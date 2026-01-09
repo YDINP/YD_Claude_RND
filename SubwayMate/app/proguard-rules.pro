@@ -65,3 +65,89 @@
 -keepclassmembers class kotlinx.coroutines.** {
     volatile <fields>;
 }
+-dontwarn kotlinx.coroutines.flow.**
+
+# ============================================
+# Jetpack Compose
+# ============================================
+-dontwarn androidx.compose.**
+-keep class androidx.compose.** { *; }
+
+# Compose runtime
+-keepclassmembers class * {
+    @androidx.compose.runtime.Composable <methods>;
+}
+
+# Compose UI
+-keep class androidx.compose.ui.** { *; }
+
+# ============================================
+# AndroidX & Lifecycle
+# ============================================
+-keep class * extends androidx.lifecycle.ViewModel {
+    <init>();
+}
+-keep class * extends androidx.lifecycle.AndroidViewModel {
+    <init>(android.app.Application);
+}
+
+# ============================================
+# WorkManager
+# ============================================
+-keep class * extends androidx.work.Worker
+-keep class * extends androidx.work.ListenableWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-keep class androidx.work.WorkerParameters
+
+# ============================================
+# Enum 클래스 보호
+# ============================================
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+# ============================================
+# Parcelable 보호
+# ============================================
+-keepclassmembers class * implements android.os.Parcelable {
+    public static final android.os.Parcelable$Creator CREATOR;
+}
+
+# ============================================
+# Serializable 보호
+# ============================================
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    private static final java.io.ObjectStreamField[] serialPersistentFields;
+    !static !transient <fields>;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+}
+
+# ============================================
+# Service & BroadcastReceiver 보호
+# ============================================
+-keep class com.ydinp.subwaymate.service.** { *; }
+-keep class com.ydinp.subwaymate.notification.** { *; }
+
+# ============================================
+# R8 full mode 호환성
+# ============================================
+-dontwarn java.lang.invoke.StringConcatFactory
+
+# ============================================
+# Kotlin Metadata
+# ============================================
+-keep class kotlin.Metadata { *; }
+-keepclassmembers class kotlin.Metadata {
+    public <methods>;
+}
+
+# ============================================
+# Application 클래스 보호
+# ============================================
+-keep class com.ydinp.subwaymate.SubwayMateApp { *; }

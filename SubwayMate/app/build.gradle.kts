@@ -11,6 +11,28 @@ android {
     namespace = "com.ydinp.subwaymate"
     compileSdk = 34
 
+    signingConfigs {
+        getByName("debug") {
+            // Debug용 기본 keystore 사용
+            // Android Studio가 자동으로 ~/.android/debug.keystore 사용
+        }
+        create("release") {
+            // Release 빌드 시 local.properties에서 keystore 정보를 읽음
+            // 실제 릴리즈 시에는 아래 속성들을 local.properties에 추가해야 함
+            val keystorePath = project.findProperty("RELEASE_KEYSTORE_PATH") as String?
+            val keystorePassword = project.findProperty("RELEASE_KEYSTORE_PASSWORD") as String?
+            val keyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String?
+            val keyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String?
+
+            if (keystorePath != null && keystorePassword != null && keyAlias != null && keyPassword != null) {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "com.ydinp.subwaymate"
         minSdk = 26
@@ -32,9 +54,17 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Release signing 설정이 있는 경우에만 적용
+            val releaseSigningConfig = signingConfigs.findByName("release")
+            if (releaseSigningConfig?.storeFile != null) {
+                signingConfig = releaseSigningConfig
+            }
         }
         debug {
             isMinifyEnabled = false
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
