@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SubwayMate</string>
+
+    <!-- 메인 화면 -->
+    <string name="select_departure">출발역 선택</string>
+    <string name="select_destination">도착역 선택</string>
+    <string name="select_line">호선 선택</string>
+    <string name="select_direction">방향 선택</string>
+    <string name="start_alert">알림 시작</string>
+    <string name="stop_alert">알림 중지</string>
+
+    <!-- 알림 설정 -->
+    <string name="alert_before_stations">%d역 전 알림</string>
+    <string name="alert_before_minutes">%d분 전 알림</string>
+    <string name="sound_on">소리 ON</string>
+    <string name="sound_off">소리 OFF</string>
+    <string name="vibration_on">진동 ON</string>
+    <string name="vibration_off">진동 OFF</string>
+
+    <!-- 실시간 추적 -->
+    <string name="current_station">현재역: %s</string>
+    <string name="remaining_stations">남은 역: %d</string>
+    <string name="estimated_arrival">예상 도착: 약 %d분</string>
+    <string name="moving_between">%s → %s 이동 중</string>
+
+    <!-- 방향 -->
+    <string name="direction_up">상행</string>
+    <string name="direction_down">하행</string>
+    <string name="direction_inner">내선</string>
+    <string name="direction_outer">외선</string>
+
+    <!-- 알림 채널 -->
+    <string name="notification_channel_tracking">실시간 추적</string>
+    <string name="notification_channel_alert">도착 알림</string>
+    <string name="notification_tracking_title">지하철 추적 중</string>
+    <string name="notification_tracking_text">%s → %s</string>
+    <string name="notification_alert_title">곧 도착합니다!</string>
+    <string name="notification_alert_text">%s역 %d역 전</string>
+
+    <!-- 즐겨찾기 -->
+    <string name="favorites">즐겨찾기</string>
+    <string name="recent_routes">최근 경로</string>
+    <string name="no_favorites">저장된 즐겨찾기가 없습니다</string>
+
+    <!-- 오류 메시지 -->
+    <string name="error_network">네트워크 연결을 확인해주세요</string>
+    <string name="error_api">서버 연결에 실패했습니다</string>
+    <string name="error_location">위치 정보를 가져올 수 없습니다</string>
+</resources>

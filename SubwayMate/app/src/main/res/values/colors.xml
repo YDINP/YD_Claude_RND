@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 기본 색상 -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- 지하철 노선 색상 -->
+    <color name="line_1">#0052A4</color>  <!-- 1호선 - 남색 -->
+    <color name="line_2">#00A84D</color>  <!-- 2호선 - 초록 -->
+    <color name="line_3">#EF7C1C</color>  <!-- 3호선 - 주황 -->
+    <color name="line_4">#00A5DE</color>  <!-- 4호선 - 하늘 -->
+    <color name="line_5">#996CAC</color>  <!-- 5호선 - 보라 -->
+    <color name="line_6">#CD7C2F</color>  <!-- 6호선 - 황토 -->
+    <color name="line_7">#747F00</color>  <!-- 7호선 - 올리브 -->
+    <color name="line_8">#E6186C</color>  <!-- 8호선 - 분홍 -->
+    <color name="line_9">#BDB092</color>  <!-- 9호선 - 금색 -->
+    <color name="line_gyeongui">#77C4A3</color>  <!-- 경의중앙선 -->
+    <color name="line_gyeongchun">#0C8E72</color>  <!-- 경춘선 -->
+    <color name="line_suin">#F5A200</color>  <!-- 수인분당선 -->
+    <color name="line_shinbundang">#D4003B</color>  <!-- 신분당선 -->
+    <color name="line_airport">#0090D2</color>  <!-- 공항철도 -->
+    <color name="line_gtx_a">#9A6292</color>  <!-- GTX-A -->
+</resources>
