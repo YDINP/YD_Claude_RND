@@ -33,10 +33,21 @@
     <!-- 알림 채널 -->
     <string name="notification_channel_tracking">실시간 추적</string>
     <string name="notification_channel_alert">도착 알림</string>
-    <string name="notification_tracking_title">지하철 추적 중</string>
+    <string name="notification_tracking_title">%s → %s 이동 중</string>
     <string name="notification_tracking_text">%s → %s</string>
     <string name="notification_alert_title">곧 도착합니다!</string>
     <string name="notification_alert_text">%s역 %d역 전</string>
+
+    <!-- Foreground Service 알림 -->
+    <string name="notification_action_stop">추적 중지</string>
+    <string name="notification_status_boarding">탑승 대기 중</string>
+    <string name="notification_status_in_transit">%d역 남음</string>
+    <string name="notification_status_moving">이동 중</string>
+    <string name="notification_status_approaching">곧 도착! %d역 남음</string>
+    <string name="notification_status_arrived">도착 완료</string>
+    <string name="notification_alert_content">%s역까지 %d역 남았습니다</string>
+    <string name="notification_arrived_title">도착했습니다!</string>
+    <string name="notification_arrived_content">%s역에 도착했습니다</string>
 
     <!-- 즐겨찾기 -->
     <string name="favorites">즐겨찾기</string>

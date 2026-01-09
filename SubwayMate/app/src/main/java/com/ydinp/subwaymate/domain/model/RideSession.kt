@@ -1,5 +1,7 @@
 package com.ydinp.subwaymate.domain.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -23,6 +25,7 @@ import java.util.UUID
  * @property trackedTrainNo 추적 중인 열차 번호 (null이면 아직 열차 미지정)
  * @property alertSent 알림 발송 여부
  */
+@Parcelize
 data class RideSession(
     val id: String = UUID.randomUUID().toString(),
     val departureStation: Station,
@@ -37,7 +40,7 @@ data class RideSession(
     val estimatedArrivalTime: LocalDateTime? = null,
     val trackedTrainNo: String? = null,
     val alertSent: Boolean = false
-) {
+) : Parcelable {
     /**
      * 세션이 활성 상태인지 확인
      *

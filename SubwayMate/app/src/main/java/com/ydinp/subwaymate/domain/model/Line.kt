@@ -1,5 +1,8 @@
 package com.ydinp.subwaymate.domain.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
 /**
  * 지하철 노선 정보를 나타내는 data class
  *
@@ -11,12 +14,13 @@ package com.ydinp.subwaymate.domain.model
  * @property color 노선 대표 색상 (HEX 형식, 예: "#0052A4")
  * @property type 노선 유형 (일반, 순환, 지선 등)
  */
+@Parcelize
 data class Line(
     val id: String,
     val name: String,
     val color: String,
     val type: LineType
-) {
+) : Parcelable {
     /**
      * 순환 노선인지 확인
      *

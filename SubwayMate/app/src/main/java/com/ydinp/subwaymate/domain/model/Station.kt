@@ -1,5 +1,8 @@
 package com.ydinp.subwaymate.domain.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
 /**
  * 지하철 역 정보를 나타내는 data class
  *
@@ -13,6 +16,7 @@ package com.ydinp.subwaymate.domain.model
  * @property longitude 역의 경도 좌표
  * @property transferLines 환승 가능한 다른 노선 ID 목록
  */
+@Parcelize
 data class Station(
     val id: String,
     val name: String,
@@ -20,7 +24,7 @@ data class Station(
     val latitude: Double,
     val longitude: Double,
     val transferLines: List<String> = emptyList()
-) {
+) : Parcelable {
     /**
      * 환승역인지 확인
      *

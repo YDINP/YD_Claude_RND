@@ -1,5 +1,8 @@
 package com.ydinp.subwaymate.domain.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
 /**
  * 도착 알림 설정을 나타내는 data class
  *
@@ -13,6 +16,7 @@ package com.ydinp.subwaymate.domain.model
  * @property repeatCount 알림 반복 횟수 (1~5, 기본값 1)
  * @property repeatIntervalSeconds 반복 알림 간격 (초 단위)
  */
+@Parcelize
 data class AlertSetting(
     val stationsBefore: Int = DEFAULT_STATIONS_BEFORE,
     val minutesBefore: Int = DEFAULT_MINUTES_BEFORE,
@@ -20,7 +24,7 @@ data class AlertSetting(
     val vibrationEnabled: Boolean = true,
     val repeatCount: Int = DEFAULT_REPEAT_COUNT,
     val repeatIntervalSeconds: Int = DEFAULT_REPEAT_INTERVAL_SECONDS
-) {
+) : Parcelable {
     init {
         require(stationsBefore >= 0) { "stationsBefore must be non-negative" }
         require(minutesBefore >= 0) { "minutesBefore must be non-negative" }
