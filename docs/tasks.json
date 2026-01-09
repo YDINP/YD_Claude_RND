@@ -1,0 +1,285 @@
+{
+  "projectName": "SubwayMate",
+  "description": "수도권 지하철 실시간 위치 기반 도착 알림 서비스",
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "프로젝트 초기화 (Android/Kotlin/Compose)",
+      "description": "Android Studio 프로젝트 생성, Gradle 설정, 기본 의존성 추가 (Hilt, Retrofit, Room, Compose)",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": [],
+      "parallelGroup": null,
+      "agent": "Bash",
+      "subtasks": [
+        "Android 프로젝트 생성",
+        "build.gradle 의존성 설정",
+        "패키지 구조 생성 (data/domain/presentation)",
+        "Hilt Application 클래스 설정"
+      ]
+    },
+    {
+      "id": "2.1",
+      "title": "데이터 모델 정의",
+      "description": "Station, Line, RideSession, AlertSetting 등 핵심 엔티티 정의",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["1.1"],
+      "parallelGroup": "A",
+      "agent": "general-purpose",
+      "subtasks": [
+        "Station data class 생성",
+        "Line data class 생성",
+        "RideSession data class 생성",
+        "AlertSetting data class 생성",
+        "Direction, RideStatus enum 정의"
+      ]
+    },
+    {
+      "id": "2.2",
+      "title": "역/노선 정적 데이터 구축",
+      "description": "수도권 지하철 전 노선의 역 정보 JSON 데이터 구축",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["1.1"],
+      "parallelGroup": "A",
+      "agent": "general-purpose",
+      "subtasks": [
+        "1-9호선 역 데이터 수집",
+        "경의중앙선, 신분당선 등 추가 노선 데이터",
+        "JSON 파일 구조 설계",
+        "assets 폴더에 데이터 저장"
+      ]
+    },
+    {
+      "id": "2.3",
+      "title": "API 클라이언트 기본 구현",
+      "description": "Retrofit 클라이언트, API 인터페이스 정의, 서울 열린데이터광장 API 연동",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["1.1"],
+      "parallelGroup": "A",
+      "agent": "general-purpose",
+      "subtasks": [
+        "Retrofit 클라이언트 설정",
+        "SeoulOpenDataApi 인터페이스 정의",
+        "실시간 열차 위치 API DTO 정의",
+        "실시간 도착정보 API DTO 정의",
+        "API 응답 파싱 및 에러 처리"
+      ]
+    },
+    {
+      "id": "3.1",
+      "title": "Room DB 구현",
+      "description": "로컬 데이터베이스 설정, Entity, DAO, Database 클래스 구현",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["2.1", "2.2", "2.3"],
+      "parallelGroup": "B",
+      "agent": "general-purpose",
+      "subtasks": [
+        "AppDatabase 클래스 생성",
+        "StationEntity 정의",
+        "FavoriteRouteEntity 정의",
+        "StationDao 구현",
+        "FavoriteDao 구현"
+      ]
+    },
+    {
+      "id": "3.2",
+      "title": "Repository 패턴 구현",
+      "description": "데이터 소스 추상화, Repository 인터페이스 및 구현체",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["2.1", "2.2", "2.3"],
+      "parallelGroup": "B",
+      "agent": "general-purpose",
+      "subtasks": [
+        "StationRepository 인터페이스/구현",
+        "TrainLocationRepository 인터페이스/구현",
+        "FavoriteRepository 인터페이스/구현",
+        "Hilt Module 설정"
+      ]
+    },
+    {
+      "id": "3.3",
+      "title": "ViewModel 구현",
+      "description": "화면별 ViewModel, UI State 관리, UseCase 연동",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["2.1", "2.2", "2.3"],
+      "parallelGroup": "B",
+      "agent": "general-purpose",
+      "subtasks": [
+        "MainViewModel 구현",
+        "StationSelectViewModel 구현",
+        "TrackingViewModel 구현",
+        "UI State 클래스 정의",
+        "UseCase 클래스 구현"
+      ]
+    },
+    {
+      "id": "4.1",
+      "title": "메인 화면 UI",
+      "description": "Jetpack Compose로 메인 화면 구현 (출발역/도착역 선택, 알림 시작)",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["3.3"],
+      "parallelGroup": "C",
+      "agent": "general-purpose",
+      "subtasks": [
+        "MainScreen Composable",
+        "출발역/도착역 선택 카드",
+        "호선/방향 선택 UI",
+        "알림 시작 버튼",
+        "즐겨찾기 목록 표시"
+      ]
+    },
+    {
+      "id": "4.2",
+      "title": "역 선택 UI",
+      "description": "역 검색 및 선택 화면, 최근 이용역, 노선별 필터",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["3.3"],
+      "parallelGroup": "C",
+      "agent": "general-purpose",
+      "subtasks": [
+        "StationSelectScreen Composable",
+        "검색 TextField",
+        "노선별 필터 탭",
+        "역 목록 LazyColumn",
+        "최근 이용역 섹션"
+      ]
+    },
+    {
+      "id": "4.3",
+      "title": "실시간 추적 UI",
+      "description": "현재 위치 표시 노선도, 남은 역/시간 정보, 알림 설정",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["3.3"],
+      "parallelGroup": "C",
+      "agent": "general-purpose",
+      "subtasks": [
+        "TrackingScreen Composable",
+        "노선도 시각화 (Canvas/Custom)",
+        "현재 위치 애니메이션",
+        "남은 역/예상 시간 표시",
+        "알림 설정 바텀시트"
+      ]
+    },
+    {
+      "id": "5.1",
+      "title": "Foreground Service 구현",
+      "description": "백그라운드 위치 추적을 위한 Foreground Service",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["4.1", "4.2", "4.3"],
+      "parallelGroup": null,
+      "agent": "general-purpose",
+      "subtasks": [
+        "TrackingService 클래스 생성",
+        "Notification 채널 설정",
+        "서비스 시작/종료 로직",
+        "실시간 위치 업데이트 로직"
+      ]
+    },
+    {
+      "id": "5.2",
+      "title": "알림 채널 및 푸시 구현",
+      "description": "도착 알림 Notification, 소리/진동 옵션",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["5.1"],
+      "parallelGroup": null,
+      "agent": "general-purpose",
+      "subtasks": [
+        "NotificationManager 래퍼 클래스",
+        "도착 알림 Notification 빌더",
+        "소리/진동 옵션 처리",
+        "알림 클릭 시 앱 이동"
+      ]
+    },
+    {
+      "id": "5.3",
+      "title": "WorkManager 백그라운드 처리",
+      "description": "Doze 모드 대응, 주기적 API 폴링",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["5.2"],
+      "parallelGroup": null,
+      "agent": "general-purpose",
+      "subtasks": [
+        "LocationPollingWorker 구현",
+        "PeriodicWorkRequest 설정",
+        "배터리 최적화 대응"
+      ]
+    },
+    {
+      "id": "6.1",
+      "title": "전체 플로우 통합",
+      "description": "화면 간 네비게이션, 데이터 흐름 검증",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["5.3"],
+      "parallelGroup": null,
+      "agent": "general-purpose",
+      "subtasks": [
+        "Navigation 설정",
+        "화면 간 데이터 전달",
+        "에러 처리 통합",
+        "로딩 상태 처리"
+      ]
+    },
+    {
+      "id": "6.2",
+      "title": "테스트 코드 작성",
+      "description": "Unit 테스트, UI 테스트 작성",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["6.1"],
+      "parallelGroup": null,
+      "agent": "general-purpose",
+      "subtasks": [
+        "ViewModel Unit 테스트",
+        "Repository Unit 테스트",
+        "API 응답 Mock 테스트",
+        "Compose UI 테스트"
+      ]
+    },
+    {
+      "id": "6.3",
+      "title": "빌드 및 검증",
+      "description": "Release 빌드, ProGuard, APK 생성 및 테스트",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["6.2"],
+      "parallelGroup": null,
+      "agent": "Bash",
+      "subtasks": [
+        "Release 빌드 설정",
+        "ProGuard 규칙 설정",
+        "APK 생성",
+        "기기 설치 테스트"
+      ]
+    }
+  ],
+  "parallelGroups": {
+    "A": {
+      "name": "핵심 레이어 구현",
+      "description": "데이터 모델, 정적 데이터, API 클라이언트를 병렬로 구현",
+      "tasks": ["2.1", "2.2", "2.3"]
+    },
+    "B": {
+      "name": "기능 구현",
+      "description": "Room DB, Repository, ViewModel을 병렬로 구현",
+      "tasks": ["3.1", "3.2", "3.3"]
+    },
+    "C": {
+      "name": "UI 구현",
+      "description": "메인 화면, 역 선택 화면, 추적 화면을 병렬로 구현",
+      "tasks": ["4.1", "4.2", "4.3"]
+    }
+  }
+}
