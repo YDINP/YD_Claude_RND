@@ -10,6 +10,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.ydinp.subwaymate.presentation.main.MainScreen
+import com.ydinp.subwaymate.presentation.station.StationSelectScreen
 
 sealed class Screen(val route: String) {
     data object Main : Screen("main")
@@ -17,6 +19,7 @@ sealed class Screen(val route: String) {
         fun createRoute(type: String) = "station_select/$type"
     }
     data object Tracking : Screen("tracking")
+    data object Settings : Screen("settings")
 }
 
 @Composable
@@ -31,19 +34,44 @@ fun SubwayMateNavHost(
         modifier = modifier
     ) {
         composable(Screen.Main.route) {
-            // TODO: MainScreen 구현 (Task 4.1)
-            PlaceholderScreen("메인 화면\n\n출발역/도착역 선택 후\n알림을 시작하세요")
+            MainScreen(
+                onNavigateToStationSelect = { type ->
+                    navController.navigate(Screen.StationSelect.createRoute(type))
+                },
+                onNavigateToTracking = {
+                    navController.navigate(Screen.Tracking.route)
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
+                }
+            )
         }
 
         composable(Screen.StationSelect.route) { backStackEntry ->
             val type = backStackEntry.arguments?.getString("type") ?: "departure"
-            // TODO: StationSelectScreen 구현 (Task 4.2)
-            PlaceholderScreen("역 선택 화면\n\nType: $type")
+            StationSelectScreen(
+                selectionType = type,
+                onStationSelected = { station ->
+                    // 역 선택 후 이전 화면으로 돌아가기
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("selected_station_$type", station.id)
+                    navController.popBackStack()
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
         }
 
         composable(Screen.Tracking.route) {
             // TODO: TrackingScreen 구현 (Task 4.3)
             PlaceholderScreen("실시간 추적 화면\n\n현재 위치와\n남은 역을 표시합니다")
+        }
+
+        composable(Screen.Settings.route) {
+            // TODO: SettingsScreen 구현
+            PlaceholderScreen("설정 화면")
         }
     }
 }
