@@ -99,6 +99,8 @@ dependencies {
 
     // WorkManager
     implementation(libs.work.runtime.ktx)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.compiler)
 
     // Testing
     testImplementation(libs.junit)

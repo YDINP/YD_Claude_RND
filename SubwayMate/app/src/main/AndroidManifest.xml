@@ -19,6 +19,9 @@
     <!-- 부팅 완료 수신 (선택적 - 앱 자동 시작용) -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- 배터리 최적화 예외 요청 권한 -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <application
         android:name=".SubwayMateApp"
         android:allowBackup="true"
@@ -68,6 +71,22 @@
                 <action android:name="com.ydinp.subwaymate.ACTION_STOP_TRACKING" />
             </intent-filter>
         </receiver>
+
+        <!--
+            WorkManager 기본 초기화 비활성화
+            Application에서 Hilt WorkerFactory를 사용하여 초기화하므로
+            기본 초기화를 제거합니다.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
     </application>
 

@@ -6,17 +6,63 @@ import android.app.NotificationManager
 import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
+/**
+ * SubwayMate Application 클래스
+ *
+ * Hilt 의존성 주입 및 앱 초기화를 담당합니다.
+ * WorkManager의 Hilt Worker Factory 지원을 위해 Configuration.Provider를 구현합니다.
+ */
 @HiltAndroidApp
-class SubwayMateApp : Application() {
+class SubwayMateApp : Application(), Configuration.Provider {
+
+    /** Hilt WorkerFactory - Worker에 의존성 주입을 지원 */
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        Log.d(TAG, "SubwayMateApp initialized")
     }
 
+    /**
+     * WorkManager Configuration 제공
+     *
+     * Hilt Worker Factory를 사용하도록 WorkManager를 구성합니다.
+     * 이를 통해 @HiltWorker 어노테이션이 붙은 Worker에서
+     * 의존성 주입을 사용할 수 있습니다.
+     *
+     * 주의: AndroidManifest.xml에서 default WorkManager initializer를 비활성화해야 합니다.
+     * <provider
+     *     android:name="androidx.startup.InitializationProvider"
+     *     android:authorities="${applicationId}.androidx-startup"
+     *     tools:node="merge">
+     *     <meta-data
+     *         android:name="androidx.work.WorkManagerInitializer"
+     *         android:value="androidx.startup"
+     *         tools:node="remove" />
+     * </provider>
+     */
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .setMinimumLoggingLevel(
+                if (BuildConfig.DEBUG) Log.DEBUG else Log.INFO
+            )
+            .build()
+
+    /**
+     * 알림 채널 생성
+     *
+     * Android 8.0 (API 26) 이상에서 알림을 표시하려면 채널이 필요합니다.
+     */
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = getSystemService(NotificationManager::class.java)
@@ -64,6 +110,7 @@ class SubwayMateApp : Application() {
             }
 
             notificationManager.createNotificationChannels(listOf(trackingChannel, alertChannel))
+            Log.d(TAG, "Notification channels created")
         }
     }
 
@@ -86,6 +133,8 @@ class SubwayMateApp : Application() {
     }
 
     companion object {
+        private const val TAG = "SubwayMateApp"
+
         /** 추적 채널 ID (Foreground Service용, 중요도 LOW) */
         const val CHANNEL_TRACKING = "tracking_channel"
 
