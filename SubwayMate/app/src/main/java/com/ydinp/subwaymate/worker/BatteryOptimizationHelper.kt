@@ -83,6 +83,32 @@ class BatteryOptimizationHelper @Inject constructor(
     }
 
     /**
+     * Activity에서 배터리 최적화 예외 요청
+     *
+     * @param activity 호출하는 Activity
+     * @return 성공 여부
+     */
+    fun requestBatteryOptimizationExemption(activity: android.app.Activity): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return true
+        }
+
+        return try {
+            val intent = createBatteryOptimizationExemptionIntent()
+            if (intent != null) {
+                activity.startActivity(intent)
+                Log.d(TAG, "Battery optimization exemption request sent from Activity")
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to request battery optimization exemption from Activity", e)
+            false
+        }
+    }
+
+    /**
      * 배터리 최적화 예외 요청을 Application Context에서 시작
      *
      * FLAG_ACTIVITY_NEW_TASK 플래그가 필요합니다.

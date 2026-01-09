@@ -49,9 +49,10 @@ class TrackingViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
+        // NavHost에서 사용하는 argument 이름과 동일하게 맞춤
         const val ARG_SESSION_ID = "sessionId"
-        const val ARG_DEPARTURE_STATION_ID = "departureStationId"
-        const val ARG_ARRIVAL_STATION_ID = "arrivalStationId"
+        const val ARG_DEPARTURE_STATION_ID = "departureId"
+        const val ARG_ARRIVAL_STATION_ID = "arrivalId"
         const val ARG_LINE_ID = "lineId"
         const val ARG_DIRECTION = "direction"
 

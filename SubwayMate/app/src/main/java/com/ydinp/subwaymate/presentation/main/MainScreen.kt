@@ -22,13 +22,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -68,34 +68,56 @@ import com.ydinp.subwaymate.domain.model.Direction
 import com.ydinp.subwaymate.domain.model.Line
 import com.ydinp.subwaymate.domain.model.Station
 import com.ydinp.subwaymate.domain.repository.FavoriteRoute
+import com.ydinp.subwaymate.presentation.common.components.ErrorContent
+import com.ydinp.subwaymate.presentation.common.components.LoadingContent
 import com.ydinp.subwaymate.presentation.common.theme.LineColors
 
 /**
  * 메인 화면 Composable
  *
  * @param viewModel MainViewModel 인스턴스
+ * @param selectedDepartureStationId 선택된 출발역 ID (NavHost에서 전달)
+ * @param selectedDepartureStationName 선택된 출발역 이름
+ * @param selectedArrivalStationId 선택된 도착역 ID (NavHost에서 전달)
+ * @param selectedArrivalStationName 선택된 도착역 이름
+ * @param selectedLineId 선택된 노선 ID
  * @param onNavigateToStationSelect 역 선택 화면으로 이동하는 콜백 (type: "departure" 또는 "arrival")
  * @param onNavigateToTracking 추적 화면으로 이동하는 콜백
  * @param onNavigateToSettings 설정 화면으로 이동하는 콜백
+ * @param onClearDepartureSelection 출발역 선택 초기화 콜백
+ * @param onClearArrivalSelection 도착역 선택 초기화 콜백
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel = hiltViewModel(),
+    selectedDepartureStationId: String? = null,
+    selectedDepartureStationName: String? = null,
+    selectedArrivalStationId: String? = null,
+    selectedArrivalStationName: String? = null,
+    selectedLineId: String? = null,
     onNavigateToStationSelect: (type: String) -> Unit = {},
-    onNavigateToTracking: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToTracking: (departureId: String, arrivalId: String, lineId: String, direction: String) -> Unit = { _, _, _, _ -> },
+    onNavigateToSettings: () -> Unit = {},
+    onClearDepartureSelection: () -> Unit = {},
+    onClearArrivalSelection: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // 선택된 출발역/도착역 상태 (임시 - 추후 ViewModel로 이동 가능)
-    var selectedDepartureStation by rememberSaveable { mutableStateOf<Station?>(null) }
-    var selectedArrivalStation by rememberSaveable { mutableStateOf<Station?>(null) }
+    // 선택된 노선 및 방향 상태 (로컬)
     var selectedLine by rememberSaveable { mutableStateOf<Line?>(null) }
     var selectedDirection by rememberSaveable { mutableStateOf(Direction.UP) }
+
+    // 노선 ID가 전달되면 해당 노선 선택
+    LaunchedEffect(selectedLineId, uiState) {
+        if (selectedLineId != null && uiState is MainUiState.Success) {
+            val lines = (uiState as MainUiState.Success).lines
+            selectedLine = lines.find { it.id == selectedLineId }
+        }
+    }
 
     // Side Effect 처리
     LaunchedEffect(Unit) {
@@ -105,7 +127,15 @@ fun MainScreen(
                     onNavigateToStationSelect(effect.lineId ?: "departure")
                 }
                 is MainSideEffect.NavigateToTracking -> {
-                    onNavigateToTracking()
+                    // 세션 ID를 사용하여 추적 화면으로 이동
+                    if (selectedDepartureStationId != null && selectedArrivalStationId != null && selectedLine != null) {
+                        onNavigateToTracking(
+                            selectedDepartureStationId,
+                            selectedArrivalStationId,
+                            selectedLine!!.id,
+                            selectedDirection.code
+                        )
+                    }
                 }
                 is MainSideEffect.NavigateToSettings -> {
                     onNavigateToSettings()
@@ -117,14 +147,17 @@ fun MainScreen(
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
                 is MainSideEffect.StartTrackingWithRoute -> {
-                    // 경로 정보 설정 후 추적 화면으로 이동
-                    selectedDepartureStation = effect.route.departureStation
-                    selectedArrivalStation = effect.route.arrivalStation
-                    selectedDirection = effect.route.direction
-                    onNavigateToTracking()
+                    // 즐겨찾기 경로로 추적 시작
+                    val route = effect.route
+                    onNavigateToTracking(
+                        route.departureStationId,
+                        route.arrivalStationId,
+                        route.lineId,
+                        route.direction.code
+                    )
                 }
                 is MainSideEffect.RequestLocationPermission -> {
-                    // 위치 권한 요청 처리
+                    // 위치 권한 요청 처리 (MainActivity에서 처리)
                 }
             }
         }
@@ -164,7 +197,7 @@ fun MainScreen(
         ) {
             when (val state = uiState) {
                 is MainUiState.Loading -> {
-                    LoadingContent()
+                    LoadingContent(message = "데이터를 불러오는 중...")
                 }
                 is MainUiState.Error -> {
                     ErrorContent(
@@ -175,16 +208,30 @@ fun MainScreen(
                 is MainUiState.Success -> {
                     MainContent(
                         state = state,
-                        selectedDepartureStation = selectedDepartureStation,
-                        selectedArrivalStation = selectedArrivalStation,
+                        selectedDepartureId = selectedDepartureStationId,
+                        selectedDepartureName = selectedDepartureStationName,
+                        selectedArrivalId = selectedArrivalStationId,
+                        selectedArrivalName = selectedArrivalStationName,
                         selectedLine = selectedLine,
                         selectedDirection = selectedDirection,
                         isRefreshing = isRefreshing,
                         onDepartureStationClick = { onNavigateToStationSelect("departure") },
                         onArrivalStationClick = { onNavigateToStationSelect("arrival") },
+                        onClearDeparture = onClearDepartureSelection,
+                        onClearArrival = onClearArrivalSelection,
                         onLineSelect = { line -> selectedLine = line },
                         onDirectionSelect = { direction -> selectedDirection = direction },
-                        onStartTracking = { onNavigateToTracking() },
+                        onStartTracking = {
+                            if (selectedDepartureStationId != null && selectedArrivalStationId != null) {
+                                val lineId = selectedLine?.id ?: selectedLineId ?: ""
+                                onNavigateToTracking(
+                                    selectedDepartureStationId,
+                                    selectedArrivalStationId,
+                                    lineId,
+                                    selectedDirection.code
+                                )
+                            }
+                        },
                         onFavoriteRouteClick = { route ->
                             viewModel.onEvent(MainUiEvent.SelectRoute(route))
                         }
@@ -196,79 +243,22 @@ fun MainScreen(
 }
 
 /**
- * 로딩 상태 컨텐츠
- */
-@Composable
-private fun LoadingContent() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            CircularProgressIndicator()
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "데이터를 불러오는 중...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-/**
- * 에러 상태 컨텐츠
- */
-@Composable
-private fun ErrorContent(
-    message: String,
-    onRetry: () -> Unit
-) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(24.dp)
-        ) {
-            Text(
-                text = "오류가 발생했습니다",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            OutlinedButton(onClick = onRetry) {
-                Text("다시 시도")
-            }
-        }
-    }
-}
-
-/**
  * 메인 컨텐츠
  */
 @Composable
 private fun MainContent(
     state: MainUiState.Success,
-    selectedDepartureStation: Station?,
-    selectedArrivalStation: Station?,
+    selectedDepartureId: String?,
+    selectedDepartureName: String?,
+    selectedArrivalId: String?,
+    selectedArrivalName: String?,
     selectedLine: Line?,
     selectedDirection: Direction,
     isRefreshing: Boolean,
     onDepartureStationClick: () -> Unit,
     onArrivalStationClick: () -> Unit,
+    onClearDeparture: () -> Unit,
+    onClearArrival: () -> Unit,
     onLineSelect: (Line) -> Unit,
     onDirectionSelect: (Direction) -> Unit,
     onStartTracking: () -> Unit,
@@ -283,10 +273,15 @@ private fun MainContent(
         // 역 선택 섹션
         item {
             StationSelectionSection(
-                departureStation = selectedDepartureStation,
-                arrivalStation = selectedArrivalStation,
+                departureId = selectedDepartureId,
+                departureName = selectedDepartureName,
+                arrivalId = selectedArrivalId,
+                arrivalName = selectedArrivalName,
+                lineId = selectedLine?.id,
                 onDepartureClick = onDepartureStationClick,
-                onArrivalClick = onArrivalStationClick
+                onArrivalClick = onArrivalStationClick,
+                onClearDeparture = onClearDeparture,
+                onClearArrival = onClearArrival
             )
         }
 
@@ -311,7 +306,7 @@ private fun MainContent(
         // 알림 시작 버튼
         item {
             StartTrackingButton(
-                enabled = selectedDepartureStation != null && selectedArrivalStation != null,
+                enabled = selectedDepartureId != null && selectedArrivalId != null,
                 onClick = onStartTracking
             )
         }
@@ -346,10 +341,15 @@ private fun MainContent(
  */
 @Composable
 private fun StationSelectionSection(
-    departureStation: Station?,
-    arrivalStation: Station?,
+    departureId: String?,
+    departureName: String?,
+    arrivalId: String?,
+    arrivalName: String?,
+    lineId: String?,
     onDepartureClick: () -> Unit,
-    onArrivalClick: () -> Unit
+    onArrivalClick: () -> Unit,
+    onClearDeparture: () -> Unit,
+    onClearArrival: () -> Unit
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -363,9 +363,10 @@ private fun StationSelectionSection(
         // 출발역 카드
         StationSelectCard(
             label = "출발역",
-            stationName = departureStation?.name,
-            lineId = departureStation?.lineId,
-            onClick = onDepartureClick
+            stationName = departureName,
+            lineId = lineId,
+            onClick = onDepartureClick,
+            onClear = if (departureId != null) onClearDeparture else null
         )
 
         // 방향 화살표
@@ -390,9 +391,10 @@ private fun StationSelectionSection(
         // 도착역 카드
         StationSelectCard(
             label = "도착역",
-            stationName = arrivalStation?.name,
-            lineId = arrivalStation?.lineId,
-            onClick = onArrivalClick
+            stationName = arrivalName,
+            lineId = lineId,
+            onClick = onArrivalClick,
+            onClear = if (arrivalId != null) onClearArrival else null
         )
     }
 }
@@ -405,7 +407,8 @@ private fun StationSelectCard(
     label: String,
     stationName: String?,
     lineId: String?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onClear: (() -> Unit)? = null
 ) {
     ElevatedCard(
         modifier = Modifier
@@ -455,6 +458,21 @@ private fun StationSelectCard(
                     else
                         MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            // 초기화 버튼
+            if (onClear != null) {
+                IconButton(
+                    onClick = onClear,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = "선택 해제",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
