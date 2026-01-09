@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n[Task 1.1] 프로젝트 초기화 \\(Android/Kotlin/Compose\\)\n\n- Android 프로젝트 구조 생성 \\(SubwayMate/\\)\n- build.gradle.kts 의존성 설정\n  - Jetpack Compose \\(Material3\\)\n  - Hilt \\(DI\\)\n  - Room \\(Local DB\\)\n  - Retrofit + OkHttp + Moshi \\(Network\\)\n  - Coroutines + Flow \\(Async\\)\n  - WorkManager \\(Background\\)\n- Clean Architecture 패키지 구조 생성\n  - data/ \\(local, remote, repository\\)\n  - domain/ \\(model, repository, usecase\\)\n  - presentation/ \\(main, station, tracking, common\\)\n  - di/, service/, util/\n- Hilt Application 클래스 설정 \\(SubwayMateApp\\)\n- 알림 채널 초기화 \\(tracking, alert\\)\n- Compose Theme 설정 \\(지하철 노선 색상 포함\\)\n- Navigation 기본 구조 설정\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push)",
+      "WebFetch(domain:data.seoul.go.kr)",
+      "WebFetch(domain:github.com)",
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(gradlew.bat assembleDebug:*)"
     ]
   }
 }

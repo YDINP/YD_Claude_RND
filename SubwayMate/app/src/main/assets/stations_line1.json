@@ -1,0 +1,128 @@
+{
+  "line_id": "line1",
+  "line_name": "1호선",
+  "type": "linear",
+  "section": "서울역~청량리",
+  "stations": [
+    {
+      "id": "133",
+      "name": "서울역",
+      "line_id": "line1",
+      "sequence": 1,
+      "latitude": 37.5547,
+      "longitude": 126.9707,
+      "transfer_lines": ["line4", "airport", "gyeongui_jungang", "ktx"],
+      "prev_station_id": null,
+      "next_station_id": "132",
+      "avg_time_to_next": 2
+    },
+    {
+      "id": "132",
+      "name": "시청",
+      "line_id": "line1",
+      "sequence": 2,
+      "latitude": 37.5636,
+      "longitude": 126.9770,
+      "transfer_lines": ["line2"],
+      "prev_station_id": "133",
+      "next_station_id": "131",
+      "avg_time_to_next": 2
+    },
+    {
+      "id": "131",
+      "name": "종각",
+      "line_id": "line1",
+      "sequence": 3,
+      "latitude": 37.5700,
+      "longitude": 126.9829,
+      "transfer_lines": [],
+      "prev_station_id": "132",
+      "next_station_id": "130",
+      "avg_time_to_next": 2
+    },
+    {
+      "id": "130",
+      "name": "종로3가",
+      "line_id": "line1",
+      "sequence": 4,
+      "latitude": 37.5713,
+      "longitude": 126.9916,
+      "transfer_lines": ["line3", "line5"],
+      "prev_station_id": "131",
+      "next_station_id": "129",
+      "avg_time_to_next": 2
+    },
+    {
+      "id": "129",
+      "name": "종로5가",
+      "line_id": "line1",
+      "sequence": 5,
+      "latitude": 37.5706,
+      "longitude": 127.0020,
+      "transfer_lines": [],
+      "prev_station_id": "130",
+      "next_station_id": "128",
+      "avg_time_to_next": 2
+    },
+    {
+      "id": "128",
+      "name": "동대문",
+      "line_id": "line1",
+      "sequence": 6,
+      "latitude": 37.5710,
+      "longitude": 127.0094,
+      "transfer_lines": ["line4"],
+      "prev_station_id": "129",
+      "next_station_id": "127",
+      "avg_time_to_next": 2
+    },
+    {
+      "id": "127",
+      "name": "동묘앞",
+      "line_id": "line1",
+      "sequence": 7,
+      "latitude": 37.5718,
+      "longitude": 127.0162,
+      "transfer_lines": ["line6"],
+      "prev_station_id": "128",
+      "next_station_id": "126",
+      "avg_time_to_next": 2
+    },
+    {
+      "id": "126",
+      "name": "신설동",
+      "line_id": "line1",
+      "sequence": 8,
+      "latitude": 37.5761,
+      "longitude": 127.0249,
+      "transfer_lines": ["line2", "ui_sinseol"],
+      "prev_station_id": "127",
+      "next_station_id": "125",
+      "avg_time_to_next": 2
+    },
+    {
+      "id": "125",
+      "name": "제기동",
+      "line_id": "line1",
+      "sequence": 9,
+      "latitude": 37.5786,
+      "longitude": 127.0343,
+      "transfer_lines": [],
+      "prev_station_id": "126",
+      "next_station_id": "124",
+      "avg_time_to_next": 2
+    },
+    {
+      "id": "124",
+      "name": "청량리",
+      "line_id": "line1",
+      "sequence": 10,
+      "latitude": 37.5802,
+      "longitude": 127.0469,
+      "transfer_lines": ["gyeongui_jungang", "gyeongchun", "suin_bundang", "ktx"],
+      "prev_station_id": "125",
+      "next_station_id": null,
+      "avg_time_to_next": 0
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+[
+  {
+    "id": "line1",
+    "name": "1호선",
+    "color": "#0052A4",
+    "type": "linear",
+    "stations_count": 98
+  },
+  {
+    "id": "line2",
+    "name": "2호선",
+    "color": "#00A84D",
+    "type": "circular",
+    "stations_count": 51
+  },
+  {
+    "id": "line3",
+    "name": "3호선",
+    "color": "#EF7C1C",
+    "type": "linear",
+    "stations_count": 44
+  },
+  {
+    "id": "line4",
+    "name": "4호선",
+    "color": "#00A5DE",
+    "type": "linear",
+    "stations_count": 48
+  },
+  {
+    "id": "line5",
+    "name": "5호선",
+    "color": "#996CAC",
+    "type": "linear",
+    "stations_count": 56
+  },
+  {
+    "id": "line6",
+    "name": "6호선",
+    "color": "#CD7C2F",
+    "type": "linear",
+    "stations_count": 39
+  },
+  {
+    "id": "line7",
+    "name": "7호선",
+    "color": "#747F00",
+    "type": "linear",
+    "stations_count": 53
+  },
+  {
+    "id": "line8",
+    "name": "8호선",
+    "color": "#E6186C",
+    "type": "linear",
+    "stations_count": 18
+  },
+  {
+    "id": "line9",
+    "name": "9호선",
+    "color": "#BDB092",
+    "type": "linear",
+    "stations_count": 38
+  },
+  {
+    "id": "gyeongui_jungang",
+    "name": "경의중앙선",
+    "color": "#77C4A3",
+    "type": "linear",
+    "stations_count": 57
+  },
+  {
+    "id": "gyeongchun",
+    "name": "경춘선",
+    "color": "#0D9764",
+    "type": "linear",
+    "stations_count": 23
+  },
+  {
+    "id": "suin_bundang",
+    "name": "수인분당선",
+    "color": "#FABE00",
+    "type": "linear",
+    "stations_count": 63
+  },
+  {
+    "id": "shinbundang",
+    "name": "신분당선",
+    "color": "#D31145",
+    "type": "linear",
+    "stations_count": 16
+  },
+  {
+    "id": "airport",
+    "name": "공항철도",
+    "color": "#0090D2",
+    "type": "linear",
+    "stations_count": 14
+  },
+  {
+    "id": "gtx_a",
+    "name": "GTX-A",
+    "color": "#9A6292",
+    "type": "linear",
+    "stations_count": 10
+  }
+]
