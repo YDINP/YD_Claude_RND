@@ -51,6 +51,24 @@
                 android:value="subway_tracking" />
         </service>
 
+        <!-- 알림 닫기 BroadcastReceiver -->
+        <receiver
+            android:name=".notification.AlertDismissReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.ydinp.subwaymate.ACTION_DISMISS_ALERT" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 알림 액션 BroadcastReceiver -->
+        <receiver
+            android:name=".notification.AlertActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.ydinp.subwaymate.ACTION_STOP_TRACKING" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

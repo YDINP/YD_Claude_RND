@@ -4,6 +4,11 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
+    <!-- 알림 관련 색상 -->
+    <color name="alert_light_color">#FF4081</color>  <!-- 알림 LED 색상 -->
+    <color name="alert_urgent_color">#FF0000</color>  <!-- 긴급 알림 색상 -->
+    <color name="alert_success_color">#4CAF50</color>  <!-- 도착 완료 색상 -->
+
     <!-- 지하철 노선 색상 -->
     <color name="line_1">#0052A4</color>  <!-- 1호선 - 남색 -->
     <color name="line_2">#00A84D</color>  <!-- 2호선 - 초록 -->

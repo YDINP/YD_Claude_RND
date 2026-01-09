@@ -58,4 +58,23 @@
     <string name="error_network">네트워크 연결을 확인해주세요</string>
     <string name="error_api">서버 연결에 실패했습니다</string>
     <string name="error_location">위치 정보를 가져올 수 없습니다</string>
+
+    <!-- 알림 권한 관련 -->
+    <string name="notification_permission_title">알림 권한 필요</string>
+    <string name="notification_permission_message">도착 알림을 받으려면 알림 권한이 필요합니다.</string>
+    <string name="notification_permission_settings">설정으로 이동</string>
+    <string name="notification_channel_disabled_title">알림 채널 비활성화</string>
+    <string name="notification_channel_disabled_message">도착 알림 채널이 비활성화되어 있습니다. 설정에서 활성화해주세요.</string>
+
+    <!-- 긴급 알림 -->
+    <string name="notification_urgent_title">지금 내릴 준비하세요!</string>
+    <string name="notification_urgent_content">%s역 1역 전입니다</string>
+
+    <!-- 환승 알림 -->
+    <string name="notification_transfer_title">환승역 도착</string>
+    <string name="notification_transfer_content">%s역에서 %s으로 환승하세요</string>
+
+    <!-- 알림 액션 -->
+    <string name="notification_action_confirm">확인</string>
+    <string name="notification_action_dismiss">닫기</string>
 </resources>
