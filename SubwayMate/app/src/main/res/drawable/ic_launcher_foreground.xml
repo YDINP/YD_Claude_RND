@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 지하철 아이콘 (간단한 형태) -->
+    <group
+        android:translateX="27"
+        android:translateY="27">
+        <!-- 열차 본체 -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M9,4C6.24,4 4,6.24 4,9L4,36C4,39.87 7.13,43 11,43L11,47C11,47.55 11.45,48 12,48L16,48C16.55,48 17,47.55 17,47L17,43L37,43L37,47C37,47.55 37.45,48 38,48L42,48C42.55,48 43,47.55 43,47L43,43C46.87,43 50,39.87 50,36L50,9C50,6.24 47.76,4 45,4L9,4Z"/>
+
+        <!-- 열차 창문들 -->
+        <path
+            android:fillColor="#0052A4"
+            android:pathData="M10,10h12v10h-12z"/>
+        <path
+            android:fillColor="#0052A4"
+            android:pathData="M32,10h12v10h-12z"/>
+
+        <!-- 열차 문 -->
+        <path
+            android:fillColor="#0052A4"
+            android:pathData="M23,22h8v15h-8z"/>
+
+        <!-- 열차 헤드라이트 -->
+        <path
+            android:fillColor="#FFD700"
+            android:pathData="M12,35m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+        <path
+            android:fillColor="#FFD700"
+            android:pathData="M42,35m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+    </group>
+</vector>

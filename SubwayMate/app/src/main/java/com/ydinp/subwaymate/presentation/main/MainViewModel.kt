@@ -52,7 +52,14 @@ class MainViewModel @Inject constructor(
         startTrackingUseCase.getActiveSession(),
         startTrackingUseCase.getRecentSessions(5),
         _errorMessage
-    ) { linesResult, favoritesResult, routesResult, activeSession, recentSessions, error ->
+    ) { results: Array<Any?> ->
+        val linesResult = results[0] as Result<List<Line>>
+        val favoritesResult = results[1] as Result<List<FavoriteStation>>
+        val routesResult = results[2] as Result<List<FavoriteRoute>>
+        val activeSession = results[3] as? RideSession
+        @Suppress("UNCHECKED_CAST")
+        val recentSessions = results[4] as List<RideSession>
+        val error = results[5] as? String
 
         // 에러 메시지가 있으면 에러 상태 반환
         if (error != null) {

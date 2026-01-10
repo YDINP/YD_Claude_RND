@@ -90,8 +90,8 @@ class LocationPollingWorker @AssistedInject constructor(
             when (trainLocationResult) {
                 is com.ydinp.subwaymate.domain.common.Result.Success -> {
                     val trainLocation = trainLocationResult.data
-                    Log.d(TAG, "Train location: ${trainLocation.currentStationName}, " +
-                            "next: ${trainLocation.nextStationName}")
+                    Log.d(TAG, "Train location: ${trainLocation.currentStationId}, " +
+                            "next: ${trainLocation.nextStationId}")
 
                     // 4. 도착 알림 조건 체크 (간단한 역 기반 체크)
                     val shouldAlert = checkArrivalAlertCondition(

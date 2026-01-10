@@ -1,11 +1,15 @@
 package com.ydinp.subwaymate.di
 
 import com.ydinp.subwaymate.data.repository.FavoriteRepositoryImpl
+import com.ydinp.subwaymate.data.repository.RideSessionRepositoryImpl
 import com.ydinp.subwaymate.data.repository.StationRepositoryImpl
 import com.ydinp.subwaymate.data.repository.TrainLocationRepositoryImpl
+import com.ydinp.subwaymate.data.repository.TrainRepositoryImpl
 import com.ydinp.subwaymate.domain.repository.FavoriteRepository
+import com.ydinp.subwaymate.domain.repository.RideSessionRepository
 import com.ydinp.subwaymate.domain.repository.StationRepository
 import com.ydinp.subwaymate.domain.repository.TrainLocationRepository
+import com.ydinp.subwaymate.domain.repository.TrainRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -101,4 +105,28 @@ abstract class RepositoryModule {
     abstract fun bindFavoriteRepository(
         impl: FavoriteRepositoryImpl
     ): FavoriteRepository
+
+    /**
+     * RideSessionRepository 바인딩
+     *
+     * @param impl RideSessionRepositoryImpl 구현체
+     * @return RideSessionRepository 인터페이스
+     */
+    @Binds
+    @Singleton
+    abstract fun bindRideSessionRepository(
+        impl: RideSessionRepositoryImpl
+    ): RideSessionRepository
+
+    /**
+     * TrainRepository 바인딩
+     *
+     * @param impl TrainRepositoryImpl 구현체
+     * @return TrainRepository 인터페이스
+     */
+    @Binds
+    @Singleton
+    abstract fun bindTrainRepository(
+        impl: TrainRepositoryImpl
+    ): TrainRepository
 }

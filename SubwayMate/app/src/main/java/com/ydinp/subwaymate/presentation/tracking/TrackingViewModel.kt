@@ -71,11 +71,15 @@ class TrackingViewModel @Inject constructor(
     private var trainTrackingJob: Job? = null
     private var approachingTrainsJob: Job? = null
 
+    // 세션 StateFlow (캐싱)
+    private val _currentSession = MutableStateFlow<RideSession?>(null)
+
     // 세션 Flow
     private val sessionFlow = startTrackingUseCase.getActiveSession()
 
     // 열차 위치 Flow
     private val trainLocationFlow = sessionFlow.flatMapLatest { session ->
+        _currentSession.value = session  // 세션 캐싱
         if (session?.trackedTrainNo != null) {
             getTrainLocationUseCase.trackTrain(session.trackedTrainNo, TRAIN_UPDATE_INTERVAL_MS)
         } else {
@@ -93,7 +97,15 @@ class TrackingViewModel @Inject constructor(
         _routeStations,
         _currentStationIndex,
         _errorMessage
-    ) { session, trainLocation, approachingTrains, routeStations, currentIndex, error ->
+    ) { results: Array<Any?> ->
+        val session = results[0] as? RideSession
+        val trainLocation = results[1] as? TrainLocation
+        @Suppress("UNCHECKED_CAST")
+        val approachingTrains = results[2] as List<TrainLocation>
+        @Suppress("UNCHECKED_CAST")
+        val routeStations = results[3] as List<Station>
+        val currentIndex = results[4] as Int
+        val error = results[5] as? String
 
         // 에러 처리
         if (error != null) {
@@ -236,7 +248,7 @@ class TrackingViewModel @Inject constructor(
      * 접근 중인 열차 목록 업데이트
      */
     private suspend fun updateApproachingTrains() {
-        val session = sessionFlow.replayCache.firstOrNull() ?: return
+        val session = _currentSession.value ?: return
 
         if (session.status == RideStatus.BOARDING) {
             val trains = getTrainLocationUseCase.getApproachingTrains(
@@ -306,7 +318,7 @@ class TrackingViewModel @Inject constructor(
      */
     private suspend fun updateSessionFromTrainLocation(trainLocation: TrainLocation) {
         val sessionId = _sessionId.value ?: return
-        val session = sessionFlow.replayCache.firstOrNull() ?: return
+        val session = _currentSession.value ?: return
 
         // 남은 역 수 계산
         val remainingResult = getTrainLocationUseCase.calculateRemainingStations(
@@ -344,7 +356,7 @@ class TrackingViewModel @Inject constructor(
      * 알림 확인 및 발송
      */
     private suspend fun checkAndSendAlert(remainingStations: Int) {
-        val session = sessionFlow.replayCache.firstOrNull() ?: return
+        val session = _currentSession.value ?: return
 
         if (session.shouldSendAlert() && !session.alertSent) {
             val alertSetting = session.alertSetting
@@ -436,7 +448,7 @@ class TrackingViewModel @Inject constructor(
      */
     private fun handleRefresh() {
         viewModelScope.launch {
-            val session = sessionFlow.replayCache.firstOrNull() ?: return@launch
+            val session = _currentSession.value ?: return@launch
 
             // 열차 데이터 새로고침
             getTrainLocationUseCase.refreshTrainData(session.line.id)
@@ -489,7 +501,7 @@ class TrackingViewModel @Inject constructor(
      */
     private fun handleAddRouteToFavorites() {
         viewModelScope.launch {
-            val session = sessionFlow.replayCache.firstOrNull() ?: return@launch
+            val session = _currentSession.value ?: return@launch
 
             manageFavoritesUseCase.addFavoriteRoute(
                 departureStationId = session.departureStation.id,

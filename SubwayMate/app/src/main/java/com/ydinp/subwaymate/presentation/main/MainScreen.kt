@@ -150,8 +150,8 @@ fun MainScreen(
                     // 즐겨찾기 경로로 추적 시작
                     val route = effect.route
                     onNavigateToTracking(
-                        route.departureStationId,
-                        route.arrivalStationId,
+                        route.departureStation.id,
+                        route.arrivalStation.id,
                         route.lineId,
                         route.direction.code
                     )

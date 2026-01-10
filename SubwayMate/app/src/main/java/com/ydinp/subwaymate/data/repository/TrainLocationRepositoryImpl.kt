@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
+import com.ydinp.subwaymate.di.IoDispatcher
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,7 +29,7 @@ import javax.inject.Singleton
 @Singleton
 class TrainLocationRepositoryImpl @Inject constructor(
     private val seoulOpenApi: SeoulOpenApi,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : TrainLocationRepository {
 
     // API 키 (BuildConfig에서 가져오거나 환경변수로 관리)
