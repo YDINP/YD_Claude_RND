@@ -1,0 +1,27 @@
+{
+  "name": "arcane-collectors",
+  "version": "1.0.0",
+  "description": "Subculture-style idle collection RPG web game",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "game",
+    "phaser",
+    "gacha",
+    "idle",
+    "rpg"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "pexels": "^1.4.0",
+    "phaser": "^3.80.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
