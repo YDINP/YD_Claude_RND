@@ -1,0 +1,330 @@
+{
+  "name": "Character to Spine Atlas Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-character",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "HTTP Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// 캐릭터 프롬프트 로드 및 처리\nconst characterName = $input.first().json.body.character_name;\nconst expressions = $input.first().json.body.expressions || ['idle'];\n\n// character_prompts.json에서 데이터 로드\nconst prompts = require('./character_prompts.json');\nconst common = prompts.common;\nconst char = prompts.characters[characterName];\nconst exprPrompts = prompts.expressions;\n\nif (!char) {\n  throw new Error(`Character not found: ${characterName}`);\n}\n\n// 각 표정별로 작업 생성\nconst tasks = expressions.map(expr => ({\n  character_name: characterName,\n  character_name_kr: char.name_kr,\n  expression: expr,\n  rarity: char.rarity,\n  positive_prompt: `${common.positive_base}, ${char.positive}, ${exprPrompts[expr] || ''}`,\n  negative_prompt: `${common.negative_base}, ${char.negative || ''}`,\n  output_filename: `${characterName}_${expr}`\n}));\n\nreturn tasks;"
+      },
+      "id": "parse-character",
+      "name": "Parse Character Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-batch",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.COMFYUI_HOST || 'http://localhost:8188'}}/prompt",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": {\n    \"3\": {\n      \"inputs\": {\n        \"seed\": {{ Math.floor(Math.random() * 999999999) }},\n        \"steps\": 30,\n        \"cfg\": 7,\n        \"sampler_name\": \"dpmpp_2m\",\n        \"scheduler\": \"karras\",\n        \"denoise\": 1,\n        \"model\": [\"4\", 0],\n        \"positive\": [\"6\", 0],\n        \"negative\": [\"7\", 0],\n        \"latent_image\": [\"5\", 0]\n      },\n      \"class_type\": \"KSampler\"\n    },\n    \"4\": {\n      \"inputs\": {\n        \"ckpt_name\": \"ponyDiffusionV6XL.safetensors\"\n      },\n      \"class_type\": \"CheckpointLoaderSimple\"\n    },\n    \"5\": {\n      \"inputs\": {\n        \"width\": 1024,\n        \"height\": 1024,\n        \"batch_size\": 1\n      },\n      \"class_type\": \"EmptyLatentImage\"\n    },\n    \"6\": {\n      \"inputs\": {\n        \"text\": \"{{ $json.positive_prompt }}\",\n        \"clip\": [\"4\", 1]\n      },\n      \"class_type\": \"CLIPTextEncode\"\n    },\n    \"7\": {\n      \"inputs\": {\n        \"text\": \"{{ $json.negative_prompt }}\",\n        \"clip\": [\"4\", 1]\n      },\n      \"class_type\": \"CLIPTextEncode\"\n    },\n    \"8\": {\n      \"inputs\": {\n        \"samples\": [\"3\", 0],\n        \"vae\": [\"4\", 2]\n      },\n      \"class_type\": \"VAEDecode\"\n    },\n    \"9\": {\n      \"inputs\": {\n        \"filename_prefix\": \"{{ $json.output_filename }}\",\n        \"images\": [\"8\", 0]\n      },\n      \"class_type\": \"SaveImage\"\n    }\n  },\n  \"client_id\": \"n8n-pipeline\"\n}",
+        "options": {}
+      },
+      "id": "comfyui-generate",
+      "name": "Generate Image (ComfyUI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "amount": 45,
+        "unit": "seconds"
+      },
+      "id": "wait-generation",
+      "name": "Wait for Generation",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.COMFYUI_HOST || 'http://localhost:8188'}}/view",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filename",
+              "value": "={{ $('Split In Batches').item.json.output_filename }}_00001_.png"
+            },
+            {
+              "name": "type",
+              "value": "output"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-image",
+      "name": "Download Generated Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "toFile",
+        "fileName": "={{ $('Split In Batches').item.json.output_filename }}.png",
+        "options": {}
+      },
+      "id": "save-file",
+      "name": "Save Image File",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.COMFYUI_HOST || 'http://localhost:8188'}}/prompt",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": {\n    \"1\": {\n      \"inputs\": {\n        \"image\": \"{{ $('Split In Batches').item.json.output_filename }}_00001_.png\"\n      },\n      \"class_type\": \"LoadImage\"\n    },\n    \"2\": {\n      \"inputs\": {\n        \"model_name\": \"groundingdino_swint_ogc.pth\"\n      },\n      \"class_type\": \"GroundingDinoModelLoader (segment anything)\"\n    },\n    \"3\": {\n      \"inputs\": {\n        \"model_name\": \"sam_vit_h_4b8939.pth\"\n      },\n      \"class_type\": \"SAMModelLoader (segment anything)\"\n    },\n    \"4\": {\n      \"inputs\": {\n        \"prompt\": \"head, body, left arm, right arm, left leg, right leg, hair, weapon, effect\",\n        \"threshold\": 0.3,\n        \"sam_model\": [\"3\", 0],\n        \"grounding_dino_model\": [\"2\", 0],\n        \"image\": [\"1\", 0]\n      },\n      \"class_type\": \"GroundingDinoSAMSegment (segment anything)\"\n    },\n    \"5\": {\n      \"inputs\": {\n        \"filename_prefix\": \"{{ $('Split In Batches').item.json.output_filename }}_parts\",\n        \"images\": [\"4\", 0]\n      },\n      \"class_type\": \"SaveImage\"\n    }\n  },\n  \"client_id\": \"n8n-pipeline\"\n}",
+        "options": {}
+      },
+      "id": "segment-parts",
+      "name": "Segment Parts (SAM)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "wait-segment",
+      "name": "Wait for Segmentation",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Split In Batches').context.noItemsLeft }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-done",
+      "name": "All Items Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "command": "=python \"{{ $env.PIPELINE_DIR || 'D:/park/YD_Claude_RND/tools/spine_atlas_pipeline' }}/atlas_packer.py\" --input \"{{ $env.OUTPUT_DIR || 'D:/AI/ComfyUI/output' }}/{{ $input.first().json.body.character_name }}_parts/\" --output \"{{ $env.ATLAS_DIR || 'D:/AI/SpineAtlas' }}/{{ $input.first().json.body.character_name }}.atlas\" --format spine"
+      },
+      "id": "pack-atlas",
+      "name": "Pack Atlas",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2250, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"character\": \"{{ $input.first().json.body.character_name }}\",\n  \"expressions_generated\": {{ JSON.stringify($input.first().json.body.expressions || ['idle']) }},\n  \"atlas_url\": \"/atlas/{{ $input.first().json.body.character_name }}.atlas\",\n  \"png_url\": \"/atlas/{{ $input.first().json.body.character_name }}.png\",\n  \"message\": \"캐릭터 이미지 생성 및 Atlas 패킹 완료\"\n}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Return Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2450, 200]
+    },
+    {
+      "parameters": {},
+      "id": "loop-back",
+      "name": "Loop Back",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2050, 450]
+    }
+  ],
+  "connections": {
+    "HTTP Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Character Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Character Data": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Generate Image (ComfyUI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image (ComfyUI)": {
+      "main": [
+        [
+          {
+            "node": "Wait for Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Generation": {
+      "main": [
+        [
+          {
+            "node": "Download Generated Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Generated Image": {
+      "main": [
+        [
+          {
+            "node": "Save Image File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Image File": {
+      "main": [
+        [
+          {
+            "node": "Segment Parts (SAM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Segment Parts (SAM)": {
+      "main": [
+        [
+          {
+            "node": "Wait for Segmentation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Segmentation": {
+      "main": [
+        [
+          {
+            "node": "Check Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All Items Done?": {
+      "main": [
+        [
+          {
+            "node": "Pack Atlas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pack Atlas": {
+      "main": [
+        [
+          {
+            "node": "Return Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Back": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-31T00:00:00.000Z",
+  "versionId": "1"
+}
