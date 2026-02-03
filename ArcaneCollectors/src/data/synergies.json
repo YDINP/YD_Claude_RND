@@ -1,0 +1,112 @@
+{
+  "cultSynergies": {
+    "2": { "ATK": 0.10 },
+    "3": { "ATK": 0.15, "DEF": 0.10 },
+    "4": { "ATK": 0.20, "DEF": 0.15, "SPD": 0.10, "HP": 0.10 }
+  },
+  "personalitySynergies": [
+    {
+      "id": "warriors_fury",
+      "name": "전사의 분노",
+      "required": ["Brave", "Wild"],
+      "effect": { "ATK": 0.20, "DEF": -0.10 }
+    },
+    {
+      "id": "cold_calculation",
+      "name": "냉철한 계산",
+      "required": ["Cunning", "Calm"],
+      "effect": { "CRIT": 0.15, "COOLDOWN": -1 }
+    },
+    {
+      "id": "mystic_blessing",
+      "name": "신비의 가호",
+      "required": ["Mystic"],
+      "minCount": 1,
+      "effect": { "SPECIAL_PROC": 0.10 }
+    },
+    {
+      "id": "balance_of_power",
+      "name": "균형의 힘",
+      "required": ["Brave", "Cunning", "Calm", "Wild"],
+      "allDifferent": true,
+      "effect": { "ALL_STATS": 0.10 }
+    },
+    {
+      "id": "fierce_assault",
+      "name": "맹렬한 공세",
+      "required": ["Brave", "Brave"],
+      "minCount": 2,
+      "effect": { "ATK": 0.15, "CRIT_DMG": 0.10 }
+    },
+    {
+      "id": "shadow_tactics",
+      "name": "그림자 전술",
+      "required": ["Cunning", "Cunning"],
+      "minCount": 2,
+      "effect": { "CRIT": 0.20, "EVASION": 0.10 }
+    }
+  ],
+  "specialSynergies": [
+    {
+      "id": "nordic_twilight",
+      "name": "북유럽의 황혼",
+      "characters": ["odin", "thor", "loki"],
+      "effect": { "ATK": 0.25, "DEF": 0.25 }
+    },
+    {
+      "id": "japanese_treasures",
+      "name": "일본 삼종신기",
+      "characters": ["amaterasu", "susanoo", "tsukuyomi"],
+      "effect": { "SKILL_DMG": 0.30 }
+    },
+    {
+      "id": "olympus_three",
+      "name": "올림푸스 삼신",
+      "characters": ["zeus", "poseidon", "hades"],
+      "effect": { "ALL_STATS": 0.20 }
+    },
+    {
+      "id": "valkyrie_sisters",
+      "name": "발키리 자매단",
+      "characterPattern": "valkyrie",
+      "minCount": 3,
+      "effect": { "REVIVE_CHANCE": 0.30 }
+    },
+    {
+      "id": "youkai_war",
+      "name": "요괴 대전",
+      "characters": ["tengu", "oni", "kappa"],
+      "effect": { "DEBUFF": 0.25 }
+    },
+    {
+      "id": "nordic_brothers",
+      "name": "북유럽 사형제",
+      "characters": ["odin", "thor", "loki", "freya"],
+      "effect": { "ALL_STATS": 0.30, "ULTIMATE_CHARGE": 0.20 }
+    },
+    {
+      "id": "sun_and_moon",
+      "name": "일출과 일몰",
+      "characters": ["amaterasu", "tsukuyomi"],
+      "effect": { "LIGHT_IMMUNITY": true, "DARK_IMMUNITY": true }
+    },
+    {
+      "id": "war_goddesses",
+      "name": "전쟁의 여신들",
+      "characters": ["freya", "athena"],
+      "effect": { "FEMALE_ATK": 0.15 }
+    },
+    {
+      "id": "thunder_alliance",
+      "name": "뇌신 동맹",
+      "characters": ["thor", "zeus"],
+      "effect": { "LIGHTNING_DMG": 0.25 }
+    },
+    {
+      "id": "underworld_rulers",
+      "name": "저승의 지배자",
+      "characters": ["hades", "izanami"],
+      "effect": { "INSTANT_KILL_CHANCE": 0.05 }
+    }
+  ]
+}
