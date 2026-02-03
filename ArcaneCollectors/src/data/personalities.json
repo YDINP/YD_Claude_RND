@@ -1,0 +1,118 @@
+{
+  "personalities": [
+    {
+      "id": "brave",
+      "name": "용감",
+      "nameEn": "Brave",
+      "description": "정면 돌파를 선호하는 전사의 기질",
+      "color": "#E74C3C",
+      "icon": "sword",
+      "strongAgainst": "cunning",
+      "weakAgainst": "calm",
+      "combatBonus": {
+        "strongMultiplier": 1.2,
+        "weakMultiplier": 0.8
+      }
+    },
+    {
+      "id": "cunning",
+      "name": "교활",
+      "nameEn": "Cunning",
+      "description": "전략적 사고와 기습을 즐기는 암살자의 기질",
+      "color": "#9B59B6",
+      "icon": "dagger",
+      "strongAgainst": "calm",
+      "weakAgainst": "wild",
+      "combatBonus": {
+        "strongMultiplier": 1.2,
+        "weakMultiplier": 0.8
+      }
+    },
+    {
+      "id": "calm",
+      "name": "냉정",
+      "nameEn": "Calm",
+      "description": "분석적이고 방어적인 수호자의 기질",
+      "color": "#3498DB",
+      "icon": "shield",
+      "strongAgainst": "wild",
+      "weakAgainst": "brave",
+      "combatBonus": {
+        "strongMultiplier": 1.2,
+        "weakMultiplier": 0.8
+      }
+    },
+    {
+      "id": "wild",
+      "name": "야성",
+      "nameEn": "Wild",
+      "description": "본능에 따르는 야수의 기질",
+      "color": "#27AE60",
+      "icon": "claw",
+      "strongAgainst": "brave",
+      "weakAgainst": "cunning",
+      "combatBonus": {
+        "strongMultiplier": 1.2,
+        "weakMultiplier": 0.8
+      }
+    },
+    {
+      "id": "mystic",
+      "name": "신비",
+      "nameEn": "Mystic",
+      "description": "초월적 힘을 다루는 현자의 기질",
+      "color": "#F39C12",
+      "icon": "star",
+      "strongAgainst": null,
+      "weakAgainst": null,
+      "combatBonus": {
+        "universalMultiplier": 1.1,
+        "description": "모든 성격에 +10% 데미지"
+      }
+    }
+  ],
+  "damageMultipliers": {
+    "strong": 1.2,
+    "weak": 0.8,
+    "neutral": 1.0,
+    "mysticBonus": 1.1
+  },
+  "cultPersonalityBonus": {
+    "valhalla": {
+      "personalities": ["brave", "wild"],
+      "bonus": {
+        "atk": 0.15,
+        "description": "ATK +15%"
+      }
+    },
+    "takamagahara": {
+      "personalities": ["cunning", "mystic"],
+      "bonus": {
+        "crit_rate": 0.10,
+        "description": "CRIT +10%"
+      }
+    },
+    "olympus": {
+      "personalities": ["brave", "mystic"],
+      "bonus": {
+        "skill_dmg": 0.15,
+        "description": "SKILL_DMG +15%"
+      }
+    },
+    "asgard": {
+      "personalities": ["calm", "wild"],
+      "bonus": {
+        "hp": 0.15,
+        "def": 0.15,
+        "description": "HP_DEF +15%"
+      }
+    },
+    "yomi": {
+      "personalities": ["cunning", "calm"],
+      "bonus": {
+        "debuff_effect": 0.20,
+        "description": "DEBUFF +20%"
+      }
+    }
+  }
+}
