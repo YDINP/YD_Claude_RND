@@ -1,0 +1,76 @@
+{
+  "personalities": [
+    {
+      "id": "Brave",
+      "name": "용감",
+      "description": "정면 돌파, 높은 공격력",
+      "color": "#E74C3C",
+      "strongAgainst": "Cunning",
+      "weakAgainst": "Calm",
+      "bonusMultiplier": 1.2,
+      "penaltyMultiplier": 0.8
+    },
+    {
+      "id": "Cunning",
+      "name": "교활",
+      "description": "전략적, 크리티컬 특화",
+      "color": "#9B59B6",
+      "strongAgainst": "Calm",
+      "weakAgainst": "Wild",
+      "bonusMultiplier": 1.2,
+      "penaltyMultiplier": 0.8
+    },
+    {
+      "id": "Calm",
+      "name": "냉정",
+      "description": "분석적, 방어/회복 특화",
+      "color": "#3498DB",
+      "strongAgainst": "Wild",
+      "weakAgainst": "Brave",
+      "bonusMultiplier": 1.2,
+      "penaltyMultiplier": 0.8
+    },
+    {
+      "id": "Wild",
+      "name": "야성",
+      "description": "본능적, 속도/연속 공격",
+      "color": "#27AE60",
+      "strongAgainst": "Brave",
+      "weakAgainst": "Cunning",
+      "bonusMultiplier": 1.2,
+      "penaltyMultiplier": 0.8
+    },
+    {
+      "id": "Mystic",
+      "name": "신비",
+      "description": "초월적, 특수 효과 특화",
+      "color": "#F39C12",
+      "strongAgainst": null,
+      "weakAgainst": null,
+      "bonusMultiplier": 1.1,
+      "penaltyMultiplier": 1.0
+    }
+  ],
+  "cultPersonalityBonus": {
+    "valhalla": {
+      "optimalPersonalities": ["Brave", "Wild"],
+      "bonus": { "stat": "ATK", "value": 0.15 }
+    },
+    "takamagahara": {
+      "optimalPersonalities": ["Cunning", "Mystic"],
+      "bonus": { "stat": "CRIT", "value": 0.10 }
+    },
+    "olympus": {
+      "optimalPersonalities": ["Brave", "Mystic"],
+      "bonus": { "stat": "SKILL_DMG", "value": 0.15 }
+    },
+    "asgard": {
+      "optimalPersonalities": ["Calm", "Wild"],
+      "bonus": { "stat": "HP_DEF", "value": 0.15 }
+    },
+    "yomi": {
+      "optimalPersonalities": ["Cunning", "Calm"],
+      "bonus": { "stat": "DEBUFF", "value": 0.20 }
+    }
+  }
+}

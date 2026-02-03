@@ -1,0 +1,1154 @@
+{
+  "characters": [
+    {
+      "id": "hero_001",
+      "name": "아르카나",
+      "nameEn": "Arcana",
+      "rarity": 5,
+      "cult": "olympus",
+      "class": "mage",
+      "description": "고대 마법을 다루는 신비로운 마녀",
+      "personality": "mystic",
+      "quote": "으헤헤~ 이 마법으로 뭘 태워볼까?",
+      "stats": {
+        "hp": 1000,
+        "atk": 180,
+        "def": 70,
+        "spd": 110
+      },
+      "growthStats": {
+        "hp": 100,
+        "atk": 18,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "파이어 스파크",
+          "description": "작은 불꽃을 날려요!",
+          "multiplier": 1,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "메테오 스톰",
+          "description": "하늘에서 불덩이들이 우당탕탕!",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "플레임 버스트",
+          "description": "폭발! 터져라!",
+          "multiplier": 3.5,
+          "gaugeCost": 150,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FF6B6B",
+        "hairStyle": "트윈테일, 끝이 불꽃처럼 뻗친 스타일",
+        "eyeColor": "#FFD93D",
+        "eyeStyle": "호기심 가득한 반짝이는 큰 눈",
+        "primaryColor": "#FF4500",
+        "secondaryColor": "#FFD700",
+        "accentColor": "#FF1744",
+        "outfit": "마녀 로브, 불꽃 문양이 새겨진 숏케이프",
+        "accessories": [
+          "마법봉 지팡이",
+          "화염 문양 초커",
+          "달 모양 귀걸이"
+        ],
+        "signaturePose": "한 손으로 작은 불꽃을 만들며 장난스럽게 웃는 포즈",
+        "chibiFeatures": "통통한 볼, 과장된 표정, 불꽃이 튀는 마법 이펙트",
+        "height": "152cm",
+        "age": "외형 16세 (실제 ???세)"
+      },
+      "voiceLines": {
+        "greeting": "안녕! 오늘은 어떤 마법을 써볼까~?",
+        "battleStart": "으헤헤, 태워버릴 거야!",
+        "victory": "역시 나야 나! 짱이지?",
+        "defeat": "으앙... 다음엔 꼭 이길 거야!",
+        "levelUp": "와! 더 강해졌어! 이제 더 큰 불도 만들 수 있다구!",
+        "summon": "부르셨어요? 이제부터 내가 주인님의 든든한 마법사예요!",
+        "idle1": "심심해... 뭐 좀 태워도 돼?",
+        "idle2": "마법 실험하고 싶은데... 안 돼? 에이~"
+      }
+    },
+    {
+      "id": "hero_002",
+      "name": "레온하르트",
+      "nameEn": "Leonhardt",
+      "rarity": 5,
+      "cult": "takamagahara",
+      "class": "warrior",
+      "description": "성기사단의 기사단장",
+      "personality": "brave",
+      "quote": "정의는 이긴다... 라고 말하긴 좀 쪽팔리지만!",
+      "stats": {
+        "hp": 1300,
+        "atk": 160,
+        "def": 100,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 130,
+        "atk": 16,
+        "def": 10,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "빛의 일격",
+          "description": "성스러운 검으로 베어냅니다",
+          "multiplier": 1.1,
+          "gaugeGain": 28
+        },
+        {
+          "id": "skill1",
+          "name": "홀리 크로스",
+          "description": "십자가 모양으로 베기!",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "디바인 프로텍션",
+          "description": "아군을 지키는 빛의 방벽",
+          "multiplier": 0,
+          "gaugeCost": 120,
+          "target": "all_allies",
+          "buff": {
+            "def": 0.4,
+            "duration": 3
+          }
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FFE066",
+        "hairStyle": "단정한 쇼트컷, 한쪽에 빛나는 하이라이트",
+        "eyeColor": "#87CEEB",
+        "eyeStyle": "진지하지만 따뜻한 눈빛, 반짝이는 눈동자",
+        "primaryColor": "#FFD700",
+        "secondaryColor": "#FFFFFF",
+        "accentColor": "#FFC107",
+        "outfit": "화이트&골드 갑옷, 케이프에 십자가 문양",
+        "accessories": [
+          "왕관형 헤어밴드",
+          "성스러운 펜던트",
+          "금색 건틀릿"
+        ],
+        "signaturePose": "검을 어깨에 메고 한 손으로 엄지척하는 포즈",
+        "chibiFeatures": "빛나는 눈, 반짝이는 갑옷 이펙트, 정의감 넘치는 표정",
+        "height": "182cm",
+        "age": "25세"
+      },
+      "voiceLines": {
+        "greeting": "오늘도 정의를 위해! ...응? 너무 진지해?",
+        "battleStart": "자, 각오는 됐겠지?",
+        "victory": "이게 기사의 힘이다! ...멋있었나?",
+        "defeat": "크윽... 아직 멀었구나...",
+        "levelUp": "더 강해졌다! 이제 더 많은 사람을 지킬 수 있어!",
+        "summon": "성기사 레온하르트, 여기 있소이다! ...말투가 이상해?",
+        "idle1": "검 닦는 중... 빛나는 게 멋있잖아?",
+        "idle2": "정의... 정의... 어, 그게 뭐였더라? 농담이야!"
+      }
+    },
+    {
+      "id": "hero_003",
+      "name": "셀레네",
+      "nameEn": "Selene",
+      "rarity": 5,
+      "cult": "yomi",
+      "class": "archer",
+      "description": "그림자 속에서 활동하는 암살자",
+      "personality": "cunning",
+      "quote": "그림자에 숨었다가... 어이쿠!",
+      "stats": {
+        "hp": 950,
+        "atk": 190,
+        "def": 65,
+        "spd": 125
+      },
+      "growthStats": {
+        "hp": 95,
+        "atk": 19,
+        "def": 6,
+        "spd": 3
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "암흑 화살",
+          "description": "쉿! 조용히!",
+          "multiplier": 1.05,
+          "gaugeGain": 27
+        },
+        {
+          "id": "skill1",
+          "name": "쀼도우 스트라이크",
+          "description": "그림자에서 튀어나와 빵!",
+          "multiplier": 3.2,
+          "gaugeCost": 100,
+          "target": "single",
+          "ignoreDefense": 0.3
+        },
+        {
+          "id": "skill2",
+          "name": "다크 미스트",
+          "description": "적을 어둠 속에 가둬요",
+          "multiplier": 1.8,
+          "gaugeCost": 110,
+          "target": "all",
+          "debuff": {
+            "accuracy": -0.4,
+            "duration": 3
+          }
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#4B0082",
+        "hairStyle": "긴 생머리, 비대칭으로 한쪽 눈을 살짝 가림",
+        "eyeColor": "#9370DB",
+        "eyeStyle": "쿨한 눈매, 은은하게 빛나는 보랏빛 눈동자",
+        "primaryColor": "#2E0854",
+        "secondaryColor": "#8B00FF",
+        "accentColor": "#DA70D6",
+        "outfit": "다크퍼플 암살자 복장, 그림자 같은 망토",
+        "accessories": [
+          "달 문양 헤어핀",
+          "그림자 장갑",
+          "은색 초커"
+        ],
+        "signaturePose": "그림자에서 튀어나오는 듯한 동작, 손가락으로 입술을 가리며 쉿",
+        "chibiFeatures": "장난스러운 미소, 그림자 이펙트, 귀여운 츤데레 표정",
+        "height": "165cm",
+        "age": "???세"
+      },
+      "voiceLines": {
+        "greeting": "어? 날 찾았어? 솜씨가 좋네~",
+        "battleStart": "자, 숨바꼭질 시작이야!",
+        "victory": "쉿- 소리 지르지 마! ...근데 이겼다!",
+        "defeat": "으윽... 속았어... 내가 속다니...",
+        "levelUp": "더 빨라졌어! 이제 진짜 안 보일걸?",
+        "summon": "셀레네 참상! ...참전이었나? 에이, 됐어!",
+        "idle1": "여기 있을게, 안 보이니? 후후~",
+        "idle2": "어둠이 나를 부른다... 는 농담이고 배고파!"
+      }
+    },
+    {
+      "id": "hero_004",
+      "name": "로제",
+      "nameEn": "Rose",
+      "rarity": 4,
+      "cult": "asgard",
+      "class": "healer",
+      "description": "온화한 성격의 신관",
+      "personality": "calm",
+      "quote": "아프지 마세요! 제가 있잖아요!",
+      "stats": {
+        "hp": 1100,
+        "atk": 95,
+        "def": 85,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 110,
+        "atk": 9,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "물의 속삭임",
+          "description": "부드러운 물줄기로 공격",
+          "multiplier": 0.85,
+          "gaugeGain": 22
+        },
+        {
+          "id": "skill1",
+          "name": "힐링 웨이브",
+          "description": "물의 파동으로 아군을 치유!",
+          "multiplier": 1.6,
+          "gaugeCost": 100,
+          "isHeal": true,
+          "target": "all_allies"
+        },
+        {
+          "id": "skill2",
+          "name": "블레싱 오브 워터",
+          "description": "물의 축복으로 재생력 부여",
+          "multiplier": 0,
+          "gaugeCost": 120,
+          "target": "all_allies",
+          "buff": {
+            "regen": 0.15,
+            "duration": 3
+          }
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#E6B8AF",
+        "hairStyle": "부드러운 웨이브, 하프업으로 묶음",
+        "eyeColor": "#6FA8DC",
+        "eyeStyle": "따뜻하고 상냥한 눈빛, 크고 맑은 눈",
+        "primaryColor": "#4FC3F7",
+        "secondaryColor": "#B2EBF2",
+        "accentColor": "#80DEEA",
+        "outfit": "화이트&블루 신관복, 물방울 문양 리본",
+        "accessories": [
+          "물결무늬 헤어핀",
+          "십자가 목걸이",
+          "하얀 장갑"
+        ],
+        "signaturePose": "두 손을 모아 치유의 물결을 만드는 포즈, 미소",
+        "chibiFeatures": "포근한 미소, 물방울 이펙트, 어리버리한 표정",
+        "height": "158cm",
+        "age": "19세"
+      },
+      "voiceLines": {
+        "greeting": "좋은 아침이에요! 오늘도 힘내요!",
+        "battleStart": "다치면 제가 고쳐줄게요!",
+        "victory": "다행이에요! 아무도 다치지 않았네요!",
+        "defeat": "미안해요... 제가 더 잘했어야 하는데...",
+        "levelUp": "앗! 더 많이 치유할 수 있게 됐어요!",
+        "summon": "불러주셨나요? 제가 열심히 도와드릴게요!",
+        "idle1": "물이 반짝반짝... 예쁘죠?",
+        "idle2": "어? 여기 꽃이... 아, 제가 심은 거였네요!"
+      }
+    },
+    {
+      "id": "hero_005",
+      "name": "카이",
+      "nameEn": "Kai",
+      "rarity": 4,
+      "cult": "valhalla",
+      "class": "warrior",
+      "description": "자유로운 영혼의 검객",
+      "personality": "wild",
+      "quote": "바람처럼 살거야! ...돈은 좀 벌면서!",
+      "stats": {
+        "hp": 1050,
+        "atk": 145,
+        "def": 75,
+        "spd": 115
+      },
+      "growthStats": {
+        "hp": 105,
+        "atk": 14,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "질풍 베기",
+          "description": "바람처럼 빠르게!",
+          "multiplier": 0.95,
+          "gaugeGain": 24
+        },
+        {
+          "id": "skill1",
+          "name": "윈드 슬래시",
+          "description": "바람의 칼날로 베어버려!",
+          "multiplier": 2.6,
+          "gaugeCost": 100,
+          "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "에어리얼 댄스",
+          "description": "공중에서 춤추듯 연속 공격!",
+          "multiplier": 1.8,
+          "gaugeCost": 110,
+          "target": "random",
+          "hits": 5
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#76FF7A",
+        "hairStyle": "헝클어진 중단발, 바람에 날리는 스타일",
+        "eyeColor": "#90EE90",
+        "eyeStyle": "자유로운 눈빛, 반짝이는 밝은 눈",
+        "primaryColor": "#00E676",
+        "secondaryColor": "#B2FF59",
+        "accentColor": "#69F0AE",
+        "outfit": "그린 경량 검객복, 바람 문양 스카프",
+        "accessories": [
+          "잎사귀 모양 귀걸이",
+          "가죽 팔찌",
+          "바람개비 장식"
+        ],
+        "signaturePose": "검을 어깨에 기대고 한 손으로 브이 하는 포즈",
+        "chibiFeatures": "장난스러운 미소, 바람 이펙트, 자유분방한 표정",
+        "height": "175cm",
+        "age": "23세"
+      },
+      "voiceLines": {
+        "greeting": "야호! 오늘은 뭐 재밌는 거 없어?",
+        "battleStart": "자, 바람처럼 날아볼까?",
+        "victory": "쉬웠지롱~ 다음 판 고고!",
+        "defeat": "으악! 바람이 불어주질 않네...",
+        "levelUp": "오호! 더 빨라졌어! 이제 진짜 날아다닐 듯!",
+        "summon": "부르셨소? 검객 카이, 여기 있습니다! ...너무 딱딱해?",
+        "idle1": "바람이 기분 좋게 부네~ 낮잠 잘까?",
+        "idle2": "배고파... 고기 좀 구워먹을래?"
+      }
+    },
+    {
+      "id": "hero_006",
+      "name": "루나",
+      "nameEn": "Luna",
+      "rarity": 4,
+      "cult": "olympus",
+      "class": "archer",
+      "description": "밤의 사냥꾼",
+      "personality": "calm",
+      "quote": "밤하늘의 달처럼... 아름답고 위험하지!",
+      "stats": {
+        "hp": 950,
+        "atk": 148,
+        "def": 72,
+        "spd": 114
+      },
+      "growthStats": {
+        "hp": 95,
+        "atk": 15,
+        "def": 7,
+        "spd": 3
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "문라이트 샷",
+          "description": "달빛처럼 빠르게 화살을 날려요",
+          "multiplier": 0.98,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "플레어 애로우",
+          "description": "불타는 화살로 적을 관통!",
+          "multiplier": 2.7,
+          "gaugeCost": 100,
+          "target": "single",
+          "ignoreDefense": 0.2
+        },
+        {
+          "id": "skill2",
+          "name": "나이트 헌터",
+          "description": "어둠 속에서 연속 사격!",
+          "multiplier": 1.5,
+          "gaugeCost": 110,
+          "target": "random",
+          "hits": 4
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FF4500",
+        "hairStyle": "길게 늘어진 포니테일, 끝부분이 불꽃처럼 퍼짐",
+        "eyeColor": "#FFD700",
+        "eyeStyle": "날카로운 눈매, 금빛으로 빛나는 눈동자",
+        "primaryColor": "#DC143C",
+        "secondaryColor": "#000000",
+        "accentColor": "#FF6347",
+        "outfit": "블랙&레드 사냥복, 불꽃 문양 망토",
+        "accessories": [
+          "달 모양 브로치",
+          "가죽 암가드",
+          "붉은 리본"
+        ],
+        "signaturePose": "활을 겨누며 한쪽 눈을 찡긋하는 포즈",
+        "chibiFeatures": "쿨한 미소, 불꽃 이펙트, 자신감 넘치는 표정",
+        "height": "168cm",
+        "age": "22세"
+      },
+      "voiceLines": {
+        "greeting": "오늘 밤도 사냥감이 많겠네~",
+        "battleStart": "자, 내 화살을 피할 수 있을까?",
+        "victory": "예상대로야! 간단했지?",
+        "defeat": "치... 실수했어... 다음엔 안 당해!",
+        "levelUp": "더 정확해졌어! 이제 백발백중이야!",
+        "summon": "루나, 참전! 이제부터 내 활솜씨를 보여줄게!",
+        "idle1": "달이 뜨면... 난 더 강해져!",
+        "idle2": "지금은 낮이라 좀 졸려... 하품~"
+      }
+    },
+    {
+      "id": "hero_007",
+      "name": "누아르",
+      "nameEn": "Noir",
+      "rarity": 4,
+      "cult": "yomi",
+      "class": "mage",
+      "description": "금지된 마법 사용자",
+      "personality": "mystic",
+      "quote": "으헤헤~ 이 어둠으로 무얼 할까?",
+      "stats": {
+        "hp": 920,
+        "atk": 150,
+        "def": 70,
+        "spd": 108
+      },
+      "growthStats": {
+        "hp": 92,
+        "atk": 15,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "섀도우 볼트",
+          "description": "작은 어둠을 쏴요!",
+          "multiplier": 1,
+          "gaugeGain": 26
+        },
+        {
+          "id": "skill1",
+          "name": "다크니스 블래스트",
+          "description": "금지된 어둠의 마법을 발동!",
+          "multiplier": 2.9,
+          "gaugeCost": 100,
+          "target": "all",
+          "debuff": {
+            "atk": -0.2,
+            "duration": 2
+          }
+        },
+        {
+          "id": "skill2",
+          "name": "포비든 스펠",
+          "description": "최강의 금지 마법... 쓰고 나면 좀 아파!",
+          "multiplier": 3.8,
+          "gaugeCost": 150,
+          "target": "single",
+          "recoil": 0.15
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#1C1C1C",
+        "hairStyle": "짧은 보브컷, 어둠의 오라가 감싸는 스타일",
+        "eyeColor": "#8B00FF",
+        "eyeStyle": "신비로운 눈매, 보라빛으로 반짝이는 눈동자",
+        "primaryColor": "#000000",
+        "secondaryColor": "#8B00FF",
+        "accentColor": "#4B0082",
+        "outfit": "블랙 마법사 로브, 금지된 문자가 새겨진 망토",
+        "accessories": [
+          "마법서를 든 가방",
+          "어둠의 목걸이",
+          "검은 반지"
+        ],
+        "signaturePose": "한 손으로 어둠을 만들며 으스스하게 웃는 포즈",
+        "chibiFeatures": "장난스러운 미소, 어둠 이펙트, 귀여운 사악함",
+        "height": "160cm",
+        "age": "외형 18세 (실제 ???세)"
+      },
+      "voiceLines": {
+        "greeting": "으흐흐~ 어둠이 부르고 있어!",
+        "battleStart": "금지된 마법... 한번 써볼까?",
+        "victory": "역시 어둠의 힘은 최고야!",
+        "defeat": "으악... 너무 써서 기운이...",
+        "levelUp": "오! 더 강력한 금지 마법을 배웠어!",
+        "summon": "부르셨나요? 어둠의 마법사 누아르예요!",
+        "idle1": "심심해... 뭐 좀 저주해도 돼?",
+        "idle2": "금지된 책 읽는 중... 재밌어!"
+      }
+    },
+    {
+      "id": "hero_008",
+      "name": "아리아",
+      "nameEn": "Aria",
+      "rarity": 4,
+      "cult": "takamagahara",
+      "class": "healer",
+      "description": "빛의 축복을 받은 수녀",
+      "personality": "calm",
+      "quote": "주님의 은총이 함께하시길... 어, 너무 진지해?",
+      "stats": {
+        "hp": 1150,
+        "atk": 97,
+        "def": 88,
+        "spd": 103
+      },
+      "growthStats": {
+        "hp": 115,
+        "atk": 10,
+        "def": 9,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "홀리 터치",
+          "description": "빛의 손길로 살짝",
+          "multiplier": 0.88,
+          "gaugeGain": 23
+        },
+        {
+          "id": "skill1",
+          "name": "디바인 힐",
+          "description": "성스러운 빛으로 치유!",
+          "multiplier": 1.8,
+          "gaugeCost": 100,
+          "isHeal": true,
+          "target": "all_allies"
+        },
+        {
+          "id": "skill2",
+          "name": "블레싱 오브 라이트",
+          "description": "빛의 축복으로 모두를 보호",
+          "multiplier": 0,
+          "gaugeCost": 120,
+          "target": "all_allies",
+          "buff": {
+            "def": 0.35,
+            "duration": 3
+          }
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FFE4B5",
+        "hairStyle": "긴 생머리, 흰 리본으로 묶음",
+        "eyeColor": "#FFD700",
+        "eyeStyle": "온화한 눈빛, 크고 빛나는 금빛 눈동자",
+        "primaryColor": "#FFFFFF",
+        "secondaryColor": "#FFD700",
+        "accentColor": "#FFF8DC",
+        "outfit": "화이트 수녀복, 금색 십자가 문양",
+        "accessories": [
+          "빛나는 십자가 목걸이",
+          "하얀 장갑",
+          "천사 날개 헤어핀"
+        ],
+        "signaturePose": "두 손을 모아 기도하는 포즈, 밝은 미소",
+        "chibiFeatures": "천사 같은 미소, 빛 이펙트, 순수한 표정",
+        "height": "162cm",
+        "age": "20세"
+      },
+      "voiceLines": {
+        "greeting": "주님의 은총이... 아니 좋은 아침이에요!",
+        "battleStart": "다들 다치지 마세요!",
+        "victory": "무사히 끝나서 다행이에요!",
+        "defeat": "죄송해요... 제가 더 잘했어야 했는데...",
+        "levelUp": "감사합니다! 더 많이 치유할 수 있게 됐어요!",
+        "summon": "아리아, 여기 있습니다! 빛으로 모두를 지킬게요!",
+        "idle1": "기도를 드리는 중... 조용히 해주세요~",
+        "idle2": "어? 저기 새... 귀여워! ...기도 집중!"
+      }
+    },
+    {
+      "id": "hero_009",
+      "name": "핀",
+      "nameEn": "Finn",
+      "rarity": 3,
+      "cult": "asgard",
+      "class": "warrior",
+      "description": "물의 힘을 다루는 신참 전사",
+      "personality": "brave",
+      "quote": "물처럼 강해질 거야!",
+      "stats": {
+        "hp": 980,
+        "atk": 115,
+        "def": 78,
+        "spd": 98
+      },
+      "growthStats": {
+        "hp": 98,
+        "atk": 11,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "워터 슬래시",
+          "description": "물결치듯 베어내기!",
+          "multiplier": 0.92,
+          "gaugeGain": 23
+        },
+        {
+          "id": "skill1",
+          "name": "아쿠아 크래시",
+          "description": "물기둥으로 적을 강타!",
+          "multiplier": 2.3,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#1E90FF",
+        "hairStyle": "짧은 스파이키 헤어, 물방울이 튀는 스타일",
+        "eyeColor": "#00BFFF",
+        "eyeStyle": "열정적인 눈빛, 크고 밝은 눈",
+        "primaryColor": "#1E90FF",
+        "secondaryColor": "#87CEEB",
+        "accentColor": "#00CED1",
+        "outfit": "블루 경량 갑옷, 물결 문양 스카프",
+        "accessories": [
+          "물방울 귀걸이",
+          "파란 팔찌"
+        ],
+        "signaturePose": "검을 들어올리며 파이팅 포즈",
+        "chibiFeatures": "씩씩한 미소, 물 이펙트, 열정적인 표정",
+        "height": "172cm",
+        "age": "18세"
+      },
+      "voiceLines": {
+        "greeting": "오늘도 열심히 훈련이다!",
+        "battleStart": "자, 가보자고!",
+        "victory": "이겼다! 역시 나야!",
+        "defeat": "크윽... 아직 멀었구나...",
+        "levelUp": "오! 강해진 것 같아!",
+        "summon": "핀이 왔습니다! 열심히 할게요!",
+        "idle1": "물 좀 마셔야겠어...",
+        "idle2": "훈련... 더 해야 하나?"
+      }
+    },
+    {
+      "id": "hero_010",
+      "name": "미라",
+      "nameEn": "Mira",
+      "rarity": 3,
+      "cult": "valhalla",
+      "class": "archer",
+      "description": "바람을 타고 날아다니는 궁수",
+      "personality": "wild",
+      "quote": "바람처럼 가볍게!",
+      "stats": {
+        "hp": 850,
+        "atk": 118,
+        "def": 63,
+        "spd": 103
+      },
+      "growthStats": {
+        "hp": 85,
+        "atk": 12,
+        "def": 6,
+        "spd": 3
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "윈드 샷",
+          "description": "바람을 실은 화살!",
+          "multiplier": 0.95,
+          "gaugeGain": 24
+        },
+        {
+          "id": "skill1",
+          "name": "게일 애로우",
+          "description": "강풍과 함께 쏘는 화살!",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#98FB98",
+        "hairStyle": "짧은 숏컷, 바람에 날리는 스타일",
+        "eyeColor": "#90EE90",
+        "eyeStyle": "밝고 활기찬 눈빛",
+        "primaryColor": "#32CD32",
+        "secondaryColor": "#98FB98",
+        "accentColor": "#00FA9A",
+        "outfit": "그린 경량 궁수복, 깃털 장식",
+        "accessories": [
+          "깃털 헤어핀",
+          "바람 문양 팔찌"
+        ],
+        "signaturePose": "활을 들고 한쪽 눈을 찡긋",
+        "chibiFeatures": "밝은 미소, 바람 이펙트, 쾌활한 표정",
+        "height": "159cm",
+        "age": "17세"
+      },
+      "voiceLines": {
+        "greeting": "안녕! 오늘 날씨 좋지?",
+        "battleStart": "날아갈 준비 완료!",
+        "victory": "예이! 이겼어!",
+        "defeat": "으악... 바람이 안 불어줬어...",
+        "levelUp": "와! 더 빨라졌어!",
+        "summon": "미라 왔어요! 화살 쏠게요!",
+        "idle1": "바람 기분 좋아~",
+        "idle2": "날고 싶다..."
+      }
+    },
+    {
+      "id": "hero_011",
+      "name": "테오",
+      "nameEn": "Theo",
+      "rarity": 3,
+      "cult": "olympus",
+      "class": "mage",
+      "description": "불장난을 좋아하는 마법사 견습생",
+      "personality": "wild",
+      "quote": "불장난은 재밌어!",
+      "stats": {
+        "hp": 820,
+        "atk": 120,
+        "def": 62,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 82,
+        "atk": 12,
+        "def": 6,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "파이어볼",
+          "description": "불덩이를 던져요!",
+          "multiplier": 0.98,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "플레임 버스트",
+          "description": "불꽃을 폭발시켜요!",
+          "multiplier": 2.6,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FF6347",
+        "hairStyle": "헝클어진 짧은 머리, 불꽃처럼 뻗침",
+        "eyeColor": "#FF4500",
+        "eyeStyle": "장난기 가득한 눈빛",
+        "primaryColor": "#FF4500",
+        "secondaryColor": "#FFD700",
+        "accentColor": "#FF6347",
+        "outfit": "레드 마법사 로브, 불꽃 문양",
+        "accessories": [
+          "불 문양 모자",
+          "마법봉"
+        ],
+        "signaturePose": "마법봉을 들고 장난스럽게 웃는 포즈",
+        "chibiFeatures": "장난스러운 미소, 불꽃 이펙트",
+        "height": "165cm",
+        "age": "16세"
+      },
+      "voiceLines": {
+        "greeting": "오늘은 뭘 태워볼까?",
+        "battleStart": "불장난 시작!",
+        "victory": "쉬웠어!",
+        "defeat": "앗... 불이 꺼졌어...",
+        "levelUp": "더 큰 불을 만들 수 있어!",
+        "summon": "테오 참전! 불 좋아해?",
+        "idle1": "심심해... 불장난...",
+        "idle2": "지팡이 좀 닦을까?"
+      }
+    },
+    {
+      "id": "hero_012",
+      "name": "에바",
+      "nameEn": "Eva",
+      "rarity": 3,
+      "cult": "takamagahara",
+      "class": "healer",
+      "description": "빛의 힘을 배우는 신관 견습생",
+      "personality": "calm",
+      "quote": "치유의 빛을 보내요!",
+      "stats": {
+        "hp": 950,
+        "atk": 88,
+        "def": 75,
+        "spd": 92
+      },
+      "growthStats": {
+        "hp": 95,
+        "atk": 9,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "라이트 터치",
+          "description": "빛으로 살짝 공격",
+          "multiplier": 0.82,
+          "gaugeGain": 21
+        },
+        {
+          "id": "skill1",
+          "name": "힐링 라이트",
+          "description": "빛으로 치유해요!",
+          "multiplier": 1.5,
+          "gaugeCost": 100,
+          "isHeal": true,
+          "target": "all_allies"
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FFF5EE",
+        "hairStyle": "단정한 단발머리, 하얀 리본",
+        "eyeColor": "#FFD700",
+        "eyeStyle": "순수한 눈빛",
+        "primaryColor": "#FFFFFF",
+        "secondaryColor": "#FFD700",
+        "accentColor": "#FFF8DC",
+        "outfit": "화이트 신관복",
+        "accessories": [
+          "십자가 목걸이",
+          "하얀 장갑"
+        ],
+        "signaturePose": "두 손을 모아 기도하는 포즈",
+        "chibiFeatures": "순수한 미소, 빛 이펙트",
+        "height": "155cm",
+        "age": "16세"
+      },
+      "voiceLines": {
+        "greeting": "좋은 아침이에요!",
+        "battleStart": "힘내세요!",
+        "victory": "다행이에요!",
+        "defeat": "미안해요...",
+        "levelUp": "더 치유할 수 있어요!",
+        "summon": "에바예요! 열심히 할게요!",
+        "idle1": "기도 중이에요...",
+        "idle2": "빛이 예뻐요..."
+      }
+    },
+    {
+      "id": "hero_013",
+      "name": "렉스",
+      "nameEn": "Rex",
+      "rarity": 3,
+      "cult": "yomi",
+      "class": "warrior",
+      "description": "어둠의 힘을 사용하는 전사",
+      "personality": "calm",
+      "quote": "어둠도 힘이 될 수 있어!",
+      "stats": {
+        "hp": 1000,
+        "atk": 110,
+        "def": 80,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 100,
+        "atk": 11,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "다크 슬래시",
+          "description": "어둠을 담은 베기!",
+          "multiplier": 0.93,
+          "gaugeGain": 23
+        },
+        {
+          "id": "skill1",
+          "name": "섀도우 스트라이크",
+          "description": "그림자의 힘으로 강타!",
+          "multiplier": 2.4,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#2F4F4F",
+        "hairStyle": "짧은 헤어, 한쪽으로 넘김",
+        "eyeColor": "#8B00FF",
+        "eyeStyle": "쿨한 눈매",
+        "primaryColor": "#2F4F4F",
+        "secondaryColor": "#8B00FF",
+        "accentColor": "#4B0082",
+        "outfit": "다크 그레이 갑옷, 보라 문양",
+        "accessories": [
+          "어둠의 목걸이",
+          "검은 장갑"
+        ],
+        "signaturePose": "검을 어깨에 메고 쿨하게 서있는 포즈",
+        "chibiFeatures": "쿨한 표정, 어둠 이펙트",
+        "height": "178cm",
+        "age": "21세"
+      },
+      "voiceLines": {
+        "greeting": "어둠이 부르고 있어",
+        "battleStart": "각오는 됐지?",
+        "victory": "예상대로야",
+        "defeat": "치... 실수했어...",
+        "levelUp": "더 강해졌어",
+        "summon": "렉스다. 잘 부탁해",
+        "idle1": "어둠이 편해...",
+        "idle2": "칼날 손질 중..."
+      }
+    },
+    {
+      "id": "hero_014",
+      "name": "아이비",
+      "nameEn": "Ivy",
+      "rarity": 3,
+      "cult": "asgard",
+      "class": "mage",
+      "description": "물의 마법을 연구하는 마법사",
+      "personality": "calm",
+      "quote": "물처럼 유연하게!",
+      "stats": {
+        "hp": 830,
+        "atk": 117,
+        "def": 60,
+        "spd": 96
+      },
+      "growthStats": {
+        "hp": 83,
+        "atk": 12,
+        "def": 6,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "워터 볼트",
+          "description": "물 화살을 쏴요!",
+          "multiplier": 0.97,
+          "gaugeGain": 24
+        },
+        {
+          "id": "skill1",
+          "name": "아쿠아 웨이브",
+          "description": "물결로 적을 휩쓸어요!",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#4682B4",
+        "hairStyle": "긴 생머리, 물결치듯 흘러내림",
+        "eyeColor": "#5F9EA0",
+        "eyeStyle": "차분한 눈빛",
+        "primaryColor": "#4682B4",
+        "secondaryColor": "#B0E0E6",
+        "accentColor": "#87CEEB",
+        "outfit": "블루 마법사 로브, 물결 문양",
+        "accessories": [
+          "물방울 목걸이",
+          "파란 지팡이"
+        ],
+        "signaturePose": "지팡이를 들고 물을 만드는 포즈",
+        "chibiFeatures": "차분한 미소, 물 이펙트",
+        "height": "163cm",
+        "age": "19세"
+      },
+      "voiceLines": {
+        "greeting": "물의 흐름이 느껴져요",
+        "battleStart": "물처럼 유연하게",
+        "victory": "잘했어요",
+        "defeat": "물이... 마르네요...",
+        "levelUp": "더 많은 물을 다룰 수 있어요",
+        "summon": "아이비예요. 물의 마법을 보여드릴게요",
+        "idle1": "물소리가 들려...",
+        "idle2": "연구가 필요해..."
+      }
+    },
+    {
+      "id": "hero_015",
+      "name": "맥스",
+      "nameEn": "Max",
+      "rarity": 3,
+      "cult": "valhalla",
+      "class": "warrior",
+      "description": "바람의 속도를 추구하는 전사",
+      "personality": "wild",
+      "quote": "바람보다 빠르게!",
+      "stats": {
+        "hp": 920,
+        "atk": 112,
+        "def": 70,
+        "spd": 105
+      },
+      "growthStats": {
+        "hp": 92,
+        "atk": 11,
+        "def": 7,
+        "spd": 3
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "윈드 컷",
+          "description": "바람처럼 베어내기!",
+          "multiplier": 0.94,
+          "gaugeGain": 24
+        },
+        {
+          "id": "skill1",
+          "name": "게일 슬래시",
+          "description": "강풍의 칼날로 베기!",
+          "multiplier": 2.4,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "trickle_revive",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#7FFF00",
+        "hairStyle": "헝클어진 중단발, 바람에 날림",
+        "eyeColor": "#ADFF2F",
+        "eyeStyle": "자유분방한 눈빛",
+        "primaryColor": "#7FFF00",
+        "secondaryColor": "#98FB98",
+        "accentColor": "#00FF7F",
+        "outfit": "그린 경량 갑옷, 바람 문양",
+        "accessories": [
+          "깃털 귀걸이",
+          "바람 팔찌"
+        ],
+        "signaturePose": "검을 들고 달려가는 포즈",
+        "chibiFeatures": "자유로운 미소, 바람 이펙트",
+        "height": "176cm",
+        "age": "20세"
+      },
+      "voiceLines": {
+        "greeting": "오늘도 달려볼까!",
+        "battleStart": "바람처럼 빠르게!",
+        "victory": "쉬웠지!",
+        "defeat": "으악... 바람이...",
+        "levelUp": "더 빨라졌어!",
+        "summon": "맥스 참전! 바람처럼 달릴게!",
+        "idle1": "바람 기분 좋아~",
+        "idle2": "달리고 싶어..."
+      }
+    }
+  ]
+}
