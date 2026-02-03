@@ -176,6 +176,18 @@ export const PERSONALITIES = {
 };
 
 // ============================================
+// Element Types (Legacy - 호환성 유지용)
+// Note: v4에서 Personality 시스템으로 대체되었으나, 기존 데이터 호환성 유지
+// ============================================
+export const ELEMENTS = {
+  fire: { name: '화염', color: 0xE74C3C },
+  water: { name: '물', color: 0x3498DB },
+  wind: { name: '바람', color: 0x27AE60 },
+  light: { name: '빛', color: 0xF39C12 },
+  dark: { name: '어둠', color: 0x9B59B6 }
+};
+
+// ============================================
 // Class Types
 // ============================================
 export const CLASSES = {

@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, ELEMENTS } from '../config/gameConfig.js';
 
 export class HeroListScene extends Phaser.Scene {
   constructor() {
@@ -181,33 +181,6 @@ export class HeroListScene extends Phaser.Scene {
       });
     });
 
-    // Cult filter buttons (use CULT_COLORS for display)
-    const cults = Object.values(CULTS); // ['valhalla', 'takamagahara', ...]
-    this.cultButtons = [];
-
-    cults.forEach((cult, index) => {
-      const x = 400 + (index % 3) * 28;
-      const y = filterY2 + Math.floor(index / 3) * 22 - 10;
-      const cultColor = CULT_COLORS[cult] || COLORS.textDark;
-      const btn = this.add.circle(x, y, 10, cultColor, 0.8)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(20);
-
-      this.cultButtons.push({ btn, cult });
-
-      btn.on('pointerdown', () => {
-        if (this.filterCult === cult) {
-          this.filterCult = null;
-          btn.setStrokeStyle(0);
-        } else {
-          this.cultButtons.forEach(cb => cb.btn.setStrokeStyle(0));
-          this.filterCult = cult;
-          btn.setStrokeStyle(2, COLORS.text);
-        }
-        this.refreshGrid();
-      });
-    });
-
     // Clear filters button
     const clearBtn = this.add.text(GAME_WIDTH - 50, filterY2, '초기화', {
       fontSize: '11px',
@@ -216,11 +189,10 @@ export class HeroListScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });
 
     clearBtn.on('pointerdown', () => {
-        this.filterRarity = null;
+      this.filterRarity = null;
       this.filterCult = null;
       this.sortBy = 'rarity';
       this.sortAscending = false;
-      this.elementButtons.forEach(eb => eb.btn.setStrokeStyle(0));
       this.rarityButtons.forEach(rb => rb.bg.setFillStyle(COLORS.backgroundLight, 0.9));
       this.cultButtons.forEach(cb => cb.btn.setStrokeStyle(0));
       this.updateSortButtons();
