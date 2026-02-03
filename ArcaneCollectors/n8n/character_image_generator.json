@@ -1,0 +1,305 @@
+{
+  "name": "Arcane Collectors - Character Image Generator",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 캐릭터 데이터 정의\nconst characters = [\n  {\n    id: 'arcana',\n    name: '아르카나',\n    nameEn: 'Arcana',\n    rarity: 'SSR',\n    personality: 'mystic',\n    cult: 'olympus',\n    class: 'mage',\n    prompt: 'chibi, 2.5 head ratio, 1girl, arcana, cute witch, purple twintails, big golden eyes, chubby cheeks, witch hat with gold ribbon, purple dress with gold trim, white sash, golden sandals, holding wand, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'leonhardt',\n    name: '레온하르트',\n    nameEn: 'Leonhardt',\n    rarity: 'SSR',\n    personality: 'brave',\n    cult: 'takamagahara',\n    class: 'warrior',\n    prompt: 'chibi, 2.5 head ratio, 1boy, leonhardt, cute holy knight, fluffy blonde hair with ahoge, sky blue eyes, chubby cheeks, white gold samurai armor with sun emblem, red cape, golden headband, holding golden katana, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'selene',\n    name: '셀레네',\n    nameEn: 'Selene',\n    rarity: 'SSR',\n    personality: 'cunning',\n    cult: 'yomi',\n    class: 'archer',\n    prompt: 'chibi, 2.5 head ratio, 1girl, selene, cute shadow archer, long silver hair, purple eyes with crescent moon, pale skin, chubby cheeks, black kimono hoodie with ghost patterns, purple hakama shorts, holding dark bow, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'rose',\n    name: '로제',\n    nameEn: 'Rose',\n    rarity: 'SR',\n    personality: 'calm',\n    cult: 'asgard',\n    class: 'healer',\n    prompt: 'chibi, 2.5 head ratio, 1girl, rose, cute healer priestess, long wavy pink hair, soft blue eyes, rosy chubby cheeks, white ice blue dress with norse runes, fur trim cape, holding healing staff with ice crystal, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'kai',\n    name: '카이',\n    nameEn: 'Kai',\n    rarity: 'SR',\n    personality: 'wild',\n    cult: 'valhalla',\n    class: 'warrior',\n    prompt: 'chibi, 2.5 head ratio, 1boy, kai, cute wind swordsman, messy green hair ponytail, bright green eyes, chubby cheeks, viking tunic with fur vest, baggy pants, holding viking sword, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  }\n];\n\n// 선택된 캐릭터 (전체 또는 특정 캐릭터)\nconst selectedCharacter = $input.first()?.json?.characterId || 'all';\n\nif (selectedCharacter === 'all') {\n  return characters.map(char => ({ json: char }));\n} else {\n  const char = characters.find(c => c.id === selectedCharacter);\n  return char ? [{ json: char }] : [];\n}"
+      },
+      "id": "character_data",
+      "name": "Character Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const character = $input.first().json;\n\n// 공통 프롬프트 설정\nconst commonPositive = '(masterpiece:1.2), (best quality:1.2), chibi, super deformed, anime style, game character design, korean gacha game style';\nconst commonNegative = 'realistic, 3d, photo, bad anatomy, worst quality, low quality, blurry, mature, serious, dark, dynamic pose, action pose, overlapping limbs';\n\n// 최종 프롬프트 구성\nconst finalPrompt = {\n  positive: `${commonPositive}, ${character.prompt}`,\n  negative: commonNegative,\n  characterId: character.id,\n  characterName: character.name,\n  rarity: character.rarity\n};\n\nreturn [{ json: finalPrompt }];"
+      },
+      "id": "build_prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "stability",
+              "leftValue": "={{ $json.platform }}",
+              "rightValue": "stability",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "platform_switch",
+      "name": "Platform Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text_prompts\": [\n    {\n      \"text\": \"{{ $json.positive }}\",\n      \"weight\": 1\n    },\n    {\n      \"text\": \"{{ $json.negative }}\",\n      \"weight\": -1\n    }\n  ],\n  \"cfg_scale\": 7,\n  \"height\": 1024,\n  \"width\": 1024,\n  \"samples\": 1,\n  \"steps\": 30\n}",
+        "options": {}
+      },
+      "id": "stability_api",
+      "name": "Stability AI API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "stability_api_key",
+          "name": "Stability API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/generations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"dall-e-3\",\n  \"prompt\": \"{{ $json.positive }}\",\n  \"n\": 1,\n  \"size\": \"1024x1024\",\n  \"quality\": \"hd\",\n  \"style\": \"vivid\"\n}",
+        "options": {}
+      },
+      "id": "dalle_api",
+      "name": "DALL-E 3 API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "openai_api_key",
+          "name": "OpenAI API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.replicate.com/v1/predictions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"version\": \"39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b\",\n  \"input\": {\n    \"prompt\": \"{{ $json.positive }}\",\n    \"negative_prompt\": \"{{ $json.negative }}\",\n    \"width\": 1024,\n    \"height\": 1024,\n    \"num_inference_steps\": 30,\n    \"guidance_scale\": 7\n  }\n}",
+        "options": {}
+      },
+      "id": "replicate_api",
+      "name": "Replicate API (SDXL)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "replicate_api_key",
+          "name": "Replicate API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:7860/sdapi/v1/txt2img",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": \"{{ $json.positive }}\",\n  \"negative_prompt\": \"{{ $json.negative }}\",\n  \"steps\": 30,\n  \"cfg_scale\": 7,\n  \"width\": 1024,\n  \"height\": 1024,\n  \"sampler_name\": \"DPM++ 2M Karras\"\n}",
+        "options": {}
+      },
+      "id": "local_sd_api",
+      "name": "Local SD WebUI API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst characterId = $('Build Prompt').first().json.characterId;\nconst timestamp = Date.now();\n\n// 이미지 데이터 추출 (플랫폼별 응답 구조가 다름)\nlet imageData = null;\nlet imageUrl = null;\n\n// Stability AI\nif (input.artifacts) {\n  imageData = input.artifacts[0].base64;\n}\n// DALL-E 3\nelse if (input.data) {\n  imageUrl = input.data[0].url;\n}\n// Replicate\nelse if (input.output) {\n  imageUrl = Array.isArray(input.output) ? input.output[0] : input.output;\n}\n// Local SD WebUI\nelse if (input.images) {\n  imageData = input.images[0];\n}\n\nreturn [{\n  json: {\n    characterId,\n    timestamp,\n    imageData,\n    imageUrl,\n    filename: `${characterId}_${timestamp}.png`\n  }\n}];"
+      },
+      "id": "process_result",
+      "name": "Process Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=D:/AI/generated_characters/{{ $json.filename }}",
+        "options": {}
+      },
+      "id": "save_image",
+      "name": "Save Image",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Character Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Character Data": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Platform Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Platform Switch": {
+      "main": [
+        [
+          {
+            "node": "Stability AI API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DALL-E 3 API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Replicate API (SDXL)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Local SD WebUI API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stability AI API": {
+      "main": [
+        [
+          {
+            "node": "Process Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DALL-E 3 API": {
+      "main": [
+        [
+          {
+            "node": "Process Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replicate API (SDXL)": {
+      "main": [
+        [
+          {
+            "node": "Process Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Local SD WebUI API": {
+      "main": [
+        [
+          {
+            "node": "Process Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Result": {
+      "main": [
+        [
+          {
+            "node": "Save Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateId": "arcane_collectors_character_generator"
+  },
+  "tags": [
+    {
+      "name": "AI Image Generation"
+    },
+    {
+      "name": "Game Development"
+    }
+  ]
+}
