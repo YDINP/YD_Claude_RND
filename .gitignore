@@ -25,3 +25,18 @@ node_modules/
 .DS_Store
 .mcp.json
 NUL
+
+# Build outputs
+dist/
+*.bin
+
+# Temporary files
+temp_*.py
+append_*.py
+
+# Project-specific (managed in separate branches)
+ArcaneCollectors/
+
+# Tool configs
+.omc/
+.serena/
