@@ -1,0 +1,298 @@
+{
+  "items": [
+    {
+      "id": "exp_potion_s",
+      "name": "경험치 물약 (소)",
+      "nameEn": "EXP Potion (S)",
+      "type": "consumable",
+      "subtype": "exp",
+      "rarity": "common",
+      "value": 100,
+      "description": "캐릭터 경험치 100을 획득한다",
+      "sellPrice": 10
+    },
+    {
+      "id": "exp_potion_m",
+      "name": "경험치 물약 (중)",
+      "nameEn": "EXP Potion (M)",
+      "type": "consumable",
+      "subtype": "exp",
+      "rarity": "uncommon",
+      "value": 500,
+      "description": "캐릭터 경험치 500을 획득한다",
+      "sellPrice": 50
+    },
+    {
+      "id": "exp_potion_l",
+      "name": "경험치 물약 (대)",
+      "nameEn": "EXP Potion (L)",
+      "type": "consumable",
+      "subtype": "exp",
+      "rarity": "rare",
+      "value": 2000,
+      "description": "캐릭터 경험치 2000을 획득한다",
+      "sellPrice": 200
+    },
+    {
+      "id": "gold_chest_s",
+      "name": "골드 상자 (소)",
+      "nameEn": "Gold Chest (S)",
+      "type": "consumable",
+      "subtype": "gold",
+      "rarity": "common",
+      "value": 500,
+      "description": "골드 500을 획득한다",
+      "sellPrice": 0
+    },
+    {
+      "id": "gold_chest_m",
+      "name": "골드 상자 (중)",
+      "nameEn": "Gold Chest (M)",
+      "type": "consumable",
+      "subtype": "gold",
+      "rarity": "uncommon",
+      "value": 2000,
+      "description": "골드 2000을 획득한다",
+      "sellPrice": 0
+    },
+    {
+      "id": "gold_chest_l",
+      "name": "골드 상자 (대)",
+      "nameEn": "Gold Chest (L)",
+      "type": "consumable",
+      "subtype": "gold",
+      "rarity": "rare",
+      "value": 10000,
+      "description": "골드 10000을 획득한다",
+      "sellPrice": 0
+    },
+    {
+      "id": "stamina_potion",
+      "name": "스태미나 물약",
+      "nameEn": "Stamina Potion",
+      "type": "consumable",
+      "subtype": "stamina",
+      "rarity": "uncommon",
+      "value": 30,
+      "description": "스태미나를 30 회복한다",
+      "sellPrice": 100
+    },
+    {
+      "id": "summon_ticket",
+      "name": "소환권",
+      "nameEn": "Summon Ticket",
+      "type": "currency",
+      "subtype": "summon",
+      "rarity": "rare",
+      "description": "캐릭터 소환에 사용",
+      "sellPrice": 0
+    },
+    {
+      "id": "summon_ticket_premium",
+      "name": "프리미엄 소환권",
+      "nameEn": "Premium Summon Ticket",
+      "type": "currency",
+      "subtype": "summon_premium",
+      "rarity": "epic",
+      "description": "SR 이상 확정 소환에 사용",
+      "sellPrice": 0
+    },
+    {
+      "id": "skill_book_basic",
+      "name": "스킬북 (초급)",
+      "nameEn": "Skill Book (Basic)",
+      "type": "consumable",
+      "subtype": "skill",
+      "rarity": "uncommon",
+      "value": 1,
+      "description": "스킬 레벨을 1 올린다 (최대 5레벨까지)",
+      "sellPrice": 100
+    },
+    {
+      "id": "skill_book_advanced",
+      "name": "스킬북 (고급)",
+      "nameEn": "Skill Book (Advanced)",
+      "type": "consumable",
+      "subtype": "skill",
+      "rarity": "rare",
+      "value": 1,
+      "description": "스킬 레벨을 1 올린다 (최대 10레벨까지)",
+      "sellPrice": 500
+    },
+    {
+      "id": "evolution_material_r",
+      "name": "진화석 (R)",
+      "nameEn": "Evolution Stone (R)",
+      "type": "material",
+      "subtype": "evolution",
+      "rarity": "uncommon",
+      "description": "R등급 캐릭터 진화에 필요",
+      "requiredCount": 5,
+      "sellPrice": 50
+    },
+    {
+      "id": "evolution_material_sr",
+      "name": "진화석 (SR)",
+      "nameEn": "Evolution Stone (SR)",
+      "type": "material",
+      "subtype": "evolution",
+      "rarity": "rare",
+      "description": "SR등급 캐릭터 진화에 필요",
+      "requiredCount": 10,
+      "sellPrice": 200
+    },
+    {
+      "id": "evolution_material_ssr",
+      "name": "진화석 (SSR)",
+      "nameEn": "Evolution Stone (SSR)",
+      "type": "material",
+      "subtype": "evolution",
+      "rarity": "epic",
+      "description": "SSR등급 캐릭터 진화에 필요",
+      "requiredCount": 20,
+      "sellPrice": 500
+    },
+    {
+      "id": "awakening_stone",
+      "name": "각성석",
+      "nameEn": "Awakening Stone",
+      "type": "material",
+      "subtype": "awakening",
+      "rarity": "epic",
+      "description": "캐릭터 각성에 필요한 희귀 재료",
+      "sellPrice": 1000
+    },
+    {
+      "id": "element_fire",
+      "name": "화염의 정수",
+      "nameEn": "Fire Essence",
+      "type": "material",
+      "subtype": "element",
+      "element": "fire",
+      "rarity": "uncommon",
+      "description": "화염 속성 캐릭터 강화에 필요",
+      "sellPrice": 30
+    },
+    {
+      "id": "element_water",
+      "name": "물의 정수",
+      "nameEn": "Water Essence",
+      "type": "material",
+      "subtype": "element",
+      "element": "water",
+      "rarity": "uncommon",
+      "description": "물 속성 캐릭터 강화에 필요",
+      "sellPrice": 30
+    },
+    {
+      "id": "element_wind",
+      "name": "바람의 정수",
+      "nameEn": "Wind Essence",
+      "type": "material",
+      "subtype": "element",
+      "element": "wind",
+      "rarity": "uncommon",
+      "description": "바람 속성 캐릭터 강화에 필요",
+      "sellPrice": 30
+    },
+    {
+      "id": "element_light",
+      "name": "빛의 정수",
+      "nameEn": "Light Essence",
+      "type": "material",
+      "subtype": "element",
+      "element": "light",
+      "rarity": "rare",
+      "description": "빛 속성 캐릭터 강화에 필요",
+      "sellPrice": 50
+    },
+    {
+      "id": "element_dark",
+      "name": "어둠의 정수",
+      "nameEn": "Dark Essence",
+      "type": "material",
+      "subtype": "element",
+      "element": "dark",
+      "rarity": "rare",
+      "description": "어둠 속성 캐릭터 강화에 필요",
+      "sellPrice": 50
+    },
+    {
+      "id": "equipment_sword_basic",
+      "name": "초보자의 검",
+      "nameEn": "Beginner's Sword",
+      "type": "equipment",
+      "subtype": "weapon",
+      "slot": "weapon",
+      "rarity": "common",
+      "stats": {
+        "atk": 10
+      },
+      "classRestriction": ["warrior"],
+      "description": "초보자용 기본 검",
+      "sellPrice": 100
+    },
+    {
+      "id": "equipment_staff_basic",
+      "name": "초보자의 지팡이",
+      "nameEn": "Beginner's Staff",
+      "type": "equipment",
+      "subtype": "weapon",
+      "slot": "weapon",
+      "rarity": "common",
+      "stats": {
+        "atk": 8,
+        "spd": 5
+      },
+      "classRestriction": ["mage", "healer"],
+      "description": "초보자용 기본 지팡이",
+      "sellPrice": 100
+    },
+    {
+      "id": "equipment_bow_basic",
+      "name": "초보자의 활",
+      "nameEn": "Beginner's Bow",
+      "type": "equipment",
+      "subtype": "weapon",
+      "slot": "weapon",
+      "rarity": "common",
+      "stats": {
+        "atk": 9,
+        "spd": 3
+      },
+      "classRestriction": ["archer"],
+      "description": "초보자용 기본 활",
+      "sellPrice": 100
+    },
+    {
+      "id": "equipment_armor_basic",
+      "name": "초보자의 갑옷",
+      "nameEn": "Beginner's Armor",
+      "type": "equipment",
+      "subtype": "armor",
+      "slot": "armor",
+      "rarity": "common",
+      "stats": {
+        "hp": 50,
+        "def": 5
+      },
+      "description": "초보자용 기본 갑옷",
+      "sellPrice": 100
+    },
+    {
+      "id": "equipment_accessory_basic",
+      "name": "초보자의 반지",
+      "nameEn": "Beginner's Ring",
+      "type": "equipment",
+      "subtype": "accessory",
+      "slot": "accessory",
+      "rarity": "common",
+      "stats": {
+        "hp": 30,
+        "spd": 3
+      },
+      "description": "초보자용 기본 반지",
+      "sellPrice": 100
+    }
+  ]
+}

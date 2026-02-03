@@ -1,0 +1,171 @@
+{
+  "dailyQuests": [
+    {
+      "id": "daily_001",
+      "name": "전투 3회 수행",
+      "nameEn": "Complete 3 Battles",
+      "description": "전투를 3회 수행하세요",
+      "type": "battle_count",
+      "target": 3,
+      "rewards": {
+        "gems": 20,
+        "gold": 500
+      }
+    },
+    {
+      "id": "daily_002",
+      "name": "스테이지 클리어",
+      "nameEn": "Clear Stage",
+      "description": "아무 스테이지나 1회 클리어하세요",
+      "type": "stage_clear",
+      "target": 1,
+      "rewards": {
+        "gems": 10,
+        "exp_potion_s": 2
+      }
+    },
+    {
+      "id": "daily_003",
+      "name": "캐릭터 강화",
+      "nameEn": "Enhance Character",
+      "description": "캐릭터를 1회 강화하세요",
+      "type": "enhance",
+      "target": 1,
+      "rewards": {
+        "gold": 1000,
+        "exp_potion_s": 3
+      }
+    },
+    {
+      "id": "daily_004",
+      "name": "소환 1회",
+      "nameEn": "Summon Once",
+      "description": "캐릭터를 1회 소환하세요",
+      "type": "summon",
+      "target": 1,
+      "rewards": {
+        "gems": 30,
+        "gold": 300
+      }
+    },
+    {
+      "id": "daily_005",
+      "name": "일일 퀘스트 전체 완료",
+      "nameEn": "Complete All Daily Quests",
+      "description": "위의 모든 일일 퀘스트를 완료하세요",
+      "type": "complete_all_daily",
+      "target": 4,
+      "rewards": {
+        "gems": 50,
+        "summon_ticket": 1
+      }
+    }
+  ],
+  "weeklyQuests": [
+    {
+      "id": "weekly_001",
+      "name": "전투 50회 수행",
+      "nameEn": "Complete 50 Battles",
+      "description": "전투를 50회 수행하세요",
+      "type": "battle_count",
+      "target": 50,
+      "rewards": {
+        "gems": 100,
+        "summon_ticket": 2
+      }
+    },
+    {
+      "id": "weekly_002",
+      "name": "챕터 보스 처치",
+      "nameEn": "Defeat Chapter Boss",
+      "description": "챕터 보스를 3회 처치하세요",
+      "type": "boss_kill",
+      "target": 3,
+      "rewards": {
+        "gems": 150,
+        "exp_potion_l": 3
+      }
+    },
+    {
+      "id": "weekly_003",
+      "name": "캐릭터 진화",
+      "nameEn": "Evolve Character",
+      "description": "캐릭터를 1회 진화시키세요",
+      "type": "evolve",
+      "target": 1,
+      "rewards": {
+        "gems": 100,
+        "skill_book_basic": 5
+      }
+    }
+  ],
+  "achievementQuests": [
+    {
+      "id": "achieve_001",
+      "name": "첫 번째 전투",
+      "nameEn": "First Battle",
+      "description": "첫 번째 전투를 완료하세요",
+      "type": "battle_count",
+      "target": 1,
+      "rewards": {
+        "gems": 50,
+        "gold": 1000
+      },
+      "oneTime": true
+    },
+    {
+      "id": "achieve_002",
+      "name": "첫 번째 소환",
+      "nameEn": "First Summon",
+      "description": "첫 번째 캐릭터를 소환하세요",
+      "type": "summon",
+      "target": 1,
+      "rewards": {
+        "gems": 50,
+        "summon_ticket": 1
+      },
+      "oneTime": true
+    },
+    {
+      "id": "achieve_003",
+      "name": "어둠의 숲 정복자",
+      "nameEn": "Dark Forest Conqueror",
+      "description": "챕터 1을 클리어하세요",
+      "type": "chapter_clear",
+      "chapterId": "chapter_1",
+      "target": 1,
+      "rewards": {
+        "gems": 200,
+        "summon_ticket_premium": 1,
+        "exp_potion_l": 10
+      },
+      "oneTime": true
+    },
+    {
+      "id": "achieve_004",
+      "name": "전투의 달인",
+      "nameEn": "Battle Master",
+      "description": "전투를 100회 수행하세요",
+      "type": "battle_count",
+      "target": 100,
+      "rewards": {
+        "gems": 100,
+        "gold": 10000
+      },
+      "oneTime": true
+    },
+    {
+      "id": "achieve_005",
+      "name": "수집가",
+      "nameEn": "Collector",
+      "description": "캐릭터를 10명 수집하세요",
+      "type": "character_count",
+      "target": 10,
+      "rewards": {
+        "gems": 200,
+        "summon_ticket": 5
+      },
+      "oneTime": true
+    }
+  ]
+}

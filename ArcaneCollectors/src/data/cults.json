@@ -1,0 +1,145 @@
+{
+  "cults": {
+    "valhalla": {
+      "id": "valhalla",
+      "name": "Valhalla",
+      "nameKr": "발할라",
+      "origin": "북유럽 신화",
+      "description": "용맹한 전사들의 낙원. 오딘이 이끄는 전사 교단으로, 전투에서 죽은 영웅들이 모이는 성스러운 홀.",
+      "theme": ["영웅", "명예", "전사"],
+      "synergy_bonus": {
+        "atk": 0.1,
+        "def": 0.05
+      },
+      "color": "#4A90D9",
+      "lore": "발키리의 선택을 받은 전사들만이 들어갈 수 있는 전설의 장소. 라그나로크 전까지 매일 전투와 향연을 즐긴다.",
+      "enabled": true
+    },
+    "takamagahara": {
+      "id": "takamagahara",
+      "name": "Takamagahara",
+      "nameKr": "타카마가하라",
+      "origin": "일본 신화",
+      "description": "아마테라스가 다스리는 천상의 세계. 질서와 신성의 신들이 거주하는 고귀한 영역.",
+      "theme": ["질서", "신성", "축복"],
+      "synergy_bonus": {
+        "spd": 0.1,
+        "crit_rate": 0.05
+      },
+      "color": "#FFD700",
+      "lore": "하늘 위 구름 너머에 존재하는 신들의 낙원. 아마노이와토 사건 이후 더욱 화려하게 빛난다.",
+      "enabled": true
+    },
+    "olympus": {
+      "id": "olympus",
+      "name": "Olympus",
+      "nameKr": "올림푸스",
+      "origin": "그리스 신화",
+      "description": "제우스와 올림포스 12신의 성지. 그리스 세계의 중심이자 신들의 궁전.",
+      "theme": ["위엄", "영광", "정복"],
+      "synergy_bonus": {
+        "atk": 0.15
+      },
+      "color": "#FF6B35",
+      "lore": "신들의 왕국. 티탄과의 전쟁 후 세워진 새로운 질서의 중심.",
+      "enabled": true
+    },
+    "asgard": {
+      "id": "asgard",
+      "name": "Asgard",
+      "nameKr": "아스가르드",
+      "origin": "북유럽 신화",
+      "description": "신들의 세계, 비프로스트로 연결된 성채. 아스 신족이 다스리는 강력한 요새.",
+      "theme": ["전투", "수호", "지혜"],
+      "synergy_bonus": {
+        "hp": 0.1,
+        "def": 0.1
+      },
+      "color": "#5DADE2",
+      "lore": "세계수 이그드라실의 가지 위에 위치한 신들의 도시. 무지개 다리를 통해 미드가르드와 연결된다.",
+      "enabled": true
+    },
+    "yomi": {
+      "id": "yomi",
+      "name": "Yomi",
+      "nameKr": "요미",
+      "origin": "일본 신화",
+      "description": "이자나미가 다스리는 저승의 세계. 죽음과 저주의 영역.",
+      "theme": ["죽음", "저주", "망령"],
+      "synergy_bonus": {
+        "crit_dmg": 0.2
+      },
+      "color": "#8E44AD",
+      "lore": "지하 깊은 곳에 존재하는 황천의 나라. 한 번 들어가면 되돌아올 수 없는 죽음의 세계.",
+      "enabled": true
+    },
+    "heliopolis": {
+      "id": "heliopolis",
+      "name": "Heliopolis",
+      "nameKr": "헬리오폴리스",
+      "origin": "이집트 신화",
+      "description": "라(Ra)가 다스리는 태양의 도시. 부활과 왕권의 영역.",
+      "theme": ["태양", "부활", "왕권"],
+      "synergy_bonus": {
+        "hp": 0.1,
+        "atk": 0.1
+      },
+      "color": "#D4A017",
+      "lore": "나일강의 축복을 받은 태양신의 성지. 오시리스의 죽음과 부활 신화가 전해지는 곳.",
+      "enabled": false
+    },
+    "kunlun": {
+      "id": "kunlun",
+      "name": "Kunlun",
+      "nameKr": "곤륜",
+      "origin": "중국 신화",
+      "description": "서왕모가 다스리는 선계. 불멸과 조화의 영역.",
+      "theme": ["선계", "조화", "불멸"],
+      "synergy_bonus": {
+        "hp": 0.15,
+        "spd": 0.05
+      },
+      "color": "#50C878",
+      "lore": "서쪽 끝에 위치한 신선들의 낙원. 불사의 복숭아가 자라는 전설의 산.",
+      "enabled": false
+    },
+    "svarga": {
+      "id": "svarga",
+      "name": "Svarga",
+      "nameKr": "스와르가",
+      "origin": "인도 신화",
+      "description": "인드라가 다스리는 천상의 낙원. 윤회와 해탈의 영역.",
+      "theme": ["윤회", "해탈", "업보"],
+      "synergy_bonus": {
+        "crit_rate": 0.1,
+        "crit_dmg": 0.1
+      },
+      "color": "#E6E6FA",
+      "lore": "메루산 정상에 위치한 신들의 거처. 업보에 따라 환생이 결정되는 영적 세계.",
+      "enabled": false
+    },
+    "tir_na_nog": {
+      "id": "tir_na_nog",
+      "name": "Tir na Nog",
+      "nameKr": "티르 나 노그",
+      "origin": "켈트 신화",
+      "description": "투아하 데 다난이 다스리는 요정의 나라. 영원한 젊음의 영역.",
+      "theme": ["요정", "자연", "영원"],
+      "synergy_bonus": {
+        "spd": 0.15,
+        "def": 0.05
+      },
+      "color": "#7CFC00",
+      "lore": "바다 너머 서쪽에 존재하는 전설의 낙원. 시간이 흐르지 않는 영원한 젊음의 땅.",
+      "enabled": false
+    }
+  },
+  "_meta": {
+    "version": "2.0",
+    "lastUpdated": "2026-01-29",
+    "totalCults": 9,
+    "enabledCults": 5,
+    "pendingCults": 4,
+    "note": "enabled: false인 교단은 추후 업데이트에서 활성화 예정"
+  }
+}

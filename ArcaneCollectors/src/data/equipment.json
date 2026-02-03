@@ -1,0 +1,1204 @@
+{
+  "equipment": {
+    "weapons": {
+      "n_iron_sword": {
+        "id": "n_iron_sword",
+        "name": "Iron Sword",
+        "nameKr": "철검",
+        "rarity": "N",
+        "type": "weapon",
+        "cultAffinity": "none",
+        "stats": {
+          "atk": 10
+        },
+        "description": "기본적인 철 검.",
+        "lore": "평범한 전사들이 사용하는 기본 무기."
+      },
+      "n_wooden_club": {
+        "id": "n_wooden_club",
+        "name": "Wooden Club",
+        "nameKr": "나무 곤봉",
+        "rarity": "N",
+        "type": "weapon",
+        "cultAffinity": "none",
+        "stats": {
+          "atk": 8,
+          "hp": 20
+        },
+        "description": "단단한 나무로 만든 곤봉.",
+        "lore": "원시적이지만 효과적인 무기."
+      },
+      "n_bronze_axe": {
+        "id": "n_bronze_axe",
+        "name": "Bronze Axe",
+        "nameKr": "청동 도끼",
+        "rarity": "N",
+        "type": "weapon",
+        "cultAffinity": "none",
+        "stats": {
+          "atk": 12,
+          "crit_rate": 0.02
+        },
+        "description": "청동으로 만든 간단한 도끼.",
+        "lore": "농사와 전투 모두에 쓰이는 도구."
+      },
+      "n_stone_hammer": {
+        "id": "n_stone_hammer",
+        "name": "Stone Hammer",
+        "nameKr": "돌 망치",
+        "rarity": "N",
+        "type": "weapon",
+        "cultAffinity": "none",
+        "stats": {
+          "atk": 11,
+          "def": 5
+        },
+        "description": "돌로 만든 무거운 망치.",
+        "lore": "무딘 타격으로 적을 제압한다."
+      },
+      "n_copper_dagger": {
+        "id": "n_copper_dagger",
+        "name": "Copper Dagger",
+        "nameKr": "구리 단검",
+        "rarity": "N",
+        "type": "weapon",
+        "cultAffinity": "none",
+        "stats": {
+          "atk": 9,
+          "spd": 5
+        },
+        "description": "구리로 만든 작은 단검.",
+        "lore": "빠른 공격에 적합하다."
+      },
+      "r_viking_axe": {
+        "id": "r_viking_axe",
+        "name": "Viking Axe",
+        "nameKr": "바이킹 도끼",
+        "rarity": "R",
+        "type": "weapon",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "atk": 35,
+          "crit_dmg": 0.1
+        },
+        "description": "바이킹 전사들이 사용하는 양날 도끼.",
+        "lore": "북해를 정복한 전사들의 상징."
+      },
+      "r_samurai_katana": {
+        "id": "r_samurai_katana",
+        "name": "Samurai Katana",
+        "nameKr": "사무라이 도",
+        "rarity": "R",
+        "type": "weapon",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "atk": 38,
+          "spd": 8,
+          "crit_rate": 0.05
+        },
+        "description": "사무라이의 혼이 담긴 일본도.",
+        "lore": "장인이 수개월간 벼려 만든 명검."
+      },
+      "r_greek_spear": {
+        "id": "r_greek_spear",
+        "name": "Greek Spear",
+        "nameKr": "그리스 창",
+        "rarity": "R",
+        "type": "weapon",
+        "cultAffinity": "olympus",
+        "stats": {
+          "atk": 33,
+          "accuracy": 0.15,
+          "def": 10
+        },
+        "description": "스파르타 전사들이 사용하는 창.",
+        "lore": "밀집대형의 핵심 무기."
+      },
+      "r_celtic_sword": {
+        "id": "r_celtic_sword",
+        "name": "Celtic Sword",
+        "nameKr": "켈트 검",
+        "rarity": "R",
+        "type": "weapon",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "atk": 36,
+          "hp": 50
+        },
+        "description": "켈트 전사들의 긴 검.",
+        "lore": "드루이드의 축복을 받은 무기."
+      },
+      "r_norse_mace": {
+        "id": "r_norse_mace",
+        "name": "Norse Mace",
+        "nameKr": "노르드 메이스",
+        "rarity": "R",
+        "type": "weapon",
+        "cultAffinity": "asgard",
+        "stats": {
+          "atk": 40,
+          "crit_rate": 0.03
+        },
+        "description": "북유럽의 철제 메이스.",
+        "lore": "갑옷을 관통하는 타격무기."
+      },
+      "sr_gungnir": {
+        "id": "sr_gungnir",
+        "name": "Gungnir",
+        "nameKr": "궁니르",
+        "rarity": "SR",
+        "type": "weapon",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "atk": 75,
+          "accuracy": 0.2
+        },
+        "description": "오딘의 창. 던지면 반드시 명중한다.",
+        "lore": "룬 문자가 새겨진 절대명중의 창."
+      },
+      "sr_excalibur": {
+        "id": "sr_excalibur",
+        "name": "Excalibur",
+        "nameKr": "엑스칼리버",
+        "rarity": "SR",
+        "type": "weapon",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "atk": 78,
+          "crit_rate": 0.12,
+          "hp": 100
+        },
+        "description": "아서왕의 성검. 호수의 여인이 준 검.",
+        "lore": "정당한 왕만이 휘둘 수 있는 검."
+      },
+      "sr_gae_bolg": {
+        "id": "sr_gae_bolg",
+        "name": "Gae Bolg",
+        "nameKr": "게이볼그",
+        "rarity": "SR",
+        "type": "weapon",
+        "cultAffinity": "olympus",
+        "stats": {
+          "atk": 73,
+          "crit_dmg": 0.25,
+          "accuracy": 0.15
+        },
+        "description": "쿠훌린의 마창. 한 번 찔리면 반드시 죽는다.",
+        "lore": "가시가 돋아나 내장을 찢는 저주의 창."
+      },
+      "sr_muramasa": {
+        "id": "sr_muramasa",
+        "name": "Muramasa",
+        "nameKr": "무라마사",
+        "rarity": "SR",
+        "type": "weapon",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "atk": 80,
+          "crit_rate": 0.15,
+          "spd": 12
+        },
+        "description": "요도. 주인을 미치게 하는 마검.",
+        "lore": "무라마사가 만든 저주받은 명검."
+      },
+      "sr_caladbolg": {
+        "id": "sr_caladbolg",
+        "name": "Caladbolg",
+        "nameKr": "칼라드볼그",
+        "rarity": "SR",
+        "type": "weapon",
+        "cultAffinity": "olympus",
+        "stats": {
+          "atk": 76,
+          "atk_range": 0.2,
+          "crit_dmg": 0.15
+        },
+        "description": "무지개 검. 산을 베는 전설의 검.",
+        "lore": "켈트 신화의 영웅 페르구스의 검."
+      },
+      "ssr_mjolnir": {
+        "id": "ssr_mjolnir",
+        "name": "Mjolnir",
+        "nameKr": "묠니르",
+        "rarity": "SSR",
+        "type": "weapon",
+        "cultAffinity": "asgard",
+        "stats": {
+          "atk": 100,
+          "crit_rate": 0.1
+        },
+        "description": "토르의 천둥 망치. 던져도 다시 돌아온다.",
+        "lore": "드워프가 만든 신들의 무기. 거인들을 물리치는 데 사용된다."
+      },
+      "ssr_kusanagi": {
+        "id": "ssr_kusanagi",
+        "name": "Kusanagi",
+        "nameKr": "쿠사나기",
+        "rarity": "SSR",
+        "type": "weapon",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "atk": 95,
+          "spd": 15,
+          "crit_dmg": 0.15
+        },
+        "description": "스사노오가 야마타노오로치의 꼬리에서 얻은 신검.",
+        "lore": "일본 3대 신기 중 하나. 베지 못하는 것이 없다."
+      },
+      "ssr_gram": {
+        "id": "ssr_gram",
+        "name": "Gram",
+        "nameKr": "그람",
+        "rarity": "SSR",
+        "type": "weapon",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "atk": 98,
+          "crit_dmg": 0.2,
+          "accuracy": 0.1
+        },
+        "description": "시구르드의 용을 죽인 검.",
+        "lore": "파프니르의 심장을 관통한 드래곤슬레이어."
+      },
+      "ssr_master_bolt": {
+        "id": "ssr_master_bolt",
+        "name": "Master Bolt",
+        "nameKr": "주신의 번개",
+        "rarity": "SSR",
+        "type": "weapon",
+        "cultAffinity": "olympus",
+        "stats": {
+          "atk": 105,
+          "crit_rate": 0.15,
+          "skill_dmg_bonus": 0.2
+        },
+        "description": "제우스의 번개. 하늘을 가르는 힘.",
+        "lore": "올림포스의 절대권력을 상징하는 무기."
+      },
+      "ssr_totsuka_blade": {
+        "id": "ssr_totsuka_blade",
+        "name": "Totsuka no Tsurugi",
+        "nameKr": "토츠카의 검",
+        "rarity": "SSR",
+        "type": "weapon",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "atk": 92,
+          "spd": 18,
+          "status_inflict": 0.3
+        },
+        "description": "스사노오가 오로치를 벤 십권검.",
+        "lore": "신성한 의식에 쓰이는 영검."
+      },
+      "ssr_trident": {
+        "id": "ssr_trident",
+        "name": "Poseidon's Trident",
+        "nameKr": "포세이돈의 삼지창",
+        "rarity": "SSR",
+        "type": "weapon",
+        "cultAffinity": "olympus",
+        "stats": {
+          "atk": 96,
+          "hp": 200,
+          "accuracy": 0.15
+        },
+        "description": "포세이돈의 삼지창. 바다를 지배한다.",
+        "lore": "대지를 흔들고 파도를 일으키는 신의 무기."
+      }
+    },
+    "armors": {
+      "n_leather_armor": {
+        "id": "n_leather_armor",
+        "name": "Leather Armor",
+        "nameKr": "가죽 갑옷",
+        "rarity": "N",
+        "type": "armor",
+        "cultAffinity": "none",
+        "stats": {
+          "def": 15,
+          "hp": 30
+        },
+        "description": "두꺼운 가죽으로 만든 갑옷.",
+        "lore": "모험가들의 기본 방어구."
+      },
+      "n_cloth_robe": {
+        "id": "n_cloth_robe",
+        "name": "Cloth Robe",
+        "nameKr": "천 로브",
+        "rarity": "N",
+        "type": "armor",
+        "cultAffinity": "none",
+        "stats": {
+          "def": 10,
+          "hp": 40,
+          "spd": 3
+        },
+        "description": "간단한 천으로 만든 로브.",
+        "lore": "가볍고 움직이기 편하다."
+      },
+      "n_wooden_shield": {
+        "id": "n_wooden_shield",
+        "name": "Wooden Shield",
+        "nameKr": "나무 방패",
+        "rarity": "N",
+        "type": "armor",
+        "cultAffinity": "none",
+        "stats": {
+          "def": 18,
+          "hp": 25
+        },
+        "description": "나무로 만든 방패.",
+        "lore": "기본적인 방어 도구."
+      },
+      "n_fur_vest": {
+        "id": "n_fur_vest",
+        "name": "Fur Vest",
+        "nameKr": "모피 조끼",
+        "rarity": "N",
+        "type": "armor",
+        "cultAffinity": "none",
+        "stats": {
+          "def": 12,
+          "hp": 35,
+          "hp_regen": 0.01
+        },
+        "description": "따뜻한 모피 조끼.",
+        "lore": "추운 지역에서 유용하다."
+      },
+      "n_iron_helm": {
+        "id": "n_iron_helm",
+        "name": "Iron Helm",
+        "nameKr": "철 투구",
+        "rarity": "N",
+        "type": "armor",
+        "cultAffinity": "none",
+        "stats": {
+          "def": 20,
+          "hp": 20
+        },
+        "description": "철로 만든 투구.",
+        "lore": "머리를 보호하는 기본 장비."
+      },
+      "r_chainmail": {
+        "id": "r_chainmail",
+        "name": "Chainmail",
+        "nameKr": "쇠사슬 갑옷",
+        "rarity": "R",
+        "type": "armor",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "def": 45,
+          "hp": 80
+        },
+        "description": "쇠사슬로 엮은 갑옷.",
+        "lore": "유연하면서도 단단하다."
+      },
+      "r_samurai_armor": {
+        "id": "r_samurai_armor",
+        "name": "Samurai Armor",
+        "nameKr": "사무라이 갑옷",
+        "rarity": "R",
+        "type": "armor",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "def": 42,
+          "hp": 90,
+          "spd": 5
+        },
+        "description": "사무라이의 갑옷. 옻칠과 끈으로 조립되었다.",
+        "lore": "가볍고 실용적인 동양의 갑옷."
+      },
+      "r_greek_breastplate": {
+        "id": "r_greek_breastplate",
+        "name": "Greek Breastplate",
+        "nameKr": "그리스 흉갑",
+        "rarity": "R",
+        "type": "armor",
+        "cultAffinity": "olympus",
+        "stats": {
+          "def": 50,
+          "hp": 70
+        },
+        "description": "청동으로 만든 흉갑.",
+        "lore": "팔랑크스 전사들의 필수품."
+      },
+      "r_viking_helm": {
+        "id": "r_viking_helm",
+        "name": "Viking Helm",
+        "nameKr": "바이킹 투구",
+        "rarity": "R",
+        "type": "armor",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "def": 40,
+          "hp": 75,
+          "intimidation": 0.1
+        },
+        "description": "바이킹 전사들의 투구.",
+        "lore": "적을 위협하는 위풍당당한 모습."
+      },
+      "r_leather_greaves": {
+        "id": "r_leather_greaves",
+        "name": "Leather Greaves",
+        "nameKr": "가죽 각반",
+        "rarity": "R",
+        "type": "armor",
+        "cultAffinity": "none",
+        "stats": {
+          "def": 35,
+          "hp": 60,
+          "spd": 8
+        },
+        "description": "다리를 보호하는 가죽 갑옷.",
+        "lore": "기동성을 해치지 않는다."
+      },
+      "sr_aegis": {
+        "id": "sr_aegis",
+        "name": "Aegis",
+        "nameKr": "아이기스",
+        "rarity": "SR",
+        "type": "armor",
+        "cultAffinity": "olympus",
+        "stats": {
+          "def": 80,
+          "hp": 200
+        },
+        "description": "아테나의 방패. 메두사의 머리가 박혀있다.",
+        "lore": "제우스가 딸에게 준 무적의 방패."
+      },
+      "sr_valkyrie_armor": {
+        "id": "sr_valkyrie_armor",
+        "name": "Valkyrie Armor",
+        "nameKr": "발키리 갑옷",
+        "rarity": "SR",
+        "type": "armor",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "def": 75,
+          "hp": 180,
+          "spd": 10
+        },
+        "description": "발키리의 신성한 갑옷.",
+        "lore": "전장에서 영웅을 선택하는 자들의 갑옷."
+      },
+      "sr_oni_mask": {
+        "id": "sr_oni_mask",
+        "name": "Oni Mask",
+        "nameKr": "오니 가면",
+        "rarity": "SR",
+        "type": "armor",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "def": 70,
+          "atk": 30,
+          "fear_inflict": 0.2
+        },
+        "description": "오니의 형상을 한 가면.",
+        "lore": "적에게 공포를 심어준다."
+      },
+      "sr_aegis_shield": {
+        "id": "sr_aegis_shield",
+        "name": "Blessed Shield",
+        "nameKr": "축복받은 방패",
+        "rarity": "SR",
+        "type": "armor",
+        "cultAffinity": "olympus",
+        "stats": {
+          "def": 85,
+          "hp": 150,
+          "status_resist": 0.15
+        },
+        "description": "신의 축복을 받은 방패.",
+        "lore": "마법 공격을 약화시킨다."
+      },
+      "sr_dragon_scale": {
+        "id": "sr_dragon_scale",
+        "name": "Dragon Scale Mail",
+        "nameKr": "용비늘 갑옷",
+        "rarity": "SR",
+        "type": "armor",
+        "cultAffinity": "asgard",
+        "stats": {
+          "def": 78,
+          "hp": 190,
+          "fire_resist": 0.3
+        },
+        "description": "용의 비늘로 만든 갑옷.",
+        "lore": "파프니르의 비늘로 제작되었다."
+      },
+      "ssr_golden_fleece": {
+        "id": "ssr_golden_fleece",
+        "name": "Golden Fleece",
+        "nameKr": "황금 양털",
+        "rarity": "SSR",
+        "type": "armor",
+        "cultAffinity": "olympus",
+        "stats": {
+          "def": 90,
+          "hp": 300,
+          "hp_regen": 0.05
+        },
+        "description": "전설의 황금 양털. 입는 자를 보호한다.",
+        "lore": "이아손이 찾아낸 신화의 보물."
+      },
+      "ssr_svalinn": {
+        "id": "ssr_svalinn",
+        "name": "Svalinn",
+        "nameKr": "스발린",
+        "rarity": "SSR",
+        "type": "armor",
+        "cultAffinity": "asgard",
+        "stats": {
+          "def": 95,
+          "hp": 280,
+          "fire_resist": 0.5
+        },
+        "description": "태양의 열을 막는 방패.",
+        "lore": "이것이 없으면 태양이 대지를 태운다."
+      },
+      "ssr_kusazuri": {
+        "id": "ssr_kusazuri",
+        "name": "Divine Kusazuri",
+        "nameKr": "신성한 쿠사즈리",
+        "rarity": "SSR",
+        "type": "armor",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "def": 88,
+          "hp": 270,
+          "spd": 12,
+          "evasion": 0.15
+        },
+        "description": "신의 가호를 받은 사무라이 갑옷.",
+        "lore": "아마테라스의 축복이 깃들었다."
+      },
+      "ssr_nemean_lion": {
+        "id": "ssr_nemean_lion",
+        "name": "Nemean Lion Hide",
+        "nameKr": "네메아 사자 가죽",
+        "rarity": "SSR",
+        "type": "armor",
+        "cultAffinity": "olympus",
+        "stats": {
+          "def": 100,
+          "hp": 320,
+          "physical_resist": 0.3
+        },
+        "description": "헤라클레스가 벗긴 네메아 사자의 가죽.",
+        "lore": "어떤 무기도 뚫을 수 없다."
+      },
+      "ssr_yasakani_armor": {
+        "id": "ssr_yasakani_armor",
+        "name": "Yasakani Armor",
+        "nameKr": "야사카니 갑옷",
+        "rarity": "SSR",
+        "type": "armor",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "def": 85,
+          "hp": 290,
+          "all_resist": 0.2
+        },
+        "description": "신기의 힘을 담은 신성 갑옷.",
+        "lore": "삼신기의 힘이 깃든 전설의 방어구."
+      },
+      "ssr_bifrost_mail": {
+        "id": "ssr_bifrost_mail",
+        "name": "Bifrost Mail",
+        "nameKr": "비프로스트 갑옷",
+        "rarity": "SSR",
+        "type": "armor",
+        "cultAffinity": "asgard",
+        "stats": {
+          "def": 92,
+          "hp": 310,
+          "spd": 15
+        },
+        "description": "무지개 다리의 빛으로 만든 갑옷.",
+        "lore": "하임달이 축복한 신의 갑옷."
+      }
+    },
+    "accessories": {
+      "n_simple_ring": {
+        "id": "n_simple_ring",
+        "name": "Simple Ring",
+        "nameKr": "단순한 반지",
+        "rarity": "N",
+        "type": "accessory",
+        "cultAffinity": "none",
+        "stats": {
+          "atk": 3,
+          "def": 3
+        },
+        "description": "평범한 은 반지.",
+        "lore": "간단하지만 실용적이다."
+      },
+      "n_bone_necklace": {
+        "id": "n_bone_necklace",
+        "name": "Bone Necklace",
+        "nameKr": "뼈 목걸이",
+        "rarity": "N",
+        "type": "accessory",
+        "cultAffinity": "none",
+        "stats": {
+          "hp": 15,
+          "atk": 2
+        },
+        "description": "동물 뼈로 만든 목걸이.",
+        "lore": "원시적인 부적."
+      },
+      "n_wooden_charm": {
+        "id": "n_wooden_charm",
+        "name": "Wooden Charm",
+        "nameKr": "나무 부적",
+        "rarity": "N",
+        "type": "accessory",
+        "cultAffinity": "none",
+        "stats": {
+          "def": 5,
+          "hp": 10
+        },
+        "description": "나무로 만든 간단한 부적.",
+        "lore": "행운을 가져다준다고 한다."
+      },
+      "n_leather_bracelet": {
+        "id": "n_leather_bracelet",
+        "name": "Leather Bracelet",
+        "nameKr": "가죽 팔찌",
+        "rarity": "N",
+        "type": "accessory",
+        "cultAffinity": "none",
+        "stats": {
+          "def": 4,
+          "spd": 2
+        },
+        "description": "가죽으로 만든 팔찌.",
+        "lore": "손목을 보호한다."
+      },
+      "n_stone_pendant": {
+        "id": "n_stone_pendant",
+        "name": "Stone Pendant",
+        "nameKr": "돌 펜던트",
+        "rarity": "N",
+        "type": "accessory",
+        "cultAffinity": "none",
+        "stats": {
+          "hp": 20
+        },
+        "description": "돌로 만든 목걸이.",
+        "lore": "무거지만 든든하다."
+      },
+      "r_silver_ring": {
+        "id": "r_silver_ring",
+        "name": "Silver Ring",
+        "nameKr": "은 반지",
+        "rarity": "R",
+        "type": "accessory",
+        "cultAffinity": "none",
+        "stats": {
+          "atk": 15,
+          "def": 15
+        },
+        "description": "은으로 만든 반지.",
+        "lore": "장인의 손길이 느껴진다."
+      },
+      "r_jade_pendant": {
+        "id": "r_jade_pendant",
+        "name": "Jade Pendant",
+        "nameKr": "비취 펜던트",
+        "rarity": "R",
+        "type": "accessory",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "hp": 60,
+          "hp_regen": 0.02
+        },
+        "description": "비취로 만든 목걸이.",
+        "lore": "치유의 힘을 가졌다고 전해진다."
+      },
+      "r_gold_bracelet": {
+        "id": "r_gold_bracelet",
+        "name": "Gold Bracelet",
+        "nameKr": "금 팔찌",
+        "rarity": "R",
+        "type": "accessory",
+        "cultAffinity": "olympus",
+        "stats": {
+          "atk": 20,
+          "gold_bonus": 0.1
+        },
+        "description": "금으로 만든 화려한 팔찌.",
+        "lore": "부를 상징한다."
+      },
+      "r_ruby_earring": {
+        "id": "r_ruby_earring",
+        "name": "Ruby Earring",
+        "nameKr": "루비 귀걸이",
+        "rarity": "R",
+        "type": "accessory",
+        "cultAffinity": "olympus",
+        "stats": {
+          "atk": 25,
+          "crit_rate": 0.05
+        },
+        "description": "루비가 박힌 귀걸이.",
+        "lore": "열정의 붉은 빛을 발한다."
+      },
+      "r_sapphire_necklace": {
+        "id": "r_sapphire_necklace",
+        "name": "Sapphire Necklace",
+        "nameKr": "사파이어 목걸이",
+        "rarity": "R",
+        "type": "accessory",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "def": 25,
+          "hp": 50
+        },
+        "description": "사파이어가 박힌 목걸이.",
+        "lore": "고귀한 푸른빛을 낸다."
+      },
+      "sr_magatama": {
+        "id": "sr_magatama",
+        "name": "Magatama",
+        "nameKr": "야사카니노마가타마",
+        "rarity": "SR",
+        "type": "accessory",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "hp": 150,
+          "spd": 10,
+          "evasion": 0.1
+        },
+        "description": "곡옥. 일본 3대 신기 중 하나.",
+        "lore": "신성한 힘을 담은 구슬."
+      },
+      "sr_fenrir_fang": {
+        "id": "sr_fenrir_fang",
+        "name": "Fenrir's Fang",
+        "nameKr": "펜리르의 송곳니",
+        "rarity": "SR",
+        "type": "accessory",
+        "cultAffinity": "asgard",
+        "stats": {
+          "atk": 50,
+          "crit_rate": 0.1,
+          "armor_pierce": 0.15
+        },
+        "description": "거대 늑대 펜리르의 송곳니.",
+        "lore": "신들조차 두려워한 야수의 이빨."
+      },
+      "sr_hermes_sandals": {
+        "id": "sr_hermes_sandals",
+        "name": "Hermes' Sandals",
+        "nameKr": "헤르메스의 날개 샌들",
+        "rarity": "SR",
+        "type": "accessory",
+        "cultAffinity": "olympus",
+        "stats": {
+          "spd": 20,
+          "evasion": 0.15,
+          "atk": 30
+        },
+        "description": "헤르메스의 날개 달린 샌들.",
+        "lore": "신들의 전령이 신던 신속의 신발."
+      },
+      "sr_freya_necklace": {
+        "id": "sr_freya_necklace",
+        "name": "Freya's Necklace",
+        "nameKr": "프레야의 목걸이",
+        "rarity": "SR",
+        "type": "accessory",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "atk": 40,
+          "def": 40,
+          "charm": 0.2
+        },
+        "description": "프레야 여신의 아름다운 목걸이.",
+        "lore": "사랑과 전쟁의 여신이 사랑한 보석."
+      },
+      "sr_thor_belt": {
+        "id": "sr_thor_belt",
+        "name": "Thor's Belt",
+        "nameKr": "토르의 힘의 띠",
+        "rarity": "SR",
+        "type": "accessory",
+        "cultAffinity": "asgard",
+        "stats": {
+          "atk": 45,
+          "hp": 120,
+          "str_bonus": 0.15
+        },
+        "description": "메긴기요르드. 토르의 힘을 두 배로 늘려준다.",
+        "lore": "거인의 힘을 담은 마법의 띠."
+      },
+      "sr_draupnir": {
+        "id": "sr_draupnir",
+        "name": "Draupnir",
+        "nameKr": "드라우프니르",
+        "rarity": "SR",
+        "type": "accessory",
+        "cultAffinity": "asgard",
+        "stats": {
+          "atk": 40,
+          "def": 40,
+          "gold_bonus": 0.2
+        },
+        "description": "오딘의 팔찌. 9일마다 8개의 복제품을 만든다.",
+        "lore": "드워프가 만든 마법의 팔찌. 끝없는 부를 상징한다."
+      },
+      "ssr_brisingamen": {
+        "id": "ssr_brisingamen",
+        "name": "Brisingamen",
+        "nameKr": "브리싱가멘",
+        "rarity": "SSR",
+        "type": "accessory",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "atk": 60,
+          "crit_rate": 0.15,
+          "crit_dmg": 0.2
+        },
+        "description": "프레야의 황금 목걸이. 모든 이를 매혹시킨다.",
+        "lore": "4명의 드워프가 만든 아름다움의 상징."
+      },
+      "ssr_yata_no_kagami": {
+        "id": "ssr_yata_no_kagami",
+        "name": "Yata no Kagami",
+        "nameKr": "야타노카가미",
+        "rarity": "SSR",
+        "type": "accessory",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "def": 70,
+          "reflect_damage": 0.3
+        },
+        "description": "팔지경. 아마테라스를 동굴에서 나오게 한 거울.",
+        "lore": "일본 3대 신기 중 하나. 진실을 비춘다."
+      },
+      "ssr_ring_of_gyges": {
+        "id": "ssr_ring_of_gyges",
+        "name": "Ring of Gyges",
+        "nameKr": "기게스의 반지",
+        "rarity": "SSR",
+        "type": "accessory",
+        "cultAffinity": "olympus",
+        "stats": {
+          "evasion": 0.3,
+          "spd": 15,
+          "stealth": 0.5
+        },
+        "description": "투명해지는 반지.",
+        "lore": "착용자를 완전히 숨겨준다."
+      },
+      "ssr_andvaranaut": {
+        "id": "ssr_andvaranaut",
+        "name": "Andvaranaut",
+        "nameKr": "안드바리의 반지",
+        "rarity": "SSR",
+        "type": "accessory",
+        "cultAffinity": "asgard",
+        "stats": {
+          "atk": 55,
+          "def": 55,
+          "gold_bonus": 0.5,
+          "curse": -0.1
+        },
+        "description": "드워프 안드바리의 저주받은 반지.",
+        "lore": "막대한 부를 가져오지만 저주도 함께 온다."
+      },
+      "ssr_kibisis": {
+        "id": "ssr_kibisis",
+        "name": "Kibisis",
+        "nameKr": "키비시스",
+        "rarity": "SSR",
+        "type": "accessory",
+        "cultAffinity": "olympus",
+        "stats": {
+          "hp": 200,
+          "inventory_size": 0.5,
+          "def": 50
+        },
+        "description": "페르세우스의 마법 주머니.",
+        "lore": "메두사의 머리를 담았던 무한 가방."
+      },
+      "ssr_cloak_of_feathers": {
+        "id": "ssr_cloak_of_feathers",
+        "name": "Cloak of Feathers",
+        "nameKr": "깃털 망토",
+        "rarity": "SSR",
+        "type": "accessory",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "spd": 25,
+          "evasion": 0.2,
+          "flight": true
+        },
+        "description": "프레야의 변신 망토. 새로 변할 수 있다.",
+        "lore": "하늘을 자유롭게 날 수 있게 해준다."
+      }
+    },
+    "relics": {
+      "n_healing_herb": {
+        "id": "n_healing_herb",
+        "name": "Healing Herb",
+        "nameKr": "치유의 약초",
+        "rarity": "N",
+        "type": "relic",
+        "cultAffinity": "none",
+        "stats": {
+          "hp": 25,
+          "hp_regen": 0.01
+        },
+        "description": "상처를 치유하는 약초.",
+        "lore": "야생에서 흔히 볼 수 있다."
+      },
+      "n_minor_potion": {
+        "id": "n_minor_potion",
+        "name": "Minor Potion",
+        "nameKr": "하급 포션",
+        "rarity": "N",
+        "type": "relic",
+        "cultAffinity": "none",
+        "stats": {
+          "hp": 30
+        },
+        "description": "간단한 회복 물약.",
+        "lore": "초보 연금술사의 작품."
+      },
+      "n_lucky_coin": {
+        "id": "n_lucky_coin",
+        "name": "Lucky Coin",
+        "nameKr": "행운의 동전",
+        "rarity": "N",
+        "type": "relic",
+        "cultAffinity": "none",
+        "stats": {
+          "gold_bonus": 0.05
+        },
+        "description": "행운을 가져다주는 동전.",
+        "lore": "소소한 재물운을 높여준다."
+      },
+      "r_stamina_potion": {
+        "id": "r_stamina_potion",
+        "name": "Stamina Potion",
+        "nameKr": "체력 물약",
+        "rarity": "R",
+        "type": "relic",
+        "cultAffinity": "none",
+        "stats": {
+          "hp": 80,
+          "hp_regen": 0.03
+        },
+        "description": "체력을 회복시키는 물약.",
+        "lore": "장기전에 유용하다."
+      },
+      "r_mana_crystal": {
+        "id": "r_mana_crystal",
+        "name": "Mana Crystal",
+        "nameKr": "마나 수정",
+        "rarity": "R",
+        "type": "relic",
+        "cultAffinity": "olympus",
+        "stats": {
+          "skill_dmg_bonus": 0.1,
+          "atk": 20
+        },
+        "description": "마나가 응축된 수정.",
+        "lore": "마법의 힘을 증폭시킨다."
+      },
+      "r_fire_stone": {
+        "id": "r_fire_stone",
+        "name": "Fire Stone",
+        "nameKr": "화염석",
+        "rarity": "R",
+        "type": "relic",
+        "cultAffinity": "olympus",
+        "stats": {
+          "atk": 25,
+          "fire_dmg_bonus": 0.15
+        },
+        "description": "뜨거운 열기를 품은 돌.",
+        "lore": "화염 속성 공격을 강화한다."
+      },
+      "r_wind_feather": {
+        "id": "r_wind_feather",
+        "name": "Wind Feather",
+        "nameKr": "바람 깃털",
+        "rarity": "R",
+        "type": "relic",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "spd": 12,
+          "evasion": 0.08
+        },
+        "description": "바람의 정령이 깃든 깃털.",
+        "lore": "움직임을 가볍게 만든다."
+      },
+      "sr_izanagis_spear": {
+        "id": "sr_izanagis_spear",
+        "name": "Amenonuhoko",
+        "nameKr": "아메노누호코",
+        "rarity": "SR",
+        "type": "relic",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "atk": 65,
+          "def": 40,
+          "create_bonus": 0.15
+        },
+        "description": "이자나기와 이자나미가 세계를 창조한 창.",
+        "lore": "바다를 저어 섬을 만든 천지창조의 도구."
+      },
+      "sr_apples_of_idunn": {
+        "id": "sr_apples_of_idunn",
+        "name": "Idunns Apples",
+        "nameKr": "이둔의 사과",
+        "rarity": "SR",
+        "type": "relic",
+        "cultAffinity": "asgard",
+        "stats": {
+          "hp": 200,
+          "hp_regen": 0.08,
+          "age_resist": 0.5
+        },
+        "description": "신들의 젊음을 유지시키는 사과.",
+        "lore": "이둔 여신이 가꾼 불로불사의 과일."
+      },
+      "sr_horn_of_plenty": {
+        "id": "sr_horn_of_plenty",
+        "name": "Cornucopia",
+        "nameKr": "풍요의 뿔",
+        "rarity": "SR",
+        "type": "relic",
+        "cultAffinity": "olympus",
+        "stats": {
+          "gold_bonus": 0.3,
+          "item_drop": 0.15
+        },
+        "description": "끝없이 식량과 재물이 쏟아지는 뿔.",
+        "lore": "제우스를 기른 아말테이아의 뿔."
+      },
+      "sr_gjallarhorn": {
+        "id": "sr_gjallarhorn",
+        "name": "Gjallarhorn",
+        "nameKr": "갸들라르호른",
+        "rarity": "SR",
+        "type": "relic",
+        "cultAffinity": "valhalla",
+        "stats": {
+          "atk": 60,
+          "team_buff": 0.2,
+          "hearing_range": 999
+        },
+        "description": "하임달의 뿔나팔. 라그나로크를 알린다.",
+        "lore": "아홉 세계에 울려퍼지는 경고의 소리."
+      },
+      "sr_philosophers_stone": {
+        "id": "sr_philosophers_stone",
+        "name": "Philosophers Stone",
+        "nameKr": "현자의 돌",
+        "rarity": "SR",
+        "type": "relic",
+        "cultAffinity": "olympus",
+        "stats": {
+          "hp": 180,
+          "transmutation": 0.25,
+          "alchemy_bonus": 0.3
+        },
+        "description": "연금술의 궁극. 납을 금으로 바꾼다.",
+        "lore": "불로불사와 무한한 부를 약속하는 돌."
+      },
+      "ssr_olympian_ambrosia": {
+        "id": "ssr_olympian_ambrosia",
+        "name": "Ambrosia",
+        "nameKr": "암브로시아",
+        "rarity": "SSR",
+        "type": "relic",
+        "cultAffinity": "olympus",
+        "stats": {
+          "hp": 400,
+          "hp_regen": 0.1,
+          "status_resist": 0.3
+        },
+        "description": "신들의 음식. 불멸을 선사한다.",
+        "lore": "올림포스 신들만이 먹을 수 있는 성스러운 음식."
+      },
+      "ssr_mead_of_poetry": {
+        "id": "ssr_mead_of_poetry",
+        "name": "Mead of Poetry",
+        "nameKr": "시의 밀주",
+        "rarity": "SSR",
+        "type": "relic",
+        "cultAffinity": "asgard",
+        "stats": {
+          "atk": 80,
+          "skill_dmg_bonus": 0.25
+        },
+        "description": "마시면 시인이 되는 마법의 술. 오딘이 훔쳐왔다.",
+        "lore": "드워프의 피로 만든 전설의 밀주."
+      },
+      "ssr_horai_jewel": {
+        "id": "ssr_horai_jewel",
+        "name": "Horai Jewel",
+        "nameKr": "봉래의 옥지",
+        "rarity": "SSR",
+        "type": "relic",
+        "cultAffinity": "takamagahara",
+        "stats": {
+          "hp": 350,
+          "immortality": 0.1,
+          "all_stats": 20
+        },
+        "description": "불로불사의 영약이 담긴 구슬.",
+        "lore": "봉래산의 선인들이 지키는 보물."
+      },
+      "ssr_holy_grail": {
+        "id": "ssr_holy_grail",
+        "name": "Holy Grail",
+        "nameKr": "성배",
+        "rarity": "SSR",
+        "type": "relic",
+        "cultAffinity": "olympus",
+        "stats": {
+          "hp": 500,
+          "hp_regen": 0.15,
+          "holy_power": 0.4
+        },
+        "description": "최후의 만찬에 쓰인 잔.",
+        "lore": "영생과 무한한 힘을 약속한다."
+      },
+      "ssr_golden_apple": {
+        "id": "ssr_golden_apple",
+        "name": "Golden Apple of Discord",
+        "nameKr": "불화의 황금 사과",
+        "rarity": "SSR",
+        "type": "relic",
+        "cultAffinity": "olympus",
+        "stats": {
+          "atk": 70,
+          "discord": 0.5,
+          "chaos_bonus": 0.3
+        },
+        "description": "에리스가 던진 불화의 사과. 트로이 전쟁의 원인.",
+        "lore": "가장 아름다운 이에게. 신들조차 다투게 만든다."
+      },
+      "ssr_gleipnir": {
+        "id": "ssr_gleipnir",
+        "name": "Gleipnir",
+        "nameKr": "글레이프니르",
+        "rarity": "SSR",
+        "type": "relic",
+        "cultAffinity": "asgard",
+        "stats": {
+          "def": 80,
+          "binding_power": 0.9,
+          "unbreakable": true
+        },
+        "description": "펜리르를 묶은 마법의 사슬.",
+        "lore": "여섯 가지 불가능한 재료로 만든 드워프의 걸작."
+      }
+    }
+  }
+}

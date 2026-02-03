@@ -1,0 +1,246 @@
+{
+  "enemies": [
+    {
+      "id": "enemy_goblin",
+      "name": "고블린",
+      "nameEn": "Goblin",
+      "element": "wind",
+      "type": "normal",
+      "baseStats": {
+        "hp": 200,
+        "atk": 30,
+        "def": 10,
+        "spd": 80
+      },
+      "growthStats": {
+        "hp": 40,
+        "atk": 8,
+        "def": 3,
+        "spd": 2
+      },
+      "skills": ["skill_goblin_scratch"],
+      "expReward": 10,
+      "goldReward": 15
+    },
+    {
+      "id": "enemy_goblin_archer",
+      "name": "고블린 궁수",
+      "nameEn": "Goblin Archer",
+      "element": "wind",
+      "type": "normal",
+      "baseStats": {
+        "hp": 160,
+        "atk": 40,
+        "def": 8,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 32,
+        "atk": 10,
+        "def": 2,
+        "spd": 3
+      },
+      "skills": ["skill_basic_attack", "skill_quick_shot"],
+      "expReward": 12,
+      "goldReward": 18
+    },
+    {
+      "id": "enemy_goblin_shaman",
+      "name": "고블린 주술사",
+      "nameEn": "Goblin Shaman",
+      "element": "dark",
+      "type": "elite",
+      "baseStats": {
+        "hp": 180,
+        "atk": 45,
+        "def": 12,
+        "spd": 75
+      },
+      "growthStats": {
+        "hp": 36,
+        "atk": 11,
+        "def": 3,
+        "spd": 2
+      },
+      "skills": ["skill_dark_bolt", "skill_fear"],
+      "expReward": 18,
+      "goldReward": 25
+    },
+    {
+      "id": "enemy_goblin_warrior",
+      "name": "고블린 전사",
+      "nameEn": "Goblin Warrior",
+      "element": "fire",
+      "type": "elite",
+      "baseStats": {
+        "hp": 280,
+        "atk": 50,
+        "def": 20,
+        "spd": 70
+      },
+      "growthStats": {
+        "hp": 56,
+        "atk": 12,
+        "def": 5,
+        "spd": 2
+      },
+      "skills": ["skill_power_strike", "skill_iron_will"],
+      "expReward": 20,
+      "goldReward": 28
+    },
+    {
+      "id": "enemy_goblin_king",
+      "name": "고블린 왕",
+      "nameEn": "Goblin King",
+      "element": "fire",
+      "type": "boss",
+      "baseStats": {
+        "hp": 1500,
+        "atk": 80,
+        "def": 40,
+        "spd": 60
+      },
+      "growthStats": {
+        "hp": 200,
+        "atk": 15,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": ["skill_power_strike", "skill_iron_will", "skill_fire_dance"],
+      "expReward": 100,
+      "goldReward": 150
+    },
+    {
+      "id": "enemy_wolf",
+      "name": "야생 늑대",
+      "nameEn": "Wild Wolf",
+      "element": "wind",
+      "type": "normal",
+      "baseStats": {
+        "hp": 180,
+        "atk": 35,
+        "def": 8,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 36,
+        "atk": 9,
+        "def": 2,
+        "spd": 3
+      },
+      "skills": ["skill_wolf_bite"],
+      "expReward": 12,
+      "goldReward": 16
+    },
+    {
+      "id": "enemy_wolf_alpha",
+      "name": "알파 늑대",
+      "nameEn": "Alpha Wolf",
+      "element": "wind",
+      "type": "elite",
+      "baseStats": {
+        "hp": 350,
+        "atk": 55,
+        "def": 18,
+        "spd": 110
+      },
+      "growthStats": {
+        "hp": 70,
+        "atk": 13,
+        "def": 4,
+        "spd": 3
+      },
+      "skills": ["skill_wolf_bite", "skill_wind_slash"],
+      "expReward": 25,
+      "goldReward": 35
+    },
+    {
+      "id": "enemy_slime",
+      "name": "슬라임",
+      "nameEn": "Slime",
+      "element": "water",
+      "type": "normal",
+      "baseStats": {
+        "hp": 250,
+        "atk": 20,
+        "def": 15,
+        "spd": 50
+      },
+      "growthStats": {
+        "hp": 50,
+        "atk": 5,
+        "def": 4,
+        "spd": 1
+      },
+      "skills": ["skill_basic_attack", "skill_slime_split"],
+      "expReward": 8,
+      "goldReward": 12
+    },
+    {
+      "id": "enemy_slime_large",
+      "name": "대형 슬라임",
+      "nameEn": "Large Slime",
+      "element": "water",
+      "type": "elite",
+      "baseStats": {
+        "hp": 500,
+        "atk": 30,
+        "def": 25,
+        "spd": 40
+      },
+      "growthStats": {
+        "hp": 100,
+        "atk": 8,
+        "def": 6,
+        "spd": 1
+      },
+      "skills": ["skill_water_splash", "skill_slime_split"],
+      "expReward": 18,
+      "goldReward": 22
+    },
+    {
+      "id": "enemy_mushroom",
+      "name": "독버섯",
+      "nameEn": "Poison Mushroom",
+      "element": "wind",
+      "type": "normal",
+      "baseStats": {
+        "hp": 150,
+        "atk": 25,
+        "def": 12,
+        "spd": 60
+      },
+      "growthStats": {
+        "hp": 30,
+        "atk": 6,
+        "def": 3,
+        "spd": 1
+      },
+      "skills": ["skill_basic_attack", "skill_mushroom_spore"],
+      "expReward": 10,
+      "goldReward": 14
+    },
+    {
+      "id": "enemy_treant",
+      "name": "트렌트",
+      "nameEn": "Treant",
+      "element": "wind",
+      "type": "elite",
+      "baseStats": {
+        "hp": 600,
+        "atk": 45,
+        "def": 35,
+        "spd": 30
+      },
+      "growthStats": {
+        "hp": 120,
+        "atk": 10,
+        "def": 8,
+        "spd": 1
+      },
+      "skills": ["skill_treant_smash", "skill_tide_guard"],
+      "expReward": 28,
+      "goldReward": 40
+    }
+  ]
+}

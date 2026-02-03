@@ -1,0 +1,1200 @@
+{
+  "chapters": [
+    {
+      "id": "chapter_1",
+      "name": "균열의 시작",
+      "nameEn": "Rift Awakening",
+      "description": "평화 롭던 세계에 균열이 발생하면서 시작된다. 신들의 이그드라실에 이상 징후가...",
+      "lore": "타카마가하라, 올림푸스, 아스가르드, 요미나라, 헬... 전혀 다른 신화 속 세계들이 하나의 공간이 되어가고 있었다. 신들의 이그드라실을 한명씩 붕괴시켜 만들어진 균열의 발생한 것이다.",
+      "stages": [
+        {
+          "id": "1-1",
+          "name": "어두운 숲 입구",
+          "nameEn": "Dark Forest Entrance",
+          "recommendedPower": 100,
+          "energyCost": 6,
+          "story_intro": "신들의 이그드라실에 이상한 기운이 감지된 곳이었다. 숲은 평화로운 듯하지만 무언가 숨어 있다.",
+          "story_clear": "숲의 괴물들을 처치한다. '더 큰 무언가가 다가오고 있어요. 균열은... 균열은 커지고 있어요!'",
+          "enemies": [
+            {
+              "id": "enemy_goblin",
+              "level": 1
+            },
+            {
+              "id": "enemy_goblin",
+              "level": 1
+            }
+          ],
+          "rewards": {
+            "gold": 100,
+            "exp": 50,
+            "items": [
+              {
+                "id": "exp_potion_s",
+                "chance": 0.3
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_common_essence",
+              "chance": 0.6
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          }
+        },
+        {
+          "id": "1-2",
+          "name": "울창한 숲길",
+          "nameEn": "Dense Forest Path",
+          "recommendedPower": 150,
+          "energyCost": 6,
+          "story_intro": "숲은 점점 깊어질수록. 이상한 그림자들이 점점 많이 눈에 띄이기는데.",
+          "story_clear": "늑대들의 사냥 소리 들린다. 이게... 평화가 아니다.",
+          "enemies": [
+            {
+              "id": "enemy_goblin",
+              "level": 2
+            },
+            {
+              "id": "enemy_goblin",
+              "level": 2
+            },
+            {
+              "id": "enemy_wolf",
+              "level": 1
+            }
+          ],
+          "rewards": {
+            "gold": 120,
+            "exp": 60,
+            "items": [
+              {
+                "id": "exp_potion_s",
+                "chance": 0.35
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_common_essence",
+              "chance": 0.65
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          }
+        },
+        {
+          "id": "1-3",
+          "name": "버섯 군락지",
+          "nameEn": "Mushroom Colony",
+          "recommendedPower": 200,
+          "energyCost": 12,
+          "isElite": true,
+          "story_intro": "이상하고 커다란 버섯들이 펼쳐진다. 아니, 이게 버섯이 아니라는...",
+          "story_clear": "거대 버섯들은 움직였다. 이들은 균열의 영향을 받은 듯 하다.",
+          "enemies": [
+            {
+              "id": "enemy_mushroom",
+              "level": 2
+            },
+            {
+              "id": "enemy_mushroom",
+              "level": 2
+            },
+            {
+              "id": "enemy_mushroom",
+              "level": 3
+            }
+          ],
+          "rewards": {
+            "gold": 150,
+            "exp": 75,
+            "items": [
+              {
+                "id": "exp_potion_s",
+                "chance": 0.4
+              },
+              {
+                "id": "gold_chest_s",
+                "chance": 0.1
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_common_essence",
+              "chance": 0.7
+            },
+            {
+              "id": "material_rare_fragment",
+              "chance": 0.2
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          }
+        },
+        {
+          "id": "1-4",
+          "name": "고대의 폐허",
+          "nameEn": "Ancient Ruins",
+          "recommendedPower": 500,
+          "energyCost": 6,
+          "story_intro": "숲 속 깊은 곳에 고대 유적이 있다. 이곳으로 균열 에너지가 흘러들고.",
+          "story_clear": "유적의 보호자들을 물리쳤다. 벽에 낯설지 않은 문자가 보인다. 신들의 메시지인가?",
+          "enemies": [
+            {
+              "id": "enemy_stone_golem",
+              "level": 5
+            },
+            {
+              "id": "enemy_stone_golem",
+              "level": 5
+            }
+          ],
+          "rewards": {
+            "gold": 300,
+            "exp": 150,
+            "items": [
+              {
+                "id": "exp_potion_m",
+                "chance": 0.4
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_rare_fragment",
+              "chance": 0.3
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 50
+          }
+        },
+        {
+          "id": "1-5",
+          "name": "숲의 지배자",
+          "nameEn": "Forest Ruler",
+          "recommendedPower": 1000,
+          "energyCost": 20,
+          "isBoss": true,
+          "story_intro": "숲의 가장 깊. 거대한 그림자가 나타에 걸려있다. '인간이냐... 어리석기를. 이 숲에서 나가거라!'",
+          "story_clear": "숲를 지배 물리쳤다. '최후... 너는 끝나지 않 것이다... 균열은 이제 시작일 뿐이다. 전에 앞머웨서 더 강한 자들이 온다...'",
+          "enemies": [
+            {
+              "id": "enemy_goblin_king",
+              "level": 10,
+              "isBoss": true
+            }
+          ],
+          "rewards": {
+            "gold": 600,
+            "exp": 300,
+            "items": [
+              {
+                "id": "exp_potion_l",
+                "chance": 0.3
+              },
+              {
+                "id": "evolution_material_sr",
+                "chance": 0.1
+              },
+              {
+                "id": "skill_book_advanced",
+                "chance": 0.05
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_epic_core",
+              "chance": 0.4
+            },
+            {
+              "id": "equipment_weapon_rare",
+              "chance": 0.15
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 100,
+            "items": [
+              {
+                "id": "summon_ticket",
+                "count": 3
+              },
+              {
+                "id": "exp_potion_l",
+                "count": 5
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "chapter_2",
+      "name": "신들의 전장",
+      "nameEn": "Battlefield of Gods",
+      "description": "요미나라와 타카마가하라의 균열이 광활하면서 두 신화의 세계들이 충돌한다.",
+      "lore": "일본의 요미나라 어둠과라와 타카마가하라 빛세계가 부딪혔다. 전혀 다른 신화의 세계들이 혼재된 상태 속에 투쟁가 펼쳐지는 전쟁터다. 이 혼재는 판타지 세계의 현실을 깨뜨리는데.",
+      "stages": [
+        {
+          "id": "2-1",
+          "name": "전운이 감도는 평원",
+          "nameEn": "War-Clouded Plains",
+          "recommendedPower": 600,
+          "energyCost": 6,
+          "story_intro": "하늘은 검게 흐르고있다. 저편에 보이는것은 회오리 하늘, 다른 편은 일본의 천사 같은 존재. '이게 전체 어떤 세계인가?'",
+          "story_clear": "아인헤르야르와 텐구를 물리 격전 넘었다 처리했다. 그들은 서로를 제거를 반복하고 있다!",
+          "enemies": [
+            {
+              "id": "enemy_einherjar_warrior",
+              "level": 12
+            },
+            {
+              "id": "enemy_tengu_scout",
+              "level": 12
+            }
+          ],
+          "rewards": {
+            "gold": 800,
+            "exp": 400,
+            "items": [
+              {
+                "id": "exp_potion_l",
+                "chance": 0.35
+              },
+              {
+                "id": "evolution_material_sr",
+                "chance": 0.15
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_rare_fragment",
+              "chance": 0.5
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 50
+          }
+        },
+        {
+          "id": "2-2",
+          "name": "타카마가하라 입구",
+          "nameEn": "Takamagahara Entrance",
+          "recommendedPower": 1000,
+          "energyCost": 6,
+          "story_intro": "어둠과라와 정반대 입구였다. 햇살이 밝게 주변을 비추는데도, 분위기 속 어두워한다.",
+          "story_clear": "텐구전사를 물리쳤다. '이 세계이 왜 이렇게 된 것일까... 신들의 전쟁 때문 않는가?'",
+          "enemies": [
+            {
+              "id": "enemy_tengu_warrior",
+              "level": 14
+            },
+            {
+              "id": "enemy_tengu_warrior",
+              "level": 14
+            }
+          ],
+          "rewards": {
+            "gold": 900,
+            "exp": 450,
+            "items": [
+              {
+                "id": "exp_potion_l",
+                "chance": 0.4
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_epic_core",
+              "chance": 0.25
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 50
+          }
+        },
+        {
+          "id": "2-3",
+          "name": "뒤틀린 비프로스트",
+          "nameEn": "Twisted Bifrost",
+          "recommendedPower": 1500,
+          "energyCost": 12,
+          "isElite": true,
+          "story_intro": "신화를 잇는 비프로스트가 나타난다. 무지개 다리 이상하다. 다리로 연결 세계들 뒤틀려 있다!",
+          "story_clear": "비프로스트의 보호를 격퇴했다 나타난다. '이 다리는 원래대로 될 수 않다. 세계는... 이미 뒤엉켜버렸어 모른다.'",
+          "enemies": [
+            {
+              "id": "enemy_bifrost_guardian",
+              "level": 15
+            },
+            {
+              "id": "enemy_dimension_beast",
+              "level": 14
+            },
+            {
+              "id": "enemy_dimension_beast",
+              "level": 14
+            }
+          ],
+          "rewards": {
+            "gold": 1200,
+            "exp": 600,
+            "items": [
+              {
+                "id": "exp_potion_l",
+                "chance": 0.4
+              },
+              {
+                "id": "evolution_material_ssr",
+                "chance": 0.1
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_epic_core",
+              "chance": 0.35
+            },
+            {
+              "id": "equipment_armor_epic",
+              "chance": 0.1
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 80
+          }
+        },
+        {
+          "id": "2-4",
+          "name": "차원의 경계선",
+          "nameEn": "Dimensional Border",
+          "recommendedPower": 1800,
+          "energyCost": 6,
+          "story_intro": "여러 세계이 겹치는 지점. 공허가 뿜어내는 세계이 흘러나오는데.",
+          "story_clear": "차원 공포들을 물리쳤다. 균열은 점점 더 커지고 있다!",
+          "enemies": [
+            {
+              "id": "enemy_dimension_horror",
+              "level": 20
+            },
+            {
+              "id": "enemy_dimension_horror",
+              "level": 20
+            }
+          ],
+          "rewards": {
+            "gold": 1500,
+            "exp": 750,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.35
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.15
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 50
+          }
+        },
+        {
+          "id": "2-5",
+          "name": "균열의 수호자",
+          "nameEn": "Rift Guardian",
+          "recommendedPower": 2500,
+          "energyCost": 20,
+          "isBoss": true,
+          "story_intro": "거대한 그 밖. 이것을 막키려 자가 나타난다. '더 이상 진행할 수 없다. 신이든 인간이든 마물이든. 이 균열을 파괴하려는 자는 모두 죽는다!'",
+          "story_clear": "수호자를 물리쳤다. 그는 마지막에 뭔 말했다. '균열의 배후는 신들이 있다... 세계이... 하나로 모이는걸...' 전체 무엇 뭔 계획이 걸까?",
+          "enemies": [
+            {
+              "id": "enemy_rift_guardian",
+              "level": 25,
+              "isBoss": true
+            }
+          ],
+          "rewards": {
+            "gold": 2000,
+            "exp": 1000,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.3
+              },
+              {
+                "id": "evolution_material_ssr",
+                "chance": 0.2
+              },
+              {
+                "id": "skill_book_master",
+                "chance": 0.1
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.3
+            },
+            {
+              "id": "equipment_weapon_epic",
+              "chance": 0.2
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 150,
+            "items": [
+              {
+                "id": "summon_ticket",
+                "count": 5
+              },
+              {
+                "id": "evolution_material_ssr",
+                "count": 3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "chapter_3",
+      "name": "요미의 심연",
+      "nameEn": "Yomi's Abyss",
+      "description": "일본 신화의 지하세계 요미나라의 어둠이 지상으로 침투한다.",
+      "lore": "요미나라의 이자나미가 균열을 통해 자신의 영역을 확장하려 한다. 죽음의 신과 그녀의 군대가 지상 세계를 침식하고 있다.",
+      "stages": [
+        {
+          "id": "3-1",
+          "name": "망자의 입구",
+          "nameEn": "Gate of the Dead",
+          "recommendedPower": 1800,
+          "energyCost": 6,
+          "story_intro": "죽은 자들의 세계로 가는 입구다. 차가운 기운이 온몸을 감싼다.",
+          "story_clear": "망령들을 정화했다. 하지만 더 깊은 곳에서 무언가 부르고 있다.",
+          "enemies": [
+            {
+              "id": "enemy_yomi_wraith",
+              "level": 18
+            },
+            {
+              "id": "enemy_yomi_wraith",
+              "level": 18
+            },
+            {
+              "id": "enemy_yomi_soldier",
+              "level": 19
+            }
+          ],
+          "rewards": {
+            "gold": 1800,
+            "exp": 900,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.4
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_epic_core",
+              "chance": 0.4
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 60
+          }
+        },
+        {
+          "id": "3-2",
+          "name": "망각의 강",
+          "nameEn": "River of Oblivion",
+          "recommendedPower": 2200,
+          "energyCost": 6,
+          "story_intro": "검은 강물이 흐른다. 이 물에 닿으면 모든 기억을 잃는다고 한다.",
+          "story_clear": "강의 수호자들을 물리쳤다. 강물은 여전히 불길하게 흐르고 있다.",
+          "enemies": [
+            {
+              "id": "enemy_river_guardian",
+              "level": 22
+            },
+            {
+              "id": "enemy_soul_eater",
+              "level": 21
+            },
+            {
+              "id": "enemy_soul_eater",
+              "level": 21
+            }
+          ],
+          "rewards": {
+            "gold": 2200,
+            "exp": 1100,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.45
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.2
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 60
+          }
+        },
+        {
+          "id": "3-3",
+          "name": "저주받은 전장",
+          "nameEn": "Cursed Battlefield",
+          "recommendedPower": 2600,
+          "energyCost": 12,
+          "isElite": true,
+          "story_intro": "과거 요미에서 벌어진 전쟁의 흔적. 저주받은 전사들이 영원히 싸우고 있다.",
+          "story_clear": "저주를 풀었다. 전사들은 감사의 눈빛을 보내며 사라진다.",
+          "enemies": [
+            {
+              "id": "enemy_cursed_warrior",
+              "level": 25
+            },
+            {
+              "id": "enemy_cursed_warrior",
+              "level": 25
+            },
+            {
+              "id": "enemy_cursed_general",
+              "level": 26
+            }
+          ],
+          "rewards": {
+            "gold": 3000,
+            "exp": 1500,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.5
+              },
+              {
+                "id": "evolution_material_ssr",
+                "chance": 0.15
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.3
+            },
+            {
+              "id": "equipment_weapon_epic",
+              "chance": 0.15
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 100
+          }
+        },
+        {
+          "id": "3-4",
+          "name": "죽음의 궁전 입구",
+          "nameEn": "Death Palace Entrance",
+          "recommendedPower": 3200,
+          "energyCost": 6,
+          "story_intro": "이자나미의 궁전이 보인다. 어둠의 힘이 사방에서 쏟아진다.",
+          "story_clear": "궁전 수호자들을 격퇴했다. 이제 이자나미와 대면할 때가 왔다.",
+          "enemies": [
+            {
+              "id": "enemy_palace_guard",
+              "level": 30
+            },
+            {
+              "id": "enemy_palace_guard",
+              "level": 30
+            }
+          ],
+          "rewards": {
+            "gold": 3500,
+            "exp": 1750,
+            "items": [
+              {
+                "id": "exp_potion_xxl",
+                "chance": 0.4
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_mythic_essence",
+              "chance": 0.1
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 60
+          }
+        },
+        {
+          "id": "3-5",
+          "name": "죽음의 여신",
+          "nameEn": "Goddess of Death",
+          "recommendedPower": 4000,
+          "energyCost": 20,
+          "isBoss": true,
+          "story_intro": "이자나미가 나타난다. '산 자가 죽은 자의 영역에 왔구나. 네 영혼을 이곳에 남겨두겠다.'",
+          "story_clear": "이자나미를 물리쳤다. '놀랍구나... 하지만 죽음은 끝이 아니다. 균열은 더 큰 존재들의 계획일 뿐...'",
+          "enemies": [
+            {
+              "id": "enemy_izanami",
+              "level": 35,
+              "isBoss": true
+            }
+          ],
+          "rewards": {
+            "gold": 5000,
+            "exp": 2500,
+            "items": [
+              {
+                "id": "exp_potion_xxl",
+                "chance": 0.4
+              },
+              {
+                "id": "evolution_material_ssr",
+                "chance": 0.3
+              },
+              {
+                "id": "skill_book_legendary",
+                "chance": 0.15
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_mythic_essence",
+              "chance": 0.4
+            },
+            {
+              "id": "equipment_armor_legendary",
+              "chance": 0.2
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 200,
+            "items": [
+              {
+                "id": "summon_ticket",
+                "count": 10
+              },
+              {
+                "id": "evolution_material_ssr",
+                "count": 5
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "chapter_4",
+      "name": "올림푸스의 시련",
+      "nameEn": "Olympus Trials",
+      "description": "그리스 신화의 올림푸스 산이 균열로 인해 불안정해진다.",
+      "lore": "제우스와 올림푸스 신들이 균열의 위협에 맞서고 있다. 타이탄들과 괴물들이 다시 깨어나고 있다.",
+      "stages": [
+        {
+          "id": "4-1",
+          "name": "올림푸스 산기슭",
+          "nameEn": "Olympus Foothills",
+          "recommendedPower": 4000,
+          "energyCost": 6,
+          "story_intro": "거대한 올림푸스 산이 눈앞에 펼쳐진다. 신들의 전령들이 경계하고 있다.",
+          "story_clear": "전령들을 물리쳤다. 산 위에서 천둥소리가 들린다.",
+          "enemies": [
+            {
+              "id": "enemy_olympus_herald",
+              "level": 38
+            },
+            {
+              "id": "enemy_olympus_herald",
+              "level": 38
+            },
+            {
+              "id": "enemy_centaur",
+              "level": 40
+            }
+          ],
+          "rewards": {
+            "gold": 5500,
+            "exp": 2750,
+            "items": [
+              {
+                "id": "exp_potion_xxl",
+                "chance": 0.45
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.35
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 70
+          }
+        },
+        {
+          "id": "4-2",
+          "name": "미궁의 입구",
+          "nameEn": "Labyrinth Entrance",
+          "recommendedPower": 4800,
+          "energyCost": 6,
+          "story_intro": "미노타우로스의 미궁이 나타났다. 균열의 영향으로 더욱 복잡해졌다.",
+          "story_clear": "미궁의 괴물들을 처치했다. 하지만 이건 시작에 불과하다.",
+          "enemies": [
+            {
+              "id": "enemy_minotaur_minion",
+              "level": 42
+            },
+            {
+              "id": "enemy_minotaur_minion",
+              "level": 42
+            },
+            {
+              "id": "enemy_harpy",
+              "level": 43
+            }
+          ],
+          "rewards": {
+            "gold": 6000,
+            "exp": 3000,
+            "items": [
+              {
+                "id": "exp_potion_xxl",
+                "chance": 0.5
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_mythic_essence",
+              "chance": 0.15
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 70
+          }
+        },
+        {
+          "id": "4-3",
+          "name": "타이탄의 감옥",
+          "nameEn": "Titan Prison",
+          "recommendedPower": 5600,
+          "energyCost": 12,
+          "isElite": true,
+          "story_intro": "타르타로스에 갇혀있던 타이탄들이 깨어나고 있다. 균열이 봉인을 약화시켰다.",
+          "story_clear": "타이탄을 다시 봉인했다. 하지만 다른 타이탄들도 깨어날 것이다.",
+          "enemies": [
+            {
+              "id": "enemy_titan_minor",
+              "level": 45
+            },
+            {
+              "id": "enemy_titan_minor",
+              "level": 45
+            },
+            {
+              "id": "enemy_cyclops",
+              "level": 46
+            }
+          ],
+          "rewards": {
+            "gold": 7000,
+            "exp": 3500,
+            "items": [
+              {
+                "id": "exp_potion_xxl",
+                "chance": 0.55
+              },
+              {
+                "id": "evolution_material_ssr",
+                "chance": 0.2
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_mythic_essence",
+              "chance": 0.3
+            },
+            {
+              "id": "equipment_accessory_legendary",
+              "chance": 0.15
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 120
+          }
+        },
+        {
+          "id": "4-4",
+          "name": "신들의 정원",
+          "nameEn": "Garden of Gods",
+          "recommendedPower": 6500,
+          "energyCost": 6,
+          "story_intro": "올림푸스의 신성한 정원. 하지만 균열의 영향으로 왜곡되어 있다.",
+          "story_clear": "정원의 수호자들을 물리쳤다. 제우스의 신전이 가까워진다.",
+          "enemies": [
+            {
+              "id": "enemy_garden_guardian",
+              "level": 50
+            },
+            {
+              "id": "enemy_garden_guardian",
+              "level": 50
+            }
+          ],
+          "rewards": {
+            "gold": 8000,
+            "exp": 4000,
+            "items": [
+              {
+                "id": "exp_potion_xxl",
+                "chance": 0.5
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_divine_fragment",
+              "chance": 0.12
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 70
+          }
+        },
+        {
+          "id": "4-5",
+          "name": "천둥의 신",
+          "nameEn": "God of Thunder",
+          "recommendedPower": 7500,
+          "energyCost": 20,
+          "isBoss": true,
+          "story_intro": "제우스가 나타난다. '필멸자여, 신의 영역에 도전하는 용기는 칭찬할 만하다. 하지만 이곳에서 네 여정은 끝난다!'",
+          "story_clear": "제우스를 물리쳤다. '훌륭하다... 하지만 균열은 내가 만든 것이 아니다. 더 큰 세력이... 모든 신화를 통합하려 한다...'",
+          "enemies": [
+            {
+              "id": "enemy_zeus",
+              "level": 55,
+              "isBoss": true
+            }
+          ],
+          "rewards": {
+            "gold": 10000,
+            "exp": 5000,
+            "items": [
+              {
+                "id": "exp_potion_xxl",
+                "chance": 0.5
+              },
+              {
+                "id": "evolution_material_ssr",
+                "chance": 0.4
+              },
+              {
+                "id": "skill_book_legendary",
+                "chance": 0.2
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_divine_fragment",
+              "chance": 0.5
+            },
+            {
+              "id": "equipment_weapon_legendary",
+              "chance": 0.25
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 250,
+            "items": [
+              {
+                "id": "summon_ticket",
+                "count": 15
+              },
+              {
+                "id": "evolution_material_ssr",
+                "count": 10
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "chapter_5",
+      "name": "라그나로크",
+      "nameEn": "Ragnarok",
+      "description": "북유럽 신화의 최후의 날. 모든 신화가 하나로 수렴하는 궁극의 전장.",
+      "lore": "오딘이 예견한 라그나로크가 시작되었다. 하지만 이것은 단순한 북유럽 신화의 종말이 아니다. 모든 신화 세계가 하나로 합쳐지는 진정한 종말이다.",
+      "stages": [
+        {
+          "id": "5-1",
+          "name": "헬하임의 문",
+          "nameEn": "Gates of Helheim",
+          "recommendedPower": 8000,
+          "energyCost": 6,
+          "story_intro": "북유럽 죽음의 세계 헬하임의 문이 활짝 열렸다. 모든 신화의 망자들이 쏟아져 나온다.",
+          "story_clear": "망자의 군대를 막아냈다. 하지만 이건 시작에 불과하다. 전쟁의 나팔 소리가 들린다.",
+          "enemies": [
+            {
+              "id": "enemy_draugr",
+              "level": 60
+            },
+            {
+              "id": "enemy_draugr",
+              "level": 60
+            },
+            {
+              "id": "enemy_fenrir_wolf",
+              "level": 62
+            }
+          ],
+          "rewards": {
+            "gold": 12000,
+            "exp": 6000,
+            "items": [
+              {
+                "id": "exp_potion_xxl",
+                "chance": 0.6
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_mythic_essence",
+              "chance": 0.4
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 80
+          }
+        },
+        {
+          "id": "5-2",
+          "name": "비프로스트의 최후",
+          "nameEn": "Final Bifrost",
+          "recommendedPower": 10000,
+          "energyCost": 6,
+          "story_intro": "무지개 다리 비프로스트가 무너지고 있다. 거인들과 괴물들이 아스가르드로 진격한다.",
+          "story_clear": "거인들을 막아냈다. 하지만 비프로스트는 이미 파괴되었다. 아스가르드가 위험하다!",
+          "enemies": [
+            {
+              "id": "enemy_frost_giant",
+              "level": 65
+            },
+            {
+              "id": "enemy_fire_giant",
+              "level": 65
+            },
+            {
+              "id": "enemy_jotun",
+              "level": 66
+            }
+          ],
+          "rewards": {
+            "gold": 14000,
+            "exp": 7000,
+            "items": [
+              {
+                "id": "exp_potion_xxl",
+                "chance": 0.65
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_divine_fragment",
+              "chance": 0.2
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 80
+          }
+        },
+        {
+          "id": "5-3",
+          "name": "발할라의 전사들",
+          "nameEn": "Warriors of Valhalla",
+          "recommendedPower": 12000,
+          "energyCost": 12,
+          "isElite": true,
+          "story_intro": "발할라의 아인헤리아르들이 최후의 전투를 위해 출격한다. 하지만 적은 너무나 강하다.",
+          "story_clear": "아인헤리아르들과 함께 적을 물리쳤다. '당신은 우리 중 가장 강한 전사다. 오딘을 도와달라!'",
+          "enemies": [
+            {
+              "id": "enemy_surtr",
+              "level": 70
+            },
+            {
+              "id": "enemy_hel_servant",
+              "level": 68
+            },
+            {
+              "id": "enemy_hel_servant",
+              "level": 68
+            }
+          ],
+          "rewards": {
+            "gold": 16000,
+            "exp": 8000,
+            "items": [
+              {
+                "id": "exp_potion_xxl",
+                "chance": 0.7
+              },
+              {
+                "id": "evolution_material_ssr",
+                "chance": 0.3
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_divine_fragment",
+              "chance": 0.35
+            },
+            {
+              "id": "equipment_set_legendary",
+              "chance": 0.2
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 150
+          }
+        },
+        {
+          "id": "5-4",
+          "name": "세계수의 뿌리",
+          "nameEn": "Roots of Yggdrasil",
+          "recommendedPower": 14000,
+          "energyCost": 6,
+          "story_intro": "세계수 이그드라실의 뿌리에 도달했다. 여기서 모든 신화가 연결되어 있다. 뿌리가 썩어가고 있다!",
+          "story_clear": "니드호그를 물리쳤다. 하지만 세계수는 이미 치명상을 입었다. 모든 신화가 무너지려 한다!",
+          "enemies": [
+            {
+              "id": "enemy_nidhogg",
+              "level": 75
+            },
+            {
+              "id": "enemy_world_serpent",
+              "level": 73
+            }
+          ],
+          "rewards": {
+            "gold": 18000,
+            "exp": 9000,
+            "items": [
+              {
+                "id": "exp_potion_xxl",
+                "chance": 0.65
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_primordial_essence",
+              "chance": 0.15
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 80
+          }
+        },
+        {
+          "id": "5-5",
+          "name": "신화의 종말",
+          "nameEn": "End of Mythology",
+          "recommendedPower": 15000,
+          "energyCost": 20,
+          "isBoss": true,
+          "story_intro": "오딘이 나타난다. '드디어 왔구나. 이 모든 것은... 계획된 일이었다. 균열은 우리가 만든 것이다. 모든 신화를 하나로 통합하기 위해...' 무엇이 진실인가?",
+          "story_clear": "오딘을 쓰러뜨렸다. 그는 미소 지으며 말한다. '훌륭하다... 네가 새로운 세계의 시작이 될 것이다. 모든 신화가 하나로 합쳐져... 새로운 신화가 탄생한다...' 세계가 빛으로 가득 찬다. 이것이 끝인가, 아니면 시작인가?",
+          "enemies": [
+            {
+              "id": "enemy_odin_allfather",
+              "level": 80,
+              "isBoss": true
+            }
+          ],
+          "rewards": {
+            "gold": 25000,
+            "exp": 12500,
+            "items": [
+              {
+                "id": "exp_potion_xxl",
+                "chance": 0.7
+              },
+              {
+                "id": "evolution_material_ssr",
+                "chance": 0.5
+              },
+              {
+                "id": "skill_book_mythic",
+                "chance": 0.3
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_primordial_essence",
+              "chance": 0.6
+            },
+            {
+              "id": "equipment_mythic_weapon",
+              "chance": 0.3
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 300,
+            "items": [
+              {
+                "id": "summon_ticket",
+                "count": 25
+              },
+              {
+                "id": "evolution_material_ssr",
+                "count": 20
+              },
+              {
+                "id": "mythic_selector",
+                "count": 1
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

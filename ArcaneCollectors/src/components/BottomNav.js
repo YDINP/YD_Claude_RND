@@ -1,281 +1,228 @@
-/**
- * ArcaneCollectors - Bottom Navigation Component
- * 5개 탭 하단 네비게이션 UI 컴포넌트
- */
+import Phaser from 'phaser';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 
-import { LAYOUT, BOTTOM_NAV, UI_STYLES, Z_INDEX } from '../config/layoutConfig.js';
+// 5-tab bottom navigation configuration
+const TABS = [
+  { id: 'home', icon: '\u{1F3E0}', label: '\uD648', scene: 'MainMenuScene' },
+  { id: 'adventure', icon: '\u2694\uFE0F', label: '\uBAA8\uD5D8', scene: 'StageSelectScene' },
+  { id: 'inventory', icon: '\u{1F4E6}', label: '\uAC00\uBC29', scene: 'InventoryScene' },
+  { id: 'gacha', icon: '\u{1F3B2}', label: '\uC18C\uD658', scene: 'GachaScene' },
+  { id: 'more', icon: '\u2261', label: '\uB354\uBCF4\uAE30', scene: 'SettingsScene' }
+];
 
-export default class BottomNav {
-    /**
-     * BottomNav 생성자
-     * @param {Phaser.Scene} scene - Phaser 씬 인스턴스
-     */
-    constructor(scene) {
-        this.scene = scene;
-        this.container = null;
-        this.tabs = [];
-        this.activeIndex = 0;
+export class BottomNav extends Phaser.GameObjects.Container {
+  constructor(scene, activeTab = 'home') {
+    super(scene, GAME_WIDTH / 2, GAME_HEIGHT);
 
-        // 탭 정보 정의
-        this.tabInfo = [
-            { key: 'home', label: '홈', icon: '🏠' },
-            { key: 'adventure', label: '모험', icon: '⚔️' },
-            { key: 'inventory', label: '가방', icon: '🎒' },
-            { key: 'gacha', label: '소환', icon: '✨' },
-            { key: 'more', label: '더보기', icon: '⋯' }
-        ];
+    this.navHeight = 80;
+    this.activeTab = activeTab;
+    this.tabs = TABS;
+    this.tabButtons = {};
+    this.onTabChangeCallback = null;
 
-        // 씬 매핑
-        this.sceneMap = {
-            home: 'HomeScene',
-            adventure: 'AdventureScene',
-            inventory: 'InventoryScene',
-            gacha: 'GachaScene',
-            more: 'MoreScene'
-        };
+    this.createBackground();
+    this.createTabs();
+    this.setDepth(1000);
+
+    scene.add.existing(this);
+  }
+
+  createBackground() {
+    this.background = this.scene.add.graphics();
+    this.background.fillStyle(0x0F172A, 0.98);
+    this.background.fillRect(-GAME_WIDTH / 2, -this.navHeight, GAME_WIDTH, this.navHeight);
+    this.background.lineStyle(2, COLORS.primary, 0.6);
+    this.background.lineBetween(-GAME_WIDTH / 2, -this.navHeight, GAME_WIDTH / 2, -this.navHeight);
+    this.background.fillStyle(COLORS.primary, 0.05);
+    this.background.fillRect(-GAME_WIDTH / 2, -this.navHeight, GAME_WIDTH, 15);
+    this.add(this.background);
+  }
+
+  createTabs() {
+    const tabWidth = GAME_WIDTH / this.tabs.length;
+    const startX = -GAME_WIDTH / 2 + tabWidth / 2;
+
+    this.tabs.forEach((tab, index) => {
+      const x = startX + index * tabWidth;
+      const y = -this.navHeight / 2;
+      const isActive = tab.id === this.activeTab;
+
+      const tabContainer = this.createTabButton(x, y, tab, isActive);
+      this.tabButtons[tab.id] = tabContainer;
+      this.add(tabContainer);
+    });
+  }
+
+  createTabButton(x, y, tab, isActive) {
+    const container = this.scene.add.container(x, y);
+    const tabWidth = GAME_WIDTH / this.tabs.length;
+
+    const indicator = this.scene.add.graphics();
+    if (isActive) {
+      indicator.fillStyle(COLORS.primary, 0.25);
+      indicator.fillRoundedRect(-tabWidth / 2 + 8, -32, tabWidth - 16, 64, 12);
+      indicator.fillStyle(COLORS.primary, 0.9);
+      indicator.fillRect(-25, -36, 50, 3);
     }
+    container.add(indicator);
+    container.indicator = indicator;
 
-    /**
-     * 네비게이션 바 생성
-     * @param {number} x - X 좌표 (기본값: 화면 중앙)
-     * @param {number} y - Y 좌표 (기본값: 화면 하단)
-     * @returns {Phaser.GameObjects.Container} 생성된 컨테이너
-     */
-    create(x = LAYOUT.WIDTH / 2, y = LAYOUT.HEIGHT - BOTTOM_NAV.HEIGHT / 2) {
-        this.container = this.scene.add.container(x, y);
-        this.container.setDepth(Z_INDEX.BOTTOM_NAV);
+    const iconText = this.scene.add.text(0, -10, tab.icon, { fontSize: '28px' }).setOrigin(0.5);
+    container.add(iconText);
+    container.iconText = iconText;
 
-        // 배경 생성
-        this.createBackground();
+    const label = this.scene.add.text(0, 20, tab.label, {
+      fontFamily: '"Noto Sans KR", sans-serif',
+      fontSize: '13px',
+      fontStyle: isActive ? 'bold' : 'normal',
+      color: isActive ? '#FFFFFF' : '#64748B'
+    }).setOrigin(0.5);
+    container.add(label);
+    container.label = label;
 
-        // 탭 버튼들 생성
-        this.createTabs();
+    const hitArea = new Phaser.Geom.Rectangle(-tabWidth / 2, -35, tabWidth, 70);
+    container.setSize(tabWidth, 70);
+    container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
 
-        // 초기 활성 탭 설정
-        this.setActiveTab(this.activeIndex);
+    container.on('pointerover', () => {
+      if (tab.id !== this.activeTab) iconText.setScale(1.1);
+    });
 
-        return this.container;
-    }
+    container.on('pointerout', () => {
+      if (tab.id !== this.activeTab) iconText.setScale(1);
+    });
 
-    /**
-     * 배경 생성
-     */
-    createBackground() {
-        const bg = this.scene.add.rectangle(
-            0,
-            0,
-            LAYOUT.WIDTH,
-            BOTTOM_NAV.HEIGHT,
-            UI_STYLES.BACKGROUND.SECONDARY
-        );
-        bg.setStrokeStyle(1, UI_STYLES.BACKGROUND.ACCENT);
-        this.container.add(bg);
-
-        // 상단 구분선
-        const topLine = this.scene.add.rectangle(
-            0,
-            -BOTTOM_NAV.HEIGHT / 2 + 1,
-            LAYOUT.WIDTH,
-            2,
-            UI_STYLES.BUTTON.PRIMARY
-        );
-        this.container.add(topLine);
-    }
-
-    /**
-     * 탭 버튼들 생성
-     */
-    createTabs() {
-        const tabWidth = LAYOUT.WIDTH / this.tabInfo.length;
-        const startX = -LAYOUT.WIDTH / 2 + tabWidth / 2;
-
-        this.tabInfo.forEach((tab, index) => {
-            const tabX = startX + index * tabWidth;
-            const tabContainer = this.createTab(tab, tabX, index);
-            this.tabs.push(tabContainer);
-            this.container.add(tabContainer);
+    container.on('pointerdown', () => {
+      if (tab.id !== this.activeTab) {
+        this.scene.tweens.add({
+          targets: container,
+          scaleX: 0.95,
+          scaleY: 0.95,
+          duration: 50,
+          yoyo: true
         });
-    }
 
-    /**
-     * 개별 탭 생성
-     * @param {Object} tab - 탭 정보
-     * @param {number} x - X 좌표
-     * @param {number} index - 탭 인덱스
-     * @returns {Phaser.GameObjects.Container} 탭 컨테이너
-     */
-    createTab(tab, x, index) {
-        const tabContainer = this.scene.add.container(x, 0);
+        this.setActiveTab(tab.id);
 
-        // 터치 영역 (투명)
-        const hitArea = this.scene.add.rectangle(
-            0,
-            0,
-            LAYOUT.WIDTH / this.tabInfo.length,
-            BOTTOM_NAV.HEIGHT,
-            0x000000,
-            0
-        );
-        hitArea.setInteractive({ useHandCursor: true });
-        hitArea.on('pointerdown', () => this.onTabClick(index));
-        hitArea.on('pointerover', () => {
-            if (index !== this.activeIndex) {
-                icon.setAlpha(0.8);
-            }
-        });
-        hitArea.on('pointerout', () => {
-            if (index !== this.activeIndex) {
-                icon.setAlpha(0.5);
-            }
-        });
-        tabContainer.add(hitArea);
-
-        // 아이콘
-        const icon = this.scene.add.text(0, -12, tab.icon, {
-            fontSize: `${BOTTOM_NAV.ICON_SIZE}px`
-        });
-        icon.setOrigin(0.5);
-        icon.setAlpha(0.5);
-        tabContainer.add(icon);
-        tabContainer.icon = icon;
-
-        // 레이블
-        const label = this.scene.add.text(0, 28, tab.label, {
-            fontSize: `${UI_STYLES.FONT_SIZE.SMALL}px`,
-            fontFamily: 'Arial, sans-serif',
-            color: UI_STYLES.TEXT.SECONDARY
-        });
-        label.setOrigin(0.5);
-        tabContainer.add(label);
-        tabContainer.label = label;
-
-        // 활성화 인디케이터
-        const indicator = this.scene.add.rectangle(
-            0,
-            -BOTTOM_NAV.HEIGHT / 2 + 4,
-            40,
-            4,
-            UI_STYLES.BUTTON.PRIMARY
-        );
-        indicator.setVisible(false);
-        tabContainer.add(indicator);
-        tabContainer.indicator = indicator;
-
-        return tabContainer;
-    }
-
-    /**
-     * 탭 클릭 핸들러
-     * @param {number} index - 클릭된 탭 인덱스
-     */
-    onTabClick(index) {
-        if (index === this.activeIndex) return;
-
-        // 활성 탭 변경
-        this.setActiveTab(index);
-
-        // 씬 전환
-        const tabKey = this.tabInfo[index].key;
-        const targetScene = this.sceneMap[tabKey];
-
-        if (targetScene && this.scene.scene.get(targetScene)) {
-            this.scene.scene.start(targetScene);
+        if (this.onTabChangeCallback) {
+          this.onTabChangeCallback(tab.id, tab.scene);
         } else {
-            console.log(`[BottomNav] Scene not found: ${targetScene}`);
+          this.navigateToScene(tab.scene);
         }
+      }
+    });
 
-        // 이벤트 발생
-        this.scene.events.emit('bottomnav:tabchange', {
-            index,
-            key: tabKey,
-            scene: targetScene
-        });
+    container.tabData = tab;
+    return container;
+  }
+
+  navigateToScene(sceneName) {
+    const validScenes = ['MainMenuScene', 'StageSelectScene', 'GachaScene', 'HeroListScene'];
+
+    if (validScenes.includes(sceneName)) {
+      this.scene.cameras.main.fadeOut(200, 0, 0, 0);
+      this.scene.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.scene.start(sceneName);
+      });
+    } else {
+      this.showToast('\uC900\uBE44 \uC911\uC785\uB2C8\uB2E4!');
+    }
+  }
+
+  showToast(message) {
+    const toast = this.scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 200, message, {
+      fontSize: '18px',
+      fontFamily: '"Noto Sans KR", sans-serif',
+      color: '#FFFFFF',
+      backgroundColor: '#' + COLORS.backgroundLight.toString(16).padStart(6, '0'),
+      padding: { x: 24, y: 14 }
+    }).setOrigin(0.5).setDepth(2000);
+
+    this.scene.tweens.add({
+      targets: toast,
+      y: toast.y - 50,
+      alpha: 0,
+      duration: 1500,
+      delay: 500,
+      onComplete: () => toast.destroy()
+    });
+  }
+
+  setActiveTab(tabId) {
+    const tabExists = this.tabs.find(t => t.id === tabId);
+    if (!tabExists) return this;
+
+    this.activeTab = tabId;
+
+    this.tabs.forEach((tab) => {
+      const tabContainer = this.tabButtons[tab.id];
+      if (!tabContainer) return;
+
+      const isActive = tab.id === tabId;
+      const tabWidth = GAME_WIDTH / this.tabs.length;
+
+      tabContainer.indicator.clear();
+      if (isActive) {
+        tabContainer.indicator.fillStyle(COLORS.primary, 0.25);
+        tabContainer.indicator.fillRoundedRect(-tabWidth / 2 + 8, -32, tabWidth - 16, 64, 12);
+        tabContainer.indicator.fillStyle(COLORS.primary, 0.9);
+        tabContainer.indicator.fillRect(-25, -36, 50, 3);
+      }
+
+      tabContainer.iconText.setScale(isActive ? 1.15 : 1);
+      tabContainer.label.setStyle({
+        fontFamily: '"Noto Sans KR", sans-serif',
+        fontSize: '13px',
+        fontStyle: isActive ? 'bold' : 'normal',
+        color: isActive ? '#FFFFFF' : '#64748B'
+      });
+    });
+
+    return this;
+  }
+
+  onTabChange(callback) {
+    this.onTabChangeCallback = callback;
+    return this;
+  }
+
+  setBadge(tabId, show, count = 0) {
+    const tab = this.tabButtons[tabId];
+    if (!tab) return this;
+
+    if (tab.badge) { tab.badge.destroy(); tab.badge = null; }
+    if (tab.badgeText) { tab.badgeText.destroy(); tab.badgeText = null; }
+
+    if (show) {
+      const badgeX = 18;
+      const badgeY = -25;
+
+      const badge = this.scene.add.graphics();
+      badge.fillStyle(COLORS.danger, 1);
+
+      if (count > 0) {
+        const badgeWidth = count > 99 ? 30 : count > 9 ? 24 : 18;
+        badge.fillRoundedRect(badgeX - badgeWidth / 2, badgeY - 9, badgeWidth, 18, 9);
+
+        const badgeText = this.scene.add.text(badgeX, badgeY, count > 99 ? '99+' : count.toString(), {
+          fontFamily: '"Noto Sans KR", sans-serif',
+          fontSize: '11px',
+          fontStyle: 'bold',
+          color: '#FFFFFF'
+        }).setOrigin(0.5);
+        tab.add(badgeText);
+        tab.badgeText = badgeText;
+      } else {
+        badge.fillCircle(badgeX, badgeY, 6);
+      }
+
+      tab.add(badge);
+      tab.badge = badge;
     }
 
-    /**
-     * 활성 탭 설정
-     * @param {number} index - 활성화할 탭 인덱스
-     */
-    setActiveTab(index) {
-        if (index < 0 || index >= this.tabs.length) return;
+    return this;
+  }
 
-        // 이전 활성 탭 비활성화
-        if (this.activeIndex < this.tabs.length) {
-            const prevTab = this.tabs[this.activeIndex];
-            if (prevTab) {
-                prevTab.icon.setAlpha(0.5);
-                prevTab.label.setColor(UI_STYLES.TEXT.SECONDARY);
-                prevTab.indicator.setVisible(false);
-            }
-        }
-
-        // 새 탭 활성화
-        this.activeIndex = index;
-        const activeTab = this.tabs[index];
-        if (activeTab) {
-            activeTab.icon.setAlpha(1);
-            activeTab.label.setColor(UI_STYLES.TEXT.PRIMARY);
-            activeTab.indicator.setVisible(true);
-
-            // 활성화 애니메이션
-            this.scene.tweens.add({
-                targets: activeTab.icon,
-                scaleX: 1.2,
-                scaleY: 1.2,
-                duration: 100,
-                yoyo: true,
-                ease: 'Power2'
-            });
-        }
-    }
-
-    /**
-     * 탭 인덱스로 키 가져오기
-     * @param {number} index - 탭 인덱스
-     * @returns {string} 탭 키
-     */
-    getTabKey(index) {
-        return this.tabInfo[index]?.key || null;
-    }
-
-    /**
-     * 키로 탭 인덱스 가져오기
-     * @param {string} key - 탭 키
-     * @returns {number} 탭 인덱스
-     */
-    getTabIndex(key) {
-        return this.tabInfo.findIndex(tab => tab.key === key);
-    }
-
-    /**
-     * 특정 탭 활성화 (키로)
-     * @param {string} key - 탭 키
-     */
-    activateByKey(key) {
-        const index = this.getTabIndex(key);
-        if (index >= 0) {
-            this.setActiveTab(index);
-        }
-    }
-
-    /**
-     * 탭 표시/숨김
-     * @param {boolean} visible - 표시 여부
-     */
-    setVisible(visible) {
-        if (this.container) {
-            this.container.setVisible(visible);
-        }
-    }
-
-    /**
-     * 컴포넌트 제거
-     */
-    destroy() {
-        if (this.container) {
-            this.container.destroy(true);
-            this.container = null;
-        }
-        this.tabs = [];
-    }
+  getHeight() { return this.navHeight; }
+  static getNavHeight() { return 80; }
 }

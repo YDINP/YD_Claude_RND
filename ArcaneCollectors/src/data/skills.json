@@ -1,0 +1,470 @@
+{
+  "skills": [
+    {
+      "id": "skill_basic_attack",
+      "name": "기본 공격",
+      "nameEn": "Basic Attack",
+      "description": "적 1명에게 공격력의 100%의 데미지를 입힌다",
+      "type": "basic",
+      "element": "neutral",
+      "target": "enemy_single",
+      "multiplier": 1.0,
+      "cooldown": 0,
+      "effects": []
+    },
+    {
+      "id": "skill_fireball",
+      "name": "파이어볼",
+      "nameEn": "Fireball",
+      "description": "적 1명에게 공격력의 150%의 화염 데미지를 입힌다",
+      "type": "active",
+      "element": "fire",
+      "target": "enemy_single",
+      "multiplier": 1.5,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_meteor",
+      "name": "메테오",
+      "nameEn": "Meteor",
+      "description": "적 전체에게 공격력의 200%의 화염 데미지를 입힌다",
+      "type": "ultimate",
+      "element": "fire",
+      "target": "enemy_all",
+      "multiplier": 2.0,
+      "chargeRequired": 100,
+      "effects": [
+        { "type": "burn", "chance": 0.5, "duration": 2 }
+      ]
+    },
+    {
+      "id": "skill_holy_slash",
+      "name": "성스러운 일격",
+      "nameEn": "Holy Slash",
+      "description": "적 1명에게 공격력의 160%의 빛 데미지를 입히고 자신의 HP를 10% 회복한다",
+      "type": "active",
+      "element": "light",
+      "target": "enemy_single",
+      "multiplier": 1.6,
+      "cooldown": 4,
+      "effects": [
+        { "type": "self_heal", "value": 0.1 }
+      ]
+    },
+    {
+      "id": "skill_divine_judgment",
+      "name": "신성한 심판",
+      "nameEn": "Divine Judgment",
+      "description": "적 전체에게 공격력의 180%의 빛 데미지를 입히고 어둠 속성 적에게 추가 50% 데미지",
+      "type": "ultimate",
+      "element": "light",
+      "target": "enemy_all",
+      "multiplier": 1.8,
+      "chargeRequired": 100,
+      "effects": [
+        { "type": "bonus_damage", "condition": "dark", "bonus": 0.5 }
+      ]
+    },
+    {
+      "id": "skill_shadow_arrow",
+      "name": "그림자 화살",
+      "nameEn": "Shadow Arrow",
+      "description": "적 1명에게 공격력의 170%의 어둠 데미지를 입히고 30% 확률로 실명 상태를 부여한다",
+      "type": "active",
+      "element": "dark",
+      "target": "enemy_single",
+      "multiplier": 1.7,
+      "cooldown": 3,
+      "effects": [
+        { "type": "blind", "chance": 0.3, "duration": 2 }
+      ]
+    },
+    {
+      "id": "skill_moonlight_barrage",
+      "name": "월광난무",
+      "nameEn": "Moonlight Barrage",
+      "description": "무작위 적에게 5회 공격, 각각 공격력의 80%의 어둠 데미지",
+      "type": "ultimate",
+      "element": "dark",
+      "target": "enemy_random",
+      "multiplier": 0.8,
+      "hits": 5,
+      "chargeRequired": 100,
+      "effects": []
+    },
+    {
+      "id": "skill_healing_rain",
+      "name": "치유의 비",
+      "nameEn": "Healing Rain",
+      "description": "아군 전체의 HP를 공격력의 120%만큼 회복한다",
+      "type": "active",
+      "element": "water",
+      "target": "ally_all",
+      "multiplier": 1.2,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_purify",
+      "name": "정화",
+      "nameEn": "Purify",
+      "description": "아군 전체의 디버프를 제거하고 HP를 공격력의 150%만큼 회복한다",
+      "type": "ultimate",
+      "element": "water",
+      "target": "ally_all",
+      "multiplier": 1.5,
+      "chargeRequired": 100,
+      "effects": [
+        { "type": "cleanse", "target": "all_debuffs" }
+      ]
+    },
+    {
+      "id": "skill_wind_slash",
+      "name": "바람 베기",
+      "nameEn": "Wind Slash",
+      "description": "적 1명에게 공격력의 140%의 바람 데미지를 입힌다",
+      "type": "active",
+      "element": "wind",
+      "target": "enemy_single",
+      "multiplier": 1.4,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_storm_blade",
+      "name": "폭풍검",
+      "nameEn": "Storm Blade",
+      "description": "적 전체에게 공격력의 160%의 바람 데미지를 입히고 자신의 속도를 30% 증가시킨다",
+      "type": "ultimate",
+      "element": "wind",
+      "target": "enemy_all",
+      "multiplier": 1.6,
+      "chargeRequired": 100,
+      "effects": [
+        { "type": "self_buff", "stat": "spd", "value": 0.3, "duration": 3 }
+      ]
+    },
+    {
+      "id": "skill_flame_arrow",
+      "name": "화염 화살",
+      "nameEn": "Flame Arrow",
+      "description": "적 1명에게 공격력의 150%의 화염 데미지를 입히고 20% 확률로 화상을 부여한다",
+      "type": "active",
+      "element": "fire",
+      "target": "enemy_single",
+      "multiplier": 1.5,
+      "cooldown": 3,
+      "effects": [
+        { "type": "burn", "chance": 0.2, "duration": 2 }
+      ]
+    },
+    {
+      "id": "skill_rapid_fire",
+      "name": "속사",
+      "nameEn": "Rapid Fire",
+      "description": "적 1명에게 3회 연속 공격, 각각 공격력의 70%의 화염 데미지",
+      "type": "ultimate",
+      "element": "fire",
+      "target": "enemy_single",
+      "multiplier": 0.7,
+      "hits": 3,
+      "chargeRequired": 100,
+      "effects": []
+    },
+    {
+      "id": "skill_dark_bolt",
+      "name": "암흑 화살",
+      "nameEn": "Dark Bolt",
+      "description": "적 1명에게 공격력의 160%의 어둠 데미지를 입힌다",
+      "type": "active",
+      "element": "dark",
+      "target": "enemy_single",
+      "multiplier": 1.6,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_curse",
+      "name": "저주",
+      "nameEn": "Curse",
+      "description": "적 전체에게 공격력의 140%의 어둠 데미지를 입히고 방어력을 20% 감소시킨다",
+      "type": "ultimate",
+      "element": "dark",
+      "target": "enemy_all",
+      "multiplier": 1.4,
+      "chargeRequired": 100,
+      "effects": [
+        { "type": "debuff", "stat": "def", "value": -0.2, "duration": 3 }
+      ]
+    },
+    {
+      "id": "skill_holy_light",
+      "name": "성스러운 빛",
+      "nameEn": "Holy Light",
+      "description": "아군 1명의 HP를 공격력의 180%만큼 회복한다",
+      "type": "active",
+      "element": "light",
+      "target": "ally_single",
+      "multiplier": 1.8,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_resurrection",
+      "name": "부활",
+      "nameEn": "Resurrection",
+      "description": "전투 불능 아군 1명을 HP 50%로 부활시킨다",
+      "type": "ultimate",
+      "element": "light",
+      "target": "ally_dead",
+      "chargeRequired": 100,
+      "effects": [
+        { "type": "revive", "hp_percent": 0.5 }
+      ]
+    },
+    {
+      "id": "skill_power_strike",
+      "name": "강타",
+      "nameEn": "Power Strike",
+      "description": "적 1명에게 공격력의 140%의 화염 데미지를 입힌다",
+      "type": "active",
+      "element": "fire",
+      "target": "enemy_single",
+      "multiplier": 1.4,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_iron_will",
+      "name": "강철 의지",
+      "nameEn": "Iron Will",
+      "description": "자신의 방어력을 3턴간 30% 증가시킨다",
+      "type": "active",
+      "element": "fire",
+      "target": "self",
+      "cooldown": 4,
+      "effects": [
+        { "type": "self_buff", "stat": "def", "value": 0.3, "duration": 3 }
+      ]
+    },
+    {
+      "id": "skill_water_splash",
+      "name": "물결 공격",
+      "nameEn": "Water Splash",
+      "description": "적 1명에게 공격력의 140%의 물 데미지를 입힌다",
+      "type": "active",
+      "element": "water",
+      "target": "enemy_single",
+      "multiplier": 1.4,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_frost_nova",
+      "name": "서리 폭발",
+      "nameEn": "Frost Nova",
+      "description": "적 전체에게 공격력의 130%의 물 데미지를 입히고 30% 확률로 속도를 감소시킨다",
+      "type": "active",
+      "element": "water",
+      "target": "enemy_all",
+      "multiplier": 1.3,
+      "cooldown": 4,
+      "effects": [
+        { "type": "debuff", "stat": "spd", "value": -0.2, "chance": 0.3, "duration": 2 }
+      ]
+    },
+    {
+      "id": "skill_quick_shot",
+      "name": "속사",
+      "nameEn": "Quick Shot",
+      "description": "적 1명에게 공격력의 130%의 바람 데미지를 입힌다",
+      "type": "active",
+      "element": "wind",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 2,
+      "effects": []
+    },
+    {
+      "id": "skill_wind_arrow",
+      "name": "바람 화살",
+      "nameEn": "Wind Arrow",
+      "description": "적 1명에게 공격력의 150%의 바람 데미지를 입히고 자신의 속도를 15% 증가시킨다",
+      "type": "active",
+      "element": "wind",
+      "target": "enemy_single",
+      "multiplier": 1.5,
+      "cooldown": 3,
+      "effects": [
+        { "type": "self_buff", "stat": "spd", "value": 0.15, "duration": 2 }
+      ]
+    },
+    {
+      "id": "skill_heal",
+      "name": "치유",
+      "nameEn": "Heal",
+      "description": "아군 1명의 HP를 공격력의 150%만큼 회복한다",
+      "type": "active",
+      "element": "light",
+      "target": "ally_single",
+      "multiplier": 1.5,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_bless",
+      "name": "축복",
+      "nameEn": "Bless",
+      "description": "아군 전체의 공격력을 2턴간 15% 증가시킨다",
+      "type": "active",
+      "element": "light",
+      "target": "ally_all",
+      "cooldown": 4,
+      "effects": [
+        { "type": "buff", "stat": "atk", "value": 0.15, "duration": 2 }
+      ]
+    },
+    {
+      "id": "skill_dark_slash",
+      "name": "암흑 베기",
+      "nameEn": "Dark Slash",
+      "description": "적 1명에게 공격력의 145%의 어둠 데미지를 입힌다",
+      "type": "active",
+      "element": "dark",
+      "target": "enemy_single",
+      "multiplier": 1.45,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_fear",
+      "name": "공포",
+      "nameEn": "Fear",
+      "description": "적 1명에게 2턴간 공격력 20% 감소 디버프를 부여한다",
+      "type": "active",
+      "element": "dark",
+      "target": "enemy_single",
+      "cooldown": 4,
+      "effects": [
+        { "type": "debuff", "stat": "atk", "value": -0.2, "duration": 2 }
+      ]
+    },
+    {
+      "id": "skill_flame_spirit",
+      "name": "불꽃 정령",
+      "nameEn": "Flame Spirit",
+      "description": "적 1명에게 공격력의 140%의 화염 데미지를 입히고 15% 확률로 화상을 부여한다",
+      "type": "active",
+      "element": "fire",
+      "target": "enemy_single",
+      "multiplier": 1.4,
+      "cooldown": 3,
+      "effects": [
+        { "type": "burn", "chance": 0.15, "duration": 2 }
+      ]
+    },
+    {
+      "id": "skill_fire_dance",
+      "name": "화염무",
+      "nameEn": "Fire Dance",
+      "description": "적 전체에게 공격력의 120%의 화염 데미지를 입힌다",
+      "type": "active",
+      "element": "fire",
+      "target": "enemy_all",
+      "multiplier": 1.2,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_anchor_strike",
+      "name": "닻 강타",
+      "nameEn": "Anchor Strike",
+      "description": "적 1명에게 공격력의 150%의 물 데미지를 입히고 20% 확률로 기절시킨다",
+      "type": "active",
+      "element": "water",
+      "target": "enemy_single",
+      "multiplier": 1.5,
+      "cooldown": 4,
+      "effects": [
+        { "type": "stun", "chance": 0.2, "duration": 1 }
+      ]
+    },
+    {
+      "id": "skill_tide_guard",
+      "name": "파도의 수호",
+      "nameEn": "Tide Guard",
+      "description": "자신의 방어력을 3턴간 25% 증가시킨다",
+      "type": "active",
+      "element": "water",
+      "target": "self",
+      "cooldown": 4,
+      "effects": [
+        { "type": "self_buff", "stat": "def", "value": 0.25, "duration": 3 }
+      ]
+    },
+    {
+      "id": "skill_goblin_scratch",
+      "name": "할퀴기",
+      "nameEn": "Scratch",
+      "description": "적 1명에게 공격력의 100%의 데미지를 입힌다",
+      "type": "basic",
+      "element": "neutral",
+      "target": "enemy_single",
+      "multiplier": 1.0,
+      "cooldown": 0,
+      "effects": []
+    },
+    {
+      "id": "skill_wolf_bite",
+      "name": "물어뜯기",
+      "nameEn": "Bite",
+      "description": "적 1명에게 공격력의 120%의 데미지를 입힌다",
+      "type": "active",
+      "element": "neutral",
+      "target": "enemy_single",
+      "multiplier": 1.2,
+      "cooldown": 2,
+      "effects": []
+    },
+    {
+      "id": "skill_slime_split",
+      "name": "분열",
+      "nameEn": "Split",
+      "description": "자신의 HP를 10% 회복한다",
+      "type": "active",
+      "element": "water",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        { "type": "self_heal", "value": 0.1 }
+      ]
+    },
+    {
+      "id": "skill_mushroom_spore",
+      "name": "포자 뿌리기",
+      "nameEn": "Spore",
+      "description": "적 전체에게 공격력의 80%의 데미지를 입히고 20% 확률로 독을 부여한다",
+      "type": "active",
+      "element": "wind",
+      "target": "enemy_all",
+      "multiplier": 0.8,
+      "cooldown": 3,
+      "effects": [
+        { "type": "poison", "chance": 0.2, "duration": 2 }
+      ]
+    },
+    {
+      "id": "skill_treant_smash",
+      "name": "나무 강타",
+      "nameEn": "Tree Smash",
+      "description": "적 1명에게 공격력의 140%의 데미지를 입힌다",
+      "type": "active",
+      "element": "wind",
+      "target": "enemy_single",
+      "multiplier": 1.4,
+      "cooldown": 3,
+      "effects": []
+    }
+  ]
+}
