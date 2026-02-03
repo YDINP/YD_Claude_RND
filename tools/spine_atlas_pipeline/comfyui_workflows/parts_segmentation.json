@@ -1,0 +1,185 @@
+{
+  "last_node_id": 15,
+  "last_link_id": 18,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [26, 200],
+      "size": { "0": 315, "1": 314 },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "outputs": [
+        { "name": "IMAGE", "type": "IMAGE", "links": [1], "slot_index": 0 },
+        { "name": "MASK", "type": "MASK", "links": null }
+      ],
+      "properties": { "Node name for S&R": "LoadImage" },
+      "widgets_values": ["input_character.png", "image"]
+    },
+    {
+      "id": 2,
+      "type": "GroundingDinoModelLoader (segment anything)",
+      "pos": [26, 550],
+      "size": { "0": 361, "1": 58 },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "outputs": [
+        { "name": "GROUNDING_DINO_MODEL", "type": "GROUNDING_DINO_MODEL", "links": [2], "slot_index": 0 }
+      ],
+      "properties": { "Node name for S&R": "GroundingDinoModelLoader (segment anything)" },
+      "widgets_values": ["groundingdino_swint_ogc.pth"]
+    },
+    {
+      "id": 3,
+      "type": "SAMModelLoader (segment anything)",
+      "pos": [26, 650],
+      "size": { "0": 315, "1": 58 },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "outputs": [
+        { "name": "SAM_MODEL", "type": "SAM_MODEL", "links": [3], "slot_index": 0 }
+      ],
+      "properties": { "Node name for S&R": "SAMModelLoader (segment anything)" },
+      "widgets_values": ["sam_vit_h_4b8939.pth"]
+    },
+    {
+      "id": 4,
+      "type": "GroundingDinoSAMSegment (segment anything)",
+      "pos": [430, 300],
+      "size": { "0": 352, "1": 122 },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        { "name": "sam_model", "type": "SAM_MODEL", "link": 3 },
+        { "name": "grounding_dino_model", "type": "GROUNDING_DINO_MODEL", "link": 2 },
+        { "name": "image", "type": "IMAGE", "link": 1 }
+      ],
+      "outputs": [
+        { "name": "IMAGE", "type": "IMAGE", "links": [4], "slot_index": 0 },
+        { "name": "MASK", "type": "MASK", "links": [5, 10], "slot_index": 1 }
+      ],
+      "properties": { "Node name for S&R": "GroundingDinoSAMSegment (segment anything)" },
+      "widgets_values": [
+        "chibi head with face, round body torso, left arm, right arm, left leg, right leg, front hair bangs, back hair ponytail, weapon staff sword bow, magical floating effect",
+        0.3
+      ]
+    },
+    {
+      "id": 5,
+      "type": "MaskToImage",
+      "pos": [820, 200],
+      "size": { "0": 210, "1": 26 },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [{ "name": "mask", "type": "MASK", "link": 5 }],
+      "outputs": [
+        { "name": "IMAGE", "type": "IMAGE", "links": [6], "slot_index": 0 }
+      ],
+      "properties": { "Node name for S&R": "MaskToImage" }
+    },
+    {
+      "id": 6,
+      "type": "SaveImage",
+      "pos": [1060, 200],
+      "size": { "0": 315, "1": 270 },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [{ "name": "images", "type": "IMAGE", "link": 6 }],
+      "properties": { "Node name for S&R": "SaveImage" },
+      "widgets_values": ["mask_preview"]
+    },
+    {
+      "id": 10,
+      "type": "InvertMask",
+      "pos": [820, 300],
+      "size": { "0": 210, "1": 26 },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [{ "name": "mask", "type": "MASK", "link": 10 }],
+      "outputs": [
+        { "name": "MASK", "type": "MASK", "links": [11], "slot_index": 0 }
+      ],
+      "properties": { "Node name for S&R": "InvertMask" }
+    },
+    {
+      "id": 11,
+      "type": "ImageCompositeMasked",
+      "pos": [1060, 500],
+      "size": { "0": 315, "1": 146 },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        { "name": "destination", "type": "IMAGE", "link": 12 },
+        { "name": "source", "type": "IMAGE", "link": 4 },
+        { "name": "mask", "type": "MASK", "link": 11 }
+      ],
+      "outputs": [
+        { "name": "IMAGE", "type": "IMAGE", "links": [14], "slot_index": 0 }
+      ],
+      "properties": { "Node name for S&R": "ImageCompositeMasked" },
+      "widgets_values": [0, 0, false]
+    },
+    {
+      "id": 12,
+      "type": "EmptyImage",
+      "pos": [820, 500],
+      "size": { "0": 210, "1": 106 },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "outputs": [
+        { "name": "IMAGE", "type": "IMAGE", "links": [12], "slot_index": 0 }
+      ],
+      "properties": { "Node name for S&R": "EmptyImage" },
+      "widgets_values": [1024, 1024, 1, 0]
+    },
+    {
+      "id": 13,
+      "type": "SaveImage",
+      "pos": [1400, 500],
+      "size": { "0": 315, "1": 270 },
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [{ "name": "images", "type": "IMAGE", "link": 14 }],
+      "properties": { "Node name for S&R": "SaveImage" },
+      "widgets_values": ["parts_segmented"]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 4, 2, "IMAGE"],
+    [2, 2, 0, 4, 1, "GROUNDING_DINO_MODEL"],
+    [3, 3, 0, 4, 0, "SAM_MODEL"],
+    [4, 4, 0, 11, 1, "IMAGE"],
+    [5, 4, 1, 5, 0, "MASK"],
+    [6, 5, 0, 6, 0, "IMAGE"],
+    [10, 4, 1, 10, 0, "MASK"],
+    [11, 10, 0, 11, 2, "MASK"],
+    [12, 12, 0, 11, 0, "IMAGE"],
+    [14, 11, 0, 13, 0, "IMAGE"]
+  ],
+  "groups": [
+    {
+      "title": "Parts Segmentation with SAM + GroundingDINO",
+      "bounding": [14, 127, 1720, 700],
+      "color": "#8e3f3f"
+    }
+  ],
+  "config": {},
+  "extra": {
+    "info": {
+      "description": "SAM + GroundingDINO를 사용한 캐릭터 파츠 자동 분리 워크플로우",
+      "author": "Spine Atlas Pipeline",
+      "usage": "1. LoadImage에 캐릭터 전신 이미지 로드\n2. GroundingDINO 프롬프트에 분리할 파츠 입력\n3. 각 파츠별 마스크 생성 및 개별 저장"
+    }
+  },
+  "version": 0.4
+}
