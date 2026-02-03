@@ -399,6 +399,265 @@ export const getTimeUntilFullEnergy = async () => {
   return energyNeeded * ENERGY_RECOVERY_INTERVAL;
 };
 
+/**
+ * 로컬 데이터를 클라우드에 동기화
+ * @returns {Promise<Object>} 동기화 결과
+ */
+export const syncToCloud = async () => {
+  const userId = await getUserId();
+
+  if (!isSupabaseConfigured || !supabase) {
+    return {
+      success: false,
+      error: 'Supabase not configured',
+      synced: false
+    };
+  }
+
+  try {
+    // 로컬 데이터 가져오기
+    const localData = getLocalData(COLLECTION, userId);
+
+    if (!localData) {
+      return {
+        success: true,
+        message: 'No local data to sync',
+        synced: false
+      };
+    }
+
+    // 클라우드 데이터 확인
+    const { data: cloudData, error: fetchError } = await supabase
+      .from('player_data')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      throw fetchError;
+    }
+
+    // 충돌 해결: 로컬이 더 최신인 경우만 업로드
+    if (cloudData) {
+      const localUpdated = new Date(localData.updated_at);
+      const cloudUpdated = new Date(cloudData.updated_at);
+
+      if (cloudUpdated > localUpdated) {
+        return {
+          success: true,
+          message: 'Cloud data is newer, sync skipped',
+          synced: false,
+          conflict: true
+        };
+      }
+    }
+
+    // 업서트 (생성 또는 업데이트)
+    const { data: syncedData, error: upsertError } = await supabase
+      .from('player_data')
+      .upsert({
+        ...localData,
+        user_id: userId,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (upsertError) {
+      throw upsertError;
+    }
+
+    // 로컬 데이터도 업데이트
+    setLocalData(COLLECTION, syncedData, userId);
+
+    return {
+      success: true,
+      data: syncedData,
+      synced: true
+    };
+  } catch (error) {
+    console.error('PlayerService.syncToCloud error:', error);
+    return {
+      success: false,
+      error: error.message,
+      synced: false
+    };
+  }
+};
+
+/**
+ * 클라우드에서 데이터 로드
+ * @param {boolean} overwriteLocal - 로컬 데이터 덮어쓰기 여부
+ * @returns {Promise<Object>} 로드 결과
+ */
+export const loadFromCloud = async (overwriteLocal = false) => {
+  const userId = await getUserId();
+
+  if (!isSupabaseConfigured || !supabase) {
+    return {
+      success: false,
+      error: 'Supabase not configured',
+      loaded: false
+    };
+  }
+
+  try {
+    const { data: cloudData, error } = await supabase
+      .from('player_data')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return {
+          success: true,
+          message: 'No cloud data found',
+          loaded: false
+        };
+      }
+      throw error;
+    }
+
+    // 로컬 데이터와 비교
+    const localData = getLocalData(COLLECTION, userId);
+
+    if (localData && !overwriteLocal) {
+      const localUpdated = new Date(localData.updated_at);
+      const cloudUpdated = new Date(cloudData.updated_at);
+
+      if (localUpdated > cloudUpdated) {
+        return {
+          success: true,
+          message: 'Local data is newer',
+          loaded: false,
+          conflict: true,
+          localData,
+          cloudData
+        };
+      }
+    }
+
+    // 로컬에 저장
+    setLocalData(COLLECTION, cloudData, userId);
+
+    return {
+      success: true,
+      data: calculateEnergyRecovery(cloudData),
+      loaded: true
+    };
+  } catch (error) {
+    console.error('PlayerService.loadFromCloud error:', error);
+    return {
+      success: false,
+      error: error.message,
+      loaded: false
+    };
+  }
+};
+
+/**
+ * 일일 소탕 횟수 확인 및 리셋
+ */
+export const checkAndResetDailySweep = async () => {
+  const playerData = await getPlayerData();
+
+  if (!playerData) return null;
+
+  const today = new Date().toISOString().split('T')[0];
+  const resetDate = playerData.sweep_reset_date || today;
+
+  if (resetDate < today) {
+    // 일일 리셋
+    const updated = await updatePlayerData({
+      sweep_count_today: 0,
+      sweep_reset_date: today
+    });
+    return updated;
+  }
+
+  return playerData;
+};
+
+/**
+ * 일일 소탕 횟수 증가
+ */
+export const incrementDailySweepCount = async (amount = 1) => {
+  const playerData = await checkAndResetDailySweep();
+
+  const updated = await updatePlayerData({
+    sweep_count_today: (playerData.sweep_count_today || 0) + amount
+  });
+
+  return updated;
+};
+
+/**
+ * VIP 레벨에 따른 일일 소탕 제한 확인
+ */
+export const getDailySweepLimit = (vipLevel = 0) => {
+  // VIP 레벨별 일일 소탕 제한
+  const limits = {
+    0: 5,
+    1: 10,
+    2: 15,
+    3: 20,
+    4: 30,
+    5: 40,
+    6: 50,
+    7: 70,
+    8: 100,
+    9: 150,
+    10: 999
+  };
+  return limits[vipLevel] || limits[0];
+};
+
+/**
+ * 젬 소비 기록 및 VIP 레벨 업데이트
+ */
+export const recordGemSpending = async (amount) => {
+  const playerData = await getPlayerData();
+
+  const totalSpent = (playerData.total_gems_spent || 0) + amount;
+
+  // VIP 레벨 계산
+  const newVipLevel = calculateVipLevel(totalSpent);
+
+  const updated = await updatePlayerData({
+    total_gems_spent: totalSpent,
+    vip_level: newVipLevel
+  });
+
+  return {
+    playerData: updated,
+    vipLevelUp: newVipLevel > (playerData.vip_level || 0)
+  };
+};
+
+/**
+ * VIP 레벨 계산 (클라이언트 측)
+ */
+const calculateVipLevel = (totalSpent) => {
+  const thresholds = [
+    { level: 10, amount: 200000 },
+    { level: 9, amount: 100000 },
+    { level: 8, amount: 50000 },
+    { level: 7, amount: 20000 },
+    { level: 6, amount: 10000 },
+    { level: 5, amount: 5000 },
+    { level: 4, amount: 3000 },
+    { level: 3, amount: 1000 },
+    { level: 2, amount: 500 },
+    { level: 1, amount: 100 }
+  ];
+
+  for (const { level, amount } of thresholds) {
+    if (totalSpent >= amount) return level;
+  }
+  return 0;
+};
+
 // 서비스 객체로 내보내기
 const PlayerService = {
   getPlayerData,
@@ -417,7 +676,14 @@ const PlayerService = {
   addExp,
   getExpForLevel,
   getTimeUntilNextEnergy,
-  getTimeUntilFullEnergy
+  getTimeUntilFullEnergy,
+  // v5 추가 기능
+  syncToCloud,
+  loadFromCloud,
+  checkAndResetDailySweep,
+  incrementDailySweepCount,
+  getDailySweepLimit,
+  recordGemSpending
 };
 
 export default PlayerService;

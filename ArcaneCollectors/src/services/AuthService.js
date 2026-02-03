@@ -34,6 +34,49 @@ export const getGuestUserId = () => {
 };
 
 /**
+ * 게스트 로그인
+ * 새로운 게스트 사용자 생성 또는 기존 게스트 복원
+ */
+export const guestLogin = async () => {
+  const guestUser = getGuestUserId();
+
+  // 세션 정보 저장
+  setLocalData('session', {
+    user: guestUser,
+    isGuest: true,
+    loginAt: new Date().toISOString()
+  });
+
+  return {
+    user: guestUser,
+    session: null,
+    isGuest: true,
+    error: null
+  };
+};
+
+/**
+ * 회원가입 별칭 (API 일관성)
+ */
+export const register = async (email, password, nickname = '') => {
+  return signUp(email, password, nickname);
+};
+
+/**
+ * 로그인 별칭 (API 일관성)
+ */
+export const login = async (email, password) => {
+  return signIn(email, password);
+};
+
+/**
+ * 로그아웃 별칭 (API 일관성)
+ */
+export const logout = async () => {
+  return signOut();
+};
+
+/**
  * 이메일/비밀번호로 회원가입
  */
 export const signUp = async (email, password, nickname = '') => {
@@ -327,6 +370,10 @@ export const convertGuestToUser = async (email, password, nickname) => {
 // 서비스 객체로 내보내기
 const AuthService = {
   getGuestUserId,
+  guestLogin,
+  register,
+  login,
+  logout,
   signUp,
   signIn,
   signInWithProvider,

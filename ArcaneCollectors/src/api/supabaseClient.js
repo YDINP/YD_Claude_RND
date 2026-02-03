@@ -107,6 +107,139 @@ export const isOnline = () => {
 };
 
 /**
+ * 재시도 가능한 Supabase 쿼리 실행
+ * @param {Function} queryFn - 쿼리 함수
+ * @param {number} maxRetries - 최대 재시도 횟수
+ * @param {number} delay - 재시도 간격 (ms)
+ */
+export const executeWithRetry = async (queryFn, maxRetries = 3, delay = 1000) => {
+  let lastError;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const result = await queryFn();
+      if (result.error) {
+        // 재시도 가능한 에러인지 확인
+        const retryableErrors = ['PGRST301', 'PGRST502', 'PGRST503'];
+        if (retryableErrors.includes(result.error.code) && attempt < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, delay * (attempt + 1)));
+          continue;
+        }
+        return result;
+      }
+      return result;
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay * (attempt + 1)));
+      }
+    }
+  }
+
+  return { data: null, error: lastError || new Error('Max retries exceeded') };
+};
+
+/**
+ * Supabase 에러 처리 헬퍼
+ * @param {Object} error - Supabase 에러 객체
+ * @returns {Object} 표준화된 에러 객체
+ */
+export const handleSupabaseError = (error) => {
+  if (!error) return null;
+
+  const errorMap = {
+    'PGRST116': { code: 'NOT_FOUND', message: '데이터를 찾을 수 없습니다' },
+    'PGRST301': { code: 'NETWORK_ERROR', message: '네트워크 오류가 발생했습니다' },
+    'PGRST401': { code: 'UNAUTHORIZED', message: '인증이 필요합니다' },
+    'PGRST403': { code: 'FORBIDDEN', message: '접근 권한이 없습니다' },
+    '23505': { code: 'DUPLICATE', message: '이미 존재하는 데이터입니다' },
+    '23503': { code: 'FOREIGN_KEY', message: '참조 무결성 오류입니다' }
+  };
+
+  const mapped = errorMap[error.code] || {
+    code: error.code || 'UNKNOWN',
+    message: error.message || '알 수 없는 오류가 발생했습니다'
+  };
+
+  return {
+    ...mapped,
+    originalError: error,
+    hint: error.hint || null,
+    details: error.details || null
+  };
+};
+
+/**
+ * 오프라인 큐 - 오프라인 상태에서 발생한 작업 저장
+ */
+const OFFLINE_QUEUE_KEY = 'arcane_collectors_offline_queue';
+
+export const addToOfflineQueue = (operation) => {
+  try {
+    const queue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+    queue.push({
+      ...operation,
+      timestamp: new Date().toISOString()
+    });
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+    return true;
+  } catch (error) {
+    console.error('Failed to add to offline queue:', error);
+    return false;
+  }
+};
+
+export const processOfflineQueue = async () => {
+  if (!isOnline()) return { processed: 0, errors: [] };
+
+  try {
+    const queue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+    if (queue.length === 0) return { processed: 0, errors: [] };
+
+    const results = { processed: 0, errors: [] };
+    const remainingQueue = [];
+
+    for (const operation of queue) {
+      try {
+        // 작업 유형에 따라 처리
+        const { table, action, data } = operation;
+        let result;
+
+        switch (action) {
+          case 'insert':
+            result = await supabase.from(table).insert(data);
+            break;
+          case 'update':
+            result = await supabase.from(table).update(data.updates).eq('id', data.id);
+            break;
+          case 'upsert':
+            result = await supabase.from(table).upsert(data);
+            break;
+          default:
+            throw new Error(`Unknown action: ${action}`);
+        }
+
+        if (result.error) {
+          results.errors.push({ operation, error: result.error });
+          remainingQueue.push(operation);
+        } else {
+          results.processed++;
+        }
+      } catch (error) {
+        results.errors.push({ operation, error });
+        remainingQueue.push(operation);
+      }
+    }
+
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(remainingQueue));
+    return results;
+  } catch (error) {
+    console.error('Failed to process offline queue:', error);
+    return { processed: 0, errors: [error] };
+  }
+};
+
+/**
  * Supabase 연결 테스트
  */
 export const testConnection = async () => {
