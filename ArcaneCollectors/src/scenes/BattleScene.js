@@ -859,7 +859,9 @@ export class BattleScene extends Phaser.Scene {
     this.speedButtons.forEach(btn => {
       const bg = btn.getData('bg');
       const speed = btn.getData('speed');
-      bg.setFillStyle(this.battleSpeed === speed ? COLORS.primary : COLORS.backgroundLight, 1);
+      if (bg && bg.setFillStyle) {
+        bg.setFillStyle(this.battleSpeed === speed ? COLORS.primary : COLORS.backgroundLight, 1);
+      }
     });
   }
 
