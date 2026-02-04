@@ -1,0 +1,191 @@
+{
+  "config": {
+    "maxFloor": 100,
+    "bossFloors": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+    "resetType": "monthly"
+  },
+  "rewards": {
+    "1-10": {
+      "gold": 1000,
+      "exp": 500,
+      "equipmentChance": 0
+    },
+    "11-30": {
+      "gold": 2000,
+      "exp": 1000,
+      "equipmentChance": 0.1
+    },
+    "31-50": {
+      "gold": 5000,
+      "exp": 2000,
+      "equipmentChance": 0.2
+    },
+    "51-70": {
+      "gold": 10000,
+      "exp": 5000,
+      "equipmentChance": 0.3
+    },
+    "71-100": {
+      "gold": 20000,
+      "exp": 10000,
+      "equipmentChance": 0.5
+    }
+  },
+  "floors": [
+    {
+      "floor": 1,
+      "enemies": [{"id": "enemy_slime", "count": 3}],
+      "isBoss": false
+    },
+    {
+      "floor": 2,
+      "enemies": [{"id": "enemy_slime", "count": 3}, {"id": "enemy_goblin", "count": 1}],
+      "isBoss": false
+    },
+    {
+      "floor": 3,
+      "enemies": [{"id": "enemy_goblin", "count": 3}],
+      "isBoss": false
+    },
+    {
+      "floor": 4,
+      "enemies": [{"id": "enemy_goblin", "count": 2}, {"id": "enemy_wolf", "count": 2}],
+      "isBoss": false
+    },
+    {
+      "floor": 5,
+      "enemies": [{"id": "enemy_goblin_archer", "count": 3}],
+      "isBoss": false
+    },
+    {
+      "floor": 6,
+      "enemies": [{"id": "enemy_wolf", "count": 4}],
+      "isBoss": false
+    },
+    {
+      "floor": 7,
+      "enemies": [{"id": "enemy_mushroom", "count": 4}],
+      "isBoss": false
+    },
+    {
+      "floor": 8,
+      "enemies": [{"id": "enemy_goblin_shaman", "count": 2}],
+      "isBoss": false
+    },
+    {
+      "floor": 9,
+      "enemies": [{"id": "enemy_goblin_warrior", "count": 2}, {"id": "enemy_goblin_archer", "count": 2}],
+      "isBoss": false
+    },
+    {
+      "floor": 10,
+      "enemies": [{"id": "enemy_goblin_king", "count": 1}],
+      "isBoss": true,
+      "bossReward": {
+        "gems": 50,
+        "srTicket": 1,
+        "ssrTicket": 0
+      }
+    },
+    {
+      "floor": 15,
+      "enemies": [{"id": "enemy_wolf_alpha", "count": 2}],
+      "isBoss": false
+    },
+    {
+      "floor": 20,
+      "enemies": [{"id": "enemy_treant", "count": 1}],
+      "isBoss": true,
+      "bossReward": {
+        "gems": 70,
+        "srTicket": 1,
+        "ssrTicket": 0
+      }
+    },
+    {
+      "floor": 25,
+      "enemies": [{"id": "enemy_slime_large", "count": 3}],
+      "isBoss": false
+    },
+    {
+      "floor": 30,
+      "enemies": [{"id": "enemy_goblin_king", "count": 1}, {"id": "enemy_goblin_shaman", "count": 2}],
+      "isBoss": true,
+      "bossReward": {
+        "gems": 100,
+        "srTicket": 2,
+        "ssrTicket": 0
+      }
+    },
+    {
+      "floor": 40,
+      "enemies": [{"id": "enemy_treant", "count": 2}],
+      "isBoss": true,
+      "bossReward": {
+        "gems": 130,
+        "srTicket": 2,
+        "ssrTicket": 0
+      }
+    },
+    {
+      "floor": 50,
+      "enemies": [{"id": "enemy_goblin_king", "count": 2}],
+      "isBoss": true,
+      "bossReward": {
+        "gems": 180,
+        "srTicket": 3,
+        "ssrTicket": 1
+      }
+    },
+    {
+      "floor": 60,
+      "enemies": [{"id": "enemy_treant", "count": 2}, {"id": "enemy_wolf_alpha", "count": 2}],
+      "isBoss": true,
+      "bossReward": {
+        "gems": 230,
+        "srTicket": 3,
+        "ssrTicket": 1
+      }
+    },
+    {
+      "floor": 70,
+      "enemies": [{"id": "enemy_goblin_king", "count": 2}, {"id": "enemy_goblin_warrior", "count": 3}],
+      "isBoss": true,
+      "bossReward": {
+        "gems": 280,
+        "srTicket": 4,
+        "ssrTicket": 1
+      }
+    },
+    {
+      "floor": 80,
+      "enemies": [{"id": "enemy_treant", "count": 3}],
+      "isBoss": true,
+      "bossReward": {
+        "gems": 350,
+        "srTicket": 4,
+        "ssrTicket": 1
+      }
+    },
+    {
+      "floor": 90,
+      "enemies": [{"id": "enemy_goblin_king", "count": 2}, {"id": "enemy_treant", "count": 2}],
+      "isBoss": true,
+      "bossReward": {
+        "gems": 450,
+        "srTicket": 5,
+        "ssrTicket": 2
+      }
+    },
+    {
+      "floor": 100,
+      "enemies": [{"id": "enemy_goblin_king", "count": 3}, {"id": "enemy_treant", "count": 2}],
+      "isBoss": true,
+      "bossReward": {
+        "gems": 600,
+        "srTicket": 10,
+        "ssrTicket": 3
+      }
+    }
+  ]
+}
