@@ -61,6 +61,11 @@ export const COLORS = {
     SR: 0xA855F7,
     SSR: 0xF97316
   },
+  // Flat rarity aliases (legacy compatibility)
+  rarityN: 0x9CA3AF,
+  rarityR: 0x3B82F6,
+  raritySR: 0xA855F7,
+  raritySSR: 0xF97316,
   personality: {
     brave: 0xE74C3C,
     cunning: 0x9B59B6,
