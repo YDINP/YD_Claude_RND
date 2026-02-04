@@ -1149,6 +1149,1484 @@
         "idle1": "바람 기분 좋아~",
         "idle2": "달리고 싶어..."
       }
+    },
+    {
+      "id": "hero_016",
+      "name": "오딘",
+      "nameEn": "Odin",
+      "rarity": 5,
+      "cult": "valhalla",
+      "class": "mage",
+      "description": "지혜와 전쟁의 신, 발할라의 주신",
+      "personality": "mystic",
+      "quote": "지혜를 위해 눈 하나를 바쳤지... 후회는 없다",
+      "stats": {
+        "hp": 1200,
+        "atk": 195,
+        "def": 85,
+        "spd": 105
+      },
+      "growthStats": {
+        "hp": 120,
+        "atk": 19,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "룬의 속삭임",
+          "description": "고대 룬 문자로 공격",
+          "multiplier": 1.1,
+          "gaugeGain": 26
+        },
+        {
+          "id": "skill1",
+          "name": "궁니르 일격",
+          "description": "절대 빗나가지 않는 창!",
+          "multiplier": 3.5,
+          "gaugeCost": 120,
+          "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "오딘의 지혜",
+          "description": "모든 아군의 능력 강화",
+          "multiplier": 0,
+          "gaugeCost": 150,
+          "target": "all_allies",
+          "buff": {
+            "atk": 0.3,
+            "def": 0.3,
+            "duration": 3
+          }
+        }
+      ],
+      "voiceLines": {
+        "greeting": "젊은이여, 지혜를 구하는가?",
+        "battleStart": "라그나로크까지 기다릴 수 없구나",
+        "victory": "예상대로야",
+        "defeat": "이것도 미래를 위한 것이리라",
+        "levelUp": "지혜는 끝이 없다",
+        "summon": "발할라의 주인이 왔다",
+        "idle1": "후긴, 무닌아... 무엇을 보았느냐?",
+        "idle2": "미드가르드의 운명이 걱정되는구나..."
+      }
+    },
+    {
+      "id": "hero_017",
+      "name": "토르",
+      "nameEn": "Thor",
+      "rarity": 5,
+      "cult": "valhalla",
+      "class": "warrior",
+      "description": "천둥의 신, 묠니르의 주인",
+      "personality": "brave",
+      "quote": "천둥이 치면 나를 떠올려라!",
+      "stats": {
+        "hp": 1400,
+        "atk": 185,
+        "def": 95,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 140,
+        "atk": 18,
+        "def": 9,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "묠니르 타격",
+          "description": "망치로 내려치기!",
+          "multiplier": 1.15,
+          "gaugeGain": 28
+        },
+        {
+          "id": "skill1",
+          "name": "천둥 번개",
+          "description": "하늘에서 번개가 쏟아진다!",
+          "multiplier": 3.2,
+          "gaugeCost": 110,
+          "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "토르의 분노",
+          "description": "분노의 연속 타격!",
+          "multiplier": 2,
+          "gaugeCost": 130,
+          "target": "random",
+          "hits": 5
+        }
+      ],
+      "voiceLines": {
+        "greeting": "좋은 날씨군! 번개 치기 딱 좋아!",
+        "battleStart": "묠니르가 피를 원한다!",
+        "victory": "하하! 역시 토르다!",
+        "defeat": "으윽... 잠시 쉬어가자...",
+        "levelUp": "더 강한 번개를 부를 수 있다!",
+        "summon": "천둥의 신 토르다!",
+        "idle1": "묠니르 닦는 중...",
+        "idle2": "배고파... 염소 고기 있나?"
+      }
+    },
+    {
+      "id": "hero_018",
+      "name": "로키",
+      "nameEn": "Loki",
+      "rarity": 5,
+      "cult": "valhalla",
+      "class": "mage",
+      "description": "장난과 속임수의 신",
+      "personality": "cunning",
+      "quote": "속이는 게 아니야, 진실을 비틀 뿐이지~",
+      "stats": {
+        "hp": 950,
+        "atk": 175,
+        "def": 65,
+        "spd": 130
+      },
+      "growthStats": {
+        "hp": 95,
+        "atk": 17,
+        "def": 6,
+        "spd": 3
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "환영 단검",
+          "description": "진짜인지 가짜인지~?",
+          "multiplier": 1,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "도플갱어",
+          "description": "어디가 진짜일까?",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "single",
+          "ignoreDefense": 0.4
+        },
+        {
+          "id": "skill2",
+          "name": "카오스 필드",
+          "description": "혼돈을 즐겨라!",
+          "multiplier": 2.2,
+          "gaugeCost": 120,
+          "target": "all",
+          "debuff": {
+            "accuracy": -0.5,
+            "duration": 2
+          }
+        }
+      ],
+      "voiceLines": {
+        "greeting": "나를 불렀나? 아니면 내가 부른 건가?",
+        "battleStart": "재밌는 게임 시작이야~",
+        "victory": "예상 못했지?",
+        "defeat": "다음엔 더 교묘하게...",
+        "levelUp": "더 많은 속임수를 배웠다!",
+        "summon": "로키님 등장~",
+        "idle1": "심심해... 누구 좀 속여볼까?",
+        "idle2": "토르 놀리러 갈까..."
+      }
+    },
+    {
+      "id": "hero_019",
+      "name": "프레야",
+      "nameEn": "Freya",
+      "rarity": 5,
+      "cult": "valhalla",
+      "class": "healer",
+      "description": "사랑과 전쟁의 여신",
+      "personality": "calm",
+      "quote": "아름다움도 전쟁터에선 무기가 되지",
+      "stats": {
+        "hp": 1150,
+        "atk": 140,
+        "def": 80,
+        "spd": 115
+      },
+      "growthStats": {
+        "hp": 115,
+        "atk": 14,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "황금 눈물",
+          "description": "빛나는 눈물로 공격",
+          "multiplier": 0.9,
+          "gaugeGain": 24
+        },
+        {
+          "id": "skill1",
+          "name": "브리싱가멘의 축복",
+          "description": "아군 전체를 치유",
+          "multiplier": 2,
+          "gaugeCost": 110,
+          "isHeal": true,
+          "target": "all_allies"
+        },
+        {
+          "id": "skill2",
+          "name": "발키리 소환",
+          "description": "전장의 천사들!",
+          "multiplier": 2.5,
+          "gaugeCost": 140,
+          "target": "all",
+          "buff": {
+            "atk": 0.25,
+            "duration": 3
+          }
+        }
+      ],
+      "voiceLines": {
+        "greeting": "어머, 잘 왔어~",
+        "battleStart": "아름답게 끝내줄게",
+        "victory": "싸움도 우아하게~",
+        "defeat": "이런... 화장이 지워졌어...",
+        "levelUp": "더 아름다워진 것 같아~",
+        "summon": "프레야야~",
+        "idle1": "고양이들아, 배고프지 않아?",
+        "idle2": "브리싱가멘이 반짝반짝..."
+      }
+    },
+    {
+      "id": "hero_020",
+      "name": "발키리",
+      "nameEn": "Valkyrie",
+      "rarity": 4,
+      "cult": "valhalla",
+      "class": "warrior",
+      "description": "전장의 천사, 영웅을 선택하는 자",
+      "personality": "brave",
+      "quote": "영웅이여, 발할라로 가자!",
+      "stats": {
+        "hp": 1100,
+        "atk": 155,
+        "def": 90,
+        "spd": 108
+      },
+      "growthStats": {
+        "hp": 110,
+        "atk": 15,
+        "def": 9,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "천상의 창",
+          "description": "신성한 창으로 찌르기",
+          "multiplier": 1.05,
+          "gaugeGain": 26
+        },
+        {
+          "id": "skill1",
+          "name": "발할라의 부름",
+          "description": "영혼의 힘을 빌려온다",
+          "multiplier": 2.8,
+          "gaugeCost": 110,
+          "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "천사의 날개",
+          "description": "아군 하나를 부활",
+          "multiplier": 0,
+          "gaugeCost": 200,
+          "target": "single_ally",
+          "revive": 0.5
+        }
+      ],
+      "voiceLines": {
+        "greeting": "전장에서 다시 만나자",
+        "battleStart": "영웅의 자격을 보여라!",
+        "victory": "발할라가 기뻐하리라",
+        "defeat": "아직... 갈 수 없어...",
+        "levelUp": "오딘께서 축복하신다",
+        "summon": "발키리, 참전한다",
+        "idle1": "영웅의 기운이 느껴져...",
+        "idle2": "날개를 손질하는 중..."
+      }
+    },
+    {
+      "id": "hero_021",
+      "name": "헤임달",
+      "nameEn": "Heimdall",
+      "rarity": 4,
+      "cult": "valhalla",
+      "class": "warrior",
+      "description": "비프로스트의 수호자",
+      "personality": "calm",
+      "quote": "아홉 세계를 지켜본다",
+      "stats": {
+        "hp": 1250,
+        "atk": 140,
+        "def": 105,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 125,
+        "atk": 14,
+        "def": 10,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "호프드의 일격",
+          "description": "빛나는 검으로 베기",
+          "multiplier": 1,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "갸들라르호른",
+          "description": "아군 전체에 경고의 빛!",
+          "multiplier": 0,
+          "gaugeCost": 100,
+          "target": "all_allies",
+          "buff": {
+            "def": 0.35,
+            "duration": 3
+          }
+        },
+        {
+          "id": "skill2",
+          "name": "무지개 다리",
+          "description": "비프로스트의 힘!",
+          "multiplier": 3,
+          "gaugeCost": 130,
+          "target": "all"
+        }
+      ],
+      "voiceLines": {
+        "greeting": "비프로스트의 수호자다",
+        "battleStart": "내 눈에서 벗어날 수 없다",
+        "victory": "평화가 유지되었다",
+        "defeat": "잠시... 눈을 쉬어야겠다...",
+        "levelUp": "더 멀리 볼 수 있게 되었다",
+        "summon": "헤임달이다",
+        "idle1": "멀리서 뭔가 움직이는군...",
+        "idle2": "잠은 필요 없다..."
+      }
+    },
+    {
+      "id": "hero_022",
+      "name": "아마테라스",
+      "nameEn": "Amaterasu",
+      "rarity": 5,
+      "cult": "takamagahara",
+      "class": "mage",
+      "description": "태양의 여신, 타카마가하라의 주신",
+      "personality": "calm",
+      "quote": "빛이 있는 곳에 희망이 있다",
+      "stats": {
+        "hp": 1100,
+        "atk": 190,
+        "def": 80,
+        "spd": 110
+      },
+      "growthStats": {
+        "hp": 110,
+        "atk": 19,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "태양의 광선",
+          "description": "태양빛으로 공격",
+          "multiplier": 1.1,
+          "gaugeGain": 26
+        },
+        {
+          "id": "skill1",
+          "name": "천조대신",
+          "description": "태양의 축복을 내린다",
+          "multiplier": 2.8,
+          "gaugeCost": 110,
+          "target": "all",
+          "buff": {
+            "atk": 0.2,
+            "duration": 3
+          }
+        },
+        {
+          "id": "skill2",
+          "name": "야타노카가미",
+          "description": "거울로 모든 것을 반사!",
+          "multiplier": 3.5,
+          "gaugeCost": 150,
+          "target": "single",
+          "reflect": 0.3
+        }
+      ],
+      "voiceLines": {
+        "greeting": "태양이 그대를 비추리라",
+        "battleStart": "어둠을 물리치자",
+        "victory": "빛이 승리했다",
+        "defeat": "잠시 구름 뒤로 숨을 뿐...",
+        "levelUp": "더 밝게 빛나리라",
+        "summon": "아마테라스다. 빛을 가져왔다",
+        "idle1": "오늘 날씨가 좋구나",
+        "idle2": "동굴은 질색이야..."
+      }
+    },
+    {
+      "id": "hero_023",
+      "name": "스사노오",
+      "nameEn": "Susanoo",
+      "rarity": 5,
+      "cult": "takamagahara",
+      "class": "warrior",
+      "description": "폭풍과 바다의 신",
+      "personality": "wild",
+      "quote": "폭풍우가 온다! 각오해라!",
+      "stats": {
+        "hp": 1350,
+        "atk": 180,
+        "def": 90,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 135,
+        "atk": 18,
+        "def": 9,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "폭풍의 검",
+          "description": "바람을 담은 베기",
+          "multiplier": 1.12,
+          "gaugeGain": 27
+        },
+        {
+          "id": "skill1",
+          "name": "쿠사나기 일섬",
+          "description": "신검으로 베어라!",
+          "multiplier": 3.3,
+          "gaugeCost": 110,
+          "target": "single",
+          "ignoreDefense": 0.25
+        },
+        {
+          "id": "skill2",
+          "name": "야마타노오로치",
+          "description": "폭풍우를 불러일으킨다!",
+          "multiplier": 2.8,
+          "gaugeCost": 140,
+          "target": "all"
+        }
+      ],
+      "voiceLines": {
+        "greeting": "폭풍의 신이다. 뭐가 필요해?",
+        "battleStart": "폭풍우가 몰려온다!",
+        "victory": "역시 나다!",
+        "defeat": "잠깐... 바람이 잦아들었어...",
+        "levelUp": "폭풍이 더 강해졌다!",
+        "summon": "스사노오 참전!",
+        "idle1": "바다가 부르는군...",
+        "idle2": "누나한테 장난칠까..."
+      }
+    },
+    {
+      "id": "hero_024",
+      "name": "츠쿠요미",
+      "nameEn": "Tsukuyomi",
+      "rarity": 5,
+      "cult": "takamagahara",
+      "class": "archer",
+      "description": "달의 신, 밤의 지배자",
+      "personality": "mystic",
+      "quote": "달빛 아래서 모든 것이 드러난다",
+      "stats": {
+        "hp": 980,
+        "atk": 185,
+        "def": 70,
+        "spd": 120
+      },
+      "growthStats": {
+        "hp": 98,
+        "atk": 18,
+        "def": 7,
+        "spd": 3
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "월광 화살",
+          "description": "달빛을 실은 화살",
+          "multiplier": 1.05,
+          "gaugeGain": 26
+        },
+        {
+          "id": "skill1",
+          "name": "월식",
+          "description": "어둠 속에서 적을 노린다",
+          "multiplier": 3,
+          "gaugeCost": 100,
+          "target": "single",
+          "crit_bonus": 0.3
+        },
+        {
+          "id": "skill2",
+          "name": "달의 저주",
+          "description": "달빛에 홀린 적들",
+          "multiplier": 2.2,
+          "gaugeCost": 120,
+          "target": "all",
+          "debuff": {
+            "spd": -0.3,
+            "duration": 3
+          }
+        }
+      ],
+      "voiceLines": {
+        "greeting": "달이 차오르는 밤이군",
+        "battleStart": "달빛이 그대를 비추리라",
+        "victory": "예정된 결과다",
+        "defeat": "달도 기우는 법...",
+        "levelUp": "달이 더 밝아졌다",
+        "summon": "츠쿠요미다",
+        "idle1": "언니는 너무 눈부셔...",
+        "idle2": "밤이 좋아..."
+      }
+    },
+    {
+      "id": "hero_025",
+      "name": "이나리",
+      "nameEn": "Inari",
+      "rarity": 4,
+      "cult": "takamagahara",
+      "class": "healer",
+      "description": "쌀과 풍요의 신, 여우의 주인",
+      "personality": "calm",
+      "quote": "풍요로운 축복을 내리지~",
+      "stats": {
+        "hp": 1100,
+        "atk": 100,
+        "def": 85,
+        "spd": 105
+      },
+      "growthStats": {
+        "hp": 110,
+        "atk": 10,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "여우불",
+          "description": "신비한 불꽃으로 공격",
+          "multiplier": 0.88,
+          "gaugeGain": 23
+        },
+        {
+          "id": "skill1",
+          "name": "풍요의 축복",
+          "description": "풍작의 기운으로 치유",
+          "multiplier": 1.8,
+          "gaugeCost": 100,
+          "isHeal": true,
+          "target": "all_allies"
+        },
+        {
+          "id": "skill2",
+          "name": "키츠네의 가호",
+          "description": "여우 정령들의 보호",
+          "multiplier": 0,
+          "gaugeCost": 130,
+          "target": "all_allies",
+          "buff": {
+            "hp_regen": 0.1,
+            "duration": 3
+          }
+        }
+      ],
+      "voiceLines": {
+        "greeting": "콘콘! 이나리님이시다~",
+        "battleStart": "여우들아, 도와줘~",
+        "victory": "풍작이다~!",
+        "defeat": "앗... 쌀알이 떨어졌어...",
+        "levelUp": "더 풍요로워졌다!",
+        "summon": "이나리 참상!",
+        "idle1": "유부초밥 먹고 싶어~",
+        "idle2": "꼬리가 근질근질..."
+      }
+    },
+    {
+      "id": "hero_026",
+      "name": "라이진",
+      "nameEn": "Raijin",
+      "rarity": 4,
+      "cult": "takamagahara",
+      "class": "mage",
+      "description": "번개의 신",
+      "personality": "wild",
+      "quote": "쾅! 번개가 내리친다!",
+      "stats": {
+        "hp": 950,
+        "atk": 160,
+        "def": 68,
+        "spd": 115
+      },
+      "growthStats": {
+        "hp": 95,
+        "atk": 16,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "뇌격",
+          "description": "번개를 떨어뜨려!",
+          "multiplier": 1.02,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "낙뢰",
+          "description": "하늘에서 번개가!",
+          "multiplier": 2.9,
+          "gaugeCost": 100,
+          "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "뇌신의 북",
+          "description": "북을 두드려 폭풍을!",
+          "multiplier": 2.5,
+          "gaugeCost": 120,
+          "target": "all"
+        }
+      ],
+      "voiceLines": {
+        "greeting": "쾅쾅! 뇌신님이시다!",
+        "battleStart": "천둥이 치겠다!",
+        "victory": "우하하! 최고다!",
+        "defeat": "북이 찢어졌어...",
+        "levelUp": "더 큰 소리가 난다!",
+        "summon": "라이진 등장!",
+        "idle1": "둥둥둥...",
+        "idle2": "후진이랑 놀까..."
+      }
+    },
+    {
+      "id": "hero_027",
+      "name": "후진",
+      "nameEn": "Fujin",
+      "rarity": 4,
+      "cult": "takamagahara",
+      "class": "archer",
+      "description": "바람의 신",
+      "personality": "wild",
+      "quote": "바람이 분다~ 휘이익!",
+      "stats": {
+        "hp": 920,
+        "atk": 155,
+        "def": 65,
+        "spd": 125
+      },
+      "growthStats": {
+        "hp": 92,
+        "atk": 15,
+        "def": 6,
+        "spd": 3
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "돌풍",
+          "description": "바람을 쏜다!",
+          "multiplier": 0.98,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "태풍",
+          "description": "거대한 바람을!",
+          "multiplier": 2.6,
+          "gaugeCost": 100,
+          "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "풍신의 자루",
+          "description": "바람 주머니를 열어라!",
+          "multiplier": 3,
+          "gaugeCost": 130,
+          "target": "single",
+          "debuff": {
+            "def": -0.3,
+            "duration": 2
+          }
+        }
+      ],
+      "voiceLines": {
+        "greeting": "휘이익~ 바람의 신이다~",
+        "battleStart": "바람이 분다!",
+        "victory": "산들바람이지~",
+        "defeat": "바람이 멈췄어...",
+        "levelUp": "더 세게 불 수 있어!",
+        "summon": "후진 등장~",
+        "idle1": "바람 주머니 정리 중...",
+        "idle2": "라이진이랑 경쟁할까..."
+      }
+    },
+    {
+      "id": "hero_028",
+      "name": "제우스",
+      "nameEn": "Zeus",
+      "rarity": 5,
+      "cult": "olympus",
+      "class": "mage",
+      "description": "신들의 왕, 번개의 주인",
+      "personality": "brave",
+      "quote": "올림푸스의 왕 앞에 무릎 꿇어라!",
+      "stats": {
+        "hp": 1250,
+        "atk": 200,
+        "def": 85,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 125,
+        "atk": 20,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "번개 낙뢰",
+          "description": "하늘에서 번개가!",
+          "multiplier": 1.15,
+          "gaugeGain": 27
+        },
+        {
+          "id": "skill1",
+          "name": "주신의 번개",
+          "description": "올림푸스의 절대 권능!",
+          "multiplier": 3.5,
+          "gaugeCost": 120,
+          "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "신왕의 위엄",
+          "description": "왕의 오라로 압도한다",
+          "multiplier": 0,
+          "gaugeCost": 150,
+          "target": "all",
+          "debuff": {
+            "atk": -0.3,
+            "def": -0.3,
+            "duration": 2
+          }
+        }
+      ],
+      "voiceLines": {
+        "greeting": "신들의 왕 앞에 섰구나",
+        "battleStart": "올림푸스의 힘을 보여주마",
+        "victory": "당연한 결과다",
+        "defeat": "흠... 잠시 쉬어가자",
+        "levelUp": "더 강한 번개를!",
+        "summon": "제우스가 왔다",
+        "idle1": "헤라가 뭐라 하겠군...",
+        "idle2": "독수리야, 어디 갔니?"
+      }
+    },
+    {
+      "id": "hero_029",
+      "name": "포세이돈",
+      "nameEn": "Poseidon",
+      "rarity": 5,
+      "cult": "olympus",
+      "class": "warrior",
+      "description": "바다의 지배자, 삼지창의 주인",
+      "personality": "wild",
+      "quote": "바다의 분노를 느껴보아라!",
+      "stats": {
+        "hp": 1400,
+        "atk": 175,
+        "def": 100,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 140,
+        "atk": 17,
+        "def": 10,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "삼지창 찌르기",
+          "description": "바다의 창으로!",
+          "multiplier": 1.1,
+          "gaugeGain": 26
+        },
+        {
+          "id": "skill1",
+          "name": "해일",
+          "description": "거대한 파도를 일으킨다!",
+          "multiplier": 3,
+          "gaugeCost": 110,
+          "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "대지의 진동",
+          "description": "바다와 땅을 흔든다!",
+          "multiplier": 3.2,
+          "gaugeCost": 140,
+          "target": "all",
+          "stun_chance": 0.3
+        }
+      ],
+      "voiceLines": {
+        "greeting": "바다의 신이다. 무엇을 원하느냐?",
+        "battleStart": "파도가 밀려온다!",
+        "victory": "바다는 항상 승리한다",
+        "defeat": "밀물과 썰물이 있는 법...",
+        "levelUp": "바다가 더 깊어졌다",
+        "summon": "포세이돈이 왔다",
+        "idle1": "말들이 보고 싶군...",
+        "idle2": "제우스 형은 어디 갔지..."
+      }
+    },
+    {
+      "id": "hero_030",
+      "name": "하데스",
+      "nameEn": "Hades",
+      "rarity": 5,
+      "cult": "olympus",
+      "class": "mage",
+      "description": "저승의 왕, 죽음의 지배자",
+      "personality": "mystic",
+      "quote": "모든 것은 결국 내게로 온다...",
+      "stats": {
+        "hp": 1150,
+        "atk": 185,
+        "def": 88,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 115,
+        "atk": 18,
+        "def": 9,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "저승의 손길",
+          "description": "어둠이 닿는다",
+          "multiplier": 1.08,
+          "gaugeGain": 26
+        },
+        {
+          "id": "skill1",
+          "name": "망자의 부름",
+          "description": "죽은 영혼을 불러낸다",
+          "multiplier": 2.8,
+          "gaugeCost": 110,
+          "target": "all",
+          "lifesteal": 0.2
+        },
+        {
+          "id": "skill2",
+          "name": "지하 세계의 문",
+          "description": "저승의 문을 연다!",
+          "multiplier": 3.5,
+          "gaugeCost": 150,
+          "target": "single",
+          "execute": 0.2
+        }
+      ],
+      "voiceLines": {
+        "greeting": "저승의 왕이 여기 있다",
+        "battleStart": "모든 생명은 끝이 있다",
+        "victory": "죽음은 피할 수 없지",
+        "defeat": "아직... 때가 아닌가...",
+        "levelUp": "저승이 확장되었다",
+        "summon": "하데스다",
+        "idle1": "페르세포네는 잘 있나...",
+        "idle2": "케르베로스, 안녕?"
+      }
+    },
+    {
+      "id": "hero_031",
+      "name": "아테나",
+      "nameEn": "Athena",
+      "rarity": 5,
+      "cult": "olympus",
+      "class": "warrior",
+      "description": "지혜와 전쟁의 여신",
+      "personality": "calm",
+      "quote": "진정한 승리는 전략에서 나온다",
+      "stats": {
+        "hp": 1200,
+        "atk": 170,
+        "def": 105,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 120,
+        "atk": 17,
+        "def": 10,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "지혜의 창",
+          "description": "정확한 찌르기",
+          "multiplier": 1.08,
+          "gaugeGain": 26
+        },
+        {
+          "id": "skill1",
+          "name": "아이기스의 방어",
+          "description": "신성한 방패로 막는다!",
+          "multiplier": 0,
+          "gaugeCost": 100,
+          "target": "all_allies",
+          "buff": {
+            "def": 0.4,
+            "duration": 3
+          }
+        },
+        {
+          "id": "skill2",
+          "name": "전략의 일격",
+          "description": "완벽한 전술!",
+          "multiplier": 3.2,
+          "gaugeCost": 130,
+          "target": "single",
+          "crit_bonus": 0.5
+        }
+      ],
+      "voiceLines": {
+        "greeting": "지혜의 여신이 함께한다",
+        "battleStart": "전략을 세우자",
+        "victory": "예측대로다",
+        "defeat": "새로운 전략이 필요해...",
+        "levelUp": "지혜가 더해졌다",
+        "summon": "아테나다. 지혜롭게 싸우자",
+        "idle1": "올빼미야, 어디 있니?",
+        "idle2": "방패를 닦아야겠어..."
+      }
+    },
+    {
+      "id": "hero_032",
+      "name": "아레스",
+      "nameEn": "Ares",
+      "rarity": 4,
+      "cult": "olympus",
+      "class": "warrior",
+      "description": "전쟁의 신, 피의 축제를 즐기는 자",
+      "personality": "wild",
+      "quote": "피가 끓어오른다! 전쟁이다!",
+      "stats": {
+        "hp": 1150,
+        "atk": 175,
+        "def": 85,
+        "spd": 105
+      },
+      "growthStats": {
+        "hp": 115,
+        "atk": 17,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "광폭한 베기",
+          "description": "미친듯이 베어라!",
+          "multiplier": 1.15,
+          "gaugeGain": 28
+        },
+        {
+          "id": "skill1",
+          "name": "전쟁의 광기",
+          "description": "피에 미친 일격!",
+          "multiplier": 3,
+          "gaugeCost": 100,
+          "target": "single",
+          "selfBuff": {
+            "atk": 0.2,
+            "duration": 2
+          }
+        },
+        {
+          "id": "skill2",
+          "name": "피의 축제",
+          "description": "전장을 핏빛으로!",
+          "multiplier": 2.5,
+          "gaugeCost": 120,
+          "target": "all",
+          "lifesteal": 0.15
+        }
+      ],
+      "voiceLines": {
+        "greeting": "전쟁의 신이다!",
+        "battleStart": "피가 끓어오른다!",
+        "victory": "하하하! 최고다!",
+        "defeat": "치... 다음엔 더 피를...",
+        "levelUp": "더 강해졌다!",
+        "summon": "아레스 등장!",
+        "idle1": "싸움이 그립다...",
+        "idle2": "아테나는 맨날 잔소리야..."
+      }
+    },
+    {
+      "id": "hero_033",
+      "name": "아폴론",
+      "nameEn": "Apollo",
+      "rarity": 4,
+      "cult": "olympus",
+      "class": "archer",
+      "description": "태양과 예언의 신, 예술의 후원자",
+      "personality": "calm",
+      "quote": "태양처럼 빛나리라~",
+      "stats": {
+        "hp": 1000,
+        "atk": 165,
+        "def": 75,
+        "spd": 115
+      },
+      "growthStats": {
+        "hp": 100,
+        "atk": 16,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "태양의 화살",
+          "description": "빛나는 화살!",
+          "multiplier": 1.05,
+          "gaugeGain": 26
+        },
+        {
+          "id": "skill1",
+          "name": "예언의 화살",
+          "description": "절대 빗나가지 않는다",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "single",
+          "accuracy": 1
+        },
+        {
+          "id": "skill2",
+          "name": "태양신의 축복",
+          "description": "태양빛으로 치유!",
+          "multiplier": 1.5,
+          "gaugeCost": 120,
+          "isHeal": true,
+          "target": "all_allies"
+        }
+      ],
+      "voiceLines": {
+        "greeting": "아름다운 하루다~",
+        "battleStart": "태양이 뜬다!",
+        "victory": "완벽한 연주다~",
+        "defeat": "잠시 구름 뒤로...",
+        "levelUp": "더 빛나게!",
+        "summon": "아폴론이다~",
+        "idle1": "리라 연주할까...",
+        "idle2": "아르테미스 누나는 어디?"
+      }
+    },
+    {
+      "id": "hero_034",
+      "name": "이자나미",
+      "nameEn": "Izanami",
+      "rarity": 5,
+      "cult": "yomi",
+      "class": "mage",
+      "description": "황천국의 여왕, 죽음의 여신",
+      "personality": "mystic",
+      "quote": "황천의 문은 항상 열려있다...",
+      "stats": {
+        "hp": 1100,
+        "atk": 188,
+        "def": 82,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 110,
+        "atk": 18,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "황천의 손길",
+          "description": "저승에서 뻗어나오는 손",
+          "multiplier": 1.08,
+          "gaugeGain": 26
+        },
+        {
+          "id": "skill1",
+          "name": "죽음의 저주",
+          "description": "황천의 저주를 내린다",
+          "multiplier": 2.8,
+          "gaugeCost": 110,
+          "target": "all",
+          "debuff": {
+            "hp_drain": 0.1,
+            "duration": 3
+          }
+        },
+        {
+          "id": "skill2",
+          "name": "요모츠히라사카",
+          "description": "황천의 문을 연다!",
+          "multiplier": 3.5,
+          "gaugeCost": 150,
+          "target": "single",
+          "execute": 0.25
+        }
+      ],
+      "voiceLines": {
+        "greeting": "황천에서 왔다...",
+        "battleStart": "죽음을 맞이하라",
+        "victory": "모두 여기로 오게 된다",
+        "defeat": "이자나기... 기다려...",
+        "levelUp": "황천이 확장되었다",
+        "summon": "이자나미다",
+        "idle1": "이자나기는 어디 있을까...",
+        "idle2": "어둠이 편안해..."
+      }
+    },
+    {
+      "id": "hero_035",
+      "name": "엠마",
+      "nameEn": "Emma",
+      "rarity": 5,
+      "cult": "yomi",
+      "class": "warrior",
+      "description": "염라대왕, 죽은 자의 심판자",
+      "personality": "calm",
+      "quote": "너의 죄를 심판하겠다",
+      "stats": {
+        "hp": 1300,
+        "atk": 170,
+        "def": 100,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 130,
+        "atk": 17,
+        "def": 10,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "심판의 검",
+          "description": "죄를 베어낸다",
+          "multiplier": 1.1,
+          "gaugeGain": 27
+        },
+        {
+          "id": "skill1",
+          "name": "염라의 재판",
+          "description": "죄의 무게로 공격!",
+          "multiplier": 3,
+          "gaugeCost": 110,
+          "target": "single",
+          "bonusDmgVsDebuff": 0.5
+        },
+        {
+          "id": "skill2",
+          "name": "지옥의 문",
+          "description": "지옥으로 떨어져라!",
+          "multiplier": 2.5,
+          "gaugeCost": 140,
+          "target": "all",
+          "debuff": {
+            "atk": -0.25,
+            "def": -0.25,
+            "duration": 2
+          }
+        }
+      ],
+      "voiceLines": {
+        "greeting": "심판의 때가 왔다",
+        "battleStart": "죄인을 심판한다",
+        "victory": "정의가 이루어졌다",
+        "defeat": "흠... 다시 판결을 내려야...",
+        "levelUp": "심판의 힘이 강해졌다",
+        "summon": "염라대왕이다",
+        "idle1": "서류가 밀렸군...",
+        "idle2": "거울아, 죄를 보여라..."
+      }
+    },
+    {
+      "id": "hero_036",
+      "name": "오니",
+      "nameEn": "Oni",
+      "rarity": 4,
+      "cult": "yomi",
+      "class": "warrior",
+      "description": "지옥의 귀신, 철퇴를 휘두르는 자",
+      "personality": "wild",
+      "quote": "으하하! 부숴버리겠다!",
+      "stats": {
+        "hp": 1200,
+        "atk": 165,
+        "def": 95,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 120,
+        "atk": 16,
+        "def": 9,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "철퇴 내려치기",
+          "description": "무거운 철퇴로!",
+          "multiplier": 1.12,
+          "gaugeGain": 27
+        },
+        {
+          "id": "skill1",
+          "name": "지옥의 철퇴",
+          "description": "땅을 부숴버려!",
+          "multiplier": 2.9,
+          "gaugeCost": 100,
+          "target": "single",
+          "stun_chance": 0.25
+        },
+        {
+          "id": "skill2",
+          "name": "귀신의 분노",
+          "description": "분노의 연타!",
+          "multiplier": 1.8,
+          "gaugeCost": 120,
+          "target": "random",
+          "hits": 4
+        }
+      ],
+      "voiceLines": {
+        "greeting": "으하하! 오니다!",
+        "battleStart": "부숴버리겠다!",
+        "victory": "역시 오니 최강!",
+        "defeat": "으윽... 뿔이...",
+        "levelUp": "더 세졌다!",
+        "summon": "오니 등장!",
+        "idle1": "콩 싫어...",
+        "idle2": "철퇴 닦을까..."
+      }
+    },
+    {
+      "id": "hero_037",
+      "name": "텐구",
+      "nameEn": "Tengu",
+      "rarity": 4,
+      "cult": "yomi",
+      "class": "archer",
+      "description": "산의 요괴, 바람을 다루는 자",
+      "personality": "cunning",
+      "quote": "하늘에서 내려다보고 있다~",
+      "stats": {
+        "hp": 950,
+        "atk": 158,
+        "def": 70,
+        "spd": 125
+      },
+      "growthStats": {
+        "hp": 95,
+        "atk": 16,
+        "def": 7,
+        "spd": 3
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "깃털 수리검",
+          "description": "날카로운 깃털!",
+          "multiplier": 1.02,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "산바람",
+          "description": "강한 바람을 일으킨다!",
+          "multiplier": 2.7,
+          "gaugeCost": 100,
+          "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "텐구의 부채",
+          "description": "바람을 조종해!",
+          "multiplier": 3,
+          "gaugeCost": 120,
+          "target": "single",
+          "debuff": {
+            "spd": -0.4,
+            "duration": 2
+          }
+        }
+      ],
+      "voiceLines": {
+        "greeting": "후훗, 텐구님이시다~",
+        "battleStart": "날개 좀 펴볼까~",
+        "victory": "산의 왕이다!",
+        "defeat": "코가... 부러졌어...",
+        "levelUp": "날개가 더 강해졌다!",
+        "summon": "텐구 등장~",
+        "idle1": "코 자랑 좀 할까~",
+        "idle2": "산 꼭대기가 좋아..."
+      }
+    },
+    {
+      "id": "hero_038",
+      "name": "유키온나",
+      "nameEn": "Yuki-onna",
+      "rarity": 4,
+      "cult": "yomi",
+      "class": "mage",
+      "description": "설녀, 얼음과 눈의 요괴",
+      "personality": "mystic",
+      "quote": "차가운 포옹을 해줄까...?",
+      "stats": {
+        "hp": 920,
+        "atk": 165,
+        "def": 68,
+        "spd": 110
+      },
+      "growthStats": {
+        "hp": 92,
+        "atk": 16,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "눈꽃 한숨",
+          "description": "얼어붙는 숨결",
+          "multiplier": 1,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "동결",
+          "description": "얼어붙어라!",
+          "multiplier": 2.6,
+          "gaugeCost": 100,
+          "target": "single",
+          "freeze_chance": 0.35
+        },
+        {
+          "id": "skill2",
+          "name": "눈보라",
+          "description": "모든 것을 얼린다!",
+          "multiplier": 2.4,
+          "gaugeCost": 120,
+          "target": "all",
+          "debuff": {
+            "spd": -0.25,
+            "duration": 3
+          }
+        }
+      ],
+      "voiceLines": {
+        "greeting": "차갑지 않아...?",
+        "battleStart": "얼어붙어라...",
+        "victory": "눈처럼 사라졌네...",
+        "defeat": "녹아버릴 것 같아...",
+        "levelUp": "더 차가워졌어...",
+        "summon": "유키온나야...",
+        "idle1": "따뜻한 건 싫어...",
+        "idle2": "눈이 내리면 좋겠다..."
+      }
+    },
+    {
+      "id": "hero_039",
+      "name": "주온",
+      "nameEn": "Joon",
+      "rarity": 4,
+      "cult": "yomi",
+      "class": "healer",
+      "description": "저주의 영혼, 원한을 품은 귀신",
+      "personality": "cunning",
+      "quote": "원한은 절대 잊지 않아...",
+      "stats": {
+        "hp": 1050,
+        "atk": 105,
+        "def": 80,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 105,
+        "atk": 10,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "저주의 손톱",
+          "description": "원한을 담아...",
+          "multiplier": 0.9,
+          "gaugeGain": 24
+        },
+        {
+          "id": "skill1",
+          "name": "원한의 회복",
+          "description": "적의 생명력을 빼앗아 치유",
+          "multiplier": 1.6,
+          "gaugeCost": 100,
+          "isHeal": true,
+          "target": "all_allies",
+          "lifesteal": 0.3
+        },
+        {
+          "id": "skill2",
+          "name": "저주 전이",
+          "description": "디버프를 적에게 전이!",
+          "multiplier": 2,
+          "gaugeCost": 130,
+          "target": "single",
+          "transferDebuff": true
+        }
+      ],
+      "voiceLines": {
+        "greeting": "원한... 잊지 않아...",
+        "battleStart": "저주해줄게...",
+        "victory": "원한이 풀렸어...",
+        "defeat": "아직... 끝나지 않았어...",
+        "levelUp": "원한이 깊어졌어...",
+        "summon": "주온이야...",
+        "idle1": "기다려... 기다려...",
+        "idle2": "절대 용서 안 해..."
+      }
     }
   ]
 }
