@@ -1,4 +1,5 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY } from '../config/gameConfig.js';
+import { SaveManager } from '../systems/SaveManager.js';
 
 export class GachaScene extends Phaser.Scene {
   constructor() {
@@ -390,8 +391,14 @@ export class GachaScene extends Phaser.Scene {
       });
 
       // Deduct gems
-      this.registry.set('gems', gems - cost);
-      this.gemText.setText((gems - cost).toLocaleString());
+      const newGems = gems - cost;
+      this.registry.set('gems', newGems);
+      this.gemText.setText(newGems.toLocaleString());
+
+      // Save gems to localStorage
+      const saveData = SaveManager.load();
+      saveData.resources.gems = newGems;
+      SaveManager.save(saveData);
 
       // Perform summon
       this.performSummon(count);
@@ -509,10 +516,29 @@ export class GachaScene extends Phaser.Scene {
       skills: []
     };
 
-    // Add to owned heroes
+    // Add to owned heroes (registry for in-memory)
     const owned = this.registry.get('ownedHeroes') || [];
     owned.push(hero);
     this.registry.set('ownedHeroes', owned);
+
+    // Save to localStorage for persistence
+    const saveData = SaveManager.load();
+    saveData.characters.push({
+      instanceId: hero.id,
+      characterId: hero.id,
+      name: hero.name,
+      rarity: hero.rarity,
+      element: hero.element,
+      level: hero.level,
+      exp: 0,
+      stars: hero.stars,
+      stats: hero.stats,
+      skills: hero.skills,
+      equipped: null
+    });
+    saveData.gacha.pityCounter = this.registry.get('pityCounter') || 0;
+    saveData.gacha.totalPulls = (saveData.gacha.totalPulls || 0) + 1;
+    SaveManager.save(saveData);
 
     return hero;
   }
