@@ -50,6 +50,8 @@ export const COLORS = {
   bgDark: 0x0F172A,
   bgLight: 0x1E293B,
   bgPanel: 0x334155,
+  backgroundLight: 0x1E293B,  // Alias for bgLight (legacy compatibility)
+  background: 0x0F172A,       // Alias for bgDark
   text: 0xF8FAFC,
   textLight: 0xF8FAFC,
   textDark: 0x94A3B8,
