@@ -1,0 +1,104 @@
+{
+  "banners": [
+    {
+      "id": "standard",
+      "name": "표준 소환",
+      "type": "standard",
+      "description": "모든 캐릭터가 등장하는 기본 배너입니다.",
+      "pickupCharacters": [],
+      "pickupRate": 0,
+      "rates": {
+        "SSR": 0.03,
+        "SR": 0.15,
+        "R": 0.50,
+        "N": 0.32
+      },
+      "isActive": true,
+      "isPermanent": true
+    },
+    {
+      "id": "pickup_arcana",
+      "name": "아르카나 픽업",
+      "type": "pickup",
+      "description": "불꽃의 마녀 아르카나의 픽업 확률이 증가합니다!",
+      "pickupCharacters": ["hero_001"],
+      "pickupRate": 0.5,
+      "rates": {
+        "SSR": 0.03,
+        "SR": 0.15,
+        "R": 0.50,
+        "N": 0.32
+      },
+      "isActive": false,
+      "isPermanent": false,
+      "startDate": "2025-03-01T00:00:00Z",
+      "endDate": "2025-03-15T23:59:59Z"
+    },
+    {
+      "id": "pickup_leonhardt",
+      "name": "레온하르트 픽업",
+      "type": "pickup",
+      "description": "성기사 레온하르트의 픽업 확률이 증가합니다!",
+      "pickupCharacters": ["hero_002"],
+      "pickupRate": 0.5,
+      "rates": {
+        "SSR": 0.03,
+        "SR": 0.15,
+        "R": 0.50,
+        "N": 0.32
+      },
+      "isActive": false,
+      "isPermanent": false,
+      "startDate": "2025-03-15T00:00:00Z",
+      "endDate": "2025-03-30T23:59:59Z"
+    },
+    {
+      "id": "pickup_selene",
+      "name": "셀레네 픽업",
+      "type": "pickup",
+      "description": "그림자 암살자 셀레네의 픽업 확률이 증가합니다!",
+      "pickupCharacters": ["hero_003"],
+      "pickupRate": 0.5,
+      "rates": {
+        "SSR": 0.03,
+        "SR": 0.15,
+        "R": 0.50,
+        "N": 0.32
+      },
+      "isActive": false,
+      "isPermanent": false,
+      "startDate": "2025-04-01T00:00:00Z",
+      "endDate": "2025-04-15T23:59:59Z"
+    },
+    {
+      "id": "pickup_dual",
+      "name": "빛과 어둠 듀얼 픽업",
+      "type": "dual_pickup",
+      "description": "레온하르트와 셀레네의 픽업 확률이 함께 증가합니다!",
+      "pickupCharacters": ["hero_002", "hero_003"],
+      "pickupRate": 0.5,
+      "rates": {
+        "SSR": 0.03,
+        "SR": 0.15,
+        "R": 0.50,
+        "N": 0.32
+      },
+      "isActive": false,
+      "isPermanent": false,
+      "startDate": "2025-05-01T00:00:00Z",
+      "endDate": "2025-05-15T23:59:59Z"
+    }
+  ],
+  "pityConfig": {
+    "softPity": 75,
+    "hardPity": 90,
+    "softPityBonus": 0.06,
+    "pickupPity": 180
+  },
+  "rarityMapping": {
+    "SSR": 5,
+    "SR": 4,
+    "R": 3,
+    "N": 2
+  }
+}

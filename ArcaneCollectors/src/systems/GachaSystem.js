@@ -1,22 +1,32 @@
 /**
  * GachaSystem - 캐릭터 소환 시스템
  * 확률 기반 소환 및 천장(pity) 시스템 구현
+ * v5: 천장/픽업 시스템 추가
  */
 import { SaveManager } from './SaveManager.js';
 import { EventBus, GameEvents } from './EventBus.js';
+import bannersData from '../data/banners.json';
 
 export class GachaSystem {
-  // 등급별 확률
+  // 등급별 기본 확률
   static RATES = {
-    SSR: 0.015, // 1.5%
-    SR: 0.085, // 8.5%
-    R: 0.30, // 30%
-    N: 0.60 // 60%
+    SSR: 0.03, // 3%
+    SR: 0.15, // 15%
+    R: 0.50, // 50%
+    N: 0.32 // 32%
   };
 
-  // 천장 시스템
-  static PITY_THRESHOLD = 90; // 90연차 SSR 확정
-  static SOFT_PITY_START = 75; // 75연차부터 확률 증가
+  // 천장 시스템 설정 (v5)
+  static PITY_CONFIG = {
+    softPity: 75,        // 75회부터 SSR 확률 증가
+    hardPity: 90,        // 90회 SSR 확정
+    softPityBonus: 0.06, // 소프트 천장 후 회당 +6%
+    pickupPity: 180      // 180회 픽업 확정
+  };
+
+  // 레거시 호환성을 위한 상수
+  static PITY_THRESHOLD = 90;
+  static SOFT_PITY_START = 75;
 
   // 비용
   static SINGLE_COST = 300; // 젬
@@ -24,13 +34,153 @@ export class GachaSystem {
   static TICKET_SINGLE = 1; // 티켓 1장
   static TICKET_MULTI = 10; // 티켓 10장
 
-  // 등급별 캐릭터 풀 (실제 게임에서는 데이터에서 로드)
+  // 등급별 캐릭터 풀
   static CHARACTER_POOL = {
-    SSR: ['ssr_aelara', 'ssr_krom', 'ssr_lyra', 'ssr_vex', 'ssr_nova'],
-    SR: ['sr_finn', 'sr_mira', 'sr_bolt', 'sr_sage', 'sr_ash', 'sr_ivy', 'sr_rex'],
-    R: ['r_guard', 'r_scout', 'r_mage', 'r_healer', 'r_archer', 'r_knight', 'r_rogue', 'r_priest'],
+    SSR: ['hero_001', 'hero_002', 'hero_003'],
+    SR: ['hero_004', 'hero_005', 'hero_006', 'hero_007', 'hero_008'],
+    R: ['hero_009', 'hero_010', 'hero_011', 'hero_012', 'hero_013', 'hero_014', 'hero_015'],
     N: ['n_soldier', 'n_peasant', 'n_apprentice', 'n_acolyte', 'n_hunter', 'n_villager']
   };
+
+  // 배너 데이터
+  static _banners = bannersData.banners;
+  static _currentBannerId = 'standard';
+  static _bannerPityCounters = {};
+
+  /** 천장 보너스 확률 계산 (v5) */
+  static calculatePityBonus(pullCount) {
+    if (pullCount >= this.PITY_CONFIG.hardPity) return 1.0;
+    if (pullCount >= this.PITY_CONFIG.softPity) {
+      const extraPulls = pullCount - this.PITY_CONFIG.softPity;
+      return Math.min(this.RATES.SSR + (extraPulls * this.PITY_CONFIG.softPityBonus), 1.0);
+    }
+    return this.RATES.SSR;
+  }
+
+  /** 다음 SSR 획득 확률 계산 (v5) */
+  static getNextSSRChance(bannerId = null) {
+    const targetBanner = bannerId || this._currentBannerId;
+    const gachaInfo = this.getBannerGachaInfo(targetBanner);
+    const pullCount = gachaInfo.pityCounter;
+    const baseRate = this.calculatePityBonus(pullCount);
+    return {
+      currentRate: (baseRate * 100).toFixed(2) + '%',
+      rawRate: baseRate,
+      pullCount,
+      remainingToSoftPity: Math.max(0, this.PITY_CONFIG.softPity - pullCount),
+      remainingToHardPity: Math.max(0, this.PITY_CONFIG.hardPity - pullCount),
+      inSoftPity: pullCount >= this.PITY_CONFIG.softPity,
+      isGuaranteed: pullCount >= this.PITY_CONFIG.hardPity - 1
+    };
+  }
+
+  /** 픽업 확정 여부 확인 (v5) */
+  static isPickupGuaranteed(bannerId = null) {
+    const targetBanner = bannerId || this._currentBannerId;
+    const banner = this.getBannerById(targetBanner);
+    if (!banner || banner.type === 'standard') {
+      return { hasPickup: false, isGuaranteed: false, remainingToGuarantee: 0, pickupCharacters: [] };
+    }
+    const gachaInfo = this.getBannerGachaInfo(targetBanner);
+    const pickupPityCount = gachaInfo.pickupPityCounter || 0;
+    const lostPrevious5050 = gachaInfo.lost5050 || false;
+    const isGuaranteed = lostPrevious5050 || pickupPityCount >= this.PITY_CONFIG.pickupPity - 1;
+    return {
+      hasPickup: true,
+      isGuaranteed,
+      lost5050: lostPrevious5050,
+      remainingToGuarantee: Math.max(0, this.PITY_CONFIG.pickupPity - pickupPityCount),
+      pickupPityCount,
+      pickupCharacters: banner.pickupCharacters,
+      pickupRate: banner.pickupRate
+    };
+  }
+
+  /** 배너 ID로 배너 정보 조회 */
+  static getBannerById(bannerId) {
+    return this._banners.find(b => b.id === bannerId) || null;
+  }
+
+  /** 활성 배너 목록 조회 */
+  static getActiveBanners() {
+    const now = new Date();
+    return this._banners.filter(banner => {
+      if (banner.isPermanent) return true;
+      if (!banner.isActive) return false;
+      if (banner.startDate && banner.endDate) {
+        return now >= new Date(banner.startDate) && now <= new Date(banner.endDate);
+      }
+      return banner.isActive;
+    });
+  }
+
+  /** 배너별 가챠 정보 조회 */
+  static getBannerGachaInfo(bannerId) {
+    const saved = SaveManager.getGachaInfo();
+    const bannerInfo = saved.banners?.[bannerId] || {
+      pityCounter: 0, pickupPityCounter: 0, totalPulls: 0, totalSSR: 0, lost5050: false
+    };
+    if (bannerId === 'standard' && !saved.banners?.standard) {
+      return {
+        pityCounter: saved.pityCounter || 0,
+        pickupPityCounter: 0,
+        totalPulls: saved.totalPulls || 0,
+        totalSSR: saved.totalSSR || 0,
+        lost5050: false
+      };
+    }
+    return bannerInfo;
+  }
+
+  /** 배너별 가챠 카운터 업데이트 */
+  static updateBannerGachaInfo(bannerId, updates) {
+    const saved = SaveManager.getGachaInfo();
+    if (!saved.banners) saved.banners = {};
+    if (!saved.banners[bannerId]) {
+      saved.banners[bannerId] = { pityCounter: 0, pickupPityCounter: 0, totalPulls: 0, totalSSR: 0, lost5050: false };
+    }
+    Object.assign(saved.banners[bannerId], updates);
+    if (bannerId === 'standard') {
+      saved.pityCounter = updates.pityCounter ?? saved.pityCounter;
+      saved.totalPulls = updates.totalPulls ?? saved.totalPulls;
+    }
+    SaveManager.saveGachaInfo(saved);
+  }
+
+  /** 현재 배너 설정 */
+  static setCurrentBanner(bannerId) {
+    const banner = this.getBannerById(bannerId);
+    if (banner) { this._currentBannerId = bannerId; return true; }
+    return false;
+  }
+
+  /** 픽업 캐릭터 결정 (v5) */
+  static determinePickupCharacter(banner, lost5050, pickupPityCount) {
+    const pickupCharacters = banner.pickupCharacters || [];
+    if (pickupCharacters.length === 0) {
+      return { characterId: this.getRandomCharacterByRarity('SSR'), isPickup: false, won5050: null };
+    }
+    if (pickupPityCount >= this.PITY_CONFIG.pickupPity || lost5050) {
+      const pickupChar = pickupCharacters[Math.floor(Math.random() * pickupCharacters.length)];
+      return { characterId: pickupChar, isPickup: true, won5050: null };
+    }
+    const roll = Math.random();
+    if (roll < (banner.pickupRate || 0.5)) {
+      const pickupChar = pickupCharacters[Math.floor(Math.random() * pickupCharacters.length)];
+      return { characterId: pickupChar, isPickup: true, won5050: true };
+    } else {
+      const nonPickupSSR = this.CHARACTER_POOL.SSR.filter(c => !pickupCharacters.includes(c));
+      const charId = nonPickupSSR.length > 0
+        ? nonPickupSSR[Math.floor(Math.random() * nonPickupSSR.length)]
+        : this.CHARACTER_POOL.SSR[Math.floor(Math.random() * this.CHARACTER_POOL.SSR.length)];
+      return { characterId: charId, isPickup: false, won5050: false };
+    }
+  }
+
+  /** 배너 천장 카운터 초기화 */
+  static resetBannerPity(bannerId) {
+    this.updateBannerGachaInfo(bannerId, { pityCounter: 0, pickupPityCounter: 0, lost5050: false });
+  }
 
   /**
    * 소환 실행
