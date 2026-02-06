@@ -66,7 +66,7 @@ export const COLORS = {
   rarityR: 0x3B82F6,
   raritySR: 0xA855F7,
   raritySSR: 0xF97316,
-  personality: {
+  mood: {
     brave: 0xE74C3C,
     cunning: 0x9B59B6,
     calm: 0x3498DB,
@@ -83,13 +83,13 @@ export const COLORS = {
 };
 
 // ============================================
-// Personality Colors (CSS 형식)
+// Mood Colors (CSS 형식)
 // ============================================
-export const PERSONALITY_COLORS = {
-  BRAVE: '#E74C3C',     // 용감 - 빨강
-  CUNNING: '#9B59B6',   // 교활 - 보라
-  CALM: '#3498DB',      // 침착 - 파랑
-  WILD: '#27AE60',      // 야성 - 초록
+export const MOOD_COLORS = {
+  BRAVE: '#E74C3C',     // 열혈 - 빨강
+  CUNNING: '#9B59B6',   // 냉철 - 보라
+  CALM: '#3498DB',      // 고요 - 파랑
+  WILD: '#27AE60',      // 광폭 - 초록
   MYSTIC: '#F39C12'     // 신비 - 황금
 };
 
@@ -172,26 +172,18 @@ export const RARITY = {
 };
 
 // ============================================
-// Personality Types (성격 시스템 - 속성 대체)
+// Mood Types (분위기 시스템)
 // ============================================
-export const PERSONALITIES = {
-  brave: { name: '용감', color: 0xE74C3C, strongAgainst: 'cunning', weakAgainst: 'calm' },
-  cunning: { name: '교활', color: 0x9B59B6, strongAgainst: 'calm', weakAgainst: 'wild' },
-  calm: { name: '침착', color: 0x3498DB, strongAgainst: 'wild', weakAgainst: 'brave' },
-  wild: { name: '야성', color: 0x27AE60, strongAgainst: 'brave', weakAgainst: 'cunning' },
-  mystic: { name: '신비', color: 0xF39C12, specialEffect: '모든 성격에 +10% 데미지' }
-};
-
-// ============================================
-// Element Types (Legacy - 호환성 유지용)
-// Note: v4에서 Personality 시스템으로 대체되었으나, 기존 데이터 호환성 유지
-// ============================================
-export const ELEMENTS = {
-  fire: { name: '화염', color: 0xE74C3C },
-  water: { name: '물', color: 0x3498DB },
-  wind: { name: '바람', color: 0x27AE60 },
-  light: { name: '빛', color: 0xF39C12 },
-  dark: { name: '어둠', color: 0x9B59B6 }
+export const MOODS = {
+  brave: { name: '열혈', color: 0xE74C3C, group: 'attack' },
+  fierce: { name: '격렬', color: 0xFF5722, group: 'attack' },
+  wild: { name: '광폭', color: 0x27AE60, group: 'attack' },
+  calm: { name: '고요', color: 0x3498DB, group: 'defense' },
+  stoic: { name: '의연', color: 0x607D8B, group: 'defense' },
+  devoted: { name: '헌신', color: 0xE91E63, group: 'defense' },
+  cunning: { name: '냉철', color: 0x9B59B6, group: 'strategy' },
+  noble: { name: '고결', color: 0xFFD700, group: 'strategy' },
+  mystic: { name: '신비', color: 0xF39C12, group: 'strategy' }
 };
 
 // ============================================

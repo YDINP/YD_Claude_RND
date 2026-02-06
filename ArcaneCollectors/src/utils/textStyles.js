@@ -258,15 +258,19 @@ export const TextStyles = {
   },
 
   // ============================================
-  // Element Colors
+  // Mood Colors
   // ============================================
 
-  element: {
-    fire: { color: '#EF4444' },
-    water: { color: '#3B82F6' },
-    wind: { color: '#22C55E' },
-    light: { color: '#FACC15' },
-    dark: { color: '#8B5CF6' }
+  mood: {
+    brave: { color: '#E74C3C' },     // 열혈 - 빨강
+    fierce: { color: '#FF5722' },    // 격렬 - 주홍
+    wild: { color: '#27AE60' },      // 광폭 - 초록
+    calm: { color: '#3498DB' },      // 고요 - 파랑
+    stoic: { color: '#607D8B' },     // 의연 - 청회색
+    devoted: { color: '#E91E63' },   // 헌신 - 핑크
+    cunning: { color: '#9B59B6' },   // 냉철 - 보라
+    noble: { color: '#FFD700' },     // 고결 - 금색
+    mystic: { color: '#F39C12' }     // 신비 - 주황금
   }
 };
 
@@ -293,15 +297,15 @@ export function getRarityStyle(rarity, baseStyle = 'body') {
 }
 
 /**
- * Get text style for element
- * @param {string} element - Element name (fire, water, wind, light, dark)
+ * Get text style for mood
+ * @param {string} mood - Mood name (brave, cunning, calm, wild, mystic)
  * @param {string} baseStyle - Base style name to use
- * @returns {object} Text style with element color
+ * @returns {object} Text style with mood color
  */
-export function getElementStyle(element, baseStyle = 'body') {
+export function getMoodStyle(mood, baseStyle = 'body') {
   const base = TextStyles[baseStyle] || TextStyles.body;
-  const elementColor = TextStyles.element[element] || { color: '#F8FAFC' };
-  return mergeStyles(base, elementColor);
+  const moodColor = TextStyles.mood[mood] || { color: '#F8FAFC' };
+  return mergeStyles(base, moodColor);
 }
 
 /**

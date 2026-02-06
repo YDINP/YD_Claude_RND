@@ -521,7 +521,7 @@
         "stats": {
           "def": 78,
           "hp": 190,
-          "fire_resist": 0.3
+          "brave_resist": 0.3
         },
         "description": "용의 비늘로 만든 갑옷.",
         "lore": "파프니르의 비늘로 제작되었다."
@@ -551,7 +551,7 @@
         "stats": {
           "def": 95,
           "hp": 280,
-          "fire_resist": 0.5
+          "brave_resist": 0.5
         },
         "description": "태양의 열을 막는 방패.",
         "lore": "이것이 없으면 태양이 대지를 태운다."
@@ -1008,24 +1008,24 @@
         "description": "마나가 응축된 수정.",
         "lore": "마법의 힘을 증폭시킨다."
       },
-      "r_fire_stone": {
-        "id": "r_fire_stone",
-        "name": "Fire Stone",
-        "nameKr": "화염석",
+      "r_brave_stone": {
+        "id": "r_brave_stone",
+        "name": "Brave Stone",
+        "nameKr": "열혈석",
         "rarity": "R",
         "type": "relic",
         "cultAffinity": "olympus",
         "stats": {
           "atk": 25,
-          "fire_dmg_bonus": 0.15
+          "brave_dmg_bonus": 0.15
         },
-        "description": "뜨거운 열기를 품은 돌.",
-        "lore": "화염 속성 공격을 강화한다."
+        "description": "열혈의 기운이 응축된 돌.",
+        "lore": "열혈 분위기 공격을 강화한다."
       },
-      "r_wind_feather": {
-        "id": "r_wind_feather",
-        "name": "Wind Feather",
-        "nameKr": "바람 깃털",
+      "r_cunning_feather": {
+        "id": "r_cunning_feather",
+        "name": "Cunning Feather",
+        "nameKr": "냉철의 깃털",
         "rarity": "R",
         "type": "relic",
         "cultAffinity": "valhalla",
@@ -1033,7 +1033,7 @@
           "spd": 12,
           "evasion": 0.08
         },
-        "description": "바람의 정령이 깃든 깃털.",
+        "description": "냉철한 기운이 깃든 깃털.",
         "lore": "움직임을 가볍게 만든다."
       },
       "sr_izanagis_spear": {

@@ -178,27 +178,31 @@ export function drawHexagon(graphics, x, y, radius, fillColor, strokeColor = nul
 // ============================================
 
 /**
- * Draw element icon
+ * Draw mood icon
  * @param {Phaser.Scene} scene - Current scene
  * @param {number} x - X position
  * @param {number} y - Y position
- * @param {string} element - Element name (fire, water, wind, light, dark)
+ * @param {string} mood - Mood name (brave, cunning, calm, wild, mystic)
  * @param {number} size - Icon size
  * @returns {Phaser.GameObjects.Graphics} The graphics object
  */
-export function drawElementIcon(scene, x, y, element, size = 24) {
+export function drawMoodIcon(scene, x, y, mood, size = 24) {
   const colors = {
-    fire: 0xef4444,
-    water: 0x3b82f6,
-    wind: 0x22c55e,
-    light: 0xfacc15,
-    dark: 0x8b5cf6
+    brave: 0xE74C3C,    // 열혈 - 빨강
+    fierce: 0xFF5722,   // 격렬 - 주홍
+    wild: 0x27AE60,     // 광폭 - 초록
+    calm: 0x3498DB,     // 고요 - 파랑
+    stoic: 0x607D8B,    // 의연 - 청회색
+    devoted: 0xE91E63,  // 헌신 - 핑크
+    cunning: 0x9B59B6,  // 냉철 - 보라
+    noble: 0xFFD700,    // 고결 - 금색
+    mystic: 0xF39C12    // 신비 - 주황금
   };
 
   const graphics = scene.add.graphics();
-  const color = colors[element] || 0xffffff;
+  const color = colors[mood] || 0xffffff;
 
-  // Simple circle with element color
+  // Simple circle with mood color
   graphics.fillStyle(color);
   graphics.fillCircle(x, y, size / 2);
 

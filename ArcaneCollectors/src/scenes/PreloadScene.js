@@ -113,35 +113,6 @@ export class PreloadScene extends Phaser.Scene {
 
     this.textures.addCanvas('star_empty', emptyStarCanvas);
 
-    // Element icons (fire, water, wind, light, dark)
-    const elements = [
-      { name: 'fire', color: '#EF4444', symbol: '🔥' },
-      { name: 'water', color: '#3B82F6', symbol: '💧' },
-      { name: 'wind', color: '#22C55E', symbol: '🌿' },
-      { name: 'light', color: '#FBBF24', symbol: '☀' },
-      { name: 'dark', color: '#8B5CF6', symbol: '🌙' }
-    ];
-
-    elements.forEach(elem => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 24;
-      canvas.height = 24;
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = elem.color;
-      ctx.beginPath();
-      ctx.arc(12, 12, 10, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '12px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(elem.symbol.charAt(0), 12, 12);
-
-      this.textures.addCanvas(`element_${elem.name}`, canvas);
-    });
-
     // Character portraits for each rarity (SSR, SR, R)
     const rarities = [
       { name: 'ssr', color: '#F59E0B', borderColor: '#FCD34D' },

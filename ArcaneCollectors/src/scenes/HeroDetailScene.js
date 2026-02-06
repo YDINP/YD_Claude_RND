@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, EQUIPMENT_SLOTS, ELEMENTS } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, EQUIPMENT_SLOTS } from '../config/gameConfig.js';
 import { EvolutionSystem } from '../systems/EvolutionSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
@@ -38,14 +38,13 @@ export class HeroDetailScene extends Phaser.Scene {
   }
 
   createBackground() {
-    // Gradient background based on element
+    // Gradient background
     const graphics = this.add.graphics();
-    const elemColor = ELEMENTS[this.hero.element]?.color || COLORS.primary;
 
     for (let y = 0; y < GAME_HEIGHT; y++) {
       const ratio = y / GAME_HEIGHT;
       const baseColor = Phaser.Display.Color.IntegerToColor(COLORS.background);
-      const accentColor = Phaser.Display.Color.IntegerToColor(elemColor);
+      const accentColor = Phaser.Display.Color.IntegerToColor(COLORS.primary);
 
       const r = Math.floor(baseColor.red + (accentColor.red - baseColor.red) * ratio * 0.2);
       const g = Math.floor(baseColor.green + (accentColor.green - baseColor.green) * ratio * 0.2);
@@ -94,28 +93,15 @@ export class HeroDetailScene extends Phaser.Scene {
       color: '#' + rarityColor.toString(16).padStart(6, '0')
     }).setOrigin(0.5);
 
-    // Element indicator
-    const elemColor = ELEMENTS[this.hero.element]?.color || 0xffffff;
-    const elemName = ELEMENTS[this.hero.element]?.name || '';
-    this.add.circle(GAME_WIDTH - 50, 40, 15, elemColor, 1);
-    this.add.text(GAME_WIDTH - 50, 40, elemName, {
-      fontSize: '10px',
+    // Mood indicator (분위기)
+    const moodKey = this.hero.mood || 'balanced';
+    const moodColor = COLORS.primary;
+    this.add.circle(GAME_WIDTH - 50, 50, 12, moodColor, 0.8);
+    this.add.text(GAME_WIDTH - 50, 50, moodKey.substring(0, 2), {
+      fontSize: '8px',
       fontFamily: 'Arial',
       color: '#ffffff'
     }).setOrigin(0.5);
-
-    // Cult indicator (use new CULT_COLORS and CULT_INFO)
-    const cultKey = this.hero.cult || 'olympus';
-    const cultColor = CULT_COLORS[cultKey] || COLORS.textDark;
-    const cultInfo = CULT_INFO[cultKey];
-    if (cultInfo) {
-      this.add.circle(GAME_WIDTH - 50, 65, 12, cultColor, 0.8);
-      this.add.text(GAME_WIDTH - 50, 65, cultInfo.name.substring(0, 2), {
-        fontSize: '8px',
-        fontFamily: 'Arial',
-        color: '#ffffff'
-      }).setOrigin(0.5);
-    }
   }
 
   createHeroDisplay() {

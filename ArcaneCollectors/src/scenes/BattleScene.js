@@ -75,14 +75,11 @@ export class BattleScene extends Phaser.Scene {
 
     // 클래스별 카운트
     const classCounts = {};
-    const elementCounts = {};
 
     this.allies.forEach(ally => {
       const heroClass = ally.class || 'warrior';
-      const element = ally.element || 'neutral';
 
       classCounts[heroClass] = (classCounts[heroClass] || 0) + 1;
-      elementCounts[element] = (elementCounts[element] || 0) + 1;
     });
 
     // 시너지 버프 초기화
@@ -102,17 +99,6 @@ export class BattleScene extends Phaser.Scene {
       } else if (count >= 2) {
         this.synergyBuffs.atk += 0.10;
         console.log(`[Battle] Class synergy (${cls}) 2: ATK +10%`);
-      }
-    });
-
-    // 속성 시너지 계산
-    Object.entries(elementCounts).forEach(([elem, count]) => {
-      if (count >= 3) {
-        this.synergyBuffs.atk += 0.10;
-        console.log(`[Battle] Element synergy (${elem}) 3+: ATK +10%`);
-      } else if (count >= 2) {
-        this.synergyBuffs.def += 0.05;
-        console.log(`[Battle] Element synergy (${elem}) 2: DEF +5%`);
       }
     });
 
@@ -148,7 +134,6 @@ export class BattleScene extends Phaser.Scene {
       isAlly: true,
       isAlive: true,
       class: hero.class || 'warrior',
-      element: hero.element || 'neutral',
       skills: hero.skills || [
         { id: 'basic', name: '기본 공격', multiplier: 1, gaugeGain: 20, description: '기본 공격을 합니다.' },
         { id: 'skill1', name: '강력 일격', multiplier: 2.5, gaugeCost: 100, description: '강력한 공격을 합니다.' }
@@ -177,8 +162,7 @@ export class BattleScene extends Phaser.Scene {
         maxSkillGauge: 100,
         position: i,
         isAlly: false,
-        isAlive: true,
-        element: Phaser.Math.RND.pick(['fire', 'water', 'wind', 'light', 'dark', 'neutral'])
+        isAlive: true
       };
       this.enemies.push(enemy);
     }
@@ -995,15 +979,12 @@ export class BattleScene extends Phaser.Scene {
     const isCrit = Math.random() < critChance;
     const critMultiplier = isCrit ? (battler.critDmg || 1.5) : 1.0;
 
-    // 속성 상성 계산
-    const elementBonus = this.calculateElementBonus(battler.element, target.element);
-
     const damage = Math.max(1, Math.floor(
-      baseDamage * skillMultiplier * critMultiplier * (1 + elementBonus) *
+      baseDamage * skillMultiplier * critMultiplier *
       (1 - defense / (defense + 200)) * (0.9 + Math.random() * 0.2)
     ));
 
-    console.log(`[Battle] Damage calc: base=${baseDamage}, skill=${skillMultiplier}x, crit=${critMultiplier}x, element=${elementBonus}, def=${defense}, final=${damage}`);
+    console.log(`[Battle] Damage calc: base=${baseDamage}, skill=${skillMultiplier}x, crit=${critMultiplier}x, def=${defense}, final=${damage}`);
 
     // Apply damage
     target.currentHp = Math.max(0, target.currentHp - damage);
@@ -1024,8 +1005,7 @@ export class BattleScene extends Phaser.Scene {
 
     // Log
     const critText = isCrit ? ' (크리티컬!)' : '';
-    const elementText = elementBonus > 0 ? ' (유리)' : elementBonus < 0 ? ' (불리)' : '';
-    this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name}에게 ${damage} 데미지${critText}${elementText}`);
+    this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name}에게 ${damage} 데미지${critText}`);
 
     // 스킬 게이지 처리
     if (useSkill) {
@@ -1054,41 +1034,6 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  /**
-   * 속성 상성 보너스 계산
-   */
-  calculateElementBonus(attackerElement, defenderElement) {
-    if (!attackerElement || !defenderElement) return 0;
-    if (attackerElement === defenderElement) return 0;
-    if (attackerElement === 'neutral' || defenderElement === 'neutral') return 0;
-
-    // fire > wind > water > fire
-    const elementCycle = {
-      fire: 'wind',
-      wind: 'water',
-      water: 'fire'
-    };
-
-    // light <-> dark
-    const opposites = {
-      light: 'dark',
-      dark: 'light'
-    };
-
-    if (elementCycle[attackerElement] === defenderElement) {
-      return 0.25; // 유리
-    }
-
-    if (elementCycle[defenderElement] === attackerElement) {
-      return -0.25; // 불리
-    }
-
-    if (opposites[attackerElement] === defenderElement) {
-      return 0.25; // 상호 유리
-    }
-
-    return 0;
-  }
 
   updateBattlerUI(battler) {
     const sprites = battler.isAlly ? this.allySprites : this.enemySprites;

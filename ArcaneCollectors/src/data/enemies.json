@@ -4,7 +4,7 @@
       "id": "enemy_goblin",
       "name": "고블린",
       "nameEn": "Goblin",
-      "element": "wind",
+      "mood": "cunning",
       "type": "normal",
       "baseStats": {
         "hp": 200,
@@ -26,7 +26,7 @@
       "id": "enemy_goblin_archer",
       "name": "고블린 궁수",
       "nameEn": "Goblin Archer",
-      "element": "wind",
+      "mood": "cunning",
       "type": "normal",
       "baseStats": {
         "hp": 160,
@@ -48,7 +48,7 @@
       "id": "enemy_goblin_shaman",
       "name": "고블린 주술사",
       "nameEn": "Goblin Shaman",
-      "element": "dark",
+      "mood": "wild",
       "type": "elite",
       "baseStats": {
         "hp": 180,
@@ -70,7 +70,7 @@
       "id": "enemy_goblin_warrior",
       "name": "고블린 전사",
       "nameEn": "Goblin Warrior",
-      "element": "fire",
+      "mood": "brave",
       "type": "elite",
       "baseStats": {
         "hp": 280,
@@ -92,7 +92,7 @@
       "id": "enemy_goblin_king",
       "name": "고블린 왕",
       "nameEn": "Goblin King",
-      "element": "fire",
+      "mood": "brave",
       "type": "boss",
       "baseStats": {
         "hp": 1500,
@@ -114,7 +114,7 @@
       "id": "enemy_wolf",
       "name": "야생 늑대",
       "nameEn": "Wild Wolf",
-      "element": "wind",
+      "mood": "cunning",
       "type": "normal",
       "baseStats": {
         "hp": 180,
@@ -136,7 +136,7 @@
       "id": "enemy_wolf_alpha",
       "name": "알파 늑대",
       "nameEn": "Alpha Wolf",
-      "element": "wind",
+      "mood": "cunning",
       "type": "elite",
       "baseStats": {
         "hp": 350,
@@ -158,7 +158,7 @@
       "id": "enemy_slime",
       "name": "슬라임",
       "nameEn": "Slime",
-      "element": "water",
+      "mood": "calm",
       "type": "normal",
       "baseStats": {
         "hp": 250,
@@ -180,7 +180,7 @@
       "id": "enemy_slime_large",
       "name": "대형 슬라임",
       "nameEn": "Large Slime",
-      "element": "water",
+      "mood": "calm",
       "type": "elite",
       "baseStats": {
         "hp": 500,
@@ -202,7 +202,7 @@
       "id": "enemy_mushroom",
       "name": "독버섯",
       "nameEn": "Poison Mushroom",
-      "element": "wind",
+      "mood": "cunning",
       "type": "normal",
       "baseStats": {
         "hp": 150,
@@ -224,7 +224,7 @@
       "id": "enemy_treant",
       "name": "트렌트",
       "nameEn": "Treant",
-      "element": "wind",
+      "mood": "cunning",
       "type": "elite",
       "baseStats": {
         "hp": 600,
@@ -241,6 +241,94 @@
       "skills": ["skill_treant_smash", "skill_tide_guard"],
       "expReward": 28,
       "goldReward": 40
+    },
+    {
+      "id": "enemy_golem",
+      "name": "석상 골렘",
+      "nameEn": "Stone Golem",
+      "mood": "stoic",
+      "type": "elite",
+      "baseStats": {
+        "hp": 800,
+        "atk": 35,
+        "def": 50,
+        "spd": 20
+      },
+      "growthStats": {
+        "hp": 160,
+        "atk": 8,
+        "def": 12,
+        "spd": 1
+      },
+      "skills": ["skill_power_strike", "skill_iron_will"],
+      "expReward": 30,
+      "goldReward": 45
+    },
+    {
+      "id": "enemy_fairy",
+      "name": "장난꾸러기 요정",
+      "nameEn": "Mischievous Fairy",
+      "mood": "noble",
+      "type": "normal",
+      "baseStats": {
+        "hp": 120,
+        "atk": 35,
+        "def": 5,
+        "spd": 120
+      },
+      "growthStats": {
+        "hp": 24,
+        "atk": 9,
+        "def": 2,
+        "spd": 4
+      },
+      "skills": ["skill_basic_attack"],
+      "expReward": 10,
+      "goldReward": 15
+    },
+    {
+      "id": "enemy_berserker",
+      "name": "광전사",
+      "nameEn": "Berserker",
+      "mood": "fierce",
+      "type": "elite",
+      "baseStats": {
+        "hp": 400,
+        "atk": 70,
+        "def": 15,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 80,
+        "atk": 16,
+        "def": 3,
+        "spd": 2
+      },
+      "skills": ["skill_power_strike", "skill_fire_dance"],
+      "expReward": 25,
+      "goldReward": 35
+    },
+    {
+      "id": "enemy_priestess",
+      "name": "어둠의 사제",
+      "nameEn": "Dark Priestess",
+      "mood": "devoted",
+      "type": "elite",
+      "baseStats": {
+        "hp": 300,
+        "atk": 50,
+        "def": 20,
+        "spd": 75
+      },
+      "growthStats": {
+        "hp": 60,
+        "atk": 12,
+        "def": 5,
+        "spd": 2
+      },
+      "skills": ["skill_dark_bolt", "skill_fear"],
+      "expReward": 22,
+      "goldReward": 30
     }
   ]
 }

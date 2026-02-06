@@ -1,6 +1,6 @@
 /**
  * BattleSystem - 전투 시스템
- * 턴제 전투, 스킬, 속성 상성, AI 관리
+ * 턴제 전투, 스킬, 분위기 상성, AI 관리
  *
  * Design Patterns:
  * - Strategy Pattern: 스킬 효과 (SkillStrategy)
@@ -220,14 +220,14 @@ class SynergyCalculator {
     console.log('[Battle] Calculating synergy...');
 
     const classCounts = {};
-    const elementCounts = {};
+    const moodCounts = {};
 
     allies.forEach(unit => {
       const unitClass = unit.data?.class || 'warrior';
-      const element = unit.element || 'neutral';
+      const mood = unit.mood || 'neutral';
 
       classCounts[unitClass] = (classCounts[unitClass] || 0) + 1;
-      elementCounts[element] = (elementCounts[element] || 0) + 1;
+      moodCounts[mood] = (moodCounts[mood] || 0) + 1;
     });
 
     const buffs = { atk: 0, def: 0, spd: 0 };
@@ -249,14 +249,14 @@ class SynergyCalculator {
       }
     });
 
-    // 속성 시너지
-    Object.entries(elementCounts).forEach(([elem, count]) => {
+    // 분위기 시너지
+    Object.entries(moodCounts).forEach(([mood, count]) => {
       if (count >= 3) {
         buffs.atk += 0.10;
-        console.log(`[Battle] Element synergy (${elem}) 3+: ATK +10%`);
+        console.log(`[Battle] Mood synergy (${mood}) 3+: ATK +10%`);
       } else if (count >= 2) {
         buffs.def += 0.05;
-        console.log(`[Battle] Element synergy (${elem}) 2: DEF +5%`);
+        console.log(`[Battle] Mood synergy (${mood}) 2: DEF +5%`);
       }
     });
 
@@ -295,7 +295,7 @@ export class BattleUnit {
     this.name = characterData.name || characterData.id;
     this.level = level;
     this.isEnemy = isEnemy;
-    this.element = characterData.element || 'neutral';
+    this.mood = characterData.mood || 'neutral';
     this.rarity = characterData.rarity || 'N';
 
     // 스탯 계산
@@ -721,14 +721,14 @@ export class BattleSystem {
           type: 'damage',
           amount: damageResult.actualDamage,
           isCrit: damage.isCrit,
-          elementBonus: damage.elementBonus,
+          moodBonus: damage.moodBonus,
           isDead: damageResult.isDead
         });
 
         const critText = damage.isCrit ? '크리티컬! ' : '';
         this.log(`${unit.name}이(가) ${target.name}에게 ${critText}${damageResult.actualDamage} 피해!`);
 
-        console.log(`[Battle] Damage: ${unit.name} -> ${target.name}, damage=${damageResult.actualDamage}, crit=${damage.isCrit}, element=${damage.elementBonus}%`);
+        console.log(`[Battle] Damage: ${unit.name} -> ${target.name}, damage=${damageResult.actualDamage}, crit=${damage.isCrit}, mood=${damage.moodBonus}%`);
 
         // Observer Pattern: 데미지 이벤트
         this.emit('damage', {
@@ -736,7 +736,7 @@ export class BattleSystem {
           target: target.id,
           amount: damageResult.actualDamage,
           isCrit: damage.isCrit,
-          elementBonus: damage.elementBonus
+          moodBonus: damage.moodBonus
         });
 
         if (damageResult.isDead) {
@@ -792,12 +792,12 @@ export class BattleSystem {
 
     console.log(`[Battle] After DEF reduction (${defender.def}): ${baseDamage.toFixed(0)}`);
 
-    // 속성 상성
-    const elementBonus = this.getElementBonus(attacker.element, defender.element);
-    baseDamage *= (1 + elementBonus);
+    // 분위기 상성
+    const moodBonus = this.getMoodBonus(attacker.mood, defender.mood);
+    baseDamage *= (1 + moodBonus);
 
-    if (elementBonus !== 0) {
-      console.log(`[Battle] Element bonus (${attacker.element} vs ${defender.element}): ${elementBonus > 0 ? '+' : ''}${(elementBonus * 100).toFixed(0)}%`);
+    if (moodBonus !== 0) {
+      console.log(`[Battle] Mood bonus (${attacker.mood} vs ${defender.mood}): ${moodBonus > 0 ? '+' : ''}${(moodBonus * 100).toFixed(0)}%`);
     }
 
     // 크리티컬
@@ -817,43 +817,44 @@ export class BattleSystem {
       baseDamage: Math.floor(baseDamage),
       finalDamage,
       isCrit,
-      elementBonus: elementBonus * 100 // 퍼센트로 변환
+      moodBonus: moodBonus * 100 // 퍼센트로 변환
     };
   }
 
   /**
-   * 속성 상성 보너스 계산
-   * @param {string} attackerElement 공격자 속성
-   * @param {string} defenderElement 방어자 속성
+   * 분위기 상성 보너스 계산
+   * @param {string} attackerMood 공격자 분위기
+   * @param {string} defenderMood 방어자 분위기
    * @returns {number} 보너스 배율 (-0.25 ~ 0.25)
    */
-  getElementBonus(attackerElement, defenderElement) {
-    if (attackerElement === defenderElement) return 0;
-    if (attackerElement === 'neutral' || defenderElement === 'neutral') return 0;
+  getMoodBonus(attackerMood, defenderMood) {
+    if (attackerMood === defenderMood) return 0;
+    if (attackerMood === 'neutral' || defenderMood === 'neutral') return 0;
 
-    // fire > wind > water > fire
-    const elementCycle = {
-      fire: 'wind',
-      wind: 'water',
-      water: 'fire'
+    // 분위기 상성 매트릭스 (각 2강 2약)
+    const moodAdvantage = {
+      brave: ['wild', 'cunning'],
+      fierce: ['brave', 'noble'],
+      wild: ['fierce', 'mystic'],
+      calm: ['devoted', 'fierce'],
+      stoic: ['calm', 'wild'],
+      devoted: ['stoic', 'brave'],
+      cunning: ['mystic', 'calm'],
+      noble: ['cunning', 'devoted'],
+      mystic: ['noble', 'stoic']
     };
 
-    // light <-> dark
-    const opposites = {
-      light: 'dark',
-      dark: 'light'
-    };
+    const advantages = moodAdvantage[attackerMood];
+    if (!advantages) return 0;
 
-    if (elementCycle[attackerElement] === defenderElement) {
-      return 0.25; // 유리
+    if (advantages.includes(defenderMood)) {
+      return 0.20; // 유리 +20%
     }
 
-    if (elementCycle[defenderElement] === attackerElement) {
-      return -0.25; // 불리
-    }
-
-    if (opposites[attackerElement] === defenderElement) {
-      return 0.25; // 상호 유리
+    // 역방향 체크 (상대가 나에게 유리하면 나는 불리)
+    const defenderAdvantages = moodAdvantage[defenderMood];
+    if (defenderAdvantages && defenderAdvantages.includes(attackerMood)) {
+      return -0.20; // 불리 -20%
     }
 
     return 0;
@@ -1144,7 +1145,7 @@ export class BattleSystem {
         maxHp: a.maxHp,
         skillGauge: a.skillGauge,
         isAlive: a.isAlive,
-        element: a.element
+        mood: a.mood
       })),
       enemies: this.enemies.map(e => ({
         id: e.id,
@@ -1152,7 +1153,7 @@ export class BattleSystem {
         hp: e.currentHp,
         maxHp: e.maxHp,
         isAlive: e.isAlive,
-        element: e.element
+        mood: e.mood
       })),
       currentUnit: this.turnOrder[this.currentTurnIndex]?.id || null,
       turnOrder: this.turnOrder.map(u => ({ id: u.id, name: u.name, spd: u.spd }))

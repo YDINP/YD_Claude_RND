@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, ELEMENTS } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO } from '../config/gameConfig.js';
 
 export class HeroListScene extends Phaser.Scene {
   constructor() {
@@ -79,7 +79,7 @@ export class HeroListScene extends Phaser.Scene {
       { key: 'rarity', label: '등급순' },
       { key: 'level', label: '레벨순' },
       { key: 'power', label: '전투력순' },
-      { key: 'element', label: '속성순' },
+      { key: 'mood', label: '분위기순' },
       { key: 'cult', label: '교단순' }
     ];
 
@@ -122,7 +122,7 @@ export class HeroListScene extends Phaser.Scene {
       color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
     }).setOrigin(0.5).setDepth(20);
 
-    // Second row - Cult filter buttons (속성 대신 교단 필터)
+    // Second row - Cult filter buttons (분위기/교단 필터)
     const cults = ['olympus', 'takamagahara', 'yomi', 'asgard', 'valhalla'];
     this.cultButtons = [];
 
@@ -254,9 +254,13 @@ export class HeroListScene extends Phaser.Scene {
       case 'level':
         heroes.sort((a, b) => (b.level - a.level) * sortDirection);
         break;
-      case 'element':
-        const elemOrder = { fire: 0, water: 1, wind: 2, light: 3, dark: 4 };
-        heroes.sort((a, b) => (elemOrder[a.element] - elemOrder[b.element]) * sortDirection);
+      case 'mood':
+        const moodOrder = { aggressive: 0, balanced: 1, defensive: 2, tactical: 3 };
+        heroes.sort((a, b) => {
+          const aMood = moodOrder[a.mood] ?? 99;
+          const bMood = moodOrder[b.mood] ?? 99;
+          return (aMood - bMood) * sortDirection;
+        });
         break;
       case 'power':
         heroes.sort((a, b) => (this.calculatePower(b) - this.calculatePower(a)) * sortDirection);
@@ -328,10 +332,6 @@ export class HeroListScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    // Element icon
-    const elemColor = ELEMENTS[hero.element]?.color || 0xffffff;
-    const elemIcon = this.add.circle(35, -55, 10, elemColor, 1);
-
     // Hero portrait
     const portrait = this.add.image(0, -10, 'hero_placeholder').setScale(0.85);
 
@@ -356,7 +356,7 @@ export class HeroListScene extends Phaser.Scene {
       color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
     }).setOrigin(0.5);
 
-    card.add([cardBg, rarityBg, rarityText, elemIcon, portrait, stars, nameText, levelText]);
+    card.add([cardBg, rarityBg, rarityText, portrait, stars, nameText, levelText]);
     this.gridContainer.add(card);
 
     // Interactions

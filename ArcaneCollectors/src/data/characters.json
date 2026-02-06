@@ -8,7 +8,7 @@
       "cult": "olympus",
       "class": "mage",
       "description": "고대 마법을 다루는 신비로운 마녀",
-      "personality": "mystic",
+      "mood": "mystic",
       "quote": "으헤헤~ 이 마법으로 뭘 태워볼까?",
       "stats": {
         "hp": 1000,
@@ -87,7 +87,7 @@
       "cult": "takamagahara",
       "class": "warrior",
       "description": "성기사단의 기사단장",
-      "personality": "brave",
+      "mood": "brave",
       "quote": "정의는 이긴다... 라고 말하긴 좀 쪽팔리지만!",
       "stats": {
         "hp": 1300,
@@ -170,7 +170,7 @@
       "cult": "yomi",
       "class": "archer",
       "description": "그림자 속에서 활동하는 암살자",
-      "personality": "cunning",
+      "mood": "cunning",
       "quote": "그림자에 숨었다가... 어이쿠!",
       "stats": {
         "hp": 950,
@@ -254,7 +254,7 @@
       "cult": "asgard",
       "class": "healer",
       "description": "온화한 성격의 신관",
-      "personality": "calm",
+      "mood": "devoted",
       "quote": "아프지 마세요! 제가 있잖아요!",
       "stats": {
         "hp": 1100,
@@ -338,7 +338,7 @@
       "cult": "valhalla",
       "class": "warrior",
       "description": "자유로운 영혼의 검객",
-      "personality": "wild",
+      "mood": "wild",
       "quote": "바람처럼 살거야! ...돈은 좀 벌면서!",
       "stats": {
         "hp": 1050,
@@ -418,7 +418,7 @@
       "cult": "olympus",
       "class": "archer",
       "description": "밤의 사냥꾼",
-      "personality": "calm",
+      "mood": "calm",
       "quote": "밤하늘의 달처럼... 아름답고 위험하지!",
       "stats": {
         "hp": 950,
@@ -499,7 +499,7 @@
       "cult": "yomi",
       "class": "mage",
       "description": "금지된 마법 사용자",
-      "personality": "mystic",
+      "mood": "noble",
       "quote": "으헤헤~ 이 어둠으로 무얼 할까?",
       "stats": {
         "hp": 920,
@@ -582,8 +582,8 @@
       "rarity": 4,
       "cult": "takamagahara",
       "class": "healer",
-      "description": "빛의 축복을 받은 수녀",
-      "personality": "calm",
+      "description": "고요한 축복을 받은 수녀",
+      "mood": "devoted",
       "quote": "주님의 은총이 함께하시길... 어, 너무 진지해?",
       "stats": {
         "hp": 1150,
@@ -666,8 +666,8 @@
       "rarity": 3,
       "cult": "asgard",
       "class": "warrior",
-      "description": "물의 힘을 다루는 신참 전사",
-      "personality": "brave",
+      "description": "열혈의 기운을 품은 신참 전사",
+      "mood": "brave",
       "quote": "물처럼 강해질 거야!",
       "stats": {
         "hp": 980,
@@ -736,8 +736,8 @@
       "rarity": 3,
       "cult": "valhalla",
       "class": "archer",
-      "description": "바람을 타고 날아다니는 궁수",
-      "personality": "wild",
+      "description": "광폭한 기세로 날아다니는 궁수",
+      "mood": "wild",
       "quote": "바람처럼 가볍게!",
       "stats": {
         "hp": 850,
@@ -807,7 +807,7 @@
       "cult": "olympus",
       "class": "mage",
       "description": "불장난을 좋아하는 마법사 견습생",
-      "personality": "wild",
+      "mood": "fierce",
       "quote": "불장난은 재밌어!",
       "stats": {
         "hp": 820,
@@ -876,8 +876,8 @@
       "rarity": 3,
       "cult": "takamagahara",
       "class": "healer",
-      "description": "빛의 힘을 배우는 신관 견습생",
-      "personality": "calm",
+      "description": "고요한 기운을 배우는 신관 견습생",
+      "mood": "devoted",
       "quote": "치유의 빛을 보내요!",
       "stats": {
         "hp": 950,
@@ -947,8 +947,8 @@
       "rarity": 3,
       "cult": "yomi",
       "class": "warrior",
-      "description": "어둠의 힘을 사용하는 전사",
-      "personality": "calm",
+      "description": "고요한 기운을 다루는 전사",
+      "mood": "stoic",
       "quote": "어둠도 힘이 될 수 있어!",
       "stats": {
         "hp": 1000,
@@ -1017,8 +1017,8 @@
       "rarity": 3,
       "cult": "asgard",
       "class": "mage",
-      "description": "물의 마법을 연구하는 마법사",
-      "personality": "calm",
+      "description": "고요한 마법을 연구하는 마법사",
+      "mood": "calm",
       "quote": "물처럼 유연하게!",
       "stats": {
         "hp": 830,
@@ -1087,8 +1087,8 @@
       "rarity": 3,
       "cult": "valhalla",
       "class": "warrior",
-      "description": "바람의 속도를 추구하는 전사",
-      "personality": "wild",
+      "description": "광폭한 속도를 추구하는 전사",
+      "mood": "wild",
       "quote": "바람보다 빠르게!",
       "stats": {
         "hp": 920,
@@ -1158,7 +1158,7 @@
       "cult": "valhalla",
       "class": "mage",
       "description": "지혜와 전쟁의 신, 발할라의 주신",
-      "personality": "mystic",
+      "mood": "mystic",
       "quote": "지혜를 위해 눈 하나를 바쳤지... 후회는 없다",
       "stats": {
         "hp": 1200,
@@ -1202,6 +1202,27 @@
           }
         }
       ],
+      "design": {
+        "style": "legendary_sage",
+        "bodyRatio": "3 head",
+        "hairColor": "#B0B0B0",
+        "hairStyle": "긴 백발, 턱수염과 함께 지혜로운 노현자 스타일",
+        "eyeColor": "#4FC3F7",
+        "eyeStyle": "한쪽 눈은 안대, 남은 눈은 깊은 지혜를 담은 날카로운 눈빛",
+        "primaryColor": "#4FC3F7",
+        "secondaryColor": "#1565C0",
+        "accentColor": "#FFD700",
+        "outfit": "푸른 로브에 룬 문자가 새겨진 망토, 어깨에 까마귀가 앉을 수 있는 견갑",
+        "accessories": [
+          "궁니르 창 (절대 빗나가지 않는 신창)",
+          "지혜의 안대 (미미르의 샘을 위해 바친 눈)",
+          "룬 문자가 새겨진 팔찌"
+        ],
+        "signaturePose": "궁니르 창을 한 손에 들고 까마귀 후긴과 무닌을 어깨에 앉힌 위엄있는 자세",
+        "chibiFeatures": "긴 수염이 귀엽게 펄럭이고, 작은 까마귀들이 머리 위를 빙빙 도는 모습",
+        "height": "185cm",
+        "age": "외형 60세 (신이므로 불멸)"
+      },
       "voiceLines": {
         "greeting": "젊은이여, 지혜를 구하는가?",
         "battleStart": "라그나로크까지 기다릴 수 없구나",
@@ -1221,7 +1242,7 @@
       "cult": "valhalla",
       "class": "warrior",
       "description": "천둥의 신, 묠니르의 주인",
-      "personality": "brave",
+      "mood": "brave",
       "quote": "천둥이 치면 나를 떠올려라!",
       "stats": {
         "hp": 1400,
@@ -1261,6 +1282,27 @@
           "hits": 5
         }
       ],
+      "design": {
+        "style": "heroic_warrior",
+        "bodyRatio": "3 head",
+        "hairColor": "#FFD700",
+        "hairStyle": "금발의 거친 장발, 전투로 흩날리는 스타일",
+        "eyeColor": "#1E88E5",
+        "eyeStyle": "용맹하고 거친 눈빛, 번개가 깃든 듯한 푸른 눈동자",
+        "primaryColor": "#E74C3C",
+        "secondaryColor": "#1565C0",
+        "accentColor": "#FFD700",
+        "outfit": "붉은 망토와 은색 갑옷, 가슴팍에 천둥 문양, 전사의 가죽 벨트",
+        "accessories": [
+          "묠니르 (번개를 부르는 신성한 망치)",
+          "철제 장갑 (묠니르를 다루기 위한)",
+          "천둥의 허리띠 메긴기외르드"
+        ],
+        "signaturePose": "묠니르를 하늘 높이 들어올리며 번개가 내리치는 역동적인 포즈",
+        "chibiFeatures": "과장되게 큰 묠니르를 들고 있고, 머리 위로 작은 번개가 번쩍이는 모습",
+        "height": "195cm",
+        "age": "외형 30세 (신이므로 불멸)"
+      },
       "voiceLines": {
         "greeting": "좋은 날씨군! 번개 치기 딱 좋아!",
         "battleStart": "묠니르가 피를 원한다!",
@@ -1280,7 +1322,7 @@
       "cult": "valhalla",
       "class": "mage",
       "description": "장난과 속임수의 신",
-      "personality": "cunning",
+      "mood": "cunning",
       "quote": "속이는 게 아니야, 진실을 비틀 뿐이지~",
       "stats": {
         "hp": 950,
@@ -1324,6 +1366,27 @@
           }
         }
       ],
+      "design": {
+        "style": "trickster_sorcerer",
+        "bodyRatio": "3 head",
+        "hairColor": "#212121",
+        "hairStyle": "흑발 장발, 끝이 녹색 하이라이트로 물든 교활한 스타일",
+        "eyeColor": "#00E676",
+        "eyeStyle": "날카롭고 장난스러운 눈빛, 항상 미소를 머금은 듯한 표정",
+        "primaryColor": "#00E676",
+        "secondaryColor": "#212121",
+        "accentColor": "#FFD700",
+        "outfit": "녹색과 검은색 로브, 비대칭 디자인, 환영 같은 망토, 속임수를 상징하는 문양",
+        "accessories": [
+          "쌍검 (환영을 만드는 이중 단검)",
+          "변신의 목걸이",
+          "카오스의 반지"
+        ],
+        "signaturePose": "교활한 미소를 지으며 손가락으로 입술을 가리키는 장난스러운 포즈",
+        "chibiFeatures": "장난스러운 표정에 작은 환영 분신들이 주위를 맴도는 모습",
+        "height": "178cm",
+        "age": "외형 28세 (신이므로 불멸)"
+      },
       "voiceLines": {
         "greeting": "나를 불렀나? 아니면 내가 부른 건가?",
         "battleStart": "재밌는 게임 시작이야~",
@@ -1343,7 +1406,7 @@
       "cult": "valhalla",
       "class": "healer",
       "description": "사랑과 전쟁의 여신",
-      "personality": "calm",
+      "mood": "devoted",
       "quote": "아름다움도 전쟁터에선 무기가 되지",
       "stats": {
         "hp": 1150,
@@ -1387,6 +1450,27 @@
           }
         }
       ],
+      "design": {
+        "style": "elegant_goddess",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FFD700",
+        "hairStyle": "금발 웨이브 장발, 꽃과 장식으로 우아하게 꾸민 스타일",
+        "eyeColor": "#FF6F00",
+        "eyeStyle": "따뜻하고 사랑스러운 눈빛, 때로는 전쟁의 날카로움도 품은 이중적 눈매",
+        "primaryColor": "#FFD700",
+        "secondaryColor": "#FF6F00",
+        "accentColor": "#FFFFFF",
+        "outfit": "금빛 드레스에 전투용 갑옷 디테일, 깃털 망토, 브리싱가멘 목걸이가 가슴에 빛남",
+        "accessories": [
+          "브리싱가멘 (사랑과 전쟁의 신성한 목걸이)",
+          "황금 고양이 목걸이 장식",
+          "발키리의 날개 깃털 헤어핀"
+        ],
+        "signaturePose": "한 손을 가슴에 얹고 다른 손은 축복을 내리는 우아한 포즈, 고양이가 발치에",
+        "chibiFeatures": "반짝이는 큰 눈과 항상 미소를 머금은 표정, 작은 고양이들이 주변을 따라다니는 모습",
+        "height": "168cm",
+        "age": "외형 25세 (신이므로 불멸)"
+      },
       "voiceLines": {
         "greeting": "어머, 잘 왔어~",
         "battleStart": "아름답게 끝내줄게",
@@ -1406,7 +1490,7 @@
       "cult": "valhalla",
       "class": "warrior",
       "description": "전장의 천사, 영웅을 선택하는 자",
-      "personality": "brave",
+      "mood": "brave",
       "quote": "영웅이여, 발할라로 가자!",
       "stats": {
         "hp": 1100,
@@ -1446,6 +1530,27 @@
           "revive": 0.5
         }
       ],
+      "design": {
+        "style": "angelic_warrior",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#90CAF9",
+        "hairStyle": "은빛 파란 장발, 날개 모양 헤어핀으로 정돈된 스타일",
+        "eyeColor": "#1976D2",
+        "eyeStyle": "결연하고 신성한 눈빛, 전사의 강인함을 담은 푸른 눈",
+        "primaryColor": "#90CAF9",
+        "secondaryColor": "#C0C0C0",
+        "accentColor": "#FFD700",
+        "outfit": "은빛 갑옷 위에 푸른 전투복, 날개 달린 투구, 발할라 문양이 새겨진 망토",
+        "accessories": [
+          "천상의 창 (영웅을 선택하는 신성한 무기)",
+          "발키리의 날개 투구",
+          "영혼 구슬 목걸이"
+        ],
+        "signaturePose": "창을 하늘로 들어올리며 날개를 펼친 역동적인 포즈",
+        "chibiFeatures": "작은 날개가 펼쳐지고 투구가 귀엽게 커진 모습, 신성한 빛이 주변을 감싸는 효과",
+        "height": "170cm",
+        "age": "외형 22세"
+      },
       "voiceLines": {
         "greeting": "전장에서 다시 만나자",
         "battleStart": "영웅의 자격을 보여라!",
@@ -1465,7 +1570,7 @@
       "cult": "valhalla",
       "class": "warrior",
       "description": "비프로스트의 수호자",
-      "personality": "calm",
+      "mood": "stoic",
       "quote": "아홉 세계를 지켜본다",
       "stats": {
         "hp": 1250,
@@ -1508,6 +1613,27 @@
           "target": "all"
         }
       ],
+      "design": {
+        "style": "vigilant_guardian",
+        "bodyRatio": "3 head",
+        "hairColor": "#FFD700",
+        "hairStyle": "금발 단발, 깔끔하고 정돈된 수호자 스타일",
+        "eyeColor": "#E0E0E0",
+        "eyeStyle": "모든 것을 꿰뚫어보는 날카로운 은빛 눈빛, 경계심 가득",
+        "primaryColor": "#FFD700",
+        "secondaryColor": "#E0E0E0",
+        "accentColor": "#7CB342",
+        "outfit": "금빛 갑옷에 무지개색 망토, 비프로스트 문양이 새겨진 가슴팍, 실용적인 전투복",
+        "accessories": [
+          "호프드 (빛나는 검)",
+          "갸들라르호른 (라그나로크를 알리는 뿔피리)",
+          "무지개 보석 팔찌"
+        ],
+        "signaturePose": "경계 자세로 갸들라르호른을 들고 먼 곳을 응시하는 포즈",
+        "chibiFeatures": "항상 경계하는 표정, 작은 뿔피리를 들고 있고 무지개 빛이 주변을 감싸는 모습",
+        "height": "182cm",
+        "age": "외형 32세"
+      },
       "voiceLines": {
         "greeting": "비프로스트의 수호자다",
         "battleStart": "내 눈에서 벗어날 수 없다",
@@ -1527,7 +1653,7 @@
       "cult": "takamagahara",
       "class": "mage",
       "description": "태양의 여신, 타카마가하라의 주신",
-      "personality": "calm",
+      "mood": "noble",
       "quote": "빛이 있는 곳에 희망이 있다",
       "stats": {
         "hp": 1100,
@@ -1571,6 +1697,27 @@
           "reflect": 0.3
         }
       ],
+      "design": {
+        "style": "divine_radiance",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FFD700",
+        "hairStyle": "금빛 장발, 태양 광선처럼 퍼지는 화려한 스타일",
+        "eyeColor": "#FF6F00",
+        "eyeStyle": "온화하고 자비로운 눈빛, 태양처럼 따뜻한 황금빛 눈동자",
+        "primaryColor": "#FFD700",
+        "secondaryColor": "#FFFFFF",
+        "accentColor": "#FF6F00",
+        "outfit": "흰색과 금색의 우아한 기모노, 태양 문양이 수놓인 오비, 광채가 감도는 망토",
+        "accessories": [
+          "야타노카가미 (팔척경 거울, 삼종신기 중 하나)",
+          "태양 왕관",
+          "금빛 구슬 목걸이"
+        ],
+        "signaturePose": "야타노카가미를 들고 태양빛이 사방으로 퍼지는 신성한 포즈",
+        "chibiFeatures": "항상 미소 짓는 표정, 머리 위로 태양 후광이 빛나고 주변이 따뜻한 빛으로 감싸진 모습",
+        "height": "165cm",
+        "age": "외형 26세 (신이므로 불멸)"
+      },
       "voiceLines": {
         "greeting": "태양이 그대를 비추리라",
         "battleStart": "어둠을 물리치자",
@@ -1590,7 +1737,7 @@
       "cult": "takamagahara",
       "class": "warrior",
       "description": "폭풍과 바다의 신",
-      "personality": "wild",
+      "mood": "wild",
       "quote": "폭풍우가 온다! 각오해라!",
       "stats": {
         "hp": 1350,
@@ -1630,6 +1777,27 @@
           "target": "all"
         }
       ],
+      "design": {
+        "style": "storm_berserker",
+        "bodyRatio": "3 head",
+        "hairColor": "#212121",
+        "hairStyle": "거친 흑발 장발, 폭풍에 휘날리는 듯한 거칠고 자유로운 스타일",
+        "eyeColor": "#7C4DFF",
+        "eyeStyle": "거칠고 야생적인 눈빛, 폭풍우 같은 보랏빛 눈동자",
+        "primaryColor": "#7C4DFF",
+        "secondaryColor": "#212121",
+        "accentColor": "#00BCD4",
+        "outfit": "검은색 전투복에 보라색 갑옷, 바다와 폭풍 문양, 너덜거리는 망토",
+        "accessories": [
+          "쿠사나기노츠루기 (천총운검, 야마타노오로치에서 얻은 신검)",
+          "폭풍 문양 팔찌",
+          "바다의 구슬 목걸이"
+        ],
+        "signaturePose": "쿠사나기를 휘두르며 폭풍우를 일으키는 역동적인 포즈",
+        "chibiFeatures": "거친 표정에 머리카락이 사방으로 튀고, 작은 폭풍 구름이 머리 위를 맴도는 모습",
+        "height": "180cm",
+        "age": "외형 28세 (신이므로 불멸)"
+      },
       "voiceLines": {
         "greeting": "폭풍의 신이다. 뭐가 필요해?",
         "battleStart": "폭풍우가 몰려온다!",
@@ -1649,7 +1817,7 @@
       "cult": "takamagahara",
       "class": "archer",
       "description": "달의 신, 밤의 지배자",
-      "personality": "mystic",
+      "mood": "mystic",
       "quote": "달빛 아래서 모든 것이 드러난다",
       "stats": {
         "hp": 980,
@@ -1693,6 +1861,27 @@
           }
         }
       ],
+      "design": {
+        "style": "lunar_mystic",
+        "bodyRatio": "3 head",
+        "hairColor": "#C0C0C0",
+        "hairStyle": "은빛 장발, 달빛처럼 빛나는 고요한 스타일",
+        "eyeColor": "#311B92",
+        "eyeStyle": "신비롭고 고요한 눈빛, 달처럼 차분한 보라빛 눈동자",
+        "primaryColor": "#C0C0C0",
+        "secondaryColor": "#311B92",
+        "accentColor": "#E1BEE7",
+        "outfit": "은빛과 보라색의 우아한 기모노, 달과 별 문양, 고요한 밤을 상징하는 망토",
+        "accessories": [
+          "달의 활 (월광을 화살로 쏘는 신성한 활)",
+          "월식의 왕관",
+          "은빛 달 펜던트"
+        ],
+        "signaturePose": "활을 들고 달빛 아래 고요히 서 있는 신비로운 포즈",
+        "chibiFeatures": "차분한 표정에 머리 위로 초승달이 떠 있고, 은빛 빛이 주변을 감싸는 모습",
+        "height": "175cm",
+        "age": "외형 27세 (신이므로 불멸)"
+      },
       "voiceLines": {
         "greeting": "달이 차오르는 밤이군",
         "battleStart": "달빛이 그대를 비추리라",
@@ -1712,7 +1901,7 @@
       "cult": "takamagahara",
       "class": "healer",
       "description": "쌀과 풍요의 신, 여우의 주인",
-      "personality": "calm",
+      "mood": "devoted",
       "quote": "풍요로운 축복을 내리지~",
       "stats": {
         "hp": 1100,
@@ -1756,6 +1945,27 @@
           }
         }
       ],
+      "design": {
+        "style": "kitsune_shrine",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FFFFFF",
+        "hairStyle": "흰 장발에 여우 귀, 끝이 붉은빛으로 물든 스타일",
+        "eyeColor": "#FF6B9D",
+        "eyeStyle": "장난스럽고 친근한 눈빛, 여우처럼 영롱한 분홍빛 눈동자",
+        "primaryColor": "#FF6B9D",
+        "secondaryColor": "#FFFFFF",
+        "accentColor": "#FF5722",
+        "outfit": "흰색과 붉은색 무녀복, 도리이 문양, 여우 꼬리가 뒤로 펼쳐진 모습",
+        "accessories": [
+          "신사의 방울 (여우 정령을 부르는)",
+          "붉은 도리이 헤어핀",
+          "쌀 자루 부적"
+        ],
+        "signaturePose": "여우 귀를 세우고 방울을 흔들며 장난스럽게 웃는 포즈, 여우불이 주변을 감싸는 모습",
+        "chibiFeatures": "큼직한 여우 귀와 꼬리, 작은 여우 정령들이 주변을 맴돌고 쌀알이 반짝이는 모습",
+        "height": "158cm",
+        "age": "외형 20세 (신이므로 불멸)"
+      },
       "voiceLines": {
         "greeting": "콘콘! 이나리님이시다~",
         "battleStart": "여우들아, 도와줘~",
@@ -1775,7 +1985,7 @@
       "cult": "takamagahara",
       "class": "mage",
       "description": "번개의 신",
-      "personality": "wild",
+      "mood": "fierce",
       "quote": "쾅! 번개가 내리친다!",
       "stats": {
         "hp": 950,
@@ -1814,6 +2024,27 @@
           "target": "all"
         }
       ],
+      "design": {
+        "style": "thunder_demon",
+        "bodyRatio": "3 head",
+        "hairColor": "#FFD600",
+        "hairStyle": "번개처럼 곤두선 노란 스파이크 머리",
+        "eyeColor": "#FF5722",
+        "eyeStyle": "격렬하고 흥분한 눈빛, 번개가 번쩍이는 듯한 주황빛 눈동자",
+        "primaryColor": "#FFD600",
+        "secondaryColor": "#FF5722",
+        "accentColor": "#FFFFFF",
+        "outfit": "번개 문양이 새겨진 전통 복장, 등에 북들이 원형으로 배치됨, 전기가 흐르는 띠",
+        "accessories": [
+          "뇌신의 북 (천둥을 만드는 신성한 북들)",
+          "번개 채 (북을 치는 지휘봉)",
+          "전기 구슬 팔찌"
+        ],
+        "signaturePose": "북을 두드리며 번개를 소환하는 격렬한 포즈, 전기가 사방으로 튀는 모습",
+        "chibiFeatures": "흥분한 표정에 작은 북들이 주변을 맴돌고, 머리카락에서 전기 스파크가 튀는 모습",
+        "height": "172cm",
+        "age": "외형 35세 (신이므로 불멸)"
+      },
       "voiceLines": {
         "greeting": "쾅쾅! 뇌신님이시다!",
         "battleStart": "천둥이 치겠다!",
@@ -1833,7 +2064,7 @@
       "cult": "takamagahara",
       "class": "archer",
       "description": "바람의 신",
-      "personality": "wild",
+      "mood": "wild",
       "quote": "바람이 분다~ 휘이익!",
       "stats": {
         "hp": 920,
@@ -1876,6 +2107,27 @@
           }
         }
       ],
+      "design": {
+        "style": "wind_spirit",
+        "bodyRatio": "3 head",
+        "hairColor": "#00E676",
+        "hairStyle": "녹색 단발, 바람에 날리는 자유로운 스타일",
+        "eyeColor": "#B2FF59",
+        "eyeStyle": "쾌활하고 자유로운 눈빛, 바람처럼 가벼운 연두빛 눈동자",
+        "primaryColor": "#00E676",
+        "secondaryColor": "#B2FF59",
+        "accentColor": "#FFFFFF",
+        "outfit": "바람 문양이 새겨진 전통 복장, 등에 바람 자루를 메고 있음, 펄럭이는 녹색 띠",
+        "accessories": [
+          "풍신의 바람 자루 (태풍을 담는 신성한 주머니)",
+          "바람 방울 목걸이",
+          "회오리 팔찌"
+        ],
+        "signaturePose": "바람 자루를 열며 태풍을 일으키는 자유로운 포즈, 회오리가 주변을 감싸는 모습",
+        "chibiFeatures": "쾌활한 표정에 작은 바람 자루를 들고 있고, 머리카락과 옷이 항상 바람에 날리는 모습",
+        "height": "170cm",
+        "age": "외형 33세 (신이므로 불멸)"
+      },
       "voiceLines": {
         "greeting": "휘이익~ 바람의 신이다~",
         "battleStart": "바람이 분다!",
@@ -1895,7 +2147,7 @@
       "cult": "olympus",
       "class": "mage",
       "description": "신들의 왕, 번개의 주인",
-      "personality": "brave",
+      "mood": "brave",
       "quote": "올림푸스의 왕 앞에 무릎 꿇어라!",
       "stats": {
         "hp": 1250,
@@ -1939,6 +2191,27 @@
           }
         }
       ],
+      "design": {
+        "style": "divine_majesty",
+        "bodyRatio": "3 head",
+        "hairColor": "#FFFFFF",
+        "hairStyle": "위엄 있는 백발의 긴 머리와 수염, 금빛 테두리",
+        "eyeColor": "#1E88E5",
+        "eyeStyle": "번개가 깃든 듯한 날카롭고 위엄 있는 눈빛",
+        "primaryColor": "#FFD700",
+        "secondaryColor": "#1E88E5",
+        "accentColor": "#FFFFFF",
+        "outfit": "흰색과 금색의 그리스식 토가, 어깨에 번개 문양이 새겨진 황금 견갑, 허리에 번개 띠",
+        "accessories": [
+          "황금 월계관",
+          "번개 문양 팔찌",
+          "독수리 깃털 망토"
+        ],
+        "signaturePose": "한 손을 높이 들어 번개를 소환하며 위엄 있게 서있는 포즈",
+        "chibiFeatures": "우렁찬 표정, 번개 이펙트가 튀는 손, 황금 월계관이 빛나는 연출",
+        "height": "195cm",
+        "age": "외형 50대 (불멸)"
+      },
       "voiceLines": {
         "greeting": "신들의 왕 앞에 섰구나",
         "battleStart": "올림푸스의 힘을 보여주마",
@@ -1958,7 +2231,7 @@
       "cult": "olympus",
       "class": "warrior",
       "description": "바다의 지배자, 삼지창의 주인",
-      "personality": "wild",
+      "mood": "fierce",
       "quote": "바다의 분노를 느껴보아라!",
       "stats": {
         "hp": 1400,
@@ -1998,6 +2271,27 @@
           "stun_chance": 0.3
         }
       ],
+      "design": {
+        "style": "oceanic_fury",
+        "bodyRatio": "3 head",
+        "hairColor": "#1E88E5",
+        "hairStyle": "바다처럼 물결치는 청록색 장발, 흰 거품 하이라이트",
+        "eyeColor": "#00E5FF",
+        "eyeStyle": "깊은 바다를 담은 강렬한 눈빛, 파도가 일렁이는 듯한 효과",
+        "primaryColor": "#1E88E5",
+        "secondaryColor": "#00E5FF",
+        "accentColor": "#FFD700",
+        "outfit": "청록색 그리스식 토가, 어깨에 조개껍데기 장식, 허리에 산호 벨트, 금빛 테두리",
+        "accessories": [
+          "삼지창",
+          "바다 거품 팔찌",
+          "물고기 비늘 망토"
+        ],
+        "signaturePose": "삼지창을 땅에 꽂으며 파도를 일으키는 역동적인 포즈",
+        "chibiFeatures": "격렬한 표정, 물보라 이펙트, 파도가 치는 연출",
+        "height": "190cm",
+        "age": "외형 40대 (불멸)"
+      },
       "voiceLines": {
         "greeting": "바다의 신이다. 무엇을 원하느냐?",
         "battleStart": "파도가 밀려온다!",
@@ -2017,7 +2311,7 @@
       "cult": "olympus",
       "class": "mage",
       "description": "저승의 왕, 죽음의 지배자",
-      "personality": "mystic",
+      "mood": "mystic",
       "quote": "모든 것은 결국 내게로 온다...",
       "stats": {
         "hp": 1150,
@@ -2058,6 +2352,27 @@
           "execute": 0.2
         }
       ],
+      "design": {
+        "style": "underworld_sovereign",
+        "bodyRatio": "3 head",
+        "hairColor": "#212121",
+        "hairStyle": "어둠처럼 깊은 흑발의 장발, 보랏빛 하이라이트",
+        "eyeColor": "#4A148C",
+        "eyeStyle": "차갑고 신비로운 보라색 눈빛, 어둠의 힘이 깃든 듯한 효과",
+        "primaryColor": "#4A148C",
+        "secondaryColor": "#212121",
+        "accentColor": "#9C27B0",
+        "outfit": "검은색과 보라색의 그리스식 로브, 어깨에 해골 장식, 보석과 금속이 박힌 검은 망토",
+        "accessories": [
+          "검은 왕관 (보석 장식)",
+          "명계의 열쇠 목걸이",
+          "어둠의 팔찌"
+        ],
+        "signaturePose": "한 손을 내밀어 어둠의 오라를 발산하며 냉정하게 서있는 포즈",
+        "chibiFeatures": "차갑고 신비로운 표정, 어둠 이펙트, 보랏빛 오라가 감도는 연출",
+        "height": "188cm",
+        "age": "외형 45세 (불멸)"
+      },
       "voiceLines": {
         "greeting": "저승의 왕이 여기 있다",
         "battleStart": "모든 생명은 끝이 있다",
@@ -2077,50 +2392,71 @@
       "cult": "olympus",
       "class": "warrior",
       "description": "지혜와 전쟁의 여신",
-      "personality": "calm",
-      "quote": "진정한 승리는 전략에서 나온다",
+      "mood": "noble",
+      "quote": "지혜로운 자만이 승리를 쟁취한다",
       "stats": {
-        "hp": 1200,
+        "hp": 1350,
         "atk": 170,
-        "def": 105,
-        "spd": 100
+        "def": 110,
+        "spd": 90
       },
       "growthStats": {
-        "hp": 120,
+        "hp": 135,
         "atk": 17,
-        "def": 10,
+        "def": 11,
         "spd": 2
       },
       "skills": [
         {
           "id": "basic",
           "name": "지혜의 창",
-          "description": "정확한 찌르기",
-          "multiplier": 1.08,
-          "gaugeGain": 26
+          "description": "정확한 일격",
+          "multiplier": 1.12,
+          "gaugeGain": 27
         },
         {
           "id": "skill1",
-          "name": "아이기스의 방어",
-          "description": "신성한 방패로 막는다!",
+          "name": "올림포스의 방패",
+          "description": "아군을 보호한다",
           "multiplier": 0,
           "gaugeCost": 100,
           "target": "all_allies",
           "buff": {
-            "def": 0.4,
+            "def": 0.5,
             "duration": 3
           }
         },
         {
           "id": "skill2",
-          "name": "전략의 일격",
-          "description": "완벽한 전술!",
-          "multiplier": 3.2,
-          "gaugeCost": 130,
+          "name": "지혜의 창격",
+          "description": "전략적 일격!",
+          "multiplier": 3.3,
+          "gaugeCost": 140,
           "target": "single",
           "crit_bonus": 0.5
         }
       ],
+      "design": {
+        "style": "wisdom_warrior",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#C0C0C0",
+        "hairStyle": "은빛 장발을 우아하게 묶은 스타일, 올리브 나뭇가지 장식",
+        "eyeColor": "#FFD700",
+        "eyeStyle": "지혜롭고 날카로운 황금빛 눈빛, 전략가의 냉철함",
+        "primaryColor": "#FFD700",
+        "secondaryColor": "#C0C0C0",
+        "accentColor": "#FFFFFF",
+        "outfit": "흰색과 금색의 그리스 갑옷, 어깨에 올빼미 문양, 올리브 나뭇가지가 새겨진 방패",
+        "accessories": [
+          "황금 투구 (올빼미 장식)",
+          "지혜의 목걸이",
+          "올리브 팔찌"
+        ],
+        "signaturePose": "방패를 들고 창을 세우며 우아하게 서있는 전략가의 포즈",
+        "chibiFeatures": "지적이고 우아한 표정, 황금빛 오라, 올빼미가 함께하는 연출",
+        "height": "172cm",
+        "age": "외형 28세 (불멸)"
+      },
       "voiceLines": {
         "greeting": "지혜의 여신이 함께한다",
         "battleStart": "전략을 세우자",
@@ -2139,51 +2475,72 @@
       "rarity": 4,
       "cult": "olympus",
       "class": "warrior",
-      "description": "전쟁의 신, 피의 축제를 즐기는 자",
-      "personality": "wild",
-      "quote": "피가 끓어오른다! 전쟁이다!",
+      "description": "전쟁의 신, 피의 광기",
+      "mood": "fierce",
+      "quote": "전쟁이야말로 진리다!",
       "stats": {
-        "hp": 1150,
-        "atk": 175,
+        "hp": 1100,
+        "atk": 150,
         "def": 85,
-        "spd": 105
+        "spd": 95
       },
       "growthStats": {
-        "hp": 115,
-        "atk": 17,
+        "hp": 110,
+        "atk": 15,
         "def": 8,
         "spd": 2
       },
       "skills": [
         {
           "id": "basic",
-          "name": "광폭한 베기",
-          "description": "미친듯이 베어라!",
+          "name": "피의 참격",
+          "description": "붉은 검으로 베기",
           "multiplier": 1.15,
           "gaugeGain": 28
         },
         {
           "id": "skill1",
-          "name": "전쟁의 광기",
-          "description": "피에 미친 일격!",
-          "multiplier": 3,
-          "gaugeCost": 100,
-          "target": "single",
-          "selfBuff": {
-            "atk": 0.2,
+          "name": "전쟁의 함성",
+          "description": "아군을 분노로 채운다",
+          "multiplier": 0,
+          "gaugeCost": 90,
+          "target": "all_allies",
+          "buff": {
+            "atk": 0.4,
             "duration": 2
           }
         },
         {
           "id": "skill2",
-          "name": "피의 축제",
-          "description": "전장을 핏빛으로!",
-          "multiplier": 2.5,
-          "gaugeCost": 120,
-          "target": "all",
-          "lifesteal": 0.15
+          "name": "광전사의 일격",
+          "description": "분노의 강타!",
+          "multiplier": 3.8,
+          "gaugeCost": 130,
+          "target": "single",
+          "recoil": 0.1
         }
       ],
+      "design": {
+        "style": "war_berserker",
+        "bodyRatio": "3 head",
+        "hairColor": "#B71C1C",
+        "hairStyle": "짧고 거친 붉은 머리, 전투적인 스파이크 스타일",
+        "eyeColor": "#D32F2F",
+        "eyeStyle": "광기 어린 붉은 눈빛, 전투 본능이 넘치는 표정",
+        "primaryColor": "#B71C1C",
+        "secondaryColor": "#212121",
+        "accentColor": "#FF5252",
+        "outfit": "붉은색과 검은색의 중장 갑옷, 어깨에 뿔 장식, 전쟁의 상처가 새겨진 망토",
+        "accessories": [
+          "전쟁의 투구 (뿔 장식)",
+          "피의 팔찌",
+          "붉은 벨트"
+        ],
+        "signaturePose": "창을 휘두르며 전투적으로 외치는 격렬한 포즈",
+        "chibiFeatures": "격렬하고 광적인 표정, 붉은 오라, 전투 이펙트",
+        "height": "185cm",
+        "age": "외형 35세 (불멸)"
+      },
       "voiceLines": {
         "greeting": "전쟁의 신이다!",
         "battleStart": "피가 끓어오른다!",
@@ -2202,48 +2559,69 @@
       "rarity": 4,
       "cult": "olympus",
       "class": "archer",
-      "description": "태양과 예언의 신, 예술의 후원자",
-      "personality": "calm",
-      "quote": "태양처럼 빛나리라~",
+      "description": "태양과 음악의 신",
+      "mood": "noble",
+      "quote": "빛은 어둠을 밝히고, 음악은 영혼을 채운다",
       "stats": {
-        "hp": 1000,
-        "atk": 165,
-        "def": 75,
-        "spd": 115
+        "hp": 950,
+        "atk": 145,
+        "def": 70,
+        "spd": 105
       },
       "growthStats": {
-        "hp": 100,
-        "atk": 16,
+        "hp": 95,
+        "atk": 14,
         "def": 7,
         "spd": 2
       },
       "skills": [
         {
           "id": "basic",
-          "name": "태양의 화살",
-          "description": "빛나는 화살!",
-          "multiplier": 1.05,
+          "name": "빛의 화살",
+          "description": "태양의 화살",
+          "multiplier": 1.1,
           "gaugeGain": 26
         },
         {
           "id": "skill1",
-          "name": "예언의 화살",
-          "description": "절대 빗나가지 않는다",
-          "multiplier": 2.8,
-          "gaugeCost": 100,
-          "target": "single",
-          "accuracy": 1
+          "name": "태양의 축복",
+          "description": "빛으로 아군을 치유",
+          "multiplier": 0,
+          "gaugeCost": 90,
+          "target": "all_allies",
+          "heal": 0.3
         },
         {
           "id": "skill2",
-          "name": "태양신의 축복",
-          "description": "태양빛으로 치유!",
-          "multiplier": 1.5,
+          "name": "황금 화살",
+          "description": "완벽한 조준!",
+          "multiplier": 3.5,
           "gaugeCost": 120,
-          "isHeal": true,
-          "target": "all_allies"
+          "target": "single",
+          "crit_rate": 0.8
         }
       ],
+      "design": {
+        "style": "radiant_musician",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FFD700",
+        "hairStyle": "황금빛 웨이브 장발, 태양처럼 빛나는 스타일",
+        "eyeColor": "#FF8F00",
+        "eyeStyle": "따뜻하고 고귀한 황금색 눈빛, 태양의 온기가 느껴지는 표정",
+        "primaryColor": "#FFD700",
+        "secondaryColor": "#FF8F00",
+        "accentColor": "#FFFFFF",
+        "outfit": "흰색과 금색의 그리스식 튜닉, 어깨에 태양 문양, 리라를 든 우아한 스타일",
+        "accessories": [
+          "황금 월계관",
+          "리라 (황금 악기)",
+          "태양 문양 팔찌"
+        ],
+        "signaturePose": "리라를 들고 우아하게 미소 짓는 예술가의 포즈",
+        "chibiFeatures": "고귀하고 따뜻한 표정, 황금빛 오라, 음표 이펙트",
+        "height": "178cm",
+        "age": "외형 25세 (불멸)"
+      },
       "voiceLines": {
         "greeting": "아름다운 하루다~",
         "battleStart": "태양이 뜬다!",
@@ -2263,7 +2641,7 @@
       "cult": "yomi",
       "class": "mage",
       "description": "황천국의 여왕, 죽음의 여신",
-      "personality": "mystic",
+      "mood": "mystic",
       "quote": "황천의 문은 항상 열려있다...",
       "stats": {
         "hp": 1100,
@@ -2307,6 +2685,27 @@
           "execute": 0.25
         }
       ],
+      "design": {
+        "style": "yomi_empress",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#212121",
+        "hairStyle": "깊은 흑발의 초장발, 흐트러진 듯 신비로운 스타일",
+        "eyeColor": "#4A148C",
+        "eyeStyle": "슬프고 신비로운 보라색 눈빛, 죽음의 기운이 서린 표정",
+        "primaryColor": "#4A148C",
+        "secondaryColor": "#E8EAF6",
+        "accentColor": "#9C27B0",
+        "outfit": "검은색과 연보라색의 전통 일본 기모노, 황천국의 문양이 새겨진 화려한 오비, 찢어진 듯한 연출",
+        "accessories": [
+          "흑진주 머리 장식",
+          "황천의 비녀",
+          "보랏빛 구슬 목걸이"
+        ],
+        "signaturePose": "한 손을 내밀어 죽음을 부르는 듯한 신비롭고 슬픈 포즈",
+        "chibiFeatures": "슬프고 신비로운 표정, 보랏빛 어둠 이펙트, 흐트러진 기모노 연출",
+        "height": "168cm",
+        "age": "외형 30세 (불멸)"
+      },
       "voiceLines": {
         "greeting": "황천에서 왔다...",
         "battleStart": "죽음을 맞이하라",
@@ -2325,17 +2724,17 @@
       "rarity": 5,
       "cult": "yomi",
       "class": "warrior",
-      "description": "염라대왕, 죽은 자의 심판자",
-      "personality": "calm",
-      "quote": "너의 죄를 심판하겠다",
+      "description": "명계의 심판관, 염라대왕",
+      "mood": "calm",
+      "quote": "네 죄를 심판하겠다",
       "stats": {
-        "hp": 1300,
-        "atk": 170,
-        "def": 100,
-        "spd": 90
+        "hp": 1380,
+        "atk": 172,
+        "def": 105,
+        "spd": 88
       },
       "growthStats": {
-        "hp": 130,
+        "hp": 138,
         "atk": 17,
         "def": 10,
         "spd": 2
@@ -2343,34 +2742,54 @@
       "skills": [
         {
           "id": "basic",
-          "name": "심판의 검",
-          "description": "죄를 베어낸다",
+          "name": "심판의 망치",
+          "description": "죄를 심판한다",
           "multiplier": 1.1,
           "gaugeGain": 27
         },
         {
           "id": "skill1",
-          "name": "염라의 재판",
-          "description": "죄의 무게로 공격!",
-          "multiplier": 3,
-          "gaugeCost": 110,
+          "name": "명계의 판결",
+          "description": "유죄! 처형!",
+          "multiplier": 3.2,
+          "gaugeCost": 120,
           "target": "single",
-          "bonusDmgVsDebuff": 0.5
+          "execute": 0.15
         },
         {
           "id": "skill2",
-          "name": "지옥의 문",
-          "description": "지옥으로 떨어져라!",
+          "name": "업경대",
+          "description": "모든 죄를 비춘다",
           "multiplier": 2.5,
-          "gaugeCost": 140,
+          "gaugeCost": 130,
           "target": "all",
           "debuff": {
-            "atk": -0.25,
-            "def": -0.25,
-            "duration": 2
+            "def": -0.4,
+            "duration": 3
           }
         }
       ],
+      "design": {
+        "style": "yomi_judge",
+        "bodyRatio": "3 head",
+        "hairColor": "#000000",
+        "hairStyle": "단정한 흑발 단발, 위엄 있는 스타일",
+        "eyeColor": "#FFD700",
+        "eyeStyle": "날카롭고 냉철한 황금빛 눈빛, 심판자의 위엄",
+        "primaryColor": "#B71C1C",
+        "secondaryColor": "#FFD700",
+        "accentColor": "#000000",
+        "outfit": "붉은색과 금색의 전통 일본 관복, 어깨에 심판 문양, 검은 벨트와 업경대를 든 위엄 있는 스타일",
+        "accessories": [
+          "염라대왕 관 (금빛 장식)",
+          "업경대 (심판의 거울)",
+          "심판의 홀"
+        ],
+        "signaturePose": "업경대를 들고 냉정하게 심판하는 위엄 있는 포즈",
+        "chibiFeatures": "위엄 있고 냉철한 표정, 붉은 오라, 심판의 거울이 빛나는 연출",
+        "height": "185cm",
+        "age": "외형 50대 (불멸)"
+      },
       "voiceLines": {
         "greeting": "심판의 때가 왔다",
         "battleStart": "죄인을 심판한다",
@@ -2389,48 +2808,72 @@
       "rarity": 4,
       "cult": "yomi",
       "class": "warrior",
-      "description": "지옥의 귀신, 철퇴를 휘두르는 자",
-      "personality": "wild",
-      "quote": "으하하! 부숴버리겠다!",
+      "description": "명계의 수호자, 붉은 도깨비",
+      "mood": "fierce",
+      "quote": "으하하! 부숴버리마!",
       "stats": {
         "hp": 1200,
-        "atk": 165,
-        "def": 95,
+        "atk": 155,
+        "def": 90,
         "spd": 85
       },
       "growthStats": {
         "hp": 120,
-        "atk": 16,
+        "atk": 15,
         "def": 9,
         "spd": 2
       },
       "skills": [
         {
           "id": "basic",
-          "name": "철퇴 내려치기",
-          "description": "무거운 철퇴로!",
-          "multiplier": 1.12,
-          "gaugeGain": 27
+          "name": "쇠몽둥이 강타",
+          "description": "쿵! 쾅!",
+          "multiplier": 1.15,
+          "gaugeGain": 28
         },
         {
           "id": "skill1",
-          "name": "지옥의 철퇴",
-          "description": "땅을 부숴버려!",
-          "multiplier": 2.9,
-          "gaugeCost": 100,
-          "target": "single",
-          "stun_chance": 0.25
+          "name": "광폭화",
+          "description": "화가 폭발한다!",
+          "multiplier": 0,
+          "gaugeCost": 85,
+          "target": "self",
+          "buff": {
+            "atk": 0.6,
+            "duration": 2
+          }
         },
         {
           "id": "skill2",
-          "name": "귀신의 분노",
-          "description": "분노의 연타!",
-          "multiplier": 1.8,
-          "gaugeCost": 120,
-          "target": "random",
-          "hits": 4
+          "name": "지옥 강하",
+          "description": "하늘에서 내려찍기!",
+          "multiplier": 4.0,
+          "gaugeCost": 130,
+          "target": "single",
+          "stun_chance": 0.4
         }
       ],
+      "design": {
+        "style": "oni_brute",
+        "bodyRatio": "3 head",
+        "hairColor": "#D32F2F",
+        "hairStyle": "짧고 거친 붉은 머리, 뿔 주변으로 튀어나온 스타일",
+        "eyeColor": "#FFEB3B",
+        "eyeStyle": "광적이고 거친 황색 눈빛, 야생의 힘이 넘치는 표정",
+        "primaryColor": "#D32F2F",
+        "secondaryColor": "#7B1FA2",
+        "accentColor": "#000000",
+        "outfit": "짐승 가죽 갑옷, 어깨에 뿔 장식, 찢어진 바지, 쇠몽둥이를 든 야생적인 스타일",
+        "accessories": [
+          "붉은 뿔 (이마에서 돋아남)",
+          "쇠몽둥이",
+          "짐승 가죽 벨트"
+        ],
+        "signaturePose": "쇠몽둥이를 휘두르며 우렁차게 웃는 야성적인 포즈",
+        "chibiFeatures": "거칠고 광적인 표정, 붉은 오라, 쇠몽둥이가 빛나는 연출",
+        "height": "195cm",
+        "age": "외형 40대"
+      },
       "voiceLines": {
         "greeting": "으하하! 오니다!",
         "battleStart": "부숴버리겠다!",
@@ -2449,50 +2892,68 @@
       "rarity": 4,
       "cult": "yomi",
       "class": "archer",
-      "description": "산의 요괴, 바람을 다루는 자",
-      "personality": "cunning",
-      "quote": "하늘에서 내려다보고 있다~",
+      "description": "산의 수호자, 천구",
+      "mood": "cunning",
+      "quote": "후후... 날개를 펼칠 시간이다",
       "stats": {
-        "hp": 950,
-        "atk": 158,
-        "def": 70,
-        "spd": 125
+        "hp": 1000,
+        "atk": 148,
+        "def": 75,
+        "spd": 110
       },
       "growthStats": {
-        "hp": 95,
-        "atk": 16,
+        "hp": 100,
+        "atk": 14,
         "def": 7,
-        "spd": 3
+        "spd": 2
       },
       "skills": [
         {
           "id": "basic",
-          "name": "깃털 수리검",
-          "description": "날카로운 깃털!",
-          "multiplier": 1.02,
+          "name": "깃털 투척",
+          "description": "날카로운 깃털",
+          "multiplier": 1.08,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
-          "name": "산바람",
-          "description": "강한 바람을 일으킨다!",
-          "multiplier": 2.7,
-          "gaugeCost": 100,
+          "name": "돌풍",
+          "description": "부채로 바람을!",
+          "multiplier": 2.5,
+          "gaugeCost": 90,
           "target": "all"
         },
         {
           "id": "skill2",
-          "name": "텐구의 부채",
-          "description": "바람을 조종해!",
-          "multiplier": 3,
-          "gaugeCost": 120,
-          "target": "single",
-          "debuff": {
-            "spd": -0.4,
-            "duration": 2
-          }
+          "name": "천구의 비상",
+          "description": "날아서 연속 공격!",
+          "multiplier": 2.0,
+          "gaugeCost": 110,
+          "target": "random_3",
+          "hits": 3
         }
       ],
+      "design": {
+        "style": "tengu_trickster",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#000000",
+        "hairStyle": "긴 흑발을 높이 묶은 스타일, 붉은 하이라이트",
+        "eyeColor": "#D32F2F",
+        "eyeStyle": "교활하고 날카로운 붉은 눈빛, 트릭스터의 미소",
+        "primaryColor": "#D32F2F",
+        "secondaryColor": "#000000",
+        "accentColor": "#FFD700",
+        "outfit": "붉은색과 검은색의 전통 일본 하오리, 어깨에 날개 장식, 긴 코 가면과 부채를 든 신비로운 스타일",
+        "accessories": [
+          "천구 가면 (긴 코)",
+          "깃털 부채",
+          "붉은 날개"
+        ],
+        "signaturePose": "부채를 펼치고 날개를 펴며 교활하게 미소 짓는 포즈",
+        "chibiFeatures": "교활하고 장난스러운 표정, 바람 이펙트, 깃털이 날리는 연출",
+        "height": "175cm",
+        "age": "외형 불명 (수백 세)"
+      },
       "voiceLines": {
         "greeting": "후훗, 텐구님이시다~",
         "battleStart": "날개 좀 펴볼까~",
@@ -2511,51 +2972,72 @@
       "rarity": 4,
       "cult": "yomi",
       "class": "mage",
-      "description": "설녀, 얼음과 눈의 요괴",
-      "personality": "mystic",
-      "quote": "차가운 포옹을 해줄까...?",
+      "description": "눈의 정령, 설녀",
+      "mood": "stoic",
+      "quote": "차가운 눈처럼... 고요하게...",
       "stats": {
-        "hp": 920,
-        "atk": 165,
+        "hp": 980,
+        "atk": 142,
         "def": 68,
-        "spd": 110
+        "spd": 105
       },
       "growthStats": {
-        "hp": 92,
-        "atk": 16,
-        "def": 7,
+        "hp": 98,
+        "atk": 14,
+        "def": 6,
         "spd": 2
       },
       "skills": [
         {
           "id": "basic",
-          "name": "눈꽃 한숨",
-          "description": "얼어붙는 숨결",
-          "multiplier": 1,
+          "name": "서리 숨결",
+          "description": "차가운 입김",
+          "multiplier": 1.05,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
-          "name": "동결",
-          "description": "얼어붙어라!",
+          "name": "눈보라",
+          "description": "모두 얼려버린다",
           "multiplier": 2.6,
-          "gaugeCost": 100,
-          "target": "single",
-          "freeze_chance": 0.35
+          "gaugeCost": 95,
+          "target": "all",
+          "debuff": {
+            "spd": -0.3,
+            "duration": 2
+          }
         },
         {
           "id": "skill2",
-          "name": "눈보라",
-          "description": "모든 것을 얼린다!",
-          "multiplier": 2.4,
-          "gaugeCost": 120,
-          "target": "all",
-          "debuff": {
-            "spd": -0.25,
-            "duration": 3
-          }
+          "name": "빙결의 포옹",
+          "description": "얼어붙어라...",
+          "multiplier": 3.3,
+          "gaugeCost": 125,
+          "target": "single",
+          "freeze_chance": 0.6
         }
       ],
+      "design": {
+        "style": "yuki_onna_frost",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#E3F2FD",
+        "hairStyle": "은빛에 가까운 하얀 장발, 서리가 맺힌 듯한 스타일",
+        "eyeColor": "#90CAF9",
+        "eyeStyle": "차갑고 슬픈 하늘색 눈빛, 고요한 서리의 정령",
+        "primaryColor": "#E3F2FD",
+        "secondaryColor": "#90CAF9",
+        "accentColor": "#FFFFFF",
+        "outfit": "흰색의 전통 일본 기모노, 서리와 눈송이 문양, 반투명한 소매와 차가운 오라가 감도는 스타일",
+        "accessories": [
+          "눈송이 머리 장식",
+          "서리 목걸이",
+          "얼음 결정 팔찌"
+        ],
+        "signaturePose": "한 손을 내밀어 눈을 내리게 하는 고요하고 슬픈 포즈",
+        "chibiFeatures": "슬프고 고요한 표정, 눈송이 이펙트, 서리가 흩날리는 연출",
+        "height": "165cm",
+        "age": "외형 22세"
+      },
       "voiceLines": {
         "greeting": "차갑지 않아...?",
         "battleStart": "얼어붙어라...",
@@ -2574,49 +3056,73 @@
       "rarity": 4,
       "cult": "yomi",
       "class": "healer",
-      "description": "저주의 영혼, 원한을 품은 귀신",
-      "personality": "cunning",
-      "quote": "원한은 절대 잊지 않아...",
+      "description": "저주의 사제, 음양사",
+      "mood": "cunning",
+      "quote": "후후... 이 부적으로 뭘 해볼까~",
       "stats": {
         "hp": 1050,
-        "atk": 105,
+        "atk": 120,
         "def": 80,
-        "spd": 100
+        "spd": 95
       },
       "growthStats": {
         "hp": 105,
-        "atk": 10,
+        "atk": 12,
         "def": 8,
         "spd": 2
       },
       "skills": [
         {
           "id": "basic",
-          "name": "저주의 손톱",
-          "description": "원한을 담아...",
+          "name": "부적 투척",
+          "description": "퇴마의 부적!",
           "multiplier": 0.9,
-          "gaugeGain": 24
+          "gaugeGain": 28
         },
         {
           "id": "skill1",
-          "name": "원한의 회복",
-          "description": "적의 생명력을 빼앗아 치유",
-          "multiplier": 1.6,
-          "gaugeCost": 100,
-          "isHeal": true,
+          "name": "음양의 치유",
+          "description": "기를 회복시킨다",
+          "multiplier": 0,
+          "gaugeCost": 80,
           "target": "all_allies",
-          "lifesteal": 0.3
+          "heal": 0.35
         },
         {
           "id": "skill2",
-          "name": "저주 전이",
-          "description": "디버프를 적에게 전이!",
-          "multiplier": 2,
-          "gaugeCost": 130,
+          "name": "저주의 인",
+          "description": "저주를 새긴다",
+          "multiplier": 2.2,
+          "gaugeCost": 100,
           "target": "single",
-          "transferDebuff": true
+          "debuff": {
+            "atk": -0.4,
+            "def": -0.4,
+            "duration": 3
+          }
         }
       ],
+      "design": {
+        "style": "onmyoji_sage",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#4A148C",
+        "hairStyle": "짧은 보라색 머리, 한쪽에 부적을 꽂은 독특한 스타일",
+        "eyeColor": "#00E676",
+        "eyeStyle": "교활하고 영리한 초록빛 눈빛, 음양사의 지혜",
+        "primaryColor": "#4A148C",
+        "secondaryColor": "#00E676",
+        "accentColor": "#FFFFFF",
+        "outfit": "보라색과 녹색의 전통 일본 음양사 복장, 어깨에 부적 장식, 음양 문양이 새겨진 로브",
+        "accessories": [
+          "음양 부적 (여러 개)",
+          "주술 구슬 목걸이",
+          "음양 문양 팔찌"
+        ],
+        "signaturePose": "부적을 손에 들고 주술을 읊는 듯한 교활한 미소의 포즈",
+        "chibiFeatures": "교활하고 영리한 표정, 부적 이펙트, 음양 오라가 감도는 연출",
+        "height": "170cm",
+        "age": "외형 28세"
+      },
       "voiceLines": {
         "greeting": "원한... 잊지 않아...",
         "battleStart": "저주해줄게...",
@@ -2626,6 +3132,3780 @@
         "summon": "주온이야...",
         "idle1": "기다려... 기다려...",
         "idle2": "절대 용서 안 해..."
+      }
+    },
+    {
+      "id": "hero_040",
+      "name": "크로노스",
+      "nameEn": "Kronos",
+      "rarity": 5,
+      "cult": "tartarus",
+      "class": "warrior",
+      "description": "시간을 지배하는 티탄의 왕",
+      "mood": "fierce",
+      "quote": "시간은 모든 것을 삼킨다",
+      "stats": {
+        "hp": 1200,
+        "atk": 200,
+        "def": 80,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 120,
+        "atk": 20,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "시간의 낫",
+          "description": "시간을 베는 강력한 일격",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "크로노스 슬래시",
+          "description": "시간의 힘을 담은 참격",
+          "multiplier": 3.0,
+          "gaugeCost": 100,
+          "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "시간 정지",
+          "description": "모든 적의 시간을 멈춘다",
+          "multiplier": 4.0,
+          "gaugeCost": 150,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "ancient_titan",
+        "bodyRatio": "3 head",
+        "hairColor": "#4A148C",
+        "hairStyle": "긴 은발, 시간의 흐름처럼 흐르는 스타일",
+        "eyeColor": "#B71C1C",
+        "eyeStyle": "시간을 꿰뚫어보는 날카로운 눈",
+        "primaryColor": "#B71C1C",
+        "secondaryColor": "#4A148C",
+        "accentColor": "#FFD700",
+        "outfit": "거대한 낫을 든 고대 티탄의 갑옷",
+        "accessories": [
+          "시간의 낫",
+          "시간을 상징하는 모래시계 목걸이"
+        ],
+        "signaturePose": "낫을 휘두르며 시간을 지배하는 포즈",
+        "chibiFeatures": "거대한 낫, 흐르는 시간 이펙트",
+        "height": "200cm",
+        "age": "수천년"
+      },
+      "voiceLines": {
+        "greeting": "시간은 나의 지배 아래에 있다",
+        "battleStart": "시간의 종말을 보여주지",
+        "victory": "시간은 모든 것을 삼킨다",
+        "defeat": "시간조차... 나를 배신하는가...",
+        "levelUp": "시간의 힘이 더욱 강해졌다",
+        "summon": "크로노스다. 시간의 왕이 왔노라",
+        "idle1": "시간은 멈추지 않는다...",
+        "idle2": "모든 것은 시간 속에..."
+      }
+    },
+    {
+      "id": "hero_041",
+      "name": "프로메테우스",
+      "nameEn": "Prometheus",
+      "rarity": 5,
+      "cult": "tartarus",
+      "class": "mage",
+      "description": "인류에게 불을 선물한 자비로운 티탄",
+      "mood": "devoted",
+      "quote": "이 불꽃은 희망의 상징이다",
+      "stats": {
+        "hp": 900,
+        "atk": 190,
+        "def": 60,
+        "spd": 105
+      },
+      "growthStats": {
+        "hp": 90,
+        "atk": 19,
+        "def": 6,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "불꽃 선사",
+          "description": "희망의 불꽃을 던진다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "프로메테우스의 불꽃",
+          "description": "모든 아군에게 희망의 불꽃을",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "희생의 불길",
+          "description": "자신을 희생하여 강력한 일격",
+          "multiplier": 3.5,
+          "gaugeCost": 150,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "chained_titan",
+        "bodyRatio": "2.8 head",
+        "hairColor": "#FF6F00",
+        "hairStyle": "불꽃처럼 타오르는 짧은 머리",
+        "eyeColor": "#B71C1C",
+        "eyeStyle": "자비롭지만 고통스러운 눈빛",
+        "primaryColor": "#FF6F00",
+        "secondaryColor": "#B71C1C",
+        "accentColor": "#FDD835",
+        "outfit": "쇠사슬에 묶인 채 불꽃을 든 티탄",
+        "accessories": [
+          "쇠사슬",
+          "영원한 불꽃"
+        ],
+        "signaturePose": "쇠사슬에 묶인 채 불꽃을 높이 들어올리는 포즈",
+        "chibiFeatures": "작은 쇠사슬, 따뜻한 불꽃 이펙트",
+        "height": "190cm",
+        "age": "수천년"
+      },
+      "voiceLines": {
+        "greeting": "이 불꽃이 너희를 인도하리라",
+        "battleStart": "희망의 불꽃을 보여주지",
+        "victory": "불꽃은 결코 꺼지지 않는다",
+        "defeat": "불꽃이... 꺼져간다...",
+        "levelUp": "희망의 불꽃이 더욱 밝아진다",
+        "summon": "프로메테우스다. 불의 선물을 받아라",
+        "idle1": "이 불꽃은 영원하리...",
+        "idle2": "인류여, 희망을 잃지 말라..."
+      }
+    },
+    {
+      "id": "hero_042",
+      "name": "메두사",
+      "nameEn": "Medusa",
+      "rarity": 4,
+      "cult": "tartarus",
+      "class": "archer",
+      "description": "돌로 변하는 저주를 견디는 비극의 존재",
+      "mood": "stoic",
+      "quote": "내 눈을 보지 마라...",
+      "stats": {
+        "hp": 800,
+        "atk": 160,
+        "def": 65,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 80,
+        "atk": 16,
+        "def": 6,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "독화살",
+          "description": "독이 담긴 화살을 쏜다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "석화의 시선",
+          "description": "적을 돌로 만드는 저주의 눈빛",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "cursed_gorgon",
+        "bodyRatio": "2.6 head",
+        "hairColor": "#4CAF50",
+        "hairStyle": "뱀으로 이루어진 머리카락",
+        "eyeColor": "#1B5E20",
+        "eyeStyle": "슬프지만 위험한 눈빛",
+        "primaryColor": "#4CAF50",
+        "secondaryColor": "#1B5E20",
+        "accentColor": "#8BC34A",
+        "outfit": "뱀 머리카락의 신비로운 궁수",
+        "accessories": [
+          "독화살",
+          "뱀 팔찌"
+        ],
+        "signaturePose": "고개를 돌린 채 화살을 겨누는 포즈",
+        "chibiFeatures": "작은 뱀들, 석화 이펙트",
+        "height": "168cm",
+        "age": "수백년"
+      },
+      "voiceLines": {
+        "greeting": "가까이 오지 마...",
+        "battleStart": "내 눈을 보지 마라...",
+        "victory": "미안해... 하지만 어쩔 수 없었어...",
+        "defeat": "결국... 저주받은 운명이구나...",
+        "levelUp": "저주가 더 강해졌어...",
+        "summon": "메두사야... 조심해...",
+        "idle1": "외로워...",
+        "idle2": "이 저주가 풀릴 날이 올까..."
+      }
+    },
+    {
+      "id": "hero_043",
+      "name": "미노타우로스",
+      "nameEn": "Minotaur",
+      "rarity": 4,
+      "cult": "tartarus",
+      "class": "warrior",
+      "description": "미궁에서 깨어난 격렬한 괴물",
+      "mood": "fierce",
+      "quote": "이 미궁에서 나갈 수 있을까!",
+      "stats": {
+        "hp": 1100,
+        "atk": 175,
+        "def": 85,
+        "spd": 70
+      },
+      "growthStats": {
+        "hp": 110,
+        "atk": 17,
+        "def": 9,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "뿔 들이받기",
+          "description": "강력한 뿔로 적을 받는다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "미궁의 분노",
+          "description": "격렬한 분노의 일격",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "labyrinth_beast",
+        "bodyRatio": "3 head",
+        "hairColor": "#3E2723",
+        "hairStyle": "거친 소의 털",
+        "eyeColor": "#B71C1C",
+        "eyeStyle": "분노에 찬 붉은 눈",
+        "primaryColor": "#B71C1C",
+        "secondaryColor": "#3E2723",
+        "accentColor": "#FFD700",
+        "outfit": "거대한 도끼를 든 반인반우",
+        "accessories": [
+          "거대한 전투 도끼",
+          "미궁의 사슬"
+        ],
+        "signaturePose": "도끼를 들어올리며 포효하는 포즈",
+        "chibiFeatures": "큰 뿔, 분노 이펙트",
+        "height": "220cm",
+        "age": "수백년"
+      },
+      "voiceLines": {
+        "greeting": "으르렁...",
+        "battleStart": "부숴버리겠어!",
+        "victory": "크아아악!",
+        "defeat": "이 미궁에서... 벗어날 수 없나...",
+        "levelUp": "더 강해졌다!",
+        "summon": "미노타우로스다!",
+        "idle1": "미궁이... 나를 부른다...",
+        "idle2": "으르렁... 크르릉..."
+      }
+    },
+    {
+      "id": "hero_044",
+      "name": "케르베로스",
+      "nameEn": "Cerberus",
+      "rarity": 3,
+      "cult": "tartarus",
+      "class": "warrior",
+      "description": "지옥의 문을 지키는 세 머리 수호견",
+      "mood": "brave",
+      "quote": "으르르... 통과할 수 없다!",
+      "stats": {
+        "hp": 900,
+        "atk": 140,
+        "def": 70,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 90,
+        "atk": 14,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "삼중 물기",
+          "description": "세 머리가 동시에 문다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "지옥의 포효",
+          "description": "세 머리가 동시에 포효한다",
+          "multiplier": 2.2,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "three_headed_hound",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#212121",
+        "hairStyle": "불꽃처럼 타오르는 검은 털",
+        "eyeColor": "#D32F2F",
+        "eyeStyle": "세 쌍의 붉은 눈",
+        "primaryColor": "#D32F2F",
+        "secondaryColor": "#212121",
+        "accentColor": "#FF6F00",
+        "outfit": "불꽃을 내뿜는 세 머리 개",
+        "accessories": [
+          "지옥의 불꽃",
+          "쇠사슬 목걸이"
+        ],
+        "signaturePose": "세 머리가 각기 다른 방향을 보는 포즈",
+        "chibiFeatures": "귀여운 세 머리, 작은 불꽃",
+        "height": "180cm",
+        "age": "수백년"
+      },
+      "voiceLines": {
+        "greeting": "으르렁!",
+        "battleStart": "통과할 수 없다!",
+        "victory": "크르릉!",
+        "defeat": "끙... 끙...",
+        "levelUp": "왈왈! 강해졌다!",
+        "summon": "케르베로스다!",
+        "idle1": "으르렁...",
+        "idle2": "크르릉... 크르릉..."
+      }
+    },
+    {
+      "id": "hero_045",
+      "name": "키메라",
+      "nameEn": "Chimera",
+      "rarity": 3,
+      "cult": "tartarus",
+      "class": "mage",
+      "description": "사자, 염소, 뱀이 합쳐진 예측불가의 괴수",
+      "mood": "wild",
+      "quote": "어떤 머리가 공격할지 모른다!",
+      "stats": {
+        "hp": 750,
+        "atk": 150,
+        "def": 55,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 75,
+        "atk": 15,
+        "def": 5,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "혼합 브레스",
+          "description": "불, 독, 번개를 섞어 내뿜는다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "삼중 브레스",
+          "description": "세 머리가 동시에 브레스를 쏜다",
+          "multiplier": 2.3,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "triple_beast",
+        "bodyRatio": "2.7 head",
+        "hairColor": "#FF5722",
+        "hairStyle": "사자의 갈기",
+        "eyeColor": "#4CAF50",
+        "eyeStyle": "세 생물의 각기 다른 눈",
+        "primaryColor": "#FF5722",
+        "secondaryColor": "#4CAF50",
+        "accentColor": "#9C27B0",
+        "outfit": "세 짐승이 합쳐진 기괴한 생물",
+        "accessories": [
+          "사자 갈기",
+          "염소 뿔",
+          "뱀 꼬리"
+        ],
+        "signaturePose": "세 머리가 각기 다른 브레스를 준비하는 포즈",
+        "chibiFeatures": "귀여운 세 머리, 혼합 이펙트",
+        "height": "200cm",
+        "age": "수백년"
+      },
+      "voiceLines": {
+        "greeting": "크르르... 쉬이... 크악...",
+        "battleStart": "무엇이 튀어나올까!",
+        "victory": "크하하!",
+        "defeat": "으윽... 끝인가...",
+        "levelUp": "세 머리가 모두 강해졌다!",
+        "summon": "키메라다!",
+        "idle1": "크르르...",
+        "idle2": "쉬이... 크르릉..."
+      }
+    },
+    {
+      "id": "hero_046",
+      "name": "하피",
+      "nameEn": "Harpy",
+      "rarity": 2,
+      "cult": "tartarus",
+      "class": "archer",
+      "description": "하늘의 교활한 약탈자",
+      "mood": "cunning",
+      "quote": "잡을 수 있으면 잡아봐!",
+      "stats": {
+        "hp": 500,
+        "atk": 110,
+        "def": 35,
+        "spd": 115
+      },
+      "growthStats": {
+        "hp": 50,
+        "atk": 11,
+        "def": 3,
+        "spd": 3
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "급강하 발톱",
+          "description": "빠르게 급강하하여 공격",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "폭풍 날개",
+          "description": "날개로 폭풍을 일으킨다",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "bird_woman",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#7B1FA2",
+        "hairStyle": "깃털처럼 흩날리는 보라색 머리",
+        "eyeColor": "#E1BEE7",
+        "eyeStyle": "날카로운 새의 눈",
+        "primaryColor": "#7B1FA2",
+        "secondaryColor": "#E1BEE7",
+        "accentColor": "#FFD700",
+        "outfit": "날카로운 발톱의 여성형 조류",
+        "accessories": [
+          "거대한 날개",
+          "날카로운 발톱"
+        ],
+        "signaturePose": "날개를 펼치며 하늘을 나는 포즈",
+        "chibiFeatures": "작은 날개, 귀여운 발톱",
+        "height": "165cm",
+        "age": "수십년"
+      },
+      "voiceLines": {
+        "greeting": "키히히~",
+        "battleStart": "잡을 수 있으면 잡아봐!",
+        "victory": "날 못 잡았지!",
+        "defeat": "끄아악... 떨어진다...",
+        "levelUp": "날개가 더 강해졌어!",
+        "summon": "하피다~",
+        "idle1": "키히히~",
+        "idle2": "날아다니는 게 좋아~"
+      }
+    },
+    {
+      "id": "hero_047",
+      "name": "사이클롭스",
+      "nameEn": "Cyclops",
+      "rarity": 2,
+      "cult": "tartarus",
+      "class": "warrior",
+      "description": "거대한 외눈의 대장장이 거인",
+      "mood": "fierce",
+      "quote": "이 망치 한 방이면 끝이다!",
+      "stats": {
+        "hp": 700,
+        "atk": 130,
+        "def": 50,
+        "spd": 60
+      },
+      "growthStats": {
+        "hp": 70,
+        "atk": 13,
+        "def": 5,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "거인의 주먹",
+          "description": "거대한 주먹으로 내려친다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "대지 강타",
+          "description": "망치로 땅을 강타한다",
+          "multiplier": 2.2,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "one_eyed_giant",
+        "bodyRatio": "3.5 head",
+        "hairColor": "#795548",
+        "hairStyle": "거친 갈색 머리",
+        "eyeColor": "#FF5722",
+        "eyeStyle": "거대한 하나의 눈",
+        "primaryColor": "#795548",
+        "secondaryColor": "#FF5722",
+        "accentColor": "#FFD700",
+        "outfit": "거대한 망치를 든 외눈 거인",
+        "accessories": [
+          "대장장이 망치",
+          "가죽 앞치마"
+        ],
+        "signaturePose": "망치를 들어올리는 포즈",
+        "chibiFeatures": "큰 눈, 작은 망치",
+        "height": "250cm",
+        "age": "수백년"
+      },
+      "voiceLines": {
+        "greeting": "으흠...",
+        "battleStart": "망치 한 방이면 끝이다!",
+        "victory": "크하하!",
+        "defeat": "으윽... 눈이...",
+        "levelUp": "더 세게 칠 수 있어!",
+        "summon": "사이클롭스다!",
+        "idle1": "망치질하고 싶어...",
+        "idle2": "대장간이 그립네..."
+      }
+    },
+    {
+      "id": "hero_048",
+      "name": "스켈레톤",
+      "nameEn": "Skeleton",
+      "rarity": 1,
+      "cult": "tartarus",
+      "class": "warrior",
+      "description": "되살아난 고대 전사의 뼈",
+      "mood": "stoic",
+      "quote": "...달그락...",
+      "stats": {
+        "hp": 350,
+        "atk": 70,
+        "def": 40,
+        "spd": 65
+      },
+      "growthStats": {
+        "hp": 35,
+        "atk": 7,
+        "def": 4,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "뼈 칼",
+          "description": "녹슨 검으로 베기",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "뼈 던지기",
+          "description": "자신의 뼈를 던진다",
+          "multiplier": 1.8,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "undead_warrior",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#ECEFF1",
+        "hairStyle": "없음",
+        "eyeColor": "#455A64",
+        "eyeStyle": "텅 빈 눈구멍",
+        "primaryColor": "#ECEFF1",
+        "secondaryColor": "#455A64",
+        "accentColor": "#78909C",
+        "outfit": "녹슨 검을 든 해골 전사",
+        "accessories": [
+          "녹슨 검",
+          "낡은 방패"
+        ],
+        "signaturePose": "칼을 들고 서 있는 포즈",
+        "chibiFeatures": "귀여운 해골, 달그락 이펙트",
+        "height": "170cm",
+        "age": "수백년"
+      },
+      "voiceLines": {
+        "greeting": "...달그락...",
+        "battleStart": "...크르릉...",
+        "victory": "...달그락...",
+        "defeat": "...크르릉...",
+        "levelUp": "...달그락...",
+        "summon": "...달그락...",
+        "idle1": "...달그락...",
+        "idle2": "...크르릉..."
+      }
+    },
+    {
+      "id": "hero_049",
+      "name": "아서",
+      "nameEn": "Arthur",
+      "rarity": 5,
+      "cult": "avalon",
+      "class": "warrior",
+      "description": "엑스칼리버를 쥔 브리튼의 전설적 왕",
+      "mood": "noble",
+      "quote": "기사의 명예를 걸고!",
+      "stats": {
+        "hp": 1150,
+        "atk": 185,
+        "def": 90,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 115,
+        "atk": 18,
+        "def": 9,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "엑스칼리버 참격",
+          "description": "성검의 힘으로 베기",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "성검 해방",
+          "description": "엑스칼리버의 진정한 힘을 해방",
+          "multiplier": 3.0,
+          "gaugeCost": 100,
+          "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "카멜롯의 위엄",
+          "description": "왕의 위엄으로 모든 적을 제압",
+          "multiplier": 3.8,
+          "gaugeCost": 150,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "legendary_king",
+        "bodyRatio": "2.8 head",
+        "hairColor": "#FFD700",
+        "hairStyle": "금빛 짧은 머리",
+        "eyeColor": "#1565C0",
+        "eyeStyle": "카리스마 넘치는 푸른 눈",
+        "primaryColor": "#FFD700",
+        "secondaryColor": "#1565C0",
+        "accentColor": "#F5F5F5",
+        "outfit": "금빛 갑옷과 성검을 든 기사왕",
+        "accessories": [
+          "엑스칼리버",
+          "왕관",
+          "망토"
+        ],
+        "signaturePose": "성검을 높이 들어올리는 포즈",
+        "chibiFeatures": "금빛 갑옷, 빛나는 엑스칼리버",
+        "height": "180cm",
+        "age": "30세"
+      },
+      "voiceLines": {
+        "greeting": "나는 아서, 브리튼의 왕이다",
+        "battleStart": "기사의 명예를 걸고!",
+        "victory": "정의는 승리한다",
+        "defeat": "카멜롯이... 무너지는가...",
+        "levelUp": "왕의 힘이 더욱 강해졌다",
+        "summon": "아서왕이 도착했다",
+        "idle1": "카멜롯의 평화를 위하여...",
+        "idle2": "기사도는 영원하다..."
+      }
+    },
+    {
+      "id": "hero_050",
+      "name": "모건 르 페이",
+      "nameEn": "Morgan le Fay",
+      "rarity": 5,
+      "cult": "avalon",
+      "class": "mage",
+      "description": "마법의 섬을 다스리는 신비의 여왕",
+      "mood": "mystic",
+      "quote": "이 섬의 마법은 나의 의지",
+      "stats": {
+        "hp": 880,
+        "atk": 195,
+        "def": 55,
+        "spd": 110
+      },
+      "growthStats": {
+        "hp": 88,
+        "atk": 19,
+        "def": 5,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "요정 광선",
+          "description": "요정의 마법을 쏜다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "아발론의 안개",
+          "description": "신비의 안개로 모든 적을 혼란",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "운명 조작",
+          "description": "운명을 바꾸는 강력한 마법",
+          "multiplier": 3.5,
+          "gaugeCost": 150,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "mystic_queen",
+        "bodyRatio": "2.6 head",
+        "hairColor": "#7B1FA2",
+        "hairStyle": "긴 보라색 웨이브 머리",
+        "eyeColor": "#E8EAF6",
+        "eyeStyle": "신비로운 보랏빛 눈",
+        "primaryColor": "#7B1FA2",
+        "secondaryColor": "#E8EAF6",
+        "accentColor": "#FFD700",
+        "outfit": "보랏빛 로브의 신비로운 마녀",
+        "accessories": [
+          "마법 지팡이",
+          "요정 왕관",
+          "신비의 목걸이"
+        ],
+        "signaturePose": "지팡이를 들고 마법을 시전하는 포즈",
+        "chibiFeatures": "반짝이는 마법 이펙트, 작은 요정들",
+        "height": "172cm",
+        "age": "외형 28세 (실제 ???세)"
+      },
+      "voiceLines": {
+        "greeting": "운명을 보러 왔구나",
+        "battleStart": "마법의 힘을 보여주지",
+        "victory": "예정된 결과였어",
+        "defeat": "운명도 바꿀 수 없는 건가...",
+        "levelUp": "마법의 힘이 깊어진다",
+        "summon": "모건 르 페이다. 마법의 섬이 너를 환영한다",
+        "idle1": "운명은 이미 정해져 있어...",
+        "idle2": "마법은 신비로워..."
+      }
+    },
+    {
+      "id": "hero_051",
+      "name": "쿠 훌린",
+      "nameEn": "Cu Chulainn",
+      "rarity": 4,
+      "cult": "avalon",
+      "class": "warrior",
+      "description": "얼스터의 사냥개, 전장의 광전사",
+      "mood": "fierce",
+      "quote": "게이 볼그!",
+      "stats": {
+        "hp": 950,
+        "atk": 175,
+        "def": 65,
+        "spd": 110
+      },
+      "growthStats": {
+        "hp": 95,
+        "atk": 17,
+        "def": 6,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "창 연타",
+          "description": "빠른 창 공격",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "게이 볼그",
+          "description": "필살의 마창으로 관통",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "celtic_berserker",
+        "bodyRatio": "2.7 head",
+        "hairColor": "#D32F2F",
+        "hairStyle": "거친 붉은 단발",
+        "eyeColor": "#1B5E20",
+        "eyeStyle": "야성적인 녹색 눈",
+        "primaryColor": "#D32F2F",
+        "secondaryColor": "#1B5E20",
+        "accentColor": "#FFD700",
+        "outfit": "붉은 창을 든 켈트 전사",
+        "accessories": [
+          "게이 볼그",
+          "켈트 문양 팔찌",
+          "전사의 망토"
+        ],
+        "signaturePose": "창을 던지는 포즈",
+        "chibiFeatures": "붉은 창, 광전사 이펙트",
+        "height": "178cm",
+        "age": "25세"
+      },
+      "voiceLines": {
+        "greeting": "사냥개가 왔다",
+        "battleStart": "게이 볼그!",
+        "victory": "이 정도는 가볍지",
+        "defeat": "으윽... 이대로는...",
+        "levelUp": "더 강해졌다!",
+        "summon": "쿠 훌린이다!",
+        "idle1": "전장이 그립군...",
+        "idle2": "창을 들고 싸우자..."
+      }
+    },
+    {
+      "id": "hero_052",
+      "name": "모리건",
+      "nameEn": "Morrigan",
+      "rarity": 4,
+      "cult": "avalon",
+      "class": "mage",
+      "description": "전쟁과 운명을 조종하는 까마귀 여신",
+      "mood": "cunning",
+      "quote": "네 운명은 이미 정해졌다",
+      "stats": {
+        "hp": 800,
+        "atk": 170,
+        "def": 50,
+        "spd": 105
+      },
+      "growthStats": {
+        "hp": 80,
+        "atk": 17,
+        "def": 5,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "까마귀 소환",
+          "description": "까마귀를 소환하여 공격",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "운명의 예언",
+          "description": "적의 운명을 예언하고 저주",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "raven_goddess",
+        "bodyRatio": "2.6 head",
+        "hairColor": "#212121",
+        "hairStyle": "까마귀 깃털처럼 검은 긴 머리",
+        "eyeColor": "#9C27B0",
+        "eyeStyle": "날카로운 보라색 눈",
+        "primaryColor": "#212121",
+        "secondaryColor": "#9C27B0",
+        "accentColor": "#D32F2F",
+        "outfit": "까마귀 깃털 로브의 어두운 여신",
+        "accessories": [
+          "까마귀 지팡이",
+          "깃털 장식",
+          "전쟁의 목걸이"
+        ],
+        "signaturePose": "까마귀들에 둘러싸여 있는 포즈",
+        "chibiFeatures": "작은 까마귀들, 어두운 이펙트",
+        "height": "170cm",
+        "age": "???세"
+      },
+      "voiceLines": {
+        "greeting": "전쟁의 냄새가 나는군",
+        "battleStart": "운명은 이미 정해졌다",
+        "victory": "예언대로구나",
+        "defeat": "운명이... 바뀌었나...",
+        "levelUp": "더 많은 운명을 볼 수 있게 됐어",
+        "summon": "모리건이다. 전쟁을 보러 왔다",
+        "idle1": "까악... 까악...",
+        "idle2": "전쟁과 운명... 영원하지..."
+      }
+    },
+    {
+      "id": "hero_053",
+      "name": "란슬롯",
+      "nameEn": "Lancelot",
+      "rarity": 3,
+      "cult": "avalon",
+      "class": "warrior",
+      "description": "호반의 기사, 충성스러운 검의 달인",
+      "mood": "brave",
+      "quote": "검을 든 자의 명예!",
+      "stats": {
+        "hp": 850,
+        "atk": 150,
+        "def": 70,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 85,
+        "atk": 15,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기사의 검",
+          "description": "정직한 검격",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "호반의 일격",
+          "description": "물처럼 흐르는 강력한 검격",
+          "multiplier": 2.3,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "silver_knight",
+        "bodyRatio": "2.7 head",
+        "hairColor": "#C0C0C0",
+        "hairStyle": "은발 단정한 중단발",
+        "eyeColor": "#1565C0",
+        "eyeStyle": "충성스러운 푸른 눈",
+        "primaryColor": "#C0C0C0",
+        "secondaryColor": "#1565C0",
+        "accentColor": "#FFD700",
+        "outfit": "은빛 갑옷의 기사",
+        "accessories": [
+          "기사의 검",
+          "호반의 문장",
+          "기사 망토"
+        ],
+        "signaturePose": "검을 세우고 경례하는 포즈",
+        "chibiFeatures": "반짝이는 은빛 갑옷, 작은 검",
+        "height": "182cm",
+        "age": "28세"
+      },
+      "voiceLines": {
+        "greeting": "란슬롯입니다",
+        "battleStart": "명예를 걸고!",
+        "victory": "정의가 승리했습니다",
+        "defeat": "죄송합니다...",
+        "levelUp": "더 강해졌습니다!",
+        "summon": "호반의 기사 란슬롯, 출전합니다",
+        "idle1": "기사도를 지키겠습니다...",
+        "idle2": "왕을 위하여..."
+      }
+    },
+    {
+      "id": "hero_054",
+      "name": "머린",
+      "nameEn": "Merlin",
+      "rarity": 3,
+      "cult": "avalon",
+      "class": "mage",
+      "description": "위대한 마법사이자 왕의 참모",
+      "mood": "noble",
+      "quote": "지혜가 검보다 강하다",
+      "stats": {
+        "hp": 650,
+        "atk": 155,
+        "def": 45,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 65,
+        "atk": 15,
+        "def": 4,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "마법 화살",
+          "description": "마법의 힘으로 공격",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "현자의 지혜",
+          "description": "지혜의 마법으로 모든 적을 공격",
+          "multiplier": 2.3,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "wise_wizard",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#B0BEC5",
+        "hairStyle": "긴 은발과 긴 수염",
+        "eyeColor": "#1565C0",
+        "eyeStyle": "지혜로운 푸른 눈",
+        "primaryColor": "#1565C0",
+        "secondaryColor": "#B0BEC5",
+        "accentColor": "#FFD700",
+        "outfit": "긴 수염과 지팡이의 노마법사",
+        "accessories": [
+          "마법 지팡이",
+          "마법사 모자",
+          "현자의 로브"
+        ],
+        "signaturePose": "지팡이를 들고 생각에 잠긴 포즈",
+        "chibiFeatures": "긴 수염, 반짝이는 지팡이",
+        "height": "175cm",
+        "age": "???세"
+      },
+      "voiceLines": {
+        "greeting": "현자 머린이다",
+        "battleStart": "지혜의 힘을 보여주지",
+        "victory": "지식이 승리했구나",
+        "defeat": "아직... 배울 게 많군...",
+        "levelUp": "지혜가 깊어진다",
+        "summon": "머린이다. 왕을 보좌하리라",
+        "idle1": "지식은 힘이다...",
+        "idle2": "흠... 흥미롭군..."
+      }
+    },
+    {
+      "id": "hero_055",
+      "name": "요정기사",
+      "nameEn": "Fairy Knight",
+      "rarity": 2,
+      "cult": "avalon",
+      "class": "warrior",
+      "description": "숲의 수호자, 자연과 함께하는 기사",
+      "mood": "calm",
+      "quote": "숲이 나를 인도한다",
+      "stats": {
+        "hp": 550,
+        "atk": 100,
+        "def": 55,
+        "spd": 80
+      },
+      "growthStats": {
+        "hp": 55,
+        "atk": 10,
+        "def": 5,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "잎사귀 검",
+          "description": "자연의 힘으로 공격",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "숲의 보호",
+          "description": "자연의 힘으로 모두를 보호",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "nature_guardian",
+        "bodyRatio": "2.4 head",
+        "hairColor": "#4CAF50",
+        "hairStyle": "녹색 짧은 머리",
+        "eyeColor": "#81C784",
+        "eyeStyle": "평온한 녹색 눈",
+        "primaryColor": "#4CAF50",
+        "secondaryColor": "#81C784",
+        "accentColor": "#FFD700",
+        "outfit": "녹색 갑옷의 작은 기사",
+        "accessories": [
+          "잎사귀 검",
+          "자연의 방패",
+          "요정 날개"
+        ],
+        "signaturePose": "잎사귀 검을 들고 있는 포즈",
+        "chibiFeatures": "작은 날개, 자연 이펙트",
+        "height": "150cm",
+        "age": "외형 15세"
+      },
+      "voiceLines": {
+        "greeting": "숲의 인사를 전합니다",
+        "battleStart": "자연이 함께합니다",
+        "victory": "숲이 축복합니다",
+        "defeat": "숲으로... 돌아갑니다...",
+        "levelUp": "자연과 더 가까워졌어요",
+        "summon": "요정기사입니다",
+        "idle1": "숲이 평온해요...",
+        "idle2": "나무들이 속삭여요..."
+      }
+    },
+    {
+      "id": "hero_056",
+      "name": "드루이드",
+      "nameEn": "Druid",
+      "rarity": 2,
+      "cult": "avalon",
+      "class": "healer",
+      "description": "자연의 힘으로 치유하는 사제",
+      "mood": "devoted",
+      "quote": "대지의 축복을 받으라",
+      "stats": {
+        "hp": 500,
+        "atk": 85,
+        "def": 40,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 50,
+        "atk": 8,
+        "def": 4,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "자연의 손길",
+          "description": "자연의 힘으로 공격",
+          "multiplier": 0.8,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "치유의 이끼",
+          "description": "자연의 힘으로 치유",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "single",
+          "isHeal": true
+        }
+      ],
+      "design": {
+        "style": "nature_priest",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#2E7D32",
+        "hairStyle": "나뭇잎으로 장식된 갈색 긴 머리",
+        "eyeColor": "#8D6E63",
+        "eyeStyle": "자비로운 갈색 눈",
+        "primaryColor": "#2E7D32",
+        "secondaryColor": "#8D6E63",
+        "accentColor": "#4CAF50",
+        "outfit": "나뭇잎 로브의 자연 사제",
+        "accessories": [
+          "나무 지팡이",
+          "나뭇잎 화관",
+          "자연의 목걸이"
+        ],
+        "signaturePose": "지팡이를 들고 치유하는 포즈",
+        "chibiFeatures": "작은 나뭇잎들, 치유 이펙트",
+        "height": "165cm",
+        "age": "35세"
+      },
+      "voiceLines": {
+        "greeting": "대지의 인사를 전합니다",
+        "battleStart": "자연이 함께합니다",
+        "victory": "대지가 축복합니다",
+        "defeat": "자연으로... 돌아갑니다...",
+        "levelUp": "자연의 힘이 강해졌어요",
+        "summon": "드루이드입니다",
+        "idle1": "대지가 숨쉬네요...",
+        "idle2": "자연은 아름다워요..."
+      }
+    },
+    {
+      "id": "hero_057",
+      "name": "종자",
+      "nameEn": "Squire",
+      "rarity": 1,
+      "cult": "avalon",
+      "class": "warrior",
+      "description": "기사를 꿈꾸는 견습생",
+      "mood": "devoted",
+      "quote": "언젠가 나도 기사가 될 거야!",
+      "stats": {
+        "hp": 300,
+        "atk": 60,
+        "def": 35,
+        "spd": 70
+      },
+      "growthStats": {
+        "hp": 30,
+        "atk": 6,
+        "def": 3,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "나무 검",
+          "description": "나무 검으로 공격",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "견습 돌격",
+          "description": "용기를 내어 돌격!",
+          "multiplier": 1.6,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "young_apprentice",
+        "bodyRatio": "2.3 head",
+        "hairColor": "#8D6E63",
+        "hairStyle": "갈색 단발",
+        "eyeColor": "#FFE082",
+        "eyeStyle": "희망찬 눈빛",
+        "primaryColor": "#8D6E63",
+        "secondaryColor": "#FFE082",
+        "accentColor": "#9E9E9E",
+        "outfit": "나무 검과 천 갑옷의 소년",
+        "accessories": [
+          "나무 훈련검",
+          "천 갑옷",
+          "견습 휘장"
+        ],
+        "signaturePose": "나무 검을 들고 열심히 연습하는 포즈",
+        "chibiFeatures": "큰 눈, 작은 나무검",
+        "height": "155cm",
+        "age": "14세"
+      },
+      "voiceLines": {
+        "greeting": "안녕하세요!",
+        "battleStart": "열심히 하겠습니다!",
+        "victory": "이겼다! 나도 할 수 있어!",
+        "defeat": "으윽... 더 열심히 할게요...",
+        "levelUp": "강해졌어! 기사에 가까워졌다!",
+        "summon": "종자입니다! 열심히 하겠습니다!",
+        "idle1": "언젠가 나도 기사가...",
+        "idle2": "더 연습해야지..."
+      }
+    },
+    {
+      "id": "hero_058",
+      "name": "헬",
+      "nameEn": "Hel",
+      "rarity": 5,
+      "cult": "helheim",
+      "class": "mage",
+      "description": "죽음의 여왕, 헬하임의 지배자",
+      "mood": "stoic",
+      "quote": "삶과 죽음은 내 손 안에 있다",
+      "stats": {
+        "hp": 950,
+        "atk": 185,
+        "def": 75,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 95,
+        "atk": 18,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "죽음의 손길",
+          "description": "생명을 빼앗는다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "사령술",
+          "description": "죽은 자를 부린다",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "생사의 심판",
+          "description": "삶과 죽음을 가른다",
+          "multiplier": 3.5,
+          "gaugeCost": 150,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "dualism_goddess",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#E8EAF6",
+        "hairStyle": "한쪽은 은빛 긴 생머리, 한쪽은 해골",
+        "eyeColor": "#455A64",
+        "eyeStyle": "한쪽은 깊은 슬픔의 눈, 한쪽은 빈 눈구멍",
+        "primaryColor": "#455A64",
+        "secondaryColor": "#E8EAF6",
+        "accentColor": "#263238",
+        "outfit": "반쪽은 화려한 드레스, 반쪽은 찢어진 누더기",
+        "accessories": [
+          "죽음의 왕관",
+          "생사의 홀",
+          "헬하임의 펜던트"
+        ],
+        "signaturePose": "한 손으로 생명을, 한 손으로 죽음을 다루는 자세",
+        "chibiFeatures": "반쪽 아름다운 얼굴, 반쪽 해골 얼굴",
+        "height": "170cm",
+        "age": "불명"
+      },
+      "voiceLines": {
+        "greeting": "죽음을 두려워하지 마라",
+        "battleStart": "생사는 내가 정한다",
+        "victory": "죽음이 승리했다",
+        "defeat": "죽음조차 죽을 수 있구나...",
+        "levelUp": "죽음의 힘이 커진다",
+        "summon": "헬이다",
+        "idle1": "삶과 죽음, 둘은 하나",
+        "idle2": "헬하임이 너를 부른다"
+      }
+    },
+    {
+      "id": "hero_059",
+      "name": "펜리르",
+      "nameEn": "Fenrir",
+      "rarity": 5,
+      "cult": "helheim",
+      "class": "warrior",
+      "description": "신들을 삼키는 거대 늑대",
+      "mood": "wild",
+      "quote": "사슬은 끊어졌다!",
+      "stats": {
+        "hp": 1300,
+        "atk": 210,
+        "def": 70,
+        "spd": 105
+      },
+      "growthStats": {
+        "hp": 130,
+        "atk": 21,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "늑대 이빨",
+          "description": "강력한 이빨 공격",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "삼키기",
+          "description": "적을 통째로 삼킨다",
+          "multiplier": 3.2,
+          "gaugeCost": 100,
+          "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "라그나로크 울부짖음",
+          "description": "종말의 포효",
+          "multiplier": 4.0,
+          "gaugeCost": 150,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "beast_destroyer",
+        "bodyRatio": "3 head",
+        "hairColor": "#212121",
+        "hairStyle": "거친 흑색 갈기, 늑대의 야생적 털",
+        "eyeColor": "#F44336",
+        "eyeStyle": "광기와 분노가 담긴 붉은 눈",
+        "primaryColor": "#212121",
+        "secondaryColor": "#F44336",
+        "accentColor": "#B71C1C",
+        "outfit": "끊어진 글레이프니르 사슬이 감긴 갑옷",
+        "accessories": [
+          "끊어진 마법 사슬",
+          "강철 송곳니",
+          "파괴의 발톱"
+        ],
+        "signaturePose": "포효하며 사슬을 끊고 덤비는 포즈",
+        "chibiFeatures": "큰 늑대 귀, 날카로운 송곳니, 작은 사슬",
+        "height": "220cm",
+        "age": "수천 년"
+      },
+      "voiceLines": {
+        "greeting": "으르렁...",
+        "battleStart": "사슬에서 풀려났다!",
+        "victory": "아오오오오!",
+        "defeat": "다시... 사슬에...",
+        "levelUp": "더 강해진다!",
+        "summon": "펜리르다!",
+        "idle1": "굶주렸다...",
+        "idle2": "신들의 냄새가 난다"
+      }
+    },
+    {
+      "id": "hero_060",
+      "name": "요르문간드",
+      "nameEn": "Jormungandr",
+      "rarity": 4,
+      "cult": "helheim",
+      "class": "mage",
+      "description": "세계를 감싸는 대해뱀",
+      "mood": "stoic",
+      "quote": "이 바다는 나의 몸이다",
+      "stats": {
+        "hp": 1000,
+        "atk": 165,
+        "def": 80,
+        "spd": 75
+      },
+      "growthStats": {
+        "hp": 100,
+        "atk": 16,
+        "def": 8,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "독 침",
+          "description": "독을 발사한다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "세계를 감은 독",
+          "description": "독이 세계를 뒤덮는다",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "world_serpent",
+        "bodyRatio": "3 head",
+        "hairColor": "#00695C",
+        "hairStyle": "뱀 비늘 질감의 짧은 머리, 용의 뿔",
+        "eyeColor": "#455A64",
+        "eyeStyle": "냉정하고 무표정한 파충류의 눈",
+        "primaryColor": "#00695C",
+        "secondaryColor": "#455A64",
+        "accentColor": "#004D40",
+        "outfit": "바다 비늘 갑옷, 뱀 문양 망토",
+        "accessories": [
+          "세계를 감은 고리",
+          "독니 목걸이",
+          "대해의 왕관"
+        ],
+        "signaturePose": "몸을 둥글게 감고 꼬리를 물고 있는 포즈",
+        "chibiFeatures": "작은 뱀 눈, 귀여운 독니, 긴 꼬리",
+        "height": "185cm",
+        "age": "태고"
+      },
+      "voiceLines": {
+        "greeting": "쉬이익...",
+        "battleStart": "독이 퍼진다...",
+        "victory": "바다로 돌아간다...",
+        "defeat": "바다가... 멀어진다...",
+        "levelUp": "몸이 더 길어진다...",
+        "summon": "요르문간드다...",
+        "idle1": "바다 깊은 곳...",
+        "idle2": "세계를 감싸고 있다..."
+      }
+    },
+    {
+      "id": "hero_061",
+      "name": "니드호그",
+      "nameEn": "Nidhogg",
+      "rarity": 4,
+      "cult": "helheim",
+      "class": "warrior",
+      "description": "세계수를 갉아먹는 파괴의 용",
+      "mood": "fierce",
+      "quote": "모든 것은 부식된다",
+      "stats": {
+        "hp": 1050,
+        "atk": 180,
+        "def": 75,
+        "spd": 80
+      },
+      "growthStats": {
+        "hp": 105,
+        "atk": 18,
+        "def": 7,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "부식의 이빨",
+          "description": "부식시킨다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "세계수 파괴",
+          "description": "모든 것을 갉아먹는다",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "corrupted_dragon",
+        "bodyRatio": "3 head",
+        "hairColor": "#4E342E",
+        "hairStyle": "가시처럼 뻗친 갈색 머리, 용의 뿔",
+        "eyeColor": "#1B5E20",
+        "eyeStyle": "파괴와 부식을 담은 녹색 눈",
+        "primaryColor": "#4E342E",
+        "secondaryColor": "#1B5E20",
+        "accentColor": "#33691E",
+        "outfit": "부식된 비늘 갑옷, 찢어진 용의 날개",
+        "accessories": [
+          "세계수 뿌리 목걸이",
+          "부식의 이빨",
+          "파괴의 발톱"
+        ],
+        "signaturePose": "세계수를 갉아먹는 포즈",
+        "chibiFeatures": "귀여운 용 뿔, 작은 날개, 부식 효과",
+        "height": "190cm",
+        "age": "태고"
+      },
+      "voiceLines": {
+        "greeting": "부식시켜주지...",
+        "battleStart": "갉아먹어주마!",
+        "victory": "다 썩어버렸군",
+        "defeat": "세계수가... 멀어진다...",
+        "levelUp": "더 많이 갉아먹는다",
+        "summon": "니드호그다",
+        "idle1": "배고프다...",
+        "idle2": "뿌리가 맛있어..."
+      }
+    },
+    {
+      "id": "hero_062",
+      "name": "드라우그르",
+      "nameEn": "Draugr",
+      "rarity": 3,
+      "cult": "helheim",
+      "class": "warrior",
+      "description": "되살아난 바이킹 전사의 망령",
+      "mood": "brave",
+      "quote": "전사는 죽어도 싸운다",
+      "stats": {
+        "hp": 800,
+        "atk": 135,
+        "def": 75,
+        "spd": 70
+      },
+      "growthStats": {
+        "hp": 80,
+        "atk": 13,
+        "def": 7,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "녹슨 검",
+          "description": "낡은 무기로 공격",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "망령의 일격",
+          "description": "불사의 힘으로 공격",
+          "multiplier": 2.2,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "undead_viking",
+        "bodyRatio": "3 head",
+        "hairColor": "#37474F",
+        "hairStyle": "흐트러진 긴 머리, 바이킹 스타일",
+        "eyeColor": "#607D8B",
+        "eyeStyle": "생명이 없는 회색 눈, 공허한 시선",
+        "primaryColor": "#607D8B",
+        "secondaryColor": "#37474F",
+        "accentColor": "#263238",
+        "outfit": "부서진 바이킹 갑옷, 찢어진 모피 망토",
+        "accessories": [
+          "녹슨 바이킹 투구",
+          "부러진 방패",
+          "낡은 검"
+        ],
+        "signaturePose": "검을 들고 씩씩하게 서 있는 전사의 포즈",
+        "chibiFeatures": "작은 투구, 귀여운 망령 효과",
+        "height": "185cm",
+        "age": "수백 년"
+      },
+      "voiceLines": {
+        "greeting": "...으윽...",
+        "battleStart": "다시... 싸운다...",
+        "victory": "전사의... 의무...",
+        "defeat": "이번엔... 진짜 끝인가...",
+        "levelUp": "힘이... 돌아온다...",
+        "summon": "...드라우그르...",
+        "idle1": "전장이... 그립다...",
+        "idle2": "발할라는... 어디에..."
+      }
+    },
+    {
+      "id": "hero_063",
+      "name": "서리거인",
+      "nameEn": "Frost Giant",
+      "rarity": 3,
+      "cult": "helheim",
+      "class": "warrior",
+      "description": "얼음 세계의 고요한 파수꾼",
+      "mood": "calm",
+      "quote": "이 추위를 견딜 수 있겠나",
+      "stats": {
+        "hp": 950,
+        "atk": 125,
+        "def": 85,
+        "spd": 55
+      },
+      "growthStats": {
+        "hp": 95,
+        "atk": 12,
+        "def": 8,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "얼음 주먹",
+          "description": "차가운 주먹",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "빙하 벽",
+          "description": "얼음으로 막는다",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "ice_giant",
+        "bodyRatio": "3 head",
+        "hairColor": "#B3E5FC",
+        "hairStyle": "얼음 결정처럼 뻗친 하얀 머리",
+        "eyeColor": "#0277BD",
+        "eyeStyle": "고요하고 차가운 푸른 눈",
+        "primaryColor": "#B3E5FC",
+        "secondaryColor": "#0277BD",
+        "accentColor": "#01579B",
+        "outfit": "얼음 결정 갑옷, 서리 망토",
+        "accessories": [
+          "얼음 왕관",
+          "서리 건틀릿",
+          "빙하 어깨 갑주"
+        ],
+        "signaturePose": "거대한 몸으로 차가운 힘을 발산하는 포즈",
+        "chibiFeatures": "큰 얼음 결정, 귀여운 서리 효과",
+        "height": "250cm",
+        "age": "수천 년"
+      },
+      "voiceLines": {
+        "greeting": "추위를 느껴라",
+        "battleStart": "얼어붙어라",
+        "victory": "고요히 얼었구나",
+        "defeat": "녹아버린다...",
+        "levelUp": "더 차가워진다",
+        "summon": "서리거인이다",
+        "idle1": "추위가 좋다",
+        "idle2": "조용히..."
+      }
+    },
+    {
+      "id": "hero_064",
+      "name": "영혼전사",
+      "nameEn": "Soul Warrior",
+      "rarity": 2,
+      "cult": "helheim",
+      "class": "archer",
+      "description": "영혼의 화살을 쏘는 유령 궁수",
+      "mood": "wild",
+      "quote": "영혼은 과녁을 빗나가지 않는다",
+      "stats": {
+        "hp": 480,
+        "atk": 105,
+        "def": 30,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 48,
+        "atk": 10,
+        "def": 3,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "영혼 화살",
+          "description": "영혼을 쏜다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "유령 화살비",
+          "description": "무수한 영혼의 화살",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "phantom_archer",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#B0BEC5",
+        "hairStyle": "휘날리는 투명한 긴 머리",
+        "eyeColor": "#263238",
+        "eyeStyle": "공허한 어두운 눈, 영혼의 빛",
+        "primaryColor": "#B0BEC5",
+        "secondaryColor": "#263238",
+        "accentColor": "#78909C",
+        "outfit": "반투명 궁수 복장, 영혼의 망토",
+        "accessories": [
+          "영혼의 활",
+          "유령 화살통",
+          "망령의 팔찌"
+        ],
+        "signaturePose": "활시위를 당겨 영혼 화살을 겨누는 포즈",
+        "chibiFeatures": "작은 유령 효과, 투명한 몸, 귀여운 활",
+        "height": "168cm",
+        "age": "영혼"
+      },
+      "voiceLines": {
+        "greeting": "...히익...",
+        "battleStart": "영혼으로 쏜다...",
+        "victory": "관통했다...",
+        "defeat": "흩어진다...",
+        "levelUp": "더 많은 영혼...",
+        "summon": "영혼전사...",
+        "idle1": "과녁이 보인다...",
+        "idle2": "화살이 부족해..."
+      }
+    },
+    {
+      "id": "hero_065",
+      "name": "스베르탈프",
+      "nameEn": "Svartalfr",
+      "rarity": 2,
+      "cult": "helheim",
+      "class": "mage",
+      "description": "어둠 요정의 교활한 마법사",
+      "mood": "cunning",
+      "quote": "빛은 어둠의 시작일 뿐",
+      "stats": {
+        "hp": 450,
+        "atk": 115,
+        "def": 35,
+        "spd": 105
+      },
+      "growthStats": {
+        "hp": 45,
+        "atk": 11,
+        "def": 3,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "암흑 화살",
+          "description": "어둠을 쏜다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "그림자 함정",
+          "description": "어둠 속에 숨긴 함정",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "dark_elf",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#311B92",
+        "hairStyle": "짧고 날카로운 머리, 요정 귀",
+        "eyeColor": "#B388FF",
+        "eyeStyle": "교활하고 빛나는 보라색 눈",
+        "primaryColor": "#311B92",
+        "secondaryColor": "#B388FF",
+        "accentColor": "#4A148C",
+        "outfit": "어둠의 로브, 그림자 망토",
+        "accessories": [
+          "어둠의 지팡이",
+          "함정 도구",
+          "요정 귀걸이"
+        ],
+        "signaturePose": "그림자 속에서 교활하게 웃는 포즈",
+        "chibiFeatures": "큰 요정 귀, 작은 지팡이, 장난기 가득",
+        "height": "150cm",
+        "age": "불명"
+      },
+      "voiceLines": {
+        "greeting": "히히힛...",
+        "battleStart": "어둠 속으로...",
+        "victory": "계획대로야",
+        "defeat": "빛이... 싫어...",
+        "levelUp": "더 교활해졌어",
+        "summon": "스베르탈프",
+        "idle1": "어둠이 편해",
+        "idle2": "함정을 준비하자"
+      }
+    },
+    {
+      "id": "hero_066",
+      "name": "해골병사",
+      "nameEn": "Bone Soldier",
+      "rarity": 1,
+      "cult": "helheim",
+      "class": "warrior",
+      "description": "말없이 명령을 수행하는 뼈 전사",
+      "mood": "stoic",
+      "quote": "...덜그덕...",
+      "stats": {
+        "hp": 320,
+        "atk": 65,
+        "def": 45,
+        "spd": 55
+      },
+      "growthStats": {
+        "hp": 32,
+        "atk": 6,
+        "def": 4,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "뼈 방패",
+          "description": "방패로 막는다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "뼈 방벽",
+          "description": "뼈로 벽을 만든다",
+          "multiplier": 1.5,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "skeleton_soldier",
+        "bodyRatio": "3 head",
+        "hairColor": "#ECEFF1",
+        "hairStyle": "없음 (해골)",
+        "eyeColor": "#37474F",
+        "eyeStyle": "텅 빈 눈구멍, 어둠의 불빛",
+        "primaryColor": "#ECEFF1",
+        "secondaryColor": "#37474F",
+        "accentColor": "#546E7A",
+        "outfit": "낡은 갑옷, 뼈 방패",
+        "accessories": [
+          "뼈 방패",
+          "낡은 검",
+          "부서진 투구"
+        ],
+        "signaturePose": "방패를 들고 무표정하게 서 있는 포즈",
+        "chibiFeatures": "귀여운 해골 얼굴, 작은 방패",
+        "height": "170cm",
+        "age": "불명"
+      },
+      "voiceLines": {
+        "greeting": "...덜그덕...",
+        "battleStart": "...",
+        "victory": "...딸각...",
+        "defeat": "...와르르...",
+        "levelUp": "...",
+        "summon": "...덜그덕...",
+        "idle1": "...",
+        "idle2": "...딸각딸각..."
+      }
+    },
+    {
+      "id": "hero_067",
+      "name": "손오공",
+      "nameEn": "Sun Wukong",
+      "rarity": 5,
+      "cult": "kunlun",
+      "class": "warrior",
+      "description": "하늘을 뒤흔드는 제천대성",
+      "mood": "wild",
+      "quote": "이 여의봉에 맞고 싶냐!",
+      "stats": {
+        "hp": 1100,
+        "atk": 200,
+        "def": 65,
+        "spd": 130
+      },
+      "growthStats": {
+        "hp": 110,
+        "atk": 20,
+        "def": 6,
+        "spd": 3
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "여의봉 휘두르기",
+          "description": "여의봉이 늘어난다!",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "72변화",
+          "description": "무엇이든 될 수 있다!",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "제천대성 강림",
+          "description": "하늘을 뒤흔든다!",
+          "multiplier": 4.0,
+          "gaugeCost": 150,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "monkey_king",
+        "bodyRatio": "3 head",
+        "hairColor": "#F44336",
+        "hairStyle": "거친 붉은색 원숭이 머리, 튀어나온 귀",
+        "eyeColor": "#FFD700",
+        "eyeStyle": "야생적이고 장난기 가득한 금빛 눈",
+        "primaryColor": "#FFD700",
+        "secondaryColor": "#F44336",
+        "accentColor": "#FFA000",
+        "outfit": "황금 갑옷, 붉은 호랑이 가죽 치마",
+        "accessories": [
+          "여의봉",
+          "금고봉 왕관",
+          "근두운"
+        ],
+        "signaturePose": "여의봉을 어깨에 걸치고 자신만만하게 서 있는 포즈",
+        "chibiFeatures": "귀여운 원숭이 얼굴, 작은 여의봉, 장난스러운 표정",
+        "height": "175cm",
+        "age": "수천 년"
+      },
+      "voiceLines": {
+        "greeting": "제천대성이 왔다!",
+        "battleStart": "여의봉, 커져라!",
+        "victory": "크크크, 당연한 결과지!",
+        "defeat": "이럴 수가... 나보다 강하다니!",
+        "levelUp": "점점 강해진다!",
+        "summon": "손오공 참상!",
+        "idle1": "심심한데?",
+        "idle2": "한 판 붙을까?"
+      }
+    },
+    {
+      "id": "hero_068",
+      "name": "나타",
+      "nameEn": "Nezha",
+      "rarity": 5,
+      "cult": "kunlun",
+      "class": "warrior",
+      "description": "풍화륜을 타는 격렬한 삼태자",
+      "mood": "fierce",
+      "quote": "하늘과 바다를 뒤집어 놓겠다!",
+      "stats": {
+        "hp": 950,
+        "atk": 195,
+        "def": 60,
+        "spd": 125
+      },
+      "growthStats": {
+        "hp": 95,
+        "atk": 19,
+        "def": 6,
+        "spd": 3
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "화첨창",
+          "description": "불꽃의 창",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "건곤권",
+          "description": "세상을 뒤집는다",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "삼두육비",
+          "description": "세 머리 여섯 팔",
+          "multiplier": 3.5,
+          "gaugeCost": 150,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "lotus_warrior",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#F44336",
+        "hairStyle": "짧고 날카로운 붉은 머리, 연꽃 장식",
+        "eyeColor": "#FF9800",
+        "eyeStyle": "격렬하고 불타는 주황색 눈",
+        "primaryColor": "#F44336",
+        "secondaryColor": "#FF9800",
+        "accentColor": "#E65100",
+        "outfit": "붉은 전투복, 연꽃 문양 갑옷",
+        "accessories": [
+          "화첨창",
+          "풍화륜",
+          "혼천권"
+        ],
+        "signaturePose": "풍화륜을 타고 창을 휘두르는 역동적인 포즈",
+        "chibiFeatures": "작은 풍화륜, 불꽃 효과, 귀여운 소년 얼굴",
+        "height": "160cm",
+        "age": "소년"
+      },
+      "voiceLines": {
+        "greeting": "나타 삼태자다!",
+        "battleStart": "뒤집어버리겠다!",
+        "victory": "이것이 나의 힘이다!",
+        "defeat": "이럴 수는...",
+        "levelUp": "더 강해졌다!",
+        "summon": "나타 등장!",
+        "idle1": "빨리 싸우자!",
+        "idle2": "기다리는 건 싫어!"
+      }
+    },
+    {
+      "id": "hero_069",
+      "name": "관우",
+      "nameEn": "Guan Yu",
+      "rarity": 4,
+      "cult": "kunlun",
+      "class": "warrior",
+      "description": "충의의 화신, 무신 관우",
+      "mood": "noble",
+      "quote": "의리는 천하보다 무겁다",
+      "stats": {
+        "hp": 1050,
+        "atk": 175,
+        "def": 80,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 105,
+        "atk": 17,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "청룡언월도",
+          "description": "의리의 칼날",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "의리의 일격",
+          "description": "의리로 베어낸다",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "war_god",
+        "bodyRatio": "3 head",
+        "hairColor": "#1B5E20",
+        "hairStyle": "긴 검은 수염과 머리, 무사 스타일",
+        "eyeColor": "#D32F2F",
+        "eyeStyle": "위엄 있고 충의로운 붉은 눈",
+        "primaryColor": "#D32F2F",
+        "secondaryColor": "#1B5E20",
+        "accentColor": "#B71C1C",
+        "outfit": "녹색 전포, 붉은 갑옷",
+        "accessories": [
+          "청룡언월도",
+          "적토마 문양",
+          "충의의 깃발"
+        ],
+        "signaturePose": "청룡언월도를 당당하게 세우고 서 있는 포즈",
+        "chibiFeatures": "작은 수염, 귀여운 청룡언월도",
+        "height": "200cm",
+        "age": "장년"
+      },
+      "voiceLines": {
+        "greeting": "관우다",
+        "battleStart": "의리를 지킨다",
+        "victory": "의리가 승리했다",
+        "defeat": "의리를 지키지 못했다...",
+        "levelUp": "더욱 강해진다",
+        "summon": "관우 참전",
+        "idle1": "의리를 지킨다",
+        "idle2": "충의를 잊지 말라"
+      }
+    },
+    {
+      "id": "hero_070",
+      "name": "항아",
+      "nameEn": "Chang'e",
+      "rarity": 4,
+      "cult": "kunlun",
+      "class": "mage",
+      "description": "달에서 인간을 지켜보는 헌신적인 여신",
+      "mood": "devoted",
+      "quote": "달빛이 너를 감싸줄 거야",
+      "stats": {
+        "hp": 750,
+        "atk": 170,
+        "def": 50,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 75,
+        "atk": 17,
+        "def": 5,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "달빛 구슬",
+          "description": "달빛의 구슬",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "월궁의 축복",
+          "description": "달의 축복",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "all",
+          "isHeal": true
+        }
+      ],
+      "design": {
+        "style": "moon_goddess",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#C5CAE9",
+        "hairStyle": "긴 은빛 생머리, 달꽃 장식",
+        "eyeColor": "#E8EAF6",
+        "eyeStyle": "부드럽고 헌신적인 은빛 눈",
+        "primaryColor": "#E8EAF6",
+        "secondaryColor": "#C5CAE9",
+        "accentColor": "#9FA8DA",
+        "outfit": "하얀 달빛 로브, 은빛 치마",
+        "accessories": [
+          "달 문양 관",
+          "옥토끼 장식",
+          "달빛 구슬"
+        ],
+        "signaturePose": "달빛을 손에 모으며 우아하게 서 있는 포즈",
+        "chibiFeatures": "작은 옥토끼, 달빛 효과, 귀여운 미소",
+        "height": "168cm",
+        "age": "영원"
+      },
+      "voiceLines": {
+        "greeting": "달에서 왔어요",
+        "battleStart": "달빛이 함께해요",
+        "victory": "달빛이 승리했어요",
+        "defeat": "달이... 지고 있어요...",
+        "levelUp": "더 밝게 빛날게요",
+        "summon": "항아예요",
+        "idle1": "달이 아름답네요",
+        "idle2": "지켜볼게요"
+      }
+    },
+    {
+      "id": "hero_071",
+      "name": "삼장",
+      "nameEn": "Xuanzang",
+      "rarity": 3,
+      "cult": "kunlun",
+      "class": "healer",
+      "description": "서역을 향한 구도의 승려",
+      "mood": "devoted",
+      "quote": "자비로운 마음이 세상을 구한다",
+      "stats": {
+        "hp": 700,
+        "atk": 100,
+        "def": 55,
+        "spd": 80
+      },
+      "growthStats": {
+        "hp": 70,
+        "atk": 10,
+        "def": 5,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "경전 독경",
+          "description": "경전을 읊는다",
+          "multiplier": 0.8,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "자비의 기도",
+          "description": "자비로운 기도",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "all",
+          "isHeal": true
+        }
+      ],
+      "design": {
+        "style": "monk_pilgrim",
+        "bodyRatio": "3 head",
+        "hairColor": "#FFF3E0",
+        "hairStyle": "삭발, 승려 스타일",
+        "eyeColor": "#FF9800",
+        "eyeStyle": "자비롭고 온화한 주황색 눈",
+        "primaryColor": "#FF9800",
+        "secondaryColor": "#FFF3E0",
+        "accentColor": "#F57C00",
+        "outfit": "주황색 가사, 승려 복장",
+        "accessories": [
+          "석장",
+          "경전",
+          "염주"
+        ],
+        "signaturePose": "석장을 짚고 경전을 들고 서 있는 포즈",
+        "chibiFeatures": "작은 석장, 귀여운 가사, 온화한 표정",
+        "height": "178cm",
+        "age": "중년"
+      },
+      "voiceLines": {
+        "greeting": "자비를...",
+        "battleStart": "평화를 위해...",
+        "victory": "자비가 이겼습니다",
+        "defeat": "더 정진해야겠습니다...",
+        "levelUp": "수행이 깊어집니다",
+        "summon": "삼장입니다",
+        "idle1": "경전을 읽어야지",
+        "idle2": "자비로운 마음..."
+      }
+    },
+    {
+      "id": "hero_072",
+      "name": "저팔계",
+      "nameEn": "Zhu Bajie",
+      "rarity": 3,
+      "cult": "kunlun",
+      "class": "warrior",
+      "description": "먹보지만 믿음직한 천봉원수",
+      "mood": "brave",
+      "quote": "배고프다... 적부터 먹어치우자!",
+      "stats": {
+        "hp": 900,
+        "atk": 140,
+        "def": 70,
+        "spd": 65
+      },
+      "growthStats": {
+        "hp": 90,
+        "atk": 14,
+        "def": 7,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "쇠갈퀴",
+          "description": "쇠갈퀴로 공격",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "천봉원수 돌격",
+          "description": "힘껏 돌격한다",
+          "multiplier": 2.3,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "pig_warrior",
+        "bodyRatio": "3 head",
+        "hairColor": "#E65100",
+        "hairStyle": "짧고 거친 갈색 머리, 돼지 귀",
+        "eyeColor": "#FFCC80",
+        "eyeStyle": "먹을 것을 찾는 탐욕스러운 눈",
+        "primaryColor": "#FFCC80",
+        "secondaryColor": "#E65100",
+        "accentColor": "#D84315",
+        "outfit": "낡은 전투복, 돼지 문양",
+        "accessories": [
+          "구치파 (쇠갈퀴)",
+          "먹을 것 자루",
+          "천봉원수 표식"
+        ],
+        "signaturePose": "쇠갈퀴를 들고 용감하게 돌진하는 포즈",
+        "chibiFeatures": "큰 돼지 코, 작은 쇠갈퀴, 귀여운 배",
+        "height": "180cm",
+        "age": "성년"
+      },
+      "voiceLines": {
+        "greeting": "배고프다...",
+        "battleStart": "먹어치우자!",
+        "victory": "이제 밥 먹을 시간!",
+        "defeat": "배고파서 힘이 안 나...",
+        "levelUp": "더 많이 먹을 수 있어!",
+        "summon": "저팔계다!",
+        "idle1": "뭐 먹을 거 없나?",
+        "idle2": "점심 안 먹었는데..."
+      }
+    },
+    {
+      "id": "hero_073",
+      "name": "도사",
+      "nameEn": "Taoist",
+      "rarity": 2,
+      "cult": "kunlun",
+      "class": "mage",
+      "description": "도술을 수련하는 구름 위의 선인",
+      "mood": "mystic",
+      "quote": "도는 만물의 근원이다",
+      "stats": {
+        "hp": 450,
+        "atk": 110,
+        "def": 35,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 45,
+        "atk": 11,
+        "def": 3,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "부적 던지기",
+          "description": "부적을 날린다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "태극 기공",
+          "description": "태극의 힘",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "taoist_immortal",
+        "bodyRatio": "3 head",
+        "hairColor": "#E8EAF6",
+        "hairStyle": "긴 흰 수염, 도사 상투",
+        "eyeColor": "#1A237E",
+        "eyeStyle": "신비롭고 깊은 남색 눈",
+        "primaryColor": "#1A237E",
+        "secondaryColor": "#E8EAF6",
+        "accentColor": "#303F9F",
+        "outfit": "남색 도포, 흰 학 문양",
+        "accessories": [
+          "불진 (털 먼지털이)",
+          "부적",
+          "태극 패",
+          "염주"
+        ],
+        "signaturePose": "불진을 들고 신비로운 도술을 시전하는 포즈",
+        "chibiFeatures": "작은 불진, 긴 흰 수염, 귀여운 도사 모자",
+        "height": "175cm",
+        "age": "노년"
+      },
+      "voiceLines": {
+        "greeting": "도를 아는가",
+        "battleStart": "도술을 보여주지",
+        "victory": "도가 이겼다",
+        "defeat": "수련이 부족했구나...",
+        "levelUp": "도가 깊어진다",
+        "summon": "도사다",
+        "idle1": "수련이 필요하다",
+        "idle2": "도를 깨달아야..."
+      }
+    },
+    {
+      "id": "hero_074",
+      "name": "무사",
+      "nameEn": "Martial Artist",
+      "rarity": 2,
+      "cult": "kunlun",
+      "class": "warrior",
+      "description": "무술의 경지에 이른 달인",
+      "mood": "noble",
+      "quote": "주먹 하나로 천하를 얻으리라",
+      "stats": {
+        "hp": 520,
+        "atk": 115,
+        "def": 45,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 52,
+        "atk": 11,
+        "def": 4,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "권법 연타",
+          "description": "빠른 연타",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "비룡승천",
+          "description": "용처럼 승천한다",
+          "multiplier": 2.2,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "martial_master",
+        "bodyRatio": "3 head",
+        "hairColor": "#8D6E63",
+        "hairStyle": "짧게 자른 머리, 무사 스타일 띠",
+        "eyeColor": "#F44336",
+        "eyeStyle": "예리하고 고결한 붉은 눈",
+        "primaryColor": "#FFFFFF",
+        "secondaryColor": "#F44336",
+        "accentColor": "#D32F2F",
+        "outfit": "하얀 무술 도복, 붉은 띠",
+        "accessories": [
+          "무술 띠",
+          "손 붕대",
+          "수련 두건"
+        ],
+        "signaturePose": "권법 자세로 한 주먹을 내밀고 서 있는 포즈",
+        "chibiFeatures": "작은 근육, 귀여운 권법 자세",
+        "height": "178cm",
+        "age": "청년"
+      },
+      "voiceLines": {
+        "greeting": "무술의 길을 간다",
+        "battleStart": "검이 필요 없다",
+        "victory": "무술이 승리했다",
+        "defeat": "아직 부족하구나...",
+        "levelUp": "경지가 올랐다",
+        "summon": "무사다",
+        "idle1": "수련을 계속한다",
+        "idle2": "더 강해져야 해"
+      }
+    },
+    {
+      "id": "hero_075",
+      "name": "수련생",
+      "nameEn": "Disciple",
+      "rarity": 1,
+      "cult": "kunlun",
+      "class": "healer",
+      "description": "무술을 갓 배우기 시작한 수련생",
+      "mood": "calm",
+      "quote": "열심히 하겠습니다, 사부님!",
+      "stats": {
+        "hp": 280,
+        "atk": 55,
+        "def": 30,
+        "spd": 70
+      },
+      "growthStats": {
+        "hp": 28,
+        "atk": 5,
+        "def": 3,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 권법",
+          "description": "배운 대로 한다",
+          "multiplier": 0.8,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "수련의 기운",
+          "description": "배운 치유 기운",
+          "multiplier": 1.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "isHeal": true
+        }
+      ],
+      "design": {
+        "style": "young_disciple",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#8D6E63",
+        "hairStyle": "짧은 갈색 머리, 수련생 띠",
+        "eyeColor": "#FFF9C4",
+        "eyeStyle": "순수하고 열정적인 밝은 눈",
+        "primaryColor": "#FFF9C4",
+        "secondaryColor": "#8D6E63",
+        "accentColor": "#6D4C41",
+        "outfit": "소박한 수련복, 초보자 띠",
+        "accessories": [
+          "수련생 띠",
+          "나무 훈련봉",
+          "견습 휘장"
+        ],
+        "signaturePose": "열심히 수련하는 초보자 자세",
+        "chibiFeatures": "큰 순수한 눈, 작은 훈련봉, 귀여운 표정",
+        "height": "155cm",
+        "age": "소년"
+      },
+      "voiceLines": {
+        "greeting": "잘 부탁드립니다!",
+        "battleStart": "열심히 하겠습니다!",
+        "victory": "이겼어요!",
+        "defeat": "더 열심히 해야겠어요...",
+        "levelUp": "조금씩 강해지고 있어요!",
+        "summon": "수련생입니다!",
+        "idle1": "연습 또 연습...",
+        "idle2": "사부님처럼 되고 싶어요"
+      }
+    },
+    {
+      "id": "hero_076",
+      "name": "바이킹 전사",
+      "nameEn": "Viking Warrior",
+      "rarity": 2,
+      "cult": "valhalla",
+      "class": "warrior",
+      "description": "전장에서 살아가는 거친 전사",
+      "mood": "fierce",
+      "quote": "발할라를 향하여!",
+      "stats": {
+        "hp": 580,
+        "atk": 120,
+        "def": 50,
+        "spd": 75
+      },
+      "growthStats": {
+        "hp": 58,
+        "atk": 12,
+        "def": 5,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "도끼 휘두르기",
+          "description": "도끼를 휘두른다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "바이킹 돌격",
+          "description": "전력으로 돌격",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "chibi_warrior",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#8B4513",
+        "hairStyle": "거친 긴 머리, 땋아진 수염",
+        "eyeColor": "#4A90D9",
+        "eyeStyle": "날카롭고 전투적인 눈빛",
+        "primaryColor": "#4A90D9",
+        "secondaryColor": "#795548",
+        "accentColor": "#FFD700",
+        "outfit": "뿔 달린 철제 투구, 가죽 갑옷, 모피 망토",
+        "accessories": [
+          "양날 전투 도끼",
+          "목걸이 형태의 룬 부적",
+          "가죽 팔찌"
+        ],
+        "signaturePose": "도끼를 어깨에 걸치고 전투 함성을 지르는 모습",
+        "chibiFeatures": "과장된 뿔 투구, 우락부락한 체격, 도끼 휘두르는 모션",
+        "height": "185cm",
+        "age": "30세"
+      },
+      "voiceLines": {
+        "greeting": "전사의 인사다!",
+        "battleStart": "발할라로!",
+        "victory": "승리를 위하여!",
+        "defeat": "발할라에서 다시...",
+        "levelUp": "더 강해졌다!",
+        "summon": "바이킹이다!",
+        "idle1": "언제 싸우나?",
+        "idle2": "도끼가 무뎌진다"
+      }
+    },
+    {
+      "id": "hero_077",
+      "name": "바이킹 신병",
+      "nameEn": "Viking Recruit",
+      "rarity": 1,
+      "cult": "valhalla",
+      "class": "warrior",
+      "description": "전사의 꿈을 품은 젊은 바이킹",
+      "mood": "brave",
+      "quote": "오딘이시여, 지켜봐 주소서!",
+      "stats": {
+        "hp": 330,
+        "atk": 65,
+        "def": 35,
+        "spd": 65
+      },
+      "growthStats": {
+        "hp": 33,
+        "atk": 6,
+        "def": 3,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "단검 찌르기",
+          "description": "단검으로 찌른다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "용기의 돌격",
+          "description": "용기를 내어 돌격",
+          "multiplier": 1.6,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "chibi_warrior",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#D4A574",
+        "hairStyle": "짧고 산발적인 금발 머리",
+        "eyeColor": "#4A90D9",
+        "eyeStyle": "열정적이고 순수한 눈빛",
+        "primaryColor": "#4A90D9",
+        "secondaryColor": "#B0BEC5",
+        "accentColor": "#FFB74D",
+        "outfit": "가죽 조끼, 간단한 철제 어깨 보호대, 짧은 바지",
+        "accessories": [
+          "작은 훈련용 도끼",
+          "나무 방패",
+          "가죽 벨트"
+        ],
+        "signaturePose": "도끼를 높이 들고 패기 있게 외치는 모습",
+        "chibiFeatures": "초롱초롱한 눈, 작은 체구, 귀여운 전투 자세",
+        "height": "165cm",
+        "age": "18세"
+      },
+      "voiceLines": {
+        "greeting": "잘 부탁합니다!",
+        "battleStart": "용기를 낸다!",
+        "victory": "이겼다!",
+        "defeat": "아직 부족해...",
+        "levelUp": "강해지고 있어!",
+        "summon": "신병입니다!",
+        "idle1": "빨리 전사가 되고 싶다",
+        "idle2": "훈련이 힘들어..."
+      }
+    },
+    {
+      "id": "hero_078",
+      "name": "무녀",
+      "nameEn": "Miko",
+      "rarity": 2,
+      "cult": "takamagahara",
+      "class": "healer",
+      "description": "신사에서 기도를 올리는 무녀",
+      "mood": "devoted",
+      "quote": "신의 은총이 함께하길",
+      "stats": {
+        "hp": 450,
+        "atk": 80,
+        "def": 35,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 45,
+        "atk": 8,
+        "def": 3,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "정화의 부적",
+          "description": "부적을 던진다",
+          "multiplier": 0.8,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "신성한 기도",
+          "description": "신에게 기도한다",
+          "multiplier": 1.8,
+          "gaugeCost": 100,
+          "target": "single",
+          "isHeal": true
+        }
+      ],
+      "design": {
+        "style": "chibi_healer",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#000000",
+        "hairStyle": "긴 흑발을 뒤로 곱게 넘긴 스타일, 빨간 리본으로 묶음",
+        "eyeColor": "#8B4513",
+        "eyeStyle": "온화하고 신성한 눈빛",
+        "primaryColor": "#FFFFFF",
+        "secondaryColor": "#F44336",
+        "accentColor": "#FFD700",
+        "outfit": "하얀 하카마에 붉은 치하야, 전통 타비와 게타",
+        "accessories": [
+          "신성한 방울(神楽鈴)",
+          "종이 부적(御札)",
+          "하얀 꽃 비녀"
+        ],
+        "signaturePose": "방울을 흔들며 정화 의식을 하는 자세",
+        "chibiFeatures": "우아한 자세, 반짝이는 정화 이펙트, 흩날리는 꽃잎",
+        "height": "162cm",
+        "age": "20세"
+      },
+      "voiceLines": {
+        "greeting": "신의 축복을...",
+        "battleStart": "신이 함께하십니다",
+        "victory": "신의 은총이에요",
+        "defeat": "기도가 부족했나봐요...",
+        "levelUp": "신께 감사드립니다",
+        "summon": "무녀입니다",
+        "idle1": "기도를 올려야겠어요",
+        "idle2": "신사가 그립네요"
+      }
+    },
+    {
+      "id": "hero_079",
+      "name": "하니와",
+      "nameEn": "Haniwa",
+      "rarity": 1,
+      "cult": "takamagahara",
+      "class": "warrior",
+      "description": "고대 점토로 빚어진 수호 인형",
+      "mood": "stoic",
+      "quote": "...지킨다...",
+      "stats": {
+        "hp": 380,
+        "atk": 60,
+        "def": 50,
+        "spd": 50
+      },
+      "growthStats": {
+        "hp": 38,
+        "atk": 6,
+        "def": 5,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "점토 주먹",
+          "description": "점토 주먹",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "수호의 벽",
+          "description": "점토 벽으로 막는다",
+          "multiplier": 1.5,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "chibi_warrior",
+        "bodyRatio": "2.5 head",
+        "hairColor": "없음 (토우)",
+        "hairStyle": "매끈한 토우 형태의 머리",
+        "eyeColor": "#000000",
+        "eyeStyle": "작고 단순한 점 형태의 눈",
+        "primaryColor": "#D7CCC8",
+        "secondaryColor": "#8D6E63",
+        "accentColor": "#A1887F",
+        "outfit": "간단한 고대 갑옷 형태의 토우 문양",
+        "accessories": [
+          "토우 검",
+          "원형 토우 방패",
+          "고대 무늬가 새겨진 허리띠"
+        ],
+        "signaturePose": "뻣뻣하게 검을 앞으로 내민 직립 자세",
+        "chibiFeatures": "단순하고 투박한 토우 질감, 귀여운 움직임, 흙먼지 이펙트",
+        "height": "140cm",
+        "age": "고대 유물"
+      },
+      "voiceLines": {
+        "greeting": "...",
+        "battleStart": "...지킨다...",
+        "victory": "...지켰다...",
+        "defeat": "...부서진다...",
+        "levelUp": "...",
+        "summon": "...하니와...",
+        "idle1": "...",
+        "idle2": "...우직..."
+      }
+    },
+    {
+      "id": "hero_080",
+      "name": "헤르메스",
+      "nameEn": "Hermes",
+      "rarity": 3,
+      "cult": "olympus",
+      "class": "archer",
+      "description": "신들의 전령, 가장 빠른 신",
+      "mood": "cunning",
+      "quote": "소식을 전하러 왔다... 아프게!",
+      "stats": {
+        "hp": 700,
+        "atk": 145,
+        "def": 45,
+        "spd": 130
+      },
+      "growthStats": {
+        "hp": 70,
+        "atk": 14,
+        "def": 4,
+        "spd": 3
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "신속의 화살",
+          "description": "빠른 화살",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "전령의 질풍",
+          "description": "질풍같은 공격",
+          "multiplier": 2.3,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "chibi_archer",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FFD54F",
+        "hairStyle": "짧은 곱슬 금발, 바람에 날리는 스타일",
+        "eyeColor": "#FF6B35",
+        "eyeStyle": "영리하고 날렵한 눈빛",
+        "primaryColor": "#FF6B35",
+        "secondaryColor": "#FFF3E0",
+        "accentColor": "#FFD700",
+        "outfit": "가벼운 그리스 토가, 황금색 샌들, 짧은 망토",
+        "accessories": [
+          "날개 달린 지팡이 (케리케이온)",
+          "날개 달린 샌들",
+          "전령의 모자 (페타소스)"
+        ],
+        "signaturePose": "한 발을 들고 날아오를 듯한 경쾌한 자세",
+        "chibiFeatures": "작은 날개, 빠른 움직임 이펙트, 반짝이는 오라",
+        "height": "175cm",
+        "age": "외형 22세 (신)"
+      },
+      "voiceLines": {
+        "greeting": "전령 헤르메스다!",
+        "battleStart": "빠르게 끝내주지!",
+        "victory": "역시 빠르지?",
+        "defeat": "이럴 수가... 따라잡혔어!",
+        "levelUp": "더 빨라진다!",
+        "summon": "헤르메스 도착!",
+        "idle1": "심부름 있나?",
+        "idle2": "빨리빨리!"
+      }
+    },
+    {
+      "id": "hero_081",
+      "name": "님프",
+      "nameEn": "Nymph",
+      "rarity": 2,
+      "cult": "olympus",
+      "class": "healer",
+      "description": "숲과 물의 정령, 자연의 치유자",
+      "mood": "devoted",
+      "quote": "자연의 은혜를 나눠줄게",
+      "stats": {
+        "hp": 430,
+        "atk": 75,
+        "def": 30,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 43,
+        "atk": 7,
+        "def": 3,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "물방울",
+          "description": "물방울을 날린다",
+          "multiplier": 0.8,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "자연의 치유",
+          "description": "자연이 치유한다",
+          "multiplier": 1.8,
+          "gaugeCost": 100,
+          "target": "single",
+          "isHeal": true
+        }
+      ],
+      "design": {
+        "style": "chibi_healer",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#81C784",
+        "hairStyle": "물결치는 긴 초록빛 머리, 꽃과 잎사귀로 장식",
+        "eyeColor": "#66BB6A",
+        "eyeStyle": "순수하고 자연스러운 눈빛",
+        "primaryColor": "#A5D6A7",
+        "secondaryColor": "#81C784",
+        "accentColor": "#FFEB3B",
+        "outfit": "꽃잎과 잎사귀로 만든 드레스, 맨발",
+        "accessories": [
+          "꽃 화환",
+          "나뭇가지 지팡이",
+          "나비 모양 귀걸이"
+        ],
+        "signaturePose": "양손을 모아 치유의 빛을 내뿜는 우아한 자세",
+        "chibiFeatures": "흩날리는 꽃잎, 반짝이는 치유 이펙트, 나비와 새들",
+        "height": "158cm",
+        "age": "외형 18세 (정령)"
+      },
+      "voiceLines": {
+        "greeting": "자연의 축복을...",
+        "battleStart": "자연이 함께해요",
+        "victory": "자연이 이겼어요",
+        "defeat": "자연으로 돌아가요...",
+        "levelUp": "자연이 기뻐해요",
+        "summon": "님프예요",
+        "idle1": "꽃이 예뻐요",
+        "idle2": "물소리가 좋아요"
+      }
+    },
+    {
+      "id": "hero_082",
+      "name": "호플리테스",
+      "nameEn": "Hoplite",
+      "rarity": 1,
+      "cult": "olympus",
+      "class": "warrior",
+      "description": "올림푸스를 수호하는 시민병",
+      "mood": "brave",
+      "quote": "방패와 창으로 지킨다!",
+      "stats": {
+        "hp": 350,
+        "atk": 70,
+        "def": 45,
+        "spd": 60
+      },
+      "growthStats": {
+        "hp": 35,
+        "atk": 7,
+        "def": 4,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "창 찌르기",
+          "description": "창으로 찌른다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "방패 돌격",
+          "description": "방패로 돌격한다",
+          "multiplier": 1.6,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "chibi_warrior",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#6D4C41",
+        "hairStyle": "짧은 갈색 곱슬머리",
+        "eyeColor": "#5D4037",
+        "eyeStyle": "결연하고 용감한 눈빛",
+        "primaryColor": "#FF6B35",
+        "secondaryColor": "#795548",
+        "accentColor": "#FFD54F",
+        "outfit": "청동 투구와 흉갑, 붉은 망토, 그리스 샌들",
+        "accessories": [
+          "긴 창 (도리)",
+          "대형 원형 방패 (호플론)",
+          "청동 정강이 보호대"
+        ],
+        "signaturePose": "방패를 앞세우고 창을 겨눈 방어 자세",
+        "chibiFeatures": "커다란 방패, 튼튼한 체격, 금속 반짝임 이펙트",
+        "height": "178cm",
+        "age": "25세"
+      },
+      "voiceLines": {
+        "greeting": "시민병입니다!",
+        "battleStart": "올림푸스를 지킨다!",
+        "victory": "승리다!",
+        "defeat": "지켜내지 못했다...",
+        "levelUp": "더 강해진다!",
+        "summon": "호플리테스!",
+        "idle1": "경계를 늦추지 않는다",
+        "idle2": "방패를 닦아야지"
+      }
+    },
+    {
+      "id": "hero_083",
+      "name": "티르",
+      "nameEn": "Tyr",
+      "rarity": 5,
+      "cult": "asgard",
+      "class": "warrior",
+      "description": "정의와 용기의 신, 한 손의 전사",
+      "mood": "noble",
+      "quote": "정의를 위해 손을 잃었으나 후회 없다",
+      "stats": {
+        "hp": 1100,
+        "atk": 190,
+        "def": 85,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 110,
+        "atk": 19,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "정의의 검",
+          "description": "정의의 일격",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "티르의 심판",
+          "description": "정의로 심판한다",
+          "multiplier": 3.0,
+          "gaugeCost": 100,
+          "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "전쟁신의 선언",
+          "description": "전쟁의 신이 선언한다",
+          "multiplier": 3.5,
+          "gaugeCost": 150,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "chibi_hero",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#C0C0C0",
+        "hairStyle": "짧고 정돈된 은발, 전투적인 스타일",
+        "eyeColor": "#5DADE2",
+        "eyeStyle": "강렬하고 정의로운 눈빛",
+        "primaryColor": "#5DADE2",
+        "secondaryColor": "#C0C0C0",
+        "accentColor": "#FFD700",
+        "outfit": "화려한 은빛 갑옷, 푸른 망토, 룬 문양 장식",
+        "accessories": [
+          "전설의 검 (티르핑)",
+          "정의의 팔목 보호대",
+          "승리의 목걸이"
+        ],
+        "signaturePose": "한 손 검을 하늘로 치켜들고 정의를 선언하는 자세",
+        "chibiFeatures": "빛나는 갑옷, 영웅적인 포즈, 푸른 오라 이펙트",
+        "height": "190cm",
+        "age": "외형 35세 (신)"
+      },
+      "voiceLines": {
+        "greeting": "정의의 신 티르다",
+        "battleStart": "정의를 집행한다",
+        "victory": "정의가 승리했다",
+        "defeat": "정의는 지지 않는다...",
+        "levelUp": "정의가 더 강해진다",
+        "summon": "티르 참전",
+        "idle1": "정의를 지킨다",
+        "idle2": "이 한 손으로 충분하다"
+      }
+    },
+    {
+      "id": "hero_084",
+      "name": "이둔",
+      "nameEn": "Idun",
+      "rarity": 5,
+      "cult": "asgard",
+      "class": "healer",
+      "description": "불멸의 사과를 지키는 청춘의 여신",
+      "mood": "devoted",
+      "quote": "이 사과 한 입이면 모든 상처가 낫는다",
+      "stats": {
+        "hp": 850,
+        "atk": 130,
+        "def": 70,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 85,
+        "atk": 13,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "황금 사과 던지기",
+          "description": "사과를 던진다",
+          "multiplier": 0.8,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "청춘의 사과",
+          "description": "청춘을 되찾게 한다",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "all",
+          "isHeal": true
+        },
+        {
+          "id": "skill2",
+          "name": "불멸의 축복",
+          "description": "불멸의 힘을 나눈다",
+          "multiplier": 3.0,
+          "gaugeCost": 150,
+          "target": "all",
+          "isHeal": true
+        }
+      ],
+      "design": {
+        "style": "chibi_healer",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FFE082",
+        "hairStyle": "부드러운 웨이브의 긴 금발, 꽃으로 장식",
+        "eyeColor": "#FFA726",
+        "eyeStyle": "따뜻하고 생명력 넘치는 눈빛",
+        "primaryColor": "#FFE082",
+        "secondaryColor": "#FFA726",
+        "accentColor": "#FFD700",
+        "outfit": "흰색과 금색의 우아한 드레스, 사과 문양 장식",
+        "accessories": [
+          "황금 사과 바구니",
+          "생명의 목걸이",
+          "꽃 화관"
+        ],
+        "signaturePose": "황금 사과를 부드럽게 건네는 자애로운 자세",
+        "chibiFeatures": "반짝이는 황금빛, 치유 오라, 생명의 꽃잎 이펙트",
+        "height": "168cm",
+        "age": "외형 25세 (신)"
+      },
+      "voiceLines": {
+        "greeting": "청춘의 여신 이둔이에요",
+        "battleStart": "사과가 힘을 줄 거예요",
+        "victory": "청춘이 이겼어요",
+        "defeat": "사과가... 떨어졌어요...",
+        "levelUp": "사과가 더 빛나요",
+        "summon": "이둔이에요",
+        "idle1": "사과를 드실래요?",
+        "idle2": "청춘은 아름다워요"
+      }
+    },
+    {
+      "id": "hero_085",
+      "name": "브라기",
+      "nameEn": "Bragi",
+      "rarity": 4,
+      "cult": "asgard",
+      "class": "mage",
+      "description": "시와 음악의 신, 아군에게 영감을 주는 자",
+      "mood": "noble",
+      "quote": "나의 시가 너희에게 힘을 줄 것이다",
+      "stats": {
+        "hp": 750,
+        "atk": 160,
+        "def": 55,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 75,
+        "atk": 16,
+        "def": 5,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "음파 공격",
+          "description": "소리로 공격한다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "전투의 시",
+          "description": "시로 사기를 높인다",
+          "multiplier": 2.3,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "chibi_mage",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#9C27B0",
+        "hairStyle": "우아하게 넘긴 긴 보라빛 머리, 금색 장식",
+        "eyeColor": "#FFD700",
+        "eyeStyle": "예술적이고 지혜로운 눈빛",
+        "primaryColor": "#9C27B0",
+        "secondaryColor": "#FFD700",
+        "accentColor": "#E1BEE7",
+        "outfit": "화려한 보라색 로브, 금빛 자수, 우아한 망토",
+        "accessories": [
+          "황금 하프",
+          "음표 모양 귀걸이",
+          "시인의 화관"
+        ],
+        "signaturePose": "하프를 연주하며 마법의 선율을 만드는 자세",
+        "chibiFeatures": "흐르는 음표 이펙트, 아름다운 오라, 우아한 몸짓",
+        "height": "180cm",
+        "age": "외형 30세 (신)"
+      },
+      "voiceLines": {
+        "greeting": "시인 브라기다",
+        "battleStart": "시를 들려주지",
+        "victory": "아름다운 승리였다",
+        "defeat": "비극적인 결말이로군...",
+        "levelUp": "시가 깊어진다",
+        "summon": "브라기 등장",
+        "idle1": "시를 짓고 있다",
+        "idle2": "하프를 연주하자"
+      }
+    },
+    {
+      "id": "hero_086",
+      "name": "드워프 대장장이",
+      "nameEn": "Dwarf Smith",
+      "rarity": 3,
+      "cult": "asgard",
+      "class": "warrior",
+      "description": "묠니르를 만든 전설의 대장장이",
+      "mood": "stoic",
+      "quote": "내 망치질에 못 만들 게 없다!",
+      "stats": {
+        "hp": 800,
+        "atk": 130,
+        "def": 80,
+        "spd": 55
+      },
+      "growthStats": {
+        "hp": 80,
+        "atk": 13,
+        "def": 8,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "망치 내려치기",
+          "description": "대장장이의 망치",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "대장장이의 일격",
+          "description": "힘껏 내려친다",
+          "multiplier": 2.2,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "chibi_warrior",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#FF5722",
+        "hairStyle": "붉은 수염이 길게 땋아진 스타일",
+        "eyeColor": "#8D6E63",
+        "eyeStyle": "집중력 있고 장인다운 눈빛",
+        "primaryColor": "#8D6E63",
+        "secondaryColor": "#FF5722",
+        "accentColor": "#FFA726",
+        "outfit": "가죽 앞치마, 튼튼한 작업복, 두꺼운 장갑",
+        "accessories": [
+          "전설적인 대장 망치",
+          "대장장이 모루",
+          "룬 문양 벨트"
+        ],
+        "signaturePose": "망치를 어깨에 메고 자신만만하게 서있는 자세",
+        "chibiFeatures": "땅딸막한 체격, 불꽃 이펙트, 단단한 근육",
+        "height": "140cm",
+        "age": "120세"
+      },
+      "voiceLines": {
+        "greeting": "대장장이다",
+        "battleStart": "망치질로 보여주지!",
+        "victory": "잘 만들어졌어",
+        "defeat": "불량품이 나왔군...",
+        "levelUp": "실력이 늘었다",
+        "summon": "드워프 대장장이!",
+        "idle1": "뭐 만들까?",
+        "idle2": "망치질이 필요해"
+      }
+    },
+    {
+      "id": "hero_087",
+      "name": "룬 마법사",
+      "nameEn": "Rune Caster",
+      "rarity": 2,
+      "cult": "asgard",
+      "class": "mage",
+      "description": "고대 룬 문자를 다루는 마법사",
+      "mood": "mystic",
+      "quote": "룬이 미래를 보여준다",
+      "stats": {
+        "hp": 420,
+        "atk": 110,
+        "def": 30,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 42,
+        "atk": 11,
+        "def": 3,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "룬 발사",
+          "description": "룬을 날린다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "룬 폭발",
+          "description": "룬이 폭발한다",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "chibi_mage",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#9E9E9E",
+        "hairStyle": "긴 회색 머리, 룬 장식이 달린 땋은 머리",
+        "eyeColor": "#3F51B5",
+        "eyeStyle": "신비롭고 현명한 눈빛",
+        "primaryColor": "#3F51B5",
+        "secondaryColor": "#9E9E9E",
+        "accentColor": "#7986CB",
+        "outfit": "룬 문양이 새겨진 로브, 모피 어깨 장식, 긴 후드",
+        "accessories": [
+          "룬 스톤 지팡이",
+          "룬 문자 목걸이",
+          "마법서 가방"
+        ],
+        "signaturePose": "공중에 룬 문자를 새기며 주문을 읊는 자세",
+        "chibiFeatures": "빛나는 룬 문자, 신비한 오라, 떠다니는 마법진",
+        "height": "170cm",
+        "age": "45세"
+      },
+      "voiceLines": {
+        "greeting": "룬을 읽는다",
+        "battleStart": "룬이 말한다",
+        "victory": "룬이 승리를 예언했다",
+        "defeat": "룬이... 빗나갔나...",
+        "levelUp": "룬을 더 알게 됐다",
+        "summon": "룬 마법사다",
+        "idle1": "룬을 연구한다",
+        "idle2": "미래가 보인다"
+      }
+    },
+    {
+      "id": "hero_088",
+      "name": "농부 전사",
+      "nameEn": "Farmer Warrior",
+      "rarity": 1,
+      "cult": "asgard",
+      "class": "warrior",
+      "description": "평화로운 농부였으나 전장에 선 자",
+      "mood": "calm",
+      "quote": "밭을 갈듯 적을 갈아주지!",
+      "stats": {
+        "hp": 300,
+        "atk": 55,
+        "def": 35,
+        "spd": 60
+      },
+      "growthStats": {
+        "hp": 30,
+        "atk": 5,
+        "def": 3,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "낫 공격",
+          "description": "낫으로 벤다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "풍년 기원",
+          "description": "풍년을 기원한다",
+          "multiplier": 1.5,
+          "gaugeCost": 100,
+          "target": "single"
+        }
+      ],
+      "design": {
+        "style": "chibi_warrior",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#8BC34A",
+        "hairStyle": "짧고 소박한 갈색 머리, 지푸라기가 꽂혀있음",
+        "eyeColor": "#795548",
+        "eyeStyle": "순박하고 평화로운 눈빛",
+        "primaryColor": "#A1887F",
+        "secondaryColor": "#8BC34A",
+        "accentColor": "#FFEB3B",
+        "outfit": "소박한 농부복, 간단한 가죽 조끼, 밀짚모자",
+        "accessories": [
+          "농기구 낫",
+          "밀 다발",
+          "소박한 가죽 벨트"
+        ],
+        "signaturePose": "낫을 들고 농사일 하듯 서있는 평범한 자세",
+        "chibiFeatures": "소박한 외모, 흙먼지 이펙트, 친근한 표정",
+        "height": "172cm",
+        "age": "28세"
+      },
+      "voiceLines": {
+        "greeting": "농부입니다",
+        "battleStart": "밭처럼 갈아주지!",
+        "victory": "풍년이야!",
+        "defeat": "흉년이로군...",
+        "levelUp": "수확이 좋다",
+        "summon": "농부 전사!",
+        "idle1": "밭이 그립다",
+        "idle2": "빨리 집에 가고 싶다"
+      }
+    },
+    {
+      "id": "hero_089",
+      "name": "갓파",
+      "nameEn": "Kappa",
+      "rarity": 3,
+      "cult": "yomi",
+      "class": "warrior",
+      "description": "강과 늪에서 사는 물의 요괴",
+      "mood": "calm",
+      "quote": "물 밖은 싫어...",
+      "stats": {
+        "hp": 750,
+        "atk": 130,
+        "def": 65,
+        "spd": 80
+      },
+      "growthStats": {
+        "hp": 75,
+        "atk": 13,
+        "def": 6,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "조개 던지기",
+          "description": "조개를 던진다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "물살 회전",
+          "description": "물살을 일으킨다",
+          "multiplier": 2.2,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "chibi_warrior",
+        "bodyRatio": "2.5 head",
+        "hairColor": "#66BB6A",
+        "hairStyle": "젖은 듯한 초록빛 짧은 머리",
+        "eyeColor": "#4FC3F7",
+        "eyeStyle": "장난스럽지만 평화로운 눈빛",
+        "primaryColor": "#4FC3F7",
+        "secondaryColor": "#66BB6A",
+        "accentColor": "#81C784",
+        "outfit": "물결무늬 짧은 기모노, 맨발, 거북 등껍질 패턴",
+        "accessories": [
+          "머리 위 접시 (사라)",
+          "오이 (필수품)",
+          "물결 무늬 띠"
+        ],
+        "signaturePose": "접시의 물을 조심하며 오이를 들고 서있는 모습",
+        "chibiFeatures": "커다란 머리 접시, 물방울 이펙트, 거북 등껍질 문양",
+        "height": "150cm",
+        "age": "외형 12세 (요괴)"
+      },
+      "voiceLines": {
+        "greeting": "물이 좋아...",
+        "battleStart": "물속으로...",
+        "victory": "물이 이겼어...",
+        "defeat": "물이... 마른다...",
+        "levelUp": "물이 차올라...",
+        "summon": "갓파야...",
+        "idle1": "물이 그립다...",
+        "idle2": "오이 먹고 싶어..."
+      }
+    },
+    {
+      "id": "hero_090",
+      "name": "히토다마",
+      "nameEn": "Hitodama",
+      "rarity": 2,
+      "cult": "yomi",
+      "class": "mage",
+      "description": "저승을 떠도는 인혼의 불꽃",
+      "mood": "mystic",
+      "quote": "...이리로 와...",
+      "stats": {
+        "hp": 380,
+        "atk": 105,
+        "def": 25,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 38,
+        "atk": 10,
+        "def": 2,
+        "spd": 2
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "혼불 발사",
+          "description": "혼불을 날린다",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "영혼 폭발",
+          "description": "혼이 폭발한다",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "all"
+        }
+      ],
+      "design": {
+        "style": "chibi_mage",
+        "bodyRatio": "2.5 head",
+        "hairColor": "없음 (불꽃)",
+        "hairStyle": "푸른 영혼의 불꽃이 머리 형태로 타오름",
+        "eyeColor": "#40C4FF",
+        "eyeStyle": "신비롭고 공허한 눈빛",
+        "primaryColor": "#E1F5FE",
+        "secondaryColor": "#40C4FF",
+        "accentColor": "#80D8FF",
+        "outfit": "반투명한 형태, 옅은 흰 기모노 형상",
+        "accessories": [
+          "떠다니는 혼의 구슬",
+          "영혼의 불꽃",
+          "미약한 빛 오라"
+        ],
+        "signaturePose": "공중에 떠서 불꽃을 조종하는 모습",
+        "chibiFeatures": "반투명 효과, 푸른 불꽃, 떠다니는 움직임",
+        "height": "145cm (공중 부유)",
+        "age": "미상 (영혼)"
+      },
+      "voiceLines": {
+        "greeting": "...따라와...",
+        "battleStart": "...혼이 부른다...",
+        "victory": "...혼이 쉰다...",
+        "defeat": "...소멸한다...",
+        "levelUp": "...혼이 강해진다...",
+        "summon": "...히토다마...",
+        "idle1": "...떠돈다...",
+        "idle2": "...쉬고 싶어..."
+      }
+    },
+    {
+      "id": "hero_091",
+      "name": "코다마",
+      "nameEn": "Kodama",
+      "rarity": 1,
+      "cult": "yomi",
+      "class": "healer",
+      "description": "나무에 깃든 작은 정령",
+      "mood": "devoted",
+      "quote": "...또각또각...",
+      "stats": {
+        "hp": 260,
+        "atk": 50,
+        "def": 25,
+        "spd": 75
+      },
+      "growthStats": {
+        "hp": 26,
+        "atk": 5,
+        "def": 2,
+        "spd": 1
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "잎사귀 날리기",
+          "description": "잎사귀를 날린다",
+          "multiplier": 0.8,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "나무의 치유",
+          "description": "나무가 치유한다",
+          "multiplier": 1.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "isHeal": true
+        }
+      ],
+      "design": {
+        "style": "chibi_healer",
+        "bodyRatio": "2.5 head",
+        "hairColor": "없음 (나무)",
+        "hairStyle": "작은 나뭇가지와 잎사귀가 머리처럼 돋아남",
+        "eyeColor": "#000000",
+        "eyeStyle": "단순한 점 형태의 귀여운 눈",
+        "primaryColor": "#E8F5E9",
+        "secondaryColor": "#4CAF50",
+        "accentColor": "#81C784",
+        "outfit": "나무 질감의 작은 몸통, 나뭇잎 치마",
+        "accessories": [
+          "하얀 구슬 머리",
+          "작은 나뭇잎",
+          "이끼 장식"
+        ],
+        "signaturePose": "또각또각 걸으며 머리를 갸우뚱하는 귀여운 모습",
+        "chibiFeatures": "통통한 구슬 머리, 작은 나무 몸통, 흔들리는 잎사귀",
+        "height": "80cm",
+        "age": "미상 (정령)"
+      },
+      "voiceLines": {
+        "greeting": "...또각...",
+        "battleStart": "...또각또각...",
+        "victory": "...도각...",
+        "defeat": "...또각...",
+        "levelUp": "...",
+        "summon": "...코다마...",
+        "idle1": "...",
+        "idle2": "...또각..."
       }
     }
   ]

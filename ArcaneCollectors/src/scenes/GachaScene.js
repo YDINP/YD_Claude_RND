@@ -501,15 +501,12 @@ export class GachaScene extends Phaser.Scene {
     this.registry.set('pityCounter', pity);
 
     // Generate hero
-    const elements = ['fire', 'water', 'wind', 'light', 'dark'];
-    const element = Phaser.Math.RND.pick(elements);
     const heroId = `hero_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const hero = {
       id: heroId,
       name: this.generateHeroName(rarity),
       rarity: rarity,
-      element: element,
       level: 1,
       stars: RARITY[rarity].stars,
       stats: this.generateStats(rarity),
@@ -528,7 +525,6 @@ export class GachaScene extends Phaser.Scene {
       characterId: hero.id,
       name: hero.name,
       rarity: hero.rarity,
-      element: hero.element,
       level: hero.level,
       exp: 0,
       stars: hero.stars,

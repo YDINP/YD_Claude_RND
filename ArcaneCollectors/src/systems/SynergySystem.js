@@ -5,7 +5,7 @@
 
 import synergiesData from '../data/synergies.json';
 import cultsData from '../data/cults.json';
-import { PersonalitySystem } from './PersonalitySystem.js';
+import { MoodSystem } from './MoodSystem.js';
 
 export class SynergySystem {
   // 4인 파티용 상수
@@ -33,9 +33,9 @@ export class SynergySystem {
       synergies.push(cultSynergy);
     }
 
-    // 2. 성격 시너지
-    const personalitySynergies = this.calculatePersonalitySynergies(partyHeroes);
-    synergies.push(...personalitySynergies);
+    // 2. 분위기 시너지
+    const moodSynergies = this.calculateMoodSynergies(partyHeroes);
+    synergies.push(...moodSynergies);
 
     // 3. 역할 시너지
     const roleSynergies = this.calculateRoleSynergies(partyHeroes);
@@ -121,78 +121,78 @@ export class SynergySystem {
   }
 
   /**
-   * 성격 시너지 계산
+   * 분위기 시너지 계산
    * @param {Array} partyHeroes 파티 영웅 데이터 배열
-   * @returns {Array} 성격 시너지 배열
+   * @returns {Array} 분위기 시너지 배열
    */
-  static calculatePersonalitySynergies(partyHeroes) {
+  static calculateMoodSynergies(partyHeroes) {
     const synergies = [];
-    const personalityCount = {};
+    const moodCount = {};
 
     partyHeroes.forEach(hero => {
-      const personality = hero.personality || 'neutral';
-      personalityCount[personality] = (personalityCount[personality] || 0) + 1;
+      const mood = hero.mood || 'neutral';
+      moodCount[mood] = (moodCount[mood] || 0) + 1;
     });
 
-    // 단일 성격 집중 시너지
-    Object.entries(personalityCount).forEach(([personality, count]) => {
+    // 단일 분위기 집중 시너지
+    Object.entries(moodCount).forEach(([mood, count]) => {
       if (count >= 2) {
-        const personalityInfo = PersonalitySystem.getPersonality(personality);
-        const name = personalityInfo?.name || personality;
+        const moodInfo = MoodSystem.getMood?.(mood);
+        const name = moodInfo?.name || mood;
 
         if (count >= 4) {
-          // 4명 동일 성격
+          // 4명 동일 분위기
           synergies.push({
-            type: 'personality',
-            id: `personality_${personality}_4`,
+            type: 'mood',
+            id: `mood_${mood}_4`,
             name: `${name}의 극치`,
-            personality,
+            mood,
             count: 4,
-            effect: this.getPersonalitySynergyEffect(personality, 4),
-            icon: personalityInfo?.icon || 'personality'
+            effect: this.getMoodSynergyEffect(mood, 4),
+            icon: moodInfo?.icon || 'mood'
           });
         } else if (count >= 3) {
-          // 3명 동일 성격
+          // 3명 동일 분위기
           synergies.push({
-            type: 'personality',
-            id: `personality_${personality}_3`,
+            type: 'mood',
+            id: `mood_${mood}_3`,
             name: `${name}의 조화`,
-            personality,
+            mood,
             count: 3,
-            effect: this.getPersonalitySynergyEffect(personality, 3),
-            icon: personalityInfo?.icon || 'personality'
+            effect: this.getMoodSynergyEffect(mood, 3),
+            icon: moodInfo?.icon || 'mood'
           });
         } else {
-          // 2명 동일 성격
+          // 2명 동일 분위기
           synergies.push({
-            type: 'personality',
-            id: `personality_${personality}_2`,
+            type: 'mood',
+            id: `mood_${mood}_2`,
             name: `${name}의 공명`,
-            personality,
+            mood,
             count: 2,
-            effect: this.getPersonalitySynergyEffect(personality, 2),
-            icon: personalityInfo?.icon || 'personality'
+            effect: this.getMoodSynergyEffect(mood, 2),
+            icon: moodInfo?.icon || 'mood'
           });
         }
       }
     });
 
-    // 균형 시너지 (서로 다른 3가지 이상 성격)
-    const uniquePersonalities = Object.keys(personalityCount).filter(p => p !== 'neutral');
-    if (uniquePersonalities.length >= 3) {
+    // 균형 시너지 (서로 다른 3가지 이상 분위기)
+    const uniqueMoods = Object.keys(moodCount).filter(p => p !== 'neutral');
+    if (uniqueMoods.length >= 3) {
       synergies.push({
-        type: 'personality_balance',
-        id: 'personality_balance',
-        name: '성격의 균형',
+        type: 'mood_balance',
+        id: 'mood_balance',
+        name: '분위기의 균형',
         effect: { all: 5 },
         icon: 'balance'
       });
     }
 
     // Mystic 특수 시너지
-    if (personalityCount.mystic) {
+    if (moodCount.mystic) {
       synergies.push({
-        type: 'personality_special',
+        type: 'mood_special',
         id: 'mystic_presence',
         name: '신비의 기운',
         effect: { skill_dmg: 10 },
@@ -204,12 +204,12 @@ export class SynergySystem {
   }
 
   /**
-   * 성격별 시너지 효과 반환
-   * @param {string} personality 성격 ID
+   * 분위기별 시너지 효과 반환
+   * @param {string} mood 분위기 ID
    * @param {number} count 인원 수
    * @returns {Object} 효과
    */
-  static getPersonalitySynergyEffect(personality, count) {
+  static getMoodSynergyEffect(mood, count) {
     const effects = {
       brave: {
         2: { atk: 8 },
@@ -238,7 +238,7 @@ export class SynergySystem {
       }
     };
 
-    return effects[personality]?.[count] || {};
+    return effects[mood]?.[count] || {};
   }
 
   /**

@@ -47,23 +47,26 @@ export const BATTLE = {
     }
 };
 
-// 성격별 색상 (Phaser hex 형식)
-export const PERSONALITY_COLORS = {
-    // 기본 성격 유형
-    AGGRESSIVE: 0xE74C3C,    // 빨강 - 공격적
-    DEFENSIVE: 0x3498DB,     // 파랑 - 방어적
-    BALANCED: 0x2ECC71,      // 초록 - 균형
-    STRATEGIC: 0x9B59B6,     // 보라 - 전략적
-    SUPPORT: 0xF1C40F,       // 노랑 - 서포트
+// 분위기별 색상 (Phaser hex 형식)
+export const MOOD_COLORS = {
+    // 공격형 분위기
+    BRAVE: 0xE74C3C,       // 열혈 - 빨강
+    FIERCE: 0xFF5722,      // 격렬 - 주홍
+    WILD: 0x27AE60,        // 광폭 - 초록
 
-    // 추가 성격 유형
-    WILD: 0xE67E22,          // 주황 - 야생적
-    CALM: 0x1ABC9C,          // 청록 - 차분함
-    MYSTERIOUS: 0x8E44AD,    // 진보라 - 신비로운
+    // 방어형 분위기
+    CALM: 0x3498DB,        // 고요 - 파랑
+    STOIC: 0x607D8B,       // 의연 - 청회색
+    DEVOTED: 0xE91E63,     // 헌신 - 핑크
+
+    // 전략형 분위기
+    CUNNING: 0x9B59B6,     // 냉철 - 보라
+    NOBLE: 0xFFD700,       // 고결 - 금색
+    MYSTIC: 0xF39C12,      // 신비 - 주황금
 
     // 기본값
-    DEFAULT: 0x95A5A6        // 회색 - 기본
-};
+    DEFAULT: 0x95A5A6      // 회색 - 기본
+};;
 
 // 에너지 UI 설정
 export const ENERGY_UI = {
@@ -136,7 +139,7 @@ export default {
     CONTENT,
     PARTY,
     BATTLE,
-    PERSONALITY_COLORS,
+    MOOD_COLORS,
     ENERGY_UI,
     UI_STYLES,
     Z_INDEX

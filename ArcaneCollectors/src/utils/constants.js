@@ -1,98 +1,131 @@
 /**
  * constants.js - Game system constants and configurations
- * 성격 시스템, 교단 시스템, 상성 관계 정의
+ * 분위기 시스템, 교단 시스템, 상성 관계 정의
  */
 
 // ============================================
-// Personality System (성격 시스템)
+// Mood System (분위기 시스템)
 // ============================================
 
 /**
- * 성격 타입 정의
- * 4가지 기본 성격 + 1가지 특수 성격 (신비)
+ * 분위기 타입 정의
+ * 9가지 분위기 (공격형: 열혈/격렬/광폭, 방어형: 고요/의연/헌신, 전략형: 냉철/고결/신비)
  */
-export const PERSONALITY = {
-  BRAVE: 'brave',       // 용감 - 공격적, 전투 지향
-  CUNNING: 'cunning',   // 교활 - 전략적, 계략 사용
-  CALM: 'calm',         // 침착 - 방어적, 안정적
-  WILD: 'wild',         // 야성 - 본능적, 예측 불가
-  MYSTIC: 'mystic'      // 신비 - 신비로운, 모든 성격에 보너스
-};
+export const MOOD = {
+  BRAVE: 'brave',       // 열혈 - 공격적, 전투 지향
+  FIERCE: 'fierce',     // 격렬 - 폭발적, 근접 극대화
+  WILD: 'wild',         // 광폭 - 본능적, 예측 불가
+  CALM: 'calm',         // 고요 - 방어적, 안정적
+  STOIC: 'stoic',       // 의연 - 인내, 생존 특화
+  DEVOTED: 'devoted',   // 헌신 - 자기희생, 치유/보호
+  CUNNING: 'cunning',   // 냉철 - 전략적, 약점 공략
+  NOBLE: 'noble',       // 고결 - 리더십, 팀 버프
+  MYSTIC: 'mystic'      // 신비 - 초월적, 마법 특화
+};;
 
 /**
- * 성격 상성 관계 (가위바위보 구조)
- * - BRAVE > CUNNING > CALM > WILD > BRAVE
- * - MYSTIC은 모든 성격에 약간의 보너스
+ * 분위기 상성 관계 (매트릭스 구조)
+ * 각 분위기는 2개에 강하고 2개에 약함, 나머지 4개는 중립
+ * 그룹: 공격형(brave/fierce/wild), 방어형(calm/stoic/devoted), 전략형(cunning/noble/mystic)
  */
-export const PERSONALITY_MATCHUP = {
-  [PERSONALITY.BRAVE]: {
-    strongAgainst: PERSONALITY.CUNNING,   // 용감 > 교활
-    weakAgainst: PERSONALITY.CALM,        // 용감 < 침착
-    neutral: [PERSONALITY.WILD, PERSONALITY.MYSTIC]
+export const MOOD_MATCHUP = {
+  [MOOD.BRAVE]: {
+    strongAgainst: [MOOD.WILD, MOOD.CUNNING],
+    weakAgainst: [MOOD.FIERCE, MOOD.DEVOTED]
   },
-  [PERSONALITY.CUNNING]: {
-    strongAgainst: PERSONALITY.CALM,      // 교활 > 침착
-    weakAgainst: PERSONALITY.WILD,        // 교활 < 야성
-    neutral: [PERSONALITY.BRAVE, PERSONALITY.MYSTIC]
+  [MOOD.FIERCE]: {
+    strongAgainst: [MOOD.BRAVE, MOOD.NOBLE],
+    weakAgainst: [MOOD.WILD, MOOD.CALM]
   },
-  [PERSONALITY.CALM]: {
-    strongAgainst: PERSONALITY.WILD,      // 침착 > 야성
-    weakAgainst: PERSONALITY.BRAVE,       // 침착 < 용감
-    neutral: [PERSONALITY.CUNNING, PERSONALITY.MYSTIC]
+  [MOOD.WILD]: {
+    strongAgainst: [MOOD.FIERCE, MOOD.MYSTIC],
+    weakAgainst: [MOOD.BRAVE, MOOD.STOIC]
   },
-  [PERSONALITY.WILD]: {
-    strongAgainst: PERSONALITY.BRAVE,     // 야성 > 용감
-    weakAgainst: PERSONALITY.CUNNING,     // 야성 < 교활
-    neutral: [PERSONALITY.CALM, PERSONALITY.MYSTIC]
+  [MOOD.CALM]: {
+    strongAgainst: [MOOD.DEVOTED, MOOD.FIERCE],
+    weakAgainst: [MOOD.STOIC, MOOD.CUNNING]
   },
-  [PERSONALITY.MYSTIC]: {
-    strongAgainst: null,                  // 신비는 특정 상성 없음
-    weakAgainst: null,                    // 약점 없음
-    neutral: [PERSONALITY.BRAVE, PERSONALITY.CUNNING, PERSONALITY.CALM, PERSONALITY.WILD],
-    specialBonus: true                    // 모든 성격에 보너스
+  [MOOD.STOIC]: {
+    strongAgainst: [MOOD.CALM, MOOD.WILD],
+    weakAgainst: [MOOD.DEVOTED, MOOD.MYSTIC]
+  },
+  [MOOD.DEVOTED]: {
+    strongAgainst: [MOOD.STOIC, MOOD.BRAVE],
+    weakAgainst: [MOOD.CALM, MOOD.NOBLE]
+  },
+  [MOOD.CUNNING]: {
+    strongAgainst: [MOOD.MYSTIC, MOOD.CALM],
+    weakAgainst: [MOOD.NOBLE, MOOD.BRAVE]
+  },
+  [MOOD.NOBLE]: {
+    strongAgainst: [MOOD.CUNNING, MOOD.DEVOTED],
+    weakAgainst: [MOOD.MYSTIC, MOOD.FIERCE]
+  },
+  [MOOD.MYSTIC]: {
+    strongAgainst: [MOOD.NOBLE, MOOD.STOIC],
+    weakAgainst: [MOOD.CUNNING, MOOD.WILD]
   }
-};
+};;
 
 /**
- * 성격 상성 데미지 배율
+ * 분위기 상성 데미지 배율
  */
-export const PERSONALITY_DAMAGE = {
+export const MOOD_DAMAGE = {
   ADVANTAGE: 1.2,       // 상성 우위: 20% 추가 데미지
   DISADVANTAGE: 0.8,    // 상성 열세: 20% 데미지 감소
-  NEUTRAL: 1.0,         // 중립: 변화 없음
-  MYSTIC_BONUS: 1.1     // 신비 보너스: 10% 추가 데미지 (모든 대상)
-};
+  NEUTRAL: 1.0          // 중립: 변화 없음
+};;
 
 /**
- * 성격별 한글 이름 및 설명
+ * 분위기별 한글 이름 및 설명
  */
-export const PERSONALITY_INFO = {
-  [PERSONALITY.BRAVE]: {
-    name: '용감',
+export const MOOD_INFO = {
+  [MOOD.BRAVE]: {
+    name: '열혈',
     description: '두려움을 모르는 전사의 기질',
     color: '#E74C3C'
   },
-  [PERSONALITY.CUNNING]: {
-    name: '교활',
-    description: '상대의 허점을 노리는 전략가',
-    color: '#9B59B6'
+  [MOOD.FIERCE]: {
+    name: '격렬',
+    description: '폭발적인 힘으로 적을 압도하는 파괴자',
+    color: '#FF5722'
   },
-  [PERSONALITY.CALM]: {
-    name: '침착',
-    description: '어떤 상황에서도 냉정함을 유지',
-    color: '#3498DB'
-  },
-  [PERSONALITY.WILD]: {
-    name: '야성',
+  [MOOD.WILD]: {
+    name: '광폭',
     description: '본능에 따라 행동하는 야수의 기질',
     color: '#27AE60'
   },
-  [PERSONALITY.MYSTIC]: {
+  [MOOD.CALM]: {
+    name: '고요',
+    description: '어떤 상황에서도 냉정함을 유지',
+    color: '#3498DB'
+  },
+  [MOOD.STOIC]: {
+    name: '의연',
+    description: '어떤 고통도 견디는 불굴의 인내',
+    color: '#607D8B'
+  },
+  [MOOD.DEVOTED]: {
+    name: '헌신',
+    description: '동료를 위해 모든 것을 바치는 수호자',
+    color: '#E91E63'
+  },
+  [MOOD.CUNNING]: {
+    name: '냉철',
+    description: '상대의 허점을 노리는 전략가',
+    color: '#9B59B6'
+  },
+  [MOOD.NOBLE]: {
+    name: '고결',
+    description: '고귀한 의지로 아군을 이끄는 지휘관',
+    color: '#FFD700'
+  },
+  [MOOD.MYSTIC]: {
     name: '신비',
-    description: '신비로운 힘을 지닌 존재',
+    description: '신비로운 힘을 지닌 초월적 존재',
     color: '#F39C12'
   }
-};
+};;
 
 // ============================================
 // Cult System (교단 시스템)
@@ -100,15 +133,19 @@ export const PERSONALITY_INFO = {
 
 /**
  * 교단 타입 정의
- * 5개의 신화 기반 교단
+ * 9개의 신화 기반 교단
  */
 export const CULT = {
-  VALHALLA: 'valhalla',           // 발할라 (북유럽)
-  TAKAMAGAHARA: 'takamagahara',   // 타카마가하라 (일본)
-  OLYMPUS: 'olympus',             // 올림푸스 (그리스)
-  ASGARD: 'asgard',               // 아스가르드 (북유럽)
-  YOMI: 'yomi'                    // 요미 (일본)
-};
+  VALHALLA: 'valhalla',           // 발할라 (북유럽 - 전사의 낙원)
+  TAKAMAGAHARA: 'takamagahara',   // 타카마가하라 (일본 - 천상계)
+  OLYMPUS: 'olympus',             // 올림푸스 (그리스 - 12신)
+  ASGARD: 'asgard',               // 아스가르드 (북유럽 - 신들의 세계)
+  YOMI: 'yomi',                   // 요미 (일본 - 저승)
+  TARTARUS: 'tartarus',           // 타르타로스 (그리스 - 티탄의 감옥)
+  AVALON: 'avalon',               // 아발론 (켈트 - 성스러운 섬)
+  HELHEIM: 'helheim',             // 헬하임 (북유럽 - 명계)
+  KUNLUN: 'kunlun'                // 곤륜 (중국 - 선인의 산)
+};;
 
 /**
  * 교단별 상세 정보
@@ -118,111 +155,145 @@ export const CULT_INFO = {
     name: '발할라',
     origin: '북유럽 신화',
     description: '용맹한 전사들의 낙원',
-    color: '#4A90D9',
-    element: 'wind'
+    color: '#4A90D9'
   },
   [CULT.TAKAMAGAHARA]: {
     name: '타카마가하라',
     origin: '일본 신화',
     description: '아마테라스의 천상계',
-    color: '#FFD700',
-    element: 'light'
+    color: '#FFD700'
   },
   [CULT.OLYMPUS]: {
     name: '올림푸스',
     origin: '그리스 신화',
     description: '제우스와 12신의 성지',
-    color: '#FF6B35',
-    element: 'fire'
+    color: '#FF6B35'
   },
   [CULT.ASGARD]: {
     name: '아스가르드',
     origin: '북유럽 신화',
     description: '신들의 세계',
-    color: '#5DADE2',
-    element: 'water'
+    color: '#5DADE2'
   },
   [CULT.YOMI]: {
     name: '요미',
     origin: '일본 신화',
     description: '이자나미의 저승',
-    color: '#8E44AD',
-    element: 'dark'
+    color: '#8E44AD'
+  },
+  [CULT.TARTARUS]: {
+    name: '타르타로스',
+    origin: '그리스 신화',
+    description: '티탄과 괴물이 갇힌 지하세계',
+    color: '#B71C1C'
+  },
+  [CULT.AVALON]: {
+    name: '아발론',
+    origin: '켈트 전설',
+    description: '전설의 기사왕이 잠든 성스러운 섬',
+    color: '#4CAF50'
+  },
+  [CULT.HELHEIM]: {
+    name: '헬하임',
+    origin: '북유럽 신화',
+    description: '죽음의 여왕 헬이 다스리는 명계',
+    color: '#455A64'
+  },
+  [CULT.KUNLUN]: {
+    name: '곤륜',
+    origin: '중국 신화',
+    description: '선인과 무협의 영웅이 수련하는 산',
+    color: '#FF9800'
   }
-};
+};;
 
 /**
- * 교단-성격 최적 조합 보너스
- * 특정 교단에서 특정 성격 영웅이 추가 보너스를 받음
+ * 교단-분위기 최적 조합 보너스
+ * 특정 교단에서 특정 분위기 영웅이 추가 보너스를 받음
  */
-export const CULT_PERSONALITY_BONUS = {
+export const CULT_MOOD_BONUS = {
   [CULT.VALHALLA]: {
-    optimalPersonality: PERSONALITY.BRAVE,   // 발할라 - 용감한 전사들
-    bonusMultiplier: 1.15,                   // 15% 추가 스탯 보너스
-    description: '발할라의 전사는 용맹함을 높이 평가합니다'
+    optimalMood: MOOD.BRAVE,
+    bonusMultiplier: 1.15,
+    description: '발할라의 전사는 열혈의 기운을 높이 평가합니다'
   },
   [CULT.TAKAMAGAHARA]: {
-    optimalPersonality: PERSONALITY.MYSTIC,  // 타카마가하라 - 신비로운 존재
+    optimalMood: MOOD.MYSTIC,
     bonusMultiplier: 1.15,
     description: '천상계는 신비로운 힘을 환영합니다'
   },
   [CULT.OLYMPUS]: {
-    optimalPersonality: PERSONALITY.CUNNING, // 올림푸스 - 전략적인 신들
+    optimalMood: MOOD.CUNNING,
     bonusMultiplier: 1.15,
     description: '올림푸스의 신들은 지혜와 전략을 중시합니다'
   },
   [CULT.ASGARD]: {
-    optimalPersonality: PERSONALITY.CALM,    // 아스가르드 - 침착한 수호자
+    optimalMood: MOOD.CALM,
     bonusMultiplier: 1.15,
-    description: '아스가르드는 냉정한 수호자를 필요로 합니다'
+    description: '아스가르드는 고요한 수호자를 필요로 합니다'
   },
   [CULT.YOMI]: {
-    optimalPersonality: PERSONALITY.WILD,    // 요미 - 야성적인 어둠
+    optimalMood: MOOD.WILD,
     bonusMultiplier: 1.15,
-    description: '저승은 야성적인 영혼을 끌어들입니다'
+    description: '저승은 광폭한 영혼을 끌어들입니다'
+  },
+  [CULT.TARTARUS]: {
+    optimalMood: MOOD.FIERCE,
+    bonusMultiplier: 1.15,
+    description: '타르타로스는 격렬한 파괴의 힘을 해방합니다'
+  },
+  [CULT.AVALON]: {
+    optimalMood: MOOD.NOBLE,
+    bonusMultiplier: 1.15,
+    description: '아발론은 고결한 기사의 정신을 찬양합니다'
+  },
+  [CULT.HELHEIM]: {
+    optimalMood: MOOD.STOIC,
+    bonusMultiplier: 1.15,
+    description: '헬하임은 의연한 영혼만이 버텨낼 수 있습니다'
+  },
+  [CULT.KUNLUN]: {
+    optimalMood: MOOD.DEVOTED,
+    bonusMultiplier: 1.15,
+    description: '곤륜산은 헌신적인 수행자를 이끌어줍니다'
   }
-};
+};;
 
 // ============================================
 // Helper Functions
 // ============================================
 
 /**
- * 성격 상성 데미지 배율 계산
- * @param {string} attackerPersonality - 공격자 성격
- * @param {string} defenderPersonality - 방어자 성격
+ * 분위기 상성 데미지 배율 계산
+ * @param {string} attackerMood - 공격자 분위기
+ * @param {string} defenderMood - 방어자 분위기
  * @returns {number} 데미지 배율
  */
-export function getPersonalityDamageMultiplier(attackerPersonality, defenderPersonality) {
-  // 신비 성격은 항상 보너스
-  if (attackerPersonality === PERSONALITY.MYSTIC) {
-    return PERSONALITY_DAMAGE.MYSTIC_BONUS;
+function getMoodDamageMultiplier(attackerMood, defenderMood) {
+  const matchup = MOOD_MATCHUP[attackerMood];
+  if (!matchup) return MOOD_DAMAGE.NEUTRAL;
+
+  if (matchup.strongAgainst.includes(defenderMood)) {
+    return MOOD_DAMAGE.ADVANTAGE;
+  }
+  if (matchup.weakAgainst.includes(defenderMood)) {
+    return MOOD_DAMAGE.DISADVANTAGE;
   }
 
-  const matchup = PERSONALITY_MATCHUP[attackerPersonality];
-  if (!matchup) return PERSONALITY_DAMAGE.NEUTRAL;
-
-  if (matchup.strongAgainst === defenderPersonality) {
-    return PERSONALITY_DAMAGE.ADVANTAGE;
-  }
-  if (matchup.weakAgainst === defenderPersonality) {
-    return PERSONALITY_DAMAGE.DISADVANTAGE;
-  }
-
-  return PERSONALITY_DAMAGE.NEUTRAL;
+  return MOOD_DAMAGE.NEUTRAL;
 }
 
 /**
- * 교단-성격 보너스 배율 계산
+ * 교단-분위기 보너스 배율 계산
  * @param {string} cult - 교단
- * @param {string} personality - 성격
+ * @param {string} mood - 분위기
  * @returns {number} 보너스 배율 (1.0 = 보너스 없음)
  */
-export function getCultPersonalityBonus(cult, personality) {
-  const bonus = CULT_PERSONALITY_BONUS[cult];
+export function getCultMoodBonus(cult, mood) {
+  const bonus = CULT_MOOD_BONUS[cult];
   if (!bonus) return 1.0;
 
-  if (bonus.optimalPersonality === personality) {
+  if (bonus.optimalMood === mood) {
     return bonus.bonusMultiplier;
   }
 
@@ -230,35 +301,37 @@ export function getCultPersonalityBonus(cult, personality) {
 }
 
 /**
- * 성격 상성 관계 설명 문자열 반환
- * @param {string} personality - 성격
+ * 분위기 상성 관계 설명 문자열 반환
+ * @param {string} mood - 분위기
  * @returns {string} 상성 설명
  */
-export function getPersonalityMatchupDescription(personality) {
-  const matchup = PERSONALITY_MATCHUP[personality];
-  const info = PERSONALITY_INFO[personality];
+function getMoodMatchupDescription(mood) {
+  const matchup = MOOD_MATCHUP[mood];
+  const info = MOOD_INFO[mood];
 
   if (!matchup || !info) return '';
 
-  if (personality === PERSONALITY.MYSTIC) {
-    return `${info.name}: 모든 성격에 ${(PERSONALITY_DAMAGE.MYSTIC_BONUS - 1) * 100}% 보너스 데미지`;
-  }
+  const strongNames = matchup.strongAgainst
+    .map(m => MOOD_INFO[m]?.name)
+    .filter(Boolean)
+    .join(', ');
+  const weakNames = matchup.weakAgainst
+    .map(m => MOOD_INFO[m]?.name)
+    .filter(Boolean)
+    .join(', ');
 
-  const strongInfo = PERSONALITY_INFO[matchup.strongAgainst];
-  const weakInfo = PERSONALITY_INFO[matchup.weakAgainst];
-
-  return `${info.name}: ${strongInfo.name}에 강함, ${weakInfo.name}에 약함`;
+  return `${info.name}: ${strongNames}에 강함, ${weakNames}에 약함`;
 }
 
 export default {
-  PERSONALITY,
-  PERSONALITY_MATCHUP,
-  PERSONALITY_DAMAGE,
-  PERSONALITY_INFO,
+  MOOD,
+  MOOD_MATCHUP,
+  MOOD_DAMAGE,
+  MOOD_INFO,
   CULT,
   CULT_INFO,
-  CULT_PERSONALITY_BONUS,
-  getPersonalityDamageMultiplier,
-  getCultPersonalityBonus,
-  getPersonalityMatchupDescription
+  CULT_MOOD_BONUS,
+  getMoodDamageMultiplier,
+  getCultMoodBonus,
+  getMoodMatchupDescription
 };

@@ -446,18 +446,18 @@ export class PartyManager {
       return hero ? {
         id: hero.id,
         name: hero.name,
-        element: hero.element,
+        mood: hero.mood,
         class: hero.class,
         rarity: hero.rarity
       } : null;
     }).filter(h => h !== null);
 
-    // 속성/클래스 카운트
-    const elements = {};
+    // 분위기/클래스 카운트
+    const moods = {};
     const classes = {};
 
     heroes.forEach(hero => {
-      elements[hero.element] = (elements[hero.element] || 0) + 1;
+      moods[hero.mood] = (moods[hero.mood] || 0) + 1;
       classes[hero.class] = (classes[hero.class] || 0) + 1;
     });
 
@@ -467,7 +467,7 @@ export class PartyManager {
       maxSize: this.PARTY_SIZE,
       heroes,
       power: this.calculatePartyPower(party, heroData),
-      elements,
+      moods,
       classes,
       isActive: party.isActive,
       updatedAt: party.updatedAt
@@ -477,12 +477,12 @@ export class PartyManager {
   /**
    * 자동 파티 편성 (추천)
    * @param {Array} ownedHeroes 소유한 영웅 배열
-   * @param {Object} options 옵션 { preferElement, preferClass, excludeIds }
+   * @param {Object} options 옵션 { preferMood, preferClass, excludeIds }
    * @returns {Array} 추천 영웅 ID 배열
    */
   static autoFormParty(ownedHeroes, options = {}) {
     const {
-      preferElement = null,
+      preferMood = null,
       preferClass = null,
       excludeIds = []
     } = options;
@@ -497,10 +497,10 @@ export class PartyManager {
       return powerB - powerA;
     });
 
-    // 선호 속성/클래스 우선
-    if (preferElement) {
-      const preferred = candidates.filter(h => h.element === preferElement);
-      const others = candidates.filter(h => h.element !== preferElement);
+    // 선호 분위기/클래스 우선
+    if (preferMood) {
+      const preferred = candidates.filter(h => h.mood === preferMood);
+      const others = candidates.filter(h => h.mood !== preferMood);
       candidates = [...preferred, ...others];
     }
 

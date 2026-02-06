@@ -1,6 +1,6 @@
 /**
  * SynergyDisplay - 시너지 효과 표시 컴포넌트
- * 같은 교단/속성 영웅 조합 시 버프 표시
+ * 같은 교단/분위기 영웅 조합 시 버프 표시
  */
 import { COLORS, GAME_WIDTH } from '../../config/gameConfig.js';
 
@@ -14,13 +14,16 @@ const SYNERGY_TYPES = {
     archer: { name: '궁수', color: COLORS.success },
     healer: { name: '힐러', color: COLORS.secondary }
   },
-  element: {
-    fire: { name: '불', color: 0xEF4444 },
-    water: { name: '물', color: 0x3B82F6 },
-    wind: { name: '바람', color: 0x22C55E },
-    light: { name: '빛', color: 0xFACC15 },
-    dark: { name: '암흑', color: 0x8B5CF6 },
-    neutral: { name: '무속성', color: 0x9CA3AF }
+  mood: {
+    brave: { name: '열혈', color: 0xE74C3C },
+    fierce: { name: '격렬', color: 0xFF5722 },
+    wild: { name: '광폭', color: 0x27AE60 },
+    calm: { name: '고요', color: 0x3498DB },
+    stoic: { name: '의연', color: 0x607D8B },
+    devoted: { name: '헌신', color: 0xE91E63 },
+    cunning: { name: '냉철', color: 0x9B59B6 },
+    noble: { name: '고결', color: 0xFFD700 },
+    mystic: { name: '신비', color: 0xF39C12 }
   }
 };
 
@@ -50,16 +53,16 @@ export class SynergyDisplay {
   calculate(allies) {
     console.log('[SynergyDisplay] Calculating synergies...');
 
-    // 클래스/속성 카운트
+    // 클래스/분위기 카운트
     const classCounts = {};
-    const elementCounts = {};
+    const moodCounts = {};
 
     allies.forEach(ally => {
       const heroClass = ally.class || 'warrior';
-      const element = ally.element || 'neutral';
+      const mood = ally.mood || 'calm';
 
       classCounts[heroClass] = (classCounts[heroClass] || 0) + 1;
-      elementCounts[element] = (elementCounts[element] || 0) + 1;
+      moodCounts[mood] = (moodCounts[mood] || 0) + 1;
     });
 
     // 버프 초기화
@@ -110,16 +113,16 @@ export class SynergyDisplay {
       }
     });
 
-    // 속성 시너지 계산
-    Object.entries(elementCounts).forEach(([elem, count]) => {
-      if (count >= 2 && elem !== 'neutral') {
-        const synergyInfo = SYNERGY_TYPES.element[elem] || { name: elem, color: COLORS.primary };
+    // 분위기 시너지 계산
+    Object.entries(moodCounts).forEach(([mood, count]) => {
+      if (count >= 2) {
+        const synergyInfo = SYNERGY_TYPES.mood[mood] || { name: mood, color: COLORS.primary };
         let buff = {};
 
         if (count >= 3) {
           buff = { atk: 0.10, def: 0, spd: 0 };
           this.activeSynergies.push({
-            type: 'element',
+            type: 'mood',
             name: synergyInfo.name,
             count: count,
             tier: 2,
@@ -129,7 +132,7 @@ export class SynergyDisplay {
         } else {
           buff = { atk: 0, def: 0.05, spd: 0 };
           this.activeSynergies.push({
-            type: 'element',
+            type: 'mood',
             name: synergyInfo.name,
             count: count,
             tier: 1,

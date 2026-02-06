@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, RARITY, ELEMENTS } from '../config/gameConfig.js';
+import { COLORS, RARITY, MOODS } from '../config/gameConfig.js';
 import { StarRating } from './StarRating.js';
 
 export class HeroCard extends Phaser.GameObjects.Container {
@@ -20,7 +20,7 @@ export class HeroCard extends Phaser.GameObjects.Container {
 
     this.createFrame();
     this.createPortrait();
-    this.createElementIcon();
+    this.createMoodIcon();
     this.createStarRating();
     this.createLevelBadge();
     this.setupInteraction();
@@ -132,27 +132,27 @@ export class HeroCard extends Phaser.GameObjects.Container {
     this.sendToBack(this.portrait);
   }
 
-  createElementIcon() {
-    if (!this.heroData.element) return;
+  createMoodIcon() {
+    if (!this.heroData.mood) return;
 
-    const elementConfig = ELEMENTS[this.heroData.element];
-    if (!elementConfig) return;
+    const moodConfig = MOODS[this.heroData.mood];
+    if (!moodConfig) return;
 
     const iconSize = 20;
     const iconX = this.cardWidth / 2 - iconSize / 2 - 6;
     const iconY = -this.cardHeight / 2 + iconSize / 2 + 6;
 
-    this.elementIcon = this.scene.add.graphics();
+    this.moodIcon = this.scene.add.graphics();
 
     // Circle background
-    this.elementIcon.fillStyle(0x000000, 0.6);
-    this.elementIcon.fillCircle(iconX, iconY, iconSize / 2 + 2);
+    this.moodIcon.fillStyle(0x000000, 0.6);
+    this.moodIcon.fillCircle(iconX, iconY, iconSize / 2 + 2);
 
-    // Element color
-    this.elementIcon.fillStyle(elementConfig.color, 1);
-    this.elementIcon.fillCircle(iconX, iconY, iconSize / 2);
+    // Mood color
+    this.moodIcon.fillStyle(moodConfig.color, 1);
+    this.moodIcon.fillCircle(iconX, iconY, iconSize / 2);
 
-    this.add(this.elementIcon);
+    this.add(this.moodIcon);
   }
 
   createStarRating() {

@@ -4,7 +4,7 @@
     "3": { "ATK": 0.15, "DEF": 0.10 },
     "4": { "ATK": 0.20, "DEF": 0.15, "SPD": 0.10, "HP": 0.10 }
   },
-  "personalitySynergies": [
+  "moodSynergies": [
     {
       "id": "warriors_fury",
       "name": "전사의 분노",
@@ -44,6 +44,39 @@
       "required": ["Cunning", "Cunning"],
       "minCount": 2,
       "effect": { "CRIT": 0.20, "EVASION": 0.10 }
+    },
+    {
+      "id": "devoted_shield",
+      "name": "헌신의 방패",
+      "required": ["Devoted", "Devoted"],
+      "minCount": 2,
+      "effect": { "DEF": 0.20, "HEAL": 0.15 }
+    },
+    {
+      "id": "noble_command",
+      "name": "고결한 지휘",
+      "required": ["Noble", "Noble"],
+      "minCount": 2,
+      "effect": { "ATK": 0.10, "DEF": 0.10, "SPD": 0.10 }
+    },
+    {
+      "id": "fierce_rampage",
+      "name": "격렬한 돌격",
+      "required": ["Fierce", "Brave"],
+      "effect": { "ATK": 0.25, "CRIT_DMG": 0.15, "DEF": -0.15 }
+    },
+    {
+      "id": "stoic_endurance",
+      "name": "불굴의 인내",
+      "required": ["Stoic", "Calm"],
+      "effect": { "DEF": 0.25, "HP": 0.15 }
+    },
+    {
+      "id": "complete_harmony",
+      "name": "완전한 조화",
+      "required": ["Brave", "Fierce", "Wild", "Calm", "Stoic", "Devoted", "Cunning", "Noble", "Mystic"],
+      "allDifferent": true,
+      "effect": { "ALL_STATS": 0.20 }
     }
   ],
   "specialSynergies": [
@@ -107,6 +140,30 @@
       "name": "저승의 지배자",
       "characters": ["hades", "izanami"],
       "effect": { "INSTANT_KILL_CHANCE": 0.05 }
+    },
+    {
+      "id": "round_table",
+      "name": "원탁의 기사",
+      "characters": ["arthur", "lancelot", "merlin"],
+      "effect": { "ALL_STATS": 0.25, "SKILL_DMG": 0.15 }
+    },
+    {
+      "id": "journey_west",
+      "name": "서유기",
+      "characters": ["sun_wukong", "xuanzang", "zhu_bajie"],
+      "effect": { "ATK": 0.20, "DEF": 0.20, "SPD": 0.10 }
+    },
+    {
+      "id": "ragnarok",
+      "name": "라그나로크",
+      "characters": ["fenrir", "jormungandr", "hel"],
+      "effect": { "ATK": 0.30, "INSTANT_KILL_CHANCE": 0.05 }
+    },
+    {
+      "id": "titan_wrath",
+      "name": "티탄의 분노",
+      "characters": ["kronos", "prometheus"],
+      "effect": { "ATK": 0.25, "SKILL_DMG": 0.20 }
     }
   ]
 }

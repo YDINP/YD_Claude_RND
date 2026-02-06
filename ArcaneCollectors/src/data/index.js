@@ -39,12 +39,12 @@ export function getCharactersByRarity(rarity) {
 }
 
 /**
- * 속성별 캐릭터를 가져옵니다
- * @param {string} element - 속성 (fire, water, wind, light, dark)
- * @returns {Array} 해당 속성의 캐릭터 배열
+ * 분위기별 캐릭터를 가져옵니다
+ * @param {string} mood - 분위기 (brave, cunning, calm, wild, mystic)
+ * @returns {Array} 해당 분위기의 캐릭터 배열
  */
-export function getCharactersByElement(element) {
-  return characters.characters.filter(char => char.element === element);
+export function getCharactersByMood(mood) {
+  return characters.characters.filter(char => char.mood === mood);
 }
 
 /**
@@ -312,33 +312,37 @@ export function getSummonRates() {
 }
 
 /**
- * 속성 상성을 반환합니다
- * @returns {Object} 속성 상성 정보
+ * 분위기 상성을 반환합니다
+ * @returns {Object} 분위기 상성 정보
  */
-export function getElementAdvantages() {
+export function getMoodAdvantages() {
   return {
-    fire: { strong: 'wind', weak: 'water' },
-    water: { strong: 'fire', weak: 'wind' },
-    wind: { strong: 'water', weak: 'fire' },
-    light: { strong: 'dark', weak: 'dark' },
-    dark: { strong: 'light', weak: 'light' }
+    brave: { strong: ['wild', 'cunning'], weak: ['fierce', 'devoted'] },
+    fierce: { strong: ['brave', 'noble'], weak: ['wild', 'calm'] },
+    wild: { strong: ['fierce', 'mystic'], weak: ['brave', 'stoic'] },
+    calm: { strong: ['devoted', 'fierce'], weak: ['stoic', 'cunning'] },
+    stoic: { strong: ['calm', 'wild'], weak: ['devoted', 'mystic'] },
+    devoted: { strong: ['stoic', 'brave'], weak: ['calm', 'noble'] },
+    cunning: { strong: ['mystic', 'calm'], weak: ['noble', 'brave'] },
+    noble: { strong: ['cunning', 'devoted'], weak: ['mystic', 'fierce'] },
+    mystic: { strong: ['noble', 'stoic'], weak: ['cunning', 'wild'] }
   };
 }
 
 /**
- * 속성 상성에 따른 데미지 배율을 계산합니다
- * @param {string} attackerElement - 공격자 속성
- * @param {string} defenderElement - 방어자 속성
- * @returns {number} 데미지 배율 (1.0, 1.3, 0.7)
+ * 분위기 상성에 따른 데미지 배율을 계산합니다
+ * @param {string} attackerMood - 공격자 분위기
+ * @param {string} defenderMood - 방어자 분위기
+ * @returns {number} 데미지 배율 (1.0, 1.2, 0.8)
  */
-export function calculateElementMultiplier(attackerElement, defenderElement) {
-  const advantages = getElementAdvantages();
-  const attackerAdvantage = advantages[attackerElement];
+export function calculateMoodMultiplier(attackerMood, defenderMood) {
+  const advantages = getMoodAdvantages();
+  const attackerAdvantage = advantages[attackerMood];
 
   if (!attackerAdvantage) return 1.0;
 
-  if (attackerAdvantage.strong === defenderElement) return 1.3;
-  if (attackerAdvantage.weak === defenderElement) return 0.7;
+  if (attackerAdvantage.strong.includes(defenderMood)) return 1.2;
+  if (attackerAdvantage.weak.includes(defenderMood)) return 0.8;
 
   return 1.0;
 }
@@ -373,7 +377,7 @@ export default {
   getCharacter,
   getAllCharacters,
   getCharactersByRarity,
-  getCharactersByElement,
+  getCharactersByMood,
   getCharactersByClass,
   calculatePower,
   calculateStats,
@@ -410,8 +414,8 @@ export default {
 
   // Utility
   getSummonRates,
-  getElementAdvantages,
-  calculateElementMultiplier,
+  getMoodAdvantages,
+  calculateMoodMultiplier,
   getExpRequiredForLevel,
   getMaxLevel
 };

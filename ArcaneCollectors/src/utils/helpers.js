@@ -340,16 +340,20 @@ export function formatTime(milliseconds) {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-// Personality icon
-export function getPersonalityIcon(personality) {
+// Mood icon
+export function getMoodIcon(mood) {
   const icons = {
     brave: '⚔️',
-    cunning: '🗡️',
-    calm: '🛡️',
+    fierce: '🔥',
     wild: '🐺',
+    calm: '🛡️',
+    stoic: '🪨',
+    devoted: '💖',
+    cunning: '🗡️',
+    noble: '👑',
     mystic: '✨'
   };
-  return icons[personality] || '❓';
+  return icons[mood] || '❓';
 }
 
 // Cult icon
