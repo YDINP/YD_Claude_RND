@@ -79,9 +79,9 @@
   - 아스가르드(asgard) + 고요(calm)
   - 요미(yomi) + 광폭(wild)
   - 타르타로스(tartarus) + 격렬(fierce)
-  - 아발론(avalon) + 의연(stoic)
-  - 헬하임(helheim) + 헌신(devoted)
-  - 곤륜(kunlun) + 고결(noble)
+  - 아발론(avalon) + 고결(noble)
+  - 헬하임(helheim) + 의연(stoic)
+  - 곤륜(kunlun) + 헌신(devoted)
 - **코드 불일치 3건** (v5.2까지):
   1. `constants.js`: 정확한 교단명, 1:1 매핑 ×1.15 — **정본(Canon)**
   2. `PersonalitySystem.js`: **잘못된 교단명** (SHADOW/FLAME/FROST/NATURE/VOID 사용) → ✅ v5.3에서 수정 완료

@@ -22,18 +22,19 @@ docs/**
 ### Task 5.1: 게임 설정 업데이트
 - [ ] gameConfig.js 전면 업데이트
 - [ ] 해상도 설정
-- [ ] 성격 색상 팔레트
+- [ ] 분위기 색상 팔레트 (9종)
 - [ ] 에너지/소탕 상수
 
 ### Task 5.2: 상수 및 유틸 업데이트
-- [ ] constants.js 업데이트
-- [ ] 성격 상수 추가
+- [✅] constants.js 업데이트
+- [✅] 분위기 상수 추가 (MOOD, 9종)
+- [✅] MOOD_MATCHUP → 9×9 배열 기반 상성
 - [ ] 에너지 상수 추가
 - [ ] 소탕 상수 추가
 
 ### Task 5.3: 게임 기획서 업데이트
 - [ ] GameDesignDocument 업데이트
-- [ ] 성격 시스템 문서화
+- [ ] 분위기 시스템 문서화 (9종)
 - [ ] 에너지/소탕 문서화
 - [ ] 백엔드 API 문서화
 
@@ -52,14 +53,18 @@ export const GAME_CONFIG = {
 };
 ```
 
-### 성격 색상 팔레트
+### 분위기 색상 팔레트
 ```javascript
-export const PERSONALITY_COLORS = {
-  Brave: '#E74C3C',
-  Cunning: '#9B59B6',
-  Calm: '#3498DB',
-  Wild: '#27AE60',
-  Mystic: '#F39C12',
+export const MOOD_COLORS = {
+  brave: '#E74C3C',
+  fierce: '#FF5722',
+  wild: '#27AE60',
+  calm: '#3498DB',
+  stoic: '#607D8B',
+  devoted: '#E91E63',
+  cunning: '#9B59B6',
+  noble: '#FFD700',
+  mystic: '#F39C12',
 };
 ```
 
@@ -105,23 +110,27 @@ export const PARTY_CONFIG = {
 ## constants.js 구조 예시
 
 ```javascript
-// 성격 타입
-export const PERSONALITY = {
-  BRAVE: 'Brave',
-  CUNNING: 'Cunning',
-  CALM: 'Calm',
-  WILD: 'Wild',
-  MYSTIC: 'Mystic',
+// 분위기 타입 (9종)
+export const MOOD = {
+  BRAVE: 'brave',
+  FIERCE: 'fierce',
+  WILD: 'wild',
+  CALM: 'calm',
+  STOIC: 'stoic',
+  DEVOTED: 'devoted',
+  CUNNING: 'cunning',
+  NOBLE: 'noble',
+  MYSTIC: 'mystic',
 };
 
-// 성격 상성
-export const PERSONALITY_MATCHUP = {
-  [PERSONALITY.BRAVE]: { strong: PERSONALITY.CUNNING, weak: PERSONALITY.CALM },
-  [PERSONALITY.CUNNING]: { strong: PERSONALITY.CALM, weak: PERSONALITY.WILD },
-  [PERSONALITY.CALM]: { strong: PERSONALITY.WILD, weak: PERSONALITY.BRAVE },
-  [PERSONALITY.WILD]: { strong: PERSONALITY.BRAVE, weak: PERSONALITY.CUNNING },
-  [PERSONALITY.MYSTIC]: { strong: null, weak: null }, // 모두에게 +10%
-};
+// 분위기 상성 (9×9 배열 기반)
+// 상세 매트릭스는 MoodSystem.js 참조
+export const MOOD_MATCHUP = [
+  // brave, fierce, wild, calm, stoic, devoted, cunning, noble, mystic
+  [1.0, 1.1, 1.15, 0.85, 0.9, 1.0, 1.2, 1.0, 0.95], // brave
+  [0.9, 1.0, 1.2, 0.8, 0.85, 0.95, 1.1, 0.9, 0.9],  // fierce
+  // ... (나머지 7개 행)
+];
 
 // 교단 타입
 export const CULT = {
@@ -132,13 +141,13 @@ export const CULT = {
   YOMI: 'yomi',
 };
 
-// 교단-성격 최적 조합
-export const CULT_PERSONALITY_BONUS = {
-  [CULT.VALHALLA]: [PERSONALITY.BRAVE, PERSONALITY.WILD],
-  [CULT.TAKAMAGAHARA]: [PERSONALITY.CUNNING, PERSONALITY.MYSTIC],
-  [CULT.OLYMPUS]: [PERSONALITY.BRAVE, PERSONALITY.MYSTIC],
-  [CULT.ASGARD]: [PERSONALITY.CALM, PERSONALITY.WILD],
-  [CULT.YOMI]: [PERSONALITY.CUNNING, PERSONALITY.CALM],
+// 교단-분위기 최적 조합
+export const CULT_MOOD_BONUS = {
+  [CULT.VALHALLA]: [MOOD.BRAVE, MOOD.FIERCE, MOOD.WILD],
+  [CULT.TAKAMAGAHARA]: [MOOD.CUNNING, MOOD.MYSTIC],
+  [CULT.OLYMPUS]: [MOOD.BRAVE, MOOD.NOBLE, MOOD.MYSTIC],
+  [CULT.ASGARD]: [MOOD.CALM, MOOD.STOIC, MOOD.DEVOTED],
+  [CULT.YOMI]: [MOOD.CUNNING, MOOD.CALM],
 };
 ```
 
@@ -147,10 +156,10 @@ export const CULT_PERSONALITY_BONUS = {
 ## 문서 업데이트 항목
 
 ### GameDesignDocument 추가 섹션
-1. 성격(Personality) 시스템
-   - 5가지 성격 설명
-   - 상성 관계
-   - 교단-성격 보너스
+1. 분위기(Mood) 시스템
+   - 9종 분위기 설명 (brave/fierce/wild/calm/stoic/devoted/cunning/noble/mystic)
+   - 9×9 상성 관계 (배열 기반)
+   - 교단-분위기 보너스
 
 2. 에너지 시스템
    - 최대 에너지 공식
@@ -179,7 +188,7 @@ W5는 다른 Worker들과 의존성이 낮아 **독립적으로 병렬 진행 �
 
 ## 커밋 예시
 ```
-[W5][5.1] gameConfig.js 해상도 및 성격 색상 설정
-[W5][5.2] constants.js 성격/에너지/소탕 상수 추가
-[W5][5.3] GameDesignDocument v4 업데이트
+[W5][5.1] gameConfig.js 해상도 및 분위기 색상 설정 (9종)
+[W5][5.2] constants.js 분위기/에너지/소탕 상수 추가 (MOOD 9종)
+[W5][5.3] GameDesignDocument v4 업데이트 - 분위기 시스템
 ```

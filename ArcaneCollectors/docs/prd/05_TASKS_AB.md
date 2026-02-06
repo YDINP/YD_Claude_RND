@@ -36,24 +36,24 @@
 - [ ] 지연 로딩(lazy import) vs 즉시 로딩(eager import) 전략 결정
 **확장 아이디어**: 시스템 초기화 순서 매니저 구현 (SystemBootstrap)
 
-#### A-2: PersonalitySystem → BattleScene 완전 연결
+#### A-2: MoodSystem → BattleScene 완전 연결
 **유저 상호작용 체인**:
 ```
-유저가 전투 시작 → 적 공격 시 성격 상성 계산 →
+유저가 전투 시작 → 적 공격 시 분위기 상성 계산 →
 데미지 숫자 색상 변화(유리=노랑↑, 불리=파랑↓) →
 전투 로그에 "상성 유리!" 표시
 ```
 **서브 태스크**:
-- A-2.1: BattleScene에 PersonalitySystem import
+- A-2.1: BattleScene에 MoodSystem import
 - A-2.2: `calculateElementBonus()` → `calculateMoodBonus()` 교체 (v5.2)
   - 기존 element 기반 로직 완전 제거, mood 상성 적용
-  - PersonalitySystem.getMatchupMultiplier(attacker, defender) 호출
+  - MoodSystem.getMatchupMultiplier(attacker, defender) 호출
 - A-2.3: 데미지 표시 UI에 상성 인디케이터 추가
   - 유리: 데미지 텍스트 노란색 + "▲" + 스케일 1.3x
   - 불리: 데미지 텍스트 파란색 + "▼" + 스케일 0.8x
   - Mystic: 중립 흰색 표시
 - A-2.4: 전투 로그에 상성 정보 추가
-- A-2.5: 턴 오더 바에 성격 아이콘 표시
+- A-2.5: 턴 오더 바에 분위기(mood) 아이콘 표시
 **추론 체크리스트**:
 - [x] 적(enemy)에게도 mood 속성 필요 → enemies.json의 element→mood 마이그레이션 (v5.2 결정)
 - [x] 적에 mood 없으면 기본값 'neutral' 처리

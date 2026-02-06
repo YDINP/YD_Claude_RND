@@ -12,7 +12,7 @@
 | 항목 | v2.0 (현재) | v4.0 (목표) |
 |------|------------|-------------|
 | 파티 인원 | 5인 | **4인** |
-| 특성 시스템 | 속성 (Fire/Water/Wind/Light/Dark) | **성격 (Brave/Cunning/Calm/Wild/Mystic)** |
+| 특성 시스템 | 속성 (Fire/Water/Wind/Light/Dark) | **분위기 (brave/fierce/wild/calm/stoic/devoted/cunning/noble/mystic - 9종)** |
 | 저장소 | LocalStorage | **Supabase** |
 | 해상도 | 480x854 | **720x1280** |
 | 스테이지 | 1챕터 10스테이지 | **5챕터 25스테이지** |
@@ -122,14 +122,18 @@ D:\park\
 - **5인 → 4인** 변경
 - 파티 슬롯 5개 저장 가능
 
-### 4.2 성격(Personality) 시스템
-| 성격 | 이름 | 색상 | 특징 |
+### 4.2 분위기(Mood) 시스템
+| 분위기 | 이름 | 색상 | 특징 |
 |------|------|------|------|
-| Brave | 용감 | #E74C3C | 공격력 특화 |
-| Cunning | 교활 | #9B59B6 | 크리티컬 특화 |
-| Calm | 냉정 | #3498DB | 방어/회복 특화 |
-| Wild | 야성 | #27AE60 | 속도/연속 공격 |
-| Mystic | 신비 | #F39C12 | 특수 효과 특화 |
+| brave | 열혈 | #E74C3C | 공격력 특화 |
+| fierce | 격렬 | #FF5722 | 폭발적 데미지 |
+| wild | 광폭 | #27AE60 | 속도/연속 공격 |
+| calm | 고요 | #3498DB | 방어/회복 특화 |
+| stoic | 의연 | #607D8B | 지속력/내구 |
+| devoted | 헌신 | #E91E63 | 지원/버프 |
+| cunning | 냉철 | #9B59B6 | 크리티컬 특화 |
+| noble | 고결 | #FFD700 | 균형잡힌 능력치 |
+| mystic | 신비 | #F39C12 | 특수 효과 특화 |
 
 ### 4.3 해상도
 - 기존: 480x854
@@ -211,10 +215,9 @@ ArcaneCollectors/
 │   │   ├── EnergySystem.js         # 신규
 │   │   ├── SweepSystem.js          # 신규
 │   │   ├── PartyManager.js         # 신규
-│   │   └── PersonalitySystem.js    # 신규
+│   │   └── MoodSystem.js           # 신규 (분위기 시스템)
 │   ├── data/                       # W2 담당
-│   │   ├── characters.json         # 개편
-│   │   ├── personalities.json      # 신규
+│   │   ├── characters.json         # 개편 (mood 필드 포함)
 │   │   ├── synergies.json          # 개편
 │   │   ├── stages.json             # 확장
 │   │   ├── equipment.json          # 확장
@@ -270,7 +273,7 @@ ArcaneCollectors/
 
 ## 10. 기존 시스템 참조 (PRD v2.0)
 
-### 10.1 속성 상성 (v4에서 성격으로 변경)
+### 10.1 속성 시스템 (v4에서 폐지됨)
 ```
      Fire
     ↗    ↘
@@ -279,7 +282,8 @@ Wind  ←  Water
 Light ↔ Dark (상호 유리)
 ```
 - 유리: 130%, 불리: 70%
-- **v4에서 성격 상성으로 변경됨**
+- **v4에서 분위기(Mood) 시스템으로 대체됨**
+- 분위기는 9종으로 구성되며 9×9 상성 매트릭스 사용
 
 ### 10.2 가챠 확률 (유지)
 | 등급 | 확률 |
@@ -291,9 +295,9 @@ Light ↔ Dark (상호 유리)
 
 ### 10.3 데미지 공식 (기본)
 ```
-데미지 = ATK × 스킬배율 × (1 - DEF/1000) × 속성배율
+데미지 = ATK × 스킬배율 × (1 - DEF/1000) × 분위기배율
 ```
-- v4에서 **성격배율** 추가
+- v4에서 속성배율 삭제, **분위기배율** 추가
 
 ---
 

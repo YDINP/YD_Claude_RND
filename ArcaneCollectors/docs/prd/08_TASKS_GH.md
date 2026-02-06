@@ -95,13 +95,13 @@ static setLastOnlineTime(hoursAgo)        // 마지막 접속 시간 변경
 static resetDailyTimers()                 // 일일 리셋 타이머 초기화
 ```
 
-#### G-9: 성격 & 시너지 & 파티 치트 API
+#### G-9: 분위기 & 시너지 & 파티 치트 API
 **우선순위**: P2
 **목표 API**:
 ```javascript
-// 성격 상성
-static setPersonalityAdvantage(enabled)   // 항상 상성 유리
-static viewPersonalityMatchup(a, b)       // 두 성격 상성 확인
+// 분위기 상성
+static setMoodAdvantage(enabled)   // 항상 상성 유리
+static viewMoodMatchup(a, b)       // 두 분위기 상성 확인
 // 시너지
 static viewActiveSynergies(partyIds)      // 파티의 활성 시너지 확인
 static forceSynergyBonus(synergyId)       // 특정 시너지 강제 활성화

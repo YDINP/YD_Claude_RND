@@ -63,7 +63,7 @@ src/components/**
 ### Task 3.7: 전투 화면 4인 조정
 - [ ] BattleScene 4인 레이아웃 조정
 - [ ] 스킬 카드 4개로 조정
-- [ ] 성격 표시 (속성 대체)
+- [ ] 분위기 표시 (속성 시스템 폐지됨)
 - [ ] 시너지 표시 개편
 
 ---
@@ -149,14 +149,18 @@ src/components/**
 
 ---
 
-## 성격 색상 팔레트
-| 성격 | 색상 |
+## 분위기 색상 팔레트
+| 분위기 | 색상 |
 |------|------|
-| Brave | #E74C3C |
-| Cunning | #9B59B6 |
-| Calm | #3498DB |
-| Wild | #27AE60 |
-| Mystic | #F39C12 |
+| brave | #E74C3C |
+| fierce | #FF5722 |
+| wild | #27AE60 |
+| calm | #3498DB |
+| stoic | #607D8B |
+| devoted | #E91E63 |
+| cunning | #9B59B6 |
+| noble | #FFD700 |
+| mystic | #F39C12 |
 
 ---
 

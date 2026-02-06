@@ -13,7 +13,7 @@
 src/systems/EnergySystem.js (신규)
 src/systems/SweepSystem.js (신규)
 src/systems/PartyManager.js (신규)
-src/systems/PersonalitySystem.js (신규)
+src/systems/MoodSystem.js (신규 - 분위기 시스템)
 src/systems/SynergySystem.js (개편)
 src/systems/BattleSystem.js (개편)
 ```
@@ -42,21 +42,21 @@ src/systems/BattleSystem.js (개편)
 - [ ] 활성 파티 지정
 - [ ] 서버 동기화
 
-### Task 4.4: 성격 상호작용 시스템
-- [ ] PersonalitySystem.js 생성
-- [ ] 상성 데미지 계산
-- [ ] 교단-성격 보너스
+### Task 4.4: 분위기 상호작용 시스템
+- [✅] MoodSystem.js 생성 완료
+- [✅] 9×9 상성 데미지 계산 (배열 기반)
+- [✅] 교단-분위기 보너스
 - [ ] BattleSystem 연동
 
 ### Task 4.5: 시너지 시스템 개편
-- [ ] SynergySystem.js 개편
-- [ ] 4인 파티용 조정
-- [ ] 성격 시너지 추가
-- [ ] 특수 시너지 확장
+- [✅] SynergySystem.js 개편 완료
+- [✅] 4인 파티용 조정
+- [✅] 분위기 시너지 추가 (9종 기반)
+- [✅] 특수 시너지 확장
 
 ### Task 4.6: 전투 시스템 4인 조정
 - [ ] BattleSystem.js 4인 조정
-- [ ] 성격 기반 데미지 계산
+- [ ] 분위기 기반 데미지 계산 (속성 시스템 제거)
 - [ ] 에너지 소모 연동
 
 ---
@@ -86,23 +86,19 @@ src/systems/BattleSystem.js (개편)
 | 결과 | 즉시 보상 획득 (전투 스킵) |
 | 제한 | 일일 50회 |
 
-### 성격 상성 데미지
-| 공격자 | 유리 대상 | 불리 대상 | 효과 |
-|-------|----------|----------|------|
-| Brave | Cunning | Calm | +20% / -20% |
-| Cunning | Calm | Wild | +20% / -20% |
-| Calm | Wild | Brave | +20% / -20% |
-| Wild | Brave | Cunning | +20% / -20% |
-| Mystic | 모든 성격 | - | +10% (고정) |
+### 분위기 상성 데미지
+9×9 배열 기반 상성 매트릭스
+각 분위기는 다른 8개 분위기에 대해 개별 보정값 적용
+상세 데이터는 MoodSystem.js 참조
 
-### 교단-성격 보너스
-| 교단 | 최적 성격 | 보너스 |
+### 교단-분위기 보너스
+| 교단 | 최적 분위기 | 보너스 |
 |-----|---------|-------|
-| 발할라 | Brave, Wild | ATK +15% |
-| 타카마가하라 | Cunning, Mystic | CRIT +10% |
-| 올림푸스 | Brave, Mystic | 스킬 데미지 +15% |
-| 아스가르드 | Calm, Wild | HP/DEF +15% |
-| 요미 | Cunning, Calm | 디버프 효과 +20% |
+| 발할라 | brave, fierce, wild | ATK +15% |
+| 타카마가하라 | cunning, mystic | CRIT +10% |
+| 올림푸스 | brave, noble, mystic | 스킬 데미지 +15% |
+| 아스가르드 | calm, stoic, devoted | HP/DEF +15% |
+| 요미 | cunning, calm | 디버프 효과 +20% |
 
 ---
 
@@ -114,7 +110,7 @@ src/systems/BattleSystem.js (개편)
 - BattleService API
 
 ### W2 (데이터)에서 받음
-- personalities.json (성격 데이터)
+- characters.json (캐릭터 mood 데이터)
 - synergies.json (시너지 데이터)
 - stages.json (스테이지 에너지 소모)
 
@@ -135,16 +131,16 @@ class EnergySystem {
 }
 ```
 
-### PersonalitySystem.js
+### MoodSystem.js
 ```javascript
-class PersonalitySystem {
+class MoodSystem {
   constructor() {}
 
-  // 상성 데미지 배율 계산
-  getMatchupMultiplier(attackerPersonality, defenderPersonality) {}
+  // 상성 데미지 배율 계산 (9×9 매트릭스)
+  getMatchupMultiplier(attackerMood, defenderMood) {}
 
-  // 교단-성격 보너스 계산
-  getCultBonus(cult, personality) {}
+  // 교단-분위기 보너스 계산
+  getCultBonus(cult, mood) {}
 }
 ```
 
@@ -165,6 +161,6 @@ class SweepSystem {
 ## 커밋 예시
 ```
 [W4][4.1] EnergySystem 구현 - 최대 에너지 및 회복 로직
-[W4][4.4] PersonalitySystem 구현 - 상성 데미지 계산
-[W4][4.6] BattleSystem 4인 조정 완료
+[W4][4.4] MoodSystem 구현 - 9×9 상성 데미지 계산
+[W4][4.6] BattleSystem 4인 조정 완료 - 분위기 기반 데미지
 ```

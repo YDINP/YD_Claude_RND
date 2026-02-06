@@ -59,7 +59,6 @@
 | Yomi | 12명 | 13.2% | ✅ |
 | Takamagahara | 11명 | 12.1% | ✅ |
 | Valhalla | 11명 | 12.1% | ✅ |
-| Olympus | 9명 | 9.9% | ✅ |
 | Asgard | 9명 | 9.9% | ✅ **확장 완료** |
 | Tartarus | 9명 | 9.9% | ✅ |
 | Avalon | 9명 | 9.9% | ✅ |

@@ -86,6 +86,8 @@ hero_id: text
 level: integer
 exp: integer
 stars: integer
+mood: text                  -- 분위기 (brave/fierce/wild/calm/stoic/devoted/cunning/noble/mystic)
+cult: text                  -- 교단 (valhalla/takamagahara/olympus/asgard/yomi)
 skill_levels: jsonb
 equipment: jsonb
 ```

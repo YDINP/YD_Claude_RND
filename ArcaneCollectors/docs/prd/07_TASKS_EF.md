@@ -5,7 +5,7 @@
 
 #### E-1: 기존 캐릭터 데이터 감사 (Audit)
 **서브 태스크**:
-- E-1.1: 39명 캐릭터 필수 필드 완전성 검증 (id, name, nameKo, rarity, mood, cult, role, baseStats, growthStats, skills, description) ← personality→mood
+- E-1.1: 39명 캐릭터 필수 필드 완전성 검증 (id, name, nameKo, rarity, mood, cult, role, baseStats, growthStats, skills, description)
 - E-1.2: 등급 분포 확인: 현재 N:0, R:7, SR:16, SSR:16 → N등급 부재 확인
 - E-1.3: asgard 교단 캐릭터 3명 → 6명 추가 필요
 - E-1.4: 스킬 ID가 skills.json과 정확히 매칭되는지 검증
@@ -15,13 +15,13 @@
 - [ ] 중복 ID가 없는가?
 - [ ] 각 교단 내 역할(warrior/mage/archer/healer) 분포가 균등한가?
 
-#### E-2: 누락 캐릭터 데이터 설계 (42명)
+#### E-2: 누락 캐릭터 데이터 설계 (52명)
 **서브 태스크**:
 - E-2.1: asgard 교단 6명 추가 (현재 3명 → 총 9명)
 - E-2.2: N등급(2성) 캐릭터 15명 추가 (각 교단 3명)
 - E-2.3: 나머지 교단 확장: 각 교단 ~16명까지 추가
 - E-2.4: 역할(warrior/mage/archer/healer) 균등 분포
-- E-2.5: 성격(brave/cunning/calm/wild/mystic) 균등 분포
+- E-2.5: 분위기(brave/fierce/wild/calm/stoic/devoted/cunning/noble/mystic) 균등 분포 (9종)
 - E-2.6: 캐릭터 이름(영문+한글), 설명, 배경 스토리 작성
 - E-2.7: 추가 캐릭터 characters.json에 통합
 **설계 원칙**: 각 교단 내에서 역할/성격의 조합이 최대한 다양하도록
@@ -39,8 +39,8 @@
 - E-4.1: 캐릭터별 스킬 3개(기본/액티브/궁극기) 체계 확인
 - E-4.2: 스킬 타입별 효과: damage, heal, buff, debuff, aoe
 - E-4.3: 스킬 레벨업 수치 증가율 (레벨당 +5~10%)
-- E-4.4: 성격별 특화 스킬 효과 (brave→공격력UP, calm→방어력UP 등)
-- E-4.5: 42명 추가 캐릭터용 스킬 126개(42×3) 작성
+- E-4.4: 분위기(mood)별 특화 스킬 효과 (brave→공격력UP, calm→방어력UP 등)
+- E-4.5: 52명 추가 캐릭터용 스킬 156개(52×3) 작성
 
 #### E-5: 장비 데이터 확장 (4→81개)
 **서브 태스크**:
@@ -63,7 +63,7 @@
 #### E-7: 시너지 데이터 검증 및 확장
 **서브 태스크**:
 - E-7.1: 교단 시너지 5개로 확장 (현재 3개)
-- E-7.2: 성격 시너지 10개로 확장 (5C2 = 10개 조합)
+- E-7.2: 분위기 시너지로 확장 (9종 분위기 기반)
 - E-7.3: 역할 시너지 추가 (전사+힐러, 마법사+궁수 등)
 - E-7.4: 특수 시너지: 특정 캐릭터 조합 보너스 (스토리 기반)
 - E-7.5: 시너지 효과 밸런스 (너무 강력하지 않게 ±15% 이내)

@@ -10,8 +10,7 @@
 ## 파일 소유권
 
 ```
-src/data/personalities.json
-src/data/characters.json
+src/data/characters.json (mood 필드 포함)
 src/data/synergies.json
 src/data/equipment.json
 src/data/items.json
@@ -23,24 +22,24 @@ src/data/index.js
 
 ## 태스크 목록
 
-### Task 2.1: 성격(Personality) 시스템 데이터
-- [ ] personalities.json 생성
-- [ ] 5가지 성격 정의 (Brave, Cunning, Calm, Wild, Mystic)
-- [ ] 성격 상호작용 매트릭스
-- [ ] 성격-교단 보너스 정의
+### Task 2.1: 분위기(Mood) 시스템 데이터
+- [✅] MoodSystem.js 구현 완료
+- [✅] 9종 분위기 정의 (brave/fierce/wild/calm/stoic/devoted/cunning/noble/mystic)
+- [✅] 9×9 분위기 상성 매트릭스 (배열 기반)
+- [✅] 분위기-교단 보너스 정의
 
 ### Task 2.2: 캐릭터 데이터 개편
-- [ ] characters.json에서 element → personality 변경
-- [ ] cult 필드 명시적 추가
+- [✅] characters.json에서 element 삭제, mood 필드로 변경 완료
+- [✅] cult 필드 명시적 추가
 - [ ] 신규 캐릭터 추가 (포세이돈, 하데스, 츠쿠요미, 카파 등)
 - [ ] 캐릭터별 대사 추가
 
 ### Task 2.3: 시너지 데이터 개편
-- [ ] synergies.json 전면 개편
-- [ ] 속성 시너지 제거
-- [ ] 성격 시너지 추가
-- [ ] 특수 시너지 확장 (10개+)
-- [ ] 교단 시너지 4인용 조정
+- [✅] synergies.json 전면 개편 완료
+- [✅] 속성 시너지 제거
+- [✅] 분위기 시너지 추가 (9종 기반)
+- [✅] 특수 시너지 확장 (10개+)
+- [✅] 교단 시너지 4인용 조정
 
 ### Task 2.4: 장비/아이템 데이터 확장
 - [ ] equipment.json 확장 (81개 장비)
@@ -56,34 +55,33 @@ src/data/index.js
 
 ---
 
-## 성격(Personality) 시스템 참조
+## 분위기(Mood) 시스템 참조
 
-### 5가지 성격
-| 성격 | 이름 | 테마 색상 | 특징 |
+### 9종 분위기
+| 분위기 | 이름 | 테마 색상 | 특징 |
 |------|------|----------|------|
-| Brave | 용감 | #E74C3C | 정면 돌파, 높은 공격력 |
-| Cunning | 교활 | #9B59B6 | 전략적, 크리티컬 특화 |
-| Calm | 냉정 | #3498DB | 분석적, 방어/회복 특화 |
-| Wild | 야성 | #27AE60 | 본능적, 속도/연속 공격 |
-| Mystic | 신비 | #F39C12 | 초월적, 특수 효과 특화 |
+| brave | 열혈 | #E74C3C | 정면 돌파, 높은 공격력 |
+| fierce | 격렬 | #FF5722 | 폭발적 데미지 |
+| wild | 광폭 | #27AE60 | 본능적, 속도/연속 공격 |
+| calm | 고요 | #3498DB | 분석적, 방어/회복 특화 |
+| stoic | 의연 | #607D8B | 지속력/내구 |
+| devoted | 헌신 | #E91E63 | 지원/버프 |
+| cunning | 냉철 | #9B59B6 | 전략적, 크리티컬 특화 |
+| noble | 고결 | #FFD700 | 균형잡힌 능력치 |
+| mystic | 신비 | #F39C12 | 초월적, 특수 효과 특화 |
 
-### 성격 상호작용 (상성)
-| 공격자 | 유리 대상 | 불리 대상 | 효과 |
-|-------|----------|----------|------|
-| Brave | Cunning | Calm | +20% / -20% |
-| Cunning | Calm | Wild | +20% / -20% |
-| Calm | Wild | Brave | +20% / -20% |
-| Wild | Brave | Cunning | +20% / -20% |
-| Mystic | 모든 성격 | - | +10% (고정) |
+### 분위기 상성 (9×9 매트릭스)
+배열 기반 상성 데이터는 MoodSystem.js에 정의됨
+각 분위기마다 다른 8개 분위기에 대한 보정값 적용
 
-### 성격-교단 보너스
-| 교단 | 최적 성격 | 보너스 |
+### 분위기-교단 보너스
+| 교단 | 최적 분위기 | 보너스 |
 |-----|---------|-------|
-| 발할라 | Brave, Wild | ATK +15% |
-| 타카마가하라 | Cunning, Mystic | CRIT +10% |
-| 올림푸스 | Brave, Mystic | 스킬 데미지 +15% |
-| 아스가르드 | Calm, Wild | HP/DEF +15% |
-| 요미 | Cunning, Calm | 디버프 효과 +20% |
+| 발할라 | brave, fierce, wild | ATK +15% |
+| 타카마가하라 | cunning, mystic | CRIT +10% |
+| 올림푸스 | brave, noble, mystic | 스킬 데미지 +15% |
+| 아스가르드 | calm, stoic, devoted | HP/DEF +15% |
+| 요미 | cunning, calm | 디버프 효과 +20% |
 
 ---
 
@@ -96,13 +94,13 @@ src/data/index.js
 | 3명 | ATK +15%, DEF +10% |
 | 4명 (풀파티) | 모든 스탯 +20% |
 
-### 성격 시너지 (신규)
+### 분위기 시너지 (신규)
 | 조합 | 효과 |
 |-----|------|
-| Brave + Wild | "전사의 분노" - ATK +20%, DEF -10% |
-| Cunning + Calm | "냉철한 계산" - CRIT +15%, 쿨다운 -1 |
-| Mystic + Any | "신비의 가호" - 특수 효과 +10% |
-| All Different | "균형의 힘" - 모든 스탯 +10% |
+| brave + fierce + wild | "전사의 분노" - ATK +20%, DEF -10% |
+| cunning + calm | "냉철한 계산" - CRIT +15%, 쿨다운 -1 |
+| mystic + Any | "신비의 가호" - 특수 효과 +10% |
+| All Different (4종 이상) | "균형의 힘" - 모든 스탯 +10% |
 
 ### 특수 시너지 (확장)
 | 이름 | 조합 | 효과 |
@@ -115,7 +113,7 @@ src/data/index.js
 
 ## 커밋 예시
 ```
-[W2][2.1] personalities.json 생성 - 5가지 성격 정의
-[W2][2.2] characters.json 개편 - personality 필드 추가
-[W2][2.3] synergies.json 개편 완료
+[W2][2.1] MoodSystem.js 구현 - 9종 분위기 정의
+[W2][2.2] characters.json 개편 - mood 필드 추가, element 삭제
+[W2][2.3] synergies.json 개편 완료 - 분위기 기반 시너지
 ```
