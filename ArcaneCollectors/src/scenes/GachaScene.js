@@ -177,6 +177,10 @@ export class GachaScene extends Phaser.Scene {
       this.equipTabText.setStyle({ fontStyle: 'normal' });
 
       this.showMessage('영웅 소환 모드', COLORS.primary);
+      // 천장 카운터 표시
+      if (this.pityBar) this.pityBar.setVisible(true);
+      if (this.pityText) this.pityText.setVisible(true);
+      if (this.equipGuaranteeText) this.equipGuaranteeText.setVisible(false);
     } else {
       // Activate equipment tab
       this.equipTabBg.setFillStyle(COLORS.primary, 1);
@@ -191,6 +195,17 @@ export class GachaScene extends Phaser.Scene {
       this.heroTabText.setStyle({ fontStyle: 'normal' });
 
       this.showMessage('장비 소환 모드', COLORS.accent);
+      // 장비 보장 정보 표시, 천장 카운터 숨김
+      if (this.pityBar) this.pityBar.setVisible(false);
+      if (this.pityText) this.pityText.setVisible(false);
+      if (!this.equipGuaranteeText) {
+        this.equipGuaranteeText = this.add.text(GAME_WIDTH / 2, 710, '10연차 SR등급 이상 장비 1개 보장!', {
+          fontSize: '13px', fontFamily: 'Arial',
+          color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+          fontStyle: 'bold'
+        }).setOrigin(0.5);
+      }
+      this.equipGuaranteeText.setVisible(true);
     }
   }
 
