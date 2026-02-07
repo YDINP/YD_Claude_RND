@@ -215,25 +215,43 @@ export class SettingsScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(5002);
     elements.push(title);
 
-    // HTML input 사용 (Phaser에서 텍스트 입력은 DOM 요소 필요)
-    const inputBg = this.add.graphics().setDepth(5002);
-    inputBg.fillStyle(0x0F172A, 1);
-    inputBg.fillRoundedRect(GAME_WIDTH / 2 - 130, GAME_HEIGHT / 2 - 35, 260, 40, 8);
-    elements.push(inputBg);
+    // HTML DOM input 요소 (Phaser canvas 위에 오버레이)
+    const canvas = this.game.canvas;
+    const canvasRect = canvas.getBoundingClientRect();
+    const scaleX = canvasRect.width / this.game.config.width;
+    const scaleY = canvasRect.height / this.game.config.height;
 
-    const placeholder = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 15,
-      '쿠폰 코드를 입력하세요', {
-        fontFamily: '"Noto Sans KR", sans-serif', fontSize: '14px', color: '#64748B'
-      }).setOrigin(0.5).setDepth(5003);
-    elements.push(placeholder);
+    const inputEl = document.createElement('input');
+    inputEl.type = 'text';
+    inputEl.placeholder = '쿠폰 코드를 입력하세요';
+    inputEl.maxLength = 20;
+    inputEl.style.cssText = `
+      position: fixed;
+      left: ${canvasRect.left + (GAME_WIDTH / 2 - 130) * scaleX}px;
+      top: ${canvasRect.top + (GAME_HEIGHT / 2 - 35) * scaleY}px;
+      width: ${260 * scaleX}px;
+      height: ${40 * scaleY}px;
+      font-size: ${14 * Math.min(scaleX, scaleY)}px;
+      font-family: "Noto Sans KR", sans-serif;
+      text-align: center;
+      background: #0F172A;
+      color: #F8FAFC;
+      border: 1px solid #6366F1;
+      border-radius: 8px;
+      padding: 0 12px;
+      outline: none;
+      z-index: 10000;
+      text-transform: uppercase;
+    `;
+    document.body.appendChild(inputEl);
+    inputEl.focus();
 
-    // 간단한 텍스트 기반 쿠폰 입력 (프롬프트 사용)
     const submitBtn = this.add.graphics().setDepth(5002);
     submitBtn.fillStyle(COLORS.primary, 1);
     submitBtn.fillRoundedRect(GAME_WIDTH / 2 - 60, GAME_HEIGHT / 2 + 20, 120, 40, 10);
     elements.push(submitBtn);
 
-    const submitLabel = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, '입력', {
+    const submitLabel = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, '적용', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: '16px',
       fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(5003);
@@ -243,21 +261,30 @@ export class SettingsScene extends Phaser.Scene {
       .setAlpha(0.001).setDepth(5004).setInteractive({ useHandCursor: true });
     elements.push(submitHit);
 
-    submitHit.on('pointerdown', () => {
-      const code = prompt('쿠폰 코드를 입력하세요:');
-      if (code) {
-        try {
-          const result = CouponSystem.redeemCoupon(code.trim());
-          if (result.success) {
-            this.showToast(`쿠폰 적용! ${JSON.stringify(result.rewards)}`);
-          } else {
-            this.showToast(result.error || '유효하지 않은 쿠폰입니다');
-          }
-        } catch {
-          this.showToast('쿠폰 시스템 오류');
-        }
+    const redeemCoupon = () => {
+      const code = inputEl.value.trim();
+      if (!code) {
+        this.showToast('쿠폰 코드를 입력하세요');
+        return;
       }
+      try {
+        const result = CouponSystem.redeemCoupon(code);
+        if (result.success) {
+          const formatted = CouponSystem.formatRewards(result.rewards);
+          this.showToast(`🎁 쿠폰 적용! ${formatted}`);
+        } else {
+          this.showToast(result.error || '유효하지 않은 쿠폰입니다');
+        }
+      } catch {
+        this.showToast('쿠폰 시스템 오류');
+      }
+      inputEl.remove();
       elements.forEach(e => e.destroy());
+    };
+
+    submitHit.on('pointerdown', redeemCoupon);
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') redeemCoupon();
     });
 
     // 닫기
@@ -267,6 +294,7 @@ export class SettingsScene extends Phaser.Scene {
     elements.push(closeLabel);
 
     closeLabel.on('pointerdown', () => {
+      inputEl.remove();
       elements.forEach(e => e.destroy());
     });
   }
