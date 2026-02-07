@@ -46,6 +46,12 @@
 | E-10 | 캐릭터 밸런스 시뮬레이션 (14명 조정) | `task/E-10-character-balance-sim` | `f3fb817` | 2026-02-07 |
 | W1-1.4 | LocalStorage→Supabase 마이그레이션 유틸 | `task/W1-1.4-supabase-migration` | `4775dad` | 2026-02-07 |
 
+### 브랜치별 개발 (Session 3)
+| ID | 태스크 | 브랜치 | 커밋 | 완료일 |
+|----|--------|--------|------|--------|
+| QA-1 | 전 씬 shutdown() + Error Boundary + console.log 제거 | `task/code-quality-improvements` | `2496a53` | 2026-02-07 |
+| DOC-1 | 프로젝트 종합 문서화 (README + ARCHITECTURE) | `task/project-documentation` | - | 2026-02-07 |
+
 ---
 
 ## 진행중 (IN PROGRESS)
@@ -65,11 +71,12 @@
 ---
 
 ## 통계
-- **전체**: 69개 중 **69개 완료 (100%)**
+- **전체**: 71개 중 **71개 완료 (100%)**
 - **베이스라인 커밋**: `db276df` (arcane/integration)
-- **최종 커밋**: `4775dad` (arcane/integration)
+- **최종 커밋**: (arcane/integration)
 - **Session 1 완료**: B-4, B-7, C-6, W3-3.3, F-1~F-12, D-1~D-4
 - **Session 2 완료**: E-4, E-6, E-10, W1-1.4
+- **Session 3 완료**: QA-1, DOC-1
 
 ## 주요 결과물 (Session 2)
 | 항목 | 내용 |
@@ -78,3 +85,11 @@
 | 적 데이터 | 48종→65종 (avalon 7 + kunlun 7 + 공통 3) |
 | 밸런스 조정 | 14명 스탯 조정 (등급별 하한/상한 기준 적용) |
 | 마이그레이션 | MigrationService + 5개 신규 DB 테이블 + RLS |
+
+## 주요 결과물 (Session 3)
+| 항목 | 내용 |
+|------|------|
+| Memory Leak 방지 | 15개 전 씬 shutdown() 메서드 추가/개선 |
+| Error Boundary | 15개 전 씬 create() try/catch + 안전한 복귀 |
+| Console.log 제거 | Vite esbuild pure 옵션 (프로덕션 빌드 시 자동 제거) |
+| 프로젝트 문서 | README.md + docs/ARCHITECTURE.md 종합 문서 |
