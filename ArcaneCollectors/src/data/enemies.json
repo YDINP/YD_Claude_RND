@@ -18,7 +18,9 @@
         "def": 3,
         "spd": 2
       },
-      "skills": ["skill_goblin_scratch"],
+      "skills": [
+        "skill_goblin_scratch"
+      ],
       "expReward": 10,
       "goldReward": 15
     },
@@ -40,7 +42,10 @@
         "def": 2,
         "spd": 3
       },
-      "skills": ["skill_basic_attack", "skill_quick_shot"],
+      "skills": [
+        "skill_basic_attack",
+        "skill_quick_shot"
+      ],
       "expReward": 12,
       "goldReward": 18
     },
@@ -62,7 +67,10 @@
         "def": 3,
         "spd": 2
       },
-      "skills": ["skill_dark_bolt", "skill_fear"],
+      "skills": [
+        "skill_dark_bolt",
+        "skill_fear"
+      ],
       "expReward": 18,
       "goldReward": 25
     },
@@ -84,7 +92,10 @@
         "def": 5,
         "spd": 2
       },
-      "skills": ["skill_power_strike", "skill_iron_will"],
+      "skills": [
+        "skill_power_strike",
+        "skill_iron_will"
+      ],
       "expReward": 20,
       "goldReward": 28
     },
@@ -106,7 +117,11 @@
         "def": 8,
         "spd": 2
       },
-      "skills": ["skill_power_strike", "skill_iron_will", "skill_fire_dance"],
+      "skills": [
+        "skill_power_strike",
+        "skill_iron_will",
+        "skill_fire_dance"
+      ],
       "expReward": 100,
       "goldReward": 150
     },
@@ -128,7 +143,9 @@
         "def": 2,
         "spd": 3
       },
-      "skills": ["skill_wolf_bite"],
+      "skills": [
+        "skill_wolf_bite"
+      ],
       "expReward": 12,
       "goldReward": 16
     },
@@ -150,7 +167,10 @@
         "def": 4,
         "spd": 3
       },
-      "skills": ["skill_wolf_bite", "skill_wind_slash"],
+      "skills": [
+        "skill_wolf_bite",
+        "skill_wind_slash"
+      ],
       "expReward": 25,
       "goldReward": 35
     },
@@ -172,7 +192,10 @@
         "def": 4,
         "spd": 1
       },
-      "skills": ["skill_basic_attack", "skill_slime_split"],
+      "skills": [
+        "skill_basic_attack",
+        "skill_slime_split"
+      ],
       "expReward": 8,
       "goldReward": 12
     },
@@ -194,7 +217,10 @@
         "def": 6,
         "spd": 1
       },
-      "skills": ["skill_water_splash", "skill_slime_split"],
+      "skills": [
+        "skill_water_splash",
+        "skill_slime_split"
+      ],
       "expReward": 18,
       "goldReward": 22
     },
@@ -216,7 +242,10 @@
         "def": 3,
         "spd": 1
       },
-      "skills": ["skill_basic_attack", "skill_mushroom_spore"],
+      "skills": [
+        "skill_basic_attack",
+        "skill_mushroom_spore"
+      ],
       "expReward": 10,
       "goldReward": 14
     },
@@ -238,7 +267,10 @@
         "def": 8,
         "spd": 1
       },
-      "skills": ["skill_treant_smash", "skill_tide_guard"],
+      "skills": [
+        "skill_treant_smash",
+        "skill_tide_guard"
+      ],
       "expReward": 28,
       "goldReward": 40
     },
@@ -260,7 +292,10 @@
         "def": 12,
         "spd": 1
       },
-      "skills": ["skill_power_strike", "skill_iron_will"],
+      "skills": [
+        "skill_power_strike",
+        "skill_iron_will"
+      ],
       "expReward": 30,
       "goldReward": 45
     },
@@ -282,7 +317,9 @@
         "def": 2,
         "spd": 4
       },
-      "skills": ["skill_basic_attack"],
+      "skills": [
+        "skill_basic_attack"
+      ],
       "expReward": 10,
       "goldReward": 15
     },
@@ -304,7 +341,10 @@
         "def": 3,
         "spd": 2
       },
-      "skills": ["skill_power_strike", "skill_fire_dance"],
+      "skills": [
+        "skill_power_strike",
+        "skill_fire_dance"
+      ],
       "expReward": 25,
       "goldReward": 35
     },
@@ -326,7 +366,10 @@
         "def": 5,
         "spd": 2
       },
-      "skills": ["skill_dark_bolt", "skill_fear"],
+      "skills": [
+        "skill_dark_bolt",
+        "skill_fear"
+      ],
       "expReward": 22,
       "goldReward": 30
     },
@@ -348,7 +391,10 @@
         "def": 2,
         "spd": 5
       },
-      "skills": ["skill_talon_strike", "skill_screech"],
+      "skills": [
+        "skill_talon_strike",
+        "skill_screech"
+      ],
       "expReward": 13,
       "goldReward": 20
     },
@@ -370,7 +416,10 @@
         "def": 4,
         "spd": 4
       },
-      "skills": ["skill_charge", "skill_spear_thrust"],
+      "skills": [
+        "skill_charge",
+        "skill_spear_thrust"
+      ],
       "expReward": 15,
       "goldReward": 22
     },
@@ -392,7 +441,10 @@
         "def": 5,
         "spd": 3
       },
-      "skills": ["skill_boulder_throw", "skill_ground_slam"],
+      "skills": [
+        "skill_boulder_throw",
+        "skill_ground_slam"
+      ],
       "expReward": 16,
       "goldReward": 24
     },
@@ -414,7 +466,10 @@
         "def": 3,
         "spd": 4
       },
-      "skills": ["skill_music_charm", "skill_basic_attack"],
+      "skills": [
+        "skill_music_charm",
+        "skill_basic_attack"
+      ],
       "expReward": 14,
       "goldReward": 21
     },
@@ -436,7 +491,10 @@
         "def": 8,
         "spd": 3
       },
-      "skills": ["skill_rampage", "skill_bull_charge"],
+      "skills": [
+        "skill_rampage",
+        "skill_bull_charge"
+      ],
       "expReward": 33,
       "goldReward": 46
     },
@@ -458,7 +516,10 @@
         "def": 5,
         "spd": 4
       },
-      "skills": ["skill_petrifying_gaze", "skill_serpent_strike"],
+      "skills": [
+        "skill_petrifying_gaze",
+        "skill_serpent_strike"
+      ],
       "expReward": 35,
       "goldReward": 48
     },
@@ -480,7 +541,11 @@
         "def": 10,
         "spd": 3
       },
-      "skills": ["skill_triple_bite", "skill_hellfire_breath", "skill_dark_howl"],
+      "skills": [
+        "skill_triple_bite",
+        "skill_hellfire_breath",
+        "skill_dark_howl"
+      ],
       "expReward": 130,
       "goldReward": 195
     },
@@ -502,7 +567,10 @@
         "def": 5,
         "spd": 4
       },
-      "skills": ["skill_club_smash", "skill_war_cry"],
+      "skills": [
+        "skill_club_smash",
+        "skill_war_cry"
+      ],
       "expReward": 16,
       "goldReward": 26
     },
@@ -524,7 +592,10 @@
         "def": 4,
         "spd": 5
       },
-      "skills": ["skill_wind_blade", "skill_swift_strike"],
+      "skills": [
+        "skill_wind_blade",
+        "skill_swift_strike"
+      ],
       "expReward": 17,
       "goldReward": 27
     },
@@ -546,7 +617,10 @@
         "def": 6,
         "spd": 3
       },
-      "skills": ["skill_water_jet", "skill_shell_defense"],
+      "skills": [
+        "skill_water_jet",
+        "skill_shell_defense"
+      ],
       "expReward": 15,
       "goldReward": 24
     },
@@ -568,7 +642,10 @@
         "def": 2,
         "spd": 4
       },
-      "skills": ["skill_spirit_bolt", "skill_nature_blessing"],
+      "skills": [
+        "skill_spirit_bolt",
+        "skill_nature_blessing"
+      ],
       "expReward": 18,
       "goldReward": 28
     },
@@ -590,7 +667,10 @@
         "def": 9,
         "spd": 3
       },
-      "skills": ["skill_devastating_blow", "skill_iron_resolve"],
+      "skills": [
+        "skill_devastating_blow",
+        "skill_iron_resolve"
+      ],
       "expReward": 40,
       "goldReward": 56
     },
@@ -612,7 +692,10 @@
         "def": 5,
         "spd": 5
       },
-      "skills": ["skill_fox_fire", "skill_illusion_veil"],
+      "skills": [
+        "skill_fox_fire",
+        "skill_illusion_veil"
+      ],
       "expReward": 42,
       "goldReward": 58
     },
@@ -634,7 +717,11 @@
         "def": 12,
         "spd": 3
       },
-      "skills": ["skill_eight_headed_strike", "skill_poison_breath", "skill_tail_whip"],
+      "skills": [
+        "skill_eight_headed_strike",
+        "skill_poison_breath",
+        "skill_tail_whip"
+      ],
       "expReward": 160,
       "goldReward": 240
     },
@@ -656,7 +743,10 @@
         "def": 9,
         "spd": 3
       },
-      "skills": ["skill_hammer_strike", "skill_ice_armor"],
+      "skills": [
+        "skill_hammer_strike",
+        "skill_ice_armor"
+      ],
       "expReward": 20,
       "goldReward": 32
     },
@@ -678,7 +768,10 @@
         "def": 5,
         "spd": 5
       },
-      "skills": ["skill_frost_bite", "skill_ice_claw"],
+      "skills": [
+        "skill_frost_bite",
+        "skill_ice_claw"
+      ],
       "expReward": 22,
       "goldReward": 34
     },
@@ -700,7 +793,10 @@
         "def": 5,
         "spd": 4
       },
-      "skills": ["skill_dark_spear", "skill_corrupted_aura"],
+      "skills": [
+        "skill_dark_spear",
+        "skill_corrupted_aura"
+      ],
       "expReward": 21,
       "goldReward": 33
     },
@@ -722,7 +818,10 @@
         "def": 8,
         "spd": 2
       },
-      "skills": ["skill_ice_smash", "skill_frost_shield"],
+      "skills": [
+        "skill_ice_smash",
+        "skill_frost_shield"
+      ],
       "expReward": 23,
       "goldReward": 36
     },
@@ -744,7 +843,10 @@
         "def": 12,
         "spd": 2
       },
-      "skills": ["skill_undying_fury", "skill_bone_armor"],
+      "skills": [
+        "skill_undying_fury",
+        "skill_bone_armor"
+      ],
       "expReward": 50,
       "goldReward": 70
     },
@@ -766,7 +868,10 @@
         "def": 6,
         "spd": 5
       },
-      "skills": ["skill_savage_bite", "skill_moonlit_howl"],
+      "skills": [
+        "skill_savage_bite",
+        "skill_moonlit_howl"
+      ],
       "expReward": 52,
       "goldReward": 72
     },
@@ -788,7 +893,11 @@
         "def": 14,
         "spd": 2
       },
-      "skills": ["skill_world_serpent_coil", "skill_venom_deluge", "skill_tidal_crash"],
+      "skills": [
+        "skill_world_serpent_coil",
+        "skill_venom_deluge",
+        "skill_tidal_crash"
+      ],
       "expReward": 200,
       "goldReward": 300
     },
@@ -810,7 +919,10 @@
         "def": 4,
         "spd": 6
       },
-      "skills": ["skill_shadow_strike", "skill_phase_shift"],
+      "skills": [
+        "skill_shadow_strike",
+        "skill_phase_shift"
+      ],
       "expReward": 25,
       "goldReward": 40
     },
@@ -832,7 +944,10 @@
         "def": 10,
         "spd": 3
       },
-      "skills": ["skill_cursed_blade", "skill_death_ward"],
+      "skills": [
+        "skill_cursed_blade",
+        "skill_death_ward"
+      ],
       "expReward": 27,
       "goldReward": 42
     },
@@ -854,7 +969,10 @@
         "def": 3,
         "spd": 5
       },
-      "skills": ["skill_wail_of_death", "skill_soul_drain"],
+      "skills": [
+        "skill_wail_of_death",
+        "skill_soul_drain"
+      ],
       "expReward": 26,
       "goldReward": 41
     },
@@ -876,7 +994,10 @@
         "def": 5,
         "spd": 5
       },
-      "skills": ["skill_spectral_touch", "skill_ethereal_form"],
+      "skills": [
+        "skill_spectral_touch",
+        "skill_ethereal_form"
+      ],
       "expReward": 28,
       "goldReward": 43
     },
@@ -898,7 +1019,10 @@
         "def": 9,
         "spd": 3
       },
-      "skills": ["skill_death_ray", "skill_phylactery_shield"],
+      "skills": [
+        "skill_death_ray",
+        "skill_phylactery_shield"
+      ],
       "expReward": 63,
       "goldReward": 88
     },
@@ -920,7 +1044,10 @@
         "def": 11,
         "spd": 3
       },
-      "skills": ["skill_necrotic_breath", "skill_wing_barrage"],
+      "skills": [
+        "skill_necrotic_breath",
+        "skill_wing_barrage"
+      ],
       "expReward": 65,
       "goldReward": 90
     },
@@ -942,7 +1069,11 @@
         "def": 15,
         "spd": 3
       },
-      "skills": ["skill_yomi_gate", "skill_death_embrace", "skill_soul_harvest"],
+      "skills": [
+        "skill_yomi_gate",
+        "skill_death_embrace",
+        "skill_soul_harvest"
+      ],
       "expReward": 250,
       "goldReward": 375
     },
@@ -964,7 +1095,10 @@
         "def": 8,
         "spd": 3
       },
-      "skills": ["skill_guardian_strike", "skill_barrier"],
+      "skills": [
+        "skill_guardian_strike",
+        "skill_barrier"
+      ],
       "expReward": 50,
       "goldReward": 80
     },
@@ -986,7 +1120,11 @@
         "def": 10,
         "spd": 3
       },
-      "skills": ["skill_guardian_slash", "skill_tower_shield", "skill_power_surge"],
+      "skills": [
+        "skill_guardian_slash",
+        "skill_tower_shield",
+        "skill_power_surge"
+      ],
       "expReward": 100,
       "goldReward": 150
     },
@@ -1008,7 +1146,11 @@
         "def": 12,
         "spd": 3
       },
-      "skills": ["skill_guardian_fury", "skill_impenetrable_wall", "skill_devastating_sweep"],
+      "skills": [
+        "skill_guardian_fury",
+        "skill_impenetrable_wall",
+        "skill_devastating_sweep"
+      ],
       "expReward": 150,
       "goldReward": 220
     },
@@ -1030,7 +1172,11 @@
         "def": 15,
         "spd": 4
       },
-      "skills": ["skill_mystic_blast", "skill_arcane_shield", "skill_tower_judgment"],
+      "skills": [
+        "skill_mystic_blast",
+        "skill_arcane_shield",
+        "skill_tower_judgment"
+      ],
       "expReward": 180,
       "goldReward": 270
     },
@@ -1052,7 +1198,437 @@
         "def": 19,
         "spd": 4
       },
-      "skills": ["skill_divine_strike", "skill_holy_barrier", "skill_ultimate_judgment"],
+      "skills": [
+        "skill_divine_strike",
+        "skill_holy_barrier",
+        "skill_ultimate_judgment"
+      ],
+      "expReward": 200,
+      "goldReward": 300
+    },
+    {
+      "id": "enemy_brownie",
+      "name": "브라우니",
+      "nameEn": "Brownie",
+      "mood": "calm",
+      "type": "normal",
+      "baseStats": {
+        "hp": 180,
+        "atk": 25,
+        "def": 15,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 35,
+        "atk": 7,
+        "def": 4,
+        "spd": 3
+      },
+      "skills": [
+        "skill_nature_touch"
+      ],
+      "expReward": 10,
+      "goldReward": 14
+    },
+    {
+      "id": "enemy_sidhe",
+      "name": "시드",
+      "nameEn": "Sidhe",
+      "mood": "mystic",
+      "type": "normal",
+      "baseStats": {
+        "hp": 220,
+        "atk": 40,
+        "def": 12,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 45,
+        "atk": 10,
+        "def": 3,
+        "spd": 3
+      },
+      "skills": [
+        "skill_fairy_dust",
+        "skill_illusion"
+      ],
+      "expReward": 14,
+      "goldReward": 20
+    },
+    {
+      "id": "enemy_green_knight",
+      "name": "녹색 기사",
+      "nameEn": "Green Knight",
+      "mood": "brave",
+      "type": "normal",
+      "baseStats": {
+        "hp": 350,
+        "atk": 45,
+        "def": 25,
+        "spd": 65
+      },
+      "growthStats": {
+        "hp": 65,
+        "atk": 11,
+        "def": 6,
+        "spd": 2
+      },
+      "skills": [
+        "skill_vine_slash",
+        "skill_nature_shield"
+      ],
+      "expReward": 16,
+      "goldReward": 24
+    },
+    {
+      "id": "enemy_dullahan",
+      "name": "듈라한",
+      "nameEn": "Dullahan",
+      "mood": "fierce",
+      "type": "elite",
+      "baseStats": {
+        "hp": 600,
+        "atk": 65,
+        "def": 30,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 100,
+        "atk": 14,
+        "def": 6,
+        "spd": 3
+      },
+      "skills": [
+        "skill_death_gaze",
+        "skill_dark_charge"
+      ],
+      "expReward": 35,
+      "goldReward": 50
+    },
+    {
+      "id": "enemy_spriggan",
+      "name": "스프리건",
+      "nameEn": "Spriggan",
+      "mood": "wild",
+      "type": "elite",
+      "baseStats": {
+        "hp": 500,
+        "atk": 55,
+        "def": 35,
+        "spd": 70
+      },
+      "growthStats": {
+        "hp": 85,
+        "atk": 12,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        "skill_thorn_burst",
+        "skill_root_bind"
+      ],
+      "expReward": 30,
+      "goldReward": 45
+    },
+    {
+      "id": "enemy_cernunnos",
+      "name": "케르눈노스",
+      "nameEn": "Cernunnos",
+      "mood": "noble",
+      "type": "boss",
+      "baseStats": {
+        "hp": 2000,
+        "atk": 90,
+        "def": 50,
+        "spd": 70
+      },
+      "growthStats": {
+        "hp": 250,
+        "atk": 18,
+        "def": 10,
+        "spd": 3
+      },
+      "skills": [
+        "skill_antler_charge",
+        "skill_forest_wrath",
+        "skill_nature_rebirth"
+      ],
+      "expReward": 120,
+      "goldReward": 180
+    },
+    {
+      "id": "enemy_fomorian",
+      "name": "포모르",
+      "nameEn": "Fomorian",
+      "mood": "stoic",
+      "type": "elite",
+      "baseStats": {
+        "hp": 700,
+        "atk": 70,
+        "def": 40,
+        "spd": 55
+      },
+      "growthStats": {
+        "hp": 120,
+        "atk": 15,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        "skill_giant_slam",
+        "skill_stone_skin"
+      ],
+      "expReward": 40,
+      "goldReward": 60
+    },
+    {
+      "id": "enemy_terra_cotta",
+      "name": "병마용",
+      "nameEn": "Terra Cotta Soldier",
+      "mood": "stoic",
+      "type": "normal",
+      "baseStats": {
+        "hp": 280,
+        "atk": 35,
+        "def": 30,
+        "spd": 50
+      },
+      "growthStats": {
+        "hp": 55,
+        "atk": 9,
+        "def": 7,
+        "spd": 1
+      },
+      "skills": [
+        "skill_spear_thrust"
+      ],
+      "expReward": 12,
+      "goldReward": 18
+    },
+    {
+      "id": "enemy_jiangshi",
+      "name": "강시",
+      "nameEn": "Jiangshi",
+      "mood": "fierce",
+      "type": "normal",
+      "baseStats": {
+        "hp": 260,
+        "atk": 45,
+        "def": 15,
+        "spd": 60
+      },
+      "growthStats": {
+        "hp": 50,
+        "atk": 11,
+        "def": 4,
+        "spd": 2
+      },
+      "skills": [
+        "skill_hop_attack",
+        "skill_drain_bite"
+      ],
+      "expReward": 14,
+      "goldReward": 20
+    },
+    {
+      "id": "enemy_gui",
+      "name": "귀(鬼)",
+      "nameEn": "Gui Spirit",
+      "mood": "mystic",
+      "type": "normal",
+      "baseStats": {
+        "hp": 200,
+        "atk": 40,
+        "def": 10,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 40,
+        "atk": 10,
+        "def": 3,
+        "spd": 4
+      },
+      "skills": [
+        "skill_spirit_wail",
+        "skill_phase_shift"
+      ],
+      "expReward": 14,
+      "goldReward": 22
+    },
+    {
+      "id": "enemy_pixiu",
+      "name": "벽사(貔貅)",
+      "nameEn": "Pixiu",
+      "mood": "noble",
+      "type": "normal",
+      "baseStats": {
+        "hp": 320,
+        "atk": 42,
+        "def": 22,
+        "spd": 80
+      },
+      "growthStats": {
+        "hp": 60,
+        "atk": 10,
+        "def": 5,
+        "spd": 3
+      },
+      "skills": [
+        "skill_golden_bite",
+        "skill_fortune_aura"
+      ],
+      "expReward": 16,
+      "goldReward": 30
+    },
+    {
+      "id": "enemy_yaoguai",
+      "name": "요괴(妖怪)",
+      "nameEn": "Yaoguai",
+      "mood": "wild",
+      "type": "elite",
+      "baseStats": {
+        "hp": 550,
+        "atk": 60,
+        "def": 25,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 90,
+        "atk": 13,
+        "def": 5,
+        "spd": 3
+      },
+      "skills": [
+        "skill_demon_claw",
+        "skill_chaos_howl"
+      ],
+      "expReward": 32,
+      "goldReward": 48
+    },
+    {
+      "id": "enemy_taotie",
+      "name": "도철(饕餮)",
+      "nameEn": "Taotie",
+      "mood": "fierce",
+      "type": "elite",
+      "baseStats": {
+        "hp": 650,
+        "atk": 75,
+        "def": 35,
+        "spd": 65
+      },
+      "growthStats": {
+        "hp": 110,
+        "atk": 16,
+        "def": 7,
+        "spd": 2
+      },
+      "skills": [
+        "skill_devour",
+        "skill_glutton_rage"
+      ],
+      "expReward": 38,
+      "goldReward": 55
+    },
+    {
+      "id": "enemy_qilin",
+      "name": "기린(麒麟)",
+      "nameEn": "Qilin",
+      "mood": "devoted",
+      "type": "boss",
+      "baseStats": {
+        "hp": 2200,
+        "atk": 85,
+        "def": 55,
+        "spd": 80
+      },
+      "growthStats": {
+        "hp": 270,
+        "atk": 17,
+        "def": 11,
+        "spd": 3
+      },
+      "skills": [
+        "skill_holy_flame",
+        "skill_heaven_judgment",
+        "skill_divine_blessing"
+      ],
+      "expReward": 130,
+      "goldReward": 200
+    },
+    {
+      "id": "enemy_mimic",
+      "name": "미믹",
+      "nameEn": "Mimic",
+      "mood": "cunning",
+      "type": "normal",
+      "baseStats": {
+        "hp": 250,
+        "atk": 50,
+        "def": 20,
+        "spd": 70
+      },
+      "growthStats": {
+        "hp": 50,
+        "atk": 12,
+        "def": 5,
+        "spd": 2
+      },
+      "skills": [
+        "skill_surprise_bite",
+        "skill_gold_toss"
+      ],
+      "expReward": 18,
+      "goldReward": 40
+    },
+    {
+      "id": "enemy_elemental",
+      "name": "정령체",
+      "nameEn": "Elemental",
+      "mood": "mystic",
+      "type": "elite",
+      "baseStats": {
+        "hp": 450,
+        "atk": 55,
+        "def": 28,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 80,
+        "atk": 12,
+        "def": 6,
+        "spd": 3
+      },
+      "skills": [
+        "skill_elemental_burst",
+        "skill_mana_drain"
+      ],
+      "expReward": 28,
+      "goldReward": 42
+    },
+    {
+      "id": "enemy_dark_lord",
+      "name": "암흑 군주",
+      "nameEn": "Dark Lord",
+      "mood": "cunning",
+      "type": "boss",
+      "baseStats": {
+        "hp": 3000,
+        "atk": 100,
+        "def": 60,
+        "spd": 75
+      },
+      "growthStats": {
+        "hp": 350,
+        "atk": 20,
+        "def": 12,
+        "spd": 3
+      },
+      "skills": [
+        "skill_dark_nova",
+        "skill_shadow_army",
+        "skill_absolute_zero"
+      ],
       "expReward": 200,
       "goldReward": 300
     }
