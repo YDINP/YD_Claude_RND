@@ -696,6 +696,18 @@
           "multiplier": 2.3,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "룬 용맹격",
+          "description": "용기를 모아 강력한 일격을 날리며 아군의 공격력을 높인다",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "buff": {
+            "atk": 0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -766,6 +778,15 @@
           "multiplier": 2.5,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "전사의 연사",
+          "description": "광폭하게 화살을 난사하여 무작위 적을 공격한다",
+          "multiplier": 1.5,
+          "gaugeCost": 100,
+          "target": "random",
+          "hits": 4
         }
       ],
       "design": {
@@ -834,6 +855,14 @@
           "name": "플레임 버스트",
           "description": "불꽃을 폭발시켜요!",
           "multiplier": 2.6,
+          "gaugeCost": 100,
+          "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "파도 대폭발",
+          "description": "격렬한 마력으로 적 전체에 대폭발을 일으킨다",
+          "multiplier": 1.8,
           "gaugeCost": 100,
           "target": "all"
         }
@@ -907,6 +936,15 @@
           "gaugeCost": 100,
           "isHeal": true,
           "target": "all_allies"
+        },
+        {
+          "id": "skill2",
+          "name": "신성 대치유",
+          "description": "깊은 헌신으로 아군 전체를 크게 회복시킨다",
+          "multiplier": 2.2,
+          "gaugeCost": 100,
+          "target": "all_allies",
+          "isHeal": true
         }
       ],
       "design": {
@@ -977,6 +1015,18 @@
           "multiplier": 2.4,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "원혼 억제격",
+          "description": "의연한 자세로 적을 제압하며 속도를 낮춘다",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "debuff": {
+            "spd": -0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -1047,6 +1097,18 @@
           "multiplier": 2.5,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "고요한 서리 결계",
+          "description": "평온한 마력으로 아군 전체에 방어 결계를 펼친다",
+          "multiplier": 0,
+          "gaugeCost": 100,
+          "target": "all_allies",
+          "buff": {
+            "def": 0.3,
+            "duration": 3
+          }
         }
       ],
       "design": {
@@ -1117,6 +1179,15 @@
           "multiplier": 2.4,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "전사의 폭풍참",
+          "description": "전투의 힘으로 적 전체를 휩쓸어 치는 광폭한 일격",
+          "multiplier": 1.8,
+          "gaugeCost": 100,
+          "target": "random",
+          "hits": 3
         }
       ],
       "design": {
@@ -2847,7 +2918,7 @@
           "id": "skill2",
           "name": "지옥 강하",
           "description": "하늘에서 내려찍기!",
-          "multiplier": 4.0,
+          "multiplier": 4,
           "gaugeCost": 130,
           "target": "single",
           "stun_chance": 0.4
@@ -2927,7 +2998,7 @@
           "id": "skill2",
           "name": "천구의 비상",
           "description": "날아서 연속 공격!",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 110,
           "target": "random_3",
           "hits": 3
@@ -3161,14 +3232,14 @@
           "id": "basic",
           "name": "시간의 낫",
           "description": "시간을 베는 강력한 일격",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
           "name": "크로노스 슬래시",
           "description": "시간의 힘을 담은 참격",
-          "multiplier": 3.0,
+          "multiplier": 3,
           "gaugeCost": 100,
           "target": "single"
         },
@@ -3176,7 +3247,7 @@
           "id": "skill2",
           "name": "시간 정지",
           "description": "모든 적의 시간을 멈춘다",
-          "multiplier": 4.0,
+          "multiplier": 4,
           "gaugeCost": 150,
           "target": "all"
         }
@@ -3239,7 +3310,7 @@
           "id": "basic",
           "name": "불꽃 선사",
           "description": "희망의 불꽃을 던진다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -3317,7 +3388,7 @@
           "id": "basic",
           "name": "독화살",
           "description": "독이 담긴 화살을 쏜다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -3327,6 +3398,18 @@
           "multiplier": 2.5,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "독기 저격",
+          "description": "의연하게 조준하여 적을 저격하고 속도를 떨어뜨린다",
+          "multiplier": 3,
+          "gaugeCost": 120,
+          "target": "single",
+          "debuff": {
+            "spd": -0.25,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -3387,7 +3470,7 @@
           "id": "basic",
           "name": "뿔 들이받기",
           "description": "강력한 뿔로 적을 받는다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -3397,6 +3480,18 @@
           "multiplier": 2.8,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "혼돈 강타",
+          "description": "격렬한 기세로 적을 짓부수며 방어력을 떨어뜨린다",
+          "multiplier": 2.1,
+          "gaugeCost": 120,
+          "target": "all",
+          "debuff": {
+            "def": -0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -3457,7 +3552,7 @@
           "id": "basic",
           "name": "삼중 물기",
           "description": "세 머리가 동시에 문다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -3467,6 +3562,18 @@
           "multiplier": 2.2,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "타르타로스 용맹격",
+          "description": "용기를 모아 강력한 일격을 날리며 아군의 공격력을 높인다",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "buff": {
+            "atk": 0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -3527,7 +3634,7 @@
           "id": "basic",
           "name": "혼합 브레스",
           "description": "불, 독, 번개를 섞어 내뿜는다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -3537,6 +3644,15 @@
           "multiplier": 2.3,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "타르타로스 연쇄 마탄",
+          "description": "무작위 적에게 마력탄을 연사한다",
+          "multiplier": 2.3,
+          "gaugeCost": 100,
+          "target": "random",
+          "hits": 3
         }
       ],
       "design": {
@@ -3598,16 +3714,25 @@
           "id": "basic",
           "name": "급강하 발톱",
           "description": "빠르게 급강하하여 공격",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
           "name": "폭풍 날개",
           "description": "날개로 폭풍을 일으킨다",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "독기 급소 사격",
+          "description": "냉철하게 적의 약점을 간파하여 관통하는 일격",
+          "multiplier": 2.4,
+          "gaugeCost": 90,
+          "target": "single",
+          "ignoreDefense": true
         }
       ],
       "design": {
@@ -3668,7 +3793,7 @@
           "id": "basic",
           "name": "거인의 주먹",
           "description": "거대한 주먹으로 내려친다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -3678,6 +3803,18 @@
           "multiplier": 2.2,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "혼돈 강타",
+          "description": "격렬한 기세로 적을 짓부수며 방어력을 떨어뜨린다",
+          "multiplier": 1.4,
+          "gaugeCost": 90,
+          "target": "all",
+          "debuff": {
+            "def": -0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -3738,7 +3875,7 @@
           "id": "basic",
           "name": "뼈 칼",
           "description": "녹슨 검으로 베기",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -3748,6 +3885,18 @@
           "multiplier": 1.8,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "혼돈 억제격",
+          "description": "의연한 자세로 적을 제압하며 속도를 낮춘다",
+          "multiplier": 1.6,
+          "gaugeCost": 80,
+          "target": "single",
+          "debuff": {
+            "spd": -0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -3808,14 +3957,14 @@
           "id": "basic",
           "name": "엑스칼리버 참격",
           "description": "성검의 힘으로 베기",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
           "name": "성검 해방",
           "description": "엑스칼리버의 진정한 힘을 해방",
-          "multiplier": 3.0,
+          "multiplier": 3,
           "gaugeCost": 100,
           "target": "single"
         },
@@ -3887,7 +4036,7 @@
           "id": "basic",
           "name": "요정 광선",
           "description": "요정의 마법을 쏜다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -3966,7 +4115,7 @@
           "id": "basic",
           "name": "창 연타",
           "description": "빠른 창 공격",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -3976,6 +4125,18 @@
           "multiplier": 2.8,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "정령 강타",
+          "description": "격렬한 기세로 적을 짓부수며 방어력을 떨어뜨린다",
+          "multiplier": 2.1,
+          "gaugeCost": 120,
+          "target": "all",
+          "debuff": {
+            "def": -0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -4037,7 +4198,7 @@
           "id": "basic",
           "name": "까마귀 소환",
           "description": "까마귀를 소환하여 공격",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -4047,6 +4208,19 @@
           "multiplier": 2.5,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "자연 약화술",
+          "description": "냉철한 판단으로 적의 공격력과 방어력을 동시에 떨어뜨린다",
+          "multiplier": 1.7,
+          "gaugeCost": 120,
+          "target": "all",
+          "debuff": {
+            "atk": -0.15,
+            "def": -0.15,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -4108,7 +4282,7 @@
           "id": "basic",
           "name": "기사의 검",
           "description": "정직한 검격",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -4118,6 +4292,18 @@
           "multiplier": 2.3,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "성스러운 용맹격",
+          "description": "용기를 모아 강력한 일격을 날리며 아군의 공격력을 높인다",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "buff": {
+            "atk": 0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -4179,7 +4365,7 @@
           "id": "basic",
           "name": "마법 화살",
           "description": "마법의 힘으로 공격",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -4189,6 +4375,18 @@
           "multiplier": 2.3,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "고결한 자연 마법",
+          "description": "품격 있는 마법으로 적 전체를 공격한다",
+          "multiplier": 1.8,
+          "gaugeCost": 100,
+          "target": "all",
+          "buff": {
+            "critRate": 0.15,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -4250,16 +4448,28 @@
           "id": "basic",
           "name": "잎사귀 검",
           "description": "자연의 힘으로 공격",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
           "name": "숲의 보호",
           "description": "자연의 힘으로 모두를 보호",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "성스러운 방패술",
+          "description": "고요한 집중으로 방어적 공격을 가하며 자신의 방어력을 높인다",
+          "multiplier": 2,
+          "gaugeCost": 90,
+          "target": "single",
+          "buff": {
+            "def": 0.25,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -4328,9 +4538,18 @@
           "id": "skill1",
           "name": "치유의 이끼",
           "description": "자연의 힘으로 치유",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "single",
+          "isHeal": true
+        },
+        {
+          "id": "skill2",
+          "name": "성스러운 대치유",
+          "description": "깊은 헌신으로 아군 전체를 크게 회복시킨다",
+          "multiplier": 1.8,
+          "gaugeCost": 90,
+          "target": "all_allies",
           "isHeal": true
         }
       ],
@@ -4393,7 +4612,7 @@
           "id": "basic",
           "name": "나무 검",
           "description": "나무 검으로 공격",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -4403,6 +4622,15 @@
           "multiplier": 1.6,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "헌신의 정령검",
+          "description": "아군을 지키려는 의지로 적을 공격하며 아군 전체를 약간 회복",
+          "multiplier": 1.3,
+          "gaugeCost": 80,
+          "target": "single",
+          "isHeal": false
         }
       ],
       "design": {
@@ -4464,7 +4692,7 @@
           "id": "basic",
           "name": "죽음의 손길",
           "description": "생명을 빼앗는다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -4543,7 +4771,7 @@
           "id": "basic",
           "name": "늑대 이빨",
           "description": "강력한 이빨 공격",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -4558,7 +4786,7 @@
           "id": "skill2",
           "name": "라그나로크 울부짖음",
           "description": "종말의 포효",
-          "multiplier": 4.0,
+          "multiplier": 4,
           "gaugeCost": 150,
           "target": "all"
         }
@@ -4622,7 +4850,7 @@
           "id": "basic",
           "name": "독 침",
           "description": "독을 발사한다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -4632,6 +4860,18 @@
           "multiplier": 2.5,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "서리 봉인술",
+          "description": "의연하게 적의 속도를 봉인하는 마법을 시전한다",
+          "multiplier": 2.1,
+          "gaugeCost": 120,
+          "target": "all",
+          "debuff": {
+            "spd": -0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -4693,7 +4933,7 @@
           "id": "basic",
           "name": "부식의 이빨",
           "description": "부식시킨다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -4703,6 +4943,18 @@
           "multiplier": 2.8,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "죽음 강타",
+          "description": "격렬한 기세로 적을 짓부수며 방어력을 떨어뜨린다",
+          "multiplier": 2.1,
+          "gaugeCost": 120,
+          "target": "all",
+          "debuff": {
+            "def": -0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -4764,7 +5016,7 @@
           "id": "basic",
           "name": "녹슨 검",
           "description": "낡은 무기로 공격",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -4774,6 +5026,18 @@
           "multiplier": 2.2,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "냉혹한 용맹격",
+          "description": "용기를 모아 강력한 일격을 날리며 아군의 공격력을 높인다",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "buff": {
+            "atk": 0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -4835,16 +5099,28 @@
           "id": "basic",
           "name": "얼음 주먹",
           "description": "차가운 주먹",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
           "name": "빙하 벽",
           "description": "얼음으로 막는다",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "냉혹한 방패술",
+          "description": "고요한 집중으로 방어적 공격을 가하며 자신의 방어력을 높인다",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "buff": {
+            "def": 0.25,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -4906,16 +5182,25 @@
           "id": "basic",
           "name": "영혼 화살",
           "description": "영혼을 쏜다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
           "name": "유령 화살비",
           "description": "무수한 영혼의 화살",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "냉혹한 연사",
+          "description": "광폭하게 화살을 난사하여 무작위 적을 공격한다",
+          "multiplier": 1.2,
+          "gaugeCost": 90,
+          "target": "random",
+          "hits": 4
         }
       ],
       "design": {
@@ -4977,16 +5262,29 @@
           "id": "basic",
           "name": "암흑 화살",
           "description": "어둠을 쏜다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
           "name": "그림자 함정",
           "description": "어둠 속에 숨긴 함정",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "서리 약화술",
+          "description": "냉철한 판단으로 적의 공격력과 방어력을 동시에 떨어뜨린다",
+          "multiplier": 1.1,
+          "gaugeCost": 90,
+          "target": "all",
+          "debuff": {
+            "atk": -0.15,
+            "def": -0.15,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -5048,7 +5346,7 @@
           "id": "basic",
           "name": "뼈 방패",
           "description": "방패로 막는다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -5058,6 +5356,18 @@
           "multiplier": 1.5,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "죽음 억제격",
+          "description": "의연한 자세로 적을 제압하며 속도를 낮춘다",
+          "multiplier": 1.6,
+          "gaugeCost": 80,
+          "target": "single",
+          "debuff": {
+            "spd": -0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -5119,7 +5429,7 @@
           "id": "basic",
           "name": "여의봉 휘두르기",
           "description": "여의봉이 늘어난다!",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -5134,7 +5444,7 @@
           "id": "skill2",
           "name": "제천대성 강림",
           "description": "하늘을 뒤흔든다!",
-          "multiplier": 4.0,
+          "multiplier": 4,
           "gaugeCost": 150,
           "target": "single"
         }
@@ -5198,7 +5508,7 @@
           "id": "basic",
           "name": "화첨창",
           "description": "불꽃의 창",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -5277,7 +5587,7 @@
           "id": "basic",
           "name": "청룡언월도",
           "description": "의리의 칼날",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -5287,6 +5597,18 @@
           "multiplier": 2.8,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "고결한 기공 일격",
+          "description": "품위 있는 검술로 적의 급소를 노린다",
+          "multiplier": 3,
+          "gaugeCost": 120,
+          "target": "single",
+          "buff": {
+            "critRate": 0.15,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -5348,7 +5670,7 @@
           "id": "basic",
           "name": "달빛 구슬",
           "description": "달빛의 구슬",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -5359,6 +5681,14 @@
           "gaugeCost": 100,
           "target": "all",
           "isHeal": true
+        },
+        {
+          "id": "skill2",
+          "name": "헌신의 풍수 마법",
+          "description": "아군을 위해 적 전체를 공격하는 헌신의 마법",
+          "multiplier": 2.1,
+          "gaugeCost": 120,
+          "target": "all"
         }
       ],
       "design": {
@@ -5427,9 +5757,18 @@
           "id": "skill1",
           "name": "자비의 기도",
           "description": "자비로운 기도",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "all",
+          "isHeal": true
+        },
+        {
+          "id": "skill2",
+          "name": "선계 대치유",
+          "description": "깊은 헌신으로 아군 전체를 크게 회복시킨다",
+          "multiplier": 2.2,
+          "gaugeCost": 100,
+          "target": "all_allies",
           "isHeal": true
         }
       ],
@@ -5492,7 +5831,7 @@
           "id": "basic",
           "name": "쇠갈퀴",
           "description": "쇠갈퀴로 공격",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -5502,6 +5841,18 @@
           "multiplier": 2.3,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "선계 용맹격",
+          "description": "용기를 모아 강력한 일격을 날리며 아군의 공격력을 높인다",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "buff": {
+            "atk": 0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -5563,16 +5914,28 @@
           "id": "basic",
           "name": "부적 던지기",
           "description": "부적을 날린다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
           "name": "태극 기공",
           "description": "태극의 힘",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "선계 비전 마법",
+          "description": "신비로운 마력으로 적을 공격하며 아군의 마력을 증폭시킨다",
+          "multiplier": 1.4,
+          "gaugeCost": 90,
+          "target": "all",
+          "buff": {
+            "magicPower": 0.25,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -5635,7 +5998,7 @@
           "id": "basic",
           "name": "권법 연타",
           "description": "빠른 연타",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -5645,6 +6008,18 @@
           "multiplier": 2.2,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "고결한 기공 일격",
+          "description": "품위 있는 검술로 적의 급소를 노린다",
+          "multiplier": 2,
+          "gaugeCost": 90,
+          "target": "single",
+          "buff": {
+            "critRate": 0.15,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -5717,6 +6092,19 @@
           "gaugeCost": 100,
           "target": "single",
           "isHeal": true
+        },
+        {
+          "id": "skill2",
+          "name": "고요한 천지 재생",
+          "description": "평온한 기운으로 아군에게 재생력을 부여한다",
+          "multiplier": 0.9,
+          "gaugeCost": 80,
+          "target": "all_allies",
+          "isHeal": true,
+          "buff": {
+            "regen": 0.1,
+            "duration": 3
+          }
         }
       ],
       "design": {
@@ -5778,16 +6166,28 @@
           "id": "basic",
           "name": "도끼 휘두르기",
           "description": "도끼를 휘두른다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
           "name": "바이킹 돌격",
           "description": "전력으로 돌격",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "전투 강타",
+          "description": "격렬한 기세로 적을 짓부수며 방어력을 떨어뜨린다",
+          "multiplier": 1.4,
+          "gaugeCost": 90,
+          "target": "all",
+          "debuff": {
+            "def": -0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -5849,7 +6249,7 @@
           "id": "basic",
           "name": "단검 찌르기",
           "description": "단검으로 찌른다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -5859,6 +6259,18 @@
           "multiplier": 1.6,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "전사의 용맹격",
+          "description": "용기를 모아 강력한 일격을 날리며 아군의 공격력을 높인다",
+          "multiplier": 1.6,
+          "gaugeCost": 80,
+          "target": "single",
+          "buff": {
+            "atk": 0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -5931,6 +6343,15 @@
           "gaugeCost": 100,
           "target": "single",
           "isHeal": true
+        },
+        {
+          "id": "skill2",
+          "name": "신성 대치유",
+          "description": "깊은 헌신으로 아군 전체를 크게 회복시킨다",
+          "multiplier": 1.8,
+          "gaugeCost": 90,
+          "target": "all_allies",
+          "isHeal": true
         }
       ],
       "design": {
@@ -5992,7 +6413,7 @@
           "id": "basic",
           "name": "점토 주먹",
           "description": "점토 주먹",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -6002,6 +6423,18 @@
           "multiplier": 1.5,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "벚꽃 억제격",
+          "description": "의연한 자세로 적을 제압하며 속도를 낮춘다",
+          "multiplier": 1.6,
+          "gaugeCost": 80,
+          "target": "single",
+          "debuff": {
+            "spd": -0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -6063,7 +6496,7 @@
           "id": "basic",
           "name": "신속의 화살",
           "description": "빠른 화살",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -6073,6 +6506,15 @@
           "multiplier": 2.3,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "광명 급소 사격",
+          "description": "냉철하게 적의 약점을 간파하여 관통하는 일격",
+          "multiplier": 3,
+          "gaugeCost": 100,
+          "target": "single",
+          "ignoreDefense": true
         }
       ],
       "design": {
@@ -6145,6 +6587,15 @@
           "gaugeCost": 100,
           "target": "single",
           "isHeal": true
+        },
+        {
+          "id": "skill2",
+          "name": "올림포스 대치유",
+          "description": "깊은 헌신으로 아군 전체를 크게 회복시킨다",
+          "multiplier": 1.8,
+          "gaugeCost": 90,
+          "target": "all_allies",
+          "isHeal": true
         }
       ],
       "design": {
@@ -6206,7 +6657,7 @@
           "id": "basic",
           "name": "창 찌르기",
           "description": "창으로 찌른다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -6216,6 +6667,18 @@
           "multiplier": 1.6,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "올림포스 용맹격",
+          "description": "용기를 모아 강력한 일격을 날리며 아군의 공격력을 높인다",
+          "multiplier": 1.6,
+          "gaugeCost": 80,
+          "target": "single",
+          "buff": {
+            "atk": 0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -6277,14 +6740,14 @@
           "id": "basic",
           "name": "정의의 검",
           "description": "정의의 일격",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
           "name": "티르의 심판",
           "description": "정의로 심판한다",
-          "multiplier": 3.0,
+          "multiplier": 3,
           "gaugeCost": 100,
           "target": "single"
         },
@@ -6372,7 +6835,7 @@
           "id": "skill2",
           "name": "불멸의 축복",
           "description": "불멸의 힘을 나눈다",
-          "multiplier": 3.0,
+          "multiplier": 3,
           "gaugeCost": 150,
           "target": "all",
           "isHeal": true
@@ -6437,7 +6900,7 @@
           "id": "basic",
           "name": "음파 공격",
           "description": "소리로 공격한다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -6447,6 +6910,18 @@
           "multiplier": 2.3,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "고결한 서리 마법",
+          "description": "품격 있는 마법으로 적 전체를 공격한다",
+          "multiplier": 2.1,
+          "gaugeCost": 120,
+          "target": "all",
+          "buff": {
+            "critRate": 0.15,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -6508,7 +6983,7 @@
           "id": "basic",
           "name": "망치 내려치기",
           "description": "대장장이의 망치",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -6518,6 +6993,18 @@
           "multiplier": 2.2,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "번개 억제격",
+          "description": "의연한 자세로 적을 제압하며 속도를 낮춘다",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "debuff": {
+            "spd": -0.2,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -6579,16 +7066,28 @@
           "id": "basic",
           "name": "룬 발사",
           "description": "룬을 날린다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
           "name": "룬 폭발",
           "description": "룬이 폭발한다",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "룬 비전 마법",
+          "description": "신비로운 마력으로 적을 공격하며 아군의 마력을 증폭시킨다",
+          "multiplier": 1.4,
+          "gaugeCost": 90,
+          "target": "all",
+          "buff": {
+            "magicPower": 0.25,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -6650,7 +7149,7 @@
           "id": "basic",
           "name": "낫 공격",
           "description": "낫으로 벤다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -6660,6 +7159,18 @@
           "multiplier": 1.5,
           "gaugeCost": 100,
           "target": "single"
+        },
+        {
+          "id": "skill2",
+          "name": "룬 방패술",
+          "description": "고요한 집중으로 방어적 공격을 가하며 자신의 방어력을 높인다",
+          "multiplier": 1.6,
+          "gaugeCost": 80,
+          "target": "single",
+          "buff": {
+            "def": 0.25,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -6721,7 +7232,7 @@
           "id": "basic",
           "name": "조개 던지기",
           "description": "조개를 던진다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -6731,6 +7242,18 @@
           "multiplier": 2.2,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "명계 방패술",
+          "description": "고요한 집중으로 방어적 공격을 가하며 자신의 방어력을 높인다",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "buff": {
+            "def": 0.25,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -6792,16 +7315,28 @@
           "id": "basic",
           "name": "혼불 발사",
           "description": "혼불을 날린다",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
           "id": "skill1",
           "name": "영혼 폭발",
           "description": "혼이 폭발한다",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "all"
+        },
+        {
+          "id": "skill2",
+          "name": "명계 비전 마법",
+          "description": "신비로운 마력으로 적을 공격하며 아군의 마력을 증폭시킨다",
+          "multiplier": 1.4,
+          "gaugeCost": 90,
+          "target": "all",
+          "buff": {
+            "magicPower": 0.25,
+            "duration": 2
+          }
         }
       ],
       "design": {
@@ -6873,6 +7408,15 @@
           "multiplier": 1.5,
           "gaugeCost": 100,
           "target": "single",
+          "isHeal": true
+        },
+        {
+          "id": "skill2",
+          "name": "명계 대치유",
+          "description": "깊은 헌신으로 아군 전체를 크게 회복시킨다",
+          "multiplier": 1.5,
+          "gaugeCost": 80,
+          "target": "all_allies",
           "isHeal": true
         }
       ],
