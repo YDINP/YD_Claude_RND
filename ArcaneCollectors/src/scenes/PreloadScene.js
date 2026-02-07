@@ -1,4 +1,6 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY } from '../config/gameConfig.js';
+import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
+import { getAllCharacters } from '../data/index.js';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -319,6 +321,15 @@ export class PreloadScene extends Phaser.Scene {
     }
 
     this.textures.addCanvas('battle_bg', bgCanvas);
+
+    // H-2: 91명 전체 캐릭터 향상된 플레이스홀더 생성
+    try {
+      const characters = getAllCharacters();
+      HeroAssetLoader.generatePlaceholders(this, characters);
+    } catch (e) {
+      // characters.json 로드 실패 시 무시 (기존 placeholder 사용)
+      console.warn('HeroAssetLoader: Failed to generate placeholders', e);
+    }
   }
 
   drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
@@ -373,58 +384,166 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   createLoadingBar() {
-    const width = 300;
-    const height = 30;
-    const x = (GAME_WIDTH - width) / 2;
-    const y = GAME_HEIGHT / 2 + 50;
+    // H-9.3: 마법진 회전 + 진행바 개선
+    this.cameras.main.fadeIn(400);
 
-    // Loading text
-    this.loadingText = this.add.text(GAME_WIDTH / 2, y - 40, '로딩 중...', {
-      fontSize: '20px',
-      fontFamily: 'Arial',
-      color: '#F8FAFC'
-    }).setOrigin(0.5);
+    // 배경
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0a0a1a);
 
-    // Progress bar background
-    this.add.rectangle(x + width/2, y + height/2, width, height, 0x1E293B);
+    // H-9.3: 마법진 회전 아이콘
+    const magicY = GAME_HEIGHT * 0.38;
 
-    // Progress bar fill
-    this.progressBar = this.add.rectangle(x + 5, y + 5, 0, height - 10, 0x6366F1);
-    this.progressBar.setOrigin(0, 0);
+    // 외곽 링 (회전)
+    this.outerRing = this.add.circle(GAME_WIDTH / 2, magicY, 60, 0x000000, 0);
+    this.outerRing.setStrokeStyle(2, 0x6366f1, 0.6);
 
-    // Percentage text
-    this.percentText = this.add.text(GAME_WIDTH / 2, y + height + 20, '0%', {
+    // 내부 링 (역회전)
+    this.innerRing = this.add.circle(GAME_WIDTH / 2, magicY, 40, 0x000000, 0);
+    this.innerRing.setStrokeStyle(1.5, 0xEC4899, 0.4);
+
+    // 장식 도트 (외곽 링 위)
+    this.magicDots = [];
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 * i) / 8;
+      const dotX = GAME_WIDTH / 2 + Math.cos(angle) * 60;
+      const dotY = magicY + Math.sin(angle) * 60;
+      const dot = this.add.circle(dotX, dotY, 3, 0x6366f1, 0.7);
+      this.magicDots.push({ dot, baseAngle: angle });
+    }
+
+    // 중앙 글로우
+    const glow = this.add.circle(GAME_WIDTH / 2, magicY, 15, 0x6366f1, 0.2);
+    this.tweens.add({
+      targets: glow,
+      scaleX: 1.5, scaleY: 1.5,
+      alpha: 0.1,
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    // 회전 트윈
+    this.tweens.add({
+      targets: this.outerRing,
+      angle: 360,
+      duration: 3000,
+      repeat: -1,
+      ease: 'Linear'
+    });
+
+    this.tweens.add({
+      targets: this.innerRing,
+      angle: -360,
+      duration: 2000,
+      repeat: -1,
+      ease: 'Linear'
+    });
+
+    // 도트 회전 (타이머)
+    this._dotAngleOffset = 0;
+    this.time.addEvent({
+      delay: 30,
+      callback: () => {
+        this._dotAngleOffset += 0.02;
+        this.magicDots.forEach(({ dot, baseAngle }) => {
+          const angle = baseAngle + this._dotAngleOffset;
+          dot.setPosition(
+            GAME_WIDTH / 2 + Math.cos(angle) * 60,
+            magicY + Math.sin(angle) * 60
+          );
+        });
+      },
+      loop: true
+    });
+
+    // 로딩 텍스트
+    const barY = GAME_HEIGHT * 0.58;
+    this.loadingText = this.add.text(GAME_WIDTH / 2, barY - 25, '에셋 준비 중...', {
       fontSize: '16px',
       fontFamily: 'Arial',
-      color: '#94A3B8'
+      color: '#a5b4fc'
+    }).setOrigin(0.5);
+
+    // 진행바 (둥근 모서리)
+    const barWidth = 320;
+    const barHeight = 12;
+    const barX = (GAME_WIDTH - barWidth) / 2;
+
+    // 배경
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0x1e293b, 1);
+    barBg.fillRoundedRect(barX, barY, barWidth, barHeight, barHeight / 2);
+
+    // 채움바 (마스크용)
+    this.progressBar = this.add.graphics();
+    this._barX = barX;
+    this._barY = barY;
+    this._barWidth = barWidth;
+    this._barHeight = barHeight;
+
+    // 퍼센트 텍스트
+    this.percentText = this.add.text(GAME_WIDTH / 2, barY + barHeight + 16, '0%', {
+      fontSize: '13px',
+      fontFamily: 'Roboto Mono, monospace',
+      color: '#64748b'
     }).setOrigin(0.5);
   }
 
   create() {
-    // Simulate loading progress
+    // 에셋 생성 시뮬레이션 + 프로그레스
     let progress = 0;
-    const maxWidth = 290;
+
+    const stages = [
+      { label: '에셋 준비 중...', target: 0.3 },
+      { label: '캐릭터 로드 중...', target: 0.6 },
+      { label: '전투 데이터 초기화...', target: 0.85 },
+      { label: '완료!', target: 1.0 }
+    ];
+    let stageIndex = 0;
 
     const timer = this.time.addEvent({
-      delay: 20,
+      delay: 25,
       callback: () => {
-        progress += 0.05;
+        progress += 0.03;
+
+        // 단계별 텍스트 변경
+        if (stageIndex < stages.length && progress >= stages[stageIndex].target) {
+          if (stageIndex + 1 < stages.length) {
+            this.loadingText.setText(stages[stageIndex + 1].label);
+          }
+          stageIndex++;
+        }
+
         if (progress >= 1) {
           progress = 1;
           timer.remove();
 
-          // Check for offline rewards
+          this.loadingText.setText('완료!');
+
           const pendingRewards = this.registry.get('pendingOfflineRewards');
 
-          this.time.delayedCall(300, () => {
+          this.cameras.main.fadeOut(400, 10, 10, 26);
+          this.cameras.main.once('camerafadeoutcomplete', () => {
             this.scene.start('MainMenuScene', { showOfflineRewards: pendingRewards });
           });
         }
 
-        this.progressBar.width = maxWidth * progress;
+        // 둥근 진행바 그리기
+        this.progressBar.clear();
+        const fillWidth = Math.max(0, this._barWidth * progress);
+        if (fillWidth > 0) {
+          this.progressBar.fillStyle(0x6366f1, 1);
+          this.progressBar.fillRoundedRect(
+            this._barX, this._barY,
+            fillWidth, this._barHeight,
+            this._barHeight / 2
+          );
+        }
+
         this.percentText.setText(Math.floor(progress * 100) + '%');
       },
-      repeat: 20
+      repeat: 40
     });
   }
 }

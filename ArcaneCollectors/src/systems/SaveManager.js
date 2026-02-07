@@ -1,10 +1,17 @@
 /**
- * SaveManager - 게임 저장/로드 및 리소스 관리 시스템
- * localStorage를 사용하여 게임 상태를 영구 저장
+ * SaveManager - 하이브리드 게임 저장/로드 시스템
+ * 온라인: Supabase 우선 + localStorage 백업
+ * 오프라인: localStorage 전용 모드
+ * 재접속: 타임스탬프 기반 자동 동기화
  */
+import { supabase, isSupabaseConfigured, isOnline } from '../api/supabaseClient.js';
+
 export class SaveManager {
   static SAVE_KEY = 'arcane_collectors_save';
   static VERSION = 1;
+  static _syncInProgress = false;
+  static _pendingSync = false;
+  static _userId = null;
 
   /**
    * 기본 저장 데이터 구조 반환
@@ -86,18 +93,40 @@ export class SaveManager {
   }
 
   /**
-   * 데이터 저장
+   * 데이터 저장 (하이브리드: localStorage + Supabase)
    * @param {Object} data 저장할 데이터
    */
   static save(data) {
     try {
       data.lastOnline = Date.now();
       localStorage.setItem(this.SAVE_KEY, JSON.stringify(data));
+
+      // 온라인이면 Supabase에도 비동기 저장 (UI 블로킹 방지)
+      if (isOnline() && this._userId) {
+        this._syncToCloudDebounced();
+      }
+
       return true;
     } catch (error) {
       console.error('SaveManager: 저장 실패', error);
       return false;
     }
+  }
+
+  /**
+   * Supabase 동기화 디바운스 (짧은 시간 내 여러 save 호출 시 마지막만 실행)
+   */
+  static _syncToCloudDebounced() {
+    this._pendingSync = true;
+    if (this._syncTimer) clearTimeout(this._syncTimer);
+    this._syncTimer = setTimeout(() => {
+      if (this._pendingSync) {
+        this._pendingSync = false;
+        this.syncToCloud().catch(err =>
+          console.warn('SaveManager: 클라우드 동기화 실패 (다음 기회에 재시도)', err)
+        );
+      }
+    }, 2000); // 2초 디바운스
   }
 
   /**
@@ -852,5 +881,194 @@ export class SaveManager {
   static getInventory() {
     const data = this.load();
     return data.inventory || [];
+  }
+
+  // ========== C-4: 하이브리드 저장 시스템 ==========
+
+  /**
+   * C-4.1: 온라인/오프라인 상태 확인
+   * @returns {boolean} Supabase 연결 가능 여부
+   */
+  static isCloudAvailable() {
+    return isOnline() && !!this._userId;
+  }
+
+  /**
+   * 현재 인증된 사용자 ID 설정 (AuthService에서 호출)
+   * @param {string} userId Supabase auth.uid()
+   */
+  static setUserId(userId) {
+    this._userId = userId;
+    if (userId) {
+      // 재접속 시 자동 동기화 시작
+      this._setupReconnectSync();
+    }
+  }
+
+  /**
+   * C-4.2: 로컬 → 클라우드 동기화
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  static async syncToCloud() {
+    if (!isOnline() || !this._userId || !supabase) {
+      return { success: false, error: 'offline' };
+    }
+    if (this._syncInProgress) {
+      return { success: false, error: 'sync_in_progress' };
+    }
+
+    this._syncInProgress = true;
+    try {
+      const localData = this.load();
+      const { data: cloudRow, error: fetchErr } = await supabase
+        .from('game_saves')
+        .select('updated_at')
+        .eq('user_id', this._userId)
+        .maybeSingle();
+
+      if (fetchErr) throw fetchErr;
+
+      // upsert: 신규면 insert, 기존이면 update
+      const { error: upsertErr } = await supabase
+        .from('game_saves')
+        .upsert({
+          user_id: this._userId,
+          save_data: localData,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+
+      if (upsertErr) throw upsertErr;
+
+      console.log('SaveManager: 클라우드 동기화 성공');
+      return { success: true };
+    } catch (error) {
+      console.warn('SaveManager: 클라우드 동기화 실패', error);
+      return { success: false, error: error.message };
+    } finally {
+      this._syncInProgress = false;
+    }
+  }
+
+  /**
+   * C-4.4: 클라우드 → 로컬 동기화 (재접속 시)
+   * @returns {Promise<{success: boolean, source?: string, conflict?: boolean}>}
+   */
+  static async loadFromCloud() {
+    if (!isOnline() || !this._userId || !supabase) {
+      return { success: false, source: 'local' };
+    }
+
+    try {
+      const { data: cloudRow, error } = await supabase
+        .from('game_saves')
+        .select('save_data, updated_at')
+        .eq('user_id', this._userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      // 클라우드에 데이터 없음 → 로컬 데이터를 클라우드에 업로드
+      if (!cloudRow) {
+        await this.syncToCloud();
+        return { success: true, source: 'local_uploaded' };
+      }
+
+      const localData = this.load();
+      const cloudData = cloudRow.save_data;
+      const cloudTime = new Date(cloudRow.updated_at).getTime();
+      const localTime = localData.lastOnline || 0;
+
+      // C-4.4: 타임스탬프 비교 → 최신 데이터 우선
+      if (cloudTime > localTime + 5000) {
+        // 클라우드가 5초 이상 더 최신 → 클라우드 데이터 적용
+        console.log('SaveManager: 클라우드 데이터가 더 최신 → 클라우드 데이터 적용');
+        this._applyCloudData(cloudData);
+        return { success: true, source: 'cloud', conflict: false };
+      } else if (localTime > cloudTime + 5000) {
+        // 로컬이 5초 이상 더 최신 → 로컬 데이터를 클라우드에 업로드
+        console.log('SaveManager: 로컬 데이터가 더 최신 → 클라우드 업데이트');
+        await this.syncToCloud();
+        return { success: true, source: 'local', conflict: false };
+      } else {
+        // C-4.5: 시간차가 5초 이내 → 충돌 가능
+        // 진행도가 더 높은 쪽 선택 (자동 해결)
+        const cloudProgress = this._calculateProgressScore(cloudData);
+        const localProgress = this._calculateProgressScore(localData);
+
+        if (cloudProgress > localProgress) {
+          this._applyCloudData(cloudData);
+          return { success: true, source: 'cloud', conflict: true };
+        } else {
+          await this.syncToCloud();
+          return { success: true, source: 'local', conflict: true };
+        }
+      }
+    } catch (error) {
+      console.warn('SaveManager: 클라우드 로드 실패, 로컬 사용', error);
+      return { success: false, source: 'local' };
+    }
+  }
+
+  /**
+   * 클라우드 데이터를 로컬에 적용
+   * @param {Object} cloudData 클라우드 세이브 데이터
+   */
+  static _applyCloudData(cloudData) {
+    // 버전 마이그레이션 필요 시 처리
+    if (cloudData.version !== this.VERSION) {
+      const migrated = this.migrate(cloudData);
+      localStorage.setItem(this.SAVE_KEY, JSON.stringify(migrated));
+    } else {
+      cloudData.lastOnline = Date.now();
+      localStorage.setItem(this.SAVE_KEY, JSON.stringify(cloudData));
+    }
+  }
+
+  /**
+   * 진행도 점수 계산 (충돌 해결용)
+   * @param {Object} data 세이브 데이터
+   * @returns {number} 진행도 점수
+   */
+  static _calculateProgressScore(data) {
+    if (!data) return 0;
+    let score = 0;
+    score += (data.player?.level || 1) * 100;
+    score += (data.characters?.length || 0) * 50;
+    score += Object.keys(data.progress?.clearedStages || {}).length * 30;
+    score += (data.resources?.gold || 0) * 0.01;
+    score += (data.resources?.gems || 0) * 0.1;
+    score += (data.statistics?.totalGoldEarned || 0) * 0.001;
+    return score;
+  }
+
+  /**
+   * C-4.4: 재접속 자동 동기화 설정
+   */
+  static _setupReconnectSync() {
+    // 이전 리스너 제거
+    if (this._onlineListener) {
+      window.removeEventListener('online', this._onlineListener);
+    }
+
+    this._onlineListener = async () => {
+      console.log('SaveManager: 네트워크 복구 감지 → 클라우드 동기화 시작');
+      const result = await this.loadFromCloud();
+      console.log('SaveManager: 재접속 동기화 결과:', result);
+    };
+
+    window.addEventListener('online', this._onlineListener);
+  }
+
+  /**
+   * 클라우드 연결 상태 정보
+   * @returns {Object} { isOnline, userId, lastSync }
+   */
+  static getCloudStatus() {
+    return {
+      isOnline: isOnline(),
+      isConfigured: isSupabaseConfigured,
+      userId: this._userId,
+      hasPendingSync: this._pendingSync
+    };
   }
 }

@@ -9,6 +9,7 @@ export class HeroListScene extends Phaser.Scene {
     this.filterCult = null;
     this.filterRarity = null;
     this.filterButtons = [];
+    this.transitioning = false;
   }
 
   create() {
@@ -43,6 +44,8 @@ export class HeroListScene extends Phaser.Scene {
     backBtn.add([backBg, backText]);
 
     backBg.on('pointerdown', () => {
+      if (this.transitioning) return;
+      this.transitioning = true;
       this.cameras.main.fadeOut(200);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('MainMenuScene');
@@ -371,6 +374,8 @@ export class HeroListScene extends Phaser.Scene {
     });
 
     cardBg.on('pointerdown', () => {
+      if (this.transitioning) return;
+      this.transitioning = true;
       this.cameras.main.fadeOut(200);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('HeroDetailScene', { heroId: hero.id });

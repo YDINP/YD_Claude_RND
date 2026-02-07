@@ -117,7 +117,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
   }
 
   navigateToScene(sceneName) {
-    const validScenes = ['MainMenuScene', 'StageSelectScene', 'GachaScene', 'HeroListScene'];
+    const validScenes = ['MainMenuScene', 'StageSelectScene', 'GachaScene', 'HeroListScene', 'InventoryScene', 'PartyEditScene', 'TowerScene', 'QuestScene', 'SettingsScene'];
 
     if (validScenes.includes(sceneName)) {
       this.scene.cameras.main.fadeOut(200, 0, 0, 0);

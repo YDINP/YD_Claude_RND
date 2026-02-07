@@ -2,6 +2,8 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { energySystem } from '../systems/EnergySystem.js';
 import { PartyManager } from '../systems/PartyManager.js';
 import { SynergySystem } from '../systems/SynergySystem.js';
+import { sweepSystem } from '../systems/SweepSystem.js';
+import { SaveManager } from '../systems/SaveManager.js';
 import { getAllCharacters, getChapterStages } from '../data/index.js';
 
 export class StageSelectScene extends Phaser.Scene {
@@ -278,6 +280,24 @@ export class StageSelectScene extends Phaser.Scene {
         color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
       }).setOrigin(1, 0.5);
       card.add(lockText);
+    }
+
+    // 소탕 버튼 (3성 클리어 시)
+    if (stars >= 3) {
+      const sweepBtn = this.add.rectangle(140, 12, 60, 22, COLORS.success, 0.8)
+        .setStrokeStyle(1, 0xFFFFFF, 0.2)
+        .setInteractive({ useHandCursor: true });
+      const sweepLabel = this.add.text(140, 12, '⚡소탕', {
+        fontSize: '11px', fontFamily: 'Arial',
+        color: '#FFFFFF', fontStyle: 'bold'
+      }).setOrigin(0.5);
+
+      sweepBtn.on('pointerdown', (pointer, localX, localY, event) => {
+        event.stopPropagation();
+        this.executeSweep(stage);
+      });
+
+      card.add([sweepBtn, sweepLabel]);
     }
 
     card.add([cardBg, numberBg, numberText, nameText, powerText, starsText]);
@@ -633,6 +653,40 @@ export class StageSelectScene extends Phaser.Scene {
       this.refreshEnergyDisplay();
       this.updateEnergyTimer();
     });
+  }
+
+  executeSweep(stage) {
+    const canSweep = sweepSystem.canSweep(stage.id, 1);
+    if (canSweep.canSweep === false) {
+      this.showMessage(canSweep.reason || '소탕 불가!', COLORS.danger);
+      return;
+    }
+
+    // 에너지 확인
+    const cost = stage.energyCost || 6;
+    const status = energySystem.getStatus();
+    if (status.current < cost) {
+      this.showMessage('에너지가 부족합니다!', COLORS.danger);
+      return;
+    }
+
+    // 소탕 실행
+    const result = sweepSystem.executeSweep(stage.id, 1);
+    if (result && result.success) {
+      // 에너지 차감
+      energySystem.consumeEnergy(cost);
+
+      // 보상 지급
+      if (result.rewards?.gold) {
+        const newGold = SaveManager.addGold(result.rewards.gold);
+        this.registry.set('gold', newGold);
+      }
+
+      this.refreshEnergyDisplay();
+      this.showMessage(`⚡ 소탕 완료! 🪙+${result.rewards?.gold || 0}`, COLORS.success);
+    } else {
+      this.showMessage(result?.error || '소탕 실패!', COLORS.danger);
+    }
   }
 
   showMessage(text, color = COLORS.text) {

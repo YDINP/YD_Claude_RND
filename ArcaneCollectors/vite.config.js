@@ -5,7 +5,25 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: true
+    sourcemap: true,
+    // D-4.6: 청크 사이즈 경고 기준 (Phaser가 크므로 1MB로 상향)
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        // D-4.2: 코드 스플리팅 - Phaser를 별도 vendor 청크로 분리
+        manualChunks: {
+          phaser: ['phaser'],
+          data: [
+            './src/data/characters.json',
+            './src/data/enemies.json',
+            './src/data/items.json',
+            './src/data/stages.json',
+            './src/data/synergies.json',
+            './src/data/banners.json'
+          ]
+        }
+      }
+    }
   },
   server: {
     port: 3000,

@@ -8,12 +8,12 @@ import { EventBus, GameEvents } from './EventBus.js';
 import bannersData from '../data/banners.json';
 
 export class GachaSystem {
-  // 등급별 기본 확률
+  // 등급별 기본 확률 (PRD v5.2 명세)
   static RATES = {
-    SSR: 0.03, // 3%
-    SR: 0.15, // 15%
-    R: 0.50, // 50%
-    N: 0.32 // 32%
+    SSR: 0.015, // 1.5%
+    SR: 0.085, // 8.5%
+    R: 0.30, // 30%
+    N: 0.60 // 60%
   };
 
   // 천장 시스템 설정 (v5)
@@ -34,12 +34,12 @@ export class GachaSystem {
   static TICKET_SINGLE = 1; // 티켓 1장
   static TICKET_MULTI = 10; // 티켓 10장
 
-  // 등급별 캐릭터 풀
+  // 등급별 캐릭터 풀 (characters.json 기반 91명)
   static CHARACTER_POOL = {
-    SSR: ['hero_001', 'hero_002', 'hero_003'],
-    SR: ['hero_004', 'hero_005', 'hero_006', 'hero_007', 'hero_008'],
-    R: ['hero_009', 'hero_010', 'hero_011', 'hero_012', 'hero_013', 'hero_014', 'hero_015'],
-    N: ['n_soldier', 'n_peasant', 'n_apprentice', 'n_acolyte', 'n_hunter', 'n_villager']
+    SSR: ['hero_001', 'hero_002', 'hero_003', 'hero_016', 'hero_017', 'hero_018', 'hero_019', 'hero_022', 'hero_023', 'hero_024', 'hero_028', 'hero_029', 'hero_030', 'hero_031', 'hero_034', 'hero_035', 'hero_040', 'hero_041', 'hero_049', 'hero_050', 'hero_058', 'hero_059', 'hero_067', 'hero_068', 'hero_083', 'hero_084'],
+    SR: ['hero_004', 'hero_005', 'hero_006', 'hero_007', 'hero_008', 'hero_020', 'hero_021', 'hero_025', 'hero_026', 'hero_027', 'hero_032', 'hero_033', 'hero_036', 'hero_037', 'hero_038', 'hero_039', 'hero_042', 'hero_043', 'hero_051', 'hero_052', 'hero_060', 'hero_061', 'hero_069', 'hero_070', 'hero_085'],
+    R: ['hero_009', 'hero_010', 'hero_011', 'hero_012', 'hero_013', 'hero_014', 'hero_015', 'hero_044', 'hero_045', 'hero_053', 'hero_054', 'hero_062', 'hero_063', 'hero_071', 'hero_072', 'hero_080', 'hero_086', 'hero_089'],
+    N: ['hero_046', 'hero_047', 'hero_048', 'hero_055', 'hero_056', 'hero_057', 'hero_064', 'hero_065', 'hero_066', 'hero_073', 'hero_074', 'hero_075', 'hero_076', 'hero_077', 'hero_078', 'hero_079', 'hero_081', 'hero_082', 'hero_087', 'hero_088', 'hero_090', 'hero_091']
   };
 
   // 배너 데이터
@@ -292,10 +292,10 @@ export class GachaSystem {
       return 'SSR';
     }
 
-    // 소프트 천장 (75연차 이후 SSR 확률 증가)
+    // 소프트 천장 (75연차 이후 SSR 확률 증가: 매 회 +6%)
     let ssrRate = this.RATES.SSR;
     if (currentPity >= this.SOFT_PITY_START) {
-      const extraRate = (currentPity - this.SOFT_PITY_START) * 0.05;
+      const extraRate = (currentPity - this.SOFT_PITY_START) * this.PITY_CONFIG.softPityBonus;
       ssrRate = Math.min(ssrRate + extraRate, 1);
     }
 

@@ -23,7 +23,7 @@
 
 ### TEAM A TASK (전투 통합) - 상세
 
-#### A-1: systems/index.js 완전 barrel export
+#### A-1: systems/index.js 완전 barrel export `[DONE]`
 **유저 상호작용**: 없음 (인프라)
 **서브 태스크**:
 - A-1.1: 17개 시스템 파일 모두 import 문 추가
@@ -36,7 +36,7 @@
 - [ ] 지연 로딩(lazy import) vs 즉시 로딩(eager import) 전략 결정
 **확장 아이디어**: 시스템 초기화 순서 매니저 구현 (SystemBootstrap)
 
-#### A-2: MoodSystem → BattleScene 완전 연결
+#### A-2: MoodSystem → BattleScene 완전 연결 `[DONE]`
 **유저 상호작용 체인**:
 ```
 유저가 전투 시작 → 적 공격 시 분위기 상성 계산 →
@@ -61,7 +61,7 @@
 - [ ] 상성 보너스가 시너지 보너스와 중첩될 때 밸런스 문제?
 - [x] 기존 세이브 데이터의 element→mood 마이그레이션: SaveManager.load() 시 자동 변환 (v5.2 결정)
 
-#### A-3: SynergySystem 실시간 전투 반영
+#### A-3: SynergySystem 실시간 전투 반영 `[DONE]`
 **유저 상호작용 체인**:
 ```
 파티 편성 시 시너지 미리보기 → 전투 시작 시 시너지 버프 적용 →
@@ -75,7 +75,7 @@ SynergyDisplay에 활성 시너지 표시 → 스탯 패널에 버프 수치 반
 - A-3.5: 시너지 변경 시 (캐릭터 사망) 실시간 재계산
 **확장 아이디어**: 시너지 조합 도감 (어떤 캐릭터 조합이 어떤 시너지 발동하는지)
 
-#### A-4: 별점(Star Rating) 성과 기반 계산
+#### A-4: 별점(Star Rating) 성과 기반 계산 `[DONE]`
 **유저 상호작용 체인**:
 ```
 전투 클리어 → 성과 분석 (턴수, 생존자, HP잔량) →
@@ -98,7 +98,7 @@ SynergyDisplay에 활성 시너지 표시 → 스탯 패널에 버프 수치 반
 - [ ] 기존 clearedStages 데이터와 호환성 (기존 3 하드코딩 데이터)
 - [ ] 별점이 기존보다 낮아질 때 갱신 여부 (최고 기록만 유지)
 
-#### A-5: 카드 덱 스킬 시스템 완전 검증
+#### A-5: 카드 덱 스킬 시스템 완전 검증 `[DONE]`
 **유저 상호작용 체인**:
 ```
 매 턴 스킬 카드 3장 표시 → 유저가 카드 터치 →
@@ -112,7 +112,7 @@ SynergyDisplay에 활성 시너지 표시 → 스탯 패널에 버프 수치 반
 - A-5.4: 궁극기 게이지: 충전 조건, 충전 속도, 발동 조건
 - A-5.5: 스킬 카드 비활성 조건 (MP 부족, 쿨다운)
 
-#### A-6: 자동전투 AI 스마트 로직
+#### A-6: 자동전투 AI 스마트 로직 `[DONE]`
 **서브 태스크**:
 - A-6.1: 적 HP 기반 스킬 선택 (광역 vs 단일 판단)
 - A-6.2: 아군 HP 기반 힐 우선순위 (HP<30% 시 힐러 우선 행동)
@@ -121,7 +121,7 @@ SynergyDisplay에 활성 시너지 표시 → 스탯 패널에 버프 수치 반
 - A-6.5: 배속 1x/2x/3x 실제 애니메이션 속도 조절
 **확장 아이디어**: AI 전략 프리셋 (공격적/수비적/밸런스)
 
-#### A-7: 전투 결과 → 보상 → 저장 완전 체인
+#### A-7: 전투 결과 → 보상 → 저장 완전 체인 `[DONE]`
 **유저 상호작용 체인**:
 ```
 전투 승리 → 골드 획득 + 캐릭터 EXP 획득 + 아이템 드롭 →
@@ -137,7 +137,7 @@ registry 갱신 → StageSelectScene 복귀 시 UI 반영
 - A-7.6: 첫 클리어 보너스 (보석 추가 지급)
 **확장 아이디어**: MVP(Most Valuable Player) 선정 및 보너스 EXP
 
-#### A-8: 전투 이펙트 & 연출 고도화
+#### A-8: 전투 이펙트 & 연출 고도화 `[DONE]`
 **서브 태스크**:
 - A-8.1: 스킬별 파티클 이펙트 (Phaser.GameObjects.Particles)
 - A-8.2: 데미지 숫자 폰트/크기/색상 세분화
@@ -149,7 +149,7 @@ registry 갱신 → StageSelectScene 복귀 시 UI 반영
 
 ### TEAM B TASK (신규 씬 & UI) - 상세
 
-#### B-1: TowerScene 신규 생성
+#### B-1: TowerScene 신규 생성 `[DONE]`
 **유저 상호작용 체인**:
 ```
 메인 메뉴 "탑" 탭 터치 → TowerScene 전환 →
@@ -171,7 +171,7 @@ registry 갱신 → StageSelectScene 복귀 시 UI 반영
 - [ ] 에너지 소모 여부? (탑은 무료? 또는 별도 입장권?)
 - [ ] 시즌 리셋 시 UI 처리
 
-#### B-2: StageSelectScene → stages.json 동적 로드
+#### B-2: StageSelectScene → stages.json 동적 로드 `[DONE]`
 **유저 상호작용 체인**:
 ```
 "모험" 탭 터치 → 5개 챕터 탭 표시 →
@@ -191,7 +191,7 @@ registry 갱신 → StageSelectScene 복귀 시 UI 반영
 - B-2.9: PartyManager 연동 (현재 완전 미사용 → 파티 저장/로드 기능 활성화)
 **확장 아이디어**: 챕터 진행도 % 표시, 올 3성 클리어 보너스 보상
 
-#### B-3: EnergySystem ↔ StageSelectScene 실시간 연결
+#### B-3: EnergySystem ↔ StageSelectScene 실시간 연결 `[DONE]`
 **유저 상호작용 체인**:
 ```
 StageSelectScene 진입 → 에너지 바 실시간 표시 (45/50) →
@@ -210,7 +210,7 @@ StageSelectScene 진입 → 에너지 바 실시간 표시 (45/50) →
 - B-3.8: 회복 타이머 카운트다운 표시
 - B-3.9: update() 메서드에서 매 프레임 에너지/타이머 갱신
 
-#### B-4: SweepSystem UI 완전 구현
+#### B-4: SweepSystem UI 완전 구현 `[DONE]`
 **유저 상호작용 체인**:
 ```
 3성 클리어 스테이지에 "소탕" 버튼 표시 →
@@ -226,7 +226,7 @@ StageSelectScene 진입 → 에너지 바 실시간 표시 (45/50) →
 - B-4.5: 보상 요약 팝업 (아이템별 아이콘 + 수량)
 - B-4.6: 남은 일일 소탕 횟수 표시
 
-#### B-5: LoginScene 인증 UI
+#### B-5: LoginScene 인증 UI `[DONE]`
 **서브 태스크**:
 - B-5.1: 타이틀 화면 (게임 로고 + 배경 애니메이션)
 - B-5.2: "게스트로 시작" 버튼 (즉시 게임 진입)
@@ -234,7 +234,7 @@ StageSelectScene 진입 → 에너지 바 실시간 표시 (45/50) →
 - B-5.4: AuthService 연결
 - B-5.5: Scene 흐름: Boot → Login → Preload → MainMenu
 
-#### B-6: QuestScene 퀘스트 UI
+#### B-6: QuestScene 퀘스트 UI `[DONE]`
 **서브 태스크**:
 - B-6.1: 일일/주간/업적 3탭 UI
 - B-6.2: 퀘스트 카드 (이름, 진행도 바, 보상 미리보기)
@@ -242,7 +242,7 @@ StageSelectScene 진입 → 에너지 바 실시간 표시 (45/50) →
 - B-6.4: 전체 수령 버튼 → claimAllRewards()
 - B-6.5: 리셋 타이머 표시
 
-#### B-7: 장비 가챠 활성화
+#### B-7: 장비 가챠 활성화 `[DONE]`
 **서브 태스크**:
 - B-7.1: GachaScene 장비 탭 "준비 중" 제거
 - B-7.2: EquipmentSystem.createEquipment() 연결

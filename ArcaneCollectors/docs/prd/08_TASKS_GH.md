@@ -3,7 +3,7 @@
 
 ### TEAM G TASK (치트 API) - 상세
 
-#### G-1: DebugManager require() → import() 마이그레이션
+#### G-1: DebugManager require() → import() 마이그레이션 `[DONE]`
 **우선순위**: P0
 **문제**: 모든 내부 호출이 `require()` (CJS) → ES Modules 프로젝트에서 런타임 에러
 **서브 태스크**:
@@ -12,7 +12,7 @@
 - G-1.3: 모든 치트 메서드 정상 동작 확인
 - G-1.4: `import.meta.env.DEV` 조건부 활성화 래핑
 
-#### G-2: clearAllStages/skipToChapter stages.json 연동
+#### G-2: clearAllStages/skipToChapter stages.json 연동 `[DONE]`
 **우선순위**: P0
 **문제**: 10챕터×10스테이지 하드코딩 → stages.json은 5챕터×5스테이지
 **서브 태스크**:
@@ -20,7 +20,7 @@
 - G-2.2: clearAllStages() → stages.json 전체 순회 클리어
 - G-2.3: skipToChapter(n) → 해당 챕터까지만 클리어
 
-#### G-3: 에너지 시스템 치트 API
+#### G-3: 에너지 시스템 치트 API `[DONE]`
 **우선순위**: P1
 **목표 API**:
 ```javascript
@@ -30,7 +30,7 @@ static setInfiniteEnergy(enabled)         // 무한 에너지 모드
 static setEnergyRecoverySpeed(multiplier) // 회복 속도 배율 (1x~100x)
 ```
 
-#### G-4: 가챠 시스템 치트 API
+#### G-4: 가챠 시스템 치트 API `[DONE]`
 **우선순위**: P1
 **목표 API**:
 ```javascript
@@ -43,7 +43,7 @@ static resetPity()                        // 천장 카운터 리셋
 static forcePickup(enabled)              // 픽업 확정 모드
 ```
 
-#### G-5: 장비 시스템 치트 API
+#### G-5: 장비 시스템 치트 API `[DONE]`
 **우선순위**: P1
 **목표 API**:
 ```javascript
@@ -54,7 +54,7 @@ static maxEnhanceEquipment(equipId)       // 장비 강화 MAX (+15)
 static setEnhanceAlwaysSuccess(enabled)   // 강화 100% 성공
 ```
 
-#### G-6: 무한의 탑 치트 API
+#### G-6: 무한의 탑 치트 API `[DONE]`
 **우선순위**: P1
 **목표 API**:
 ```javascript
@@ -65,7 +65,7 @@ static resetTower()                       // 탑 진행도 리셋
 static setTowerDifficulty(multiplier)     // 난이도 배율 설정
 ```
 
-#### G-7: 소탕 & 퀘스트 치트 API
+#### G-7: 소탕 & 퀘스트 치트 API `[DONE]`
 **우선순위**: P1
 **목표 API**:
 ```javascript
@@ -80,7 +80,7 @@ static claimAllQuestRewards()             // 미수령 보상 전체 수령
 static resetDailyQuests()                 // 일일 퀘스트 리셋
 ```
 
-#### G-8: 세이브 & 시간 치트 API
+#### G-8: 세이브 & 시간 치트 API `[DONE]`
 **우선순위**: P2
 **목표 API**:
 ```javascript
@@ -95,7 +95,7 @@ static setLastOnlineTime(hoursAgo)        // 마지막 접속 시간 변경
 static resetDailyTimers()                 // 일일 리셋 타이머 초기화
 ```
 
-#### G-9: 분위기 & 시너지 & 파티 치트 API
+#### G-9: 분위기 & 시너지 & 파티 치트 API `[DONE]`
 **우선순위**: P2
 **목표 API**:
 ```javascript
@@ -110,7 +110,7 @@ static autoOptimalParty()                 // 최적 파티 자동 편성
 static clearParty()                       // 파티 초기화
 ```
 
-#### G-10: 디버그 콘솔 UI & 치트코드 확장
+#### G-10: 디버그 콘솔 UI & 치트코드 확장 `[DONE]`
 **우선순위**: P2
 **서브 태스크**:
 - G-10.1: 카테고리별 탭 UI (리소스/캐릭터/전투/에너지/가챠/장비/탑/시간)
@@ -129,7 +129,7 @@ static clearParty()                       // 파티 초기화
 
 ### TEAM H TASK (디자인 & 에셋) - 상세
 
-#### H-1: UI 디자인 시스템 정립
+#### H-1: UI 디자인 시스템 정립 `[TODO]`
 **우선순위**: P1
 **서브 태스크**:
 - H-1.1: 컬러 팔레트 통합: Primary(#6366F1), Secondary(#EC4899), BG(#0F172A~#1E293B), Accent(#F59E0B)
@@ -138,7 +138,7 @@ static clearParty()                       // 파티 초기화
 - H-1.4: 컴포넌트 가이드: 둥근 모서리(12px), 그라데이션 버튼, 글로우 이펙트
 - H-1.5: textStyles.js, drawUtils.js 확장
 
-#### H-2: 영웅 이미지 에셋 시스템
+#### H-2: 영웅 이미지 에셋 시스템 `[TODO]`
 **우선순위**: P1
 **서브 태스크**:
 - H-2.1: AI 생성 파이프라인 (Stable Diffusion/Midjourney/DALL-E) 프롬프트 템플릿
@@ -148,7 +148,7 @@ static clearParty()                       // 파티 초기화
 - H-2.5: fallback: 컬러 실루엣 + 이름 텍스트 (이미지 미완시)
 - H-2.6: 최소 10장 테스트 이미지 생성
 
-#### H-3: 가챠 소환 연출 디자인
+#### H-3: 가챠 소환 연출 디자인 `[TODO]`
 **우선순위**: P1
 **서브 태스크**:
 - H-3.1: 등급별 연출: N(0.5초 간단), R(1초 파란 마법진), SR(1.5초 보라+파티클), SSR(3초 금빛+컷인)
@@ -157,7 +157,7 @@ static clearParty()                       // 파티 초기화
 - H-3.4: 10연차 카드 뒤집기 연출
 - H-3.5: 스킵 기능 (터치로 연출 스킵)
 
-#### H-4: 전투 이펙트 & 애니메이션
+#### H-4: 전투 이펙트 & 애니메이션 `[TODO]`
 **우선순위**: P1
 **서브 태스크**:
 - H-4.1: 스킬 이펙트: 기본(슬래시), 마법(파티클), 힐(초록 빛기둥), 궁극기(풀스크린)
@@ -165,7 +165,7 @@ static clearParty()                       // 파티 초기화
 - H-4.3: 전투 전환 연출 (페이드, 파티 등장)
 - H-4.4: 승리/패배 화면 연출
 
-#### H-5: 메인 로비 & Scene 전환 연출
+#### H-5: 메인 로비 & Scene 전환 연출 `[TODO]`
 **우선순위**: P2
 **서브 태스크**:
 - H-5.1: 배경 일러스트 (AI 생성 판타지 길드 홀)
@@ -174,14 +174,14 @@ static clearParty()                       // 파티 초기화
 - H-5.4: 공통 페이드 트랜지션 (0.3초)
 - H-5.5: 배경 파티클 (별/꽃잎/마법진)
 
-#### H-6: HeroCard & 등급 프레임 디자인
+#### H-6: HeroCard & 등급 프레임 디자인 `[TODO]`
 **우선순위**: P2
 **서브 태스크**:
 - H-6.1: 등급별 프레임: N(회색), R(파랑+은), SR(보라 그라데이션+빛남), SSR(금색+홀로그램+파티클)
 - H-6.2: 카드 획득 애니메이션 (뒤집기 + 등급 이펙트)
 - H-6.3: 교단별 배경 색상 반영
 
-#### H-7: 사운드 & BGM 에셋 계획
+#### H-7: 사운드 & BGM 에셋 계획 `[TODO]`
 **우선순위**: P3
 **서브 태스크**:
 - H-7.1: BGM: 로비/전투/보스전/가챠 (무료 에셋 또는 AI 생성 Suno/Udio)
@@ -189,7 +189,7 @@ static clearParty()                       // 파티 초기화
 - H-7.3: Phaser 내장 사운드 시스템 또는 Howler.js 통합
 - H-7.4: 음량 조절 SaveManager 연동
 
-#### H-8: 반응형 & 모바일 터치 UX
+#### H-8: 반응형 & 모바일 터치 UX `[TODO]`
 **우선순위**: P2
 **서브 태스크**:
 - H-8.1: 다양한 비율(16:9, 18:9, 20:9) 대응
@@ -198,14 +198,14 @@ static clearParty()                       // 파티 초기화
 - H-8.4: 롱프레스 (아이템/스킬 상세 팝업)
 - H-8.5: 햅틱 피드백 (지원 기기)
 
-#### H-9: 로딩 & 스플래시 스크린
+#### H-9: 로딩 & 스플래시 스크린 `[TODO]`
 **서브 태스크**:
 - H-9.1: 게임 로고 디자인 (AI 생성 또는 텍스트 기반)
 - H-9.2: 스플래시 화면 (3초, 로고 + 페이드)
 - H-9.3: 프리로드 진행바 디자인 (마법진 회전 + 퍼센트)
 - H-9.4: Scene 전환 로딩 스피너
 
-#### H-10: 이펙트 파티클 라이브러리
+#### H-10: 이펙트 파티클 라이브러리 `[TODO]`
 **서브 태스크**:
 - H-10.1: 공통 파티클 프리셋: 별 반짝임, 연기, 불꽃, 빛기둥
 - H-10.2: 등급별 파티클: N(없음), R(파랑), SR(보라), SSR(금색)

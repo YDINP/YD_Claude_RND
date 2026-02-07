@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, RARITY, MOODS } from '../config/gameConfig.js';
+import { COLORS, RARITY, MOODS, CULT_COLORS } from '../config/gameConfig.js';
 import { StarRating } from './StarRating.js';
 
 export class HeroCard extends Phaser.GameObjects.Container {
@@ -22,6 +22,7 @@ export class HeroCard extends Phaser.GameObjects.Container {
     this.createPortrait();
     this.createMoodIcon();
     this.createStarRating();
+    this.createNameLabel();
     this.createLevelBadge();
     this.setupInteraction();
 
@@ -34,8 +35,19 @@ export class HeroCard extends Phaser.GameObjects.Container {
 
     this.frame = this.scene.add.graphics();
 
-    // Background with gradient effect
-    this.frame.fillStyle(COLORS.backgroundLight, 1);
+    // H-6.3: 교단(Cult) 기반 배경색 반영
+    const cultColor = CULT_COLORS[this.heroData.cult] || COLORS.backgroundLight;
+    this.frame.fillStyle(cultColor, 0.15);
+    this.frame.fillRoundedRect(
+      -this.cardWidth / 2,
+      -this.cardHeight / 2,
+      this.cardWidth,
+      this.cardHeight,
+      8
+    );
+
+    // 기본 배경 오버레이
+    this.frame.fillStyle(COLORS.backgroundLight, 0.85);
     this.frame.fillRoundedRect(
       -this.cardWidth / 2,
       -this.cardHeight / 2,
@@ -52,6 +64,16 @@ export class HeroCard extends Phaser.GameObjects.Container {
       this.cardWidth,
       this.cardHeight * 0.3,
       { tl: 8, tr: 8, bl: 0, br: 0 }
+    );
+
+    // H-6.1: 하단 교단색 그라데이션 힌트
+    this.frame.fillStyle(cultColor, 0.2);
+    this.frame.fillRoundedRect(
+      -this.cardWidth / 2,
+      this.cardHeight / 2 - this.cardHeight * 0.25,
+      this.cardWidth,
+      this.cardHeight * 0.25,
+      { tl: 0, tr: 0, bl: 8, br: 8 }
     );
 
     // Rarity border with enhanced thickness
@@ -153,6 +175,17 @@ export class HeroCard extends Phaser.GameObjects.Container {
     this.moodIcon.fillCircle(iconX, iconY, iconSize / 2);
 
     this.add(this.moodIcon);
+  }
+
+  createNameLabel() {
+    if (!this.heroData.name) return;
+    const nameY = this.cardHeight / 2 - 14;
+    this.nameLabel = this.scene.add.text(0, nameY, this.heroData.name, {
+      fontFamily: '"Noto Sans KR", sans-serif',
+      fontSize: '9px',
+      color: '#E2E8F0'
+    }).setOrigin(0.5);
+    this.add(this.nameLabel);
   }
 
   createStarRating() {

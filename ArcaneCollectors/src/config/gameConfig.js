@@ -7,6 +7,13 @@ import { HeroListScene } from '../scenes/HeroListScene.js';
 import { HeroDetailScene } from '../scenes/HeroDetailScene.js';
 import { StageSelectScene } from '../scenes/StageSelectScene.js';
 import { BattleScene } from '../scenes/BattleScene.js';
+import { BattleResultScene } from '../scenes/BattleResultScene.js';
+import { PartyEditScene } from '../scenes/PartyEditScene.js';
+import { InventoryScene } from '../scenes/InventoryScene.js';
+import { TowerScene } from '../scenes/TowerScene.js';
+import { QuestScene } from '../scenes/QuestScene.js';
+import { SettingsScene } from '../scenes/SettingsScene.js';
+import { LoginScene } from '../scenes/LoginScene.js';
 
 // ============================================
 // Game Dimensions
@@ -20,21 +27,35 @@ export const gameConfig = {
   type: Phaser.AUTO,
   parent: 'game-container',
   backgroundColor: '#0F172A',
+  dom: {
+    createContainer: true // LoginScene의 HTML input 요소를 위해 필요
+  },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: GAME_WIDTH,
     height: GAME_HEIGHT
   },
+  input: {
+    activePointers: 3,
+    touch: { capture: true }
+  },
   scene: [
     BootScene,
+    LoginScene,
     PreloadScene,
     MainMenuScene,
     GachaScene,
     HeroListScene,
     HeroDetailScene,
     StageSelectScene,
-    BattleScene
+    BattleScene,
+    BattleResultScene,
+    PartyEditScene,
+    InventoryScene,
+    TowerScene,
+    QuestScene,
+    SettingsScene
   ]
 };
 
@@ -67,10 +88,17 @@ export const COLORS = {
   raritySR: 0xA855F7,
   raritySSR: 0xF97316,
   mood: {
+    // 공격형
     brave: 0xE74C3C,
-    cunning: 0x9B59B6,
-    calm: 0x3498DB,
+    fierce: 0xFF5722,
     wild: 0x27AE60,
+    // 방어형
+    calm: 0x3498DB,
+    stoic: 0x607D8B,
+    devoted: 0xE91E63,
+    // 전략형
+    cunning: 0x9B59B6,
+    noble: 0xFFD700,
     mystic: 0xF39C12
   },
   cult: {
@@ -78,7 +106,11 @@ export const COLORS = {
     takamagahara: 0xFFD700,
     olympus: 0xFF6B35,
     asgard: 0x5DADE2,
-    yomi: 0x8E44AD
+    yomi: 0x8E44AD,
+    tartarus: 0xB71C1C,
+    avalon: 0x4CAF50,
+    helheim: 0x37474F,
+    kunlun: 0x00BCD4
   }
 };
 
@@ -86,11 +118,18 @@ export const COLORS = {
 // Mood Colors (CSS 형식)
 // ============================================
 export const MOOD_COLORS = {
+  // 공격형
   BRAVE: '#E74C3C',     // 열혈 - 빨강
-  CUNNING: '#9B59B6',   // 냉철 - 보라
-  CALM: '#3498DB',      // 고요 - 파랑
+  FIERCE: '#FF5722',    // 격렬 - 주홍
   WILD: '#27AE60',      // 광폭 - 초록
-  MYSTIC: '#F39C12'     // 신비 - 황금
+  // 방어형
+  CALM: '#3498DB',      // 고요 - 파랑
+  STOIC: '#607D8B',     // 의연 - 청회색
+  DEVOTED: '#E91E63',   // 헌신 - 핑크
+  // 전략형
+  CUNNING: '#9B59B6',   // 냉철 - 보라
+  NOBLE: '#FFD700',     // 고결 - 금색
+  MYSTIC: '#F39C12'     // 신비 - 주황금
 };
 
 // ============================================
@@ -204,7 +243,11 @@ export const CULTS = {
   TAKAMAGAHARA: 'takamagahara',
   OLYMPUS: 'olympus',
   ASGARD: 'asgard',
-  YOMI: 'yomi'
+  YOMI: 'yomi',
+  TARTARUS: 'tartarus',
+  AVALON: 'avalon',
+  HELHEIM: 'helheim',
+  KUNLUN: 'kunlun'
 };
 
 // ============================================
@@ -215,7 +258,11 @@ export const CULT_COLORS = {
   takamagahara: 0xFFD700,  // 타카마가하라 - 빛의 황금
   olympus: 0xFF6B35,       // 올림푸스 - 불의 주황
   asgard: 0x5DADE2,        // 아스가르드 - 물의 청록
-  yomi: 0x8E44AD          // 요미 - 어둠의 보라
+  yomi: 0x8E44AD,          // 요미 - 어둠의 보라
+  tartarus: 0xB71C1C,      // 타르타로스 - 심연의 진홍
+  avalon: 0x4CAF50,        // 아발론 - 요정의 초록
+  helheim: 0x37474F,       // 헬하임 - 죽음의 청흑
+  kunlun: 0x00BCD4         // 곤륜 - 선계의 청옥
 };
 
 export const CULT_INFO = {
@@ -223,7 +270,11 @@ export const CULT_INFO = {
   takamagahara: { name: '타카마가하라', origin: '일본 신화', description: '아마테라스의 천상계' },
   olympus: { name: '올림푸스', origin: '그리스 신화', description: '제우스와 12신의 성지' },
   asgard: { name: '아스가르드', origin: '북유럽 신화', description: '신들의 세계' },
-  yomi: { name: '요미', origin: '일본 신화', description: '이자나미의 저승' }
+  yomi: { name: '요미', origin: '일본 신화', description: '이자나미의 저승' },
+  tartarus: { name: '타르타로스', origin: '그리스 신화', description: '심연 속 형벌의 감옥' },
+  avalon: { name: '아발론', origin: '켈트 신화', description: '치유의 사과가 열리는 섬' },
+  helheim: { name: '헬하임', origin: '북유럽 신화', description: '헬이 다스리는 명계' },
+  kunlun: { name: '곤륜', origin: '중국 신화', description: '서왕모의 불사 선계' }
 };
 
 // ============================================

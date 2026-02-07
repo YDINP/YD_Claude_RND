@@ -3,6 +3,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { moodSystem } from '../systems/MoodSystem.js';
 import { SynergySystem } from '../systems/SynergySystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
+import { ParticleManager } from '../systems/ParticleManager.js';
 import { getAllCharacters } from '../data/index.js';
 import { MOOD_COLORS } from '../config/layoutConfig.js';
 
@@ -44,8 +45,6 @@ export class BattleScene extends Phaser.Scene {
 
   create() {
     console.log('[Battle] Scene created');
-    this.cameras.main.fadeIn(300);
-
     // Reset battle state
     this.battleSpeed = this.registry.get('battleSpeed') || 1;
     this.autoBattle = this.registry.get('autoBattle') !== false;
@@ -53,6 +52,9 @@ export class BattleScene extends Phaser.Scene {
     this.turn = 0;
     this.isProcessingTurn = false;
     this.waitingForManualInput = false;
+
+    // H-10: ParticleManager 초기화
+    this.particles = new ParticleManager(this);
 
     this.initializeBattlers();
     this.calculateSynergy();
@@ -65,9 +67,15 @@ export class BattleScene extends Phaser.Scene {
     this.createSynergyDisplay();
     this.createManualTurnButton();
 
-    // Start battle after brief delay
-    this.time.delayedCall(500, () => {
-      this.startBattle();
+    // A-8.5: 전투 시작 트랜지션
+    this.playBattleIntro();
+
+    // Scene 종료 시 정리
+    this.events.once('shutdown', () => {
+      if (this.particles) {
+        this.particles.destroy();
+        this.particles = null;
+      }
     });
   }
 
@@ -481,30 +489,56 @@ export class BattleScene extends Phaser.Scene {
 
     // 영웅 이름
     const heroName = ally.name.length > 4 ? ally.name.substring(0, 4) : ally.name;
-    const nameText = this.add.text(0, -15, heroName, {
-      fontSize: '10px',
+    const nameText = this.add.text(0, -17, heroName, {
+      fontSize: '9px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0')
+      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // A-5: 스킬명 표시 (skill1 우선, skill2 있으면 표시)
+    const skill1 = ally.skills?.find(s => s.id === 'skill1') || ally.skills?.[1];
+    const skill2 = ally.skills?.find(s => s.id === 'skill2') || ally.skills?.[2];
+    const activeSkill = skill1;
+    const skillLabel = activeSkill ? (activeSkill.name.length > 5 ? activeSkill.name.substring(0, 5) : activeSkill.name) : '스킬';
+    const hasSkill2 = skill2 && ally.skillGauge >= (skill2.gaugeCost || 150);
+    const skillText = this.add.text(0, -6, hasSkill2 ? '★' + skillLabel : skillLabel, {
+      fontSize: '7px',
+      fontFamily: 'Arial',
+      color: isReady ? (hasSkill2 ? '#FF6B6B' : '#FFD700') : '#999999'
     }).setOrigin(0.5);
 
     // 스킬 게이지 바
-    const gaugeBg = this.add.rectangle(0, 5, 55, 6, 0x333333, 1);
-    const gaugeFill = this.add.rectangle(-27.5, 5, 55 * gaugePercent, 4, isReady ? COLORS.accent : COLORS.secondary, 1);
+    const gaugeBg = this.add.rectangle(0, 8, 55, 6, 0x333333, 1);
+    const gaugeFill = this.add.rectangle(-27.5, 8, 55 * gaugePercent, 4, isReady ? COLORS.accent : COLORS.secondary, 1);
     gaugeFill.setOrigin(0, 0.5);
 
     // 게이지 텍스트
-    const gaugeText = this.add.text(0, 17, `${ally.skillGauge}/${ally.maxSkillGauge}`, {
+    const gaugeText = this.add.text(0, 19, `${ally.skillGauge}/${ally.maxSkillGauge}`, {
       fontSize: '8px',
       fontFamily: 'Arial',
       color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
     }).setOrigin(0.5);
 
-    card.add([cardBg, nameText, gaugeBg, gaugeFill, gaugeText]);
+    card.add([cardBg, nameText, skillText, gaugeBg, gaugeFill, gaugeText]);
+
+    // 준비 완료 시 빛남(pulse) 효과
+    if (isReady) {
+      this.tweens.add({
+        targets: cardBg,
+        alpha: { from: 1, to: 0.6 },
+        duration: 600,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    }
     card.setData('ally', ally);
     card.setData('index', index);
     card.setData('cardBg', cardBg);
     card.setData('gaugeFill', gaugeFill);
     card.setData('gaugeText', gaugeText);
+    card.setData('skillText', skillText);
 
     this.skillCardContainer.add(card);
 
@@ -571,57 +605,70 @@ export class BattleScene extends Phaser.Scene {
    * 수동 스킬 발동
    */
   executeManualSkill(attacker, target) {
-    if (!attacker.isAlive || !target.isAlive || this.battleEnded) return;
+    if (!attacker.isAlive || this.battleEnded) return;
 
     console.log(`[Battle] Manual skill executed: ${attacker.name} -> ${target.name}`);
 
-    // 스킬 정보
-    const skill = attacker.skills?.[1] || { name: '강력 일격', multiplier: 2.5, gaugeCost: 100 };
+    // 캐릭터 실제 스킬 데이터 사용
+    const skill = attacker.skills?.find(s => s.id === 'skill1') || attacker.skills?.[1] || { name: '강력 일격', multiplier: 2.5, gaugeCost: 100 };
 
     // 스킬 게이지 소비
     attacker.skillGauge = 0;
     this.updateSkillCardUI(attacker);
 
-    // 데미지 계산 (크리티컬 + 분위기 상성 포함)
+    // AoE 스킬: 전체 적 공격
+    if (skill.target === 'all') {
+      const aliveEnemies = this.enemies.filter(e => e.isAlive);
+      this.addBattleLog(`${attacker.name}의 ${skill.name}! 전체 공격!`);
+      aliveEnemies.forEach((enemy, i) => {
+        this.time.delayedCall(i * 100 / this.battleSpeed, () => {
+          this._applyManualDamage(attacker, enemy, skill);
+        });
+      });
+      this.time.delayedCall(aliveEnemies.length * 100 / this.battleSpeed + 200, () => {
+        this.checkBattleEnd();
+      });
+      return;
+    }
+
+    // 단일 대상 스킬
+    if (!target.isAlive) return;
+    this._applyManualDamage(attacker, target, skill);
+    this.checkBattleEnd();
+  }
+
+  /**
+   * 수동 스킬 데미지 적용 (단일 대상)
+   */
+  _applyManualDamage(attacker, target, skill) {
+    if (!target.isAlive || this.battleEnded) return;
+
     const baseDamage = attacker.stats?.atk || 100;
     const defense = target.stats?.def || 50;
     const moodResult = this.getMoodMatchup(attacker.mood, target.mood);
-    const isCrit = Math.random() < 0.25;
-    const critMultiplier = isCrit ? 1.5 : 1;
-    const damage = Math.max(1, Math.floor(baseDamage * skill.multiplier * critMultiplier * moodResult.multiplier * (1 - defense / (defense + 200))));
+    const critChance = attacker.critRate || 0.1;
+    const isCrit = Math.random() < critChance;
+    const critMultiplier = isCrit ? (attacker.critDmg || 1.5) : 1;
+    const aoeMod = skill.target === 'all' ? 0.7 : 1.0;
+    const damage = Math.max(1, Math.floor(baseDamage * skill.multiplier * aoeMod * critMultiplier * moodResult.multiplier * (1 - defense / (defense + 200))));
 
-    // 크리티컬 화면 흔들림
-    if (isCrit) {
-      this.cameras.main.shake(150, 0.005);
-    }
+    if (isCrit) this.cameras.main.shake(150, 0.005);
 
-    // 데미지 적용
     target.currentHp = Math.max(0, target.currentHp - damage);
     this.updateBattlerUI(target);
-
-    // 스킬 이펙트
-    this.playSkillEffect(attacker, target, isCrit);
-
-    // 데미지 표시 (상성 정보 포함)
+    this.playSkillEffect(attacker, target, isCrit, true);
     this.showDamage(target, damage, isCrit, moodResult.advantage);
 
-    // 로그
     const critText = isCrit ? ' (크리티컬!)' : '';
     const moodText = moodResult.advantage === 'ADVANTAGE' ? ' (유리▲)' : moodResult.advantage === 'DISADVANTAGE' ? ' (불리▼)' : '';
-    this.addBattleLog(`${attacker.name}의 ${skill.name}! ${target.name}에게 ${damage} 데미지${critText}${moodText}`);
+    this.addBattleLog(`  → ${target.name}에게 ${damage} 데미지${critText}${moodText}`);
 
-    // 타겟 사망 체크
     if (target.currentHp <= 0) {
       target.isAlive = false;
       this.playDeathAnimation(target);
       this.addBattleLog(`${target.name} 쓰러짐!`);
     }
-
-    // 턴 순서 업데이트
     this.updateTurnOrderBar();
-
-    // 승패 체크
-    this.checkBattleEnd();
   }
 
   /**
@@ -649,55 +696,197 @@ export class BattleScene extends Phaser.Scene {
 
     gaugeText.setText(`${ally.skillGauge}/${ally.maxSkillGauge}`);
 
+    // 스킬명 색상 업데이트
+    const skillTextObj = card.getData('skillText');
+    if (skillTextObj) {
+      skillTextObj.setColor(isReady ? '#FFD700' : '#999999');
+    }
+
     // 인터랙티브 상태 업데이트
     if (isReady && !cardBg.input) {
       cardBg.setInteractive({ useHandCursor: true });
       cardBg.on('pointerdown', () => this.onSkillCardClick(ally, card.getData('index')));
+      // 준비 완료 시 빛남 효과
+      this.tweens.add({
+        targets: cardBg,
+        alpha: { from: 1, to: 0.6 },
+        duration: 600,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
     } else if (!isReady && cardBg.input) {
       cardBg.removeInteractive();
+      this.tweens.killTweensOf(cardBg);
+      cardBg.setAlpha(0.7);
     }
   }
 
   /**
-   * 스킬 이펙트 재생
+   * A-8.1 + H-4 + H-10: ParticleManager 기반 스킬 이펙트
    */
-  playSkillEffect(attacker, target, isCrit) {
+  playSkillEffect(attacker, target, isCrit, isUltimate = false) {
     const targetSprites = target.isAlly ? this.allySprites : this.enemySprites;
     const targetSprite = targetSprites[target.position];
     if (!targetSprite) return;
 
-    // 스킬 이펙트 원형
-    const effect = this.add.circle(targetSprite.x, targetSprite.y, 10, isCrit ? COLORS.accent : COLORS.secondary, 0.8);
-    effect.setDepth(25);
+    const mood = attacker.mood || 'brave';
+    const x = targetSprite.x;
+    const y = targetSprite.y;
 
+    if (this.particles) {
+      if (isUltimate) {
+        this.particles.playMoodEffect(mood, x, y, 'ultimate');
+      } else if (isCrit) {
+        this.particles.playMoodEffect(mood, x, y, 'skill');
+      } else {
+        this.particles.playMoodEffect(mood, x, y, 'hit');
+      }
+    }
+
+    // 타겟 흔들림 (피격 반응)
     this.tweens.add({
-      targets: effect,
-      scale: isCrit ? 4 : 3,
-      alpha: 0,
-      duration: 400 / this.battleSpeed,
-      ease: 'Power2',
-      onComplete: () => effect.destroy()
+      targets: targetSprite,
+      x: targetSprite.x + (isCrit ? 8 : 4),
+      duration: 50 / this.battleSpeed,
+      yoyo: true,
+      repeat: isCrit ? 3 : 1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  /**
+   * H-4.2: 데미지 숫자 표시 (ParticleManager 연동)
+   */
+  showDamageNumber(target, value, type = 'normal') {
+    const targetSprites = target.isAlly ? this.allySprites : this.enemySprites;
+    const targetSprite = targetSprites[target.position];
+    if (!targetSprite || !this.particles) return;
+
+    this.particles.showDamageNumber(targetSprite.x, targetSprite.y - 30, value, type);
+  }
+
+  /**
+   * A-8.4: 궁극기 컷인 연출
+   */
+  playUltimateCutIn(battler, callback) {
+    const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0).setDepth(30);
+
+    // 화면 어둡게
+    this.tweens.add({
+      targets: overlay,
+      alpha: 0.7,
+      duration: 200 / this.battleSpeed
     });
 
-    // 파티클 효과
-    for (let i = 0; i < (isCrit ? 8 : 5); i++) {
-      const particle = this.add.circle(
-        targetSprite.x + Phaser.Math.Between(-20, 20),
-        targetSprite.y + Phaser.Math.Between(-20, 20),
-        Phaser.Math.Between(3, 6),
-        isCrit ? COLORS.accent : COLORS.secondary,
-        0.9
-      ).setDepth(25);
+    // 캐릭터 이름 + 스킬명 표시
+    const cutInBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, 100, 0x000000, 0).setDepth(31);
+    this.tweens.add({
+      targets: cutInBg,
+      alpha: 0.8,
+      duration: 150 / this.battleSpeed
+    });
 
+    // 캐릭터 아이콘 줌인
+    const moodColorMap = {
+      brave: 0xE74C3C, fierce: 0xFF5722, wild: 0x27AE60,
+      calm: 0x3498DB, stoic: 0x607D8B, devoted: 0xE91E63,
+      cunning: 0x9B59B6, noble: 0xFFD700, mystic: 0xF39C12
+    };
+    const moodColor = moodColorMap[battler.mood] || COLORS.primary;
+
+    const portrait = this.add.circle(GAME_WIDTH / 2 - 120, GAME_HEIGHT / 2, 35, moodColor, 0.9).setDepth(32).setScale(0);
+    const nameText = this.add.text(GAME_WIDTH / 2 + 20, GAME_HEIGHT / 2 - 15, battler.name, {
+      fontSize: '22px', fontFamily: 'Arial',
+      color: '#FFFFFF', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3
+    }).setOrigin(0, 0.5).setDepth(32).setAlpha(0);
+
+    const skillText = this.add.text(GAME_WIDTH / 2 + 20, GAME_HEIGHT / 2 + 15, '⚡ 궁극기 발동!', {
+      fontSize: '16px', fontFamily: 'Arial',
+      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2
+    }).setOrigin(0, 0.5).setDepth(32).setAlpha(0);
+
+    // 줌인 애니메이션
+    this.tweens.add({
+      targets: portrait,
+      scale: 1, duration: 200 / this.battleSpeed,
+      ease: 'Back.easeOut'
+    });
+    this.tweens.add({
+      targets: [nameText, skillText],
+      alpha: 1, x: '+=0',
+      duration: 150 / this.battleSpeed,
+      delay: 100 / this.battleSpeed
+    });
+
+    // 컷인 종료 후 콜백
+    this.time.delayedCall(800 / this.battleSpeed, () => {
       this.tweens.add({
-        targets: particle,
-        x: particle.x + Phaser.Math.Between(-50, 50),
-        y: particle.y - Phaser.Math.Between(30, 60),
-        alpha: 0,
-        duration: 500 / this.battleSpeed,
-        onComplete: () => particle.destroy()
+        targets: [overlay, cutInBg, portrait, nameText, skillText],
+        alpha: 0, duration: 200 / this.battleSpeed,
+        onComplete: () => {
+          overlay.destroy();
+          cutInBg.destroy();
+          portrait.destroy();
+          nameText.destroy();
+          skillText.destroy();
+          if (callback) callback();
+        }
       });
-    }
+    });
+  }
+
+  /**
+   * A-8.5: 전투 시작 트랜지션
+   */
+  playBattleIntro() {
+    // 전체 화면 검정 오버레이
+    const introOverlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1).setDepth(50);
+
+    // 스테이지 이름 표시
+    const stageName = this.stage?.name || '전투 시작';
+    const stageText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20, stageName, {
+      fontSize: '28px', fontFamily: 'Georgia, serif',
+      color: '#FFFFFF', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4
+    }).setOrigin(0.5).setDepth(51).setAlpha(0);
+
+    const battleText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20, '⚔️ BATTLE START ⚔️', {
+      fontSize: '18px', fontFamily: 'Arial',
+      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3
+    }).setOrigin(0.5).setDepth(51).setAlpha(0);
+
+    // 와이프인 텍스트
+    this.tweens.add({
+      targets: stageText,
+      alpha: 1, duration: 300, delay: 200
+    });
+    this.tweens.add({
+      targets: battleText,
+      alpha: 1, duration: 300, delay: 400
+    });
+
+    // 오버레이 페이드 아웃
+    this.tweens.add({
+      targets: introOverlay,
+      alpha: 0, duration: 500, delay: 1000,
+      onComplete: () => introOverlay.destroy()
+    });
+    this.tweens.add({
+      targets: [stageText, battleText],
+      alpha: 0, y: '-=30', duration: 400, delay: 1200,
+      onComplete: () => { stageText.destroy(); battleText.destroy(); }
+    });
+
+    // 전투 시작은 인트로 후
+    this.time.delayedCall(1500, () => {
+      this.startBattle();
+    });
   }
 
   /**
@@ -1017,28 +1206,170 @@ export class BattleScene extends Phaser.Scene {
     this.battleEventListeners.push({ eventType, callback });
   }
 
+  /**
+   * 스마트 AI 타겟 선택
+   * 우선순위: 1) 힐러(healer) > 2) 상성 유리 > 3) 낮은 HP > 4) 고위협 대상
+   */
+  selectSmartTarget(battler, aliveTargets) {
+    if (aliveTargets.length === 1) return aliveTargets[0];
+
+    // 각 타겟에 점수 부여
+    const scored = aliveTargets.map(target => {
+      let score = 0;
+
+      // 1) HP 비율이 낮은 대상 선호 (처치 가능성)
+      const hpRatio = target.currentHp / target.maxHp;
+      score += (1 - hpRatio) * 30;
+
+      // 2) 상성 유리 대상 보너스
+      const matchup = this.getMoodMatchup(battler.mood, target.mood);
+      if (matchup.advantage === 'ADVANTAGE') score += 25;
+      else if (matchup.advantage === 'DISADVANTAGE') score -= 15;
+
+      // 3) 힐러/서포터 우선 제거 (적 진영)
+      const role = target.role || target.class || '';
+      if (role === 'healer') score += 20;
+      else if (role === 'mage') score += 10;
+
+      // 4) 높은 ATK 대상 우선 (위협 제거)
+      const atk = target.stats?.atk || 0;
+      score += atk / 20;
+
+      // 5) 처치 가능 대상 최우선 (킬 확인)
+      const estDmg = (battler.stats?.atk || 100) * 0.5;
+      if (target.currentHp <= estDmg) score += 40;
+
+      return { target, score };
+    });
+
+    // 점수 높은 순 정렬
+    scored.sort((a, b) => b.score - a.score);
+    return scored[0].target;
+  }
+
+  /**
+   * A-5: 카드 덱에서 사용 가능한 스킬 선택
+   * A-6: 스마트 AI 스킬/타겟 결정
+   */
   executeBattlerAction(battler) {
     if (!battler.isAlive || this.battleEnded) return;
 
     console.log(`[Battle] ${battler.name} is taking action`);
 
-    // Find target
     const targets = battler.isAlly ? this.enemies : this.allies;
     const aliveTargets = targets.filter(t => t.isAlive);
-
     if (aliveTargets.length === 0) return;
 
-    // 타겟 선택 (가장 낮은 HP 우선)
-    const target = aliveTargets.reduce((min, curr) =>
-      curr.currentHp < min.currentHp ? curr : min
-    );
+    // A-5: 스킬 목록 (basic, skill1, skill2)
+    const basicSkill = battler.skills?.find(s => s.id === 'basic') || battler.skills?.[0] || { name: '기본 공격', multiplier: 1.0, gaugeGain: 20 };
+    const skill1 = battler.skills?.find(s => s.id === 'skill1') || battler.skills?.[1];
+    const skill2 = battler.skills?.find(s => s.id === 'skill2') || battler.skills?.[2];
 
-    // 스킬 사용 여부 결정 (AI가 스킬 게이지가 충분하면 스킬 사용)
-    const useSkill = battler.skillGauge >= battler.maxSkillGauge && battler.isAlly === false;
-    const skillMultiplier = useSkill ? 2.5 : 1.0;
-    const skillName = useSkill ? '강력 일격' : '기본 공격';
+    // A-6: 힐러 AI — HP 낮은 아군 힐 우선
+    const role = battler.role || battler.class || '';
+    if (role === 'healer' && battler.isAlly) {
+      const allies = this.allies.filter(a => a.isAlive);
+      const lowestHp = allies.reduce((min, a) => a.currentHp / a.maxHp < min.currentHp / min.maxHp ? a : min);
+      if (lowestHp.currentHp / lowestHp.maxHp < 0.5) {
+        const healSkill = battler.skills?.find(s => s.name?.includes('힐') || s.name?.includes('치유') || s.id === 'skill1');
+        if (healSkill && battler.skillGauge >= (healSkill.gaugeCost || battler.maxSkillGauge)) {
+          this.playUltimateCutIn(battler, () => {
+            this._executeAttack(battler, lowestHp, healSkill.multiplier, healSkill.name, true, healSkill);
+          });
+          return;
+        }
+      }
+    }
 
-    // Calculate damage
+    // A-6: 궁극기 사용 여부 결정 (스마트 로직)
+    let chosenSkill = basicSkill;
+    let isUltimate = false;
+
+    // 스킬2 우선 체크 (더 강한 궁극기)
+    if (skill2 && battler.skillGauge >= (skill2.gaugeCost || 150)) {
+      // A-6.4: 보스전 보존 — 마지막 웨이브가 아닌 경우 보존
+      const shouldPreserve = this.stage?.waves && this.currentWave < (this.stage.waves.length || 1) - 1;
+      if (!shouldPreserve) {
+        chosenSkill = skill2;
+        isUltimate = true;
+      }
+    }
+
+    // 스킬1 체크
+    if (!isUltimate && skill1 && battler.skillGauge >= (skill1.gaugeCost || battler.maxSkillGauge)) {
+      // A-6.1: 광역 vs 단일 스킬 선택
+      if (skill1.target === 'all' && aliveTargets.length >= 3) {
+        chosenSkill = skill1;
+        isUltimate = true;
+      } else if (skill1.target !== 'all') {
+        chosenSkill = skill1;
+        isUltimate = true;
+      } else if (aliveTargets.length < 3 && skill1.target === 'all') {
+        // 적이 적으면 기본공격이 효율적
+        chosenSkill = basicSkill;
+        isUltimate = false;
+      }
+    }
+
+    // 타겟 선택
+    const target = this.selectSmartTarget(battler, aliveTargets);
+
+    // 궁극기 컷인 연출
+    if (isUltimate) {
+      this.playUltimateCutIn(battler, () => {
+        this._executeAttack(battler, target, chosenSkill.multiplier, chosenSkill.name, true, chosenSkill);
+      });
+    } else {
+      this._executeAttack(battler, target, chosenSkill.multiplier, chosenSkill.name, false, chosenSkill);
+    }
+  }
+
+  /**
+   * 실제 공격 실행 (컷인 연출 후 호출됨)
+   */
+  _executeAttack(battler, target, skillMultiplier, skillName, isUltimate, skill = null) {
+    if (!target.isAlive || this.battleEnded) return;
+
+    // AoE 스킬: target: "all" → 살아있는 적 전체 공격
+    if (isUltimate && skill?.target === 'all') {
+      const targets = battler.isAlly ? this.enemies : this.allies;
+      const aliveTargets = targets.filter(t => t.isAlive);
+      aliveTargets.forEach((t, i) => {
+        this.time.delayedCall(i * 100 / this.battleSpeed, () => {
+          this._executeSingleAttack(battler, t, skillMultiplier * 0.7, skillName, isUltimate, skill);
+        });
+      });
+      // AoE 게이지 처리
+      battler.skillGauge = 0;
+      this.updateSkillGauge(battler);
+      if (battler.isAlly) this.updateSkillCardUI(battler);
+      this.addBattleLog(`${battler.name}의 ${skillName}! 전체 공격!`);
+      return;
+    }
+
+    this._executeSingleAttack(battler, target, skillMultiplier, skillName, isUltimate, skill);
+
+    // 스킬 게이지 처리
+    const gaugeGain = skill?.gaugeGain || 20;
+    if (isUltimate) {
+      battler.skillGauge = 0;
+    } else {
+      battler.skillGauge = Math.min(battler.maxSkillGauge, battler.skillGauge + gaugeGain);
+    }
+    this.updateSkillGauge(battler);
+
+    // 아군의 경우 스킬 카드 UI 업데이트
+    if (battler.isAlly) {
+      this.updateSkillCardUI(battler);
+    }
+  }
+
+  /**
+   * 단일 대상 공격 실행
+   */
+  _executeSingleAttack(battler, target, skillMultiplier, skillName, isUltimate, skill = null) {
+    if (!target.isAlive || this.battleEnded) return;
+
     const baseDamage = battler.stats?.atk || 100;
     const defense = target.stats?.def || 50;
 
@@ -1061,9 +1392,11 @@ export class BattleScene extends Phaser.Scene {
     // Apply damage
     target.currentHp = Math.max(0, target.currentHp - damage);
 
-    // 크리티컬 화면 흔들림
+    // A-8.3: 크리티컬 화면 흔들림 강화
     if (isCrit) {
-      this.cameras.main.shake(100, 0.003);
+      this.cameras.main.shake(isUltimate ? 200 : 120, isUltimate ? 0.008 : 0.004);
+    } else if (isUltimate) {
+      this.cameras.main.shake(150, 0.005);
     }
 
     // Update UI
@@ -1072,26 +1405,14 @@ export class BattleScene extends Phaser.Scene {
     // Show damage (상성 정보 포함)
     this.showDamage(target, damage, isCrit, moodResult.advantage);
 
-    // Attack animation
+    // Attack animation + A-8.1 스킬 이펙트
     this.playAttackAnimation(battler, target, isCrit);
+    this.playSkillEffect(battler, target, isCrit, isUltimate);
 
     // Log
     const critText = isCrit ? ' (크리티컬!)' : '';
     const moodText = moodResult.advantage === 'ADVANTAGE' ? ' (유리▲)' : moodResult.advantage === 'DISADVANTAGE' ? ' (불리▼)' : '';
     this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name}에게 ${damage} 데미지${critText}${moodText}`);
-
-    // 스킬 게이지 처리
-    if (useSkill) {
-      battler.skillGauge = 0;
-    } else {
-      battler.skillGauge = Math.min(battler.maxSkillGauge, battler.skillGauge + 20);
-    }
-    this.updateSkillGauge(battler);
-
-    // 아군의 경우 스킬 카드 UI 업데이트
-    if (battler.isAlly) {
-      this.updateSkillCardUI(battler);
-    }
 
     // 턴 순서 바 업데이트
     this.updateTurnOrderBar();
@@ -1149,86 +1470,111 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * A-8.2: 데미지 숫자 세분화 + A-8.3: 크리티컬 강화
+   */
   showDamage(target, damage, isCrit = false, moodAdvantage = 'NEUTRAL') {
     const sprites = target.isAlly ? this.allySprites : this.enemySprites;
     const sprite = sprites[target.position];
     if (!sprite) return;
 
-    const fontSize = isCrit ? '28px' : '20px';
-    // 상성에 따른 데미지 텍스트 색상
-    let color = isCrit ? COLORS.accent : COLORS.danger;
-    if (moodAdvantage === 'ADVANTAGE') color = 0xFFD700; // 유리 → 노랑/금색
-    else if (moodAdvantage === 'DISADVANTAGE') color = 0x3498DB; // 불리 → 파랑
+    // A-8.2: 데미지 크기별 폰트 세분화
+    let fontSize;
+    if (isCrit) fontSize = '32px';
+    else if (damage >= 300) fontSize = '26px';
+    else if (damage >= 150) fontSize = '22px';
+    else fontSize = '18px';
+
+    // 상성 + 크리티컬에 따른 색상
+    let color = COLORS.danger;
+    if (isCrit && moodAdvantage === 'ADVANTAGE') color = 0xFF4500; // 크릿+유리 → 주황
+    else if (isCrit) color = COLORS.accent;
+    else if (moodAdvantage === 'ADVANTAGE') color = 0xFFD700;
+    else if (moodAdvantage === 'DISADVANTAGE') color = 0x3498DB;
+
+    // A-8.3: 크리티컬 스크린 플래시
+    if (isCrit) {
+      this.cameras.main.flash(150, 255, 200, 50, true);
+    }
 
     const dmgText = this.add.text(sprite.x, sprite.y - 70, `-${damage}`, {
-      fontSize: fontSize,
-      fontFamily: 'Arial',
+      fontSize, fontFamily: 'Arial',
       color: '#' + color.toString(16).padStart(6, '0'),
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: isCrit ? 4 : 3
+      strokeThickness: isCrit ? 5 : 3
     }).setOrigin(0.5).setDepth(20);
 
-    // 상성 표시
+    // A-8.2: 크리티컬 바운스 애니메이션
+    if (isCrit) {
+      dmgText.setScale(2);
+      this.tweens.add({
+        targets: dmgText,
+        scale: 1.2,
+        duration: 200 / this.battleSpeed,
+        ease: 'Bounce.easeOut'
+      });
+    }
+
+    // 상성 표시 (기존 유지 + 약간 개선)
     if (moodAdvantage === 'ADVANTAGE') {
-      const advLabel = this.add.text(sprite.x + 40, sprite.y - 70, '▲유리', {
-        fontSize: '11px',
-        fontFamily: 'Arial',
-        color: '#FFD700',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 2
+      const advLabel = this.add.text(sprite.x + 45, sprite.y - 75, '▲유리', {
+        fontSize: '12px', fontFamily: 'Arial',
+        color: '#FFD700', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 2
       }).setOrigin(0.5).setDepth(20);
       this.tweens.add({
         targets: advLabel,
-        y: advLabel.y - 30, alpha: 0,
-        duration: 800 / this.battleSpeed,
+        y: advLabel.y - 35, alpha: 0,
+        duration: 900 / this.battleSpeed,
         onComplete: () => advLabel.destroy()
       });
     } else if (moodAdvantage === 'DISADVANTAGE') {
-      const disLabel = this.add.text(sprite.x + 40, sprite.y - 70, '▼불리', {
-        fontSize: '11px',
-        fontFamily: 'Arial',
-        color: '#3498DB',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 2
+      const disLabel = this.add.text(sprite.x + 45, sprite.y - 75, '▼불리', {
+        fontSize: '12px', fontFamily: 'Arial',
+        color: '#3498DB', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 2
       }).setOrigin(0.5).setDepth(20);
       this.tweens.add({
         targets: disLabel,
-        y: disLabel.y - 30, alpha: 0,
-        duration: 800 / this.battleSpeed,
+        y: disLabel.y - 35, alpha: 0,
+        duration: 900 / this.battleSpeed,
         onComplete: () => disLabel.destroy()
       });
     }
 
-    // 크리티컬 시 추가 텍스트
+    // A-8.3: 크리티컬 라벨 강화 (스케일 펀치)
     if (isCrit) {
-      const critLabel = this.add.text(sprite.x, sprite.y - 95, 'CRITICAL!', {
-        fontSize: '14px',
-        fontFamily: 'Arial',
+      const critLabel = this.add.text(sprite.x, sprite.y - 100, '💥 CRITICAL!', {
+        fontSize: '16px', fontFamily: 'Arial',
         color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
         fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 2
-      }).setOrigin(0.5).setDepth(20);
+        stroke: '#000000', strokeThickness: 3
+      }).setOrigin(0.5).setDepth(20).setScale(0.5);
 
       this.tweens.add({
         targets: critLabel,
-        y: critLabel.y - 30,
-        alpha: 0,
-        scale: 1.5,
-        duration: 600 / this.battleSpeed,
-        onComplete: () => critLabel.destroy()
+        scale: 1.3, duration: 150 / this.battleSpeed,
+        ease: 'Back.easeOut',
+        onComplete: () => {
+          this.tweens.add({
+            targets: critLabel,
+            y: critLabel.y - 30, alpha: 0, scale: 1.6,
+            duration: 500 / this.battleSpeed,
+            onComplete: () => critLabel.destroy()
+          });
+        }
       });
     }
 
+    // 데미지 텍스트 애니메이션 (위로 올라가며 사라짐)
     this.tweens.add({
       targets: dmgText,
-      y: dmgText.y - 40,
+      y: dmgText.y - 50,
       alpha: 0,
-      scale: isCrit ? 1.3 : 1,
-      duration: 800 / this.battleSpeed,
+      scale: isCrit ? 1.5 : 1,
+      duration: 900 / this.battleSpeed,
+      delay: isCrit ? 200 / this.battleSpeed : 0,
       onComplete: () => dmgText.destroy()
     });
   }
@@ -1286,6 +1632,26 @@ export class BattleScene extends Phaser.Scene {
     const sprites = battler.isAlly ? this.allySprites : this.enemySprites;
     const sprite = sprites[battler.position];
     if (!sprite) return;
+
+    // 사망 파티클 (파편 흩어짐)
+    for (let i = 0; i < 6; i++) {
+      const shard = this.add.circle(
+        sprite.x + Phaser.Math.Between(-15, 15),
+        sprite.y + Phaser.Math.Between(-15, 15),
+        Phaser.Math.Between(2, 5),
+        battler.isAlly ? COLORS.primary : COLORS.danger,
+        0.8
+      ).setDepth(20);
+
+      this.tweens.add({
+        targets: shard,
+        x: shard.x + Phaser.Math.Between(-60, 60),
+        y: shard.y + Phaser.Math.Between(20, 60),
+        alpha: 0,
+        duration: 600 / this.battleSpeed,
+        onComplete: () => shard.destroy()
+      });
+    }
 
     this.tweens.add({
       targets: sprite,
@@ -1349,52 +1715,72 @@ export class BattleScene extends Phaser.Scene {
   showBattleResult(victory) {
     console.log('[Battle] Showing battle result...');
 
-    // 승리/패배 연출 강화
+    // A-8.5: 승리/패배 연출 강화
     if (victory) {
-      // 승리 플래시 효과
-      this.cameras.main.flash(300, 255, 215, 0, true);
+      this.cameras.main.flash(400, 255, 215, 0, true);
+
+      // 승리 텍스트
+      const victoryText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 50, '✨ VICTORY ✨', {
+        fontSize: '36px', fontFamily: 'Georgia, serif',
+        color: '#FFD700', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 5
+      }).setOrigin(0.5).setDepth(40).setScale(0);
+
+      this.tweens.add({
+        targets: victoryText,
+        scale: 1.2, duration: 400, ease: 'Back.easeOut',
+        onComplete: () => {
+          this.tweens.add({
+            targets: victoryText,
+            alpha: 0, y: victoryText.y - 30,
+            duration: 400, delay: 300,
+            onComplete: () => victoryText.destroy()
+          });
+        }
+      });
     } else {
-      // 패배 시 어두워지는 효과
-      this.cameras.main.fade(500, 50, 0, 0, true);
+      this.cameras.main.fade(600, 50, 0, 0, true);
+
+      // 패배 텍스트
+      const defeatText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 50, 'DEFEAT', {
+        fontSize: '36px', fontFamily: 'Georgia, serif',
+        color: '#EF4444', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 5
+      }).setOrigin(0.5).setDepth(40).setAlpha(0);
+
+      this.tweens.add({
+        targets: defeatText,
+        alpha: 1, duration: 500,
+        onComplete: () => {
+          this.tweens.add({
+            targets: defeatText,
+            alpha: 0, duration: 400, delay: 300,
+            onComplete: () => defeatText.destroy()
+          });
+        }
+      });
     }
 
-    // Overlay
-    const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7)
-      .setDepth(50);
+    const aliveCount = this.allies.filter(a => a.isAlive).length;
+    const totalAllies = this.allies.length;
 
-    // Result container
-    const result = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2).setDepth(60);
-
-    // Result background
-    const resultBg = this.add.rectangle(0, 0, 300, 350, COLORS.backgroundLight, 0.95);
-    resultBg.setStrokeStyle(3, victory ? COLORS.success : COLORS.danger);
-
-    // Result text
-    const resultText = this.add.text(0, -130, victory ? '승리!' : '패배...', {
-      fontSize: '36px',
-      fontFamily: 'Georgia, serif',
-      color: '#' + (victory ? COLORS.success : COLORS.danger).toString(16).padStart(6, '0'),
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    result.add([resultBg, resultText]);
+    let newStars = 0;
+    let rewards = { gold: 0, exp: 0 };
+    let levelUpResults = [];
 
     if (victory) {
       // 성과 기반 별점 계산
-      const aliveCount = this.allies.filter(a => a.isAlive).length;
-      const totalAllies = this.allies.length;
       const avgHpRatio = this.allies.reduce((sum, a) => sum + (a.isAlive ? a.currentHp / a.maxHp : 0), 0) / totalAllies;
 
-      let newStars = 1;
+      newStars = 1;
       if (aliveCount === totalAllies && avgHpRatio > 0.5) {
-        newStars = 3; // 전원 생존 + HP 50% 이상
+        newStars = 3;
       } else if (aliveCount >= Math.ceil(totalAllies / 2)) {
-        newStars = 2; // 절반 이상 생존
+        newStars = 2;
       }
-      // 20턴 이내 클리어 보너스
       if (this.turn <= 20 && newStars < 3) newStars++;
 
-      // Mark stage as cleared
+      // 스테이지 클리어 기록
       const clearedStages = this.registry.get('clearedStages') || {};
       if (this.stage) {
         const currentStars = clearedStages[this.stage.id] || 0;
@@ -1405,16 +1791,13 @@ export class BattleScene extends Phaser.Scene {
         }
       }
 
-      // Rewards
-      const rewards = this.stage?.rewards || { gold: 100, exp: 50 };
-
-      // Add gold and persist to SaveManager
+      // 보상 지급
+      rewards = this.stage?.rewards || { gold: 100, exp: 50 };
       const newGold = SaveManager.addGold(rewards.gold);
       this.registry.set('gold', newGold);
 
-      // 캐릭터 EXP 지급 — ProgressionSystem 통합
+      // 캐릭터 EXP 지급
       const expPerHero = Math.floor(rewards.exp / totalAllies);
-      const levelUpResults = [];
       this.allies.forEach(ally => {
         if (ally.id) {
           try {
@@ -1431,84 +1814,24 @@ export class BattleScene extends Phaser.Scene {
           }
         }
       });
-
-      // Rewards display
-      const rewardTitle = this.add.text(0, -80, '보상', {
-        fontSize: '18px',
-        fontFamily: 'Arial',
-        color: '#' + COLORS.text.toString(16).padStart(6, '0')
-      }).setOrigin(0.5);
-
-      const goldReward = this.add.text(0, -50, `골드: +${rewards.gold}`, {
-        fontSize: '16px',
-        fontFamily: 'Arial',
-        color: '#' + COLORS.accent.toString(16).padStart(6, '0')
-      }).setOrigin(0.5);
-
-      const expReward = this.add.text(0, -25, `경험치: +${rewards.exp} (각 ${expPerHero})`, {
-        fontSize: '14px',
-        fontFamily: 'Arial',
-        color: '#' + COLORS.primary.toString(16).padStart(6, '0')
-      }).setOrigin(0.5);
-
-      // 레벨업 표시
-      let levelUpText = '';
-      if (levelUpResults.length > 0) {
-        levelUpText = levelUpResults.map(r => `${r.name} Lv.${r.newLevel}↑`).join(', ');
-      }
-      const levelUpDisplay = this.add.text(0, 5, levelUpText, {
-        fontSize: '12px',
-        fontFamily: 'Arial',
-        color: '#' + COLORS.success.toString(16).padStart(6, '0')
-      }).setOrigin(0.5);
-
-      // Stars (성과 기반)
-      const starStr = '★'.repeat(newStars) + '☆'.repeat(3 - newStars);
-      const stars = this.add.text(0, 40, starStr, {
-        fontSize: '32px',
-        color: '#' + COLORS.accent.toString(16).padStart(6, '0')
-      }).setOrigin(0.5);
-
-      result.add([rewardTitle, goldReward, expReward, levelUpDisplay, stars]);
-    } else {
-      // Defeat message
-      const defeatMsg = this.add.text(0, -30, '다음에 다시 도전하세요!', {
-        fontSize: '16px',
-        fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
-      }).setOrigin(0.5);
-
-      result.add(defeatMsg);
     }
 
-    // Continue button
-    const continueBtn = this.add.container(0, 120);
-    const continueBg = this.add.rectangle(0, 0, 150, 50, COLORS.primary, 1)
-      .setInteractive({ useHandCursor: true });
-    const continueText = this.add.text(0, 0, '확인', {
-      fontSize: '18px',
-      fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    continueBtn.add([continueBg, continueText]);
-    result.add(continueBtn);
-
-    continueBg.on('pointerdown', () => {
+    // BattleResultScene으로 전환
+    this.time.delayedCall(800 / this.battleSpeed, () => {
       this.cameras.main.fadeOut(300);
       this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('StageSelectScene');
+        this.scene.start('BattleResultScene', {
+          victory,
+          stars: newStars,
+          rewards,
+          levelUpResults,
+          stage: this.stage,
+          party: this.party,
+          turnCount: this.turn,
+          aliveCount,
+          totalAllies
+        });
       });
-    });
-
-    // Entrance animation
-    result.setScale(0);
-    this.tweens.add({
-      targets: result,
-      scale: 1,
-      duration: 300,
-      ease: 'Back.easeOut'
     });
   }
 

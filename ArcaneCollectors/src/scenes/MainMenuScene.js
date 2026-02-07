@@ -1,5 +1,8 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
+import { BottomNav } from '../components/BottomNav.js';
+import { energySystem } from '../systems/EnergySystem.js';
+import { ParticleManager } from '../systems/ParticleManager.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -11,7 +14,10 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.fadeIn(300);
+    this.cameras.main.fadeIn(400);
+
+    // Initialize ParticleManager for dynamic effects
+    this.particles = new ParticleManager(this);
 
     // Load current resources from SaveManager
     const resources = SaveManager.getResources();
@@ -23,6 +29,18 @@ export class MainMenuScene extends Phaser.Scene {
     this.createTitle();
     this.createCharacterDisplay();
     this.createBottomNavigation();
+
+    // Cleanup on scene shutdown
+    this.events.once('shutdown', () => {
+      if (this.particles) {
+        this.particles.destroy();
+        this.particles = null;
+      }
+      if (this._starTimer) {
+        this._starTimer.remove();
+        this._starTimer = null;
+      }
+    });
 
     // Show offline rewards popup if available
     if (this.showOfflineRewards && this.showOfflineRewards.gold > 0) {
@@ -132,21 +150,62 @@ export class MainMenuScene extends Phaser.Scene {
       graphics.fillRect(0, y, GAME_WIDTH, 1);
     }
 
-    // Decorative particles/stars
-    for (let i = 0; i < 30; i++) {
-      const x = Phaser.Math.Between(0, GAME_WIDTH);
-      const y = Phaser.Math.Between(0, GAME_HEIGHT - 200);
-      const size = Phaser.Math.FloatBetween(1, 3);
-      const alpha = Phaser.Math.FloatBetween(0.2, 0.6);
-
-      graphics.fillStyle(COLORS.text, alpha);
-      graphics.fillCircle(x, y, size);
+    // Animated twinkling stars
+    this._stars = [];
+    for (let i = 0; i < 25; i++) {
+      const star = this.add.circle(
+        Phaser.Math.Between(10, GAME_WIDTH - 10),
+        Phaser.Math.Between(10, GAME_HEIGHT - 250),
+        Phaser.Math.FloatBetween(1, 2.5),
+        COLORS.text,
+        Phaser.Math.FloatBetween(0.15, 0.5)
+      );
+      // Twinkle animation with random delay
+      this.tweens.add({
+        targets: star,
+        alpha: { from: star.alpha, to: Phaser.Math.FloatBetween(0.05, 0.3) },
+        duration: Phaser.Math.Between(1500, 3500),
+        yoyo: true,
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 2000),
+        ease: 'Sine.easeInOut'
+      });
+      this._stars.push(star);
     }
 
-    // Mystic glow at bottom
+    // Slow-drifting ambient particles (3 larger glowing orbs)
+    for (let i = 0; i < 3; i++) {
+      const orb = this.add.circle(
+        Phaser.Math.Between(50, GAME_WIDTH - 50),
+        Phaser.Math.Between(100, GAME_HEIGHT - 300),
+        Phaser.Math.Between(4, 8),
+        COLORS.primary,
+        0.08
+      );
+      this.tweens.add({
+        targets: orb,
+        x: orb.x + Phaser.Math.Between(-60, 60),
+        y: orb.y + Phaser.Math.Between(-40, 40),
+        alpha: { from: 0.08, to: 0.15 },
+        duration: Phaser.Math.Between(6000, 10000),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    }
+
+    // Mystic glow at bottom (pulsing)
     const glowGraphics = this.add.graphics();
     glowGraphics.fillStyle(COLORS.primary, 0.1);
     glowGraphics.fillEllipse(GAME_WIDTH / 2, GAME_HEIGHT, GAME_WIDTH, 300);
+    this.tweens.add({
+      targets: glowGraphics,
+      alpha: { from: 1, to: 0.5 },
+      duration: 3000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
   }
 
   createTopBar() {
@@ -183,6 +242,16 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: '18px',
       fontFamily: 'Arial',
       color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      fontStyle: 'bold'
+    }).setOrigin(0, 0.5).setDepth(11);
+
+    // Energy display
+    const energyStatus = energySystem.getStatus();
+    this.add.text(300, 40, '⚡', { fontSize: '18px' }).setOrigin(0.5).setDepth(11);
+    this.energyText = this.add.text(320, 40, `${energyStatus.current}/${energyStatus.max}`, {
+      fontSize: '16px',
+      fontFamily: 'Arial',
+      color: '#' + COLORS.success.toString(16).padStart(6, '0'),
       fontStyle: 'bold'
     }).setOrigin(0, 0.5).setDepth(11);
 
@@ -271,7 +340,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     mainChar.setInteractive({ useHandCursor: true });
 
-    // Idle animation
+    // Idle floating animation
     this.tweens.add({
       targets: mainChar,
       y: mainChar.y - 10,
@@ -281,16 +350,36 @@ export class MainMenuScene extends Phaser.Scene {
       ease: 'Sine.easeInOut'
     });
 
-    // Touch reaction
+    // Subtle breathing scale effect
+    const baseScaleX = mainChar.scaleX;
+    const baseScaleY = mainChar.scaleY;
+    this.tweens.add({
+      targets: mainChar,
+      scaleX: baseScaleX * 1.02,
+      scaleY: baseScaleY * 1.02,
+      duration: 2500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    // Touch reaction with particle effect
     mainChar.on('pointerdown', () => {
       this.tweens.add({
         targets: mainChar,
-        scaleX: mainChar.scaleX * 1.1,
-        scaleY: mainChar.scaleY * 0.9,
+        scaleX: baseScaleX * 1.1,
+        scaleY: baseScaleY * 0.9,
         duration: 100,
         yoyo: true,
         ease: 'Back.easeOut'
       });
+
+      // Sparkle particles on touch
+      if (this.particles) {
+        this.particles.playPreset('sparkle', GAME_WIDTH / 2, mainCharY - 20, {
+          colors: [COLORS.primary, COLORS.accent, COLORS.text]
+        });
+      }
 
       // Show reaction text
       const reactions = ['안녕!', '반가워!', '모험을 떠나자!', '오늘도 힘내!', '준비됐어!'];
@@ -372,82 +461,8 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   createBottomNavigation() {
-    const navY = GAME_HEIGHT - 60;
-    const navHeight = 100;
-
-    // Navigation background
-    const navBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 50, GAME_WIDTH, navHeight, COLORS.backgroundLight, 0.95);
-    navBg.setDepth(10);
-
-    // Navigation buttons
-    const navItems = [
-      { key: 'adventure', label: '모험', icon: '⚔️', scene: 'StageSelectScene' },
-      { key: 'summon', label: '소환', icon: '✨', scene: 'GachaScene' },
-      { key: 'heroes', label: '영웅', icon: '👥', scene: 'HeroListScene' },
-      { key: 'menu', label: '메뉴', icon: '☰', scene: null }
-    ];
-
-    const buttonWidth = GAME_WIDTH / navItems.length;
-
-    navItems.forEach((item, index) => {
-      const x = buttonWidth * index + buttonWidth / 2;
-
-      // Button container
-      const btn = this.add.container(x, navY).setDepth(11);
-
-      // Button background
-      const btnBg = this.add.rectangle(0, 0, buttonWidth - 10, 80, 0x000000, 0)
-        .setInteractive({ useHandCursor: true });
-
-      // Icon
-      const icon = this.add.text(0, -15, item.icon, {
-        fontSize: '28px'
-      }).setOrigin(0.5);
-
-      // Label
-      const label = this.add.text(0, 20, item.label, {
-        fontSize: '14px',
-        fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
-      }).setOrigin(0.5);
-
-      btn.add([btnBg, icon, label]);
-
-      // Interactions
-      btnBg.on('pointerover', () => {
-        icon.setScale(1.2);
-        label.setStyle({ color: '#' + COLORS.text.toString(16).padStart(6, '0') });
-      });
-
-      btnBg.on('pointerout', () => {
-        icon.setScale(1);
-        label.setStyle({ color: '#' + COLORS.textDark.toString(16).padStart(6, '0') });
-      });
-
-      btnBg.on('pointerdown', () => {
-        this.tweens.add({
-          targets: btn,
-          scaleX: 0.9,
-          scaleY: 0.9,
-          duration: 50,
-          yoyo: true
-        });
-
-        if (item.scene) {
-          // Save before transitioning
-          const data = SaveManager.load();
-          data.lastOnline = Date.now();
-          SaveManager.save(data);
-
-          this.cameras.main.fadeOut(200, 0, 0, 0);
-          this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start(item.scene);
-          });
-        } else {
-          this.showToast('준비 중입니다!');
-        }
-      });
-    });
+    // BottomNav 컴포넌트 사용 (5탭: 홈/모험/가방/소환/더보기)
+    this.bottomNav = new BottomNav(this, 'home');
   }
 
   showToast(message) {
@@ -476,5 +491,11 @@ export class MainMenuScene extends Phaser.Scene {
 
     if (this.gemText) this.gemText.setText(gems.toLocaleString());
     if (this.goldText) this.goldText.setText(gold.toLocaleString());
+
+    // 에너지 갱신
+    if (this.energyText) {
+      const es = energySystem.getStatus();
+      this.energyText.setText(`${es.current}/${es.max}`);
+    }
   }
 }

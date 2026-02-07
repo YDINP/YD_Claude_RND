@@ -96,6 +96,15 @@ export {
 // 디버그 매니저
 export { DebugManager } from './DebugManager.js';
 
+// 파티클 매니저
+export { ParticleManager } from './ParticleManager.js';
+
+// 히어로 에셋 로더
+export { HeroAssetLoader } from './HeroAssetLoader.js';
+
+// 사운드 매니저
+export { soundManager, BGM_TRACKS, SFX_LIST, SCENE_BGM_MAP } from './SoundManager.js';
+
 // 기본 export - 싱글톤 인스턴스들
 export default {
   energySystem: () => import('./EnergySystem.js').then(m => m.energySystem),

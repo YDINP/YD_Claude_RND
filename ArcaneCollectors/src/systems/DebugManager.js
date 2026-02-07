@@ -1,72 +1,75 @@
 /**
  * DebugManager - 개발/테스트용 치트 기능
  * 디버그 모드에서만 활성화
+ * G-1~G-10: 전체 시스템 치트 API + 치트코드 25종 + window.debug
  */
 import { SaveManager } from './SaveManager.js';
-import { getAllCharacters } from '../data/index.js';
+import { getAllCharacters, getAllChapters, getChapterStages } from '../data/index.js';
+import energySystem from './EnergySystem.js';
+import { GachaSystem } from './GachaSystem.js';
+import { EquipmentSystem } from './EquipmentSystem.js';
+import { TowerSystem } from './TowerSystem.js';
+import sweepSystem from './SweepSystem.js';
+import { QuestSystem } from './QuestSystem.js';
+import { PartyManager } from './PartyManager.js';
+import moodSystem from './MoodSystem.js';
+import { SynergySystem } from './SynergySystem.js';
 
 export class DebugManager {
   static isDebugMode = false;
   static invincible = false;
   static oneHitKill = false;
   static battleSpeedMultiplier = 1;
+  // G-3: 에너지 치트 상태
+  static infiniteEnergy = false;
+  static energyRecoveryMultiplier = 1;
+  // G-4: 가챠 치트 상태
+  static freeGachaMode = false;
+  static forceNextRarity = null;
+  static forceNextCharacter = null;
+  static forcePickupMode = false;
+  // G-5: 장비 치트 상태
+  static enhanceAlwaysSuccess = false;
+  // G-9: 분위기 치트 상태
+  static alwaysMoodAdvantage = false;
 
   /**
    * 디버그 모드 활성화/비활성화
-   * @param {boolean} enabled 활성화 여부
    */
   static setDebugMode(enabled) {
     this.isDebugMode = enabled;
     this.log('System', `Debug mode ${enabled ? 'ENABLED' : 'DISABLED'}`);
+    if (enabled) {
+      window.debug = DebugManager;
+      this.log('System', 'window.debug registered — type debug.help() for commands');
+    }
   }
 
   // ========== 리소스 치트 ==========
 
-  /**
-   * 골드 추가
-   * @param {number} amount 추가할 양
-   */
   static addGold(amount) {
     if (!this.isDebugMode) return false;
-
-    // SaveManager는 상단 import 사용
     SaveManager.addGold(amount);
     this.log('Cheat', `Added ${amount} gold`);
     return true;
   }
 
-  /**
-   * 젬 추가
-   * @param {number} amount 추가할 양
-   */
   static addGems(amount) {
     if (!this.isDebugMode) return false;
-
-    // SaveManager는 상단 import 사용
     SaveManager.addGems(amount);
     this.log('Cheat', `Added ${amount} gems`);
     return true;
   }
 
-  /**
-   * 소환 티켓 추가
-   * @param {number} amount 추가할 양
-   */
   static addSummonTickets(amount) {
     if (!this.isDebugMode) return false;
-
-    // SaveManager는 상단 import 사용
     SaveManager.addSummonTickets(amount);
     this.log('Cheat', `Added ${amount} summon tickets`);
     return true;
   }
 
-  /**
-   * 모든 리소스 최대치 부여
-   */
   static maxResources() {
     if (!this.isDebugMode) return false;
-
     this.addGold(9999999);
     this.addGems(999999);
     this.addSummonTickets(999);
@@ -76,281 +79,715 @@ export class DebugManager {
 
   // ========== 캐릭터 치트 ==========
 
-  /**
-   * 모든 캐릭터 해금
-   */
   static unlockAllCharacters() {
     if (!this.isDebugMode) return false;
-
-    // SaveManager는 상단 import 사용
-    // getAllCharacters는 상단 import 사용
-
     const allCharacters = getAllCharacters();
     allCharacters.forEach(char => {
       SaveManager.addCharacter(char.id, 1);
     });
-
     this.log('Cheat', `All ${allCharacters.length} characters unlocked`);
     return true;
   }
 
-  /**
-   * 캐릭터 레벨 설정
-   * @param {string} charId 캐릭터 ID
-   * @param {number} level 레벨
-   */
   static setCharacterLevel(charId, level) {
     if (!this.isDebugMode) return false;
-
-    // SaveManager는 상단 import 사용
     const character = SaveManager.getCharacter(charId);
-
     if (!character) {
       this.log('Error', `Character ${charId} not found`);
       return false;
     }
-
     SaveManager.updateCharacter(charId, { level, exp: 0 });
     this.log('Cheat', `Set ${charId} to level ${level}`);
     return true;
   }
 
-  /**
-   * 캐릭터 모든 스킬 최대 레벨
-   * @param {string} charId 캐릭터 ID
-   */
   static maxAllSkills(charId) {
     if (!this.isDebugMode) return false;
-
-    // SaveManager는 상단 import 사용
     const character = SaveManager.getCharacter(charId);
-
     if (!character) {
       this.log('Error', `Character ${charId} not found`);
       return false;
     }
-
-    SaveManager.updateCharacter(charId, {
-      skillLevels: [10, 10, 10]
-    });
+    SaveManager.updateCharacter(charId, { skillLevels: [10, 10, 10] });
     this.log('Cheat', `Maxed all skills for ${charId}`);
     return true;
   }
 
-  /**
-   * 캐릭터 별 등급 설정
-   * @param {string} charId 캐릭터 ID
-   * @param {number} stars 별 등급 (1-6)
-   */
   static setCharacterStars(charId, stars) {
     if (!this.isDebugMode) return false;
-
-    // SaveManager는 상단 import 사용
     const character = SaveManager.getCharacter(charId);
-
     if (!character) {
       this.log('Error', `Character ${charId} not found`);
       return false;
     }
-
     SaveManager.updateCharacter(charId, { stars: Math.min(stars, 6) });
     this.log('Cheat', `Set ${charId} to ${stars} stars`);
     return true;
   }
 
-  // ========== 진행도 치트 ==========
+  // ========== G-2: 진행도 치트 (stages.json 연동) ==========
 
-  /**
-   * 모든 스테이지 클리어
-   */
   static clearAllStages() {
     if (!this.isDebugMode) return false;
-
-    // SaveManager는 상단 import 사용
     const data = SaveManager.load();
+    if (!data.progress) data.progress = {};
+    if (!data.progress.clearedStages) data.progress.clearedStages = {};
 
-    // 모든 스테이지를 3성으로 클리어
-    for (let chapter = 1; chapter <= 10; chapter++) {
-      for (let stage = 1; stage <= 10; stage++) {
-        const stageId = `stage_${chapter}_${stage}`;
-        data.progress.clearedStages[stageId] = 3;
-      }
-    }
+    const chapters = getAllChapters();
+    let count = 0;
+    chapters.forEach(chapter => {
+      const stages = chapter.stages || [];
+      stages.forEach(stage => {
+        data.progress.clearedStages[stage.id] = 3;
+        count++;
+      });
+    });
 
     SaveManager.save(data);
-    this.log('Cheat', 'All stages cleared with 3 stars');
+    this.log('Cheat', `All ${count} stages cleared with 3 stars (${chapters.length} chapters)`);
     return true;
   }
 
-  /**
-   * 특정 챕터로 스킵
-   * @param {number} chapter 챕터 번호
-   */
   static skipToChapter(chapter) {
     if (!this.isDebugMode) return false;
-
-    // SaveManager는 상단 import 사용
     const data = SaveManager.load();
+    if (!data.progress) data.progress = {};
+    if (!data.progress.clearedStages) data.progress.clearedStages = {};
 
-    // 해당 챕터까지의 모든 스테이지 클리어
-    for (let c = 1; c < chapter; c++) {
-      for (let s = 1; s <= 10; s++) {
-        const stageId = `stage_${c}_${s}`;
-        data.progress.clearedStages[stageId] = 3;
+    const chapters = getAllChapters();
+    let cleared = 0;
+    chapters.forEach(ch => {
+      const chapterNum = parseInt(ch.id.replace('chapter_', ''));
+      if (chapterNum < chapter) {
+        const stages = ch.stages || [];
+        stages.forEach(stage => {
+          data.progress.clearedStages[stage.id] = 3;
+          cleared++;
+        });
       }
-    }
+    });
 
     data.progress.currentChapter = `chapter_${chapter}`;
     SaveManager.save(data);
-    this.log('Cheat', `Skipped to chapter ${chapter}`);
+    this.log('Cheat', `Skipped to chapter ${chapter} (${cleared} stages auto-cleared)`);
     return true;
   }
 
   // ========== 전투 치트 ==========
 
-  /**
-   * 무적 모드 설정
-   * @param {boolean} enabled 활성화 여부
-   */
   static setInvincible(enabled) {
     if (!this.isDebugMode) return false;
-
     this.invincible = enabled;
     this.log('Cheat', `Invincibility ${enabled ? 'ON' : 'OFF'}`);
     return true;
   }
 
-  /**
-   * 원킬 모드 설정
-   * @param {boolean} enabled 활성화 여부
-   */
   static setOneHitKill(enabled) {
     if (!this.isDebugMode) return false;
-
     this.oneHitKill = enabled;
     this.log('Cheat', `One-hit kill ${enabled ? 'ON' : 'OFF'}`);
     return true;
   }
 
-  /**
-   * 전투 속도 설정
-   * @param {number} speed 배속 (0.5 ~ 5.0)
-   */
   static setBattleSpeed(speed) {
     if (!this.isDebugMode) return false;
-
     this.battleSpeedMultiplier = Math.max(0.5, Math.min(5.0, speed));
     this.log('Cheat', `Battle speed set to ${this.battleSpeedMultiplier}x`);
     return true;
   }
 
+  // ========== G-3: 에너지 시스템 치트 ==========
+
+  static refillEnergy() {
+    if (!this.isDebugMode) return false;
+    const max = energySystem.getMaxEnergy();
+    energySystem.addEnergy(max);
+    this.log('Cheat', `Energy refilled to max (${max})`);
+    return true;
+  }
+
+  static setEnergy(amount) {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    if (!data.energy) data.energy = {};
+    data.energy.current = Math.max(0, amount);
+    SaveManager.save(data);
+    this.log('Cheat', `Energy set to ${amount}`);
+    return true;
+  }
+
+  static setInfiniteEnergy(enabled) {
+    if (!this.isDebugMode) return false;
+    this.infiniteEnergy = enabled;
+    this.log('Cheat', `Infinite energy ${enabled ? 'ON' : 'OFF'}`);
+    return true;
+  }
+
+  static setEnergyRecoverySpeed(multiplier) {
+    if (!this.isDebugMode) return false;
+    this.energyRecoveryMultiplier = Math.max(1, Math.min(100, multiplier));
+    this.log('Cheat', `Energy recovery speed set to ${this.energyRecoveryMultiplier}x`);
+    return true;
+  }
+
+  // ========== G-4: 가챠 시스템 치트 ==========
+
+  static setPityCounter(count) {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    if (!data.gacha) data.gacha = {};
+    data.gacha.pityCounter = Math.max(0, count);
+    SaveManager.save(data);
+    this.log('Gacha', `Pity counter set to ${count}`);
+    return true;
+  }
+
+  static setNextPullRarity(rarity) {
+    if (!this.isDebugMode) return false;
+    const valid = ['R', 'SR', 'SSR'];
+    if (!valid.includes(rarity)) {
+      this.log('Error', `Invalid rarity: ${rarity}. Use: ${valid.join(', ')}`);
+      return false;
+    }
+    this.forceNextRarity = rarity;
+    this.log('Gacha', `Next pull forced to ${rarity}`);
+    return true;
+  }
+
+  static setNextPullCharacter(charId) {
+    if (!this.isDebugMode) return false;
+    this.forceNextCharacter = charId;
+    this.log('Gacha', `Next pull forced to character ${charId}`);
+    return true;
+  }
+
+  static freeGacha(enabled) {
+    if (!this.isDebugMode) return false;
+    this.freeGachaMode = enabled;
+    this.log('Gacha', `Free gacha mode ${enabled ? 'ON' : 'OFF'}`);
+    return true;
+  }
+
+  static simulateGacha(count = 100) {
+    if (!this.isDebugMode) return false;
+    const results = { R: 0, SR: 0, SSR: 0, characters: {} };
+    for (let i = 0; i < count; i++) {
+      try {
+        const pull = GachaSystem.pull(1, 'gems');
+        if (pull && pull.results) {
+          pull.results.forEach(r => {
+            const rarity = r.rarity || 'R';
+            results[rarity] = (results[rarity] || 0) + 1;
+            const name = r.name || r.id || 'unknown';
+            results.characters[name] = (results.characters[name] || 0) + 1;
+          });
+        }
+      } catch {
+        results.R++;
+      }
+    }
+    this.log('Gacha', `Simulation ${count} pulls:`, results);
+    console.table({
+      'R': `${results.R} (${(results.R / count * 100).toFixed(1)}%)`,
+      'SR': `${results.SR} (${(results.SR / count * 100).toFixed(1)}%)`,
+      'SSR': `${results.SSR} (${(results.SSR / count * 100).toFixed(1)}%)`
+    });
+    return results;
+  }
+
+  static resetPity() {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    if (!data.gacha) data.gacha = {};
+    data.gacha.pityCounter = 0;
+    data.gacha.isPickupGuaranteed = false;
+    SaveManager.save(data);
+    this.log('Gacha', 'Pity counter reset to 0');
+    return true;
+  }
+
+  static forcePickup(enabled) {
+    if (!this.isDebugMode) return false;
+    this.forcePickupMode = enabled;
+    this.log('Gacha', `Force pickup mode ${enabled ? 'ON' : 'OFF'}`);
+    return true;
+  }
+
+  // ========== G-5: 장비 시스템 치트 ==========
+
+  static giveEquipment(slotType = 'weapon', rarity = 'SR') {
+    if (!this.isDebugMode) return false;
+    const equip = EquipmentSystem.createEquipment(slotType, rarity);
+    if (equip) {
+      const data = SaveManager.load();
+      if (!data.inventory) data.inventory = {};
+      if (!data.inventory.equipment) data.inventory.equipment = [];
+      data.inventory.equipment.push(equip);
+      SaveManager.save(data);
+      this.log('Cheat', `Given ${rarity} ${slotType}`, equip);
+    }
+    return true;
+  }
+
+  static giveAllEquipment() {
+    if (!this.isDebugMode) return false;
+    const slots = ['weapon', 'armor', 'accessory', 'relic'];
+    const rarities = ['R', 'SR', 'SSR'];
+    let count = 0;
+    const data = SaveManager.load();
+    if (!data.inventory) data.inventory = {};
+    if (!data.inventory.equipment) data.inventory.equipment = [];
+
+    slots.forEach(slot => {
+      rarities.forEach(rarity => {
+        const equip = EquipmentSystem.createEquipment(slot, rarity);
+        if (equip) {
+          data.inventory.equipment.push(equip);
+          count++;
+        }
+      });
+    });
+
+    SaveManager.save(data);
+    this.log('Cheat', `Given ${count} equipment items (all slots × rarities)`);
+    return true;
+  }
+
+  static maxEnhanceEquipment(equipmentId) {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    const equipment = data.inventory?.equipment?.find(e => e.id === equipmentId);
+    if (!equipment) {
+      this.log('Error', `Equipment ${equipmentId} not found`);
+      return false;
+    }
+    equipment.enhanceLevel = 15;
+    SaveManager.save(data);
+    this.log('Cheat', `Equipment ${equipmentId} enhanced to +15`);
+    return true;
+  }
+
+  static setEnhanceAlwaysSuccess(enabled) {
+    if (!this.isDebugMode) return false;
+    this.enhanceAlwaysSuccess = enabled;
+    this.log('Cheat', `Enhance always success ${enabled ? 'ON' : 'OFF'}`);
+    return true;
+  }
+
+  // ========== G-6: 무한의 탑 치트 ==========
+
+  static setTowerFloor(floor) {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    if (!data.tower) data.tower = {};
+    data.tower.currentFloor = Math.max(1, floor);
+    SaveManager.save(data);
+    this.log('Cheat', `Tower floor set to ${floor}`);
+    return true;
+  }
+
+  static clearTowerFloors(from, to) {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    if (!data.tower) data.tower = {};
+    if (!data.tower.clearedFloors) data.tower.clearedFloors = {};
+
+    let count = 0;
+    for (let f = from; f <= to; f++) {
+      data.tower.clearedFloors[f] = true;
+      count++;
+    }
+    data.tower.highestFloor = Math.max(data.tower.highestFloor || 0, to);
+    data.tower.currentFloor = to + 1;
+
+    SaveManager.save(data);
+    this.log('Cheat', `Cleared tower floors ${from}-${to} (${count} floors)`);
+    return true;
+  }
+
+  static clearAllTowerFloors() {
+    if (!this.isDebugMode) return false;
+    return this.clearTowerFloors(1, 100);
+  }
+
+  static resetTower() {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    data.tower = { currentFloor: 1, highestFloor: 0, clearedFloors: {} };
+    SaveManager.save(data);
+    this.log('Cheat', 'Tower progress reset');
+    return true;
+  }
+
+  static setTowerDifficulty(multiplier) {
+    if (!this.isDebugMode) return false;
+    this.towerDifficultyMultiplier = Math.max(0.1, Math.min(10, multiplier));
+    this.log('Cheat', `Tower difficulty multiplier set to ${this.towerDifficultyMultiplier}x`);
+    return true;
+  }
+
+  // ========== G-7: 소탕 & 퀘스트 치트 ==========
+
+  static addSweepTickets(amount) {
+    if (!this.isDebugMode) return false;
+    sweepSystem.addSweepTickets(amount);
+    this.log('Cheat', `Added ${amount} sweep tickets`);
+    return true;
+  }
+
+  static setInfiniteSweeps(enabled) {
+    if (!this.isDebugMode) return false;
+    this.infiniteSweeps = enabled;
+    this.log('Cheat', `Infinite sweeps ${enabled ? 'ON' : 'OFF'}`);
+    return true;
+  }
+
+  static resetDailySweepCount() {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    if (!data.sweep) data.sweep = {};
+    data.sweep.dailyUsed = 0;
+    data.sweep.lastResetDate = null;
+    SaveManager.save(data);
+    this.log('Cheat', 'Daily sweep count reset');
+    return true;
+  }
+
+  static completeAllDailyQuests() {
+    if (!this.isDebugMode) return false;
+    try {
+      const quests = QuestSystem.getDailyQuests();
+      quests.forEach(q => {
+        QuestSystem.updateProgress(q.id, q.target || 999);
+      });
+      this.log('Cheat', `Completed ${quests.length} daily quests`);
+    } catch (e) {
+      this.log('Error', 'Failed to complete daily quests', e.message);
+    }
+    return true;
+  }
+
+  static completeAllWeeklyQuests() {
+    if (!this.isDebugMode) return false;
+    try {
+      const quests = QuestSystem.getWeeklyQuests ? QuestSystem.getWeeklyQuests() : [];
+      quests.forEach(q => {
+        QuestSystem.updateProgress(q.id, q.target || 999);
+      });
+      this.log('Cheat', `Completed ${quests.length} weekly quests`);
+    } catch (e) {
+      this.log('Error', 'Failed to complete weekly quests', e.message);
+    }
+    return true;
+  }
+
+  static claimAllQuestRewards() {
+    if (!this.isDebugMode) return false;
+    try {
+      const claimable = QuestSystem.getClaimableQuests();
+      let claimed = 0;
+      claimable.forEach(q => {
+        QuestSystem.claimReward(q.id);
+        claimed++;
+      });
+      this.log('Cheat', `Claimed ${claimed} quest rewards`);
+    } catch (e) {
+      this.log('Error', 'Failed to claim quest rewards', e.message);
+    }
+    return true;
+  }
+
+  static resetDailyQuests() {
+    if (!this.isDebugMode) return false;
+    try {
+      QuestSystem.resetDailyQuests();
+      this.log('Cheat', 'Daily quests reset');
+    } catch (e) {
+      this.log('Error', 'Failed to reset daily quests', e.message);
+    }
+    return true;
+  }
+
+  // ========== G-8: 세이브 & 시간 치트 ==========
+
+  static exportSave() {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `arcane_save_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.log('Save', 'Save data exported');
+    return true;
+  }
+
+  static importSave(jsonString) {
+    if (!this.isDebugMode) return false;
+    try {
+      const data = JSON.parse(jsonString);
+      SaveManager.save(data);
+      this.log('Save', 'Save data imported successfully');
+      return true;
+    } catch (e) {
+      this.log('Error', `Import failed: ${e.message}`);
+      return false;
+    }
+  }
+
+  static resetAllData() {
+    if (!this.isDebugMode) return false;
+    localStorage.removeItem('arcane_collectors_save');
+    this.log('Save', 'ALL save data cleared');
+    return true;
+  }
+
+  static createBackup(slotName = 'default') {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    localStorage.setItem(`arcane_backup_${slotName}`, JSON.stringify(data));
+    this.log('Save', `Backup created: ${slotName}`);
+    return true;
+  }
+
+  static loadBackup(slotName = 'default') {
+    if (!this.isDebugMode) return false;
+    const backup = localStorage.getItem(`arcane_backup_${slotName}`);
+    if (!backup) {
+      this.log('Error', `Backup not found: ${slotName}`);
+      return false;
+    }
+    SaveManager.save(JSON.parse(backup));
+    this.log('Save', `Backup loaded: ${slotName}`);
+    return true;
+  }
+
+  static fastForwardOffline(hours) {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    const msOffset = hours * 60 * 60 * 1000;
+    if (!data.lastOnlineTime) data.lastOnlineTime = Date.now();
+    data.lastOnlineTime -= msOffset;
+    SaveManager.save(data);
+    this.log('Cheat', `Fast-forwarded offline time by ${hours} hours`);
+    return true;
+  }
+
+  static setLastOnlineTime(hoursAgo) {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    data.lastOnlineTime = Date.now() - (hoursAgo * 60 * 60 * 1000);
+    SaveManager.save(data);
+    this.log('Cheat', `Last online time set to ${hoursAgo} hours ago`);
+    return true;
+  }
+
+  static resetDailyTimers() {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    if (data.dailyReset) data.dailyReset = null;
+    if (data.sweep) data.sweep.lastResetDate = null;
+    if (data.quest) data.quest.lastDailyReset = null;
+    SaveManager.save(data);
+    this.log('Cheat', 'All daily timers reset');
+    return true;
+  }
+
+  // ========== G-9: 분위기 & 시너지 & 파티 치트 ==========
+
+  static setMoodAdvantage(enabled) {
+    if (!this.isDebugMode) return false;
+    this.alwaysMoodAdvantage = enabled;
+    this.log('Cheat', `Always mood advantage ${enabled ? 'ON' : 'OFF'}`);
+    return true;
+  }
+
+  static viewMoodMatchup(moodA, moodB) {
+    if (!this.isDebugMode) return false;
+    const multiplier = moodSystem.getMatchupMultiplier(moodA, moodB);
+    const result = multiplier > 1 ? 'ADVANTAGE' : multiplier < 1 ? 'DISADVANTAGE' : 'NEUTRAL';
+    this.log('Cheat', `${moodA} vs ${moodB}: ${result} (×${multiplier})`);
+    return { moodA, moodB, multiplier, result };
+  }
+
+  static viewActiveSynergies(partyIds) {
+    if (!this.isDebugMode) return false;
+    try {
+      const allChars = getAllCharacters();
+      const heroData = partyIds.map(id => allChars.find(c => c.id === id)).filter(Boolean);
+      const synergies = SynergySystem.calculatePartySynergies(partyIds, heroData);
+      this.log('Cheat', 'Active synergies:', synergies);
+      return synergies;
+    } catch (e) {
+      this.log('Error', `Synergy calculation failed: ${e.message}`);
+      return null;
+    }
+  }
+
+  static forceSynergyBonus(synergyId) {
+    if (!this.isDebugMode) return false;
+    if (!this.forcedSynergies) this.forcedSynergies = [];
+    this.forcedSynergies.push(synergyId);
+    this.log('Cheat', `Forced synergy: ${synergyId}`);
+    return true;
+  }
+
+  static autoOptimalParty() {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    const ownedIds = Object.keys(data.characters || {});
+    if (ownedIds.length === 0) {
+      this.log('Error', 'No characters owned');
+      return false;
+    }
+    const allChars = getAllCharacters();
+    const ownedHeroes = ownedIds
+      .map(id => allChars.find(c => c.id === id))
+      .filter(Boolean);
+    const result = PartyManager.autoFormParty(ownedHeroes);
+    this.log('Cheat', 'Optimal party formed:', result);
+    return result;
+  }
+
+  static clearParty() {
+    if (!this.isDebugMode) return false;
+    const data = SaveManager.load();
+    if (data.parties) {
+      Object.keys(data.parties).forEach(key => {
+        if (data.parties[key]) data.parties[key].members = [];
+      });
+    }
+    SaveManager.save(data);
+    this.log('Cheat', 'All party slots cleared');
+    return true;
+  }
+
   // ========== 로그 ==========
 
-  /**
-   * 디버그 로그 출력
-   * @param {string} category 카테고리
-   * @param {string} message 메시지
-   * @param {*} data 추가 데이터
-   */
   static log(category, message, data) {
     if (!this.isDebugMode) return;
-
     const colors = {
       'System': '#3498db',
       'Cheat': '#e74c3c',
       'Battle': '#e67e22',
       'Gacha': '#9b59b6',
       'Save': '#27ae60',
+      'Energy': '#f39c12',
+      'Tower': '#1abc9c',
+      'Quest': '#2ecc71',
       'Error': '#c0392b'
     };
-
     const color = colors[category] || '#95a5a6';
-    console.log(
-      `%c[DEBUG:${category}] ${message}`,
-      `color: ${color}; font-weight: bold;`,
-      data || ''
-    );
+    if (data !== undefined) {
+      console.log(`%c[DEBUG:${category}] ${message}`, `color: ${color}; font-weight: bold;`, data);
+    } else {
+      console.log(`%c[DEBUG:${category}] ${message}`, `color: ${color}; font-weight: bold;`);
+    }
   }
 
-  // ========== 디버그 UI ==========
+  // ========== G-10: 디버그 콘솔 UI ==========
 
-  /**
-   * 디버그 메뉴 UI 표시
-   * @param {Phaser.Scene} scene 현재 씬
-   */
   static showDebugUI(scene) {
     if (!this.isDebugMode) return;
-
     const width = scene.cameras.main.width;
     const height = scene.cameras.main.height;
 
-    // 배경
-    const bg = scene.add.rectangle(width / 2, height / 2, width * 0.9, height * 0.8, 0x000000, 0.9);
-    bg.setDepth(9000);
+    const bg = scene.add.rectangle(width / 2, height / 2, width * 0.9, height * 0.85, 0x000000, 0.95);
+    bg.setDepth(9000).setInteractive();
 
-    // 제목
-    const title = scene.add.text(width / 2, 100, 'DEBUG MENU', {
-      fontSize: '32px',
-      fontFamily: 'Arial',
-      color: '#ff0000',
-      fontStyle: 'bold'
+    const title = scene.add.text(width / 2, 60, 'DEBUG MENU', {
+      fontSize: '28px', fontFamily: 'Arial', color: '#ff0000', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(9001);
 
-    // 버튼들
+    const statusText = scene.add.text(width / 2, 95, this._getStatusLine(), {
+      fontSize: '12px', fontFamily: 'monospace', color: '#88ff88'
+    }).setOrigin(0.5).setDepth(9001);
+
     const buttons = [
-      { text: '골드 +10000', action: () => this.addGold(10000) },
-      { text: '젬 +1000', action: () => this.addGems(1000) },
-      { text: '티켓 +10', action: () => this.addSummonTickets(10) },
-      { text: '모든 리소스 MAX', action: () => this.maxResources() },
-      { text: '모든 캐릭터 해금', action: () => this.unlockAllCharacters() },
-      { text: '모든 스테이지 클리어', action: () => this.clearAllStages() },
-      { text: '무적 ON/OFF', action: () => this.setInvincible(!this.invincible) },
-      { text: '원킬 ON/OFF', action: () => this.setOneHitKill(!this.oneHitKill) },
-      { text: '닫기', action: () => {
-        bg.destroy();
-        title.destroy();
-        debugContainer.destroy();
-      }}
+      // 리소스
+      { text: '💰 골드 +100K', action: () => this.addGold(100000) },
+      { text: '💎 젬 +10K', action: () => this.addGems(10000) },
+      { text: '🎫 티켓 +50', action: () => this.addSummonTickets(50) },
+      { text: '📦 모든 리소스 MAX', action: () => this.maxResources() },
+      // 캐릭터
+      { text: '🦸 모든 캐릭터 해금', action: () => this.unlockAllCharacters() },
+      // 진행도
+      { text: '⭐ 전체 스테이지 클리어', action: () => this.clearAllStages() },
+      { text: '🗼 탑 전층 클리어', action: () => this.clearAllTowerFloors() },
+      // 에너지
+      { text: '⚡ 에너지 충전', action: () => this.refillEnergy() },
+      { text: `♾️ 무한에너지 ${this.infiniteEnergy ? 'OFF' : 'ON'}`, action: () => this.setInfiniteEnergy(!this.infiniteEnergy) },
+      // 전투
+      { text: `🛡️ 무적 ${this.invincible ? 'OFF' : 'ON'}`, action: () => this.setInvincible(!this.invincible) },
+      { text: `⚔️ 원킬 ${this.oneHitKill ? 'OFF' : 'ON'}`, action: () => this.setOneHitKill(!this.oneHitKill) },
+      { text: '🚀 3배속', action: () => this.setBattleSpeed(3.0) },
+      // 가챠
+      { text: `🎲 무료가챠 ${this.freeGachaMode ? 'OFF' : 'ON'}`, action: () => this.freeGacha(!this.freeGachaMode) },
+      { text: '🎯 천장→89', action: () => this.setPityCounter(89) },
+      // 세이브
+      { text: '💾 세이브 내보내기', action: () => this.exportSave() },
+      { text: '🔄 전체 초기화', action: () => { this.resetAllData(); location.reload(); } },
+      // 닫기
+      { text: '❌ 닫기', action: () => { elements.forEach(e => e.destroy()); } }
     ];
 
-    const debugContainer = scene.add.container(0, 0).setDepth(9001);
+    const elements = [bg, title, statusText];
+    const cols = 2;
+    const btnW = (width * 0.9 - 40) / cols;
+    const btnH = 46;
+    const startY = 125;
+    const startX = width * 0.05 + 20;
 
     buttons.forEach((btn, i) => {
-      const y = 180 + i * 60;
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = startX + col * btnW + btnW / 2;
+      const y = startY + row * (btnH + 6) + btnH / 2;
 
-      const btnBg = scene.add.rectangle(width / 2, y, 300, 50, 0x333333)
+      const btnBg = scene.add.rectangle(x, y, btnW - 8, btnH, 0x222244)
+        .setDepth(9001)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
           btn.action();
-          // UI 새로고침 이벤트 발생
+          statusText.setText(this._getStatusLine());
           scene.events.emit('debug-action');
         })
-        .on('pointerover', () => btnBg.setFillStyle(0x555555))
-        .on('pointerout', () => btnBg.setFillStyle(0x333333));
+        .on('pointerover', () => btnBg.setFillStyle(0x333366))
+        .on('pointerout', () => btnBg.setFillStyle(0x222244));
 
-      const btnText = scene.add.text(width / 2, y, btn.text, {
-        fontSize: '18px',
-        fontFamily: 'Arial',
-        color: '#ffffff'
-      }).setOrigin(0.5);
+      const btnText = scene.add.text(x, y, btn.text, {
+        fontSize: '14px', fontFamily: '"Noto Sans KR", Arial', color: '#ffffff'
+      }).setOrigin(0.5).setDepth(9002);
 
-      debugContainer.add([btnBg, btnText]);
+      elements.push(btnBg, btnText);
     });
-
-    debugContainer.add([bg, title]);
   }
 
-  // ========== 치트 코드 입력 ==========
+  static _getStatusLine() {
+    const data = SaveManager.load();
+    const gold = data.resources?.gold || 0;
+    const gems = data.resources?.gems || 0;
+    const energy = energySystem.getCurrentEnergy();
+    const flags = [
+      this.invincible ? 'GOD' : null,
+      this.oneHitKill ? '1HIT' : null,
+      this.infiniteEnergy ? '∞EN' : null,
+      this.freeGachaMode ? 'FREE' : null,
+      this.alwaysMoodAdvantage ? 'MOOD+' : null
+    ].filter(Boolean).join(' ');
+    return `G:${gold} 💎${gems} ⚡${energy} ${flags ? `[${flags}]` : ''}`;
+  }
 
-  /**
-   * 치트 코드 처리
-   * @param {string} code 치트 코드
-   * @returns {boolean} 성공 여부
-   */
+  // ========== G-10: 치트 코드 25종 ==========
+
   static processCheatCode(code) {
     if (!this.isDebugMode) return false;
 
     const cheats = {
+      // 기존 8종
       'GOLDRAIN': () => this.addGold(999999),
       'GEMSTORM': () => this.addGems(99999),
       'SUMMONALL': () => this.addSummonTickets(100),
@@ -358,7 +795,32 @@ export class DebugManager {
       'ONEPUNCH': () => this.setOneHitKill(true),
       'SPEEDUP': () => this.setBattleSpeed(3.0),
       'UNLOCKALL': () => this.unlockAllCharacters(),
-      'CLEARALL': () => this.clearAllStages()
+      'CLEARALL': () => this.clearAllStages(),
+      // G-3: 에너지
+      'FULLCHARGE': () => this.refillEnergy(),
+      'INFINERGY': () => this.setInfiniteEnergy(!this.infiniteEnergy),
+      'SPEEDREGEN': () => this.setEnergyRecoverySpeed(10),
+      // G-4: 가챠
+      'FREEPULL': () => this.freeGacha(true),
+      'PITY89': () => this.setPityCounter(89),
+      'FORCEPICKUP': () => this.forcePickup(true),
+      'FORCESSR': () => this.setNextPullRarity('SSR'),
+      // G-5: 장비
+      'GEARUP': () => this.giveAllEquipment(),
+      'ENHANCE100': () => this.setEnhanceAlwaysSuccess(true),
+      // G-6: 탑
+      'TOWERMAX': () => this.clearAllTowerFloors(),
+      'TOWERRESET': () => this.resetTower(),
+      // G-7: 소탕 & 퀘스트
+      'SWEEPMAX': () => { this.addSweepTickets(999); this.resetDailySweepCount(); },
+      'QUESTDONE': () => { this.completeAllDailyQuests(); this.claimAllQuestRewards(); },
+      // G-8: 세이브 & 시간
+      'SAVEEXPORT': () => this.exportSave(),
+      'BACKUP': () => this.createBackup('cheatcode'),
+      'RESETALL': () => this.resetAllData(),
+      // G-9: 분위기 & 파티
+      'MOODPLUS': () => this.setMoodAdvantage(!this.alwaysMoodAdvantage),
+      'AUTOPARTY': () => this.autoOptimalParty()
     };
 
     const cheat = cheats[code.toUpperCase()];
@@ -370,4 +832,97 @@ export class DebugManager {
 
     return false;
   }
+
+  // ========== G-10: 도움말 ==========
+
+  static help() {
+    const commands = {
+      '=== 리소스 ===': '',
+      'addGold(n)': '골드 추가',
+      'addGems(n)': '젬 추가',
+      'addSummonTickets(n)': '소환 티켓 추가',
+      'maxResources()': '모든 리소스 MAX',
+      '=== 캐릭터 ===': '',
+      'unlockAllCharacters()': '전체 캐릭터 해금',
+      'setCharacterLevel(id, lv)': '캐릭터 레벨 설정',
+      'maxAllSkills(id)': '캐릭터 스킬 MAX',
+      'setCharacterStars(id, n)': '캐릭터 별 등급 설정',
+      '=== 진행도 (G-2) ===': '',
+      'clearAllStages()': '전체 스테이지 3성 클리어',
+      'skipToChapter(n)': 'n챕터로 스킵',
+      '=== 전투 ===': '',
+      'setInvincible(bool)': '무적 모드',
+      'setOneHitKill(bool)': '원킬 모드',
+      'setBattleSpeed(n)': '전투 배속 (0.5~5.0)',
+      '=== 에너지 (G-3) ===': '',
+      'refillEnergy()': '에너지 최대 충전',
+      'setEnergy(n)': '에너지 특정 값 설정',
+      'setInfiniteEnergy(bool)': '무한 에너지',
+      'setEnergyRecoverySpeed(n)': '회복 배속 (1~100)',
+      '=== 가챠 (G-4) ===': '',
+      'setPityCounter(n)': '천장 카운터 설정',
+      'setNextPullRarity(str)': '다음 소환 등급 강제',
+      'setNextPullCharacter(id)': '다음 소환 캐릭터 강제',
+      'freeGacha(bool)': '무료 소환 모드',
+      'simulateGacha(n)': 'N회 소환 시뮬레이션',
+      'resetPity()': '천장 리셋',
+      'forcePickup(bool)': '픽업 확정 모드',
+      '=== 장비 (G-5) ===': '',
+      'giveEquipment(slot, rarity)': '장비 지급',
+      'giveAllEquipment()': '전 종류 장비 지급',
+      'maxEnhanceEquipment(id)': '장비 +15 강화',
+      'setEnhanceAlwaysSuccess(bool)': '강화 100% 성공',
+      '=== 탑 (G-6) ===': '',
+      'setTowerFloor(n)': '탑 현재 층 설정',
+      'clearTowerFloors(from, to)': '범위 층 클리어',
+      'clearAllTowerFloors()': '전층 클리어',
+      'resetTower()': '탑 초기화',
+      'setTowerDifficulty(n)': '탑 난이도 배율',
+      '=== 소탕 & 퀘스트 (G-7) ===': '',
+      'addSweepTickets(n)': '소탕권 추가',
+      'setInfiniteSweeps(bool)': '무한 소탕',
+      'resetDailySweepCount()': '일일 소탕 리셋',
+      'completeAllDailyQuests()': '일일 퀘스트 완료',
+      'completeAllWeeklyQuests()': '주간 퀘스트 완료',
+      'claimAllQuestRewards()': '보상 전체 수령',
+      'resetDailyQuests()': '일일 퀘스트 리셋',
+      '=== 세이브 & 시간 (G-8) ===': '',
+      'exportSave()': '세이브 JSON 다운로드',
+      'importSave(json)': '세이브 JSON 업로드',
+      'resetAllData()': '전체 초기화',
+      'createBackup(name)': '백업 생성',
+      'loadBackup(name)': '백업 불러오기',
+      'fastForwardOffline(h)': '오프라인 보상 빨리감기',
+      'setLastOnlineTime(h)': '마지막 접속 시간 변경',
+      'resetDailyTimers()': '일일 타이머 리셋',
+      '=== 분위기 & 시너지 (G-9) ===': '',
+      'setMoodAdvantage(bool)': '항상 상성 유리',
+      'viewMoodMatchup(a, b)': '두 분위기 상성 확인',
+      'viewActiveSynergies(ids)': '파티 시너지 확인',
+      'forceSynergyBonus(id)': '시너지 강제 활성화',
+      'autoOptimalParty()': '최적 파티 자동 편성',
+      'clearParty()': '파티 초기화',
+      '=== 치트코드 (processCheatCode) ===': '',
+      'GOLDRAIN/GEMSTORM/SUMMONALL': '리소스',
+      'GODMODE/ONEPUNCH/SPEEDUP': '전투',
+      'UNLOCKALL/CLEARALL': '진행도',
+      'FULLCHARGE/INFINERGY/SPEEDREGEN': '에너지',
+      'FREEPULL/PITY89/FORCEPICKUP/FORCESSR': '가챠',
+      'GEARUP/ENHANCE100': '장비',
+      'TOWERMAX/TOWERRESET': '탑',
+      'SWEEPMAX/QUESTDONE': '소탕/퀘스트',
+      'SAVEEXPORT/BACKUP/RESETALL': '세이브',
+      'MOODPLUS/AUTOPARTY': '분위기/파티'
+    };
+
+    console.log('%c=== ArcaneCollectors Debug Commands ===', 'color: #ff6600; font-size: 16px; font-weight: bold;');
+    console.log('%cUsage: debug.commandName(args)', 'color: #ffcc00;');
+    console.table(commands);
+    return commands;
+  }
+}
+
+// DEV 모드 자동 활성화
+if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+  DebugManager.setDebugMode(true);
 }

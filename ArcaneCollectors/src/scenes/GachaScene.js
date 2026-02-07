@@ -1,6 +1,8 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { GachaSystem } from '../systems/GachaSystem.js';
+import { EquipmentSystem } from '../systems/EquipmentSystem.js';
+import { ParticleManager } from '../systems/ParticleManager.js';
 import { getCharacter } from '../data/index.js';
 
 export class GachaScene extends Phaser.Scene {
@@ -13,12 +15,22 @@ export class GachaScene extends Phaser.Scene {
   create() {
     this.cameras.main.fadeIn(300);
 
+    // H-3: ParticleManager 초기화
+    this.particles = new ParticleManager(this);
+
     this.createBackground();
     this.createHeader();
     this.createTabButtons();
     this.createBannerArea();
     this.createSummonButtons();
     this.createPityDisplay();
+
+    this.events.once('shutdown', () => {
+      if (this.particles) {
+        this.particles.destroy();
+        this.particles = null;
+      }
+    });
   }
 
   createBackground() {
@@ -178,7 +190,7 @@ export class GachaScene extends Phaser.Scene {
       this.heroTabText.setColor('#' + COLORS.textDark.toString(16).padStart(6, '0'));
       this.heroTabText.setStyle({ fontStyle: 'normal' });
 
-      this.showMessage('장비 소환 모드 (준비 중)', COLORS.accent);
+      this.showMessage('장비 소환 모드', COLORS.accent);
     }
   }
 
@@ -371,14 +383,10 @@ export class GachaScene extends Phaser.Scene {
     bg.on('pointerdown', () => {
       if (this.isAnimating) return;
 
-      // Check if equipment summon is disabled
-      if (this.currentTab === 'equipment') {
-        this.showMessage('장비 소환은 준비 중입니다!', COLORS.accent);
-        return;
-      }
-
-      // GachaSystem으로 소환 가능 여부 확인
-      if (!GachaSystem.canPull(count, 'gems')) {
+      // 보석 부족 체크
+      const cost = count === 1 ? 300 : 2700;
+      const resources = SaveManager.getResources();
+      if (resources.gems < cost) {
         this.showMessage('보석이 부족합니다!', COLORS.danger);
         return;
       }
@@ -393,8 +401,16 @@ export class GachaScene extends Phaser.Scene {
         ease: 'Power2'
       });
 
-      // GachaSystem을 통한 소환 실행
-      this.performGachaPull(count);
+      if (this.currentTab === 'equipment') {
+        this.performEquipmentPull(count, cost);
+      } else {
+        // GachaSystem으로 소환 가능 여부 재확인
+        if (!GachaSystem.canPull(count, 'gems')) {
+          this.showMessage('보석이 부족합니다!', COLORS.danger);
+          return;
+        }
+        this.performGachaPull(count);
+      }
     });
 
     // Premium glow effect
@@ -529,6 +545,267 @@ export class GachaScene extends Phaser.Scene {
         targets: this.pityBar,
         width: 300 * progress,
         duration: 300
+      });
+    }
+  }
+
+  /**
+   * 장비 가챠 소환 실행
+   */
+  performEquipmentPull(count, cost) {
+    this.isAnimating = true;
+
+    // 보석 차감
+    const data = SaveManager.load();
+    data.resources = data.resources || { gems: 1000, gold: 0 };
+    data.resources.gems -= cost;
+    SaveManager.save(data);
+
+    // 젬 UI 업데이트
+    this.registry.set('gems', data.resources.gems);
+    if (this.gemText) {
+      this.gemText.setText(data.resources.gems.toLocaleString());
+    }
+
+    // 장비 등급 결정 및 생성
+    const EQUIP_RATES = { SSR: 0.015, SR: 0.085, R: 0.30, N: 0.60 };
+    const SLOT_TYPES = ['weapon', 'armor', 'accessory', 'relic'];
+    const SLOT_NAMES = { weapon: '무기', armor: '방어구', accessory: '악세서리', relic: '유물' };
+    const SLOT_ICONS = { weapon: '⚔️', armor: '🛡️', accessory: '💍', relic: '🔮' };
+
+    const results = [];
+    let guaranteeSR = count >= 10; // 10연차 SR 이상 1회 보장
+
+    for (let i = 0; i < count; i++) {
+      const roll = Math.random();
+      let rarity;
+      if (roll < EQUIP_RATES.SSR) {
+        rarity = 'SSR';
+        guaranteeSR = false;
+      } else if (roll < EQUIP_RATES.SSR + EQUIP_RATES.SR) {
+        rarity = 'SR';
+        guaranteeSR = false;
+      } else if (roll < EQUIP_RATES.SSR + EQUIP_RATES.SR + EQUIP_RATES.R) {
+        rarity = 'R';
+      } else {
+        rarity = 'N';
+      }
+
+      // 10연차 마지막인데 SR 이상이 없으면 보장
+      if (i === count - 1 && guaranteeSR) {
+        rarity = 'SR';
+      }
+
+      const slotType = Phaser.Math.RND.pick(SLOT_TYPES);
+      const equipment = EquipmentSystem.createEquipment(slotType, rarity);
+
+      results.push({
+        ...equipment,
+        slotName: SLOT_NAMES[slotType],
+        slotIcon: SLOT_ICONS[slotType]
+      });
+    }
+
+    // 소환 연출
+    this.showEquipmentAnimation(results);
+  }
+
+  showEquipmentAnimation(results) {
+    const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0);
+    overlay.setDepth(50);
+
+    this.tweens.add({
+      targets: overlay,
+      alpha: 0.9,
+      duration: 400,
+      ease: 'Power2'
+    });
+
+    const hasSSR = results.some(e => e.rarity === 'SSR');
+    const hasSR = results.some(e => e.rarity === 'SR');
+
+    // 장비 소환 이펙트 (기어/톱니 모양)
+    const circleGraphics = this.add.graphics().setDepth(51);
+    const effectColor = hasSSR ? COLORS.raritySSR : (hasSR ? COLORS.raritySR : COLORS.accent);
+    circleGraphics.lineStyle(3, effectColor, 1);
+
+    // 육각형 마법진 효과
+    for (let ring = 0; ring < 3; ring++) {
+      const radius = 80 + ring * 35;
+      const sides = 6;
+      circleGraphics.beginPath();
+      for (let i = 0; i <= sides; i++) {
+        const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+        const px = GAME_WIDTH / 2 + Math.cos(angle) * radius;
+        const py = GAME_HEIGHT / 2 + Math.sin(angle) * radius;
+        if (i === 0) circleGraphics.moveTo(px, py);
+        else circleGraphics.lineTo(px, py);
+      }
+      circleGraphics.strokePath();
+    }
+
+    circleGraphics.setAlpha(0).setScale(0);
+
+    this.tweens.add({
+      targets: circleGraphics,
+      scale: 1.3,
+      alpha: 1,
+      rotation: Math.PI / 3,
+      duration: 1200,
+      ease: 'Cubic.easeOut'
+    });
+
+    // 파티클 버스트
+    const particleCount = hasSSR ? 35 : 20;
+    const particles = [];
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (i / particleCount) * Math.PI * 2;
+      const particle = this.add.circle(GAME_WIDTH / 2, GAME_HEIGHT / 2, hasSSR ? 5 : 3, effectColor)
+        .setDepth(52).setAlpha(0);
+      particles.push(particle);
+
+      this.tweens.add({
+        targets: particle,
+        x: GAME_WIDTH / 2 + Math.cos(angle) * 180,
+        y: GAME_HEIGHT / 2 + Math.sin(angle) * 180,
+        alpha: { from: 1, to: 0 },
+        duration: 1200,
+        delay: 300 + i * 25,
+        ease: 'Cubic.easeOut'
+      });
+    }
+
+    if (hasSSR) {
+      const flash = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xFFD700, 0);
+      flash.setDepth(55);
+      this.tweens.add({
+        targets: flash,
+        alpha: { from: 0, to: 0.5 },
+        duration: 400,
+        delay: 600,
+        yoyo: true,
+        onComplete: () => flash.destroy()
+      });
+      this.cameras.main.shake(250, 0.008);
+    }
+
+    const animDuration = hasSSR ? 2200 : 1600;
+    this.time.delayedCall(animDuration, () => {
+      circleGraphics.destroy();
+      particles.forEach(p => p.destroy());
+      this.showEquipmentResults(results, overlay);
+    });
+  }
+
+  showEquipmentResults(results, overlay) {
+    const container = this.add.container(0, 0).setDepth(60);
+
+    const resultBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - 40, GAME_HEIGHT - 200, COLORS.backgroundLight, 0.95);
+    resultBg.setStrokeStyle(2, COLORS.accent);
+    container.add(resultBg);
+
+    const title = this.add.text(GAME_WIDTH / 2, 150, '⚔️ 장비 소환 결과', {
+      fontSize: '24px',
+      fontFamily: 'Georgia, serif',
+      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    container.add(title);
+
+    const cols = Math.min(5, results.length);
+    const startX = GAME_WIDTH / 2 - ((cols - 1) * 85) / 2;
+    const startY = 250;
+
+    results.forEach((equip, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const x = startX + col * 85;
+      const y = startY + row * 140;
+
+      this.time.delayedCall(index * 80, () => {
+        this.createEquipmentCard(container, x, y, equip);
+      });
+    });
+
+    const closeBtn = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT - 120);
+    const closeBg = this.add.rectangle(0, 0, 150, 50, COLORS.accent, 1)
+      .setInteractive({ useHandCursor: true });
+    const closeText = this.add.text(0, 0, '확인', {
+      fontSize: '18px',
+      fontFamily: 'Arial',
+      color: '#' + COLORS.text.toString(16).padStart(6, '0')
+    }).setOrigin(0.5);
+
+    closeBtn.add([closeBg, closeText]);
+    container.add(closeBtn);
+
+    closeBg.on('pointerdown', () => {
+      container.destroy();
+      overlay.destroy();
+      this.isAnimating = false;
+    });
+  }
+
+  createEquipmentCard(container, x, y, equip) {
+    const card = this.add.container(x, y);
+    const rarityColor = COLORS.rarity[equip.rarity] || COLORS.rarityN;
+
+    const cardBg = this.add.rectangle(0, 0, 75, 120, COLORS.backgroundLight, 1);
+    cardBg.setStrokeStyle(2, rarityColor);
+
+    // 슬롯 아이콘
+    const icon = this.add.text(0, -25, equip.slotIcon || '⚔️', {
+      fontSize: '32px'
+    }).setOrigin(0.5);
+
+    // 등급 배지
+    const rarityBadge = this.add.rectangle(0, -55, 30, 18, rarityColor, 1);
+    const rarityText = this.add.text(0, -55, equip.rarity, {
+      fontSize: '10px', fontFamily: 'Arial', color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // 슬롯 타입
+    const slotText = this.add.text(0, 15, equip.slotName || equip.slotType, {
+      fontSize: '11px', fontFamily: 'Arial',
+      color: '#' + COLORS.text.toString(16).padStart(6, '0')
+    }).setOrigin(0.5);
+
+    // 장비 이름 (축약)
+    const displayName = equip.name && equip.name.length > 6 ? equip.name.substring(0, 6) + '..' : (equip.name || '장비');
+    const nameText = this.add.text(0, 35, displayName, {
+      fontSize: '9px', fontFamily: 'Arial',
+      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+    }).setOrigin(0.5);
+
+    // 주요 스탯 표시
+    const mainStat = equip.baseStats ? Object.entries(equip.baseStats)[0] : null;
+    const statLabel = mainStat ? `${mainStat[0]} +${Math.floor(mainStat[1])}` : '';
+    const statText = this.add.text(0, 50, statLabel, {
+      fontSize: '9px', fontFamily: 'Arial',
+      color: '#' + COLORS.accent.toString(16).padStart(6, '0')
+    }).setOrigin(0.5);
+
+    card.add([cardBg, icon, rarityBadge, rarityText, slotText, nameText, statText]);
+    container.add(card);
+
+    card.setScale(0);
+    this.tweens.add({
+      targets: card,
+      scale: 1,
+      duration: 200,
+      ease: 'Back.easeOut'
+    });
+
+    if (equip.rarity === 'SSR') {
+      const glow = this.add.circle(x, y, 50, COLORS.raritySSR, 0.3);
+      container.add(glow);
+      container.sendToBack(glow);
+      this.tweens.add({
+        targets: glow,
+        scale: { from: 0.8, to: 1.2 },
+        alpha: { from: 0.5, to: 0 },
+        duration: 1000,
+        repeat: -1
       });
     }
   }
@@ -742,6 +1019,26 @@ export class GachaScene extends Phaser.Scene {
 
       // Mini shake
       this.cameras.main.shake(200, 0.005);
+    }
+
+    // H-3: ParticleManager 기반 등급별 파티클 추가
+    if (this.particles) {
+      const bestRarity = hasSSR ? 'SSR' : (hasSR ? 'SR' : 'R');
+      const cx = GAME_WIDTH / 2;
+      const cy = GAME_HEIGHT / 2;
+
+      // 등급별 소환 파티클
+      this.time.delayedCall(500, () => {
+        this.particles.playRarityEffect(bestRarity, cx, cy);
+      });
+
+      // 최고 등급 캐릭터의 분위기(Mood) 파티클 수렴 (H-3.2)
+      const bestHero = results.find(h => h.rarity === bestRarity);
+      if (bestHero?.mood) {
+        this.time.delayedCall(1000, () => {
+          this.particles.playMoodEffect(bestHero.mood, cx, cy, 'skill');
+        });
+      }
     }
 
     // Show results after animation

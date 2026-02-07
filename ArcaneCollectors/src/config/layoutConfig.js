@@ -66,7 +66,7 @@ export const MOOD_COLORS = {
 
     // 기본값
     DEFAULT: 0x95A5A6      // 회색 - 기본
-};;
+};
 
 // 에너지 UI 설정
 export const ENERGY_UI = {
@@ -121,6 +121,28 @@ export const UI_STYLES = {
     }
 };
 
+// 교단별 색상 (Phaser hex 형식)
+export const CULT_COLORS = {
+    valhalla: 0x4A90D9,      // 발할라 - 바람의 파랑
+    takamagahara: 0xFFD700,  // 타카마가하라 - 빛의 황금
+    olympus: 0xFF6B35,       // 올림푸스 - 불의 주황
+    asgard: 0x5DADE2,        // 아스가르드 - 물의 청록
+    yomi: 0x8E44AD,          // 요미 - 어둠의 보라
+    tartarus: 0xB71C1C,      // 타르타로스 - 심연의 진홍
+    avalon: 0x4CAF50,        // 아발론 - 요정의 초록
+    helheim: 0x37474F,       // 헬하임 - 죽음의 청흑
+    kunlun: 0x00BCD4,        // 곤륜 - 선계의 청옥
+    DEFAULT: 0x95A5A6        // 기본 - 회색
+};
+
+// 등급별 프레임 색상
+export const RARITY_COLORS = {
+    N: { border: 0x6B7280, bg: 0x374151, glow: null },
+    R: { border: 0x3B82F6, bg: 0x1E3A5F, glow: null },
+    SR: { border: 0xA855F7, bg: 0x4C1D95, glow: 0xA855F7 },
+    SSR: { border: 0xF59E0B, bg: 0x78350F, glow: 0xF59E0B }
+};
+
 // Z-인덱스 레이어
 export const Z_INDEX = {
     BACKGROUND: 0,
@@ -140,6 +162,8 @@ export default {
     PARTY,
     BATTLE,
     MOOD_COLORS,
+    CULT_COLORS,
+    RARITY_COLORS,
     ENERGY_UI,
     UI_STYLES,
     Z_INDEX

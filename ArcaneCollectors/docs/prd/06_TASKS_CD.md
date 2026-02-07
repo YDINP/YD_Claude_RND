@@ -3,7 +3,7 @@
 
 ### TEAM C TASK (데이터 & 백엔드) - 상세
 
-#### C-1: data/index.js Element→Mood 전면 마이그레이션 (v5.2 업데이트)
+#### C-1: data/index.js Element→Mood 전면 마이그레이션 (v5.2 업데이트) `[DONE]`
 **서브 태스크**:
 - C-1.1: `getCharactersByElement()` → `getCharactersByMood()` 교체
 - C-1.2: `getCharactersByCult()` 신규 추가
@@ -13,7 +13,7 @@
 - C-1.6: 모든 import처에서 새 함수명 사용 확인
 - C-1.7: default export 객체 업데이트
 
-#### C-2: GachaScene ↔ GachaSystem 완전 교체
+#### C-2: GachaScene ↔ GachaSystem 완전 교체 `[DONE]`
 **유저 상호작용 체인**:
 ```
 소환 버튼 터치 → 보석 확인 → GachaSystem.pull() 호출 →
@@ -33,7 +33,7 @@ characters.json에서 실제 캐릭터 데이터 반환 →
 - C-2.10: 하드코딩 UI 텍스트 동적화: 천장 카운터(87/90→실제값), 소환권(5개→실제값), 확률 표시 일치
 **확장 아이디어**: 소환 히스토리 UI (최근 100회 기록)
 
-#### C-3: Supabase 마이그레이션 SQL 검증 및 적용
+#### C-3: Supabase 마이그레이션 SQL 검증 및 적용 `[DONE]`
 **유저 상호작용 체인**:
 ```
 앱 실행 → Supabase 연결 → DB 스키마 검증 →
@@ -50,7 +50,7 @@ RLS 정책 적용 → 데이터 CRUD 정상 동작
 - [ ] RLS 정책이 누락된 테이블은 없는가?
 - [ ] 가챠 결과를 서버에서 검증하는 RPC function이 있는가?
 
-#### C-4: 하이브리드 저장 시스템 (Local + Supabase)
+#### C-4: 하이브리드 저장 시스템 (Local + Supabase) `[DONE]`
 **유저 상호작용 체인**:
 ```
 온라인: 저장 → Supabase 우선 + localStorage 백업 →
@@ -68,7 +68,7 @@ RLS 정책 적용 → 데이터 CRUD 정상 동작
 - [ ] 서버/로컬 데이터가 다를 때 어느 것을 우선하는가?
 - [ ] 저장 실패 시 재시도 로직이 있는가?
 
-#### C-5: 오프라인 보상 시스템 검증
+#### C-5: 오프라인 보상 시스템 검증 `[DONE]`
 **유저 상호작용 체인**:
 ```
 앱 종료 → (오프라인 시간 경과) → 앱 재실행 →
@@ -84,7 +84,7 @@ BootScene에서 lastOnline 비교 → 보상 계산 →
 - [ ] lastOnline이 미래 시간일 때 (시간 조작) 방어 처리?
 - [ ] 보상 계산 시 소수점 처리 (내림 vs 반올림)?
 
-#### C-6: 쿠폰 시스템 UI 연결
+#### C-6: 쿠폰 시스템 UI 연결 `[DONE]`
 **유저 상호작용 체인**:
 ```
 설정/메뉴 → "쿠폰 입력" 터치 → 입력 모달 →
@@ -98,7 +98,7 @@ BootScene에서 lastOnline 비교 → 보상 계산 →
 - C-6.4: 사용 완료 쿠폰 재사용 방지 안내
 **확장 아이디어**: 쿠폰 히스토리 목록 (사용한 쿠폰/보상 목록)
 
-#### C-7: DebugManager 통합 (TEAM G 협업)
+#### C-7: DebugManager 통합 (TEAM G 협업) `[DONE]`
 **서브 태스크**:
 - C-7.1: 개발 모드에서만 활성화 (`import.meta.env.DEV` 체크)
 - C-7.2: 프로덕션 빌드에서 DebugManager 코드 tree-shaking 제거
@@ -109,7 +109,7 @@ BootScene에서 lastOnline 비교 → 보상 계산 →
 
 ### TEAM D TASK (통합 QA & 최적화) - 상세
 
-#### D-1: 전체 Scene 전환 흐름 테스트
+#### D-1: 전체 Scene 전환 흐름 테스트 `[DONE]`
 **유저 상호작용 체인**:
 ```
 Boot → Login → Preload → MainMenu → 각 하위 Scene →
@@ -125,7 +125,7 @@ Boot → Login → Preload → MainMenu → 각 하위 Scene →
 - [ ] 신규 Scene(Tower, Login, Quest) 등록 후 전환 문제?
 - [ ] Scene shutdown()에서 리스너/타이머 정리 완전한가?
 
-#### D-2: 전투 E2E 테스트
+#### D-2: 전투 E2E 테스트 `[DONE]`
 **유저 상호작용 체인**:
 ```
 모험 → 스테이지 선택 → 에너지 확인 → 파티 편성 →
@@ -141,7 +141,7 @@ Boot → Login → Preload → MainMenu → 각 하위 Scene →
 - D-2.6: 배속(1x/2x/3x) 전환 시 전투 정상 진행
 - D-2.7: 시너지 버프가 실제 데미지에 반영되는지 수치 검증
 
-#### D-3: 가챠 확률 시뮬레이션 검증
+#### D-3: 가챠 확률 시뮬레이션 검증 `[DONE]`
 **서브 태스크**:
 - D-3.1: 10,000회 소환 시뮬레이션 실행
 - D-3.2: 등급 분포 검증: N:60%±2%, R:30%±2%, SR:8.5%±1%, SSR:1.5%±0.5%
@@ -151,7 +151,7 @@ Boot → Login → Preload → MainMenu → 각 하위 Scene →
 - D-3.6: 픽업 배너 확률 UP (SSR 중 50% 픽업 대상) 검증
 **확장 아이디어**: 가챠 시뮬레이터 페이지 (유저가 직접 확률 테스트)
 
-#### D-4: Vite 빌드 최적화
+#### D-4: Vite 빌드 최적화 `[DONE]`
 **서브 태스크**:
 - D-4.1: 번들 사이즈 분석 (rollup-plugin-visualizer)
 - D-4.2: 코드 스플리팅: Scene별 lazy load (dynamic import)
@@ -160,7 +160,7 @@ Boot → Login → Preload → MainMenu → 각 하위 Scene →
 - D-4.5: tree-shaking 확인: 미사용 코드 제거
 - D-4.6: gzip 압축 후 번들 < 2MB 확인
 
-#### D-5: 크로스 브라우저 & 모바일 테스트
+#### D-5: 크로스 브라우저 & 모바일 테스트 `[TODO]`
 **서브 태스크**:
 - D-5.1: Chrome/Safari/Firefox 동작 확인
 - D-5.2: 모바일 터치 입력 정상 동작 (iOS Safari, Android Chrome)
