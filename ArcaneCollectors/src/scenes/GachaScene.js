@@ -14,6 +14,7 @@ export class GachaScene extends Phaser.Scene {
   }
 
   create() {
+    try {
     this.cameras.main.fadeIn(300);
 
     // H-3: ParticleManager 초기화
@@ -27,13 +28,15 @@ export class GachaScene extends Phaser.Scene {
     this.createPityDisplay();
 
     this.bottomNav = new BottomNav(this, 'gacha');
-
-    this.events.once('shutdown', () => {
-      if (this.particles) {
-        this.particles.destroy();
-        this.particles = null;
-      }
-    });
+    } catch (error) {
+      console.error('[GachaScene] create() 실패:', error);
+      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: '20px', fill: '#ff4444', align: 'center'
+      }).setOrigin(0.5);
+      this.time.delayedCall(2000, () => {
+        this.scene.start('MainMenuScene');
+      });
+    }
   }
 
   createBackground() {
@@ -1105,6 +1108,18 @@ export class GachaScene extends Phaser.Scene {
     });
 
     this.pityText.setText(`${pity}/${pityMax}`);
+  }
+
+  shutdown() {
+    this.time.removeAllEvents();
+    this.tweens.killAll();
+    if (this.input) {
+      this.input.removeAllListeners();
+    }
+    if (this.particles) {
+      this.particles.destroy();
+      this.particles = null;
+    }
   }
 
   showMessage(text, color = COLORS.text) {

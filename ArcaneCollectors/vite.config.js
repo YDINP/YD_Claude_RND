@@ -6,6 +6,10 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: true,
+    // 프로덕션 빌드에서 console.log 제거 (console.warn/error는 유지)
+    esbuild: {
+      pure: ['console.log']
+    },
     // D-4.6: 청크 사이즈 경고 기준 (Phaser가 크므로 1MB로 상향)
     chunkSizeWarningLimit: 1600,
     rollupOptions: {

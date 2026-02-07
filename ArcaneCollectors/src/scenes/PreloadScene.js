@@ -491,59 +491,77 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create() {
-    // 에셋 생성 시뮬레이션 + 프로그레스
-    let progress = 0;
+    try {
+      // 에셋 생성 시뮬레이션 + 프로그레스
+      let progress = 0;
 
-    const stages = [
-      { label: '에셋 준비 중...', target: 0.3 },
-      { label: '캐릭터 로드 중...', target: 0.6 },
-      { label: '전투 데이터 초기화...', target: 0.85 },
-      { label: '완료!', target: 1.0 }
-    ];
-    let stageIndex = 0;
+      const stages = [
+        { label: '에셋 준비 중...', target: 0.3 },
+        { label: '캐릭터 로드 중...', target: 0.6 },
+        { label: '전투 데이터 초기화...', target: 0.85 },
+        { label: '완료!', target: 1.0 }
+      ];
+      let stageIndex = 0;
 
-    const timer = this.time.addEvent({
-      delay: 25,
-      callback: () => {
-        progress += 0.03;
+      const timer = this.time.addEvent({
+        delay: 25,
+        callback: () => {
+          progress += 0.03;
 
-        // 단계별 텍스트 변경
-        if (stageIndex < stages.length && progress >= stages[stageIndex].target) {
-          if (stageIndex + 1 < stages.length) {
-            this.loadingText.setText(stages[stageIndex + 1].label);
+          // 단계별 텍스트 변경
+          if (stageIndex < stages.length && progress >= stages[stageIndex].target) {
+            if (stageIndex + 1 < stages.length) {
+              this.loadingText.setText(stages[stageIndex + 1].label);
+            }
+            stageIndex++;
           }
-          stageIndex++;
-        }
 
-        if (progress >= 1) {
-          progress = 1;
-          timer.remove();
+          if (progress >= 1) {
+            progress = 1;
+            timer.remove();
 
-          this.loadingText.setText('완료!');
+            this.loadingText.setText('완료!');
 
-          const pendingRewards = this.registry.get('pendingOfflineRewards');
+            const pendingRewards = this.registry.get('pendingOfflineRewards');
 
-          this.cameras.main.fadeOut(400, 10, 10, 26);
-          this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start('MainMenuScene', { showOfflineRewards: pendingRewards });
-          });
-        }
+            this.cameras.main.fadeOut(400, 10, 10, 26);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+              this.scene.start('MainMenuScene', { showOfflineRewards: pendingRewards });
+            });
+          }
 
-        // 둥근 진행바 그리기
-        this.progressBar.clear();
-        const fillWidth = Math.max(0, this._barWidth * progress);
-        if (fillWidth > 0) {
-          this.progressBar.fillStyle(0x6366f1, 1);
-          this.progressBar.fillRoundedRect(
-            this._barX, this._barY,
-            fillWidth, this._barHeight,
-            this._barHeight / 2
-          );
-        }
+          // 둥근 진행바 그리기
+          this.progressBar.clear();
+          const fillWidth = Math.max(0, this._barWidth * progress);
+          if (fillWidth > 0) {
+            this.progressBar.fillStyle(0x6366f1, 1);
+            this.progressBar.fillRoundedRect(
+              this._barX, this._barY,
+              fillWidth, this._barHeight,
+              this._barHeight / 2
+            );
+          }
 
-        this.percentText.setText(Math.floor(progress * 100) + '%');
-      },
-      repeat: 40
-    });
+          this.percentText.setText(Math.floor(progress * 100) + '%');
+        },
+        repeat: 40
+      });
+    } catch (error) {
+      console.error('[PreloadScene] create() 실패:', error);
+      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: '20px', fill: '#ff4444', align: 'center'
+      }).setOrigin(0.5);
+      this.time.delayedCall(2000, () => {
+        this.scene.start('MainMenuScene');
+      });
+    }
+  }
+
+  shutdown() {
+    this.time.removeAllEvents();
+    this.tweens.killAll();
+    if (this.input) {
+      this.input.removeAllListeners();
+    }
   }
 }

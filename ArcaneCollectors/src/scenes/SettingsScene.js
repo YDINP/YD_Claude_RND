@@ -14,6 +14,7 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   create() {
+    try {
     this.cameras.main.fadeIn(300);
     this.createBackground();
     this.createTopBar();
@@ -21,6 +22,27 @@ export class SettingsScene extends Phaser.Scene {
     this.createSettingsSection();
     this.createAccountInfo();
     this.bottomNav = new BottomNav(this, 'more');
+    } catch (error) {
+      console.error('[SettingsScene] create() 실패:', error);
+      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: '20px', fill: '#ff4444', align: 'center'
+      }).setOrigin(0.5);
+      this.time.delayedCall(2000, () => {
+        this.scene.start('MainMenuScene');
+      });
+    }
+  }
+
+  shutdown() {
+    if (this.couponInput) {
+      this.couponInput.remove();
+      this.couponInput = null;
+    }
+    this.time.removeAllEvents();
+    this.tweens.killAll();
+    if (this.input) {
+      this.input.removeAllListeners();
+    }
   }
 
   createBackground() {

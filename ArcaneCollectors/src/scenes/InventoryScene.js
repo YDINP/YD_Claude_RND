@@ -22,6 +22,7 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   create() {
+    try {
     this.cameras.main.fadeIn(300);
 
     this.loadInventoryData();
@@ -31,6 +32,15 @@ export class InventoryScene extends Phaser.Scene {
     this.createItemList();
     this.refreshItemList();
     this.bottomNav = new BottomNav(this, 'inventory');
+    } catch (error) {
+      console.error('[InventoryScene] create() 실패:', error);
+      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: '20px', fill: '#ff4444', align: 'center'
+      }).setOrigin(0.5);
+      this.time.delayedCall(2000, () => {
+        this.scene.start('MainMenuScene');
+      });
+    }
   }
 
   loadInventoryData() {
@@ -472,6 +482,14 @@ export class InventoryScene extends Phaser.Scene {
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start(this.returnTo);
     });
+  }
+
+  shutdown() {
+    this.time.removeAllEvents();
+    this.tweens.killAll();
+    if (this.input) {
+      this.input.removeAllListeners();
+    }
   }
 
   showToast(message) {

@@ -44,39 +44,49 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create() {
-    console.log('[Battle] Scene created');
-    // Reset battle state
-    this.battleSpeed = this.registry.get('battleSpeed') || 1;
-    this.autoBattle = this.registry.get('autoBattle') !== false;
-    this.battleEnded = false;
-    this.turn = 0;
-    this.isProcessingTurn = false;
-    this.waitingForManualInput = false;
+    try {
+      console.log('[Battle] Scene created');
+      // Reset battle state
+      this.battleSpeed = this.registry.get('battleSpeed') || 1;
+      this.autoBattle = this.registry.get('autoBattle') !== false;
+      this.battleEnded = false;
+      this.turn = 0;
+      this.isProcessingTurn = false;
+      this.waitingForManualInput = false;
 
-    // H-10: ParticleManager 초기화
-    this.particles = new ParticleManager(this);
+      // H-10: ParticleManager 초기화
+      this.particles = new ParticleManager(this);
 
-    this.initializeBattlers();
-    this.calculateSynergy();
-    this.createBackground();
-    this.createTurnOrderBar();
-    this.createBattleUI();
-    this.createBattlers();
-    this.createControlButtons();
-    this.createSkillCards();
-    this.createSynergyDisplay();
-    this.createManualTurnButton();
+      this.initializeBattlers();
+      this.calculateSynergy();
+      this.createBackground();
+      this.createTurnOrderBar();
+      this.createBattleUI();
+      this.createBattlers();
+      this.createControlButtons();
+      this.createSkillCards();
+      this.createSynergyDisplay();
+      this.createManualTurnButton();
 
-    // A-8.5: 전투 시작 트랜지션
-    this.playBattleIntro();
+      // A-8.5: 전투 시작 트랜지션
+      this.playBattleIntro();
 
-    // Scene 종료 시 정리
-    this.events.once('shutdown', () => {
-      if (this.particles) {
-        this.particles.destroy();
-        this.particles = null;
-      }
-    });
+      // Scene 종료 시 정리
+      this.events.once('shutdown', () => {
+        if (this.particles) {
+          this.particles.destroy();
+          this.particles = null;
+        }
+      });
+    } catch (error) {
+      console.error('[BattleScene] create() 실패:', error);
+      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: '20px', fill: '#ff4444', align: 'center'
+      }).setOrigin(0.5);
+      this.time.delayedCall(2000, () => {
+        this.scene.start('MainMenuScene');
+      });
+    }
   }
 
   /**
@@ -1853,13 +1863,13 @@ export class BattleScene extends Phaser.Scene {
    * 씬 정리
    */
   shutdown() {
-    console.log('[Battle] Scene shutdown');
-
-    // 이벤트 리스너 정리
+    this.time.removeAllEvents();
+    this.tweens.killAll();
     this.battleEventListeners = [];
-
-    // 타겟 선택 모드 해제
     this.targetSelectionMode = false;
     this.selectedSkillCard = null;
+    if (this.input) {
+      this.input.removeAllListeners();
+    }
   }
 }

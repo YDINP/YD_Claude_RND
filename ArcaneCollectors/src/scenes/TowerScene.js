@@ -14,6 +14,7 @@ export class TowerScene extends Phaser.Scene {
   }
 
   create() {
+    try {
     this.cameras.main.fadeIn(300);
     this.createBackground();
     this.createTopBar();
@@ -23,6 +24,23 @@ export class TowerScene extends Phaser.Scene {
     this.createActionButtons();
     this.createProgressBar();
     this.bottomNav = new BottomNav(this, 'adventure');
+    } catch (error) {
+      console.error('[TowerScene] create() 실패:', error);
+      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: '20px', fill: '#ff4444', align: 'center'
+      }).setOrigin(0.5);
+      this.time.delayedCall(2000, () => {
+        this.scene.start('MainMenuScene');
+      });
+    }
+  }
+
+  shutdown() {
+    this.time.removeAllEvents();
+    this.tweens.killAll();
+    if (this.input) {
+      this.input.removeAllListeners();
+    }
   }
 
   createBackground() {

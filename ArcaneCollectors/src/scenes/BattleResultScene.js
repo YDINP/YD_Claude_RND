@@ -27,15 +27,25 @@ export class BattleResultScene extends Phaser.Scene {
   create() {
     this.cameras.main.fadeIn(400);
 
-    this.createBackground();
+    try {
+      this.createBackground();
 
-    if (this.victory) {
-      this.createVictoryDisplay();
-    } else {
-      this.createDefeatDisplay();
+      if (this.victory) {
+        this.createVictoryDisplay();
+      } else {
+        this.createDefeatDisplay();
+      }
+
+      this.createActionButtons();
+    } catch (error) {
+      console.error('[BattleResultScene] create() 실패:', error);
+      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: '20px', fill: '#ff4444', align: 'center'
+      }).setOrigin(0.5);
+      this.time.delayedCall(2000, () => {
+        this.scene.start('MainMenuScene');
+      });
     }
-
-    this.createActionButtons();
   }
 
   createBackground() {
@@ -559,5 +569,17 @@ export class BattleResultScene extends Phaser.Scene {
       delay: 500,
       onComplete: () => toast.destroy()
     });
+  }
+
+  shutdown() {
+    this.time.removeAllEvents();
+    this.tweens.killAll();
+    if (this.input) {
+      this.input.removeAllListeners();
+    }
+    if (this.particles) {
+      this.particles.destroy();
+      this.particles = null;
+    }
   }
 }

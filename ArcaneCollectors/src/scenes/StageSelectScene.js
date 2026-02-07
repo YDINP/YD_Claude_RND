@@ -15,6 +15,7 @@ export class StageSelectScene extends Phaser.Scene {
   }
 
   create() {
+    try {
     this.cameras.main.fadeIn(300);
 
     this.createBackground();
@@ -24,6 +25,15 @@ export class StageSelectScene extends Phaser.Scene {
     this.createPartySelectModal();
     this.createSweepModal();
     this.bottomNav = new BottomNav(this, 'adventure');
+    } catch (error) {
+      console.error('[StageSelectScene] create() 실패:', error);
+      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: '20px', fill: '#ff4444', align: 'center'
+      }).setOrigin(0.5);
+      this.time.delayedCall(2000, () => {
+        this.scene.start('MainMenuScene');
+      });
+    }
   }
 
   createBackground() {
@@ -817,6 +827,18 @@ export class StageSelectScene extends Phaser.Scene {
       );
     } else {
       this.showMessage(result?.error || '소탕 실패!', COLORS.danger);
+    }
+  }
+
+  shutdown() {
+    this.time.removeAllEvents();
+    this.tweens.killAll();
+    if (this.input) {
+      this.input.removeAllListeners();
+    }
+    if (this.energyTimer) {
+      this.energyTimer.remove();
+      this.energyTimer = null;
     }
   }
 

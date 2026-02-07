@@ -14,6 +14,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create() {
+    try {
     this.cameras.main.fadeIn(400);
 
     // Initialize ParticleManager for dynamic effects
@@ -30,23 +31,36 @@ export class MainMenuScene extends Phaser.Scene {
     this.createCharacterDisplay();
     this.createBottomNavigation();
 
-    // Cleanup on scene shutdown
-    this.events.once('shutdown', () => {
-      if (this.particles) {
-        this.particles.destroy();
-        this.particles = null;
-      }
-      if (this._starTimer) {
-        this._starTimer.remove();
-        this._starTimer = null;
-      }
-    });
-
     // Show offline rewards popup if available
     if (this.showOfflineRewards && this.showOfflineRewards.gold > 0) {
       this.time.delayedCall(500, () => {
         this.showOfflineRewardsPopup(this.showOfflineRewards);
       });
+    }
+    } catch (error) {
+      console.error('[MainMenuScene] create() 실패:', error);
+      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: '20px', fill: '#ff4444', align: 'center'
+      }).setOrigin(0.5);
+      this.time.delayedCall(2000, () => {
+        this.scene.start('MainMenuScene');
+      });
+    }
+  }
+
+  shutdown() {
+    if (this.particles) {
+      this.particles.destroy();
+      this.particles = null;
+    }
+    if (this._starTimer) {
+      this._starTimer.remove();
+      this._starTimer = null;
+    }
+    this.time.removeAllEvents();
+    this.tweens.killAll();
+    if (this.input) {
+      this.input.removeAllListeners();
     }
   }
 

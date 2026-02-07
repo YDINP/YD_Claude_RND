@@ -24,6 +24,7 @@ export class PartyEditScene extends Phaser.Scene {
   }
 
   create() {
+    try {
     this.cameras.main.fadeIn(300);
 
     // 파티 데이터 로드
@@ -37,6 +38,23 @@ export class PartyEditScene extends Phaser.Scene {
     this.createActionButtons();
 
     this.refreshPartyDisplay();
+    } catch (error) {
+      console.error('[PartyEditScene] create() 실패:', error);
+      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: '20px', fill: '#ff4444', align: 'center'
+      }).setOrigin(0.5);
+      this.time.delayedCall(2000, () => {
+        this.scene.start('MainMenuScene');
+      });
+    }
+  }
+
+  shutdown() {
+    this.time.removeAllEvents();
+    this.tweens.killAll();
+    if (this.input) {
+      this.input.removeAllListeners();
+    }
   }
 
   loadPartyData() {

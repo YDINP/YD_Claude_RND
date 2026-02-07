@@ -15,10 +15,18 @@ export class LoginScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.fadeIn(400);
-    this.createBackground();
-    this.createTitle();
-    this.createButtons();
-    this.loginForm = null;
+
+    try {
+      this.createBackground();
+      this.createTitle();
+      this.createButtons();
+      this.loginForm = null;
+    } catch (error) {
+      console.error('[LoginScene] create() 실패:', error);
+      this.add.text(360, 640, '씬 로드 실패', {
+        fontSize: '20px', fill: '#ff4444', align: 'center'
+      }).setOrigin(0.5);
+    }
   }
 
   createBackground() {
@@ -341,5 +349,13 @@ export class LoginScene extends Phaser.Scene {
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('PreloadScene');
     });
+  }
+
+  shutdown() {
+    this.time.removeAllEvents();
+    this.tweens.killAll();
+    if (this.input) {
+      this.input.removeAllListeners();
+    }
   }
 }
