@@ -1,7 +1,7 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO } from '../config/gameConfig.js';
 import { BottomNav } from '../components/BottomNav.js';
-
 import { getRarityKey, getRarityNum } from '../utils/helpers.js';
+import { getCharacter } from '../data/index.js';
 
 export class HeroListScene extends Phaser.Scene {
   constructor() {
@@ -250,6 +250,14 @@ export class HeroListScene extends Phaser.Scene {
 
     let heroes = [...(this.registry.get('ownedHeroes') || [])];
 
+    // 불완전한 데이터 보강 (name이 없으면 characters.json에서 채움)
+    heroes = heroes.map(h => {
+      if (h.name && h.rarity != null) return h;
+      const full = getCharacter(h.id);
+      if (full) return { ...full, ...h, name: h.name || full.name, rarity: h.rarity ?? full.rarity };
+      return h;
+    }).filter(h => h.name); // name이 여전히 없으면 제외
+
     // Filter by rarity (숫자/문자열 모두 지원)
     if (this.filterRarity) {
       heroes = heroes.filter(h => getRarityKey(h.rarity) === this.filterRarity);
@@ -366,7 +374,8 @@ export class HeroListScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Name
-    const name = hero.name.length > 7 ? hero.name.substring(0, 7) + '..' : hero.name;
+    const heroName = hero.name || '???';
+    const name = heroName.length > 7 ? heroName.substring(0, 7) + '..' : heroName;
     const nameText = this.add.text(0, 50, name, {
       fontSize: '11px',
       fontFamily: 'Arial',

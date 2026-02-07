@@ -477,13 +477,13 @@ export class SaveManager {
       this.addGold(rewards.gold);
     }
 
-    // 플레이어 경험치 추가
+    // 플레이어 경험치 추가 + lastOnline 갱신 (중복 수령 방지)
+    const data = this.load();
     if (rewards.exp > 0) {
-      const data = this.load();
       data.player.exp += rewards.exp;
-      // 레벨업 체크는 ProgressionSystem에서 처리
-      this.save(data);
     }
+    data.lastOnline = Date.now();
+    this.save(data);
 
     return rewards;
   }

@@ -124,8 +124,12 @@ export class MainMenuScene extends Phaser.Scene {
     claimBtn.on('pointerout', () => claimBtn.setFillStyle(COLORS.primary));
 
     claimBtn.on('pointerdown', () => {
-      // Claim rewards
+      // Claim rewards + lastOnline 갱신 (중복 방지)
       SaveManager.claimOfflineRewards();
+
+      // registry 정리 (다른 씬에서 돌아와도 재표시 안 함)
+      this.registry.remove('pendingOfflineRewards');
+      this.showOfflineRewards = null;
 
       // Update registry
       const newResources = SaveManager.getResources();
