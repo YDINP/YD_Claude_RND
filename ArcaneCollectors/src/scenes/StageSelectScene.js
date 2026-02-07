@@ -1,4 +1,8 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import { energySystem } from '../systems/EnergySystem.js';
+import { PartyManager } from '../systems/PartyManager.js';
+import { SynergySystem } from '../systems/SynergySystem.js';
+import { getAllCharacters, getChapterStages } from '../data/index.js';
 
 export class StageSelectScene extends Phaser.Scene {
   constructor() {
@@ -78,12 +82,23 @@ export class StageSelectScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(21);
 
-    // Energy display (placeholder)
-    this.add.text(GAME_WIDTH - 40, 50, '⚡ 50/50', {
+    // Energy display (동적)
+    const energyStatus = energySystem.getStatus();
+    this.energyText = this.add.text(GAME_WIDTH - 40, 40, `⚡ ${energyStatus.current}/${energyStatus.max}`, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: '#' + COLORS.accent.toString(16).padStart(6, '0')
     }).setOrigin(1, 0.5).setDepth(21);
+
+    // 에너지 회복 타이머 표시
+    if (energyStatus.current < energyStatus.max && energyStatus.recoveryInfo) {
+      this.energyTimerText = this.add.text(GAME_WIDTH - 40, 60, '', {
+        fontSize: '10px',
+        fontFamily: 'Arial',
+        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      }).setOrigin(1, 0.5).setDepth(21);
+      this.updateEnergyTimer();
+    }
   }
 
   createChapterTitle() {
@@ -160,6 +175,26 @@ export class StageSelectScene extends Phaser.Scene {
   }
 
   generateStages(chapter) {
+    // data/index.js에서 동적 로드 시도
+    const dataStages = getChapterStages(chapter);
+
+    if (dataStages && dataStages.length > 0) {
+      console.log(`[StageSelect] Loaded ${dataStages.length} stages from data for chapter ${chapter}`);
+      return dataStages.map((stage, i) => ({
+        id: stage.id || `${chapter}-${i + 1}`,
+        number: stage.number || `${chapter}-${i + 1}`,
+        name: stage.name || `스테이지 ${i + 1}`,
+        recommendedPower: stage.recommendedPower || 1000 + (chapter - 1) * 2000 + i * 300,
+        enemyCount: stage.enemyCount || 3 + Math.floor(i / 3),
+        rewards: stage.rewards || {
+          gold: 100 + i * 50 + (chapter - 1) * 200,
+          exp: 50 + i * 20 + (chapter - 1) * 100
+        }
+      }));
+    }
+
+    // 폴백: 하드코딩 스테이지
+    console.log(`[StageSelect] No data for chapter ${chapter}, using fallback`);
     const stages = [];
     const stageNames = {
       1: ['숲의 입구', '어두운 오솔길', '고목 광장', '독버섯 군락', '늑대 서식지',
@@ -170,11 +205,12 @@ export class StageSelectScene extends Phaser.Scene {
           '마그마 심연', '불타는 요새', '지옥 문턱', '용의 보좌', '화염의 왕']
     };
 
+    const names = stageNames[chapter] || stageNames[1];
     for (let i = 0; i < 10; i++) {
       stages.push({
         id: `${chapter}-${i + 1}`,
         number: `${chapter}-${i + 1}`,
-        name: stageNames[chapter][i],
+        name: names[i] || `스테이지 ${i + 1}`,
         recommendedPower: 1000 + (chapter - 1) * 2000 + i * 300,
         enemyCount: 3 + Math.floor(i / 3),
         rewards: {
@@ -293,13 +329,13 @@ export class StageSelectScene extends Phaser.Scene {
       color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
     }).setOrigin(0.5);
 
-    // Party slots (5 slots)
+    // Party slots (4 slots — PARTY_SIZE 기준)
     this.partySlots = [];
-    const slotStartX = GAME_WIDTH / 2 - 180;
+    const slotStartX = GAME_WIDTH / 2 - 150;
     const slotY = GAME_HEIGHT / 2 - 60;
 
-    for (let i = 0; i < 5; i++) {
-      const x = slotStartX + i * 90;
+    for (let i = 0; i < 4; i++) {
+      const x = slotStartX + i * 100;
       const slotContainer = this.add.container(x, slotY);
 
       const slotBg = this.add.rectangle(0, 0, 75, 90, COLORS.background, 0.8);
@@ -438,6 +474,7 @@ export class StageSelectScene extends Phaser.Scene {
     this.partySlots[slotIndex].slotBg.setStrokeStyle(2, COLORS.success, 1);
 
     this.updateTotalPower();
+    this.updateSynergyPreview();
   }
 
   autoFillParty() {
@@ -448,21 +485,28 @@ export class StageSelectScene extends Phaser.Scene {
       return;
     }
 
-    // Sort heroes by power
-    const sortedHeroes = [...heroes].sort((a, b) => {
-      const powerA = a.stats.hp + a.stats.atk * 5 + a.stats.def * 3 + a.stats.spd * 2;
-      const powerB = b.stats.hp + b.stats.atk * 5 + b.stats.def * 3 + b.stats.spd * 2;
-      return powerB - powerA;
+    // PartyManager로 자동 편성
+    const recommendedIds = PartyManager.autoFormParty(heroes);
+
+    // 슬롯 초기화 후 배치
+    this.partySlots.forEach(slot => {
+      slot.hero = null;
+      slot.slotText.setText('+');
+      slot.slotBg.setStrokeStyle(2, COLORS.primary, 0.5);
     });
 
-    // Fill slots with top heroes
-    for (let i = 0; i < 5 && i < sortedHeroes.length; i++) {
+    const sortedHeroes = recommendedIds
+      .map(id => heroes.find(h => h.id === id))
+      .filter(Boolean);
+
+    for (let i = 0; i < 4 && i < sortedHeroes.length; i++) {
       this.partySlots[i].hero = sortedHeroes[i];
       this.partySlots[i].slotText.setText(sortedHeroes[i].name.substring(0, 4));
       this.partySlots[i].slotBg.setStrokeStyle(2, COLORS.success, 1);
     }
 
     this.updateTotalPower();
+    this.updateSynergyPreview();
     this.showMessage('자동 편성 완료!', COLORS.success);
   }
 
@@ -486,6 +530,43 @@ export class StageSelectScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * 시너지 미리보기 표시
+   */
+  updateSynergyPreview() {
+    // 기존 시너지 미리보기 제거
+    if (this.synergyPreviewTexts) {
+      this.synergyPreviewTexts.forEach(t => t.destroy());
+    }
+    this.synergyPreviewTexts = [];
+
+    const partyHeroIds = this.partySlots
+      .filter(s => s.hero)
+      .map(s => s.hero.id)
+      .filter(Boolean);
+
+    if (partyHeroIds.length < 2) return;
+
+    const heroData = getAllCharacters();
+    const synergies = SynergySystem.calculatePartySynergies(partyHeroIds, heroData);
+
+    if (synergies.length === 0) return;
+
+    const baseY = GAME_HEIGHT / 2 + 110;
+    const typeIcons = { cult: '⛪', mood: '🎭', role: '⚔️', special: '✨' };
+
+    synergies.slice(0, 3).forEach((syn, i) => {
+      const icon = typeIcons[syn.type] || '●';
+      const text = this.add.text(GAME_WIDTH / 2, baseY + i * 18, `${icon} ${syn.name || syn.type}`, {
+        fontSize: '11px',
+        fontFamily: 'Arial',
+        color: '#' + COLORS.accent.toString(16).padStart(6, '0')
+      }).setOrigin(0.5).setDepth(60);
+      this.partyModal.add(text);
+      this.synergyPreviewTexts.push(text);
+    });
+  }
+
   startBattle() {
     const partyHeroes = this.partySlots
       .filter(s => s.hero)
@@ -495,6 +576,18 @@ export class StageSelectScene extends Phaser.Scene {
       this.showMessage('파티에 영웅을 배치해주세요!');
       return;
     }
+
+    // 에너지 차감 (스테이지 비용 계산)
+    const stageCost = energySystem.getStageCost(this.selectedStage?.id) || 10;
+    const consumeResult = energySystem.consumeEnergy(stageCost);
+
+    if (!consumeResult.success) {
+      this.showMessage(`⚡ 에너지가 부족합니다! (필요: ${stageCost})`, COLORS.danger);
+      return;
+    }
+
+    // 에너지 UI 업데이트
+    this.refreshEnergyDisplay();
 
     // Save party to registry
     this.registry.set('currentTeam', partyHeroes);
@@ -506,6 +599,39 @@ export class StageSelectScene extends Phaser.Scene {
         stage: this.selectedStage,
         party: partyHeroes
       });
+    });
+  }
+
+  /**
+   * 에너지 UI 갱신
+   */
+  refreshEnergyDisplay() {
+    const status = energySystem.getStatus();
+    if (this.energyText) {
+      this.energyText.setText(`⚡ ${status.current}/${status.max}`);
+    }
+  }
+
+  /**
+   * 에너지 회복 타이머 업데이트
+   */
+  updateEnergyTimer() {
+    if (!this.energyTimerText) return;
+
+    const status = energySystem.getStatus();
+    if (status.current >= status.max) {
+      this.energyTimerText.setText('');
+      return;
+    }
+
+    if (status.recoveryInfo && status.recoveryInfo.formatted) {
+      this.energyTimerText.setText(`회복: ${status.recoveryInfo.formatted}`);
+    }
+
+    // 30초마다 갱신
+    this.time.delayedCall(30000, () => {
+      this.refreshEnergyDisplay();
+      this.updateEnergyTimer();
     });
   }
 

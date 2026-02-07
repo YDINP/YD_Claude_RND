@@ -2,6 +2,9 @@
  * DebugManager - 개발/테스트용 치트 기능
  * 디버그 모드에서만 활성화
  */
+import { SaveManager } from './SaveManager.js';
+import { getAllCharacters } from '../data/index.js';
+
 export class DebugManager {
   static isDebugMode = false;
   static invincible = false;
@@ -26,7 +29,7 @@ export class DebugManager {
   static addGold(amount) {
     if (!this.isDebugMode) return false;
 
-    const { SaveManager } = require('./SaveManager.js');
+    // SaveManager는 상단 import 사용
     SaveManager.addGold(amount);
     this.log('Cheat', `Added ${amount} gold`);
     return true;
@@ -39,7 +42,7 @@ export class DebugManager {
   static addGems(amount) {
     if (!this.isDebugMode) return false;
 
-    const { SaveManager } = require('./SaveManager.js');
+    // SaveManager는 상단 import 사용
     SaveManager.addGems(amount);
     this.log('Cheat', `Added ${amount} gems`);
     return true;
@@ -52,7 +55,7 @@ export class DebugManager {
   static addSummonTickets(amount) {
     if (!this.isDebugMode) return false;
 
-    const { SaveManager } = require('./SaveManager.js');
+    // SaveManager는 상단 import 사용
     SaveManager.addSummonTickets(amount);
     this.log('Cheat', `Added ${amount} summon tickets`);
     return true;
@@ -79,8 +82,8 @@ export class DebugManager {
   static unlockAllCharacters() {
     if (!this.isDebugMode) return false;
 
-    const { SaveManager } = require('./SaveManager.js');
-    const { getAllCharacters } = require('../data/index.js');
+    // SaveManager는 상단 import 사용
+    // getAllCharacters는 상단 import 사용
 
     const allCharacters = getAllCharacters();
     allCharacters.forEach(char => {
@@ -99,7 +102,7 @@ export class DebugManager {
   static setCharacterLevel(charId, level) {
     if (!this.isDebugMode) return false;
 
-    const { SaveManager } = require('./SaveManager.js');
+    // SaveManager는 상단 import 사용
     const character = SaveManager.getCharacter(charId);
 
     if (!character) {
@@ -119,7 +122,7 @@ export class DebugManager {
   static maxAllSkills(charId) {
     if (!this.isDebugMode) return false;
 
-    const { SaveManager } = require('./SaveManager.js');
+    // SaveManager는 상단 import 사용
     const character = SaveManager.getCharacter(charId);
 
     if (!character) {
@@ -142,7 +145,7 @@ export class DebugManager {
   static setCharacterStars(charId, stars) {
     if (!this.isDebugMode) return false;
 
-    const { SaveManager } = require('./SaveManager.js');
+    // SaveManager는 상단 import 사용
     const character = SaveManager.getCharacter(charId);
 
     if (!character) {
@@ -163,7 +166,7 @@ export class DebugManager {
   static clearAllStages() {
     if (!this.isDebugMode) return false;
 
-    const { SaveManager } = require('./SaveManager.js');
+    // SaveManager는 상단 import 사용
     const data = SaveManager.load();
 
     // 모든 스테이지를 3성으로 클리어
@@ -186,7 +189,7 @@ export class DebugManager {
   static skipToChapter(chapter) {
     if (!this.isDebugMode) return false;
 
-    const { SaveManager } = require('./SaveManager.js');
+    // SaveManager는 상단 import 사용
     const data = SaveManager.load();
 
     // 해당 챕터까지의 모든 스테이지 클리어

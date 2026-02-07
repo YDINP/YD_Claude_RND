@@ -2,6 +2,7 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO,
 import { EvolutionSystem } from '../systems/EvolutionSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
+import { SaveManager } from '../systems/SaveManager.js';
 
 export class HeroDetailScene extends Phaser.Scene {
   constructor() {
@@ -335,6 +336,7 @@ export class HeroDetailScene extends Phaser.Scene {
       heroes[heroIndex] = this.hero;
       this.registry.set('ownedHeroes', heroes);
     }
+    this.persistHeroData();
 
     this.showMessage(`스킬 Lv.${currentLevel + 1} 달성!`, COLORS.success);
 
@@ -480,6 +482,7 @@ export class HeroDetailScene extends Phaser.Scene {
         heroes[heroIndex] = this.hero;
         this.registry.set('ownedHeroes', heroes);
       }
+      this.persistHeroData();
 
       popup.destroy();
       this.showMessage('장비 해제 완료!');
@@ -560,6 +563,7 @@ export class HeroDetailScene extends Phaser.Scene {
       heroes[heroIndex] = this.hero;
       this.registry.set('ownedHeroes', heroes);
     }
+    this.persistHeroData();
 
     this.showMessage(`+${totalLevels} 레벨! (Lv.${this.hero.level})`, COLORS.success);
 
@@ -693,6 +697,7 @@ export class HeroDetailScene extends Phaser.Scene {
       heroes[heroIndex] = this.hero;
       this.registry.set('ownedHeroes', heroes);
     }
+    this.persistHeroData();
 
     // Show success animation
     this.showEvolutionSuccess(preview.nextRarity);
@@ -801,6 +806,7 @@ export class HeroDetailScene extends Phaser.Scene {
       heroes[heroIndex] = this.hero;
       this.registry.set('ownedHeroes', heroes);
     }
+    this.persistHeroData();
 
     // Show success animation without full scene restart
     this.showLevelUpEffect();
@@ -875,6 +881,33 @@ export class HeroDetailScene extends Phaser.Scene {
     if (this.tooltip) {
       this.tooltip.destroy();
       this.tooltip = null;
+    }
+  }
+
+  /**
+   * 영웅 데이터를 SaveManager에 영속화
+   */
+  persistHeroData() {
+    try {
+      if (this.hero && this.hero.id) {
+        SaveManager.updateCharacter(this.hero.id, {
+          level: this.hero.level,
+          exp: this.hero.exp || 0,
+          rarity: this.hero.rarity,
+          stats: this.hero.stats,
+          skillLevels: this.hero.skillLevels,
+          evolutionCount: this.hero.evolutionCount || 0
+        });
+      }
+      // 골드/리소스도 동기화
+      const gold = this.registry.get('gold');
+      if (gold !== undefined) {
+        const saveData = SaveManager.load();
+        saveData.resources.gold = gold;
+        SaveManager.save(saveData);
+      }
+    } catch (e) {
+      console.warn('[HeroDetail] Save error:', e.message);
     }
   }
 

@@ -516,7 +516,7 @@ export function showToast(scene, toast, displayTime = 2000) {
  * @param {number} duration - Animation duration in ms
  * @returns {Promise} Promise that resolves when complete
  */
-export function popIn(scene, target, duration = 300) {
+export function popInAsync(scene, target, duration = 300) {
   target.setScale(0.5);
   target.setAlpha(0);
 
@@ -591,7 +591,7 @@ export function fadeTransition(scene, toScene, duration = 300) {
  * @param {number} color - Particle color (hex number)
  * @returns {Array} Array of particle objects
  */
-export function particleBurst(scene, x, y, count = 20, color = 0xFFD700) {
+export function particleBurstFancy(scene, x, y, count = 20, color = 0xFFD700) {
   const particles = [];
 
   for (let i = 0; i < count; i++) {

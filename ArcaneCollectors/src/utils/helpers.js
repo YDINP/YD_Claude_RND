@@ -332,8 +332,8 @@ export function formatEnergy(current, max) {
   return `⚡ ${current}/${max}`;
 }
 
-// Time formatting (mm:ss)
-export function formatTime(milliseconds) {
+// Time formatting (mm:ss) for battle timer
+export function formatBattleTimer(milliseconds) {
   const totalSeconds = Math.floor(milliseconds / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -373,8 +373,8 @@ export function generateStars(count, max = 3) {
   return '⭐'.repeat(count) + '☆'.repeat(max - count);
 }
 
-// Number formatting (1000 → 1K)
-export function formatNumber(num) {
+// Compact number formatting (1000 → 1K)
+export function formatNumberShort(num) {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
   if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
   return num.toString();

@@ -1,5 +1,10 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
+import { moodSystem } from '../systems/MoodSystem.js';
+import { SynergySystem } from '../systems/SynergySystem.js';
+import { ProgressionSystem } from '../systems/ProgressionSystem.js';
+import { getAllCharacters } from '../data/index.js';
+import { MOOD_COLORS } from '../config/layoutConfig.js';
 
 /**
  * BattleScene - 전투 씬
@@ -67,57 +72,81 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 시너지 효과 계산
-   * 같은 교단(클래스) 영웅 조합 시 버프
+   * 시너지 효과 계산 — SynergySystem 통합
+   * cult/mood/role/special 4종 시너지 전투 반영
    */
   calculateSynergy() {
-    console.log('[Battle] Calculating synergy effects...');
+    console.log('[Battle] Calculating synergy effects via SynergySystem...');
 
-    // 클래스별 카운트
-    const classCounts = {};
+    // 파티 영웅 ID 수집
+    const partyHeroIds = this.allies.map(a => a.id).filter(Boolean);
+    const heroData = getAllCharacters();
 
-    this.allies.forEach(ally => {
-      const heroClass = ally.class || 'warrior';
+    // SynergySystem으로 시너지 계산
+    this.activeSynergies = SynergySystem.calculatePartySynergies(partyHeroIds, heroData);
+    console.log(`[Battle] Active synergies: ${this.activeSynergies.length}`, this.activeSynergies);
 
-      classCounts[heroClass] = (classCounts[heroClass] || 0) + 1;
-    });
-
-    // 시너지 버프 초기화
+    // 시너지 버프 초기화 (레거시 호환)
     this.synergyBuffs = { atk: 0, def: 0, spd: 0 };
 
-    // 클래스 시너지 계산
-    Object.entries(classCounts).forEach(([cls, count]) => {
-      if (count >= 4) {
-        this.synergyBuffs.atk += 0.20;
-        this.synergyBuffs.def += 0.15;
-        this.synergyBuffs.spd += 0.10;
-        console.log(`[Battle] Class synergy (${cls}) 4+: ATK +20%, DEF +15%, SPD +10%`);
-      } else if (count >= 3) {
-        this.synergyBuffs.atk += 0.15;
-        this.synergyBuffs.def += 0.10;
-        console.log(`[Battle] Class synergy (${cls}) 3: ATK +15%, DEF +10%`);
-      } else if (count >= 2) {
-        this.synergyBuffs.atk += 0.10;
-        console.log(`[Battle] Class synergy (${cls}) 2: ATK +10%`);
-      }
-    });
+    // 시너지가 없으면 기본 클래스 시너지로 폴백
+    if (this.activeSynergies.length === 0) {
+      this.calculateFallbackSynergy();
+    }
 
     // 시너지 버프 적용
     this.applySynergyBuffs();
   }
 
   /**
-   * 시너지 버프 적용
+   * 폴백: 기본 클래스 시너지 (SynergySystem에서 시너지를 찾지 못한 경우)
+   */
+  calculateFallbackSynergy() {
+    const classCounts = {};
+    this.allies.forEach(ally => {
+      const heroClass = ally.class || 'warrior';
+      classCounts[heroClass] = (classCounts[heroClass] || 0) + 1;
+    });
+
+    Object.entries(classCounts).forEach(([cls, count]) => {
+      if (count >= 4) {
+        this.synergyBuffs.atk += 0.20;
+        this.synergyBuffs.def += 0.15;
+        this.synergyBuffs.spd += 0.10;
+      } else if (count >= 3) {
+        this.synergyBuffs.atk += 0.15;
+        this.synergyBuffs.def += 0.10;
+      } else if (count >= 2) {
+        this.synergyBuffs.atk += 0.10;
+      }
+    });
+  }
+
+  /**
+   * 시너지 버프 적용 — SynergySystem.applySynergiesToStats() 사용
    */
   applySynergyBuffs() {
     this.allies.forEach(ally => {
-      if (ally.stats) {
+      if (ally.stats && this.activeSynergies && this.activeSynergies.length > 0) {
+        const modified = SynergySystem.applySynergiesToStats(ally.stats, this.activeSynergies);
+        ally.stats = modified;
+        // 보너스 효과 저장 (크리티컬율 등)
+        ally.synergyBonuses = modified.bonuses || {};
+        // 크리티컬율 반영
+        if (ally.synergyBonuses.crit_rate) {
+          ally.critRate = (ally.critRate || 0.1) + ally.synergyBonuses.crit_rate;
+        }
+        if (ally.synergyBonuses.crit_dmg) {
+          ally.critDmg = (ally.critDmg || 1.5) + ally.synergyBonuses.crit_dmg;
+        }
+      } else if (ally.stats) {
+        // 폴백 시너지 적용
         ally.stats.atk = Math.floor(ally.stats.atk * (1 + this.synergyBuffs.atk));
         ally.stats.def = Math.floor(ally.stats.def * (1 + this.synergyBuffs.def));
         ally.stats.spd = Math.floor(ally.stats.spd * (1 + this.synergyBuffs.spd));
       }
     });
-    console.log('[Battle] Synergy buffs applied:', this.synergyBuffs);
+    console.log('[Battle] Synergy buffs applied:', this.activeSynergies?.length || 0, 'synergies');
   }
 
   initializeBattlers() {
@@ -162,7 +191,8 @@ export class BattleScene extends Phaser.Scene {
         maxSkillGauge: 100,
         position: i,
         isAlly: false,
-        isAlive: true
+        isAlive: true,
+        mood: this.getRandomMood()
       };
       this.enemies.push(enemy);
     }
@@ -178,6 +208,30 @@ export class BattleScene extends Phaser.Scene {
   getEnemyName() {
     const names = ['슬라임', '고블린', '오크', '스켈레톤', '좀비', '늑대', '박쥐', '거미', '뱀', '악마'];
     return Phaser.Math.RND.pick(names);
+  }
+
+  /**
+   * 랜덤 분위기 반환
+   */
+  getRandomMood() {
+    const moods = ['brave', 'fierce', 'wild', 'calm', 'stoic', 'devoted', 'cunning', 'noble', 'mystic'];
+    return Phaser.Math.RND.pick(moods);
+  }
+
+  /**
+   * Mood 상성 배율 계산
+   * @returns {{ multiplier: number, advantage: string }}
+   */
+  getMoodMatchup(attackerMood, defenderMood) {
+    if (!attackerMood || !defenderMood) {
+      return { multiplier: 1.0, advantage: 'NEUTRAL' };
+    }
+    try {
+      return moodSystem.getMatchupMultiplier(attackerMood, defenderMood);
+    } catch (e) {
+      console.warn('[Battle] Mood matchup error:', e.message);
+      return { multiplier: 1.0, advantage: 'NEUTRAL' };
+    }
   }
 
   createBackground() {
@@ -310,26 +364,29 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 시너지 효과 표시 생성
+   * 시너지 효과 표시 생성 — SynergySystem 통합
    */
   createSynergyDisplay() {
     console.log('[Battle] Creating synergy display...');
 
-    // 시너지가 없으면 표시하지 않음
-    if (this.synergyBuffs.atk === 0 && this.synergyBuffs.def === 0 && this.synergyBuffs.spd === 0) {
+    const synergies = this.activeSynergies || [];
+
+    // 시너지가 없으면 폴백 표시
+    if (synergies.length === 0 && this.synergyBuffs.atk === 0 && this.synergyBuffs.def === 0) {
       return;
     }
 
     // 시너지 컨테이너
+    const containerHeight = Math.max(60, synergies.length * 20 + 30);
     this.synergyContainer = this.add.container(GAME_WIDTH - 100, 130).setDepth(12);
 
     // 시너지 배경
-    const synergyBg = this.add.rectangle(0, 0, 80, 60, COLORS.backgroundLight, 0.85);
+    const synergyBg = this.add.rectangle(0, 0, 100, containerHeight, COLORS.backgroundLight, 0.85);
     synergyBg.setStrokeStyle(1, COLORS.accent);
     this.synergyContainer.add(synergyBg);
 
     // 시너지 타이틀
-    const synergyTitle = this.add.text(0, -20, '시너지', {
+    const synergyTitle = this.add.text(0, -containerHeight / 2 + 10, '시너지', {
       fontSize: '10px',
       fontFamily: 'Arial',
       color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
@@ -337,33 +394,42 @@ export class BattleScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.synergyContainer.add(synergyTitle);
 
-    // 버프 표시
-    let yOffset = -5;
-    if (this.synergyBuffs.atk > 0) {
-      const atkText = this.add.text(0, yOffset, `ATK +${Math.round(this.synergyBuffs.atk * 100)}%`, {
-        fontSize: '9px',
-        fontFamily: 'Arial',
-        color: '#' + COLORS.danger.toString(16).padStart(6, '0')
-      }).setOrigin(0.5);
-      this.synergyContainer.add(atkText);
-      yOffset += 12;
-    }
-    if (this.synergyBuffs.def > 0) {
-      const defText = this.add.text(0, yOffset, `DEF +${Math.round(this.synergyBuffs.def * 100)}%`, {
-        fontSize: '9px',
-        fontFamily: 'Arial',
-        color: '#' + COLORS.primary.toString(16).padStart(6, '0')
-      }).setOrigin(0.5);
-      this.synergyContainer.add(defText);
-      yOffset += 12;
-    }
-    if (this.synergyBuffs.spd > 0) {
-      const spdText = this.add.text(0, yOffset, `SPD +${Math.round(this.synergyBuffs.spd * 100)}%`, {
-        fontSize: '9px',
-        fontFamily: 'Arial',
-        color: '#' + COLORS.success.toString(16).padStart(6, '0')
-      }).setOrigin(0.5);
-      this.synergyContainer.add(spdText);
+    if (synergies.length > 0) {
+      // SynergySystem 기반 표시
+      let yOffset = -containerHeight / 2 + 28;
+      const typeIcons = { cult: '⛪', mood: '🎭', role: '⚔️', special: '✨', mood_balance: '☯️', mood_special: '🌟' };
+      const typeColors = { cult: COLORS.secondary, mood: COLORS.primary, role: COLORS.danger, special: COLORS.accent, mood_balance: COLORS.success, mood_special: COLORS.accent };
+
+      synergies.forEach(syn => {
+        const icon = typeIcons[syn.type] || '●';
+        const color = typeColors[syn.type] || COLORS.text;
+        const label = `${icon} ${syn.name || syn.type}`;
+        const synText = this.add.text(0, yOffset, label, {
+          fontSize: '9px',
+          fontFamily: 'Arial',
+          color: '#' + color.toString(16).padStart(6, '0')
+        }).setOrigin(0.5);
+        this.synergyContainer.add(synText);
+        yOffset += 16;
+      });
+    } else {
+      // 폴백 버프 표시
+      let yOffset = -5;
+      if (this.synergyBuffs.atk > 0) {
+        const atkText = this.add.text(0, yOffset, `ATK +${Math.round(this.synergyBuffs.atk * 100)}%`, {
+          fontSize: '9px', fontFamily: 'Arial',
+          color: '#' + COLORS.danger.toString(16).padStart(6, '0')
+        }).setOrigin(0.5);
+        this.synergyContainer.add(atkText);
+        yOffset += 12;
+      }
+      if (this.synergyBuffs.def > 0) {
+        const defText = this.add.text(0, yOffset, `DEF +${Math.round(this.synergyBuffs.def * 100)}%`, {
+          fontSize: '9px', fontFamily: 'Arial',
+          color: '#' + COLORS.primary.toString(16).padStart(6, '0')
+        }).setOrigin(0.5);
+        this.synergyContainer.add(defText);
+      }
     }
   }
 
@@ -516,12 +582,13 @@ export class BattleScene extends Phaser.Scene {
     attacker.skillGauge = 0;
     this.updateSkillCardUI(attacker);
 
-    // 데미지 계산 (크리티컬 포함)
+    // 데미지 계산 (크리티컬 + 분위기 상성 포함)
     const baseDamage = attacker.stats?.atk || 100;
     const defense = target.stats?.def || 50;
+    const moodResult = this.getMoodMatchup(attacker.mood, target.mood);
     const isCrit = Math.random() < 0.25;
     const critMultiplier = isCrit ? 1.5 : 1;
-    const damage = Math.max(1, Math.floor(baseDamage * skill.multiplier * critMultiplier * (1 - defense / (defense + 200))));
+    const damage = Math.max(1, Math.floor(baseDamage * skill.multiplier * critMultiplier * moodResult.multiplier * (1 - defense / (defense + 200))));
 
     // 크리티컬 화면 흔들림
     if (isCrit) {
@@ -535,12 +602,13 @@ export class BattleScene extends Phaser.Scene {
     // 스킬 이펙트
     this.playSkillEffect(attacker, target, isCrit);
 
-    // 데미지 표시
-    this.showDamage(target, damage, isCrit);
+    // 데미지 표시 (상성 정보 포함)
+    this.showDamage(target, damage, isCrit, moodResult.advantage);
 
     // 로그
     const critText = isCrit ? ' (크리티컬!)' : '';
-    this.addBattleLog(`${attacker.name}의 ${skill.name}! ${target.name}에게 ${damage} 데미지${critText}`);
+    const moodText = moodResult.advantage === 'ADVANTAGE' ? ' (유리▲)' : moodResult.advantage === 'DISADVANTAGE' ? ' (불리▼)' : '';
+    this.addBattleLog(`${attacker.name}의 ${skill.name}! ${target.name}에게 ${damage} 데미지${critText}${moodText}`);
 
     // 타겟 사망 체크
     if (target.currentHp <= 0) {
@@ -974,17 +1042,21 @@ export class BattleScene extends Phaser.Scene {
     const baseDamage = battler.stats?.atk || 100;
     const defense = target.stats?.def || 50;
 
+    // 분위기(Mood) 상성 배율 계산
+    const moodResult = this.getMoodMatchup(battler.mood, target.mood);
+    const moodMultiplier = moodResult.multiplier;
+
     // 크리티컬 계산
     const critChance = battler.critRate || 0.1;
     const isCrit = Math.random() < critChance;
     const critMultiplier = isCrit ? (battler.critDmg || 1.5) : 1.0;
 
     const damage = Math.max(1, Math.floor(
-      baseDamage * skillMultiplier * critMultiplier *
+      baseDamage * skillMultiplier * critMultiplier * moodMultiplier *
       (1 - defense / (defense + 200)) * (0.9 + Math.random() * 0.2)
     ));
 
-    console.log(`[Battle] Damage calc: base=${baseDamage}, skill=${skillMultiplier}x, crit=${critMultiplier}x, def=${defense}, final=${damage}`);
+    console.log(`[Battle] Damage calc: base=${baseDamage}, skill=${skillMultiplier}x, crit=${critMultiplier}x, mood=${moodMultiplier}x, def=${defense}, final=${damage}`);
 
     // Apply damage
     target.currentHp = Math.max(0, target.currentHp - damage);
@@ -997,15 +1069,16 @@ export class BattleScene extends Phaser.Scene {
     // Update UI
     this.updateBattlerUI(target);
 
-    // Show damage
-    this.showDamage(target, damage, isCrit);
+    // Show damage (상성 정보 포함)
+    this.showDamage(target, damage, isCrit, moodResult.advantage);
 
     // Attack animation
     this.playAttackAnimation(battler, target, isCrit);
 
     // Log
     const critText = isCrit ? ' (크리티컬!)' : '';
-    this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name}에게 ${damage} 데미지${critText}`);
+    const moodText = moodResult.advantage === 'ADVANTAGE' ? ' (유리▲)' : moodResult.advantage === 'DISADVANTAGE' ? ' (불리▼)' : '';
+    this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name}에게 ${damage} 데미지${critText}${moodText}`);
 
     // 스킬 게이지 처리
     if (useSkill) {
@@ -1076,13 +1149,16 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  showDamage(target, damage, isCrit = false) {
+  showDamage(target, damage, isCrit = false, moodAdvantage = 'NEUTRAL') {
     const sprites = target.isAlly ? this.allySprites : this.enemySprites;
     const sprite = sprites[target.position];
     if (!sprite) return;
 
     const fontSize = isCrit ? '28px' : '20px';
-    const color = isCrit ? COLORS.accent : COLORS.danger;
+    // 상성에 따른 데미지 텍스트 색상
+    let color = isCrit ? COLORS.accent : COLORS.danger;
+    if (moodAdvantage === 'ADVANTAGE') color = 0xFFD700; // 유리 → 노랑/금색
+    else if (moodAdvantage === 'DISADVANTAGE') color = 0x3498DB; // 불리 → 파랑
 
     const dmgText = this.add.text(sprite.x, sprite.y - 70, `-${damage}`, {
       fontSize: fontSize,
@@ -1092,6 +1168,39 @@ export class BattleScene extends Phaser.Scene {
       stroke: '#000000',
       strokeThickness: isCrit ? 4 : 3
     }).setOrigin(0.5).setDepth(20);
+
+    // 상성 표시
+    if (moodAdvantage === 'ADVANTAGE') {
+      const advLabel = this.add.text(sprite.x + 40, sprite.y - 70, '▲유리', {
+        fontSize: '11px',
+        fontFamily: 'Arial',
+        color: '#FFD700',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5).setDepth(20);
+      this.tweens.add({
+        targets: advLabel,
+        y: advLabel.y - 30, alpha: 0,
+        duration: 800 / this.battleSpeed,
+        onComplete: () => advLabel.destroy()
+      });
+    } else if (moodAdvantage === 'DISADVANTAGE') {
+      const disLabel = this.add.text(sprite.x + 40, sprite.y - 70, '▼불리', {
+        fontSize: '11px',
+        fontFamily: 'Arial',
+        color: '#3498DB',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5).setDepth(20);
+      this.tweens.add({
+        targets: disLabel,
+        y: disLabel.y - 30, alpha: 0,
+        duration: 800 / this.battleSpeed,
+        onComplete: () => disLabel.destroy()
+      });
+    }
 
     // 크리티컬 시 추가 텍스트
     if (isCrit) {
@@ -1271,15 +1380,27 @@ export class BattleScene extends Phaser.Scene {
     result.add([resultBg, resultText]);
 
     if (victory) {
-      // Mark stage as cleared (store as object with stars)
+      // 성과 기반 별점 계산
+      const aliveCount = this.allies.filter(a => a.isAlive).length;
+      const totalAllies = this.allies.length;
+      const avgHpRatio = this.allies.reduce((sum, a) => sum + (a.isAlive ? a.currentHp / a.maxHp : 0), 0) / totalAllies;
+
+      let newStars = 1;
+      if (aliveCount === totalAllies && avgHpRatio > 0.5) {
+        newStars = 3; // 전원 생존 + HP 50% 이상
+      } else if (aliveCount >= Math.ceil(totalAllies / 2)) {
+        newStars = 2; // 절반 이상 생존
+      }
+      // 20턴 이내 클리어 보너스
+      if (this.turn <= 20 && newStars < 3) newStars++;
+
+      // Mark stage as cleared
       const clearedStages = this.registry.get('clearedStages') || {};
       if (this.stage) {
         const currentStars = clearedStages[this.stage.id] || 0;
-        const newStars = 3; // TODO: Calculate based on performance
         if (newStars > currentStars) {
           clearedStages[this.stage.id] = newStars;
           this.registry.set('clearedStages', clearedStages);
-          // Persist to SaveManager
           SaveManager.clearStage(this.stage.id, newStars);
         }
       }
@@ -1291,32 +1412,64 @@ export class BattleScene extends Phaser.Scene {
       const newGold = SaveManager.addGold(rewards.gold);
       this.registry.set('gold', newGold);
 
+      // 캐릭터 EXP 지급 — ProgressionSystem 통합
+      const expPerHero = Math.floor(rewards.exp / totalAllies);
+      const levelUpResults = [];
+      this.allies.forEach(ally => {
+        if (ally.id) {
+          try {
+            const expResult = ProgressionSystem.addExp(ally.id, expPerHero);
+            if (expResult.success && expResult.levelsGained > 0) {
+              levelUpResults.push({
+                name: ally.name,
+                newLevel: expResult.newLevel,
+                gained: expResult.levelsGained
+              });
+            }
+          } catch (e) {
+            console.warn('[Battle] EXP error:', ally.id, e.message);
+          }
+        }
+      });
+
       // Rewards display
-      const rewardTitle = this.add.text(0, -70, '보상', {
+      const rewardTitle = this.add.text(0, -80, '보상', {
         fontSize: '18px',
         fontFamily: 'Arial',
         color: '#' + COLORS.text.toString(16).padStart(6, '0')
       }).setOrigin(0.5);
 
-      const goldReward = this.add.text(0, -30, `골드: +${rewards.gold}`, {
+      const goldReward = this.add.text(0, -50, `골드: +${rewards.gold}`, {
         fontSize: '16px',
         fontFamily: 'Arial',
         color: '#' + COLORS.accent.toString(16).padStart(6, '0')
       }).setOrigin(0.5);
 
-      const expReward = this.add.text(0, 0, `경험치: +${rewards.exp}`, {
-        fontSize: '16px',
+      const expReward = this.add.text(0, -25, `경험치: +${rewards.exp} (각 ${expPerHero})`, {
+        fontSize: '14px',
         fontFamily: 'Arial',
         color: '#' + COLORS.primary.toString(16).padStart(6, '0')
       }).setOrigin(0.5);
 
-      // Stars
-      const stars = this.add.text(0, 50, '★★★', {
+      // 레벨업 표시
+      let levelUpText = '';
+      if (levelUpResults.length > 0) {
+        levelUpText = levelUpResults.map(r => `${r.name} Lv.${r.newLevel}↑`).join(', ');
+      }
+      const levelUpDisplay = this.add.text(0, 5, levelUpText, {
+        fontSize: '12px',
+        fontFamily: 'Arial',
+        color: '#' + COLORS.success.toString(16).padStart(6, '0')
+      }).setOrigin(0.5);
+
+      // Stars (성과 기반)
+      const starStr = '★'.repeat(newStars) + '☆'.repeat(3 - newStars);
+      const stars = this.add.text(0, 40, starStr, {
         fontSize: '32px',
         color: '#' + COLORS.accent.toString(16).padStart(6, '0')
       }).setOrigin(0.5);
 
-      result.add([rewardTitle, goldReward, expReward, stars]);
+      result.add([rewardTitle, goldReward, expReward, levelUpDisplay, stars]);
     } else {
       // Defeat message
       const defeatMsg = this.add.text(0, -30, '다음에 다시 도전하세요!', {

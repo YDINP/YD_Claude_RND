@@ -1,5 +1,7 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
+import { GachaSystem } from '../systems/GachaSystem.js';
+import { getCharacter } from '../data/index.js';
 
 export class GachaScene extends Phaser.Scene {
   constructor() {
@@ -268,16 +270,17 @@ export class GachaScene extends Phaser.Scene {
       ease: 'Linear'
     });
 
-    // Rates info with color coding
+    // Rates info with dynamic pity counter
     const ratesY = bannerY + 100;
-    this.add.text(GAME_WIDTH / 2, ratesY - 10, '천장 카운터: 87/90', {
+    const pityInfo = GachaSystem.getPityInfo();
+    this.bannerPityText = this.add.text(GAME_WIDTH / 2, ratesY - 10, `천장 카운터: ${pityInfo.current}/${pityInfo.threshold}`, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, ratesY + 10, 'SSR 1.5%  SR 15%  R 50%  N 33.5%', {
+    this.add.text(GAME_WIDTH / 2, ratesY + 10, `SSR ${pityInfo.currentSSRRate}  SR 15%  R 50%  N 32%`, {
       fontSize: '12px',
       fontFamily: 'Arial',
       color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
@@ -374,8 +377,8 @@ export class GachaScene extends Phaser.Scene {
         return;
       }
 
-      const gems = this.registry.get('gems') || 0;
-      if (gems < cost) {
+      // GachaSystem으로 소환 가능 여부 확인
+      if (!GachaSystem.canPull(count, 'gems')) {
         this.showMessage('보석이 부족합니다!', COLORS.danger);
         return;
       }
@@ -390,18 +393,8 @@ export class GachaScene extends Phaser.Scene {
         ease: 'Power2'
       });
 
-      // Deduct gems
-      const newGems = gems - cost;
-      this.registry.set('gems', newGems);
-      this.gemText.setText(newGems.toLocaleString());
-
-      // Save gems to localStorage
-      const saveData = SaveManager.load();
-      saveData.resources.gems = newGems;
-      SaveManager.save(saveData);
-
-      // Perform summon
-      this.performSummon(count);
+      // GachaSystem을 통한 소환 실행
+      this.performGachaPull(count);
     });
 
     // Premium glow effect
@@ -425,9 +418,10 @@ export class GachaScene extends Phaser.Scene {
   createPityDisplay() {
     const pityY = 680;
 
-    // Pity counter
-    const pity = this.registry.get('pityCounter') || 0;
-    const pityMax = 90;
+    // GachaSystem에서 동적으로 가져오기
+    const pityInfo = GachaSystem.getPityInfo();
+    const pity = pityInfo.current;
+    const pityMax = pityInfo.threshold;
 
     this.add.text(GAME_WIDTH / 2, pityY, '천장 카운터', {
       fontSize: '14px',
@@ -464,16 +458,79 @@ export class GachaScene extends Phaser.Scene {
   }
 
   performSummon(count) {
+    // 레거시 호환: performGachaPull로 위임
+    this.performGachaPull(count);
+  }
+
+  /**
+   * GachaSystem을 통한 소환 실행
+   */
+  performGachaPull(count) {
     this.isAnimating = true;
 
-    // Get results
-    const results = [];
-    for (let i = 0; i < count; i++) {
-      results.push(this.rollGacha());
+    // GachaSystem.pull()로 실제 소환
+    const pullResult = GachaSystem.pull(count, 'gems');
+
+    if (!pullResult.success) {
+      this.showMessage(pullResult.error, COLORS.danger);
+      this.isAnimating = false;
+      return;
     }
+
+    // 젬 UI 업데이트
+    const resources = SaveManager.getResources();
+    this.registry.set('gems', resources.gems);
+    if (this.gemText) {
+      this.gemText.setText(resources.gems.toLocaleString());
+    }
+
+    // 결과를 씬 UI용 형식으로 변환
+    const results = pullResult.results.map(r => {
+      const charData = getCharacter(r.characterId);
+      return {
+        id: r.characterId,
+        name: charData?.name || r.characterId,
+        rarity: r.rarity,
+        level: 1,
+        stars: RARITY[r.rarity]?.stars || 1,
+        stats: charData?.stats || { hp: 100, atk: 20, def: 10, spd: 10 },
+        isNew: r.isNew,
+        shardsGained: r.shardsGained,
+        mood: charData?.mood || 'brave',
+        cult: charData?.cult || 'olympus',
+        class: charData?.class || 'warrior'
+      };
+    });
+
+    // registry에 소유 캐릭터 업데이트
+    const owned = SaveManager.getOwnedCharacters();
+    this.registry.set('ownedHeroes', owned);
+
+    // 천장 카운터 UI 업데이트
+    this.updatePityUI(pullResult.pityInfo);
 
     // Show summon animation
     this.showSummonAnimation(results);
+  }
+
+  /**
+   * 천장 카운터 UI 업데이트
+   */
+  updatePityUI(pityInfo) {
+    if (this.bannerPityText) {
+      this.bannerPityText.setText(`천장 카운터: ${pityInfo.current}/${pityInfo.threshold}`);
+    }
+    if (this.pityText) {
+      this.pityText.setText(`${pityInfo.current}/${pityInfo.threshold}`);
+    }
+    if (this.pityBar) {
+      const progress = pityInfo.current / pityInfo.threshold;
+      this.tweens.add({
+        targets: this.pityBar,
+        width: 300 * progress,
+        duration: 300
+      });
+    }
   }
 
   rollGacha() {
