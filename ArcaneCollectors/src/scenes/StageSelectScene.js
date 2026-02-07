@@ -21,6 +21,7 @@ export class StageSelectScene extends Phaser.Scene {
     this.createChapterTitle();
     this.createStageList();
     this.createPartySelectModal();
+    this.createSweepModal();
   }
 
   createBackground() {
@@ -294,7 +295,7 @@ export class StageSelectScene extends Phaser.Scene {
 
       sweepBtn.on('pointerdown', (pointer, localX, localY, event) => {
         event.stopPropagation();
-        this.executeSweep(stage);
+        this.showSweepModal(stage);
       });
 
       card.add([sweepBtn, sweepLabel]);
@@ -655,15 +656,134 @@ export class StageSelectScene extends Phaser.Scene {
     });
   }
 
-  executeSweep(stage) {
-    const canSweep = sweepSystem.canSweep(stage.id, 1);
+  createSweepModal() {
+    this.sweepModal = this.add.container(0, 0).setDepth(60).setVisible(false);
+
+    // Overlay
+    const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
+    overlay.setInteractive();
+    overlay.on('pointerdown', () => this.hideSweepModal());
+
+    // Modal background
+    const modalBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 340, 320, COLORS.backgroundLight, 0.95);
+    modalBg.setStrokeStyle(2, COLORS.primary);
+
+    // Title
+    this.sweepTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 130, '⚡ 소탕', {
+      fontSize: '20px', fontFamily: 'Georgia, serif',
+      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // Stage info
+    this.sweepStageInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, '', {
+      fontSize: '13px', fontFamily: 'Arial',
+      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+    }).setOrigin(0.5);
+
+    // Cost info
+    this.sweepCostInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 75, '', {
+      fontSize: '12px', fontFamily: 'Arial',
+      color: '#' + COLORS.accent.toString(16).padStart(6, '0')
+    }).setOrigin(0.5);
+
+    // Count buttons (1, 3, 5, 10)
+    const counts = [1, 3, 5, 10];
+    this.sweepCountBtns = [];
+    const btnY = GAME_HEIGHT / 2 - 25;
+
+    counts.forEach((count, i) => {
+      const btnX = GAME_WIDTH / 2 - 120 + i * 80;
+      const bg = this.add.rectangle(btnX, btnY, 65, 50, COLORS.background, 0.9)
+        .setStrokeStyle(2, COLORS.primary, 0.5)
+        .setInteractive({ useHandCursor: true });
+      const label = this.add.text(btnX, btnY - 8, `×${count}`, {
+        fontSize: '18px', fontFamily: 'Arial',
+        color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+      const costLabel = this.add.text(btnX, btnY + 14, '', {
+        fontSize: '10px', fontFamily: 'Arial',
+        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      }).setOrigin(0.5);
+
+      bg.on('pointerover', () => bg.setStrokeStyle(2, COLORS.accent));
+      bg.on('pointerout', () => bg.setStrokeStyle(2, COLORS.primary, 0.5));
+      bg.on('pointerdown', () => this.executeSweep(this._sweepStage, count));
+
+      this.sweepCountBtns.push({ bg, label, costLabel, count });
+      this.sweepModal.add([bg, label, costLabel]);
+    });
+
+    // Daily remaining info
+    this.sweepDailyInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, '', {
+      fontSize: '11px', fontFamily: 'Arial',
+      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+    }).setOrigin(0.5);
+
+    // Tickets info
+    this.sweepTicketInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60, '', {
+      fontSize: '11px', fontFamily: 'Arial',
+      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+    }).setOrigin(0.5);
+
+    // Close button
+    const closeBtn = this.add.text(GAME_WIDTH / 2 + 155, GAME_HEIGHT / 2 - 145, '✕', {
+      fontSize: '20px', fontFamily: 'Arial',
+      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    closeBtn.on('pointerdown', () => this.hideSweepModal());
+
+    this.sweepModal.add([overlay, modalBg, this.sweepTitle, this.sweepStageInfo,
+      this.sweepCostInfo, this.sweepDailyInfo, this.sweepTicketInfo, closeBtn]);
+  }
+
+  showSweepModal(stage) {
+    this._sweepStage = stage;
+    const cost = stage.energyCost || 6;
+    const status = energySystem.getStatus();
+    const daily = sweepSystem.getDailyRemaining();
+    const tickets = sweepSystem.sweepTickets || 0;
+
+    this.sweepStageInfo.setText(`${stage.name || stage.id} (에너지 ${cost}/회)`);
+    this.sweepDailyInfo.setText(`일일 소탕: ${daily.used || 0}/${daily.limit || 50}`);
+    this.sweepTicketInfo.setText(`소탕권: ${tickets}장`);
+
+    // Update each count button availability
+    this.sweepCountBtns.forEach(({ bg, label, costLabel, count }) => {
+      const totalCost = cost * count;
+      const canAfford = status.current >= totalCost;
+      const canDaily = (daily.remaining || 50) >= count;
+      const canTicket = tickets >= count;
+      const available = canAfford && canDaily && canTicket;
+
+      costLabel.setText(`⚡${totalCost}`);
+      bg.setAlpha(available ? 1 : 0.4);
+      label.setAlpha(available ? 1 : 0.4);
+      bg.setInteractive(available ? { useHandCursor: true } : false);
+      if (!available) bg.disableInteractive();
+      else bg.setInteractive({ useHandCursor: true });
+    });
+
+    this.sweepCostInfo.setText(`보유 에너지: ⚡${status.current}/${status.max}`);
+    this.sweepModal.setVisible(true);
+  }
+
+  hideSweepModal() {
+    this.sweepModal.setVisible(false);
+    this._sweepStage = null;
+  }
+
+  executeSweep(stage, count = 1) {
+    if (!stage) return;
+
+    const canSweep = sweepSystem.canSweep(stage.id, count);
     if (canSweep.canSweep === false) {
-      this.showMessage(canSweep.reason || '소탕 불가!', COLORS.danger);
+      this.showMessage(canSweep.reasons?.[0] || '소탕 불가!', COLORS.danger);
       return;
     }
 
-    // 에너지 확인
-    const cost = stage.energyCost || 6;
+    const cost = (stage.energyCost || 6) * count;
     const status = energySystem.getStatus();
     if (status.current < cost) {
       this.showMessage('에너지가 부족합니다!', COLORS.danger);
@@ -671,19 +791,28 @@ export class StageSelectScene extends Phaser.Scene {
     }
 
     // 소탕 실행
-    const result = sweepSystem.executeSweep(stage.id, 1);
+    const result = sweepSystem.executeSweep(stage.id, count);
     if (result && result.success) {
-      // 에너지 차감
       energySystem.consumeEnergy(cost);
 
       // 보상 지급
-      if (result.rewards?.gold) {
-        const newGold = SaveManager.addGold(result.rewards.gold);
-        this.registry.set('gold', newGold);
+      let totalGold = 0;
+      let totalExp = 0;
+      if (result.rewards) {
+        totalGold = result.rewards.gold || 0;
+        totalExp = result.rewards.exp || 0;
+        if (totalGold > 0) {
+          const newGold = SaveManager.addGold(totalGold);
+          this.registry.set('gold', newGold);
+        }
       }
 
+      this.hideSweepModal();
       this.refreshEnergyDisplay();
-      this.showMessage(`⚡ 소탕 완료! 🪙+${result.rewards?.gold || 0}`, COLORS.success);
+      this.showMessage(
+        `⚡ ${count}회 소탕 완료! 🪙+${totalGold} ✨+${totalExp}`,
+        COLORS.success
+      );
     } else {
       this.showMessage(result?.error || '소탕 실패!', COLORS.danger);
     }
