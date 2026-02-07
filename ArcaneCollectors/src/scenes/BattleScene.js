@@ -173,10 +173,14 @@ export class BattleScene extends Phaser.Scene {
     GameLogger.log('BATTLE', `전투 초기화 - 스테이지: ${this.stage?.name || 'unknown'}`, { partySize: this.party.length });
 
     // Initialize party battlers
-    this.allies = this.party.map((hero, index) => ({
+    this.allies = this.party.map((hero, index) => {
+      const stats = hero.stats || { hp: 100, atk: 10, def: 10, spd: 10 };
+      return {
       ...hero,
-      currentHp: hero.stats.hp,
-      maxHp: hero.stats.hp,
+      name: hero.name || hero.id || '???',
+      stats,
+      currentHp: stats.hp,
+      maxHp: stats.hp,
       skillGauge: 0,
       maxSkillGauge: 100,
       position: index,
@@ -191,7 +195,8 @@ export class BattleScene extends Phaser.Scene {
           return [{ id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 20 }];
         }
       })()
-    }));
+    };
+    });
 
     console.log(`[Battle] Initialized ${this.allies.length} allies`);
 
@@ -340,7 +345,7 @@ export class BattleScene extends Phaser.Scene {
       }
 
       // 유닛 이름 첫글자
-      const initial = battler.name.charAt(0);
+      const initial = (battler.name || '?').charAt(0);
       const iconText = this.add.text(x, 0, initial, {
         fontSize: isCurrentTurn ? '14px' : '11px',
         fontFamily: 'Arial',
@@ -504,7 +509,8 @@ export class BattleScene extends Phaser.Scene {
     }
 
     // 영웅 이름
-    const heroName = ally.name.length > 4 ? ally.name.substring(0, 4) : ally.name;
+    const allyName = ally.name || '???';
+    const heroName = allyName.length > 4 ? allyName.substring(0, 4) : allyName;
     const nameText = this.add.text(0, -17, heroName, {
       fontSize: '9px',
       fontFamily: 'Arial',
@@ -1082,7 +1088,8 @@ export class BattleScene extends Phaser.Scene {
     skillGaugeFill.setOrigin(0, 0.5);
 
     // Name tag
-    const name = battler.name.length > 6 ? battler.name.substring(0, 6) : battler.name;
+    const battlerName = battler.name || '???';
+    const name = battlerName.length > 6 ? battlerName.substring(0, 6) : battlerName;
     const nameTag = this.add.text(0, 45, name, {
       fontSize: '11px',
       fontFamily: 'Arial',
@@ -1166,6 +1173,7 @@ export class BattleScene extends Phaser.Scene {
       bg.on('pointerdown', () => {
         this.battleSpeed = speed;
         this.registry.set('battleSpeed', speed);
+        SaveManager.updateSettings({ battleSpeed: speed });
         this.updateSpeedButtons();
       });
 

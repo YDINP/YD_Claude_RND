@@ -436,7 +436,7 @@ export class PartyManager {
         size: 0,
         heroes: [],
         power: 0,
-        elements: {},
+        moods: {},
         classes: {}
       };
     }

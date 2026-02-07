@@ -5,7 +5,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { GachaSystem } from '../systems/GachaSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
-import { getCharacter } from '../data/index.js';
+import { getCharacter, normalizeHeroes } from '../data/index.js';
 import { BottomNav } from '../components/BottomNav.js';
 
 export class GachaScene extends Phaser.Scene {
@@ -598,8 +598,8 @@ export class GachaScene extends Phaser.Scene {
       };
     });
 
-    // registry에 소유 캐릭터 업데이트
-    const owned = SaveManager.getOwnedCharacters();
+    // registry에 소유 캐릭터 업데이트 (정규화 적용)
+    const owned = normalizeHeroes(SaveManager.getOwnedCharacters());
     this.registry.set('ownedHeroes', owned);
 
     // 천장 카운터 UI 업데이트
@@ -643,8 +643,8 @@ export class GachaScene extends Phaser.Scene {
       };
     });
 
-    // registry에 소유 캐릭터 업데이트
-    const owned = SaveManager.getOwnedCharacters();
+    // registry에 소유 캐릭터 업데이트 (정규화 적용)
+    const owned = normalizeHeroes(SaveManager.getOwnedCharacters());
     this.registry.set('ownedHeroes', owned);
 
     // 천장 카운터 UI 업데이트
@@ -715,16 +715,14 @@ export class GachaScene extends Phaser.Scene {
   performEquipmentPull(count, cost) {
     this.isAnimating = true;
 
-    // 보석 차감
-    const data = SaveManager.load();
-    data.resources = data.resources || { gems: 1000, gold: 0 };
-    data.resources.gems -= cost;
-    SaveManager.save(data);
+    // SaveManager API로 보석 차감
+    SaveManager.spendGems(cost);
 
-    // 젬 UI 업데이트
-    this.registry.set('gems', data.resources.gems);
+    // 젬 UI 업데이트 (SaveManager에서 최신값 조회)
+    const resources = SaveManager.getResources();
+    this.registry.set('gems', resources.gems);
     if (this.gemText) {
-      this.gemText.setText(data.resources.gems.toLocaleString());
+      this.gemText.setText(resources.gems.toLocaleString());
     }
 
     // 장비 등급 결정 및 생성
@@ -1203,7 +1201,8 @@ export class GachaScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Name (truncated)
-    const name = hero.name.length > 6 ? hero.name.substring(0, 6) + '..' : hero.name;
+    const heroName = hero.name || '???';
+    const name = heroName.length > 6 ? heroName.substring(0, 6) + '..' : heroName;
     const nameText = this.add.text(0, 42, name, {
       fontSize: '10px',
       fontFamily: 'Arial',
@@ -1239,17 +1238,8 @@ export class GachaScene extends Phaser.Scene {
   }
 
   updatePityDisplay() {
-    const pity = this.registry.get('pityCounter') || 0;
-    const pityMax = 90;
-
-    this.tweens.add({
-      targets: this.pityBar,
-      x: GAME_WIDTH / 2 - 150 + (300 * pity / pityMax) / 2,
-      width: 300 * pity / pityMax,
-      duration: 300
-    });
-
-    this.pityText.setText(`${pity}/${pityMax}`);
+    const pityInfo = GachaSystem.getPityInfo();
+    this.updatePityUI(pityInfo);
   }
 
   shutdown() {

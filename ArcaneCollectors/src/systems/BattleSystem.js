@@ -784,7 +784,7 @@ export class BattleSystem {
    * @param {BattleUnit} attacker 공격자
    * @param {BattleUnit} defender 방어자
    * @param {Object} skill 스킬
-   * @returns {Object} { baseDamage, finalDamage, isCrit, elementBonus }
+   * @returns {Object} { baseDamage, finalDamage, isCrit, moodBonus }
    */
   calculateDamage(attacker, defender, skill) {
     // 기본 데미지 = ATK * 배율

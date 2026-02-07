@@ -9,6 +9,76 @@ import stages from './stages.json';
 import enemies from './enemies.json';
 import items from './items.json';
 import quests from './quests.json';
+import { getRarityKey } from '../utils/helpers.js';
+
+// ==================== Hero Data Normalization ====================
+
+const DEFAULT_STATS = { hp: 100, atk: 10, def: 10, spd: 10 };
+
+/**
+ * SaveManager/Registry의 불완전한 영웅 데이터를 characters.json으로 보강합니다.
+ * 모든 씬에서 동일한 형태의 완전한 영웅 객체를 보장합니다.
+ *
+ * @param {Object} hero - 불완전할 수 있는 영웅 데이터 (최소 id 또는 characterId 필요)
+ * @returns {Object|null} 정규화된 영웅 객체 (null = 알 수 없는 캐릭터)
+ */
+export function normalizeHero(hero) {
+  if (!hero) return null;
+
+  const heroId = hero.id || hero.characterId;
+  if (!heroId) return null;
+
+  const base = getCharacter(heroId);
+
+  // 숫자 rarity → 문자열 키 변환용 (stars 계산)
+  const rarity = hero.rarity ?? base?.rarity ?? 1;
+  const rarityKey = getRarityKey(rarity);
+
+  return {
+    // 식별자
+    id: heroId,
+    instanceId: hero.instanceId || heroId,
+    characterId: heroId,
+
+    // 기본 정보 (characters.json 우선, 오버라이드 허용)
+    name: hero.name || base?.name || '???',
+    rarity: rarity,
+    rarityKey: rarityKey,
+    stars: hero.stars || (typeof rarity === 'number' ? rarity : ({ SSR: 5, SR: 4, R: 3, N: 1 }[rarity] || 1)),
+    cult: hero.cult || base?.cult || 'olympus',
+    class: hero.class || base?.class || 'warrior',
+    mood: hero.mood || base?.mood || 'brave',
+    description: hero.description || base?.description || '',
+
+    // 상태 (세이브 데이터 우선)
+    level: hero.level || 1,
+    exp: hero.exp || 0,
+
+    // 스탯 (세이브에 레벨 반영 스탯 있으면 사용, 없으면 base)
+    stats: hero.stats || base?.stats || { ...DEFAULT_STATS },
+    growthStats: base?.growthStats || { hp: 0, atk: 0, def: 0, spd: 0 },
+
+    // 스킬 (characters.json에서 가져옴)
+    skills: hero.skills || base?.skills || [],
+    skillLevels: hero.skillLevels || [1, 1, 1],
+
+    // 장비
+    equipped: hero.equipped || null,
+
+    // 진화
+    evolutionCount: hero.evolutionCount || 0
+  };
+}
+
+/**
+ * 영웅 배열 전체를 정규화합니다. null 결과는 자동 필터링.
+ * @param {Array} heroes - 불완전한 영웅 배열
+ * @returns {Array} 정규화된 영웅 배열
+ */
+export function normalizeHeroes(heroes) {
+  if (!Array.isArray(heroes)) return [];
+  return heroes.map(normalizeHero).filter(Boolean);
+}
 
 // ==================== Character Functions ====================
 
@@ -63,16 +133,16 @@ export function getCharactersByClass(charClass) {
  * @returns {number} 전투력
  */
 export function calculatePower(character, level = 1) {
-  const baseStats = character.baseStats;
-  const growthStats = character.growthStats;
+  const base = character.stats || character.baseStats;
+  if (!base) return 0;
+  const growthStats = character.growthStats || { hp: 0, atk: 0, def: 0, spd: 0 };
   const levelMultiplier = level - 1;
 
-  const hp = baseStats.hp + (growthStats.hp * levelMultiplier);
-  const atk = baseStats.atk + (growthStats.atk * levelMultiplier);
-  const def = baseStats.def + (growthStats.def * levelMultiplier);
-  const spd = baseStats.spd + (growthStats.spd * levelMultiplier);
+  const hp = base.hp + (growthStats.hp * levelMultiplier);
+  const atk = base.atk + (growthStats.atk * levelMultiplier);
+  const def = base.def + (growthStats.def * levelMultiplier);
+  const spd = base.spd + (growthStats.spd * levelMultiplier);
 
-  // 전투력 공식: (HP * 0.1) + (ATK * 2) + (DEF * 1.5) + (SPD * 1)
   return Math.floor((hp * 0.1) + (atk * 2) + (def * 1.5) + (spd * 1));
 }
 
@@ -83,15 +153,16 @@ export function calculatePower(character, level = 1) {
  * @returns {Object} 계산된 스탯
  */
 export function calculateStats(character, level) {
-  const baseStats = character.baseStats;
-  const growthStats = character.growthStats;
+  const base = character.stats || character.baseStats;
+  if (!base) return { hp: 100, atk: 10, def: 10, spd: 10 };
+  const growthStats = character.growthStats || { hp: 0, atk: 0, def: 0, spd: 0 };
   const levelMultiplier = level - 1;
 
   return {
-    hp: baseStats.hp + (growthStats.hp * levelMultiplier),
-    atk: baseStats.atk + (growthStats.atk * levelMultiplier),
-    def: baseStats.def + (growthStats.def * levelMultiplier),
-    spd: baseStats.spd + (growthStats.spd * levelMultiplier)
+    hp: base.hp + (growthStats.hp * levelMultiplier),
+    atk: base.atk + (growthStats.atk * levelMultiplier),
+    def: base.def + (growthStats.def * levelMultiplier),
+    spd: base.spd + (growthStats.spd * levelMultiplier)
   };
 }
 
@@ -363,12 +434,9 @@ export function getExpRequiredForLevel(level) {
  * @returns {number} 최대 레벨
  */
 export function getMaxLevel(rarity) {
-  const maxLevels = {
-    R: 40,
-    SR: 50,
-    SSR: 60
-  };
-  return maxLevels[rarity] || 40;
+  const key = getRarityKey(rarity);
+  const maxLevels = { N: 30, R: 40, SR: 50, SSR: 60 };
+  return maxLevels[key] || 40;
 }
 
 // Default export for convenience
@@ -381,6 +449,8 @@ export default {
   getCharactersByClass,
   calculatePower,
   calculateStats,
+  normalizeHero,
+  normalizeHeroes,
 
   // Skill
   getSkill,

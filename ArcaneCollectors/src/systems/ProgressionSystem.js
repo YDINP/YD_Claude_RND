@@ -4,6 +4,8 @@
  */
 import { SaveManager } from './SaveManager.js';
 import { EventBus, GameEvents } from './EventBus.js';
+import { getRarityKey } from '../utils/helpers.js';
+import { getCharacter } from '../data/index.js';
 
 export class ProgressionSystem {
   // 최대 레벨 (등급별)
@@ -55,7 +57,8 @@ export class ProgressionSystem {
       return { success: false, error: '캐릭터를 찾을 수 없습니다' };
     }
 
-    const rarity = characterId.split('_')[0].toUpperCase();
+    const charData = getCharacter(characterId);
+    const rarity = getRarityKey(character.rarity ?? charData?.rarity ?? 1);
     const maxLevel = this.MAX_LEVEL[rarity] || 30;
 
     // 이미 최대 레벨이면 오버플로우
@@ -134,7 +137,9 @@ export class ProgressionSystem {
    * @returns {Object} 스탯
    */
   static getStatsAtLevel(characterId, level) {
-    const rarity = characterId.split('_')[0].toUpperCase();
+    const charData = getCharacter(characterId);
+    const savedChar = SaveManager.getCharacter(characterId);
+    const rarity = getRarityKey(savedChar?.rarity ?? charData?.rarity ?? 1);
 
     // 기본 스탯 (등급별 베이스)
     const baseStats = {
@@ -472,7 +477,8 @@ export class ProgressionSystem {
     const character = SaveManager.getCharacter(characterId);
     if (!character) return null;
 
-    const rarity = characterId.split('_')[0].toUpperCase();
+    const charData = getCharacter(characterId);
+    const rarity = getRarityKey(character.rarity ?? charData?.rarity ?? 1);
     const maxLevel = this.MAX_LEVEL[rarity];
     const stats = this.getStatsAtLevel(characterId, character.level);
     const starBonus = this.getStarBonus(character.stars);

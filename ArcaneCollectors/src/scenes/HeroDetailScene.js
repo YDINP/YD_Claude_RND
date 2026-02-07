@@ -141,7 +141,7 @@ export class HeroDetailScene extends Phaser.Scene {
     });
 
     // Stars
-    this.add.text(GAME_WIDTH / 2, displayY + 115, '★'.repeat(this.hero.stars), {
+    this.add.text(GAME_WIDTH / 2, displayY + 115, '★'.repeat(this.hero.stars || this.hero.rarity || 1), {
       fontSize: '20px',
       color: '#' + COLORS.accent.toString(16).padStart(6, '0')
     }).setOrigin(0.5);
@@ -908,16 +908,31 @@ export class HeroDetailScene extends Phaser.Scene {
           rarity: this.hero.rarity,
           stats: this.hero.stats,
           skillLevels: this.hero.skillLevels,
-          evolutionCount: this.hero.evolutionCount || 0
+          evolutionCount: this.hero.evolutionCount || 0,
+          equipment: this.hero.equipment || null
         });
       }
-      // 골드/리소스도 동기화
+      // 골드/스킬북/조각 등 리소스도 동기화
+      const saveData = SaveManager.load();
       const gold = this.registry.get('gold');
       if (gold !== undefined) {
-        const saveData = SaveManager.load();
         saveData.resources.gold = gold;
-        SaveManager.save(saveData);
       }
+      const skillBooks = this.registry.get('skillBooks');
+      if (skillBooks !== undefined) {
+        saveData.resources.skillBooks = skillBooks;
+      }
+      // 조각(shards) 동기화
+      if (this.hero && this.hero.id) {
+        const shards = this.registry.get(`shards_${this.hero.id}`);
+        if (shards !== undefined) {
+          if (!saveData.resources.characterShards) {
+            saveData.resources.characterShards = {};
+          }
+          saveData.resources.characterShards[this.hero.id] = shards;
+        }
+      }
+      SaveManager.save(saveData);
     } catch (e) {
       console.warn('[HeroDetail] Save error:', e.message);
     }

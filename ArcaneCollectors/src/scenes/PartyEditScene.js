@@ -3,7 +3,7 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS } from '../config/gameConfig.js'
 import { PartyManager } from '../systems/PartyManager.js';
 import { SynergySystem } from '../systems/SynergySystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
-import { getCharacter, getAllCharacters } from '../data/index.js';
+import { getCharacter, getAllCharacters, normalizeHeroes } from '../data/index.js';
 
 /**
  * PartyEditScene - 파티 편성 전용 씬
@@ -62,32 +62,22 @@ export class PartyEditScene extends Phaser.Scene {
     this.parties = saveData?.parties || [];
     this.parties = PartyManager.ensurePartySlots(this.parties);
 
-    // SaveManager에서 소유 캐릭터 로드 (registry fallback)
-    const savedChars = saveData?.characters || [];
+    // registry에서 정규화된 영웅 로드 (BootScene/LoginScene에서 normalizeHeroes 적용 완료)
     const registryHeroes = this.registry.get('ownedHeroes') || [];
-    this.ownedHeroes = savedChars.length > 0 ? savedChars : registryHeroes;
+    // SaveManager fallback: registry가 비어있으면 SaveManager에서 로드 후 정규화
+    const savedChars = saveData?.characters || [];
+    this.ownedHeroes = registryHeroes.length > 0 ? registryHeroes : normalizeHeroes(savedChars);
 
     // If still empty, give default starter heroes for testing
     if (this.ownedHeroes.length === 0) {
       const allChars = getAllCharacters();
       if (allChars && allChars.length > 0) {
-        this.ownedHeroes = allChars.slice(0, 4).map(c => ({
-          instanceId: c.id + '_inst',
-          characterId: c.id,
+        this.ownedHeroes = normalizeHeroes(allChars.slice(0, 4).map(c => ({
           id: c.id,
-          name: c.name,
-          nameKo: c.nameKo,
-          rarity: c.rarity,
-          mood: c.mood,
-          cult: c.cult,
-          role: c.role || c.class,
-          class: c.class,
-          stats: c.stats || c.baseStats,
           level: 1,
           exp: 0,
-          stars: c.rarity,
           skillLevels: [1, 1, 1]
-        }));
+        })));
         // 세이브 데이터에도 저장
         saveData.characters = this.ownedHeroes;
         SaveManager.save(saveData);

@@ -1,8 +1,6 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO } from '../config/gameConfig.js';
 import { BottomNav } from '../components/BottomNav.js';
 import { getRarityKey, getRarityNum } from '../utils/helpers.js';
-import { getCharacter } from '../data/index.js';
-
 export class HeroListScene extends Phaser.Scene {
   constructor() {
     super({ key: 'HeroListScene' });
@@ -248,15 +246,7 @@ export class HeroListScene extends Phaser.Scene {
     // Clear existing cards
     this.gridContainer.removeAll(true);
 
-    let heroes = [...(this.registry.get('ownedHeroes') || [])];
-
-    // 불완전한 데이터 보강 (name이 없으면 characters.json에서 채움)
-    heroes = heroes.map(h => {
-      if (h.name && h.rarity != null) return h;
-      const full = getCharacter(h.id);
-      if (full) return { ...full, ...h, name: h.name || full.name, rarity: h.rarity ?? full.rarity };
-      return h;
-    }).filter(h => h.name); // name이 여전히 없으면 제외
+    let heroes = [...(this.registry.get('ownedHeroes') || [])].filter(h => h.name);
 
     // Filter by rarity (숫자/문자열 모두 지원)
     if (this.filterRarity) {
@@ -281,7 +271,7 @@ export class HeroListScene extends Phaser.Scene {
         });
         break;
       case 'level':
-        heroes.sort((a, b) => (b.level - a.level) * sortDirection);
+        heroes.sort((a, b) => ((b.level || 1) - (a.level || 1)) * sortDirection);
         break;
       case 'mood':
         const moodOrder = { brave: 0, fierce: 1, wild: 2, calm: 3, stoic: 4, devoted: 5, cunning: 6, noble: 7, mystic: 8 };

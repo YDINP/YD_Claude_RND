@@ -6,6 +6,7 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { isSupabaseConfigured, supabase } from '../api/supabaseClient.js';
 import { guestLogin } from '../services/AuthService.js';
+import { normalizeHeroes } from '../data/index.js';
 
 export class LoginScene extends Phaser.Scene {
   constructor() {
@@ -335,7 +336,7 @@ export class LoginScene extends Phaser.Scene {
     this.registry.set('gems', saveData.resources.gems);
     this.registry.set('gold', saveData.resources.gold);
     this.registry.set('pityCounter', saveData.gacha.pityCounter);
-    this.registry.set('ownedHeroes', saveData.characters);
+    this.registry.set('ownedHeroes', normalizeHeroes(saveData.characters));
     this.registry.set('clearedStages', saveData.progress.clearedStages);
     this.registry.set('battleSpeed', saveData.settings.battleSpeed);
     this.registry.set('autoBattle', false);
