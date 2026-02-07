@@ -128,12 +128,12 @@ export class HeroListScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(20);
 
     // Second row - Cult filter buttons (분위기/교단 필터)
-    const cults = ['olympus', 'takamagahara', 'yomi', 'asgard', 'valhalla'];
+    const cults = ['olympus', 'takamagahara', 'yomi', 'asgard', 'valhalla', 'tartarus', 'avalon', 'helheim', 'kunlun'];
     this.cultButtons = [];
 
     cults.forEach((cult, index) => {
-      const x = 30 + index * 32;
-      const btn = this.add.circle(x, filterY2, 13, CULT_COLORS[cult] || COLORS.textDark, 0.8)
+      const x = 20 + index * 22;
+      const btn = this.add.circle(x, filterY2, 10, CULT_COLORS[cult] || COLORS.textDark, 0.8)
         .setInteractive({ useHandCursor: true })
         .setDepth(20);
 
@@ -260,7 +260,7 @@ export class HeroListScene extends Phaser.Scene {
         heroes.sort((a, b) => (b.level - a.level) * sortDirection);
         break;
       case 'mood':
-        const moodOrder = { aggressive: 0, balanced: 1, defensive: 2, tactical: 3 };
+        const moodOrder = { brave: 0, fierce: 1, wild: 2, calm: 3, stoic: 4, devoted: 5, cunning: 6, noble: 7, mystic: 8 };
         heroes.sort((a, b) => {
           const aMood = moodOrder[a.mood] ?? 99;
           const bMood = moodOrder[b.mood] ?? 99;
@@ -271,7 +271,7 @@ export class HeroListScene extends Phaser.Scene {
         heroes.sort((a, b) => (this.calculatePower(b) - this.calculatePower(a)) * sortDirection);
         break;
       case 'cult':
-        const cultOrder = { valhalla: 0, takamagahara: 1, olympus: 2, asgard: 3, yomi: 4 };
+        const cultOrder = { olympus: 0, takamagahara: 1, yomi: 2, asgard: 3, valhalla: 4, tartarus: 5, avalon: 6, helheim: 7, kunlun: 8 };
         heroes.sort((a, b) => {
           const aCult = cultOrder[a.cult] ?? 99;
           const bCult = cultOrder[b.cult] ?? 99;
