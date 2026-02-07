@@ -1,4 +1,5 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY } from '../config/gameConfig.js';
+import { getRarityKey } from '../utils/helpers.js';
 import GameLogger from '../utils/GameLogger.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { GachaSystem } from '../systems/GachaSystem.js';
@@ -587,7 +588,7 @@ export class GachaScene extends Phaser.Scene {
         name: charData?.name || r.characterId,
         rarity: r.rarity,
         level: 1,
-        stars: RARITY[r.rarity]?.stars || 1,
+        stars: r.rarity || RARITY[getRarityKey(r.rarity)]?.stars || 1,
         stats: charData?.stats || { hp: 100, atk: 20, def: 10, spd: 10 },
         isNew: r.isNew,
         shardsGained: r.shardsGained,
@@ -632,7 +633,7 @@ export class GachaScene extends Phaser.Scene {
         name: charData?.name || r.characterId,
         rarity: r.rarity,
         level: 1,
-        stars: RARITY[r.rarity]?.stars || 1,
+        stars: r.rarity || RARITY[getRarityKey(r.rarity)]?.stars || 1,
         stats: charData?.stats || { hp: 100, atk: 20, def: 10, spd: 10 },
         isNew: r.isNew,
         shardsGained: r.shardsGained,
@@ -1176,7 +1177,9 @@ export class GachaScene extends Phaser.Scene {
     const card = this.add.container(x, y);
 
     // Card background with rarity color
-    const rarityColor = RARITY[hero.rarity].color;
+    const rKey = getRarityKey(hero.rarity);
+    const rarityData = RARITY[rKey] || RARITY.N;
+    const rarityColor = rarityData.color;
     const cardBg = this.add.rectangle(0, 0, 75, 110, COLORS.backgroundLight, 1);
     cardBg.setStrokeStyle(2, rarityColor);
 
@@ -1185,7 +1188,7 @@ export class GachaScene extends Phaser.Scene {
 
     // Rarity indicator
     const rarityBg = this.add.rectangle(0, -50, 30, 18, rarityColor, 1);
-    const rarityText = this.add.text(0, -50, hero.rarity, {
+    const rarityText = this.add.text(0, -50, rKey, {
       fontSize: '10px',
       fontFamily: 'Arial',
       color: '#ffffff',
@@ -1193,7 +1196,8 @@ export class GachaScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Stars
-    const stars = this.add.text(0, 25, '★'.repeat(hero.stars), {
+    const starCount = hero.stars || (typeof hero.rarity === 'number' ? hero.rarity : rarityData.stars || 1);
+    const stars = this.add.text(0, 25, '★'.repeat(starCount), {
       fontSize: '10px',
       color: '#' + COLORS.accent.toString(16).padStart(6, '0')
     }).setOrigin(0.5);

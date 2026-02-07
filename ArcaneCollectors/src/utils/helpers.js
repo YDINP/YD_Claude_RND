@@ -3,6 +3,33 @@
  */
 
 // ============================================
+// Rarity Conversion (숫자 ↔ 문자열)
+// ============================================
+
+const RARITY_NUM_TO_KEY = { 1: 'N', 2: 'N', 3: 'R', 4: 'SR', 5: 'SSR' };
+const RARITY_KEY_TO_NUM = { 'N': 1, 'R': 3, 'SR': 4, 'SSR': 5 };
+
+/**
+ * 숫자 rarity → 문자열 등급 키로 변환 (이미 문자열이면 그대로 반환)
+ * @param {number|string} rarity
+ * @returns {string} 'N' | 'R' | 'SR' | 'SSR'
+ */
+export function getRarityKey(rarity) {
+  if (typeof rarity === 'string') return rarity;
+  return RARITY_NUM_TO_KEY[rarity] || 'N';
+}
+
+/**
+ * 문자열 등급 → 숫자 rarity로 변환 (이미 숫자면 그대로 반환)
+ * @param {number|string} rarity
+ * @returns {number}
+ */
+export function getRarityNum(rarity) {
+  if (typeof rarity === 'number') return rarity;
+  return RARITY_KEY_TO_NUM[rarity] || 1;
+}
+
+// ============================================
 // Number Formatting
 // ============================================
 

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { COLORS, RARITY, MOODS, CULT_COLORS } from '../config/gameConfig.js';
+import { getRarityKey } from '../utils/helpers.js';
 import { StarRating } from './StarRating.js';
 
 export class HeroCard extends Phaser.GameObjects.Container {
@@ -30,7 +31,7 @@ export class HeroCard extends Phaser.GameObjects.Container {
   }
 
   createFrame() {
-    const rarityConfig = RARITY[this.heroData.rarity] || RARITY.N;
+    const rarityConfig = RARITY[getRarityKey(this.heroData.rarity)] || RARITY.N;
     const frameColor = rarityConfig.color;
 
     this.frame = this.scene.add.graphics();
@@ -189,7 +190,7 @@ export class HeroCard extends Phaser.GameObjects.Container {
   }
 
   createStarRating() {
-    const rarityConfig = RARITY[this.heroData.rarity] || RARITY.N;
+    const rarityConfig = RARITY[getRarityKey(this.heroData.rarity)] || RARITY.N;
     const starCount = rarityConfig.stars;
     const starY = this.cardHeight / 2 - 30;
 
@@ -297,7 +298,7 @@ export class HeroCard extends Phaser.GameObjects.Container {
     this.levelText.setText(`Lv${heroData.level || 1}`);
 
     // Update stars if rarity changed
-    const rarityConfig = RARITY[heroData.rarity] || RARITY.N;
+    const rarityConfig = RARITY[getRarityKey(heroData.rarity)] || RARITY.N;
     this.stars.setStars(rarityConfig.stars);
 
     return this;
@@ -319,7 +320,7 @@ export class HeroCard extends Phaser.GameObjects.Container {
       );
     } else {
       // Redraw with original rarity color
-      const rarityConfig = RARITY[this.heroData.rarity] || RARITY.N;
+      const rarityConfig = RARITY[getRarityKey(this.heroData.rarity)] || RARITY.N;
       this.frame.lineStyle(3, rarityConfig.color, 1);
       this.frame.strokeRoundedRect(
         -this.cardWidth / 2,

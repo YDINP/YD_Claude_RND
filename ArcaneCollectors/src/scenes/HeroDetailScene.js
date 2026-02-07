@@ -1,4 +1,5 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, EQUIPMENT_SLOTS } from '../config/gameConfig.js';
+import { getRarityKey } from '../utils/helpers.js';
 import { EvolutionSystem } from '../systems/EvolutionSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
@@ -90,7 +91,8 @@ export class HeroDetailScene extends Phaser.Scene {
     });
 
     // Hero name and rarity
-    const rarityColor = RARITY[this.hero.rarity].color;
+    const heroRarityKey = getRarityKey(this.hero.rarity);
+    const rarityColor = (RARITY[heroRarityKey] || RARITY.N).color;
     this.add.text(GAME_WIDTH / 2, 40, this.hero.name, {
       fontSize: '22px',
       fontFamily: 'Georgia, serif',
@@ -98,7 +100,7 @@ export class HeroDetailScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, 65, `${this.hero.rarity} · Lv.${this.hero.level}`, {
+    this.add.text(GAME_WIDTH / 2, 65, `${heroRarityKey} · Lv.${this.hero.level}`, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: '#' + rarityColor.toString(16).padStart(6, '0')
@@ -121,8 +123,8 @@ export class HeroDetailScene extends Phaser.Scene {
 
     // Frame
     const frame = this.add.rectangle(GAME_WIDTH / 2, displayY, 180, 200, COLORS.backgroundLight, 0.3);
-    const rarityColor = RARITY[this.hero.rarity].color;
-    frame.setStrokeStyle(3, rarityColor, 0.8);
+    const frameRarityColor = (RARITY[getRarityKey(this.hero.rarity)] || RARITY.N).color;
+    frame.setStrokeStyle(3, frameRarityColor, 0.8);
 
     // Hero image
     const heroImg = this.add.image(GAME_WIDTH / 2, displayY, 'hero_placeholder');
@@ -388,12 +390,12 @@ export class HeroDetailScene extends Phaser.Scene {
       let bgColor = COLORS.backgroundLight;
       let bgAlpha = 0.6;
       if (equippedItem) {
-        bgColor = RARITY[equippedItem.rarity]?.color || COLORS.backgroundLight;
+        bgColor = RARITY[getRarityKey(equippedItem.rarity)]?.color || COLORS.backgroundLight;
         bgAlpha = 0.4;
       }
 
       const slotBg = this.add.rectangle(x, slotsY + 20, 65, 65, bgColor, bgAlpha);
-      slotBg.setStrokeStyle(2, equippedItem ? RARITY[equippedItem.rarity]?.color || COLORS.textDark : COLORS.textDark, equippedItem ? 1 : 0.5);
+      slotBg.setStrokeStyle(2, equippedItem ? RARITY[getRarityKey(equippedItem.rarity)]?.color || COLORS.textDark : COLORS.textDark, equippedItem ? 1 : 0.5);
       slotBg.setInteractive({ useHandCursor: true });
 
       // Slot content

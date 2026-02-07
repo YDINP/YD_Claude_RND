@@ -17,6 +17,7 @@
  */
 
 import { MOODS, CULT_COLORS, RARITY } from '../config/gameConfig.js';
+import { getRarityKey } from '../utils/helpers.js';
 
 // 히어로 이미지 사이즈 (등급별)
 const PORTRAIT_SIZES = {
@@ -122,14 +123,15 @@ export class HeroAssetLoader {
     }
 
     // 3. 등급별 테두리 효과
-    const rarityConfig = RARITY[hero.rarity];
+    const heroRKey = getRarityKey(hero.rarity);
+    const rarityConfig = RARITY[heroRKey];
     if (rarityConfig) {
       const rc = rarityConfig.color;
       const rr = (rc >> 16) & 0xFF;
       const rg = (rc >> 8) & 0xFF;
       const rb = rc & 0xFF;
       ctx.strokeStyle = `rgba(${rr}, ${rg}, ${rb}, 0.6)`;
-      ctx.lineWidth = hero.rarity === 'SSR' ? 3 : (hero.rarity === 'SR' ? 2 : 1);
+      ctx.lineWidth = heroRKey === 'SSR' ? 3 : (heroRKey === 'SR' ? 2 : 1);
       ctx.strokeRect(1, 1, size - 2, size - 2);
     }
 

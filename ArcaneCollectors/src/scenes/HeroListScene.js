@@ -1,6 +1,8 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO } from '../config/gameConfig.js';
 import { BottomNav } from '../components/BottomNav.js';
 
+import { getRarityKey, getRarityNum } from '../utils/helpers.js';
+
 export class HeroListScene extends Phaser.Scene {
   constructor() {
     super({ key: 'HeroListScene' });
@@ -248,9 +250,9 @@ export class HeroListScene extends Phaser.Scene {
 
     let heroes = [...(this.registry.get('ownedHeroes') || [])];
 
-    // Filter by rarity
+    // Filter by rarity (숫자/문자열 모두 지원)
     if (this.filterRarity) {
-      heroes = heroes.filter(h => h.rarity === this.filterRarity);
+      heroes = heroes.filter(h => getRarityKey(h.rarity) === this.filterRarity);
     }
 
     // Filter by cult
@@ -263,8 +265,12 @@ export class HeroListScene extends Phaser.Scene {
 
     switch (this.sortBy) {
       case 'rarity':
-        const rarityOrder = { SSR: 0, SR: 1, R: 2, N: 3 };
-        heroes.sort((a, b) => (rarityOrder[a.rarity] - rarityOrder[b.rarity]) * sortDirection);
+        // 숫자 rarity: 높을수록 상위 (5=SSR, 4=SR, 3=R, 1~2=N)
+        heroes.sort((a, b) => {
+          const aR = typeof a.rarity === 'number' ? a.rarity : ({ SSR: 5, SR: 4, R: 3, N: 1 }[a.rarity] || 0);
+          const bR = typeof b.rarity === 'number' ? b.rarity : ({ SSR: 5, SR: 4, R: 3, N: 1 }[b.rarity] || 0);
+          return (bR - aR) * sortDirection;
+        });
         break;
       case 'level':
         heroes.sort((a, b) => (b.level - a.level) * sortDirection);
@@ -333,14 +339,16 @@ export class HeroListScene extends Phaser.Scene {
     const card = this.add.container(x, y);
 
     // Card background with rarity color
-    const rarityColor = RARITY[hero.rarity].color;
+    const rKey = getRarityKey(hero.rarity);
+    const rarityData = RARITY[rKey] || RARITY.N;
+    const rarityColor = rarityData.color;
     const cardBg = this.add.rectangle(0, 0, 95, 135, COLORS.backgroundLight, 1);
     cardBg.setStrokeStyle(2, rarityColor);
     cardBg.setInteractive({ useHandCursor: true });
 
     // Rarity indicator
     const rarityBg = this.add.rectangle(0, -55, 35, 18, rarityColor, 1);
-    const rarityText = this.add.text(0, -55, hero.rarity, {
+    const rarityText = this.add.text(0, -55, rKey, {
       fontSize: '11px',
       fontFamily: 'Arial',
       color: '#ffffff',
@@ -350,8 +358,9 @@ export class HeroListScene extends Phaser.Scene {
     // Hero portrait
     const portrait = this.add.image(0, -10, 'hero_placeholder').setScale(0.85);
 
-    // Stars
-    const stars = this.add.text(0, 35, '★'.repeat(hero.stars), {
+    // Stars (rarity 숫자를 stars로 사용)
+    const starCount = hero.stars || (typeof hero.rarity === 'number' ? hero.rarity : rarityData.stars || 1);
+    const stars = this.add.text(0, 35, '★'.repeat(starCount), {
       fontSize: '11px',
       color: '#' + COLORS.accent.toString(16).padStart(6, '0')
     }).setOrigin(0.5);
