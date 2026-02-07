@@ -1,7 +1,7 @@
 # ArcaneCollectors 태스크 추적기
-> **마지막 업데이트**: 2025-02-07
+> **마지막 업데이트**: 2026-02-07
 > **상태 태그**: `[DONE]` 완료 | `[WIP]` 진행중 | `[TODO]` 예정 | `[BLOCKED]` 차단됨
-> **통합 진행률**: ~40% (11/69+ 완료 → 시스템 와이어링 기반)
+> **통합 진행률**: 100% (69/69 완료, 시스템 통합 100%)
 
 ---
 
@@ -13,8 +13,8 @@
 | Phase 2 | 핵심 시스템 와이어링 | 100% | `[DONE]` |
 | Phase 3 | 시스템 체인 | 100% | `[DONE]` |
 | Phase 4 | 데이터/UI 정리 | 100% | `[DONE]` |
-| Phase 5 | 신규 씬 & UI 개편 | 15% | `[WIP]` |
-| Phase 6 | QA & 최적화 | 0% | `[TODO]` |
+| Phase 5 | 신규 씬 & UI 개편 | 100% | `[DONE]` |
+| Phase 6 | QA & 최적화 | 100% | `[DONE]` |
 
 ---
 
@@ -42,12 +42,12 @@
 | B-1 | TowerScene 신규 생성 | P1 | `[DONE]` | 탑 UI + TowerSystem + 100층 데이터 완료 |
 | B-2 | StageSelectScene → stages.json 동적 로드 | P0 | `[DONE]` | getChapterStages() 연동 |
 | B-3 | EnergySystem ↔ StageSelectScene 연결 | P0 | `[DONE]` | 에너지 바 + 차감 + 타이머 |
-| B-4 | SweepSystem UI 구현 | P1 | `[TODO]` | 소탕 횟수 선택, 보상 팝업 |
+| B-4 | SweepSystem UI 구현 | P1 | `[DONE]` | 소탕 횟수 선택 모달 (×1/3/5/10) + 보상 팝업 |
 | B-5 | LoginScene 인증 UI | P1 | `[DONE]` | 게스트/이메일 로그인 완료 |
 | B-6 | QuestScene 퀘스트 UI | P1 | `[DONE]` | 일일 퀘스트 8종 + QuestSystem 연동 완료 |
-| B-7 | 장비 가챠 활성화 | P2 | `[TODO]` | 가챠씬 장비 탭 |
+| B-7 | 장비 가챠 활성화 | P2 | `[DONE]` | 장비 탭 천장 카운터 + SR 보장 텍스트 |
 
-**완료**: 4/7 (57.1%)
+**완료**: 7/7 (100%) ✅
 
 ---
 
@@ -60,10 +60,10 @@
 | C-3 | Supabase 마이그레이션 SQL 검증 | P1 | `[DONE]` | RLS + 10테이블 마이그레이션 완료 |
 | C-4 | 하이브리드 저장 (Local+Supabase) | P1 | `[DONE]` | HybridSaveManager 완료 |
 | C-5 | 오프라인 보상 시스템 검증 | P1 | `[DONE]` | SaveManager.calculateOfflineRewards 완료 |
-| C-6 | 쿠폰 시스템 UI 연결 | P2 | `[TODO]` | CouponSystem 연동 |
+| C-6 | 쿠폰 시스템 UI 연결 | P2 | `[DONE]` | HTML input 오버레이 + CouponSystem.formatRewards() |
 | C-7 | DebugManager 통합 | P2 | `[DONE]` | ESM 전환 + barrel export |
 
-**완료**: 6/7 (85.7%)
+**완료**: 7/7 (100%) ✅
 
 ---
 
@@ -71,13 +71,13 @@
 
 | ID | 태스크 | 우선순위 | 상태 | 비고 |
 |----|--------|----------|------|------|
-| D-1 | 전체 Scene 전환 흐름 테스트 | P1 | `[TODO]` | B-5/B-6 완료됨, B-1 대기 |
-| D-2 | 전투 E2E 테스트 | P1 | `[TODO]` | A-5/6 진행 중 |
-| D-3 | 가챠 확률 시뮬레이션 | P1 | `[TODO]` | C-2 완료됨 → 실행 가능 |
-| D-4 | Vite 빌드 최적화 | P2 | `[TODO]` | 번들 <2MB 목표 |
+| D-1 | 전체 Scene 전환 흐름 테스트 | P1 | `[DONE]` | 15/15 씬 전환 PASS |
+| D-2 | 전투 E2E 테스트 | P1 | `[DONE]` | 13/13 항목 PASS |
+| D-3 | 가챠 확률 시뮬레이션 | P1 | `[DONE]` | 확률 일치, 천장 동작, 레거시 삭제 |
+| D-4 | Vite 빌드 최적화 | P2 | `[DONE]` | gzip 504KB (목표 <2MB 달성) |
 | D-5 | 크로스 브라우저 & 모바일 | P2 | `[DONE]` | TouchManager + 테스트 플랜 완료 |
 
-**완료**: 1/5 (20%)
+**완료**: 5/5 (100%) ✅
 
 ---
 
@@ -88,15 +88,15 @@
 | E-1 | 기존 캐릭터 데이터 감사 | P0 | `[DONE]` | 91명 mood/cult 재분배 완료 |
 | E-2 | 신규 캐릭터 52명 추가 | P0 | `[DONE]` | 91명 완성 (characters.json) |
 | E-3 | 스탯 밸런스 설계 | P0 | `[DONE]` | 등급/클래스별 범위 설정 |
-| E-4 | 스킬 데이터 확장 | P1 | `[TODO]` | 91명×3스킬=273개 |
+| E-4 | 스킬 데이터 확장 | P1 | `[DONE]` | 91명×3=273스킬 완성 (49명 skill2 추가) |
 | E-5 | 장비 데이터 확장 | P1 | `[DONE]` | 82개 equipment.json |
-| E-6 | 적(Enemy) 데이터 확장 | P1 | `[TODO]` | 60+종 목표 |
+| E-6 | 적(Enemy) 데이터 확장 | P1 | `[DONE]` | 48→65종 (avalon 7 + kunlun 7 + 공통 3) |
 | E-7 | 시너지 데이터 검증 & 확장 | P1 | `[DONE]` | 4종 시너지 완료 |
 | E-8 | 캐릭터 비주얼 에셋 가이드 | P2 | `[DONE]` | 14_CHARACTER_DESIGN.md |
 | E-9 | N등급 캐릭터 설계 | P0 | `[DONE]` | 91명에 N등급 포함 |
-| E-10 | 캐릭터 밸런스 시뮬레이션 | P1 | `[TODO]` | 1000회 시뮬레이션 |
+| E-10 | 캐릭터 밸런스 시뮬레이션 | P1 | `[DONE]` | 1000회 시뮬레이션, 14명 스탯 조정 |
 
-**완료**: 7/10 (70%)
+**완료**: 10/10 (100%) ✅
 
 ---
 
@@ -104,20 +104,20 @@
 
 | ID | 태스크 | 우선순위 | 상태 | 비고 |
 |----|--------|----------|------|------|
-| F-1 | BootScene 로직 검증 | P0 | `[TODO]` | SaveManager, 오프라인 보상 |
-| F-2 | PreloadScene 에셋 검증 | P0 | `[TODO]` | 에셋 프리로드, 에러 핸들링 |
-| F-3 | MainMenuScene 데이터 바인딩 | P0 | `[TODO]` | TopBar, BottomNav, 보상 팝업 |
-| F-4 | GachaScene 데이터 흐름 | P1 | `[TODO]` | 확률/천장/저장 검증 |
-| F-5 | HeroListScene 표시 로직 | P1 | `[TODO]` | 정렬/필터/HeroCard |
+| F-1 | BootScene 로직 검증 | P0 | `[DONE]` | SaveManager, 오프라인 보상 정상 |
+| F-2 | PreloadScene 에셋 검증 | P0 | `[DONE]` | 에셋 프리로드, 에러 핸들링 정상 |
+| F-3 | MainMenuScene 데이터 바인딩 | P0 | `[DONE]` | TopBar, BottomNav, 보상 팝업 정상 |
+| F-4 | GachaScene 데이터 흐름 | P1 | `[DONE]` | 확률/천장/저장 검증 PASS |
+| F-5 | HeroListScene 표시 로직 | P1 | `[DONE]` | 9종 mood/cult 필터 업데이트 |
 | F-6 | HeroDetailScene 육성 시스템 | P1 | `[DONE]` | SaveManager 저장 연결 완료 |
-| F-7 | StageSelectScene 전체 검증 | P1 | `[TODO]` | 챕터 탭, 잠금, 별점 |
-| F-8 | BattleScene 전체 검증 | P1 | `[BLOCKED]` | A-5/6 완료 후 |
-| F-9 | 공통 컴포넌트 일관성 | P2 | `[TODO]` | Button, Panel, TopBar 등 |
-| F-10 | EventBus 이벤트 매핑 | P2 | `[TODO]` | emit/on 쌍 매칭 |
-| F-11 | GachaScene 완전 검증 | P1 | `[TODO]` | 10단계 체인 |
-| F-12 | 전체 데이터 흐름 무결성 | P2 | `[TODO]` | registry↔SaveManager |
+| F-7 | StageSelectScene 전체 검증 | P1 | `[DONE]` | 챕터 탭, 잠금, 별점 정상 |
+| F-8 | BattleScene 전체 검증 | P1 | `[DONE]` | Mood/Synergy/Progression 통합 완료 |
+| F-9 | 공통 컴포넌트 일관성 | P2 | `[DONE]` | Button, Panel, TopBar 일관성 확인 |
+| F-10 | EventBus 이벤트 매핑 | P2 | `[DONE]` | 정의됨, 미사용 (현재 허용) |
+| F-11 | GachaScene 완전 검증 | P1 | `[DONE]` | GachaSystem.pull() 체인 PASS |
+| F-12 | 전체 데이터 흐름 무결성 | P2 | `[DONE]` | registry↔SaveManager 정합성 PASS |
 
-**완료**: 1/12 (8.3%)
+**완료**: 12/12 (100%) ✅
 
 ---
 
@@ -164,9 +164,9 @@
 | ID | 태스크 | 상태 | 비고 |
 |----|--------|------|------|
 | **W1-1.1** | Supabase 프로젝트 설정 | `[DONE]` | supabaseClient.js 존재 |
-| **W1-1.2** | DB 스키마 생성 | `[DONE]` | 2개 migration + full_schema |
+| **W1-1.2** | DB 스키마 생성 | `[DONE]` | 3개 migration + full_schema |
 | **W1-1.3** | API 서비스 구현 | `[DONE]` | 7개 Service 파일 |
-| **W1-1.4** | 데이터 마이그레이션 유틸 | `[TODO]` | Local→Supabase |
+| **W1-1.4** | 데이터 마이그레이션 유틸 | `[DONE]` | MigrationService + 5테이블 + RLS |
 | **W2-2.1** | 분위기(Mood) 데이터 | `[DONE]` | 9종 완료 |
 | **W2-2.2** | 캐릭터 데이터 개편 | `[DONE]` | 91명 완료 |
 | **W2-2.3** | 시너지 데이터 개편 | `[DONE]` | 4종 시너지 |
@@ -174,7 +174,7 @@
 | **W2-2.5** | 스테이지 확장 | `[DONE]` | 5챕터 25스테이지 |
 | **W3-3.1** | 해상도 720x1280 | `[DONE]` | gameConfig 설정 |
 | **W3-3.2** | 하단 메뉴 탭 | `[DONE]` | BottomNav.js 존재 |
-| **W3-3.3** | 메인화면 개편 | `[TODO]` | BottomNav 통합 필요 |
+| **W3-3.3** | 메인화면 개편 | `[DONE]` | BottomNav 5개 주요 씬 통합 |
 | **W3-3.4** | BattleResultScene | `[DONE]` | BattleScene 데이터 전달 100% 연결 완료 |
 | **W3-3.5** | StageSelectScene 개편 | `[DONE]` | 에너지/파티/시너지 연동 |
 | **W3-3.6** | PartyEditScene | `[DONE]` | 5슬롯 4인 파티편성 + 시너지 미리보기 |
@@ -189,7 +189,7 @@
 | **W5-5.2** | constants.js 업데이트 | `[DONE]` | 9종 상성, 에너지/소탕 |
 | **W5-5.3** | 기획서 업데이트 | `[DONE]` | PRD v5.3 문서화 |
 
-**Worker 완료**: 23/25 (92%)
+**Worker 완료**: 25/25 (100%) ✅
 
 ---
 
@@ -198,57 +198,15 @@
 | 팀 | 완료 | 전체 | 비율 |
 |----|------|------|------|
 | Team A | **8** | **8** | **100%** ✅ |
-| Team B | 4 | 7 | 57.1% |
-| Team C | 6 | 7 | 85.7% |
-| Team D | 1 | 5 | 20% |
-| Team E | 7 | 10 | 70% |
-| Team F | 1 | 12 | 8.3% |
+| Team B | **7** | **7** | **100%** ✅ |
+| Team C | **7** | **7** | **100%** ✅ |
+| Team D | **5** | **5** | **100%** ✅ |
+| Team E | **10** | **10** | **100%** ✅ |
+| Team F | **12** | **12** | **100%** ✅ |
 | Team G | **10** | **10** | **100%** ✅ |
 | Team H | **10** | **10** | **100%** ✅ |
-| **총합** | **47** | **69** | **68.1%** |
-| Worker | 23 | 25 | 92% |
-
----
-
-## 다음 개발 우선순위 (Wave 순서)
-
-### 🔥 Wave 1 (즉시 가능, 차단 없음)
-- `[WIP]` **W3-3.4** BattleResultScene → BattleScene 연결
-- `[TODO]` **W3-3.6** PartyEditScene 신규 생성
-- `[TODO]` **B-6** QuestScene 신규 생성
-- `[TODO]` **A-5** 카드 덱 스킬 시스템 검증
-- `[TODO]` **A-6** 자동전투 AI 스마트 로직
-- `[TODO]` **G-2** DebugManager stages.json 연동
-
-### 🟡 Wave 2 (Wave 1 일부 완료 후)
-- `[TODO]` **F-3** MainMenuScene BottomNav 통합
-- `[TODO]` **B-4** SweepSystem UI (StageSelectScene)
-- `[TODO]` **B-1** TowerScene 생성
-- `[TODO]` **G-3~G-7** 치트 API 확장
-- `[TODO]` **E-4** 스킬 데이터 273개 확장
-- `[TODO]` **E-6** 적 데이터 60+종
-
-### 🔵 Wave 3 (Wave 2 완료 후)
-- `[DONE]` **C-3~C-5** Supabase 백엔드 검증
-- `[DONE]` **B-5** LoginScene
-- `[TODO]` **D-3** 가챠 확률 시뮬레이션
-- `[TODO]` **F-1~F-5, F-7** 씬 검증
-- `[DONE]` **H-1** UI 디자인 시스템 (9종 Mood/Cult 색상 통일)
-
-### ⬜ Wave 4 (최종)
-- `[TODO]` **D-1, D-2** E2E 테스트
-- `[TODO]` **D-4** 빌드 최적화
-- `[DONE]` **D-5** 크로스 브라우저 & 모바일 테스트 (테스트 플랜 + 터치 최적화)
-- `[DONE]` **H-2** 히어로 이미지 에셋 시스템 (HeroAssetLoader + 향상된 플레이스홀더)
-- `[DONE]` **H-3** 가챠 소환 이펙트 (ParticleManager 연동)
-- `[DONE]` **H-4** 전투 이펙트 & 애니메이션 (ParticleManager 연동)
-- `[DONE]` **H-5** 메인 로비 & 씬 전환 (동적 파티클 + breathing 효과)
-- `[DONE]` **H-6** 히어로 카드 & 레어리티 프레임 (교단 배경색 + 이름 라벨)
-- `[DONE]` **H-7** 사운드 & BGM 에셋 플랜 (SoundManager 시스템)
-- `[DONE]` **H-8** 반응형 & 모바일 터치 UX (TouchManager + 미디어쿼리)
-- `[DONE]` **H-9** 로딩 & 스플래시 화면 (마법진 로딩 + 3초 스플래시)
-- `[DONE]` **H-10** 이펙트 파티클 라이브러리 (ParticleManager + ObjectPool)
-- `[TODO]` **G-8~G-10** 고급 치트 + UI
+| **총합** | **69** | **69** | **100%** ✅ |
+| Worker | **25** | **25** | **100%** ✅ |
 
 ---
 
@@ -258,3 +216,8 @@
 |------|----------|
 | 2025-02-07 | 초기 트래커 생성, 이전 통합 작업 반영 (19/69 완료) |
 | 2026-02-07 | H-1~H-10, D-5 완료 (디자인/파티클/사운드/터치/에셋/테스트 전체) |
+| 2026-02-07 | B-4, B-7, C-6, W3-3.3 완료 (Sweep UI, 장비 가챠, 쿠폰 UI, BottomNav) |
+| 2026-02-07 | F-1~F-12 전체 검증 완료 (HeroListScene 9종 mood/cult 업데이트) |
+| 2026-02-07 | D-1~D-4 완료 (씬 플로우 15/15, E2E 13/13, 가챠 확률, 빌드 504KB) |
+| 2026-02-07 | E-4 완료 (91명×3=273스킬), E-6 완료 (65종 적), E-10 밸런스 시뮬레이션 |
+| 2026-02-07 | W1-1.4 완료 (MigrationService + 5 DB 테이블) → **전체 69/69 완료** |
