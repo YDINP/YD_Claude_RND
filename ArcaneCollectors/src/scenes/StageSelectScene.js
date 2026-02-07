@@ -5,6 +5,7 @@ import { SynergySystem } from '../systems/SynergySystem.js';
 import { sweepSystem } from '../systems/SweepSystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { getAllCharacters, getChapterStages } from '../data/index.js';
+import { BottomNav } from '../components/BottomNav.js';
 
 export class StageSelectScene extends Phaser.Scene {
   constructor() {
@@ -22,6 +23,7 @@ export class StageSelectScene extends Phaser.Scene {
     this.createStageList();
     this.createPartySelectModal();
     this.createSweepModal();
+    this.bottomNav = new BottomNav(this, 'adventure');
   }
 
   createBackground() {

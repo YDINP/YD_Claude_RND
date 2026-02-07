@@ -1,4 +1,5 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO } from '../config/gameConfig.js';
+import { BottomNav } from '../components/BottomNav.js';
 
 export class HeroListScene extends Phaser.Scene {
   constructor() {
@@ -20,6 +21,7 @@ export class HeroListScene extends Phaser.Scene {
     this.createFilterBar();
     this.createHeroGrid();
     this.setupScrolling();
+    this.bottomNav = new BottomNav(this, 'home');
   }
 
   createBackground() {

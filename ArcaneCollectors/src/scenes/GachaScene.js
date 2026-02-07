@@ -4,6 +4,7 @@ import { GachaSystem } from '../systems/GachaSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
 import { getCharacter } from '../data/index.js';
+import { BottomNav } from '../components/BottomNav.js';
 
 export class GachaScene extends Phaser.Scene {
   constructor() {
@@ -24,6 +25,8 @@ export class GachaScene extends Phaser.Scene {
     this.createBannerArea();
     this.createSummonButtons();
     this.createPityDisplay();
+
+    this.bottomNav = new BottomNav(this, 'gacha');
 
     this.events.once('shutdown', () => {
       if (this.particles) {

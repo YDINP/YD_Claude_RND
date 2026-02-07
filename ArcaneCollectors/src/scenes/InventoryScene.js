@@ -3,6 +3,7 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { getAllItems, getItemsByType } from '../data/index.js';
+import { BottomNav } from '../components/BottomNav.js';
 
 /**
  * InventoryScene - 인벤토리/장비 관리
@@ -29,6 +30,7 @@ export class InventoryScene extends Phaser.Scene {
     this.createTabs();
     this.createItemList();
     this.refreshItemList();
+    this.bottomNav = new BottomNav(this, 'inventory');
   }
 
   loadInventoryData() {
