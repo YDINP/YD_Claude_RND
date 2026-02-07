@@ -499,6 +499,12 @@ export class SaveManager {
    * @param {number} pulls 뽑은 횟수
    * @param {boolean} gotSSR SSR 획득 여부
    */
+  static saveGachaInfo(gachaData) {
+    const data = this.load();
+    data.gacha = { ...data.gacha, ...gachaData };
+    this.save(data);
+  }
+
   static updateGachaCounter(pulls, gotSSR) {
     const data = this.load();
     data.gacha.totalPulls += pulls;
