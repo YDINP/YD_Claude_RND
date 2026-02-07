@@ -4,6 +4,7 @@
  * 
  * ArcaneCollectors v4 - 핵심 게임 시스템
  */
+import GameLogger from '../utils/GameLogger.js';
 
 // 에너지 회복 설정
 const ENERGY_CONFIG = {
@@ -112,8 +113,10 @@ class EnergySystem {
       };
     }
     
+    const before = this.currentEnergy;
     this.currentEnergy -= amount;
-    
+    GameLogger.log('ENERGY', `에너지 소모: ${before} → ${this.currentEnergy}`, { consumed: amount, max: this.getMaxEnergy(this.playerLevel) });
+
     return {
       success: true,
       currentEnergy: this.currentEnergy,
@@ -267,7 +270,8 @@ class EnergySystem {
     // 보상 에너지는 최대치의 200%까지 가능
     this.currentEnergy = Math.min(this.currentEnergy + amount, maxEnergy * 2);
     const actualAdded = this.currentEnergy - previousEnergy;
-    
+    GameLogger.log('ENERGY', `에너지 추가: ${previousEnergy} → ${this.currentEnergy}`, { added: actualAdded, max: maxEnergy });
+
     return {
       success: true,
       added: actualAdded,

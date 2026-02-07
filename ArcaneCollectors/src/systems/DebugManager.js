@@ -833,6 +833,150 @@ export class DebugManager {
     return false;
   }
 
+  // ========== ESC 키 치트 패널 ==========
+
+  /**
+   * ESC 키 치트 패널 토글 등록 (모든 씬에서 동작)
+   */
+  static registerEscKeyHandler() {
+    if (this._escRegistered) return;
+    this._escRegistered = true;
+    this._debugPanelVisible = false;
+    this._debugPanelElements = [];
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const game = window.game;
+        if (!game) return;
+        const scene = game.scene.getScenes(true)[0];
+        if (!scene) return;
+
+        if (this._debugPanelVisible) {
+          this.hideDebugPanel(scene);
+        } else {
+          this.showDebugPanel(scene);
+        }
+      }
+    });
+  }
+
+  /**
+   * ESC 디버그 패널 표시
+   */
+  static showDebugPanel(scene) {
+    this._debugPanelVisible = true;
+    this._debugPanelElements = [];
+    const GAME_WIDTH = 720;
+    const GAME_HEIGHT = 1280;
+
+    // 반투명 배경
+    const overlay = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.85);
+    overlay.setDepth(9000);
+    overlay.setInteractive(); // 뒤쪽 클릭 차단
+    this._debugPanelElements.push(overlay);
+
+    // 제목
+    const title = scene.add.text(GAME_WIDTH / 2, 60, 'CHEAT PANEL', {
+      fontSize: '28px', fontFamily: 'Arial', color: '#ff6600', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(9001);
+    this._debugPanelElements.push(title);
+
+    const subtitle = scene.add.text(GAME_WIDTH / 2, 95, 'ESC를 다시 누르면 닫힙니다', {
+      fontSize: '14px', fontFamily: 'Arial', color: '#888888'
+    }).setOrigin(0.5).setDepth(9001);
+    this._debugPanelElements.push(subtitle);
+
+    // 상태 표시
+    let statusLine = '';
+    try {
+      statusLine = this._getStatusLine();
+    } catch (e) {
+      statusLine = '(상태 로드 실패)';
+    }
+
+    const status = scene.add.text(GAME_WIDTH / 2, 130, statusLine, {
+      fontSize: '16px', fontFamily: 'monospace', color: '#88ff88'
+    }).setOrigin(0.5).setDepth(9001);
+    this._debugPanelElements.push(status);
+
+    // 디버그 모드가 꺼져 있으면 자동 활성화
+    if (!this.isDebugMode) {
+      this.setDebugMode(true);
+    }
+
+    // 버튼 그리드 (3열)
+    const buttons = [
+      { label: '골드 +100K', action: () => this.addGold(100000) },
+      { label: '젬 +10K', action: () => this.addGems(10000) },
+      { label: '소환권 +50', action: () => this.addSummonTickets(50) },
+      { label: '리소스 MAX', action: () => this.maxResources() },
+      { label: '전캐릭 해금', action: () => this.unlockAllCharacters() },
+      { label: '전스테이지 클리어', action: () => this.clearAllStages() },
+      { label: '탑 전층 클리어', action: () => this.clearAllTowerFloors() },
+      { label: '에너지 충전', action: () => this.refillEnergy() },
+      { label: `무한에너지 ${this.infiniteEnergy ? 'OFF' : 'ON'}`, action: () => this.setInfiniteEnergy(!this.infiniteEnergy) },
+      { label: `무적 ${this.invincible ? 'OFF' : 'ON'}`, action: () => this.setInvincible(!this.invincible) },
+      { label: `원킬 ${this.oneHitKill ? 'OFF' : 'ON'}`, action: () => this.setOneHitKill(!this.oneHitKill) },
+      { label: '전투 3배속', action: () => this.setBattleSpeed(3) },
+      { label: `무료 가챠 ${this.freeGachaMode ? 'OFF' : 'ON'}`, action: () => this.freeGacha(!this.freeGachaMode) },
+      { label: '천장 -> 89', action: () => this.setPityCounter(89) },
+      { label: '세이브 내보내기', action: () => this.exportSave() },
+      { label: '씬 새로고침', action: () => { this.hideDebugPanel(scene); scene.scene.restart(); } },
+      { label: '메인으로', action: () => { this.hideDebugPanel(scene); scene.scene.start('MainMenuScene'); } },
+      { label: '닫기', action: () => this.hideDebugPanel(scene) },
+    ];
+
+    const cols = 3;
+    const btnWidth = 200;
+    const btnHeight = 55;
+    const gapX = 15;
+    const gapY = 12;
+    const startX = (GAME_WIDTH - (cols * btnWidth + (cols - 1) * gapX)) / 2 + btnWidth / 2;
+    const startY = 175;
+
+    buttons.forEach((btn, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = startX + col * (btnWidth + gapX);
+      const y = startY + row * (btnHeight + gapY);
+
+      const bg = scene.add.rectangle(x, y, btnWidth, btnHeight, 0x222244, 1);
+      bg.setStrokeStyle(1, 0x4444aa, 0.5);
+      bg.setDepth(9001);
+      bg.setInteractive({ useHandCursor: true });
+
+      bg.on('pointerover', () => bg.setFillStyle(0x333366));
+      bg.on('pointerout', () => bg.setFillStyle(0x222244));
+      bg.on('pointerdown', () => {
+        btn.action();
+        // 플래시 피드백
+        bg.setFillStyle(0x44ff44);
+        scene.time.delayedCall(200, () => bg.setFillStyle(0x222244));
+        // 상태 업데이트
+        try {
+          status.setText(this._getStatusLine());
+        } catch (e) { /* ignore */ }
+      });
+
+      const label = scene.add.text(x, y, btn.label, {
+        fontSize: '14px', fontFamily: 'Arial', color: '#ffffff', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(9002);
+
+      this._debugPanelElements.push(bg, label);
+    });
+  }
+
+  /**
+   * ESC 디버그 패널 숨김
+   */
+  static hideDebugPanel(scene) {
+    this._debugPanelVisible = false;
+    this._debugPanelElements.forEach(el => {
+      if (el && el.destroy) el.destroy();
+    });
+    this._debugPanelElements = [];
+  }
+
   // ========== G-10: 도움말 ==========
 
   static help() {
@@ -926,3 +1070,6 @@ export class DebugManager {
 if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
   DebugManager.setDebugMode(true);
 }
+
+// ESC 키 치트 패널 - 항상 등록 (DEV 여부 무관)
+DebugManager.registerEscKeyHandler();

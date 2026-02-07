@@ -5,6 +5,7 @@
  * 재접속: 타임스탬프 기반 자동 동기화
  */
 import { supabase, isSupabaseConfigured, isOnline } from '../api/supabaseClient.js';
+import GameLogger from '../utils/GameLogger.js';
 
 export class SaveManager {
   static SAVE_KEY = 'arcane_collectors_save';
@@ -32,6 +33,7 @@ export class SaveManager {
         characterShards: {}
       },
       characters: [], // 소유한 캐릭터 인스턴스 배열
+      parties: [], // 파티 편성 (5슬롯)
       inventory: [],
       progress: {
         currentChapter: 'chapter_1',
@@ -79,6 +81,7 @@ export class SaveManager {
       }
 
       const data = JSON.parse(saved);
+      GameLogger.log('SAVE', '데이터 로드', { version: data.version, chars: data.characters?.length });
 
       // 버전 마이그레이션이 필요한 경우 처리
       if (data.version !== this.VERSION) {
@@ -100,6 +103,7 @@ export class SaveManager {
     try {
       data.lastOnline = Date.now();
       localStorage.setItem(this.SAVE_KEY, JSON.stringify(data));
+      GameLogger.log('SAVE', '데이터 저장', { gold: data.resources?.gold, chars: data.characters?.length });
 
       // 온라인이면 Supabase에도 비동기 저장 (UI 블로킹 방지)
       if (isOnline() && this._userId) {
@@ -109,6 +113,22 @@ export class SaveManager {
       return true;
     } catch (error) {
       console.error('SaveManager: 저장 실패', error);
+      return false;
+    }
+  }
+
+  /**
+   * 파티 데이터만 저장
+   * @param {Array} parties 파티 배열 (5슬롯)
+   * @returns {boolean} 저장 성공 여부
+   */
+  static saveParties(parties) {
+    try {
+      const data = this.load();
+      data.parties = parties;
+      return this.save(data);
+    } catch (error) {
+      console.error('SaveManager: 파티 저장 실패', error);
       return false;
     }
   }

@@ -1,4 +1,5 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY } from '../config/gameConfig.js';
+import GameLogger from '../utils/GameLogger.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { GachaSystem } from '../systems/GachaSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
@@ -110,7 +111,9 @@ export class GachaScene extends Phaser.Scene {
     } else {
       gemIcon = this.add.text(GAME_WIDTH - 80, 50, '💎', { fontSize: '20px' }).setOrigin(0.5);
     }
-    const gems = this.registry.get('gems') || 1000;
+    const resources = SaveManager.getResources();
+    const gems = resources.gems;
+    this.registry.set('gems', gems); // sync registry
     this.gemText = this.add.text(GAME_WIDTH - 55, 50, gems.toLocaleString(), {
       fontSize: '16px',
       fontFamily: 'Arial',
@@ -329,12 +332,66 @@ export class GachaScene extends Phaser.Scene {
     // 10x summon button
     this.createSummonButton(GAME_WIDTH / 2 + 110, buttonY, '10연차', 2700, 10, true);
 
-    // Free ticket info
-    this.add.text(GAME_WIDTH / 2, buttonY + 55, '🎫 소환권: 5개 보유 중', {
+    // Ticket summon buttons
+    const ticketY = buttonY + 70;
+    const ticketResources = SaveManager.getResources();
+    const ticketCount = ticketResources.summonTickets || 0;
+
+    this.ticketText = this.add.text(GAME_WIDTH / 2, ticketY, `🎫 소환권: ${ticketCount}개`, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: '#' + COLORS.accent.toString(16).padStart(6, '0')
     }).setOrigin(0.5);
+
+    // Ticket single pull button
+    const ticketBtn1 = this.add.container(GAME_WIDTH / 2 - 110, ticketY + 45);
+    const ticketBg1 = this.add.rectangle(0, 0, 180, 50, 0x2a5298, 1);
+    ticketBg1.setStrokeStyle(2, COLORS.accent, 0.5);
+    ticketBg1.setInteractive({ useHandCursor: true });
+    const ticketLabel1 = this.add.text(0, 0, '🎫 ×1 소환', {
+      fontSize: '16px', fontFamily: 'Arial',
+      color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    ticketBtn1.add([ticketBg1, ticketLabel1]);
+
+    ticketBg1.on('pointerdown', () => {
+      if (this.isAnimating) return;
+      const res = SaveManager.getResources();
+      if (res.summonTickets < 1) {
+        this.showMessage('소환권이 부족합니다!', COLORS.danger);
+        return;
+      }
+      if (this.currentTab === 'equipment') {
+        this.performEquipmentPullWithTickets(1);
+      } else {
+        this.performTicketPull(1);
+      }
+    });
+
+    // Ticket 10-pull button
+    const ticketBtn10 = this.add.container(GAME_WIDTH / 2 + 110, ticketY + 45);
+    const ticketBg10 = this.add.rectangle(0, 0, 180, 50, 0x2a5298, 1);
+    ticketBg10.setStrokeStyle(2, COLORS.accent, 0.5);
+    ticketBg10.setInteractive({ useHandCursor: true });
+    const ticketLabel10 = this.add.text(0, 0, '🎫 ×10 소환', {
+      fontSize: '16px', fontFamily: 'Arial',
+      color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    ticketBtn10.add([ticketBg10, ticketLabel10]);
+
+    ticketBg10.on('pointerdown', () => {
+      if (this.isAnimating) return;
+      const res = SaveManager.getResources();
+      if (res.summonTickets < 10) {
+        this.showMessage('소환권이 부족합니다! (10장 필요)', COLORS.danger);
+        return;
+      }
+      if (this.currentTab === 'equipment') {
+        this.performEquipmentPullWithTickets(10);
+      } else {
+        this.performTicketPull(10);
+      }
+    });
   }
 
   createSummonButton(x, y, label, cost, count, isPremium = false) {
@@ -504,6 +561,7 @@ export class GachaScene extends Phaser.Scene {
    */
   performGachaPull(count) {
     this.isAnimating = true;
+    GameLogger.log('GACHA', `소환 ${count}회 (gems)`, { pityBefore: GachaSystem.getPityInfo().current });
 
     // GachaSystem.pull()로 실제 소환
     const pullResult = GachaSystem.pull(count, 'gems');
@@ -546,8 +604,88 @@ export class GachaScene extends Phaser.Scene {
     // 천장 카운터 UI 업데이트
     this.updatePityUI(pullResult.pityInfo);
 
+    GameLogger.log('GACHA', `결과: ${results.map(r => r.name + '(' + r.rarity + ')').join(', ')}`);
+
     // Show summon animation
     this.showSummonAnimation(results);
+  }
+
+  performTicketPull(count) {
+    this.isAnimating = true;
+
+    const result = GachaSystem.pull(count, 'tickets');
+    if (!result.success) {
+      this.showMessage(result.error || '소환 실패', COLORS.danger);
+      this.isAnimating = false;
+      return;
+    }
+
+    // Update ticket display
+    const updatedResources = SaveManager.getResources();
+    if (this.ticketText) this.ticketText.setText(`🎫 소환권: ${updatedResources.summonTickets}개`);
+
+    // 결과를 씬 UI용 형식으로 변환
+    const results = result.results.map(r => {
+      const charData = getCharacter(r.characterId);
+      return {
+        id: r.characterId,
+        name: charData?.name || r.characterId,
+        rarity: r.rarity,
+        level: 1,
+        stars: RARITY[r.rarity]?.stars || 1,
+        stats: charData?.stats || { hp: 100, atk: 20, def: 10, spd: 10 },
+        isNew: r.isNew,
+        shardsGained: r.shardsGained,
+        mood: charData?.mood || 'brave',
+        cult: charData?.cult || 'olympus',
+        class: charData?.class || 'warrior'
+      };
+    });
+
+    // registry에 소유 캐릭터 업데이트
+    const owned = SaveManager.getOwnedCharacters();
+    this.registry.set('ownedHeroes', owned);
+
+    // 천장 카운터 UI 업데이트
+    this.updatePityUI(result.pityInfo);
+
+    // Show summon animation
+    this.showSummonAnimation(results);
+  }
+
+  performEquipmentPullWithTickets(count) {
+    const res = SaveManager.getResources();
+    const ticketCost = count === 10 ? 10 : 1;
+    if (res.summonTickets < ticketCost) {
+      this.showMessage('소환권이 부족합니다!', COLORS.danger);
+      return;
+    }
+
+    this.isAnimating = true;
+    SaveManager.spendSummonTickets(ticketCost);
+
+    const results = [];
+    for (let i = 0; i < count; i++) {
+      const rarityRoll = Math.random();
+      let rarity, color;
+      if (rarityRoll < 0.03) { rarity = 'SSR'; color = 0xFFD700; }
+      else if (rarityRoll < 0.15) { rarity = 'SR'; color = 0xAA44FF; }
+      else { rarity = 'R'; color = 0x4488FF; }
+
+      const slots = ['weapon', 'armor', 'accessory', 'boots'];
+      const slot = slots[Math.floor(Math.random() * slots.length)];
+      results.push({
+        id: `equip_${Date.now()}_${i}`,
+        name: `${rarity} ${slot === 'weapon' ? '무기' : slot === 'armor' ? '방어구' : slot === 'accessory' ? '장신구' : '신발'}`,
+        rarity, slot, color,
+        stats: { atk: Math.floor(Math.random() * 50) + 10, def: Math.floor(Math.random() * 30) + 5 }
+      });
+    }
+
+    const updatedResources = SaveManager.getResources();
+    if (this.ticketText) this.ticketText.setText(`🎫 소환권: ${updatedResources.summonTickets}개`);
+
+    this.showEquipmentResults(results);
   }
 
   /**

@@ -1,10 +1,11 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import GameLogger from '../utils/GameLogger.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { moodSystem } from '../systems/MoodSystem.js';
 import { SynergySystem } from '../systems/SynergySystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
-import { getAllCharacters } from '../data/index.js';
+import { getAllCharacters, getCharacter } from '../data/index.js';
 import { MOOD_COLORS } from '../config/layoutConfig.js';
 
 /**
@@ -169,6 +170,7 @@ export class BattleScene extends Phaser.Scene {
 
   initializeBattlers() {
     console.log('[Battle] Initializing battlers...');
+    GameLogger.log('BATTLE', `전투 초기화 - 스테이지: ${this.stage?.name || 'unknown'}`, { partySize: this.party.length });
 
     // Initialize party battlers
     this.allies = this.party.map((hero, index) => ({
@@ -181,10 +183,14 @@ export class BattleScene extends Phaser.Scene {
       isAlly: true,
       isAlive: true,
       class: hero.class || 'warrior',
-      skills: hero.skills || [
-        { id: 'basic', name: '기본 공격', multiplier: 1, gaugeGain: 20, description: '기본 공격을 합니다.' },
-        { id: 'skill1', name: '강력 일격', multiplier: 2.5, gaugeCost: 100, description: '강력한 공격을 합니다.' }
-      ]
+      skills: hero.skills && hero.skills.length > 0 ? hero.skills : (() => {
+        try {
+          const charData = getCharacter(hero.id || hero.characterId);
+          return charData?.skills || [{ id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 20 }];
+        } catch {
+          return [{ id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 20 }];
+        }
+      })()
     }));
 
     console.log(`[Battle] Initialized ${this.allies.length} allies`);
@@ -620,7 +626,8 @@ export class BattleScene extends Phaser.Scene {
     console.log(`[Battle] Manual skill executed: ${attacker.name} -> ${target.name}`);
 
     // 캐릭터 실제 스킬 데이터 사용
-    const skill = attacker.skills?.find(s => s.id === 'skill1') || attacker.skills?.[1] || { name: '강력 일격', multiplier: 2.5, gaugeCost: 100 };
+    const skill = attacker.skills?.find(s => s.id === 'skill1') || attacker.skills?.[1];
+    if (!skill) return; // No skill available
 
     // 스킬 게이지 소비
     attacker.skillGauge = 0;
@@ -666,7 +673,7 @@ export class BattleScene extends Phaser.Scene {
 
     target.currentHp = Math.max(0, target.currentHp - damage);
     this.updateBattlerUI(target);
-    this.playSkillEffect(attacker, target, isCrit, true);
+    this.playSkillEffect(attacker, target, isCrit, true, skill);
     this.showDamage(target, damage, isCrit, moodResult.advantage);
 
     const critText = isCrit ? ' (크리티컬!)' : '';
@@ -734,8 +741,13 @@ export class BattleScene extends Phaser.Scene {
 
   /**
    * A-8.1 + H-4 + H-10: ParticleManager 기반 스킬 이펙트
+   * @param {object} attacker - 공격자 배틀러
+   * @param {object} target - 대상 배틀러
+   * @param {boolean} isCrit - 크리티컬 여부
+   * @param {boolean} isUltimate - 궁극기 여부
+   * @param {object|null} skill - 사용된 스킬 객체 (id, name, target 등)
    */
-  playSkillEffect(attacker, target, isCrit, isUltimate = false) {
+  playSkillEffect(attacker, target, isCrit, isUltimate = false, skill = null) {
     const targetSprites = target.isAlly ? this.allySprites : this.enemySprites;
     const targetSprite = targetSprites[target.position];
     if (!targetSprite) return;
@@ -745,24 +757,70 @@ export class BattleScene extends Phaser.Scene {
     const y = targetSprite.y;
 
     if (this.particles) {
-      if (isUltimate) {
+      const skillId = skill?.id || '';
+      const isHeal = skill?.isHeal || skill?.target === 'ally' || skill?.target === 'all_allies' ||
+        skill?.name?.includes('힐') || skill?.name?.includes('치유') || skill?.name?.includes('회복');
+
+      if (isHeal) {
+        // 힐 스킬: 녹색 힐링 파티클 + 반짝임
+        this.particles.playPreset('heal', x, y, {
+          colors: [0x44ff44, 0x88ffaa, 0xffffff],
+          count: 12
+        });
+        // 힐링 링 이펙트
+        this.particles.playPreset('sparkle', x, y - 20, {
+          colors: [0x22C55E, 0x4ADE80, 0xBBF7D0],
+          count: 8
+        });
+      } else if (skillId === 'skill2' || (isUltimate && skillId !== 'skill1')) {
+        // skill2 / 궁극기: 대규모 이펙트 + 화면 흔들림
         this.particles.playMoodEffect(mood, x, y, 'ultimate');
+        this.cameras.main.shake(200, 0.01);
+        // 추가 화면 플래시
+        const moodFlashColors = {
+          brave: [255, 80, 60], fierce: [255, 100, 40], wild: [50, 200, 100],
+          calm: [60, 160, 230], stoic: [100, 130, 150], devoted: [240, 50, 110],
+          cunning: [160, 90, 200], noble: [255, 220, 50], mystic: [250, 170, 30]
+        };
+        const flashColor = moodFlashColors[mood] || [255, 255, 255];
+        this.cameras.main.flash(200, flashColor[0], flashColor[1], flashColor[2], true);
+      } else if (skillId === 'skill1' || isUltimate) {
+        // skill1: 중간 규모 이펙트 + 약한 화면 흔들림
+        this.particles.playMoodEffect(mood, x, y, 'skill');
+        this.cameras.main.shake(100, 0.005);
       } else if (isCrit) {
+        // 기본 공격 크리티컬: 강한 히트 이펙트
         this.particles.playMoodEffect(mood, x, y, 'skill');
       } else {
+        // 기본 공격: 간단한 히트 이펙트
         this.particles.playMoodEffect(mood, x, y, 'hit');
       }
     }
 
-    // 타겟 흔들림 (피격 반응)
-    this.tweens.add({
-      targets: targetSprite,
-      x: targetSprite.x + (isCrit ? 8 : 4),
-      duration: 50 / this.battleSpeed,
-      yoyo: true,
-      repeat: isCrit ? 3 : 1,
-      ease: 'Sine.easeInOut'
-    });
+    // 타겟 흔들림 (피격 반응) — 스킬 등급에 따라 강도 조절
+    const isHeal = skill?.isHeal || skill?.target === 'ally' || skill?.target === 'all_allies';
+    if (!isHeal) {
+      const shakeIntensity = isUltimate ? 12 : (isCrit ? 8 : 4);
+      const shakeRepeat = isUltimate ? 4 : (isCrit ? 3 : 1);
+      this.tweens.add({
+        targets: targetSprite,
+        x: targetSprite.x + shakeIntensity,
+        duration: 50 / this.battleSpeed,
+        yoyo: true,
+        repeat: shakeRepeat,
+        ease: 'Sine.easeInOut'
+      });
+    } else {
+      // 힐 대상: 부드러운 스케일 업 반응
+      this.tweens.add({
+        targets: targetSprite,
+        scaleX: 1.08,
+        scaleY: 1.08,
+        duration: 200 / this.battleSpeed,
+        yoyo: true,
+        ease: 'Sine.easeInOut'
+      });
+    }
   }
 
   /**
@@ -774,6 +832,36 @@ export class BattleScene extends Phaser.Scene {
     if (!targetSprite || !this.particles) return;
 
     this.particles.showDamageNumber(targetSprite.x, targetSprite.y - 30, value, type);
+  }
+
+  /**
+   * 힐 숫자 표시
+   */
+  showHealNumber(target, healAmount) {
+    const sprites = target.isAlly ? this.allySprites : this.enemySprites;
+    const sprite = sprites[target.position];
+    if (!sprite) return;
+
+    // ParticleManager의 showDamageNumber를 사용 (heal 타입)
+    if (this.particles) {
+      this.particles.showDamageNumber(sprite.x, sprite.y - 30, healAmount, 'heal');
+    }
+
+    // 추가 힐 텍스트 (떠오르는 +HP)
+    const healText = this.add.text(sprite.x, sprite.y - 60, `+${healAmount}`, {
+      fontSize: '22px', fontFamily: 'Arial',
+      color: '#4ADE80', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3
+    }).setOrigin(0.5).setDepth(20);
+
+    this.tweens.add({
+      targets: healText,
+      y: healText.y - 40,
+      alpha: 0,
+      duration: 900 / this.battleSpeed,
+      ease: 'Quad.easeOut',
+      onComplete: () => healText.destroy()
+    });
   }
 
   /**
@@ -1281,7 +1369,10 @@ export class BattleScene extends Phaser.Scene {
       const allies = this.allies.filter(a => a.isAlive);
       const lowestHp = allies.reduce((min, a) => a.currentHp / a.maxHp < min.currentHp / min.maxHp ? a : min);
       if (lowestHp.currentHp / lowestHp.maxHp < 0.5) {
-        const healSkill = battler.skills?.find(s => s.name?.includes('힐') || s.name?.includes('치유') || s.id === 'skill1');
+        const healSkill = battler.skills?.find(s =>
+          s.isHeal || s.target === 'ally' || s.target === 'all_allies' ||
+          s.name?.includes('힐') || s.name?.includes('치유') || s.name?.includes('회복')
+        );
         if (healSkill && battler.skillGauge >= (healSkill.gaugeCost || battler.maxSkillGauge)) {
           this.playUltimateCutIn(battler, () => {
             this._executeAttack(battler, lowestHp, healSkill.multiplier, healSkill.name, true, healSkill);
@@ -1380,6 +1471,37 @@ export class BattleScene extends Phaser.Scene {
   _executeSingleAttack(battler, target, skillMultiplier, skillName, isUltimate, skill = null) {
     if (!target.isAlive || this.battleEnded) return;
 
+    // 힐 스킬 판정
+    const isHealSkill = skill?.isHeal || skill?.target === 'ally' || skill?.target === 'all_allies' ||
+      skill?.name?.includes('힐') || skill?.name?.includes('치유') || skill?.name?.includes('회복');
+
+    if (isHealSkill) {
+      // ======== 힐 스킬 처리 ========
+      const baseHeal = (battler.stats?.atk || 100) * skillMultiplier;
+      const healAmount = Math.max(1, Math.floor(baseHeal * (0.9 + Math.random() * 0.2)));
+
+      target.currentHp = Math.min(target.maxHp, target.currentHp + healAmount);
+
+      console.log(`[Battle] Heal: ${battler.name} -> ${target.name} +${healAmount} HP`);
+
+      // UI 업데이트
+      this.updateBattlerUI(target);
+
+      // 힐 이펙트 (파티클 + 반짝임)
+      this.playSkillEffect(battler, target, false, isUltimate, skill);
+
+      // 힐 숫자 표시
+      this.showHealNumber(target, healAmount);
+
+      // 로그
+      this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name} HP +${healAmount} 회복!`);
+
+      // 턴 순서 바 업데이트
+      this.updateTurnOrderBar();
+      return;
+    }
+
+    // ======== 공격 스킬 처리 ========
     const baseDamage = battler.stats?.atk || 100;
     const defense = target.stats?.def || 50;
 
@@ -1398,15 +1520,14 @@ export class BattleScene extends Phaser.Scene {
     ));
 
     console.log(`[Battle] Damage calc: base=${baseDamage}, skill=${skillMultiplier}x, crit=${critMultiplier}x, mood=${moodMultiplier}x, def=${defense}, final=${damage}`);
+    GameLogger.log('BATTLE', `${battler.name} → ${target.name}: ${damage}dmg (${skillName})`, { mood: battler.mood, crit: isCrit, moodAdv: moodResult.advantage });
 
     // Apply damage
     target.currentHp = Math.max(0, target.currentHp - damage);
 
-    // A-8.3: 크리티컬 화면 흔들림 강화
-    if (isCrit) {
-      this.cameras.main.shake(isUltimate ? 200 : 120, isUltimate ? 0.008 : 0.004);
-    } else if (isUltimate) {
-      this.cameras.main.shake(150, 0.005);
+    // A-8.3: 크리티컬 화면 흔들림 강화 (playSkillEffect에서도 처리하므로 중복 방지)
+    if (isCrit && !isUltimate) {
+      this.cameras.main.shake(120, 0.004);
     }
 
     // Update UI
@@ -1417,7 +1538,7 @@ export class BattleScene extends Phaser.Scene {
 
     // Attack animation + A-8.1 스킬 이펙트
     this.playAttackAnimation(battler, target, isCrit);
-    this.playSkillEffect(battler, target, isCrit, isUltimate);
+    this.playSkillEffect(battler, target, isCrit, isUltimate, skill);
 
     // Log
     const critText = isCrit ? ' (크리티컬!)' : '';
@@ -1710,6 +1831,8 @@ export class BattleScene extends Phaser.Scene {
 
   endBattle(victory) {
     console.log(`[Battle] Battle ended: ${victory ? 'VICTORY' : 'DEFEAT'}`);
+    const survivors = this.allies.filter(a => a.isAlive).length;
+    GameLogger.log('BATTLE', `전투 종료 - ${victory ? '승리' : '패배'}`, { turns: this.turn, survivors, totalAllies: this.allies.length });
 
     this.battleEnded = true;
     this.waitingForManualInput = false;

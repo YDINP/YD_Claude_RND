@@ -9,6 +9,7 @@
  */
 import { EventBus, GameEvents } from './EventBus.js';
 import { SaveManager } from './SaveManager.js';
+import { getCharacter } from '../data/index.js';
 
 // ============================================
 // Strategy Pattern: 스킬 효과 전략
@@ -314,11 +315,17 @@ export class BattleUnit {
     this.buffs = [];
     this.debuffs = [];
 
-    // 스킬 정보
-    this.skills = characterData.skills || [
-      { id: 'basic', name: '기본 공격', multiplier: 1, gaugeGain: 20 },
-      { id: 'skill1', name: '스킬', multiplier: 2.5, gaugeCost: 100 }
-    ];
+    // 스킬 정보 - characters.json에서 로드, 없으면 데이터에서 조회
+    this.skills = characterData.skills && characterData.skills.length > 0
+      ? characterData.skills
+      : (() => {
+          try {
+            const charData = getCharacter(characterData.id);
+            return charData?.skills || [{ id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 20 }];
+          } catch {
+            return [{ id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 20 }];
+          }
+        })();
   }
 
   /**
@@ -866,8 +873,14 @@ export class BattleSystem {
    * @returns {Object} { skill, targets }
    */
   getAIAction(unit) {
-    const isHealer = unit.data.role === 'healer';
-    const skillReady = unit.canUseSkill(1); // 스킬 사용 가능 여부
+    const isHealer = unit.data.role === 'healer' || unit.data.class === 'healer';
+    const basicSkill = unit.skills?.find(s => s.id === 'basic') || unit.skills?.[0];
+    const skill1 = unit.skills?.find(s => s.id === 'skill1') || unit.skills?.[1];
+    const skill2 = unit.skills?.find(s => s.id === 'skill2') || unit.skills?.[2];
+
+    // 스킬 사용 가능 여부 (skill2 우선, 없으면 skill1)
+    const skill2Ready = skill2 && unit.skillGauge >= (skill2.gaugeCost || 150);
+    const skill1Ready = skill1 && unit.skillGauge >= (skill1.gaugeCost || unit.maxSkillGauge);
 
     // 힐러인 경우
     if (isHealer) {
@@ -876,23 +889,36 @@ export class BattleSystem {
         curr.getHpPercent() < min.getHpPercent() ? curr : min
       );
 
-      // HP가 50% 이하인 아군이 있고 스킬 사용 가능하면 힐
-      if (lowestHpAlly.getHpPercent() < 0.5 && skillReady) {
+      // HP가 50% 이하인 아군이 있고 힐 스킬 사용 가능하면 힐
+      const healSkill = unit.skills?.find(s =>
+        s.isHeal || s.target === 'ally' || s.target === 'all_allies' ||
+        s.name?.includes('힐') || s.name?.includes('치유') || s.name?.includes('회복')
+      );
+      if (lowestHpAlly.getHpPercent() < 0.5 && healSkill && unit.skillGauge >= (healSkill.gaugeCost || unit.maxSkillGauge)) {
         return {
-          skill: { ...unit.skills[1], isHeal: true },
+          skill: { ...healSkill, isHeal: true },
           targets: [lowestHpAlly]
         };
       }
     }
 
-    // 스킬 사용 (게이지 충분)
-    if (skillReady) {
+    // 스킬2 우선 사용 (더 강한 궁극기)
+    if (skill2Ready) {
       const targets = unit.isEnemy ? this.getAliveAllies() : this.getAliveEnemies();
       const target = this.selectTarget(targets);
-
       return {
-        skill: unit.skills[1],
-        targets: [target]
+        skill: skill2,
+        targets: skill2.target === 'all' ? targets : [target]
+      };
+    }
+
+    // 스킬1 사용 (게이지 충분)
+    if (skill1Ready) {
+      const targets = unit.isEnemy ? this.getAliveAllies() : this.getAliveEnemies();
+      const target = this.selectTarget(targets);
+      return {
+        skill: skill1,
+        targets: skill1.target === 'all' ? targets : [target]
       };
     }
 
@@ -901,7 +927,7 @@ export class BattleSystem {
     const target = this.selectTarget(targets);
 
     return {
-      skill: unit.skills[0],
+      skill: basicSkill || { id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeGain: 20 },
       targets: [target]
     };
   }

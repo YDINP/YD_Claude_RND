@@ -58,10 +58,43 @@ export class PartyEditScene extends Phaser.Scene {
   }
 
   loadPartyData() {
-    const saved = SaveManager.load();
-    this.parties = saved?.parties || [];
+    const saveData = SaveManager.load();
+    this.parties = saveData?.parties || [];
     this.parties = PartyManager.ensurePartySlots(this.parties);
-    this.ownedHeroes = this.registry.get('ownedHeroes') || [];
+
+    // SaveManager에서 소유 캐릭터 로드 (registry fallback)
+    const savedChars = saveData?.characters || [];
+    const registryHeroes = this.registry.get('ownedHeroes') || [];
+    this.ownedHeroes = savedChars.length > 0 ? savedChars : registryHeroes;
+
+    // If still empty, give default starter heroes for testing
+    if (this.ownedHeroes.length === 0) {
+      const allChars = getAllCharacters();
+      if (allChars && allChars.length > 0) {
+        this.ownedHeroes = allChars.slice(0, 4).map(c => ({
+          instanceId: c.id + '_inst',
+          characterId: c.id,
+          id: c.id,
+          name: c.name,
+          nameKo: c.nameKo,
+          rarity: c.rarity,
+          mood: c.mood,
+          cult: c.cult,
+          role: c.role || c.class,
+          class: c.class,
+          stats: c.stats || c.baseStats,
+          level: 1,
+          exp: 0,
+          stars: c.rarity,
+          skillLevels: [1, 1, 1]
+        }));
+        // 세이브 데이터에도 저장
+        saveData.characters = this.ownedHeroes;
+        SaveManager.save(saveData);
+        console.log('[PartyEditScene] 기본 스타터 영웅 4명 지급:', this.ownedHeroes.map(h => h.id));
+      }
+    }
+    this.registry.set('ownedHeroes', this.ownedHeroes);
   }
 
   createBackground() {
@@ -289,13 +322,23 @@ export class PartyEditScene extends Phaser.Scene {
         const heroData = this.findHeroData(heroId);
         slot.hero = heroData;
         if (heroData) {
-          slot.nameText.setText(heroData.nameKo || heroData.name);
+          slot.nameText.setText(heroData.nameKo || heroData.name || heroId);
           const moodInfo = MOODS[heroData.mood];
-          slot.infoText.setText(`${moodInfo?.name || heroData.mood} · ${heroData.role || heroData.class}`);
+          slot.infoText.setText(`${moodInfo?.name || heroData.mood || '?'} · ${heroData.role || heroData.class || '?'}`);
           slot.rarityText.setText(this.getRarityStars(heroData.rarity));
           slot.bg.setStrokeStyle(2, COLORS.success);
           slot.iconBg.setFillStyle(MOODS[heroData.mood]?.color || COLORS.bgPanel, 0.7);
           slot.removeBtn.setVisible(true);
+        } else {
+          // heroData를 찾지 못한 경우 - 슬롯 비움 처리
+          console.warn(`[PartyEditScene] heroId '${heroId}' 데이터를 찾을 수 없음, 슬롯 비움`);
+          slot.hero = null;
+          slot.nameText.setText('+');
+          slot.infoText.setText('');
+          slot.rarityText.setText('');
+          slot.bg.setStrokeStyle(2, COLORS.bgPanel);
+          slot.iconBg.setFillStyle(COLORS.bgPanel, 0.5);
+          slot.removeBtn.setVisible(false);
         }
       } else {
         slot.hero = null;
@@ -313,16 +356,22 @@ export class PartyEditScene extends Phaser.Scene {
   }
 
   findHeroData(heroId) {
+    if (!heroId) return null;
+
     // ownedHeroes 배열에서 검색
     const owned = this.ownedHeroes.find(h =>
-      (typeof h === 'string' ? h : h.id) === heroId
+      (typeof h === 'string' ? h : h?.id) === heroId
     );
     if (owned && typeof owned === 'object') return owned;
 
     // data/index.js에서 검색
     try {
-      return getCharacter(heroId);
-    } catch { return null; }
+      const charData = getCharacter(heroId);
+      return charData || null;
+    } catch {
+      console.warn(`[PartyEditScene] findHeroData: '${heroId}' 캐릭터 데이터 없음`);
+      return null;
+    }
   }
 
   getRarityStars(rarity) {

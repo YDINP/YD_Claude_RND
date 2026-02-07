@@ -1,4 +1,5 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import GameLogger from '../utils/GameLogger.js';
 import { energySystem } from '../systems/EnergySystem.js';
 import { PartyManager } from '../systems/PartyManager.js';
 import { SynergySystem } from '../systems/SynergySystem.js';
@@ -625,6 +626,8 @@ export class StageSelectScene extends Phaser.Scene {
     // Save party to registry
     this.registry.set('currentTeam', partyHeroes);
 
+    GameLogger.log('SCENE', `스테이지 선택: ${this.selectedStage?.name || this.selectedStage?.id}`, { chapter: this.currentChapter, partySize: partyHeroes.length, energy: consumeResult.currentEnergy });
+
     // Transition to battle
     this.cameras.main.fadeOut(300);
     this.cameras.main.once('camerafadeoutcomplete', () => {
@@ -803,6 +806,7 @@ export class StageSelectScene extends Phaser.Scene {
     }
 
     // 소탕 실행
+    GameLogger.log('SCENE', `소탕 실행: ${stage.name || stage.id} x${count}`, { energyCost: cost });
     const result = sweepSystem.executeSweep(stage.id, count);
     if (result && result.success) {
       energySystem.consumeEnergy(cost);

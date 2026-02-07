@@ -29,6 +29,10 @@ export class MainMenuScene extends Phaser.Scene {
     this.createTopBar();
     this.createTitle();
     this.createCharacterDisplay();
+
+    // === 콘텐츠 바로가기 버튼 ===
+    this.createContentButtons();
+
     this.createBottomNavigation();
 
     // Show offline rewards popup if available
@@ -472,6 +476,71 @@ export class MainMenuScene extends Phaser.Scene {
         });
       });
     }
+  }
+
+  createContentButtons() {
+    const startY = 920;
+    const buttons = [
+      { icon: '\u{1F9B8}', label: '영웅', scene: 'HeroListScene' },
+      { icon: '\u{1F465}', label: '파티편성', scene: 'PartyEditScene' },
+      { icon: '\u{1F4DC}', label: '퀘스트', scene: 'QuestScene' },
+      { icon: '\u{1F5FC}', label: '무한탑', scene: 'TowerScene' },
+      { icon: '\u{1F4E6}', label: '가방', scene: 'InventoryScene' },
+      { icon: '\u2699\uFE0F', label: '설정', scene: 'SettingsScene' },
+    ];
+
+    const cols = 3;
+    const btnWidth = 105;
+    const btnHeight = 75;
+    const gapX = 12;
+    const gapY = 10;
+    const totalWidth = cols * btnWidth + (cols - 1) * gapX;
+    const startX = (GAME_WIDTH - totalWidth) / 2 + btnWidth / 2;
+
+    buttons.forEach((btn, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = startX + col * (btnWidth + gapX);
+      const y = startY + row * (btnHeight + gapY);
+
+      const container = this.add.container(x, y);
+
+      // Button background
+      const bg = this.add.rectangle(0, 0, btnWidth, btnHeight, 0x1a1a3e, 0.8);
+      bg.setStrokeStyle(1, 0x4444aa, 0.4);
+      bg.setInteractive({ useHandCursor: true });
+
+      // Icon
+      const icon = this.add.text(0, -12, btn.icon, {
+        fontSize: '28px'
+      }).setOrigin(0.5);
+
+      // Label
+      const label = this.add.text(0, 22, btn.label, {
+        fontSize: '13px',
+        fontFamily: 'Arial',
+        color: '#ccccdd',
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+
+      container.add([bg, icon, label]);
+
+      // Hover effects
+      bg.on('pointerover', () => {
+        bg.setFillStyle(0x2a2a5e, 1);
+        this.tweens.add({ targets: container, scaleX: 1.05, scaleY: 1.05, duration: 100 });
+      });
+      bg.on('pointerout', () => {
+        bg.setFillStyle(0x1a1a3e, 0.8);
+        this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 100 });
+      });
+      bg.on('pointerdown', () => {
+        this.cameras.main.fadeOut(200, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+          this.scene.start(btn.scene);
+        });
+      });
+    });
   }
 
   createBottomNavigation() {
