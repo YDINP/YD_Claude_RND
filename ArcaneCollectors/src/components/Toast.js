@@ -197,15 +197,17 @@ class ToastInstance extends Phaser.GameObjects.Container {
   }
 
   animate() {
-    // Slide in from top with bounce
-    this.setScale(0.9);
+    // PRD VFX-4.6: Slide up from below target + fade in (200ms)
+    const targetY = this.targetY || Toast.startY;
+    this.y = targetY + 50; // Start 50px below target
+    this.setAlpha(0);
+
     this.scene.tweens.add({
       targets: this,
-      y: this.targetY || Toast.startY,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 400,
-      ease: 'Back.easeOut'
+      y: targetY,
+      alpha: 1,
+      duration: 200,
+      ease: 'Power2'
     });
 
     // Auto-hide after duration
@@ -215,15 +217,16 @@ class ToastInstance extends Phaser.GameObjects.Container {
   }
 
   hide() {
-    // Slide out to the right with fade
+    if (this._hiding) return;
+    this._hiding = true;
+
+    // PRD VFX-4.6: Slide up + fade out (200ms)
     this.scene.tweens.add({
       targets: this,
-      x: GAME_WIDTH + 200,
+      y: this.y - 20,
       alpha: 0,
-      scaleX: 0.8,
-      scaleY: 0.8,
-      duration: 300,
-      ease: 'Back.easeIn',
+      duration: 200,
+      ease: 'Power2',
       onComplete: () => {
         this.emit('hidden');
         this.destroy();

@@ -196,38 +196,52 @@ export class Modal extends Phaser.GameObjects.Container {
     this.isVisible = true;
     this.setVisible(true);
 
-    // Reset scale and alpha
-    this.panel.setScale(0.7);
-    this.setAlpha(0);
+    // PRD VFX-4.7: overlay alpha 0→0.6 (200ms) + panel scale 0.85→1.0 + alpha 0→1 (200ms)
+    this.overlay.setAlpha(0);
+    this.panel.setScale(0.85);
+    this.panel.setAlpha(0);
 
-    // Animate in with enhanced easing
+    // Overlay fade in
     this.scene.tweens.add({
-      targets: this,
+      targets: this.overlay,
       alpha: 1,
-      duration: 250,
-      ease: 'Cubic.easeOut'
+      duration: 200,
+      ease: 'Power2'
     });
 
+    // Panel scale + alpha
     this.scene.tweens.add({
       targets: this.panel,
       scaleX: 1,
       scaleY: 1,
-      duration: 400,
-      ease: 'Back.easeOut'
+      alpha: 1,
+      duration: 200,
+      ease: 'Cubic.easeOut'
     });
 
-    // Subtle bounce for buttons
+    // Content and buttons fade in
+    if (this.contentText) {
+      this.contentText.setAlpha(0);
+      this.scene.tweens.add({
+        targets: this.contentText,
+        alpha: 1,
+        duration: 200,
+        delay: 100,
+        ease: 'Power2'
+      });
+    }
+
     if (this.buttonInstances.length > 0) {
-      this.scene.time.delayedCall(200, () => {
-        this.buttonInstances.forEach((btn, index) => {
-          this.scene.tweens.add({
-            targets: btn,
-            scaleX: { from: 0.8, to: 1 },
-            scaleY: { from: 0.8, to: 1 },
-            duration: 300,
-            delay: index * 50,
-            ease: 'Back.easeOut'
-          });
+      this.buttonInstances.forEach((btn, index) => {
+        btn.setAlpha(0);
+        this.scene.tweens.add({
+          targets: btn,
+          alpha: 1,
+          scaleX: { from: 0.85, to: 1 },
+          scaleY: { from: 0.85, to: 1 },
+          duration: 200,
+          delay: 100 + index * 50,
+          ease: 'Power2'
         });
       });
     }
@@ -242,20 +256,21 @@ export class Modal extends Phaser.GameObjects.Container {
   hide() {
     if (!this.isVisible) return this;
 
-    // Animate out with smooth transition
+    // PRD VFX-4.7: panel scale 1.0→0.9 + alpha 1→0 (150ms) + overlay alpha→0 (200ms)
     this.scene.tweens.add({
-      targets: this,
+      targets: this.panel,
+      scaleX: 0.9,
+      scaleY: 0.9,
       alpha: 0,
-      duration: 250,
+      duration: 150,
       ease: 'Cubic.easeIn'
     });
 
     this.scene.tweens.add({
-      targets: this.panel,
-      scaleX: 0.7,
-      scaleY: 0.7,
-      duration: 250,
-      ease: 'Back.easeIn',
+      targets: this.overlay,
+      alpha: 0,
+      duration: 200,
+      ease: 'Power2',
       onComplete: () => {
         this.isVisible = false;
         this.setVisible(false);

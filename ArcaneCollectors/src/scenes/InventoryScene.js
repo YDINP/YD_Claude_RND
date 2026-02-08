@@ -4,6 +4,7 @@ import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { getAllItems, getItemsByType } from '../data/index.js';
 import { BottomNav } from '../components/BottomNav.js';
+import transitionManager from '../utils/TransitionManager.js';
 
 /**
  * InventoryScene - 인벤토리/장비 관리
@@ -478,10 +479,7 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   goBack() {
-    this.cameras.main.fadeOut(200);
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start(this.returnTo);
-    });
+    transitionManager.slideTransition(this, this.returnTo, {}, 'left');
   }
 
   shutdown() {

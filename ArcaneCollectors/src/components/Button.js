@@ -167,14 +167,19 @@ export class Button extends Phaser.GameObjects.Container {
     if (!this.isEnabled) return;
     this.isPressed = true;
 
-    // Scale down effect
+    // PRD VFX-4.1: Scale down + tint feedback (80ms)
     this.scene.tweens.add({
       targets: this,
       scaleX: 0.95,
       scaleY: 0.95,
-      duration: 50,
+      duration: 80,
       ease: 'Power2'
     });
+
+    // Apply press tint to label
+    if (this.label) {
+      this.label.setTint(0xdddddd);
+    }
 
     this.drawBackground(this.options.hoverColor, true);
   }
@@ -182,14 +187,19 @@ export class Button extends Phaser.GameObjects.Container {
   onPointerUp() {
     if (!this.isEnabled) return;
 
-    // Scale back
+    // PRD VFX-4.1: Scale back + clear tint (80ms)
     this.scene.tweens.add({
       targets: this,
       scaleX: 1,
       scaleY: 1,
-      duration: 100,
+      duration: 80,
       ease: 'Back.easeOut'
     });
+
+    // Clear press tint
+    if (this.label) {
+      this.label.clearTint();
+    }
 
     if (this.isPressed && this.options.onClick) {
       this.options.onClick();
@@ -207,11 +217,18 @@ export class Button extends Phaser.GameObjects.Container {
     this.isEnabled = enabled;
 
     if (!enabled) {
+      // PRD VFX-4.1: Disabled state - alpha 0.5 + tint 0x888888
       this.setAlpha(0.5);
       this.glow.setAlpha(0);
+      if (this.label) {
+        this.label.setTint(0x888888);
+      }
       this.drawBackground(COLORS.textDark);
     } else {
       this.setAlpha(1);
+      if (this.label) {
+        this.label.clearTint();
+      }
       this.drawBackground(this.options.color);
     }
 
