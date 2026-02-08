@@ -6,6 +6,9 @@ import { ParticleManager } from '../systems/ParticleManager.js';
 import transitionManager from '../utils/TransitionManager.js';
 import { safeGet, safeCall } from '../utils/safeAccess.js';
 import { Z_INDEX } from '../config/layoutConfig.js';
+import EnergyBar from '../components/EnergyBar.js';
+import { Modal } from '../components/Modal.js';
+import { formatTime } from '../utils/colorUtils.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -64,10 +67,38 @@ export class MainMenuScene extends Phaser.Scene {
       this._starTimer.remove();
       this._starTimer = null;
     }
+    if (this.energyBar) {
+      this.energyBar.destroy();
+      this.energyBar = null;
+    }
     this.time.removeAllEvents();
     this.tweens.killAll();
     if (this.input) {
       this.input.removeAllListeners();
+    }
+  }
+
+  /**
+   * 메뉴 버튼 배지 데이터 가져오기 (UIX-2.1.2)
+   * @param {string} sceneKey - 씬 키
+   * @returns {number} 배지에 표시할 개수
+   */
+  getBadgeData(sceneKey) {
+    switch (sceneKey) {
+      case 'HeroListScene':
+        // 새로운 영웅 개수 (예: 레벨업 가능한 영웅)
+        return 0; // TODO: 실제 로직 추가
+      case 'QuestScene':
+        // 미완료 퀘스트 개수
+        return 0; // TODO: 실제 로직 추가
+      case 'InventoryScene':
+        // 새로운 아이템 개수
+        return 0; // TODO: 실제 로직 추가
+      case 'TowerScene':
+        // 도전 가능한 층 수
+        return 0; // TODO: 실제 로직 추가
+      default:
+        return 0;
     }
   }
 
@@ -84,93 +115,66 @@ export class MainMenuScene extends Phaser.Scene {
       exp: rewards?.exp ?? 0
     };
 
-    // Overlay (Z_INDEX.MODAL)
-    const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7)
-      .setDepth(Z_INDEX.MODAL)
-      .setInteractive();
+    // UIX-2.1.3: Refactored using Modal component
+    const contentContainer = this.add.container(0, 0);
 
-    // Popup panel (Z_INDEX.MODAL + 1)
-    const panel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 320, 280, COLORS.backgroundLight, 1)
-      .setDepth(Z_INDEX.MODAL + 1)
-      .setStrokeStyle(2, COLORS.primary);
-
-    // Title (Z_INDEX.MODAL + 2)
-    const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, '🎁 오프라인 보상', {
-      fontSize: '24px',
-      fontFamily: 'Arial',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(Z_INDEX.MODAL + 2);
-
-    // Duration (Z_INDEX.MODAL + 2)
-    const duration = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, `${safeRewards.formattedDuration} 동안 모험했습니다!`, {
+    // Duration text
+    const durationText = this.add.text(0, -60, `${safeRewards.formattedDuration} 동안 모험했습니다!`, {
       fontSize: '16px',
       fontFamily: 'Arial',
-      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setDepth(Z_INDEX.MODAL + 2);
+      color: '#94A3B8',
+      align: 'center'
+    }).setOrigin(0.5);
 
-    // Gold reward (Z_INDEX.MODAL + 2)
-    const goldText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10, `💰 골드: +${safeRewards.gold.toLocaleString()}`, {
+    // Gold reward with icon
+    const goldReward = this.add.text(0, -15, `💰 골드: +${safeRewards.gold.toLocaleString()}`, {
       fontSize: '20px',
       fontFamily: 'Arial',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setDepth(Z_INDEX.MODAL + 2);
-
-    // Exp reward (Z_INDEX.MODAL + 2)
-    const expText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, `⭐ 경험치: +${safeRewards.exp.toLocaleString()}`, {
-      fontSize: '20px',
-      fontFamily: 'Arial',
-      color: `#${  COLORS.success.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setDepth(Z_INDEX.MODAL + 2);
-
-    // Claim button (Z_INDEX.MODAL + 2)
-    const claimBtn = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 90, 200, 50, COLORS.primary)
-      .setDepth(Z_INDEX.MODAL + 2)
-      .setInteractive({ useHandCursor: true });
-
-    const claimText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 90, '받기', {
-      fontSize: '20px',
-      fontFamily: 'Arial',
-      color: '#FFFFFF',
+      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(Z_INDEX.MODAL + 2);
+    }).setOrigin(0.5);
 
-    claimBtn.on('pointerover', () => claimBtn.setFillStyle(COLORS.secondary));
-    claimBtn.on('pointerout', () => claimBtn.setFillStyle(COLORS.primary));
+    // Exp reward with icon
+    const expReward = this.add.text(0, 25, `⭐ 경험치: +${safeRewards.exp.toLocaleString()}`, {
+      fontSize: '20px',
+      fontFamily: 'Arial',
+      color: `#${COLORS.success.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
 
-    claimBtn.on('pointerdown', () => {
-      // Claim rewards + lastOnline 갱신 (중복 방지)
-      SaveManager.claimOfflineRewards();
+    contentContainer.add([durationText, goldReward, expReward]);
 
-      // registry 정리 (다른 씬에서 돌아와도 재표시 안 함)
-      this.registry.remove('pendingOfflineRewards');
-      this.showOfflineRewards = null;
+    // Create Modal
+    const modal = new Modal(this, {
+      title: '🎁 오프라인 보상',
+      content: contentContainer,
+      width: 350,
+      height: 280,
+      buttons: [
+        {
+          text: '받기',
+          onClick: () => {
+            // Claim rewards + lastOnline 갱신 (중복 방지)
+            SaveManager.claimOfflineRewards();
 
-      // Update registry (with null defense)
-      const newResources = SaveManager.getResources() || {};
-      this.registry.set('gems', newResources?.gems ?? 1500);
-      this.registry.set('gold', newResources?.gold ?? 10000);
+            // registry 정리 (다른 씬에서 돌아와도 재표시 안 함)
+            this.registry.remove('pendingOfflineRewards');
+            this.showOfflineRewards = null;
 
-      // Animate and close
-      this.tweens.add({
-        targets: [overlay, panel, title, duration, goldText, expText, claimBtn, claimText],
-        alpha: 0,
-        duration: 300,
-        onComplete: () => {
-          overlay.destroy();
-          panel.destroy();
-          title.destroy();
-          duration.destroy();
-          goldText.destroy();
-          expText.destroy();
-          claimBtn.destroy();
-          claimText.destroy();
+            // Update registry (with null defense)
+            const newResources = SaveManager.getResources() || {};
+            this.registry.set('gems', newResources?.gems ?? 1500);
+            this.registry.set('gold', newResources?.gold ?? 10000);
+
+            // Show toast
+            this.showToast('보상을 받았습니다!');
+          }
         }
-      });
-
-      // Show toast
-      this.showToast('보상을 받았습니다!');
+      ],
+      closeOnOverlay: false
     });
+
+    modal.show();
   }
 
   createBackground() {
@@ -282,14 +286,19 @@ export class MainMenuScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0, 0.5).setDepth(Z_INDEX.UI + 1);
 
-    // Energy display (with null defense) (Z_INDEX.UI + 1)
+    // Energy display with EnergyBar component (UIX-2.1.1)
     const energyStatus = energySystem.getStatus() || {};
-    this.add.text(300, 40, '⚡', { fontSize: '18px' }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
-    this.energyText = this.add.text(320, 40, `${energyStatus?.current ?? 0}/${energyStatus?.max ?? 100}`, {
-      fontSize: '16px',
+    this.energyBar = new EnergyBar(this);
+    this.energyBar.create(430, 40);
+    this.energyBar.update(energyStatus?.current ?? 0, energyStatus?.max ?? 100);
+
+    // Energy recovery timer (UIX-2.1.1)
+    const timeToRecover = energySystem.getTimeToNextRecovery?.() ?? 0;
+    this.energyTimerText = this.add.text(560, 40, timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
+      fontSize: '12px',
       fontFamily: 'Arial',
-      color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
+      color: '#94A3B8',
+      fontStyle: 'normal'
     }).setOrigin(0, 0.5).setDepth(Z_INDEX.UI + 1);
 
     // Settings button (Z_INDEX.UI + 1)
@@ -547,6 +556,30 @@ export class MainMenuScene extends Phaser.Scene {
 
       container.add([bg, icon, label]);
 
+      // Badge system (UIX-2.1.2) - reference BottomNav.js setBadge() pattern
+      const badgeCount = this.getBadgeData(btn.scene);
+      if (badgeCount > 0) {
+        const badgeX = btnWidth / 2 - 12;
+        const badgeY = -btnHeight / 2 + 8;
+
+        const badge = this.scene.add.graphics();
+        badge.fillStyle(COLORS.danger, 1);
+
+        const badgeWidth = badgeCount > 99 ? 28 : badgeCount > 9 ? 22 : 16;
+        badge.fillRoundedRect(badgeX - badgeWidth / 2, badgeY - 8, badgeWidth, 16, 8);
+
+        const badgeText = this.scene.add.text(badgeX, badgeY, badgeCount > 99 ? '99+' : badgeCount.toString(), {
+          fontFamily: 'Arial',
+          fontSize: '10px',
+          fontStyle: 'bold',
+          color: '#FFFFFF'
+        }).setOrigin(0.5);
+
+        container.add([badge, badgeText]);
+        container.badge = badge;
+        container.badgeText = badgeText;
+      }
+
       // Hover effects
       bg.on('pointerover', () => {
         bg.setFillStyle(0x2a2a5e, 1);
@@ -610,10 +643,16 @@ export class MainMenuScene extends Phaser.Scene {
     if (this.gemText) this.gemText.setText(gems.toLocaleString());
     if (this.goldText) this.goldText.setText(gold.toLocaleString());
 
-    // 에너지 갱신 (with null defense)
-    if (this.energyText) {
+    // 에너지 갱신 with EnergyBar (UIX-2.1.1)
+    if (this.energyBar) {
       const es = energySystem.getStatus() || {};
-      this.energyText.setText(`${es?.current ?? 0}/${es?.max ?? 100}`);
+      this.energyBar.update(es?.current ?? 0, es?.max ?? 100);
+    }
+
+    // 에너지 회복 타이머 갱신 (UIX-2.1.1)
+    if (this.energyTimerText) {
+      const timeToRecover = energySystem.getTimeToNextRecovery?.() ?? 0;
+      this.energyTimerText.setText(timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '');
     }
   }
 }
