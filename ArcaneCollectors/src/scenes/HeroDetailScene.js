@@ -5,6 +5,7 @@ import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import transitionManager from '../utils/TransitionManager.js';
+import uiRenderer from '../renderers/UIRenderer.js';
 
 export class HeroDetailScene extends Phaser.Scene {
   constructor() {
@@ -254,9 +255,8 @@ export class HeroDetailScene extends Phaser.Scene {
       iconBg.setStrokeStyle(2, COLORS.primary);
       iconBg.setInteractive({ useHandCursor: true });
 
-      this.add.text(x, y - 5, '⚔', {
-        fontSize: '20px'
-      }).setOrigin(0.5);
+      const skillIcon = uiRenderer.renderIcon(this, x, y - 5, { type: 'stat', key: 'atk', size: 20 });
+      this.add.existing(skillIcon);
 
       this.add.text(x, y + 18, `Lv.${skillLevel}/${maxSkillLevel}`, {
         fontSize: '9px',
