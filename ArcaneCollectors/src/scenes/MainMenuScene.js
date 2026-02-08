@@ -83,7 +83,7 @@ export class MainMenuScene extends Phaser.Scene {
     const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, '🎁 오프라인 보상', {
       fontSize: '24px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(52);
 
@@ -91,21 +91,21 @@ export class MainMenuScene extends Phaser.Scene {
     const duration = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, `${rewards.formattedDuration} 동안 모험했습니다!`, {
       fontSize: '16px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(52);
 
     // Gold reward
     const goldText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10, `💰 골드: +${rewards.gold.toLocaleString()}`, {
       fontSize: '20px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0')
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(52);
 
     // Exp reward
     const expText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, `⭐ 경험치: +${rewards.exp.toLocaleString()}`, {
       fontSize: '20px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.success.toString(16).padStart(6, '0')
+      color: `#${  COLORS.success.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(52);
 
     // Claim button
@@ -247,7 +247,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.gemText = this.add.text(55, 40, gems.toLocaleString(), {
       fontSize: '18px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0, 0.5).setDepth(11);
 
@@ -263,7 +263,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.goldText = this.add.text(175, 40, gold.toLocaleString(), {
       fontSize: '18px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0, 0.5).setDepth(11);
 
@@ -273,7 +273,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.energyText = this.add.text(320, 40, `${energyStatus.current}/${energyStatus.max}`, {
       fontSize: '16px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.success.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0, 0.5).setDepth(11);
 
@@ -298,7 +298,7 @@ export class MainMenuScene extends Phaser.Scene {
     const title = this.add.text(GAME_WIDTH / 2, 120, 'Arcane Collectors', {
       fontSize: '32px',
       fontFamily: 'Georgia, serif',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -335,7 +335,7 @@ export class MainMenuScene extends Phaser.Scene {
       this.add.text(GAME_WIDTH / 2, mainCharY + 80, mainHero.name, {
         fontSize: '18px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
 
@@ -345,7 +345,7 @@ export class MainMenuScene extends Phaser.Scene {
       this.add.text(GAME_WIDTH / 2 - 80, mainCharY - 80, `Lv ${mainHero.level || 1}`, {
         fontSize: '16px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
     } else {
@@ -356,7 +356,7 @@ export class MainMenuScene extends Phaser.Scene {
       this.add.text(GAME_WIDTH / 2, mainCharY + 80, '영웅을 소환하세요!', {
         fontSize: '16px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
     }
 
@@ -409,8 +409,8 @@ export class MainMenuScene extends Phaser.Scene {
       const reactionText = this.add.text(GAME_WIDTH / 2, mainCharY - 160, reaction, {
         fontSize: '20px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
-        backgroundColor: '#' + COLORS.backgroundLight.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
+        backgroundColor: `#${  COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
         padding: { x: 15, y: 8 }
       }).setOrigin(0.5).setDepth(20);
 
@@ -452,8 +452,8 @@ export class MainMenuScene extends Phaser.Scene {
         const miniLevel = this.add.text(x, subCharY + 35, `Lv${hero.level || 1}`, {
           fontSize: '11px',
           fontFamily: 'Arial',
-          color: '#' + COLORS.text.toString(16).padStart(6, '0'),
-          backgroundColor: '#' + COLORS.backgroundLight.toString(16).padStart(6, '0'),
+          color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
+          backgroundColor: `#${  COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
           padding: { x: 4, y: 2 }
         }).setOrigin(0.5);
 
@@ -556,8 +556,8 @@ export class MainMenuScene extends Phaser.Scene {
     const toast = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, message, {
       fontSize: '18px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
-      backgroundColor: '#' + COLORS.backgroundLight.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
+      backgroundColor: `#${  COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
       padding: { x: 20, y: 12 }
     }).setOrigin(0.5).setDepth(100);
 

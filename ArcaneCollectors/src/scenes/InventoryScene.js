@@ -74,21 +74,21 @@ export class InventoryScene extends Phaser.Scene {
     // 제목
     this.add.text(GAME_WIDTH / 2, 40, '인벤토리', {
       fontSize: '24px', fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // 골드 표시
     this.goldText = this.add.text(GAME_WIDTH - 30, 40, `🪙 ${this.gold.toLocaleString()}`, {
       fontSize: '16px', fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(1, 0.5);
 
     // 아이템 수
     this.countText = this.add.text(GAME_WIDTH - 30, 62, '', {
       fontSize: '12px', fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0.5);
   }
 
@@ -163,7 +163,7 @@ export class InventoryScene extends Phaser.Scene {
     if (items.length === 0) {
       const emptyText = this.add.text(GAME_WIDTH / 2, this.listY + 100, '아이템이 없습니다', {
         fontSize: '16px', fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
       this.itemElements.push(emptyText);
       return;
@@ -223,7 +223,7 @@ export class InventoryScene extends Phaser.Scene {
 
     const info = this.add.text(padX + 65, y + 40, infoStr, {
       fontSize: '12px', fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0, 0.5);
     elements.push(info);
 
@@ -231,7 +231,7 @@ export class InventoryScene extends Phaser.Scene {
     const statStr = this.getItemStatSummary(item);
     const statText = this.add.text(GAME_WIDTH - padX - 10, y + 30, statStr, {
       fontSize: '13px', fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
       align: 'right'
     }).setOrigin(1, 0.5);
@@ -368,13 +368,13 @@ export class InventoryScene extends Phaser.Scene {
 
     this.add.text(cx, topY + 62, `${item.rarity || 'common'}`, {
       fontSize: '14px', fontFamily: 'Arial',
-      color: '#' + this.getRarityColor(item.rarity).toString(16).padStart(6, '0')
+      color: `#${  this.getRarityColor(item.rarity).toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(82);
 
     // 설명
     this.add.text(cx, topY + 90, item.description || '', {
       fontSize: '13px', fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`,
       wordWrap: { width: GAME_WIDTH - 120 },
       align: 'center'
     }).setOrigin(0.5, 0).setDepth(82);
@@ -394,12 +394,12 @@ export class InventoryScene extends Phaser.Scene {
     statEntries.forEach(([key, val], i) => {
       this.add.text(cx - 100, y + i * 25, key, {
         fontSize: '14px', fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setDepth(82);
 
       this.add.text(cx + 100, y + i * 25, `+${val}`, {
         fontSize: '14px', fontFamily: 'Arial',
-        color: '#' + COLORS.success.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(1, 0).setDepth(82);
     });
@@ -408,7 +408,7 @@ export class InventoryScene extends Phaser.Scene {
     const enhY = y + statEntries.length * 25 + 15;
     this.add.text(cx, enhY, `강화: +${item.enhanceLevel || 0}/15`, {
       fontSize: '15px', fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);
 
@@ -438,21 +438,21 @@ export class InventoryScene extends Phaser.Scene {
   showConsumableDetail(item, cx, y) {
     this.add.text(cx, y, `보유: ${item.quantity || 0}개`, {
       fontSize: '18px', fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);
 
     if (item.value) {
       this.add.text(cx, y + 30, `효과: ${item.value}`, {
         fontSize: '14px', fontFamily: 'Arial',
-        color: '#' + COLORS.success.toString(16).padStart(6, '0')
+        color: `#${  COLORS.success.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(82);
     }
 
     if (item.sellPrice) {
       this.add.text(cx, y + 55, `판매가: 🪙 ${item.sellPrice}`, {
         fontSize: '13px', fontFamily: 'Arial',
-        color: '#' + COLORS.accent.toString(16).padStart(6, '0')
+        color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(82);
     }
   }
@@ -464,7 +464,7 @@ export class InventoryScene extends Phaser.Scene {
         this.showToast('장비 해제 완료');
         this.refreshItemList();
       } catch (e) {
-        this.showToast('해제 실패: ' + e.message);
+        this.showToast(`해제 실패: ${  e.message}`);
       }
     }
   }
@@ -496,7 +496,7 @@ export class InventoryScene extends Phaser.Scene {
     const toast = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 80, message, {
       fontSize: '16px', fontFamily: 'Arial',
       color: '#FFFFFF',
-      backgroundColor: '#' + COLORS.bgPanel.toString(16).padStart(6, '0'),
+      backgroundColor: `#${  COLORS.bgPanel.toString(16).padStart(6, '0')}`,
       padding: { x: 16, y: 10 }
     }).setOrigin(0.5).setDepth(100);
 

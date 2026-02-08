@@ -4,7 +4,7 @@
  */
 import { SaveManager } from './SaveManager.js';
 import { EventBus, GameEvents } from './EventBus.js';
-import { getRarityKey } from '../utils/helpers.js';
+import { getRarityKey } from '../utils/rarityUtils.js';
 import { getCharacter } from '../data/index.js';
 
 export class ProgressionSystem {

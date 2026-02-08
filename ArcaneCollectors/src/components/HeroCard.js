@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { COLORS, RARITY, MOODS, CULT_COLORS } from '../config/gameConfig.js';
-import { getRarityKey } from '../utils/helpers.js';
+import { getRarityKey } from '../utils/rarityUtils.js';
 import { StarRating } from './StarRating.js';
 
 export class HeroCard extends Phaser.GameObjects.Container {

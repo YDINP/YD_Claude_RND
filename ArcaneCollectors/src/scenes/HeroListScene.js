@@ -1,6 +1,6 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO } from '../config/gameConfig.js';
 import { BottomNav } from '../components/BottomNav.js';
-import { getRarityKey, getRarityNum } from '../utils/helpers.js';
+import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
 export class HeroListScene extends Phaser.Scene {
   constructor() {
     super({ key: 'HeroListScene' });
@@ -50,7 +50,7 @@ export class HeroListScene extends Phaser.Scene {
     const backText = this.add.text(0, 0, '← 뒤로', {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0')
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     backBtn.add([backBg, backText]);
@@ -68,7 +68,7 @@ export class HeroListScene extends Phaser.Scene {
     this.add.text(GAME_WIDTH / 2, 50, '영웅', {
       fontSize: '28px',
       fontFamily: 'Georgia, serif',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(21);
 
@@ -77,7 +77,7 @@ export class HeroListScene extends Phaser.Scene {
     this.countText = this.add.text(GAME_WIDTH - 30, 50, `${heroes.length}명`, {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0.5).setDepth(21);
   }
 
@@ -110,7 +110,7 @@ export class HeroListScene extends Phaser.Scene {
       const text = this.add.text(0, 0, opt.label, {
         fontSize: '11px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.text.toString(16).padStart(6, '0')
+        color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       btn.add([bg, text]);
@@ -134,7 +134,7 @@ export class HeroListScene extends Phaser.Scene {
     this.sortDirText = this.add.text(GAME_WIDTH - 25, filterY, this.sortAscending ? '▲' : '▼', {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(20);
 
     // Second row - Cult filter buttons (분위기/교단 필터)
@@ -177,7 +177,7 @@ export class HeroListScene extends Phaser.Scene {
         fontSize: '10px',
         fontFamily: 'Arial',
         fontStyle: 'bold',
-        color: '#' + COLORS.text.toString(16).padStart(6, '0')
+        color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       btn.add([bg, text]);
@@ -200,7 +200,7 @@ export class HeroListScene extends Phaser.Scene {
     const clearBtn = this.add.text(GAME_WIDTH - 50, filterY2, '초기화', {
       fontSize: '11px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.danger.toString(16).padStart(6, '0')
+      color: `#${  COLORS.danger.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });
 
     clearBtn.on('pointerdown', () => {
@@ -263,10 +263,9 @@ export class HeroListScene extends Phaser.Scene {
 
     switch (this.sortBy) {
       case 'rarity':
-        // 숫자 rarity: 높을수록 상위 (5=SSR, 4=SR, 3=R, 1~2=N)
         heroes.sort((a, b) => {
-          const aR = typeof a.rarity === 'number' ? a.rarity : ({ SSR: 5, SR: 4, R: 3, N: 1 }[a.rarity] || 0);
-          const bR = typeof b.rarity === 'number' ? b.rarity : ({ SSR: 5, SR: 4, R: 3, N: 1 }[b.rarity] || 0);
+          const aR = getRarityNum(a.rarity);
+          const bR = getRarityNum(b.rarity);
           return (bR - aR) * sortDirection;
         });
         break;
@@ -306,7 +305,7 @@ export class HeroListScene extends Phaser.Scene {
       const emptyText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '보유한 영웅이 없습니다\n소환에서 영웅을 획득하세요!', {
         fontSize: '16px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`,
         align: 'center'
       }).setOrigin(0.5);
       this.gridContainer.add(emptyText);
@@ -356,27 +355,26 @@ export class HeroListScene extends Phaser.Scene {
     // Hero portrait
     const portrait = this.add.image(0, -10, 'hero_placeholder').setScale(0.85);
 
-    // Stars (rarity 숫자를 stars로 사용)
-    const starCount = hero.stars || (typeof hero.rarity === 'number' ? hero.rarity : rarityData.stars || 1);
+    const starCount = hero.stars || getRarityNum(hero.rarity) || rarityData.stars || 1;
     const stars = this.add.text(0, 35, '★'.repeat(starCount), {
       fontSize: '11px',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0')
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Name
     const heroName = hero.name || '???';
-    const name = heroName.length > 7 ? heroName.substring(0, 7) + '..' : heroName;
+    const name = heroName.length > 7 ? `${heroName.substring(0, 7)  }..` : heroName;
     const nameText = this.add.text(0, 50, name, {
       fontSize: '11px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0')
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Level
     const levelText = this.add.text(0, 62, `Lv.${hero.level}`, {
       fontSize: '10px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     card.add([cardBg, rarityBg, rarityText, portrait, stars, nameText, levelText]);

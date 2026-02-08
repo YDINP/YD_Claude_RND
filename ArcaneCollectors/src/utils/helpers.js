@@ -3,31 +3,9 @@
  */
 
 // ============================================
-// Rarity Conversion (숫자 ↔ 문자열)
+// Rarity Conversion - rarityUtils에서 재export
 // ============================================
-
-const RARITY_NUM_TO_KEY = { 1: 'N', 2: 'N', 3: 'R', 4: 'SR', 5: 'SSR' };
-const RARITY_KEY_TO_NUM = { 'N': 1, 'R': 3, 'SR': 4, 'SSR': 5 };
-
-/**
- * 숫자 rarity → 문자열 등급 키로 변환 (이미 문자열이면 그대로 반환)
- * @param {number|string} rarity
- * @returns {string} 'N' | 'R' | 'SR' | 'SSR'
- */
-export function getRarityKey(rarity) {
-  if (typeof rarity === 'string') return rarity;
-  return RARITY_NUM_TO_KEY[rarity] || 'N';
-}
-
-/**
- * 문자열 등급 → 숫자 rarity로 변환 (이미 숫자면 그대로 반환)
- * @param {number|string} rarity
- * @returns {number}
- */
-export function getRarityNum(rarity) {
-  if (typeof rarity === 'number') return rarity;
-  return RARITY_KEY_TO_NUM[rarity] || 1;
-}
+export { getRarityKey, getRarityNum, isValidRarity } from './rarityUtils.js';
 
 // ============================================
 // Number Formatting
@@ -40,10 +18,10 @@ export function getRarityNum(rarity) {
  */
 export function formatNumber(num) {
   if (num >= 1000000000) {
-    return (num / 1000000000).toFixed(1) + 'B';
+    return `${(num / 1000000000).toFixed(1)  }B`;
   }
   if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M';
+    return `${(num / 1000000).toFixed(1)  }M`;
   }
   if (num >= 1000) {
     return num.toLocaleString();
@@ -204,7 +182,7 @@ export function hexToRgb(hex) {
 export function rgbToHex(r, g, b) {
   const toHex = (c) => {
     const hex = clamp(Math.round(c), 0, 255).toString(16);
-    return hex.length === 1 ? '0' + hex : hex;
+    return hex.length === 1 ? `0${  hex}` : hex;
   };
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
@@ -402,8 +380,8 @@ export function generateStars(count, max = 3) {
 
 // Compact number formatting (1000 → 1K)
 export function formatNumberShort(num) {
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)  }M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)  }K`;
   return num.toString();
 }
 

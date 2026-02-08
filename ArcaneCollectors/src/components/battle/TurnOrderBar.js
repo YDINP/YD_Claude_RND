@@ -35,7 +35,7 @@ export class TurnOrderBar {
     this.label = this.scene.add.text(20, 0, '턴 순서:', {
       fontSize: '12px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0, 0.5);
     this.container.add(this.label);
   }
@@ -99,7 +99,7 @@ export class TurnOrderBar {
       const spdText = this.scene.add.text(x, 20, `${spd}`, {
         fontSize: '8px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       this.container.add([bg, text, spdText]);

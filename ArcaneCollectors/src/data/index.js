@@ -9,7 +9,7 @@ import stages from './stages.json';
 import enemies from './enemies.json';
 import items from './items.json';
 import quests from './quests.json';
-import { getRarityKey } from '../utils/helpers.js';
+import { getRarityKey, getRarityStars } from '../utils/rarityUtils.js';
 
 // ==================== Hero Data Normalization ====================
 
@@ -44,7 +44,7 @@ export function normalizeHero(hero) {
     name: hero.name || base?.name || '???',
     rarity: rarity,
     rarityKey: rarityKey,
-    stars: hero.stars || (typeof rarity === 'number' ? rarity : ({ SSR: 5, SR: 4, R: 3, N: 1 }[rarity] || 1)),
+    stars: hero.stars || getRarityStars(rarity),
     cult: hero.cult || base?.cult || 'olympus',
     class: hero.class || base?.class || 'warrior',
     mood: hero.mood || base?.mood || 'brave',

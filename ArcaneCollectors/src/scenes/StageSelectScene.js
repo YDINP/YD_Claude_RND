@@ -78,7 +78,7 @@ export class StageSelectScene extends Phaser.Scene {
     const backText = this.add.text(0, 0, '← 뒤로', {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0')
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     backBtn.add([backBg, backText]);
@@ -94,7 +94,7 @@ export class StageSelectScene extends Phaser.Scene {
     this.add.text(GAME_WIDTH / 2, 50, '모험', {
       fontSize: '28px',
       fontFamily: 'Georgia, serif',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(21);
 
@@ -103,7 +103,7 @@ export class StageSelectScene extends Phaser.Scene {
     this.energyText = this.add.text(GAME_WIDTH - 40, 40, `⚡ ${energyStatus.current}/${energyStatus.max}`, {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0')
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0.5).setDepth(21);
 
     // 에너지 회복 타이머 표시
@@ -111,7 +111,7 @@ export class StageSelectScene extends Phaser.Scene {
       this.energyTimerText = this.add.text(GAME_WIDTH - 40, 60, '', {
         fontSize: '10px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(1, 0.5).setDepth(21);
       this.updateEnergyTimer();
     }
@@ -123,19 +123,19 @@ export class StageSelectScene extends Phaser.Scene {
     // Chapter navigation
     const prevBtn = this.add.text(30, titleY, '◀', {
       fontSize: '24px',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     const nextBtn = this.add.text(GAME_WIDTH - 30, titleY, '▶', {
       fontSize: '24px',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     // Chapter title
     this.chapterTitle = this.add.text(GAME_WIDTH / 2, titleY, '', {
       fontSize: '20px',
       fontFamily: 'Georgia, serif',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -243,8 +243,8 @@ export class StageSelectScene extends Phaser.Scene {
     const card = this.add.container(GAME_WIDTH / 2, y);
 
     // Card background
-    let bgColor = isLocked ? 0x1a1a2e : COLORS.backgroundLight;
-    let bgAlpha = isLocked ? 0.5 : 0.8;
+    const bgColor = isLocked ? 0x1a1a2e : COLORS.backgroundLight;
+    const bgAlpha = isLocked ? 0.5 : 0.8;
 
     const cardBg = this.add.rectangle(0, 0, GAME_WIDTH - 40, 80, bgColor, bgAlpha);
     cardBg.setStrokeStyle(2, isCleared ? COLORS.success : (isLocked ? COLORS.textDark : COLORS.primary), 0.5);
@@ -267,7 +267,7 @@ export class StageSelectScene extends Phaser.Scene {
     const nameText = this.add.text(-140, -15, stage.name, {
       fontSize: '16px',
       fontFamily: 'Arial',
-      color: '#' + nameColor.toString(16).padStart(6, '0'),
+      color: `#${  nameColor.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0, 0.5);
 
@@ -275,7 +275,7 @@ export class StageSelectScene extends Phaser.Scene {
     const powerText = this.add.text(-140, 10, `추천 전투력: ${stage.recommendedPower.toLocaleString()}`, {
       fontSize: '12px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0, 0.5);
 
     // Stars earned
@@ -283,7 +283,7 @@ export class StageSelectScene extends Phaser.Scene {
     const stars = clearedStages[stage.id] || 0;
     const starsText = this.add.text(170, -10, '★'.repeat(stars) + '☆'.repeat(3 - stars), {
       fontSize: '16px',
-      color: '#' + (stars > 0 ? COLORS.accent : COLORS.textDark).toString(16).padStart(6, '0')
+      color: `#${  (stars > 0 ? COLORS.accent : COLORS.textDark).toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0.5);
 
     // Lock icon
@@ -291,7 +291,7 @@ export class StageSelectScene extends Phaser.Scene {
       const lockText = this.add.text(170, 10, '🔒 잠김', {
         fontSize: '12px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(1, 0.5);
       card.add(lockText);
     }
@@ -352,7 +352,7 @@ export class StageSelectScene extends Phaser.Scene {
     this.modalTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 200, '파티 선택', {
       fontSize: '22px',
       fontFamily: 'Georgia, serif',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -360,7 +360,7 @@ export class StageSelectScene extends Phaser.Scene {
     this.stageInfoText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 165, '', {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Party slots (4 slots — PARTY_SIZE 기준)
@@ -379,13 +379,13 @@ export class StageSelectScene extends Phaser.Scene {
       const slotText = this.add.text(0, 0, '+', {
         fontSize: '30px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       const slotLabel = this.add.text(0, 55, `슬롯 ${i + 1}`, {
         fontSize: '10px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       slotContainer.add([slotBg, slotText, slotLabel]);
@@ -403,7 +403,7 @@ export class StageSelectScene extends Phaser.Scene {
     const autoText = this.add.text(0, 0, '자동 편성', {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0')
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
     autoBtn.add([autoBg, autoText]);
 
@@ -418,7 +418,7 @@ export class StageSelectScene extends Phaser.Scene {
     const startText = this.add.text(0, 0, '전투 시작', {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
     startBtn.add([startBg, startText]);
@@ -430,7 +430,7 @@ export class StageSelectScene extends Phaser.Scene {
     // Close button
     const closeBtn = this.add.text(GAME_WIDTH / 2 + 180, GAME_HEIGHT / 2 - 200, '✕', {
       fontSize: '24px',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0')
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     closeBtn.on('pointerdown', () => {
@@ -441,7 +441,7 @@ export class StageSelectScene extends Phaser.Scene {
     this.totalPowerText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, '총 전투력: 0', {
       fontSize: '16px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -560,7 +560,7 @@ export class StageSelectScene extends Phaser.Scene {
       let color = COLORS.danger;
       if (ratio >= 1) color = COLORS.success;
       else if (ratio >= 0.8) color = COLORS.accent;
-      this.totalPowerText.setColor('#' + color.toString(16).padStart(6, '0'));
+      this.totalPowerText.setColor(`#${  color.toString(16).padStart(6, '0')}`);
     }
   }
 
@@ -594,7 +594,7 @@ export class StageSelectScene extends Phaser.Scene {
       const text = this.add.text(GAME_WIDTH / 2, baseY + i * 18, `${icon} ${syn.name || syn.type}`, {
         fontSize: '11px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.accent.toString(16).padStart(6, '0')
+        color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(60);
       this.partyModal.add(text);
       this.synergyPreviewTexts.push(text);
@@ -686,20 +686,20 @@ export class StageSelectScene extends Phaser.Scene {
     // Title
     this.sweepTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 130, '⚡ 소탕', {
       fontSize: '20px', fontFamily: 'Georgia, serif',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // Stage info
     this.sweepStageInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, '', {
       fontSize: '13px', fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Cost info
     this.sweepCostInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 75, '', {
       fontSize: '12px', fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0')
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Count buttons (1, 3, 5, 10)
@@ -714,12 +714,12 @@ export class StageSelectScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true });
       const label = this.add.text(btnX, btnY - 8, `×${count}`, {
         fontSize: '18px', fontFamily: 'Arial',
-        color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
       const costLabel = this.add.text(btnX, btnY + 14, '', {
         fontSize: '10px', fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       bg.on('pointerover', () => bg.setStrokeStyle(2, COLORS.accent));
@@ -733,19 +733,19 @@ export class StageSelectScene extends Phaser.Scene {
     // Daily remaining info
     this.sweepDailyInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, '', {
       fontSize: '11px', fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Tickets info
     this.sweepTicketInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60, '', {
       fontSize: '11px', fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Close button
     const closeBtn = this.add.text(GAME_WIDTH / 2 + 155, GAME_HEIGHT / 2 - 145, '✕', {
       fontSize: '20px', fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.hideSweepModal());
 
@@ -850,8 +850,8 @@ export class StageSelectScene extends Phaser.Scene {
     const msg = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, text, {
       fontSize: '18px',
       fontFamily: 'Arial',
-      color: '#' + color.toString(16).padStart(6, '0'),
-      backgroundColor: '#' + COLORS.background.toString(16).padStart(6, '0'),
+      color: `#${  color.toString(16).padStart(6, '0')}`,
+      backgroundColor: `#${  COLORS.background.toString(16).padStart(6, '0')}`,
       padding: { x: 20, y: 12 }
     }).setOrigin(0.5).setDepth(100);
 

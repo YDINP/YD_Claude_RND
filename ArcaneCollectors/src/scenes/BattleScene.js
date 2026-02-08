@@ -308,7 +308,7 @@ export class BattleScene extends Phaser.Scene {
     const turnLabel = this.add.text(20, 0, '턴 순서:', {
       fontSize: '12px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0, 0.5);
     this.turnOrderContainer.add(turnLabel);
 
@@ -357,7 +357,7 @@ export class BattleScene extends Phaser.Scene {
       const spdText = this.add.text(x, 20, `${battler.stats?.spd || 0}`, {
         fontSize: '8px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       this.turnOrderContainer.add([iconBg, iconText, spdText]);
@@ -376,7 +376,7 @@ export class BattleScene extends Phaser.Scene {
     this.add.text(20, 30, this.stage?.name || 'Battle', {
       fontSize: '16px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0, 0.5).setDepth(11);
 
@@ -384,7 +384,7 @@ export class BattleScene extends Phaser.Scene {
     this.turnText = this.add.text(GAME_WIDTH / 2, 30, 'Turn 0', {
       fontSize: '16px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0')
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(11);
 
     // Battle log area
@@ -418,7 +418,7 @@ export class BattleScene extends Phaser.Scene {
     const synergyTitle = this.add.text(0, -containerHeight / 2 + 10, '시너지', {
       fontSize: '10px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
     this.synergyContainer.add(synergyTitle);
@@ -436,7 +436,7 @@ export class BattleScene extends Phaser.Scene {
         const synText = this.add.text(0, yOffset, label, {
           fontSize: '9px',
           fontFamily: 'Arial',
-          color: '#' + color.toString(16).padStart(6, '0')
+          color: `#${  color.toString(16).padStart(6, '0')}`
         }).setOrigin(0.5);
         this.synergyContainer.add(synText);
         yOffset += 16;
@@ -447,7 +447,7 @@ export class BattleScene extends Phaser.Scene {
       if (this.synergyBuffs.atk > 0) {
         const atkText = this.add.text(0, yOffset, `ATK +${Math.round(this.synergyBuffs.atk * 100)}%`, {
           fontSize: '9px', fontFamily: 'Arial',
-          color: '#' + COLORS.danger.toString(16).padStart(6, '0')
+          color: `#${  COLORS.danger.toString(16).padStart(6, '0')}`
         }).setOrigin(0.5);
         this.synergyContainer.add(atkText);
         yOffset += 12;
@@ -455,7 +455,7 @@ export class BattleScene extends Phaser.Scene {
       if (this.synergyBuffs.def > 0) {
         const defText = this.add.text(0, yOffset, `DEF +${Math.round(this.synergyBuffs.def * 100)}%`, {
           fontSize: '9px', fontFamily: 'Arial',
-          color: '#' + COLORS.primary.toString(16).padStart(6, '0')
+          color: `#${  COLORS.primary.toString(16).padStart(6, '0')}`
         }).setOrigin(0.5);
         this.synergyContainer.add(defText);
       }
@@ -514,7 +514,7 @@ export class BattleScene extends Phaser.Scene {
     const nameText = this.add.text(0, -17, heroName, {
       fontSize: '9px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -524,7 +524,7 @@ export class BattleScene extends Phaser.Scene {
     const activeSkill = skill1;
     const skillLabel = activeSkill ? (activeSkill.name.length > 5 ? activeSkill.name.substring(0, 5) : activeSkill.name) : '스킬';
     const hasSkill2 = skill2 && ally.skillGauge >= (skill2.gaugeCost || 150);
-    const skillText = this.add.text(0, -6, hasSkill2 ? '★' + skillLabel : skillLabel, {
+    const skillText = this.add.text(0, -6, hasSkill2 ? `★${  skillLabel}` : skillLabel, {
       fontSize: '7px',
       fontFamily: 'Arial',
       color: isReady ? (hasSkill2 ? '#FF6B6B' : '#FFD700') : '#999999'
@@ -539,7 +539,7 @@ export class BattleScene extends Phaser.Scene {
     const gaugeText = this.add.text(0, 19, `${ally.skillGauge}/${ally.maxSkillGauge}`, {
       fontSize: '8px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     card.add([cardBg, nameText, skillText, gaugeBg, gaugeFill, gaugeText]);
@@ -908,7 +908,7 @@ export class BattleScene extends Phaser.Scene {
 
     const skillText = this.add.text(GAME_WIDTH / 2 + 20, GAME_HEIGHT / 2 + 15, '⚡ 궁극기 발동!', {
       fontSize: '16px', fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 2
     }).setOrigin(0, 0.5).setDepth(32).setAlpha(0);
@@ -960,7 +960,7 @@ export class BattleScene extends Phaser.Scene {
 
     const battleText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20, '⚔️ BATTLE START ⚔️', {
       fontSize: '18px', fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3
     }).setOrigin(0.5).setDepth(51).setAlpha(0);
@@ -1093,7 +1093,7 @@ export class BattleScene extends Phaser.Scene {
     const nameTag = this.add.text(0, 45, name, {
       fontSize: '11px',
       fontFamily: 'Arial',
-      color: '#' + (isAlly ? COLORS.text : COLORS.danger).toString(16).padStart(6, '0')
+      color: `#${  (isAlly ? COLORS.text : COLORS.danger).toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     container.add([sprite, hpBarBg, hpBarFill, hpText, skillGaugeBg, skillGaugeFill, nameTag]);
@@ -1122,7 +1122,7 @@ export class BattleScene extends Phaser.Scene {
     const autoText = this.add.text(0, 0, this.autoBattle ? 'AUTO ON' : 'AUTO OFF', {
       fontSize: '12px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -1163,7 +1163,7 @@ export class BattleScene extends Phaser.Scene {
       const text = this.add.text(0, 0, `${speed}x`, {
         fontSize: '14px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.text.toString(16).padStart(6, '0')
+        color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       btn.add([bg, text]);
@@ -1188,7 +1188,7 @@ export class BattleScene extends Phaser.Scene {
     const retreatText = this.add.text(0, 0, '퇴각', {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -1638,7 +1638,7 @@ export class BattleScene extends Phaser.Scene {
 
     const dmgText = this.add.text(sprite.x, sprite.y - 70, `-${damage}`, {
       fontSize, fontFamily: 'Arial',
-      color: '#' + color.toString(16).padStart(6, '0'),
+      color: `#${  color.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: isCrit ? 5 : 3
@@ -1686,7 +1686,7 @@ export class BattleScene extends Phaser.Scene {
     if (isCrit) {
       const critLabel = this.add.text(sprite.x, sprite.y - 100, '💥 CRITICAL!', {
         fontSize: '16px', fontFamily: 'Arial',
-        color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold',
         stroke: '#000000', strokeThickness: 3
       }).setOrigin(0.5).setDepth(20).setScale(0.5);
@@ -1805,7 +1805,7 @@ export class BattleScene extends Phaser.Scene {
     const logText = this.add.text(GAME_WIDTH / 2, 100, message, {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       backgroundColor: 'rgba(0,0,0,0.7)',
       padding: { x: 10, y: 5 }
     }).setOrigin(0.5).setDepth(15);
@@ -1907,7 +1907,7 @@ export class BattleScene extends Phaser.Scene {
 
     let newStars = 0;
     let rewards = { gold: 0, exp: 0 };
-    let levelUpResults = [];
+    const levelUpResults = [];
 
     if (victory) {
       // 성과 기반 별점 계산

@@ -114,7 +114,7 @@ export class PartyEditScene extends Phaser.Scene {
     this.add.text(GAME_WIDTH / 2, 50, '파티 편성', {
       fontSize: '24px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -122,7 +122,7 @@ export class PartyEditScene extends Phaser.Scene {
     this.powerText = this.add.text(GAME_WIDTH - 30, 50, '전투력: 0', {
       fontSize: '16px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(1, 0.5);
   }
@@ -190,7 +190,7 @@ export class PartyEditScene extends Phaser.Scene {
       // 슬롯 번호
       this.add.text(x, y - slotSize / 2 + 12, `슬롯 ${i + 1}`, {
         fontSize: '11px', fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       // 캐릭터 아이콘 영역 (원형)
@@ -199,14 +199,14 @@ export class PartyEditScene extends Phaser.Scene {
       // 캐릭터 이름
       const nameText = this.add.text(x, y + 35, '+', {
         fontSize: '14px', fontFamily: 'Arial',
-        color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
 
       // 부가 정보 (분위기, 클래스)
       const infoText = this.add.text(x, y + 55, '', {
         fontSize: '11px', fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       // 등급 표시
@@ -239,7 +239,7 @@ export class PartyEditScene extends Phaser.Scene {
 
     this.add.text(GAME_WIDTH / 2, y, '시너지 효과', {
       fontSize: '14px', fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -247,7 +247,7 @@ export class PartyEditScene extends Phaser.Scene {
     for (let i = 0; i < 3; i++) {
       const text = this.add.text(50, y + 20 + i * 25, '', {
         fontSize: '13px', fontFamily: 'Arial',
-        color: '#' + COLORS.text.toString(16).padStart(6, '0')
+        color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
       });
       this.synergyTexts.push(text);
     }
@@ -435,7 +435,7 @@ export class PartyEditScene extends Phaser.Scene {
     // 타이틀
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - panelH / 2 + 25, `슬롯 ${slotIndex + 1} - 영웅 선택`, {
       fontSize: '20px', fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);
 
@@ -453,7 +453,7 @@ export class PartyEditScene extends Phaser.Scene {
     if (availableHeroes.length === 0) {
       this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '편성 가능한 영웅이 없습니다', {
         fontSize: '16px', fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(82);
       return;
     }
@@ -484,7 +484,7 @@ export class PartyEditScene extends Phaser.Scene {
       const moodName = MOODS[hero.mood]?.name || hero.mood;
       this.add.text(listX + 50, y + 10, `${moodName} · ${hero.role || hero.class} · ${hero.rarity}`, {
         fontSize: '12px', fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0, 0.5).setDepth(82);
 
       // 전투력
@@ -492,7 +492,7 @@ export class PartyEditScene extends Phaser.Scene {
       const power = Math.floor((stats.hp || 0) / 10 + (stats.atk || 0) + (stats.def || 0) + (stats.spd || 0));
       this.add.text(GAME_WIDTH - 70, y, power.toString(), {
         fontSize: '14px', fontFamily: 'Arial',
-        color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(1, 0.5).setDepth(82);
 
@@ -530,7 +530,7 @@ export class PartyEditScene extends Phaser.Scene {
     if (party.heroIds && party.heroIds[slotIndex]) {
       party.heroIds[slotIndex] = null;
       // 빈 슬롯 정리 (뒤로 당기기)
-      party.heroIds = party.heroIds.filter(id => id != null);
+      party.heroIds = party.heroIds.filter(id => id !== null);
       this.refreshPartyDisplay();
     }
   }
@@ -562,7 +562,7 @@ export class PartyEditScene extends Phaser.Scene {
 
   saveCurrentParty() {
     const party = this.parties[this.activeSlot - 1];
-    const heroIds = party.heroIds?.filter(id => id != null) || [];
+    const heroIds = party.heroIds?.filter(id => id !== null) || [];
 
     if (heroIds.length === 0) {
       this.showToast('편성된 영웅이 없습니다!');
@@ -582,7 +582,7 @@ export class PartyEditScene extends Phaser.Scene {
   confirmAndReturn() {
     // 현재 파티를 registry에 설정 후 복귀
     const party = this.parties[this.activeSlot - 1];
-    const heroIds = party.heroIds?.filter(id => id != null) || [];
+    const heroIds = party.heroIds?.filter(id => id !== null) || [];
     const heroes = heroIds.map(id => this.findHeroData(id)).filter(Boolean);
 
     if (heroes.length > 0) {
@@ -603,7 +603,7 @@ export class PartyEditScene extends Phaser.Scene {
     const toast = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 100, message, {
       fontSize: '16px', fontFamily: 'Arial',
       color: '#FFFFFF',
-      backgroundColor: '#' + COLORS.bgPanel.toString(16).padStart(6, '0'),
+      backgroundColor: `#${  COLORS.bgPanel.toString(16).padStart(6, '0')}`,
       padding: { x: 16, y: 10 }
     }).setOrigin(0.5).setDepth(100);
 
