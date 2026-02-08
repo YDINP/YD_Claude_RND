@@ -1,41 +1,64 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY } from '../config/gameConfig.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { getAllCharacters } from '../data/index.js';
+import characterRenderer from '../renderers/CharacterRenderer.js';
+import uiRenderer from '../renderers/UIRenderer.js';
 
+/**
+ * PreloadScene - 에셋 프리로드 씬
+ *
+ * Phase별 로딩:
+ *   Phase 1: 기본 UI 플레이스홀더 (별, 아이콘, 재화)
+ *   Phase 2: 캐릭터 플레이스홀더 (레거시 15종 + HeroAssetLoader 91명)
+ *   Phase 3: 전투 에셋 (적, 이펙트, 배경)
+ *   Phase 4: 가차 연출 에셋 (마법진)
+ *   Phase 5: 렌더러 에셋 (에셋 모드 시 이미지 파일 로드)
+ *   Phase 6: 최종 검증
+ */
 export class PreloadScene extends Phaser.Scene {
   constructor() {
     super({ key: 'PreloadScene' });
+    this._loadPhase = 0;
+    this._totalPhases = 6;
   }
 
   preload() {
-    // Create loading bar
+    // 로딩 UI 생성
     this.createLoadingBar();
 
-    // Generate placeholder textures
-    this.generatePlaceholderTextures();
+    // Phase 1~4: 코드 기반 플레이스홀더 생성 (동기)
+    this.loadPhase1_UIPlaceholders();
+    this.loadPhase2_CharacterPlaceholders();
+    this.loadPhase3_BattleAssets();
+    this.loadPhase4_GachaAssets();
+
+    // Phase 5: 렌더러 에셋 (비동기 이미지 로드, 에셋 모드 시)
+    this.loadPhase5_RendererAssets();
   }
 
-  generatePlaceholderTextures() {
+  // ============================================
+  // Phase 1: 기본 UI 플레이스홀더
+  // ============================================
+  loadPhase1_UIPlaceholders() {
+    this._updatePhaseText('UI 요소 준비 중...');
+
     // Hero placeholder (64x64)
     const heroCanvas = document.createElement('canvas');
     heroCanvas.width = 64;
     heroCanvas.height = 64;
     const heroCtx = heroCanvas.getContext('2d');
 
-    // Background circle
     heroCtx.fillStyle = '#6366F1';
     heroCtx.beginPath();
     heroCtx.arc(32, 32, 28, 0, Math.PI * 2);
     heroCtx.fill();
 
-    // Simple face
     heroCtx.fillStyle = '#F8FAFC';
     heroCtx.beginPath();
     heroCtx.arc(24, 26, 4, 0, Math.PI * 2);
     heroCtx.arc(40, 26, 4, 0, Math.PI * 2);
     heroCtx.fill();
 
-    // Smile
     heroCtx.strokeStyle = '#F8FAFC';
     heroCtx.lineWidth = 2;
     heroCtx.beginPath();
@@ -115,7 +138,16 @@ export class PreloadScene extends Phaser.Scene {
 
     this.textures.addCanvas('star_empty', emptyStarCanvas);
 
-    // Character portraits for each rarity (SSR, SR, R)
+    this._loadPhase = 1;
+  }
+
+  // ============================================
+  // Phase 2: 캐릭터 플레이스홀더
+  // ============================================
+  loadPhase2_CharacterPlaceholders() {
+    this._updatePhaseText('캐릭터 로드 중...');
+
+    // 레거시 15종 캐릭터 포트레이트
     const rarities = [
       { name: 'ssr', color: '#F59E0B', borderColor: '#FCD34D' },
       { name: 'sr', color: '#A855F7', borderColor: '#C084FC' },
@@ -123,11 +155,10 @@ export class PreloadScene extends Phaser.Scene {
       { name: 'n', color: '#6B7280', borderColor: '#9CA3AF' }
     ];
 
-    // Create 15 character portraits
     const characterNames = [
-      'arcana', 'leonhart', 'selene', // SSR
-      'rose', 'kai', 'luna', 'noir', 'aria', // SR
-      'finn', 'mira', 'theo', 'eva', 'rex', 'ivy', 'max' // R
+      'arcana', 'leonhart', 'selene',
+      'rose', 'kai', 'luna', 'noir', 'aria',
+      'finn', 'mira', 'theo', 'eva', 'rex', 'ivy', 'max'
     ];
 
     const rarityMap = {
@@ -136,7 +167,7 @@ export class PreloadScene extends Phaser.Scene {
       'finn': 'r', 'mira': 'r', 'theo': 'r', 'eva': 'r', 'rex': 'r', 'ivy': 'r', 'max': 'r'
     };
 
-    characterNames.forEach((name, index) => {
+    characterNames.forEach((name) => {
       const rarity = rarities.find(r => r.name === rarityMap[name]);
 
       // Portrait (80x80)
@@ -145,22 +176,17 @@ export class PreloadScene extends Phaser.Scene {
       canvas.height = 80;
       const ctx = canvas.getContext('2d');
 
-      // Border
       ctx.fillStyle = rarity.borderColor;
       ctx.fillRect(0, 0, 80, 80);
-
-      // Inner background
       ctx.fillStyle = rarity.color;
       ctx.fillRect(4, 4, 72, 72);
 
-      // Character silhouette
       ctx.fillStyle = '#1E293B';
       ctx.beginPath();
       ctx.arc(40, 35, 20, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillRect(25, 50, 30, 26);
 
-      // Name initial
       ctx.fillStyle = '#F8FAFC';
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'center';
@@ -175,33 +201,46 @@ export class PreloadScene extends Phaser.Scene {
       fullCanvas.height = 300;
       const fullCtx = fullCanvas.getContext('2d');
 
-      // Background gradient
       const gradient = fullCtx.createLinearGradient(0, 0, 0, 300);
       gradient.addColorStop(0, rarity.color);
       gradient.addColorStop(1, '#1E293B');
       fullCtx.fillStyle = gradient;
       fullCtx.fillRect(0, 0, 200, 300);
 
-      // Character body
       fullCtx.fillStyle = '#0F172A';
       fullCtx.beginPath();
       fullCtx.arc(100, 80, 40, 0, Math.PI * 2);
       fullCtx.fill();
       fullCtx.fillRect(60, 110, 80, 150);
 
-      // Name
       fullCtx.fillStyle = '#F8FAFC';
       fullCtx.font = 'bold 48px Arial';
       fullCtx.textAlign = 'center';
       fullCtx.fillText(name.charAt(0).toUpperCase(), 100, 90);
 
-      // Rarity badge
       fullCtx.fillStyle = rarity.borderColor;
       fullCtx.font = 'bold 16px Arial';
       fullCtx.fillText(rarity.name.toUpperCase(), 100, 280);
 
       this.textures.addCanvas(`char_full_${name}`, fullCanvas);
     });
+
+    // H-2: 91명 전체 캐릭터 향상된 플레이스홀더 생성
+    try {
+      const characters = getAllCharacters();
+      HeroAssetLoader.generatePlaceholders(this, characters);
+    } catch (e) {
+      console.warn('HeroAssetLoader: Failed to generate placeholders', e);
+    }
+
+    this._loadPhase = 2;
+  }
+
+  // ============================================
+  // Phase 3: 전투 에셋
+  // ============================================
+  loadPhase3_BattleAssets() {
+    this._updatePhaseText('전투 데이터 초기화...');
 
     // Enemy placeholders
     for (let i = 1; i <= 10; i++) {
@@ -216,7 +255,6 @@ export class PreloadScene extends Phaser.Scene {
       ctx.fill();
 
       ctx.fillStyle = '#1E293B';
-      // Angry eyes
       ctx.beginPath();
       ctx.moveTo(18, 22);
       ctx.lineTo(28, 28);
@@ -228,7 +266,6 @@ export class PreloadScene extends Phaser.Scene {
       ctx.lineTo(46, 28);
       ctx.fill();
 
-      // Frown
       ctx.strokeStyle = '#1E293B';
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -247,55 +284,14 @@ export class PreloadScene extends Phaser.Scene {
     effectCtx.fillStyle = '#FBBF24';
     for (let i = 0; i < 8; i++) {
       const angle = (Math.PI * 2 * i) / 8;
-      const x = 32 + Math.cos(angle) * 20;
-      const y = 32 + Math.sin(angle) * 20;
+      const ex = 32 + Math.cos(angle) * 20;
+      const ey = 32 + Math.sin(angle) * 20;
       effectCtx.beginPath();
-      effectCtx.arc(x, y, 6, 0, Math.PI * 2);
+      effectCtx.arc(ex, ey, 6, 0, Math.PI * 2);
       effectCtx.fill();
     }
 
     this.textures.addCanvas('effect_hit', effectCanvas);
-
-    // Magic circle for gacha
-    const circleCanvas = document.createElement('canvas');
-    circleCanvas.width = 256;
-    circleCanvas.height = 256;
-    const circleCtx = circleCanvas.getContext('2d');
-
-    circleCtx.strokeStyle = '#6366F1';
-    circleCtx.lineWidth = 2;
-
-    // Outer circle
-    circleCtx.beginPath();
-    circleCtx.arc(128, 128, 120, 0, Math.PI * 2);
-    circleCtx.stroke();
-
-    // Inner circles
-    circleCtx.beginPath();
-    circleCtx.arc(128, 128, 90, 0, Math.PI * 2);
-    circleCtx.stroke();
-
-    circleCtx.beginPath();
-    circleCtx.arc(128, 128, 60, 0, Math.PI * 2);
-    circleCtx.stroke();
-
-    // Runes/symbols around
-    circleCtx.fillStyle = '#6366F1';
-    for (let i = 0; i < 12; i++) {
-      const angle = (Math.PI * 2 * i) / 12;
-      const x = 128 + Math.cos(angle) * 105;
-      const y = 128 + Math.sin(angle) * 105;
-      circleCtx.beginPath();
-      circleCtx.arc(x, y, 8, 0, Math.PI * 2);
-      circleCtx.fill();
-    }
-
-    // Hexagram
-    circleCtx.strokeStyle = '#EC4899';
-    circleCtx.lineWidth = 2;
-    this.drawHexagram(circleCtx, 128, 128, 70);
-
-    this.textures.addCanvas('magic_circle', circleCanvas);
 
     // Background for stages
     const bgCanvas = document.createElement('canvas');
@@ -309,28 +305,102 @@ export class PreloadScene extends Phaser.Scene {
     bgCtx.fillStyle = bgGradient;
     bgCtx.fillRect(0, 0, 480, 854);
 
-    // Add some decorative elements
     bgCtx.fillStyle = 'rgba(99, 102, 241, 0.1)';
     for (let i = 0; i < 20; i++) {
-      const x = Math.random() * 480;
-      const y = Math.random() * 854;
+      const bx = Math.random() * 480;
+      const by = Math.random() * 854;
       const size = Math.random() * 100 + 50;
       bgCtx.beginPath();
-      bgCtx.arc(x, y, size, 0, Math.PI * 2);
+      bgCtx.arc(bx, by, size, 0, Math.PI * 2);
       bgCtx.fill();
     }
 
     this.textures.addCanvas('battle_bg', bgCanvas);
 
-    // H-2: 91명 전체 캐릭터 향상된 플레이스홀더 생성
-    try {
-      const characters = getAllCharacters();
-      HeroAssetLoader.generatePlaceholders(this, characters);
-    } catch (e) {
-      // characters.json 로드 실패 시 무시 (기존 placeholder 사용)
-      console.warn('HeroAssetLoader: Failed to generate placeholders', e);
-    }
+    this._loadPhase = 3;
   }
+
+  // ============================================
+  // Phase 4: 가차 연출 에셋
+  // ============================================
+  loadPhase4_GachaAssets() {
+    this._updatePhaseText('연출 에셋 준비...');
+
+    // Magic circle for gacha
+    const circleCanvas = document.createElement('canvas');
+    circleCanvas.width = 256;
+    circleCanvas.height = 256;
+    const circleCtx = circleCanvas.getContext('2d');
+
+    circleCtx.strokeStyle = '#6366F1';
+    circleCtx.lineWidth = 2;
+
+    circleCtx.beginPath();
+    circleCtx.arc(128, 128, 120, 0, Math.PI * 2);
+    circleCtx.stroke();
+
+    circleCtx.beginPath();
+    circleCtx.arc(128, 128, 90, 0, Math.PI * 2);
+    circleCtx.stroke();
+
+    circleCtx.beginPath();
+    circleCtx.arc(128, 128, 60, 0, Math.PI * 2);
+    circleCtx.stroke();
+
+    circleCtx.fillStyle = '#6366F1';
+    for (let i = 0; i < 12; i++) {
+      const angle = (Math.PI * 2 * i) / 12;
+      const cx = 128 + Math.cos(angle) * 105;
+      const cy = 128 + Math.sin(angle) * 105;
+      circleCtx.beginPath();
+      circleCtx.arc(cx, cy, 8, 0, Math.PI * 2);
+      circleCtx.fill();
+    }
+
+    circleCtx.strokeStyle = '#EC4899';
+    circleCtx.lineWidth = 2;
+    this.drawHexagram(circleCtx, 128, 128, 70);
+
+    this.textures.addCanvas('magic_circle', circleCanvas);
+
+    this._loadPhase = 4;
+  }
+
+  // ============================================
+  // Phase 5: 렌더러 에셋 (조건부 이미지 로드)
+  // ============================================
+  loadPhase5_RendererAssets() {
+    this._updatePhaseText('추가 에셋 확인...');
+
+    // 에셋 모드가 활성화되어 있을 때만 이미지 파일 로드 시도
+    // 현재는 기본적으로 코드 렌더링 모드이므로 스킵
+    if (characterRenderer.useAssets) {
+      try {
+        const characters = getAllCharacters();
+        characterRenderer.preloadAssets(this, characters);
+      } catch (e) {
+        console.warn('[PreloadScene] Character asset preload skipped:', e);
+      }
+    }
+
+    if (uiRenderer.useAssets) {
+      uiRenderer.preloadAssets(this);
+    }
+
+    this._loadPhase = 5;
+  }
+
+  // ============================================
+  // Phase 6: 최종 검증 (create에서 수행)
+  // ============================================
+  loadPhase6_Finalize() {
+    this._updatePhaseText('완료!');
+    this._loadPhase = 6;
+  }
+
+  // ============================================
+  // 유틸리티: 별/헥사그램 그리기
+  // ============================================
 
   drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
     let rot = Math.PI / 2 * 3;
@@ -359,7 +429,6 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   drawHexagram(ctx, cx, cy, size) {
-    // Two overlapping triangles
     ctx.beginPath();
     for (let i = 0; i < 3; i++) {
       const angle = (Math.PI * 2 * i) / 3 - Math.PI / 2;
@@ -382,6 +451,10 @@ export class PreloadScene extends Phaser.Scene {
     ctx.closePath();
     ctx.stroke();
   }
+
+  // ============================================
+  // 로딩 바 UI
+  // ============================================
 
   createLoadingBar() {
     // H-9.3: 마법진 회전 + 진행바 개선
@@ -465,6 +538,13 @@ export class PreloadScene extends Phaser.Scene {
       color: '#a5b4fc'
     }).setOrigin(0.5);
 
+    // Phase 표시 텍스트
+    this.phaseText = this.add.text(GAME_WIDTH / 2, barY - 48, '', {
+      fontSize: '11px',
+      fontFamily: 'Arial',
+      color: '#64748b'
+    }).setOrigin(0.5);
+
     // 진행바 (둥근 모서리)
     const barWidth = 320;
     const barHeight = 12;
@@ -475,7 +555,7 @@ export class PreloadScene extends Phaser.Scene {
     barBg.fillStyle(0x1e293b, 1);
     barBg.fillRoundedRect(barX, barY, barWidth, barHeight, barHeight / 2);
 
-    // 채움바 (마스크용)
+    // 채움바
     this.progressBar = this.add.graphics();
     this._barX = barX;
     this._barY = barY;
@@ -490,9 +570,51 @@ export class PreloadScene extends Phaser.Scene {
     }).setOrigin(0.5);
   }
 
+  /**
+   * Phase 텍스트 업데이트 (preload 중 호출)
+   */
+  _updatePhaseText(text) {
+    if (this.loadingText) {
+      this.loadingText.setText(text);
+    }
+  }
+
+  /**
+   * 진행바 업데이트
+   */
+  _updateProgressBar(progress) {
+    if (!this.progressBar) return;
+
+    this.progressBar.clear();
+    const fillWidth = Math.max(0, this._barWidth * progress);
+    if (fillWidth > 0) {
+      this.progressBar.fillStyle(0x6366f1, 1);
+      this.progressBar.fillRoundedRect(
+        this._barX, this._barY,
+        fillWidth, this._barHeight,
+        this._barHeight / 2
+      );
+    }
+
+    if (this.percentText) {
+      this.percentText.setText(Math.floor(progress * 100) + '%');
+    }
+
+    if (this.phaseText) {
+      this.phaseText.setText(`Phase ${this._loadPhase}/${this._totalPhases}`);
+    }
+  }
+
+  // ============================================
+  // create: 로딩 완료 트랜지션
+  // ============================================
+
   create() {
     try {
-      // 에셋 생성 시뮬레이션 + 프로그레스
+      // Phase 6: 최종 검증
+      this.loadPhase6_Finalize();
+
+      // 에셋 생성 시뮬레이션 + 프로그레스 애니메이션
       let progress = 0;
 
       const stages = [
@@ -530,19 +652,7 @@ export class PreloadScene extends Phaser.Scene {
             });
           }
 
-          // 둥근 진행바 그리기
-          this.progressBar.clear();
-          const fillWidth = Math.max(0, this._barWidth * progress);
-          if (fillWidth > 0) {
-            this.progressBar.fillStyle(0x6366f1, 1);
-            this.progressBar.fillRoundedRect(
-              this._barX, this._barY,
-              fillWidth, this._barHeight,
-              this._barHeight / 2
-            );
-          }
-
-          this.percentText.setText(Math.floor(progress * 100) + '%');
+          this._updateProgressBar(progress);
         },
         repeat: 40
       });
