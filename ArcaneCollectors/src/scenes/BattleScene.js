@@ -47,6 +47,14 @@ export class BattleScene extends Phaser.Scene {
   create() {
     try {
       console.log('[Battle] Scene created');
+
+      // 파티 데이터 방어
+      if (!this.party || this.party.length === 0) {
+        console.warn('[BattleScene] 파티 데이터 없음, 스테이지 선택으로 이동');
+        this.scene.start('StageSelectScene');
+        return;
+      }
+
       // Reset battle state
       this.battleSpeed = this.registry.get('battleSpeed') || 1;
       this.autoBattle = this.registry.get('autoBattle') !== false;
