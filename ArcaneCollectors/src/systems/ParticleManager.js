@@ -539,6 +539,95 @@ export class ParticleManager {
   // 정리
   // ============================================
 
+  // ============================================
+  // VFX-2.1: Skill Animation Support
+  // ============================================
+
+  /**
+   * Promise-based particle burst for skill animations
+   * @param {Phaser.Scene} scene - Scene context
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {string} particleType - Particle preset name (e.g., 'flame_burst')
+   * @param {string} mood - Mood name for color mapping
+   * @returns {Promise<void>}
+   */
+  async playSkillParticle(scene, x, y, particleType, mood) {
+    return new Promise((resolve) => {
+      // Import MOOD_VFX from skillAnimationConfig
+      import('../config/skillAnimationConfig.js').then(({ MOOD_VFX }) => {
+        const config = MOOD_VFX[mood] || MOOD_VFX.brave;
+
+        // Create particle burst (8 particles radiating outward)
+        const particles = [];
+        const count = 8;
+
+        for (let i = 0; i < count; i++) {
+          const angle = (i / count) * Math.PI * 2;
+          const particle = this.pool.getCircle(x, y, 4, config.color, 0.8);
+          particle.setDepth(100);
+          particles.push(particle);
+
+          // Radial outward motion
+          scene.tweens.add({
+            targets: particle,
+            x: x + Math.cos(angle) * 60,
+            y: y + Math.sin(angle) * 60,
+            alpha: 0,
+            scale: 0.3,
+            duration: 500,
+            ease: 'Power2',
+            onComplete: () => this.pool.release(particle)
+          });
+        }
+
+        // Resolve after particles complete
+        scene.time.delayedCall(500, resolve);
+      });
+    });
+  }
+
+  /**
+   * Create trail effect for moving objects
+   * @param {Phaser.Scene} scene - Scene context
+   * @param {Phaser.GameObjects.GameObject} gameObject - Object to trail
+   * @param {number} color - Trail color
+   * @param {number} duration - Trail fade duration (ms)
+   * @returns {Phaser.GameObjects.Arc} Trail object
+   */
+  createTrail(scene, gameObject, color, duration = 300) {
+    // Create fading copy behind moving object
+    const trail = this.pool.getCircle(gameObject.x, gameObject.y, 6, color, 0.5);
+    trail.setDepth(gameObject.depth - 1);
+
+    scene.tweens.add({
+      targets: trail,
+      alpha: 0,
+      scale: 0.1,
+      duration,
+      ease: 'Quad.easeOut',
+      onComplete: () => this.pool.release(trail)
+    });
+
+    return trail;
+  }
+
+  /**
+   * Apply screen shake effect
+   * @param {Phaser.Scene} scene - Scene context
+   * @param {object} config - Shake config { intensity, duration }
+   */
+  applyScreenShake(scene, config) {
+    if (!scene.cameras?.main) return;
+
+    // Phaser camera shake: intensity is in pixels, duration in ms
+    scene.cameras.main.shake(config.duration, config.intensity / 1000);
+  }
+
+  // ============================================
+  // 정리
+  // ============================================
+
   /**
    * Scene 종료 시 정리
    */
