@@ -66,15 +66,6 @@ export class HeroDetailScene extends Phaser.Scene {
     this.createSkillsPanel();
     this.createActionButtons();
     this.createEquipmentSlots();
-    } catch (error) {
-      console.error('[HeroDetailScene] create() 실패:', error);
-      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
-        fontSize: '20px', fill: '#ff4444', align: 'center'
-      }).setOrigin(0.5);
-      this.time.delayedCall(2000, () => {
-        this.scene.start('MainMenuScene');
-      });
-    }
   }
 
   createBackground() {
