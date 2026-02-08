@@ -25,7 +25,8 @@ const UI_ASSET_PATHS = {
     moods: 'assets/ui/icons/moods/',
     cults: 'assets/ui/icons/cults/',
     classes: 'assets/ui/icons/classes/',
-    tabs: 'assets/ui/icons/tabs/'
+    tabs: 'assets/ui/icons/tabs/',
+    buttons: 'assets/ui/icons/buttons/'
   }
 };
 
@@ -389,6 +390,18 @@ class UIRenderer {
         symbol = STAT_SYMBOLS[key] || '?';
         break;
       }
+      case 'tab': {
+        const tabIcons = { home: '🏠', adventure: '⚔', inventory: '📦', gacha: '🎲', more: '☰' };
+        symbol = tabIcons[key] || '?';
+        color = 0x94A3B8;
+        break;
+      }
+      case 'button': {
+        const btnIcons = { add: '+', remove: '-', lock: '🔒', unlock: '🔓', filter: '🔍', sort: '↕', auto: '🤖', speed: '⚡', pause: '⏸' };
+        symbol = btnIcons[key] || '?';
+        color = 0xE2E8F0;
+        break;
+      }
     }
 
     // 원형 배경
@@ -510,8 +523,10 @@ class UIRenderer {
   /**
    * UI 에셋 프리로드 (PreloadScene에서 호출)
    * @param {Phaser.Scene} scene
+   * @param {Object} options - 로드 옵션
+   * @param {Array<string>} [options.icons] - 로드할 아이콘 카테고리 배열 (예: ['currency', 'stats'])
    */
-  preloadAssets(scene) {
+  preloadAssets(scene, options = {}) {
     if (!this.useAssets) return;
 
     // 버튼 에셋
@@ -538,30 +553,79 @@ class UIRenderer {
       }
     });
 
+    // 아이콘 로딩 필터링
+    const iconCategories = options.icons || ['moods', 'cults', 'classes', 'currency', 'stats', 'tabs', 'buttons'];
+
     // 아이콘 에셋 - 분위기
-    Object.keys(MOODS).forEach(mood => {
-      const mKey = `icon_mood_${mood}`;
-      if (!scene.textures.exists(mKey)) {
-        scene.load.image(mKey, `${UI_ASSET_PATHS.icon.moods}${mood}.png`);
-      }
-    });
+    if (iconCategories.includes('moods')) {
+      Object.keys(MOODS).forEach(mood => {
+        const mKey = `icon_mood_${mood}`;
+        if (!scene.textures.exists(mKey)) {
+          scene.load.image(mKey, `${UI_ASSET_PATHS.icon.moods}${mood}.png`);
+        }
+      });
+    }
 
     // 아이콘 에셋 - 교단
-    Object.keys(CULT_COLORS).forEach(cult => {
-      if (cult === 'DEFAULT') return;
-      const cKey = `icon_cult_${cult}`;
-      if (!scene.textures.exists(cKey)) {
-        scene.load.image(cKey, `${UI_ASSET_PATHS.icon.cults}${cult}.png`);
-      }
-    });
+    if (iconCategories.includes('cults')) {
+      Object.keys(CULT_COLORS).forEach(cult => {
+        if (cult === 'DEFAULT') return;
+        const cKey = `icon_cult_${cult}`;
+        if (!scene.textures.exists(cKey)) {
+          scene.load.image(cKey, `${UI_ASSET_PATHS.icon.cults}${cult}.png`);
+        }
+      });
+    }
 
     // 아이콘 에셋 - 클래스
-    Object.keys(CLASSES).forEach(cls => {
-      const clKey = `icon_class_${cls}`;
-      if (!scene.textures.exists(clKey)) {
-        scene.load.image(clKey, `${UI_ASSET_PATHS.icon.classes}${cls}.png`);
-      }
-    });
+    if (iconCategories.includes('classes')) {
+      Object.keys(CLASSES).forEach(cls => {
+        const clKey = `icon_class_${cls}`;
+        if (!scene.textures.exists(clKey)) {
+          scene.load.image(clKey, `${UI_ASSET_PATHS.icon.classes}${cls}.png`);
+        }
+      });
+    }
+
+    // 아이콘 에셋 - 재화 (currency)
+    if (iconCategories.includes('currency')) {
+      ['gold', 'gem', 'ticket', 'energy'].forEach(curr => {
+        const currKey = `icon_currency_${curr}`;
+        if (!scene.textures.exists(currKey)) {
+          scene.load.image(currKey, `${UI_ASSET_PATHS.icon.currency}${curr}.png`);
+        }
+      });
+    }
+
+    // 아이콘 에셋 - 스탯 (stats)
+    if (iconCategories.includes('stats')) {
+      ['hp', 'atk', 'def', 'spd'].forEach(stat => {
+        const statKey = `icon_stat_${stat}`;
+        if (!scene.textures.exists(statKey)) {
+          scene.load.image(statKey, `${UI_ASSET_PATHS.icon.stats}${stat}.png`);
+        }
+      });
+    }
+
+    // 아이콘 에셋 - 탭 (tabs)
+    if (iconCategories.includes('tabs')) {
+      ['home', 'adventure', 'inventory', 'gacha', 'more'].forEach(tab => {
+        const tabKey = `icon_tab_${tab}`;
+        if (!scene.textures.exists(tabKey)) {
+          scene.load.image(tabKey, `${UI_ASSET_PATHS.icon.tabs}${tab}.png`);
+        }
+      });
+    }
+
+    // 아이콘 에셋 - 버튼 (buttons)
+    if (iconCategories.includes('buttons')) {
+      ['add', 'remove', 'lock', 'unlock', 'filter', 'sort', 'auto', 'speed', 'pause'].forEach(btn => {
+        const btnKey = `icon_button_${btn}`;
+        if (!scene.textures.exists(btnKey)) {
+          scene.load.image(btnKey, `${UI_ASSET_PATHS.icon.buttons}${btn}.png`);
+        }
+      });
+    }
 
     // 로드 실패 무시 (코드 폴백)
     scene.load.on('loaderror', (file) => {
