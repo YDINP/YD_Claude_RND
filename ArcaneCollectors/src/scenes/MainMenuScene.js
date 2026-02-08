@@ -4,6 +4,7 @@ import { BottomNav } from '../components/BottomNav.js';
 import { energySystem } from '../systems/EnergySystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
 import transitionManager from '../utils/TransitionManager.js';
+import { safeGet, safeCall } from '../utils/safeAccess.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -21,10 +22,10 @@ export class MainMenuScene extends Phaser.Scene {
     // Initialize ParticleManager for dynamic effects
     this.particles = new ParticleManager(this);
 
-    // Load current resources from SaveManager
-    const resources = SaveManager.getResources();
-    this.registry.set('gems', resources.gems);
-    this.registry.set('gold', resources.gold);
+    // Load current resources from SaveManager (with null defense)
+    const resources = SaveManager.getResources() || {};
+    this.registry.set('gems', resources?.gems ?? 1500);
+    this.registry.set('gold', resources?.gold ?? 10000);
 
     this.createBackground();
     this.createTopBar();
@@ -36,8 +37,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.createBottomNavigation();
 
-    // Show offline rewards popup if available
-    if (this.showOfflineRewards && this.showOfflineRewards.gold > 0) {
+    // Show offline rewards popup if available (with null defense)
+    if (this.showOfflineRewards && (this.showOfflineRewards?.gold ?? 0) > 0) {
       this.time.delayedCall(500, () => {
         this.showOfflineRewardsPopup(this.showOfflineRewards);
       });
@@ -70,6 +71,18 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   showOfflineRewardsPopup(rewards) {
+    // Null defense for rewards object
+    if (!rewards) {
+      console.warn('[MainMenuScene] showOfflineRewardsPopup: rewards is null/undefined');
+      return;
+    }
+
+    const safeRewards = {
+      formattedDuration: rewards?.formattedDuration ?? '0분',
+      gold: rewards?.gold ?? 0,
+      exp: rewards?.exp ?? 0
+    };
+
     // Overlay
     const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7)
       .setDepth(50)
@@ -89,21 +102,21 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(52);
 
     // Duration
-    const duration = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, `${rewards.formattedDuration} 동안 모험했습니다!`, {
+    const duration = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, `${safeRewards.formattedDuration} 동안 모험했습니다!`, {
       fontSize: '16px',
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(52);
 
     // Gold reward
-    const goldText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10, `💰 골드: +${rewards.gold.toLocaleString()}`, {
+    const goldText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10, `💰 골드: +${safeRewards.gold.toLocaleString()}`, {
       fontSize: '20px',
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(52);
 
     // Exp reward
-    const expText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, `⭐ 경험치: +${rewards.exp.toLocaleString()}`, {
+    const expText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, `⭐ 경험치: +${safeRewards.exp.toLocaleString()}`, {
       fontSize: '20px',
       fontFamily: 'Arial',
       color: `#${  COLORS.success.toString(16).padStart(6, '0')}`
@@ -132,10 +145,10 @@ export class MainMenuScene extends Phaser.Scene {
       this.registry.remove('pendingOfflineRewards');
       this.showOfflineRewards = null;
 
-      // Update registry
-      const newResources = SaveManager.getResources();
-      this.registry.set('gems', newResources.gems);
-      this.registry.set('gold', newResources.gold);
+      // Update registry (with null defense)
+      const newResources = SaveManager.getResources() || {};
+      this.registry.set('gems', newResources?.gems ?? 1500);
+      this.registry.set('gold', newResources?.gold ?? 10000);
 
       // Animate and close
       this.tweens.add({
@@ -268,10 +281,10 @@ export class MainMenuScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0, 0.5).setDepth(11);
 
-    // Energy display
-    const energyStatus = energySystem.getStatus();
+    // Energy display (with null defense)
+    const energyStatus = energySystem.getStatus() || {};
     this.add.text(300, 40, '⚡', { fontSize: '18px' }).setOrigin(0.5).setDepth(11);
-    this.energyText = this.add.text(320, 40, `${energyStatus.current}/${energyStatus.max}`, {
+    this.energyText = this.add.text(320, 40, `${energyStatus?.current ?? 0}/${energyStatus?.max ?? 100}`, {
       fontSize: '16px',
       fontFamily: 'Arial',
       color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
@@ -324,7 +337,7 @@ export class MainMenuScene extends Phaser.Scene {
     const ownedHeroes = this.registry.get('ownedHeroes') || [];
     const partyHeroes = ownedHeroes.slice(0, 4);
 
-    // Main character (first in party or placeholder)
+    // Main character (first in party or placeholder) - with null defense
     let mainChar;
     const mainHero = partyHeroes[0];
 
@@ -332,18 +345,20 @@ export class MainMenuScene extends Phaser.Scene {
       mainChar = this.add.image(GAME_WIDTH / 2, mainCharY - 20, 'hero_placeholder');
       mainChar.setScale(3);
 
-      // Add hero name below
-      this.add.text(GAME_WIDTH / 2, mainCharY + 80, mainHero.name, {
+      // Add hero name below (with null defense)
+      const heroName = mainHero?.name ?? '알 수 없는 영웅';
+      this.add.text(GAME_WIDTH / 2, mainCharY + 80, heroName, {
         fontSize: '18px',
         fontFamily: 'Arial',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
 
-      // Add level badge
+      // Add level badge (with null defense)
+      const heroLevel = mainHero?.level ?? 1;
       const levelBadge = this.add.rectangle(GAME_WIDTH / 2 - 80, mainCharY - 80, 60, 30, COLORS.primary, 0.9);
       levelBadge.setStrokeStyle(2, COLORS.text, 0.3);
-      this.add.text(GAME_WIDTH / 2 - 80, mainCharY - 80, `Lv ${mainHero.level || 1}`, {
+      this.add.text(GAME_WIDTH / 2 - 80, mainCharY - 80, `Lv ${heroLevel}`, {
         fontSize: '16px',
         fontFamily: 'Arial',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
@@ -449,8 +464,9 @@ export class MainMenuScene extends Phaser.Scene {
           }).setOrigin(0.5);
         }
 
-        // Mini level badge
-        const miniLevel = this.add.text(x, subCharY + 35, `Lv${hero.level || 1}`, {
+        // Mini level badge (with null defense)
+        const subHeroLevel = hero?.level ?? 1;
+        const miniLevel = this.add.text(x, subCharY + 35, `Lv${subHeroLevel}`, {
           fontSize: '11px',
           fontFamily: 'Arial',
           color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
@@ -586,17 +602,17 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   update() {
-    // Update currency displays
-    const gems = this.registry.get('gems') || 0;
-    const gold = this.registry.get('gold') || 0;
+    // Update currency displays (with null defense)
+    const gems = this.registry.get('gems') ?? 0;
+    const gold = this.registry.get('gold') ?? 0;
 
     if (this.gemText) this.gemText.setText(gems.toLocaleString());
     if (this.goldText) this.goldText.setText(gold.toLocaleString());
 
-    // 에너지 갱신
+    // 에너지 갱신 (with null defense)
     if (this.energyText) {
-      const es = energySystem.getStatus();
-      this.energyText.setText(`${es.current}/${es.max}`);
+      const es = energySystem.getStatus() || {};
+      this.energyText.setText(`${es?.current ?? 0}/${es?.max ?? 100}`);
     }
   }
 }
