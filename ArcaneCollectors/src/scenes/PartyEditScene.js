@@ -374,7 +374,7 @@ export class PartyEditScene extends Phaser.Scene {
     const heroes = this.heroSlots.filter(s => s.hero).map(s => s.hero);
     let totalPower = 0;
     heroes.forEach(h => {
-      const stats = h.stats || h.baseStats || {};
+      const stats = h.stats || {};
       totalPower += (stats.hp || 0) / 10 + (stats.atk || 0) + (stats.def || 0) + (stats.spd || 0);
     });
     this.powerText.setText(`전투력: ${Math.floor(totalPower).toLocaleString()}`);
@@ -489,7 +489,7 @@ export class PartyEditScene extends Phaser.Scene {
       }).setOrigin(0, 0.5).setDepth(82);
 
       // 전투력
-      const stats = hero.stats || hero.baseStats || {};
+      const stats = hero.stats || {};
       const power = Math.floor((stats.hp || 0) / 10 + (stats.atk || 0) + (stats.def || 0) + (stats.spd || 0));
       this.add.text(GAME_WIDTH - 70, y, power.toString(), {
         fontSize: '14px', fontFamily: 'Arial',

@@ -325,7 +325,7 @@ export class InventoryScene extends Phaser.Scene {
 
   getItemStatSummary(item) {
     if (this.activeTab === 'equipment') {
-      const stats = item.baseStats || {};
+      const stats = item.stats || {};
       const parts = [];
       if (stats.ATK) parts.push(`ATK+${stats.ATK}`);
       if (stats.HP) parts.push(`HP+${stats.HP}`);

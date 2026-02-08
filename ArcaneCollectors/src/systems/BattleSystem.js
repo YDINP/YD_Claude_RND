@@ -334,7 +334,7 @@ export class BattleUnit {
    * @returns {number} 계산된 스탯 값
    */
   calculateStat(stat) {
-    const baseStats = this.data.baseStats || {
+    const baseStats = this.data.stats || {
       hp: 1000,
       atk: 100,
       def: 50,
