@@ -4,6 +4,7 @@ import { PartyManager } from '../systems/PartyManager.js';
 import { SynergySystem } from '../systems/SynergySystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { getCharacter, getAllCharacters, normalizeHeroes } from '../data/index.js';
+import transitionManager from '../utils/TransitionManager.js';
 
 /**
  * PartyEditScene - 파티 편성 전용 씬
@@ -593,10 +594,7 @@ export class PartyEditScene extends Phaser.Scene {
   }
 
   goBack() {
-    this.cameras.main.fadeOut(200);
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start(this.returnTo, this.returnData);
-    });
+    transitionManager.fadeTransition(this, this.returnTo, this.returnData);
   }
 
   showToast(message) {
