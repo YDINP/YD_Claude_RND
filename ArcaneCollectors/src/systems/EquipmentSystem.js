@@ -345,7 +345,7 @@ export class EquipmentSystem {
       slotType,
       rarity,
       name: options.name || this.generateEquipmentName(slotType, rarity),
-      baseStats,
+      stats: baseStats,
       enhanceLevel: 0,
       enhancedStats: {},
       equippedBy: null,

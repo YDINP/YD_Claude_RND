@@ -389,7 +389,7 @@ export class InventoryScene extends Phaser.Scene {
 
   showEquipmentDetail(item, cx, y) {
     // 스탯 표시
-    const stats = item.baseStats || {};
+    const stats = item.stats || {};
     const statEntries = Object.entries(stats);
 
     statEntries.forEach(([key, val], i) => {
