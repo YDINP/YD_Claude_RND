@@ -1,6 +1,7 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY } from '../config/gameConfig.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { getAllCharacters } from '../data/index.js';
+import { SaveManager } from '../systems/SaveManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import uiRenderer from '../renderers/UIRenderer.js';
 
@@ -376,15 +377,20 @@ export class PreloadScene extends Phaser.Scene {
     // 현재는 기본적으로 코드 렌더링 모드이므로 스킵
     if (characterRenderer.useAssets) {
       try {
-        const characters = getAllCharacters();
-        characterRenderer.preloadAssets(this, characters);
+        // RES-ABS-4: 파티 영웅만 초기 로드 (전체 91명 아님)
+        const allCharacters = getAllCharacters();
+        const partyIds = SaveManager.getParty() || [];
+        const partyCharacters = allCharacters.filter(c => partyIds.includes(c.id));
+
+        characterRenderer.preloadAssets(this, partyCharacters, { types: ['thumbnail', 'portrait'] });
       } catch (e) {
         console.warn('[PreloadScene] Character asset preload skipped:', e);
       }
     }
 
     if (uiRenderer.useAssets) {
-      uiRenderer.preloadAssets(this);
+      // RES-ABS-4: 기본 아이콘만 초기 로드 (currency, stats)
+      uiRenderer.preloadAssets(this, { icons: ['currency', 'stats'] });
     }
 
     this._loadPhase = 5;

@@ -180,6 +180,22 @@ export class HeroAssetLoader {
       }
     });
   }
+
+  /**
+   * 텍스처 메모리 해제 (RES-ABS-4: Lazy Loading)
+   * @param {Phaser.Scene} scene
+   * @param {Array<string>} heroIds - 해제할 히어로 ID 배열
+   */
+  static unloadTextures(scene, heroIds) {
+    if (!heroIds || !Array.isArray(heroIds)) return;
+
+    heroIds.forEach(id => {
+      const key = `hero_${id}`;
+      if (scene.textures.exists(key)) {
+        scene.textures.remove(key);
+      }
+    });
+  }
 }
 
 export default HeroAssetLoader;
