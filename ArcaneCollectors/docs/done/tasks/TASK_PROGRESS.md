@@ -110,7 +110,7 @@
 
 ---
 
-### Phase 2 Sprint 1 완료 (DONE) — 27/31 (87%)
+### Phase 2 Sprint 1 완료 (DONE) — 28/31 (90%)
 
 | ID | 태스크 | 워크트리 | 커밋 | 완료일 |
 |----|--------|---------|------|--------|
@@ -130,6 +130,9 @@
 | **UIX-3.4.2** | 터치 영역 최적화 검증 | w3 | `067e463` | 2026-02-08 |
 | **VFX-1.1** | TransitionManager 신규 구현 | w4 | `d8c157a` | 2026-02-08 |
 | **VFX-1.2** | 씬별 전환 매핑 적용 (11개 씬) | w4 | `d8c157a` | 2026-02-08 |
+| **VFX-4.1** | 버튼 터치 피드백 (tint+scale) | w4 | `1e54f53` | 2026-02-08 |
+| **VFX-4.6** | 토스트 슬라이드+fade 애니메이션 | w4 | `1e54f53` | 2026-02-08 |
+| **VFX-4.7** | 모달 scale+fade 애니메이션 | w4 | `1e54f53` | 2026-02-08 |
 | **QAT-FW-1** | Vitest 설치 | w5 | `ba646c4` | 2026-02-08 |
 | **QAT-FW-2** | vitest.config.js 작성 | w5 | `ba646c4` | 2026-02-08 |
 | **QAT-FW-3** | npm scripts 추가 (test, test:watch, coverage) | w5 | `ba646c4` | 2026-02-08 |
@@ -139,23 +142,20 @@
 | **RES-DIR** | 에셋 디렉토리 구조 생성 (20개 폴더) | w6 | `a2c3100` | 2026-02-08 |
 | **RES-ABS-1** | CharacterRenderer 추상화 레이어 | w6 | `a2c3100` | 2026-02-08 |
 | **RES-ABS-2** | UIRenderer 추상화 레이어 | w6 | `a2c3100` | 2026-02-08 |
+| **RES-ABS-3** | PreloadScene Phase별 로딩 구조화 | w6 | `7f0c0fc` | 2026-02-08 |
 
 ### Sprint 1 미완료 (다음 Sprint으로 이월)
 | ID | 태스크 | 사유 |
 |----|--------|------|
 | COMPAT-1.2 | Stats 스키마 통일 | COMPAT-1.1 의존, Sprint 2로 |
-| VFX-4.1 | 버튼 터치 피드백 | 시간 부족, Sprint 2로 |
-| VFX-4.6 | 토스트 애니메이션 | 시간 부족, Sprint 2로 |
-| VFX-4.7 | 모달 애니메이션 | 시간 부족, Sprint 2로 |
-| RES-ABS-3 | PreloadScene 구조화 | RES-ABS-1 의존, Sprint 2로 |
 | RES-ABS-4 | 레이지 로딩 패턴 | RES-ABS-3 의존, Sprint 2로 |
 
 ---
 
 ## 통계
 - **Phase 1**: 71/71 완료 (100%)
-- **Phase 2 Sprint 1**: 25/31 완료 (81%) — 6개 워크트리 병렬 진행 ✅
+- **Phase 2 Sprint 1**: 29/31 완료 (94%) — 6개 워크트리 병렬 진행 ✅
 - **Phase 2 Sprint 2**: 0/?? (대기)
-- **총 테스트**: 184/184 통과 (Vitest, 233ms)
-- **빌드**: 정상 (vite build 3.90s)
-- **통합 커밋**: `3532411` (arcane/integration)
+- **총 테스트**: 184/184 통과 (Vitest, 232ms)
+- **빌드**: 정상 (vite build 3.61s, 99 modules)
+- **통합 커밋**: `83621e7` (arcane/integration)
