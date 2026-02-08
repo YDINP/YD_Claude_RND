@@ -104,7 +104,7 @@ export class LoginScene extends Phaser.Scene {
     }
 
     // 버전 정보
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 30, 'v1.0.0 | Supabase ' + (isSupabaseConfigured ? 'ON' : 'OFF'), {
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 30, `v1.0.0 | Supabase ${  isSupabaseConfigured ? 'ON' : 'OFF'}`, {
       fontSize: '10px',
       fontFamily: 'Arial',
       color: '#475569'
@@ -303,7 +303,7 @@ export class LoginScene extends Phaser.Scene {
       this._destroyForm();
       this._goToPreload();
     } catch (error) {
-      this._showToast('인증 오류: ' + error.message);
+      this._showToast(`인증 오류: ${  error.message}`);
     }
   }
 

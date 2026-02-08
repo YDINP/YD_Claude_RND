@@ -64,7 +64,7 @@ export class GachaSystem {
     const pullCount = gachaInfo.pityCounter;
     const baseRate = this.calculatePityBonus(pullCount);
     return {
-      currentRate: (baseRate * 100).toFixed(2) + '%',
+      currentRate: `${(baseRate * 100).toFixed(2)  }%`,
       rawRate: baseRate,
       pullCount,
       remainingToSoftPity: Math.max(0, this.PITY_CONFIG.softPity - pullCount),
@@ -380,7 +380,7 @@ export class GachaSystem {
       remaining,
       softPityStart: this.SOFT_PITY_START,
       inSoftPity,
-      currentSSRRate: (currentSSRRate * 100).toFixed(2) + '%',
+      currentSSRRate: `${(currentSSRRate * 100).toFixed(2)  }%`,
       totalPulls: gachaInfo.totalPulls
     };
   }
@@ -421,10 +421,10 @@ export class GachaSystem {
    */
   static getRateInfo() {
     return {
-      SSR: { rate: this.RATES.SSR * 100 + '%', description: '전설 등급' },
-      SR: { rate: this.RATES.SR * 100 + '%', description: '영웅 등급' },
-      R: { rate: this.RATES.R * 100 + '%', description: '희귀 등급' },
-      N: { rate: this.RATES.N * 100 + '%', description: '일반 등급' },
+      SSR: { rate: `${this.RATES.SSR * 100  }%`, description: '전설 등급' },
+      SR: { rate: `${this.RATES.SR * 100  }%`, description: '영웅 등급' },
+      R: { rate: `${this.RATES.R * 100  }%`, description: '희귀 등급' },
+      N: { rate: `${this.RATES.N * 100  }%`, description: '일반 등급' },
       pity: {
         hard: `${this.PITY_THRESHOLD}회 SSR 확정`,
         soft: `${this.SOFT_PITY_START}회부터 SSR 확률 증가`
@@ -483,10 +483,10 @@ export class GachaSystem {
       totalPulls: simCount,
       results,
       rates: {
-        SSR: ((results.SSR / simCount) * 100).toFixed(2) + '%',
-        SR: ((results.SR / simCount) * 100).toFixed(2) + '%',
-        R: ((results.R / simCount) * 100).toFixed(2) + '%',
-        N: ((results.N / simCount) * 100).toFixed(2) + '%'
+        SSR: `${((results.SSR / simCount) * 100).toFixed(2)  }%`,
+        SR: `${((results.SR / simCount) * 100).toFixed(2)  }%`,
+        R: `${((results.R / simCount) * 100).toFixed(2)  }%`,
+        N: `${((results.N / simCount) * 100).toFixed(2)  }%`
       }
     };
   }

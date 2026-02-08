@@ -221,7 +221,7 @@ export class TowerScene extends Phaser.Scene {
     const btnH = 60;
 
     // 도전 버튼
-    const canChallenge = this.currentFloorInfo != null;
+    const canChallenge = this.currentFloorInfo !== null;
     const challengeColor = canChallenge ? COLORS.primary : 0x475569;
 
     const challengeBtn = this.add.graphics();

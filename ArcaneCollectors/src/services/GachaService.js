@@ -453,8 +453,8 @@ export const getGachaStats = async (bannerId = null) => {
     total3Star,
     averagePityFor5Star: total5Star > 0 ? Math.round(pitySum5Star / total5Star) : 0,
     totalGemsSpent,
-    rate5Star: totalPulls > 0 ? (total5Star / totalPulls * 100).toFixed(2) + '%' : '0%',
-    rate4Star: totalPulls > 0 ? (total4Star / totalPulls * 100).toFixed(2) + '%' : '0%'
+    rate5Star: totalPulls > 0 ? `${(total5Star / totalPulls * 100).toFixed(2)  }%` : '0%',
+    rate4Star: totalPulls > 0 ? `${(total4Star / totalPulls * 100).toFixed(2)  }%` : '0%'
   };
 };
 

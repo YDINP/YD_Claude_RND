@@ -181,7 +181,7 @@ export class SynergyDisplay {
     const title = this.scene.add.text(0, -5, '시너지', {
       fontSize: '11px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
     this.container.add(title);
@@ -194,7 +194,7 @@ export class SynergyDisplay {
       const synergyText = this.scene.add.text(0, yOffset, `${synergy.name}(${synergy.count})${tierStars}`, {
         fontSize: '9px',
         fontFamily: 'Arial',
-        color: '#' + synergy.color.toString(16).padStart(6, '0')
+        color: `#${  synergy.color.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
       this.container.add(synergyText);
       yOffset += 18;
@@ -211,7 +211,7 @@ export class SynergyDisplay {
       const atkText = this.scene.add.text(0, yOffset, `ATK +${Math.round(this.buffs.atk * 100)}%`, {
         fontSize: '9px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.danger.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.danger.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
       this.container.add(atkText);
@@ -222,7 +222,7 @@ export class SynergyDisplay {
       const defText = this.scene.add.text(0, yOffset, `DEF +${Math.round(this.buffs.def * 100)}%`, {
         fontSize: '9px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.primary.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.primary.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
       this.container.add(defText);
@@ -233,7 +233,7 @@ export class SynergyDisplay {
       const spdText = this.scene.add.text(0, yOffset, `SPD +${Math.round(this.buffs.spd * 100)}%`, {
         fontSize: '9px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.success.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
       this.container.add(spdText);

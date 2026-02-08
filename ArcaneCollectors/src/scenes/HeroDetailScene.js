@@ -1,5 +1,5 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, EQUIPMENT_SLOTS } from '../config/gameConfig.js';
-import { getRarityKey } from '../utils/helpers.js';
+import { getRarityKey } from '../utils/rarityUtils.js';
 import { EvolutionSystem } from '../systems/EvolutionSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
@@ -78,7 +78,7 @@ export class HeroDetailScene extends Phaser.Scene {
     const backText = this.add.text(0, 0, '← 뒤로', {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0')
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     backBtn.add([backBg, backText]);
@@ -96,14 +96,14 @@ export class HeroDetailScene extends Phaser.Scene {
     this.add.text(GAME_WIDTH / 2, 40, this.hero.name, {
       fontSize: '22px',
       fontFamily: 'Georgia, serif',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     this.add.text(GAME_WIDTH / 2, 65, `${heroRarityKey} · Lv.${this.hero.level}`, {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + rarityColor.toString(16).padStart(6, '0')
+      color: `#${  rarityColor.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Mood indicator (분위기)
@@ -143,7 +143,7 @@ export class HeroDetailScene extends Phaser.Scene {
     // Stars
     this.add.text(GAME_WIDTH / 2, displayY + 115, '★'.repeat(this.hero.stars || this.hero.rarity || 1), {
       fontSize: '20px',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0')
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Rarity glow for SSR
@@ -171,7 +171,7 @@ export class HeroDetailScene extends Phaser.Scene {
     this.add.text(40, panelY - 50, '능력치', {
       fontSize: '16px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     });
 
@@ -193,14 +193,14 @@ export class HeroDetailScene extends Phaser.Scene {
       this.add.text(40, y, stat.key, {
         fontSize: '13px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0, 0.5);
 
       // Stat value
       this.add.text(90, y, stat.value.toString(), {
         fontSize: '13px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0, 0.5);
 
@@ -217,7 +217,7 @@ export class HeroDetailScene extends Phaser.Scene {
     this.add.text(GAME_WIDTH - 40, panelY + 45, `전투력: ${totalPower.toLocaleString()}`, {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(1, 0.5);
   }
@@ -233,7 +233,7 @@ export class HeroDetailScene extends Phaser.Scene {
     this.add.text(40, panelY - 40, '스킬', {
       fontSize: '16px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     });
 
@@ -262,23 +262,23 @@ export class HeroDetailScene extends Phaser.Scene {
       this.add.text(x, y + 18, `Lv.${skillLevel}/${maxSkillLevel}`, {
         fontSize: '9px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.text.toString(16).padStart(6, '0')
+        color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       // Skill name
       this.add.text(x + 35, y - 15, skill.name, {
         fontSize: '11px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0, 0.5);
 
       // Skill description
       const desc = skill.description || '스킬 설명';
-      this.add.text(x + 35, y + 2, desc.length > 12 ? desc.substring(0, 12) + '..' : desc, {
+      this.add.text(x + 35, y + 2, desc.length > 12 ? `${desc.substring(0, 12)  }..` : desc, {
         fontSize: '9px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0, 0.5);
 
       // Skill enhance button
@@ -365,7 +365,7 @@ export class HeroDetailScene extends Phaser.Scene {
     this.add.text(40, slotsY - 25, '장비', {
       fontSize: '16px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     });
 
@@ -409,14 +409,14 @@ export class HeroDetailScene extends Phaser.Scene {
           fontSize: '10px',
           fontFamily: 'Arial',
           fontStyle: 'bold',
-          color: '#' + COLORS.accent.toString(16).padStart(6, '0')
+          color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
         }).setOrigin(0.5);
       } else {
         // Empty slot indicator
         this.add.text(x, slotsY + 15, '+', {
           fontSize: '22px',
           fontFamily: 'Arial',
-          color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+          color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
         }).setOrigin(0.5);
       }
 
@@ -424,7 +424,7 @@ export class HeroDetailScene extends Phaser.Scene {
       this.add.text(x, slotsY + 58, slot.name, {
         fontSize: '10px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       slotBg.on('pointerdown', () => {
@@ -439,7 +439,7 @@ export class HeroDetailScene extends Phaser.Scene {
       if (equippedItem) {
         slotBg.on('pointerover', () => {
           const stats = equippedItem.baseStats || {};
-          let statsText = Object.entries(stats).map(([k, v]) => `${k}: +${v}`).join('\n');
+          const statsText = Object.entries(stats).map(([k, v]) => `${k}: +${v}`).join('\n');
           this.showTooltip(x, slotsY - 30, `${equippedItem.name}\n${equippedItem.rarity} +${equippedItem.enhanceLevel || 0}\n${statsText}`);
         });
 
@@ -461,7 +461,7 @@ export class HeroDetailScene extends Phaser.Scene {
       fontSize: '14px',
       fontFamily: 'Arial',
       fontStyle: 'bold',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0')
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     const unequipBtn = this.add.rectangle(0, 0, 120, 35, COLORS.danger, 0.9)
@@ -627,21 +627,21 @@ export class HeroDetailScene extends Phaser.Scene {
       fontSize: '16px',
       fontFamily: 'Arial',
       fontStyle: 'bold',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0')
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     const rarityText = this.add.text(0, -60, `${preview.currentRarity} → ${preview.nextRarity}`, {
       fontSize: '20px',
       fontFamily: 'Arial',
       fontStyle: 'bold',
-      color: '#' + RARITY[preview.nextRarity].color.toString(16).padStart(6, '0')
+      color: `#${  RARITY[preview.nextRarity].color.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     const statsText = this.add.text(0, -20,
       `HP: +${preview.statGain.hp}  ATK: +${preview.statGain.atk}\nDEF: +${preview.statGain.def}  SPD: +${preview.statGain.spd}`, {
       fontSize: '12px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.success.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
       align: 'center'
     }).setOrigin(0.5);
 
@@ -649,7 +649,7 @@ export class HeroDetailScene extends Phaser.Scene {
       `비용: ${cost.gold} 골드 / ${cost.shards} 조각`, {
       fontSize: '11px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     const confirmBtn = this.add.rectangle(-50, 75, 90, 35, COLORS.secondary, 0.9)
@@ -749,7 +749,7 @@ export class HeroDetailScene extends Phaser.Scene {
     const text = this.add.text(0, 0, label, {
       fontSize: '14px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -836,7 +836,7 @@ export class HeroDetailScene extends Phaser.Scene {
       fontSize: '32px',
       fontFamily: 'Georgia, serif',
       fontStyle: 'bold',
-      color: '#' + COLORS.success.toString(16).padStart(6, '0')
+      color: `#${  COLORS.success.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(101);
 
     const tween = this.tweens.add({
@@ -881,7 +881,7 @@ export class HeroDetailScene extends Phaser.Scene {
     const tooltipText = this.add.text(0, 0, text, {
       fontSize: '11px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0'),
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       align: 'center',
       wordWrap: { width: 140 }
     }).setOrigin(0.5);
@@ -951,8 +951,8 @@ export class HeroDetailScene extends Phaser.Scene {
     const msg = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, text, {
       fontSize: '18px',
       fontFamily: 'Arial',
-      color: '#' + color.toString(16).padStart(6, '0'),
-      backgroundColor: '#' + COLORS.backgroundLight.toString(16).padStart(6, '0'),
+      color: `#${  color.toString(16).padStart(6, '0')}`,
+      backgroundColor: `#${  COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
       padding: { x: 20, y: 12 }
     }).setOrigin(0.5).setDepth(100);
 

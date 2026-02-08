@@ -41,7 +41,7 @@ export class SkillCard {
     this.nameText = this.scene.add.text(0, -15, heroName, {
       fontSize: '10px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.text.toString(16).padStart(6, '0')
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // 스킬 게이지 바 배경
@@ -57,7 +57,7 @@ export class SkillCard {
     this.gaugeText = this.scene.add.text(0, 17, `${this.hero.skillGauge}/${this.hero.maxSkillGauge}`, {
       fontSize: '8px',
       fontFamily: 'Arial',
-      color: '#' + COLORS.textDark.toString(16).padStart(6, '0')
+      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // 스킬 아이콘 (준비 완료 시)
@@ -65,7 +65,7 @@ export class SkillCard {
       this.skillIcon = this.scene.add.text(0, -2, 'SKILL', {
         fontSize: '8px',
         fontFamily: 'Arial',
-        color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+        color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
       this.container.add(this.skillIcon);
@@ -113,7 +113,7 @@ export class SkillCard {
         this.skillIcon = this.scene.add.text(0, -2, 'SKILL', {
           fontSize: '8px',
           fontFamily: 'Arial',
-          color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+          color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
           fontStyle: 'bold'
         }).setOrigin(0.5);
         this.container.add(this.skillIcon);

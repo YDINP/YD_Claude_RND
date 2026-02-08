@@ -17,7 +17,7 @@
  */
 
 import { MOODS, CULT_COLORS, RARITY } from '../config/gameConfig.js';
-import { getRarityKey } from '../utils/helpers.js';
+import { getRarityKey } from '../utils/rarityUtils.js';
 
 // 히어로 이미지 사이즈 (등급별)
 const PORTRAIT_SIZES = {

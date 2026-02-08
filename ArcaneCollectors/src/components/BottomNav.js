@@ -134,7 +134,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
       fontSize: '18px',
       fontFamily: '"Noto Sans KR", sans-serif',
       color: '#FFFFFF',
-      backgroundColor: '#' + COLORS.backgroundLight.toString(16).padStart(6, '0'),
+      backgroundColor: `#${  COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
       padding: { x: 24, y: 14 }
     }).setOrigin(0.5).setDepth(2000);
 

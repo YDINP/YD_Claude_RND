@@ -735,7 +735,7 @@ export class SaveManager {
    * @returns {string} 계정 ID
    */
   static getAccountId() {
-    let data = this.load();
+    const data = this.load();
 
     if (!data.accountId) {
       // UUID 생성 (간단한 버전)

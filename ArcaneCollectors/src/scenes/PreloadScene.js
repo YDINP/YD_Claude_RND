@@ -542,7 +542,7 @@ export class PreloadScene extends Phaser.Scene {
             );
           }
 
-          this.percentText.setText(Math.floor(progress * 100) + '%');
+          this.percentText.setText(`${Math.floor(progress * 100)  }%`);
         },
         repeat: 40
       });
