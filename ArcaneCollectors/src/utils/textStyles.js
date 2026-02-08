@@ -1,8 +1,13 @@
 /**
  * textStyles.js - Phaser text style definitions
+ * Design System 기반 통합 타이포그래피
  */
 
-import { COLORS } from '../config/gameConfig.js';
+import { DESIGN } from '../config/designSystem.js';
+
+const { font, colors } = DESIGN;
+const F = font.family.primary;
+const M = font.family.mono;
 
 /**
  * Predefined text styles for consistent UI typography
@@ -13,26 +18,26 @@ export const TextStyles = {
   // ============================================
 
   title: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '32px',
+    fontFamily: F,
+    fontSize: `${font.size.title}px`,
     fontStyle: 'bold',
-    color: '#F8FAFC',
+    color: colors.text.primary,
     stroke: '#000000',
     strokeThickness: 2
   },
 
   subtitle: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '24px',
+    fontFamily: F,
+    fontSize: `${font.size.header}px`,
     fontStyle: 'bold',
-    color: '#F8FAFC'
+    color: colors.text.primary
   },
 
   heading: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '20px',
+    fontFamily: F,
+    fontSize: `${font.size.subheader}px`,
     fontStyle: 'bold',
-    color: '#F8FAFC'
+    color: colors.text.primary
   },
 
   // ============================================
@@ -40,21 +45,21 @@ export const TextStyles = {
   // ============================================
 
   body: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '16px',
-    color: '#F8FAFC'
+    fontFamily: F,
+    fontSize: `${font.size.body}px`,
+    color: colors.text.primary
   },
 
   bodySmall: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '14px',
-    color: '#94A3B8'
+    fontFamily: F,
+    fontSize: `${font.size.small}px`,
+    color: colors.text.secondary
   },
 
   bodyTiny: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '12px',
-    color: '#64748B'
+    fontFamily: F,
+    fontSize: `${font.size.caption}px`,
+    color: colors.text.muted
   },
 
   // ============================================
@@ -62,30 +67,30 @@ export const TextStyles = {
   // ============================================
 
   button: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '18px',
+    fontFamily: F,
+    fontSize: `${font.size.button}px`,
     fontStyle: 'bold',
     color: '#FFFFFF'
   },
 
   buttonSmall: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '14px',
+    fontFamily: F,
+    fontSize: `${font.size.small}px`,
     fontStyle: 'bold',
     color: '#FFFFFF'
   },
 
   label: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '12px',
+    fontFamily: F,
+    fontSize: `${font.size.caption}px`,
     fontStyle: 'bold',
-    color: '#94A3B8'
+    color: colors.text.secondary
   },
 
   tooltip: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '14px',
-    color: '#F8FAFC',
+    fontFamily: F,
+    fontSize: `${font.size.small}px`,
+    color: colors.text.primary,
     backgroundColor: '#1E293B',
     padding: { x: 8, y: 4 }
   },
@@ -95,38 +100,38 @@ export const TextStyles = {
   // ============================================
 
   number: {
-    fontFamily: 'Roboto Mono, monospace',
-    fontSize: '16px',
+    fontFamily: M,
+    fontSize: `${font.size.body}px`,
     fontStyle: 'bold',
-    color: '#F8FAFC'
+    color: colors.text.primary
   },
 
   numberLarge: {
-    fontFamily: 'Roboto Mono, monospace',
-    fontSize: '24px',
+    fontFamily: M,
+    fontSize: `${font.size.header}px`,
     fontStyle: 'bold',
-    color: '#F8FAFC'
+    color: colors.text.primary
   },
 
   gold: {
-    fontFamily: 'Roboto Mono, monospace',
-    fontSize: '16px',
+    fontFamily: M,
+    fontSize: `${font.size.body}px`,
     fontStyle: 'bold',
-    color: '#F59E0B'
+    color: colors.currency.gold
   },
 
   gem: {
-    fontFamily: 'Roboto Mono, monospace',
-    fontSize: '16px',
+    fontFamily: M,
+    fontSize: `${font.size.body}px`,
     fontStyle: 'bold',
-    color: '#EC4899'
+    color: colors.currency.gem
   },
 
   stamina: {
-    fontFamily: 'Roboto Mono, monospace',
-    fontSize: '16px',
+    fontFamily: M,
+    fontSize: `${font.size.body}px`,
     fontStyle: 'bold',
-    color: '#22C55E'
+    color: colors.currency.stamina
   },
 
   // ============================================
@@ -134,36 +139,36 @@ export const TextStyles = {
   // ============================================
 
   rarity: {
-    N: { color: '#9CA3AF' },
-    R: { color: '#3B82F6' },
-    SR: { color: '#A855F7' },
-    SSR: { color: '#F59E0B' }
+    N: { color: colors.rarityNamed.N.css },
+    R: { color: colors.rarityNamed.R.css },
+    SR: { color: colors.rarityNamed.SR.css },
+    SSR: { color: colors.rarityNamed.SSR.css }
   },
 
   rarityName: {
     N: {
-      fontFamily: 'Noto Sans KR',
-      fontSize: '14px',
+      fontFamily: F,
+      fontSize: `${font.size.small}px`,
       fontStyle: 'bold',
-      color: '#9CA3AF'
+      color: colors.rarityNamed.N.css
     },
     R: {
-      fontFamily: 'Noto Sans KR',
-      fontSize: '14px',
+      fontFamily: F,
+      fontSize: `${font.size.small}px`,
       fontStyle: 'bold',
-      color: '#3B82F6'
+      color: colors.rarityNamed.R.css
     },
     SR: {
-      fontFamily: 'Noto Sans KR',
-      fontSize: '14px',
+      fontFamily: F,
+      fontSize: `${font.size.small}px`,
       fontStyle: 'bold',
-      color: '#A855F7'
+      color: colors.rarityNamed.SR.css
     },
     SSR: {
-      fontFamily: 'Noto Sans KR',
-      fontSize: '14px',
+      fontFamily: F,
+      fontSize: `${font.size.small}px`,
       fontStyle: 'bold',
-      color: '#F59E0B'
+      color: colors.rarityNamed.SSR.css
     }
   },
 
@@ -172,55 +177,55 @@ export const TextStyles = {
   // ============================================
 
   damage: {
-    fontFamily: 'Roboto Mono, monospace',
-    fontSize: '24px',
+    fontFamily: M,
+    fontSize: `${font.size.header}px`,
     fontStyle: 'bold',
-    color: '#EF4444',
+    color: colors.battle.damage,
     stroke: '#000000',
     strokeThickness: 3
   },
 
   heal: {
-    fontFamily: 'Roboto Mono, monospace',
-    fontSize: '24px',
+    fontFamily: M,
+    fontSize: `${font.size.header}px`,
     fontStyle: 'bold',
-    color: '#22C55E',
+    color: colors.battle.heal,
     stroke: '#000000',
     strokeThickness: 3
   },
 
   critical: {
-    fontFamily: 'Roboto Mono, monospace',
-    fontSize: '32px',
+    fontFamily: M,
+    fontSize: `${font.size.title}px`,
     fontStyle: 'bold',
-    color: '#FBBF24',
+    color: colors.battle.critical,
     stroke: '#000000',
     strokeThickness: 4
   },
 
   miss: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '18px',
+    fontFamily: F,
+    fontSize: `${font.size.button}px`,
     fontStyle: 'italic',
-    color: '#94A3B8',
+    color: colors.battle.miss,
     stroke: '#000000',
     strokeThickness: 2
   },
 
   buff: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '16px',
+    fontFamily: F,
+    fontSize: `${font.size.body}px`,
     fontStyle: 'bold',
-    color: '#3B82F6',
+    color: colors.battle.buff,
     stroke: '#000000',
     strokeThickness: 2
   },
 
   debuff: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '16px',
+    fontFamily: F,
+    fontSize: `${font.size.body}px`,
     fontStyle: 'bold',
-    color: '#F97316',
+    color: colors.battle.debuff,
     stroke: '#000000',
     strokeThickness: 2
   },
@@ -230,31 +235,31 @@ export const TextStyles = {
   // ============================================
 
   heroName: {
-    fontFamily: 'Noto Sans KR',
-    fontSize: '16px',
+    fontFamily: F,
+    fontSize: `${font.size.body}px`,
     fontStyle: 'bold',
-    color: '#F8FAFC'
+    color: colors.text.primary
   },
 
   heroLevel: {
-    fontFamily: 'Roboto Mono, monospace',
-    fontSize: '12px',
+    fontFamily: M,
+    fontSize: `${font.size.caption}px`,
     fontStyle: 'bold',
-    color: '#F8FAFC',
+    color: colors.text.primary,
     backgroundColor: '#1E293B'
   },
 
   heroStat: {
-    fontFamily: 'Roboto Mono, monospace',
-    fontSize: '14px',
-    color: '#94A3B8'
+    fontFamily: M,
+    fontSize: `${font.size.small}px`,
+    color: colors.text.secondary
   },
 
   heroStatValue: {
-    fontFamily: 'Roboto Mono, monospace',
-    fontSize: '14px',
+    fontFamily: M,
+    fontSize: `${font.size.small}px`,
     fontStyle: 'bold',
-    color: '#F8FAFC'
+    color: colors.text.primary
   },
 
   // ============================================
@@ -262,15 +267,15 @@ export const TextStyles = {
   // ============================================
 
   mood: {
-    brave: { color: '#E74C3C' },     // 열혈 - 빨강
-    fierce: { color: '#FF5722' },    // 격렬 - 주홍
-    wild: { color: '#27AE60' },      // 광폭 - 초록
-    calm: { color: '#3498DB' },      // 고요 - 파랑
-    stoic: { color: '#607D8B' },     // 의연 - 청회색
-    devoted: { color: '#E91E63' },   // 헌신 - 핑크
-    cunning: { color: '#9B59B6' },   // 냉철 - 보라
-    noble: { color: '#FFD700' },     // 고결 - 금색
-    mystic: { color: '#F39C12' }     // 신비 - 주황금
+    brave:   { color: colors.moodCSS.brave },
+    fierce:  { color: colors.moodCSS.fierce },
+    wild:    { color: colors.moodCSS.wild },
+    calm:    { color: colors.moodCSS.calm },
+    stoic:   { color: colors.moodCSS.stoic },
+    devoted: { color: colors.moodCSS.devoted },
+    cunning: { color: colors.moodCSS.cunning },
+    noble:   { color: colors.moodCSS.noble },
+    mystic:  { color: colors.moodCSS.mystic }
   }
 };
 
@@ -298,13 +303,13 @@ export function getRarityStyle(rarity, baseStyle = 'body') {
 
 /**
  * Get text style for mood
- * @param {string} mood - Mood name (brave, cunning, calm, wild, mystic)
+ * @param {string} mood - Mood name (brave, cunning, calm, wild, mystic, etc.)
  * @param {string} baseStyle - Base style name to use
  * @returns {object} Text style with mood color
  */
 export function getMoodStyle(mood, baseStyle = 'body') {
   const base = TextStyles[baseStyle] || TextStyles.body;
-  const moodColor = TextStyles.mood[mood] || { color: '#F8FAFC' };
+  const moodColor = TextStyles.mood[mood] || { color: colors.text.primary };
   return mergeStyles(base, moodColor);
 }
 

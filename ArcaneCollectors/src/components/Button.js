@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { COLORS } from '../config/gameConfig.js';
+import { DESIGN } from '../config/designSystem.js';
 
 export class Button extends Phaser.GameObjects.Container {
   /**
@@ -117,14 +118,19 @@ export class Button extends Phaser.GameObjects.Container {
   }
 
   setupInteraction() {
+    // 최소 터치 영역 44x44px 보장
+    const minTouch = DESIGN.touch.minSize;
+    const hitW = Math.max(this.buttonWidth, minTouch);
+    const hitH = Math.max(this.buttonHeight, minTouch);
+
     const hitArea = new Phaser.Geom.Rectangle(
-      -this.buttonWidth / 2,
-      -this.buttonHeight / 2,
-      this.buttonWidth,
-      this.buttonHeight
+      -hitW / 2,
+      -hitH / 2,
+      hitW,
+      hitH
     );
 
-    this.setSize(this.buttonWidth, this.buttonHeight);
+    this.setSize(hitW, hitH);
     this.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
 
     this.on('pointerover', this.onPointerOver, this);

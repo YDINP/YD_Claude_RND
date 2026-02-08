@@ -3,6 +3,7 @@
  */
 
 import { COLORS } from '../config/gameConfig.js';
+import { DESIGN, getMoodColor, getHPColor } from '../config/designSystem.js';
 
 // ============================================
 // Basic Shapes
@@ -187,20 +188,8 @@ export function drawHexagon(graphics, x, y, radius, fillColor, strokeColor = nul
  * @returns {Phaser.GameObjects.Graphics} The graphics object
  */
 export function drawMoodIcon(scene, x, y, mood, size = 24) {
-  const colors = {
-    brave: 0xE74C3C,    // 열혈 - 빨강
-    fierce: 0xFF5722,   // 격렬 - 주홍
-    wild: 0x27AE60,     // 광폭 - 초록
-    calm: 0x3498DB,     // 고요 - 파랑
-    stoic: 0x607D8B,    // 의연 - 청회색
-    devoted: 0xE91E63,  // 헌신 - 핑크
-    cunning: 0x9B59B6,  // 냉철 - 보라
-    noble: 0xFFD700,    // 고결 - 금색
-    mystic: 0xF39C12    // 신비 - 주황금
-  };
-
   const graphics = scene.add.graphics();
-  const color = colors[mood] || 0xffffff;
+  const color = getMoodColor(mood);
 
   // Simple circle with mood color
   graphics.fillStyle(color);
