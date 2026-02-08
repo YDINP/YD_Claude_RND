@@ -434,8 +434,8 @@ describe('getMaxLevel', () => {
     expect(getMaxLevel(5)).toBe(60);  // 5 → SSR
   });
 
-  it('알 수 없는 등급 → 기본값 40', () => {
-    expect(getMaxLevel('UNKNOWN')).toBe(40);
+  it('알 수 없는 등급 → N등급 기본값 30 (getRarityKey 폴백)', () => {
+    expect(getMaxLevel('UNKNOWN')).toBe(30);
   });
 });
 
