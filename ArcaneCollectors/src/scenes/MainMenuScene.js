@@ -5,6 +5,7 @@ import { energySystem } from '../systems/EnergySystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
 import transitionManager from '../utils/TransitionManager.js';
 import { safeGet, safeCall } from '../utils/safeAccess.js';
+import { Z_INDEX } from '../config/layoutConfig.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -83,48 +84,48 @@ export class MainMenuScene extends Phaser.Scene {
       exp: rewards?.exp ?? 0
     };
 
-    // Overlay
+    // Overlay (Z_INDEX.MODAL)
     const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7)
-      .setDepth(50)
+      .setDepth(Z_INDEX.MODAL)
       .setInteractive();
 
-    // Popup panel
+    // Popup panel (Z_INDEX.MODAL + 1)
     const panel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 320, 280, COLORS.backgroundLight, 1)
-      .setDepth(51)
+      .setDepth(Z_INDEX.MODAL + 1)
       .setStrokeStyle(2, COLORS.primary);
 
-    // Title
+    // Title (Z_INDEX.MODAL + 2)
     const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, '🎁 오프라인 보상', {
       fontSize: '24px',
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(52);
+    }).setOrigin(0.5).setDepth(Z_INDEX.MODAL + 2);
 
-    // Duration
+    // Duration (Z_INDEX.MODAL + 2)
     const duration = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, `${safeRewards.formattedDuration} 동안 모험했습니다!`, {
       fontSize: '16px',
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setDepth(52);
+    }).setOrigin(0.5).setDepth(Z_INDEX.MODAL + 2);
 
-    // Gold reward
+    // Gold reward (Z_INDEX.MODAL + 2)
     const goldText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10, `💰 골드: +${safeRewards.gold.toLocaleString()}`, {
       fontSize: '20px',
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setDepth(52);
+    }).setOrigin(0.5).setDepth(Z_INDEX.MODAL + 2);
 
-    // Exp reward
+    // Exp reward (Z_INDEX.MODAL + 2)
     const expText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, `⭐ 경험치: +${safeRewards.exp.toLocaleString()}`, {
       fontSize: '20px',
       fontFamily: 'Arial',
       color: `#${  COLORS.success.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setDepth(52);
+    }).setOrigin(0.5).setDepth(Z_INDEX.MODAL + 2);
 
-    // Claim button
+    // Claim button (Z_INDEX.MODAL + 2)
     const claimBtn = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 90, 200, 50, COLORS.primary)
-      .setDepth(52)
+      .setDepth(Z_INDEX.MODAL + 2)
       .setInteractive({ useHandCursor: true });
 
     const claimText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 90, '받기', {
@@ -132,7 +133,7 @@ export class MainMenuScene extends Phaser.Scene {
       fontFamily: 'Arial',
       color: '#FFFFFF',
       fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(52);
+    }).setOrigin(0.5).setDepth(Z_INDEX.MODAL + 2);
 
     claimBtn.on('pointerover', () => claimBtn.setFillStyle(COLORS.secondary));
     claimBtn.on('pointerout', () => claimBtn.setFillStyle(COLORS.primary));
@@ -245,16 +246,16 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   createTopBar() {
-    // Top bar background
+    // Top bar background (Z_INDEX.UI)
     const topBar = this.add.rectangle(GAME_WIDTH / 2, 40, GAME_WIDTH, 80, COLORS.backgroundLight, 0.9);
-    topBar.setDepth(10);
+    topBar.setDepth(Z_INDEX.UI);
 
-    // Gems display - use texture if exists, else create placeholder
+    // Gems display - use texture if exists, else create placeholder (Z_INDEX.UI + 1)
     let gemIcon;
     if (this.textures.exists('gem')) {
-      gemIcon = this.add.image(30, 40, 'gem').setScale(1).setDepth(11);
+      gemIcon = this.add.image(30, 40, 'gem').setScale(1).setDepth(Z_INDEX.UI + 1);
     } else {
-      gemIcon = this.add.text(30, 40, '💎', { fontSize: '20px' }).setOrigin(0.5).setDepth(11);
+      gemIcon = this.add.text(30, 40, '💎', { fontSize: '20px' }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
     }
 
     const gems = this.registry.get('gems') || 1500;
@@ -263,14 +264,14 @@ export class MainMenuScene extends Phaser.Scene {
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(0, 0.5).setDepth(11);
+    }).setOrigin(0, 0.5).setDepth(Z_INDEX.UI + 1);
 
-    // Gold display
+    // Gold display (Z_INDEX.UI + 1)
     let goldIcon;
     if (this.textures.exists('gold')) {
-      goldIcon = this.add.image(150, 40, 'gold').setScale(1).setDepth(11);
+      goldIcon = this.add.image(150, 40, 'gold').setScale(1).setDepth(Z_INDEX.UI + 1);
     } else {
-      goldIcon = this.add.text(150, 40, '🪙', { fontSize: '20px' }).setOrigin(0.5).setDepth(11);
+      goldIcon = this.add.text(150, 40, '🪙', { fontSize: '20px' }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
     }
 
     const gold = this.registry.get('gold') || 10000;
@@ -279,26 +280,26 @@ export class MainMenuScene extends Phaser.Scene {
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(0, 0.5).setDepth(11);
+    }).setOrigin(0, 0.5).setDepth(Z_INDEX.UI + 1);
 
-    // Energy display (with null defense)
+    // Energy display (with null defense) (Z_INDEX.UI + 1)
     const energyStatus = energySystem.getStatus() || {};
-    this.add.text(300, 40, '⚡', { fontSize: '18px' }).setOrigin(0.5).setDepth(11);
+    this.add.text(300, 40, '⚡', { fontSize: '18px' }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
     this.energyText = this.add.text(320, 40, `${energyStatus?.current ?? 0}/${energyStatus?.max ?? 100}`, {
       fontSize: '16px',
       fontFamily: 'Arial',
       color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(0, 0.5).setDepth(11);
+    }).setOrigin(0, 0.5).setDepth(Z_INDEX.UI + 1);
 
-    // Settings button
+    // Settings button (Z_INDEX.UI + 1)
     const settingsBtn = this.add.rectangle(GAME_WIDTH - 40, 40, 40, 40, COLORS.backgroundLight, 0.8)
-      .setDepth(11)
+      .setDepth(Z_INDEX.UI + 1)
       .setInteractive({ useHandCursor: true });
 
     const settingsIcon = this.add.text(GAME_WIDTH - 40, 40, '⚙️', {
       fontSize: '24px'
-    }).setOrigin(0.5).setDepth(11);
+    }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
 
     settingsBtn.on('pointerover', () => settingsBtn.setFillStyle(COLORS.primary, 0.5));
     settingsBtn.on('pointerout', () => settingsBtn.setFillStyle(COLORS.backgroundLight, 0.8));
@@ -419,7 +420,7 @@ export class MainMenuScene extends Phaser.Scene {
         });
       }
 
-      // Show reaction text
+      // Show reaction text (Z_INDEX.UI + 10 for temporary floating text)
       const reactions = ['안녕!', '반가워!', '모험을 떠나자!', '오늘도 힘내!', '준비됐어!'];
       const reaction = Phaser.Math.RND.pick(reactions);
       const reactionText = this.add.text(GAME_WIDTH / 2, mainCharY - 160, reaction, {
@@ -428,7 +429,7 @@ export class MainMenuScene extends Phaser.Scene {
         color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
         backgroundColor: `#${  COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
         padding: { x: 15, y: 8 }
-      }).setOrigin(0.5).setDepth(20);
+      }).setOrigin(0.5).setDepth(Z_INDEX.UI + 10);
 
       this.tweens.add({
         targets: reactionText,
@@ -589,7 +590,7 @@ export class MainMenuScene extends Phaser.Scene {
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       backgroundColor: `#${  COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
       padding: { x: 20, y: 12 }
-    }).setOrigin(0.5).setDepth(100);
+    }).setOrigin(0.5).setDepth(Z_INDEX.TOOLTIP);
 
     this.tweens.add({
       targets: toast,
