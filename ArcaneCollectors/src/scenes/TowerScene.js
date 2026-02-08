@@ -7,6 +7,7 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS } from '../config/gameConfig.js'
 import { TowerSystem } from '../systems/TowerSystem.js';
 import energySystem from '../systems/EnergySystem.js';
 import { BottomNav } from '../components/BottomNav.js';
+import transitionManager from '../utils/TransitionManager.js';
 
 export class TowerScene extends Phaser.Scene {
   constructor() {
@@ -72,10 +73,7 @@ export class TowerScene extends Phaser.Scene {
     this.add.text(20, 30, '< 뒤로', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: '18px', color: '#94A3B8'
     }).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-      this.cameras.main.fadeOut(200, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('StageSelectScene');
-      });
+      transitionManager.slideTransition(this, 'StageSelectScene', {}, 'right');
     });
 
     this.add.text(GAME_WIDTH / 2, 30, '무한의 탑', {
@@ -309,15 +307,12 @@ export class TowerScene extends Phaser.Scene {
 
     energySystem.consumeEnergy(energyCost);
 
-    this.cameras.main.fadeOut(200, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('BattleScene', {
-        mode: 'tower',
-        towerFloor: this.progress.currentFloor,
-        enemies: this.currentFloorInfo.enemies,
-        isBoss: this.currentFloorInfo.isBoss,
-        returnScene: 'TowerScene'
-      });
+    transitionManager.battleEntryTransition(this, {
+      mode: 'tower',
+      towerFloor: this.progress.currentFloor,
+      enemies: this.currentFloorInfo.enemies,
+      isBoss: this.currentFloorInfo.isBoss,
+      returnScene: 'TowerScene'
     });
   }
 

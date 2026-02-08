@@ -7,6 +7,7 @@ import { sweepSystem } from '../systems/SweepSystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { getAllCharacters, getChapterStages } from '../data/index.js';
 import { BottomNav } from '../components/BottomNav.js';
+import transitionManager from '../utils/TransitionManager.js';
 
 export class StageSelectScene extends Phaser.Scene {
   constructor() {
@@ -84,10 +85,7 @@ export class StageSelectScene extends Phaser.Scene {
     backBtn.add([backBg, backText]);
 
     backBg.on('pointerdown', () => {
-      this.cameras.main.fadeOut(200);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('MainMenuScene');
-      });
+      transitionManager.slideTransition(this, 'MainMenuScene', {}, 'right');
     });
 
     // Title
@@ -628,13 +626,10 @@ export class StageSelectScene extends Phaser.Scene {
 
     GameLogger.log('SCENE', `스테이지 선택: ${this.selectedStage?.name || this.selectedStage?.id}`, { chapter: this.currentChapter, partySize: partyHeroes.length, energy: consumeResult.currentEnergy });
 
-    // Transition to battle
-    this.cameras.main.fadeOut(300);
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('BattleScene', {
-        stage: this.selectedStage,
-        party: partyHeroes
-      });
+    // Transition to battle with dramatic entry
+    transitionManager.battleEntryTransition(this, {
+      stage: this.selectedStage,
+      party: partyHeroes
     });
   }
 

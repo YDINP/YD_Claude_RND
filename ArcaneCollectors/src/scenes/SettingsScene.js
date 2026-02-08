@@ -7,6 +7,7 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { CouponSystem } from '../systems/CouponSystem.js';
 import { BottomNav } from '../components/BottomNav.js';
+import transitionManager from '../utils/TransitionManager.js';
 
 export class SettingsScene extends Phaser.Scene {
   constructor() {
@@ -107,10 +108,7 @@ export class SettingsScene extends Phaser.Scene {
         if (menu.action === 'coupon') {
           this.showCouponModal();
         } else if (menu.scene) {
-          this.cameras.main.fadeOut(200, 0, 0, 0);
-          this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start(menu.scene);
-          });
+          transitionManager.fadeTransition(this, menu.scene);
         }
       });
     });

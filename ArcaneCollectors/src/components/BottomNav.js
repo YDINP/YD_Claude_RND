@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import transitionManager from '../utils/TransitionManager.js';
 
 // 5-tab bottom navigation configuration
 const TABS = [
@@ -120,10 +121,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
     const validScenes = ['MainMenuScene', 'StageSelectScene', 'GachaScene', 'HeroListScene', 'InventoryScene', 'PartyEditScene', 'TowerScene', 'QuestScene', 'SettingsScene'];
 
     if (validScenes.includes(sceneName)) {
-      this.scene.cameras.main.fadeOut(200, 0, 0, 0);
-      this.scene.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.scene.start(sceneName);
-      });
+      transitionManager.fadeTransition(this.scene, sceneName);
     } else {
       this.showToast('\uC900\uBE44 \uC911\uC785\uB2C8\uB2E4!');
     }

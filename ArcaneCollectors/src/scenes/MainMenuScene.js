@@ -3,6 +3,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { BottomNav } from '../components/BottomNav.js';
 import { energySystem } from '../systems/EnergySystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
+import transitionManager from '../utils/TransitionManager.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -539,10 +540,23 @@ export class MainMenuScene extends Phaser.Scene {
         this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 100 });
       });
       bg.on('pointerdown', () => {
-        this.cameras.main.fadeOut(200, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-          this.scene.start(btn.scene);
-        });
+        // PRD VFX-1.2: Scene-specific transition mapping
+        switch (btn.scene) {
+          case 'StageSelectScene':
+            transitionManager.slideTransition(this, btn.scene, {}, 'left');
+            break;
+          case 'HeroListScene':
+          case 'InventoryScene':
+          case 'QuestScene':
+            transitionManager.slideTransition(this, btn.scene, {}, 'right');
+            break;
+          case 'SettingsScene':
+            transitionManager.slideTransition(this, btn.scene, {}, 'up');
+            break;
+          default:
+            transitionManager.fadeTransition(this, btn.scene);
+            break;
+        }
       });
     });
   }

@@ -1,6 +1,7 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO } from '../config/gameConfig.js';
 import { BottomNav } from '../components/BottomNav.js';
 import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
+import transitionManager from '../utils/TransitionManager.js';
 export class HeroListScene extends Phaser.Scene {
   constructor() {
     super({ key: 'HeroListScene' });
@@ -58,10 +59,7 @@ export class HeroListScene extends Phaser.Scene {
     backBg.on('pointerdown', () => {
       if (this.transitioning) return;
       this.transitioning = true;
-      this.cameras.main.fadeOut(200);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('MainMenuScene');
-      });
+      transitionManager.slideTransition(this, 'MainMenuScene', {}, 'left');
     });
 
     // Title
@@ -391,13 +389,11 @@ export class HeroListScene extends Phaser.Scene {
       cardBg.setFillStyle(COLORS.backgroundLight, 1);
     });
 
-    cardBg.on('pointerdown', () => {
+    cardBg.on('pointerdown', (pointer) => {
       if (this.transitioning) return;
       this.transitioning = true;
-      this.cameras.main.fadeOut(200);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('HeroDetailScene', { heroId: hero.id });
-      });
+      // PRD VFX-1.2: HeroList → HeroDetail = zoomIn (card position)
+      transitionManager.zoomTransition(this, 'HeroDetailScene', { heroId: hero.id }, pointer.x, pointer.y, 'in', 400);
     });
   }
 
