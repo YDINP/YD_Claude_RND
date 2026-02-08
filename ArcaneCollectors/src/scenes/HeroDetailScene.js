@@ -4,6 +4,7 @@ import { EvolutionSystem } from '../systems/EvolutionSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
+import transitionManager from '../utils/TransitionManager.js';
 
 export class HeroDetailScene extends Phaser.Scene {
   constructor() {
@@ -84,10 +85,8 @@ export class HeroDetailScene extends Phaser.Scene {
     backBtn.add([backBg, backText]);
 
     backBg.on('pointerdown', () => {
-      this.cameras.main.fadeOut(200);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('HeroListScene');
-      });
+      // PRD VFX-1.2: HeroDetail → HeroList = zoomOut
+      transitionManager.zoomTransition(this, 'HeroListScene', {}, GAME_WIDTH / 2, GAME_HEIGHT / 2, 'out', 300);
     });
 
     // Hero name and rarity

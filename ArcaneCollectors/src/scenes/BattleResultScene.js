@@ -1,6 +1,7 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { sweepSystem } from '../systems/SweepSystem.js';
+import transitionManager from '../utils/TransitionManager.js';
 
 /**
  * BattleResultScene - 전투 결과 화면
@@ -526,22 +527,23 @@ export class BattleResultScene extends Phaser.Scene {
       .forEach(c => c.destroy());
   }
 
-  // === 네비게이션 (D-1.5: 중복 전환 방지) ===
+  // === 네비게이션 (D-1.5: 중복 전환 방지 + TransitionManager) ===
   _navigate(sceneName, data = {}) {
     if (this.transitioning) return;
     this.transitioning = true;
-    this.cameras.main.fadeOut(200);
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start(sceneName, data);
-    });
+    transitionManager.fadeTransition(this, sceneName, data);
   }
 
   goToNextStage() {
-    this._navigate('StageSelectScene');
+    if (this.transitioning) return;
+    this.transitioning = true;
+    transitionManager.slideTransition(this, 'StageSelectScene', {}, 'left');
   }
 
   retryBattle() {
-    this._navigate('BattleScene', { stage: this.stage, party: this.party });
+    if (this.transitioning) return;
+    this.transitioning = true;
+    transitionManager.battleEntryTransition(this, { stage: this.stage, party: this.party });
   }
 
   goToPartyEdit() {

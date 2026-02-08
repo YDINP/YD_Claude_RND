@@ -7,6 +7,7 @@ import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
 import { getAllCharacters, getCharacter } from '../data/index.js';
 import { MOOD_COLORS } from '../config/layoutConfig.js';
+import transitionManager from '../utils/TransitionManager.js';
 
 /**
  * BattleScene - 전투 씬
@@ -1957,22 +1958,24 @@ export class BattleScene extends Phaser.Scene {
       });
     }
 
-    // BattleResultScene으로 전환
+    // BattleResultScene으로 전환 (PRD VFX-1.2: 승리=flash / 패배=fadeOut)
+    const resultData = {
+      victory,
+      stars: newStars,
+      rewards,
+      levelUpResults,
+      stage: this.stage,
+      party: this.party,
+      turnCount: this.turn,
+      aliveCount,
+      totalAllies
+    };
     this.time.delayedCall(800 / this.battleSpeed, () => {
-      this.cameras.main.fadeOut(300);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('BattleResultScene', {
-          victory,
-          stars: newStars,
-          rewards,
-          levelUpResults,
-          stage: this.stage,
-          party: this.party,
-          turnCount: this.turn,
-          aliveCount,
-          totalAllies
-        });
-      });
+      if (victory) {
+        transitionManager.victoryTransition(this, resultData);
+      } else {
+        transitionManager.defeatTransition(this, resultData);
+      }
     });
   }
 
