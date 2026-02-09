@@ -163,9 +163,10 @@ export class HeroDetailScene extends Phaser.Scene {
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
-    // Rarity glow for SSR
-    if (this.hero.rarity === 'SSR') {
-      const glow = this.add.circle(GAME_WIDTH / 2, displayY, 90, rarityColor, 0.2);
+    // Rarity glow for SSR+ (rarity 4+ or key 'SSR'/'UR')
+    const heroRarityKey = getRarityKey(this.hero.rarity);
+    if (this.hero.rarity >= 4 || heroRarityKey === 'SSR' || heroRarityKey === 'UR') {
+      const glow = this.add.circle(GAME_WIDTH / 2, displayY, 90, frameRarityColor, 0.2);
       this.tweens.add({
         targets: glow,
         scale: { from: 0.9, to: 1.1 },
