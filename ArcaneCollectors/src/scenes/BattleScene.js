@@ -88,6 +88,10 @@ export class BattleScene extends Phaser.Scene {
           this.particles.destroy();
           this.particles = null;
         }
+        // VFX-2.1: 진행 중인 애니메이션 안전하게 중단
+        if (SkillAnimationManager.isPlaying()) {
+          SkillAnimationManager.abort();
+        }
       });
     } catch (error) {
       console.error('[BattleScene] create() 실패:', error);
@@ -1446,18 +1450,19 @@ export class BattleScene extends Phaser.Scene {
   /**
    * 실제 공격 실행 (컷인 연출 후 호출됨)
    */
-  _executeAttack(battler, target, skillMultiplier, skillName, isUltimate, skill = null) {
+  async _executeAttack(battler, target, skillMultiplier, skillName, isUltimate, skill = null) {
     if (!target.isAlive || this.battleEnded) return;
 
     // AoE 스킬: target: "all" → 살아있는 적 전체 공격
     if (isUltimate && skill?.target === 'all') {
       const targets = battler.isAlly ? this.enemies : this.allies;
       const aliveTargets = targets.filter(t => t.isAlive);
-      aliveTargets.forEach((t, i) => {
-        this.time.delayedCall(i * 100 / this.battleSpeed, () => {
-          this._executeSingleAttack(battler, t, skillMultiplier * 0.7, skillName, isUltimate, skill);
-        });
-      });
+      for (let i = 0; i < aliveTargets.length; i++) {
+        if (i > 0) {
+          await new Promise(resolve => this.time.delayedCall(100 / this.battleSpeed, resolve));
+        }
+        await this._executeSingleAttack(battler, aliveTargets[i], skillMultiplier * 0.7, skillName, isUltimate, skill);
+      }
       // AoE 게이지 처리
       battler.skillGauge = 0;
       this.updateSkillGauge(battler);
@@ -1466,7 +1471,7 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
-    this._executeSingleAttack(battler, target, skillMultiplier, skillName, isUltimate, skill);
+    await this._executeSingleAttack(battler, target, skillMultiplier, skillName, isUltimate, skill);
 
     // 스킬 게이지 처리
     const gaugeGain = skill?.gaugeGain || 20;
