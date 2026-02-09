@@ -189,31 +189,53 @@ class SkillAnimationManager {
       }
 
       const target = targets[0]; // Primary target
+      const particleManager = scene.particleManager || new ParticleManager(scene);
+      const mood = attacker.mood || 'brave';
+
+      // VFX-2.2: Play mood-specific attack particle (from attacker to target)
+      if (FEATURE_FLAGS.enableParticles && actionType !== 'heal') {
+        particleManager.playMoodAttack(
+          mood,
+          attacker.x,
+          attacker.y,
+          target.x,
+          target.y
+        ).catch(err => console.warn('[SkillAnimationManager] Mood attack particle error:', err));
+      }
 
       // Apply screen shake based on action power
       if (FEATURE_FLAGS.enableScreenShake) {
         if (actionType === 'ultimate') {
-          const particleManager = scene.particleManager || new ParticleManager(scene);
           particleManager.applyScreenShake(scene, SCREEN_SHAKE.heavy);
         } else if (actionType === 'skill2') {
-          const particleManager = scene.particleManager || new ParticleManager(scene);
           particleManager.applyScreenShake(scene, SCREEN_SHAKE.medium);
         } else if (actionType !== 'heal') {
-          const particleManager = scene.particleManager || new ParticleManager(scene);
           particleManager.applyScreenShake(scene, SCREEN_SHAKE.light);
         }
       }
 
-      // Particle burst at target position
-      if (FEATURE_FLAGS.enableParticles) {
-        const particleManager = scene.particleManager || new ParticleManager(scene);
-        particleManager.playSkillParticle(
-          scene,
-          target.x,
-          target.y,
-          vfx.particle,
-          attacker.mood || 'brave'
-        ).catch(err => console.warn('[SkillAnimationManager] Particle error:', err));
+      // Wait for attack particles to travel
+      await scene.time.delayedCall(duration * 0.4, () => {});
+
+      // VFX-2.2: Play mood-specific hit effect at target
+      if (FEATURE_FLAGS.enableParticles && actionType !== 'heal') {
+        particleManager.playMoodHit(mood, target.x, target.y)
+          .catch(err => console.warn('[SkillAnimationManager] Mood hit particle error:', err));
+      }
+
+      // VFX-2.3: Show type advantage effect if available
+      if (target.mood && attacker.mood && FEATURE_FLAGS.enableParticles) {
+        // Import MoodSystem to check advantage
+        import('./MoodSystem.js').then(({ moodSystem }) => {
+          const matchup = moodSystem.getMatchupMultiplier(attacker.mood, target.mood);
+          if (matchup.advantage === 'ADVANTAGE') {
+            particleManager.showAdvantageEffect('advantage', target.x, target.y - 40)
+              .catch(err => console.warn('[SkillAnimationManager] Advantage effect error:', err));
+          } else if (matchup.advantage === 'DISADVANTAGE') {
+            particleManager.showAdvantageEffect('disadvantage', target.x, target.y - 40)
+              .catch(err => console.warn('[SkillAnimationManager] Disadvantage effect error:', err));
+          }
+        }).catch(err => console.warn('[SkillAnimationManager] MoodSystem import error:', err));
       }
 
       // Target hit flash (not for healing)
