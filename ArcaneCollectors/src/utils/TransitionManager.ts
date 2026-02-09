@@ -1,22 +1,23 @@
 /**
- * TransitionManager.js - Scene transition effects manager
+ * TransitionManager.ts - Scene transition effects manager
  * Singleton pattern for consistent scene transitions
  */
 import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 
+type SlideDirection = 'left' | 'right' | 'up' | 'down';
+type ZoomDirection = 'in' | 'out';
+
 class TransitionManagerClass {
-  constructor() {
-    this.isTransitioning = false;
-  }
+  private isTransitioning: boolean = false;
 
   /**
    * Fade out → scene change → fade in
-   * @param {Phaser.Scene} scene - Current scene
-   * @param {string} target - Target scene key
-   * @param {Object} data - Data to pass to target scene
-   * @param {number} duration - Fade duration in ms
+   * @param scene - Current scene
+   * @param target - Target scene key
+   * @param data - Data to pass to target scene
+   * @param duration - Fade duration in ms
    */
-  fadeTransition(scene, target, data = {}, duration = 400) {
+  fadeTransition(scene: Phaser.Scene, target: string, data: any = {}, duration: number = 400): void {
     if (this.isTransitioning) return;
     this.isTransitioning = true;
 
@@ -29,13 +30,19 @@ class TransitionManagerClass {
 
   /**
    * Slide transition
-   * @param {Phaser.Scene} scene - Current scene
-   * @param {string} target - Target scene key
-   * @param {Object} data - Data to pass
-   * @param {string} direction - 'left', 'right', 'up', 'down'
-   * @param {number} duration - Transition duration in ms
+   * @param scene - Current scene
+   * @param target - Target scene key
+   * @param data - Data to pass
+   * @param direction - 'left', 'right', 'up', 'down'
+   * @param duration - Transition duration in ms
    */
-  slideTransition(scene, target, data = {}, direction = 'left', duration = 300) {
+  slideTransition(
+    scene: Phaser.Scene,
+    target: string,
+    data: any = {},
+    direction: SlideDirection = 'left',
+    duration: number = 300
+  ): void {
     if (this.isTransitioning) return;
     this.isTransitioning = true;
 
@@ -88,10 +95,10 @@ class TransitionManagerClass {
   /**
    * Battle entry transition with dramatic effects
    * Sequence: darken → BATTLE START text → shake → flash → scene start
-   * @param {Phaser.Scene} scene - Current scene
-   * @param {Object} data - Battle data to pass
+   * @param scene - Current scene
+   * @param data - Battle data to pass
    */
-  battleEntryTransition(scene, data = {}) {
+  battleEntryTransition(scene: Phaser.Scene, data: any = {}): void {
     if (this.isTransitioning) return;
     this.isTransitioning = true;
 
@@ -158,10 +165,10 @@ class TransitionManagerClass {
   /**
    * Gacha entry transition with mystical effects
    * Sequence: darken → magic circle expand → rotate + particles → flash → scene start
-   * @param {Phaser.Scene} scene - Current scene
-   * @param {Object} data - Data to pass
+   * @param scene - Current scene
+   * @param data - Data to pass
    */
-  gachaEntryTransition(scene, data = {}) {
+  gachaEntryTransition(scene: Phaser.Scene, data: any = {}): void {
     if (this.isTransitioning) return;
     this.isTransitioning = true;
 
@@ -262,15 +269,23 @@ class TransitionManagerClass {
 
   /**
    * Zoom in/out transition
-   * @param {Phaser.Scene} scene - Current scene
-   * @param {string} target - Target scene key
-   * @param {Object} data - Data to pass
-   * @param {number} originX - Zoom origin X (default center)
-   * @param {number} originY - Zoom origin Y (default center)
-   * @param {string} zoomDir - 'in' or 'out'
-   * @param {number} duration - Transition duration in ms
+   * @param scene - Current scene
+   * @param target - Target scene key
+   * @param data - Data to pass
+   * @param originX - Zoom origin X (default center)
+   * @param originY - Zoom origin Y (default center)
+   * @param zoomDir - 'in' or 'out'
+   * @param duration - Transition duration in ms
    */
-  zoomTransition(scene, target, data = {}, originX = GAME_WIDTH / 2, originY = GAME_HEIGHT / 2, zoomDir = 'in', duration = 400) {
+  zoomTransition(
+    scene: Phaser.Scene,
+    target: string,
+    data: any = {},
+    originX: number = GAME_WIDTH / 2,
+    originY: number = GAME_HEIGHT / 2,
+    zoomDir: ZoomDirection = 'in',
+    duration: number = 400
+  ): void {
     if (this.isTransitioning) return;
     this.isTransitioning = true;
 
@@ -314,10 +329,10 @@ class TransitionManagerClass {
 
   /**
    * Victory flash transition (BattleScene → BattleResult on win)
-   * @param {Phaser.Scene} scene
-   * @param {Object} data
+   * @param scene
+   * @param data
    */
-  victoryTransition(scene, data = {}) {
+  victoryTransition(scene: Phaser.Scene, data: any = {}): void {
     if (this.isTransitioning) return;
     this.isTransitioning = true;
 
@@ -335,10 +350,10 @@ class TransitionManagerClass {
 
   /**
    * Defeat fade transition (BattleScene → BattleResult on loss)
-   * @param {Phaser.Scene} scene
-   * @param {Object} data
+   * @param scene
+   * @param data
    */
-  defeatTransition(scene, data = {}) {
+  defeatTransition(scene: Phaser.Scene, data: any = {}): void {
     if (this.isTransitioning) return;
     this.isTransitioning = true;
 
