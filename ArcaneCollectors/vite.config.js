@@ -1,7 +1,41 @@
 import { defineConfig } from 'vite';
+import { existsSync } from 'fs';
+import { resolve as pathResolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Custom plugin to resolve .js imports to .ts files
+function resolveJsToTs() {
+  return {
+    name: 'resolve-js-to-ts',
+    resolveId(source, importer) {
+      // Skip if not a relative import ending in .js
+      if (!source.endsWith('.js') || !source.startsWith('.')) {
+        return null;
+      }
+
+      // Get the directory of the importer
+      const importerDir = importer ? dirname(importer) : __dirname;
+      const jsPath = pathResolve(importerDir, source);
+      const tsPath = jsPath.replace(/\.js$/, '.ts');
+
+      // Check if .ts file exists instead of .js
+      if (!existsSync(jsPath) && existsSync(tsPath)) {
+        return tsPath;
+      }
+
+      return null;
+    }
+  };
+}
 
 export default defineConfig({
   base: './',
+  plugins: [resolveJsToTs()],
+  resolve: {
+    extensions: ['.ts', '.js', '.json']
+  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
