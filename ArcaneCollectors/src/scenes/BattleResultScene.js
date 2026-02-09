@@ -26,6 +26,7 @@ export class BattleResultScene extends Phaser.Scene {
   }
 
   create() {
+    this.transitioning = false; // 씬 재진입 시 반드시 리셋
     this.cameras.main.fadeIn(400);
 
     try {

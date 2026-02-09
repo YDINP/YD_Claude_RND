@@ -19,6 +19,7 @@ export class HeroListScene extends Phaser.Scene {
 
   create() {
     try {
+    this.transitioning = false; // 씬 재진입 시 반드시 리셋
     this.cameras.main.fadeIn(300);
 
     // RES-ABS-4: 소유 히어로 썸네일 동적 로드
@@ -453,6 +454,7 @@ export class HeroListScene extends Phaser.Scene {
   }
 
   shutdown() {
+    this.transitioning = false; // 씬 종료 시 리셋
     // RES-ABS-4: 메모리 해제
     if (this._loadedHeroIds && this._loadedHeroIds.length > 0) {
       HeroAssetLoader.unloadTextures(this, this._loadedHeroIds);
