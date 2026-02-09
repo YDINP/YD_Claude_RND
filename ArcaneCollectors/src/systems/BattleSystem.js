@@ -555,6 +555,32 @@ export class BattleSystem {
   }
 
   /**
+   * 만료된 버프를 해제하고 원래 스탯으로 복원
+   * @param {BattleUnit} unit - 버프를 체크할 유닛
+   */
+  _processExpiredBuffs(unit) {
+    if (!unit.buffs || unit.buffs.length === 0) return;
+
+    const expiredBuffs = unit.buffs.filter(buff => {
+      const turnsElapsed = this.turnCount - buff.appliedAt;
+      return turnsElapsed >= buff.duration;
+    });
+
+    for (const buff of expiredBuffs) {
+      if (buff.type === 'defense' && buff.originalValue !== undefined) {
+        unit.def = buff.originalValue;
+        console.log(`[Battle] Defense buff expired for ${unit.name}: DEF restored to ${unit.def}`);
+      }
+    }
+
+    // 만료된 버프 제거
+    unit.buffs = unit.buffs.filter(buff => {
+      const turnsElapsed = this.turnCount - buff.appliedAt;
+      return turnsElapsed < buff.duration;
+    });
+  }
+
+  /**
    * 커맨드 히스토리 조회
    * @param {number} count 조회할 개수 (기본: 전체)
    * @returns {Array<Object>}
@@ -694,6 +720,9 @@ export class BattleSystem {
       turn: this.turnCount,
       unit: { id: unit.id, name: unit.name, isAlly: !unit.isEnemy }
     });
+
+    // PAT-1.1: 만료된 버프 해제 (방어 커맨드 등)
+    this._processExpiredBuffs(unit);
 
     this.setState(BattleState.PROCESSING_ACTION);
 

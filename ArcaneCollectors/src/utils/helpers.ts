@@ -355,7 +355,7 @@ export function formatBattleTimer(milliseconds: number): string {
 }
 
 type Mood = 'brave' | 'fierce' | 'wild' | 'calm' | 'stoic' | 'devoted' | 'cunning' | 'noble' | 'mystic';
-type Cult = 'valhalla' | 'takamagahara' | 'olympus' | 'asgard' | 'yomi';
+type Cult = 'valhalla' | 'takamagahara' | 'olympus' | 'asgard' | 'yomi' | 'tartarus' | 'avalon' | 'helheim' | 'kunlun';
 
 // Mood icon
 export function getMoodIcon(mood: Mood): string {
@@ -380,7 +380,11 @@ export function getCultIcon(cult: Cult): string {
     takamagahara: '☀️',
     olympus: '🔱',
     asgard: '❄️',
-    yomi: '💀'
+    yomi: '💀',
+    tartarus: '🌑',
+    avalon: '🍀',
+    helheim: '🥶',
+    kunlun: '🐉'
   };
   return icons[cult] || '❓';
 }

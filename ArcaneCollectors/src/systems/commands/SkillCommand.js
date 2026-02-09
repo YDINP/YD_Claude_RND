@@ -94,9 +94,9 @@ export class SkillCommand extends BaseCommand {
       }
     });
 
-    // 스킬 게이지 소비
+    // 스킬 게이지 소비 (직접 차감 — 인덱스 의존 제거)
     if (this.skill.gaugeCost) {
-      this.unit.consumeSkillGauge(0);
+      this.unit.skillGauge = Math.max(0, this.unit.skillGauge - this.skill.gaugeCost);
       console.log(`[Command] Skill gauge consumed: ${this.unit.name} now has ${this.unit.skillGauge}`);
     }
 
