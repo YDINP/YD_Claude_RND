@@ -173,6 +173,192 @@ export const PARTICLE_PRESETS = {
 };
 
 // ============================================
+// VFX-2.2: 분위기별 전투 파티클 설정
+// ============================================
+export const MOOD_ATTACK_PARTICLES = {
+  brave: {
+    // 불꽃 파편 상승
+    count: 10,
+    speed: { min: 80, max: 150 },
+    scale: { start: 0.7, end: 0.1 },
+    alpha: { start: 1, end: 0 },
+    lifespan: { min: 400, max: 700 },
+    angle: { min: 240, max: 300 }, // 위쪽 상승
+    gravity: -120,
+    shape: 'circle',
+    size: 5,
+    colors: [0xFF4444, 0xFF6B6B, 0xFFA07A]
+  },
+  fierce: {
+    // 번개 지그재그
+    count: 8,
+    speed: { min: 100, max: 200 },
+    scale: { start: 0.8, end: 0.2 },
+    alpha: { start: 1, end: 0 },
+    lifespan: { min: 300, max: 500 },
+    angle: { min: 0, max: 360 },
+    shape: 'circle',
+    size: 3,
+    colors: [0xFF8800, 0xFFCC00, 0xFFFF66]
+  },
+  wild: {
+    // 바람 나선형
+    count: 12,
+    speed: { min: 70, max: 140 },
+    scale: { start: 0.6, end: 0 },
+    alpha: { start: 0.8, end: 0 },
+    lifespan: { min: 500, max: 800 },
+    angle: { min: 0, max: 360 },
+    spiral: true,
+    shape: 'circle',
+    size: 4,
+    colors: [0x44CC44, 0x88FF88, 0xAAFFAA]
+  },
+  calm: {
+    // 물방울 부유
+    count: 8,
+    speed: { min: 30, max: 70 },
+    scale: { start: 0.5, end: 0.8 },
+    alpha: { start: 0.9, end: 0 },
+    lifespan: { min: 600, max: 1000 },
+    angle: { min: 250, max: 290 }, // 위쪽 느리게
+    gravity: -40,
+    shape: 'circle',
+    size: 4,
+    colors: [0x4488FF, 0x66AAFF, 0xAADDFF]
+  },
+  stoic: {
+    // 바위 파편 낙하
+    count: 10,
+    speed: { min: 60, max: 120 },
+    scale: { start: 0.9, end: 0.3 },
+    alpha: { start: 1, end: 0 },
+    lifespan: { min: 500, max: 900 },
+    angle: { min: 60, max: 120 }, // 아래쪽 낙하
+    gravity: 150,
+    shape: 'circle',
+    size: 6,
+    colors: [0x888888, 0xAAAAAA, 0xCCCCCC]
+  },
+  devoted: {
+    // 하트 부유 상승
+    count: 10,
+    speed: { min: 50, max: 100 },
+    scale: { start: 0.6, end: 0 },
+    alpha: { start: 1, end: 0 },
+    lifespan: { min: 600, max: 1000 },
+    angle: { min: 250, max: 290 },
+    gravity: -80,
+    shape: 'circle',
+    size: 5,
+    colors: [0xFF88CC, 0xFFAADD, 0xFFCCEE]
+  },
+  cunning: {
+    // 연기 확산
+    count: 12,
+    speed: { min: 40, max: 90 },
+    scale: { start: 0.4, end: 1.5 },
+    alpha: { start: 0.7, end: 0 },
+    lifespan: { min: 700, max: 1200 },
+    angle: { min: 0, max: 360 },
+    shape: 'circle',
+    size: 8,
+    colors: [0xAA44FF, 0xCC66FF, 0xDD99FF]
+  },
+  noble: {
+    // 빛줄기 방사
+    count: 16,
+    speed: { min: 90, max: 180 },
+    scale: { start: 0.7, end: 0 },
+    alpha: { start: 1, end: 0 },
+    lifespan: { min: 400, max: 700 },
+    angle: { min: 0, max: 360 },
+    shape: 'circle',
+    size: 3,
+    colors: [0xFFD700, 0xFFE44D, 0xFFF176]
+  },
+  mystic: {
+    // 마법진 회전
+    count: 12,
+    speed: { min: 60, max: 120 },
+    scale: { start: 0.8, end: 0.2 },
+    alpha: { start: 0.9, end: 0 },
+    lifespan: { min: 600, max: 1000 },
+    angle: { min: 0, max: 360 },
+    rotate: true,
+    shape: 'circle',
+    size: 4,
+    colors: [0xCC88FF, 0xDD99FF, 0xEEBBFF]
+  }
+};
+
+export const MOOD_HIT_PARTICLES = {
+  brave: {
+    // 폭발 원형파
+    type: 'shockwave',
+    rings: 3,
+    colors: [0xFF4444, 0xFF6B6B, 0xFFA07A],
+    maxScale: 4,
+    duration: 500
+  },
+  fierce: {
+    // 전기 스파크
+    type: 'spark',
+    count: 12,
+    colors: [0xFF8800, 0xFFCC00, 0xFFFF66],
+    duration: 400
+  },
+  wild: {
+    // 회오리
+    type: 'vortex',
+    particles: 16,
+    colors: [0x44CC44, 0x88FF88, 0xAAFFAA],
+    duration: 600
+  },
+  calm: {
+    // 파문 원형
+    type: 'ripple',
+    rings: 4,
+    colors: [0x4488FF, 0x66AAFF, 0xAADDFF],
+    maxScale: 3.5,
+    duration: 600
+  },
+  stoic: {
+    // 방패 섬광
+    type: 'flash',
+    colors: [0x888888, 0xAAAAAA, 0xCCCCCC],
+    duration: 300
+  },
+  devoted: {
+    // 빛줄기 수렴
+    type: 'converge',
+    count: 12,
+    colors: [0xFF88CC, 0xFFAADD, 0xFFCCEE],
+    duration: 500
+  },
+  cunning: {
+    // 독안개
+    type: 'fog',
+    count: 10,
+    colors: [0xAA44FF, 0xCC66FF, 0xDD99FF],
+    duration: 700
+  },
+  noble: {
+    // 후광
+    type: 'halo',
+    colors: [0xFFD700, 0xFFE44D, 0xFFF176],
+    duration: 600
+  },
+  mystic: {
+    // 룬 문자 부유
+    type: 'runes',
+    count: 8,
+    colors: [0xCC88FF, 0xDD99FF, 0xEEBBFF],
+    duration: 800
+  }
+};
+
+// ============================================
 // 풀 설정
 // ============================================
 export const POOL_CONFIG = {
