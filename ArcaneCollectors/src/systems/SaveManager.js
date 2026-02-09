@@ -88,11 +88,41 @@ export class SaveManager {
         return this.migrate(data);
       }
 
+      // COMPAT-1.3: 구버전 ownedHeroes 데이터 마이그레이션
+      if (data.characters && Array.isArray(data.characters)) {
+        data.characters = this._migrateHeroesSchema(data.characters);
+      }
+
       return data;
     } catch (error) {
       console.error('SaveManager: 로드 실패', error);
       return this.getDefaultSave();
     }
+  }
+
+  /**
+   * COMPAT-1.3: 구버전 영웅 데이터를 표준 스키마로 마이그레이션
+   * @param {Array} heroes - 영웅 배열
+   * @returns {Array} 마이그레이션된 영웅 배열
+   */
+  static _migrateHeroesSchema(heroes) {
+    return heroes.map(hero => {
+      // constellation, equipment, acquiredAt 필드가 없으면 추가
+      if (hero.constellation === undefined) {
+        hero.constellation = 0;
+      }
+      if (!hero.equipment) {
+        hero.equipment = {
+          weapon: hero.equipped?.weapon || null,
+          armor: hero.equipped?.armor || null,
+          accessory: hero.equipped?.accessory || null
+        };
+      }
+      if (!hero.acquiredAt) {
+        hero.acquiredAt = Date.now();
+      }
+      return hero;
+    });
   }
 
   /**
@@ -286,7 +316,7 @@ export class SaveManager {
       return { duplicate: true, shardsGained, character: existing };
     }
 
-    // 새 캐릭터 추가
+    // 새 캐릭터 추가 (COMPAT-1.3: 표준 스키마 필드 포함)
     const newCharacter = {
       instanceId: `${characterId}_${Date.now()}`,
       characterId: characterId,
@@ -294,7 +324,14 @@ export class SaveManager {
       exp: 0,
       stars: this.getBaseStars(characterId),
       skillLevels: [1, 1, 1], // 기본/스킬1/스킬2
-      equipped: null
+      equipped: null,
+      equipment: {
+        weapon: null,
+        armor: null,
+        accessory: null
+      },
+      constellation: 0,
+      acquiredAt: Date.now()
     };
 
     data.characters.push(newCharacter);

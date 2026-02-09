@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "enemy.schema.json",
+  "title": "Enemy Schema",
+  "description": "Schema for enemies.json validation",
+  "type": "object",
+  "required": ["enemies"],
+  "properties": {
+    "enemies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "mood", "type", "baseStats", "growthStats", "skills", "expReward", "goldReward"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^enemy_"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "mood": {
+            "type": "string",
+            "enum": ["brave", "fierce", "wild", "calm", "stoic", "devoted", "cunning", "noble", "mystic"]
+          },
+          "type": {
+            "type": "string",
+            "enum": ["normal", "elite", "boss", "tower_boss"]
+          },
+          "baseStats": {
+            "type": "object",
+            "required": ["hp", "atk", "def", "spd"],
+            "properties": {
+              "hp": { "type": "number", "minimum": 0 },
+              "atk": { "type": "number", "minimum": 0 },
+              "def": { "type": "number", "minimum": 0 },
+              "spd": { "type": "number", "minimum": 0 }
+            },
+            "additionalProperties": false
+          },
+          "growthStats": {
+            "type": "object",
+            "required": ["hp", "atk", "def", "spd"],
+            "properties": {
+              "hp": { "type": "number", "minimum": 0 },
+              "atk": { "type": "number", "minimum": 0 },
+              "def": { "type": "number", "minimum": 0 },
+              "spd": { "type": "number", "minimum": 0 }
+            },
+            "additionalProperties": false
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expReward": {
+            "type": "number",
+            "minimum": 0
+          },
+          "goldReward": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

@@ -15,7 +15,9 @@
     "typecheck:watch": "tsc --noEmit --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "validate:data": "node scripts/validate-data.js",
+    "prebuild": "npm run validate:data"
   },
   "keywords": [
     "game",
@@ -28,6 +30,7 @@
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
+    "ajv": "^8.17.1",
     "pexels": "^1.4.0",
     "phaser": "^3.80.1"
   },

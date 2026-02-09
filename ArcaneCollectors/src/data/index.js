@@ -62,11 +62,20 @@ export function normalizeHero(hero) {
     skills: hero.skills || base?.skills || [],
     skillLevels: hero.skillLevels || [1, 1, 1],
 
-    // 장비
+    // 장비 (COMPAT-1.3: 표준 스키마 보장)
     equipped: hero.equipped || null,
+    equipment: hero.equipment || {
+      weapon: null,
+      armor: null,
+      accessory: null
+    },
 
-    // 진화
-    evolutionCount: hero.evolutionCount || 0
+    // 진화 및 성좌 (COMPAT-1.3: 기본값 보장)
+    evolutionCount: hero.evolutionCount || 0,
+    constellation: hero.constellation || 0,
+
+    // 획득 시각 (COMPAT-1.3: 타임스탬프 기본값)
+    acquiredAt: hero.acquiredAt || Date.now()
   };
 }
 

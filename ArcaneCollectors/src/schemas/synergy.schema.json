@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "synergy.schema.json",
+  "title": "Synergy Schema",
+  "description": "Schema for synergies.json validation",
+  "type": "object",
+  "required": ["cultSynergies", "moodSynergies"],
+  "properties": {
+    "cultSynergies": {
+      "type": "object",
+      "patternProperties": {
+        "^[0-9]+$": {
+          "type": "object",
+          "properties": {
+            "ATK": { "type": "number" },
+            "DEF": { "type": "number" },
+            "HP": { "type": "number" },
+            "SPD": { "type": "number" },
+            "CRIT": { "type": "number" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "moodSynergies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "required", "effect"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "required": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "minCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "effect": {
+            "type": "object",
+            "properties": {
+              "ATK": { "type": "number" },
+              "DEF": { "type": "number" },
+              "HP": { "type": "number" },
+              "SPD": { "type": "number" },
+              "CRIT": { "type": "number" },
+              "COOLDOWN": { "type": "number" },
+              "SPECIAL_PROC": { "type": "number" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "specialSynergies": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": false
+}
