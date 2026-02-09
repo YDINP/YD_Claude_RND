@@ -150,6 +150,9 @@ export class BottomNav extends Phaser.GameObjects.Container {
     const tabExists = this.tabs.find(t => t.id === tabId);
     if (!tabExists) return this;
 
+    const previousTabIndex = this.tabs.findIndex(t => t.id === this.activeTab);
+    const newTabIndex = this.tabs.findIndex(t => t.id === tabId);
+
     this.activeTab = tabId;
 
     this.tabs.forEach((tab) => {
@@ -176,7 +179,51 @@ export class BottomNav extends Phaser.GameObjects.Container {
       });
     });
 
+    // VFX-4.2: Underline slide animation
+    this.animateUnderlineSlide(previousTabIndex, newTabIndex);
+
     return this;
+  }
+
+  /**
+   * VFX-4.2: Animate underline sliding from previous tab to new tab
+   * @param {number} fromIndex - Previous tab index
+   * @param {number} toIndex - New tab index
+   */
+  animateUnderlineSlide(fromIndex, toIndex) {
+    if (fromIndex === toIndex || fromIndex === -1) return;
+
+    const tabWidth = GAME_WIDTH / this.tabs.length;
+    const startX = -GAME_WIDTH / 2 + tabWidth / 2;
+
+    const fromX = startX + fromIndex * tabWidth;
+    const toX = startX + toIndex * tabWidth;
+
+    // Remove existing underline if present
+    if (this.underlineBar) {
+      this.underlineBar.destroy();
+    }
+
+    // Create sliding underline bar
+    this.underlineBar = this.scene.add.graphics();
+    this.underlineBar.fillStyle(COLORS.primary, 0.9);
+    this.underlineBar.fillRect(fromX - 25, -this.navHeight - 36, 50, 3);
+    this.add(this.underlineBar);
+
+    // Animate slide
+    this.scene.tweens.add({
+      targets: this.underlineBar,
+      x: toX - fromX,
+      duration: 200,
+      ease: 'Power2',
+      onComplete: () => {
+        // Clean up temporary underline
+        if (this.underlineBar) {
+          this.underlineBar.destroy();
+          this.underlineBar = null;
+        }
+      }
+    });
   }
 
   onTabChange(callback) {
