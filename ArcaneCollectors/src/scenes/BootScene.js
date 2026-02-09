@@ -3,6 +3,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { isSupabaseConfigured, supabase } from '../api/supabaseClient.js';
 import { getGuestUserId } from '../services/AuthService.js';
 import { normalizeHeroes } from '../data/index.js';
+import { validateAllGameData } from '../schemas/validator.js';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -108,6 +109,17 @@ export class BootScene extends Phaser.Scene {
         delay: 500,
         ease: 'Quad.easeOut'
       });
+
+      // COMPAT-1.5: 개발 모드 스키마 검증 (비동기)
+      if (import.meta.env.DEV) {
+        this.time.delayedCall(100, () => {
+          try {
+            validateAllGameData();
+          } catch (err) {
+            console.warn('[BootScene] Schema validation error:', err);
+          }
+        });
+      }
 
       // 세션 확인 (스플래시 중 비동기)
       const hasSession = await this._checkExistingSession();
