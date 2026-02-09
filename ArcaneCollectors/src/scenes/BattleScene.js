@@ -11,6 +11,7 @@ import transitionManager from '../utils/TransitionManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import SkillAnimationManager from '../systems/SkillAnimationManager.js';
+import { EnhancedHPBar } from '../components/EnhancedHPBar.js';
 
 /**
  * BattleScene - 전투 씬
@@ -1104,26 +1105,18 @@ export class BattleScene extends Phaser.Scene {
     sprite.setScale(isAlly ? 0.9 : 0.85);
     if (!isAlly) sprite.setFlipX(true);
 
-    // HP bar background
-    const hpBarBg = this.add.rectangle(0, -55, 70, 10, 0x333333, 1);
-
-    // HP bar fill
-    const hpBarFill = this.add.rectangle(-35, -55, 70, 8, COLORS.success, 1);
-    hpBarFill.setOrigin(0, 0.5);
-
-    // HP text
-    const hpText = this.add.text(0, -55, `${battler.currentHp}`, {
-      fontSize: '9px',
-      fontFamily: 'Arial',
-      color: '#ffffff'
-    }).setOrigin(0.5);
-
-    // Skill gauge background
-    const skillGaugeBg = this.add.rectangle(0, -42, 50, 6, 0x333333, 1);
-
-    // Skill gauge fill
-    const skillGaugeFill = this.add.rectangle(-25, -42, 0, 4, COLORS.secondary, 1);
-    skillGaugeFill.setOrigin(0, 0.5);
+    // UIX-2.6.1: Enhanced HP Bar with gradients, animations, and buff icons
+    const hpBar = new EnhancedHPBar(this, 0, -55, 80, {
+      height: 12,
+      currentHP: battler.currentHp,
+      maxHP: battler.maxHp,
+      currentSkill: battler.skillGauge || 0,
+      maxSkill: battler.maxSkillGauge || 100,
+      showSkillBar: true,
+      showBuffIcons: true,
+      delayDuration: 500,
+      animationDuration: 300
+    });
 
     // Name tag
     const battlerName = battler.name || '???';
@@ -1134,14 +1127,13 @@ export class BattleScene extends Phaser.Scene {
       color: `#${  (isAlly ? COLORS.text : COLORS.danger).toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
-    container.add([sprite, hpBarBg, hpBarFill, hpText, skillGaugeBg, skillGaugeFill, nameTag]);
+    // UIX-2.6.1: Add components with enhanced HP bar
+    container.add([sprite, hpBar, nameTag]);
 
     // Store references
     container.setData('battler', battler);
     container.setData('sprite', sprite);
-    container.setData('hpBarFill', hpBarFill);
-    container.setData('hpText', hpText);
-    container.setData('skillGaugeFill', skillGaugeFill);
+    container.setData('hpBar', hpBar); // UIX-2.6.1: Store enhanced HP bar reference
 
     return container;
   }
@@ -1658,25 +1650,11 @@ export class BattleScene extends Phaser.Scene {
     const sprite = sprites[battler.position];
     if (!sprite) return;
 
-    const hpBarFill = sprite.getData('hpBarFill');
-    const hpText = sprite.getData('hpText');
-
-    const hpPercent = battler.currentHp / battler.maxHp;
-    const barWidth = 70 * hpPercent;
-
-    this.tweens.add({
-      targets: hpBarFill,
-      width: barWidth,
-      duration: 200 / this.battleSpeed
-    });
-
-    // Change color based on HP
-    let barColor = COLORS.success;
-    if (hpPercent < 0.3) barColor = COLORS.danger;
-    else if (hpPercent < 0.6) barColor = COLORS.accent;
-    hpBarFill.setFillStyle(barColor, 1);
-
-    hpText.setText(`${battler.currentHp}`);
+    // UIX-2.6.1: Use enhanced HP bar
+    const hpBar = sprite.getData('hpBar');
+    if (hpBar) {
+      hpBar.updateHP(battler.currentHp, battler.maxHp, true);
+    }
   }
 
   updateSkillGauge(battler) {
@@ -1684,14 +1662,11 @@ export class BattleScene extends Phaser.Scene {
     const sprite = sprites[battler.position];
     if (!sprite) return;
 
-    const skillGaugeFill = sprite.getData('skillGaugeFill');
-    const gaugePercent = battler.skillGauge / battler.maxSkillGauge;
-
-    this.tweens.add({
-      targets: skillGaugeFill,
-      width: 50 * gaugePercent,
-      duration: 200 / this.battleSpeed
-    });
+    // UIX-2.6.1: Use enhanced HP bar's skill gauge
+    const hpBar = sprite.getData('hpBar');
+    if (hpBar) {
+      hpBar.updateSkill(battler.skillGauge, battler.maxSkillGauge);
+    }
   }
 
   /**

@@ -8,6 +8,7 @@ import transitionManager from '../utils/TransitionManager.js';
 import uiRenderer from '../renderers/UIRenderer.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
+import { RadarChart } from '../components/RadarChart.js';
 
 export class HeroDetailScene extends Phaser.Scene {
   constructor() {
@@ -181,8 +182,11 @@ export class HeroDetailScene extends Phaser.Scene {
   createStatsPanel() {
     const panelY = 420;
 
+    // UIX-2.3.1: Increased panel height for radar chart
+    const panelHeight = 220;
+
     // Panel background
-    const panel = this.add.rectangle(GAME_WIDTH / 2, panelY, GAME_WIDTH - 40, 120, COLORS.backgroundLight, 0.8);
+    const panel = this.add.rectangle(GAME_WIDTH / 2, panelY + 50, GAME_WIDTH - 40, panelHeight, COLORS.backgroundLight, 0.8);
     panel.setStrokeStyle(1, COLORS.primary, 0.5);
 
     // Panel title
@@ -238,10 +242,52 @@ export class HeroDetailScene extends Phaser.Scene {
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(1, 0.5);
+
+    // UIX-2.3.1: Add radar chart
+    const heroRarityKey = getRarityKey(this.hero.rarity);
+
+    // Calculate average stats for same rarity (mock data)
+    const averageStats = this.calculateAverageStats(heroRarityKey);
+
+    this.radarChart = new RadarChart(this, GAME_WIDTH / 2, panelY + 120, stats, {
+      radius: 70,
+      rarity: heroRarityKey,
+      maxStats: { hp: 2000, atk: 500, def: 400, spd: 150 },
+      showAverage: true,
+      averageStats: averageStats,
+      previewStats: null // Will be set when equipment is selected
+    });
+  }
+
+  /**
+   * UIX-2.3.1: Calculate average stats for same rarity heroes
+   */
+  calculateAverageStats(rarity) {
+    const heroes = this.registry.get('ownedHeroes') || [];
+    const sameRarityHeroes = heroes.filter(h => getRarityKey(h.rarity) === rarity);
+
+    if (sameRarityHeroes.length === 0) {
+      return { hp: 0, atk: 0, def: 0, spd: 0 };
+    }
+
+    const sum = sameRarityHeroes.reduce((acc, h) => ({
+      hp: acc.hp + (h.stats?.hp || 0),
+      atk: acc.atk + (h.stats?.atk || 0),
+      def: acc.def + (h.stats?.def || 0),
+      spd: acc.spd + (h.stats?.spd || 0)
+    }), { hp: 0, atk: 0, def: 0, spd: 0 });
+
+    return {
+      hp: Math.floor(sum.hp / sameRarityHeroes.length),
+      atk: Math.floor(sum.atk / sameRarityHeroes.length),
+      def: Math.floor(sum.def / sameRarityHeroes.length),
+      spd: Math.floor(sum.spd / sameRarityHeroes.length)
+    };
   }
 
   createSkillsPanel() {
-    const panelY = 560;
+    // UIX-2.3.1: Adjusted Y position for larger stats panel
+    const panelY = 660;
 
     // Panel background
     const panel = this.add.rectangle(GAME_WIDTH / 2, panelY, GAME_WIDTH - 40, 100, COLORS.backgroundLight, 0.8);
@@ -376,7 +422,8 @@ export class HeroDetailScene extends Phaser.Scene {
   }
 
   createEquipmentSlots() {
-    const slotsY = 680;
+    // UIX-2.3.1: Adjusted Y position for larger stats panel
+    const slotsY = 780;
 
     // Equipment title
     this.add.text(40, slotsY - 25, '장비', {
@@ -452,16 +499,32 @@ export class HeroDetailScene extends Phaser.Scene {
         }
       });
 
-      // Tooltip on hover
+      // UIX-2.3.1: Tooltip on hover + radar chart preview
       if (equippedItem) {
         slotBg.on('pointerover', () => {
           const stats = equippedItem.stats || {};
           const statsText = Object.entries(stats).map(([k, v]) => `${k}: +${v}`).join('\n');
           this.showTooltip(x, slotsY - 30, `${equippedItem.name}\n${equippedItem.rarity} +${equippedItem.enhanceLevel || 0}\n${statsText}`);
+
+          // Show preview on radar chart
+          const previewStats = { ...this.hero.stats };
+          if (stats.hp) previewStats.hp += stats.hp;
+          if (stats.atk) previewStats.atk += stats.atk;
+          if (stats.def) previewStats.def += stats.def;
+          if (stats.spd) previewStats.spd += stats.spd;
+
+          if (this.radarChart) {
+            this.radarChart.updateStats(this.hero.stats, previewStats);
+          }
         });
 
         slotBg.on('pointerout', () => {
           this.hideTooltip();
+
+          // Clear preview
+          if (this.radarChart) {
+            this.radarChart.updateStats(this.hero.stats, null);
+          }
         });
       }
     });

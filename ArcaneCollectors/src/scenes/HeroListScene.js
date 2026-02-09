@@ -4,17 +4,23 @@ import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
 import transitionManager from '../utils/TransitionManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
+import { VirtualCardPool } from '../components/VirtualCardPool.js';
+
 export class HeroListScene extends Phaser.Scene {
   constructor() {
     super({ key: 'HeroListScene' });
     this.scrollY = 0;
     this.sortBy = 'rarity';
     this.sortAscending = false;
+    // UIX-2.2.1: 다중 필터 (AND 조건)
     this.filterCult = null;
     this.filterRarity = null;
+    this.filterClass = null; // 클래스 필터 추가
+    this.filterMood = null;  // 분위기 필터 추가
     this.filterButtons = [];
     this.transitioning = false;
     this._loadedHeroIds = []; // RES-ABS-4: 로드된 히어로 추적
+    this.cardPool = null; // UIX-2.2.1: Virtual scroll object pool
   }
 
   create() {
@@ -51,6 +57,8 @@ export class HeroListScene extends Phaser.Scene {
     this.createBackground();
     this.createHeader();
     this.createFilterBar();
+    // UIX-2.2.1: Initialize card pool
+    this.cardPool = new VirtualCardPool(this, this.createHeroCard.bind(this), 24);
     this.createHeroGrid();
     this.setupScrolling();
     this.bottomNav = new BottomNav(this, 'home');
@@ -262,11 +270,17 @@ export class HeroListScene extends Phaser.Scene {
   }
 
   refreshGrid() {
+    // UIX-2.2.1: Release all cards back to pool
+    if (this.cardPool) {
+      this.cardPool.releaseAll();
+    }
+
     // Clear existing cards
     this.gridContainer.removeAll(true);
 
     let heroes = [...(this.registry.get('ownedHeroes') || [])].filter(h => h.name);
 
+    // UIX-2.2.1: 다중 필터 (AND 조건)
     // Filter by rarity (숫자/문자열 모두 지원)
     if (this.filterRarity) {
       heroes = heroes.filter(h => getRarityKey(h.rarity) === this.filterRarity);
@@ -275,6 +289,16 @@ export class HeroListScene extends Phaser.Scene {
     // Filter by cult
     if (this.filterCult) {
       heroes = heroes.filter(h => h.cult === this.filterCult);
+    }
+
+    // Filter by class
+    if (this.filterClass) {
+      heroes = heroes.filter(h => h.class === this.filterClass);
+    }
+
+    // Filter by mood
+    if (this.filterMood) {
+      heroes = heroes.filter(h => h.mood === this.filterMood);
     }
 
     // Sort
@@ -312,11 +336,13 @@ export class HeroListScene extends Phaser.Scene {
         break;
     }
 
-    // Display heroes in grid (4 columns)
+    // UIX-2.2.1: Display heroes in grid (4 columns, 110x150 cards, 10px spacing)
     const cols = 4;
-    const cardWidth = 105;
-    const cardHeight = 145;
-    const startX = (GAME_WIDTH - cols * cardWidth) / 2 + cardWidth / 2;
+    const cardWidth = 110;
+    const cardHeight = 150;
+    const spacing = 10;
+    const gridWidth = cols * cardWidth + (cols - 1) * spacing;
+    const startX = (GAME_WIDTH - gridWidth) / 2 + cardWidth / 2;
     const startY = 240;
 
     if (heroes.length === 0) {
@@ -331,18 +357,27 @@ export class HeroListScene extends Phaser.Scene {
       return;
     }
 
+    // UIX-2.2.1: Virtual scrolling - only render visible cards
+    const visibleStart = Math.max(0, Math.floor((this.scrollY - startY) / (cardHeight + spacing)) * cols);
+    const visibleRows = Math.ceil((GAME_HEIGHT - 250) / (cardHeight + spacing)) + 2;
+    const visibleEnd = Math.min(heroes.length, visibleStart + visibleRows * cols);
+
     heroes.forEach((hero, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
-      const x = startX + col * cardWidth;
-      const y = startY + row * cardHeight;
+      const x = startX + col * (cardWidth + spacing);
+      const y = startY + row * (cardHeight + spacing);
 
-      this.createHeroCard(x, y, hero);
+      // Only create cards in visible range
+      if (index >= visibleStart && index < visibleEnd) {
+        const card = this.cardPool.acquire(x, y, hero);
+        this.gridContainer.add(card);
+      }
     });
 
-    // Update max scroll (adjusted for extended filter bar)
+    // UIX-2.2.1: Update max scroll with new spacing
     const rows = Math.ceil(heroes.length / cols);
-    this.maxScroll = Math.max(0, rows * cardHeight - (GAME_HEIGHT - 250));
+    this.maxScroll = Math.max(0, rows * (cardHeight + spacing) - (GAME_HEIGHT - 250));
     this.scrollY = Math.min(this.scrollY, this.maxScroll);
 
     // Update count
@@ -351,20 +386,24 @@ export class HeroListScene extends Phaser.Scene {
     }
   }
 
-  createHeroCard(x, y, hero) {
-    const card = this.add.container(x, y);
+  createHeroCard(scene, x, y, hero) {
+    const card = scene.add.container(x, y);
+
+    // UIX-2.2.1: Updated card size 110x150
+    const cardWidth = 110;
+    const cardHeight = 150;
 
     // Card background with rarity color
     const rKey = getRarityKey(hero.rarity);
     const rarityData = RARITY[rKey] || RARITY.N;
     const rarityColor = rarityData.color;
-    const cardBg = this.add.rectangle(0, 0, 95, 135, COLORS.backgroundLight, 1);
+    const cardBg = scene.add.rectangle(0, 0, cardWidth - 10, cardHeight - 10, COLORS.backgroundLight, 1);
     cardBg.setStrokeStyle(2, rarityColor);
     cardBg.setInteractive({ useHandCursor: true });
 
     // Rarity indicator
-    const rarityBg = this.add.rectangle(0, -55, 35, 18, rarityColor, 1);
-    const rarityText = this.add.text(0, -55, rKey, {
+    const rarityBg = scene.add.rectangle(0, -60, 35, 18, rarityColor, 1);
+    const rarityText = scene.add.text(0, -60, rKey, {
       fontSize: '11px',
       fontFamily: 'Arial',
       color: '#ffffff',
@@ -372,32 +411,55 @@ export class HeroListScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Hero portrait
-    const portrait = this.add.image(0, -10, 'hero_placeholder').setScale(0.85);
+    const portrait = scene.add.image(0, -15, 'hero_placeholder').setScale(0.9);
 
     const starCount = hero.stars || getRarityNum(hero.rarity) || rarityData.stars || 1;
-    const stars = this.add.text(0, 35, '★'.repeat(starCount), {
+    const stars = scene.add.text(0, 40, '★'.repeat(starCount), {
       fontSize: '11px',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Name
     const heroName = hero.name || '???';
-    const name = heroName.length > 7 ? `${heroName.substring(0, 7)  }..` : heroName;
-    const nameText = this.add.text(0, 50, name, {
-      fontSize: '11px',
+    const name = heroName.length > 8 ? `${heroName.substring(0, 8)  }..` : heroName;
+    const nameText = scene.add.text(0, 56, name, {
+      fontSize: '12px',
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Level
-    const levelText = this.add.text(0, 62, `Lv.${hero.level}`, {
+    const levelText = scene.add.text(0, 68, `Lv.${hero.level}`, {
       fontSize: '10px',
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     card.add([cardBg, rarityBg, rarityText, portrait, stars, nameText, levelText]);
-    this.gridContainer.add(card);
+
+    // Add setHeroData method for pool reuse
+    card.setHeroData = function(newHero) {
+      const newRKey = getRarityKey(newHero.rarity);
+      const newRarityData = RARITY[newRKey] || RARITY.N;
+      const newRarityColor = newRarityData.color;
+
+      cardBg.setStrokeStyle(2, newRarityColor);
+      rarityBg.setFillStyle(newRarityColor, 1);
+      rarityText.setText(newRKey);
+
+      const newStarCount = newHero.stars || getRarityNum(newHero.rarity) || newRarityData.stars || 1;
+      stars.setText('★'.repeat(newStarCount));
+
+      const newHeroName = newHero.name || '???';
+      const newName = newHeroName.length > 8 ? `${newHeroName.substring(0, 8)  }..` : newHeroName;
+      nameText.setText(newName);
+      levelText.setText(`Lv.${newHero.level}`);
+
+      // Update hero reference for interactions
+      card.heroData = newHero;
+    };
+
+    card.heroData = hero;
 
     // Interactions
     cardBg.on('pointerover', () => {
@@ -411,11 +473,14 @@ export class HeroListScene extends Phaser.Scene {
     });
 
     cardBg.on('pointerdown', (pointer) => {
-      if (this.transitioning) return;
-      this.transitioning = true;
+      if (scene.transitioning) return;
+      scene.transitioning = true;
+      const currentHero = card.heroData || hero;
       // PRD VFX-1.2: HeroList → HeroDetail = zoomIn (card position)
-      transitionManager.zoomTransition(this, 'HeroDetailScene', { heroId: hero.id }, pointer.x, pointer.y, 'in', 400);
+      transitionManager.zoomTransition(scene, 'HeroDetailScene', { heroId: currentHero.id }, pointer.x, pointer.y, 'in', 400);
     });
+
+    return card;
   }
 
   setupScrolling() {
@@ -455,6 +520,13 @@ export class HeroListScene extends Phaser.Scene {
 
   shutdown() {
     this.transitioning = false; // 씬 종료 시 리셋
+
+    // UIX-2.2.1: Clean up card pool
+    if (this.cardPool) {
+      this.cardPool.destroy();
+      this.cardPool = null;
+    }
+
     // RES-ABS-4: 메모리 해제
     if (this._loadedHeroIds && this._loadedHeroIds.length > 0) {
       HeroAssetLoader.unloadTextures(this, this._loadedHeroIds);
