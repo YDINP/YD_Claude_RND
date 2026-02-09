@@ -2,6 +2,8 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO 
 import { BottomNav } from '../components/BottomNav.js';
 import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
 import transitionManager from '../utils/TransitionManager.js';
+import characterRenderer from '../renderers/CharacterRenderer.js';
+import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 export class HeroListScene extends Phaser.Scene {
   constructor() {
     super({ key: 'HeroListScene' });
@@ -12,18 +14,27 @@ export class HeroListScene extends Phaser.Scene {
     this.filterRarity = null;
     this.filterButtons = [];
     this.transitioning = false;
+    this._loadedHeroIds = []; // RES-ABS-4: 로드된 히어로 추적
   }
 
   create() {
     try {
     this.cameras.main.fadeIn(300);
 
-    this.createBackground();
-    this.createHeader();
-    this.createFilterBar();
-    this.createHeroGrid();
-    this.setupScrolling();
-    this.bottomNav = new BottomNav(this, 'home');
+    // RES-ABS-4: 소유 히어로 썸네일 동적 로드
+    const ownedHeroes = this.registry.get('ownedHeroes') || [];
+    const heroIds = ownedHeroes.map(h => h.id);
+    this._loadedHeroIds = heroIds;
+
+    if (characterRenderer.useAssets && heroIds.length > 0) {
+      characterRenderer.preloadAssets(this, ownedHeroes, { ids: heroIds, types: ['thumbnail'] });
+      this.load.start();
+      this.load.once('complete', () => {
+        this.initUI();
+      });
+    } else {
+      this.initUI();
+    }
     } catch (error) {
       console.error('[HeroListScene] create() 실패:', error);
       this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -33,6 +44,15 @@ export class HeroListScene extends Phaser.Scene {
         this.scene.start('MainMenuScene');
       });
     }
+  }
+
+  initUI() {
+    this.createBackground();
+    this.createHeader();
+    this.createFilterBar();
+    this.createHeroGrid();
+    this.setupScrolling();
+    this.bottomNav = new BottomNav(this, 'home');
   }
 
   createBackground() {
@@ -433,6 +453,11 @@ export class HeroListScene extends Phaser.Scene {
   }
 
   shutdown() {
+    // RES-ABS-4: 메모리 해제
+    if (this._loadedHeroIds && this._loadedHeroIds.length > 0) {
+      HeroAssetLoader.unloadTextures(this, this._loadedHeroIds);
+    }
+
     this.time.removeAllEvents();
     this.tweens.killAll();
     if (this.input) {

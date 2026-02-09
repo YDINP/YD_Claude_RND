@@ -5,6 +5,9 @@ import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import transitionManager from '../utils/TransitionManager.js';
+import uiRenderer from '../renderers/UIRenderer.js';
+import characterRenderer from '../renderers/CharacterRenderer.js';
+import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 
 export class HeroDetailScene extends Phaser.Scene {
   constructor() {
@@ -12,6 +15,7 @@ export class HeroDetailScene extends Phaser.Scene {
     this.hero = null;
     this.isLevelingUp = false;
     this.activeTweens = [];
+    this._loadedHeroId = null; // RES-ABS-4: 로드된 히어로 추적
   }
 
   init(data) {
@@ -32,13 +36,17 @@ export class HeroDetailScene extends Phaser.Scene {
       return;
     }
 
-    this.createBackground();
-    this.createHeader();
-    this.createHeroDisplay();
-    this.createStatsPanel();
-    this.createSkillsPanel();
-    this.createActionButtons();
-    this.createEquipmentSlots();
+    // RES-ABS-4: 단일 히어로 카드 동적 로드
+    this._loadedHeroId = this.hero.id;
+    if (characterRenderer.useAssets) {
+      characterRenderer.preloadAssets(this, [this.hero], { ids: [this.hero.id], types: ['card'] });
+      this.load.start();
+      this.load.once('complete', () => {
+        this.initUI();
+      });
+    } else {
+      this.initUI();
+    }
     } catch (error) {
       console.error('[HeroDetailScene] create() 실패:', error);
       this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -48,6 +56,16 @@ export class HeroDetailScene extends Phaser.Scene {
         this.scene.start('MainMenuScene');
       });
     }
+  }
+
+  initUI() {
+    this.createBackground();
+    this.createHeader();
+    this.createHeroDisplay();
+    this.createStatsPanel();
+    this.createSkillsPanel();
+    this.createActionButtons();
+    this.createEquipmentSlots();
   }
 
   createBackground() {
@@ -254,9 +272,8 @@ export class HeroDetailScene extends Phaser.Scene {
       iconBg.setStrokeStyle(2, COLORS.primary);
       iconBg.setInteractive({ useHandCursor: true });
 
-      this.add.text(x, y - 5, '⚔', {
-        fontSize: '20px'
-      }).setOrigin(0.5);
+      const skillIcon = uiRenderer.renderIcon(this, x, y - 5, { type: 'stat', key: 'atk', size: 20 });
+      this.add.existing(skillIcon);
 
       this.add.text(x, y + 18, `Lv.${skillLevel}/${maxSkillLevel}`, {
         fontSize: '9px',
@@ -938,6 +955,11 @@ export class HeroDetailScene extends Phaser.Scene {
   }
 
   shutdown() {
+    // RES-ABS-4: 메모리 해제
+    if (this._loadedHeroId) {
+      HeroAssetLoader.unloadTextures(this, [this._loadedHeroId]);
+    }
+
     this.time.removeAllEvents();
     this.tweens.killAll();
     if (this.input) {

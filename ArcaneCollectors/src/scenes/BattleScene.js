@@ -8,6 +8,8 @@ import { ParticleManager } from '../systems/ParticleManager.js';
 import { getAllCharacters, getCharacter } from '../data/index.js';
 import { MOOD_COLORS } from '../config/layoutConfig.js';
 import transitionManager from '../utils/TransitionManager.js';
+import characterRenderer from '../renderers/CharacterRenderer.js';
+import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 
 /**
  * BattleScene - 전투 씬
@@ -38,6 +40,9 @@ export class BattleScene extends Phaser.Scene {
 
     // 전투 이벤트 리스너 (Observer Pattern)
     this.battleEventListeners = [];
+
+    // RES-ABS-4: 로드된 히어로 추적
+    this._loadedHeroIds = [];
   }
 
   init(data) {
@@ -67,19 +72,19 @@ export class BattleScene extends Phaser.Scene {
       // H-10: ParticleManager 초기화
       this.particles = new ParticleManager(this);
 
-      this.initializeBattlers();
-      this.calculateSynergy();
-      this.createBackground();
-      this.createTurnOrderBar();
-      this.createBattleUI();
-      this.createBattlers();
-      this.createControlButtons();
-      this.createSkillCards();
-      this.createSynergyDisplay();
-      this.createManualTurnButton();
+      // RES-ABS-4: 파티 + 적 전투 스프라이트 동적 로드
+      const partyIds = this.party.map(h => h.id);
+      this._loadedHeroIds = partyIds;
 
-      // A-8.5: 전투 시작 트랜지션
-      this.playBattleIntro();
+      if (characterRenderer.useAssets && partyIds.length > 0) {
+        characterRenderer.preloadAssets(this, this.party, { ids: partyIds, types: ['battle'] });
+        this.load.start();
+        this.load.once('complete', () => {
+          this.initBattle();
+        });
+      } else {
+        this.initBattle();
+      }
 
       // Scene 종료 시 정리
       this.events.once('shutdown', () => {
@@ -97,6 +102,25 @@ export class BattleScene extends Phaser.Scene {
         this.scene.start('MainMenuScene');
       });
     }
+  }
+
+  /**
+   * RES-ABS-4: 전투 초기화 (에셋 로드 후 호출)
+   */
+  initBattle() {
+    this.initializeBattlers();
+    this.calculateSynergy();
+    this.createBackground();
+    this.createTurnOrderBar();
+    this.createBattleUI();
+    this.createBattlers();
+    this.createControlButtons();
+    this.createSkillCards();
+    this.createSynergyDisplay();
+    this.createManualTurnButton();
+
+    // A-8.5: 전투 시작 트랜지션
+    this.playBattleIntro();
   }
 
   /**
@@ -2005,6 +2029,11 @@ export class BattleScene extends Phaser.Scene {
    * 씬 정리
    */
   shutdown() {
+    // RES-ABS-4: 메모리 해제
+    if (this._loadedHeroIds && this._loadedHeroIds.length > 0) {
+      HeroAssetLoader.unloadTextures(this, this._loadedHeroIds);
+    }
+
     this.time.removeAllEvents();
     this.tweens.killAll();
     this.battleEventListeners = [];

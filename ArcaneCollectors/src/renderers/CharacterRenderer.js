@@ -479,12 +479,21 @@ class CharacterRenderer {
    * 에셋 프리로드 (PreloadScene에서 호출)
    * @param {Phaser.Scene} scene
    * @param {Array} characters
+   * @param {Object} options - 로드 옵션
+   * @param {Array<string>} [options.types] - 로드할 타입 배열 (예: ['thumbnail', 'portrait'])
+   * @param {Array<string>} [options.ids] - 로드할 히어로 ID 배열 (필터링용)
    */
-  preloadAssets(scene, characters) {
+  preloadAssets(scene, characters, options = {}) {
     if (!this.useAssets || !characters) return;
 
-    const types = ['thumbnail', 'card', 'battle', 'portrait'];
-    characters.forEach(hero => {
+    const types = options.types || ['thumbnail', 'card', 'battle', 'portrait'];
+    const filterIds = options.ids || null;
+
+    const filteredCharacters = filterIds
+      ? characters.filter(c => filterIds.includes(c.id))
+      : characters;
+
+    filteredCharacters.forEach(hero => {
       types.forEach(type => {
         const key = this._getTextureKey(hero, type);
         if (!scene.textures.exists(key)) {
