@@ -10,7 +10,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "name", "mood", "type", "baseStats", "growthStats", "skills", "expReward", "goldReward"],
+        "required": ["id", "name", "mood", "type", "stats", "growthStats", "skills", "expReward", "goldReward"],
         "properties": {
           "id": {
             "type": "string",
@@ -31,7 +31,7 @@
             "type": "string",
             "enum": ["normal", "elite", "boss", "tower_boss"]
           },
-          "baseStats": {
+          "stats": {
             "type": "object",
             "required": ["hp", "atk", "def", "spd"],
             "properties": {
