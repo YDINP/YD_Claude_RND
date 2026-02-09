@@ -1,5 +1,5 @@
 /**
- * drawUtils.js - Phaser graphics drawing utilities
+ * drawUtils.ts - Phaser graphics drawing utilities
  */
 
 import { COLORS } from '../config/gameConfig.js';
@@ -11,17 +11,27 @@ import { DESIGN, getMoodColor, getHPColor } from '../config/designSystem.js';
 
 /**
  * Draw rounded rectangle
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - X position
- * @param {number} y - Y position
- * @param {number} width - Width
- * @param {number} height - Height
- * @param {number} radius - Corner radius
- * @param {number} fillColor - Fill color (hex number)
- * @param {number|null} strokeColor - Stroke color (hex number) or null
- * @param {number} strokeWidth - Stroke width
+ * @param graphics - Graphics object
+ * @param x - X position
+ * @param y - Y position
+ * @param width - Width
+ * @param height - Height
+ * @param radius - Corner radius
+ * @param fillColor - Fill color (hex number)
+ * @param strokeColor - Stroke color (hex number) or null
+ * @param strokeWidth - Stroke width
  */
-export function drawRoundedRect(graphics, x, y, width, height, radius, fillColor, strokeColor = null, strokeWidth = 0) {
+export function drawRoundedRect(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  fillColor: number,
+  strokeColor: number | null = null,
+  strokeWidth: number = 0
+): void {
   graphics.fillStyle(fillColor);
   graphics.fillRoundedRect(x, y, width, height, radius);
 
@@ -33,12 +43,12 @@ export function drawRoundedRect(graphics, x, y, width, height, radius, fillColor
 
 /**
  * Linear interpolation between two colors
- * @param {number} color1 - Start color (hex number)
- * @param {number} color2 - End color (hex number)
- * @param {number} t - Interpolation factor (0-1)
- * @returns {number} Interpolated color
+ * @param color1 - Start color (hex number)
+ * @param color2 - End color (hex number)
+ * @param t - Interpolation factor (0-1)
+ * @returns Interpolated color
  */
-function lerpColor(color1, color2, t) {
+function lerpColor(color1: number, color2: number, t: number): number {
   const r1 = (color1 >> 16) & 0xff;
   const g1 = (color1 >> 8) & 0xff;
   const b1 = color1 & 0xff;
@@ -56,16 +66,25 @@ function lerpColor(color1, color2, t) {
 
 /**
  * Draw gradient rectangle (vertical gradient)
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - X position
- * @param {number} y - Y position
- * @param {number} width - Width
- * @param {number} height - Height
- * @param {number} colorTop - Top color (hex number)
- * @param {number} colorBottom - Bottom color (hex number)
- * @param {number} radius - Corner radius (optional)
+ * @param graphics - Graphics object
+ * @param x - X position
+ * @param y - Y position
+ * @param width - Width
+ * @param height - Height
+ * @param colorTop - Top color (hex number)
+ * @param colorBottom - Bottom color (hex number)
+ * @param radius - Corner radius (optional)
  */
-export function drawGradientRect(graphics, x, y, width, height, colorTop, colorBottom, radius = 0) {
+export function drawGradientRect(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  colorTop: number,
+  colorBottom: number,
+  radius: number = 0
+): void {
   const steps = 10;
   const stepHeight = height / steps;
 
@@ -88,15 +107,23 @@ export function drawGradientRect(graphics, x, y, width, height, colorTop, colorB
 
 /**
  * Draw star shape
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - Center X
- * @param {number} y - Center Y
- * @param {number} points - Number of points
- * @param {number} outerRadius - Outer radius
- * @param {number} innerRadius - Inner radius
- * @param {number} fillColor - Fill color
+ * @param graphics - Graphics object
+ * @param x - Center X
+ * @param y - Center Y
+ * @param points - Number of points
+ * @param outerRadius - Outer radius
+ * @param innerRadius - Inner radius
+ * @param fillColor - Fill color
  */
-export function drawStar(graphics, x, y, points, outerRadius, innerRadius, fillColor) {
+export function drawStar(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  points: number,
+  outerRadius: number,
+  innerRadius: number,
+  fillColor: number
+): void {
   graphics.fillStyle(fillColor);
   graphics.beginPath();
 
@@ -119,14 +146,21 @@ export function drawStar(graphics, x, y, points, outerRadius, innerRadius, fillC
 
 /**
  * Draw circle with glow effect
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - Center X
- * @param {number} y - Center Y
- * @param {number} radius - Circle radius
- * @param {number} color - Circle color
- * @param {number} glowRadius - Glow radius
+ * @param graphics - Graphics object
+ * @param x - Center X
+ * @param y - Center Y
+ * @param radius - Circle radius
+ * @param color - Circle color
+ * @param glowRadius - Glow radius
  */
-export function drawGlowCircle(graphics, x, y, radius, color, glowRadius = 10) {
+export function drawGlowCircle(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  radius: number,
+  color: number,
+  glowRadius: number = 10
+): void {
   // Draw glow layers
   for (let i = glowRadius; i > 0; i--) {
     const alpha = 0.1 * (1 - i / glowRadius);
@@ -141,15 +175,23 @@ export function drawGlowCircle(graphics, x, y, radius, color, glowRadius = 10) {
 
 /**
  * Draw hexagon shape
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - Center X
- * @param {number} y - Center Y
- * @param {number} radius - Radius
- * @param {number} fillColor - Fill color
- * @param {number|null} strokeColor - Stroke color
- * @param {number} strokeWidth - Stroke width
+ * @param graphics - Graphics object
+ * @param x - Center X
+ * @param y - Center Y
+ * @param radius - Radius
+ * @param fillColor - Fill color
+ * @param strokeColor - Stroke color
+ * @param strokeWidth - Stroke width
  */
-export function drawHexagon(graphics, x, y, radius, fillColor, strokeColor = null, strokeWidth = 0) {
+export function drawHexagon(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  radius: number,
+  fillColor: number,
+  strokeColor: number | null = null,
+  strokeWidth: number = 0
+): void {
   graphics.fillStyle(fillColor);
   graphics.beginPath();
 
@@ -180,14 +222,20 @@ export function drawHexagon(graphics, x, y, radius, fillColor, strokeColor = nul
 
 /**
  * Draw mood icon
- * @param {Phaser.Scene} scene - Current scene
- * @param {number} x - X position
- * @param {number} y - Y position
- * @param {string} mood - Mood name (brave, cunning, calm, wild, mystic)
- * @param {number} size - Icon size
- * @returns {Phaser.GameObjects.Graphics} The graphics object
+ * @param scene - Current scene
+ * @param x - X position
+ * @param y - Y position
+ * @param mood - Mood name (brave, cunning, calm, wild, mystic)
+ * @param size - Icon size
+ * @returns The graphics object
  */
-export function drawMoodIcon(scene, x, y, mood, size = 24) {
+export function drawMoodIcon(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  mood: string,
+  size: number = 24
+): Phaser.GameObjects.Graphics {
   const graphics = scene.add.graphics();
   const color = getMoodColor(mood);
 
@@ -204,22 +252,30 @@ export function drawMoodIcon(scene, x, y, mood, size = 24) {
 
 /**
  * Draw HP bar
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - X position
- * @param {number} y - Y position
- * @param {number} width - Bar width
- * @param {number} height - Bar height
- * @param {number} percent - Fill percentage (0-1)
- * @param {boolean} showBackground - Whether to show background
+ * @param graphics - Graphics object
+ * @param x - X position
+ * @param y - Y position
+ * @param width - Bar width
+ * @param height - Bar height
+ * @param percent - Fill percentage (0-1)
+ * @param showBackground - Whether to show background
  */
-export function drawHPBar(graphics, x, y, width, height, percent, showBackground = true) {
+export function drawHPBar(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  percent: number,
+  showBackground: boolean = true
+): void {
   if (showBackground) {
     graphics.fillStyle(0x1e293b);
     graphics.fillRoundedRect(x, y, width, height, height / 2);
   }
 
   // Determine color based on percent
-  let color;
+  let color: number;
   if (percent > 0.5) color = 0x22c55e;      // Green
   else if (percent > 0.25) color = 0xf59e0b; // Yellow
   else color = 0xef4444;                      // Red
@@ -234,14 +290,21 @@ export function drawHPBar(graphics, x, y, width, height, percent, showBackground
 
 /**
  * Draw skill bar (blue themed)
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - X position
- * @param {number} y - Y position
- * @param {number} width - Bar width
- * @param {number} height - Bar height
- * @param {number} percent - Fill percentage (0-1)
+ * @param graphics - Graphics object
+ * @param x - X position
+ * @param y - Y position
+ * @param width - Bar width
+ * @param height - Bar height
+ * @param percent - Fill percentage (0-1)
  */
-export function drawSkillBar(graphics, x, y, width, height, percent) {
+export function drawSkillBar(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  percent: number
+): void {
   // Background
   graphics.fillStyle(0x1e293b);
   graphics.fillRoundedRect(x, y, width, height, height / 2);
@@ -256,14 +319,21 @@ export function drawSkillBar(graphics, x, y, width, height, percent) {
 
 /**
  * Draw experience bar (purple themed)
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - X position
- * @param {number} y - Y position
- * @param {number} width - Bar width
- * @param {number} height - Bar height
- * @param {number} percent - Fill percentage (0-1)
+ * @param graphics - Graphics object
+ * @param x - X position
+ * @param y - Y position
+ * @param width - Bar width
+ * @param height - Bar height
+ * @param percent - Fill percentage (0-1)
  */
-export function drawExpBar(graphics, x, y, width, height, percent) {
+export function drawExpBar(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  percent: number
+): void {
   // Background
   graphics.fillStyle(0x1e293b);
   graphics.fillRoundedRect(x, y, width, height, height / 2);
@@ -278,16 +348,25 @@ export function drawExpBar(graphics, x, y, width, height, percent) {
 
 /**
  * Draw progress ring
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - Center X
- * @param {number} y - Center Y
- * @param {number} radius - Ring radius
- * @param {number} thickness - Ring thickness
- * @param {number} percent - Fill percentage (0-1)
- * @param {number} fillColor - Fill color
- * @param {number} bgColor - Background color
+ * @param graphics - Graphics object
+ * @param x - Center X
+ * @param y - Center Y
+ * @param radius - Ring radius
+ * @param thickness - Ring thickness
+ * @param percent - Fill percentage (0-1)
+ * @param fillColor - Fill color
+ * @param bgColor - Background color
  */
-export function drawProgressRing(graphics, x, y, radius, thickness, percent, fillColor = 0x3b82f6, bgColor = 0x1e293b) {
+export function drawProgressRing(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  radius: number,
+  thickness: number,
+  percent: number,
+  fillColor: number = 0x3b82f6,
+  bgColor: number = 0x1e293b
+): void {
   const startAngle = -Math.PI / 2;
   const endAngle = startAngle + Math.PI * 2 * Math.max(0, Math.min(1, percent));
 
@@ -312,15 +391,22 @@ export function drawProgressRing(graphics, x, y, radius, thickness, percent, fil
 
 /**
  * Draw rarity frame for hero card
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - X position
- * @param {number} y - Y position
- * @param {number} width - Frame width
- * @param {number} height - Frame height
- * @param {string} rarity - Rarity (N, R, SR, SSR)
+ * @param graphics - Graphics object
+ * @param x - X position
+ * @param y - Y position
+ * @param width - Frame width
+ * @param height - Frame height
+ * @param rarity - Rarity (N, R, SR, SSR)
  */
-export function drawRarityFrame(graphics, x, y, width, height, rarity) {
-  const rarityColors = {
+export function drawRarityFrame(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  rarity: string
+): void {
+  const rarityColors: Record<string, { border: number; bg: number }> = {
     N: { border: 0x6b7280, bg: 0x374151 },
     R: { border: 0x3b82f6, bg: 0x1e3a5f },
     SR: { border: 0xa855f7, bg: 0x4c1d95 },
@@ -351,14 +437,21 @@ export function drawRarityFrame(graphics, x, y, width, height, rarity) {
 
 /**
  * Draw panel background
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - X position
- * @param {number} y - Y position
- * @param {number} width - Panel width
- * @param {number} height - Panel height
- * @param {number} radius - Corner radius
+ * @param graphics - Graphics object
+ * @param x - X position
+ * @param y - Y position
+ * @param width - Panel width
+ * @param height - Panel height
+ * @param radius - Corner radius
  */
-export function drawPanel(graphics, x, y, width, height, radius = 12) {
+export function drawPanel(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number = 12
+): void {
   // Semi-transparent dark background
   graphics.fillStyle(0x0f172a, 0.9);
   graphics.fillRoundedRect(x, y, width, height, radius);
@@ -370,14 +463,21 @@ export function drawPanel(graphics, x, y, width, height, radius = 12) {
 
 /**
  * Draw card background
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - X position
- * @param {number} y - Y position
- * @param {number} width - Card width
- * @param {number} height - Card height
- * @param {boolean} interactive - Add hover highlight
+ * @param graphics - Graphics object
+ * @param x - X position
+ * @param y - Y position
+ * @param width - Card width
+ * @param height - Card height
+ * @param interactive - Add hover highlight
  */
-export function drawCard(graphics, x, y, width, height, interactive = false) {
+export function drawCard(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  interactive: boolean = false
+): void {
   const radius = 8;
 
   // Background
@@ -397,15 +497,23 @@ export function drawCard(graphics, x, y, width, height, interactive = false) {
 
 /**
  * Draw button background
- * @param {Phaser.GameObjects.Graphics} graphics - Graphics object
- * @param {number} x - X position
- * @param {number} y - Y position
- * @param {number} width - Button width
- * @param {number} height - Button height
- * @param {number} color - Button color
- * @param {boolean} pressed - Is button pressed
+ * @param graphics - Graphics object
+ * @param x - X position
+ * @param y - Y position
+ * @param width - Button width
+ * @param height - Button height
+ * @param color - Button color
+ * @param pressed - Is button pressed
  */
-export function drawButton(graphics, x, y, width, height, color = 0x3b82f6, pressed = false) {
+export function drawButton(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: number = 0x3b82f6,
+  pressed: boolean = false
+): void {
   const radius = 8;
 
   // Shadow (only if not pressed)

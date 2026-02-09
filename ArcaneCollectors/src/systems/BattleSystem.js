@@ -10,6 +10,7 @@
 import { EventBus, GameEvents } from './EventBus.js';
 import { SaveManager } from './SaveManager.js';
 import { getCharacter } from '../data/index.js';
+import { AttackCommand, SkillCommand, DefendCommand } from './commands/index.js';
 
 // ============================================
 // Strategy Pattern: 스킬 효과 전략
@@ -485,6 +486,10 @@ export class BattleSystem {
 
     // 시너지 버프
     this.synergyBuffs = { atk: 0, def: 0, spd: 0 };
+
+    // Command Pattern: 커맨드 히스토리
+    this.commandHistory = [];
+    this.maxCommandHistory = 100; // 최대 히스토리 개수
   }
 
   /**
@@ -510,6 +515,88 @@ export class BattleSystem {
    */
   emit(event, data) {
     this.eventEmitter.emit(event, data);
+  }
+
+  /**
+   * 커맨드 실행 (Command Pattern)
+   * @param {BaseCommand} command 실행할 커맨드
+   * @returns {Array<Object>} 액션 결과
+   */
+  executeCommand(command) {
+    if (!command.canExecute()) {
+      console.warn(`[Battle] Command cannot be executed: ${command.getDescription()}`);
+      return [];
+    }
+
+    console.log(`[Battle] Executing command: ${command.getDescription()}`);
+
+    // 커맨드 실행
+    const results = command.execute();
+
+    // 히스토리에 기록
+    this.commandHistory.push({
+      metadata: command.getMetadata(),
+      results: results,
+      turnCount: this.turnCount
+    });
+
+    // 히스토리 크기 제한
+    if (this.commandHistory.length > this.maxCommandHistory) {
+      this.commandHistory.shift();
+    }
+
+    // 커맨드 실행 이벤트 발행
+    this.emit('commandExecuted', {
+      command: command.getMetadata(),
+      results: results
+    });
+
+    return results;
+  }
+
+  /**
+   * 만료된 버프를 해제하고 원래 스탯으로 복원
+   * @param {BattleUnit} unit - 버프를 체크할 유닛
+   */
+  _processExpiredBuffs(unit) {
+    if (!unit.buffs || unit.buffs.length === 0) return;
+
+    const expiredBuffs = unit.buffs.filter(buff => {
+      const turnsElapsed = this.turnCount - buff.appliedAt;
+      return turnsElapsed >= buff.duration;
+    });
+
+    for (const buff of expiredBuffs) {
+      if (buff.type === 'defense' && buff.originalValue !== undefined) {
+        unit.def = buff.originalValue;
+        console.log(`[Battle] Defense buff expired for ${unit.name}: DEF restored to ${unit.def}`);
+      }
+    }
+
+    // 만료된 버프 제거
+    unit.buffs = unit.buffs.filter(buff => {
+      const turnsElapsed = this.turnCount - buff.appliedAt;
+      return turnsElapsed < buff.duration;
+    });
+  }
+
+  /**
+   * 커맨드 히스토리 조회
+   * @param {number} count 조회할 개수 (기본: 전체)
+   * @returns {Array<Object>}
+   */
+  getCommandHistory(count = null) {
+    if (count === null) {
+      return [...this.commandHistory];
+    }
+    return this.commandHistory.slice(-count);
+  }
+
+  /**
+   * 커맨드 히스토리 초기화
+   */
+  clearCommandHistory() {
+    this.commandHistory = [];
   }
 
   /**
@@ -633,6 +720,9 @@ export class BattleSystem {
       turn: this.turnCount,
       unit: { id: unit.id, name: unit.name, isAlly: !unit.isEnemy }
     });
+
+    // PAT-1.1: 만료된 버프 해제 (방어 커맨드 등)
+    this._processExpiredBuffs(unit);
 
     this.setState(BattleState.PROCESSING_ACTION);
 
@@ -1200,3 +1290,6 @@ export { SkillStrategy, BasicAttackStrategy, PowerStrikeStrategy, HealStrategy, 
 export { BattleEventEmitter };
 export { BattleState };
 export { SynergyCalculator };
+
+// Export Command Pattern classes
+export { AttackCommand, SkillCommand, DefendCommand };

@@ -2,8 +2,22 @@
  * GameLogger - 카테고리별 구조화된 디버그 로그
  * 각 카테고리를 개별적으로 on/off 가능
  */
+
+interface CategoryConfig {
+  enabled: boolean;
+  color: string;
+  icon: string;
+}
+
+interface LogEntry {
+  timestamp: string;
+  category: string;
+  message: string;
+  data: any;
+}
+
 class GameLogger {
-  static categories = {
+  static categories: Record<string, CategoryConfig> = {
     BATTLE: { enabled: true, color: '#ff4444', icon: '⚔️' },
     GACHA: { enabled: true, color: '#ffaa00', icon: '🎲' },
     PARTY: { enabled: true, color: '#44aaff', icon: '👥' },
@@ -16,17 +30,17 @@ class GameLogger {
     DATA: { enabled: false, color: '#8888ff', icon: '📊' },
   };
 
-  static _history = [];
-  static _maxHistory = 500;
-  static _enabled = true; // master switch
+  static _history: LogEntry[] = [];
+  static _maxHistory: number = 500;
+  static _enabled: boolean = true; // master switch
 
   /**
    * 로그 출력
-   * @param {string} category - 카테고리 키 (BATTLE, GACHA, etc.)
-   * @param {string} message - 로그 메시지
-   * @param {*} [data] - 추가 데이터
+   * @param category - 카테고리 키 (BATTLE, GACHA, etc.)
+   * @param message - 로그 메시지
+   * @param data - 추가 데이터
    */
-  static log(category, message, data = null) {
+  static log(category: string, message: string, data: any = null): void {
     if (!this._enabled) return;
     const cat = this.categories[category];
     if (!cat || !cat.enabled) return;
@@ -34,7 +48,7 @@ class GameLogger {
     const timestamp = new Date().toLocaleTimeString('ko-KR', { hour12: false });
     const prefix = `${cat.icon} [${category}]`;
 
-    const entry = { timestamp, category, message, data };
+    const entry: LogEntry = { timestamp, category, message, data };
     this._history.push(entry);
     if (this._history.length > this._maxHistory) {
       this._history.shift();
@@ -50,35 +64,35 @@ class GameLogger {
   /**
    * 카테고리 활성/비활성
    */
-  static enable(category) {
+  static enable(category: string): void {
     if (this.categories[category]) this.categories[category].enabled = true;
   }
 
-  static disable(category) {
+  static disable(category: string): void {
     if (this.categories[category]) this.categories[category].enabled = false;
   }
 
-  static enableAll() {
+  static enableAll(): void {
     Object.keys(this.categories).forEach(k => this.categories[k].enabled = true);
   }
 
-  static disableAll() {
+  static disableAll(): void {
     Object.keys(this.categories).forEach(k => this.categories[k].enabled = false);
   }
 
   /**
    * 마스터 스위치
    */
-  static setEnabled(enabled) {
+  static setEnabled(enabled: boolean): void {
     this._enabled = enabled;
   }
 
   /**
    * 최근 로그 이력 조회
-   * @param {string} [category] - 필터할 카테고리
-   * @param {number} [count=20] - 조회할 개수
+   * @param category - 필터할 카테고리
+   * @param count - 조회할 개수
    */
-  static getHistory(category = null, count = 20) {
+  static getHistory(category: string | null = null, count: number = 20): LogEntry[] {
     let history = this._history;
     if (category) {
       history = history.filter(h => h.category === category);
@@ -89,7 +103,7 @@ class GameLogger {
   /**
    * 이력 콘솔 출력
    */
-  static printHistory(category = null, count = 20) {
+  static printHistory(category: string | null = null, count: number = 20): void {
     const entries = this.getHistory(category, count);
     console.group(`📋 Log History (${entries.length} entries)`);
     entries.forEach(e => {
@@ -103,7 +117,7 @@ class GameLogger {
   /**
    * 현재 카테고리 상태 표시
    */
-  static status() {
+  static status(): void {
     console.group('📊 GameLogger Status');
     console.log(`Master: ${this._enabled ? '✅ ON' : '❌ OFF'}`);
     console.log(`History: ${this._history.length}/${this._maxHistory}`);
@@ -116,7 +130,7 @@ class GameLogger {
 
 // 글로벌 접근 (디버그 콘솔에서 사용)
 if (typeof window !== 'undefined') {
-  window.GameLogger = GameLogger;
+  (window as any).GameLogger = GameLogger;
 }
 
 export default GameLogger;

@@ -1,5 +1,5 @@
 /**
- * TouchManager.js - 모바일 터치 제스처 관리
+ * TouchManager.ts - 모바일 터치 제스처 관리
  * H-8: Responsive & Mobile Touch UX
  *
  * 지원 제스처:
@@ -14,26 +14,60 @@
  *   touch.on('longpress', (data) => { ... });
  */
 
+export interface TouchManagerOptions {
+  swipeThreshold?: number;
+  swipeTimeLimit?: number;
+  longPressTime?: number;
+  doubleTapTime?: number;
+}
+
+export interface SwipeData {
+  direction: string;
+  distance: number;
+  duration: number;
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+}
+
+export interface TapData {
+  x: number;
+  y: number;
+  worldX: number;
+  worldY: number;
+}
+
+export type GestureEvent = 'swipe' | 'swipeleft' | 'swiperight' | 'swipeup' | 'swipedown' | 'longpress' | 'doubletap';
+export type GestureCallback = (data: SwipeData | TapData) => void;
+
 export class TouchManager {
-  constructor(scene, options = {}) {
+  private scene: Phaser.Scene;
+  private swipeThreshold: number;
+  private swipeTimeLimit: number;
+  private longPressTime: number;
+  private doubleTapTime: number;
+
+  private _startX: number = 0;
+  private _startY: number = 0;
+  private _startTime: number = 0;
+  private _longPressTimer: Phaser.Time.TimerEvent | null = null;
+  private _lastTapTime: number = 0;
+  private _callbacks: Record<string, GestureCallback[]> = {};
+  private _enabled: boolean = true;
+  private _isSwiping: boolean = false;
+
+  constructor(scene: Phaser.Scene, options: TouchManagerOptions = {}) {
     this.scene = scene;
     this.swipeThreshold = options.swipeThreshold ?? 50;
     this.swipeTimeLimit = options.swipeTimeLimit ?? 300;
     this.longPressTime = options.longPressTime ?? 500;
     this.doubleTapTime = options.doubleTapTime ?? 300;
 
-    this._startX = 0;
-    this._startY = 0;
-    this._startTime = 0;
-    this._longPressTimer = null;
-    this._lastTapTime = 0;
-    this._callbacks = {};
-    this._enabled = true;
-
     this._setupListeners();
   }
 
-  _setupListeners() {
+  private _setupListeners(): void {
     this.scene.input.on('pointerdown', this._onPointerDown, this);
     this.scene.input.on('pointerup', this._onPointerUp, this);
     this.scene.input.on('pointermove', this._onPointerMove, this);
@@ -42,7 +76,7 @@ export class TouchManager {
     this.scene.events.once('shutdown', () => this.destroy());
   }
 
-  _onPointerDown(pointer) {
+  private _onPointerDown(pointer: Phaser.Input.Pointer): void {
     if (!this._enabled) return;
 
     this._startX = pointer.x;
@@ -62,7 +96,7 @@ export class TouchManager {
     });
   }
 
-  _onPointerMove(pointer) {
+  private _onPointerMove(pointer: Phaser.Input.Pointer): void {
     if (!this._enabled || !pointer.isDown) return;
 
     const dx = pointer.x - this._startX;
@@ -76,7 +110,7 @@ export class TouchManager {
     }
   }
 
-  _onPointerUp(pointer) {
+  private _onPointerUp(pointer: Phaser.Input.Pointer): void {
     if (!this._enabled) return;
 
     // Cancel long-press
@@ -94,7 +128,7 @@ export class TouchManager {
 
     // Swipe detection
     if (dist >= this.swipeThreshold && elapsed <= this.swipeTimeLimit) {
-      const data = {
+      const data: SwipeData = {
         direction: '',
         distance: dist,
         duration: elapsed,
@@ -111,7 +145,7 @@ export class TouchManager {
       }
 
       this._emit('swipe', data);
-      this._emit(`swipe${data.direction}`, data);
+      this._emit(`swipe${data.direction}` as GestureEvent, data);
       return;
     }
 
@@ -134,10 +168,10 @@ export class TouchManager {
 
   /**
    * Register gesture callback
-   * @param {string} event - 'swipe'|'swipeleft'|'swiperight'|'swipeup'|'swipedown'|'longpress'|'doubletap'
-   * @param {Function} callback
+   * @param event - 'swipe'|'swipeleft'|'swiperight'|'swipeup'|'swipedown'|'longpress'|'doubletap'
+   * @param callback
    */
-  on(event, callback) {
+  on(event: GestureEvent, callback: GestureCallback): this {
     if (!this._callbacks[event]) {
       this._callbacks[event] = [];
     }
@@ -145,7 +179,7 @@ export class TouchManager {
     return this;
   }
 
-  off(event, callback) {
+  off(event: GestureEvent, callback?: GestureCallback): this {
     if (!this._callbacks[event]) return this;
     if (callback) {
       this._callbacks[event] = this._callbacks[event].filter(cb => cb !== callback);
@@ -155,17 +189,17 @@ export class TouchManager {
     return this;
   }
 
-  _emit(event, data) {
+  private _emit(event: string, data: SwipeData | TapData): void {
     const cbs = this._callbacks[event];
     if (cbs) {
       cbs.forEach(cb => cb(data));
     }
   }
 
-  enable() { this._enabled = true; }
-  disable() { this._enabled = false; }
+  enable(): void { this._enabled = true; }
+  disable(): void { this._enabled = false; }
 
-  destroy() {
+  destroy(): void {
     if (this.scene && this.scene.input) {
       this.scene.input.off('pointerdown', this._onPointerDown, this);
       this.scene.input.off('pointerup', this._onPointerUp, this);
@@ -182,7 +216,7 @@ export class TouchManager {
 /**
  * 디바이스 타입 감지 유틸리티
  */
-export function isMobileDevice() {
+export function isMobileDevice(): boolean {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     navigator.userAgent
   ) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -190,10 +224,10 @@ export function isMobileDevice() {
 
 /**
  * 터치 영역 최소 사이즈 보장 유틸리티 (44px 기준)
- * @param {number} size - 원본 사이즈
- * @returns {number} 최소 44px 이상 보장된 사이즈
+ * @param size - 원본 사이즈
+ * @returns 최소 44px 이상 보장된 사이즈
  */
-export function ensureTouchSize(size) {
+export function ensureTouchSize(size: number): number {
   return Math.max(size, 44);
 }
 

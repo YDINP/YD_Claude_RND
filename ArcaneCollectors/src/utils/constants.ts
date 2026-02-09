@@ -1,5 +1,5 @@
 /**
- * constants.js - Game system constants and configurations
+ * constants.ts - Game system constants and configurations
  * 분위기 시스템, 교단 시스템, 상성 관계 정의
  */
 
@@ -21,14 +21,21 @@ export const MOOD = {
   CUNNING: 'cunning',   // 냉철 - 전략적, 약점 공략
   NOBLE: 'noble',       // 고결 - 리더십, 팀 버프
   MYSTIC: 'mystic'      // 신비 - 초월적, 마법 특화
-};;
+} as const;
+
+export type MoodType = typeof MOOD[keyof typeof MOOD];
 
 /**
  * 분위기 상성 관계 (매트릭스 구조)
  * 각 분위기는 2개에 강하고 2개에 약함, 나머지 4개는 중립
  * 그룹: 공격형(brave/fierce/wild), 방어형(calm/stoic/devoted), 전략형(cunning/noble/mystic)
  */
-export const MOOD_MATCHUP = {
+export interface MoodMatchup {
+  strongAgainst: MoodType[];
+  weakAgainst: MoodType[];
+}
+
+export const MOOD_MATCHUP: Record<MoodType, MoodMatchup> = {
   [MOOD.BRAVE]: {
     strongAgainst: [MOOD.WILD, MOOD.CUNNING],
     weakAgainst: [MOOD.FIERCE, MOOD.DEVOTED]
@@ -65,7 +72,7 @@ export const MOOD_MATCHUP = {
     strongAgainst: [MOOD.NOBLE, MOOD.STOIC],
     weakAgainst: [MOOD.CUNNING, MOOD.WILD]
   }
-};;
+};
 
 /**
  * 분위기 상성 데미지 배율
@@ -74,12 +81,18 @@ export const MOOD_DAMAGE = {
   ADVANTAGE: 1.2,       // 상성 우위: 20% 추가 데미지
   DISADVANTAGE: 0.8,    // 상성 열세: 20% 데미지 감소
   NEUTRAL: 1.0          // 중립: 변화 없음
-};;
+} as const;
 
 /**
  * 분위기별 한글 이름 및 설명
  */
-export const MOOD_INFO = {
+export interface MoodInfo {
+  name: string;
+  description: string;
+  color: string;
+}
+
+export const MOOD_INFO: Record<MoodType, MoodInfo> = {
   [MOOD.BRAVE]: {
     name: '열혈',
     description: '두려움을 모르는 전사의 기질',
@@ -125,7 +138,7 @@ export const MOOD_INFO = {
     description: '신비로운 힘을 지닌 초월적 존재',
     color: '#F39C12'
   }
-};;
+};
 
 // ============================================
 // Cult System (교단 시스템)
@@ -145,12 +158,21 @@ export const CULT = {
   AVALON: 'avalon',               // 아발론 (켈트 - 성스러운 섬)
   HELHEIM: 'helheim',             // 헬하임 (북유럽 - 명계)
   KUNLUN: 'kunlun'                // 곤륜 (중국 - 선인의 산)
-};;
+} as const;
+
+export type CultType = typeof CULT[keyof typeof CULT];
 
 /**
  * 교단별 상세 정보
  */
-export const CULT_INFO = {
+export interface CultInfo {
+  name: string;
+  origin: string;
+  description: string;
+  color: string;
+}
+
+export const CULT_INFO: Record<CultType, CultInfo> = {
   [CULT.VALHALLA]: {
     name: '발할라',
     origin: '북유럽 신화',
@@ -205,13 +227,19 @@ export const CULT_INFO = {
     description: '선인과 무협의 영웅이 수련하는 산',
     color: '#FF9800'
   }
-};;
+};
 
 /**
  * 교단-분위기 최적 조합 보너스
  * 특정 교단에서 특정 분위기 영웅이 추가 보너스를 받음
  */
-export const CULT_MOOD_BONUS = {
+export interface CultMoodBonusInfo {
+  optimalMood: MoodType;
+  bonusMultiplier: number;
+  description: string;
+}
+
+export const CULT_MOOD_BONUS: Record<CultType, CultMoodBonusInfo> = {
   [CULT.VALHALLA]: {
     optimalMood: MOOD.BRAVE,
     bonusMultiplier: 1.15,
@@ -257,7 +285,7 @@ export const CULT_MOOD_BONUS = {
     bonusMultiplier: 1.15,
     description: '곤륜산은 헌신적인 수행자를 이끌어줍니다'
   }
-};;
+};
 
 // ============================================
 // Helper Functions
@@ -265,11 +293,11 @@ export const CULT_MOOD_BONUS = {
 
 /**
  * 분위기 상성 데미지 배율 계산
- * @param {string} attackerMood - 공격자 분위기
- * @param {string} defenderMood - 방어자 분위기
- * @returns {number} 데미지 배율
+ * @param attackerMood - 공격자 분위기
+ * @param defenderMood - 방어자 분위기
+ * @returns 데미지 배율
  */
-function getMoodDamageMultiplier(attackerMood, defenderMood) {
+export function getMoodDamageMultiplier(attackerMood: MoodType, defenderMood: MoodType): number {
   const matchup = MOOD_MATCHUP[attackerMood];
   if (!matchup) return MOOD_DAMAGE.NEUTRAL;
 
@@ -285,11 +313,11 @@ function getMoodDamageMultiplier(attackerMood, defenderMood) {
 
 /**
  * 교단-분위기 보너스 배율 계산
- * @param {string} cult - 교단
- * @param {string} mood - 분위기
- * @returns {number} 보너스 배율 (1.0 = 보너스 없음)
+ * @param cult - 교단
+ * @param mood - 분위기
+ * @returns 보너스 배율 (1.0 = 보너스 없음)
  */
-export function getCultMoodBonus(cult, mood) {
+export function getCultMoodBonus(cult: CultType, mood: MoodType): number {
   const bonus = CULT_MOOD_BONUS[cult];
   if (!bonus) return 1.0;
 
@@ -302,10 +330,10 @@ export function getCultMoodBonus(cult, mood) {
 
 /**
  * 분위기 상성 관계 설명 문자열 반환
- * @param {string} mood - 분위기
- * @returns {string} 상성 설명
+ * @param mood - 분위기
+ * @returns 상성 설명
  */
-function getMoodMatchupDescription(mood) {
+export function getMoodMatchupDescription(mood: MoodType): string {
   const matchup = MOOD_MATCHUP[mood];
   const info = MOOD_INFO[mood];
 
