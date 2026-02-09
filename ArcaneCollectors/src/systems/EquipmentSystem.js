@@ -228,7 +228,7 @@ export class EquipmentSystem {
   static getEquipmentStats(equipment) {
     if (!equipment) return {};
 
-    const baseStats = equipment.baseStats || {};
+    const baseStats = equipment.stats || {};
     const enhancedStats = equipment.enhancedStats || {};
     const rarityMultiplier = EQUIPMENT_RARITY[equipment.rarity]?.multiplier || 1.0;
 
@@ -303,7 +303,7 @@ export class EquipmentSystem {
    */
   static getEnhanceStatBonus(equipment) {
     const bonus = {};
-    const baseStats = equipment.baseStats || {};
+    const baseStats = equipment.stats || {};
 
     // 주 스탯의 5% 증가
     for (const [stat, value] of Object.entries(baseStats)) {
@@ -345,7 +345,7 @@ export class EquipmentSystem {
       slotType,
       rarity,
       name: options.name || this.generateEquipmentName(slotType, rarity),
-      baseStats,
+      stats: baseStats,
       enhanceLevel: 0,
       enhancedStats: {},
       equippedBy: null,

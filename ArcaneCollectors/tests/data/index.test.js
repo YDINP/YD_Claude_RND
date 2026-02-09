@@ -279,12 +279,11 @@ describe('calculatePower', () => {
     expect(calculatePower({ name: 'test' }, 5)).toBe(0);
   });
 
-  it('baseStats 필드도 인식', () => {
+  it('stats 필드 없으면 0 반환', () => {
     const char = {
-      baseStats: { hp: 200, atk: 20, def: 20, spd: 10 },
+      name: 'test',
     };
-    // (200*0.1) + (20*2) + (20*1.5) + (10*1) = 20 + 40 + 30 + 10 = 100
-    expect(calculatePower(char, 1)).toBe(100);
+    expect(calculatePower(char, 1)).toBe(0);
   });
 
   it('growthStats 없으면 성장 0으로 처리', () => {
@@ -324,13 +323,13 @@ describe('calculateStats', () => {
     expect(result).toEqual({ hp: 100, atk: 10, def: 10, spd: 10 });
   });
 
-  it('baseStats 필드도 인식', () => {
+  it('stats 필드 없으면 기본값 반환', () => {
     const char = {
-      baseStats: { hp: 200, atk: 20, def: 15, spd: 12 },
+      name: 'test',
       growthStats: { hp: 10, atk: 2, def: 1, spd: 1 },
     };
     const result = calculateStats(char, 1);
-    expect(result).toEqual({ hp: 200, atk: 20, def: 15, spd: 12 });
+    expect(result).toEqual({ hp: 100, atk: 10, def: 10, spd: 10 });
   });
 });
 
@@ -602,14 +601,14 @@ describe('Enemy Functions', () => {
   it('calculateEnemyStats: 레벨별 스탯 계산', () => {
     const allEnemies = getAllEnemies();
     const enemy = allEnemies[0];
-    if (!enemy.baseStats || !enemy.growthStats) return;
+    if (!enemy.stats || !enemy.growthStats) return;
 
     const statsL1 = calculateEnemyStats(enemy, 1);
-    expect(statsL1).toEqual(enemy.baseStats);
+    expect(statsL1).toEqual(enemy.stats);
 
     const statsL10 = calculateEnemyStats(enemy, 10);
-    expect(statsL10.hp).toBe(enemy.baseStats.hp + enemy.growthStats.hp * 9);
-    expect(statsL10.atk).toBe(enemy.baseStats.atk + enemy.growthStats.atk * 9);
+    expect(statsL10.hp).toBe(enemy.stats.hp + enemy.growthStats.hp * 9);
+    expect(statsL10.atk).toBe(enemy.stats.atk + enemy.growthStats.atk * 9);
   });
 });
 

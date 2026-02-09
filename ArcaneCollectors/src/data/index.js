@@ -133,7 +133,7 @@ export function getCharactersByClass(charClass) {
  * @returns {number} 전투력
  */
 export function calculatePower(character, level = 1) {
-  const base = character.stats || character.baseStats;
+  const base = character.stats;
   if (!base) return 0;
   const growthStats = character.growthStats || { hp: 0, atk: 0, def: 0, spd: 0 };
   const levelMultiplier = level - 1;
@@ -153,7 +153,7 @@ export function calculatePower(character, level = 1) {
  * @returns {Object} 계산된 스탯
  */
 export function calculateStats(character, level) {
-  const base = character.stats || character.baseStats;
+  const base = character.stats;
   if (!base) return { hp: 100, atk: 10, def: 10, spd: 10 };
   const growthStats = character.growthStats || { hp: 0, atk: 0, def: 0, spd: 0 };
   const levelMultiplier = level - 1;
@@ -279,15 +279,15 @@ export function getEnemiesByType(type) {
  * @returns {Object} 계산된 스탯
  */
 export function calculateEnemyStats(enemy, level) {
-  const baseStats = enemy.baseStats;
+  const stats = enemy.stats;
   const growthStats = enemy.growthStats;
   const levelMultiplier = level - 1;
 
   return {
-    hp: baseStats.hp + (growthStats.hp * levelMultiplier),
-    atk: baseStats.atk + (growthStats.atk * levelMultiplier),
-    def: baseStats.def + (growthStats.def * levelMultiplier),
-    spd: baseStats.spd + (growthStats.spd * levelMultiplier)
+    hp: stats.hp + (growthStats.hp * levelMultiplier),
+    atk: stats.atk + (growthStats.atk * levelMultiplier),
+    def: stats.def + (growthStats.def * levelMultiplier),
+    spd: stats.spd + (growthStats.spd * levelMultiplier)
   };
 }
 

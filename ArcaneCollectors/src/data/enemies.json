@@ -6,7 +6,7 @@
       "nameEn": "Goblin",
       "mood": "cunning",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 200,
         "atk": 30,
         "def": 10,
@@ -30,7 +30,7 @@
       "nameEn": "Goblin Archer",
       "mood": "cunning",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 160,
         "atk": 40,
         "def": 8,
@@ -55,7 +55,7 @@
       "nameEn": "Goblin Shaman",
       "mood": "wild",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 180,
         "atk": 45,
         "def": 12,
@@ -80,7 +80,7 @@
       "nameEn": "Goblin Warrior",
       "mood": "brave",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 280,
         "atk": 50,
         "def": 20,
@@ -105,7 +105,7 @@
       "nameEn": "Goblin King",
       "mood": "brave",
       "type": "boss",
-      "baseStats": {
+      "stats": {
         "hp": 1500,
         "atk": 80,
         "def": 40,
@@ -131,7 +131,7 @@
       "nameEn": "Wild Wolf",
       "mood": "cunning",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 180,
         "atk": 35,
         "def": 8,
@@ -155,7 +155,7 @@
       "nameEn": "Alpha Wolf",
       "mood": "cunning",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 350,
         "atk": 55,
         "def": 18,
@@ -180,7 +180,7 @@
       "nameEn": "Slime",
       "mood": "calm",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 250,
         "atk": 20,
         "def": 15,
@@ -205,7 +205,7 @@
       "nameEn": "Large Slime",
       "mood": "calm",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 500,
         "atk": 30,
         "def": 25,
@@ -230,7 +230,7 @@
       "nameEn": "Poison Mushroom",
       "mood": "cunning",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 150,
         "atk": 25,
         "def": 12,
@@ -255,7 +255,7 @@
       "nameEn": "Treant",
       "mood": "cunning",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 600,
         "atk": 45,
         "def": 35,
@@ -280,7 +280,7 @@
       "nameEn": "Stone Golem",
       "mood": "stoic",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 800,
         "atk": 35,
         "def": 50,
@@ -305,7 +305,7 @@
       "nameEn": "Mischievous Fairy",
       "mood": "noble",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 120,
         "atk": 35,
         "def": 5,
@@ -329,7 +329,7 @@
       "nameEn": "Berserker",
       "mood": "fierce",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 400,
         "atk": 70,
         "def": 15,
@@ -354,7 +354,7 @@
       "nameEn": "Dark Priestess",
       "mood": "devoted",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 300,
         "atk": 50,
         "def": 20,
@@ -379,7 +379,7 @@
       "nameEn": "Harpy",
       "mood": "wild",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 220,
         "atk": 38,
         "def": 10,
@@ -404,7 +404,7 @@
       "nameEn": "Centaur",
       "mood": "brave",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 300,
         "atk": 45,
         "def": 15,
@@ -429,7 +429,7 @@
       "nameEn": "Minor Cyclops",
       "mood": "fierce",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 350,
         "atk": 55,
         "def": 22,
@@ -454,7 +454,7 @@
       "nameEn": "Satyr",
       "mood": "noble",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 200,
         "atk": 30,
         "def": 12,
@@ -479,7 +479,7 @@
       "nameEn": "Minotaur",
       "mood": "fierce",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 700,
         "atk": 65,
         "def": 30,
@@ -504,7 +504,7 @@
       "nameEn": "Medusa",
       "mood": "cunning",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 500,
         "atk": 55,
         "def": 20,
@@ -529,7 +529,7 @@
       "nameEn": "Cerberus",
       "mood": "wild",
       "type": "boss",
-      "baseStats": {
+      "stats": {
         "hp": 2000,
         "atk": 90,
         "def": 45,
@@ -555,7 +555,7 @@
       "nameEn": "Minor Oni",
       "mood": "brave",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 300,
         "atk": 50,
         "def": 18,
@@ -580,7 +580,7 @@
       "nameEn": "Tengu",
       "mood": "cunning",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 250,
         "atk": 42,
         "def": 14,
@@ -605,7 +605,7 @@
       "nameEn": "Kappa",
       "mood": "calm",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 350,
         "atk": 35,
         "def": 25,
@@ -630,7 +630,7 @@
       "nameEn": "Kodama",
       "mood": "mystic",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 200,
         "atk": 48,
         "def": 10,
@@ -655,7 +655,7 @@
       "nameEn": "Oni Warlord",
       "mood": "fierce",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 800,
         "atk": 72,
         "def": 35,
@@ -680,7 +680,7 @@
       "nameEn": "Kitsune",
       "mood": "mystic",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 600,
         "atk": 60,
         "def": 22,
@@ -705,7 +705,7 @@
       "nameEn": "Yamata no Orochi",
       "mood": "wild",
       "type": "boss",
-      "baseStats": {
+      "stats": {
         "hp": 2500,
         "atk": 100,
         "def": 50,
@@ -731,7 +731,7 @@
       "nameEn": "Frost Dwarf",
       "mood": "stoic",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 400,
         "atk": 40,
         "def": 35,
@@ -756,7 +756,7 @@
       "nameEn": "Ice Wolf",
       "mood": "cunning",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 350,
         "atk": 50,
         "def": 18,
@@ -781,7 +781,7 @@
       "nameEn": "Fallen Valkyrie",
       "mood": "devoted",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 300,
         "atk": 45,
         "def": 22,
@@ -806,7 +806,7 @@
       "nameEn": "Minor Frost Giant",
       "mood": "brave",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 500,
         "atk": 55,
         "def": 30,
@@ -831,7 +831,7 @@
       "nameEn": "Draugr",
       "mood": "stoic",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 1000,
         "atk": 60,
         "def": 50,
@@ -856,7 +856,7 @@
       "nameEn": "Fenrir Pup",
       "mood": "wild",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 700,
         "atk": 80,
         "def": 25,
@@ -881,7 +881,7 @@
       "nameEn": "Jormungandr",
       "mood": "mystic",
       "type": "boss",
-      "baseStats": {
+      "stats": {
         "hp": 3000,
         "atk": 110,
         "def": 55,
@@ -907,7 +907,7 @@
       "nameEn": "Shade",
       "mood": "cunning",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 400,
         "atk": 55,
         "def": 15,
@@ -932,7 +932,7 @@
       "nameEn": "Death Knight",
       "mood": "stoic",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 550,
         "atk": 50,
         "def": 40,
@@ -957,7 +957,7 @@
       "nameEn": "Banshee",
       "mood": "devoted",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 350,
         "atk": 60,
         "def": 12,
@@ -982,7 +982,7 @@
       "nameEn": "Wraith",
       "mood": "mystic",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 420,
         "atk": 58,
         "def": 18,
@@ -1007,7 +1007,7 @@
       "nameEn": "Lich",
       "mood": "cunning",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 1000,
         "atk": 75,
         "def": 35,
@@ -1032,7 +1032,7 @@
       "nameEn": "Death Dragon",
       "mood": "fierce",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 1200,
         "atk": 90,
         "def": 45,
@@ -1057,7 +1057,7 @@
       "nameEn": "Izanami",
       "mood": "devoted",
       "type": "boss",
-      "baseStats": {
+      "stats": {
         "hp": 4000,
         "atk": 120,
         "def": 60,
@@ -1083,7 +1083,7 @@
       "nameEn": "Tower Guardian Lv10",
       "mood": "calm",
       "type": "tower_boss",
-      "baseStats": {
+      "stats": {
         "hp": 1000,
         "atk": 50,
         "def": 30,
@@ -1108,7 +1108,7 @@
       "nameEn": "Tower Guardian Lv20",
       "mood": "brave",
       "type": "tower_boss",
-      "baseStats": {
+      "stats": {
         "hp": 1800,
         "atk": 70,
         "def": 40,
@@ -1134,7 +1134,7 @@
       "nameEn": "Tower Guardian Lv30",
       "mood": "fierce",
       "type": "tower_boss",
-      "baseStats": {
+      "stats": {
         "hp": 2800,
         "atk": 90,
         "def": 50,
@@ -1160,7 +1160,7 @@
       "nameEn": "Tower Guardian Lv40",
       "mood": "mystic",
       "type": "tower_boss",
-      "baseStats": {
+      "stats": {
         "hp": 4000,
         "atk": 110,
         "def": 60,
@@ -1186,7 +1186,7 @@
       "nameEn": "Tower Guardian Lv50",
       "mood": "noble",
       "type": "tower_boss",
-      "baseStats": {
+      "stats": {
         "hp": 6000,
         "atk": 130,
         "def": 75,
@@ -1212,7 +1212,7 @@
       "nameEn": "Brownie",
       "mood": "calm",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 180,
         "atk": 25,
         "def": 15,
@@ -1236,7 +1236,7 @@
       "nameEn": "Sidhe",
       "mood": "mystic",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 220,
         "atk": 40,
         "def": 12,
@@ -1261,7 +1261,7 @@
       "nameEn": "Green Knight",
       "mood": "brave",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 350,
         "atk": 45,
         "def": 25,
@@ -1286,7 +1286,7 @@
       "nameEn": "Dullahan",
       "mood": "fierce",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 600,
         "atk": 65,
         "def": 30,
@@ -1311,7 +1311,7 @@
       "nameEn": "Spriggan",
       "mood": "wild",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 500,
         "atk": 55,
         "def": 35,
@@ -1336,7 +1336,7 @@
       "nameEn": "Cernunnos",
       "mood": "noble",
       "type": "boss",
-      "baseStats": {
+      "stats": {
         "hp": 2000,
         "atk": 90,
         "def": 50,
@@ -1362,7 +1362,7 @@
       "nameEn": "Fomorian",
       "mood": "stoic",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 700,
         "atk": 70,
         "def": 40,
@@ -1387,7 +1387,7 @@
       "nameEn": "Terra Cotta Soldier",
       "mood": "stoic",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 280,
         "atk": 35,
         "def": 30,
@@ -1411,7 +1411,7 @@
       "nameEn": "Jiangshi",
       "mood": "fierce",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 260,
         "atk": 45,
         "def": 15,
@@ -1436,7 +1436,7 @@
       "nameEn": "Gui Spirit",
       "mood": "mystic",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 200,
         "atk": 40,
         "def": 10,
@@ -1461,7 +1461,7 @@
       "nameEn": "Pixiu",
       "mood": "noble",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 320,
         "atk": 42,
         "def": 22,
@@ -1486,7 +1486,7 @@
       "nameEn": "Yaoguai",
       "mood": "wild",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 550,
         "atk": 60,
         "def": 25,
@@ -1511,7 +1511,7 @@
       "nameEn": "Taotie",
       "mood": "fierce",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 650,
         "atk": 75,
         "def": 35,
@@ -1536,7 +1536,7 @@
       "nameEn": "Qilin",
       "mood": "devoted",
       "type": "boss",
-      "baseStats": {
+      "stats": {
         "hp": 2200,
         "atk": 85,
         "def": 55,
@@ -1562,7 +1562,7 @@
       "nameEn": "Mimic",
       "mood": "cunning",
       "type": "normal",
-      "baseStats": {
+      "stats": {
         "hp": 250,
         "atk": 50,
         "def": 20,
@@ -1587,7 +1587,7 @@
       "nameEn": "Elemental",
       "mood": "mystic",
       "type": "elite",
-      "baseStats": {
+      "stats": {
         "hp": 450,
         "atk": 55,
         "def": 28,
@@ -1612,7 +1612,7 @@
       "nameEn": "Dark Lord",
       "mood": "cunning",
       "type": "boss",
-      "baseStats": {
+      "stats": {
         "hp": 3000,
         "atk": 100,
         "def": 60,

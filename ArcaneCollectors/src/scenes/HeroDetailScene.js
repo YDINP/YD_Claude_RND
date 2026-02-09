@@ -437,7 +437,7 @@ export class HeroDetailScene extends Phaser.Scene {
       // Tooltip on hover
       if (equippedItem) {
         slotBg.on('pointerover', () => {
-          const stats = equippedItem.baseStats || {};
+          const stats = equippedItem.stats || {};
           const statsText = Object.entries(stats).map(([k, v]) => `${k}: +${v}`).join('\n');
           this.showTooltip(x, slotsY - 30, `${equippedItem.name}\n${equippedItem.rarity} +${equippedItem.enhanceLevel || 0}\n${statsText}`);
         });

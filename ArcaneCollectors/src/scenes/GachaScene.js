@@ -934,7 +934,7 @@ export class GachaScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // 주요 스탯 표시
-    const mainStat = equip.baseStats ? Object.entries(equip.baseStats)[0] : null;
+    const mainStat = equip.stats ? Object.entries(equip.stats)[0] : null;
     const statLabel = mainStat ? `${mainStat[0]} +${Math.floor(mainStat[1])}` : '';
     const statText = this.add.text(0, 50, statLabel, {
       fontSize: '9px', fontFamily: 'Arial',

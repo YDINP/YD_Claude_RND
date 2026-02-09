@@ -54,7 +54,6 @@ export interface BattlerSourceData {
   cult?: CultType;
   rarity?: RarityNumber | string;
   stats?: CharacterStats;
-  baseStats?: CharacterStats;
   growthStats?: CharacterStats;
   skills?: CharacterSkill[];
   critRate?: number;
