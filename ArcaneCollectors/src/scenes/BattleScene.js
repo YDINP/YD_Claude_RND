@@ -8,6 +8,7 @@ import { ParticleManager } from '../systems/ParticleManager.js';
 import { getAllCharacters, getCharacter } from '../data/index.js';
 import { MOOD_COLORS } from '../config/layoutConfig.js';
 import transitionManager from '../utils/TransitionManager.js';
+import SkillAnimationManager from '../systems/SkillAnimationManager.js';
 
 /**
  * BattleScene - 전투 씬
@@ -1483,97 +1484,143 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 단일 대상 공격 실행
+   * 단일 대상 공격 실행 (VFX-2.1: SkillAnimationManager 통합)
    */
-  _executeSingleAttack(battler, target, skillMultiplier, skillName, isUltimate, skill = null) {
+  async _executeSingleAttack(battler, target, skillMultiplier, skillName, isUltimate, skill = null) {
     if (!target.isAlive || this.battleEnded) return;
 
     // 힐 스킬 판정
     const isHealSkill = skill?.isHeal || skill?.target === 'ally' || skill?.target === 'all_allies' ||
       skill?.name?.includes('힐') || skill?.name?.includes('치유') || skill?.name?.includes('회복');
 
-    if (isHealSkill) {
-      // ======== 힐 스킬 처리 ========
-      const baseHeal = (battler.stats?.atk || 100) * skillMultiplier;
-      const healAmount = Math.max(1, Math.floor(baseHeal * (0.9 + Math.random() * 0.2)));
-
-      target.currentHp = Math.min(target.maxHp, target.currentHp + healAmount);
-
-      console.log(`[Battle] Heal: ${battler.name} -> ${target.name} +${healAmount} HP`);
-
-      // UI 업데이트
-      this.updateBattlerUI(target);
-
-      // 힐 이펙트 (파티클 + 반짝임)
-      this.playSkillEffect(battler, target, false, isUltimate, skill);
-
-      // 힐 숫자 표시
-      this.showHealNumber(target, healAmount);
-
-      // 로그
-      this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name} HP +${healAmount} 회복!`);
-
-      // 턴 순서 바 업데이트
-      this.updateTurnOrderBar();
-      return;
+    // Determine action type for animation system
+    let actionType = 'basic_attack';
+    if (isUltimate) {
+      if (skill?.id === 'skill2') {
+        actionType = 'ultimate';
+      } else if (skill?.id === 'skill1') {
+        actionType = 'skill1';
+      } else {
+        actionType = 'skill2'; // fallback for ultimate
+      }
+    } else if (skill?.id === 'skill1') {
+      actionType = 'skill1';
+    } else if (isHealSkill) {
+      actionType = 'heal';
     }
 
-    // ======== 공격 스킬 처리 ========
-    const baseDamage = battler.stats?.atk || 100;
-    const defense = target.stats?.def || 50;
+    // Prepare animation data
+    const sprites = battler.isAlly ? this.allySprites : this.enemySprites;
+    const targetSprites = target.isAlly ? this.allySprites : this.enemySprites;
 
-    // 분위기(Mood) 상성 배율 계산
-    const moodResult = this.getMoodMatchup(battler.mood, target.mood);
-    const moodMultiplier = moodResult.multiplier;
+    const attackerData = {
+      sprite: sprites?.[battler.position],
+      x: battler.isAlly ? 200 + (battler.position % 3) * 150 : 520 + (battler.position % 3) * 150,
+      y: battler.isAlly ? 300 + Math.floor(battler.position / 3) * 180 : 300 + Math.floor(battler.position / 3) * 180,
+      mood: battler.mood || 'brave'
+    };
 
-    // 크리티컬 계산
-    const critChance = battler.critRate || 0.1;
-    const isCrit = Math.random() < critChance;
-    const critMultiplier = isCrit ? (battler.critDmg || 1.5) : 1.0;
+    const targetsData = [{
+      sprite: targetSprites?.[target.position],
+      x: target.isAlly ? 200 + (target.position % 3) * 150 : 520 + (target.position % 3) * 150,
+      y: target.isAlly ? 300 + Math.floor(target.position / 3) * 180 : 300 + Math.floor(target.position / 3) * 180
+    }];
 
-    const damage = Math.max(1, Math.floor(
-      baseDamage * skillMultiplier * critMultiplier * moodMultiplier *
-      (1 - defense / (defense + 200)) * (0.9 + Math.random() * 0.2)
-    ));
+    // ======== VFX-2.1: Execute with SkillAnimationManager ========
+    await SkillAnimationManager.playAnimation(
+      this,
+      attackerData,
+      targetsData,
+      actionType,
+      {
+        onImpact: async () => {
+          // All damage calculation and effects happen here (at impact moment)
 
-    console.log(`[Battle] Damage calc: base=${baseDamage}, skill=${skillMultiplier}x, crit=${critMultiplier}x, mood=${moodMultiplier}x, def=${defense}, final=${damage}`);
-    GameLogger.log('BATTLE', `${battler.name} → ${target.name}: ${damage}dmg (${skillName})`, { mood: battler.mood, crit: isCrit, moodAdv: moodResult.advantage });
+          if (isHealSkill) {
+            // ======== 힐 스킬 처리 ========
+            const baseHeal = (battler.stats?.atk || 100) * skillMultiplier;
+            const healAmount = Math.max(1, Math.floor(baseHeal * (0.9 + Math.random() * 0.2)));
 
-    // Apply damage
-    target.currentHp = Math.max(0, target.currentHp - damage);
+            target.currentHp = Math.min(target.maxHp, target.currentHp + healAmount);
 
-    // A-8.3: 크리티컬 화면 흔들림 강화 (playSkillEffect에서도 처리하므로 중복 방지)
-    if (isCrit && !isUltimate) {
-      this.cameras.main.shake(120, 0.004);
-    }
+            console.log(`[Battle] Heal: ${battler.name} -> ${target.name} +${healAmount} HP`);
 
-    // Update UI
-    this.updateBattlerUI(target);
+            // UI 업데이트
+            this.updateBattlerUI(target);
 
-    // Show damage (상성 정보 포함)
-    this.showDamage(target, damage, isCrit, moodResult.advantage);
+            // 힐 이펙트 (파티클 + 반짝임) - Keep existing effects
+            this.playSkillEffect(battler, target, false, isUltimate, skill);
 
-    // Attack animation + A-8.1 스킬 이펙트
-    this.playAttackAnimation(battler, target, isCrit);
-    this.playSkillEffect(battler, target, isCrit, isUltimate, skill);
+            // 힐 숫자 표시
+            this.showHealNumber(target, healAmount);
 
-    // Log
-    const critText = isCrit ? ' (크리티컬!)' : '';
-    const moodText = moodResult.advantage === 'ADVANTAGE' ? ' (유리▲)' : moodResult.advantage === 'DISADVANTAGE' ? ' (불리▼)' : '';
-    this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name}에게 ${damage} 데미지${critText}${moodText}`);
+            // 로그
+            this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name} HP +${healAmount} 회복!`);
 
-    // 턴 순서 바 업데이트
-    this.updateTurnOrderBar();
+            // 턴 순서 바 업데이트
+            this.updateTurnOrderBar();
+            return;
+          }
 
-    // Check if target died
-    if (target.currentHp <= 0) {
-      target.isAlive = false;
-      this.playDeathAnimation(target);
-      this.addBattleLog(`${target.name} 쓰러짐!`);
+          // ======== 공격 스킬 처리 ========
+          const baseDamage = battler.stats?.atk || 100;
+          const defense = target.stats?.def || 50;
 
-      // 전투 이벤트 발행
-      this.emitBattleEvent('unitDeath', { unit: target.name, killedBy: battler.name });
-    }
+          // 분위기(Mood) 상성 배율 계산
+          const moodResult = this.getMoodMatchup(battler.mood, target.mood);
+          const moodMultiplier = moodResult.multiplier;
+
+          // 크리티컬 계산
+          const critChance = battler.critRate || 0.1;
+          const isCrit = Math.random() < critChance;
+          const critMultiplier = isCrit ? (battler.critDmg || 1.5) : 1.0;
+
+          const damage = Math.max(1, Math.floor(
+            baseDamage * skillMultiplier * critMultiplier * moodMultiplier *
+            (1 - defense / (defense + 200)) * (0.9 + Math.random() * 0.2)
+          ));
+
+          console.log(`[Battle] Damage calc: base=${baseDamage}, skill=${skillMultiplier}x, crit=${critMultiplier}x, mood=${moodMultiplier}x, def=${defense}, final=${damage}`);
+          GameLogger.log('BATTLE', `${battler.name} → ${target.name}: ${damage}dmg (${skillName})`, { mood: battler.mood, crit: isCrit, moodAdv: moodResult.advantage });
+
+          // Apply damage
+          target.currentHp = Math.max(0, target.currentHp - damage);
+
+          // A-8.3: 크리티컬 화면 흔들림 강화 (SkillAnimationManager가 기본 shake 처리, 추가 효과만)
+          if (isCrit && !isUltimate) {
+            this.cameras.main.shake(80, 0.003); // Reduced since SkillAnimationManager adds shake
+          }
+
+          // Update UI
+          this.updateBattlerUI(target);
+
+          // Show damage (상성 정보 포함)
+          this.showDamage(target, damage, isCrit, moodResult.advantage);
+
+          // Attack animation + A-8.1 스킬 이펙트 (keep existing effects)
+          this.playAttackAnimation(battler, target, isCrit);
+          this.playSkillEffect(battler, target, isCrit, isUltimate, skill);
+
+          // Log
+          const critText = isCrit ? ' (크리티컬!)' : '';
+          const moodText = moodResult.advantage === 'ADVANTAGE' ? ' (유리▲)' : moodResult.advantage === 'DISADVANTAGE' ? ' (불리▼)' : '';
+          this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name}에게 ${damage} 데미지${critText}${moodText}`);
+
+          // 턴 순서 바 업데이트
+          this.updateTurnOrderBar();
+
+          // Check if target died
+          if (target.currentHp <= 0) {
+            target.isAlive = false;
+            this.playDeathAnimation(target);
+            this.addBattleLog(`${target.name} 쓰러짐!`);
+
+            // 전투 이벤트 발행
+            this.emitBattleEvent('unitDeath', { unit: target.name, killedBy: battler.name });
+          }
+        }
+      }
+    );
   }
 
 
