@@ -562,13 +562,13 @@ export class MainMenuScene extends Phaser.Scene {
         const badgeX = btnWidth / 2 - 12;
         const badgeY = -btnHeight / 2 + 8;
 
-        const badge = this.scene.add.graphics();
+        const badge = this.add.graphics();
         badge.fillStyle(COLORS.danger, 1);
 
         const badgeWidth = badgeCount > 99 ? 28 : badgeCount > 9 ? 22 : 16;
         badge.fillRoundedRect(badgeX - badgeWidth / 2, badgeY - 8, badgeWidth, 16, 8);
 
-        const badgeText = this.scene.add.text(badgeX, badgeY, badgeCount > 99 ? '99+' : badgeCount.toString(), {
+        const badgeText = this.add.text(badgeX, badgeY, badgeCount > 99 ? '99+' : badgeCount.toString(), {
           fontFamily: 'Arial',
           fontSize: '10px',
           fontStyle: 'bold',
