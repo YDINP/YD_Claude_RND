@@ -43,16 +43,21 @@ export class GachaScene extends Phaser.Scene {
   }
 
   createBackground() {
-    // Dark mystical background
-    const graphics = this.add.graphics();
+    // ART-1: 배경 텍스처 사용 (폴백: 기존 그래디언트)
+    if (this.textures.exists('bg_gacha')) {
+      this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'bg_gacha').setOrigin(0.5);
+    } else {
+      // Fallback: Dark mystical background
+      const graphics = this.add.graphics();
 
-    for (let y = 0; y < GAME_HEIGHT; y++) {
-      const ratio = y / GAME_HEIGHT;
-      const r = Math.floor(15 + ratio * 5);
-      const g = Math.floor(10 + ratio * 10);
-      const b = Math.floor(30 + ratio * 15);
-      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
-      graphics.fillRect(0, y, GAME_WIDTH, 1);
+      for (let y = 0; y < GAME_HEIGHT; y++) {
+        const ratio = y / GAME_HEIGHT;
+        const r = Math.floor(15 + ratio * 5);
+        const g = Math.floor(10 + ratio * 10);
+        const b = Math.floor(30 + ratio * 15);
+        graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
+        graphics.fillRect(0, y, GAME_WIDTH, 1);
+      }
     }
 
     // Floating particles

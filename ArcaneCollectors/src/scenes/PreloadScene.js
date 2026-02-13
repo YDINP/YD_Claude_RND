@@ -4,6 +4,7 @@ import { getAllCharacters } from '../data/index.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import uiRenderer from '../renderers/UIRenderer.js';
+import { TextureGenerator } from '../utils/TextureGenerator.js';
 
 /**
  * PreloadScene - 에셋 프리로드 씬
@@ -43,6 +44,16 @@ export class PreloadScene extends Phaser.Scene {
   loadPhase1_UIPlaceholders() {
     this._updatePhaseText('UI 요소 준비 중...');
 
+    // ART-1.1: 배경 텍스처 생성
+    TextureGenerator.generateBackgrounds(this);
+
+    // ART-1.2: UI 아이콘 텍스처 생성
+    TextureGenerator.generateIcons(this);
+
+    // ART-1.3: 캐릭터 및 프레임 텍스처 생성
+    TextureGenerator.generateCharacterAssets(this);
+
+    // 기존 플레이스홀더 유지 (폴백용)
     // Hero placeholder (64x64)
     const heroCanvas = document.createElement('canvas');
     heroCanvas.width = 64;
@@ -68,7 +79,7 @@ export class PreloadScene extends Phaser.Scene {
 
     this.textures.addCanvas('hero_placeholder', heroCanvas);
 
-    // Gem icon (24x24)
+    // Gem icon (24x24) - 작은 버전 유지
     const gemCanvas = document.createElement('canvas');
     gemCanvas.width = 24;
     gemCanvas.height = 24;
@@ -93,7 +104,7 @@ export class PreloadScene extends Phaser.Scene {
 
     this.textures.addCanvas('gem', gemCanvas);
 
-    // Gold icon (24x24)
+    // Gold icon (24x24) - 작은 버전 유지
     const goldCanvas = document.createElement('canvas');
     goldCanvas.width = 24;
     goldCanvas.height = 24;
