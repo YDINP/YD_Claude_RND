@@ -1,8 +1,7 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
-import { isSupabaseConfigured, supabase } from '../api/supabaseClient.js';
+import { isSupabaseConfigured, supabase, getLocalData } from '../api/supabaseClient.js';
 import { getGuestUserId } from '../services/AuthService.js';
-import { getLocalData } from '../api/supabaseClient.js';
 import { normalizeHeroes } from '../data/index.js';
 import { validateAllGameData } from '../schemas/validator.js';
 

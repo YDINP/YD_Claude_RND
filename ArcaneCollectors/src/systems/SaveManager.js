@@ -486,8 +486,8 @@ export class SaveManager {
 
     // 스테이지 ID 파싱: stage_chapter_number
     const parts = stageId.split('_');
-    const chapter = parseInt(parts[1]);
-    const stageNum = parseInt(parts[2]);
+    const chapter = parseInt(parts[1]) || 1;
+    const stageNum = parseInt(parts[2]) || 1;
 
     if (stageNum === 1) {
       // 챕터 첫 스테이지: 이전 챕터 마지막 스테이지 클리어 필요

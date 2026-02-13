@@ -177,7 +177,7 @@ export class DebugManager {
     const chapters = getAllChapters();
     let cleared = 0;
     chapters.forEach(ch => {
-      const chapterNum = parseInt(ch.id.replace('chapter_', ''));
+      const chapterNum = parseInt(ch.id.replace('chapter_', '')) || 0;
       if (chapterNum < chapter) {
         const stages = ch.stages || [];
         stages.forEach(stage => {

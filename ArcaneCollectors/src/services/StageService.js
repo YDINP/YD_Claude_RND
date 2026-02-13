@@ -367,8 +367,8 @@ export const getLastClearedStage = async () => {
 export const getNextAvailableStage = async (currentStageId) => {
   // 스테이지 ID 파싱 (예: "1-5-normal")
   const parts = currentStageId.split('-');
-  const chapter = parseInt(parts[0]);
-  const stage = parseInt(parts[1]);
+  const chapter = parseInt(parts[0]) || 1;
+  const stage = parseInt(parts[1]) || 1;
   const difficulty = parts[2] || 'normal';
 
   // 다음 스테이지 계산

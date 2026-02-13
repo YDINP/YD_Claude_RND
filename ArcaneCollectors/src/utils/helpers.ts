@@ -170,7 +170,7 @@ export interface RGBColor {
  */
 export function hexToRgb(hex: string): RGBColor {
   const cleanHex = hex.replace(/^#/, '');
-  const bigint = parseInt(cleanHex, 16);
+  const bigint = parseInt(cleanHex, 16) || 0;
   return {
     r: (bigint >> 16) & 255,
     g: (bigint >> 8) & 255,
