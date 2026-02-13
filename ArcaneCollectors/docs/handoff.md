@@ -98,8 +98,52 @@ QA-3.1 (테스트) ──→ UIX-3.1~3.4 전부 완료 후
 
 #### WARN (개선 권장, 추후 대응)
 1. BottomNav hitArea 상단 마진 균등화
-2. IdleProgressSystem getCurrentStage() 정렬 로직 명시화
+2. ~~IdleProgressSystem getCurrentStage() 정렬 로직 명시화~~ → Phase 5에서 수정 완료
 3. MainMenuScene IdleBattleView ↔ IdleSummary 데이터 갱신 이벤트 연동
+
+### Phase 5: NaN 이슈 수정 ✅ 완료
+| 항목 | 수정 내용 | 커밋 |
+|------|----------|------|
+| **근본 원인** | `IdleProgressSystem.getCurrentStage()` 스테이지 키 파싱 실패 시 기본값 처리 | 79ad1ca |
+| **수정 파일** | `IdleProgressSystem.js`, `MainMenuScene.js`, `IdleBattleView.js` (3개) | |
+| **수정 사항** | `parseInt(parts[N]) \|\| 1` 파싱 방어, `\|\| 0` / `\|\| 1` 기본값, 파라미터 방어 | |
+
+#### 검증 결과
+- [x] **NaN 텍스트 0건**: 38개 텍스트 요소 중 NaN/undefined 포함 0개 ✅
+- [x] **수치 정상**: 💰 9,072/h, ⭐ 2,268/h, 📍 1-2, 챕터 1-2: 고블린 숲 ✅
+- [x] **tsc --noEmit**: 에러 0개 ✅
+- [x] **vitest**: 337/337 통과 ✅
+- [x] **콘솔 에러**: 0개 ✅
+
+---
+
+### Phase 4: Playwright MCP 통합 테스트 ✅ 완료
+| TC | 테스트 항목 | 결과 | 비고 |
+|----|-----------|------|------|
+| TC-01 | 게스트 로그인 → MainMenuScene 전환 | ✅ PASS | LoginScene → PreloadScene → MainMenuScene 정상 |
+| TC-02a | BottomNav 모험 탭 → StageSelectScene | ✅ PASS | 10개 스테이지, 별 평가, 잠금 표시 |
+| TC-02b | BottomNav 가방 탭 → InventoryScene | ✅ PASS | 장비/소비/재료 탭, 5개 아이템 |
+| TC-02c | BottomNav 소환 탭 → GachaScene | ✅ PASS | 영웅/장비 소환, 배너, 단일/10연차 |
+| TC-02d | BottomNav 더보기 탭 → SettingsScene | ✅ PASS | 6개 바로가기, 4개 설정 토글 |
+| TC-02e | BottomNav 홈 탭 → MainMenuScene | ✅ PASS | 5탭 전부 정상 전환 |
+| TC-03a | 퀵액세스 영웅 → HeroListScene | ✅ PASS | 92명, 필터 5종, 4열 카드 그리드 |
+| TC-03b | 퀵액세스 퀘스트 → QuestScene | ✅ PASS | 일일 퀘스트 8개, 수령 버튼 |
+| TC-03c | 퀵액세스 무한탑 → TowerScene | ✅ PASS | 1층, 층 정보, bg_tower 배경 |
+| TC-04 | System healthCheck | ✅ PASS | 9/9 시스템 healthy |
+| TC-05 | 8개 씬 존재 확인 | ✅ PASS | 전부 exists=true |
+| TC-06 | 7개 씬 BottomNav 겹침 검증 | ✅ PASS | 0 overlaps (전 씬) |
+| TC-07 | 콘솔 에러 확인 | ✅ PASS | Errors: 0, Warnings: 1 (HeroFactory char not found — 무시 가능) |
+
+#### 테스트 환경
+- 도구: Playwright MCP (browser_evaluate + browser_take_screenshot)
+- URL: `http://localhost:3001`
+- 로그인: 게스트 로그인 (정상 플로우)
+- 스크린샷: 8장 (s3-test-01~08)
+
+#### 발견된 이슈 (WARN, 기능에 영향 없음)
+1. **NaN 표시**: MainMenuScene IdleSummary에 "NaN/h", "챕터 NaN-undefined" — 신규 게스트 계정에 스테이지/파티 데이터 부재 시 발생
+2. **HeroFactory Warning**: `Character not found: char_...` — characters.json에 없는 ID 참조 (1건)
+3. **SAVE 로드 반복 로그**: 씬 전환 시 SaveManager 데이터 로드가 다수 발생 (성능 최적화 대상)
 
 ---
 
