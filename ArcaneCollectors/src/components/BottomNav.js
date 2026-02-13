@@ -93,11 +93,11 @@ export class BottomNav extends Phaser.GameObjects.Container {
     container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
 
     container.on('pointerover', () => {
-      if (tab.id !== this.activeTab) iconText.setScale(1.1);
+      if (tab.id !== this.activeTab) container.iconText.setScale(1.1);
     });
 
     container.on('pointerout', () => {
-      if (tab.id !== this.activeTab) iconText.setScale(1);
+      if (tab.id !== this.activeTab) container.iconText.setScale(1);
     });
 
     // UIX-3.1: Press feedback (pointer down)
