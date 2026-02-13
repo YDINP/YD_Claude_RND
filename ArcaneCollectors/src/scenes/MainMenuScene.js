@@ -405,7 +405,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // 현재 스테이지
     const currentStage = this.idleSystem.getCurrentStage();
-    const stageText = this.add.text(GAME_WIDTH / 2 + 100, infoY, `${currentStage.chapter}-${currentStage.stage}`, {
+    const stageText = this.add.text(GAME_WIDTH / 2 + 100, infoY, `${currentStage.chapter || 1}-${currentStage.stage || 1}`, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
@@ -445,7 +445,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // 현재 스테이지 정보 업데이트
     const currentStage = this.idleSystem.getCurrentStage();
-    this.idleBattleView.updateStageInfo(currentStage.chapter, currentStage.stage, currentStage.name);
+    this.idleBattleView.updateStageInfo(currentStage.chapter || 1, currentStage.stage || 1, currentStage.name || '슬라임 평원');
 
     // 파티 정보 업데이트
     const saveData = SaveManager.load();
@@ -471,8 +471,8 @@ export class MainMenuScene extends Phaser.Scene {
     // 골드/시간
     const partyPower = this.idleSystem.getPartyPower();
     const rates = this.idleSystem.getIdleBattleRate(partyPower);
-    const goldPerHour = Math.floor(rates.goldPerSec * 3600);
-    const expPerHour = Math.floor(rates.expPerSec * 3600);
+    const goldPerHour = Math.floor((rates.goldPerSec || 0) * 3600);
+    const expPerHour = Math.floor((rates.expPerSec || 0) * 3600);
 
     const goldText = this.add.text(GAME_WIDTH / 2 - 150, summaryY, `💰 ${goldPerHour.toLocaleString()}/h`, {
       fontSize: '16px',
@@ -491,7 +491,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // 현재 스테이지
     const currentStage = this.idleSystem.getCurrentStage();
-    const stageLabel = this.add.text(GAME_WIDTH / 2 + 150, summaryY, `📍 ${currentStage.chapter}-${currentStage.stage}`, {
+    const stageLabel = this.add.text(GAME_WIDTH / 2 + 150, summaryY, `📍 ${currentStage.chapter || 1}-${currentStage.stage || 1}`, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`

@@ -108,7 +108,9 @@ export class IdleProgressSystem {
 
     // 마지막 클리어 스테이지 파싱 (예: stage_1_5)
     const lastCleared = clearedStages.sort().pop();
-    const [, chapter, stage] = lastCleared.split('_').map(Number);
+    const parts = lastCleared.split('_');
+    const chapter = parseInt(parts[1]) || 1;
+    const stage = parseInt(parts[2]) || 1;
 
     // 다음 스테이지 (또는 현재 챕터 마지막)
     const nextStage = stage < 10 ? stage + 1 : stage;
@@ -220,7 +222,7 @@ export class IdleProgressSystem {
    */
   getStageMultiplier() {
     const stage = this.getCurrentStage();
-    return 1 + (stage.chapter - 1) * 0.5 + (stage.stage - 1) * 0.05;
+    return 1 + ((stage.chapter || 1) - 1) * 0.5 + ((stage.stage || 1) - 1) * 0.05;
   }
 
   /**

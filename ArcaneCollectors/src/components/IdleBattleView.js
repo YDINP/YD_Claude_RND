@@ -434,7 +434,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    * @param {string} name - 스테이지 이름
    */
   updateStageInfo(chapter, stage, name) {
-    this.stageText.setText(`챕터 ${chapter}-${stage}: ${name}`);
+    this.stageText.setText(`챕터 ${chapter || 1}-${stage || 1}: ${name || '슬라임 평원'}`);
   }
 
   /**
