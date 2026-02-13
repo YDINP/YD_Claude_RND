@@ -52,20 +52,21 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   createTopBar() {
+    // LAYOUT 통일: Top bar background (100px)
     const bar = this.add.graphics();
     bar.fillStyle(0x0F172A, 0.95);
-    bar.fillRect(0, 0, GAME_WIDTH, 90);
+    bar.fillRect(0, 0, GAME_WIDTH, 100);
     bar.lineStyle(2, COLORS.primary, 0.5);
-    bar.lineBetween(0, 90, GAME_WIDTH, 90);
+    bar.lineBetween(0, 100, GAME_WIDTH, 100);
 
-    this.add.text(GAME_WIDTH / 2, 30, '더보기', {
+    this.add.text(GAME_WIDTH / 2, 50, '더보기', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: '24px',
       fontStyle: 'bold', color: '#F8FAFC'
-    }).setOrigin(0.5, 0);
+    }).setOrigin(0.5);
   }
 
   createMenuGrid() {
-    const startY = 110;
+    const startY = 120; // LAYOUT.content.y
     const cols = 3;
     const cellW = (GAME_WIDTH - 60) / cols;
     const cellH = 100;

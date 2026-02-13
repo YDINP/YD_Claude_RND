@@ -1,11 +1,10 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, LAYOUT } from '../config/gameConfig.js';
 import transitionManager from '../utils/TransitionManager.js';
 
-// 5-tab bottom navigation configuration
+// 4-tab bottom navigation configuration
 const TABS = [
   { id: 'home', icon: '\u{1F3E0}', iconKey: 'icon_home', label: '\uD648', scene: 'MainMenuScene' },
-  { id: 'adventure', icon: '\u2694\uFE0F', iconKey: 'icon_sword', label: '\uBAA8\uD5D8', scene: 'StageSelectScene' },
   { id: 'inventory', icon: '\u{1F4E6}', iconKey: 'icon_bag', label: '\uAC00\uBC29', scene: 'InventoryScene' },
   { id: 'gacha', icon: '\u{1F3B2}', iconKey: 'icon_dice', label: '\uC18C\uD658', scene: 'GachaScene' },
   { id: 'more', icon: '\u2261', iconKey: 'icon_menu', label: '\uB354\uBCF4\uAE30', scene: 'SettingsScene' }
@@ -13,7 +12,7 @@ const TABS = [
 
 export class BottomNav extends Phaser.GameObjects.Container {
   constructor(scene, activeTab = 'home') {
-    super(scene, GAME_WIDTH / 2, GAME_HEIGHT);
+    super(scene, GAME_WIDTH / 2, LAYOUT.bottomNav.y + 120 / 2);
 
     this.navHeight = 120;
     this.activeTab = activeTab;
@@ -31,11 +30,11 @@ export class BottomNav extends Phaser.GameObjects.Container {
   createBackground() {
     this.background = this.scene.add.graphics();
     this.background.fillStyle(0x0F172A, 0.98);
-    this.background.fillRect(-GAME_WIDTH / 2, -this.navHeight, GAME_WIDTH, this.navHeight);
+    this.background.fillRect(-GAME_WIDTH / 2, -this.navHeight / 2, GAME_WIDTH, this.navHeight);
     this.background.lineStyle(2, COLORS.primary, 0.6);
-    this.background.lineBetween(-GAME_WIDTH / 2, -this.navHeight, GAME_WIDTH / 2, -this.navHeight);
+    this.background.lineBetween(-GAME_WIDTH / 2, -this.navHeight / 2, GAME_WIDTH / 2, -this.navHeight / 2);
     this.background.fillStyle(COLORS.primary, 0.05);
-    this.background.fillRect(-GAME_WIDTH / 2, -this.navHeight, GAME_WIDTH, 15);
+    this.background.fillRect(-GAME_WIDTH / 2, -this.navHeight / 2, GAME_WIDTH, 15);
     this.add(this.background);
   }
 
@@ -45,7 +44,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
 
     this.tabs.forEach((tab, index) => {
       const x = startX + index * tabWidth;
-      const y = -this.navHeight / 2;
+      const y = 0;
       const isActive = tab.id === this.activeTab;
 
       const tabContainer = this.createTabButton(x, y, tab, isActive);
@@ -63,7 +62,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
       indicator.fillStyle(COLORS.primary, 0.25);
       indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
       indicator.fillStyle(COLORS.primary, 0.9);
-      indicator.fillRect(-25, -54, 50, 3);
+      indicator.fillRect(-25, -this.navHeight / 2 + 3, 50, 3);
     }
     container.add(indicator);
     container.indicator = indicator;
@@ -71,9 +70,9 @@ export class BottomNav extends Phaser.GameObjects.Container {
     // ART-1: 텍스처 아이콘 사용 (폴백: 이모지)
     let iconObj;
     if (tab.iconKey && this.scene.textures.exists(tab.iconKey)) {
-      iconObj = this.scene.add.image(0, -10, tab.iconKey).setOrigin(0.5).setDisplaySize(32, 32);
+      iconObj = this.scene.add.image(0, -15, tab.iconKey).setOrigin(0.5).setDisplaySize(32, 32);
     } else {
-      iconObj = this.scene.add.text(0, -10, tab.icon, { fontSize: '28px' }).setOrigin(0.5);
+      iconObj = this.scene.add.text(0, -15, tab.icon, { fontSize: '28px' }).setOrigin(0.5);
     }
     container.add(iconObj);
     container.iconText = iconObj;
@@ -87,11 +86,9 @@ export class BottomNav extends Phaser.GameObjects.Container {
     container.add(label);
     container.label = label;
 
-    // UIX-3.1: hitArea와 setSize 정확히 일치, 캔버스 내부만 커버
-    // tab center y=-60 (BottomNav space) → world y=1220
-    // hitArea: y=-55~+60 (tab local) → world 1165~1280 (캔버스 하단까지)
-    const hitY = -55;
-    const hitH = 115;
+    // hitArea: navHeight 전체 영역 커버
+    const hitY = -this.navHeight / 2;
+    const hitH = this.navHeight;
     const hitArea = new Phaser.Geom.Rectangle(-tabWidth / 2, hitY, tabWidth, hitH);
     container.setSize(tabWidth, hitH);
     container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
@@ -125,7 +122,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
         indicator.fillStyle(COLORS.primary, 0.35); // Brighter when active
         indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
         indicator.fillStyle(COLORS.primary, 0.9);
-        indicator.fillRect(-25, -54, 50, 3);
+        indicator.fillRect(-25, -this.navHeight / 2 + 3, 50, 3);
       } else {
         indicator.fillStyle(COLORS.primary, 0.15); // Subtle feedback when inactive
         indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
@@ -183,7 +180,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
         indicator.fillStyle(COLORS.primary, 0.25);
         indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
         indicator.fillStyle(COLORS.primary, 0.9);
-        indicator.fillRect(-25, -54, 50, 3);
+        indicator.fillRect(-25, -this.navHeight / 2 + 3, 50, 3);
       }
     });
 
@@ -241,7 +238,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
         tabContainer.indicator.fillStyle(COLORS.primary, 0.25);
         tabContainer.indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
         tabContainer.indicator.fillStyle(COLORS.primary, 0.9);
-        tabContainer.indicator.fillRect(-25, -54, 50, 3);
+        tabContainer.indicator.fillRect(-25, -this.navHeight / 2 + 3, 50, 3);
       }
 
       tabContainer.iconText.setScale(isActive ? 1.15 : 1);
@@ -281,7 +278,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
     // Create sliding underline bar
     this.underlineBar = this.scene.add.graphics();
     this.underlineBar.fillStyle(COLORS.primary, 0.9);
-    this.underlineBar.fillRect(fromX - 25, -this.navHeight - 54, 50, 3);
+    this.underlineBar.fillRect(fromX - 25, -this.navHeight / 2 + 3, 50, 3);
     this.add(this.underlineBar);
 
     // Animate slide

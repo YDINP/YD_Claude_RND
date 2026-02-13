@@ -64,47 +64,47 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   createTopBar() {
-    // UIX-3.4: Top bar background (80px)
-    this.add.rectangle(GAME_WIDTH / 2, 40, GAME_WIDTH, 80, COLORS.bgDark, 0.9);
+    // LAYOUT 통일: Top bar background (100px)
+    this.add.rectangle(GAME_WIDTH / 2, 50, GAME_WIDTH, 100, COLORS.bgDark, 0.9);
 
-    // UIX-3.4: Back button (좌상단 30, 40 위치, 50×40 터치 영역)
-    const backBg = this.add.rectangle(30, 40, 50, 40, COLORS.bgDark, 0.8)
+    // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
+    const backBg = this.add.rectangle(30, 50, 50, 40, COLORS.bgDark, 0.8)
       .setInteractive({ useHandCursor: true });
-    const backBtn = this.add.text(30, 40, '← 뒤로', {
+    const backBtn = this.add.text(30, 50, '← 뒤로', {
       fontSize: '14px', fontFamily: 'Arial', color: '#FFFFFF'
     }).setOrigin(0.5);
     backBg.on('pointerdown', () => this.goBack());
 
     // 제목
-    this.add.text(GAME_WIDTH / 2, 40, '인벤토리', {
+    this.add.text(GAME_WIDTH / 2, 50, '인벤토리', {
       fontSize: '24px', fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // 골드 표시
-    this.goldText = this.add.text(GAME_WIDTH - 30, 30, `🪙 ${this.gold.toLocaleString()}`, {
+    this.goldText = this.add.text(GAME_WIDTH - 30, 38, `🪙 ${this.gold.toLocaleString()}`, {
       fontSize: '16px', fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(1, 0.5);
 
     // 아이템 수
-    this.countText = this.add.text(GAME_WIDTH - 30, 50, '', {
+    this.countText = this.add.text(GAME_WIDTH - 30, 60, '', {
       fontSize: '12px', fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0.5);
   }
 
   createTabs() {
-    // UIX-3.4: 장비 카테고리 탭 (y=100)
+    // LAYOUT 통일: 장비 카테고리 탭 (y=120, content 시작)
     const tabs = [
       { key: 'equipment', label: '⚔️ 장비', icon: '⚔️' },
       { key: 'consumable', label: '🧪 소비', icon: '🧪' },
       { key: 'material', label: '🔧 재료', icon: '🔧' }
     ];
 
-    const tabY = 100;
+    const tabY = 120;
     const tabW = GAME_WIDTH / tabs.length;
 
     this.tabElements = [];
@@ -142,8 +142,8 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   createItemList() {
-    // UIX-3.4: 리스트 영역 정의 (콘텐츠 영역 y=80~1160)
-    this.listY = 140;
+    // LAYOUT 통일: 리스트 영역 정의 (탭 아래 y=160 ~ BottomNav y=1160)
+    this.listY = 160;
     this.listH = GAME_HEIGHT - this.listY - 140;
     this.itemElements = [];
   }
@@ -179,7 +179,7 @@ export class InventoryScene extends Phaser.Scene {
 
     items.forEach((item, i) => {
       const y = startY + i * itemH;
-      if (y > GAME_HEIGHT - 30) return;
+      if (y + itemH > 1160) return; // BottomNav(y=1160) 겹침 방지
 
       const elements = this.createItemRow(item, y, i);
       this.itemElements.push(...elements);
@@ -496,7 +496,7 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   showToast(message) {
-    const toast = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 80, message, {
+    const toast = this.add.text(GAME_WIDTH / 2, 1100, message, { // BottomNav(y=1160) 위에 표시
       fontSize: '16px', fontFamily: 'Arial',
       color: '#FFFFFF',
       backgroundColor: `#${  COLORS.bgPanel.toString(16).padStart(6, '0')}`,

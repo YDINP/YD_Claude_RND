@@ -49,23 +49,23 @@ export class QuestScene extends Phaser.Scene {
   }
 
   createTopBar() {
-    // UIX-3.4: Top bar background (80px)
+    // LAYOUT 통일: Top bar background (100px)
     const bar = this.add.graphics();
     bar.fillStyle(0x0F172A, 0.95);
-    bar.fillRect(0, 0, GAME_WIDTH, 80);
+    bar.fillRect(0, 0, GAME_WIDTH, 100);
     bar.lineStyle(2, COLORS.primary, 0.5);
-    bar.lineBetween(0, 80, GAME_WIDTH, 80);
+    bar.lineBetween(0, 100, GAME_WIDTH, 100);
 
-    // UIX-3.4: Back button (좌상단 30, 40 위치, 50×40 터치 영역)
-    const backBg = this.add.rectangle(30, 40, 50, 40, 0x0F172A, 0.8)
+    // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
+    const backBg = this.add.rectangle(30, 50, 50, 40, 0x0F172A, 0.8)
       .setInteractive({ useHandCursor: true });
-    this.add.text(30, 40, '← 뒤로', {
+    this.add.text(30, 50, '← 뒤로', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: '14px', color: '#94A3B8'
     }).setOrigin(0.5).on('pointerdown', () => {
       transitionManager.slideTransition(this, 'MainMenuScene', {}, 'left');
     });
 
-    this.add.text(GAME_WIDTH / 2, 40, '일일 퀘스트', {
+    this.add.text(GAME_WIDTH / 2, 50, '일일 퀘스트', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: '24px',
       fontStyle: 'bold', color: '#F8FAFC'
     }).setOrigin(0.5);
@@ -77,8 +77,8 @@ export class QuestScene extends Phaser.Scene {
   }
 
   createQuestSummary() {
-    // UIX-3.4: 일일/주간 탭 (y=100)
-    const y = 100;
+    // LAYOUT 통일: 요약 패널 (y=120, content 시작)
+    const y = 120;
     const total = this.quests.length;
     const completed = this.quests.filter(q => q.completed).length;
     const claimed = this.quests.filter(q => q.claimed).length;
@@ -118,8 +118,8 @@ export class QuestScene extends Phaser.Scene {
   }
 
   createQuestList() {
-    // UIX-3.4: 퀘스트 목록 시작 y=200
-    const startY = 200;
+    // LAYOUT 통일: 퀘스트 목록 시작 y=220 (요약패널 아래)
+    const startY = 220;
     const cardH = 100;
     const gap = 10;
 
@@ -226,7 +226,7 @@ export class QuestScene extends Phaser.Scene {
   createClaimAllButton() {
     if (this.claimable.length === 0) return;
 
-    const btnY = GAME_HEIGHT - 160;
+    const btnY = 1090; // BottomNav(y=1160) 겹침 방지: 1090+55=1145 < 1160
     const btnW = 280;
     const btnH = 55;
 

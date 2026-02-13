@@ -19,7 +19,7 @@ export const TOP_BAR = {
 export const BOTTOM_NAV = {
     HEIGHT: 120,
     ICON_SIZE: 48,
-    TABS: ['home', 'adventure', 'inventory', 'gacha', 'more']
+    TABS: ['home', 'inventory', 'gacha', 'more']
 };
 
 // 콘텐츠 영역 설정

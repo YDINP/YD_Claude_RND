@@ -196,8 +196,9 @@ export class IdleProgressSystem {
    */
   getPartyPower() {
     const saveData = SaveManager.load();
+    if (!saveData) return 0;
     const parties = saveData.parties || [];
-    const party = parties[0] || [];
+    const party = Array.isArray(parties[0]) ? parties[0] : [];
 
     let totalPower = 0;
     party.forEach(heroId => {

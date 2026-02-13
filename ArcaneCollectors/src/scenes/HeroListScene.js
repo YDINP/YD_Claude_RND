@@ -81,12 +81,12 @@ export class HeroListScene extends Phaser.Scene {
   }
 
   createHeader() {
-    // UIX-3.4: Header background (80px)
-    const headerBg = this.add.rectangle(GAME_WIDTH / 2, 40, GAME_WIDTH, 80, COLORS.backgroundLight, 0.95);
+    // LAYOUT 통일: Header background (100px)
+    const headerBg = this.add.rectangle(GAME_WIDTH / 2, 50, GAME_WIDTH, 100, COLORS.backgroundLight, 0.95);
     headerBg.setDepth(20);
 
-    // UIX-3.4: Back button (좌상단 30, 40 위치, 50×40 터치 영역)
-    const backBtn = this.add.container(30, 40).setDepth(21);
+    // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
+    const backBtn = this.add.container(30, 50).setDepth(21);
     const backBg = this.add.rectangle(0, 0, 50, 40, COLORS.backgroundLight, 0.8)
       .setInteractive({ useHandCursor: true });
     const backText = this.add.text(0, 0, '← 뒤로', {
@@ -104,7 +104,7 @@ export class HeroListScene extends Phaser.Scene {
     });
 
     // Title
-    this.add.text(GAME_WIDTH / 2, 40, '영웅', {
+    this.add.text(GAME_WIDTH / 2, 50, '영웅', {
       fontSize: '28px',
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
@@ -113,7 +113,7 @@ export class HeroListScene extends Phaser.Scene {
 
     // Hero count
     const heroes = this.registry.get('ownedHeroes') || [];
-    this.countText = this.add.text(GAME_WIDTH - 30, 40, `${heroes.length}명`, {
+    this.countText = this.add.text(GAME_WIDTH - 30, 50, `${heroes.length}명`, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
@@ -473,7 +473,7 @@ export class HeroListScene extends Phaser.Scene {
 
     card.heroData = hero;
 
-    // Interactions
+    // Interactions - hover only (tap handled by scene-level pointerup)
     cardBg.on('pointerover', () => {
       card.setScale(1.05);
       cardBg.setFillStyle(COLORS.backgroundLight, 0.8);
@@ -484,50 +484,91 @@ export class HeroListScene extends Phaser.Scene {
       cardBg.setFillStyle(COLORS.backgroundLight, 1);
     });
 
-    cardBg.on('pointerdown', (pointer) => {
-      if (scene.transitioning) return;
-      scene.transitioning = true;
-      const currentHero = card.heroData || hero;
-      // PRD VFX-1.2: HeroList → HeroDetail = zoomIn (card position)
-      transitionManager.zoomTransition(scene, 'HeroDetailScene', { heroId: currentHero.id }, pointer.x, pointer.y, 'in', 400);
-    });
-
     return card;
   }
 
   setupScrolling() {
     this.maxScroll = 0;
+    this.isDragging = false;
+    this.dragStartPointerY = 0;
+    this.dragStartScrollY = 0;
 
-    // Touch/mouse wheel scrolling (adjusted y offset for extended filter)
+    const DRAG_THRESHOLD = 10; // px - 드래그 vs 탭 판정 임계값
+    const CONTENT_TOP = 210;   // 필터바 아래 콘텐츠 영역 시작
+
+    // Mouse wheel scrolling
     this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
       this.scrollY += deltaY * 0.5;
       this.scrollY = Phaser.Math.Clamp(this.scrollY, 0, this.maxScroll);
-      this.gridContainer.y = 210 - this.scrollY;
+      this.updateGridPosition();
     });
 
-    // Touch drag scrolling
-    let dragStartY = 0;
-    let dragStartScroll = 0;
-
+    // Touch/mouse drag scrolling - scene level (카드 위에서도 동작)
     this.input.on('pointerdown', (pointer) => {
-      if (pointer.y > 210) {
-        dragStartY = pointer.y;
-        dragStartScroll = this.scrollY;
-      }
+      if (pointer.y < CONTENT_TOP) return; // 필터바 영역 제외
+      this.isDragging = false;
+      this.dragStartPointerY = pointer.y;
+      this.dragStartScrollY = this.scrollY;
     });
 
     this.input.on('pointermove', (pointer) => {
-      if (pointer.isDown && dragStartY > 0) {
-        const deltaY = dragStartY - pointer.y;
-        this.scrollY = dragStartScroll + deltaY;
+      if (!pointer.isDown || this.dragStartPointerY === 0) return;
+
+      const deltaY = this.dragStartPointerY - pointer.y;
+
+      if (!this.isDragging && Math.abs(deltaY) > DRAG_THRESHOLD) {
+        this.isDragging = true;
+      }
+
+      if (this.isDragging) {
+        this.scrollY = this.dragStartScrollY + deltaY;
         this.scrollY = Phaser.Math.Clamp(this.scrollY, 0, this.maxScroll);
-        this.gridContainer.y = 210 - this.scrollY;
+        this.updateGridPosition();
       }
     });
 
-    this.input.on('pointerup', () => {
-      dragStartY = 0;
+    this.input.on('pointerup', (pointer) => {
+      if (!this.isDragging && this.dragStartPointerY > 0) {
+        // 드래그가 아닌 탭 → 카드 클릭 처리
+        this.handleCardTap(pointer);
+      }
+      this.isDragging = false;
+      this.dragStartPointerY = 0;
     });
+  }
+
+  updateGridPosition() {
+    if (this.gridContainer) {
+      this.gridContainer.y = 210 - this.scrollY;
+    }
+  }
+
+  handleCardTap(pointer) {
+    if (this.transitioning) return;
+
+    // gridContainer 자식 중 포인터 위치에 해당하는 카드 찾기
+    const worldX = pointer.x;
+    const worldY = pointer.y;
+
+    const children = this.gridContainer.getAll();
+    for (const card of children) {
+      if (!card.heroData) continue;
+
+      // 카드의 월드 좌표 계산 (container 오프셋 적용)
+      const cardWorldX = card.x + this.gridContainer.x;
+      const cardWorldY = card.y + this.gridContainer.y;
+      const halfW = 50; // (cardWidth - 10) / 2 = 100/2
+      const halfH = 70; // (cardHeight - 10) / 2 = 140/2
+
+      if (worldX >= cardWorldX - halfW && worldX <= cardWorldX + halfW &&
+          worldY >= cardWorldY - halfH && worldY <= cardWorldY + halfH) {
+        this.transitioning = true;
+        const currentHero = card.heroData;
+        // PRD VFX-1.2: HeroList → HeroDetail = zoomIn (card position)
+        transitionManager.zoomTransition(this, 'HeroDetailScene', { heroId: currentHero.id }, pointer.x, pointer.y, 'in', 400);
+        return;
+      }
+    }
   }
 
   shutdown() {
@@ -555,7 +596,7 @@ export class HeroListScene extends Phaser.Scene {
   update() {
     // Smooth scroll position (adjusted for extended filter)
     const targetY = 210 - this.scrollY;
-    if (this.gridContainer.y !== targetY) {
+    if (this.gridContainer && this.gridContainer.y !== targetY) {
       this.gridContainer.y = Phaser.Math.Linear(this.gridContainer.y, targetY, 0.2);
     }
   }

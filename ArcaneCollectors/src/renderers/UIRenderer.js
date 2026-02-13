@@ -391,7 +391,7 @@ class UIRenderer {
         break;
       }
       case 'tab': {
-        const tabIcons = { home: '🏠', adventure: '⚔', inventory: '📦', gacha: '🎲', more: '☰' };
+        const tabIcons = { home: '🏠', inventory: '📦', gacha: '🎲', more: '☰' };
         symbol = tabIcons[key] || '?';
         color = 0x94A3B8;
         break;
@@ -609,7 +609,7 @@ class UIRenderer {
 
     // 아이콘 에셋 - 탭 (tabs)
     if (iconCategories.includes('tabs')) {
-      ['home', 'adventure', 'inventory', 'gacha', 'more'].forEach(tab => {
+      ['home', 'inventory', 'gacha', 'more'].forEach(tab => {
         const tabKey = `icon_tab_${tab}`;
         if (!scene.textures.exists(tabKey)) {
           scene.load.image(tabKey, `${UI_ASSET_PATHS.icon.tabs}${tab}.png`);

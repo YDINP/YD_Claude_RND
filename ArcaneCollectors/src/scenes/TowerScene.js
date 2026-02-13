@@ -24,7 +24,7 @@ export class TowerScene extends Phaser.Scene {
     this.createFloorInfo();
     this.createActionButtons();
     this.createProgressBar();
-    this.bottomNav = new BottomNav(this, 'adventure');
+    this.bottomNav = new BottomNav(this, 'home');
     } catch (error) {
       console.error('[TowerScene] create() 실패:', error);
       this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -70,23 +70,23 @@ export class TowerScene extends Phaser.Scene {
   }
 
   createTopBar() {
-    // UIX-3.4: Top bar background (80px)
+    // LAYOUT 통일: Top bar background (100px)
     const bar = this.add.graphics();
     bar.fillStyle(0x0F172A, 0.95);
-    bar.fillRect(0, 0, GAME_WIDTH, 80);
+    bar.fillRect(0, 0, GAME_WIDTH, 100);
     bar.lineStyle(2, COLORS.primary, 0.5);
-    bar.lineBetween(0, 80, GAME_WIDTH, 80);
+    bar.lineBetween(0, 100, GAME_WIDTH, 100);
 
-    // UIX-3.4: Back button (좌상단 30, 40 위치, 50×40 터치 영역)
-    const backBg = this.add.rectangle(30, 40, 50, 40, 0x0F172A, 0.8)
+    // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
+    const backBg = this.add.rectangle(30, 50, 50, 40, 0x0F172A, 0.8)
       .setInteractive({ useHandCursor: true });
-    this.add.text(30, 40, '← 뒤로', {
+    this.add.text(30, 50, '← 뒤로', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: '14px', color: '#94A3B8'
     }).setOrigin(0.5).on('pointerdown', () => {
       transitionManager.slideTransition(this, 'StageSelectScene', {}, 'right');
     });
 
-    this.add.text(GAME_WIDTH / 2, 40, '무한의 탑', {
+    this.add.text(GAME_WIDTH / 2, 50, '무한의 탑', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: '24px',
       fontStyle: 'bold', color: '#F8FAFC'
     }).setOrigin(0.5);
@@ -94,7 +94,7 @@ export class TowerScene extends Phaser.Scene {
     // 에너지 표시 (우상단)
     const energy = energySystem.getCurrentEnergy();
     const maxEnergy = energySystem.getMaxEnergy();
-    this.energyText = this.add.text(GAME_WIDTH - 30, 40, `⚡ ${energy}/${maxEnergy}`, {
+    this.energyText = this.add.text(GAME_WIDTH - 30, 50, `⚡ ${energy}/${maxEnergy}`, {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: '16px', color: '#F59E0B'
     }).setOrigin(1, 0.5);
   }
@@ -252,8 +252,8 @@ export class TowerScene extends Phaser.Scene {
       });
     }
 
-    // 리셋 버튼
-    const resetY = btnY + 80;
+    // 리셋 버튼: BottomNav(y=1160) 겹침 방지
+    const resetY = 1110; // 1110+45=1155 < 1160
     if (this.progress.currentFloor > 1) {
       const resetBtn = this.add.graphics();
       resetBtn.fillStyle(0x334155, 1);
