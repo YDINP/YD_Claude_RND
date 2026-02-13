@@ -338,7 +338,7 @@ export class GachaScene extends Phaser.Scene {
     this.createSummonButton(GAME_WIDTH / 2 + 110, buttonY, '10연차', 2700, 10, true);
 
     // Ticket summon buttons
-    const ticketY = buttonY + 70;
+    const ticketY = buttonY + 50; // BottomNav(y=1160) 겹침 방지: 70→50
     const ticketResources = SaveManager.getResources();
     const ticketCount = ticketResources.summonTickets || 0;
 

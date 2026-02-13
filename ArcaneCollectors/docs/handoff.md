@@ -27,6 +27,9 @@
 | ART-1.2 | UI 아이콘/버튼 이미지 | P2 | LOW | researcher | ⬜ |
 | ART-1.3 | 캐릭터 플레이스홀더 이미지 | P2 | LOW | researcher | ⬜ |
 | QA-3.1 | Playwright MCP 통합 테스트 | P1 | MED | qa-tester | ⬜ |
+| **AUTH-1.1** | 자동로그인 (BootScene 분기) | P1 | MED | executor | 📋 백로그 |
+| **AUTH-1.2** | 계정 변경 (SettingsScene) | P1 | MED | executor | 📋 백로그 |
+| **AUTH-1.3** | 로그인 화면 개선 (체크박스/최근계정) | P2 | LOW | executor | 📋 백로그 |
 
 ### 의존성 그래프
 ```
@@ -42,10 +45,61 @@ QA-3.1 (테스트) ──→ UIX-3.1~3.4 전부 완료 후
 
 ## 변경 이력
 
-### [2026-02-13] 초기 설정
+### [2026-02-13] Phase 1 실행 시작
 - handoff.md 생성
 - PRD 태스크 8개 정의
-- 에이전트 팀 구성 계획
+- 워크트리 3개 생성 (s3w1, s3w2, s3w3)
+- **Phase 1 병렬 실행**: UI Dev A (s3w1) + UI Dev B (s3w2) + Asset Scout (s3w3)
+
+---
+
+## 실행 Phase 구조
+
+### Phase 1: 병렬 구현 (현재 진행 중 🔄)
+| 에이전트 | 워크트리 | 태스크 | 모델 | 상태 |
+|---------|---------|--------|------|------|
+| UI Dev A | s3w1 | UIX-3.1 (BottomNav) | sonnet | ✅ 완료 (d42c078) |
+| UI Dev B | s3w2 | UIX-3.2 (방치형 홈) | sonnet | ✅ 완료 (9da25d1) |
+| Asset Scout | s3w3 | ART-1.1~1.3 (이미지) | sonnet | ✅ 완료 (48fd553) |
+
+### Phase 2: 후속 구현 ✅ 완료
+| 에이전트 | 워크트리 | 태스크 | 모델 | 상태 |
+|---------|---------|--------|------|------|
+| UI Dev A | integration | UIX-3.3 + UIX-3.4 | sonnet | ✅ 완료 (dd2b79a) |
+
+### Phase 3: 통합 + 코드 리뷰 + 린트 검증 ✅ 완료
+| 에이전트 | 역할 | 검증 항목 | 모델 | 상태 |
+|---------|------|----------|------|------|
+| Code Reviewer | 크로스 종속성 리뷰 | 7개 항목 검증 | sonnet | ✅ CONDITIONAL PASS |
+| Lint Checker | 린트/타입 검증 | tsc/vitest/build | 직접 | ✅ ALL PASS |
+| Hotfix | GachaScene 겹침 수정 | ticketY 70→50 | 직접 | ✅ 수정 완료 |
+
+### Phase 3 상세: 검증 결과
+
+#### 린트/빌드 검증 ✅ (직접 실행 완료)
+- [x] **tsc --noEmit**: 에러 0개 ✅
+- [x] **vitest**: 11 파일, **337/337 통과** (363ms) ✅
+- [x] **vite build**: 성공 (4.25s), 218 모듈 ✅
+  - index: 665.26 KB (gzip 178.97 KB)
+  - phaser: 1,478.63 KB (gzip 339.73 KB)
+  - 경고 2개 (MoodSystem/skillAnimationConfig 동적 import — 무시 가능)
+
+#### 코드 리뷰 ✅ (CONDITIONAL PASS → PASS)
+- [x] BottomNav ↔ layoutConfig HEIGHT 일치 (120px 양쪽 일치) ✅
+- [x] IdleProgressSystem ↔ SaveManager 정합성 (lastLogoutTime, parties, characters) ✅
+- [x] IdleBattleView 타이머 정리 (destroy()에서 remove() 호출) ✅
+- [x] TextureGenerator ↔ PreloadScene 호출 연결 (3개 메서드 일치) ✅
+- [x] BottomNav 텍스처 키 ↔ TextureGenerator 생성 키 일치 (5개 아이콘) ✅
+- [x] MainMenuScene 8버튼 씬 이름 전부 유효 ✅
+- [x] 6개 씬 콘텐츠 영역 범위 ✅ (GachaScene 티켓버튼 겹침 → **HOTFIX 완료**)
+
+#### FAIL→수정 완료
+- GachaScene `ticketY = buttonY + 70` → `+50` (BottomNav y=1160 겹침 방지)
+
+#### WARN (개선 권장, 추후 대응)
+1. BottomNav hitArea 상단 마진 균등화
+2. IdleProgressSystem getCurrentStage() 정렬 로직 명시화
+3. MainMenuScene IdleBattleView ↔ IdleSummary 데이터 갱신 이벤트 연동
 
 ---
 
@@ -66,15 +120,14 @@ QA-3.1 (테스트) ──→ UIX-3.1~3.4 전부 완료 후
 
 ---
 
-## 워크트리 계획
+## 워크트리 (활성)
 
-| 워크트리 | 브랜치 | 태스크 |
-|---------|--------|--------|
-| `wt-uix31` | `arcane/uix-3.1-bottomnav` | UIX-3.1 |
-| `wt-uix32` | `arcane/uix-3.2-idle-home` | UIX-3.2 |
-| `wt-uix33` | `arcane/uix-3.3-quick-access` | UIX-3.3 |
-| `wt-uix34` | `arcane/uix-3.4-scene-layout` | UIX-3.4 |
-| `wt-art1` | `arcane/art-1-assets` | ART-1.1~1.3 |
+| 워크트리 경로 | 브랜치 | 태스크 | 상태 |
+|-------------|--------|--------|------|
+| `D:/park/YD_Claude_RND-s3w1` | `arcane/s3-bottomnav` | UIX-3.1 + UIX-3.3 + UIX-3.4 | ⬜ Ready |
+| `D:/park/YD_Claude_RND-s3w2` | `arcane/s3-idle-home` | UIX-3.2 | ⬜ Ready |
+| `D:/park/YD_Claude_RND-s3w3` | `arcane/s3-assets` | ART-1.1~1.3 | ⬜ Ready |
+| `D:/park/YD_Claude_RND-integration` | `arcane/integration` | 통합/QA | Base |
 
 ---
 

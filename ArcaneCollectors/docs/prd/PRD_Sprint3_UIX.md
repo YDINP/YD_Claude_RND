@@ -171,6 +171,89 @@
 
 ---
 
+## AUTH-1: 자동로그인 + 계정 변경 (Sprint 4 백로그)
+
+> **상태**: 📋 백로그 (추후 구현)
+> **우선순위**: P1
+> **난이도**: MED
+
+### 현재 상태
+- `LoginScene.js`: 게스트 로그인 + Supabase 이메일/비밀번호 인증
+- 로그인 후 `SaveManager.setUserId()` → `PreloadScene` 이동
+- **자동로그인 없음** — 매번 LoginScene에서 수동 선택 필요
+
+### AUTH-1.1: 자동로그인
+
+#### 요구사항
+1. 앱 시작 시 localStorage에서 이전 로그인 정보 확인
+2. 정보 있으면 LoginScene 스킵 → 자동 인증 → PreloadScene 직행
+3. 자동로그인 실패 시 (토큰 만료 등) LoginScene으로 폴백
+4. BootScene에서 자동로그인 분기 처리
+
+#### 구현 방향
+```
+BootScene.create()
+  → localStorage에서 auth_token / userId 확인
+  → 있으면: Supabase 세션 복원 시도
+    → 성공: PreloadScene 이동 (LoginScene 스킵)
+    → 실패: LoginScene 이동
+  → 없으면: LoginScene 이동
+```
+
+#### 저장 데이터
+```javascript
+// localStorage 키
+'arcane_auth': {
+  userId: string,
+  authType: 'guest' | 'email',
+  email?: string,
+  lastLogin: timestamp,
+  autoLogin: boolean  // 사용자 선택
+}
+```
+
+### AUTH-1.2: 계정 변경 (SettingsScene)
+
+#### 요구사항
+1. SettingsScene에 "계정 변경" 버튼 추가
+2. 버튼 클릭 시 확인 모달: "현재 계정에서 로그아웃하고 로그인 화면으로 돌아갑니다"
+3. 확인 시:
+   - 현재 세이브 데이터 클라우드 동기화 (Supabase)
+   - localStorage의 auth 정보 삭제
+   - Registry 초기화
+   - LoginScene으로 이동
+4. 취소 시 모달 닫기
+
+#### UI 위치
+- SettingsScene 하단 "계정" 섹션
+- 버튼: "🔄 계정 변경" (danger 색상, 명확한 경고)
+- 현재 로그인 정보 표시: "현재: guest_abc123" 또는 "현재: user@email.com"
+
+### AUTH-1.3: 로그인 화면 개선
+
+#### 요구사항
+1. "자동 로그인" 체크박스 추가 (기본 ON)
+2. "이전 계정으로 로그인" 빠른 버튼 (최근 3개 계정)
+3. 게스트 → 이메일 계정 전환(연동) 기능
+
+### 수정 파일 (예상)
+| 파일 | 변경 유형 | 내용 |
+|------|----------|------|
+| `src/scenes/BootScene.js` | 수정 | 자동로그인 분기 로직 |
+| `src/scenes/LoginScene.js` | 수정 | 자동로그인 체크박스, 최근 계정 |
+| `src/scenes/SettingsScene.js` | 수정 | 계정 변경 버튼/모달 |
+| `src/systems/AuthManager.js` | 신규 | 인증 상태 관리 Singleton |
+| `src/systems/SaveManager.js` | 수정 | auth 데이터 저장/삭제 |
+
+### 완료 기준
+- [ ] 이전 로그인 정보 있으면 LoginScene 스킵
+- [ ] 자동로그인 실패 시 LoginScene 폴백
+- [ ] SettingsScene에서 계정 변경 가능
+- [ ] 계정 변경 시 데이터 동기화 후 로그아웃
+- [ ] 자동로그인 ON/OFF 토글
+
+---
+
 ## QA-3.1: 통합 테스트
 
 ### 테스트 범위
