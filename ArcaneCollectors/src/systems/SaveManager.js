@@ -63,6 +63,7 @@ export class SaveManager {
         highestDamage: 0
       },
       lastOnline: Date.now(),
+      lastLogoutTime: Date.now(), // 오프라인 보상 계산용
       createdAt: Date.now()
     };
   }
@@ -132,6 +133,7 @@ export class SaveManager {
   static save(data) {
     try {
       data.lastOnline = Date.now();
+      // lastLogoutTime은 명시적으로 설정하지 않는 한 유지 (오프라인 보상 중복 방지)
       localStorage.setItem(this.SAVE_KEY, JSON.stringify(data));
       GameLogger.log('SAVE', '데이터 저장', { gold: data.resources?.gold, chars: data.characters?.length });
 
@@ -521,6 +523,7 @@ export class SaveManager {
       data.player.exp += rewards.exp;
     }
     data.lastOnline = Date.now();
+    data.lastLogoutTime = Date.now(); // 오프라인 보상 중복 방지
     this.save(data);
 
     return rewards;
