@@ -4,11 +4,11 @@ import transitionManager from '../utils/TransitionManager.js';
 
 // 5-tab bottom navigation configuration
 const TABS = [
-  { id: 'home', icon: '\u{1F3E0}', label: '\uD648', scene: 'MainMenuScene' },
-  { id: 'adventure', icon: '\u2694\uFE0F', label: '\uBAA8\uD5D8', scene: 'StageSelectScene' },
-  { id: 'inventory', icon: '\u{1F4E6}', label: '\uAC00\uBC29', scene: 'InventoryScene' },
-  { id: 'gacha', icon: '\u{1F3B2}', label: '\uC18C\uD658', scene: 'GachaScene' },
-  { id: 'more', icon: '\u2261', label: '\uB354\uBCF4\uAE30', scene: 'SettingsScene' }
+  { id: 'home', icon: '\u{1F3E0}', iconKey: 'icon_home', label: '\uD648', scene: 'MainMenuScene' },
+  { id: 'adventure', icon: '\u2694\uFE0F', iconKey: 'icon_sword', label: '\uBAA8\uD5D8', scene: 'StageSelectScene' },
+  { id: 'inventory', icon: '\u{1F4E6}', iconKey: 'icon_bag', label: '\uAC00\uBC29', scene: 'InventoryScene' },
+  { id: 'gacha', icon: '\u{1F3B2}', iconKey: 'icon_dice', label: '\uC18C\uD658', scene: 'GachaScene' },
+  { id: 'more', icon: '\u2261', iconKey: 'icon_menu', label: '\uB354\uBCF4\uAE30', scene: 'SettingsScene' }
 ];
 
 export class BottomNav extends Phaser.GameObjects.Container {
@@ -68,9 +68,15 @@ export class BottomNav extends Phaser.GameObjects.Container {
     container.add(indicator);
     container.indicator = indicator;
 
-    const iconText = this.scene.add.text(0, -10, tab.icon, { fontSize: '28px' }).setOrigin(0.5);
-    container.add(iconText);
-    container.iconText = iconText;
+    // ART-1: 텍스처 아이콘 사용 (폴백: 이모지)
+    let iconObj;
+    if (tab.iconKey && this.scene.textures.exists(tab.iconKey)) {
+      iconObj = this.scene.add.image(0, -10, tab.iconKey).setOrigin(0.5).setDisplaySize(32, 32);
+    } else {
+      iconObj = this.scene.add.text(0, -10, tab.icon, { fontSize: '28px' }).setOrigin(0.5);
+    }
+    container.add(iconObj);
+    container.iconText = iconObj;
 
     const label = this.scene.add.text(0, 20, tab.label, {
       fontFamily: '"Noto Sans KR", sans-serif',

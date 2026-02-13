@@ -178,40 +178,65 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   createBackground() {
-    // Dark fantasy gradient background
-    const graphics = this.add.graphics();
+    // ART-1: 배경 텍스처 사용 (폴백: 기존 그래디언트)
+    if (this.textures.exists('bg_main')) {
+      this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'bg_main').setOrigin(0.5);
+      // 추가 트윈클 스타 효과
+      this._stars = [];
+      for (let i = 0; i < 10; i++) {
+        const star = this.add.circle(
+          Phaser.Math.Between(10, GAME_WIDTH - 10),
+          Phaser.Math.Between(10, GAME_HEIGHT - 250),
+          Phaser.Math.FloatBetween(1, 2),
+          0xFFFFFF,
+          Phaser.Math.FloatBetween(0.3, 0.7)
+        );
+        this.tweens.add({
+          targets: star,
+          alpha: { from: star.alpha, to: 0.1 },
+          duration: Phaser.Math.Between(1500, 3000),
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+        this._stars.push(star);
+      }
+    } else {
+      // Fallback: Dark fantasy gradient background
+      const graphics = this.add.graphics();
 
-    // Base gradient
-    for (let y = 0; y < GAME_HEIGHT; y++) {
-      const ratio = y / GAME_HEIGHT;
-      const r = Math.floor(15 + ratio * 10);
-      const g = Math.floor(23 + ratio * 15);
-      const b = Math.floor(42 + ratio * 20);
-      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
-      graphics.fillRect(0, y, GAME_WIDTH, 1);
-    }
+      // Base gradient
+      for (let y = 0; y < GAME_HEIGHT; y++) {
+        const ratio = y / GAME_HEIGHT;
+        const r = Math.floor(15 + ratio * 10);
+        const g = Math.floor(23 + ratio * 15);
+        const b = Math.floor(42 + ratio * 20);
+        graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
+        graphics.fillRect(0, y, GAME_WIDTH, 1);
+      }
 
-    // Animated twinkling stars
-    this._stars = [];
-    for (let i = 0; i < 25; i++) {
-      const star = this.add.circle(
-        Phaser.Math.Between(10, GAME_WIDTH - 10),
-        Phaser.Math.Between(10, GAME_HEIGHT - 250),
-        Phaser.Math.FloatBetween(1, 2.5),
-        COLORS.text,
-        Phaser.Math.FloatBetween(0.15, 0.5)
-      );
-      // Twinkle animation with random delay
-      this.tweens.add({
-        targets: star,
-        alpha: { from: star.alpha, to: Phaser.Math.FloatBetween(0.05, 0.3) },
-        duration: Phaser.Math.Between(1500, 3500),
-        yoyo: true,
-        repeat: -1,
-        delay: Phaser.Math.Between(0, 2000),
-        ease: 'Sine.easeInOut'
-      });
-      this._stars.push(star);
+      // Animated twinkling stars
+      this._stars = [];
+      for (let i = 0; i < 25; i++) {
+        const star = this.add.circle(
+          Phaser.Math.Between(10, GAME_WIDTH - 10),
+          Phaser.Math.Between(10, GAME_HEIGHT - 250),
+          Phaser.Math.FloatBetween(1, 2.5),
+          COLORS.text,
+          Phaser.Math.FloatBetween(0.15, 0.5)
+        );
+        // Twinkle animation with random delay
+        this.tweens.add({
+          targets: star,
+          alpha: { from: star.alpha, to: Phaser.Math.FloatBetween(0.05, 0.3) },
+          duration: Phaser.Math.Between(1500, 3500),
+          yoyo: true,
+          repeat: -1,
+          delay: Phaser.Math.Between(0, 2000),
+          ease: 'Sine.easeInOut'
+        });
+        this._stars.push(star);
+      }
     }
 
     // Slow-drifting ambient particles (3 larger glowing orbs)
