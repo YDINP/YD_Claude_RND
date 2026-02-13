@@ -32,8 +32,8 @@ export class SaveManager {
         skillBooks: 0,
         characterShards: {}
       },
-      characters: [], // 소유한 캐릭터 인스턴스 배열
-      parties: [], // 파티 편성 (5슬롯)
+      characters: this._createStarterCharacters(), // 스타터 캐릭터 4명
+      parties: [['hero_055', 'hero_065', 'hero_046', 'hero_081']], // 스타터 파티
       inventory: [],
       progress: {
         currentChapter: 'chapter_1',
@@ -92,6 +92,17 @@ export class SaveManager {
       // COMPAT-1.3: 구버전 ownedHeroes 데이터 마이그레이션
       if (data.characters && Array.isArray(data.characters)) {
         data.characters = this._migrateHeroesSchema(data.characters);
+      }
+
+      // 기존 빈 세이브에 스타터 캐릭터 제공 (신규 계정 마이그레이션)
+      if ((!data.characters || data.characters.length === 0) && data.progress?.totalBattles === 0) {
+        data.characters = this._createStarterCharacters();
+        if (!data.parties || data.parties.length === 0) {
+          data.parties = [['hero_055', 'hero_065', 'hero_046', 'hero_081']];
+        }
+        data.statistics.charactersCollected = 4;
+        this.save(data);
+        GameLogger.log('SAVE', '스타터 캐릭터 4명 마이그레이션 적용');
       }
 
       return data;
@@ -342,6 +353,33 @@ export class SaveManager {
     this.save(data);
 
     return { duplicate: false, character: newCharacter };
+  }
+
+  /**
+   * 신규 계정용 스타터 캐릭터 4명 생성
+   * 4개 클래스 × 1명 (R등급): warrior, mage, archer, healer
+   */
+  static _createStarterCharacters() {
+    const starters = [
+      { id: 'hero_055', stars: 2 }, // 요정기사 (warrior, avalon)
+      { id: 'hero_065', stars: 2 }, // 스베르탈프 (mage, helheim)
+      { id: 'hero_046', stars: 2 }, // 하피 (archer, tartarus)
+      { id: 'hero_081', stars: 2 }, // 님프 (healer, olympus)
+    ];
+    const now = Date.now();
+    return starters.map((s, i) => ({
+      id: s.id,
+      instanceId: `${s.id}_starter_${now + i}`,
+      characterId: s.id,
+      level: 1,
+      exp: 0,
+      stars: s.stars,
+      skillLevels: [1, 1, 1],
+      equipped: null,
+      equipment: { weapon: null, armor: null, accessory: null },
+      constellation: 0,
+      acquiredAt: now
+    }));
   }
 
   /**
