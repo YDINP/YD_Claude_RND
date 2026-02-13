@@ -81,13 +81,13 @@ export class HeroListScene extends Phaser.Scene {
   }
 
   createHeader() {
-    // Header background
-    const headerBg = this.add.rectangle(GAME_WIDTH / 2, 50, GAME_WIDTH, 100, COLORS.backgroundLight, 0.95);
+    // UIX-3.4: Header background (80px)
+    const headerBg = this.add.rectangle(GAME_WIDTH / 2, 40, GAME_WIDTH, 80, COLORS.backgroundLight, 0.95);
     headerBg.setDepth(20);
 
-    // Back button
-    const backBtn = this.add.container(40, 50).setDepth(21);
-    const backBg = this.add.rectangle(0, 0, 60, 40, COLORS.backgroundLight, 0.8)
+    // UIX-3.4: Back button (좌상단 30, 40 위치, 50×40 터치 영역)
+    const backBtn = this.add.container(30, 40).setDepth(21);
+    const backBg = this.add.rectangle(0, 0, 50, 40, COLORS.backgroundLight, 0.8)
       .setInteractive({ useHandCursor: true });
     const backText = this.add.text(0, 0, '← 뒤로', {
       fontSize: '14px',
@@ -104,7 +104,7 @@ export class HeroListScene extends Phaser.Scene {
     });
 
     // Title
-    this.add.text(GAME_WIDTH / 2, 50, '영웅', {
+    this.add.text(GAME_WIDTH / 2, 40, '영웅', {
       fontSize: '28px',
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
@@ -113,7 +113,7 @@ export class HeroListScene extends Phaser.Scene {
 
     // Hero count
     const heroes = this.registry.get('ownedHeroes') || [];
-    this.countText = this.add.text(GAME_WIDTH - 30, 50, `${heroes.length}명`, {
+    this.countText = this.add.text(GAME_WIDTH - 30, 40, `${heroes.length}명`, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
@@ -267,9 +267,9 @@ export class HeroListScene extends Phaser.Scene {
     // Scrollable container
     this.gridContainer = this.add.container(0, 0);
 
-    // Mask for scrolling (adjusted for extended filter bar)
+    // UIX-3.4: Mask for scrolling (콘텐츠 영역 y=80~1160)
     const maskShape = this.make.graphics();
-    maskShape.fillRect(0, 210, GAME_WIDTH, GAME_HEIGHT - 210);
+    maskShape.fillRect(0, 210, GAME_WIDTH, GAME_HEIGHT - 330);
     const mask = maskShape.createGeometryMask();
     this.gridContainer.setMask(mask);
 

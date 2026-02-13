@@ -69,27 +69,31 @@ export class TowerScene extends Phaser.Scene {
   }
 
   createTopBar() {
+    // UIX-3.4: Top bar background (80px)
     const bar = this.add.graphics();
     bar.fillStyle(0x0F172A, 0.95);
-    bar.fillRect(0, 0, GAME_WIDTH, 90);
+    bar.fillRect(0, 0, GAME_WIDTH, 80);
     bar.lineStyle(2, COLORS.primary, 0.5);
-    bar.lineBetween(0, 90, GAME_WIDTH, 90);
+    bar.lineBetween(0, 80, GAME_WIDTH, 80);
 
-    this.add.text(20, 30, '< 뒤로', {
-      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '18px', color: '#94A3B8'
-    }).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+    // UIX-3.4: Back button (좌상단 30, 40 위치, 50×40 터치 영역)
+    const backBg = this.add.rectangle(30, 40, 50, 40, 0x0F172A, 0.8)
+      .setInteractive({ useHandCursor: true });
+    this.add.text(30, 40, '← 뒤로', {
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '14px', color: '#94A3B8'
+    }).setOrigin(0.5).on('pointerdown', () => {
       transitionManager.slideTransition(this, 'StageSelectScene', {}, 'right');
     });
 
-    this.add.text(GAME_WIDTH / 2, 30, '무한의 탑', {
+    this.add.text(GAME_WIDTH / 2, 40, '무한의 탑', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: '24px',
       fontStyle: 'bold', color: '#F8FAFC'
-    }).setOrigin(0.5, 0);
+    }).setOrigin(0.5);
 
-    // 에너지 표시
+    // 에너지 표시 (우상단)
     const energy = energySystem.getCurrentEnergy();
     const maxEnergy = energySystem.getMaxEnergy();
-    this.energyText = this.add.text(GAME_WIDTH - 20, 45, `⚡ ${energy}/${maxEnergy}`, {
+    this.energyText = this.add.text(GAME_WIDTH - 30, 40, `⚡ ${energy}/${maxEnergy}`, {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: '16px', color: '#F59E0B'
     }).setOrigin(1, 0.5);
   }
@@ -219,7 +223,8 @@ export class TowerScene extends Phaser.Scene {
   }
 
   createActionButtons() {
-    const btnY = 640;
+    // UIX-3.4: 도전 버튼 하단 중앙 (y=1050)
+    const btnY = 1050;
     const btnW = 280;
     const btnH = 60;
 

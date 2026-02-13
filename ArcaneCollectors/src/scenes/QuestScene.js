@@ -48,22 +48,26 @@ export class QuestScene extends Phaser.Scene {
   }
 
   createTopBar() {
+    // UIX-3.4: Top bar background (80px)
     const bar = this.add.graphics();
     bar.fillStyle(0x0F172A, 0.95);
-    bar.fillRect(0, 0, GAME_WIDTH, 90);
+    bar.fillRect(0, 0, GAME_WIDTH, 80);
     bar.lineStyle(2, COLORS.primary, 0.5);
-    bar.lineBetween(0, 90, GAME_WIDTH, 90);
+    bar.lineBetween(0, 80, GAME_WIDTH, 80);
 
-    this.add.text(20, 30, '< 뒤로', {
-      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '18px', color: '#94A3B8'
-    }).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+    // UIX-3.4: Back button (좌상단 30, 40 위치, 50×40 터치 영역)
+    const backBg = this.add.rectangle(30, 40, 50, 40, 0x0F172A, 0.8)
+      .setInteractive({ useHandCursor: true });
+    this.add.text(30, 40, '← 뒤로', {
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '14px', color: '#94A3B8'
+    }).setOrigin(0.5).on('pointerdown', () => {
       transitionManager.slideTransition(this, 'MainMenuScene', {}, 'left');
     });
 
-    this.add.text(GAME_WIDTH / 2, 30, '일일 퀘스트', {
+    this.add.text(GAME_WIDTH / 2, 40, '일일 퀘스트', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: '24px',
       fontStyle: 'bold', color: '#F8FAFC'
-    }).setOrigin(0.5, 0);
+    }).setOrigin(0.5);
   }
 
   loadQuests() {
@@ -72,7 +76,8 @@ export class QuestScene extends Phaser.Scene {
   }
 
   createQuestSummary() {
-    const y = 105;
+    // UIX-3.4: 일일/주간 탭 (y=100)
+    const y = 100;
     const total = this.quests.length;
     const completed = this.quests.filter(q => q.completed).length;
     const claimed = this.quests.filter(q => q.claimed).length;
@@ -112,7 +117,8 @@ export class QuestScene extends Phaser.Scene {
   }
 
   createQuestList() {
-    const startY = 205;
+    // UIX-3.4: 퀘스트 목록 시작 y=200
+    const startY = 200;
     const cardH = 100;
     const gap = 10;
 

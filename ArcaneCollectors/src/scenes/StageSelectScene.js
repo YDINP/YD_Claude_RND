@@ -73,13 +73,13 @@ export class StageSelectScene extends Phaser.Scene {
   }
 
   createHeader() {
-    // Header background
-    const headerBg = this.add.rectangle(GAME_WIDTH / 2, 50, GAME_WIDTH, 100, COLORS.backgroundLight, 0.9);
+    // UIX-3.4: Header background (80px)
+    const headerBg = this.add.rectangle(GAME_WIDTH / 2, 40, GAME_WIDTH, 80, COLORS.backgroundLight, 0.9);
     headerBg.setDepth(20);
 
-    // Back button
-    const backBtn = this.add.container(40, 50).setDepth(21);
-    const backBg = this.add.rectangle(0, 0, 60, 40, COLORS.backgroundLight, 0.8)
+    // UIX-3.4: Back button (좌상단 30, 40 위치, 50×40 터치 영역)
+    const backBtn = this.add.container(30, 40).setDepth(21);
+    const backBg = this.add.rectangle(0, 0, 50, 40, COLORS.backgroundLight, 0.8)
       .setInteractive({ useHandCursor: true });
     const backText = this.add.text(0, 0, '← 뒤로', {
       fontSize: '14px',
@@ -94,7 +94,7 @@ export class StageSelectScene extends Phaser.Scene {
     });
 
     // Title
-    this.add.text(GAME_WIDTH / 2, 50, '모험', {
+    this.add.text(GAME_WIDTH / 2, 40, '모험', {
       fontSize: '28px',
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
@@ -103,25 +103,16 @@ export class StageSelectScene extends Phaser.Scene {
 
     // Energy display (동적)
     const energyStatus = energySystem.getStatus();
-    this.energyText = this.add.text(GAME_WIDTH - 40, 40, `⚡ ${energyStatus.current}/${energyStatus.max}`, {
+    this.energyText = this.add.text(GAME_WIDTH - 30, 40, `⚡ ${energyStatus.current}/${energyStatus.max}`, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0.5).setDepth(21);
-
-    // 에너지 회복 타이머 표시
-    if (energyStatus.current < energyStatus.max && energyStatus.recoveryInfo) {
-      this.energyTimerText = this.add.text(GAME_WIDTH - 40, 60, '', {
-        fontSize: '10px',
-        fontFamily: 'Arial',
-        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-      }).setOrigin(1, 0.5).setDepth(21);
-      this.updateEnergyTimer();
-    }
   }
 
   createChapterTitle() {
-    const titleY = 140;
+    // UIX-3.4: 챕터 타이틀 영역 y=100
+    const titleY = 100;
 
     // Chapter navigation
     const prevBtn = this.add.text(30, titleY, '◀', {
@@ -181,7 +172,8 @@ export class StageSelectScene extends Phaser.Scene {
     const clearedStages = this.registry.get('clearedStages') || {};
     const stages = this.generateStages(this.currentChapter);
 
-    const startY = 200;
+    // UIX-3.4: 스테이지 버튼 그리드 시작 y=150
+    const startY = 150;
     const stageHeight = 90;
 
     stages.forEach((stage, index) => {

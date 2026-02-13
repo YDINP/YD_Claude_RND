@@ -80,12 +80,12 @@ export class GachaScene extends Phaser.Scene {
   }
 
   createHeader() {
-    // Header background
-    this.add.rectangle(GAME_WIDTH / 2, 50, GAME_WIDTH, 100, COLORS.backgroundLight, 0.9);
+    // UIX-3.4: Header background (80px)
+    this.add.rectangle(GAME_WIDTH / 2, 40, GAME_WIDTH, 80, COLORS.backgroundLight, 0.9);
 
-    // Back button
-    const backBtn = this.add.container(40, 50);
-    const backBg = this.add.rectangle(0, 0, 60, 40, COLORS.backgroundLight, 0.8)
+    // UIX-3.4: Back button (좌상단 30, 40 위치, 50×40 터치 영역)
+    const backBtn = this.add.container(30, 40);
+    const backBg = this.add.rectangle(0, 0, 50, 40, COLORS.backgroundLight, 0.8)
       .setInteractive({ useHandCursor: true });
     const backText = this.add.text(0, 0, '← 뒤로', {
       fontSize: '14px',
@@ -101,7 +101,7 @@ export class GachaScene extends Phaser.Scene {
     });
 
     // Title
-    this.add.text(GAME_WIDTH / 2, 50, '소환', {
+    this.add.text(GAME_WIDTH / 2, 40, '소환', {
       fontSize: '28px',
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
@@ -111,14 +111,14 @@ export class GachaScene extends Phaser.Scene {
     // Gems display
     let gemIcon;
     if (this.textures.exists('gem')) {
-      gemIcon = this.add.image(GAME_WIDTH - 80, 50, 'gem').setScale(0.7);
+      gemIcon = this.add.image(GAME_WIDTH - 80, 40, 'gem').setScale(0.7);
     } else {
-      gemIcon = this.add.text(GAME_WIDTH - 80, 50, '💎', { fontSize: '20px' }).setOrigin(0.5);
+      gemIcon = this.add.text(GAME_WIDTH - 80, 40, '💎', { fontSize: '20px' }).setOrigin(0.5);
     }
     const resources = SaveManager.getResources();
     const gems = resources.gems;
     this.registry.set('gems', gems); // sync registry
-    this.gemText = this.add.text(GAME_WIDTH - 55, 50, gems.toLocaleString(), {
+    this.gemText = this.add.text(GAME_WIDTH - 55, 40, gems.toLocaleString(), {
       fontSize: '16px',
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
@@ -328,7 +328,8 @@ export class GachaScene extends Phaser.Scene {
   }
 
   createSummonButtons() {
-    const buttonY = 550;
+    // UIX-3.4: 소환 버튼 위치 하단 BottomNav 위 (y=1050 정도)
+    const buttonY = 1050;
 
     // Single summon button
     this.createSummonButton(GAME_WIDTH / 2 - 110, buttonY, '단일 소환', 300, 1);

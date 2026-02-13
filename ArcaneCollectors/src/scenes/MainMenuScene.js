@@ -294,16 +294,29 @@ export class MainMenuScene extends Phaser.Scene {
     const topBar = this.add.rectangle(GAME_WIDTH / 2, 40, GAME_WIDTH, 80, COLORS.backgroundLight, 0.9);
     topBar.setDepth(Z_INDEX.UI);
 
+    // UIX-3.3: 플레이어 레벨 배지 (좌측 끝)
+    const saveData = SaveManager.load();
+    const playerLevel = saveData.player?.level || 1;
+    const levelBadge = this.add.rectangle(40, 40, 55, 30, COLORS.primary, 0.9)
+      .setDepth(Z_INDEX.UI + 1);
+    levelBadge.setStrokeStyle(1, COLORS.text, 0.3);
+    this.levelBadgeText = this.add.text(40, 40, `Lv.${playerLevel}`, {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
+
     // Gems display - use texture if exists, else create placeholder (Z_INDEX.UI + 1)
     let gemIcon;
     if (this.textures.exists('gem')) {
-      gemIcon = this.add.image(30, 40, 'gem').setScale(1).setDepth(Z_INDEX.UI + 1);
+      gemIcon = this.add.image(100, 40, 'gem').setScale(1).setDepth(Z_INDEX.UI + 1);
     } else {
-      gemIcon = this.add.text(30, 40, '💎', { fontSize: '20px' }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
+      gemIcon = this.add.text(100, 40, '💎', { fontSize: '20px' }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
     }
 
     const gems = this.registry.get('gems') || 1500;
-    this.gemText = this.add.text(55, 40, gems.toLocaleString(), {
+    this.gemText = this.add.text(125, 40, gems.toLocaleString(), {
       fontSize: '18px',
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
@@ -313,13 +326,13 @@ export class MainMenuScene extends Phaser.Scene {
     // Gold display (Z_INDEX.UI + 1)
     let goldIcon;
     if (this.textures.exists('gold')) {
-      goldIcon = this.add.image(150, 40, 'gold').setScale(1).setDepth(Z_INDEX.UI + 1);
+      goldIcon = this.add.image(220, 40, 'gold').setScale(1).setDepth(Z_INDEX.UI + 1);
     } else {
-      goldIcon = this.add.text(150, 40, '🪙', { fontSize: '20px' }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
+      goldIcon = this.add.text(220, 40, '🪙', { fontSize: '20px' }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
     }
 
     const gold = this.registry.get('gold') || 10000;
-    this.goldText = this.add.text(175, 40, gold.toLocaleString(), {
+    this.goldText = this.add.text(245, 40, gold.toLocaleString(), {
       fontSize: '18px',
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
@@ -340,6 +353,15 @@ export class MainMenuScene extends Phaser.Scene {
       color: '#94A3B8',
       fontStyle: 'normal'
     }).setOrigin(0, 0.5).setDepth(Z_INDEX.UI + 1);
+
+    // UIX-3.3: 전투력 표시 (에너지 바 옆)
+    const partyPower = this.idleSystem.getPartyPower();
+    this.powerText = this.add.text(GAME_WIDTH - 90, 40, `⚔ ${Math.floor(partyPower).toLocaleString()}`, {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(1, 0.5).setDepth(Z_INDEX.UI + 1);
 
     // Settings button (Z_INDEX.UI + 1)
     const settingsBtn = this.add.rectangle(GAME_WIDTH - 40, 40, 40, 40, COLORS.backgroundLight, 0.8)
@@ -653,19 +675,22 @@ export class MainMenuScene extends Phaser.Scene {
 
   createContentButtons() {
     const startY = 950;
+    // UIX-3.3: 8개 버튼 (4열 × 2행)
     const buttons = [
-      { icon: '\u{1F9B8}', label: '영웅', scene: 'HeroListScene' },
-      { icon: '\u{1F465}', label: '파티편성', scene: 'PartyEditScene' },
-      { icon: '\u{1F4DC}', label: '퀘스트', scene: 'QuestScene' },
-      { icon: '\u{1F5FC}', label: '무한탑', scene: 'TowerScene' },
-      { icon: '\u{1F4E6}', label: '가방', scene: 'InventoryScene' },
-      { icon: '\u2699\uFE0F', label: '설정', scene: 'SettingsScene' },
+      { icon: '🗺️', label: '모험', scene: 'StageSelectScene', texture: 'icon_sword' },
+      { icon: '🎲', label: '소환', scene: 'GachaScene', texture: 'icon_dice' },
+      { icon: '\u{1F9B8}', label: '영웅', scene: 'HeroListScene', texture: 'icon_hero' },
+      { icon: '\u{1F465}', label: '파티편성', scene: 'PartyEditScene', texture: 'icon_party' },
+      { icon: '\u{1F4DC}', label: '퀘스트', scene: 'QuestScene', texture: 'icon_quest' },
+      { icon: '\u{1F5FC}', label: '무한탑', scene: 'TowerScene', texture: 'icon_tower' },
+      { icon: '\u{1F4E6}', label: '가방', scene: 'InventoryScene', texture: 'icon_bag' },
+      { icon: '\u2699\uFE0F', label: '설정', scene: 'SettingsScene', texture: 'icon_settings' },
     ];
 
-    const cols = 3;
-    const btnWidth = 105;
-    const btnHeight = 75;
-    const gapX = 12;
+    const cols = 4;
+    const btnWidth = 150;
+    const btnHeight = 65;
+    const gapX = 10;
     const gapY = 10;
     const totalWidth = cols * btnWidth + (cols - 1) * gapX;
     const startX = (GAME_WIDTH - totalWidth) / 2 + btnWidth / 2;
@@ -683,10 +708,15 @@ export class MainMenuScene extends Phaser.Scene {
       bg.setStrokeStyle(1, 0x4444aa, 0.4);
       bg.setInteractive({ useHandCursor: true });
 
-      // Icon
-      const icon = this.add.text(0, -12, btn.icon, {
-        fontSize: '28px'
-      }).setOrigin(0.5);
+      // UIX-3.3: 텍스처 아이콘 우선, 없으면 이모지 폴백
+      let iconObj;
+      if (btn.texture && this.textures.exists(btn.texture)) {
+        iconObj = this.add.image(0, -12, btn.texture).setScale(0.8);
+      } else {
+        iconObj = this.add.text(0, -12, btn.icon, {
+          fontSize: '28px'
+        }).setOrigin(0.5);
+      }
 
       // Label
       const label = this.add.text(0, 22, btn.label, {
@@ -696,7 +726,7 @@ export class MainMenuScene extends Phaser.Scene {
         fontStyle: 'bold'
       }).setOrigin(0.5);
 
-      container.add([bg, icon, label]);
+      container.add([bg, iconObj, label]);
 
       // Badge system (UIX-2.1.2) - reference BottomNav.js setBadge() pattern
       const badgeCount = this.getBadgeData(btn.scene);

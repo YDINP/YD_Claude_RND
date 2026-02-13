@@ -64,13 +64,16 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   createTopBar() {
-    this.add.rectangle(GAME_WIDTH / 2, 50, GAME_WIDTH, 100, COLORS.bgDark, 0.9);
+    // UIX-3.4: Top bar background (80px)
+    this.add.rectangle(GAME_WIDTH / 2, 40, GAME_WIDTH, 80, COLORS.bgDark, 0.9);
 
-    // 뒤로가기
-    const backBtn = this.add.text(30, 50, '◁', {
-      fontSize: '32px', color: '#FFFFFF'
-    }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
-    backBtn.on('pointerdown', () => this.goBack());
+    // UIX-3.4: Back button (좌상단 30, 40 위치, 50×40 터치 영역)
+    const backBg = this.add.rectangle(30, 40, 50, 40, COLORS.bgDark, 0.8)
+      .setInteractive({ useHandCursor: true });
+    const backBtn = this.add.text(30, 40, '← 뒤로', {
+      fontSize: '14px', fontFamily: 'Arial', color: '#FFFFFF'
+    }).setOrigin(0.5);
+    backBg.on('pointerdown', () => this.goBack());
 
     // 제목
     this.add.text(GAME_WIDTH / 2, 40, '인벤토리', {
@@ -80,27 +83,28 @@ export class InventoryScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // 골드 표시
-    this.goldText = this.add.text(GAME_WIDTH - 30, 40, `🪙 ${this.gold.toLocaleString()}`, {
+    this.goldText = this.add.text(GAME_WIDTH - 30, 30, `🪙 ${this.gold.toLocaleString()}`, {
       fontSize: '16px', fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(1, 0.5);
 
     // 아이템 수
-    this.countText = this.add.text(GAME_WIDTH - 30, 62, '', {
+    this.countText = this.add.text(GAME_WIDTH - 30, 50, '', {
       fontSize: '12px', fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0.5);
   }
 
   createTabs() {
+    // UIX-3.4: 장비 카테고리 탭 (y=100)
     const tabs = [
       { key: 'equipment', label: '⚔️ 장비', icon: '⚔️' },
       { key: 'consumable', label: '🧪 소비', icon: '🧪' },
       { key: 'material', label: '🔧 재료', icon: '🔧' }
     ];
 
-    const tabY = 125;
+    const tabY = 100;
     const tabW = GAME_WIDTH / tabs.length;
 
     this.tabElements = [];
@@ -138,9 +142,9 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   createItemList() {
-    // 리스트 영역 정의
-    this.listY = 160;
-    this.listH = GAME_HEIGHT - this.listY - 20;
+    // UIX-3.4: 리스트 영역 정의 (콘텐츠 영역 y=80~1160)
+    this.listY = 140;
+    this.listH = GAME_HEIGHT - this.listY - 140;
     this.itemElements = [];
   }
 
