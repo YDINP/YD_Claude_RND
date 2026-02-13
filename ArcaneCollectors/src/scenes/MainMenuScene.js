@@ -9,6 +9,8 @@ import { Z_INDEX } from '../config/layoutConfig.js';
 import EnergyBar from '../components/EnergyBar.js';
 import { Modal } from '../components/Modal.js';
 import { formatTime } from '../utils/colorUtils.js';
+import { IdleProgressSystem } from '../systems/IdleProgressSystem.js';
+import { IdleBattleView } from '../components/IdleBattleView.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -26,6 +28,9 @@ export class MainMenuScene extends Phaser.Scene {
     // Initialize ParticleManager for dynamic effects
     this.particles = new ParticleManager(this);
 
+    // Initialize IdleProgressSystem
+    this.idleSystem = new IdleProgressSystem(this);
+
     // Load current resources from SaveManager (with null defense)
     const resources = SaveManager.getResources() || {};
     this.registry.set('gems', resources?.gems ?? 1500);
@@ -33,7 +38,10 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.createBackground();
     this.createTopBar();
+    this.createPlayerInfo();
     this.createTitle();
+    this.createIdleBattleView();
+    this.createIdleSummary();
     this.createCharacterDisplay();
 
     // === 콘텐츠 바로가기 버튼 ===
@@ -70,6 +78,13 @@ export class MainMenuScene extends Phaser.Scene {
     if (this.energyBar) {
       this.energyBar.destroy();
       this.energyBar = null;
+    }
+    if (this.idleBattleView) {
+      this.idleBattleView.destroy();
+      this.idleBattleView = null;
+    }
+    if (this.idleSystem) {
+      this.idleSystem = null;
     }
     this.time.removeAllEvents();
     this.tweens.killAll();
@@ -317,10 +332,43 @@ export class MainMenuScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * 플레이어 정보 표시 (레벨, 전투력, 스테이지)
+   */
+  createPlayerInfo() {
+    const infoY = 90;
+    const saveData = SaveManager.load();
+
+    // 플레이어 레벨
+    const playerLevel = saveData.player?.level || 1;
+    const levelText = this.add.text(GAME_WIDTH / 2 - 100, infoY, `Lv.${playerLevel}`, {
+      fontSize: '16px',
+      fontFamily: 'Arial',
+      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(Z_INDEX.UI);
+
+    // 파티 전투력
+    const partyPower = this.idleSystem.getPartyPower();
+    const powerText = this.add.text(GAME_WIDTH / 2, infoY, `⚔️ ${Math.floor(partyPower)}`, {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: `#${COLORS.text.toString(16).padStart(6, '0')}`
+    }).setOrigin(0.5).setDepth(Z_INDEX.UI);
+
+    // 현재 스테이지
+    const currentStage = this.idleSystem.getCurrentStage();
+    const stageText = this.add.text(GAME_WIDTH / 2 + 100, infoY, `${currentStage.chapter}-${currentStage.stage}`, {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
+    }).setOrigin(0.5).setDepth(Z_INDEX.UI);
+  }
+
   createTitle() {
-    // Game title
-    const title = this.add.text(GAME_WIDTH / 2, 120, 'Arcane Collectors', {
-      fontSize: '32px',
+    // Game title (축소)
+    const title = this.add.text(GAME_WIDTH / 2, 145, 'Arcane Collectors', {
+      fontSize: '26px',
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -337,9 +385,78 @@ export class MainMenuScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * 자동 전투 미니뷰 생성
+   */
+  createIdleBattleView() {
+    const viewY = 425; // 200~650px 중앙
+    const viewWidth = 640;
+    const viewHeight = 380;
+
+    this.idleBattleView = new IdleBattleView(this, GAME_WIDTH / 2, viewY, viewWidth, viewHeight);
+    this.idleBattleView.setDepth(Z_INDEX.UI - 1);
+
+    // 현재 스테이지 정보 업데이트
+    const currentStage = this.idleSystem.getCurrentStage();
+    this.idleBattleView.updateStageInfo(currentStage.chapter, currentStage.stage, currentStage.name);
+
+    // 파티 정보 업데이트
+    const saveData = SaveManager.load();
+    const parties = saveData.parties || [];
+    const party = parties[0] || [];
+    const partyHeroes = party.map(heroId => saveData.characters.find(c => c.id === heroId));
+    this.idleBattleView.updateParty(partyHeroes);
+
+    // 전투 사이클 시작
+    this.idleBattleView.startBattleCycle();
+  }
+
+  /**
+   * 방치 수익 요약 표시
+   */
+  createIdleSummary() {
+    const summaryY = 680;
+
+    // 배경
+    const summaryBg = this.add.rectangle(GAME_WIDTH / 2, summaryY, 640, 60, COLORS.bgLight, 0.5);
+    summaryBg.setStrokeStyle(1, COLORS.primary, 0.3);
+
+    // 골드/시간
+    const partyPower = this.idleSystem.getPartyPower();
+    const rates = this.idleSystem.getIdleBattleRate(partyPower);
+    const goldPerHour = Math.floor(rates.goldPerSec * 3600);
+    const expPerHour = Math.floor(rates.expPerSec * 3600);
+
+    const goldText = this.add.text(GAME_WIDTH / 2 - 150, summaryY, `💰 ${goldPerHour.toLocaleString()}/h`, {
+      fontSize: '16px',
+      fontFamily: 'Arial',
+      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // 경험치/시간
+    const expText = this.add.text(GAME_WIDTH / 2, summaryY, `⭐ ${expPerHour.toLocaleString()}/h`, {
+      fontSize: '16px',
+      fontFamily: 'Arial',
+      color: `#${COLORS.success.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // 현재 스테이지
+    const currentStage = this.idleSystem.getCurrentStage();
+    const stageLabel = this.add.text(GAME_WIDTH / 2 + 150, summaryY, `📍 ${currentStage.chapter}-${currentStage.stage}`, {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
+    }).setOrigin(0.5);
+  }
+
   createCharacterDisplay() {
-    // Main character display area (larger)
-    const mainCharY = GAME_HEIGHT / 2 - 80;
+    // Main character display area (smaller, moved down) - 제거 (미니뷰로 대체)
+    // 파티 미리보기는 IdleBattleView에서 표시됨
+    return;
+
+    const mainCharY = 820;
     const charDisplayBg = this.add.rectangle(GAME_WIDTH / 2, mainCharY, 220, 300, COLORS.backgroundLight, 0.4);
     charDisplayBg.setStrokeStyle(3, COLORS.primary, 0.6);
 
@@ -450,8 +567,8 @@ export class MainMenuScene extends Phaser.Scene {
       });
     });
 
-    // Sub characters display (party members 2-4)
-    if (partyHeroes.length > 1) {
+    // Sub characters display (party members 2-4) - 제거 (미니뷰에서 표시)
+    if (false && partyHeroes.length > 1) {
       const subCharY = GAME_HEIGHT / 2 + 150;
       const spacing = 100;
       const subHeroes = partyHeroes.slice(1, 4);
@@ -510,7 +627,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   createContentButtons() {
-    const startY = 920;
+    const startY = 950;
     const buttons = [
       { icon: '\u{1F9B8}', label: '영웅', scene: 'HeroListScene' },
       { icon: '\u{1F465}', label: '파티편성', scene: 'PartyEditScene' },
