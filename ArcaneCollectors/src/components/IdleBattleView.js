@@ -21,6 +21,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.battlePhase = 0; // 0: idle, 1: enemy appear, 2: attack, 3: victory
     this.phaseTimer = 0;
     this.currentEnemy = null;
+    this.pendingDelays = [];
 
     this.createBackground();
     this.createPartyDisplay();
@@ -52,7 +53,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.add(title);
 
     // 제목 깜빡임
-    this.scene.tweens.add({
+    this.titleTween = this.scene.tweens.add({
       targets: title,
       alpha: { from: 1, to: 0.5 },
       duration: 1500,
@@ -199,28 +200,32 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    * 전투 시퀀스 실행
    */
   runBattleSequence() {
+    // 이전 시퀀스 delayedCall 정리
+    this.pendingDelays.forEach(d => d.remove());
+    this.pendingDelays = [];
+
     // Phase 1: 적 등장 (0-1s)
-    this.scene.time.delayedCall(0, () => {
+    this.pendingDelays.push(this.scene.time.delayedCall(0, () => {
       this.showEnemy();
-    });
+    }));
 
     // Phase 2: 공격 (1-4s)
-    this.scene.time.delayedCall(1000, () => {
+    this.pendingDelays.push(this.scene.time.delayedCall(1000, () => {
       this.performAttack();
-    });
+    }));
 
-    this.scene.time.delayedCall(2000, () => {
+    this.pendingDelays.push(this.scene.time.delayedCall(2000, () => {
       this.performAttack();
-    });
+    }));
 
-    this.scene.time.delayedCall(3000, () => {
+    this.pendingDelays.push(this.scene.time.delayedCall(3000, () => {
       this.performAttack();
-    });
+    }));
 
     // Phase 3: 적 처치 + 보상 (4-5s)
-    this.scene.time.delayedCall(4000, () => {
+    this.pendingDelays.push(this.scene.time.delayedCall(4000, () => {
       this.defeatEnemy();
-    });
+    }));
   }
 
   /**
@@ -465,8 +470,20 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    * 정리
    */
   destroy(fromScene) {
+    // 타이틀 반복 트윈 정리
+    if (this.titleTween) {
+      this.titleTween.stop();
+      this.titleTween = null;
+    }
+    // 전투 사이클 타이머 정리
     if (this.battleCycleTimer) {
       this.battleCycleTimer.remove();
+      this.battleCycleTimer = null;
+    }
+    // 대기중인 delayedCall 정리
+    if (this.pendingDelays) {
+      this.pendingDelays.forEach(d => d.remove());
+      this.pendingDelays = [];
     }
     super.destroy(fromScene);
   }

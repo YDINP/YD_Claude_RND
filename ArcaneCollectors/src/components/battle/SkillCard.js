@@ -71,7 +71,7 @@ export class SkillCard {
       this.container.add(this.skillIcon);
 
       // 반짝임 애니메이션
-      this.scene.tweens.add({
+      this.shimmerTween = this.scene.tweens.add({
         targets: this.cardBg,
         alpha: 0.7,
         duration: 500,
@@ -195,6 +195,10 @@ export class SkillCard {
    */
   destroy() {
     console.log(`[SkillCard] Destroying skill card for ${this.hero.name}`);
+    if (this.shimmerTween) {
+      this.shimmerTween.stop();
+      this.shimmerTween = null;
+    }
     this.container.destroy();
   }
 }

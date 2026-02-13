@@ -48,8 +48,9 @@ export class TurnOrderBar {
   update(battlers, currentIndex = 0) {
     console.log(`[TurnOrderBar] Updating with ${battlers.length} battlers, current index: ${currentIndex}`);
 
-    // 기존 아이콘 제거
+    // 기존 아이콘 제거 (펄스 트윈 포함)
     this.icons.forEach(icon => {
+      if (icon.pulseTween) icon.pulseTween.stop();
       if (icon.bg) icon.bg.destroy();
       if (icon.text) icon.text.destroy();
       if (icon.spdText) icon.spdText.destroy();
@@ -66,6 +67,7 @@ export class TurnOrderBar {
       const x = startX + index * spacing;
       const isCurrentTurn = index === currentIndex;
       const isAlly = battler.isAlly !== false && !battler.isEnemy;
+      let pulseTween = null;
 
       // 아이콘 배경
       const bgColor = isAlly ? COLORS.primary : COLORS.danger;
@@ -75,8 +77,8 @@ export class TurnOrderBar {
       if (isCurrentTurn) {
         bg.setStrokeStyle(3, COLORS.accent);
 
-        // 현재 턴 펄스 애니메이션
-        this.scene.tweens.add({
+        // 현재 턴 펄스 애니메이션 (참조 저장)
+        pulseTween = this.scene.tweens.add({
           targets: bg,
           scale: 1.2,
           duration: 500,
@@ -103,7 +105,7 @@ export class TurnOrderBar {
       }).setOrigin(0.5);
 
       this.container.add([bg, text, spdText]);
-      this.icons.push({ bg, text, spdText, battler });
+      this.icons.push({ bg, text, spdText, battler, pulseTween });
     });
 
     console.log('[TurnOrderBar] Turn order:', battlers.slice(0, maxIcons).map(b => `${b.name}(${b.stats?.spd || b.spd || 0})`).join(' > '));
@@ -135,6 +137,9 @@ export class TurnOrderBar {
     const iconIndex = this.icons.findIndex(icon => icon.battler?.id === unitId);
     if (iconIndex !== -1) {
       const icon = this.icons[iconIndex];
+
+      // 펄스 트윈 정리
+      if (icon.pulseTween) icon.pulseTween.stop();
 
       // 페이드아웃 애니메이션
       this.scene.tweens.add({
@@ -173,6 +178,11 @@ export class TurnOrderBar {
    */
   destroy() {
     console.log('[TurnOrderBar] Destroying turn order bar');
+    // 모든 펄스 트윈 정리
+    this.icons.forEach(icon => {
+      if (icon.pulseTween) icon.pulseTween.stop();
+    });
+    this.icons = [];
     this.container.destroy();
   }
 }
