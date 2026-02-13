@@ -147,6 +147,8 @@ export class LoginScene extends Phaser.Scene {
 
       // 게스트는 클라우드 동기화 불가
       SaveManager.setUserId(null);
+      // 세이브 데이터가 없으면 기본값 생성 (스타터 캐릭터 포함)
+      SaveManager.load();
       this._goToPreload();
     } catch (error) {
       console.error('LoginScene: 게스트 로그인 실패', error);

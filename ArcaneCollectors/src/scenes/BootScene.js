@@ -2,6 +2,7 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { isSupabaseConfigured, supabase } from '../api/supabaseClient.js';
 import { getGuestUserId } from '../services/AuthService.js';
+import { getLocalData } from '../api/supabaseClient.js';
 import { normalizeHeroes } from '../data/index.js';
 import { validateAllGameData } from '../schemas/validator.js';
 
@@ -164,13 +165,16 @@ export class BootScene extends Phaser.Scene {
       }
 
       // 게스트 세션 확인 (이전에 게스트로 시작한 적이 있으면)
-      const guestData = localStorage.getItem('arcane_collectors_guest_user');
+      const guestData = getLocalData('guest_user');
       const saveData = localStorage.getItem(SaveManager.SAVE_KEY);
-      if (guestData && saveData) {
-        // 이전 게스트 세이브가 있으면 바로 진행
-        const guest = getGuestUserId();
+      if (guestData) {
+        // 이전 게스트 세이브가 있으면 바로 진행 (세이브 없어도 자동 생성됨)
         SaveManager.setUserId(null);
-        console.log('BootScene: 기존 게스트 세션 복원', guest.id);
+        if (!saveData) {
+          // 첫 로그인 후 세이브가 아직 없으면 기본값 생성
+          SaveManager.load();
+        }
+        console.log('BootScene: 기존 게스트 세션 복원', guestData.id);
         return true;
       }
 

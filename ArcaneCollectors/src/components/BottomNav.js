@@ -87,9 +87,13 @@ export class BottomNav extends Phaser.GameObjects.Container {
     container.add(label);
     container.label = label;
 
-    // UIX-3.1: Expanded hit area with top margin (120px height, 15px top margin)
-    const hitArea = new Phaser.Geom.Rectangle(-tabWidth / 2, -60 + 15, tabWidth, 120);
-    container.setSize(tabWidth, 120);
+    // UIX-3.1: hitArea와 setSize 정확히 일치, 캔버스 내부만 커버
+    // tab center y=-60 (BottomNav space) → world y=1220
+    // hitArea: y=-55~+60 (tab local) → world 1165~1280 (캔버스 하단까지)
+    const hitY = -55;
+    const hitH = 115;
+    const hitArea = new Phaser.Geom.Rectangle(-tabWidth / 2, hitY, tabWidth, hitH);
+    container.setSize(tabWidth, hitH);
     container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
 
     container.on('pointerover', () => {
