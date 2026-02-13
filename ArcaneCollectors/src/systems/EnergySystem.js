@@ -54,8 +54,8 @@ class EnergySystem {
    * @param {number} playerLevel - 플레이어 레벨
    * @returns {number} 최대 에너지
    */
-  getMaxEnergy(playerLevel) {
-    return ENERGY_CONFIG.BASE_MAX_ENERGY + (playerLevel * ENERGY_CONFIG.ENERGY_PER_LEVEL);
+  getMaxEnergy(playerLevel = this.playerLevel) {
+    return ENERGY_CONFIG.BASE_MAX_ENERGY + ((playerLevel || 1) * ENERGY_CONFIG.ENERGY_PER_LEVEL);
   }
 
   /**

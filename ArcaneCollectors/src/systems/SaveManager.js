@@ -318,6 +318,7 @@ export class SaveManager {
 
     // 새 캐릭터 추가 (COMPAT-1.3: 표준 스키마 필드 포함)
     const newCharacter = {
+      id: characterId,
       instanceId: `${characterId}_${Date.now()}`,
       characterId: characterId,
       level: level,

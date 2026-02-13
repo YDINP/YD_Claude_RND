@@ -14,6 +14,7 @@ import { QuestSystem } from './QuestSystem.js';
 import { PartyManager } from './PartyManager.js';
 import moodSystem from './MoodSystem.js';
 import { SynergySystem } from './SynergySystem.js';
+import { normalizeHeroes } from '../data/index.js';
 
 export class DebugManager {
   static isDebugMode = false;
@@ -85,8 +86,27 @@ export class DebugManager {
     allCharacters.forEach(char => {
       SaveManager.addCharacter(char.id, 1);
     });
+    // ISSUE-01 FIX: 게임 registry도 갱신
+    this._refreshHeroRegistry();
     this.log('Cheat', `All ${allCharacters.length} characters unlocked`);
     return true;
+  }
+
+  /**
+   * SaveManager의 최신 데이터로 게임 registry 갱신
+   */
+  static _refreshHeroRegistry() {
+    try {
+      const game = window.game;
+      if (game && game.registry) {
+        const saveData = SaveManager.load();
+        const normalized = normalizeHeroes(saveData.characters || []);
+        game.registry.set('ownedHeroes', normalized);
+        console.log(`[DebugManager] Registry 갱신: ${normalized.length}명`);
+      }
+    } catch (e) {
+      console.warn('[DebugManager] Registry 갱신 실패:', e.message);
+    }
   }
 
   static setCharacterLevel(charId, level) {
@@ -1073,3 +1093,238 @@ if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
 
 // ESC 키 치트 패널 - 항상 등록 (DEV 여부 무관)
 DebugManager.registerEscKeyHandler();
+
+// ============================================================================
+// TEST API: Playwright MCP 자동화 테스트용 인터페이스
+// window.__TEST_API__ 로 접근 가능
+// ============================================================================
+if (typeof window !== 'undefined') {
+  window.__TEST_API__ = {
+    /** 현재 활성 씬 가져오기 */
+    getActiveScene: () => {
+      const game = window.game;
+      if (!game) return null;
+      const scenes = game.scene.getScenes(true);
+      return scenes[0] || null;
+    },
+
+    /** 씬 이름으로 씬 전환 */
+    navigateTo: (sceneName) => {
+      const game = window.game;
+      if (!game) return { success: false, error: 'game not found' };
+      const active = game.scene.getScenes(true);
+      if (active[0]) {
+        active[0].scene.start(sceneName);
+        return { success: true, from: active[0].scene.key, to: sceneName };
+      }
+      return { success: false, error: 'no active scene' };
+    },
+
+    /** 현재 씬의 모든 인터랙티브 오브젝트 목록 */
+    getInteractiveObjects: () => {
+      const scene = window.__TEST_API__.getActiveScene();
+      if (!scene) return [];
+      return scene.children.list
+        .filter(c => c.input && c.input.enabled)
+        .map(c => ({
+          type: c.type || c.constructor.name,
+          x: Math.round(c.x),
+          y: Math.round(c.y),
+          width: c.width || 0,
+          height: c.height || 0,
+          text: c.text || c.getData?.('label') || '',
+          name: c.name || '',
+          depth: c.depth || 0
+        }));
+    },
+
+    /** Registry 데이터 조회 */
+    getRegistryData: (key) => {
+      const game = window.game;
+      if (!game) return null;
+      if (key) return game.registry.get(key);
+      return {
+        gems: game.registry.get('gems'),
+        gold: game.registry.get('gold'),
+        ownedHeroCount: (game.registry.get('ownedHeroes') || []).length,
+        pityCounter: game.registry.get('pityCounter'),
+        battleSpeed: game.registry.get('battleSpeed'),
+        autoBattle: game.registry.get('autoBattle')
+      };
+    },
+
+    /** SaveManager 데이터 조회 */
+    getSaveData: () => {
+      const data = SaveManager.load();
+      return {
+        playerLevel: data.player?.level || 1,
+        gold: data.resources?.gold || 0,
+        gems: data.resources?.gems || 0,
+        summonTickets: data.resources?.summonTickets || 0,
+        characterCount: (data.characters || []).length,
+        clearedStages: Object.keys(data.progress?.clearedStages || {}).length,
+        pityCounter: data.gacha?.pityCounter || 0,
+        settings: data.settings || {}
+      };
+    },
+
+    /** 영웅 목록 (정규화) */
+    getHeroes: () => {
+      const game = window.game;
+      if (!game) return [];
+      const heroes = game.registry.get('ownedHeroes') || [];
+      return heroes.map(h => ({
+        id: h.id,
+        name: h.name,
+        rarity: h.rarity,
+        rarityKey: h.rarityKey,
+        level: h.level,
+        cult: h.cult,
+        mood: h.mood,
+        class: h.class,
+        hasEquipment: !!h.equipment,
+        constellation: h.constellation || 0,
+        acquiredAt: h.acquiredAt || 0
+      }));
+    },
+
+    /** 에너지 시스템 상태 */
+    getEnergyStatus: () => {
+      return energySystem.getStatus();
+    },
+
+    /** 가챠 시스템 상태 */
+    getGachaStatus: () => {
+      return {
+        pityInfo: GachaSystem.getPityInfo(),
+        freeMode: GachaSystem.freeMode || false
+      };
+    },
+
+    /** 장비 시스템 조회 */
+    getEquipmentList: () => {
+      const data = SaveManager.load();
+      return data.equipment || [];
+    },
+
+    /** 퀘스트 시스템 조회 */
+    getQuestStatus: () => {
+      const quests = QuestSystem.getDailyQuests();
+      return {
+        total: quests.length,
+        completed: quests.filter(q => q.completed).length,
+        claimed: quests.filter(q => q.claimed).length,
+        claimable: quests.filter(q => q.completed && !q.claimed).length,
+        quests: quests.map(q => ({
+          id: q.id,
+          name: q.name,
+          progress: q.progress,
+          target: q.target,
+          completed: q.completed,
+          claimed: q.claimed,
+          rewards: q.rewards
+        }))
+      };
+    },
+
+    /** 탑 진행도 조회 */
+    getTowerStatus: () => {
+      return TowerSystem.getProgress();
+    },
+
+    /** 파티 시너지 계산 */
+    calculateSynergies: (heroIds) => {
+      const heroData = getAllCharacters();
+      return SynergySystem.calculatePartySynergies(heroIds, heroData);
+    },
+
+    /** Mood 상성 확인 */
+    checkMoodMatchup: (attackerMood, defenderMood) => {
+      return moodSystem.getMatchupMultiplier(attackerMood, defenderMood);
+    },
+
+    /** 파티 데이터 조회 */
+    getPartyData: () => {
+      const data = SaveManager.load();
+      return data.parties || {};
+    },
+
+    /** 좌표 기반 클릭 시뮬레이션 */
+    clickAt: (x, y) => {
+      const scene = window.__TEST_API__.getActiveScene();
+      if (!scene) return { success: false, error: 'no scene' };
+      const objects = scene.children.list.filter(c => {
+        if (!c.input || !c.input.enabled) return false;
+        const bounds = c.getBounds();
+        return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
+      });
+      if (objects.length > 0) {
+        const target = objects[objects.length - 1]; // 최상위 depth
+        target.emit('pointerdown', { x, y });
+        target.emit('pointerup', { x, y });
+        return { success: true, target: target.type || target.constructor.name, text: target.text || '' };
+      }
+      return { success: false, error: `no interactive at (${x}, ${y})` };
+    },
+
+    /** 콘솔 로그 수집기 */
+    _logs: [],
+    startLogCapture: () => {
+      window.__TEST_API__._logs = [];
+      const origLog = console.log;
+      const origWarn = console.warn;
+      const origError = console.error;
+      console._origLog = origLog;
+      console._origWarn = origWarn;
+      console._origError = origError;
+      console.log = (...args) => {
+        window.__TEST_API__._logs.push({ level: 'log', msg: args.join(' '), ts: Date.now() });
+        origLog.apply(console, args);
+      };
+      console.warn = (...args) => {
+        window.__TEST_API__._logs.push({ level: 'warn', msg: args.join(' '), ts: Date.now() });
+        origWarn.apply(console, args);
+      };
+      console.error = (...args) => {
+        window.__TEST_API__._logs.push({ level: 'error', msg: args.join(' '), ts: Date.now() });
+        origError.apply(console, args);
+      };
+      return { success: true };
+    },
+    stopLogCapture: () => {
+      if (console._origLog) console.log = console._origLog;
+      if (console._origWarn) console.warn = console._origWarn;
+      if (console._origError) console.error = console._origError;
+      return window.__TEST_API__._logs;
+    },
+
+    /** 스크린 비교용 씬 메타데이터 */
+    getSceneMetadata: () => {
+      const scene = window.__TEST_API__.getActiveScene();
+      if (!scene) return null;
+      return {
+        key: scene.scene.key,
+        childCount: scene.children.list.length,
+        interactiveCount: scene.children.list.filter(c => c.input?.enabled).length,
+        tweenCount: scene.tweens?.getAllTweens?.()?.length || 0,
+        timerCount: scene.time?.getEvents?.()?.length || 0
+      };
+    },
+
+    /** 전체 시스템 헬스 체크 */
+    healthCheck: () => {
+      const results = {};
+      try { results.saveManager = SaveManager.load() !== null; } catch { results.saveManager = false; }
+      try { results.energySystem = typeof energySystem.getCurrentEnergy() === 'number'; } catch { results.energySystem = false; }
+      try { results.gachaSystem = GachaSystem.getPityInfo() !== null; } catch { results.gachaSystem = false; }
+      try { results.questSystem = Array.isArray(QuestSystem.getDailyQuests()); } catch { results.questSystem = false; }
+      try { results.towerSystem = TowerSystem.getProgress() !== null; } catch { results.towerSystem = false; }
+      try { results.synergySystem = typeof SynergySystem.calculatePartySynergies === 'function'; } catch { results.synergySystem = false; }
+      try { results.moodSystem = typeof moodSystem.getMatchupMultiplier === 'function'; } catch { results.moodSystem = false; }
+      try { results.equipmentSystem = typeof EquipmentSystem.createEquipment === 'function'; } catch { results.equipmentSystem = false; }
+      try { results.partyManager = typeof PartyManager.autoFormParty === 'function'; } catch { results.partyManager = false; }
+      results.allHealthy = Object.values(results).every(v => v === true);
+      return results;
+    }
+  };
+}

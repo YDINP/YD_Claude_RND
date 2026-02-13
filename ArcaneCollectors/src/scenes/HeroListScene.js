@@ -5,6 +5,8 @@ import transitionManager from '../utils/TransitionManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { VirtualCardPool } from '../components/VirtualCardPool.js';
+import { SaveManager } from '../systems/SaveManager.js';
+import { normalizeHeroes } from '../data/index.js';
 
 export class HeroListScene extends Phaser.Scene {
   constructor() {
@@ -29,7 +31,17 @@ export class HeroListScene extends Phaser.Scene {
     this.cameras.main.fadeIn(300);
 
     // RES-ABS-4: 소유 히어로 썸네일 동적 로드
-    const ownedHeroes = this.registry.get('ownedHeroes') || [];
+    // ISSUE-01 FIX: registry가 비어있으면 SaveManager에서 최신 데이터 로드 후 정규화
+    let ownedHeroes = this.registry.get('ownedHeroes') || [];
+    if (ownedHeroes.length === 0) {
+      const saveData = SaveManager.load();
+      const savedChars = saveData?.characters || [];
+      if (savedChars.length > 0) {
+        ownedHeroes = normalizeHeroes(savedChars);
+        this.registry.set('ownedHeroes', ownedHeroes);
+        console.log(`[HeroListScene] Registry 갱신: ${ownedHeroes.length}명 로드`);
+      }
+    }
     const heroIds = ownedHeroes.map(h => h.id);
     this._loadedHeroIds = heroIds;
 

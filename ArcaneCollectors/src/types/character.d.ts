@@ -37,7 +37,7 @@ export type ClassType = 'warrior' | 'mage' | 'healer' | 'archer';
 export type RarityNumber = 1 | 2 | 3 | 4 | 5;
 
 /** 등급 키 (문자열 기반, 내부 변환용) */
-export type RarityKey = 'N' | 'R' | 'SR' | 'SSR';
+export type RarityKey = 'N' | 'R' | 'SR' | 'SSR' | 'UR';
 
 /** 기본 스탯 */
 export interface CharacterStats {
@@ -110,6 +110,13 @@ export interface Character {
   voiceLines: VoiceLines;
 }
 
+/** 장비 슬롯 구조 (COMPAT-1.3) */
+export interface EquipmentSlots {
+  weapon: string | null;
+  armor: string | null;
+  accessory: string | null;
+}
+
 /** 소유한 영웅 인스턴스 (세이브 데이터) */
 export interface OwnedHero {
   id: string;
@@ -130,6 +137,9 @@ export interface OwnedHero {
   skills?: CharacterSkill[];
   skillLevels?: number[];
   equipped?: string | null;
+  equipment?: EquipmentSlots;
+  constellation?: number;
+  acquiredAt?: number;
   evolutionCount?: number;
 }
 
@@ -153,6 +163,9 @@ export interface NormalizedHero {
   skills: CharacterSkill[];
   skillLevels: number[];
   equipped: string | null;
+  equipment: EquipmentSlots;
+  constellation: number;
+  acquiredAt: number;
   evolutionCount: number;
 }
 

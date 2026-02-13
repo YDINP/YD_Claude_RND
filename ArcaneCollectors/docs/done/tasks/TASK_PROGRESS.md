@@ -152,10 +152,46 @@
 
 ---
 
+## Phase 2 Sprint 2 Wave 1 완료 (DONE) — 14/14 (100%)
+
+| W | 완료 태스크 | 핵심 변경 | 완료일 |
+|---|-----------|---------|--------|
+| W1 | COMPAT-1.2 | baseStats→stats 통일 (enemies.json + 소비자 10파일) | 2026-02-09 |
+| W2 | TSO-3.1, PAT-1.1 | JS→TS 9파일 + 커맨드 패턴 + 버프 만료 + Cult 9종 | 2026-02-09 |
+| W3 | UIX-4.2.1, UIX-2.1 | null방어 13곳 + Z-Index + EnergyBar + Badge + Modal | 2026-02-09 |
+| W4 | VFX-2.1 | SkillAnimationManager + ParticleManager 확장 + async/await | 2026-02-09 |
+| W5 | QAT-T2-1~3 | 유닛 테스트 70개 (Mood+Gacha+Battle) → 총 254개 | 2026-02-09 |
+| W6 | RES-ABS-4, RES-PH1 | 레이지 로딩 3씬 + emoji→renderIcon + PreloadScene 분할 | 2026-02-09 |
+
+---
+
+## Phase 2 Sprint 2 Wave 2 완료 (DONE) — 19/19 (100%)
+
+| W | 완료 태스크 | 핵심 변경 | 완료일 |
+|---|-----------|---------|--------|
+| W1 | COMPAT-1.3, COMPAT-1.5 | ownedHeroes 스키마 통일 + JSON Schema 검증 (ajv) | 2026-02-09 |
+| W2 | TSO-4, PAT-2, PAT-4 | data/index.ts 전환 + BattlePhaseManager + HeroFactory | 2026-02-09 |
+| W3 | UIX-2.2.1, UIX-2.3.1, UIX-2.6.1 | RadarChart + EnhancedHPBar + VirtualCardPool | 2026-02-09 |
+| W4 | VFX-2.2, VFX-2.3, VFX-2.4 | Mood 9종 파티클 + 상성 이펙트 + 크리티컬/미스/힐/버프 | 2026-02-09 |
+| W5 | QAT-T3, LOG | SaveManager/Energy/Synergy/Equipment 테스트 83개 → 총 337개 | 2026-02-09 |
+| W6 | VFX-1.3, VFX-1.4, VFX-4.2 | 가챠/전투결과 연출 + BottomNav 슬라이드 | 2026-02-09 |
+
+### Wave 2 테스트 결과 (2026-02-13)
+- **유닛 테스트**: 337/337 통과 (Vitest, 386ms)
+- **스키마 검증**: 4/4 통과 (characters, enemies, equipment, synergies)
+- **프로덕션 빌드**: 성공 (3.49s, 215 modules)
+- **브라우저 테스트**: 9개 씬 전환 에러 0 (Playwright MCP)
+- **COMPAT-1.3**: 91명 전원 마이그레이션 필드 정상
+- **발견 이슈**: 3건 (MEDIUM 1, LOW 2) → Sprint 3 백로그
+- **상세 결과**: `docs/testing/SPRINT2_WAVE2_TEST_RESULTS.md`
+
+---
+
 ## 통계
 - **Phase 1**: 71/71 완료 (100%)
 - **Phase 2 Sprint 1**: 29/31 완료 (94%) — 6개 워크트리 병렬 진행 ✅
-- **Phase 2 Sprint 2**: 0/?? (대기)
-- **총 테스트**: 184/184 통과 (Vitest, 232ms)
-- **빌드**: 정상 (vite build 3.61s, 99 modules)
-- **통합 커밋**: `83621e7` (arcane/integration)
+- **Phase 2 Sprint 2 Wave 1**: 14/14 완료 (100%) — 6개 워크트리 병렬 ✅
+- **Phase 2 Sprint 2 Wave 2**: 19/19 완료 (100%) — 6개 워크트리 병렬 ✅
+- **총 테스트**: 337/337 통과 (Vitest, 386ms)
+- **빌드**: 정상 (vite build 3.49s, 215 modules)
+- **통합 커밋**: `arcane/integration` (Wave 2 머지 완료)
