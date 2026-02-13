@@ -17,7 +17,7 @@ export const TOP_BAR = {
 
 // 하단 네비게이션 설정
 export const BOTTOM_NAV = {
-    HEIGHT: 100,
+    HEIGHT: 120,
     ICON_SIZE: 48,
     TABS: ['home', 'adventure', 'inventory', 'gacha', 'more']
 };

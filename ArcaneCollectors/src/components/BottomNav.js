@@ -15,7 +15,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
   constructor(scene, activeTab = 'home') {
     super(scene, GAME_WIDTH / 2, GAME_HEIGHT);
 
-    this.navHeight = 80;
+    this.navHeight = 120;
     this.activeTab = activeTab;
     this.tabs = TABS;
     this.tabButtons = {};
@@ -61,9 +61,9 @@ export class BottomNav extends Phaser.GameObjects.Container {
     const indicator = this.scene.add.graphics();
     if (isActive) {
       indicator.fillStyle(COLORS.primary, 0.25);
-      indicator.fillRoundedRect(-tabWidth / 2 + 8, -32, tabWidth - 16, 64, 12);
+      indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
       indicator.fillStyle(COLORS.primary, 0.9);
-      indicator.fillRect(-25, -36, 50, 3);
+      indicator.fillRect(-25, -54, 50, 3);
     }
     container.add(indicator);
     container.indicator = indicator;
@@ -81,8 +81,9 @@ export class BottomNav extends Phaser.GameObjects.Container {
     container.add(label);
     container.label = label;
 
-    const hitArea = new Phaser.Geom.Rectangle(-tabWidth / 2, -35, tabWidth, 70);
-    container.setSize(tabWidth, 70);
+    // UIX-3.1: Expanded hit area with top margin (120px height, 15px top margin)
+    const hitArea = new Phaser.Geom.Rectangle(-tabWidth / 2, -60 + 15, tabWidth, 120);
+    container.setSize(tabWidth, 120);
     container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
 
     container.on('pointerover', () => {
@@ -93,14 +94,48 @@ export class BottomNav extends Phaser.GameObjects.Container {
       if (tab.id !== this.activeTab) iconText.setScale(1);
     });
 
+    // UIX-3.1: Press feedback (pointer down)
     container.on('pointerdown', () => {
+      // Stop any ongoing tweens
+      this.scene.tweens.killTweensOf(container);
+      this.scene.tweens.killTweensOf(indicator);
+
+      // Press animation: scale down + brighten background
+      this.scene.tweens.add({
+        targets: container,
+        scaleX: 0.92,
+        scaleY: 0.92,
+        duration: 100,
+        ease: 'Power1'
+      });
+
+      // Brighten indicator on press
+      indicator.clear();
+      if (tab.id === this.activeTab) {
+        indicator.fillStyle(COLORS.primary, 0.35); // Brighter when active
+        indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
+        indicator.fillStyle(COLORS.primary, 0.9);
+        indicator.fillRect(-25, -54, 50, 3);
+      } else {
+        indicator.fillStyle(COLORS.primary, 0.15); // Subtle feedback when inactive
+        indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
+      }
+    });
+
+    // UIX-3.1: Release feedback (pointer up)
+    container.on('pointerup', () => {
+      // Stop any ongoing tweens
+      this.scene.tweens.killTweensOf(container);
+      this.scene.tweens.killTweensOf(indicator);
+
       if (tab.id !== this.activeTab) {
+        // Navigate to new tab
         this.scene.tweens.add({
           targets: container,
-          scaleX: 0.95,
-          scaleY: 0.95,
-          duration: 50,
-          yoyo: true
+          scaleX: 1.0,
+          scaleY: 1.0,
+          duration: 150,
+          ease: 'Power2.easeOut'
         });
 
         this.setActiveTab(tab.id);
@@ -110,6 +145,35 @@ export class BottomNav extends Phaser.GameObjects.Container {
         } else {
           this.navigateToScene(tab.scene);
         }
+      } else {
+        // UIX-3.1: Same tab re-click - bounce feedback
+        this.scene.tweens.add({
+          targets: container,
+          scaleX: 0.95,
+          scaleY: 0.95,
+          duration: 100,
+          yoyo: true,
+          repeat: 0,
+          ease: 'Power1',
+          onComplete: () => {
+            this.scene.tweens.add({
+              targets: container,
+              scaleX: 1.05,
+              scaleY: 1.05,
+              duration: 100,
+              yoyo: true,
+              repeat: 0,
+              ease: 'Power1'
+            });
+          }
+        });
+
+        // Restore indicator brightness
+        indicator.clear();
+        indicator.fillStyle(COLORS.primary, 0.25);
+        indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
+        indicator.fillStyle(COLORS.primary, 0.9);
+        indicator.fillRect(-25, -54, 50, 3);
       }
     });
 
@@ -165,9 +229,9 @@ export class BottomNav extends Phaser.GameObjects.Container {
       tabContainer.indicator.clear();
       if (isActive) {
         tabContainer.indicator.fillStyle(COLORS.primary, 0.25);
-        tabContainer.indicator.fillRoundedRect(-tabWidth / 2 + 8, -32, tabWidth - 16, 64, 12);
+        tabContainer.indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
         tabContainer.indicator.fillStyle(COLORS.primary, 0.9);
-        tabContainer.indicator.fillRect(-25, -36, 50, 3);
+        tabContainer.indicator.fillRect(-25, -54, 50, 3);
       }
 
       tabContainer.iconText.setScale(isActive ? 1.15 : 1);
@@ -207,7 +271,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
     // Create sliding underline bar
     this.underlineBar = this.scene.add.graphics();
     this.underlineBar.fillStyle(COLORS.primary, 0.9);
-    this.underlineBar.fillRect(fromX - 25, -this.navHeight - 36, 50, 3);
+    this.underlineBar.fillRect(fromX - 25, -this.navHeight - 54, 50, 3);
     this.add(this.underlineBar);
 
     // Animate slide
@@ -269,5 +333,5 @@ export class BottomNav extends Phaser.GameObjects.Container {
   }
 
   getHeight() { return this.navHeight; }
-  static getNavHeight() { return 80; }
+  static getNavHeight() { return 120; }
 }
