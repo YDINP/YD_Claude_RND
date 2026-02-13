@@ -827,6 +827,7 @@ export class StageSelectScene extends Phaser.Scene {
   }
 
   shutdown() {
+    if (this.bottomNav) { this.bottomNav.destroy(); this.bottomNav = null; }
     this.time.removeAllEvents();
     this.tweens.killAll();
     if (this.input) {

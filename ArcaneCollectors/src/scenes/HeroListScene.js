@@ -532,6 +532,7 @@ export class HeroListScene extends Phaser.Scene {
 
   shutdown() {
     this.transitioning = false; // 씬 종료 시 리셋
+    if (this.bottomNav) { this.bottomNav.destroy(); this.bottomNav = null; }
 
     // UIX-2.2.1: Clean up card pool
     if (this.cardPool) {

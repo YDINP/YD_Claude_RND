@@ -190,14 +190,15 @@ export class BootScene extends Phaser.Scene {
    */
   _initRegistry() {
     const saveData = SaveManager.load();
+    if (!saveData) return;
 
     this.registry.set('saveData', saveData);
-    this.registry.set('gems', saveData.resources.gems);
-    this.registry.set('gold', saveData.resources.gold);
-    this.registry.set('pityCounter', saveData.gacha.pityCounter);
-    this.registry.set('ownedHeroes', normalizeHeroes(saveData.characters));
-    this.registry.set('clearedStages', saveData.progress.clearedStages);
-    this.registry.set('battleSpeed', saveData.settings.battleSpeed);
+    this.registry.set('gems', saveData.resources?.gems ?? 0);
+    this.registry.set('gold', saveData.resources?.gold ?? 0);
+    this.registry.set('pityCounter', saveData.gacha?.pityCounter ?? 0);
+    this.registry.set('ownedHeroes', normalizeHeroes(saveData.characters || []));
+    this.registry.set('clearedStages', saveData.progress?.clearedStages ?? {});
+    this.registry.set('battleSpeed', saveData.settings?.battleSpeed ?? 1);
     this.registry.set('autoBattle', false);
 
     // Check for offline rewards

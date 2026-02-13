@@ -35,6 +35,7 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   shutdown() {
+    if (this.bottomNav) { this.bottomNav.destroy(); this.bottomNav = null; }
     if (this.couponInput) {
       this.couponInput.remove();
       this.couponInput = null;
