@@ -197,6 +197,31 @@ describe('TowerSystem', () => {
       expect(result.success).toBe(true);
       expect(result.isBossCleared).toBe(true);
     });
+
+    it('updates currentFloor to next floor on victory', () => {
+      const mockData = {
+        tower: {
+          currentFloor: 5,
+          highestFloor: 5,
+          totalClears: 0,
+          bossClears: {}
+        }
+      };
+      SaveManager.load.mockReturnValue(mockData);
+
+      const result = TowerSystem.clearFloor(5, { victory: true });
+
+      expect(result.success).toBe(true);
+      expect(result.nextFloor).toBe(6);
+      // SaveManager.save가 호출될 때 currentFloor가 6으로 업데이트되었는지 확인
+      expect(SaveManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tower: expect.objectContaining({
+            currentFloor: 6
+          })
+        })
+      );
+    });
   });
 
   describe('nextFloor', () => {

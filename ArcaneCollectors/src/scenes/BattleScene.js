@@ -12,6 +12,7 @@ import characterRenderer from '../renderers/CharacterRenderer.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import SkillAnimationManager from '../systems/SkillAnimationManager.js';
 import { EnhancedHPBar } from '../components/EnhancedHPBar.js';
+import { TowerSystem } from '../systems/TowerSystem.js';
 
 /**
  * BattleScene - 전투 씬
@@ -51,6 +52,7 @@ export class BattleScene extends Phaser.Scene {
     this.stage = data?.stage;
     this.party = data?.party || [];
     this.mode = data?.mode || 'normal';  // 추가: 보스전 모드 수용
+    this.towerFloor = data?.towerFloor;  // 타워 층 번호 저장
   }
 
   create() {
@@ -2118,6 +2120,15 @@ export class BattleScene extends Phaser.Scene {
           this.registry.set('clearedStages', clearedStages);
           SaveManager.clearStage(this.stage.id, newStars);
         }
+      }
+
+      // 타워 모드: 층 클리어 처리
+      if (this.mode === 'tower' && this.towerFloor) {
+        TowerSystem.clearFloor(this.towerFloor, {
+          victory: true,
+          stars: newStars,
+          rewards
+        });
       }
 
       // 보상 지급
