@@ -72,29 +72,49 @@ export class IconFactory {
   }
 
   /**
-   * 검 아이콘 (공격력)
+   * ART-2.3: 검 아이콘 강화 (그라데이션 + 빛 효과)
    */
   static _drawSword(graphics, half, size) {
     const color = 0xEF4444; // 빨강
 
-    // 칼날
+    // 칼날 (메인)
     graphics.fillStyle(color, 1);
     graphics.fillTriangle(
-      half, half * 0.3,
-      half - 3, half * 1.3,
-      half + 3, half * 1.3
+      half, half * 0.25,
+      half - 4, half * 1.35,
+      half + 4, half * 1.35
     );
 
-    // 손잡이
+    // 칼날 하이라이트
+    graphics.fillStyle(0xFF6B6B, 0.8);
+    graphics.fillTriangle(
+      half, half * 0.25,
+      half - 2, half * 0.9,
+      half + 2, half * 0.9
+    );
+
+    // 손잡이 (어두운 회색)
+    graphics.fillStyle(0x475569, 1);
+    graphics.fillRect(half - 6, half * 1.35, 12, half * 0.55);
+
+    // 손잡이 감싼 부분 (골드 힌트)
+    graphics.fillStyle(0xD97706, 1);
+    graphics.fillRect(half - 6, half * 1.4, 12, 2);
+    graphics.fillRect(half - 6, half * 1.65, 12, 2);
+
+    // 가드 (크로스 가드)
     graphics.fillStyle(0x64748B, 1);
-    graphics.fillRect(half - 5, half * 1.3, 10, half * 0.5);
+    graphics.fillRect(half - 10, half * 1.3, 20, 4);
 
-    // 가드
-    graphics.fillRect(half - 8, half * 1.25, 16, 3);
+    // 빛나는 효과 (중앙선)
+    graphics.lineStyle(2, 0xffffff, 0.7);
+    graphics.lineBetween(half - 1.5, half * 0.35, half - 1.5, half * 1.2);
 
-    // 빛나는 효과
-    graphics.lineStyle(1, 0xffffff, 0.6);
-    graphics.lineBetween(half - 1, half * 0.4, half - 1, half * 1.1);
+    // 빛 반짝임 (3개 점)
+    graphics.fillStyle(0xffffff, 0.9);
+    graphics.fillCircle(half - 1, half * 0.5, 1.5);
+    graphics.fillCircle(half - 1, half * 0.75, 1.5);
+    graphics.fillCircle(half - 1, half * 1.0, 1.5);
   }
 
   /**
@@ -182,26 +202,45 @@ export class IconFactory {
   }
 
   /**
-   * 동전 아이콘 (골드)
+   * ART-2.3: 동전 아이콘 강화 (입체감 + 엠보싱)
    */
   static _drawCoin(graphics, half, size) {
     const color = 0xF59E0B; // 골드
 
-    // 동전 외곽
+    // 그림자 (하단)
+    graphics.fillStyle(0x000000, 0.25);
+    graphics.fillEllipse(half + 1, half + 2, half - 1, half * 0.8);
+
+    // 동전 외곽 (어두운 테두리)
+    graphics.fillStyle(0xB45309, 1);
+    graphics.fillCircle(half, half, half - 1);
+
+    // 동전 메인
     graphics.fillStyle(color, 1);
-    graphics.fillCircle(half, half, half - 2);
+    graphics.fillCircle(half, half, half - 3);
 
-    // 내부 링
+    // 내부 링 (엠보싱)
     graphics.lineStyle(2, 0xD97706, 1);
-    graphics.strokeCircle(half, half, half - 5);
+    graphics.strokeCircle(half, half, half - 6);
+    graphics.lineStyle(1, 0xFBBF24, 0.8);
+    graphics.strokeCircle(half, half, half - 8);
 
-    // 하이라이트
-    graphics.fillStyle(0xffffff, 0.4);
-    graphics.fillCircle(half - half * 0.3, half - half * 0.3, half * 0.3);
+    // 중앙 심볼 (G 문자)
+    graphics.fillStyle(0xD97706, 1);
+    graphics.beginPath();
+    graphics.arc(half, half, half * 0.35, 0, Math.PI * 1.5);
+    graphics.lineTo(half + half * 0.35, half);
+    graphics.closePath();
+    graphics.fillPath();
+    graphics.fillRect(half - half * 0.15, half - half * 0.05, half * 0.5, half * 0.1);
 
-    // 그림자
-    graphics.fillStyle(0x000000, 0.2);
-    graphics.fillEllipse(half + half * 0.3, half + half * 0.3, half * 0.4, half * 0.3);
+    // 하이라이트 (좌상단)
+    graphics.fillStyle(0xffffff, 0.5);
+    graphics.fillCircle(half - half * 0.35, half - half * 0.35, half * 0.35);
+
+    // 빛 반사 (우상단 작은 점)
+    graphics.fillStyle(0xffffff, 0.8);
+    graphics.fillCircle(half - half * 0.2, half - half * 0.25, half * 0.15);
   }
 
   /**

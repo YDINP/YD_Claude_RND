@@ -479,7 +479,7 @@ class CharacterRenderer {
   // ============================================
 
   /**
-   * 직업별 실루엣 그리기
+   * ART-2.2: 직업별 실루엣 강화 (더 디테일한 디자인)
    * @param {Phaser.Scene} scene
    * @param {Phaser.GameObjects.Container} container
    * @param {string} heroClass - 'warrior'|'mage'|'healer'|'archer'
@@ -495,34 +495,133 @@ class CharacterRenderer {
     };
     const color = classColors[heroClass] || 0x94A3B8;
 
-    graphics.fillStyle(color, 0.6);
-
     switch (heroClass) {
       case 'warrior':
-        // 검 실루엣
-        graphics.fillTriangle(0, -size * 0.4, -size * 0.15, size * 0.3, size * 0.15, size * 0.3);
-        graphics.fillRect(-size * 0.2, size * 0.3, size * 0.4, size * 0.2); // 손잡이
+        // ART-2.2: 검 + 방패 실루엣
+        graphics.fillStyle(color, 0.7);
+        // 검
+        graphics.fillTriangle(
+          size * 0.15, -size * 0.5,
+          size * 0.05, size * 0.3,
+          size * 0.25, size * 0.3
+        );
+        // 검 가드
+        graphics.fillRect(size * 0.0, size * 0.25, size * 0.3, size * 0.08);
+        // 손잡이
+        graphics.fillStyle(0x64748B, 0.8);
+        graphics.fillRect(size * 0.1, size * 0.33, size * 0.1, size * 0.15);
+
+        // 방패
+        graphics.fillStyle(color, 0.5);
+        graphics.beginPath();
+        graphics.arc(-size * 0.2, 0, size * 0.25, -Math.PI * 0.5, Math.PI * 0.5);
+        graphics.lineTo(-size * 0.2, size * 0.3);
+        graphics.closePath();
+        graphics.fillPath();
+        // 방패 테두리
+        graphics.lineStyle(2, color, 0.9);
+        graphics.strokePath();
         break;
+
       case 'mage':
-        // 지팡이 실루엣
-        graphics.fillRect(-size * 0.05, -size * 0.5, size * 0.1, size * 0.8);
-        graphics.fillCircle(0, -size * 0.5, size * 0.2); // 보석
+        // ART-2.2: 지팡이 + 로브 실루엣
+        graphics.fillStyle(color, 0.7);
+        // 지팡이
+        graphics.fillRect(-size * 0.04, -size * 0.55, size * 0.08, size * 0.9);
+        // 마법 보석 (상단)
+        graphics.fillStyle(0xF59E0B, 0.8);
+        graphics.fillCircle(0, -size * 0.52, size * 0.15);
+        graphics.fillStyle(0xFFFFFF, 0.5);
+        graphics.fillCircle(-size * 0.05, -size * 0.57, size * 0.06);
+
+        // 로브 (하단)
+        graphics.fillStyle(color, 0.5);
+        graphics.fillTriangle(
+          -size * 0.25, size * 0.2,
+          size * 0.25, size * 0.2,
+          0, size * 0.45
+        );
+        // 마법 오라
+        for (let i = 0; i < 3; i++) {
+          const angle = (i / 3) * Math.PI * 2;
+          graphics.fillStyle(color, 0.3);
+          graphics.fillCircle(
+            Math.cos(angle) * size * 0.35,
+            -size * 0.52 + Math.sin(angle) * size * 0.35,
+            size * 0.08
+          );
+        }
         break;
-      case 'healer':
-        // 십자가 실루엣
-        graphics.fillRect(-size * 0.3, -size * 0.08, size * 0.6, size * 0.16);
-        graphics.fillRect(-size * 0.08, -size * 0.4, size * 0.16, size * 0.8);
-        break;
+
       case 'archer':
-        // 활 실루엣
-        graphics.lineStyle(size * 0.1, color, 1);
-        graphics.arc(0, 0, size * 0.3, -Math.PI * 0.7, Math.PI * 0.7);
-        graphics.lineBetween(-size * 0.2, -size * 0.25, -size * 0.2, size * 0.25);
+        // ART-2.2: 활 + 화살 실루엣
+        graphics.fillStyle(color, 0.7);
+        // 활 본체
+        graphics.lineStyle(size * 0.08, color, 0.8);
+        graphics.beginPath();
+        graphics.arc(0, 0, size * 0.35, -Math.PI * 0.65, Math.PI * 0.65, false);
+        graphics.strokePath();
+        // 활시위
+        graphics.lineStyle(2, color, 0.9);
+        graphics.lineBetween(
+          -size * 0.15, -size * 0.3,
+          -size * 0.15, size * 0.3
+        );
+
+        // 화살
+        graphics.fillStyle(0xF59E0B, 0.8);
+        graphics.fillTriangle(
+          size * 0.3, 0,
+          size * 0.15, -size * 0.05,
+          size * 0.15, size * 0.05
+        );
+        graphics.fillRect(size * 0.05, -size * 0.03, size * 0.15, size * 0.06);
+        // 화살깃
+        graphics.fillStyle(color, 0.6);
+        graphics.fillTriangle(
+          -size * 0.05, -size * 0.08,
+          -size * 0.05, size * 0.08,
+          -size * 0.15, 0
+        );
         break;
+
+      case 'healer':
+        // ART-2.2: 십자가 + 빛 효과
+        graphics.fillStyle(color, 0.8);
+        // 십자가
+        graphics.fillRect(-size * 0.35, -size * 0.08, size * 0.7, size * 0.16);
+        graphics.fillRect(-size * 0.08, -size * 0.45, size * 0.16, size * 0.9);
+
+        // 십자가 테두리
+        graphics.lineStyle(2, 0xFFFFFF, 0.6);
+        graphics.strokeRect(-size * 0.35, -size * 0.08, size * 0.7, size * 0.16);
+        graphics.strokeRect(-size * 0.08, -size * 0.45, size * 0.16, size * 0.9);
+
+        // 빛 효과 (사방으로 퍼지는 광선)
+        for (let i = 0; i < 4; i++) {
+          const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+          graphics.fillStyle(color, 0.3);
+          graphics.fillTriangle(
+            Math.cos(angle) * size * 0.1, Math.sin(angle) * size * 0.1,
+            Math.cos(angle - 0.1) * size * 0.4, Math.sin(angle - 0.1) * size * 0.4,
+            Math.cos(angle + 0.1) * size * 0.4, Math.sin(angle + 0.1) * size * 0.4
+          );
+        }
+
+        // 중앙 광채
+        graphics.fillStyle(0xFFFFFF, 0.5);
+        graphics.fillCircle(0, 0, size * 0.12);
+        break;
+
       default:
-        // 기본: 물음표
-        graphics.fillCircle(0, -size * 0.2, size * 0.3);
-        graphics.fillRect(-size * 0.1, 0, size * 0.2, size * 0.3);
+        // 기본: 물음표 + 원형 배경
+        graphics.fillStyle(0x475569, 0.6);
+        graphics.fillCircle(0, 0, size * 0.4);
+        graphics.fillStyle(0x94A3B8, 1);
+        graphics.fillCircle(0, -size * 0.25, size * 0.2);
+        graphics.fillRect(-size * 0.12, -size * 0.05, size * 0.24, size * 0.08);
+        graphics.fillRect(-size * 0.08, 0.05, size * 0.16, size * 0.3);
+        graphics.fillCircle(0, size * 0.42, size * 0.1);
     }
 
     container.add(graphics);
