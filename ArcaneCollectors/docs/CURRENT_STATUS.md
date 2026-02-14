@@ -74,12 +74,12 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | GP-1 | PvP/랭킹 | H | 실시간/비동기 PvP, 리더보드 (Supabase 연동) |
 | GP-2 | 길드 시스템 | H | 길드 생성/가입, 길드전 (Supabase 연동) |
 
-### P2: 배포 & 운영
-| ID | 태스크 | 난이도 | 설명 |
-|----|--------|--------|------|
-| DEPLOY-1 | Vercel 실제 배포 | L | vercel.json 준비 완료 → 계정 연결 + 배포 |
-| DEPLOY-2 | 환경 변수 설정 | L | Supabase URL/KEY 프로덕션 설정 |
-| DEPLOY-3 | PWA 아이콘 | L | 192x192, 512x512 앱 아이콘 생성 |
+### P2: 배포 & 운영 — ✅ 완료
+| ID | 태스크 | 상태 | 설명 |
+|----|--------|------|------|
+| DEPLOY-1 | Vercel 실제 배포 | ✅ | https://arcane-collectors.vercel.app |
+| DEPLOY-2 | 환경 변수 설정 | ✅ | Supabase URL/KEY Vercel 환경변수 설정 완료 |
+| DEPLOY-3 | PWA 아이콘 | ✅ | 192x192, 512x512 프로시저럴 생성 완료 |
 
 ---
 
@@ -190,5 +190,5 @@ docs/
 | 타입체크 | TypeScript (tsc --noEmit) |
 | 백엔드 | Supabase (하이브리드 저장) |
 | CI/CD | GitHub Actions (ci + deploy + pr-check) |
-| 배포 | Vercel/Netlify (설정 완료, 미배포) |
+| 배포 | Vercel (https://arcane-collectors.vercel.app) |
 | 빌드 크기 | 568KB gzip (73% 압축) |
