@@ -1,8 +1,9 @@
 # ArcaneCollectors 현재 상태
 
-> **최종 업데이트**: 2026-02-14
+> **최종 업데이트**: 2026-02-15
 > **브랜치**: `arcane/integration`
-> **테스트**: 562/562 유닛 + 34/34 E2E = 596개 통과 | **빌드**: tsc 0 에러
+> **테스트**: 590/590 유닛 + 34/34 E2E = 624개 통과 | **빌드**: tsc 0 에러
+> **번들 크기**: 568KB gzip (최적화 완료)
 
 ---
 
@@ -43,44 +44,46 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | ART-1.2 | 프로시저럴 UI 아이콘 7종 (IconFactory) | `f1e0ccf` | 02-14 |
 | ART-1.3 | 캐릭터 렌더러 강화 (실루엣/글로우/Mood) | `f1e0ccf` | 02-14 |
 
+### Sprint 4: 게임플레이 + 인프라 확장
+| ID | 태스크 | 커밋 | 날짜 |
+|----|--------|------|------|
+| GP-3 | 이벤트 던전 시스템 (3종 이벤트+상점+팝업) | `128fdf0` | 02-15 |
+| ART-2.1 | 배경 5종 강화 (성/전투/마법진/월드맵/탑) | `954f702` | 02-15 |
+| ART-2.2 | 캐릭터 실루엣 4종 (warrior/mage/archer/healer) | `954f702` | 02-15 |
+| ART-2.3 | UI 아이콘 7종 강화 + 등급 프레임 | `954f702` | 02-15 |
+| INFRA-1 | 빌드 최적화 (2.1MB→568KB gzip, 73% 압축) | `88c1cec` | 02-15 |
+| INFRA-2 | CI/CD GitHub Actions (ci+deploy+pr-check) | `f689b87` | 02-15 |
+| INFRA-3 | 배포 설정 (Vercel+Netlify+PWA manifest) | `88c1cec` | 02-15 |
+
 ### 테스트 커버리지 확장
 | 항목 | 커밋 | 날짜 |
 |------|------|------|
 | 유닛 테스트 9개 시스템 추가 (353→562) | `654c71a` | 02-14 |
 | Playwright E2E 34개 (로그인/메뉴/팝업/전투/자동로그인) | `654c71a` | 02-14 |
+| 이벤트 던전 유닛 테스트 28개 추가 (562→590) | `128fdf0` | 02-15 |
 
 ---
 
 ## 남은 태스크 (백로그)
 
-> 기존 P1~P3 백로그가 모두 완료되어 새로운 백로그를 정리합니다.
-
-### P1: 실제 아트 에셋 교체
+### P1: 게임플레이 확장
 | ID | 태스크 | 난이도 | 설명 |
 |----|--------|--------|------|
-| ART-2.1 | 실제 배경 이미지 교체 | M | 프로시저럴 → 실제 PNG/WebP (BackgroundFactory 추상화 활용) |
-| ART-2.2 | 실제 캐릭터 스프라이트 | H | 91캐릭터 스프라이트시트 (CharacterRenderer 교체) |
-| ART-2.3 | UI 테마/스킨 | M | 버튼/패널 이미지 에셋, 폰트 교체 |
+| GP-1 | PvP/랭킹 | H | 실시간/비동기 PvP, 리더보드 (Supabase 연동) |
+| GP-2 | 길드 시스템 | H | 길드 생성/가입, 길드전 (Supabase 연동) |
 
-### P2: 게임플레이 확장
+### P2: 배포 & 운영
 | ID | 태스크 | 난이도 | 설명 |
 |----|--------|--------|------|
-| GP-1 | PvP/랭킹 | H | 실시간/비동기 PvP, 리더보드 |
-| GP-2 | 길드 시스템 | H | 길드 생성/가입, 길드전 |
-| GP-3 | 이벤트 던전 | M | 기간 한정 스테이지, 특별 보상 |
-
-### P3: 인프라/배포
-| ID | 태스크 | 난이도 | 설명 |
-|----|--------|--------|------|
-| INFRA-1 | 프로덕션 빌드 최적화 | M | 번들 분석, 코드 스플리팅, 에셋 CDN |
-| INFRA-2 | CI/CD 파이프라인 | M | GitHub Actions (빌드+테스트+배포) |
-| INFRA-3 | 호스팅 배포 | L | Vercel/Netlify/Firebase Hosting |
+| DEPLOY-1 | Vercel 실제 배포 | L | vercel.json 준비 완료 → 계정 연결 + 배포 |
+| DEPLOY-2 | 환경 변수 설정 | L | Supabase URL/KEY 프로덕션 설정 |
+| DEPLOY-3 | PWA 아이콘 | L | 192x192, 512x512 앱 아이콘 생성 |
 
 ---
 
 ## 테스트 현황
 
-### Vitest 유닛 테스트 (562개)
+### Vitest 유닛 테스트 (590개, 22파일)
 | # | 파일 | 테스트 수 |
 |---|------|----------|
 | 1 | data/index.test.js | 62 |
@@ -89,21 +92,22 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | 4 | constants.test.js | 37 |
 | 5 | PartyManager.test.js | 33 |
 | 6 | SaveManager.test.js | 33 |
-| 7 | ProgressionSystem.test.js | 26 |
-| 8 | SweepSystem.test.js | 25 |
-| 9 | CouponSystem.test.js | 24 |
-| 10 | EvolutionSystem.test.js | 24 |
-| 11 | EventBus.test.js | 23 |
-| 12 | errorPatterns.test.js | 23 |
-| 13 | MoodSystem.test.js | 21 |
-| 14 | TowerSystem.test.js | 21 |
-| 15 | QuestSystem.test.js | 20 |
-| 16 | IdleProgressSystem.test.js | 17 |
-| 17 | EnergySystem.test.js | 17 |
-| 18 | GachaSystem.test.js | 16 |
-| 19 | SynergySystem.test.js | 16 |
-| 20 | AutoLogin.test.js | 16 |
-| 21 | helpers.test.js | 13 |
+| 7 | EventDungeonSystem.test.js | 28 |
+| 8 | ProgressionSystem.test.js | 26 |
+| 9 | SweepSystem.test.js | 25 |
+| 10 | CouponSystem.test.js | 24 |
+| 11 | EvolutionSystem.test.js | 24 |
+| 12 | EventBus.test.js | 23 |
+| 13 | errorPatterns.test.js | 23 |
+| 14 | MoodSystem.test.js | 21 |
+| 15 | TowerSystem.test.js | 21 |
+| 16 | QuestSystem.test.js | 20 |
+| 17 | IdleProgressSystem.test.js | 17 |
+| 18 | EnergySystem.test.js | 17 |
+| 19 | GachaSystem.test.js | 16 |
+| 20 | SynergySystem.test.js | 16 |
+| 21 | AutoLogin.test.js | 16 |
+| 22 | helpers.test.js | 13 |
 
 ### Playwright E2E 테스트 (34개)
 | 카테고리 | 테스트 수 | 내용 |
@@ -116,10 +120,35 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 실행 명령:
 ```bash
-npm test          # Vitest 유닛 테스트
-npm run test:e2e  # Playwright E2E (headless)
+npm test              # Vitest 유닛 테스트
+npm run test:e2e      # Playwright E2E (headless)
 npm run test:e2e:headed  # E2E (브라우저 표시)
+npm run build:analyze  # 번들 분석
 ```
+
+---
+
+## 빌드 & 배포
+
+### 번들 크기 (프로덕션)
+| 청크 | 원본 | gzip | 압축률 |
+|------|------|------|--------|
+| phaser | 1,188KB | 315KB | 73.5% |
+| game-core | 436KB | 116KB | 73.3% |
+| game-data | 164KB | 58KB | 64.6% |
+| supabase | 164KB | 42KB | 74.6% |
+| vendor | 118KB | 35KB | 70.0% |
+| **총합** | **2,070KB** | **568KB** | **73%** |
+
+### CI/CD 파이프라인
+- `ci.yml`: 타입체크 → 데이터검증 → 유닛테스트 → E2E → 빌드 (병렬)
+- `deploy.yml`: CI 통과 후 Vercel/GitHub Pages 자동 배포
+- `pr-check.yml`: PR 상태 체크
+
+### 배포 설정 파일
+- `vercel.json`: SPA 라우팅 + 캐싱 + 보안 헤더
+- `netlify.toml`: 빌드 + 리다이렉트 + 헤더
+- `public/manifest.json`: PWA 기본 설정
 
 ---
 
@@ -127,23 +156,21 @@ npm run test:e2e:headed  # E2E (브라우저 표시)
 
 ```
 docs/
-├── PRD_Unified_v5.md          ← 메인 기획서 (91캐릭터, 시스템 전체)
-├── CURRENT_STATUS.md          ← 이 파일 (현재 상태 + 남은 태스크)
-├── AUTH_SYSTEM.md             ← 자동로그인 시스템 문서
-├── PROCEDURAL_ART_GUIDE.md   ← 프로시저럴 아트 가이드
+├── PRD_Unified_v5.md                    ← 메인 기획서 (91캐릭터, 시스템 전체)
+├── CURRENT_STATUS.md                    ← 이 파일
+├── AUTH_SYSTEM.md                       ← 자동로그인 시스템 문서
+├── PROCEDURAL_ART_GUIDE.md             ← 프로시저럴 아트 가이드
+├── GP-3-EventDungeonSystem-Implementation.md ← 이벤트 던전 구현 문서
+├── INFRA-2-CI-CD-REPORT.md             ← CI/CD 구축 리포트
 ├── prd/
-│   └── PRD_Sprint3_UIX.md     ← Sprint 3 PRD
-└── done/                      ← 완료된 문서 아카이브
-    ├── tasks/
-    │   ├── TASK_TRACKER.md    ← Phase 1 (69/69)
-    │   ├── TASK_PROGRESS.md   ← Phase 2 Sprint 1~2 (61/61)
-    │   └── TASK_8_COMPLETE.md ← Task 8 완료 보고서
-    ├── prd-completed/
-    │   └── PRD_POPUP_ARCHITECTURE.md ← Task #7~#11 PRD (완료)
-    ├── POPUP_USAGE.md         ← 팝업 시스템 가이드
-    ├── testing/               ← 테스트 결과
-    ├── dev-logs/              ← 개발 로그
-    └── workers/               ← 워커 태스크 기록
+│   └── PRD_Sprint3_UIX.md              ← Sprint 3 PRD
+└── done/                               ← 완료된 문서 아카이브
+    ├── tasks/                          ← Phase 1~2 태스크 기록
+    ├── prd-completed/                  ← 완료된 PRD
+    ├── POPUP_USAGE.md                  ← 팝업 시스템 가이드
+    ├── testing/                        ← 테스트 결과
+    ├── dev-logs/                       ← 개발 로그
+    └── workers/                        ← 워커 태스크 기록
 ```
 
 ---
@@ -156,9 +183,10 @@ docs/
 | 번들러 | Vite 5 |
 | 모듈 | ES Modules |
 | 해상도 | 720x1280 |
-| 유닛 테스트 | Vitest (562개, 21파일) |
+| 유닛 테스트 | Vitest (590개, 22파일) |
 | E2E 테스트 | Playwright (34개) |
 | 타입체크 | TypeScript (tsc --noEmit) |
 | 백엔드 | Supabase (하이브리드 저장) |
-| 배포 | 미정 (dev 모드) |
-| 빌드 크기 | ~504KB gzip |
+| CI/CD | GitHub Actions (ci + deploy + pr-check) |
+| 배포 | Vercel/Netlify (설정 완료, 미배포) |
+| 빌드 크기 | 568KB gzip (73% 압축) |
