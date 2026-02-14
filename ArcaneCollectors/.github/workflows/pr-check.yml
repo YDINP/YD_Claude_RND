@@ -1,0 +1,184 @@
+name: PR Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+  checks: write
+
+jobs:
+  pr-info:
+    name: PR Information
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR info
+        id: pr-info
+        run: |
+          # 변경된 파일 수 계산
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | wc -l)
+          echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+
+          # 파일 타입별 분류
+          TS_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E '\.(ts|tsx)$' | wc -l || echo 0)
+          JS_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E '\.(js|jsx)$' | wc -l || echo 0)
+          JSON_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.json$' | wc -l || echo 0)
+          TEST_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E 'test\.(ts|js)$' | wc -l || echo 0)
+
+          echo "ts_files=$TS_FILES" >> $GITHUB_OUTPUT
+          echo "js_files=$JS_FILES" >> $GITHUB_OUTPUT
+          echo "json_files=$JSON_FILES" >> $GITHUB_OUTPUT
+          echo "test_files=$TEST_FILES" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        continue-on-error: true
+
+      - name: Extract coverage percentage
+        id: coverage
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            COVERAGE=$(node -p "Math.round(require('./coverage/coverage-summary.json').total.lines.pct)")
+            echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+            echo "has_coverage=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_coverage=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const changedFiles = ${{ steps.pr-info.outputs.changed_files }};
+            const tsFiles = ${{ steps.pr-info.outputs.ts_files }};
+            const jsFiles = ${{ steps.pr-info.outputs.js_files }};
+            const jsonFiles = ${{ steps.pr-info.outputs.json_files }};
+            const testFiles = ${{ steps.pr-info.outputs.test_files }};
+            const hasCoverage = ${{ steps.coverage.outputs.has_coverage }};
+            const coverage = ${{ steps.coverage.outputs.percentage || 0 }};
+
+            let coverageBadge = '';
+            if (hasCoverage) {
+              const color = coverage >= 80 ? '🟢' : coverage >= 60 ? '🟡' : '🔴';
+              coverageBadge = `\n\n### Test Coverage\n${color} **${coverage}%**`;
+            }
+
+            const body = `## 🔍 PR 분석 결과
+
+            ### 📊 변경 사항
+            - **총 파일 수**: ${changedFiles}개
+            - TypeScript 파일: ${tsFiles}개
+            - JavaScript 파일: ${jsFiles}개
+            - JSON 파일: ${jsonFiles}개
+            - 테스트 파일: ${testFiles}개
+            ${coverageBadge}
+
+            ### ✅ 체크리스트
+            ${testFiles > 0 ? '✅' : '⚠️'} 테스트 파일 포함
+            ${jsonFiles > 0 ? '📋 데이터 파일 변경됨 - \`validate:data\` 확인 필요' : ''}
+
+            ---
+            *Automated PR check by ArcaneCollectors CI*
+            `;
+
+            // 기존 봇 코멘트 찾기
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.name,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('PR 분석 결과')
+            );
+
+            if (botComment) {
+              // 기존 코멘트 업데이트
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.name,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              // 새 코멘트 생성
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.name,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+  size-check:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Check bundle size
+        id: size
+        run: |
+          # dist 폴더의 총 사이즈 계산
+          TOTAL_SIZE=$(du -sh dist | cut -f1)
+          echo "total_size=$TOTAL_SIZE" >> $GITHUB_OUTPUT
+
+          # 주요 파일들의 사이즈
+          if [ -f dist/index.html ]; then
+            HTML_SIZE=$(du -h dist/index.html | cut -f1)
+            echo "html_size=$HTML_SIZE" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment bundle size
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const totalSize = '${{ steps.size.outputs.total_size }}';
+            const htmlSize = '${{ steps.size.outputs.html_size }}' || 'N/A';
+
+            const body = `## 📦 Bundle Size
+
+            - **Total**: ${totalSize}
+            - **index.html**: ${htmlSize}
+
+            ℹ️ Build artifacts uploaded to workflow artifacts.
+            `;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.name,
+              issue_number: context.issue.number,
+              body: body
+            });

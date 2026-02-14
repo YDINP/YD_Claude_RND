@@ -1,0 +1,129 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  # CI 워크플로우 재사용
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy-vercel:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    needs: ci
+    timeout-minutes: 10
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Deploy to Vercel
+        id: deploy
+        run: |
+          # Vercel CLI를 통한 배포
+          # secrets.VERCEL_TOKEN, secrets.VERCEL_ORG_ID, secrets.VERCEL_PROJECT_ID 필요
+          npx vercel --token=${{ secrets.VERCEL_TOKEN }} --prod
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Comment PR with deployment URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.name,
+              body: `✅ Deployed to Vercel: ${{ steps.deploy.outputs.url }}`
+            })
+
+  deploy-github-pages:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: ci
+    timeout-minutes: 10
+    # GitHub Pages 배포는 수동으로만 실행하거나 특정 조건에서만 실행
+    if: github.event.inputs.environment == 'staging' || github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  deploy-status:
+    name: Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-vercel]
+    if: always()
+
+    steps:
+      - name: Check deployment status
+        run: |
+          echo "### Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.deploy-vercel.result }}" == "success" ]; then
+            echo "✅ Vercel deployment successful" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Vercel deployment failed" >> $GITHUB_STEP_SUMMARY
+          fi
