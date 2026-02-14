@@ -11,7 +11,7 @@ import { Modal } from '../components/Modal.js';
 import { formatTime } from '../utils/colorUtils.js';
 import { IdleProgressSystem } from '../systems/IdleProgressSystem.js';
 import { IdleBattleView } from '../components/IdleBattleView.js';
-import { getCharacter, calculatePower } from '../data/index.ts';
+import { getCharacter, calculatePower, getStage } from '../data/index.ts';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -548,10 +548,7 @@ export class MainMenuScene extends Phaser.Scene {
     const bossHit = this.add.rectangle(bossBtnX + bossBtnW / 2, panelY + 105, bossBtnW, 50)
       .setAlpha(0.001).setInteractive({ useHandCursor: true });
     bossHit.on('pointerdown', () => {
-      transitionManager.slideTransition(this, 'BattleScene', {
-        stageId: `${currentStage.chapter || 1}-${currentStage.stage || 1}`,
-        mode: 'boss'
-      }, 'right');
+      this.prepareBossBattle();
     });
 
     // Energy display (EnergySystem 시간 회복 반영)
@@ -567,6 +564,38 @@ export class MainMenuScene extends Phaser.Scene {
     this.add.text(GAME_WIDTH - 40, panelY + 150, `📍 ${currentStage.name || '슬라임 평원'}`, {
       fontSize: '13px', fontFamily: 'Arial', color: '#94A3B8'
     }).setOrigin(1, 0);
+  }
+
+  /**
+   * Prepare boss battle with full party and stage data
+   */
+  prepareBossBattle() {
+    const currentStage = this.idleSystem.getCurrentStage();
+    const stageId = `${currentStage.chapter || 1}-${currentStage.stage || 1}`;
+    const stage = getStage(`chapter_${currentStage.chapter || 1}`, stageId);
+
+    // 파티 로드
+    const saveData = SaveManager.load();
+    const parties = saveData?.parties || [];
+    const rawParty = parties[0];
+    const heroIds = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
+    const party = heroIds.map(id => {
+      const charData = (saveData?.characters || []).find(c => c.id === id || c.characterId === id);
+      const staticData = getCharacter(id);
+      if (!charData && !staticData) return null;
+      return { ...staticData, ...charData, id, stats: staticData?.stats || charData?.stats };
+    }).filter(Boolean);
+
+    if (party.length === 0) {
+      this.showToast('파티를 먼저 편성해주세요!');
+      return;
+    }
+
+    transitionManager.slideTransition(this, 'BattleScene', {
+      stage: stage || { id: stageId, name: `스테이지 ${stageId}`, enemies: [], rewards: { gold: 200, exp: 100 } },
+      party,
+      mode: 'boss'
+    }, 'right');
   }
 
   /**

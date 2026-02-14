@@ -5,7 +5,7 @@ import { moodSystem } from '../systems/MoodSystem.js';
 import { SynergySystem } from '../systems/SynergySystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
-import { getAllCharacters, getCharacter } from '../data/index.js';
+import { getAllCharacters, getCharacter, getEnemy, calculateEnemyStats } from '../data/index.js';
 import { MOOD_COLORS } from '../config/layoutConfig.js';
 import transitionManager from '../utils/TransitionManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
@@ -50,6 +50,7 @@ export class BattleScene extends Phaser.Scene {
   init(data) {
     this.stage = data?.stage;
     this.party = data?.party || [];
+    this.mode = data?.mode || 'normal';  // 추가: 보스전 모드 수용
   }
 
   create() {
@@ -58,9 +59,28 @@ export class BattleScene extends Phaser.Scene {
 
       // 파티 데이터 방어
       if (!this.party || this.party.length === 0) {
-        console.warn('[BattleScene] 파티 데이터 없음, 스테이지 선택으로 이동');
-        this.scene.start('StageSelectScene');
-        return;
+        // SaveManager에서 파티 자동 로드 시도
+        const saveData = SaveManager.load();
+        const parties = saveData?.parties || [];
+        const rawParty = parties[0];
+        const heroIds = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
+        this.party = heroIds.map(id => {
+          const charData = (saveData?.characters || []).find(c => c.id === id || c.characterId === id);
+          const staticData = getCharacter(id);
+          if (!staticData && !charData) return null;
+          return { ...staticData, ...charData, id, stats: staticData?.stats || charData?.stats };
+        }).filter(Boolean);
+
+        if (this.party.length === 0) {
+          console.warn('[BattleScene] 파티 데이터 없음');
+          this.scene.start('MainMenuScene');
+          return;
+        }
+      }
+
+      // 보스전: 수동 전투 강제
+      if (this.mode === 'boss') {
+        this.autoBattle = false;
       }
 
       // Reset battle state
@@ -239,33 +259,50 @@ export class BattleScene extends Phaser.Scene {
 
     console.log(`[Battle] Initialized ${this.allies.length} allies`);
 
-    // Generate enemies based on stage
-    const enemyCount = this.stage?.enemyCount || 3;
-    this.enemies = [];
+    // === 적 생성 ===
+    if (this.stage?.enemies && this.stage.enemies.length > 0) {
+      // 스테이지 데이터 기반 적 생성
+      this.enemies = this.stage.enemies.map((enemyDef, i) => {
+        const enemyData = getEnemy(enemyDef.id);
+        if (!enemyData) return this._createRandomEnemy(i);
 
-    for (let i = 0; i < enemyCount; i++) {
-      const baseStats = 500 + (this.stage?.recommendedPower || 1000) / 5;
-      const enemy = {
-        id: `enemy_${i}`,
-        name: this.getEnemyName(),
-        currentHp: Math.floor(baseStats * (0.8 + Math.random() * 0.4)),
-        maxHp: Math.floor(baseStats * (0.8 + Math.random() * 0.4)),
-        stats: {
-          atk: Math.floor(baseStats / 8 * (0.8 + Math.random() * 0.4)),
-          def: Math.floor(baseStats / 10 * (0.8 + Math.random() * 0.4)),
-          spd: Math.floor(30 + Math.random() * 30)
-        },
-        skillGauge: 0,
-        maxSkillGauge: 100,
-        position: i,
-        isAlly: false,
-        isAlive: true,
-        mood: this.getRandomMood()
-      };
-      this.enemies.push(enemy);
+        const level = enemyDef.level || 1;
+        const stats = calculateEnemyStats(enemyData, level);
+
+        return {
+          id: enemyData.id,
+          name: enemyData.name || enemyData.nameEn || '???',
+          stats: { ...stats },
+          currentHp: stats.hp,
+          maxHp: stats.hp,
+          skillGauge: 0,
+          maxSkillGauge: 100,
+          position: i,
+          isAlly: false,
+          isAlive: true,
+          mood: enemyData.mood || 'brave',
+          skills: [
+            { id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 20 },
+            ...(enemyData.skills || []).map(sId => ({
+              id: sId, name: sId, multiplier: 1.3, gaugeCost: 40, target: 'single', gaugeGain: 0
+            }))
+          ],
+          isBoss: enemyDef.isBoss || enemyData.type === 'boss',
+          expReward: enemyData.expReward || 10,
+          goldReward: enemyData.goldReward || 15,
+          level
+        };
+      });
+    } else {
+      // 레거시: 랜덤 적 생성
+      const enemyCount = this.stage?.enemyCount || 3;
+      this.enemies = [];
+      for (let i = 0; i < enemyCount; i++) {
+        this.enemies.push(this._createRandomEnemy(i));
+      }
     }
 
-    this.enemies.forEach(e => e.maxHp = e.currentHp);
+    this.enemies.forEach(e => { if (!e.maxHp) e.maxHp = e.currentHp; });
 
     console.log(`[Battle] Initialized ${this.enemies.length} enemies`);
 
@@ -284,6 +321,35 @@ export class BattleScene extends Phaser.Scene {
   getRandomMood() {
     const moods = ['brave', 'fierce', 'wild', 'calm', 'stoic', 'devoted', 'cunning', 'noble', 'mystic'];
     return Phaser.Math.RND.pick(moods);
+  }
+
+  /**
+   * 랜덤 적 생성 헬퍼
+   */
+  _createRandomEnemy(index) {
+    const baseStats = 500 + (this.stage?.recommendedPower || 1000) / 5;
+    const currentHp = Math.floor(baseStats * (0.8 + Math.random() * 0.4));
+    return {
+      id: `enemy_${index}`,
+      name: this.getEnemyName(),
+      currentHp,
+      maxHp: currentHp,
+      stats: {
+        atk: Math.floor(baseStats / 8 * (0.8 + Math.random() * 0.4)),
+        def: Math.floor(baseStats / 10 * (0.8 + Math.random() * 0.4)),
+        spd: Math.floor(30 + Math.random() * 30)
+      },
+      skillGauge: 0,
+      maxSkillGauge: 100,
+      position: index,
+      isAlly: false,
+      isAlive: true,
+      mood: this.getRandomMood(),
+      isBoss: false,
+      expReward: 10,
+      goldReward: 15,
+      level: 1
+    };
   }
 
   /**
@@ -991,6 +1057,42 @@ export class BattleScene extends Phaser.Scene {
    * A-8.5: 전투 시작 트랜지션
    */
   playBattleIntro() {
+    // 보스전 인트로
+    if (this.mode === 'boss') {
+      // 카메라 쉐이크
+      this.cameras.main.shake(200, 0.01);
+
+      // 보스 이름 찾기
+      const bossEnemy = this.enemies.find(e => e.isBoss) || this.enemies[0];
+      const bossName = bossEnemy?.name || 'BOSS';
+
+      // 보스 배틀 타이틀
+      const bossTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 80, '⚔️ BOSS BATTLE ⚔️', {
+        fontSize: '32px', fontFamily: 'Georgia, serif', color: '#FF4444', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 5
+      }).setOrigin(0.5).setDepth(50).setAlpha(0);
+
+      const bossNameText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 30, bossName, {
+        fontSize: '24px', fontFamily: 'Arial', color: '#FFD700', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 3
+      }).setOrigin(0.5).setDepth(50).setAlpha(0);
+
+      this.tweens.add({
+        targets: [bossTitle, bossNameText],
+        alpha: 1, duration: 400, ease: 'Power2',
+        onComplete: () => {
+          this.tweens.add({
+            targets: [bossTitle, bossNameText],
+            alpha: 0, y: '-=30', duration: 600, delay: 1000,
+            onComplete: () => { bossTitle.destroy(); bossNameText.destroy(); }
+          });
+        }
+      });
+
+      return;
+    }
+
+    // 일반 전투 인트로
     // 전체 화면 검정 오버레이
     const introOverlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1).setDepth(50);
 
@@ -1098,6 +1200,20 @@ export class BattleScene extends Phaser.Scene {
       if (y < GAME_HEIGHT - 150) {
         const sprite = this.createBattlerSprite(enemyStartX, y, enemy, false);
         this.enemySprites.push(sprite);
+
+        // 보스 시각 처리
+        if (enemy.isBoss) {
+          // 보스 스케일 증가
+          const enemySprite = sprite.getData('sprite');
+          if (enemySprite) {
+            enemySprite.setScale(enemySprite.scaleX * 1.3, enemySprite.scaleY * 1.3);
+          }
+          // 보스 라벨
+          const bossLabel = this.add.text(enemyStartX, y - 60, '👑 BOSS', {
+            fontSize: '14px', fontFamily: 'Arial', color: '#FFD700', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 3
+          }).setOrigin(0.5).setDepth(15);
+        }
       }
     });
   }
@@ -2032,7 +2148,8 @@ export class BattleScene extends Phaser.Scene {
       party: this.party,
       turnCount: this.turn,
       aliveCount,
-      totalAllies
+      totalAllies,
+      mode: this.mode  // 추가: 보스전 모드 전달
     };
     this.time.delayedCall(800 / this.battleSpeed, () => {
       if (victory) {
