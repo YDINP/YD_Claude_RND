@@ -106,6 +106,8 @@ export function getCharactersByClass(charClass: string): Character[] {
 
 /**
  * 캐릭터의 전투력을 계산합니다
+ * NOTE: This matches ProgressionSystem.calculatePower() formula
+ * Formula: HP/10 + ATK + DEF + SPD + skillBonus (with star multiplier)
  * @param character - 캐릭터 데이터
  * @param level - 캐릭터 레벨 (기본값: 1)
  * @returns 전투력
@@ -116,12 +118,37 @@ export function calculatePower(character: Character | OwnedHero, level: number =
   const growthStats = character.growthStats || { hp: 0, atk: 0, def: 0, spd: 0 };
   const levelMultiplier = level - 1;
 
-  const hp = base.hp + (growthStats.hp * levelMultiplier);
-  const atk = base.atk + (growthStats.atk * levelMultiplier);
-  const def = base.def + (growthStats.def * levelMultiplier);
-  const spd = base.spd + (growthStats.spd * levelMultiplier);
+  // Calculate level-scaled stats
+  const levelStats = {
+    hp: base.hp + (growthStats.hp * levelMultiplier),
+    atk: base.atk + (growthStats.atk * levelMultiplier),
+    def: base.def + (growthStats.def * levelMultiplier),
+    spd: base.spd + (growthStats.spd * levelMultiplier)
+  };
 
-  return Math.floor((hp * 0.1) + (atk * 2) + (def * 1.5) + (spd * 1));
+  // Apply star bonus (5% per star)
+  const stars = (character as OwnedHero).stars || getRarityStars(character.rarity) || 1;
+  const starBonusPercent = (stars - 1) * 5;
+
+  const finalStats = {
+    hp: Math.floor(levelStats.hp * (1 + starBonusPercent / 100)),
+    atk: Math.floor(levelStats.atk * (1 + starBonusPercent / 100)),
+    def: Math.floor(levelStats.def * (1 + starBonusPercent / 100)),
+    spd: Math.floor(levelStats.spd * (1 + starBonusPercent / 100))
+  };
+
+  // Skill level bonus (10 per skill level)
+  const skillLevels = (character as OwnedHero).skillLevels || [1, 1];
+  const skillBonus = skillLevels.reduce((sum, lv) => sum + lv, 0) * 10;
+
+  // Canonical formula: HP/10 + ATK + DEF + SPD + skillBonus
+  return Math.floor(
+    finalStats.hp / 10 +
+    finalStats.atk +
+    finalStats.def +
+    finalStats.spd +
+    skillBonus
+  );
 }
 
 /**

@@ -536,9 +536,16 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: '14px', fontFamily: 'Arial', color: '#94A3B8'
     });
 
+    // Check if party exists
+    const parties = saveData?.parties || [];
+    const rawParty = parties[0];
+    const party = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
+    const partyHeroes = party.map(heroId => (saveData.characters || []).find(c => c.id === heroId)).filter(Boolean);
+    const hasParty = partyHeroes.length > 0;
+
     // Sweep availability check
     const clearedStages = progress.clearedStages || {};
-    const canSweep = Object.keys(clearedStages).length > 0;
+    const canSweep = Object.keys(clearedStages).length > 0 && hasParty;
     const energy = saveData?.resources?.energy ?? 50;
 
     // Sweep button
@@ -547,35 +554,43 @@ export class MainMenuScene extends Phaser.Scene {
     const sweepBtn = this.add.graphics();
     sweepBtn.fillStyle(canSweep ? 0x10B981 : 0x334155, 1);
     sweepBtn.fillRoundedRect(sweepBtnX, panelY + 80, sweepBtnW, 50, 10);
-    this.add.text(sweepBtnX + sweepBtnW / 2, panelY + 105, `⚡ 소탕 (10🔋)`, {
+    const sweepBtnText = this.add.text(sweepBtnX + sweepBtnW / 2, panelY + 105, `⚡ 소탕 (10🔋)`, {
       fontSize: '16px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
 
     const sweepHit = this.add.rectangle(sweepBtnX + sweepBtnW / 2, panelY + 105, sweepBtnW, 50)
-      .setAlpha(0.001).setInteractive({ useHandCursor: true });
-    sweepHit.on('pointerdown', () => {
-      if (!canSweep) {
-        this.showToast('클리어한 스테이지가 없습니다!');
-        return;
-      }
-      this.performSweep();
-    });
+      .setAlpha(0.001);
+
+    if (canSweep) {
+      sweepHit.setInteractive({ useHandCursor: true });
+      sweepHit.on('pointerdown', () => {
+        this.performSweep();
+      });
+    } else {
+      sweepBtnText.setAlpha(0.5);
+    }
 
     // Boss battle button
     const bossBtnX = GAME_WIDTH / 2 + 20;
     const bossBtnW = GAME_WIDTH / 2 - 60;
     const bossBtn = this.add.graphics();
-    bossBtn.fillStyle(0xEF4444, 1);
+    bossBtn.fillStyle(hasParty ? 0xEF4444 : 0x334155, 1);
     bossBtn.fillRoundedRect(bossBtnX, panelY + 80, bossBtnW, 50, 10);
-    this.add.text(bossBtnX + bossBtnW / 2, panelY + 105, '🗡️ 보스전 도전', {
+    const bossBtnText = this.add.text(bossBtnX + bossBtnW / 2, panelY + 105, '🗡️ 보스전 도전', {
       fontSize: '16px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
 
     const bossHit = this.add.rectangle(bossBtnX + bossBtnW / 2, panelY + 105, bossBtnW, 50)
-      .setAlpha(0.001).setInteractive({ useHandCursor: true });
-    bossHit.on('pointerdown', () => {
-      this.prepareBossBattle();
-    });
+      .setAlpha(0.001);
+
+    if (hasParty) {
+      bossHit.setInteractive({ useHandCursor: true });
+      bossHit.on('pointerdown', () => {
+        this.prepareBossBattle();
+      });
+    } else {
+      bossBtnText.setAlpha(0.5);
+    }
 
     // Energy display (EnergySystem 시간 회복 반영)
     const esStatus = energySystem.getStatus() || {};
@@ -697,10 +712,18 @@ export class MainMenuScene extends Phaser.Scene {
     const parties = saveData.parties || [];
     const rawParty = parties[0];
     const party = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
-    const partyHeroes = party.map(heroId => (saveData.characters || []).find(c => c.id === heroId));
-    this.idleBattleView.updateParty(partyHeroes);
+    const partyHeroes = party.map(heroId => (saveData.characters || []).find(c => c.id === heroId)).filter(Boolean);
 
-    this.idleBattleView.startBattleCycle();
+    // Check if party is empty
+    const hasParty = partyHeroes.length > 0;
+
+    if (hasParty) {
+      this.idleBattleView.updateParty(partyHeroes);
+      this.idleBattleView.startBattleCycle();
+    } else {
+      // Show empty party message
+      this.idleBattleView.showEmptyPartyMessage();
+    }
   }
 
   /**
@@ -775,6 +798,26 @@ export class MainMenuScene extends Phaser.Scene {
     if (this.energyTimerText) {
       const timeToRecover = energySystem.getTimeToNextRecovery?.() ?? 0;
       this.energyTimerText.setText(timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '');
+    }
+
+    // 방치 전투 진행 체크
+    if (this.idleSystem) {
+      const battleResult = this.idleSystem.updateProgress(this.game.loop.delta);
+      if (battleResult) {
+        // 스테이지 진행 체크
+        if (battleResult.stageAdvanced) {
+          const currentStage = this.idleSystem.getCurrentStage();
+          this.showToast(`챕터 ${currentStage.chapter}-${currentStage.stage} 클리어!`);
+          // IdleBattleView 스테이지 정보 업데이트
+          if (this.idleBattleView) {
+            this.idleBattleView.updateStageInfo(
+              currentStage.chapter,
+              currentStage.stage,
+              currentStage.name
+            );
+          }
+        }
+      }
     }
   }
 }

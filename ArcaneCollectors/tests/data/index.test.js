@@ -254,24 +254,35 @@ describe('getCharactersByClass', () => {
 describe('calculatePower', () => {
   it('레벨 1 기본 전투력 계산', () => {
     const char = {
+      rarity: 1, // N (1 star)
       stats: { hp: 500, atk: 50, def: 30, spd: 20 },
       growthStats: { hp: 10, atk: 2, def: 1, spd: 1 },
+      skillLevels: [1, 1], // Default skill levels
     };
-    // (500*0.1) + (50*2) + (30*1.5) + (20*1) = 50 + 100 + 45 + 20 = 215
+    // New canonical formula: HP/10 + ATK + DEF + SPD + skillBonus
+    // stars = 1, starBonus = 0%
+    // finalStats = { hp: 500, atk: 50, def: 30, spd: 20 }
+    // skillBonus = (1 + 1) * 10 = 20
+    // power = 500/10 + 50 + 30 + 20 + 20 = 50 + 50 + 30 + 20 + 20 = 170
     const power = calculatePower(char, 1);
-    expect(power).toBe(215);
+    expect(power).toBe(170);
   });
 
   it('레벨 10 전투력 계산 (growthStats 적용)', () => {
     const char = {
+      rarity: 1, // N (1 star)
       stats: { hp: 500, atk: 50, def: 30, spd: 20 },
       growthStats: { hp: 10, atk: 2, def: 1, spd: 1 },
+      skillLevels: [1, 1],
     };
     // levelMultiplier = 9
-    // hp = 500 + 90 = 590, atk = 50 + 18 = 68, def = 30 + 9 = 39, spd = 20 + 9 = 29
-    // (590*0.1) + (68*2) + (39*1.5) + (29*1) = 59 + 136 + 58.5 + 29 = 282.5 → 282
+    // levelStats = { hp: 500 + 90 = 590, atk: 50 + 18 = 68, def: 30 + 9 = 39, spd: 20 + 9 = 29 }
+    // stars = 1, starBonus = 0%
+    // finalStats = { hp: 590, atk: 68, def: 39, spd: 29 }
+    // skillBonus = (1 + 1) * 10 = 20
+    // power = 590/10 + 68 + 39 + 29 + 20 = 59 + 68 + 39 + 29 + 20 = 215
     const power = calculatePower(char, 10);
-    expect(power).toBe(282);
+    expect(power).toBe(215);
   });
 
   it('stats 없는 캐릭터 → 0', () => {

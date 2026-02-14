@@ -180,12 +180,17 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    * 전투 사이클 시작
    */
   startBattleCycle() {
+    // Guard: don't start if no party
+    if (!this.hasParty) {
+      return;
+    }
+
     if (this.battleCycleTimer) {
       this.battleCycleTimer.remove();
     }
 
     this.battleCycleTimer = this.scene.time.addEvent({
-      delay: 5000, // 5초마다 반복
+      delay: 2500, // 2.5초마다 반복
       callback: () => {
         this.runBattleSequence();
       },
@@ -447,6 +452,8 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    * @param {Array} party - 파티 데이터 배열
    */
   updateParty(party) {
+    this.hasParty = party && party.length > 0;
+
     party.forEach((hero, index) => {
       if (index >= this.partyAvatars.length) return;
 
@@ -463,6 +470,32 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
           avatar.avatar.setFillStyle(moodColor, 1);
         }
       }
+    });
+  }
+
+  /**
+   * 파티가 비어있을 때 안내 메시지 표시
+   */
+  showEmptyPartyMessage() {
+    this.hasParty = false;
+
+    // 중앙에 안내 메시지 표시
+    const messageText = this.scene.add.text(0, 0, '파티를 먼저 편성해주세요!', {
+      fontSize: '20px',
+      fontFamily: 'Arial',
+      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.add(messageText);
+
+    // 깜빡임 효과
+    this.scene.tweens.add({
+      targets: messageText,
+      alpha: { from: 1, to: 0.4 },
+      duration: 1200,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
     });
   }
 

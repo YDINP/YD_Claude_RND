@@ -8,6 +8,7 @@ import { VirtualCardPool } from '../components/VirtualCardPool.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { normalizeHeroes } from '../data/index.js';
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
+import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 
 export class HeroListScene extends Phaser.Scene {
   constructor() {
@@ -280,8 +281,16 @@ export class HeroListScene extends Phaser.Scene {
   }
 
   calculatePower(hero) {
-    const stats = hero.stats || { hp: 0, atk: 0, def: 0, spd: 0 };
-    return stats.hp + stats.atk * 5 + stats.def * 3 + stats.spd * 2;
+    try {
+      return ProgressionSystem.calculatePower({
+        ...hero,
+        characterId: hero.id || hero.characterId,
+        skillLevels: hero.skillLevels || [1, 1]
+      });
+    } catch (e) {
+      const s = hero.stats || {};
+      return Math.floor((s.hp || 0) / 10 + (s.atk || 0) + (s.def || 0) + (s.spd || 0));
+    }
   }
 
   refreshGrid() {

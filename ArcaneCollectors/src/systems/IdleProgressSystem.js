@@ -10,18 +10,21 @@
 
 import { SaveManager } from './SaveManager.js';
 import GameLogger from '../utils/GameLogger.js';
+import { ProgressionSystem } from './ProgressionSystem.js';
 
 export class IdleProgressSystem {
   static MAX_OFFLINE_HOURS = 12;
-  static BASE_GOLD_PER_SEC = 2;
-  static BASE_EXP_PER_SEC = 0.5;
+  static BASE_GOLD_PER_SEC = 5;
+  static BASE_EXP_PER_SEC = 1.5;
 
   constructor(scene) {
     this.scene = scene;
     this.currentStage = { chapter: 1, stage: 1, name: '슬라임 평원' };
     this.enemyPool = [];
     this.lastBattleTime = Date.now();
-    this.battleInterval = 5000; // 5초마다 자동 전투
+    this.battleInterval = 2500; // 2.5초마다 자동 전투
+    this.battleWinCount = 0;
+    this.winsToAdvance = 3; // 3연승 시 다음 스테이지
   }
 
   /**
@@ -147,7 +150,7 @@ export class IdleProgressSystem {
 
   /**
    * 전투 시뮬레이션 (미니뷰용)
-   * @returns {Object} { enemy, damage, reward, duration }
+   * @returns {Object} { enemy, damage, reward, duration, stageAdvanced }
    */
   simulateBattle() {
     const enemy = this.getRandomEnemy();
@@ -161,6 +164,16 @@ export class IdleProgressSystem {
     const goldReward = Math.floor((enemy.goldReward || 15) * 1.2);
     const expReward = Math.floor((enemy.expReward || 10) * 1.2);
 
+    // 전투 승리 카운트 증가
+    this.battleWinCount += 1;
+    let stageAdvanced = false;
+
+    // 3연승 시 다음 스테이지로 진행
+    if (this.battleWinCount >= this.winsToAdvance) {
+      this.advanceStage();
+      stageAdvanced = true;
+    }
+
     return {
       enemy: {
         name: enemy.name,
@@ -172,7 +185,8 @@ export class IdleProgressSystem {
         gold: goldReward,
         exp: expReward
       },
-      duration: 5000 // 5초
+      duration: 2500, // 2.5초
+      stageAdvanced
     };
   }
 
@@ -205,12 +219,20 @@ export class IdleProgressSystem {
     party.forEach(heroId => {
       const hero = saveData.characters.find(c => c.id === heroId);
       if (hero) {
-        // 간단한 전투력 계산: (공격력 + 방어력 + HP/10) * 레벨계수
-        const atk = hero.atk || 100;
-        const def = hero.def || 50;
-        const hp = hero.hp || 500;
-        const level = hero.level || 1;
-        totalPower += (atk + def + hp / 10) * (1 + level * 0.1);
+        try {
+          totalPower += ProgressionSystem.calculatePower({
+            ...hero,
+            characterId: hero.id || hero.characterId,
+            skillLevels: hero.skillLevels || [1, 1]
+          });
+        } catch (e) {
+          // Fallback to simple calculation
+          const atk = hero.atk || 100;
+          const def = hero.def || 50;
+          const hp = hero.hp || 500;
+          const level = hero.level || 1;
+          totalPower += (atk + def + hp / 10) * (1 + level * 0.1);
+        }
       }
     });
 
@@ -270,5 +292,41 @@ export class IdleProgressSystem {
       return `${hours}시간 ${mins}분`;
     }
     return `${mins}분`;
+  }
+
+  /**
+   * 다음 스테이지로 진행
+   */
+  advanceStage() {
+    const current = this.getCurrentStage();
+    let nextChapter = current.chapter;
+    let nextStage = current.stage + 1;
+
+    if (nextStage > 10) {
+      nextChapter += 1;
+      nextStage = 1;
+    }
+
+    // Save progress
+    const saveData = SaveManager.load();
+    if (saveData) {
+      saveData.progress = saveData.progress || {};
+      saveData.progress.lastClearedStage = `stage_${nextChapter}_${nextStage}`;
+      SaveManager.save(saveData);
+    }
+
+    this.currentStage = {
+      chapter: nextChapter,
+      stage: nextStage,
+      name: this.getStageName(nextChapter, nextStage)
+    };
+
+    this.battleWinCount = 0;
+
+    GameLogger.log('IDLE', '스테이지 자동 진행', {
+      chapter: nextChapter,
+      stage: nextStage,
+      name: this.currentStage.name
+    });
   }
 }
