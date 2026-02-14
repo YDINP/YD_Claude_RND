@@ -16,6 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "node tests/e2e/browser-test.mjs",
+    "test:e2e:headed": "node tests/e2e/browser-test.mjs --headed",
     "validate:data": "node scripts/validate-data.js",
     "prebuild": "npm run validate:data"
   },
@@ -41,6 +43,7 @@
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.3.0",
+    "playwright": "^1.58.2",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "vite": "^5.4.0",
