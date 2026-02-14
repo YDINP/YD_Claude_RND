@@ -538,7 +538,7 @@ export class BattleResultScene extends Phaser.Scene {
   goToNextStage() {
     if (this.transitioning) return;
     this.transitioning = true;
-    transitionManager.slideTransition(this, 'StageSelectScene', {}, 'left');
+    transitionManager.slideTransition(this, 'MainMenuScene', {}, 'left');
   }
 
   retryBattle() {
@@ -548,7 +548,7 @@ export class BattleResultScene extends Phaser.Scene {
   }
 
   goToPartyEdit() {
-    this._navigate('PartyEditScene', { returnTo: 'StageSelectScene', stage: this.stage });
+    this._navigate('PartyEditScene', { returnTo: 'MainMenuScene', stage: this.stage });
   }
 
   goToMain() {

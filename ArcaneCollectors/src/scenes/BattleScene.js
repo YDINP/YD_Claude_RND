@@ -78,14 +78,14 @@ export class BattleScene extends Phaser.Scene {
         }
       }
 
-      // 보스전: 수동 전투 강제
-      if (this.mode === 'boss') {
-        this.autoBattle = false;
-      }
-
       // Reset battle state
       this.battleSpeed = this.registry.get('battleSpeed') || 1;
       this.autoBattle = this.registry.get('autoBattle') !== false;
+
+      // 보스전: 수동 전투 강제 (registry 읽기 이후에 적용해야 덮어쓰기 방지)
+      if (this.mode === 'boss') {
+        this.autoBattle = false;
+      }
       this.battleEnded = false;
       this.turn = 0;
       this.isProcessingTurn = false;

@@ -370,6 +370,19 @@ export class MainMenuScene extends Phaser.Scene {
       color: '#F8FAFC'
     });
 
+    // 파티 편성 바로가기 버튼
+    const editBtn = this.add.container(GAME_WIDTH - 60, panelY + 18);
+    const editBg = this.add.rectangle(0, 0, 60, 26, COLORS.primary, 0.8)
+      .setInteractive({ useHandCursor: true })
+      .setStrokeStyle(1, 0x818CF8);
+    const editText = this.add.text(0, 0, '편성', {
+      fontSize: '12px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+    }).setOrigin(0.5);
+    editBtn.add([editBg, editText]);
+    editBg.on('pointerdown', () => {
+      transitionManager.fadeTransition(this, 'PartyEditScene', { returnTo: 'MainMenuScene' });
+    });
+
     const classColors = { warrior: 0xEF4444, mage: 0x8B5CF6, archer: 0x10B981, healer: 0x3B82F6 };
     const classIcons = { warrior: '⚔️', mage: '🔮', archer: '🏹', healer: '💚' };
 
@@ -385,8 +398,9 @@ export class MainMenuScene extends Phaser.Scene {
       const charClass = staticData?.class || charData?.class || 'warrior';
       const color = classColors[charClass] || 0x64748B;
 
-      // Circular avatar background
-      this.add.circle(x, y, 32, color, 0.9);
+      // Circular avatar background (클릭 가능)
+      const avatar = this.add.circle(x, y, 32, color, 0.9)
+        .setInteractive({ useHandCursor: true });
 
       // Class icon
       this.add.text(x, y - 5, classIcons[charClass] || '❓', {
@@ -404,6 +418,16 @@ export class MainMenuScene extends Phaser.Scene {
       this.add.text(x, y + 55, `Lv.${level}`, {
         fontSize: '11px', fontFamily: 'Arial', color: '#94A3B8'
       }).setOrigin(0.5);
+
+      // 영웅 클릭 → 상세 정보
+      avatar.on('pointerdown', () => {
+        transitionManager.fadeTransition(this, 'HeroDetailScene', {
+          heroId: heroId,
+          returnTo: 'MainMenuScene'
+        });
+      });
+      avatar.on('pointerover', () => avatar.setScale(1.1));
+      avatar.on('pointerout', () => avatar.setScale(1));
     });
 
     // If party is empty, show placeholder
