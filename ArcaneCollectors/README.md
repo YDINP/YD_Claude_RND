@@ -1,5 +1,8 @@
 # ArcaneCollectors
 
+[![CI](https://github.com/YDINP/ArcaneCollectors/actions/workflows/ci.yml/badge.svg)](https://github.com/YDINP/ArcaneCollectors/actions/workflows/ci.yml)
+[![Deploy](https://github.com/YDINP/ArcaneCollectors/actions/workflows/deploy.yml/badge.svg)](https://github.com/YDINP/ArcaneCollectors/actions/workflows/deploy.yml)
+
 서브컬처 스타일 방치형 수집 RPG 웹 게임
 
 ## 개요

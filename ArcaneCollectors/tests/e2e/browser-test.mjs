@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE_URL = 'http://localhost:3002';
+const BASE_URL = 'http://localhost:3000';
 
 async function runTests() {
   // CLI 인자로 headless 모드 제어: node browser-test.mjs --headed
