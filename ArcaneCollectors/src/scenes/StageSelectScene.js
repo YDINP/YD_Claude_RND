@@ -6,7 +6,6 @@ import { SynergySystem } from '../systems/SynergySystem.js';
 import { sweepSystem } from '../systems/SweepSystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { getAllCharacters, getChapterStages } from '../data/index.js';
-import { BottomNav } from '../components/BottomNav.js';
 import transitionManager from '../utils/TransitionManager.js';
 
 export class StageSelectScene extends Phaser.Scene {
@@ -26,7 +25,6 @@ export class StageSelectScene extends Phaser.Scene {
     this.createStageList();
     this.createPartySelectModal();
     this.createSweepModal();
-    this.bottomNav = new BottomNav(this, 'home');
     } catch (error) {
       console.error('[StageSelectScene] create() 실패:', error);
       this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -827,7 +825,6 @@ export class StageSelectScene extends Phaser.Scene {
   }
 
   shutdown() {
-    if (this.bottomNav) { this.bottomNav.destroy(); this.bottomNav = null; }
     this.time.removeAllEvents();
     this.tweens.killAll();
     if (this.input) {

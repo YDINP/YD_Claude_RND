@@ -1,6 +1,5 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, LAYOUT } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
-import { BottomNav } from '../components/BottomNav.js';
 import { energySystem } from '../systems/EnergySystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
 import transitionManager from '../utils/TransitionManager.js';
@@ -14,6 +13,13 @@ import { IdleBattleView } from '../components/IdleBattleView.js';
 import { getCharacter, calculatePower, getStage, getChapterStages } from '../data/index.ts';
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
+import { GachaPopup } from '../components/popups/GachaPopup.js';
+import { HeroListPopup } from '../components/popups/HeroListPopup.js';
+import { PartyEditPopup } from '../components/popups/PartyEditPopup.js';
+import { QuestPopup } from '../components/popups/QuestPopup.js';
+import { TowerPopup } from '../components/popups/TowerPopup.js';
+import { InventoryPopup } from '../components/popups/InventoryPopup.js';
+import { SettingsPopup } from '../components/popups/SettingsPopup.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -53,8 +59,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.createAdventurePanel();
     this.createIdleBattleView();
     this.createIdleSummary();
-
-    this.createBottomNavigation();
+    this.createBottomMenu();
 
     // Show offline rewards popup if available (with null defense)
     if (this.showOfflineRewards && (this.showOfflineRewards?.gold ?? 0) > 0) {
@@ -96,10 +101,6 @@ export class MainMenuScene extends Phaser.Scene {
     }
     if (this.idleSystem) {
       this.idleSystem = null;
-    }
-    if (this.bottomNav) {
-      this.bottomNav.destroy();
-      this.bottomNav = null;
     }
     this.time.removeAllEvents();
     this.tweens.killAll();
@@ -759,9 +760,96 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
   }
 
+  createBottomMenu() {
+    const menuItems = [
+      { icon: '🎲', label: '소환', popupKey: 'gacha' },
+      { icon: '🦸', label: '영웅', popupKey: 'herolist' },
+      { icon: '👥', label: '파티', popupKey: 'partyedit' },
+      { icon: '📜', label: '퀘스트', popupKey: 'quest' },
+      { icon: '🗼', label: '무한탑', popupKey: 'tower' },
+      { icon: '📦', label: '가방', popupKey: 'inventory' },
+      { icon: '⚙️', label: '설정', popupKey: 'settings' },
+    ];
 
-  createBottomNavigation() {
-    this.bottomNav = new BottomNav(this, 'home');
+    const cols = 4;
+    const btnSize = 80;
+    const gapX = 20;
+    const gapY = 10;
+    const startY = 990;
+    const totalWidth = cols * btnSize + (cols - 1) * gapX;
+    const startX = (GAME_WIDTH - totalWidth) / 2 + btnSize / 2;
+
+    menuItems.forEach((item, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = startX + col * (btnSize + gapX);
+      const y = startY + row * (btnSize + gapY);
+
+      // Circle background
+      const bg = this.add.graphics();
+      bg.fillStyle(0x1E293B, 0.9);
+      bg.fillCircle(x, y - 8, 32);
+      bg.lineStyle(2, COLORS.primary, 0.3);
+      bg.strokeCircle(x, y - 8, 32);
+
+      // Icon
+      const icon = this.add.text(x, y - 10, item.icon, {
+        fontSize: '28px'
+      }).setOrigin(0.5);
+
+      // Label
+      const label = this.add.text(x, y + 22, item.label, {
+        fontSize: '11px', fontFamily: '"Noto Sans KR", sans-serif',
+        color: '#94A3B8'
+      }).setOrigin(0.5);
+
+      // Hit area
+      const hitArea = this.add.rectangle(x, y + 5, btnSize, btnSize + 10)
+        .setAlpha(0.001).setInteractive({ useHandCursor: true });
+
+      hitArea.on('pointerover', () => {
+        bg.clear();
+        bg.fillStyle(0x334155, 1);
+        bg.fillCircle(x, y - 8, 34);
+        bg.lineStyle(2, COLORS.primary, 0.6);
+        bg.strokeCircle(x, y - 8, 34);
+      });
+      hitArea.on('pointerout', () => {
+        bg.clear();
+        bg.fillStyle(0x1E293B, 0.9);
+        bg.fillCircle(x, y - 8, 32);
+        bg.lineStyle(2, COLORS.primary, 0.3);
+        bg.strokeCircle(x, y - 8, 32);
+      });
+      hitArea.on('pointerdown', () => {
+        this.openPopup(item.popupKey);
+      });
+    });
+  }
+
+  openPopup(key) {
+    const popups = {
+      gacha: GachaPopup,
+      herolist: HeroListPopup,
+      partyedit: PartyEditPopup,
+      quest: QuestPopup,
+      tower: TowerPopup,
+      inventory: InventoryPopup,
+      settings: SettingsPopup,
+    };
+    const PopupClass = popups[key];
+    if (PopupClass) {
+      const popup = new PopupClass(this, {
+        onClose: () => this.refreshAfterPopup()
+      });
+      popup.show();
+    }
+  }
+
+  refreshAfterPopup() {
+    // Refresh party display, combat power, etc after popup closes
+    // Simply restart the scene for now
+    this.scene.restart();
   }
 
   showToast(message) {

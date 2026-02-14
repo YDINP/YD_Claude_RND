@@ -1,5 +1,4 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO } from '../config/gameConfig.js';
-import { BottomNav } from '../components/BottomNav.js';
 import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
 import transitionManager from '../utils/TransitionManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
@@ -77,7 +76,6 @@ export class HeroListScene extends Phaser.Scene {
     this.heroPopup = new HeroInfoPopup(this);
     this.createHeroGrid();
     this.setupScrolling();
-    this.bottomNav = new BottomNav(this, 'hero');
   }
 
   createBackground() {
@@ -585,7 +583,6 @@ export class HeroListScene extends Phaser.Scene {
   shutdown() {
     this.transitioning = false; // 씬 종료 시 리셋
     if (this.heroPopup) { this.heroPopup.destroy(); this.heroPopup = null; }
-    if (this.bottomNav) { this.bottomNav.destroy(); this.bottomNav = null; }
 
     // UIX-2.2.1: Clean up card pool
     if (this.cardPool) {

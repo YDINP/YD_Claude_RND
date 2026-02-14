@@ -6,7 +6,6 @@ import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { CouponSystem } from '../systems/CouponSystem.js';
-import { BottomNav } from '../components/BottomNav.js';
 import transitionManager from '../utils/TransitionManager.js';
 
 export class SettingsScene extends Phaser.Scene {
@@ -22,7 +21,6 @@ export class SettingsScene extends Phaser.Scene {
     this.createMenuGrid();
     this.createSettingsSection();
     this.createAccountInfo();
-    this.bottomNav = new BottomNav(this, 'menu');
     } catch (error) {
       console.error('[SettingsScene] create() 실패:', error);
       this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -35,7 +33,6 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   shutdown() {
-    if (this.bottomNav) { this.bottomNav.destroy(); this.bottomNav = null; }
     if (this.couponInput) {
       this.couponInput.remove();
       this.couponInput = null;

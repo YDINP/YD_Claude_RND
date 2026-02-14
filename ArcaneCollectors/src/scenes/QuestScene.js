@@ -5,7 +5,6 @@
 import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { QuestSystem } from '../systems/QuestSystem.js';
-import { BottomNav } from '../components/BottomNav.js';
 import transitionManager from '../utils/TransitionManager.js';
 
 export class QuestScene extends Phaser.Scene {
@@ -23,7 +22,6 @@ export class QuestScene extends Phaser.Scene {
     this.createQuestSummary();
     this.createQuestList();
     this.createClaimAllButton();
-    this.bottomNav = new BottomNav(this, 'menu');
     } catch (error) {
       console.error('[QuestScene] create() 실패:', error);
       this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -36,7 +34,6 @@ export class QuestScene extends Phaser.Scene {
   }
 
   shutdown() {
-    if (this.bottomNav) { this.bottomNav.destroy(); this.bottomNav = null; }
     this.time.removeAllEvents();
     this.tweens.killAll();
     if (this.input) {

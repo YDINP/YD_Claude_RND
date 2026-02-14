@@ -6,7 +6,6 @@ import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS } from '../config/gameConfig.js';
 import { TowerSystem } from '../systems/TowerSystem.js';
 import energySystem from '../systems/EnergySystem.js';
-import { BottomNav } from '../components/BottomNav.js';
 import transitionManager from '../utils/TransitionManager.js';
 
 export class TowerScene extends Phaser.Scene {
@@ -24,7 +23,6 @@ export class TowerScene extends Phaser.Scene {
     this.createFloorInfo();
     this.createActionButtons();
     this.createProgressBar();
-    this.bottomNav = new BottomNav(this, 'menu');
     } catch (error) {
       console.error('[TowerScene] create() 실패:', error);
       this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -37,7 +35,6 @@ export class TowerScene extends Phaser.Scene {
   }
 
   shutdown() {
-    if (this.bottomNav) { this.bottomNav.destroy(); this.bottomNav = null; }
     this.time.removeAllEvents();
     this.tweens.killAll();
     if (this.input) {

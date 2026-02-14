@@ -6,7 +6,6 @@ import { GachaSystem } from '../systems/GachaSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
 import { getCharacter, normalizeHeroes } from '../data/index.js';
-import { BottomNav } from '../components/BottomNav.js';
 import transitionManager from '../utils/TransitionManager.js';
 
 export class GachaScene extends Phaser.Scene {
@@ -29,8 +28,6 @@ export class GachaScene extends Phaser.Scene {
     this.createBannerArea();
     this.createSummonButtons();
     this.createPityDisplay();
-
-    this.bottomNav = new BottomNav(this, 'gacha');
     } catch (error) {
       console.error('[GachaScene] create() 실패:', error);
       this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -1247,7 +1244,6 @@ export class GachaScene extends Phaser.Scene {
   }
 
   shutdown() {
-    if (this.bottomNav) { this.bottomNav.destroy(); this.bottomNav = null; }
     this.time.removeAllEvents();
     this.tweens.killAll();
     if (this.input) {
