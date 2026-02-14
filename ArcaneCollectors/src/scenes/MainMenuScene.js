@@ -29,6 +29,8 @@ export class MainMenuScene extends Phaser.Scene {
 
   init(data) {
     this.showOfflineRewards = data?.showOfflineRewards || null;
+    this.bossVictory = data?.bossVictory || false;
+    this.bossDefeat = data?.bossDefeat || false;
   }
 
   create() {
@@ -727,6 +729,27 @@ export class MainMenuScene extends Phaser.Scene {
         this.idleBattleView.showBoss(this.idleSystem.currentBossData);
       }
       this.idleBattleView.startBattleCycle();
+
+      // 보스전 복귀 처리
+      if (this.bossVictory) {
+        this.idleSystem.advanceStage();
+        const newStage = this.idleSystem.getCurrentStage();
+        this.idleBattleView.updateStageInfo(newStage.chapter, newStage.stage, newStage.name);
+        this.idleBattleView.showStageClear();
+        this.showToast(`챕터 ${newStage.chapter}-${newStage.stage} 진출!`);
+        // 2초 후 다음 보스 등장
+        this.time.delayedCall(2000, () => {
+          if (this.idleSystem && this.idleBattleView) {
+            this.idleSystem.loadCurrentBoss();
+            if (this.idleSystem.currentBossData) {
+              this.idleBattleView.showNextBoss(this.idleSystem.currentBossData);
+            }
+          }
+        });
+      } else if (this.bossDefeat) {
+        // 패배: 진행도 100% 유지, 재도전 가능
+        this.showToast('보스전 패배... 다시 도전하세요!');
+      }
     } else {
       // Show empty party message
       this.idleBattleView.showEmptyPartyMessage();
@@ -938,29 +961,25 @@ export class MainMenuScene extends Phaser.Scene {
       this.energyTimerText.setText(timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '');
     }
 
-    // 방치 전투 진행 체크
-    if (this.idleSystem) {
+    // 방치 전투 진행 체크 (샌드백 모드: 데미지 누적 → 진행도 → 보스전)
+    if (this.idleSystem && !this.bossTransitioning) {
       const battleResult = this.idleSystem.updateProgress(this.game.loop.delta);
       if (battleResult && this.idleBattleView) {
-        // 데미지 텍스트 + HP 바 + 프로그레스 바 업데이트
+        // 데미지 텍스트 + 진행도 바 업데이트
         this.idleBattleView.showDamageText(battleResult.damage);
         this.idleBattleView.updateBossHp(battleResult.accumulatedDamage, battleResult.bossMaxHp);
         this.idleBattleView.updateProgress(battleResult.progress);
 
-        // 스테이지 진행 체크
-        if (battleResult.stageAdvanced) {
-          const currentStage = this.idleSystem.getCurrentStage();
-          this.showToast(`챕터 ${currentStage.chapter}-${currentStage.stage} 클리어!`);
-          this.idleBattleView.updateStageInfo(currentStage.chapter, currentStage.stage, currentStage.name);
-          this.idleBattleView.defeatBoss();
+        // 진행도 100% → 보스전 준비
+        if (battleResult.bossReady) {
+          this.bossTransitioning = true;
+          this.idleBattleView.showBossReady();
+          this.showToast('⚔️ 보스전 준비 완료!');
 
-          // 2초 후 다음 보스 등장
-          this.time.delayedCall(2000, () => {
-            if (this.idleSystem && this.idleBattleView) {
-              this.idleSystem.loadCurrentBoss();
-              if (this.idleSystem.currentBossData) {
-                this.idleBattleView.showNextBoss(this.idleSystem.currentBossData);
-              }
+          // 1.5초 후 보스전 돌입
+          this.time.delayedCall(1500, () => {
+            if (this.idleSystem) {
+              this.prepareBossBattle();
             }
           });
         }

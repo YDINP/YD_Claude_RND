@@ -45,19 +45,27 @@ export class IdleProgressSystem {
 
     // 최소 30초 이상 오프라인이어야 보상 제공
     if (offlineSec < 30) {
-      return { gold: 0, exp: 0, items: [], duration: 0 };
+      return { gold: 0, exp: 0, items: [], duration: 0, progressGained: 0 };
     }
 
-    // DPS 기반 보스 처치 계산
+    // DPS 기반 진행도 누적 (스테이지 자동 진행 없음 — 보스전 필요)
     const dps = this.calculateDPS();
     const boss = this.getBossForCurrentStage();
     const bossHp = boss.hp;
-    const timePerBoss = bossHp / dps; // 보스 1마리 처치 시간 (초)
-    const bossesKilled = Math.floor(offlineSec / timePerBoss);
 
-    // 보상 계산: 보스 킬 수 × 보스 보상
-    const gold = Math.floor(bossesKilled * (boss.goldReward || 600) * 0.8); // 80% 효율
-    const exp = Math.floor(bossesKilled * (boss.expReward || 300) * 0.8);
+    // 오프라인 동안 누적 데미지 계산
+    const offlineDamage = Math.floor(dps * offlineSec);
+    const previousDamage = this.accumulatedDamage;
+    this.accumulatedDamage = Math.min(
+      previousDamage + offlineDamage,
+      bossHp // 100% 캡 — 보스전은 직접 플레이해야 함
+    );
+    const progressGained = (this.accumulatedDamage - previousDamage) / bossHp;
+
+    // 보상: 누적 데미지 비율 기반 (스테이지 클리어 보상 제외)
+    const damageRatio = offlineDamage / bossHp;
+    const gold = Math.floor(damageRatio * (boss.goldReward || 600) * 0.8);
+    const exp = Math.floor(damageRatio * (boss.expReward || 300) * 0.8);
 
     // 아이템 드롭 (1시간당 1개 확률 50%)
     const items = [];
@@ -68,10 +76,12 @@ export class IdleProgressSystem {
       }
     }
 
-    GameLogger.log('IDLE', '오프라인 보상 계산', {
+    GameLogger.log('IDLE', '오프라인 보상 계산 (샌드백 모드)', {
       offlineSec,
       dps: Math.floor(dps),
-      bossesKilled,
+      offlineDamage,
+      progressGained: Math.floor(progressGained * 100) + '%',
+      bossReady: this.accumulatedDamage >= bossHp,
       gold,
       exp,
       items: items.length
@@ -82,6 +92,8 @@ export class IdleProgressSystem {
       exp,
       items,
       duration: cappedMs,
+      progressGained,
+      bossReady: this.accumulatedDamage >= bossHp,
       formattedDuration: this.formatDuration(Math.floor(offlineSec / 60))
     };
   }
@@ -312,14 +324,19 @@ export class IdleProgressSystem {
   }
 
   /**
-   * 전투 시뮬레이션 (미니뷰용)
-   * @returns {Object} { boss, damage, accumulatedDamage, bossMaxHp, progress, reward, stageAdvanced }
+   * 전투 시뮬레이션 (미니뷰용) — 샌드백 모드
+   * 보스는 죽지 않고, 데미지 누적으로 진행도가 올라감.
+   * 진행도 100% 도달 시 bossReady 플래그 반환 (보스전 트리거용)
+   * @returns {Object} { boss, damage, accumulatedDamage, bossMaxHp, progress, reward, bossReady }
    */
   simulateBattle() {
     // 보스 데이터 없으면 로드
     if (!this.currentBossData) {
       this.loadCurrentBoss();
     }
+
+    // 이미 보스전 준비 상태면 데미지만 표시 (진행도 100% 유지)
+    const alreadyReady = this.accumulatedDamage >= this.currentBossHp;
 
     const dps = this.calculateDPS();
     const intervalSec = this.battleInterval / 1000;
@@ -331,14 +348,8 @@ export class IdleProgressSystem {
     const goldReward = Math.floor((this.currentBossData?.goldReward || 15) * 0.3);
     const expReward = Math.floor((this.currentBossData?.expReward || 10) * 0.3);
 
-    let stageAdvanced = false;
     const progress = Math.min(1, this.accumulatedDamage / this.currentBossHp);
-
-    // 보스 HP 0 이하면 스테이지 진행
-    if (this.accumulatedDamage >= this.currentBossHp) {
-      this.advanceStage();
-      stageAdvanced = true;
-    }
+    const bossReady = !alreadyReady && this.accumulatedDamage >= this.currentBossHp;
 
     return {
       boss: this.currentBossData,
@@ -350,8 +361,16 @@ export class IdleProgressSystem {
         gold: goldReward,
         exp: expReward
       },
-      stageAdvanced
+      bossReady
     };
+  }
+
+  /**
+   * 보스전 준비 상태인지 확인
+   * @returns {boolean}
+   */
+  isBossReady() {
+    return this.currentBossHp > 0 && this.accumulatedDamage >= this.currentBossHp;
   }
 
   /**
@@ -478,7 +497,7 @@ export class IdleProgressSystem {
     this.accumulatedDamage = 0;
     this.currentBossData = null;
 
-    GameLogger.log('IDLE', '스테이지 자동 진행', {
+    GameLogger.log('IDLE', '보스전 승리 → 스테이지 진행', {
       cleared: `${clearedChapter}-${clearedStage}`,
       next: `${nextChapter}-${nextStage}`,
       name: this.currentStage.name

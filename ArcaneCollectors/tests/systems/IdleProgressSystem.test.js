@@ -280,30 +280,58 @@ describe('IdleProgressSystem', () => {
       expect(result.progress).toBeCloseTo(expectedProgress, 5);
     });
 
-    it('advances stage when boss HP is depleted', () => {
-      SaveManager.load.mockReturnValue({
-        progress: { clearedStages: {} }
-      });
-
-      // Force high accumulated damage to defeat boss
+    it('sets bossReady when progress reaches 100%', () => {
+      // Force high accumulated damage to reach 100%
       idleSystem.loadCurrentBoss();
       const bossHp = idleSystem.currentBossHp;
       idleSystem.accumulatedDamage = bossHp - 10;
 
       const result = idleSystem.simulateBattle();
 
-      expect(result.stageAdvanced).toBe(true);
-      expect(idleSystem.accumulatedDamage).toBe(0);
-      expect(idleSystem.currentBossData).toBe(null);
+      expect(result.bossReady).toBe(true);
+      expect(result.progress).toBe(1);
+      // 샌드백 모드: 자동 스테이지 진행 없음
+      expect(idleSystem.accumulatedDamage).toBeGreaterThanOrEqual(bossHp);
     });
 
-    it('does not advance stage when boss HP remains', () => {
+    it('does not set bossReady when progress is below 100%', () => {
       idleSystem.loadCurrentBoss();
       idleSystem.accumulatedDamage = 0;
 
       const result = idleSystem.simulateBattle();
 
-      expect(result.stageAdvanced).toBe(false);
+      expect(result.bossReady).toBe(false);
+    });
+
+    it('bossReady fires only once (not on subsequent calls)', () => {
+      idleSystem.loadCurrentBoss();
+      const bossHp = idleSystem.currentBossHp;
+      idleSystem.accumulatedDamage = bossHp - 10;
+
+      const result1 = idleSystem.simulateBattle();
+      expect(result1.bossReady).toBe(true);
+
+      const result2 = idleSystem.simulateBattle();
+      expect(result2.bossReady).toBe(false);
+      expect(result2.progress).toBe(1);
+    });
+
+    it('continues accumulating damage past 100%', () => {
+      idleSystem.loadCurrentBoss();
+      const bossHp = idleSystem.currentBossHp;
+      idleSystem.accumulatedDamage = bossHp + 100;
+
+      const result = idleSystem.simulateBattle();
+
+      expect(result.accumulatedDamage).toBeGreaterThan(bossHp + 100);
+      expect(result.progress).toBe(1);
+    });
+
+    it('isBossReady returns true when damage >= bossHp', () => {
+      idleSystem.loadCurrentBoss();
+      idleSystem.accumulatedDamage = idleSystem.currentBossHp;
+
+      expect(idleSystem.isBossReady()).toBe(true);
     });
 
     it('provides gold and exp rewards', () => {
@@ -323,12 +351,13 @@ describe('IdleProgressSystem', () => {
       expect(rewards.exp).toBe(0);
     });
 
-    it('calculates rewards based on DPS and boss kills', () => {
+    it('calculates rewards based on DPS and damage ratio', () => {
       const lastLogout = Date.now() - 120000; // 2 minutes ago
       const rewards = idleSystem.calculateOfflineRewards(lastLogout);
 
       expect(rewards.gold).toBeGreaterThan(0);
       expect(rewards.exp).toBeGreaterThan(0);
+      expect(rewards.progressGained).toBeGreaterThanOrEqual(0);
     });
 
     it('caps offline rewards at 12 hours', () => {

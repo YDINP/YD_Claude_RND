@@ -23,6 +23,7 @@ export class BattleResultScene extends Phaser.Scene {
     this.turnCount = data?.turnCount ?? 0;
     this.aliveCount = data?.aliveCount ?? 0;
     this.totalAllies = data?.totalAllies ?? 0;
+    this.mode = data?.mode ?? 'normal';
   }
 
   create() {
@@ -334,13 +335,13 @@ export class BattleResultScene extends Phaser.Scene {
     if (this.victory) {
       // 다음 스테이지 버튼
       buttons.push({
-        label: '다음 스테이지',
+        label: this.mode === 'boss' ? '스테이지 진행' : '다음 스테이지',
         color: COLORS.primary,
         action: () => this.goToNextStage()
       });
 
-      // 소탕 버튼 (3성일 때만)
-      if (this.stars >= 3 && this.stage) {
+      // 소탕 버튼 (3성일 때만, 보스전 모드 제외)
+      if (this.stars >= 3 && this.stage && this.mode !== 'boss') {
         buttons.push({
           label: '⚡ 소탕',
           color: COLORS.success,
@@ -538,7 +539,8 @@ export class BattleResultScene extends Phaser.Scene {
   goToNextStage() {
     if (this.transitioning) return;
     this.transitioning = true;
-    transitionManager.slideTransition(this, 'MainMenuScene', {}, 'left');
+    const data = this.mode === 'boss' ? { bossVictory: true } : {};
+    transitionManager.slideTransition(this, 'MainMenuScene', data, 'left');
   }
 
   retryBattle() {
@@ -552,7 +554,12 @@ export class BattleResultScene extends Phaser.Scene {
   }
 
   goToMain() {
-    this._navigate('MainMenuScene');
+    if (this.mode === 'boss') {
+      const data = this.victory ? { bossVictory: true } : { bossDefeat: true };
+      this._navigate('MainMenuScene', data);
+    } else {
+      this._navigate('MainMenuScene');
+    }
   }
 
   showToast(message) {
