@@ -299,20 +299,25 @@ export class IdleProgressSystem {
    */
   advanceStage() {
     const current = this.getCurrentStage();
-    let nextChapter = current.chapter;
-    let nextStage = current.stage + 1;
+    const clearedChapter = current.chapter;
+    const clearedStage = current.stage;
+
+    // 현재 스테이지를 clearedStages에 기록
+    const saveData = SaveManager.load();
+    if (saveData) {
+      saveData.progress = saveData.progress || {};
+      saveData.progress.clearedStages = saveData.progress.clearedStages || {};
+      saveData.progress.clearedStages[`stage_${clearedChapter}_${clearedStage}`] = true;
+      SaveManager.save(saveData);
+    }
+
+    // 다음 스테이지 계산
+    let nextChapter = clearedChapter;
+    let nextStage = clearedStage + 1;
 
     if (nextStage > 10) {
       nextChapter += 1;
       nextStage = 1;
-    }
-
-    // Save progress
-    const saveData = SaveManager.load();
-    if (saveData) {
-      saveData.progress = saveData.progress || {};
-      saveData.progress.lastClearedStage = `stage_${nextChapter}_${nextStage}`;
-      SaveManager.save(saveData);
     }
 
     this.currentStage = {
@@ -324,8 +329,8 @@ export class IdleProgressSystem {
     this.battleWinCount = 0;
 
     GameLogger.log('IDLE', '스테이지 자동 진행', {
-      chapter: nextChapter,
-      stage: nextStage,
+      cleared: `${clearedChapter}-${clearedStage}`,
+      next: `${nextChapter}-${nextStage}`,
       name: this.currentStage.name
     });
   }

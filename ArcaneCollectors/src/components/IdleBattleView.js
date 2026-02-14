@@ -190,7 +190,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     }
 
     this.battleCycleTimer = this.scene.time.addEvent({
-      delay: 2500, // 2.5초마다 반복
+      delay: 5000, // 전투 시퀀스(4s) + 여유(1s) = 5초 간격
       callback: () => {
         this.runBattleSequence();
       },
@@ -247,6 +247,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     const enemy = enemies[Math.floor(Math.random() * enemies.length)];
 
     this.currentEnemy = enemy;
+    this.attackCount = 0;
 
     // 적 표시
     this.enemyCircle.setFillStyle(enemy.color, 0.8);
@@ -316,9 +317,9 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
       yoyo: true
     });
 
-    // HP 감소
-    const currentScale = this.enemyHpBar.scaleX;
-    const newScale = Math.max(0, currentScale - 0.3);
+    // HP 감소 — 3회 공격으로 정확히 0 도달 (1.0 → 0.67 → 0.33 → 0)
+    this.attackCount = (this.attackCount || 0) + 1;
+    const newScale = Math.max(0, 1 - (this.attackCount / 3));
     this.scene.tweens.add({
       targets: this.enemyHpBar,
       scaleX: newScale,
