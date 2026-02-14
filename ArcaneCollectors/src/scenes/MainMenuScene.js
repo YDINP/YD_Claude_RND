@@ -854,11 +854,39 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   refreshAfterPopup() {
-    // tween 콜백 내에서 scene.restart() 직접 호출 시 충돌 방지
-    // 다음 프레임에서 안전하게 재시작
-    this.time.delayedCall(50, () => {
-      this.scene.restart();
-    });
+    // 부분 갱신으로 변경: 전체 씬 재시작 대신 필요한 부분만 업데이트
+    // scene.restart() 제거 → 깜빡임 없이 부드러운 갱신
+
+    // 1. 자원 표시 갱신 (상단바)
+    const resources = SaveManager.getResources() || {};
+    this.registry.set('gems', resources?.gems ?? 1500);
+    this.registry.set('gold', resources?.gold ?? 10000);
+
+    // 2. 파티 전투력 갱신
+    if (this.powerText) {
+      const partyPower = this.idleSystem.getPartyPower();
+      this.powerText.setText(`⚔ ${Math.floor(partyPower).toLocaleString()}`);
+    }
+
+    // 3. IdleBattleView 파티 갱신 (파티 편성 변경 시)
+    if (this.idleBattleView) {
+      const saveData = SaveManager.load();
+      const parties = saveData?.parties || [];
+      const rawParty = parties[0];
+      const party = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
+      const partyHeroes = party.map(heroId => (saveData.characters || []).find(c => c.id === heroId)).filter(Boolean);
+
+      if (partyHeroes.length > 0) {
+        this.idleBattleView.updateParty(partyHeroes);
+        // 전투 사이클이 멈춰있다면 재시작
+        if (!this.idleBattleView.battleCycleTimer) {
+          this.idleBattleView.startBattleCycle();
+        }
+      }
+    }
+
+    // 4. 퀘스트 배지 갱신 (필요 시)
+    // TODO: 퀘스트 시스템이 추가되면 배지 갱신 로직 추가
   }
 
   showToast(message) {

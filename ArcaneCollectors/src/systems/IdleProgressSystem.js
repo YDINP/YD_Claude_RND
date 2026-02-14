@@ -22,7 +22,7 @@ export class IdleProgressSystem {
     this.currentStage = { chapter: 1, stage: 1, name: '슬라임 평원' };
     this.enemyPool = [];
     this.lastBattleTime = Date.now();
-    this.battleInterval = 2500; // 2.5초마다 자동 전투
+    this.battleInterval = 5000; // 5초마다 자동 전투 (IdleBattleView와 동기화)
     this.battleWinCount = 0;
     this.winsToAdvance = 3; // 3연승 시 다음 스테이지
   }
@@ -110,7 +110,18 @@ export class IdleProgressSystem {
     }
 
     // 마지막 클리어 스테이지 파싱 (예: stage_1_5)
-    const lastCleared = clearedStages.sort().pop();
+    // 숫자 기반 정렬로 수정: "stage_1_10" > "stage_1_9" (렉시코그래픽 버그 수정)
+    const lastCleared = clearedStages.sort((a, b) => {
+      const partsA = a.split('_');
+      const partsB = b.split('_');
+      const chA = parseInt(partsA[1]) || 0;
+      const stA = parseInt(partsA[2]) || 0;
+      const chB = parseInt(partsB[1]) || 0;
+      const stB = parseInt(partsB[2]) || 0;
+      // 챕터 우선, 스테이지 후순
+      return (chA - chB) || (stA - stB);
+    }).pop();
+
     const parts = lastCleared.split('_');
     const chapter = parseInt(parts[1]) || 1;
     const stage = parseInt(parts[2]) || 1;
@@ -185,7 +196,7 @@ export class IdleProgressSystem {
         gold: goldReward,
         exp: expReward
       },
-      duration: 2500, // 2.5초
+      duration: 5000, // 5초 (IdleBattleView와 동기화)
       stageAdvanced
     };
   }
