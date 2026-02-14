@@ -23,7 +23,7 @@ export class QuestScene extends Phaser.Scene {
     this.createQuestSummary();
     this.createQuestList();
     this.createClaimAllButton();
-    this.bottomNav = new BottomNav(this, 'more');
+    this.bottomNav = new BottomNav(this, 'menu');
     } catch (error) {
       console.error('[QuestScene] create() 실패:', error);
       this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -226,7 +226,7 @@ export class QuestScene extends Phaser.Scene {
   createClaimAllButton() {
     if (this.claimable.length === 0) return;
 
-    const btnY = 1090; // BottomNav(y=1160) 겹침 방지: 1090+55=1145 < 1160
+    const btnY = 1060; // BottomNav(y=1160) 겹침 방지: 1060+55=1115 < 1160
     const btnW = 280;
     const btnH = 55;
 

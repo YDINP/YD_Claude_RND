@@ -24,7 +24,7 @@ export class TowerScene extends Phaser.Scene {
     this.createFloorInfo();
     this.createActionButtons();
     this.createProgressBar();
-    this.bottomNav = new BottomNav(this, 'home');
+    this.bottomNav = new BottomNav(this, 'menu');
     } catch (error) {
       console.error('[TowerScene] create() 실패:', error);
       this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -224,8 +224,8 @@ export class TowerScene extends Phaser.Scene {
   }
 
   createActionButtons() {
-    // UIX-3.4: 도전 버튼 하단 중앙 (y=1050)
-    const btnY = 1050;
+    // UIX-3.4: 도전 버튼 하단 중앙 (y=980)
+    const btnY = 980;
     const btnW = 280;
     const btnH = 60;
 
@@ -253,7 +253,7 @@ export class TowerScene extends Phaser.Scene {
     }
 
     // 리셋 버튼: BottomNav(y=1160) 겹침 방지
-    const resetY = 1110; // 1110+45=1155 < 1160
+    const resetY = 1050; // 1050+45=1095 < 1160
     if (this.progress.currentFloor > 1) {
       const resetBtn = this.add.graphics();
       resetBtn.fillStyle(0x334155, 1);

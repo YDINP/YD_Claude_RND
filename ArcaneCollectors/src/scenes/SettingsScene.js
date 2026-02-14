@@ -22,7 +22,7 @@ export class SettingsScene extends Phaser.Scene {
     this.createMenuGrid();
     this.createSettingsSection();
     this.createAccountInfo();
-    this.bottomNav = new BottomNav(this, 'more');
+    this.bottomNav = new BottomNav(this, 'menu');
     } catch (error) {
       console.error('[SettingsScene] create() 실패:', error);
       this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {

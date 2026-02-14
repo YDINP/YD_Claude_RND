@@ -2,12 +2,13 @@ import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, LAYOUT } from '../config/gameConfig.js';
 import transitionManager from '../utils/TransitionManager.js';
 
-// 4-tab bottom navigation configuration
+// 5-tab bottom navigation configuration
 const TABS = [
-  { id: 'home', icon: '\u{1F3E0}', iconKey: 'icon_home', label: '\uD648', scene: 'MainMenuScene' },
-  { id: 'inventory', icon: '\u{1F4E6}', iconKey: 'icon_bag', label: '\uAC00\uBC29', scene: 'InventoryScene' },
-  { id: 'gacha', icon: '\u{1F3B2}', iconKey: 'icon_dice', label: '\uC18C\uD658', scene: 'GachaScene' },
-  { id: 'more', icon: '\u2261', iconKey: 'icon_menu', label: '\uB354\uBCF4\uAE30', scene: 'SettingsScene' }
+  { id: 'home', icon: '🏠', iconKey: 'icon_home', label: '홈', scene: 'MainMenuScene' },
+  { id: 'gacha', icon: '🎲', iconKey: 'icon_dice', label: '소환', scene: 'GachaScene' },
+  { id: 'hero', icon: '🦸', iconKey: 'icon_hero', label: '영웅', scene: 'HeroListScene' },
+  { id: 'inventory', icon: '📦', iconKey: 'icon_bag', label: '가방', scene: 'InventoryScene' },
+  { id: 'menu', icon: '≡', iconKey: 'icon_menu', label: '메뉴', scene: null }
 ];
 
 export class BottomNav extends Phaser.GameObjects.Container {
@@ -19,6 +20,8 @@ export class BottomNav extends Phaser.GameObjects.Container {
     this.tabs = TABS;
     this.tabButtons = {};
     this.onTabChangeCallback = null;
+    this.isDrawerOpen = false;
+    this.drawerElements = [];
 
     this.createBackground();
     this.createTabs();
@@ -79,7 +82,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
 
     const label = this.scene.add.text(0, 20, tab.label, {
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontSize: '13px',
+      fontSize: '12px',
       fontStyle: isActive ? 'bold' : 'normal',
       color: isActive ? '#FFFFFF' : '#64748B'
     }).setOrigin(0.5);
@@ -135,6 +138,35 @@ export class BottomNav extends Phaser.GameObjects.Container {
       this.scene.tweens.killTweensOf(container);
       this.scene.tweens.killTweensOf(indicator);
 
+      // Handle menu tab specially
+      if (tab.id === 'menu') {
+        this.scene.tweens.add({
+          targets: container,
+          scaleX: 1.0,
+          scaleY: 1.0,
+          duration: 150,
+          ease: 'Power2.easeOut'
+        });
+
+        this.toggleDrawer();
+
+        // Restore indicator brightness
+        indicator.clear();
+        if (this.isDrawerOpen) {
+          indicator.fillStyle(COLORS.primary, 0.25);
+          indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
+          indicator.fillStyle(COLORS.primary, 0.9);
+          indicator.fillRect(-25, -this.navHeight / 2 + 3, 50, 3);
+        }
+
+        return;
+      }
+
+      // If drawer is open and another tab is tapped, close drawer first
+      if (this.isDrawerOpen) {
+        this.closeDrawer();
+      }
+
       if (tab.id !== this.activeTab) {
         // Navigate to new tab
         this.scene.tweens.add({
@@ -188,13 +220,221 @@ export class BottomNav extends Phaser.GameObjects.Container {
     return container;
   }
 
+  toggleDrawer() {
+    if (this.isDrawerOpen) {
+      this.closeDrawer();
+    } else {
+      this.openDrawer();
+    }
+  }
+
+  openDrawer() {
+    if (this.isDrawerOpen) return;
+    this.isDrawerOpen = true;
+
+    // Update menu tab indicator to show active state
+    const menuTab = this.tabButtons['menu'];
+    if (menuTab) {
+      const tabWidth = GAME_WIDTH / this.tabs.length;
+      menuTab.indicator.clear();
+      menuTab.indicator.fillStyle(COLORS.primary, 0.25);
+      menuTab.indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
+      menuTab.indicator.fillStyle(COLORS.primary, 0.9);
+      menuTab.indicator.fillRect(-25, -this.navHeight / 2 + 3, 50, 3);
+
+      menuTab.iconText.setScale(1.15);
+      menuTab.label.setStyle({
+        fontFamily: '"Noto Sans KR", sans-serif',
+        fontSize: '12px',
+        fontStyle: 'bold',
+        color: '#FFFFFF'
+      });
+    }
+
+    // Create semi-transparent overlay (above everything except drawer panel)
+    const overlay = this.scene.add.rectangle(
+      GAME_WIDTH / 2,
+      1160 / 2,
+      GAME_WIDTH,
+      1160,
+      0x000000,
+      0.6
+    );
+    overlay.setOrigin(0.5);
+    overlay.setDepth(1499);
+    overlay.setInteractive();
+    overlay.on('pointerup', () => this.closeDrawer());
+    this.drawerElements.push(overlay);
+
+    // Create drawer panel
+    const panelHeight = 320;
+    const panel = this.scene.add.graphics();
+    panel.fillStyle(0x0F172A, 0.98);
+    panel.fillRect(0, 0, GAME_WIDTH, panelHeight);
+    panel.lineStyle(2, COLORS.primary, 0.6);
+    panel.lineBetween(0, 0, GAME_WIDTH, 0);
+
+    const panelContainer = this.scene.add.container(0, 1160);
+    panelContainer.add(panel);
+    panelContainer.setDepth(1500);
+    this.drawerElements.push(panelContainer);
+
+    // Drawer menu items (2x2 grid)
+    const menuItems = [
+      { icon: '👥', label: '파티편성', scene: 'PartyEditScene' },
+      { icon: '📜', label: '퀘스트', scene: 'QuestScene' },
+      { icon: '🗼', label: '무한탑', scene: 'TowerScene' },
+      { icon: '⚙️', label: '설정', scene: 'SettingsScene' }
+    ];
+
+    const buttonWidth = 280;
+    const buttonHeight = 100;
+    const spacing = 40;
+    const startX = (GAME_WIDTH - 2 * buttonWidth - spacing) / 2;
+    const startY = 40;
+
+    menuItems.forEach((item, index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const x = startX + col * (buttonWidth + spacing);
+      const y = startY + row * (buttonHeight + 40);
+
+      const btn = this.createDrawerButton(x, y, buttonWidth, buttonHeight, item);
+      panelContainer.add(btn);
+    });
+
+    // Animate panel sliding up
+    this.scene.tweens.add({
+      targets: panelContainer,
+      y: 840,
+      duration: 300,
+      ease: 'Power2.easeOut'
+    });
+  }
+
+  createDrawerButton(x, y, width, height, item) {
+    const container = this.scene.add.container(x, y);
+
+    const bg = this.scene.add.graphics();
+    bg.fillStyle(COLORS.primary, 0.15);
+    bg.fillRoundedRect(0, 0, width, height, 12);
+    bg.lineStyle(2, COLORS.primary, 0.3);
+    bg.strokeRoundedRect(0, 0, width, height, 12);
+    container.add(bg);
+
+    const icon = this.scene.add.text(width / 2, height / 2 - 15, item.icon, {
+      fontSize: '28px'
+    }).setOrigin(0.5);
+    container.add(icon);
+
+    const label = this.scene.add.text(width / 2, height / 2 + 20, item.label, {
+      fontFamily: '"Noto Sans KR", sans-serif',
+      fontSize: '16px',
+      fontStyle: 'bold',
+      color: '#FFFFFF'
+    }).setOrigin(0.5);
+    container.add(label);
+
+    const hitArea = new Phaser.Geom.Rectangle(0, 0, width, height);
+    container.setSize(width, height);
+    container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+
+    container.on('pointerover', () => {
+      bg.clear();
+      bg.fillStyle(COLORS.primary, 0.25);
+      bg.fillRoundedRect(0, 0, width, height, 12);
+      bg.lineStyle(2, COLORS.primary, 0.5);
+      bg.strokeRoundedRect(0, 0, width, height, 12);
+      icon.setScale(1.1);
+    });
+
+    container.on('pointerout', () => {
+      bg.clear();
+      bg.fillStyle(COLORS.primary, 0.15);
+      bg.fillRoundedRect(0, 0, width, height, 12);
+      bg.lineStyle(2, COLORS.primary, 0.3);
+      bg.strokeRoundedRect(0, 0, width, height, 12);
+      icon.setScale(1);
+    });
+
+    container.on('pointerdown', () => {
+      this.scene.tweens.add({
+        targets: container,
+        scaleX: 0.95,
+        scaleY: 0.95,
+        duration: 100,
+        ease: 'Power1'
+      });
+    });
+
+    container.on('pointerup', () => {
+      this.scene.tweens.add({
+        targets: container,
+        scaleX: 1.0,
+        scaleY: 1.0,
+        duration: 100,
+        ease: 'Power1',
+        onComplete: () => {
+          this.closeDrawer();
+          this.navigateToScene(item.scene);
+        }
+      });
+    });
+
+    return container;
+  }
+
+  closeDrawer() {
+    if (!this.isDrawerOpen) return;
+    this.isDrawerOpen = false;
+
+    // Update menu tab indicator to show inactive state
+    const menuTab = this.tabButtons['menu'];
+    if (menuTab && this.activeTab !== 'menu') {
+      const tabWidth = GAME_WIDTH / this.tabs.length;
+      menuTab.indicator.clear();
+
+      menuTab.iconText.setScale(1);
+      menuTab.label.setStyle({
+        fontFamily: '"Noto Sans KR", sans-serif',
+        fontSize: '12px',
+        fontStyle: 'normal',
+        color: '#64748B'
+      });
+    }
+
+    // Find panel and animate it down
+    const panel = this.drawerElements.find(el => el.type === 'Container');
+    if (panel) {
+      this.scene.tweens.add({
+        targets: panel,
+        y: 1160,
+        duration: 250,
+        ease: 'Power2.easeIn',
+        onComplete: () => {
+          this.destroyDrawerElements();
+        }
+      });
+    } else {
+      this.destroyDrawerElements();
+    }
+  }
+
+  destroyDrawerElements() {
+    this.drawerElements.forEach(el => {
+      if (el && !el.scene) return; // Already destroyed
+      el.destroy();
+    });
+    this.drawerElements = [];
+  }
+
   navigateToScene(sceneName) {
     const validScenes = ['MainMenuScene', 'StageSelectScene', 'GachaScene', 'HeroListScene', 'InventoryScene', 'PartyEditScene', 'TowerScene', 'QuestScene', 'SettingsScene'];
 
     if (validScenes.includes(sceneName)) {
       transitionManager.fadeTransition(this.scene, sceneName);
     } else {
-      this.showToast('\uC900\uBE44 \uC911\uC785\uB2C8\uB2E4!');
+      this.showToast('준비 중입니다!');
     }
   }
 
@@ -203,7 +443,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
       fontSize: '18px',
       fontFamily: '"Noto Sans KR", sans-serif',
       color: '#FFFFFF',
-      backgroundColor: `#${  COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
+      backgroundColor: `#${COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
       padding: { x: 24, y: 14 }
     }).setOrigin(0.5).setDepth(2000);
 
@@ -244,7 +484,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
       tabContainer.iconText.setScale(isActive ? 1.15 : 1);
       tabContainer.label.setStyle({
         fontFamily: '"Noto Sans KR", sans-serif',
-        fontSize: '13px',
+        fontSize: '12px',
         fontStyle: isActive ? 'bold' : 'normal',
         color: isActive ? '#FFFFFF' : '#64748B'
       });
@@ -337,6 +577,13 @@ export class BottomNav extends Phaser.GameObjects.Container {
     }
 
     return this;
+  }
+
+  destroy() {
+    if (this.isDrawerOpen) {
+      this.destroyDrawerElements();
+    }
+    super.destroy();
   }
 
   getHeight() { return this.navHeight; }

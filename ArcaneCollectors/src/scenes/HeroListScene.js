@@ -76,7 +76,7 @@ export class HeroListScene extends Phaser.Scene {
     this.heroPopup = new HeroInfoPopup(this);
     this.createHeroGrid();
     this.setupScrolling();
-    this.bottomNav = new BottomNav(this, 'home');
+    this.bottomNav = new BottomNav(this, 'hero');
   }
 
   createBackground() {

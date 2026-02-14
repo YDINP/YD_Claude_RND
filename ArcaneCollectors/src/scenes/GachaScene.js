@@ -328,8 +328,8 @@ export class GachaScene extends Phaser.Scene {
   }
 
   createSummonButtons() {
-    // UIX-3.4: 소환 버튼 위치 하단 BottomNav 위 (y=1050 정도)
-    const buttonY = 1050;
+    // UIX-3.4: 소환 버튼 위치 하단 BottomNav 위 (y=950 정도)
+    const buttonY = 950;
 
     // Single summon button
     this.createSummonButton(GAME_WIDTH / 2 - 110, buttonY, '단일 소환', 300, 1);

@@ -54,9 +54,6 @@ export class MainMenuScene extends Phaser.Scene {
     this.createIdleBattleView();
     this.createIdleSummary();
 
-    // === Content shortcut buttons ===
-    this.createContentButtons();
-
     this.createBottomNavigation();
 
     // Show offline rewards popup if available (with null defense)
@@ -111,23 +108,6 @@ export class MainMenuScene extends Phaser.Scene {
     }
   }
 
-  /**
-   * Badge data for menu buttons (UIX-2.1.2)
-   */
-  getBadgeData(sceneKey) {
-    switch (sceneKey) {
-      case 'HeroListScene':
-        return 0;
-      case 'QuestScene':
-        return 0;
-      case 'InventoryScene':
-        return 0;
-      case 'TowerScene':
-        return 0;
-      default:
-        return 0;
-    }
-  }
 
   showOfflineRewardsPopup(rewards) {
     if (!rewards) {
@@ -383,7 +363,7 @@ export class MainMenuScene extends Phaser.Scene {
     const partyIds = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
     const characters = saveData?.characters || [];
 
-    const panelY = 90;
+    const panelY = 105;
     const panel = this.add.graphics();
     panel.fillStyle(0x1E293B, 0.9);
     panel.fillRoundedRect(20, panelY, GAME_WIDTH - 40, 150, 12);
@@ -466,7 +446,7 @@ export class MainMenuScene extends Phaser.Scene {
     const power = this.calculateCombatPower(saveData);
     const difficulty = this.getDifficulty(power);
 
-    const panelY = 250;
+    const panelY = 280;
     const panel = this.add.graphics();
     panel.fillStyle(0x1E293B, 0.9);
     panel.fillRoundedRect(20, panelY, GAME_WIDTH - 40, 65, 12);
@@ -539,7 +519,7 @@ export class MainMenuScene extends Phaser.Scene {
    * WS-3: Adventure panel with sweep + boss battle (y=360~560)
    */
   createAdventurePanel() {
-    const panelY = 325;
+    const panelY = 360;
     const panel = this.add.graphics();
     panel.fillStyle(0x1E293B, 0.9);
     panel.fillRoundedRect(20, panelY, GAME_WIDTH - 40, 190, 12);
@@ -700,12 +680,12 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   /**
-   * IdleBattleView (y=570~720, smaller)
+   * IdleBattleView (y=580~880, expanded)
    */
   createIdleBattleView() {
-    const viewY = 525;
+    const viewY = 580;
     const viewWidth = 640;
-    const viewHeight = 200;
+    const viewHeight = 300;
 
     this.idleBattleView = new IdleBattleView(this, GAME_WIDTH / 2, viewY, viewWidth, viewHeight);
     this.idleBattleView.setDepth(Z_INDEX.UI - 1);
@@ -724,10 +704,10 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   /**
-   * Idle income summary (y=780)
+   * Idle income summary (y=900)
    */
   createIdleSummary() {
-    const summaryY = 740;
+    const summaryY = 900;
 
     const summaryBg = this.add.rectangle(GAME_WIDTH / 2, summaryY, 640, 50, COLORS.bgLight, 0.5);
     summaryBg.setStrokeStyle(1, COLORS.primary, 0.3);
@@ -756,110 +736,6 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
   }
 
-  /**
-   * Content shortcut buttons (y=830~) - adventure removed, 7 buttons
-   */
-  createContentButtons() {
-    const startY = 780;
-    // WS-3: 7 buttons (adventure removed, handled in adventure panel above)
-    const buttons = [
-      { icon: '🎲', label: '소환', scene: 'GachaScene', texture: 'icon_dice' },
-      { icon: '\u{1F9B8}', label: '영웅', scene: 'HeroListScene', texture: 'icon_hero' },
-      { icon: '\u{1F465}', label: '파티편성', scene: 'PartyEditScene', texture: 'icon_party' },
-      { icon: '\u{1F4DC}', label: '퀘스트', scene: 'QuestScene', texture: 'icon_quest' },
-      { icon: '\u{1F5FC}', label: '무한탑', scene: 'TowerScene', texture: 'icon_tower' },
-      { icon: '\u{1F4E6}', label: '가방', scene: 'InventoryScene', texture: 'icon_bag' },
-      { icon: '\u2699\uFE0F', label: '설정', scene: 'SettingsScene', texture: 'icon_settings' },
-    ];
-
-    const cols = 4;
-    const btnWidth = 150;
-    const btnHeight = 65;
-    const gapX = 10;
-    const gapY = 10;
-    const totalWidth = cols * btnWidth + (cols - 1) * gapX;
-    const startX = (GAME_WIDTH - totalWidth) / 2 + btnWidth / 2;
-
-    buttons.forEach((btn, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = startX + col * (btnWidth + gapX);
-      const y = startY + row * (btnHeight + gapY);
-
-      const container = this.add.container(x, y);
-
-      const bg = this.add.rectangle(0, 0, btnWidth, btnHeight, 0x1a1a3e, 0.8);
-      bg.setStrokeStyle(1, 0x4444aa, 0.4);
-      bg.setInteractive({ useHandCursor: true });
-
-      let iconObj;
-      if (btn.texture && this.textures.exists(btn.texture)) {
-        iconObj = this.add.image(0, -12, btn.texture).setScale(0.8);
-      } else {
-        iconObj = this.add.text(0, -12, btn.icon, {
-          fontSize: '28px'
-        }).setOrigin(0.5);
-      }
-
-      const label = this.add.text(0, 22, btn.label, {
-        fontSize: '13px',
-        fontFamily: 'Arial',
-        color: '#ccccdd',
-        fontStyle: 'bold'
-      }).setOrigin(0.5);
-
-      container.add([bg, iconObj, label]);
-
-      const badgeCount = this.getBadgeData(btn.scene);
-      if (badgeCount > 0) {
-        const badgeX = btnWidth / 2 - 12;
-        const badgeY = -btnHeight / 2 + 8;
-
-        const badge = this.add.graphics();
-        badge.fillStyle(COLORS.danger, 1);
-        const badgeWidth = badgeCount > 99 ? 28 : badgeCount > 9 ? 22 : 16;
-        badge.fillRoundedRect(badgeX - badgeWidth / 2, badgeY - 8, badgeWidth, 16, 8);
-
-        const badgeText = this.add.text(badgeX, badgeY, badgeCount > 99 ? '99+' : badgeCount.toString(), {
-          fontFamily: 'Arial',
-          fontSize: '10px',
-          fontStyle: 'bold',
-          color: '#FFFFFF'
-        }).setOrigin(0.5);
-
-        container.add([badge, badgeText]);
-        container.badge = badge;
-        container.badgeText = badgeText;
-      }
-
-      bg.on('pointerover', () => {
-        bg.setFillStyle(0x2a2a5e, 1);
-        this.tweens.add({ targets: container, scaleX: 1.05, scaleY: 1.05, duration: 100 });
-      });
-      bg.on('pointerout', () => {
-        bg.setFillStyle(0x1a1a3e, 0.8);
-        this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 100 });
-      });
-      bg.on('pointerdown', () => {
-        switch (btn.scene) {
-          case 'HeroListScene':
-          case 'InventoryScene':
-          case 'QuestScene':
-            transitionManager.slideTransition(this, btn.scene, {}, 'right');
-            break;
-          case 'SettingsScene':
-            transitionManager.slideTransition(this, btn.scene, {}, 'up');
-            break;
-          case 'PartyEditScene':
-            transitionManager.fadeTransition(this, btn.scene, { returnTo: 'MainMenuScene' });
-            break;
-          default:
-            transitionManager.fadeTransition(this, btn.scene);
-            break;
-        }
-      });
-    });
-  }
 
   createBottomNavigation() {
     this.bottomNav = new BottomNav(this, 'home');
