@@ -2,7 +2,7 @@
 
 > **최종 업데이트**: 2026-02-15
 > **브랜치**: `arcane/integration`
-> **테스트**: 590/590 유닛 + 34/34 E2E = 624개 통과 | **빌드**: tsc 0 에러
+> **테스트**: 597/597 유닛 + 34/34 E2E = 631개 통과 | **빌드**: tsc 0 에러
 > **번들 크기**: 568KB gzip (최적화 완료)
 
 ---
@@ -54,6 +54,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | INFRA-1 | 빌드 최적화 (2.1MB→568KB gzip, 73% 압축) | `88c1cec` | 02-15 |
 | INFRA-2 | CI/CD GitHub Actions (ci+deploy+pr-check) | `f689b87` | 02-15 |
 | INFRA-3 | 배포 설정 (Vercel+Netlify+PWA manifest) | `88c1cec` | 02-15 |
+| GP-4 | 유휴 전투 보스 기반 리디자인 (DPS 누적 진행) | `fd3a7f6` | 02-15 |
 
 ### 테스트 커버리지 확장
 | 항목 | 커밋 | 날짜 |
@@ -61,6 +62,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | 유닛 테스트 9개 시스템 추가 (353→562) | `654c71a` | 02-14 |
 | Playwright E2E 34개 (로그인/메뉴/팝업/전투/자동로그인) | `654c71a` | 02-14 |
 | 이벤트 던전 유닛 테스트 28개 추가 (562→590) | `128fdf0` | 02-15 |
+| 보스 전투 테스트 7개 추가 (590→597) | `fd3a7f6` | 02-15 |
 
 ---
 
@@ -83,7 +85,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 ## 테스트 현황
 
-### Vitest 유닛 테스트 (590개, 22파일)
+### Vitest 유닛 테스트 (597개, 22파일)
 | # | 파일 | 테스트 수 |
 |---|------|----------|
 | 1 | data/index.test.js | 62 |
@@ -102,7 +104,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | 14 | MoodSystem.test.js | 21 |
 | 15 | TowerSystem.test.js | 21 |
 | 16 | QuestSystem.test.js | 20 |
-| 17 | IdleProgressSystem.test.js | 17 |
+| 17 | IdleProgressSystem.test.js | 24 |
 | 18 | EnergySystem.test.js | 17 |
 | 19 | GachaSystem.test.js | 16 |
 | 20 | SynergySystem.test.js | 16 |
@@ -183,7 +185,7 @@ docs/
 | 번들러 | Vite 5 |
 | 모듈 | ES Modules |
 | 해상도 | 720x1280 |
-| 유닛 테스트 | Vitest (590개, 22파일) |
+| 유닛 테스트 | Vitest (597개, 22파일) |
 | E2E 테스트 | Playwright (34개) |
 | 타입체크 | TypeScript (tsc --noEmit) |
 | 백엔드 | Supabase (하이브리드 저장) |
