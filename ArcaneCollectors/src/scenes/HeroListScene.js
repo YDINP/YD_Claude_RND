@@ -7,6 +7,7 @@ import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { VirtualCardPool } from '../components/VirtualCardPool.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { normalizeHeroes } from '../data/index.js';
+import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
 
 export class HeroListScene extends Phaser.Scene {
   constructor() {
@@ -23,6 +24,7 @@ export class HeroListScene extends Phaser.Scene {
     this.transitioning = false;
     this._loadedHeroIds = []; // RES-ABS-4: 로드된 히어로 추적
     this.cardPool = null; // UIX-2.2.1: Virtual scroll object pool
+    this.heroPopup = null;
   }
 
   create() {
@@ -71,6 +73,7 @@ export class HeroListScene extends Phaser.Scene {
     this.createFilterBar();
     // UIX-2.2.1: Initialize card pool
     this.cardPool = new VirtualCardPool(this, this.createHeroCard.bind(this), 24);
+    this.heroPopup = new HeroInfoPopup(this);
     this.createHeroGrid();
     this.setupScrolling();
     this.bottomNav = new BottomNav(this, 'home');
@@ -539,7 +542,7 @@ export class HeroListScene extends Phaser.Scene {
 
   updateGridPosition() {
     if (this.gridContainer) {
-      this.gridContainer.y = 210 - this.scrollY;
+      this.gridContainer.y = -this.scrollY;
     }
   }
 
@@ -562,10 +565,9 @@ export class HeroListScene extends Phaser.Scene {
 
       if (worldX >= cardWorldX - halfW && worldX <= cardWorldX + halfW &&
           worldY >= cardWorldY - halfH && worldY <= cardWorldY + halfH) {
-        this.transitioning = true;
         const currentHero = card.heroData;
-        // PRD VFX-1.2: HeroList → HeroDetail = zoomIn (card position)
-        transitionManager.zoomTransition(this, 'HeroDetailScene', { heroId: currentHero.id }, pointer.x, pointer.y, 'in', 400);
+        // 팝업으로 영웅 정보 표시 (씬 전환 없음)
+        this.heroPopup?.show(currentHero.id);
         return;
       }
     }
@@ -573,6 +575,7 @@ export class HeroListScene extends Phaser.Scene {
 
   shutdown() {
     this.transitioning = false; // 씬 종료 시 리셋
+    if (this.heroPopup) { this.heroPopup.destroy(); this.heroPopup = null; }
     if (this.bottomNav) { this.bottomNav.destroy(); this.bottomNav = null; }
 
     // UIX-2.2.1: Clean up card pool
@@ -594,9 +597,9 @@ export class HeroListScene extends Phaser.Scene {
   }
 
   update() {
-    // Smooth scroll position (adjusted for extended filter)
-    const targetY = 210 - this.scrollY;
-    if (this.gridContainer && this.gridContainer.y !== targetY) {
+    // Smooth scroll position
+    const targetY = -this.scrollY;
+    if (this.gridContainer && Math.abs(this.gridContainer.y - targetY) > 0.5) {
       this.gridContainer.y = Phaser.Math.Linear(this.gridContainer.y, targetY, 0.2);
     }
   }

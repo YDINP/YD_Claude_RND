@@ -12,6 +12,7 @@ import { formatTime } from '../utils/colorUtils.js';
 import { IdleProgressSystem } from '../systems/IdleProgressSystem.js';
 import { IdleBattleView } from '../components/IdleBattleView.js';
 import { getCharacter, calculatePower, getStage, getChapterStages } from '../data/index.ts';
+import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -36,6 +37,13 @@ export class MainMenuScene extends Phaser.Scene {
     const resources = SaveManager.getResources() || {};
     this.registry.set('gems', resources?.gems ?? 1500);
     this.registry.set('gold', resources?.gold ?? 10000);
+
+    // Initialize energy system (에너지 회복 시작)
+    const fullSaveData = SaveManager.load();
+    energySystem.initialize(fullSaveData?.energy || null);
+
+    // Hero info popup instance
+    this.heroPopup = new HeroInfoPopup(this);
 
     this.createBackground();
     this.createTopBar();
@@ -83,6 +91,10 @@ export class MainMenuScene extends Phaser.Scene {
     if (this.idleBattleView) {
       this.idleBattleView.destroy();
       this.idleBattleView = null;
+    }
+    if (this.heroPopup) {
+      this.heroPopup.destroy();
+      this.heroPopup = null;
     }
     if (this.idleSystem) {
       this.idleSystem = null;
@@ -319,12 +331,22 @@ export class MainMenuScene extends Phaser.Scene {
     this.energyBar.update(energyStatus?.current ?? 0, energyStatus?.max ?? 100);
 
     const timeToRecover = energySystem.getTimeToNextRecovery?.() ?? 0;
-    this.energyTimerText = this.add.text(560, 40, timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
-      fontSize: '12px',
+    this.energyTimerText = this.add.text(540, 40, timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
+      fontSize: '11px',
       fontFamily: 'Arial',
       color: '#94A3B8',
       fontStyle: 'normal'
     }).setOrigin(0, 0.5).setDepth(Z_INDEX.UI + 1);
+
+    // Energy gem charge button (💎+)
+    const chargeBtn = this.add.text(620, 40, '💎+', {
+      fontSize: '14px', fontFamily: 'Arial', fontStyle: 'bold',
+      color: '#A78BFA', backgroundColor: '#1E293B',
+      padding: { x: 4, y: 2 }
+    }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1).setInteractive({ useHandCursor: true });
+    chargeBtn.on('pointerdown', () => this.chargeEnergyWithGems());
+    chargeBtn.on('pointerover', () => chargeBtn.setColor('#C4B5FD'));
+    chargeBtn.on('pointerout', () => chargeBtn.setColor('#A78BFA'));
 
     const partyPower = this.idleSystem.getPartyPower();
     this.powerText = this.add.text(GAME_WIDTH - 90, 40, `⚔ ${Math.floor(partyPower).toLocaleString()}`, {
@@ -360,10 +382,10 @@ export class MainMenuScene extends Phaser.Scene {
     const partyIds = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
     const characters = saveData?.characters || [];
 
-    const panelY = 110;
+    const panelY = 90;
     const panel = this.add.graphics();
     panel.fillStyle(0x1E293B, 0.9);
-    panel.fillRoundedRect(20, panelY, GAME_WIDTH - 40, 155, 12);
+    panel.fillRoundedRect(20, panelY, GAME_WIDTH - 40, 150, 12);
 
     this.add.text(40, panelY + 10, '내 파티', {
       fontSize: '16px', fontFamily: 'Arial', fontStyle: 'bold',
@@ -419,12 +441,9 @@ export class MainMenuScene extends Phaser.Scene {
         fontSize: '11px', fontFamily: 'Arial', color: '#94A3B8'
       }).setOrigin(0.5);
 
-      // 영웅 클릭 → 상세 정보
+      // 영웅 클릭 → 팝업 정보
       avatar.on('pointerdown', () => {
-        transitionManager.fadeTransition(this, 'HeroDetailScene', {
-          heroId: heroId,
-          returnTo: 'MainMenuScene'
-        });
+        this.heroPopup?.show(heroId);
       });
       avatar.on('pointerover', () => avatar.setScale(1.1));
       avatar.on('pointerout', () => avatar.setScale(1));
@@ -446,7 +465,7 @@ export class MainMenuScene extends Phaser.Scene {
     const power = this.calculateCombatPower(saveData);
     const difficulty = this.getDifficulty(power);
 
-    const panelY = 280;
+    const panelY = 250;
     const panel = this.add.graphics();
     panel.fillStyle(0x1E293B, 0.9);
     panel.fillRoundedRect(20, panelY, GAME_WIDTH - 40, 65, 12);
@@ -517,7 +536,7 @@ export class MainMenuScene extends Phaser.Scene {
    * WS-3: Adventure panel with sweep + boss battle (y=360~560)
    */
   createAdventurePanel() {
-    const panelY = 360;
+    const panelY = 325;
     const panel = this.add.graphics();
     panel.fillStyle(0x1E293B, 0.9);
     panel.fillRoundedRect(20, panelY, GAME_WIDTH - 40, 190, 12);
@@ -629,6 +648,26 @@ export class MainMenuScene extends Phaser.Scene {
   /**
    * Perform sweep (auto-clear) of current stage
    */
+  chargeEnergyWithGems() {
+    const saveData = SaveManager.load();
+    if (!saveData) return;
+    const gems = saveData.resources?.gems ?? 0;
+
+    if (gems < 50) {
+      this.showToast('보석이 부족합니다! (필요: 50💎)');
+      return;
+    }
+
+    const result = energySystem.chargeWithGems(saveData.resources);
+    if (result.success) {
+      SaveManager.save(saveData);
+      this.registry.set('gems', saveData.resources.gems);
+      this.showToast(`에너지 충전! +${result.energyGained}🔋 (-${result.gemsSpent}💎)`);
+    } else {
+      this.showToast(result.message || '충전 실패');
+    }
+  }
+
   performSweep() {
     // EnergySystem을 통한 에너지 소모 (시간 회복 자동 적용)
     const result = energySystem.consumeEnergy(10);
@@ -661,9 +700,9 @@ export class MainMenuScene extends Phaser.Scene {
    * IdleBattleView (y=570~720, smaller)
    */
   createIdleBattleView() {
-    const viewY = 645;
+    const viewY = 525;
     const viewWidth = 640;
-    const viewHeight = 260;
+    const viewHeight = 200;
 
     this.idleBattleView = new IdleBattleView(this, GAME_WIDTH / 2, viewY, viewWidth, viewHeight);
     this.idleBattleView.setDepth(Z_INDEX.UI - 1);
@@ -685,7 +724,7 @@ export class MainMenuScene extends Phaser.Scene {
    * Idle income summary (y=780)
    */
   createIdleSummary() {
-    const summaryY = 790;
+    const summaryY = 740;
 
     const summaryBg = this.add.rectangle(GAME_WIDTH / 2, summaryY, 640, 50, COLORS.bgLight, 0.5);
     summaryBg.setStrokeStyle(1, COLORS.primary, 0.3);
@@ -718,7 +757,7 @@ export class MainMenuScene extends Phaser.Scene {
    * Content shortcut buttons (y=830~) - adventure removed, 7 buttons
    */
   createContentButtons() {
-    const startY = 830;
+    const startY = 780;
     // WS-3: 7 buttons (adventure removed, handled in adventure panel above)
     const buttons = [
       { icon: '🎲', label: '소환', scene: 'GachaScene', texture: 'icon_dice' },
