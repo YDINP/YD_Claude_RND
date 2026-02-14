@@ -97,6 +97,13 @@ export class PopupBase {
 
   hide() {
     if (!this.isOpen) return;
+    this.isOpen = false; // 즉시 플래그 해제 → 중복 호출 방지
+
+    if (!this.container || !this.scene?.tweens) {
+      this.destroy();
+      return;
+    }
+
     this.scene.tweens.add({
       targets: this.container,
       alpha: 0,

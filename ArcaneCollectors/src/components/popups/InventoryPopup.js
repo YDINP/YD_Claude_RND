@@ -9,11 +9,12 @@ import { SaveManager } from '../../systems/SaveManager.js';
 import { getItemsByType } from '../../data/index.js';
 
 export class InventoryPopup extends PopupBase {
-  constructor(scene) {
+  constructor(scene, options = {}) {
     super(scene, {
       title: '인벤토리',
       width: 680,
-      height: 1100
+      height: 1100,
+      ...options
     });
 
     this.activeTab = 'equipment';

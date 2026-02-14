@@ -12,11 +12,12 @@ import { getRarityKey, getRarityNum } from '../../utils/rarityUtils.js';
 import { ProgressionSystem } from '../../systems/ProgressionSystem.js';
 
 export class HeroListPopup extends PopupBase {
-  constructor(scene) {
+  constructor(scene, options = {}) {
     super(scene, {
       title: '영웅 목록',
       width: 680,
-      height: 1100
+      height: 1100,
+      ...options
     });
 
     this.heroes = [];

@@ -854,9 +854,11 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   refreshAfterPopup() {
-    // Refresh party display, combat power, etc after popup closes
-    // Simply restart the scene for now
-    this.scene.restart();
+    // tween 콜백 내에서 scene.restart() 직접 호출 시 충돌 방지
+    // 다음 프레임에서 안전하게 재시작
+    this.time.delayedCall(50, () => {
+      this.scene.restart();
+    });
   }
 
   showToast(message) {
