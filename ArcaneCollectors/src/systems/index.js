@@ -93,6 +93,13 @@ export {
   TowerEvents
 } from './TowerSystem.js';
 
+// 이벤트 던전 시스템
+export {
+  EventDungeonSystem,
+  eventDungeonSystem,
+  EventDungeonEvents
+} from './EventDungeonSystem.js';
+
 // 디버그 매니저
 export { DebugManager } from './DebugManager.js';
 

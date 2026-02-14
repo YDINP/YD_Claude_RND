@@ -1,0 +1,381 @@
+{
+  "events": [
+    {
+      "id": "evt_dragon_raid",
+      "name": "드래곤 습격",
+      "description": "고대의 드래곤이 마을을 위협합니다! 드래곤을 처치하고 특별한 보상을 획득하세요.",
+      "type": "raid",
+      "startDate": "2026-01-01",
+      "endDate": "2026-03-31",
+      "dailyLimit": 3,
+      "eventCurrency": "dragon_scale",
+      "stages": [
+        {
+          "id": "evt_dragon_1",
+          "name": "드래곤 전초기지",
+          "difficulty": "easy",
+          "recommendedPower": 800,
+          "enemies": [
+            {
+              "id": "enemy_goblin_warrior",
+              "level": 5
+            },
+            {
+              "id": "enemy_goblin_shaman",
+              "level": 5
+            }
+          ],
+          "rewards": {
+            "gold": 300,
+            "exp": 150,
+            "items": [
+              {
+                "id": "material_rare_essence",
+                "chance": 0.3
+              }
+            ]
+          }
+        },
+        {
+          "id": "evt_dragon_2",
+          "name": "드래곤 둥지",
+          "difficulty": "normal",
+          "recommendedPower": 1500,
+          "enemies": [
+            {
+              "id": "enemy_wolf_alpha",
+              "level": 8
+            },
+            {
+              "id": "enemy_treant",
+              "level": 8
+            }
+          ],
+          "rewards": {
+            "gold": 600,
+            "exp": 300,
+            "items": [
+              {
+                "id": "material_rare_essence",
+                "chance": 0.5
+              },
+              {
+                "id": "exp_potion_m",
+                "chance": 0.4
+              }
+            ]
+          }
+        },
+        {
+          "id": "evt_dragon_3",
+          "name": "고대 드래곤",
+          "difficulty": "hard",
+          "recommendedPower": 2500,
+          "enemies": [
+            {
+              "id": "enemy_goblin_king",
+              "level": 12
+            }
+          ],
+          "rewards": {
+            "gold": 1200,
+            "exp": 600,
+            "gems": 50,
+            "items": [
+              {
+                "id": "material_epic_essence",
+                "chance": 0.3
+              },
+              {
+                "id": "exp_potion_l",
+                "chance": 0.5
+              }
+            ]
+          }
+        }
+      ],
+      "shop": [
+        {
+          "id": "shop_dragon_ticket",
+          "name": "SR 소환권",
+          "reward": {
+            "summonTickets": 1
+          },
+          "cost": 100,
+          "limit": 5
+        },
+        {
+          "id": "shop_dragon_gems",
+          "name": "보석 상자",
+          "reward": {
+            "gems": 300
+          },
+          "cost": 150,
+          "limit": 3
+        },
+        {
+          "id": "shop_dragon_gold",
+          "name": "황금 보따리",
+          "reward": {
+            "gold": 5000
+          },
+          "cost": 50,
+          "limit": 10
+        }
+      ]
+    },
+    {
+      "id": "evt_shadow_tower",
+      "name": "그림자 탑",
+      "description": "어둠의 힘이 깃든 탑을 정복하세요. 각 층마다 강력한 적들이 기다리고 있습니다.",
+      "type": "tower",
+      "startDate": "2026-02-01",
+      "endDate": "2026-02-28",
+      "dailyLimit": 5,
+      "eventCurrency": "shadow_fragment",
+      "stages": [
+        {
+          "id": "evt_shadow_1",
+          "name": "그림자 탑 1층",
+          "difficulty": "easy",
+          "recommendedPower": 600,
+          "enemies": [
+            {
+              "id": "enemy_slime_large",
+              "level": 4
+            },
+            {
+              "id": "enemy_slime",
+              "level": 3
+            }
+          ],
+          "rewards": {
+            "gold": 250,
+            "exp": 120,
+            "items": [
+              {
+                "id": "material_common_essence",
+                "chance": 0.6
+              }
+            ]
+          }
+        },
+        {
+          "id": "evt_shadow_2",
+          "name": "그림자 탑 3층",
+          "difficulty": "normal",
+          "recommendedPower": 1200,
+          "enemies": [
+            {
+              "id": "enemy_mushroom",
+              "level": 7
+            },
+            {
+              "id": "enemy_wolf_alpha",
+              "level": 7
+            }
+          ],
+          "rewards": {
+            "gold": 500,
+            "exp": 250,
+            "items": [
+              {
+                "id": "material_rare_essence",
+                "chance": 0.4
+              }
+            ]
+          }
+        },
+        {
+          "id": "evt_shadow_3",
+          "name": "그림자 탑 5층 (보스)",
+          "difficulty": "hard",
+          "recommendedPower": 2000,
+          "enemies": [
+            {
+              "id": "enemy_goblin_king",
+              "level": 10
+            }
+          ],
+          "rewards": {
+            "gold": 1000,
+            "exp": 500,
+            "gems": 30,
+            "items": [
+              {
+                "id": "material_epic_essence",
+                "chance": 0.25
+              },
+              {
+                "id": "exp_potion_l",
+                "chance": 0.4
+              }
+            ]
+          }
+        }
+      ],
+      "shop": [
+        {
+          "id": "shop_shadow_weapon",
+          "name": "그림자 무기 상자",
+          "reward": {
+            "items": ["equipment_weapon_rare"]
+          },
+          "cost": 200,
+          "limit": 1
+        },
+        {
+          "id": "shop_shadow_ticket",
+          "name": "SR 소환권",
+          "reward": {
+            "summonTickets": 1
+          },
+          "cost": 80,
+          "limit": 3
+        },
+        {
+          "id": "shop_shadow_potion",
+          "name": "경험치 물약 (대)",
+          "reward": {
+            "items": ["exp_potion_l"]
+          },
+          "cost": 30,
+          "limit": 20
+        }
+      ]
+    },
+    {
+      "id": "evt_treasure_hunt",
+      "name": "보물 사냥",
+      "description": "전설의 보물이 숨겨진 던전을 탐험하세요. 운이 좋다면 희귀한 아이템을 획득할 수 있습니다!",
+      "type": "collection",
+      "startDate": "2026-04-01",
+      "endDate": "2026-04-30",
+      "dailyLimit": 3,
+      "eventCurrency": "treasure_key",
+      "stages": [
+        {
+          "id": "evt_treasure_1",
+          "name": "보물 던전 입구",
+          "difficulty": "easy",
+          "recommendedPower": 700,
+          "enemies": [
+            {
+              "id": "enemy_goblin",
+              "level": 5
+            },
+            {
+              "id": "enemy_wolf",
+              "level": 5
+            }
+          ],
+          "rewards": {
+            "gold": 400,
+            "exp": 180,
+            "items": [
+              {
+                "id": "material_common_essence",
+                "chance": 0.7
+              },
+              {
+                "id": "material_rare_essence",
+                "chance": 0.2
+              }
+            ]
+          }
+        },
+        {
+          "id": "evt_treasure_2",
+          "name": "보물 창고",
+          "difficulty": "normal",
+          "recommendedPower": 1400,
+          "enemies": [
+            {
+              "id": "enemy_goblin_warrior",
+              "level": 9
+            },
+            {
+              "id": "enemy_goblin_shaman",
+              "level": 9
+            }
+          ],
+          "rewards": {
+            "gold": 800,
+            "exp": 350,
+            "gems": 20,
+            "items": [
+              {
+                "id": "material_rare_essence",
+                "chance": 0.6
+              },
+              {
+                "id": "exp_potion_m",
+                "chance": 0.5
+              }
+            ]
+          }
+        },
+        {
+          "id": "evt_treasure_3",
+          "name": "전설의 보물 상자",
+          "difficulty": "hard",
+          "recommendedPower": 2200,
+          "enemies": [
+            {
+              "id": "enemy_treant",
+              "level": 11
+            },
+            {
+              "id": "enemy_wolf_alpha",
+              "level": 11
+            }
+          ],
+          "rewards": {
+            "gold": 1500,
+            "exp": 700,
+            "gems": 80,
+            "items": [
+              {
+                "id": "material_epic_essence",
+                "chance": 0.4
+              },
+              {
+                "id": "material_rare_essence",
+                "chance": 0.8
+              }
+            ]
+          }
+        }
+      ],
+      "shop": [
+        {
+          "id": "shop_treasure_ssr",
+          "name": "SSR 소환권",
+          "reward": {
+            "items": ["summon_ticket_ssr"]
+          },
+          "cost": 300,
+          "limit": 1
+        },
+        {
+          "id": "shop_treasure_gems",
+          "name": "대량 보석",
+          "reward": {
+            "gems": 500
+          },
+          "cost": 200,
+          "limit": 2
+        },
+        {
+          "id": "shop_treasure_gold",
+          "name": "골드 더미",
+          "reward": {
+            "gold": 10000
+          },
+          "cost": 100,
+          "limit": 5
+        }
+      ]
+    }
+  ]
+}
