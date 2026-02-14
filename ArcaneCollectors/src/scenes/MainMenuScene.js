@@ -355,7 +355,9 @@ export class MainMenuScene extends Phaser.Scene {
   createPartyDisplay() {
     const saveData = SaveManager.load();
     const parties = saveData?.parties || [];
-    const partyIds = Array.isArray(parties[0]) ? parties[0] : [];
+    // PartyManager 형식: {heroIds: [...]} 또는 레거시 배열 형식 둘 다 지원
+    const rawParty = parties[0];
+    const partyIds = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
     const characters = saveData?.characters || [];
 
     const panelY = 110;
@@ -449,7 +451,8 @@ export class MainMenuScene extends Phaser.Scene {
    */
   calculateCombatPower(saveData) {
     const parties = saveData?.parties || [];
-    const partyIds = Array.isArray(parties[0]) ? parties[0] : [];
+    const rawParty = parties[0];
+    const partyIds = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
     const characters = saveData?.characters || [];
 
     let totalPower = 0;
@@ -529,7 +532,7 @@ export class MainMenuScene extends Phaser.Scene {
         this.showToast('클리어한 스테이지가 없습니다!');
         return;
       }
-      this.performSweep(saveData);
+      this.performSweep();
     });
 
     // Boss battle button
@@ -551,10 +554,13 @@ export class MainMenuScene extends Phaser.Scene {
       }, 'right');
     });
 
-    // Energy display
-    this.add.text(40, panelY + 150, `🔋 에너지: ${energy}/50`, {
+    // Energy display (EnergySystem 시간 회복 반영)
+    const esStatus = energySystem.getStatus() || {};
+    const currentEnergy = esStatus.current ?? 0;
+    const maxEnergy = esStatus.max ?? 100;
+    this.add.text(40, panelY + 150, `🔋 에너지: ${currentEnergy}/${maxEnergy}`, {
       fontSize: '13px', fontFamily: 'Arial',
-      color: energy >= 10 ? '#10B981' : '#EF4444'
+      color: currentEnergy >= 10 ? '#10B981' : '#EF4444'
     });
 
     // Stage name
@@ -566,9 +572,10 @@ export class MainMenuScene extends Phaser.Scene {
   /**
    * Perform sweep (auto-clear) of current stage
    */
-  performSweep(saveData) {
-    const energy = saveData?.resources?.energy ?? 0;
-    if (energy < 10) {
+  performSweep() {
+    // EnergySystem을 통한 에너지 소모 (시간 회복 자동 적용)
+    const result = energySystem.consumeEnergy(10);
+    if (!result.success) {
       this.showToast('에너지가 부족합니다!');
       return;
     }
@@ -578,7 +585,6 @@ export class MainMenuScene extends Phaser.Scene {
 
     const data = SaveManager.load();
     if (data) {
-      data.resources.energy = Math.max(0, (data.resources.energy || 50) - 10);
       data.resources.gold = (data.resources.gold || 0) + goldReward;
       data.statistics = data.statistics || {};
       data.statistics.totalGoldEarned = (data.statistics.totalGoldEarned || 0) + goldReward;
@@ -610,7 +616,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     const saveData = SaveManager.load();
     const parties = saveData.parties || [];
-    const party = Array.isArray(parties[0]) ? parties[0] : [];
+    const rawParty = parties[0];
+    const party = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
     const partyHeroes = party.map(heroId => (saveData.characters || []).find(c => c.id === heroId));
     this.idleBattleView.updateParty(partyHeroes);
 
@@ -736,9 +743,6 @@ export class MainMenuScene extends Phaser.Scene {
       });
       bg.on('pointerdown', () => {
         switch (btn.scene) {
-          case 'StageSelectScene':
-            transitionManager.slideTransition(this, btn.scene, {}, 'left');
-            break;
           case 'HeroListScene':
           case 'InventoryScene':
           case 'QuestScene':
@@ -746,6 +750,9 @@ export class MainMenuScene extends Phaser.Scene {
             break;
           case 'SettingsScene':
             transitionManager.slideTransition(this, btn.scene, {}, 'up');
+            break;
+          case 'PartyEditScene':
+            transitionManager.fadeTransition(this, btn.scene, { returnTo: 'MainMenuScene' });
             break;
           default:
             transitionManager.fadeTransition(this, btn.scene);

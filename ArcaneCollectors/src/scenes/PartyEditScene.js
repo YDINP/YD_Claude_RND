@@ -399,7 +399,13 @@ export class PartyEditScene extends Phaser.Scene {
       if (synergies && synergies.length > 0) {
         synergies.slice(0, 3).forEach((syn, i) => {
           const icon = syn.type === 'cult' ? '⛪' : syn.type === 'mood' ? '🎭' : syn.type === 'role' ? '⚔️' : '✨';
-          this.synergyTexts[i].setText(`${icon} ${syn.name}: ${syn.description || syn.effect || ''}`);
+          // syn.effect는 객체 {atk: 8, def: 5, ...} → 문자열 포맷
+          let effectStr = '';
+          if (syn.effect && typeof syn.effect === 'object') {
+            const labels = { atk: '공격', def: '방어', hp: 'HP', spd: '속도', all: '전체', skill_dmg: '스킬뎀', lifesteal: '흡혈', crit_rate: '치확', crit_dmg: '치뎀' };
+            effectStr = Object.entries(syn.effect).map(([k, v]) => `${labels[k] || k}+${v}%`).join(' ');
+          }
+          this.synergyTexts[i].setText(`${icon} ${syn.name}${effectStr ? ' ' + effectStr : ''}`);
         });
       } else {
         this.synergyTexts[0].setText('활성 시너지 없음');
