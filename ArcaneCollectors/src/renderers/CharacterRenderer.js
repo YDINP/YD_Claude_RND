@@ -192,10 +192,20 @@ class CharacterRenderer {
     const cultColor = CULT_COLORS[hero.cult] || 0x666666;
     const moodConfig = MOODS[hero.mood];
 
-    // 배경
+    // ART-1.3: 등급별 배경 레이어
     const bg = scene.add.graphics();
-    bg.fillStyle(cultColor, 0.2);
+
+    // 교단 색상 베이스
+    bg.fillStyle(cultColor, 0.15);
     bg.fillRoundedRect(-halfW, -halfH, width, height, 6);
+
+    // 분위기(Mood) 색상 오버레이
+    if (moodConfig) {
+      bg.fillStyle(moodConfig.color, 0.08);
+      bg.fillRoundedRect(-halfW, -halfH, width, height, 6);
+    }
+
+    // 메인 배경
     bg.fillStyle(COLORS.backgroundLight, 0.85);
     bg.fillRoundedRect(-halfW, -halfH, width, height, 6);
     container.add(bg);
@@ -207,15 +217,8 @@ class CharacterRenderer {
       portrait.setDisplaySize(width - 8, height - 8);
       container.add(portrait);
     } else {
-      // 최종 폴백: 이니셜
-      const initial = hero.name ? hero.name.charAt(0) : '?';
-      const text = scene.add.text(0, 0, initial, {
-        fontFamily: '"Noto Sans KR", sans-serif',
-        fontSize: '28px',
-        fontStyle: 'bold',
-        color: '#94A3B8'
-      }).setOrigin(0.5);
-      container.add(text);
+      // ART-1.3: 직업별 실루엣 폴백
+      this._drawClassSilhouette(scene, container, hero.class, width * 0.5);
     }
 
     // 분위기 아이콘 (우상단)
@@ -230,12 +233,8 @@ class CharacterRenderer {
       container.add(moodDot);
     }
 
-    // 등급 테두리
-    const borderWidth = rKey === 'SSR' ? 3 : (rKey === 'SR' ? 2 : 1);
-    const border = scene.add.graphics();
-    border.lineStyle(borderWidth, rarityConfig.color, 1);
-    border.strokeRoundedRect(-halfW, -halfH, width, height, 6);
-    container.add(border);
+    // ART-1.3: 등급 프레임 강화
+    this._drawRarityFrame(scene, container, rKey, width, height, halfW, halfH);
 
     container.setSize(width, height);
     return container;
@@ -473,6 +472,117 @@ class CharacterRenderer {
    */
   clearCache() {
     this._textureCache.clear();
+  }
+
+  // ============================================
+  // ART-1.3: 강화 렌더링 헬퍼 (직업별 실루엣 + 등급 프레임)
+  // ============================================
+
+  /**
+   * 직업별 실루엣 그리기
+   * @param {Phaser.Scene} scene
+   * @param {Phaser.GameObjects.Container} container
+   * @param {string} heroClass - 'warrior'|'mage'|'healer'|'archer'
+   * @param {number} size - 아이콘 크기
+   */
+  _drawClassSilhouette(scene, container, heroClass, size) {
+    const graphics = scene.add.graphics();
+    const classColors = {
+      warrior: 0xEF4444, // 빨강
+      mage: 0x8B5CF6,    // 보라
+      healer: 0x10B981,  // 초록
+      archer: 0x3B82F6   // 파랑
+    };
+    const color = classColors[heroClass] || 0x94A3B8;
+
+    graphics.fillStyle(color, 0.6);
+
+    switch (heroClass) {
+      case 'warrior':
+        // 검 실루엣
+        graphics.fillTriangle(0, -size * 0.4, -size * 0.15, size * 0.3, size * 0.15, size * 0.3);
+        graphics.fillRect(-size * 0.2, size * 0.3, size * 0.4, size * 0.2); // 손잡이
+        break;
+      case 'mage':
+        // 지팡이 실루엣
+        graphics.fillRect(-size * 0.05, -size * 0.5, size * 0.1, size * 0.8);
+        graphics.fillCircle(0, -size * 0.5, size * 0.2); // 보석
+        break;
+      case 'healer':
+        // 십자가 실루엣
+        graphics.fillRect(-size * 0.3, -size * 0.08, size * 0.6, size * 0.16);
+        graphics.fillRect(-size * 0.08, -size * 0.4, size * 0.16, size * 0.8);
+        break;
+      case 'archer':
+        // 활 실루엣
+        graphics.lineStyle(size * 0.1, color, 1);
+        graphics.arc(0, 0, size * 0.3, -Math.PI * 0.7, Math.PI * 0.7);
+        graphics.lineBetween(-size * 0.2, -size * 0.25, -size * 0.2, size * 0.25);
+        break;
+      default:
+        // 기본: 물음표
+        graphics.fillCircle(0, -size * 0.2, size * 0.3);
+        graphics.fillRect(-size * 0.1, 0, size * 0.2, size * 0.3);
+    }
+
+    container.add(graphics);
+  }
+
+  /**
+   * 등급별 프레임 그리기 (강화 버전)
+   * @param {Phaser.Scene} scene
+   * @param {Phaser.GameObjects.Container} container
+   * @param {string} rKey - 'N'|'R'|'SR'|'SSR'|'UR'
+   * @param {number} width
+   * @param {number} height
+   * @param {number} halfW
+   * @param {number} halfH
+   */
+  _drawRarityFrame(scene, container, rKey, width, height, halfW, halfH) {
+    const rarityConfig = RARITY[rKey] || RARITY.N;
+
+    // SSR/UR 글로우 효과
+    if (rKey === 'SSR' || rKey === 'UR') {
+      const glow = scene.add.graphics();
+      glow.fillStyle(rarityConfig.color, 0.2);
+      glow.fillRoundedRect(-halfW - 3, -halfH - 3, width + 6, height + 6, 8);
+      container.add(glow);
+      container.sendToBack(glow);
+
+      // 빛나는 파티클 (4개)
+      for (let i = 0; i < 4; i++) {
+        const particle = scene.add.circle(
+          Phaser.Math.Between(-halfW, halfW),
+          Phaser.Math.Between(-halfH, halfH),
+          2,
+          rarityConfig.color,
+          0.6
+        );
+        container.add(particle);
+        scene.tweens.add({
+          targets: particle,
+          alpha: 0,
+          y: particle.y - 20,
+          duration: 1500,
+          repeat: -1,
+          delay: i * 375
+        });
+      }
+    }
+
+    // 테두리
+    const borderWidth = rKey === 'SSR' ? 3 : (rKey === 'SR' ? 2 : (rKey === 'UR' ? 4 : 1));
+    const border = scene.add.graphics();
+    border.lineStyle(borderWidth, rarityConfig.color, 1);
+    border.strokeRoundedRect(-halfW, -halfH, width, height, 6);
+
+    // UR 추가 효과: 이중 테두리
+    if (rKey === 'UR') {
+      border.lineStyle(1, 0xffffff, 0.5);
+      border.strokeRoundedRect(-halfW - 2, -halfH - 2, width + 4, height + 4, 7);
+    }
+
+    container.add(border);
   }
 
   /**
