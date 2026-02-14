@@ -828,6 +828,9 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   openPopup(key) {
+    // 이미 열린 팝업이 있으면 무시
+    if (this.activePopup) return;
+
     const popups = {
       gacha: GachaPopup,
       herolist: HeroListPopup,
@@ -840,8 +843,12 @@ export class MainMenuScene extends Phaser.Scene {
     const PopupClass = popups[key];
     if (PopupClass) {
       const popup = new PopupClass(this, {
-        onClose: () => this.refreshAfterPopup()
+        onClose: () => {
+          this.activePopup = null;
+          this.refreshAfterPopup();
+        }
       });
+      this.activePopup = popup;
       popup.show();
     }
   }

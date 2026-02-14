@@ -43,8 +43,14 @@ export class HeroListPopup extends PopupBase {
   }
 
   loadHeroes() {
-    const saveData = SaveManager.load();
-    this.heroes = saveData?.characters || [];
+    // registry에서 정규화된 영웅 로드 (name, emoji, rarity 등 포함)
+    const registryHeroes = this.scene.registry.get('ownedHeroes') || [];
+    if (registryHeroes.length > 0) {
+      this.heroes = registryHeroes;
+    } else {
+      const saveData = SaveManager.load();
+      this.heroes = saveData?.characters || [];
+    }
   }
 
   createFilterBar() {
