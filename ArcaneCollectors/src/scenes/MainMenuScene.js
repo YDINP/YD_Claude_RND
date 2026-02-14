@@ -13,6 +13,7 @@ import { IdleProgressSystem } from '../systems/IdleProgressSystem.js';
 import { IdleBattleView } from '../components/IdleBattleView.js';
 import { getCharacter, calculatePower, getStage, getChapterStages } from '../data/index.ts';
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
+import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -502,15 +503,17 @@ export class MainMenuScene extends Phaser.Scene {
     partyIds.forEach(heroId => {
       const charData = characters.find(c => c.id === heroId || c.characterId === heroId);
       if (!charData) return;
-      const staticData = getCharacter(heroId);
-      if (!staticData) return;
-
-      const stats = staticData.stats;
-      if (!stats) return;
-      const level = charData.level || 1;
-      const starMult = 1 + (charData.stars || 1) * 0.2;
-      const basePower = (stats.hp + stats.atk * 2 + stats.def + stats.spd);
-      totalPower += Math.floor(basePower * level * starMult);
+      try {
+        totalPower += ProgressionSystem.calculatePower({
+          ...charData,
+          characterId: heroId,
+          skillLevels: charData.skillLevels || [1, 1]
+        });
+      } catch (e) {
+        // Fallback
+        const stats = charData.stats || {};
+        totalPower += Math.floor((stats.hp || 0) / 10 + (stats.atk || 0) + (stats.def || 0) + (stats.spd || 0));
+      }
     });
     return totalPower || 400;
   }
