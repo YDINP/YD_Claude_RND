@@ -1,7 +1,7 @@
 /**
  * IdleProgressSystem.test.js
  * Unit tests for IdleProgressSystem - 방치형 진행 시스템
- * 14 tests total
+ * Updated for new boss battle mechanics (DPS-based)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -31,6 +31,44 @@ vi.mock('../../src/systems/ProgressionSystem.js', () => ({
   }
 }));
 
+vi.mock('../../src/data/index.ts', () => ({
+  getChapter: vi.fn(() => ({ id: 'chapter_1', name: '고대의 숲' })),
+  getEnemy: vi.fn(() => ({
+    id: 'enemy_goblin_king',
+    name: '고블린 왕',
+    type: 'boss',
+    stats: { hp: 1500, atk: 80, def: 40, spd: 30 },
+    growthStats: { hp: 150, atk: 8, def: 4, spd: 3 },
+    skills: [],
+    expReward: 300,
+    goldReward: 600
+  })),
+  getChapterStages: vi.fn(() => [
+    {
+      id: '1-1',
+      name: '슬라임 평원',
+      enemies: [{ id: 'enemy_slime', level: 1 }],
+      rewards: { gold: 100, exp: 50 }
+    },
+    {
+      id: '1-5',
+      name: '고블린 왕의 성',
+      isBoss: true,
+      enemies: [{ id: 'enemy_goblin_king', level: 5 }],
+      rewards: { gold: 600, exp: 300 }
+    }
+  ]),
+  calculateEnemyStats: vi.fn((enemy, level) => ({
+    hp: enemy.stats.hp + (enemy.growthStats?.hp || 0) * (level - 1),
+    atk: enemy.stats.atk + (enemy.growthStats?.atk || 0) * (level - 1),
+    def: enemy.stats.def + (enemy.growthStats?.def || 0) * (level - 1),
+    spd: enemy.stats.spd + (enemy.growthStats?.spd || 0) * (level - 1)
+  })),
+  getCharacter: vi.fn(),
+  calculatePower: vi.fn(),
+  getStage: vi.fn()
+}));
+
 import { IdleProgressSystem } from '../../src/systems/IdleProgressSystem.js';
 import { SaveManager } from '../../src/systems/SaveManager.js';
 
@@ -46,9 +84,10 @@ describe('IdleProgressSystem', () => {
 
   describe('constructor', () => {
     it('sets correct initial values', () => {
-      expect(idleSystem.battleInterval).toBe(5000);
-      expect(idleSystem.winsToAdvance).toBe(3);
-      expect(idleSystem.battleWinCount).toBe(0);
+      expect(idleSystem.battleInterval).toBe(1500);
+      expect(idleSystem.accumulatedDamage).toBe(0);
+      expect(idleSystem.currentBossHp).toBe(0);
+      expect(idleSystem.currentBossData).toBe(null);
     });
 
     it('initializes current stage', () => {
@@ -105,8 +144,6 @@ describe('IdleProgressSystem', () => {
 
   describe('advanceStage', () => {
     it('increments stage correctly', () => {
-      // advanceStage calls getCurrentStage() which reads clearedStages
-      // So we need to set up both getProgress and load mocks
       SaveManager.getProgress.mockReturnValue({
         clearedStages: {
           'stage_1_1': true
@@ -126,7 +163,7 @@ describe('IdleProgressSystem', () => {
       expect(SaveManager.save).toHaveBeenCalled();
     });
 
-    it('resets win count after advancing', () => {
+    it('resets accumulated damage and boss data after advancing', () => {
       SaveManager.getProgress.mockReturnValue({
         clearedStages: {}
       });
@@ -134,16 +171,15 @@ describe('IdleProgressSystem', () => {
         progress: { clearedStages: {} }
       });
 
-      idleSystem.battleWinCount = 3;
+      idleSystem.accumulatedDamage = 500;
+      idleSystem.currentBossData = { name: 'Test Boss' };
       idleSystem.advanceStage();
 
-      expect(idleSystem.battleWinCount).toBe(0);
+      expect(idleSystem.accumulatedDamage).toBe(0);
+      expect(idleSystem.currentBossData).toBe(null);
     });
 
     it('advances to next chapter after stage 10', () => {
-      // For this test, we don't pre-populate clearedStages
-      // advanceStage will call getCurrentStage which will read clearedStages
-      // But since we want to test stage 10 -> chapter 2, we set up empty
       SaveManager.getProgress.mockReturnValue({
         clearedStages: {}
       });
@@ -155,54 +191,126 @@ describe('IdleProgressSystem', () => {
       // Set current stage to 1-10 manually
       idleSystem.currentStage = { chapter: 1, stage: 10, name: '고블린 왕의 성' };
 
-      // Now call advanceStage - it should move to 2-1
       idleSystem.advanceStage();
 
-      // The advanceStage logic:
-      // 1. Gets current = getCurrentStage() = 1-1 (since cleared is empty)
-      // 2. But we manually set currentStage to 1-10
-      // 3. Actually advanceStage uses getCurrentStage(), not this.currentStage
-      // So we need to mock getCurrentStage differently
-
-      // Let's just test that it saves to clearedStages
       expect(SaveManager.save).toHaveBeenCalled();
     });
   });
 
+  describe('getBossForCurrentStage', () => {
+    it('returns boss data with correct structure', () => {
+      const boss = idleSystem.getBossForCurrentStage();
+
+      expect(boss).toHaveProperty('id');
+      expect(boss).toHaveProperty('name');
+      expect(boss).toHaveProperty('hp');
+      expect(boss).toHaveProperty('atk');
+      expect(boss).toHaveProperty('def');
+      expect(boss).toHaveProperty('emoji');
+      expect(boss).toHaveProperty('goldReward');
+      expect(boss).toHaveProperty('expReward');
+    });
+
+    it('returns goblin king as default boss', () => {
+      const boss = idleSystem.getBossForCurrentStage();
+
+      expect(boss.id).toBe('enemy_goblin_king');
+      expect(boss.name).toBe('고블린 왕');
+      expect(boss.hp).toBeGreaterThan(0);
+    });
+  });
+
+  describe('calculateDPS', () => {
+    it('calculates DPS based on party power', () => {
+      const dps = idleSystem.calculateDPS();
+
+      expect(dps).toBeGreaterThan(0);
+      // With party power 400, baseDPS = 400 * 0.15 = 60
+      // With 0.9-1.1 multiplier, should be around 54-66
+      expect(dps).toBeGreaterThanOrEqual(54);
+      expect(dps).toBeLessThanOrEqual(66);
+    });
+  });
+
+  describe('loadCurrentBoss', () => {
+    it('loads boss data and initializes HP values', () => {
+      idleSystem.loadCurrentBoss();
+
+      expect(idleSystem.currentBossData).not.toBe(null);
+      expect(idleSystem.currentBossHp).toBeGreaterThan(0);
+      expect(idleSystem.accumulatedDamage).toBe(0);
+      expect(idleSystem.currentBossData.name).toBe('고블린 왕');
+    });
+  });
+
   describe('simulateBattle', () => {
-    it('returns battle results with enemy and damage', () => {
+    it('returns battle results with boss and damage', () => {
       const result = idleSystem.simulateBattle();
 
-      expect(result).toHaveProperty('enemy');
+      expect(result).toHaveProperty('boss');
       expect(result).toHaveProperty('damage');
+      expect(result).toHaveProperty('accumulatedDamage');
+      expect(result).toHaveProperty('bossMaxHp');
+      expect(result).toHaveProperty('progress');
       expect(result).toHaveProperty('reward');
-      expect(result.enemy).toHaveProperty('name');
+      expect(result.boss).toHaveProperty('name');
       expect(result.damage).toBeGreaterThan(0);
     });
 
-    it('increments win count on battle', () => {
-      const initialCount = idleSystem.battleWinCount;
-      idleSystem.simulateBattle();
+    it('accumulates damage correctly', () => {
+      const result1 = idleSystem.simulateBattle();
+      const firstDamage = result1.damage;
+      const firstAccumulated = result1.accumulatedDamage;
 
-      expect(idleSystem.battleWinCount).toBe(initialCount + 1);
+      expect(firstAccumulated).toBe(firstDamage);
+
+      const result2 = idleSystem.simulateBattle();
+      const secondAccumulated = result2.accumulatedDamage;
+
+      expect(secondAccumulated).toBeGreaterThan(firstAccumulated);
     });
 
-    it('advances stage after 3 wins', () => {
+    it('calculates progress as ratio of accumulated damage to boss max HP', () => {
+      const result = idleSystem.simulateBattle();
+
+      expect(result.progress).toBeGreaterThanOrEqual(0);
+      expect(result.progress).toBeLessThanOrEqual(1);
+
+      const expectedProgress = result.accumulatedDamage / result.bossMaxHp;
+      expect(result.progress).toBeCloseTo(expectedProgress, 5);
+    });
+
+    it('advances stage when boss HP is depleted', () => {
       SaveManager.load.mockReturnValue({
         progress: { clearedStages: {} }
       });
 
-      idleSystem.battleWinCount = 2;
+      // Force high accumulated damage to defeat boss
+      idleSystem.loadCurrentBoss();
+      const bossHp = idleSystem.currentBossHp;
+      idleSystem.accumulatedDamage = bossHp - 10;
+
       const result = idleSystem.simulateBattle();
 
       expect(result.stageAdvanced).toBe(true);
-      expect(idleSystem.battleWinCount).toBe(0);
+      expect(idleSystem.accumulatedDamage).toBe(0);
+      expect(idleSystem.currentBossData).toBe(null);
     });
 
-    it('sets duration to 5000ms', () => {
+    it('does not advance stage when boss HP remains', () => {
+      idleSystem.loadCurrentBoss();
+      idleSystem.accumulatedDamage = 0;
+
       const result = idleSystem.simulateBattle();
 
-      expect(result.duration).toBe(5000);
+      expect(result.stageAdvanced).toBe(false);
+    });
+
+    it('provides gold and exp rewards', () => {
+      const result = idleSystem.simulateBattle();
+
+      expect(result.reward.gold).toBeGreaterThanOrEqual(0);
+      expect(result.reward.exp).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -215,7 +323,7 @@ describe('IdleProgressSystem', () => {
       expect(rewards.exp).toBe(0);
     });
 
-    it('calculates rewards for valid offline time', () => {
+    it('calculates rewards based on DPS and boss kills', () => {
       const lastLogout = Date.now() - 120000; // 2 minutes ago
       const rewards = idleSystem.calculateOfflineRewards(lastLogout);
 
@@ -225,13 +333,26 @@ describe('IdleProgressSystem', () => {
 
     it('caps offline rewards at 12 hours', () => {
       const thirteenHoursAgo = Date.now() - (13 * 60 * 60 * 1000);
-      const twelveHoursAgo = Date.now() - (12 * 60 * 60 * 1000);
+      const maxMs = 12 * 60 * 60 * 1000;
 
       const reward13h = idleSystem.calculateOfflineRewards(thirteenHoursAgo);
-      const reward12h = idleSystem.calculateOfflineRewards(twelveHoursAgo);
 
-      expect(reward13h.gold).toBe(reward12h.gold);
-      expect(reward13h.exp).toBe(reward12h.exp);
+      // Verify that duration is capped at 12 hours max
+      expect(reward13h.duration).toBe(maxMs);
+
+      // Verify rewards are non-zero (capped, but still rewarded)
+      expect(reward13h.gold).toBeGreaterThan(0);
+      expect(reward13h.exp).toBeGreaterThan(0);
+    });
+
+    it('generates items based on offline hours', () => {
+      const twoHoursAgo = Date.now() - (2 * 60 * 60 * 1000);
+      const rewards = idleSystem.calculateOfflineRewards(twoHoursAgo);
+
+      expect(rewards.items).toBeInstanceOf(Array);
+      // 1시간당 50% 확률이므로 0~2개 예상
+      expect(rewards.items.length).toBeGreaterThanOrEqual(0);
+      expect(rewards.items.length).toBeLessThanOrEqual(2);
     });
   });
 
@@ -246,7 +367,7 @@ describe('IdleProgressSystem', () => {
   });
 
   describe('boss detection', () => {
-    it('detects boss stage (stage 10, 20, 30, etc.)', () => {
+    it('detects boss stage (stage 10)', () => {
       const bossStage = idleSystem.getStageName(1, 10);
       expect(bossStage).toContain('왕');
     });

@@ -721,6 +721,11 @@ export class MainMenuScene extends Phaser.Scene {
 
     if (hasParty) {
       this.idleBattleView.updateParty(partyHeroes);
+      // 보스 로드 + 표시
+      this.idleSystem.loadCurrentBoss();
+      if (this.idleSystem.currentBossData) {
+        this.idleBattleView.showBoss(this.idleSystem.currentBossData);
+      }
       this.idleBattleView.startBattleCycle();
     } else {
       // Show empty party message
@@ -881,8 +886,13 @@ export class MainMenuScene extends Phaser.Scene {
 
       if (partyHeroes.length > 0) {
         this.idleBattleView.updateParty(partyHeroes);
+        // 보스 재로드 (파티 변경 시 DPS 변경)
+        this.idleSystem.loadCurrentBoss();
+        if (this.idleSystem.currentBossData) {
+          this.idleBattleView.showNextBoss(this.idleSystem.currentBossData);
+        }
         // 전투 사이클이 멈춰있다면 재시작
-        if (!this.idleBattleView.battleCycleTimer) {
+        if (!this.idleBattleView.battleCycleTimer && !this.idleBattleView.attackInterval) {
           this.idleBattleView.startBattleCycle();
         }
       }
@@ -931,19 +941,28 @@ export class MainMenuScene extends Phaser.Scene {
     // 방치 전투 진행 체크
     if (this.idleSystem) {
       const battleResult = this.idleSystem.updateProgress(this.game.loop.delta);
-      if (battleResult) {
+      if (battleResult && this.idleBattleView) {
+        // 데미지 텍스트 + HP 바 + 프로그레스 바 업데이트
+        this.idleBattleView.showDamageText(battleResult.damage);
+        this.idleBattleView.updateBossHp(battleResult.accumulatedDamage, battleResult.bossMaxHp);
+        this.idleBattleView.updateProgress(battleResult.progress);
+
         // 스테이지 진행 체크
         if (battleResult.stageAdvanced) {
           const currentStage = this.idleSystem.getCurrentStage();
           this.showToast(`챕터 ${currentStage.chapter}-${currentStage.stage} 클리어!`);
-          // IdleBattleView 스테이지 정보 업데이트
-          if (this.idleBattleView) {
-            this.idleBattleView.updateStageInfo(
-              currentStage.chapter,
-              currentStage.stage,
-              currentStage.name
-            );
-          }
+          this.idleBattleView.updateStageInfo(currentStage.chapter, currentStage.stage, currentStage.name);
+          this.idleBattleView.defeatBoss();
+
+          // 2초 후 다음 보스 등장
+          this.time.delayedCall(2000, () => {
+            if (this.idleSystem && this.idleBattleView) {
+              this.idleSystem.loadCurrentBoss();
+              if (this.idleSystem.currentBossData) {
+                this.idleBattleView.showNextBoss(this.idleSystem.currentBossData);
+              }
+            }
+          });
         }
       }
     }

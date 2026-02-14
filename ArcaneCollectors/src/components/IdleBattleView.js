@@ -18,9 +18,11 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
 
     this.viewWidth = width;
     this.viewHeight = height;
-    this.battlePhase = 0; // 0: idle, 1: enemy appear, 2: attack, 3: victory
-    this.phaseTimer = 0;
-    this.currentEnemy = null;
+    this.currentBoss = null;          // 현재 보스 데이터
+    this.bossMaxHp = 0;               // 보스 최대 HP
+    this.bossCurrentHp = 0;           // 보스 현재 HP (비주얼용)
+    this.attackInterval = null;        // 공격 반복 타이머
+    this.isDefeating = false;          // 처치 연출 중 플래그
     this.pendingDelays = [];
 
     this.createBackground();
@@ -118,9 +120,9 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.enemyEmoji.setVisible(false);
     this.add(this.enemyEmoji);
 
-    // 적 이름
+    // 적 이름 (보스 이름 - 크게 강조)
     this.enemyName = this.scene.add.text(enemyX, enemyY + 55, '', {
-      fontSize: '12px',
+      fontSize: '14px',
       fontFamily: 'Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -134,6 +136,16 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.enemyHpBg.setVisible(false);
     this.enemyHpBar.setVisible(false);
     this.add([this.enemyHpBg, this.enemyHpBar]);
+
+    // 보스 HP 텍스트 (수치 표시)
+    this.bossHpText = this.scene.add.text(enemyX, enemyY - 65, '', {
+      fontSize: '10px',
+      fontFamily: 'Arial',
+      color: '#FFFFFF',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.bossHpText.setVisible(false);
+    this.add(this.bossHpText);
   }
 
   /**
@@ -155,20 +167,20 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.progressBg = this.scene.add.rectangle(0, infoY, this.viewWidth - 40, 8, COLORS.bgLight, 0.6);
     this.add(this.progressBg);
 
-    // 진행 바
+    // 진행 바 (보스 HP 테마로 빨간색)
     this.progressBar = this.scene.add.rectangle(
       -this.viewWidth / 2 + 20,
       infoY,
       (this.viewWidth - 40) * 0.3,
       8,
-      COLORS.accent,
+      COLORS.danger,
       1
     );
     this.progressBar.setOrigin(0, 0.5);
     this.add(this.progressBar);
 
-    // 스테이지 텍스트
-    this.stageText = this.scene.add.text(0, infoY + 18, '챕터 1-1: 슬라임 평원', {
+    // 스테이지 텍스트 (보스 이름 포함)
+    this.stageText = this.scene.add.text(0, infoY + 18, '챕터 1-1: 슬라임 킹', {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
@@ -185,90 +197,64 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
       return;
     }
 
+    // 기존 타이머 정리
     if (this.battleCycleTimer) {
       this.battleCycleTimer.remove();
     }
+    if (this.attackInterval) {
+      this.attackInterval.remove();
+    }
 
-    this.battleCycleTimer = this.scene.time.addEvent({
-      delay: 5000, // 전투 시퀀스(4s) + 여유(1s) = 5초 간격
+    // 1.5초 간격 연속 공격 루프
+    this.attackInterval = this.scene.time.addEvent({
+      delay: 1500,
       callback: () => {
-        this.runBattleSequence();
+        if (!this.isDefeating) {
+          this.performAttack();
+        }
       },
       loop: true
     });
 
-    // 즉시 첫 전투 시작
-    this.runBattleSequence();
+    // 즉시 첫 공격
+    this.performAttack();
   }
 
   /**
-   * 전투 시퀀스 실행
+   * 보스 표시
    */
-  runBattleSequence() {
-    // 이전 시퀀스 delayedCall 정리
-    this.pendingDelays.forEach(d => d.remove());
-    this.pendingDelays = [];
+  showBoss(bossData) {
+    if (!bossData) return;
+    this.currentBoss = bossData;
+    this.bossMaxHp = bossData.hp || 1000;
+    this.bossCurrentHp = this.bossMaxHp;
+    this.isDefeating = false;
 
-    // Phase 1: 적 등장 (0-1s)
-    this.pendingDelays.push(this.scene.time.delayedCall(0, () => {
-      this.showEnemy();
-    }));
-
-    // Phase 2: 공격 (1-4s)
-    this.pendingDelays.push(this.scene.time.delayedCall(1000, () => {
-      this.performAttack();
-    }));
-
-    this.pendingDelays.push(this.scene.time.delayedCall(2000, () => {
-      this.performAttack();
-    }));
-
-    this.pendingDelays.push(this.scene.time.delayedCall(3000, () => {
-      this.performAttack();
-    }));
-
-    // Phase 3: 적 처치 + 보상 (4-5s)
-    this.pendingDelays.push(this.scene.time.delayedCall(4000, () => {
-      this.defeatEnemy();
-    }));
-  }
-
-  /**
-   * 적 등장 애니메이션
-   */
-  showEnemy() {
-    // 랜덤 적 선택
-    const enemies = [
-      { name: '슬라임', emoji: '🟢', color: COLORS.success },
-      { name: '고블린', emoji: '👺', color: COLORS.danger },
-      { name: '늑대', emoji: '🐺', color: COLORS.textDark },
-      { name: '독버섯', emoji: '🍄', color: COLORS.accent }
-    ];
-    const enemy = enemies[Math.floor(Math.random() * enemies.length)];
-
-    this.currentEnemy = enemy;
-    this.attackCount = 0;
-
-    // 적 표시
-    this.enemyCircle.setFillStyle(enemy.color, 0.8);
+    // 보스 표시
+    this.enemyCircle.setFillStyle(COLORS.danger, 0.9);
     this.enemyCircle.setVisible(true);
-    this.enemyEmoji.setText(enemy.emoji);
+    this.enemyEmoji.setText(bossData.emoji || '👹');
     this.enemyEmoji.setVisible(true);
-    this.enemyName.setText(enemy.name);
+    this.enemyName.setText(bossData.name || '보스');
     this.enemyName.setVisible(true);
     this.enemyHpBg.setVisible(true);
     this.enemyHpBar.setVisible(true);
+    if (this.bossHpText) {
+      this.bossHpText.setText(`${this.bossMaxHp.toLocaleString()} / ${this.bossMaxHp.toLocaleString()}`);
+      this.bossHpText.setVisible(true);
+    }
 
-    // 슬라이드 인 애니메이션
+    // 슬라이드 인 (최초만)
     const targetX = this.viewWidth / 2 - 80;
     this.enemyCircle.x = this.viewWidth / 2 + 100;
     this.enemyEmoji.x = this.viewWidth / 2 + 100;
     this.enemyName.x = this.viewWidth / 2 + 100;
     this.enemyHpBg.x = this.viewWidth / 2 + 100;
     this.enemyHpBar.x = this.viewWidth / 2 + 100;
+    if (this.bossHpText) this.bossHpText.x = this.viewWidth / 2 + 100;
 
     this.scene.tweens.add({
-      targets: [this.enemyCircle, this.enemyEmoji, this.enemyName, this.enemyHpBg, this.enemyHpBar],
+      targets: [this.enemyCircle, this.enemyEmoji, this.enemyName, this.enemyHpBg, this.enemyHpBar, this.bossHpText].filter(Boolean),
       x: targetX,
       duration: 600,
       ease: 'Back.easeOut'
@@ -276,13 +262,14 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
 
     // HP 바 초기화
     this.enemyHpBar.setScale(1, 1);
+    this.enemyHpBar.setFillStyle(COLORS.success, 1);
   }
 
   /**
-   * 공격 수행
+   * 공격 수행 (시각적 연출만)
    */
   performAttack() {
-    if (!this.currentEnemy) return;
+    if (!this.currentBoss || this.isDefeating) return;
 
     const startX = -this.viewWidth / 2 + 60;
     const endX = this.viewWidth / 2 - 80;
@@ -316,18 +303,45 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
       duration: 100,
       yoyo: true
     });
+  }
 
-    // HP 감소 — 3회 공격으로 정확히 0 도달 (1.0 → 0.67 → 0.33 → 0)
-    this.attackCount = (this.attackCount || 0) + 1;
-    const newScale = Math.max(0, 1 - (this.attackCount / 3));
+  /**
+   * 보스 HP 업데이트 (외부에서 호출)
+   */
+  updateBossHp(accumulatedDamage, bossMaxHp) {
+    if (!this.currentBoss) return;
+
+    const remaining = Math.max(0, bossMaxHp - accumulatedDamage);
+    const ratio = remaining / bossMaxHp;
+
+    // HP 바 스케일 조정 (tween)
     this.scene.tweens.add({
       targets: this.enemyHpBar,
-      scaleX: newScale,
+      scaleX: ratio,
       duration: 200
     });
 
-    // 데미지 텍스트
-    const damageText = this.scene.add.text(endX - 40, y - 20, `-${Phaser.Math.Between(50, 150)}`, {
+    // HP 텍스트 업데이트
+    if (this.bossHpText) {
+      this.bossHpText.setText(`${Math.floor(remaining).toLocaleString()} / ${bossMaxHp.toLocaleString()}`);
+    }
+
+    // HP 비율에 따라 색상 변경
+    if (ratio < 0.3) {
+      this.enemyHpBar.setFillStyle(COLORS.danger, 1);
+    } else if (ratio < 0.6) {
+      this.enemyHpBar.setFillStyle(COLORS.accent, 1);
+    }
+  }
+
+  /**
+   * 데미지 텍스트 표시 (외부에서 호출)
+   */
+  showDamageText(damage) {
+    const endX = this.viewWidth / 2 - 80;
+    const y = Phaser.Math.Between(-30, -10);
+
+    const damageText = this.scene.add.text(endX - 40, y, `-${damage.toLocaleString()}`, {
       fontSize: '18px',
       fontFamily: 'Arial',
       color: '#FFAA00',
@@ -341,60 +355,91 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
       alpha: 0,
       duration: 800,
       ease: 'Power2',
-      onComplete: () => {
-        damageText.destroy();
-      }
+      onComplete: () => damageText.destroy()
     });
   }
 
   /**
-   * 적 처치 + 보상 표시
+   * 보스 처치 + 보상 표시
    */
-  defeatEnemy() {
-    if (!this.currentEnemy) return;
+  defeatBoss() {
+    if (!this.currentBoss || this.isDefeating) return;
+    this.isDefeating = true;
 
-    // 적 사라지는 애니메이션
+    // HP 바 0으로
     this.scene.tweens.add({
-      targets: [this.enemyCircle, this.enemyEmoji, this.enemyName, this.enemyHpBg, this.enemyHpBar],
-      alpha: 0,
-      scale: 0.5,
-      duration: 400,
-      ease: 'Back.easeIn',
-      onComplete: () => {
-        this.enemyCircle.setVisible(false);
-        this.enemyEmoji.setVisible(false);
-        this.enemyName.setVisible(false);
-        this.enemyHpBg.setVisible(false);
-        this.enemyHpBar.setVisible(false);
-        this.enemyCircle.setAlpha(1).setScale(1);
-        this.enemyEmoji.setAlpha(1).setScale(1);
-        this.enemyName.setAlpha(1).setScale(1);
-        this.enemyHpBg.setAlpha(1).setScale(1);
-        this.enemyHpBar.setAlpha(1).setScale(1);
-      }
+      targets: this.enemyHpBar,
+      scaleX: 0,
+      duration: 200
     });
 
-    // 보상 팝업
-    const gold = Phaser.Math.Between(10, 30);
-    const exp = Phaser.Math.Between(5, 15);
-    this.showRewardFloat(gold, exp);
+    // "STAGE CLEAR!" 텍스트
+    const clearText = this.scene.add.text(0, -20, 'STAGE CLEAR!', {
+      fontSize: '28px',
+      fontFamily: 'Arial',
+      color: '#FFD700',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+    this.add(clearText);
 
-    // 진행 바 증가
-    const currentWidth = this.progressBar.width;
+    // 보스 shake + flash
+    this.scene.tweens.add({
+      targets: [this.enemyCircle, this.enemyEmoji],
+      alpha: { from: 1, to: 0 },
+      scaleX: { from: 1, to: 1.3 },
+      scaleY: { from: 1, to: 1.3 },
+      duration: 800,
+      ease: 'Power2'
+    });
+
+    // CLEAR 텍스트 부유 후 소멸
+    this.scene.tweens.add({
+      targets: clearText,
+      y: clearText.y - 40,
+      alpha: 0,
+      duration: 1500,
+      delay: 500,
+      onComplete: () => clearText.destroy()
+    });
+
+    // 보상 표시
+    const gold = this.currentBoss.goldReward || 100;
+    const exp = this.currentBoss.expReward || 50;
+    this.showRewardFloat(gold, exp);
+  }
+
+  /**
+   * 다음 보스 표시
+   */
+  showNextBoss(bossData) {
+    // 이전 보스 요소 초기화
+    this.enemyCircle.setAlpha(1).setScale(1);
+    this.enemyEmoji.setAlpha(1).setScale(1);
+    this.enemyName.setAlpha(1).setScale(1);
+    this.enemyHpBg.setAlpha(1).setScale(1);
+    this.enemyHpBar.setAlpha(1).setScale(1);
+    this.enemyHpBar.setFillStyle(COLORS.success, 1);
+    if (this.bossHpText) this.bossHpText.setAlpha(1);
+
+    // 새 보스 표시
+    this.showBoss(bossData);
+  }
+
+  /**
+   * 프로그레스 바 업데이트
+   */
+  updateProgress(progress) {
+    // progress = 0~1 비율
     const maxWidth = this.viewWidth - 40;
-    const newWidth = Math.min(maxWidth, currentWidth + 10);
+    const newWidth = Math.max(1, maxWidth * progress);
+
     this.scene.tweens.add({
       targets: this.progressBar,
       width: newWidth,
-      duration: 400
+      duration: 300
     });
-
-    // 진행 바 가득 차면 리셋
-    if (newWidth >= maxWidth) {
-      this.scene.time.delayedCall(1000, () => {
-        this.progressBar.width = (this.viewWidth - 40) * 0.3;
-      });
-    }
   }
 
   /**
@@ -442,10 +487,10 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    * 스테이지 정보 업데이트
    * @param {number} chapter - 챕터 번호
    * @param {number} stage - 스테이지 번호
-   * @param {string} name - 스테이지 이름
+   * @param {string} name - 보스 이름
    */
   updateStageInfo(chapter, stage, name) {
-    this.stageText.setText(`챕터 ${chapter || 1}-${stage || 1}: ${name || '슬라임 평원'}`);
+    this.stageText.setText(`챕터 ${chapter || 1}-${stage || 1}: ${name || '슬라임 킹'}`);
   }
 
   /**
@@ -513,6 +558,11 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     if (this.battleCycleTimer) {
       this.battleCycleTimer.remove();
       this.battleCycleTimer = null;
+    }
+    // 공격 반복 타이머 정리
+    if (this.attackInterval) {
+      this.attackInterval.remove();
+      this.attackInterval = null;
     }
     // 대기중인 delayedCall 정리
     if (this.pendingDelays) {

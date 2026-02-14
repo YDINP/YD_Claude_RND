@@ -11,6 +11,7 @@
 import { SaveManager } from './SaveManager.js';
 import GameLogger from '../utils/GameLogger.js';
 import { ProgressionSystem } from './ProgressionSystem.js';
+import { getChapter, getEnemy, getChapterStages, calculateEnemyStats } from '../data/index.ts';
 
 export class IdleProgressSystem {
   static MAX_OFFLINE_HOURS = 12;
@@ -22,9 +23,10 @@ export class IdleProgressSystem {
     this.currentStage = { chapter: 1, stage: 1, name: '슬라임 평원' };
     this.enemyPool = [];
     this.lastBattleTime = Date.now();
-    this.battleInterval = 5000; // 5초마다 자동 전투 (IdleBattleView와 동기화)
-    this.battleWinCount = 0;
-    this.winsToAdvance = 3; // 3연승 시 다음 스테이지
+    this.battleInterval = 1500; // 1.5초마다 공격 (더 빠른 타격감)
+    this.accumulatedDamage = 0; // 현재 보스에게 누적된 데미지
+    this.currentBossHp = 0; // 현재 보스의 최대 HP
+    this.currentBossData = null; // 현재 보스 데이터
   }
 
   /**
@@ -46,19 +48,16 @@ export class IdleProgressSystem {
       return { gold: 0, exp: 0, items: [], duration: 0 };
     }
 
-    // 파티 전투력 기반 계수
-    const partyPower = this.getPartyPower();
-    const powerMultiplier = 1 + (partyPower / 1000) * 0.5; // 파티 전투력 1000당 50% 증가
+    // DPS 기반 보스 처치 계산
+    const dps = this.calculateDPS();
+    const boss = this.getBossForCurrentStage();
+    const bossHp = boss.hp;
+    const timePerBoss = bossHp / dps; // 보스 1마리 처치 시간 (초)
+    const bossesKilled = Math.floor(offlineSec / timePerBoss);
 
-    // 현재 스테이지 계수
-    const stageMultiplier = this.getStageMultiplier();
-
-    // 보상 계산
-    const goldPerSec = this.constructor.BASE_GOLD_PER_SEC * powerMultiplier * stageMultiplier;
-    const expPerSec = this.constructor.BASE_EXP_PER_SEC * powerMultiplier * stageMultiplier;
-
-    const gold = Math.floor(goldPerSec * offlineSec);
-    const exp = Math.floor(expPerSec * offlineSec);
+    // 보상 계산: 보스 킬 수 × 보스 보상
+    const gold = Math.floor(bossesKilled * (boss.goldReward || 600) * 0.8); // 80% 효율
+    const exp = Math.floor(bossesKilled * (boss.expReward || 300) * 0.8);
 
     // 아이템 드롭 (1시간당 1개 확률 50%)
     const items = [];
@@ -70,7 +69,12 @@ export class IdleProgressSystem {
     }
 
     GameLogger.log('IDLE', '오프라인 보상 계산', {
-      offlineSec, gold, exp, items: items.length, partyPower
+      offlineSec,
+      dps: Math.floor(dps),
+      bossesKilled,
+      gold,
+      exp,
+      items: items.length
     });
 
     return {
@@ -160,43 +164,192 @@ export class IdleProgressSystem {
   }
 
   /**
+   * 현재 스테이지의 보스 가져오기
+   * @returns {Object} 보스 데이터 { id, name, hp, atk, def, emoji, goldReward, expReward }
+   */
+  getBossForCurrentStage() {
+    const current = this.getCurrentStage();
+    const chapterId = `chapter_${current.chapter}`;
+    const chapter = getChapter(chapterId);
+
+    if (!chapter) {
+      // Fallback: 기본 보스
+      return {
+        id: 'enemy_goblin_king',
+        name: '고블린 왕',
+        hp: 1500,
+        atk: 80,
+        def: 40,
+        emoji: '👑',
+        goldReward: 600,
+        expReward: 300
+      };
+    }
+
+    // 챕터의 보스 스테이지 찾기
+    const stages = getChapterStages(chapterId);
+    const bossStage = stages.find(s => s.isBoss);
+
+    if (!bossStage || !bossStage.enemies || bossStage.enemies.length === 0) {
+      // Fallback: 마지막 스테이지의 마지막 적
+      const lastStage = stages[stages.length - 1];
+      if (lastStage && lastStage.enemies && lastStage.enemies.length > 0) {
+        const lastEnemy = lastStage.enemies[lastStage.enemies.length - 1];
+        const enemyData = getEnemy(lastEnemy.id);
+        if (enemyData) {
+          const stats = calculateEnemyStats(enemyData, lastEnemy.level || 1);
+          return {
+            id: enemyData.id,
+            name: enemyData.name || '알 수 없는 적',
+            hp: stats.hp,
+            atk: stats.atk,
+            def: stats.def,
+            emoji: this.getBossEmoji(enemyData.id),
+            goldReward: lastStage.rewards?.gold || 100,
+            expReward: lastStage.rewards?.exp || 50
+          };
+        }
+      }
+      // Final fallback
+      return {
+        id: 'enemy_goblin_king',
+        name: '고블린 왕',
+        hp: 1500,
+        atk: 80,
+        def: 40,
+        emoji: '👑',
+        goldReward: 600,
+        expReward: 300
+      };
+    }
+
+    // 보스 데이터 가져오기
+    const bossEnemyData = bossStage.enemies[0];
+    const enemyData = getEnemy(bossEnemyData.id);
+
+    if (!enemyData) {
+      // Fallback
+      return {
+        id: 'enemy_goblin_king',
+        name: '고블린 왕',
+        hp: 1500,
+        atk: 80,
+        def: 40,
+        emoji: '👑',
+        goldReward: 600,
+        expReward: 300
+      };
+    }
+
+    const stats = calculateEnemyStats(enemyData, bossEnemyData.level || 1);
+    let bossHp = stats.hp;
+
+    // 비보스 스테이지에서는 HP 스케일링
+    // 현재 스테이지가 보스 스테이지가 아니면 비율로 HP 조정
+    const currentStageId = `${current.chapter}-${current.stage}`;
+    const bossStageId = bossStage.id;
+
+    if (currentStageId !== bossStageId) {
+      // 챕터당 10 스테이지로 가정, 현재 스테이지 / 보스 스테이지(10)
+      const bossStageNumber = parseInt(bossStageId.split('-')[1]) || 10;
+      const ratio = current.stage / bossStageNumber;
+      bossHp = Math.floor(stats.hp * ratio);
+    }
+
+    return {
+      id: enemyData.id,
+      name: enemyData.name || '알 수 없는 보스',
+      hp: bossHp,
+      atk: stats.atk,
+      def: stats.def,
+      emoji: this.getBossEmoji(enemyData.id),
+      goldReward: bossStage.rewards?.gold || 600,
+      expReward: bossStage.rewards?.exp || 300
+    };
+  }
+
+  /**
+   * 보스 이모지 매핑
+   * @param {string} bossId - 보스 ID
+   * @returns {string} 이모지
+   */
+  getBossEmoji(bossId) {
+    const bossEmojis = {
+      'enemy_goblin_king': '👑',
+      'enemy_rift_guardian': '🛡️',
+      'enemy_izanami': '💀',
+      'enemy_zeus': '⚡',
+      'enemy_odin_allfather': '👁️'
+    };
+    return bossEmojis[bossId] || '👹';
+  }
+
+  /**
+   * 파티 전투력 기반 DPS 계산
+   * @returns {number} 초당 데미지
+   */
+  calculateDPS() {
+    const partyPower = this.getPartyPower();
+    const baseDPS = partyPower * 0.15; // 전투력 400이면 DPS 60
+    // 약간의 랜덤성 (0.9~1.1배)
+    return baseDPS * (0.9 + Math.random() * 0.2);
+  }
+
+  /**
+   * 현재 보스 로드
+   */
+  loadCurrentBoss() {
+    const boss = this.getBossForCurrentStage();
+    this.currentBossData = boss;
+    this.currentBossHp = boss.hp;
+    this.accumulatedDamage = 0;
+
+    GameLogger.log('IDLE', '새 보스 로드', {
+      boss: boss.name,
+      hp: boss.hp,
+      emoji: boss.emoji
+    });
+  }
+
+  /**
    * 전투 시뮬레이션 (미니뷰용)
-   * @returns {Object} { enemy, damage, reward, duration, stageAdvanced }
+   * @returns {Object} { boss, damage, accumulatedDamage, bossMaxHp, progress, reward, stageAdvanced }
    */
   simulateBattle() {
-    const enemy = this.getRandomEnemy();
-    const partyPower = this.getPartyPower();
+    // 보스 데이터 없으면 로드
+    if (!this.currentBossData) {
+      this.loadCurrentBoss();
+    }
 
-    // 데미지 계산 (파티 전투력 기반)
-    const baseDamage = Math.floor(partyPower * 0.3);
-    const damage = baseDamage + Math.floor(Math.random() * baseDamage * 0.3);
+    const dps = this.calculateDPS();
+    const intervalSec = this.battleInterval / 1000;
+    const damage = Math.floor(dps * intervalSec * (0.9 + Math.random() * 0.2));
 
-    // 보상 계산
-    const goldReward = Math.floor((enemy.goldReward || 15) * 1.2);
-    const expReward = Math.floor((enemy.expReward || 10) * 1.2);
+    this.accumulatedDamage += damage;
 
-    // 전투 승리 카운트 증가
-    this.battleWinCount += 1;
+    // 보상 계산 (공격마다 소량)
+    const goldReward = Math.floor((this.currentBossData?.goldReward || 15) * 0.3);
+    const expReward = Math.floor((this.currentBossData?.expReward || 10) * 0.3);
+
     let stageAdvanced = false;
+    const progress = Math.min(1, this.accumulatedDamage / this.currentBossHp);
 
-    // 3연승 시 다음 스테이지로 진행
-    if (this.battleWinCount >= this.winsToAdvance) {
+    // 보스 HP 0 이하면 스테이지 진행
+    if (this.accumulatedDamage >= this.currentBossHp) {
       this.advanceStage();
       stageAdvanced = true;
     }
 
     return {
-      enemy: {
-        name: enemy.name,
-        hp: enemy.stats.hp,
-        mood: enemy.mood
-      },
+      boss: this.currentBossData,
       damage,
+      accumulatedDamage: this.accumulatedDamage,
+      bossMaxHp: this.currentBossHp,
+      progress,
       reward: {
         gold: goldReward,
         exp: expReward
       },
-      duration: 5000, // 5초 (IdleBattleView와 동기화)
       stageAdvanced
     };
   }
@@ -260,22 +413,6 @@ export class IdleProgressSystem {
     return 1 + ((stage.chapter || 1) - 1) * 0.5 + ((stage.stage || 1) - 1) * 0.05;
   }
 
-  /**
-   * 랜덤 적 가져오기
-   * @returns {Object} 적 데이터
-   */
-  getRandomEnemy() {
-    // 간단한 적 풀 (실제로는 enemies.json에서 로드)
-    const enemies = [
-      { id: 'enemy_slime', name: '슬라임', mood: 'calm', stats: { hp: 250, atk: 20 }, goldReward: 12, expReward: 8 },
-      { id: 'enemy_goblin', name: '고블린', mood: 'cunning', stats: { hp: 200, atk: 30 }, goldReward: 15, expReward: 10 },
-      { id: 'enemy_wolf', name: '야생 늑대', mood: 'cunning', stats: { hp: 180, atk: 35 }, goldReward: 16, expReward: 12 },
-      { id: 'enemy_mushroom', name: '독버섯', mood: 'cunning', stats: { hp: 150, atk: 25 }, goldReward: 14, expReward: 10 },
-      { id: 'enemy_goblin_archer', name: '고블린 궁수', mood: 'cunning', stats: { hp: 160, atk: 40 }, goldReward: 18, expReward: 12 }
-    ];
-
-    return enemies[Math.floor(Math.random() * enemies.length)];
-  }
 
   /**
    * 랜덤 아이템 생성
@@ -337,7 +474,9 @@ export class IdleProgressSystem {
       name: this.getStageName(nextChapter, nextStage)
     };
 
-    this.battleWinCount = 0;
+    // 보스 데이터 리셋 (다음 보스 로드 트리거)
+    this.accumulatedDamage = 0;
+    this.currentBossData = null;
 
     GameLogger.log('IDLE', '스테이지 자동 진행', {
       cleared: `${clearedChapter}-${clearedStage}`,
