@@ -918,13 +918,15 @@ export class BattleScene extends Phaser.Scene {
     if (!isHeal) {
       const shakeIntensity = isUltimate ? 12 : (isCrit ? 8 : 4);
       const shakeRepeat = isUltimate ? 4 : (isCrit ? 3 : 1);
+      const originalX = targetSprite.getData('originalX') ?? targetSprite.x;
       this.tweens.add({
         targets: targetSprite,
-        x: targetSprite.x + shakeIntensity,
+        x: originalX + shakeIntensity,
         duration: 50 / this.battleSpeed,
         yoyo: true,
         repeat: shakeRepeat,
-        ease: 'Sine.easeInOut'
+        ease: 'Sine.easeInOut',
+        onComplete: () => { targetSprite.x = originalX; }
       });
     } else {
       // 힐 대상: 부드러운 스케일 업 반응
@@ -1259,6 +1261,7 @@ export class BattleScene extends Phaser.Scene {
     container.setData('battler', battler);
     container.setData('sprite', sprite);
     container.setData('hpBar', hpBar); // UIX-2.6.1: Store enhanced HP bar reference
+    container.setData('originalX', x); // 피격 흔들림 복원용
 
     return container;
   }
