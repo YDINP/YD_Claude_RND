@@ -11,7 +11,7 @@ import { Modal } from '../components/Modal.js';
 import { formatTime } from '../utils/colorUtils.js';
 import { IdleProgressSystem } from '../systems/IdleProgressSystem.js';
 import { IdleBattleView } from '../components/IdleBattleView.js';
-import { getCharacter, calculatePower, getStage } from '../data/index.ts';
+import { getCharacter, calculatePower, getStage, getChapterStages } from '../data/index.ts';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -595,8 +595,12 @@ export class MainMenuScene extends Phaser.Scene {
    */
   prepareBossBattle() {
     const currentStage = this.idleSystem.getCurrentStage();
-    const stageId = `${currentStage.chapter || 1}-${currentStage.stage || 1}`;
-    const stage = getStage(`chapter_${currentStage.chapter || 1}`, stageId);
+    const chapterId = `chapter_${currentStage.chapter || 1}`;
+
+    // 현재 챕터의 보스 스테이지 찾기
+    const chapterStages = getChapterStages(chapterId) || [];
+    const bossStage = chapterStages.find(s => s.isBoss);
+    const stage = bossStage || getStage(chapterId, `${currentStage.chapter || 1}-${currentStage.stage || 1}`);
 
     // 파티 로드
     const saveData = SaveManager.load();

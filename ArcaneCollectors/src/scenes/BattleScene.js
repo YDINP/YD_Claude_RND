@@ -1089,6 +1089,10 @@ export class BattleScene extends Phaser.Scene {
         }
       });
 
+      // 보스전 인트로 후 전투 시작
+      this.time.delayedCall(2000, () => {
+        this.startBattle();
+      });
       return;
     }
 
