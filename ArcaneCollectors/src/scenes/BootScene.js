@@ -148,11 +148,43 @@ export class BootScene extends Phaser.Scene {
   }
 
   /**
-   * 기존 Supabase 세션 확인
+   * AUTH-1.1: 기존 세션 또는 자동로그인 확인
    * @returns {Promise<boolean>} 세션 유효 여부
    */
   async _checkExistingSession() {
     try {
+      // AUTH-1.1: 자동로그인 정보 확인
+      const authData = this._loadAutoLoginData();
+      if (authData && authData.autoLogin) {
+        const isValid = this._isAuthDataValid(authData);
+        if (isValid) {
+          console.log('BootScene: 자동로그인 적용', authData.authType, authData.userId);
+
+          if (authData.authType === 'email' && authData.userId) {
+            // 이메일 계정: Supabase 세션 확인
+            if (isSupabaseConfigured && supabase) {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.user && session.user.id === authData.userId) {
+                SaveManager.setUserId(session.user.id);
+                await SaveManager.loadFromCloud();
+                return true;
+              }
+            }
+          } else if (authData.authType === 'guest') {
+            // 게스트 계정: 로컬 데이터 확인
+            const guestData = getLocalData('guest_user');
+            if (guestData && guestData.id === authData.userId) {
+              SaveManager.setUserId(null);
+              SaveManager.load();
+              return true;
+            }
+          }
+        }
+        // 자동로그인 정보가 있지만 유효하지 않으면 삭제
+        this._clearAutoLoginData();
+      }
+
+      // 기존 Supabase 세션 확인 (자동로그인 없을 때)
       if (isSupabaseConfigured && supabase) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
@@ -183,6 +215,48 @@ export class BootScene extends Phaser.Scene {
       // 로컬 세이브가 있으면 진행 허용
       return !!localStorage.getItem(SaveManager.SAVE_KEY);
     }
+  }
+
+  /**
+   * AUTH-1.1: 자동로그인 데이터 로드
+   * @returns {Object|null} 자동로그인 정보
+   */
+  _loadAutoLoginData() {
+    try {
+      const data = localStorage.getItem('arcane_auth');
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.warn('BootScene: 자동로그인 데이터 파싱 실패', error);
+      return null;
+    }
+  }
+
+  /**
+   * AUTH-1.1: 자동로그인 데이터 유효성 검증
+   * @param {Object} authData 자동로그인 정보
+   * @returns {boolean} 유효 여부
+   */
+  _isAuthDataValid(authData) {
+    if (!authData || !authData.userId || !authData.authType) {
+      return false;
+    }
+
+    // 7일 이상 지난 자동로그인 정보는 무효화
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+    const lastLogin = authData.lastLogin || 0;
+    if (Date.now() - lastLogin > SEVEN_DAYS) {
+      console.log('BootScene: 자동로그인 만료 (7일 초과)');
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * AUTH-1.1: 자동로그인 데이터 삭제
+   */
+  _clearAutoLoginData() {
+    localStorage.removeItem('arcane_auth');
   }
 
   /**

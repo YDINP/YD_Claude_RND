@@ -21,6 +21,7 @@ export class SettingsPopup extends PopupBase {
 
   buildContent() {
     this.createSettingsSection();
+    this.createAccountManagement(); // AUTH-1.2: 계정 관리 섹션
     this.createAccountInfo();
   }
 
@@ -91,9 +92,156 @@ export class SettingsPopup extends PopupBase {
     });
   }
 
-  createAccountInfo() {
+  /**
+   * AUTH-1.2: 계정 관리 섹션 생성
+   */
+  createAccountManagement() {
     const { left, top, width } = this.contentBounds;
     const y = top + 280;
+
+    this.addText(left + 10, y, '계정 관리', {
+      fontSize: '20px',
+      fontStyle: 'bold',
+      color: '#F8FAFC'
+    });
+
+    // 현재 로그인 정보 표시
+    const authData = this._loadAutoLoginData();
+    const currentAccountText = this._getAccountDisplayText(authData);
+
+    const accountInfoBg = this.scene.add.graphics();
+    accountInfoBg.fillStyle(0x1E293B, 0.8);
+    accountInfoBg.fillRoundedRect(left, y + 35, width, 50, 10);
+    this.contentContainer.add(accountInfoBg);
+
+    this.addText(left + 20, y + 47, '현재 계정:', {
+      fontSize: '14px',
+      color: '#94A3B8'
+    });
+
+    this.addText(left + 20, y + 67, currentAccountText, {
+      fontSize: '15px',
+      color: '#F8FAFC',
+      fontStyle: 'bold'
+    });
+
+    // 계정 변경 버튼
+    const changeBtnY = y + 100;
+    const changeBtn = this.scene.add.graphics();
+    changeBtn.fillStyle(0xEF4444, 1);
+    changeBtn.fillRoundedRect(left + 10, changeBtnY, 200, 40, 10);
+    this.contentContainer.add(changeBtn);
+
+    this.addText(left + 110, changeBtnY + 20, '🔄 계정 변경', {
+      fontSize: '14px',
+      fontStyle: 'bold',
+      color: '#FFFFFF'
+    }).setOrigin(0.5);
+
+    const changeHit = this.scene.add.rectangle(left + 110, changeBtnY + 20, 200, 40)
+      .setAlpha(0.001).setInteractive({ useHandCursor: true });
+    this.contentContainer.add(changeHit);
+
+    changeHit.on('pointerdown', () => {
+      this.showAccountChangeConfirm();
+    });
+  }
+
+  /**
+   * AUTH-1.2: 자동로그인 데이터 로드
+   */
+  _loadAutoLoginData() {
+    try {
+      const data = localStorage.getItem('arcane_auth');
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * AUTH-1.2: 계정 정보 표시 텍스트 생성
+   */
+  _getAccountDisplayText(authData) {
+    if (!authData) {
+      return '자동 로그인 미설정';
+    }
+
+    if (authData.authType === 'guest') {
+      const shortId = authData.userId ? authData.userId.substring(0, 20) : 'unknown';
+      return `게스트: ${shortId}...`;
+    } else if (authData.authType === 'email' && authData.email) {
+      return `이메일: ${authData.email}`;
+    }
+
+    return '알 수 없는 계정';
+  }
+
+  /**
+   * AUTH-1.2: 계정 변경 확인 모달
+   */
+  showAccountChangeConfirm() {
+    const elements = [];
+    const { centerX } = this.contentBounds;
+    const dialogY = 500;
+
+    const overlay = this.scene.add.rectangle(centerX, dialogY,
+      this.contentBounds.width + 30, 200, 0x000000, 0.7).setDepth(3000).setInteractive();
+    elements.push(overlay);
+
+    const dialog = this.scene.add.graphics().setDepth(3001);
+    dialog.fillStyle(0x1E293B, 1);
+    dialog.fillRoundedRect(centerX - 180, dialogY - 100, 360, 200, 16);
+    dialog.lineStyle(2, 0xEF4444, 0.5);
+    dialog.strokeRoundedRect(centerX - 180, dialogY - 100, 360, 200, 16);
+    elements.push(dialog);
+
+    const msg = this.scene.add.text(centerX, dialogY - 50,
+      '계정을 변경하시겠습니까?\n\n로그인 화면으로 이동하며,\n현재 데이터는 저장됩니다.', {
+        fontFamily: '"Noto Sans KR", sans-serif', fontSize: '15px',
+        color: '#F8FAFC', align: 'center'
+      }).setOrigin(0.5).setDepth(3002);
+    elements.push(msg);
+
+    const confirmBg = this.scene.add.rectangle(centerX - 85, dialogY + 55, 140, 40, 0xEF4444)
+      .setDepth(3002).setInteractive({ useHandCursor: true });
+    elements.push(confirmBg);
+    const confirmLabel = this.scene.add.text(centerX - 85, dialogY + 55, '변경', {
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '16px',
+      fontStyle: 'bold', color: '#FFFFFF'
+    }).setOrigin(0.5).setDepth(3003);
+    elements.push(confirmLabel);
+
+    confirmBg.on('pointerdown', () => {
+      // 자동로그인 정보 삭제
+      localStorage.removeItem('arcane_auth');
+
+      // Registry 초기화
+      this.scene.scene.registry.destroy();
+      this.scene.scene.registry.events.off();
+
+      // LoginScene으로 이동
+      elements.forEach(e => e.destroy());
+      this.destroy();
+      this.scene.scene.start('LoginScene');
+    });
+
+    const cancelBg = this.scene.add.rectangle(centerX + 85, dialogY + 55, 140, 40, 0x475569)
+      .setDepth(3002).setInteractive({ useHandCursor: true });
+    elements.push(cancelBg);
+    const cancelLabel = this.scene.add.text(centerX + 85, dialogY + 55, '취소', {
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '16px', color: '#94A3B8'
+    }).setOrigin(0.5).setDepth(3003);
+    elements.push(cancelLabel);
+
+    cancelBg.on('pointerdown', () => {
+      elements.forEach(e => e.destroy());
+    });
+  }
+
+  createAccountInfo() {
+    const { left, top, width } = this.contentBounds;
+    const y = top + 460; // AUTH-1.2: Y 위치 조정 (계정 관리 섹션 아래로)
 
     this.addText(left + 10, y, '계정 정보', {
       fontSize: '20px',

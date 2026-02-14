@@ -12,6 +12,7 @@ export class LoginScene extends Phaser.Scene {
   constructor() {
     super({ key: 'LoginScene' });
     this.transitioning = false;
+    this.autoLoginEnabled = true; // AUTH-1.3: 기본값 ON
   }
 
   create() {
@@ -21,6 +22,7 @@ export class LoginScene extends Phaser.Scene {
       this.createBackground();
       this.createTitle();
       this.createButtons();
+      this.createAutoLoginToggle(); // AUTH-1.3: 자동로그인 체크박스
       this.loginForm = null;
     } catch (error) {
       console.error('[LoginScene] create() 실패:', error);
@@ -111,6 +113,51 @@ export class LoginScene extends Phaser.Scene {
     }).setOrigin(0.5);
   }
 
+  /**
+   * AUTH-1.3: 자동로그인 체크박스 생성
+   */
+  createAutoLoginToggle() {
+    const toggleY = GAME_HEIGHT - 80;
+    const toggleX = GAME_WIDTH / 2;
+
+    // 체크박스 배경
+    const checkboxSize = 20;
+    const checkbox = this.add.rectangle(
+      toggleX - 60, toggleY, checkboxSize, checkboxSize, 0x1e293b, 1
+    );
+    checkbox.setStrokeStyle(2, COLORS.primary);
+    checkbox.setInteractive({ useHandCursor: true });
+
+    // 체크 표시
+    const checkmark = this.add.text(toggleX - 60, toggleY, '✓', {
+      fontSize: '16px',
+      fontFamily: 'Arial',
+      color: '#6366F1',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setVisible(this.autoLoginEnabled);
+
+    // 레이블
+    const label = this.add.text(toggleX - 35, toggleY, '자동 로그인', {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: '#94a3b8'
+    }).setOrigin(0, 0.5);
+
+    // 클릭 이벤트
+    checkbox.on('pointerdown', () => {
+      this.autoLoginEnabled = !this.autoLoginEnabled;
+      checkmark.setVisible(this.autoLoginEnabled);
+    });
+
+    label.setInteractive({ useHandCursor: true });
+    label.on('pointerdown', () => {
+      this.autoLoginEnabled = !this.autoLoginEnabled;
+      checkmark.setVisible(this.autoLoginEnabled);
+    });
+
+    this.autoLoginCheckbox = { checkbox, checkmark, label };
+  }
+
   _createButton(x, y, label, color, width, height, callback) {
     const container = this.add.container(x, y);
 
@@ -144,6 +191,16 @@ export class LoginScene extends Phaser.Scene {
     try {
       const result = await guestLogin();
       console.log('LoginScene: 게스트 로그인 성공', result.user.id);
+
+      // AUTH-1.3: 자동로그인 정보 저장
+      if (this.autoLoginEnabled) {
+        this._saveAutoLoginData({
+          userId: result.user.id,
+          authType: 'guest',
+          autoLogin: true,
+          lastLogin: Date.now()
+        });
+      }
 
       // 게스트는 클라우드 동기화 불가
       SaveManager.setUserId(null);
@@ -296,6 +353,18 @@ export class LoginScene extends Phaser.Scene {
       const userId = result.data?.user?.id;
       if (userId) {
         console.log('LoginScene: 이메일 인증 성공', userId);
+
+        // AUTH-1.3: 자동로그인 정보 저장
+        if (this.autoLoginEnabled) {
+          this._saveAutoLoginData({
+            userId: userId,
+            authType: 'email',
+            email: email,
+            autoLogin: true,
+            lastLogin: Date.now()
+          });
+        }
+
         SaveManager.setUserId(userId);
 
         // 클라우드 동기화 시도
@@ -352,6 +421,19 @@ export class LoginScene extends Phaser.Scene {
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('PreloadScene');
     });
+  }
+
+  /**
+   * AUTH-1.3: 자동로그인 데이터 저장
+   * @param {Object} authData 자동로그인 정보
+   */
+  _saveAutoLoginData(authData) {
+    try {
+      localStorage.setItem('arcane_auth', JSON.stringify(authData));
+      console.log('LoginScene: 자동로그인 정보 저장', authData.authType);
+    } catch (error) {
+      console.warn('LoginScene: 자동로그인 저장 실패', error);
+    }
   }
 
   shutdown() {
