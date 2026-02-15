@@ -237,12 +237,18 @@ export class PreloadScene extends Phaser.Scene {
       this.textures.addCanvas(`char_full_${name}`, fullCanvas);
     });
 
-    // H-2: 91명 전체 캐릭터 향상된 플레이스홀더 생성
+    // H-2: 91명 전체 캐릭터 — 실제 이미지 로드 (실패 시 플레이스홀더 폴백)
     try {
       const characters = getAllCharacters();
-      HeroAssetLoader.generatePlaceholders(this, characters);
+      HeroAssetLoader.loadImages(this, characters, 'assets/characters/portraits/');
     } catch (e) {
-      console.warn('HeroAssetLoader: Failed to generate placeholders', e);
+      console.warn('HeroAssetLoader: Failed to load hero images, using placeholders', e);
+      try {
+        const characters = getAllCharacters();
+        HeroAssetLoader.generatePlaceholders(this, characters);
+      } catch (e2) {
+        console.warn('HeroAssetLoader: Failed to generate placeholders', e2);
+      }
     }
 
     this._loadPhase = 2;
