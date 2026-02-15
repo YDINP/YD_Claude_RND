@@ -45,24 +45,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     bg.strokeRoundedRect(-this.viewWidth / 2, -this.viewHeight / 2, this.viewWidth, this.viewHeight, 16);
     this.add(bg);
 
-    // 제목 텍스트
-    const title = this.scene.add.text(0, -this.viewHeight / 2 + 20, '⚔️ 자동 전투 중...', {
-      fontSize: '18px',
-      fontFamily: 'Arial',
-      color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    this.add(title);
-
-    // 제목 깜빡임
-    this.titleTween = this.scene.tweens.add({
-      targets: title,
-      alpha: { from: 1, to: 0.5 },
-      duration: 1500,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
+    // (타이틀 제거됨 — 패널 자체가 전투 영역)
   }
 
   /**
@@ -605,11 +588,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    * 정리
    */
   destroy(fromScene) {
-    // 타이틀 반복 트윈 정리
-    if (this.titleTween) {
-      this.titleTween.stop();
-      this.titleTween = null;
-    }
+    // (타이틀 트윈 제거됨)
     // 전투 사이클 타이머 정리
     if (this.battleCycleTimer) {
       this.battleCycleTimer.remove();

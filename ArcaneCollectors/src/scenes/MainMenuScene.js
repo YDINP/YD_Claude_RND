@@ -580,7 +580,7 @@ export class MainMenuScene extends Phaser.Scene {
     const bossBtn = this.add.graphics();
     bossBtn.fillStyle(hasParty ? 0xEF4444 : 0x334155, 1);
     bossBtn.fillRoundedRect(bossBtnX, panelY + 80, bossBtnW, 50, 10);
-    const bossBtnText = this.add.text(bossBtnX + bossBtnW / 2, panelY + 105, '🗡️ 보스전 도전', {
+    const bossBtnText = this.add.text(bossBtnX + bossBtnW / 2, panelY + 105, '🗡️ 보스전 (20🔋)', {
       fontSize: '16px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
 
@@ -615,6 +615,13 @@ export class MainMenuScene extends Phaser.Scene {
    * Prepare boss battle with full party and stage data
    */
   prepareBossBattle() {
+    // 보스전 에너지 소모 (20)
+    const energyResult = energySystem.consumeEnergy(20);
+    if (!energyResult.success) {
+      this.showToast('에너지가 부족합니다! (필요: 20🔋)');
+      return;
+    }
+
     const currentStage = this.idleSystem.getCurrentStage();
     const chapterId = `chapter_${currentStage.chapter || 1}`;
 
@@ -692,10 +699,19 @@ export class MainMenuScene extends Phaser.Scene {
       this.registry.set('gems', data.resources.gems);
     }
 
-    this.showToast(`소탕 완료! 💰${goldReward} ✨${expReward}EXP`);
-
-    // Refresh scene after 1.5s
-    this.time.delayedCall(1500, () => this.scene.restart());
+    // 보상 팝업 표시
+    const currentStage = this.idleSystem.getCurrentStage();
+    const stageName = `${currentStage.chapter}-${currentStage.stage}`;
+    const modal = new Modal(this, {
+      title: '⚡ 소탕 완료!',
+      message: `📍 스테이지 ${stageName}\n\n💰 골드: +${goldReward}\n✨ 경험치: +${expReward} EXP\n🔋 에너지: -10`,
+      buttons: [
+        { text: '확인', style: 'primary', callback: () => {
+          modal.close();
+          this.scene.restart();
+        }}
+      ]
+    });
   }
 
   /**
@@ -962,7 +978,7 @@ export class MainMenuScene extends Phaser.Scene {
     }
 
     // 방치 전투 진행 체크 (샌드백 모드: 데미지 누적 → 진행도 → 보스전)
-    if (this.idleSystem && !this.bossTransitioning) {
+    if (this.idleSystem) {
       const battleResult = this.idleSystem.updateProgress(this.game.loop.delta);
       if (battleResult && this.idleBattleView) {
         // 데미지 텍스트 + 진행도 바 업데이트
@@ -970,18 +986,10 @@ export class MainMenuScene extends Phaser.Scene {
         this.idleBattleView.updateBossHp(battleResult.accumulatedDamage, battleResult.bossMaxHp);
         this.idleBattleView.updateProgress(battleResult.progress);
 
-        // 진행도 100% → 보스전 준비
+        // 진행도 100% → 보스전 준비 알림 (자동 진입 없음, 수동 버튼으로만)
         if (battleResult.bossReady) {
-          this.bossTransitioning = true;
           this.idleBattleView.showBossReady();
-          this.showToast('⚔️ 보스전 준비 완료!');
-
-          // 1.5초 후 보스전 돌입
-          this.time.delayedCall(1500, () => {
-            if (this.idleSystem) {
-              this.prepareBossBattle();
-            }
-          });
+          this.showToast('⚔️ 보스전 준비 완료! 보스전 버튼을 눌러주세요.');
         }
       }
     }
