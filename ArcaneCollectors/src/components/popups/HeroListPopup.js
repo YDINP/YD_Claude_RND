@@ -332,10 +332,17 @@ export class HeroListPopup extends PopupBase {
       fontSize: '11px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
 
-    // Portrait placeholder
-    const portrait = this.scene.add.text(0, -15, hero.emoji || '👤', {
-      fontSize: '36px'
-    }).setOrigin(0.5);
+    // Portrait — DiceBear 이미지 우선, 없으면 emoji 폴백
+    const portraitKey = `hero_${hero.id || hero.characterId}`;
+    let portrait;
+    if (this.scene.textures.exists(portraitKey)) {
+      portrait = this.scene.add.image(0, -15, portraitKey);
+      portrait.setDisplaySize(60, 60);
+    } else {
+      portrait = this.scene.add.text(0, -15, hero.emoji || '👤', {
+        fontSize: '36px'
+      }).setOrigin(0.5);
+    }
 
     // Stars
     const starCount = hero.stars || getRarityNum(hero.rarity) || 1;

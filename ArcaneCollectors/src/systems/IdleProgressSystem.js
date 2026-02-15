@@ -417,8 +417,8 @@ export class IdleProgressSystem {
       bossMaxHp: this.currentBossHp,
       progress,
       reward: {
-        gold: goldReward,
-        exp: expReward
+        gold: this.currentBossData?.goldReward || 600,
+        exp: this.currentBossData?.expReward || 300
       },
       bossReady
     };

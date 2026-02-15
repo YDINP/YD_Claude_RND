@@ -454,14 +454,25 @@ export class MainMenuScene extends Phaser.Scene {
       const charClass = staticData?.class || charData?.class || 'warrior';
       const color = classColors[charClass] || 0x64748B;
 
-      // Circular avatar background (클릭 가능)
-      const avatar = this.add.circle(x, y, 32, color, 0.9)
-        .setInteractive({ useHandCursor: true });
-
-      // Class icon
-      this.add.text(x, y - 5, classIcons[charClass] || '❓', {
-        fontSize: '24px'
-      }).setOrigin(0.5);
+      // Circular avatar — DiceBear 이미지 우선, 없으면 컬러 원형 폴백
+      const portraitKey = `hero_${heroId}`;
+      let avatar;
+      if (this.textures.exists(portraitKey)) {
+        // 원형 마스크 + DiceBear 이미지
+        const maskGfx = this.make.graphics({ x: 0, y: 0 });
+        maskGfx.fillCircle(x, y, 32);
+        const mask = maskGfx.createGeometryMask();
+        const img = this.add.image(x, y, portraitKey).setDisplaySize(64, 64);
+        img.setMask(mask);
+        avatar = this.add.circle(x, y, 32, 0x000000, 0.001)
+          .setInteractive({ useHandCursor: true });
+      } else {
+        avatar = this.add.circle(x, y, 32, color, 0.9)
+          .setInteractive({ useHandCursor: true });
+        this.add.text(x, y - 5, classIcons[charClass] || '❓', {
+          fontSize: '24px'
+        }).setOrigin(0.5);
+      }
 
       // Name (max 4 chars)
       const name = (staticData?.name || charData?.name || '???').substring(0, 4);
