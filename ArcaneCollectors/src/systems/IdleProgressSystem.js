@@ -493,16 +493,22 @@ export class IdleProgressSystem {
 
 
   /**
-   * 미수령 누적 보상 조회
-   * @returns {Object} { gold, exp, damageDealt, hasRewards }
+   * 미수령 누적 보상 조회 (누적 데미지 + 현재 진행도 합산)
+   * @returns {Object} { gold, exp, totalDamage, hasRewards }
    */
-  getUnclaimedRewards() {
-    if (!this.currentBossData || this.unclaimedDamage <= 0) {
-      return { gold: 0, exp: 0, damageDealt: 0, hasRewards: false };
+  getClaimableRewards() {
+    if (!this.currentBossData) {
+      return { gold: 0, exp: 0, totalDamage: 0, hasRewards: false };
+    }
+
+    // 누적 미수령 데미지 + 현재 진행도(accumulatedDamage) 합산
+    const totalDamage = (this.unclaimedDamage || 0) + (this.accumulatedDamage || 0);
+    if (totalDamage <= 0) {
+      return { gold: 0, exp: 0, totalDamage: 0, hasRewards: false };
     }
 
     const bossHp = this.currentBossHp || 1;
-    const damageRatio = this.unclaimedDamage / bossHp;
+    const damageRatio = totalDamage / bossHp;
     const stageMultiplier = this.getStageMultiplier();
 
     const gold = Math.floor(damageRatio * (this.currentBossData.goldReward || 600) * stageMultiplier);
@@ -511,18 +517,19 @@ export class IdleProgressSystem {
     return {
       gold,
       exp,
-      damageDealt: this.unclaimedDamage,
+      totalDamage,
       hasRewards: gold > 0 || exp > 0
     };
   }
 
   /**
-   * 누적 보상 수령 — unclaimedDamage 리셋
-   * @returns {Object} { gold, exp, damageDealt }
+   * 보상 수령 — 누적 데미지 + 현재 진행도 전부 리셋
+   * @returns {Object} { gold, exp, totalDamage, hasRewards }
    */
   claimRewards() {
-    const rewards = this.getUnclaimedRewards();
+    const rewards = this.getClaimableRewards();
     this.unclaimedDamage = 0;
+    this.accumulatedDamage = 0;
     this.saveProgress();
 
     GameLogger.log('IDLE', '누적 보상 수령', {

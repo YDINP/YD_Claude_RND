@@ -866,22 +866,22 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   /**
-   * 누적 보상 수령 버튼 생성
+   * 누적 보상 수령 버튼 생성 (항상 활성 상태)
    */
   _createClaimRewardsButton(y) {
     const btnW = 300;
     const btnH = 44;
     const btnX = GAME_WIDTH / 2 - btnW / 2;
 
-    // 버튼 배경
+    // 버튼 배경 (항상 녹색 활성)
     this._claimBtnGfx = this.add.graphics();
-    this._claimBtnGfx.fillStyle(0x334155, 1);
+    this._claimBtnGfx.fillStyle(0x22C55E, 1);
     this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
 
-    // 보상 텍스트 (동적 갱신)
-    this._claimRewardText = this.add.text(GAME_WIDTH / 2, y + btnH / 2, '🎁 보상받기 (누적 없음)', {
+    // 버튼 텍스트
+    this._claimRewardText = this.add.text(GAME_WIDTH / 2, y + btnH / 2, '🎁 보상받기', {
       fontSize: '14px', fontFamily: '"Noto Sans KR", Arial',
-      color: '#94A3B8',
+      color: '#FFFFFF',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -891,54 +891,29 @@ export class MainMenuScene extends Phaser.Scene {
 
     this._claimBtnHit.on('pointerdown', () => this._onClaimRewards());
     this._claimBtnHit.on('pointerover', () => {
-      if (this._hasClaimableRewards) {
-        this._claimBtnGfx.clear();
-        this._claimBtnGfx.fillStyle(0x16A34A, 1);
-        this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
-      }
+      this._claimBtnGfx.clear();
+      this._claimBtnGfx.fillStyle(0x16A34A, 1);
+      this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
     });
     this._claimBtnHit.on('pointerout', () => {
-      this._updateClaimButton(btnX, y, btnW, btnH);
+      this._claimBtnGfx.clear();
+      this._claimBtnGfx.fillStyle(0x22C55E, 1);
+      this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
     });
 
-    // 상태 변수
     this._claimBtnX = btnX;
     this._claimBtnY = y;
     this._claimBtnW = btnW;
     this._claimBtnH = btnH;
-    this._hasClaimableRewards = false;
-    this._lastClaimUpdate = 0;
   }
 
   /**
-   * 보상받기 버튼 상태 갱신 (update에서 호출)
-   */
-  _updateClaimButton(btnX, y, btnW, btnH) {
-    if (!this._claimBtnGfx || !this._claimRewardText) return;
-
-    const rewards = this.idleSystem?.getUnclaimedRewards?.() || { gold: 0, exp: 0, hasRewards: false };
-    this._hasClaimableRewards = rewards.hasRewards;
-
-    this._claimBtnGfx.clear();
-    if (rewards.hasRewards) {
-      this._claimBtnGfx.fillStyle(0x22C55E, 1);
-      this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
-      this._claimRewardText.setText(`🎁 보상받기  💰${rewards.gold.toLocaleString()}  ⭐${rewards.exp.toLocaleString()}`);
-      this._claimRewardText.setColor('#FFFFFF');
-    } else {
-      this._claimBtnGfx.fillStyle(0x334155, 1);
-      this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
-      this._claimRewardText.setText('🎁 보상받기 (누적 없음)');
-      this._claimRewardText.setColor('#94A3B8');
-    }
-  }
-
-  /**
-   * 보상 수령 처리
+   * 보상 수령 처리 — 버튼 누를 때 누적 보상 + 현재 진행도 합산 계산
    */
   _onClaimRewards() {
     if (!this.idleSystem) return;
 
+    // 누적 보상 + 현재 진행도를 합산하여 최종 보상 계산 후 수령
     const rewards = this.idleSystem.claimRewards();
     if (!rewards.hasRewards) {
       this.showToast('누적된 보상이 없습니다.');
@@ -959,11 +934,8 @@ export class MainMenuScene extends Phaser.Scene {
       }
     }
 
-    // 보상 팝업 표시
+    // 보상 팝업 표시 (계산 결과 보여줌)
     this._showClaimRewardsPopup(rewards);
-
-    // 버튼 갱신
-    this._updateClaimButton(this._claimBtnX, this._claimBtnY, this._claimBtnW, this._claimBtnH);
   }
 
   /**
@@ -1208,13 +1180,6 @@ export class MainMenuScene extends Phaser.Scene {
           this.idleBattleView.showBossReady();
           this.showToast('⚔️ 보스전 준비 완료! 보스전 버튼을 눌러주세요.');
         }
-      }
-
-      // 보상받기 버튼 갱신 (2초 간격)
-      const now = Date.now();
-      if (this._claimBtnGfx && now - (this._lastClaimUpdate || 0) > 2000) {
-        this._lastClaimUpdate = now;
-        this._updateClaimButton(this._claimBtnX, this._claimBtnY, this._claimBtnW, this._claimBtnH);
       }
 
       // 보스 버튼 상태 동적 업데이트
