@@ -2,7 +2,9 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, arcane/integration]
+    paths:
+      - 'ArcaneCollectors/**'
   workflow_dispatch:
     inputs:
       environment:
