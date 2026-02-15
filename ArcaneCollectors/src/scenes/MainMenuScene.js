@@ -574,11 +574,12 @@ export class MainMenuScene extends Phaser.Scene {
       sweepBtnText.setAlpha(0.5);
     }
 
-    // Boss battle button
+    // Boss battle button — 진행도 100% + 파티 있을 때만 활성화
+    const bossReady = hasParty && this.idleSystem?.isBossReady?.();
     const bossBtnX = GAME_WIDTH / 2 + 20;
     const bossBtnW = GAME_WIDTH / 2 - 60;
     const bossBtn = this.add.graphics();
-    bossBtn.fillStyle(hasParty ? 0xEF4444 : 0x334155, 1);
+    bossBtn.fillStyle(bossReady ? 0xEF4444 : 0x334155, 1);
     bossBtn.fillRoundedRect(bossBtnX, panelY + 80, bossBtnW, 50, 10);
     const bossBtnText = this.add.text(bossBtnX + bossBtnW / 2, panelY + 105, '🗡️ 보스전 (20🔋)', {
       fontSize: '16px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
@@ -587,7 +588,7 @@ export class MainMenuScene extends Phaser.Scene {
     const bossHit = this.add.rectangle(bossBtnX + bossBtnW / 2, panelY + 105, bossBtnW, 50)
       .setAlpha(0.001);
 
-    if (hasParty) {
+    if (bossReady) {
       bossHit.setInteractive({ useHandCursor: true });
       bossHit.on('pointerdown', () => {
         this.prepareBossBattle();
