@@ -27,6 +27,47 @@ export class IdleProgressSystem {
     this.accumulatedDamage = 0; // 현재 보스에게 누적된 데미지
     this.currentBossHp = 0; // 현재 보스의 최대 HP
     this.currentBossData = null; // 현재 보스 데이터
+    this.lastSaveTime = Date.now(); // 진행도 저장 타이머
+    this.SAVE_INTERVAL = 10000; // 10초마다 저장
+    this.unclaimedDamage = 0; // 미수령 누적 데미지 (보상받기용)
+
+    // 저장된 진행도 로드
+    this._loadSavedProgress();
+  }
+
+  /**
+   * 저장된 진행도 로드
+   * @private
+   */
+  _loadSavedProgress() {
+    const saveData = SaveManager.load();
+    const idleProgress = saveData?.idleProgress;
+    if (idleProgress) {
+      this.accumulatedDamage = idleProgress.accumulatedDamage || 0;
+      this.unclaimedDamage = idleProgress.unclaimedDamage || 0;
+      this._savedBossId = idleProgress.currentBossId || null;
+      GameLogger.log('IDLE', '저장된 진행도 로드', {
+        accumulatedDamage: this.accumulatedDamage,
+        unclaimedDamage: this.unclaimedDamage,
+        bossId: this._savedBossId
+      });
+    }
+  }
+
+  /**
+   * 진행도를 SaveManager에 저장
+   */
+  saveProgress() {
+    const saveData = SaveManager.load();
+    if (!saveData) return;
+
+    saveData.idleProgress = {
+      accumulatedDamage: this.accumulatedDamage,
+      unclaimedDamage: this.unclaimedDamage,
+      currentBossId: this.currentBossData?.id || null,
+      savedAt: Date.now()
+    };
+    SaveManager.save(saveData);
   }
 
   /**
@@ -308,19 +349,33 @@ export class IdleProgressSystem {
   }
 
   /**
-   * 현재 보스 로드
+   * 현재 보스 로드 — 같은 보스면 누적 데미지 유지
    */
   loadCurrentBoss() {
     const boss = this.getBossForCurrentStage();
+    const isSameBoss = this._savedBossId && this._savedBossId === boss.id;
+
     this.currentBossData = boss;
     this.currentBossHp = boss.hp;
-    this.accumulatedDamage = 0;
 
-    GameLogger.log('IDLE', '새 보스 로드', {
-      boss: boss.name,
-      hp: boss.hp,
-      emoji: boss.emoji
-    });
+    if (isSameBoss) {
+      // 같은 보스: 저장된 누적 데미지 유지
+      GameLogger.log('IDLE', '보스 로드 (진행도 유지)', {
+        boss: boss.name,
+        hp: boss.hp,
+        accumulatedDamage: this.accumulatedDamage,
+        progress: Math.floor((this.accumulatedDamage / boss.hp) * 100) + '%'
+      });
+    } else {
+      // 다른 보스: 리셋
+      this.accumulatedDamage = 0;
+      this._savedBossId = boss.id;
+      GameLogger.log('IDLE', '새 보스 로드 (진행도 리셋)', {
+        boss: boss.name,
+        hp: boss.hp,
+        emoji: boss.emoji
+      });
+    }
   }
 
   /**
@@ -343,13 +398,17 @@ export class IdleProgressSystem {
     const damage = Math.floor(dps * intervalSec * (0.9 + Math.random() * 0.2));
 
     this.accumulatedDamage += damage;
-
-    // 보상 계산 (공격마다 소량)
-    const goldReward = Math.floor((this.currentBossData?.goldReward || 15) * 0.3);
-    const expReward = Math.floor((this.currentBossData?.expReward || 10) * 0.3);
+    this.unclaimedDamage += damage;
 
     const progress = Math.min(1, this.accumulatedDamage / this.currentBossHp);
     const bossReady = !alreadyReady && this.accumulatedDamage >= this.currentBossHp;
+
+    // 주기적 저장 (10초마다)
+    const now = Date.now();
+    if (now - this.lastSaveTime >= this.SAVE_INTERVAL) {
+      this.lastSaveTime = now;
+      this.saveProgress();
+    }
 
     return {
       boss: this.currentBossData,
@@ -432,6 +491,68 @@ export class IdleProgressSystem {
     return 1 + ((stage.chapter || 1) - 1) * 0.5 + ((stage.stage || 1) - 1) * 0.05;
   }
 
+
+  /**
+   * 미수령 누적 보상 조회
+   * @returns {Object} { gold, exp, damageDealt, hasRewards }
+   */
+  getUnclaimedRewards() {
+    if (!this.currentBossData || this.unclaimedDamage <= 0) {
+      return { gold: 0, exp: 0, damageDealt: 0, hasRewards: false };
+    }
+
+    const bossHp = this.currentBossHp || 1;
+    const damageRatio = this.unclaimedDamage / bossHp;
+    const stageMultiplier = this.getStageMultiplier();
+
+    const gold = Math.floor(damageRatio * (this.currentBossData.goldReward || 600) * stageMultiplier);
+    const exp = Math.floor(damageRatio * (this.currentBossData.expReward || 300) * stageMultiplier);
+
+    return {
+      gold,
+      exp,
+      damageDealt: this.unclaimedDamage,
+      hasRewards: gold > 0 || exp > 0
+    };
+  }
+
+  /**
+   * 누적 보상 수령 — unclaimedDamage 리셋
+   * @returns {Object} { gold, exp, damageDealt }
+   */
+  claimRewards() {
+    const rewards = this.getUnclaimedRewards();
+    this.unclaimedDamage = 0;
+    this.saveProgress();
+
+    GameLogger.log('IDLE', '누적 보상 수령', {
+      gold: rewards.gold,
+      exp: rewards.exp,
+      damageDealt: rewards.damageDealt
+    });
+
+    return rewards;
+  }
+
+  /**
+   * 소탕 보상 계산 — 이전 단계의 예상 클리어 시간 기반
+   * @returns {Object} { gold, exp, estimatedTime }
+   */
+  calculateSweepRewards() {
+    const partyPower = this.getPartyPower();
+    const dps = partyPower * 0.15;
+    const boss = this.getBossForCurrentStage();
+    const bossHp = boss.hp;
+
+    // 예상 클리어 시간 (초) — 최소 10초, 최대 300초
+    const estimatedTime = Math.max(10, Math.min(300, bossHp / Math.max(1, dps)));
+    const stageMultiplier = this.getStageMultiplier();
+
+    const gold = Math.floor(estimatedTime * this.constructor.BASE_GOLD_PER_SEC * stageMultiplier);
+    const exp = Math.floor(estimatedTime * this.constructor.BASE_EXP_PER_SEC * stageMultiplier);
+
+    return { gold, exp, estimatedTime: Math.floor(estimatedTime) };
+  }
 
   /**
    * 랜덤 아이템 생성

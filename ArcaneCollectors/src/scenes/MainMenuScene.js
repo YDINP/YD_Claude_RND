@@ -64,8 +64,25 @@ export class MainMenuScene extends Phaser.Scene {
     this.createIdleSummary();
     this.createBottomMenu();
 
-    // Show offline rewards popup if available (with null defense)
+    // 오프라인 보상: IdleProgressSystem의 DPS 기반으로 재계산
     if (this.showOfflineRewards && (this.showOfflineRewards?.gold ?? 0) > 0) {
+      const lastLogoutTime = fullSaveData?.lastLogoutTime || fullSaveData?.lastOnline || Date.now();
+      const dpsRewards = this.idleSystem.calculateOfflineRewards(lastLogoutTime);
+
+      // DPS 기반 보상이 있으면 사용, 없으면 기존 보상 유지
+      if (dpsRewards.gold > 0 || dpsRewards.progressGained > 0) {
+        this.showOfflineRewards = {
+          ...this.showOfflineRewards,
+          gold: Math.max(this.showOfflineRewards.gold, dpsRewards.gold),
+          exp: Math.max(this.showOfflineRewards.exp, dpsRewards.exp),
+          items: dpsRewards.items || [],
+          progressGained: dpsRewards.progressGained || 0,
+          bossReady: dpsRewards.bossReady || false
+        };
+        // 진행도 즉시 저장
+        this.idleSystem.saveProgress();
+      }
+
       this.time.delayedCall(500, () => {
         this.showOfflineRewardsPopup(this.showOfflineRewards);
       });
@@ -103,6 +120,7 @@ export class MainMenuScene extends Phaser.Scene {
       this.heroPopup = null;
     }
     if (this.idleSystem) {
+      this.idleSystem.saveProgress();
       this.idleSystem = null;
     }
     this.time.removeAllEvents();
@@ -122,39 +140,70 @@ export class MainMenuScene extends Phaser.Scene {
     const safeRewards = {
       formattedDuration: rewards?.formattedDuration ?? '0분',
       gold: rewards?.gold ?? 0,
-      exp: rewards?.exp ?? 0
+      exp: rewards?.exp ?? 0,
+      progressGained: rewards?.progressGained ?? 0,
+      bossReady: rewards?.bossReady ?? false,
+      items: rewards?.items || []
     };
 
     const contentContainer = this.add.container(0, 0);
+    const elements = [];
+    let yPos = -80;
 
-    const durationText = this.add.text(0, -60, `${safeRewards.formattedDuration} 동안 모험했습니다!`, {
-      fontSize: '16px',
-      fontFamily: 'Arial',
-      color: '#94A3B8',
-      align: 'center'
-    }).setOrigin(0.5);
+    // 시간 표시
+    elements.push(this.add.text(0, yPos, `${safeRewards.formattedDuration} 동안 모험했습니다!`, {
+      fontSize: '16px', fontFamily: 'Arial', color: '#94A3B8', align: 'center'
+    }).setOrigin(0.5));
+    yPos += 40;
 
-    const goldReward = this.add.text(0, -15, `💰 골드: +${safeRewards.gold.toLocaleString()}`, {
-      fontSize: '20px',
-      fontFamily: 'Arial',
-      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+    // 골드 보상
+    elements.push(this.add.text(0, yPos, `💰 골드: +${safeRewards.gold.toLocaleString()}`, {
+      fontSize: '20px', fontFamily: 'Arial',
+      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`, fontStyle: 'bold'
+    }).setOrigin(0.5));
+    yPos += 35;
 
-    const expReward = this.add.text(0, 25, `⭐ 경험치: +${safeRewards.exp.toLocaleString()}`, {
-      fontSize: '20px',
-      fontFamily: 'Arial',
-      color: `#${COLORS.success.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+    // 경험치 보상
+    elements.push(this.add.text(0, yPos, `⭐ 경험치: +${safeRewards.exp.toLocaleString()}`, {
+      fontSize: '20px', fontFamily: 'Arial',
+      color: `#${COLORS.success.toString(16).padStart(6, '0')}`, fontStyle: 'bold'
+    }).setOrigin(0.5));
+    yPos += 35;
 
-    contentContainer.add([durationText, goldReward, expReward]);
+    // 보스 진행도 증가
+    if (safeRewards.progressGained > 0) {
+      const progressPercent = Math.floor(safeRewards.progressGained * 100);
+      const progressColor = safeRewards.bossReady ? '#EF4444' : '#3B82F6';
+      elements.push(this.add.text(0, yPos, `⚔️ 보스 진행도: +${progressPercent}%`, {
+        fontSize: '18px', fontFamily: 'Arial', color: progressColor, fontStyle: 'bold'
+      }).setOrigin(0.5));
+      yPos += 30;
 
+      if (safeRewards.bossReady) {
+        elements.push(this.add.text(0, yPos, '🔥 보스전 도전 가능!', {
+          fontSize: '16px', fontFamily: 'Arial', color: '#EF4444', fontStyle: 'bold'
+        }).setOrigin(0.5));
+        yPos += 30;
+      }
+    }
+
+    // 아이템 드롭
+    if (safeRewards.items.length > 0) {
+      const itemNames = safeRewards.items.map(i => i.name || i.id).join(', ');
+      elements.push(this.add.text(0, yPos, `📦 아이템: ${itemNames}`, {
+        fontSize: '14px', fontFamily: 'Arial', color: '#A78BFA'
+      }).setOrigin(0.5));
+      yPos += 25;
+    }
+
+    contentContainer.add(elements);
+
+    const modalHeight = Math.max(280, yPos + 160);
     const modal = new Modal(this, {
       title: '🎁 오프라인 보상',
       content: contentContainer,
-      width: 350,
-      height: 280,
+      width: 380,
+      height: modalHeight,
       buttons: [
         {
           text: '받기',
@@ -387,7 +436,7 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
     editBtn.add([editBg, editText]);
     editBg.on('pointerdown', () => {
-      transitionManager.fadeTransition(this, 'PartyEditScene', { returnTo: 'MainMenuScene' });
+      this.openPopup('partyedit');
     });
 
     const classColors = { warrior: 0xEF4444, mage: 0x8B5CF6, archer: 0x10B981, healer: 0x3B82F6 };
@@ -547,54 +596,59 @@ export class MainMenuScene extends Phaser.Scene {
     const partyHeroes = party.map(heroId => (saveData.characters || []).find(c => c.id === heroId)).filter(Boolean);
     const hasParty = partyHeroes.length > 0;
 
-    // Sweep availability check
-    const clearedStages = progress.clearedStages || {};
-    const canSweep = Object.keys(clearedStages).length > 0 && hasParty;
-    const energy = saveData?.resources?.energy ?? 50;
+    // Sweep availability: 파티만 있으면 항상 가능
+    const canSweep = hasParty;
 
-    // Sweep button
+    // Sweep button (인스턴스 변수로 보관)
     const sweepBtnX = 40;
     const sweepBtnW = GAME_WIDTH / 2 - 60;
-    const sweepBtn = this.add.graphics();
-    sweepBtn.fillStyle(canSweep ? 0x10B981 : 0x334155, 1);
-    sweepBtn.fillRoundedRect(sweepBtnX, panelY + 80, sweepBtnW, 50, 10);
-    const sweepBtnText = this.add.text(sweepBtnX + sweepBtnW / 2, panelY + 105, `⚡ 소탕 (10🔋)`, {
+    this._sweepBtnGfx = this.add.graphics();
+    this._sweepBtnGfx.fillStyle(canSweep ? 0x10B981 : 0x334155, 1);
+    this._sweepBtnGfx.fillRoundedRect(sweepBtnX, panelY + 80, sweepBtnW, 50, 10);
+    this._sweepBtnText = this.add.text(sweepBtnX + sweepBtnW / 2, panelY + 105, `⚡ 소탕 (10🔋)`, {
       fontSize: '16px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
 
-    const sweepHit = this.add.rectangle(sweepBtnX + sweepBtnW / 2, panelY + 105, sweepBtnW, 50)
+    this._sweepHit = this.add.rectangle(sweepBtnX + sweepBtnW / 2, panelY + 105, sweepBtnW, 50)
       .setAlpha(0.001);
 
     if (canSweep) {
-      sweepHit.setInteractive({ useHandCursor: true });
-      sweepHit.on('pointerdown', () => {
+      this._sweepHit.setInteractive({ useHandCursor: true });
+      this._sweepHit.on('pointerdown', () => {
         this.performSweep();
       });
     } else {
-      sweepBtnText.setAlpha(0.5);
+      this._sweepBtnText.setAlpha(0.5);
     }
 
-    // Boss battle button — 진행도 100% + 파티 있을 때만 활성화
+    // Boss battle button — 동적 활성화 (인스턴스 변수로 보관)
     const bossReady = hasParty && this.idleSystem?.isBossReady?.();
+    this._bossReady = bossReady;
     const bossBtnX = GAME_WIDTH / 2 + 20;
     const bossBtnW = GAME_WIDTH / 2 - 60;
-    const bossBtn = this.add.graphics();
-    bossBtn.fillStyle(bossReady ? 0xEF4444 : 0x334155, 1);
-    bossBtn.fillRoundedRect(bossBtnX, panelY + 80, bossBtnW, 50, 10);
-    const bossBtnText = this.add.text(bossBtnX + bossBtnW / 2, panelY + 105, '🗡️ 보스전 (20🔋)', {
+    this._bossBtnGfx = this.add.graphics();
+    this._bossBtnGfx.fillStyle(bossReady ? 0xEF4444 : 0x334155, 1);
+    this._bossBtnGfx.fillRoundedRect(bossBtnX, panelY + 80, bossBtnW, 50, 10);
+    this._bossBtnText = this.add.text(bossBtnX + bossBtnW / 2, panelY + 105, '🗡️ 보스전 (20🔋)', {
       fontSize: '16px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
+    this._bossBtnPanelY = panelY;
 
-    const bossHit = this.add.rectangle(bossBtnX + bossBtnW / 2, panelY + 105, bossBtnW, 50)
+    this._bossHit = this.add.rectangle(bossBtnX + bossBtnW / 2, panelY + 105, bossBtnW, 50)
       .setAlpha(0.001);
 
-    if (bossReady) {
-      bossHit.setInteractive({ useHandCursor: true });
-      bossHit.on('pointerdown', () => {
+    // 보스전 버튼은 항상 인터랙티브 등록 (상태는 update에서 동적 관리)
+    this._bossHit.setInteractive({ useHandCursor: true });
+    this._bossHit.on('pointerdown', () => {
+      if (this._bossReady) {
         this.prepareBossBattle();
-      });
-    } else {
-      bossBtnText.setAlpha(0.5);
+      } else {
+        this.showToast('진행도 100%가 되어야 보스전에 도전할 수 있습니다!');
+      }
+    });
+
+    if (!bossReady) {
+      this._bossBtnText.setAlpha(0.5);
     }
 
     // Energy display (EnergySystem 시간 회복 반영)
@@ -686,8 +740,10 @@ export class MainMenuScene extends Phaser.Scene {
       return;
     }
 
-    const goldReward = Phaser.Math.Between(50, 150);
-    const expReward = Phaser.Math.Between(20, 60);
+    // 이전 단계의 예상 클리어 시간 기반 보상 계산
+    const sweepRewards = this.idleSystem.calculateSweepRewards();
+    const goldReward = sweepRewards.gold;
+    const expReward = sweepRewards.exp;
 
     const data = SaveManager.load();
     if (data) {
@@ -705,7 +761,7 @@ export class MainMenuScene extends Phaser.Scene {
     const stageName = `${currentStage.chapter}-${currentStage.stage}`;
     const modal = new Modal(this, {
       title: '⚡ 소탕 완료!',
-      message: `📍 스테이지 ${stageName}\n\n💰 골드: +${goldReward}\n✨ 경험치: +${expReward} EXP\n🔋 에너지: -10`,
+      message: `📍 스테이지 ${stageName}\n⏱ 예상 클리어: ${sweepRewards.estimatedTime}초\n\n💰 골드: +${goldReward.toLocaleString()}\n✨ 경험치: +${expReward.toLocaleString()} EXP\n🔋 에너지: -10`,
       buttons: [
         { text: '확인', style: 'primary', callback: () => {
           modal.close();
@@ -804,6 +860,164 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: '13px', fontFamily: 'Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
+
+    // === 보상받기 버튼 ===
+    this._createClaimRewardsButton(summaryY + 45);
+  }
+
+  /**
+   * 누적 보상 수령 버튼 생성
+   */
+  _createClaimRewardsButton(y) {
+    const btnW = 300;
+    const btnH = 44;
+    const btnX = GAME_WIDTH / 2 - btnW / 2;
+
+    // 버튼 배경
+    this._claimBtnGfx = this.add.graphics();
+    this._claimBtnGfx.fillStyle(0x334155, 1);
+    this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
+
+    // 보상 텍스트 (동적 갱신)
+    this._claimRewardText = this.add.text(GAME_WIDTH / 2, y + btnH / 2, '🎁 보상받기 (누적 없음)', {
+      fontSize: '14px', fontFamily: '"Noto Sans KR", Arial',
+      color: '#94A3B8',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // 히트 영역
+    this._claimBtnHit = this.add.rectangle(GAME_WIDTH / 2, y + btnH / 2, btnW, btnH)
+      .setAlpha(0.001).setInteractive({ useHandCursor: true });
+
+    this._claimBtnHit.on('pointerdown', () => this._onClaimRewards());
+    this._claimBtnHit.on('pointerover', () => {
+      if (this._hasClaimableRewards) {
+        this._claimBtnGfx.clear();
+        this._claimBtnGfx.fillStyle(0x16A34A, 1);
+        this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
+      }
+    });
+    this._claimBtnHit.on('pointerout', () => {
+      this._updateClaimButton(btnX, y, btnW, btnH);
+    });
+
+    // 상태 변수
+    this._claimBtnX = btnX;
+    this._claimBtnY = y;
+    this._claimBtnW = btnW;
+    this._claimBtnH = btnH;
+    this._hasClaimableRewards = false;
+    this._lastClaimUpdate = 0;
+  }
+
+  /**
+   * 보상받기 버튼 상태 갱신 (update에서 호출)
+   */
+  _updateClaimButton(btnX, y, btnW, btnH) {
+    if (!this._claimBtnGfx || !this._claimRewardText) return;
+
+    const rewards = this.idleSystem?.getUnclaimedRewards?.() || { gold: 0, exp: 0, hasRewards: false };
+    this._hasClaimableRewards = rewards.hasRewards;
+
+    this._claimBtnGfx.clear();
+    if (rewards.hasRewards) {
+      this._claimBtnGfx.fillStyle(0x22C55E, 1);
+      this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
+      this._claimRewardText.setText(`🎁 보상받기  💰${rewards.gold.toLocaleString()}  ⭐${rewards.exp.toLocaleString()}`);
+      this._claimRewardText.setColor('#FFFFFF');
+    } else {
+      this._claimBtnGfx.fillStyle(0x334155, 1);
+      this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
+      this._claimRewardText.setText('🎁 보상받기 (누적 없음)');
+      this._claimRewardText.setColor('#94A3B8');
+    }
+  }
+
+  /**
+   * 보상 수령 처리
+   */
+  _onClaimRewards() {
+    if (!this.idleSystem) return;
+
+    const rewards = this.idleSystem.claimRewards();
+    if (!rewards.hasRewards) {
+      this.showToast('누적된 보상이 없습니다.');
+      return;
+    }
+
+    // 골드/경험치 적용
+    const currentGold = this.registry.get('gold') ?? 0;
+    this.registry.set('gold', currentGold + rewards.gold);
+    SaveManager.addGold(rewards.gold);
+
+    // 플레이어 경험치 적용
+    if (rewards.exp > 0) {
+      const data = SaveManager.load();
+      if (data?.player) {
+        data.player.exp = (data.player.exp || 0) + rewards.exp;
+        SaveManager.save(data);
+      }
+    }
+
+    // 보상 팝업 표시
+    this._showClaimRewardsPopup(rewards);
+
+    // 버튼 갱신
+    this._updateClaimButton(this._claimBtnX, this._claimBtnY, this._claimBtnW, this._claimBtnH);
+  }
+
+  /**
+   * 보상 수령 팝업
+   */
+  _showClaimRewardsPopup(rewards) {
+    const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6)
+      .setInteractive().setDepth(1000);
+
+    const popupW = 320;
+    const popupH = 200;
+    const popupX = GAME_WIDTH / 2 - popupW / 2;
+    const popupY = GAME_HEIGHT / 2 - popupH / 2;
+
+    const popupBg = this.add.graphics().setDepth(1001);
+    popupBg.fillStyle(0x1E293B, 1);
+    popupBg.fillRoundedRect(popupX, popupY, popupW, popupH, 16);
+    popupBg.lineStyle(2, 0x22C55E, 0.8);
+    popupBg.strokeRoundedRect(popupX, popupY, popupW, popupH, 16);
+
+    const title = this.add.text(GAME_WIDTH / 2, popupY + 30, '🎁 보상 수령 완료!', {
+      fontSize: '18px', fontFamily: '"Noto Sans KR", Arial',
+      color: '#22C55E', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(1002);
+
+    const goldText = this.add.text(GAME_WIDTH / 2, popupY + 75, `💰 골드  +${rewards.gold.toLocaleString()}`, {
+      fontSize: '16px', fontFamily: 'Arial',
+      color: '#FBBF24', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(1002);
+
+    const expText = this.add.text(GAME_WIDTH / 2, popupY + 105, `⭐ 경험치  +${rewards.exp.toLocaleString()}`, {
+      fontSize: '16px', fontFamily: 'Arial',
+      color: '#34D399', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(1002);
+
+    const closeBtn = this.add.text(GAME_WIDTH / 2, popupY + 155, '확인', {
+      fontSize: '16px', fontFamily: '"Noto Sans KR", Arial',
+      color: '#FFFFFF', backgroundColor: '#22C55E',
+      padding: { x: 30, y: 8 }
+    }).setOrigin(0.5).setDepth(1002).setInteractive({ useHandCursor: true });
+
+    const popupElements = [overlay, popupBg, title, goldText, expText, closeBtn];
+
+    closeBtn.on('pointerdown', () => {
+      popupElements.forEach(el => el.destroy());
+    });
+    overlay.on('pointerdown', () => {
+      popupElements.forEach(el => el.destroy());
+    });
+
+    // 자동 닫기 (3초)
+    this.time.delayedCall(3000, () => {
+      popupElements.forEach(el => { if (el.scene) el.destroy(); });
+    });
   }
 
   createBottomMenu() {
@@ -987,10 +1201,50 @@ export class MainMenuScene extends Phaser.Scene {
         this.idleBattleView.updateBossHp(battleResult.accumulatedDamage, battleResult.bossMaxHp);
         this.idleBattleView.updateProgress(battleResult.progress);
 
-        // 진행도 100% → 보스전 준비 알림 (자동 진입 없음, 수동 버튼으로만)
+
+
+        // 진행도 100% → 보스전 준비 알림 + 버튼 동적 활성화
         if (battleResult.bossReady) {
           this.idleBattleView.showBossReady();
           this.showToast('⚔️ 보스전 준비 완료! 보스전 버튼을 눌러주세요.');
+        }
+      }
+
+      // 보상받기 버튼 갱신 (2초 간격)
+      const now = Date.now();
+      if (this._claimBtnGfx && now - (this._lastClaimUpdate || 0) > 2000) {
+        this._lastClaimUpdate = now;
+        this._updateClaimButton(this._claimBtnX, this._claimBtnY, this._claimBtnW, this._claimBtnH);
+      }
+
+      // 보스 버튼 상태 동적 업데이트
+      const nowBossReady = this.idleSystem.isBossReady?.() || false;
+      if (nowBossReady !== this._bossReady) {
+        this._bossReady = nowBossReady;
+        if (this._bossBtnGfx && this._bossBtnText) {
+          const bossBtnX = GAME_WIDTH / 2 + 20;
+          const bossBtnW = GAME_WIDTH / 2 - 60;
+          this._bossBtnGfx.clear();
+          this._bossBtnGfx.fillStyle(nowBossReady ? 0xEF4444 : 0x334155, 1);
+          this._bossBtnGfx.fillRoundedRect(bossBtnX, this._bossBtnPanelY + 80, bossBtnW, 50, 10);
+          this._bossBtnText.setAlpha(nowBossReady ? 1 : 0.5);
+
+          // 활성화 시 펄스 애니메이션
+          if (nowBossReady && !this._bossPulseTween) {
+            this._bossPulseTween = this.tweens.add({
+              targets: this._bossBtnText,
+              scaleX: { from: 1, to: 1.05 },
+              scaleY: { from: 1, to: 1.05 },
+              duration: 800,
+              yoyo: true,
+              repeat: -1,
+              ease: 'Sine.easeInOut'
+            });
+          } else if (!nowBossReady && this._bossPulseTween) {
+            this._bossPulseTween.stop();
+            this._bossPulseTween = null;
+            this._bossBtnText.setScale(1);
+          }
         }
       }
     }
