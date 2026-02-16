@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PopupBase } from '../PopupBase.js';
 import { COLORS, MOODS, s, sf, GAME_WIDTH, GAME_HEIGHT } from '../../config/gameConfig.js';
+import { RARITY_COLORS } from '../../config/layoutConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import { PartyManager } from '../../systems/PartyManager.js';
 import { ProgressionSystem } from '../../systems/ProgressionSystem.js';
@@ -356,110 +357,270 @@ export class PartyEditPopup extends PopupBase {
     // 현재 파티에 있는 영웅 ID 목록
     const currentIds = this.heroSlots.filter(s => s.hero).map(s => s.hero.id || s.hero.characterId);
 
-    // 보유 영웅 목록 (이미 편성된 영웅 제외)
-    const availableHeroes = this.ownedHeroes
+    // 보유 영웅 목록 (모든 영웅 표시)
+    const allHeroes = this.ownedHeroes
       .map(h => typeof h === 'string' ? this.findHeroData(h) : h)
-      .filter(h => h && !currentIds.includes(h.id || h.characterId));
+      .filter(h => h);
 
     // 서브패널 오버레이
-    const overlay = this.scene.add.rectangle(this.contentBounds.centerX, this.contentBounds.top + this.contentBounds.height / 2,
-      this.contentBounds.width + s(30), this.contentBounds.height, 0x000000, 0.75)
-      .setDepth(2100).setInteractive();
+    const overlay = this.scene.add.rectangle(
+      this.contentBounds.centerX,
+      this.contentBounds.top + this.contentBounds.height / 2,
+      this.contentBounds.width + s(30),
+      this.contentBounds.height,
+      0x000000,
+      0.75
+    ).setDepth(2100).setInteractive();
 
     // 서브패널
-    const panelH = Math.min(s(600), s(160) + availableHeroes.length * s(65));
-    const panel = this.scene.add.rectangle(this.contentBounds.centerX, this.contentBounds.top + s(350),
-      this.contentBounds.width - s(40), panelH, COLORS.bgLight, 0.98)
-      .setDepth(2101);
+    const panelH = s(700);
+    const panelW = this.contentBounds.width - s(40);
+    const panelY = this.contentBounds.top + s(350);
+    const panel = this.scene.add.rectangle(
+      this.contentBounds.centerX,
+      panelY,
+      panelW,
+      panelH,
+      COLORS.bgLight,
+      0.98
+    ).setDepth(2101);
     panel.setStrokeStyle(s(2), COLORS.primary);
 
     // 타이틀
-    const title = this.scene.add.text(this.contentBounds.centerX, this.contentBounds.top + s(350) - panelH / 2 + s(25),
-      `슬롯 ${slotIndex + 1} - 영웅 선택`, {
+    const title = this.scene.add.text(
+      this.contentBounds.centerX,
+      panelY - panelH / 2 + s(25),
+      `슬롯 ${slotIndex + 1} - 영웅 선택`,
+      {
         fontSize: sf(20),
         fontFamily: '"Noto Sans KR", sans-serif',
         fontStyle: 'bold',
         color: '#F8FAFC'
-      }).setOrigin(0.5).setDepth(2102);
+      }
+    ).setOrigin(0.5).setDepth(2102);
 
     // 닫기 버튼
-    const closeX = this.contentBounds.centerX + (this.contentBounds.width - s(40)) / 2 - s(20);
-    const closeBtn = this.scene.add.text(closeX, this.contentBounds.top + s(350) - panelH / 2 + s(25), '✕', {
-      fontSize: sf(24),
-      color: '#FFFFFF'
-    }).setOrigin(0.5).setDepth(2102).setInteractive({ useHandCursor: true });
+    const closeX = this.contentBounds.centerX + panelW / 2 - s(20);
+    const closeBtn = this.scene.add.text(
+      closeX,
+      panelY - panelH / 2 + s(25),
+      '✕',
+      {
+        fontSize: sf(24),
+        color: '#FFFFFF'
+      }
+    ).setOrigin(0.5).setDepth(2102).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.closeHeroSelect());
 
-    if (availableHeroes.length === 0) {
-      const msg = this.scene.add.text(this.contentBounds.centerX, this.contentBounds.top + s(350),
-        '편성 가능한 영웅이 없습니다', {
+    if (allHeroes.length === 0) {
+      const msg = this.scene.add.text(
+        this.contentBounds.centerX,
+        panelY,
+        '보유한 영웅이 없습니다',
+        {
           fontSize: sf(16),
           fontFamily: '"Noto Sans KR", sans-serif',
           color: '#64748B'
-        }).setOrigin(0.5).setDepth(2102);
+        }
+      ).setOrigin(0.5).setDepth(2102);
       return;
     }
 
     // 등급순 정렬
     const rarityOrder = { SSR: 0, SR: 1, R: 2, N: 3 };
-    availableHeroes.sort((a, b) => (rarityOrder[a.rarity] || 9) - (rarityOrder[b.rarity] || 9));
+    allHeroes.sort((a, b) => (rarityOrder[a.rarity] || 9) - (rarityOrder[b.rarity] || 9));
 
-    // 영웅 리스트
-    const listStartY = this.contentBounds.top + s(350) - panelH / 2 + s(60);
-    const itemH = s(60);
+    // 그리드 컨테이너 설정
+    const gridContainer = this.scene.add.container(0, 0).setDepth(2102);
 
-    availableHeroes.slice(0, 8).forEach((hero, i) => {
-      const y = listStartY + i * itemH;
+    // 그리드 설정
+    const cols = 3;
+    const cardW = s(110);
+    const cardH = s(130);
+    const gapX = s(15);
+    const gapY = s(15);
+    const totalGridW = cols * cardW + (cols - 1) * gapX;
+    const startX = this.contentBounds.centerX - totalGridW / 2 + cardW / 2;
+    const startY = panelY - panelH / 2 + s(70);
 
-      const itemBg = this.scene.add.rectangle(this.contentBounds.centerX, y,
-        this.contentBounds.width - s(80), itemH - s(5), COLORS.bgPanel, 0.5)
-        .setDepth(2102).setInteractive({ useHandCursor: true });
+    // 스크롤 영역 설정
+    const scrollAreaH = panelH - s(120);
+    const maskY = startY;
+    const maskH = scrollAreaH;
 
-      // 등급 원
-      const rarityColor = COLORS.rarity?.[hero.rarity] || 0x9CA3AF;
-      this.scene.add.circle(this.contentBounds.left + s(60), y, s(15), rarityColor, 0.8).setDepth(2102);
+    // 마스크 생성
+    const maskGraphics = this.scene.make.graphics({ x: 0, y: 0 }).setDepth(2102);
+    maskGraphics.fillStyle(0xffffff);
+    maskGraphics.fillRect(
+      this.contentBounds.centerX - totalGridW / 2 - s(10),
+      maskY - s(10),
+      totalGridW + s(20),
+      maskH + s(20)
+    );
+    const mask = maskGraphics.createGeometryMask();
+    gridContainer.setMask(mask);
+
+    // 영웅 카드 생성
+    let scrollY = 0;
+    const maxScrollY = Math.max(0, Math.ceil(allHeroes.length / cols) * (cardH + gapY) - scrollAreaH + s(30));
+
+    allHeroes.forEach((hero, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const x = startX + col * (cardW + gapX);
+      const y = startY + row * (cardH + gapY);
+
+      const isInParty = currentIds.includes(hero.id || hero.characterId);
+
+      // 카드 배경
+      const cardBg = this.scene.add.rectangle(
+        x,
+        y,
+        cardW,
+        cardH,
+        COLORS.bgPanel,
+        isInParty ? 0.3 : 0.7
+      );
+
+      // 등급별 테두리
+      const rarityStyle = RARITY_COLORS[hero.rarity] || RARITY_COLORS.N;
+      cardBg.setStrokeStyle(s(2), rarityStyle.border, isInParty ? 0.4 : 1);
+
+      if (!isInParty) {
+        cardBg.setInteractive({ useHandCursor: true });
+        cardBg.on('pointerdown', () => this.selectHero(hero));
+        cardBg.on('pointerover', () => {
+          cardBg.setFillStyle(COLORS.primary, 0.5);
+          cardBg.setStrokeStyle(s(3), rarityStyle.border, 1);
+        });
+        cardBg.on('pointerout', () => {
+          cardBg.setFillStyle(COLORS.bgPanel, 0.7);
+          cardBg.setStrokeStyle(s(2), rarityStyle.border, 1);
+        });
+      }
+
+      // 등급 표시 (별)
+      const rarityText = this.scene.add.text(
+        x,
+        y - cardH / 2 + s(18),
+        this.getRarityStars(hero.rarity),
+        {
+          fontSize: sf(14),
+          color: '#FFD700'
+        }
+      ).setOrigin(0.5);
 
       // 이름
-      this.scene.add.text(this.contentBounds.left + s(90), y - s(10), hero.nameKo || hero.name, {
-        fontSize: sf(15),
-        fontFamily: '"Noto Sans KR", sans-serif',
-        color: '#FFFFFF',
-        fontStyle: 'bold'
-      }).setOrigin(0, 0.5).setDepth(2102);
+      const nameText = this.scene.add.text(
+        x,
+        y - s(10),
+        hero.nameKo || hero.name,
+        {
+          fontSize: sf(13),
+          fontFamily: '"Noto Sans KR", sans-serif',
+          color: isInParty ? '#64748B' : '#F8FAFC',
+          fontStyle: 'bold',
+          wordWrap: { width: cardW - s(10) },
+          align: 'center'
+        }
+      ).setOrigin(0.5);
 
-      // 정보
-      const moodName = MOODS[hero.mood]?.name || hero.mood;
-      this.scene.add.text(this.contentBounds.left + s(90), y + s(10),
-        `${moodName} · ${hero.role || hero.class} · ${hero.rarity}`, {
+      // 레벨
+      const levelText = this.scene.add.text(
+        x,
+        y + s(15),
+        `Lv.${hero.level || 1}`,
+        {
           fontSize: sf(12),
           fontFamily: '"Noto Sans KR", sans-serif',
-          color: '#64748B'
-        }).setOrigin(0, 0.5).setDepth(2102);
+          color: isInParty ? '#64748B' : '#94A3B8'
+        }
+      ).setOrigin(0.5);
 
-      // 전투력
-      let power = 0;
-      try {
-        power = ProgressionSystem.calculatePower({
-          ...hero,
-          characterId: hero.id || hero.characterId,
-          skillLevels: hero.skillLevels || [1, 1, 1]
-        });
-      } catch (e) {
-        const stats = hero.stats || {};
-        power = Math.floor((stats.hp || 0) / 10 + (stats.atk || 0) + (stats.def || 0) + (stats.spd || 0));
+      // 편성됨 표시
+      let statusText = null;
+      if (isInParty) {
+        statusText = this.scene.add.text(
+          x,
+          y + s(38),
+          '편성됨',
+          {
+            fontSize: sf(11),
+            fontFamily: '"Noto Sans KR", sans-serif',
+            color: '#64748B',
+            backgroundColor: '#1E293B',
+            padding: { x: s(6), y: s(3) }
+          }
+        ).setOrigin(0.5);
       }
-      this.scene.add.text(this.contentBounds.centerX + (this.contentBounds.width - s(80)) / 2 - s(10), y,
-        power.toString(), {
-          fontSize: sf(14),
-          fontFamily: '"Noto Sans KR", sans-serif',
-          color: '#F59E0B',
-          fontStyle: 'bold'
-        }).setOrigin(1, 0.5).setDepth(2102);
 
-      itemBg.on('pointerdown', () => this.selectHero(hero));
-      itemBg.on('pointerover', () => itemBg.setFillStyle(COLORS.primary, 0.3));
-      itemBg.on('pointerout', () => itemBg.setFillStyle(COLORS.bgPanel, 0.5));
+      gridContainer.add([cardBg, rarityText, nameText, levelText]);
+      if (statusText) gridContainer.add(statusText);
     });
+
+    // 스크롤 이벤트
+    if (maxScrollY > 0) {
+      panel.setInteractive();
+      panel.on('wheel', (pointer, deltaX, deltaY) => {
+        scrollY = Phaser.Math.Clamp(scrollY + deltaY * 0.5, 0, maxScrollY);
+        gridContainer.y = -scrollY;
+      });
+
+      // 드래그 스크롤
+      let isDragging = false;
+      let dragStartY = 0;
+      let dragStartScrollY = 0;
+
+      panel.on('pointerdown', (pointer) => {
+        isDragging = true;
+        dragStartY = pointer.y;
+        dragStartScrollY = scrollY;
+      });
+
+      this.scene.input.on('pointermove', (pointer) => {
+        if (isDragging) {
+          const deltaY = dragStartY - pointer.y;
+          scrollY = Phaser.Math.Clamp(dragStartScrollY + deltaY, 0, maxScrollY);
+          gridContainer.y = -scrollY;
+        }
+      });
+
+      this.scene.input.on('pointerup', () => {
+        isDragging = false;
+      });
+    }
+
+    // 스크롤 인디케이터
+    if (maxScrollY > 0) {
+      const indicatorX = this.contentBounds.centerX + totalGridW / 2 + s(20);
+      const indicatorH = maskH - s(20);
+      const indicatorTrack = this.scene.add.rectangle(
+        indicatorX,
+        maskY + maskH / 2,
+        s(4),
+        indicatorH,
+        0x64748B,
+        0.3
+      ).setDepth(2102);
+
+      const indicatorBarH = Math.max(s(30), indicatorH * (scrollAreaH / (scrollAreaH + maxScrollY)));
+      const indicatorBar = this.scene.add.rectangle(
+        indicatorX,
+        maskY + s(10) + indicatorBarH / 2,
+        s(4),
+        indicatorBarH,
+        COLORS.primary,
+        0.8
+      ).setDepth(2102);
+
+      // 스크롤 업데이트 시 인디케이터 위치 업데이트
+      panel.on('wheel', () => {
+        const progress = scrollY / maxScrollY;
+        const maxBarY = maskY + indicatorH - indicatorBarH / 2 - s(10);
+        const minBarY = maskY + indicatorBarH / 2 + s(10);
+        indicatorBar.y = minBarY + (maxBarY - minBarY) * progress;
+      });
+    }
   }
 
   selectHero(hero) {

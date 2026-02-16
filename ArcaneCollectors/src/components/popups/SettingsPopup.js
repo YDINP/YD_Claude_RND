@@ -6,6 +6,7 @@ import { PopupBase } from '../PopupBase.js';
 import { COLORS, s, sf, GAME_WIDTH, GAME_HEIGHT } from '../../config/gameConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import { CouponSystem } from '../../systems/CouponSystem.js';
+import { DebugManager } from '../../systems/DebugManager.js';
 
 export class SettingsPopup extends PopupBase {
   constructor(scene, options = {}) {
@@ -21,6 +22,7 @@ export class SettingsPopup extends PopupBase {
 
   buildContent() {
     this.createSettingsSection();
+    this.createDebugToggle();
     this.createAccountManagement(); // AUTH-1.2: 계정 관리 섹션
     this.createAccountInfo();
   }
@@ -48,6 +50,61 @@ export class SettingsPopup extends PopupBase {
     settings.forEach((setting, i) => {
       const y = sectionY + s(45) + i * s(55);
       this.createSettingRow(setting, y, settingsData);
+    });
+  }
+
+  /**
+   * BUG-10: 개발자 모드(치트패널) 토글
+   */
+  createDebugToggle() {
+    const { left, top, width } = this.contentBounds;
+    const y = top + s(45) + 4 * s(55); // 4개 설정 행 아래
+
+    const rowBg = this.scene.add.graphics();
+    rowBg.fillStyle(0x1E293B, 0.8);
+    rowBg.fillRoundedRect(left, y, width, s(45), s(10));
+    this.contentContainer.add(rowBg);
+
+    this.addText(left + s(20), y + s(12), '🛠️ 개발자 모드', {
+      fontSize: sf(16),
+      color: '#F59E0B'
+    });
+
+    const isOn = DebugManager.isDebugMode;
+    const toggleX = left + width - s(50);
+    const toggleBg = this.scene.add.graphics();
+    toggleBg.fillStyle(isOn ? 0xF59E0B : 0x475569, 1);
+    toggleBg.fillRoundedRect(toggleX, y + s(10), s(44), s(24), s(12));
+    this.contentContainer.add(toggleBg);
+
+    const knobX = isOn ? toggleX + s(28) : toggleX + s(16);
+    const knob = this.scene.add.circle(knobX, y + s(22), s(9), 0xffffff);
+    this.contentContainer.add(knob);
+
+    const hitArea = this.scene.add.rectangle(toggleX + s(22), y + s(22), s(50), s(30))
+      .setAlpha(0.001).setInteractive({ useHandCursor: true });
+    this.contentContainer.add(hitArea);
+
+    hitArea.on('pointerdown', () => {
+      const newVal = !DebugManager.isDebugMode;
+      DebugManager.setDebugMode(newVal);
+
+      // FAB 토글: 활성화 시 디버그 FAB 부착, 비활성화 시 제거
+      if (newVal) {
+        DebugManager.attachToScene(this.scene);
+        this.showToast('🛠️ 개발자 모드 활성화! 디버그 버튼이 화면에 표시됩니다.');
+      } else {
+        if (DebugManager.currentFAB) {
+          DebugManager.currentFAB.destroy();
+          DebugManager.currentFAB = null;
+        }
+        if (DebugManager.currentPanel) {
+          DebugManager.currentPanel.destroy();
+          DebugManager.currentPanel = null;
+        }
+        this.showToast('개발자 모드 비활성화');
+      }
+      this.refresh();
     });
   }
 
@@ -97,7 +154,7 @@ export class SettingsPopup extends PopupBase {
    */
   createAccountManagement() {
     const { left, top, width } = this.contentBounds;
-    const y = top + s(280);
+    const y = top + s(335); // s(280) + s(55) for debug toggle row
 
     this.addText(left + s(10), y, '계정 관리', {
       fontSize: sf(20),
@@ -241,7 +298,7 @@ export class SettingsPopup extends PopupBase {
 
   createAccountInfo() {
     const { left, top, width } = this.contentBounds;
-    const y = top + s(460); // AUTH-1.2: Y 위치 조정 (계정 관리 섹션 아래로)
+    const y = top + s(515); // AUTH-1.2: Y 위치 조정 (계정 관리 + 디버그 토글 아래로)
 
     this.addText(left + s(10), y, '계정 정보', {
       fontSize: sf(20),

@@ -286,9 +286,9 @@ export class HeroListPopup extends PopupBase {
       this.heroCountText.setText(`${filtered.length}명`);
     }
 
-    // Render grid (2 columns)
-    const cols = 2;
-    const cardW = s(110);
+    // Render grid (3 columns)
+    const cols = 3;
+    const cardW = s(120);
     const cardH = s(150);
     const spacing = s(10);
     const gridW = cols * cardW + (cols - 1) * spacing;
@@ -313,7 +313,7 @@ export class HeroListPopup extends PopupBase {
   createHeroCard(hero, x, y) {
     const card = this.scene.add.container(x, y);
 
-    const cardW = s(110);
+    const cardW = s(120);
     const cardH = s(150);
 
     const rKey = getRarityKey(hero.rarity);
