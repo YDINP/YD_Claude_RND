@@ -25,6 +25,7 @@ export class BattleResultScene extends Phaser.Scene {
     this.aliveCount = data?.aliveCount ?? 0;
     this.totalAllies = data?.totalAllies ?? 0;
     this.mode = data?.mode ?? 'normal';
+    this.towerFloor = data?.towerFloor;  // 추가: 타워 층 번호
   }
 
   create() {
@@ -338,8 +339,12 @@ export class BattleResultScene extends Phaser.Scene {
 
     if (this.victory) {
       // 다음 스테이지 버튼
+      let label = '다음 스테이지';
+      if (this.mode === 'boss') label = '스테이지 진행';
+      if (this.mode === 'tower') label = '타워로 복귀';
+
       buttons.push({
-        label: this.mode === 'boss' ? '스테이지 진행' : '다음 스테이지',
+        label,
         color: COLORS.primary,
         action: () => this.goToNextStage()
       });
@@ -543,6 +548,14 @@ export class BattleResultScene extends Phaser.Scene {
   goToNextStage() {
     if (this.transitioning) return;
     this.transitioning = true;
+
+    // 타워 모드: TowerScene으로 복귀
+    if (this.mode === 'tower') {
+      transitionManager.fadeTransition(this, 'TowerScene');
+      return;
+    }
+
+    // 보스 모드 또는 일반 모드: MainMenuScene으로 복귀
     const data = this.mode === 'boss' ? { bossVictory: true } : {};
     transitionManager.slideTransition(this, 'MainMenuScene', data, 'left');
   }

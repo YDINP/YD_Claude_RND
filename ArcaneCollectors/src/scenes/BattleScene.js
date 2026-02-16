@@ -2182,7 +2182,8 @@ export class BattleScene extends Phaser.Scene {
       turnCount: this.turn,
       aliveCount,
       totalAllies,
-      mode: this.mode  // 추가: 보스전 모드 전달
+      mode: this.mode,  // 추가: 보스전 모드 전달
+      towerFloor: this.towerFloor  // 추가: 타워 층 전달
     };
     this.time.delayedCall(800 / this.battleSpeed, () => {
       if (victory) {
