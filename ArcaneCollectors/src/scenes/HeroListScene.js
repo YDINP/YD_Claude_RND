@@ -8,6 +8,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { normalizeHeroes } from '../data/index.js';
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
+import navigationManager from '../systems/NavigationManager.js';
 
 export class HeroListScene extends Phaser.Scene {
   constructor() {
@@ -102,7 +103,7 @@ export class HeroListScene extends Phaser.Scene {
     backBg.on('pointerdown', () => {
       if (this.transitioning) return;
       this.transitioning = true;
-      transitionManager.slideTransition(this, 'MainMenuScene', {}, 'left');
+      navigationManager.goBack(this);
     });
 
     // Title

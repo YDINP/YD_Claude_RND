@@ -6,6 +6,7 @@ import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 import { QuestSystem } from '../systems/QuestSystem.js';
 import transitionManager from '../utils/TransitionManager.js';
+import navigationManager from '../systems/NavigationManager.js';
 
 export class QuestScene extends Phaser.Scene {
   constructor() {
@@ -59,7 +60,7 @@ export class QuestScene extends Phaser.Scene {
     this.add.text(s(30), s(50), '← 뒤로', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(14), color: '#94A3B8'
     }).setOrigin(0.5).on('pointerdown', () => {
-      transitionManager.slideTransition(this, 'MainMenuScene', {}, 'left');
+      navigationManager.goBack(this);
     });
 
     this.add.text(GAME_WIDTH / 2, s(50), '일일 퀘스트', {

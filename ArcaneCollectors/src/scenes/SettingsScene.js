@@ -7,6 +7,7 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js'
 import { SaveManager } from '../systems/SaveManager.js';
 import { CouponSystem } from '../systems/CouponSystem.js';
 import transitionManager from '../utils/TransitionManager.js';
+import navigationManager from '../systems/NavigationManager.js';
 
 export class SettingsScene extends Phaser.Scene {
   constructor() {
@@ -55,6 +56,16 @@ export class SettingsScene extends Phaser.Scene {
     bar.fillRect(0, 0, GAME_WIDTH, s(100));
     bar.lineStyle(s(2), COLORS.primary, 0.5);
     bar.lineBetween(0, s(100), GAME_WIDTH, s(100));
+
+    // Back button
+    const backBg = this.add.rectangle(s(30), s(50), s(50), s(40), 0x0F172A, 0.8)
+      .setInteractive({ useHandCursor: true });
+    this.add.text(s(30), s(50), '← 뒤로', {
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(14), color: '#94A3B8'
+    }).setOrigin(0.5);
+    backBg.on('pointerdown', () => {
+      navigationManager.goBack(this);
+    });
 
     this.add.text(GAME_WIDTH / 2, s(50), '더보기', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(24),

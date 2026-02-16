@@ -7,6 +7,7 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS, s, sf } from '../config/gameCon
 import { TowerSystem } from '../systems/TowerSystem.js';
 import energySystem from '../systems/EnergySystem.js';
 import transitionManager from '../utils/TransitionManager.js';
+import navigationManager from '../systems/NavigationManager.js';
 
 export class TowerScene extends Phaser.Scene {
   constructor() {
@@ -80,7 +81,7 @@ export class TowerScene extends Phaser.Scene {
     this.add.text(s(30), s(50), '← 뒤로', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(14), color: '#94A3B8'
     }).setOrigin(0.5).on('pointerdown', () => {
-      transitionManager.slideTransition(this, 'StageSelectScene', {}, 'right');
+      navigationManager.goBack(this);
     });
 
     this.add.text(GAME_WIDTH / 2, s(50), '무한의 탑', {

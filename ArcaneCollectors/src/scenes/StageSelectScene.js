@@ -7,6 +7,7 @@ import { sweepSystem } from '../systems/SweepSystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { getAllCharacters, getChapterStages } from '../data/index.js';
 import transitionManager from '../utils/TransitionManager.js';
+import navigationManager from '../systems/NavigationManager.js';
 
 export class StageSelectScene extends Phaser.Scene {
   constructor() {
@@ -88,7 +89,7 @@ export class StageSelectScene extends Phaser.Scene {
     backBtn.add([backBg, backText]);
 
     backBg.on('pointerdown', () => {
-      transitionManager.slideTransition(this, 'MainMenuScene', {}, 'right');
+      navigationManager.goBack(this);
     });
 
     // Title

@@ -7,6 +7,7 @@ import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
 import { getCharacter, normalizeHeroes } from '../data/index.js';
 import transitionManager from '../utils/TransitionManager.js';
+import navigationManager from '../systems/NavigationManager.js';
 
 export class GachaScene extends Phaser.Scene {
   constructor() {
@@ -94,7 +95,7 @@ export class GachaScene extends Phaser.Scene {
 
     backBg.on('pointerdown', () => {
       if (this.isAnimating) return;
-      transitionManager.fadeTransition(this, 'MainMenuScene');
+      navigationManager.goBack(this);
     });
 
     // Title

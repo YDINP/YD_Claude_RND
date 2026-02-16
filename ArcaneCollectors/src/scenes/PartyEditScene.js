@@ -6,6 +6,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { getCharacter, getAllCharacters, normalizeHeroes } from '../data/index.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import transitionManager from '../utils/TransitionManager.js';
+import navigationManager from '../systems/NavigationManager.js';
 
 /**
  * PartyEditScene - 파티 편성 전용 씬
@@ -614,7 +615,7 @@ export class PartyEditScene extends Phaser.Scene {
   }
 
   goBack() {
-    transitionManager.fadeTransition(this, this.returnTo, this.returnData);
+    navigationManager.goBack(this);
   }
 
   showToast(message) {

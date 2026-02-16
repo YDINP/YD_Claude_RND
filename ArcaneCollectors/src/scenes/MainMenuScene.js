@@ -3,6 +3,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { energySystem } from '../systems/EnergySystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
 import transitionManager from '../utils/TransitionManager.js';
+import navigationManager from '../systems/NavigationManager.js';
 import { safeGet, safeCall } from '../utils/safeAccess.js';
 import { Z_INDEX } from '../config/layoutConfig.js';
 import EnergyBar from '../components/EnergyBar.js';
@@ -35,6 +36,11 @@ export class MainMenuScene extends Phaser.Scene {
 
   create() {
     try {
+    // NavigationManager 초기화 (메인 메뉴 = 네비게이션 루트)
+    navigationManager.reset();
+    navigationManager.pushScene('MainMenuScene', {});
+    navigationManager.setCurrentScene(this);
+
     this.cameras.main.fadeIn(400);
 
     // Initialize ParticleManager for dynamic effects

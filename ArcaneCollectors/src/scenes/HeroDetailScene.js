@@ -9,6 +9,7 @@ import uiRenderer from '../renderers/UIRenderer.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { RadarChart } from '../components/RadarChart.js';
+import navigationManager from '../systems/NavigationManager.js';
 
 export class HeroDetailScene extends Phaser.Scene {
   constructor() {
@@ -104,8 +105,7 @@ export class HeroDetailScene extends Phaser.Scene {
     backBtn.add([backBg, backText]);
 
     backBg.on('pointerdown', () => {
-      // PRD VFX-1.2: HeroDetail → HeroList = zoomOut
-      transitionManager.zoomTransition(this, 'HeroListScene', {}, GAME_WIDTH / 2, GAME_HEIGHT / 2, 'out', 300);
+      navigationManager.goBack(this);
     });
 
     // Hero name and rarity

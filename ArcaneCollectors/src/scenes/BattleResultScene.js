@@ -2,6 +2,7 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS, s, sf } from '../config/gameCon
 import { SaveManager } from '../systems/SaveManager.js';
 import { sweepSystem } from '../systems/SweepSystem.js';
 import transitionManager from '../utils/TransitionManager.js';
+import navigationManager from '../systems/NavigationManager.js';
 
 /**
  * BattleResultScene - 전투 결과 화면
@@ -554,12 +555,7 @@ export class BattleResultScene extends Phaser.Scene {
   }
 
   goToMain() {
-    if (this.mode === 'boss') {
-      const data = this.victory ? { bossVictory: true } : { bossDefeat: true };
-      this._navigate('MainMenuScene', data);
-    } else {
-      this._navigate('MainMenuScene');
-    }
+    navigationManager.goBackToScene(this, 'MainMenuScene');
   }
 
   showToast(message) {

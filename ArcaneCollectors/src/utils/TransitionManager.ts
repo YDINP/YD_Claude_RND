@@ -3,6 +3,7 @@
  * Singleton pattern for consistent scene transitions
  */
 import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import navigationManager from '../systems/NavigationManager.js';
 
 type SlideDirection = 'left' | 'right' | 'up' | 'down';
 type ZoomDirection = 'in' | 'out';
@@ -24,6 +25,7 @@ class TransitionManagerClass {
     scene.cameras.main.fadeOut(duration / 2, 0, 0, 0);
     scene.cameras.main.once('camerafadeoutcomplete', () => {
       this.isTransitioning = false;
+      navigationManager.pushScene(target, data);
       scene.scene.start(target, data);
     });
   }
@@ -87,6 +89,7 @@ class TransitionManagerClass {
       onComplete: () => {
         this.isTransitioning = false;
         overlay.destroy();
+        navigationManager.pushScene(target, data);
         scene.scene.start(target, data);
       }
     });
@@ -157,6 +160,7 @@ class TransitionManagerClass {
         this.isTransitioning = false;
         overlay.destroy();
         battleText.destroy();
+        navigationManager.pushScene('BattleScene', data, { battle: true });
         scene.scene.start('BattleScene', data);
       });
     });
@@ -262,6 +266,7 @@ class TransitionManagerClass {
         this.isTransitioning = false;
         magicCircle.destroy();
         overlay.destroy();
+        navigationManager.pushScene('GachaScene', data);
         scene.scene.start('GachaScene', data);
       });
     });
@@ -322,6 +327,7 @@ class TransitionManagerClass {
         cam.scrollY = 0;
         this.isTransitioning = false;
         overlay.destroy();
+        navigationManager.pushScene(target, data);
         scene.scene.start(target, data);
       }
     });
@@ -343,6 +349,7 @@ class TransitionManagerClass {
       cam.fadeOut(300, 0, 0, 0);
       cam.once('camerafadeoutcomplete', () => {
         this.isTransitioning = false;
+        navigationManager.pushScene('BattleResultScene', data, { battle: true });
         scene.scene.start('BattleResultScene', data);
       });
     });
@@ -361,6 +368,7 @@ class TransitionManagerClass {
     cam.fadeOut(600, 10, 0, 0);
     cam.once('camerafadeoutcomplete', () => {
       this.isTransitioning = false;
+      navigationManager.pushScene('BattleResultScene', data, { battle: true });
       scene.scene.start('BattleResultScene', data);
     });
   }

@@ -9,6 +9,7 @@ import { getCharacter } from '../data/index.ts';
 import { SaveManager } from '../systems/SaveManager.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
+import navigationManager from '../systems/NavigationManager.js';
 
 const CLASS_ICONS = { warrior: '⚔️', mage: '🔮', archer: '🏹', healer: '💚' };
 const CLASS_NAMES = { warrior: '전사', mage: '마법사', archer: '궁수', healer: '힐러' };
@@ -48,6 +49,7 @@ export class HeroInfoPopup {
     const levelUpCost = level * 100;
 
     this.container = scene.add.container(0, 0).setDepth(Z_INDEX.MODAL + 10);
+    navigationManager.pushPopup('HeroInfoPopup', this);
 
     // --- Overlay ---
     const overlay = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6);
@@ -435,6 +437,7 @@ export class HeroInfoPopup {
 
   destroy() {
     if (!this.container) return;
+    navigationManager.popPopup();
     const container = this.container;
     this.container = null;
 

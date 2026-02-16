@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
+import navigationManager from '../systems/NavigationManager.js';
 
 export class PopupBase {
   constructor(scene, options = {}) {
@@ -81,6 +82,9 @@ export class PopupBase {
     // Build content (override in subclasses)
     this.buildContent();
 
+    // Register with NavigationManager
+    navigationManager.pushPopup(this.constructor.name, this);
+
     // Entrance animation
     this.container.setAlpha(0);
     this.scene.tweens.add({
@@ -97,6 +101,7 @@ export class PopupBase {
 
   hide() {
     if (!this.isOpen) return;
+    navigationManager.popPopup();
     this.isOpen = false; // 즉시 플래그 해제 → 중복 호출 방지
 
     if (!this.container || !this.scene?.tweens) {
