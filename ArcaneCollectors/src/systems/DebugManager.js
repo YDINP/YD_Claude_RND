@@ -5,6 +5,8 @@
  */
 import { SaveManager } from './SaveManager.js';
 import { getAllCharacters, getAllChapters, getChapterStages } from '../data/index.js';
+import { DebugFAB } from '../components/debug/DebugFAB.js';
+import { DebugPanel } from '../components/debug/DebugPanel.js';
 import energySystem from './EnergySystem.js';
 import { GachaSystem } from './GachaSystem.js';
 import { EquipmentSystem } from './EquipmentSystem.js';
@@ -33,6 +35,10 @@ export class DebugManager {
   static enhanceAlwaysSuccess = false;
   // G-9: 분위기 치트 상태
   static alwaysMoodAdvantage = false;
+
+  // 모바일 디버그 UI
+  static currentFAB = null;
+  static currentPanel = null;
 
   /**
    * 디버그 모드 활성화/비활성화
@@ -853,6 +859,72 @@ export class DebugManager {
     return false;
   }
 
+  // ========== 모바일 디버그 UI ==========
+
+  /**
+   * 모바일 디버그 UI를 씬에 부착
+   * 모든 씬의 create() 끝에서 호출
+   */
+  static attachToScene(scene) {
+    if (!this.isDebugMode) return;
+
+    // 기존 UI 정리
+    this.currentFAB?.destroy();
+    this.currentPanel?.destroy();
+
+    // FAB 생성
+    this.currentFAB = new DebugFAB(scene);
+    this.currentPanel = new DebugPanel(scene);
+
+    // FAB 콜백 연결
+    this.currentFAB.onToggle = (isOpen) => {
+      if (isOpen) {
+        this.currentPanel.open();
+      } else {
+        this.currentPanel.close();
+      }
+    };
+
+    // 씬 종료 시 정리
+    scene.events.once('shutdown', () => {
+      this.currentFAB?.destroy();
+      this.currentPanel?.destroy();
+      this.currentFAB = null;
+      this.currentPanel = null;
+    });
+  }
+
+  /**
+   * 프로덕션 환경에서 디버그 모드 숨김 활성화
+   * 설정 화면 타이틀 7번 탭으로 호출
+   */
+  static handleSecretTap() {
+    if (!this._secretTapCount) this._secretTapCount = 0;
+    if (!this._secretTapTimer) this._secretTapTimer = null;
+
+    this._secretTapCount++;
+
+    clearTimeout(this._secretTapTimer);
+    this._secretTapTimer = setTimeout(() => {
+      this._secretTapCount = 0;
+    }, 3000);
+
+    if (this._secretTapCount >= 7) {
+      this._secretTapCount = 0;
+      const newState = !this.isDebugMode;
+      this.setDebugMode(newState);
+
+      if (newState) {
+        localStorage.setItem('arcane_debug_enabled', 'true');
+      } else {
+        localStorage.removeItem('arcane_debug_enabled');
+      }
+
+      return newState; // 호출자에게 상태 반환
+    }
+    return null; // 아직 7탭 미달
+  }
+
   // ========== ESC 키 치트 패널 ==========
 
   /**
@@ -1086,8 +1158,8 @@ export class DebugManager {
   }
 }
 
-// DEV 모드 자동 활성화
-if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+// DEV 모드 또는 localStorage 저장된 디버그 활성화
+if ((typeof import.meta !== 'undefined' && import.meta.env?.DEV) || localStorage.getItem('arcane_debug_enabled') === 'true') {
   DebugManager.setDebugMode(true);
 }
 
