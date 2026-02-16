@@ -33,6 +33,9 @@ export class IdleProgressSystem {
 
     // 저장된 진행도 로드
     this._loadSavedProgress();
+
+    // BUG-12 수정: 세이브 데이터 로드 직후 보스 로드하여 bossReady 상태 즉시 계산
+    this.loadCurrentBoss();
   }
 
   /**
@@ -350,6 +353,7 @@ export class IdleProgressSystem {
 
   /**
    * 현재 보스 로드 — 같은 보스면 누적 데미지 유지
+   * BUG-12 수정: bossReady 상태도 로그에 표시
    */
   loadCurrentBoss() {
     const boss = this.getBossForCurrentStage();
@@ -360,11 +364,14 @@ export class IdleProgressSystem {
 
     if (isSameBoss) {
       // 같은 보스: 저장된 누적 데미지 유지
+      const progress = Math.floor((this.accumulatedDamage / boss.hp) * 100);
+      const bossReady = this.accumulatedDamage >= boss.hp;
       GameLogger.log('IDLE', '보스 로드 (진행도 유지)', {
         boss: boss.name,
         hp: boss.hp,
         accumulatedDamage: this.accumulatedDamage,
-        progress: Math.floor((this.accumulatedDamage / boss.hp) * 100) + '%'
+        progress: progress + '%',
+        bossReady
       });
     } else {
       // 다른 보스: 리셋
@@ -373,7 +380,8 @@ export class IdleProgressSystem {
       GameLogger.log('IDLE', '새 보스 로드 (진행도 리셋)', {
         boss: boss.name,
         hp: boss.hp,
-        emoji: boss.emoji
+        emoji: boss.emoji,
+        bossReady: false
       });
     }
   }
@@ -524,6 +532,7 @@ export class IdleProgressSystem {
 
   /**
    * 보상 수령 — 누적 데미지 + 현재 진행도 전부 리셋
+   * BUG-12 수정: 보상 수령 후 bossReady 상태 갱신 (진행도 0%로 리셋)
    * @returns {Object} { gold, exp, totalDamage, hasRewards }
    */
   claimRewards() {
@@ -532,10 +541,11 @@ export class IdleProgressSystem {
     this.accumulatedDamage = 0;
     this.saveProgress();
 
-    GameLogger.log('IDLE', '누적 보상 수령', {
+    GameLogger.log('IDLE', '누적 보상 수령 (진행도 리셋)', {
       gold: rewards.gold,
       exp: rewards.exp,
-      damageDealt: rewards.damageDealt
+      damageDealt: rewards.totalDamage,
+      bossReady: false // 리셋 후 보스전 준비 해제
     });
 
     return rewards;

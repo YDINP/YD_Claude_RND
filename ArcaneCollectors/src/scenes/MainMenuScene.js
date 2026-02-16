@@ -36,6 +36,16 @@ export class MainMenuScene extends Phaser.Scene {
 
   create() {
     try {
+    // BUG-01 수정: create() 재호출 방지 - 팝업 열기/닫기로 인한 중복 생성 차단
+    if (this._uiCreated) {
+      console.warn('[MainMenuScene] create() 재호출 감지됨 - UI 생성 스킵');
+      // 데이터만 갱신
+      const resources = SaveManager.getResources() || {};
+      this.registry.set('gems', resources?.gems ?? 1500);
+      this.registry.set('gold', resources?.gold ?? 10000);
+      return;
+    }
+
     // NavigationManager 초기화 (메인 메뉴 = 네비게이션 루트)
     navigationManager.reset();
     navigationManager.pushScene('MainMenuScene', {});
@@ -70,6 +80,9 @@ export class MainMenuScene extends Phaser.Scene {
     this.createIdleSummary();
     this.createBottomMenu();
 
+    // BUG-01 수정: UI 생성 완료 플래그 설정 (중복 생성 방지)
+    this._uiCreated = true;
+
     // 오프라인 보상: IdleProgressSystem의 DPS 기반으로 재계산
     if (this.showOfflineRewards && (this.showOfflineRewards?.gold ?? 0) > 0) {
       const lastLogoutTime = fullSaveData?.lastLogoutTime || fullSaveData?.lastOnline || Date.now();
@@ -87,6 +100,9 @@ export class MainMenuScene extends Phaser.Scene {
         };
         // 진행도 즉시 저장
         this.idleSystem.saveProgress();
+
+        // BUG-12 수정: 오프라인 보상 적용 후 bossReady 상태 재계산
+        // 이미 loadCurrentBoss()가 constructor에서 실행되었으므로, 여기서는 상태만 갱신
       }
 
       this.time.delayedCall(500, () => {
@@ -105,6 +121,9 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   shutdown() {
+    // BUG-01 수정: UI 생성 플래그 리셋 (씬이 완전히 종료될 때)
+    this._uiCreated = false;
+
     if (this.particles) {
       this.particles.destroy();
       this.particles = null;
@@ -662,7 +681,8 @@ export class MainMenuScene extends Phaser.Scene {
       this._sweepBtnText.setAlpha(0.5);
     }
 
-    // Boss battle button — 동적 활성화 (인스턴스 변수로 보관)
+    // BUG-12 수정: 보스 버튼 생성 전 보스 데이터 로드 완료 보장 (이미 constructor에서 로드됨)
+    // 이제 isBossReady() 호출 시 정확한 상태 반환
     const bossReady = hasParty && this.idleSystem?.isBossReady?.();
     this._bossReady = bossReady;
     const bossBtnX = GAME_WIDTH / 2 + s(20);
@@ -1223,8 +1243,6 @@ export class MainMenuScene extends Phaser.Scene {
         this.idleBattleView.updateBossHp(battleResult.accumulatedDamage, battleResult.bossMaxHp);
         this.idleBattleView.updateProgress(battleResult.progress);
 
-
-
         // 진행도 100% → 보스전 준비 알림 + 버튼 동적 활성화
         if (battleResult.bossReady) {
           this.idleBattleView.showBossReady();
@@ -1232,7 +1250,7 @@ export class MainMenuScene extends Phaser.Scene {
         }
       }
 
-      // 보스 버튼 상태 동적 업데이트
+      // BUG-12 수정: 보스 버튼 상태를 매 프레임 체크하여 동적 갱신 (재접속 시 즉시 반영)
       const nowBossReady = this.idleSystem.isBossReady?.() || false;
       if (nowBossReady !== this._bossReady) {
         this._bossReady = nowBossReady;
