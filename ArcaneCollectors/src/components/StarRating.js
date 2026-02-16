@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS } from '../config/gameConfig.js';
+import { COLORS, s } from '../config/gameConfig.js';
 
 export class StarRating extends Phaser.GameObjects.Container {
   /**
@@ -17,8 +17,8 @@ export class StarRating extends Phaser.GameObjects.Container {
     this.filledCount = count;
     this.maxStars = maxStars;
     this.options = {
-      starSize: options.starSize ?? 12,
-      spacing: options.spacing ?? 2,
+      starSize: options.starSize ?? s(12),
+      spacing: options.spacing ?? s(2),
       filledColor: options.filledColor ?? COLORS.accent,
       emptyColor: options.emptyColor ?? 0x4B5563,
       outlineColor: options.outlineColor ?? null
@@ -49,7 +49,7 @@ export class StarRating extends Phaser.GameObjects.Container {
     this.drawStar(graphics, cx, cy, 5, size / 2, size / 4, color);
 
     if (this.options.outlineColor !== null) {
-      graphics.lineStyle(1, this.options.outlineColor, 1);
+      graphics.lineStyle(s(1), this.options.outlineColor, 1);
       this.strokeStar(graphics, cx, cy, 5, size / 2, size / 4);
     }
 
@@ -116,7 +116,7 @@ export class StarRating extends Phaser.GameObjects.Container {
       this.drawStar(star, x, 0, 5, starSize / 2, starSize / 4, targetColor);
 
       if (this.options.outlineColor !== null) {
-        star.lineStyle(1, this.options.outlineColor, 1);
+        star.lineStyle(s(1), this.options.outlineColor, 1);
         this.strokeStar(star, x, 0, 5, starSize / 2, starSize / 4);
       }
 

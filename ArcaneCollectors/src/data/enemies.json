@@ -106,13 +106,13 @@
       "mood": "brave",
       "type": "boss",
       "stats": {
-        "hp": 1500,
-        "atk": 80,
-        "def": 40,
+        "hp": 900,
+        "atk": 55,
+        "def": 30,
         "spd": 60
       },
       "growthStats": {
-        "hp": 200,
+        "hp": 120,
         "atk": 15,
         "def": 8,
         "spd": 2

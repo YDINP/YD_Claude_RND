@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, LAYOUT } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, LAYOUT, s, sf } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { energySystem } from '../systems/EnergySystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
@@ -89,8 +89,8 @@ export class MainMenuScene extends Phaser.Scene {
     }
     } catch (error) {
       console.error('[MainMenuScene] create() 실패:', error);
-      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
-        fontSize: '20px', fill: '#ff4444', align: 'center'
+      this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: sf(20), fill: '#ff4444', align: 'center'
       }).setOrigin(0.5);
       this.time.delayedCall(2000, () => {
         this.scene.start('MainMenuScene');
@@ -148,42 +148,42 @@ export class MainMenuScene extends Phaser.Scene {
 
     const contentContainer = this.add.container(0, 0);
     const elements = [];
-    let yPos = -80;
+    let yPos = s(-80);
 
     // 시간 표시
     elements.push(this.add.text(0, yPos, `${safeRewards.formattedDuration} 동안 모험했습니다!`, {
-      fontSize: '16px', fontFamily: 'Arial', color: '#94A3B8', align: 'center'
+      fontSize: sf(16), fontFamily: 'Arial', color: '#94A3B8', align: 'center'
     }).setOrigin(0.5));
-    yPos += 40;
+    yPos += s(40);
 
     // 골드 보상
     elements.push(this.add.text(0, yPos, `💰 골드: +${safeRewards.gold.toLocaleString()}`, {
-      fontSize: '20px', fontFamily: 'Arial',
+      fontSize: sf(20), fontFamily: 'Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`, fontStyle: 'bold'
     }).setOrigin(0.5));
-    yPos += 35;
+    yPos += s(35);
 
     // 경험치 보상
     elements.push(this.add.text(0, yPos, `⭐ 경험치: +${safeRewards.exp.toLocaleString()}`, {
-      fontSize: '20px', fontFamily: 'Arial',
+      fontSize: sf(20), fontFamily: 'Arial',
       color: `#${COLORS.success.toString(16).padStart(6, '0')}`, fontStyle: 'bold'
     }).setOrigin(0.5));
-    yPos += 35;
+    yPos += s(35);
 
     // 보스 진행도 증가
     if (safeRewards.progressGained > 0) {
       const progressPercent = Math.floor(safeRewards.progressGained * 100);
       const progressColor = safeRewards.bossReady ? '#EF4444' : '#3B82F6';
       elements.push(this.add.text(0, yPos, `⚔️ 보스 진행도: +${progressPercent}%`, {
-        fontSize: '18px', fontFamily: 'Arial', color: progressColor, fontStyle: 'bold'
+        fontSize: sf(18), fontFamily: 'Arial', color: progressColor, fontStyle: 'bold'
       }).setOrigin(0.5));
-      yPos += 30;
+      yPos += s(30);
 
       if (safeRewards.bossReady) {
         elements.push(this.add.text(0, yPos, '🔥 보스전 도전 가능!', {
-          fontSize: '16px', fontFamily: 'Arial', color: '#EF4444', fontStyle: 'bold'
+          fontSize: sf(16), fontFamily: 'Arial', color: '#EF4444', fontStyle: 'bold'
         }).setOrigin(0.5));
-        yPos += 30;
+        yPos += s(30);
       }
     }
 
@@ -191,18 +191,18 @@ export class MainMenuScene extends Phaser.Scene {
     if (safeRewards.items.length > 0) {
       const itemNames = safeRewards.items.map(i => i.name || i.id).join(', ');
       elements.push(this.add.text(0, yPos, `📦 아이템: ${itemNames}`, {
-        fontSize: '14px', fontFamily: 'Arial', color: '#A78BFA'
+        fontSize: sf(14), fontFamily: 'Arial', color: '#A78BFA'
       }).setOrigin(0.5));
-      yPos += 25;
+      yPos += s(25);
     }
 
     contentContainer.add(elements);
 
-    const modalHeight = Math.max(280, yPos + 160);
+    const modalHeight = Math.max(s(280), yPos + s(160));
     const modal = new Modal(this, {
       title: '🎁 오프라인 보상',
       content: contentContainer,
-      width: 380,
+      width: s(380),
       height: modalHeight,
       buttons: [
         {
@@ -314,16 +314,18 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   createTopBar() {
-    const topBar = this.add.rectangle(GAME_WIDTH / 2, 40, GAME_WIDTH, 80, COLORS.backgroundLight, 0.9);
+    const barY = s(40);
+    const barH = s(80);
+    const topBar = this.add.rectangle(GAME_WIDTH / 2, barY, GAME_WIDTH, barH, COLORS.backgroundLight, 0.9);
     topBar.setDepth(Z_INDEX.UI);
 
     const saveData = SaveManager.load();
     const playerLevel = saveData.player?.level || 1;
-    const levelBadge = this.add.rectangle(40, 40, 55, 30, COLORS.primary, 0.9)
+    const levelBadge = this.add.rectangle(s(40), barY, s(55), s(30), COLORS.primary, 0.9)
       .setDepth(Z_INDEX.UI + 1);
     levelBadge.setStrokeStyle(1, COLORS.text, 0.3);
-    this.levelBadgeText = this.add.text(40, 40, `Lv.${playerLevel}`, {
-      fontSize: '14px',
+    this.levelBadgeText = this.add.text(s(40), barY, `Lv.${playerLevel}`, {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -331,14 +333,14 @@ export class MainMenuScene extends Phaser.Scene {
 
     let gemIcon;
     if (this.textures.exists('gem')) {
-      gemIcon = this.add.image(100, 40, 'gem').setScale(1).setDepth(Z_INDEX.UI + 1);
+      gemIcon = this.add.image(s(100), barY, 'gem').setScale(1).setDepth(Z_INDEX.UI + 1);
     } else {
-      gemIcon = this.add.text(100, 40, '💎', { fontSize: '20px' }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
+      gemIcon = this.add.text(s(100), barY, '💎', { fontSize: sf(20) }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
     }
 
     const gems = this.registry.get('gems') || 1500;
-    this.gemText = this.add.text(125, 40, gems.toLocaleString(), {
-      fontSize: '18px',
+    this.gemText = this.add.text(s(125), barY, gems.toLocaleString(), {
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -346,14 +348,14 @@ export class MainMenuScene extends Phaser.Scene {
 
     let goldIcon;
     if (this.textures.exists('gold')) {
-      goldIcon = this.add.image(220, 40, 'gold').setScale(1).setDepth(Z_INDEX.UI + 1);
+      goldIcon = this.add.image(s(220), barY, 'gold').setScale(1).setDepth(Z_INDEX.UI + 1);
     } else {
-      goldIcon = this.add.text(220, 40, '🪙', { fontSize: '20px' }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
+      goldIcon = this.add.text(s(220), barY, '🪙', { fontSize: sf(20) }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
     }
 
     const gold = this.registry.get('gold') || 10000;
-    this.goldText = this.add.text(245, 40, gold.toLocaleString(), {
-      fontSize: '18px',
+    this.goldText = this.add.text(s(245), barY, gold.toLocaleString(), {
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -361,41 +363,41 @@ export class MainMenuScene extends Phaser.Scene {
 
     const energyStatus = energySystem.getStatus() || {};
     this.energyBar = new EnergyBar(this);
-    this.energyBar.create(430, 40);
+    this.energyBar.create(s(430), barY);
     this.energyBar.update(energyStatus?.current ?? 0, energyStatus?.max ?? 100);
 
     const timeToRecover = energySystem.getTimeToNextRecovery?.() ?? 0;
-    this.energyTimerText = this.add.text(540, 40, timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
-      fontSize: '11px',
+    this.energyTimerText = this.add.text(s(540), barY, timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
+      fontSize: sf(11),
       fontFamily: 'Arial',
       color: '#94A3B8',
       fontStyle: 'normal'
     }).setOrigin(0, 0.5).setDepth(Z_INDEX.UI + 1);
 
     // Energy gem charge button (💎+)
-    const chargeBtn = this.add.text(620, 40, '💎+', {
-      fontSize: '14px', fontFamily: 'Arial', fontStyle: 'bold',
+    const chargeBtn = this.add.text(s(620), barY, '💎+', {
+      fontSize: sf(14), fontFamily: 'Arial', fontStyle: 'bold',
       color: '#A78BFA', backgroundColor: '#1E293B',
-      padding: { x: 4, y: 2 }
+      padding: { x: s(4), y: s(2) }
     }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1).setInteractive({ useHandCursor: true });
     chargeBtn.on('pointerdown', () => this.chargeEnergyWithGems());
     chargeBtn.on('pointerover', () => chargeBtn.setColor('#C4B5FD'));
     chargeBtn.on('pointerout', () => chargeBtn.setColor('#A78BFA'));
 
     const partyPower = this.idleSystem.getPartyPower();
-    this.powerText = this.add.text(GAME_WIDTH - 90, 40, `⚔ ${Math.floor(partyPower).toLocaleString()}`, {
-      fontSize: '14px',
+    this.powerText = this.add.text(GAME_WIDTH - s(90), barY, `⚔ ${Math.floor(partyPower).toLocaleString()}`, {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(1, 0.5).setDepth(Z_INDEX.UI + 1);
 
-    const settingsBtn = this.add.rectangle(GAME_WIDTH - 40, 40, 40, 40, COLORS.backgroundLight, 0.8)
+    const settingsBtn = this.add.rectangle(GAME_WIDTH - s(40), barY, s(40), s(40), COLORS.backgroundLight, 0.8)
       .setDepth(Z_INDEX.UI + 1)
       .setInteractive({ useHandCursor: true });
 
-    const settingsIcon = this.add.text(GAME_WIDTH - 40, 40, '⚙️', {
-      fontSize: '24px'
+    const settingsIcon = this.add.text(GAME_WIDTH - s(40), barY, '⚙️', {
+      fontSize: sf(24)
     }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
 
     settingsBtn.on('pointerover', () => settingsBtn.setFillStyle(COLORS.primary, 0.5));
@@ -416,23 +418,24 @@ export class MainMenuScene extends Phaser.Scene {
     const partyIds = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
     const characters = saveData?.characters || [];
 
-    const panelY = 105;
+    const panelY = s(95);
+    const panelH = s(150);
     const panel = this.add.graphics();
     panel.fillStyle(0x1E293B, 0.9);
-    panel.fillRoundedRect(20, panelY, GAME_WIDTH - 40, 150, 12);
+    panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), panelH, s(12));
 
-    this.add.text(40, panelY + 10, '내 파티', {
-      fontSize: '16px', fontFamily: 'Arial', fontStyle: 'bold',
+    this.add.text(s(40), panelY + s(10), '내 파티', {
+      fontSize: sf(16), fontFamily: 'Arial', fontStyle: 'bold',
       color: '#F8FAFC'
     });
 
     // 파티 편성 바로가기 버튼
-    const editBtn = this.add.container(GAME_WIDTH - 60, panelY + 18);
-    const editBg = this.add.rectangle(0, 0, 60, 26, COLORS.primary, 0.8)
+    const editBtn = this.add.container(GAME_WIDTH - s(60), panelY + s(18));
+    const editBg = this.add.rectangle(0, 0, s(60), s(26), COLORS.primary, 0.8)
       .setInteractive({ useHandCursor: true })
       .setStrokeStyle(1, 0x818CF8);
     const editText = this.add.text(0, 0, '편성', {
-      fontSize: '12px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+      fontSize: sf(12), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
     editBtn.add([editBg, editText]);
     editBg.on('pointerdown', () => {
@@ -443,47 +446,48 @@ export class MainMenuScene extends Phaser.Scene {
     const classIcons = { warrior: '⚔️', mage: '🔮', archer: '🏹', healer: '💚' };
 
     // Calculate slot positions for 4 heroes evenly across panel
-    const slotWidth = (GAME_WIDTH - 80) / 4;
+    const slotWidth = (GAME_WIDTH - s(80)) / 4;
 
     partyIds.forEach((heroId, i) => {
       const charData = characters.find(c => c.id === heroId || c.characterId === heroId);
       const staticData = getCharacter(heroId);
-      const x = 40 + slotWidth / 2 + i * slotWidth;
-      const y = panelY + 90;
+      const x = s(40) + slotWidth / 2 + i * slotWidth;
+      const y = panelY + s(90);
 
       const charClass = staticData?.class || charData?.class || 'warrior';
       const color = classColors[charClass] || 0x64748B;
 
       // Circular avatar — DiceBear 이미지 우선, 없으면 컬러 원형 폴백
       const portraitKey = `hero_${heroId}`;
+      const avatarR = s(32);
       let avatar;
       if (this.textures.exists(portraitKey)) {
         // 원형 마스크 + DiceBear 이미지
         const maskGfx = this.make.graphics({ x: 0, y: 0 });
-        maskGfx.fillCircle(x, y, 32);
+        maskGfx.fillCircle(x, y, avatarR);
         const mask = maskGfx.createGeometryMask();
-        const img = this.add.image(x, y, portraitKey).setDisplaySize(64, 64);
+        const img = this.add.image(x, y, portraitKey).setDisplaySize(avatarR * 2, avatarR * 2);
         img.setMask(mask);
-        avatar = this.add.circle(x, y, 32, 0x000000, 0.001)
+        avatar = this.add.circle(x, y, avatarR, 0x000000, 0.001)
           .setInteractive({ useHandCursor: true });
       } else {
-        avatar = this.add.circle(x, y, 32, color, 0.9)
+        avatar = this.add.circle(x, y, avatarR, color, 0.9)
           .setInteractive({ useHandCursor: true });
-        this.add.text(x, y - 5, classIcons[charClass] || '❓', {
-          fontSize: '24px'
+        this.add.text(x, y - s(5), classIcons[charClass] || '❓', {
+          fontSize: sf(24)
         }).setOrigin(0.5);
       }
 
       // Name (max 4 chars)
       const name = (staticData?.name || charData?.name || '???').substring(0, 4);
-      this.add.text(x, y + 40, name, {
-        fontSize: '12px', fontFamily: 'Arial', color: '#F8FAFC'
+      this.add.text(x, y + s(40), name, {
+        fontSize: sf(12), fontFamily: 'Arial', color: '#F8FAFC'
       }).setOrigin(0.5);
 
       // Level
       const level = charData?.level || 1;
-      this.add.text(x, y + 55, `Lv.${level}`, {
-        fontSize: '11px', fontFamily: 'Arial', color: '#94A3B8'
+      this.add.text(x, y + s(55), `Lv.${level}`, {
+        fontSize: sf(11), fontFamily: 'Arial', color: '#94A3B8'
       }).setOrigin(0.5);
 
       // 영웅 클릭 → 팝업 정보
@@ -496,8 +500,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     // If party is empty, show placeholder
     if (partyIds.length === 0) {
-      this.add.text(GAME_WIDTH / 2, panelY + 80, '파티를 편성해주세요!', {
-        fontSize: '16px', fontFamily: 'Arial', color: '#94A3B8'
+      this.add.text(GAME_WIDTH / 2, panelY + s(80), '파티를 편성해주세요!', {
+        fontSize: sf(16), fontFamily: 'Arial', color: '#94A3B8'
       }).setOrigin(0.5);
     }
   }
@@ -510,14 +514,14 @@ export class MainMenuScene extends Phaser.Scene {
     const power = this.calculateCombatPower(saveData);
     const difficulty = this.getDifficulty(power);
 
-    const panelY = 280;
+    const panelY = s(245);
     const panel = this.add.graphics();
     panel.fillStyle(0x1E293B, 0.9);
-    panel.fillRoundedRect(20, panelY, GAME_WIDTH - 40, 65, 12);
+    panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), s(65), s(12));
 
     // Combat power number
-    this.add.text(40, panelY + 20, `⚡ 전투력: ${power.toLocaleString()}`, {
-      fontSize: '20px', fontFamily: 'Arial', fontStyle: 'bold',
+    this.add.text(s(40), panelY + s(20), `⚡ 전투력: ${power.toLocaleString()}`, {
+      fontSize: sf(20), fontFamily: 'Arial', fontStyle: 'bold',
       color: '#F59E0B'
     });
 
@@ -528,9 +532,9 @@ export class MainMenuScene extends Phaser.Scene {
     };
     const badge = this.add.graphics();
     badge.fillStyle(diffColors[difficulty.label] || 0x3B82F6, 1);
-    badge.fillRoundedRect(GAME_WIDTH - 160, panelY + 15, 120, 35, 8);
-    this.add.text(GAME_WIDTH - 100, panelY + 32, difficulty.label, {
-      fontSize: '15px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+    badge.fillRoundedRect(GAME_WIDTH - s(160), panelY + s(15), s(120), s(35), s(8));
+    this.add.text(GAME_WIDTH - s(100), panelY + s(32), difficulty.label, {
+      fontSize: sf(15), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
   }
 
@@ -583,21 +587,22 @@ export class MainMenuScene extends Phaser.Scene {
    * WS-3: Adventure panel with sweep + boss battle (y=360~560)
    */
   createAdventurePanel() {
-    const panelY = 360;
+    const panelY = s(310);
+    const panelH = s(190);
     const panel = this.add.graphics();
     panel.fillStyle(0x1E293B, 0.9);
-    panel.fillRoundedRect(20, panelY, GAME_WIDTH - 40, 190, 12);
+    panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), panelH, s(12));
 
     const saveData = SaveManager.load();
     const progress = saveData?.progress || {};
 
     // Current stage info
     const currentStage = this.idleSystem.getCurrentStage();
-    this.add.text(40, panelY + 15, '🗺️ 현재 모험', {
-      fontSize: '18px', fontFamily: 'Arial', fontStyle: 'bold', color: '#F8FAFC'
+    this.add.text(s(40), panelY + s(15), '🗺️ 현재 모험', {
+      fontSize: sf(18), fontFamily: 'Arial', fontStyle: 'bold', color: '#F8FAFC'
     });
-    this.add.text(40, panelY + 45, `챕터 ${currentStage.chapter || 1} - 스테이지 ${currentStage.chapter || 1}-${currentStage.stage || 1}`, {
-      fontSize: '14px', fontFamily: 'Arial', color: '#94A3B8'
+    this.add.text(s(40), panelY + s(45), `챕터 ${currentStage.chapter || 1} - 스테이지 ${currentStage.chapter || 1}-${currentStage.stage || 1}`, {
+      fontSize: sf(14), fontFamily: 'Arial', color: '#94A3B8'
     });
 
     // Check if party exists
@@ -611,16 +616,17 @@ export class MainMenuScene extends Phaser.Scene {
     const canSweep = hasParty;
 
     // Sweep button (인스턴스 변수로 보관)
-    const sweepBtnX = 40;
-    const sweepBtnW = GAME_WIDTH / 2 - 60;
+    const sweepBtnX = s(40);
+    const sweepBtnW = GAME_WIDTH / 2 - s(60);
+    const btnH = s(50);
     this._sweepBtnGfx = this.add.graphics();
     this._sweepBtnGfx.fillStyle(canSweep ? 0x10B981 : 0x334155, 1);
-    this._sweepBtnGfx.fillRoundedRect(sweepBtnX, panelY + 80, sweepBtnW, 50, 10);
-    this._sweepBtnText = this.add.text(sweepBtnX + sweepBtnW / 2, panelY + 105, `⚡ 소탕 (10🔋)`, {
-      fontSize: '16px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+    this._sweepBtnGfx.fillRoundedRect(sweepBtnX, panelY + s(80), sweepBtnW, btnH, s(10));
+    this._sweepBtnText = this.add.text(sweepBtnX + sweepBtnW / 2, panelY + s(105), `⚡ 소탕 (10🔋)`, {
+      fontSize: sf(16), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
 
-    this._sweepHit = this.add.rectangle(sweepBtnX + sweepBtnW / 2, panelY + 105, sweepBtnW, 50)
+    this._sweepHit = this.add.rectangle(sweepBtnX + sweepBtnW / 2, panelY + s(105), sweepBtnW, btnH)
       .setAlpha(0.001);
 
     if (canSweep) {
@@ -635,17 +641,17 @@ export class MainMenuScene extends Phaser.Scene {
     // Boss battle button — 동적 활성화 (인스턴스 변수로 보관)
     const bossReady = hasParty && this.idleSystem?.isBossReady?.();
     this._bossReady = bossReady;
-    const bossBtnX = GAME_WIDTH / 2 + 20;
-    const bossBtnW = GAME_WIDTH / 2 - 60;
+    const bossBtnX = GAME_WIDTH / 2 + s(20);
+    const bossBtnW = GAME_WIDTH / 2 - s(60);
     this._bossBtnGfx = this.add.graphics();
     this._bossBtnGfx.fillStyle(bossReady ? 0xEF4444 : 0x334155, 1);
-    this._bossBtnGfx.fillRoundedRect(bossBtnX, panelY + 80, bossBtnW, 50, 10);
-    this._bossBtnText = this.add.text(bossBtnX + bossBtnW / 2, panelY + 105, '🗡️ 보스전 (20🔋)', {
-      fontSize: '16px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+    this._bossBtnGfx.fillRoundedRect(bossBtnX, panelY + s(80), bossBtnW, btnH, s(10));
+    this._bossBtnText = this.add.text(bossBtnX + bossBtnW / 2, panelY + s(105), '🗡️ 보스전 (20🔋)', {
+      fontSize: sf(16), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
     this._bossBtnPanelY = panelY;
 
-    this._bossHit = this.add.rectangle(bossBtnX + bossBtnW / 2, panelY + 105, bossBtnW, 50)
+    this._bossHit = this.add.rectangle(bossBtnX + bossBtnW / 2, panelY + s(105), bossBtnW, btnH)
       .setAlpha(0.001);
 
     // 보스전 버튼은 항상 인터랙티브 등록 (상태는 update에서 동적 관리)
@@ -666,14 +672,14 @@ export class MainMenuScene extends Phaser.Scene {
     const esStatus = energySystem.getStatus() || {};
     const currentEnergy = esStatus.current ?? 0;
     const maxEnergy = esStatus.max ?? 100;
-    this.add.text(40, panelY + 150, `🔋 에너지: ${currentEnergy}/${maxEnergy}`, {
-      fontSize: '13px', fontFamily: 'Arial',
+    this.add.text(s(40), panelY + s(150), `🔋 에너지: ${currentEnergy}/${maxEnergy}`, {
+      fontSize: sf(13), fontFamily: 'Arial',
       color: currentEnergy >= 10 ? '#10B981' : '#EF4444'
     });
 
     // Stage name
-    this.add.text(GAME_WIDTH - 40, panelY + 150, `📍 ${currentStage.name || '슬라임 평원'}`, {
-      fontSize: '13px', fontFamily: 'Arial', color: '#94A3B8'
+    this.add.text(GAME_WIDTH - s(40), panelY + s(150), `📍 ${currentStage.name || '슬라임 평원'}`, {
+      fontSize: sf(13), fontFamily: 'Arial', color: '#94A3B8'
     }).setOrigin(1, 0);
   }
 
@@ -786,9 +792,9 @@ export class MainMenuScene extends Phaser.Scene {
    * IdleBattleView (y=580~880, expanded)
    */
   createIdleBattleView() {
-    const viewY = 580;
-    const viewWidth = 640;
-    const viewHeight = 300;
+    const viewY = s(500);
+    const viewWidth = s(640);
+    const viewHeight = s(300);
 
     this.idleBattleView = new IdleBattleView(this, GAME_WIDTH / 2, viewY, viewWidth, viewHeight);
     this.idleBattleView.setDepth(Z_INDEX.UI - 1);
@@ -844,9 +850,9 @@ export class MainMenuScene extends Phaser.Scene {
    * Idle income summary (y=900)
    */
   createIdleSummary() {
-    const summaryY = 900;
+    const summaryY = s(795);
 
-    const summaryBg = this.add.rectangle(GAME_WIDTH / 2, summaryY, 640, 50, COLORS.bgLight, 0.5);
+    const summaryBg = this.add.rectangle(GAME_WIDTH / 2, summaryY, s(640), s(50), COLORS.bgLight, 0.5);
     summaryBg.setStrokeStyle(1, COLORS.primary, 0.3);
 
     const partyPower = this.idleSystem.getPartyPower();
@@ -854,44 +860,44 @@ export class MainMenuScene extends Phaser.Scene {
     const goldPerHour = Math.floor((rates.goldPerSec || 0) * 3600);
     const expPerHour = Math.floor((rates.expPerSec || 0) * 3600);
 
-    this.add.text(GAME_WIDTH / 2 - 150, summaryY, `💰 ${goldPerHour.toLocaleString()}/h`, {
-      fontSize: '15px', fontFamily: 'Arial',
+    this.add.text(GAME_WIDTH / 2 - s(150), summaryY, `💰 ${goldPerHour.toLocaleString()}/h`, {
+      fontSize: sf(15), fontFamily: 'Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     this.add.text(GAME_WIDTH / 2, summaryY, `⭐ ${expPerHour.toLocaleString()}/h`, {
-      fontSize: '15px', fontFamily: 'Arial',
+      fontSize: sf(15), fontFamily: 'Arial',
       color: `#${COLORS.success.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     const currentStage = this.idleSystem.getCurrentStage();
-    this.add.text(GAME_WIDTH / 2 + 150, summaryY, `📍 ${currentStage.chapter || 1}-${currentStage.stage || 1}`, {
-      fontSize: '13px', fontFamily: 'Arial',
+    this.add.text(GAME_WIDTH / 2 + s(150), summaryY, `📍 ${currentStage.chapter || 1}-${currentStage.stage || 1}`, {
+      fontSize: sf(13), fontFamily: 'Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // === 보상받기 버튼 ===
-    this._createClaimRewardsButton(summaryY + 45);
+    this._createClaimRewardsButton(summaryY + s(45));
   }
 
   /**
    * 누적 보상 수령 버튼 생성 (항상 활성 상태)
    */
   _createClaimRewardsButton(y) {
-    const btnW = 300;
-    const btnH = 44;
+    const btnW = s(300);
+    const btnH = s(44);
     const btnX = GAME_WIDTH / 2 - btnW / 2;
 
     // 버튼 배경 (항상 녹색 활성)
     this._claimBtnGfx = this.add.graphics();
     this._claimBtnGfx.fillStyle(0x22C55E, 1);
-    this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
+    this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, s(10));
 
     // 버튼 텍스트
     this._claimRewardText = this.add.text(GAME_WIDTH / 2, y + btnH / 2, '🎁 보상받기', {
-      fontSize: '14px', fontFamily: '"Noto Sans KR", Arial',
+      fontSize: sf(14), fontFamily: '"Noto Sans KR", Arial',
       color: '#FFFFFF',
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -956,36 +962,36 @@ export class MainMenuScene extends Phaser.Scene {
     const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6)
       .setInteractive().setDepth(1000);
 
-    const popupW = 320;
-    const popupH = 200;
+    const popupW = s(320);
+    const popupH = s(200);
     const popupX = GAME_WIDTH / 2 - popupW / 2;
     const popupY = GAME_HEIGHT / 2 - popupH / 2;
 
     const popupBg = this.add.graphics().setDepth(1001);
     popupBg.fillStyle(0x1E293B, 1);
-    popupBg.fillRoundedRect(popupX, popupY, popupW, popupH, 16);
+    popupBg.fillRoundedRect(popupX, popupY, popupW, popupH, s(16));
     popupBg.lineStyle(2, 0x22C55E, 0.8);
-    popupBg.strokeRoundedRect(popupX, popupY, popupW, popupH, 16);
+    popupBg.strokeRoundedRect(popupX, popupY, popupW, popupH, s(16));
 
-    const title = this.add.text(GAME_WIDTH / 2, popupY + 30, '🎁 보상 수령 완료!', {
-      fontSize: '18px', fontFamily: '"Noto Sans KR", Arial',
+    const title = this.add.text(GAME_WIDTH / 2, popupY + s(30), '🎁 보상 수령 완료!', {
+      fontSize: sf(18), fontFamily: '"Noto Sans KR", Arial',
       color: '#22C55E', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(1002);
 
-    const goldText = this.add.text(GAME_WIDTH / 2, popupY + 75, `💰 골드  +${rewards.gold.toLocaleString()}`, {
-      fontSize: '16px', fontFamily: 'Arial',
+    const goldText = this.add.text(GAME_WIDTH / 2, popupY + s(75), `💰 골드  +${rewards.gold.toLocaleString()}`, {
+      fontSize: sf(16), fontFamily: 'Arial',
       color: '#FBBF24', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(1002);
 
-    const expText = this.add.text(GAME_WIDTH / 2, popupY + 105, `⭐ 경험치  +${rewards.exp.toLocaleString()}`, {
-      fontSize: '16px', fontFamily: 'Arial',
+    const expText = this.add.text(GAME_WIDTH / 2, popupY + s(105), `⭐ 경험치  +${rewards.exp.toLocaleString()}`, {
+      fontSize: sf(16), fontFamily: 'Arial',
       color: '#34D399', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(1002);
 
-    const closeBtn = this.add.text(GAME_WIDTH / 2, popupY + 155, '확인', {
-      fontSize: '16px', fontFamily: '"Noto Sans KR", Arial',
+    const closeBtn = this.add.text(GAME_WIDTH / 2, popupY + s(155), '확인', {
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial',
       color: '#FFFFFF', backgroundColor: '#22C55E',
-      padding: { x: 30, y: 8 }
+      padding: { x: s(30), y: s(8) }
     }).setOrigin(0.5).setDepth(1002).setInteractive({ useHandCursor: true });
 
     const popupElements = [overlay, popupBg, title, goldText, expText, closeBtn];
@@ -1016,10 +1022,10 @@ export class MainMenuScene extends Phaser.Scene {
     ];
 
     const cols = 4;
-    const btnSize = 80;
-    const gapX = 20;
-    const gapY = 10;
-    const startY = 990;
+    const btnSize = s(80);
+    const gapX = s(20);
+    const gapY = s(10);
+    const startY = s(910);
     const totalWidth = cols * btnSize + (cols - 1) * gapX;
     const startX = (GAME_WIDTH - totalWidth) / 2 + btnSize / 2;
 
@@ -1030,40 +1036,41 @@ export class MainMenuScene extends Phaser.Scene {
       const y = startY + row * (btnSize + gapY);
 
       // Circle background
+      const circleR = s(32);
       const bg = this.add.graphics();
       bg.fillStyle(0x1E293B, 0.9);
-      bg.fillCircle(x, y - 8, 32);
+      bg.fillCircle(x, y - s(8), circleR);
       bg.lineStyle(2, COLORS.primary, 0.3);
-      bg.strokeCircle(x, y - 8, 32);
+      bg.strokeCircle(x, y - s(8), circleR);
 
       // Icon
-      const icon = this.add.text(x, y - 10, item.icon, {
-        fontSize: '28px'
+      const icon = this.add.text(x, y - s(10), item.icon, {
+        fontSize: sf(28)
       }).setOrigin(0.5);
 
       // Label
-      const label = this.add.text(x, y + 22, item.label, {
-        fontSize: '11px', fontFamily: '"Noto Sans KR", sans-serif',
+      const label = this.add.text(x, y + s(22), item.label, {
+        fontSize: sf(11), fontFamily: '"Noto Sans KR", sans-serif',
         color: '#94A3B8'
       }).setOrigin(0.5);
 
       // Hit area
-      const hitArea = this.add.rectangle(x, y + 5, btnSize, btnSize + 10)
+      const hitArea = this.add.rectangle(x, y + s(5), btnSize, btnSize + s(10))
         .setAlpha(0.001).setInteractive({ useHandCursor: true });
 
       hitArea.on('pointerover', () => {
         bg.clear();
         bg.fillStyle(0x334155, 1);
-        bg.fillCircle(x, y - 8, 34);
+        bg.fillCircle(x, y - s(8), s(34));
         bg.lineStyle(2, COLORS.primary, 0.6);
-        bg.strokeCircle(x, y - 8, 34);
+        bg.strokeCircle(x, y - s(8), s(34));
       });
       hitArea.on('pointerout', () => {
         bg.clear();
         bg.fillStyle(0x1E293B, 0.9);
-        bg.fillCircle(x, y - 8, 32);
+        bg.fillCircle(x, y - s(8), circleR);
         bg.lineStyle(2, COLORS.primary, 0.3);
-        bg.strokeCircle(x, y - 8, 32);
+        bg.strokeCircle(x, y - s(8), circleR);
       });
       hitArea.on('pointerdown', () => {
         this.openPopup(item.popupKey);
@@ -1140,12 +1147,12 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   showToast(message) {
-    const toast = this.add.text(GAME_WIDTH / 2, 500, message, {
-      fontSize: '18px',
+    const toast = this.add.text(GAME_WIDTH / 2, s(500), message, {
+      fontSize: sf(18),
       fontFamily: '"Noto Sans KR", Arial, sans-serif',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       backgroundColor: `#${COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
-      padding: { x: 20, y: 12 }
+      padding: { x: s(20), y: s(12) }
     }).setOrigin(0.5).setDepth(Z_INDEX.TOOLTIP);
 
     this.tweens.add({
@@ -1198,11 +1205,11 @@ export class MainMenuScene extends Phaser.Scene {
       if (nowBossReady !== this._bossReady) {
         this._bossReady = nowBossReady;
         if (this._bossBtnGfx && this._bossBtnText) {
-          const bossBtnX = GAME_WIDTH / 2 + 20;
-          const bossBtnW = GAME_WIDTH / 2 - 60;
+          const bossBtnX = GAME_WIDTH / 2 + s(20);
+          const bossBtnW = GAME_WIDTH / 2 - s(60);
           this._bossBtnGfx.clear();
           this._bossBtnGfx.fillStyle(nowBossReady ? 0xEF4444 : 0x334155, 1);
-          this._bossBtnGfx.fillRoundedRect(bossBtnX, this._bossBtnPanelY + 80, bossBtnW, 50, 10);
+          this._bossBtnGfx.fillRoundedRect(bossBtnX, this._bossBtnPanelY + s(80), bossBtnW, s(50), s(10));
           this._bossBtnText.setAlpha(nowBossReady ? 1 : 0.5);
 
           // 활성화 시 펄스 애니메이션

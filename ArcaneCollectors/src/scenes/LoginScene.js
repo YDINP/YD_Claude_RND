@@ -2,7 +2,7 @@
  * LoginScene - 인증 화면
  * B-5: 타이틀 + 게스트/이메일 로그인
  */
-import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { isSupabaseConfigured, supabase } from '../api/supabaseClient.js';
 import { guestLogin } from '../services/AuthService.js';
@@ -26,8 +26,8 @@ export class LoginScene extends Phaser.Scene {
       this.loginForm = null;
     } catch (error) {
       console.error('[LoginScene] create() 실패:', error);
-      this.add.text(360, 640, '씬 로드 실패', {
-        fontSize: '20px', fill: '#ff4444', align: 'center'
+      this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '씬 로드 실패', {
+        fontSize: sf(20), fill: '#ff4444', align: 'center'
       }).setOrigin(0.5);
     }
   }
@@ -38,8 +38,8 @@ export class LoginScene extends Phaser.Scene {
 
     // 장식적 파티클 (별처럼 반짝이는 점)
     for (let i = 0; i < 30; i++) {
-      const x = Phaser.Math.Between(20, GAME_WIDTH - 20);
-      const y = Phaser.Math.Between(50, GAME_HEIGHT - 200);
+      const x = Phaser.Math.Between(s(20), GAME_WIDTH - s(20));
+      const y = Phaser.Math.Between(s(50), GAME_HEIGHT - s(200));
       const size = Phaser.Math.Between(1, 3);
       const star = this.add.circle(x, y, size, 0x6366f1, Phaser.Math.FloatBetween(0.2, 0.7));
 
@@ -58,23 +58,23 @@ export class LoginScene extends Phaser.Scene {
     // B-5.1: 게임 로고
     const titleY = GAME_HEIGHT * 0.3;
 
-    this.add.text(GAME_WIDTH / 2, titleY - 30, 'ARCANE', {
-      fontSize: '48px',
+    this.add.text(GAME_WIDTH / 2, titleY - s(30), 'ARCANE', {
+      fontSize: sf(48),
       fontFamily: 'Georgia, serif',
       color: '#6366F1',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, titleY + 30, 'COLLECTORS', {
-      fontSize: '28px',
+    this.add.text(GAME_WIDTH / 2, titleY + s(30), 'COLLECTORS', {
+      fontSize: sf(28),
       fontFamily: 'Georgia, serif',
       color: '#a5b4fc',
-      letterSpacing: 8
+      letterSpacing: s(8)
     }).setOrigin(0.5);
 
     // 서브 타이틀
-    this.add.text(GAME_WIDTH / 2, titleY + 70, '신화의 교단에서 영웅을 모아라', {
-      fontSize: '13px',
+    this.add.text(GAME_WIDTH / 2, titleY + s(70), '신화의 교단에서 영웅을 모아라', {
+      fontSize: sf(13),
       fontFamily: 'Arial',
       color: '#64748b'
     }).setOrigin(0.5);
@@ -86,28 +86,28 @@ export class LoginScene extends Phaser.Scene {
     // B-5.2: 게스트로 시작 버튼 (메인)
     this._createButton(
       GAME_WIDTH / 2, btnY,
-      '게스트로 시작', COLORS.primary, 280, 52,
+      '게스트로 시작', COLORS.primary, s(280), s(52),
       () => this._handleGuestLogin()
     );
 
     // B-5.3: 이메일 로그인 버튼 (서브)
     if (isSupabaseConfigured) {
       this._createButton(
-        GAME_WIDTH / 2, btnY + 70,
-        '이메일 로그인', 0x374151, 280, 44,
+        GAME_WIDTH / 2, btnY + s(70),
+        '이메일 로그인', 0x374151, s(280), s(44),
         () => this._showLoginForm()
       );
 
       this._createButton(
-        GAME_WIDTH / 2, btnY + 125,
-        '회원가입', 0x374151, 280, 44,
+        GAME_WIDTH / 2, btnY + s(125),
+        '회원가입', 0x374151, s(280), s(44),
         () => this._showSignupForm()
       );
     }
 
     // 버전 정보
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 30, `v1.0.0 | Supabase ${  isSupabaseConfigured ? 'ON' : 'OFF'}`, {
-      fontSize: '10px',
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - s(30), `v1.0.0 | Supabase ${  isSupabaseConfigured ? 'ON' : 'OFF'}`, {
+      fontSize: sf(10),
       fontFamily: 'Arial',
       color: '#475569'
     }).setOrigin(0.5);

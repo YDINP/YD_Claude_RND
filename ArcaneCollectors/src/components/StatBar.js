@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS } from '../config/gameConfig.js';
+import { COLORS, s, sf } from '../config/gameConfig.js';
 
 export class StatBar extends Phaser.GameObjects.Container {
   /**
@@ -20,9 +20,9 @@ export class StatBar extends Phaser.GameObjects.Container {
       currentValue: options.currentValue ?? 100,
       color: options.color ?? COLORS.success,
       backgroundColor: options.backgroundColor ?? COLORS.backgroundLight,
-      height: options.height ?? 16,
-      labelWidth: options.labelWidth ?? 40,
-      valueWidth: options.valueWidth ?? 60,
+      height: options.height ?? s(16),
+      labelWidth: options.labelWidth ?? s(40),
+      valueWidth: options.valueWidth ?? s(60),
       showValue: options.showValue ?? true,
       animationDuration: options.animationDuration ?? 300
     };
@@ -46,7 +46,7 @@ export class StatBar extends Phaser.GameObjects.Container {
 
     this.labelText = this.scene.add.text(labelX, 0, this.options.label, {
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontSize: '12px',
+      fontSize: sf(12),
       color: '#94A3B8'
     }).setOrigin(0, 0.5);
 
@@ -103,7 +103,7 @@ export class StatBar extends Phaser.GameObjects.Container {
 
     this.valueText = this.scene.add.text(valueX, 0, `${this.currentValue}/${this.maxValue}`, {
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontSize: '12px',
+      fontSize: sf(12),
       fontStyle: 'bold',
       color: '#FFFFFF'
     }).setOrigin(1, 0.5);

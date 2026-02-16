@@ -16,10 +16,22 @@ import { SettingsScene } from '../scenes/SettingsScene.js';
 import { LoginScene } from '../scenes/LoginScene.js';
 
 // ============================================
-// Game Dimensions
+// Game Dimensions & Dynamic Scaling
 // ============================================
-export const GAME_WIDTH = 720;
-export const GAME_HEIGHT = 1280;
+export const GAME_WIDTH = 1080;
+export const GAME_HEIGHT = 1920;
+export const BASE_WIDTH = 720;
+export const SCALE_FACTOR = GAME_WIDTH / BASE_WIDTH;
+
+/** 픽셀 스케일 헬퍼 — 모든 하드코딩 값에 적용 */
+export function s(value) {
+  return Math.round(value * SCALE_FACTOR);
+}
+
+/** 폰트 스케일 헬퍼 — px 문자열 반환 */
+export function sf(basePx) {
+  return `${Math.round(basePx * SCALE_FACTOR)}px`;
+}
 
 export const gameConfig = {
   width: GAME_WIDTH,
@@ -136,11 +148,11 @@ export const MOOD_COLORS = {
 // Layout Configuration
 // ============================================
 export const LAYOUT = {
-  topBar: { height: 100, padding: 20 },
-  bottomNav: { height: 120, y: 1160 },
-  content: { y: 120, height: 1040 },
-  character: { mainY: 450, partyY: 750, size: 200 },
-  button: { width: 200, height: 60, spacing: 20 }
+  topBar: { height: s(100), padding: s(20) },
+  bottomNav: { height: s(120), y: s(1160) },
+  content: { y: s(120), height: s(1040) },
+  character: { mainY: s(450), partyY: s(750), size: s(200) },
+  button: { width: s(200), height: s(60), spacing: s(20) }
 };
 
 // ============================================

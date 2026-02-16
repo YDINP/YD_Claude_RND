@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, s, sf } from '../config/gameConfig.js';
 import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
 import transitionManager from '../utils/TransitionManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
@@ -58,8 +58,8 @@ export class HeroListScene extends Phaser.Scene {
     }
     } catch (error) {
       console.error('[HeroListScene] create() 실패:', error);
-      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
-        fontSize: '20px', fill: '#ff4444', align: 'center'
+      this.add.text(s(360), s(640), '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: sf(20), fill: '#ff4444', align: 'center'
       }).setOrigin(0.5);
       this.time.delayedCall(2000, () => {
         this.scene.start('MainMenuScene');
@@ -84,15 +84,15 @@ export class HeroListScene extends Phaser.Scene {
 
   createHeader() {
     // LAYOUT 통일: Header background (100px)
-    const headerBg = this.add.rectangle(GAME_WIDTH / 2, 50, GAME_WIDTH, 100, COLORS.backgroundLight, 0.95);
+    const headerBg = this.add.rectangle(GAME_WIDTH / 2, s(50), GAME_WIDTH, s(100), COLORS.backgroundLight, 0.95);
     headerBg.setDepth(20);
 
     // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
-    const backBtn = this.add.container(30, 50).setDepth(21);
-    const backBg = this.add.rectangle(0, 0, 50, 40, COLORS.backgroundLight, 0.8)
+    const backBtn = this.add.container(s(30), s(50)).setDepth(21);
+    const backBg = this.add.rectangle(0, 0, s(50), s(40), COLORS.backgroundLight, 0.8)
       .setInteractive({ useHandCursor: true });
     const backText = this.add.text(0, 0, '← 뒤로', {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -106,8 +106,8 @@ export class HeroListScene extends Phaser.Scene {
     });
 
     // Title
-    this.add.text(GAME_WIDTH / 2, 50, '영웅', {
-      fontSize: '28px',
+    this.add.text(GAME_WIDTH / 2, s(50), '영웅', {
+      fontSize: sf(28),
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -115,19 +115,19 @@ export class HeroListScene extends Phaser.Scene {
 
     // Hero count
     const heroes = this.registry.get('ownedHeroes') || [];
-    this.countText = this.add.text(GAME_WIDTH - 30, 50, `${heroes.length}명`, {
-      fontSize: '14px',
+    this.countText = this.add.text(GAME_WIDTH - s(30), s(50), `${heroes.length}명`, {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0.5).setDepth(21);
   }
 
   createFilterBar() {
-    const filterY = 130;
-    const filterY2 = 175;
+    const filterY = s(130);
+    const filterY2 = s(175);
 
     // Filter background (extended for two rows)
-    const filterBg = this.add.rectangle(GAME_WIDTH / 2, 152, GAME_WIDTH, 105, COLORS.backgroundLight, 0.8);
+    const filterBg = this.add.rectangle(GAME_WIDTH / 2, s(152), GAME_WIDTH, s(105), COLORS.backgroundLight, 0.8);
     filterBg.setDepth(19);
 
     // Sort buttons - expanded options
@@ -142,14 +142,14 @@ export class HeroListScene extends Phaser.Scene {
     this.sortButtons = [];
 
     sortOptions.forEach((opt, index) => {
-      const x = 45 + index * 78;
+      const x = s(45) + index * s(78);
       const btn = this.add.container(x, filterY).setDepth(20);
 
       const isActive = this.sortBy === opt.key;
-      const bg = this.add.rectangle(0, 0, 70, 28, isActive ? COLORS.primary : COLORS.backgroundLight, 1)
+      const bg = this.add.rectangle(0, 0, s(70), s(28), isActive ? COLORS.primary : COLORS.backgroundLight, 1)
         .setInteractive({ useHandCursor: true });
       const text = this.add.text(0, 0, opt.label, {
-        fontSize: '11px',
+        fontSize: sf(11),
         fontFamily: 'Arial',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
@@ -172,8 +172,8 @@ export class HeroListScene extends Phaser.Scene {
     });
 
     // Sort direction indicator
-    this.sortDirText = this.add.text(GAME_WIDTH - 25, filterY, this.sortAscending ? '▲' : '▼', {
-      fontSize: '14px',
+    this.sortDirText = this.add.text(GAME_WIDTH - s(25), filterY, this.sortAscending ? '▲' : '▼', {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(20);
@@ -183,8 +183,8 @@ export class HeroListScene extends Phaser.Scene {
     this.cultButtons = [];
 
     cults.forEach((cult, index) => {
-      const x = 20 + index * 22;
-      const btn = this.add.circle(x, filterY2, 10, CULT_COLORS[cult] || COLORS.textDark, 0.8)
+      const x = s(20) + index * s(22);
+      const btn = this.add.circle(x, filterY2, s(10), CULT_COLORS[cult] || COLORS.textDark, 0.8)
         .setInteractive({ useHandCursor: true })
         .setDepth(20);
 
@@ -197,7 +197,7 @@ export class HeroListScene extends Phaser.Scene {
         } else {
           this.cultButtons.forEach(cb => cb.btn.setStrokeStyle(0));
           this.filterCult = cult;
-          btn.setStrokeStyle(2, COLORS.text);
+          btn.setStrokeStyle(s(2), COLORS.text);
         }
         this.refreshGrid();
       });
@@ -208,14 +208,14 @@ export class HeroListScene extends Phaser.Scene {
     this.rarityButtons = [];
 
     rarities.forEach((rarity, index) => {
-      const x = 200 + index * 45;
+      const x = s(200) + index * s(45);
       const btn = this.add.container(x, filterY2).setDepth(20);
 
       const isActive = this.filterRarity === rarity;
-      const bg = this.add.rectangle(0, 0, 38, 24, isActive ? RARITY[rarity].color : COLORS.backgroundLight, 0.9)
+      const bg = this.add.rectangle(0, 0, s(38), s(24), isActive ? RARITY[rarity].color : COLORS.backgroundLight, 0.9)
         .setInteractive({ useHandCursor: true });
       const text = this.add.text(0, 0, rarity, {
-        fontSize: '10px',
+        fontSize: sf(10),
         fontFamily: 'Arial',
         fontStyle: 'bold',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
@@ -238,8 +238,8 @@ export class HeroListScene extends Phaser.Scene {
     });
 
     // Clear filters button
-    const clearBtn = this.add.text(GAME_WIDTH - 50, filterY2, '초기화', {
-      fontSize: '11px',
+    const clearBtn = this.add.text(GAME_WIDTH - s(50), filterY2, '초기화', {
+      fontSize: sf(11),
       fontFamily: 'Arial',
       color: `#${  COLORS.danger.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });
@@ -271,7 +271,7 @@ export class HeroListScene extends Phaser.Scene {
 
     // UIX-3.4: Mask for scrolling (콘텐츠 영역 y=80~1160)
     const maskShape = this.make.graphics();
-    maskShape.fillRect(0, 210, GAME_WIDTH, GAME_HEIGHT - 330);
+    maskShape.fillRect(0, s(210), GAME_WIDTH, GAME_HEIGHT - s(330));
     const mask = maskShape.createGeometryMask();
     this.gridContainer.setMask(mask);
 
@@ -286,8 +286,8 @@ export class HeroListScene extends Phaser.Scene {
         skillLevels: hero.skillLevels || [1, 1]
       });
     } catch (e) {
-      const s = hero.stats || {};
-      return Math.floor((s.hp || 0) / 10 + (s.atk || 0) + (s.def || 0) + (s.spd || 0));
+      const st = hero.stats || {};
+      return Math.floor((st.hp || 0) / 10 + (st.atk || 0) + (st.def || 0) + (st.spd || 0));
     }
   }
 
@@ -360,17 +360,17 @@ export class HeroListScene extends Phaser.Scene {
 
     // UIX-2.2.1: Display heroes in grid (4 columns, 110x150 cards, 10px spacing)
     const cols = 4;
-    const cardWidth = 110;
-    const cardHeight = 150;
-    const spacing = 10;
+    const cardWidth = s(110);
+    const cardHeight = s(150);
+    const spacing = s(10);
     const gridWidth = cols * cardWidth + (cols - 1) * spacing;
     const startX = (GAME_WIDTH - gridWidth) / 2 + cardWidth / 2;
-    const startY = 240;
+    const startY = s(240);
 
     if (heroes.length === 0) {
       // Empty state
       const emptyText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '보유한 영웅이 없습니다\n소환에서 영웅을 획득하세요!', {
-        fontSize: '16px',
+        fontSize: sf(16),
         fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`,
         align: 'center'
@@ -381,7 +381,7 @@ export class HeroListScene extends Phaser.Scene {
 
     // UIX-2.2.1: Virtual scrolling - only render visible cards
     const visibleStart = Math.max(0, Math.floor((this.scrollY - startY) / (cardHeight + spacing)) * cols);
-    const visibleRows = Math.ceil((GAME_HEIGHT - 250) / (cardHeight + spacing)) + 2;
+    const visibleRows = Math.ceil((GAME_HEIGHT - s(250)) / (cardHeight + spacing)) + 2;
     const visibleEnd = Math.min(heroes.length, visibleStart + visibleRows * cols);
 
     heroes.forEach((hero, index) => {
@@ -399,7 +399,7 @@ export class HeroListScene extends Phaser.Scene {
 
     // UIX-2.2.1: Update max scroll with new spacing
     const rows = Math.ceil(heroes.length / cols);
-    this.maxScroll = Math.max(0, rows * (cardHeight + spacing) - (GAME_HEIGHT - 250));
+    this.maxScroll = Math.max(0, rows * (cardHeight + spacing) - (GAME_HEIGHT - s(250)));
     this.scrollY = Math.min(this.scrollY, this.maxScroll);
 
     // Update count
@@ -412,47 +412,47 @@ export class HeroListScene extends Phaser.Scene {
     const card = scene.add.container(x, y);
 
     // UIX-2.2.1: Updated card size 110x150
-    const cardWidth = 110;
-    const cardHeight = 150;
+    const cardWidth = s(110);
+    const cardHeight = s(150);
 
     // Card background with rarity color
     const rKey = getRarityKey(hero.rarity);
     const rarityData = RARITY[rKey] || RARITY.N;
     const rarityColor = rarityData.color;
-    const cardBg = scene.add.rectangle(0, 0, cardWidth - 10, cardHeight - 10, COLORS.backgroundLight, 1);
-    cardBg.setStrokeStyle(2, rarityColor);
+    const cardBg = scene.add.rectangle(0, 0, cardWidth - s(10), cardHeight - s(10), COLORS.backgroundLight, 1);
+    cardBg.setStrokeStyle(s(2), rarityColor);
     cardBg.setInteractive({ useHandCursor: true });
 
     // Rarity indicator
-    const rarityBg = scene.add.rectangle(0, -60, 35, 18, rarityColor, 1);
-    const rarityText = scene.add.text(0, -60, rKey, {
-      fontSize: '11px',
+    const rarityBg = scene.add.rectangle(0, s(-60), s(35), s(18), rarityColor, 1);
+    const rarityText = scene.add.text(0, s(-60), rKey, {
+      fontSize: sf(11),
       fontFamily: 'Arial',
       color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // Hero portrait
-    const portrait = scene.add.image(0, -15, 'hero_placeholder').setScale(0.9);
+    const portrait = scene.add.image(0, s(-15), 'hero_placeholder').setScale(0.9);
 
     const starCount = hero.stars || getRarityNum(hero.rarity) || rarityData.stars || 1;
-    const stars = scene.add.text(0, 40, '★'.repeat(starCount), {
-      fontSize: '11px',
+    const stars = scene.add.text(0, s(40), '★'.repeat(starCount), {
+      fontSize: sf(11),
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Name
     const heroName = hero.name || '???';
     const name = heroName.length > 8 ? `${heroName.substring(0, 8)  }..` : heroName;
-    const nameText = scene.add.text(0, 56, name, {
-      fontSize: '12px',
+    const nameText = scene.add.text(0, s(56), name, {
+      fontSize: sf(12),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Level
-    const levelText = scene.add.text(0, 68, `Lv.${hero.level}`, {
-      fontSize: '10px',
+    const levelText = scene.add.text(0, s(68), `Lv.${hero.level}`, {
+      fontSize: sf(10),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -465,7 +465,7 @@ export class HeroListScene extends Phaser.Scene {
       const newRarityData = RARITY[newRKey] || RARITY.N;
       const newRarityColor = newRarityData.color;
 
-      cardBg.setStrokeStyle(2, newRarityColor);
+      cardBg.setStrokeStyle(s(2), newRarityColor);
       rarityBg.setFillStyle(newRarityColor, 1);
       rarityText.setText(newRKey);
 
@@ -503,8 +503,8 @@ export class HeroListScene extends Phaser.Scene {
     this.dragStartPointerY = 0;
     this.dragStartScrollY = 0;
 
-    const DRAG_THRESHOLD = 10; // px - 드래그 vs 탭 판정 임계값
-    const CONTENT_TOP = 210;   // 필터바 아래 콘텐츠 영역 시작
+    const DRAG_THRESHOLD = s(10); // px - 드래그 vs 탭 판정 임계값
+    const CONTENT_TOP = s(210);   // 필터바 아래 콘텐츠 영역 시작
 
     // Mouse wheel scrolling
     this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
@@ -567,8 +567,8 @@ export class HeroListScene extends Phaser.Scene {
       // 카드의 월드 좌표 계산 (container 오프셋 적용)
       const cardWorldX = card.x + this.gridContainer.x;
       const cardWorldY = card.y + this.gridContainer.y;
-      const halfW = 50; // (cardWidth - 10) / 2 = 100/2
-      const halfH = 70; // (cardHeight - 10) / 2 = 140/2
+      const halfW = s(50); // (cardWidth - 10) / 2 = 100/2
+      const halfH = s(70); // (cardHeight - 10) / 2 = 140/2
 
       if (worldX >= cardWorldX - halfW && worldX <= cardWorldX + halfW &&
           worldY >= cardWorldY - halfH && worldY <= cardWorldY + halfH) {

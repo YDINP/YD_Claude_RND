@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, RARITY, MOODS, CULT_COLORS } from '../config/gameConfig.js';
+import { COLORS, RARITY, MOODS, CULT_COLORS, s, sf } from '../config/gameConfig.js';
 import { getRarityKey } from '../utils/rarityUtils.js';
 import { StarRating } from './StarRating.js';
 
@@ -15,8 +15,8 @@ export class HeroCard extends Phaser.GameObjects.Container {
     super(scene, x, y);
 
     this.heroData = heroData;
-    this.cardWidth = 100;
-    this.cardHeight = 120;
+    this.cardWidth = s(100);
+    this.cardHeight = s(120);
     this.onTapCallback = null;
 
     this.createFrame();
@@ -44,7 +44,7 @@ export class HeroCard extends Phaser.GameObjects.Container {
       -this.cardHeight / 2,
       this.cardWidth,
       this.cardHeight,
-      8
+      s(8)
     );
 
     // 기본 배경 오버레이
@@ -54,7 +54,7 @@ export class HeroCard extends Phaser.GameObjects.Container {
       -this.cardHeight / 2,
       this.cardWidth,
       this.cardHeight,
-      8
+      s(8)
     );
 
     // Top shine
@@ -64,7 +64,7 @@ export class HeroCard extends Phaser.GameObjects.Container {
       -this.cardHeight / 2,
       this.cardWidth,
       this.cardHeight * 0.3,
-      { tl: 8, tr: 8, bl: 0, br: 0 }
+      { tl: s(8), tr: s(8), bl: 0, br: 0 }
     );
 
     // H-6.1: 하단 교단색 그라데이션 힌트
@@ -74,18 +74,18 @@ export class HeroCard extends Phaser.GameObjects.Container {
       this.cardHeight / 2 - this.cardHeight * 0.25,
       this.cardWidth,
       this.cardHeight * 0.25,
-      { tl: 0, tr: 0, bl: 8, br: 8 }
+      { tl: 0, tr: 0, bl: s(8), br: s(8) }
     );
 
     // Rarity border with enhanced thickness
-    const borderWidth = this.heroData.rarity === 'SSR' ? 4 : (this.heroData.rarity === 'SR' ? 3 : 2);
+    const borderWidth = this.heroData.rarity === 'SSR' ? s(4) : (this.heroData.rarity === 'SR' ? s(3) : s(2));
     this.frame.lineStyle(borderWidth, frameColor, 1);
     this.frame.strokeRoundedRect(
       -this.cardWidth / 2,
       -this.cardHeight / 2,
       this.cardWidth,
       this.cardHeight,
-      8
+      s(8)
     );
 
     // Rarity glow effect (for SR and SSR)
@@ -93,11 +93,11 @@ export class HeroCard extends Phaser.GameObjects.Container {
       const glowGraphics = this.scene.add.graphics();
       glowGraphics.fillStyle(frameColor, 0.25);
       glowGraphics.fillRoundedRect(
-        -this.cardWidth / 2 - 3,
-        -this.cardHeight / 2 - 3,
-        this.cardWidth + 6,
-        this.cardHeight + 6,
-        10
+        -this.cardWidth / 2 - s(3),
+        -this.cardHeight / 2 - s(3),
+        this.cardWidth + s(6),
+        this.cardHeight + s(6),
+        s(10)
       );
       this.add(glowGraphics);
       this.sendToBack(glowGraphics);
@@ -119,8 +119,8 @@ export class HeroCard extends Phaser.GameObjects.Container {
   }
 
   createPortrait() {
-    const portraitSize = 70;
-    const portraitY = -this.cardHeight / 2 + 10 + portraitSize / 2;
+    const portraitSize = s(70);
+    const portraitY = -this.cardHeight / 2 + s(10) + portraitSize / 2;
 
     // Portrait background/placeholder
     this.portrait = this.scene.add.graphics();
@@ -130,21 +130,21 @@ export class HeroCard extends Phaser.GameObjects.Container {
       portraitY - portraitSize / 2,
       portraitSize,
       portraitSize,
-      6
+      s(6)
     );
 
     // Try to load portrait image
     const portraitKey = `hero_${this.heroData.id}`;
     if (this.scene.textures.exists(portraitKey)) {
       this.portraitImage = this.scene.add.image(0, portraitY, portraitKey);
-      this.portraitImage.setDisplaySize(portraitSize - 4, portraitSize - 4);
+      this.portraitImage.setDisplaySize(portraitSize - s(4), portraitSize - s(4));
       this.add(this.portraitImage);
     } else {
       // Placeholder with first letter of name
       const initial = this.heroData.name ? this.heroData.name.charAt(0) : '?';
       this.placeholder = this.scene.add.text(0, portraitY, initial, {
         fontFamily: '"Noto Sans KR", sans-serif',
-        fontSize: '32px',
+        fontSize: sf(32),
         fontStyle: 'bold',
         color: '#64748B'
       }).setOrigin(0.5);
@@ -161,15 +161,15 @@ export class HeroCard extends Phaser.GameObjects.Container {
     const moodConfig = MOODS[this.heroData.mood];
     if (!moodConfig) return;
 
-    const iconSize = 20;
-    const iconX = this.cardWidth / 2 - iconSize / 2 - 6;
-    const iconY = -this.cardHeight / 2 + iconSize / 2 + 6;
+    const iconSize = s(20);
+    const iconX = this.cardWidth / 2 - iconSize / 2 - s(6);
+    const iconY = -this.cardHeight / 2 + iconSize / 2 + s(6);
 
     this.moodIcon = this.scene.add.graphics();
 
     // Circle background
     this.moodIcon.fillStyle(0x000000, 0.6);
-    this.moodIcon.fillCircle(iconX, iconY, iconSize / 2 + 2);
+    this.moodIcon.fillCircle(iconX, iconY, iconSize / 2 + s(2));
 
     // Mood color
     this.moodIcon.fillStyle(moodConfig.color, 1);
@@ -180,10 +180,10 @@ export class HeroCard extends Phaser.GameObjects.Container {
 
   createNameLabel() {
     if (!this.heroData.name) return;
-    const nameY = this.cardHeight / 2 - 14;
+    const nameY = this.cardHeight / 2 - s(14);
     this.nameLabel = this.scene.add.text(0, nameY, this.heroData.name, {
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontSize: '9px',
+      fontSize: sf(9),
       color: '#E2E8F0'
     }).setOrigin(0.5);
     this.add(this.nameLabel);
@@ -192,29 +192,29 @@ export class HeroCard extends Phaser.GameObjects.Container {
   createStarRating() {
     const rarityConfig = RARITY[getRarityKey(this.heroData.rarity)] || RARITY.N;
     const starCount = rarityConfig.stars;
-    const starY = this.cardHeight / 2 - 30;
+    const starY = this.cardHeight / 2 - s(30);
 
-    this.stars = new StarRating(this.scene, 0, starY, starCount, 5);
+    this.stars = new StarRating(this.scene, 0, starY, starCount, s(5));
     this.add(this.stars);
   }
 
   createLevelBadge() {
     const level = this.heroData.level || 1;
-    const badgeX = -this.cardWidth / 2 + 18;
-    const badgeY = -this.cardHeight / 2 + 14;
+    const badgeX = -this.cardWidth / 2 + s(18);
+    const badgeY = -this.cardHeight / 2 + s(14);
 
     this.levelBadge = this.scene.add.graphics();
 
     // Badge background
     this.levelBadge.fillStyle(0x000000, 0.7);
-    this.levelBadge.fillRoundedRect(badgeX - 14, badgeY - 10, 28, 18, 4);
+    this.levelBadge.fillRoundedRect(badgeX - s(14), badgeY - s(10), s(28), s(18), s(4));
 
     this.add(this.levelBadge);
 
     // Level text
     this.levelText = this.scene.add.text(badgeX, badgeY, `Lv${level}`, {
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontSize: '10px',
+      fontSize: sf(10),
       fontStyle: 'bold',
       color: '#FFFFFF'
     }).setOrigin(0.5);
@@ -310,24 +310,24 @@ export class HeroCard extends Phaser.GameObjects.Container {
    */
   setSelected(selected) {
     if (selected) {
-      this.frame.lineStyle(3, COLORS.success, 1);
+      this.frame.lineStyle(s(3), COLORS.success, 1);
       this.frame.strokeRoundedRect(
         -this.cardWidth / 2,
         -this.cardHeight / 2,
         this.cardWidth,
         this.cardHeight,
-        8
+        s(8)
       );
     } else {
       // Redraw with original rarity color
       const rarityConfig = RARITY[getRarityKey(this.heroData.rarity)] || RARITY.N;
-      this.frame.lineStyle(3, rarityConfig.color, 1);
+      this.frame.lineStyle(s(3), rarityConfig.color, 1);
       this.frame.strokeRoundedRect(
         -this.cardWidth / 2,
         -this.cardHeight / 2,
         this.cardWidth,
         this.cardHeight,
-        8
+        s(8)
       );
     }
 

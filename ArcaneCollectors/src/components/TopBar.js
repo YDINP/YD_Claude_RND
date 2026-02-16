@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_WIDTH } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, s, sf } from '../config/gameConfig.js';
 
 export class TopBar extends Phaser.GameObjects.Container {
   /**
@@ -9,7 +9,7 @@ export class TopBar extends Phaser.GameObjects.Container {
   constructor(scene) {
     super(scene, GAME_WIDTH / 2, 0);
 
-    this.barHeight = 50;
+    this.barHeight = s(50);
     this.gems = 0;
     this.gold = 0;
 
@@ -34,55 +34,55 @@ export class TopBar extends Phaser.GameObjects.Container {
     this.background.fillRect(-GAME_WIDTH / 2, 0, GAME_WIDTH, this.barHeight * 0.3);
 
     // Bottom border with glow
-    this.background.lineStyle(2, COLORS.primary, 0.6);
+    this.background.lineStyle(s(2), COLORS.primary, 0.6);
     this.background.lineBetween(-GAME_WIDTH / 2, this.barHeight, GAME_WIDTH / 2, this.barHeight);
 
     // Neon glow line below
-    this.background.lineStyle(4, COLORS.primary, 0.2);
-    this.background.lineBetween(-GAME_WIDTH / 2, this.barHeight + 1, GAME_WIDTH / 2, this.barHeight + 1);
+    this.background.lineStyle(s(4), COLORS.primary, 0.2);
+    this.background.lineBetween(-GAME_WIDTH / 2, this.barHeight + s(1), GAME_WIDTH / 2, this.barHeight + s(1));
 
     this.add(this.background);
   }
 
   createResourceDisplays() {
-    const iconSize = 24;
-    const startX = -GAME_WIDTH / 2 + 20;
+    const iconSize = s(24);
+    const startX = -GAME_WIDTH / 2 + s(20);
     const centerY = this.barHeight / 2;
 
     // Gems display
     this.gemsIcon = this.createResourceIcon(startX, centerY, COLORS.secondary, 'gem');
     this.add(this.gemsIcon);
 
-    this.gemsText = this.scene.add.text(startX + iconSize + 8, centerY, '0', {
+    this.gemsText = this.scene.add.text(startX + iconSize + s(8), centerY, '0', {
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontSize: '16px',
+      fontSize: sf(16),
       fontStyle: 'bold',
       color: '#FFFFFF'
     }).setOrigin(0, 0.5);
     this.add(this.gemsText);
 
     // Gold display
-    const goldX = startX + 120;
+    const goldX = startX + s(120);
     this.goldIcon = this.createResourceIcon(goldX, centerY, COLORS.accent, 'coin');
     this.add(this.goldIcon);
 
-    this.goldText = this.scene.add.text(goldX + iconSize + 8, centerY, '0', {
+    this.goldText = this.scene.add.text(goldX + iconSize + s(8), centerY, '0', {
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontSize: '16px',
+      fontSize: sf(16),
       fontStyle: 'bold',
       color: '#FFFFFF'
     }).setOrigin(0, 0.5);
     this.add(this.goldText);
 
     // Player level / Settings area on right
-    const rightX = GAME_WIDTH / 2 - 50;
+    const rightX = GAME_WIDTH / 2 - s(50);
     this.settingsBtn = this.createSettingsButton(rightX, centerY);
     this.add(this.settingsBtn);
   }
 
   createResourceIcon(x, y, color, type) {
     const graphics = this.scene.add.graphics();
-    const size = 20;
+    const size = s(20);
 
     if (type === 'gem') {
       // Diamond shape
@@ -110,7 +110,7 @@ export class TopBar extends Phaser.GameObjects.Container {
       graphics.fillCircle(x, y, size / 2);
 
       // Inner ring
-      graphics.lineStyle(2, 0xffffff, 0.4);
+      graphics.lineStyle(s(2), 0xffffff, 0.4);
       graphics.strokeCircle(x, y, size / 3);
     }
 
@@ -119,7 +119,7 @@ export class TopBar extends Phaser.GameObjects.Container {
 
   createSettingsButton(x, y) {
     const btn = this.scene.add.graphics();
-    const size = 24;
+    const size = s(24);
 
     // Gear icon representation
     btn.fillStyle(COLORS.textDark, 1);

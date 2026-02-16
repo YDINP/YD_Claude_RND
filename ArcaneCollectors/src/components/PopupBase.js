@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 
 export class PopupBase {
   constructor(scene, options = {}) {
     this.scene = scene;
     this.title = options.title || '';
-    this.panelWidth = options.width || 680;
-    this.panelHeight = options.height || 1100;
+    this.panelWidth = options.width || s(680);
+    this.panelHeight = options.height || s(1100);
     this.container = null;
     this.contentContainer = null;
     this.isOpen = false;
@@ -33,9 +33,9 @@ export class PopupBase {
 
     const panel = this.scene.add.graphics();
     panel.fillStyle(0x0F172A, 0.98);
-    panel.fillRoundedRect(left, top, this.panelWidth, this.panelHeight, 16);
-    panel.lineStyle(2, COLORS.primary, 0.5);
-    panel.strokeRoundedRect(left, top, this.panelWidth, this.panelHeight, 16);
+    panel.fillRoundedRect(left, top, this.panelWidth, this.panelHeight, s(16));
+    panel.lineStyle(s(2), COLORS.primary, 0.5);
+    panel.strokeRoundedRect(left, top, this.panelWidth, this.panelHeight, s(16));
     this.container.add(panel);
 
     // Panel blocker (prevent overlay close when clicking panel)
@@ -44,23 +44,23 @@ export class PopupBase {
     this.container.add(blocker);
 
     // Header
-    this.scene.add.text(px, top + 35, this.title, {
-      fontSize: '24px', fontFamily: '"Noto Sans KR", sans-serif',
+    this.scene.add.text(px, top + s(35), this.title, {
+      fontSize: sf(24), fontFamily: '"Noto Sans KR", sans-serif',
       fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
     this.container.add(this.container.last);
 
     // Close button
-    const closeBtn = this.scene.add.text(left + this.panelWidth - 30, top + 20, '✕', {
-      fontSize: '24px', color: '#94A3B8'
+    const closeBtn = this.scene.add.text(left + this.panelWidth - s(30), top + s(20), '✕', {
+      fontSize: sf(24), color: '#94A3B8'
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.hide());
     this.container.add(closeBtn);
 
     // Separator line
     const sep = this.scene.add.graphics();
-    sep.lineStyle(1, COLORS.primary, 0.3);
-    sep.lineBetween(left + 20, top + 60, left + this.panelWidth - 20, top + 60);
+    sep.lineStyle(s(1), COLORS.primary, 0.3);
+    sep.lineBetween(left + s(20), top + s(60), left + this.panelWidth - s(20), top + s(60));
     this.container.add(sep);
 
     // Content area
@@ -69,12 +69,12 @@ export class PopupBase {
 
     // Content area bounds for subclasses
     this.contentBounds = {
-      left: left + 15,
-      top: top + 70,
-      right: left + this.panelWidth - 15,
-      bottom: top + this.panelHeight - 15,
-      width: this.panelWidth - 30,
-      height: this.panelHeight - 85,
+      left: left + s(15),
+      top: top + s(70),
+      right: left + this.panelWidth - s(15),
+      bottom: top + this.panelHeight - s(15),
+      width: this.panelWidth - s(30),
+      height: this.panelHeight - s(85),
       centerX: px
     };
 
@@ -128,7 +128,7 @@ export class PopupBase {
   // Helper: add text to content
   addText(x, y, text, style = {}) {
     const t = this.scene.add.text(x, y, text, {
-      fontSize: '16px',
+      fontSize: sf(16),
       fontFamily: '"Noto Sans KR", sans-serif',
       color: '#FFFFFF',
       ...style
@@ -140,11 +140,11 @@ export class PopupBase {
   // Helper: add button
   addButton(x, y, width, height, label, color, callback) {
     const bg = this.scene.add.rectangle(x, y, width, height, color, 1);
-    bg.setStrokeStyle(1, 0xFFFFFF, 0.2);
+    bg.setStrokeStyle(s(1), 0xFFFFFF, 0.2);
     bg.setInteractive({ useHandCursor: true });
 
     const text = this.scene.add.text(x, y, label, {
-      fontSize: '16px', fontFamily: '"Noto Sans KR", sans-serif',
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", sans-serif',
       fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
 

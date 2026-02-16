@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS, s, sf } from '../config/gameConfig.js';
 import { PartyManager } from '../systems/PartyManager.js';
 import { SynergySystem } from '../systems/SynergySystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
@@ -42,8 +42,8 @@ export class PartyEditScene extends Phaser.Scene {
     this.refreshPartyDisplay();
     } catch (error) {
       console.error('[PartyEditScene] create() 실패:', error);
-      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
-        fontSize: '20px', fill: '#ff4444', align: 'center'
+      this.add.text(s(360), s(640), '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: sf(20), fill: '#ff4444', align: 'center'
       }).setOrigin(0.5);
       this.time.delayedCall(2000, () => {
         this.scene.start('MainMenuScene');
@@ -103,26 +103,26 @@ export class PartyEditScene extends Phaser.Scene {
 
   createTopBar() {
     // 상단 바 배경
-    this.add.rectangle(GAME_WIDTH / 2, 50, GAME_WIDTH, 100, COLORS.bgDark, 0.9);
+    this.add.rectangle(GAME_WIDTH / 2, s(50), GAME_WIDTH, s(100), COLORS.bgDark, 0.9);
 
     // 뒤로가기 버튼
-    const backBtn = this.add.text(30, 50, '◁', {
-      fontSize: '32px', color: '#FFFFFF'
+    const backBtn = this.add.text(s(30), s(50), '◁', {
+      fontSize: sf(32), color: '#FFFFFF'
     }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
 
     backBtn.on('pointerdown', () => this.goBack());
 
     // 제목
-    this.add.text(GAME_WIDTH / 2, 50, '파티 편성', {
-      fontSize: '24px',
+    this.add.text(GAME_WIDTH / 2, s(50), '파티 편성', {
+      fontSize: sf(24),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // 전투력 표시
-    this.powerText = this.add.text(GAME_WIDTH - 30, 50, '전투력: 0', {
-      fontSize: '16px',
+    this.powerText = this.add.text(GAME_WIDTH - s(30), s(50), '전투력: 0', {
+      fontSize: sf(16),
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -130,23 +130,23 @@ export class PartyEditScene extends Phaser.Scene {
   }
 
   createSlotTabs() {
-    const tabY = 130;
-    const tabW = 120;
-    const startX = (GAME_WIDTH - tabW * 5 - 10 * 4) / 2 + tabW / 2;
+    const tabY = s(130);
+    const tabW = s(120);
+    const startX = (GAME_WIDTH - tabW * 5 - s(10) * 4) / 2 + tabW / 2;
 
     this.tabButtons = [];
 
     for (let i = 0; i < 5; i++) {
-      const x = startX + i * (tabW + 10);
+      const x = startX + i * (tabW + s(10));
       const slot = i + 1;
       const isActive = slot === this.activeSlot;
 
-      const bg = this.add.rectangle(x, tabY, tabW, 40,
+      const bg = this.add.rectangle(x, tabY, tabW, s(40),
         isActive ? COLORS.primary : COLORS.bgPanel, isActive ? 1 : 0.6)
         .setInteractive({ useHandCursor: true });
 
       const label = this.add.text(x, tabY, `파티 ${slot}`, {
-        fontSize: '14px',
+        fontSize: sf(14),
         fontFamily: 'Arial',
         color: '#FFFFFF',
         fontStyle: isActive ? 'bold' : 'normal'
@@ -172,9 +172,9 @@ export class PartyEditScene extends Phaser.Scene {
   }
 
   createPartyGrid() {
-    const gridY = 220;
-    const slotSize = 140;
-    const spacing = 15;
+    const gridY = s(220);
+    const slotSize = s(140);
+    const spacing = s(15);
     const totalW = slotSize * 4 + spacing * 3;
     const startX = (GAME_WIDTH - totalW) / 2 + slotSize / 2;
 
@@ -185,40 +185,40 @@ export class PartyEditScene extends Phaser.Scene {
       const y = gridY + slotSize / 2;
 
       // 슬롯 배경
-      const bg = this.add.rectangle(x, y, slotSize, slotSize + 30, COLORS.bgLight, 0.7)
-        .setStrokeStyle(2, COLORS.bgPanel)
+      const bg = this.add.rectangle(x, y, slotSize, slotSize + s(30), COLORS.bgLight, 0.7)
+        .setStrokeStyle(s(2), COLORS.bgPanel)
         .setInteractive({ useHandCursor: true });
 
       // 슬롯 번호
-      this.add.text(x, y - slotSize / 2 + 12, `슬롯 ${i + 1}`, {
-        fontSize: '11px', fontFamily: 'Arial',
+      this.add.text(x, y - slotSize / 2 + s(12), `슬롯 ${i + 1}`, {
+        fontSize: sf(11), fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       // 캐릭터 아이콘 영역 (원형)
-      const iconBg = this.add.circle(x, y - 10, 35, COLORS.bgPanel, 0.5);
+      const iconBg = this.add.circle(x, y - s(10), s(35), COLORS.bgPanel, 0.5);
 
       // 캐릭터 이름
-      const nameText = this.add.text(x, y + 35, '+', {
-        fontSize: '14px', fontFamily: 'Arial',
+      const nameText = this.add.text(x, y + s(35), '+', {
+        fontSize: sf(14), fontFamily: 'Arial',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
 
       // 부가 정보 (분위기, 클래스)
-      const infoText = this.add.text(x, y + 55, '', {
-        fontSize: '11px', fontFamily: 'Arial',
+      const infoText = this.add.text(x, y + s(55), '', {
+        fontSize: sf(11), fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       // 등급 표시
-      const rarityText = this.add.text(x, y - 10, '', {
-        fontSize: '24px'
+      const rarityText = this.add.text(x, y - s(10), '', {
+        fontSize: sf(24)
       }).setOrigin(0.5);
 
       // 제거 버튼
-      const removeBtn = this.add.text(x + slotSize / 2 - 8, y - slotSize / 2 - 5, '✕', {
-        fontSize: '16px', color: '#FF5555'
+      const removeBtn = this.add.text(x + slotSize / 2 - s(8), y - slotSize / 2 - s(5), '✕', {
+        fontSize: sf(16), color: '#FF5555'
       }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false);
 
       removeBtn.on('pointerdown', () => this.removeHeroFromSlot(i));
@@ -233,22 +233,22 @@ export class PartyEditScene extends Phaser.Scene {
   }
 
   createSynergyPreview() {
-    const y = 460;
+    const y = s(460);
 
     // 시너지 패널 배경
-    this.synergyPanel = this.add.rectangle(GAME_WIDTH / 2, y + 40, GAME_WIDTH - 60, 100, COLORS.bgLight, 0.5)
-      .setStrokeStyle(1, COLORS.bgPanel);
+    this.synergyPanel = this.add.rectangle(GAME_WIDTH / 2, y + s(40), GAME_WIDTH - s(60), s(100), COLORS.bgLight, 0.5)
+      .setStrokeStyle(s(1), COLORS.bgPanel);
 
     this.add.text(GAME_WIDTH / 2, y, '시너지 효과', {
-      fontSize: '14px', fontFamily: 'Arial',
+      fontSize: sf(14), fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     this.synergyTexts = [];
     for (let i = 0; i < 3; i++) {
-      const text = this.add.text(50, y + 20 + i * 25, '', {
-        fontSize: '13px', fontFamily: 'Arial',
+      const text = this.add.text(s(50), y + s(20) + i * s(25), '', {
+        fontSize: sf(13), fontFamily: 'Arial',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
       });
       this.synergyTexts.push(text);
@@ -256,25 +256,25 @@ export class PartyEditScene extends Phaser.Scene {
   }
 
   createActionButtons() {
-    const btnY = 580;
-    const btnWidth = 180;
-    const btnHeight = 48;
+    const btnY = s(580);
+    const btnWidth = s(180);
+    const btnHeight = s(48);
 
     // 자동 편성 버튼
-    this.createButton(GAME_WIDTH / 2 - 100, btnY, btnWidth, btnHeight,
+    this.createButton(GAME_WIDTH / 2 - s(100), btnY, btnWidth, btnHeight,
       '⚡ 자동 편성', COLORS.primary, () => this.autoFormParty());
 
     // 초기화 버튼
-    this.createButton(GAME_WIDTH / 2 + 100, btnY, btnWidth, btnHeight,
+    this.createButton(GAME_WIDTH / 2 + s(100), btnY, btnWidth, btnHeight,
       '초기화', COLORS.bgPanel, () => this.clearParty());
 
     // 저장 버튼
-    this.createButton(GAME_WIDTH / 2, btnY + 65, btnWidth + 40, btnHeight + 5,
+    this.createButton(GAME_WIDTH / 2, btnY + s(65), btnWidth + s(40), btnHeight + s(5),
       '💾 파티 저장', COLORS.success, () => this.saveCurrentParty());
 
     // 확인 (전투 복귀) 버튼
     if (this.returnTo === 'StageSelectScene' || this.returnTo === 'BattleResultScene') {
-      this.createButton(GAME_WIDTH / 2, btnY + 135, btnWidth + 40, btnHeight + 5,
+      this.createButton(GAME_WIDTH / 2, btnY + s(135), btnWidth + s(40), btnHeight + s(5),
         '✅ 편성 완료', COLORS.secondary, () => this.confirmAndReturn());
     }
   }
@@ -282,10 +282,10 @@ export class PartyEditScene extends Phaser.Scene {
   createButton(x, y, w, h, label, color, callback) {
     const bg = this.add.rectangle(x, y, w, h, color, 1)
       .setInteractive({ useHandCursor: true })
-      .setStrokeStyle(1, 0xFFFFFF, 0.15);
+      .setStrokeStyle(s(1), 0xFFFFFF, 0.15);
 
     const text = this.add.text(x, y, label, {
-      fontSize: '16px', fontFamily: 'Arial',
+      fontSize: sf(16), fontFamily: 'Arial',
       color: '#FFFFFF', fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -318,7 +318,7 @@ export class PartyEditScene extends Phaser.Scene {
           const moodInfo = MOODS[heroData.mood];
           slot.infoText.setText(`${moodInfo?.name || heroData.mood || '?'} · ${heroData.role || heroData.class || '?'}`);
           slot.rarityText.setText(this.getRarityStars(heroData.rarity));
-          slot.bg.setStrokeStyle(2, COLORS.success);
+          slot.bg.setStrokeStyle(s(2), COLORS.success);
           slot.iconBg.setFillStyle(MOODS[heroData.mood]?.color || COLORS.bgPanel, 0.7);
           slot.removeBtn.setVisible(true);
         } else {
@@ -328,7 +328,7 @@ export class PartyEditScene extends Phaser.Scene {
           slot.nameText.setText('+');
           slot.infoText.setText('');
           slot.rarityText.setText('');
-          slot.bg.setStrokeStyle(2, COLORS.bgPanel);
+          slot.bg.setStrokeStyle(s(2), COLORS.bgPanel);
           slot.iconBg.setFillStyle(COLORS.bgPanel, 0.5);
           slot.removeBtn.setVisible(false);
         }
@@ -337,7 +337,7 @@ export class PartyEditScene extends Phaser.Scene {
         slot.nameText.setText('+');
         slot.infoText.setText('');
         slot.rarityText.setText('');
-        slot.bg.setStrokeStyle(2, COLORS.bgPanel);
+        slot.bg.setStrokeStyle(s(2), COLORS.bgPanel);
         slot.iconBg.setFillStyle(COLORS.bgPanel, 0.5);
         slot.removeBtn.setVisible(false);
       }
@@ -444,31 +444,31 @@ export class PartyEditScene extends Phaser.Scene {
       .setDepth(80).setInteractive();
 
     // 패널
-    const panelH = Math.min(700, 160 + availableHeroes.length * 65);
-    this.selectPanel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - 40, panelH, COLORS.bgLight, 0.98)
-      .setDepth(81).setStrokeStyle(2, COLORS.primary);
+    const panelH = Math.min(s(700), s(160) + availableHeroes.length * s(65));
+    this.selectPanel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - s(40), panelH, COLORS.bgLight, 0.98)
+      .setDepth(81).setStrokeStyle(s(2), COLORS.primary);
 
     // 타이틀
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - panelH / 2 + 25, `슬롯 ${slotIndex + 1} - 영웅 선택`, {
-      fontSize: '20px', fontFamily: 'Arial',
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - panelH / 2 + s(25), `슬롯 ${slotIndex + 1} - 영웅 선택`, {
+      fontSize: sf(20), fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);
 
     // 닫기 버튼
-    const closeBtn = this.add.text(GAME_WIDTH - 50, GAME_HEIGHT / 2 - panelH / 2 + 25, '✕', {
-      fontSize: '24px', color: '#FFFFFF'
+    const closeBtn = this.add.text(GAME_WIDTH - s(50), GAME_HEIGHT / 2 - panelH / 2 + s(25), '✕', {
+      fontSize: sf(24), color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(82).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.closeHeroSelect());
 
     // 영웅 리스트 (스크롤 가능 영역)
-    const listStartY = GAME_HEIGHT / 2 - panelH / 2 + 60;
-    const listX = 50;
-    const itemH = 60;
+    const listStartY = GAME_HEIGHT / 2 - panelH / 2 + s(60);
+    const listX = s(50);
+    const itemH = s(60);
 
     if (availableHeroes.length === 0) {
       this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '편성 가능한 영웅이 없습니다', {
-        fontSize: '16px', fontFamily: 'Arial',
+        fontSize: sf(16), fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(82);
       return;
@@ -481,25 +481,25 @@ export class PartyEditScene extends Phaser.Scene {
     this.heroListItems = [];
     availableHeroes.forEach((hero, i) => {
       const y = listStartY + i * itemH;
-      if (y > GAME_HEIGHT / 2 + panelH / 2 - 40) return; // 패널 밖은 표시 안 함
+      if (y > GAME_HEIGHT / 2 + panelH / 2 - s(40)) return; // 패널 밖은 표시 안 함
 
-      const itemBg = this.add.rectangle(GAME_WIDTH / 2, y, GAME_WIDTH - 80, itemH - 5, COLORS.bgPanel, 0.5)
+      const itemBg = this.add.rectangle(GAME_WIDTH / 2, y, GAME_WIDTH - s(80), itemH - s(5), COLORS.bgPanel, 0.5)
         .setDepth(82).setInteractive({ useHandCursor: true });
 
       // 등급 색상 원
       const rarityColor = COLORS.rarity?.[hero.rarity] || 0x9CA3AF;
-      this.add.circle(listX + 20, y, 15, rarityColor, 0.8).setDepth(82);
+      this.add.circle(listX + s(20), y, s(15), rarityColor, 0.8).setDepth(82);
 
       // 이름
-      this.add.text(listX + 50, y - 10, hero.nameKo || hero.name, {
-        fontSize: '15px', fontFamily: 'Arial',
+      this.add.text(listX + s(50), y - s(10), hero.nameKo || hero.name, {
+        fontSize: sf(15), fontFamily: 'Arial',
         color: '#FFFFFF', fontStyle: 'bold'
       }).setOrigin(0, 0.5).setDepth(82);
 
       // 정보 (분위기 · 역할 · 등급)
       const moodName = MOODS[hero.mood]?.name || hero.mood;
-      this.add.text(listX + 50, y + 10, `${moodName} · ${hero.role || hero.class} · ${hero.rarity}`, {
-        fontSize: '12px', fontFamily: 'Arial',
+      this.add.text(listX + s(50), y + s(10), `${moodName} · ${hero.role || hero.class} · ${hero.rarity}`, {
+        fontSize: sf(12), fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0, 0.5).setDepth(82);
 
@@ -511,8 +511,8 @@ export class PartyEditScene extends Phaser.Scene {
         const stats = hero.stats || {};
         power = Math.floor((stats.hp || 0) / 10 + (stats.atk || 0) + (stats.def || 0) + (stats.spd || 0));
       }
-      this.add.text(GAME_WIDTH - 70, y, power.toString(), {
-        fontSize: '14px', fontFamily: 'Arial',
+      this.add.text(GAME_WIDTH - s(70), y, power.toString(), {
+        fontSize: sf(14), fontFamily: 'Arial',
         color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(1, 0.5).setDepth(82);
@@ -618,16 +618,16 @@ export class PartyEditScene extends Phaser.Scene {
   }
 
   showToast(message) {
-    const toast = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 100, message, {
-      fontSize: '16px', fontFamily: 'Arial',
+    const toast = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - s(100), message, {
+      fontSize: sf(16), fontFamily: 'Arial',
       color: '#FFFFFF',
       backgroundColor: `#${  COLORS.bgPanel.toString(16).padStart(6, '0')}`,
-      padding: { x: 16, y: 10 }
+      padding: { x: s(16), y: s(10) }
     }).setOrigin(0.5).setDepth(100);
 
     this.tweens.add({
       targets: toast,
-      y: toast.y - 40,
+      y: toast.y - s(40),
       alpha: 0,
       duration: 1200,
       delay: 600,

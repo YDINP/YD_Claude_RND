@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS } from '../config/gameConfig.js';
+import { COLORS, s, sf } from '../config/gameConfig.js';
 
 export class ProgressBar extends Phaser.GameObjects.Container {
   /**
@@ -104,11 +104,11 @@ export class ProgressBar extends Phaser.GameObjects.Container {
   createText() {
     this.valueText = this.scene.add.text(0, 0, '0%', {
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontSize: `${Math.max(this.barHeight - 4, 10)}px`,
+      fontSize: `${Math.max(this.barHeight - s(4), s(10))}px`,
       fontStyle: 'bold',
       color: '#FFFFFF',
       stroke: '#000000',
-      strokeThickness: 2
+      strokeThickness: s(2)
     }).setOrigin(0.5);
 
     this.add(this.valueText);

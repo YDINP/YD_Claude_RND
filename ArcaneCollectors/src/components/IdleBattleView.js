@@ -10,7 +10,7 @@
  */
 
 import Phaser from 'phaser';
-import { COLORS, MOOD_COLORS } from '../config/gameConfig.js';
+import { COLORS, MOOD_COLORS, s, sf } from '../config/gameConfig.js';
 
 export class IdleBattleView extends Phaser.GameObjects.Container {
   constructor(scene, x, y, width, height) {
@@ -40,9 +40,9 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
   createBackground() {
     const bg = this.scene.add.graphics();
     bg.fillStyle(COLORS.bgDark, 0.6);
-    bg.fillRoundedRect(-this.viewWidth / 2, -this.viewHeight / 2, this.viewWidth, this.viewHeight, 16);
-    bg.lineStyle(2, COLORS.primary, 0.4);
-    bg.strokeRoundedRect(-this.viewWidth / 2, -this.viewHeight / 2, this.viewWidth, this.viewHeight, 16);
+    bg.fillRoundedRect(-this.viewWidth / 2, -this.viewHeight / 2, this.viewWidth, this.viewHeight, s(16));
+    bg.lineStyle(s(2), COLORS.primary, 0.4);
+    bg.strokeRoundedRect(-this.viewWidth / 2, -this.viewHeight / 2, this.viewWidth, this.viewHeight, s(16));
     this.add(bg);
 
     // (타이틀 제거됨 — 패널 자체가 전투 영역)
@@ -52,9 +52,9 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    * 파티 표시 (좌측)
    */
   createPartyDisplay() {
-    const startX = -this.viewWidth / 2 + 60;
-    const startY = -30;
-    const spacing = 50;
+    const startX = -this.viewWidth / 2 + s(60);
+    const startY = s(-30);
+    const spacing = s(50);
 
     this.partyAvatars = [];
 
@@ -62,19 +62,19 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
       const y = startY + i * spacing;
 
       // 아바타 원
-      const avatar = this.scene.add.circle(startX, y, 18, COLORS.primary, 1);
+      const avatar = this.scene.add.circle(startX, y, s(18), COLORS.primary, 1);
       this.add(avatar);
 
       // 이모지 (임시)
       const emoji = this.scene.add.text(startX, y, '⚔️', {
-        fontSize: '20px'
+        fontSize: sf(20)
       }).setOrigin(0.5);
       this.add(emoji);
 
       // 레벨 배지
-      const levelBg = this.scene.add.rectangle(startX + 25, y, 24, 14, COLORS.bgLight, 0.9);
-      const levelText = this.scene.add.text(startX + 25, y, `L${i + 1}`, {
-        fontSize: '10px',
+      const levelBg = this.scene.add.rectangle(startX + s(25), y, s(24), s(14), COLORS.bgLight, 0.9);
+      const levelText = this.scene.add.text(startX + s(25), y, `L${i + 1}`, {
+        fontSize: sf(10),
         fontFamily: 'Arial',
         color: '#FFFFFF'
       }).setOrigin(0.5);
@@ -88,24 +88,24 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    * 적 표시 (우측)
    */
   createEnemyDisplay() {
-    const enemyX = this.viewWidth / 2 - 80;
+    const enemyX = this.viewWidth / 2 - s(80);
     const enemyY = 0;
 
     // 적 배경 원
-    this.enemyCircle = this.scene.add.circle(enemyX, enemyY, 40, COLORS.danger, 0.8);
+    this.enemyCircle = this.scene.add.circle(enemyX, enemyY, s(40), COLORS.danger, 0.8);
     this.enemyCircle.setVisible(false);
     this.add(this.enemyCircle);
 
     // 적 이모지
     this.enemyEmoji = this.scene.add.text(enemyX, enemyY, '👾', {
-      fontSize: '40px'
+      fontSize: sf(40)
     }).setOrigin(0.5);
     this.enemyEmoji.setVisible(false);
     this.add(this.enemyEmoji);
 
     // 적 이름 (보스 이름 - 크게 강조)
-    this.enemyName = this.scene.add.text(enemyX, enemyY + 55, '', {
-      fontSize: '14px',
+    this.enemyName = this.scene.add.text(enemyX, enemyY + s(55), '', {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -114,15 +114,15 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.add(this.enemyName);
 
     // HP 바
-    this.enemyHpBg = this.scene.add.rectangle(enemyX, enemyY - 55, 80, 6, COLORS.bgLight, 0.8);
-    this.enemyHpBar = this.scene.add.rectangle(enemyX, enemyY - 55, 80, 6, COLORS.success, 1);
+    this.enemyHpBg = this.scene.add.rectangle(enemyX, enemyY - s(55), s(80), s(6), COLORS.bgLight, 0.8);
+    this.enemyHpBar = this.scene.add.rectangle(enemyX, enemyY - s(55), s(80), s(6), COLORS.success, 1);
     this.enemyHpBg.setVisible(false);
     this.enemyHpBar.setVisible(false);
     this.add([this.enemyHpBg, this.enemyHpBar]);
 
     // 보스 HP 텍스트 (수치 표시)
-    this.bossHpText = this.scene.add.text(enemyX, enemyY - 65, '', {
-      fontSize: '10px',
+    this.bossHpText = this.scene.add.text(enemyX, enemyY - s(65), '', {
+      fontSize: sf(10),
       fontFamily: 'Arial',
       color: '#FFFFFF',
       fontStyle: 'bold'
@@ -144,18 +144,18 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    * 스테이지 정보 (하단)
    */
   createStageInfo() {
-    const infoY = this.viewHeight / 2 - 30;
+    const infoY = this.viewHeight / 2 - s(30);
 
     // 진행 바 배경
-    this.progressBg = this.scene.add.rectangle(0, infoY, this.viewWidth - 40, 8, COLORS.bgLight, 0.6);
+    this.progressBg = this.scene.add.rectangle(0, infoY, this.viewWidth - s(40), s(8), COLORS.bgLight, 0.6);
     this.add(this.progressBg);
 
     // 진행 바 (보스 HP 테마로 빨간색)
     this.progressBar = this.scene.add.rectangle(
-      -this.viewWidth / 2 + 20,
+      -this.viewWidth / 2 + s(20),
       infoY,
-      (this.viewWidth - 40) * 0.3,
-      8,
+      (this.viewWidth - s(40)) * 0.3,
+      s(8),
       COLORS.danger,
       1
     );
@@ -163,8 +163,8 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.add(this.progressBar);
 
     // 스테이지 텍스트 (보스 이름 포함)
-    this.stageText = this.scene.add.text(0, infoY + 18, '챕터 1-1: 슬라임 킹', {
-      fontSize: '14px',
+    this.stageText = this.scene.add.text(0, infoY + s(18), '챕터 1-1: 슬라임 킹', {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -228,13 +228,13 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     }
 
     // 슬라이드 인 (최초만)
-    const targetX = this.viewWidth / 2 - 80;
-    this.enemyCircle.x = this.viewWidth / 2 + 100;
-    this.enemyEmoji.x = this.viewWidth / 2 + 100;
-    this.enemyName.x = this.viewWidth / 2 + 100;
-    this.enemyHpBg.x = this.viewWidth / 2 + 100;
-    this.enemyHpBar.x = this.viewWidth / 2 + 100;
-    if (this.bossHpText) this.bossHpText.x = this.viewWidth / 2 + 100;
+    const targetX = this.viewWidth / 2 - s(80);
+    this.enemyCircle.x = this.viewWidth / 2 + s(100);
+    this.enemyEmoji.x = this.viewWidth / 2 + s(100);
+    this.enemyName.x = this.viewWidth / 2 + s(100);
+    this.enemyHpBg.x = this.viewWidth / 2 + s(100);
+    this.enemyHpBar.x = this.viewWidth / 2 + s(100);
+    if (this.bossHpText) this.bossHpText.x = this.viewWidth / 2 + s(100);
 
     this.scene.tweens.add({
       targets: [this.enemyCircle, this.enemyEmoji, this.enemyName, this.enemyHpBg, this.enemyHpBar, this.bossHpText].filter(Boolean),
@@ -255,13 +255,13 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
   performAttack() {
     if (!this.currentBoss || this.isDefeating) return;
 
-    const startX = -this.viewWidth / 2 + 60;
-    const endX = this.viewWidth / 2 - 80;
+    const startX = -this.viewWidth / 2 + s(60);
+    const endX = this.viewWidth / 2 - s(80);
     const y = 0;
 
     // 공격 이펙트 (좌→우 스윙)
     this.attackEffect.clear();
-    this.attackEffect.lineStyle(4, COLORS.accent, 1);
+    this.attackEffect.lineStyle(s(4), COLORS.accent, 1);
     this.attackEffect.beginPath();
     this.attackEffect.moveTo(startX, y);
     this.attackEffect.lineTo(endX, y);
@@ -282,8 +282,8 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     // 적 흔들림
     this.scene.tweens.add({
       targets: [this.enemyCircle, this.enemyEmoji],
-      x: `+=${Phaser.Math.Between(-8, 8)}`,
-      y: `+=${Phaser.Math.Between(-8, 8)}`,
+      x: `+=${Phaser.Math.Between(s(-8), s(8))}`,
+      y: `+=${Phaser.Math.Between(s(-8), s(8))}`,
       duration: 100,
       yoyo: true
     });
@@ -323,11 +323,11 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    * 데미지 텍스트 표시 (외부에서 호출)
    */
   showDamageText(damage) {
-    const endX = this.viewWidth / 2 - 80;
-    const y = Phaser.Math.Between(-30, -10);
+    const endX = this.viewWidth / 2 - s(80);
+    const y = Phaser.Math.Between(s(-30), s(-10));
 
-    const damageText = this.scene.add.text(endX - 40, y, `-${damage.toLocaleString()}`, {
-      fontSize: '18px',
+    const damageText = this.scene.add.text(endX - s(40), y, `-${damage.toLocaleString()}`, {
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: '#FFAA00',
       fontStyle: 'bold'
@@ -336,7 +336,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
 
     this.scene.tweens.add({
       targets: damageText,
-      y: damageText.y - 30,
+      y: damageText.y - s(30),
       alpha: 0,
       duration: 800,
       ease: 'Power2',
@@ -360,13 +360,13 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     });
 
     // "BOSS READY!" 텍스트
-    this.bossReadyText = this.scene.add.text(0, -20, '⚔️ BOSS READY!', {
-      fontSize: '26px',
+    this.bossReadyText = this.scene.add.text(0, s(-20), '⚔️ BOSS READY!', {
+      fontSize: sf(26),
       fontFamily: 'Arial',
       color: '#FF4444',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3
+      strokeThickness: s(3)
     }).setOrigin(0.5);
     this.add(this.bossReadyText);
 
@@ -420,20 +420,20 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.clearBossReady();
 
     // "STAGE CLEAR!" 텍스트
-    const clearText = this.scene.add.text(0, -20, 'STAGE CLEAR!', {
-      fontSize: '28px',
+    const clearText = this.scene.add.text(0, s(-20), 'STAGE CLEAR!', {
+      fontSize: sf(28),
       fontFamily: 'Arial',
       color: '#FFD700',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3
+      strokeThickness: s(3)
     }).setOrigin(0.5);
     this.add(clearText);
 
     // CLEAR 텍스트 부유 후 소멸
     this.scene.tweens.add({
       targets: clearText,
-      y: clearText.y - 40,
+      y: clearText.y - s(40),
       alpha: 0,
       duration: 1500,
       delay: 500,
@@ -471,7 +471,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    */
   updateProgress(progress) {
     // progress = 0~1 비율
-    const maxWidth = this.viewWidth - 40;
+    const maxWidth = this.viewWidth - s(40);
     const newWidth = Math.max(1, maxWidth * progress);
 
     this.scene.tweens.add({
@@ -488,11 +488,11 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    */
   showRewardFloat(gold, exp) {
     const centerX = 0;
-    const centerY = -40;
+    const centerY = s(-40);
 
     // 골드 텍스트
-    const goldText = this.scene.add.text(centerX - 30, centerY, `+${gold}G`, {
-      fontSize: '16px',
+    const goldText = this.scene.add.text(centerX - s(30), centerY, `+${gold}G`, {
+      fontSize: sf(16),
       fontFamily: 'Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -500,8 +500,8 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.add(goldText);
 
     // 경험치 텍스트
-    const expText = this.scene.add.text(centerX + 30, centerY, `+${exp}EXP`, {
-      fontSize: '16px',
+    const expText = this.scene.add.text(centerX + s(30), centerY, `+${exp}EXP`, {
+      fontSize: sf(16),
       fontFamily: 'Arial',
       color: `#${COLORS.success.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -511,7 +511,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     // 부유 후 소멸
     this.scene.tweens.add({
       targets: [goldText, expText],
-      y: centerY - 50,
+      y: centerY - s(50),
       alpha: 0,
       duration: 1500,
       ease: 'Power2',
@@ -566,7 +566,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
 
     // 중앙에 안내 메시지 표시
     const messageText = this.scene.add.text(0, 0, '파티를 먼저 편성해주세요!', {
-      fontSize: '20px',
+      fontSize: sf(20),
       fontFamily: 'Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'

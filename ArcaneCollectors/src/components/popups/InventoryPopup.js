@@ -4,7 +4,7 @@
  * 3탭: 장비, 소비, 재료
  */
 import { PopupBase } from '../PopupBase.js';
-import { COLORS, GAME_WIDTH, RARITY } from '../../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, s, sf } from '../../config/gameConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import { getItemsByType } from '../../data/index.js';
 
@@ -12,8 +12,8 @@ export class InventoryPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
       title: '인벤토리',
-      width: 680,
-      height: 1100,
+      width: s(680),
+      height: s(1100),
       ...options
     });
 
@@ -47,14 +47,14 @@ export class InventoryPopup extends PopupBase {
     const { centerX, top } = this.contentBounds;
 
     // Gold display
-    this.goldText = this.addText(centerX, top + 10, `🪙 ${this.gold.toLocaleString()}`, {
-      fontSize: '16px', fontStyle: 'bold', color: '#FFD700'
+    this.goldText = this.addText(centerX, top + s(10), `🪙 ${this.gold.toLocaleString()}`, {
+      fontSize: sf(16), fontStyle: 'bold', color: '#FFD700'
     });
     this.goldText.setOrigin(0.5);
 
     // Item count
-    this.countText = this.addText(centerX, top + 35, '', {
-      fontSize: '14px', color: '#94A3B8'
+    this.countText = this.addText(centerX, top + s(35), '', {
+      fontSize: sf(14), color: '#94A3B8'
     });
     this.countText.setOrigin(0.5);
   }
@@ -68,19 +68,19 @@ export class InventoryPopup extends PopupBase {
       { key: 'material', label: '🔧 재료' }
     ];
 
-    const tabY = top + 60;
+    const tabY = top + s(60);
     const tabW = width / tabs.length;
 
     tabs.forEach((tab, i) => {
       const x = left + i * tabW;
       const isActive = tab.key === this.activeTab;
 
-      const bg = this.scene.add.rectangle(x + tabW / 2, tabY, tabW - 4, 40,
+      const bg = this.scene.add.rectangle(x + tabW / 2, tabY, tabW - s(4), s(40),
         isActive ? COLORS.primary : 0x334155, isActive ? 0.9 : 0.5);
       bg.setInteractive({ useHandCursor: true });
 
       const label = this.scene.add.text(x + tabW / 2, tabY, tab.label, {
-        fontSize: '15px', fontFamily: '"Noto Sans KR", sans-serif',
+        fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif',
         color: '#FFFFFF', fontStyle: isActive ? 'bold' : 'normal'
       }).setOrigin(0.5);
 
@@ -107,12 +107,12 @@ export class InventoryPopup extends PopupBase {
   createItemList() {
     const { left, top, width, height } = this.contentBounds;
 
-    this.listContainer = this.scene.add.container(0, top + 110);
+    this.listContainer = this.scene.add.container(0, top + s(110));
     this.contentContainer.add(this.listContainer);
 
     // Mask for scrolling
     const maskShape = this.scene.make.graphics();
-    maskShape.fillRect(left, top + 110, width, height - 110);
+    maskShape.fillRect(left, top + s(110), width, height - s(110));
     const mask = maskShape.createGeometryMask();
     this.listContainer.setMask(mask);
 
@@ -142,10 +142,10 @@ export class InventoryPopup extends PopupBase {
     if (items.length === 0) {
       const emptyText = this.scene.add.text(
         this.contentBounds.centerX,
-        50,
+        s(50),
         '아이템이 없습니다',
         {
-          fontSize: '16px',
+          fontSize: sf(16),
           fontFamily: '"Noto Sans KR", sans-serif',
           color: '#94A3B8'
         }
@@ -154,8 +154,8 @@ export class InventoryPopup extends PopupBase {
       return;
     }
 
-    const itemH = 75;
-    const padX = 20;
+    const itemH = s(75);
+    const padX = s(20);
 
     items.forEach((item, i) => {
       const y = i * itemH;
@@ -165,7 +165,7 @@ export class InventoryPopup extends PopupBase {
     });
 
     // Update max scroll
-    this.maxScroll = Math.max(0, items.length * itemH - (this.contentBounds.height - 110));
+    this.maxScroll = Math.max(0, items.length * itemH - (this.contentBounds.height - s(110)));
     this.scrollY = Math.min(this.scrollY, this.maxScroll);
   }
 
@@ -176,9 +176,9 @@ export class InventoryPopup extends PopupBase {
     // Row background
     const rowBg = this.scene.add.rectangle(
       this.contentBounds.centerX,
-      y + 35,
+      y + s(35),
       rowW,
-      68,
+      s(68),
       index % 2 === 0 ? 0x1E293B : 0x334155,
       0.4
     );
@@ -188,33 +188,33 @@ export class InventoryPopup extends PopupBase {
     // Icon
     const rarityColor = this.getRarityColor(item.rarity);
     const icon = this.scene.add.rectangle(
-      this.contentBounds.left + padX + 28,
-      y + 35,
-      44,
-      44,
+      this.contentBounds.left + padX + s(28),
+      y + s(35),
+      s(44),
+      s(44),
       rarityColor,
       0.7
     );
-    icon.setStrokeStyle(1, 0xFFFFFF, 0.3);
+    icon.setStrokeStyle(s(1), 0xFFFFFF, 0.3);
     elements.push(icon);
 
     // Slot icon
     const slotIcon = this.getSlotIcon(item);
     const iconText = this.scene.add.text(
-      this.contentBounds.left + padX + 28,
-      y + 35,
+      this.contentBounds.left + padX + s(28),
+      y + s(35),
       slotIcon,
-      { fontSize: '20px' }
+      { fontSize: sf(20) }
     ).setOrigin(0.5);
     elements.push(iconText);
 
     // Item name
     const name = this.scene.add.text(
-      this.contentBounds.left + padX + 65,
-      y + 23,
+      this.contentBounds.left + padX + s(65),
+      y + s(23),
       item.name || item.nameKo || item.id,
       {
-        fontSize: '15px',
+        fontSize: sf(15),
         fontFamily: '"Noto Sans KR", sans-serif',
         fontStyle: 'bold',
         color: '#FFFFFF'
@@ -233,11 +233,11 @@ export class InventoryPopup extends PopupBase {
     }
 
     const info = this.scene.add.text(
-      this.contentBounds.left + padX + 65,
-      y + 45,
+      this.contentBounds.left + padX + s(65),
+      y + s(45),
       infoStr,
       {
-        fontSize: '12px',
+        fontSize: sf(12),
         fontFamily: 'Arial',
         color: '#94A3B8'
       }
@@ -247,11 +247,11 @@ export class InventoryPopup extends PopupBase {
     // Stats summary (right side)
     const statStr = this.getItemStatSummary(item);
     const statText = this.scene.add.text(
-      this.contentBounds.right - padX - 10,
-      y + 35,
+      this.contentBounds.right - padX - s(10),
+      y + s(35),
       statStr,
       {
-        fontSize: '13px',
+        fontSize: sf(13),
         fontFamily: 'Arial',
         fontStyle: 'bold',
         color: '#FFD700',
@@ -362,8 +362,8 @@ export class InventoryPopup extends PopupBase {
 
   setupScrolling() {
     const { left, top, width, height } = this.contentBounds;
-    const scrollTop = top + 110;
-    const scrollHeight = height - 110;
+    const scrollTop = top + s(110);
+    const scrollHeight = height - s(110);
 
     this.scene.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
       if (!this.isOpen) return;
@@ -378,7 +378,7 @@ export class InventoryPopup extends PopupBase {
 
   updateListPosition() {
     if (this.listContainer) {
-      this.listContainer.y = this.contentBounds.top + 110 - this.scrollY;
+      this.listContainer.y = this.contentBounds.top + s(110) - this.scrollY;
     }
   }
 }

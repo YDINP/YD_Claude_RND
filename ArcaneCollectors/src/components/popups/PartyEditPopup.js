@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { PopupBase } from '../PopupBase.js';
-import { COLORS, MOODS } from '../../config/gameConfig.js';
+import { COLORS, MOODS, s, sf, GAME_WIDTH, GAME_HEIGHT } from '../../config/gameConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import { PartyManager } from '../../systems/PartyManager.js';
 import { ProgressionSystem } from '../../systems/ProgressionSystem.js';
@@ -22,8 +22,8 @@ export class PartyEditPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
       title: '파티 편성',
-      width: 680,
-      height: 1100,
+      width: s(680),
+      height: s(1100),
       ...options
     });
 
@@ -72,9 +72,9 @@ export class PartyEditPopup extends PopupBase {
   }
 
   createSlotTabs() {
-    const tabY = this.contentBounds.top + 10;
-    const tabW = 120;
-    const spacing = 10;
+    const tabY = this.contentBounds.top + s(10);
+    const tabW = s(120);
+    const spacing = s(10);
     const totalW = tabW * 5 + spacing * 4;
     const startX = this.contentBounds.centerX - totalW / 2 + tabW / 2;
 
@@ -83,12 +83,12 @@ export class PartyEditPopup extends PopupBase {
       const slot = i + 1;
       const isActive = slot === this.activeSlot;
 
-      const bg = this.scene.add.rectangle(x, tabY, tabW, 40,
+      const bg = this.scene.add.rectangle(x, tabY, tabW, s(40),
         isActive ? COLORS.primary : COLORS.bgPanel, isActive ? 1 : 0.6);
       bg.setInteractive({ useHandCursor: true });
 
       const label = this.scene.add.text(x, tabY, `파티 ${slot}`, {
-        fontSize: '14px',
+        fontSize: sf(14),
         fontFamily: '"Noto Sans KR", sans-serif',
         color: '#FFFFFF',
         fontStyle: isActive ? 'bold' : 'normal'
@@ -115,9 +115,9 @@ export class PartyEditPopup extends PopupBase {
   }
 
   createPartyGrid() {
-    const gridY = this.contentBounds.top + 70;
-    const slotSize = 140;
-    const spacing = 15;
+    const gridY = this.contentBounds.top + s(70);
+    const slotSize = s(140);
+    const spacing = s(15);
     const totalW = slotSize * 4 + spacing * 3;
     const startX = this.contentBounds.centerX - totalW / 2 + slotSize / 2;
 
@@ -126,43 +126,43 @@ export class PartyEditPopup extends PopupBase {
       const y = gridY + slotSize / 2;
 
       // 슬롯 배경
-      const bg = this.scene.add.rectangle(x, y, slotSize, slotSize + 30, COLORS.bgLight, 0.7);
-      bg.setStrokeStyle(2, COLORS.bgPanel);
+      const bg = this.scene.add.rectangle(x, y, slotSize, slotSize + s(30), COLORS.bgLight, 0.7);
+      bg.setStrokeStyle(s(2), COLORS.bgPanel);
       bg.setInteractive({ useHandCursor: true });
 
       // 슬롯 번호
-      const slotLabel = this.scene.add.text(x, y - slotSize / 2 + 12, `슬롯 ${i + 1}`, {
-        fontSize: '11px',
+      const slotLabel = this.scene.add.text(x, y - slotSize / 2 + s(12), `슬롯 ${i + 1}`, {
+        fontSize: sf(11),
         fontFamily: '"Noto Sans KR", sans-serif',
         color: '#64748B'
       }).setOrigin(0.5);
 
       // 캐릭터 아이콘 배경 (원형)
-      const iconBg = this.scene.add.circle(x, y - 10, 35, COLORS.bgPanel, 0.5);
+      const iconBg = this.scene.add.circle(x, y - s(10), s(35), COLORS.bgPanel, 0.5);
 
       // 캐릭터 이름
-      const nameText = this.scene.add.text(x, y + 35, '+', {
-        fontSize: '14px',
+      const nameText = this.scene.add.text(x, y + s(35), '+', {
+        fontSize: sf(14),
         fontFamily: '"Noto Sans KR", sans-serif',
         color: '#F8FAFC',
         fontStyle: 'bold'
       }).setOrigin(0.5);
 
       // 부가 정보 (분위기, 역할)
-      const infoText = this.scene.add.text(x, y + 55, '', {
-        fontSize: '11px',
+      const infoText = this.scene.add.text(x, y + s(55), '', {
+        fontSize: sf(11),
         fontFamily: '"Noto Sans KR", sans-serif',
         color: '#64748B'
       }).setOrigin(0.5);
 
       // 등급 표시
-      const rarityText = this.scene.add.text(x, y - 10, '', {
-        fontSize: '24px'
+      const rarityText = this.scene.add.text(x, y - s(10), '', {
+        fontSize: sf(24)
       }).setOrigin(0.5);
 
       // 제거 버튼
-      const removeBtn = this.scene.add.text(x + slotSize / 2 - 8, y - slotSize / 2 - 5, '✕', {
-        fontSize: '16px',
+      const removeBtn = this.scene.add.text(x + slotSize / 2 - s(8), y - slotSize / 2 - s(5), '✕', {
+        fontSize: sf(16),
         color: '#FF5555'
       }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false);
 
@@ -178,25 +178,25 @@ export class PartyEditPopup extends PopupBase {
   }
 
   createSynergyPreview() {
-    const y = this.contentBounds.top + 280;
+    const y = this.contentBounds.top + s(280);
     const cx = this.contentBounds.centerX;
     const left = this.contentBounds.left;
 
     // 시너지 패널 배경
-    const panel = this.scene.add.rectangle(cx, y + 40, this.contentBounds.width, 100, COLORS.bgLight, 0.5);
-    panel.setStrokeStyle(1, COLORS.bgPanel);
+    const panel = this.scene.add.rectangle(cx, y + s(40), this.contentBounds.width, s(100), COLORS.bgLight, 0.5);
+    panel.setStrokeStyle(s(1), COLORS.bgPanel);
     this.contentContainer.add(panel);
 
     this.addText(cx, y, '시너지 효과', {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontStyle: 'bold',
       color: '#64748B'
     }).setOrigin(0.5);
 
     this.synergyTexts = [];
     for (let i = 0; i < 3; i++) {
-      const text = this.addText(left + 30, y + 20 + i * 25, '', {
-        fontSize: '13px',
+      const text = this.addText(left + s(30), y + s(20) + i * s(25), '', {
+        fontSize: sf(13),
         color: '#F8FAFC'
       });
       this.synergyTexts.push(text);
@@ -205,27 +205,27 @@ export class PartyEditPopup extends PopupBase {
 
   createActionButtons() {
     const cx = this.contentBounds.centerX;
-    const btnY = this.contentBounds.top + 430;
+    const btnY = this.contentBounds.top + s(430);
 
     // 전투력 표시
-    this.powerText = this.addText(cx, btnY - 30, '전투력: 0', {
-      fontSize: '16px',
+    this.powerText = this.addText(cx, btnY - s(30), '전투력: 0', {
+      fontSize: sf(16),
       fontStyle: 'bold',
       color: '#F59E0B'
     }).setOrigin(0.5);
 
     // 자동 편성 버튼
-    this.addButton(cx - 100, btnY, 180, 48, '⚡ 자동 편성', COLORS.primary, () => {
+    this.addButton(cx - s(100), btnY, s(180), s(48), '⚡ 자동 편성', COLORS.primary, () => {
       this.autoFormParty();
     });
 
     // 초기화 버튼
-    this.addButton(cx + 100, btnY, 180, 48, '초기화', COLORS.bgPanel, () => {
+    this.addButton(cx + s(100), btnY, s(180), s(48), '초기화', COLORS.bgPanel, () => {
       this.clearParty();
     });
 
     // 저장 버튼
-    this.addButton(cx, btnY + 65, 220, 53, '💾 파티 저장', COLORS.success || 0x10B981, () => {
+    this.addButton(cx, btnY + s(65), s(220), s(53), '💾 파티 저장', COLORS.success || 0x10B981, () => {
       this.saveCurrentParty();
     });
   }
@@ -363,37 +363,37 @@ export class PartyEditPopup extends PopupBase {
 
     // 서브패널 오버레이
     const overlay = this.scene.add.rectangle(this.contentBounds.centerX, this.contentBounds.top + this.contentBounds.height / 2,
-      this.contentBounds.width + 30, this.contentBounds.height, 0x000000, 0.75)
+      this.contentBounds.width + s(30), this.contentBounds.height, 0x000000, 0.75)
       .setDepth(2100).setInteractive();
 
     // 서브패널
-    const panelH = Math.min(600, 160 + availableHeroes.length * 65);
-    const panel = this.scene.add.rectangle(this.contentBounds.centerX, this.contentBounds.top + 350,
-      this.contentBounds.width - 40, panelH, COLORS.bgLight, 0.98)
+    const panelH = Math.min(s(600), s(160) + availableHeroes.length * s(65));
+    const panel = this.scene.add.rectangle(this.contentBounds.centerX, this.contentBounds.top + s(350),
+      this.contentBounds.width - s(40), panelH, COLORS.bgLight, 0.98)
       .setDepth(2101);
-    panel.setStrokeStyle(2, COLORS.primary);
+    panel.setStrokeStyle(s(2), COLORS.primary);
 
     // 타이틀
-    const title = this.scene.add.text(this.contentBounds.centerX, this.contentBounds.top + 350 - panelH / 2 + 25,
+    const title = this.scene.add.text(this.contentBounds.centerX, this.contentBounds.top + s(350) - panelH / 2 + s(25),
       `슬롯 ${slotIndex + 1} - 영웅 선택`, {
-        fontSize: '20px',
+        fontSize: sf(20),
         fontFamily: '"Noto Sans KR", sans-serif',
         fontStyle: 'bold',
         color: '#F8FAFC'
       }).setOrigin(0.5).setDepth(2102);
 
     // 닫기 버튼
-    const closeX = this.contentBounds.centerX + (this.contentBounds.width - 40) / 2 - 20;
-    const closeBtn = this.scene.add.text(closeX, this.contentBounds.top + 350 - panelH / 2 + 25, '✕', {
-      fontSize: '24px',
+    const closeX = this.contentBounds.centerX + (this.contentBounds.width - s(40)) / 2 - s(20);
+    const closeBtn = this.scene.add.text(closeX, this.contentBounds.top + s(350) - panelH / 2 + s(25), '✕', {
+      fontSize: sf(24),
       color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(2102).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.closeHeroSelect());
 
     if (availableHeroes.length === 0) {
-      const msg = this.scene.add.text(this.contentBounds.centerX, this.contentBounds.top + 350,
+      const msg = this.scene.add.text(this.contentBounds.centerX, this.contentBounds.top + s(350),
         '편성 가능한 영웅이 없습니다', {
-          fontSize: '16px',
+          fontSize: sf(16),
           fontFamily: '"Noto Sans KR", sans-serif',
           color: '#64748B'
         }).setOrigin(0.5).setDepth(2102);
@@ -405,23 +405,23 @@ export class PartyEditPopup extends PopupBase {
     availableHeroes.sort((a, b) => (rarityOrder[a.rarity] || 9) - (rarityOrder[b.rarity] || 9));
 
     // 영웅 리스트
-    const listStartY = this.contentBounds.top + 350 - panelH / 2 + 60;
-    const itemH = 60;
+    const listStartY = this.contentBounds.top + s(350) - panelH / 2 + s(60);
+    const itemH = s(60);
 
     availableHeroes.slice(0, 8).forEach((hero, i) => {
       const y = listStartY + i * itemH;
 
       const itemBg = this.scene.add.rectangle(this.contentBounds.centerX, y,
-        this.contentBounds.width - 80, itemH - 5, COLORS.bgPanel, 0.5)
+        this.contentBounds.width - s(80), itemH - s(5), COLORS.bgPanel, 0.5)
         .setDepth(2102).setInteractive({ useHandCursor: true });
 
       // 등급 원
       const rarityColor = COLORS.rarity?.[hero.rarity] || 0x9CA3AF;
-      this.scene.add.circle(this.contentBounds.left + 60, y, 15, rarityColor, 0.8).setDepth(2102);
+      this.scene.add.circle(this.contentBounds.left + s(60), y, s(15), rarityColor, 0.8).setDepth(2102);
 
       // 이름
-      this.scene.add.text(this.contentBounds.left + 90, y - 10, hero.nameKo || hero.name, {
-        fontSize: '15px',
+      this.scene.add.text(this.contentBounds.left + s(90), y - s(10), hero.nameKo || hero.name, {
+        fontSize: sf(15),
         fontFamily: '"Noto Sans KR", sans-serif',
         color: '#FFFFFF',
         fontStyle: 'bold'
@@ -429,9 +429,9 @@ export class PartyEditPopup extends PopupBase {
 
       // 정보
       const moodName = MOODS[hero.mood]?.name || hero.mood;
-      this.scene.add.text(this.contentBounds.left + 90, y + 10,
+      this.scene.add.text(this.contentBounds.left + s(90), y + s(10),
         `${moodName} · ${hero.role || hero.class} · ${hero.rarity}`, {
-          fontSize: '12px',
+          fontSize: sf(12),
           fontFamily: '"Noto Sans KR", sans-serif',
           color: '#64748B'
         }).setOrigin(0, 0.5).setDepth(2102);
@@ -448,9 +448,9 @@ export class PartyEditPopup extends PopupBase {
         const stats = hero.stats || {};
         power = Math.floor((stats.hp || 0) / 10 + (stats.atk || 0) + (stats.def || 0) + (stats.spd || 0));
       }
-      this.scene.add.text(this.contentBounds.centerX + (this.contentBounds.width - 80) / 2 - 10, y,
+      this.scene.add.text(this.contentBounds.centerX + (this.contentBounds.width - s(80)) / 2 - s(10), y,
         power.toString(), {
-          fontSize: '14px',
+          fontSize: sf(14),
           fontFamily: '"Noto Sans KR", sans-serif',
           color: '#F59E0B',
           fontStyle: 'bold'
@@ -589,17 +589,17 @@ export class PartyEditPopup extends PopupBase {
   }
 
   showToast(message) {
-    const toast = this.scene.add.text(this.contentBounds.centerX, this.contentBounds.bottom - 50, message, {
-      fontSize: '16px',
+    const toast = this.scene.add.text(this.contentBounds.centerX, this.contentBounds.bottom - s(50), message, {
+      fontSize: sf(16),
       fontFamily: '"Noto Sans KR", sans-serif',
       color: '#FFFFFF',
       backgroundColor: '#334155',
-      padding: { x: 16, y: 10 }
+      padding: { x: s(16), y: s(10) }
     }).setOrigin(0.5).setDepth(2100);
 
     this.scene.tweens.add({
       targets: toast,
-      y: toast.y - 40,
+      y: toast.y - s(40),
       alpha: 0,
       duration: 1200,
       delay: 600,

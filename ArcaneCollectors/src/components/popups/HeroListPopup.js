@@ -4,7 +4,7 @@
  * 정렬, 필터링, 영웅 클릭 → HeroInfoPopup 표시
  */
 import { PopupBase } from '../PopupBase.js';
-import { COLORS, GAME_WIDTH, RARITY, CULT_COLORS } from '../../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, RARITY, CULT_COLORS, s, sf } from '../../config/gameConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import { HeroInfoPopup } from '../HeroInfoPopup.js';
 import { getCharacter } from '../../data/index.js';
@@ -15,8 +15,8 @@ export class HeroListPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
       title: '영웅 목록',
-      width: 680,
-      height: 1100,
+      width: s(680),
+      height: s(1100),
       ...options
     });
 
@@ -58,7 +58,7 @@ export class HeroListPopup extends PopupBase {
     const { left, top, width, centerX } = this.contentBounds;
 
     // Sort buttons
-    const sortY = top + 10;
+    const sortY = top + s(10);
     const sortOptions = [
       { key: 'rarity', label: '등급' },
       { key: 'level', label: '레벨' },
@@ -68,8 +68,8 @@ export class HeroListPopup extends PopupBase {
     ];
 
     this.sortButtons = [];
-    const btnW = 60;
-    const btnGap = 8;
+    const btnW = s(60);
+    const btnGap = s(8);
     const totalW = sortOptions.length * btnW + (sortOptions.length - 1) * btnGap;
     const startX = centerX - totalW / 2;
 
@@ -77,12 +77,12 @@ export class HeroListPopup extends PopupBase {
       const x = startX + i * (btnW + btnGap);
       const isActive = this.sortBy === opt.key;
 
-      const bg = this.scene.add.rectangle(x + btnW / 2, sortY, btnW, 28,
+      const bg = this.scene.add.rectangle(x + btnW / 2, sortY, btnW, s(28),
         isActive ? COLORS.primary : 0x334155, 1);
       bg.setInteractive({ useHandCursor: true });
 
       const label = this.scene.add.text(x + btnW / 2, sortY, opt.label, {
-        fontSize: '12px', fontFamily: '"Noto Sans KR", sans-serif',
+        fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif',
         color: '#FFFFFF', fontStyle: isActive ? 'bold' : 'normal'
       }).setOrigin(0.5);
 
@@ -102,29 +102,29 @@ export class HeroListPopup extends PopupBase {
     });
 
     // Sort direction indicator
-    this.sortDirText = this.scene.add.text(startX + totalW + 15, sortY,
+    this.sortDirText = this.scene.add.text(startX + totalW + s(15), sortY,
       this.sortAscending ? '▲' : '▼', {
-        fontSize: '14px', color: '#94A3B8'
+        fontSize: sf(14), color: '#94A3B8'
       }).setOrigin(0.5);
     this.contentContainer.add(this.sortDirText);
 
     // Filter row - Rarity
-    const filterY = top + 50;
+    const filterY = top + s(50);
     const rarities = ['N', 'R', 'SR', 'SSR'];
     this.rarityButtons = [];
-    const rarityStartX = centerX - (rarities.length * 45) / 2;
+    const rarityStartX = centerX - (rarities.length * s(45)) / 2;
 
     rarities.forEach((rarity, i) => {
-      const x = rarityStartX + i * 45;
+      const x = rarityStartX + i * s(45);
       const isActive = this.filterRarity === rarity;
       const rarityColor = RARITY[rarity]?.color || 0x9CA3AF;
 
-      const bg = this.scene.add.rectangle(x + 20, filterY, 38, 24,
+      const bg = this.scene.add.rectangle(x + s(20), filterY, s(38), s(24),
         isActive ? rarityColor : 0x334155, 0.9);
       bg.setInteractive({ useHandCursor: true });
 
-      const label = this.scene.add.text(x + 20, filterY, rarity, {
-        fontSize: '11px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+      const label = this.scene.add.text(x + s(20), filterY, rarity, {
+        fontSize: sf(11), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
       }).setOrigin(0.5);
 
       bg.on('pointerdown', () => {
@@ -142,16 +142,16 @@ export class HeroListPopup extends PopupBase {
     });
 
     // Filter row - Cult dots
-    const cultY = top + 85;
+    const cultY = top + s(85);
     const cults = ['olympus', 'takamagahara', 'yomi', 'asgard', 'valhalla',
                    'tartarus', 'avalon', 'helheim', 'kunlun'];
     this.cultButtons = [];
-    const cultStartX = left + 30;
+    const cultStartX = left + s(30);
 
     cults.forEach((cult, i) => {
-      const x = cultStartX + i * 22;
+      const x = cultStartX + i * s(22);
       const cultColor = CULT_COLORS[cult] || 0x9CA3AF;
-      const circle = this.scene.add.circle(x, cultY, 10, cultColor, 0.8);
+      const circle = this.scene.add.circle(x, cultY, s(10), cultColor, 0.8);
       circle.setInteractive({ useHandCursor: true });
 
       circle.on('pointerdown', () => {
@@ -161,7 +161,7 @@ export class HeroListPopup extends PopupBase {
         } else {
           this.cultButtons.forEach(cb => cb.circle.setStrokeStyle(0));
           this.filterCult = cult;
-          circle.setStrokeStyle(2, 0xFFFFFF);
+          circle.setStrokeStyle(s(2), 0xFFFFFF);
         }
         this.refreshGrid();
       });
@@ -171,8 +171,8 @@ export class HeroListPopup extends PopupBase {
     });
 
     // Clear filters button
-    const clearBtn = this.scene.add.text(left + width - 50, cultY, '초기화', {
-      fontSize: '11px', fontFamily: '"Noto Sans KR", sans-serif',
+    const clearBtn = this.scene.add.text(left + width - s(50), cultY, '초기화', {
+      fontSize: sf(11), fontFamily: '"Noto Sans KR", sans-serif',
       color: '#EF4444'
     }).setOrigin(0.5);
     clearBtn.setInteractive({ useHandCursor: true });
@@ -189,8 +189,8 @@ export class HeroListPopup extends PopupBase {
     this.contentContainer.add(clearBtn);
 
     // Hero count
-    this.heroCountText = this.addText(centerX, top + 115, `${this.heroes.length}명`, {
-      fontSize: '14px', color: '#94A3B8'
+    this.heroCountText = this.addText(centerX, top + s(115), `${this.heroes.length}명`, {
+      fontSize: sf(14), color: '#94A3B8'
     });
     this.heroCountText.setOrigin(0.5);
   }
@@ -218,8 +218,8 @@ export class HeroListPopup extends PopupBase {
     const { left, top, width, height } = this.contentBounds;
 
     // Grid container with mask
-    const gridTop = top + 145;
-    const gridHeight = height - 145;
+    const gridTop = top + s(145);
+    const gridHeight = height - s(145);
 
     this.gridContainer = this.scene.add.container(0, gridTop);
     this.contentContainer.add(this.gridContainer);
@@ -288,9 +288,9 @@ export class HeroListPopup extends PopupBase {
 
     // Render grid (2 columns)
     const cols = 2;
-    const cardW = 110;
-    const cardH = 150;
-    const spacing = 10;
+    const cardW = s(110);
+    const cardH = s(150);
+    const spacing = s(10);
     const gridW = cols * cardW + (cols - 1) * spacing;
     const startX = this.contentBounds.centerX - gridW / 2 + cardW / 2;
 
@@ -306,59 +306,59 @@ export class HeroListPopup extends PopupBase {
 
     // Update max scroll
     const rows = Math.ceil(filtered.length / cols);
-    this.maxScroll = Math.max(0, rows * (cardH + spacing) - this.contentBounds.height + 145);
+    this.maxScroll = Math.max(0, rows * (cardH + spacing) - this.contentBounds.height + s(145));
     this.scrollY = Math.min(this.scrollY, this.maxScroll);
   }
 
   createHeroCard(hero, x, y) {
     const card = this.scene.add.container(x, y);
 
-    const cardW = 110;
-    const cardH = 150;
+    const cardW = s(110);
+    const cardH = s(150);
 
     const rKey = getRarityKey(hero.rarity);
     const rarityData = RARITY[rKey] || RARITY.N;
     const rarityColor = rarityData.color;
 
     // Background
-    const bg = this.scene.add.rectangle(0, 0, cardW - 10, cardH - 10,
+    const bg = this.scene.add.rectangle(0, 0, cardW - s(10), cardH - s(10),
       COLORS.backgroundLight || 0x1E293B, 1);
-    bg.setStrokeStyle(2, rarityColor);
+    bg.setStrokeStyle(s(2), rarityColor);
     bg.setInteractive({ useHandCursor: true });
 
     // Rarity badge
-    const rarityBg = this.scene.add.rectangle(0, -60, 35, 18, rarityColor, 1);
-    const rarityText = this.scene.add.text(0, -60, rKey, {
-      fontSize: '11px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+    const rarityBg = this.scene.add.rectangle(0, s(-60), s(35), s(18), rarityColor, 1);
+    const rarityText = this.scene.add.text(0, s(-60), rKey, {
+      fontSize: sf(11), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
 
     // Portrait — DiceBear 이미지 우선, 없으면 emoji 폴백
     const portraitKey = `hero_${hero.id || hero.characterId}`;
     let portrait;
     if (this.scene.textures.exists(portraitKey)) {
-      portrait = this.scene.add.image(0, -15, portraitKey);
-      portrait.setDisplaySize(60, 60);
+      portrait = this.scene.add.image(0, s(-15), portraitKey);
+      portrait.setDisplaySize(s(60), s(60));
     } else {
-      portrait = this.scene.add.text(0, -15, hero.emoji || '👤', {
-        fontSize: '36px'
+      portrait = this.scene.add.text(0, s(-15), hero.emoji || '👤', {
+        fontSize: sf(36)
       }).setOrigin(0.5);
     }
 
     // Stars
     const starCount = hero.stars || getRarityNum(hero.rarity) || 1;
-    const stars = this.scene.add.text(0, 40, '★'.repeat(starCount), {
-      fontSize: '11px', color: '#FFD700'
+    const stars = this.scene.add.text(0, s(40), '★'.repeat(starCount), {
+      fontSize: sf(11), color: '#FFD700'
     }).setOrigin(0.5);
 
     // Name
     const name = (hero.name || '???').substring(0, 8);
-    const nameText = this.scene.add.text(0, 56, name, {
-      fontSize: '12px', fontFamily: '"Noto Sans KR", sans-serif', color: '#FFFFFF'
+    const nameText = this.scene.add.text(0, s(56), name, {
+      fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif', color: '#FFFFFF'
     }).setOrigin(0.5);
 
     // Level
-    const levelText = this.scene.add.text(0, 68, `Lv.${hero.level || 1}`, {
-      fontSize: '10px', fontFamily: 'Arial', color: '#94A3B8'
+    const levelText = this.scene.add.text(0, s(68), `Lv.${hero.level || 1}`, {
+      fontSize: sf(10), fontFamily: 'Arial', color: '#94A3B8'
     }).setOrigin(0.5);
 
     card.add([bg, rarityBg, rarityText, portrait, stars, nameText, levelText]);
@@ -389,15 +389,15 @@ export class HeroListPopup extends PopupBase {
         skillLevels: hero.skillLevels || [1, 1]
       });
     } catch (e) {
-      const s = hero.stats || {};
-      return Math.floor((s.hp || 0) / 10 + (s.atk || 0) + (s.def || 0) + (s.spd || 0));
+      const st = hero.stats || {};
+      return Math.floor((st.hp || 0) / 10 + (st.atk || 0) + (st.def || 0) + (st.spd || 0));
     }
   }
 
   setupScrolling() {
     const { left, top, width, height } = this.contentBounds;
-    const scrollTop = top + 145;
-    const scrollHeight = height - 145;
+    const scrollTop = top + s(145);
+    const scrollHeight = height - s(145);
 
     this.scene.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
       if (!this.isOpen) return;
@@ -423,7 +423,7 @@ export class HeroListPopup extends PopupBase {
       if (!this.isOpen || !pointer.isDown || this.dragStartY === 0) return;
 
       const deltaY = this.dragStartY - pointer.y;
-      if (!this.isDragging && Math.abs(deltaY) > 5) {
+      if (!this.isDragging && Math.abs(deltaY) > s(5)) {
         this.isDragging = true;
       }
 
@@ -442,7 +442,7 @@ export class HeroListPopup extends PopupBase {
 
   updateGridPosition() {
     if (this.gridContainer) {
-      this.gridContainer.y = this.contentBounds.top + 145 - this.scrollY;
+      this.gridContainer.y = this.contentBounds.top + s(145) - this.scrollY;
     }
   }
 

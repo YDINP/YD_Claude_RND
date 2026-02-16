@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_WIDTH } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, s, sf } from '../config/gameConfig.js';
 
 /**
  * Toast notification system
@@ -7,9 +7,9 @@ import { COLORS, GAME_WIDTH } from '../config/gameConfig.js';
  */
 export class Toast {
   static activeToasts = [];
-  static toastHeight = 40;
-  static toastSpacing = 10;
-  static startY = 70; // Below top bar
+  static toastHeight = s(40);
+  static toastSpacing = s(10);
+  static startY = s(70); // Below top bar
 
   /**
    * Show a toast notification
@@ -90,7 +90,7 @@ export class Toast {
  */
 class ToastInstance extends Phaser.GameObjects.Container {
   constructor(scene, message, type, duration) {
-    super(scene, GAME_WIDTH / 2, -50);
+    super(scene, GAME_WIDTH / 2, s(-50));
 
     this.message = message;
     this.type = type;
@@ -118,7 +118,7 @@ class ToastInstance extends Phaser.GameObjects.Container {
   }
 
   createBackground() {
-    const width = GAME_WIDTH - 40;
+    const width = GAME_WIDTH - s(40);
     const height = Toast.toastHeight;
     const color = this.getTypeColor();
 
@@ -126,22 +126,22 @@ class ToastInstance extends Phaser.GameObjects.Container {
 
     // Shadow
     this.background.fillStyle(0x000000, 0.3);
-    this.background.fillRoundedRect(-width / 2 + 2, -height / 2 + 2, width, height, 8);
+    this.background.fillRoundedRect(-width / 2 + s(2), -height / 2 + s(2), width, height, s(8));
 
     // Main background
     this.background.fillStyle(COLORS.backgroundLight, 0.95);
-    this.background.fillRoundedRect(-width / 2, -height / 2, width, height, 8);
+    this.background.fillRoundedRect(-width / 2, -height / 2, width, height, s(8));
 
     // Left color stripe
     this.background.fillStyle(color, 1);
-    this.background.fillRoundedRect(-width / 2, -height / 2, 6, height, { tl: 8, tr: 0, bl: 8, br: 0 });
+    this.background.fillRoundedRect(-width / 2, -height / 2, s(6), height, { tl: s(8), tr: 0, bl: s(8), br: 0 });
 
     this.add(this.background);
   }
 
   createIcon() {
-    const iconX = -GAME_WIDTH / 2 + 40;
-    const iconSize = 20;
+    const iconX = -GAME_WIDTH / 2 + s(40);
+    const iconSize = s(20);
     const color = this.getTypeColor();
 
     this.icon = this.scene.add.graphics();
@@ -149,29 +149,29 @@ class ToastInstance extends Phaser.GameObjects.Container {
     switch (this.type) {
       case 'success':
         // Checkmark
-        this.icon.lineStyle(3, color, 1);
+        this.icon.lineStyle(s(3), color, 1);
         this.icon.beginPath();
-        this.icon.moveTo(iconX - 6, 0);
-        this.icon.lineTo(iconX - 2, 5);
-        this.icon.lineTo(iconX + 7, -5);
+        this.icon.moveTo(iconX - s(6), 0);
+        this.icon.lineTo(iconX - s(2), s(5));
+        this.icon.lineTo(iconX + s(7), s(-5));
         this.icon.strokePath();
         break;
 
       case 'error':
         // X mark
-        this.icon.lineStyle(3, color, 1);
-        this.icon.lineBetween(iconX - 5, -5, iconX + 5, 5);
-        this.icon.lineBetween(iconX + 5, -5, iconX - 5, 5);
+        this.icon.lineStyle(s(3), color, 1);
+        this.icon.lineBetween(iconX - s(5), s(-5), iconX + s(5), s(5));
+        this.icon.lineBetween(iconX + s(5), s(-5), iconX - s(5), s(5));
         break;
 
       case 'info':
       default:
         // Info circle with i
-        this.icon.lineStyle(2, color, 1);
-        this.icon.strokeCircle(iconX, 0, 8);
+        this.icon.lineStyle(s(2), color, 1);
+        this.icon.strokeCircle(iconX, 0, s(8));
         this.icon.fillStyle(color, 1);
-        this.icon.fillCircle(iconX, -4, 2);
-        this.icon.fillRect(iconX - 1, -1, 2, 7);
+        this.icon.fillCircle(iconX, s(-4), s(2));
+        this.icon.fillRect(iconX - s(1), s(-1), s(2), s(7));
         break;
     }
 
@@ -179,13 +179,13 @@ class ToastInstance extends Phaser.GameObjects.Container {
   }
 
   createText() {
-    const textX = -GAME_WIDTH / 2 + 65;
+    const textX = -GAME_WIDTH / 2 + s(65);
 
     this.text = this.scene.add.text(textX, 0, this.message, {
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontSize: '14px',
+      fontSize: sf(14),
       color: '#FFFFFF',
-      wordWrap: { width: GAME_WIDTH - 120 }
+      wordWrap: { width: GAME_WIDTH - s(120) }
     }).setOrigin(0, 0.5);
 
     this.add(this.text);
@@ -199,7 +199,7 @@ class ToastInstance extends Phaser.GameObjects.Container {
   animate() {
     // PRD VFX-4.6: Slide up from below target + fade in (200ms)
     const targetY = this.targetY || Toast.startY;
-    this.y = targetY + 50; // Start 50px below target
+    this.y = targetY + s(50); // Start 50px below target
     this.setAlpha(0);
 
     this.scene.tweens.add({
@@ -223,7 +223,7 @@ class ToastInstance extends Phaser.GameObjects.Container {
     // PRD VFX-4.6: Slide up + fade out (200ms)
     this.scene.tweens.add({
       targets: this,
-      y: this.y - 20,
+      y: this.y - s(20),
       alpha: 0,
       duration: 200,
       ease: 'Power2',

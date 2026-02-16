@@ -2,14 +2,14 @@
  * TurnOrderBar - 턴 순서 표시 바
  * 상단에 각 영웅/적의 행동 순서를 SPD 기반으로 표시
  */
-import { COLORS, GAME_WIDTH } from '../../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, s, sf } from '../../config/gameConfig.js';
 
 export class TurnOrderBar {
   /**
    * @param {Phaser.Scene} scene Phaser 씬
    * @param {number} y Y 좌표
    */
-  constructor(scene, y = 70) {
+  constructor(scene, y = s(70)) {
     this.scene = scene;
     this.y = y;
     this.icons = [];
@@ -25,15 +25,15 @@ export class TurnOrderBar {
     // 배경
     this.background = this.scene.add.rectangle(
       GAME_WIDTH / 2, 0,
-      GAME_WIDTH - 20, 50,
+      GAME_WIDTH - s(20), s(50),
       COLORS.backgroundLight, 0.9
     );
-    this.background.setStrokeStyle(2, COLORS.primary);
+    this.background.setStrokeStyle(s(2), COLORS.primary);
     this.container.add(this.background);
 
     // 라벨
-    this.label = this.scene.add.text(20, 0, '턴 순서:', {
-      fontSize: '12px',
+    this.label = this.scene.add.text(s(20), 0, '턴 순서:', {
+      fontSize: sf(12),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0, 0.5);
@@ -59,8 +59,8 @@ export class TurnOrderBar {
 
     this.currentTurnIndex = currentIndex;
 
-    const startX = 90;
-    const spacing = 45;
+    const startX = s(90);
+    const spacing = s(45);
     const maxIcons = Math.min(8, battlers.length);
 
     battlers.slice(0, maxIcons).forEach((battler, index) => {
@@ -71,11 +71,11 @@ export class TurnOrderBar {
 
       // 아이콘 배경
       const bgColor = isAlly ? COLORS.primary : COLORS.danger;
-      const bgSize = isCurrentTurn ? 18 : 15;
+      const bgSize = isCurrentTurn ? s(18) : s(15);
       const bg = this.scene.add.circle(x, 0, bgSize, bgColor, isCurrentTurn ? 1 : 0.7);
 
       if (isCurrentTurn) {
-        bg.setStrokeStyle(3, COLORS.accent);
+        bg.setStrokeStyle(s(3), COLORS.accent);
 
         // 현재 턴 펄스 애니메이션 (참조 저장)
         pulseTween = this.scene.tweens.add({
@@ -90,7 +90,7 @@ export class TurnOrderBar {
       // 유닛 이름 첫글자
       const initial = battler.name.charAt(0);
       const text = this.scene.add.text(x, 0, initial, {
-        fontSize: isCurrentTurn ? '14px' : '11px',
+        fontSize: isCurrentTurn ? sf(14) : sf(11),
         fontFamily: 'Arial',
         color: '#ffffff',
         fontStyle: 'bold'
@@ -98,8 +98,8 @@ export class TurnOrderBar {
 
       // SPD 표시
       const spd = battler.stats?.spd || battler.spd || 0;
-      const spdText = this.scene.add.text(x, 20, `${spd}`, {
-        fontSize: '8px',
+      const spdText = this.scene.add.text(x, s(20), `${spd}`, {
+        fontSize: sf(8),
         fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
@@ -118,13 +118,13 @@ export class TurnOrderBar {
   highlightCurrent(index) {
     this.icons.forEach((icon, i) => {
       if (i === index) {
-        icon.bg.setStrokeStyle(3, COLORS.accent);
+        icon.bg.setStrokeStyle(s(3), COLORS.accent);
         icon.bg.setScale(1.2);
-        icon.text.setFontSize(14);
+        icon.text.setFontSize(sf(14));
       } else {
         icon.bg.setStrokeStyle(0);
         icon.bg.setScale(1);
-        icon.text.setFontSize(11);
+        icon.text.setFontSize(sf(11));
       }
     });
   }

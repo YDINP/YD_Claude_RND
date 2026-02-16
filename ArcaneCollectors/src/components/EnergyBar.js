@@ -4,6 +4,7 @@
  */
 
 import { ENERGY_UI, UI_STYLES, Z_INDEX } from '../config/layoutConfig.js';
+import { s, sf } from '../config/gameConfig.js';
 
 export default class EnergyBar {
     /**
@@ -58,8 +59,8 @@ export default class EnergyBar {
      * 에너지 아이콘 생성
      */
     createIcon() {
-        this.icon = this.scene.add.text(-ENERGY_UI.BAR_WIDTH / 2 - 30, 0, '⚡', {
-            fontSize: '24px'
+        this.icon = this.scene.add.text(-ENERGY_UI.BAR_WIDTH / 2 - s(30), 0, '⚡', {
+            fontSize: sf(24)
         });
         this.icon.setOrigin(0.5);
         this.container.add(this.icon);
@@ -88,7 +89,7 @@ export default class EnergyBar {
             -ENERGY_UI.BAR_WIDTH / 2,
             0,
             0,
-            ENERGY_UI.BAR_HEIGHT - 4,
+            ENERGY_UI.BAR_HEIGHT - s(4),
             ENERGY_UI.COLORS.HIGH
         );
         this.fill.setOrigin(0, 0.5);
@@ -107,7 +108,7 @@ export default class EnergyBar {
             0x000000,
             0
         );
-        this.border.setStrokeStyle(2, UI_STYLES.BACKGROUND.ACCENT);
+        this.border.setStrokeStyle(s(2), UI_STYLES.BACKGROUND.ACCENT);
         this.border.setOrigin(0.5);
         this.container.add(this.border);
     }
@@ -266,7 +267,7 @@ export default class EnergyBar {
 
         this.scene.tweens.add({
             targets: this.container,
-            x: originalX + 5,
+            x: originalX + s(5),
             duration: 50,
             yoyo: true,
             repeat: 3,

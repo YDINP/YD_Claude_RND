@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, LAYOUT } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, LAYOUT, s, sf } from '../config/gameConfig.js';
 import transitionManager from '../utils/TransitionManager.js';
 
 // 5-tab bottom navigation configuration
@@ -13,9 +13,9 @@ const TABS = [
 
 export class BottomNav extends Phaser.GameObjects.Container {
   constructor(scene, activeTab = 'home') {
-    super(scene, GAME_WIDTH / 2, LAYOUT.bottomNav.y + 120 / 2);
+    super(scene, GAME_WIDTH / 2, LAYOUT.bottomNav.y + s(120) / 2);
 
-    this.navHeight = 120;
+    this.navHeight = s(120);
     this.activeTab = activeTab;
     this.tabs = TABS;
     this.tabButtons = {};
@@ -34,10 +34,10 @@ export class BottomNav extends Phaser.GameObjects.Container {
     this.background = this.scene.add.graphics();
     this.background.fillStyle(0x0F172A, 0.98);
     this.background.fillRect(-GAME_WIDTH / 2, -this.navHeight / 2, GAME_WIDTH, this.navHeight);
-    this.background.lineStyle(2, COLORS.primary, 0.6);
+    this.background.lineStyle(s(2), COLORS.primary, 0.6);
     this.background.lineBetween(-GAME_WIDTH / 2, -this.navHeight / 2, GAME_WIDTH / 2, -this.navHeight / 2);
     this.background.fillStyle(COLORS.primary, 0.05);
-    this.background.fillRect(-GAME_WIDTH / 2, -this.navHeight / 2, GAME_WIDTH, 15);
+    this.background.fillRect(-GAME_WIDTH / 2, -this.navHeight / 2, GAME_WIDTH, s(15));
     this.add(this.background);
   }
 
@@ -63,9 +63,9 @@ export class BottomNav extends Phaser.GameObjects.Container {
     const indicator = this.scene.add.graphics();
     if (isActive) {
       indicator.fillStyle(COLORS.primary, 0.25);
-      indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
+      indicator.fillRoundedRect(-tabWidth / 2 + s(8), s(-50), tabWidth - s(16), s(100), s(12));
       indicator.fillStyle(COLORS.primary, 0.9);
-      indicator.fillRect(-25, -this.navHeight / 2 + 3, 50, 3);
+      indicator.fillRect(s(-25), -this.navHeight / 2 + s(3), s(50), s(3));
     }
     container.add(indicator);
     container.indicator = indicator;
@@ -73,16 +73,16 @@ export class BottomNav extends Phaser.GameObjects.Container {
     // ART-1: 텍스처 아이콘 사용 (폴백: 이모지)
     let iconObj;
     if (tab.iconKey && this.scene.textures.exists(tab.iconKey)) {
-      iconObj = this.scene.add.image(0, -15, tab.iconKey).setOrigin(0.5).setDisplaySize(32, 32);
+      iconObj = this.scene.add.image(0, s(-15), tab.iconKey).setOrigin(0.5).setDisplaySize(s(32), s(32));
     } else {
-      iconObj = this.scene.add.text(0, -15, tab.icon, { fontSize: '28px' }).setOrigin(0.5);
+      iconObj = this.scene.add.text(0, s(-15), tab.icon, { fontSize: sf(28) }).setOrigin(0.5);
     }
     container.add(iconObj);
     container.iconText = iconObj;
 
-    const label = this.scene.add.text(0, 20, tab.label, {
+    const label = this.scene.add.text(0, s(20), tab.label, {
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontSize: '12px',
+      fontSize: sf(12),
       fontStyle: isActive ? 'bold' : 'normal',
       color: isActive ? '#FFFFFF' : '#64748B'
     }).setOrigin(0.5);
@@ -123,12 +123,12 @@ export class BottomNav extends Phaser.GameObjects.Container {
       indicator.clear();
       if (tab.id === this.activeTab) {
         indicator.fillStyle(COLORS.primary, 0.35); // Brighter when active
-        indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
+        indicator.fillRoundedRect(-tabWidth / 2 + s(8), s(-50), tabWidth - s(16), s(100), s(12));
         indicator.fillStyle(COLORS.primary, 0.9);
-        indicator.fillRect(-25, -this.navHeight / 2 + 3, 50, 3);
+        indicator.fillRect(s(-25), -this.navHeight / 2 + s(3), s(50), s(3));
       } else {
         indicator.fillStyle(COLORS.primary, 0.15); // Subtle feedback when inactive
-        indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
+        indicator.fillRoundedRect(-tabWidth / 2 + s(8), s(-50), tabWidth - s(16), s(100), s(12));
       }
     });
 
@@ -154,9 +154,9 @@ export class BottomNav extends Phaser.GameObjects.Container {
         indicator.clear();
         if (this.isDrawerOpen) {
           indicator.fillStyle(COLORS.primary, 0.25);
-          indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
+          indicator.fillRoundedRect(-tabWidth / 2 + s(8), s(-50), tabWidth - s(16), s(100), s(12));
           indicator.fillStyle(COLORS.primary, 0.9);
-          indicator.fillRect(-25, -this.navHeight / 2 + 3, 50, 3);
+          indicator.fillRect(s(-25), -this.navHeight / 2 + s(3), s(50), s(3));
         }
 
         return;
@@ -210,9 +210,9 @@ export class BottomNav extends Phaser.GameObjects.Container {
         // Restore indicator brightness
         indicator.clear();
         indicator.fillStyle(COLORS.primary, 0.25);
-        indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
+        indicator.fillRoundedRect(-tabWidth / 2 + s(8), s(-50), tabWidth - s(16), s(100), s(12));
         indicator.fillStyle(COLORS.primary, 0.9);
-        indicator.fillRect(-25, -this.navHeight / 2 + 3, 50, 3);
+        indicator.fillRect(s(-25), -this.navHeight / 2 + s(3), s(50), s(3));
       }
     });
 
@@ -238,14 +238,14 @@ export class BottomNav extends Phaser.GameObjects.Container {
       const tabWidth = GAME_WIDTH / this.tabs.length;
       menuTab.indicator.clear();
       menuTab.indicator.fillStyle(COLORS.primary, 0.25);
-      menuTab.indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
+      menuTab.indicator.fillRoundedRect(-tabWidth / 2 + s(8), s(-50), tabWidth - s(16), s(100), s(12));
       menuTab.indicator.fillStyle(COLORS.primary, 0.9);
-      menuTab.indicator.fillRect(-25, -this.navHeight / 2 + 3, 50, 3);
+      menuTab.indicator.fillRect(s(-25), -this.navHeight / 2 + s(3), s(50), s(3));
 
       menuTab.iconText.setScale(1.15);
       menuTab.label.setStyle({
         fontFamily: '"Noto Sans KR", sans-serif',
-        fontSize: '12px',
+        fontSize: sf(12),
         fontStyle: 'bold',
         color: '#FFFFFF'
       });
@@ -267,11 +267,11 @@ export class BottomNav extends Phaser.GameObjects.Container {
     this.drawerElements.push(overlay);
 
     // Create drawer panel
-    const panelHeight = 320;
+    const panelHeight = s(320);
     const panel = this.scene.add.graphics();
     panel.fillStyle(0x0F172A, 0.98);
     panel.fillRect(0, 0, GAME_WIDTH, panelHeight);
-    panel.lineStyle(2, COLORS.primary, 0.6);
+    panel.lineStyle(s(2), COLORS.primary, 0.6);
     panel.lineBetween(0, 0, GAME_WIDTH, 0);
 
     const panelContainer = this.scene.add.container(0, 1160);
@@ -287,17 +287,17 @@ export class BottomNav extends Phaser.GameObjects.Container {
       { icon: '⚙️', label: '설정', scene: 'SettingsScene' }
     ];
 
-    const buttonWidth = 280;
-    const buttonHeight = 100;
-    const spacing = 40;
+    const buttonWidth = s(280);
+    const buttonHeight = s(100);
+    const spacing = s(40);
     const startX = (GAME_WIDTH - 2 * buttonWidth - spacing) / 2;
-    const startY = 40;
+    const startY = s(40);
 
     menuItems.forEach((item, index) => {
       const col = index % 2;
       const row = Math.floor(index / 2);
       const x = startX + col * (buttonWidth + spacing);
-      const y = startY + row * (buttonHeight + 40);
+      const y = startY + row * (buttonHeight + s(40));
 
       const btn = this.createDrawerButton(x, y, buttonWidth, buttonHeight, item);
       panelContainer.add(btn);
@@ -317,19 +317,19 @@ export class BottomNav extends Phaser.GameObjects.Container {
 
     const bg = this.scene.add.graphics();
     bg.fillStyle(COLORS.primary, 0.15);
-    bg.fillRoundedRect(0, 0, width, height, 12);
-    bg.lineStyle(2, COLORS.primary, 0.3);
-    bg.strokeRoundedRect(0, 0, width, height, 12);
+    bg.fillRoundedRect(0, 0, width, height, s(12));
+    bg.lineStyle(s(2), COLORS.primary, 0.3);
+    bg.strokeRoundedRect(0, 0, width, height, s(12));
     container.add(bg);
 
-    const icon = this.scene.add.text(width / 2, height / 2 - 15, item.icon, {
-      fontSize: '28px'
+    const icon = this.scene.add.text(width / 2, height / 2 - s(15), item.icon, {
+      fontSize: sf(28)
     }).setOrigin(0.5);
     container.add(icon);
 
-    const label = this.scene.add.text(width / 2, height / 2 + 20, item.label, {
+    const label = this.scene.add.text(width / 2, height / 2 + s(20), item.label, {
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontSize: '16px',
+      fontSize: sf(16),
       fontStyle: 'bold',
       color: '#FFFFFF'
     }).setOrigin(0.5);
@@ -342,18 +342,18 @@ export class BottomNav extends Phaser.GameObjects.Container {
     container.on('pointerover', () => {
       bg.clear();
       bg.fillStyle(COLORS.primary, 0.25);
-      bg.fillRoundedRect(0, 0, width, height, 12);
-      bg.lineStyle(2, COLORS.primary, 0.5);
-      bg.strokeRoundedRect(0, 0, width, height, 12);
+      bg.fillRoundedRect(0, 0, width, height, s(12));
+      bg.lineStyle(s(2), COLORS.primary, 0.5);
+      bg.strokeRoundedRect(0, 0, width, height, s(12));
       icon.setScale(1.1);
     });
 
     container.on('pointerout', () => {
       bg.clear();
       bg.fillStyle(COLORS.primary, 0.15);
-      bg.fillRoundedRect(0, 0, width, height, 12);
-      bg.lineStyle(2, COLORS.primary, 0.3);
-      bg.strokeRoundedRect(0, 0, width, height, 12);
+      bg.fillRoundedRect(0, 0, width, height, s(12));
+      bg.lineStyle(s(2), COLORS.primary, 0.3);
+      bg.strokeRoundedRect(0, 0, width, height, s(12));
       icon.setScale(1);
     });
 
@@ -397,7 +397,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
       menuTab.iconText.setScale(1);
       menuTab.label.setStyle({
         fontFamily: '"Noto Sans KR", sans-serif',
-        fontSize: '12px',
+        fontSize: sf(12),
         fontStyle: 'normal',
         color: '#64748B'
       });
@@ -439,17 +439,17 @@ export class BottomNav extends Phaser.GameObjects.Container {
   }
 
   showToast(message) {
-    const toast = this.scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 200, message, {
-      fontSize: '18px',
+    const toast = this.scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(200), message, {
+      fontSize: sf(18),
       fontFamily: '"Noto Sans KR", sans-serif',
       color: '#FFFFFF',
       backgroundColor: `#${COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
-      padding: { x: 24, y: 14 }
+      padding: { x: s(24), y: s(14) }
     }).setOrigin(0.5).setDepth(2000);
 
     this.scene.tweens.add({
       targets: toast,
-      y: toast.y - 50,
+      y: toast.y - s(50),
       alpha: 0,
       duration: 1500,
       delay: 500,
@@ -476,15 +476,15 @@ export class BottomNav extends Phaser.GameObjects.Container {
       tabContainer.indicator.clear();
       if (isActive) {
         tabContainer.indicator.fillStyle(COLORS.primary, 0.25);
-        tabContainer.indicator.fillRoundedRect(-tabWidth / 2 + 8, -50, tabWidth - 16, 100, 12);
+        tabContainer.indicator.fillRoundedRect(-tabWidth / 2 + s(8), s(-50), tabWidth - s(16), s(100), s(12));
         tabContainer.indicator.fillStyle(COLORS.primary, 0.9);
-        tabContainer.indicator.fillRect(-25, -this.navHeight / 2 + 3, 50, 3);
+        tabContainer.indicator.fillRect(s(-25), -this.navHeight / 2 + s(3), s(50), s(3));
       }
 
       tabContainer.iconText.setScale(isActive ? 1.15 : 1);
       tabContainer.label.setStyle({
         fontFamily: '"Noto Sans KR", sans-serif',
-        fontSize: '12px',
+        fontSize: sf(12),
         fontStyle: isActive ? 'bold' : 'normal',
         color: isActive ? '#FFFFFF' : '#64748B'
       });
@@ -518,7 +518,7 @@ export class BottomNav extends Phaser.GameObjects.Container {
     // Create sliding underline bar
     this.underlineBar = this.scene.add.graphics();
     this.underlineBar.fillStyle(COLORS.primary, 0.9);
-    this.underlineBar.fillRect(fromX - 25, -this.navHeight / 2 + 3, 50, 3);
+    this.underlineBar.fillRect(fromX - s(25), -this.navHeight / 2 + s(3), s(50), s(3));
     this.add(this.underlineBar);
 
     // Animate slide
@@ -550,26 +550,26 @@ export class BottomNav extends Phaser.GameObjects.Container {
     if (tab.badgeText) { tab.badgeText.destroy(); tab.badgeText = null; }
 
     if (show) {
-      const badgeX = 18;
-      const badgeY = -25;
+      const badgeX = s(18);
+      const badgeY = s(-25);
 
       const badge = this.scene.add.graphics();
       badge.fillStyle(COLORS.danger, 1);
 
       if (count > 0) {
-        const badgeWidth = count > 99 ? 30 : count > 9 ? 24 : 18;
-        badge.fillRoundedRect(badgeX - badgeWidth / 2, badgeY - 9, badgeWidth, 18, 9);
+        const badgeWidth = count > 99 ? s(30) : count > 9 ? s(24) : s(18);
+        badge.fillRoundedRect(badgeX - badgeWidth / 2, badgeY - s(9), badgeWidth, s(18), s(9));
 
         const badgeText = this.scene.add.text(badgeX, badgeY, count > 99 ? '99+' : count.toString(), {
           fontFamily: '"Noto Sans KR", sans-serif',
-          fontSize: '11px',
+          fontSize: sf(11),
           fontStyle: 'bold',
           color: '#FFFFFF'
         }).setOrigin(0.5);
         tab.add(badgeText);
         tab.badgeText = badgeText;
       } else {
-        badge.fillCircle(badgeX, badgeY, 6);
+        badge.fillCircle(badgeX, badgeY, s(6));
       }
 
       tab.add(badge);
@@ -587,5 +587,5 @@ export class BottomNav extends Phaser.GameObjects.Container {
   }
 
   getHeight() { return this.navHeight; }
-  static getNavHeight() { return 120; }
+  static getNavHeight() { return s(120); }
 }

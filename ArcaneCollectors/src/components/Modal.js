@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 import { Button } from './Button.js';
 import { Panel } from './Panel.js';
 
@@ -16,8 +16,8 @@ export class Modal extends Phaser.GameObjects.Container {
       title: options.title ?? '',
       content: options.content ?? '',
       buttons: options.buttons ?? [{ text: '확인', onClick: () => this.hide() }],
-      width: options.width ?? 320,
-      height: options.height ?? 240,
+      width: options.width ?? s(320),
+      height: options.height ?? s(240),
       closeOnOverlay: options.closeOnOverlay ?? true,
       showCloseButton: options.showCloseButton ?? false
     };
@@ -92,7 +92,7 @@ export class Modal extends Phaser.GameObjects.Container {
         backgroundColor: COLORS.backgroundLight,
         borderColor: COLORS.primary,
         title: this.options.title || null,
-        cornerRadius: 16
+        cornerRadius: s(16)
       }
     );
 
@@ -103,19 +103,19 @@ export class Modal extends Phaser.GameObjects.Container {
 
   createContent() {
     const contentBounds = this.panel.getContentBounds();
-    const buttonAreaHeight = this.options.buttons.length > 0 ? 60 : 0;
+    const buttonAreaHeight = this.options.buttons.length > 0 ? s(60) : 0;
 
     if (typeof this.options.content === 'string') {
       this.contentText = this.scene.add.text(
         0,
-        this.options.title ? -10 : 0,
+        this.options.title ? s(-10) : 0,
         this.options.content,
         {
           fontFamily: '"Noto Sans KR", sans-serif',
-          fontSize: '16px',
+          fontSize: sf(16),
           color: '#E2E8F0',
           align: 'center',
-          wordWrap: { width: this.options.width - 40 }
+          wordWrap: { width: this.options.width - s(40) }
         }
       ).setOrigin(0.5);
 
@@ -130,14 +130,14 @@ export class Modal extends Phaser.GameObjects.Container {
     const buttonCount = this.options.buttons.length;
     if (buttonCount === 0) return;
 
-    const buttonWidth = Math.min(120, (this.options.width - 40 - (buttonCount - 1) * 10) / buttonCount);
-    const buttonHeight = 40;
-    const buttonY = this.options.height / 2 - buttonHeight / 2 - 15;
-    const totalButtonsWidth = buttonWidth * buttonCount + (buttonCount - 1) * 10;
+    const buttonWidth = Math.min(s(120), (this.options.width - s(40) - (buttonCount - 1) * s(10)) / buttonCount);
+    const buttonHeight = s(40);
+    const buttonY = this.options.height / 2 - buttonHeight / 2 - s(15);
+    const totalButtonsWidth = buttonWidth * buttonCount + (buttonCount - 1) * s(10);
     const startX = -totalButtonsWidth / 2 + buttonWidth / 2;
 
     this.options.buttons.forEach((btnConfig, index) => {
-      const x = startX + index * (buttonWidth + 10);
+      const x = startX + index * (buttonWidth + s(10));
 
       const button = new Button(
         this.scene,

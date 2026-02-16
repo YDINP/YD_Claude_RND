@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { getAllItems, getItemsByType } from '../data/index.js';
@@ -33,8 +33,8 @@ export class InventoryScene extends Phaser.Scene {
     this.refreshItemList();
     } catch (error) {
       console.error('[InventoryScene] create() 실패:', error);
-      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
-        fontSize: '20px', fill: '#ff4444', align: 'center'
+      this.add.text(s(360), s(640), '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: sf(20), fill: '#ff4444', align: 'center'
       }).setOrigin(0.5);
       this.time.delayedCall(2000, () => {
         this.scene.start('MainMenuScene');
@@ -63,33 +63,33 @@ export class InventoryScene extends Phaser.Scene {
 
   createTopBar() {
     // LAYOUT 통일: Top bar background (100px)
-    this.add.rectangle(GAME_WIDTH / 2, 50, GAME_WIDTH, 100, COLORS.bgDark, 0.9);
+    this.add.rectangle(GAME_WIDTH / 2, s(50), GAME_WIDTH, s(100), COLORS.bgDark, 0.9);
 
     // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
-    const backBg = this.add.rectangle(30, 50, 50, 40, COLORS.bgDark, 0.8)
+    const backBg = this.add.rectangle(s(30), s(50), s(50), s(40), COLORS.bgDark, 0.8)
       .setInteractive({ useHandCursor: true });
-    const backBtn = this.add.text(30, 50, '← 뒤로', {
-      fontSize: '14px', fontFamily: 'Arial', color: '#FFFFFF'
+    const backBtn = this.add.text(s(30), s(50), '← 뒤로', {
+      fontSize: sf(14), fontFamily: 'Arial', color: '#FFFFFF'
     }).setOrigin(0.5);
     backBg.on('pointerdown', () => this.goBack());
 
     // 제목
-    this.add.text(GAME_WIDTH / 2, 50, '인벤토리', {
-      fontSize: '24px', fontFamily: 'Arial',
+    this.add.text(GAME_WIDTH / 2, s(50), '인벤토리', {
+      fontSize: sf(24), fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // 골드 표시
-    this.goldText = this.add.text(GAME_WIDTH - 30, 38, `🪙 ${this.gold.toLocaleString()}`, {
-      fontSize: '16px', fontFamily: 'Arial',
+    this.goldText = this.add.text(GAME_WIDTH - s(30), s(38), `🪙 ${this.gold.toLocaleString()}`, {
+      fontSize: sf(16), fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(1, 0.5);
 
     // 아이템 수
-    this.countText = this.add.text(GAME_WIDTH - 30, 60, '', {
-      fontSize: '12px', fontFamily: 'Arial',
+    this.countText = this.add.text(GAME_WIDTH - s(30), s(60), '', {
+      fontSize: sf(12), fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0.5);
   }
@@ -102,7 +102,7 @@ export class InventoryScene extends Phaser.Scene {
       { key: 'material', label: '🔧 재료', icon: '🔧' }
     ];
 
-    const tabY = 120;
+    const tabY = s(120);
     const tabW = GAME_WIDTH / tabs.length;
 
     this.tabElements = [];
@@ -111,12 +111,12 @@ export class InventoryScene extends Phaser.Scene {
       const x = tabW / 2 + i * tabW;
       const isActive = tab.key === this.activeTab;
 
-      const bg = this.add.rectangle(x, tabY, tabW - 4, 40,
+      const bg = this.add.rectangle(x, tabY, tabW - s(4), s(40),
         isActive ? COLORS.primary : COLORS.bgPanel, isActive ? 0.9 : 0.5)
         .setInteractive({ useHandCursor: true });
 
       const label = this.add.text(x, tabY, tab.label, {
-        fontSize: '15px', fontFamily: 'Arial',
+        fontSize: sf(15), fontFamily: 'Arial',
         color: '#FFFFFF',
         fontStyle: isActive ? 'bold' : 'normal'
       }).setOrigin(0.5);
@@ -141,8 +141,8 @@ export class InventoryScene extends Phaser.Scene {
 
   createItemList() {
     // LAYOUT 통일: 리스트 영역 정의 (탭 아래 y=160 ~ BottomNav y=1160)
-    this.listY = 160;
-    this.listH = GAME_HEIGHT - this.listY - 140;
+    this.listY = s(160);
+    this.listH = GAME_HEIGHT - this.listY - s(140);
     this.itemElements = [];
   }
 
@@ -164,20 +164,20 @@ export class InventoryScene extends Phaser.Scene {
     this.countText.setText(`${items.length}개`);
 
     if (items.length === 0) {
-      const emptyText = this.add.text(GAME_WIDTH / 2, this.listY + 100, '아이템이 없습니다', {
-        fontSize: '16px', fontFamily: 'Arial',
+      const emptyText = this.add.text(GAME_WIDTH / 2, this.listY + s(100), '아이템이 없습니다', {
+        fontSize: sf(16), fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
       this.itemElements.push(emptyText);
       return;
     }
 
-    const itemH = 75;
-    const startY = this.listY + 10;
+    const itemH = s(75);
+    const startY = this.listY + s(10);
 
     items.forEach((item, i) => {
       const y = startY + i * itemH;
-      if (y + itemH > 1160) return; // BottomNav(y=1160) 겹침 방지
+      if (y + itemH > s(1160)) return; // BottomNav(y=1160) 겹침 방지
 
       const elements = this.createItemRow(item, y, i);
       this.itemElements.push(...elements);
@@ -186,30 +186,30 @@ export class InventoryScene extends Phaser.Scene {
 
   createItemRow(item, y, index) {
     const elements = [];
-    const padX = 20;
+    const padX = s(20);
 
     // 행 배경
-    const rowBg = this.add.rectangle(GAME_WIDTH / 2, y + 30, GAME_WIDTH - padX * 2, 68,
+    const rowBg = this.add.rectangle(GAME_WIDTH / 2, y + s(30), GAME_WIDTH - padX * 2, s(68),
       index % 2 === 0 ? COLORS.bgLight : COLORS.bgPanel, 0.4)
       .setInteractive({ useHandCursor: true });
     elements.push(rowBg);
 
     // 등급 색상 아이콘
     const rarityColor = this.getRarityColor(item.rarity);
-    const icon = this.add.rectangle(padX + 28, y + 30, 44, 44, rarityColor, 0.7)
-      .setStrokeStyle(1, 0xFFFFFF, 0.3);
+    const icon = this.add.rectangle(padX + s(28), y + s(30), s(44), s(44), rarityColor, 0.7)
+      .setStrokeStyle(s(1), 0xFFFFFF, 0.3);
     elements.push(icon);
 
     // 장비 슬롯 아이콘
     const slotIcon = this.getSlotIcon(item);
-    const iconText = this.add.text(padX + 28, y + 30, slotIcon, {
-      fontSize: '20px'
+    const iconText = this.add.text(padX + s(28), y + s(30), slotIcon, {
+      fontSize: sf(20)
     }).setOrigin(0.5);
     elements.push(iconText);
 
     // 아이템 이름
-    const name = this.add.text(padX + 65, y + 18, item.name || item.nameKo || item.id, {
-      fontSize: '15px', fontFamily: 'Arial',
+    const name = this.add.text(padX + s(65), y + s(18), item.name || item.nameKo || item.id, {
+      fontSize: sf(15), fontFamily: 'Arial',
       color: '#FFFFFF', fontStyle: 'bold'
     }).setOrigin(0, 0.5);
     elements.push(name);
@@ -224,16 +224,16 @@ export class InventoryScene extends Phaser.Scene {
       infoStr = `${item.rarity || 'common'} · 수량: ${item.quantity || 1}`;
     }
 
-    const info = this.add.text(padX + 65, y + 40, infoStr, {
-      fontSize: '12px', fontFamily: 'Arial',
+    const info = this.add.text(padX + s(65), y + s(40), infoStr, {
+      fontSize: sf(12), fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0, 0.5);
     elements.push(info);
 
     // 스탯/효과 요약 (우측)
     const statStr = this.getItemStatSummary(item);
-    const statText = this.add.text(GAME_WIDTH - padX - 10, y + 30, statStr, {
-      fontSize: '13px', fontFamily: 'Arial',
+    const statText = this.add.text(GAME_WIDTH - padX - s(10), y + s(30), statStr, {
+      fontSize: sf(13), fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
       align: 'right'
@@ -350,42 +350,42 @@ export class InventoryScene extends Phaser.Scene {
       .setDepth(80).setInteractive();
 
     // 패널
-    const panelH = this.activeTab === 'equipment' ? 400 : 280;
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - 60, panelH, COLORS.bgLight, 0.98)
-      .setDepth(81).setStrokeStyle(2, this.getRarityColor(item.rarity));
+    const panelH = this.activeTab === 'equipment' ? s(400) : s(280);
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - s(60), panelH, COLORS.bgLight, 0.98)
+      .setDepth(81).setStrokeStyle(s(2), this.getRarityColor(item.rarity));
 
     const cx = GAME_WIDTH / 2;
     const topY = GAME_HEIGHT / 2 - panelH / 2;
 
     // 닫기
-    const closeBtn = this.add.text(cx + (GAME_WIDTH - 60) / 2 - 20, topY + 20, '✕', {
-      fontSize: '24px', color: '#FFFFFF'
+    const closeBtn = this.add.text(cx + (GAME_WIDTH - s(60)) / 2 - s(20), topY + s(20), '✕', {
+      fontSize: sf(24), color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(82).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.closeDetail());
 
     // 아이템 이름 + 등급
-    this.add.text(cx, topY + 35, `${item.name || item.id}`, {
-      fontSize: '22px', fontFamily: 'Arial',
+    this.add.text(cx, topY + s(35), `${item.name || item.id}`, {
+      fontSize: sf(22), fontFamily: 'Arial',
       color: '#FFFFFF', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);
 
-    this.add.text(cx, topY + 62, `${item.rarity || 'common'}`, {
-      fontSize: '14px', fontFamily: 'Arial',
+    this.add.text(cx, topY + s(62), `${item.rarity || 'common'}`, {
+      fontSize: sf(14), fontFamily: 'Arial',
       color: `#${  this.getRarityColor(item.rarity).toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(82);
 
     // 설명
-    this.add.text(cx, topY + 90, item.description || '', {
-      fontSize: '13px', fontFamily: 'Arial',
+    this.add.text(cx, topY + s(90), item.description || '', {
+      fontSize: sf(13), fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`,
-      wordWrap: { width: GAME_WIDTH - 120 },
+      wordWrap: { width: GAME_WIDTH - s(120) },
       align: 'center'
     }).setOrigin(0.5, 0).setDepth(82);
 
     if (this.activeTab === 'equipment') {
-      this.showEquipmentDetail(item, cx, topY + 140);
+      this.showEquipmentDetail(item, cx, topY + s(140));
     } else {
-      this.showConsumableDetail(item, cx, topY + 130);
+      this.showConsumableDetail(item, cx, topY + s(130));
     }
   }
 
@@ -395,36 +395,36 @@ export class InventoryScene extends Phaser.Scene {
     const statEntries = Object.entries(stats);
 
     statEntries.forEach(([key, val], i) => {
-      this.add.text(cx - 100, y + i * 25, key, {
-        fontSize: '14px', fontFamily: 'Arial',
+      this.add.text(cx - s(100), y + i * s(25), key, {
+        fontSize: sf(14), fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setDepth(82);
 
-      this.add.text(cx + 100, y + i * 25, `+${val}`, {
-        fontSize: '14px', fontFamily: 'Arial',
+      this.add.text(cx + s(100), y + i * s(25), `+${val}`, {
+        fontSize: sf(14), fontFamily: 'Arial',
         color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(1, 0).setDepth(82);
     });
 
     // 강화 레벨
-    const enhY = y + statEntries.length * 25 + 15;
+    const enhY = y + statEntries.length * s(25) + s(15);
     this.add.text(cx, enhY, `강화: +${item.enhanceLevel || 0}/15`, {
-      fontSize: '15px', fontFamily: 'Arial',
+      fontSize: sf(15), fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);
 
     // 장착/해제 버튼
-    const btnY = enhY + 45;
+    const btnY = enhY + s(45);
     const equipped = !!item.equippedBy;
 
-    const actionBg = this.add.rectangle(cx, btnY, 180, 45,
+    const actionBg = this.add.rectangle(cx, btnY, s(180), s(45),
       equipped ? COLORS.danger : COLORS.primary)
       .setDepth(82).setInteractive({ useHandCursor: true });
 
     this.add.text(cx, btnY, equipped ? '장비 해제' : '장비 장착', {
-      fontSize: '16px', fontFamily: 'Arial',
+      fontSize: sf(16), fontFamily: 'Arial',
       color: '#FFFFFF', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);
 
@@ -440,21 +440,21 @@ export class InventoryScene extends Phaser.Scene {
 
   showConsumableDetail(item, cx, y) {
     this.add.text(cx, y, `보유: ${item.quantity || 0}개`, {
-      fontSize: '18px', fontFamily: 'Arial',
+      fontSize: sf(18), fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);
 
     if (item.value) {
-      this.add.text(cx, y + 30, `효과: ${item.value}`, {
-        fontSize: '14px', fontFamily: 'Arial',
+      this.add.text(cx, y + s(30), `효과: ${item.value}`, {
+        fontSize: sf(14), fontFamily: 'Arial',
         color: `#${  COLORS.success.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(82);
     }
 
     if (item.sellPrice) {
-      this.add.text(cx, y + 55, `판매가: 🪙 ${item.sellPrice}`, {
-        fontSize: '13px', fontFamily: 'Arial',
+      this.add.text(cx, y + s(55), `판매가: 🪙 ${item.sellPrice}`, {
+        fontSize: sf(13), fontFamily: 'Arial',
         color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(82);
     }
@@ -493,16 +493,16 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   showToast(message) {
-    const toast = this.add.text(GAME_WIDTH / 2, 1100, message, { // BottomNav(y=1160) 위에 표시
-      fontSize: '16px', fontFamily: 'Arial',
+    const toast = this.add.text(GAME_WIDTH / 2, s(1100), message, { // BottomNav(y=1160) 위에 표시
+      fontSize: sf(16), fontFamily: 'Arial',
       color: '#FFFFFF',
       backgroundColor: `#${  COLORS.bgPanel.toString(16).padStart(6, '0')}`,
-      padding: { x: 16, y: 10 }
+      padding: { x: s(16), y: s(10) }
     }).setOrigin(0.5).setDepth(100);
 
     this.tweens.add({
       targets: toast,
-      y: toast.y - 40,
+      y: toast.y - s(40),
       alpha: 0,
       duration: 1200,
       delay: 600,

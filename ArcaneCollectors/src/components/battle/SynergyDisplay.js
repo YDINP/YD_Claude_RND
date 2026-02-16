@@ -2,7 +2,7 @@
  * SynergyDisplay - 시너지 효과 표시 컴포넌트
  * 같은 교단/분위기 영웅 조합 시 버프 표시
  */
-import { COLORS, GAME_WIDTH } from '../../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, s, sf } from '../../config/gameConfig.js';
 
 /**
  * 시너지 타입 정의
@@ -33,7 +33,7 @@ export class SynergyDisplay {
    * @param {number} x X 좌표
    * @param {number} y Y 좌표
    */
-  constructor(scene, x = GAME_WIDTH - 100, y = 130) {
+  constructor(scene, x = GAME_WIDTH - s(100), y = s(130)) {
     this.scene = scene;
     this.x = x;
     this.y = y;
@@ -170,16 +170,16 @@ export class SynergyDisplay {
     this.container.setVisible(true);
 
     // 배경 높이 계산
-    const bgHeight = 30 + this.activeSynergies.length * 20 + 40;
+    const bgHeight = s(30) + this.activeSynergies.length * s(20) + s(40);
 
     // 배경
-    const bg = this.scene.add.rectangle(0, bgHeight / 2 - 20, 90, bgHeight, COLORS.backgroundLight, 0.9);
-    bg.setStrokeStyle(1, COLORS.accent);
+    const bg = this.scene.add.rectangle(0, bgHeight / 2 - s(20), s(90), bgHeight, COLORS.backgroundLight, 0.9);
+    bg.setStrokeStyle(s(1), COLORS.accent);
     this.container.add(bg);
 
     // 타이틀
-    const title = this.scene.add.text(0, -5, '시너지', {
-      fontSize: '11px',
+    const title = this.scene.add.text(0, s(-5), '시너지', {
+      fontSize: sf(11),
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -187,51 +187,51 @@ export class SynergyDisplay {
     this.container.add(title);
 
     // 활성 시너지 목록
-    let yOffset = 15;
+    let yOffset = s(15);
     this.activeSynergies.forEach(synergy => {
       // 시너지 이름과 카운트
       const tierStars = '★'.repeat(synergy.tier);
       const synergyText = this.scene.add.text(0, yOffset, `${synergy.name}(${synergy.count})${tierStars}`, {
-        fontSize: '9px',
+        fontSize: sf(9),
         fontFamily: 'Arial',
         color: `#${  synergy.color.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
       this.container.add(synergyText);
-      yOffset += 18;
+      yOffset += s(18);
     });
 
     // 구분선
-    yOffset += 5;
-    const line = this.scene.add.rectangle(0, yOffset, 70, 1, COLORS.textDark, 0.5);
+    yOffset += s(5);
+    const line = this.scene.add.rectangle(0, yOffset, s(70), s(1), COLORS.textDark, 0.5);
     this.container.add(line);
-    yOffset += 10;
+    yOffset += s(10);
 
     // 총 버프 표시
     if (this.buffs.atk > 0) {
       const atkText = this.scene.add.text(0, yOffset, `ATK +${Math.round(this.buffs.atk * 100)}%`, {
-        fontSize: '9px',
+        fontSize: sf(9),
         fontFamily: 'Arial',
         color: `#${  COLORS.danger.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
       this.container.add(atkText);
-      yOffset += 12;
+      yOffset += s(12);
     }
 
     if (this.buffs.def > 0) {
       const defText = this.scene.add.text(0, yOffset, `DEF +${Math.round(this.buffs.def * 100)}%`, {
-        fontSize: '9px',
+        fontSize: sf(9),
         fontFamily: 'Arial',
         color: `#${  COLORS.primary.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
       this.container.add(defText);
-      yOffset += 12;
+      yOffset += s(12);
     }
 
     if (this.buffs.spd > 0) {
       const spdText = this.scene.add.text(0, yOffset, `SPD +${Math.round(this.buffs.spd * 100)}%`, {
-        fontSize: '9px',
+        fontSize: sf(9),
         fontFamily: 'Arial',
         color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'

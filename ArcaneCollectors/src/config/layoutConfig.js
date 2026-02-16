@@ -1,24 +1,26 @@
 /**
  * ArcaneCollectors - Layout Configuration
  * 게임 UI 레이아웃 및 색상 설정
+ * 모든 픽셀값은 s() 헬퍼로 동적 스케일링
  */
+import { GAME_WIDTH, GAME_HEIGHT, s } from './gameConfig.js';
 
 // 기본 레이아웃 설정
 export const LAYOUT = {
-    WIDTH: 720,
-    HEIGHT: 1280
+    WIDTH: GAME_WIDTH,
+    HEIGHT: GAME_HEIGHT
 };
 
 // 상단 바 설정
 export const TOP_BAR = {
-    HEIGHT: 80,
-    PADDING: 16
+    HEIGHT: s(80),
+    PADDING: s(16)
 };
 
 // 하단 네비게이션 설정
 export const BOTTOM_NAV = {
-    HEIGHT: 120,
-    ICON_SIZE: 48,
+    HEIGHT: s(120),
+    ICON_SIZE: s(48),
     TABS: ['home', 'inventory', 'gacha', 'more']
 };
 
@@ -34,16 +36,16 @@ export const CONTENT = {
 // 파티 슬롯 설정
 export const PARTY = {
     SLOT_COUNT: 4,
-    SLOT_SIZE: 120,
-    SLOT_GAP: 20
+    SLOT_SIZE: s(120),
+    SLOT_GAP: s(20)
 };
 
 // 전투 UI 설정
 export const BATTLE = {
-    UNIT_SIZE: 100,
+    UNIT_SIZE: s(100),
     SKILL_CARD: {
-        WIDTH: 140,
-        HEIGHT: 180
+        WIDTH: s(140),
+        HEIGHT: s(180)
     }
 };
 
@@ -70,8 +72,8 @@ export const MOOD_COLORS = {
 
 // 에너지 UI 설정
 export const ENERGY_UI = {
-    BAR_WIDTH: 200,
-    BAR_HEIGHT: 24,
+    BAR_WIDTH: s(200),
+    BAR_HEIGHT: s(24),
 
     // 에너지 레벨별 색상
     COLORS: {
@@ -114,10 +116,10 @@ export const UI_STYLES = {
 
     // 폰트 크기
     FONT_SIZE: {
-        SMALL: 14,
-        MEDIUM: 18,
-        LARGE: 24,
-        TITLE: 32
+        SMALL: s(14),
+        MEDIUM: s(18),
+        LARGE: s(24),
+        TITLE: s(32)
     }
 };
 

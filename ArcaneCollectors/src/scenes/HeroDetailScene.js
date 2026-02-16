@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, EQUIPMENT_SLOTS } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, EQUIPMENT_SLOTS, s, sf } from '../config/gameConfig.js';
 import { getRarityKey } from '../utils/rarityUtils.js';
 import { EvolutionSystem } from '../systems/EvolutionSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
@@ -50,8 +50,8 @@ export class HeroDetailScene extends Phaser.Scene {
     }
     } catch (error) {
       console.error('[HeroDetailScene] create() 실패:', error);
-      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
-        fontSize: '20px', fill: '#ff4444', align: 'center'
+      this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: sf(20), fill: '#ff4444', align: 'center'
       }).setOrigin(0.5);
       this.time.delayedCall(2000, () => {
         this.scene.start('MainMenuScene');
@@ -89,14 +89,14 @@ export class HeroDetailScene extends Phaser.Scene {
 
   createHeader() {
     // Header background
-    this.add.rectangle(GAME_WIDTH / 2, 50, GAME_WIDTH, 100, COLORS.backgroundLight, 0.9);
+    this.add.rectangle(GAME_WIDTH / 2, s(50), GAME_WIDTH, s(100), COLORS.backgroundLight, 0.9);
 
     // Back button
-    const backBtn = this.add.container(40, 50);
-    const backBg = this.add.rectangle(0, 0, 60, 40, COLORS.backgroundLight, 0.8)
+    const backBtn = this.add.container(s(40), s(50));
+    const backBg = this.add.rectangle(0, 0, s(60), s(40), COLORS.backgroundLight, 0.8)
       .setInteractive({ useHandCursor: true });
     const backText = this.add.text(0, 0, '← 뒤로', {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -111,15 +111,15 @@ export class HeroDetailScene extends Phaser.Scene {
     // Hero name and rarity
     const heroRarityKey = getRarityKey(this.hero.rarity);
     const rarityColor = (RARITY[heroRarityKey] || RARITY.N).color;
-    this.add.text(GAME_WIDTH / 2, 40, this.hero.name, {
-      fontSize: '22px',
+    this.add.text(GAME_WIDTH / 2, s(40), this.hero.name, {
+      fontSize: sf(22),
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, 65, `${heroRarityKey} · Lv.${this.hero.level}`, {
-      fontSize: '14px',
+    this.add.text(GAME_WIDTH / 2, s(65), `${heroRarityKey} · Lv.${this.hero.level}`, {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  rarityColor.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -127,9 +127,9 @@ export class HeroDetailScene extends Phaser.Scene {
     // Mood indicator (분위기)
     const moodKey = this.hero.mood || 'balanced';
     const moodColor = COLORS.primary;
-    this.add.circle(GAME_WIDTH - 50, 50, 12, moodColor, 0.8);
-    this.add.text(GAME_WIDTH - 50, 50, moodKey.substring(0, 2), {
-      fontSize: '8px',
+    this.add.circle(GAME_WIDTH - s(50), s(50), s(12), moodColor, 0.8);
+    this.add.text(GAME_WIDTH - s(50), s(50), moodKey.substring(0, 2), {
+      fontSize: sf(8),
       fontFamily: 'Arial',
       color: '#ffffff'
     }).setOrigin(0.5);
@@ -137,12 +137,12 @@ export class HeroDetailScene extends Phaser.Scene {
 
   createHeroDisplay() {
     // Character illustration area
-    const displayY = 230;
+    const displayY = s(230);
 
     // Frame
-    const frame = this.add.rectangle(GAME_WIDTH / 2, displayY, 180, 200, COLORS.backgroundLight, 0.3);
+    const frame = this.add.rectangle(GAME_WIDTH / 2, displayY, s(180), s(200), COLORS.backgroundLight, 0.3);
     const frameRarityColor = (RARITY[getRarityKey(this.hero.rarity)] || RARITY.N).color;
-    frame.setStrokeStyle(3, frameRarityColor, 0.8);
+    frame.setStrokeStyle(s(3), frameRarityColor, 0.8);
 
     // Hero image
     const heroImg = this.add.image(GAME_WIDTH / 2, displayY, 'hero_placeholder');
@@ -151,7 +151,7 @@ export class HeroDetailScene extends Phaser.Scene {
     // Idle animation
     this.tweens.add({
       targets: heroImg,
-      y: displayY - 5,
+      y: displayY - s(5),
       duration: 1500,
       yoyo: true,
       repeat: -1,
@@ -159,15 +159,15 @@ export class HeroDetailScene extends Phaser.Scene {
     });
 
     // Stars
-    this.add.text(GAME_WIDTH / 2, displayY + 115, '★'.repeat(this.hero.stars || this.hero.rarity || 1), {
-      fontSize: '20px',
+    this.add.text(GAME_WIDTH / 2, displayY + s(115), '★'.repeat(this.hero.stars || this.hero.rarity || 1), {
+      fontSize: sf(20),
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Rarity glow for SSR+ (rarity 4+ or key 'SSR'/'UR')
     const heroRarityKey = getRarityKey(this.hero.rarity);
     if (this.hero.rarity >= 4 || heroRarityKey === 'SSR' || heroRarityKey === 'UR') {
-      const glow = this.add.circle(GAME_WIDTH / 2, displayY, 90, frameRarityColor, 0.2);
+      const glow = this.add.circle(GAME_WIDTH / 2, displayY, s(90), frameRarityColor, 0.2);
       this.tweens.add({
         targets: glow,
         scale: { from: 0.9, to: 1.1 },
@@ -180,18 +180,18 @@ export class HeroDetailScene extends Phaser.Scene {
   }
 
   createStatsPanel() {
-    const panelY = 420;
+    const panelY = s(420);
 
     // UIX-2.3.1: Increased panel height for radar chart
-    const panelHeight = 220;
+    const panelHeight = s(220);
 
     // Panel background
-    const panel = this.add.rectangle(GAME_WIDTH / 2, panelY + 50, GAME_WIDTH - 40, panelHeight, COLORS.backgroundLight, 0.8);
+    const panel = this.add.rectangle(GAME_WIDTH / 2, panelY + s(50), GAME_WIDTH - s(40), panelHeight, COLORS.backgroundLight, 0.8);
     panel.setStrokeStyle(1, COLORS.primary, 0.5);
 
     // Panel title
-    this.add.text(40, panelY - 50, '능력치', {
-      fontSize: '16px',
+    this.add.text(s(40), panelY - s(50), '능력치', {
+      fontSize: sf(16),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -206,38 +206,38 @@ export class HeroDetailScene extends Phaser.Scene {
       { key: 'SPD', value: stats.spd, color: COLORS.accent, maxVal: 150 }
     ];
 
-    const startY = panelY - 30;
+    const startY = panelY - s(30);
 
     statData.forEach((stat, index) => {
-      const y = startY + index * 28;
+      const y = startY + index * s(28);
 
       // Stat name
-      this.add.text(40, y, stat.key, {
-        fontSize: '13px',
+      this.add.text(s(40), y, stat.key, {
+        fontSize: sf(13),
         fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0, 0.5);
 
       // Stat value
-      this.add.text(90, y, stat.value.toString(), {
-        fontSize: '13px',
+      this.add.text(s(90), y, stat.value.toString(), {
+        fontSize: sf(13),
         fontFamily: 'Arial',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0, 0.5);
 
       // Stat bar background
-      this.add.rectangle(280, y, 150, 12, COLORS.backgroundLight, 1).setOrigin(0, 0.5);
+      this.add.rectangle(s(280), y, s(150), s(12), COLORS.backgroundLight, 1).setOrigin(0, 0.5);
 
       // Stat bar fill
-      const fillWidth = Math.min(150, (stat.value / stat.maxVal) * 150);
-      this.add.rectangle(280, y, fillWidth, 10, stat.color, 1).setOrigin(0, 0.5);
+      const fillWidth = Math.min(s(150), (stat.value / stat.maxVal) * s(150));
+      this.add.rectangle(s(280), y, fillWidth, s(10), stat.color, 1).setOrigin(0, 0.5);
     });
 
     // Total power
     const totalPower = stats.hp + stats.atk * 5 + stats.def * 3 + stats.spd * 2;
-    this.add.text(GAME_WIDTH - 40, panelY + 45, `전투력: ${totalPower.toLocaleString()}`, {
-      fontSize: '14px',
+    this.add.text(GAME_WIDTH - s(40), panelY + s(45), `전투력: ${totalPower.toLocaleString()}`, {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -249,8 +249,8 @@ export class HeroDetailScene extends Phaser.Scene {
     // Calculate average stats for same rarity (mock data)
     const averageStats = this.calculateAverageStats(heroRarityKey);
 
-    this.radarChart = new RadarChart(this, GAME_WIDTH / 2, panelY + 120, stats, {
-      radius: 70,
+    this.radarChart = new RadarChart(this, GAME_WIDTH / 2, panelY + s(120), stats, {
+      radius: s(70),
       rarity: heroRarityKey,
       maxStats: { hp: 2000, atk: 500, def: 400, spd: 150 },
       showAverage: true,

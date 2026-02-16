@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS, s, sf } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { sweepSystem } from '../systems/SweepSystem.js';
 import transitionManager from '../utils/TransitionManager.js';
@@ -42,8 +42,8 @@ export class BattleResultScene extends Phaser.Scene {
       this.createActionButtons();
     } catch (error) {
       console.error('[BattleResultScene] create() 실패:', error);
-      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
-        fontSize: '20px', fill: '#ff4444', align: 'center'
+      this.add.text(s(360), s(640), '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: sf(20), fill: '#ff4444', align: 'center'
       }).setOrigin(0.5);
       this.time.delayedCall(2000, () => {
         this.scene.start('MainMenuScene');
@@ -91,13 +91,13 @@ export class BattleResultScene extends Phaser.Scene {
     const centerX = GAME_WIDTH / 2;
 
     // === 승리 타이틀 ===
-    const title = this.add.text(centerX, 100, 'VICTORY', {
-      fontSize: '48px',
+    const title = this.add.text(centerX, s(100), 'VICTORY', {
+      fontSize: sf(48),
       fontFamily: 'Georgia, serif',
       color: '#FFD700',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 4
+      strokeThickness: s(4)
     }).setOrigin(0.5);
 
     // 타이틀 글로우 애니메이션
@@ -113,32 +113,32 @@ export class BattleResultScene extends Phaser.Scene {
     });
 
     // === 별점 표시 ===
-    this.createStarDisplay(centerX, 180);
+    this.createStarDisplay(centerX, s(180));
 
     // === 스테이지 정보 ===
     if (this.stage) {
-      this.add.text(centerX, 240, this.stage.name || `Stage ${this.stage.id}`, {
-        fontSize: '18px',
+      this.add.text(centerX, s(240), this.stage.name || `Stage ${this.stage.id}`, {
+        fontSize: sf(18),
         fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
     }
 
     // === 보상 패널 ===
-    this.createRewardsPanel(centerX, 380);
+    this.createRewardsPanel(centerX, s(380));
 
     // === 레벨업 표시 ===
     if (this.levelUpResults.length > 0) {
-      this.createLevelUpDisplay(centerX, 580);
+      this.createLevelUpDisplay(centerX, s(580));
     }
 
     // === 전투 통계 ===
-    this.createBattleStats(centerX, 700);
+    this.createBattleStats(centerX, s(700));
   }
 
   createStarDisplay(x, y) {
-    const starSize = 50;
-    const spacing = 60;
+    const starSize = s(50);
+    const spacing = s(60);
     const startX = x - spacing;
 
     for (let i = 0; i < 3; i++) {
@@ -146,7 +146,7 @@ export class BattleResultScene extends Phaser.Scene {
       const filled = i < this.stars;
 
       const star = this.add.text(starX, y, filled ? '★' : '☆', {
-        fontSize: `${starSize}px`,
+        fontSize: `${starSize}px`,  // starSize already scaled
         color: filled ? '#FFD700' : '#555555'
       }).setOrigin(0.5).setAlpha(0).setScale(0);
 
@@ -178,35 +178,35 @@ export class BattleResultScene extends Phaser.Scene {
 
   createRewardsPanel(x, y) {
     // 패널 배경
-    const panelWidth = 360;
-    const panelHeight = 160;
+    const panelWidth = s(360);
+    const panelHeight = s(160);
 
     const panel = this.add.rectangle(x, y, panelWidth, panelHeight, COLORS.bgLight, 0.85);
-    panel.setStrokeStyle(2, COLORS.primary, 0.6);
+    panel.setStrokeStyle(s(2), COLORS.primary, 0.6);
 
     // 보상 타이틀
-    this.add.text(x, y - 60, '보상', {
-      fontSize: '20px',
+    this.add.text(x, y - s(60), '보상', {
+      fontSize: sf(20),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // 골드
-    const goldY = y - 20;
-    this.add.text(x - 60, goldY, '🪙', { fontSize: '24px' }).setOrigin(0.5);
-    const goldText = this.add.text(x + 10, goldY, `+${this.rewards.gold.toLocaleString()}`, {
-      fontSize: '22px',
+    const goldY = y - s(20);
+    this.add.text(x - s(60), goldY, '🪙', { fontSize: sf(24) }).setOrigin(0.5);
+    const goldText = this.add.text(x + s(10), goldY, `+${this.rewards.gold.toLocaleString()}`, {
+      fontSize: sf(22),
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0, 0.5);
 
     // 경험치
-    const expY = y + 20;
-    this.add.text(x - 60, expY, '⭐', { fontSize: '24px' }).setOrigin(0.5);
-    this.add.text(x + 10, expY, `+${this.rewards.exp.toLocaleString()} EXP`, {
-      fontSize: '20px',
+    const expY = y + s(20);
+    this.add.text(x - s(60), expY, '⭐', { fontSize: sf(24) }).setOrigin(0.5);
+    this.add.text(x + s(10), expY, `+${this.rewards.exp.toLocaleString()} EXP`, {
+      fontSize: sf(20),
       fontFamily: 'Arial',
       color: `#${  COLORS.primary.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -214,11 +214,11 @@ export class BattleResultScene extends Phaser.Scene {
 
     // 아이템 드롭 (있으면)
     if (this.rewards.items && this.rewards.items.length > 0) {
-      const itemY = y + 55;
-      this.add.text(x - 60, itemY, '📦', { fontSize: '20px' }).setOrigin(0.5);
+      const itemY = y + s(55);
+      this.add.text(x - s(60), itemY, '📦', { fontSize: sf(20) }).setOrigin(0.5);
       const itemNames = this.rewards.items.map(i => i.name || i.itemId).join(', ');
-      this.add.text(x + 10, itemY, itemNames, {
-        fontSize: '14px',
+      this.add.text(x + s(10), itemY, itemNames, {
+        fontSize: sf(14),
         fontFamily: 'Arial',
         color: `#${  COLORS.success.toString(16).padStart(6, '0')}`
       }).setOrigin(0, 0.5);
@@ -236,20 +236,20 @@ export class BattleResultScene extends Phaser.Scene {
 
   createLevelUpDisplay(x, y) {
     // 레벨업 배너
-    const banner = this.add.rectangle(x, y, 340, 30 + this.levelUpResults.length * 30, COLORS.success, 0.15);
-    banner.setStrokeStyle(1, COLORS.success, 0.5);
+    const banner = this.add.rectangle(x, y, s(340), s(30) + this.levelUpResults.length * s(30), COLORS.success, 0.15);
+    banner.setStrokeStyle(s(1), COLORS.success, 0.5);
 
-    this.add.text(x, y - (this.levelUpResults.length * 15), '🎉 레벨 업!', {
-      fontSize: '18px',
+    this.add.text(x, y - (this.levelUpResults.length * s(15)), '🎉 레벨 업!', {
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     this.levelUpResults.forEach((result, i) => {
-      const lineY = y - (this.levelUpResults.length * 15) + 30 + i * 28;
+      const lineY = y - (this.levelUpResults.length * s(15)) + s(30) + i * s(28);
       this.add.text(x, lineY, `${result.name}  Lv.${result.newLevel - result.gained} → Lv.${result.newLevel}`, {
-        fontSize: '15px',
+        fontSize: sf(15),
         fontFamily: 'Arial',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
@@ -263,14 +263,14 @@ export class BattleResultScene extends Phaser.Scene {
     ];
 
     stats.forEach((stat, i) => {
-      const statX = x - 80 + i * 160;
+      const statX = x - s(80) + i * s(160);
       this.add.text(statX, y, stat.label, {
-        fontSize: '13px',
+        fontSize: sf(13),
         fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
-      this.add.text(statX, y + 24, stat.value, {
-        fontSize: '18px',
+      this.add.text(statX, y + s(24), stat.value, {
+        fontSize: sf(18),
         fontFamily: 'Arial',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
@@ -282,19 +282,19 @@ export class BattleResultScene extends Phaser.Scene {
     const centerX = GAME_WIDTH / 2;
 
     // 패배 타이틀
-    this.add.text(centerX, 200, 'DEFEAT', {
-      fontSize: '44px',
+    this.add.text(centerX, s(200), 'DEFEAT', {
+      fontSize: sf(44),
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.danger.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3
+      strokeThickness: s(3)
     }).setOrigin(0.5);
 
     // 빈 별
     const starStr = '☆☆☆';
-    this.add.text(centerX, 280, starStr, {
-      fontSize: '40px',
+    this.add.text(centerX, s(280), starStr, {
+      fontSize: sf(40),
       color: '#555555'
     }).setOrigin(0.5);
 
@@ -305,18 +305,18 @@ export class BattleResultScene extends Phaser.Scene {
       '분위기 상성을 확인해보세요!',
       '영웅을 레벨업하면 쉬워질 거예요!'
     ];
-    this.add.text(centerX, 380, Phaser.Math.RND.pick(messages), {
-      fontSize: '16px',
+    this.add.text(centerX, s(380), Phaser.Math.RND.pick(messages), {
+      fontSize: sf(16),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`,
-      wordWrap: { width: 300 },
+      wordWrap: { width: s(300) },
       align: 'center'
     }).setOrigin(0.5);
 
     // 전투 통계 (패배 시에도)
     if (this.stage) {
-      this.add.text(centerX, 460, this.stage.name || `Stage ${this.stage.id}`, {
-        fontSize: '16px',
+      this.add.text(centerX, s(460), this.stage.name || `Stage ${this.stage.id}`, {
+        fontSize: sf(16),
         fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
@@ -325,10 +325,10 @@ export class BattleResultScene extends Phaser.Scene {
 
   createActionButtons() {
     const centerX = GAME_WIDTH / 2;
-    const btnY = this.victory ? 820 : 580;
-    const btnWidth = 200;
-    const btnHeight = 55;
-    const btnSpacing = 70;
+    const btnY = this.victory ? s(820) : s(580);
+    const btnWidth = s(200);
+    const btnHeight = s(55);
+    const btnSpacing = s(70);
 
     const buttons = [];
 
@@ -383,10 +383,10 @@ export class BattleResultScene extends Phaser.Scene {
 
       const bg = this.add.rectangle(centerX, y, btnWidth, btnHeight, btn.color, 1)
         .setInteractive({ useHandCursor: true });
-      bg.setStrokeStyle(2, 0xFFFFFF, 0.2);
+      bg.setStrokeStyle(s(2), 0xFFFFFF, 0.2);
 
       const text = this.add.text(centerX, y, btn.label, {
-        fontSize: '18px',
+        fontSize: sf(18),
         fontFamily: 'Arial',
         color: '#FFFFFF',
         fontStyle: 'bold'
@@ -420,13 +420,13 @@ export class BattleResultScene extends Phaser.Scene {
     const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7)
       .setDepth(50).setInteractive();
 
-    const panelW = 340;
-    const panelH = 320;
+    const panelW = s(340);
+    const panelH = s(320);
     const panel = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, panelW, panelH, COLORS.bgLight, 0.98)
-      .setDepth(51).setStrokeStyle(2, COLORS.primary);
+      .setDepth(51).setStrokeStyle(s(2), COLORS.primary);
 
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 120, '⚡ 소탕', {
-      fontSize: '24px', fontFamily: 'Arial',
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(120), '⚡ 소탕', {
+      fontSize: sf(24), fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(52);
@@ -436,8 +436,8 @@ export class BattleResultScene extends Phaser.Scene {
 
     // 남은 횟수 표시
     const remaining = sweepSystem.getDailyRemaining();
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 75, `남은 소탕: ${remaining}회`, {
-      fontSize: '16px', fontFamily: 'Arial',
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(75), `남은 소탕: ${remaining}회`, {
+      fontSize: sf(16), fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(52);
 
@@ -445,19 +445,19 @@ export class BattleResultScene extends Phaser.Scene {
     let sweepCount = 1;
     const maxSweep = Math.min(remaining, 10);
 
-    const countText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 30, `${sweepCount}회`, {
-      fontSize: '28px', fontFamily: 'Arial',
+    const countText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(30), `${sweepCount}회`, {
+      fontSize: sf(28), fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(52);
 
     // -/+ 버튼
-    const minusBtn = this.add.text(GAME_WIDTH / 2 - 80, GAME_HEIGHT / 2 - 30, '◀', {
-      fontSize: '28px', color: '#FFFFFF'
+    const minusBtn = this.add.text(GAME_WIDTH / 2 - s(80), GAME_HEIGHT / 2 - s(30), '◀', {
+      fontSize: sf(28), color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(52).setInteractive({ useHandCursor: true });
 
-    const plusBtn = this.add.text(GAME_WIDTH / 2 + 80, GAME_HEIGHT / 2 - 30, '▶', {
-      fontSize: '28px', color: '#FFFFFF'
+    const plusBtn = this.add.text(GAME_WIDTH / 2 + s(80), GAME_HEIGHT / 2 - s(30), '▶', {
+      fontSize: sf(28), color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(52).setInteractive({ useHandCursor: true });
 
     minusBtn.on('pointerdown', () => {
@@ -468,8 +468,8 @@ export class BattleResultScene extends Phaser.Scene {
     });
 
     // 예상 보상 미리보기
-    const previewText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, '', {
-      fontSize: '14px', fontFamily: 'Arial',
+    const previewText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + s(30), '', {
+      fontSize: sf(14), fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`,
       align: 'center'
     }).setOrigin(0.5).setDepth(52);
@@ -483,12 +483,12 @@ export class BattleResultScene extends Phaser.Scene {
     updatePreview();
 
     // 소탕 실행 버튼
-    const execBtn = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 90, 180, 50,
+    const execBtn = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + s(90), s(180), s(50),
       canSweep.canSweep !== false ? COLORS.success : COLORS.bgPanel)
       .setDepth(52).setInteractive({ useHandCursor: true });
 
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 90, '소탕 실행', {
-      fontSize: '18px', fontFamily: 'Arial',
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + s(90), '소탕 실행', {
+      fontSize: sf(18), fontFamily: 'Arial',
       color: '#FFFFFF', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(52);
 
@@ -508,8 +508,8 @@ export class BattleResultScene extends Phaser.Scene {
     });
 
     // 닫기 버튼
-    const closeBtn = this.add.text(GAME_WIDTH / 2 + panelW / 2 - 20, GAME_HEIGHT / 2 - panelH / 2 + 20, '✕', {
-      fontSize: '24px', color: '#FFFFFF'
+    const closeBtn = this.add.text(GAME_WIDTH / 2 + panelW / 2 - s(20), GAME_HEIGHT / 2 - panelH / 2 + s(20), '✕', {
+      fontSize: sf(24), color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(52).setInteractive({ useHandCursor: true });
 
     closeBtn.on('pointerdown', () => this.closeSweepModal(overlay, panel));
@@ -564,16 +564,16 @@ export class BattleResultScene extends Phaser.Scene {
 
   showToast(message) {
     const toast = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, message, {
-      fontSize: '18px',
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       backgroundColor: `#${  COLORS.bgLight.toString(16).padStart(6, '0')}`,
-      padding: { x: 20, y: 12 }
+      padding: { x: s(20), y: s(12) }
     }).setOrigin(0.5).setDepth(100);
 
     this.tweens.add({
       targets: toast,
-      y: toast.y - 50,
+      y: toast.y - s(50),
       alpha: 0,
       duration: 1500,
       delay: 500,

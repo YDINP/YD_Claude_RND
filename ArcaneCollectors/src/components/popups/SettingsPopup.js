@@ -3,7 +3,7 @@
  * SettingsScene 로직을 팝업 형태로 변환 (퀵 네비게이션 제거)
  */
 import { PopupBase } from '../PopupBase.js';
-import { COLORS } from '../../config/gameConfig.js';
+import { COLORS, s, sf, GAME_WIDTH, GAME_HEIGHT } from '../../config/gameConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import { CouponSystem } from '../../systems/CouponSystem.js';
 
@@ -11,8 +11,8 @@ export class SettingsPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
       title: '설정',
-      width: 680,
-      height: 900,
+      width: s(680),
+      height: s(900),
       ...options
     });
 
@@ -29,8 +29,8 @@ export class SettingsPopup extends PopupBase {
     const { left, top, width } = this.contentBounds;
     const sectionY = top;
 
-    this.addText(left + 10, sectionY, '설정', {
-      fontSize: '20px',
+    this.addText(left + s(10), sectionY, '설정', {
+      fontSize: sf(20),
       fontStyle: 'bold',
       color: '#F8FAFC'
     });
@@ -46,7 +46,7 @@ export class SettingsPopup extends PopupBase {
     const settingsData = data.settings || {};
 
     settings.forEach((setting, i) => {
-      const y = sectionY + 45 + i * 55;
+      const y = sectionY + s(45) + i * s(55);
       this.createSettingRow(setting, y, settingsData);
     });
   }
@@ -56,29 +56,29 @@ export class SettingsPopup extends PopupBase {
 
     const rowBg = this.scene.add.graphics();
     rowBg.fillStyle(0x1E293B, 0.8);
-    rowBg.fillRoundedRect(left, y, width, 45, 10);
+    rowBg.fillRoundedRect(left, y, width, s(45), s(10));
     this.contentContainer.add(rowBg);
 
-    this.addText(left + 20, y + 12, setting.label, {
-      fontSize: '16px',
+    this.addText(left + s(20), y + s(12), setting.label, {
+      fontSize: sf(16),
       color: '#F8FAFC'
     });
 
     const isOn = settingsData[setting.key] !== false;
 
     // Toggle
-    const toggleX = left + width - 50;
+    const toggleX = left + width - s(50);
     const toggleBg = this.scene.add.graphics();
     const toggleColor = isOn ? COLORS.success : 0x475569;
     toggleBg.fillStyle(toggleColor, 1);
-    toggleBg.fillRoundedRect(toggleX, y + 10, 44, 24, 12);
+    toggleBg.fillRoundedRect(toggleX, y + s(10), s(44), s(24), s(12));
     this.contentContainer.add(toggleBg);
 
-    const knobX = isOn ? toggleX + 28 : toggleX + 16;
-    const knob = this.scene.add.circle(knobX, y + 22, 9, 0xffffff);
+    const knobX = isOn ? toggleX + s(28) : toggleX + s(16);
+    const knob = this.scene.add.circle(knobX, y + s(22), s(9), 0xffffff);
     this.contentContainer.add(knob);
 
-    const hitArea = this.scene.add.rectangle(toggleX + 22, y + 22, 50, 30)
+    const hitArea = this.scene.add.rectangle(toggleX + s(22), y + s(22), s(50), s(30))
       .setAlpha(0.001).setInteractive({ useHandCursor: true });
     this.contentContainer.add(hitArea);
 
@@ -97,10 +97,10 @@ export class SettingsPopup extends PopupBase {
    */
   createAccountManagement() {
     const { left, top, width } = this.contentBounds;
-    const y = top + 280;
+    const y = top + s(280);
 
-    this.addText(left + 10, y, '계정 관리', {
-      fontSize: '20px',
+    this.addText(left + s(10), y, '계정 관리', {
+      fontSize: sf(20),
       fontStyle: 'bold',
       color: '#F8FAFC'
     });
@@ -111,34 +111,34 @@ export class SettingsPopup extends PopupBase {
 
     const accountInfoBg = this.scene.add.graphics();
     accountInfoBg.fillStyle(0x1E293B, 0.8);
-    accountInfoBg.fillRoundedRect(left, y + 35, width, 50, 10);
+    accountInfoBg.fillRoundedRect(left, y + s(35), width, s(50), s(10));
     this.contentContainer.add(accountInfoBg);
 
-    this.addText(left + 20, y + 47, '현재 계정:', {
-      fontSize: '14px',
+    this.addText(left + s(20), y + s(47), '현재 계정:', {
+      fontSize: sf(14),
       color: '#94A3B8'
     });
 
-    this.addText(left + 20, y + 67, currentAccountText, {
-      fontSize: '15px',
+    this.addText(left + s(20), y + s(67), currentAccountText, {
+      fontSize: sf(15),
       color: '#F8FAFC',
       fontStyle: 'bold'
     });
 
     // 계정 변경 버튼
-    const changeBtnY = y + 100;
+    const changeBtnY = y + s(100);
     const changeBtn = this.scene.add.graphics();
     changeBtn.fillStyle(0xEF4444, 1);
-    changeBtn.fillRoundedRect(left + 10, changeBtnY, 200, 40, 10);
+    changeBtn.fillRoundedRect(left + s(10), changeBtnY, s(200), s(40), s(10));
     this.contentContainer.add(changeBtn);
 
-    this.addText(left + 110, changeBtnY + 20, '🔄 계정 변경', {
-      fontSize: '14px',
+    this.addText(left + s(110), changeBtnY + s(20), '🔄 계정 변경', {
+      fontSize: sf(14),
       fontStyle: 'bold',
       color: '#FFFFFF'
     }).setOrigin(0.5);
 
-    const changeHit = this.scene.add.rectangle(left + 110, changeBtnY + 20, 200, 40)
+    const changeHit = this.scene.add.rectangle(left + s(110), changeBtnY + s(20), s(200), s(40))
       .setAlpha(0.001).setInteractive({ useHandCursor: true });
     this.contentContainer.add(changeHit);
 
@@ -183,31 +183,31 @@ export class SettingsPopup extends PopupBase {
   showAccountChangeConfirm() {
     const elements = [];
     const { centerX } = this.contentBounds;
-    const dialogY = 500;
+    const dialogY = s(500);
 
     const overlay = this.scene.add.rectangle(centerX, dialogY,
-      this.contentBounds.width + 30, 200, 0x000000, 0.7).setDepth(3000).setInteractive();
+      this.contentBounds.width + s(30), s(200), 0x000000, 0.7).setDepth(3000).setInteractive();
     elements.push(overlay);
 
     const dialog = this.scene.add.graphics().setDepth(3001);
     dialog.fillStyle(0x1E293B, 1);
-    dialog.fillRoundedRect(centerX - 180, dialogY - 100, 360, 200, 16);
-    dialog.lineStyle(2, 0xEF4444, 0.5);
-    dialog.strokeRoundedRect(centerX - 180, dialogY - 100, 360, 200, 16);
+    dialog.fillRoundedRect(centerX - s(180), dialogY - s(100), s(360), s(200), s(16));
+    dialog.lineStyle(s(2), 0xEF4444, 0.5);
+    dialog.strokeRoundedRect(centerX - s(180), dialogY - s(100), s(360), s(200), s(16));
     elements.push(dialog);
 
-    const msg = this.scene.add.text(centerX, dialogY - 50,
+    const msg = this.scene.add.text(centerX, dialogY - s(50),
       '계정을 변경하시겠습니까?\n\n로그인 화면으로 이동하며,\n현재 데이터는 저장됩니다.', {
-        fontFamily: '"Noto Sans KR", sans-serif', fontSize: '15px',
+        fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(15),
         color: '#F8FAFC', align: 'center'
       }).setOrigin(0.5).setDepth(3002);
     elements.push(msg);
 
-    const confirmBg = this.scene.add.rectangle(centerX - 85, dialogY + 55, 140, 40, 0xEF4444)
+    const confirmBg = this.scene.add.rectangle(centerX - s(85), dialogY + s(55), s(140), s(40), 0xEF4444)
       .setDepth(3002).setInteractive({ useHandCursor: true });
     elements.push(confirmBg);
-    const confirmLabel = this.scene.add.text(centerX - 85, dialogY + 55, '변경', {
-      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '16px',
+    const confirmLabel = this.scene.add.text(centerX - s(85), dialogY + s(55), '변경', {
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16),
       fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(3003);
     elements.push(confirmLabel);
@@ -226,11 +226,11 @@ export class SettingsPopup extends PopupBase {
       this.scene.scene.start('LoginScene');
     });
 
-    const cancelBg = this.scene.add.rectangle(centerX + 85, dialogY + 55, 140, 40, 0x475569)
+    const cancelBg = this.scene.add.rectangle(centerX + s(85), dialogY + s(55), s(140), s(40), 0x475569)
       .setDepth(3002).setInteractive({ useHandCursor: true });
     elements.push(cancelBg);
-    const cancelLabel = this.scene.add.text(centerX + 85, dialogY + 55, '취소', {
-      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '16px', color: '#94A3B8'
+    const cancelLabel = this.scene.add.text(centerX + s(85), dialogY + s(55), '취소', {
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16), color: '#94A3B8'
     }).setOrigin(0.5).setDepth(3003);
     elements.push(cancelLabel);
 
@@ -241,10 +241,10 @@ export class SettingsPopup extends PopupBase {
 
   createAccountInfo() {
     const { left, top, width } = this.contentBounds;
-    const y = top + 460; // AUTH-1.2: Y 위치 조정 (계정 관리 섹션 아래로)
+    const y = top + s(460); // AUTH-1.2: Y 위치 조정 (계정 관리 섹션 아래로)
 
-    this.addText(left + 10, y, '계정 정보', {
-      fontSize: '20px',
+    this.addText(left + s(10), y, '계정 정보', {
+      fontSize: sf(20),
       fontStyle: 'bold',
       color: '#F8FAFC'
     });
@@ -261,26 +261,26 @@ export class SettingsPopup extends PopupBase {
     ];
 
     infoItems.forEach((text, i) => {
-      this.addText(left + 20, y + 35 + i * 28, text, {
-        fontSize: '15px',
+      this.addText(left + s(20), y + s(35) + i * s(28), text, {
+        fontSize: sf(15),
         color: '#94A3B8'
       });
     });
 
     // Coupon button
-    const couponY = y + 35 + infoItems.length * 28 + 15;
+    const couponY = y + s(35) + infoItems.length * s(28) + s(15);
     const couponBtn = this.scene.add.graphics();
     couponBtn.fillStyle(COLORS.primary, 1);
-    couponBtn.fillRoundedRect(left + 10, couponY, 180, 40, 10);
+    couponBtn.fillRoundedRect(left + s(10), couponY, s(180), s(40), s(10));
     this.contentContainer.add(couponBtn);
 
-    this.addText(left + 100, couponY + 20, '🎫 쿠폰 입력', {
-      fontSize: '14px',
+    this.addText(left + s(100), couponY + s(20), '🎫 쿠폰 입력', {
+      fontSize: sf(14),
       fontStyle: 'bold',
       color: '#FFFFFF'
     }).setOrigin(0.5);
 
-    const couponHit = this.scene.add.rectangle(left + 100, couponY + 20, 180, 40)
+    const couponHit = this.scene.add.rectangle(left + s(100), couponY + s(20), s(180), s(40))
       .setAlpha(0.001).setInteractive({ useHandCursor: true });
     this.contentContainer.add(couponHit);
 
@@ -289,18 +289,18 @@ export class SettingsPopup extends PopupBase {
     });
 
     // Data reset button
-    const resetY = couponY + 50;
+    const resetY = couponY + s(50);
     const resetBtn = this.scene.add.graphics();
     resetBtn.fillStyle(0x334155, 1);
-    resetBtn.fillRoundedRect(left + 10, resetY, 180, 40, 10);
+    resetBtn.fillRoundedRect(left + s(10), resetY, s(180), s(40), s(10));
     this.contentContainer.add(resetBtn);
 
-    this.addText(left + 100, resetY + 20, '🗑️ 데이터 초기화', {
-      fontSize: '14px',
+    this.addText(left + s(100), resetY + s(20), '🗑️ 데이터 초기화', {
+      fontSize: sf(14),
       color: '#EF4444'
     }).setOrigin(0.5);
 
-    const resetHit = this.scene.add.rectangle(left + 100, resetY + 20, 180, 40)
+    const resetHit = this.scene.add.rectangle(left + s(100), resetY + s(20), s(180), s(40))
       .setAlpha(0.001).setInteractive({ useHandCursor: true });
     this.contentContainer.add(resetHit);
 
@@ -312,21 +312,21 @@ export class SettingsPopup extends PopupBase {
   showCouponModal() {
     const elements = [];
     const { centerX } = this.contentBounds;
-    const modalY = 500;
+    const modalY = s(500);
 
     const overlay = this.scene.add.rectangle(centerX, modalY,
-      this.contentBounds.width + 30, 200, 0x000000, 0.7).setDepth(3000).setInteractive();
+      this.contentBounds.width + s(30), s(200), 0x000000, 0.7).setDepth(3000).setInteractive();
     elements.push(overlay);
 
     const modal = this.scene.add.graphics().setDepth(3001);
     modal.fillStyle(0x1E293B, 1);
-    modal.fillRoundedRect(centerX - 160, modalY - 100, 320, 200, 16);
-    modal.lineStyle(2, COLORS.primary, 0.5);
-    modal.strokeRoundedRect(centerX - 160, modalY - 100, 320, 200, 16);
+    modal.fillRoundedRect(centerX - s(160), modalY - s(100), s(320), s(200), s(16));
+    modal.lineStyle(s(2), COLORS.primary, 0.5);
+    modal.strokeRoundedRect(centerX - s(160), modalY - s(100), s(320), s(200), s(16));
     elements.push(modal);
 
-    const title = this.scene.add.text(centerX, modalY - 75, '쿠폰 입력', {
-      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '20px',
+    const title = this.scene.add.text(centerX, modalY - s(75), '쿠폰 입력', {
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(20),
       fontStyle: 'bold', color: '#F8FAFC'
     }).setOrigin(0.5).setDepth(3002);
     elements.push(title);
@@ -343,11 +343,11 @@ export class SettingsPopup extends PopupBase {
     inputEl.maxLength = 20;
     inputEl.style.cssText = `
       position: fixed;
-      left: ${canvasRect.left + (centerX - 130) * scaleX}px;
-      top: ${canvasRect.top + (modalY - 35) * scaleY}px;
-      width: ${260 * scaleX}px;
-      height: ${40 * scaleY}px;
-      font-size: ${14 * Math.min(scaleX, scaleY)}px;
+      left: ${canvasRect.left + (centerX - s(130)) * scaleX}px;
+      top: ${canvasRect.top + (modalY - s(35)) * scaleY}px;
+      width: ${s(260) * scaleX}px;
+      height: ${s(40) * scaleY}px;
+      font-size: ${s(14) * Math.min(scaleX, scaleY)}px;
       font-family: "Noto Sans KR", sans-serif;
       text-align: center;
       background: #0F172A;
@@ -365,16 +365,16 @@ export class SettingsPopup extends PopupBase {
 
     const submitBtn = this.scene.add.graphics().setDepth(3002);
     submitBtn.fillStyle(COLORS.primary, 1);
-    submitBtn.fillRoundedRect(centerX - 60, modalY + 20, 120, 40, 10);
+    submitBtn.fillRoundedRect(centerX - s(60), modalY + s(20), s(120), s(40), s(10));
     elements.push(submitBtn);
 
-    const submitLabel = this.scene.add.text(centerX, modalY + 40, '적용', {
-      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '16px',
+    const submitLabel = this.scene.add.text(centerX, modalY + s(40), '적용', {
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16),
       fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(3003);
     elements.push(submitLabel);
 
-    const submitHit = this.scene.add.rectangle(centerX, modalY + 40, 120, 40)
+    const submitHit = this.scene.add.rectangle(centerX, modalY + s(40), s(120), s(40))
       .setAlpha(0.001).setDepth(3004).setInteractive({ useHandCursor: true });
     elements.push(submitHit);
 
@@ -406,8 +406,8 @@ export class SettingsPopup extends PopupBase {
     });
 
     // Close
-    const closeLabel = this.scene.add.text(centerX, modalY + 75, '닫기', {
-      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '14px', color: '#94A3B8'
+    const closeLabel = this.scene.add.text(centerX, modalY + s(75), '닫기', {
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(14), color: '#94A3B8'
     }).setOrigin(0.5).setDepth(3003).setInteractive({ useHandCursor: true });
     elements.push(closeLabel);
 
@@ -421,29 +421,29 @@ export class SettingsPopup extends PopupBase {
   showResetConfirm() {
     const elements = [];
     const { centerX } = this.contentBounds;
-    const dialogY = 500;
+    const dialogY = s(500);
 
     const overlay = this.scene.add.rectangle(centerX, dialogY,
-      this.contentBounds.width + 30, 160, 0x000000, 0.7).setDepth(3000).setInteractive();
+      this.contentBounds.width + s(30), s(160), 0x000000, 0.7).setDepth(3000).setInteractive();
     elements.push(overlay);
 
     const dialog = this.scene.add.graphics().setDepth(3001);
     dialog.fillStyle(0x1E293B, 1);
-    dialog.fillRoundedRect(centerX - 160, dialogY - 80, 320, 160, 16);
+    dialog.fillRoundedRect(centerX - s(160), dialogY - s(80), s(320), s(160), s(16));
     elements.push(dialog);
 
-    const msg = this.scene.add.text(centerX, dialogY - 35,
+    const msg = this.scene.add.text(centerX, dialogY - s(35),
       '모든 데이터가 삭제됩니다.\n정말 초기화하시겠습니까?', {
-        fontFamily: '"Noto Sans KR", sans-serif', fontSize: '16px',
+        fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16),
         color: '#F8FAFC', align: 'center'
       }).setOrigin(0.5).setDepth(3002);
     elements.push(msg);
 
-    const confirmBg = this.scene.add.rectangle(centerX - 75, dialogY + 35, 120, 40, 0xEF4444)
+    const confirmBg = this.scene.add.rectangle(centerX - s(75), dialogY + s(35), s(120), s(40), 0xEF4444)
       .setDepth(3002).setInteractive({ useHandCursor: true });
     elements.push(confirmBg);
-    const confirmLabel = this.scene.add.text(centerX - 75, dialogY + 35, '초기화', {
-      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '16px',
+    const confirmLabel = this.scene.add.text(centerX - s(75), dialogY + s(35), '초기화', {
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16),
       fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(3003);
     elements.push(confirmLabel);
@@ -453,11 +453,11 @@ export class SettingsPopup extends PopupBase {
       location.reload();
     });
 
-    const cancelBg = this.scene.add.rectangle(centerX + 75, dialogY + 35, 120, 40, 0x475569)
+    const cancelBg = this.scene.add.rectangle(centerX + s(75), dialogY + s(35), s(120), s(40), 0x475569)
       .setDepth(3002).setInteractive({ useHandCursor: true });
     elements.push(cancelBg);
-    const cancelLabel = this.scene.add.text(centerX + 75, dialogY + 35, '취소', {
-      fontFamily: '"Noto Sans KR", sans-serif', fontSize: '16px', color: '#94A3B8'
+    const cancelLabel = this.scene.add.text(centerX + s(75), dialogY + s(35), '취소', {
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16), color: '#94A3B8'
     }).setOrigin(0.5).setDepth(3003);
     elements.push(cancelLabel);
 
@@ -468,13 +468,13 @@ export class SettingsPopup extends PopupBase {
 
   showToast(message) {
     const { centerX, top } = this.contentBounds;
-    const toast = this.scene.add.text(centerX, top + 200, message, {
-      fontSize: '16px', fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#FFFFFF', backgroundColor: '#334155', padding: { x: 20, y: 12 }
+    const toast = this.scene.add.text(centerX, top + s(200), message, {
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", sans-serif',
+      color: '#FFFFFF', backgroundColor: '#334155', padding: { x: s(20), y: s(12) }
     }).setOrigin(0.5).setDepth(4000);
 
     this.scene.tweens.add({
-      targets: toast, y: toast.y - 50, alpha: 0,
+      targets: toast, y: toast.y - s(50), alpha: 0,
       duration: 1500, delay: 800, onComplete: () => toast.destroy()
     });
   }

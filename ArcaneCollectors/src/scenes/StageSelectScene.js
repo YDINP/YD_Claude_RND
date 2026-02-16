@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 import GameLogger from '../utils/GameLogger.js';
 import { energySystem } from '../systems/EnergySystem.js';
 import { PartyManager } from '../systems/PartyManager.js';
@@ -27,8 +27,8 @@ export class StageSelectScene extends Phaser.Scene {
     this.createSweepModal();
     } catch (error) {
       console.error('[StageSelectScene] create() 실패:', error);
-      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
-        fontSize: '20px', fill: '#ff4444', align: 'center'
+      this.add.text(s(360), s(640), '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: sf(20), fill: '#ff4444', align: 'center'
       }).setOrigin(0.5);
       this.time.delayedCall(2000, () => {
         this.scene.start('MainMenuScene');
@@ -56,8 +56,8 @@ export class StageSelectScene extends Phaser.Scene {
       // Decorative trees/fog
       for (let i = 0; i < 15; i++) {
         const x = Phaser.Math.Between(0, GAME_WIDTH);
-        const y = Phaser.Math.Between(100, GAME_HEIGHT - 100);
-        const size = Phaser.Math.Between(30, 80);
+        const y = Phaser.Math.Between(s(100), GAME_HEIGHT - s(100));
+        const size = Phaser.Math.Between(s(30), s(80));
         const alpha = Phaser.Math.FloatBetween(0.05, 0.15);
 
         graphics.fillStyle(0x1a472a, alpha);
@@ -72,15 +72,15 @@ export class StageSelectScene extends Phaser.Scene {
 
   createHeader() {
     // LAYOUT 통일: Header background (100px)
-    const headerBg = this.add.rectangle(GAME_WIDTH / 2, 50, GAME_WIDTH, 100, COLORS.backgroundLight, 0.9);
+    const headerBg = this.add.rectangle(GAME_WIDTH / 2, s(50), GAME_WIDTH, s(100), COLORS.backgroundLight, 0.9);
     headerBg.setDepth(20);
 
     // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
-    const backBtn = this.add.container(30, 50).setDepth(21);
-    const backBg = this.add.rectangle(0, 0, 50, 40, COLORS.backgroundLight, 0.8)
+    const backBtn = this.add.container(s(30), s(50)).setDepth(21);
+    const backBg = this.add.rectangle(0, 0, s(50), s(40), COLORS.backgroundLight, 0.8)
       .setInteractive({ useHandCursor: true });
     const backText = this.add.text(0, 0, '← 뒤로', {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -92,8 +92,8 @@ export class StageSelectScene extends Phaser.Scene {
     });
 
     // Title
-    this.add.text(GAME_WIDTH / 2, 50, '모험', {
-      fontSize: '28px',
+    this.add.text(GAME_WIDTH / 2, s(50), '모험', {
+      fontSize: sf(28),
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -101,8 +101,8 @@ export class StageSelectScene extends Phaser.Scene {
 
     // Energy display (동적)
     const energyStatus = energySystem.getStatus();
-    this.energyText = this.add.text(GAME_WIDTH - 30, 50, `⚡ ${energyStatus.current}/${energyStatus.max}`, {
-      fontSize: '14px',
+    this.energyText = this.add.text(GAME_WIDTH - s(30), s(50), `⚡ ${energyStatus.current}/${energyStatus.max}`, {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0.5).setDepth(21);
@@ -110,22 +110,22 @@ export class StageSelectScene extends Phaser.Scene {
 
   createChapterTitle() {
     // LAYOUT 통일: 챕터 타이틀 영역 y=120 (content 시작)
-    const titleY = 120;
+    const titleY = s(120);
 
     // Chapter navigation
-    const prevBtn = this.add.text(30, titleY, '◀', {
-      fontSize: '24px',
+    const prevBtn = this.add.text(s(30), titleY, '◀', {
+      fontSize: sf(24),
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    const nextBtn = this.add.text(GAME_WIDTH - 30, titleY, '▶', {
-      fontSize: '24px',
+    const nextBtn = this.add.text(GAME_WIDTH - s(30), titleY, '▶', {
+      fontSize: sf(24),
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     // Chapter title
     this.chapterTitle = this.add.text(GAME_WIDTH / 2, titleY, '', {
-      fontSize: '20px',
+      fontSize: sf(20),
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -171,8 +171,8 @@ export class StageSelectScene extends Phaser.Scene {
     const stages = this.generateStages(this.currentChapter);
 
     // LAYOUT 통일: 스테이지 버튼 그리드 시작 y=160
-    const startY = 160;
-    const stageHeight = 90;
+    const startY = s(160);
+    const stageHeight = s(90);
 
     stages.forEach((stage, index) => {
       const y = startY + index * stageHeight;
@@ -239,17 +239,17 @@ export class StageSelectScene extends Phaser.Scene {
     const bgColor = isLocked ? 0x1a1a2e : COLORS.backgroundLight;
     const bgAlpha = isLocked ? 0.5 : 0.8;
 
-    const cardBg = this.add.rectangle(0, 0, GAME_WIDTH - 40, 80, bgColor, bgAlpha);
-    cardBg.setStrokeStyle(2, isCleared ? COLORS.success : (isLocked ? COLORS.textDark : COLORS.primary), 0.5);
+    const cardBg = this.add.rectangle(0, 0, GAME_WIDTH - s(40), s(80), bgColor, bgAlpha);
+    cardBg.setStrokeStyle(s(2), isCleared ? COLORS.success : (isLocked ? COLORS.textDark : COLORS.primary), 0.5);
 
     if (!isLocked) {
       cardBg.setInteractive({ useHandCursor: true });
     }
 
     // Stage number
-    const numberBg = this.add.circle(-185, 0, 25, isCleared ? COLORS.success : COLORS.primary, 1);
-    const numberText = this.add.text(-185, 0, stage.number, {
-      fontSize: '14px',
+    const numberBg = this.add.circle(s(-185), 0, s(25), isCleared ? COLORS.success : COLORS.primary, 1);
+    const numberText = this.add.text(s(-185), 0, stage.number, {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: '#ffffff',
       fontStyle: 'bold'
@@ -257,16 +257,16 @@ export class StageSelectScene extends Phaser.Scene {
 
     // Stage name
     const nameColor = isLocked ? COLORS.textDark : COLORS.text;
-    const nameText = this.add.text(-140, -15, stage.name, {
-      fontSize: '16px',
+    const nameText = this.add.text(s(-140), s(-15), stage.name, {
+      fontSize: sf(16),
       fontFamily: 'Arial',
       color: `#${  nameColor.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0, 0.5);
 
     // Recommended power
-    const powerText = this.add.text(-140, 10, `추천 전투력: ${stage.recommendedPower.toLocaleString()}`, {
-      fontSize: '12px',
+    const powerText = this.add.text(s(-140), s(10), `추천 전투력: ${stage.recommendedPower.toLocaleString()}`, {
+      fontSize: sf(12),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0, 0.5);
@@ -274,15 +274,15 @@ export class StageSelectScene extends Phaser.Scene {
     // Stars earned
     const clearedStages = this.registry.get('clearedStages') || {};
     const stars = clearedStages[stage.id] || 0;
-    const starsText = this.add.text(170, -10, '★'.repeat(stars) + '☆'.repeat(3 - stars), {
-      fontSize: '16px',
+    const starsText = this.add.text(s(170), s(-10), '★'.repeat(stars) + '☆'.repeat(3 - stars), {
+      fontSize: sf(16),
       color: `#${  (stars > 0 ? COLORS.accent : COLORS.textDark).toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0.5);
 
     // Lock icon
     if (isLocked) {
-      const lockText = this.add.text(170, 10, '🔒 잠김', {
-        fontSize: '12px',
+      const lockText = this.add.text(s(170), s(10), '🔒 잠김', {
+        fontSize: sf(12),
         fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(1, 0.5);
@@ -291,11 +291,11 @@ export class StageSelectScene extends Phaser.Scene {
 
     // 소탕 버튼 (3성 클리어 시)
     if (stars >= 3) {
-      const sweepBtn = this.add.rectangle(140, 12, 60, 22, COLORS.success, 0.8)
-        .setStrokeStyle(1, 0xFFFFFF, 0.2)
+      const sweepBtn = this.add.rectangle(s(140), s(12), s(60), s(22), COLORS.success, 0.8)
+        .setStrokeStyle(s(1), 0xFFFFFF, 0.2)
         .setInteractive({ useHandCursor: true });
-      const sweepLabel = this.add.text(140, 12, '⚡소탕', {
-        fontSize: '11px', fontFamily: 'Arial',
+      const sweepLabel = this.add.text(s(140), s(12), '⚡소탕', {
+        fontSize: sf(11), fontFamily: 'Arial',
         color: '#FFFFFF', fontStyle: 'bold'
       }).setOrigin(0.5);
 
@@ -338,45 +338,45 @@ export class StageSelectScene extends Phaser.Scene {
     overlay.setInteractive();
 
     // Modal background
-    const modalBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - 60, 450, COLORS.backgroundLight, 0.95);
-    modalBg.setStrokeStyle(2, COLORS.primary);
+    const modalBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - s(60), s(450), COLORS.backgroundLight, 0.95);
+    modalBg.setStrokeStyle(s(2), COLORS.primary);
 
     // Modal title
-    this.modalTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 200, '파티 선택', {
-      fontSize: '22px',
+    this.modalTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(200), '파티 선택', {
+      fontSize: sf(22),
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // Stage info
-    this.stageInfoText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 165, '', {
-      fontSize: '14px',
+    this.stageInfoText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(165), '', {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Party slots (4 slots — PARTY_SIZE 기준)
     this.partySlots = [];
-    const slotStartX = GAME_WIDTH / 2 - 150;
-    const slotY = GAME_HEIGHT / 2 - 60;
+    const slotStartX = GAME_WIDTH / 2 - s(150);
+    const slotY = GAME_HEIGHT / 2 - s(60);
 
     for (let i = 0; i < 4; i++) {
-      const x = slotStartX + i * 100;
+      const x = slotStartX + i * s(100);
       const slotContainer = this.add.container(x, slotY);
 
-      const slotBg = this.add.rectangle(0, 0, 75, 90, COLORS.background, 0.8);
-      slotBg.setStrokeStyle(2, COLORS.primary, 0.5);
+      const slotBg = this.add.rectangle(0, 0, s(75), s(90), COLORS.background, 0.8);
+      slotBg.setStrokeStyle(s(2), COLORS.primary, 0.5);
       slotBg.setInteractive({ useHandCursor: true });
 
       const slotText = this.add.text(0, 0, '+', {
-        fontSize: '30px',
+        fontSize: sf(30),
         fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
-      const slotLabel = this.add.text(0, 55, `슬롯 ${i + 1}`, {
-        fontSize: '10px',
+      const slotLabel = this.add.text(0, s(55), `슬롯 ${i + 1}`, {
+        fontSize: sf(10),
         fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
@@ -390,11 +390,11 @@ export class StageSelectScene extends Phaser.Scene {
     }
 
     // Auto-fill button
-    const autoBtn = this.add.container(GAME_WIDTH / 2 - 80, GAME_HEIGHT / 2 + 80);
-    const autoBg = this.add.rectangle(0, 0, 140, 40, COLORS.primary, 1)
+    const autoBtn = this.add.container(GAME_WIDTH / 2 - s(80), GAME_HEIGHT / 2 + s(80));
+    const autoBg = this.add.rectangle(0, 0, s(140), s(40), COLORS.primary, 1)
       .setInteractive({ useHandCursor: true });
     const autoText = this.add.text(0, 0, '자동 편성', {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -405,11 +405,11 @@ export class StageSelectScene extends Phaser.Scene {
     });
 
     // Start battle button
-    const startBtn = this.add.container(GAME_WIDTH / 2 + 80, GAME_HEIGHT / 2 + 80);
-    const startBg = this.add.rectangle(0, 0, 140, 40, COLORS.success, 1)
+    const startBtn = this.add.container(GAME_WIDTH / 2 + s(80), GAME_HEIGHT / 2 + s(80));
+    const startBg = this.add.rectangle(0, 0, s(140), s(40), COLORS.success, 1)
       .setInteractive({ useHandCursor: true });
     const startText = this.add.text(0, 0, '전투 시작', {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -421,8 +421,8 @@ export class StageSelectScene extends Phaser.Scene {
     });
 
     // Close button
-    const closeBtn = this.add.text(GAME_WIDTH / 2 + 180, GAME_HEIGHT / 2 - 200, '✕', {
-      fontSize: '24px',
+    const closeBtn = this.add.text(GAME_WIDTH / 2 + s(180), GAME_HEIGHT / 2 - s(200), '✕', {
+      fontSize: sf(24),
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
@@ -431,8 +431,8 @@ export class StageSelectScene extends Phaser.Scene {
     });
 
     // Total power display
-    this.totalPowerText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, '총 전투력: 0', {
-      fontSize: '16px',
+    this.totalPowerText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + s(30), '총 전투력: 0', {
+      fontSize: sf(16),
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -579,13 +579,13 @@ export class StageSelectScene extends Phaser.Scene {
 
     if (synergies.length === 0) return;
 
-    const baseY = GAME_HEIGHT / 2 + 110;
+    const baseY = GAME_HEIGHT / 2 + s(110);
     const typeIcons = { cult: '⛪', mood: '🎭', role: '⚔️', special: '✨' };
 
     synergies.slice(0, 3).forEach((syn, i) => {
       const icon = typeIcons[syn.type] || '●';
-      const text = this.add.text(GAME_WIDTH / 2, baseY + i * 18, `${icon} ${syn.name || syn.type}`, {
-        fontSize: '11px',
+      const text = this.add.text(GAME_WIDTH / 2, baseY + i * s(18), `${icon} ${syn.name || syn.type}`, {
+        fontSize: sf(11),
         fontFamily: 'Arial',
         color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(60);
@@ -670,50 +670,50 @@ export class StageSelectScene extends Phaser.Scene {
     overlay.on('pointerdown', () => this.hideSweepModal());
 
     // Modal background
-    const modalBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 340, 320, COLORS.backgroundLight, 0.95);
-    modalBg.setStrokeStyle(2, COLORS.primary);
+    const modalBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, s(340), s(320), COLORS.backgroundLight, 0.95);
+    modalBg.setStrokeStyle(s(2), COLORS.primary);
 
     // Title
-    this.sweepTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 130, '⚡ 소탕', {
-      fontSize: '20px', fontFamily: 'Georgia, serif',
+    this.sweepTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(130), '⚡ 소탕', {
+      fontSize: sf(20), fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // Stage info
-    this.sweepStageInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, '', {
-      fontSize: '13px', fontFamily: 'Arial',
+    this.sweepStageInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(100), '', {
+      fontSize: sf(13), fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Cost info
-    this.sweepCostInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 75, '', {
-      fontSize: '12px', fontFamily: 'Arial',
+    this.sweepCostInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(75), '', {
+      fontSize: sf(12), fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Count buttons (1, 3, 5, 10)
     const counts = [1, 3, 5, 10];
     this.sweepCountBtns = [];
-    const btnY = GAME_HEIGHT / 2 - 25;
+    const btnY = GAME_HEIGHT / 2 - s(25);
 
     counts.forEach((count, i) => {
-      const btnX = GAME_WIDTH / 2 - 120 + i * 80;
-      const bg = this.add.rectangle(btnX, btnY, 65, 50, COLORS.background, 0.9)
-        .setStrokeStyle(2, COLORS.primary, 0.5)
+      const btnX = GAME_WIDTH / 2 - s(120) + i * s(80);
+      const bg = this.add.rectangle(btnX, btnY, s(65), s(50), COLORS.background, 0.9)
+        .setStrokeStyle(s(2), COLORS.primary, 0.5)
         .setInteractive({ useHandCursor: true });
-      const label = this.add.text(btnX, btnY - 8, `×${count}`, {
-        fontSize: '18px', fontFamily: 'Arial',
+      const label = this.add.text(btnX, btnY - s(8), `×${count}`, {
+        fontSize: sf(18), fontFamily: 'Arial',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
-      const costLabel = this.add.text(btnX, btnY + 14, '', {
-        fontSize: '10px', fontFamily: 'Arial',
+      const costLabel = this.add.text(btnX, btnY + s(14), '', {
+        fontSize: sf(10), fontFamily: 'Arial',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
-      bg.on('pointerover', () => bg.setStrokeStyle(2, COLORS.accent));
-      bg.on('pointerout', () => bg.setStrokeStyle(2, COLORS.primary, 0.5));
+      bg.on('pointerover', () => bg.setStrokeStyle(s(2), COLORS.accent));
+      bg.on('pointerout', () => bg.setStrokeStyle(s(2), COLORS.primary, 0.5));
       bg.on('pointerdown', () => this.executeSweep(this._sweepStage, count));
 
       this.sweepCountBtns.push({ bg, label, costLabel, count });
@@ -721,20 +721,20 @@ export class StageSelectScene extends Phaser.Scene {
     });
 
     // Daily remaining info
-    this.sweepDailyInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, '', {
-      fontSize: '11px', fontFamily: 'Arial',
+    this.sweepDailyInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + s(40), '', {
+      fontSize: sf(11), fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Tickets info
-    this.sweepTicketInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60, '', {
-      fontSize: '11px', fontFamily: 'Arial',
+    this.sweepTicketInfo = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + s(60), '', {
+      fontSize: sf(11), fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Close button
-    const closeBtn = this.add.text(GAME_WIDTH / 2 + 155, GAME_HEIGHT / 2 - 145, '✕', {
-      fontSize: '20px', fontFamily: 'Arial',
+    const closeBtn = this.add.text(GAME_WIDTH / 2 + s(155), GAME_HEIGHT / 2 - s(145), '✕', {
+      fontSize: sf(20), fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.hideSweepModal());
@@ -837,18 +837,18 @@ export class StageSelectScene extends Phaser.Scene {
   }
 
   showMessage(text, color = COLORS.text) {
-    const msg = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100, text, {
-      fontSize: '18px',
+    const msg = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(100), text, {
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: `#${  color.toString(16).padStart(6, '0')}`,
       backgroundColor: `#${  COLORS.background.toString(16).padStart(6, '0')}`,
-      padding: { x: 20, y: 12 }
+      padding: { x: s(20), y: s(12) }
     }).setOrigin(0.5).setDepth(100);
 
     this.tweens.add({
       targets: msg,
       alpha: 0,
-      y: msg.y - 50,
+      y: msg.y - s(50),
       duration: 1500,
       delay: 500,
       onComplete: () => msg.destroy()

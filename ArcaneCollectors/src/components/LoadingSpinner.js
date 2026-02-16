@@ -10,14 +10,14 @@
  *   spinner.hide();
  */
 
-import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import { GAME_WIDTH, GAME_HEIGHT, s } from '../config/gameConfig.js';
 
 export class LoadingSpinner {
   constructor(scene, options = {}) {
     this.scene = scene;
-    this.x = options.x ?? GAME_WIDTH - 60;
-    this.y = options.y ?? GAME_HEIGHT - 60;
-    this.size = options.size ?? 20;
+    this.x = options.x ?? GAME_WIDTH - s(60);
+    this.y = options.y ?? GAME_HEIGHT - s(60);
+    this.size = options.size ?? s(20);
     this.color = options.color ?? 0x6366f1;
     this.visible = false;
 
@@ -42,7 +42,7 @@ export class LoadingSpinner {
       const angle = (Math.PI * 2 * i) / dotCount;
       const dx = Math.cos(angle) * this.size;
       const dy = Math.sin(angle) * this.size;
-      const dot = this.scene.add.circle(dx, dy, 4, this.color, 0.8 - i * 0.2);
+      const dot = this.scene.add.circle(dx, dy, s(4), this.color, 0.8 - i * 0.2);
       this.dots.push(dot);
       this.container.add(dot);
     }

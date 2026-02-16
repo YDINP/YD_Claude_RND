@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getRarityColors } from '../config/designSystem.js';
+import { s } from '../config/gameConfig.js';
 
 /**
  * RadarChart - 4축 레이더 차트 (HP, ATK, DEF, SPD)
@@ -18,13 +19,13 @@ export class RadarChart extends Phaser.GameObjects.Container {
 
     this.stats = stats;
     this.options = {
-      radius: options.radius ?? 80,
+      radius: options.radius ?? s(80),
       rarity: options.rarity ?? 'N',
       maxStats: options.maxStats ?? { hp: 2000, atk: 500, def: 400, spd: 150 },
       showAverage: options.showAverage ?? false,
       averageStats: options.averageStats ?? null,
       previewStats: options.previewStats ?? null, // 장비 적용 후 스탯
-      labelSize: options.labelSize ?? 12,
+      labelSize: options.labelSize ?? s(12),
       axisColor: options.axisColor ?? 0x64748B,
       axisAlpha: options.axisAlpha ?? 0.5
     };
@@ -63,7 +64,7 @@ export class RadarChart extends Phaser.GameObjects.Container {
   drawGrid() {
     const steps = [0.25, 0.5, 0.75, 1.0];
     steps.forEach(step => {
-      this.graphics.lineStyle(1, this.options.axisColor, this.options.axisAlpha * 0.3);
+      this.graphics.lineStyle(s(1), this.options.axisColor, this.options.axisAlpha * 0.3);
       this.graphics.strokeCircle(0, 0, this.options.radius * step);
     });
   }
@@ -81,12 +82,12 @@ export class RadarChart extends Phaser.GameObjects.Container {
       const endY = Math.sin(axis.angle) * this.options.radius;
 
       // Axis line
-      this.graphics.lineStyle(1, this.options.axisColor, this.options.axisAlpha);
+      this.graphics.lineStyle(s(1), this.options.axisColor, this.options.axisAlpha);
       this.graphics.lineBetween(0, 0, endX, endY);
 
       // Label
-      const labelX = Math.cos(axis.angle) * (this.options.radius + 20);
-      const labelY = Math.sin(axis.angle) * (this.options.radius + 20);
+      const labelX = Math.cos(axis.angle) * (this.options.radius + s(20));
+      const labelY = Math.sin(axis.angle) * (this.options.radius + s(20));
 
       const label = this.scene.add.text(labelX, labelY, axis.label, {
         fontFamily: '"Noto Sans KR", sans-serif',
@@ -136,7 +137,7 @@ export class RadarChart extends Phaser.GameObjects.Container {
     // Stroke polygon
     if (isDashed) {
       // Dashed line for preview
-      this.graphics.lineStyle(2, strokeColor, 0.8);
+      this.graphics.lineStyle(s(2), strokeColor, 0.8);
       for (let i = 0; i < points.length; i++) {
         const start = points[i];
         const end = points[(i + 1) % points.length];
@@ -144,7 +145,7 @@ export class RadarChart extends Phaser.GameObjects.Container {
       }
     } else {
       // Solid line
-      this.graphics.lineStyle(2, strokeColor, 1);
+      this.graphics.lineStyle(s(2), strokeColor, 1);
       this.graphics.beginPath();
       this.graphics.moveTo(points[0].x, points[0].y);
       points.slice(1).forEach(p => this.graphics.lineTo(p.x, p.y));
@@ -155,7 +156,7 @@ export class RadarChart extends Phaser.GameObjects.Container {
     // Draw vertices
     points.forEach(point => {
       this.graphics.fillStyle(strokeColor, 1);
-      this.graphics.fillCircle(point.x, point.y, isDashed ? 3 : 4);
+      this.graphics.fillCircle(point.x, point.y, isDashed ? s(3) : s(4));
     });
   }
 
@@ -182,15 +183,15 @@ export class RadarChart extends Phaser.GameObjects.Container {
     });
 
     // Gray dashed line for average
-    this.graphics.lineStyle(1, 0x94A3B8, 0.6);
+    this.graphics.lineStyle(s(1), 0x94A3B8, 0.6);
     for (let i = 0; i < points.length; i++) {
       const start = points[i];
       const end = points[(i + 1) % points.length];
-      this.drawDashedLine(start.x, start.y, end.x, end.y, 4, 4);
+      this.drawDashedLine(start.x, start.y, end.x, end.y, s(4), s(4));
     }
   }
 
-  drawDashedLine(x1, y1, x2, y2, dashLength = 5, gapLength = 5) {
+  drawDashedLine(x1, y1, x2, y2, dashLength = s(5), gapLength = s(5)) {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const distance = Math.sqrt(dx * dx + dy * dy);

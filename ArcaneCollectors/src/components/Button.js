@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS } from '../config/gameConfig.js';
+import { COLORS, s, sf } from '../config/gameConfig.js';
 import { DESIGN } from '../config/designSystem.js';
 
 export class Button extends Phaser.GameObjects.Container {
@@ -22,8 +22,8 @@ export class Button extends Phaser.GameObjects.Container {
       color: options.color ?? COLORS.primary,
       hoverColor: options.hoverColor ?? COLORS.secondary,
       onClick: options.onClick ?? null,
-      fontSize: options.fontSize ?? 18,
-      cornerRadius: options.cornerRadius ?? 8,
+      fontSize: options.fontSize ?? s(18),
+      cornerRadius: options.cornerRadius ?? s(8),
       disabled: options.disabled ?? false,
       style: options.style ?? 'primary' // 'primary', 'secondary', 'danger', 'success'
     };
@@ -74,7 +74,7 @@ export class Button extends Phaser.GameObjects.Container {
     // Draw shadow
     if (!isPressed) {
       this.background.fillStyle(0x000000, 0.3);
-      this.background.fillRoundedRect(-w/2 + 2, -h/2 + 4, w, h, r);
+      this.background.fillRoundedRect(-w/2 + s(2), -h/2 + s(4), w, h, r);
     }
 
     // Draw main button body
@@ -86,7 +86,7 @@ export class Button extends Phaser.GameObjects.Container {
     this.background.fillRoundedRect(-w/2, -h/2, w, h * 0.5, { tl: r, tr: r, bl: 0, br: 0 });
 
     // Draw border
-    this.background.lineStyle(2, 0xffffff, 0.2);
+    this.background.lineStyle(s(2), 0xffffff, 0.2);
     this.background.strokeRoundedRect(-w/2, -h/2, w, h, r);
   }
 
@@ -102,7 +102,7 @@ export class Button extends Phaser.GameObjects.Container {
 
     // Draw glow effect
     this.glow.fillStyle(this.options.hoverColor, 0.4);
-    this.glow.fillRoundedRect(-w/2 - 4, -h/2 - 4, w + 8, h + 8, r + 4);
+    this.glow.fillRoundedRect(-w/2 - s(4), -h/2 - s(4), w + s(8), h + s(8), r + s(4));
   }
 
   createText(text) {
@@ -112,7 +112,7 @@ export class Button extends Phaser.GameObjects.Container {
       fontStyle: 'bold',
       color: '#FFFFFF',
       stroke: '#000000',
-      strokeThickness: 1
+      strokeThickness: s(1)
     }).setOrigin(0.5);
     this.add(this.label);
   }

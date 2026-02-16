@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS } from '../config/gameConfig.js';
+import { COLORS, s, sf } from '../config/gameConfig.js';
 
 export class Panel extends Phaser.GameObjects.Container {
   /**
@@ -19,12 +19,12 @@ export class Panel extends Phaser.GameObjects.Container {
     this.options = {
       backgroundColor: options.backgroundColor ?? COLORS.backgroundLight,
       borderColor: options.borderColor ?? null,
-      borderWidth: options.borderWidth ?? 2,
-      cornerRadius: options.cornerRadius ?? 12,
+      borderWidth: options.borderWidth ?? s(2),
+      cornerRadius: options.cornerRadius ?? s(12),
       title: options.title ?? null,
       titleColor: options.titleColor ?? COLORS.text,
-      titleFontSize: options.titleFontSize ?? 20,
-      shadowOffset: options.shadowOffset ?? 4,
+      titleFontSize: options.titleFontSize ?? s(20),
+      shadowOffset: options.shadowOffset ?? s(4),
       shadowAlpha: options.shadowAlpha ?? 0.3
     };
 
@@ -69,9 +69,9 @@ export class Panel extends Phaser.GameObjects.Container {
     // Add inner glow for depth
     this.background.fillStyle(0xffffff, 0.05);
     this.background.fillRoundedRect(
-      -this.panelWidth / 2 + 2,
-      -this.panelHeight / 2 + 2,
-      this.panelWidth - 4,
+      -this.panelWidth / 2 + s(2),
+      -this.panelHeight / 2 + s(2),
+      this.panelWidth - s(4),
       this.panelHeight * 0.3,
       this.options.cornerRadius
     );
@@ -88,13 +88,13 @@ export class Panel extends Phaser.GameObjects.Container {
       );
 
       // Subtle outer glow
-      this.background.lineStyle(this.options.borderWidth + 2, this.options.borderColor, 0.2);
+      this.background.lineStyle(this.options.borderWidth + s(2), this.options.borderColor, 0.2);
       this.background.strokeRoundedRect(
-        -this.panelWidth / 2 - 1,
-        -this.panelHeight / 2 - 1,
-        this.panelWidth + 2,
-        this.panelHeight + 2,
-        this.options.cornerRadius + 1
+        -this.panelWidth / 2 - s(1),
+        -this.panelHeight / 2 - s(1),
+        this.panelWidth + s(2),
+        this.panelHeight + s(2),
+        this.options.cornerRadius + s(1)
       );
     }
 
@@ -102,7 +102,7 @@ export class Panel extends Phaser.GameObjects.Container {
   }
 
   createTitleBar() {
-    const titleBarHeight = 40;
+    const titleBarHeight = s(40);
     const r = this.options.cornerRadius;
 
     // Title bar background
@@ -117,7 +117,7 @@ export class Panel extends Phaser.GameObjects.Container {
     );
 
     // Title bar bottom line
-    this.titleBar.lineStyle(1, COLORS.primary, 0.5);
+    this.titleBar.lineStyle(s(1), COLORS.primary, 0.5);
     this.titleBar.lineBetween(
       -this.panelWidth / 2,
       -this.panelHeight / 2 + titleBarHeight,
@@ -148,8 +148,8 @@ export class Panel extends Phaser.GameObjects.Container {
    * @returns {Object} { x, y, width, height } of content area
    */
   getContentBounds() {
-    const titleOffset = this.options.title ? 40 : 0;
-    const padding = 10;
+    const titleOffset = this.options.title ? s(40) : 0;
+    const padding = s(10);
 
     return {
       x: -this.panelWidth / 2 + padding,

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getHPColor } from '../config/designSystem.js';
+import { s, sf } from '../config/gameConfig.js';
 
 /**
  * EnhancedHPBar - 고도화된 HP 바
@@ -21,7 +22,7 @@ export class EnhancedHPBar extends Phaser.GameObjects.Container {
 
     this.barWidth = width;
     this.options = {
-      height: options.height ?? 12,
+      height: options.height ?? s(12),
       currentHP: options.currentHP ?? 100,
       maxHP: options.maxHP ?? 100,
       currentSkill: options.currentSkill ?? 0,
@@ -139,8 +140,8 @@ export class EnhancedHPBar extends Phaser.GameObjects.Container {
   }
 
   createSkillBar() {
-    const skillY = this.options.height / 2 + 6;
-    const skillHeight = 4;
+    const skillY = this.options.height / 2 + s(6);
+    const skillHeight = s(4);
 
     // Skill bar background
     this.skillBackground = this.scene.add.graphics();
@@ -168,8 +169,8 @@ export class EnhancedHPBar extends Phaser.GameObjects.Container {
     const percent = this.maxSkill > 0 ? this.currentSkill / this.maxSkill : 0;
     if (percent <= 0) return;
 
-    const skillY = this.options.height / 2 + 6;
-    const skillHeight = 4;
+    const skillY = this.options.height / 2 + s(6);
+    const skillHeight = s(4);
     const fillWidth = Math.max(this.barWidth * Math.min(percent, 1), skillHeight);
 
     this.skillBar.fillStyle(this.options.skillColor, 1);
@@ -195,7 +196,7 @@ export class EnhancedHPBar extends Phaser.GameObjects.Container {
   }
 
   createBuffContainer() {
-    this.buffContainer = this.scene.add.container(this.barWidth / 2 + 10, 0);
+    this.buffContainer = this.scene.add.container(this.barWidth / 2 + s(10), 0);
     this.add(this.buffContainer);
   }
 
@@ -249,20 +250,20 @@ export class EnhancedHPBar extends Phaser.GameObjects.Container {
     const color = isHeal ? '#22C55E' : '#EF4444';
     const text = isHeal ? `+${Math.abs(delta)}` : `-${Math.abs(delta)}`;
 
-    const changeText = this.scene.add.text(0, -this.options.height - 5, text, {
+    const changeText = this.scene.add.text(0, -this.options.height - s(5), text, {
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontSize: '14px',
+      fontSize: sf(14),
       fontStyle: 'bold',
       color: color,
       stroke: '#000000',
-      strokeThickness: 2
+      strokeThickness: s(2)
     }).setOrigin(0.5);
 
     this.add(changeText);
 
     this.scene.tweens.add({
       targets: changeText,
-      y: changeText.y - 20,
+      y: changeText.y - s(20),
       alpha: 0,
       duration: 800,
       ease: 'Power2',
@@ -312,14 +313,14 @@ export class EnhancedHPBar extends Phaser.GameObjects.Container {
     this.buffContainer.removeAll(true);
 
     this.buffs.forEach((buff, index) => {
-      const iconX = index * 18;
-      const iconSize = 14;
+      const iconX = index * s(18);
+      const iconSize = s(14);
 
       const iconBg = this.scene.add.circle(iconX, 0, iconSize / 2, buff.type === 'buff' ? 0x3B82F6 : 0xF97316, 0.9);
       this.buffContainer.add(iconBg);
 
       const iconText = this.scene.add.text(iconX, 0, buff.icon, {
-        fontSize: '10px'
+        fontSize: sf(10)
       }).setOrigin(0.5);
       this.buffContainer.add(iconText);
     });

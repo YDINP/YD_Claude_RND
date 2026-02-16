@@ -3,7 +3,7 @@
  * 영웅 정보 팝업 오버레이 - 씬 전환 없이 인라인 표시
  * 레벨업, 진화, 스킬 강화 기능 포함
  */
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, s, sf } from '../config/gameConfig.js';
 import { Z_INDEX } from '../config/layoutConfig.js';
 import { getCharacter } from '../data/index.ts';
 import { SaveManager } from '../systems/SaveManager.js';
@@ -56,8 +56,8 @@ export class HeroInfoPopup {
     this.container.add(overlay);
 
     // --- Panel ---
-    const panelW = 620;
-    const panelH = 820;
+    const panelW = s(620);
+    const panelH = s(820);
     const px = GAME_WIDTH / 2;
     const py = GAME_HEIGHT / 2;
     const left = px - panelW / 2;
@@ -65,9 +65,9 @@ export class HeroInfoPopup {
 
     const panel = scene.add.graphics();
     panel.fillStyle(0x0F172A, 0.97);
-    panel.fillRoundedRect(left, top, panelW, panelH, 16);
-    panel.lineStyle(2, rarityColor, 0.6);
-    panel.strokeRoundedRect(left, top, panelW, panelH, 16);
+    panel.fillRoundedRect(left, top, panelW, panelH, s(16));
+    panel.lineStyle(s(2), rarityColor, 0.6);
+    panel.strokeRoundedRect(left, top, panelW, panelH, s(16));
     this.container.add(panel);
 
     // Block panel clicks from closing
@@ -75,8 +75,8 @@ export class HeroInfoPopup {
     this.container.add(blocker);
 
     // --- Close button ---
-    const closeBtn = scene.add.text(left + panelW - 25, top + 18, '✕', {
-      fontSize: '22px', color: '#94A3B8'
+    const closeBtn = scene.add.text(left + panelW - s(25), top + s(18), '✕', {
+      fontSize: sf(22), color: '#94A3B8'
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.destroy());
     closeBtn.on('pointerover', () => closeBtn.setColor('#FFFFFF'));
@@ -84,44 +84,44 @@ export class HeroInfoPopup {
     this.container.add(closeBtn);
 
     // === HEADER: Name + Rarity badge ===
-    const nameText = scene.add.text(px, top + 40, hero.name || '???', {
-      fontSize: '22px', fontFamily: 'Arial', fontStyle: 'bold', color: '#F8FAFC'
+    const nameText = scene.add.text(px, top + s(40), hero.name || '???', {
+      fontSize: sf(22), fontFamily: 'Arial', fontStyle: 'bold', color: '#F8FAFC'
     }).setOrigin(0.5);
     this.container.add(nameText);
 
     const rarityBadge = scene.add.graphics();
     rarityBadge.fillStyle(rarityColor, 1);
-    rarityBadge.fillRoundedRect(left + 18, top + 28, 42, 22, 6);
+    rarityBadge.fillRoundedRect(left + s(18), top + s(28), s(42), s(22), s(6));
     this.container.add(rarityBadge);
-    const rarityLabel = scene.add.text(left + 39, top + 39, rKey, {
-      fontSize: '12px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+    const rarityLabel = scene.add.text(left + s(39), top + s(39), rKey, {
+      fontSize: sf(12), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
     this.container.add(rarityLabel);
 
     // === AVATAR ===
-    const avatarY = top + 110;
-    const avatarCircle = scene.add.circle(px, avatarY, 42, rarityColor, 0.3);
-    avatarCircle.setStrokeStyle(2, rarityColor);
+    const avatarY = top + s(110);
+    const avatarCircle = scene.add.circle(px, avatarY, s(42), rarityColor, 0.3);
+    avatarCircle.setStrokeStyle(s(2), rarityColor);
     this.container.add(avatarCircle);
-    const iconText = scene.add.text(px, avatarY - 3, classIcon, {
-      fontSize: '36px'
+    const iconText = scene.add.text(px, avatarY - s(3), classIcon, {
+      fontSize: sf(36)
     }).setOrigin(0.5);
     this.container.add(iconText);
 
     // Class + Level + Stars
-    const infoLine = scene.add.text(px, avatarY + 50, `${className}  Lv.${level}/${maxLevel}`, {
-      fontSize: '14px', fontFamily: 'Arial', color: '#94A3B8'
+    const infoLine = scene.add.text(px, avatarY + s(50), `${className}  Lv.${level}/${maxLevel}`, {
+      fontSize: sf(14), fontFamily: 'Arial', color: '#94A3B8'
     }).setOrigin(0.5);
     this.container.add(infoLine);
-    const starsText = scene.add.text(px, avatarY + 70, '★'.repeat(starCount) + '☆'.repeat(Math.max(0, 6 - starCount)), {
-      fontSize: '14px', color: `#${COLORS.accent.toString(16).padStart(6, '0')}`
+    const starsText = scene.add.text(px, avatarY + s(70), '★'.repeat(starCount) + '☆'.repeat(Math.max(0, 6 - starCount)), {
+      fontSize: sf(14), color: `#${COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
     this.container.add(starsText);
 
     // === STATS BARS ===
-    const statsY = top + 235;
-    const barWidth = 180;
-    const barHeight = 12;
+    const statsY = top + s(235);
+    const barWidth = s(180);
+    const barHeight = s(12);
     // Use ProgressionSystem stats for level-scaled values
     let leveledStats = stats;
     try {
@@ -130,26 +130,26 @@ export class HeroInfoPopup {
     const maxVal = Math.max(leveledStats.hp || 1, (leveledStats.atk || 1) * 5, (leveledStats.def || 1) * 3, 1500);
 
     ['hp', 'atk', 'def', 'spd'].forEach((key, i) => {
-      const y = statsY + i * 32;
+      const y = statsY + i * s(32);
       const val = leveledStats[key] || 0;
       const ratio = Math.min(val / maxVal, 1);
       const color = STAT_COLORS[key];
 
-      const label = scene.add.text(left + 35, y, STAT_LABELS[key], {
-        fontSize: '13px', fontFamily: 'Arial', fontStyle: 'bold',
+      const label = scene.add.text(left + s(35), y, STAT_LABELS[key], {
+        fontSize: sf(13), fontFamily: 'Arial', fontStyle: 'bold',
         color: `#${color.toString(16).padStart(6, '0')}`
       }).setOrigin(0, 0.5);
       this.container.add(label);
 
-      const barBg = scene.add.rectangle(left + 100 + barWidth / 2, y, barWidth, barHeight, 0x334155, 1);
+      const barBg = scene.add.rectangle(left + s(100) + barWidth / 2, y, barWidth, barHeight, 0x334155, 1);
       this.container.add(barBg);
 
-      const fillW = Math.max(barWidth * ratio, 3);
-      const barFill = scene.add.rectangle(left + 100 + fillW / 2, y, fillW, barHeight, color, 0.8);
+      const fillW = Math.max(barWidth * ratio, s(3));
+      const barFill = scene.add.rectangle(left + s(100) + fillW / 2, y, fillW, barHeight, color, 0.8);
       this.container.add(barFill);
 
-      const valText = scene.add.text(left + 100 + barWidth + 12, y, val.toLocaleString(), {
-        fontSize: '12px', fontFamily: 'Arial', fontStyle: 'bold', color: '#E2E8F0'
+      const valText = scene.add.text(left + s(100) + barWidth + s(12), y, val.toLocaleString(), {
+        fontSize: sf(12), fontFamily: 'Arial', fontStyle: 'bold', color: '#E2E8F0'
       }).setOrigin(0, 0.5);
       this.container.add(valText);
     });
@@ -162,44 +162,44 @@ export class HeroInfoPopup {
       // Fallback: hp/10 + atk + def + spd
       power = Math.floor((leveledStats.hp || 0) / 10 + (leveledStats.atk || 0) + (leveledStats.def || 0) + (leveledStats.spd || 0));
     }
-    const powerText = scene.add.text(px + 100, statsY + 50, `⚡ ${power.toLocaleString()}`, {
-      fontSize: '18px', fontFamily: 'Arial', fontStyle: 'bold', color: '#F59E0B'
+    const powerText = scene.add.text(px + s(100), statsY + s(50), `⚡ ${power.toLocaleString()}`, {
+      fontSize: sf(18), fontFamily: 'Arial', fontStyle: 'bold', color: '#F59E0B'
     }).setOrigin(0.5);
     this.container.add(powerText);
 
     // === SKILLS ===
-    const skillsY = statsY + 140;
+    const skillsY = statsY + s(140);
     const skills = staticData?.skills || hero.skills || [];
     const skillLevels = hero.skillLevels || [1, 1];
 
-    const skillTitle = scene.add.text(left + 35, skillsY, '스킬', {
-      fontSize: '14px', fontFamily: 'Arial', fontStyle: 'bold', color: '#CBD5E1'
+    const skillTitle = scene.add.text(left + s(35), skillsY, '스킬', {
+      fontSize: sf(14), fontFamily: 'Arial', fontStyle: 'bold', color: '#CBD5E1'
     });
     this.container.add(skillTitle);
 
     if (skills.length === 0) {
-      const noSkill = scene.add.text(px, skillsY + 28, '스킬 정보 없음', {
-        fontSize: '12px', fontFamily: 'Arial', color: '#64748B'
+      const noSkill = scene.add.text(px, skillsY + s(28), '스킬 정보 없음', {
+        fontSize: sf(12), fontFamily: 'Arial', color: '#64748B'
       }).setOrigin(0.5);
       this.container.add(noSkill);
     } else {
       skills.slice(0, 2).forEach((skill, i) => {
-        const sx = left + 40 + i * 280;
-        const sy = skillsY + 28;
+        const sx = left + s(40) + i * s(280);
+        const sy = skillsY + s(28);
         const sLv = skillLevels[i + 1] || 1;
         const skillName = scene.add.text(sx, sy, `${skill.icon || '🔥'} ${skill.name || '???'} Lv.${sLv}`, {
-          fontSize: '12px', fontFamily: 'Arial', fontStyle: 'bold', color: '#E2E8F0'
+          fontSize: sf(12), fontFamily: 'Arial', fontStyle: 'bold', color: '#E2E8F0'
         });
         this.container.add(skillName);
-        const skillDesc = scene.add.text(sx, sy + 18, (skill.description || '').substring(0, 25), {
-          fontSize: '10px', fontFamily: 'Arial', color: '#94A3B8'
+        const skillDesc = scene.add.text(sx, sy + s(18), (skill.description || '').substring(0, 25), {
+          fontSize: sf(10), fontFamily: 'Arial', color: '#94A3B8'
         });
         this.container.add(skillDesc);
 
         // Skill enhance button
         if (sLv < 10) {
           const enhCost = ProgressionSystem.getSkillEnhanceCost(sLv);
-          const enhBtn = this._createSmallButton(scene, sx + 200, sy + 8, `강화 (${enhCost.gold}G)`, 0x6366F1, () => {
+          const enhBtn = this._createSmallButton(scene, sx + s(200), sy + s(8), `강화 (${enhCost.gold}G)`, 0x6366F1, () => {
             const result = ProgressionSystem.enhanceSkill(heroId, i + 1);
             if (result.success) {
               this._showMessage(`스킬 강화! Lv.${result.newLevel}`);
@@ -214,10 +214,10 @@ export class HeroInfoPopup {
     }
 
     // === ACTION BUTTONS ===
-    const btnY = top + panelH - 80;
-    const btnW = 160;
-    const btnH = 42;
-    const btnGap = 15;
+    const btnY = top + panelH - s(80);
+    const btnW = s(160);
+    const btnH = s(42);
+    const btnGap = s(15);
 
     // Level Up button
     const isMaxLevel = level >= maxLevel;
@@ -242,7 +242,7 @@ export class HeroInfoPopup {
     this.container.add(autoBtn);
 
     // Evolve button (below)
-    const evoBtnY = btnY + btnH + 10;
+    const evoBtnY = btnY + btnH + s(10);
     const evoBtn = this._createButton(scene, px - btnW / 2, evoBtnY, btnW * 2 + btnGap, btnH,
       `⭐ 진화 (조각 필요)`, 0x7C3AED, () => {
         this._evolve(heroId);
@@ -250,9 +250,9 @@ export class HeroInfoPopup {
     this.container.add(evoBtn);
 
     // === Resources display ===
-    const resY = top + panelH - 160;
-    const resText = scene.add.text(left + 35, resY, `💰 ${gold.toLocaleString()}   📕 ${scene.registry?.get('skillBooks') || 0}`, {
-      fontSize: '12px', fontFamily: 'Arial', color: '#94A3B8'
+    const resY = top + panelH - s(160);
+    const resText = scene.add.text(left + s(35), resY, `💰 ${gold.toLocaleString()}   📕 ${scene.registry?.get('skillBooks') || 0}`, {
+      fontSize: sf(12), fontFamily: 'Arial', color: '#94A3B8'
     });
     this.container.add(resText);
 
@@ -382,15 +382,15 @@ export class HeroInfoPopup {
 
   _showMessage(text) {
     const scene = this.scene;
-    const msg = scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 50, text, {
-      fontSize: '16px', fontFamily: 'Arial', fontStyle: 'bold',
+    const msg = scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(50), text, {
+      fontSize: sf(16), fontFamily: 'Arial', fontStyle: 'bold',
       color: '#FFFFFF', backgroundColor: '#1E293B',
-      padding: { x: 16, y: 8 }
+      padding: { x: s(16), y: s(8) }
     }).setOrigin(0.5).setDepth(Z_INDEX.TOOLTIP + 10);
 
     scene.tweens.add({
       targets: msg,
-      y: msg.y - 40,
+      y: msg.y - s(40),
       alpha: 0,
       duration: 1200,
       delay: 600,
@@ -402,9 +402,9 @@ export class HeroInfoPopup {
     const btn = scene.add.container(x + w / 2, y + h / 2);
     const bg = scene.add.rectangle(0, 0, w, h, color, 0.9)
       .setInteractive({ useHandCursor: true });
-    bg.setStrokeStyle(1, 0xFFFFFF, 0.2);
+    bg.setStrokeStyle(s(1), 0xFFFFFF, 0.2);
     const label = scene.add.text(0, 0, text, {
-      fontSize: '13px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+      fontSize: sf(13), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
     btn.add([bg, label]);
 
@@ -416,10 +416,10 @@ export class HeroInfoPopup {
 
   _createSmallButton(scene, x, y, text, color, callback) {
     const btn = scene.add.container(x, y);
-    const bg = scene.add.rectangle(0, 0, 90, 22, color, 0.8)
+    const bg = scene.add.rectangle(0, 0, s(90), s(22), color, 0.8)
       .setInteractive({ useHandCursor: true });
     const label = scene.add.text(0, 0, text, {
-      fontSize: '10px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+      fontSize: sf(10), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
     btn.add([bg, label]);
     bg.on('pointerdown', callback);

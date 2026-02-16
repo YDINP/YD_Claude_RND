@@ -2,7 +2,7 @@
  * SkillCard - 스킬 카드 컴포넌트
  * 전투 UI 하단에 표시되는 영웅별 스킬 카드
  */
-import { COLORS } from '../../config/gameConfig.js';
+import { COLORS, s, sf } from '../../config/gameConfig.js';
 
 export class SkillCard {
   /**
@@ -30,40 +30,40 @@ export class SkillCard {
     this.isReady = this.hero.skillGauge >= this.hero.maxSkillGauge;
 
     // 카드 배경
-    this.cardBg = this.scene.add.rectangle(0, 0, 65, 50,
+    this.cardBg = this.scene.add.rectangle(0, 0, s(65), s(50),
       this.isReady ? COLORS.secondary : COLORS.backgroundLight,
       this.isReady ? 1 : 0.7
     );
-    this.cardBg.setStrokeStyle(2, this.isReady ? COLORS.accent : COLORS.primary);
+    this.cardBg.setStrokeStyle(s(2), this.isReady ? COLORS.accent : COLORS.primary);
 
     // 영웅 이름
     const heroName = this.hero.name.length > 4 ? this.hero.name.substring(0, 4) : this.hero.name;
-    this.nameText = this.scene.add.text(0, -15, heroName, {
-      fontSize: '10px',
+    this.nameText = this.scene.add.text(0, s(-15), heroName, {
+      fontSize: sf(10),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // 스킬 게이지 바 배경
-    this.gaugeBg = this.scene.add.rectangle(0, 5, 55, 6, 0x333333, 1);
+    this.gaugeBg = this.scene.add.rectangle(0, s(5), s(55), s(6), 0x333333, 1);
 
     // 스킬 게이지 바 채우기
-    this.gaugeFill = this.scene.add.rectangle(-27.5, 5, 55 * gaugePercent, 4,
+    this.gaugeFill = this.scene.add.rectangle(s(-27.5), s(5), s(55) * gaugePercent, s(4),
       this.isReady ? COLORS.accent : COLORS.secondary, 1
     );
     this.gaugeFill.setOrigin(0, 0.5);
 
     // 게이지 텍스트
-    this.gaugeText = this.scene.add.text(0, 17, `${this.hero.skillGauge}/${this.hero.maxSkillGauge}`, {
-      fontSize: '8px',
+    this.gaugeText = this.scene.add.text(0, s(17), `${this.hero.skillGauge}/${this.hero.maxSkillGauge}`, {
+      fontSize: sf(8),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // 스킬 아이콘 (준비 완료 시)
     if (this.isReady) {
-      this.skillIcon = this.scene.add.text(0, -2, 'SKILL', {
-        fontSize: '8px',
+      this.skillIcon = this.scene.add.text(0, s(-2), 'SKILL', {
+        fontSize: sf(8),
         fontFamily: 'Arial',
         color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
@@ -96,7 +96,7 @@ export class SkillCard {
     // 게이지 바 애니메이션
     this.scene.tweens.add({
       targets: this.gaugeFill,
-      width: 55 * gaugePercent,
+      width: s(55) * gaugePercent,
       duration: 200
     });
 
@@ -106,12 +106,12 @@ export class SkillCard {
     // 상태 변경 시 스타일 업데이트
     if (this.isReady !== wasReady) {
       this.cardBg.setFillStyle(this.isReady ? COLORS.secondary : COLORS.backgroundLight, this.isReady ? 1 : 0.7);
-      this.cardBg.setStrokeStyle(2, this.isReady ? COLORS.accent : COLORS.primary);
+      this.cardBg.setStrokeStyle(s(2), this.isReady ? COLORS.accent : COLORS.primary);
       this.gaugeFill.setFillStyle(this.isReady ? COLORS.accent : COLORS.secondary, 1);
 
       if (this.isReady && !this.skillIcon) {
-        this.skillIcon = this.scene.add.text(0, -2, 'SKILL', {
-          fontSize: '8px',
+        this.skillIcon = this.scene.add.text(0, s(-2), 'SKILL', {
+          fontSize: sf(8),
           fontFamily: 'Arial',
           color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
           fontStyle: 'bold'
@@ -157,10 +157,10 @@ export class SkillCard {
   setSelected(selected) {
     this.isSelected = selected;
     if (selected) {
-      this.cardBg.setStrokeStyle(3, 0xffffff);
+      this.cardBg.setStrokeStyle(s(3), 0xffffff);
       this.container.setScale(1.1);
     } else {
-      this.cardBg.setStrokeStyle(2, this.isReady ? COLORS.accent : COLORS.primary);
+      this.cardBg.setStrokeStyle(s(2), this.isReady ? COLORS.accent : COLORS.primary);
       this.container.setScale(1);
     }
   }

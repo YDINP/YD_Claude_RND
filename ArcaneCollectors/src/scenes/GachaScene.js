@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, s, sf } from '../config/gameConfig.js';
 import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
 import GameLogger from '../utils/GameLogger.js';
 import { SaveManager } from '../systems/SaveManager.js';
@@ -30,8 +30,8 @@ export class GachaScene extends Phaser.Scene {
     this.createPityDisplay();
     } catch (error) {
       console.error('[GachaScene] create() 실패:', error);
-      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
-        fontSize: '20px', fill: '#ff4444', align: 'center'
+      this.add.text(s(360), s(640), '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: sf(20), fill: '#ff4444', align: 'center'
       }).setOrigin(0.5);
       this.time.delayedCall(2000, () => {
         this.scene.start('MainMenuScene');
@@ -67,7 +67,7 @@ export class GachaScene extends Phaser.Scene {
 
       this.tweens.add({
         targets: particle,
-        y: particle.y - Phaser.Math.Between(100, 200),
+        y: particle.y - Phaser.Math.Between(s(100), s(200)),
         alpha: 0,
         duration: Phaser.Math.Between(3000, 6000),
         repeat: -1,
@@ -78,14 +78,14 @@ export class GachaScene extends Phaser.Scene {
 
   createHeader() {
     // LAYOUT 통일: Header background (100px)
-    this.add.rectangle(GAME_WIDTH / 2, 50, GAME_WIDTH, 100, COLORS.backgroundLight, 0.9);
+    this.add.rectangle(GAME_WIDTH / 2, s(50), GAME_WIDTH, s(100), COLORS.backgroundLight, 0.9);
 
     // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
-    const backBtn = this.add.container(30, 50);
-    const backBg = this.add.rectangle(0, 0, 50, 40, COLORS.backgroundLight, 0.8)
+    const backBtn = this.add.container(s(30), s(50));
+    const backBg = this.add.rectangle(0, 0, s(50), s(40), COLORS.backgroundLight, 0.8)
       .setInteractive({ useHandCursor: true });
     const backText = this.add.text(0, 0, '← 뒤로', {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -98,8 +98,8 @@ export class GachaScene extends Phaser.Scene {
     });
 
     // Title
-    this.add.text(GAME_WIDTH / 2, 50, '소환', {
-      fontSize: '28px',
+    this.add.text(GAME_WIDTH / 2, s(50), '소환', {
+      fontSize: sf(28),
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -108,15 +108,15 @@ export class GachaScene extends Phaser.Scene {
     // Gems display
     let gemIcon;
     if (this.textures.exists('gem')) {
-      gemIcon = this.add.image(GAME_WIDTH - 80, 50, 'gem').setScale(0.7);
+      gemIcon = this.add.image(GAME_WIDTH - s(80), s(50), 'gem').setScale(0.7);
     } else {
-      gemIcon = this.add.text(GAME_WIDTH - 80, 50, '💎', { fontSize: '20px' }).setOrigin(0.5);
+      gemIcon = this.add.text(GAME_WIDTH - s(80), s(50), '💎', { fontSize: sf(20) }).setOrigin(0.5);
     }
     const resources = SaveManager.getResources();
     const gems = resources.gems;
     this.registry.set('gems', gems); // sync registry
-    this.gemText = this.add.text(GAME_WIDTH - 55, 50, gems.toLocaleString(), {
-      fontSize: '16px',
+    this.gemText = this.add.text(GAME_WIDTH - s(55), s(50), gems.toLocaleString(), {
+      fontSize: sf(16),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -124,15 +124,15 @@ export class GachaScene extends Phaser.Scene {
   }
 
   createTabButtons() {
-    const tabY = 120;
-    const tabWidth = 180;
+    const tabY = s(120);
+    const tabWidth = s(180);
 
     // Hero summon tab
-    this.heroTab = this.add.container(GAME_WIDTH / 2 - tabWidth / 2 - 10, tabY);
-    const heroTabBg = this.add.rectangle(0, 0, tabWidth, 50, COLORS.primary, 1);
-    heroTabBg.setStrokeStyle(2, COLORS.text, 0.3);
+    this.heroTab = this.add.container(GAME_WIDTH / 2 - tabWidth / 2 - s(10), tabY);
+    const heroTabBg = this.add.rectangle(0, 0, tabWidth, s(50), COLORS.primary, 1);
+    heroTabBg.setStrokeStyle(s(2), COLORS.text, 0.3);
     const heroTabText = this.add.text(0, 0, '⭐ 영웅 소환', {
-      fontSize: '18px',
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -141,11 +141,11 @@ export class GachaScene extends Phaser.Scene {
     heroTabBg.setInteractive({ useHandCursor: true });
 
     // Equipment summon tab
-    this.equipTab = this.add.container(GAME_WIDTH / 2 + tabWidth / 2 + 10, tabY);
-    const equipTabBg = this.add.rectangle(0, 0, tabWidth, 50, COLORS.backgroundLight, 0.6);
-    equipTabBg.setStrokeStyle(2, COLORS.textDark, 0.3);
+    this.equipTab = this.add.container(GAME_WIDTH / 2 + tabWidth / 2 + s(10), tabY);
+    const equipTabBg = this.add.rectangle(0, 0, tabWidth, s(50), COLORS.backgroundLight, 0.6);
+    equipTabBg.setStrokeStyle(s(2), COLORS.textDark, 0.3);
     const equipTabText = this.add.text(0, 0, '⚔️ 장비 소환', {
-      fontSize: '18px',
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -176,13 +176,13 @@ export class GachaScene extends Phaser.Scene {
     if (tab === 'hero') {
       // Activate hero tab
       this.heroTabBg.setFillStyle(COLORS.primary, 1);
-      this.heroTabBg.setStrokeStyle(2, COLORS.text, 0.3);
+      this.heroTabBg.setStrokeStyle(s(2), COLORS.text, 0.3);
       this.heroTabText.setColor(`#${  COLORS.text.toString(16).padStart(6, '0')}`);
       this.heroTabText.setStyle({ fontStyle: 'bold' });
 
       // Deactivate equipment tab
       this.equipTabBg.setFillStyle(COLORS.backgroundLight, 0.6);
-      this.equipTabBg.setStrokeStyle(2, COLORS.textDark, 0.3);
+      this.equipTabBg.setStrokeStyle(s(2), COLORS.textDark, 0.3);
       this.equipTabText.setColor(`#${  COLORS.textDark.toString(16).padStart(6, '0')}`);
       this.equipTabText.setStyle({ fontStyle: 'normal' });
 
@@ -194,13 +194,13 @@ export class GachaScene extends Phaser.Scene {
     } else {
       // Activate equipment tab
       this.equipTabBg.setFillStyle(COLORS.primary, 1);
-      this.equipTabBg.setStrokeStyle(2, COLORS.text, 0.3);
+      this.equipTabBg.setStrokeStyle(s(2), COLORS.text, 0.3);
       this.equipTabText.setColor(`#${  COLORS.text.toString(16).padStart(6, '0')}`);
       this.equipTabText.setStyle({ fontStyle: 'bold' });
 
       // Deactivate hero tab
       this.heroTabBg.setFillStyle(COLORS.backgroundLight, 0.6);
-      this.heroTabBg.setStrokeStyle(2, COLORS.textDark, 0.3);
+      this.heroTabBg.setStrokeStyle(s(2), COLORS.textDark, 0.3);
       this.heroTabText.setColor(`#${  COLORS.textDark.toString(16).padStart(6, '0')}`);
       this.heroTabText.setStyle({ fontStyle: 'normal' });
 
@@ -209,8 +209,8 @@ export class GachaScene extends Phaser.Scene {
       if (this.pityBar) this.pityBar.setVisible(false);
       if (this.pityText) this.pityText.setVisible(false);
       if (!this.equipGuaranteeText) {
-        this.equipGuaranteeText = this.add.text(GAME_WIDTH / 2, 710, '10연차 SR등급 이상 장비 1개 보장!', {
-          fontSize: '13px', fontFamily: 'Arial',
+        this.equipGuaranteeText = this.add.text(GAME_WIDTH / 2, s(710), '10연차 SR등급 이상 장비 1개 보장!', {
+          fontSize: sf(13), fontFamily: 'Arial',
           color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
           fontStyle: 'bold'
         }).setOrigin(0.5);
@@ -221,22 +221,22 @@ export class GachaScene extends Phaser.Scene {
 
   createBannerArea() {
     // Banner container
-    const bannerY = 260;
+    const bannerY = s(260);
 
     // Banner frame with gradient
-    const bannerBg = this.add.rectangle(GAME_WIDTH / 2, bannerY, GAME_WIDTH - 40, 240, COLORS.backgroundLight, 0.6);
-    bannerBg.setStrokeStyle(3, COLORS.secondary, 0.8);
+    const bannerBg = this.add.rectangle(GAME_WIDTH / 2, bannerY, GAME_WIDTH - s(40), s(240), COLORS.backgroundLight, 0.6);
+    bannerBg.setStrokeStyle(s(3), COLORS.secondary, 0.8);
 
     // Animated background particles
     for (let i = 0; i < 15; i++) {
-      const px = GAME_WIDTH / 2 - 200 + Phaser.Math.Between(0, 400);
-      const py = bannerY - 100 + Phaser.Math.Between(0, 200);
+      const px = GAME_WIDTH / 2 - s(200) + Phaser.Math.Between(0, s(400));
+      const py = bannerY - s(100) + Phaser.Math.Between(0, s(200));
       const particle = this.add.circle(px, py, Phaser.Math.FloatBetween(1, 3), COLORS.accent, 0.5);
 
       this.tweens.add({
         targets: particle,
-        x: px + Phaser.Math.Between(-30, 30),
-        y: py + Phaser.Math.Between(-30, 30),
+        x: px + Phaser.Math.Between(s(-30), s(30)),
+        y: py + Phaser.Math.Between(s(-30), s(30)),
         alpha: { from: 0.2, to: 0.6 },
         duration: Phaser.Math.Between(2000, 4000),
         yoyo: true,
@@ -245,13 +245,13 @@ export class GachaScene extends Phaser.Scene {
     }
 
     // Banner title with glow
-    const bannerTitle = this.add.text(GAME_WIDTH / 2, bannerY - 90, '✨ 발할라의 전사들 픽업! ✨', {
-      fontSize: '22px',
+    const bannerTitle = this.add.text(GAME_WIDTH / 2, bannerY - s(90), '✨ 발할라의 전사들 픽업! ✨', {
+      fontSize: sf(22),
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
       stroke: `#${  COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
-      strokeThickness: 4
+      strokeThickness: s(4)
     }).setOrigin(0.5);
 
     this.tweens.add({
@@ -267,18 +267,18 @@ export class GachaScene extends Phaser.Scene {
     // Rate up characters (placeholders)
     const featured = this.add.container(GAME_WIDTH / 2, bannerY);
 
-    const featuredBg = this.add.rectangle(0, 0, 120, 120, COLORS.raritySR, 0.3);
-    featuredBg.setStrokeStyle(3, COLORS.raritySSR);
+    const featuredBg = this.add.rectangle(0, 0, s(120), s(120), COLORS.raritySR, 0.3);
+    featuredBg.setStrokeStyle(s(3), COLORS.raritySSR);
 
     let featuredChar;
     if (this.textures.exists('hero_placeholder')) {
-      featuredChar = this.add.image(0, -10, 'hero_placeholder').setScale(1.2);
+      featuredChar = this.add.image(0, s(-10), 'hero_placeholder').setScale(1.2);
     } else {
-      featuredChar = this.add.text(0, -10, '👤', { fontSize: '60px' }).setOrigin(0.5);
+      featuredChar = this.add.text(0, s(-10), '👤', { fontSize: sf(60) }).setOrigin(0.5);
     }
 
-    const featuredLabel = this.add.text(0, 55, 'SSR 픽업!', {
-      fontSize: '14px',
+    const featuredLabel = this.add.text(0, s(55), 'SSR 픽업!', {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.raritySSR.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -297,8 +297,8 @@ export class GachaScene extends Phaser.Scene {
 
     // Rotating glow effect
     const glow = this.add.graphics();
-    glow.lineStyle(3, COLORS.raritySSR, 0.5);
-    glow.strokeCircle(GAME_WIDTH / 2, bannerY, 70);
+    glow.lineStyle(s(3), COLORS.raritySSR, 0.5);
+    glow.strokeCircle(GAME_WIDTH / 2, bannerY, s(70));
     this.tweens.add({
       targets: glow,
       rotation: Math.PI * 2,
@@ -308,17 +308,17 @@ export class GachaScene extends Phaser.Scene {
     });
 
     // Rates info with dynamic pity counter
-    const ratesY = bannerY + 100;
+    const ratesY = bannerY + s(100);
     const pityInfo = GachaSystem.getPityInfo();
-    this.bannerPityText = this.add.text(GAME_WIDTH / 2, ratesY - 10, `천장 카운터: ${pityInfo.current}/${pityInfo.threshold}`, {
-      fontSize: '14px',
+    this.bannerPityText = this.add.text(GAME_WIDTH / 2, ratesY - s(10), `천장 카운터: ${pityInfo.current}/${pityInfo.threshold}`, {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, ratesY + 10, `SSR ${pityInfo.currentSSRRate}  SR 15%  R 50%  N 32%`, {
-      fontSize: '12px',
+    this.add.text(GAME_WIDTH / 2, ratesY + s(10), `SSR ${pityInfo.currentSSRRate}  SR 15%  R 50%  N 32%`, {
+      fontSize: sf(12),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -326,32 +326,32 @@ export class GachaScene extends Phaser.Scene {
 
   createSummonButtons() {
     // UIX-3.4: 소환 버튼 위치 하단 BottomNav 위 (y=950 정도)
-    const buttonY = 950;
+    const buttonY = s(950);
 
     // Single summon button
-    this.createSummonButton(GAME_WIDTH / 2 - 110, buttonY, '단일 소환', 300, 1);
+    this.createSummonButton(GAME_WIDTH / 2 - s(110), buttonY, '단일 소환', 300, 1);
 
     // 10x summon button
-    this.createSummonButton(GAME_WIDTH / 2 + 110, buttonY, '10연차', 2700, 10, true);
+    this.createSummonButton(GAME_WIDTH / 2 + s(110), buttonY, '10연차', 2700, 10, true);
 
     // Ticket summon buttons
-    const ticketY = buttonY + 40; // BottomNav(y=1160) 겹침 방지: 버튼 하단이 1160 이내
+    const ticketY = buttonY + s(40); // BottomNav(y=1160) 겹침 방지: 버튼 하단이 1160 이내
     const ticketResources = SaveManager.getResources();
     const ticketCount = ticketResources.summonTickets || 0;
 
     this.ticketText = this.add.text(GAME_WIDTH / 2, ticketY, `🎫 소환권: ${ticketCount}개`, {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Ticket single pull button
-    const ticketBtn1 = this.add.container(GAME_WIDTH / 2 - 110, ticketY + 45);
-    const ticketBg1 = this.add.rectangle(0, 0, 180, 50, 0x2a5298, 1);
-    ticketBg1.setStrokeStyle(2, COLORS.accent, 0.5);
+    const ticketBtn1 = this.add.container(GAME_WIDTH / 2 - s(110), ticketY + s(45));
+    const ticketBg1 = this.add.rectangle(0, 0, s(180), s(50), 0x2a5298, 1);
+    ticketBg1.setStrokeStyle(s(2), COLORS.accent, 0.5);
     ticketBg1.setInteractive({ useHandCursor: true });
     const ticketLabel1 = this.add.text(0, 0, '🎫 ×1 소환', {
-      fontSize: '16px', fontFamily: 'Arial',
+      fontSize: sf(16), fontFamily: 'Arial',
       color: '#ffffff', fontStyle: 'bold'
     }).setOrigin(0.5);
     ticketBtn1.add([ticketBg1, ticketLabel1]);
@@ -371,12 +371,12 @@ export class GachaScene extends Phaser.Scene {
     });
 
     // Ticket 10-pull button
-    const ticketBtn10 = this.add.container(GAME_WIDTH / 2 + 110, ticketY + 45);
-    const ticketBg10 = this.add.rectangle(0, 0, 180, 50, 0x2a5298, 1);
-    ticketBg10.setStrokeStyle(2, COLORS.accent, 0.5);
+    const ticketBtn10 = this.add.container(GAME_WIDTH / 2 + s(110), ticketY + s(45));
+    const ticketBg10 = this.add.rectangle(0, 0, s(180), s(50), 0x2a5298, 1);
+    ticketBg10.setStrokeStyle(s(2), COLORS.accent, 0.5);
     ticketBg10.setInteractive({ useHandCursor: true });
     const ticketLabel10 = this.add.text(0, 0, '🎫 ×10 소환', {
-      fontSize: '16px', fontFamily: 'Arial',
+      fontSize: sf(16), fontFamily: 'Arial',
       color: '#ffffff', fontStyle: 'bold'
     }).setOrigin(0.5);
     ticketBtn10.add([ticketBg10, ticketLabel10]);
@@ -401,34 +401,34 @@ export class GachaScene extends Phaser.Scene {
 
     // Button background with gradient effect
     const bgColor = isPremium ? COLORS.secondary : COLORS.primary;
-    const bg = this.add.rectangle(0, 0, 180, 90, bgColor, 1);
-    bg.setStrokeStyle(3, COLORS.text, 0.4);
+    const bg = this.add.rectangle(0, 0, s(180), s(90), bgColor, 1);
+    bg.setStrokeStyle(s(3), COLORS.text, 0.4);
     bg.setInteractive({ useHandCursor: true });
 
     // Inner glow
-    const innerGlow = this.add.rectangle(0, -20, 170, 35, 0xffffff, 0.15);
+    const innerGlow = this.add.rectangle(0, s(-20), s(170), s(35), 0xffffff, 0.15);
     btn.add(innerGlow);
 
     // Button label
-    const labelText = this.add.text(0, -18, label, {
-      fontSize: '20px',
+    const labelText = this.add.text(0, s(-18), label, {
+      fontSize: sf(20),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 2
+      strokeThickness: s(2)
     }).setOrigin(0.5);
 
     // Cost display
-    const costContainer = this.add.container(0, 20);
+    const costContainer = this.add.container(0, s(20));
     let gemIcon;
     if (this.textures.exists('gem')) {
-      gemIcon = this.add.image(-35, 0, 'gem').setScale(0.6);
+      gemIcon = this.add.image(s(-35), 0, 'gem').setScale(0.6);
     } else {
-      gemIcon = this.add.text(-35, 0, '💎', { fontSize: '18px' }).setOrigin(0.5);
+      gemIcon = this.add.text(s(-35), 0, '💎', { fontSize: sf(18) }).setOrigin(0.5);
     }
     const costText = this.add.text(0, 0, cost.toLocaleString(), {
-      fontSize: '18px',
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -496,8 +496,8 @@ export class GachaScene extends Phaser.Scene {
     // Premium glow effect
     if (isPremium) {
       const premiumGlow = this.add.graphics();
-      premiumGlow.lineStyle(4, COLORS.accent, 0.6);
-      premiumGlow.strokeRect(-90, -45, 180, 90);
+      premiumGlow.lineStyle(s(4), COLORS.accent, 0.6);
+      premiumGlow.strokeRect(s(-90), s(-45), s(180), s(90));
       btn.add(premiumGlow);
       btn.sendToBack(premiumGlow);
 
@@ -512,7 +512,7 @@ export class GachaScene extends Phaser.Scene {
   }
 
   createPityDisplay() {
-    const pityY = 680;
+    const pityY = s(680);
 
     // GachaSystem에서 동적으로 가져오기
     const pityInfo = GachaSystem.getPityInfo();
@@ -520,34 +520,34 @@ export class GachaScene extends Phaser.Scene {
     const pityMax = pityInfo.threshold;
 
     this.add.text(GAME_WIDTH / 2, pityY, '천장 카운터', {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Progress bar background
-    this.add.rectangle(GAME_WIDTH / 2, pityY + 30, 300, 20, COLORS.backgroundLight, 1);
+    this.add.rectangle(GAME_WIDTH / 2, pityY + s(30), s(300), s(20), COLORS.backgroundLight, 1);
 
     // Progress bar fill
     this.pityBar = this.add.rectangle(
-      GAME_WIDTH / 2 - 150 + (300 * pity / pityMax) / 2,
-      pityY + 30,
-      300 * pity / pityMax,
-      16,
+      GAME_WIDTH / 2 - s(150) + (s(300) * pity / pityMax) / 2,
+      pityY + s(30),
+      s(300) * pity / pityMax,
+      s(16),
       COLORS.secondary,
       1
     ).setOrigin(0, 0.5);
 
     // Pity text
-    this.pityText = this.add.text(GAME_WIDTH / 2, pityY + 30, `${pity}/${pityMax}`, {
-      fontSize: '12px',
+    this.pityText = this.add.text(GAME_WIDTH / 2, pityY + s(30), `${pity}/${pityMax}`, {
+      fontSize: sf(12),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Info text
-    this.add.text(GAME_WIDTH / 2, pityY + 60, '90회 소환 시 SSR 확정!', {
-      fontSize: '12px',
+    this.add.text(GAME_WIDTH / 2, pityY + s(60), '90회 소환 시 SSR 확정!', {
+      fontSize: sf(12),
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -704,7 +704,7 @@ export class GachaScene extends Phaser.Scene {
       const progress = pityInfo.current / pityInfo.threshold;
       this.tweens.add({
         targets: this.pityBar,
-        width: 300 * progress,
+        width: s(300) * progress,
         duration: 300
       });
     }
@@ -786,11 +786,11 @@ export class GachaScene extends Phaser.Scene {
     // 장비 소환 이펙트 (기어/톱니 모양)
     const circleGraphics = this.add.graphics().setDepth(51);
     const effectColor = hasSSR ? COLORS.raritySSR : (hasSR ? COLORS.raritySR : COLORS.accent);
-    circleGraphics.lineStyle(3, effectColor, 1);
+    circleGraphics.lineStyle(s(3), effectColor, 1);
 
     // 육각형 마법진 효과
     for (let ring = 0; ring < 3; ring++) {
-      const radius = 80 + ring * 35;
+      const radius = s(80) + ring * s(35);
       const sides = 6;
       circleGraphics.beginPath();
       for (let i = 0; i <= sides; i++) {
@@ -819,14 +819,14 @@ export class GachaScene extends Phaser.Scene {
     const particles = [];
     for (let i = 0; i < particleCount; i++) {
       const angle = (i / particleCount) * Math.PI * 2;
-      const particle = this.add.circle(GAME_WIDTH / 2, GAME_HEIGHT / 2, hasSSR ? 5 : 3, effectColor)
+      const particle = this.add.circle(GAME_WIDTH / 2, GAME_HEIGHT / 2, hasSSR ? s(5) : s(3), effectColor)
         .setDepth(52).setAlpha(0);
       particles.push(particle);
 
       this.tweens.add({
         targets: particle,
-        x: GAME_WIDTH / 2 + Math.cos(angle) * 180,
-        y: GAME_HEIGHT / 2 + Math.sin(angle) * 180,
+        x: GAME_WIDTH / 2 + Math.cos(angle) * s(180),
+        y: GAME_HEIGHT / 2 + Math.sin(angle) * s(180),
         alpha: { from: 1, to: 0 },
         duration: 1200,
         delay: 300 + i * 25,
@@ -859,12 +859,12 @@ export class GachaScene extends Phaser.Scene {
   showEquipmentResults(results, overlay) {
     const container = this.add.container(0, 0).setDepth(60);
 
-    const resultBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - 40, GAME_HEIGHT - 200, COLORS.backgroundLight, 0.95);
-    resultBg.setStrokeStyle(2, COLORS.accent);
+    const resultBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - s(40), GAME_HEIGHT - s(200), COLORS.backgroundLight, 0.95);
+    resultBg.setStrokeStyle(s(2), COLORS.accent);
     container.add(resultBg);
 
-    const title = this.add.text(GAME_WIDTH / 2, 150, '⚔️ 장비 소환 결과', {
-      fontSize: '24px',
+    const title = this.add.text(GAME_WIDTH / 2, s(150), '⚔️ 장비 소환 결과', {
+      fontSize: sf(24),
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -872,25 +872,25 @@ export class GachaScene extends Phaser.Scene {
     container.add(title);
 
     const cols = Math.min(5, results.length);
-    const startX = GAME_WIDTH / 2 - ((cols - 1) * 85) / 2;
-    const startY = 250;
+    const startX = GAME_WIDTH / 2 - ((cols - 1) * s(85)) / 2;
+    const startY = s(250);
 
     results.forEach((equip, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
-      const x = startX + col * 85;
-      const y = startY + row * 140;
+      const x = startX + col * s(85);
+      const y = startY + row * s(140);
 
       this.time.delayedCall(index * 80, () => {
         this.createEquipmentCard(container, x, y, equip);
       });
     });
 
-    const closeBtn = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT - 120);
-    const closeBg = this.add.rectangle(0, 0, 150, 50, COLORS.accent, 1)
+    const closeBtn = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT - s(120));
+    const closeBg = this.add.rectangle(0, 0, s(150), s(50), COLORS.accent, 1)
       .setInteractive({ useHandCursor: true });
     const closeText = this.add.text(0, 0, '확인', {
-      fontSize: '18px',
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -909,38 +909,38 @@ export class GachaScene extends Phaser.Scene {
     const card = this.add.container(x, y);
     const rarityColor = COLORS.rarity[equip.rarity] || COLORS.rarityN;
 
-    const cardBg = this.add.rectangle(0, 0, 75, 120, COLORS.backgroundLight, 1);
-    cardBg.setStrokeStyle(2, rarityColor);
+    const cardBg = this.add.rectangle(0, 0, s(75), s(120), COLORS.backgroundLight, 1);
+    cardBg.setStrokeStyle(s(2), rarityColor);
 
     // 슬롯 아이콘
-    const icon = this.add.text(0, -25, equip.slotIcon || '⚔️', {
-      fontSize: '32px'
+    const icon = this.add.text(0, s(-25), equip.slotIcon || '⚔️', {
+      fontSize: sf(32)
     }).setOrigin(0.5);
 
     // 등급 배지
-    const rarityBadge = this.add.rectangle(0, -55, 30, 18, rarityColor, 1);
-    const rarityText = this.add.text(0, -55, equip.rarity, {
-      fontSize: '10px', fontFamily: 'Arial', color: '#ffffff', fontStyle: 'bold'
+    const rarityBadge = this.add.rectangle(0, s(-55), s(30), s(18), rarityColor, 1);
+    const rarityText = this.add.text(0, s(-55), equip.rarity, {
+      fontSize: sf(10), fontFamily: 'Arial', color: '#ffffff', fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // 슬롯 타입
-    const slotText = this.add.text(0, 15, equip.slotName || equip.slotType, {
-      fontSize: '11px', fontFamily: 'Arial',
+    const slotText = this.add.text(0, s(15), equip.slotName || equip.slotType, {
+      fontSize: sf(11), fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // 장비 이름 (축약)
     const displayName = equip.name && equip.name.length > 6 ? `${equip.name.substring(0, 6)  }..` : (equip.name || '장비');
-    const nameText = this.add.text(0, 35, displayName, {
-      fontSize: '9px', fontFamily: 'Arial',
+    const nameText = this.add.text(0, s(35), displayName, {
+      fontSize: sf(9), fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // 주요 스탯 표시
     const mainStat = equip.stats ? Object.entries(equip.stats)[0] : null;
     const statLabel = mainStat ? `${mainStat[0]} +${Math.floor(mainStat[1])}` : '';
-    const statText = this.add.text(0, 50, statLabel, {
-      fontSize: '9px', fontFamily: 'Arial',
+    const statText = this.add.text(0, s(50), statLabel, {
+      fontSize: sf(9), fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
@@ -956,7 +956,7 @@ export class GachaScene extends Phaser.Scene {
     });
 
     if (equip.rarity === 'SSR') {
-      const glow = this.add.circle(x, y, 50, COLORS.raritySSR, 0.3);
+      const glow = this.add.circle(x, y, s(50), COLORS.raritySSR, 0.3);
       container.add(glow);
       container.sendToBack(glow);
       this.tweens.add({
@@ -987,10 +987,10 @@ export class GachaScene extends Phaser.Scene {
 
     // Enhanced magic circle animation
     const circleGraphics = this.add.graphics().setDepth(51);
-    circleGraphics.lineStyle(4, hasSSR ? COLORS.raritySSR : (hasSR ? COLORS.raritySR : COLORS.primary), 1);
+    circleGraphics.lineStyle(s(4), hasSSR ? COLORS.raritySSR : (hasSR ? COLORS.raritySR : COLORS.primary), 1);
 
     for (let i = 0; i < 3; i++) {
-      circleGraphics.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 100 + i * 30);
+      circleGraphics.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, s(100) + i * s(30));
     }
 
     circleGraphics.setAlpha(0).setScale(0);
@@ -1014,7 +1014,7 @@ export class GachaScene extends Phaser.Scene {
       const particle = this.add.circle(
         GAME_WIDTH / 2,
         GAME_HEIGHT / 2,
-        hasSSR ? 6 : 4,
+        hasSSR ? s(6) : s(4),
         particleColor
       ).setDepth(52).setAlpha(0);
 
@@ -1022,8 +1022,8 @@ export class GachaScene extends Phaser.Scene {
 
       this.tweens.add({
         targets: particle,
-        x: GAME_WIDTH / 2 + Math.cos(angle) * (hasSSR ? 200 : 150),
-        y: GAME_HEIGHT / 2 + Math.sin(angle) * (hasSSR ? 200 : 150),
+        x: GAME_WIDTH / 2 + Math.cos(angle) * (hasSSR ? s(200) : s(150)),
+        y: GAME_HEIGHT / 2 + Math.sin(angle) * (hasSSR ? s(200) : s(150)),
         alpha: { from: 1, to: 0 },
         duration: hasSSR ? 1500 : 1000,
         delay: 400 + i * (hasSSR ? 30 : 50),
@@ -1053,7 +1053,7 @@ export class GachaScene extends Phaser.Scene {
         const angle = (i / 12) * Math.PI * 2;
         const ray = this.add.graphics().setDepth(53);
         ray.fillStyle(COLORS.raritySSR, 0.6);
-        ray.fillTriangle(0, 0, -10, -300, 10, -300);
+        ray.fillTriangle(0, 0, s(-10), s(-300), s(10), s(-300));
         ray.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2);
         ray.setRotation(angle);
         ray.setAlpha(0);
@@ -1072,7 +1072,7 @@ export class GachaScene extends Phaser.Scene {
 
     // SR effect - purple glow
     if (hasSR && !hasSSR) {
-      const glow = this.add.circle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 150, COLORS.raritySR, 0.3);
+      const glow = this.add.circle(GAME_WIDTH / 2, GAME_HEIGHT / 2, s(150), COLORS.raritySR, 0.3);
       glow.setDepth(51);
 
       this.tweens.add({
@@ -1122,13 +1122,13 @@ export class GachaScene extends Phaser.Scene {
     const container = this.add.container(0, 0).setDepth(60);
 
     // Results background
-    const resultBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - 40, GAME_HEIGHT - 200, COLORS.backgroundLight, 0.95);
-    resultBg.setStrokeStyle(2, COLORS.primary);
+    const resultBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - s(40), GAME_HEIGHT - s(200), COLORS.backgroundLight, 0.95);
+    resultBg.setStrokeStyle(s(2), COLORS.primary);
     container.add(resultBg);
 
     // Title
-    const title = this.add.text(GAME_WIDTH / 2, 150, '소환 결과', {
-      fontSize: '24px',
+    const title = this.add.text(GAME_WIDTH / 2, s(150), '소환 결과', {
+      fontSize: sf(24),
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -1137,14 +1137,14 @@ export class GachaScene extends Phaser.Scene {
 
     // Display heroes in grid
     const cols = Math.min(5, results.length);
-    const startX = GAME_WIDTH / 2 - ((cols - 1) * 85) / 2;
-    const startY = 250;
+    const startX = GAME_WIDTH / 2 - ((cols - 1) * s(85)) / 2;
+    const startY = s(250);
 
     results.forEach((hero, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
-      const x = startX + col * 85;
-      const y = startY + row * 130;
+      const x = startX + col * s(85);
+      const y = startY + row * s(130);
 
       this.time.delayedCall(index * 100, () => {
         this.createHeroCard(container, x, y, hero);
@@ -1152,11 +1152,11 @@ export class GachaScene extends Phaser.Scene {
     });
 
     // Close button
-    const closeBtn = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT - 120);
-    const closeBg = this.add.rectangle(0, 0, 150, 50, COLORS.primary, 1)
+    const closeBtn = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT - s(120));
+    const closeBg = this.add.rectangle(0, 0, s(150), s(50), COLORS.primary, 1)
       .setInteractive({ useHandCursor: true });
     const closeText = this.add.text(0, 0, '확인', {
-      fontSize: '18px',
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -1179,16 +1179,16 @@ export class GachaScene extends Phaser.Scene {
     const rKey = getRarityKey(hero.rarity);
     const rarityData = RARITY[rKey] || RARITY.N;
     const rarityColor = rarityData.color;
-    const cardBg = this.add.rectangle(0, 0, 75, 110, COLORS.backgroundLight, 1);
-    cardBg.setStrokeStyle(2, rarityColor);
+    const cardBg = this.add.rectangle(0, 0, s(75), s(110), COLORS.backgroundLight, 1);
+    cardBg.setStrokeStyle(s(2), rarityColor);
 
     // Hero image
-    const heroImg = this.add.image(0, -15, 'hero_placeholder').setScale(0.7);
+    const heroImg = this.add.image(0, s(-15), 'hero_placeholder').setScale(0.7);
 
     // Rarity indicator
-    const rarityBg = this.add.rectangle(0, -50, 30, 18, rarityColor, 1);
-    const rarityText = this.add.text(0, -50, rKey, {
-      fontSize: '10px',
+    const rarityBg = this.add.rectangle(0, s(-50), s(30), s(18), rarityColor, 1);
+    const rarityText = this.add.text(0, s(-50), rKey, {
+      fontSize: sf(10),
       fontFamily: 'Arial',
       color: '#ffffff',
       fontStyle: 'bold'
@@ -1196,16 +1196,16 @@ export class GachaScene extends Phaser.Scene {
 
     // Stars
     const starCount = hero.stars || getRarityNum(hero.rarity) || rarityData.stars || 1;
-    const stars = this.add.text(0, 25, '★'.repeat(starCount), {
-      fontSize: '10px',
+    const stars = this.add.text(0, s(25), '★'.repeat(starCount), {
+      fontSize: sf(10),
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Name (truncated)
     const heroName = hero.name || '???';
     const name = heroName.length > 6 ? `${heroName.substring(0, 6)  }..` : heroName;
-    const nameText = this.add.text(0, 42, name, {
-      fontSize: '10px',
+    const nameText = this.add.text(0, s(42), name, {
+      fontSize: sf(10),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -1224,7 +1224,7 @@ export class GachaScene extends Phaser.Scene {
 
     // SSR special effect
     if (hero.rarity === 'SSR') {
-      const glow = this.add.circle(x, y, 50, COLORS.raritySSR, 0.3);
+      const glow = this.add.circle(x, y, s(50), COLORS.raritySSR, 0.3);
       container.add(glow);
       container.sendToBack(glow);
 
@@ -1257,17 +1257,17 @@ export class GachaScene extends Phaser.Scene {
 
   showMessage(text, color = COLORS.text) {
     const msg = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, text, {
-      fontSize: '20px',
+      fontSize: sf(20),
       fontFamily: 'Arial',
       color: `#${  color.toString(16).padStart(6, '0')}`,
       backgroundColor: `#${  COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
-      padding: { x: 20, y: 12 }
+      padding: { x: s(20), y: s(12) }
     }).setOrigin(0.5).setDepth(100);
 
     this.tweens.add({
       targets: msg,
       alpha: 0,
-      y: msg.y - 50,
+      y: msg.y - s(50),
       duration: 1500,
       delay: 500,
       onComplete: () => msg.destroy()

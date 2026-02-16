@@ -1,5 +1,5 @@
 import { PopupBase } from '../PopupBase.js';
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY } from '../../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, s, sf } from '../../config/gameConfig.js';
 import { GachaSystem } from '../../systems/GachaSystem.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import { getCharacter } from '../../data/index.js';
@@ -13,8 +13,8 @@ export class GachaPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
       title: '소환',
-      width: 680,
-      height: 1100,
+      width: s(680),
+      height: s(1100),
       ...options
     });
 
@@ -53,21 +53,21 @@ export class GachaPopup extends PopupBase {
     const resources = SaveManager.getResources();
 
     // Gems
-    const gemIcon = this.scene.add.text(b.centerX - 120, b.top + 10, '💎', {
-      fontSize: '20px'
+    const gemIcon = this.scene.add.text(b.centerX - s(120), b.top + s(10), '💎', {
+      fontSize: sf(20)
     }).setOrigin(0.5);
-    this.gemText = this.addText(b.centerX - 85, b.top + 10, resources.gems.toLocaleString(), {
-      fontSize: '18px',
+    this.gemText = this.addText(b.centerX - s(85), b.top + s(10), resources.gems.toLocaleString(), {
+      fontSize: sf(18),
       fontStyle: 'bold',
       color: '#FFD700'
     }).setOrigin(0, 0.5);
 
     // Tickets
-    const ticketIcon = this.scene.add.text(b.centerX + 20, b.top + 10, '🎫', {
-      fontSize: '20px'
+    const ticketIcon = this.scene.add.text(b.centerX + s(20), b.top + s(10), '🎫', {
+      fontSize: sf(20)
     }).setOrigin(0.5);
-    this.ticketText = this.addText(b.centerX + 55, b.top + 10, `${resources.summonTickets}개`, {
-      fontSize: '18px',
+    this.ticketText = this.addText(b.centerX + s(55), b.top + s(10), `${resources.summonTickets}개`, {
+      fontSize: sf(18),
       fontStyle: 'bold',
       color: '#87CEEB'
     }).setOrigin(0, 0.5);
@@ -77,15 +77,15 @@ export class GachaPopup extends PopupBase {
 
   createTabButtons() {
     const b = this.contentBounds;
-    const tabY = b.top + 50;
-    const tabWidth = 180;
+    const tabY = b.top + s(50);
+    const tabWidth = s(180);
 
     // Hero tab
-    this.heroTab = this.scene.add.container(b.centerX - tabWidth / 2 - 10, tabY);
-    const heroTabBg = this.scene.add.rectangle(0, 0, tabWidth, 40, COLORS.primary, 1);
-    heroTabBg.setStrokeStyle(2, COLORS.text, 0.3);
+    this.heroTab = this.scene.add.container(b.centerX - tabWidth / 2 - s(10), tabY);
+    const heroTabBg = this.scene.add.rectangle(0, 0, tabWidth, s(40), COLORS.primary, 1);
+    heroTabBg.setStrokeStyle(s(2), COLORS.text, 0.3);
     const heroTabText = this.scene.add.text(0, 0, '⭐ 영웅 소환', {
-      fontSize: '16px',
+      fontSize: sf(16),
       fontFamily: 'Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -94,11 +94,11 @@ export class GachaPopup extends PopupBase {
     heroTabBg.setInteractive({ useHandCursor: true });
 
     // Equipment tab
-    this.equipTab = this.scene.add.container(b.centerX + tabWidth / 2 + 10, tabY);
-    const equipTabBg = this.scene.add.rectangle(0, 0, tabWidth, 40, COLORS.backgroundLight, 0.6);
-    equipTabBg.setStrokeStyle(2, COLORS.textDark, 0.3);
+    this.equipTab = this.scene.add.container(b.centerX + tabWidth / 2 + s(10), tabY);
+    const equipTabBg = this.scene.add.rectangle(0, 0, tabWidth, s(40), COLORS.backgroundLight, 0.6);
+    equipTabBg.setStrokeStyle(s(2), COLORS.textDark, 0.3);
     const equipTabText = this.scene.add.text(0, 0, '⚔️ 장비 소환', {
-      fontSize: '16px',
+      fontSize: sf(16),
       fontFamily: 'Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -131,13 +131,13 @@ export class GachaPopup extends PopupBase {
     if (tab === 'hero') {
       // Activate hero tab
       this.heroTabBg.setFillStyle(COLORS.primary, 1);
-      this.heroTabBg.setStrokeStyle(2, COLORS.text, 0.3);
+      this.heroTabBg.setStrokeStyle(s(2), COLORS.text, 0.3);
       this.heroTabText.setColor(`#${COLORS.text.toString(16).padStart(6, '0')}`);
       this.heroTabText.setStyle({ fontStyle: 'bold' });
 
       // Deactivate equipment tab
       this.equipTabBg.setFillStyle(COLORS.backgroundLight, 0.6);
-      this.equipTabBg.setStrokeStyle(2, COLORS.textDark, 0.3);
+      this.equipTabBg.setStrokeStyle(s(2), COLORS.textDark, 0.3);
       this.equipTabText.setColor(`#${COLORS.textDark.toString(16).padStart(6, '0')}`);
       this.equipTabText.setStyle({ fontStyle: 'normal' });
 
@@ -147,13 +147,13 @@ export class GachaPopup extends PopupBase {
     } else {
       // Activate equipment tab
       this.equipTabBg.setFillStyle(COLORS.primary, 1);
-      this.equipTabBg.setStrokeStyle(2, COLORS.text, 0.3);
+      this.equipTabBg.setStrokeStyle(s(2), COLORS.text, 0.3);
       this.equipTabText.setColor(`#${COLORS.text.toString(16).padStart(6, '0')}`);
       this.equipTabText.setStyle({ fontStyle: 'bold' });
 
       // Deactivate hero tab
       this.heroTabBg.setFillStyle(COLORS.backgroundLight, 0.6);
-      this.heroTabBg.setStrokeStyle(2, COLORS.textDark, 0.3);
+      this.heroTabBg.setStrokeStyle(s(2), COLORS.textDark, 0.3);
       this.heroTabText.setColor(`#${COLORS.textDark.toString(16).padStart(6, '0')}`);
       this.heroTabText.setStyle({ fontStyle: 'normal' });
 
@@ -165,16 +165,16 @@ export class GachaPopup extends PopupBase {
 
   createBannerArea() {
     const b = this.contentBounds;
-    const bannerY = b.top + 150;
+    const bannerY = b.top + s(150);
 
     // Banner background
-    const bannerBg = this.scene.add.rectangle(b.centerX, bannerY, b.width - 40, 200, COLORS.backgroundLight, 0.6);
-    bannerBg.setStrokeStyle(3, COLORS.secondary, 0.8);
+    const bannerBg = this.scene.add.rectangle(b.centerX, bannerY, b.width - s(40), s(200), COLORS.backgroundLight, 0.6);
+    bannerBg.setStrokeStyle(s(3), COLORS.secondary, 0.8);
     this.contentContainer.add(bannerBg);
 
     // Banner title
-    const bannerTitle = this.scene.add.text(b.centerX, bannerY - 70, '✨ 발할라의 전사들 픽업! ✨', {
-      fontSize: '18px',
+    const bannerTitle = this.scene.add.text(b.centerX, bannerY - s(70), '✨ 발할라의 전사들 픽업! ✨', {
+      fontSize: sf(18),
       fontFamily: 'Georgia, serif',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -182,13 +182,13 @@ export class GachaPopup extends PopupBase {
     this.contentContainer.add(bannerTitle);
 
     // Featured hero placeholder
-    const featuredIcon = this.scene.add.text(b.centerX, bannerY - 10, '👤', {
-      fontSize: '60px'
+    const featuredIcon = this.scene.add.text(b.centerX, bannerY - s(10), '👤', {
+      fontSize: sf(60)
     }).setOrigin(0.5);
     this.contentContainer.add(featuredIcon);
 
-    const featuredLabel = this.scene.add.text(b.centerX, bannerY + 45, 'SSR 픽업!', {
-      fontSize: '14px',
+    const featuredLabel = this.scene.add.text(b.centerX, bannerY + s(45), 'SSR 픽업!', {
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${COLORS.raritySSR.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -196,18 +196,18 @@ export class GachaPopup extends PopupBase {
     this.contentContainer.add(featuredLabel);
 
     // Rates info
-    const ratesY = bannerY + 80;
+    const ratesY = bannerY + s(80);
     const pityInfo = GachaSystem.getPityInfo();
     this.bannerPityText = this.scene.add.text(b.centerX, ratesY, `천장 카운터: ${pityInfo.current}/${pityInfo.threshold}`, {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
     this.contentContainer.add(this.bannerPityText);
 
-    const ratesText = this.scene.add.text(b.centerX, ratesY + 20, `SSR ${pityInfo.currentSSRRate}  SR 15%  R 50%  N 32%`, {
-      fontSize: '12px',
+    const ratesText = this.scene.add.text(b.centerX, ratesY + s(20), `SSR ${pityInfo.currentSSRRate}  SR 15%  R 50%  N 32%`, {
+      fontSize: sf(12),
       fontFamily: 'Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -216,45 +216,45 @@ export class GachaPopup extends PopupBase {
 
   createPityDisplay() {
     const b = this.contentBounds;
-    const pityY = b.top + 380;
+    const pityY = b.top + s(380);
 
     const pityInfo = GachaSystem.getPityInfo();
     const pity = pityInfo.current;
     const pityMax = pityInfo.threshold;
 
     const pityLabel = this.scene.add.text(b.centerX, pityY, '천장 카운터', {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
     this.contentContainer.add(pityLabel);
 
     // Progress bar background
-    const barBg = this.scene.add.rectangle(b.centerX, pityY + 30, 300, 20, COLORS.backgroundLight, 1);
+    const barBg = this.scene.add.rectangle(b.centerX, pityY + s(30), s(300), s(20), COLORS.backgroundLight, 1);
     this.contentContainer.add(barBg);
 
     // Progress bar fill
     this.pityBar = this.scene.add.rectangle(
-      b.centerX - 150 + (300 * pity / pityMax) / 2,
-      pityY + 30,
-      300 * pity / pityMax,
-      16,
+      b.centerX - s(150) + (s(300) * pity / pityMax) / 2,
+      pityY + s(30),
+      s(300) * pity / pityMax,
+      s(16),
       COLORS.secondary,
       1
     ).setOrigin(0, 0.5);
     this.contentContainer.add(this.pityBar);
 
     // Pity text
-    this.pityText = this.scene.add.text(b.centerX, pityY + 30, `${pity}/${pityMax}`, {
-      fontSize: '12px',
+    this.pityText = this.scene.add.text(b.centerX, pityY + s(30), `${pity}/${pityMax}`, {
+      fontSize: sf(12),
       fontFamily: 'Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
     this.contentContainer.add(this.pityText);
 
     // Info text
-    const infoText = this.scene.add.text(b.centerX, pityY + 60, '90회 소환 시 SSR 확정!', {
-      fontSize: '12px',
+    const infoText = this.scene.add.text(b.centerX, pityY + s(60), '90회 소환 시 SSR 확정!', {
+      fontSize: sf(12),
       fontFamily: 'Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -263,33 +263,33 @@ export class GachaPopup extends PopupBase {
 
   createSummonButtons() {
     const b = this.contentBounds;
-    const buttonY = b.top + 500;
+    const buttonY = b.top + s(500);
 
     // Gem summon buttons
-    this.addButton(b.centerX - 110, buttonY, 180, 80, '단일 소환\n💎 300', COLORS.primary, () => {
+    this.addButton(b.centerX - s(110), buttonY, s(180), s(80), '단일 소환\n💎 300', COLORS.primary, () => {
       this.performSummon(1, false);
     });
 
-    this.addButton(b.centerX + 110, buttonY, 180, 80, '10연차\n💎 2700', COLORS.secondary, () => {
+    this.addButton(b.centerX + s(110), buttonY, s(180), s(80), '10연차\n💎 2700', COLORS.secondary, () => {
       this.performSummon(10, false);
     });
 
     // Ticket summon buttons
-    const ticketY = buttonY + 100;
+    const ticketY = buttonY + s(100);
     const resources = SaveManager.getResources();
 
     const ticketLabel = this.scene.add.text(b.centerX, ticketY, `🎫 소환권: ${resources.summonTickets}개`, {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
     this.contentContainer.add(ticketLabel);
 
-    this.addButton(b.centerX - 110, ticketY + 40, 180, 50, '🎫 ×1 소환', 0x2a5298, () => {
+    this.addButton(b.centerX - s(110), ticketY + s(40), s(180), s(50), '🎫 ×1 소환', 0x2a5298, () => {
       this.performSummon(1, true);
     });
 
-    this.addButton(b.centerX + 110, ticketY + 40, 180, 50, '🎫 ×10 소환', 0x2a5298, () => {
+    this.addButton(b.centerX + s(110), ticketY + s(40), s(180), s(50), '🎫 ×10 소환', 0x2a5298, () => {
       this.performSummon(10, true);
     });
   }
@@ -358,8 +358,8 @@ export class GachaPopup extends PopupBase {
       const progress = pityInfo.current / pityInfo.threshold;
       this.scene.tweens.add({
         targets: this.pityBar,
-        width: 300 * progress,
-        x: this.contentBounds.centerX - 150 + (300 * progress) / 2,
+        width: s(300) * progress,
+        x: this.contentBounds.centerX - s(150) + (s(300) * progress) / 2,
         duration: 300
       });
     }
@@ -385,10 +385,10 @@ export class GachaPopup extends PopupBase {
     // Magic circle effect
     const circleGraphics = this.scene.add.graphics().setDepth(3001);
     const effectColor = hasSSR ? COLORS.raritySSR : (hasSR ? COLORS.raritySR : COLORS.primary);
-    circleGraphics.lineStyle(4, effectColor, 1);
+    circleGraphics.lineStyle(s(4), effectColor, 1);
 
     for (let i = 0; i < 3; i++) {
-      circleGraphics.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 100 + i * 30);
+      circleGraphics.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, s(100) + i * s(30));
     }
 
     circleGraphics.setAlpha(0).setScale(0);
@@ -411,7 +411,7 @@ export class GachaPopup extends PopupBase {
       const particle = this.scene.add.circle(
         GAME_WIDTH / 2,
         GAME_HEIGHT / 2,
-        hasSSR ? 6 : 4,
+        hasSSR ? s(6) : s(4),
         effectColor
       ).setDepth(3002).setAlpha(0);
 
@@ -419,8 +419,8 @@ export class GachaPopup extends PopupBase {
 
       this.scene.tweens.add({
         targets: particle,
-        x: GAME_WIDTH / 2 + Math.cos(angle) * (hasSSR ? 200 : 150),
-        y: GAME_HEIGHT / 2 + Math.sin(angle) * (hasSSR ? 200 : 150),
+        x: GAME_WIDTH / 2 + Math.cos(angle) * (hasSSR ? s(200) : s(150)),
+        y: GAME_HEIGHT / 2 + Math.sin(angle) * (hasSSR ? s(200) : s(150)),
         alpha: { from: 1, to: 0 },
         duration: hasSSR ? 1500 : 1000,
         delay: 400 + i * (hasSSR ? 30 : 50),
@@ -458,13 +458,13 @@ export class GachaPopup extends PopupBase {
     const resultContainer = this.scene.add.container(0, 0).setDepth(3010);
 
     // Results background
-    const resultBg = this.scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - 60, GAME_HEIGHT - 300, COLORS.backgroundLight, 0.95);
-    resultBg.setStrokeStyle(2, COLORS.primary);
+    const resultBg = this.scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - s(60), GAME_HEIGHT - s(300), COLORS.backgroundLight, 0.95);
+    resultBg.setStrokeStyle(s(2), COLORS.primary);
     resultContainer.add(resultBg);
 
     // Title
-    const title = this.scene.add.text(GAME_WIDTH / 2, 200, '소환 결과', {
-      fontSize: '24px',
+    const title = this.scene.add.text(GAME_WIDTH / 2, s(200), '소환 결과', {
+      fontSize: sf(24),
       fontFamily: 'Georgia, serif',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -473,14 +473,14 @@ export class GachaPopup extends PopupBase {
 
     // Display heroes in grid
     const cols = Math.min(5, results.length);
-    const startX = GAME_WIDTH / 2 - ((cols - 1) * 85) / 2;
-    const startY = 300;
+    const startX = GAME_WIDTH / 2 - ((cols - 1) * s(85)) / 2;
+    const startY = s(300);
 
     results.forEach((hero, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
-      const x = startX + col * 85;
-      const y = startY + row * 130;
+      const x = startX + col * s(85);
+      const y = startY + row * s(130);
 
       this.scene.time.delayedCall(index * 100, () => {
         this.createHeroCard(resultContainer, x, y, hero);
@@ -488,11 +488,11 @@ export class GachaPopup extends PopupBase {
     });
 
     // Close button
-    const closeBtn = this.scene.add.container(GAME_WIDTH / 2, GAME_HEIGHT - 150);
-    const closeBg = this.scene.add.rectangle(0, 0, 150, 50, COLORS.primary, 1)
+    const closeBtn = this.scene.add.container(GAME_WIDTH / 2, GAME_HEIGHT - s(150));
+    const closeBg = this.scene.add.rectangle(0, 0, s(150), s(50), COLORS.primary, 1)
       .setInteractive({ useHandCursor: true });
     const closeText = this.scene.add.text(0, 0, '확인', {
-      fontSize: '18px',
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -514,16 +514,16 @@ export class GachaPopup extends PopupBase {
     const rKey = getRarityKey(hero.rarity);
     const rarityData = RARITY[rKey] || RARITY.N;
     const rarityColor = rarityData.color;
-    const cardBg = this.scene.add.rectangle(0, 0, 75, 110, COLORS.backgroundLight, 1);
-    cardBg.setStrokeStyle(2, rarityColor);
+    const cardBg = this.scene.add.rectangle(0, 0, s(75), s(110), COLORS.backgroundLight, 1);
+    cardBg.setStrokeStyle(s(2), rarityColor);
 
     // Hero image placeholder
-    const heroImg = this.scene.add.text(0, -15, '👤', { fontSize: '40px' }).setOrigin(0.5);
+    const heroImg = this.scene.add.text(0, s(-15), '👤', { fontSize: sf(40) }).setOrigin(0.5);
 
     // Rarity indicator
-    const rarityBg = this.scene.add.rectangle(0, -50, 30, 18, rarityColor, 1);
-    const rarityText = this.scene.add.text(0, -50, rKey, {
-      fontSize: '10px',
+    const rarityBg = this.scene.add.rectangle(0, s(-50), s(30), s(18), rarityColor, 1);
+    const rarityText = this.scene.add.text(0, s(-50), rKey, {
+      fontSize: sf(10),
       fontFamily: 'Arial',
       color: '#ffffff',
       fontStyle: 'bold'
@@ -531,16 +531,16 @@ export class GachaPopup extends PopupBase {
 
     // Stars
     const starCount = hero.stars || getRarityNum(hero.rarity) || rarityData.stars || 1;
-    const stars = this.scene.add.text(0, 25, '★'.repeat(starCount), {
-      fontSize: '10px',
+    const stars = this.scene.add.text(0, s(25), '★'.repeat(starCount), {
+      fontSize: sf(10),
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // Name (truncated)
     const heroName = hero.name || '???';
     const name = heroName.length > 6 ? `${heroName.substring(0, 6)}..` : heroName;
-    const nameText = this.scene.add.text(0, 42, name, {
-      fontSize: '10px',
+    const nameText = this.scene.add.text(0, s(42), name, {
+      fontSize: sf(10),
       fontFamily: 'Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -559,7 +559,7 @@ export class GachaPopup extends PopupBase {
 
     // SSR special effect
     if (hero.rarity === 'SSR') {
-      const glow = this.scene.add.circle(x, y, 50, COLORS.raritySSR, 0.3);
+      const glow = this.scene.add.circle(x, y, s(50), COLORS.raritySSR, 0.3);
       container.add(glow);
       container.sendToBack(glow);
 
@@ -575,17 +575,17 @@ export class GachaPopup extends PopupBase {
 
   showToast(text, color = COLORS.text) {
     const toast = this.scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, text, {
-      fontSize: '18px',
+      fontSize: sf(18),
       fontFamily: 'Arial',
       color: `#${color.toString(16).padStart(6, '0')}`,
       backgroundColor: `#${COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
-      padding: { x: 20, y: 12 }
+      padding: { x: s(20), y: s(12) }
     }).setOrigin(0.5).setDepth(4000);
 
     this.scene.tweens.add({
       targets: toast,
       alpha: 0,
-      y: toast.y - 50,
+      y: toast.y - s(50),
       duration: 1500,
       delay: 500,
       onComplete: () => toast.destroy()
