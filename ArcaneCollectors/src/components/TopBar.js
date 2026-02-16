@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, s, sf } from '../config/gameConfig.js';
+import { Z_INDEX } from '../config/layoutConfig.js';
 
 export class TopBar extends Phaser.GameObjects.Container {
   /**
@@ -16,8 +17,8 @@ export class TopBar extends Phaser.GameObjects.Container {
     this.createBackground();
     this.createResourceDisplays();
 
-    // Set depth to ensure it's on top
-    this.setDepth(100);
+    // Set depth to match Z_INDEX standard
+    this.setDepth(Z_INDEX.TOP_BAR);
 
     scene.add.existing(this);
   }

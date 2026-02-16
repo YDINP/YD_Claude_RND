@@ -148,7 +148,13 @@ export const RARITY_COLORS = {
 // Z-인덱스 레이어
 export const Z_INDEX = {
     BACKGROUND: 0,
+    PANELS: 10,          // 파티/전투력/모험 패널 배경
+    PANEL_CONTENT: 15,   // 패널 내부 텍스트/아이콘
+    PANEL_BUTTONS: 20,   // 패널 내부 버튼 (소탕/보스전/편성)
     GAME_OBJECTS: 100,
+    IDLE_BATTLE: 150,    // IdleBattleView
+    CLAIM_BUTTON: 160,   // 보상받기 버튼
+    BOTTOM_MENU: 170,    // 하단 메뉴 버튼
     UI: 200,
     TOP_BAR: 300,
     BOTTOM_NAV: 300,

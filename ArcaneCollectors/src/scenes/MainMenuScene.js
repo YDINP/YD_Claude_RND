@@ -461,14 +461,16 @@ export class MainMenuScene extends Phaser.Scene {
     const panel = this.add.graphics();
     panel.fillStyle(COLORS.bgLight, 0.9);
     panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), panelH, s(12));
+    panel.setDepth(Z_INDEX.PANELS);
 
     this.add.text(s(40), panelY + s(10), '내 파티', {
       fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
-    });
+    }).setDepth(Z_INDEX.PANEL_CONTENT);
 
     // 파티 편성 바로가기 버튼
     const editBtn = this.add.container(GAME_WIDTH - s(60), panelY + s(18));
+    editBtn.setDepth(Z_INDEX.PANEL_BUTTONS);
     const editBg = this.add.rectangle(0, 0, s(60), s(26), COLORS.primary, 0.8)
       .setInteractive({ useHandCursor: true })
       .setStrokeStyle(1, 0x818CF8);
@@ -504,16 +506,19 @@ export class MainMenuScene extends Phaser.Scene {
         const maskGfx = this.make.graphics({ x: 0, y: 0 });
         maskGfx.fillCircle(x, y, avatarR);
         const mask = maskGfx.createGeometryMask();
-        const img = this.add.image(x, y, portraitKey).setDisplaySize(avatarR * 2, avatarR * 2);
+        const img = this.add.image(x, y, portraitKey).setDisplaySize(avatarR * 2, avatarR * 2)
+          .setDepth(Z_INDEX.PANEL_CONTENT);
         img.setMask(mask);
         avatar = this.add.circle(x, y, avatarR, 0x000000, 0.001)
+          .setDepth(Z_INDEX.PANEL_CONTENT + 1)
           .setInteractive({ useHandCursor: true });
       } else {
         avatar = this.add.circle(x, y, avatarR, color, 0.9)
+          .setDepth(Z_INDEX.PANEL_CONTENT)
           .setInteractive({ useHandCursor: true });
         this.add.text(x, y - s(5), classIcons[charClass] || '❓', {
           fontSize: sf(24)
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT + 1);
       }
 
       // Name (max 4 chars)
@@ -521,14 +526,14 @@ export class MainMenuScene extends Phaser.Scene {
       this.add.text(x, y + s(40), name, {
         fontSize: sf(12), fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.text.toString(16).padStart(6, '0')}`
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
 
       // Level
       const level = charData?.level || 1;
       this.add.text(x, y + s(55), `Lv.${level}`, {
         fontSize: sf(11), fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
 
       // 영웅 클릭 → 팝업 정보
       avatar.on('pointerdown', () => {
@@ -543,7 +548,7 @@ export class MainMenuScene extends Phaser.Scene {
       this.add.text(GAME_WIDTH / 2, panelY + s(80), '파티를 편성해주세요!', {
         fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
     }
   }
 
@@ -559,12 +564,13 @@ export class MainMenuScene extends Phaser.Scene {
     const panel = this.add.graphics();
     panel.fillStyle(COLORS.bgLight, 0.9);
     panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), s(65), s(12));
+    panel.setDepth(Z_INDEX.PANELS);
 
     // Combat power number
     this.add.text(s(40), panelY + s(20), `⚡ 전투력: ${power.toLocaleString()}`, {
       fontSize: sf(20), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`
-    });
+    }).setDepth(Z_INDEX.PANEL_CONTENT);
 
     // Difficulty badge
     const diffColors = {
@@ -574,9 +580,10 @@ export class MainMenuScene extends Phaser.Scene {
     const badge = this.add.graphics();
     badge.fillStyle(diffColors[difficulty.label] || 0x3B82F6, 1);
     badge.fillRoundedRect(GAME_WIDTH - s(160), panelY + s(15), s(120), s(35), s(8));
+    badge.setDepth(Z_INDEX.PANEL_CONTENT);
     this.add.text(GAME_WIDTH - s(100), panelY + s(32), difficulty.label, {
       fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT + 1);
   }
 
   /**
@@ -633,6 +640,7 @@ export class MainMenuScene extends Phaser.Scene {
     const panel = this.add.graphics();
     panel.fillStyle(COLORS.bgLight, 0.9);
     panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), panelH, s(12));
+    panel.setDepth(Z_INDEX.PANELS);
 
     const saveData = SaveManager.load();
     const progress = saveData?.progress || {};
@@ -642,11 +650,11 @@ export class MainMenuScene extends Phaser.Scene {
     this.add.text(s(40), panelY + s(15), '🗺️ 현재 모험', {
       fontSize: sf(18), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
-    });
+    }).setDepth(Z_INDEX.PANEL_CONTENT);
     this.add.text(s(40), panelY + s(45), `챕터 ${currentStage.chapter || 1} - 스테이지 ${currentStage.chapter || 1}-${currentStage.stage || 1}`, {
       fontSize: sf(14), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-    });
+    }).setDepth(Z_INDEX.PANEL_CONTENT);
 
     // Check if party exists
     const parties = saveData?.parties || [];
@@ -665,12 +673,13 @@ export class MainMenuScene extends Phaser.Scene {
     this._sweepBtnGfx = this.add.graphics();
     this._sweepBtnGfx.fillStyle(canSweep ? COLORS.success : COLORS.bgPanel, 1);
     this._sweepBtnGfx.fillRoundedRect(sweepBtnX, panelY + s(80), sweepBtnW, btnH, s(10));
+    this._sweepBtnGfx.setDepth(Z_INDEX.PANEL_BUTTONS);
     this._sweepBtnText = this.add.text(sweepBtnX + sweepBtnW / 2, panelY + s(105), `⚡ 소탕 (10🔋)`, {
       fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_BUTTONS + 1);
 
     this._sweepHit = this.add.rectangle(sweepBtnX + sweepBtnW / 2, panelY + s(105), sweepBtnW, btnH)
-      .setAlpha(0.001);
+      .setAlpha(0.001).setDepth(Z_INDEX.PANEL_BUTTONS + 2);
 
     if (canSweep) {
       this._sweepHit.setInteractive({ useHandCursor: true });
@@ -690,13 +699,14 @@ export class MainMenuScene extends Phaser.Scene {
     this._bossBtnGfx = this.add.graphics();
     this._bossBtnGfx.fillStyle(bossReady ? COLORS.danger : COLORS.bgPanel, 1);
     this._bossBtnGfx.fillRoundedRect(bossBtnX, panelY + s(80), bossBtnW, btnH, s(10));
+    this._bossBtnGfx.setDepth(Z_INDEX.PANEL_BUTTONS);
     this._bossBtnText = this.add.text(bossBtnX + bossBtnW / 2, panelY + s(105), '🗡️ 보스전 (20🔋)', {
       fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_BUTTONS + 1);
     this._bossBtnPanelY = panelY;
 
     this._bossHit = this.add.rectangle(bossBtnX + bossBtnW / 2, panelY + s(105), bossBtnW, btnH)
-      .setAlpha(0.001);
+      .setAlpha(0.001).setDepth(Z_INDEX.PANEL_BUTTONS + 2);
 
     // 보스전 버튼은 항상 인터랙티브 등록 (상태는 update에서 동적 관리)
     this._bossHit.setInteractive({ useHandCursor: true });
@@ -719,13 +729,13 @@ export class MainMenuScene extends Phaser.Scene {
     this.add.text(s(40), panelY + s(150), `🔋 에너지: ${currentEnergy}/${maxEnergy}`, {
       fontSize: sf(13), fontFamily: '"Noto Sans KR", Arial',
       color: currentEnergy >= 10 ? `#${COLORS.success.toString(16).padStart(6, '0')}` : `#${COLORS.danger.toString(16).padStart(6, '0')}`
-    });
+    }).setDepth(Z_INDEX.PANEL_CONTENT);
 
     // Stage name
     this.add.text(GAME_WIDTH - s(40), panelY + s(150), `📍 ${currentStage.name || '슬라임 평원'}`, {
       fontSize: sf(13), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(1, 0);
+    }).setOrigin(1, 0).setDepth(Z_INDEX.PANEL_CONTENT);
   }
 
   /**
@@ -842,7 +852,7 @@ export class MainMenuScene extends Phaser.Scene {
     const viewHeight = s(300);
 
     this.idleBattleView = new IdleBattleView(this, GAME_WIDTH / 2, viewY, viewWidth, viewHeight);
-    this.idleBattleView.setDepth(Z_INDEX.UI - 1);
+    this.idleBattleView.setDepth(Z_INDEX.IDLE_BATTLE);
 
     const currentStage = this.idleSystem.getCurrentStage();
     this.idleBattleView.updateStageInfo(currentStage.chapter || 1, currentStage.stage || 1, currentStage.name || '슬라임 평원');
@@ -899,6 +909,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     const summaryBg = this.add.rectangle(GAME_WIDTH / 2, summaryY, s(640), s(50), COLORS.bgLight, 0.5);
     summaryBg.setStrokeStyle(1, COLORS.primary, 0.3);
+    summaryBg.setDepth(Z_INDEX.CLAIM_BUTTON - 1);
 
     const partyPower = this.idleSystem.getPartyPower();
     const rates = this.idleSystem.getIdleBattleRate(partyPower);
@@ -909,19 +920,19 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(Z_INDEX.CLAIM_BUTTON);
 
     this.add.text(GAME_WIDTH / 2, summaryY, `⭐ ${expPerHour.toLocaleString()}/h`, {
       fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.success.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(Z_INDEX.CLAIM_BUTTON);
 
     const currentStage = this.idleSystem.getCurrentStage();
     this.add.text(GAME_WIDTH / 2 + s(150), summaryY, `📍 ${currentStage.chapter || 1}-${currentStage.stage || 1}`, {
       fontSize: sf(13), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(Z_INDEX.CLAIM_BUTTON);
 
     // === 보상받기 버튼 ===
     this._createClaimRewardsButton(summaryY + s(45));
@@ -939,17 +950,18 @@ export class MainMenuScene extends Phaser.Scene {
     this._claimBtnGfx = this.add.graphics();
     this._claimBtnGfx.fillStyle(0x22C55E, 1);
     this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, s(10));
+    this._claimBtnGfx.setDepth(Z_INDEX.CLAIM_BUTTON);
 
     // 버튼 텍스트
     this._claimRewardText = this.add.text(GAME_WIDTH / 2, y + btnH / 2, '🎁 보상받기', {
       fontSize: sf(14), fontFamily: '"Noto Sans KR", Arial',
       color: '#FFFFFF',
       fontStyle: 'bold'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(Z_INDEX.CLAIM_BUTTON + 1);
 
     // 히트 영역
     this._claimBtnHit = this.add.rectangle(GAME_WIDTH / 2, y + btnH / 2, btnW, btnH)
-      .setAlpha(0.001).setInteractive({ useHandCursor: true });
+      .setAlpha(0.001).setDepth(Z_INDEX.CLAIM_BUTTON + 2).setInteractive({ useHandCursor: true });
 
     this._claimBtnHit.on('pointerdown', () => this._onClaimRewards());
     this._claimBtnHit.on('pointerover', () => {
@@ -1087,21 +1099,22 @@ export class MainMenuScene extends Phaser.Scene {
       bg.fillCircle(x, y - s(8), circleR);
       bg.lineStyle(2, COLORS.primary, 0.3);
       bg.strokeCircle(x, y - s(8), circleR);
+      bg.setDepth(Z_INDEX.BOTTOM_MENU);
 
       // Icon
       const icon = this.add.text(x, y - s(10), item.icon, {
         fontSize: sf(28)
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setDepth(Z_INDEX.BOTTOM_MENU + 1);
 
       // Label
       const label = this.add.text(x, y + s(22), item.label, {
         fontSize: sf(11), fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setDepth(Z_INDEX.BOTTOM_MENU + 1);
 
       // Hit area
       const hitArea = this.add.rectangle(x, y + s(5), btnSize, btnSize + s(10))
-        .setAlpha(0.001).setInteractive({ useHandCursor: true });
+        .setAlpha(0.001).setDepth(Z_INDEX.BOTTOM_MENU + 2).setInteractive({ useHandCursor: true });
 
       hitArea.on('pointerover', () => {
         bg.clear();
