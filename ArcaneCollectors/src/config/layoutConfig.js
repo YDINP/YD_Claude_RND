@@ -3,7 +3,7 @@
  * 게임 UI 레이아웃 및 색상 설정
  * 모든 픽셀값은 s() 헬퍼로 동적 스케일링
  */
-import { GAME_WIDTH, GAME_HEIGHT, s } from './gameConfig.js';
+import { GAME_WIDTH, GAME_HEIGHT, s } from './scaleConfig.js';
 
 // 기본 레이아웃 설정
 export const LAYOUT = {

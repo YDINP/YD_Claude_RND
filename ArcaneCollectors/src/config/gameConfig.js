@@ -15,23 +15,9 @@ import { QuestScene } from '../scenes/QuestScene.js';
 import { SettingsScene } from '../scenes/SettingsScene.js';
 import { LoginScene } from '../scenes/LoginScene.js';
 
-// ============================================
-// Game Dimensions & Dynamic Scaling
-// ============================================
-export const GAME_WIDTH = 1080;
-export const GAME_HEIGHT = 1920;
-export const BASE_WIDTH = 720;
-export const SCALE_FACTOR = GAME_WIDTH / BASE_WIDTH;
-
-/** 픽셀 스케일 헬퍼 — 모든 하드코딩 값에 적용 */
-export function s(value) {
-  return Math.round(value * SCALE_FACTOR);
-}
-
-/** 폰트 스케일 헬퍼 — px 문자열 반환 */
-export function sf(basePx) {
-  return `${Math.round(basePx * SCALE_FACTOR)}px`;
-}
+// Re-export from scaleConfig (순환 의존성 방지)
+export { GAME_WIDTH, GAME_HEIGHT, BASE_WIDTH, SCALE_FACTOR, s, sf } from './scaleConfig.js';
+import { GAME_WIDTH, GAME_HEIGHT, s } from './scaleConfig.js';
 
 export const gameConfig = {
   width: GAME_WIDTH,
