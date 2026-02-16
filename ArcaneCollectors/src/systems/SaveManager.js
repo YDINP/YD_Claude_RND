@@ -27,8 +27,8 @@ export class SaveManager {
       },
       resources: {
         gold: 10000,
-        gems: 1500,
-        summonTickets: 5,
+        gems: 2700,
+        summonTickets: 10,
         skillBooks: 0,
         characterShards: {}
       },
