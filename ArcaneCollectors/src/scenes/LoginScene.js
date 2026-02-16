@@ -27,25 +27,25 @@ export class LoginScene extends Phaser.Scene {
     } catch (error) {
       console.error('[LoginScene] create() 실패:', error);
       this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '씬 로드 실패', {
-        fontSize: sf(20), fill: '#ff4444', align: 'center'
+        fontSize: sf(18), fontFamily: 'Noto Sans KR', fill: '#EF4444', align: 'center'
       }).setOrigin(0.5);
     }
   }
 
   createBackground() {
-    // 어두운 그라데이션 배경
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0a0a1a);
+    // 배경 (DESIGN_SYSTEM: bgDark)
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.bgDark);
 
     // 장식적 파티클 (별처럼 반짝이는 점)
     for (let i = 0; i < 30; i++) {
       const x = Phaser.Math.Between(s(20), GAME_WIDTH - s(20));
-      const y = Phaser.Math.Between(s(50), GAME_HEIGHT - s(200));
+      const y = Phaser.Math.Between(s(50), GAME_HEIGHT - s(50));
       const size = Phaser.Math.Between(1, 3);
-      const star = this.add.circle(x, y, size, 0x6366f1, Phaser.Math.FloatBetween(0.2, 0.7));
+      const star = this.add.circle(x, y, size, COLORS.primary, Phaser.Math.FloatBetween(0.1, 0.5));
 
       this.tweens.add({
         targets: star,
-        alpha: { from: star.alpha, to: Phaser.Math.FloatBetween(0.1, 0.5) },
+        alpha: { from: star.alpha, to: Phaser.Math.FloatBetween(0.05, 0.3) },
         duration: Phaser.Math.Between(1500, 3000),
         yoyo: true,
         repeat: -1,
@@ -58,25 +58,25 @@ export class LoginScene extends Phaser.Scene {
     // B-5.1: 게임 로고
     const titleY = GAME_HEIGHT * 0.3;
 
-    this.add.text(GAME_WIDTH / 2, titleY - s(30), 'ARCANE', {
-      fontSize: sf(48),
-      fontFamily: 'Georgia, serif',
+    this.add.text(GAME_WIDTH / 2, titleY - s(20), 'ARCANE', {
+      fontSize: sf(32),
+      fontFamily: 'Noto Sans KR',
       color: '#6366F1',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, titleY + s(30), 'COLLECTORS', {
-      fontSize: sf(28),
-      fontFamily: 'Georgia, serif',
+    this.add.text(GAME_WIDTH / 2, titleY + s(20), 'COLLECTORS', {
+      fontSize: sf(24),
+      fontFamily: 'Noto Sans KR',
       color: '#a5b4fc',
-      letterSpacing: s(8)
+      letterSpacing: s(4)
     }).setOrigin(0.5);
 
     // 서브 타이틀
-    this.add.text(GAME_WIDTH / 2, titleY + s(70), '신화의 교단에서 영웅을 모아라', {
-      fontSize: sf(13),
-      fontFamily: 'Arial',
-      color: '#64748b'
+    this.add.text(GAME_WIDTH / 2, titleY + s(48), '신화의 교단에서 영웅을 모아라', {
+      fontSize: sf(14),
+      fontFamily: 'Noto Sans KR',
+      color: '#94A3B8'
     }).setOrigin(0.5);
   }
 
@@ -86,7 +86,7 @@ export class LoginScene extends Phaser.Scene {
     // B-5.2: 게스트로 시작 버튼 (메인)
     this._createButton(
       GAME_WIDTH / 2, btnY,
-      '게스트로 시작', COLORS.primary, s(280), s(52),
+      '게스트로 시작', COLORS.primary, s(280), s(60),
       () => this._handleGuestLogin()
     );
 
@@ -94,53 +94,53 @@ export class LoginScene extends Phaser.Scene {
     if (isSupabaseConfigured) {
       this._createButton(
         GAME_WIDTH / 2, btnY + s(70),
-        '이메일 로그인', 0x374151, s(280), s(44),
+        '이메일 로그인', COLORS.bgLight, s(280), s(48),
         () => this._showLoginForm()
       );
 
       this._createButton(
         GAME_WIDTH / 2, btnY + s(125),
-        '회원가입', 0x374151, s(280), s(44),
+        '회원가입', COLORS.bgLight, s(280), s(48),
         () => this._showSignupForm()
       );
     }
 
     // 버전 정보
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - s(30), `v1.0.0 | Supabase ${  isSupabaseConfigured ? 'ON' : 'OFF'}`, {
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - s(20), `v1.0.0 | Supabase ${isSupabaseConfigured ? 'ON' : 'OFF'}`, {
       fontSize: sf(10),
-      fontFamily: 'Arial',
-      color: '#475569'
-    }).setOrigin(0.5);
+      fontFamily: 'Noto Sans KR',
+      color: '#94A3B8'
+    }).setOrigin(0.5).setAlpha(0.5);
   }
 
   /**
    * AUTH-1.3: 자동로그인 체크박스 생성
    */
   createAutoLoginToggle() {
-    const toggleY = GAME_HEIGHT - 80;
+    const toggleY = GAME_HEIGHT - s(60);
     const toggleX = GAME_WIDTH / 2;
 
     // 체크박스 배경
-    const checkboxSize = 20;
+    const checkboxSize = s(16);
     const checkbox = this.add.rectangle(
-      toggleX - 60, toggleY, checkboxSize, checkboxSize, 0x1e293b, 1
+      toggleX - s(40), toggleY, checkboxSize, checkboxSize, COLORS.bgLight, 1
     );
     checkbox.setStrokeStyle(2, COLORS.primary);
     checkbox.setInteractive({ useHandCursor: true });
 
     // 체크 표시
-    const checkmark = this.add.text(toggleX - 60, toggleY, '✓', {
-      fontSize: '16px',
-      fontFamily: 'Arial',
+    const checkmark = this.add.text(toggleX - s(40), toggleY, '✓', {
+      fontSize: sf(14),
+      fontFamily: 'Noto Sans KR',
       color: '#6366F1',
       fontStyle: 'bold'
     }).setOrigin(0.5).setVisible(this.autoLoginEnabled);
 
     // 레이블
-    const label = this.add.text(toggleX - 35, toggleY, '자동 로그인', {
-      fontSize: '14px',
-      fontFamily: 'Arial',
-      color: '#94a3b8'
+    const label = this.add.text(toggleX - s(24), toggleY, '자동 로그인', {
+      fontSize: sf(14),
+      fontFamily: 'Noto Sans KR',
+      color: '#94A3B8'
     }).setOrigin(0, 0.5);
 
     // 클릭 이벤트
@@ -161,22 +161,34 @@ export class LoginScene extends Phaser.Scene {
   _createButton(x, y, label, color, width, height, callback) {
     const container = this.add.container(x, y);
 
-    const bg = this.add.rectangle(0, 0, width, height, color, 1)
+    // 라운드 모서리 배경 (Graphics)
+    const bg = this.add.graphics();
+    const radius = s(8);
+    bg.fillStyle(color, 1);
+    bg.fillRoundedRect(-width / 2, -height / 2, width, height, radius);
+    bg.lineStyle(1, COLORS.primary, 0.3);
+    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, radius);
+
+    // 인터랙티브 히트 영역
+    const hitArea = this.add.rectangle(0, 0, width, height, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
-    bg.setStrokeStyle(1, 0x4f46e5);
 
     const text = this.add.text(0, 0, label, {
-      fontSize: '16px',
-      fontFamily: 'Arial',
-      color: '#ffffff',
+      fontSize: sf(16),
+      fontFamily: 'Noto Sans KR',
+      color: '#F8FAFC',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    container.add([bg, text]);
+    container.add([bg, hitArea, text]);
 
-    bg.on('pointerover', () => bg.setFillStyle(Phaser.Display.Color.IntegerToColor(color).brighten(20).color, 1));
-    bg.on('pointerout', () => bg.setFillStyle(color, 1));
-    bg.on('pointerdown', callback);
+    hitArea.on('pointerover', () => container.setAlpha(0.8));
+    hitArea.on('pointerout', () => { container.setAlpha(1); container.setScale(1); });
+    hitArea.on('pointerdown', () => {
+      container.setScale(0.95);
+      callback();
+    });
+    hitArea.on('pointerup', () => container.setScale(1));
 
     return container;
   }
@@ -236,13 +248,13 @@ export class LoginScene extends Phaser.Scene {
     ).setInteractive();
 
     // 폼 컨테이너
-    const formBg = this.add.rectangle(GAME_WIDTH / 2, formY, 320, isLogin ? 280 : 340, 0x1e1b4b, 1);
-    formBg.setStrokeStyle(2, 0x6366f1);
+    const formBg = this.add.rectangle(GAME_WIDTH / 2, formY, 320, isLogin ? 280 : 340, COLORS.bgLight, 1);
+    formBg.setStrokeStyle(2, COLORS.primary, 0.5);
 
     const title = this.add.text(GAME_WIDTH / 2, formY - (isLogin ? 110 : 140), isLogin ? '이메일 로그인' : '회원가입', {
-      fontSize: '20px',
-      fontFamily: 'Arial',
-      color: '#e2e8f0',
+      fontSize: sf(20),
+      fontFamily: 'Noto Sans KR',
+      color: '#F8FAFC',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -275,7 +287,7 @@ export class LoginScene extends Phaser.Scene {
 
     // 닫기 버튼
     const closeBtn = this.add.text(GAME_WIDTH / 2 + 140, formY - (isLogin ? 120 : 150), '✕', {
-      fontSize: '20px', color: '#94a3b8'
+      fontSize: sf(20), fontFamily: 'Noto Sans KR', color: '#94A3B8'
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     closeBtn.on('pointerdown', () => {
@@ -379,20 +391,21 @@ export class LoginScene extends Phaser.Scene {
   }
 
   _showToast(message) {
-    const toast = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 80, message, {
-      fontSize: '13px',
-      fontFamily: 'Arial',
-      color: '#fca5a5',
-      backgroundColor: '#1e1b4b',
-      padding: { x: 16, y: 8 }
-    }).setOrigin(0.5).setDepth(100);
+    const toast = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - s(60), message, {
+      fontSize: sf(14),
+      fontFamily: 'Noto Sans KR',
+      color: '#EF4444',
+      backgroundColor: '#334155',
+      padding: { x: s(12), y: s(8) }
+    }).setOrigin(0.5).setDepth(500);
 
     this.tweens.add({
       targets: toast,
       alpha: { from: 1, to: 0 },
-      y: toast.y - 30,
-      duration: 2000,
-      delay: 1500,
+      y: toast.y - s(20),
+      duration: 150,
+      delay: 2000,
+      ease: 'Power2',
       onComplete: () => toast.destroy()
     });
   }
@@ -417,7 +430,7 @@ export class LoginScene extends Phaser.Scene {
       this.registry.set('pendingOfflineRewards', offlineRewards);
     }
 
-    this.cameras.main.fadeOut(300);
+    this.cameras.main.fadeOut(200, 15, 23, 42);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('PreloadScene');
     });

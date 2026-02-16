@@ -158,20 +158,20 @@ export class MainMenuScene extends Phaser.Scene {
 
     // 시간 표시
     elements.push(this.add.text(0, yPos, `${safeRewards.formattedDuration} 동안 모험했습니다!`, {
-      fontSize: sf(16), fontFamily: 'Arial', color: '#94A3B8', align: 'center'
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial', color: '#94A3B8', align: 'center'
     }).setOrigin(0.5));
     yPos += s(40);
 
     // 골드 보상
     elements.push(this.add.text(0, yPos, `💰 골드: +${safeRewards.gold.toLocaleString()}`, {
-      fontSize: sf(20), fontFamily: 'Arial',
+      fontSize: sf(20), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`, fontStyle: 'bold'
     }).setOrigin(0.5));
     yPos += s(35);
 
     // 경험치 보상
     elements.push(this.add.text(0, yPos, `⭐ 경험치: +${safeRewards.exp.toLocaleString()}`, {
-      fontSize: sf(20), fontFamily: 'Arial',
+      fontSize: sf(20), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.success.toString(16).padStart(6, '0')}`, fontStyle: 'bold'
     }).setOrigin(0.5));
     yPos += s(35);
@@ -181,13 +181,13 @@ export class MainMenuScene extends Phaser.Scene {
       const progressPercent = Math.floor(safeRewards.progressGained * 100);
       const progressColor = safeRewards.bossReady ? '#EF4444' : '#3B82F6';
       elements.push(this.add.text(0, yPos, `⚔️ 보스 진행도: +${progressPercent}%`, {
-        fontSize: sf(18), fontFamily: 'Arial', color: progressColor, fontStyle: 'bold'
+        fontSize: sf(18), fontFamily: '"Noto Sans KR", Arial', color: progressColor, fontStyle: 'bold'
       }).setOrigin(0.5));
       yPos += s(30);
 
       if (safeRewards.bossReady) {
         elements.push(this.add.text(0, yPos, '🔥 보스전 도전 가능!', {
-          fontSize: sf(16), fontFamily: 'Arial', color: '#EF4444', fontStyle: 'bold'
+          fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial', color: '#EF4444', fontStyle: 'bold'
         }).setOrigin(0.5));
         yPos += s(30);
       }
@@ -197,7 +197,7 @@ export class MainMenuScene extends Phaser.Scene {
     if (safeRewards.items.length > 0) {
       const itemNames = safeRewards.items.map(i => i.name || i.id).join(', ');
       elements.push(this.add.text(0, yPos, `📦 아이템: ${itemNames}`, {
-        fontSize: sf(14), fontFamily: 'Arial', color: '#A78BFA'
+        fontSize: sf(14), fontFamily: '"Noto Sans KR", Arial', color: '#A78BFA'
       }).setOrigin(0.5));
       yPos += s(25);
     }
@@ -322,50 +322,57 @@ export class MainMenuScene extends Phaser.Scene {
   createTopBar() {
     const barY = s(40);
     const barH = s(80);
-    const topBar = this.add.rectangle(GAME_WIDTH / 2, barY, GAME_WIDTH, barH, COLORS.backgroundLight, 0.9);
-    topBar.setDepth(Z_INDEX.UI);
+    const topBarDepth = Z_INDEX.TOP_BAR;
+
+    // TopBar 배경 (DESIGN_SYSTEM 4.1: bgDark + 구분선)
+    const topBar = this.add.rectangle(GAME_WIDTH / 2, barY, GAME_WIDTH, barH, COLORS.bgDark, 0.95);
+    topBar.setDepth(topBarDepth);
+
+    // 하단 구분선 (primary alpha 0.3)
+    const divider = this.add.rectangle(GAME_WIDTH / 2, barY + barH / 2, GAME_WIDTH, 1, COLORS.primary, 0.3);
+    divider.setDepth(topBarDepth);
 
     const saveData = SaveManager.load();
     const playerLevel = saveData.player?.level || 1;
     const levelBadge = this.add.rectangle(s(40), barY, s(55), s(30), COLORS.primary, 0.9)
-      .setDepth(Z_INDEX.UI + 1);
+      .setDepth(topBarDepth + 1);
     levelBadge.setStrokeStyle(1, COLORS.text, 0.3);
     this.levelBadgeText = this.add.text(s(40), barY, `Lv.${playerLevel}`, {
       fontSize: sf(14),
-      fontFamily: 'Arial',
+      fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
+    }).setOrigin(0.5).setDepth(topBarDepth + 1);
 
     let gemIcon;
     if (this.textures.exists('gem')) {
-      gemIcon = this.add.image(s(100), barY, 'gem').setScale(1).setDepth(Z_INDEX.UI + 1);
+      gemIcon = this.add.image(s(100), barY, 'gem').setScale(1).setDepth(topBarDepth + 1);
     } else {
-      gemIcon = this.add.text(s(100), barY, '💎', { fontSize: sf(20) }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
+      gemIcon = this.add.text(s(100), barY, '💎', { fontSize: sf(20) }).setOrigin(0.5).setDepth(topBarDepth + 1);
     }
 
     const gems = this.registry.get('gems') || 1500;
     this.gemText = this.add.text(s(125), barY, gems.toLocaleString(), {
       fontSize: sf(18),
-      fontFamily: 'Arial',
+      fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(0, 0.5).setDepth(Z_INDEX.UI + 1);
+    }).setOrigin(0, 0.5).setDepth(topBarDepth + 1);
 
     let goldIcon;
     if (this.textures.exists('gold')) {
-      goldIcon = this.add.image(s(220), barY, 'gold').setScale(1).setDepth(Z_INDEX.UI + 1);
+      goldIcon = this.add.image(s(220), barY, 'gold').setScale(1).setDepth(topBarDepth + 1);
     } else {
-      goldIcon = this.add.text(s(220), barY, '🪙', { fontSize: sf(20) }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
+      goldIcon = this.add.text(s(220), barY, '🪙', { fontSize: sf(20) }).setOrigin(0.5).setDepth(topBarDepth + 1);
     }
 
     const gold = this.registry.get('gold') || 10000;
     this.goldText = this.add.text(s(245), barY, gold.toLocaleString(), {
       fontSize: sf(18),
-      fontFamily: 'Arial',
+      fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(0, 0.5).setDepth(Z_INDEX.UI + 1);
+    }).setOrigin(0, 0.5).setDepth(topBarDepth + 1);
 
     const energyStatus = energySystem.getStatus() || {};
     this.energyBar = new EnergyBar(this);
@@ -375,17 +382,17 @@ export class MainMenuScene extends Phaser.Scene {
     const timeToRecover = energySystem.getTimeToNextRecovery?.() ?? 0;
     this.energyTimerText = this.add.text(s(540), barY, timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
       fontSize: sf(11),
-      fontFamily: 'Arial',
-      color: '#94A3B8',
+      fontFamily: '"Noto Sans KR", Arial',
+      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`,
       fontStyle: 'normal'
-    }).setOrigin(0, 0.5).setDepth(Z_INDEX.UI + 1);
+    }).setOrigin(0, 0.5).setDepth(topBarDepth + 1);
 
     // Energy gem charge button (💎+)
     const chargeBtn = this.add.text(s(620), barY, '💎+', {
-      fontSize: sf(14), fontFamily: 'Arial', fontStyle: 'bold',
-      color: '#A78BFA', backgroundColor: '#1E293B',
+      fontSize: sf(14), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
+      color: '#A78BFA', backgroundColor: '#0F172A',
       padding: { x: s(4), y: s(2) }
-    }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setDepth(topBarDepth + 1).setInteractive({ useHandCursor: true });
     chargeBtn.on('pointerdown', () => this.chargeEnergyWithGems());
     chargeBtn.on('pointerover', () => chargeBtn.setColor('#C4B5FD'));
     chargeBtn.on('pointerout', () => chargeBtn.setColor('#A78BFA'));
@@ -393,23 +400,29 @@ export class MainMenuScene extends Phaser.Scene {
     const partyPower = this.idleSystem.getPartyPower();
     this.powerText = this.add.text(GAME_WIDTH - s(90), barY, `⚔ ${Math.floor(partyPower).toLocaleString()}`, {
       fontSize: sf(14),
-      fontFamily: 'Arial',
+      fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(1, 0.5).setDepth(Z_INDEX.UI + 1);
+    }).setOrigin(1, 0.5).setDepth(topBarDepth + 1);
 
-    const settingsBtn = this.add.rectangle(GAME_WIDTH - s(40), barY, s(40), s(40), COLORS.backgroundLight, 0.8)
-      .setDepth(Z_INDEX.UI + 1)
+    const settingsBtn = this.add.rectangle(GAME_WIDTH - s(40), barY, s(44), s(44), COLORS.bgDark, 0.01)
+      .setDepth(topBarDepth + 1)
       .setInteractive({ useHandCursor: true });
 
     const settingsIcon = this.add.text(GAME_WIDTH - s(40), barY, '⚙️', {
       fontSize: sf(24)
-    }).setOrigin(0.5).setDepth(Z_INDEX.UI + 1);
+    }).setOrigin(0.5).setDepth(topBarDepth + 1);
 
-    settingsBtn.on('pointerover', () => settingsBtn.setFillStyle(COLORS.primary, 0.5));
-    settingsBtn.on('pointerout', () => settingsBtn.setFillStyle(COLORS.backgroundLight, 0.8));
+    settingsBtn.on('pointerover', () => {
+      settingsBtn.setFillStyle(COLORS.primary, 0.3);
+      settingsIcon.setAlpha(0.8);
+    });
+    settingsBtn.on('pointerout', () => {
+      settingsBtn.setFillStyle(COLORS.bgDark, 0.01);
+      settingsIcon.setAlpha(1);
+    });
     settingsBtn.on('pointerdown', () => {
-      this.showToast('설정 준비 중!');
+      this.openPopup('settings');
     });
   }
 
@@ -427,12 +440,12 @@ export class MainMenuScene extends Phaser.Scene {
     const panelY = s(95);
     const panelH = s(150);
     const panel = this.add.graphics();
-    panel.fillStyle(0x1E293B, 0.9);
+    panel.fillStyle(COLORS.bgLight, 0.9);
     panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), panelH, s(12));
 
     this.add.text(s(40), panelY + s(10), '내 파티', {
-      fontSize: sf(16), fontFamily: 'Arial', fontStyle: 'bold',
-      color: '#F8FAFC'
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
+      color: `#${COLORS.text.toString(16).padStart(6, '0')}`
     });
 
     // 파티 편성 바로가기 버튼
@@ -441,7 +454,7 @@ export class MainMenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .setStrokeStyle(1, 0x818CF8);
     const editText = this.add.text(0, 0, '편성', {
-      fontSize: sf(12), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+      fontSize: sf(12), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
     editBtn.add([editBg, editText]);
     editBg.on('pointerdown', () => {
@@ -487,13 +500,15 @@ export class MainMenuScene extends Phaser.Scene {
       // Name (max 4 chars)
       const name = (staticData?.name || charData?.name || '???').substring(0, 4);
       this.add.text(x, y + s(40), name, {
-        fontSize: sf(12), fontFamily: 'Arial', color: '#F8FAFC'
+        fontSize: sf(12), fontFamily: '"Noto Sans KR", Arial',
+        color: `#${COLORS.text.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       // Level
       const level = charData?.level || 1;
       this.add.text(x, y + s(55), `Lv.${level}`, {
-        fontSize: sf(11), fontFamily: 'Arial', color: '#94A3B8'
+        fontSize: sf(11), fontFamily: '"Noto Sans KR", Arial',
+        color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       // 영웅 클릭 → 팝업 정보
@@ -507,7 +522,8 @@ export class MainMenuScene extends Phaser.Scene {
     // If party is empty, show placeholder
     if (partyIds.length === 0) {
       this.add.text(GAME_WIDTH / 2, panelY + s(80), '파티를 편성해주세요!', {
-        fontSize: sf(16), fontFamily: 'Arial', color: '#94A3B8'
+        fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial',
+        color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
     }
   }
@@ -522,13 +538,13 @@ export class MainMenuScene extends Phaser.Scene {
 
     const panelY = s(245);
     const panel = this.add.graphics();
-    panel.fillStyle(0x1E293B, 0.9);
+    panel.fillStyle(COLORS.bgLight, 0.9);
     panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), s(65), s(12));
 
     // Combat power number
     this.add.text(s(40), panelY + s(20), `⚡ 전투력: ${power.toLocaleString()}`, {
-      fontSize: sf(20), fontFamily: 'Arial', fontStyle: 'bold',
-      color: '#F59E0B'
+      fontSize: sf(20), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
+      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`
     });
 
     // Difficulty badge
@@ -540,7 +556,7 @@ export class MainMenuScene extends Phaser.Scene {
     badge.fillStyle(diffColors[difficulty.label] || 0x3B82F6, 1);
     badge.fillRoundedRect(GAME_WIDTH - s(160), panelY + s(15), s(120), s(35), s(8));
     this.add.text(GAME_WIDTH - s(100), panelY + s(32), difficulty.label, {
-      fontSize: sf(15), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+      fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
   }
 
@@ -596,7 +612,7 @@ export class MainMenuScene extends Phaser.Scene {
     const panelY = s(310);
     const panelH = s(190);
     const panel = this.add.graphics();
-    panel.fillStyle(0x1E293B, 0.9);
+    panel.fillStyle(COLORS.bgLight, 0.9);
     panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), panelH, s(12));
 
     const saveData = SaveManager.load();
@@ -605,10 +621,12 @@ export class MainMenuScene extends Phaser.Scene {
     // Current stage info
     const currentStage = this.idleSystem.getCurrentStage();
     this.add.text(s(40), panelY + s(15), '🗺️ 현재 모험', {
-      fontSize: sf(18), fontFamily: 'Arial', fontStyle: 'bold', color: '#F8FAFC'
+      fontSize: sf(18), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
+      color: `#${COLORS.text.toString(16).padStart(6, '0')}`
     });
     this.add.text(s(40), panelY + s(45), `챕터 ${currentStage.chapter || 1} - 스테이지 ${currentStage.chapter || 1}-${currentStage.stage || 1}`, {
-      fontSize: sf(14), fontFamily: 'Arial', color: '#94A3B8'
+      fontSize: sf(14), fontFamily: '"Noto Sans KR", Arial',
+      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     });
 
     // Check if party exists
@@ -626,10 +644,10 @@ export class MainMenuScene extends Phaser.Scene {
     const sweepBtnW = GAME_WIDTH / 2 - s(60);
     const btnH = s(50);
     this._sweepBtnGfx = this.add.graphics();
-    this._sweepBtnGfx.fillStyle(canSweep ? 0x10B981 : 0x334155, 1);
+    this._sweepBtnGfx.fillStyle(canSweep ? COLORS.success : COLORS.bgPanel, 1);
     this._sweepBtnGfx.fillRoundedRect(sweepBtnX, panelY + s(80), sweepBtnW, btnH, s(10));
     this._sweepBtnText = this.add.text(sweepBtnX + sweepBtnW / 2, panelY + s(105), `⚡ 소탕 (10🔋)`, {
-      fontSize: sf(16), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
 
     this._sweepHit = this.add.rectangle(sweepBtnX + sweepBtnW / 2, panelY + s(105), sweepBtnW, btnH)
@@ -650,10 +668,10 @@ export class MainMenuScene extends Phaser.Scene {
     const bossBtnX = GAME_WIDTH / 2 + s(20);
     const bossBtnW = GAME_WIDTH / 2 - s(60);
     this._bossBtnGfx = this.add.graphics();
-    this._bossBtnGfx.fillStyle(bossReady ? 0xEF4444 : 0x334155, 1);
+    this._bossBtnGfx.fillStyle(bossReady ? COLORS.danger : COLORS.bgPanel, 1);
     this._bossBtnGfx.fillRoundedRect(bossBtnX, panelY + s(80), bossBtnW, btnH, s(10));
     this._bossBtnText = this.add.text(bossBtnX + bossBtnW / 2, panelY + s(105), '🗡️ 보스전 (20🔋)', {
-      fontSize: sf(16), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
     this._bossBtnPanelY = panelY;
 
@@ -679,13 +697,14 @@ export class MainMenuScene extends Phaser.Scene {
     const currentEnergy = esStatus.current ?? 0;
     const maxEnergy = esStatus.max ?? 100;
     this.add.text(s(40), panelY + s(150), `🔋 에너지: ${currentEnergy}/${maxEnergy}`, {
-      fontSize: sf(13), fontFamily: 'Arial',
-      color: currentEnergy >= 10 ? '#10B981' : '#EF4444'
+      fontSize: sf(13), fontFamily: '"Noto Sans KR", Arial',
+      color: currentEnergy >= 10 ? `#${COLORS.success.toString(16).padStart(6, '0')}` : `#${COLORS.danger.toString(16).padStart(6, '0')}`
     });
 
     // Stage name
     this.add.text(GAME_WIDTH - s(40), panelY + s(150), `📍 ${currentStage.name || '슬라임 평원'}`, {
-      fontSize: sf(13), fontFamily: 'Arial', color: '#94A3B8'
+      fontSize: sf(13), fontFamily: '"Noto Sans KR", Arial',
+      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0);
   }
 
@@ -867,20 +886,20 @@ export class MainMenuScene extends Phaser.Scene {
     const expPerHour = Math.floor((rates.expPerSec || 0) * 3600);
 
     this.add.text(GAME_WIDTH / 2 - s(150), summaryY, `💰 ${goldPerHour.toLocaleString()}/h`, {
-      fontSize: sf(15), fontFamily: 'Arial',
+      fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     this.add.text(GAME_WIDTH / 2, summaryY, `⭐ ${expPerHour.toLocaleString()}/h`, {
-      fontSize: sf(15), fontFamily: 'Arial',
+      fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.success.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     const currentStage = this.idleSystem.getCurrentStage();
     this.add.text(GAME_WIDTH / 2 + s(150), summaryY, `📍 ${currentStage.chapter || 1}-${currentStage.stage || 1}`, {
-      fontSize: sf(13), fontFamily: 'Arial',
+      fontSize: sf(13), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
@@ -985,12 +1004,12 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(1002);
 
     const goldText = this.add.text(GAME_WIDTH / 2, popupY + s(75), `💰 골드  +${rewards.gold.toLocaleString()}`, {
-      fontSize: sf(16), fontFamily: 'Arial',
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial',
       color: '#FBBF24', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(1002);
 
     const expText = this.add.text(GAME_WIDTH / 2, popupY + s(105), `⭐ 경험치  +${rewards.exp.toLocaleString()}`, {
-      fontSize: sf(16), fontFamily: 'Arial',
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial',
       color: '#34D399', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(1002);
 
@@ -1044,7 +1063,7 @@ export class MainMenuScene extends Phaser.Scene {
       // Circle background
       const circleR = s(32);
       const bg = this.add.graphics();
-      bg.fillStyle(0x1E293B, 0.9);
+      bg.fillStyle(COLORS.bgLight, 0.9);
       bg.fillCircle(x, y - s(8), circleR);
       bg.lineStyle(2, COLORS.primary, 0.3);
       bg.strokeCircle(x, y - s(8), circleR);
@@ -1056,8 +1075,8 @@ export class MainMenuScene extends Phaser.Scene {
 
       // Label
       const label = this.add.text(x, y + s(22), item.label, {
-        fontSize: sf(11), fontFamily: '"Noto Sans KR", sans-serif',
-        color: '#94A3B8'
+        fontSize: sf(11), fontFamily: '"Noto Sans KR", Arial',
+        color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
       // Hit area
@@ -1066,20 +1085,27 @@ export class MainMenuScene extends Phaser.Scene {
 
       hitArea.on('pointerover', () => {
         bg.clear();
-        bg.fillStyle(0x334155, 1);
-        bg.fillCircle(x, y - s(8), s(34));
+        bg.fillStyle(COLORS.bgPanel, 1);
+        bg.fillCircle(x, y - s(8), circleR);
         bg.lineStyle(2, COLORS.primary, 0.6);
-        bg.strokeCircle(x, y - s(8), s(34));
+        bg.strokeCircle(x, y - s(8), circleR);
+        label.setColor(`#${COLORS.text.toString(16).padStart(6, '0')}`);
       });
       hitArea.on('pointerout', () => {
         bg.clear();
-        bg.fillStyle(0x1E293B, 0.9);
+        bg.fillStyle(COLORS.bgLight, 0.9);
         bg.fillCircle(x, y - s(8), circleR);
         bg.lineStyle(2, COLORS.primary, 0.3);
         bg.strokeCircle(x, y - s(8), circleR);
+        label.setColor(`#${COLORS.textDark.toString(16).padStart(6, '0')}`);
+        icon.setScale(1);
       });
       hitArea.on('pointerdown', () => {
-        this.openPopup(item.popupKey);
+        icon.setScale(0.92);
+        this.time.delayedCall(100, () => {
+          icon.setScale(1);
+          this.openPopup(item.popupKey);
+        });
       });
     });
   }
@@ -1214,7 +1240,7 @@ export class MainMenuScene extends Phaser.Scene {
           const bossBtnX = GAME_WIDTH / 2 + s(20);
           const bossBtnW = GAME_WIDTH / 2 - s(60);
           this._bossBtnGfx.clear();
-          this._bossBtnGfx.fillStyle(nowBossReady ? 0xEF4444 : 0x334155, 1);
+          this._bossBtnGfx.fillStyle(nowBossReady ? COLORS.danger : COLORS.bgPanel, 1);
           this._bossBtnGfx.fillRoundedRect(bossBtnX, this._bossBtnPanelY + s(80), bossBtnW, s(50), s(10));
           this._bossBtnText.setAlpha(nowBossReady ? 1 : 0.5);
 

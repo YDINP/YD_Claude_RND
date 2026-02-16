@@ -50,31 +50,31 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   createTopBar() {
-    // LAYOUT 통일: Top bar background (100px)
+    // DESIGN_SYSTEM: TopBar s(80), 구분선 alpha 0.3
     const bar = this.add.graphics();
     bar.fillStyle(0x0F172A, 0.95);
-    bar.fillRect(0, 0, GAME_WIDTH, s(100));
-    bar.lineStyle(s(2), COLORS.primary, 0.5);
-    bar.lineBetween(0, s(100), GAME_WIDTH, s(100));
+    bar.fillRect(0, 0, GAME_WIDTH, s(80));
+    bar.lineStyle(s(2), COLORS.primary, 0.3);
+    bar.lineBetween(0, s(80), GAME_WIDTH, s(80));
 
-    // Back button
-    const backBg = this.add.rectangle(s(30), s(50), s(50), s(40), 0x0F172A, 0.8)
+    // Back button (최소 터치 s(50)×s(44))
+    const backBg = this.add.rectangle(s(30), s(40), s(50), s(44), 0x0F172A, 0.8)
       .setInteractive({ useHandCursor: true });
-    this.add.text(s(30), s(50), '← 뒤로', {
+    this.add.text(s(30), s(40), '← 뒤로', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(14), color: '#94A3B8'
     }).setOrigin(0.5);
     backBg.on('pointerdown', () => {
       navigationManager.goBack(this);
     });
 
-    this.add.text(GAME_WIDTH / 2, s(50), '더보기', {
+    this.add.text(GAME_WIDTH / 2, s(40), '더보기', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(24),
       fontStyle: 'bold', color: '#F8FAFC'
     }).setOrigin(0.5);
   }
 
   createMenuGrid() {
-    const startY = s(120); // LAYOUT.content.y
+    const startY = s(100); // DESIGN_SYSTEM: TopBar s(80) + 간격 s(20)
     const cols = 3;
     const cellW = (GAME_WIDTH - s(60)) / cols;
     const cellH = s(100);
@@ -125,7 +125,7 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   createSettingsSection() {
-    const sectionY = s(340);
+    const sectionY = s(320);
 
     this.add.text(s(30), sectionY, '설정', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(20),
@@ -169,7 +169,8 @@ export class SettingsScene extends Phaser.Scene {
     const knobX = isOn ? toggleX + s(28) : toggleX + s(16);
     const knob = this.add.circle(knobX, y + s(22), s(9), 0xffffff);
 
-    const hitArea = this.add.rectangle(toggleX + s(22), y + s(22), s(50), s(30))
+    // DESIGN_SYSTEM: 최소 터치 영역 s(44) x s(44)
+    const hitArea = this.add.rectangle(toggleX + s(22), y + s(22), s(50), s(44))
       .setAlpha(0.001).setInteractive({ useHandCursor: true });
 
     hitArea.on('pointerdown', () => {
@@ -183,7 +184,7 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   createAccountInfo() {
-    const y = s(600);
+    const y = s(580);
 
     this.add.text(s(30), y, '계정 정보', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(20),

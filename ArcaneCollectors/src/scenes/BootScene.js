@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { isSupabaseConfigured, supabase, getLocalData } from '../api/supabaseClient.js';
 import { getGuestUserId } from '../services/AuthService.js';
@@ -13,13 +13,13 @@ export class BootScene extends Phaser.Scene {
   async create() {
     try {
       // H-9.2: 스플래시 화면 배경
-      this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0a0a1a);
+      this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.bgDark);
 
       // 장식 파티클 (별)
       for (let i = 0; i < 20; i++) {
-        const x = Phaser.Math.Between(50, GAME_WIDTH - 50);
-        const y = Phaser.Math.Between(100, GAME_HEIGHT - 100);
-        const star = this.add.circle(x, y, Phaser.Math.Between(1, 2), 0x6366f1, Phaser.Math.FloatBetween(0.1, 0.4));
+        const x = Phaser.Math.Between(s(20), GAME_WIDTH - s(20));
+        const y = Phaser.Math.Between(s(50), GAME_HEIGHT - s(50));
+        const star = this.add.circle(x, y, Phaser.Math.Between(1, 3), COLORS.primary, Phaser.Math.FloatBetween(0.1, 0.5));
         this.tweens.add({
           targets: star,
           alpha: { from: star.alpha, to: Phaser.Math.FloatBetween(0.05, 0.3) },
@@ -35,61 +35,61 @@ export class BootScene extends Phaser.Scene {
 
       // 마법진 배경 (장식)
       const magicRing = this.add.circle(GAME_WIDTH / 2, logoY, 100, 0x000000, 0);
-      magicRing.setStrokeStyle(1, 0x6366f1, 0.3);
+      magicRing.setStrokeStyle(1, COLORS.primary, 0.3);
       this.tweens.add({
         targets: magicRing,
         scaleX: 1.2, scaleY: 1.2,
         alpha: 0,
         duration: 2500,
-        ease: 'Quad.easeOut'
+        ease: 'Power2'
       });
 
       const magicRing2 = this.add.circle(GAME_WIDTH / 2, logoY, 80, 0x000000, 0);
-      magicRing2.setStrokeStyle(1, 0xEC4899, 0.2);
+      magicRing2.setStrokeStyle(1, COLORS.secondary, 0.2);
       this.tweens.add({
         targets: magicRing2,
         angle: 360,
         scaleX: 1.3, scaleY: 1.3,
         alpha: 0,
         duration: 2800,
-        ease: 'Quad.easeOut'
+        ease: 'Power2'
       });
 
       // 메인 타이틀
-      const titleArcane = this.add.text(GAME_WIDTH / 2, logoY - 25, 'ARCANE', {
-        fontSize: '52px',
-        fontFamily: 'Georgia, serif',
+      const titleArcane = this.add.text(GAME_WIDTH / 2, logoY - s(20), 'ARCANE', {
+        fontSize: sf(32),
+        fontFamily: 'Noto Sans KR',
         color: '#6366F1',
         fontStyle: 'bold',
         stroke: '#000000',
         strokeThickness: 2
       }).setOrigin(0.5).setAlpha(0);
 
-      const titleCollectors = this.add.text(GAME_WIDTH / 2, logoY + 30, 'COLLECTORS', {
-        fontSize: '28px',
-        fontFamily: 'Georgia, serif',
+      const titleCollectors = this.add.text(GAME_WIDTH / 2, logoY + s(20), 'COLLECTORS', {
+        fontSize: sf(24),
+        fontFamily: 'Noto Sans KR',
         color: '#a5b4fc',
-        letterSpacing: 6
+        letterSpacing: s(4)
       }).setOrigin(0.5).setAlpha(0);
 
-      const subtitle = this.add.text(GAME_WIDTH / 2, logoY + 70, '신화의 교단에서 영웅을 모아라', {
-        fontSize: '13px',
-        fontFamily: 'Arial',
-        color: '#64748b'
+      const subtitle = this.add.text(GAME_WIDTH / 2, logoY + s(48), '신화의 교단에서 영웅을 모아라', {
+        fontSize: sf(14),
+        fontFamily: 'Noto Sans KR',
+        color: '#94A3B8'
       }).setOrigin(0.5).setAlpha(0);
 
       // 하단 저작권
-      const copyright = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 60, 'YD Studio © 2025', {
-        fontSize: '11px',
-        fontFamily: 'Arial',
-        color: '#334155'
-      }).setOrigin(0.5).setAlpha(0);
+      const copyright = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - s(40), 'YD Studio © 2025', {
+        fontSize: sf(12),
+        fontFamily: 'Noto Sans KR',
+        color: '#94A3B8'
+      }).setOrigin(0.5).setAlpha(0.5);
 
-      // H-9.2: 페이드 인 (600ms)
+      // H-9.2: 페이드 인
       this.tweens.add({
         targets: titleArcane,
         alpha: 1,
-        y: logoY - 30,
+        y: logoY - s(24),
         duration: 600,
         ease: 'Back.easeOut'
       });
@@ -97,17 +97,25 @@ export class BootScene extends Phaser.Scene {
       this.tweens.add({
         targets: titleCollectors,
         alpha: 1,
-        duration: 600,
+        duration: 400,
         delay: 200,
-        ease: 'Quad.easeOut'
+        ease: 'Power2'
       });
 
       this.tweens.add({
-        targets: [subtitle, copyright],
+        targets: subtitle,
         alpha: 1,
         duration: 400,
         delay: 500,
-        ease: 'Quad.easeOut'
+        ease: 'Power2'
+      });
+
+      this.tweens.add({
+        targets: copyright,
+        alpha: 0.5,
+        duration: 400,
+        delay: 500,
+        ease: 'Power2'
       });
 
       // COMPAT-1.5: 개발 모드 스키마 검증 (비동기)
@@ -126,7 +134,7 @@ export class BootScene extends Phaser.Scene {
 
       // H-9.2: 3초 스플래시 후 페이드 아웃
       this.time.delayedCall(2400, () => {
-        this.cameras.main.fadeOut(500, 10, 10, 26);
+        this.cameras.main.fadeOut(200, 15, 23, 42);
         this.cameras.main.once('camerafadeoutcomplete', () => {
           if (hasSession) {
             this._initRegistry();
@@ -138,8 +146,8 @@ export class BootScene extends Phaser.Scene {
       });
     } catch (error) {
       console.error('[BootScene] create() 실패:', error);
-      this.add.text(360, 640, '씬 로드 실패\n로그인으로 돌아갑니다', {
-        fontSize: '20px', fill: '#ff4444', align: 'center'
+      this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '씬 로드 실패\n로그인으로 돌아갑니다', {
+        fontSize: sf(18), fontFamily: 'Noto Sans KR', fill: '#EF4444', align: 'center'
       }).setOrigin(0.5);
       this.time.delayedCall(2000, () => {
         this.scene.start('LoginScene');

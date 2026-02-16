@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, s, sf } from '../config/gameConfig.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { getAllCharacters } from '../data/index.js';
 import { SaveManager } from '../systems/SaveManager.js';
@@ -483,19 +483,19 @@ export class PreloadScene extends Phaser.Scene {
     // H-9.3: 마법진 회전 + 진행바 개선
     this.cameras.main.fadeIn(400);
 
-    // 배경
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0a0a1a);
+    // 배경 (DESIGN_SYSTEM: bgDark)
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.bgDark);
 
     // H-9.3: 마법진 회전 아이콘
     const magicY = GAME_HEIGHT * 0.38;
 
     // 외곽 링 (회전)
     this.outerRing = this.add.circle(GAME_WIDTH / 2, magicY, 60, 0x000000, 0);
-    this.outerRing.setStrokeStyle(2, 0x6366f1, 0.6);
+    this.outerRing.setStrokeStyle(2, COLORS.primary, 0.6);
 
     // 내부 링 (역회전)
     this.innerRing = this.add.circle(GAME_WIDTH / 2, magicY, 40, 0x000000, 0);
-    this.innerRing.setStrokeStyle(1.5, 0xEC4899, 0.4);
+    this.innerRing.setStrokeStyle(1.5, COLORS.secondary, 0.4);
 
     // 장식 도트 (외곽 링 위)
     this.magicDots = [];
@@ -503,12 +503,12 @@ export class PreloadScene extends Phaser.Scene {
       const angle = (Math.PI * 2 * i) / 8;
       const dotX = GAME_WIDTH / 2 + Math.cos(angle) * 60;
       const dotY = magicY + Math.sin(angle) * 60;
-      const dot = this.add.circle(dotX, dotY, 3, 0x6366f1, 0.7);
+      const dot = this.add.circle(dotX, dotY, 3, COLORS.primary, 0.7);
       this.magicDots.push({ dot, baseAngle: angle });
     }
 
     // 중앙 글로우
-    const glow = this.add.circle(GAME_WIDTH / 2, magicY, 15, 0x6366f1, 0.2);
+    const glow = this.add.circle(GAME_WIDTH / 2, magicY, 15, COLORS.primary, 0.2);
     this.tweens.add({
       targets: glow,
       scaleX: 1.5, scaleY: 1.5,
@@ -555,27 +555,27 @@ export class PreloadScene extends Phaser.Scene {
 
     // 로딩 텍스트
     const barY = GAME_HEIGHT * 0.58;
-    this.loadingText = this.add.text(GAME_WIDTH / 2, barY - 25, '에셋 준비 중...', {
-      fontSize: '16px',
-      fontFamily: 'Arial',
-      color: '#a5b4fc'
-    }).setOrigin(0.5);
+    this.loadingText = this.add.text(GAME_WIDTH / 2, barY - s(16), '에셋 준비 중...', {
+      fontSize: sf(16),
+      fontFamily: 'Noto Sans KR',
+      color: '#F8FAFC'
+    }).setOrigin(0.5).setAlpha(0.8);
 
     // Phase 표시 텍스트
-    this.phaseText = this.add.text(GAME_WIDTH / 2, barY - 48, '', {
-      fontSize: '11px',
-      fontFamily: 'Arial',
-      color: '#64748b'
+    this.phaseText = this.add.text(GAME_WIDTH / 2, barY - s(32), '', {
+      fontSize: sf(12),
+      fontFamily: 'Noto Sans KR',
+      color: '#94A3B8'
     }).setOrigin(0.5);
 
     // 진행바 (둥근 모서리)
-    const barWidth = 320;
-    const barHeight = 12;
+    const barWidth = s(200);
+    const barHeight = s(8);
     const barX = (GAME_WIDTH - barWidth) / 2;
 
     // 배경
     const barBg = this.add.graphics();
-    barBg.fillStyle(0x1e293b, 1);
+    barBg.fillStyle(COLORS.bgLight, 1);
     barBg.fillRoundedRect(barX, barY, barWidth, barHeight, barHeight / 2);
 
     // 채움바
@@ -586,10 +586,10 @@ export class PreloadScene extends Phaser.Scene {
     this._barHeight = barHeight;
 
     // 퍼센트 텍스트
-    this.percentText = this.add.text(GAME_WIDTH / 2, barY + barHeight + 16, '0%', {
-      fontSize: '13px',
-      fontFamily: 'Roboto Mono, monospace',
-      color: '#64748b'
+    this.percentText = this.add.text(GAME_WIDTH / 2, barY + barHeight + s(20), '0%', {
+      fontSize: sf(14),
+      fontFamily: 'Noto Sans KR',
+      color: '#94A3B8'
     }).setOrigin(0.5);
   }
 
@@ -611,7 +611,7 @@ export class PreloadScene extends Phaser.Scene {
     this.progressBar.clear();
     const fillWidth = Math.max(0, this._barWidth * progress);
     if (fillWidth > 0) {
-      this.progressBar.fillStyle(0x6366f1, 1);
+      this.progressBar.fillStyle(COLORS.primary, 1);
       this.progressBar.fillRoundedRect(
         this._barX, this._barY,
         fillWidth, this._barHeight,
@@ -669,7 +669,7 @@ export class PreloadScene extends Phaser.Scene {
 
             const pendingRewards = this.registry.get('pendingOfflineRewards');
 
-            this.cameras.main.fadeOut(400, 10, 10, 26);
+            this.cameras.main.fadeOut(200, 15, 23, 42);
             this.cameras.main.once('camerafadeoutcomplete', () => {
               this.scene.start('MainMenuScene', { showOfflineRewards: pendingRewards });
             });
@@ -681,8 +681,8 @@ export class PreloadScene extends Phaser.Scene {
       });
     } catch (error) {
       console.error('[PreloadScene] create() 실패:', error);
-      this.add.text(360, 640, '씬 로드 실패\n메인으로 돌아갑니다', {
-        fontSize: '20px', fill: '#ff4444', align: 'center'
+      this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '씬 로드 실패\n메인으로 돌아갑니다', {
+        fontSize: sf(18), fontFamily: 'Noto Sans KR', fill: '#EF4444', align: 'center'
       }).setOrigin(0.5);
       this.time.delayedCall(2000, () => {
         this.scene.start('MainMenuScene');

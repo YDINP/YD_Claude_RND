@@ -243,12 +243,26 @@ export class StageSelectScene extends Phaser.Scene {
     const cardBg = this.add.rectangle(0, 0, GAME_WIDTH - s(40), s(80), bgColor, bgAlpha);
     cardBg.setStrokeStyle(s(2), isCleared ? COLORS.success : (isLocked ? COLORS.textDark : COLORS.primary), 0.5);
 
+    // 클리어 상태 좌측 컬러 스트라이프
+    if (isCleared) {
+      const stars = (this.registry.get('clearedStages') || {})[stage.id] || 0;
+      const stripeColor = stars >= 3 ? COLORS.accent : COLORS.success;
+      const stripe = this.add.rectangle(-(GAME_WIDTH - s(40)) / 2 + s(3), 0, s(6), s(76), stripeColor, 1);
+      card.add(stripe);
+    }
+
+    // 잠김 상태 오버레이
+    if (isLocked) {
+      const lockOverlay = this.add.rectangle(0, 0, GAME_WIDTH - s(44), s(76), 0x000000, 0.3);
+      card.add(lockOverlay);
+    }
+
     if (!isLocked) {
       cardBg.setInteractive({ useHandCursor: true });
     }
 
     // Stage number
-    const numberBg = this.add.circle(s(-185), 0, s(25), isCleared ? COLORS.success : COLORS.primary, 1);
+    const numberBg = this.add.circle(s(-185), 0, s(25), isCleared ? COLORS.success : (isLocked ? COLORS.textDark : COLORS.primary), 1);
     const numberText = this.add.text(s(-185), 0, stage.number, {
       fontSize: sf(14),
       fontFamily: 'Arial',
@@ -282,12 +296,15 @@ export class StageSelectScene extends Phaser.Scene {
 
     // Lock icon
     if (isLocked) {
-      const lockText = this.add.text(s(170), s(10), '🔒 잠김', {
-        fontSize: sf(12),
-        fontFamily: 'Arial',
+      const lockIcon = this.add.text(s(160), 0, '🔒', {
+        fontSize: sf(24)
+      }).setOrigin(0.5);
+      const lockLabel = this.add.text(s(160), s(22), '잠김', {
+        fontSize: sf(10),
+        fontFamily: 'Noto Sans KR',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-      }).setOrigin(1, 0.5);
-      card.add(lockText);
+      }).setOrigin(0.5);
+      card.add([lockIcon, lockLabel]);
     }
 
     // 소탕 버튼 (3성 클리어 시)
@@ -315,12 +332,24 @@ export class StageSelectScene extends Phaser.Scene {
     if (!isLocked) {
       cardBg.on('pointerover', () => {
         cardBg.setFillStyle(COLORS.primary, 0.3);
-        card.setScale(1.02);
+        this.tweens.add({
+          targets: card,
+          scaleX: 1.02,
+          scaleY: 1.02,
+          duration: 150,
+          ease: 'Power2'
+        });
       });
 
       cardBg.on('pointerout', () => {
         cardBg.setFillStyle(COLORS.backgroundLight, 0.8);
-        card.setScale(1);
+        this.tweens.add({
+          targets: card,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 150,
+          ease: 'Power2'
+        });
       });
 
       cardBg.on('pointerdown', () => {
@@ -338,9 +367,12 @@ export class StageSelectScene extends Phaser.Scene {
     const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
     overlay.setInteractive();
 
-    // Modal background
-    const modalBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - s(60), s(450), COLORS.backgroundLight, 0.95);
-    modalBg.setStrokeStyle(s(2), COLORS.primary);
+    // Modal background (라운드 코너 s(16))
+    const modalBg = this.add.graphics();
+    modalBg.fillStyle(COLORS.backgroundLight, 0.95);
+    modalBg.fillRoundedRect(GAME_WIDTH / 2 - (GAME_WIDTH - s(60)) / 2, GAME_HEIGHT / 2 - s(225), GAME_WIDTH - s(60), s(450), s(16));
+    modalBg.lineStyle(s(2), COLORS.primary, 1);
+    modalBg.strokeRoundedRect(GAME_WIDTH / 2 - (GAME_WIDTH - s(60)) / 2, GAME_HEIGHT / 2 - s(225), GAME_WIDTH - s(60), s(450), s(16));
 
     // Modal title
     this.modalTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(200), '파티 선택', {
@@ -670,9 +702,12 @@ export class StageSelectScene extends Phaser.Scene {
     overlay.setInteractive();
     overlay.on('pointerdown', () => this.hideSweepModal());
 
-    // Modal background
-    const modalBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, s(340), s(320), COLORS.backgroundLight, 0.95);
-    modalBg.setStrokeStyle(s(2), COLORS.primary);
+    // Modal background (라운드 코너 s(16))
+    const sweepModalBg = this.add.graphics();
+    sweepModalBg.fillStyle(COLORS.backgroundLight, 0.95);
+    sweepModalBg.fillRoundedRect(GAME_WIDTH / 2 - s(170), GAME_HEIGHT / 2 - s(160), s(340), s(320), s(16));
+    sweepModalBg.lineStyle(s(2), COLORS.primary, 1);
+    sweepModalBg.strokeRoundedRect(GAME_WIDTH / 2 - s(170), GAME_HEIGHT / 2 - s(160), s(340), s(320), s(16));
 
     // Title
     this.sweepTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(130), '⚡ 소탕', {
@@ -740,7 +775,7 @@ export class StageSelectScene extends Phaser.Scene {
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.hideSweepModal());
 
-    this.sweepModal.add([overlay, modalBg, this.sweepTitle, this.sweepStageInfo,
+    this.sweepModal.add([overlay, sweepModalBg, this.sweepTitle, this.sweepStageInfo,
       this.sweepCostInfo, this.sweepDailyInfo, this.sweepTicketInfo, closeBtn]);
   }
 

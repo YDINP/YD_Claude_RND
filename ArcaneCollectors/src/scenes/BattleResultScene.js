@@ -120,7 +120,7 @@ export class BattleResultScene extends Phaser.Scene {
     if (this.stage) {
       this.add.text(centerX, s(240), this.stage.name || `Stage ${this.stage.id}`, {
         fontSize: sf(18),
-        fontFamily: 'Arial',
+        fontFamily: 'Noto Sans KR',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
     }
@@ -178,17 +178,20 @@ export class BattleResultScene extends Phaser.Scene {
   }
 
   createRewardsPanel(x, y) {
-    // 패널 배경
-    const panelWidth = s(360);
-    const panelHeight = s(160);
+    // 패널 배경 (둥근 모서리)
+    const panelWidth = s(380);
+    const panelHeight = s(170);
 
-    const panel = this.add.rectangle(x, y, panelWidth, panelHeight, COLORS.bgLight, 0.85);
-    panel.setStrokeStyle(s(2), COLORS.primary, 0.6);
+    const panel = this.add.graphics();
+    panel.fillStyle(COLORS.bgLight, 0.85);
+    panel.fillRoundedRect(x - panelWidth / 2, y - panelHeight / 2, panelWidth, panelHeight, s(12));
+    panel.lineStyle(s(2), COLORS.primary, 0.4);
+    panel.strokeRoundedRect(x - panelWidth / 2, y - panelHeight / 2, panelWidth, panelHeight, s(12));
 
     // 보상 타이틀
     this.add.text(x, y - s(60), '보상', {
       fontSize: sf(20),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -198,7 +201,7 @@ export class BattleResultScene extends Phaser.Scene {
     this.add.text(x - s(60), goldY, '🪙', { fontSize: sf(24) }).setOrigin(0.5);
     const goldText = this.add.text(x + s(10), goldY, `+${this.rewards.gold.toLocaleString()}`, {
       fontSize: sf(22),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0, 0.5);
@@ -208,7 +211,7 @@ export class BattleResultScene extends Phaser.Scene {
     this.add.text(x - s(60), expY, '⭐', { fontSize: sf(24) }).setOrigin(0.5);
     this.add.text(x + s(10), expY, `+${this.rewards.exp.toLocaleString()} EXP`, {
       fontSize: sf(20),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.primary.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0, 0.5);
@@ -220,7 +223,7 @@ export class BattleResultScene extends Phaser.Scene {
       const itemNames = this.rewards.items.map(i => i.name || i.itemId).join(', ');
       this.add.text(x + s(10), itemY, itemNames, {
         fontSize: sf(14),
-        fontFamily: 'Arial',
+        fontFamily: 'Noto Sans KR',
         color: `#${  COLORS.success.toString(16).padStart(6, '0')}`
       }).setOrigin(0, 0.5);
     }
@@ -229,7 +232,7 @@ export class BattleResultScene extends Phaser.Scene {
     panel.setAlpha(0);
     this.tweens.add({
       targets: panel,
-      alpha: 0.85,
+      alpha: 1,
       duration: 500,
       delay: 600
     });
@@ -242,7 +245,7 @@ export class BattleResultScene extends Phaser.Scene {
 
     this.add.text(x, y - (this.levelUpResults.length * s(15)), '🎉 레벨 업!', {
       fontSize: sf(18),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -251,7 +254,7 @@ export class BattleResultScene extends Phaser.Scene {
       const lineY = y - (this.levelUpResults.length * s(15)) + s(30) + i * s(28);
       this.add.text(x, lineY, `${result.name}  Lv.${result.newLevel - result.gained} → Lv.${result.newLevel}`, {
         fontSize: sf(15),
-        fontFamily: 'Arial',
+        fontFamily: 'Noto Sans KR',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
     });
@@ -267,12 +270,12 @@ export class BattleResultScene extends Phaser.Scene {
       const statX = x - s(80) + i * s(160);
       this.add.text(statX, y, stat.label, {
         fontSize: sf(13),
-        fontFamily: 'Arial',
+        fontFamily: 'Noto Sans KR',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
       this.add.text(statX, y + s(24), stat.value, {
         fontSize: sf(18),
-        fontFamily: 'Arial',
+        fontFamily: 'Noto Sans KR',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold'
       }).setOrigin(0.5);
@@ -308,7 +311,7 @@ export class BattleResultScene extends Phaser.Scene {
     ];
     this.add.text(centerX, s(380), Phaser.Math.RND.pick(messages), {
       fontSize: sf(16),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`,
       wordWrap: { width: s(300) },
       align: 'center'
@@ -318,7 +321,7 @@ export class BattleResultScene extends Phaser.Scene {
     if (this.stage) {
       this.add.text(centerX, s(460), this.stage.name || `Stage ${this.stage.id}`, {
         fontSize: sf(16),
-        fontFamily: 'Arial',
+        fontFamily: 'Noto Sans KR',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
     }
@@ -327,7 +330,7 @@ export class BattleResultScene extends Phaser.Scene {
   createActionButtons() {
     const centerX = GAME_WIDTH / 2;
     const btnY = this.victory ? s(820) : s(580);
-    const btnWidth = s(200);
+    const btnWidth = s(220);
     const btnHeight = s(55);
     const btnSpacing = s(70);
 
@@ -388,18 +391,18 @@ export class BattleResultScene extends Phaser.Scene {
 
       const text = this.add.text(centerX, y, btn.label, {
         fontSize: sf(18),
-        fontFamily: 'Arial',
+        fontFamily: 'Noto Sans KR',
         color: '#FFFFFF',
         fontStyle: 'bold'
       }).setOrigin(0.5);
 
       bg.on('pointerover', () => {
-        bg.setScale(1.05);
-        text.setScale(1.05);
+        bg.setAlpha(0.85);
+        text.setAlpha(0.85);
       });
       bg.on('pointerout', () => {
-        bg.setScale(1);
-        text.setScale(1);
+        bg.setAlpha(1);
+        text.setAlpha(1);
       });
       bg.on('pointerdown', () => {
         this.tweens.add({
@@ -427,7 +430,7 @@ export class BattleResultScene extends Phaser.Scene {
       .setDepth(51).setStrokeStyle(s(2), COLORS.primary);
 
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(120), '⚡ 소탕', {
-      fontSize: sf(24), fontFamily: 'Arial',
+      fontSize: sf(24), fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(52);
@@ -438,7 +441,7 @@ export class BattleResultScene extends Phaser.Scene {
     // 남은 횟수 표시
     const remaining = sweepSystem.getDailyRemaining();
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(75), `남은 소탕: ${remaining}회`, {
-      fontSize: sf(16), fontFamily: 'Arial',
+      fontSize: sf(16), fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(52);
 
@@ -447,7 +450,7 @@ export class BattleResultScene extends Phaser.Scene {
     const maxSweep = Math.min(remaining, 10);
 
     const countText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(30), `${sweepCount}회`, {
-      fontSize: sf(28), fontFamily: 'Arial',
+      fontSize: sf(28), fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(52);
@@ -470,7 +473,7 @@ export class BattleResultScene extends Phaser.Scene {
 
     // 예상 보상 미리보기
     const previewText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + s(30), '', {
-      fontSize: sf(14), fontFamily: 'Arial',
+      fontSize: sf(14), fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`,
       align: 'center'
     }).setOrigin(0.5).setDepth(52);
@@ -489,7 +492,7 @@ export class BattleResultScene extends Phaser.Scene {
       .setDepth(52).setInteractive({ useHandCursor: true });
 
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + s(90), '소탕 실행', {
-      fontSize: sf(18), fontFamily: 'Arial',
+      fontSize: sf(18), fontFamily: 'Noto Sans KR',
       color: '#FFFFFF', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(52);
 
@@ -561,7 +564,7 @@ export class BattleResultScene extends Phaser.Scene {
   showToast(message) {
     const toast = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, message, {
       fontSize: sf(18),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       backgroundColor: `#${  COLORS.bgLight.toString(16).padStart(6, '0')}`,
       padding: { x: s(20), y: s(12) }

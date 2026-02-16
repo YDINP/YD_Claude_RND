@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS, s, sf } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS, CULT_COLORS, s, sf } from '../config/gameConfig.js';
+import { RARITY_COLORS } from '../config/layoutConfig.js';
 import { PartyManager } from '../systems/PartyManager.js';
 import { SynergySystem } from '../systems/SynergySystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
@@ -319,7 +320,9 @@ export class PartyEditScene extends Phaser.Scene {
           const moodInfo = MOODS[heroData.mood];
           slot.infoText.setText(`${moodInfo?.name || heroData.mood || '?'} · ${heroData.role || heroData.class || '?'}`);
           slot.rarityText.setText(this.getRarityStars(heroData.rarity));
-          slot.bg.setStrokeStyle(s(2), COLORS.success);
+          // 등급별 RARITY_COLORS border 적용
+          const rColorSet = RARITY_COLORS[heroData.rarity] || RARITY_COLORS.N;
+          slot.bg.setStrokeStyle(s(2), rColorSet.border);
           slot.iconBg.setFillStyle(MOODS[heroData.mood]?.color || COLORS.bgPanel, 0.7);
           slot.removeBtn.setVisible(true);
         } else {
@@ -416,6 +419,19 @@ export class PartyEditScene extends Phaser.Scene {
             effectStr = Object.entries(syn.effect).map(([k, v]) => `${labels[k] || k}+${v}%`).join(' ');
           }
           this.synergyTexts[i].setText(`${icon} ${syn.name}${effectStr ? ' ' + effectStr : ''}`);
+
+          // 시너지 타입별 색상 적용
+          let synColor = COLORS.text;
+          if (syn.type === 'cult' && syn.cultKey) {
+            synColor = CULT_COLORS[syn.cultKey] || COLORS.text;
+          } else if (syn.type === 'mood' && syn.moodKey) {
+            synColor = MOODS[syn.moodKey]?.color || COLORS.text;
+          } else if (syn.type === 'role') {
+            synColor = COLORS.primary;
+          } else {
+            synColor = COLORS.accent;
+          }
+          this.synergyTexts[i].setColor(`#${synColor.toString(16).padStart(6, '0')}`);
         });
       } else {
         this.synergyTexts[0].setText('활성 시너지 없음');
@@ -487,9 +503,9 @@ export class PartyEditScene extends Phaser.Scene {
       const itemBg = this.add.rectangle(GAME_WIDTH / 2, y, GAME_WIDTH - s(80), itemH - s(5), COLORS.bgPanel, 0.5)
         .setDepth(82).setInteractive({ useHandCursor: true });
 
-      // 등급 색상 원
-      const rarityColor = COLORS.rarity?.[hero.rarity] || 0x9CA3AF;
-      this.add.circle(listX + s(20), y, s(15), rarityColor, 0.8).setDepth(82);
+      // 등급 색상 원 (RARITY_COLORS 통일)
+      const heroRColorSet = RARITY_COLORS[hero.rarity] || RARITY_COLORS.N;
+      this.add.circle(listX + s(20), y, s(15), heroRColorSet.border, 0.8).setDepth(82);
 
       // 이름
       this.add.text(listX + s(50), y - s(10), hero.nameKo || hero.name, {

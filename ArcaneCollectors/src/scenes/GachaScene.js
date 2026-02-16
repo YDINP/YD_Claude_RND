@@ -134,7 +134,7 @@ export class GachaScene extends Phaser.Scene {
     heroTabBg.setStrokeStyle(s(2), COLORS.text, 0.3);
     const heroTabText = this.add.text(0, 0, '⭐ 영웅 소환', {
       fontSize: sf(18),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -147,7 +147,7 @@ export class GachaScene extends Phaser.Scene {
     equipTabBg.setStrokeStyle(s(2), COLORS.textDark, 0.3);
     const equipTabText = this.add.text(0, 0, '⚔️ 장비 소환', {
       fontSize: sf(18),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
     this.equipTab.add([equipTabBg, equipTabText]);
@@ -318,7 +318,16 @@ export class GachaScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, ratesY + s(10), `SSR ${pityInfo.currentSSRRate}  SR 15%  R 50%  N 32%`, {
+    // SSR 확률 강조 표시
+    const rateTextX = GAME_WIDTH / 2;
+    const ssrRateText = this.add.text(rateTextX - s(80), ratesY + s(10), `SSR ${pityInfo.currentSSRRate}`, {
+      fontSize: sf(13),
+      fontFamily: 'Arial',
+      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    this.add.text(rateTextX + s(40), ratesY + s(10), 'SR 15%  R 50%  N 32%', {
       fontSize: sf(12),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
@@ -348,7 +357,7 @@ export class GachaScene extends Phaser.Scene {
 
     // Ticket single pull button
     const ticketBtn1 = this.add.container(GAME_WIDTH / 2 - s(110), ticketY + s(45));
-    const ticketBg1 = this.add.rectangle(0, 0, s(180), s(50), 0x2a5298, 1);
+    const ticketBg1 = this.add.rectangle(0, 0, s(180), s(50), COLORS.primary, 1);
     ticketBg1.setStrokeStyle(s(2), COLORS.accent, 0.5);
     ticketBg1.setInteractive({ useHandCursor: true });
     const ticketLabel1 = this.add.text(0, 0, '🎫 ×1 소환', {
@@ -373,7 +382,7 @@ export class GachaScene extends Phaser.Scene {
 
     // Ticket 10-pull button
     const ticketBtn10 = this.add.container(GAME_WIDTH / 2 + s(110), ticketY + s(45));
-    const ticketBg10 = this.add.rectangle(0, 0, s(180), s(50), 0x2a5298, 1);
+    const ticketBg10 = this.add.rectangle(0, 0, s(180), s(50), COLORS.primary, 1);
     ticketBg10.setStrokeStyle(s(2), COLORS.accent, 0.5);
     ticketBg10.setInteractive({ useHandCursor: true });
     const ticketLabel10 = this.add.text(0, 0, '🎫 ×10 소환', {

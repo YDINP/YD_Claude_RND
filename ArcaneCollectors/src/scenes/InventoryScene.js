@@ -63,47 +63,49 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   createTopBar() {
-    // LAYOUT 통일: Top bar background (100px)
-    this.add.rectangle(GAME_WIDTH / 2, s(50), GAME_WIDTH, s(100), COLORS.bgDark, 0.9);
+    // DESIGN_SYSTEM: TopBar s(80), 구분선 alpha 0.3
+    const bar = this.add.graphics();
+    bar.fillStyle(0x0F172A, 0.95);
+    bar.fillRect(0, 0, GAME_WIDTH, s(80));
+    bar.lineStyle(s(2), COLORS.primary, 0.3);
+    bar.lineBetween(0, s(80), GAME_WIDTH, s(80));
 
-    // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
-    const backBg = this.add.rectangle(s(30), s(50), s(50), s(40), COLORS.bgDark, 0.8)
+    // Back button (최소 터치 s(50)×s(44))
+    const backBg = this.add.rectangle(s(30), s(40), s(50), s(44), 0x0F172A, 0.8)
       .setInteractive({ useHandCursor: true });
-    const backBtn = this.add.text(s(30), s(50), '← 뒤로', {
-      fontSize: sf(14), fontFamily: 'Arial', color: '#FFFFFF'
+    this.add.text(s(30), s(40), '← 뒤로', {
+      fontSize: sf(14), fontFamily: '"Noto Sans KR", sans-serif', color: '#94A3B8'
     }).setOrigin(0.5);
     backBg.on('pointerdown', () => this.goBack());
 
     // 제목
-    this.add.text(GAME_WIDTH / 2, s(50), '인벤토리', {
-      fontSize: sf(24), fontFamily: 'Arial',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
+    this.add.text(GAME_WIDTH / 2, s(40), '인벤토리', {
+      fontSize: sf(24), fontFamily: '"Noto Sans KR", sans-serif',
+      color: '#F8FAFC', fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // 골드 표시
-    this.goldText = this.add.text(GAME_WIDTH - s(30), s(38), `🪙 ${this.gold.toLocaleString()}`, {
-      fontSize: sf(16), fontFamily: 'Arial',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
+    this.goldText = this.add.text(GAME_WIDTH - s(30), s(30), `🪙 ${this.gold.toLocaleString()}`, {
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", sans-serif',
+      color: '#F59E0B', fontStyle: 'bold'
     }).setOrigin(1, 0.5);
 
     // 아이템 수
-    this.countText = this.add.text(GAME_WIDTH - s(30), s(60), '', {
-      fontSize: sf(12), fontFamily: 'Arial',
-      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
+    this.countText = this.add.text(GAME_WIDTH - s(30), s(50), '', {
+      fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif',
+      color: '#94A3B8'
     }).setOrigin(1, 0.5);
   }
 
   createTabs() {
-    // LAYOUT 통일: 장비 카테고리 탭 (y=120, content 시작)
+    // DESIGN_SYSTEM: 카테고리 탭 (TopBar s(80) + 간격 s(20) = s(100))
     const tabs = [
       { key: 'equipment', label: '⚔️ 장비', icon: '⚔️' },
       { key: 'consumable', label: '🧪 소비', icon: '🧪' },
       { key: 'material', label: '🔧 재료', icon: '🔧' }
     ];
 
-    const tabY = s(120);
+    const tabY = s(100);
     const tabW = GAME_WIDTH / tabs.length;
 
     this.tabElements = [];
@@ -117,7 +119,7 @@ export class InventoryScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true });
 
       const label = this.add.text(x, tabY, tab.label, {
-        fontSize: sf(15), fontFamily: 'Arial',
+        fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif',
         color: '#FFFFFF',
         fontStyle: isActive ? 'bold' : 'normal'
       }).setOrigin(0.5);
@@ -141,8 +143,8 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   createItemList() {
-    // LAYOUT 통일: 리스트 영역 정의 (탭 아래 y=160 ~ BottomNav y=1160)
-    this.listY = s(160);
+    // DESIGN_SYSTEM: 리스트 영역 (탭 s(100)+s(40) + 간격 = s(140))
+    this.listY = s(140);
     this.listH = GAME_HEIGHT - this.listY - s(140);
     this.itemElements = [];
   }
@@ -166,8 +168,8 @@ export class InventoryScene extends Phaser.Scene {
 
     if (items.length === 0) {
       const emptyText = this.add.text(GAME_WIDTH / 2, this.listY + s(100), '아이템이 없습니다', {
-        fontSize: sf(16), fontFamily: 'Arial',
-        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
+        fontSize: sf(16), fontFamily: '"Noto Sans KR", sans-serif',
+        color: '#94A3B8'
       }).setOrigin(0.5);
       this.itemElements.push(emptyText);
       return;
@@ -195,11 +197,22 @@ export class InventoryScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     elements.push(rowBg);
 
-    // 등급 색상 아이콘
-    const rarityColor = this.getRarityColor(item.rarity);
-    const icon = this.add.rectangle(padX + s(28), y + s(30), s(44), s(44), rarityColor, 0.7)
-      .setStrokeStyle(s(1), 0xFFFFFF, 0.3);
-    elements.push(icon);
+    // DESIGN_SYSTEM: 등급별 프레임 (border/background 분리)
+    const rarityFrame = this.getRarityFrame(item.rarity);
+    const iconBg = this.add.graphics();
+    iconBg.fillStyle(rarityFrame.bg, 0.9);
+    iconBg.fillRoundedRect(padX + s(6), y + s(8), s(44), s(44), s(6));
+    iconBg.lineStyle(s(2), rarityFrame.border, 0.8);
+    iconBg.strokeRoundedRect(padX + s(6), y + s(8), s(44), s(44), s(6));
+    elements.push(iconBg);
+
+    // SR/SSR 글로우 효과
+    if (rarityFrame.glow) {
+      const glowRect = this.add.graphics();
+      glowRect.fillStyle(rarityFrame.glow, 0.15);
+      glowRect.fillRoundedRect(padX + s(3), y + s(5), s(50), s(50), s(8));
+      elements.push(glowRect);
+    }
 
     // 장비 슬롯 아이콘
     const slotIcon = this.getSlotIcon(item);
@@ -210,7 +223,7 @@ export class InventoryScene extends Phaser.Scene {
 
     // 아이템 이름
     const name = this.add.text(padX + s(65), y + s(18), item.name || item.nameKo || item.id, {
-      fontSize: sf(15), fontFamily: 'Arial',
+      fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif',
       color: '#FFFFFF', fontStyle: 'bold'
     }).setOrigin(0, 0.5);
     elements.push(name);
@@ -226,18 +239,16 @@ export class InventoryScene extends Phaser.Scene {
     }
 
     const info = this.add.text(padX + s(65), y + s(40), infoStr, {
-      fontSize: sf(12), fontFamily: 'Arial',
-      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
+      fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif',
+      color: '#94A3B8'
     }).setOrigin(0, 0.5);
     elements.push(info);
 
     // 스탯/효과 요약 (우측)
     const statStr = this.getItemStatSummary(item);
     const statText = this.add.text(GAME_WIDTH - padX - s(10), y + s(30), statStr, {
-      fontSize: sf(13), fontFamily: 'Arial',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold',
-      align: 'right'
+      fontSize: sf(13), fontFamily: '"Noto Sans KR", sans-serif',
+      color: '#F59E0B', fontStyle: 'bold', align: 'right'
     }).setOrigin(1, 0.5);
     elements.push(statText);
 
@@ -303,13 +314,28 @@ export class InventoryScene extends Phaser.Scene {
       N: COLORS.rarity?.N || 0x9CA3AF,
       R: COLORS.rarity?.R || 0x3B82F6,
       SR: COLORS.rarity?.SR || 0xA855F7,
-      SSR: COLORS.rarity?.SSR || 0xF97316,
+      SSR: COLORS.rarity?.SSR || 0xF59E0B,
       common: 0x9CA3AF,
       uncommon: 0x3B82F6,
       rare: 0xA855F7,
-      epic: 0xF97316
+      epic: 0xF59E0B
     };
     return map[rarity] || 0x9CA3AF;
+  }
+
+  // DESIGN_SYSTEM: 등급별 border/background/glow 프레임
+  getRarityFrame(rarity) {
+    const frames = {
+      N:   { border: 0x6B7280, bg: 0x374151, glow: null },
+      R:   { border: 0x3B82F6, bg: 0x1E3A5F, glow: null },
+      SR:  { border: 0xA855F7, bg: 0x4C1D95, glow: 0xA855F7 },
+      SSR: { border: 0xF59E0B, bg: 0x78350F, glow: 0xF59E0B },
+      common:   { border: 0x6B7280, bg: 0x374151, glow: null },
+      uncommon: { border: 0x3B82F6, bg: 0x1E3A5F, glow: null },
+      rare:     { border: 0xA855F7, bg: 0x4C1D95, glow: 0xA855F7 },
+      epic:     { border: 0xF59E0B, bg: 0x78350F, glow: 0xF59E0B }
+    };
+    return frames[rarity] || frames.N;
   }
 
   getSlotIcon(item) {
@@ -366,19 +392,19 @@ export class InventoryScene extends Phaser.Scene {
 
     // 아이템 이름 + 등급
     this.add.text(cx, topY + s(35), `${item.name || item.id}`, {
-      fontSize: sf(22), fontFamily: 'Arial',
+      fontSize: sf(22), fontFamily: '"Noto Sans KR", sans-serif',
       color: '#FFFFFF', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);
 
     this.add.text(cx, topY + s(62), `${item.rarity || 'common'}`, {
-      fontSize: sf(14), fontFamily: 'Arial',
+      fontSize: sf(14), fontFamily: '"Noto Sans KR", sans-serif',
       color: `#${  this.getRarityColor(item.rarity).toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(82);
 
     // 설명
     this.add.text(cx, topY + s(90), item.description || '', {
-      fontSize: sf(13), fontFamily: 'Arial',
-      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`,
+      fontSize: sf(13), fontFamily: '"Noto Sans KR", sans-serif',
+      color: '#94A3B8',
       wordWrap: { width: GAME_WIDTH - s(120) },
       align: 'center'
     }).setOrigin(0.5, 0).setDepth(82);
@@ -397,13 +423,13 @@ export class InventoryScene extends Phaser.Scene {
 
     statEntries.forEach(([key, val], i) => {
       this.add.text(cx - s(100), y + i * s(25), key, {
-        fontSize: sf(14), fontFamily: 'Arial',
-        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
+        fontSize: sf(14), fontFamily: '"Noto Sans KR", sans-serif',
+        color: '#94A3B8'
       }).setDepth(82);
 
       this.add.text(cx + s(100), y + i * s(25), `+${val}`, {
-        fontSize: sf(14), fontFamily: 'Arial',
-        color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
+        fontSize: sf(14), fontFamily: '"Noto Sans KR", sans-serif',
+        color: '#10B981',
         fontStyle: 'bold'
       }).setOrigin(1, 0).setDepth(82);
     });
@@ -411,8 +437,8 @@ export class InventoryScene extends Phaser.Scene {
     // 강화 레벨
     const enhY = y + statEntries.length * s(25) + s(15);
     this.add.text(cx, enhY, `강화: +${item.enhanceLevel || 0}/15`, {
-      fontSize: sf(15), fontFamily: 'Arial',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
+      fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif',
+      color: '#F59E0B',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);
 
@@ -425,7 +451,7 @@ export class InventoryScene extends Phaser.Scene {
       .setDepth(82).setInteractive({ useHandCursor: true });
 
     this.add.text(cx, btnY, equipped ? '장비 해제' : '장비 장착', {
-      fontSize: sf(16), fontFamily: 'Arial',
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", sans-serif',
       color: '#FFFFFF', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);
 
@@ -441,22 +467,22 @@ export class InventoryScene extends Phaser.Scene {
 
   showConsumableDetail(item, cx, y) {
     this.add.text(cx, y, `보유: ${item.quantity || 0}개`, {
-      fontSize: sf(18), fontFamily: 'Arial',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
+      fontSize: sf(18), fontFamily: '"Noto Sans KR", sans-serif',
+      color: '#F8FAFC',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);
 
     if (item.value) {
       this.add.text(cx, y + s(30), `효과: ${item.value}`, {
-        fontSize: sf(14), fontFamily: 'Arial',
-        color: `#${  COLORS.success.toString(16).padStart(6, '0')}`
+        fontSize: sf(14), fontFamily: '"Noto Sans KR", sans-serif',
+        color: '#10B981'
       }).setOrigin(0.5).setDepth(82);
     }
 
     if (item.sellPrice) {
       this.add.text(cx, y + s(55), `판매가: 🪙 ${item.sellPrice}`, {
-        fontSize: sf(13), fontFamily: 'Arial',
-        color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
+        fontSize: sf(13), fontFamily: '"Noto Sans KR", sans-serif',
+        color: '#F59E0B'
       }).setOrigin(0.5).setDepth(82);
     }
   }
@@ -495,9 +521,9 @@ export class InventoryScene extends Phaser.Scene {
 
   showToast(message) {
     const toast = this.add.text(GAME_WIDTH / 2, s(1100), message, { // BottomNav(y=1160) 위에 표시
-      fontSize: sf(16), fontFamily: 'Arial',
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", sans-serif',
       color: '#FFFFFF',
-      backgroundColor: `#${  COLORS.bgPanel.toString(16).padStart(6, '0')}`,
+      backgroundColor: '#334155',
       padding: { x: s(16), y: s(10) }
     }).setOrigin(0.5).setDepth(100);
 

@@ -68,23 +68,24 @@ export class TowerScene extends Phaser.Scene {
   }
 
   createTopBar() {
-    // LAYOUT 통일: Top bar background (100px)
+    // DESIGN_SYSTEM: TopBar s(80), 구분선 alpha 0.3
     const bar = this.add.graphics();
     bar.fillStyle(0x0F172A, 0.95);
-    bar.fillRect(0, 0, GAME_WIDTH, s(100));
-    bar.lineStyle(s(2), COLORS.primary, 0.5);
-    bar.lineBetween(0, s(100), GAME_WIDTH, s(100));
+    bar.fillRect(0, 0, GAME_WIDTH, s(80));
+    bar.lineStyle(s(2), COLORS.primary, 0.3);
+    bar.lineBetween(0, s(80), GAME_WIDTH, s(80));
 
-    // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
-    const backBg = this.add.rectangle(s(30), s(50), s(50), s(40), 0x0F172A, 0.8)
+    // Back button (최소 터치 s(50)×s(44))
+    const backBg = this.add.rectangle(s(30), s(40), s(50), s(44), 0x0F172A, 0.8)
       .setInteractive({ useHandCursor: true });
-    this.add.text(s(30), s(50), '← 뒤로', {
+    this.add.text(s(30), s(40), '← 뒤로', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(14), color: '#94A3B8'
-    }).setOrigin(0.5).on('pointerdown', () => {
+    }).setOrigin(0.5);
+    backBg.on('pointerdown', () => {
       navigationManager.goBack(this);
     });
 
-    this.add.text(GAME_WIDTH / 2, s(50), '무한의 탑', {
+    this.add.text(GAME_WIDTH / 2, s(40), '무한의 탑', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(24),
       fontStyle: 'bold', color: '#F8FAFC'
     }).setOrigin(0.5);
@@ -92,7 +93,7 @@ export class TowerScene extends Phaser.Scene {
     // 에너지 표시 (우상단)
     const energy = energySystem.getCurrentEnergy();
     const maxEnergy = energySystem.getMaxEnergy();
-    this.energyText = this.add.text(GAME_WIDTH - s(30), s(50), `⚡ ${energy}/${maxEnergy}`, {
+    this.energyText = this.add.text(GAME_WIDTH - s(30), s(40), `⚡ ${energy}/${maxEnergy}`, {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16), color: '#F59E0B'
     }).setOrigin(1, 0.5);
   }
@@ -104,16 +105,37 @@ export class TowerScene extends Phaser.Scene {
 
   createFloorDisplay() {
     const centerX = GAME_WIDTH / 2;
-    const y = s(160);
+    const y = s(140);
 
-    // 현재 층 표시 (큰 원)
-    const circle = this.add.graphics();
     const isBoss = this.currentFloorInfo?.isBoss;
     const circleColor = isBoss ? 0xEF4444 : COLORS.primary;
-    circle.fillStyle(circleColor, 0.2);
+
+    // 외곽 글로우 (큰 원, 저알파)
+    const glow = this.add.graphics();
+    glow.fillStyle(circleColor, 0.08);
+    glow.fillCircle(centerX, y + s(60), s(100));
+
+    // 메인 원 배경
+    const circle = this.add.graphics();
+    circle.fillStyle(circleColor, 0.15);
     circle.fillCircle(centerX, y + s(60), s(80));
+    // 내부 그라데이션 효과 (동심원)
+    circle.fillStyle(circleColor, 0.1);
+    circle.fillCircle(centerX, y + s(60), s(60));
     circle.lineStyle(s(3), circleColor, 0.8);
     circle.strokeCircle(centerX, y + s(60), s(80));
+    // 내부 보조선
+    circle.lineStyle(s(1), circleColor, 0.2);
+    circle.strokeCircle(centerX, y + s(60), s(60));
+
+    // 보스 글로우 애니메이션
+    if (isBoss) {
+      const glowCircle = this.add.circle(centerX, y + s(60), s(85), circleColor, 0.15);
+      this.tweens.add({
+        targets: glowCircle, alpha: 0.05, duration: 1500,
+        yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+      });
+    }
 
     // 층 번호
     this.add.text(centerX, y + s(45), `${this.progress.currentFloor}`, {
@@ -286,7 +308,7 @@ export class TowerScene extends Phaser.Scene {
       }).setOrigin(1, 0);
 
     const barBg = this.add.graphics();
-    barBg.fillStyle(0x1E293B, 1);
+    barBg.fillStyle(0x374151, 1);
     barBg.fillRoundedRect(s(40), barY, barW, barH, s(6));
 
     const barFill = this.add.graphics();

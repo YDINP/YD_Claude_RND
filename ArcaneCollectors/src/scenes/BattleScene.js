@@ -412,14 +412,14 @@ export class BattleScene extends Phaser.Scene {
     this.turnOrderContainer = this.add.container(0, s(70)).setDepth(15);
 
     // 턴 순서 바 배경
-    const turnBarBg = this.add.rectangle(GAME_WIDTH / 2, 0, GAME_WIDTH - s(20), s(50), COLORS.backgroundLight, 0.9);
+    const turnBarBg = this.add.rectangle(GAME_WIDTH / 2, 0, GAME_WIDTH - s(20), s(50), COLORS.bgLight, 0.9);
     turnBarBg.setStrokeStyle(s(2), COLORS.primary);
     this.turnOrderContainer.add(turnBarBg);
 
     // 턴 순서 라벨
     const turnLabel = this.add.text(s(20), 0, '턴 순서:', {
       fontSize: sf(12),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0, 0.5);
     this.turnOrderContainer.add(turnLabel);
@@ -460,7 +460,7 @@ export class BattleScene extends Phaser.Scene {
       const initial = (battler.name || '?').charAt(0);
       const iconText = this.add.text(x, 0, initial, {
         fontSize: isCurrentTurn ? sf(14) : sf(11),
-        fontFamily: 'Arial',
+        fontFamily: 'Noto Sans KR',
         color: '#ffffff',
         fontStyle: 'bold'
       }).setOrigin(0.5);
@@ -468,7 +468,7 @@ export class BattleScene extends Phaser.Scene {
       // SPD 표시
       const spdText = this.add.text(x, s(20), `${battler.stats?.spd || 0}`, {
         fontSize: sf(8),
-        fontFamily: 'Arial',
+        fontFamily: 'Noto Sans KR',
         color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
@@ -481,13 +481,13 @@ export class BattleScene extends Phaser.Scene {
 
   createBattleUI() {
     // Top status bar
-    const topBar = this.add.rectangle(GAME_WIDTH / 2, s(30), GAME_WIDTH, s(60), COLORS.backgroundLight, 0.9);
+    const topBar = this.add.rectangle(GAME_WIDTH / 2, s(30), GAME_WIDTH, s(60), COLORS.bgLight, 0.9);
     topBar.setDepth(10);
 
     // Stage name
     this.add.text(s(20), s(30), this.stage?.name || 'Battle', {
       fontSize: sf(16),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0, 0.5).setDepth(11);
@@ -495,7 +495,7 @@ export class BattleScene extends Phaser.Scene {
     // Turn counter
     this.turnText = this.add.text(GAME_WIDTH / 2, s(30), 'Turn 0', {
       fontSize: sf(16),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(11);
 
@@ -522,14 +522,14 @@ export class BattleScene extends Phaser.Scene {
     this.synergyContainer = this.add.container(GAME_WIDTH - s(100), s(130)).setDepth(12);
 
     // 시너지 배경
-    const synergyBg = this.add.rectangle(0, 0, s(100), containerHeight, COLORS.backgroundLight, 0.85);
+    const synergyBg = this.add.rectangle(0, 0, s(100), containerHeight, COLORS.bgLight, 0.85);
     synergyBg.setStrokeStyle(s(1), COLORS.accent);
     this.synergyContainer.add(synergyBg);
 
     // 시너지 타이틀
     const synergyTitle = this.add.text(0, -containerHeight / 2 + s(10), '시너지', {
       fontSize: sf(10),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -547,7 +547,7 @@ export class BattleScene extends Phaser.Scene {
         const label = `${icon} ${syn.name || syn.type}`;
         const synText = this.add.text(0, yOffset, label, {
           fontSize: sf(9),
-          fontFamily: 'Arial',
+          fontFamily: 'Noto Sans KR',
           color: `#${  color.toString(16).padStart(6, '0')}`
         }).setOrigin(0.5);
         this.synergyContainer.add(synText);
@@ -558,7 +558,7 @@ export class BattleScene extends Phaser.Scene {
       let yOffset = s(-5);
       if (this.synergyBuffs.atk > 0) {
         const atkText = this.add.text(0, yOffset, `ATK +${Math.round(this.synergyBuffs.atk * 100)}%`, {
-          fontSize: sf(9), fontFamily: 'Arial',
+          fontSize: sf(9), fontFamily: 'Noto Sans KR',
           color: `#${  COLORS.danger.toString(16).padStart(6, '0')}`
         }).setOrigin(0.5);
         this.synergyContainer.add(atkText);
@@ -566,7 +566,7 @@ export class BattleScene extends Phaser.Scene {
       }
       if (this.synergyBuffs.def > 0) {
         const defText = this.add.text(0, yOffset, `DEF +${Math.round(this.synergyBuffs.def * 100)}%`, {
-          fontSize: sf(9), fontFamily: 'Arial',
+          fontSize: sf(9), fontFamily: 'Noto Sans KR',
           color: `#${  COLORS.primary.toString(16).padStart(6, '0')}`
         }).setOrigin(0.5);
         this.synergyContainer.add(defText);
@@ -611,13 +611,20 @@ export class BattleScene extends Phaser.Scene {
     const gaugePercent = ally.skillGauge / ally.maxSkillGauge;
     const isReady = ally.skillGauge >= ally.maxSkillGauge;
 
-    // 카드 배경
-    const cardBg = this.add.rectangle(0, 0, s(65), s(50), isReady ? COLORS.secondary : COLORS.backgroundLight, isReady ? 1 : 0.7);
-    cardBg.setStrokeStyle(s(2), isReady ? COLORS.accent : COLORS.primary);
+    // 카드 배경 (둥근 모서리)
+    const cardW = s(70);
+    const cardH = s(55);
+    const cardBg = this.add.graphics();
+    cardBg.fillStyle(isReady ? COLORS.secondary : COLORS.bgLight, isReady ? 1 : 0.7);
+    cardBg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, s(8));
+    cardBg.lineStyle(s(2), isReady ? COLORS.accent : COLORS.primary, isReady ? 1 : 0.4);
+    cardBg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, s(8));
+    // 인터랙션 히트영역
+    const cardHit = this.add.rectangle(0, 0, cardW, cardH, 0x000000, 0);
 
     if (isReady) {
-      cardBg.setInteractive({ useHandCursor: true });
-      cardBg.on('pointerdown', () => this.onSkillCardClick(ally, index));
+      cardHit.setInteractive({ useHandCursor: true });
+      cardHit.on('pointerdown', () => this.onSkillCardClick(ally, index));
     }
 
     // 영웅 이름
@@ -625,7 +632,7 @@ export class BattleScene extends Phaser.Scene {
     const heroName = allyName.length > 4 ? allyName.substring(0, 4) : allyName;
     const nameText = this.add.text(0, s(-17), heroName, {
       fontSize: sf(9),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -638,28 +645,28 @@ export class BattleScene extends Phaser.Scene {
     const hasSkill2 = skill2 && ally.skillGauge >= (skill2.gaugeCost || 150);
     const skillText = this.add.text(0, s(-6), hasSkill2 ? `★${  skillLabel}` : skillLabel, {
       fontSize: sf(7),
-      fontFamily: 'Arial',
-      color: isReady ? (hasSkill2 ? '#FF6B6B' : '#FFD700') : '#999999'
+      fontFamily: 'Noto Sans KR',
+      color: isReady ? (hasSkill2 ? '#FF6B6B' : '#FFD700') : '#94A3B8'
     }).setOrigin(0.5);
 
     // 스킬 게이지 바
-    const gaugeBg = this.add.rectangle(0, s(8), s(55), s(6), 0x333333, 1);
+    const gaugeBg = this.add.rectangle(0, s(8), s(55), s(6), 0x374151, 1);
     const gaugeFill = this.add.rectangle(s(-27.5), s(8), s(55) * gaugePercent, s(4), isReady ? COLORS.accent : COLORS.secondary, 1);
     gaugeFill.setOrigin(0, 0.5);
 
     // 게이지 텍스트
     const gaugeText = this.add.text(0, s(19), `${ally.skillGauge}/${ally.maxSkillGauge}`, {
       fontSize: sf(8),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
-    card.add([cardBg, nameText, skillText, gaugeBg, gaugeFill, gaugeText]);
+    card.add([cardBg, cardHit, nameText, skillText, gaugeBg, gaugeFill, gaugeText]);
 
     // 준비 완료 시 빛남(pulse) 효과
     if (isReady) {
       this.tweens.add({
-        targets: cardBg,
+        targets: card,
         alpha: { from: 1, to: 0.6 },
         duration: 600,
         yoyo: true,
@@ -670,6 +677,7 @@ export class BattleScene extends Phaser.Scene {
     card.setData('ally', ally);
     card.setData('index', index);
     card.setData('cardBg', cardBg);
+    card.setData('cardHit', cardHit);
     card.setData('gaugeFill', gaugeFill);
     card.setData('gaugeText', gaugeText);
     card.setData('skillText', skillText);
@@ -817,11 +825,18 @@ export class BattleScene extends Phaser.Scene {
     const isReady = ally.skillGauge >= ally.maxSkillGauge;
 
     const cardBg = card.getData('cardBg');
+    const cardHit = card.getData('cardHit');
     const gaugeFill = card.getData('gaugeFill');
     const gaugeText = card.getData('gaugeText');
 
-    cardBg.setFillStyle(isReady ? COLORS.secondary : COLORS.backgroundLight, isReady ? 1 : 0.7);
-    cardBg.setStrokeStyle(s(2), isReady ? COLORS.accent : COLORS.primary);
+    // Graphics 기반 카드 배경 다시 그리기
+    const cardW = s(70);
+    const cardH = s(55);
+    cardBg.clear();
+    cardBg.fillStyle(isReady ? COLORS.secondary : COLORS.bgLight, isReady ? 1 : 0.7);
+    cardBg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, s(8));
+    cardBg.lineStyle(s(2), isReady ? COLORS.accent : COLORS.primary, isReady ? 1 : 0.4);
+    cardBg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, s(8));
 
     this.tweens.add({
       targets: gaugeFill,
@@ -834,26 +849,26 @@ export class BattleScene extends Phaser.Scene {
     // 스킬명 색상 업데이트
     const skillTextObj = card.getData('skillText');
     if (skillTextObj) {
-      skillTextObj.setColor(isReady ? '#FFD700' : '#999999');
+      skillTextObj.setColor(isReady ? '#FFD700' : '#94A3B8');
     }
 
     // 인터랙티브 상태 업데이트
-    if (isReady && !cardBg.input) {
-      cardBg.setInteractive({ useHandCursor: true });
-      cardBg.on('pointerdown', () => this.onSkillCardClick(ally, card.getData('index')));
+    if (isReady && cardHit && !cardHit.input) {
+      cardHit.setInteractive({ useHandCursor: true });
+      cardHit.on('pointerdown', () => this.onSkillCardClick(ally, card.getData('index')));
       // 준비 완료 시 빛남 효과
       this.tweens.add({
-        targets: cardBg,
+        targets: card,
         alpha: { from: 1, to: 0.6 },
         duration: 600,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut'
       });
-    } else if (!isReady && cardBg.input) {
-      cardBg.removeInteractive();
-      this.tweens.killTweensOf(cardBg);
-      cardBg.setAlpha(0.7);
+    } else if (!isReady && cardHit && cardHit.input) {
+      cardHit.removeInteractive();
+      this.tweens.killTweensOf(card);
+      card.setAlpha(0.7);
     }
   }
 
@@ -969,7 +984,7 @@ export class BattleScene extends Phaser.Scene {
 
     // 추가 힐 텍스트 (떠오르는 +HP)
     const healText = this.add.text(sprite.x, sprite.y - s(60), `+${healAmount}`, {
-      fontSize: sf(22), fontFamily: 'Arial',
+      fontSize: sf(22), fontFamily: 'Noto Sans KR',
       color: '#4ADE80', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: s(3)
     }).setOrigin(0.5).setDepth(20);
@@ -1015,13 +1030,13 @@ export class BattleScene extends Phaser.Scene {
 
     const portrait = this.add.circle(GAME_WIDTH / 2 - s(120), GAME_HEIGHT / 2, s(35), moodColor, 0.9).setDepth(32).setScale(0);
     const nameText = this.add.text(GAME_WIDTH / 2 + s(20), GAME_HEIGHT / 2 - s(15), battler.name, {
-      fontSize: sf(22), fontFamily: 'Arial',
+      fontSize: sf(22), fontFamily: 'Noto Sans KR',
       color: '#FFFFFF', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: s(3)
     }).setOrigin(0, 0.5).setDepth(32).setAlpha(0);
 
     const skillText = this.add.text(GAME_WIDTH / 2 + s(20), GAME_HEIGHT / 2 + s(15), '⚡ 궁극기 발동!', {
-      fontSize: sf(16), fontFamily: 'Arial',
+      fontSize: sf(16), fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
       stroke: '#000000', strokeThickness: s(2)
@@ -1077,7 +1092,7 @@ export class BattleScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(50).setAlpha(0);
 
       const bossNameText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(30), bossName, {
-        fontSize: sf(24), fontFamily: 'Arial', color: '#FFD700', fontStyle: 'bold',
+        fontSize: sf(24), fontFamily: 'Noto Sans KR', color: '#FFD700', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: s(3)
       }).setOrigin(0.5).setDepth(50).setAlpha(0);
 
@@ -1113,7 +1128,7 @@ export class BattleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(51).setAlpha(0);
 
     const battleText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + s(20), '⚔️ BATTLE START ⚔️', {
-      fontSize: sf(18), fontFamily: 'Arial',
+      fontSize: sf(18), fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
       stroke: '#000000', strokeThickness: s(3)
@@ -1162,7 +1177,7 @@ export class BattleScene extends Phaser.Scene {
 
     const btnText = this.add.text(0, 0, '다음 턴', {
       fontSize: sf(16),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: '#000000',
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -1218,7 +1233,7 @@ export class BattleScene extends Phaser.Scene {
           }
           // 보스 라벨
           const bossLabel = this.add.text(enemyStartX, y - s(60), '👑 BOSS', {
-            fontSize: sf(14), fontFamily: 'Arial', color: '#FFD700', fontStyle: 'bold',
+            fontSize: sf(14), fontFamily: 'Noto Sans KR', color: '#FFD700', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: s(3)
           }).setOrigin(0.5).setDepth(15);
         }
@@ -1252,7 +1267,7 @@ export class BattleScene extends Phaser.Scene {
     const name = battlerName.length > 6 ? battlerName.substring(0, 6) : battlerName;
     const nameTag = this.add.text(0, s(45), name, {
       fontSize: sf(11),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  (isAlly ? COLORS.text : COLORS.danger).toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
@@ -1272,16 +1287,16 @@ export class BattleScene extends Phaser.Scene {
     const controlY = GAME_HEIGHT - s(50);
 
     // Control bar background
-    this.add.rectangle(GAME_WIDTH / 2, controlY, GAME_WIDTH, s(100), COLORS.backgroundLight, 0.95).setDepth(10);
+    this.add.rectangle(GAME_WIDTH / 2, controlY, GAME_WIDTH, s(100), COLORS.bgLight, 0.95).setDepth(10);
 
     // Auto battle toggle
     this.autoBtn = this.add.container(s(80), controlY).setDepth(11);
-    const autoBg = this.add.rectangle(0, 0, s(100), s(40), this.autoBattle ? COLORS.success : COLORS.backgroundLight, 1)
+    const autoBg = this.add.rectangle(0, 0, s(100), s(44), this.autoBattle ? COLORS.success : COLORS.bgLight, 1)
       .setInteractive({ useHandCursor: true })
       .setStrokeStyle(s(2), COLORS.primary);
     const autoText = this.add.text(0, 0, this.autoBattle ? 'AUTO ON' : 'AUTO OFF', {
       fontSize: sf(12),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -1293,7 +1308,7 @@ export class BattleScene extends Phaser.Scene {
     autoBg.on('pointerdown', () => {
       this.autoBattle = !this.autoBattle;
       this.registry.set('autoBattle', this.autoBattle);
-      autoBg.setFillStyle(this.autoBattle ? COLORS.success : COLORS.backgroundLight, 1);
+      autoBg.setFillStyle(this.autoBattle ? COLORS.success : COLORS.bgLight, 1);
       autoText.setText(this.autoBattle ? 'AUTO ON' : 'AUTO OFF');
 
       console.log(`[Battle] Auto battle toggled: ${this.autoBattle ? 'ON' : 'OFF'}`);
@@ -1317,12 +1332,12 @@ export class BattleScene extends Phaser.Scene {
       const btn = this.add.container(x, controlY).setDepth(11);
 
       const isActive = this.battleSpeed === speed;
-      const bg = this.add.rectangle(0, 0, s(50), s(40), isActive ? COLORS.primary : COLORS.backgroundLight, 1)
+      const bg = this.add.rectangle(0, 0, s(50), s(44), isActive ? COLORS.primary : COLORS.bgLight, 1)
         .setInteractive({ useHandCursor: true })
         .setStrokeStyle(s(1), COLORS.primary);
       const text = this.add.text(0, 0, `${speed}x`, {
         fontSize: sf(14),
-        fontFamily: 'Arial',
+        fontFamily: 'Noto Sans KR',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
@@ -1343,11 +1358,11 @@ export class BattleScene extends Phaser.Scene {
 
     // Retreat button
     const retreatBtn = this.add.container(GAME_WIDTH - s(70), controlY).setDepth(11);
-    const retreatBg = this.add.rectangle(0, 0, s(100), s(40), COLORS.danger, 1)
+    const retreatBg = this.add.rectangle(0, 0, s(100), s(44), COLORS.danger, 1)
       .setInteractive({ useHandCursor: true });
     const retreatText = this.add.text(0, 0, '퇴각', {
       fontSize: sf(14),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -1367,7 +1382,7 @@ export class BattleScene extends Phaser.Scene {
       const bg = btn.getData('bg');
       const speed = btn.getData('speed');
       if (bg && bg.setFillStyle) {
-        bg.setFillStyle(this.battleSpeed === speed ? COLORS.primary : COLORS.backgroundLight, 1);
+        bg.setFillStyle(this.battleSpeed === speed ? COLORS.primary : COLORS.bgLight, 1);
       }
     });
   }
@@ -1827,7 +1842,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const dmgText = this.add.text(sprite.x, sprite.y - s(70), `-${damage}`, {
-      fontSize, fontFamily: 'Arial',
+      fontSize, fontFamily: 'Noto Sans KR',
       color: `#${  color.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
       stroke: '#000000',
@@ -1848,7 +1863,7 @@ export class BattleScene extends Phaser.Scene {
     // 상성 표시 (기존 유지 + 약간 개선)
     if (moodAdvantage === 'ADVANTAGE') {
       const advLabel = this.add.text(sprite.x + s(45), sprite.y - s(75), '▲유리', {
-        fontSize: sf(12), fontFamily: 'Arial',
+        fontSize: sf(12), fontFamily: 'Noto Sans KR',
         color: '#FFD700', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: s(2)
       }).setOrigin(0.5).setDepth(20);
@@ -1860,7 +1875,7 @@ export class BattleScene extends Phaser.Scene {
       });
     } else if (moodAdvantage === 'DISADVANTAGE') {
       const disLabel = this.add.text(sprite.x + s(45), sprite.y - s(75), '▼불리', {
-        fontSize: sf(12), fontFamily: 'Arial',
+        fontSize: sf(12), fontFamily: 'Noto Sans KR',
         color: '#3498DB', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: s(2)
       }).setOrigin(0.5).setDepth(20);
@@ -1875,7 +1890,7 @@ export class BattleScene extends Phaser.Scene {
     // A-8.3: 크리티컬 라벨 강화 (스케일 펀치)
     if (isCrit) {
       const critLabel = this.add.text(sprite.x, sprite.y - s(100), '💥 CRITICAL!', {
-        fontSize: sf(16), fontFamily: 'Arial',
+        fontSize: sf(16), fontFamily: 'Noto Sans KR',
         color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold',
         stroke: '#000000', strokeThickness: s(3)
@@ -1994,7 +2009,7 @@ export class BattleScene extends Phaser.Scene {
     // Simple floating log
     const logText = this.add.text(GAME_WIDTH / 2, s(100), message, {
       fontSize: sf(14),
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       backgroundColor: 'rgba(0,0,0,0.7)',
       padding: { x: s(10), y: s(5) }

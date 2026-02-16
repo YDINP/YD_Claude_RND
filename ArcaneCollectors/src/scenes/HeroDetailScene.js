@@ -1,4 +1,5 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, EQUIPMENT_SLOTS, s, sf } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, EQUIPMENT_SLOTS, MOODS, s, sf } from '../config/gameConfig.js';
+import { RARITY_COLORS } from '../config/layoutConfig.js';
 import { getRarityKey } from '../utils/rarityUtils.js';
 import { EvolutionSystem } from '../systems/EvolutionSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
@@ -124,13 +125,16 @@ export class HeroDetailScene extends Phaser.Scene {
       color: `#${  rarityColor.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
-    // Mood indicator (분위기)
+    // Mood indicator (분위기) - 실제 mood 색상 사용
     const moodKey = this.hero.mood || 'balanced';
-    const moodColor = COLORS.primary;
-    this.add.circle(GAME_WIDTH - s(50), s(50), s(12), moodColor, 0.8);
-    this.add.text(GAME_WIDTH - s(50), s(50), moodKey.substring(0, 2), {
-      fontSize: sf(8),
+    const moodInfo = MOODS[moodKey];
+    const moodColor = moodInfo?.color || COLORS.primary;
+    const moodName = moodInfo?.name || moodKey.substring(0, 2);
+    this.add.circle(GAME_WIDTH - s(50), s(50), s(14), moodColor, 0.8);
+    this.add.text(GAME_WIDTH - s(50), s(50), moodName.substring(0, 2), {
+      fontSize: sf(9),
       fontFamily: 'Arial',
+      fontStyle: 'bold',
       color: '#ffffff'
     }).setOrigin(0.5);
   }
@@ -139,10 +143,11 @@ export class HeroDetailScene extends Phaser.Scene {
     // Character illustration area
     const displayY = s(230);
 
-    // Frame
-    const frame = this.add.rectangle(GAME_WIDTH / 2, displayY, s(180), s(200), COLORS.backgroundLight, 0.3);
-    const frameRarityColor = (RARITY[getRarityKey(this.hero.rarity)] || RARITY.N).color;
-    frame.setStrokeStyle(s(3), frameRarityColor, 0.8);
+    // Frame with RARITY_COLORS
+    const heroRKey = getRarityKey(this.hero.rarity);
+    const frameRarityColorSet = RARITY_COLORS[heroRKey] || RARITY_COLORS.N;
+    const frame = this.add.rectangle(GAME_WIDTH / 2, displayY, s(180), s(200), frameRarityColorSet.bg, 0.3);
+    frame.setStrokeStyle(s(3), frameRarityColorSet.border, 0.8);
 
     // Hero image
     const heroImg = this.add.image(GAME_WIDTH / 2, displayY, 'hero_placeholder');
@@ -165,9 +170,8 @@ export class HeroDetailScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Rarity glow for SSR+ (rarity 4+ or key 'SSR'/'UR')
-    const heroRarityKey = getRarityKey(this.hero.rarity);
-    if (this.hero.rarity >= 4 || heroRarityKey === 'SSR' || heroRarityKey === 'UR') {
-      const glow = this.add.circle(GAME_WIDTH / 2, displayY, s(90), frameRarityColor, 0.2);
+    if (frameRarityColorSet.glow) {
+      const glow = this.add.circle(GAME_WIDTH / 2, displayY, s(90), frameRarityColorSet.glow, 0.2);
       this.tweens.add({
         targets: glow,
         scale: { from: 0.9, to: 1.1 },
@@ -450,16 +454,23 @@ export class HeroDetailScene extends Phaser.Scene {
       // Get equipped item if any
       const equippedItem = equipped[slot.key];
 
-      // Slot background with rarity color if equipped
-      let bgColor = COLORS.backgroundLight;
-      let bgAlpha = 0.6;
+      // Slot background with rarity color if equipped (RARITY_COLORS 적용)
+      let bgColor = COLORS.bgPanel;
+      let bgAlpha = 0.4;
+      let borderColor = COLORS.textDark;
+      let borderAlpha = 0.3;
+
       if (equippedItem) {
-        bgColor = RARITY[getRarityKey(equippedItem.rarity)]?.color || COLORS.backgroundLight;
-        bgAlpha = 0.4;
+        const eqRKey = getRarityKey(equippedItem.rarity);
+        const eqColorSet = RARITY_COLORS[eqRKey] || RARITY_COLORS.N;
+        bgColor = eqColorSet.bg;
+        bgAlpha = 0.5;
+        borderColor = eqColorSet.border;
+        borderAlpha = 1;
       }
 
       const slotBg = this.add.rectangle(x, slotsY + 20, 65, 65, bgColor, bgAlpha);
-      slotBg.setStrokeStyle(2, equippedItem ? RARITY[getRarityKey(equippedItem.rarity)]?.color || COLORS.textDark : COLORS.textDark, equippedItem ? 1 : 0.5);
+      slotBg.setStrokeStyle(2, borderColor, borderAlpha);
       slotBg.setInteractive({ useHandCursor: true });
 
       // Slot content
@@ -476,10 +487,16 @@ export class HeroDetailScene extends Phaser.Scene {
           color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
         }).setOrigin(0.5);
       } else {
-        // Empty slot indicator
-        this.add.text(x, slotsY + 15, '+', {
-          fontSize: '22px',
+        // Empty slot - 반투명 타입 아이콘 + '+' 표시
+        this.add.text(x, slotsY + 10, slot.icon, {
+          fontSize: '20px',
+          alpha: 0.25
+        }).setOrigin(0.5).setAlpha(0.25);
+
+        this.add.text(x, slotsY + 32, '+', {
+          fontSize: '14px',
           fontFamily: 'Arial',
+          fontStyle: 'bold',
           color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
         }).setOrigin(0.5);
       }

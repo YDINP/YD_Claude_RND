@@ -47,23 +47,24 @@ export class QuestScene extends Phaser.Scene {
   }
 
   createTopBar() {
-    // LAYOUT 통일: Top bar background (100px)
+    // DESIGN_SYSTEM: TopBar s(80), 구분선 alpha 0.3
     const bar = this.add.graphics();
     bar.fillStyle(0x0F172A, 0.95);
-    bar.fillRect(0, 0, GAME_WIDTH, s(100));
-    bar.lineStyle(s(2), COLORS.primary, 0.5);
-    bar.lineBetween(0, s(100), GAME_WIDTH, s(100));
+    bar.fillRect(0, 0, GAME_WIDTH, s(80));
+    bar.lineStyle(s(2), COLORS.primary, 0.3);
+    bar.lineBetween(0, s(80), GAME_WIDTH, s(80));
 
-    // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
-    const backBg = this.add.rectangle(s(30), s(50), s(50), s(40), 0x0F172A, 0.8)
+    // Back button (최소 터치 s(50)×s(44))
+    const backBg = this.add.rectangle(s(30), s(40), s(50), s(44), 0x0F172A, 0.8)
       .setInteractive({ useHandCursor: true });
-    this.add.text(s(30), s(50), '← 뒤로', {
+    this.add.text(s(30), s(40), '← 뒤로', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(14), color: '#94A3B8'
-    }).setOrigin(0.5).on('pointerdown', () => {
+    }).setOrigin(0.5);
+    backBg.on('pointerdown', () => {
       navigationManager.goBack(this);
     });
 
-    this.add.text(GAME_WIDTH / 2, s(50), '일일 퀘스트', {
+    this.add.text(GAME_WIDTH / 2, s(40), '일일 퀘스트', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(24),
       fontStyle: 'bold', color: '#F8FAFC'
     }).setOrigin(0.5);
@@ -75,8 +76,8 @@ export class QuestScene extends Phaser.Scene {
   }
 
   createQuestSummary() {
-    // LAYOUT 통일: 요약 패널 (y=120, content 시작)
-    const y = s(120);
+    // DESIGN_SYSTEM: 요약 패널 (TopBar s(80) + 간격 s(20) = s(100))
+    const y = s(100);
     const total = this.quests.length;
     const completed = this.quests.filter(q => q.completed).length;
     const claimed = this.quests.filter(q => q.claimed).length;
@@ -116,8 +117,8 @@ export class QuestScene extends Phaser.Scene {
   }
 
   createQuestList() {
-    // LAYOUT 통일: 퀘스트 목록 시작 y=220 (요약패널 아래)
-    const startY = s(220);
+    // DESIGN_SYSTEM: 퀘스트 목록 시작 (요약패널 s(100)+s(80) + 간격 s(20) = s(200))
+    const startY = s(200);
     const cardH = s(100);
     const gap = s(10);
 

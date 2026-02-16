@@ -1,4 +1,5 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, s, sf } from '../config/gameConfig.js';
+import { RARITY_COLORS } from '../config/layoutConfig.js';
 import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
 import transitionManager from '../utils/TransitionManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
@@ -147,11 +148,13 @@ export class HeroListScene extends Phaser.Scene {
       const btn = this.add.container(x, filterY).setDepth(20);
 
       const isActive = this.sortBy === opt.key;
-      const bg = this.add.rectangle(0, 0, s(70), s(28), isActive ? COLORS.primary : COLORS.backgroundLight, 1)
-        .setInteractive({ useHandCursor: true });
+      const bg = this.add.rectangle(0, 0, s(70), s(28), isActive ? COLORS.primary : COLORS.bgPanel, isActive ? 1 : 0.6);
+      bg.setStrokeStyle(isActive ? s(1) : 0, COLORS.primary, 0.5);
+      bg.setInteractive({ useHandCursor: true });
       const text = this.add.text(0, 0, opt.label, {
         fontSize: sf(11),
         fontFamily: 'Arial',
+        fontStyle: isActive ? 'bold' : 'normal',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5);
 
@@ -259,7 +262,9 @@ export class HeroListScene extends Phaser.Scene {
 
   updateSortButtons() {
     this.sortButtons.forEach(({ bg, key }) => {
-      bg.setFillStyle(this.sortBy === key ? COLORS.primary : COLORS.backgroundLight, 1);
+      const isActive = this.sortBy === key;
+      bg.setFillStyle(isActive ? COLORS.primary : COLORS.bgPanel, isActive ? 1 : 0.6);
+      bg.setStrokeStyle(isActive ? s(1) : 0, COLORS.primary, 0.5);
     });
     if (this.sortDirText) {
       this.sortDirText.setText(this.sortAscending ? '▲' : '▼');
@@ -416,16 +421,22 @@ export class HeroListScene extends Phaser.Scene {
     const cardWidth = s(110);
     const cardHeight = s(150);
 
-    // Card background with rarity color
+    // Card background with rarity color (RARITY_COLORS: border/bg/glow)
     const rKey = getRarityKey(hero.rarity);
     const rarityData = RARITY[rKey] || RARITY.N;
-    const rarityColor = rarityData.color;
-    const cardBg = scene.add.rectangle(0, 0, cardWidth - s(10), cardHeight - s(10), COLORS.backgroundLight, 1);
-    cardBg.setStrokeStyle(s(2), rarityColor);
+    const rarityColorSet = RARITY_COLORS[rKey] || RARITY_COLORS.N;
+    const cardBg = scene.add.rectangle(0, 0, cardWidth - s(10), cardHeight - s(10), rarityColorSet.bg, 0.3);
+    cardBg.setStrokeStyle(s(2), rarityColorSet.border);
     cardBg.setInteractive({ useHandCursor: true });
 
+    // SSR/SR glow effect
+    if (rarityColorSet.glow) {
+      const glow = scene.add.rectangle(0, 0, cardWidth - s(6), cardHeight - s(6), rarityColorSet.glow, 0.08);
+      card.add(glow);
+    }
+
     // Rarity indicator
-    const rarityBg = scene.add.rectangle(0, s(-60), s(35), s(18), rarityColor, 1);
+    const rarityBg = scene.add.rectangle(0, s(-60), s(35), s(18), rarityColorSet.border, 1);
     const rarityText = scene.add.text(0, s(-60), rKey, {
       fontSize: sf(11),
       fontFamily: 'Arial',
@@ -463,11 +474,11 @@ export class HeroListScene extends Phaser.Scene {
     // Add setHeroData method for pool reuse
     card.setHeroData = function(newHero) {
       const newRKey = getRarityKey(newHero.rarity);
-      const newRarityData = RARITY[newRKey] || RARITY.N;
-      const newRarityColor = newRarityData.color;
+      const newRarityColorSet = RARITY_COLORS[newRKey] || RARITY_COLORS.N;
 
-      cardBg.setStrokeStyle(s(2), newRarityColor);
-      rarityBg.setFillStyle(newRarityColor, 1);
+      cardBg.setFillStyle(newRarityColorSet.bg, 0.3);
+      cardBg.setStrokeStyle(s(2), newRarityColorSet.border);
+      rarityBg.setFillStyle(newRarityColorSet.border, 1);
       rarityText.setText(newRKey);
 
       const newStarCount = newHero.stars || getRarityNum(newHero.rarity) || newRarityData.stars || 1;
@@ -487,12 +498,12 @@ export class HeroListScene extends Phaser.Scene {
     // Interactions - hover only (tap handled by scene-level pointerup)
     cardBg.on('pointerover', () => {
       card.setScale(1.05);
-      cardBg.setFillStyle(COLORS.backgroundLight, 0.8);
+      cardBg.setFillStyle(rarityColorSet.bg, 0.5);
     });
 
     cardBg.on('pointerout', () => {
       card.setScale(1);
-      cardBg.setFillStyle(COLORS.backgroundLight, 1);
+      cardBg.setFillStyle(rarityColorSet.bg, 0.3);
     });
 
     return card;
