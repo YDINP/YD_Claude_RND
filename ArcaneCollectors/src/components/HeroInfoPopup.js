@@ -58,7 +58,8 @@ export class HeroInfoPopup {
     const maxLevel = MAX_LEVELS[rKey] || 60;
     const levelUpCost = level * 100;
 
-    this.container = scene.add.container(0, 0).setDepth(Z_INDEX.MODAL + 10);
+    // PopupBase가 depth 2000 사용 → 중첩 팝업은 2100으로 그 위에 표시
+    this.container = scene.add.container(0, 0).setDepth(2100);
     navigationManager.pushPopup('HeroInfoPopup', this);
 
     // --- Overlay ---

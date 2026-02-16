@@ -10,6 +10,28 @@ type ZoomDirection = 'in' | 'out';
 
 class TransitionManagerClass {
   private isTransitioning: boolean = false;
+  private _safetyTimer: any = null;
+
+  /** isTransitioning 강제 리셋 (비정상 잠금 복구용) */
+  reset(): void {
+    this.isTransitioning = false;
+    if (this._safetyTimer) {
+      clearTimeout(this._safetyTimer);
+      this._safetyTimer = null;
+    }
+  }
+
+  /** 안전 타이머: duration 이후에도 isTransitioning이 true면 강제 리셋 */
+  private _startSafetyTimer(timeout: number): void {
+    if (this._safetyTimer) clearTimeout(this._safetyTimer);
+    this._safetyTimer = setTimeout(() => {
+      if (this.isTransitioning) {
+        console.warn('[TransitionManager] Safety timeout - force reset isTransitioning');
+        this.isTransitioning = false;
+      }
+      this._safetyTimer = null;
+    }, timeout);
+  }
 
   /**
    * Fade out → scene change → fade in
@@ -17,15 +39,18 @@ class TransitionManagerClass {
    * @param target - Target scene key
    * @param data - Data to pass to target scene
    * @param duration - Fade duration in ms
+   * @param skipPush - true면 navigationManager.pushScene 스킵 (goBackToScene에서 호출 시)
    */
-  fadeTransition(scene: Phaser.Scene, target: string, data: any = {}, duration: number = 400): void {
+  fadeTransition(scene: Phaser.Scene, target: string, data: any = {}, duration: number = 400, skipPush: boolean = false): void {
     if (this.isTransitioning) return;
     this.isTransitioning = true;
+    this._startSafetyTimer(duration + 2000);
 
     scene.cameras.main.fadeOut(duration / 2, 0, 0, 0);
     scene.cameras.main.once('camerafadeoutcomplete', () => {
       this.isTransitioning = false;
-      navigationManager.pushScene(target, data);
+      if (this._safetyTimer) { clearTimeout(this._safetyTimer); this._safetyTimer = null; }
+      if (!skipPush) navigationManager.pushScene(target, data);
       scene.scene.start(target, data);
     });
   }

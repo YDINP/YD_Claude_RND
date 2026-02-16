@@ -32,6 +32,8 @@ export class MainMenuScene extends Phaser.Scene {
     this.showOfflineRewards = data?.showOfflineRewards || null;
     this.bossVictory = data?.bossVictory || false;
     this.bossDefeat = data?.bossDefeat || false;
+    // 빈 화면 방지: shutdown()이 호출되지 않는 비정상 경로 대비
+    this._uiCreated = false;
   }
 
   create() {

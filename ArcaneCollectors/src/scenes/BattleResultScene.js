@@ -571,6 +571,8 @@ export class BattleResultScene extends Phaser.Scene {
   }
 
   goToMain() {
+    if (this.transitioning) return;
+    this.transitioning = true;
     navigationManager.goBackToScene(this, 'MainMenuScene');
   }
 
@@ -594,6 +596,7 @@ export class BattleResultScene extends Phaser.Scene {
   }
 
   shutdown() {
+    this.transitioning = false;
     this.time.removeAllEvents();
     this.tweens.killAll();
     if (this.input) {

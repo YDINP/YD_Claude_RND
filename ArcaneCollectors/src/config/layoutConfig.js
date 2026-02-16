@@ -159,7 +159,9 @@ export const Z_INDEX = {
     TOP_BAR: 300,
     BOTTOM_NAV: 300,
     MODAL: 400,
-    TOOLTIP: 500
+    TOOLTIP: 500,
+    POPUP_BASE: 2000,    // PopupBase 기본 depth
+    POPUP_NESTED: 2100   // 중첩 팝업 (HeroInfoPopup 등)
 };
 
 export default {

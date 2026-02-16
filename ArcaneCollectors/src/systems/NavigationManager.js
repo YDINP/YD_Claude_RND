@@ -108,7 +108,8 @@ class NavigationManagerClass {
       }
 
       if (target) {
-        transitionManager.fadeTransition(currentScene, target.name, target.data || {}, 300);
+        // skipPush=true: 스택에 이미 target이 있으므로 중복 push 방지
+        transitionManager.fadeTransition(currentScene, target.name, target.data || {}, 300, true);
       }
       return true;
     }
@@ -135,7 +136,8 @@ class NavigationManagerClass {
       this.pushScene(targetSceneName, {});
     }
 
-    transitionManager.fadeTransition(currentScene, targetSceneName, {}, 300);
+    // skipPush=true: 이미 스택에 target이 있으므로 중복 push 방지
+    transitionManager.fadeTransition(currentScene, targetSceneName, {}, 300, true);
   }
 
   /** 디버그용: 현재 스택 출력 */
