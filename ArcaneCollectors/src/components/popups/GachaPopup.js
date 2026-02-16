@@ -278,12 +278,12 @@ export class GachaPopup extends PopupBase {
     const ticketY = buttonY + s(100);
     const resources = SaveManager.getResources();
 
-    const ticketLabel = this.scene.add.text(b.centerX, ticketY, `🎫 소환권: ${resources.summonTickets}개`, {
+    this.ticketLabelText = this.scene.add.text(b.centerX, ticketY, `🎫 소환권: ${resources.summonTickets}개`, {
       fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
-    this.contentContainer.add(ticketLabel);
+    this.contentContainer.add(this.ticketLabelText);
 
     this.addButton(b.centerX - s(110), ticketY + s(40), s(180), s(50), '🎫 ×1 소환', 0x2a5298, () => {
       this.performSummon(1, true);
@@ -321,6 +321,9 @@ export class GachaPopup extends PopupBase {
     const resources = SaveManager.getResources();
     this.gemText.setText(resources.gems.toLocaleString());
     this.ticketText.setText(`${resources.summonTickets}개`);
+    if (this.ticketLabelText) {
+      this.ticketLabelText.setText(`🎫 소환권: ${resources.summonTickets}개`);
+    }
 
     // Update pity display
     this.updatePityUI(result.pityInfo);
