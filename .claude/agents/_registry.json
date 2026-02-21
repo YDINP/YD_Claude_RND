@@ -1,0 +1,269 @@
+{
+  "version": "2.3.0",
+  "last_updated": "2026-02-22",
+  "standards": "_STANDARDS.md",
+  "total_agents": 29,
+  "agents": [
+    {
+      "name": "agent-manager",
+      "tier": "main",
+      "file": "agent-manager.md",
+      "model": "claude-sonnet-4-6",
+      "description": "중앙 오케스트레이터. 요청 분석 → 서브 에이전트 위임 → 결과 통합",
+      "capabilities": ["orchestration", "task-routing", "registry-management"],
+      "triggers": ["*"]
+    },
+    {
+      "name": "agent-architect",
+      "tier": "sub",
+      "file": "agent-architect.md",
+      "model": "claude-sonnet-4-6",
+      "description": "새로운 Claude Code 에이전트 설계 및 생성 전문가",
+      "capabilities": ["agent-design", "system-prompt-writing", "tool-selection", "registry-update"],
+      "triggers": ["새 에이전트", "에이전트 설계", "에이전트 추가", "에이전트 만들어"]
+    },
+    {
+      "name": "architect",
+      "tier": "sub",
+      "file": "architect.md",
+      "model": "claude-opus-4-6",
+      "description": "시스템 아키텍처 분석, 디버깅 진단, 요구사항 사전 분석 (읽기 전용)",
+      "capabilities": ["architecture-analysis", "debugging", "requirements-analysis", "trade-off-evaluation"],
+      "triggers": ["아키텍처 분석", "버그 원인", "설계 검토", "요구사항 분석", "왜 이 오류가", "리뷰해줘"]
+    },
+    {
+      "name": "executor",
+      "tier": "sub",
+      "file": "executor.md",
+      "model": "claude-sonnet-4-6",
+      "description": "코드 구현 및 파일 수정 전문 실행자",
+      "capabilities": ["code-implementation", "bug-fix", "refactoring", "file-creation"],
+      "triggers": ["구현해줘", "만들어줘", "고쳐줘", "수정해줘", "리팩토링", "추가해줘"]
+    },
+    {
+      "name": "explorer",
+      "tier": "sub",
+      "file": "explorer.md",
+      "model": "claude-sonnet-4-6",
+      "description": "코드베이스 탐색 및 패턴 검색 전문가 (읽기 전용)",
+      "capabilities": ["file-search", "pattern-search", "dependency-mapping", "architecture-exploration"],
+      "triggers": ["어디에 있어", "찾아줘", "어디서 쓰여", "구조 설명", "탐색해줘"]
+    },
+    {
+      "name": "code-reviewer",
+      "tier": "sub",
+      "file": "code-reviewer.md",
+      "model": "claude-opus-4-6",
+      "description": "코드 품질, 보안, 사양 준수 종합 리뷰 (읽기 전용)",
+      "capabilities": ["code-quality", "security-scan", "spec-compliance", "plan-review"],
+      "triggers": ["코드 리뷰", "리뷰해줘", "코드 품질", "작업계획 검토", "PR 리뷰"]
+    },
+    {
+      "name": "qa-tester",
+      "tier": "sub",
+      "file": "qa-tester.md",
+      "model": "claude-sonnet-4-6",
+      "description": "테스트 작성, TDD 가이드, QA 검증 전문가",
+      "capabilities": ["test-writing", "tdd-workflow", "edge-case-discovery", "qa-validation"],
+      "triggers": ["테스트 작성", "TDD", "테스트 커버리지", "QA", "검증해줘", "테스트 추가"]
+    },
+    {
+      "name": "researcher",
+      "tier": "sub",
+      "file": "researcher.md",
+      "model": "claude-sonnet-4-6",
+      "description": "외부 문서, 공식 API, 라이브러리 레퍼런스 조사 전문가",
+      "capabilities": ["documentation-research", "api-lookup", "library-comparison", "tech-research"],
+      "triggers": ["사용법 알아봐", "문서 찾아줘", "공식 문서", "라이브러리 비교", "조사해줘"]
+    },
+    {
+      "name": "designer",
+      "tier": "sub",
+      "file": "designer.md",
+      "model": "claude-sonnet-4-6",
+      "description": "UI/UX 디자인 및 프론트엔드 구현 전문가",
+      "capabilities": ["ui-design", "component-implementation", "design-system", "animation"],
+      "triggers": ["UI 만들어", "화면 디자인", "컴포넌트 만들어", "스타일 개선", "Compose UI"]
+    },
+    {
+      "name": "build-fixer",
+      "tier": "sub",
+      "file": "build-fixer.md",
+      "model": "claude-sonnet-4-6",
+      "description": "빌드 오류, 컴파일 에러, 의존성 문제 해결 전문가",
+      "capabilities": ["build-error-fix", "compile-error", "dependency-resolution", "gradle-fix"],
+      "triggers": ["빌드 안 돼", "컴파일 에러", "Gradle 오류", "빌드 실패", "에러 고쳐줘"]
+    },
+    {
+      "name": "security",
+      "tier": "sub",
+      "file": "security.md",
+      "model": "claude-opus-4-6",
+      "description": "보안 취약점 탐지 및 보안 코드 리뷰 전문가 (읽기 전용)",
+      "capabilities": ["vulnerability-scan", "owasp-check", "secret-detection", "auth-review"],
+      "triggers": ["보안 취약점", "보안 검토", "API 키 노출", "보안 감사", "OWASP"]
+    },
+    {
+      "name": "planner",
+      "tier": "sub",
+      "file": "planner.md",
+      "model": "claude-opus-4-6",
+      "description": "전략 기획 및 작업 계획 수립 전문가 (계획만, 구현 안 함)",
+      "capabilities": ["task-planning", "requirements-clarification", "risk-analysis", "milestone-planning"],
+      "triggers": ["계획 세워줘", "계획 짜줘", "어떻게 개발할지", "전략 수립", "마이그레이션 계획"]
+    },
+    {
+      "name": "scientist",
+      "tier": "sub",
+      "file": "scientist.md",
+      "model": "claude-sonnet-4-6",
+      "description": "데이터 분석, 통계, 가설 검증 전문가",
+      "capabilities": ["data-analysis", "statistical-analysis", "hypothesis-testing", "metrics"],
+      "triggers": ["데이터 분석", "통계 분석", "지표 계산", "성능 분석", "데이터 탐색"]
+    },
+    {
+      "name": "writer",
+      "tier": "sub",
+      "file": "writer.md",
+      "model": "claude-haiku-4-5-20251001",
+      "description": "기술 문서, README, API 문서 작성 전문가",
+      "capabilities": ["readme-writing", "api-documentation", "technical-guide", "code-comments"],
+      "triggers": ["문서 작성", "README 써줘", "API 문서화", "주석 달아줘", "가이드 작성"]
+    },
+    {
+      "name": "vision",
+      "tier": "sub",
+      "file": "vision.md",
+      "model": "claude-sonnet-4-6",
+      "description": "이미지, 스크린샷, 다이어그램, PDF 시각 분석 전문가",
+      "capabilities": ["image-analysis", "screenshot-analysis", "diagram-interpretation", "pdf-extraction"],
+      "triggers": ["스크린샷 분석", "이미지 분석", "다이어그램 설명", "에러 화면", "PDF 분석"]
+    },
+    {
+      "name": "reasoner",
+      "tier": "sub",
+      "file": "reasoner.md",
+      "model": "claude-opus-4-6",
+      "description": "복잡한 추론, 논리 분석, 다중 가설 검증, 인과관계 분석 전문가",
+      "capabilities": ["causal-reasoning", "hypothesis-generation", "trade-off-analysis", "5-whys", "counterfactual"],
+      "triggers": ["근본 원인 분석", "왜 반복되는지", "깊게 분석해줘", "트레이드오프 분석", "논리적으로 판단"]
+    },
+    {
+      "name": "data-scout",
+      "tier": "sub",
+      "file": "data-scout.md",
+      "model": "claude-sonnet-4-6",
+      "description": "웹 크롤링, 구글링, 학술 논문 탐색, 시장 조사 전문 데이터 수집가",
+      "capabilities": ["web-crawling", "academic-search", "market-research", "data-collection", "citation-management"],
+      "triggers": ["웹 조사해줘", "논문 찾아줘", "구글링해줘", "시장 조사", "경쟁사 분석", "크롤링해줘", "arXiv", "PubMed"]
+    },
+    {
+      "name": "devops",
+      "tier": "sub",
+      "file": "devops.md",
+      "model": "claude-sonnet-4-6",
+      "description": "CI/CD 파이프라인, Docker, 배포 자동화, 인프라 설정 전문가",
+      "capabilities": ["ci-cd", "docker", "github-actions", "deployment", "infrastructure", "secrets-management"],
+      "triggers": ["GitHub Actions", "Docker", "배포 자동화", "CI/CD", "워크플로우 만들어줘", "배포 설정", "인프라"]
+    },
+    {
+      "name": "prompt-engineer",
+      "tier": "sub",
+      "file": "prompt-engineer.md",
+      "model": "claude-sonnet-4-6",
+      "description": "LLM 프롬프트 설계, 최적화, 평가 전문가",
+      "capabilities": ["prompt-design", "few-shot", "chain-of-thought", "system-prompt", "prompt-evaluation", "react-pattern"],
+      "triggers": ["프롬프트 개선", "시스템 프롬프트", "프롬프트 짜줘", "Few-shot", "프롬프트 최적화", "에이전트 프롬프트"]
+    },
+    {
+      "name": "db-expert",
+      "tier": "sub",
+      "file": "db-expert.md",
+      "model": "claude-sonnet-4-6",
+      "description": "데이터베이스 설계, SQL 최적화, 마이그레이션 전문가",
+      "capabilities": ["schema-design", "query-optimization", "migration", "room-db", "indexing", "orm"],
+      "triggers": ["스키마 설계", "쿼리 최적화", "마이그레이션", "DB 설계", "인덱스", "Room DB", "SQL"]
+    },
+    {
+      "name": "performance",
+      "tier": "sub",
+      "file": "performance.md",
+      "model": "claude-sonnet-4-6",
+      "description": "성능 프로파일링, 병목 분석, 최적화 방향 제시 전문가 (읽기 전용)",
+      "capabilities": ["profiling", "bottleneck-analysis", "memory-leak-detection", "rendering-optimization", "battery-optimization"],
+      "triggers": ["앱이 느려", "성능 분석", "메모리 누수", "렌더링 최적화", "프로파일링", "병목 찾아줘"]
+    },
+    {
+      "name": "api-designer",
+      "tier": "sub",
+      "file": "api-designer.md",
+      "model": "claude-sonnet-4-6",
+      "description": "REST/GraphQL API 설계, OpenAPI 스펙 작성 전문가",
+      "capabilities": ["rest-design", "graphql-schema", "openapi-spec", "api-versioning", "error-design"],
+      "triggers": ["API 설계", "엔드포인트 설계", "OpenAPI", "Swagger", "API 스펙", "REST 설계"]
+    },
+    {
+      "name": "localizer",
+      "tier": "sub",
+      "file": "localizer.md",
+      "model": "claude-sonnet-4-6",
+      "description": "다국어 번역 및 i18n/l10n 구현 전문가",
+      "capabilities": ["i18n", "l10n", "translation-management", "pluralization", "rtl-support", "strings-xml"],
+      "triggers": ["다국어 지원", "번역 파일", "i18n", "l10n", "strings.xml", "현지화", "번역 누락"]
+    },
+    {
+      "name": "git-historian",
+      "tier": "sub",
+      "file": "git-historian.md",
+      "model": "claude-sonnet-4-6",
+      "description": "Git 이력 분석, 회귀 추적, 변경 이력 조사 전문가",
+      "capabilities": ["git-bisect", "blame-analysis", "regression-tracking", "contributor-analysis", "history-search"],
+      "triggers": ["버그 언제 생겼는지", "이력 봐줘", "git blame", "커밋 찾아줘", "언제 바뀐지", "기여 분석"]
+    },
+    {
+      "name": "cost-analyzer",
+      "tier": "sub",
+      "file": "cost-analyzer.md",
+      "model": "claude-sonnet-4-6",
+      "description": "클라우드 비용, API 비용 분석 및 최적화 전문가",
+      "capabilities": ["cloud-cost-analysis", "llm-cost-optimization", "cost-projection", "firebase-optimization", "roi-analysis"],
+      "triggers": ["비용 분석", "비용 최적화", "얼마 드는지", "Firebase 비용", "API 비용 줄이기", "클라우드 비용"]
+    },
+    {
+      "name": "accessibility",
+      "tier": "sub",
+      "file": "accessibility.md",
+      "model": "claude-sonnet-4-6",
+      "description": "웹/앱 접근성(a11y) 감사 및 개선 방향 제시 전문가 (읽기 전용)",
+      "capabilities": ["wcag-audit", "talkback-support", "aria-review", "color-contrast", "keyboard-navigation", "screen-reader"],
+      "triggers": ["접근성 검사", "a11y", "WCAG", "TalkBack", "스크린 리더", "색상 대비", "접근성 개선"]
+    },
+    {
+      "name": "card-scenario",
+      "tier": "sub",
+      "file": "card-scenario.md",
+      "model": "claude-sonnet-4-6",
+      "description": "SnapWise MDX 카드 시나리오 작성 전문가 (심리학/과학/역사/비즈니스 개념 허구 스토리 + 시네마틱 연출)",
+      "capabilities": ["mdx-content-generation", "step-composition", "cinematic-storytelling"],
+      "triggers": ["카드 만들어", "MDX 작성", "시나리오 작성", "콘텐츠 생성", "카드 시나리오", "shortform 카드", "카드 써줘"]
+    },
+    {
+      "name": "mdx-validator",
+      "tier": "sub",
+      "file": "mdx-validator.md",
+      "model": "claude-haiku-4-5-20251001",
+      "description": "SnapWise MDX 카드 구조 검증 전문가 — 7가지 규칙 기반 품질 검사 (읽기 전용)",
+      "capabilities": ["mdx-schema-validation", "step-type-validation", "content-rule-check"],
+      "triggers": ["MDX 검증", "카드 검증", "콘텐츠 검사", "MDX 유효성", "카드 구조 확인", "validator"]
+    },
+    {
+      "name": "card-batch-runner",
+      "tier": "sub",
+      "file": "card-batch-runner.md",
+      "model": "claude-sonnet-4-6",
+      "description": "SnapWise 대량 카드 생산 오케스트레이터 — card-scenario 병렬 위임 + mdx-validator 일괄 검증",
+      "capabilities": ["batch-card-orchestration", "content-pipeline-management", "parallel-card-generation"],
+      "triggers": ["카드 대량 생성", "배치 생성", "카드 일괄 작성", "콘텐츠 대량 생산", "batch", "여러 카드"]
+    }
+  ]
+}
