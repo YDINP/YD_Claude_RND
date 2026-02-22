@@ -133,18 +133,29 @@ agent-manager가 자동으로 적합한 에이전트를 선택합니다.
 
 **내부 동작 (Consensus 모드 기준):**
 ```
+Phase 0.5 전문 에이전트 자동 선택
+  → 요구사항 키워드 감지 시 db-expert / devops / security 등 자동 추가
+
 1. 4인 동시 분석     → architect(아키텍처+종속성) + planner(전략) + qa-tester(시나리오)
-                       ※ reasoner는 이 단계에서 실행 안 함 (컨텍스트 부족)
-2. 합의 + 방어 로직  → 3개 결과 취합 → reasoner가 1회 호출로 합의 중재 + 방어 로직 확정
+                       ※ reasoner는 이 단계에서 실행 안 함
+2. 합의 + 방어 로직  → 오케스트레이터가 직접 합의 판단
+                       3/3·2/3 일치 → 오케스트레이터가 채택 (reasoner 불필요)
+                       1/1/1 완전 분산 시에만 → reasoner(opus) 1회 호출
 3. 프롬프트 최적화   → prompt-engineer: 방어 로직 포함 + 파일 영역 충돌 확인
+                       ※ HIGH 시나리오 0건 + 방어 로직 단순 시 스킵
 4. 병렬 실행         → 최적화된 프롬프트로 독립 서브태스크 동시 진행
+4.5. 중간 교차 검증  → architect(sonnet): 파일 경계 충돌 여부만 경량 확인
 5. 의존성 처리       → planner 정의 의존성 체인 순서대로
-6. 최종 검증         → code-reviewer + architect (실패 시 심각도별 재실행)
+6. 최종 검증         → code-reviewer(sonnet) + architect(sonnet) 1차
+                       HIGH 발견 시에만 → opus 2차 심층 검토 (최대 2회 재실행)
 ```
 
 **복잡도 자동 판단:**
-- Simple (파일 3개 이하, 단일 도메인) → 경량 모드 실행
+- Simple (파일 3개 이하, 단일 도메인) → planner+qa-tester 병렬 → 실행 → code-reviewer
 - Consensus (파일 4개+, 다중 도메인, 아키텍처 결정) → 협의체 풀 모드
+
+**Retry Policy (자동 적용):**
+- 에이전트 실패 → 동일 에이전트 최대 2회 재시도 → 실패 시 하위 모델 폴백 → 에스컬레이션
 
 ---
 
@@ -154,6 +165,7 @@ agent-manager가 자동으로 적합한 에이전트를 선택합니다.
 
 ```
 Phase 0: Consensus 모드 판단 (다중 도메인, 파일 4개+)
+Phase 0.5: "FCM" → security 키워드 미감지, "DB" → db-expert 자동 추가
 
 Step 1 (동시 — 4인 분석)
   architect(opus)   → 아키텍처 분석 + 종속성 검사 통합
@@ -162,8 +174,9 @@ Step 1 (동시 — 4인 분석)
   qa-tester(sonnet) → 7개 시나리오: FCM 만료(HIGH), 동시 쓰기 충돌(MED) 등
 
 Step 2 (순차 — 3개 결과 취합 후)
-  reasoner(opus) 1회 호출
-  → 합의 중재 + FCM→AlarmWorker, 동시 쓰기→Mutex 방어 로직 확정
+  [합의 판단] architect·planner 2/3 일치 → 오케스트레이터가 직접 채택
+  → reasoner 호출 없음 (2/3 일치이므로)
+  → FCM→AlarmWorker, 동시 쓰기→Mutex 방어 로직 확정
 
 Step 3 (순차)
   prompt-engineer(sonnet)
@@ -179,13 +192,16 @@ Step 4 (동시 실행)
   └── qa-tester    담당: test/**
       AlarmRepository 단위 테스트
 
+Step 4.5 (경량 교차 검증)
+  architect(sonnet) → 파일 경계 충돌 확인 → 충돌 없음, Step 5 진행
+
 Step 5 (순차 — db-expert 완료 후)
   executor → AlarmRepository 구현 (DB 스키마 의존)
 
-Step 6 (동시)
-  code-reviewer(opus) → 전체 코드 리뷰
-  architect(opus)     → 아키텍처 정합성 검증
-  → 실패 시 심각도별 재실행 루프
+Step 6 (1차 — sonnet)
+  code-reviewer(sonnet) + architect(sonnet) → 동시 실행
+  → HIGH 없음: 완료
+  → HIGH 발견 시 2차 opus 심층 검토 (최대 2회)
 ```
 
 ---
