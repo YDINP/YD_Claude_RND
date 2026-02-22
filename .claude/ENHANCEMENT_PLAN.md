@@ -1,0 +1,523 @@
+# 에이전트 전문 지식 강화 계획
+
+> 생성일: 2026-02-23
+> 대상: `.claude/agents/` 에이전트 11개
+> 실행 방법: 이 문서를 참조하여 `/pt` 명령으로 실제 강화 실행
+> 주의: 이 문서는 계획서입니다. agents/*.md 파일을 직접 수정하지 않습니다.
+
+---
+
+## 0. 개요
+
+### 기준 버전 (모든 강화 항목에 적용)
+
+| 라이브러리 / 플랫폼 | 최소 버전 | 비고 |
+|-------------------|---------|------|
+| Kotlin | 1.9+ | K2 컴파일러 호환성 필수 |
+| Android API | 33+ (Target) | minSdk 24 유지 |
+| Jetpack Compose | 1.5+ | BOM 관리 권장 |
+| Kotlin Coroutines | 1.7+ | `runTest`, `TestCoroutineScheduler` 사용 |
+| Hilt | 2.50+ | `@HiltViewModel` 표준 사용 |
+| MockK | 1.13+ | `mockk<T>()`, `coEvery`, `coVerify` 사용 |
+| Turbine | 1.0+ | Flow 테스트 전용 (`turbine {}`) |
+| Room | 2.6+ | KSP 기반 어노테이션 처리 |
+| Retrofit2 | 2.9+ | OkHttp 4.x와 쌍 사용 |
+| OkHttp | 4.x | `mockwebserver` 포함 |
+| Gradle | 8.x | `libs.versions.toml` (Version Catalog) 필수 |
+| AGP (Android Gradle Plugin) | 8.x | Gradle 8.x 대응 |
+| Detekt | 1.23+ | 정적 분석 lint 대체 |
+| Python | 3.10+ | scientist 전용 |
+| scipy | 1.11+ | scientist 전용 |
+| matplotlib | 3.7+ | scientist 전용 |
+
+### 실행 전략 (LAYERED 병렬 실행)
+
+```
+P1 (동시 실행 가능):
+  executor.md / build-fixer.md / qa-tester.md / code-reviewer.md / scientist.md
+
+P2 (P1 완료 확인 후 동시 실행):
+  architect.md / planner.md / security.md / researcher.md / writer.md
+
+P3 (선택적 — P2 결과 검토 후 결정):
+  explorer.md
+```
+
+### 방어 원칙 요약
+
+| 우선순위 | 원칙 | 내용 |
+|--------|------|------|
+| [HIGH] | Deprecated API 삽입 방지 | `researcher` 선행 조사 의무 + 버전 레이블 `[v{버전}+]` 필수 |
+| [HIGH] | 소유 파일 중복 방지 | 에이전트별 독점 섹션 정의 + 타 에이전트는 `→ {담당}.md 위임` 참조만 허용 |
+| [HIGH] | 역할 경계 침범 방지 | 타 도메인 직접 기술 금지, SSOT 에이전트에 위임 명시 |
+
+---
+
+## 1. P1 에이전트 강화 계획
+
+### 1.1 executor.md
+
+**현재 상태:** 114줄
+**목표 변경량:** +85~105줄 (목표 199~219줄) / 코드 예시 5~7개
+
+#### 강화 내용 테이블
+
+| ID | 강화 항목 | 추가 내용 요약 | 방어 로직 | 코드 예시 |
+|----|---------|-------------|---------|---------|
+| E-1 | Kotlin Coroutines 패턴 | `viewModelScope`, `launchIn`, `catch` operator 사용법. `GlobalScope` 금지 명시 | `[v1.7+]` 레이블 | `viewModelScope.launch { ... }` |
+| E-2 | Hilt 의존성 주입 패턴 | `@HiltViewModel`, `@Inject constructor`, 스코프(`@Singleton`, `@ViewModelScoped`) 선택 기준 | 스코프 선택은 E-5에서 전담 | `@HiltViewModel class VM @Inject constructor(...)` |
+| E-3 | Compose 상태 관리 | `remember`, `rememberSaveable`, `collectAsStateWithLifecycle` 구분. `by` 위임 패턴 | Recomposition 이슈 → code-reviewer.md (R-2) 위임 | `val uiState by viewModel.uiState.collectAsStateWithLifecycle()` |
+| E-4 | Room DAO 구현 패턴 | `@Query`, `@Insert(onConflict = REPLACE)`, Flow 반환 타입 | DB 스키마 설계는 db-expert 위임 | `@Query("SELECT * FROM alarm WHERE ...") fun getAlarms(): Flow<List<AlarmEntity>>` |
+| E-5 | Hilt 스코프 구현 패턴 예시 | `@Singleton` vs `@ViewModelScoped` vs `@ActivityScoped` 구현 코드 예시만 포함 | 스코프 선택 기준 SSOT는 `architect.md` — `→ architect.md 참조` 위임 참조만 | 구현 예시 코드 형식 |
+
+#### DoD 체크리스트 (executor.md 강화 완료 기준)
+
+- [ ] E-1~E-5 항목 모두 섹션으로 추가됨
+- [ ] 각 코드 예시가 Kotlin 1.9+ / Coroutines 1.7+ 문법 준수
+- [ ] `GlobalScope`, `runBlocking` (프로덕션) 금지 명시됨
+- [ ] Hilt 스코프 선택 기준은 architect.md A-4 위임 참조 삽입됨
+- [ ] 방어 로직 레이블(`[v{버전}+]`) 모든 코드 예시에 적용됨
+- [ ] 기존 114줄 내용 손상 없음
+
+---
+
+### 1.2 build-fixer.md
+
+**현재 상태:** 109줄
+**목표 변경량:** +90~110줄 (목표 199~219줄) / 코드 예시 5~6개
+
+#### 강화 내용 테이블
+
+| ID | 강화 항목 | 추가 내용 요약 | 방어 로직 | 코드 예시 |
+|----|---------|-------------|---------|---------|
+| B-1 | AGP 8.x 마이그레이션 오류 | `namespace` 이동, `buildFeatures { viewBinding }` 방식 변경, `PackagingOptions` → `packaging` 블록 전환 | `[AGP 8.x+]` 레이블 | `android { namespace = "com.example" }` |
+| B-2 | Version Catalog 충돌 해결 | `libs.versions.toml` 내 버전 충돌 진단 패턴. `./gradlew dependencies --configuration` 활용법 | `[Gradle 8.x+]` 레이블 | `./gradlew app:dependencies --configuration releaseRuntimeClasspath` |
+| B-3 | KSP vs KAPT 충돌 | Room + Hilt + Compose 동시 사용 시 KSP 전환 가이드. `kapt` → `ksp` 마이그레이션 체크리스트 | KSP 버전은 researcher 선행 조사 후 적용 | `ksp("com.google.dagger:hilt-compiler:...")` |
+| B-4 | Compose 컴파일러 버전 불일치 | Kotlin 버전 ↔ Compose Compiler 버전 매핑 표. `Compose BOM` 활용으로 버전 자동 맞춤 | `[Compose 1.5+]` 레이블 | `implementation(platform("androidx.compose:compose-bom:..."))` |
+| B-5 | ProGuard/R8 빌드 실패 | `-keep` 규칙 누락으로 인한 Release 빌드 실패 패턴. Hilt, Retrofit, Room 각 필수 규칙 포함 | CI/CD 파이프라인 수정은 devops 위임 | `proguard-rules.pro` 섹션별 필수 룰 |
+
+#### DoD 체크리스트 (build-fixer.md 강화 완료 기준)
+
+- [ ] B-1~B-5 항목 모두 섹션으로 추가됨
+- [ ] AGP 8.x 오류 패턴 표가 기존 "오류 유형별 접근" 섹션과 통합됨
+- [ ] `./gradlew dependencies` 활용 커맨드 실제 실행 예시 포함
+- [ ] Kotlin ↔ Compose Compiler 버전 매핑 표 최신 기준 반영 (`[v{버전}+]` 레이블)
+- [ ] 기존 109줄 내용 손상 없음
+
+---
+
+### 1.3 qa-tester.md
+
+**현재 상태:** 134줄
+**목표 변경량:** +100~120줄 (목표 234~254줄) / 코드 예시 6~8개
+
+#### 강화 내용 테이블
+
+| ID | 강화 항목 | 추가 내용 요약 | 방어 로직 | 코드 예시 |
+|----|---------|-------------|---------|---------|
+| Q-1 | MockK 고급 패턴 | `coEvery`, `coVerify`, `slot<T>()`, `every { ... } returns ...` 체이닝. **Q-1 전담 소유** | `[MockK 1.13+]` 레이블, executor.md에서는 위임 참조만 | `coEvery { repo.getData() } returns Result.success(data)` |
+| Q-2 | Turbine Flow 테스트 | `turbine {}`, `awaitItem()`, `awaitComplete()`, `cancelAndIgnoreRemainingEvents()` 사용법 | `[Turbine 1.0+]` 레이블 | `viewModel.uiState.test { val item = awaitItem() ... }` |
+| Q-3 | Hilt 테스트 환경 | `@HiltAndroidTest`, `@UninstallModules`, `@BindValue`, `HiltAndroidRule` 설정 패턴 | `[Hilt 2.50+]` 레이블 | `@HiltAndroidTest class MyTest { @get:Rule val hiltRule = HiltAndroidRule(this) }` |
+| Q-4 | TestCoroutineScheduler | `TestCoroutineScheduler`, `StandardTestDispatcher`, `advanceUntilIdle()`, `runTest {}` 완전 대체 | `runBlockingTest` deprecated → `runTest` 사용 명시 | `@Test fun test() = runTest { advanceUntilIdle() ... }` |
+| Q-5 | A/B 테스트 설계 위임 | A/B 테스트 설계 판단은 scientist.md (S-4) 위임, qa-tester는 A/B 결과 검증만 담당 | **역할 경계 명시** — A/B 설계는 scientist 전담 | 위임 참조 메시지 패턴 |
+
+#### DoD 체크리스트 (qa-tester.md 강화 완료 기준)
+
+- [ ] Q-1~Q-5 항목 모두 섹션으로 추가됨
+- [ ] MockK 예시가 `coEvery`/`coVerify` Coroutine 패턴 포함 (`[MockK 1.13+]`)
+- [ ] Turbine 예시가 `test {}` 블록 형식으로 작성됨 (`[Turbine 1.0+]`)
+- [ ] `runBlockingTest` deprecated 경고 및 `runTest` 대체 명시됨
+- [ ] A/B 테스트 설계 → scientist.md 위임 참조 추가됨
+- [ ] 기존 134줄 내용 손상 없음 (기존 Flaky Test 방지 규칙 유지)
+- [ ] 기존 Flaky Test 방지 규칙 내 runBlockingTest() → advanceUntilIdle() 대체 명시됨
+
+---
+
+### 1.4 code-reviewer.md
+
+**현재 상태:** 138줄
+**목표 변경량:** +100~120줄 (목표 238~258줄)
+
+#### 강화 내용 테이블
+
+| ID | 강화 항목 | 추가 내용 요약 | 방어 로직 | 코드 예시 |
+|----|---------|-------------|---------|---------|
+| R-1 | Kotlin 코루틴 안티패턴 탐지 | `GlobalScope` 사용, `runBlocking` 메인스레드 사용, `launch { }` 내 예외 미처리, `async` 반환값 미사용(fire-and-forget) 패턴 | `[Coroutines 1.7+]` 레이블 | 코드 리뷰 전용 — 수정은 executor 위임 |
+| R-2 | Compose Recomposition 이슈 탐지 | 불필요한 람다 참조로 인한 과도 리컴포지션, `remember` 누락, `derivedStateOf` 미사용 패턴. **R-2 전담 소유** | executor.md, qa-tester.md에서는 위임 참조만 | 성능 프로파일링 판정은 performance 위임 |
+| R-3 | Detekt 정적 분석 연계 | 리뷰 전 `./gradlew detekt` 실행 권장. Detekt 규칙 위반 목록을 [HIGH]/[MEDIUM]에 자동 매핑하는 판단 기준 | `[Detekt 1.23+]` 레이블 | CI 연동 여부는 devops 위임 |
+| R-4 | MVVM 레이어 경계 위반 탐지 | ViewModel에 `Context` 직접 참조, Repository에 UI 로직, `Activity`에서 DB 직접 접근 패턴 탐지. MVVM 경계 위반 판정 → architect.md (A-1) 위임 참조 | **역할 경계 명시** — MVVM 레이어 설계는 architect 전담 | 탐지만 수행, 재설계는 architect |
+
+#### DoD 체크리스트 (code-reviewer.md 강화 완료 기준)
+
+- [ ] R-1~R-4 항목 모두 섹션으로 추가됨
+- [ ] Kotlin 코루틴 안티패턴 목록이 [HIGH] 카테고리에 통합됨
+- [ ] Compose Recomposition 이슈가 [MEDIUM] 카테고리에 통합됨
+- [ ] Detekt 연계 섹션에 실행 커맨드 포함됨
+- [ ] MVVM 레이어 경계 위반 → architect.md 위임 참조 명시됨
+- [ ] 기존 138줄 내용 손상 없음 (기존 [CRITICAL]/[HIGH]/[MEDIUM]/[LOW] 구조 유지)
+
+---
+
+### 1.5 scientist.md
+
+**현재 상태:** 119줄
+**목표 변경량:** +90~110줄 (목표 209~229줄) / 코드 예시 5~6개
+
+#### 강화 내용 테이블
+
+| ID | 강화 항목 | 추가 내용 요약 | 방어 로직 | 코드 예시 |
+|----|---------|-------------|---------|---------|
+| S-1 | 앱 성능 지표 분석 | Baseline Profile, Macrobenchmark 결과 CSV 분석. 스타트업 시간, 프레임 드롭 통계 | `[Python 3.10+ / scipy 1.11+]` 레이블 | `df['startup_ms'].describe()` |
+| S-2 | 가설 검정 자동화 | t-test, Mann-Whitney U-test, Chi-square test 적용 결정 트리. p-value 해석 기준 명시 | 통계 근거 없는 주장 금지 원칙 강화 | `scipy.stats.ttest_ind(group_a, group_b)` |
+| S-3 | 데이터 시각화 위임 | UI 포함 시각화(`matplotlib`, `seaborn` 고급 커스텀)는 designer 위임. `scientist`는 데이터 검증 및 로직만 담당 | **역할 경계 명시** — 데이터 시각화 UI는 designer 전담 | 위임 참조 메시지 패턴 |
+| S-4 | A/B 테스트 설계 | 샘플 크기 계산 (`power analysis`), 무작위 배정 방법, 결과 해석 기준. **S-4 전담 소유** | qa-tester.md에서는 위임 참조만 허용 | `from scipy.stats import norm; n = norm.ppf(...)` |
+
+#### DoD 체크리스트 (scientist.md 강화 완료 기준)
+
+- [ ] S-1~S-4 항목 모두 섹션으로 추가됨
+- [ ] A/B 테스트 설계 섹션에 power analysis 공식 포함 (`[scipy 1.11+]`)
+- [ ] 데이터 시각화 UI → designer 위임 참조 명시됨
+- [ ] 가설 검정 결정 트리 표 형식으로 추가됨
+- [ ] 기존 119줄 내용 손상 없음 (기존 분석 마커 시스템 유지)
+
+---
+
+## 2. P2 에이전트 강화 계획
+
+### 2.1 architect.md
+
+**현재 상태:** 136줄
+**목표 변경량:** +80~100줄 (목표 216~236줄)
+
+#### 강화 내용 테이블
+
+| ID | 강화 항목 | 추가 내용 요약 | 방어 로직 | 비고 |
+|----|---------|-------------|---------|-----|
+| A-1 | MVVM 레이어 경계 기준 정의 | ViewModel, Repository, UseCase, DataSource 각 레이어의 허용/금지 의존성 규칙 테이블. **A-1 전담 소유** | code-reviewer.md는 탐지만, 설계는 architect 전담 | MVVM 설계 변경 시 이 섹션 참조 필수 |
+| A-2 | Clean Architecture 적용 기준 | UseCase 도입 여부 결정 기준 (복잡도 기반). 오버엔지니어링 경계 명시 | 구현은 executor 위임 원칙 재강조 | 간단한 앱에서 UseCase 미도입 허용 |
+| A-3 | 성능 병목 진단 프로세스 | Compose 렌더링 병목, DB 쿼리 N+1, Room DAO `List<T>` vs `Flow<List<T>>` 트레이드오프 | 성능 프로파일링 측정은 performance SSOT 위임 | 진단만 수행, 측정 도구는 위임 |
+| A-4 | Hilt 스코프 선택 기준 | `@Singleton` vs `@ViewModelScoped` vs `@ActivityScoped` 결정 트리. **A-4 전담 소유** | executor.md에는 구현 패턴 예시만 허용, 선택 기준 중복 기술 금지 | 결정 트리 표 형식 |
+
+#### DoD 체크리스트 (architect.md 강화 완료 기준)
+
+- [ ] A-1~A-4 항목 모두 섹션으로 추가됨
+- [ ] MVVM 레이어 경계 테이블이 레이어별 허용/금지 컬럼으로 구성됨
+- [ ] Hilt 스코프 선택 기준 결정 트리가 A-4 섹션으로 추가됨 (SSOT 전담)
+- [ ] 기존 136줄 내용 손상 없음 (기존 SOLID 원칙 체크리스트 유지)
+
+---
+
+### 2.2 planner.md
+
+**현재 상태:** 108줄
+**목표 변경량:** +70~90줄 (목표 178~198줄)
+
+#### 강화 내용 테이블
+
+| ID | 강화 항목 | 추가 내용 요약 | 방어 로직 | 비고 |
+|----|---------|-------------|---------|-----|
+| PL-1 | Android 기능 개발 계획 템플릿 | 지하철 앱 예시 기반 계획 템플릿. API 통합, DB 스키마, UI 화면 단계별 분리 계획 | 구현 세부 기술 금지 원칙 재강조 | 계획에 기술 선택 이유 포함 허용 |
+| PL-2 | 의존성 충돌 사전 감지 | 계획 수립 시 라이브러리 버전 충돌 가능성 사전 체크 항목. `researcher` 선행 조사 의무화 | researcher 선행 조사 연동 명시 | 버전 확정은 researcher에게 위임 |
+| PL-3 | 마이그레이션 계획 체크리스트 | KAPT→KSP, Room 버전업, AGP 업그레이드 시 단계별 체크리스트 | `[AGP 8.x+ / Gradle 8.x+]` 레이블 | 실제 마이그레이션은 executor/build-fixer |
+
+#### DoD 체크리스트 (planner.md 강화 완료 기준)
+
+- [ ] PL-1~PL-3 항목 모두 섹션으로 추가됨
+- [ ] Android 기능 개발 계획 템플릿이 `## 실행 계획` 섹션 아래 예시로 포함됨
+- [ ] `[NEEDS CLARIFICATION]` 플래그 기준에 버전/라이브러리 항목 추가됨
+- [ ] 기존 108줄 내용 손상 없음
+
+---
+
+### 2.3 security.md
+
+**현재 상태:** 158줄
+**목표 변경량:** +80~100줄 (목표 238~258줄)
+
+#### 강화 내용 테이블
+
+| ID | 강화 항목 | 추가 내용 요약 | 방어 로직 | 비고 |
+|----|---------|-------------|---------|-----|
+| SE-1 | Android Keystore 올바른 사용 | `AndroidKeyStore`, `KeyGenerator`, `Cipher` 올바른 구현 패턴. **SE-1 전담 소유** | architect.md, executor.md는 위임 참조만 | `[Android API 23+]` 레이블 |
+| SE-2 | Network Security Config 검토 | `network_security_config.xml` 설정 검토. `cleartext` 허용 범위 판단 기준 | 기존 Android 특화 체크에 통합 | `[Android API 24+]` 레이블 |
+| SE-3 | 의존성 CVE 자동 조회 | `./gradlew dependencyCheckAnalyze` 실행 또는 `researcher`에 CVE 조회 위임 패턴 | CVE 데이터 조회는 researcher 위임 원칙 | `[AGP 8.x+]` |
+| SE-4 | JWT / Token 취약점 패턴 | `alg:none` 공격, 만료 미검증, Refresh Token 저장 방식 취약점 탐지 | `[HIGH]` 심각도로 분류 기준 명시 | 수정은 executor 위임 원칙 |
+
+#### DoD 체크리스트 (security.md 강화 완료 기준)
+
+- [ ] SE-1~SE-4 항목 모두 섹션으로 추가됨
+- [ ] Android Keystore 섹션이 기존 "Android 특화 보안 체크"에 통합됨
+- [ ] CVE 조회 → researcher 위임 참조 명시됨
+- [ ] CVE 조회 → researcher.md RS-2 위임 참조 명시됨
+- [ ] 기존 158줄 OWASP Top 10 테이블 손상 없음
+
+---
+
+### 2.4 researcher.md
+
+**현재 상태:** 89줄
+**목표 변경량:** +70~90줄 (목표 159~179줄)
+
+#### 강화 내용 테이블
+
+| ID | 강화 항목 | 추가 내용 요약 | 방어 로직 | 비고 |
+|----|---------|-------------|---------|-----|
+| RS-1 | Android 라이브러리 버전 조사 기준 | Maven Central, Google Maven Repository, GitHub Releases 조회 순서. Deprecated API 포함 여부 판단 | **Deprecated API 방지의 핵심 역할** — 모든 에이전트가 버전 조사 시 researcher 선행 호출 | 버전 레이블 `[v{버전}+]` 형식 출력 의무 |
+| RS-2 | CVE 조회 프로세스 | NVD(nvd.nist.gov), OSV(osv.dev) 조회 방법. CVSS 점수 기준 심각도 분류 | security.md (SE-3)와 연동 | 조회 결과 security 에이전트에 전달 |
+| RS-3 | 공식 마이그레이션 가이드 조사 | AndroidX 마이그레이션, Compose 업그레이드, AGP 업그레이드 공식 가이드 링크 조사 패턴 | planner.md (PL-2)와 연동 | 비공식 블로그보다 공식 문서 우선 |
+
+#### DoD 체크리스트 (researcher.md 강화 완료 기준)
+
+- [ ] RS-1~RS-3 항목 모두 섹션으로 추가됨
+- [ ] 버전 조사 결과 출력 형식에 `[v{버전}+]` 레이블 예시 포함됨
+- [ ] CVE 조회 → security.md 전달 프로세스 명시됨
+- [ ] 기존 89줄 내용 손상 없음 (기존 소스 우선순위 유지)
+
+---
+
+### 2.5 writer.md
+
+**현재 상태:** 105줄
+**목표 변경량:** +60~80줄 (목표 165~185줄)
+
+#### 강화 내용 테이블
+
+| ID | 강화 항목 | 추가 내용 요약 | 방어 로직 | 비고 |
+|----|---------|-------------|---------|-----|
+| W-1 | KDoc 문서화 표준 | `@param`, `@return`, `@throws`, `@sample` KDoc 태그 표준 패턴. Compose Preview 문서화 | `[Kotlin 1.9+]` 레이블 | 코드는 수정 안 하고 문서만 추가 |
+| W-2 | CHANGELOG 작성 규칙 | Keep a Changelog 형식 준수. `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security` 섹션 | 버전 레이블 형식 통일 | Semantic Versioning 연계 |
+| W-3 | ADR (Architecture Decision Record) | 아키텍처 결정 기록 템플릿. 컨텍스트, 결정, 결과 3섹션 형식 | architect.md와 협력 — 결정은 architect, 기록은 writer | ADR 번호 체계 명시 |
+
+#### DoD 체크리스트 (writer.md 강화 완료 기준)
+
+- [ ] W-1~W-3 항목 모두 섹션으로 추가됨
+- [ ] KDoc 예시가 실제 SubwayMate 코드 패턴 반영
+- [ ] ADR 템플릿이 기존 "문서 유형별 템플릿" 섹션에 통합됨
+- [ ] 기존 105줄 내용 손상 없음
+
+---
+
+## 3. P3 에이전트 강화 계획
+
+### 3.1 explorer.md
+
+**현재 상태:** 93줄
+**강화 방침:** 조건부 강화 (우선순위 낮음)
+
+#### 강화 검토 결과
+
+| 평가 항목 | 결과 | 이유 |
+|---------|------|------|
+| 현재 충실도 | 양호 | 검색 전략, 복잡도별 접근, 출력 형식 모두 명확 |
+| 버전 의존성 | 낮음 | 검색 도구(Glob/Grep)는 버전 중립적 |
+| 강화 필요성 | 선택적 | Android 코드 패턴 검색 특화 예시 추가 가능 |
+
+#### 조건부 강화 항목 (P2 완료 후 결정)
+
+| ID | 강화 항목 | 선택 조건 |
+|----|---------|---------|
+| EX-1 | Android 패턴 검색 레시피 | Hilt 스코프, Room Entity, Compose Screen 위치 찾기 예시 추가 |
+| EX-2 | 의존성 역추적 패턴 | "이 클래스를 사용하는 모든 곳" Grep 패턴 표준화 |
+
+### 강화 불필요 에이전트
+
+| 에이전트 | 이유 |
+|---------|------|
+| `reasoner.md` | Android 특화 강화 계획 범위 외 (도메인 비적합성으로 이번 강화 대상 제외) |
+| `data-scout.md` | Android 특화 강화 계획 범위 외 (도메인 비적합성으로 이번 강화 대상 제외) |
+
+---
+
+## 4. 방어 로직 전문
+
+### 4.1 [HIGH] Deprecated API 삽입 방지
+
+**문제:** 에이전트가 구버전 API (예: `runBlockingTest`, `KAPT`, `LiveData` 대신 `StateFlow`)를 코드 예시에 삽입할 위험
+
+**적용 규칙:**
+
+```
+규칙 1: 모든 코드 예시에 버전 레이블 필수
+  형식: `[v{최소버전}+]` (예: `[v1.7+]`, `[Compose 1.5+]`)
+
+규칙 2: researcher 선행 조사 의무
+  에이전트가 라이브러리 API를 코드 예시에 추가하기 전,
+  researcher.md가 해당 API의 현재 권장 여부를 확인해야 함
+
+규칙 3: Deprecated 명시
+  구버전 API는 예시에서 제거하거나 `// [DEPRECATED v{버전}] → {대체 API}` 주석 추가
+```
+
+**Deprecated → 대체 API 매핑 (기준 버전 기준):**
+
+| 구버전 API | 대체 API | 레이블 |
+|----------|---------|------|
+| `runBlockingTest {}` | `runTest {}` | `[Coroutines 1.7+]` |
+| `TestCoroutineDispatcher` | `StandardTestDispatcher` | `[Coroutines 1.6+]` |
+| `kapt` (Room, Hilt) | `ksp` | `[KSP 1.0+]` |
+| `LiveData` (새 코드) | `StateFlow` / `SharedFlow` | `[Coroutines 1.7+]` |
+| `AsyncLayoutInflater` | Compose 직접 사용 | `[Compose 1.5+]` |
+| `PackagingOptions` (AGP) | `packaging` 블록 | `[AGP 8.x+]` |
+
+---
+
+### 4.2 [HIGH] 소유 파일 중복 방지
+
+**문제:** 동일 개념을 여러 에이전트가 중복 기술하면 일관성 붕괴 및 정보 분산 발생
+
+**소유권 매핑 테이블:**
+
+| 개념 | 전담 에이전트 (전담 섹션 ID) | 타 에이전트 처리 방식 |
+|-----|--------------------------|-------------------|
+| Hilt 스코프 선택 기준 | `architect.md` | `executor.md`는 구현 패턴 예시만 보유, `→ architect.md 참조` 위임 참조만 |
+| Compose Recomposition 탐지 | `code-reviewer.md` (R-2) | `executor.md`, `qa-tester.md`는 `→ code-reviewer.md R-2 참조` |
+| MockK API 사용법 | `qa-tester.md` (Q-1) | `executor.md`는 `→ qa-tester.md Q-1 참조` |
+| Android Keystore 구현 | `security.md` (SE-1) | `architect.md`, `executor.md`는 `→ security.md SE-1 참조` |
+| MVVM 레이어 경계 기준 | `architect.md` (A-1) | `code-reviewer.md`는 탐지만, 설계는 `→ architect.md A-1 참조` |
+| A/B 테스트 설계 | `scientist.md` (S-4) | `qa-tester.md`는 검증만, 설계는 `→ scientist.md S-4 참조` |
+| CVE 조회 프로세스 | `researcher.md` (RS-2) | `security.md`는 `→ researcher.md RS-2 참조` |
+| ADR 작성 형식 | `writer.md` (W-3) | `architect.md`는 결정만, 기록은 `→ writer.md W-3 참조` |
+
+**위임 참조 표준 문구:**
+
+```markdown
+> 이 항목은 {담당 에이전트}.md ({섹션 ID})에서 전담합니다.
+> 해당 개념이 필요한 경우 → `{담당 에이전트}` 에이전트를 호출하세요.
+```
+
+---
+
+### 4.3 [HIGH] 역할 경계 침범 방지
+
+**문제:** 에이전트가 자신의 도메인 외 판단을 직접 내리면 SSOT(Single Source of Truth) 위반
+
+**SSOT 맵 테이블:**
+
+| 도메인 | SSOT 에이전트 | 침범 금지 대상 에이전트 | 위반 예시 |
+|-------|------------|-------------------|---------|
+| 접근성(a11y) 판정 | `accessibility` | 모든 에이전트 | code-reviewer가 a11y 판정 내리기 |
+| 성능 프로파일링 측정 | `performance` | `executor`, `qa-tester`, `scientist` | qa-tester가 Benchmark 측정 결과 판정 |
+| 보안 취약점 최종 판정 | `security.md` | `code-reviewer`, `architect`, `executor` | code-reviewer가 CVE 심각도 판정 |
+| 데이터 시각화 UI 설계 | `designer` (외부) | `scientist` | scientist가 matplotlib 커스텀 UI 설계 |
+| CI/CD 파이프라인 설계 | `devops` | `executor`, `build-fixer` | build-fixer가 CI 스크립트 직접 작성 |
+| DB 스키마 설계 | `db-expert` | `executor`, `architect` | executor가 Room Entity 스키마 독단 설계 |
+| Git 이력 분석 | `git-historian` | `executor`, `explorer` | explorer가 git blame 기반 결론 도출 |
+
+**현재 존재하는 에이전트 기준 경계 규칙:**
+
+```
+executor  → 보안 취약점 판정 금지 → security 위임
+executor  → 아키텍처 설계 금지 → architect 위임
+architect → 코드 직접 수정 금지 → executor 위임
+code-reviewer → 코드 수정 금지 → executor 위임 (Write/Edit 툴 금지 원칙 유지)
+scientist → UI 시각화 설계 금지 → designer 위임
+qa-tester → A/B 테스트 설계 금지 → scientist 위임
+```
+
+---
+
+## 5. 실제 강화 실행 시 DoD (7단계 절차 + 금지 행동)
+
+### 7단계 실행 절차
+
+```
+Step 1: researcher.md를 호출하여 강화 대상 에이전트의
+        모든 라이브러리 최신 버전 및 Deprecated API 목록 확인
+
+Step 2: 대상 에이전트 파일 Read (현재 상태 확인)
+
+Step 3: 소유권 매핑 테이블(4.2절) 조회
+        → 작성할 내용이 다른 에이전트 소유인지 확인
+
+Step 4: SSOT 맵(4.3절) 조회
+        → 역할 경계 침범 여부 확인
+
+Step 5: 강화 내용 초안 작성
+        → 버전 레이블 `[v{버전}+]` 모든 코드 예시에 적용
+        → 위임 참조 표준 문구 삽입
+
+Step 6: code-reviewer 에이전트로 초안 검토
+        → 소유권 침범 여부 확인
+        → 섹션 구조 일관성 확인
+
+Step 7: 최종 Write — 기존 줄 수 + 목표 변경량 범위 내 확인
+```
+
+### 금지 행동
+
+```
+[PROHIBITED] researcher 선행 조사 없이 버전 명시 금지
+[PROHIBITED] 소유권 확인 없이 타 에이전트 전담 개념 기술 금지
+[PROHIBITED] 기존 에이전트 줄 수 목표 범위 초과 (+50줄 이상 차이) 금지
+[PROHIBITED] _STANDARDS.md 규격 위반 (역할 / 입력출력 명세 / 작업 방식 / 제약 사항 — 4개 필수 섹션 누락) 금지
+[PROHIBITED] 에이전트 간 동일 코드 예시 중복 기술 금지
+```
+
+---
+
+## 6. 에이전트 반환 형식 표준 블록 (4블록 형식)
+
+모든 강화 완료 보고는 아래 4블록 형식을 준수합니다.
+
+```
+[결과_요약]
+{완료한 강화 작업 1-3줄 요약}
+예: executor.md에 E-1~E-5 항목 추가 완료 (+97줄, 총 211줄)
+
+[수정_파일]
+- {에이전트 파일 절대경로}: {추가된 섹션 ID 목록}
+예: D:\park\YD_Claude_RND\.claude\agents\executor.md: E-1, E-2, E-3, E-4, E-5 추가
+
+[이슈_목록]
+- [HIGH/MED/LOW] {발견된 이슈} → {해결 방향}
+예: [MED] E-3 Compose 버전 레이블 누락 → [Compose 1.5+] 추가 필요
+- (없으면 "없음")
+
+[의존성_알림]
+- {다음 단계 에이전트 강화에 영향 주는 내용}
+예: E-5 (Hilt 스코프) 완료 → architect.md A-4에서 위임 참조 추가 필요
+- (없으면 "없음")
+```
+
+---
+
+## 7. 토큰 최적화 규칙 (테이블 형식)
+
+강화 실행 시 적용할 토큰 최적화 규칙 (_STANDARDS.md 5절 기준 확장):
+
+| 규칙 번호 | 규칙 내용 | 적용 대상 |
+|---------|---------|---------|
+| T-1 | 강화 전 Read는 offset/limit 활용 (필요한 섹션만 읽기) | 모든 에이전트 |
+| T-2 | 코드 예시는 최대 10줄 이내 (더 긴 경우 핵심만 추출) | 모든 에이전트 |
+| T-3 | 위임 참조 문구는 1줄 표준 문구로 통일 (길게 설명 금지) | 소유권 위임 섹션 |
+| T-4 | DoD 체크리스트 항목은 6개 이내 (핵심만) | 각 에이전트 DoD |
+| T-5 | P1 5개 에이전트 병렬 실행 (순차 실행 금지) | 실행 전략 |
+| T-6 | 강화 완료 보고는 4블록 형식 100줄 이내 | 완료 보고서 |
+| T-7 | 이미 읽은 에이전트 파일 재독 금지 (컨텍스트 내 유지) | 멀티 에이전트 환경 |
+
+---
+
+## 부록: 파일 경로 빠른 참조
+
+```
+# 에이전트 파일 절대 경로
+D:\park\YD_Claude_RND\.claude\agents\executor.md       (114줄 기준)
+D:\park\YD_Claude_RND\.claude\agents\build-fixer.md    (109줄 기준)
+D:\park\YD_Claude_RND\.claude\agents\qa-tester.md      (134줄 기준)
+D:\park\YD_Claude_RND\.claude\agents\code-reviewer.md  (138줄 기준)
+D:\park\YD_Claude_RND\.claude\agents\scientist.md      (119줄 기준)
+D:\park\YD_Claude_RND\.claude\agents\architect.md      (136줄 기준)
+D:\park\YD_Claude_RND\.claude\agents\planner.md        (108줄 기준)
+D:\park\YD_Claude_RND\.claude\agents\security.md       (158줄 기준)
+D:\park\YD_Claude_RND\.claude\agents\researcher.md     (89줄 기준)
+D:\park\YD_Claude_RND\.claude\agents\writer.md         (105줄 기준)
+D:\park\YD_Claude_RND\.claude\agents\explorer.md       (93줄 기준)
+D:\park\YD_Claude_RND\.claude\agents\_STANDARDS.md     (194줄 기준, 수정 금지)
+
+# 이 계획서
+D:\park\YD_Claude_RND\.claude\ENHANCEMENT_PLAN.md
+```
+
+---
+
+*이 문서는 2026-02-23 사전 조사 기반으로 작성되었습니다. 실제 강화 실행 전 Read 툴로 현재 줄 수를 재확인하세요.*
