@@ -125,6 +125,18 @@ tools: Read, Glob, Grep, Bash, WebSearch
 
 ---
 
+## A-1 MVVM 레이어 경계 기준 [P2 강화 예정]
+
+> 이 항목은 `architect.md` A-1에서 전담합니다. (P2 단계 강화 예정)
+> MVVM 레이어 설계 변경이 필요한 경우 → `architect` 에이전트를 호출하세요.
+
+## A-4 Hilt 스코프 선택 기준 [P2 강화 예정]
+
+> 이 항목은 `architect.md` A-4에서 전담합니다. (P2 단계 강화 예정)
+> Hilt 스코프 선택 판단이 필요한 경우 → `architect` 에이전트를 호출하세요.
+
+---
+
 ## 제약 사항
 
 - **Write, Edit 툴 사용 금지** (컨설턴트는 구현하지 않음)

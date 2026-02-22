@@ -103,6 +103,76 @@ ls, 프로젝트 구조 확인
 
 ---
 
+## Android 코루틴 / Hilt / Compose 구현 패턴
+
+### E-1 Kotlin Coroutines 패턴 [v1.7+]
+
+```kotlin
+// ✅ 올바른 코루틴 실행 (ViewModel 내)
+viewModelScope.launch {
+    repository.getData()
+        .catch { e -> _uiState.update { it.copy(error = e.message) } }
+        .collect { data -> _uiState.update { it.copy(data = data) } }
+}
+```
+
+**코루틴 금지 패턴:**
+- **`GlobalScope` 사용 금지** — 앱 생명주기와 분리되어 메모리 누수 (앱 종료까지 지속)
+- **`runBlocking` 프로덕션 사용 금지** — UI 스레드 블로킹 시 ANR 발생
+
+> Kotlin 코루틴 안티패턴 탐지는 → `code-reviewer` 에이전트를 호출하세요. (R-1)
+
+### E-2 Hilt 의존성 주입 패턴 [Hilt 2.50+]
+
+```kotlin
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    private val repository: MainRepository
+) : ViewModel()
+```
+
+> Hilt 스코프 선택 기준은 `architect.md` A-4 [P2 강화 예정]에서 전담합니다.
+> 스코프 판단이 필요한 경우 → `architect` 에이전트를 호출하세요.
+
+### E-3 Compose 상태 관리 [Compose 1.5+]
+
+```kotlin
+// ✅ collectAsStateWithLifecycle 권장 (생명주기 인식)
+val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+// remember: 재구성 시 값 유지, rememberSaveable: 프로세스 재시작 후에도 유지
+val query by rememberSaveable { mutableStateOf("") }
+```
+
+> Compose Recomposition 탐지는 → `code-reviewer` 에이전트를 호출하세요. (R-2)
+
+### E-4 Room DAO 구현 패턴 [Room 2.6+]
+
+```kotlin
+@Dao
+interface AlarmDao {
+    @Query("SELECT * FROM alarm WHERE isEnabled = 1")
+    fun getEnabledAlarms(): Flow<List<AlarmEntity>>
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(alarm: AlarmEntity)
+}
+```
+
+> DB 스키마 설계는 → `db-expert` 에이전트를 호출하세요.
+
+### E-5 Hilt 스코프 구현 패턴 예시 [Hilt 2.50+]
+
+```kotlin
+@Singleton           // 앱 전체 단일 인스턴스
+class AppRepository @Inject constructor() { ... }
+@ViewModelScoped     // ViewModel 생명주기에 종속
+class FeatureHelper @Inject constructor() { ... }
+```
+
+> Hilt 스코프 선택 기준은 `architect.md` A-4 [P2 강화 예정]에서 전담합니다.
+> 스코프 판단이 필요한 경우 → `architect` 에이전트를 호출하세요.
+
+---
+
 ## 제약 사항
 
 - **Task 툴 사용 금지** (서브에이전트 생성 불가)

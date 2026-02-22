@@ -99,6 +99,72 @@ Step 5: 빌드 검증
 
 ---
 
+## Android 빌드 특화 오류 패턴
+
+### B-1 AGP 8.x 마이그레이션 오류 [AGP 8.x+]
+
+```kotlin
+// ✅ AGP 8.x: namespace는 android 블록 내로 이동
+android {
+    namespace = "com.example.app"  // AndroidManifest.xml에서 제거 필요
+    buildFeatures { viewBinding = true }
+    packaging { resources.excludes += "META-INF/LICENSE.md" }
+}
+// ❌ 구버전: packagingOptions { exclude "..." }
+```
+
+### B-2 Version Catalog 충돌 해결 [Gradle 8.x+]
+
+```bash
+# 의존성 충돌 진단
+./gradlew app:dependencies --configuration releaseRuntimeClasspath | grep -A5 "conflicted"
+# libs.versions.toml에서 버전 단일화 후 재시도
+```
+
+> CI/CD 파이프라인 수정은 → `devops` 에이전트를 호출하세요.
+
+### B-3 KSP vs KAPT 충돌 [KSP 1.0+]
+
+```kotlin
+// ✅ KSP 전환 (build.gradle.kts)
+plugins { alias(libs.plugins.ksp) }
+dependencies {
+    ksp(libs.room.compiler)
+    ksp(libs.hilt.compiler)
+}
+// ❌ kapt { ... } 블록 혼용 금지 (충돌 원인)
+```
+
+> KSP 최신 버전 확인은 → `researcher` 에이전트를 호출하세요.
+
+### B-4 Compose Compiler 버전 불일치 [Compose 1.5+]
+
+| Kotlin 버전 | Compose Compiler | BOM |
+|------------|-----------------|-----|
+| 1.9.x | 1.5.x | 2024.02.00+ |
+| 2.0.x | 2.0.x (K2) | 2024.09.00+ |
+
+```kotlin
+// ✅ BOM 사용으로 버전 자동 맞춤 권장
+implementation(platform("androidx.compose:compose-bom:2024.09.00"))
+```
+
+### B-5 ProGuard/R8 Release 빌드 실패
+
+```proguard
+# Hilt 필수 규칙
+-keep class dagger.hilt.** { *; }
+# Retrofit + OkHttp
+-keepattributes Signature
+-keep interface retrofit2.** { *; }
+# Room
+-keep class * extends androidx.room.RoomDatabase { *; }
+```
+
+> CI/CD ProGuard 파이프라인 수정은 → `devops` 에이전트를 호출하세요.
+
+---
+
 ## 제약 사항
 
 - 에러 메시지 없이 추측으로 수정 금지

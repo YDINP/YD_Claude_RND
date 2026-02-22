@@ -93,7 +93,8 @@ fun `기능명_조건_기대결과`() {
 - `Random`, `UUID` 등 비결정적 값 → 고정값 또는 Mock으로 대체
 - 시간 의존 로직 → `Clock` 추상화 / `FakeClock` 사용
 - 네트워크/파일시스템 → Mock 또는 Fake 서버 사용
-- `Thread.sleep()` 금지 → `advanceUntilIdle()` 또는 `runBlockingTest()` 사용
+- `Thread.sleep()` 금지 → `advanceUntilIdle()` 또는 `runTest {}` 사용 `[Coroutines 1.7+]`
+  - `runBlockingTest {}` `[DEPRECATED Coroutines 1.7+]` → `runTest {}` 로 대체 (→ Q-4 참조)
 - 테스트 간 공유 상태 금지 → `@Before`/`@After`로 격리
 
 **커버리지 목표:**
@@ -121,6 +122,69 @@ fun `기능명_조건_기대결과`() {
 ### 발견된 버그
 [테스트 중 발견된 실제 버그 목록]
 ```
+
+---
+
+## Android 테스트 프레임워크 전문 패턴
+
+### Q-1 MockK 고급 패턴 [MockK 1.13+]
+
+```kotlin
+// ✅ MockK 완전 패턴 (qa-tester 전담 소유)
+@MockK lateinit var repository: UserRepository
+coEvery { repository.getUser(any()) } returns Result.success(fakeUser)
+coVerify(exactly = 1) { repository.getUser("userId") }
+// 슬롯 캡처
+val slot = slot<String>()
+coEvery { repository.getUser(capture(slot)) } returns Result.success(fakeUser)
+```
+
+> `executor.md`에서 MockK가 필요한 경우 → `qa-tester` 에이전트를 호출하세요.
+
+### Q-2 Turbine Flow 테스트 [Turbine 1.0+]
+
+```kotlin
+@Test
+fun `uiState Flow 테스트`() = runTest {
+    viewModel.uiState.test {
+        val initial = awaitItem()  // 초기 상태 수신
+        viewModel.loadData()
+        val loaded = awaitItem()   // 로딩 완료 상태
+        assertEquals(UiState.Success, loaded)
+        cancelAndIgnoreRemainingEvents()
+    }
+}
+```
+
+### Q-3 Hilt 테스트 환경 [Hilt 2.50+]
+
+```kotlin
+@HiltAndroidTest
+class MainViewModelTest {
+    @get:Rule val hiltRule = HiltAndroidRule(this)
+    @BindValue @JvmField
+    val fakeRepo: UserRepository = FakeUserRepository()
+}
+```
+
+### Q-4 TestCoroutineScheduler 완전 패턴 [Coroutines 1.7+]
+
+```kotlin
+// ✅ runTest {} 표준 패턴 (runBlockingTest deprecated)
+@Test
+fun `비동기 상태 변화 테스트`() = runTest {
+    viewModel.loadData()
+    advanceUntilIdle()  // 모든 코루틴 완료 대기
+    assertEquals(UiState.Success, viewModel.uiState.value)
+}
+// ❌ runBlockingTest {} // [DEPRECATED Coroutines 1.7+] → runTest 사용
+```
+
+### Q-5 A/B 테스트 설계 위임
+
+> 이 항목은 `scientist.md` (S-4)에서 전담합니다.
+> A/B 테스트 설계(샘플 크기, 무작위 배정)가 필요한 경우 → `scientist` 에이전트를 호출하세요.
+> `qa-tester`는 A/B 테스트 **결과 검증**만 담당합니다.
 
 ---
 

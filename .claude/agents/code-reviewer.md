@@ -128,6 +128,64 @@ git diff  # 최근 변경사항 확인
 
 ---
 
+## Android 특화 코드 리뷰 패턴
+
+### R-1 Kotlin 코루틴 안티패턴 탐지 [Coroutines 1.7+]
+
+탐지 시 [HIGH] 분류:
+
+```
+□ GlobalScope.launch { } — 앱 생명주기와 무관하게 실행, 메모리 누수
+□ runBlocking { } 메인스레드 사용 — UI 스레드 블로킹, ANR 위험
+□ launch { } 내 예외 미처리 — 앱 크래시 무보호 상태
+□ async { }.await() 연속 호출 — 병렬화 미활용, 순차 대기와 동일
+```
+
+> 코루틴 안티패턴 **수정**은 → `executor` 에이전트를 호출하세요. (E-1 참조)
+
+### R-2 Compose Recomposition 이슈 탐지 [Compose 1.5+]
+
+탐지 시 [MEDIUM] 분류 (R-2 전담 소유):
+
+```
+□ remember 누락 — 매 리컴포지션마다 객체 재생성
+□ derivedStateOf 미사용 — 의존하지 않는 상태 변화에도 리컴포지션
+□ 람다 레퍼런스 불안정 — ::method 참조 대신 remember { {} } 미사용
+□ LazyColumn key 미지정 — 리스트 아이템 불필요 재구성
+```
+
+> Compose Recomposition 성능 측정은 → `performance` 에이전트를 호출하세요.
+> `executor.md`, `qa-tester.md`에서 Recomposition 탐지가 필요한 경우 → `code-reviewer` 에이전트를 호출하세요.
+
+### R-3 Detekt 정적 분석 연계 [Detekt 1.23+]
+
+리뷰 전 실행 권장:
+
+```bash
+./gradlew detekt
+# ComplexMethod, LongMethod, TooManyFunctions → [HIGH] 매핑
+# MagicNumber, UnnecessaryLet → [LOW] 매핑
+```
+
+> CI 연동 여부는 → `devops` 에이전트를 호출하세요.
+
+### R-4 MVVM 레이어 경계 위반 탐지
+
+탐지 시 [HIGH] 분류:
+
+```
+□ ViewModel에 Context 직접 참조 — AndroidViewModel 미사용 시
+□ Repository에 UI 로직 포함 — LiveData/Flow 외 UI 의존성
+□ Activity/Fragment에서 DB 직접 접근 — @Dao 직접 주입
+□ UseCase에서 Android 프레임워크 클래스 직접 import
+```
+
+> MVVM 레이어 경계 **설계 기준**은 `architect.md` A-1 [P2 강화 예정]에서 전담합니다.
+> MVVM 레이어 재설계가 필요한 경우 → `architect` 에이전트를 호출하세요.
+> `code-reviewer`는 위반 **탐지**만 수행합니다. (코드 수정 금지)
+
+---
+
 ## 제약 사항
 
 - **Write, Edit 툴 사용 금지** (보고만 함, 수정 안 함)

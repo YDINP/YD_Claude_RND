@@ -23,7 +23,7 @@ tools: Read, Glob, Grep, Bash, Write
 ## 입력/출력 명세
 
 - **입력**: 분석할 데이터 파일/데이터베이스 + 분석 목적
-- **출력**: 분석 결과 + 통계 요약 + 인사이트 + 시각화 코드
+- **출력**: 분석 결과 + 통계 요약 + 인사이트 + 시각화 로직 코드(UI 렌더링 제외)
 
 ---
 
@@ -107,6 +107,69 @@ df.isnull().sum()
 ### 한계
 [LIMITATION] {분석 한계 및 주의사항}
 ```
+
+---
+
+## Android 앱 데이터 분석 전문 패턴
+
+### S-1 앱 성능 지표 분석 [Python 3.10+ / scipy 1.11+]
+
+```python
+# Macrobenchmark 결과 CSV 분석
+import pandas as pd
+df = pd.read_csv('benchmark_results.csv')
+startup_stats = df['startup_ms'].describe()
+frame_drops = df[df['frame_time_ms'] > 16.67]  # 60fps 기준
+print(f"[STAT:mean] 스타트업: {startup_stats['mean']:.1f}ms")
+print(f"[FINDING] 프레임 드롭: {len(frame_drops)}회 / {len(df)}프레임")
+```
+
+### S-2 가설 검정 자동화 [scipy 1.11+]
+
+| 상황 | 검정 방법 | 조건 |
+|------|---------|------|
+| 두 그룹 평균 비교 | `ttest_ind` | 정규분포 가정 가능 |
+| 비정규 분포 비교 | `mannwhitneyu` | 정규분포 미보장 |
+| 비율 비교 | `chi2_contingency` | 카테고리형 데이터 |
+
+```python
+from scipy import stats
+t_stat, p_val = stats.ttest_ind(group_a, group_b)
+print(f"[STAT:p-val] {p_val:.4f}")
+# p < 0.05 → 유의미한 차이, p ≥ 0.05 → 차이 없음
+```
+
+### S-3 데이터 시각화 위임
+
+```python
+# ✅ scientist 담당: 데이터 검증 및 시각화 로직
+fig, ax = plt.subplots()
+ax.hist(df['startup_ms'], bins=20)
+plt.savefig('startup_distribution.png')  # 파일로 저장 후 전달
+# ❌ matplotlib 고급 커스터마이징 (테마, 대화형 위젯) → designer 위임
+```
+
+> 이 항목은 `designer` 에이전트에서 UI 시각화를 전담합니다.
+> 인터랙티브 차트, 대시보드 UI가 필요한 경우 → `designer` 에이전트를 호출하세요.
+
+### S-4 A/B 테스트 설계 [scipy 1.11+] (S-4 전담 소유)
+
+```python
+from scipy.stats import norm
+import math
+
+def calc_sample_size(effect_size=0.2, alpha=0.05, power=0.8):
+    """Power analysis: 필요 샘플 크기 계산"""
+    z_alpha = norm.ppf(1 - alpha/2)
+    z_beta  = norm.ppf(power)
+    n = ((z_alpha + z_beta) / effect_size) ** 2
+    return math.ceil(n)
+
+print(f"[STAT:n] 그룹당 필요 샘플: {calc_sample_size()}명")
+```
+
+> `qa-tester.md`에서 A/B 테스트 설계가 필요한 경우 → `scientist` 에이전트를 호출하세요.
+> `qa-tester`는 A/B 테스트 **결과 검증**만 담당합니다.
 
 ---
 
