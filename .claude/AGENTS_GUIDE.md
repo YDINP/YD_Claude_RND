@@ -1,6 +1,6 @@
 # 에이전트 시스템 가이드
 
-> `.claude/agents/` 멀티 에이전트 시스템 — v2.3.1 (29개 에이전트)
+> `.claude/agents/` 멀티 에이전트 시스템 — v2.4.0 (29개 에이전트)
 
 ---
 
@@ -12,6 +12,7 @@
 카드 생성  → /create-card 주제명 카테고리
 대량 카드  → /card-batch 5개 psychology
 에이전트 추가 → "새 에이전트 추가해줘"
+다른 프로젝트 → ./install-agents.sh (루트에서 실행)
 ```
 
 ---
@@ -133,29 +134,62 @@ agent-manager가 자동으로 적합한 에이전트를 선택합니다.
 
 **내부 동작 (Consensus 모드 기준):**
 ```
-Phase 0.5 전문 에이전트 자동 선택
+Phase 0-A: Glob/Grep 실측 탐색 (의무)
+  → 영향 파일 수 직접 측정 → [공통 파일 목록] 생성 → Step 1 전 에이전트에 전달
+
+Phase 0-B: 복잡도 자동 판단 (실측값 기준)
+  → Simple (파일 3개 이하, 단일 도메인)
+  → Consensus (파일 4개+, 다중 도메인, 아키텍처 결정 포함)
+
+Phase 0.5: 전문 에이전트 자동 선택
   → 요구사항 키워드 감지 시 db-expert / devops / security 등 자동 추가
 
 1. 4인 동시 분석     → architect(아키텍처+종속성) + planner(전략) + qa-tester(시나리오)
-                       ※ reasoner는 이 단계에서 실행 안 함
+                       ※ [합의 요약] 블록 강제 — 없으면 합의 대상에서 제외
+                       ※ security는 합의 대상 제외 (오케스트레이터에 직접 보고)
+
 2. 합의 + 방어 로직  → 오케스트레이터가 직접 합의 판단
                        3/3·2/3 일치 → 오케스트레이터가 채택 (reasoner 불필요)
                        1/1/1 완전 분산 시에만 → reasoner(opus) 1회 호출
+                       ※ security HIGH 이슈 → Step 2 완료 후 방어 로직 즉시 반영
+
 3. 프롬프트 최적화   → prompt-engineer: 방어 로직 포함 + 파일 영역 충돌 확인
-                       ※ HIGH 시나리오 0건 + 방어 로직 단순 시 스킵
+                       ※ HIGH 0건 AND MED 2건 이하 시 자동 스킵
+
 4. 병렬 실행         → 최적화된 프롬프트로 독립 서브태스크 동시 진행
-4.5. 중간 교차 검증  → architect(sonnet): 파일 경계 충돌 여부만 경량 확인
+                       ※ 모든 에이전트가 4블록 형식으로 반환 (하단 참조)
+
+4.5. 중간 교차 검증  → architect(sonnet):
+                       [1] 파일 경계 충돌 확인
+                       [2] 인터페이스 정합성 — 새로 추가된 공개 메서드 시그니처 일치 여부
+
 5. 의존성 처리       → planner 정의 의존성 체인 순서대로
+                       ※ 이전 단계 컨텍스트 500토큰 이하로 압축 전달
+
 6. 최종 검증         → code-reviewer(sonnet) + architect(sonnet) 1차
                        HIGH 발견 시에만 → opus 2차 심층 검토 (최대 2회 재실행)
 ```
 
-**복잡도 자동 판단:**
-- Simple (파일 3개 이하, 단일 도메인) → planner+qa-tester 병렬 → 실행 → code-reviewer
-- Consensus (파일 4개+, 다중 도메인, 아키텍처 결정) → 협의체 풀 모드
+**에이전트 반환 형식 4블록 표준 (Step 4 모든 에이전트 필수):**
+```
+[결과_요약]
+{완료한 작업 1-3줄 요약}
+
+[수정_파일]
+- {파일경로}: {변경 내용 1줄}
+
+[이슈_목록]
+- [HIGH/MED/LOW] {이슈 내용} → {권장 해결 방향}
+- (없으면 "없음")
+
+[의존성_알림]
+- {다음 에이전트명}: {전달할 핵심 정보}
+- (없으면 "없음")
+```
 
 **Retry Policy (자동 적용):**
 - 에이전트 실패 → 동일 에이전트 최대 2회 재시도 → 실패 시 하위 모델 폴백 → 에스컬레이션
+- 부분 실패 (60%+ 완료) → 다음 단계 진입, 실패 에이전트 정보를 다음 프롬프트에 명시
 
 ---
 
@@ -164,23 +198,26 @@ Phase 0.5 전문 에이전트 자동 선택
 ### 예시: `/pt "SubwayMate 알림 구독 기능 추가"`
 
 ```
-Phase 0: Consensus 모드 판단 (다중 도메인, 파일 4개+)
-Phase 0.5: "FCM" → security 키워드 미감지, "DB" → db-expert 자동 추가
+Phase 0-A (실측 탐색)
+  Glob("**/alarm/**"), Grep("AlarmEntity|AlarmDao")
+  → [공통 파일 목록]: 6개 파일, 다중 도메인
+
+Phase 0-B (Consensus 모드 판단)
+
+Phase 0.5: "DB" → db-expert 자동 추가
 
 Step 1 (동시 — 4인 분석)
-  architect(opus)   → 아키텍처 분석 + 종속성 검사 통합
-                      결과: Repository 패턴, 종속성 이슈 2건(HIGH)
-  planner(opus)     → DB→Repo→UseCase→ViewModel 순서, 파일 영역 분배
+  architect(opus)   → 아키텍처 + 종속성 이슈 2건(HIGH) / [합의 요약] LAYERED
+  planner(opus)     → DB→Repo→UseCase→ViewModel 순서 / [합의 요약] REPOSITORY
   qa-tester(sonnet) → 7개 시나리오: FCM 만료(HIGH), 동시 쓰기 충돌(MED) 등
 
-Step 2 (순차 — 3개 결과 취합 후)
-  [합의 판단] architect·planner 2/3 일치 → 오케스트레이터가 직접 채택
-  → reasoner 호출 없음 (2/3 일치이므로)
+Step 2 (합의 판단 — 오케스트레이터)
+  [접근방식] 2/3 LAYERED+REPOSITORY 일치 → 오케스트레이터가 직접 채택
+  → reasoner 호출 없음
   → FCM→AlarmWorker, 동시 쓰기→Mutex 방어 로직 확정
 
-Step 3 (순차)
-  prompt-engineer(sonnet)
-  → 방어 로직 포함 + 파일 충돌 확인 → 4개 에이전트 최적화 프롬프트 (평균 87점)
+Step 3 (프롬프트 최적화)
+  prompt-engineer(sonnet) → 방어 로직 포함 + 파일 충돌 확인 → 평균 87점
 
 Step 4 (동시 실행)
   ├── db-expert    담당: data/db/**
@@ -192,17 +229,58 @@ Step 4 (동시 실행)
   └── qa-tester    담당: test/**
       AlarmRepository 단위 테스트
 
-Step 4.5 (경량 교차 검증)
-  architect(sonnet) → 파일 경계 충돌 확인 → 충돌 없음, Step 5 진행
+Step 4.5 (교차 검증)
+  architect(sonnet) → 파일 경계 ✅ / 인터페이스 정합성 ✅ → Step 5 진행
 
 Step 5 (순차 — db-expert 완료 후)
   executor → AlarmRepository 구현 (DB 스키마 의존)
 
 Step 6 (1차 — sonnet)
-  code-reviewer(sonnet) + architect(sonnet) → 동시 실행
-  → HIGH 없음: 완료
-  → HIGH 발견 시 2차 opus 심층 검토 (최대 2회)
+  code-reviewer(sonnet) + architect(sonnet) → HIGH 없음: 완료
 ```
+
+---
+
+## 다른 프로젝트에 에이전트 설치
+
+### `install-agents.sh` 사용
+
+```bash
+# YD_Claude_RND 루트에서
+./install-agents.sh              # 대화형 설치 (자동 감지)
+./install-agents.sh --copy       # 파일 복사 방식 (링크 없음)
+./install-agents.sh --dry-run    # 미리보기만
+./install-agents.sh --force      # 기존 설치 덮어쓰기
+```
+
+**설치 방식 자동 선택:**
+
+| 상황 | 동작 |
+|------|------|
+| YD_Claude_RND 하위 프로젝트 | Junction(Windows) / Symlink(Mac·Linux) — 실시간 동기화 |
+| 외부 독립 프로젝트 | GitHub sparse clone (agents/ + commands/ 만 취득) |
+| `--copy` 플래그 | 파일 직접 복사 (동기화 없음) |
+
+**설치 후 생성되는 파일:**
+```
+your-project/
+└── .claude/
+    ├── agents/      ← Junction 또는 복사본
+    ├── commands/    ← Junction 또는 복사본
+    ├── CLAUDE.md    ← 대화형 템플릿 (--no-claude 로 스킵)
+    └── settings.local.json
+```
+
+### shortform-blog (Junction 연동)
+
+`shortform-blog/.claude/`는 Junction으로 연결되어 있습니다.
+
+```
+shortform-blog/.claude/agents/   → YD_Claude_RND/.claude/agents/
+shortform-blog/.claude/commands/ → YD_Claude_RND/.claude/commands/
+```
+
+에이전트를 수정하면 shortform-blog에서도 즉시 반영됩니다.
 
 ---
 
@@ -217,6 +295,7 @@ Step 6 (1차 — sonnet)
 | 출력 압축 | 코드 완성본 + 판단 근거 2-3줄 |
 | 모델 적정 선택 | 단순 작업 haiku / 표준 sonnet / 복잡 추론 opus |
 | 담당 파일 제한 | 지정된 파일 영역 외 수정 금지 |
+| 컨텍스트 전달 | Step 5 이전 단계 컨텍스트 500토큰 이하 압축 |
 
 ---
 
@@ -233,18 +312,43 @@ agent-manager → agent-architect → 파일 생성 + _registry.json 자동 업�
 ## 파일 구조
 
 ```
-.claude/
-├── agents/
-│   ├── _STANDARDS.md         규격 정의 (토큰 최적화 규칙 포함)
-│   ├── _registry.json        에이전트 레지스트리 v2.3.1 (29개)
-│   ├── agent-manager.md      중앙 오케스트레이터
-│   ├── card-scenario.md      SnapWise MDX 카드 시나리오 작성
-│   ├── mdx-validator.md      MDX 구조 검증 (R-01~R-07)
-│   ├── card-batch-runner.md  대량 카드 생산 오케스트레이터
-│   └── *.md                  서브 에이전트 (25개)
-├── commands/
-│   ├── pt.md                 /pt 명령어 (멀티 에이전트 팀)
-│   ├── create-card.md        /create-card 명령어 (단일 카드 생성)
-│   └── card-batch.md         /card-batch 명령어 (대량 배치 생성)
-└── AGENTS_GUIDE.md           이 문서
+YD_Claude_RND/
+├── install-agents.sh             에이전트 시스템 자동 설치 스크립트
+└── .claude/
+    ├── agents/
+    │   ├── _STANDARDS.md         규격 정의 (토큰 최적화 규칙 포함)
+    │   ├── _registry.json        에이전트 레지스트리 v2.4.0 (29개)
+    │   ├── agent-manager.md      중앙 오케스트레이터
+    │   ├── card-scenario.md      SnapWise MDX 카드 시나리오 작성
+    │   ├── mdx-validator.md      MDX 구조 검증 (R-01~R-07)
+    │   ├── card-batch-runner.md  대량 카드 생산 오케스트레이터
+    │   └── *.md                  서브 에이전트 (25개)
+    ├── commands/
+    │   ├── pt.md                 /pt 명령어 (멀티 에이전트 팀) v2.4.0
+    │   ├── create-card.md        /create-card 명령어 (단일 카드 생성)
+    │   └── card-batch.md         /card-batch 명령어 (대량 배치 생성)
+    └── AGENTS_GUIDE.md           이 문서
+
+shortform-blog/.claude/
+    ├── agents/    → Junction → YD_Claude_RND/.claude/agents/
+    ├── commands/  → Junction → YD_Claude_RND/.claude/commands/
+    ├── CLAUDE.md
+    └── settings.local.json
 ```
+
+---
+
+## v2.4.0 변경 이력
+
+| 항목 | 내용 |
+|------|------|
+| Phase 0 분리 | Phase 0-A (Glob/Grep 실측 탐색 의무) + Phase 0-B (판단) |
+| 공통 파일 목록 | Step 1 전 에이전트에 실측 파일 목록 전달 |
+| 합의 요약 강제 | [합의 요약] 블록 누락 시 합의 대상 제외 |
+| 반환 형식 표준화 | 4블록: [결과_요약] / [수정_파일] / [이슈_목록] / [의존성_알림] |
+| 인터페이스 정합성 | Step 4.5에서 공개 메서드 시그니처 불일치 검사 추가 |
+| 컨텍스트 압축 | Step 5 이전 단계 컨텍스트 500토큰 이하 구조화 |
+| security 채널 분리 | 합의 대상 제외, 오케스트레이터 직접 보고 |
+| 부분 실패 보완 | 실패 에이전트 정보 다음 프롬프트에 명시적 전달 |
+| install-agents.sh | 다른 프로젝트에 에이전트 시스템 설치 자동화 |
+| shortform-blog 연동 | Junction 기반 agents/commands 실시간 동기화 |
