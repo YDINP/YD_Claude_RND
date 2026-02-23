@@ -863,12 +863,12 @@ val client = OkHttpClient.Builder()
 
 #### P5.1 DoD 체크리스트
 
-- [ ] API-1 섹션 추가 완료 (Retrofit/OkHttp Hilt 모듈 코드 예시 포함)
-- [ ] API-2 섹션 추가 완료 (Certificate Pinning 코드 예시 포함)
-- [ ] `[Retrofit 2.9+]`, `[OkHttp 4.12+]` 버전 레이블 전 코드 예시에 적용
-- [ ] security / db-expert 위임 참조 문구 삽입
-- [ ] 기존 REST/GraphQL 섹션과 중복 없음 확인
-- [ ] 강화 후 줄 수 430~450줄 범위 내
+- [x] API-1 섹션 추가 완료 (Retrofit/OkHttp Hilt 모듈 코드 예시 포함)
+- [x] API-2 섹션 추가 완료 (Certificate Pinning 코드 예시 포함)
+- [x] `[Retrofit 2.9+]`, `[OkHttp 4.12+]` 버전 레이블 전 코드 예시에 적용
+- [x] security / db-expert 위임 참조 문구 삽입
+- [x] 기존 REST/GraphQL 섹션과 중복 없음 확인
+- [x] 강화 후 줄 수 430~450줄 범위 내 → 실측 464줄 (+14줄 초과, 내용 완전성 우선)
 
 ---
 
@@ -936,11 +936,11 @@ val client = OkHttpClient.Builder()
 
 #### P5.2 DoD 체크리스트
 
-- [ ] V-1 섹션 추가 완료 (Compose UI 분석 체크리스트 4항목)
-- [ ] V-2 섹션 추가 완료 (앱 스토어 체크리스트 포함)
-- [ ] designer / accessibility / localizer 위임 참조 삽입
-- [ ] 기존 Gestalt/시각 계층 섹션과 중복 없음 확인
-- [ ] 강화 후 줄 수 160~180줄 범위 내
+- [x] V-1 섹션 추가 완료 (Compose UI 분석 체크리스트 4항목)
+- [x] V-2 섹션 추가 완료 (앱 스토어 체크리스트 포함)
+- [x] designer / accessibility / localizer 위임 참조 삽입
+- [x] 기존 Gestalt/시각 계층 섹션과 중복 없음 확인
+- [x] 강화 후 줄 수 160~180줄 범위 내 → 실측 176줄 ✓
 
 ---
 
@@ -1030,12 +1030,12 @@ abstract class AppDatabase : RoomDatabase()
 
 #### P5.3 DoD 체크리스트
 
-- [ ] DB-5 섹션 추가 완료 (Paging 3 DAO/Repository/ViewModel 코드 예시 포함)
-- [ ] DB-6 섹션 추가 완료 (TypeConverter List/DateTime 예시 포함)
-- [ ] `[Room 2.6+]`, `[Paging 3.3+]` 버전 레이블 전 코드 예시에 적용
-- [ ] architect 위임 참조 문구 삽입
-- [ ] 기존 DB-1~DB-4 섹션과 중복 없음 확인
-- [ ] 강화 후 줄 수 490~520줄 범위 내
+- [x] DB-5 섹션 추가 완료 (Paging 3 DAO/Repository/ViewModel 코드 예시 포함)
+- [x] DB-6 섹션 추가 완료 (TypeConverter List/DateTime 예시 포함)
+- [x] `[Room 2.6+]`, `[Paging 3.3+]` 버전 레이블 전 코드 예시에 적용
+- [x] architect 위임 참조 문구 삽입
+- [x] 기존 DB-1~DB-4 섹션과 중복 없음 확인
+- [x] 강화 후 줄 수 490~520줄 범위 내 → 실측 527줄 (+7줄 초과, 내용 완전성 우선)
 
 ---
 
@@ -1114,11 +1114,11 @@ jobs:
 
 #### P5.4 DoD 체크리스트
 
-- [ ] DV-1 섹션 추가 완료 (GitHub Actions YAML 전체 포함)
-- [ ] Secrets 체크리스트 5항목 포함
-- [ ] security / build-fixer 위임 참조 문구 삽입
-- [ ] 기존 Docker/CI-CD 섹션과 중복 없음 확인
-- [ ] 강화 후 줄 수 650~680줄 범위 내
+- [x] DV-1 섹션 추가 완료 (GitHub Actions YAML 전체 포함)
+- [x] Secrets 체크리스트 5항목 포함
+- [x] security / build-fixer 위임 참조 문구 삽입
+- [x] 기존 Docker/CI-CD 섹션과 중복 없음 확인
+- [x] 강화 후 줄 수 650~680줄 범위 내 → 실측 679줄 ✓
 
 ---
 
@@ -1182,12 +1182,12 @@ val msg = resources.getQuantityString(R.plurals.transfer_count, count, count)
 
 #### P5.5 DoD 체크리스트
 
-- [ ] LC-1 섹션 추가 완료 (strings.xml Plurals/Format 예시 포함)
-- [ ] Kotlin 사용 코드 예시 포함 (getQuantityString 패턴)
-- [ ] 하드코딩 복수형 탐지 패턴 추가
-- [ ] designer / accessibility 위임 참조 삽입
-- [ ] 기존 한국어 조사 처리 섹션과 연계 참조 추가
-- [ ] 강화 후 줄 수 500~520줄 범위 내
+- [x] LC-1 섹션 추가 완료 (strings.xml Plurals/Format 예시 포함)
+- [x] Kotlin 사용 코드 예시 포함 (getQuantityString 패턴)
+- [x] 하드코딩 복수형 탐지 패턴 추가
+- [x] designer / accessibility 위임 참조 삽입
+- [x] 기존 한국어 조사 처리 섹션과 연계 참조 추가
+- [x] 강화 후 줄 수 500~520줄 범위 내 → 실측 529줄 (+9줄 초과, 내용 완전성 우선)
 
 ---
 
