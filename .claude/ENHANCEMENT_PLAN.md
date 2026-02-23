@@ -72,12 +72,12 @@ P3 (선택적 — P2 결과 검토 후 결정):
 
 #### DoD 체크리스트 (executor.md 강화 완료 기준)
 
-- [ ] E-1~E-5 항목 모두 섹션으로 추가됨
-- [ ] 각 코드 예시가 Kotlin 1.9+ / Coroutines 1.7+ 문법 준수
-- [ ] `GlobalScope`, `runBlocking` (프로덕션) 금지 명시됨
-- [ ] Hilt 스코프 선택 기준은 architect.md A-4 위임 참조 삽입됨
-- [ ] 방어 로직 레이블(`[v{버전}+]`) 모든 코드 예시에 적용됨
-- [ ] 기존 114줄 내용 손상 없음
+- [x] E-1~E-5 항목 모두 섹션으로 추가됨
+- [x] 각 코드 예시가 Kotlin 1.9+ / Coroutines 1.7+ 문법 준수
+- [x] `GlobalScope`, `runBlocking` (프로덕션) 금지 명시됨
+- [x] Hilt 스코프 선택 기준은 architect.md A-4 위임 참조 삽입됨
+- [x] 방어 로직 레이블(`[v{버전}+]`) 모든 코드 예시에 적용됨
+- [x] 기존 114줄 내용 손상 없음
 
 ---
 
@@ -98,11 +98,11 @@ P3 (선택적 — P2 결과 검토 후 결정):
 
 #### DoD 체크리스트 (build-fixer.md 강화 완료 기준)
 
-- [ ] B-1~B-5 항목 모두 섹션으로 추가됨
-- [ ] AGP 8.x 오류 패턴 표가 기존 "오류 유형별 접근" 섹션과 통합됨
-- [ ] `./gradlew dependencies` 활용 커맨드 실제 실행 예시 포함
-- [ ] Kotlin ↔ Compose Compiler 버전 매핑 표 최신 기준 반영 (`[v{버전}+]` 레이블)
-- [ ] 기존 109줄 내용 손상 없음
+- [x] B-1~B-5 항목 모두 섹션으로 추가됨
+- [x] AGP 8.x 오류 패턴 표가 기존 "오류 유형별 접근" 섹션과 통합됨
+- [x] `./gradlew dependencies` 활용 커맨드 실제 실행 예시 포함
+- [x] Kotlin ↔ Compose Compiler 버전 매핑 표 최신 기준 반영 (`[v{버전}+]` 레이블)
+- [x] 기존 109줄 내용 손상 없음
 
 ---
 
@@ -123,13 +123,13 @@ P3 (선택적 — P2 결과 검토 후 결정):
 
 #### DoD 체크리스트 (qa-tester.md 강화 완료 기준)
 
-- [ ] Q-1~Q-5 항목 모두 섹션으로 추가됨
-- [ ] MockK 예시가 `coEvery`/`coVerify` Coroutine 패턴 포함 (`[MockK 1.13+]`)
-- [ ] Turbine 예시가 `test {}` 블록 형식으로 작성됨 (`[Turbine 1.0+]`)
-- [ ] `runBlockingTest` deprecated 경고 및 `runTest` 대체 명시됨
-- [ ] A/B 테스트 설계 → scientist.md 위임 참조 추가됨
-- [ ] 기존 134줄 내용 손상 없음 (기존 Flaky Test 방지 규칙 유지)
-- [ ] 기존 Flaky Test 방지 규칙 내 runBlockingTest() → advanceUntilIdle() 대체 명시됨
+- [x] Q-1~Q-5 항목 모두 섹션으로 추가됨
+- [x] MockK 예시가 `coEvery`/`coVerify` Coroutine 패턴 포함 (`[MockK 1.13+]`)
+- [x] Turbine 예시가 `test {}` 블록 형식으로 작성됨 (`[Turbine 1.0+]`)
+- [x] `runBlockingTest` deprecated 경고 및 `runTest` 대체 명시됨
+- [x] A/B 테스트 설계 → scientist.md 위임 참조 추가됨
+- [x] 기존 134줄 내용 손상 없음 (기존 Flaky Test 방지 규칙 유지)
+- [x] 기존 Flaky Test 방지 규칙 내 runBlockingTest() → advanceUntilIdle() 대체 명시됨
 
 ---
 
@@ -149,12 +149,12 @@ P3 (선택적 — P2 결과 검토 후 결정):
 
 #### DoD 체크리스트 (code-reviewer.md 강화 완료 기준)
 
-- [ ] R-1~R-4 항목 모두 섹션으로 추가됨
-- [ ] Kotlin 코루틴 안티패턴 목록이 [HIGH] 카테고리에 통합됨
-- [ ] Compose Recomposition 이슈가 [MEDIUM] 카테고리에 통합됨
-- [ ] Detekt 연계 섹션에 실행 커맨드 포함됨
-- [ ] MVVM 레이어 경계 위반 → architect.md 위임 참조 명시됨
-- [ ] 기존 138줄 내용 손상 없음 (기존 [CRITICAL]/[HIGH]/[MEDIUM]/[LOW] 구조 유지)
+- [x] R-1~R-4 항목 모두 섹션으로 추가됨
+- [x] Kotlin 코루틴 안티패턴 목록이 [HIGH] 카테고리에 통합됨
+- [x] Compose Recomposition 이슈가 [MEDIUM] 카테고리에 통합됨
+- [x] Detekt 연계 섹션에 실행 커맨드 포함됨
+- [x] MVVM 레이어 경계 위반 → architect.md 위임 참조 명시됨
+- [x] 기존 138줄 내용 손상 없음 (기존 [CRITICAL]/[HIGH]/[MEDIUM]/[LOW] 구조 유지)
 
 ---
 
@@ -174,11 +174,11 @@ P3 (선택적 — P2 결과 검토 후 결정):
 
 #### DoD 체크리스트 (scientist.md 강화 완료 기준)
 
-- [ ] S-1~S-4 항목 모두 섹션으로 추가됨
-- [ ] A/B 테스트 설계 섹션에 power analysis 공식 포함 (`[scipy 1.11+]`)
-- [ ] 데이터 시각화 UI → designer 위임 참조 명시됨
-- [ ] 가설 검정 결정 트리 표 형식으로 추가됨
-- [ ] 기존 119줄 내용 손상 없음 (기존 분석 마커 시스템 유지)
+- [x] S-1~S-4 항목 모두 섹션으로 추가됨
+- [x] A/B 테스트 설계 섹션에 power analysis 공식 포함 (`[scipy 1.11+]`)
+- [x] 데이터 시각화 UI → designer 위임 참조 명시됨
+- [x] 가설 검정 결정 트리 표 형식으로 추가됨
+- [x] 기존 119줄 내용 손상 없음 (기존 분석 마커 시스템 유지)
 
 ---
 
@@ -200,10 +200,10 @@ P3 (선택적 — P2 결과 검토 후 결정):
 
 #### DoD 체크리스트 (architect.md 강화 완료 기준)
 
-- [ ] A-1~A-4 항목 모두 섹션으로 추가됨
-- [ ] MVVM 레이어 경계 테이블이 레이어별 허용/금지 컬럼으로 구성됨
-- [ ] Hilt 스코프 선택 기준 결정 트리가 A-4 섹션으로 추가됨 (SSOT 전담)
-- [ ] 기존 136줄 내용 손상 없음 (기존 SOLID 원칙 체크리스트 유지)
+- [x] A-1~A-4 항목 모두 섹션으로 추가됨
+- [x] MVVM 레이어 경계 테이블이 레이어별 허용/금지 컬럼으로 구성됨
+- [x] Hilt 스코프 선택 기준 결정 트리가 A-4 섹션으로 추가됨 (SSOT 전담)
+- [x] 기존 136줄 내용 손상 없음 (기존 SOLID 원칙 체크리스트 유지)
 
 ---
 
@@ -222,10 +222,10 @@ P3 (선택적 — P2 결과 검토 후 결정):
 
 #### DoD 체크리스트 (planner.md 강화 완료 기준)
 
-- [ ] PL-1~PL-3 항목 모두 섹션으로 추가됨
-- [ ] Android 기능 개발 계획 템플릿이 `## 실행 계획` 섹션 아래 예시로 포함됨
-- [ ] `[NEEDS CLARIFICATION]` 플래그 기준에 버전/라이브러리 항목 추가됨
-- [ ] 기존 108줄 내용 손상 없음
+- [x] PL-1~PL-3 항목 모두 섹션으로 추가됨
+- [x] Android 기능 개발 계획 템플릿이 `## 실행 계획` 섹션 아래 예시로 포함됨
+- [x] `[NEEDS CLARIFICATION]` 플래그 기준에 버전/라이브러리 항목 추가됨
+- [x] 기존 108줄 내용 손상 없음
 
 ---
 
@@ -245,11 +245,11 @@ P3 (선택적 — P2 결과 검토 후 결정):
 
 #### DoD 체크리스트 (security.md 강화 완료 기준)
 
-- [ ] SE-1~SE-4 항목 모두 섹션으로 추가됨
-- [ ] Android Keystore 섹션이 기존 "Android 특화 보안 체크"에 통합됨
-- [ ] CVE 조회 → researcher 위임 참조 명시됨
-- [ ] CVE 조회 → researcher.md RS-2 위임 참조 명시됨
-- [ ] 기존 158줄 OWASP Top 10 테이블 손상 없음
+- [x] SE-1~SE-4 항목 모두 섹션으로 추가됨
+- [x] Android Keystore 섹션이 기존 "Android 특화 보안 체크"에 통합됨
+- [x] CVE 조회 → researcher 위임 참조 명시됨
+- [x] CVE 조회 → researcher.md RS-2 위임 참조 명시됨
+- [x] 기존 158줄 OWASP Top 10 테이블 손상 없음
 
 ---
 
@@ -268,10 +268,10 @@ P3 (선택적 — P2 결과 검토 후 결정):
 
 #### DoD 체크리스트 (researcher.md 강화 완료 기준)
 
-- [ ] RS-1~RS-3 항목 모두 섹션으로 추가됨
-- [ ] 버전 조사 결과 출력 형식에 `[v{버전}+]` 레이블 예시 포함됨
-- [ ] CVE 조회 → security.md 전달 프로세스 명시됨
-- [ ] 기존 89줄 내용 손상 없음 (기존 소스 우선순위 유지)
+- [x] RS-1~RS-3 항목 모두 섹션으로 추가됨
+- [x] 버전 조사 결과 출력 형식에 `[v{버전}+]` 레이블 예시 포함됨
+- [x] CVE 조회 → security.md 전달 프로세스 명시됨
+- [x] 기존 89줄 내용 손상 없음 (기존 소스 우선순위 유지)
 
 ---
 
@@ -290,10 +290,10 @@ P3 (선택적 — P2 결과 검토 후 결정):
 
 #### DoD 체크리스트 (writer.md 강화 완료 기준)
 
-- [ ] W-1~W-3 항목 모두 섹션으로 추가됨
-- [ ] KDoc 예시가 실제 SubwayMate 코드 패턴 반영
-- [ ] ADR 템플릿이 기존 "문서 유형별 템플릿" 섹션에 통합됨
-- [ ] 기존 105줄 내용 손상 없음
+- [x] W-1~W-3 항목 모두 섹션으로 추가됨
+- [x] KDoc 예시가 실제 SubwayMate 코드 패턴 반영
+- [x] ADR 템플릿이 기존 "문서 유형별 템플릿" 섹션에 통합됨
+- [x] 기존 105줄 내용 손상 없음
 
 ---
 
