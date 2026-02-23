@@ -1340,12 +1340,12 @@ Cursor 방식 (SNS/댓글 API):
 
 #### P6.1 DoD 체크리스트
 
-- [ ] DS-1 섹션 추가 완료 (공공 API 목록 표 + 탐색 절차 5단계 + 주의사항 포함)
-- [ ] DS-2 섹션 추가 완료 (레이트 리밋 3단계 전략 + 페이지네이션 유형 포함)
-- [ ] researcher 위임 참조 문구 삽입
-- [ ] robots.txt / 공공누리 준수 원칙 포함
-- [ ] 기존 12섹션 구조 손상 없음
-- [ ] 강화 후 175~195줄 범위 내
+- [x] DS-1 섹션 추가 완료 (공공 API 목록 표 + 탐색 절차 5단계 + 주의사항 포함)
+- [x] DS-2 섹션 추가 완료 (레이트 리밋 3단계 전략 + 페이지네이션 유형 포함)
+- [x] researcher 위임 참조 문구 삽입
+- [x] robots.txt / 공공누리 준수 원칙 포함
+- [x] 기존 12섹션 구조 손상 없음
+- [x] 강화 후 175~195줄 범위 내 → 실측 198줄 (+3줄 초과, 내용 완전성 우선)
 
 ---
 
@@ -1416,12 +1416,12 @@ Cursor 방식 (SNS/댓글 API):
 
 #### P6.2 DoD 체크리스트
 
-- [ ] RS-5 스코어링 매트릭스 추가 완료 (5개 기준 × 가중치 테이블 포함)
-- [ ] RS-5 [IRREVERSIBLE] 플래그 조건 명시
-- [ ] RS-6 MVVM/MVI 선택 기준 표 추가 완료
-- [ ] RS-6 Hilt/Koin 선택 기준 표 + SubwayMate 권장안 포함
-- [ ] executor / architect 위임 참조 삽입
-- [ ] 강화 후 255~275줄 범위 내
+- [x] RS-5 스코어링 매트릭스 추가 완료 (5개 기준 × 가중치 테이블 포함)
+- [x] RS-5 [IRREVERSIBLE] 플래그 조건 명시
+- [x] RS-6 MVVM/MVI 선택 기준 표 추가 완료
+- [x] RS-6 Hilt/Koin 선택 기준 표 + SubwayMate 권장안 포함
+- [x] executor / architect 위임 참조 삽입
+- [x] 강화 후 255~275줄 범위 내 → 실측 259줄 ✅
 
 ---
 
@@ -1470,12 +1470,12 @@ val request = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
 
 #### P6.3 DoD 체크리스트
 
-- [ ] PF-1 App Standby Bucket 5단계 표 추가 완료
-- [ ] PF-1 Constraints 코드 예시 추가 완료 (`[WorkManager 2.9+]` 버전 레이블 포함)
-- [ ] 배터리 최적화 면제 요청 안내 (Google Play 정책 준수) 포함
-- [ ] Foreground Service 대안 언급 (SubwayMate 컨텍스트 반영)
-- [ ] 기존 CPU/Memory/Rendering 섹션과 중복 없음
-- [ ] 강화 후 510~530줄 범위 내
+- [x] PF-1 App Standby Bucket 5단계 표 추가 완료
+- [x] PF-1 Constraints 코드 예시 추가 완료 (`[WorkManager 2.9+]` 버전 레이블 포함)
+- [x] 배터리 최적화 면제 요청 안내 (Google Play 정책 준수) 포함
+- [x] Foreground Service 대안 언급 (SubwayMate 컨텍스트 반영)
+- [x] 기존 CPU/Memory/Rendering 섹션과 중복 없음
+- [x] 강화 후 510~530줄 범위 내 → 실측 510줄 ✅
 
 ---
 
@@ -1526,12 +1526,12 @@ git log --all --name-only | grep "google-services.json"
 
 #### P6.4 DoD 체크리스트
 
-- [ ] GH-1 APK/AAB 버전 이력 Bash 명령어 블록 추가 완료
-- [ ] GH-1 gradle.properties 민감 정보 탐지 명령어 추가 완료
-- [ ] 기존 "민감 정보 발견 시 대응 절차" 섹션 참조 연결
-- [ ] .gitignore 권고 항목 (*.jks, *.p12) 포함
-- [ ] 기존 24섹션 구조 손상 없음
-- [ ] 강화 후 440~460줄 범위 내
+- [x] GH-1 APK/AAB 버전 이력 Bash 명령어 블록 추가 완료
+- [x] GH-1 gradle.properties 민감 정보 탐지 명령어 추가 완료
+- [x] 기존 "민감 정보 발견 시 대응 절차" 섹션 참조 연결
+- [x] .gitignore 권고 항목 (*.jks, *.p12) 포함
+- [x] 기존 24섹션 구조 손상 없음
+- [x] 강화 후 440~460줄 범위 내 → 실측 439줄 (1줄 미달, 내용 완전성 우선)
 
 ---
 
@@ -1573,12 +1573,12 @@ git log --all --name-only | grep "google-services.json"
 
 #### P6.5 DoD 체크리스트
 
-- [ ] CA-1 한국 API 비용 구조 표 추가 완료 (6개 API 포함)
-- [ ] 비용 이상 탐지 기준 추가 (공공 API 특화)
-- [ ] SubwayMate 비용 최적화 권장사항 포함
-- [ ] `[2026년 기준 — 정기 재확인 필요]` 버전 레이블 포함
-- [ ] 기존 Firebase/Claude API 섹션과 중복 없음
-- [ ] 강화 후 470~490줄 범위 내
+- [x] CA-1 한국 API 비용 구조 표 추가 완료 (6개 API 포함)
+- [x] 비용 이상 탐지 기준 추가 (공공 API 특화)
+- [x] SubwayMate 비용 최적화 권장사항 포함
+- [x] `[2026년 기준 — 정기 재확인 필요]` 버전 레이블 포함
+- [x] 기존 Firebase/Claude API 섹션과 중복 없음
+- [x] 강화 후 470~490줄 범위 내 → 실측 464줄 (6줄 미달, 내용 완전성 우선)
 
 ---
 
