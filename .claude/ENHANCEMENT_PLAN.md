@@ -599,13 +599,14 @@ README 마케팅: 사용 전/후 변화를 코드 예시로 증명
 
 #### P4.5 DoD 체크리스트
 
-- [ ] `.claude/agents/copywriter.md` 파일 생성 완료
-- [ ] frontmatter (name/description/model/tools) 형식 준수
-- [ ] CW-1 (기능→혜택→결과 프레임워크) 구현 완료
-- [ ] CW-2 (검색가능/공유가능 분류) 구현 완료
-- [ ] CW-3 (7-Sweep 카피 검토, writer.md W-4 위임 참조 포함) 구현 완료
-- [ ] CW-4 (페이지 타입별 지침 4종) 구현 완료
-- [ ] _STANDARDS.md 4개 필수 섹션 (역할/입력출력/작업방식/제약) 포함 확인
+- [x] `.claude/agents/copywriter.md` 파일 생성 완료
+- [x] frontmatter (name/description/model/tools) 형식 준수
+- [x] CW-1 (기능→혜택→결과 프레임워크) 구현 완료
+- [x] CW-2 (검색가능/공유가능 분류) 구현 완료
+- [x] CW-3 (7-Sweep 카피 검토, writer.md 위임 참조 포함) 구현 완료
+- [x] CW-4 (플랫폼별 지침 4종: 앱 스토어/README/랜딩/이메일) 구현 완료
+- [x] _STANDARDS.md 4개 필수 섹션 (역할/입력출력/작업방식/제약) 포함 확인
+- [x] _registry.json 등록 완료 (total_agents: 30)
 
 ---
 

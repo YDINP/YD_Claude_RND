@@ -1,8 +1,8 @@
 {
   "version": "2.3.0",
-  "last_updated": "2026-02-22",
+  "last_updated": "2026-02-23",
   "standards": "_STANDARDS.md",
-  "total_agents": 29,
+  "total_agents": 30,
   "agents": [
     {
       "name": "agent-manager",
@@ -264,6 +264,15 @@
       "description": "SnapWise 대량 카드 생산 오케스트레이터 — card-scenario 병렬 위임 + mdx-validator 일괄 검증",
       "capabilities": ["batch-card-orchestration", "content-pipeline-management", "parallel-card-generation"],
       "triggers": ["카드 대량 생성", "배치 생성", "카드 일괄 작성", "콘텐츠 대량 생산", "batch", "여러 카드"]
+    },
+    {
+      "name": "copywriter",
+      "tier": "sub",
+      "file": "copywriter.md",
+      "model": "claude-sonnet-4-6",
+      "description": "마케팅 카피, 랜딩 페이지, README 마케팅 섹션 작성 전문가",
+      "capabilities": ["marketing-copy", "app-store-description", "landing-page", "feature-copy", "content-strategy"],
+      "triggers": ["앱 스토어 설명", "마케팅 카피", "랜딩 페이지", "기능 소개 카피", "README 마케팅", "제품 소개 문구", "카피 써줘"]
     }
   ]
 }
