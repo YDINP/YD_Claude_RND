@@ -197,6 +197,67 @@ keyframes { durationMillis = 375; 0.2f at 15 using FastOutLinearInEasing }
 
 > 색상 대비율 판단은 `accessibility` 에이전트 SSOT입니다. → `accessibility` 에이전트에 위임하세요.
 
+### D-3 웹 디자인 레퍼런스 [21st.dev · Framer · Spline 기반]
+
+**21st.dev — 컴포넌트 마켓플레이스 패턴:**
+- **재사용 우선 설계**: 버튼(130+) · 카드(79+) · 모달(37+) 등 카테고리별 분리
+- **다크/라이트 필수 지원**: localStorage + CSS variables 기반 테마 전환, 시스템 설정 연동
+- **AI/Magic UI 트렌드**: AI Chat UI, Hero 섹션, Pricing 블록 등 비즈니스 컴포넌트 참고
+- **스크롤 최적화**: `scrollbar-gutter: stable`로 레이아웃 시프트 방지
+- **기술 스택**: Next.js + React + Tailwind CSS — 개발자 경험 최우선
+
+```css
+/* 21st.dev 스타일 테마 전환 패턴 */
+:root { --bg: #fff; --fg: #111; }
+[data-theme="dark"] { --bg: #0a0a0a; --fg: #fafafa; }
+```
+
+**Framer — 미니멀 프로페셔널 패턴:**
+- **타이포그래피 시스템**: Inter(본문) + Inter Display(헤딩) + Space Grotesk(강조) 조합
+- **폰트 웨이트**: 100~900 전 범위 활용 → 텍스트만으로 시각적 위계 구성
+- **기능성 미니멀리즘**: 불필요한 장식 제거, 콘텐츠가 주인공
+- **성능 중심 UX**: `font-display: swap`, 레이아웃 시프트 방지, 모바일 퍼스트
+- **색상 철학**: 흰 배경 + 다크 텍스트 + 제한된 액센트 컬러 1개
+
+```css
+/* Framer 스타일 타이포그래피 스택 */
+--font-body: 'Inter', sans-serif;
+--font-heading: 'Inter Display', sans-serif;
+--font-accent: 'Space Grotesk', sans-serif;
+```
+
+**Spline — 3D 인터랙티브 패턴:**
+- **3D 히어로 섹션**: WebGL 오브젝트를 랜딩 페이지 핵심 요소로 활용
+- **다크 배경 + 선명한 3D 오브젝트**: 깊이감 있는 배경(#0a0a0f ~ #1a1a2e)에 발광 오브젝트
+- **글래스모피즘**: `backdrop-filter: blur` + 반투명 패널로 공간감 연출
+- **스크롤/호버 트리거 애니메이션**: 사용자 행동에 반응하는 3D 전환
+- **색상 팔레트**: 파스텔 네온(#a78bfa, #38bdf8, #34d399) + 다크 베이스
+
+```css
+/* Spline 스타일 글래스모피즘 */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+```
+
+**레퍼런스 적용 기준:**
+
+| 레퍼런스 | 적용 상황 | 핵심 패턴 |
+|---------|---------|---------|
+| 21st.dev | 컴포넌트 시스템 설계, 다크모드 구현 | CSS variables + localStorage 테마 |
+| Framer | 랜딩 페이지, 마케팅 페이지 타이포그래피 | Inter 패밀리 + 폰트 웨이트 위계 |
+| Spline | 히어로 섹션, 몰입형 인터랙션 페이지 | 글래스모피즘 + 3D 오브젝트 |
+
+**금지 패턴 (레퍼런스 위반):**
+```
+□ 단일 폰트 + 동일 웨이트 → 위계 없는 평면 텍스트 (Framer 위반)
+□ 다크모드 미지원 컴포넌트 → 테마 일관성 파괴 (21st.dev 위반)
+□ 배경과 낮은 대비의 3D 요소 → 시각 정보 손실 (Spline 위반)
+□ 과도한 글래스모피즘 중첩 → 가독성 저하 (Spline 남용)
+```
+
 ---
 
 ## 제약 사항
