@@ -48,6 +48,9 @@ P4 (선택적 — 마케팅·콘텐츠·디자인 품질 강화):
 
 P5 (선택적 — Android 인프라 & 클라이언트 통합 강화):
   api-designer.md / vision.md / db-expert.md / devops.md / localizer.md
+
+P6 (선택적 — 분석 지능 강화: 의사결정 품질 + 데이터 수집 전문화):
+  data-scout.md / reasoner.md / performance.md / git-historian.md / cost-analyzer.md
 ```
 
 ### 방어 원칙 요약
@@ -1233,10 +1236,366 @@ D:\park\YD_Claude_RND\.claude\agents\db-expert.md      (444줄 기준 — P5.3 �
 D:\park\YD_Claude_RND\.claude\agents\devops.md         (606줄 기준 — P5.4 대상)
 D:\park\YD_Claude_RND\.claude\agents\localizer.md      (469줄 기준 — P5.5 대상)
 D:\park\YD_Claude_RND\.claude\agents\_STANDARDS.md     (194줄 기준, 수정 금지)
+D:\park\YD_Claude_RND\.claude\agents\data-scout.md     (135줄 기준 — P6.1 대상)
+D:\park\YD_Claude_RND\.claude\agents\reasoner.md       (209줄 기준 — P6.2 대상)
+D:\park\YD_Claude_RND\.claude\agents\performance.md    (476줄 기준 — P6.3 대상)
+D:\park\YD_Claude_RND\.claude\agents\git-historian.md  (404줄 기준 — P6.4 대상)
+D:\park\YD_Claude_RND\.claude\agents\cost-analyzer.md  (438줄 기준 — P6.5 대상)
 
 # 이 계획서
 D:\park\YD_Claude_RND\.claude\ENHANCEMENT_PLAN.md
 ```
+
+---
+
+## P6. 에이전트 강화 계획 (분석 지능 강화 — 의사결정 품질 + 데이터 수집 전문화)
+
+**강화 테마**: 추론·비용·성능·이력·데이터 수집 에이전트의 Android 및 한국 생태계 특화 패턴 보강
+
+**대상 에이전트 선정 근거**:
+- data-scout(135줄) — 가장 경량, 한국 공공데이터 API 탐색 패턴 전무
+- reasoner(209줄) — 정량적 트레이드오프 스코어링 미흡, Android 결정 패턴 없음
+- performance(476줄) — 배터리 최적화(WorkManager/Doze) 패턴 미존재
+- git-historian(404줄) — Android 릴리즈 태그 이력 분석 패턴 미존재
+- cost-analyzer(438줄) — 한국 공공/상용 API 비용 구조 미존재
+
+---
+
+### P6.1 data-scout.md — 한국 공공데이터 탐색 + 레이트 리밋 처리
+
+**현재 상태**: 135줄, 12섹션
+**강화 후 목표**: 175~195줄
+**강화 방침**: 한국 공공데이터 포털 API 탐색 워크플로우 + 크롤링 제약 처리 패턴 추가
+
+#### DS-1: 한국 공공데이터 포털 탐색 패턴 [data.go.kr, 서울 열린데이터광장]
+
+**추가 위치**: 기존 "학술 논문 탐색" 섹션 다음
+
+```markdown
+### DS-1 한국 공공데이터 포털 탐색 패턴
+
+**주요 공공 API 목록 (SubwayMate/지하철 관련 포함):**
+
+| API 제공처 | 데이터 | 포털 | 일일 한도 |
+|-----------|------|------|---------|
+| 서울 열린데이터광장 | 지하철 실시간 위치 | data.seoul.go.kr | 10,000건 |
+| 공공데이터포털 | 기상청 단기예보 | data.go.kr | 10,000건 |
+| 공공데이터포털 | 국토교통부 버스/지하철 | data.go.kr | 5,000건 |
+| 카카오 API | 지도/경로 | developers.kakao.com | 300,000건 |
+| 네이버 클라우드 | 지도/장소 | ncloud.com | 100,000건/월 |
+
+**탐색 절차:**
+```
+1. 키워드 검색: data.go.kr 또는 data.seoul.go.kr에서 API 명칭 확인
+2. 샘플 응답 확인: 인증키 없이 조회 가능한 미리보기 활용
+3. 응답 형태 확인: XML 기본 / JSON 선택 가능 여부 확인
+4. 변경 이력 확인: 해당 API의 "공지사항" 탭 — 응답 필드 변경 공지 존재 여부
+5. 신뢰도 평가: 최근 업데이트 날짜 확인 (6개월 이상 미업데이트 시 → [LOW 신뢰도])
+```
+
+**공공 API 응답 형태 주의사항:**
+- 한국 공공 API는 필드명 한글/camelCase 혼용 → Retrofit `@SerializedName` 매핑 필수
+- `resultCode: "00"` (성공) 외 오류 코드 목록을 API 문서에서 반드시 확인
+- API 스펙 최신 여부 조사 → `researcher` 에이전트 위임
+```
+
+#### DS-2: 레이트 리밋 + 페이지네이션 처리 패턴
+
+**추가 위치**: DS-1 다음
+
+```markdown
+### DS-2 레이트 리밋 + 페이지네이션 처리 패턴
+
+**레이트 리밋 대응 전략:**
+```
+429 응답 수신 시:
+  1단계: Retry-After 헤더 확인 → 지정 시간 대기
+  2단계: 헤더 없음 → exponential backoff (1s → 2s → 4s, 최대 3회)
+  3단계: 3회 모두 실패 → 수집 중단 + 결과 부분 반환 명시
+
+일일 한도 초과 방지:
+  - 세션 내 API 호출 카운터 유지
+  - 한도의 80% 도달 시 → 조사 종료 + 사용자 고지
+```
+
+**페이지네이션 유형별 처리:**
+```
+Offset 방식 (공공데이터 표준):
+  numOfRows=100&pageNo=1 → pageNo=2 → ... → totalCount로 종료 판단
+
+Cursor 방식 (SNS/댓글 API):
+  after={cursor_token} → 응답에 next_cursor 없으면 종료
+
+한도 내 전체 수집 전략:
+  전체 건수 = totalCount (1페이지 응답에서 추출)
+  예상 총 호출 수 = ceil(totalCount / numOfRows)
+  일일 한도 초과 예상 시 → 우선순위 높은 페이지만 수집
+```
+
+**준수 원칙 (robots.txt + 이용약관):**
+- robots.txt 조회 → 크롤링 허용 경로 확인 후 진행
+- 공공 API: 상업적 목적 허용 여부 확인 (공공누리 1~4유형 구분)
+- 자동 크롤링 시 1초 이상 간격 유지 (서버 부하 방지)
+```
+
+#### P6.1 DoD 체크리스트
+
+- [ ] DS-1 섹션 추가 완료 (공공 API 목록 표 + 탐색 절차 5단계 + 주의사항 포함)
+- [ ] DS-2 섹션 추가 완료 (레이트 리밋 3단계 전략 + 페이지네이션 유형 포함)
+- [ ] researcher 위임 참조 문구 삽입
+- [ ] robots.txt / 공공누리 준수 원칙 포함
+- [ ] 기존 12섹션 구조 손상 없음
+- [ ] 강화 후 175~195줄 범위 내
+
+---
+
+### P6.2 reasoner.md — 구조화 트레이드오프 스코어링 + Android 결정 패턴
+
+**현재 상태**: 209줄, 14섹션
+**강화 후 목표**: 255~275줄
+**강화 방침**: 정량적 의사결정 매트릭스 + Android 아키텍처 결정 패턴 추가
+
+#### RS-5: 구조화 트레이드오프 스코어링 매트릭스
+
+**추가 위치**: 기존 "설계 결정 분석" 섹션 다음
+
+```markdown
+### RS-5 구조화 트레이드오프 스코어링 매트릭스
+
+**적용 상황:** 2개 이상 기술 옵션 중 하나를 선택해야 할 때
+
+**스코어링 표 (가중 합계 최고점 → 추천):**
+
+| 평가 기준 | 가중치 | 옵션 A (1~5) | 옵션 B (1~5) | 옵션 C (1~5) |
+|---------|------|------------|------------|------------|
+| 성능/처리 속도 | 0.25 | {점수} | {점수} | {점수} |
+| 유지보수 용이성 | 0.25 | {점수} | {점수} | {점수} |
+| 팀 학습 비용 | 0.20 | {점수} | {점수} | {점수} |
+| 커뮤니티/생태계 | 0.15 | {점수} | {점수} | {점수} |
+| 테스트 가능성 | 0.15 | {점수} | {점수} | {점수} |
+| **가중 합계** | 1.00 | {합계} | {합계} | {합계} |
+
+**해석 기준:**
+```
+가중 합계 차이 ≥ 0.5  → 명확한 권장 옵션 존재
+가중 합계 차이 < 0.5  → 컨텍스트 의존 (팀 선호도 / 기존 코드베이스 반영)
+```
+
+**[IRREVERSIBLE] 플래그 조건:** 점수 1위 옵션이 DB 마이그레이션, 아키텍처 전환,
+외부 API 종속 결정을 포함할 경우 → 반드시 롤백 계획 명시
+```
+
+#### RS-6: Android 아키텍처 결정 가이드
+
+**추가 위치**: RS-5 다음
+
+```markdown
+### RS-6 Android 아키텍처 결정 가이드
+
+**MVVM vs MVI 선택 기준:**
+
+| 기준 | MVVM 권장 | MVI 권장 |
+|-----|---------|--------|
+| 상태 복잡도 | 단순 (3개 이하 UI 상태) | 복잡 (다중 상태/이벤트 조합) |
+| 팀 규모 | 소규모 (1~3명) | 중·대규모 (4명+) |
+| 단방향 데이터 흐름 강제 여부 | 선택 | 필수 |
+| Kotlin 숙련도 | 중급 이상 | 고급 (Sealed class 적극 활용) |
+
+**Hilt vs Koin 선택 기준:**
+
+| 기준 | Hilt 권장 | Koin 권장 |
+|-----|---------|---------|
+| Android 표준 준수 | Google 공식 권장 | Kotlin 순수 환경 |
+| 컴파일 타임 검증 | ✅ (KSP 기반) | ❌ (런타임 오류) |
+| Kotlin Multiplatform | 미지원 | ✅ (KMP 지원) |
+| 현재 프로젝트(SubwayMate) | **Hilt 유지 권장** | — |
+
+> ※ reasoner는 아키텍처 결정 권고만 수행.
+> 실제 구현 → `executor` 에이전트 위임, 설계 검토 → `architect` 에이전트 위임.
+```
+
+#### P6.2 DoD 체크리스트
+
+- [ ] RS-5 스코어링 매트릭스 추가 완료 (5개 기준 × 가중치 테이블 포함)
+- [ ] RS-5 [IRREVERSIBLE] 플래그 조건 명시
+- [ ] RS-6 MVVM/MVI 선택 기준 표 추가 완료
+- [ ] RS-6 Hilt/Koin 선택 기준 표 + SubwayMate 권장안 포함
+- [ ] executor / architect 위임 참조 삽입
+- [ ] 강화 후 255~275줄 범위 내
+
+---
+
+### P6.3 performance.md — WorkManager/Doze 배터리 최적화 패턴
+
+**현재 상태**: 476줄, 25섹션
+**강화 후 목표**: 510~530줄
+**강화 방침**: WorkManager + Android Doze/App Standby Bucket 배터리 최적화 패턴 추가 (기존 CPU/Memory/Rendering과 독립 영역)
+
+#### PF-1: WorkManager + Doze 모드 배터리 최적화 [WorkManager 2.9+, Android API 28+]
+
+**추가 위치**: 기존 마지막 전문 섹션 다음
+
+```markdown
+### PF-1 WorkManager + Doze 배터리 최적화 패턴 [WorkManager 2.9+, Android API 28+]
+
+**App Standby Bucket 등급 (배경 작업 실행 빈도에 영향):**
+
+| Bucket | 설명 | WorkManager 실행 빈도 |
+|--------|-----|-------------------|
+| ACTIVE | 최근 사용 중 | 제한 없음 |
+| WORKING_SET | 규칙적 사용 | 2시간에 최대 1회 |
+| FREQUENT | 간헐적 사용 | 8시간에 최대 1회 |
+| RARE | 거의 미사용 | 24시간에 최대 1회 |
+| RESTRICTED | 비정상 배터리 소모 | 매우 제한적 |
+
+**권장 Constraints 설정 [WorkManager 2.9+]:**
+```kotlin
+val constraints = Constraints.Builder()
+    .setRequiredNetworkType(NetworkType.CONNECTED)  // 네트워크 연결 시만 실행
+    .setRequiresBatteryNotLow(true)                 // 배터리 부족 시 건너뜀
+    .setRequiresDeviceIdle(false)                   // Doze 진입 시 대기 여부
+    .build()
+
+val request = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
+    .setConstraints(constraints)
+    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+    .build()
+```
+
+**배터리 최적화 면제 요청 안내:**
+- "배터리 최적화 제외" 요청은 명확한 이유 필요 (Google Play 정책 — 과도한 요청 시 리젝)
+- 실시간 위치 추적류(SubwayMate): Foreground Service + 알림 패턴 권장
+- 배터리 소모 측정 및 프로파일링 → 기존 프로파일링 섹션 참조
+```
+
+#### P6.3 DoD 체크리스트
+
+- [ ] PF-1 App Standby Bucket 5단계 표 추가 완료
+- [ ] PF-1 Constraints 코드 예시 추가 완료 (`[WorkManager 2.9+]` 버전 레이블 포함)
+- [ ] 배터리 최적화 면제 요청 안내 (Google Play 정책 준수) 포함
+- [ ] Foreground Service 대안 언급 (SubwayMate 컨텍스트 반영)
+- [ ] 기존 CPU/Memory/Rendering 섹션과 중복 없음
+- [ ] 강화 후 510~530줄 범위 내
+
+---
+
+### P6.4 git-historian.md — Android 릴리즈 태그 이력 분석
+
+**현재 상태**: 404줄, 24섹션
+**강화 후 목표**: 440~460줄
+**강화 방침**: Android APK/AAB 릴리즈 태그 이력 분석 + gradle.properties 민감 정보 탐지 추가
+
+#### GH-1: Android 릴리즈 태그 이력 분석 패턴
+
+**추가 위치**: 기존 "민감 정보 커밋 탐지" 섹션 다음
+
+```markdown
+### GH-1 Android 릴리즈 태그 이력 분석 패턴
+
+**APK/AAB 버전 이력 추출:**
+```bash
+# 릴리즈 태그 목록 (최신순)
+git tag -l "v*" --sort=-v:refname | head -20
+
+# 버전 간 변경사항 요약 (릴리즈 노트 자동 추출)
+git log v1.0.0..v2.0.0 --format="- %s (%h)" --no-merges \
+  | grep -E "^- (feat|fix|perf)"
+
+# 특정 버전의 빌드 설정 확인
+git show v1.5.0:app/build.gradle | grep -E "(versionCode|versionName)"
+```
+
+**gradle.properties 민감 정보 탐지 (Android 서명 정보):**
+```bash
+# Keystore 관련 커밋 이력 탐지
+git log --all -p -- gradle.properties \
+  | grep -iE "(keystore|keystorePassword|keyAlias|storePassword)"
+
+# 서명 관련 파일 커밋 여부 확인 (*.jks, *.p12)
+git log --all --name-only | grep -iE "(signing|keystore|\.jks|\.p12)"
+
+# google-services.json 이력 (Firebase API 키 노출 위험)
+git log --all --name-only | grep "google-services.json"
+```
+
+**발견 시 대응:**
+- `storePassword`, `keyPassword` 값 노출 → 즉시 Keystore 재생성 권고
+- `.gitignore`에 `*.jks`, `*.p12`, `signing.properties` 추가 권고
+- 이력 정리 절차 → 기존 "민감 정보 발견 시 대응 절차" 섹션 참조
+```
+
+#### P6.4 DoD 체크리스트
+
+- [ ] GH-1 APK/AAB 버전 이력 Bash 명령어 블록 추가 완료
+- [ ] GH-1 gradle.properties 민감 정보 탐지 명령어 추가 완료
+- [ ] 기존 "민감 정보 발견 시 대응 절차" 섹션 참조 연결
+- [ ] .gitignore 권고 항목 (*.jks, *.p12) 포함
+- [ ] 기존 24섹션 구조 손상 없음
+- [ ] 강화 후 440~460줄 범위 내
+
+---
+
+### P6.5 cost-analyzer.md — 한국 공공/상용 API 비용 구조
+
+**현재 상태**: 438줄, 30섹션
+**강화 후 목표**: 470~490줄
+**강화 방침**: Android 앱 개발 시 자주 사용하는 한국 지도/공공 API의 무료 한도 및 비용 구조 추가
+
+#### CA-1: 한국 공공/상용 API 비용 구조 [2026년 기준 — 정기 재확인 필요]
+
+**추가 위치**: 기존 마지막 비용 분석 섹션 다음
+
+```markdown
+### CA-1 한국 공공/상용 API 비용 구조 [2026년 기준 — 정기 재확인 필요]
+
+**주요 API 무료 한도 및 과금 구조:**
+
+| API 제공처 | 서비스 | 무료 한도 | 초과 과금 | 주의사항 |
+|-----------|------|---------|---------|---------|
+| **카카오맵** | 지도/경로 | 일 300,000건 | 10만건당 1,800원 | 앱 등록 필수 |
+| **네이버 지도** | 지도/장소 | 월 100,000건 | 10만건당 5,000원 | NCP 콘솔 관리 |
+| **공공데이터포털** | 지하철/기상 등 | 일 10,000건 | 무료 (한도 있음) | API 별도 신청 |
+| **서울 열린데이터광장** | 지하철 실시간 | 일 10,000건 | 무료 | 초당 10건 제한 |
+| **FCM (Firebase)** | 푸시 알림 | 무제한 | 없음 | 데이터 메시지 기준 |
+| **기상청 공공 API** | 날씨 예보 | 일 10,000건 | 무료 | 응답 XML 파싱 필요 |
+
+**비용 이상 탐지 기준 (공공 API 특화):**
+```
+일일 호출 수 > 한도의 80% 도달 → 캐시 레이어 추가 검토
+연속 429 응답 → 일일 한도 초과 신호 → 호출 패턴 최적화
+```
+
+**SubwayMate 비용 최적화 권장:**
+- 서울 열린데이터광장 API: 1분 캐시 적용 → 동일 노선 중복 호출 방지
+- FCM: 데이터 메시지 사용 (notification 메시지는 앱 포그라운드 처리 비용 발생)
+- 지도 API 최소화: 지하철 노선 정적 좌표를 앱 내 번들 포함 → 지도 API 호출 절감
+```
+
+#### P6.5 DoD 체크리스트
+
+- [ ] CA-1 한국 API 비용 구조 표 추가 완료 (6개 API 포함)
+- [ ] 비용 이상 탐지 기준 추가 (공공 API 특화)
+- [ ] SubwayMate 비용 최적화 권장사항 포함
+- [ ] `[2026년 기준 — 정기 재확인 필요]` 버전 레이블 포함
+- [ ] 기존 Firebase/Claude API 섹션과 중복 없음
+- [ ] 강화 후 470~490줄 범위 내
+
+---
+
+### P6 실행 전략
+
+```
+P6 (동시 실행 가능 — 파일 경계 독립):
+  data-scout.md    → DS-1, DS-2 추가
+  reasoner.md      → RS-5, RS-6 추가
+  performance.md   → PF-1 추가
+  git-historian.md → GH-1 추가
+  cost-analyzer.md → CA-1 추가
+```
+
+**병렬 실행 가능 조건**: 5개 파일 모두 독립적 — 파일 경계 충돌 없음
+**실행 명령**: `P6 강화 실제 적용해줘. 워크트리병렬처리로 진행`
+**검증**: code-reviewer(sonnet) × 5개 파일 순차 검토
 
 ---
 
