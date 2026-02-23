@@ -205,6 +205,41 @@ grep -r -E "(api_key|secret|password)\s*=\s*['\"][^'\"]{8,}" --include="*.kt" --
 5. .gitignore에 해당 파일 추가 권고
 ```
 
+### GH-1 Android 릴리즈 태그 이력 분석 패턴
+
+**APK/AAB 버전 이력 추출:**
+
+```bash
+# 릴리즈 태그 목록 (최신순)
+git tag -l "v*" --sort=-v:refname | head -20
+
+# 버전 간 변경사항 요약 (릴리즈 노트 자동 추출)
+git log v1.0.0..v2.0.0 --format="- %s (%h)" --no-merges \
+  | grep -E "^- (feat|fix|perf)"
+
+# 특정 버전의 빌드 설정 확인
+git show v1.5.0:app/build.gradle | grep -E "(versionCode|versionName)"
+```
+
+**gradle.properties 민감 정보 탐지 (Android 서명 정보):**
+
+```bash
+# Keystore 관련 커밋 이력 탐지
+git log --all -p -- gradle.properties \
+  | grep -iE "(keystore|keystorePassword|keyAlias|storePassword)"
+
+# 서명 관련 파일 커밋 여부 확인 (*.jks, *.p12)
+git log --all --name-only | grep -iE "(signing|keystore|\.jks|\.p12)"
+
+# google-services.json 이력 (Firebase API 키 노출 위험)
+git log --all --name-only | grep "google-services.json"
+```
+
+**발견 시 대응:**
+- `storePassword`, `keyPassword` 값 노출 → 즉시 Keystore 재생성 권고
+- `.gitignore`에 `*.jks`, `*.p12`, `signing.properties` 추가 권고
+- 이력 정리 절차 → 기존 "민감 정보 발견 시 대응 절차" 섹션 참조
+
 ### Conventional Commits 컨벤션 준수 분석
 
 #### 컨벤션 기준

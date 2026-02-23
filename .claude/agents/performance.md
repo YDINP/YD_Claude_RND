@@ -466,6 +466,40 @@ ROI < 5   → 백로그 (시간 여유 시 처리)
 
 ---
 
+### PF-1 WorkManager + Doze 배터리 최적화 패턴 [WorkManager 2.9+, Android API 28+]
+
+**App Standby Bucket 등급 (배경 작업 실행 빈도에 영향):**
+
+| Bucket | 설명 | WorkManager 실행 빈도 |
+|--------|-----|-------------------|
+| ACTIVE | 최근 사용 중 | 제한 없음 |
+| WORKING_SET | 규칙적 사용 | 2시간에 최대 1회 |
+| FREQUENT | 간헐적 사용 | 8시간에 최대 1회 |
+| RARE | 거의 미사용 | 24시간에 최대 1회 |
+| RESTRICTED | 비정상 배터리 소모 | 매우 제한적 |
+
+**권장 Constraints 설정 [WorkManager 2.9+]:**
+
+```kotlin
+val constraints = Constraints.Builder()
+    .setRequiredNetworkType(NetworkType.CONNECTED)  // 네트워크 연결 시만 실행
+    .setRequiresBatteryNotLow(true)                 // 배터리 부족 시 건너뜀
+    .setRequiresDeviceIdle(false)                   // Doze 진입 시 대기 여부
+    .build()
+
+val request = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
+    .setConstraints(constraints)
+    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+    .build()
+```
+
+**배터리 최적화 면제 요청 안내:**
+- "배터리 최적화 제외" 요청은 명확한 이유 필요 (Google Play 정책 — 과도한 요청 시 리젝)
+- 실시간 위치 추적류(SubwayMate): Foreground Service + 알림 패턴 권장
+- 배터리 소모 측정 및 프로파일링 → 기존 프로파일링 섹션 참조
+
+---
+
 ## 제약 사항
 
 - 실제 코드 수정은 `executor`에 위임 (분석만 담당)
