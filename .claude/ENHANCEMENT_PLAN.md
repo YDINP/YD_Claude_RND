@@ -1600,3 +1600,628 @@ P6 (동시 실행 가능 — 파일 경계 독립):
 ---
 
 *이 문서는 2026-02-23 사전 조사 기반으로 작성되었습니다. 실제 강화 실행 전 Read 툴로 현재 줄 수를 재확인하세요.*
+
+---
+
+## P7. 에이전트 강화 계획 (품질 게이트 & 릴리즈 안전망 강화)
+
+**테마 선정 근거**: P4(콘텐츠 품질)→P5(인프라 통합)→P6(분석 지능) 흐름의 완결점으로, 코드가 프로덕션에 도달하기 직전 단계(QA 검증·코드 리뷰·빌드·보안 감사·실행)의 Android 특화 안전망을 강화합니다. SubwayMate의 위치 권한·백그라운드 실행·네트워크 상태 변화라는 고위험 경로를 직접 보호합니다.
+
+**대상 에이전트 5개:**
+
+| 순서 | 파일 | 강화 테마 |
+|-----|-----|---------|
+| P7.1 | qa-tester.md | Android 백그라운드 & 권한 테스트 패턴 |
+| P7.2 | code-reviewer.md | Flow/StateFlow 수집 안티패턴 + 메모리 누수 탐지 |
+| P7.3 | build-fixer.md | Android Release 빌드 실패 진단 트리 |
+| P7.4 | security.md | 위치정보 최소 권한 감사 + 포그라운드 서비스 보안 |
+| P7.5 | executor.md | WorkManager/AlarmManager 구현 표준 패턴 |
+
+---
+
+### P7.1 qa-tester.md — Android 백그라운드 & 권한 테스트 패턴
+
+**현재 상태**: 197줄
+**강화 후 목표**: 235~250줄
+**강화 방침**: WorkManager 단위 테스트 패턴(Q-6)과 위치 권한 시나리오 테스트(Q-7) 추가. 기존 마지막 Android 패턴 섹션 다음에 삽입.
+
+#### QT-1: WorkManager 단위 테스트 패턴 [WorkManager 2.9+]
+
+**추가 위치**: 기존 마지막 섹션(Q-5) 다음
+
+```markdown
+### Q-6 WorkManager 단위 테스트 패턴 [WorkManager 2.9+]
+
+**의존성 (테스트 전용):**
+```kotlin
+// build.gradle.kts
+androidTestImplementation("androidx.work:work-testing:2.9.0")
+testImplementation("androidx.work:work-testing:2.9.0")
+```
+
+**표준 테스트 패턴:**
+```kotlin
+@RunWith(AndroidJUnit4::class)
+class ArrivalNotifyWorkerTest {
+
+    private lateinit var context: Context
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        val config = Configuration.Builder()
+            .setMinimumLoggingLevel(Log.DEBUG)
+            .setExecutor(SynchronousExecutor())   // ✅ 동기 실행 — flaky 방지
+            .build()
+        WorkManagerTestInitHelper.initializeTestWorkManager(context, config)
+    }
+
+    @Test
+    fun `도착 알림 Worker — 성공 시 Result_success 반환`() = runTest {
+        val worker = TestListenableWorkerBuilder<ArrivalNotifyWorker>(context)
+            .setInputData(workDataOf("stationId" to "1234"))
+            .build()
+
+        val result = worker.doWork()
+
+        assertTrue(result is ListenableWorker.Result.Success)
+    }
+
+    @Test
+    fun `도착 알림 Worker — 네트워크 오류 시 Result_retry 반환`() = runTest {
+        val worker = TestListenableWorkerBuilder<ArrivalNotifyWorker>(context)
+            .setInputData(workDataOf("stationId" to "INVALID"))
+            .build()
+
+        val result = worker.doWork()
+
+        assertTrue(result is ListenableWorker.Result.Retry)
+    }
+}
+```
+
+**주기 실행 Worker 검증 (TestDriver 활용):**
+```kotlin
+@Test
+fun `주기적 Work 실행 — 제약 충족 시 실행됨`() {
+    val testDriver = WorkManagerTestInitHelper.getTestDriver(context)!!
+    val request = PeriodicWorkRequestBuilder<ArrivalNotifyWorker>(15, TimeUnit.MINUTES)
+        .setConstraints(Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build())
+        .build()
+
+    WorkManager.getInstance(context).enqueue(request)
+    testDriver.setPeriodDelayMet(request.id)
+    testDriver.setAllConstraintsMet(request.id)
+
+    val workInfo = WorkManager.getInstance(context)
+        .getWorkInfoById(request.id).get()
+    assertEquals(WorkInfo.State.ENQUEUED, workInfo?.state)
+}
+```
+
+> WorkManager 빌드 오류 → `build-fixer` 에이전트, Worker 아키텍처 설계 → `architect` 에이전트 A-2 참조
+```
+
+#### QT-2: 위치 권한 시나리오 테스트 [Android API 29+]
+
+**추가 위치**: QT-1(Q-6) 다음
+
+```markdown
+### Q-7 위치 권한 시나리오 테스트 [Android API 29+]
+
+**시나리오 분류 (P0 우선):**
+
+| 시나리오 | 우선순위 | 기대 동작 |
+|---------|---------|---------|
+| 정밀 위치 허용 (`ACCESS_FINE_LOCATION`) | P0 | 실시간 알림 정상 동작 |
+| 대략 위치만 허용 (`ACCESS_COARSE_LOCATION`) | P0 | 알림 정확도 저하 안내 + 제한 동작 |
+| 권한 거부 (한 번) | P1 | 권한 재요청 다이얼로그 표시 |
+| 권한 영구 거부 (`shouldShowRationale=false`) | P1 | 설정 화면 이동 안내 |
+| 백그라운드 위치 (`ACCESS_BACKGROUND_LOCATION`) | P1 | Android 10+ 별도 승인 유도 |
+
+**ViewModel 권한 상태 테스트 (MockK + runTest):**
+```kotlin
+@Test
+fun `위치 권한 거부 시 — uiState가 PermissionRequired로 전환`() = runTest {
+    coEvery { locationPermissionChecker.hasPermission() } returns false
+
+    viewModel.checkPermission()
+    advanceUntilIdle()
+
+    assertEquals(MainUiState.PermissionRequired, viewModel.uiState.value)
+}
+
+@Test
+fun `위치 권한 허용 시 — 실시간 데이터 로딩 시작`() = runTest {
+    coEvery { locationPermissionChecker.hasPermission() } returns true
+    coEvery { repository.getArrivals(any()) } returns
+        Result.success(listOf(fakeArrivalInfo))
+
+    viewModel.checkPermission()
+    advanceUntilIdle()
+
+    assertIs<MainUiState.Success>(viewModel.uiState.value)
+}
+```
+
+**UI 테스트 (Compose Testing — 권한 다이얼로그 표시 여부):**
+```kotlin
+@Test
+fun `권한_거부_상태에서_안내_텍스트_표시됨`() {
+    composeTestRule.setContent {
+        MainScreen(uiState = MainUiState.PermissionRequired)
+    }
+    composeTestRule
+        .onNodeWithText("위치 권한이 필요합니다")
+        .assertIsDisplayed()
+}
+```
+
+> 위치 권한 보안 정책 기준 → `security` 에이전트 SE-5 참조
+```
+
+#### P7.1 DoD 체크리스트
+
+- [ ] Q-6 WorkManager 테스트 패턴 (TestListenableWorkerBuilder + TestDriver 포함) 추가
+- [ ] Q-7 위치 권한 5개 시나리오 표 + ViewModel/UI 테스트 예시 추가
+- [ ] 기존 Q-1~Q-5 섹션 손상 없음
+- [ ] `build-fixer`, `architect`, `security` 위임 참조 문구 삽입
+- [ ] 강화 후 235~250줄 범위 내
+
+---
+
+### P7.2 code-reviewer.md — Flow/StateFlow 수집 안티패턴 + 메모리 누수 탐지
+
+**현재 상태**: 195줄
+**강화 후 목표**: 230~245줄
+**강화 방침**: Flow 수집 안티패턴 탐지(R-5)와 Fragment/ViewModel 메모리 누수 탐지(R-6) 추가. 기존 마지막 섹션(R-4) 다음에 삽입.
+
+#### CR-1: Flow/StateFlow 수집 안티패턴 탐지 [Coroutines 1.7+]
+
+**추가 위치**: 기존 마지막 섹션(R-4 MVVM 레이어 경계 위반 탐지) 다음
+
+```markdown
+### R-5 Flow/StateFlow 수집 안티패턴 탐지 [Coroutines 1.7+]
+
+탐지 시 [HIGH] 분류:
+
+```
+□ lifecycleScope.launch { flow.collect {} }
+  — Lifecycle.State.STARTED 미지정 → 백그라운드에서도 수집 계속
+  → 수정: repeatOnLifecycle(Lifecycle.State.STARTED) { flow.collect {} }
+
+□ collectAsState() in Compose
+  — 화면 백그라운드 이동 후에도 upstream 유지
+  → 수정: collectAsStateWithLifecycle() 사용 [Lifecycle 2.6+]
+
+□ viewModelScope.launch { stateFlow.collect {} } in ViewModel
+  — StateFlow는 collect 없이 .value 직접 접근 또는 update {} 사용 가능
+  → 불필요한 코루틴 낭비
+```
+
+**탐지 Grep 패턴:**
+```bash
+# lifecycleScope 내 collect 미보호 패턴
+grep -rn "lifecycleScope.launch" --include="*.kt" | grep -v "repeatOnLifecycle"
+
+# collectAsState 사용 탐지 (Compose 파일)
+grep -rn "\.collectAsState()" --include="*.kt"
+```
+
+> Flow 수집 패턴 수정은 → `executor` 에이전트 호출
+> Flow 수집 성능 측정은 → `performance` 에이전트 호출
+```
+
+#### CR-2: Fragment/ViewModel 메모리 누수 탐지 [Android API 33+]
+
+**추가 위치**: CR-1(R-5) 다음
+
+```markdown
+### R-6 Fragment/ViewModel 메모리 누수 탐지 [Android API 33+]
+
+탐지 시 [HIGH] 분류:
+
+```
+□ Fragment에서 View Binding 미해제
+  — onDestroyView()에서 _binding = null 미설정
+  — 탐지: ViewBinding 선언 파일에서 onDestroyView override 부재
+
+□ ViewModel에서 Activity/Fragment Context 직접 참조
+  — Activity/Fragment context를 ViewModel 멤버 변수로 저장
+  — 탐지: class *ViewModel 내 val.*Context|val.*Activity|val.*Fragment 패턴
+
+□ Handler/Runnable 미취소
+  — onStop/onDestroy에서 removeCallbacksAndMessages(null) 미호출
+  — 탐지: Handler() 생성 후 onDestroy에서 removeCallbacks 부재 패턴
+
+□ companion object 내 Context 참조
+  — 정적 컨텍스트 참조 → GC 불가
+```
+
+**탐지 Grep 패턴:**
+```bash
+# ViewBinding 미해제 탐지
+grep -rn "ViewBinding" --include="*.kt" -l | xargs grep -L "onDestroyView"
+
+# ViewModel 내 Context/Activity 직접 참조
+grep -rn "class.*ViewModel" --include="*.kt" -A 20 \
+  | grep -E "val.*Context|val.*Activity|val.*Fragment"
+```
+
+탐지 시 [MEDIUM] 분류:
+```
+□ 익명 inner class에서 외부 클래스 암묵적 참조 유지
+  — setOnClickListener { viewModel.doSomething() }가 긴 수명 객체에 등록된 경우
+```
+
+> 메모리 누수 측정은 → `performance` 에이전트 호출
+> 누수 수정 구현은 → `executor` 에이전트 호출
+```
+
+#### P7.2 DoD 체크리스트
+
+- [ ] R-5 Flow 수집 안티패턴 3항목 + Grep 탐지 패턴 추가
+- [ ] R-6 메모리 누수 탐지 [HIGH] 4항목 + [MEDIUM] 1항목 + Grep 패턴 추가
+- [ ] `executor`, `performance` 위임 참조 문구 삽입
+- [ ] 기존 R-1~R-4 섹션 손상 없음, Write/Edit 툴 금지 원칙 유지
+- [ ] 강화 후 230~245줄 범위 내
+
+---
+
+### P7.3 build-fixer.md — Android Release 빌드 실패 진단 트리
+
+**현재 상태**: 174줄
+**강화 후 목표**: 210~225줄
+**강화 방침**: Release 빌드 전용 실패 진단 트리(B-6)와 Gradle Task 캐시 무효화 패턴(B-7) 추가. 기존 마지막 섹션(B-5) 다음에 삽입.
+
+#### BF-1: Release 빌드 전용 실패 진단 트리 [AGP 8.x+, R8]
+
+**추가 위치**: 기존 마지막 섹션(B-5 ProGuard/R8) 다음
+
+```markdown
+### B-6 Release 빌드 전용 실패 진단 트리 [AGP 8.x+, R8]
+
+Debug 빌드는 통과하지만 Release 빌드만 실패하는 경우 아래 순서로 진단합니다:
+
+```
+Release 빌드 실패
+│
+├─ [ClassNotFoundException / NoSuchMethodError 런타임]
+│   → R8 규칙 미포함 → proguard-rules.pro 확인
+│   → 해당 클래스/메서드에 -keep 규칙 추가 (B-5 Hilt/Retrofit/Room 기본 규칙 참조)
+│
+├─ [minifyEnabled=true 후 빌드 타임 오류]
+│   → R8 full mode 확인: gradle.properties의 android.enableR8.fullMode=true
+│   → false로 임시 변경 후 재빌드 → 원인 분리
+│
+├─ [shrinkResources 후 UI 깨짐]
+│   → res/raw/keep.xml 생성
+│   → <resources xmlns:tools="..." tools:keep="@layout/..." />
+│
+├─ [Kotlin Serialization / Gson 직렬화 실패]
+│   → data class 필드 rename → @SerializedName / @JsonProperty 확인
+│   → -keepclassmembers class * { @SerializedName <fields>; }
+│
+└─ [signingConfig 미설정]
+    → release { signingConfig } 블록 확인
+    → 미서명 APK는 Play Store 업로드 불가
+```
+
+**빠른 R8 규칙 검증:**
+```bash
+./gradlew assembleRelease
+cat app/build/outputs/mapping/release/mapping.txt | grep "MyClass"
+
+# R8 full mode 임시 비활성화 후 비교
+echo "android.enableR8.fullMode=false" >> gradle.properties
+./gradlew assembleRelease
+```
+
+> 서명 관련 보안 설정 → `security` 에이전트 참조
+> CI/CD Release 파이프라인 설정 → `devops` 에이전트 참조
+```
+
+#### BF-2: Gradle 빌드 캐시 무효화 패턴 [Gradle 8.x+]
+
+**추가 위치**: BF-1(B-6) 다음
+
+```markdown
+### B-7 Gradle 빌드 캐시 무효화 패턴 [Gradle 8.x+]
+
+**증상**: 코드 수정 후 변경이 반영되지 않거나 이전 오류가 재현될 때
+
+**단계별 캐시 초기화 (최소 → 최대 순서):**
+```bash
+# 1단계: 프로젝트 빌드 출력만 정리
+./gradlew clean
+
+# 2단계: Gradle 빌드 캐시 삭제
+rm -rf ~/.gradle/caches/build-cache-*
+
+# 3단계: 전체 Gradle 캐시 삭제 (의존성 재다운로드)
+rm -rf ~/.gradle/caches/
+
+# 4단계: .gradle .idea 삭제 후 Android Studio Sync
+rm -rf .gradle .idea
+```
+
+**캐시 무효화가 필요한 상황:**
+```
+□ libs.versions.toml 버전 변경 후에도 구버전 라이브러리 사용됨
+□ Hilt/KSP 생성 코드가 이전 버전으로 남아있음
+□ Clean 후에도 R 클래스 오류 지속
+□ Gradle Sync 성공 + 빌드 실패
+```
+
+**캐시 문제 예방 (gradle.properties):**
+```properties
+org.gradle.caching=true
+org.gradle.parallel=true
+org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m
+```
+
+> CI 캐시 전략 최적화 → `devops` 에이전트 참조
+```
+
+#### P7.3 DoD 체크리스트
+
+- [ ] B-6 Release 빌드 진단 트리 (5분기 + 빠른 검증 명령) 추가
+- [ ] B-7 캐시 무효화 4단계 + 상황 체크리스트 + gradle.properties 설정 추가
+- [ ] `security`, `devops` 위임 참조 문구 삽입
+- [ ] 기존 B-1~B-5 섹션 손상 없음
+- [ ] 강화 후 210~225줄 범위 내
+
+---
+
+### P7.4 security.md — 위치정보 최소 권한 감사 + 포그라운드 서비스 보안
+
+**현재 상태**: 268줄
+**강화 후 목표**: 305~320줄
+**강화 방침**: 위치정보 최소 권한 감사(SE-5)와 포그라운드 서비스 보안 체크(SE-6) 추가. 기존 마지막 섹션(SE-4) 다음에 삽입.
+
+#### SC-1: 위치정보 최소 권한 감사 [Android API 29+]
+
+**추가 위치**: 기존 마지막 섹션(SE-4 JWT/Token 취약점) 다음
+
+```markdown
+### SE-5 위치정보 최소 권한 감사 [Android API 29+]
+
+**위치 권한 최소화 원칙:**
+
+| 권한 | 용도 | 감사 기준 |
+|-----|-----|---------|
+| `ACCESS_FINE_LOCATION` | GPS 정밀 위치 | 정밀 위치가 필수 기능인지 확인 |
+| `ACCESS_COARSE_LOCATION` | 기지국/Wi-Fi 대략 위치 | 가능하면 이것으로 대체 |
+| `ACCESS_BACKGROUND_LOCATION` | 백그라운드 위치 | 별도 사용자 승인 필요 — 남용 시 Play 정책 위반 |
+
+**AndroidManifest.xml 감사 체크리스트:**
+```
+□ ACCESS_BACKGROUND_LOCATION 사용 시 — 핵심 기능 필수 여부 근거 문서화
+□ maxSdkVersion 미설정 — 구버전 기기에서 불필요한 권한 유지
+□ android:required="false" 미설정 — 위치 기능 없는 기기에서 설치 불가
+```
+
+**탐지 Grep 패턴:**
+```bash
+# 백그라운드 위치 권한 선언 탐지
+grep -rn "ACCESS_BACKGROUND_LOCATION" --include="*.xml"
+
+# 위치 좌표 로그 출력 탐지 (민감정보 노출 위험)
+grep -rn "Log\.\(d\|i\|e\)\|println" --include="*.kt" \
+  | grep -iE "latitude|longitude|location"
+```
+
+**[CRITICAL] 위치 좌표 로그 출력:**
+- `Log.d()` / `println()`으로 위치 좌표 출력 시 logcat을 통해 타 앱이 읽을 수 있음
+- 수정: `BuildConfig.DEBUG` 조건부 처리 또는 Timber 릴리즈 트리에서 로그 차단
+
+> 위치 좌표 저장 암호화 → SE-1 (AndroidKeyStore) 패턴 참조
+> 권한 요청 UI 구현 → `executor` 에이전트 호출
+```
+
+#### SC-2: 백그라운드 서비스 보안 체크 [Android API 31+]
+
+**추가 위치**: SC-1(SE-5) 다음
+
+```markdown
+### SE-6 백그라운드 서비스 보안 체크 [Android API 31+]
+
+**포그라운드 서비스 권한 감사 (Android 12+):**
+
+```
+□ <service android:foregroundServiceType="location"> 미선언
+  — Android 12+: 위치 접근 포그라운드 서비스는 타입 명시 필수
+  — 탐지: service 태그에 foregroundServiceType 속성 부재 → 즉시 크래시
+
+□ FOREGROUND_SERVICE_LOCATION 권한 미선언 (Android 14+)
+  — Android 14부터 위치 포그라운드 서비스에 별도 권한 필요
+  — 탐지: AndroidManifest.xml에서 해당 권한 부재
+```
+
+**올바른 선언 패턴 [API 34+]:**
+```xml
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+<service
+    android:name=".service.ArrivalMonitorService"
+    android:foregroundServiceType="location"
+    android:exported="false" />   <!-- ✅ 외부 접근 금지 필수 -->
+```
+
+**[HIGH] exported=true 서비스 탐지:**
+```bash
+grep -rn 'android:exported="true"' --include="*.xml" | grep "<service"
+```
+- 외부 앱이 임의로 서비스를 시작/종료 가능 → 위치 정보 수집 제어권 상실
+- 수정: `android:exported="false"` 또는 `android:permission`으로 접근 제한
+
+> 포그라운드 서비스 구현 → `executor` 에이전트 호출
+> Android 버전별 권한 최신 정보 → `researcher` 에이전트 호출
+```
+
+#### P7.4 DoD 체크리스트
+
+- [ ] SE-5 위치 권한 3단계 표 + 체크리스트 + Grep 패턴 + [CRITICAL] 항목 추가
+- [ ] SE-6 포그라운드 서비스 선언 패턴 + [HIGH] exported 탐지 Grep 추가
+- [ ] `executor`, `researcher` 위임 참조 문구 삽입
+- [ ] 기존 SE-1~SE-4 섹션 손상 없음, Write/Edit 툴 금지 원칙 유지
+- [ ] 강화 후 305~320줄 범위 내
+
+---
+
+### P7.5 executor.md — WorkManager/AlarmManager 구현 표준 패턴
+
+**현재 상태**: 183줄
+**강화 후 목표**: 220~235줄
+**강화 방침**: HiltWorker 구현 표준 패턴(E-6)과 정확한 알람 권한 처리(E-7) 추가. 기존 마지막 섹션(E-5) 다음에 삽입.
+
+#### EX-1: WorkManager 구현 표준 패턴 [WorkManager 2.9+, Hilt 2.50+]
+
+**추가 위치**: 기존 마지막 섹션(E-5 Hilt 스코프 구현 패턴) 다음
+
+```markdown
+### E-6 WorkManager 구현 표준 패턴 [WorkManager 2.9+, Hilt 2.50+]
+
+**HiltWorker — WorkManager + Hilt 통합:**
+```kotlin
+@HiltWorker
+class ArrivalNotifyWorker @AssistedInject constructor(
+    @Assisted context: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val repository: SubwayRepository,
+    private val notificationHelper: NotificationHelper
+) : CoroutineWorker(context, workerParams) {
+
+    override suspend fun doWork(): Result {
+        val stationId = inputData.getString("stationId")
+            ?: return Result.failure()
+
+        return try {
+            val arrivals = repository.getArrivals(stationId).getOrThrow()
+            notificationHelper.showArrivalNotification(arrivals)
+            Result.success()
+        } catch (e: IOException) {
+            if (runAttemptCount < 3) Result.retry() else Result.failure()
+        }
+    }
+}
+```
+
+**Application 초기화 (HiltWorkerFactory 연동):**
+```kotlin
+@HiltAndroidApp
+class SubwayMateApp : Application(), Configuration.Provider {
+
+    @Inject lateinit var workerFactory: HiltWorkerFactory
+
+    override fun getWorkManagerConfiguration(): Configuration =
+        Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
+}
+```
+
+**주기적 실행 등록 (enqueueUniquePeriodicWork):**
+```kotlin
+val request = PeriodicWorkRequestBuilder<ArrivalNotifyWorker>(15, TimeUnit.MINUTES)
+    .setConstraints(
+        Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+    )
+    .setInputData(workDataOf("stationId" to stationId))
+    .build()
+
+WorkManager.getInstance(context)
+    .enqueueUniquePeriodicWork(
+        "arrival_notify_$stationId",
+        ExistingPeriodicWorkPolicy.UPDATE,
+        request
+    )
+```
+
+> WorkManager 테스트 → `qa-tester` 에이전트 Q-6 참조
+> Worker 아키텍처 설계 → `architect` 에이전트 호출
+```
+
+#### EX-2: 정확한 알람 권한 처리 [Android API 31+]
+
+**추가 위치**: EX-1(E-6) 다음
+
+```markdown
+### E-7 정확한 알람(Exact Alarm) 권한 처리 [Android API 31+]
+
+**Android 12+ 정확한 알람 권한 필요 상황:**
+```
+□ AlarmManager.setExactAndAllowWhileIdle() 사용 시 → SCHEDULE_EXACT_ALARM 권한 필요
+□ Android 12+ (API 31): 사용자가 명시적으로 허용해야 함
+□ 권한 거부 시 → SecurityException 크래시
+```
+
+**권한 확인 후 설정 화면 유도 패턴:**
+```kotlin
+fun scheduleExactAlarm(context: Context, triggerAtMillis: Long, pendingIntent: PendingIntent) {
+    val alarmManager = context.getSystemService(AlarmManager::class.java)
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (!alarmManager.canScheduleExactAlarms()) {
+            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+            context.startActivity(intent)
+            return
+        }
+    }
+
+    alarmManager.setExactAndAllowWhileIdle(
+        AlarmManager.RTC_WAKEUP,
+        triggerAtMillis,
+        pendingIntent
+    )
+}
+```
+
+**AndroidManifest.xml 선언:**
+```xml
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
+    android:minSdkVersion="31" />
+```
+
+**WorkManager vs AlarmManager 선택 기준:**
+
+| 기준 | WorkManager 권장 | AlarmManager 권장 |
+|-----|----------------|----------------|
+| 정확한 시각 필요 | 불필요 (15분+ 주기) | 필요 (초 단위 정확성) |
+| 네트워크 제약 조건 | 자동 지원 | 직접 처리 필요 |
+| Doze 모드 대응 | 자동 처리 | `setExactAndAllowWhileIdle` 필요 |
+| 테스트 용이성 | 높음 (TestDriver) | 낮음 (시스템 의존) |
+
+> 알람 권한 보안 감사 → `security` 에이전트 SE-5 참조
+> 알람 테스트 패턴 → `qa-tester` 에이전트 Q-6 참조
+```
+
+#### P7.5 DoD 체크리스트
+
+- [ ] E-6 HiltWorker 패턴 (CoroutineWorker + Application 초기화 + 주기 등록) 추가
+- [ ] E-7 정확한 알람 권한 체크 패턴 + WorkManager/AlarmManager 선택 기준 표 추가
+- [ ] `qa-tester`, `architect`, `security` 위임 참조 문구 삽입
+- [ ] 기존 E-1~E-5 섹션 손상 없음, Task 툴 금지 원칙 유지
+- [ ] 강화 후 220~235줄 범위 내
+
+---
+
+### P7 실행 전략
+
+```
+P7 (동시 실행 가능 — 파일 경계 독립):
+  qa-tester.md     → Q-6, Q-7 추가
+  code-reviewer.md → R-5, R-6 추가
+  build-fixer.md   → B-6, B-7 추가
+  security.md      → SE-5, SE-6 추가
+  executor.md      → E-6, E-7 추가
+```
+
+**병렬 실행 가능 조건**: 5개 파일 모두 독립적 — 파일 경계 충돌 없음. 위임 참조는 단방향(읽기 전용).
+**실행 명령**: `P7 강화 실제 적용해줘. 워크트리 병렬처리로 진행`
+**검증**: code-reviewer(sonnet) × 5개 파일 순차 검토
