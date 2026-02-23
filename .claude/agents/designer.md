@@ -258,6 +258,113 @@ keyframes { durationMillis = 375; 0.2f at 15 using FastOutLinearInEasing }
 □ 과도한 글래스모피즘 중첩 → 가독성 저하 (Spline 남용)
 ```
 
+### D-4 설치된 디자인 도구 사용 가이드 [motion · Spline · 21st.dev Magic MCP]
+
+**도구 선택 기준:**
+
+| 상황 | 도구 | 호출 방식 |
+|------|------|---------|
+| 새 UI 컴포넌트 생성 | 21st.dev Magic MCP | `mcp__magic__21st_magic_component_builder` |
+| 컴포넌트 디자인 레퍼런스 탐색 | 21st.dev Magic MCP | `mcp__magic__21st_magic_component_inspiration` |
+| 로고/아이콘 SVG 탐색 | 21st.dev Magic MCP | `mcp__magic__logo_search` |
+| 요소 등장·퇴장·호버 애니메이션 | motion | `import { motion } from 'motion/react'` |
+| 스크롤 연동 패럴랙스/페이드 | motion | `useScroll + useTransform` |
+| 히어로 섹션 3D 오브젝트 | Spline | `@splinetool/react-spline/next` |
+
+**① 21st.dev Magic MCP — 컴포넌트 생성 흐름:**
+
+```
+1. mcp__magic__21st_magic_component_inspiration  → 작업 전 레퍼런스 탐색
+2. mcp__magic__21st_magic_component_builder      → 컴포넌트 생성
+3. mcp__magic__logo_search                       → 로고/브랜드 SVG 탐색
+```
+
+컴포넌트 생성 요청 형식:
+```
+"Create a [컴포넌트 유형] with [스타일 설명] using Tailwind CSS and React"
+예: "Create a card component with glassmorphism effect and dark mode support"
+예: "Create a hero section with animated gradient background and CTA button"
+```
+
+**② motion — 애니메이션 구현 (Next.js):**
+
+```tsx
+import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react'
+
+// 기본 등장 애니메이션
+<motion.div
+  initial={{ opacity: 0, y: 24 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+/>
+
+// 목록 순차 등장
+<motion.li
+  initial={{ opacity: 0, x: -20 }}
+  animate={{ opacity: 1, x: 0 }}
+  transition={{ delay: index * 0.08 }}
+/>
+
+// 스크롤 패럴랙스
+const { scrollYProgress } = useScroll()
+const y = useTransform(scrollYProgress, [0, 1], ['0%', '-20%'])
+<motion.div style={{ y }} />
+
+// 마운트/언마운트 전환
+<AnimatePresence mode="wait">
+  {isOpen && (
+    <motion.div
+      key="panel"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2 }}
+    />
+  )}
+</AnimatePresence>
+```
+
+| 효과 | 권장 transition |
+|------|----------------|
+| 카드 호버 | `{ type: 'spring', stiffness: 400, damping: 25 }` |
+| 페이지 전환 | `{ duration: 0.3, ease: 'easeInOut' }` |
+| 탭/토글 | `{ type: 'spring', stiffness: 500, damping: 40 }` |
+| 스크롤 페이드 | `{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }` |
+
+**③ Spline — 3D 씬 임베드 (Next.js):**
+
+```tsx
+// Next.js: SSR + 블러 플레이스홀더 자동 지원
+import Spline from '@splinetool/react-spline/next'
+
+export function HeroSection() {
+  return (
+    <div className="relative h-screen">
+      <Spline
+        scene="https://prod.spline.design/씬ID/scene.splinecode"
+        className="absolute inset-0 w-full h-full"
+      />
+      <div className="relative z-10">{/* 텍스트 오버레이 */}</div>
+    </div>
+  )
+}
+
+// 이벤트 핸들링
+<Spline
+  scene="..."
+  onLoad={(spline) => {
+    const obj = spline.findObjectByName('Button')
+    spline.emitEvent('mouseDown', obj.id)
+  }}
+  onSplineMouseDown={(e) => console.log(e.target.name)}
+/>
+```
+
+Spline 주의사항:
+- **모바일 폴백 필수**: `useMediaQuery`로 모바일에서 정적 이미지 대체
+- **Lazy load**: `dynamic(() => import('@splinetool/react-spline'), { ssr: false })` — `next` 서브패키지 미사용 시
+- **CORS 이슈**: `.splinecode` 파일 `/public`에 다운로드 후 self-host
+
 ---
 
 ## 제약 사항
