@@ -597,6 +597,79 @@ google-services.json
 
 ---
 
+### DV-1: Android GitHub Actions CI/CD 워크플로우 [GitHub Actions, Gradle 8.x]
+
+Android APK 빌드, 서명, Google Play 자동 배포를 위한 GitHub Actions 설정입니다.
+
+```yaml
+# .github/workflows/android-release.yml
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'v*'           # v1.0.0 형태 태그 푸시 시 트리거
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle*') }}
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+          packageName: com.example.subwaymate
+          releaseFiles: app/build/outputs/apk/release/*.apk
+          track: internal            # internal → alpha → beta → production
+```
+
+**GitHub Secrets 설정 체크리스트:**
+```
+□ KEYSTORE_BASE64     : base64로 인코딩된 .jks 파일
+□ KEY_ALIAS           : 키 별칭
+□ KEYSTORE_PASSWORD   : 키스토어 비밀번호
+□ KEY_PASSWORD        : 키 비밀번호
+□ SERVICE_ACCOUNT_JSON: Google Play API 서비스 계정 JSON
+```
+
+**주의사항:**
+- Keystore 파일을 레포지토리에 직접 커밋 금지
+- 모든 민감 값은 GitHub Secrets에만 저장
+- Keystore/서명 보안 검토 → `security` 에이전트 위임
+
+> APK 빌드 오류 → `build-fixer` 에이전트 | Keystore·서명 보안 검토 → `security` 에이전트
+
+---
+
 ## 제약 사항
 
 - **시크릿 하드코딩 절대 금지** — API 키, 비밀번호를 파일에 직접 작성하지 않음

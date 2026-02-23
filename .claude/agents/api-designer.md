@@ -386,6 +386,76 @@ components:
 
 ---
 
+### API-1: Retrofit2 + OkHttp Android 클라이언트 패턴 [Retrofit 2.9+, OkHttp 4.12+]
+
+Hilt 모듈에서 Retrofit + OkHttp 클라이언트를 구성합니다.
+
+```kotlin
+// Hilt 모듈에서 Retrofit 인스턴스 제공
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkModule {
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(): OkHttpClient =
+        OkHttpClient.Builder()
+            .addInterceptor(AuthInterceptor())       // 인증 헤더 자동 삽입
+            .addInterceptor(LoggingInterceptor())    // 디버그 로그 (BuildConfig 조건부)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(client: OkHttpClient): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(BuildConfig.BASE_URL)          // 환경별 URL — 하드코딩 금지
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+}
+
+// API 인터페이스 — suspend fun 필수 (coroutines 연동)
+interface SubwayApi {
+    @GET("arrivals/{stationId}")
+    suspend fun getArrivals(@Path("stationId") id: String): Response<ArrivalsDto>
+}
+```
+
+**설계 원칙:**
+- `@Singleton` 스코프: Retrofit/OkHttpClient는 앱 전역 1개 인스턴스만
+- BaseUrl은 `BuildConfig` 상수로 — 환경(dev/prod) 분리
+- `suspend fun` + `Response<T>` 래핑으로 에러 코드 처리
+- `AuthInterceptor`: 토큰 만료 시 `401` 감지 → 자동 갱신 후 재시도
+
+> 보안 취약점 최종 판정 → `security` 에이전트 | DB 연동 패턴 → `db-expert` 에이전트
+
+---
+
+### API-2: 네트워크 보안 — Certificate Pinning [OkHttp 4.12+]
+
+MITM(중간자) 공격 방어를 위한 Certificate Pinning 설정입니다.
+
+```kotlin
+// Certificate Pinning — MITM 공격 방어
+val certPinner = CertificatePinner.Builder()
+    .add("api.subway.example.com", "sha256/{공개키 해시}")
+    .add("api.subway.example.com", "sha256/{백업 공개키 해시}")  // 갱신 대비 백업 필수
+    .build()
+
+val client = OkHttpClient.Builder()
+    .certificatePinner(certPinner)
+    .build()
+```
+
+**주의사항:**
+- 백업 공개키 해시 반드시 포함 (인증서 갱신 시 앱 배포 없이 전환 가능)
+- Keystore 및 민감 값 저장 방식 검토 → `security` 에이전트 위임
+- Certificate Pinning 적용 전 → `security` 에이전트에 키 해시 검증 위임
+
+---
+
 ## 제약 사항
 
 - 실제 구현 코드 작성은 `executor`에 위임

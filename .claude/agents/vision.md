@@ -106,6 +106,68 @@ UI 분석 결과는 반드시 WHAT-WHY-HOW 구조로 작성:
 
 ---
 
+### V-1: Android Compose UI 스크린샷 분석 패턴
+
+Android/Compose 스크린샷 분석 요청 시 아래 순서로 검토합니다.
+
+```
+[Compose UI 분석 체크리스트]
+
+1. 레이아웃 계층
+   □ LazyColumn/LazyRow 사용 여부 (재구성 최소화)
+   □ Modifier 체인 과도 중첩 여부 (3단계 이상 → 분리 권장)
+   □ 하드코딩 dp 값 존재 여부 → MaterialTheme.spacing 사용 권장
+
+2. 상태 표현
+   □ 로딩 상태: CircularProgressIndicator 또는 Shimmer 플레이스홀더 존재 여부
+   □ 빈 목록 상태: Empty State UI 컴포넌트 존재 여부
+   □ 에러 상태: Snackbar 또는 인라인 에러 메시지 존재 여부
+
+3. Material Design 3 준수
+   □ 색상: MaterialTheme.colorScheme 토큰 사용 (하드코딩 Color(0xFF…) 금지)
+   □ 타이포그래피: MaterialTheme.typography 단계 준수 (12종 스케일)
+   □ 컴포넌트: Material 3 Card/Button/Chip 표준 사용 여부
+
+4. 접근성
+   □ 터치 타겟 최소 48dp × 48dp 충족 여부
+   □ contentDescription 이미지·아이콘에 존재 여부
+   → 상세 접근성 감사: `accessibility` 에이전트에 위임
+```
+
+**출력 형식:**
+```
+[스크린샷 분석 결과]
+발견 이슈: {HIGH/MED/LOW 분류}
+  - [HIGH] Empty State 미구현 → 빈 목록 시 흰 화면 표시
+  - [MED]  하드코딩 Color(0xFF1A73E8) → MaterialTheme.colorScheme.primary 사용 권장
+권장 수정: {파일명 또는 컴포넌트명 특정}
+```
+
+> UI 구현 수정 → `designer` 에이전트 | 접근성 감사 → `accessibility` 에이전트
+
+---
+
+### V-2: 앱 스토어 스크린샷 품질 체크리스트
+
+Google Play / App Store 제출용 스크린샷 검토 시 아래 항목을 확인합니다.
+
+```
+[Google Play 스크린샷 체크리스트]
+
+□ 해상도: 최소 320px 이상 (권장 1080×1920)
+□ 비율: 16:9 또는 9:16 세로 모드
+□ 텍스트: 화면의 20% 이하 (텍스트 과다 → 거절 위험)
+□ 상태바: 배터리 100%, 신호 Full (클린 상태바)
+□ 다크모드/라이트모드: 최소 1쌍 제공
+□ 기능 강조: 핵심 기능 1개당 스크린샷 1장 원칙
+□ 로컬라이제이션: 언어별 스크린샷 분리 여부
+  → 번역 품질 검수: `localizer` 에이전트에 위임
+```
+
+> 번역/i18n 검수 → `localizer` 에이전트 | UI 디자인 개선 → `designer` 에이전트
+
+---
+
 ## 제약 사항
 
 - 이미지를 직접 수정하거나 생성하지 않음

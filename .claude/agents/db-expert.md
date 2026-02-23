@@ -434,6 +434,89 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 
 ---
 
+### DB-5: Room + Paging 3 연동 패턴 [Room 2.6+, Paging 3.3+]
+
+대용량 목록 조회 시 Room과 Paging 3를 연동합니다.
+
+```kotlin
+// DAO — PagingSource 반환 (Room이 자동 생성)
+@Dao
+interface ArrivalDao {
+    @Query("SELECT * FROM arrivals ORDER BY timestamp DESC")
+    fun getArrivalsPaged(): PagingSource<Int, ArrivalEntity>
+}
+
+// Repository — Pager 설정
+class ArrivalRepository(private val dao: ArrivalDao) {
+    fun getPagedArrivals(): Flow<PagingData<ArrivalEntity>> =
+        Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                prefetchDistance = 5
+            ),
+            pagingSourceFactory = { dao.getArrivalsPaged() }
+        ).flow
+}
+
+// ViewModel
+@HiltViewModel
+class ArrivalViewModel @Inject constructor(
+    private val repository: ArrivalRepository
+) : ViewModel() {
+    val arrivals = repository.getPagedArrivals()
+        .cachedIn(viewModelScope)
+}
+```
+
+**설계 원칙:**
+- `PagingConfig.pageSize`: 20~50 권장 (메모리 ↔ 네트워크 균형)
+- `enablePlaceholders = false`: Compose LazyColumn 친화적
+- `.cachedIn(viewModelScope)`: 화면 회전 시 재로드 방지
+- RemoteMediator 패턴(네트워크+DB 동시) 아키텍처 설계 → `architect` 에이전트 위임
+
+---
+
+### DB-6: TypeConverter 직렬화 패턴 [Room 2.6+]
+
+Room이 직접 저장할 수 없는 복합 타입을 직렬화합니다.
+
+```kotlin
+class Converters {
+    private val gson = Gson()
+
+    @TypeConverter
+    fun fromList(list: List<String>): String =
+        gson.toJson(list)
+
+    @TypeConverter
+    fun toList(json: String): List<String> =
+        gson.fromJson(json, object : TypeToken<List<String>>() {}.type)
+            ?: emptyList()
+
+    @TypeConverter
+    fun fromDateTime(dt: LocalDateTime?): String? = dt?.toString()
+
+    @TypeConverter
+    fun toDateTime(value: String?): LocalDateTime? =
+        value?.let { LocalDateTime.parse(it) }
+}
+
+// Database 클래스에 등록
+@Database(entities = [...], version = 1)
+@TypeConverters(Converters::class)
+abstract class AppDatabase : RoomDatabase()
+```
+
+**주의사항:**
+- `kotlinx.serialization` 사용 권장 (Kotlin 프로젝트 표준, Gson 대체)
+- TypeConverter에서 null 처리 필수 — `?` 타입 명시
+- TypeConverter 추가 후 DB 버전 변경 불필요 (스키마 변경 아님)
+
+> Paging 3 RemoteMediator 아키텍처 설계 → `architect` 에이전트 | 마이그레이션 → DB-4 참조
+
+---
+
 ## 제약 사항
 
 - 프로덕션 DB에 직접 DROP/TRUNCATE 명령 실행 금지

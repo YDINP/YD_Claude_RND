@@ -461,6 +461,66 @@ EOF
 
 ---
 
+### LC-1: Android Plurals & Format Strings 표준 패턴 [Android API 21+]
+
+수량에 따른 복수형 처리와 위치 인수 기반 문자열 형식화 표준입니다.
+
+**strings.xml 정의:**
+```xml
+<!-- res/values/strings.xml -->
+<resources>
+    <!-- Format Strings — 위치 인수 사용 -->
+    <string name="arrival_minutes">%1$d분 후 도착</string>
+    <string name="station_name_format">%1$s역 %2$s방면</string>
+
+    <!-- Plurals — 수량에 따른 복수형 처리 -->
+    <plurals name="transfer_count">
+        <item quantity="one">환승 %d회</item>
+        <item quantity="other">환승 %d회</item>
+    </plurals>
+</resources>
+
+<!-- res/values-en/strings.xml (영어) -->
+<resources>
+    <string name="arrival_minutes">Arrives in %1$d min</string>
+
+    <plurals name="transfer_count">
+        <item quantity="one">%d transfer</item>
+        <item quantity="other">%d transfers</item>
+    </plurals>
+</resources>
+```
+
+**Kotlin 사용 코드:**
+```kotlin
+// Format Strings
+val msg = context.getString(R.string.arrival_minutes, 3)
+// → "3분 후 도착"
+
+// Plurals
+val transferMsg = resources.getQuantityString(R.plurals.transfer_count, count, count)
+// count=1 → "환승 1회", count=2 → "환승 2회"
+```
+
+**하드코딩 복수 처리 탐지 패턴:**
+```kotlin
+// 위반 — 하드코딩 복수 처리
+val msg = if (count == 1) "환승 1회" else "환승 ${count}회"
+
+// 준수 — Plurals 리소스 사용
+val msg = resources.getQuantityString(R.plurals.transfer_count, count, count)
+```
+
+**주의사항:**
+- `%d` (위치 없는) 사용 금지 → `%1$d` (위치 인수) 필수 (번역 언어별 어순 대응)
+- 한국어 조사 자동 처리는 기존 LC 섹션(한국어 조사) 참조
+- 번역 문자열 UI 렌더링 확인 → `designer` 에이전트 위임
+- 접근성 텍스트 검토 → `accessibility` 에이전트 위임
+
+> 번역 UI 렌더링 확인 → `designer` 에이전트 | 접근성 텍스트 검토 → `accessibility` 에이전트
+
+---
+
 ## 제약 사항
 
 - 전문 번역이 필요한 마케팅/법적 문구는 네이티브 검토 권장 명시
