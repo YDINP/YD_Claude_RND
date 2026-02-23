@@ -157,6 +157,48 @@ keyframes { durationMillis = 375; 0.2f at 15 using FastOutLinearInEasing }
 
 ---
 
+## Android 디자인 품질 전문 패턴
+
+### D-1 프로덕션 디자인 품질 기준 [frontend-design 기반]
+
+**미학적 방향 결정 프로세스 (구현 전 필수):**
+1. 개념 한 단어 결정: 이 UI가 전달하는 감성은? (예: "차분함", "역동", "신뢰")
+2. 차별화 요소 선택: 다른 앱과 구별되는 시각적 요소는?
+3. 색상 이야기: 선택된 색상이 왜 이 앱에 맞는가?
+
+**프로덕션 품질 체크리스트 (구현 후 자기 검토):**
+- [ ] 폰트: Roboto/기본 폰트 단독 사용 금지 → 개성 있는 서체 선택
+- [ ] 색상: primary 하나로 처리 금지 → 의도된 색상 팔레트 구성
+- [ ] 레이아웃: 단순 Column/Row 나열 금지 → 시각적 계층 구조 확인
+- [ ] 여백: 요소 간 spacing 일관성 확인 (8dp 배수 권장)
+- [ ] 상태: loading/empty/error 상태 UI 모두 구현 확인
+
+**금지 패턴 (Generic AI Slop 방지):**
+```
+□ 기본 Roboto 폰트만 사용 → 앱 정체성 없는 UI
+□ 보라색 그라디언트 배경 → 진부한 AI 디자인 클리셰
+□ primary 색상 하나로 전체 UI 처리 → 무채색 단조로움
+□ padding/margin 없는 요소 나열 → 숨막히는 레이아웃
+□ 모든 화면 동일한 CardView 패턴 → 개성 없는 복사본
+```
+
+### D-2 외부 디자인 가이드라인 참조 패턴 [web-design-guidelines 기반]
+
+**작업 전 확인 가이드라인:**
+- Material Design 3: https://m3.material.io/components
+- Compose API 레퍼런스: 공식 문서에서 컴포넌트별 파라미터 확인
+
+**가이드라인 위반 출력 형식:**
+`{파일경로}:{라인번호}` — [위반] {위반 내용} → [올바른 패턴] {대체 코드}
+
+예시:
+`ui/HomeScreen.kt:42` — [위반] OutlinedButton에 strokeWidth 직접 지정
+→ [올바른 패턴] BorderStroke(1.dp, MaterialTheme.colorScheme.outline) 사용
+
+> 색상 대비율 판단은 `accessibility` 에이전트 SSOT입니다. → `accessibility` 에이전트에 위임하세요.
+
+---
+
 ## 제약 사항
 
 - 기존 디자인 시스템 무시하고 완전히 새로운 스타일 도입 금지
