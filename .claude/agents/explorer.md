@@ -82,6 +82,85 @@ Glob + Grep + Read → 병렬로
 
 ---
 
+## Android 코드 탐색 전문 패턴
+
+### EX-1 Android 패턴 검색 레시피 [Android API 33+]
+
+**Hilt 스코프 위치 찾기:**
+
+```bash
+# @Singleton 컴포넌트 위치 탐색
+grep -r "@Singleton" --include="*.kt" {프로젝트_루트}
+
+# @HiltViewModel 클래스 전체 목록
+grep -r "@HiltViewModel" --include="*.kt" {프로젝트_루트}
+
+# Hilt 모듈 파일 위치 (관례: di/**Module.kt)
+glob **/di/**Module*.kt
+```
+
+**Room Entity / DAO 위치 찾기:**
+
+```bash
+# Room Entity 탐색
+grep -r "@Entity" --include="*.kt" {프로젝트_루트}
+
+# Room DAO 탐색
+grep -r "@Dao" --include="*.kt" {프로젝트_루트}
+
+# Migration 클래스 위치
+glob **/*Migration*.kt
+```
+
+**Compose Screen 위치 찾기:**
+
+```bash
+# Screen 단위 파일 탐색 (관례: *Screen.kt)
+glob **/*Screen.kt
+
+# NavGraph / Navigation 라우트 정의 위치
+grep -r "composable(" --include="*.kt" {프로젝트_루트}
+
+# ViewModel 연결 Composable 탐색
+grep -r "hiltViewModel\|viewModel(" --include="*.kt" {프로젝트_루트}
+```
+
+> Hilt 스코프 선택 기준은 `architect.md` A-4에서 전담합니다.
+> 스코프 판단이 필요한 경우 → `architect` 에이전트를 호출하세요.
+
+### EX-2 의존성 역추적 패턴
+
+**"이 클래스를 사용하는 모든 곳" 표준 Grep 패턴:**
+
+```bash
+# 1단계: 클래스명 직접 참조 탐색
+grep -r "{클래스명}" --include="*.kt" {프로젝트_루트}
+
+# 2단계: import 문으로 의존 모듈 역추적
+grep -r "import.*{클래스명}" --include="*.kt" {프로젝트_루트}
+
+# 3단계: 인터페이스 구현체 탐색 (예: : AlarmRepository)
+grep -r ": {인터페이스명}" --include="*.kt" {프로젝트_루트}
+
+# 4단계: Hilt 모듈 내 @Provides / @Binds 바인딩 확인
+grep -r "@Provides\|@Binds" --include="*.kt" {프로젝트_루트}
+```
+
+**의존성 역추적 체크리스트:**
+
+```
+□ 1단계: Grep으로 클래스명 직접 참조 탐색
+□ 2단계: import 문으로 의존 모듈 탐색
+□ 3단계: 인터페이스 구현체 탐색 (: 인터페이스명 패턴)
+□ 4단계: Hilt 모듈 @Provides / @Binds 바인딩 확인
+□ 5단계: 역방향 — 이 클래스가 주입받는 의존성 확인
+```
+
+> Git 이력 기반 의존성 분석은 `git-historian` 에이전트를 호출하세요.
+> 아키텍처 전체 의존성 맵핑이 필요한 경우 → `architect` 에이전트를 호출하세요.
+
+---
+
 ## 제약 사항
 
 - **Write, Edit 툴 사용 금지** (읽기 전용)
