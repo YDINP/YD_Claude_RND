@@ -258,6 +258,79 @@ grep -r "parseJwt\|decodeJwt\|JwtParser" --include="*.kt"
 
 ---
 
+### SE-5 위치정보 최소 권한 감사 [Android API 29+]
+
+**위치 권한 최소화 원칙:**
+
+| 권한 | 용도 | 감사 기준 |
+|-----|-----|---------|
+| `ACCESS_FINE_LOCATION` | GPS 정밀 위치 | 정밀 위치가 필수 기능인지 확인 |
+| `ACCESS_COARSE_LOCATION` | 기지국/Wi-Fi 대략 위치 | 가능하면 이것으로 대체 |
+| `ACCESS_BACKGROUND_LOCATION` | 백그라운드 위치 | 별도 사용자 승인 필요 — 남용 시 Play 정책 위반 |
+
+**AndroidManifest.xml 감사 체크리스트:**
+```
+□ ACCESS_BACKGROUND_LOCATION 사용 시 — 핵심 기능 필수 여부 근거 문서화
+□ maxSdkVersion 미설정 — 구버전 기기에서 불필요한 권한 유지
+□ android:required="false" 미설정 — 위치 기능 없는 기기에서 설치 불가
+```
+
+**탐지 Grep 패턴:**
+```bash
+# 백그라운드 위치 권한 선언 탐지
+grep -rn "ACCESS_BACKGROUND_LOCATION" --include="*.xml"
+
+# 위치 좌표 로그 출력 탐지 (민감정보 노출 위험)
+grep -rn "Log\.\(d\|i\|e\)\|println" --include="*.kt" \
+  | grep -iE "latitude|longitude|location"
+```
+
+**[CRITICAL] 위치 좌표 로그 출력:**
+- `Log.d()` / `println()`으로 위치 좌표 출력 시 logcat을 통해 타 앱이 읽을 수 있음
+- 수정: `BuildConfig.DEBUG` 조건부 처리 또는 Timber 릴리즈 트리에서 로그 차단
+
+> 위치 좌표 저장 암호화 → SE-1 (AndroidKeyStore) 패턴 참조
+> 권한 요청 UI 구현 → `executor` 에이전트 호출
+
+---
+
+### SE-6 백그라운드 서비스 보안 체크 [Android API 31+]
+
+**포그라운드 서비스 권한 감사 (Android 12+):**
+
+```
+□ <service android:foregroundServiceType="location"> 미선언
+  — Android 12+: 위치 접근 포그라운드 서비스는 타입 명시 필수
+  — 탐지: service 태그에 foregroundServiceType 속성 부재 → 즉시 크래시
+
+□ FOREGROUND_SERVICE_LOCATION 권한 미선언 (Android 14+)
+  — Android 14부터 위치 포그라운드 서비스에 별도 권한 필요
+  — 탐지: AndroidManifest.xml에서 해당 권한 부재
+```
+
+**올바른 선언 패턴 [API 34+]:**
+```xml
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+<service
+    android:name=".service.ArrivalMonitorService"
+    android:foregroundServiceType="location"
+    android:exported="false" />   <!-- ✅ 외부 접근 금지 필수 -->
+```
+
+**[HIGH] exported=true 서비스 탐지:**
+```bash
+grep -rn 'android:exported="true"' --include="*.xml" | grep "<service"
+```
+- 외부 앱이 임의로 서비스를 시작/종료 가능 → 위치 정보 수집 제어권 상실
+- 수정: `android:exported="false"` 또는 `android:permission`으로 접근 제한
+
+> 포그라운드 서비스 구현 → `executor` 에이전트 호출
+> Android 버전별 권한 최신 정보 → `researcher` 에이전트 호출
+
+---
+
 ## 제약 사항
 
 - **Write, Edit 툴 사용 금지** (보고만 함)

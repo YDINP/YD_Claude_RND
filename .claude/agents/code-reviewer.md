@@ -186,6 +186,80 @@ git diff  # 최근 변경사항 확인
 
 ---
 
+### R-5 Flow/StateFlow 수집 안티패턴 탐지 [Coroutines 1.7+]
+
+탐지 시 [HIGH] 분류:
+
+```
+□ lifecycleScope.launch { flow.collect {} }
+  — Lifecycle.State.STARTED 미지정 → 백그라운드에서도 수집 계속
+  → 수정: repeatOnLifecycle(Lifecycle.State.STARTED) { flow.collect {} }
+
+□ collectAsState() in Compose
+  — 화면 백그라운드 이동 후에도 upstream 유지
+  → 수정: collectAsStateWithLifecycle() 사용 [Lifecycle 2.6+]
+
+□ viewModelScope.launch { stateFlow.collect {} } in ViewModel
+  — StateFlow는 collect 없이 .value 직접 접근 또는 update {} 사용 가능
+  → 불필요한 코루틴 낭비
+```
+
+**탐지 Grep 패턴:**
+```bash
+# lifecycleScope 내 collect 미보호 패턴
+grep -rn "lifecycleScope.launch" --include="*.kt" | grep -v "repeatOnLifecycle"
+
+# collectAsState 사용 탐지 (Compose 파일)
+grep -rn "\.collectAsState()" --include="*.kt"
+```
+
+> Flow 수집 패턴 수정은 → `executor` 에이전트 호출
+> Flow 수집 성능 측정은 → `performance` 에이전트 호출
+
+---
+
+### R-6 Fragment/ViewModel 메모리 누수 탐지 [Android API 33+]
+
+탐지 시 [HIGH] 분류:
+
+```
+□ Fragment에서 View Binding 미해제
+  — onDestroyView()에서 _binding = null 미설정
+  — 탐지: ViewBinding 선언 파일에서 onDestroyView override 부재
+
+□ ViewModel에서 Activity/Fragment Context 직접 참조
+  — Activity/Fragment context를 ViewModel 멤버 변수로 저장
+  — 탐지: class *ViewModel 내 val.*Context|val.*Activity|val.*Fragment 패턴
+
+□ Handler/Runnable 미취소
+  — onStop/onDestroy에서 removeCallbacksAndMessages(null) 미호출
+  — 탐지: Handler() 생성 후 onDestroy에서 removeCallbacks 부재 패턴
+
+□ companion object 내 Context 참조
+  — 정적 컨텍스트 참조 → GC 불가
+```
+
+**탐지 Grep 패턴:**
+```bash
+# ViewBinding 미해제 탐지
+grep -rn "ViewBinding" --include="*.kt" -l | xargs grep -L "onDestroyView"
+
+# ViewModel 내 Context/Activity 직접 참조
+grep -rn "class.*ViewModel" --include="*.kt" -A 20 \
+  | grep -E "val.*Context|val.*Activity|val.*Fragment"
+```
+
+탐지 시 [MEDIUM] 분류:
+```
+□ 익명 inner class에서 외부 클래스 암묵적 참조 유지
+  — setOnClickListener { viewModel.doSomething() }가 긴 수명 객체에 등록된 경우
+```
+
+> 메모리 누수 측정은 → `performance` 에이전트 호출
+> 누수 수정 구현은 → `executor` 에이전트 호출
+
+---
+
 ## 제약 사항
 
 - **Write, Edit 툴 사용 금지** (보고만 함, 수정 안 함)

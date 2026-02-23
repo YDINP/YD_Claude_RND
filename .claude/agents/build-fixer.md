@@ -165,6 +165,87 @@ implementation(platform("androidx.compose:compose-bom:2024.09.00"))
 
 ---
 
+### B-6 Release 빌드 전용 실패 진단 트리 [AGP 8.x+, R8]
+
+Debug 빌드는 통과하지만 Release 빌드만 실패하는 경우 아래 순서로 진단합니다:
+
+```
+Release 빌드 실패
+│
+├─ [ClassNotFoundException / NoSuchMethodError 런타임]
+│   → R8 규칙 미포함 → proguard-rules.pro 확인
+│   → 해당 클래스/메서드에 -keep 규칙 추가 (B-5 Hilt/Retrofit/Room 기본 규칙 참조)
+│
+├─ [minifyEnabled=true 후 빌드 타임 오류]
+│   → R8 full mode 확인: gradle.properties의 android.enableR8.fullMode=true
+│   → false로 임시 변경 후 재빌드 → 원인 분리
+│
+├─ [shrinkResources 후 UI 깨짐]
+│   → res/raw/keep.xml 생성
+│   → <resources xmlns:tools="..." tools:keep="@layout/..." />
+│
+├─ [Kotlin Serialization / Gson 직렬화 실패]
+│   → data class 필드 rename → @SerializedName / @JsonProperty 확인
+│   → -keepclassmembers class * { @SerializedName <fields>; }
+│
+└─ [signingConfig 미설정]
+    → release { signingConfig } 블록 확인
+    → 미서명 APK는 Play Store 업로드 불가
+```
+
+**빠른 R8 규칙 검증:**
+```bash
+./gradlew assembleRelease
+cat app/build/outputs/mapping/release/mapping.txt | grep "MyClass"
+
+# R8 full mode 임시 비활성화 후 비교
+echo "android.enableR8.fullMode=false" >> gradle.properties
+./gradlew assembleRelease
+```
+
+> 서명 관련 보안 설정 → `security` 에이전트 참조
+> CI/CD Release 파이프라인 설정 → `devops` 에이전트 참조
+
+---
+
+### B-7 Gradle 빌드 캐시 무효화 패턴 [Gradle 8.x+]
+
+**증상**: 코드 수정 후 변경이 반영되지 않거나 이전 오류가 재현될 때
+
+**단계별 캐시 초기화 (최소 → 최대 순서):**
+```bash
+# 1단계: 프로젝트 빌드 출력만 정리
+./gradlew clean
+
+# 2단계: Gradle 빌드 캐시 삭제
+rm -rf ~/.gradle/caches/build-cache-*
+
+# 3단계: 전체 Gradle 캐시 삭제 (의존성 재다운로드)
+rm -rf ~/.gradle/caches/
+
+# 4단계: .gradle .idea 삭제 후 Android Studio Sync
+rm -rf .gradle .idea
+```
+
+**캐시 무효화가 필요한 상황:**
+```
+□ libs.versions.toml 버전 변경 후에도 구버전 라이브러리 사용됨
+□ Hilt/KSP 생성 코드가 이전 버전으로 남아있음
+□ Clean 후에도 R 클래스 오류 지속
+□ Gradle Sync 성공 + 빌드 실패
+```
+
+**캐시 문제 예방 (gradle.properties):**
+```properties
+org.gradle.caching=true
+org.gradle.parallel=true
+org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m
+```
+
+> CI 캐시 전략 최적화 → `devops` 에이전트 참조
+
+---
+
 ## 제약 사항
 
 - 에러 메시지 없이 추측으로 수정 금지

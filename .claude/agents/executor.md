@@ -173,6 +173,121 @@ class FeatureHelper @Inject constructor() { ... }
 
 ---
 
+### E-6 WorkManager 구현 표준 패턴 [WorkManager 2.9+, Hilt 2.50+]
+
+**HiltWorker — WorkManager + Hilt 통합:**
+```kotlin
+@HiltWorker
+class ArrivalNotifyWorker @AssistedInject constructor(
+    @Assisted context: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val repository: SubwayRepository,
+    private val notificationHelper: NotificationHelper
+) : CoroutineWorker(context, workerParams) {
+
+    override suspend fun doWork(): Result {
+        val stationId = inputData.getString("stationId")
+            ?: return Result.failure()
+
+        return try {
+            val arrivals = repository.getArrivals(stationId).getOrThrow()
+            notificationHelper.showArrivalNotification(arrivals)
+            Result.success()
+        } catch (e: IOException) {
+            if (runAttemptCount < 3) Result.retry() else Result.failure()
+        }
+    }
+}
+```
+
+**Application 초기화 (HiltWorkerFactory 연동):**
+```kotlin
+@HiltAndroidApp
+class SubwayMateApp : Application(), Configuration.Provider {
+
+    @Inject lateinit var workerFactory: HiltWorkerFactory
+
+    override fun getWorkManagerConfiguration(): Configuration =
+        Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
+}
+```
+
+**주기적 실행 등록 (enqueueUniquePeriodicWork):**
+```kotlin
+val request = PeriodicWorkRequestBuilder<ArrivalNotifyWorker>(15, TimeUnit.MINUTES)
+    .setConstraints(
+        Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+    )
+    .setInputData(workDataOf("stationId" to stationId))
+    .build()
+
+WorkManager.getInstance(context)
+    .enqueueUniquePeriodicWork(
+        "arrival_notify_$stationId",
+        ExistingPeriodicWorkPolicy.UPDATE,
+        request
+    )
+```
+
+> WorkManager 테스트 → `qa-tester` 에이전트 Q-6 참조
+> Worker 아키텍처 설계 → `architect` 에이전트 호출
+
+---
+
+### E-7 정확한 알람(Exact Alarm) 권한 처리 [Android API 31+]
+
+**Android 12+ 정확한 알람 권한 필요 상황:**
+```
+□ AlarmManager.setExactAndAllowWhileIdle() 사용 시 → SCHEDULE_EXACT_ALARM 권한 필요
+□ Android 12+ (API 31): 사용자가 명시적으로 허용해야 함
+□ 권한 거부 시 → SecurityException 크래시
+```
+
+**권한 확인 후 설정 화면 유도 패턴:**
+```kotlin
+fun scheduleExactAlarm(context: Context, triggerAtMillis: Long, pendingIntent: PendingIntent) {
+    val alarmManager = context.getSystemService(AlarmManager::class.java)
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (!alarmManager.canScheduleExactAlarms()) {
+            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+            context.startActivity(intent)
+            return
+        }
+    }
+
+    alarmManager.setExactAndAllowWhileIdle(
+        AlarmManager.RTC_WAKEUP,
+        triggerAtMillis,
+        pendingIntent
+    )
+}
+```
+
+**AndroidManifest.xml 선언:**
+```xml
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
+    android:minSdkVersion="31" />
+```
+
+**WorkManager vs AlarmManager 선택 기준:**
+
+| 기준 | WorkManager 권장 | AlarmManager 권장 |
+|-----|----------------|----------------|
+| 정확한 시각 필요 | 불필요 (15분+ 주기) | 필요 (초 단위 정확성) |
+| 네트워크 제약 조건 | 자동 지원 | 직접 처리 필요 |
+| Doze 모드 대응 | 자동 처리 | `setExactAndAllowWhileIdle` 필요 |
+| 테스트 용이성 | 높음 (TestDriver) | 낮음 (시스템 의존) |
+
+> 알람 권한 보안 감사 → `security` 에이전트 SE-5 참조
+> 알람 테스트 패턴 → `qa-tester` 에이전트 Q-6 참조
+
+---
+
 ## 제약 사항
 
 - **Task 툴 사용 금지** (서브에이전트 생성 불가)

@@ -188,6 +188,135 @@ fun `비동기 상태 변화 테스트`() = runTest {
 
 ---
 
+### Q-6 WorkManager 단위 테스트 패턴 [WorkManager 2.9+]
+
+**의존성 (테스트 전용):**
+```kotlin
+// build.gradle.kts
+androidTestImplementation("androidx.work:work-testing:2.9.0")
+testImplementation("androidx.work:work-testing:2.9.0")
+```
+
+**표준 테스트 패턴:**
+```kotlin
+@RunWith(AndroidJUnit4::class)
+class ArrivalNotifyWorkerTest {
+
+    private lateinit var context: Context
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        val config = Configuration.Builder()
+            .setMinimumLoggingLevel(Log.DEBUG)
+            .setExecutor(SynchronousExecutor())   // ✅ 동기 실행 — flaky 방지
+            .build()
+        WorkManagerTestInitHelper.initializeTestWorkManager(context, config)
+    }
+
+    @Test
+    fun `도착 알림 Worker — 성공 시 Result_success 반환`() = runTest {
+        val worker = TestListenableWorkerBuilder<ArrivalNotifyWorker>(context)
+            .setInputData(workDataOf("stationId" to "1234"))
+            .build()
+
+        val result = worker.doWork()
+
+        assertTrue(result is ListenableWorker.Result.Success)
+    }
+
+    @Test
+    fun `도착 알림 Worker — 네트워크 오류 시 Result_retry 반환`() = runTest {
+        val worker = TestListenableWorkerBuilder<ArrivalNotifyWorker>(context)
+            .setInputData(workDataOf("stationId" to "INVALID"))
+            .build()
+
+        val result = worker.doWork()
+
+        assertTrue(result is ListenableWorker.Result.Retry)
+    }
+}
+```
+
+**주기 실행 Worker 검증 (TestDriver 활용):**
+```kotlin
+@Test
+fun `주기적 Work 실행 — 제약 충족 시 실행됨`() {
+    val testDriver = WorkManagerTestInitHelper.getTestDriver(context)!!
+    val request = PeriodicWorkRequestBuilder<ArrivalNotifyWorker>(15, TimeUnit.MINUTES)
+        .setConstraints(Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build())
+        .build()
+
+    WorkManager.getInstance(context).enqueue(request)
+    testDriver.setPeriodDelayMet(request.id)
+    testDriver.setAllConstraintsMet(request.id)
+
+    val workInfo = WorkManager.getInstance(context)
+        .getWorkInfoById(request.id).get()
+    assertEquals(WorkInfo.State.ENQUEUED, workInfo?.state)
+}
+```
+
+> WorkManager 빌드 오류 → `build-fixer` 에이전트, Worker 아키텍처 설계 → `architect` 에이전트 A-2 참조
+
+---
+
+### Q-7 위치 권한 시나리오 테스트 [Android API 29+]
+
+**시나리오 분류 (P0 우선):**
+
+| 시나리오 | 우선순위 | 기대 동작 |
+|---------|---------|---------|
+| 정밀 위치 허용 (`ACCESS_FINE_LOCATION`) | P0 | 실시간 알림 정상 동작 |
+| 대략 위치만 허용 (`ACCESS_COARSE_LOCATION`) | P0 | 알림 정확도 저하 안내 + 제한 동작 |
+| 권한 거부 (한 번) | P1 | 권한 재요청 다이얼로그 표시 |
+| 권한 영구 거부 (`shouldShowRationale=false`) | P1 | 설정 화면 이동 안내 |
+| 백그라운드 위치 (`ACCESS_BACKGROUND_LOCATION`) | P1 | Android 10+ 별도 승인 유도 |
+
+**ViewModel 권한 상태 테스트 (MockK + runTest):**
+```kotlin
+@Test
+fun `위치 권한 거부 시 — uiState가 PermissionRequired로 전환`() = runTest {
+    coEvery { locationPermissionChecker.hasPermission() } returns false
+
+    viewModel.checkPermission()
+    advanceUntilIdle()
+
+    assertEquals(MainUiState.PermissionRequired, viewModel.uiState.value)
+}
+
+@Test
+fun `위치 권한 허용 시 — 실시간 데이터 로딩 시작`() = runTest {
+    coEvery { locationPermissionChecker.hasPermission() } returns true
+    coEvery { repository.getArrivals(any()) } returns
+        Result.success(listOf(fakeArrivalInfo))
+
+    viewModel.checkPermission()
+    advanceUntilIdle()
+
+    assertIs<MainUiState.Success>(viewModel.uiState.value)
+}
+```
+
+**UI 테스트 (Compose Testing — 권한 다이얼로그 표시 여부):**
+```kotlin
+@Test
+fun `권한_거부_상태에서_안내_텍스트_표시됨`() {
+    composeTestRule.setContent {
+        MainScreen(uiState = MainUiState.PermissionRequired)
+    }
+    composeTestRule
+        .onNodeWithText("위치 권한이 필요합니다")
+        .assertIsDisplayed()
+}
+```
+
+> 위치 권한 보안 정책 기준 → `security` 에이전트 SE-5 참조
+
+---
+
 ## 제약 사항
 
 - 테스트 없이 구현 완료 선언 금지
