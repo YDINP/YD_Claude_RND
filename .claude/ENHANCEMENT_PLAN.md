@@ -45,6 +45,9 @@ P3 (선택적 — P2 결과 검토 후 결정):
 P4 (선택적 — 마케팅·콘텐츠·디자인 품질 강화):
   designer.md / writer.md / planner.md / researcher.md
   + copywriter.md (신규 에이전트 생성)
+
+P5 (선택적 — Android 인프라 & 클라이언트 통합 강화):
+  api-designer.md / vision.md / db-expert.md / devops.md / localizer.md
 ```
 
 ### 방어 원칙 요약
@@ -779,6 +782,432 @@ Step 7: 최종 Write — 기존 줄 수 + 목표 변경량 범위 내 확인
 
 ---
 
+---
+
+## P5. 에이전트 강화 계획 (Android 인프라 & 클라이언트 통합)
+
+**강화 테마**: Android 생태계 특화 패턴 보강 + 인프라/배포 자동화
+
+**대상 에이전트 선정 근거**:
+- api-designer, vision, db-expert, devops, localizer — Android 특화 패턴 부재 또는 매우 경량
+- P1~P4에서 강화된 에이전트와 협력 관계 형성 필요
+- 전체 31개 중 미강화 12개 중 실용적 효과 상위 5개
+
+---
+
+### P5.1 api-designer.md — Android Retrofit2/OkHttp + 네트워크 보안
+
+**현재 상태**: 394줄, 30섹션
+**강화 후 목표**: 430~450줄
+**강화 방침**: Android Retrofit2+OkHttp 클라이언트 패턴, Certificate Pinning 보안 섹션 추가
+
+#### API-1: Retrofit2 + OkHttp Android 클라이언트 패턴 [Retrofit 2.9+, OkHttp 4.12+]
+
+```kotlin
+// Hilt 모듈에서 Retrofit 인스턴스 제공
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkModule {
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(): OkHttpClient =
+        OkHttpClient.Builder()
+            .addInterceptor(AuthInterceptor())       // 인증 헤더 자동 삽입
+            .addInterceptor(LoggingInterceptor())    // 디버그 로그 (BuildConfig 조건부)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(client: OkHttpClient): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(BuildConfig.BASE_URL)          // 환경별 URL — 하드코딩 금지
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+}
+
+// API 인터페이스 — suspend fun 필수 (coroutines 연동)
+interface SubwayApi {
+    @GET("arrivals/{stationId}")
+    suspend fun getArrivals(@Path("stationId") id: String): Response<ArrivalsDto>
+}
+```
+
+**설계 원칙**:
+- `@Singleton` 스코프: Retrofit/OkHttpClient는 앱 전역 1개 인스턴스만
+- BaseUrl은 `BuildConfig` 상수로 — 환경(dev/prod) 분리
+- `suspend fun` + `Response<T>` 래핑으로 에러 코드 처리
+- `AuthInterceptor`: 토큰 만료 시 `401` 감지 → 자동 갱신 후 재시도
+
+#### API-2: 네트워크 보안 — Certificate Pinning [OkHttp 4.12+]
+
+```kotlin
+// Certificate Pinning — MITM 공격 방어
+val certPinner = CertificatePinner.Builder()
+    .add("api.subway.example.com", "sha256/{공개키 해시}")
+    .add("api.subway.example.com", "sha256/{백업 공개키 해시}")  // 갱신 대비 백업 필수
+    .build()
+
+val client = OkHttpClient.Builder()
+    .certificatePinner(certPinner)
+    .build()
+```
+
+> ⚠️ Certificate Pinning 적용 시 → `security` 에이전트에 키 해시 검증 위임
+> API 키/토큰 저장 방식 → `EncryptedSharedPreferences` 사용 강제 (security 에이전트 전담)
+
+**위임 참조**: 보안 취약점 최종 판정 → `security` 에이전트, DB 연동 패턴 → `db-expert` 에이전트
+
+#### P5.1 DoD 체크리스트
+
+- [ ] API-1 섹션 추가 완료 (Retrofit/OkHttp Hilt 모듈 코드 예시 포함)
+- [ ] API-2 섹션 추가 완료 (Certificate Pinning 코드 예시 포함)
+- [ ] `[Retrofit 2.9+]`, `[OkHttp 4.12+]` 버전 레이블 전 코드 예시에 적용
+- [ ] security / db-expert 위임 참조 문구 삽입
+- [ ] 기존 REST/GraphQL 섹션과 중복 없음 확인
+- [ ] 강화 후 줄 수 430~450줄 범위 내
+
+---
+
+### P5.2 vision.md — Android Compose UI 스크린샷 분석
+
+**현재 상태**: 114줄, 8섹션 (가장 경량, Generic 패턴만 존재)
+**강화 후 목표**: 160~180줄
+**강화 방침**: Android/Compose 전용 스크린샷 분석 패턴, 앱 스토어 스크린샷 품질 체크리스트 추가
+
+#### V-1: Android Compose UI 스크린샷 분석 패턴
+
+스크린샷 분석 요청 시 아래 순서로 검토합니다:
+
+```
+[Compose UI 분석 체크리스트]
+
+1. 레이아웃 계층
+   □ LazyColumn/LazyRow 사용 여부 (재구성 최소화)
+   □ Modifier 체인 과도 중첩 여부 (3단계 이상 → 분리 권장)
+   □ 하드코딩 dp 값 존재 여부 → MaterialTheme.spacing 사용 권장
+
+2. 상태 표현
+   □ 로딩 상태: CircularProgressIndicator 또는 Shimmer 플레이스홀더 존재 여부
+   □ 빈 목록 상태: Empty State UI 컴포넌트 존재 여부
+   □ 에러 상태: Snackbar 또는 인라인 에러 메시지 존재 여부
+
+3. Material Design 3 준수
+   □ 색상: MaterialTheme.colorScheme 토큰 사용 (하드코딩 Color(0xFF…) 금지)
+   □ 타이포그래피: MaterialTheme.typography 단계 준수 (12종 스케일)
+   □ 컴포넌트: Material 3 Card/Button/Chip 표준 사용 여부
+
+4. 접근성
+   □ 터치 타겟 최소 48dp × 48dp 충족 여부
+   □ contentDescription 이미지·아이콘에 존재 여부
+   → 상세 접근성 감사: `accessibility` 에이전트에 위임
+```
+
+**출력 형식**:
+```
+[스크린샷 분석 결과]
+발견 이슈: {HIGH/MED/LOW 분류}
+  - [HIGH] Empty State 미구현 → 빈 목록 시 흰 화면 표시
+  - [MED]  하드코딩 Color(0xFF1A73E8) → MaterialTheme.colorScheme.primary 사용 권장
+권장 수정: {파일명 또는 컴포넌트명 특정}
+```
+
+#### V-2: 앱 스토어 스크린샷 품질 체크리스트
+
+앱 스토어 제출용 스크린샷 검토 시:
+
+```
+[Google Play 스크린샷 체크리스트]
+
+□ 해상도: 최소 320px 이상 (권장 1080×1920)
+□ 비율: 16:9 또는 9:16 세로 모드
+□ 텍스트: 화면의 20% 이하 (텍스트 과다 → 거절 위험)
+□ 상태바: 배터리 100%, 신호 Full (클린 상태바)
+□ 다크모드/라이트모드: 최소 1쌍 제공
+□ 기능 강조: 핵심 기능 1개당 스크린샷 1장 원칙
+□ 로컬라이제이션: 언어별 스크린샷 분리 여부
+  → 번역 품질 검수: `localizer` 에이전트에 위임
+```
+
+**위임 참조**: UI 구현 수정 → `designer` 에이전트, 접근성 감사 → `accessibility` 에이전트, 번역/i18n → `localizer` 에이전트
+
+#### P5.2 DoD 체크리스트
+
+- [ ] V-1 섹션 추가 완료 (Compose UI 분석 체크리스트 4항목)
+- [ ] V-2 섹션 추가 완료 (앱 스토어 체크리스트 포함)
+- [ ] designer / accessibility / localizer 위임 참조 삽입
+- [ ] 기존 Gestalt/시각 계층 섹션과 중복 없음 확인
+- [ ] 강화 후 줄 수 160~180줄 범위 내
+
+---
+
+### P5.3 db-expert.md — Room Paging 3 연동 + TypeConverter
+
+**현재 상태**: 444줄, 17섹션
+**강화 후 목표**: 490~520줄
+**강화 방침**: Paging 3 라이브러리 Room 연동 패턴, TypeConverter 직렬화 표준 패턴 추가
+
+#### DB-5: Room + Paging 3 연동 패턴 [Room 2.6+, Paging 3.3+]
+
+```kotlin
+// DAO — PagingSource 반환 (Room이 자동 생성)
+@Dao
+interface ArrivalDao {
+    @Query("SELECT * FROM arrivals ORDER BY timestamp DESC")
+    fun getArrivalsPaged(): PagingSource<Int, ArrivalEntity>
+}
+
+// Repository — Pager 설정
+class ArrivalRepository(private val dao: ArrivalDao) {
+    fun getPagedArrivals(): Flow<PagingData<ArrivalEntity>> =
+        Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                prefetchDistance = 5
+            ),
+            pagingSourceFactory = { dao.getArrivalsPaged() }
+        ).flow
+
+    // RemoteMediator 패턴: 네트워크 → DB 캐시 연동
+    // 네트워크 + DB 동시 사용 시 → RemoteMediator 구현 (구조 설계는 architect 위임)
+}
+
+// ViewModel
+@HiltViewModel
+class ArrivalViewModel @Inject constructor(
+    private val repository: ArrivalRepository
+) : ViewModel() {
+    val arrivals = repository.getPagedArrivals()
+        .cachedIn(viewModelScope)
+}
+```
+
+**설계 원칙**:
+- `PagingConfig.pageSize`: 20~50 권장 (메모리 ↔ 네트워크 균형)
+- `enablePlaceholders = false`: 데이터 없는 자리 표시자 비활성 (Compose LazyColumn 친화적)
+- `.cachedIn(viewModelScope)`: ViewModel 스코프로 캐시하여 화면 회전 시 재로드 방지
+
+#### DB-6: TypeConverter 직렬화 패턴 [Room 2.6+]
+
+```kotlin
+// 복합 객체 → JSON 직렬화 저장
+class Converters {
+    private val gson = Gson()
+
+    @TypeConverter
+    fun fromList(list: List<String>): String =
+        gson.toJson(list)
+
+    @TypeConverter
+    fun toList(json: String): List<String> =
+        gson.fromJson(json, object : TypeToken<List<String>>() {}.type)
+            ?: emptyList()
+
+    // LocalDateTime 변환
+    @TypeConverter
+    fun fromDateTime(dt: LocalDateTime?): String? =
+        dt?.toString()
+
+    @TypeConverter
+    fun toDateTime(value: String?): LocalDateTime? =
+        value?.let { LocalDateTime.parse(it) }
+}
+
+// Database 클래스에 등록
+@Database(entities = [...], version = 1)
+@TypeConverters(Converters::class)
+abstract class AppDatabase : RoomDatabase()
+```
+
+> ⚠️ `Gson` 대신 `kotlinx.serialization` 사용 권장 (Kotlin 프로젝트 표준)
+> TypeConverter에서 null 처리 필수 — `?` 타입 명시
+
+**위임 참조**: Paging 3 RemoteMediator 아키텍처 설계 → `architect` 에이전트, 마이그레이션 스크립트 작성 → DB-4(기존 섹션) 참조
+
+#### P5.3 DoD 체크리스트
+
+- [ ] DB-5 섹션 추가 완료 (Paging 3 DAO/Repository/ViewModel 코드 예시 포함)
+- [ ] DB-6 섹션 추가 완료 (TypeConverter List/DateTime 예시 포함)
+- [ ] `[Room 2.6+]`, `[Paging 3.3+]` 버전 레이블 전 코드 예시에 적용
+- [ ] architect 위임 참조 문구 삽입
+- [ ] 기존 DB-1~DB-4 섹션과 중복 없음 확인
+- [ ] 강화 후 줄 수 490~520줄 범위 내
+
+---
+
+### P5.4 devops.md — Android GitHub Actions CI/CD
+
+**현재 상태**: 606줄, 16섹션
+**강화 후 목표**: 650~680줄
+**강화 방침**: Android APK 서명 + Google Play Store 자동화 워크플로우 추가
+
+#### DV-1: Android GitHub Actions CI/CD 워크플로우 [GitHub Actions, Gradle 8.x]
+
+```yaml
+# .github/workflows/android-release.yml
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'v*'           # v1.0.0 형태 태그 푸시 시 트리거
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle*') }}
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+          packageName: com.example.subwaymate
+          releaseFiles: app/build/outputs/apk/release/*.apk
+          track: internal            # internal → alpha → beta → production
+```
+
+**GitHub Secrets 설정 체크리스트**:
+```
+□ KEYSTORE_BASE64     : base64로 인코딩된 .jks 파일
+□ KEY_ALIAS           : 키 별칭
+□ KEYSTORE_PASSWORD   : 키스토어 비밀번호
+□ KEY_PASSWORD        : 키 비밀번호
+□ SERVICE_ACCOUNT_JSON: Google Play API 서비스 계정 JSON
+```
+
+> ⚠️ Keystore 파일을 레포지토리에 직접 커밋 금지
+> 모든 민감 값은 GitHub Secrets에만 저장 → 보안 감사: `security` 에이전트 위임
+
+**위임 참조**: APK 빌드 오류 → `build-fixer` 에이전트, Keystore/서명 보안 검토 → `security` 에이전트
+
+#### P5.4 DoD 체크리스트
+
+- [ ] DV-1 섹션 추가 완료 (GitHub Actions YAML 전체 포함)
+- [ ] Secrets 체크리스트 5항목 포함
+- [ ] security / build-fixer 위임 참조 문구 삽입
+- [ ] 기존 Docker/CI-CD 섹션과 중복 없음 확인
+- [ ] 강화 후 줄 수 650~680줄 범위 내
+
+---
+
+### P5.5 localizer.md — Android Plurals & Format Strings
+
+**현재 상태**: 469줄, 30섹션
+**강화 후 목표**: 500~520줄
+**강화 방침**: Android strings.xml Plurals/Format Strings 표준 패턴 추가 (기존 하드코딩 탐지와 연계)
+
+#### LC-1: Android Plurals & Format Strings 표준 패턴 [Android API 21+]
+
+```xml
+<!-- res/values/strings.xml -->
+<resources>
+    <!-- Format Strings — 위치 인수 사용 -->
+    <string name="arrival_minutes">%1$d분 후 도착</string>
+    <string name="station_name_format">%1$s역 %2$s방면</string>
+
+    <!-- Plurals — 수량에 따른 복수형 처리 -->
+    <plurals name="transfer_count">
+        <item quantity="one">환승 %d회</item>
+        <item quantity="other">환승 %d회</item>
+    </plurals>
+</resources>
+
+<!-- res/values-en/strings.xml (영어) -->
+<resources>
+    <string name="arrival_minutes">Arrives in %1$d min</string>
+
+    <plurals name="transfer_count">
+        <item quantity="one">%d transfer</item>
+        <item quantity="other">%d transfers</item>    <!-- 복수형 별도 처리 필수 -->
+    </plurals>
+</resources>
+```
+
+**Kotlin 사용 코드**:
+```kotlin
+// Format Strings
+val msg = context.getString(R.string.arrival_minutes, 3)
+// → "3분 후 도착"
+
+// Plurals
+val transferMsg = resources.getQuantityString(R.plurals.transfer_count, count, count)
+// count=1 → "환승 1회", count=2 → "환승 2회"
+```
+
+**탐지 패턴 (하드코딩 복수형)**:
+```kotlin
+// 위반 — 하드코딩 복수 처리
+val msg = if (count == 1) "환승 1회" else "환승 ${count}회"
+
+// 준수 — Plurals 리소스 사용
+val msg = resources.getQuantityString(R.plurals.transfer_count, count, count)
+```
+
+> ⚠️ `%d` (위치 없는) 사용 금지 → `%1$d` (위치 인수) 필수 (번역 언어별 어순 대응)
+> 한국어 조사 자동 처리 패턴은 기존 LC 섹션(한국어 조사) 참조
+
+**위임 참조**: 번역 문자열 UI 렌더링 확인 → `designer` 에이전트, 접근성 텍스트 검토 → `accessibility` 에이전트
+
+#### P5.5 DoD 체크리스트
+
+- [ ] LC-1 섹션 추가 완료 (strings.xml Plurals/Format 예시 포함)
+- [ ] Kotlin 사용 코드 예시 포함 (getQuantityString 패턴)
+- [ ] 하드코딩 복수형 탐지 패턴 추가
+- [ ] designer / accessibility 위임 참조 삽입
+- [ ] 기존 한국어 조사 처리 섹션과 연계 참조 추가
+- [ ] 강화 후 줄 수 500~520줄 범위 내
+
+---
+
+### P5 실행 전략
+
+```
+P5 (동시 실행 가능 — 파일 경계 독립):
+  api-designer.md  → API-1, API-2 추가
+  vision.md        → V-1, V-2 추가
+  db-expert.md     → DB-5, DB-6 추가
+  devops.md        → DV-1 추가
+  localizer.md     → LC-1 추가
+```
+
+**병렬 실행 가능 조건**: 5개 파일 모두 독립적 — 파일 경계 충돌 없음
+**실행 명령**: `P5 강화 실제 적용해줘. 워크트리병렬처리로 진행`
+**검증**: code-reviewer(sonnet) × 5개 파일 순차 검토
+
+---
+
 ## 부록: 파일 경로 빠른 참조
 
 ```
@@ -798,6 +1227,11 @@ D:\park\YD_Claude_RND\.claude\agents\designer.md       (168줄 기준)
 D:\park\YD_Claude_RND\.claude\agents\writer.md         (197줄 기준)
 D:\park\YD_Claude_RND\.claude\agents\planner.md        (108줄 기준, 별도 추적)
 D:\park\YD_Claude_RND\.claude\agents\copywriter.md     (신규 — P4.5 생성 대상)
+D:\park\YD_Claude_RND\.claude\agents\api-designer.md   (394줄 기준 — P5.1 대상)
+D:\park\YD_Claude_RND\.claude\agents\vision.md         (114줄 기준 — P5.2 대상)
+D:\park\YD_Claude_RND\.claude\agents\db-expert.md      (444줄 기준 — P5.3 대상)
+D:\park\YD_Claude_RND\.claude\agents\devops.md         (606줄 기준 — P5.4 대상)
+D:\park\YD_Claude_RND\.claude\agents\localizer.md      (469줄 기준 — P5.5 대상)
 D:\park\YD_Claude_RND\.claude\agents\_STANDARDS.md     (194줄 기준, 수정 금지)
 
 # 이 계획서
