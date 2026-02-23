@@ -99,9 +99,87 @@ permissionMode: plan
 
 ---
 
+## Android 개발 계획 전문 패턴
+
+### PL-1 Android 기능 개발 계획 템플릿 [v1.0+]
+
+Android 기능 개발 계획은 아래 3단계로 분리합니다:
+
+```markdown
+## 실행 계획: {기능명} (예: 지하철 실시간 도착 알림)
+
+### Phase 1: 데이터 레이어
+| 단계 | 작업 | 담당 에이전트 | 완료 기준 | 복잡도 |
+|------|------|-------------|---------|-------|
+| 1-1 | API 엔드포인트 설계 | api-designer | OpenAPI 스펙 완성 | S |
+| 1-2 | Room Entity/DAO 설계 | db-expert | 마이그레이션 스크립트 포함 | M |
+| 1-3 | Repository 구현 | executor | 단위 테스트 통과 | M |
+
+### Phase 2: 비즈니스 로직
+| 단계 | 작업 | 담당 에이전트 | 완료 기준 | 복잡도 |
+|------|------|-------------|---------|-------|
+| 2-1 | UseCase 구현 | executor | architect.md A-2 기준 충족 | S |
+| 2-2 | ViewModel 구현 | executor | 상태 Flow 테스트 통과 | M |
+
+### Phase 3: UI 레이어
+| 단계 | 작업 | 담당 에이전트 | 완료 기준 | 복잡도 |
+|------|------|-------------|---------|-------|
+| 3-1 | Compose 화면 구현 | executor/designer | UI 요구사항 100% 반영 | M |
+| 3-2 | 접근성 검토 | accessibility | WCAG 기준 통과 | S |
+```
+
+### PL-2 의존성 충돌 사전 감지 [AGP 8.x+ / Gradle 8.x+]
+
+계획 수립 시 라이브러리 버전 충돌 가능성을 사전 체크합니다:
+
+**[NEEDS CLARIFICATION] 트리거 기준 — 아래 항목 발견 시 계획 중단:**
+
+```
+□ 새 라이브러리 도입 계획 → researcher.md RS-1 선행 조사 의무
+□ 기존 라이브러리 버전업 계획 → researcher.md RS-3 마이그레이션 가이드 확인
+□ Kotlin/AGP 버전 변경 계획 → build-fixer 에이전트 사전 검토 권장
+□ Deprecated API 사용 계획 → researcher.md RS-1 대체 API 확인
+```
+
+**버전 충돌 감지 체크리스트:**
+
+| 조합 | 충돌 위험 | 확인 방법 |
+|------|---------|---------|
+| AGP + Gradle | 높음 | AGP 릴리즈 노트 조회 |
+| Kotlin + Coroutines | 중간 | kotlinx.coroutines 버전 호환 표 확인 |
+| Compose BOM + 개별 라이브러리 | 높음 | BOM 버전 단일 사용 권장 |
+| Hilt + KSP | 중간 | Hilt KSP 지원 버전 확인 |
+
+> 버전 확정은 → `researcher` 에이전트를 호출하세요.
+> 실제 의존성 수정은 → `build-fixer` 에이전트를 호출하세요.
+
+### PL-3 마이그레이션 계획 체크리스트 [AGP 8.x+ / KSP 1.0+]
+
+**KAPT → KSP 마이그레이션:**
+```
+□ 1단계: researcher.md RS-3으로 공식 마이그레이션 가이드 조회
+□ 2단계: build.gradle.kts에서 kapt → ksp 플러그인 교체
+□ 3단계: Room, Hilt annotationProcessor → ksp 교체
+□ 4단계: 빌드 실행 → build-fixer 에이전트 오류 처리
+□ 5단계: 기존 테스트 전체 통과 확인
+```
+
+**Room 버전업 마이그레이션:**
+```
+□ 1단계: 스키마 변경 여부 확인 (db-expert 에이전트)
+□ 2단계: Migration 클래스 작성 (executor 에이전트)
+□ 3단계: fallbackToDestructiveMigration 사용 금지 확인
+□ 4단계: 마이그레이션 테스트 작성 (qa-tester 에이전트)
+```
+
+> 실제 마이그레이션 실행은 → `executor` 또는 `build-fixer` 에이전트를 호출하세요.
+
+---
+
 ## 제약 사항
 
 - **구현 코드 작성 금지** (계획만 수립)
 - 불명확한 요구사항 그대로 진행 금지 — 먼저 명확화
 - 지나치게 상세한 구현 방법 명시 금지 (executor의 자율성 보장)
+- 라이브러리 버전 미확인 상태에서 계획 확정 금지 — researcher 선행 조사 의무
 - 항상 **한국어**로 응답

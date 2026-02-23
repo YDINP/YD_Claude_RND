@@ -96,9 +96,101 @@ tools: Read, Glob, Grep, Write, Edit
 
 ---
 
+## Android 문서화 전문 패턴
+
+### W-1 KDoc 문서화 표준 [Kotlin 1.9+]
+
+**KDoc 필수 태그 (공개 API 기준):**
+
+```kotlin
+/**
+ * 지하철 역 도착 정보를 조회합니다.
+ *
+ * @param stationId 역 코드 (예: "0150" = 강남역)
+ * @param lineNumber 호선 번호 (1~9, 의정부경전철 등)
+ * @return 도착 정보 목록. 운행 종료 시 빈 리스트 반환
+ * @throws SubwayApiException API 서버 오류 또는 네트워크 실패 시
+ * @sample com.example.subway.SubwayRepositoryTest.getArrivalsSuccess
+ */
+suspend fun getArrivals(stationId: String, lineNumber: Int): List<ArrivalInfo>
+```
+
+**Compose Composable 문서화:**
+
+```kotlin
+/**
+ * 지하철 도착 정보 카드 컴포넌트
+ *
+ * @param arrival 표시할 도착 정보
+ * @param onAlarmSet 알람 설정 버튼 클릭 콜백
+ */
+@Composable
+fun ArrivalCard(arrival: ArrivalInfo, onAlarmSet: (ArrivalInfo) -> Unit)
+```
+
+> KDoc이 필요한 코드 수정은 → `executor` 에이전트를 호출하세요.
+
+### W-2 CHANGELOG 작성 규칙 [Keep a Changelog 1.0]
+
+**형식 (Keep a Changelog 준수):**
+
+```markdown
+## [1.2.0] - 2026-02-23
+
+### Added
+- 실시간 도착 알림 기능 (지하철 역 기반)
+
+### Changed
+- SubwayRepository → Flow 기반으로 전환 [Coroutines 1.7+]
+
+### Deprecated
+- ArrivalActivity → ArrivalScreen (Compose 전환 예정)
+
+### Removed
+- LiveData 기반 구현 제거
+
+### Fixed
+- 막차 시간대 도착 정보 오표시 버그 수정
+
+### Security
+- API 키 하드코딩 제거 → local.properties로 이동
+```
+
+**버전 레이블 형식 통일:** `[vX.Y.Z]` — Semantic Versioning 준수
+
+### W-3 ADR (Architecture Decision Record) 템플릿 [v1.0+]
+
+**ADR 번호 체계:** `ADR-{3자리 번호}-{kebab-case-제목}.md` (예: `ADR-001-use-compose-navigation.md`)
+
+```markdown
+# ADR-{번호}: {결정 제목}
+
+**상태:** Accepted / Proposed / Deprecated / Superseded by ADR-{번호}
+**날짜:** {YYYY-MM-DD}
+
+## 컨텍스트 (Context)
+{이 결정이 필요한 상황과 배경}
+
+## 결정 (Decision)
+{내린 결정과 그 이유}
+
+## 결과 (Consequences)
+**긍정적:**
+- {기대 효과}
+
+**부정적:**
+- {트레이드오프}
+```
+
+> 아키텍처 결정은 `architect` 에이전트가 내립니다. → `writer`는 기록만 담당합니다.
+> ADR 내용 설계는 → `architect` 에이전트를 호출하세요.
+
+---
+
 ## 제약 사항
 
 - 코드를 읽기 전에 문서 작성 금지
 - 추측으로 API 동작 설명 금지
 - 과도하게 긴 문서 작성 금지 (읽히지 않는 문서는 의미 없음)
+- ADR 아키텍처 결정 내용은 architect 에이전트와 협력 — 기록만 담당
 - 항상 **한국어**로 응답 (코드 주석은 기존 언어 따름)

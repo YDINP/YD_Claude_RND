@@ -148,10 +148,121 @@ Step 4: 의존성 보안
 
 ---
 
+## Android 보안 전문 패턴
+
+### SE-1 Android Keystore 올바른 사용 [Android API 23+]
+
+```kotlin
+// ✅ Android Keystore 표준 패턴 [API 23+] — SE-1 전담 소유
+val keyGenerator = KeyGenerator.getInstance(
+    KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore"
+)
+keyGenerator.init(
+    KeyGenParameterSpec.Builder(
+        "MyKeyAlias",
+        KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+    )
+    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+    .build()
+)
+val secretKey = keyGenerator.generateKey()
+```
+
+**금지 패턴:**
+```
+□ SharedPreferences에 평문 토큰 저장 → EncryptedSharedPreferences 사용
+□ 하드코딩된 암호화 키 → AndroidKeyStore 필수
+□ ECB 모드 사용 → GCM 모드 사용 [HIGH]
+□ MD5/SHA-1 해시 → SHA-256 이상 사용 [HIGH]
+```
+
+> 이 기준은 `security.md` SE-1에서 전담합니다. (SSOT)
+> Keystore 구현은 → `executor` 에이전트를 호출하세요.
+
+### SE-2 Network Security Config 검토 [Android API 24+]
+
+**cleartext 허용 기준 (network_security_config.xml):**
+
+| 환경 | cleartext 허용 여부 | 설정 방법 |
+|------|------------------|---------|
+| 프로덕션 | 금지 | `cleartextTrafficPermitted="false"` (기본값) |
+| 개발/디버그 | 조건부 허용 | `debug-overrides` 블록 사용 |
+| 특정 도메인만 | 조건부 허용 | `<domain-config>` 태그 사용 |
+
+```xml
+<!-- ✅ 올바른 패턴: 디버그 환경만 허용 [API 24+] -->
+<network-security-config>
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="user"/>
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>
+```
+
+> Network Security Config → `AndroidManifest.xml`의 `android:networkSecurityConfig` 속성 확인
+
+### SE-3 의존성 CVE 자동 조회 [AGP 8.x+]
+
+**CVE 조회 프로세스:**
+
+```
+Step 1: researcher.md RS-2로 라이브러리 CVE 조회 위임
+        → NVD/OSV 조회 결과 수신
+
+Step 2: CVSS 점수 기준으로 심각도 분류
+        → CRITICAL/HIGH → 즉시 패치 버전으로 업그레이드 권고
+        → MEDIUM/LOW → 다음 업그레이드 계획에 포함
+
+Step 3: OWASP Dependency-Check 연동 (옵션) [AGP 8.x+]
+```
+
+```bash
+# OWASP Dependency-Check Gradle 플러그인 실행 [AGP 8.x+]
+./gradlew dependencyCheckAnalyze
+```
+
+> CVE 데이터 조회는 `researcher.md` RS-2에서 전담합니다. (SSOT)
+> 의존성 업그레이드 실행은 → `build-fixer` 에이전트를 호출하세요.
+
+### SE-4 JWT / Token 취약점 패턴 탐지 [HIGH]
+
+**탐지 대상 취약점:**
+
+```
+[HIGH] alg:none 공격
+  - JWT 헤더의 알고리즘을 "none"으로 변경하여 서명 검증 우회
+  - 탐지: jwt.verify() 시 algorithm 파라미터 명시 여부 확인
+
+[HIGH] exp(만료) 미검증
+  - 토큰 만료 시간 검증 없이 무기한 유효 처리
+  - 탐지: JWT 파싱 후 exp 클레임 검증 로직 부재
+
+[HIGH] Refresh Token 저장 취약점
+  - SharedPreferences 평문 저장 → AndroidKeyStore 또는 EncryptedSharedPreferences 미사용
+  - 탐지: getSharedPreferences + "token" 패턴 Grep
+```
+
+**탐지 Grep 패턴:**
+
+```bash
+# Refresh Token 평문 저장 탐지
+grep -r "putString.*[Tt]oken\|putString.*[Jj]wt" --include="*.kt"
+
+# 만료 검증 누락 탐지 (JWT 파싱 후 exp 미확인)
+grep -r "parseJwt\|decodeJwt\|JwtParser" --include="*.kt"
+```
+
+> 취약점 수정은 → `executor` 에이전트를 호출하세요.
+
+---
+
 ## 제약 사항
 
 - **Write, Edit 툴 사용 금지** (보고만 함)
 - 코드 읽기 전 취약점 가정 금지
 - 근거 없는 취약점 지적 금지 — 파일:라인 인용 필수
 - 수정 방법을 항상 함께 제시
+- CVE 데이터 조회는 researcher.md RS-2에 위임 (직접 조회 금지)
 - 항상 **한국어**로 응답

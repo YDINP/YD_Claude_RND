@@ -125,15 +125,85 @@ tools: Read, Glob, Grep, Bash, WebSearch
 
 ---
 
-## A-1 MVVM 레이어 경계 기준 [P2 강화 예정]
+## Android MVVM / Clean Architecture 전문 패턴
 
-> 이 항목은 `architect.md` A-1에서 전담합니다. (P2 단계 강화 예정)
-> MVVM 레이어 설계 변경이 필요한 경우 → `architect` 에이전트를 호출하세요.
+### A-1 MVVM 레이어 경계 기준 [v1.0+]
 
-## A-4 Hilt 스코프 선택 기준 [P2 강화 예정]
+| 레이어 | 허용 의존 방향 | 금지 패턴 | 위반 심각도 |
+|--------|-------------|---------|-----------|
+| **UI (Composable)** | ViewModel만 참조 | Repository/DB 직접 참조 | HIGH |
+| **ViewModel** | UseCase, Repository | Context 직접 주입 (AndroidViewModel 미사용), View 직접 참조 | HIGH |
+| **UseCase** | Repository Interface만 | Android 프레임워크 import (Context, Activity 등) | HIGH |
+| **Repository** | DataSource, DAO Interface | UI 로직 포함 (LiveData 변환 제외) | MEDIUM |
+| **DataSource/DAO** | DB/Network 라이브러리 | 비즈니스 로직 포함 | MEDIUM |
 
-> 이 항목은 `architect.md` A-4에서 전담합니다. (P2 단계 강화 예정)
-> Hilt 스코프 선택 판단이 필요한 경우 → `architect` 에이전트를 호출하세요.
+> 이 기준은 `architect.md` A-1에서 전담합니다. (SSOT)
+> 레이어 경계 위반 탐지 → `code-reviewer` 에이전트 R-4 참조
+> 레이어 경계 수정 → `executor` 에이전트를 호출하세요.
+
+### A-2 Clean Architecture UseCase 도입 기준 [v1.0+]
+
+| 기준 | UseCase 도입 | Repository 직접 호출 |
+|------|------------|------------------|
+| 비즈니스 로직 복잡도 | 복잡 (조건 분기 3개+) | 단순 CRUD |
+| 여러 ViewModel 공유 여부 | 공유됨 | 단일 ViewModel 전용 |
+| 테스트 독립성 필요 | 필요 | 불필요 |
+| 트랜잭션 범위 | DB + Network 혼합 | 단일 DataSource |
+
+```kotlin
+// ✅ UseCase 패턴 [Clean Architecture]
+class GetSubwayArrivalUseCase @Inject constructor(
+    private val subwayRepository: SubwayRepository
+) {
+    suspend operator fun invoke(stationId: String): Result<List<ArrivalInfo>> =
+        subwayRepository.getArrivals(stationId)
+}
+```
+
+> DB 스키마 설계는 → `db-expert` 에이전트를 호출하세요.
+
+### A-3 성능 병목 진단 프로세스 [Compose 1.5+ / Room 2.6+]
+
+**진단 순서 (이 순서로 탐색):**
+
+```
+1. Compose Recomposition 과다 → Layout Inspector에서 recomposition count 확인
+   탐지 기준: 동일 Composable 1초 내 10회+ 재구성
+   → code-reviewer.md R-2 패턴 적용 권장
+
+2. DB 쿼리 지연 → Room DAO 쿼리 복잡도 확인
+   탐지 기준: 쿼리 실행 100ms+ (Systrace 또는 Room 로그)
+   → db-expert 에이전트 위임
+
+3. Flow 연산 병목 → collect 위치 및 operator chain 확인
+   탐지 기준: conflate(), buffer() 미적용 고빈도 이벤트
+   → executor.md E-1 패턴 적용 권장
+```
+
+> 실제 성능 측정 및 Benchmark → `performance` 에이전트를 호출하세요.
+
+### A-4 Hilt 스코프 선택 기준 [Hilt 2.50+]
+
+**스코프 결정 트리:**
+
+```
+인스턴스가 필요한 범위는?
+├─ 앱 전체 (싱글턴) → @Singleton
+├─ Activity 범위    → @ActivityScoped
+├─ Fragment 범위    → @FragmentScoped
+├─ ViewModel 범위   → @ViewModelScoped
+└─ 매 요청마다 새 인스턴스 → 스코프 없음 (기본)
+```
+
+| 스코프 | 생명주기 | 대표 사용 예 | 주의사항 |
+|--------|---------|------------|---------|
+| `@Singleton` | 앱 전체 | Repository, ApiService | Context 직접 주입 금지 |
+| `@ActivityScoped` | Activity | Navigator, Coordinator | Configuration Change 시 재생성 |
+| `@ViewModelScoped` | ViewModel | 화면별 UseCase Helper | ViewModel 소멸 시 함께 소멸 |
+| 스코프 없음 | 매 주입 시 | 단순 유틸, 상태 없는 클래스 | 멀티 인스턴스 주의 |
+
+> 이 기준은 `architect.md` A-4에서 전담합니다. (SSOT)
+> `executor.md`는 구현 패턴 예시만 보유합니다. → `architect` 에이전트를 호출하세요.
 
 ---
 

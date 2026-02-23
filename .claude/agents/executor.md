@@ -131,7 +131,7 @@ class MainViewModel @Inject constructor(
 ) : ViewModel()
 ```
 
-> Hilt 스코프 선택 기준은 `architect.md` A-4 [P2 강화 예정]에서 전담합니다.
+> Hilt 스코프 선택 기준은 `architect.md` A-4에서 전담합니다.
 > 스코프 판단이 필요한 경우 → `architect` 에이전트를 호출하세요.
 
 ### E-3 Compose 상태 관리 [Compose 1.5+]
@@ -168,7 +168,7 @@ class AppRepository @Inject constructor() { ... }
 class FeatureHelper @Inject constructor() { ... }
 ```
 
-> Hilt 스코프 선택 기준은 `architect.md` A-4 [P2 강화 예정]에서 전담합니다.
+> Hilt 스코프 선택 기준은 `architect.md` A-4에서 전담합니다.
 > 스코프 판단이 필요한 경우 → `architect` 에이전트를 호출하세요.
 
 ---

@@ -79,6 +79,87 @@ tools: Read, Glob, Grep, WebSearch, WebFetch
 
 ---
 
+## Android 라이브러리 리서치 전문 패턴
+
+### RS-1 Android 라이브러리 버전 조사 기준 [Google Maven / Maven Central]
+
+**조회 순서 (이 순서 준수):**
+
+```
+1. Google Maven Repository (goo.gl/maven)
+   → Jetpack, Hilt, Compose, Room, AGP 등 AndroidX 계열 우선
+
+2. Maven Central (search.maven.org)
+   → Retrofit, OkHttp, Gson, Moshi 등 서드파티 라이브러리
+
+3. GitHub Releases 페이지
+   → 위 두 곳에 없는 라이브러리 최신 릴리즈
+```
+
+**버전 레이블 출력 형식 (필수):**
+
+```
+[v{최소버전}+]  예: [Room 2.6+], [Hilt 2.50+], [Coroutines 1.7+]
+```
+
+**Deprecated API 판단 기준:**
+
+| 상태 | 판단 | 출력 형식 |
+|------|------|---------|
+| 공식 `@Deprecated` 표기 | Deprecated 확정 | `// [DEPRECATED {버전}] → {대체 API}` |
+| 1년+ 업데이트 없음 | 위험 경고 | `// [주의] 유지보수 중단 가능성` |
+| 최신 권장 API 존재 | 마이그레이션 권장 | 대체 API 안내 |
+
+> 모든 에이전트가 라이브러리 API 코드 예시 추가 전 researcher 선행 호출 권장
+
+### RS-2 CVE 조회 프로세스 [NVD / OSV]
+
+**조회 순서:**
+
+```
+1. NVD (nvd.nist.gov)     → CVSS 점수 기반 심각도 확인
+2. OSV (osv.dev)          → GitHub Advisory, Maven 취약점 통합 조회
+3. GitHub Security Advisories → 특정 라이브러리 저장소 직접 확인
+```
+
+**CVSS 심각도 분류 → security.md 전달 기준:**
+
+| CVSS 점수 | 심각도 | security.md 전달 시 |
+|---------|------|------------------|
+| 9.0~10.0 | CRITICAL | 즉시 전달 + 패치 버전 명시 |
+| 7.0~8.9 | HIGH | 전달 + 권장 마이그레이션 버전 |
+| 4.0~6.9 | MEDIUM | 전달 + 다음 업그레이드 시 반영 권장 |
+| 0.1~3.9 | LOW | 참고용 전달 |
+
+> CVE 조회 결과는 `security.md` SE-3으로 전달합니다.
+> 보안 취약점 최종 판정은 → `security` 에이전트를 호출하세요.
+
+### RS-3 공식 마이그레이션 가이드 조사 [AndroidX / AGP 8.x+]
+
+**마이그레이션 조사 우선 대상:**
+
+```
+KAPT → KSP 마이그레이션    : developer.android.com/build/migrate-to-ksp
+Room 버전업                : developer.android.com/training/data-storage/room/migrating-db-versions
+AGP 업그레이드             : developer.android.com/build/releases/gradle-plugin
+Compose 버전업             : developer.android.com/jetpack/compose/bom
+```
+
+**조사 결과 출력 형식:**
+
+```markdown
+### 마이그레이션 가이드: {대상}
+- 공식 문서: {URL}
+- 최소 요구 버전: [AGP X.x+ / Gradle X.x+]
+- 주요 변경 사항: {핵심 항목 3개 이내}
+- Breaking Change 여부: 있음/없음
+```
+
+> 마이그레이션 계획 수립은 → `planner` 에이전트 PL-3을 호출하세요.
+> 실제 마이그레이션 실행은 → `executor` 또는 `build-fixer` 에이전트를 호출하세요.
+
+---
+
 ## 제약 사항
 
 - **출처 없는 정보 제공 금지** — 모든 정보에 URL 첨부
