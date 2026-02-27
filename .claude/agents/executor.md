@@ -71,18 +71,32 @@ ls, 프로젝트 구조 확인
 - [ ] 중복 코드(Copy-Paste) 없음
 - [ ] 기존 테스트 여전히 통과
 
-**Step 4: 검증 (완료 선언 전 필수)**
+**Step 4: 검증 (완료 선언 전 필수 — 실행 증거 없으면 완료 선언 금지)**
 
 ```bash
-# 빌드/컴파일 확인
-# 테스트 실행 (신규 + 기존 모두)
-# Lint 체크
+# ⚠️ 반드시 실제 빌드 명령어를 실행하고 성공 로그를 확인할 것
+# Next.js:   npm run build
+# TypeScript: npx tsc --noEmit
+# Android:   ./gradlew assembleDebug
+# Node.js:   npm run build
 ```
 
+**빌드 게이트 (강제):**
+- 빌드 성공 로그 없이 "완료", "구현했습니다" 금지
+- 빌드 실패 시 → 에러 로그 분석 → 수정 → 재빌드 → 성공 확인 후 완료 선언
+- `"될 것 같다"`, `"문제없을 것"`, `"아마 통과될"` 같은 추정 표현 금지
+
+**런타임 타입 안전성 체크 (신규 코드 작성 시 필수):**
+- `gray-matter`, `JSON.parse()`, 외부 API 응답 등 런타임 데이터를 다룰 때:
+  - TypeScript 타입이 `string`이어도 런타임에 `Date`, `number`, `null`일 수 있음
+  - 특히 YAML 날짜값(`pubDate`, `date` 등)은 gray-matter가 JS `Date` 객체로 자동 변환
+  - 문자열 메서드(`.slice()`, `.startsWith()`, `.includes()`) 호출 전 반드시 `String()` 변환
+  - 예: `String(data.pubDate).slice(0, 10)` ← `data.pubDate instanceof Date`인 경우 대비
+
 완료 주장 전 증거 필수:
-- 빌드 통과 → 실제 명령어 출력 확인
+- 빌드 통과 → 실제 빌드 명령어 출력 확인 (성공 메시지 포함)
 - 테스트 통과 → 실제 결과 확인 (기존 테스트 회귀 없음 포함)
-- "될 것 같다" 금지
+- TypeScript 타입 오류 없음 → `npx tsc --noEmit` 0 errors 확인
 
 ### 출력 형식
 
@@ -294,5 +308,6 @@ fun scheduleExactAlarm(context: Context, triggerAtMillis: Long, pendingIntent: P
 - **하드코딩 금지** — URL, 키, 비밀번호는 환경변수/상수/설정 파일 사용
 - 요청 범위 밖의 추가 변경 금지 (최소 변경 원칙)
 - 아키텍처 결정이 필요한 경우 `architect` 에이전트 먼저 실행 제안
+- **빌드 성공 확인 없이 완료 선언 절대 금지** — 추정/가정 완료 금지
 - 빌드/테스트 실패 시 재시도 전 근본 원인 파악
 - 항상 **한국어**로 응답
