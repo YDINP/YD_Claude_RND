@@ -69,7 +69,7 @@ Read(".claude/agents/code-reviewer.md") → REVIEWER_PROMPT
 **모델 라우팅 최적화 (비용 절감):**
 | 단계 | 기본 모델 | 재시도 시 |
 |------|---------|---------|
-| planner | opus | sonnet |
+| planner | sonnet | sonnet |
 | architect | opus | sonnet |
 | executor (구현) | sonnet | sonnet |
 | executor (QA 수정) | sonnet | sonnet |
@@ -87,7 +87,7 @@ Read(".claude/agents/code-reviewer.md") → REVIEWER_PROMPT
 ```
 Task(
   subagent_type: "general-purpose",
-  model: "opus",
+  model: "sonnet",   # 비용 최적화: 요구사항 분석·순서 정리는 sonnet으로 충분
   prompt: PLANNER_PROMPT + """
 
 ---
@@ -222,24 +222,52 @@ LOOP (build_attempt <= 2):
       if build_attempt >= 2:
         → 파이프라인 중단 + 빌드 에러 로그 전체 보고 + 수동 개입 요청
 
-      → 에러 로그를 executor에 전달하여 수정 요청:
-        Task(executor, EXECUTOR_PROMPT + """
-        ## 빌드 에러 수정
-        아래 빌드 에러를 수정하세요. 수정 후 빌드 성공을 확인하세요.
+      [3.5C] 에러 타입 분류 → 담당 에이전트 자동 라우팅
+        에러 로그 패턴 매칭:
 
-        **빌드 에러 로그:**
-        {에러 로그 전체}
+        패턴 A — TypeScript 타입 에러:
+          탐지: "TS2\d{3}" / "Type '.*' is not assignable" / "Property '.*' does not exist"
+          → executor에게 수정 위임 (타입 수정 가능)
 
-        **기존 구현 컨텍스트:**
-        """ + IMPLEMENTATION)
-        → IMPLEMENTATION 업데이트
+        패턴 B — 모듈/패키지 없음:
+          탐지: "Cannot find module" / "Module not found" / "Package '.*' not found"
+          → build-fixer에게 수정 위임 (의존성 설치/설정)
+          Task(build-fixer, """
+          ## 빌드 에러 수정 (의존성 문제)
+          아래 빌드 에러를 수정하세요. 패키지 설치 또는 설정 수정으로 해결하세요.
+
+          **빌드 에러 로그:**
+          {에러 로그 전체}
+          """)
+
+        패턴 C — 환경변수 누락:
+          탐지: "process.env\.\w+ is undefined" / "NEXT_PUBLIC_\w+ is not defined"
+               / "Missing environment variable" / "env.*required"
+          → 즉시 파이프라인 중단 + 사용자 에스컬레이션:
+          "[AUTO-PIPELINE] ⚠️ 환경변수 누락으로 중단
+          필요한 환경변수: {감지된 변수명}
+          조치: .env.local 파일에 해당 변수를 추가한 후 재실행하세요."
+
+        패턴 D — 기타 (기본):
+          → executor에게 수정 위임 (기존 동작 유지)
+          Task(executor, EXECUTOR_PROMPT + """
+          ## 빌드 에러 수정
+          아래 빌드 에러를 수정하세요. 수정 후 빌드 성공을 확인하세요.
+
+          **빌드 에러 로그:**
+          {에러 로그 전체}
+
+          **기존 구현 컨텍스트:**
+          """ + IMPLEMENTATION)
+
+        → IMPLEMENTATION 업데이트 (패턴 A·D)
 
       → build_attempt++
       → 루프 계속
 
 진행 로그:
 [AUTO-PIPELINE] Stage 3.5/5: 빌드 게이트 확인 중...
-  → 결과: ✅ 빌드 성공 / ❌ 빌드 실패 (executor 수정 후 재시도 {n}/2)
+  → 결과: ✅ 빌드 성공 / ❌ 빌드 실패 [{에러 타입}] ({담당 에이전트} 수정 후 재시도 {n}/2)
 ```
 
 ---

@@ -67,13 +67,39 @@ QA_RESULT를 반환하기 전 반드시 실제 빌드를 실행합니다.
 ```
 
 빌드 결과 분기:
-- **성공** (exit code 0, "error" 출력 없음) → 정적 분석 / 테스트로 진행
+- **성공** (exit code 0, "error" 출력 없음) → 테스트 자동 실행 단계로 진행
 - **실패** → QA_RESULT: FAIL 즉시 반환, QA_FAILURES에 빌드 에러 로그 포함
 
 ```
 QA_RESULT: FAIL
 QA_FAILURES:
 - [BUILD] 빌드 실패 — {에러 로그 핵심 2-3줄}
+```
+
+**테스트 자동 실행 (빌드 성공 후)**
+
+빌드 성공 시 아래 순서로 테스트를 자동 탐지·실행합니다:
+
+```bash
+# 1단계: package.json 테스트 스크립트 확인
+if package.json에 "test" 스크립트 있음:
+  → npm test 실행
+  실패 시: QA_RESULT: FAIL + [TEST] 태그로 실패 항목 보고
+
+# 2단계: 테스트 파일 직접 탐지 (위에서 실행 안 됐을 경우)
+elif __tests__/ 디렉토리 또는 *.test.ts / *.spec.ts 파일 존재:
+  → npx jest --passWithNoTests 실행
+
+# 3단계: 테스트 없음
+else:
+  → 빌드 게이트만으로 통과 (QA_RESULT: PASS 가능)
+```
+
+테스트 실패 보고 형식:
+```
+QA_RESULT: FAIL
+QA_FAILURES:
+- [TEST] {테스트 파일경로}:{라인} — {실패한 테스트명}: {에러 메시지}
 ```
 
 ---
