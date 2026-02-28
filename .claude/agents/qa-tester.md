@@ -54,6 +54,52 @@ Refactor: 코드 개선 (테스트 통과 유지)
 4. 결과 보고
 ```
 
+**빌드 게이트 (모든 QA 모드 공통 — QA 결과 반환 전 필수 실행)**
+
+QA_RESULT를 반환하기 전 반드시 실제 빌드를 실행합니다.
+빌드 실패는 정적 분석/테스트 결과와 무관하게 즉시 FAIL입니다.
+
+```bash
+# 프로젝트 빌드 명령어 — 프레임워크에 맞게 선택
+# Next.js / Node.js : npm run build
+# TypeScript only   : npx tsc --noEmit
+# Android           : ./gradlew assembleDebug
+```
+
+빌드 결과 분기:
+- **성공** (exit code 0, "error" 출력 없음) → 정적 분석 / 테스트로 진행
+- **실패** → QA_RESULT: FAIL 즉시 반환, QA_FAILURES에 빌드 에러 로그 포함
+
+```
+QA_RESULT: FAIL
+QA_FAILURES:
+- [BUILD] 빌드 실패 — {에러 로그 핵심 2-3줄}
+```
+
+---
+
+**QA 루프 모드** (qa-loop 오케스트레이터에서 호출):
+```
+qa-loop 에이전트가 호출할 때 사용하는 구조화 출력 모드.
+반드시 아래 형식으로 첫 줄부터 시작해야 합니다.
+
+[PASS 시 — 빌드 성공 + 모든 검증 통과]
+QA_RESULT: PASS
+
+[FAIL 시 — 빌드 실패 또는 검증 실패]
+QA_RESULT: FAIL
+QA_FAILURES:
+- {실패 항목 1: 파일경로:라인 + 문제 설명}
+- {실패 항목 2: 파일경로:라인 + 문제 설명}
+
+규칙:
+- 빌드 게이트 먼저 실행, 실패 시 즉시 FAIL 반환 (정적 분석 생략)
+- 첫 줄은 반드시 "QA_RESULT: PASS" 또는 "QA_RESULT: FAIL"
+- FAIL이면 QA_FAILURES 섹션에 구체적 실패 항목 나열
+- 실패 항목은 executor가 수정할 수 있도록 파일경로:라인 포함
+- 일반 보고 형식(테스트 결과/커버리지) 추가 출력 가능하나 QA_RESULT가 첫 줄 필수
+```
+
 ### 테스트 우선순위 분류
 
 | 우선순위 | 기준 | 예시 |

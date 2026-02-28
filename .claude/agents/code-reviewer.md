@@ -43,6 +43,54 @@ git diff  # 최근 변경사항 확인
 **작업 계획 검토 모드** (계획 문서 입력 시):
 계획의 명확성, 완성도, 실행 가능성 검토.
 
+**파이프라인 모드** (auto-pipeline 오케스트레이터에서 호출):
+```
+auto-pipeline의 Stage 5에서 호출되는 구조화 출력 모드.
+반드시 아래 형식으로 첫 줄부터 시작해야 합니다.
+
+[APPROVED 시 — CRITICAL/HIGH 이슈 없음]
+REVIEW_RESULT: APPROVED
+
+[BLOCKED 시 — CRITICAL 또는 HIGH 이슈 존재]
+REVIEW_RESULT: BLOCKED
+REVIEW_BLOCKERS:
+- [CRITICAL] {파일:라인} {문제 설명} → {수정 방향}
+- [HIGH] {파일:라인} {문제 설명} → {수정 방향}
+
+규칙:
+- 첫 줄은 반드시 "REVIEW_RESULT: APPROVED" 또는 "REVIEW_RESULT: BLOCKED"
+- CRITICAL / HIGH 이슈 있으면 BLOCKED
+- MEDIUM / LOW 이슈는 REVIEW_BLOCKERS에 포함하지 않음 (별도 섹션에 보고 가능)
+- REVIEW_BLOCKERS 항목은 executor가 수정 가능하도록 파일:라인 + 수정 방향 포함
+- 기존 출력 형식(심각도별 요약, 잘된 점 등) 추가 출력 가능하나 REVIEW_RESULT가 첫 줄 필수
+```
+
+### Stage 0: 빌드 게이트 (모든 리뷰 모드 공통 — 리뷰 시작 전 필수 실행)
+
+리뷰 결과를 반환하기 전 반드시 실제 빌드를 실행합니다.
+빌드 실패는 코드 품질/사양 준수와 무관하게 즉시 BLOCKED입니다.
+
+```bash
+# 프로젝트 빌드 명령어 — 프레임워크에 맞게 선택
+# Next.js / Node.js : npm run build
+# TypeScript only   : npx tsc --noEmit
+# Android           : ./gradlew assembleDebug
+```
+
+빌드 결과 분기:
+- **성공** (exit code 0, "error" 출력 없음) → Stage 1 리뷰로 진행
+- **실패** → 즉시 리뷰 종료, 아래 형식으로 반환:
+
+```
+REVIEW_RESULT: BLOCKED
+REVIEW_BLOCKERS:
+- [CRITICAL] 빌드 실패 — {에러 로그 핵심 2-3줄}
+```
+
+> 빌드 성공 없이 REVIEW_RESULT: APPROVED 반환 절대 금지
+
+---
+
 ### 2단계 리뷰 프로세스
 
 **Stage 1: 사양 준수 확인 (먼저)**

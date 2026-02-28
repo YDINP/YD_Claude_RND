@@ -48,6 +48,40 @@ Read(".claude/agents/code-reviewer.md") → REVIEWER_PROMPT
 
 ---
 
+### 컨텍스트 압축 전달 규칙 (비용·손실 최소화)
+
+단계 간 컨텍스트 전달 시 반드시 아래 규칙을 준수합니다.
+
+**전달 금지 항목 (토큰 낭비):**
+- 이전 에이전트의 전체 출력 그대로 복사
+- 파일 내용 직접 삽입 (경로만 전달)
+- 이미 다음 에이전트가 알고 있는 요구사항 반복
+
+**전달 필수 항목 (핵심 요약, 500토큰 이하):**
+```
+[이전 단계 핵심 요약 — 500토큰 이하]
+- 결정사항: {1-2줄 핵심 결정}
+- 영향 파일: {수정/생성된 파일 경로 목록 (내용 제외)}
+- 주의사항: {다음 단계에서 주의할 점}
+- 실패 항목: {있을 경우만, 수정 필요 항목}
+```
+
+**모델 라우팅 최적화 (비용 절감):**
+| 단계 | 기본 모델 | 재시도 시 |
+|------|---------|---------|
+| planner | opus | sonnet |
+| architect | opus | sonnet |
+| executor (구현) | sonnet | sonnet |
+| executor (QA 수정) | sonnet | sonnet |
+| qa-tester | sonnet | sonnet |
+| code-reviewer (1차) | sonnet | — |
+| code-reviewer (2차, HIGH 이슈) | opus | — |
+
+> **1차 코드리뷰는 sonnet으로 절약**: 명백한 빌드 실패·CRITICAL 이슈는 sonnet도 충분히 감지.
+> opus는 2차(HIGH 이슈 발견 시)에만 사용.
+
+---
+
 ### Stage 1: 작업 계획 (planner)
 
 ```
@@ -292,11 +326,22 @@ QA 검증에서 실패한 항목을 수정하세요.
 ```
 review_attempt = 1
 
+# 비용 최적화: 1차는 sonnet, 2차(BLOCKED 후)는 opus
+REVIEW_MODEL = "sonnet"
+
 LOOP (review_attempt <= 2):
+
+  [컨텍스트 압축 — IMPLEMENTATION 전체 대신 핵심 요약만 전달]
+  REVIEW_CONTEXT = """
+  [구현 요약]
+  - 수정 파일: {IMPLEMENTATION에서 수정 파일 목록만 추출}
+  - 핵심 변경: {1-3줄 요약}
+  - 빌드 상태: ✅ Stage 3.5에서 성공 확인됨
+  """
 
   Task(
     subagent_type: "general-purpose",
-    model: "opus",
+    model: REVIEW_MODEL,
     prompt: REVIEWER_PROMPT + """
 
 ---
@@ -307,12 +352,16 @@ LOOP (review_attempt <= 2):
 **요구사항:**
 {입력된 기능 요구사항}
 
-**검토할 구현:**
-""" + IMPLEMENTATION + """
+**구현 요약 (빌드 이미 통과):**
+""" + REVIEW_CONTEXT + """
+
+**검토할 파일 (직접 Read로 확인):**
+{수정된 파일 경로 목록}
 
 **완료 기준:**
 첫 줄에 반드시 `REVIEW_RESULT: APPROVED` 또는 `REVIEW_RESULT: BLOCKED`로 시작.
 CRITICAL/HIGH 이슈만 BLOCKER로 분류.
+빌드는 이미 Stage 3.5에서 통과 확인됨 — 빌드 재실행 불필요.
 """
   )
 
@@ -324,6 +373,7 @@ CRITICAL/HIGH 이슈만 BLOCKER로 분류.
       → 2회 모두 BLOCKED → 파이프라인 중단, 수동 개입 요청
 
     → REVIEW_BLOCKERS 추출
+    → REVIEW_MODEL = "opus"  # 2차 리뷰는 opus로 에스컬레이션
 
     [5B] executor 최종 수정
       Task(
