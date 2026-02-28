@@ -48,6 +48,44 @@ Read(".claude/agents/code-reviewer.md") → REVIEWER_PROMPT
 
 ---
 
+### STAGE_OUTPUT 파싱 규칙 (단계 간 컨텍스트 추출)
+
+각 에이전트 Task 완료 후, 출력에서 `[STAGE_OUTPUT]` 블록을 파싱하여 그 내용만 다음 단계 컨텍스트로 전달합니다.
+
+**파싱 방법:**
+
+```
+1. 에이전트 Task 출력(output)에서 "[STAGE_OUTPUT]" 문자열 탐색
+2. "[STAGE_OUTPUT]" 이후 첫 빈 줄 또는 출력 끝까지를 블록으로 추출
+3. 추출된 블록 내용을 STAGE_CONTEXT 변수에 저장
+4. 다음 단계에 STAGE_CONTEXT만 전달 (출력 전체 전달 금지)
+```
+
+**파싱 성공 시 전달 형식:**
+
+```
+[이전 단계 STAGE_OUTPUT]
+결정사항: {파싱된 값}
+수정파일: {파싱된 값}
+주의사항: {파싱된 값, 없으면 생략}
+```
+
+**파싱 실패 시 폴백 (기존 압축 전달 방식):**
+
+`[STAGE_OUTPUT]` 블록이 출력에 없거나 파싱 불가한 경우, 아래 압축 전달 방식을 사용합니다.
+
+```
+[이전 단계 핵심 요약 — 500토큰 이하, 폴백]
+- 결정사항: {출력에서 직접 요약한 1-2줄 핵심 결정}
+- 영향 파일: {출력에서 추출한 수정/생성된 파일 경로 목록 (내용 제외)}
+- 주의사항: {다음 단계에서 주의할 점}
+- 실패 항목: {있을 경우만, 수정 필요 항목}
+```
+
+**파싱 적용 대상 단계:** Stage 3(executor), Stage 4(qa-tester), Stage 5(code-reviewer), Stage 3.5(build-fixer 패턴 B)
+
+---
+
 ### 컨텍스트 압축 전달 규칙 (비용·손실 최소화)
 
 단계 간 컨텍스트 전달 시 반드시 아래 규칙을 준수합니다.
@@ -58,6 +96,10 @@ Read(".claude/agents/code-reviewer.md") → REVIEWER_PROMPT
 - 이미 다음 에이전트가 알고 있는 요구사항 반복
 
 **전달 필수 항목 (핵심 요약, 500토큰 이하):**
+
+STAGE_OUTPUT 파싱 성공 시 → 파싱된 블록 내용 사용
+STAGE_OUTPUT 파싱 실패 시 → 아래 형식으로 직접 요약:
+
 ```
 [이전 단계 핵심 요약 — 500토큰 이하]
 - 결정사항: {1-2줄 핵심 결정}
@@ -442,6 +484,27 @@ CRITICAL/HIGH 이슈만 BLOCKER로 분류.
 
 ### 주요 결정 사항
 {architect가 제안한 설계 결정 요약}
+
+### 비용 추적 (추정값)
+
+> 정확한 토큰 수 계산은 불가능합니다. 아래는 모델별 단가 기준 추정값입니다.
+> 실제 비용은 Claude API 콘솔에서 확인하세요.
+
+**모델별 단가:**
+- Haiku: 입력 $0.80/MTok, 출력 $4.00/MTok
+- Sonnet: 입력 $3.00/MTok, 출력 $15.00/MTok
+- Opus: 입력 $15.00/MTok, 출력 $75.00/MTok
+
+| 단계 | 에이전트 | 모델 | 호출 횟수 |
+|------|---------|------|---------|
+| Stage 1 | planner | sonnet | 1회 |
+| Stage 2 | architect | opus | 1회 |
+| Stage 3 | executor (구현) | sonnet | {n}회 |
+| Stage 3.5 | build-fixer (있을 경우) | sonnet | {n}회 |
+| Stage 4 | qa-tester | sonnet | {n}회 |
+| Stage 5 | code-reviewer | sonnet/opus | {n}회 |
+
+**예상 총 비용**: ~$X.XX (추정값 — sonnet 기준 1회 호출 ≈ $0.05~$0.15)
 
 [중단 시 추가]
 ### 미해결 항목
