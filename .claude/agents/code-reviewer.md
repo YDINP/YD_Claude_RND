@@ -169,6 +169,17 @@ REVIEW_BLOCKERS:
 ...
 ```
 
+**파이프라인 컨텍스트 전달 블록 (auto-pipeline에서 호출 시 필수 출력)**
+
+응답 마지막에 반드시 아래 블록을 포함합니다.
+
+```
+[STAGE_OUTPUT]
+결정사항: {APPROVED 또는 BLOCKED + 핵심 이유 1줄}
+수정파일: {"없음" — code-reviewer는 파일 수정 안 함}
+주의사항: {BLOCKED 시 블로커 항목 요약, APPROVED 시 생략}
+```
+
 ### 작업 계획 검토 시 판정
 
 **OKAY** 조건: 실제 구현 시 필요한 정보를 계획에서 얻을 수 있음
