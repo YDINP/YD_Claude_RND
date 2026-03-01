@@ -64,6 +64,8 @@ tools: Read, Write, Glob, Grep, Bash, Task
 | Git 이력 분석, 회귀 추적 | `git-historian` | sonnet |
 | 클라우드/API 비용 분석 및 최적화 | `cost-analyzer` | sonnet |
 | 접근성(a11y) 감사, WCAG 검토 | `accessibility` | sonnet |
+| 구현 후 자동 QA 검증 반복, executor→qa 체인 | `qa-loop` | sonnet |
+| 요구사항→구현→QA→리뷰 완전 자율 파이프라인 | `auto-pipeline` | sonnet |
 | 에이전트 목록/레지스트리 관리 | (직접 처리) | — |
 
 ---

@@ -1,8 +1,8 @@
 {
-  "version": "2.3.0",
-  "last_updated": "2026-02-23",
+  "version": "2.6.0",
+  "last_updated": "2026-02-28",
   "standards": "_STANDARDS.md",
-  "total_agents": 30,
+  "total_agents": 33,
   "agents": [
     {
       "name": "agent-manager",
@@ -273,6 +273,33 @@
       "description": "마케팅 카피, 랜딩 페이지, README 마케팅 섹션 작성 전문가",
       "capabilities": ["marketing-copy", "app-store-description", "landing-page", "feature-copy", "content-strategy"],
       "triggers": ["앱 스토어 설명", "마케팅 카피", "랜딩 페이지", "기능 소개 카피", "README 마케팅", "제품 소개 문구", "카피 써줘"]
+    },
+    {
+      "name": "qa-loop",
+      "tier": "sub",
+      "file": "qa-loop.md",
+      "model": "claude-sonnet-4-6",
+      "description": "executor→qa-tester 자동 반복 루프 오케스트레이터 (최대 3회, QA 피드백 포함 재시도)",
+      "capabilities": ["qa-loop-orchestration", "executor-qa-chain", "auto-retry", "failure-feedback-loop"],
+      "triggers": ["QA 루프", "자동 QA", "구현하고 테스트", "자동 검증 반복", "QA까지 자동"]
+    },
+    {
+      "name": "auto-pipeline",
+      "tier": "sub",
+      "file": "auto-pipeline.md",
+      "model": "claude-sonnet-4-6",
+      "description": "완전 자율 5단계 파이프라인 오케스트레이터 — planner→architect→executor→QA게이트→code-reviewer",
+      "capabilities": ["full-pipeline-orchestration", "autonomous-development", "multi-stage-chain", "blocker-retry"],
+      "triggers": ["처음부터 끝까지", "완전 자동", "auto-pipeline", "자율 파이프라인", "요구사항부터 구현까지"]
+    },
+    {
+      "name": "knowledge-tracker",
+      "tier": "sub",
+      "file": "knowledge-tracker.md",
+      "model": "claude-sonnet-4-6",
+      "description": "세션 지식 구조화 — 기술 인사이트를 .omc/notepads/ 구조로 자동 저장",
+      "capabilities": ["knowledge-capture", "session-learning", "decision-recording", "pattern-persistence"],
+      "triggers": ["지식 정리해줘", "학습 내용 저장", "결정사항 기록", "이번 세션 정리", "notepads 저장"]
     }
   ]
 }
