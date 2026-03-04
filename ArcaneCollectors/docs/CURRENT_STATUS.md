@@ -1,6 +1,6 @@
 # ArcaneCollectors 현재 상태
 
-> **최종 업데이트**: 2026-02-15
+> **최종 업데이트**: 2026-03-04
 > **브랜치**: `arcane/integration`
 > **테스트**: 601/601 유닛 + 34/34 E2E = 631개 통과 | **빌드**: tsc 0 에러
 > **번들 크기**: 568KB gzip (최적화 완료)
@@ -57,6 +57,16 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | GP-4 | 유휴 전투 보스 기반 리디자인 (DPS 누적 진행) | `fd3a7f6` | 02-15 |
 | GP-5 | 샌드백 보스 + 진행도 시스템 (6개 서브태스크) | - | 02-15 |
 
+### 캐릭터 시스템 재설계 (2026-03-04)
+| ID | 태스크 | 커밋 | 날짜 |
+|----|--------|------|------|
+| CHAR-SLIM | 캐릭터 풀 슬림화 (91캐릭터 → 4슬롯 플레이스홀더, 가챠 비활성화) | `a484671` | 03-04 |
+| GDD-1 | CHARACTER_SYSTEM_GDD.md — 전직 시스템 v1.0 기획서 | - | 03-04 |
+| GDD-2 | CULT_NARRATIVE_DESIGN.md — 교단 세계관·캐릭터 내러티브 | - | 03-04 |
+| GDD-3 | CULT_SYSTEM_DESIGN.md — 교단별 전투 메커니즘·상성 시스템 | - | 03-04 |
+| GDD-4 | INSTITUTION_REDESIGN.md — 소환 기관/학파 컨셉 리디자인 | - | 03-04 |
+| GDD-5 | EVOLUTION_SYSTEM_GDD.md — 기본영웅 복수 진화루트 v2.0 (최종) | - | 03-04 |
+
 ### 테스트 커버리지 확장
 | 항목 | 커밋 | 날짜 |
 |------|------|------|
@@ -68,7 +78,44 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 ---
 
+## 현재 기획 방향 (2026-03-04 기준)
+
+### 캐릭터 진화 시스템 v2.0 (EVOLUTION_SYSTEM_GDD.md)
+
+```
+미정령 (Unbound Spirit) → 기본영웅 (Base Hero) → 전직 영웅 (Ascended Hero)
+```
+
+**기본영웅 10명 (MVP)**: 아이리스, 세라, 루카, 카이, 린, 오마르, 솔, 하나, 레온, 파올로
+
+**소환 기관 12개 (코드명 유지)**:
+- 폭격 계열: olympus, valhalla, chaos
+- 봉쇄 계열: yomi, helheim, tartarus
+- 지속 계열: kunlun, avalon, nature
+- 조율 계열: asgard, takamagahara, balance
+
+**MVP 전직 영웅**: 24개 (SSR 14 / SR 7 / R 3)
+
+**핵심 특징**: 같은 기본영웅을 여러 기관 루트로 동시 육성 가능 (멀티-각성), 파티 내 동일 기본영웅 1체 제한
+
+**다음 구현 태스크**:
+- `src/data/base-heroes.json` 생성 (10명 기본영웅)
+- `src/data/ascended-heroes.json` 생성 (24명 전직 영웅)
+- `src/data/cults.json` → 소환 기관 체계 업데이트
+- 기관 각인 UI 프로토타입
+
+---
+
 ## 남은 태스크 (백로그)
+
+### P0: 캐릭터 진화 시스템 구현 (신규)
+| ID | 태스크 | 난이도 | 설명 |
+|----|--------|--------|------|
+| CHAR-1 | 기본영웅 데이터 생성 | M | base-heroes.json (10명) + ascended-heroes.json (24명) |
+| CHAR-2 | 소환 기관 데이터 업데이트 | M | cults.json에 institutionName 등 필드 추가 |
+| CHAR-3 | 기관 각인 UI | H | 기본영웅 선택 → 기관 선택 → 전직 확인 플로우 |
+| CHAR-4 | BattleSystem 연동 | M | 새 데이터 스키마 읽도록 수정 |
+| CHAR-5 | 피티 시스템 구현 | M | 소프트피티(30회)/하드피티(50회) 카운터 저장 |
 
 ### P1: 게임플레이 확장
 | ID | 태스크 | 난이도 | 설명 |
@@ -166,6 +213,11 @@ docs/
 ├── PROCEDURAL_ART_GUIDE.md             ← 프로시저럴 아트 가이드
 ├── GP-3-EventDungeonSystem-Implementation.md ← 이벤트 던전 구현 문서
 ├── INFRA-2-CI-CD-REPORT.md             ← CI/CD 구축 리포트
+├── CHARACTER_SYSTEM_GDD.md             ← 전직 시스템 v1.0 기획 (구버전 참고)
+├── CULT_NARRATIVE_DESIGN.md            ← 교단 세계관/캐릭터 내러티브 (참고)
+├── CULT_SYSTEM_DESIGN.md               ← 교단별 전투 메커니즘 (참고)
+├── INSTITUTION_REDESIGN.md             ← 소환 기관/학파 컨셉 (참고)
+├── EVOLUTION_SYSTEM_GDD.md             ← ★ 기본영웅 복수 진화루트 v2.0 (최신 최종)
 ├── prd/
 │   └── PRD_Sprint3_UIX.md              ← Sprint 3 PRD
 └── done/                               ← 완료된 문서 아카이브
