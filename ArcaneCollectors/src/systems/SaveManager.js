@@ -7,6 +7,9 @@
 import { supabase, isSupabaseConfigured, isOnline } from '../api/supabaseClient.js';
 import GameLogger from '../utils/GameLogger.js';
 import charactersData from '../data/characters.json';
+import baseHeroesData from '../data/base-heroes.json';
+import ascendedHeroesData from '../data/ascended-heroes.json';
+import cultsData from '../data/cults.json';
 
 export class SaveManager {
   static SAVE_KEY = 'arcane_collectors_save';
@@ -63,6 +66,9 @@ export class SaveManager {
         charactersCollected: 0,
         highestDamage: 0
       },
+      // ========== 진화 시스템 ==========
+      baseHeroes: [],        // [{ baseHeroId, fragmentCount, openedRoutes[] }]
+      ascendedHeroes: [],    // [{ ascendedHeroId, baseHeroId, cultId, rarity, obtainedAt }]
       lastOnline: Date.now(),
       lastLogoutTime: Date.now(), // 오프라인 보상 계산용
       createdAt: Date.now()
@@ -105,6 +111,10 @@ export class SaveManager {
         this.save(data);
         GameLogger.log('SAVE', '스타터 캐릭터 4명 마이그레이션 적용');
       }
+
+      // CHAR-3: 진화 시스템 필드 마이그레이션 (구버전 세이브 호환)
+      if (!data.baseHeroes) data.baseHeroes = [];
+      if (!data.ascendedHeroes) data.ascendedHeroes = [];
 
       return data;
     } catch (error) {
@@ -1176,6 +1186,184 @@ export class SaveManager {
       userId: this._userId,
       hasPendingSync: this._pendingSync
     };
+  }
+
+  // ========== 진화 시스템 (CHAR-3) ==========
+
+  /**
+   * 전체 기본영웅 데이터 반환 (JSON 원본)
+   * @returns {Array} base-heroes.json baseHeroes 배열
+   */
+  static getAllBaseHeroes() {
+    return baseHeroesData.baseHeroes || [];
+  }
+
+  /**
+   * 특정 기본영웅 데이터 조회
+   * @param {string} baseHeroId
+   * @returns {Object|null}
+   */
+  static getBaseHeroData(baseHeroId) {
+    return (baseHeroesData.baseHeroes || []).find(h => h.id === baseHeroId) || null;
+  }
+
+  /**
+   * 특정 전직영웅 데이터 조회
+   * @param {string} ascendedHeroId
+   * @returns {Object|null}
+   */
+  static getAscendedHeroData(ascendedHeroId) {
+    const heroes = ascendedHeroesData.ascendedHeroes || ascendedHeroesData;
+    if (Array.isArray(heroes)) {
+      return heroes.find(h => h.id === ascendedHeroId) || null;
+    }
+    // 객체형 구조 대비
+    return heroes[ascendedHeroId] || null;
+  }
+
+  /**
+   * 기관 데이터 조회
+   * @param {string} cultId
+   * @returns {Object|null}
+   */
+  static getCultData(cultId) {
+    return (cultsData.cults || {})[cultId] || null;
+  }
+
+  /**
+   * 보유 전직영웅 목록 조회
+   * @returns {Array} ascendedHeroes 배열
+   */
+  static getOwnedAscendedHeroes() {
+    const data = this.load();
+    return data.ascendedHeroes || [];
+  }
+
+  /**
+   * 특정 전직영웅 보유 여부 확인
+   * @param {string} ascendedHeroId
+   * @returns {boolean}
+   */
+  static hasAscendedHero(ascendedHeroId) {
+    const owned = this.getOwnedAscendedHeroes();
+    return owned.some(h => h.ascendedHeroId === ascendedHeroId);
+  }
+
+  /**
+   * 각인 가능 여부 확인
+   * - 비용: fragmentsRequired 기본영웅 조각 + spiritStonesRequired 정령석(gems로 대체)
+   * - 이미 보유한 루트는 불가
+   * @param {string} baseHeroId
+   * @param {string} cultId
+   * @returns {{ canAscend: boolean, reason: string }}
+   */
+  static canAscend(baseHeroId, cultId) {
+    const heroData = this.getBaseHeroData(baseHeroId);
+    if (!heroData) {
+      return { canAscend: false, reason: '기본영웅 데이터 없음' };
+    }
+
+    const route = (heroData.ascensionRoutes || []).find(r => r.cultId === cultId);
+    if (!route) {
+      return { canAscend: false, reason: '해당 기관 각인 루트 없음' };
+    }
+
+    // 이미 보유 중인지 확인
+    if (this.hasAscendedHero(route.ascendedHeroId)) {
+      return { canAscend: false, reason: '이미 각인된 루트' };
+    }
+
+    // 비용 확인: fragmentsRequired 조각 + spiritStonesRequired 정령석 (gems)
+    const data = this.load();
+    const fragmentCount = (data.resources.characterShards || {})[baseHeroId] || 0;
+    const gemsCount = data.resources.gems || 0;
+    const fragRequired = heroData.fragmentsRequired || 30;
+    const stonesRequired = heroData.spiritStonesRequired || 3;
+
+    if (fragmentCount < fragRequired) {
+      return {
+        canAscend: false,
+        reason: `조각 부족 (보유: ${fragmentCount}/${fragRequired}개)`
+      };
+    }
+    if (gemsCount < stonesRequired) {
+      return {
+        canAscend: false,
+        reason: `정령석(젬) 부족 (보유: ${gemsCount}/${stonesRequired}개)`
+      };
+    }
+
+    return { canAscend: true, reason: 'OK', route, fragRequired, stonesRequired };
+  }
+
+  /**
+   * 각인 실행
+   * - 재화 차감 후 ascendedHeroes 배열에 추가
+   * - characters 배열에도 등록 (기존 HeroListPopup 호환)
+   * @param {string} baseHeroId
+   * @param {string} cultId
+   * @returns {{ success: boolean, ascendedHero?: Object, error?: string }}
+   */
+  static performAscension(baseHeroId, cultId) {
+    const check = this.canAscend(baseHeroId, cultId);
+    if (!check.canAscend) {
+      return { success: false, error: check.reason };
+    }
+
+    const heroData = this.getBaseHeroData(baseHeroId);
+    const route = check.route;
+    const data = this.load();
+
+    // 재화 차감
+    if (!data.resources.characterShards) data.resources.characterShards = {};
+    data.resources.characterShards[baseHeroId] = (data.resources.characterShards[baseHeroId] || 0) - check.fragRequired;
+    data.resources.gems -= check.stonesRequired;
+    data.statistics.totalGemsSpent += check.stonesRequired;
+
+    // 전직영웅 레코드 생성
+    const now = Date.now();
+    const ascendedHeroRecord = {
+      ascendedHeroId: route.ascendedHeroId,
+      baseHeroId,
+      cultId,
+      rarity: route.resultRarity,
+      resonanceBoost: route.resonanceBoost || false,
+      obtainedAt: now
+    };
+
+    // ascendedHeroes 배열이 없으면 초기화
+    if (!data.ascendedHeroes) data.ascendedHeroes = [];
+    data.ascendedHeroes.push(ascendedHeroRecord);
+
+    // characters 배열에도 등록 (HeroListPopup 호환)
+    const existingChar = data.characters.find(c => c.characterId === route.ascendedHeroId);
+    if (!existingChar) {
+      const ascendedData = this.getAscendedHeroData(route.ascendedHeroId);
+      const rarityStars = { 'SSR': 5, 'SR': 4, 'R': 3 };
+      data.characters.push({
+        id: route.ascendedHeroId,
+        instanceId: `${route.ascendedHeroId}_asc_${now}`,
+        characterId: route.ascendedHeroId,
+        level: 1,
+        exp: 0,
+        stars: rarityStars[route.resultRarity] || 3,
+        skillLevels: [1, 1, 1],
+        equipped: null,
+        equipment: { weapon: null, armor: null, accessory: null },
+        constellation: 0,
+        acquiredAt: now,
+        isAscended: true,
+        sourceBaseHeroId: baseHeroId,
+        sourceCultId: cultId
+      });
+      data.statistics.charactersCollected++;
+    }
+
+    this.save(data);
+
+    GameLogger.log('ASCENSION', `각인 완료: ${baseHeroId} → ${route.ascendedHeroId} (${cultId})`);
+
+    return { success: true, ascendedHero: ascendedHeroRecord };
   }
 }
 

@@ -23,6 +23,7 @@ import { TowerPopup } from '../components/popups/TowerPopup.js';
 import { InventoryPopup } from '../components/popups/InventoryPopup.js';
 import { SettingsPopup } from '../components/popups/SettingsPopup.js';
 import { EventDungeonPopup } from '../components/popups/EventDungeonPopup.js';
+import { AscensionPopup } from '../components/popups/AscensionPopup.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -1077,6 +1078,7 @@ export class MainMenuScene extends Phaser.Scene {
       { icon: '👥', label: '파티', popupKey: 'partyedit' },
       { icon: '📜', label: '퀘스트', popupKey: 'quest' },
       { icon: '🗼', label: '무한탑', popupKey: 'tower' },
+      { icon: '✨', label: '각인', popupKey: 'ascension' },
       { icon: '🎉', label: '이벤트', popupKey: 'eventdungeon' },
       { icon: '📦', label: '가방', popupKey: 'inventory' },
       { icon: '⚙️', label: '설정', popupKey: 'settings' },
@@ -1158,6 +1160,7 @@ export class MainMenuScene extends Phaser.Scene {
       partyedit: PartyEditPopup,
       quest: QuestPopup,
       tower: TowerPopup,
+      ascension: AscensionPopup,
       eventdungeon: EventDungeonPopup,
       inventory: InventoryPopup,
       settings: SettingsPopup,
