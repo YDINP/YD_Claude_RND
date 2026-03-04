@@ -1,8 +1,8 @@
 # ArcaneCollectors 현재 상태
 
-> **최종 업데이트**: 2026-03-04
+> **최종 업데이트**: 2026-03-05
 > **브랜치**: `arcane/integration`
-> **테스트**: 601/601 유닛 + 34/34 E2E = 631개 통과 | **빌드**: tsc 0 에러
+> **테스트**: 586/601 유닛 통과 (15개 기존 실패, 신규 0개) | **빌드**: 0 에러
 > **번들 크기**: 568KB gzip (최적화 완료)
 
 ---
@@ -107,13 +107,15 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 **핵심 특징**: 같은 기본영웅을 여러 기관 루트로 동시 육성 가능 (멀티-각성), 파티 내 동일 기본영웅 1체 제한
 
-**데이터 구현 현황 (2026-03-04)**:
+**데이터 구현 현황 (2026-03-05 기준)**:
 - `src/data/base-heroes.json` ✅ 생성 완료 (10명, GDD v2.0 스키마)
 - `src/data/ascended-heroes.json` ✅ 생성 완료 (24개, SSR 14/SR 7/R 3)
 - `src/data/cults.json` ✅ v2.1 업데이트 (14개 기관, institutionName/baseRarity 추가)
 - `src/data/index.ts` ✅ 진화 시스템 접근 함수 6개 추가
 - `src/systems/BattleSystem.js` ✅ getCharacterOrHero 폴백 연동
-- **다음 구현 태스크**: 기관 각인 UI 프로토타입 (CHAR-3)
+- `src/components/popups/AscensionPopup.js` ✅ CHAR-3: 3단계 기관 각인 팝업 UI (커밋: a5c08ba)
+- `src/systems/SaveManager.js` ✅ CHAR-3: 각인 메서드 6개 + baseHeroes/ascendedHeroes 저장 필드
+- **다음 구현 태스크**: 피티 시스템 (CHAR-5), PvP/랭킹 (GP-1)
 
 ---
 
@@ -126,6 +128,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | CHAR-2 | 소환 기관 데이터 업데이트 | M | ✅ | cults.json v2.1 — institutionName/baseRarity + 5개 기관 추가 |
 | CHAR-3 | 기관 각인 UI | H | 미완 | 기본영웅 선택 → 기관 선택 → 전직 확인 플로우 |
 | CHAR-4 | BattleSystem 연동 | M | ✅ | index.ts 6개 함수 + BattleSystem.js 폴백 연동 |
+| CHAR-3 | 기관 각인 UI | H | ✅ | AscensionPopup.js 3단계 UI + SaveManager 각인 메서드 6개 (커밋: a5c08ba, 2026-03-05) |
 | CHAR-5 | 피티 시스템 구현 | M | 미완 | 소프트피티(30회)/하드피티(50회) 카운터 저장 |
 
 ### P1: 게임플레이 확장
