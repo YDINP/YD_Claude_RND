@@ -34,12 +34,12 @@ export class GachaSystem {
   static TICKET_SINGLE = 1; // 티켓 1장
   static TICKET_MULTI = 10; // 티켓 10장
 
-  // 등급별 캐릭터 풀 (characters.json 기반 91명)
+  // 등급별 캐릭터 풀 (임시 비활성화 - 가챠 시스템 준비 중)
   static CHARACTER_POOL = {
-    SSR: ['hero_001', 'hero_002', 'hero_003', 'hero_016', 'hero_017', 'hero_018', 'hero_019', 'hero_022', 'hero_023', 'hero_024', 'hero_028', 'hero_029', 'hero_030', 'hero_031', 'hero_034', 'hero_035', 'hero_040', 'hero_041', 'hero_049', 'hero_050', 'hero_058', 'hero_059', 'hero_067', 'hero_068', 'hero_083', 'hero_084'],
-    SR: ['hero_004', 'hero_005', 'hero_006', 'hero_007', 'hero_008', 'hero_020', 'hero_021', 'hero_025', 'hero_026', 'hero_027', 'hero_032', 'hero_033', 'hero_036', 'hero_037', 'hero_038', 'hero_039', 'hero_042', 'hero_043', 'hero_051', 'hero_052', 'hero_060', 'hero_061', 'hero_069', 'hero_070', 'hero_085'],
-    R: ['hero_009', 'hero_010', 'hero_011', 'hero_012', 'hero_013', 'hero_014', 'hero_015', 'hero_044', 'hero_045', 'hero_053', 'hero_054', 'hero_062', 'hero_063', 'hero_071', 'hero_072', 'hero_080', 'hero_086', 'hero_089'],
-    N: ['hero_046', 'hero_047', 'hero_048', 'hero_055', 'hero_056', 'hero_057', 'hero_064', 'hero_065', 'hero_066', 'hero_073', 'hero_074', 'hero_075', 'hero_076', 'hero_077', 'hero_078', 'hero_079', 'hero_081', 'hero_082', 'hero_087', 'hero_088', 'hero_090', 'hero_091']
+    SSR: [],
+    SR: [],
+    R: [],
+    N: []
   };
 
   // 배너 데이터
@@ -189,6 +189,13 @@ export class GachaSystem {
    * @returns {Object} { success, results, pityInfo }
    */
   static pull(count = 1, paymentType = 'gems') {
+    // 가챠 비활성화 guard: CHARACTER_POOL이 비어있으면 즉시 반환
+    const hasPool = Object.values(this.CHARACTER_POOL).some(pool => pool.length > 0);
+    if (!hasPool) {
+      console.warn('[GachaSystem] Gacha is currently disabled.');
+      return { success: false, error: '가챠 시스템이 현재 비활성화되어 있습니다.', results: [] };
+    }
+
     // 비용 확인 및 차감
     if (!this.canPull(count, paymentType)) {
       return {
@@ -261,8 +268,8 @@ export class GachaSystem {
       }
     }
 
-    // 가챠 카운터 업데이트
-    SaveManager.updateGachaCounter(count, gotSSR);
+    // 가챠 카운터 업데이트 (최종 pity 값 직접 전달)
+    SaveManager.updateGachaCounter(count, currentPity);
 
     // 이벤트 발생
     results.forEach(result => {
@@ -332,8 +339,8 @@ export class GachaSystem {
   static getRandomCharacterByRarity(rarity) {
     const pool = this.CHARACTER_POOL[rarity];
     if (!pool || pool.length === 0) {
-      console.error(`GachaSystem: ${rarity} 캐릭터 풀이 비어있습니다`);
-      return this.CHARACTER_POOL.N[0]; // 폴백
+      console.warn(`[GachaSystem] ${rarity} 캐릭터 풀이 비어있습니다 (가챠 비활성화 상태)`);
+      return null; // 폴백: 빈 풀일 때 null 반환
     }
 
     const randomIndex = Math.floor(Math.random() * pool.length);

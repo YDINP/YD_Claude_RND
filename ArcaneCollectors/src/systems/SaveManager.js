@@ -6,6 +6,7 @@
  */
 import { supabase, isSupabaseConfigured, isOnline } from '../api/supabaseClient.js';
 import GameLogger from '../utils/GameLogger.js';
+import charactersData from '../data/characters.json';
 
 export class SaveManager {
   static SAVE_KEY = 'arcane_collectors_save';
@@ -33,7 +34,7 @@ export class SaveManager {
         characterShards: {}
       },
       characters: this._createStarterCharacters(), // 스타터 캐릭터 4명
-      parties: [['hero_055', 'hero_065', 'hero_046', 'hero_081']], // 스타터 파티
+      parties: [['char_1', 'char_2', 'char_3', 'char_4']], // 스타터 파티
       inventory: [],
       progress: {
         currentChapter: 'chapter_1',
@@ -98,7 +99,7 @@ export class SaveManager {
       if ((!data.characters || data.characters.length === 0) && data.progress?.totalBattles === 0) {
         data.characters = this._createStarterCharacters();
         if (!data.parties || data.parties.length === 0) {
-          data.parties = [['hero_055', 'hero_065', 'hero_046', 'hero_081']];
+          data.parties = [['char_1', 'char_2', 'char_3', 'char_4']];
         }
         data.statistics.charactersCollected = 4;
         this.save(data);
@@ -361,10 +362,10 @@ export class SaveManager {
    */
   static _createStarterCharacters() {
     const starters = [
-      { id: 'hero_055', stars: 2 }, // 요정기사 (warrior, avalon)
-      { id: 'hero_065', stars: 2 }, // 스베르탈프 (mage, helheim)
-      { id: 'hero_046', stars: 2 }, // 하피 (archer, tartarus)
-      { id: 'hero_081', stars: 2 }, // 님프 (healer, olympus)
+      { id: 'char_1', stars: 2 }, // 요정기사 (warrior, avalon)
+      { id: 'char_2', stars: 2 }, // 스베르탈프 (mage, helheim)
+      { id: 'char_3', stars: 2 }, // 하피 (archer, tartarus)
+      { id: 'char_4', stars: 2 }, // 님프 (healer, olympus)
     ];
     const now = Date.now();
     return starters.map((s, i) => ({
@@ -388,10 +389,16 @@ export class SaveManager {
    * @returns {number} 기본 성급
    */
   static getBaseStars(characterId) {
-    // 캐릭터 ID 형식: rarity_name (예: ssr_aelara)
-    const rarity = characterId.split('_')[0].toUpperCase();
-    const starsMap = { N: 1, R: 2, SR: 3, SSR: 4 };
-    return starsMap[rarity] || 1;
+    // characters.json에서 rarity 필드 직접 참조
+    const char = SaveManager._charactersData?.characters?.find(c => c.id === characterId);
+    if (char && char.rarity) {
+      return char.rarity;
+    }
+    // fallback: 보유 캐릭터 데이터에서 조회
+    const data = this.load();
+    const owned = data.characters?.find(c => c.id === characterId);
+    if (owned && owned.stars) return owned.stars;
+    return 1;
   }
 
   /**
@@ -604,16 +611,10 @@ export class SaveManager {
     this.save(data);
   }
 
-  static updateGachaCounter(pulls, gotSSR) {
+  static updateGachaCounter(pulls, finalPityCount) {
     const data = this.load();
     data.gacha.totalPulls += pulls;
-
-    if (gotSSR) {
-      data.gacha.pityCounter = 0;
-    } else {
-      data.gacha.pityCounter += pulls;
-    }
-
+    data.gacha.pityCounter = finalPityCount;
     this.save(data);
   }
 
@@ -1177,3 +1178,6 @@ export class SaveManager {
     };
   }
 }
+
+// 캐릭터 데이터 정적 참조
+SaveManager._charactersData = charactersData;

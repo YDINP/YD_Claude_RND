@@ -13,6 +13,7 @@ import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import SkillAnimationManager from '../systems/SkillAnimationManager.js';
 import { EnhancedHPBar } from '../components/EnhancedHPBar.js';
 import { TowerSystem } from '../systems/TowerSystem.js';
+import { sweepSystem } from '../systems/SweepSystem.js';
 
 /**
  * BattleScene - 전투 씬
@@ -2135,6 +2136,8 @@ export class BattleScene extends Phaser.Scene {
           this.registry.set('clearedStages', clearedStages);
           SaveManager.clearStage(this.stage.id, newStars);
         }
+        // 소탕 시스템에 클리어 기록
+        sweepSystem.recordStageClear(this.stage.id, newStars);
       }
 
       // 타워 모드: 층 클리어 처리

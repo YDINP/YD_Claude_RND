@@ -21,7 +21,7 @@ export class PopupBase {
     this.container = this.scene.add.container(0, 0).setDepth(2000);
 
     // Overlay
-    const overlay = this.scene.add.rectangle(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
+    const overlay = this.scene.add.rectangle(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH * 2, GAME_HEIGHT * 2, 0x000000, 0.85);
     overlay.setInteractive();
     overlay.on('pointerdown', () => this.hide());
     this.container.add(overlay);

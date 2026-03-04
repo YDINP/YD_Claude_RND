@@ -10,11 +10,11 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "name", "rarity", "cult", "class", "mood", "stats", "growthStats", "skills"],
+        "required": ["id", "name", "rarity", "cult", "class", "stats", "skills"],
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^hero_\\d{3}$"
+            "pattern": "^[a-z][a-z0-9_]*$"
           },
           "name": {
             "type": "string",
@@ -30,15 +30,14 @@
           },
           "cult": {
             "type": "string",
-            "enum": ["olympus", "valhalla", "asgard", "avalon", "takamagahara", "kunlun", "yomi", "helheim", "tartarus"]
+            "enum": ["olympus", "valhalla", "asgard", "avalon", "takamagahara", "kunlun", "yomi", "helheim", "tartarus", "balance", "chaos", "nature"]
           },
           "class": {
             "type": "string",
             "enum": ["warrior", "mage", "archer", "healer", "assassin", "tank"]
           },
           "mood": {
-            "type": "string",
-            "enum": ["brave", "fierce", "wild", "calm", "stoic", "devoted", "cunning", "noble", "mystic"]
+            "type": "string"
           },
           "description": {
             "type": "string"

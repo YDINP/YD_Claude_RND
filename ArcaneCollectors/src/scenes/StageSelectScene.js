@@ -638,7 +638,8 @@ export class StageSelectScene extends Phaser.Scene {
     }
 
     // 에너지 차감 (스테이지 비용 계산)
-    const stageCost = energySystem.getStageCost(this.selectedStage?.id) || 10;
+    const stageType = this.selectedStage?.type || 'NORMAL';
+    const stageCost = energySystem.getStageCost(stageType);
     const consumeResult = energySystem.consumeEnergy(stageCost);
 
     if (!consumeResult.success) {
