@@ -9,7 +9,7 @@
  */
 import { EventBus, GameEvents } from './EventBus.js';
 import { SaveManager } from './SaveManager.js';
-import { getCharacter } from '../data/index.js';
+import { getCharacter, getCharacterOrHero } from '../data/index.js';
 import { AttackCommand, SkillCommand, DefendCommand } from './commands/index.js';
 
 // ============================================
@@ -316,12 +316,13 @@ export class BattleUnit {
     this.buffs = [];
     this.debuffs = [];
 
-    // 스킬 정보 - characters.json에서 로드, 없으면 데이터에서 조회
+    // 스킬 정보 - characters.json → ascended-heroes → base-heroes 순서로 조회
     this.skills = characterData.skills && characterData.skills.length > 0
       ? characterData.skills
       : (() => {
           try {
-            const charData = getCharacter(characterData.id);
+            // v2.0: getCharacterOrHero가 characters.json → ascended-heroes → base-heroes 순서로 탐색
+            const charData = getCharacterOrHero(characterData.id) || getCharacter(characterData.id);
             return charData?.skills || [{ id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 20 }];
           } catch {
             return [{ id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 20 }];

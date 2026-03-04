@@ -1,0 +1,1418 @@
+{
+  "ascendedHeroes": [
+    {
+      "id": "asc_iris_olympus",
+      "baseHeroId": "base_iris",
+      "cultId": "olympus",
+      "name": "번개의 아이리스",
+      "nameEn": "Iris of Lightning",
+      "rarity": "SSR",
+      "class": "warrior",
+      "mood": "brave",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 1.0,
+        "atk": 1.1,
+        "def": 0.95,
+        "spd": 1.05
+      },
+      "baseStats": {
+        "lv1": { "hp": 450, "atk": 55, "def": 42, "spd": 92 },
+        "lv60": { "hp": 2950, "atk": 258, "def": 195, "spd": 110 }
+      },
+      "stats": { "hp": 450, "atk": 55, "def": 42, "spd": 92 },
+      "growthStats": { "hp": 42, "atk": 3.4, "def": 2.6, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "번개 참격",
+          "description": "번개를 담은 검격으로 적을 베어낸다.",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "뇌신의 일격",
+          "description": "번개를 집중해 단일 적에게 강타. Thunderstruck 40% 확률 부여.",
+          "multiplier": 2.2,
+          "gaugeCost": 100,
+          "target": "single",
+          "cultEffect": "thunderstruck_40"
+        },
+        {
+          "id": "awakening",
+          "name": "천공 뇌신",
+          "description": "SSR 각성 스킬. 전체 적에게 ATK×180% 번개 피해 + Thunderstruck 확정 부여.",
+          "multiplier": 1.8,
+          "gaugeCost": 0,
+          "target": "all",
+          "cooldown": 3,
+          "cultEffect": "thunderstruck_100"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "olympus": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "iris_collection",
+      "voiceLines": {
+        "obtained": "번개는 나의 것. 신의 것이 아니다.",
+        "battle": "비켜라.",
+        "skill": "받아라!"
+      }
+    },
+    {
+      "id": "asc_iris_valhalla",
+      "baseHeroId": "base_iris",
+      "cultId": "valhalla",
+      "name": "폭풍의 아이리스",
+      "nameEn": "Iris of the Storm",
+      "rarity": "SSR",
+      "class": "warrior",
+      "mood": "brave",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 1.15,
+        "atk": 1.0,
+        "def": 1.0,
+        "spd": 1.0
+      },
+      "baseStats": {
+        "lv1": { "hp": 520, "atk": 50, "def": 44, "spd": 90 },
+        "lv60": { "hp": 3200, "atk": 235, "def": 200, "spd": 108 }
+      },
+      "stats": { "hp": 520, "atk": 50, "def": 44, "spd": 90 },
+      "growthStats": { "hp": 45, "atk": 3.1, "def": 2.6, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "폭풍 검격",
+          "description": "거친 폭풍을 담아 적을 베어낸다.",
+          "multiplier": 1.0,
+          "gaugeGain": 25
+        },
+        {
+          "id": "skill1",
+          "name": "불굴의 폭풍",
+          "description": "HP가 낮을수록 위력 증가. 피해 받을 때마다 ATK +5% 적층 (최대 5중).",
+          "multiplier": 1.8,
+          "gaugeCost": 100,
+          "target": "single",
+          "cultEffect": "berserker_stack"
+        },
+        {
+          "id": "awakening",
+          "name": "라그나로크 폭풍",
+          "description": "SSR 각성 스킬. 피해량이 낮을수록 배율 증가. 최대 ATK×350% 단일 피해.",
+          "multiplier": 2.0,
+          "gaugeCost": 0,
+          "target": "single",
+          "cooldown": 3,
+          "cultEffect": "berserk_overdrive"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "valhalla": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "iris_collection",
+      "voiceLines": {
+        "obtained": "쓰러질수록 강해진다. 그게 나다.",
+        "battle": "아직 끝이 아니야!",
+        "skill": "더 세게 때려봐!"
+      }
+    },
+    {
+      "id": "asc_iris_chaos",
+      "baseHeroId": "base_iris",
+      "cultId": "chaos",
+      "name": "혼돈의 아이리스",
+      "nameEn": "Iris of Chaos",
+      "rarity": "SSR",
+      "class": "warrior",
+      "mood": "wild",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 0.9,
+        "atk": 1.2,
+        "def": 0.85,
+        "spd": 1.1
+      },
+      "baseStats": {
+        "lv1": { "hp": 400, "atk": 65, "def": 36, "spd": 98 },
+        "lv60": { "hp": 2600, "atk": 295, "def": 168, "spd": 118 }
+      },
+      "stats": { "hp": 400, "atk": 65, "def": 36, "spd": 98 },
+      "growthStats": { "hp": 37, "atk": 3.8, "def": 2.2, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "혼돈 참격",
+          "description": "무작위 배율의 검격을 가한다 (0.8x ~ 2.0x).",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "cultEffect": "random_multiplier"
+        },
+        {
+          "id": "skill1",
+          "name": "카오스 버스트",
+          "description": "무작위 대상에게 ATK×(1.0~4.0)% 피해. 대상과 배율이 매번 달라진다.",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "random",
+          "cultEffect": "chaos_burst"
+        },
+        {
+          "id": "awakening",
+          "name": "혼돈의 해방",
+          "description": "SSR 각성 스킬. 전체 적에게 무작위 강력 효과 3회 발동. 극고분산.",
+          "multiplier": 3.0,
+          "gaugeCost": 0,
+          "target": "all",
+          "cooldown": 4,
+          "cultEffect": "chaos_liberation"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "chaos": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "iris_collection",
+      "voiceLines": {
+        "obtained": "예측? 그게 뭔데.",
+        "battle": "어디서 날아올지 모르지?",
+        "skill": "알 수 없는 거야!"
+      }
+    },
+    {
+      "id": "asc_sera_avalon",
+      "baseHeroId": "base_sera",
+      "cultId": "avalon",
+      "name": "성약의 세라",
+      "nameEn": "Sera of the Sacred Pact",
+      "rarity": "SSR",
+      "class": "healer",
+      "mood": "devoted",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 1.1,
+        "atk": 0.9,
+        "def": 1.1,
+        "spd": 1.0
+      },
+      "baseStats": {
+        "lv1": { "hp": 550, "atk": 42, "def": 68, "spd": 80 },
+        "lv60": { "hp": 3400, "atk": 185, "def": 285, "spd": 98 }
+      },
+      "stats": { "hp": 550, "atk": 42, "def": 68, "spd": 80 },
+      "growthStats": { "hp": 48, "atk": 2.4, "def": 3.6, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "성약의 빛",
+          "description": "가장 HP가 낮은 아군을 치유한다.",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "target": "ally_lowest_hp"
+        },
+        {
+          "id": "skill1",
+          "name": "성채 방벽",
+          "description": "전체 아군에게 ATK×150% 방어막 부여. 2턴 지속.",
+          "multiplier": 1.5,
+          "gaugeCost": 100,
+          "target": "all_allies",
+          "cultEffect": "shield_all"
+        },
+        {
+          "id": "awakening",
+          "name": "신성한 서약",
+          "description": "SSR 각성 스킬. 전체 아군 HP 완전 회복 + 2턴간 피해 반사 30%.",
+          "multiplier": 2.0,
+          "gaugeCost": 0,
+          "target": "all_allies",
+          "cooldown": 5,
+          "cultEffect": "full_heal_reflect"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "avalon": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "sera_collection",
+      "voiceLines": {
+        "obtained": "당신의 아픔을 내가 나눠 가질게요.",
+        "battle": "두려워하지 마세요.",
+        "skill": "빛이 여러분을 지킵니다!"
+      }
+    },
+    {
+      "id": "asc_sera_kunlun",
+      "baseHeroId": "base_sera",
+      "cultId": "kunlun",
+      "name": "선의 세라",
+      "nameEn": "Sera of the Celestial Medicine",
+      "rarity": "SR",
+      "class": "healer",
+      "mood": "devoted",
+      "maxLevel": 50,
+      "statModifier": {
+        "hp": 1.0,
+        "atk": 0.95,
+        "def": 1.05,
+        "spd": 1.0
+      },
+      "baseStats": {
+        "lv1": { "hp": 500, "atk": 38, "def": 62, "spd": 80 },
+        "lv50": { "hp": 2800, "atk": 168, "def": 248, "spd": 96 }
+      },
+      "stats": { "hp": 500, "atk": 38, "def": 62, "spd": 80 },
+      "growthStats": { "hp": 48, "atk": 2.7, "def": 3.8, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "선계 치유",
+          "description": "아군 1명을 치유하고 디버프 1개를 제거한다.",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "target": "ally_single"
+        },
+        {
+          "id": "skill1",
+          "name": "해독의 선술",
+          "description": "전체 아군의 모든 디버프 제거 + 소량 HP 회복.",
+          "multiplier": 1.2,
+          "gaugeCost": 100,
+          "target": "all_allies",
+          "cultEffect": "cleanse_all"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "kunlun": 20 },
+        "institutionSeal": 1,
+        "awakeningFlame": 0
+      },
+      "collectionId": "sera_collection",
+      "voiceLines": {
+        "obtained": "선계의 의술로 모두를 치유하겠어요.",
+        "battle": "독도 약이 될 수 있어요.",
+        "skill": "깨끗해졌어요!"
+      }
+    },
+    {
+      "id": "asc_sera_nature",
+      "baseHeroId": "base_sera",
+      "cultId": "nature",
+      "name": "대지의 세라",
+      "nameEn": "Sera of the Earth",
+      "rarity": "SR",
+      "class": "healer",
+      "mood": "devoted",
+      "maxLevel": 50,
+      "statModifier": {
+        "hp": 1.05,
+        "atk": 0.95,
+        "def": 1.0,
+        "spd": 1.0
+      },
+      "baseStats": {
+        "lv1": { "hp": 520, "atk": 36, "def": 60, "spd": 78 },
+        "lv50": { "hp": 2900, "atk": 162, "def": 240, "spd": 94 }
+      },
+      "stats": { "hp": 520, "atk": 36, "def": 60, "spd": 78 },
+      "growthStats": { "hp": 48, "atk": 2.5, "def": 3.6, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "대지의 은총",
+          "description": "아군 전체에게 소량 회복 (각 턴마다 HP +2%).",
+          "multiplier": 0.5,
+          "gaugeGain": 25,
+          "target": "all_allies"
+        },
+        {
+          "id": "skill1",
+          "name": "생명의 순환",
+          "description": "전투 경과 턴수에 비례해 아군 ATK/DEF 상승. 최대 +30%.",
+          "multiplier": 1.0,
+          "gaugeCost": 100,
+          "target": "all_allies",
+          "cultEffect": "growth_buff"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "nature": 20 },
+        "institutionSeal": 1,
+        "awakeningFlame": 0
+      },
+      "collectionId": "sera_collection",
+      "voiceLines": {
+        "obtained": "대지의 생명이 우리와 함께해요.",
+        "battle": "조금만 기다려요, 더 강해질 거예요.",
+        "skill": "성장의 시간이에요!"
+      }
+    },
+    {
+      "id": "asc_luca_asgard",
+      "baseHeroId": "base_luca",
+      "cultId": "asgard",
+      "name": "룬학자 루카",
+      "nameEn": "Luca the Runescholar",
+      "rarity": "SSR",
+      "class": "mage",
+      "mood": "cunning",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 0.95,
+        "atk": 1.1,
+        "def": 0.9,
+        "spd": 1.05
+      },
+      "baseStats": {
+        "lv1": { "hp": 380, "atk": 68, "def": 35, "spd": 88 },
+        "lv60": { "hp": 2500, "atk": 308, "def": 162, "spd": 108 }
+      },
+      "stats": { "hp": 380, "atk": 68, "def": 35, "spd": 88 },
+      "growthStats": { "hp": 36, "atk": 4.1, "def": 2.1, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "룬 주문",
+          "description": "룬 에너지를 담은 기본 마법 공격. 룬 스택 +1.",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "cultEffect": "rune_stack_1"
+        },
+        {
+          "id": "skill1",
+          "name": "룬 폭발",
+          "description": "적중한 룬 스택 수만큼 배율 증가 (스택당 +0.3x). 스택 초기화.",
+          "multiplier": 1.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "cultEffect": "rune_burst"
+        },
+        {
+          "id": "awakening",
+          "name": "룬의 집대성",
+          "description": "SSR 각성 스킬. 전체 아군 ATK +25% + 전체 적에게 룬 데미지.",
+          "multiplier": 2.0,
+          "gaugeCost": 0,
+          "target": "all",
+          "cooldown": 4,
+          "cultEffect": "rune_mastery"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "asgard": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "luca_collection",
+      "voiceLines": {
+        "obtained": "드디어 찾았어. 내가 있어야 할 곳을.",
+        "battle": "룬이 나를 인정했어!",
+        "skill": "폭발해라!"
+      }
+    },
+    {
+      "id": "asc_luca_tartarus",
+      "baseHeroId": "base_luca",
+      "cultId": "tartarus",
+      "name": "심연의 루카",
+      "nameEn": "Luca of the Abyss",
+      "rarity": "SR",
+      "class": "mage",
+      "mood": "cunning",
+      "maxLevel": 50,
+      "statModifier": {
+        "hp": 0.9,
+        "atk": 1.15,
+        "def": 0.85,
+        "spd": 1.0
+      },
+      "baseStats": {
+        "lv1": { "hp": 340, "atk": 75, "def": 30, "spd": 85 },
+        "lv50": { "hp": 2200, "atk": 338, "def": 140, "spd": 102 }
+      },
+      "stats": { "hp": 340, "atk": 75, "def": 30, "spd": 85 },
+      "growthStats": { "hp": 38, "atk": 4.4, "def": 2.2, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "심연 주문",
+          "description": "방어력을 무시하는 어둠의 마법 공격.",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "cultEffect": "armor_pierce_20"
+        },
+        {
+          "id": "skill1",
+          "name": "타르타로스 균열",
+          "description": "단일 적에게 방어 무시 ATK×200% 피해. 방어막 관통.",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "single",
+          "cultEffect": "shield_break"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "tartarus": 20 },
+        "institutionSeal": 1,
+        "awakeningFlame": 0
+      },
+      "collectionId": "luca_collection",
+      "voiceLines": {
+        "obtained": "방어? 그런 건 의미 없어.",
+        "battle": "뚫어버리겠어.",
+        "skill": "방어 무시!"
+      }
+    },
+    {
+      "id": "asc_kai_yomi",
+      "baseHeroId": "base_kai",
+      "cultId": "yomi",
+      "name": "사신의 카이",
+      "nameEn": "Kai the Death God",
+      "rarity": "SSR",
+      "class": "warrior",
+      "mood": "stoic",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 0.95,
+        "atk": 1.15,
+        "def": 0.9,
+        "spd": 1.1
+      },
+      "baseStats": {
+        "lv1": { "hp": 420, "atk": 72, "def": 38, "spd": 108 },
+        "lv60": { "hp": 2750, "atk": 325, "def": 178, "spd": 128 }
+      },
+      "stats": { "hp": 420, "atk": 72, "def": 38, "spd": 108 },
+      "growthStats": { "hp": 39, "atk": 4.3, "def": 2.4, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "저승의 칼",
+          "description": "빠른 베기. Doom 스택 +1 부여.",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "cultEffect": "doom_stack_1"
+        },
+        {
+          "id": "skill1",
+          "name": "사신의 심판",
+          "description": "적의 Doom 스택 5중 이상 시 즉사 판정. 미만 시 ATK×180% 피해.",
+          "multiplier": 1.8,
+          "gaugeCost": 100,
+          "target": "single",
+          "cultEffect": "execution_doom5"
+        },
+        {
+          "id": "awakening",
+          "name": "황천으로",
+          "description": "SSR 각성 스킬. 전체 적에게 Doom 3중 부여 + ATK×120% 피해.",
+          "multiplier": 1.2,
+          "gaugeCost": 0,
+          "target": "all",
+          "cooldown": 4,
+          "cultEffect": "mass_doom_3"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "yomi": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "kai_collection",
+      "voiceLines": {
+        "obtained": "이 손은 죽이는 것만 기억한다.",
+        "battle": ".",
+        "skill": "황천으로."
+      }
+    },
+    {
+      "id": "asc_kai_helheim",
+      "baseHeroId": "base_kai",
+      "cultId": "helheim",
+      "name": "빙한의 카이",
+      "nameEn": "Kai of Frozen Hell",
+      "rarity": "SR",
+      "class": "warrior",
+      "mood": "stoic",
+      "maxLevel": 50,
+      "statModifier": {
+        "hp": 1.0,
+        "atk": 1.0,
+        "def": 1.0,
+        "spd": 1.05
+      },
+      "baseStats": {
+        "lv1": { "hp": 450, "atk": 62, "def": 42, "spd": 105 },
+        "lv50": { "hp": 2650, "atk": 278, "def": 188, "spd": 122 }
+      },
+      "stats": { "hp": 450, "atk": 62, "def": 42, "spd": 105 },
+      "growthStats": { "hp": 44, "atk": 3.6, "def": 2.9, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "냉기 칼날",
+          "description": "냉기를 담은 베기. 빙결 20% 확률.",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "cultEffect": "freeze_20"
+        },
+        {
+          "id": "skill1",
+          "name": "헬하임 봉인",
+          "description": "적 1명을 2턴 행동 불가 상태로 만든다.",
+          "multiplier": 1.4,
+          "gaugeCost": 100,
+          "target": "single",
+          "cultEffect": "stun_2turns"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "helheim": 20 },
+        "institutionSeal": 1,
+        "awakeningFlame": 0
+      },
+      "collectionId": "kai_collection",
+      "voiceLines": {
+        "obtained": "얼어붙어라.",
+        "battle": "감정을 죽여라.",
+        "skill": "움직이지 마."
+      }
+    },
+    {
+      "id": "asc_lin_takamagahara",
+      "baseHeroId": "base_lin",
+      "cultId": "takamagahara",
+      "name": "천무 린",
+      "nameEn": "Lin the Heavenly Shaman",
+      "rarity": "SSR",
+      "class": "healer",
+      "mood": "mystic",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 1.0,
+        "atk": 0.95,
+        "def": 1.0,
+        "spd": 1.15
+      },
+      "baseStats": {
+        "lv1": { "hp": 480, "atk": 48, "def": 58, "spd": 115 },
+        "lv60": { "hp": 3100, "atk": 215, "def": 248, "spd": 138 }
+      },
+      "stats": { "hp": 480, "atk": 48, "def": 58, "spd": 115 },
+      "growthStats": { "hp": 44, "atk": 2.8, "def": 3.2, "spd": 0.4 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "천무의 기도",
+          "description": "아군 전체 SPD +10%, 1턴 지속.",
+          "multiplier": 0.8,
+          "gaugeGain": 25,
+          "target": "all_allies",
+          "cultEffect": "spd_up_10"
+        },
+        {
+          "id": "skill1",
+          "name": "선제 신탁",
+          "description": "아군 중 가장 빠른 캐릭터가 즉시 추가 행동 1회 획득.",
+          "multiplier": 1.0,
+          "gaugeCost": 100,
+          "target": "ally_fastest",
+          "cultEffect": "extra_action"
+        },
+        {
+          "id": "awakening",
+          "name": "천상의 신탁",
+          "description": "SSR 각성 스킬. 전체 아군 SPD +30% + 3턴간 행동 순서 우선권 획득.",
+          "multiplier": 1.0,
+          "gaugeCost": 0,
+          "target": "all_allies",
+          "cooldown": 5,
+          "cultEffect": "speed_dominance"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "takamagahara": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "lin_collection",
+      "voiceLines": {
+        "obtained": "신들의 뜻을 들었어요. 드디어.",
+        "battle": "먼저 움직이는 자가 이깁니다.",
+        "skill": "하늘의 허락을 받았어요!"
+      }
+    },
+    {
+      "id": "asc_lin_balance",
+      "baseHeroId": "base_lin",
+      "cultId": "balance",
+      "name": "균형의 린",
+      "nameEn": "Lin of Balance",
+      "rarity": "R",
+      "class": "healer",
+      "mood": "mystic",
+      "maxLevel": 40,
+      "statModifier": {
+        "hp": 1.0,
+        "atk": 1.0,
+        "def": 1.0,
+        "spd": 1.0
+      },
+      "baseStats": {
+        "lv1": { "hp": 460, "atk": 44, "def": 56, "spd": 98 },
+        "lv40": { "hp": 2200, "atk": 185, "def": 215, "spd": 112 }
+      },
+      "stats": { "hp": 460, "atk": 44, "def": 56, "spd": 98 },
+      "growthStats": { "hp": 46, "atk": 3.6, "def": 4.0, "spd": 0.4 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "균형의 기도",
+          "description": "아군 1명의 모든 상성 불이익을 1턴 무효화.",
+          "multiplier": 0.8,
+          "gaugeGain": 25,
+          "target": "ally_single",
+          "cultEffect": "neutral_buff"
+        },
+        {
+          "id": "skill1",
+          "name": "상성 무력화",
+          "description": "전체 아군 2턴간 상성 피해 무효. 적 상성 이익도 차단.",
+          "multiplier": 1.0,
+          "gaugeCost": 100,
+          "target": "all_allies",
+          "cultEffect": "mood_neutral_all"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "balance": 10 },
+        "institutionSeal": 1,
+        "awakeningFlame": 0
+      },
+      "collectionId": "lin_collection",
+      "voiceLines": {
+        "obtained": "어느 신도 섬기지 않는 것이 나의 길.",
+        "battle": "균형을 유지해요.",
+        "skill": "상성 따위!"
+      }
+    },
+    {
+      "id": "asc_omar_valhalla",
+      "baseHeroId": "base_omar",
+      "cultId": "valhalla",
+      "name": "철혈의 오마르",
+      "nameEn": "Omar the Iron-Blooded",
+      "rarity": "SR",
+      "class": "warrior",
+      "mood": "stoic",
+      "maxLevel": 50,
+      "statModifier": {
+        "hp": 1.2,
+        "atk": 1.0,
+        "def": 1.1,
+        "spd": 0.9
+      },
+      "baseStats": {
+        "lv1": { "hp": 700, "atk": 58, "def": 128, "spd": 65 },
+        "lv50": { "hp": 4200, "atk": 248, "def": 498, "spd": 80 }
+      },
+      "stats": { "hp": 700, "atk": 58, "def": 128, "spd": 65 },
+      "growthStats": { "hp": 75, "atk": 3.8, "def": 7.6, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "방패 강타",
+          "description": "방패로 적을 가격. HP가 낮을수록 피해 증가.",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "cultEffect": "low_hp_bonus"
+        },
+        {
+          "id": "skill1",
+          "name": "발할라 불굴",
+          "description": "최후의 저항: HP 30% 이하 시 방어력 +50% + 반격 데미지 발동.",
+          "multiplier": 1.2,
+          "gaugeCost": 100,
+          "target": "self",
+          "cultEffect": "last_stand"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "valhalla": 20 },
+        "institutionSeal": 1,
+        "awakeningFlame": 0
+      },
+      "collectionId": "omar_collection",
+      "voiceLines": {
+        "obtained": "사막에서 살아남은 자가 여기 있다.",
+        "battle": "나를 쓰러뜨리려면 더 세게 와.",
+        "skill": "아직 안 죽었다!"
+      }
+    },
+    {
+      "id": "asc_omar_avalon",
+      "baseHeroId": "base_omar",
+      "cultId": "avalon",
+      "name": "성채의 오마르",
+      "nameEn": "Omar the Holy Fortress",
+      "rarity": "SR",
+      "class": "warrior",
+      "mood": "stoic",
+      "maxLevel": 50,
+      "statModifier": {
+        "hp": 1.15,
+        "atk": 0.9,
+        "def": 1.2,
+        "spd": 0.95
+      },
+      "baseStats": {
+        "lv1": { "hp": 680, "atk": 52, "def": 138, "spd": 67 },
+        "lv50": { "hp": 4100, "atk": 228, "def": 528, "spd": 82 }
+      },
+      "stats": { "hp": 680, "atk": 52, "def": 138, "spd": 67 },
+      "growthStats": { "hp": 72, "atk": 3.5, "def": 7.8, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "성기사의 방패",
+          "description": "아군 중 가장 약한 1명을 보호. 2턴간 받는 피해의 30%를 오마르가 대신 받음.",
+          "multiplier": 0.8,
+          "gaugeGain": 25,
+          "target": "ally_weakest",
+          "cultEffect": "cover_shield"
+        },
+        {
+          "id": "skill1",
+          "name": "성약의 성채",
+          "description": "전체 아군에게 방어막 부여 (ATK×200% 상당). 오마르는 추가 반격 획득.",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "all_allies",
+          "cultEffect": "fortress_shield"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "avalon": 20 },
+        "institutionSeal": 1,
+        "awakeningFlame": 0
+      },
+      "collectionId": "omar_collection",
+      "voiceLines": {
+        "obtained": "이 방패가 닿는 한 동료는 쓰러지지 않는다.",
+        "battle": "내 뒤에 서라.",
+        "skill": "성약이 우리를 지킨다!"
+      }
+    },
+    {
+      "id": "asc_sol_nature",
+      "baseHeroId": "base_sol",
+      "cultId": "nature",
+      "name": "대지의 솔",
+      "nameEn": "Sol of the Earth",
+      "rarity": "SSR",
+      "class": "archer",
+      "mood": "calm",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 1.0,
+        "atk": 1.1,
+        "def": 0.95,
+        "spd": 1.0
+      },
+      "baseStats": {
+        "lv1": { "hp": 460, "atk": 68, "def": 42, "spd": 88 },
+        "lv60": { "hp": 3000, "atk": 305, "def": 192, "spd": 106 }
+      },
+      "stats": { "hp": 460, "atk": 68, "def": 42, "spd": 88 },
+      "growthStats": { "hp": 43, "atk": 4.1, "def": 2.5, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "대지의 화살",
+          "description": "자연의 힘을 담은 화살. 전투 시간이 지날수록 위력 증가 (+2%/턴).",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "cultEffect": "growth_atk"
+        },
+        {
+          "id": "skill1",
+          "name": "생명의 관통",
+          "description": "ATK×220% 단일 피해. 전투 10턴 이상 경과 시 추가 ATK×80% 피해.",
+          "multiplier": 2.2,
+          "gaugeCost": 100,
+          "target": "single",
+          "cultEffect": "late_game_bonus"
+        },
+        {
+          "id": "awakening",
+          "name": "대지 해방",
+          "description": "SSR 각성 스킬. 전체 적에게 ATK×(턴수×20%) 피해. 후반 극강.",
+          "multiplier": 2.0,
+          "gaugeCost": 0,
+          "target": "all",
+          "cooldown": 4,
+          "cultEffect": "earth_liberation"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "nature": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "sol_collection",
+      "voiceLines": {
+        "obtained": "자연이 나를 받아들였다.",
+        "battle": "서두르지 않는다. 자연처럼.",
+        "skill": "대지의 힘으로!"
+      }
+    },
+    {
+      "id": "asc_sol_kunlun",
+      "baseHeroId": "base_sol",
+      "cultId": "kunlun",
+      "name": "독화살의 솔",
+      "nameEn": "Sol the Poisoned Arrow",
+      "rarity": "SR",
+      "class": "archer",
+      "mood": "calm",
+      "maxLevel": 50,
+      "statModifier": {
+        "hp": 0.95,
+        "atk": 1.1,
+        "def": 0.9,
+        "spd": 1.05
+      },
+      "baseStats": {
+        "lv1": { "hp": 420, "atk": 68, "def": 38, "spd": 91 },
+        "lv50": { "hp": 2500, "atk": 305, "def": 172, "spd": 108 }
+      },
+      "stats": { "hp": 420, "atk": 68, "def": 38, "spd": 91 },
+      "growthStats": { "hp": 42, "atk": 4.7, "def": 2.7, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "독 화살",
+          "description": "독을 바른 화살. 적중 시 독 상태 2턴 (ATK×15%/턴) 부여.",
+          "multiplier": 0.9,
+          "gaugeGain": 25,
+          "cultEffect": "poison_2turns"
+        },
+        {
+          "id": "skill1",
+          "name": "맹독 연사",
+          "description": "3회 연속 독 화살 발사. 각 화살마다 독 스택 추가 부여.",
+          "multiplier": 0.8,
+          "gaugeCost": 100,
+          "target": "single",
+          "cultEffect": "multi_poison"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "kunlun": 20 },
+        "institutionSeal": 1,
+        "awakeningFlame": 0
+      },
+      "collectionId": "sol_collection",
+      "voiceLines": {
+        "obtained": "독도 자연의 일부다.",
+        "battle": "천천히 스며들 거야.",
+        "skill": "독이 퍼진다."
+      }
+    },
+    {
+      "id": "asc_hana_yomi",
+      "baseHeroId": "base_hana",
+      "cultId": "yomi",
+      "name": "황천의 하나",
+      "nameEn": "Hana of the Underworld",
+      "rarity": "SSR",
+      "class": "mage",
+      "mood": "mystic",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 0.9,
+        "atk": 1.2,
+        "def": 0.85,
+        "spd": 1.0
+      },
+      "baseStats": {
+        "lv1": { "hp": 385, "atk": 78, "def": 30, "spd": 92 },
+        "lv60": { "hp": 2500, "atk": 355, "def": 148, "spd": 110 }
+      },
+      "stats": { "hp": 385, "atk": 78, "def": 30, "spd": 92 },
+      "growthStats": { "hp": 36, "atk": 4.7, "def": 2.0, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "황천 저주",
+          "description": "적에게 저주를 건다. 매턴 ATK×10% 추가 피해.",
+          "multiplier": 0.9,
+          "gaugeGain": 25,
+          "cultEffect": "curse_dot"
+        },
+        {
+          "id": "skill1",
+          "name": "저승사자의 낫",
+          "description": "저주 상태 적에게 ATK×250% 피해 + 저승 전이 (추가 피해 전이).",
+          "multiplier": 2.5,
+          "gaugeCost": 100,
+          "target": "single",
+          "cultEffect": "curse_execute"
+        },
+        {
+          "id": "awakening",
+          "name": "황천 개문",
+          "description": "SSR 각성 스킬. 전체 적에게 강력한 저주 부여 + ATK×150% 피해.",
+          "multiplier": 1.5,
+          "gaugeCost": 0,
+          "target": "all",
+          "cooldown": 4,
+          "cultEffect": "mass_curse"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "yomi": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "hana_collection",
+      "voiceLines": {
+        "obtained": "황천으로 돌아가고 싶었는데... 여기가 더 재미있네.",
+        "battle": "저주받아라.",
+        "skill": "황천으로!"
+      }
+    },
+    {
+      "id": "asc_hana_helheim",
+      "baseHeroId": "base_hana",
+      "cultId": "helheim",
+      "name": "서리의 하나",
+      "nameEn": "Hana of Frost",
+      "rarity": "R",
+      "class": "mage",
+      "mood": "mystic",
+      "maxLevel": 40,
+      "statModifier": {
+        "hp": 0.95,
+        "atk": 1.05,
+        "def": 0.9,
+        "spd": 1.0
+      },
+      "baseStats": {
+        "lv1": { "hp": 365, "atk": 68, "def": 28, "spd": 90 },
+        "lv40": { "hp": 1900, "atk": 285, "def": 128, "spd": 105 }
+      },
+      "stats": { "hp": 365, "atk": 68, "def": 28, "spd": 90 },
+      "growthStats": { "hp": 40, "atk": 5.6, "def": 2.5, "spd": 0.4 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "서리 결계",
+          "description": "적 1명을 빙결 상태로 만든다 (30% 확률, 1턴).",
+          "multiplier": 0.8,
+          "gaugeGain": 25,
+          "cultEffect": "freeze_30"
+        },
+        {
+          "id": "skill1",
+          "name": "헬하임의 봉인",
+          "description": "적 전체를 공포 상태로 만든다 (행동력 -30%, 2턴).",
+          "multiplier": 1.0,
+          "gaugeCost": 100,
+          "target": "all",
+          "cultEffect": "terror_all"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "helheim": 10 },
+        "institutionSeal": 1,
+        "awakeningFlame": 0
+      },
+      "collectionId": "hana_collection",
+      "voiceLines": {
+        "obtained": "이 차가움... 익숙해.",
+        "battle": "얼어붙어.",
+        "skill": "공포를 느껴라."
+      }
+    },
+    {
+      "id": "asc_hana_chaos",
+      "baseHeroId": "base_hana",
+      "cultId": "chaos",
+      "name": "광란의 하나",
+      "nameEn": "Hana of Frenzy",
+      "rarity": "SSR",
+      "class": "mage",
+      "mood": "wild",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 0.85,
+        "atk": 1.25,
+        "def": 0.8,
+        "spd": 1.1
+      },
+      "baseStats": {
+        "lv1": { "hp": 360, "atk": 85, "def": 26, "spd": 100 },
+        "lv60": { "hp": 2350, "atk": 378, "def": 128, "spd": 120 }
+      },
+      "stats": { "hp": 360, "atk": 85, "def": 26, "spd": 100 },
+      "growthStats": { "hp": 33, "atk": 4.9, "def": 1.7, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "광기의 손길",
+          "description": "무작위 효과 기본 공격 (저주/빙결/침묵 중 하나 30% 확률).",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "cultEffect": "random_debuff"
+        },
+        {
+          "id": "skill1",
+          "name": "혼돈 폭풍",
+          "description": "무작위 대상에게 ATK×(1.5~5.0)% 피해 3회 발동.",
+          "multiplier": 3.0,
+          "gaugeCost": 100,
+          "target": "random",
+          "cultEffect": "chaos_storm"
+        },
+        {
+          "id": "awakening",
+          "name": "광기 해방",
+          "description": "SSR 각성 스킬. 전체 적/아군 무작위 강력 효과 발동. 최강 또는 최악의 결과.",
+          "multiplier": 4.0,
+          "gaugeCost": 0,
+          "target": "all",
+          "cooldown": 5,
+          "cultEffect": "madness_liberation"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "chaos": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "hana_collection",
+      "voiceLines": {
+        "obtained": "아하하! 이게 재미있잖아!",
+        "battle": "뭐든 상관없어!",
+        "skill": "폭발해라, 전부!"
+      }
+    },
+    {
+      "id": "asc_leon_asgard",
+      "baseHeroId": "base_leon",
+      "cultId": "asgard",
+      "name": "룬전사 레온",
+      "nameEn": "Leon the Rune Warrior",
+      "rarity": "SR",
+      "class": "warrior",
+      "mood": "brave",
+      "maxLevel": 50,
+      "statModifier": {
+        "hp": 1.05,
+        "atk": 1.05,
+        "def": 1.05,
+        "spd": 1.0
+      },
+      "baseStats": {
+        "lv1": { "hp": 580, "atk": 65, "def": 72, "spd": 82 },
+        "lv50": { "hp": 3400, "atk": 285, "def": 298, "spd": 98 }
+      },
+      "stats": { "hp": 580, "atk": 65, "def": 72, "spd": 82 },
+      "growthStats": { "hp": 56, "atk": 4.4, "def": 4.5, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "룬 각인",
+          "description": "검에 룬을 새겨 공격. 아군 전체 ATK +3% 버프 적층 (최대 5중).",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "target": "all_allies",
+          "cultEffect": "rune_atk_stack"
+        },
+        {
+          "id": "skill1",
+          "name": "아스가르드 결전",
+          "description": "룬 스택 수만큼 아군 전체 강화 + 적 단일 강타.",
+          "multiplier": 2.0,
+          "gaugeCost": 100,
+          "target": "single",
+          "cultEffect": "rune_party_buff"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "asgard": 20 },
+        "institutionSeal": 1,
+        "awakeningFlame": 0
+      },
+      "collectionId": "leon_collection",
+      "voiceLines": {
+        "obtained": "룬이 내 힘이었다. 처음부터.",
+        "battle": "동료를 위해 싸운다.",
+        "skill": "룬의 힘을 받아라!"
+      }
+    },
+    {
+      "id": "asc_leon_olympus",
+      "baseHeroId": "base_leon",
+      "cultId": "olympus",
+      "name": "신벌의 레온",
+      "nameEn": "Leon of Divine Wrath",
+      "rarity": "SSR",
+      "class": "warrior",
+      "mood": "brave",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 1.0,
+        "atk": 1.2,
+        "def": 0.95,
+        "spd": 1.0
+      },
+      "baseStats": {
+        "lv1": { "hp": 580, "atk": 82, "def": 68, "spd": 82 },
+        "lv60": { "hp": 3600, "atk": 368, "def": 285, "spd": 98 }
+      },
+      "stats": { "hp": 580, "atk": 82, "def": 68, "spd": 82 },
+      "growthStats": { "hp": 51, "atk": 4.8, "def": 3.6, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "번개 심판",
+          "description": "번개를 담은 검격. Thunderstruck 25% 확률.",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "cultEffect": "thunderstruck_25"
+        },
+        {
+          "id": "skill1",
+          "name": "신의 분노",
+          "description": "올림푸스의 권위를 담아 적 단일에게 ATK×280% 번개 피해.",
+          "multiplier": 2.8,
+          "gaugeCost": 100,
+          "target": "single",
+          "cultEffect": "lightning_judgment"
+        },
+        {
+          "id": "awakening",
+          "name": "신벌 선고",
+          "description": "SSR 각성 스킬. 전체 적에게 ATK×200% 번개 피해 + 2턴 행동력 -50%.",
+          "multiplier": 2.0,
+          "gaugeCost": 0,
+          "target": "all",
+          "cooldown": 4,
+          "cultEffect": "divine_judgment"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "olympus": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "leon_collection",
+      "voiceLines": {
+        "obtained": "배신한 자들이여, 신의 벌을 받아라.",
+        "battle": "이 검에 번개가 깃들었다.",
+        "skill": "신벌이다!"
+      }
+    },
+    {
+      "id": "asc_paolo_tartarus",
+      "baseHeroId": "base_paolo",
+      "cultId": "tartarus",
+      "name": "심연학자 파올로",
+      "nameEn": "Paolo the Abyss Scholar",
+      "rarity": "SSR",
+      "class": "mage",
+      "mood": "cunning",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 0.9,
+        "atk": 1.2,
+        "def": 0.85,
+        "spd": 1.05
+      },
+      "baseStats": {
+        "lv1": { "hp": 390, "atk": 80, "def": 30, "spd": 86 },
+        "lv60": { "hp": 2550, "atk": 365, "def": 145, "spd": 105 }
+      },
+      "stats": { "hp": 390, "atk": 80, "def": 30, "spd": 86 },
+      "growthStats": { "hp": 36, "atk": 4.8, "def": 1.9, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "분해 공식",
+          "description": "적의 방어막과 방어력을 분해하는 연금술 공격. DEF -5% 적층.",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "cultEffect": "armor_shred"
+        },
+        {
+          "id": "skill1",
+          "name": "심연 침식",
+          "description": "방어력 완전 무시 + ATK×240% 피해. 방어막 즉시 파괴.",
+          "multiplier": 2.4,
+          "gaugeCost": 100,
+          "target": "single",
+          "cultEffect": "full_armor_pierce"
+        },
+        {
+          "id": "awakening",
+          "name": "티탄 분해",
+          "description": "SSR 각성 스킬. 전체 적 방어력 -40% (3턴) + ATK×180% 피해.",
+          "multiplier": 1.8,
+          "gaugeCost": 0,
+          "target": "all",
+          "cooldown": 4,
+          "cultEffect": "mass_armor_shred"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "tartarus": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "paolo_collection",
+      "voiceLines": {
+        "obtained": "분해되지 않는 건 없어. 내 앞에서는.",
+        "battle": "공식을 풀어보겠어.",
+        "skill": "분해한다!"
+      }
+    },
+    {
+      "id": "asc_paolo_chaos",
+      "baseHeroId": "base_paolo",
+      "cultId": "chaos",
+      "name": "혼돈연금사 파올로",
+      "nameEn": "Paolo the Chaos Alchemist",
+      "rarity": "SSR",
+      "class": "mage",
+      "mood": "cunning",
+      "maxLevel": 60,
+      "statModifier": {
+        "hp": 0.85,
+        "atk": 1.3,
+        "def": 0.8,
+        "spd": 1.05
+      },
+      "baseStats": {
+        "lv1": { "hp": 370, "atk": 88, "def": 28, "spd": 86 },
+        "lv60": { "hp": 2400, "atk": 398, "def": 138, "spd": 105 }
+      },
+      "stats": { "hp": 370, "atk": 88, "def": 28, "spd": 86 },
+      "growthStats": { "hp": 34, "atk": 5.2, "def": 1.8, "spd": 0.3 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "혼돈 반응",
+          "description": "무작위 원소 반응 공격. 배율 0.7x~2.5x 무작위.",
+          "multiplier": 1.5,
+          "gaugeGain": 25,
+          "cultEffect": "random_element"
+        },
+        {
+          "id": "skill1",
+          "name": "불안정 폭발",
+          "description": "연금 공식 붕괴로 대폭발. ATK×(1.5~5.5)% 무작위 피해. 폭발 수는 1~4회.",
+          "multiplier": 3.5,
+          "gaugeCost": 100,
+          "target": "random",
+          "cultEffect": "unstable_explosion"
+        },
+        {
+          "id": "awakening",
+          "name": "원소 붕괴",
+          "description": "SSR 각성 스킬. 모든 원소를 동시에 해방. 무작위 강력 효과 5회.",
+          "multiplier": 5.0,
+          "gaugeCost": 0,
+          "target": "all",
+          "cooldown": 5,
+          "cultEffect": "elemental_collapse"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "chaos": 30 },
+        "institutionSeal": 1,
+        "awakeningFlame": 3
+      },
+      "collectionId": "paolo_collection",
+      "voiceLines": {
+        "obtained": "공식이 틀렸나? 아니, 공식 자체가 없는 거야!",
+        "battle": "계산 따위 버렸어.",
+        "skill": "폭발이다!"
+      }
+    },
+    {
+      "id": "asc_paolo_balance",
+      "baseHeroId": "base_paolo",
+      "cultId": "balance",
+      "name": "균형조율사 파올로",
+      "nameEn": "Paolo the Balance Tuner",
+      "rarity": "R",
+      "class": "mage",
+      "mood": "cunning",
+      "maxLevel": 40,
+      "statModifier": {
+        "hp": 1.0,
+        "atk": 1.0,
+        "def": 1.0,
+        "spd": 1.0
+      },
+      "baseStats": {
+        "lv1": { "hp": 440, "atk": 68, "def": 40, "spd": 82 },
+        "lv40": { "hp": 2200, "atk": 285, "def": 168, "spd": 98 }
+      },
+      "stats": { "hp": 440, "atk": 68, "def": 40, "spd": 82 },
+      "growthStats": { "hp": 46, "atk": 5.4, "def": 3.2, "spd": 0.4 },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "촉매 반응",
+          "description": "상성 유불리를 무시하고 중립 피해를 준다.",
+          "multiplier": 1.0,
+          "gaugeGain": 25,
+          "cultEffect": "neutral_damage"
+        },
+        {
+          "id": "skill1",
+          "name": "균형 조율",
+          "description": "아군 전체의 상성 피해를 중립화. 적의 상성 이득도 차단. 3턴.",
+          "multiplier": 1.0,
+          "gaugeCost": 100,
+          "target": "all_allies",
+          "cultEffect": "balance_field"
+        }
+      ],
+      "acquisitionCost": {
+        "cultEssence": { "balance": 10 },
+        "institutionSeal": 1,
+        "awakeningFlame": 0
+      },
+      "collectionId": "paolo_collection",
+      "voiceLines": {
+        "obtained": "모든 걸 균형 있게 다룰 수 있다면... 세상은 간단해.",
+        "battle": "균형을 맞추겠어.",
+        "skill": "조율 완료."
+      }
+    }
+  ],
+  "_meta": {
+    "version": "2.0",
+    "lastUpdated": "2026-03-04",
+    "totalAscendedHeroes": 24,
+    "ssrCount": 14,
+    "srCount": 7,
+    "rCount": 3,
+    "schema": "EVOLUTION_SYSTEM_GDD.md v2.0",
+    "note": "전직 영웅 MVP 24명. stats/growthStats는 BattleSystem.js 호환용 필드."
+  }
+}

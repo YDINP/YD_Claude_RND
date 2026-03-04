@@ -1,0 +1,483 @@
+{
+  "baseHeroes": [
+    {
+      "id": "base_iris",
+      "name": "아이리스",
+      "nameEn": "Iris",
+      "gender": "female",
+      "origin": "서구",
+      "identity": "번개를 다루는 떠돌이 검사. 강한 의지와 반항적 기질. \"내 힘은 내 것이다\"를 신조로 삼는다.",
+      "baseClass": "warrior",
+      "baseMood": "brave",
+      "maxLevel": 30,
+      "statModifier": 0.55,
+      "fragmentsRequired": 30,
+      "spiritStonesRequired": 3,
+      "stats": {
+        "hp": 900,
+        "atk": 90,
+        "def": 65,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 30,
+        "atk": 3,
+        "def": 2,
+        "spd": 1
+      },
+      "ascensionRoutes": [
+        {
+          "cultId": "olympus",
+          "ascendedHeroId": "asc_iris_olympus",
+          "resonanceBoost": false,
+          "resultRarity": "SSR",
+          "routeKeywords": ["폭딜", "번개", "선제"],
+          "loreHint": "번개의 권위에 굴복한 것이 아니라, 번개 그 자체가 된 것이다."
+        },
+        {
+          "cultId": "valhalla",
+          "ascendedHeroId": "asc_iris_valhalla",
+          "resonanceBoost": true,
+          "resultRarity": "SSR",
+          "routeKeywords": ["역전", "불굴", "베르세르크"],
+          "loreHint": "쓰러질수록 더 강해진다. 그것이 아이리스의 진짜 번개다."
+        },
+        {
+          "cultId": "chaos",
+          "ascendedHeroId": "asc_iris_chaos",
+          "resonanceBoost": false,
+          "resultRarity": "SSR",
+          "routeKeywords": ["무작위", "고분산", "파괴"],
+          "loreHint": "예측 불가능한 번개. 적도, 자신도 모르는 다음 공격."
+        }
+      ]
+    },
+    {
+      "id": "base_sera",
+      "name": "세라",
+      "nameEn": "Sera",
+      "gender": "female",
+      "origin": "서구",
+      "identity": "타고난 공감 능력을 가진 성역의 치유사. 타인의 고통을 자신의 것처럼 느끼는 감수성.",
+      "baseClass": "healer",
+      "baseMood": "devoted",
+      "maxLevel": 30,
+      "statModifier": 0.55,
+      "fragmentsRequired": 30,
+      "spiritStonesRequired": 3,
+      "stats": {
+        "hp": 1000,
+        "atk": 60,
+        "def": 80,
+        "spd": 80
+      },
+      "growthStats": {
+        "hp": 35,
+        "atk": 2,
+        "def": 3,
+        "spd": 1
+      },
+      "ascensionRoutes": [
+        {
+          "cultId": "avalon",
+          "ascendedHeroId": "asc_sera_avalon",
+          "resonanceBoost": true,
+          "resultRarity": "SSR",
+          "routeKeywords": ["방어막", "치유", "반사"],
+          "loreHint": "성약의 빛이 그녀의 손에서 흘러나온다. 상처 하나하나가 치유의 기적이 된다."
+        },
+        {
+          "cultId": "kunlun",
+          "ascendedHeroId": "asc_sera_kunlun",
+          "resonanceBoost": false,
+          "resultRarity": "SR",
+          "routeKeywords": ["독해제", "디버프클렌즈", "장기전"],
+          "loreHint": "선계의 의술은 독을 약으로 바꾼다. 세라의 손이 닿으면 저주도 치유된다."
+        },
+        {
+          "cultId": "nature",
+          "ascendedHeroId": "asc_sera_nature",
+          "resonanceBoost": false,
+          "resultRarity": "SR",
+          "routeKeywords": ["성장", "생명순환", "점진강화"],
+          "loreHint": "대지의 생명력이 세라를 통해 흐른다. 전투가 길어질수록 동료들이 더욱 강해진다."
+        }
+      ]
+    },
+    {
+      "id": "base_luca",
+      "name": "루카",
+      "nameEn": "Luca",
+      "gender": "male",
+      "origin": "서구",
+      "identity": "재주꾼 마법사 견습생. 다양한 마법을 얕게 아는 탓에 어느 학파에도 소속되지 못했다.",
+      "baseClass": "mage",
+      "baseMood": "cunning",
+      "maxLevel": 30,
+      "statModifier": 0.55,
+      "fragmentsRequired": 30,
+      "spiritStonesRequired": 3,
+      "stats": {
+        "hp": 750,
+        "atk": 110,
+        "def": 50,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 25,
+        "atk": 4,
+        "def": 2,
+        "spd": 1
+      },
+      "ascensionRoutes": [
+        {
+          "cultId": "asgard",
+          "ascendedHeroId": "asc_luca_asgard",
+          "resonanceBoost": true,
+          "resultRarity": "SSR",
+          "routeKeywords": ["룬적층", "누적폭발", "파티강화"],
+          "loreHint": "모든 마법의 근원이 룬이었다. 루카는 마침내 자신이 찾던 학파를 발견했다."
+        },
+        {
+          "cultId": "tartarus",
+          "ascendedHeroId": "asc_luca_tartarus",
+          "resonanceBoost": false,
+          "resultRarity": "SR",
+          "routeKeywords": ["방어무시", "방패관통", "지속압박"],
+          "loreHint": "심연의 어둠이 마법에 스며들었다. 이제 어떤 방어도 루카의 주문을 막지 못한다."
+        }
+      ]
+    },
+    {
+      "id": "base_kai",
+      "name": "카이",
+      "nameEn": "Kai",
+      "gender": "male",
+      "origin": "동양",
+      "identity": "전직 암살자. 지금은 모든 것을 잊으려 하지만 몸이 기억을 지우지 못한다.",
+      "baseClass": "warrior",
+      "baseMood": "stoic",
+      "maxLevel": 30,
+      "statModifier": 0.55,
+      "fragmentsRequired": 30,
+      "spiritStonesRequired": 3,
+      "stats": {
+        "hp": 800,
+        "atk": 105,
+        "def": 55,
+        "spd": 105
+      },
+      "growthStats": {
+        "hp": 25,
+        "atk": 4,
+        "def": 2,
+        "spd": 1
+      },
+      "ascensionRoutes": [
+        {
+          "cultId": "yomi",
+          "ascendedHeroId": "asc_kai_yomi",
+          "resonanceBoost": false,
+          "resultRarity": "SSR",
+          "routeKeywords": ["Doom적층", "처형", "저승"],
+          "loreHint": "저승의 신이 그에게 낫을 쥐여주었다. 이제 카이는 죽음을 배달한다."
+        },
+        {
+          "cultId": "helheim",
+          "ascendedHeroId": "asc_kai_helheim",
+          "resonanceBoost": true,
+          "resultRarity": "SR",
+          "routeKeywords": ["CC봉쇄", "냉기", "행동불가"],
+          "loreHint": "감정을 얼어붙게 하듯 적도 얼어붙는다. 카이의 냉기는 과거의 상처에서 온다."
+        }
+      ]
+    },
+    {
+      "id": "base_lin",
+      "name": "린",
+      "nameEn": "Lin",
+      "gender": "female",
+      "origin": "동양",
+      "identity": "신사(神社)를 지키는 무녀. 신들의 뜻을 읽는 능력을 가졌으나 자신이 봉사해야 할 신을 아직 찾지 못했다.",
+      "baseClass": "healer",
+      "baseMood": "mystic",
+      "maxLevel": 30,
+      "statModifier": 0.55,
+      "fragmentsRequired": 30,
+      "spiritStonesRequired": 3,
+      "stats": {
+        "hp": 850,
+        "atk": 70,
+        "def": 70,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 28,
+        "atk": 2,
+        "def": 2,
+        "spd": 2
+      },
+      "ascensionRoutes": [
+        {
+          "cultId": "takamagahara",
+          "ascendedHeroId": "asc_lin_takamagahara",
+          "resonanceBoost": true,
+          "resultRarity": "SSR",
+          "routeKeywords": ["선제", "속도지배", "기선제압"],
+          "loreHint": "천상의 신들이 린을 선택했다. 그녀의 기도가 전장에서 가장 먼저 울린다."
+        },
+        {
+          "cultId": "balance",
+          "ascendedHeroId": "asc_lin_balance",
+          "resonanceBoost": false,
+          "resultRarity": "R",
+          "routeKeywords": ["중립", "상성무력화", "유틸"],
+          "loreHint": "어느 신도 섬기지 않는 자가 모든 신의 균형을 잡는다. 린의 중립은 힘이다."
+        }
+      ]
+    },
+    {
+      "id": "base_omar",
+      "name": "오마르",
+      "nameEn": "Omar",
+      "gender": "male",
+      "origin": "중동",
+      "identity": "사막 상단의 경호원 출신 전사. 긴 전투 경험으로 인내와 방어의 달인. 방패가 없으면 불안하다.",
+      "baseClass": "warrior",
+      "baseMood": "stoic",
+      "maxLevel": 30,
+      "statModifier": 0.55,
+      "fragmentsRequired": 30,
+      "spiritStonesRequired": 3,
+      "stats": {
+        "hp": 1200,
+        "atk": 75,
+        "def": 150,
+        "spd": 70
+      },
+      "growthStats": {
+        "hp": 45,
+        "atk": 2,
+        "def": 5,
+        "spd": 1
+      },
+      "ascensionRoutes": [
+        {
+          "cultId": "valhalla",
+          "ascendedHeroId": "asc_omar_valhalla",
+          "resonanceBoost": false,
+          "resultRarity": "SR",
+          "routeKeywords": ["불굴", "역전", "최후의저항"],
+          "loreHint": "발할라의 전사는 죽어도 다시 일어선다. 오마르의 방패는 불굴의 의지다."
+        },
+        {
+          "cultId": "avalon",
+          "ascendedHeroId": "asc_omar_avalon",
+          "resonanceBoost": false,
+          "resultRarity": "SR",
+          "routeKeywords": ["방어막", "성기사", "보호"],
+          "loreHint": "성약의 빛이 오마르의 방패에 깃들었다. 동료를 지키는 것이 그의 전투다."
+        }
+      ]
+    },
+    {
+      "id": "base_sol",
+      "name": "솔",
+      "nameEn": "Sol",
+      "gender": "male",
+      "origin": "서구",
+      "identity": "자연 속에서 홀로 수련한 마법 궁수. 자연의 리듬에 맞춰 호흡하며, 절대 서두르지 않는다.",
+      "baseClass": "archer",
+      "baseMood": "calm",
+      "maxLevel": 30,
+      "statModifier": 0.55,
+      "fragmentsRequired": 30,
+      "spiritStonesRequired": 3,
+      "stats": {
+        "hp": 820,
+        "atk": 100,
+        "def": 55,
+        "spd": 88
+      },
+      "growthStats": {
+        "hp": 27,
+        "atk": 4,
+        "def": 2,
+        "spd": 1
+      },
+      "ascensionRoutes": [
+        {
+          "cultId": "nature",
+          "ascendedHeroId": "asc_sol_nature",
+          "resonanceBoost": true,
+          "resultRarity": "SSR",
+          "routeKeywords": ["성장", "지속전", "후반지배"],
+          "loreHint": "대지가 솔의 화살에 힘을 실어준다. 전투가 길어질수록 화살은 더 강해진다."
+        },
+        {
+          "cultId": "kunlun",
+          "ascendedHeroId": "asc_sol_kunlun",
+          "resonanceBoost": false,
+          "resultRarity": "SR",
+          "routeKeywords": ["독부여", "디버프누적", "장기전"],
+          "loreHint": "선계의 독초가 화살에 발려진다. 한 번 맞으면 서서히 무너진다."
+        }
+      ]
+    },
+    {
+      "id": "base_hana",
+      "name": "하나",
+      "nameEn": "Hana",
+      "gender": "female",
+      "origin": "동양",
+      "identity": "명계의 문지기였으나 실수로 산 자의 세계로 넘어온 망령 소녀. 죽음과 삶의 경계를 걷는다.",
+      "baseClass": "mage",
+      "baseMood": "mystic",
+      "maxLevel": 30,
+      "statModifier": 0.55,
+      "fragmentsRequired": 30,
+      "spiritStonesRequired": 3,
+      "stats": {
+        "hp": 770,
+        "atk": 108,
+        "def": 48,
+        "spd": 92
+      },
+      "growthStats": {
+        "hp": 25,
+        "atk": 4,
+        "def": 2,
+        "spd": 1
+      },
+      "ascensionRoutes": [
+        {
+          "cultId": "yomi",
+          "ascendedHeroId": "asc_hana_yomi",
+          "resonanceBoost": false,
+          "resultRarity": "SSR",
+          "routeKeywords": ["저주", "처형", "전이"],
+          "loreHint": "황천의 문지기가 문을 열었다. 하나의 저주는 적을 저승으로 이끈다."
+        },
+        {
+          "cultId": "helheim",
+          "ascendedHeroId": "asc_hana_helheim",
+          "resonanceBoost": false,
+          "resultRarity": "R",
+          "routeKeywords": ["빙결", "봉인", "공포"],
+          "loreHint": "서리의 왕국이 하나를 반겼다. 그녀의 손끝에서 얼음 저주가 퍼진다."
+        },
+        {
+          "cultId": "chaos",
+          "ascendedHeroId": "asc_hana_chaos",
+          "resonanceBoost": false,
+          "resultRarity": "SSR",
+          "routeKeywords": ["무작위", "광기", "불안정"],
+          "loreHint": "경계를 넘은 자는 이미 미쳤다. 하나의 광기는 예측 불가능한 파괴다."
+        }
+      ]
+    },
+    {
+      "id": "base_leon",
+      "name": "레온",
+      "nameEn": "Leon",
+      "gender": "male",
+      "origin": "서구",
+      "identity": "한때 왕국의 용장(勇將). 패배와 배신을 경험한 후 독자적인 힘을 추구한다. 룬에 집착한다.",
+      "baseClass": "warrior",
+      "baseMood": "brave",
+      "maxLevel": 30,
+      "statModifier": 0.55,
+      "fragmentsRequired": 30,
+      "spiritStonesRequired": 3,
+      "stats": {
+        "hp": 1050,
+        "atk": 95,
+        "def": 90,
+        "spd": 82
+      },
+      "growthStats": {
+        "hp": 35,
+        "atk": 3,
+        "def": 3,
+        "spd": 1
+      },
+      "ascensionRoutes": [
+        {
+          "cultId": "asgard",
+          "ascendedHeroId": "asc_leon_asgard",
+          "resonanceBoost": false,
+          "resultRarity": "SR",
+          "routeKeywords": ["룬각인", "누적강화", "지식의힘"],
+          "loreHint": "룬이 레온의 갑옷에 새겨지자 전쟁의 기억이 힘으로 변했다."
+        },
+        {
+          "cultId": "olympus",
+          "ascendedHeroId": "asc_leon_olympus",
+          "resonanceBoost": false,
+          "resultRarity": "SSR",
+          "routeKeywords": ["번개심판", "폭딜", "권위"],
+          "loreHint": "올림푸스의 신들이 레온에게 번개의 권위를 부여했다. 그의 검에서 신벌이 내린다."
+        }
+      ]
+    },
+    {
+      "id": "base_paolo",
+      "name": "파올로",
+      "nameEn": "Paolo",
+      "gender": "male",
+      "origin": "서구",
+      "identity": "몰락한 귀족 가문의 마지막 후계자이자 독학 연금술사. 무엇이든 분해하고 재조합하는 능력.",
+      "baseClass": "mage",
+      "baseMood": "cunning",
+      "maxLevel": 30,
+      "statModifier": 0.55,
+      "fragmentsRequired": 30,
+      "spiritStonesRequired": 3,
+      "stats": {
+        "hp": 780,
+        "atk": 112,
+        "def": 52,
+        "spd": 82
+      },
+      "growthStats": {
+        "hp": 26,
+        "atk": 4,
+        "def": 2,
+        "spd": 1
+      },
+      "ascensionRoutes": [
+        {
+          "cultId": "tartarus",
+          "ascendedHeroId": "asc_paolo_tartarus",
+          "resonanceBoost": true,
+          "resultRarity": "SSR",
+          "routeKeywords": ["방어무시", "분해", "깊은침식"],
+          "loreHint": "티탄의 힘으로 분해된 것은 재조합되지 않는다. 파올로의 연금술이 완성됐다."
+        },
+        {
+          "cultId": "chaos",
+          "ascendedHeroId": "asc_paolo_chaos",
+          "resonanceBoost": false,
+          "resultRarity": "SSR",
+          "routeKeywords": ["무작위반응", "폭발", "비정형"],
+          "loreHint": "연금술 공식이 무너지자 모든 것이 가능해졌다. 파올로의 폭발은 계산을 거부한다."
+        },
+        {
+          "cultId": "balance",
+          "ascendedHeroId": "asc_paolo_balance",
+          "resonanceBoost": false,
+          "resultRarity": "R",
+          "routeKeywords": ["중립유지", "상성초월", "촉매"],
+          "loreHint": "모든 원소를 다루는 자가 균형을 잡는다. 파올로는 파티의 촉매가 된다."
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "version": "2.0",
+    "lastUpdated": "2026-03-04",
+    "totalBaseHeroes": 10,
+    "schema": "EVOLUTION_SYSTEM_GDD.md v2.0",
+    "note": "기본영웅 MVP 10명. 각 영웅은 2~3개의 기관 진화루트를 보유한다."
+  }
+}

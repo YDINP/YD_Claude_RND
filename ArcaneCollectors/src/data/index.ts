@@ -22,6 +22,8 @@ import stagesData from './stages.json';
 import enemiesData from './enemies.json';
 import itemsData from './items.json';
 import questsData from './quests.json';
+import baseHeroesData from './base-heroes.json';
+import ascendedHeroesData from './ascended-heroes.json';
 import { getRarityKey, getRarityStars } from '../utils/rarityUtils.js';
 import { HeroFactory } from '../systems/HeroFactory.js';
 
@@ -32,6 +34,8 @@ const stages = stagesData as { chapters: any[] };
 const enemies = enemiesData as { enemies: any[] };
 const items = itemsData as { items: any[] };
 const quests = questsData as { dailyQuests: any[]; weeklyQuests: any[]; achievementQuests: any[] };
+const baseHeroes = baseHeroesData as { baseHeroes: any[] };
+const ascendedHeroes = ascendedHeroesData as { ascendedHeroes: any[] };
 
 // ==================== Hero Data Normalization ====================
 // Migrated to HeroFactory (PAT-4), re-exported for backward compatibility
@@ -75,6 +79,70 @@ export function getCharacter(id: string): Character | undefined {
  */
 export function getAllCharacters(): Character[] {
   return characters.characters;
+}
+
+// ==================== Evolution System Functions (v2.0) ====================
+
+/**
+ * ID로 기본 영웅을 가져옵니다 (EVOLUTION_SYSTEM_GDD.md v2.0)
+ * @param id - 기본 영웅 ID (예: "base_iris")
+ * @returns 기본 영웅 데이터
+ */
+export function getBaseHero(id: string): any | undefined {
+  return baseHeroes.baseHeroes.find((hero: any) => hero.id === id);
+}
+
+/**
+ * 모든 기본 영웅을 가져옵니다
+ * @returns 기본 영웅 배열 (10명)
+ */
+export function getAllBaseHeroes(): any[] {
+  return baseHeroes.baseHeroes;
+}
+
+/**
+ * ID로 전직 영웅을 가져옵니다 (EVOLUTION_SYSTEM_GDD.md v2.0)
+ * @param id - 전직 영웅 ID (예: "asc_iris_olympus")
+ * @returns 전직 영웅 데이터
+ */
+export function getAscendedHero(id: string): any | undefined {
+  return ascendedHeroes.ascendedHeroes.find((hero: any) => hero.id === id);
+}
+
+/**
+ * 모든 전직 영웅을 가져옵니다
+ * @returns 전직 영웅 배열 (24개)
+ */
+export function getAllAscendedHeroes(): any[] {
+  return ascendedHeroes.ascendedHeroes;
+}
+
+/**
+ * 기본 영웅에서 파생된 모든 전직 영웅을 가져옵니다
+ * @param baseHeroId - 기본 영웅 ID (예: "base_iris")
+ * @returns 해당 기본 영웅의 전직 영웅 배열
+ */
+export function getAscendedHeroesByBase(baseHeroId: string): any[] {
+  return ascendedHeroes.ascendedHeroes.filter((hero: any) => hero.baseHeroId === baseHeroId);
+}
+
+/**
+ * 진화 데이터를 통합 조회합니다 (characters.json → ascended-heroes → base-heroes 순서)
+ * BattleSystem.js 폴백 로직에서 사용
+ * @param id - 캐릭터/영웅 ID
+ * @returns 캐릭터 또는 전직/기본 영웅 데이터
+ */
+export function getCharacterOrHero(id: string): any | undefined {
+  // 1순위: 기존 characters.json (레거시 호환)
+  const legacy = characters.characters.find(char => char.id === id);
+  if (legacy) return legacy;
+
+  // 2순위: 전직 영웅 (ascended-heroes.json)
+  const ascended = ascendedHeroes.ascendedHeroes.find((hero: any) => hero.id === id);
+  if (ascended) return ascended;
+
+  // 3순위: 기본 영웅 (base-heroes.json)
+  return baseHeroes.baseHeroes.find((hero: any) => hero.id === id);
 }
 
 /**
@@ -462,6 +530,14 @@ export default {
   calculateStats,
   normalizeHero,
   normalizeHeroes,
+
+  // Evolution System (v2.0)
+  getBaseHero,
+  getAllBaseHeroes,
+  getAscendedHero,
+  getAllAscendedHeroes,
+  getAscendedHeroesByBase,
+  getCharacterOrHero,
 
   // Skill
   getSkill,

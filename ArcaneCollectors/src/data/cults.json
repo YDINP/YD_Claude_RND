@@ -4,6 +4,7 @@
       "id": "valhalla",
       "name": "Valhalla",
       "nameKr": "발할라",
+      "institutionName": "발할라",
       "origin": "북유럽 신화",
       "description": "용맹한 전사들의 낙원. 오딘이 이끄는 전사 교단으로, 전투에서 죽은 영웅들이 모이는 성스러운 홀.",
       "theme": ["영웅", "명예", "전사"],
@@ -13,12 +14,14 @@
       },
       "color": "#4A90D9",
       "lore": "발키리의 선택을 받은 전사들만이 들어갈 수 있는 전설의 장소. 라그나로크 전까지 매일 전투와 향연을 즐긴다.",
+      "baseRarity": "SR",
       "enabled": true
     },
     "takamagahara": {
       "id": "takamagahara",
       "name": "Takamagahara",
       "nameKr": "타카마가하라",
+      "institutionName": "타카마가하라",
       "origin": "일본 신화",
       "description": "아마테라스가 다스리는 천상의 세계. 질서와 신성의 신들이 거주하는 고귀한 영역.",
       "theme": ["질서", "신성", "축복"],
@@ -28,12 +31,14 @@
       },
       "color": "#FFD700",
       "lore": "하늘 위 구름 너머에 존재하는 신들의 낙원. 아마노이와토 사건 이후 더욱 화려하게 빛난다.",
+      "baseRarity": "SR",
       "enabled": true
     },
     "olympus": {
       "id": "olympus",
       "name": "Olympus",
       "nameKr": "올림푸스",
+      "institutionName": "올림푸스",
       "origin": "그리스 신화",
       "description": "제우스와 올림포스 12신의 성지. 그리스 세계의 중심이자 신들의 궁전.",
       "theme": ["위엄", "영광", "정복"],
@@ -42,12 +47,14 @@
       },
       "color": "#FF6B35",
       "lore": "신들의 왕국. 티탄과의 전쟁 후 세워진 새로운 질서의 중심.",
+      "baseRarity": "SSR",
       "enabled": true
     },
     "asgard": {
       "id": "asgard",
       "name": "Asgard",
       "nameKr": "아스가르드",
+      "institutionName": "아스가르드",
       "origin": "북유럽 신화",
       "description": "신들의 세계, 비프로스트로 연결된 성채. 아스 신족이 다스리는 강력한 요새.",
       "theme": ["전투", "수호", "지혜"],
@@ -57,12 +64,14 @@
       },
       "color": "#5DADE2",
       "lore": "세계수 이그드라실의 가지 위에 위치한 신들의 도시. 무지개 다리를 통해 미드가르드와 연결된다.",
+      "baseRarity": "SR",
       "enabled": true
     },
     "yomi": {
       "id": "yomi",
       "name": "Yomi",
       "nameKr": "요미",
+      "institutionName": "요미",
       "origin": "일본 신화",
       "description": "이자나미가 다스리는 저승의 세계. 죽음과 저주의 영역.",
       "theme": ["죽음", "저주", "망령"],
@@ -71,12 +80,116 @@
       },
       "color": "#8E44AD",
       "lore": "지하 깊은 곳에 존재하는 황천의 나라. 한 번 들어가면 되돌아올 수 없는 죽음의 세계.",
+      "baseRarity": "SSR",
+      "enabled": true
+    },
+    "avalon": {
+      "id": "avalon",
+      "name": "Avalon",
+      "nameKr": "아발론",
+      "institutionName": "아발론",
+      "origin": "켈트/아서왕 신화",
+      "description": "아서왕 전설의 신비로운 섬. 성스러운 서약과 기사도가 살아있는 성역.",
+      "theme": ["성약", "치유", "기사도"],
+      "synergy_bonus": {
+        "hp": 0.1,
+        "def": 0.05
+      },
+      "color": "#4ECDC4",
+      "lore": "안개 속에 숨겨진 전설의 섬. 아서왕의 검 엑스칼리버가 만들어진 곳이자, 상처 입은 영웅들이 치유받는 성역.",
+      "baseRarity": "SR",
+      "enabled": true
+    },
+    "helheim": {
+      "id": "helheim",
+      "name": "Helheim",
+      "nameKr": "헬헤임",
+      "institutionName": "헬헤임",
+      "origin": "북유럽 신화",
+      "description": "헬이 다스리는 죽음의 왕국. 얼음과 어둠으로 가득한 냉혹한 저승.",
+      "theme": ["냉기", "봉인", "죽음"],
+      "synergy_bonus": {
+        "def": 0.1,
+        "spd": -0.05
+      },
+      "color": "#B0C4DE",
+      "lore": "니플헤임 깊숙이 위치한 죽음의 영역. 명예롭지 못한 죽음을 맞이한 자들이 가는 차갑고 어두운 세계.",
+      "baseRarity": "R",
+      "enabled": true
+    },
+    "tartarus": {
+      "id": "tartarus",
+      "name": "Tartarus",
+      "nameKr": "타르타로스",
+      "institutionName": "타르타로스",
+      "origin": "그리스 신화",
+      "description": "올림푸스 아래 깊은 심연. 티탄들이 봉인된 최초의 어둠.",
+      "theme": ["심연", "봉인", "티탄"],
+      "synergy_bonus": {
+        "atk": 0.1,
+        "crit_rate": 0.05
+      },
+      "color": "#2C3E50",
+      "lore": "대지 아래 무한히 깊은 곳에 위치한 최초의 심연. 크로노스와 티탄들이 봉인된 가장 오래된 감옥.",
+      "baseRarity": "SR",
+      "enabled": true
+    },
+    "balance": {
+      "id": "balance",
+      "name": "Balance",
+      "nameKr": "발란스",
+      "institutionName": "발란스",
+      "origin": "범신화적 개념",
+      "description": "어느 신화에도 속하지 않는 중립의 성역. 상성과 편향을 초월한 조화의 원리.",
+      "theme": ["중립", "조화", "상성초월"],
+      "synergy_bonus": {
+        "crit_rate": 0.03,
+        "crit_dmg": 0.03
+      },
+      "color": "#95A5A6",
+      "lore": "태초부터 존재해온 균형의 원리. 어떤 신도 이 법칙 앞에서는 평등하며, 상성과 편향을 녹여 절대적 중립을 추구한다.",
+      "baseRarity": "R",
+      "enabled": true
+    },
+    "chaos": {
+      "id": "chaos",
+      "name": "Chaos",
+      "nameKr": "카오스",
+      "institutionName": "카오스",
+      "origin": "범신화적 원초",
+      "description": "모든 것이 시작되기 전의 원초적 혼돈. 예측 불가능하지만 무한한 가능성을 품은 공허.",
+      "theme": ["혼돈", "무작위", "원초적 힘"],
+      "synergy_bonus": {
+        "atk": 0.05,
+        "crit_dmg": 0.15
+      },
+      "color": "#E74C3C",
+      "lore": "만물이 탄생하기 이전에 존재했던 원초적 공허. 어떤 규칙도 통하지 않으며, 가장 파괴적이지만 동시에 가장 창의적인 힘.",
+      "baseRarity": "SSR",
+      "enabled": true
+    },
+    "nature": {
+      "id": "nature",
+      "name": "Nature",
+      "nameKr": "나투레",
+      "institutionName": "나투레",
+      "origin": "자연 원소 신앙",
+      "description": "대지와 생명의 순환을 숭배하는 고대 신앙. 성장과 자연의 리듬에 맞춰 강해지는 길.",
+      "theme": ["자연", "성장", "생명순환"],
+      "synergy_bonus": {
+        "hp": 0.1,
+        "spd": 0.05
+      },
+      "color": "#27AE60",
+      "lore": "문명 이전부터 존재해온 대지의 숨결. 꽃이 피고 지듯 생명은 순환하며, 자연과 하나 된 자만이 진정한 강함을 얻는다.",
+      "baseRarity": "SR",
       "enabled": true
     },
     "heliopolis": {
       "id": "heliopolis",
       "name": "Heliopolis",
       "nameKr": "헬리오폴리스",
+      "institutionName": "헬리오폴리스",
       "origin": "이집트 신화",
       "description": "라(Ra)가 다스리는 태양의 도시. 부활과 왕권의 영역.",
       "theme": ["태양", "부활", "왕권"],
@@ -86,12 +199,14 @@
       },
       "color": "#D4A017",
       "lore": "나일강의 축복을 받은 태양신의 성지. 오시리스의 죽음과 부활 신화가 전해지는 곳.",
+      "baseRarity": "SR",
       "enabled": false
     },
     "kunlun": {
       "id": "kunlun",
       "name": "Kunlun",
       "nameKr": "곤륜",
+      "institutionName": "곤륜",
       "origin": "중국 신화",
       "description": "서왕모가 다스리는 선계. 불멸과 조화의 영역.",
       "theme": ["선계", "조화", "불멸"],
@@ -101,12 +216,14 @@
       },
       "color": "#50C878",
       "lore": "서쪽 끝에 위치한 신선들의 낙원. 불사의 복숭아가 자라는 전설의 산.",
-      "enabled": false
+      "baseRarity": "SR",
+      "enabled": true
     },
     "svarga": {
       "id": "svarga",
       "name": "Svarga",
       "nameKr": "스와르가",
+      "institutionName": "스와르가",
       "origin": "인도 신화",
       "description": "인드라가 다스리는 천상의 낙원. 윤회와 해탈의 영역.",
       "theme": ["윤회", "해탈", "업보"],
@@ -116,12 +233,14 @@
       },
       "color": "#E6E6FA",
       "lore": "메루산 정상에 위치한 신들의 거처. 업보에 따라 환생이 결정되는 영적 세계.",
+      "baseRarity": "SR",
       "enabled": false
     },
     "tir_na_nog": {
       "id": "tir_na_nog",
       "name": "Tir na Nog",
       "nameKr": "티르 나 노그",
+      "institutionName": "티르 나 노그",
       "origin": "켈트 신화",
       "description": "투아하 데 다난이 다스리는 요정의 나라. 영원한 젊음의 영역.",
       "theme": ["요정", "자연", "영원"],
@@ -131,15 +250,16 @@
       },
       "color": "#7CFC00",
       "lore": "바다 너머 서쪽에 존재하는 전설의 낙원. 시간이 흐르지 않는 영원한 젊음의 땅.",
+      "baseRarity": "SR",
       "enabled": false
     }
   },
   "_meta": {
-    "version": "2.0",
-    "lastUpdated": "2026-01-29",
-    "totalCults": 9,
-    "enabledCults": 5,
-    "pendingCults": 4,
-    "note": "enabled: false인 교단은 추후 업데이트에서 활성화 예정"
+    "version": "2.1",
+    "lastUpdated": "2026-03-04",
+    "totalCults": 14,
+    "enabledCults": 12,
+    "pendingCults": 2,
+    "note": "v2.1: EVOLUTION_SYSTEM_GDD.md v2.0 기반 — avalon/helheim/tartarus/balance/nature 5개 신규 추가, 전체 기관 institutionName + baseRarity 필드 추가"
   }
 }

@@ -67,6 +67,15 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | GDD-4 | INSTITUTION_REDESIGN.md — 소환 기관/학파 컨셉 리디자인 | - | 03-04 |
 | GDD-5 | EVOLUTION_SYSTEM_GDD.md — 기본영웅 복수 진화루트 v2.0 (최종) | - | 03-04 |
 
+### 진화 시스템 데이터 구현 (2026-03-04) — auto-pipeline 실행
+| ID | 태스크 | 커밋 | 날짜 |
+|----|--------|------|------|
+| CHAR-1 | base-heroes.json 생성 — 기본영웅 10명 (GDD v2.0 스키마) | - | 03-04 |
+| CHAR-2a | ascended-heroes.json 생성 — 전직영웅 24개 (SSR 14/SR 7/R 3) | - | 03-04 |
+| CHAR-2b | cults.json v2.1 — 5개 기관 추가(avalon/helheim/tartarus/balance/nature), institutionName+baseRarity | - | 03-04 |
+| CHAR-4 | index.ts — getBaseHero/getAscendedHero/getCharacterOrHero 등 6개 함수 추가 | - | 03-04 |
+| CHAR-4b | BattleSystem.js — getCharacterOrHero 폴백 연동 | - | 03-04 |
+
 ### 테스트 커버리지 확장
 | 항목 | 커밋 | 날짜 |
 |------|------|------|
@@ -98,24 +107,26 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 **핵심 특징**: 같은 기본영웅을 여러 기관 루트로 동시 육성 가능 (멀티-각성), 파티 내 동일 기본영웅 1체 제한
 
-**다음 구현 태스크**:
-- `src/data/base-heroes.json` 생성 (10명 기본영웅)
-- `src/data/ascended-heroes.json` 생성 (24명 전직 영웅)
-- `src/data/cults.json` → 소환 기관 체계 업데이트
-- 기관 각인 UI 프로토타입
+**데이터 구현 현황 (2026-03-04)**:
+- `src/data/base-heroes.json` ✅ 생성 완료 (10명, GDD v2.0 스키마)
+- `src/data/ascended-heroes.json` ✅ 생성 완료 (24개, SSR 14/SR 7/R 3)
+- `src/data/cults.json` ✅ v2.1 업데이트 (14개 기관, institutionName/baseRarity 추가)
+- `src/data/index.ts` ✅ 진화 시스템 접근 함수 6개 추가
+- `src/systems/BattleSystem.js` ✅ getCharacterOrHero 폴백 연동
+- **다음 구현 태스크**: 기관 각인 UI 프로토타입 (CHAR-3)
 
 ---
 
 ## 남은 태스크 (백로그)
 
-### P0: 캐릭터 진화 시스템 구현 (신규)
-| ID | 태스크 | 난이도 | 설명 |
-|----|--------|--------|------|
-| CHAR-1 | 기본영웅 데이터 생성 | M | base-heroes.json (10명) + ascended-heroes.json (24명) |
-| CHAR-2 | 소환 기관 데이터 업데이트 | M | cults.json에 institutionName 등 필드 추가 |
-| CHAR-3 | 기관 각인 UI | H | 기본영웅 선택 → 기관 선택 → 전직 확인 플로우 |
-| CHAR-4 | BattleSystem 연동 | M | 새 데이터 스키마 읽도록 수정 |
-| CHAR-5 | 피티 시스템 구현 | M | 소프트피티(30회)/하드피티(50회) 카운터 저장 |
+### P0: 캐릭터 진화 시스템 구현
+| ID | 태스크 | 난이도 | 상태 | 설명 |
+|----|--------|--------|------|------|
+| CHAR-1 | 기본영웅 데이터 생성 | M | ✅ | base-heroes.json (10명) + ascended-heroes.json (24명) |
+| CHAR-2 | 소환 기관 데이터 업데이트 | M | ✅ | cults.json v2.1 — institutionName/baseRarity + 5개 기관 추가 |
+| CHAR-3 | 기관 각인 UI | H | 미완 | 기본영웅 선택 → 기관 선택 → 전직 확인 플로우 |
+| CHAR-4 | BattleSystem 연동 | M | ✅ | index.ts 6개 함수 + BattleSystem.js 폴백 연동 |
+| CHAR-5 | 피티 시스템 구현 | M | 미완 | 소프트피티(30회)/하드피티(50회) 카운터 저장 |
 
 ### P1: 게임플레이 확장
 | ID | 태스크 | 난이도 | 설명 |
