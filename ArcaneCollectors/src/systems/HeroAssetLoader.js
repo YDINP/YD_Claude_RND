@@ -18,6 +18,7 @@
 
 import { MOODS, CULT_COLORS, RARITY } from '../config/gameConfig.js';
 import { getRarityKey } from '../utils/rarityUtils.js';
+import PORTRAIT_MAP from '../data/portrait-mapping.json';
 
 // 히어로 이미지 사이즈 (등급별)
 const PORTRAIT_SIZES = {
@@ -49,10 +50,13 @@ const CULT_BG_TINTS = {
 };
 
 export class HeroAssetLoader {
+  // 캐릭터 ID → 파일명 매핑 (portrait-mapping.json에서 import)
+  static _PORTRAIT_MAP = PORTRAIT_MAP;
+
   /**
    * 텍스처 키 생성
    * @param {Object} heroData
-   * @returns {string} 텍스처 키 (예: 'hero_hero_001')
+   * @returns {string} 텍스처 키 (예: 'hero_char_1')
    */
   static getTextureKey(heroData) {
     return `hero_${heroData.id}`;
@@ -166,7 +170,9 @@ export class HeroAssetLoader {
       const key = HeroAssetLoader.getTextureKey(hero);
       if (scene.textures.exists(key)) return;
 
-      const filePath = `${basePath}${hero.id}.png`;
+      // portrait-mapping.json: 구 숫자 파일명(hero_001~)과 현재 ID(char_1~) 연결
+      const fileName = HeroAssetLoader._PORTRAIT_MAP[hero.id] ?? hero.id;
+      const filePath = `${basePath}${fileName}.png`;
       scene.load.image(key, filePath);
     });
 

@@ -4,7 +4,7 @@
 > **브랜치**: `arcane/integration`
 > **테스트**: 623개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: QA 감사 이슈 6건 수정 (GachaSystem/IdleProgressSystem/safeAccess/events)
+> **최근 작업**: 에셋 매핑 시스템 Phase A + Phase B 완료 (portrait-mapping.json SSOT, 38개 커버리지)
 
 ---
 
@@ -79,6 +79,17 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | DS-3 | 등급 글로우 강화 (R 글로우 추가, SSR 브라이트 골드) | `designSystem.js`, `layoutConfig.js` | 03-05 |
 | DS-4 | Orbitron 헤드라인 폰트 추가 (title/subtitle/heading) | `index.html`, `textStyles.ts` | 03-05 |
 | DS-5 | 하드코딩 배경색 정리 (tooltip/heroLevel → design token) | `textStyles.ts` | 03-05 |
+
+### 에셋 매핑 시스템 (2026-03-05) — pt + auto-pipeline 실행
+| ID | 태스크 | 파일 | 날짜 |
+|----|--------|------|------|
+| ASSET-A | portrait-mapping.json SSOT 신규 생성 (char_1~4 → hero_001~004 매핑) | `src/data/portrait-mapping.json` | 03-05 |
+| ASSET-A | HeroAssetLoader.js SSOT 연동 (JSON import + `_PORTRAIT_MAP` + `loadImages()` 매핑 적용) | `src/systems/HeroAssetLoader.js` | 03-05 |
+| ASSET-B | portrait-mapping.json 커버리지 확장 4→38개 (base_iris~base_paolo + asc_iris_olympus~asc_paolo_balance) | `src/data/portrait-mapping.json` | 03-05 |
+
+**결과**: 빌드 ✅ + 623/623 테스트 통과 + code-reviewer APPROVED (블로커 없음)
+- Phase A 핵심: `getTextureKey(hero)` → `hero_${hero.id}` 패턴 유지, `_PORTRAIT_MAP[hero.id] ?? hero.id` 폴백으로 실제 PNG 로드
+- Phase B 커버리지: char_1~4 + base_iris~base_paolo(10명) + asc_iris_olympus~asc_paolo_balance(24명) = 38개
 
 **디자인 방향**: Blue Archive(밝은 Civi 캐릭터) × NIKKE(다크 서브컬쳐 UI) 하이브리드
 - 폰트 역할 분리: Orbitron(헤드라인) + Noto Sans KR(캐릭터명/본문) + Roboto Mono(수치)
