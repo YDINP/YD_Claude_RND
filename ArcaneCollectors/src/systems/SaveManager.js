@@ -4,6 +4,7 @@
  * 오프라인: localStorage 전용 모드
  * 재접속: 타임스탬프 기반 자동 동기화
  */
+import { PitySystem } from './PitySystem.js';
 import { supabase, isSupabaseConfigured, isOnline } from '../api/supabaseClient.js';
 import GameLogger from '../utils/GameLogger.js';
 import charactersData from '../data/characters.json';
@@ -49,6 +50,7 @@ export class SaveManager {
         pityCounter: 0,
         totalPulls: 0
       },
+      pity: {},
       quests: {
         daily: {},
         dailyProgress: {},
@@ -115,6 +117,9 @@ export class SaveManager {
       // CHAR-3: 진화 시스템 필드 마이그레이션 (구버전 세이브 호환)
       if (!data.baseHeroes) data.baseHeroes = [];
       if (!data.ascendedHeroes) data.ascendedHeroes = [];
+
+      // CHAR-5: 피티 시스템 마이그레이션 (구버전 세이브 호환)
+      if (!data.pity) data.pity = {};
 
       return data;
     } catch (error) {
@@ -1188,6 +1193,59 @@ export class SaveManager {
     };
   }
 
+  // ========== 피티 시스템 (CHAR-5) ==========
+
+  /**
+   * 특정 기본영웅의 현재 피티 카운트 조회
+   * @param {string} heroId 기본영웅 ID
+   * @returns {number} 현재 피티 카운트 (0 이상)
+   */
+  static getPityCount(heroId) {
+    const data = this.load();
+    return data.pity?.[heroId]?.count || 0;
+  }
+
+  /**
+   * 특정 기본영웅의 피티 카운트 증가
+   * @param {string} heroId 기본영웅 ID
+   * @param {number} amount 증가량 (기본값: 1)
+   */
+  static incrementPityCount(heroId, amount = 1) {
+    const data = this.load();
+    if (!data.pity) data.pity = {};
+    if (!data.pity[heroId]) data.pity[heroId] = { count: 0 };
+    data.pity[heroId].count += amount;
+    this.save(data);
+  }
+
+  /**
+   * 특정 기본영웅의 피티 카운트 초기화
+   * @param {string} heroId 기본영웅 ID
+   */
+  static resetPityCount(heroId) {
+    const data = this.load();
+    if (!data.pity) data.pity = {};
+    data.pity[heroId] = { count: 0 };
+    this.save(data);
+  }
+
+  /**
+   * 특정 기본영웅의 피티 정보 종합 조회
+   * @param {string} heroId 기본영웅 ID
+   * @returns {Object} { count, isSoftPity, isHardPity, pullsUntilSoft, pullsUntilHard, currentRate }
+   */
+  static getPityInfo(heroId) {
+    const count = this.getPityCount(heroId);
+    return {
+      count,
+      isSoftPity: PitySystem.isSoftPity(count),
+      isHardPity: PitySystem.isHardPity(count),
+      pullsUntilSoft: PitySystem.getPullsUntilSoftPity(count),
+      pullsUntilHard: PitySystem.getPullsUntilHardPity(count),
+      currentRate: PitySystem.calculateDropRate(count)
+    };
+  }
+
   // ========== 진화 시스템 (CHAR-3) ==========
 
   /**
@@ -1358,6 +1416,10 @@ export class SaveManager {
       });
       data.statistics.charactersCollected++;
     }
+
+    // CHAR-5: 각인 성공 시 해당 영웅의 피티 카운터 리셋
+    if (!data.pity) data.pity = {};
+    data.pity[baseHeroId] = { count: 0 };
 
     this.save(data);
 

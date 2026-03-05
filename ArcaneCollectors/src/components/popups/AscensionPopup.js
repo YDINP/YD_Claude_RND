@@ -100,6 +100,9 @@ export class AscensionPopup extends PopupBase {
   _renderHeroListItem(hero, cx, cy, w, h) {
     const b = this.contentBounds;
 
+    // CHAR-5: 피티 정보 조회
+    const pityInfo = SaveManager.getPityInfo(hero.id);
+
     // 배경 카드
     const bg = this.scene.add.rectangle(cx, cy, w, h, COLORS.bgLight, 0.9);
     bg.setStrokeStyle(s(2), COLORS.primary, 0.3);
@@ -133,6 +136,38 @@ export class AscensionPopup extends PopupBase {
     }).setOrigin(0, 0.5);
     this.contentContainer.add(subText);
     this._track(subText);
+
+    // CHAR-5: 피티 배지 렌더링
+    if (pityInfo.count > 0) {
+      let pityLabel = '';
+      let pityColor = '#aaaaaa';
+      let pityBg = null;
+
+      if (pityInfo.isHardPity || pityInfo.count >= 50) {
+        pityLabel = '⚡ 확정';
+        pityColor = '#000000';
+        pityBg = 0xFFD700;
+      } else if (pityInfo.isSoftPity) {
+        pityLabel = '🔥 소프트 피티';
+        pityColor = '#ffffff';
+        pityBg = 0xFF8C00;
+      } else {
+        pityLabel = `${pityInfo.pullsUntilSoft}회 후 피티`;
+        pityColor = '#aaaaaa';
+        pityBg = null;
+      }
+
+      const pityText = this.scene.add.text(cx + w / 2 - s(55), cy - s(18), pityLabel, {
+        fontSize: sf(11),
+        fontFamily: '"Noto Sans KR", Arial',
+        fontStyle: 'bold',
+        color: pityColor,
+        backgroundColor: pityBg ? `#${pityBg.toString(16).padStart(6, '0')}` : undefined,
+        padding: pityBg ? { x: s(4), y: s(2) } : undefined
+      }).setOrigin(1, 0.5);
+      this.contentContainer.add(pityText);
+      this._track(pityText);
+    }
 
     // 화살표
     const arrow = this.scene.add.text(cx + w / 2 - s(25), cy, '›', {

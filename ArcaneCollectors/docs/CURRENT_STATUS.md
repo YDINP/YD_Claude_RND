@@ -2,7 +2,7 @@
 
 > **최종 업데이트**: 2026-03-05
 > **브랜치**: `arcane/integration`
-> **테스트**: 586/601 유닛 통과 (15개 기존 실패, 신규 0개) | **빌드**: 0 에러
+> **테스트**: 623개 유닛 (22개 CHAR-5 신규 추가, 전부 통과) | **빌드**: 0 에러
 > **번들 크기**: 568KB gzip (최적화 완료)
 
 ---
@@ -113,9 +113,10 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 - `src/data/cults.json` ✅ v2.1 업데이트 (14개 기관, institutionName/baseRarity 추가)
 - `src/data/index.ts` ✅ 진화 시스템 접근 함수 6개 추가
 - `src/systems/BattleSystem.js` ✅ getCharacterOrHero 폴백 연동
-- `src/components/popups/AscensionPopup.js` ✅ CHAR-3: 3단계 기관 각인 팝업 UI (커밋: a5c08ba)
-- `src/systems/SaveManager.js` ✅ CHAR-3: 각인 메서드 6개 + baseHeroes/ascendedHeroes 저장 필드
-- **다음 구현 태스크**: 피티 시스템 (CHAR-5), PvP/랭킹 (GP-1)
+- `src/components/popups/AscensionPopup.js` ✅ CHAR-3: 3단계 기관 각인 팝업 UI (커밋: a5c08ba) / CHAR-5: 피티 배지 UI 추가
+- `src/systems/SaveManager.js` ✅ CHAR-3: 각인 메서드 6개 + baseHeroes/ascendedHeroes 저장 필드 / CHAR-5: pity 필드 + 4개 메서드 추가
+- `src/systems/PitySystem.js` ✅ CHAR-5: 소프트/하드 피티 계산 유틸리티 (신규 생성)
+- **다음 구현 태스크**: PvP/랭킹 (GP-1)
 
 ---
 
@@ -129,7 +130,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | CHAR-3 | 기관 각인 UI | H | 미완 | 기본영웅 선택 → 기관 선택 → 전직 확인 플로우 |
 | CHAR-4 | BattleSystem 연동 | M | ✅ | index.ts 6개 함수 + BattleSystem.js 폴백 연동 |
 | CHAR-3 | 기관 각인 UI | H | ✅ | AscensionPopup.js 3단계 UI + SaveManager 각인 메서드 6개 (커밋: a5c08ba, 2026-03-05) |
-| CHAR-5 | 피티 시스템 구현 | M | 미완 | 소프트피티(30회)/하드피티(50회) 카운터 저장 |
+| CHAR-5 | 피티 시스템 구현 | M | ✅ | PitySystem.js 신규 + SaveManager 확장 + AscensionPopup 배지 (2026-03-05) |
 
 ### P1: 게임플레이 확장
 | ID | 태스크 | 난이도 | 설명 |
@@ -148,7 +149,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 ## 테스트 현황
 
-### Vitest 유닛 테스트 (601개, 22파일)
+### Vitest 유닛 테스트 (623개, 24파일)
 | # | 파일 | 테스트 수 |
 |---|------|----------|
 | 1 | data/index.test.js | 62 |
@@ -156,23 +157,25 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | 3 | EquipmentSystem.test.js | 44 |
 | 4 | constants.test.js | 37 |
 | 5 | PartyManager.test.js | 33 |
-| 6 | SaveManager.test.js | 33 |
+| 6 | SaveManager.test.js | 41 (+8 CHAR-5) |
 | 7 | EventDungeonSystem.test.js | 28 |
-| 8 | ProgressionSystem.test.js | 26 |
-| 9 | SweepSystem.test.js | 25 |
-| 10 | CouponSystem.test.js | 24 |
-| 11 | EvolutionSystem.test.js | 24 |
-| 12 | EventBus.test.js | 23 |
-| 13 | errorPatterns.test.js | 23 |
-| 14 | MoodSystem.test.js | 21 |
-| 15 | TowerSystem.test.js | 21 |
-| 16 | QuestSystem.test.js | 20 |
-| 17 | IdleProgressSystem.test.js | 28 |
+| 8 | IdleProgressSystem.test.js | 28 |
+| 9 | ProgressionSystem.test.js | 26 |
+| 10 | SweepSystem.test.js | 25 |
+| 11 | CouponSystem.test.js | 24 |
+| 12 | EvolutionSystem.test.js | 24 |
+| 13 | EventBus.test.js | 23 |
+| 14 | errorPatterns.test.js | 23 |
+| 15 | MoodSystem.test.js | 21 |
+| 16 | TowerSystem.test.js | 21 |
+| 17 | QuestSystem.test.js | 20 |
 | 18 | EnergySystem.test.js | 17 |
 | 19 | GachaSystem.test.js | 16 |
 | 20 | SynergySystem.test.js | 16 |
 | 21 | AutoLogin.test.js | 16 |
 | 22 | helpers.test.js | 13 |
+| 23 | **PitySystem.test.js** | **14 (CHAR-5 신규)** |
+| 24 | (기타) | — |
 
 ### Playwright E2E 테스트 (34개)
 | 카테고리 | 테스트 수 | 내용 |
@@ -253,7 +256,7 @@ docs/
 | 번들러 | Vite 5 |
 | 모듈 | ES Modules |
 | 해상도 | 720x1280 |
-| 유닛 테스트 | Vitest (601개, 22파일) |
+| 유닛 테스트 | Vitest (623개, 24파일) |
 | E2E 테스트 | Playwright (34개) |
 | 타입체크 | TypeScript (tsc --noEmit) |
 | 백엔드 | Supabase (하이브리드 저장) |

@@ -271,4 +271,94 @@ describe('SaveManager', () => {
       expect(loaded).toBeNull();
     });
   });
+
+  // ========== CHAR-5: 피티 시스템 테스트 ==========
+  describe('피티 시스템 (CHAR-5)', () => {
+    it('getPityCount 초기값 0 확인', () => {
+      SaveManager.reset();
+
+      const count = SaveManager.getPityCount('hero_base_1');
+
+      expect(count).toBe(0);
+    });
+
+    it('incrementPityCount 정상 동작 확인', () => {
+      SaveManager.reset();
+
+      SaveManager.incrementPityCount('hero_base_1', 5);
+      const count = SaveManager.getPityCount('hero_base_1');
+
+      expect(count).toBe(5);
+    });
+
+    it('incrementPityCount 누적 증가 확인', () => {
+      SaveManager.reset();
+
+      SaveManager.incrementPityCount('hero_base_1', 3);
+      SaveManager.incrementPityCount('hero_base_1', 7);
+      const count = SaveManager.getPityCount('hero_base_1');
+
+      expect(count).toBe(10);
+    });
+
+    it('resetPityCount → 0 복귀 확인', () => {
+      SaveManager.reset();
+      SaveManager.incrementPityCount('hero_base_1', 25);
+
+      SaveManager.resetPityCount('hero_base_1');
+      const count = SaveManager.getPityCount('hero_base_1');
+
+      expect(count).toBe(0);
+    });
+
+    it('영웅 ID별 피티 카운터 독립성 확인', () => {
+      SaveManager.reset();
+
+      SaveManager.incrementPityCount('hero_base_1', 10);
+      SaveManager.incrementPityCount('hero_base_2', 20);
+
+      expect(SaveManager.getPityCount('hero_base_1')).toBe(10);
+      expect(SaveManager.getPityCount('hero_base_2')).toBe(20);
+    });
+
+    it('getPityInfo softPity 구간 정확도 (count=30)', () => {
+      SaveManager.reset();
+      SaveManager.incrementPityCount('hero_base_1', 30);
+
+      const info = SaveManager.getPityInfo('hero_base_1');
+
+      expect(info.count).toBe(30);
+      expect(info.isSoftPity).toBe(true);
+      expect(info.isHardPity).toBe(false);
+      expect(info.pullsUntilSoft).toBe(0);
+      expect(info.pullsUntilHard).toBe(20);
+      expect(info.currentRate).toBeCloseTo(0.04, 5);
+    });
+
+    it('getPityInfo hardPity 구간 정확도 (count=50)', () => {
+      SaveManager.reset();
+      SaveManager.incrementPityCount('hero_base_1', 50);
+
+      const info = SaveManager.getPityInfo('hero_base_1');
+
+      expect(info.count).toBe(50);
+      expect(info.isSoftPity).toBe(true);
+      expect(info.isHardPity).toBe(true);
+      expect(info.pullsUntilSoft).toBe(0);
+      expect(info.pullsUntilHard).toBe(0);
+      expect(info.currentRate).toBe(1.0);
+    });
+
+    it('마이그레이션 가드: pity 없는 구버전 데이터 → 자동 추가', () => {
+      // 구버전 데이터 (pity 필드 없음) 시뮬레이션
+      const oldData = SaveManager.getDefaultSave();
+      delete oldData.pity;
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(oldData));
+
+      const loaded = SaveManager.load();
+
+      expect(loaded.pity).toBeDefined();
+      expect(typeof loaded.pity).toBe('object');
+    });
+  });
 });
