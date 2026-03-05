@@ -100,6 +100,9 @@ export {
   EventDungeonEvents
 } from './EventDungeonSystem.js';
 
+// PvP 시스템 (GP-1)
+export { PvPSystem, pvpSystem } from './PvPSystem.js';
+
 // 디버그 매니저
 export { DebugManager } from './DebugManager.js';
 

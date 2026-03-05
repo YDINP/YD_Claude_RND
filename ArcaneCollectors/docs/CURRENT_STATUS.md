@@ -2,9 +2,9 @@
 
 > **최종 업데이트**: 2026-03-05
 > **브랜치**: `arcane/integration`
-> **테스트**: 623개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
+> **테스트**: 649개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: 에셋 매핑 시스템 Phase A + Phase B 완료 (portrait-mapping.json SSOT, 38개 커버리지)
+> **최근 작업**: GP-1 PvP/랭킹 시스템 완료 (비동기 PvP + Supabase 리더보드, 테스트 +24개)
 
 ---
 
@@ -57,6 +57,22 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | INFRA-3 | 배포 설정 (Vercel+Netlify+PWA manifest) | `88c1cec` | 02-15 |
 | GP-4 | 유휴 전투 보스 기반 리디자인 (DPS 누적 진행) | `fd3a7f6` | 02-15 |
 | GP-5 | 샌드백 보스 + 진행도 시스템 (6개 서브태스크) | - | 02-15 |
+
+### PvP/랭킹 시스템 (2026-03-05) — pt-pipeline auto 5단계 실행
+| ID | 태스크 | 파일 | 날짜 |
+|----|--------|------|------|
+| GP-1 | Supabase 마이그레이션 SQL (pvp_snapshots/pvp_battles/pvp_leaderboard + RLS) | `supabase/migrations/20260305_pvp_leaderboard.sql` | 03-05 |
+| GP-1 | PvPSystem.js — savePartySnapshot/findOpponents/simulateBattle/executePvPBattle/getLeaderboard/getMyRecord | `src/systems/PvPSystem.js` | 03-05 |
+| GP-1 | PvPPopup.js — 3탭 UI (대전/결과/랭킹) | `src/components/popups/PvPPopup.js` | 03-05 |
+| GP-1 | PvPSystem export 추가 | `src/systems/index.js` | 03-05 |
+| GP-1 | PvPPopup export 추가 | `src/components/popups/index.js` | 03-05 |
+| GP-1 | PvPSystem 유닛 테스트 24개 신규 | `tests/systems/PvPSystem.test.js` | 03-05 |
+
+**결과**: 빌드 ✅ + 649/649 테스트 통과 (+24개 신규) + code-reviewer APPROVED
+- BattleSystem 재사용: simulateBattle()에서 BattleSystem 인스턴스 생성, 최대 20턴 시뮬레이션
+- 오프라인 지원: Supabase 연결 실패 시 localStorage 캐시 폴백
+- 매칭 로직: 내 전투력 ±30% 범위 쿼리, 최대 5명 반환
+- 점수 시스템: 승리 +25점, 패배 -10점, 무승부 +5점 기본 (전투력 차이 반영)
 
 ### QA 감사 이슈 수정 (2026-03-05)
 
@@ -155,7 +171,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 - `src/components/popups/AscensionPopup.js` ✅ CHAR-3: 3단계 기관 각인 팝업 UI (커밋: a5c08ba) / CHAR-5: 피티 배지 UI 추가
 - `src/systems/SaveManager.js` ✅ CHAR-3: 각인 메서드 6개 + baseHeroes/ascendedHeroes 저장 필드 / CHAR-5: pity 필드 + 4개 메서드 추가
 - `src/systems/PitySystem.js` ✅ CHAR-5: 소프트/하드 피티 계산 유틸리티 (신규 생성)
-- **다음 구현 태스크**: PvP/랭킹 (GP-1)
+- **다음 구현 태스크**: GP-2 길드 시스템 (GP-1 PvP/랭킹 ✅ 완료 — 2026-03-05)
 
 ---
 
@@ -174,7 +190,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 ### P1: 게임플레이 확장
 | ID | 태스크 | 난이도 | 설명 |
 |----|--------|--------|------|
-| GP-1 | PvP/랭킹 | H | 실시간/비동기 PvP, 리더보드 (Supabase 연동) |
+| GP-1 | PvP/랭킹 | H | ✅ 완료 (2026-03-05) — 비동기 PvP + Supabase 리더보드 |
 | GP-2 | 길드 시스템 | H | 길드 생성/가입, 길드전 (Supabase 연동) |
 
 ### P2: 배포 & 운영 — ✅ 완료
@@ -188,7 +204,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 ## 테스트 현황
 
-### Vitest 유닛 테스트 (623개, 24파일)
+### Vitest 유닛 테스트 (649개, 25파일)
 | # | 파일 | 테스트 수 |
 |---|------|----------|
 | 1 | data/index.test.js | 62 |
@@ -214,7 +230,8 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | 21 | AutoLogin.test.js | 16 |
 | 22 | helpers.test.js | 13 |
 | 23 | **PitySystem.test.js** | **14 (CHAR-5 신규)** |
-| 24 | (기타) | — |
+| 24 | **PvPSystem.test.js** | **24 (GP-1 신규)** |
+| 25 | (기타) | — |
 
 ### Playwright E2E 테스트 (34개)
 | 카테고리 | 테스트 수 | 내용 |
@@ -295,7 +312,7 @@ docs/
 | 번들러 | Vite 5 |
 | 모듈 | ES Modules |
 | 해상도 | 720x1280 |
-| 유닛 테스트 | Vitest (623개, 24파일) |
+| 유닛 테스트 | Vitest (649개, 25파일) |
 | E2E 테스트 | Playwright (34개) |
 | 타입체크 | TypeScript (tsc --noEmit) |
 | 백엔드 | Supabase (하이브리드 저장) |
