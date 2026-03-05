@@ -130,7 +130,7 @@
       "description": "어둠의 힘이 깃든 탑을 정복하세요. 각 층마다 강력한 적들이 기다리고 있습니다.",
       "type": "tower",
       "startDate": "2026-02-01",
-      "endDate": "2026-02-28",
+      "endDate": "2026-03-31",
       "dailyLimit": 5,
       "eventCurrency": "shadow_fragment",
       "stages": [

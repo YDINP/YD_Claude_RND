@@ -50,6 +50,14 @@ describe('GachaSystem', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    // Reset CHARACTER_POOL for tests (pool is disabled in production)
+    GachaSystem.CHARACTER_POOL = {
+      SSR: ['char_ssr_1', 'char_ssr_2'],
+      SR: ['char_sr_1', 'char_sr_2', 'char_sr_3'],
+      R: ['char_r_1', 'char_r_2', 'char_r_3', 'char_r_4'],
+      N: ['char_n_1', 'char_n_2', 'char_n_3', 'char_n_4', 'char_n_5']
+    };
+
     // Reset default mocks
     SaveManager.getGachaInfo.mockReturnValue({
       pityCounter: 0,

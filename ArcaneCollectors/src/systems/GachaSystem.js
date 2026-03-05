@@ -268,8 +268,8 @@ export class GachaSystem {
       }
     }
 
-    // 가챠 카운터 업데이트 (최종 pity 값 직접 전달)
-    SaveManager.updateGachaCounter(count, currentPity);
+    // 가챠 카운터 업데이트 (뽑기 횟수, SSR 획득 여부)
+    SaveManager.updateGachaCounter(count, gotSSR);
 
     // 이벤트 발생
     results.forEach(result => {

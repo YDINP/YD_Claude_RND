@@ -626,10 +626,14 @@ export class SaveManager {
     this.save(data);
   }
 
-  static updateGachaCounter(pulls, finalPityCount) {
+  static updateGachaCounter(pulls, gotSSR) {
     const data = this.load();
     data.gacha.totalPulls += pulls;
-    data.gacha.pityCounter = finalPityCount;
+    if (gotSSR) {
+      data.gacha.pityCounter = 0;
+    } else {
+      data.gacha.pityCounter = (data.gacha.pityCounter || 0) + pulls;
+    }
     this.save(data);
   }
 

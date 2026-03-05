@@ -77,5 +77,5 @@ export function safeArrayGet(arr, index, defaultValue = null) {
  * @returns {boolean} 존재 및 유효 여부
  */
 export function hasValidProperty(obj, key) {
-  return obj && typeof obj === 'object' && key in obj && obj[key] != null;
+  return obj && typeof obj === 'object' && key in obj && obj[key] !== null && obj[key] !== undefined;
 }

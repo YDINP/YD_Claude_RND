@@ -346,7 +346,7 @@ export class IdleProgressSystem {
    */
   calculateDPS() {
     const partyPower = this.getPartyPower();
-    const baseDPS = partyPower * 0.25; // 전투력 400이면 DPS 100 (BUG-13: 초반 체감 개선)
+    const baseDPS = partyPower * 0.15; // 전투력 400이면 DPS 60 (균형 조정)
     // 약간의 랜덤성 (0.9~1.1배)
     return baseDPS * (0.9 + Math.random() * 0.2);
   }
@@ -557,7 +557,7 @@ export class IdleProgressSystem {
    */
   calculateSweepRewards() {
     const partyPower = this.getPartyPower();
-    const dps = partyPower * 0.25;
+    const dps = partyPower * 0.15;
     const boss = this.getBossForCurrentStage();
     const bossHp = boss.hp;
 

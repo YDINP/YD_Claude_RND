@@ -2,9 +2,9 @@
 
 > **최종 업데이트**: 2026-03-05
 > **브랜치**: `arcane/integration`
-> **테스트**: 623개 유닛 (22개 CHAR-5 신규 추가, 전부 통과) | **빌드**: 0 에러
+> **테스트**: 623개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: 디자인 시스템 통합 (Blue Archive × NIKKE 하이브리드, Orbitron 폰트)
+> **최근 작업**: QA 감사 이슈 6건 수정 (GachaSystem/IdleProgressSystem/safeAccess/events)
 
 ---
 
@@ -57,6 +57,19 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | INFRA-3 | 배포 설정 (Vercel+Netlify+PWA manifest) | `88c1cec` | 02-15 |
 | GP-4 | 유휴 전투 보스 기반 리디자인 (DPS 누적 진행) | `fd3a7f6` | 02-15 |
 | GP-5 | 샌드백 보스 + 진행도 시스템 (6개 서브태스크) | - | 02-15 |
+
+### QA 감사 이슈 수정 (2026-03-05)
+
+| ID | 이슈 | 수정 파일 | 날짜 |
+|----|------|---------|------|
+| QA-1 | GachaSystem 테스트 11개 실패 — CHARACTER_POOL 비어있어 pull() 즉시 실패 반환 | `tests/systems/GachaSystem.test.js` | 03-05 |
+| QA-2 | EventDungeonSystem 테스트 실패 — evt_shadow_tower 종료일(02-28)이 현재(03-05) 이전 | `src/data/events.json` (종료일 → 03-31) | 03-05 |
+| QA-3 | IdleProgressSystem DPS 계수 초과 — calculateDPS 계수 0.25→0.15 수정 | `src/systems/IdleProgressSystem.js` | 03-05 |
+| QA-4 | IdleProgressSystem constructor 테스트 불일치 — BUG-12 수정 이후 loadCurrentBoss 호출 시점 변경 | `tests/systems/IdleProgressSystem.test.js` | 03-05 |
+| QA-5 | GachaSystem/SaveManager updateGachaCounter 시그니처 불일치 — (count, currentPity)→(pulls, gotSSR) 통일 | `src/systems/GachaSystem.js`, `src/systems/SaveManager.js` | 03-05 |
+| QA-6 | ESLint eqeqeq 에러 — safeAccess.js `!=` → `!==` 수정 | `src/utils/safeAccess.js` | 03-05 |
+
+**결과**: 빌드 0 에러 + 623/623 테스트 통과 + ESLint 에러 0개 (1회 반복만에 PASS)
 
 ### 디자인 시스템 통합 (2026-03-05)
 | ID | 태스크 | 파일 | 날짜 |
