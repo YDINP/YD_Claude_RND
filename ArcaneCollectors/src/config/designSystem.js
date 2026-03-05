@@ -15,9 +15,9 @@ export const DESIGN = {
   colors: {
     // 배경
     bg: {
-      primary: 0x0F172A,    // 최상위 배경 (가장 어두움)
-      secondary: 0x1E293B,  // 카드/패널 배경
-      surface: 0x334155,    // 표면/입력 필드
+      primary: 0x0D0F1A,    // 최상위 배경 (NIKKE식 딥 다크)
+      secondary: 0x141627,  // 카드/패널 배경
+      surface: 0x1E2235,    // 표면/입력 필드
       overlay: 0x000000     // 오버레이 (alpha와 함께 사용)
     },
 
@@ -31,9 +31,9 @@ export const DESIGN = {
 
     // 브랜드/액션
     brand: {
-      primary: 0x6366F1,    // 인디고 - 주요 액션
-      secondary: 0xEC4899,  // 핑크 - 보조 액션
-      accent: 0xF59E0B      // 앰버 - 강조/하이라이트
+      primary: 0x06BBFA,    // 시안 - 주요 액션 (Blue Archive 시그니처)
+      secondary: 0xFF4D6D,  // 핫핑크 - 보조 액션
+      accent: 0xFFD60A      // 브라이트 골드 - 강조/하이라이트
     },
 
     // 상태
@@ -49,16 +49,16 @@ export const DESIGN = {
       1: 0x9CA3AF,  // N - 회색
       2: 0x3B82F6,  // R - 파랑
       3: 0xA855F7,  // SR - 보라
-      4: 0xF59E0B,  // SSR - 금색
-      5: 0xF59E0B   // SSR+ - 금색 (확장용)
+      4: 0xFFD60A,  // SSR - 브라이트 골드
+      5: 0xFFD60A   // SSR+ - 브라이트 골드 (확장용)
     },
 
     // 등급 (이름 키)
     rarityNamed: {
       N:   { hex: 0x9CA3AF, css: '#9CA3AF', bg: 0x374151, glow: null },
-      R:   { hex: 0x3B82F6, css: '#3B82F6', bg: 0x1E3A5F, glow: null },
+      R:   { hex: 0x3B82F6, css: '#3B82F6', bg: 0x1E3A5F, glow: 0x3B82F6 },
       SR:  { hex: 0xA855F7, css: '#A855F7', bg: 0x4C1D95, glow: 0xA855F7 },
-      SSR: { hex: 0xF59E0B, css: '#F59E0B', bg: 0x78350F, glow: 0xF59E0B }
+      SSR: { hex: 0xFFD60A, css: '#FFD60A', bg: 0x78350F, glow: 0xFFD60A }
     },
 
     // 분위기 (Phaser hex)
@@ -87,17 +87,20 @@ export const DESIGN = {
       mystic:  '#F39C12'
     },
 
-    // 교단 (Phaser hex)
+    // 교단 (Phaser hex) — cults.json 기준 단일 진실 원천
     cult: {
       valhalla:      0x4A90D9,  // 발할라 - 바람의 파랑
       takamagahara:  0xFFD700,  // 타카마가하라 - 빛의 황금
       olympus:       0xFF6B35,  // 올림푸스 - 불의 주황
       asgard:        0x5DADE2,  // 아스가르드 - 물의 청록
       yomi:          0x8E44AD,  // 요미 - 어둠의 보라
-      tartarus:      0xB71C1C,  // 타르타로스 - 심연의 진홍
-      avalon:        0x4CAF50,  // 아발론 - 요정의 초록
-      helheim:       0x37474F,  // 헬하임 - 죽음의 청흑
-      kunlun:        0x00BCD4   // 곤륜 - 선계의 청옥
+      tartarus:      0x2C3E50,  // 타르타로스 - 심연의 짙은 남색
+      avalon:        0x4ECDC4,  // 아발론 - 요정의 청록민트
+      helheim:       0xB0C4DE,  // 헬하임 - 죽음의 연청회
+      kunlun:        0x50C878,  // 곤륜 - 선계의 에메랄드
+      balance:       0x95A5A6,  // 발란스 - 중립의 회색
+      chaos:         0xE74C3C,  // 카오스 - 원초적 빨강
+      nature:        0x27AE60   // 나투레 - 자연의 초록
     },
 
     // HP 바 색상
@@ -152,7 +155,7 @@ export const DESIGN = {
     family: {
       primary: 'Noto Sans KR',
       mono: 'Roboto Mono, monospace',
-      display: 'Georgia, serif'
+      display: 'Orbitron, Georgia, serif'  // 서브컬쳐 SF 헤드라인
     },
     size: {
       tiny: 10,
@@ -194,11 +197,11 @@ export const DESIGN = {
   // Shadows & Effects
   // ----------------------------------------
   effects: {
-    borderColor: 0x334155,
+    borderColor: 0x1E2235,
     borderAlpha: 1,
-    glowAlpha: 0.3,
-    overlayAlpha: 0.7,
-    panelAlpha: 0.9
+    glowAlpha: 0.4,       // 더 선명한 교단/등급 글로우
+    overlayAlpha: 0.75,
+    panelAlpha: 0.92
   }
 };
 

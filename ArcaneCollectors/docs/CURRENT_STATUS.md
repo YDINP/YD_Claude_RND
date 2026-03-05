@@ -4,6 +4,7 @@
 > **브랜치**: `arcane/integration`
 > **테스트**: 623개 유닛 (22개 CHAR-5 신규 추가, 전부 통과) | **빌드**: 0 에러
 > **번들 크기**: 568KB gzip (최적화 완료)
+> **최근 작업**: 디자인 시스템 통합 (Blue Archive × NIKKE 하이브리드, Orbitron 폰트)
 
 ---
 
@@ -56,6 +57,20 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | INFRA-3 | 배포 설정 (Vercel+Netlify+PWA manifest) | `88c1cec` | 02-15 |
 | GP-4 | 유휴 전투 보스 기반 리디자인 (DPS 누적 진행) | `fd3a7f6` | 02-15 |
 | GP-5 | 샌드백 보스 + 진행도 시스템 (6개 서브태스크) | - | 02-15 |
+
+### 디자인 시스템 통합 (2026-03-05)
+| ID | 태스크 | 파일 | 날짜 |
+|----|--------|------|------|
+| DS-1 | 배경/브랜드 컬러 통일 (NIKKE 딥 다크 + 블루아카 시안) | `designSystem.js` | 03-05 |
+| DS-2 | 교단 12종 색상 단일 진실 원천 정렬 (cults.json 기준) | `designSystem.js`, `layoutConfig.js` | 03-05 |
+| DS-3 | 등급 글로우 강화 (R 글로우 추가, SSR 브라이트 골드) | `designSystem.js`, `layoutConfig.js` | 03-05 |
+| DS-4 | Orbitron 헤드라인 폰트 추가 (title/subtitle/heading) | `index.html`, `textStyles.ts` | 03-05 |
+| DS-5 | 하드코딩 배경색 정리 (tooltip/heroLevel → design token) | `textStyles.ts` | 03-05 |
+
+**디자인 방향**: Blue Archive(밝은 Civi 캐릭터) × NIKKE(다크 서브컬쳐 UI) 하이브리드
+- 폰트 역할 분리: Orbitron(헤드라인) + Noto Sans KR(캐릭터명/본문) + Roboto Mono(수치)
+- 교단 색상 3파일 동기화: `cults.json` → `designSystem.js` → `layoutConfig.js`
+- balance/chaos/nature 교단 색상 2파일에 누락→추가 완료
 
 ### 캐릭터 시스템 재설계 (2026-03-04)
 | ID | 태스크 | 커밋 | 날짜 |

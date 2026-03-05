@@ -6,8 +6,9 @@
 import { DESIGN } from '../config/designSystem.js';
 
 const { font, colors } = DESIGN;
-const F = font.family.primary;
-const M = font.family.mono;
+const F = font.family.primary;   // Noto Sans KR — 캐릭터명/본문
+const D = font.family.display;   // Orbitron — 타이틀/헤드라인 (서브컬쳐)
+const M = font.family.mono;      // Roboto Mono — 수치/재화
 
 /**
  * Text style configuration for Phaser text objects
@@ -59,7 +60,7 @@ export const TextStyles = {
   // ============================================
 
   title: {
-    fontFamily: F,
+    fontFamily: D,              // Orbitron — 서브컬쳐 헤드라인
     fontSize: `${font.size.title}px`,
     fontStyle: 'bold',
     color: colors.text.primary,
@@ -68,14 +69,14 @@ export const TextStyles = {
   },
 
   subtitle: {
-    fontFamily: F,
+    fontFamily: D,              // Orbitron
     fontSize: `${font.size.header}px`,
     fontStyle: 'bold',
     color: colors.text.primary
   },
 
   heading: {
-    fontFamily: F,
+    fontFamily: D,              // Orbitron
     fontSize: `${font.size.subheader}px`,
     fontStyle: 'bold',
     color: colors.text.primary
@@ -132,7 +133,7 @@ export const TextStyles = {
     fontFamily: F,
     fontSize: `${font.size.small}px`,
     color: colors.text.primary,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#141627',
     padding: { x: 8, y: 4 }
   },
 
@@ -287,7 +288,7 @@ export const TextStyles = {
     fontSize: `${font.size.caption}px`,
     fontStyle: 'bold',
     color: colors.text.primary,
-    backgroundColor: '#1E293B'
+    backgroundColor: '#141627'
   },
 
   heroStat: {
