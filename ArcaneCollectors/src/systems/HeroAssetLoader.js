@@ -176,15 +176,18 @@ export class HeroAssetLoader {
       scene.load.image(key, filePath);
     });
 
-    // 로드 실패 시 플레이스홀더로 폴백
-    scene.load.on('loaderror', (file) => {
-      if (file.key.startsWith('hero_')) {
-        const hero = characters.find(c => HeroAssetLoader.getTextureKey(c) === file.key);
-        if (hero) {
-          HeroAssetLoader._createEnhancedPlaceholder(scene, hero, file.key);
+    // 로드 실패 시 플레이스홀더로 폴백 (중복 등록 방어)
+    if (!scene._heroErrorHandlerBound) {
+      scene._heroErrorHandlerBound = true;
+      scene.load.on('loaderror', (file) => {
+        if (file.key.startsWith('hero_')) {
+          const hero = characters.find(c => HeroAssetLoader.getTextureKey(c) === file.key);
+          if (hero) {
+            HeroAssetLoader._createEnhancedPlaceholder(scene, hero, file.key);
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   /**
@@ -196,7 +199,7 @@ export class HeroAssetLoader {
     if (!heroIds || !Array.isArray(heroIds)) return;
 
     heroIds.forEach(id => {
-      const key = `hero_${id}`;
+      const key = HeroAssetLoader.getTextureKey({ id });
       if (scene.textures.exists(key)) {
         scene.textures.remove(key);
       }
