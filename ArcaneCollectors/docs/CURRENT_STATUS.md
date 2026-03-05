@@ -2,9 +2,9 @@
 
 > **최종 업데이트**: 2026-03-05
 > **브랜치**: `arcane/integration`
-> **테스트**: 649개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
+> **테스트**: 685개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: GP-1 PvP/랭킹 시스템 완료 (비동기 PvP + Supabase 리더보드, 테스트 +24개)
+> **최근 작업**: GP-2 길드 시스템 완료 (GuildSystem + GuildPopup + Supabase 마이그레이션, 테스트 +36개)
 
 ---
 
@@ -69,6 +69,20 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | GP-1 | PvPSystem 유닛 테스트 24개 신규 | `tests/systems/PvPSystem.test.js` | 03-05 |
 
 **결과**: 빌드 ✅ + 649/649 테스트 통과 (+24개 신규) + code-reviewer APPROVED
+
+| GP-2 | Supabase 마이그레이션 SQL (guilds/guild_members + RLS + 트리거) | \ | 03-05 |
+| GP-2 | GuildSystem.js — createGuild/joinGuild/leaveGuild/kickMember/donate/getGuildList + 오프라인 폴백 | \ | 03-05 |
+| GP-2 | GuildPopup.js — 3탭 UI (Guild Info/Members/Donate) | \ | 03-05 |
+| GP-2 | GuildPopup export 추가 | \ | 03-05 |
+| GP-2 | GuildSystem 유닛 테스트 36개 신규 | \ | 03-05 |
+
+**결과**: 빌드 ✅ + 685/685 테스트 통과 (+36개 신규) + code-reviewer APPROVED
+- Singleton static 패턴, localStorage 캐시 폴백
+- VALID_MAX_MEMBERS: [10,20,30,50], DONATION_MIN/MAX: 100/100000
+- RLS: guilds(anon read / auth write), guild_members(owner only)
+- GuildPopup: 로딩 중 버튼 잠금, 기부 후 2초 피드백, 길드 없을 시 생성 폼 표시
+
+
 - BattleSystem 재사용: simulateBattle()에서 BattleSystem 인스턴스 생성, 최대 20턴 시뮬레이션
 - 오프라인 지원: Supabase 연결 실패 시 localStorage 캐시 폴백
 - 매칭 로직: 내 전투력 ±30% 범위 쿼리, 최대 5명 반환

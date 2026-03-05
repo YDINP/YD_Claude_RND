@@ -8,3 +8,4 @@ export { PartyEditPopup } from './PartyEditPopup.js';
 export { EventDungeonPopup } from './EventDungeonPopup.js';
 export { AscensionPopup } from './AscensionPopup.js';
 export { PvPPopup } from './PvPPopup.js';
+export { GuildPopup } from './GuildPopup.js';
