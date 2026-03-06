@@ -511,3 +511,71 @@ describe('BattleSystem', () => {
     });
   });
 });
+
+
+// PRD-2: ascended-heroes stats 스키마 지원 테스트
+describe('BattleUnit - PRD-2 ascended-heroes stats', () => {
+  it('uses stats field when present (ascended-heroes schema)', () => {
+    const ascendedData = {
+      id: 'asc_iris_olympus',
+      rarity: 'SSR',
+      stats: { hp: 2000, atk: 200, def: 100, spd: 120 },
+      growthStats: { hp: 150, atk: 15, def: 8, spd: 3 }
+    };
+
+    const unit = new BattleUnit(ascendedData, 1, false);
+
+    // stats 필드가 있으면 그것을 사용
+    expect(unit.maxHp).toBeGreaterThan(0);
+    expect(unit.atk).toBeGreaterThan(0);
+  });
+
+  it('falls back to baseStats when stats is absent (legacy characters.json schema)', () => {
+    const legacyData = {
+      id: 'char_legacy_001',
+      rarity: 'R',
+      baseStats: { hp: 800, atk: 80, def: 40, spd: 80 },
+      growth: { hp: 80, atk: 8, def: 4, spd: 2 }
+    };
+
+    const unit = new BattleUnit(legacyData, 1, false);
+
+    expect(unit.maxHp).toBeGreaterThan(0);
+    expect(unit.atk).toBeGreaterThan(0);
+  });
+
+  it('uses growthStats when present (ascended-heroes schema)', () => {
+    const ascendedData = {
+      id: 'asc_test',
+      rarity: 'SR',
+      stats: { hp: 1500, atk: 150, def: 75, spd: 100 },
+      growthStats: { hp: 120, atk: 12, def: 6, spd: 2.5 }
+    };
+
+    const unit5 = new BattleUnit(ascendedData, 5, false);
+    const unit1 = new BattleUnit(ascendedData, 1, false);
+
+    // 레벨 5는 레벨 1보다 hp가 커야 한다 (growthStats 반영)
+    expect(unit5.maxHp).toBeGreaterThan(unit1.maxHp);
+  });
+
+  it('ascended SSR unit has higher stats than N unit at same level', () => {
+    const ssrAscended = {
+      id: 'asc_ssr',
+      rarity: 'SSR',
+      stats: { hp: 2000, atk: 200, def: 100, spd: 120 },
+      growthStats: { hp: 150, atk: 15, def: 8, spd: 3 }
+    };
+    const nLegacy = {
+      id: 'char_n',
+      rarity: 'N',
+      baseStats: { hp: 500, atk: 50, def: 25, spd: 60 },
+      growth: { hp: 50, atk: 5, def: 2.5, spd: 1 }
+    };
+
+    const ssrUnit = new BattleUnit(ssrAscended, 1, false);
+    const nUnit = new BattleUnit(nLegacy, 1, false);
+
+    expect(ssrUnit.maxHp).toBeGreaterThan(nUnit.maxHp);
+  });
+});

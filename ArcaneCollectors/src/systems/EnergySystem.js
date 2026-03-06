@@ -124,6 +124,17 @@ class EnergySystem {
     };
   }
 
+
+  /**
+   * consumeEnergy() 별칭 (PRD-3: 시스템 에너지 소비 연동용)
+   * @param {number} amount - 소모할 에너지량
+   * @param {string} [source] - 소비 출처 (gacha, dungeon, pvp 등, 로깅용)
+   * @returns {Object} 결과 { success, currentEnergy, consumed, error? }
+   */
+  consume(amount, source) {
+    return this.consumeEnergy(amount);
+  }
+
   /**
    * 스테이지 타입별 에너지 비용 조회
    * @param {string} stageType - 스테이지 타입 (NORMAL, ELITE, BOSS)

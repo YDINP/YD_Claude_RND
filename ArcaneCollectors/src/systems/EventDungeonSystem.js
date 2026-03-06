@@ -5,6 +5,7 @@
 import { SaveManager } from './SaveManager.js';
 import { EventBus, GameEvents } from './EventBus.js';
 import eventsData from '../data/events.json';
+import energySystem from './EnergySystem.js';
 
 /**
  * 이벤트 던전 관련 이벤트
@@ -178,6 +179,15 @@ export class EventDungeonSystem {
 
     if (!this.isEventActive(eventId)) {
       return { success: false, error: '이벤트가 종료되었습니다.' };
+    }
+
+    // PRD-3: 에너지 소비 (skipEnergyCheck 옵션으로 테스트 보호)
+    const energyCost = 20;
+    if (!battleResult.skipEnergyCheck) {
+      const energyResult = energySystem.consume(energyCost, 'dungeon');
+      if (!energyResult.success) {
+        return { success: false, error: '에너지가 부족합니다.', energyRequired: energyCost };
+      }
     }
 
     // 전투 실패 시

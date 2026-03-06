@@ -6,6 +6,8 @@
 import { SaveManager } from './SaveManager.js';
 import { EventBus, GameEvents } from './EventBus.js';
 import bannersData from '../data/banners.json';
+import { getAllAscendedHeroes, getAllBaseHeroes } from '../data/index.js';
+import energySystem from './EnergySystem.js';
 
 export class GachaSystem {
   // 등급별 기본 확률 (PRD v5.2 명세)
@@ -41,6 +43,9 @@ export class GachaSystem {
     R: [],
     N: []
   };
+
+  // PRD-3: 소환 1회당 에너지 소비량
+  static ENERGY_COST_PER_PULL = 10;
 
   // 배너 데이터
   static _banners = bannersData.banners;
@@ -188,12 +193,22 @@ export class GachaSystem {
    * @param {string} paymentType 'gems' 또는 'tickets'
    * @returns {Object} { success, results, pityInfo }
    */
-  static pull(count = 1, paymentType = 'gems') {
+  static pull(count = 1, paymentType = 'gems', options = {}) {
     // 가챠 비활성화 guard: CHARACTER_POOL이 비어있으면 즉시 반환
     const hasPool = Object.values(this.CHARACTER_POOL).some(pool => pool.length > 0);
     if (!hasPool) {
       console.warn('[GachaSystem] Gacha is currently disabled.');
       return { success: false, error: '가챠 시스템이 현재 비활성화되어 있습니다.', results: [] };
+    }
+
+
+    // PRD-3: 에너지 소비 (skipEnergyCheck 옵션으로 기존 테스트 보호)
+    const energyCost = (count || 1) * this.ENERGY_COST_PER_PULL;
+    if (!options.skipEnergyCheck) {
+      const energyResult = energySystem.consume(energyCost, 'gacha');
+      if (!energyResult.success) {
+        return { success: false, error: '에너지가 부족합니다.', results: [], energyRequired: energyCost };
+      }
     }
 
     // 비용 확인 및 차감
@@ -465,6 +480,48 @@ export class GachaSystem {
    */
   static getCurrentBanner() {
     return this._currentBanner || 'standard';
+  }
+
+  /**
+   * CHARACTER_POOL을 base-heroes + ascended-heroes 기반으로 초기화 (PRD-1)
+   * ascended-heroes의 rarity 필드를 기준으로 분류.
+   * base-heroes는 rarity 없으면 기본값 R 사용.
+   * @param {Object} [options]
+   * @param {boolean} [options.ascendedOnly=false] ascended-heroes만 사용
+   */
+  static initializePool(options = {}) {
+    const pool = { SSR: [], SR: [], R: [], N: [] };
+
+    // ascended-heroes 로드 (rarity 필드 기준)
+    try {
+      const ascendedHeroes = getAllAscendedHeroes();
+      for (const hero of ascendedHeroes) {
+        const rarity = hero.rarity;
+        if (pool[rarity]) {
+          pool[rarity].push(hero.id);
+        }
+      }
+    } catch (e) {
+      console.warn('[GachaSystem] ascended-heroes 로드 실패:', e.message);
+    }
+
+    // base-heroes 로드 (ascendedOnly 옵션이 false일 때만)
+    if (!options.ascendedOnly) {
+      try {
+        const baseHeroes = getAllBaseHeroes();
+        for (const hero of baseHeroes) {
+          const rarity = hero.rarity || 'R';
+          if (pool[rarity]) {
+            pool[rarity].push(hero.id);
+          }
+        }
+      } catch (e) {
+        console.warn('[GachaSystem] base-heroes 로드 실패:', e.message);
+      }
+    }
+
+    this.CHARACTER_POOL = pool;
+    return pool;
   }
 
   /**

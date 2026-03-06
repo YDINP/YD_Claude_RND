@@ -135,6 +135,21 @@ vi.mock('../../src/utils/GameLogger.js', () => ({
 }));
 
 // =====================================================
+// Mock: EnergySystem (PRD-3: 기존 테스트 보호)
+// =====================================================
+vi.mock('../../src/systems/EnergySystem.js', () => {
+  const mockConsume = vi.fn(() => ({ success: true, currentEnergy: 100, consumed: 5 }));
+  const mockEnergySystem = { consume: mockConsume, consumeEnergy: mockConsume };
+  return {
+    default: mockEnergySystem,
+    EnergySystem: vi.fn(() => mockEnergySystem),
+    energySystem: mockEnergySystem,
+    ENERGY_CONFIG: { MAX_ENERGY: 200, RECOVERY_RATE: 1 },
+    STAGE_COSTS: { NORMAL: 6, ELITE: 10, BOSS: 20 }
+  };
+});
+
+// =====================================================
 // localStorage Mock
 // =====================================================
 const localStorageMock = (() => {

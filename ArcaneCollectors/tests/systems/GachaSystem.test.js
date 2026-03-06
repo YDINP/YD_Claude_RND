@@ -42,6 +42,35 @@ vi.mock('../../src/systems/EventBus.js', () => ({
   }
 }));
 
+// Mock EnergySystem (PRD-3: 기존 테스트 보호 - 항상 성공 반환)
+vi.mock('../../src/systems/EnergySystem.js', () => {
+  const mockConsume = vi.fn(() => ({ success: true, currentEnergy: 100, consumed: 10 }));
+  const mockEnergySystem = { consume: mockConsume, consumeEnergy: mockConsume };
+  return {
+    default: mockEnergySystem,
+    EnergySystem: vi.fn(() => mockEnergySystem),
+    energySystem: mockEnergySystem,
+    ENERGY_CONFIG: { MAX_ENERGY: 200, RECOVERY_RATE: 1 },
+    STAGE_COSTS: { NORMAL: 6, ELITE: 10, BOSS: 20 }
+  };
+});
+
+// Mock data/index.js (PRD-1: initializePool 테스트용)
+vi.mock('../../src/data/index.js', () => ({
+  getAllAscendedHeroes: vi.fn(() => [
+    { id: 'asc_ssr_1', rarity: 'SSR' },
+    { id: 'asc_ssr_2', rarity: 'SSR' },
+    { id: 'asc_sr_1', rarity: 'SR' }
+  ]),
+  getAllBaseHeroes: vi.fn(() => [
+    { id: 'base_r_1', rarity: 'R' },
+    { id: 'base_r_2', rarity: 'R' }
+  ]),
+  getAscendedHero: vi.fn((id) => null),
+  getBaseHero: vi.fn((id) => null),
+  getCharacterOrHero: vi.fn((id) => null)
+}));
+
 import { GachaSystem } from '../../src/systems/GachaSystem.js';
 import { SaveManager } from '../../src/systems/SaveManager.js';
 import { EventBus } from '../../src/systems/EventBus.js';
@@ -216,6 +245,73 @@ describe('GachaSystem', () => {
     it('gets banner info by ID', () => {
       const banner = GachaSystem.getBannerById('standard');
       expect(banner).toBeTruthy();
+    });
+  });
+
+
+  // PRD-1: GachaSystem.initializePool() 테스트
+  describe('initializePool() - PRD-1', () => {
+    it('initializes CHARACTER_POOL from ascended-heroes and base-heroes', () => {
+      const pool = GachaSystem.initializePool();
+
+      expect(Array.isArray(pool.SSR)).toBe(true);
+      expect(Array.isArray(pool.SR)).toBe(true);
+      expect(Array.isArray(pool.R)).toBe(true);
+      expect(pool.SSR).toContain('asc_ssr_1');
+      expect(pool.SSR).toContain('asc_ssr_2');
+      expect(pool.SR).toContain('asc_sr_1');
+    });
+
+    it('includes base-heroes in pool when ascendedOnly is false', () => {
+      const pool = GachaSystem.initializePool({ ascendedOnly: false });
+
+      expect(pool.R).toContain('base_r_1');
+      expect(pool.R).toContain('base_r_2');
+    });
+
+    it('excludes base-heroes when ascendedOnly is true', () => {
+      const pool = GachaSystem.initializePool({ ascendedOnly: true });
+
+      expect(pool.R).not.toContain('base_r_1');
+    });
+
+    it('updates GachaSystem.CHARACTER_POOL after initialization', () => {
+      GachaSystem.initializePool();
+      // CHARACTER_POOL should be updated with the new pool
+      const hasPool = Object.values(GachaSystem.CHARACTER_POOL).some(p => p.length > 0);
+      expect(hasPool).toBe(true);
+    });
+  });
+
+  // PRD-3: GachaSystem pull() 에너지 소비 테스트
+  describe('pull() energy consumption - PRD-3', () => {
+    it('consumes energy when pulling (skipEnergyCheck: false)', async () => {
+      const { default: energySystemMock } = await import('../../src/systems/EnergySystem.js');
+
+      GachaSystem.pull(1, 'gems', { skipEnergyCheck: false });
+
+      expect(energySystemMock.consume).toHaveBeenCalledWith(10, 'gacha');
+    });
+
+    it('skips energy check when skipEnergyCheck is true', async () => {
+      const { default: energySystemMock } = await import('../../src/systems/EnergySystem.js');
+      energySystemMock.consume.mockClear();
+
+      GachaSystem.pull(1, 'gems', { skipEnergyCheck: true });
+
+      expect(energySystemMock.consume).not.toHaveBeenCalled();
+    });
+
+    it('fails pull when energy is insufficient', async () => {
+      const { default: energySystemMock } = await import('../../src/systems/EnergySystem.js');
+      energySystemMock.consume.mockReturnValueOnce({
+        success: false, error: 'INSUFFICIENT_ENERGY', currentEnergy: 5, consumed: 0
+      });
+
+      const result = GachaSystem.pull(1, 'gems', { skipEnergyCheck: false });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('에너지');
     });
   });
 });

@@ -165,4 +165,34 @@ describe('EnergySystem', () => {
       expect(() => system.getStageCost('INVALID')).toThrow('알 수 없는 스테이지 타입');
     });
   });
+
+
+  // PRD-3: consume() 별칭 테스트
+  describe('consume() alias - PRD-3', () => {
+    it('consume() is an alias for consumeEnergy()', () => {
+      system.currentEnergy = 100;
+
+      const result = system.consume(20, 'gacha');
+
+      expect(result.success).toBe(true);
+      expect(result.currentEnergy).toBe(80);
+      expect(result.consumed).toBe(20);
+    });
+
+    it('consume() accepts source parameter without error', () => {
+      system.currentEnergy = 100;
+
+      expect(() => system.consume(10, 'dungeon')).not.toThrow();
+      expect(() => system.consume(10, 'pvp')).not.toThrow();
+    });
+
+    it('consume() fails when energy is insufficient', () => {
+      system.currentEnergy = 5;
+
+      const result = system.consume(20, 'gacha');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('INSUFFICIENT_ENERGY');
+    });
+  });
 });

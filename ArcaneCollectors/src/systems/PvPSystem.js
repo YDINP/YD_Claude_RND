@@ -15,6 +15,7 @@ import { BattleUnit, BattleSystem } from './BattleSystem.js';
 import { SaveManager } from './SaveManager.js';
 import { supabase, isSupabaseConfigured, isOnline } from '../api/supabaseClient.js';
 import GameLogger from '../utils/GameLogger.js';
+import energySystem from './EnergySystem.js';
 
 // =====================================================
 // 상수
@@ -294,9 +295,11 @@ export class PvPSystem {
    * 공격 → 시뮬레이션 → 점수 업데이트 → 기록 저장
    *
    * @param {Object} opponent - findOpponents()가 반환한 상대 객체
+   * @param {Object} [options] - 옵션
+   * @param {boolean} [options.skipEnergyCheck=false] - 에너지 체크 생략 (테스트용)
    * @returns {Promise<{success: boolean, result: string, scoreChange: number, newScore: number, log: Array, error?: string}>}
    */
-  static async executePvPBattle(opponent) {
+  static async executePvPBattle(opponent, options = {}) {
     const saveData = SaveManager.load();
     const userId = SaveManager._userId;
 
@@ -307,6 +310,15 @@ export class PvPSystem {
 
     if (attackerParty.length === 0) {
       return { success: false, error: '공격자 파티가 비어 있습니다' };
+    }
+
+    // PRD-3: 에너지 소비 (skipEnergyCheck 옵션으로 테스트 보호)
+    const energyCost = 5;
+    if (!options.skipEnergyCheck) {
+      const energyResult = energySystem.consume(energyCost, 'pvp');
+      if (!energyResult.success) {
+        return { success: false, error: '에너지가 부족합니다.', energyRequired: energyCost };
+      }
     }
 
     const defenderParty = opponent.party_snapshot || [];
