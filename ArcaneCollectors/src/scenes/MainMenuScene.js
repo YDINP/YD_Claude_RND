@@ -24,6 +24,8 @@ import { InventoryPopup } from '../components/popups/InventoryPopup.js';
 import { SettingsPopup } from '../components/popups/SettingsPopup.js';
 import { EventDungeonPopup } from '../components/popups/EventDungeonPopup.js';
 import { AscensionPopup } from '../components/popups/AscensionPopup.js';
+import { PvPPopup } from '../components/popups/PvPPopup.js';
+import { GuildPopup } from '../components/popups/GuildPopup.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -1082,6 +1084,8 @@ export class MainMenuScene extends Phaser.Scene {
       { icon: '🎉', label: '이벤트', popupKey: 'eventdungeon' },
       { icon: '📦', label: '가방', popupKey: 'inventory' },
       { icon: '⚙️', label: '설정', popupKey: 'settings' },
+      { icon: '⚔️', label: 'PvP', popupKey: 'pvp' },
+      { icon: '🏰', label: '길드', popupKey: 'guild' },
     ];
 
     const cols = 4;
@@ -1164,6 +1168,8 @@ export class MainMenuScene extends Phaser.Scene {
       eventdungeon: EventDungeonPopup,
       inventory: InventoryPopup,
       settings: SettingsPopup,
+      pvp: PvPPopup,
+      guild: GuildPopup,
     };
     const PopupClass = popups[key];
     if (PopupClass) {
