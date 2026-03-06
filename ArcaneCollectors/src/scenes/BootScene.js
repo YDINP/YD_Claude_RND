@@ -129,6 +129,17 @@ export class BootScene extends Phaser.Scene {
         });
       }
 
+      // TASK-C: 신규 유저 튜토리얼 체크
+      if (!localStorage.getItem("tutorial_completed")) {
+        this.time.delayedCall(2400, () => {
+          this.cameras.main.fadeOut(200, 15, 23, 42);
+          this.cameras.main.once("camerafadeoutcomplete", () => {
+            this.scene.start("TutorialScene");
+          });
+        });
+        return;
+      }
+
       // 세션 확인 (스플래시 중 비동기)
       const hasSession = await this._checkExistingSession();
 
