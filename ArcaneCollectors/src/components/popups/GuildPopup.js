@@ -119,8 +119,7 @@ export class GuildPopup extends PopupBase {
   }
 
   _renderNoGuild(cx, y, w) {
-    const msg = this.scene.add.text(cx, y + s(80), 'Not in a guild.
-Create or join!', {
+    const msg = this.scene.add.text(cx, y + s(80), 'Not in a guild. Create or join!', {
       fontSize: sf(16),
       fontFamily: '"Noto Sans KR", sans-serif',
       color: '#94A3B8', align: 'center',
