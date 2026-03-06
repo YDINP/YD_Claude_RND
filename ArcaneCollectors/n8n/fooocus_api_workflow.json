@@ -1,0 +1,103 @@
+{
+  "name": "Arcane Collectors - Fooocus Local API",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 캐릭터 데이터\nconst characters = [\n  {\n    id: 'arcana',\n    name: '아르카나',\n    rarity: 'SSR',\n    prompt: 'chibi, 2.5 head ratio, 1girl, arcana, cute witch, purple twintails, big golden eyes, chubby cheeks, witch hat with gold ribbon, purple dress with gold trim, white sash, golden sandals, holding wand, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'leonhardt',\n    name: '레온하르트',\n    rarity: 'SSR',\n    prompt: 'chibi, 2.5 head ratio, 1boy, leonhardt, cute holy knight, fluffy blonde hair with ahoge, sky blue eyes, chubby cheeks, white gold samurai armor with sun emblem, red cape, golden headband, holding golden katana, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'selene',\n    name: '셀레네',\n    rarity: 'SSR',\n    prompt: 'chibi, 2.5 head ratio, 1girl, selene, cute shadow archer, long silver hair, purple eyes with crescent moon, pale skin, chubby cheeks, black kimono hoodie with ghost patterns, purple hakama shorts, holding dark bow, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'rose',\n    name: '로제',\n    rarity: 'SR',\n    prompt: 'chibi, 2.5 head ratio, 1girl, rose, cute healer priestess, long wavy pink hair, soft blue eyes, rosy chubby cheeks, white ice blue dress with norse runes, fur trim cape, holding healing staff with ice crystal, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'kai',\n    name: '카이',\n    rarity: 'SR',\n    prompt: 'chibi, 2.5 head ratio, 1boy, kai, cute wind swordsman, messy green hair ponytail, bright green eyes, chubby cheeks, viking tunic with fur vest, baggy pants, holding viking sword, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'luna',\n    name: '루나',\n    rarity: 'SR',\n    prompt: 'chibi, 2.5 head ratio, 1girl, luna, cute fire archer, short spiky orange-red hair, amber golden eyes, chubby cheeks with bandaid, confident grin with small fang, greek huntress toga outfit, golden arm bands, holding bow with fire design, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'noir',\n    name: '누아르',\n    rarity: 'SR',\n    prompt: 'chibi, 2.5 head ratio, 1boy, noir, cute dark mage scholar, messy dark blue hair with white streaks, tired purple eyes, dark circles, chubby cheeks, black onmyoji robe with ghost patterns, holding thick grimoire, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'aria',\n    name: '아리아',\n    rarity: 'SR',\n    prompt: 'chibi, 2.5 head ratio, 1girl, aria, cute holy priestess miko, long blonde hair with twin braids, sparkling golden eyes, chubby cheeks, pure angelic smile, white gold miko outfit, tiny angel wings, sakura hairpin, holding kagura bell staff, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'finn',\n    name: '핀',\n    rarity: 'R',\n    prompt: 'chibi, 2.5 head ratio, 1boy, finn, cute water warrior rookie, short spiky blue hair, bright blue eyes, chubby cheeks, proud grin, viking light blue armor with ice patterns, fur collar, holding sword and small shield, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'mira',\n    name: '미라',\n    rarity: 'R',\n    prompt: 'chibi, 2.5 head ratio, 1girl, mira, cute wind archer, short fluffy green hair with braids, bright green eyes, chubby freckled cheeks, cheerful wild smile, viking huntress outfit with fur trim, holding small bow, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'theo',\n    name: '테오',\n    rarity: 'R',\n    prompt: 'chibi, 2.5 head ratio, 1boy, theo, cute fire mage apprentice, messy orange spiky hair like flames, bright orange eyes, chubby cheeks, mischievous wild grin, greek red mage robe with gold trim, laurel wreath, holding magic wand with flame, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'eva',\n    name: '에바',\n    rarity: 'R',\n    prompt: 'chibi, 2.5 head ratio, 1girl, eva, cute light healer trainee miko, short fluffy white hair with big white ribbon, innocent golden eyes, very chubby blushing cheeks, shy nervous smile, white trainee miko robe, sakura kanzashi, holding small healing orb, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'rex',\n    name: '렉스',\n    rarity: 'R',\n    prompt: 'chibi, 2.5 head ratio, 1boy, rex, cute dark warrior, short dark gray hair, sharp purple eyes, chubby cheeks, cool confident smirk, dark gray oni-style armor with purple accents, holding dark katana, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'ivy',\n    name: '아이비',\n    rarity: 'R',\n    prompt: 'chibi, 2.5 head ratio, 1girl, ivy, cute water mage researcher, long straight blue hair with ice crystals, calm teal eyes, chubby cheeks, serene gentle smile, blue nordic mage robe with fur collar, holding blue staff with ice crystal, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  },\n  {\n    id: 'max',\n    name: '맥스',\n    rarity: 'R',\n    prompt: 'chibi, 2.5 head ratio, 1boy, max, cute wind warrior speedster, messy bright green hair flowing, energetic green eyes, chubby cheeks, excited wide wild grin, light viking armor with wind runes, valkyrie feather scarf, holding sword, front view, T-pose, arms spread out, symmetrical, full body, flat colors, solid white background, game sprite'\n  }\n];\n\n// 전체 또는 선택\nreturn characters.map(char => ({ json: char }));"
+      },
+      "id": "character_data",
+      "name": "Character Data (15명)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const char = $input.first().json;\n\nconst positive = `(masterpiece:1.2), (best quality:1.2), chibi, super deformed, anime style, game character design, ${char.prompt}`;\nconst negative = 'realistic, 3d, photo, bad anatomy, worst quality, low quality, blurry, mature, serious, dark, dynamic pose, action pose, overlapping limbs, complex background';\n\nreturn [{\n  json: {\n    ...char,\n    positive,\n    negative\n  }\n}];"
+      },
+      "id": "build_prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:7865/api/predict",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"fn_index\": 13,\n  \"data\": [\n    \"{{ $json.positive }}\",\n    \"{{ $json.negative }}\",\n    [\"Fooocus V2\"],\n    \"Speed\",\n    \"1024×1024\",\n    1,\n    \"png\",\n    1234,\n    false,\n    2,\n    4,\n    \"juggernautXL_v8Rundiffusion.safetensors\",\n    \"None\",\n    0.5,\n    true,\n    \"None\",\n    \"\",\n    \"\",\n    \"\",\n    \"\",\n    false,\n    \"\",\n    \"\",\n    false\n  ],\n  \"session_hash\": \"n8n_session\"\n}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "fooocus_api",
+      "name": "Fooocus Gradio API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst charData = $('Build Prompt').first().json;\nconst timestamp = Date.now();\n\n// Gradio 응답에서 이미지 경로 추출\nlet imagePath = null;\nif (input.data && input.data[0]) {\n  // Fooocus는 보통 파일 경로를 반환\n  imagePath = input.data[0];\n}\n\nreturn [{\n  json: {\n    characterId: charData.id,\n    characterName: charData.name,\n    rarity: charData.rarity,\n    timestamp,\n    imagePath,\n    filename: `${charData.id}_${charData.rarity}_${timestamp}.png`,\n    outputDir: 'D:/AI/generated_characters/'\n  }\n}];"
+      },
+      "id": "process_result",
+      "name": "Process Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "command": "=copy \"{{ $json.imagePath }}\" \"{{ $json.outputDir }}{{ $json.filename }}\""
+      },
+      "id": "copy_image",
+      "name": "Copy to Output",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nconsole.log(`✅ Generated: ${data.characterName} (${data.rarity})`);\nconsole.log(`   File: ${data.filename}`);\n\nreturn [{ json: data }];"
+      },
+      "id": "log_result",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{"node": "Character Data (15명)", "type": "main", "index": 0}]]
+    },
+    "Character Data (15명)": {
+      "main": [[{"node": "Build Prompt", "type": "main", "index": 0}]]
+    },
+    "Build Prompt": {
+      "main": [[{"node": "Fooocus Gradio API", "type": "main", "index": 0}]]
+    },
+    "Fooocus Gradio API": {
+      "main": [[{"node": "Process Result", "type": "main", "index": 0}]]
+    },
+    "Process Result": {
+      "main": [[{"node": "Copy to Output", "type": "main", "index": 0}]]
+    },
+    "Copy to Output": {
+      "main": [[{"node": "Log Result", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

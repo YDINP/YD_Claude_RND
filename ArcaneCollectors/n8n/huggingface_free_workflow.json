@@ -1,0 +1,105 @@
+{
+  "name": "Arcane Collectors - Hugging Face Free API",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 15명 캐릭터 데이터\nconst characters = [\n  { id: 'arcana', name: '아르카나', rarity: 'SSR', prompt: 'chibi, 2.5 head ratio, 1girl, arcana, cute witch, purple twintails, big golden eyes, chubby cheeks, witch hat with gold ribbon, purple dress with gold trim, holding wand, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'leonhardt', name: '레온하르트', rarity: 'SSR', prompt: 'chibi, 2.5 head ratio, 1boy, leonhardt, cute holy knight, fluffy blonde hair with ahoge, sky blue eyes, white gold samurai armor, red cape, holding golden katana, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'selene', name: '셀레네', rarity: 'SSR', prompt: 'chibi, 2.5 head ratio, 1girl, selene, cute shadow archer, long silver hair, purple eyes, black kimono hoodie, purple hakama shorts, holding dark bow, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'rose', name: '로제', rarity: 'SR', prompt: 'chibi, 2.5 head ratio, 1girl, rose, cute healer, long wavy pink hair, soft blue eyes, white ice blue dress, fur trim cape, holding healing staff, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'kai', name: '카이', rarity: 'SR', prompt: 'chibi, 2.5 head ratio, 1boy, kai, cute swordsman, messy green hair ponytail, bright green eyes, viking tunic, fur vest, holding viking sword, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'luna', name: '루나', rarity: 'SR', prompt: 'chibi, 2.5 head ratio, 1girl, luna, cute fire archer, short spiky orange hair, amber eyes, greek huntress outfit, holding bow, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'noir', name: '누아르', rarity: 'SR', prompt: 'chibi, 2.5 head ratio, 1boy, noir, cute dark mage, messy dark blue hair, tired purple eyes, black onmyoji robe, holding grimoire, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'aria', name: '아리아', rarity: 'SR', prompt: 'chibi, 2.5 head ratio, 1girl, aria, cute miko priestess, long blonde hair twin braids, golden eyes, white gold miko outfit, tiny angel wings, holding kagura bell, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'finn', name: '핀', rarity: 'R', prompt: 'chibi, 2.5 head ratio, 1boy, finn, cute water warrior, short spiky blue hair, blue eyes, viking light blue armor, holding sword and shield, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'mira', name: '미라', rarity: 'R', prompt: 'chibi, 2.5 head ratio, 1girl, mira, cute wind archer, short fluffy green hair, green eyes, viking huntress outfit, holding small bow, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'theo', name: '테오', rarity: 'R', prompt: 'chibi, 2.5 head ratio, 1boy, theo, cute fire mage, messy orange spiky hair, orange eyes, greek red mage robe, holding magic wand, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'eva', name: '에바', rarity: 'R', prompt: 'chibi, 2.5 head ratio, 1girl, eva, cute healer trainee, short fluffy white hair, golden eyes, white miko robe, holding healing orb, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'rex', name: '렉스', rarity: 'R', prompt: 'chibi, 2.5 head ratio, 1boy, rex, cute dark warrior, short dark gray hair, purple eyes, dark gray oni armor, holding dark katana, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'ivy', name: '아이비', rarity: 'R', prompt: 'chibi, 2.5 head ratio, 1girl, ivy, cute water mage, long straight blue hair, teal eyes, blue nordic mage robe, holding ice staff, front view, standing pose, full body, flat colors, white background, game sprite' },\n  { id: 'max', name: '맥스', rarity: 'R', prompt: 'chibi, 2.5 head ratio, 1boy, max, cute wind warrior, messy bright green hair, green eyes, light viking armor, holding sword, front view, standing pose, full body, flat colors, white background, game sprite' }\n];\n\nreturn characters.map(char => ({ json: char }));"
+      },
+      "id": "character_data",
+      "name": "15 Characters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const char = $input.first().json;\n\nconst fullPrompt = `masterpiece, best quality, chibi, anime style, game character, ${char.prompt}`;\n\nreturn [{\n  json: {\n    ...char,\n    fullPrompt,\n    negativePrompt: 'realistic, 3d, photo, bad anatomy, worst quality, low quality, blurry, nsfw'\n  }\n}];"
+      },
+      "id": "build_prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/cagliostrolab/animagine-xl-3.1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inputs\": \"{{ $json.fullPrompt }}\",\n  \"parameters\": {\n    \"negative_prompt\": \"{{ $json.negativePrompt }}\",\n    \"width\": 1024,\n    \"height\": 1024,\n    \"num_inference_steps\": 25,\n    \"guidance_scale\": 7\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "huggingface_api",
+      "name": "Hugging Face API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "hf_token",
+          "name": "Hugging Face Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=D:/AI/generated_characters/{{ $('Build Prompt').item.json.id }}_{{ $('Build Prompt').item.json.rarity }}.png",
+        "options": {}
+      },
+      "id": "save_image",
+      "name": "Save Image",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const charData = $('Build Prompt').first().json;\n\nconsole.log(`✅ ${charData.name} (${charData.rarity}) 생성 완료!`);\n\nreturn [{ json: { success: true, character: charData.name } }];"
+      },
+      "id": "log_success",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{"node": "15 Characters", "type": "main", "index": 0}]]
+    },
+    "15 Characters": {
+      "main": [[{"node": "Build Prompt", "type": "main", "index": 0}]]
+    },
+    "Build Prompt": {
+      "main": [[{"node": "Hugging Face API", "type": "main", "index": 0}]]
+    },
+    "Hugging Face API": {
+      "main": [[{"node": "Save Image", "type": "main", "index": 0}]]
+    },
+    "Save Image": {
+      "main": [[{"node": "Log Success", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

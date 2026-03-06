@@ -1,0 +1,220 @@
+# ArcaneCollectors UI/UX 고도화 Handoff
+
+> **시작일**: 2026-02-13
+> **브랜치**: `arcane/integration` → 각 태스크별 워크트리
+> **담당**: Claude Agent Team (Conductor + 4 Agents)
+
+---
+
+## Sprint 3: UI/UX 고도화
+
+### 목표
+1. 화면 해상도 최적화 및 레이아웃 고도화
+2. BottomNav 클릭 영역 수정
+3. UI 이미지 에셋 적용 (프로젝트 분위기 맞춤)
+4. 홈 화면 방치형 게임 컨텐츠 추가
+5. 홈에서 모든 핵심 기능 접근 가능하게
+
+### 태스크 구조
+
+| ID | 태스크 | 우선순위 | 난이도 | 에이전트 | 상태 |
+|----|--------|---------|--------|---------|------|
+| UIX-3.1 | BottomNav 히트영역 + 비주얼 수정 | P0 | LOW | executor-low | ⬜ |
+| UIX-3.2 | 홈 방치형 컨텐츠 (자동전투 미니뷰) | P0 | HIGH | executor | ⬜ |
+| UIX-3.3 | 홈 퀵액세스 통합 (모든 기능 접근) | P1 | MED | executor | ⬜ |
+| UIX-3.4 | 씬별 레이아웃 고도화 (6개 씬) | P1 | MED | executor | ⬜ |
+| ART-1.1 | 배경 이미지 (5개 씬) | P1 | LOW | researcher | ⬜ |
+| ART-1.2 | UI 아이콘/버튼 이미지 | P2 | LOW | researcher | ⬜ |
+| ART-1.3 | 캐릭터 플레이스홀더 이미지 | P2 | LOW | researcher | ⬜ |
+| QA-3.1 | Playwright MCP 통합 테스트 | P1 | MED | qa-tester | ⬜ |
+| **AUTH-1.1** | 자동로그인 (BootScene 분기) | P1 | MED | executor | 📋 백로그 |
+| **AUTH-1.2** | 계정 변경 (SettingsScene) | P1 | MED | executor | 📋 백로그 |
+| **AUTH-1.3** | 로그인 화면 개선 (체크박스/최근계정) | P2 | LOW | executor | 📋 백로그 |
+
+### 의존성 그래프
+```
+UIX-3.1 (BottomNav) ─────────────────────────── 독립
+UIX-3.2 (방치형) ────────────────────────────── 독립
+UIX-3.3 (퀵액세스) ──→ UIX-3.1 완료 후
+UIX-3.4 (레이아웃) ──→ UIX-3.1 완료 후
+ART-1.1~1.3 (이미지) ────────────────────────── 독립 (병렬)
+QA-3.1 (테스트) ──→ UIX-3.1~3.4 전부 완료 후
+```
+
+---
+
+## 변경 이력
+
+### [2026-02-13] Phase 1 실행 시작
+- handoff.md 생성
+- PRD 태스크 8개 정의
+- 워크트리 3개 생성 (s3w1, s3w2, s3w3)
+- **Phase 1 병렬 실행**: UI Dev A (s3w1) + UI Dev B (s3w2) + Asset Scout (s3w3)
+
+---
+
+## 실행 Phase 구조
+
+### Phase 1: 병렬 구현 (현재 진행 중 🔄)
+| 에이전트 | 워크트리 | 태스크 | 모델 | 상태 |
+|---------|---------|--------|------|------|
+| UI Dev A | s3w1 | UIX-3.1 (BottomNav) | sonnet | ✅ 완료 (d42c078) |
+| UI Dev B | s3w2 | UIX-3.2 (방치형 홈) | sonnet | ✅ 완료 (9da25d1) |
+| Asset Scout | s3w3 | ART-1.1~1.3 (이미지) | sonnet | ✅ 완료 (48fd553) |
+
+### Phase 2: 후속 구현 ✅ 완료
+| 에이전트 | 워크트리 | 태스크 | 모델 | 상태 |
+|---------|---------|--------|------|------|
+| UI Dev A | integration | UIX-3.3 + UIX-3.4 | sonnet | ✅ 완료 (dd2b79a) |
+
+### Phase 3: 통합 + 코드 리뷰 + 린트 검증 ✅ 완료
+| 에이전트 | 역할 | 검증 항목 | 모델 | 상태 |
+|---------|------|----------|------|------|
+| Code Reviewer | 크로스 종속성 리뷰 | 7개 항목 검증 | sonnet | ✅ CONDITIONAL PASS |
+| Lint Checker | 린트/타입 검증 | tsc/vitest/build | 직접 | ✅ ALL PASS |
+| Hotfix | GachaScene 겹침 수정 | ticketY 70→50 | 직접 | ✅ 수정 완료 |
+
+### Phase 3 상세: 검증 결과
+
+#### 린트/빌드 검증 ✅ (직접 실행 완료)
+- [x] **tsc --noEmit**: 에러 0개 ✅
+- [x] **vitest**: 11 파일, **337/337 통과** (363ms) ✅
+- [x] **vite build**: 성공 (4.25s), 218 모듈 ✅
+  - index: 665.26 KB (gzip 178.97 KB)
+  - phaser: 1,478.63 KB (gzip 339.73 KB)
+  - 경고 2개 (MoodSystem/skillAnimationConfig 동적 import — 무시 가능)
+
+#### 코드 리뷰 ✅ (CONDITIONAL PASS → PASS)
+- [x] BottomNav ↔ layoutConfig HEIGHT 일치 (120px 양쪽 일치) ✅
+- [x] IdleProgressSystem ↔ SaveManager 정합성 (lastLogoutTime, parties, characters) ✅
+- [x] IdleBattleView 타이머 정리 (destroy()에서 remove() 호출) ✅
+- [x] TextureGenerator ↔ PreloadScene 호출 연결 (3개 메서드 일치) ✅
+- [x] BottomNav 텍스처 키 ↔ TextureGenerator 생성 키 일치 (5개 아이콘) ✅
+- [x] MainMenuScene 8버튼 씬 이름 전부 유효 ✅
+- [x] 6개 씬 콘텐츠 영역 범위 ✅ (GachaScene 티켓버튼 겹침 → **HOTFIX 완료**)
+
+#### FAIL→수정 완료
+- GachaScene `ticketY = buttonY + 70` → `+50` (BottomNav y=1160 겹침 방지)
+
+#### WARN (개선 권장, 추후 대응)
+1. BottomNav hitArea 상단 마진 균등화
+2. ~~IdleProgressSystem getCurrentStage() 정렬 로직 명시화~~ → Phase 5에서 수정 완료
+3. MainMenuScene IdleBattleView ↔ IdleSummary 데이터 갱신 이벤트 연동
+
+### Phase 5: NaN 이슈 수정 ✅ 완료
+| 항목 | 수정 내용 | 커밋 |
+|------|----------|------|
+| **근본 원인** | `IdleProgressSystem.getCurrentStage()` 스테이지 키 파싱 실패 시 기본값 처리 | 79ad1ca |
+| **수정 파일** | `IdleProgressSystem.js`, `MainMenuScene.js`, `IdleBattleView.js` (3개) | |
+| **수정 사항** | `parseInt(parts[N]) \|\| 1` 파싱 방어, `\|\| 0` / `\|\| 1` 기본값, 파라미터 방어 | |
+
+#### 검증 결과
+- [x] **NaN 텍스트 0건**: 38개 텍스트 요소 중 NaN/undefined 포함 0개 ✅
+- [x] **수치 정상**: 💰 9,072/h, ⭐ 2,268/h, 📍 1-2, 챕터 1-2: 고블린 숲 ✅
+- [x] **tsc --noEmit**: 에러 0개 ✅
+- [x] **vitest**: 337/337 통과 ✅
+- [x] **콘솔 에러**: 0개 ✅
+
+---
+
+### Phase 4: Playwright MCP 통합 테스트 ✅ 완료
+| TC | 테스트 항목 | 결과 | 비고 |
+|----|-----------|------|------|
+| TC-01 | 게스트 로그인 → MainMenuScene 전환 | ✅ PASS | LoginScene → PreloadScene → MainMenuScene 정상 |
+| TC-02a | BottomNav 모험 탭 → StageSelectScene | ✅ PASS | 10개 스테이지, 별 평가, 잠금 표시 |
+| TC-02b | BottomNav 가방 탭 → InventoryScene | ✅ PASS | 장비/소비/재료 탭, 5개 아이템 |
+| TC-02c | BottomNav 소환 탭 → GachaScene | ✅ PASS | 영웅/장비 소환, 배너, 단일/10연차 |
+| TC-02d | BottomNav 더보기 탭 → SettingsScene | ✅ PASS | 6개 바로가기, 4개 설정 토글 |
+| TC-02e | BottomNav 홈 탭 → MainMenuScene | ✅ PASS | 5탭 전부 정상 전환 |
+| TC-03a | 퀵액세스 영웅 → HeroListScene | ✅ PASS | 92명, 필터 5종, 4열 카드 그리드 |
+| TC-03b | 퀵액세스 퀘스트 → QuestScene | ✅ PASS | 일일 퀘스트 8개, 수령 버튼 |
+| TC-03c | 퀵액세스 무한탑 → TowerScene | ✅ PASS | 1층, 층 정보, bg_tower 배경 |
+| TC-04 | System healthCheck | ✅ PASS | 9/9 시스템 healthy |
+| TC-05 | 8개 씬 존재 확인 | ✅ PASS | 전부 exists=true |
+| TC-06 | 7개 씬 BottomNav 겹침 검증 | ✅ PASS | 0 overlaps (전 씬) |
+| TC-07 | 콘솔 에러 확인 | ✅ PASS | Errors: 0, Warnings: 1 (HeroFactory char not found — 무시 가능) |
+
+#### 테스트 환경
+- 도구: Playwright MCP (browser_evaluate + browser_take_screenshot)
+- URL: `http://localhost:3001`
+- 로그인: 게스트 로그인 (정상 플로우)
+- 스크린샷: 8장 (s3-test-01~08)
+
+#### 발견된 이슈 (WARN, 기능에 영향 없음)
+1. **NaN 표시**: MainMenuScene IdleSummary에 "NaN/h", "챕터 NaN-undefined" — 신규 게스트 계정에 스테이지/파티 데이터 부재 시 발생
+2. **HeroFactory Warning**: `Character not found: char_...` — characters.json에 없는 ID 참조 (1건)
+3. **SAVE 로드 반복 로그**: 씬 전환 시 SaveManager 데이터 로드가 다수 발생 (성능 최적화 대상)
+
+---
+
+## 에이전트 팀 구성
+
+| 역할 | 모델 | 담당 태스크 | 이유 |
+|------|------|-----------|------|
+| **Conductor** | opus | 전체 조율, 리뷰 | 복잡한 의사결정 |
+| **UI Dev A** | sonnet | UIX-3.1, UIX-3.3 | 네비/레이아웃 구현 |
+| **UI Dev B** | sonnet | UIX-3.2, UIX-3.4 | 방치형/씬 구현 |
+| **Asset Scout** | haiku | ART-1.1~1.3 | 이미지 검색/적용 |
+| **QA** | sonnet | QA-3.1 | 통합 테스트 |
+
+### 토큰 최적화 전략
+- haiku: 단순 파일 작업, 이미지 검색, 상태 확인
+- sonnet: 구현 작업 (UI 컴포넌트, 씬 수정)
+- opus: 아키텍처 결정, 최종 검증만
+
+---
+
+## 워크트리 (활성)
+
+| 워크트리 경로 | 브랜치 | 태스크 | 상태 |
+|-------------|--------|--------|------|
+| `D:/park/YD_Claude_RND-s3w1` | `arcane/s3-bottomnav` | UIX-3.1 + UIX-3.3 + UIX-3.4 | ⬜ Ready |
+| `D:/park/YD_Claude_RND-s3w2` | `arcane/s3-idle-home` | UIX-3.2 | ⬜ Ready |
+| `D:/park/YD_Claude_RND-s3w3` | `arcane/s3-assets` | ART-1.1~1.3 | ⬜ Ready |
+| `D:/park/YD_Claude_RND-integration` | `arcane/integration` | 통합/QA | Base |
+
+---
+
+## 기술 결정 사항
+
+### BottomNav 수정 방향 (UIX-3.1)
+- hitArea를 **absolute 좌표** 방식으로 변경
+- 탭 높이 80→100px, 히트영역 여유분 20px 추가
+- 시각 피드백 강화 (Press 애니메이션 추가)
+
+### 방치형 홈 컨텐츠 (UIX-3.2)
+- 자동전투 미니뷰 (화면 중앙, 현재 파티가 몬스터 자동 사냥)
+- 획득 자원 플로팅 텍스트 (+10 Gold, +1 EXP 등)
+- 오프라인 수익 계산 (시간 기반)
+- 파티 경험치 게이지 표시
+
+### 홈 퀵액세스 (UIX-3.3)
+- 콘텐츠 버튼 6→8개 확장 (소환, 퀘스트 추가)
+- 상단바 기능 확장 (레벨, 전투력 표시)
+- 빠른 소환 버튼 (홈에서 직접 1회 소환)
+
+### 이미지 에셋 (ART-1)
+- 판타지/아케인 분위기 무료 에셋 사용
+- 소스: OpenGameArt, Kenney, itch.io (CC0/CC-BY)
+- SVG 아이콘 → PNG 변환 (Phaser 호환)
+
+---
+
+## 파일 변경 추적
+
+| 파일 | 태스크 | 변경 유형 | 상태 |
+|------|--------|----------|------|
+| `src/components/BottomNav.js` | UIX-3.1 | 수정 | ⬜ |
+| `src/scenes/MainMenuScene.js` | UIX-3.2, 3.3 | 대폭 수정 | ⬜ |
+| `src/systems/IdleProgressSystem.js` | UIX-3.2 | 신규 | ⬜ |
+| `src/components/IdleBattleView.js` | UIX-3.2 | 신규 | ⬜ |
+| `src/components/QuickAccessPanel.js` | UIX-3.3 | 신규 | ⬜ |
+| `src/scenes/GachaScene.js` | UIX-3.4 | 수정 | ⬜ |
+| `src/scenes/StageSelectScene.js` | UIX-3.4 | 수정 | ⬜ |
+| `src/scenes/HeroListScene.js` | UIX-3.4 | 수정 | ⬜ |
+| `src/scenes/TowerScene.js` | UIX-3.4 | 수정 | ⬜ |
+| `src/scenes/QuestScene.js` | UIX-3.4 | 수정 | ⬜ |
+| `src/scenes/InventoryScene.js` | UIX-3.4 | 수정 | ⬜ |
+| `public/assets/backgrounds/` | ART-1.1 | 신규 이미지 | ⬜ |
+| `public/assets/ui/` | ART-1.2 | 신규 이미지 | ⬜ |
+| `public/assets/characters/` | ART-1.3 | 신규 이미지 | ⬜ |

@@ -1,0 +1,43 @@
+{
+  "name": "Arcane Collectors - Simple Image Generator",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual_trigger",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "prompt": "masterpiece, best quality, chibi, 2.5 head ratio, 1girl, arcana, cute witch, purple twintails, big golden eyes, chubby cheeks, witch hat with gold ribbon, purple dress with gold trim, holding wand, front view, standing pose, full body, flat colors, white background, game sprite, anime style"
+      },
+      "id": "huggingface",
+      "name": "Generate Image",
+      "type": "@n8n/n8n-nodes-langchain.lmChatHuggingFace",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "huggingFaceApi": {
+          "id": "your_credential_id",
+          "name": "HuggingFace API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

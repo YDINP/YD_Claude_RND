@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "equipment.schema.json",
+  "title": "Equipment Schema",
+  "description": "Schema for equipment.json validation",
+  "type": "object",
+  "required": ["equipment"],
+  "properties": {
+    "equipment": {
+      "type": "object",
+      "properties": {
+        "weapons": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z_]+$": {
+              "$ref": "#/definitions/equipmentItem"
+            }
+          }
+        },
+        "armor": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z_]+$": {
+              "$ref": "#/definitions/equipmentItem"
+            }
+          }
+        },
+        "armors": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z_]+$": {
+              "$ref": "#/definitions/equipmentItem"
+            }
+          }
+        },
+        "accessories": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z_]+$": {
+              "$ref": "#/definitions/equipmentItem"
+            }
+          }
+        },
+        "relics": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z_]+$": {
+              "$ref": "#/definitions/equipmentItem"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "equipmentItem": {
+      "type": "object",
+      "required": ["id", "name", "nameKr", "rarity", "type", "stats"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nameKr": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rarity": {
+          "type": "string",
+          "enum": ["N", "R", "SR", "SSR"]
+        },
+        "type": {
+          "type": "string",
+          "enum": ["weapon", "armor", "accessory", "relic"]
+        },
+        "cultAffinity": {
+          "type": "string"
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "hp": { "type": "number" },
+            "atk": { "type": "number" },
+            "def": { "type": "number" },
+            "spd": { "type": "number" },
+            "crit": { "type": "number" }
+          },
+          "additionalProperties": true
+        },
+        "description": {
+          "type": "string"
+        },
+        "lore": {
+          "type": "string"
+        },
+        "passive": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}
