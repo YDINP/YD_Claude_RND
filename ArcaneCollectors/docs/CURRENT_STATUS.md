@@ -2,9 +2,9 @@
 
 > **최종 업데이트**: 2026-03-06
 > **브랜치**: `arcane/integration`
-> **테스트**: 741개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
+> **테스트**: 775개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: TASK-A 가챠-전직 연동 + TASK-B 전투 성장 루프 완결 (2026-03-06)
+> **최근 작업**: TASK-D 컬렉션 도감 UI (HeroListPopup 확장 +34 테스트) (2026-03-06)
 
 ---
 
@@ -91,8 +91,9 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | TASK-C | TutorialScene.js 신규 (4단계 온보딩), BootScene.js 라우팅 패치, gameConfig.js 씬 등록, TutorialScene.test.js 30개 테스트 | `src/scenes/TutorialScene.js` 외 3개 | 03-06 |
 | TASK-A | GachaSystem CHARACTER_POOL 초기화 수정 — `initializePool()` 모듈 로드 시 자동 실행, ascended-heroes 가챠 풀 활성화, pull() 내 재초기화 guard 추가 | `src/systems/GachaSystem.js`, `tests/systems/GachaSystem.test.js` (+4 테스트) | 03-06 |
 | TASK-B | BattleSystem finishBattle() EXP 분배 연동 — ProgressionSystem import, 균등 EXP 분배, expResults 배열 result 포함 | `src/systems/BattleSystem.js`, `tests/systems/BattleSystem.test.js` (+8 테스트), `tests/systems/GachaSystem.test.js` (회귀 수정) | 03-06 |
+| TASK-D | HeroListPopup 컬렉션 도감 UI 확장 — 4개 순수 함수 export (buildOwnedSet/calcCodexProgress/buildAscendedCardData/buildCodexSections), 보유/미획득 영웅 구분, 전직 루트 그리드 표시 | `src/components/popups/HeroListPopup.js`, `tests/components/HeroListPopup.test.js` (+34 테스트) | 03-06 |
 
-**결과**: 빌드 ✅ + 741/741 테스트 통과 + code-reviewer APPROVED (P1/P3/TASK-C/TASK-A/TASK-B), main 브랜치 최신화 (P2)
+**결과**: 빌드 ✅ + 775/775 테스트 통과 + code-reviewer APPROVED (TASK-D)
 
 - BattleSystem 재사용: simulateBattle()에서 BattleSystem 인스턴스 생성, 최대 20턴 시뮬레이션
 - 오프라인 지원: Supabase 연결 실패 시 localStorage 캐시 폴백
@@ -231,14 +232,14 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | TASK-A | 가챠-전직 연동 수리 | P0 | M | ✅ 완료 (03-06) — initializePool() 자동실행, ascended-heroes 풀 활성화 |
 | TASK-B | 전투 성장 루프 완결 | P0 | M | ✅ 완료 (03-06) — finishBattle() EXP 분배 연동, expResults 포함 |
 | TASK-C | 신규 유저 최소 온보딩 | P1 | H | TutorialScene(3분) + 무료 가챠 체험 + 첫 전직 안내 |
-| TASK-D | 컬렉션 도감 UI | P1 | M | HeroListPopup 확장 — 전직 루트 진행 현황, 미획득 실루엣 표시 |
+| TASK-D | 컬렉션 도감 UI | P1 | M | ✅ 완료 (03-06) — HeroListPopup 확장, 4개 순수 함수 export, +34 테스트 |
 | TASK-E | 스테이지 시스템 교단 연계 | P1 | M | stages.json 9챕터×5스테이지 확장, 교단 보너스 스테이지 연결 |
 
 ---
 
 ## 테스트 현황
 
-### Vitest 유닛 테스트 (741개, 27파일)
+### Vitest 유닛 테스트 (775개, 28파일)
 | # | 파일 | 테스트 수 |
 |---|------|----------|
 | 1 | data/index.test.js | 62 |
@@ -267,7 +268,8 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | 24 | **PvPSystem.test.js** | **24 (GP-1 신규)** |
 | 25 | **GuildSystem.test.js** | **36 (GP-2 신규)** |
 | 26 | **TutorialScene.test.js** | **30 (TASK-C 신규)** |
-| 27 | (기타) | — |
+| 27 | **HeroListPopup.test.js** | **34 (TASK-D 신규)** |
+| 28 | (기타) | — |
 
 ### Playwright E2E 테스트 (34개)
 | 카테고리 | 테스트 수 | 내용 |
@@ -348,7 +350,7 @@ docs/
 | 번들러 | Vite 5 |
 | 모듈 | ES Modules |
 | 해상도 | 720x1280 |
-| 유닛 테스트 | Vitest (741개, 27파일) |
+| 유닛 테스트 | Vitest (775개, 28파일) |
 | E2E 테스트 | Playwright (34개, 5카테고리) |
 | 타입체크 | TypeScript (tsc --noEmit) |
 | 백엔드 | Supabase (하이브리드 저장) |
