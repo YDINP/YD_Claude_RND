@@ -246,6 +246,30 @@ export class GachaSystem {
       // 캐릭터 추가 (SaveManager 통해)
       const addResult = SaveManager.addCharacter(characterId);
 
+      // P3: ascended-hero 가챠 획득 시 ascendedHeroes 배열에도 기록
+      // (현재 CHARACTER_POOL이 비어있어 실행되지 않지만, 활성화 대비 방어 코드)
+      if (addResult.isNew !== false) {
+        const ascendedData = getAllAscendedHeroes();
+        const isAscendedHero = ascendedData.some(h => h.id === characterId);
+        if (isAscendedHero) {
+          const saveData = SaveManager.load();
+          if (!saveData.ascendedHeroes) saveData.ascendedHeroes = [];
+          const alreadyRecorded = saveData.ascendedHeroes.some(h => h.ascendedHeroId === characterId);
+          if (!alreadyRecorded) {
+            saveData.ascendedHeroes.push({
+              ascendedHeroId: characterId,
+              baseHeroId: null, // 가챠 획득이므로 기본 영웅 미지정
+              cultId: null,
+              rarity,
+              resonanceBoost: false,
+              obtainedAt: Date.now(),
+              source: 'gacha'
+            });
+            SaveManager.save(saveData);
+          }
+        }
+      }
+
       results.push({
         characterId,
         rarity,
