@@ -27,7 +27,9 @@ vi.mock('../../src/systems/SaveManager.js', () => ({
     })),
     updateGachaCounter: vi.fn(),
     updateHighestDamage: vi.fn(),
-    saveGachaInfo: vi.fn()
+    saveGachaInfo: vi.fn(),
+    load: vi.fn(() => ({ ascendedHeroes: [] })),
+    save: vi.fn()
   }
 }));
 
@@ -64,7 +66,9 @@ vi.mock('../../src/data/index.js', () => ({
   ]),
   getAllBaseHeroes: vi.fn(() => [
     { id: 'base_r_1', rarity: 'R' },
-    { id: 'base_r_2', rarity: 'R' }
+    { id: 'base_r_2', rarity: 'R' },
+    { id: 'base_n_1', rarity: 'N' },
+    { id: 'base_n_2', rarity: 'N' }
   ]),
   getAscendedHero: vi.fn((id) => null),
   getBaseHero: vi.fn((id) => null),
@@ -312,6 +316,52 @@ describe('GachaSystem', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('에너지');
+    });
+  });
+
+  // TASK-A: 가챠-전직 연동 활성화 테스트
+  describe('gacha-ascended integration - TASK-A', () => {
+    it('pull() succeeds after initializePool() with ascended-hero data', () => {
+      // initializePool로 풀 초기화 후 pull() 성공 확인
+      GachaSystem.initializePool();
+      // CHARACTER_POOL이 채워졌는지 확인
+      const hasPool = Object.values(GachaSystem.CHARACTER_POOL).some(p => p.length > 0);
+      expect(hasPool).toBe(true);
+
+      // pull() 가 성공 반환하는지 확인
+      const result = GachaSystem.pull(1, 'gems', { skipEnergyCheck: true });
+      expect(result.success).toBe(true);
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0].characterId).toBeTruthy();
+    });
+
+    it('ascended-hero IDs appear in pull results after initializePool', () => {
+      // SSR 풀에 ascended-hero가 포함되도록 초기화
+      GachaSystem.initializePool({ ascendedOnly: true });
+      // SSR 풀에 asc_ssr_1, asc_ssr_2 포함 확인
+      expect(GachaSystem.CHARACTER_POOL.SSR).toContain('asc_ssr_1');
+
+      // SSR 결과에서 ascended-hero가 반환될 수 있도록 직접 선택 테스트
+      const charId = GachaSystem.getRandomCharacterByRarity('SSR');
+      expect(['asc_ssr_1', 'asc_ssr_2']).toContain(charId);
+    });
+
+    it('pull() re-initializes pool if CHARACTER_POOL is empty at pull time', () => {
+      // 풀을 비워서 fallback 초기화 경로 테스트
+      GachaSystem.CHARACTER_POOL = { SSR: [], SR: [], R: [], N: [] };
+
+      // pull() 호출 시 initializePool()이 재실행되어야 함
+      const result = GachaSystem.pull(1, 'gems', { skipEnergyCheck: true });
+      // initializePool이 mock 데이터로 풀을 채우므로 success 기대
+      expect(result.success).toBe(true);
+    });
+
+    it('initializePool with ascendedOnly includes SSR ascended-heroes', () => {
+      const pool = GachaSystem.initializePool({ ascendedOnly: true });
+      expect(pool.SSR.length).toBeGreaterThan(0);
+      expect(pool.SR.length).toBeGreaterThan(0);
+      // R 풀에 base-hero 없음
+      expect(pool.R).not.toContain('base_r_1');
     });
   });
 });

@@ -36,7 +36,7 @@ export class GachaSystem {
   static TICKET_SINGLE = 1; // 티켓 1장
   static TICKET_MULTI = 10; // 티켓 10장
 
-  // 등급별 캐릭터 풀 (임시 비활성화 - 가챠 시스템 준비 중)
+  // 등급별 캐릭터 풀 (initializePool()에 의해 자동 초기화됨)
   static CHARACTER_POOL = {
     SSR: [],
     SR: [],
@@ -194,11 +194,15 @@ export class GachaSystem {
    * @returns {Object} { success, results, pityInfo }
    */
   static pull(count = 1, paymentType = 'gems', options = {}) {
-    // 가챠 비활성화 guard: CHARACTER_POOL이 비어있으면 즉시 반환
+    // 풀이 비어있으면 재초기화 시도
     const hasPool = Object.values(this.CHARACTER_POOL).some(pool => pool.length > 0);
     if (!hasPool) {
-      console.warn('[GachaSystem] Gacha is currently disabled.');
-      return { success: false, error: '가챠 시스템이 현재 비활성화되어 있습니다.', results: [] };
+      console.warn('[GachaSystem] CHARACTER_POOL이 비어있습니다. initializePool() 재실행 중...');
+      this.initializePool();
+      const hasPoolAfterInit = Object.values(this.CHARACTER_POOL).some(pool => pool.length > 0);
+      if (!hasPoolAfterInit) {
+        return { success: false, error: '가챠 풀을 초기화할 수 없습니다. 게임 데이터를 확인해주세요.', results: [] };
+      }
     }
 
 
@@ -242,6 +246,12 @@ export class GachaSystem {
 
       // 캐릭터 선택
       const characterId = this.getRandomCharacterByRarity(rarity);
+
+      // null characterId 방어 (풀이 빈 등급 선택 시)
+      if (!characterId) {
+        console.warn('[GachaSystem] characterId가 null입니다. rarity:', rarity);
+        continue;
+      }
 
       // 캐릭터 추가 (SaveManager 통해)
       const addResult = SaveManager.addCharacter(characterId);
@@ -579,3 +589,6 @@ export class GachaSystem {
     };
   }
 }
+
+// 모듈 로드 시 자동 풀 초기화 (가챠-전직 연동 활성화)
+GachaSystem.initializePool();

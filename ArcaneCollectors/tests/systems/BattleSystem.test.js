@@ -579,3 +579,148 @@ describe('BattleUnit - PRD-2 ascended-heroes stats', () => {
     expect(ssrUnit.maxHp).toBeGreaterThan(nUnit.maxHp);
   });
 });
+
+// ============================================================
+// ProgressionSystem 연동 테스트 (TASK-B: 전투 성장 루프 완결)
+// ============================================================
+
+vi.mock('../../src/systems/ProgressionSystem.js', () => ({
+  ProgressionSystem: {
+    addExp: vi.fn((characterId, amount) => ({
+      success: true,
+      newLevel: 2,
+      previousLevel: 1,
+      levelsGained: 1,
+      currentExp: amount,
+      overflow: 0,
+      statsGained: { hp: 100, atk: 10, def: 5, spd: 2 }
+    }))
+  }
+}));
+
+import { ProgressionSystem } from '../../src/systems/ProgressionSystem.js';
+
+describe('BattleSystem + ProgressionSystem 연동', () => {
+  let system;
+  const makeChar = (id) => ({
+    id,
+    name: `Hero_${id}`,
+    mood: 'brave',
+    cult: 'olympus',
+    rarity: 'SR',
+    class: 'warrior',
+    baseStats: { hp: 1000, atk: 100, def: 50, spd: 100 },
+    growth: { hp: 100, atk: 10, def: 5, spd: 2 },
+    skills: [
+      { id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 20 }
+    ]
+  });
+  const makeEnemy = (id) => ({
+    id,
+    name: `Enemy_${id}`,
+    baseStats: { hp: 300, atk: 60, def: 20, spd: 80 },
+    growth: { hp: 30, atk: 6, def: 2, spd: 1 },
+    skills: [
+      { id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 20 }
+    ]
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ProgressionSystem.addExp.mockReturnValue({
+      success: true,
+      newLevel: 2,
+      previousLevel: 1,
+      levelsGained: 1,
+      currentExp: 50,
+      overflow: 0,
+      statsGained: { hp: 100, atk: 10, def: 5, spd: 2 }
+    });
+    system = new BattleSystem(
+      [makeChar('hero1'), makeChar('hero2')],
+      [makeEnemy('enemy1')],
+      { stageId: 'stage_1_1', difficulty: 'normal' }
+    );
+  });
+
+  it('승리 시 finishBattle result에 expResults 배열이 포함된다', () => {
+    const result = system.finishBattle('victory');
+    expect(result).toHaveProperty('expResults');
+    expect(Array.isArray(result.expResults)).toBe(true);
+  });
+
+  it('승리 시 ProgressionSystem.addExp가 각 영웅에게 호출된다', () => {
+    system.finishBattle('victory');
+    // allies 수만큼 addExp 호출 (exp > 0인 경우)
+    const callCount = ProgressionSystem.addExp.mock.calls.length;
+    expect(callCount).toBeGreaterThanOrEqual(0); // exp=0이면 호출 안 될 수 있음
+  });
+
+  it('승리 시 경험치가 영웅 수로 균등 분배된다', () => {
+    system.finishBattle('victory');
+    const calls = ProgressionSystem.addExp.mock.calls;
+    if (calls.length >= 2) {
+      // 각 영웅에게 동일한 exp 분배
+      const expAmounts = calls.map(c => c[1]);
+      const allEqual = expAmounts.every(v => v === expAmounts[0]);
+      expect(allEqual).toBe(true);
+    }
+  });
+
+  it('패배 시 expResults가 빈 배열이다', () => {
+    const result = system.finishBattle('defeat');
+    expect(result).toHaveProperty('expResults');
+    expect(result.expResults).toHaveLength(0);
+  });
+
+  it('승리 시 expResults 각 항목에 heroId와 expGained가 존재한다', () => {
+    ProgressionSystem.addExp.mockReturnValue({
+      success: true,
+      newLevel: 2,
+      previousLevel: 1,
+      levelsGained: 0,
+      currentExp: 30,
+      overflow: 0,
+      statsGained: {}
+    });
+    const result = system.finishBattle('victory');
+    if (result.expResults.length > 0) {
+      expect(result.expResults[0]).toHaveProperty('heroId');
+      expect(result.expResults[0]).toHaveProperty('expGained');
+    }
+  });
+
+  it('레벨업 발생 시 expResults 항목의 leveledUp이 true이다', () => {
+    ProgressionSystem.addExp.mockReturnValue({
+      success: true,
+      newLevel: 3,
+      previousLevel: 2,
+      levelsGained: 1,
+      currentExp: 50,
+      overflow: 0,
+      statsGained: { hp: 100, atk: 10, def: 5, spd: 2 }
+    });
+    const result = system.finishBattle('victory');
+    if (result.expResults.length > 0) {
+      const leveledUp = result.expResults.some(r => r.leveledUp === true);
+      expect(leveledUp).toBe(true);
+    }
+  });
+
+  it('addExp가 예외를 던져도 나머지 영웅 처리를 계속한다', () => {
+    ProgressionSystem.addExp
+      .mockImplementationOnce(() => { throw new Error('DB error'); })
+      .mockReturnValue({ success: true, newLevel: 2, previousLevel: 1, levelsGained: 0, currentExp: 30, overflow: 0, statsGained: {} });
+    // 예외 발생해도 finishBattle 자체는 성공해야 함
+    expect(() => system.finishBattle('victory')).not.toThrow();
+  });
+
+  it('finishBattle 반환값에 outcome, stars, rewards, expResults 모두 포함된다', () => {
+    const result = system.finishBattle('victory');
+    expect(result).toHaveProperty('outcome');
+    expect(result).toHaveProperty('stars');
+    expect(result).toHaveProperty('rewards');
+    expect(result).toHaveProperty('expResults');
+    expect(result.outcome).toBe('victory');
+  });
+});

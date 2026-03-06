@@ -11,6 +11,7 @@ import { EventBus, GameEvents } from './EventBus.js';
 import { SaveManager } from './SaveManager.js';
 import { getCharacter, getCharacterOrHero } from '../data/index.js';
 import { AttackCommand, SkillCommand, DefendCommand } from './commands/index.js';
+import { ProgressionSystem } from './ProgressionSystem.js';
 
 // ============================================
 // Strategy Pattern: 스킬 효과 전략
@@ -1117,6 +1118,34 @@ export class BattleSystem {
     const stars = this.calculateStars(outcome);
     const rewards = this.calculateRewards(outcome);
 
+    // ProgressionSystem 경험치 분배 (승리 시)
+    const expResults = [];
+    if (outcome === 'victory' && rewards.exp > 0) {
+      const expPerHero = Math.floor(rewards.exp / Math.max(1, this.allies.length));
+      this.allies.forEach(ally => {
+        if (!ally.id) return;
+        try {
+          const result = ProgressionSystem.addExp(ally.id, expPerHero);
+          if (result && result.success) {
+            expResults.push({
+              heroId: ally.id,
+              heroName: ally.name || ally.id,
+              expGained: expPerHero,
+              newLevel: result.newLevel,
+              levelsGained: result.levelsGained,
+              leveledUp: result.levelsGained > 0
+            });
+            if (result.levelsGained > 0) {
+              console.log('[Battle] Level up: ' + (ally.name || ally.id) + ' -> Level ' + result.newLevel + ' (+' + result.levelsGained + ')');
+            }
+          }
+        } catch (e) {
+          console.warn('[Battle] EXP grant failed for ' + ally.id + ':', e.message);
+        }
+      });
+      console.log('[Battle] EXP distributed: ' + expPerHero + ' each to ' + this.allies.length + ' heroes');
+    }
+
     this.result = {
       outcome,
       stars,
@@ -1124,7 +1153,8 @@ export class BattleSystem {
       turnCount: this.turnCount,
       survivingAllies: this.getAliveAllies().length,
       totalAllies: this.allies.length,
-      synergyBuffs: this.synergyBuffs
+      synergyBuffs: this.synergyBuffs,
+      expResults
     };
 
     this.log(`전투 종료: ${outcome === 'victory' ? '승리' : outcome === 'defeat' ? '패배' : '시간 초과'}`);
