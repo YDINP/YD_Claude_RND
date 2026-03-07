@@ -53,8 +53,8 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    */
   createPartyDisplay() {
     const startX = -this.viewWidth / 2 + s(60);
-    const startY = s(-30);
-    const spacing = s(50);
+    const spacing = s(55);
+    const startY = -((4 - 1) * spacing) / 2; // 4명 수직 중앙 정렬
 
     this.partyAvatars = [];
 
