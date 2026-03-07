@@ -5,6 +5,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import uiRenderer from '../renderers/UIRenderer.js';
 import { TextureGenerator } from '../utils/TextureGenerator.js';
+import { ProceduralAssets } from '../systems/ProceduralAssets.js';
 
 /**
  * PreloadScene - 에셋 프리로드 씬
@@ -46,6 +47,13 @@ export class PreloadScene extends Phaser.Scene {
 
     // ART-1.1: 배경 텍스처 생성
     TextureGenerator.generateBackgrounds(this);
+
+    // ART-1.1b: 픽셀아트 스타일 배경/버튼/패널 텍스처 생성 (ProceduralAssets)
+    try {
+      ProceduralAssets.generateAll(this, GAME_WIDTH, GAME_HEIGHT);
+    } catch (e) {
+      console.warn('[PreloadScene] ProceduralAssets 생성 실패 (무시됨):', e);
+    }
 
     // ART-1.2: UI 아이콘 텍스처 생성
     TextureGenerator.generateIcons(this);
