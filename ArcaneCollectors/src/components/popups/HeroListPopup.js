@@ -674,7 +674,7 @@ export class HeroListPopup extends PopupBase {
     }).setOrigin(0.5);
 
     // Name
-    const name = (hero.name || '???').substring(0, 8);
+    const name = (hero.name || hero.id || '???').substring(0, 8);
     const nameText = this.scene.add.text(0, s(56), name, {
       fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif', color: '#FFFFFF'
     }).setOrigin(0.5);

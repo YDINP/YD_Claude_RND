@@ -540,7 +540,7 @@ export class MainMenuScene extends Phaser.Scene {
         avatar = this.add.circle(x, y, avatarR, color, 0.9)
           .setDepth(Z_INDEX.PANEL_CONTENT)
           .setInteractive({ useHandCursor: true });
-        const classIconText = this.add.text(x, y - s(5), classIcons[charClass] || '❓', {
+        const classIconText = this.add.text(x, y - s(5), classIcons[charClass] || (staticData?.name || charData?.name || '?')[0], {
           fontSize: sf(24)
         }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT + 1);
         // [HIGH-1] 폴백 경로 추적

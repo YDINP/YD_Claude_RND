@@ -10,6 +10,18 @@ import transitionManager from '../../utils/TransitionManager.js';
  * TowerPopup - 무한의 탑 팝업
  * PopupBase를 상속하여 탑 UI를 팝업 형태로 제공
  */
+// 적 이름 한국어 맵
+const ENEMY_NAMES_KO = {
+  slime: '슬라임',
+  goblin: '고블린',
+  orc: '오크',
+  skeleton: '스켈레톤',
+  boss: '보스',
+  dragon: '드래곤',
+  wolf: '늑대',
+  bandit: '산적'
+};
+
 export class TowerPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
@@ -128,7 +140,7 @@ export class TowerPopup extends PopupBase {
       fontSize: sf(15),
       color: '#94A3B8'
     });
-    const enemyText = enemies.map(e => `${e.id.replace('enemy_', '')} x${e.count}`).join(', ');
+    const enemyText = enemies.map(e => { const k = e.id.replace('enemy_', ''); return (ENEMY_NAMES_KO[k] || k) + ' x' + e.count; }).join(', ');
     this.addText(left + s(100), panelY + s(80), enemyText || '알 수 없음', {
       fontSize: sf(15),
       color: '#F8FAFC'

@@ -187,12 +187,14 @@ export class InventoryPopup extends PopupBase {
 
     // Icon
     const rarityColor = this.getRarityColor(item.rarity);
+    const slotTypeColors = { weapon: 0xDC2626, armor: 0x2563EB, accessory: 0x7C3AED, relic: 0xD97706 };
+    const iconColor = (this.activeTab === 'equipment' && slotTypeColors[item.slotType]) ? slotTypeColors[item.slotType] : rarityColor;
     const icon = this.scene.add.rectangle(
       this.contentBounds.left + padX + s(28),
       y + s(35),
       s(44),
       s(44),
-      rarityColor,
+      iconColor,
       0.7
     );
     icon.setStrokeStyle(s(1), 0xFFFFFF, 0.3);
@@ -226,10 +228,10 @@ export class InventoryPopup extends PopupBase {
     let infoStr = '';
     if (this.activeTab === 'equipment') {
       const level = item.enhanceLevel || 0;
-      infoStr = `${item.rarity || 'N'} · ${this.getSlotName(item.slotType)} · +${level}`;
+      infoStr = `${this.getRarityNameKo(item.rarity)} · ${this.getSlotName(item.slotType)} · +${level}`;
       if (item.equippedBy) infoStr += ' (장착중)';
     } else {
-      infoStr = `${item.rarity || 'common'} · 수량: ${item.quantity || 1}`;
+      infoStr = `${this.getRarityNameKo(item.rarity)} · 수량: ${item.quantity || 1}`;
     }
 
     const info = this.scene.add.text(
@@ -316,6 +318,12 @@ export class InventoryPopup extends PopupBase {
     } catch {
       return [];
     }
+  }
+
+
+  getRarityNameKo(rarity) {
+    const map = { common: '일반', uncommon: '고급', rare: '희귀', epic: '영웅', legendary: '전설', N: '일반', R: '고급', SR: '희귀', SSR: '영웅' };
+    return map[rarity] || rarity || '일반';
   }
 
   getRarityColor(rarity) {

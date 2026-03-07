@@ -94,6 +94,7 @@ export default class EnergyBar {
         );
         this.fill.setOrigin(0, 0.5);
         this.container.add(this.fill);
+        this.fill.setFillStyle(ENERGY_UI.COLORS.HIGH);
     }
 
     /**
@@ -137,7 +138,7 @@ export default class EnergyBar {
         this.maxEnergy = Math.max(1, max);
 
         const ratio = this.currentEnergy / this.maxEnergy;
-        const targetWidth = (ENERGY_UI.BAR_WIDTH - 4) * ratio;
+        const targetWidth = Math.max(ratio > 0 ? s(2) : 0, (ENERGY_UI.BAR_WIDTH - 4) * ratio);
         const color = this.getColorForRatio(ratio);
 
         // 채우기 바 애니메이션
