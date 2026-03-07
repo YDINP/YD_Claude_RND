@@ -156,6 +156,150 @@ const SKILL_STRATEGIES = {
 };
 
 // ============================================
+// 스킬 쿨타임 & 교단 시너지 시스템
+// ============================================
+
+/**
+ * 스킬 쿨타임 관리자
+ * 각 캐릭터의 스킬 쿨타임을 턴마다 추적
+ */
+class SkillCooldownManager {
+  constructor() {
+    /** @type {Map<string, Map<string, number>>} unitId -> (skillId -> remainingCooldown) */
+    this.cooldowns = new Map();
+  }
+
+  /**
+   * 유닛 쿨타임 초기화
+   * @param {string} unitId
+   * @param {Array<Object>} characterSkills character_skills 배열
+   */
+  initUnit(unitId, characterSkills) {
+    const skillMap = new Map();
+    characterSkills.forEach(skill => {
+      if (skill.trigger_condition?.type === 'cooldown') {
+        const initial = skill.trigger_condition.initial_cooldown || 0;
+        skillMap.set(skill.skill_id, initial);
+      }
+    });
+    this.cooldowns.set(unitId, skillMap);
+    console.log(`[SkillCD] Initialized cooldowns for unit ${unitId}`);
+  }
+
+  /**
+   * 쿨타임 감소 (턴 시작 시 호출)
+   * @param {string} unitId
+   */
+  tickCooldowns(unitId) {
+    const skillMap = this.cooldowns.get(unitId);
+    if (!skillMap) return;
+    skillMap.forEach((cd, skillId) => {
+      if (cd > 0) {
+        skillMap.set(skillId, cd - 1);
+        console.log(`[SkillCD] ${unitId} - ${skillId} cooldown: ${cd} -> ${cd - 1}`);
+      }
+    });
+  }
+
+  /**
+   * 스킬 발동 가능 여부 (쿨타임=0)
+   * @param {string} unitId
+   * @param {string} skillId
+   * @returns {boolean}
+   */
+  isReady(unitId, skillId) {
+    const skillMap = this.cooldowns.get(unitId);
+    if (!skillMap) return false;
+    const cd = skillMap.get(skillId);
+    return cd !== undefined && cd === 0;
+  }
+
+  /**
+   * 스킬 사용 후 쿨타임 리셋
+   * @param {string} unitId
+   * @param {string} skillId
+   * @param {number} cooldownTurns
+   */
+  resetCooldown(unitId, skillId, cooldownTurns) {
+    const skillMap = this.cooldowns.get(unitId);
+    if (!skillMap) return;
+    skillMap.set(skillId, cooldownTurns);
+    console.log(`[SkillCD] ${unitId} - ${skillId} reset to ${cooldownTurns} turns`);
+  }
+
+  /**
+   * 남은 쿨타임 조회
+   * @param {string} unitId
+   * @param {string} skillId
+   * @returns {number}
+   */
+  getRemaining(unitId, skillId) {
+    const skillMap = this.cooldowns.get(unitId);
+    if (!skillMap) return 0;
+    return skillMap.get(skillId) || 0;
+  }
+}
+
+/**
+ * 교단 시너지 계산기 (cult 기반)
+ */
+class CultSynergyCalculator {
+  /**
+   * 파티 내 교단별 인원수 계산 후 시너지 보너스 반환
+   * @param {Array<BattleUnit>} allies
+   * @param {Array<Object>} synergySkills skills.json synergy_skills
+   * @returns {{ atk: number, def: number }} 보정 배율 (1.0 기준)
+   */
+  static calculate(allies, synergySkills) {
+    const cultCounts = {};
+    allies.forEach(unit => {
+      const cult = unit.data?.cult || unit.data?.faction || null;
+      if (cult) {
+        cultCounts[cult] = (cultCounts[cult] || 0) + 1;
+      }
+    });
+
+    let atkBonus = 1.0;
+    let defBonus = 1.0;
+
+    if (!synergySkills || !Array.isArray(synergySkills)) return { atk: atkBonus, def: defBonus };
+
+    Object.entries(cultCounts).forEach(([cult, count]) => {
+      // 해당 교단의 시너지 조건 중 count에 부합하는 최고 단계 적용
+      const matched = synergySkills
+        .filter(s => s.cult === cult && s.required_count <= count)
+        .sort((a, b) => b.required_count - a.required_count);
+
+      if (matched.length === 0) return;
+      const best = matched[0];
+
+      const effects = best.effects || (best.effect ? [best.effect] : []);
+      effects.forEach(eff => {
+        if (eff.stat === 'ATK') atkBonus *= eff.modifier;
+        if (eff.stat === 'DEF') defBonus *= eff.modifier;
+      });
+
+      console.log(`[CultSynergy] ${cult} x${count}: ATK x${atkBonus.toFixed(2)}, DEF x${defBonus.toFixed(2)}`);
+    });
+
+    return { atk: atkBonus, def: defBonus };
+  }
+
+  /**
+   * 교단 시너지 보너스를 파티에 적용
+   * @param {Array<BattleUnit>} allies
+   * @param {{ atk: number, def: number }} bonus
+   */
+  static apply(allies, bonus) {
+    allies.forEach(unit => {
+      unit.atk = Math.floor(unit.atk * bonus.atk);
+      unit.def = Math.floor(unit.def * bonus.def);
+    });
+    console.log(`[CultSynergy] Applied to party: ATK x${bonus.atk.toFixed(2)}, DEF x${bonus.def.toFixed(2)}`);
+  }
+}
+
+// ============================================
 // Observer Pattern: 전투 이벤트
 // ============================================
 
@@ -316,6 +460,10 @@ export class BattleUnit {
     this.isAlive = true;
     this.buffs = [];
     this.debuffs = [];
+
+    // 스킬 시스템 확장: 반응 스킬 발동 추적
+    this.reactionSkillFired = {}; // { skillId: boolean } — 전투 중 1회 발동 추적
+    this.passiveBonusApplied = false; // 패시브 적용 여부
 
     // 스킬 정보 - characters.json → ascended-heroes → base-heroes 순서로 조회
     this.skills = characterData.skills && characterData.skills.length > 0
@@ -492,6 +640,22 @@ export class BattleSystem {
     // Command Pattern: 커맨드 히스토리
     this.commandHistory = [];
     this.maxCommandHistory = 100; // 최대 히스토리 개수
+
+    // 스킬 시스템 확장
+    this.skillCooldownManager = new SkillCooldownManager();
+    /** @type {Array<Object>} character_skills from skills.json */
+    this.characterSkills = [];
+    /** @type {Array<Object>} synergy_skills from skills.json */
+    this.synergySkillDefs = [];
+    /** @type {Object} grade_multipliers from skills.json */
+    this.gradeMultipliers = {
+      N: { active_multiplier: 1.5, cooldown: 4, passive_bonus: 0.03 },
+      R: { active_multiplier: 2.0, cooldown: 4, passive_bonus: 0.05 },
+      SR: { active_multiplier: 2.8, cooldown: 3, passive_bonus: 0.08 },
+      SSR: { active_multiplier: 4.0, cooldown: 3, passive_bonus: 0.12 }
+    };
+    // 교단 시너지 보너스 (적용 후 캐시)
+    this.cultSynergyBonus = { atk: 1.0, def: 1.0 };
   }
 
   /**
@@ -615,11 +779,32 @@ export class BattleSystem {
       unit.isAlive = true;
       unit.buffs = [];
       unit.debuffs = [];
+      unit.reactionSkillFired = {};
+      unit.passiveBonusApplied = false;
     });
 
-    // 시너지 계산 및 적용
+    // 시너지 계산 및 적용 (기존 클래스/분위기 기반)
     this.synergyBuffs = SynergyCalculator.calculate(this.allies);
     SynergyCalculator.apply(this.allies, this.synergyBuffs);
+
+    // 교단 시너지 계산 및 적용
+    this.cultSynergyBonus = CultSynergyCalculator.calculate(this.allies, this.synergySkillDefs);
+    if (this.cultSynergyBonus.atk !== 1.0 || this.cultSynergyBonus.def !== 1.0) {
+      CultSynergyCalculator.apply(this.allies, this.cultSynergyBonus);
+    }
+
+    // 패시브 스킬 적용 (항상 적용)
+    this.allies.forEach(unit => {
+      this._applyPassiveSkills(unit);
+    });
+
+    // 스킬 쿨타임 초기화
+    [...this.allies, ...this.enemies].forEach(unit => {
+      const unitSkills = this.characterSkills.filter(s => s.character_id === unit.id);
+      if (unitSkills.length > 0) {
+        this.skillCooldownManager.initUnit(unit.id, unitSkills);
+      }
+    });
 
     // 턴 순서 계산
     this.calculateTurnOrder();
@@ -725,6 +910,15 @@ export class BattleSystem {
 
     // PAT-1.1: 만료된 버프 해제 (방어 커맨드 등)
     this._processExpiredBuffs(unit);
+
+    // 스킬 쿨타임 감소
+    this.skillCooldownManager.tickCooldowns(unit.id);
+
+    // 반응 스킬 체크 (HP 임계값)
+    const reactionResult = this._checkReactionSkills(unit);
+    if (reactionResult) {
+      this.log(`[반응] ${unit.name}: ${reactionResult.skillName} 발동!`);
+    }
 
     this.setState(BattleState.PROCESSING_ACTION);
 
@@ -869,6 +1063,242 @@ export class BattleSystem {
       skill: skill.id,
       results
     };
+  }
+
+  /**
+   * 스킬 시스템: 외부에서 character_skills/synergy_skills 등록
+   * @param {Object} skillsData skills.json 전체 객체
+   */
+  loadSkillData(skillsData) {
+    if (!skillsData) return;
+    this.characterSkills = skillsData.character_skills || [];
+    this.synergySkillDefs = skillsData.synergy_skills || [];
+    if (skillsData.grade_multipliers) {
+      this.gradeMultipliers = skillsData.grade_multipliers;
+    }
+    console.log(`[Battle] Skill data loaded: ${this.characterSkills.length} character skills, ${this.synergySkillDefs.length} synergy skills`);
+  }
+
+  /**
+   * 패시브 스킬 적용 (항상 적용, 전투 시작 1회)
+   * @param {BattleUnit} unit
+   */
+  _applyPassiveSkills(unit) {
+    if (unit.passiveBonusApplied) return;
+
+    const unitSkills = this.characterSkills.filter(s => s.character_id === unit.id);
+    unitSkills.forEach(skill => {
+      const passive = skill.passive_bonus;
+      if (!passive || passive.condition !== 'always') return;
+
+      const stat = passive.stat.toLowerCase();
+      const modifier = passive.modifier;
+
+      if (stat === 'hp') {
+        unit.maxHp = Math.floor(unit.maxHp * modifier);
+        unit.currentHp = unit.maxHp;
+      } else if (stat === 'atk') {
+        unit.atk = Math.floor(unit.atk * modifier);
+      } else if (stat === 'def') {
+        unit.def = Math.floor(unit.def * modifier);
+      }
+
+      console.log(`[Passive] ${unit.name} - ${skill.name}: ${passive.stat} x${modifier}`);
+    });
+
+    unit.passiveBonusApplied = true;
+  }
+
+  /**
+   * 반응 스킬 조건 체크 및 발동 (HP 임계값 타입)
+   * @param {BattleUnit} unit
+   * @returns {Object|null} 발동된 스킬 결과 또는 null
+   */
+  _checkReactionSkills(unit) {
+    const unitSkills = this.characterSkills.filter(
+      s => s.character_id === unit.id && s.skill_type === 'reaction'
+    );
+
+    for (const skill of unitSkills) {
+      if (unit.reactionSkillFired[skill.skill_id]) continue;
+
+      const cond = skill.trigger_condition;
+      if (!cond || cond.type !== 'hp_threshold') continue;
+
+      const hpRatio = unit.currentHp / unit.maxHp;
+      if (hpRatio > cond.threshold) continue;
+
+      // 발동 조건 충족
+      unit.reactionSkillFired[skill.skill_id] = true;
+      console.log(`[Reaction] ${unit.name} fires reaction skill: ${skill.name} (HP ${(hpRatio * 100).toFixed(0)}%)`);
+
+      const effect = skill.effect;
+      const targets = effect.target === 'all_enemies'
+        ? (unit.isEnemy ? this.getAliveAllies() : this.getAliveEnemies())
+        : (unit.isEnemy ? this.getAliveEnemies() : this.getAliveAllies());
+
+      const results = [];
+      targets.forEach(target => {
+        if (!target.isAlive) return;
+        const dmg = this._calculateSkillDamage(unit, target, effect.modifier);
+        const dmgResult = target.takeDamage(dmg.finalDamage);
+        results.push({
+          target: target.id,
+          type: 'reaction_damage',
+          amount: dmgResult.actualDamage,
+          isCrit: dmg.isCrit
+        });
+        this.log(`${unit.name}(반응) -> ${target.name}: ${dmgResult.actualDamage} 피해`);
+      });
+
+      this.emit('reactionSkill', { unit: unit.id, skill: skill.skill_id, results });
+      return { skillName: skill.name, results };
+    }
+
+    return null;
+  }
+
+  /**
+   * 액티브 스킬 쿨타임 기반 발동 판정
+   * ATK 순으로 정렬된 아군에 대해 쿨타임=0인 스킬 발동
+   * @param {Array<BattleUnit>} units 처리할 유닛 배열
+   * @returns {Array<Object>} 발동 결과 목록
+   */
+  processActiveSkills(units) {
+    const results = [];
+
+    // ATK 내림차순으로 처리
+    const sorted = [...units].sort((a, b) => b.atk - a.atk);
+
+    sorted.forEach(unit => {
+      if (!unit.isAlive) return;
+
+      const unitSkills = this.characterSkills.filter(
+        s => s.character_id === unit.id && s.skill_type === 'active'
+      );
+
+      unitSkills.forEach(skill => {
+        if (!this.skillCooldownManager.isReady(unit.id, skill.skill_id)) return;
+
+        const effect = skill.effect;
+        const targets = this._resolveTargets(unit, effect.target);
+
+        const skillResults = [];
+        if (effect.stat === 'ATK' || effect.target.includes('enemy')) {
+          // 공격 스킬
+          targets.forEach(target => {
+            if (!target.isAlive) return;
+            const dmg = this._calculateSkillDamage(unit, target, effect.modifier);
+            const dmgResult = target.takeDamage(dmg.finalDamage);
+            skillResults.push({
+              target: target.id,
+              type: 'active_damage',
+              amount: dmgResult.actualDamage,
+              isCrit: dmg.isCrit,
+              isDead: dmgResult.isDead
+            });
+            this.log(`${unit.name}(${skill.name}) -> ${target.name}: ${dmgResult.actualDamage} 피해${dmg.isCrit ? ' [CRIT]' : ''}`);
+          });
+        } else if (effect.stat === 'DEF') {
+          // 방어 버프 스킬
+          targets.forEach(target => {
+            if (!target.isAlive) return;
+            const originalDef = target.def;
+            target.def = Math.floor(target.def * effect.modifier);
+            target.buffs.push({
+              type: 'defense',
+              stat: 'def',
+              originalValue: originalDef,
+              appliedAt: this.turnCount,
+              duration: effect.duration_turns
+            });
+            skillResults.push({
+              target: target.id,
+              type: 'buff',
+              stat: 'DEF',
+              modifier: effect.modifier,
+              duration: effect.duration_turns
+            });
+            this.log(`${unit.name}(${skill.name}) -> ${target.name}: DEF x${effect.modifier} (${effect.duration_turns}턴)`);
+          });
+        }
+
+        // 쿨타임 리셋
+        this.skillCooldownManager.resetCooldown(
+          unit.id,
+          skill.skill_id,
+          skill.trigger_condition.cooldown_turns
+        );
+
+        results.push({ unit: unit.id, skill: skill.skill_id, results: skillResults });
+        this.emit('activeSkill', { unit: unit.id, skill: skill.skill_id, results: skillResults });
+      });
+    });
+
+    return results;
+  }
+
+  /**
+   * 타겟 문자열을 실제 BattleUnit 배열로 변환
+   * @param {BattleUnit} caster
+   * @param {string} targetType
+   * @returns {Array<BattleUnit>}
+   */
+  _resolveTargets(caster, targetType) {
+    const allies = caster.isEnemy ? this.getAliveEnemies() : this.getAliveAllies();
+    const enemies = caster.isEnemy ? this.getAliveAllies() : this.getAliveEnemies();
+
+    switch (targetType) {
+      case 'party_all':
+        return allies;
+      case 'all_enemies':
+        return enemies;
+      case 'single_enemy': {
+        const target = this.selectTarget(enemies);
+        return target ? [target] : [];
+      }
+      case 'self':
+        return [caster];
+      default:
+        return enemies;
+    }
+  }
+
+  /**
+   * 스킬 피해량 계산 (스펙 공식 적용)
+   * 기본 피해량 = ATK × 스킬배율 × (1 - DEF / (DEF + 500))
+   * 크리티컬 피해량 = 기본 피해량 × (1 + CRIT_DMG) // CRIT_DMG 기본 0.5
+   * @param {BattleUnit} attacker
+   * @param {BattleUnit} defender
+   * @param {number} multiplier 스킬 배율
+   * @returns {{ baseDamage: number, finalDamage: number, isCrit: boolean }}
+   */
+  _calculateSkillDamage(attacker, defender, multiplier) {
+    const CRIT_RATE = attacker.critRate || 0.05;
+    const CRIT_DMG = attacker.critDmg ? attacker.critDmg - 1.0 : 0.5; // critDmg=1.5 → bonus=0.5
+
+    // 기본 피해량 = ATK × 스킬배율 × (1 - DEF / (DEF + 500))
+    const defMitigation = 1 - defender.def / (defender.def + 500);
+    let baseDamage = attacker.atk * multiplier * defMitigation;
+
+    // 크리티컬 판정
+    const isCrit = Math.random() < CRIT_RATE;
+    if (isCrit) {
+      baseDamage *= (1 + CRIT_DMG);
+      console.log(`[SkillDmg] CRIT! x${(1 + CRIT_DMG).toFixed(2)}`);
+    }
+
+    // 분위기 상성 반영
+    const moodBonus = this.getMoodBonus(attacker.mood, defender.mood);
+    baseDamage *= (1 + moodBonus);
+
+    // 데미지 분산 (95% ~ 105%)
+    const variance = 0.95 + Math.random() * 0.10;
+    const finalDamage = Math.floor(baseDamage * variance);
+
+    console.log(`[SkillDmg] ${attacker.name} -> ${defender.name}: ATK=${attacker.atk}, x${multiplier}, DEF_mit=${defMitigation.toFixed(2)}, final=${finalDamage}`);
+
+    return { baseDamage: Math.floor(baseDamage), finalDamage, isCrit };
   }
 
   /**
@@ -1321,6 +1751,7 @@ export { SkillStrategy, BasicAttackStrategy, PowerStrikeStrategy, HealStrategy, 
 export { BattleEventEmitter };
 export { BattleState };
 export { SynergyCalculator };
+export { SkillCooldownManager, CultSynergyCalculator };
 
 // Export Command Pattern classes
 export { AttackCommand, SkillCommand, DefendCommand };

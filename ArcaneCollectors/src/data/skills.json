@@ -430,5 +430,67 @@
       "cooldown": 3,
       "effects": []
     }
-  ]
+  ],
+  "character_skills": [
+    {
+      "skill_id": "olympus_athena_s1",
+      "character_id": "athena_01",
+      "skill_type": "active",
+      "name": "신의 방패",
+      "description": "파티 전원에게 2턴 동안 DEF +40% 버프를 부여한다.",
+      "trigger_condition": { "type": "cooldown", "initial_cooldown": 0, "cooldown_turns": 4 },
+      "effect": { "target": "party_all", "stat": "DEF", "modifier": 1.40, "duration_turns": 2 },
+      "passive_bonus": { "stat": "HP", "modifier": 1.08, "condition": "always" }
+    },
+    {
+      "skill_id": "valhalla_sigrun_s1",
+      "character_id": "sigrun_01",
+      "skill_type": "active",
+      "name": "발키리의 강습",
+      "description": "적 단일 대상에게 ATK×2.8배 피해.",
+      "trigger_condition": { "type": "cooldown", "initial_cooldown": 0, "cooldown_turns": 3 },
+      "effect": { "target": "single_enemy", "stat": "ATK", "modifier": 2.8, "duration_turns": 1 },
+      "passive_bonus": { "stat": "ATK", "modifier": 1.08, "condition": "always" }
+    },
+    {
+      "skill_id": "kunlun_heije_s1",
+      "character_id": "heije_01",
+      "skill_type": "reaction",
+      "name": "흑염의 역습",
+      "description": "HP 50% 이하 시 발동. 전체 적에게 ATK×2.0배 피해.",
+      "trigger_condition": { "type": "hp_threshold", "threshold": 0.5 },
+      "effect": { "target": "all_enemies", "stat": "ATK", "modifier": 2.0, "duration_turns": 1 },
+      "passive_bonus": { "stat": "DEF", "modifier": 1.05, "condition": "always" }
+    }
+  ],
+  "synergy_skills": [
+    {
+      "cult": "Olympus",
+      "required_count": 2,
+      "effect": { "stat": "ATK", "modifier": 1.10, "target": "party_all" }
+    },
+    {
+      "cult": "Olympus",
+      "required_count": 3,
+      "effects": [
+        { "stat": "ATK", "modifier": 1.10, "target": "party_all" },
+        { "stat": "DEF", "modifier": 1.10, "target": "party_all" }
+      ]
+    },
+    {
+      "cult": "Olympus",
+      "required_count": 4,
+      "effects": [
+        { "stat": "ATK", "modifier": 1.15, "target": "party_all" },
+        { "stat": "DEF", "modifier": 1.15, "target": "party_all" }
+      ],
+      "exclusive_skill": "cult_skill_olympus_full"
+    }
+  ],
+  "grade_multipliers": {
+    "N": { "active_multiplier": 1.5, "cooldown": 4, "passive_bonus": 0.03 },
+    "R": { "active_multiplier": 2.0, "cooldown": 4, "passive_bonus": 0.05 },
+    "SR": { "active_multiplier": 2.8, "cooldown": 3, "passive_bonus": 0.08 },
+    "SSR": { "active_multiplier": 4.0, "cooldown": 3, "passive_bonus": 0.12 }
+  }
 }
