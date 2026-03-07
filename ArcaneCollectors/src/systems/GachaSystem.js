@@ -325,9 +325,17 @@ export class GachaSystem {
       if (result.isNew) {
         EventBus.emit(GameEvents.CHARACTER_ADDED, {
           characterId: result.characterId,
-          rarity: result.rarity
+          rarity: result.rarity,
+          source: 'gacha'
         });
       }
+    });
+
+    // 가챠 완료 이벤트 (신규/중복 무관, 시도 횟수 트래킹용)
+    EventBus.emit(GameEvents.GACHA_COMPLETE, {
+      results,
+      count,
+      pityInfo: this.getPityInfo()
     });
 
     return {

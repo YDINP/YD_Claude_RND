@@ -449,11 +449,10 @@ export class DailyQuestSystem {
       }
     });
 
-    // 가챠 시도 → DQ-002
-    EventBus.on(GameEvents.CHARACTER_ADDED, (data) => {
-      if (data && data.source === 'gacha') {
-        this.trackProgress('gacha_attempt', 1);
-      }
+    // 가챠 시도 → DQ-002 (GACHA_COMPLETE: 신규/중복 무관 실제 시도 횟수 트래킹)
+    EventBus.on(GameEvents.GACHA_COMPLETE, (data) => {
+      const pullCount = (data && data.count) ? data.count : 1;
+      this.trackProgress('gacha_attempt', pullCount);
     });
 
     // 적 처치 → DQ-004
