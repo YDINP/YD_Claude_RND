@@ -5,7 +5,8 @@
       "name": "철벽 가르디아",
       "nameEn": "Gardia",
       "rarity": 4,
-      "cult": "iron_beat",
+      "cult": null,
+      "preferredCult": "iron_beat",
       "class": "warrior",
       "stats": {
         "hp": 2200,
@@ -36,7 +37,8 @@
       "name": "폭풍 마기우스",
       "nameEn": "Magius",
       "rarity": 5,
-      "cult": "glitch_paradise",
+      "cult": null,
+      "preferredCult": "glitch_paradise",
       "class": "mage",
       "stats": {
         "hp": 1100,
@@ -67,7 +69,8 @@
       "name": "질풍 아로스",
       "nameEn": "Aros",
       "rarity": 4,
-      "cult": "lunatic_circus",
+      "cult": null,
+      "preferredCult": "lunatic_circus",
       "class": "archer",
       "stats": {
         "hp": 1300,
@@ -98,7 +101,8 @@
       "name": "성광 루미나",
       "nameEn": "Lumina",
       "rarity": 4,
-      "cult": "buddy_garden",
+      "cult": null,
+      "preferredCult": "buddy_garden",
       "class": "healer",
       "stats": {
         "hp": 1500,

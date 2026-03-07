@@ -15,16 +15,16 @@
 export const AWAKENING_SOUND_KEY = "awakening_sfx";
 
 export const AWAKENING_PARTICLE_COLORS = {
-  prism_stars:     0xFFD700,
-  neon_crow:       0x00FF41,
-  ink_cyclone:     0x4169E1,
-  stella_club:     0xC0C0C0,
-  card_cartel:     0xFF4500,
-  buddy_garden:    0x32CD32,
+  prism_stars:     0xFF6EB4,
+  neon_crow:       0x00F5FF,
+  ink_cyclone:     0xFF4500,
+  stella_club:     0xE8E8FF,
+  card_cartel:     0x2D2D5B,
+  buddy_garden:    0x3DDC84,
   glitch_paradise: 0xFF00FF,
-  cafe_encore:     0xD2691E,
-  lunatic_circus:  0x9400D3,
-  iron_beat:       0x808080
+  cafe_encore:     0xC8602A,
+  lunatic_circus:  0x8B2BE2,
+  iron_beat:       0xE63946
 };
 const CULT_NAMES_KR = {
   prism_stars: "프리즘 스타즈",
