@@ -2,9 +2,9 @@
 
 > **최종 업데이트**: 2026-03-07
 > **브랜치**: `arcane/integration`
-> **테스트**: 927개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
+> **테스트**: 953개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [AWAKE-4] AwakeningCutscene.js 각성 컷신 연출 시스템 + 21개 테스트 (2026-03-07)
+> **최근 작업**: [SWARM] 교단 컬러 GDD 통일 + 방랑자 시스템 + 픽셀아트 에셋 + Sprint6 UX (2026-03-07)
 
 ---
 
@@ -137,6 +137,20 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | AWAKE-4 | AwakeningCutscene.test.js 신규 21개 테스트 (10교단 전부, play() 시그니처, onComplete, 스킵, 입력 차단/해제) | `tests/systems/AwakeningCutscene.test.js` | 03-07 |
 
 **결과**: 빌드 ✅ + 927/927 테스트 통과 + code-reviewer APPROVED (AWAKE-4)
+
+### Sprint 6 Swarm: 에셋/방랑자/UX (2026-03-07) — pt-swarm 4태스크 병렬 실행
+| ID | 태스크 | 파일 | 날짜 |
+|----|--------|------|------|
+| SWARM-1 | AwakeningCutscene.js AWAKENING_PARTICLE_COLORS 10개 GDD 기준 통일 (prism_stars→0xFF6EB4, neon_crow→0x00F5FF 등) | `src/systems/AwakeningCutscene.js` | 03-07 |
+| SWARM-1 | characters.json cult→null/preferredCult 방랑자 시스템 적용 (4캐릭터) | `src/data/characters.json` | 03-07 |
+| SWARM-1 | GachaScene.js cult 폴백 `'cafe_encore'`→null (방랑자 상태 유지) | `src/scenes/GachaScene.js` | 03-07 |
+| SWARM-2 | portrait-mapping.json 현행화 — char_1~4→hero_001~004, 구 교단 ID 34개 제거 | `src/data/portrait-mapping.json` | 03-07 |
+| SWARM-3 | ProceduralAssets.js 신규 — Canvas 픽셀아트 배경/UI 텍스처 8종 (메인메뉴/전투/가챠/버튼/패널) | `src/systems/ProceduralAssets.js` | 03-07 |
+| SWARM-3 | AudioGenerator.js 신규 — Web Audio API 8비트 SFX/BGM (click/가챠롤/SSR팡파레/타격/스킬/각성/전투BGM/메뉴BGM) | `src/systems/AudioGenerator.js` | 03-07 |
+| SWARM-3 | PreloadScene.js Phase 1에 ProceduralAssets.generateAll() 연동 | `src/scenes/PreloadScene.js` | 03-07 |
+| SWARM-4 | BattleScene.js 배속 [1,2,3]→[1,2,4] 변경 + showSkillBanner() 신규 (교단 컬러 슬라이드 배너) | `src/scenes/BattleScene.js` | 03-07 |
+
+**결과**: 빌드 ✅ + 953/953 테스트 통과 (+26개 신규: ProceduralAssets 11 + AudioGenerator 15) | 34개 테스트 파일 | 충돌 없는 자동 머지 4건
 
 - BattleSystem 재사용: simulateBattle()에서 BattleSystem 인스턴스 생성, 최대 20턴 시뮬레이션
 - 오프라인 지원: Supabase 연결 실패 시 localStorage 캐시 폴백
@@ -299,21 +313,21 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | TASK-D | 컬렉션 도감 UI | P1 | M | ✅ 완료 (03-06) — HeroListPopup 확장, 4개 순수 함수 export, +34 테스트 |
 | TASK-E | 스테이지 시스템 교단 연계 | P1 | M | ✅ 완료 (03-07) — stages.json 9챕터×5스테이지, StageSystem.js, +31 테스트 |
 
-### Sprint 6 백로그 (교단 v3.0 후속 구현)
+### Sprint 6 백로그 (교단 v3.0 후속 구현) — 전부 완료 ✅
 | ID | 태스크 | 우선순위 | 난이도 | 설명 |
 |----|--------|---------|--------|------|
-| CULT-UI | UI 레이어 교단 ID 갱신 | P0 | M | HeroListPopup/GachaPopup/gameConfig/designSystem/layoutConfig 하드코딩 교단 ID 교체 |
-| CULT-TS | TypeScript 타입 갱신 | P0 | S | character.d.ts Cult union type + HeroFactory 기본값 교체 |
-| AWAKE-1 | AwakeningSystem.js 구현 | P1 | M | cult: null 방랑자 상태, 3조건 체크 로직, 5단계 진행도 (GDD: AWAKENING_SYSTEM_GDD.md) |
-| AWAKE-2 | cult-materials.json 데이터 | P1 | S | 교단별 소재 정의, 드랍테이블 연동 |
-| ~~AWAKE-3~~ | ~~AwakeningPopup.js UI~~ | P2 | M | **완료** — 진행도 게이지, 조건 체크리스트, 각성 가능 알림 (906 테스트 통과) |
-| ~~AWAKE-4~~ | ~~각성 컷신 연출~~ | P3 | H | **완료** — 7단계 풀스크린 컷신, 10교단 파티클/컬러, play() 정적 메서드, 스킵 기능 (927 테스트 통과) |
+| ~~CULT-UI~~ | ~~UI 레이어 교단 ID 갱신~~ | P0 | M | **완료** — HeroListPopup/GachaPopup/gameConfig/designSystem/layoutConfig 교체 (845 테스트) |
+| ~~CULT-TS~~ | ~~TypeScript 타입 갱신~~ | P0 | S | **완료** — character.d.ts Cult union + HeroFactory 기본값 교체 (845 테스트) |
+| ~~AWAKE-1~~ | ~~AwakeningSystem.js 구현~~ | P1 | M | **완료** — cult: null 방랑자, 3조건 체크, 5단계 진행도, +39 테스트 (870 테스트) |
+| ~~AWAKE-2~~ | ~~cult-materials.json 데이터~~ | P1 | S | **완료** — 10교단 소재 정의, getMaterialInfo() 헬퍼, +25 테스트 (906 테스트) |
+| ~~AWAKE-3~~ | ~~AwakeningPopup.js UI~~ | P2 | M | **완료** — 진행도 게이지, 조건 체크리스트, 각성 가능 알림, +36 테스트 (927 테스트) |
+| ~~AWAKE-4~~ | ~~각성 컷신 연출~~ | P3 | H | **완료** — 7단계 풀스크린 컷신, 10교단 파티클/컬러, play() 정적 메서드, 스킵 기능 (953 테스트) |
 
 ---
 
 ## 테스트 현황
 
-### Vitest 유닛 테스트 (927개, 32파일)
+### Vitest 유닛 테스트 (953개, 34파일)
 | # | 파일 | 테스트 수 |
 |---|------|----------|
 | 1 | data/index.test.js | 62 |
@@ -343,8 +357,13 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | 25 | **GuildSystem.test.js** | **36 (GP-2 신규)** |
 | 26 | **TutorialScene.test.js** | **30 (TASK-C 신규)** |
 | 27 | **HeroListPopup.test.js** | **34 (TASK-D 신규)** |
-| 28 | **AwakeningCutscene.test.js** | **21 (AWAKE-4 신규)** |
-| 29 | (기타) | — |
+| 28 | **StageSystem.test.js** | **31 (TASK-E 신규)** |
+| 29 | **AwakeningSystem.test.js** | **39 (AWAKE-1 신규)** |
+| 30 | **cult-materials.test.js** | **25 (AWAKE-2 신규)** |
+| 31 | **AwakeningPopup.test.js** | **36 (AWAKE-3 신규)** |
+| 32 | **AwakeningCutscene.test.js** | **21 (AWAKE-4 신규)** |
+| 33 | **ProceduralAssets.test.js** | **11 (SWARM-3 신규)** |
+| 34 | **AudioGenerator.test.js** | **15 (SWARM-3 신규)** |
 
 ### Playwright E2E 테스트 (34개)
 | 카테고리 | 테스트 수 | 내용 |
