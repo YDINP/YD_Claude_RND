@@ -760,6 +760,9 @@ export class BattleScene extends Phaser.Scene {
     attacker.skillGauge = 0;
     this.updateSkillCardUI(attacker);
 
+    // 수동 스킬 발동 배너 표시
+    this.showSkillBanner(attacker.name, skill.name, attacker.mood);
+
     // AoE 스킬: 전체 적 공격
     if (skill.target === 'all') {
       const aliveEnemies = this.enemies.filter(e => e.isAlive);
@@ -1074,6 +1077,70 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
+   * UX-S6: 스킬 발동 알림 배너 (화면 상단 슬라이드 인/아웃)
+   * @param {string} characterName - 캐릭터 이름
+   * @param {string} skillName - 스킬 이름
+   * @param {string} mood - 캐릭터 무드 (컬러 결정)
+   */
+  showSkillBanner(characterName, skillName, mood) {
+    // 기존 배너 제거
+    if (this.skillBanner && this.skillBanner.active) {
+      this.skillBanner.destroy();
+      this.skillBanner = null;
+    }
+
+    // 무드 → 배너 배경 컬러 매핑
+    const moodColorMap = {
+      brave: 0xE74C3C, fierce: 0xFF5722, wild: 0x27AE60,
+      calm: 0x3498DB, stoic: 0x607D8B, devoted: 0xE91E63,
+      cunning: 0x9B59B6, noble: 0xFFD700, mystic: 0xF39C12
+    };
+    const bannerColor = moodColorMap[mood] || COLORS.primary;
+    const bannerHex = '#' + bannerColor.toString(16).padStart(6, '0');
+
+    const cx = GAME_WIDTH / 2;
+    const banner = this.add.text(cx, -s(40), `⚡ ${characterName}: ${skillName}`, {
+      fontSize: sf(18),
+      fontFamily: 'Noto Sans KR',
+      fontStyle: 'bold',
+      color: '#FFFFFF',
+      stroke: '#000000',
+      strokeThickness: s(3),
+      backgroundColor: bannerHex,
+      padding: { x: s(16), y: s(8) }
+    })
+      .setOrigin(0.5, 0)
+      .setDepth(500)
+      .setAlpha(0.95);
+
+    this.skillBanner = banner;
+
+    // 슬라이드 인 → 대기 → 슬라이드 아웃
+    this.tweens.add({
+      targets: banner,
+      y: s(70),
+      duration: 200 / this.battleSpeed,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.time.delayedCall(1200 / this.battleSpeed, () => {
+          if (!banner.active) return;
+          this.tweens.add({
+            targets: banner,
+            y: -s(40),
+            alpha: 0,
+            duration: 250 / this.battleSpeed,
+            ease: 'Quad.easeIn',
+            onComplete: () => {
+              if (banner.active) banner.destroy();
+              if (this.skillBanner === banner) this.skillBanner = null;
+            }
+          });
+        });
+      }
+    });
+  }
+
+  /**
    * A-8.5: 전투 시작 트랜지션
    */
   playBattleIntro() {
@@ -1327,7 +1394,7 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // Speed buttons
-    const speeds = [1, 2, 3];
+    const speeds = [1, 2, 4];
     speeds.forEach((speed, index) => {
       const x = s(200) + index * s(60);
       const btn = this.add.container(x, controlY).setDepth(11);
@@ -1605,6 +1672,10 @@ export class BattleScene extends Phaser.Scene {
         this._executeAttack(battler, target, chosenSkill.multiplier, chosenSkill.name, true, chosenSkill);
       });
     } else {
+      // 기본 공격이 아닌 스킬 사용 시 상단 배너 표시
+      if (chosenSkill.id !== 'basic') {
+        this.showSkillBanner(battler.name, chosenSkill.name, battler.mood);
+      }
       this._executeAttack(battler, target, chosenSkill.multiplier, chosenSkill.name, false, chosenSkill);
     }
   }
