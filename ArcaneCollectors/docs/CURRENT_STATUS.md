@@ -2,9 +2,9 @@
 
 > **최종 업데이트**: 2026-03-07
 > **브랜치**: `arcane/integration`
-> **테스트**: 953개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
+> **테스트**: 953개 유닛 (950 통과 / 3 실패: ProceduralAssets.test.js 기존 미해결) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [SWARM] BA×NIKKE 비주얼 에셋 + DebugFAB 드래그 + 가챠 교단 동기화 (2026-03-07)
+> **최근 작업**: [SPRINT7] 스킬 시스템 전투 연결 + 가챠 등급별 연출 + 일일 퀘스트 + 메인 메뉴 UX + UI 레이아웃 QA (2026-03-07)
 
 ---
 
@@ -165,6 +165,34 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 **결과**: 빌드 ✅ | 충돌 없는 자동 머지 3건
 
+### Sprint 7: 스킬/가챠/퀘스트/메뉴 UX + UI 레이아웃 QA (2026-03-07) — pt-swarm 4태스크 + QA 루프
+
+#### SPRINT7 병렬 구현 (pt-swarm 4태스크)
+| ID | 태스크 | 파일 | 커밋 | 날짜 |
+|----|--------|------|------|------|
+| SWARM7-1 | skills.json `character_skills`(athena/sigrun/heije) + `synergy_skills`(Olympus 2/3/4인) + `grade_multipliers` 섹션 추가 | `src/data/skills.json` | `2cb5811` | 03-07 |
+| SWARM7-1 | BattleSystem.js `SkillCooldownManager` + `CultSynergyCalculator` 클래스 추가, 스킬 로드/패시브/반응/액티브 메서드 6개 신규 | `src/systems/BattleSystem.js` | `2cb5811` | 03-07 |
+| SWARM7-2 | GachaScene.js 등급별 연출 8개 메서드 추가 (+623줄) — N/R/SR/SSR 차별화, SSR 3단계 서스펜스, 10연 5×2 그리드 | `src/scenes/GachaScene.js` | `8b52cdc` | 03-07 |
+| SWARM7-3 | DailyQuestSystem.js 신규 — ES6 싱글톤, 오전 5시 기준 갱신, 5개 일일 퀘스트(DQ-001~005), EventBus 구독 | `src/systems/DailyQuestSystem.js` | `78fcf58` | 03-07 |
+| SWARM7-3 | quests.json `gddDailyQuests` + `gddCompletionBonus` 섹션 추가 | `src/data/quests.json` | `78fcf58` | 03-07 |
+| SWARM7-3 | systems/index.js DailyQuestSystem + dailyQuestSystem 싱글톤 export 추가 | `src/systems/index.js` | `78fcf58` | 03-07 |
+| SWARM7-4 | MainMenuScene.js `createBottomMenu()` P1/P2/P3 3계층 재구성 — P1 전투 70%/펄스, P2 가챠+파티 2버튼, P3 8서브아이콘 2행4열 | `src/scenes/MainMenuScene.js` | `db62da3` | 03-07 |
+
+#### 후속 연동 (병렬 3개)
+| ID | 태스크 | 파일 | 커밋 | 날짜 |
+|----|--------|------|------|------|
+| POST-1 | BattleScene.js `BattleSystem` import + `initializeBattlers()` stats 동기화 + `loadSkillData/processActiveSkills` 호출 연결 | `src/scenes/BattleScene.js` | `e7074d3` | 03-07 |
+| POST-2 | GachaSystem.js `GACHA_COMPLETE` 이벤트 신규 emit (results/count/pityInfo) + `source: 'gacha'` 필드 추가 | `src/systems/GachaSystem.js` | `6aaeb41` | 03-07 |
+| POST-2 | DailyQuestSystem.js GACHA_COMPLETE 기반 가챠 퀘스트 트래킹으로 교체 (중복 캐릭터 케이스 해결) | `src/systems/DailyQuestSystem.js` | `6aaeb41` | 03-07 |
+
+#### UI 레이아웃 QA 루프 (pt-qa-loop — 1/3 이터레이션 PASS)
+| ID | 이슈 | 수정 내용 | 파일 | 날짜 |
+|----|------|---------|------|------|
+| QA-LAY-1 | MainMenuScene AdventurePanel/IdleBattleView 225px 겹침 | `viewY: s(500)→s(632)`, `viewHeight: s(300)→s(250)`, `summaryY: s(795)→s(770)` | `src/scenes/MainMenuScene.js` | 03-07 |
+
+**결과**: 빌드 ✅ (10.87s) | 950 통과 / 3 실패(ProceduralAssets.test.js 기존) | QA_RESULT: PASS (1/3 이터레이션)
+
+---
 
 - BattleSystem 재사용: simulateBattle()에서 BattleSystem 인스턴스 생성, 최대 20턴 시뮬레이션
 - 오프라인 지원: Supabase 연결 실패 시 localStorage 캐시 폴백

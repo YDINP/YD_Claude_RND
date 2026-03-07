@@ -852,9 +852,9 @@ export class MainMenuScene extends Phaser.Scene {
    * IdleBattleView (y=580~880, expanded)
    */
   createIdleBattleView() {
-    const viewY = s(500);
+    const viewY = s(632); // 수정: AdventurePanel(bottom=750px) 하단과 겹침 해소 (이전: s(500)→225px 겹침)
     const viewWidth = s(640);
-    const viewHeight = s(300);
+    const viewHeight = s(250); // 수정: 공간 확보를 위해 축소 (이전: s(300))
 
     this.idleBattleView = new IdleBattleView(this, GAME_WIDTH / 2, viewY, viewWidth, viewHeight);
     this.idleBattleView.setDepth(Z_INDEX.IDLE_BATTLE);
@@ -910,7 +910,7 @@ export class MainMenuScene extends Phaser.Scene {
    * Idle income summary (y=900)
    */
   createIdleSummary() {
-    const summaryY = s(795);
+    const summaryY = s(770); // 수정: IdleBattleView 이동에 맞춰 조정 (이전: s(795))
 
     const summaryBg = this.add.rectangle(GAME_WIDTH / 2, summaryY, s(640), s(50), COLORS.bgLight, 0.5);
     summaryBg.setStrokeStyle(1, COLORS.primary, 0.3);
