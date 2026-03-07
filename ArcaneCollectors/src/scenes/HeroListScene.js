@@ -183,7 +183,7 @@ export class HeroListScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(20);
 
     // Second row - Cult filter buttons (분위기/교단 필터)
-    const cults = ['olympus', 'takamagahara', 'yomi', 'asgard', 'valhalla', 'tartarus', 'avalon', 'helheim', 'kunlun'];
+    const cults = ['prism_stars', 'neon_crow', 'ink_cyclone', 'stella_club', 'card_cartel', 'buddy_garden', 'glitch_paradise', 'cafe_encore', 'lunatic_circus', 'iron_beat'];
     this.cultButtons = [];
 
     cults.forEach((cult, index) => {
@@ -355,7 +355,7 @@ export class HeroListScene extends Phaser.Scene {
         heroes.sort((a, b) => (this.calculatePower(b) - this.calculatePower(a)) * sortDirection);
         break;
       case 'cult':
-        const cultOrder = { olympus: 0, takamagahara: 1, yomi: 2, asgard: 3, valhalla: 4, tartarus: 5, avalon: 6, helheim: 7, kunlun: 8 };
+        const cultOrder = { prism_stars: 0, neon_crow: 1, ink_cyclone: 2, stella_club: 3, card_cartel: 4, buddy_garden: 5, glitch_paradise: 6, cafe_encore: 7, lunatic_circus: 8, iron_beat: 9 };
         heroes.sort((a, b) => {
           const aCult = cultOrder[a.cult] ?? 99;
           const bCult = cultOrder[b.cult] ?? 99;

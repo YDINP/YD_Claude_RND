@@ -102,15 +102,16 @@ export const COLORS = {
     mystic: 0xF39C12
   },
   cult: {
-    valhalla: 0x4A90D9,
-    takamagahara: 0xFFD700,
-    olympus: 0xFF6B35,
-    asgard: 0x5DADE2,
-    yomi: 0x8E44AD,
-    tartarus: 0xB71C1C,
-    avalon: 0x4CAF50,
-    helheim: 0x37474F,
-    kunlun: 0x00BCD4
+    prism_stars:     0xFF6EB4,  // 프리즘 스타즈 - 핑크
+    neon_crow:       0x00F5FF,  // 네온 크로우 - 시안
+    ink_cyclone:     0xFF4500,  // 잉크 사이클론 - 오렌지
+    stella_club:     0xE8E8FF,  // 스텔라 클럽 - 블루화이트
+    card_cartel:     0x2D2D5B,  // 카드 카르텔 - 다크퍼플
+    buddy_garden:    0x3DDC84,  // 버디 가든 - 그린
+    glitch_paradise: 0xFF00FF,  // 글리치 파라다이스 - 마젠타
+    cafe_encore:     0xC8602A,  // 카페 앙코르 - 브라운
+    lunatic_circus:  0x8B2BE2,  // 루나틱 서커스 - 퍼플
+    iron_beat:       0xE63946   // 아이언 비트 - 레드
   }
 };
 
@@ -239,42 +240,45 @@ export const CLASSES = {
 // Cult Types (교단 시스템)
 // ============================================
 export const CULTS = {
-  VALHALLA: 'valhalla',
-  TAKAMAGAHARA: 'takamagahara',
-  OLYMPUS: 'olympus',
-  ASGARD: 'asgard',
-  YOMI: 'yomi',
-  TARTARUS: 'tartarus',
-  AVALON: 'avalon',
-  HELHEIM: 'helheim',
-  KUNLUN: 'kunlun'
+  PRISM_STARS:     'prism_stars',
+  NEON_CROW:       'neon_crow',
+  INK_CYCLONE:     'ink_cyclone',
+  STELLA_CLUB:     'stella_club',
+  CARD_CARTEL:     'card_cartel',
+  BUDDY_GARDEN:    'buddy_garden',
+  GLITCH_PARADISE: 'glitch_paradise',
+  CAFE_ENCORE:     'cafe_encore',
+  LUNATIC_CIRCUS:  'lunatic_circus',
+  IRON_BEAT:       'iron_beat'
 };
 
 // ============================================
 // Cult Colors and Info
 // ============================================
 export const CULT_COLORS = {
-  valhalla: 0x4A90D9,      // 발할라 - 바람의 파랑
-  takamagahara: 0xFFD700,  // 타카마가하라 - 빛의 황금
-  olympus: 0xFF6B35,       // 올림푸스 - 불의 주황
-  asgard: 0x5DADE2,        // 아스가르드 - 물의 청록
-  yomi: 0x8E44AD,          // 요미 - 어둠의 보라
-  tartarus: 0xB71C1C,      // 타르타로스 - 심연의 진홍
-  avalon: 0x4CAF50,        // 아발론 - 요정의 초록
-  helheim: 0x37474F,       // 헬하임 - 죽음의 청흑
-  kunlun: 0x00BCD4         // 곤륜 - 선계의 청옥
+  prism_stars:     0xFF6EB4,  // 프리즘 스타즈 - 핑크
+  neon_crow:       0x00F5FF,  // 네온 크로우 - 시안
+  ink_cyclone:     0xFF4500,  // 잉크 사이클론 - 오렌지
+  stella_club:     0xE8E8FF,  // 스텔라 클럽 - 블루화이트
+  card_cartel:     0x2D2D5B,  // 카드 카르텔 - 다크퍼플
+  buddy_garden:    0x3DDC84,  // 버디 가든 - 그린
+  glitch_paradise: 0xFF00FF,  // 글리치 파라다이스 - 마젠타
+  cafe_encore:     0xC8602A,  // 카페 앙코르 - 브라운
+  lunatic_circus:  0x8B2BE2,  // 루나틱 서커스 - 퍼플
+  iron_beat:       0xE63946   // 아이언 비트 - 레드
 };
 
 export const CULT_INFO = {
-  valhalla: { name: '발할라', origin: '북유럽 신화', description: '용맹한 전사들의 낙원' },
-  takamagahara: { name: '타카마가하라', origin: '일본 신화', description: '아마테라스의 천상계' },
-  olympus: { name: '올림푸스', origin: '그리스 신화', description: '제우스와 12신의 성지' },
-  asgard: { name: '아스가르드', origin: '북유럽 신화', description: '신들의 세계' },
-  yomi: { name: '요미', origin: '일본 신화', description: '이자나미의 저승' },
-  tartarus: { name: '타르타로스', origin: '그리스 신화', description: '심연 속 형벌의 감옥' },
-  avalon: { name: '아발론', origin: '켈트 신화', description: '치유의 사과가 열리는 섬' },
-  helheim: { name: '헬하임', origin: '북유럽 신화', description: '헬이 다스리는 명계' },
-  kunlun: { name: '곤륜', origin: '중국 신화', description: '서왕모의 불사 선계' }
+  prism_stars:     { name: '프리즘 스타즈',     origin: '허구 — 아이돌/팬덤 서브컬쳐',         description: '무대 위 완벽한 퍼포먼스를 추구하는 아이돌 교단' },
+  neon_crow:       { name: '네온 크로우',       origin: '허구 — 사이버펑크/해커 서브컬쳐',     description: '디지털 세계의 그림자에서 활동하는 해커 교단' },
+  ink_cyclone:     { name: '잉크 사이클론',     origin: '허구 — 스트리트 그라피티 서브컬쳐',  description: '도시 곳곳에 작품을 남기는 그라피티 아티스트 교단' },
+  stella_club:     { name: '스텔라 클럽',       origin: '허구 — 천문 동아리/성좌 서브컬쳐',   description: '별을 관측하고 성좌의 비밀을 연구하는 천문 동아리 교단' },
+  card_cartel:     { name: '카드 카르텔',       origin: '허구 — TCG 대회 문화',               description: 'TCG 대회를 지배하는 전략가 교단' },
+  buddy_garden:    { name: '버디 가든',         origin: '허구 — 원예/식물 덕후 서브컬쳐',     description: '식물을 키우고 나누는 원예 동호회 교단' },
+  glitch_paradise: { name: '글리치 파라다이스', origin: '허구 — 인터넷 밈/카오스 미학',        description: '버그를 예술로 승화시키는 밈 교단' },
+  cafe_encore:     { name: '카페 앙코르',       origin: '허구 — 카페/바리스타 문화 (중립)',   description: '모든 교단원이 쉬어가는 중립 카페 교단' },
+  lunatic_circus:  { name: '루나틱 서커스',     origin: '허구 — 서커스/마술사 서브컬쳐',      description: '현실과 환상의 경계에서 공연하는 마술사 교단' },
+  iron_beat:       { name: '아이언 비트',       origin: '허구 — 록밴드/언더그라운드 음악',    description: '지하 공연장에서 폭발적인 사운드를 쏟아내는 록밴드 교단' }
 };
 
 // ============================================

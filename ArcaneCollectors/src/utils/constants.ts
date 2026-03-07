@@ -146,18 +146,19 @@ export const MOOD_INFO: Record<MoodType, MoodInfo> = {
 
 /**
  * 교단 타입 정의
- * 9개의 신화 기반 교단
+ * 10개의 서브컬쳐 기반 교단 (v3.0)
  */
 export const CULT = {
-  VALHALLA: 'valhalla',           // 발할라 (북유럽 - 전사의 낙원)
-  TAKAMAGAHARA: 'takamagahara',   // 타카마가하라 (일본 - 천상계)
-  OLYMPUS: 'olympus',             // 올림푸스 (그리스 - 12신)
-  ASGARD: 'asgard',               // 아스가르드 (북유럽 - 신들의 세계)
-  YOMI: 'yomi',                   // 요미 (일본 - 저승)
-  TARTARUS: 'tartarus',           // 타르타로스 (그리스 - 티탄의 감옥)
-  AVALON: 'avalon',               // 아발론 (켈트 - 성스러운 섬)
-  HELHEIM: 'helheim',             // 헬하임 (북유럽 - 명계)
-  KUNLUN: 'kunlun'                // 곤륜 (중국 - 선인의 산)
+  PRISM_STARS:     'prism_stars',     // 프리즘 스타즈 (아이돌/팬덤)
+  NEON_CROW:       'neon_crow',       // 네온 크로우 (사이버펑크/해커)
+  INK_CYCLONE:     'ink_cyclone',     // 잉크 사이클론 (스트리트 그라피티)
+  STELLA_CLUB:     'stella_club',     // 스텔라 클럽 (천문 동아리)
+  CARD_CARTEL:     'card_cartel',     // 카드 카르텔 (TCG 대회)
+  BUDDY_GARDEN:    'buddy_garden',    // 버디 가든 (원예/식물)
+  GLITCH_PARADISE: 'glitch_paradise', // 글리치 파라다이스 (인터넷 밈)
+  CAFE_ENCORE:     'cafe_encore',     // 카페 앙코르 (카페/중립)
+  LUNATIC_CIRCUS:  'lunatic_circus',  // 루나틱 서커스 (서커스/마술)
+  IRON_BEAT:       'iron_beat'        // 아이언 비트 (록밴드/언더그라운드)
 } as const;
 
 export type CultType = typeof CULT[keyof typeof CULT];
@@ -173,59 +174,65 @@ export interface CultInfo {
 }
 
 export const CULT_INFO: Record<CultType, CultInfo> = {
-  [CULT.VALHALLA]: {
-    name: '발할라',
-    origin: '북유럽 신화',
-    description: '용맹한 전사들의 낙원',
-    color: '#4A90D9'
+  [CULT.PRISM_STARS]: {
+    name: '프리즘 스타즈',
+    origin: '허구 — 아이돌/팬덤 서브컬쳐',
+    description: '무대 위 완벽한 퍼포먼스를 추구하는 아이돌 교단',
+    color: '#FF6EB4'
   },
-  [CULT.TAKAMAGAHARA]: {
-    name: '타카마가하라',
-    origin: '일본 신화',
-    description: '아마테라스의 천상계',
-    color: '#FFD700'
+  [CULT.NEON_CROW]: {
+    name: '네온 크로우',
+    origin: '허구 — 사이버펑크/해커 서브컬쳐',
+    description: '디지털 세계의 그림자에서 활동하는 해커 교단',
+    color: '#00F5FF'
   },
-  [CULT.OLYMPUS]: {
-    name: '올림푸스',
-    origin: '그리스 신화',
-    description: '제우스와 12신의 성지',
-    color: '#FF6B35'
+  [CULT.INK_CYCLONE]: {
+    name: '잉크 사이클론',
+    origin: '허구 — 스트리트 그라피티 서브컬쳐',
+    description: '도시 곳곳에 작품을 남기는 그라피티 아티스트 교단',
+    color: '#FF4500'
   },
-  [CULT.ASGARD]: {
-    name: '아스가르드',
-    origin: '북유럽 신화',
-    description: '신들의 세계',
-    color: '#5DADE2'
+  [CULT.STELLA_CLUB]: {
+    name: '스텔라 클럽',
+    origin: '허구 — 천문 동아리/성좌 서브컬쳐',
+    description: '별을 관측하고 성좌의 비밀을 연구하는 천문 동아리 교단',
+    color: '#E8E8FF'
   },
-  [CULT.YOMI]: {
-    name: '요미',
-    origin: '일본 신화',
-    description: '이자나미의 저승',
-    color: '#8E44AD'
+  [CULT.CARD_CARTEL]: {
+    name: '카드 카르텔',
+    origin: '허구 — TCG 대회 문화',
+    description: 'TCG 대회를 지배하는 전략가 교단',
+    color: '#2D2D5B'
   },
-  [CULT.TARTARUS]: {
-    name: '타르타로스',
-    origin: '그리스 신화',
-    description: '티탄과 괴물이 갇힌 지하세계',
-    color: '#B71C1C'
+  [CULT.BUDDY_GARDEN]: {
+    name: '버디 가든',
+    origin: '허구 — 원예/식물 덕후 서브컬쳐',
+    description: '식물을 키우고 나누는 원예 동호회 교단',
+    color: '#3DDC84'
   },
-  [CULT.AVALON]: {
-    name: '아발론',
-    origin: '켈트 전설',
-    description: '전설의 기사왕이 잠든 성스러운 섬',
-    color: '#4CAF50'
+  [CULT.GLITCH_PARADISE]: {
+    name: '글리치 파라다이스',
+    origin: '허구 — 인터넷 밈/카오스 미학',
+    description: '버그를 예술로 승화시키는 밈 교단',
+    color: '#FF00FF'
   },
-  [CULT.HELHEIM]: {
-    name: '헬하임',
-    origin: '북유럽 신화',
-    description: '죽음의 여왕 헬이 다스리는 명계',
-    color: '#455A64'
+  [CULT.CAFE_ENCORE]: {
+    name: '카페 앙코르',
+    origin: '허구 — 카페/바리스타 문화 (중립)',
+    description: '모든 교단원이 쉬어가는 중립 카페 교단',
+    color: '#C8602A'
   },
-  [CULT.KUNLUN]: {
-    name: '곤륜',
-    origin: '중국 신화',
-    description: '선인과 무협의 영웅이 수련하는 산',
-    color: '#FF9800'
+  [CULT.LUNATIC_CIRCUS]: {
+    name: '루나틱 서커스',
+    origin: '허구 — 서커스/마술사 서브컬쳐',
+    description: '현실과 환상의 경계에서 공연하는 마술사 교단',
+    color: '#8B2BE2'
+  },
+  [CULT.IRON_BEAT]: {
+    name: '아이언 비트',
+    origin: '허구 — 록밴드/언더그라운드 음악',
+    description: '지하 공연장에서 폭발적인 사운드를 쏟아내는 록밴드 교단',
+    color: '#E63946'
   }
 };
 
@@ -240,50 +247,55 @@ export interface CultMoodBonusInfo {
 }
 
 export const CULT_MOOD_BONUS: Record<CultType, CultMoodBonusInfo> = {
-  [CULT.VALHALLA]: {
-    optimalMood: MOOD.BRAVE,
-    bonusMultiplier: 1.15,
-    description: '발할라의 전사는 열혈의 기운을 높이 평가합니다'
-  },
-  [CULT.TAKAMAGAHARA]: {
-    optimalMood: MOOD.MYSTIC,
-    bonusMultiplier: 1.15,
-    description: '천상계는 신비로운 힘을 환영합니다'
-  },
-  [CULT.OLYMPUS]: {
-    optimalMood: MOOD.CUNNING,
-    bonusMultiplier: 1.15,
-    description: '올림푸스의 신들은 지혜와 전략을 중시합니다'
-  },
-  [CULT.ASGARD]: {
-    optimalMood: MOOD.CALM,
-    bonusMultiplier: 1.15,
-    description: '아스가르드는 고요한 수호자를 필요로 합니다'
-  },
-  [CULT.YOMI]: {
-    optimalMood: MOOD.WILD,
-    bonusMultiplier: 1.15,
-    description: '저승은 광폭한 영혼을 끌어들입니다'
-  },
-  [CULT.TARTARUS]: {
-    optimalMood: MOOD.FIERCE,
-    bonusMultiplier: 1.15,
-    description: '타르타로스는 격렬한 파괴의 힘을 해방합니다'
-  },
-  [CULT.AVALON]: {
+  [CULT.PRISM_STARS]: {
     optimalMood: MOOD.NOBLE,
     bonusMultiplier: 1.15,
-    description: '아발론은 고결한 기사의 정신을 찬양합니다'
+    description: '프리즘 스타즈는 고결한 퍼포먼스의 리더를 환영합니다'
   },
-  [CULT.HELHEIM]: {
-    optimalMood: MOOD.STOIC,
+  [CULT.NEON_CROW]: {
+    optimalMood: MOOD.CUNNING,
     bonusMultiplier: 1.15,
-    description: '헬하임은 의연한 영혼만이 버텨낼 수 있습니다'
+    description: '네온 크로우는 냉철한 분석과 전략을 최고로 칩니다'
   },
-  [CULT.KUNLUN]: {
+  [CULT.INK_CYCLONE]: {
+    optimalMood: MOOD.WILD,
+    bonusMultiplier: 1.15,
+    description: '잉크 사이클론은 본능적이고 자유로운 표현을 추구합니다'
+  },
+  [CULT.STELLA_CLUB]: {
+    optimalMood: MOOD.MYSTIC,
+    bonusMultiplier: 1.15,
+    description: '스텔라 클럽은 신비로운 우주의 관찰자를 환영합니다'
+  },
+  [CULT.CARD_CARTEL]: {
+    optimalMood: MOOD.CUNNING,
+    bonusMultiplier: 1.15,
+    description: '카드 카르텔은 냉철한 전략가를 무엇보다 중시합니다'
+  },
+  [CULT.BUDDY_GARDEN]: {
     optimalMood: MOOD.DEVOTED,
     bonusMultiplier: 1.15,
-    description: '곤륜산은 헌신적인 수행자를 이끌어줍니다'
+    description: '버디 가든은 헌신적인 돌봄의 마음을 지닌 자를 환영합니다'
+  },
+  [CULT.GLITCH_PARADISE]: {
+    optimalMood: MOOD.FIERCE,
+    bonusMultiplier: 1.15,
+    description: '글리치 파라다이스는 격렬한 혼돈의 에너지를 사랑합니다'
+  },
+  [CULT.CAFE_ENCORE]: {
+    optimalMood: MOOD.CALM,
+    bonusMultiplier: 1.15,
+    description: '카페 앙코르는 고요하고 평화로운 이를 포용합니다'
+  },
+  [CULT.LUNATIC_CIRCUS]: {
+    optimalMood: MOOD.BRAVE,
+    bonusMultiplier: 1.15,
+    description: '루나틱 서커스는 열혈적인 용기와 도전을 원합니다'
+  },
+  [CULT.IRON_BEAT]: {
+    optimalMood: MOOD.FIERCE,
+    bonusMultiplier: 1.15,
+    description: '아이언 비트는 격렬하게 타오르는 반항의 정신을 칭송합니다'
   }
 };
 

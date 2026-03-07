@@ -131,7 +131,7 @@ export class HeroFactory {
         rarity: rarity,
         rarityKey: rarityKey,
         stars: hero.stars || getRarityStars(rarity),
-        cult: hero.cult || 'olympus',
+        cult: hero.cult || 'cafe_encore',
         class: hero.class || 'warrior',
         mood: hero.mood || 'brave',
         description: hero.description || '',

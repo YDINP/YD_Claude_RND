@@ -2,9 +2,9 @@
 
 > **최종 업데이트**: 2026-03-07
 > **브랜치**: `arcane/integration`
-> **테스트**: 806개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
+> **테스트**: 845개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: 교단 전면 재설계 v3.0 — 허구 서브컬쳐 10개 교단 + 교단 각성 시스템 GDD (2026-03-07)
+> **최근 작업**: [CULT-UI/TS/AWAKE-1] 서브컬쳐 교단 v3.0 전면 교체 + AwakeningSystem 신규 (2026-03-07)
 
 ---
 
@@ -99,6 +99,27 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | TASK-E | StageSystem.test.js 신규 31개 테스트 (getStageById/calculateCultBonus/getUnlockedStages 등 전체 메서드 유닛 테스트) | `tests/systems/StageSystem.test.js` | 03-07 |
 
 **결과**: 빌드 ✅ + 806/806 테스트 통과 + code-reviewer APPROVED (TASK-E)
+
+### Sprint 6: 서브컬쳐 교단 v3.0 전면 교체 + 각성 시스템 (2026-03-07) — pt-pipeline auto 5단계
+| ID | 태스크 | 파일 | 날짜 |
+|----|--------|------|------|
+| CULT-UI | HeroListPopup.js — 교단 필터/정렬/명칭 10개 신규 서브컬쳐 ID로 교체 | `src/components/popups/HeroListPopup.js` | 03-07 |
+| CULT-UI | GachaPopup.js — cult 기본값 `'olympus'` → `'cafe_encore'` | `src/components/popups/GachaPopup.js` | 03-07 |
+| CULT-UI | gameConfig.js — CULTS/COLORS/CULT_COLORS/CULT_INFO 10개 신규 교체 | `src/config/gameConfig.js` | 03-07 |
+| CULT-UI | designSystem.js — DESIGN.colors.cult 10개 신규 hex 교체 | `src/config/designSystem.js` | 03-07 |
+| CULT-UI | layoutConfig.js — CULT_COLORS 10개 신규 교체 | `src/config/layoutConfig.js` | 03-07 |
+| CULT-UI | GachaScene.js — cult 기본값 2곳 `'olympus'` → `'cafe_encore'` | `src/scenes/GachaScene.js` | 03-07 |
+| CULT-UI | HeroListScene.js — 교단 필터 배열 + cultOrder 정렬 10개 신규 교체 | `src/scenes/HeroListScene.js` | 03-07 |
+| CULT-TS | character.d.ts — CultType union 10개 신규 서브컬쳐 ID | `src/types/character.d.ts` | 03-07 |
+| CULT-TS | helpers.ts — Cult type union + getCultIcon() 이모지 10개 신규 | `src/utils/helpers.ts` | 03-07 |
+| CULT-TS | constants.ts — CULT const enum + CULT_INFO + CULT_MOOD_BONUS 10개 교단 재매핑 | `src/utils/constants.ts` | 03-07 |
+| CULT-TS | HeroFactory.ts — normalize() cult 기본값 `'cafe_encore'` | `src/systems/HeroFactory.ts` | 03-07 |
+| AWAKE-1 | AwakeningSystem.js 신규 — 10교단 각성조건 + 5단계 진행도 + SaveManager 추상화 | `src/systems/AwakeningSystem.js` | 03-07 |
+| AWAKE-1 | AwakeningSystem.test.js 신규 39개 테스트 (TC-01~TC-39) | `tests/systems/AwakeningSystem.test.js` | 03-07 |
+| QA | constants.test.js 기존 테스트 수정 (10교단 + CUNNING 중복 매핑 허용) | `tests/utils/constants.test.js` | 03-07 |
+| QA | data/index.test.js cult 기대값 `'cafe_encore'` 수정 | `tests/data/index.test.js` | 03-07 |
+
+**결과**: 빌드 ✅ + 845/845 테스트 통과 + src 내 구 교단 ID 잔존 0건 + code-reviewer APPROVED
 
 - BattleSystem 재사용: simulateBattle()에서 BattleSystem 인스턴스 생성, 최대 20턴 시뮬레이션
 - 오프라인 지원: Supabase 연결 실패 시 localStorage 캐시 폴백

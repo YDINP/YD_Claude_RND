@@ -341,7 +341,7 @@ export class GachaPopup extends PopupBase {
         isNew: r.isNew,
         shardsGained: r.shardsGained,
         mood: charData?.mood || 'brave',
-        cult: charData?.cult || 'olympus',
+        cult: charData?.cult || 'cafe_encore',
         class: charData?.class || 'warrior'
       };
     });

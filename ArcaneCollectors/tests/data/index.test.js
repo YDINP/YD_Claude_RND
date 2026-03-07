@@ -101,7 +101,7 @@ describe('normalizeHero', () => {
     expect(result).not.toBeNull();
     expect(result.id).toBe('nonexistent_hero_xyz');
     expect(result.name).toBe('???');
-    expect(result.cult).toBe('olympus');
+    expect(result.cult).toBe('cafe_encore');
     expect(result.class).toBe('warrior');
     expect(result.mood).toBe('brave');
   });

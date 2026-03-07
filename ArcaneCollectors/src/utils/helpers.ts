@@ -355,7 +355,8 @@ export function formatBattleTimer(milliseconds: number): string {
 }
 
 type Mood = 'brave' | 'fierce' | 'wild' | 'calm' | 'stoic' | 'devoted' | 'cunning' | 'noble' | 'mystic';
-type Cult = 'valhalla' | 'takamagahara' | 'olympus' | 'asgard' | 'yomi' | 'tartarus' | 'avalon' | 'helheim' | 'kunlun';
+type Cult = 'prism_stars' | 'neon_crow' | 'ink_cyclone' | 'stella_club' | 'card_cartel'
+         | 'buddy_garden' | 'glitch_paradise' | 'cafe_encore' | 'lunatic_circus' | 'iron_beat';
 
 // Mood icon
 export function getMoodIcon(mood: Mood): string {
@@ -376,15 +377,16 @@ export function getMoodIcon(mood: Mood): string {
 // Cult icon
 export function getCultIcon(cult: Cult): string {
   const icons: Record<Cult, string> = {
-    valhalla: '⚡',
-    takamagahara: '☀️',
-    olympus: '🔱',
-    asgard: '❄️',
-    yomi: '💀',
-    tartarus: '🌑',
-    avalon: '🍀',
-    helheim: '🥶',
-    kunlun: '🐉'
+    prism_stars:     '🌟',
+    neon_crow:       '🦅',
+    ink_cyclone:     '🎨',
+    stella_club:     '⭐',
+    card_cartel:     '🃏',
+    buddy_garden:    '🌱',
+    glitch_paradise: '💾',
+    cafe_encore:     '☕',
+    lunatic_circus:  '🎪',
+    iron_beat:       '🎸'
   };
   return icons[cult] || '❓';
 }

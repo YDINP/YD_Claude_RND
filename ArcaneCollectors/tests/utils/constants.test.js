@@ -156,12 +156,15 @@ describe('MOOD_INFO', () => {
 // ==================== CULT 상수 ====================
 
 describe('CULT 상수', () => {
-  it('9개 교단 정의', () => {
-    expect(ALL_CULT_VALUES).toHaveLength(9);
+  it('10개 교단 정의', () => {
+    expect(ALL_CULT_VALUES).toHaveLength(10);
   });
 
   it('필수 교단 포함', () => {
-    const expected = ['valhalla', 'takamagahara', 'olympus', 'asgard', 'yomi', 'tartarus', 'avalon', 'helheim', 'kunlun'];
+    const expected = [
+      'prism_stars', 'neon_crow', 'ink_cyclone', 'stella_club', 'card_cartel',
+      'buddy_garden', 'glitch_paradise', 'cafe_encore', 'lunatic_circus', 'iron_beat'
+    ];
     expected.forEach((cult) => {
       expect(ALL_CULT_VALUES).toContain(cult);
     });
@@ -171,7 +174,7 @@ describe('CULT 상수', () => {
 // ==================== CULT_INFO ====================
 
 describe('CULT_INFO', () => {
-  it('9교단 모두 정보 정의됨', () => {
+  it('10교단 모두 정보 정의됨', () => {
     ALL_CULT_VALUES.forEach((cult) => {
       expect(CULT_INFO[cult]).toBeDefined();
     });
@@ -191,7 +194,7 @@ describe('CULT_INFO', () => {
 // ==================== CULT_MOOD_BONUS ====================
 
 describe('CULT_MOOD_BONUS', () => {
-  it('9교단 모두 보너스 정의됨', () => {
+  it('10교단 모두 보너스 정의됨', () => {
     ALL_CULT_VALUES.forEach((cult) => {
       expect(CULT_MOOD_BONUS[cult]).toBeDefined();
     });
@@ -205,10 +208,10 @@ describe('CULT_MOOD_BONUS', () => {
     });
   });
 
-  it('교단-분위기 1:1 매핑 (중복 없음)', () => {
-    const moods = ALL_CULT_VALUES.map((cult) => CULT_MOOD_BONUS[cult].optimalMood);
-    const uniqueMoods = new Set(moods);
-    expect(uniqueMoods.size).toBe(9);
+  it('교단-분위기 매핑 — 각 교단마다 optimalMood가 유효한 MOOD 값', () => {
+    ALL_CULT_VALUES.forEach((cult) => {
+      expect(ALL_MOOD_VALUES).toContain(CULT_MOOD_BONUS[cult].optimalMood);
+    });
   });
 
   it('optimalMood가 유효한 MOOD 값', () => {
@@ -223,16 +226,17 @@ describe('CULT_MOOD_BONUS', () => {
     });
   });
 
-  it('특정 교단-분위기 매핑 확인', () => {
-    expect(CULT_MOOD_BONUS[CULT.VALHALLA].optimalMood).toBe(MOOD.BRAVE);
-    expect(CULT_MOOD_BONUS[CULT.TAKAMAGAHARA].optimalMood).toBe(MOOD.MYSTIC);
-    expect(CULT_MOOD_BONUS[CULT.OLYMPUS].optimalMood).toBe(MOOD.CUNNING);
-    expect(CULT_MOOD_BONUS[CULT.ASGARD].optimalMood).toBe(MOOD.CALM);
-    expect(CULT_MOOD_BONUS[CULT.YOMI].optimalMood).toBe(MOOD.WILD);
-    expect(CULT_MOOD_BONUS[CULT.TARTARUS].optimalMood).toBe(MOOD.FIERCE);
-    expect(CULT_MOOD_BONUS[CULT.AVALON].optimalMood).toBe(MOOD.NOBLE);
-    expect(CULT_MOOD_BONUS[CULT.HELHEIM].optimalMood).toBe(MOOD.STOIC);
-    expect(CULT_MOOD_BONUS[CULT.KUNLUN].optimalMood).toBe(MOOD.DEVOTED);
+  it('특정 교단-분위기 매핑 확인 (서브컬쳐 v3.0)', () => {
+    expect(CULT_MOOD_BONUS[CULT.PRISM_STARS].optimalMood).toBe(MOOD.NOBLE);
+    expect(CULT_MOOD_BONUS[CULT.NEON_CROW].optimalMood).toBe(MOOD.CUNNING);
+    expect(CULT_MOOD_BONUS[CULT.INK_CYCLONE].optimalMood).toBe(MOOD.WILD);
+    expect(CULT_MOOD_BONUS[CULT.STELLA_CLUB].optimalMood).toBe(MOOD.MYSTIC);
+    expect(CULT_MOOD_BONUS[CULT.CARD_CARTEL].optimalMood).toBe(MOOD.CUNNING);
+    expect(CULT_MOOD_BONUS[CULT.BUDDY_GARDEN].optimalMood).toBe(MOOD.DEVOTED);
+    expect(CULT_MOOD_BONUS[CULT.GLITCH_PARADISE].optimalMood).toBe(MOOD.FIERCE);
+    expect(CULT_MOOD_BONUS[CULT.CAFE_ENCORE].optimalMood).toBe(MOOD.CALM);
+    expect(CULT_MOOD_BONUS[CULT.LUNATIC_CIRCUS].optimalMood).toBe(MOOD.BRAVE);
+    expect(CULT_MOOD_BONUS[CULT.IRON_BEAT].optimalMood).toBe(MOOD.FIERCE);
   });
 });
 
@@ -240,14 +244,14 @@ describe('CULT_MOOD_BONUS', () => {
 
 describe('getCultMoodBonus', () => {
   it('최적 조합 → 1.15', () => {
-    expect(getCultMoodBonus('valhalla', 'brave')).toBe(1.15);
-    expect(getCultMoodBonus('olympus', 'cunning')).toBe(1.15);
-    expect(getCultMoodBonus('tartarus', 'fierce')).toBe(1.15);
+    expect(getCultMoodBonus('prism_stars', 'noble')).toBe(1.15);
+    expect(getCultMoodBonus('neon_crow', 'cunning')).toBe(1.15);
+    expect(getCultMoodBonus('cafe_encore', 'calm')).toBe(1.15);
   });
 
   it('비최적 조합 → 1.0', () => {
-    expect(getCultMoodBonus('valhalla', 'calm')).toBe(1.0);
-    expect(getCultMoodBonus('olympus', 'brave')).toBe(1.0);
+    expect(getCultMoodBonus('prism_stars', 'calm')).toBe(1.0);
+    expect(getCultMoodBonus('cafe_encore', 'brave')).toBe(1.0);
   });
 
   it('존재하지 않는 교단 → 1.0', () => {

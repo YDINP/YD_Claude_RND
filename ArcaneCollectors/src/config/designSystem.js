@@ -87,20 +87,18 @@ export const DESIGN = {
       mystic:  '#F39C12'
     },
 
-    // 교단 (Phaser hex) — cults.json 기준 단일 진실 원천
+    // 교단 (Phaser hex) — cults.json v3.0 기준 단일 진실 원천 (서브컬쳐 10개)
     cult: {
-      valhalla:      0x4A90D9,  // 발할라 - 바람의 파랑
-      takamagahara:  0xFFD700,  // 타카마가하라 - 빛의 황금
-      olympus:       0xFF6B35,  // 올림푸스 - 불의 주황
-      asgard:        0x5DADE2,  // 아스가르드 - 물의 청록
-      yomi:          0x8E44AD,  // 요미 - 어둠의 보라
-      tartarus:      0x2C3E50,  // 타르타로스 - 심연의 짙은 남색
-      avalon:        0x4ECDC4,  // 아발론 - 요정의 청록민트
-      helheim:       0xB0C4DE,  // 헬하임 - 죽음의 연청회
-      kunlun:        0x50C878,  // 곤륜 - 선계의 에메랄드
-      balance:       0x95A5A6,  // 발란스 - 중립의 회색
-      chaos:         0xE74C3C,  // 카오스 - 원초적 빨강
-      nature:        0x27AE60   // 나투레 - 자연의 초록
+      prism_stars:     0xFF6EB4,  // 프리즘 스타즈 - 핑크
+      neon_crow:       0x00F5FF,  // 네온 크로우 - 시안
+      ink_cyclone:     0xFF4500,  // 잉크 사이클론 - 오렌지
+      stella_club:     0xE8E8FF,  // 스텔라 클럽 - 블루화이트
+      card_cartel:     0x2D2D5B,  // 카드 카르텔 - 다크퍼플
+      buddy_garden:    0x3DDC84,  // 버디 가든 - 그린
+      glitch_paradise: 0xFF00FF,  // 글리치 파라다이스 - 마젠타
+      cafe_encore:     0xC8602A,  // 카페 앙코르 - 브라운
+      lunatic_circus:  0x8B2BE2,  // 루나틱 서커스 - 퍼플
+      iron_beat:       0xE63946   // 아이언 비트 - 레드
     },
 
     // HP 바 색상

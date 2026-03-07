@@ -18,17 +18,18 @@ export type MoodType =
 /** 분위기 그룹 */
 export type MoodGroup = 'offensive' | 'defensive' | 'tactical';
 
-/** 교단(Cult) 9종 */
+/** 교단(Cult) 10종 — 서브컬쳐 기반 v3.0 */
 export type CultType =
-  | 'olympus'        // 올림푸스
-  | 'takamagahara'   // 타카마가하라
-  | 'yomi'           // 요미
-  | 'asgard'         // 아스가르드
-  | 'valhalla'       // 발할라
-  | 'tartarus'       // 타르타로스
-  | 'avalon'         // 아발론
-  | 'helheim'        // 헬하임
-  | 'kunlun';        // 곤륜
+  | 'prism_stars'     // 프리즘 스타즈 (아이돌/팬덤)
+  | 'neon_crow'       // 네온 크로우 (사이버펑크/해커)
+  | 'ink_cyclone'     // 잉크 사이클론 (스트리트 그라피티)
+  | 'stella_club'     // 스텔라 클럽 (천문 동아리)
+  | 'card_cartel'     // 카드 카르텔 (TCG 대회)
+  | 'buddy_garden'    // 버디 가든 (원예/식물)
+  | 'glitch_paradise' // 글리치 파라다이스 (인터넷 밈)
+  | 'cafe_encore'     // 카페 앙코르 (카페/중립)
+  | 'lunatic_circus'  // 루나틱 서커스 (서커스/마술)
+  | 'iron_beat';      // 아이언 비트 (록밴드/언더그라운드)
 
 /** 클래스 4종 */
 export type ClassType = 'warrior' | 'mage' | 'healer' | 'archer';
