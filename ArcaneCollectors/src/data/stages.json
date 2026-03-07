@@ -43,6 +43,11 @@
           ],
           "firstClearRewards": {
             "gems": 30
+          },
+          "recommendedCult": "nature",
+          "cultBonus": {
+            "hp": 0.03,
+            "spd": 0.02
           }
         },
         {
@@ -85,6 +90,11 @@
           ],
           "firstClearRewards": {
             "gems": 30
+          },
+          "recommendedCult": "nature",
+          "cultBonus": {
+            "hp": 0.03,
+            "spd": 0.02
           }
         },
         {
@@ -136,6 +146,11 @@
           ],
           "firstClearRewards": {
             "gems": 30
+          },
+          "recommendedCult": "nature",
+          "cultBonus": {
+            "hp": 0.03,
+            "spd": 0.02
           }
         },
         {
@@ -174,6 +189,11 @@
           ],
           "firstClearRewards": {
             "gems": 50
+          },
+          "recommendedCult": "nature",
+          "cultBonus": {
+            "hp": 0.03,
+            "spd": 0.02
           }
         },
         {
@@ -232,6 +252,11 @@
                 "count": 5
               }
             ]
+          },
+          "recommendedCult": "nature",
+          "cultBonus": {
+            "hp": 0.05,
+            "spd": 0.03
           }
         }
       ]
@@ -283,6 +308,11 @@
           ],
           "firstClearRewards": {
             "gems": 50
+          },
+          "recommendedCult": "valhalla",
+          "cultBonus": {
+            "atk": 0.04,
+            "def": 0.02
           }
         },
         {
@@ -321,6 +351,11 @@
           ],
           "firstClearRewards": {
             "gems": 50
+          },
+          "recommendedCult": "valhalla",
+          "cultBonus": {
+            "atk": 0.04,
+            "def": 0.02
           }
         },
         {
@@ -372,6 +407,11 @@
           ],
           "firstClearRewards": {
             "gems": 80
+          },
+          "recommendedCult": "valhalla",
+          "cultBonus": {
+            "atk": 0.04,
+            "def": 0.02
           }
         },
         {
@@ -410,6 +450,11 @@
           ],
           "firstClearRewards": {
             "gems": 50
+          },
+          "recommendedCult": "valhalla",
+          "cultBonus": {
+            "atk": 0.04,
+            "def": 0.02
           }
         },
         {
@@ -468,6 +513,11 @@
                 "count": 3
               }
             ]
+          },
+          "recommendedCult": "valhalla",
+          "cultBonus": {
+            "atk": 0.07,
+            "def": 0.04
           }
         }
       ]
@@ -519,6 +569,11 @@
           ],
           "firstClearRewards": {
             "gems": 60
+          },
+          "recommendedCult": "yomi",
+          "cultBonus": {
+            "crit_dmg": 0.05,
+            "atk": 0.03
           }
         },
         {
@@ -561,6 +616,11 @@
           ],
           "firstClearRewards": {
             "gems": 60
+          },
+          "recommendedCult": "yomi",
+          "cultBonus": {
+            "crit_dmg": 0.05,
+            "atk": 0.03
           }
         },
         {
@@ -612,6 +672,11 @@
           ],
           "firstClearRewards": {
             "gems": 100
+          },
+          "recommendedCult": "yomi",
+          "cultBonus": {
+            "crit_dmg": 0.05,
+            "atk": 0.03
           }
         },
         {
@@ -650,6 +715,11 @@
           ],
           "firstClearRewards": {
             "gems": 60
+          },
+          "recommendedCult": "yomi",
+          "cultBonus": {
+            "crit_dmg": 0.05,
+            "atk": 0.03
           }
         },
         {
@@ -708,6 +778,11 @@
                 "count": 5
               }
             ]
+          },
+          "recommendedCult": "yomi",
+          "cultBonus": {
+            "crit_dmg": 0.08,
+            "atk": 0.05
           }
         }
       ]
@@ -759,6 +834,11 @@
           ],
           "firstClearRewards": {
             "gems": 70
+          },
+          "recommendedCult": "olympus",
+          "cultBonus": {
+            "atk": 0.06,
+            "def": 0.04
           }
         },
         {
@@ -801,6 +881,11 @@
           ],
           "firstClearRewards": {
             "gems": 70
+          },
+          "recommendedCult": "olympus",
+          "cultBonus": {
+            "atk": 0.06,
+            "def": 0.04
           }
         },
         {
@@ -852,6 +937,11 @@
           ],
           "firstClearRewards": {
             "gems": 120
+          },
+          "recommendedCult": "olympus",
+          "cultBonus": {
+            "atk": 0.06,
+            "def": 0.04
           }
         },
         {
@@ -890,6 +980,11 @@
           ],
           "firstClearRewards": {
             "gems": 70
+          },
+          "recommendedCult": "olympus",
+          "cultBonus": {
+            "atk": 0.06,
+            "def": 0.04
           }
         },
         {
@@ -948,6 +1043,11 @@
                 "count": 10
               }
             ]
+          },
+          "recommendedCult": "olympus",
+          "cultBonus": {
+            "atk": 0.09,
+            "def": 0.06
           }
         }
       ]
@@ -999,6 +1099,11 @@
           ],
           "firstClearRewards": {
             "gems": 80
+          },
+          "recommendedCult": "asgard",
+          "cultBonus": {
+            "atk": 0.07,
+            "hp": 0.05
           }
         },
         {
@@ -1041,6 +1146,11 @@
           ],
           "firstClearRewards": {
             "gems": 80
+          },
+          "recommendedCult": "asgard",
+          "cultBonus": {
+            "atk": 0.07,
+            "hp": 0.05
           }
         },
         {
@@ -1092,6 +1202,11 @@
           ],
           "firstClearRewards": {
             "gems": 150
+          },
+          "recommendedCult": "asgard",
+          "cultBonus": {
+            "atk": 0.07,
+            "hp": 0.05
           }
         },
         {
@@ -1130,6 +1245,11 @@
           ],
           "firstClearRewards": {
             "gems": 80
+          },
+          "recommendedCult": "asgard",
+          "cultBonus": {
+            "atk": 0.07,
+            "hp": 0.05
           }
         },
         {
@@ -1192,7 +1312,944 @@
                 "count": 1
               }
             ]
+          },
+          "recommendedCult": "asgard",
+          "cultBonus": {
+            "atk": 0.1,
+            "hp": 0.08
           }
+        }
+      ]
+    },
+    {
+      "id": "chapter_6",
+      "name": "아발론의 성약",
+      "nameEn": "Covenant of Avalon",
+      "description": "안개 속의 섯 아발론. 성기사들의 맹약이 균열로 변질되고 있다.",
+      "lore": "아발론의 성기사단은 신성한 맹약을 통해 세계를 수호해왔다.",
+      "stages": [
+        {
+          "id": "6-1",
+          "name": "안개의 항구",
+          "nameEn": "Misty Harbor",
+          "recommendedPower": 5000,
+          "energyCost": 6,
+          "story_intro": "안개로 덮인 아발론 항구.",
+          "story_clear": "항구 경비대를 무쳤다.",
+          "enemies": [
+            {
+              "id": "enemy_knight",
+              "level": 45
+            },
+            {
+              "id": "enemy_archer",
+              "level": 44
+            }
+          ],
+          "rewards": {
+            "gold": 1800,
+            "exp": 900,
+            "items": [
+              {
+                "id": "exp_potion_l",
+                "chance": 0.45
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_epic_core",
+              "chance": 0.35
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          },
+          "recommendedCult": "avalon",
+          "cultBonus": {
+            "def": 0.06,
+            "hp": 0.04
+          }
+        },
+        {
+          "id": "6-2",
+          "name": "성체의 관문",
+          "nameEn": "Castle Gate",
+          "recommendedPower": 5500,
+          "energyCost": 6,
+          "story_intro": "성체 관문 앞에 섬다.",
+          "story_clear": "관문을 돌파했다.",
+          "enemies": [
+            {
+              "id": "enemy_dark_knight",
+              "level": 45
+            }
+          ],
+          "rewards": {
+            "gold": 1900,
+            "exp": 950,
+            "items": [
+              {
+                "id": "exp_potion_l",
+                "chance": 0.48
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_epic_core",
+              "chance": 0.38
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          },
+          "recommendedCult": "avalon",
+          "cultBonus": {
+            "def": 0.06,
+            "hp": 0.04
+          }
+        },
+        {
+          "id": "6-3",
+          "name": "맹약의 성당",
+          "nameEn": "Cathedral of the Covenant",
+          "recommendedPower": 6000,
+          "energyCost": 12,
+          "story_intro": "성당 내부 제단이 있다.",
+          "story_clear": "제단 수호자를 물리쳤다.",
+          "enemies": [
+            {
+              "id": "enemy_dark_mage",
+              "level": 45
+            }
+          ],
+          "rewards": {
+            "gold": 2200,
+            "exp": 1100,
+            "items": [
+              {
+                "id": "exp_potion_l",
+                "chance": 0.5
+              },
+              {
+                "id": "gold_chest_m",
+                "chance": 0.15
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_epic_core",
+              "chance": 0.42
+            },
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.08
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          },
+          "recommendedCult": "avalon",
+          "cultBonus": {
+            "def": 0.06,
+            "hp": 0.04
+          },
+          "isElite": true
+        },
+        {
+          "id": "6-4",
+          "name": "타락한 원탁",
+          "nameEn": "Corrupted Round Table",
+          "recommendedPower": 6500,
+          "energyCost": 6,
+          "story_intro": "원탁 회의실에 타락한 기사들이.",
+          "story_clear": "기사들을 제압했다.",
+          "enemies": [
+            {
+              "id": "enemy_dark_knight",
+              "level": 47
+            },
+            {
+              "id": "enemy_dark_knight",
+              "level": 46
+            }
+          ],
+          "rewards": {
+            "gold": 2400,
+            "exp": 1200,
+            "items": [
+              {
+                "id": "exp_potion_l",
+                "chance": 0.52
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.12
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 50
+          },
+          "recommendedCult": "avalon",
+          "cultBonus": {
+            "def": 0.06,
+            "hp": 0.04
+          }
+        },
+        {
+          "id": "6-5",
+          "name": "아발론의 수호자",
+          "nameEn": "Guardian of Avalon",
+          "recommendedPower": 7000,
+          "energyCost": 20,
+          "story_intro": "아발론의 최후 수호자.",
+          "story_clear": "맹약은 이미 깨졌다.",
+          "enemies": [
+            {
+              "id": "enemy_boss_guardian",
+              "level": 50
+            }
+          ],
+          "rewards": {
+            "gold": 3500,
+            "exp": 1800,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.7
+              },
+              {
+                "id": "gold_chest_l",
+                "chance": 0.3
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.25
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 100
+          },
+          "recommendedCult": "avalon",
+          "cultBonus": {
+            "def": 0.1,
+            "hp": 0.08
+          },
+          "isBoss": true
+        }
+      ]
+    },
+    {
+      "id": "chapter_7",
+      "name": "혼돈의 심연",
+      "nameEn": "Abyss of Chaos",
+      "description": "균열이 만들어낸 혼돈의 영역.",
+      "lore": "균열이 깊어질수록 세계의 법칙이 무너진다.",
+      "stages": [
+        {
+          "id": "7-1",
+          "name": "법칙 붕괴 지대",
+          "nameEn": "Law Collapse Zone",
+          "recommendedPower": 7500,
+          "energyCost": 6,
+          "story_intro": "중력이 흔들리는 곳.",
+          "story_clear": "혼돈의 괴물들을 물리쳤다.",
+          "enemies": [
+            {
+              "id": "enemy_chaos_spawn",
+              "level": 52
+            },
+            {
+              "id": "enemy_void_walker",
+              "level": 51
+            }
+          ],
+          "rewards": {
+            "gold": 2200,
+            "exp": 1100,
+            "items": [
+              {
+                "id": "exp_potion_l",
+                "chance": 0.5
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_epic_core",
+              "chance": 0.4
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          },
+          "recommendedCult": "chaos",
+          "cultBonus": {
+            "atk": 0.07,
+            "crit_rate": 0.05
+          }
+        },
+        {
+          "id": "7-2",
+          "name": "왜곡된 차원",
+          "nameEn": "Distorted Dimension",
+          "recommendedPower": 8000,
+          "energyCost": 6,
+          "story_intro": "공간이 접혀있는 곳.",
+          "story_clear": "차원의 균열을 지나왔다.",
+          "enemies": [
+            {
+              "id": "enemy_void_walker",
+              "level": 53
+            },
+            {
+              "id": "enemy_chaos_spawn",
+              "level": 53
+            }
+          ],
+          "rewards": {
+            "gold": 2400,
+            "exp": 1200,
+            "items": [
+              {
+                "id": "exp_potion_l",
+                "chance": 0.52
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_epic_core",
+              "chance": 0.42
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          },
+          "recommendedCult": "chaos",
+          "cultBonus": {
+            "atk": 0.07,
+            "crit_rate": 0.05
+          }
+        },
+        {
+          "id": "7-3",
+          "name": "혼돈 교단의 제단",
+          "nameEn": "Chaos Cult Altar",
+          "recommendedPower": 8500,
+          "energyCost": 12,
+          "story_intro": "혼돈 교단이 의식을 치르는다.",
+          "story_clear": "의식을 중단시켰다.",
+          "enemies": [
+            {
+              "id": "enemy_chaos_priest",
+              "level": 53
+            }
+          ],
+          "rewards": {
+            "gold": 2800,
+            "exp": 1400,
+            "items": [
+              {
+                "id": "exp_potion_l",
+                "chance": 0.55
+              },
+              {
+                "id": "gold_chest_m",
+                "chance": 0.18
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_epic_core",
+              "chance": 0.45
+            },
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.1
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          },
+          "recommendedCult": "chaos",
+          "cultBonus": {
+            "atk": 0.07,
+            "crit_rate": 0.05
+          },
+          "isElite": true
+        },
+        {
+          "id": "7-4",
+          "name": "무한의 미로",
+          "nameEn": "Infinite Labyrinth",
+          "recommendedPower": 9000,
+          "energyCost": 6,
+          "story_intro": "끝없이 이어지는 복도.",
+          "story_clear": "미로를 탈출했다.",
+          "enemies": [
+            {
+              "id": "enemy_void_walker",
+              "level": 55
+            },
+            {
+              "id": "enemy_chaos_cultist",
+              "level": 54
+            }
+          ],
+          "rewards": {
+            "gold": 3000,
+            "exp": 1500,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.45
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.15
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 50
+          },
+          "recommendedCult": "chaos",
+          "cultBonus": {
+            "atk": 0.07,
+            "crit_rate": 0.05
+          }
+        },
+        {
+          "id": "7-5",
+          "name": "혼돈의 화신",
+          "nameEn": "Avatar of Chaos",
+          "recommendedPower": 10000,
+          "energyCost": 20,
+          "story_intro": "혼돈이 형상을 가지게 되었다.",
+          "story_clear": "혼돈의 화신을 봉인했다.",
+          "enemies": [
+            {
+              "id": "enemy_boss_chaos_avatar",
+              "level": 60
+            }
+          ],
+          "rewards": {
+            "gold": 5000,
+            "exp": 2500,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.75
+              },
+              {
+                "id": "gold_chest_l",
+                "chance": 0.35
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.3
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 100
+          },
+          "recommendedCult": "chaos",
+          "cultBonus": {
+            "atk": 0.12,
+            "crit_rate": 0.1
+          },
+          "isBoss": true
+        }
+      ]
+    },
+    {
+      "id": "chapter_8",
+      "name": "곤률산의 시련",
+      "nameEn": "Trial of Kunlun",
+      "description": "신선들이 살던 곤률산이 균열로 오염되었다.",
+      "lore": "동방의 신선 세계 곤률산.",
+      "stages": [
+        {
+          "id": "8-1",
+          "name": "구름 계단",
+          "nameEn": "Cloud Stairway",
+          "recommendedPower": 10500,
+          "energyCost": 6,
+          "story_intro": "구름 위의 계단.",
+          "story_clear": "수호신수들을 물리쳤다.",
+          "enemies": [
+            {
+              "id": "enemy_divine_beast",
+              "level": 62
+            },
+            {
+              "id": "enemy_divine_beast",
+              "level": 62
+            }
+          ],
+          "rewards": {
+            "gold": 2800,
+            "exp": 1400,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.5
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.18
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          },
+          "recommendedCult": "kunlun",
+          "cultBonus": {
+            "hp": 0.08,
+            "def": 0.06
+          }
+        },
+        {
+          "id": "8-2",
+          "name": "선경의 폭포",
+          "nameEn": "Celestial Waterfall",
+          "recommendedPower": 11000,
+          "energyCost": 6,
+          "story_intro": "천년의 폭포. 독기가 느껐진다.",
+          "story_clear": "수괴들을 처치했다.",
+          "enemies": [
+            {
+              "id": "enemy_water_spirit",
+              "level": 63
+            },
+            {
+              "id": "enemy_divine_beast",
+              "level": 62
+            }
+          ],
+          "rewards": {
+            "gold": 3000,
+            "exp": 1500,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.52
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.2
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          },
+          "recommendedCult": "kunlun",
+          "cultBonus": {
+            "hp": 0.08,
+            "def": 0.06
+          }
+        },
+        {
+          "id": "8-3",
+          "name": "복숭아 정원",
+          "nameEn": "Peach Garden",
+          "recommendedPower": 12000,
+          "energyCost": 12,
+          "story_intro": "불사의 나무 정원. 주위에 이상한 기운이.",
+          "story_clear": "나무 정령들을 정화했다.",
+          "enemies": [
+            {
+              "id": "enemy_tree_spirit",
+              "level": 64
+            },
+            {
+              "id": "enemy_corrupted_spirit",
+              "level": 63
+            }
+          ],
+          "rewards": {
+            "gold": 3500,
+            "exp": 1750,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.55
+              },
+              {
+                "id": "gold_chest_l",
+                "chance": 0.2
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_legendary_shard",
+              "chance": 0.22
+            },
+            {
+              "id": "material_divine_essence",
+              "chance": 0.08
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          },
+          "recommendedCult": "kunlun",
+          "cultBonus": {
+            "hp": 0.08,
+            "def": 0.06
+          },
+          "isElite": true
+        },
+        {
+          "id": "8-4",
+          "name": "서왕모의 궁전",
+          "nameEn": "Palace of Xi Wangmu",
+          "recommendedPower": 13000,
+          "energyCost": 6,
+          "story_intro": "서왕모의 궁전.",
+          "story_clear": "궁전을 정화했다.",
+          "enemies": [
+            {
+              "id": "enemy_palace_guard",
+              "level": 65
+            },
+            {
+              "id": "enemy_corrupted_spirit",
+              "level": 64
+            }
+          ],
+          "rewards": {
+            "gold": 3800,
+            "exp": 1900,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.58
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_divine_essence",
+              "chance": 0.12
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 50
+          },
+          "recommendedCult": "kunlun",
+          "cultBonus": {
+            "hp": 0.08,
+            "def": 0.06
+          }
+        },
+        {
+          "id": "8-5",
+          "name": "균열에 잠식된 곤률",
+          "nameEn": "Kunlun Devoured by Rift",
+          "recommendedPower": 14000,
+          "energyCost": 20,
+          "story_intro": "곤률산 정상.",
+          "story_clear": "균열의 화신을 물리쳤다.",
+          "enemies": [
+            {
+              "id": "enemy_boss_rift_titan",
+              "level": 70
+            }
+          ],
+          "rewards": {
+            "gold": 7000,
+            "exp": 3500,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.8
+              },
+              {
+                "id": "gold_chest_l",
+                "chance": 0.4
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_divine_essence",
+              "chance": 0.3
+            },
+            {
+              "id": "equipment_legendary_robe",
+              "chance": 0.05
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 150
+          },
+          "recommendedCult": "kunlun",
+          "cultBonus": {
+            "hp": 0.12,
+            "def": 0.1
+          },
+          "isBoss": true
+        }
+      ]
+    },
+    {
+      "id": "chapter_9",
+      "name": "균형의 최후",
+      "nameEn": "Final Balance",
+      "description": "모든 균열의 근원지.",
+      "lore": "균열의 진정한 원인은 세계의 균형이 무너진 것이었다.",
+      "stages": [
+        {
+          "id": "9-1",
+          "name": "균열의 핵",
+          "nameEn": "Core of the Rift",
+          "recommendedPower": 15000,
+          "energyCost": 6,
+          "story_intro": "모든 균열이 하나로 모이는 곳.",
+          "story_clear": "첫 번째 수호자를 물리쳤다.",
+          "enemies": [
+            {
+              "id": "enemy_rift_guardian",
+              "level": 72
+            },
+            {
+              "id": "enemy_rift_guardian",
+              "level": 72
+            }
+          ],
+          "rewards": {
+            "gold": 4000,
+            "exp": 2000,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.6
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_divine_essence",
+              "chance": 0.25
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          },
+          "recommendedCult": "balance",
+          "cultBonus": {
+            "atk": 0.08,
+            "def": 0.08
+          }
+        },
+        {
+          "id": "9-2",
+          "name": "왜곡된 세계수",
+          "nameEn": "Distorted World Tree",
+          "recommendedPower": 16000,
+          "energyCost": 6,
+          "story_intro": "이그드라실이 균열에 잠식되었다.",
+          "story_clear": "새계수의 정령들을 해방했다.",
+          "enemies": [
+            {
+              "id": "enemy_rift_guardian",
+              "level": 73
+            },
+            {
+              "id": "enemy_void_walker",
+              "level": 72
+            }
+          ],
+          "rewards": {
+            "gold": 4500,
+            "exp": 2250,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.62
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_divine_essence",
+              "chance": 0.28
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          },
+          "recommendedCult": "balance",
+          "cultBonus": {
+            "atk": 0.08,
+            "def": 0.08
+          }
+        },
+        {
+          "id": "9-3",
+          "name": "신들의 결전장",
+          "nameEn": "Gods Battlefield",
+          "recommendedPower": 17000,
+          "energyCost": 12,
+          "story_intro": "모든 신화의 신들이 한 곳에 모였다.",
+          "story_clear": "가장 강력한 전사를 쓰러뜨렀다.",
+          "enemies": [
+            {
+              "id": "enemy_rift_champion",
+              "level": 75
+            },
+            {
+              "id": "enemy_rift_guardian",
+              "level": 74
+            }
+          ],
+          "rewards": {
+            "gold": 5500,
+            "exp": 2750,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.65
+              },
+              {
+                "id": "gold_chest_l",
+                "chance": 0.25
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_divine_essence",
+              "chance": 0.32
+            },
+            {
+              "id": "material_primordial_fragment",
+              "chance": 0.1
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 30
+          },
+          "recommendedCult": "balance",
+          "cultBonus": {
+            "atk": 0.08,
+            "def": 0.08
+          },
+          "isElite": true
+        },
+        {
+          "id": "9-4",
+          "name": "균형의 제단",
+          "nameEn": "Altar of Balance",
+          "recommendedPower": 18000,
+          "energyCost": 6,
+          "story_intro": "균형 교단의 마지막 제단.",
+          "story_clear": "제단을 지키는 수호자들을 물리쳤다.",
+          "enemies": [
+            {
+              "id": "enemy_rift_champion",
+              "level": 76
+            },
+            {
+              "id": "enemy_rift_champion",
+              "level": 76
+            }
+          ],
+          "rewards": {
+            "gold": 6000,
+            "exp": 3000,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 0.68
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_primordial_fragment",
+              "chance": 0.15
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 50
+          },
+          "recommendedCult": "balance",
+          "cultBonus": {
+            "atk": 0.08,
+            "def": 0.08
+          }
+        },
+        {
+          "id": "9-5",
+          "name": "균열의 심장",
+          "nameEn": "Heart of the Rift",
+          "recommendedPower": 20000,
+          "energyCost": 20,
+          "story_intro": "균열의 최종 형태.",
+          "story_clear": "균열의 심장을 봉인했다.",
+          "enemies": [
+            {
+              "id": "enemy_boss_rift_heart",
+              "level": 99
+            }
+          ],
+          "rewards": {
+            "gold": 15000,
+            "exp": 7500,
+            "items": [
+              {
+                "id": "exp_potion_xl",
+                "chance": 1.0
+              },
+              {
+                "id": "gold_chest_l",
+                "chance": 1.0
+              }
+            ]
+          },
+          "drops": [
+            {
+              "id": "material_primordial_fragment",
+              "chance": 0.5
+            },
+            {
+              "id": "equipment_legendary_set",
+              "chance": 0.1
+            }
+          ],
+          "firstClearRewards": {
+            "gems": 300
+          },
+          "recommendedCult": "balance",
+          "cultBonus": {
+            "atk": 0.12,
+            "def": 0.12
+          },
+          "isBoss": true
         }
       ]
     }

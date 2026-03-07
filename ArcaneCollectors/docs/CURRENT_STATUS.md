@@ -1,10 +1,10 @@
 # ArcaneCollectors 현재 상태
 
-> **최종 업데이트**: 2026-03-06
+> **최종 업데이트**: 2026-03-07
 > **브랜치**: `arcane/integration`
-> **테스트**: 775개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
+> **테스트**: 806개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: TASK-D 컬렉션 도감 UI (HeroListPopup 확장 +34 테스트) (2026-03-06)
+> **최근 작업**: TASK-E 스테이지 시스템 교단 연계 (StageSystem.js 신규, stages.json 9챕터, +31 테스트) (2026-03-07)
 
 ---
 
@@ -94,6 +94,11 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | TASK-D | HeroListPopup 컬렉션 도감 UI 확장 — 4개 순수 함수 export (buildOwnedSet/calcCodexProgress/buildAscendedCardData/buildCodexSections), 보유/미획득 영웅 구분, 전직 루트 그리드 표시 | `src/components/popups/HeroListPopup.js`, `tests/components/HeroListPopup.test.js` (+34 테스트) | 03-06 |
 
 **결과**: 빌드 ✅ + 775/775 테스트 통과 + code-reviewer APPROVED (TASK-D)
+| TASK-E | StageSystem.js 신규 생성 — 8개 public 메서드 (getStageById/calculateCultBonus 등), lazy init Map 패턴 | `src/systems/StageSystem.js` | 03-07 |
+| TASK-E | stages.json 9챕터x5스테이지 확장 (5챕터→9챕터 45스테이지, 전 스테이지 recommendedCult+cultBonus 추가) | `src/data/stages.json` | 03-07 |
+| TASK-E | StageSystem.test.js 신규 31개 테스트 (getStageById/calculateCultBonus/getUnlockedStages 등 전체 메서드 유닛 테스트) | `tests/systems/StageSystem.test.js` | 03-07 |
+
+**결과**: 빌드 ✅ + 806/806 테스트 통과 + code-reviewer APPROVED (TASK-E)
 
 - BattleSystem 재사용: simulateBattle()에서 BattleSystem 인스턴스 생성, 최대 20턴 시뮬레이션
 - 오프라인 지원: Supabase 연결 실패 시 localStorage 캐시 폴백
