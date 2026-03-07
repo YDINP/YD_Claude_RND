@@ -476,7 +476,7 @@ export class MainMenuScene extends Phaser.Scene {
     const characters = saveData?.characters || [];
 
     const panelY = s(95);
-    const panelH = s(150);
+    const panelH = s(200);
     const panel = this.add.graphics();
     panel.fillStyle(COLORS.bgLight, 0.9);
     panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), panelH, s(12));
@@ -488,6 +488,17 @@ export class MainMenuScene extends Phaser.Scene {
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
     }).setDepth(Z_INDEX.PANEL_CONTENT);
     this._partyObjects.push(partyLabel);
+
+    // 전투력 — 파티 패널 헤더 중앙
+    const _cpSaveData = SaveManager.load();
+    const _cpPower = this.calculateCombatPower(_cpSaveData);
+    const _cpDifficulty = this.getDifficulty(_cpPower);
+    const _cpDiffColors = { '쉬움': '#10B981', '보통': '#60A5FA', '어려움': '#F59E0B', '매우어려움': '#EF4444', '극한': '#7C3AED' };
+    const _cpText = this.add.text(GAME_WIDTH / 2, panelY + s(17), `⚡ ${_cpPower.toLocaleString()} (${_cpDifficulty.label})`, {
+      fontSize: sf(14), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
+      color: _cpDiffColors[_cpDifficulty.label] || '#60A5FA'
+    }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
+    this._partyObjects.push(_cpText);
 
     // 파티 편성 바로가기 버튼
     const editBtn = this.add.container(GAME_WIDTH - s(60), panelY + s(18));
@@ -514,7 +525,7 @@ export class MainMenuScene extends Phaser.Scene {
       const charData = characters.find(c => c.id === heroId || c.characterId === heroId);
       const staticData = getCharacter(heroId);
       const x = s(40) + slotWidth / 2 + i * slotWidth;
-      const y = panelY + s(90);
+      const y = panelY + s(130);
 
       const charClass = staticData?.class || charData?.class || 'warrior';
       const color = classColors[charClass] || 0x64748B;
@@ -573,7 +584,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // If party is empty, show placeholder
     if (partyIds.length === 0) {
-      const emptyMsg = this.add.text(GAME_WIDTH / 2, panelY + s(80), '파티를 편성해주세요!', {
+      const emptyMsg = this.add.text(GAME_WIDTH / 2, panelY + s(130), '파티를 편성해주세요!', {
         fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
@@ -585,34 +596,7 @@ export class MainMenuScene extends Phaser.Scene {
    * WS-3: Combat power + difficulty display (y=280~350)
    */
   createCombatPowerDisplay() {
-    const saveData = SaveManager.load();
-    const power = this.calculateCombatPower(saveData);
-    const difficulty = this.getDifficulty(power);
-
-    const panelY = s(245);
-    const panel = this.add.graphics();
-    panel.fillStyle(COLORS.bgLight, 0.9);
-    panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), s(65), s(12));
-    panel.setDepth(Z_INDEX.PANELS);
-
-    // Combat power number
-    this.add.text(s(40), panelY + s(20), `⚡ 전투력: ${power.toLocaleString()}`, {
-      fontSize: sf(20), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
-      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`
-    }).setDepth(Z_INDEX.PANEL_CONTENT);
-
-    // Difficulty badge
-    const diffColors = {
-      '쉬움': 0x10B981, '보통': 0x3B82F6, '어려움': 0xF59E0B,
-      '매우어려움': 0xEF4444, '극한': 0x7C3AED
-    };
-    const badge = this.add.graphics();
-    badge.fillStyle(diffColors[difficulty.label] || 0x3B82F6, 1);
-    badge.fillRoundedRect(GAME_WIDTH - s(160), panelY + s(15), s(120), s(35), s(8));
-    badge.setDepth(Z_INDEX.PANEL_CONTENT);
-    this.add.text(GAME_WIDTH - s(100), panelY + s(32), difficulty.label, {
-      fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
-    }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT + 1);
+    // 전투력 표시가 내 파티 프레임으로 통합됨 (createPartyDisplay 참고)
   }
 
   /**
@@ -696,19 +680,25 @@ export class MainMenuScene extends Phaser.Scene {
     // Sweep availability: 파티만 있으면 항상 가능
     const canSweep = hasParty;
 
-    // Sweep button (인스턴스 변수로 보관)
-    const sweepBtnX = s(40);
-    const sweepBtnW = GAME_WIDTH / 2 - s(60);
+    // === 3버튼 레이아웃: 소탕 | 보상받기 | 보스전 (동일 너비) ===
+    const btnGap = s(10);
+    const btnW = Math.floor((GAME_WIDTH - s(80) - s(20)) / 3);
     const btnH = s(50);
+    const btnY = panelY + s(80);
+    const sweepBtnX = s(40);
+    const claimBtnX = sweepBtnX + btnW + btnGap;
+    const bossBtnX = sweepBtnX + (btnW + btnGap) * 2;
+
+    // 소탕 버튼
     this._sweepBtnGfx = this.add.graphics();
     this._sweepBtnGfx.fillStyle(canSweep ? COLORS.success : COLORS.bgPanel, 1);
-    this._sweepBtnGfx.fillRoundedRect(sweepBtnX, panelY + s(80), sweepBtnW, btnH, s(10));
+    this._sweepBtnGfx.fillRoundedRect(sweepBtnX, btnY, btnW, btnH, s(10));
     this._sweepBtnGfx.setDepth(Z_INDEX.PANEL_BUTTONS);
-    this._sweepBtnText = this.add.text(sweepBtnX + sweepBtnW / 2, panelY + s(105), `⚡ 소탕 (10🔋)`, {
-      fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
+    this._sweepBtnText = this.add.text(sweepBtnX + btnW / 2, btnY + btnH / 2, `⚡ 소탕`, {
+      fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_BUTTONS + 1);
 
-    this._sweepHit = this.add.rectangle(sweepBtnX + sweepBtnW / 2, panelY + s(105), sweepBtnW, btnH)
+    this._sweepHit = this.add.rectangle(sweepBtnX + btnW / 2, btnY + btnH / 2, btnW, btnH)
       .setAlpha(0.001).setDepth(Z_INDEX.PANEL_BUTTONS + 2);
 
     if (canSweep) {
@@ -720,22 +710,22 @@ export class MainMenuScene extends Phaser.Scene {
       this._sweepBtnText.setAlpha(0.5);
     }
 
-    // BUG-12 수정: 보스 버튼 생성 전 보스 데이터 로드 완료 보장 (이미 constructor에서 로드됨)
-    // 이제 isBossReady() 호출 시 정확한 상태 반환
+    // 보상받기 버튼 (가운데)
+    this._createClaimRewardsButton(claimBtnX, btnY, btnW, btnH);
+
+    // BUG-12 수정: 보스 버튼 생성 전 보스 데이터 로드 완료 보장
     const bossReady = hasParty && this.idleSystem?.isBossReady?.();
     this._bossReady = bossReady;
-    const bossBtnX = GAME_WIDTH / 2 + s(20);
-    const bossBtnW = GAME_WIDTH / 2 - s(60);
     this._bossBtnGfx = this.add.graphics();
     this._bossBtnGfx.fillStyle(bossReady ? COLORS.danger : COLORS.bgPanel, 1);
-    this._bossBtnGfx.fillRoundedRect(bossBtnX, panelY + s(80), bossBtnW, btnH, s(10));
+    this._bossBtnGfx.fillRoundedRect(bossBtnX, btnY, btnW, btnH, s(10));
     this._bossBtnGfx.setDepth(Z_INDEX.PANEL_BUTTONS);
-    this._bossBtnText = this.add.text(bossBtnX + bossBtnW / 2, panelY + s(105), '🗡️ 보스전 (20🔋)', {
-      fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
+    this._bossBtnText = this.add.text(bossBtnX + btnW / 2, btnY + btnH / 2, '🗡️ 보스전', {
+      fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_BUTTONS + 1);
     this._bossBtnPanelY = panelY;
 
-    this._bossHit = this.add.rectangle(bossBtnX + bossBtnW / 2, panelY + s(105), bossBtnW, btnH)
+    this._bossHit = this.add.rectangle(bossBtnX + btnW / 2, btnY + btnH / 2, btnW, btnH)
       .setAlpha(0.001).setDepth(Z_INDEX.PANEL_BUTTONS + 2);
 
     // 보스전 버튼은 항상 인터랙티브 등록 (상태는 update에서 동적 관리)
@@ -877,9 +867,9 @@ export class MainMenuScene extends Phaser.Scene {
    * IdleBattleView (y=580~880, expanded)
    */
   createIdleBattleView() {
-    const viewY = s(632); // 수정: AdventurePanel(bottom=750px) 하단과 겹침 해소 (이전: s(500)→225px 겹침)
-    const viewWidth = s(640);
-    const viewHeight = s(250); // 수정: 공간 확보를 위해 축소 (이전: s(300))
+    const viewY = s(632);
+    const viewWidth = s(560);
+    const viewHeight = s(340);
 
     this.idleBattleView = new IdleBattleView(this, GAME_WIDTH / 2, viewY, viewWidth, viewHeight);
     this.idleBattleView.setDepth(Z_INDEX.IDLE_BATTLE);
@@ -942,9 +932,10 @@ export class MainMenuScene extends Phaser.Scene {
    * Idle income summary (y=900)
    */
   createIdleSummary() {
-    const summaryY = s(770); // 수정: IdleBattleView 이동에 맞춰 조정 (이전: s(795))
+    // viewY(632) + viewHeight/2(170) = 802 → summaryY는 그 아래로
+    const summaryY = s(840);
 
-    const summaryBg = this.add.rectangle(GAME_WIDTH / 2, summaryY, s(640), s(50), COLORS.bgLight, 0.5);
+    const summaryBg = this.add.rectangle(GAME_WIDTH / 2, summaryY, s(460), s(50), COLORS.bgLight, 0.5);
     summaryBg.setStrokeStyle(1, COLORS.primary, 0.3);
     summaryBg.setDepth(Z_INDEX.CLAIM_BUTTON - 1);
 
@@ -953,63 +944,57 @@ export class MainMenuScene extends Phaser.Scene {
     const goldPerHour = Math.floor((rates.goldPerSec || 0) * 3600);
     const expPerHour = Math.floor((rates.expPerSec || 0) * 3600);
 
-    this.add.text(GAME_WIDTH / 2 - s(150), summaryY, `💰 ${goldPerHour.toLocaleString()}/h`, {
+    this.add.text(GAME_WIDTH / 2 - s(110), summaryY, `💰 ${goldPerHour.toLocaleString()}/h`, {
       fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(Z_INDEX.CLAIM_BUTTON);
 
-    this.add.text(GAME_WIDTH / 2, summaryY, `⭐ ${expPerHour.toLocaleString()}/h`, {
+    this.add.text(GAME_WIDTH / 2 + s(110), summaryY, `⭐ ${expPerHour.toLocaleString()}/h`, {
       fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.success.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(Z_INDEX.CLAIM_BUTTON);
-
-    const currentStage = this.idleSystem.getCurrentStage();
-    this.add.text(GAME_WIDTH / 2 + s(150), summaryY, `📍 ${currentStage.chapter || 1}-${currentStage.stage || 1}`, {
-      fontSize: sf(13), fontFamily: '"Noto Sans KR", Arial',
-      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setDepth(Z_INDEX.CLAIM_BUTTON);
-
-    // === 보상받기 버튼 ===
-    this._createClaimRewardsButton(summaryY + s(45));
   }
 
   /**
    * 누적 보상 수령 버튼 생성 (항상 활성 상태)
    */
-  _createClaimRewardsButton(y) {
-    const btnW = s(300);
-    const btnH = s(44);
-    const btnX = GAME_WIDTH / 2 - btnW / 2;
+  _createClaimRewardsButton(x, y, w, h) {
+    const btnW = w || s(300);
+    const btnH = h || s(44);
+    const btnX = x !== undefined ? x : (GAME_WIDTH / 2 - btnW / 2);
+    const centerX = btnX + btnW / 2;
+    const centerY = y + btnH / 2;
+    const radius = s(10);
 
     // 버튼 배경 (항상 녹색 활성)
     this._claimBtnGfx = this.add.graphics();
     this._claimBtnGfx.fillStyle(0x22C55E, 1);
-    this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, s(10));
+    this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, radius);
     this._claimBtnGfx.setDepth(Z_INDEX.CLAIM_BUTTON);
 
     // 버튼 텍스트
-    this._claimRewardText = this.add.text(GAME_WIDTH / 2, y + btnH / 2, '🎁 보상받기', {
+    this._claimRewardText = this.add.text(centerX, centerY, '🎁 보상받기', {
       fontSize: sf(14), fontFamily: '"Noto Sans KR", Arial',
       color: '#FFFFFF',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(Z_INDEX.CLAIM_BUTTON + 1);
 
     // 히트 영역
-    this._claimBtnHit = this.add.rectangle(GAME_WIDTH / 2, y + btnH / 2, btnW, btnH)
+    this._claimBtnHit = this.add.rectangle(centerX, centerY, btnW, btnH)
       .setAlpha(0.001).setDepth(Z_INDEX.CLAIM_BUTTON + 2).setInteractive({ useHandCursor: true });
 
     this._claimBtnHit.on('pointerdown', () => this._onClaimRewards());
     this._claimBtnHit.on('pointerover', () => {
       this._claimBtnGfx.clear();
       this._claimBtnGfx.fillStyle(0x16A34A, 1);
-      this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
+      this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, radius);
     });
     this._claimBtnHit.on('pointerout', () => {
       this._claimBtnGfx.clear();
       this._claimBtnGfx.fillStyle(0x22C55E, 1);
-      this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, 10);
+      this._claimBtnGfx.fillRoundedRect(btnX, y, btnW, btnH, radius);
     });
 
     this._claimBtnX = btnX;
