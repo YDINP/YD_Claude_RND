@@ -45,11 +45,11 @@ export class PopupBase {
     this.container.add(blocker);
 
     // Header
-    this.scene.add.text(px, top + s(35), this.title, {
+    const titleText = this.scene.add.text(px, top + s(35), this.title, {
       fontSize: sf(24), fontFamily: '"Noto Sans KR", sans-serif',
       fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
-    this.container.add(this.container.last);
+    this.container.add(titleText);
 
     // Close button
     const closeBtn = this.scene.add.text(left + this.panelWidth - s(30), top + s(20), '✕', {
