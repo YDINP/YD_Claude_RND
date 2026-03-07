@@ -1,3 +1,4 @@
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 import GameLogger from '../utils/GameLogger.js';
 import { SaveManager } from '../systems/SaveManager.js';
@@ -393,35 +394,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   createBackground() {
-    // ART-1: 배경 텍스처 사용 (폴백: 기존 그래디언트)
-    if (this.textures.exists('bg_battle')) {
-      this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'bg_battle').setOrigin(0.5);
-    } else {
-      // Fallback: Battle arena background
-      const graphics = this.add.graphics();
-
-      // Sky gradient
-      for (let y = 0; y < GAME_HEIGHT * 0.6; y++) {
-        const ratio = y / (GAME_HEIGHT * 0.6);
-        const r = Math.floor(20 + ratio * 10);
-        const g = Math.floor(15 + ratio * 15);
-        const b = Math.floor(40 + ratio * 20);
-        graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
-        graphics.fillRect(0, y, GAME_WIDTH, 1);
-      }
-
-      // Ground
-      graphics.fillStyle(0x2a1a0a, 1);
-      graphics.fillRect(0, GAME_HEIGHT * 0.6, GAME_WIDTH, GAME_HEIGHT * 0.4);
-
-      // Ground texture
-      for (let i = 0; i < 20; i++) {
-        const x = Phaser.Math.Between(0, GAME_WIDTH);
-        const y = Phaser.Math.Between(GAME_HEIGHT * 0.6, GAME_HEIGHT * 0.85);
-        graphics.fillStyle(0x3a2a1a, 0.5);
-        graphics.fillCircle(x, y, Phaser.Math.Between(2, 5));
-      }
-    }
+    BackgroundFactory.createBattleBg(this);
   }
 
   /**

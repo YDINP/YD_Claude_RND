@@ -1,3 +1,4 @@
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, EQUIPMENT_SLOTS, MOODS, s, sf } from '../config/gameConfig.js';
 import { RARITY_COLORS } from '../config/layoutConfig.js';
 import { getRarityKey } from '../utils/rarityUtils.js';
@@ -72,21 +73,7 @@ export class HeroDetailScene extends Phaser.Scene {
   }
 
   createBackground() {
-    // Gradient background
-    const graphics = this.add.graphics();
-
-    for (let y = 0; y < GAME_HEIGHT; y++) {
-      const ratio = y / GAME_HEIGHT;
-      const baseColor = Phaser.Display.Color.IntegerToColor(COLORS.background);
-      const accentColor = Phaser.Display.Color.IntegerToColor(COLORS.primary);
-
-      const r = Math.floor(baseColor.red + (accentColor.red - baseColor.red) * ratio * 0.2);
-      const g = Math.floor(baseColor.green + (accentColor.green - baseColor.green) * ratio * 0.2);
-      const b = Math.floor(baseColor.blue + (accentColor.blue - baseColor.blue) * ratio * 0.2);
-
-      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
-      graphics.fillRect(0, y, GAME_WIDTH, 1);
-    }
+    BackgroundFactory.createHeroDetailBg(this);
   }
 
   createHeader() {

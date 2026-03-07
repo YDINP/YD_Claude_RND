@@ -1,3 +1,4 @@
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS, s, sf } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { sweepSystem } from '../systems/SweepSystem.js';
@@ -54,39 +55,7 @@ export class BattleResultScene extends Phaser.Scene {
   }
 
   createBackground() {
-    const graphics = this.add.graphics();
-
-    if (this.victory) {
-      // 승리: 따뜻한 골드 그래디언트
-      for (let y = 0; y < GAME_HEIGHT; y++) {
-        const ratio = y / GAME_HEIGHT;
-        const r = Math.floor(20 + ratio * 15);
-        const g = Math.floor(18 + ratio * 12);
-        const b = Math.floor(10 + ratio * 30);
-        graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
-        graphics.fillRect(0, y, GAME_WIDTH, 1);
-      }
-
-      // 빛 파티클
-      for (let i = 0; i < 40; i++) {
-        const x = Phaser.Math.Between(0, GAME_WIDTH);
-        const y = Phaser.Math.Between(0, GAME_HEIGHT);
-        const size = Phaser.Math.FloatBetween(1, 4);
-        const alpha = Phaser.Math.FloatBetween(0.1, 0.4);
-        graphics.fillStyle(0xFFD700, alpha);
-        graphics.fillCircle(x, y, size);
-      }
-    } else {
-      // 패배: 어두운 블루 그래디언트
-      for (let y = 0; y < GAME_HEIGHT; y++) {
-        const ratio = y / GAME_HEIGHT;
-        const r = Math.floor(10 + ratio * 5);
-        const g = Math.floor(10 + ratio * 8);
-        const b = Math.floor(25 + ratio * 15);
-        graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
-        graphics.fillRect(0, y, GAME_WIDTH, 1);
-      }
-    }
+    BackgroundFactory.createBattleResultBg(this, this.victory);
   }
 
   createVictoryDisplay() {

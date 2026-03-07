@@ -4,7 +4,7 @@
 > **브랜치**: `arcane/integration`
 > **테스트**: 1001개 유닛 (1001/1001 통과, 35파일) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [UI/FIX] 버그수정 6종 + UI 리디자인 3종 — pt-swarm 13태스크 병렬 처리
+> **최근 작업**: [ART-3.0] 프로시저럴 배경 전면 개선 — BackgroundFactory 신규 7개 메서드 + 12개 씬 교체 + code-reviewer APPROVED
 
 ---
 

@@ -2,6 +2,7 @@
  * QuestScene - 퀘스트 UI
  * QuestSystem과 연동하여 일일 퀘스트 진행도, 보상 수령 제공
  */
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 import { QuestSystem } from '../systems/QuestSystem.js';
@@ -43,7 +44,7 @@ export class QuestScene extends Phaser.Scene {
   }
 
   createBackground() {
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0F172A);
+    BackgroundFactory.createQuestBg(this);
   }
 
   createTopBar() {

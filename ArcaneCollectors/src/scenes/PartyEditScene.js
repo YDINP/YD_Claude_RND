@@ -1,3 +1,4 @@
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS, CULT_COLORS, s, sf } from '../config/gameConfig.js';
 import { RARITY_COLORS } from '../config/layoutConfig.js';
@@ -92,15 +93,7 @@ export class PartyEditScene extends Phaser.Scene {
   }
 
   createBackground() {
-    const g = this.add.graphics();
-    for (let y = 0; y < GAME_HEIGHT; y++) {
-      const r = y / GAME_HEIGHT;
-      const red = Math.floor(15 + r * 10);
-      const green = Math.floor(23 + r * 8);
-      const blue = Math.floor(42 + r * 15);
-      g.fillStyle(Phaser.Display.Color.GetColor(red, green, blue), 1);
-      g.fillRect(0, y, GAME_WIDTH, 1);
-    }
+    BackgroundFactory.createPartyEditBg(this);
   }
 
   createTopBar() {

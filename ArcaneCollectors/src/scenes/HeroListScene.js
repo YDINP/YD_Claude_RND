@@ -1,3 +1,4 @@
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULTS, CULT_COLORS, CULT_INFO, s, sf } from '../config/gameConfig.js';
 import { RARITY_COLORS } from '../config/layoutConfig.js';
 import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
@@ -81,7 +82,7 @@ export class HeroListScene extends Phaser.Scene {
   }
 
   createBackground() {
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.background);
+    BackgroundFactory.createHeroListBg(this);
   }
 
   createHeader() {

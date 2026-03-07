@@ -2,6 +2,7 @@
  * SettingsScene - 더보기 / 설정 메뉴
  * 서브메뉴 (퀘스트/탑/설정), 사운드 토글, 쿠폰 입력, 계정 정보
  */
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
@@ -46,7 +47,7 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   createBackground() {
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0F172A);
+    BackgroundFactory.createSettingsBg(this);
   }
 
   createTopBar() {

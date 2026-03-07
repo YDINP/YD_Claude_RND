@@ -2,6 +2,7 @@
  * TowerScene - 무한의 탑 UI
  * TowerSystem과 연동하여 층 진행, 보상, 전투 진입 제공
  */
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, MOODS, s, sf } from '../config/gameConfig.js';
 import { TowerSystem } from '../systems/TowerSystem.js';
@@ -44,27 +45,7 @@ export class TowerScene extends Phaser.Scene {
   }
 
   createBackground() {
-    // ART-1: 배경 텍스처 사용 (폴백: 기존 그래디언트)
-    if (this.textures.exists('bg_tower')) {
-      this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'bg_tower').setOrigin(0.5);
-    } else {
-      // Fallback: 어두운 탑 배경
-      const bg = this.add.graphics();
-      bg.fillGradientStyle(0x0a0e1a, 0x0a0e1a, 0x1a1040, 0x1a1040, 1);
-      bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-      // 별 효과
-      for (let i = 0; i < 40; i++) {
-        const x = Phaser.Math.Between(0, GAME_WIDTH);
-        const y = Phaser.Math.Between(0, GAME_HEIGHT * 0.4);
-        const size = Phaser.Math.FloatBetween(s(1), s(3));
-        const star = this.add.circle(x, y, size, 0xffffff, Phaser.Math.FloatBetween(0.2, 0.7));
-        this.tweens.add({
-          targets: star, alpha: 0.1, duration: Phaser.Math.Between(1500, 3000),
-          yoyo: true, repeat: -1
-        });
-      }
-    }
+    BackgroundFactory.createTowerBg(this);
   }
 
   createTopBar() {

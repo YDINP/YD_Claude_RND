@@ -1,3 +1,4 @@
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 import GameLogger from '../utils/GameLogger.js';
 import { energySystem } from '../systems/EnergySystem.js';
@@ -39,37 +40,7 @@ export class StageSelectScene extends Phaser.Scene {
   }
 
   createBackground() {
-    // ART-1: 배경 텍스처 사용 (폴백: 기존 그래디언트)
-    if (this.textures.exists('bg_stage')) {
-      this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'bg_stage').setOrigin(0.5);
-    } else {
-      // Fallback: Forest theme gradient
-      const graphics = this.add.graphics();
-
-      for (let y = 0; y < GAME_HEIGHT; y++) {
-        const ratio = y / GAME_HEIGHT;
-        const r = Math.floor(10 + ratio * 5);
-        const g = Math.floor(20 + ratio * 10);
-        const b = Math.floor(15 + ratio * 5);
-        graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
-        graphics.fillRect(0, y, GAME_WIDTH, 1);
-      }
-
-      // Decorative trees/fog
-      for (let i = 0; i < 15; i++) {
-        const x = Phaser.Math.Between(0, GAME_WIDTH);
-        const y = Phaser.Math.Between(s(100), GAME_HEIGHT - s(100));
-        const size = Phaser.Math.Between(s(30), s(80));
-        const alpha = Phaser.Math.FloatBetween(0.05, 0.15);
-
-        graphics.fillStyle(0x1a472a, alpha);
-        graphics.fillTriangle(
-          x, y - size,
-          x - size / 2, y + size / 2,
-          x + size / 2, y + size / 2
-        );
-      }
-    }
+    BackgroundFactory.createStageSelectBg(this);
   }
 
   createHeader() {

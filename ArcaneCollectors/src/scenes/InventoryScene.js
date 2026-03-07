@@ -1,3 +1,4 @@
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
@@ -51,15 +52,7 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   createBackground() {
-    const g = this.add.graphics();
-    for (let y = 0; y < GAME_HEIGHT; y++) {
-      const r = y / GAME_HEIGHT;
-      const red = Math.floor(15 + r * 8);
-      const green = Math.floor(23 + r * 10);
-      const blue = Math.floor(42 + r * 12);
-      g.fillStyle(Phaser.Display.Color.GetColor(red, green, blue), 1);
-      g.fillRect(0, y, GAME_WIDTH, 1);
-    }
+    BackgroundFactory.createInventoryBg(this);
   }
 
   createTopBar() {

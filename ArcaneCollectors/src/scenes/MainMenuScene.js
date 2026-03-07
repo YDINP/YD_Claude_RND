@@ -1,3 +1,4 @@
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, LAYOUT, s, sf } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { energySystem } from '../systems/EnergySystem.js';
@@ -255,92 +256,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   createBackground() {
-    // ART-1: Background texture (fallback: gradient)
-    if (this.textures.exists('bg_main')) {
-      this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'bg_main').setOrigin(0.5);
-      this._stars = [];
-      for (let i = 0; i < 10; i++) {
-        const star = this.add.circle(
-          Phaser.Math.Between(10, GAME_WIDTH - 10),
-          Phaser.Math.Between(10, GAME_HEIGHT - 250),
-          Phaser.Math.FloatBetween(1, 2),
-          0xFFFFFF,
-          Phaser.Math.FloatBetween(0.3, 0.7)
-        );
-        this.tweens.add({
-          targets: star,
-          alpha: { from: star.alpha, to: 0.1 },
-          duration: Phaser.Math.Between(1500, 3000),
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
-        this._stars.push(star);
-      }
-    } else {
-      const graphics = this.add.graphics();
-      for (let y = 0; y < GAME_HEIGHT; y++) {
-        const ratio = y / GAME_HEIGHT;
-        const r = Math.floor(15 + ratio * 10);
-        const g = Math.floor(23 + ratio * 15);
-        const b = Math.floor(42 + ratio * 20);
-        graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
-        graphics.fillRect(0, y, GAME_WIDTH, 1);
-      }
-
-      this._stars = [];
-      for (let i = 0; i < 25; i++) {
-        const star = this.add.circle(
-          Phaser.Math.Between(10, GAME_WIDTH - 10),
-          Phaser.Math.Between(10, GAME_HEIGHT - 250),
-          Phaser.Math.FloatBetween(1, 2.5),
-          COLORS.text,
-          Phaser.Math.FloatBetween(0.15, 0.5)
-        );
-        this.tweens.add({
-          targets: star,
-          alpha: { from: star.alpha, to: Phaser.Math.FloatBetween(0.05, 0.3) },
-          duration: Phaser.Math.Between(1500, 3500),
-          yoyo: true,
-          repeat: -1,
-          delay: Phaser.Math.Between(0, 2000),
-          ease: 'Sine.easeInOut'
-        });
-        this._stars.push(star);
-      }
-    }
-
-    for (let i = 0; i < 3; i++) {
-      const orb = this.add.circle(
-        Phaser.Math.Between(50, GAME_WIDTH - 50),
-        Phaser.Math.Between(100, GAME_HEIGHT - 300),
-        Phaser.Math.Between(4, 8),
-        COLORS.primary,
-        0.08
-      );
-      this.tweens.add({
-        targets: orb,
-        x: orb.x + Phaser.Math.Between(-60, 60),
-        y: orb.y + Phaser.Math.Between(-40, 40),
-        alpha: { from: 0.08, to: 0.15 },
-        duration: Phaser.Math.Between(6000, 10000),
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
-    }
-
-    const glowGraphics = this.add.graphics();
-    glowGraphics.fillStyle(COLORS.primary, 0.1);
-    glowGraphics.fillEllipse(GAME_WIDTH / 2, GAME_HEIGHT, GAME_WIDTH, 300);
-    this.tweens.add({
-      targets: glowGraphics,
-      alpha: { from: 1, to: 0.5 },
-      duration: 3000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
+    BackgroundFactory.createMainBg(this);
   }
 
   createTopBar() {
@@ -358,71 +274,84 @@ export class MainMenuScene extends Phaser.Scene {
 
     const saveData = SaveManager.load();
     const playerLevel = saveData.player?.level || 1;
-    const levelBadge = this.add.rectangle(s(40), barY, s(55), s(30), COLORS.primary, 0.9)
+
+    // ── 왼쪽 구역: Lv 배지 (x=s(30)=45px) ──
+    const levelBadge = this.add.rectangle(s(30), barY, s(55), s(30), COLORS.primary, 0.9)
       .setDepth(topBarDepth + 1);
     levelBadge.setStrokeStyle(1, COLORS.text, 0.3);
-    this.levelBadgeText = this.add.text(s(40), barY, `Lv.${playerLevel}`, {
+    this.levelBadgeText = this.add.text(s(30), barY, `Lv.${playerLevel}`, {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(topBarDepth + 1);
 
+    // ── 보석(gem) 아이콘 + 수치 (icon:x=s(80)=120px, text:x=s(100)=150px) ──
     let gemIcon;
     if (this.textures.exists('gem')) {
-      gemIcon = this.add.image(s(100), barY, 'gem').setScale(1).setDepth(topBarDepth + 1);
+      gemIcon = this.add.image(s(80), barY, 'gem').setScale(1).setDepth(topBarDepth + 1);
     } else {
-      gemIcon = this.add.text(s(100), barY, '💎', { fontSize: sf(20) }).setOrigin(0.5).setDepth(topBarDepth + 1);
+      gemIcon = this.add.text(s(80), barY, '💎', { fontSize: sf(20) }).setOrigin(0.5).setDepth(topBarDepth + 1);
     }
 
     const gems = this.registry.get('gems') || 1500;
-    this.gemText = this.add.text(s(125), barY, gems.toLocaleString(), {
-      fontSize: sf(18),
+    this.gemText = this.add.text(s(100), barY, gems.toLocaleString(), {
+      fontSize: sf(16),
       fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0, 0.5).setDepth(topBarDepth + 1);
 
+    // ── 골드(gold) 아이콘 + 수치 (icon:x=s(175)=263px, text:x=s(195)=293px) ──
     let goldIcon;
     if (this.textures.exists('gold')) {
-      goldIcon = this.add.image(s(220), barY, 'gold').setScale(1).setDepth(topBarDepth + 1);
+      goldIcon = this.add.image(s(175), barY, 'gold').setScale(1).setDepth(topBarDepth + 1);
     } else {
-      goldIcon = this.add.text(s(220), barY, '🪙', { fontSize: sf(20) }).setOrigin(0.5).setDepth(topBarDepth + 1);
+      goldIcon = this.add.text(s(175), barY, '🪙', { fontSize: sf(20) }).setOrigin(0.5).setDepth(topBarDepth + 1);
     }
 
     const gold = this.registry.get('gold') || 10000;
-    this.goldText = this.add.text(s(245), barY, gold.toLocaleString(), {
-      fontSize: sf(18),
+    this.goldText = this.add.text(s(195), barY, gold.toLocaleString(), {
+      fontSize: sf(16),
       fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0, 0.5).setDepth(topBarDepth + 1);
 
+    // ── 중간 구역: 에너지바 (컨테이너 x=s(380)=570px) ──
     const energyStatus = energySystem.getStatus() || {};
     this.energyBar = new EnergyBar(this);
-    this.energyBar.create(s(390), barY);
+    this.energyBar.create(s(420), barY);
     this.energyBar.update(energyStatus?.current ?? 0, energyStatus?.max ?? 100);
-    // [C] 에너지바 depth를 상단바보다 높게 설정 (앞 레이어 보장)
     if (this.energyBar.container) this.energyBar.container.setDepth(topBarDepth + 2);
     else if (this.energyBar.setDepth) this.energyBar.setDepth(topBarDepth + 2);
 
+    // 에너지 회복 타이머 (에너지바 하단 barY+s(16) 에 작게 표시)
     const timeToRecover = energySystem.getTimeToNextRecovery?.() ?? 0;
-    this.energyTimerText = this.add.text(s(495), barY, timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
-      fontSize: sf(11),
+    this.energyTimerText = this.add.text(s(420), barY + s(16), timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
+      fontSize: sf(10),
       fontFamily: '"Noto Sans KR", Arial',
-      color: '#FFFFFF',
+      color: '#AAAAAA',
       fontStyle: 'bold'
-    }).setOrigin(0, 0.5).setDepth(topBarDepth + 2); // [C] depth 상향
+    }).setOrigin(0.5, 0).setDepth(topBarDepth + 2);
 
-    // Energy gem charge button (💎+)
-    // [D] x값을 s(540)으로 왼쪽 이동하여 전투력 텍스트와 겹침 방지
-    const chargeBtn = this.add.text(s(540), barY, '💎+', {
-      fontSize: sf(14), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
-      color: '#A78BFA', backgroundColor: '#0F172A',
-      padding: { x: s(4), y: s(2) }
-    }).setOrigin(0.5).setDepth(topBarDepth + 2).setInteractive({ useHandCursor: true }); // [C][D]
-    chargeBtn.on('pointerdown', () => {
-      // [HIGH-2] 즉시 차감 방지 -> Modal 확인 팝업
+    // ── 에너지 충전 버튼 (x=s(495)=743px): 보석 아이콘과 동일한 그래픽 사용 ──
+    // gem 이미지가 있으면 gem 이미지(scale 0.85), 없으면 💎 이모지 — gemIcon 과 동일 소스
+    let chargeBtnIcon;
+    if (this.textures.exists('gem')) {
+      chargeBtnIcon = this.add.image(s(517), barY, 'gem').setScale(0.85).setDepth(topBarDepth + 2);
+    } else {
+      chargeBtnIcon = this.add.text(s(517), barY, '💎', { fontSize: sf(18) }).setOrigin(0.5).setDepth(topBarDepth + 2);
+    }
+    const chargePlusLabel = this.add.text(s(517) + s(14), barY - s(9), '+', {
+      fontSize: sf(12), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
+      color: '#A78BFA'
+    }).setOrigin(0.5).setDepth(topBarDepth + 2);
+
+    // 투명 히트 영역으로 클릭 인터랙션 처리
+    const chargeBtnHit = this.add.rectangle(s(517), barY, s(40), s(40), 0x000000, 0)
+      .setDepth(topBarDepth + 2).setInteractive({ useHandCursor: true });
+    chargeBtnHit.on('pointerdown', () => {
       const modal = new Modal(this, {
         title: '에너지 충전',
         content: '젬 50개를 소모하여 에너지를 충전합니다.',
@@ -433,23 +362,29 @@ export class MainMenuScene extends Phaser.Scene {
       });
       modal.show();
     });
-    chargeBtn.on('pointerover', () => chargeBtn.setColor('#C4B5FD'));
-    chargeBtn.on('pointerout', () => chargeBtn.setColor('#A78BFA'));
+    chargeBtnHit.on('pointerover', () => {
+      if (chargeBtnIcon.setAlpha) chargeBtnIcon.setAlpha(0.75);
+      chargePlusLabel.setColor('#C4B5FD');
+    });
+    chargeBtnHit.on('pointerout', () => {
+      if (chargeBtnIcon.setAlpha) chargeBtnIcon.setAlpha(1);
+      chargePlusLabel.setColor('#A78BFA');
+    });
 
+    // ── 오른쪽 구역: 전투력 (right-origin, x=GAME_WIDTH-s(98)=933px) + 설정 (x=GAME_WIDTH-s(28)=1038px) ──
     const partyPower = this.idleSystem.getPartyPower();
-    // [D] x값 조정: 설정 버튼(GAME_WIDTH-s(45)) 기준으로 충분히 왼쪽에 배치
-    this.powerText = this.add.text(GAME_WIDTH - s(100), barY, `⚔ ${Math.floor(partyPower).toLocaleString()}`, {
+    this.powerText = this.add.text(GAME_WIDTH - s(98), barY, `⚔ ${Math.floor(partyPower).toLocaleString()}`, {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(1, 0.5).setDepth(topBarDepth + 1);
 
-    const settingsBtn = this.add.rectangle(GAME_WIDTH - s(45), barY, s(44), s(44), COLORS.bgDark, 0.01)
+    const settingsBtn = this.add.rectangle(GAME_WIDTH - s(28), barY, s(44), s(44), COLORS.bgDark, 0.01)
       .setDepth(topBarDepth + 1)
       .setInteractive({ useHandCursor: true });
 
-    const settingsIcon = this.add.text(GAME_WIDTH - s(45), barY, '⚙️', {
+    const settingsIcon = this.add.text(GAME_WIDTH - s(28), barY, '⚙️', {
       fontSize: sf(20)
     }).setOrigin(0.5).setDepth(topBarDepth + 1);
 

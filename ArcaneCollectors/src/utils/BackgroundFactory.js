@@ -293,8 +293,6 @@ export class BackgroundFactory {
         GAME_HEIGHT / 2 + Math.sin(angle2) * 100
       );
     }
-    circle.add(hexagram);
-
     // 회전 애니메이션 (2개 방향)
     scene.tweens.add({
       targets: circle,
@@ -314,10 +312,10 @@ export class BackgroundFactory {
     // ART-2.1: 빛줄기 파티클 강화 (60개, 다양한 색상/속도)
     const particles = [];
     const particleColors = [0x8B5CF6, 0xEC4899, 0xF59E0B, 0x10B981];
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 28; i++) { // 퍼포먼스 제약: 씬당 최대 30개
       const x = Phaser.Math.Between(0, GAME_WIDTH);
       const y = Phaser.Math.Between(0, GAME_HEIGHT);
-      const size = Phaser.Math.FloatBetween(1.5, 3.5);
+      const size = Phaser.Math.FloatBetween(2, 5);
       const color = particleColors[i % particleColors.length];
 
       const particle = scene.add.circle(x, y, size, color, 0.6);
@@ -491,6 +489,292 @@ export class BackgroundFactory {
    * @param {number[]} options.bottomColor - [r, g, b]
    * @returns {Phaser.GameObjects.Graphics}
    */
+
+  /**
+   * Inventory: 황금빛 그래디언트 + 파티클 25개 + 격자 선반 패턴
+   * @param {Phaser.Scene} scene
+   */
+  static createInventoryBg(scene) {
+    const graphics = scene.add.graphics();
+    for (let y = 0; y < GAME_HEIGHT; y++) {
+      const ratio = y / GAME_HEIGHT;
+      const r = Math.floor(12 + ratio * 28);
+      const g = Math.floor(18 + ratio * 20);
+      const b = Math.floor(38 + ratio * 5);
+      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
+      graphics.fillRect(0, y, GAME_WIDTH, 1);
+    }
+    const grid = scene.add.graphics();
+    grid.lineStyle(1, 0xF59E0B, 0.06);
+    const slotSize = 90;
+    for (let x = 0; x <= GAME_WIDTH; x += slotSize) { grid.lineBetween(x, 0, x, GAME_HEIGHT); }
+    for (let y = 0; y <= GAME_HEIGHT; y += slotSize) { grid.lineBetween(0, y, GAME_WIDTH, y); }
+    const particles = [];
+    for (let i = 0; i < 25; i++) {
+      const sz = Phaser.Math.FloatBetween(1.5, 4);
+      const p = scene.add.circle(Phaser.Math.Between(20, GAME_WIDTH-20), Phaser.Math.Between(20, GAME_HEIGHT-20), sz, 0xF59E0B, Phaser.Math.FloatBetween(0.1, 0.35));
+      scene.tweens.add({ targets: p, alpha: { from: p.alpha, to: Phaser.Math.FloatBetween(0.02, 0.1) }, scaleX: { from: 1, to: 1.5 }, scaleY: { from: 1, to: 1.5 }, duration: Phaser.Math.Between(1800, 4500), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 3000), ease: "Sine.easeInOut" });
+      particles.push(p);
+    }
+    const vignette = scene.add.graphics();
+    vignette.fillStyle(0x0A0A0A, 0.35); vignette.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    vignette.fillStyle(0x1a1008, 0.2); vignette.fillEllipse(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH*0.9, GAME_HEIGHT*0.9);
+    vignette.setBlendMode(Phaser.BlendModes.MULTIPLY);
+    return { graphics, grid, particles, vignette };
+  }
+
+
+  /**
+   * Quest: 석양 그래디언트 + 고대 석비 실루엣 + 빛 기둥 + 먼지 파티클 18개
+   * @param {Phaser.Scene} scene
+   */
+  static createQuestBg(scene) {
+    const graphics = scene.add.graphics();
+    for (let y = 0; y < GAME_HEIGHT; y++) {
+      const ratio = y / GAME_HEIGHT;
+      const r = Math.floor(18 + Math.sin(ratio * Math.PI * 0.5) * 22 - ratio * 10);
+      const g = Math.floor(14 + ratio * 8);
+      const b = Math.floor(30 + ratio * 22);
+      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
+      graphics.fillRect(0, y, GAME_WIDTH, 1);
+    }
+    const pillars = scene.add.graphics();
+    pillars.fillStyle(0x0d1015, 0.35);
+    [160, GAME_WIDTH / 2, GAME_WIDTH - 160].forEach((x) => {
+      const h = Phaser.Math.Between(300, 500);
+      const w = 40;
+      pillars.fillRect(x - w/2, GAME_HEIGHT - h, w, h);
+      pillars.fillTriangle(x - w/2 - 10, GAME_HEIGHT - h, x + w/2 + 10, GAME_HEIGHT - h, x, GAME_HEIGHT - h - 40);
+    });
+    const lightBeams = scene.add.graphics();
+    [200, GAME_WIDTH / 2, GAME_WIDTH - 200].forEach((x, i) => {
+      lightBeams.fillStyle(0xF59E0B, 0.03 + i * 0.01);
+      lightBeams.fillRect(x - 15, 0, 30, GAME_HEIGHT);
+    });
+    scene.tweens.add({ targets: lightBeams, alpha: { from: 1, to: 0.4 }, duration: 3000, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    const particles = [];
+    for (let i = 0; i < 18; i++) {
+      const p = scene.add.circle(Phaser.Math.Between(0, GAME_WIDTH), Phaser.Math.Between(GAME_HEIGHT/2, GAME_HEIGHT), Phaser.Math.FloatBetween(2, 6), 0xC4A35A, Phaser.Math.FloatBetween(0.05, 0.15));
+      scene.tweens.add({ targets: p, x: p.x + Phaser.Math.Between(-60, 60), y: p.y - Phaser.Math.Between(100, 300), alpha: 0, duration: Phaser.Math.Between(4000, 8000), repeat: -1, delay: Phaser.Math.Between(0, 4000), ease: "Sine.easeOut" });
+      particles.push(p);
+    }
+    return { graphics, pillars, lightBeams, particles };
+  }
+
+
+  /**
+   * Settings: 청회색 그래디언트 + 육각형 격자 + 회전 기어 + 데이터 포인트 15개
+   * @param {Phaser.Scene} scene
+   */
+  static createSettingsBg(scene) {
+    const graphics = scene.add.graphics();
+    for (let y = 0; y < GAME_HEIGHT; y++) {
+      const ratio = y / GAME_HEIGHT;
+      const r = Math.floor(10 + ratio * 8);
+      const g = Math.floor(14 + ratio * 10);
+      const b = Math.floor(28 + ratio * 16);
+      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
+      graphics.fillRect(0, y, GAME_WIDTH, 1);
+    }
+    const hexGrid = scene.add.graphics();
+    hexGrid.lineStyle(1, 0x3B82F6, 0.07);
+    const hexSize = 50;
+    const hexW = hexSize * 2;
+    const hexH = Math.sqrt(3) * hexSize;
+    for (let row = -1; row < GAME_HEIGHT / hexH + 1; row++) {
+      for (let col = -1; col < GAME_WIDTH / hexW + 1; col++) {
+        const offsetX = (row % 2 === 0) ? 0 : hexW * 0.75;
+        const cx = col * hexW * 1.5 + offsetX;
+        const cy = row * hexH;
+        for (let i = 0; i < 6; i++) {
+          const a1 = (Math.PI / 3) * i;
+          const a2 = (Math.PI / 3) * (i + 1);
+          hexGrid.lineBetween(cx + hexSize*Math.cos(a1), cy + hexSize*Math.sin(a1), cx + hexSize*Math.cos(a2), cy + hexSize*Math.sin(a2));
+        }
+      }
+    }
+    const gear = scene.add.graphics();
+    gear.lineStyle(3, 0x64748B, 0.25);
+    const gearX = GAME_WIDTH / 2, gearY = GAME_HEIGHT / 2;
+    gear.strokeCircle(gearX, gearY, 120);
+    gear.strokeCircle(gearX, gearY, 80);
+    for (let i = 0; i < 12; i++) {
+      const angle = (Math.PI * 2 * i) / 12;
+      gear.lineBetween(gearX + Math.cos(angle)*80, gearY + Math.sin(angle)*80, gearX + Math.cos(angle)*130, gearY + Math.sin(angle)*130);
+    }
+    scene.tweens.add({ targets: gear, rotation: Math.PI * 2, duration: 30000, repeat: -1, ease: "Linear" });
+    const dataPoints = [];
+    for (let i = 0; i < 15; i++) {
+      const pt = scene.add.circle(Phaser.Math.Between(10, GAME_WIDTH-10), Phaser.Math.Between(10, GAME_HEIGHT-10), Phaser.Math.FloatBetween(2, 4), 0x3B82F6, Phaser.Math.FloatBetween(0.1, 0.3));
+      scene.tweens.add({ targets: pt, alpha: { from: pt.alpha, to: 0.02 }, duration: Phaser.Math.Between(1000, 3000), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 2000), ease: "Sine.easeInOut" });
+      dataPoints.push(pt);
+    }
+    return { graphics, hexGrid, gear, dataPoints };
+  }
+
+
+  /**
+   * HeroList: 파란 결정체 그래디언트 + 결정 기둥 실루엣 + 빛줄기 + 파티클 20개
+   * @param {Phaser.Scene} scene
+   */
+  static createHeroListBg(scene) {
+    const graphics = scene.add.graphics();
+    for (let y = 0; y < GAME_HEIGHT; y++) {
+      const ratio = y / GAME_HEIGHT;
+      const r = Math.floor(8 + ratio * 12);
+      const g = Math.floor(12 + ratio * 10);
+      const b = Math.floor(38 + ratio * 24);
+      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
+      graphics.fillRect(0, y, GAME_WIDTH, 1);
+    }
+    const crystals = scene.add.graphics();
+    crystals.fillStyle(0x1e2a5e, 0.3);
+    [{ x: 80, w: 50, h: 200 }, { x: 180, w: 35, h: 150 }, { x: GAME_WIDTH-80, w: 50, h: 240 }, { x: GAME_WIDTH-180, w: 35, h: 180 }].forEach(({ x, w, h }) => {
+      crystals.fillTriangle(x, GAME_HEIGHT, x - w/2, GAME_HEIGHT - h, x + w/2, GAME_HEIGHT - h);
+      crystals.fillRect(x - w/2, GAME_HEIGHT - h, w, h/3);
+    });
+    const rays = scene.add.graphics();
+    for (let i = 0; i < 5; i++) {
+      rays.fillStyle(0x6366F1, 0.03);
+      const x = (GAME_WIDTH / 6) * (i + 0.5);
+      rays.fillTriangle(x, 0, x - 30, GAME_HEIGHT, x + 30, GAME_HEIGHT);
+    }
+    scene.tweens.add({ targets: rays, alpha: { from: 1, to: 0.3 }, duration: 4000, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    const particles = [];
+    for (let i = 0; i < 20; i++) {
+      const p = scene.add.circle(Phaser.Math.Between(0, GAME_WIDTH), Phaser.Math.Between(0, GAME_HEIGHT), Phaser.Math.FloatBetween(1.5, 4), Phaser.Math.RND.pick([0x6366F1, 0x818CF8, 0xA5B4FC]), Phaser.Math.FloatBetween(0.08, 0.25));
+      scene.tweens.add({ targets: p, y: p.y - Phaser.Math.Between(80, 200), alpha: 0, duration: Phaser.Math.Between(3000, 7000), repeat: -1, delay: Phaser.Math.Between(0, 4000), ease: "Sine.easeOut" });
+      particles.push(p);
+    }
+    return { graphics, crystals, rays, particles };
+  }
+
+
+  /**
+   * HeroDetail: 극도로 어두운 배경 + 중앙 스포트라이트 글로우 + 별빛 22개
+   * @param {Phaser.Scene} scene
+   */
+  static createHeroDetailBg(scene) {
+    const graphics = scene.add.graphics();
+    for (let y = 0; y < GAME_HEIGHT; y++) {
+      const ratio = y / GAME_HEIGHT;
+      const centerDist = Math.abs(ratio - 0.4);
+      const r = Math.floor(5 + centerDist * 18);
+      const g = Math.floor(5 + centerDist * 10);
+      const b = Math.floor(12 + ratio * 20 + centerDist * 10);
+      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
+      graphics.fillRect(0, y, GAME_WIDTH, 1);
+    }
+    const spotlight = scene.add.graphics();
+    spotlight.fillStyle(COLORS.primary, 0.06);
+    spotlight.fillCircle(GAME_WIDTH / 2, GAME_HEIGHT * 0.4, 300);
+    spotlight.fillStyle(COLORS.primary, 0.04);
+    spotlight.fillCircle(GAME_WIDTH / 2, GAME_HEIGHT * 0.4, 220);
+    spotlight.fillStyle(0xffffff, 0.015);
+    spotlight.fillCircle(GAME_WIDTH / 2, GAME_HEIGHT * 0.4, 140);
+    scene.tweens.add({ targets: spotlight, alpha: { from: 1, to: 0.6 }, scaleX: { from: 1, to: 1.05 }, scaleY: { from: 1, to: 1.05 }, duration: 3500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    const stars = [];
+    for (let i = 0; i < 22; i++) {
+      const star = scene.add.circle(Phaser.Math.Between(0, GAME_WIDTH), Phaser.Math.Between(0, GAME_HEIGHT * 0.6), Phaser.Math.FloatBetween(0.8, 2.5), 0xffffff, Phaser.Math.FloatBetween(0.1, 0.5));
+      scene.tweens.add({ targets: star, alpha: { from: star.alpha, to: Phaser.Math.FloatBetween(0.02, 0.15) }, duration: Phaser.Math.Between(1500, 4000), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 3000), ease: "Sine.easeInOut" });
+      stars.push(star);
+    }
+    const vignette = scene.add.graphics();
+    vignette.fillStyle(0x000000, 0.5); vignette.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    vignette.fillStyle(0x000020, 0.3); vignette.fillEllipse(GAME_WIDTH/2, GAME_HEIGHT*0.5, GAME_WIDTH*0.85, GAME_HEIGHT*0.85);
+    vignette.setBlendMode(Phaser.BlendModes.MULTIPLY);
+    return { graphics, spotlight, stars, vignette };
+  }
+
+
+  /**
+   * PartyEdit: 네이비 그래디언트 + 전술 격자 + 나침반 로즈 (파티클 없음)
+   * @param {Phaser.Scene} scene
+   */
+  static createPartyEditBg(scene) {
+    const graphics = scene.add.graphics();
+    for (let y = 0; y < GAME_HEIGHT; y++) {
+      const ratio = y / GAME_HEIGHT;
+      const r = Math.floor(8 + ratio * 6);
+      const g = Math.floor(10 + ratio * 8);
+      const b = Math.floor(30 + ratio * 20);
+      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
+      graphics.fillRect(0, y, GAME_WIDTH, 1);
+    }
+    const tacticalGrid = scene.add.graphics();
+    tacticalGrid.lineStyle(1, 0x334155, 0.2);
+    const gridStep = 60;
+    for (let x = 0; x <= GAME_WIDTH; x += gridStep) { tacticalGrid.lineBetween(x, 0, x, GAME_HEIGHT); }
+    for (let y = 0; y <= GAME_HEIGHT; y += gridStep) { tacticalGrid.lineBetween(0, y, GAME_WIDTH, y); }
+    const compass = scene.add.graphics();
+    compass.lineStyle(1, 0x4A6FA5, 0.18);
+    const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
+    compass.strokeCircle(cx, cy, 150);
+    compass.strokeCircle(cx, cy, 100);
+    compass.strokeCircle(cx, cy, 50);
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI / 4) * i;
+      compass.lineBetween(cx + Math.cos(angle)*50, cy + Math.sin(angle)*50, cx + Math.cos(angle)*160, cy + Math.sin(angle)*160);
+    }
+    compass.fillStyle(0x6366F1, 0.15);
+    compass.fillTriangle(cx, cy - 150, cx - 12, cy - 100, cx + 12, cy - 100);
+    return { graphics, tacticalGrid, compass };
+  }
+
+
+  /**
+   * BattleResult: 승리=황금+파티클25개+방사빛 / 패배=붉은+잔재15개+비네팅
+   * @param {Phaser.Scene} scene
+   * @param {boolean} victory
+   */
+  static createBattleResultBg(scene, victory) {
+    const graphics = scene.add.graphics();
+    if (victory) {
+      for (let y = 0; y < GAME_HEIGHT; y++) {
+        const ratio = y / GAME_HEIGHT;
+        const r = Math.floor(20 + ratio * 15);
+        const g = Math.floor(18 + ratio * 12);
+        const b = Math.floor(5 + ratio * 20);
+        graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
+        graphics.fillRect(0, y, GAME_WIDTH, 1);
+      }
+      const rays = scene.add.graphics();
+      for (let i = 0; i < 12; i++) {
+        const angle = (Math.PI * 2 * i) / 12;
+        rays.fillStyle(0xFFD700, 0.04);
+        rays.fillTriangle(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH/2 + Math.cos(angle-0.15)*GAME_WIDTH, GAME_HEIGHT/2 + Math.sin(angle-0.15)*GAME_WIDTH, GAME_WIDTH/2 + Math.cos(angle+0.15)*GAME_WIDTH, GAME_HEIGHT/2 + Math.sin(angle+0.15)*GAME_WIDTH);
+      }
+      scene.tweens.add({ targets: rays, rotation: Math.PI * 2, duration: 20000, repeat: -1, ease: "Linear" });
+      const particles = [];
+      for (let i = 0; i < 25; i++) {
+        const p = scene.add.circle(Phaser.Math.Between(0, GAME_WIDTH), Phaser.Math.Between(GAME_HEIGHT, GAME_HEIGHT+100), Phaser.Math.FloatBetween(2, 6), Phaser.Math.RND.pick([0xFFD700, 0xFFA500, 0xFFEC8B]), Phaser.Math.FloatBetween(0.2, 0.6));
+        scene.tweens.add({ targets: p, y: p.y - Phaser.Math.Between(400, 900), x: p.x + Phaser.Math.Between(-80, 80), alpha: 0, duration: Phaser.Math.Between(2500, 5000), repeat: -1, delay: Phaser.Math.Between(0, 3000), ease: "Cubic.easeOut" });
+        particles.push(p);
+      }
+      return { graphics, rays, particles };
+    } else {
+      for (let y = 0; y < GAME_HEIGHT; y++) {
+        const ratio = y / GAME_HEIGHT;
+        const r = Math.floor(18 + ratio * 8);
+        const g = Math.floor(8 + ratio * 4);
+        const b = Math.floor(10 + ratio * 8);
+        graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
+        graphics.fillRect(0, y, GAME_WIDTH, 1);
+      }
+      const particles = [];
+      for (let i = 0; i < 15; i++) {
+        const p = scene.add.circle(Phaser.Math.Between(0, GAME_WIDTH), Phaser.Math.Between(-50, GAME_HEIGHT/2), Phaser.Math.FloatBetween(2, 5), Phaser.Math.RND.pick([0x6B2121, 0x8B0000, 0x4a1010]), Phaser.Math.FloatBetween(0.1, 0.3));
+        scene.tweens.add({ targets: p, y: p.y + Phaser.Math.Between(300, 700), x: p.x + Phaser.Math.Between(-40, 40), alpha: 0, duration: Phaser.Math.Between(3000, 7000), repeat: -1, delay: Phaser.Math.Between(0, 4000), ease: "Sine.easeIn" });
+        particles.push(p);
+      }
+      const vignette = scene.add.graphics();
+      vignette.fillStyle(0x1a0000, 0.5); vignette.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+      vignette.fillStyle(0x2a0808, 0.3); vignette.fillEllipse(GAME_WIDTH/2, GAME_HEIGHT/2, GAME_WIDTH*0.9, GAME_HEIGHT*0.9);
+      vignette.setBlendMode(Phaser.BlendModes.MULTIPLY);
+      return { graphics, particles, vignette };
+    }
+  }
+
   static createGradientBg(scene, options = {}) {
     const topColor = options.topColor || [15, 23, 42];
     const bottomColor = options.bottomColor || [30, 41, 59];
