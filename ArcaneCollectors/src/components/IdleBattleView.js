@@ -396,14 +396,10 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     // 보스 준비 연출 정리
     this.clearBossReady();
 
-    // 이전 보스 요소 초기화
+    // 이전 보스 요소 초기화 (존재하는 요소만)
     this.enemyCircle.setAlpha(1).setScale(1);
     this.enemyEmoji.setAlpha(1).setScale(1);
     this.enemyName.setAlpha(1).setScale(1);
-    this.enemyHpBg.setAlpha(1).setScale(1);
-    this.enemyHpBar.setAlpha(1).setScale(0, 1); // 진행도 0%에서 시작
-    this.enemyHpBar.setFillStyle(COLORS.primary, 1);
-    if (this.bossHpText) this.bossHpText.setAlpha(1);
 
     // 새 보스 표시
     this.showBoss(bossData);
