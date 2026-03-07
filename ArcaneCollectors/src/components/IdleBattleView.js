@@ -162,13 +162,6 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.progressBar.setOrigin(0, 0.5);
     this.add(this.progressBar);
 
-    // 스테이지 텍스트 (보스 이름 포함)
-    this.stageText = this.scene.add.text(0, infoY + s(18), '챕터 1-1: 슬라임 킹', {
-      fontSize: sf(14),
-      fontFamily: 'Arial',
-      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-    this.add(this.stageText);
   }
 
   /**
@@ -520,16 +513,6 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
         expText.destroy();
       }
     });
-  }
-
-  /**
-   * 스테이지 정보 업데이트
-   * @param {number} chapter - 챕터 번호
-   * @param {number} stage - 스테이지 번호
-   * @param {string} name - 보스 이름
-   */
-  updateStageInfo(chapter, stage, name) {
-    this.stageText.setText(`챕터 ${chapter || 1}-${stage || 1}: ${name || '슬라임 킹'}`);
   }
 
   /**
