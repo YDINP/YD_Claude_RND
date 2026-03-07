@@ -4,7 +4,7 @@
 > **브랜치**: `arcane/integration`
 > **테스트**: 1001개 유닛 (1001/1001 통과, 35파일) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [UI 팝업 전수 시각 테스트] 메인메뉴 8개 팝업 전체 스크린샷 캡처 + 시각 분석 완료 — 신규 버그 10건 발견 (총 누적 16건)
+> **최근 작업**: [버그 수정] UI 팝업 전수 테스트 발견 HIGH 2건 + MED 2건 수정 완료 (z-order / 젬차감 / i18n) — auto-pipeline APPROVED (commit `f7188a5`)
 
 ---
 
@@ -240,6 +240,17 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | 16 | 에셋 | LOW | 파티 슬롯 캐릭터 원형 아이콘 X 표시 (텍스처 미등록) | MainMenuScene 파티 HUD |
 
 > 심각도: HIGH = 게임플레이 영향 / MED = UX 품질 저하 / LOW = 폴리싱 필요
+
+### UI 팝업 버그 수정 (2026-03-07) — auto-pipeline 5단계 APPROVED (commit `f7188a5`)
+
+| # | 심각도 | 버그 | 수정 방법 | 파일 |
+|---|--------|------|---------|------|
+| 15 | HIGH | SettingsPopup 배경에 파티 HUD 잔상 (z-order) | 팝업 open 시 `_partyObjects.forEach setVisible(false)`, close 시 복원 | `MainMenuScene.js` |
+| 6 | HIGH | 💎+ 버튼 클릭 시 젬 50개 즉시 차감 | Modal 확인 팝업 경유 후 충전 실행, 즉시 차감 제거 | `MainMenuScene.js` |
+| 12 | MED | "dragon_scale: 0", "shadow_fragment: 0" 변수명 노출 | `EVENT_CURRENCY_NAMES` 매핑 + `getCurrencyName()` 함수 적용 | `EventDungeonPopup.js` |
+| 9 | MED | GuildPopup 전체 영문 미번역 | 영문 텍스트 18개 한국어 번역 완료 | `GuildPopup.js` |
+
+**결과**: 빌드 ✅ + **1001/1001 테스트 통과** + code-reviewer APPROVED
 
 ---
 
