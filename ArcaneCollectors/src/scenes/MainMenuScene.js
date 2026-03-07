@@ -649,7 +649,7 @@ export class MainMenuScene extends Phaser.Scene {
    */
   createAdventurePanel() {
     const panelY = s(310);
-    const panelH = s(130);
+    const panelH = s(80);
     const panel = this.add.graphics();
     panel.fillStyle(COLORS.bgLight, 0.9);
     panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), panelH, s(12));
