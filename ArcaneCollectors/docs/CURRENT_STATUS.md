@@ -2,9 +2,9 @@
 
 > **최종 업데이트**: 2026-03-07
 > **브랜치**: `arcane/integration`
-> **테스트**: 953개 유닛 (950 통과 / 3 실패: ProceduralAssets.test.js 기존 미해결) | **빌드**: 0 에러 | **ESLint**: 에러 0개
+> **테스트**: 1001개 유닛 (1001/1001 통과, 35파일) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [SPRINT7] 스킬 시스템 전투 연결 + 가챠 등급별 연출 + 일일 퀘스트 + 메인 메뉴 UX + UI 레이아웃 QA (2026-03-07)
+> **최근 작업**: [포트레이트 매핑] HeroAssetLoader null 방어 + portrait-mapping.json 91개 확장 + characters.json 91개 + PORTRAIT_MAPPING_GUIDE.md (커밋: abae293)
 
 ---
 
@@ -192,6 +192,17 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 **결과**: 빌드 ✅ (10.87s) | 950 통과 / 3 실패(ProceduralAssets.test.js 기존) | QA_RESULT: PASS (1/3 이터레이션)
 
+### 포트레이트 매핑 시스템 91개 전체 확장 (2026-03-07) — pt + pt-qa-loop
+| ID | 태스크 | 파일 | 커밋 | 날짜 |
+|----|--------|------|------|------|
+| PORTRAIT-P2 | HeroAssetLoader.js `generatePlaceholders()` null 방어 — `characters.forEach` → `characters.filter(Boolean).forEach` (null/undefined 입력 TypeError 방지) | `src/systems/HeroAssetLoader.js` | `abae293` | 03-07 |
+| PORTRAIT-P3 | portrait-mapping.json 4→91개 확장 — char_1~char_91 전체를 hero_001~hero_091 PNG에 매핑 | `src/data/portrait-mapping.json` | `abae293` | 03-07 |
+| PORTRAIT-P3 | characters.json 4→91개 확장 — char_5~char_91 87개 스텁 추가 (rarity/class/cult 균등 배분) | `src/data/characters.json` | `abae293` | 03-07 |
+| PORTRAIT-P3 | PORTRAIT_MAPPING_GUIDE.md 신규 — 10교단별 캐릭터 배분 계획 + 91개 ID↔hero_NNN↔교단 매핑 표 | `docs/PORTRAIT_MAPPING_GUIDE.md` | `abae293` | 03-07 |
+| PORTRAIT-TEST | HeroAssetLoader.test.js 신규 — 48개 유닛 테스트 (TC-HAL-01~09: 매핑 로드/포트레이트 키/generatePlaceholders/null 방어) | `tests/systems/HeroAssetLoader.test.js` | `abae293` | 03-07 |
+
+**결과**: 빌드 ✅ + **1001/1001 테스트 통과** (35파일, +48개 신규) | QA 루프 PASS
+
 ---
 
 - BattleSystem 재사용: simulateBattle()에서 BattleSystem 인스턴스 생성, 최대 20턴 시뮬레이션
@@ -369,7 +380,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 ## 테스트 현황
 
-### Vitest 유닛 테스트 (953개, 34파일)
+### Vitest 유닛 테스트 (1001개, 35파일)
 | # | 파일 | 테스트 수 |
 |---|------|----------|
 | 1 | data/index.test.js | 62 |
@@ -406,6 +417,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | 32 | **AwakeningCutscene.test.js** | **21 (AWAKE-4 신규)** |
 | 33 | **ProceduralAssets.test.js** | **11 (SWARM-3 신규)** |
 | 34 | **AudioGenerator.test.js** | **15 (SWARM-3 신규)** |
+| 35 | **HeroAssetLoader.test.js** | **48 (PORTRAIT 신규)** |
 
 ### Playwright E2E 테스트 (34개)
 | 카테고리 | 테스트 수 | 내용 |
@@ -489,7 +501,7 @@ docs/
 | 번들러 | Vite 5 |
 | 모듈 | ES Modules |
 | 해상도 | 720x1280 |
-| 유닛 테스트 | Vitest (775개, 28파일) |
+| 유닛 테스트 | Vitest (1001개, 35파일) |
 | E2E 테스트 | Playwright (34개, 5카테고리) |
 | 타입체크 | TypeScript (tsc --noEmit) |
 | 백엔드 | Supabase (하이브리드 저장) |
