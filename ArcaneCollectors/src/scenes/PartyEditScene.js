@@ -187,8 +187,8 @@ export class PartyEditScene extends Phaser.Scene {
       const y = gridY + slotSize / 2;
 
       // 슬롯 배경
-      const bg = this.add.rectangle(x, y, slotSize, slotSize + s(30), COLORS.bgLight, 0.7)
-        .setStrokeStyle(s(2), COLORS.bgPanel)
+      const bg = this.add.rectangle(x, y, slotSize, slotSize + s(30), COLORS.bgPanel, 0.85)
+        .setStrokeStyle(s(2), COLORS.bgLight)
         .setInteractive({ useHandCursor: true });
 
       // 슬롯 번호
@@ -198,7 +198,7 @@ export class PartyEditScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       // 캐릭터 아이콘 영역 (원형)
-      const iconBg = this.add.circle(x, y - s(10), s(35), COLORS.bgPanel, 0.5);
+      const iconBg = this.add.circle(x, y - s(10), s(40), COLORS.bgLight, 0.6);
 
       // 캐릭터 이름
       const nameText = this.add.text(x, y + s(35), '+', {
@@ -258,7 +258,7 @@ export class PartyEditScene extends Phaser.Scene {
   }
 
   createActionButtons() {
-    const btnY = s(580);
+    const btnY = s(610);
     const btnWidth = s(180);
     const btnHeight = s(48);
 
@@ -268,7 +268,7 @@ export class PartyEditScene extends Phaser.Scene {
 
     // 초기화 버튼
     this.createButton(GAME_WIDTH / 2 + s(100), btnY, btnWidth, btnHeight,
-      '초기화', COLORS.bgPanel, () => this.clearParty());
+      '초기화', COLORS.danger, () => this.clearParty());
 
     // 저장 버튼
     this.createButton(GAME_WIDTH / 2, btnY + s(65), btnWidth + s(40), btnHeight + s(5),
@@ -332,8 +332,8 @@ export class PartyEditScene extends Phaser.Scene {
           slot.nameText.setText('+');
           slot.infoText.setText('');
           slot.rarityText.setText('');
-          slot.bg.setStrokeStyle(s(2), COLORS.bgPanel);
-          slot.iconBg.setFillStyle(COLORS.bgPanel, 0.5);
+          slot.bg.setStrokeStyle(s(2), COLORS.bgLight, 0.5);
+          slot.iconBg.setFillStyle(COLORS.bgLight, 0.3);
           slot.removeBtn.setVisible(false);
         }
       } else {
@@ -341,8 +341,8 @@ export class PartyEditScene extends Phaser.Scene {
         slot.nameText.setText('+');
         slot.infoText.setText('');
         slot.rarityText.setText('');
-        slot.bg.setStrokeStyle(s(2), COLORS.bgPanel);
-        slot.iconBg.setFillStyle(COLORS.bgPanel, 0.5);
+        slot.bg.setStrokeStyle(s(2), COLORS.bgLight, 0.5);
+        slot.iconBg.setFillStyle(COLORS.bgLight, 0.3);
         slot.removeBtn.setVisible(false);
       }
     });
