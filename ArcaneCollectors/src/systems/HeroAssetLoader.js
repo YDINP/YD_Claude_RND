@@ -79,7 +79,7 @@ export class HeroAssetLoader {
   static generatePlaceholders(scene, characters) {
     if (!characters || !Array.isArray(characters)) return;
 
-    characters.forEach(hero => {
+    characters.filter(Boolean).forEach(hero => {
       const key = HeroAssetLoader.getTextureKey(hero);
       if (scene.textures.exists(key)) return; // 이미 로드됨
 
