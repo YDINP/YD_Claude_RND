@@ -616,6 +616,46 @@ export class ProceduralAssets {
       console.warn('[ProceduralAssets] generateNeonGrid 실패:', e);
     }
   }
+
+  /**
+   * 실제 이미지 파일 우선 로드 후, 없으면 프로시저럴 폴백
+   *
+   * public/assets/ui/ 하위에 실제 이미지를 배치하면 자동으로 사용됩니다.
+   * 파일이 없거나 로드 실패 시 기존 프로시저럴 방식으로 동작합니다.
+   *
+   * @param {Phaser.Scene} scene - Phaser 씬 인스턴스
+   * @param {string} textureKey - 텍스처 키
+   * @param {string} filePath - public/assets/ui/ 기준 상대 경로 (예: 'buttons/btn-primary.png')
+   * @param {Function} fallbackFn - 파일이 없을 경우 실행할 프로시저럴 생성 함수
+   */
+  static tryLoadImage(scene, textureKey, filePath, fallbackFn) {
+    // 이미 텍스처가 로드되어 있으면 스킵
+    if (scene.textures.exists(textureKey)) {
+      return;
+    }
+
+    const fullPath = `assets/ui/${filePath}`;
+
+    // fetch로 파일 존재 여부 확인 후 로드
+    fetch(fullPath, { method: 'HEAD' })
+      .then(res => {
+        if (res.ok) {
+          // 파일이 존재하면 Phaser 로더로 이미지 로드
+          scene.load.image(textureKey, fullPath);
+          scene.load.once(`filecomplete-image-${textureKey}`, () => {
+            console.log(`[ProceduralAssets] 이미지 파일 로드 성공: ${fullPath}`);
+          });
+          scene.load.start();
+        } else {
+          // 파일 없음 → 프로시저럴 폴백
+          if (typeof fallbackFn === 'function') fallbackFn();
+        }
+      })
+      .catch(() => {
+        // 네트워크 오류 → 프로시저럴 폴백
+        if (typeof fallbackFn === 'function') fallbackFn();
+      });
+  }
 }
 
 // ============================================================

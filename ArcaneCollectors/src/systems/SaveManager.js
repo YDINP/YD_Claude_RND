@@ -50,6 +50,11 @@ export class SaveManager {
         pityCounter: 0,
         totalPulls: 0
       },
+      energy: {
+        currentEnergy: 102, // 레벨 1 최대 에너지 (BASE_MAX_ENERGY=100 + ENERGY_PER_LEVEL=2)
+        lastRecoveryTime: Date.now(),
+        playerLevel: 1
+      },
       pity: {},
       quests: {
         daily: {},
