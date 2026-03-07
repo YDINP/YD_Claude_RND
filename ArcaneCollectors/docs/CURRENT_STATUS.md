@@ -4,7 +4,7 @@
 > **브랜치**: `arcane/integration`
 > **테스트**: 1001개 유닛 (1001/1001 통과, 35파일) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [ART-3.0] 프로시저럴 배경 전면 개선 — BackgroundFactory 신규 7개 메서드 + 12개 씬 교체 + code-reviewer APPROVED
+> **최근 작업**: 재화바 레이아웃 최적화 + 레거시 파티ID 정화 + SkillAnimation 경쟁조건 수정 + UI 에셋 추가
 
 ---
 
@@ -300,6 +300,37 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 **결과**: 빌드 ✅ (11.89s) | 7 swarm 브랜치 자동 머지 완료 | 충돌 0건
 
+### 씬 배경 프로시저럴 전면 개선 ART-3.0 (2026-03-08) — pt-pipeline 5단계 APPROVED (commit `2b47984`)
+
+| 씬 | 메서드 | 개선 내용 |
+|----|--------|---------|
+| MainMenu | `createMainBg` | 새벽 하늘 그래디언트 + 건물 실루엣 + 별빛 파티클(40개) + 마법 오브(5개) |
+| Battle | `createBattleBg` | 붉은 어두운 그래디언트 + 격자 바닥 + 불꽃 파티클(25개) + 먼지(10개) + 비네팅 |
+| Gacha | `createGachaBg` | 보라→핑크→골드 그래디언트 + 마법진(5원) + 룬 문자(12개) + 육각별 + 빛줄기(60개) |
+| StageSelect | `createStageSelectBg` | 녹색→갈색 그래디언트 + 나무 실루엣(15개) + 나뭇잎 파티클(10개) |
+| Tower | `createTowerBg` | 검정→진남색 그래디언트 + 별(40개) + 횃불빛(2개) + 비네팅 |
+| Inventory | `createInventoryBg` | 신규: 짙은 네이비 + 발광 격자 선반(5행) + 회전 기어(3개) |
+| Quest | `createQuestBg` | 신규: 양피지 갈색 + 펜촉 파티클(8개) + 글로우 + 비네팅 |
+| HeroList | `createHeroListBg` | 신규: 다크 블루 그라데이션 + 성운 파티클(30개) + 그리드 패턴 |
+| HeroDetail | `createHeroDetailBg` | 신규: 깊은 보라 + 빛줄기(12개) + 파티클 웨이브(20개) |
+| BattleResult | `createBattleResultBg` | 신규: 골드→다크 + 승리/패배 분기 색상 + 광채(8개) |
+| PartyEdit | `createPartyEditBg` | 신규: 딥 그린 + 전술 격자(5px) + 홀로그램 오버레이 |
+| Settings | `createSettingsBg` | 신규: 미드나잇 블루 + 메탈릭 패널 질감 + 교단 컬러 반사광 |
+
+**결과**: 빌드 ✅ | 12개 씬 전체 고품질 프로시저럴 배경 적용 | code-reviewer APPROVED
+
+### 재화바 레이아웃 최적화 + 다수 버그 수정 (2026-03-08) — pt-qa-loop (commit `578cb2a`)
+
+| # | 파일 | 수정 내용 |
+|---|------|---------|
+| 1 | `src/config/layoutConfig.js` | 에너지 바 너비 s(200)→s(150) 축소 (상단 재화 겹침 방지) |
+| 2 | `src/main.js` | `document.fonts.ready.then()` 후 Phaser 초기화 (폰트 비동기 로드 타이밍 대응) |
+| 3 | `src/systems/SaveManager.js` | 레거시 `base_*/asc_*` 파티 ID 자동 정화 + 스타터 파티 복구 로직 |
+| 4 | `src/systems/SkillAnimationManager.js` | `abortController` 지역변수 캡처로 동시 애니메이션 null-access 경쟁조건 방지 |
+| 5 | `src/utils/GameLogger.ts` | SCHEMA 카테고리 + `warn()` 메서드 추가 |
+| 6 | `public/assets/ui/` | 버튼(12종)/프레임(7종)/아이콘(4종)/패널(4종) 무료 에셋 추가 |
+
+**결과**: 빌드 ✅ (10.89s) | UI 에셋 27종 추가
 
 ### Kenney UI Pack SVG 에셋 전체 적용 (2026-03-07) — auto-pipeline 5단계 APPROVED (commit `d085808`)
 
