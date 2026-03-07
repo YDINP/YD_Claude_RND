@@ -54,7 +54,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
   createPartyDisplay() {
     const startX = -this.viewWidth / 2 + s(60);
     const spacing = s(55);
-    const startY = -((4 - 1) * spacing) / 2; // 4명 수직 중앙 정렬
+    const startY = -((4 - 1) * spacing) / 2 - s(20); // 4명 수직 중앙 정렬
 
     this.partyAvatars = [];
 
@@ -89,7 +89,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    */
   createEnemyDisplay() {
     const enemyX = this.viewWidth / 2 - s(80);
-    const enemyY = 0;
+    const enemyY = -s(20);
 
     // 적 배경 원
     this.enemyCircle = this.scene.add.circle(enemyX, enemyY, s(40), COLORS.danger, 0.8);
