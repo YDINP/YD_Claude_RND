@@ -127,6 +127,11 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 **결과**: 빌드 ✅ + 870/870 테스트 통과 + code-reviewer APPROVED
 
+| AWAKE-3 | AwakeningPopup.js 신규 — PopupBase 상속, 레벨/친밀도/소재/시련 조건 체크리스트 + 프로그레스 바 + SSR 각인석 조건 + 각성 버튼(활성/비활성) + 글로우 효과 | `src/ui/AwakeningPopup.js` | 03-07 |
+| AWAKE-3 | AwakeningPopup.test.js 신규 36개 테스트 (TC-01~TC-36, 헬퍼 함수 + 클래스 통합) | `tests/ui/AwakeningPopup.test.js` | 03-07 |
+
+**결과**: 빌드 ✅ + 906/906 테스트 통과 + code-reviewer APPROVED (AWAKE-3)
+
 - BattleSystem 재사용: simulateBattle()에서 BattleSystem 인스턴스 생성, 최대 20턴 시뮬레이션
 - 오프라인 지원: Supabase 연결 실패 시 localStorage 캐시 폴백
 - 매칭 로직: 내 전투력 ±30% 범위 쿼리, 최대 5명 반환
@@ -295,14 +300,14 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | CULT-TS | TypeScript 타입 갱신 | P0 | S | character.d.ts Cult union type + HeroFactory 기본값 교체 |
 | AWAKE-1 | AwakeningSystem.js 구현 | P1 | M | cult: null 방랑자 상태, 3조건 체크 로직, 5단계 진행도 (GDD: AWAKENING_SYSTEM_GDD.md) |
 | AWAKE-2 | cult-materials.json 데이터 | P1 | S | 교단별 소재 정의, 드랍테이블 연동 |
-| AWAKE-3 | AwakeningPopup.js UI | P2 | M | 진행도 게이지, 조건 체크리스트, 각성 가능 알림 |
+| ~~AWAKE-3~~ | ~~AwakeningPopup.js UI~~ | P2 | M | **완료** — 진행도 게이지, 조건 체크리스트, 각성 가능 알림 (906 테스트 통과) |
 | AWAKE-4 | 각성 컷신 연출 | P3 | H | 8~12초 풀스크린, 교단별 파티클/컬러/사운드 |
 
 ---
 
 ## 테스트 현황
 
-### Vitest 유닛 테스트 (775개, 28파일)
+### Vitest 유닛 테스트 (906개, 31파일)
 | # | 파일 | 테스트 수 |
 |---|------|----------|
 | 1 | data/index.test.js | 62 |
