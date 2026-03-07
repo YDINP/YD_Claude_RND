@@ -13,7 +13,7 @@ const TAB = { INFO: 0, MEMBERS: 1, DONATE: 2 };
 export class GuildPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: 'Guild',
+      title: '길드',
       width: s(680),
       height: s(1100),
       ...options
@@ -32,7 +32,7 @@ export class GuildPopup extends PopupBase {
   }
   _renderTabs() {
     const b2 = this.contentBounds;
-    const tabLabels = ['Guild Info', 'Members', 'Donate'];
+    const tabLabels = ['길드 정보', '멤버', '기부'];
     const tabW = b2.width / 3;
     tabLabels.forEach(function(label, idx) {
       const tx = b2.left + tabW * idx + tabW / 2;
@@ -62,7 +62,7 @@ export class GuildPopup extends PopupBase {
     const b2 = this.contentBounds;
     const contentTop = b2.top + s(60);
     this._isLoading = true;
-    const loadingText = this.scene.add.text(b2.centerX, contentTop + s(60), 'Loading...', {
+    const loadingText = this.scene.add.text(b2.centerX, contentTop + s(60), '로딩 중...', {
       fontSize: sf(16),
       fontFamily: '"Noto Sans KR", sans-serif',
       color: '#94A3B8'
@@ -107,9 +107,9 @@ export class GuildPopup extends PopupBase {
       }).setOrigin(0.5);
       this.contentContainer.add(descText); this._tabObjects.push(descText);
     }
-    const statsStr = 'Master: ' + guild.master_name
-      + '  |  Members: ' + guild.member_count + '/' + guild.max_members
-      + '  |  Points: ' + guild.guild_points;
+    const statsStr = '마스터: ' + guild.master_name
+      + '  |  멤버: ' + guild.member_count + '/' + guild.max_members
+      + '  |  포인트: ' + guild.guild_points;
     const statsText = this.scene.add.text(cx, y + s(120), statsStr, {
       fontSize: sf(13),
       fontFamily: '"Noto Sans KR", sans-serif',
@@ -119,7 +119,7 @@ export class GuildPopup extends PopupBase {
   }
 
   _renderNoGuild(cx, y, w) {
-    const msg = this.scene.add.text(cx, y + s(80), 'Not in a guild. Create or join!', {
+    const msg = this.scene.add.text(cx, y + s(80), '길드에 가입되어 있지 않습니다. 생성하거나 가입하세요!', {
       fontSize: sf(16),
       fontFamily: '"Noto Sans KR", sans-serif',
       color: '#94A3B8', align: 'center',
@@ -130,7 +130,7 @@ export class GuildPopup extends PopupBase {
     btnBg.setInteractive({ useHandCursor: true });
     btnBg.on('pointerdown', function() { this._showCreateGuildForm(); }.bind(this));
     this.contentContainer.add(btnBg); this._tabObjects.push(btnBg);
-    const btnTxt = this.scene.add.text(cx, y + s(160), 'Create Guild', {
+    const btnTxt = this.scene.add.text(cx, y + s(160), '길드 생성', {
       fontSize: sf(15),
       fontFamily: '"Noto Sans KR", sans-serif',
       fontStyle: 'bold', color: '#FFFFFF'
@@ -145,7 +145,7 @@ export class GuildPopup extends PopupBase {
     const cx = b2.centerX;
     let y = contentTop;
     if (!result.success || result.members.length === 0) {
-      const emptyTxt = this.scene.add.text(cx, y + s(60), 'No members found', {
+      const emptyTxt = this.scene.add.text(cx, y + s(60), '멤버가 없습니다', {
         fontSize: sf(15),
         fontFamily: '"Noto Sans KR", sans-serif',
         color: '#94A3B8'
@@ -154,7 +154,7 @@ export class GuildPopup extends PopupBase {
       return;
     }
     this._members = result.members;
-    const countTxt = this.scene.add.text(cx, y + s(10), 'Members: ' + result.members.length, {
+    const countTxt = this.scene.add.text(cx, y + s(10), '멤버 수: ' + result.members.length, {
       fontSize: sf(13),
       fontFamily: '"Noto Sans KR", sans-serif',
       color: '#94A3B8'
@@ -173,7 +173,7 @@ export class GuildPopup extends PopupBase {
     bg.setStrokeStyle(s(1), isMaster ? COLORS.primary : 0x334155, 0.4);
     this.contentContainer.add(bg); this._tabObjects.push(bg);
     const nameTxt = this.scene.add.text(cx - w / 2 + s(12), cy - s(10),
-      member.player_name + (isMaster ? ' [Master]' : ''), {
+      member.player_name + (isMaster ? ' [마스터]' : ''), {
       fontSize: sf(15),
       fontFamily: '"Noto Sans KR", sans-serif',
       fontStyle: isMaster ? 'bold' : 'normal',
@@ -181,7 +181,7 @@ export class GuildPopup extends PopupBase {
     }).setOrigin(0, 0.5);
     this.contentContainer.add(nameTxt); this._tabObjects.push(nameTxt);
     const pwrTxt = this.scene.add.text(cx - w / 2 + s(12), cy + s(12),
-      'CP: ' + (member.combat_power || 0).toLocaleString() + '  Donated: ' + (member.total_donation || 0).toLocaleString(), {
+      '전투력: ' + (member.combat_power || 0).toLocaleString() + '  기부: ' + (member.total_donation || 0).toLocaleString(), {
       fontSize: sf(12),
       fontFamily: '"Noto Sans KR", sans-serif',
       color: '#64748B'
@@ -194,14 +194,14 @@ export class GuildPopup extends PopupBase {
     const b2 = this.contentBounds;
     const cx = b2.centerX;
     const y = contentTop;
-    const titleTxt = this.scene.add.text(cx, y + s(20), 'Donate Gold to Guild', {
+    const titleTxt = this.scene.add.text(cx, y + s(20), '길드에 골드 기부', {
       fontSize: sf(20),
       fontFamily: '"Noto Sans KR", sans-serif',
       fontStyle: 'bold', color: '#F8FAFC'
     }).setOrigin(0.5);
     this.contentContainer.add(titleTxt); this._tabObjects.push(titleTxt);
     const infoTxt = this.scene.add.text(cx, y + s(60),
-      '1 gold = 1 guild point', {
+      '1 골드 = 1 길드 포인트', {
       fontSize: sf(13),
       fontFamily: '"Noto Sans KR", sans-serif',
       color: '#94A3B8'
@@ -232,7 +232,7 @@ export class GuildPopup extends PopupBase {
     this._isLoading = false;
     const b2 = this.contentBounds;
     const msg = result.success
-      ? 'Donated ' + amount + ' gold! +' + result.pointsEarned + ' pts'
+      ? amount + ' 골드 기부 완료! +' + result.pointsEarned + ' 포인트'
       : (result.error || 'Error');
     const color = result.success ? '#10B981' : '#EF4444';
     const feedbackTxt = this.scene.add.text(b2.centerX, b2.top + s(200), msg, {
@@ -253,13 +253,13 @@ export class GuildPopup extends PopupBase {
     const b2 = this.contentBounds;
     const cx = b2.centerX;
     let y = b2.top + s(60);
-    const titleTxt = this.scene.add.text(cx, y + s(20), 'Create New Guild', {
+    const titleTxt = this.scene.add.text(cx, y + s(20), '새 길드 생성', {
       fontSize: sf(22),
       fontFamily: '"Noto Sans KR", sans-serif',
       fontStyle: 'bold', color: '#F8FAFC'
     }).setOrigin(0.5);
     this.contentContainer.add(titleTxt); this._tabObjects.push(titleTxt);
-    const nameLbl = this.scene.add.text(cx - b2.width / 2 + s(20), y + s(70), 'Guild Name (2-20):', {
+    const nameLbl = this.scene.add.text(cx - b2.width / 2 + s(20), y + s(70), '길드 이름 (2-20자):', {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", sans-serif', color: '#94A3B8'
     }).setOrigin(0, 0.5);
@@ -273,7 +273,7 @@ export class GuildPopup extends PopupBase {
         }.bind(this));
     }.bind(this));
     this.contentContainer.add(maxBtnBg); this._tabObjects.push(maxBtnBg);
-    const maxBtnTxt = this.scene.add.text(cx, y + s(140), 'Create (Default)', {
+    const maxBtnTxt = this.scene.add.text(cx, y + s(140), '생성 (기본값)', {
       fontSize: sf(15),
       fontFamily: '"Noto Sans KR", sans-serif',
       fontStyle: 'bold', color: '#FFFFFF'

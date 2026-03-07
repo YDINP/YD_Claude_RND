@@ -5,6 +5,16 @@ import { EventDungeonSystem } from '../../systems/EventDungeonSystem.js';
 import energySystem from '../../systems/EnergySystem.js';
 import transitionManager from '../../utils/TransitionManager.js';
 
+// [MED-1] eventCurrency key -> Korean display name mapping
+const EVENT_CURRENCY_NAMES = {
+  dragon_scale: '용의 비늘',
+  shadow_fragment: '어둠 조각',
+  treasure_key: '보물 열쇠',
+};
+function getCurrencyName(key) {
+  return EVENT_CURRENCY_NAMES[key] || key;
+}
+
 /**
  * EventDungeonPopup - 이벤트 던전 팝업
  * PopupBase를 상속하여 이벤트 던전 UI를 팝업 형태로 제공
@@ -176,7 +186,7 @@ export class EventDungeonPopup extends PopupBase {
       color: '#64748B'
     });
 
-    this.addText(x + s(250), y + s(105), `${event.eventCurrency}: ${progress.eventCurrency}`, {
+    this.addText(x + s(250), y + s(105), `${getCurrencyName(event.eventCurrency)}: ${progress.eventCurrency}`, {
       fontSize: sf(13),
       color: '#F59E0B'
     });
@@ -338,7 +348,7 @@ export class EventDungeonPopup extends PopupBase {
     }).setOrigin(0, 0.5);
 
     // 이벤트 화폐
-    this.addText(x + s(20), y + s(55), `${event.eventCurrency || '화폐'}:`, {
+    this.addText(x + s(20), y + s(55), `${getCurrencyName(event.eventCurrency)}:`, {
       fontSize: sf(14),
       color: '#94A3B8'
     });
@@ -477,7 +487,7 @@ export class EventDungeonPopup extends PopupBase {
     currentY += s(40);
 
     // 보유 화폐 표시
-    this.addText(cx, currentY, `보유: ${progress.eventCurrency} ${event.eventCurrency}`, {
+    this.addText(cx, currentY, `보유: ${progress.eventCurrency} ${getCurrencyName(event.eventCurrency)}`, {
       fontSize: sf(16),
       color: '#F59E0B',
       fontStyle: 'bold'

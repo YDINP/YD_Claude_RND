@@ -417,7 +417,18 @@ export class MainMenuScene extends Phaser.Scene {
       color: '#A78BFA', backgroundColor: '#0F172A',
       padding: { x: s(4), y: s(2) }
     }).setOrigin(0.5).setDepth(topBarDepth + 1).setInteractive({ useHandCursor: true });
-    chargeBtn.on('pointerdown', () => this.chargeEnergyWithGems());
+    chargeBtn.on('pointerdown', () => {
+      // [HIGH-2] 즉시 차감 방지 -> Modal 확인 팝업
+      const modal = new Modal(this, {
+        title: '에너지 충전',
+        content: '젬 50개를 소모하여 에너지를 충전합니다.',
+        buttons: [
+          { text: '충전', color: 0x6366F1, onClick: () => { this.chargeEnergyWithGems(); } },
+          { text: '취소', color: 0x475569, onClick: () => {} }
+        ]
+      });
+      modal.show();
+    });
     chargeBtn.on('pointerover', () => chargeBtn.setColor('#C4B5FD'));
     chargeBtn.on('pointerout', () => chargeBtn.setColor('#A78BFA'));
 
@@ -454,6 +465,9 @@ export class MainMenuScene extends Phaser.Scene {
    * WS-3: Party hero display (y=110~270)
    */
   createPartyDisplay() {
+    // [HIGH-1] 파티 HUD 오브젝트 추적 배열 초기화
+    this._partyObjects = [];
+
     const saveData = SaveManager.load();
     const parties = saveData?.parties || [];
     // PartyManager 형식: {heroIds: [...]} 또는 레거시 배열 형식 둘 다 지원
@@ -467,11 +481,13 @@ export class MainMenuScene extends Phaser.Scene {
     panel.fillStyle(COLORS.bgLight, 0.9);
     panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), panelH, s(12));
     panel.setDepth(Z_INDEX.PANELS);
+    this._partyObjects.push(panel);
 
-    this.add.text(s(40), panelY + s(10), '내 파티', {
+    const partyLabel = this.add.text(s(40), panelY + s(10), '내 파티', {
       fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
     }).setDepth(Z_INDEX.PANEL_CONTENT);
+    this._partyObjects.push(partyLabel);
 
     // 파티 편성 바로가기 버튼
     const editBtn = this.add.container(GAME_WIDTH - s(60), panelY + s(18));
@@ -483,6 +499,7 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: sf(12), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
     editBtn.add([editBg, editText]);
+    this._partyObjects.push(editBtn);
     editBg.on('pointerdown', () => {
       this.openPopup('partyedit');
     });
@@ -517,28 +534,34 @@ export class MainMenuScene extends Phaser.Scene {
         avatar = this.add.circle(x, y, avatarR, 0x000000, 0.001)
           .setDepth(Z_INDEX.PANEL_CONTENT + 1)
           .setInteractive({ useHandCursor: true });
+        // [HIGH-1] DiceBear 경로 추적
+        this._partyObjects.push(maskGfx, img, avatar);
       } else {
         avatar = this.add.circle(x, y, avatarR, color, 0.9)
           .setDepth(Z_INDEX.PANEL_CONTENT)
           .setInteractive({ useHandCursor: true });
-        this.add.text(x, y - s(5), classIcons[charClass] || '❓', {
+        const classIconText = this.add.text(x, y - s(5), classIcons[charClass] || '❓', {
           fontSize: sf(24)
         }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT + 1);
+        // [HIGH-1] 폴백 경로 추적
+        this._partyObjects.push(avatar, classIconText);
       }
 
       // Name (max 4 chars)
       const name = (staticData?.name || charData?.name || '???').substring(0, 4);
-      this.add.text(x, y + s(40), name, {
+      const nameText = this.add.text(x, y + s(40), name, {
         fontSize: sf(12), fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.text.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
+      this._partyObjects.push(nameText);
 
       // Level
       const level = charData?.level || 1;
-      this.add.text(x, y + s(55), `Lv.${level}`, {
+      const levelText = this.add.text(x, y + s(55), `Lv.${level}`, {
         fontSize: sf(11), fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
+      this._partyObjects.push(levelText);
 
       // 영웅 클릭 → 팝업 정보
       avatar.on('pointerdown', () => {
@@ -550,10 +573,11 @@ export class MainMenuScene extends Phaser.Scene {
 
     // If party is empty, show placeholder
     if (partyIds.length === 0) {
-      this.add.text(GAME_WIDTH / 2, panelY + s(80), '파티를 편성해주세요!', {
+      const emptyMsg = this.add.text(GAME_WIDTH / 2, panelY + s(80), '파티를 편성해주세요!', {
         fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
+      this._partyObjects.push(emptyMsg);
     }
   }
 
@@ -1283,6 +1307,11 @@ export class MainMenuScene extends Phaser.Scene {
     // 이미 열린 팝업이 있으면 무시
     if (this.activePopup) return;
 
+    // [HIGH-1] 파티 HUD 숨기기 (z-order 잃상 방지)
+    if (this._partyObjects) {
+      this._partyObjects.forEach(obj => { if (obj?.setVisible) obj.setVisible(false); });
+    }
+
     const popups = {
       gacha: GachaPopup,
       herolist: HeroListPopup,
@@ -1301,6 +1330,10 @@ export class MainMenuScene extends Phaser.Scene {
       const popup = new PopupClass(this, {
         onClose: () => {
           this.activePopup = null;
+          // [HIGH-1] 파티 HUD 복원
+          if (this._partyObjects) {
+            this._partyObjects.forEach(obj => { if (obj?.setVisible) obj.setVisible(true); });
+          }
           this.refreshAfterPopup();
         }
       });
