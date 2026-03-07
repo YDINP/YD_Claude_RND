@@ -14,6 +14,8 @@ import SkillAnimationManager from '../systems/SkillAnimationManager.js';
 import { EnhancedHPBar } from '../components/EnhancedHPBar.js';
 import { TowerSystem } from '../systems/TowerSystem.js';
 import { sweepSystem } from '../systems/SweepSystem.js';
+import { BattleSystem } from '../systems/BattleSystem.js';
+import skillsData from '../data/skills.json';
 
 /**
  * BattleScene - 전투 씬
@@ -138,6 +140,13 @@ export class BattleScene extends Phaser.Scene {
    */
   initBattle() {
     this.initializeBattlers();
+
+    // 스킬 시스템 초기화: skills.json 데이터 주입 후 패시브 즉시 적용
+    this.battleSystem.loadSkillData(skillsData);
+    // 패시브 스킬: 전투 시작 1회 아군 전체 적용
+    this.allies.forEach(ally => this.battleSystem._applyPassiveSkills(ally));
+    console.log('[Battle] Skill system initialized, passives applied');
+
     this.calculateSynergy();
     this.createBackground();
     this.createTurnOrderBar();
@@ -311,6 +320,18 @@ export class BattleScene extends Phaser.Scene {
 
     // Combine and sort by speed for turn order
     this.allBattlers = [...this.allies, ...this.enemies];
+
+    // BattleSystem._applyPassiveSkills/processActiveSkills는 unit.atk/unit.def 플랫 필드를 사용하므로
+    // stats 객체의 값을 플랫 필드로 동기화
+    this.allBattlers.forEach(unit => {
+      if (unit.stats) {
+        unit.atk = unit.atk ?? unit.stats.atk ?? 0;
+        unit.def = unit.def ?? unit.stats.def ?? 0;
+      }
+    });
+
+    // BattleSystem 인스턴스 생성 (스킬 시스템 연동용)
+    this.battleSystem = new BattleSystem(this.allies, this.enemies);
   }
 
   getEnemyName() {
@@ -1485,6 +1506,18 @@ export class BattleScene extends Phaser.Scene {
 
     // 전투 이벤트 발행
     this.emitBattleEvent('turnStart', { turn: this.turn, order: activeBattlers.map(b => b.name) });
+
+    // 스킬 시스템: 아군 액티브 스킬 쿨타임 기반 발동 처리
+    if (this.battleSystem && this.battleSystem.characterSkills.length > 0) {
+      const skillResults = this.battleSystem.processActiveSkills(this.allies);
+      if (skillResults.length > 0) {
+        skillResults.forEach(r => {
+          if (r.skillName) {
+            this.addBattleLog(`[스킬] ${r.unitName || ''} - ${r.skillName} 발동!`);
+          }
+        });
+      }
+    }
 
     // Process each battler's action
     let delay = 0;
