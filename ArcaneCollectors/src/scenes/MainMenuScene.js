@@ -400,19 +400,19 @@ export class MainMenuScene extends Phaser.Scene {
 
     const energyStatus = energySystem.getStatus() || {};
     this.energyBar = new EnergyBar(this);
-    this.energyBar.create(s(430), barY);
+    this.energyBar.create(s(390), barY);
     this.energyBar.update(energyStatus?.current ?? 0, energyStatus?.max ?? 100);
 
     const timeToRecover = energySystem.getTimeToNextRecovery?.() ?? 0;
-    this.energyTimerText = this.add.text(s(540), barY, timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
+    this.energyTimerText = this.add.text(s(495), barY, timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
       fontSize: sf(11),
       fontFamily: '"Noto Sans KR", Arial',
-      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`,
-      fontStyle: 'normal'
+      color: '#FFFFFF',
+      fontStyle: 'bold'
     }).setOrigin(0, 0.5).setDepth(topBarDepth + 1);
 
     // Energy gem charge button (💎+)
-    const chargeBtn = this.add.text(s(620), barY, '💎+', {
+    const chargeBtn = this.add.text(s(575), barY, '💎+', {
       fontSize: sf(14), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
       color: '#A78BFA', backgroundColor: '#0F172A',
       padding: { x: s(4), y: s(2) }
@@ -440,12 +440,12 @@ export class MainMenuScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(1, 0.5).setDepth(topBarDepth + 1);
 
-    const settingsBtn = this.add.rectangle(GAME_WIDTH - s(40), barY, s(44), s(44), COLORS.bgDark, 0.01)
+    const settingsBtn = this.add.rectangle(GAME_WIDTH - s(45), barY, s(44), s(44), COLORS.bgDark, 0.01)
       .setDepth(topBarDepth + 1)
       .setInteractive({ useHandCursor: true });
 
-    const settingsIcon = this.add.text(GAME_WIDTH - s(40), barY, '⚙️', {
-      fontSize: sf(24)
+    const settingsIcon = this.add.text(GAME_WIDTH - s(45), barY, '⚙️', {
+      fontSize: sf(20)
     }).setOrigin(0.5).setDepth(topBarDepth + 1);
 
     settingsBtn.on('pointerover', () => {
@@ -454,7 +454,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
     settingsBtn.on('pointerout', () => {
       settingsBtn.setFillStyle(COLORS.bgDark, 0.01);
-      settingsIcon.setAlpha(1);
+      settingsIcon.setAlpha(1.0);
     });
     settingsBtn.on('pointerdown', () => {
       this.openPopup('settings');
@@ -476,7 +476,7 @@ export class MainMenuScene extends Phaser.Scene {
     const characters = saveData?.characters || [];
 
     const panelY = s(95);
-    const panelH = s(200);
+    const panelH = s(175);
     const panel = this.add.graphics();
     panel.fillStyle(COLORS.bgLight, 0.9);
     panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), panelH, s(12));
@@ -525,7 +525,7 @@ export class MainMenuScene extends Phaser.Scene {
       const charData = characters.find(c => c.id === heroId || c.characterId === heroId);
       const staticData = getCharacter(heroId);
       const x = s(40) + slotWidth / 2 + i * slotWidth;
-      const y = panelY + s(130);
+      const y = panelY + s(120);
 
       const charClass = staticData?.class || charData?.class || 'warrior';
       const color = classColors[charClass] || 0x64748B;
@@ -584,7 +584,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // If party is empty, show placeholder
     if (partyIds.length === 0) {
-      const emptyMsg = this.add.text(GAME_WIDTH / 2, panelY + s(130), '파티를 편성해주세요!', {
+      const emptyMsg = this.add.text(GAME_WIDTH / 2, panelY + s(120), '파티를 편성해주세요!', {
         fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
