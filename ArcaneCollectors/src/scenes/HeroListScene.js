@@ -444,8 +444,10 @@ export class HeroListScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    // Hero portrait
-    const portrait = scene.add.image(0, s(-15), 'hero_placeholder').setScale(0.9);
+    // Hero portrait (실제 hero 텍스처 우선, 없으면 hero_placeholder 폴백)
+    const heroId = hero.id || hero.characterId;
+    const heroTextureKey = heroId && scene.textures.exists(`hero_${heroId}`) ? `hero_${heroId}` : 'hero_placeholder';
+    const portrait = scene.add.image(0, s(-15), heroTextureKey).setScale(0.9);
 
     const starCount = hero.stars || getRarityNum(hero.rarity) || rarityData.stars || 1;
     const stars = scene.add.text(0, s(40), '★'.repeat(starCount), {

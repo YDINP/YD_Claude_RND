@@ -141,6 +141,11 @@ export class PartyEditPopup extends PopupBase {
       // 캐릭터 아이콘 배경 (원형)
       const iconBg = this.scene.add.circle(x, y - s(10), s(35), COLORS.bgPanel, 0.5);
 
+      // 캐릭터 이미지 (초기: 비표시, 영웅 배정 시 갱신)
+      const heroImg = this.scene.add.image(x, y - s(10), 'hero_placeholder')
+        .setDisplaySize(s(64), s(64))
+        .setVisible(false);
+
       // 캐릭터 이름
       const nameText = this.scene.add.text(x, y + s(35), '+', {
         fontSize: sf(14),
@@ -170,9 +175,9 @@ export class PartyEditPopup extends PopupBase {
       removeBtn.on('pointerdown', () => this.removeHeroFromSlot(i));
       bg.on('pointerdown', () => this.openHeroSelect(i));
 
-      this.contentContainer.add([bg, slotLabel, iconBg, nameText, infoText, rarityText, removeBtn]);
+      this.contentContainer.add([bg, slotLabel, iconBg, heroImg, nameText, infoText, rarityText, removeBtn]);
       this.heroSlots.push({
-        bg, iconBg, nameText, infoText, rarityText, removeBtn,
+        bg, iconBg, heroImg, nameText, infoText, rarityText, removeBtn,
         hero: null, index: i
       });
     }
@@ -248,6 +253,13 @@ export class PartyEditPopup extends PopupBase {
           slot.bg.setStrokeStyle(2, COLORS.success || 0x10B981);
           slot.iconBg.setFillStyle(moodInfo?.color || COLORS.bgPanel, 0.7);
           slot.removeBtn.setVisible(true);
+          // 영웅 이미지 표시 (실제 텍스처 우선, 없으면 hero_placeholder 폴백)
+          if (slot.heroImg) {
+            const textureKey = `hero_${heroId}`;
+            const finalKey = this.scene.textures.exists(textureKey) ? textureKey : 'hero_placeholder';
+            slot.heroImg.setTexture(finalKey).setVisible(true);
+            slot.rarityText.setText('');
+          }
         } else {
           // 데이터를 찾지 못한 경우
           slot.hero = null;
@@ -257,6 +269,7 @@ export class PartyEditPopup extends PopupBase {
           slot.bg.setStrokeStyle(2, COLORS.bgPanel);
           slot.iconBg.setFillStyle(COLORS.bgPanel, 0.5);
           slot.removeBtn.setVisible(false);
+          if (slot.heroImg) slot.heroImg.setVisible(false);
         }
       } else {
         slot.hero = null;
@@ -266,6 +279,7 @@ export class PartyEditPopup extends PopupBase {
         slot.bg.setStrokeStyle(2, COLORS.bgPanel);
         slot.iconBg.setFillStyle(COLORS.bgPanel, 0.5);
         slot.removeBtn.setVisible(false);
+        if (slot.heroImg) slot.heroImg.setVisible(false);
       }
     });
 
@@ -510,10 +524,19 @@ export class PartyEditPopup extends PopupBase {
         }
       ).setOrigin(0.5);
 
+      // 영웅 이미지 (실제 텍스처 우선, 없으면 hero_placeholder 폴백)
+      const selectHeroId = hero.id || hero.characterId;
+      const selectTextureKey = selectHeroId && this.scene.textures.exists(`hero_${selectHeroId}`)
+        ? `hero_${selectHeroId}`
+        : 'hero_placeholder';
+      const heroPortrait = this.scene.add.image(x, y - s(28), selectTextureKey)
+        .setDisplaySize(s(48), s(48))
+        .setAlpha(isInParty ? 0.4 : 1);
+
       // 이름
       const nameText = this.scene.add.text(
         x,
-        y - s(10),
+        y + s(5),
         hero.nameKo || hero.name,
         {
           fontSize: sf(13),
@@ -528,7 +551,7 @@ export class PartyEditPopup extends PopupBase {
       // 레벨
       const levelText = this.scene.add.text(
         x,
-        y + s(15),
+        y + s(25),
         `Lv.${hero.level || 1}`,
         {
           fontSize: sf(12),
@@ -554,7 +577,7 @@ export class PartyEditPopup extends PopupBase {
         ).setOrigin(0.5);
       }
 
-      gridContainer.add([cardBg, rarityText, nameText, levelText]);
+      gridContainer.add([cardBg, rarityText, heroPortrait, nameText, levelText]);
       if (statusText) gridContainer.add(statusText);
     });
 
