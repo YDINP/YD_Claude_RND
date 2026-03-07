@@ -162,6 +162,15 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.progressBar.setOrigin(0, 0.5);
     this.add(this.progressBar);
 
+    // 진행도 텍스트
+    this.progressText = this.scene.add.text(0, infoY + s(14), '전투 진행도: 0%', {
+      fontSize: sf(11),
+      fontFamily: '"Noto Sans KR", Arial',
+      color: '#EF4444',
+      fontStyle: 'bold'
+    }).setOrigin(0.5, 0);
+    this.add(this.progressText);
+
   }
 
   /**
@@ -472,6 +481,10 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
       width: newWidth,
       duration: 300
     });
+
+    if (this.progressText) {
+      this.progressText.setText('전투 진행도: ' + Math.floor(progress * 100) + '%');
+    }
   }
 
   /**
