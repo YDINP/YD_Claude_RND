@@ -68,9 +68,9 @@ export class HeroInfoPopup {
     overlay.on('pointerdown', () => this.destroy());
     this.container.add(overlay);
 
-    // --- Panel (BUG-07: 확장된 크기 400x600) ---
+    // --- Panel (BUG-07: 확장된 크기 400x650, 버튼 수용을 위해 높이 증가) ---
     const panelW = s(400);
-    const panelH = s(600);
+    const panelH = s(650);
     const px = GAME_WIDTH / 2;
     const py = GAME_HEIGHT / 2;
     const left = px - panelW / 2;
@@ -124,15 +124,25 @@ export class HeroInfoPopup {
     // === HEADER SECTION: Portrait + Name + Rarity ===
     const headerY = top + s(30);
 
-    // 캐릭터 초상화 (원형 아바타)
+    // 캐릭터 초상화 (HeroListScene과 동일한 방식: hero_${id} 텍스처 우선, 없으면 이모지 폴백)
     const avatarSize = s(60);
     const avatarCircle = scene.add.circle(px, headerY + avatarSize / 2, avatarSize / 2, rarityStyle.border, 0.3);
     avatarCircle.setStrokeStyle(s(3), rarityStyle.border);
     this.container.add(avatarCircle);
-    const iconText = scene.add.text(px, headerY + avatarSize / 2 - s(3), classIcon, {
-      fontSize: sf(40)
-    }).setOrigin(0.5);
-    this.container.add(iconText);
+
+    const heroTextureKey = heroId && scene.textures.exists(`hero_${heroId}`) ? `hero_${heroId}` : null;
+    if (heroTextureKey) {
+      // HeroListScene과 동일한 텍스처 기반 초상화
+      const portraitImg = scene.add.image(px, headerY + avatarSize / 2, heroTextureKey);
+      portraitImg.setDisplaySize(avatarSize, avatarSize);
+      this.container.add(portraitImg);
+    } else {
+      // 텍스처 없을 때 이모지 폴백 (기존 방식 유지)
+      const iconText = scene.add.text(px, headerY + avatarSize / 2 - s(3), classIcon, {
+        fontSize: sf(40)
+      }).setOrigin(0.5);
+      this.container.add(iconText);
+    }
 
     // 이름 (아바타 아래)
     const nameText = scene.add.text(px, headerY + avatarSize + s(12), hero.name || '???', {
@@ -285,7 +295,10 @@ export class HeroInfoPopup {
     }
 
     // === ACTION BUTTONS ===
-    const btnY = top + panelH - s(85);
+    // 스킬 3개 * s(70) + 여백 = 최대 s(235) 사용 → skillsY 기준 s(250) 아래에서 시작
+    // panelH 내부에 수용되도록 top + panelH - s(105) 이하로 제한
+    const skillsAreaBottom = skillsY + (skills.length > 0 ? Math.min(skills.length, 3) * s(70) + s(30) : s(50));
+    const btnY = Math.max(skillsAreaBottom, top + panelH - s(110));
     const btnW = s(170);
     const btnH = s(36);
     const btnGap = s(10);
