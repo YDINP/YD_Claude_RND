@@ -2,9 +2,9 @@
 
 > **최종 업데이트**: 2026-03-07
 > **브랜치**: `arcane/integration`
-> **테스트**: 845개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
+> **테스트**: 870개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [CULT-UI/TS/AWAKE-1] 서브컬쳐 교단 v3.0 전면 교체 + AwakeningSystem 신규 (2026-03-07)
+> **최근 작업**: [AWAKE-2] cult-materials.json 10교단 소재 데이터 + getMaterialInfo() 연동 (2026-03-07)
 
 ---
 
@@ -120,6 +120,12 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | QA | data/index.test.js cult 기대값 `'cafe_encore'` 수정 | `tests/data/index.test.js` | 03-07 |
 
 **결과**: 빌드 ✅ + 845/845 테스트 통과 + src 내 구 교단 ID 잔존 0건 + code-reviewer APPROVED
+
+| AWAKE-2 | cult-materials.json 신규 — 10교단 소재(소재명/요구량/등급/아이콘/획득처) + cult_imprint_stone SSR 전용 | `src/data/cult-materials.json` | 03-07 |
+| AWAKE-2 | AwakeningSystem.js — cult-materials.json import, getMaterialInfo(cultId) 헬퍼 추가 | `src/systems/AwakeningSystem.js` | 03-07 |
+| AWAKE-2 | cult-materials.test.js 신규 25개 테스트 (TC-M01~M25, AWAKENING_REQUIREMENTS 교차 검증) | `tests/data/cult-materials.test.js` | 03-07 |
+
+**결과**: 빌드 ✅ + 870/870 테스트 통과 + code-reviewer APPROVED
 
 - BattleSystem 재사용: simulateBattle()에서 BattleSystem 인스턴스 생성, 최대 20턴 시뮬레이션
 - 오프라인 지원: Supabase 연결 실패 시 localStorage 캐시 폴백

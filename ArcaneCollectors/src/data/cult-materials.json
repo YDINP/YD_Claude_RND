@@ -1,0 +1,147 @@
+{
+  "materials": {
+    "prism_stars": {
+      "id": "material_prism_stars",
+      "cultId": "prism_stars",
+      "nameKr": "공명의 별빛 조각",
+      "nameEn": "Resonant Starlight Shard",
+      "icon": "✨",
+      "description": "프리즘 스타즈 교단의 무대 에너지가 결정화된 조각. 팬들의 환호와 아이돌의 열정이 응축되어 있다.",
+      "requiredCount": 30,
+      "rarity": "SSR",
+      "dropSources": ["stage", "event", "trial", "reward"],
+      "imprintStone": true
+    },
+    "neon_crow": {
+      "id": "material_neon_crow",
+      "cultId": "neon_crow",
+      "nameKr": "암호화된 데이터 코어",
+      "nameEn": "Encrypted Data Core",
+      "icon": "💾",
+      "description": "네온 크로우 교단이 탈취한 고밀도 데이터 코어. 내부 암호화 알고리즘은 아직도 해독 중이다.",
+      "requiredCount": 30,
+      "rarity": "SSR",
+      "dropSources": ["stage", "event", "trial", "reward"],
+      "imprintStone": true
+    },
+    "ink_cyclone": {
+      "id": "material_ink_cyclone",
+      "cultId": "ink_cyclone",
+      "nameKr": "잉크 정수",
+      "nameEn": "Ink Essence",
+      "icon": "🎨",
+      "description": "잉크 사이클론 교단의 그라피티 작업에서 추출한 정제된 잉크 정수. 자유와 표현의 에너지가 담겨 있다.",
+      "requiredCount": 25,
+      "rarity": "SR",
+      "dropSources": ["stage", "event", "trial"],
+      "imprintStone": false
+    },
+    "stella_club": {
+      "id": "material_stella_club",
+      "cultId": "stella_club",
+      "nameKr": "별자리 파편",
+      "nameEn": "Constellation Fragment",
+      "icon": "🌟",
+      "description": "스텔라 클럽 교단이 관측한 별자리에서 떨어진 파편. 천문학적 지식과 낭만이 깃든 희귀 소재다.",
+      "requiredCount": 30,
+      "rarity": "SSR",
+      "dropSources": ["stage", "event", "trial", "reward"],
+      "imprintStone": true
+    },
+    "card_cartel": {
+      "id": "material_card_cartel",
+      "cultId": "card_cartel",
+      "nameKr": "봉인된 황금 카드",
+      "nameEn": "Sealed Golden Card",
+      "icon": "🃏",
+      "description": "카드 카르텔 교단의 최고 전략가만이 소지할 수 있는 봉인 황금 카드. 카드 한 장에 승패의 비밀이 담겼다.",
+      "requiredCount": 25,
+      "rarity": "SR",
+      "dropSources": ["stage", "event", "trial"],
+      "imprintStone": false
+    },
+    "buddy_garden": {
+      "id": "material_buddy_garden",
+      "cultId": "buddy_garden",
+      "nameKr": "공생의 씨앗",
+      "nameEn": "Symbiotic Seed",
+      "icon": "🌱",
+      "description": "버디 가든 교단이 수천 번의 돌봄으로 키워낸 특별한 씨앗. 함께 성장하는 생명의 에너지가 응집되어 있다.",
+      "requiredCount": 25,
+      "rarity": "SR",
+      "dropSources": ["stage", "event", "trial"],
+      "imprintStone": false
+    },
+    "glitch_paradise": {
+      "id": "material_glitch_paradise",
+      "cultId": "glitch_paradise",
+      "nameKr": "카오스 오류 데이터",
+      "nameEn": "Chaos Error Data",
+      "icon": "⚡",
+      "description": "글리치 파라다이스 교단이 수집한 예측 불가능한 오류 데이터. 카오스 미학이 픽셀 단위로 저장되어 있다.",
+      "requiredCount": 25,
+      "rarity": "SR",
+      "dropSources": ["stage", "event", "trial"],
+      "imprintStone": false
+    },
+    "cafe_encore": {
+      "id": "material_cafe_encore",
+      "cultId": "cafe_encore",
+      "nameKr": "중립의 커피 원두",
+      "nameEn": "Neutral Coffee Bean",
+      "icon": "☕",
+      "description": "카페 앙코르에서 직접 로스팅한 중립 커피 원두. 어느 교단 소속이든 평화로운 한 잔을 나눌 수 있게 해주는 소재다.",
+      "requiredCount": 20,
+      "rarity": "R",
+      "dropSources": ["stage", "event", "reward"],
+      "imprintStone": false
+    },
+    "lunatic_circus": {
+      "id": "material_lunatic_circus",
+      "cultId": "lunatic_circus",
+      "nameKr": "환상의 마술 인장",
+      "nameEn": "Phantasmal Magic Seal",
+      "icon": "🎪",
+      "description": "루나틱 서커스 교단의 마술사가 사용하는 신비한 인장. 현실과 환상의 경계를 무너뜨리는 힘이 봉인되어 있다.",
+      "requiredCount": 30,
+      "rarity": "SSR",
+      "dropSources": ["stage", "event", "trial", "reward"],
+      "imprintStone": true
+    },
+    "iron_beat": {
+      "id": "material_iron_beat",
+      "cultId": "iron_beat",
+      "nameKr": "언더그라운드 공연 기록",
+      "nameEn": "Underground Performance Record",
+      "icon": "🎸",
+      "description": "아이언 비트 교단의 지하 공연장 기록. 폭발적인 사운드와 반항 정신이 압축된 희귀 소재다.",
+      "requiredCount": 25,
+      "rarity": "SR",
+      "dropSources": ["stage", "event", "trial"],
+      "imprintStone": false
+    }
+  },
+  "cult_imprint_stone": {
+    "id": "cult_imprint_stone",
+    "nameKr": "교단 각인석",
+    "nameEn": "Cult Imprint Stone",
+    "icon": "💎",
+    "description": "SSR 교단 각성 시 추가로 필요한 희귀 소재. 월 1회 무료 지급되며, 다이아 500개로도 교환 가능하다.",
+    "requiredCount": 1,
+    "rarity": "SSR",
+    "applicableCults": ["prism_stars", "neon_crow", "stella_club", "lunatic_circus"],
+    "obtainMethods": [
+      { "type": "free", "description": "월 1회 무료 지급 (우편함)" },
+      { "type": "paid", "description": "다이아 500개 교환" }
+    ]
+  },
+  "_meta": {
+    "version": "1.0",
+    "lastUpdated": "2026-03-07",
+    "totalMaterials": 10,
+    "ssrMaterials": 4,
+    "srMaterials": 5,
+    "rMaterials": 1,
+    "gddReference": "docs/AWAKENING_SYSTEM_GDD.md §2 조건 B"
+  }
+}

@@ -4,7 +4,11 @@
  *
  * GDD 기준: docs/AWAKENING_SYSTEM_GDD.md
  * 10개 서브컬쳐 교단 (cults.json v3.0)
+ * cult-materials.json: 교단별 소재 데이터 (AWAKE-2)
+ * cult-materials.json: 교단별 소재 데이터 (AWAKE-2)
  */
+
+import cultMaterialsData from '../data/cult-materials.json';
 
 // ============================================
 // 교단 각성 조건 정의 (GDD §2 기준)
@@ -446,6 +450,16 @@ export class AwakeningSystem {
    */
   clearHeroCache(heroId) {
     this._cache.delete(heroId);
+  }
+
+  /**
+   * 교단 전용 소재 정보 반환 (cult-materials.json 참조)
+   * @param {string} cultId
+   * @returns {object|null} 소재 데이터 객체 또는 null
+   */
+  getMaterialInfo(cultId) {
+    if (!cultId || !cultMaterialsData.materials) return null;
+    return cultMaterialsData.materials[cultId] ?? null;
   }
 }
 
