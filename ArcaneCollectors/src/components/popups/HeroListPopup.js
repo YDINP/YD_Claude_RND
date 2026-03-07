@@ -628,7 +628,8 @@ export class HeroListPopup extends PopupBase {
 
     // Update max scroll
     const rows = Math.ceil(filtered.length / cols);
-    this.maxScroll = Math.max(0, rows * (cardH + spacing) - this.contentBounds.height + s(190));
+    const gridHeight = this.contentBounds.height - s(190);
+    this.maxScroll = Math.max(0, rows * (cardH + spacing) - gridHeight);
     this.scrollY = Math.min(this.scrollY, this.maxScroll);
   }
 
