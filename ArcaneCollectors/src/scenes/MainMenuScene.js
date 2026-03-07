@@ -1072,83 +1072,203 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   createBottomMenu() {
-    const menuItems = [
-      { icon: '🎲', label: '소환', popupKey: 'gacha' },
-      { icon: '🦸', label: '영웅', popupKey: 'herolist' },
-      { icon: '👥', label: '파티', popupKey: 'partyedit' },
-      { icon: '📜', label: '퀘스트', popupKey: 'quest' },
-      { icon: '🗼', label: '무한탑', popupKey: 'tower' },
-      { icon: '✨', label: '각인', popupKey: 'ascension' },
-      { icon: '🎉', label: '이벤트', popupKey: 'eventdungeon' },
-      { icon: '📦', label: '가방', popupKey: 'inventory' },
-      { icon: '⚙️', label: '설정', popupKey: 'settings' },
-      { icon: '⚔️', label: 'PvP', popupKey: 'pvp' },
-      { icon: '🏰', label: '길드', popupKey: 'guild' },
+    // ──────────────────────────────────────────────
+    // P1/P2/P3 계층 UX 구조
+    // P1: 전투/스테이지 (최우선 CTA, 펄스 애니메이션)
+    // P2: 가챠, 파티 편성 (중간 크기 2버튼)
+    // P3: 서브 콘텐츠 8개 (소형 아이콘+텍스트, 2행4열)
+    // ──────────────────────────────────────────────
+
+    const menuBaseY = s(910);
+    const padding = s(20);
+    const menuWidth = GAME_WIDTH - padding * 2;
+
+    // ── P1: 전투/스테이지 진행 버튼 ──────────────────
+    const p1BtnW = Math.floor(menuWidth * 0.7);
+    const p1BtnH = s(60);
+    const p1BtnX = GAME_WIDTH / 2;
+    const p1BtnY = menuBaseY + p1BtnH / 2;
+
+    // P1 배경 그래픽 (빛나는 테두리)
+    const p1Gfx = this.add.graphics().setDepth(Z_INDEX.BOTTOM_MENU);
+    p1Gfx.fillStyle(COLORS.primary, 0.9);
+    p1Gfx.fillRoundedRect(p1BtnX - p1BtnW / 2, menuBaseY, p1BtnW, p1BtnH, s(12));
+    p1Gfx.lineStyle(2, 0xA5B4FC, 0.8);
+    p1Gfx.strokeRoundedRect(p1BtnX - p1BtnW / 2, menuBaseY, p1BtnW, p1BtnH, s(12));
+
+    const p1Label = this.add.text(p1BtnX, p1BtnY, '⚔ 전투 / 스테이지 진행', {
+      fontSize: sf(20),
+      fontFamily: '"Noto Sans KR", Arial',
+      color: '#FFFFFF',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(Z_INDEX.BOTTOM_MENU + 1);
+
+    // P1 펄스 애니메이션
+    this.tweens.add({
+      targets: p1Label,
+      alpha: { from: 0.8, to: 1.0 },
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    // P1 히트 영역
+    const p1Hit = this.add.rectangle(p1BtnX, p1BtnY, p1BtnW, p1BtnH)
+      .setAlpha(0.001).setDepth(Z_INDEX.BOTTOM_MENU + 2).setInteractive({ useHandCursor: true });
+
+    p1Hit.on('pointerover', () => {
+      p1Gfx.clear();
+      p1Gfx.fillStyle(COLORS.primary, 1);
+      p1Gfx.fillRoundedRect(p1BtnX - p1BtnW / 2, menuBaseY, p1BtnW, p1BtnH, s(12));
+      p1Gfx.lineStyle(3, 0xC4B5FD, 1);
+      p1Gfx.strokeRoundedRect(p1BtnX - p1BtnW / 2, menuBaseY, p1BtnW, p1BtnH, s(12));
+    });
+    p1Hit.on('pointerout', () => {
+      p1Gfx.clear();
+      p1Gfx.fillStyle(COLORS.primary, 0.9);
+      p1Gfx.fillRoundedRect(p1BtnX - p1BtnW / 2, menuBaseY, p1BtnW, p1BtnH, s(12));
+      p1Gfx.lineStyle(2, 0xA5B4FC, 0.8);
+      p1Gfx.strokeRoundedRect(p1BtnX - p1BtnW / 2, menuBaseY, p1BtnW, p1BtnH, s(12));
+    });
+    p1Hit.on('pointerdown', () => {
+      this.scene.start('StageSelectScene');
+    });
+
+    // ── P2: 가챠 + 파티 편성 버튼 ──────────────────
+    const p2BtnW = Math.floor(menuWidth * 0.45);
+    const p2BtnH = s(50);
+    const p2Gap = s(12);
+    const p2Y = menuBaseY + p1BtnH + s(12);
+
+    const p2Items = [
+      { label: '🎰 가챠', popupKey: 'gacha', color: 0x7C3AED },
+      { label: '⚔ 파티 편성', popupKey: 'partyedit', color: 0x1D4ED8 },
     ];
 
-    const cols = 4;
-    const btnSize = s(80);
-    const gapX = s(20);
-    const gapY = s(10);
-    const startY = s(910);
-    const totalWidth = cols * btnSize + (cols - 1) * gapX;
-    const startX = (GAME_WIDTH - totalWidth) / 2 + btnSize / 2;
+    p2Items.forEach((item, i) => {
+      const totalP2Width = p2BtnW * 2 + p2Gap;
+      const p2StartX = (GAME_WIDTH - totalP2Width) / 2;
+      const bx = p2StartX + i * (p2BtnW + p2Gap);
+      const bCenterX = bx + p2BtnW / 2;
+      const bCenterY = p2Y + p2BtnH / 2;
 
-    menuItems.forEach((item, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = startX + col * (btnSize + gapX);
-      const y = startY + row * (btnSize + gapY);
+      const gfx = this.add.graphics().setDepth(Z_INDEX.BOTTOM_MENU);
+      gfx.fillStyle(item.color, 0.85);
+      gfx.fillRoundedRect(bx, p2Y, p2BtnW, p2BtnH, s(10));
+      gfx.lineStyle(1, 0xA5B4FC, 0.4);
+      gfx.strokeRoundedRect(bx, p2Y, p2BtnW, p2BtnH, s(10));
 
-      // Circle background
-      const circleR = s(32);
-      const bg = this.add.graphics();
-      bg.fillStyle(COLORS.bgLight, 0.9);
-      bg.fillCircle(x, y - s(8), circleR);
-      bg.lineStyle(2, COLORS.primary, 0.3);
-      bg.strokeCircle(x, y - s(8), circleR);
-      bg.setDepth(Z_INDEX.BOTTOM_MENU);
-
-      // Icon
-      const icon = this.add.text(x, y - s(10), item.icon, {
-        fontSize: sf(28)
+      const txt = this.add.text(bCenterX, bCenterY, item.label, {
+        fontSize: sf(16),
+        fontFamily: '"Noto Sans KR", Arial',
+        color: '#FFFFFF',
+        fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(Z_INDEX.BOTTOM_MENU + 1);
 
-      // Label
-      const label = this.add.text(x, y + s(22), item.label, {
-        fontSize: sf(11), fontFamily: '"Noto Sans KR", Arial',
+      const hit = this.add.rectangle(bCenterX, bCenterY, p2BtnW, p2BtnH)
+        .setAlpha(0.001).setDepth(Z_INDEX.BOTTOM_MENU + 2).setInteractive({ useHandCursor: true });
+
+      hit.on('pointerover', () => {
+        gfx.clear();
+        gfx.fillStyle(item.color, 1);
+        gfx.fillRoundedRect(bx, p2Y, p2BtnW, p2BtnH, s(10));
+        gfx.lineStyle(2, 0xC4B5FD, 0.7);
+        gfx.strokeRoundedRect(bx, p2Y, p2BtnW, p2BtnH, s(10));
+      });
+      hit.on('pointerout', () => {
+        gfx.clear();
+        gfx.fillStyle(item.color, 0.85);
+        gfx.fillRoundedRect(bx, p2Y, p2BtnW, p2BtnH, s(10));
+        gfx.lineStyle(1, 0xA5B4FC, 0.4);
+        gfx.strokeRoundedRect(bx, p2Y, p2BtnW, p2BtnH, s(10));
+      });
+      hit.on('pointerdown', () => {
+        txt.setScale(0.94);
+        this.time.delayedCall(100, () => {
+          txt.setScale(1);
+          this.openPopup(item.popupKey);
+        });
+      });
+    });
+
+    // ── P3: 서브 콘텐츠 소형 버튼 8개 (2행 4열) ──────
+    const p3Items = [
+      { icon: '📋', label: '일일 퀘스트', popupKey: 'quest' },
+      { icon: '🦸', label: '도감', popupKey: 'herolist' },
+      { icon: '⚔️', label: 'PvP', popupKey: 'pvp' },
+      { icon: '🏰', label: '길드', popupKey: 'guild' },
+      { icon: '🗼', label: '타워', popupKey: 'tower' },
+      { icon: '🎉', label: '이벤트', popupKey: 'eventdungeon' },
+      { icon: '🛒', label: '상점', popupKey: 'inventory' },
+      { icon: '⚙️', label: '설정', popupKey: 'settings' },
+    ];
+
+    const p3Cols = 4;
+    const p3BtnW = s(70);
+    const p3BtnH = s(70);
+    const p3GapX = s(14);
+    const p3GapY = s(8);
+    const p3StartY = p2Y + p2BtnH + s(14);
+    const p3TotalWidth = p3Cols * p3BtnW + (p3Cols - 1) * p3GapX;
+    const p3StartX = (GAME_WIDTH - p3TotalWidth) / 2;
+    const circleR = s(24);
+
+    p3Items.forEach((item, i) => {
+      const col = i % p3Cols;
+      const row = Math.floor(i / p3Cols);
+      const bx = p3StartX + col * (p3BtnW + p3GapX) + p3BtnW / 2;
+      const by = p3StartY + row * (p3BtnH + p3GapY) + p3BtnH / 2 - s(8);
+
+      const bg = this.add.graphics().setDepth(Z_INDEX.BOTTOM_MENU);
+      bg.fillStyle(COLORS.bgLight, 0.9);
+      bg.fillCircle(bx, by, circleR);
+      bg.lineStyle(1, COLORS.primary, 0.3);
+      bg.strokeCircle(bx, by, circleR);
+
+      const iconTxt = this.add.text(bx, by - s(2), item.icon, {
+        fontSize: sf(20)
+      }).setOrigin(0.5).setDepth(Z_INDEX.BOTTOM_MENU + 1);
+
+      const labelTxt = this.add.text(bx, by + circleR + s(6), item.label, {
+        fontSize: sf(10),
+        fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(Z_INDEX.BOTTOM_MENU + 1);
 
-      // Hit area
-      const hitArea = this.add.rectangle(x, y + s(5), btnSize, btnSize + s(10))
+      const hitArea = this.add.rectangle(bx, by + s(8), p3BtnW, p3BtnH)
         .setAlpha(0.001).setDepth(Z_INDEX.BOTTOM_MENU + 2).setInteractive({ useHandCursor: true });
 
       hitArea.on('pointerover', () => {
         bg.clear();
         bg.fillStyle(COLORS.bgPanel, 1);
-        bg.fillCircle(x, y - s(8), circleR);
+        bg.fillCircle(bx, by, circleR);
         bg.lineStyle(2, COLORS.primary, 0.6);
-        bg.strokeCircle(x, y - s(8), circleR);
-        label.setColor(`#${COLORS.text.toString(16).padStart(6, '0')}`);
+        bg.strokeCircle(bx, by, circleR);
+        labelTxt.setColor(`#${COLORS.text.toString(16).padStart(6, '0')}`);
       });
       hitArea.on('pointerout', () => {
         bg.clear();
         bg.fillStyle(COLORS.bgLight, 0.9);
-        bg.fillCircle(x, y - s(8), circleR);
-        bg.lineStyle(2, COLORS.primary, 0.3);
-        bg.strokeCircle(x, y - s(8), circleR);
-        label.setColor(`#${COLORS.textDark.toString(16).padStart(6, '0')}`);
-        icon.setScale(1);
+        bg.fillCircle(bx, by, circleR);
+        bg.lineStyle(1, COLORS.primary, 0.3);
+        bg.strokeCircle(bx, by, circleR);
+        labelTxt.setColor(`#${COLORS.textDark.toString(16).padStart(6, '0')}`);
+        iconTxt.setScale(1);
       });
       hitArea.on('pointerdown', () => {
-        icon.setScale(0.92);
+        iconTxt.setScale(0.9);
         this.time.delayedCall(100, () => {
-          icon.setScale(1);
+          iconTxt.setScale(1);
           this.openPopup(item.popupKey);
         });
       });
     });
+
+    // ── 구분선 (P2/P3 사이) ──
+    const divY = p2Y + p2BtnH + s(7);
+    const divLine = this.add.rectangle(GAME_WIDTH / 2, divY, menuWidth, 1, COLORS.primary, 0.2)
+      .setDepth(Z_INDEX.BOTTOM_MENU);
   }
 
   openPopup(key) {
