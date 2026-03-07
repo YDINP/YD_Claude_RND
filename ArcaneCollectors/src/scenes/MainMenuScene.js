@@ -724,6 +724,9 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_BUTTONS + 1);
     this._bossBtnPanelY = panelY;
+    this._bossBtnX = bossBtnX;
+    this._bossBtnW = btnW;
+    this._bossBtnH = btnH;
 
     this._bossHit = this.add.rectangle(bossBtnX + btnW / 2, btnY + btnH / 2, btnW, btnH)
       .setAlpha(0.001).setDepth(Z_INDEX.PANEL_BUTTONS + 2);
@@ -1418,8 +1421,11 @@ export class MainMenuScene extends Phaser.Scene {
 
         // 진행도 100% → 보스전 준비 알림 + 버튼 동적 활성화
         if (battleResult.bossReady) {
-          this.idleBattleView.showBossReady();
           this.showToast('⚔️ 보스전 준비 완료! 보스전 버튼을 눌러주세요.');
+        }
+        // 로드 시 이미 ready 상태면 즉시 표시 (bossReadyShown 가드가 중복 호출 방지)
+        if (battleResult.bossReady || this.idleSystem.isBossReady?.()) {
+          this.idleBattleView.showBossReady();
         }
       }
 
@@ -1428,11 +1434,9 @@ export class MainMenuScene extends Phaser.Scene {
       if (nowBossReady !== this._bossReady) {
         this._bossReady = nowBossReady;
         if (this._bossBtnGfx && this._bossBtnText) {
-          const bossBtnX = GAME_WIDTH / 2 + s(20);
-          const bossBtnW = GAME_WIDTH / 2 - s(60);
           this._bossBtnGfx.clear();
           this._bossBtnGfx.fillStyle(nowBossReady ? COLORS.danger : COLORS.bgPanel, 1);
-          this._bossBtnGfx.fillRoundedRect(bossBtnX, this._bossBtnPanelY + s(80), bossBtnW, s(50), s(10));
+          this._bossBtnGfx.fillRoundedRect(this._bossBtnX, this._bossBtnPanelY + s(80), this._bossBtnW, this._bossBtnH, s(10));
           this._bossBtnText.setAlpha(nowBossReady ? 1 : 0.5);
 
           // 활성화 시 펄스 애니메이션

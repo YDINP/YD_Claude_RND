@@ -113,22 +113,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.enemyName.setVisible(false);
     this.add(this.enemyName);
 
-    // HP 바
-    this.enemyHpBg = this.scene.add.rectangle(enemyX, enemyY - s(55), s(80), s(6), COLORS.bgLight, 0.8);
-    this.enemyHpBar = this.scene.add.rectangle(enemyX, enemyY - s(55), s(80), s(6), COLORS.success, 1);
-    this.enemyHpBg.setVisible(false);
-    this.enemyHpBar.setVisible(false);
-    this.add([this.enemyHpBg, this.enemyHpBar]);
-
-    // 보스 HP 텍스트 (수치 표시)
-    this.bossHpText = this.scene.add.text(enemyX, enemyY - s(65), '', {
-      fontSize: sf(10),
-      fontFamily: 'Arial',
-      color: '#FFFFFF',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    this.bossHpText.setVisible(false);
-    this.add(this.bossHpText);
+    // HP 바 / 퍼센트 텍스트 제거됨 (의미없는 UI 정리)
   }
 
   /**
@@ -222,32 +207,19 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.enemyEmoji.setVisible(true);
     this.enemyName.setText(bossData.name || '보스');
     this.enemyName.setVisible(true);
-    this.enemyHpBg.setVisible(true);
-    this.enemyHpBar.setVisible(true);
-    if (this.bossHpText) {
-      this.bossHpText.setText('0%');
-      this.bossHpText.setVisible(true);
-    }
-
     // 슬라이드 인 (최초만)
     const targetX = this.viewWidth / 2 - s(80);
     this.enemyCircle.x = this.viewWidth / 2 + s(100);
     this.enemyEmoji.x = this.viewWidth / 2 + s(100);
     this.enemyName.x = this.viewWidth / 2 + s(100);
-    this.enemyHpBg.x = this.viewWidth / 2 + s(100);
-    this.enemyHpBar.x = this.viewWidth / 2 + s(100);
-    if (this.bossHpText) this.bossHpText.x = this.viewWidth / 2 + s(100);
 
     this.scene.tweens.add({
-      targets: [this.enemyCircle, this.enemyEmoji, this.enemyName, this.enemyHpBg, this.enemyHpBar, this.bossHpText].filter(Boolean),
+      targets: [this.enemyCircle, this.enemyEmoji, this.enemyName],
       x: targetX,
       duration: 600,
       ease: 'Back.easeOut'
     });
 
-    // 진행도 바 초기화 (0%에서 시작)
-    this.enemyHpBar.setScale(0, 1);
-    this.enemyHpBar.setFillStyle(COLORS.primary, 1);
     this.bossReadyShown = false;
   }
 
@@ -295,30 +267,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
    * 진행도 업데이트 (샌드백 모드 — 0→100% 채워지는 방향)
    */
   updateBossHp(accumulatedDamage, bossMaxHp) {
-    if (!this.currentBoss) return;
-
-    const progress = Math.min(1, accumulatedDamage / bossMaxHp);
-
-    // 진행도 바 스케일 조정 (0→1 채워지는 방향)
-    this.scene.tweens.add({
-      targets: this.enemyHpBar,
-      scaleX: progress,
-      duration: 200
-    });
-
-    // 퍼센트 텍스트 업데이트
-    if (this.bossHpText) {
-      this.bossHpText.setText(`${Math.floor(progress * 100)}%`);
-    }
-
-    // 진행도에 따라 색상 변경
-    if (progress >= 0.9) {
-      this.enemyHpBar.setFillStyle(COLORS.danger, 1);
-    } else if (progress >= 0.6) {
-      this.enemyHpBar.setFillStyle(COLORS.accent, 1);
-    } else {
-      this.enemyHpBar.setFillStyle(COLORS.primary, 1);
-    }
+    // HP 바 제거됨 — 하단 progressBar가 진행도를 표시
   }
 
   /**
@@ -352,14 +301,6 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
   showBossReady() {
     if (!this.currentBoss || this.bossReadyShown) return;
     this.bossReadyShown = true;
-
-    // 진행도 바 100% + 빛남
-    this.enemyHpBar.setFillStyle(COLORS.danger, 1);
-    this.scene.tweens.add({
-      targets: this.enemyHpBar,
-      scaleX: 1,
-      duration: 300
-    });
 
     // "BOSS READY!" 텍스트
     this.bossReadyText = this.scene.add.text(0, s(-20), '⚔️ BOSS READY!', {
