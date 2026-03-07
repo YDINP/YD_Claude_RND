@@ -48,7 +48,13 @@ export class PreloadScene extends Phaser.Scene {
     // ART-1.1: 배경 텍스처 생성
     TextureGenerator.generateBackgrounds(this);
 
-    // ART-1.1b: 픽셀아트 스타일 배경/버튼/패널 텍스처 생성 (ProceduralAssets)
+    // ART-1.1b: BA×NIKKE 하이브리드 스타일 배경/버튼/패널/파티클 텍스처 생성
+    // generateAll() 포함 텍스처:
+    //   pixel-main-bg (별빛 그라데이션), pixel-battle-bg (사이버펑크 격자),
+    //   pixel-gacha-bg (별빛 폭발), btn-primary/danger/accent (BA 둥근 버튼),
+    //   panel-dark/glow (NIKKE 다크 패널),
+    //   star-field (별 파티클, mainmenu 오버레이용),
+    //   neon-grid (네온 격자, battle 오버레이용)
     try {
       ProceduralAssets.generateAll(this, GAME_WIDTH, GAME_HEIGHT);
     } catch (e) {
