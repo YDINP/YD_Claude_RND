@@ -72,8 +72,8 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
       this.add(emoji);
 
       // 레벨 배지
-      const levelBg = this.scene.add.rectangle(startX + s(25), y, s(24), s(14), COLORS.bgLight, 0.9);
-      const levelText = this.scene.add.text(startX + s(25), y, `L${i + 1}`, {
+      const levelBg = this.scene.add.rectangle(startX + s(25), y, s(36), s(14), COLORS.bgLight, 0.9);
+      const levelText = this.scene.add.text(startX + s(25), y, `Lv.?`, {
         fontSize: sf(10),
         fontFamily: 'Arial',
         color: '#FFFFFF'
@@ -539,6 +539,16 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
   updateParty(party) {
     this.hasParty = party && party.length > 0;
 
+    // 파티 편성 시 '파티를 먼저 편성해주세요' 안내 메시지 제거
+    if (this.hasParty && this.emptyPartyMessage) {
+      this.emptyPartyMessage.destroy();
+      this.emptyPartyMessage = null;
+      if (this.emptyPartyTween) {
+        this.emptyPartyTween.stop();
+        this.emptyPartyTween = null;
+      }
+    }
+
     party.forEach((hero, index) => {
       if (index >= this.partyAvatars.length) return;
 
@@ -546,7 +556,8 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
       if (hero) {
         // 실제 영웅 데이터로 업데이트
         avatar.emoji.setText(hero.emoji || '⚔️');
-        avatar.levelText.setText(`L${hero.level || 1}`);
+        // 슬롯 번호(L1~L4) 대신 실제 영웅 레벨 표시
+        avatar.levelText.setText(`Lv.${hero.level || 1}`);
         // mood 색상 적용 (optional)
         if (hero.mood && MOOD_COLORS[hero.mood.toUpperCase()]) {
           const moodColor = Phaser.Display.Color.HexStringToColor(
@@ -564,18 +575,21 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
   showEmptyPartyMessage() {
     this.hasParty = false;
 
+    // 이미 표시 중이면 중복 생성 방지
+    if (this.emptyPartyMessage) return;
+
     // 중앙에 안내 메시지 표시
-    const messageText = this.scene.add.text(0, 0, '파티를 먼저 편성해주세요!', {
+    this.emptyPartyMessage = this.scene.add.text(0, 0, '파티를 먼저 편성해주세요!', {
       fontSize: sf(20),
       fontFamily: 'Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
-    this.add(messageText);
+    this.add(this.emptyPartyMessage);
 
-    // 깜빡임 효과
-    this.scene.tweens.add({
-      targets: messageText,
+    // 깜빡임 효과 (참조 저장 — updateParty에서 정리)
+    this.emptyPartyTween = this.scene.tweens.add({
+      targets: this.emptyPartyMessage,
       alpha: { from: 1, to: 0.4 },
       duration: 1200,
       yoyo: true,
@@ -601,6 +615,15 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     }
     // 보스 준비 연출 정리
     this.clearBossReady();
+    // 파티 미편성 안내 메시지 정리
+    if (this.emptyPartyTween) {
+      this.emptyPartyTween.stop();
+      this.emptyPartyTween = null;
+    }
+    if (this.emptyPartyMessage) {
+      this.emptyPartyMessage.destroy();
+      this.emptyPartyMessage = null;
+    }
     // 대기중인 delayedCall 정리
     if (this.pendingDelays) {
       this.pendingDelays.forEach(d => d.remove());

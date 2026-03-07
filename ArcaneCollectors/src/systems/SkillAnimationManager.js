@@ -132,6 +132,10 @@ class SkillAnimationManager {
         return;
       }
 
+      // Capture abortController reference locally to avoid null access in callback
+      // (finally block may set this.abortController = null before tween completes)
+      const abortController = this.abortController;
+
       // Visual: Scale up slightly (charging effect)
       scene.tweens.add({
         targets: attacker.sprite,
@@ -142,7 +146,7 @@ class SkillAnimationManager {
         ease: 'Sine.easeInOut',
         onComplete: () => {
           // Check abort signal before resolving
-          if (this.abortController?.signal.aborted) {
+          if (abortController && abortController.signal.aborted) {
             reject(new Error('Windup aborted'));
           } else {
             resolve();
@@ -267,9 +271,13 @@ class SkillAnimationManager {
         });
       }
 
+      // Capture abortController reference locally to avoid null access in callback
+      // (finally block may set this.abortController = null before delayedCall fires)
+      const abortController = this.abortController;
+
       // Wait for impact duration to complete
       scene.time.delayedCall(duration, () => {
-        if (this.abortController?.signal.aborted) {
+        if (abortController && abortController.signal.aborted) {
           reject(new Error('Impact aborted'));
         } else {
           resolve();
@@ -294,6 +302,10 @@ class SkillAnimationManager {
         return;
       }
 
+      // Capture abortController reference locally to avoid null access in callback
+      // (finally block may set this.abortController = null before tween completes)
+      const abortController = this.abortController;
+
       // Return to normal scale with slight bounce
       scene.tweens.add({
         targets: attacker.sprite,
@@ -303,7 +315,7 @@ class SkillAnimationManager {
         ease: 'Back.easeOut',
         easeParams: [1.5],
         onComplete: () => {
-          if (this.abortController?.signal.aborted) {
+          if (abortController && abortController.signal.aborted) {
             reject(new Error('Recovery aborted'));
           } else {
             resolve();
