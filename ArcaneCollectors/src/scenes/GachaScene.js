@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, s, sf } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, CULT_COLORS, s, sf } from '../config/gameConfig.js';
 import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
 import GameLogger from '../utils/GameLogger.js';
 import { SaveManager } from '../systems/SaveManager.js';
@@ -980,6 +980,452 @@ export class GachaScene extends Phaser.Scene {
   }
 
   showSummonAnimation(results) {
+    // 단일 소환: 등급별 차별화 연출, 10연차: 기존 로직 + 강화 결과 화면
+    if (results.length === 1) {
+      this.playGachaReveal(results[0]);
+    } else {
+      this._showMultiSummonAnimation(results);
+    }
+  }
+
+  /**
+   * 단일 소환 등급별 연출 메인 함수
+   */
+  playGachaReveal(result) {
+    const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0);
+    overlay.setDepth(50);
+
+    // Step 1: 0.5초 페이드 다크
+    this.tweens.add({
+      targets: overlay,
+      alpha: 0.85,
+      duration: 500,
+      ease: 'Power2',
+      onComplete: () => {
+        // Step 2: 등급별 분기
+        const rarity = result.rarity || 'N';
+        if (rarity === 'SSR') {
+          this.playSSRReveal(result, overlay);
+        } else if (rarity === 'SR') {
+          this.playSRReveal(result, overlay);
+        } else if (rarity === 'R') {
+          this.playRReveal(result, overlay);
+        } else {
+          this.playNReveal(result, overlay);
+        }
+      }
+    });
+  }
+
+  /**
+   * N등급 연출 — 0.3초 빠른 등장, 기본 색상 flash
+   */
+  playNReveal(result, overlay) {
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+
+    // 기본 플래시 (회색)
+    this.cameras.main.flash(200, 120, 120, 120);
+
+    // 빠른 카드 등장 (0.3초)
+    this.time.delayedCall(300, () => {
+      this._showSingleResultCard(result, overlay);
+    });
+  }
+
+  /**
+   * R등급 연출 — 0.8초 별빛 이펙트, 파란색 glow
+   */
+  playRReveal(result, overlay) {
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const rColor = COLORS.rarityR || 0x3B82F6;
+
+    // 파란색 플래시
+    this.cameras.main.flash(300, 59, 130, 246);
+
+    // 별빛 파티클
+    const stars = [];
+    for (let i = 0; i < 15; i++) {
+      const angle = (i / 15) * Math.PI * 2;
+      const dist = s(80) + Phaser.Math.Between(0, s(60));
+      const star = this.add.circle(cx, cy, s(3), rColor, 1).setDepth(52);
+      stars.push(star);
+      this.tweens.add({
+        targets: star,
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        alpha: { from: 1, to: 0 },
+        scale: { from: 1, to: 0.2 },
+        duration: 800,
+        delay: i * 30,
+        ease: 'Cubic.easeOut',
+        onComplete: () => star.destroy()
+      });
+    }
+
+    // glow 원형
+    const glow = this.add.circle(cx, cy, s(100), rColor, 0.2).setDepth(51);
+    this.tweens.add({
+      targets: glow,
+      scale: { from: 0.3, to: 1.5 },
+      alpha: { from: 0.4, to: 0 },
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => glow.destroy()
+    });
+
+    // 0.8초 후 카드 등장
+    this.time.delayedCall(800, () => {
+      this._showSingleResultCard(result, overlay);
+    });
+  }
+
+  /**
+   * SR등급 연출 — 1.5초 교단 컬러 폭발, 화면 진동
+   */
+  playSRReveal(result, overlay) {
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const cultColor = (result.cult && CULT_COLORS[result.cult]) ? CULT_COLORS[result.cult] : (COLORS.raritySR || 0xA855F7);
+
+    // 화면 진동
+    this.cameras.main.shake(400, 0.006);
+
+    // 교단 컬러 플래시
+    const r = (cultColor >> 16) & 0xff;
+    const g = (cultColor >> 8) & 0xff;
+    const b = cultColor & 0xff;
+    this.cameras.main.flash(400, r, g, b);
+
+    // 폭발 링 이펙트
+    for (let ring = 0; ring < 3; ring++) {
+      const ringGraphics = this.add.graphics().setDepth(52);
+      ringGraphics.lineStyle(s(3), cultColor, 1);
+      ringGraphics.strokeCircle(cx, cy, s(50) + ring * s(30));
+      ringGraphics.setScale(0).setAlpha(1);
+
+      this.tweens.add({
+        targets: ringGraphics,
+        scale: 2.5,
+        alpha: 0,
+        duration: 1200,
+        delay: ring * 150,
+        ease: 'Cubic.easeOut',
+        onComplete: () => ringGraphics.destroy()
+      });
+    }
+
+    // 교단 컬러 파티클 버스트
+    for (let i = 0; i < 24; i++) {
+      const angle = (i / 24) * Math.PI * 2;
+      const particle = this.add.circle(cx, cy, s(4), cultColor, 1).setDepth(53);
+      this.tweens.add({
+        targets: particle,
+        x: cx + Math.cos(angle) * s(160),
+        y: cy + Math.sin(angle) * s(160),
+        alpha: { from: 1, to: 0 },
+        duration: 1200,
+        delay: 200 + i * 20,
+        ease: 'Cubic.easeOut',
+        onComplete: () => particle.destroy()
+      });
+    }
+
+    // H-3 ParticleManager 연동
+    if (this.particles) {
+      this.time.delayedCall(300, () => {
+        this.particles.playRarityEffect('SR', cx, cy);
+      });
+    }
+
+    // 1.5초 후 카드 등장
+    this.time.delayedCall(1500, () => {
+      this._showSingleResultCard(result, overlay);
+    });
+  }
+
+  /**
+   * SSR등급 연출 — 3.0초 서스펜스 빌드업
+   *   0~1.5초: 화면 어두워짐 + 파티클
+   *   1.5~2.0초: 교단 컬러 균열 이펙트
+   *   2.0~3.0초: 전체 폭발 → 캐릭터 등장
+   */
+  playSSRReveal(result, overlay) {
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const cultColor = (result.cult && CULT_COLORS[result.cult]) ? CULT_COLORS[result.cult] : (COLORS.raritySSR || 0xF97316);
+    const ssrColor = COLORS.raritySSR || 0xF97316;
+
+    // Phase 1 (0~1.5초): 서서히 어두워짐 + 부유 파티클
+    this.tweens.add({
+      targets: overlay,
+      alpha: 0.97,
+      duration: 1500,
+      ease: 'Power3'
+    });
+
+    // 서서히 나타나는 파티클들
+    for (let i = 0; i < 20; i++) {
+      const px = cx + Phaser.Math.Between(-s(150), s(150));
+      const py = cy + Phaser.Math.Between(-s(200), s(200));
+      const particle = this.add.circle(px, py + s(50), s(2), ssrColor, 0).setDepth(52);
+      this.tweens.add({
+        targets: particle,
+        y: py,
+        alpha: { from: 0, to: 0.7 },
+        duration: 1500,
+        delay: i * 70,
+        ease: 'Sine.easeOut',
+        onComplete: () => {}
+      });
+    }
+
+    // Phase 2 (1.5~2.0초): 교단 컬러 균열 이펙트
+    this.time.delayedCall(1500, () => {
+      const crackGraphics = this.add.graphics().setDepth(54);
+      crackGraphics.lineStyle(s(4), cultColor, 1);
+
+      // 균열 선들 (중심에서 방사형)
+      const crackCount = 8;
+      for (let i = 0; i < crackCount; i++) {
+        const angle = (i / crackCount) * Math.PI * 2;
+        const len = s(100) + Phaser.Math.Between(0, s(80));
+        crackGraphics.beginPath();
+        crackGraphics.moveTo(cx, cy);
+        // 지그재그 균열
+        const midX = cx + Math.cos(angle + 0.2) * len * 0.5;
+        const midY = cy + Math.sin(angle + 0.2) * len * 0.5;
+        crackGraphics.lineTo(midX, midY);
+        crackGraphics.lineTo(cx + Math.cos(angle) * len, cy + Math.sin(angle) * len);
+        crackGraphics.strokePath();
+      }
+
+      crackGraphics.setAlpha(0);
+      this.tweens.add({
+        targets: crackGraphics,
+        alpha: { from: 0, to: 1 },
+        duration: 300,
+        ease: 'Power2',
+        onComplete: () => {
+          // 균열 발광
+          this.tweens.add({
+            targets: crackGraphics,
+            alpha: { from: 1, to: 0.3 },
+            duration: 200,
+            yoyo: true,
+            repeat: 1,
+            onComplete: () => crackGraphics.destroy()
+          });
+        }
+      });
+
+      // 카메라 작은 흔들림 (긴장감)
+      this.cameras.main.shake(300, 0.004);
+    });
+
+    // Phase 3 (2.0~3.0초): 전체 폭발 → 캐릭터 등장
+    this.time.delayedCall(2000, () => {
+      // 강력한 카메라 흔들림
+      this.cameras.main.shake(600, 0.015);
+
+      // 황금 플래시
+      const r = (ssrColor >> 16) & 0xff;
+      const g = (ssrColor >> 8) & 0xff;
+      const b = ssrColor & 0xff;
+      this.cameras.main.flash(500, r, g, b);
+
+      // 광선 이펙트 (12방향)
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2;
+        const ray = this.add.graphics().setDepth(55);
+        ray.fillStyle(ssrColor, 0.8);
+        ray.fillTriangle(0, 0, s(-8), s(-280), s(8), s(-280));
+        ray.setPosition(cx, cy);
+        ray.setRotation(angle);
+        ray.setAlpha(0);
+
+        this.tweens.add({
+          targets: ray,
+          alpha: { from: 0, to: 1 },
+          scaleY: { from: 0.5, to: 1.5 },
+          duration: 500,
+          delay: i * 40,
+          ease: 'Power2',
+          yoyo: true,
+          onComplete: () => ray.destroy()
+        });
+      }
+
+      // 대규모 파티클 폭발
+      for (let i = 0; i < 40; i++) {
+        const angle = (i / 40) * Math.PI * 2;
+        const spd = s(150) + Phaser.Math.Between(0, s(100));
+        const pColor = i % 3 === 0 ? cultColor : ssrColor;
+        const particle = this.add.circle(cx, cy, s(5) + Phaser.Math.Between(0, s(3)), pColor, 1).setDepth(53);
+        this.tweens.add({
+          targets: particle,
+          x: cx + Math.cos(angle) * spd,
+          y: cy + Math.sin(angle) * spd,
+          alpha: { from: 1, to: 0 },
+          scale: { from: 1, to: 0 },
+          duration: 900,
+          delay: i * 15,
+          ease: 'Cubic.easeOut',
+          onComplete: () => particle.destroy()
+        });
+      }
+
+      // H-3 ParticleManager 연동
+      if (this.particles) {
+        this.particles.playRarityEffect('SSR', cx, cy);
+        if (result.mood) {
+          this.time.delayedCall(300, () => {
+            this.particles.playMoodEffect(result.mood, cx, cy, 'skill');
+          });
+        }
+      }
+
+      // 1.0초 후 카드 등장
+      this.time.delayedCall(1000, () => {
+        this._showSingleResultCard(result, overlay);
+      });
+    });
+  }
+
+  /**
+   * 단일 소환 결과 카드 표시 (NEW! 배지 / 각성 소재 표시 포함)
+   */
+  _showSingleResultCard(result, overlay) {
+    const container = this.add.container(0, 0).setDepth(60);
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+
+    const rKey = getRarityKey(result.rarity);
+    const rarityData = RARITY[rKey] || RARITY.N;
+    const rarityColor = rarityData.color;
+    const cultColor = (result.cult && CULT_COLORS[result.cult]) ? CULT_COLORS[result.cult] : rarityColor;
+
+    // 카드 배경
+    const cardW = s(200);
+    const cardH = s(280);
+    const cardBg = this.add.rectangle(cx, cy, cardW, cardH, COLORS.backgroundLight, 0.98);
+    const borderColor = (rKey === 'SSR') ? (COLORS.raritySSR || 0xF97316) : (rKey === 'SR') ? cultColor : rarityColor;
+    const borderThick = (rKey === 'SSR') ? s(4) : (rKey === 'SR') ? s(3) : s(2);
+    cardBg.setStrokeStyle(borderThick, borderColor);
+    container.add(cardBg);
+
+    // 등급 배지
+    const rarityBadge = this.add.rectangle(cx, cy - s(120), s(70), s(24), rarityColor, 1);
+    const rarityText = this.add.text(cx, cy - s(120), rKey, {
+      fontSize: sf(13), fontFamily: 'Arial', color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    container.add([rarityBadge, rarityText]);
+
+    // 캐릭터 이미지
+    const heroImg = this.add.image(cx, cy - s(30), 'hero_placeholder').setScale(1.2);
+    container.add(heroImg);
+
+    // 별 표시
+    const starCount = result.stars || getRarityNum(result.rarity) || rarityData.stars || 1;
+    const starsText = this.add.text(cx, cy + s(70), '★'.repeat(starCount), {
+      fontSize: sf(14), color: `#${(COLORS.accent || 0xFFD700).toString(16).padStart(6, '0')}`
+    }).setOrigin(0.5);
+    container.add(starsText);
+
+    // 캐릭터 이름
+    const nameText = this.add.text(cx, cy + s(95), result.name || '???', {
+      fontSize: sf(16), fontFamily: 'Arial',
+      color: `#${(COLORS.text || 0xffffff).toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    container.add(nameText);
+
+    // NEW! 배지 또는 각성 소재 표시
+    if (result.isNew) {
+      const newBadge = this.add.rectangle(cx + s(75), cy - s(105), s(50), s(26), 0x22c55e, 1);
+      const newText = this.add.text(cx + s(75), cy - s(105), 'NEW!', {
+        fontSize: sf(11), fontFamily: 'Arial', color: '#ffffff', fontStyle: 'bold'
+      }).setOrigin(0.5);
+      container.add([newBadge, newText]);
+    } else {
+      const shardCount = result.shardsGained || 1;
+      const dupText = this.add.text(cx, cy + s(118), `→ 각성 소재 ×${shardCount}`, {
+        fontSize: sf(12), fontFamily: 'Arial',
+        color: `#${(COLORS.accent || 0xFFD700).toString(16).padStart(6, '0')}`
+      }).setOrigin(0.5);
+      container.add(dupText);
+    }
+
+    // SSR/SR glow 효과
+    if (rKey === 'SSR' || rKey === 'SR') {
+      const glowColor = rKey === 'SSR' ? borderColor : cultColor;
+      const glowCircle = this.add.circle(cx, cy, s(120), glowColor, 0.15).setDepth(59);
+      container.add(glowCircle);
+      container.sendToBack(glowCircle);
+      this.tweens.add({
+        targets: glowCircle,
+        scale: { from: 0.9, to: 1.15 },
+        alpha: { from: 0.2, to: 0 },
+        duration: 1200,
+        repeat: -1
+      });
+    }
+
+    // 카드 등장 애니메이션
+    container.setAlpha(0);
+    container.setScale(0.5);
+    this.tweens.add({
+      targets: container,
+      alpha: 1,
+      scale: 1,
+      duration: 400,
+      ease: 'Back.easeOut'
+    });
+
+    // 버튼 영역
+    const btnY = cy + s(165);
+
+    // [계속 소환] 버튼
+    const continueBtn = this.add.container(cx - s(90), btnY);
+    const continueBg = this.add.rectangle(0, 0, s(150), s(50), COLORS.primary, 1)
+      .setInteractive({ useHandCursor: true });
+    const continueText = this.add.text(0, 0, '계속 소환', {
+      fontSize: sf(16), fontFamily: 'Arial',
+      color: `#${(COLORS.text || 0xffffff).toString(16).padStart(6, '0')}`, fontStyle: 'bold'
+    }).setOrigin(0.5);
+    continueBtn.add([continueBg, continueText]);
+    container.add(continueBtn);
+
+    // [확인] 버튼
+    const confirmBtn = this.add.container(cx + s(90), btnY);
+    const confirmBg = this.add.rectangle(0, 0, s(150), s(50), COLORS.accent || 0xFFD700, 1)
+      .setInteractive({ useHandCursor: true });
+    const confirmText = this.add.text(0, 0, '확인', {
+      fontSize: sf(16), fontFamily: 'Arial', color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    confirmBtn.add([confirmBg, confirmText]);
+    container.add(confirmBtn);
+
+    continueBg.on('pointerdown', () => {
+      container.destroy();
+      overlay.destroy();
+      this.isAnimating = false;
+      this.updatePityDisplay();
+    });
+
+    confirmBg.on('pointerdown', () => {
+      container.destroy();
+      overlay.destroy();
+      this.isAnimating = false;
+      this.updatePityDisplay();
+    });
+  }
+
+  /**
+   * 10연차 이상 소환 연출 (기존 로직 기반 강화)
+   */
+  _showMultiSummonAnimation(results) {
     // Darken background
     const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0);
     overlay.setDepth(50);
@@ -1124,8 +1570,183 @@ export class GachaScene extends Phaser.Scene {
     this.time.delayedCall(animDuration, () => {
       circleGraphics.destroy();
       particles.forEach(p => p.destroy());
-      this.showResults(results, overlay);
+      this.showTenPullResults(results, overlay);
     });
+  }
+
+  /**
+   * 10연차 결과 화면 — 5×2 그리드, SSR/SR 강조 테두리, NEW! 배지, SSR 강조 영역
+   */
+  showTenPullResults(results, overlay) {
+    const container = this.add.container(0, 0).setDepth(60);
+
+    // 결과 배경
+    const resultBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - s(40), GAME_HEIGHT - s(160), COLORS.backgroundLight, 0.96);
+    resultBg.setStrokeStyle(s(2), COLORS.primary);
+    container.add(resultBg);
+
+    // 타이틀
+    const hasSSR = results.some(r => r.rarity === 'SSR');
+    const titleColor = hasSSR
+      ? `#${(COLORS.raritySSR || 0xF97316).toString(16).padStart(6, '0')}`
+      : `#${(COLORS.text || 0xffffff).toString(16).padStart(6, '0')}`;
+    const titleText = hasSSR ? '✨ SSR 획득! ✨' : '소환 결과';
+
+    const title = this.add.text(GAME_WIDTH / 2, s(120), titleText, {
+      fontSize: sf(24),
+      fontFamily: 'Georgia, serif',
+      color: titleColor,
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    container.add(title);
+
+    // SSR 획득 시 별도 강조 영역
+    if (hasSSR) {
+      const ssrHeroes = results.filter(r => r.rarity === 'SSR');
+      const ssrBanner = this.add.rectangle(GAME_WIDTH / 2, s(160), GAME_WIDTH - s(60), s(50), COLORS.raritySSR || 0xF97316, 0.2);
+      ssrBanner.setStrokeStyle(s(2), COLORS.raritySSR || 0xF97316, 0.8);
+      container.add(ssrBanner);
+
+      const ssrNames = ssrHeroes.map(h => h.name || '???').join(', ');
+      const ssrHighlight = this.add.text(GAME_WIDTH / 2, s(160), `★ SSR: ${ssrNames} ★`, {
+        fontSize: sf(14), fontFamily: 'Arial',
+        color: `#${(COLORS.raritySSR || 0xF97316).toString(16).padStart(6, '0')}`,
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+      container.add(ssrHighlight);
+
+      // SSR 강조 타이틀 펄스 애니메이션
+      this.tweens.add({
+        targets: title,
+        scaleX: 1.08,
+        scaleY: 1.08,
+        duration: 600,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    }
+
+    // 5×2 카드 그리드
+    const cols = 5;
+    const cardSpacingX = s(82);
+    const cardSpacingY = s(125);
+    const gridStartX = GAME_WIDTH / 2 - ((cols - 1) * cardSpacingX) / 2;
+    const gridStartY = hasSSR ? s(205) : s(190);
+
+    results.forEach((hero, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const x = gridStartX + col * cardSpacingX;
+      const y = gridStartY + row * cardSpacingY;
+
+      this.time.delayedCall(index * 80, () => {
+        this._createTenPullCard(container, x, y, hero);
+      });
+    });
+
+    // 확인 버튼
+    const closeBtn = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT - s(100));
+    const closeBg = this.add.rectangle(0, 0, s(180), s(52), COLORS.primary, 1)
+      .setInteractive({ useHandCursor: true });
+    const closeText = this.add.text(0, 0, '확인', {
+      fontSize: sf(18), fontFamily: 'Arial',
+      color: `#${(COLORS.text || 0xffffff).toString(16).padStart(6, '0')}`, fontStyle: 'bold'
+    }).setOrigin(0.5);
+    closeBtn.add([closeBg, closeText]);
+    container.add(closeBtn);
+
+    closeBg.on('pointerdown', () => {
+      container.destroy();
+      overlay.destroy();
+      this.isAnimating = false;
+      this.updatePityDisplay();
+    });
+  }
+
+  /**
+   * 10연차 개별 카드 — SSR 금색, SR 교단 컬러 테두리, NEW! 배지
+   */
+  _createTenPullCard(container, x, y, hero) {
+    const card = this.add.container(x, y);
+
+    const rKey = getRarityKey(hero.rarity);
+    const rarityData = RARITY[rKey] || RARITY.N;
+    const rarityColor = rarityData.color;
+    const cultColor = (hero.cult && CULT_COLORS[hero.cult]) ? CULT_COLORS[hero.cult] : rarityColor;
+
+    // 등급별 테두리 색상
+    let borderColor = rarityColor;
+    let borderThick = s(2);
+    if (rKey === 'SSR') {
+      borderColor = COLORS.raritySSR || 0xF97316;
+      borderThick = s(4);
+    } else if (rKey === 'SR') {
+      borderColor = cultColor;
+      borderThick = s(3);
+    }
+
+    const cardBg = this.add.rectangle(0, 0, s(72), s(108), COLORS.backgroundLight, 1);
+    cardBg.setStrokeStyle(borderThick, borderColor);
+
+    // 히어로 이미지
+    const heroImg = this.add.image(0, s(-15), 'hero_placeholder').setScale(0.65);
+
+    // 등급 배지
+    const rarityBadge = this.add.rectangle(0, s(-47), s(32), s(18), rarityColor, 1);
+    const rarityText = this.add.text(0, s(-47), rKey, {
+      fontSize: sf(9), fontFamily: 'Arial', color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // 별
+    const starCount = hero.stars || getRarityNum(hero.rarity) || rarityData.stars || 1;
+    const starsText = this.add.text(0, s(22), '★'.repeat(starCount), {
+      fontSize: sf(8), color: `#${(COLORS.accent || 0xFFD700).toString(16).padStart(6, '0')}`
+    }).setOrigin(0.5);
+
+    // 이름
+    const heroName = hero.name || '???';
+    const displayName = heroName.length > 5 ? `${heroName.substring(0, 5)}..` : heroName;
+    const nameText = this.add.text(0, s(38), displayName, {
+      fontSize: sf(9), fontFamily: 'Arial',
+      color: `#${(COLORS.text || 0xffffff).toString(16).padStart(6, '0')}`
+    }).setOrigin(0.5);
+
+    card.add([cardBg, heroImg, rarityBadge, rarityText, starsText, nameText]);
+
+    // NEW! 배지
+    if (hero.isNew) {
+      const newBadge = this.add.rectangle(s(25), s(-47), s(28), s(16), 0x22c55e, 1);
+      const newText = this.add.text(s(25), s(-47), 'NEW', {
+        fontSize: sf(7), fontFamily: 'Arial', color: '#ffffff', fontStyle: 'bold'
+      }).setOrigin(0.5);
+      card.add([newBadge, newText]);
+    }
+
+    container.add(card);
+
+    // 등장 애니메이션
+    card.setScale(0);
+    this.tweens.add({
+      targets: card,
+      scale: 1,
+      duration: 220,
+      ease: 'Back.easeOut'
+    });
+
+    // SSR glow 효과
+    if (rKey === 'SSR') {
+      const glow = this.add.circle(x, y, s(45), COLORS.raritySSR || 0xF97316, 0.3);
+      container.add(glow);
+      container.sendToBack(glow);
+      this.tweens.add({
+        targets: glow,
+        scale: { from: 0.8, to: 1.3 },
+        alpha: { from: 0.5, to: 0 },
+        duration: 1000,
+        repeat: -1
+      });
+    }
   }
 
   showResults(results, overlay) {
