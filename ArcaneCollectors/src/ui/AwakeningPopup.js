@@ -59,7 +59,7 @@ export function formatCultName(cultId) {
   const CULT_NAMES = {
     prism_stars: '프리즘 스타즈',
     neon_crow: '네온 크로우',
-    ink_cyclone: '잌크 사이클론',
+    ink_cyclone: '잉크 사이클론',
     stella_club: '스텔라 클럽',
     card_cartel: '카드 카르텔',
     buddy_garden: '버디 가든',
