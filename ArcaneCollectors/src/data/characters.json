@@ -19,7 +19,7 @@
           "id": "basic",
           "name": "방패 강타",
           "description": "방패로 적을 강하게 밀쳐냅니다.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -51,7 +51,7 @@
           "id": "basic",
           "name": "마력 발사",
           "description": "응축된 마력을 적에게 발사합니다.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -83,7 +83,7 @@
           "id": "basic",
           "name": "속사",
           "description": "빠르게 화살을 연속으로 발사합니다.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -115,7 +115,7 @@
           "id": "basic",
           "name": "성광 타격",
           "description": "빛의 힘을 담아 적을 공격합니다.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -131,872 +131,2090 @@
     {
       "id": "char_5",
       "name": "마법사_프리즘스타즈",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "prism_stars",
       "class": "mage",
-      "stats": { "hp": 1000, "atk": 260, "def": 60, "spd": 100 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1000,
+        "atk": 260,
+        "def": 60,
+        "spd": 100
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_6",
       "name": "힐러_프리즘스타즈",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "prism_stars",
       "class": "healer",
-      "stats": { "hp": 1400, "atk": 90, "def": 110, "spd": 105 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1400,
+        "atk": 90,
+        "def": 110,
+        "spd": 105
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_7",
       "name": "궁수_프리즘스타즈",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "prism_stars",
       "class": "archer",
-      "stats": { "hp": 1100, "atk": 140, "def": 75, "spd": 145 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1100,
+        "atk": 140,
+        "def": 75,
+        "spd": 145
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_8",
       "name": "전사_프리즘스타즈2",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "prism_stars",
       "class": "warrior",
-      "stats": { "hp": 2000, "atk": 130, "def": 180, "spd": 85 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 2000,
+        "atk": 130,
+        "def": 180,
+        "spd": 85
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_9",
       "name": "마법사_프리즘스타즈2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "prism_stars",
       "class": "mage",
-      "stats": { "hp": 900, "atk": 200, "def": 55, "spd": 95 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 900,
+        "atk": 200,
+        "def": 55,
+        "spd": 95
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_10",
       "name": "힐러_프리즘스타즈2",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "prism_stars",
       "class": "healer",
-      "stats": { "hp": 1350, "atk": 85, "def": 105, "spd": 100 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1350,
+        "atk": 85,
+        "def": 105,
+        "spd": 100
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_11",
       "name": "궁수_프리즘스타즈2",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "prism_stars",
       "class": "archer",
-      "stats": { "hp": 1250, "atk": 180, "def": 90, "spd": 160 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1250,
+        "atk": 180,
+        "def": 90,
+        "spd": 160
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_12",
       "name": "전사_프리즘스타즈3",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "prism_stars",
       "class": "warrior",
-      "stats": { "hp": 1800, "atk": 110, "def": 160, "spd": 80 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1800,
+        "atk": 110,
+        "def": 160,
+        "spd": 80
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_13",
       "name": "마법사_네온크로우",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "neon_crow",
       "class": "mage",
-      "stats": { "hp": 1050, "atk": 270, "def": 65, "spd": 105 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1050,
+        "atk": 270,
+        "def": 65,
+        "spd": 105
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_14",
       "name": "전사_네온크로우",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "neon_crow",
       "class": "warrior",
-      "stats": { "hp": 2100, "atk": 125, "def": 190, "spd": 82 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 2100,
+        "atk": 125,
+        "def": 190,
+        "spd": 82
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_15",
       "name": "궁수_네온크로우",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "neon_crow",
       "class": "archer",
-      "stats": { "hp": 1050, "atk": 135, "def": 70, "spd": 140 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1050,
+        "atk": 135,
+        "def": 70,
+        "spd": 140
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_16",
       "name": "힐러_네온크로우",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "neon_crow",
       "class": "healer",
-      "stats": { "hp": 1420, "atk": 92, "def": 112, "spd": 108 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1420,
+        "atk": 92,
+        "def": 112,
+        "spd": 108
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_17",
       "name": "마법사_네온크로우2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "neon_crow",
       "class": "mage",
-      "stats": { "hp": 920, "atk": 205, "def": 58, "spd": 98 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 920,
+        "atk": 205,
+        "def": 58,
+        "spd": 98
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_18",
       "name": "전사_네온크로우2",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "neon_crow",
       "class": "warrior",
-      "stats": { "hp": 2050, "atk": 135, "def": 185, "spd": 88 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 2050,
+        "atk": 135,
+        "def": 185,
+        "spd": 88
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_19",
       "name": "궁수_네온크로우2",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "neon_crow",
       "class": "archer",
-      "stats": { "hp": 1200, "atk": 155, "def": 88, "spd": 155 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1200,
+        "atk": 155,
+        "def": 88,
+        "spd": 155
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_20",
       "name": "힐러_네온크로우2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "neon_crow",
       "class": "healer",
-      "stats": { "hp": 1300, "atk": 82, "def": 100, "spd": 102 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1300,
+        "atk": 82,
+        "def": 100,
+        "spd": 102
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_21",
       "name": "마법사_네온크로우3",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "neon_crow",
       "class": "mage",
-      "stats": { "hp": 1080, "atk": 275, "def": 68, "spd": 110 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1080,
+        "atk": 275,
+        "def": 68,
+        "spd": 110
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_22",
       "name": "전사_잉크사이클론",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "ink_cyclone",
       "class": "warrior",
-      "stats": { "hp": 2000, "atk": 120, "def": 182, "spd": 83 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 2000,
+        "atk": 120,
+        "def": 182,
+        "spd": 83
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_23",
       "name": "마법사_잉크사이클론",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "ink_cyclone",
       "class": "mage",
-      "stats": { "hp": 880, "atk": 195, "def": 52, "spd": 92 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 880,
+        "atk": 195,
+        "def": 52,
+        "spd": 92
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_24",
       "name": "힐러_잉크사이클론",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "ink_cyclone",
       "class": "healer",
-      "stats": { "hp": 1550, "atk": 105, "def": 125, "spd": 115 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1550,
+        "atk": 105,
+        "def": 125,
+        "spd": 115
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_25",
       "name": "궁수_잉크사이클론",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "ink_cyclone",
       "class": "archer",
-      "stats": { "hp": 1150, "atk": 148, "def": 80, "spd": 148 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1150,
+        "atk": 148,
+        "def": 80,
+        "spd": 148
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_26",
       "name": "전사_잉크사이클론2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "ink_cyclone",
       "class": "warrior",
-      "stats": { "hp": 1750, "atk": 105, "def": 155, "spd": 78 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1750,
+        "atk": 105,
+        "def": 155,
+        "spd": 78
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_27",
       "name": "마법사_잉크사이클론2",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "ink_cyclone",
       "class": "mage",
-      "stats": { "hp": 1020, "atk": 265, "def": 62, "spd": 102 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1020,
+        "atk": 265,
+        "def": 62,
+        "spd": 102
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_28",
       "name": "힐러_잉크사이클론2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "ink_cyclone",
       "class": "healer",
-      "stats": { "hp": 1280, "atk": 80, "def": 98, "spd": 100 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1280,
+        "atk": 80,
+        "def": 98,
+        "spd": 100
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_29",
       "name": "궁수_잉크사이클론2",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "ink_cyclone",
       "class": "archer",
-      "stats": { "hp": 1100, "atk": 142, "def": 76, "spd": 142 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1100,
+        "atk": 142,
+        "def": 76,
+        "spd": 142
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_30",
       "name": "전사_잉크사이클론3",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "ink_cyclone",
       "class": "warrior",
-      "stats": { "hp": 1700, "atk": 102, "def": 150, "spd": 76 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1700,
+        "atk": 102,
+        "def": 150,
+        "spd": 76
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_31",
       "name": "마법사_스텔라클럽",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "stella_club",
       "class": "mage",
-      "stats": { "hp": 1030, "atk": 268, "def": 64, "spd": 103 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1030,
+        "atk": 268,
+        "def": 64,
+        "spd": 103
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_32",
       "name": "힐러_스텔라클럽",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "stella_club",
       "class": "healer",
-      "stats": { "hp": 1430, "atk": 93, "def": 113, "spd": 109 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1430,
+        "atk": 93,
+        "def": 113,
+        "spd": 109
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_33",
       "name": "궁수_스텔라클럽",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "stella_club",
       "class": "archer",
-      "stats": { "hp": 1060, "atk": 136, "def": 72, "spd": 136 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1060,
+        "atk": 136,
+        "def": 72,
+        "spd": 136
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_34",
       "name": "전사_스텔라클럽",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "stella_club",
       "class": "warrior",
-      "stats": { "hp": 1950, "atk": 115, "def": 175, "spd": 81 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1950,
+        "atk": 115,
+        "def": 175,
+        "spd": 81
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_35",
       "name": "마법사_스텔라클럽2",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "stella_club",
       "class": "mage",
-      "stats": { "hp": 1040, "atk": 272, "def": 66, "spd": 106 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1040,
+        "atk": 272,
+        "def": 66,
+        "spd": 106
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_36",
       "name": "힐러_스텔라클럽2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "stella_club",
       "class": "healer",
-      "stats": { "hp": 1290, "atk": 81, "def": 99, "spd": 101 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1290,
+        "atk": 81,
+        "def": 99,
+        "spd": 101
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_37",
       "name": "궁수_스텔라클럽2",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "stella_club",
       "class": "archer",
-      "stats": { "hp": 1170, "atk": 150, "def": 84, "spd": 150 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1170,
+        "atk": 150,
+        "def": 84,
+        "spd": 150
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_38",
       "name": "전사_스텔라클럽2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "stella_club",
       "class": "warrior",
-      "stats": { "hp": 1720, "atk": 103, "def": 152, "spd": 77 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1720,
+        "atk": 103,
+        "def": 152,
+        "spd": 77
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_39",
       "name": "마법사_스텔라클럽3",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "stella_club",
       "class": "mage",
-      "stats": { "hp": 1060, "atk": 276, "def": 68, "spd": 108 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1060,
+        "atk": 276,
+        "def": 68,
+        "spd": 108
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_40",
       "name": "힐러_카드카르텔",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "card_cartel",
       "class": "healer",
-      "stats": { "hp": 1440, "atk": 94, "def": 114, "spd": 110 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1440,
+        "atk": 94,
+        "def": 114,
+        "spd": 110
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_41",
       "name": "궁수_카드카르텔",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "card_cartel",
       "class": "archer",
-      "stats": { "hp": 1070, "atk": 137, "def": 73, "spd": 137 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1070,
+        "atk": 137,
+        "def": 73,
+        "spd": 137
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_42",
       "name": "전사_카드카르텔",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "card_cartel",
       "class": "warrior",
-      "stats": { "hp": 2080, "atk": 138, "def": 188, "spd": 90 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 2080,
+        "atk": 138,
+        "def": 188,
+        "spd": 90
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_43",
       "name": "마법사_카드카르텔",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "card_cartel",
       "class": "mage",
-      "stats": { "hp": 1010, "atk": 262, "def": 61, "spd": 101 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1010,
+        "atk": 262,
+        "def": 61,
+        "spd": 101
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_44",
       "name": "힐러_카드카르텔2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "card_cartel",
       "class": "healer",
-      "stats": { "hp": 1270, "atk": 79, "def": 97, "spd": 99 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1270,
+        "atk": 79,
+        "def": 97,
+        "spd": 99
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_45",
       "name": "궁수_카드카르텔2",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "card_cartel",
       "class": "archer",
-      "stats": { "hp": 1260, "atk": 182, "def": 92, "spd": 162 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1260,
+        "atk": 182,
+        "def": 92,
+        "spd": 162
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_46",
       "name": "전사_카드카르텔2",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "card_cartel",
       "class": "warrior",
-      "stats": { "hp": 1980, "atk": 118, "def": 178, "spd": 84 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1980,
+        "atk": 118,
+        "def": 178,
+        "spd": 84
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_47",
       "name": "마법사_카드카르텔2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "card_cartel",
       "class": "mage",
-      "stats": { "hp": 890, "atk": 198, "def": 53, "spd": 93 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 890,
+        "atk": 198,
+        "def": 53,
+        "spd": 93
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_48",
       "name": "힐러_카드카르텔3",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "card_cartel",
       "class": "healer",
-      "stats": { "hp": 1560, "atk": 108, "def": 128, "spd": 118 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1560,
+        "atk": 108,
+        "def": 128,
+        "spd": 118
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_49",
       "name": "전사_버디가든",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "buddy_garden",
       "class": "warrior",
-      "stats": { "hp": 1960, "atk": 116, "def": 176, "spd": 82 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1960,
+        "atk": 116,
+        "def": 176,
+        "spd": 82
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_50",
       "name": "마법사_버디가든",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "buddy_garden",
       "class": "mage",
-      "stats": { "hp": 870, "atk": 192, "def": 51, "spd": 91 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 870,
+        "atk": 192,
+        "def": 51,
+        "spd": 91
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_51",
       "name": "궁수_버디가든",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "buddy_garden",
       "class": "archer",
-      "stats": { "hp": 1240, "atk": 178, "def": 89, "spd": 158 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1240,
+        "atk": 178,
+        "def": 89,
+        "spd": 158
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_52",
       "name": "힐러_버디가든",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "buddy_garden",
       "class": "healer",
-      "stats": { "hp": 1410, "atk": 91, "def": 111, "spd": 107 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1410,
+        "atk": 91,
+        "def": 111,
+        "spd": 107
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_53",
       "name": "전사_버디가든2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "buddy_garden",
       "class": "warrior",
-      "stats": { "hp": 1680, "atk": 100, "def": 148, "spd": 75 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1680,
+        "atk": 100,
+        "def": 148,
+        "spd": 75
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_54",
       "name": "마법사_버디가든2",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "buddy_garden",
       "class": "mage",
-      "stats": { "hp": 990, "atk": 258, "def": 59, "spd": 99 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 990,
+        "atk": 258,
+        "def": 59,
+        "spd": 99
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_55",
       "name": "궁수_버디가든2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "buddy_garden",
       "class": "archer",
-      "stats": { "hp": 1030, "atk": 132, "def": 68, "spd": 132 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1030,
+        "atk": 132,
+        "def": 68,
+        "spd": 132
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_56",
       "name": "힐러_버디가든2",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "buddy_garden",
       "class": "healer",
-      "stats": { "hp": 1530, "atk": 102, "def": 122, "spd": 112 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1530,
+        "atk": 102,
+        "def": 122,
+        "spd": 112
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_57",
       "name": "전사_버디가든3",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "buddy_garden",
       "class": "warrior",
-      "stats": { "hp": 1660, "atk": 98, "def": 145, "spd": 74 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1660,
+        "atk": 98,
+        "def": 145,
+        "spd": 74
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_58",
       "name": "궁수_글리치파라다이스",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "glitch_paradise",
       "class": "archer",
-      "stats": { "hp": 1180, "atk": 152, "def": 86, "spd": 152 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1180,
+        "atk": 152,
+        "def": 86,
+        "spd": 152
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_59",
       "name": "힐러_글리치파라다이스",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "glitch_paradise",
       "class": "healer",
-      "stats": { "hp": 1310, "atk": 83, "def": 101, "spd": 103 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1310,
+        "atk": 83,
+        "def": 101,
+        "spd": 103
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_60",
       "name": "전사_글리치파라다이스",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "glitch_paradise",
       "class": "warrior",
-      "stats": { "hp": 2060, "atk": 136, "def": 186, "spd": 89 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 2060,
+        "atk": 136,
+        "def": 186,
+        "spd": 89
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_61",
       "name": "마법사_글리치파라다이스",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "glitch_paradise",
       "class": "mage",
-      "stats": { "hp": 1000, "atk": 260, "def": 60, "spd": 100 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1000,
+        "atk": 260,
+        "def": 60,
+        "spd": 100
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_62",
       "name": "궁수_글리치파라다이스2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "glitch_paradise",
       "class": "archer",
-      "stats": { "hp": 1040, "atk": 133, "def": 69, "spd": 133 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1040,
+        "atk": 133,
+        "def": 69,
+        "spd": 133
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_63",
       "name": "힐러_글리치파라다이스2",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "glitch_paradise",
       "class": "healer",
-      "stats": { "hp": 1390, "atk": 89, "def": 109, "spd": 105 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1390,
+        "atk": 89,
+        "def": 109,
+        "spd": 105
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_64",
       "name": "전사_글리치파라다이스2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "glitch_paradise",
       "class": "warrior",
-      "stats": { "hp": 1640, "atk": 96, "def": 142, "spd": 73 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1640,
+        "atk": 96,
+        "def": 142,
+        "spd": 73
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_65",
       "name": "마법사_글리치파라다이스2",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "glitch_paradise",
       "class": "mage",
-      "stats": { "hp": 1070, "atk": 274, "def": 67, "spd": 107 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1070,
+        "atk": 274,
+        "def": 67,
+        "spd": 107
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_66",
       "name": "힐러_카페앙코르",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "cafe_encore",
       "class": "healer",
-      "stats": { "hp": 1450, "atk": 95, "def": 115, "spd": 111 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1450,
+        "atk": 95,
+        "def": 115,
+        "spd": 111
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_67",
       "name": "전사_카페앙코르",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "cafe_encore",
       "class": "warrior",
-      "stats": { "hp": 1620, "atk": 94, "def": 140, "spd": 72 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1620,
+        "atk": 94,
+        "def": 140,
+        "spd": 72
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_68",
       "name": "마법사_카페앙코르",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "cafe_encore",
       "class": "mage",
-      "stats": { "hp": 1090, "atk": 278, "def": 69, "spd": 109 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1090,
+        "atk": 278,
+        "def": 69,
+        "spd": 109
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_69",
       "name": "궁수_카페앙코르",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "cafe_encore",
       "class": "archer",
-      "stats": { "hp": 1190, "atk": 154, "def": 87, "spd": 154 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1190,
+        "atk": 154,
+        "def": 87,
+        "spd": 154
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_70",
       "name": "힐러_카페앙코르2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "cafe_encore",
       "class": "healer",
-      "stats": { "hp": 1320, "atk": 84, "def": 102, "spd": 104 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1320,
+        "atk": 84,
+        "def": 102,
+        "spd": 104
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_71",
       "name": "전사_카페앙코르2",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "cafe_encore",
       "class": "warrior",
-      "stats": { "hp": 1970, "atk": 117, "def": 177, "spd": 83 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1970,
+        "atk": 117,
+        "def": 177,
+        "spd": 83
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_72",
       "name": "마법사_카페앙코르2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "cafe_encore",
       "class": "mage",
-      "stats": { "hp": 860, "atk": 190, "def": 50, "spd": 90 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 860,
+        "atk": 190,
+        "def": 50,
+        "spd": 90
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_73",
       "name": "궁수_카페앙코르2",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "cafe_encore",
       "class": "archer",
-      "stats": { "hp": 1270, "atk": 184, "def": 93, "spd": 164 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1270,
+        "atk": 184,
+        "def": 93,
+        "spd": 164
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_74",
       "name": "힐러_카페앙코르3",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "cafe_encore",
       "class": "healer",
-      "stats": { "hp": 1260, "atk": 78, "def": 96, "spd": 98 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1260,
+        "atk": 78,
+        "def": 96,
+        "spd": 98
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_75",
       "name": "전사_루나틱서커스",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "lunatic_circus",
       "class": "warrior",
-      "stats": { "hp": 2090, "atk": 140, "def": 192, "spd": 91 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 2090,
+        "atk": 140,
+        "def": 192,
+        "spd": 91
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_76",
       "name": "마법사_루나틱서커스",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "lunatic_circus",
       "class": "mage",
-      "stats": { "hp": 1020, "atk": 264, "def": 63, "spd": 104 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1020,
+        "atk": 264,
+        "def": 63,
+        "spd": 104
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_77",
       "name": "힐러_루나틱서커스",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "lunatic_circus",
       "class": "healer",
-      "stats": { "hp": 1330, "atk": 85, "def": 103, "spd": 105 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1330,
+        "atk": 85,
+        "def": 103,
+        "spd": 105
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_78",
       "name": "궁수_루나틱서커스",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "lunatic_circus",
       "class": "archer",
-      "stats": { "hp": 1200, "atk": 156, "def": 88, "spd": 156 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1200,
+        "atk": 156,
+        "def": 88,
+        "spd": 156
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_79",
       "name": "전사_루나틱서커스2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "lunatic_circus",
       "class": "warrior",
-      "stats": { "hp": 1600, "atk": 92, "def": 138, "spd": 71 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1600,
+        "atk": 92,
+        "def": 138,
+        "spd": 71
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_80",
       "name": "마법사_루나틱서커스2",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "lunatic_circus",
       "class": "mage",
-      "stats": { "hp": 1100, "atk": 280, "def": 70, "spd": 112 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1100,
+        "atk": 280,
+        "def": 70,
+        "spd": 112
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_81",
       "name": "힐러_루나틱서커스2",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "lunatic_circus",
       "class": "healer",
-      "stats": { "hp": 1460, "atk": 96, "def": 116, "spd": 112 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1460,
+        "atk": 96,
+        "def": 116,
+        "spd": 112
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_82",
       "name": "궁수_루나틱서커스2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "lunatic_circus",
       "class": "archer",
-      "stats": { "hp": 1020, "atk": 130, "def": 67, "spd": 130 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1020,
+        "atk": 130,
+        "def": 67,
+        "spd": 130
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_83",
       "name": "마법사_아이언비트",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "iron_beat",
       "class": "mage",
-      "stats": { "hp": 980, "atk": 255, "def": 58, "spd": 98 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 980,
+        "atk": 255,
+        "def": 58,
+        "spd": 98
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_84",
       "name": "힐러_아이언비트",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "iron_beat",
       "class": "healer",
-      "stats": { "hp": 1250, "atk": 77, "def": 95, "spd": 97 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1250,
+        "atk": 77,
+        "def": 95,
+        "spd": 97
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_85",
       "name": "궁수_아이언비트",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "iron_beat",
       "class": "archer",
-      "stats": { "hp": 1280, "atk": 186, "def": 94, "spd": 166 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1280,
+        "atk": 186,
+        "def": 94,
+        "spd": 166
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_86",
       "name": "전사_아이언비트",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "iron_beat",
       "class": "warrior",
-      "stats": { "hp": 2020, "atk": 122, "def": 183, "spd": 86 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 2020,
+        "atk": 122,
+        "def": 183,
+        "spd": 86
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_87",
       "name": "마법사_아이언비트2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "iron_beat",
       "class": "mage",
-      "stats": { "hp": 840, "atk": 185, "def": 48, "spd": 88 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 840,
+        "atk": 185,
+        "def": 48,
+        "spd": 88
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_88",
       "name": "힐러_아이언비트2",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "iron_beat",
       "class": "healer",
-      "stats": { "hp": 1570, "atk": 110, "def": 130, "spd": 120 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1570,
+        "atk": 110,
+        "def": 130,
+        "spd": 120
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_89",
       "name": "궁수_아이언비트2",
-      "rarity": "SR",
+      "rarity": 4,
       "cult": null,
       "preferredCult": "iron_beat",
       "class": "archer",
-      "stats": { "hp": 1210, "atk": 158, "def": 89, "spd": 158 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1210,
+        "atk": 158,
+        "def": 89,
+        "spd": 158
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_90",
       "name": "전사_아이언비트2",
-      "rarity": "R",
+      "rarity": 3,
       "cult": null,
       "preferredCult": "iron_beat",
       "class": "warrior",
-      "stats": { "hp": 1580, "atk": 90, "def": 136, "spd": 70 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1580,
+        "atk": 90,
+        "def": 136,
+        "spd": 70
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     },
     {
       "id": "char_91",
       "name": "마법사_아이언비트3",
-      "rarity": "SSR",
+      "rarity": 5,
       "cult": null,
       "preferredCult": "iron_beat",
       "class": "mage",
-      "stats": { "hp": 1110, "atk": 282, "def": 71, "spd": 113 },
-      "skills": [{ "id": "basic", "name": "기본 공격", "damage": 100, "multiplier": 1.0, "gaugeGain": 25 }]
+      "stats": {
+        "hp": 1110,
+        "atk": 282,
+        "def": 71,
+        "spd": 113
+      },
+      "skills": [
+        {
+          "id": "basic",
+          "name": "기본 공격",
+          "damage": 100,
+          "multiplier": 1,
+          "gaugeGain": 25,
+          "description": "기본 공격 스킬"
+        }
+      ]
     }
   ]
 }

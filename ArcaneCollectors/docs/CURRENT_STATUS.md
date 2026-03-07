@@ -1,10 +1,10 @@
 # ArcaneCollectors 현재 상태
 
-> **최종 업데이트**: 2026-03-07
+> **최종 업데이트**: 2026-03-08
 > **브랜치**: `arcane/integration`
 > **테스트**: 1001개 유닛 (1001/1001 통과, 35파일) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [에셋] Kenney UI Pack 17종 SVG 전체 적용 (Button/PopupBase/StarRating 3단계 폴백) + 미수정 UI 버그 6종 수정 완료 — commit `d085808`
+> **최근 작업**: [UI] 메인화면 TopBar UX 개선 + 가챠팝업 전면 리디자인 + 영웅 아이콘 통일 + updateStageInfo 버그 수정 — pt-swarm 5태스크
 
 ---
 
@@ -266,6 +266,25 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 > 미수정 항목 #4(버튼 X): 이미 이모지 텍스트 방식으로 구현 확인. 환경별 폰트 렌더링 차이 문제로 코드 수정 불가.
 
 **결과**: 빌드 ✅ + **1001/1001 테스트 통과** + code-reviewer APPROVED
+
+### 메인화면 UX + 가챠팝업 리디자인 + 영웅 아이콘 통일 (2026-03-08) — pt-swarm 5태스크 병렬 실행
+
+#### 메인화면 TopBar UX 개선 (pt-swarm 4태스크)
+| ID | 태스크 | 파일 | 커밋 | 날짜 |
+|----|--------|------|------|------|
+| SWARM-TOP-1 | 설정버튼 아이콘 짤림 수정 (x s(40)→s(45), icon sf(24)→sf(20)) | MainMenuScene.js | swarm merge | 03-08 |
+| SWARM-TOP-2 | 에너지 가시성 개선 (텍스트 흰색+bold) + 가로너비 축소 (EnergyBar/timerText/chargeBtn x 좌측 이동) | MainMenuScene.js | swarm merge | 03-08 |
+| SWARM-TOP-3 | 내파티 패널 세로 높이 축소 (panelH s(200)→s(175)) | MainMenuScene.js | swarm merge | 03-08 |
+| SWARM-TOP-4 | 전투칸 stageText·updateStageInfo() 삭제 (IdleBattleView) | IdleBattleView.js, MainMenuScene.js |  | 03-08 |
+
+#### 가챠팝업 리디자인 + 영웅 아이콘 통일 + 버그 수정 (pt-swarm 추가 3태스크)
+| ID | 태스크 | 파일 | 커밋 | 날짜 |
+|----|--------|------|------|------|
+| SWARM-GACHA-1 | 가챠팝업 픽업배너 y조정 + 팝업 전면 리디자인 | GachaScene.js |  | 03-08 |
+| SWARM-HERO-1 | 영웅 아이콘 일관성 통일 + 상세창 버튼 프레임 내부 배치 (HeroInfoPopup 패널 s(650) 확대, 텍스처 우선 렌더링) | HeroInfoPopup.js |  | 03-08 |
+| SWARM-BUG-1 | TypeError: updateStageInfo is not a function 수정 (MainMenuScene 호출 2곳 제거) | MainMenuScene.js |  | 03-08 |
+
+**결과**: 빌드 ✅ | 1001/1001 테스트 통과 | 5태스크 자동 머지 완료
 
 ### Kenney UI Pack SVG 에셋 전체 적용 (2026-03-07) — auto-pipeline 5단계 APPROVED (commit `d085808`)
 
