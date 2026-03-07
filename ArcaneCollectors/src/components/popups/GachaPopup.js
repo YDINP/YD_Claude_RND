@@ -165,18 +165,23 @@ export class GachaPopup extends PopupBase {
 
   createBannerArea() {
     const b = this.contentBounds;
-    const bannerY = b.top + s(150);
+    // s(50) 하향 조정
+    const bannerY = b.top + s(200);
 
-    // Banner background
-    const bannerBg = this.scene.add.rectangle(b.centerX, bannerY, b.width - s(40), s(200), COLORS.backgroundLight, 0.6);
-    bannerBg.setStrokeStyle(s(3), COLORS.secondary, 0.8);
+    // Banner background — bgDark 기반 강화 패널
+    const bannerBg = this.scene.add.rectangle(b.centerX, bannerY, b.width - s(40), s(200), 0x0F172A, 0.95);
+    bannerBg.setStrokeStyle(s(4), COLORS.secondary, 1);
     this.contentContainer.add(bannerBg);
 
-    // Banner title
+    // 픽업 배너 내부 글로우 효과 (secondary 반투명 오버레이)
+    const bannerGlow = this.scene.add.rectangle(b.centerX, bannerY - s(55), b.width - s(60), s(30), COLORS.secondary, 0.15);
+    this.contentContainer.add(bannerGlow);
+
+    // Banner title — secondary 컬러 강조
     const bannerTitle = this.scene.add.text(b.centerX, bannerY - s(70), '✨ 발할라의 전사들 픽업! ✨', {
       fontSize: sf(18),
       fontFamily: 'Georgia, serif',
-      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
+      color: `#${COLORS.secondary.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
     }).setOrigin(0.5);
     this.contentContainer.add(bannerTitle);
@@ -187,7 +192,7 @@ export class GachaPopup extends PopupBase {
     }).setOrigin(0.5);
     this.contentContainer.add(featuredIcon);
 
-    const featuredLabel = this.scene.add.text(b.centerX, bannerY + s(45), 'SSR 픽업!', {
+    const featuredLabel = this.scene.add.text(b.centerX, bannerY + s(45), '⭐ SSR 픽업!', {
       fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${COLORS.raritySSR.toString(16).padStart(6, '0')}`,
@@ -195,7 +200,7 @@ export class GachaPopup extends PopupBase {
     }).setOrigin(0.5);
     this.contentContainer.add(featuredLabel);
 
-    // Rates info
+    // Rates info — 확률 컬러 구분
     const ratesY = bannerY + s(80);
     const pityInfo = GachaSystem.getPityInfo();
     this.bannerPityText = this.scene.add.text(b.centerX, ratesY, `천장 카운터: ${pityInfo.current}/${pityInfo.threshold}`, {
@@ -206,17 +211,35 @@ export class GachaPopup extends PopupBase {
     }).setOrigin(0.5);
     this.contentContainer.add(this.bannerPityText);
 
-    const ratesText = this.scene.add.text(b.centerX, ratesY + s(20), `SSR ${pityInfo.currentSSRRate}  SR 15%  R 50%  N 32%`, {
+    // SSR/SR/R 확률 각각 컬러 구분
+    const ssrText = this.scene.add.text(b.centerX - s(100), ratesY + s(22), `SSR ${pityInfo.currentSSRRate}`, {
       fontSize: sf(12),
       fontFamily: 'Arial',
-      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
+      color: '#F97316',
+      fontStyle: 'bold'
     }).setOrigin(0.5);
-    this.contentContainer.add(ratesText);
+    this.contentContainer.add(ssrText);
+
+    const srText = this.scene.add.text(b.centerX, ratesY + s(22), 'SR 15%', {
+      fontSize: sf(12),
+      fontFamily: 'Arial',
+      color: '#A855F7',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.contentContainer.add(srText);
+
+    const rText = this.scene.add.text(b.centerX + s(90), ratesY + s(22), 'R 82%', {
+      fontSize: sf(12),
+      fontFamily: 'Arial',
+      color: '#3B82F6',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.contentContainer.add(rText);
   }
 
   createPityDisplay() {
     const b = this.contentBounds;
-    const pityY = b.top + s(380);
+    const pityY = b.top + s(430);
 
     const pityInfo = GachaSystem.getPityInfo();
     const pity = pityInfo.current;
@@ -263,14 +286,14 @@ export class GachaPopup extends PopupBase {
 
   createSummonButtons() {
     const b = this.contentBounds;
-    const buttonY = b.top + s(500);
+    const buttonY = b.top + s(550);
 
-    // Gem summon buttons
-    this.addButton(b.centerX - s(110), buttonY, s(180), s(80), '단일 소환\n💎 300', COLORS.primary, () => {
+    // Gem summon buttons — primary(단챠) / accent(10챠)
+    this.addButton(b.centerX - s(110), buttonY, s(180), s(80), '🎲 단챠\n300 💎', COLORS.primary, () => {
       this.performSummon(1, false);
     });
 
-    this.addButton(b.centerX + s(110), buttonY, s(180), s(80), '10연차\n💎 2700', COLORS.secondary, () => {
+    this.addButton(b.centerX + s(110), buttonY, s(180), s(80), '🎯 10챠\n2700 💎', COLORS.accent, () => {
       this.performSummon(10, false);
     });
 
