@@ -4,7 +4,7 @@
 > **브랜치**: `arcane/integration`
 > **테스트**: 1001개 유닛 (1001/1001 통과, 35파일) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [포트레이트 매핑] HeroAssetLoader null 방어 + portrait-mapping.json 91개 확장 + characters.json 91개 + PORTRAIT_MAPPING_GUIDE.md (커밋: abae293)
+> **최근 작업**: [UI 팝업 전수 시각 테스트] 메인메뉴 8개 팝업 전체 스크린샷 캡처 + 시각 분석 완료 — 신규 버그 10건 발견 (총 누적 16건)
 
 ---
 
@@ -202,6 +202,44 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | PORTRAIT-TEST | HeroAssetLoader.test.js 신규 — 48개 유닛 테스트 (TC-HAL-01~09: 매핑 로드/포트레이트 키/generatePlaceholders/null 방어) | `tests/systems/HeroAssetLoader.test.js` | `abae293` | 03-07 |
 
 **결과**: 빌드 ✅ + **1001/1001 테스트 통과** (35파일, +48개 신규) | QA 루프 PASS
+
+### UI 팝업 전수 시각 테스트 (2026-03-07) — Playwright MCP 수동 캡처
+
+메인메뉴 하단 8개 팝업 전체를 순서대로 열고 스크린샷 캡처 후 시각 분석 수행.
+
+| 팝업 | 좌표 | 스크린샷 | 분석 결과 |
+|------|------|---------|---------|
+| 일일퀘스트 | 앞 세션 | `arcane-popup-quest.png` | ✅ 정상 (5개 퀘스트, 보상 표시) |
+| 영웅목록 | 앞 세션 | `arcane-popup-herolist.png` | ❌ 포트레이트 3개 누락, 이름 "???" |
+| PvP | 앞 세션 | `arcane-popup-partyedit.png` | ❌ 길드 UI 전체 영문, Supabase 미연결 |
+| 길드 | 앞 세션 | - | ❌ 전체 영문 미번역 |
+| 타워 | (351,1739) | `arcane-popup-tower.png` | ❌ 도전 버튼 ✕ 아이콘, "slime x3" 영문 |
+| 이벤트 던전 | (477,1739) | `arcane-popup-eventdungeon.png` | ❌ dragon_scale/shadow_fragment 변수명 노출 |
+| 인벤토리 | (603,1739) | `arcane-popup-inventory.png` | ❌ 아이템 아이콘 전체 동일, "common" 영문 |
+| 설정 | (729,1739) | `arcane-popup-settings.png` | ❌ 배경에 파티 HUD 잔상 (z-order 버그) |
+
+#### 발견된 버그 전체 목록 (16건)
+
+| # | 분류 | 심각도 | 설명 | 발생 위치 |
+|---|------|--------|------|---------|
+| 1 | 런타임 | HIGH | SaveManager 무한 로드 루프 (클릭 시 수십 번 "데이터 로드" 반복) | SaveManager.js |
+| 2 | 데이터 | MED | 캐릭터 이름 "???" (4캐릭터 중 일부 이름 미표시) | HeroListPopup |
+| 3 | 에셋 | MED | 캐릭터 포트레이트 누락 (영웅목록 상단 카드 X 표시) | HeroListPopup |
+| 4 | 에셋 | MED | "전투/스테이지 진행", "파티 편성" 버튼 아이콘 X 표시 | MainMenuScene |
+| 5 | UI | LOW | 에너지 바 색상 없음 (HUD 에너지 게이지 투명) | MainMenuScene HUD |
+| 6 | 로직 | HIGH | 💎+ 버튼 클릭 시 젬 50개 감소 (팝업 없이 차감) | MainMenuScene |
+| 7 | 데이터 | MED | characters.json schema 검증 실패 | 빌드/CI |
+| 8 | 네트워크 | MED | PvP Supabase 연동 실패 (프로덕션 환경변수 문제 추정) | PvPSystem.js |
+| 9 | i18n | MED | 길드 UI 전체 영문 미번역 (Create Guild / Guild Members 등) | GuildPopup.js |
+| 10 | 에셋 | LOW | 타워 도전 버튼 좌측 ✕ 아이콘 (텍스처 누락 fallback) | TowerSystem/팝업 |
+| 11 | i18n | LOW | 타워 "slime x3" 영문 미번역 | TowerSystem 데이터 |
+| 12 | i18n | MED | 이벤트 팝업 "dragon_scale: 0", "shadow_fragment: 0" — 변수명 그대로 노출 | EventDungeonSystem |
+| 13 | 에셋 | MED | 인벤토리 아이템 아이콘 전체 동일 (모든 장비가 동일 갈색 도형) | InventoryPopup/아이콘 시스템 |
+| 14 | i18n | LOW | 인벤토리 "common" 영문 미번역 (등급 표시) | InventoryPopup |
+| 15 | UI | HIGH | 설정 팝업 배경에 파티 편성 HUD 잔상 노출 (z-order 문제) | SettingsPopup/MainMenuScene |
+| 16 | 에셋 | LOW | 파티 슬롯 캐릭터 원형 아이콘 X 표시 (텍스처 미등록) | MainMenuScene 파티 HUD |
+
+> 심각도: HIGH = 게임플레이 영향 / MED = UX 품질 저하 / LOW = 폴리싱 필요
 
 ---
 
