@@ -402,6 +402,9 @@ export class MainMenuScene extends Phaser.Scene {
     this.energyBar = new EnergyBar(this);
     this.energyBar.create(s(390), barY);
     this.energyBar.update(energyStatus?.current ?? 0, energyStatus?.max ?? 100);
+    // [C] 에너지바 depth를 상단바보다 높게 설정 (앞 레이어 보장)
+    if (this.energyBar.container) this.energyBar.container.setDepth(topBarDepth + 2);
+    else if (this.energyBar.setDepth) this.energyBar.setDepth(topBarDepth + 2);
 
     const timeToRecover = energySystem.getTimeToNextRecovery?.() ?? 0;
     this.energyTimerText = this.add.text(s(495), barY, timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
@@ -409,14 +412,15 @@ export class MainMenuScene extends Phaser.Scene {
       fontFamily: '"Noto Sans KR", Arial',
       color: '#FFFFFF',
       fontStyle: 'bold'
-    }).setOrigin(0, 0.5).setDepth(topBarDepth + 1);
+    }).setOrigin(0, 0.5).setDepth(topBarDepth + 2); // [C] depth 상향
 
     // Energy gem charge button (💎+)
-    const chargeBtn = this.add.text(s(575), barY, '💎+', {
+    // [D] x값을 s(540)으로 왼쪽 이동하여 전투력 텍스트와 겹침 방지
+    const chargeBtn = this.add.text(s(540), barY, '💎+', {
       fontSize: sf(14), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
       color: '#A78BFA', backgroundColor: '#0F172A',
       padding: { x: s(4), y: s(2) }
-    }).setOrigin(0.5).setDepth(topBarDepth + 1).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setDepth(topBarDepth + 2).setInteractive({ useHandCursor: true }); // [C][D]
     chargeBtn.on('pointerdown', () => {
       // [HIGH-2] 즉시 차감 방지 -> Modal 확인 팝업
       const modal = new Modal(this, {
@@ -433,7 +437,8 @@ export class MainMenuScene extends Phaser.Scene {
     chargeBtn.on('pointerout', () => chargeBtn.setColor('#A78BFA'));
 
     const partyPower = this.idleSystem.getPartyPower();
-    this.powerText = this.add.text(GAME_WIDTH - s(90), barY, `⚔ ${Math.floor(partyPower).toLocaleString()}`, {
+    // [D] x값 조정: 설정 버튼(GAME_WIDTH-s(45)) 기준으로 충분히 왼쪽에 배치
+    this.powerText = this.add.text(GAME_WIDTH - s(100), barY, `⚔ ${Math.floor(partyPower).toLocaleString()}`, {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
@@ -525,7 +530,7 @@ export class MainMenuScene extends Phaser.Scene {
       const charData = characters.find(c => c.id === heroId || c.characterId === heroId);
       const staticData = getCharacter(heroId);
       const x = s(40) + slotWidth / 2 + i * slotWidth;
-      const y = panelY + s(120);
+      const y = panelY + s(90); // [B] s(30) 위로 이동 (120 → 90)
 
       const charClass = staticData?.class || charData?.class || 'warrior';
       const color = classColors[charClass] || 0x64748B;
@@ -584,7 +589,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // If party is empty, show placeholder
     if (partyIds.length === 0) {
-      const emptyMsg = this.add.text(GAME_WIDTH / 2, panelY + s(120), '파티를 편성해주세요!', {
+      const emptyMsg = this.add.text(GAME_WIDTH / 2, panelY + s(90), '파티를 편성해주세요!', { // [B] s(30) 위로
         fontSize: sf(16), fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
@@ -664,10 +669,7 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: sf(18), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
     }).setDepth(Z_INDEX.PANEL_CONTENT);
-    this.add.text(s(40), panelY + s(45), `챕터 ${currentStage.chapter || 1} - 스테이지 ${currentStage.chapter || 1}-${currentStage.stage || 1}`, {
-      fontSize: sf(14), fontFamily: '"Noto Sans KR", Arial',
-      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setDepth(Z_INDEX.PANEL_CONTENT);
+    // [A] 스테이지 이름 텍스트 삭제됨
 
     // Check if party exists
     const parties = saveData?.parties || [];
@@ -745,20 +747,7 @@ export class MainMenuScene extends Phaser.Scene {
       this._bossBtnText.setAlpha(0.5);
     }
 
-    // Energy display (EnergySystem 시간 회복 반영)
-    const esStatus = energySystem.getStatus() || {};
-    const currentEnergy = esStatus.current ?? 0;
-    const maxEnergy = esStatus.max ?? 100;
-    this.add.text(s(40), panelY + s(150), `🔋 에너지: ${currentEnergy}/${maxEnergy}`, {
-      fontSize: sf(13), fontFamily: '"Noto Sans KR", Arial',
-      color: currentEnergy >= 10 ? `#${COLORS.success.toString(16).padStart(6, '0')}` : `#${COLORS.danger.toString(16).padStart(6, '0')}`
-    }).setDepth(Z_INDEX.PANEL_CONTENT);
-
-    // Stage name
-    this.add.text(GAME_WIDTH - s(40), panelY + s(150), `📍 ${currentStage.name || '슬라임 평원'}`, {
-      fontSize: sf(13), fontFamily: '"Noto Sans KR", Arial',
-      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(1, 0).setDepth(Z_INDEX.PANEL_CONTENT);
+    // [A] 에너지 수치 텍스트 및 스테이지 이름 텍스트 삭제됨
   }
 
   /**
@@ -851,19 +840,10 @@ export class MainMenuScene extends Phaser.Scene {
       this.registry.set('gems', data.resources.gems);
     }
 
-    // 보상 팝업 표시
+    // [E] 소탕 완료 토스트 표시
     const currentStage = this.idleSystem.getCurrentStage();
     const stageName = `${currentStage.chapter}-${currentStage.stage}`;
-    const modal = new Modal(this, {
-      title: '⚡ 소탕 완료!',
-      message: `📍 스테이지 ${stageName}\n⏱ 예상 클리어: ${sweepRewards.estimatedTime}초\n\n💰 골드: +${goldReward.toLocaleString()}\n✨ 경험치: +${expReward.toLocaleString()} EXP\n🔋 에너지: -10`,
-      buttons: [
-        { text: '확인', style: 'primary', callback: () => {
-          modal.close();
-          this.scene.restart();
-        }}
-      ]
-    });
+    this.showToast(`✅ 소탕 완료! 💰 +${goldReward.toLocaleString()} / ⭐ +${expReward.toLocaleString()} EXP`);
   }
 
   /**
