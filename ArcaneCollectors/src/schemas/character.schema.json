@@ -29,8 +29,16 @@
             "maximum": 5
           },
           "cult": {
-            "type": "string",
-            "enum": ["olympus", "valhalla", "asgard", "avalon", "takamagahara", "kunlun", "yomi", "helheim", "tartarus", "balance", "chaos", "nature"]
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "string",
+                "enum": [
+                  "prism_stars", "neon_crow", "ink_cyclone", "stella_club", "card_cartel",
+                  "buddy_garden", "glitch_paradise", "cafe_encore", "lunatic_circus", "iron_beat"
+                ]
+              }
+            ]
           },
           "class": {
             "type": "string",

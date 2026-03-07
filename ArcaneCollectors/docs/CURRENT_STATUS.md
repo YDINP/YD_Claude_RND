@@ -4,7 +4,7 @@
 > **브랜치**: `arcane/integration`
 > **테스트**: 953개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [SWARM] 교단 컬러 GDD 통일 + 방랑자 시스템 + 픽셀아트 에셋 + Sprint6 UX (2026-03-07)
+> **최근 작업**: [SWARM] BA×NIKKE 비주얼 에셋 + DebugFAB 드래그 + 가챠 교단 동기화 (2026-03-07)
 
 ---
 
@@ -151,6 +151,20 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | SWARM-4 | BattleScene.js 배속 [1,2,3]→[1,2,4] 변경 + showSkillBanner() 신규 (교단 컬러 슬라이드 배너) | `src/scenes/BattleScene.js` | 03-07 |
 
 **결과**: 빌드 ✅ + 953/953 테스트 통과 (+26개 신규: ProceduralAssets 11 + AudioGenerator 15) | 34개 테스트 파일 | 충돌 없는 자동 머지 4건
+
+### Sprint 6 Swarm-A: 가챠 동기화 + BA×NIKKE 에셋 + DebugFAB 드래그 (2026-03-07) — pt-swarm 3태스크 병렬 실행
+| ID | 태스크 | 파일 | 날짜 |
+|----|--------|------|------|
+| SWARM-A1 | GachaPopup.js cult 폴백 →null (방랑자 교단 null 보존) |  | 03-07 |
+| SWARM-A1 | character.schema.json cult enum 신규 10개 교단으로 교체 + oneOf[null, enum] 패턴 |  | 03-07 |
+| SWARM-A2 | ProceduralAssets.js BA×NIKKE 스타일 전면 개선 — 별빛 그라데이션/소성운/방사광/동심원 링 파티클 |  | 03-07 |
+| SWARM-A2 | designSystem.js background/accent/glowIntensity 신규 토큰 추가 |  | 03-07 |
+| SWARM-A2 | 신규 텍스처: star-field(별 파티클), neon-grid(네온 격자) |  | 03-07 |
+| SWARM-A3 | DebugFAB.js 드래그 이동 기능 — 5px 임계값 클릭/드래그 구분, 화면 경계 clamp |  | 03-07 |
+| SWARM-A3 | DebugFAB.js localStorage 위치 저장/복원 () |  | 03-07 |
+
+**결과**: 빌드 ✅ | 충돌 없는 자동 머지 3건
+
 
 - BattleSystem 재사용: simulateBattle()에서 BattleSystem 인스턴스 생성, 최대 20턴 시뮬레이션
 - 오프라인 지원: Supabase 연결 실패 시 localStorage 캐시 폴백

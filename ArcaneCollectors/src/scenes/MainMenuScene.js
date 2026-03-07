@@ -14,8 +14,7 @@ import { IdleBattleView } from '../components/IdleBattleView.js';
 import { getCharacter, calculatePower, getStage, getChapterStages } from '../data/index.ts';
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
-// [DISABLED] gacha system temporarily disabled
-// import { GachaPopup } from '../components/popups/GachaPopup.js';
+import { GachaPopup } from '../components/popups/GachaPopup.js';
 import { HeroListPopup } from '../components/popups/HeroListPopup.js';
 import { PartyEditPopup } from '../components/popups/PartyEditPopup.js';
 import { QuestPopup } from '../components/popups/QuestPopup.js';
@@ -1074,8 +1073,7 @@ export class MainMenuScene extends Phaser.Scene {
 
   createBottomMenu() {
     const menuItems = [
-      // [DISABLED] gacha button - gacha system temporarily disabled
-      // { icon: '🎲', label: '소환', popupKey: 'gacha' },
+      { icon: '🎲', label: '소환', popupKey: 'gacha' },
       { icon: '🦸', label: '영웅', popupKey: 'herolist' },
       { icon: '👥', label: '파티', popupKey: 'partyedit' },
       { icon: '📜', label: '퀘스트', popupKey: 'quest' },
@@ -1158,8 +1156,7 @@ export class MainMenuScene extends Phaser.Scene {
     if (this.activePopup) return;
 
     const popups = {
-      // [DISABLED] gacha system temporarily disabled
-      // gacha: GachaPopup,
+      gacha: GachaPopup,
       herolist: HeroListPopup,
       partyedit: PartyEditPopup,
       quest: QuestPopup,
