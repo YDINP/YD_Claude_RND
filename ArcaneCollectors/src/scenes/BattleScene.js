@@ -1333,8 +1333,15 @@ export class BattleScene extends Phaser.Scene {
   createBattlerSprite(x, y, battler, isAlly) {
     const container = this.add.container(x, y);
 
-    // Character sprite
-    const sprite = this.add.image(0, 0, isAlly ? 'hero_placeholder' : 'enemy_placeholder');
+    // Character sprite (ally는 실제 hero 텍스처 우선, 없으면 hero_placeholder 폴백)
+    const battleSpriteKey = (() => {
+      if (!isAlly) return 'enemy_placeholder';
+      const heroId = battler.id || battler.characterId;
+      const key = `hero_${heroId}`;
+      if (heroId && this.textures.exists(key)) return key;
+      return 'hero_placeholder';
+    })();
+    const sprite = this.add.image(0, 0, battleSpriteKey);
     sprite.setScale(isAlly ? 0.9 : 0.85);
     if (!isAlly) sprite.setFlipX(true);
 

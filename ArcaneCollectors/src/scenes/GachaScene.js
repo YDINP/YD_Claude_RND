@@ -276,9 +276,20 @@ export class GachaScene extends Phaser.Scene {
     const featuredBg = this.add.rectangle(0, 0, s(120), s(120), COLORS.raritySR, 0.3);
     featuredBg.setStrokeStyle(s(3), COLORS.raritySSR);
 
+    // 픽업 배너: SSR 캐릭터 실제 이미지 표시 (폴백: hero_placeholder → 텍스트)
+    const featuredTextureKey = (() => {
+      const saveData = SaveManager.load();
+      const ownedChars = saveData?.characters || [];
+      const ssrChar = ownedChars.find(c => (c.rarity || '').toUpperCase() === 'SSR');
+      if (ssrChar) {
+        const key = `hero_${ssrChar.id || ssrChar.characterId}`;
+        if (this.textures.exists(key)) return key;
+      }
+      return this.textures.exists('hero_placeholder') ? 'hero_placeholder' : null;
+    })();
     let featuredChar;
-    if (this.textures.exists('hero_placeholder')) {
-      featuredChar = this.add.image(0, s(-10), 'hero_placeholder').setScale(1.2);
+    if (featuredTextureKey) {
+      featuredChar = this.add.image(0, s(-10), featuredTextureKey).setScale(1.2);
     } else {
       featuredChar = this.add.text(0, s(-10), '👤', { fontSize: sf(60) }).setOrigin(0.5);
     }
@@ -1327,8 +1338,15 @@ export class GachaScene extends Phaser.Scene {
     }).setOrigin(0.5);
     container.add([rarityBadge, rarityText]);
 
-    // 캐릭터 이미지
-    const heroImg = this.add.image(cx, cy - s(30), 'hero_placeholder').setScale(1.2);
+    // 캐릭터 이미지 (실제 hero 텍스처 우선, 없으면 hero_placeholder 폴백)
+    const singleResultTextureKey = (() => {
+      const key = `hero_${result.id || result.characterId}`;
+      if (result.id || result.characterId) {
+        if (this.textures.exists(key)) return key;
+      }
+      return 'hero_placeholder';
+    })();
+    const heroImg = this.add.image(cx, cy - s(30), singleResultTextureKey).setScale(1.2);
     container.add(heroImg);
 
     // 별 표시
@@ -1694,8 +1712,13 @@ export class GachaScene extends Phaser.Scene {
     const cardBg = this.add.rectangle(0, 0, s(72), s(108), COLORS.backgroundLight, 1);
     cardBg.setStrokeStyle(borderThick, borderColor);
 
-    // 히어로 이미지
-    const heroImg = this.add.image(0, s(-15), 'hero_placeholder').setScale(0.65);
+    // 히어로 이미지 (실제 hero 텍스처 우선, 없으면 hero_placeholder 폴백)
+    const tenPullCardTextureKey = (() => {
+      const key = `hero_${hero.id || hero.characterId}`;
+      if ((hero.id || hero.characterId) && this.textures.exists(key)) return key;
+      return 'hero_placeholder';
+    })();
+    const heroImg = this.add.image(0, s(-15), tenPullCardTextureKey).setScale(0.65);
 
     // 등급 배지
     const rarityBadge = this.add.rectangle(0, s(-47), s(32), s(18), rarityColor, 1);
@@ -1818,8 +1841,13 @@ export class GachaScene extends Phaser.Scene {
     const cardBg = this.add.rectangle(0, 0, s(75), s(110), COLORS.backgroundLight, 1);
     cardBg.setStrokeStyle(s(2), rarityColor);
 
-    // Hero image
-    const heroImg = this.add.image(0, s(-15), 'hero_placeholder').setScale(0.7);
+    // Hero image (실제 hero 텍스처 우선, 없으면 hero_placeholder 폴백)
+    const heroCardTextureKey = (() => {
+      const key = `hero_${hero.id || hero.characterId}`;
+      if ((hero.id || hero.characterId) && this.textures.exists(key)) return key;
+      return 'hero_placeholder';
+    })();
+    const heroImg = this.add.image(0, s(-15), heroCardTextureKey).setScale(0.7);
 
     // Rarity indicator
     const rarityBg = this.add.rectangle(0, s(-50), s(30), s(18), rarityColor, 1);
