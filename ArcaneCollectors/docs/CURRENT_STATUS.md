@@ -4,7 +4,7 @@
 > **브랜치**: `arcane/integration`
 > **테스트**: 806개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: TASK-E 스테이지 시스템 교단 연계 (StageSystem.js 신규, stages.json 9챕터, +31 테스트) (2026-03-07)
+> **최근 작업**: 교단 전면 재설계 v3.0 — 허구 서브컬쳐 10개 교단 + 교단 각성 시스템 GDD (2026-03-07)
 
 ---
 
@@ -143,6 +143,27 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 - 교단 색상 3파일 동기화: `cults.json` → `designSystem.js` → `layoutConfig.js`
 - balance/chaos/nature 교단 색상 2파일에 누락→추가 완료
 
+### 교단 전면 재설계 v3.0 (2026-03-07) — 허구 서브컬쳐 10개 교단
+
+| ID | 태스크 | 파일 | 날짜 |
+|----|--------|------|------|
+| CULT-V3 | cults.json v3.0 — 기존 14개 신화 기반 교단 전면 폐기, 허구 서브컬쳐 10개 교단으로 대체 | `src/data/cults.json` | 03-07 |
+| CULT-V3 | CULT_REDESIGN_V2.md — 신규 10개 교단 전체 설계 문서 (ID/컬러/Rarity/테마/시너지/로어) | `docs/CULT_REDESIGN_V2.md` | 03-07 |
+| CULT-V3 | characters.json cult 필드 갱신 — 4캐릭터 cult 매핑 (iron_beat/glitch_paradise/lunatic_circus/buddy_garden) | `src/data/characters.json` | 03-07 |
+| AWAKE-GDD | AWAKENING_SYSTEM_GDD.md — 교단 각성 시스템 v1.0 기획서 (방랑자→각성 5단계, 3조건, 연출, 경제) | `docs/AWAKENING_SYSTEM_GDD.md` | 03-07 |
+
+**10개 허구 서브컬쳐 교단**:
+- SSR: prism_stars(아이돌/팬덤), neon_crow(해커/사이버펑크), stella_club(천문동아리), lunatic_circus(마술사/서커스)
+- SR: ink_cyclone(그라피티), card_cartel(TCG), buddy_garden(원예), glitch_paradise(인터넷밈), iron_beat(록밴드)
+- R: cafe_encore(카페/중립)
+
+**교단 각성 시스템 핵심 설계**:
+- 방랑자(Wanderer) → 관심 → 입문 → 수련 → 서약 → 각성 완료 (5단계)
+- 조건: 친밀도 Lv(20~30) + 교단 소재(20~30개) + 교단 시련 클리어
+- SSR 추가조건: 교단 각인석 1개 (월 1회 무료 or 다이아 500)
+- 각성 연출: 8~12초 풀스크린 컷신, 교단별 파티클/컬러/사운드 차별화
+- 내러티브: "공명(Resonance)" 개념, 10개 교단별 각성 트리거 정의
+
 ### 캐릭터 시스템 재설계 (2026-03-04)
 | ID | 태스크 | 커밋 | 날짜 |
 |----|--------|------|------|
@@ -238,7 +259,17 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | TASK-B | 전투 성장 루프 완결 | P0 | M | ✅ 완료 (03-06) — finishBattle() EXP 분배 연동, expResults 포함 |
 | TASK-C | 신규 유저 최소 온보딩 | P1 | H | TutorialScene(3분) + 무료 가챠 체험 + 첫 전직 안내 |
 | TASK-D | 컬렉션 도감 UI | P1 | M | ✅ 완료 (03-06) — HeroListPopup 확장, 4개 순수 함수 export, +34 테스트 |
-| TASK-E | 스테이지 시스템 교단 연계 | P1 | M | stages.json 9챕터×5스테이지 확장, 교단 보너스 스테이지 연결 |
+| TASK-E | 스테이지 시스템 교단 연계 | P1 | M | ✅ 완료 (03-07) — stages.json 9챕터×5스테이지, StageSystem.js, +31 테스트 |
+
+### Sprint 6 백로그 (교단 v3.0 후속 구현)
+| ID | 태스크 | 우선순위 | 난이도 | 설명 |
+|----|--------|---------|--------|------|
+| CULT-UI | UI 레이어 교단 ID 갱신 | P0 | M | HeroListPopup/GachaPopup/gameConfig/designSystem/layoutConfig 하드코딩 교단 ID 교체 |
+| CULT-TS | TypeScript 타입 갱신 | P0 | S | character.d.ts Cult union type + HeroFactory 기본값 교체 |
+| AWAKE-1 | AwakeningSystem.js 구현 | P1 | M | cult: null 방랑자 상태, 3조건 체크 로직, 5단계 진행도 (GDD: AWAKENING_SYSTEM_GDD.md) |
+| AWAKE-2 | cult-materials.json 데이터 | P1 | S | 교단별 소재 정의, 드랍테이블 연동 |
+| AWAKE-3 | AwakeningPopup.js UI | P2 | M | 진행도 게이지, 조건 체크리스트, 각성 가능 알림 |
+| AWAKE-4 | 각성 컷신 연출 | P3 | H | 8~12초 풀스크린, 교단별 파티클/컬러/사운드 |
 
 ---
 
@@ -334,6 +365,9 @@ docs/
 ├── CULT_SYSTEM_DESIGN.md               ← 교단별 전투 메커니즘 (참고)
 ├── INSTITUTION_REDESIGN.md             ← 소환 기관/학파 컨셉 (참고)
 ├── EVOLUTION_SYSTEM_GDD.md             ← ★ 기본영웅 복수 진화루트 v2.0 (최신 최종)
+├── CULT_REDESIGN_V2.md                 ← ★ 허구 서브컬쳐 10개 교단 전체 설계 (v3.0 신규)
+├── AWAKENING_SYSTEM_GDD.md            ← ★ 교단 각성 시스템 v1.0 기획서 (방랑자→각성, 5단계)
+├── SPRINT6_GAMEDESIGN_PLAN.md         ← Sprint 6 게임디자인 우선순위 분석
 ├── prd/
 │   └── PRD_Sprint3_UIX.md              ← Sprint 3 PRD
 └── done/                               ← 완료된 문서 아카이브
