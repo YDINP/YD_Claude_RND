@@ -2,9 +2,9 @@
 
 > **최종 업데이트**: 2026-03-07
 > **브랜치**: `arcane/integration`
-> **테스트**: 870개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
+> **테스트**: 927개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [AWAKE-2] cult-materials.json 10교단 소재 데이터 + getMaterialInfo() 연동 (2026-03-07)
+> **최근 작업**: [AWAKE-4] AwakeningCutscene.js 각성 컷신 연출 시스템 + 21개 테스트 (2026-03-07)
 
 ---
 
@@ -131,6 +131,12 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | AWAKE-3 | AwakeningPopup.test.js 신규 36개 테스트 (TC-01~TC-36, 헬퍼 함수 + 클래스 통합) | `tests/ui/AwakeningPopup.test.js` | 03-07 |
 
 **결과**: 빌드 ✅ + 906/906 테스트 통과 + code-reviewer APPROVED (AWAKE-3)
+
+| AWAKE-4 | AwakeningCutscene.js 신규 — 7단계 풀스크린 컷신(페이드인/파티클/캐릭터전환/텍스트빌드업/플래시/스탯업/페이드아웃), 10교단 파티클 컬러, play() 정적 메서드, AWAKENING_SOUND_KEY, 스킵 기능 | `src/systems/AwakeningCutscene.js` | 03-07 |
+| AWAKE-4 | AwakeningPopup.js 연동 — 각성 버튼 → AwakeningCutscene.play() 호출 | `src/ui/AwakeningPopup.js` | 03-07 |
+| AWAKE-4 | AwakeningCutscene.test.js 신규 21개 테스트 (10교단 전부, play() 시그니처, onComplete, 스킵, 입력 차단/해제) | `tests/systems/AwakeningCutscene.test.js` | 03-07 |
+
+**결과**: 빌드 ✅ + 927/927 테스트 통과 + code-reviewer APPROVED (AWAKE-4)
 
 - BattleSystem 재사용: simulateBattle()에서 BattleSystem 인스턴스 생성, 최대 20턴 시뮬레이션
 - 오프라인 지원: Supabase 연결 실패 시 localStorage 캐시 폴백
@@ -301,13 +307,13 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | AWAKE-1 | AwakeningSystem.js 구현 | P1 | M | cult: null 방랑자 상태, 3조건 체크 로직, 5단계 진행도 (GDD: AWAKENING_SYSTEM_GDD.md) |
 | AWAKE-2 | cult-materials.json 데이터 | P1 | S | 교단별 소재 정의, 드랍테이블 연동 |
 | ~~AWAKE-3~~ | ~~AwakeningPopup.js UI~~ | P2 | M | **완료** — 진행도 게이지, 조건 체크리스트, 각성 가능 알림 (906 테스트 통과) |
-| AWAKE-4 | 각성 컷신 연출 | P3 | H | 8~12초 풀스크린, 교단별 파티클/컬러/사운드 |
+| ~~AWAKE-4~~ | ~~각성 컷신 연출~~ | P3 | H | **완료** — 7단계 풀스크린 컷신, 10교단 파티클/컬러, play() 정적 메서드, 스킵 기능 (927 테스트 통과) |
 
 ---
 
 ## 테스트 현황
 
-### Vitest 유닛 테스트 (906개, 31파일)
+### Vitest 유닛 테스트 (927개, 32파일)
 | # | 파일 | 테스트 수 |
 |---|------|----------|
 | 1 | data/index.test.js | 62 |
@@ -337,7 +343,8 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | 25 | **GuildSystem.test.js** | **36 (GP-2 신규)** |
 | 26 | **TutorialScene.test.js** | **30 (TASK-C 신규)** |
 | 27 | **HeroListPopup.test.js** | **34 (TASK-D 신규)** |
-| 28 | (기타) | — |
+| 28 | **AwakeningCutscene.test.js** | **21 (AWAKE-4 신규)** |
+| 29 | (기타) | — |
 
 ### Playwright E2E 테스트 (34개)
 | 카테고리 | 테스트 수 | 내용 |
