@@ -149,8 +149,10 @@ export class HeroDetailScene extends Phaser.Scene {
     const frame = this.add.rectangle(GAME_WIDTH / 2, displayY, s(180), s(200), frameRarityColorSet.bg, 0.3);
     frame.setStrokeStyle(s(3), frameRarityColorSet.border, 0.8);
 
-    // Hero image
-    const heroImg = this.add.image(GAME_WIDTH / 2, displayY, 'hero_placeholder');
+    // Hero image — HeroAssetLoader 텍스처 키와 동기화 (hero_${id} 패턴)
+    const heroTextureKey = `hero_${this.hero.id}`;
+    const heroTexture = this.textures.exists(heroTextureKey) ? heroTextureKey : 'hero_placeholder';
+    const heroImg = this.add.image(GAME_WIDTH / 2, displayY, heroTexture);
     heroImg.setScale(2);
 
     // Idle animation
@@ -333,19 +335,23 @@ export class HeroDetailScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       // Skill name
+      const skillNameMaxW = GAME_WIDTH - x - 35 - s(20);
       this.add.text(x + 35, y - 15, skill.name, {
         fontSize: '11px',
         fontFamily: 'Arial',
         color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        wordWrap: { width: skillNameMaxW }
       }).setOrigin(0, 0.5);
 
-      // Skill description
+      // Skill description (wordWrap으로 컨테이너 이탈 방지)
+      const descMaxW = GAME_WIDTH - x - 35 - s(20);
       const desc = skill.description || '스킬 설명';
-      this.add.text(x + 35, y + 2, desc.length > 12 ? `${desc.substring(0, 12)  }..` : desc, {
+      this.add.text(x + 35, y + 2, desc, {
         fontSize: '9px',
         fontFamily: 'Arial',
-        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
+        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`,
+        wordWrap: { width: descMaxW }
       }).setOrigin(0, 0.5);
 
       // Skill enhance button
