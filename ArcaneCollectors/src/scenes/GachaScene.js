@@ -8,6 +8,7 @@ import { ParticleManager } from '../systems/ParticleManager.js';
 import { getCharacter, normalizeHeroes } from '../data/index.js';
 import transitionManager from '../utils/TransitionManager.js';
 import navigationManager from '../systems/NavigationManager.js';
+import energySystem from '../systems/EnergySystem.js';
 
 export class GachaScene extends Phaser.Scene {
   constructor() {
@@ -19,6 +20,10 @@ export class GachaScene extends Phaser.Scene {
   create() {
     try {
     this.cameras.main.fadeIn(300);
+
+    // 에너지 시스템 초기화 (MainMenuScene을 거치지 않고 진입한 경우 대비)
+    const fullSaveData = SaveManager.load();
+    energySystem.initialize(fullSaveData?.energy || null);
 
     // H-3: ParticleManager 초기화
     this.particles = new ParticleManager(this);

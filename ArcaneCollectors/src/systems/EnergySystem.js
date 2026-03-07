@@ -28,13 +28,21 @@ class EnergySystem {
     this.currentEnergy = 0;
     this.lastRecoveryTime = Date.now();
     this.playerLevel = 1;
+    this._initialized = false;
   }
 
   /**
    * 초기화
    * @param {Object} savedData - 저장된 에너지 데이터
+   * @param {boolean} [force=false] - 이미 초기화된 경우에도 강제 재초기화
    */
-  initialize(savedData = null) {
+  initialize(savedData = null, force = false) {
+    // 이미 초기화된 경우 재초기화 스킵 (씬 전환마다 중복 호출 방지)
+    if (this._initialized && !force) {
+      this._applyTimeBasedRecovery();
+      return;
+    }
+
     if (savedData) {
       this.currentEnergy = savedData.currentEnergy || 0;
       this.lastRecoveryTime = savedData.lastRecoveryTime || Date.now();
@@ -47,6 +55,7 @@ class EnergySystem {
       this.lastRecoveryTime = Date.now();
       this.playerLevel = 1;
     }
+    this._initialized = true;
   }
 
   /**
