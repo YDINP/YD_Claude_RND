@@ -8,6 +8,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { getAllCharacters, getChapterStages } from '../data/index.js';
 import transitionManager from '../utils/TransitionManager.js';
 import navigationManager from '../systems/NavigationManager.js';
+import { SweepRewardPopup } from '../components/popups/SweepRewardPopup.js';
 
 export class StageSelectScene extends Phaser.Scene {
   constructor() {
@@ -852,10 +853,18 @@ export class StageSelectScene extends Phaser.Scene {
 
       this.hideSweepModal();
       this.refreshEnergyDisplay();
-      this.showMessage(
-        `⚡ ${count}회 소탕 완료! 🪙+${totalGold} ✨+${totalExp}`,
-        COLORS.success
-      );
+
+      // 소탕 보상 팝업 표시
+      const rewardPopup = new SweepRewardPopup(this, {
+        stageId: stage.id,
+        stageName: stage.name || stage.id,
+        count,
+        gold: totalGold,
+        exp: totalExp,
+        items: result.rewards?.items || [],
+        energyCost: cost,
+      });
+      rewardPopup.show();
     } else {
       this.showMessage(result?.error || '소탕 실패!', COLORS.danger);
     }
