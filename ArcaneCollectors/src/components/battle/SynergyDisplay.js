@@ -208,7 +208,7 @@ export class SynergyDisplay {
 
     // 총 버프 표시
     if (this.buffs.atk > 0) {
-      const atkText = this.scene.add.text(0, yOffset, `ATK +${Math.round(this.buffs.atk * 100)}%`, {
+      const atkText = this.scene.add.text(0, yOffset, `공격력 +${Math.round(this.buffs.atk * 100)}%`, {
         fontSize: sf(9),
         fontFamily: 'Arial',
         color: `#${  COLORS.danger.toString(16).padStart(6, '0')}`,
@@ -219,7 +219,7 @@ export class SynergyDisplay {
     }
 
     if (this.buffs.def > 0) {
-      const defText = this.scene.add.text(0, yOffset, `DEF +${Math.round(this.buffs.def * 100)}%`, {
+      const defText = this.scene.add.text(0, yOffset, `방어력 +${Math.round(this.buffs.def * 100)}%`, {
         fontSize: sf(9),
         fontFamily: 'Arial',
         color: `#${  COLORS.primary.toString(16).padStart(6, '0')}`,
@@ -230,7 +230,7 @@ export class SynergyDisplay {
     }
 
     if (this.buffs.spd > 0) {
-      const spdText = this.scene.add.text(0, yOffset, `SPD +${Math.round(this.buffs.spd * 100)}%`, {
+      const spdText = this.scene.add.text(0, yOffset, `속도 +${Math.round(this.buffs.spd * 100)}%`, {
         fontSize: sf(9),
         fontFamily: 'Arial',
         color: `#${  COLORS.success.toString(16).padStart(6, '0')}`,
