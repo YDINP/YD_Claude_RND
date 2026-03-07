@@ -419,9 +419,33 @@ export class PreloadScene extends Phaser.Scene {
       }
     }
 
-    if (uiRenderer.useAssets) {
-      // RES-ABS-4: 기본 아이콘만 초기 로드 (currency, stats)
-      uiRenderer.preloadAssets(this, { icons: ['currency', 'stats'] });
+    // Kenney UI 에셋 활성화 (버튼/패널/프레임만 — 아이콘은 코드 렌더링)
+    uiRenderer.setUseAssets(true);
+    uiRenderer.preloadAssets(this, { icons: [] });
+    // Kenney UI Pack SVG 에셋 로드 (17종)
+    // scale: 2 → 모바일 480x854 기준 고해상도 렌더링
+    try {
+      const svgScale = { scale: 2 };
+      this.load.svg('kenney-btn-primary',    'assets/kenney/blue/button_rectangle_depth_flat.svg',   svgScale);
+      this.load.svg('kenney-btn-danger',     'assets/kenney/red/button_rectangle_depth_flat.svg',    svgScale);
+      this.load.svg('kenney-btn-secondary',  'assets/kenney/grey/button_rectangle_depth_flat.svg',   svgScale);
+      this.load.svg('kenney-btn-success',    'assets/kenney/green/button_rectangle_depth_flat.svg',  svgScale);
+      this.load.svg('kenney-btn-accent',     'assets/kenney/yellow/button_rectangle_depth_flat.svg', svgScale);
+      this.load.svg('kenney-btn-round-blue', 'assets/kenney/blue/button_round_depth_flat.svg',   svgScale);
+      this.load.svg('kenney-btn-round-grey', 'assets/kenney/grey/button_round_depth_flat.svg',   svgScale);
+      this.load.svg('kenney-btn-square-blue','assets/kenney/blue/button_square_depth_flat.svg',  svgScale);
+      this.load.svg('kenney-icon-check',     'assets/kenney/blue/icon_checkmark.svg',   svgScale);
+      this.load.svg('kenney-icon-cross',     'assets/kenney/blue/icon_cross.svg',        svgScale);
+      this.load.svg('kenney-icon-circle',    'assets/kenney/blue/icon_circle.svg',       svgScale);
+      this.load.svg('kenney-star',           'assets/kenney/blue/star.svg',              svgScale);
+      this.load.svg('kenney-star-empty',     'assets/kenney/grey/star.svg',              svgScale);
+      this.load.svg('kenney-slider-h',       'assets/kenney/blue/slide_horizontal_color.svg', svgScale);
+      this.load.svg('kenney-check',          'assets/kenney/blue/check_square_color.svg',    svgScale);
+      this.load.svg('kenney-divider',        'assets/kenney/extra/divider.svg',          svgScale);
+      this.load.svg('kenney-input',          'assets/kenney/extra/input_rectangle.svg',  svgScale);
+      console.log('[PreloadScene] Kenney SVG 에셋 로드 등록 완료 (17종)');
+    } catch (e) {
+      console.warn('[PreloadScene] Kenney SVG 로드 등록 실패 (무시됨):', e);
     }
 
     this._loadPhase = 5;

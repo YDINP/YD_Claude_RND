@@ -53,12 +53,40 @@ export class Button extends Phaser.GameObjects.Container {
   }
 
   createBackground() {
-    this.background = this.scene.add.graphics();
-    this.drawBackground(this.options.color);
+    // Kenney SVG 키 우선 사용, 없으면 기존 PNG 키, 없으면 Graphics API 폴백
+    // style='kenney-primary' 등 kenney 접두 스타일도 지원
+    let textureKey;
+    if (typeof this.options.style === 'string' && this.options.style.startsWith('kenney-')) {
+      textureKey = 'kenney-btn-' + this.options.style.replace('kenney-', '');
+    } else {
+      textureKey = `kenney-btn-${this.options.style}`;
+      if (!this.scene.textures.exists(textureKey)) {
+        textureKey = `ui_btn_${this.options.style}`;
+      }
+    }
+    const hasTexture = this.scene.textures.exists(textureKey);
+
+    if (hasTexture) {
+      // Kenney SVG / PNG 버튼 이미지 사용
+      this.background = this.scene.add.image(0, 0, textureKey);
+      this.background.setDisplaySize(this.buttonWidth, this.buttonHeight);
+      this._usingTexture = true;
+    } else {
+      // 폴백: Graphics API
+      this.background = this.scene.add.graphics();
+      this.drawBackground(this.options.color);
+      this._usingTexture = false;
+    }
     this.add(this.background);
   }
 
   drawBackground(color, isPressed = false) {
+    if (this._usingTexture) {
+      // 이미지 모드: tint로 press 상태 표현
+      this.background.setTint(isPressed ? 0xaaaaaa : 0xffffff);
+      return;
+    }
+
     this.background.clear();
 
     const w = this.buttonWidth;

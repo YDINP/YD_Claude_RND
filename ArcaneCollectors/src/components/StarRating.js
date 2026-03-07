@@ -35,16 +35,28 @@ export class StarRating extends Phaser.GameObjects.Container {
     const totalWidth = (starSize + spacing) * this.maxStars - spacing;
     const startX = -totalWidth / 2 + starSize / 2;
 
+    // kenney 별 텍스처 사용 가능 여부 체크
+    this._useKenneyStars = this.scene.textures.exists('kenney-star') &&
+                           this.scene.textures.exists('kenney-star-empty');
+
     for (let i = 0; i < this.maxStars; i++) {
       const x = startX + i * (starSize + spacing);
       const isFilled = i < this.filledCount;
-      const star = this.createStar(x, 0, starSize, isFilled ? filledColor : emptyColor);
+      const star = this.createStar(x, 0, starSize, isFilled ? filledColor : emptyColor, isFilled);
       this.stars.push(star);
       this.add(star);
     }
   }
 
-  createStar(cx, cy, size, color) {
+  createStar(cx, cy, size, color, isFilled = true) {
+    // kenney 텍스처가 있으면 Image 사용, 없으면 Graphics 폴백
+    if (this._useKenneyStars) {
+      const key = isFilled ? 'kenney-star' : 'kenney-star-empty';
+      const img = this.scene.add.image(cx, cy, key);
+      img.setDisplaySize(size, size);
+      return img;
+    }
+
     const graphics = this.scene.add.graphics();
     this.drawStar(graphics, cx, cy, 5, size / 2, size / 4, color);
 
@@ -112,12 +124,19 @@ export class StarRating extends Phaser.GameObjects.Container {
       const targetColor = isFilled ? filledColor : emptyColor;
       const x = startX + i * (starSize + spacing);
 
-      star.clear();
-      this.drawStar(star, x, 0, 5, starSize / 2, starSize / 4, targetColor);
+      if (this._useKenneyStars) {
+        // kenney 텍스처 모드: setTexture로 교체
+        const key = isFilled ? 'kenney-star' : 'kenney-star-empty';
+        star.setTexture(key);
+      } else {
+        // Graphics 모드: clear 후 재그리기
+        star.clear();
+        this.drawStar(star, x, 0, 5, starSize / 2, starSize / 4, targetColor);
 
-      if (this.options.outlineColor !== null) {
-        star.lineStyle(s(1), this.options.outlineColor, 1);
-        this.strokeStar(star, x, 0, 5, starSize / 2, starSize / 4);
+        if (this.options.outlineColor !== null) {
+          star.lineStyle(s(1), this.options.outlineColor, 1);
+          this.strokeStar(star, x, 0, 5, starSize / 2, starSize / 4);
+        }
       }
 
       // Animate pop effect for newly filled stars

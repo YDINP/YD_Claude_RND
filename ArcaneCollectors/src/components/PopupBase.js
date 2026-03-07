@@ -32,6 +32,7 @@ export class PopupBase {
     const left = px - this.panelWidth / 2;
     const top = py - this.panelHeight / 2;
 
+    // Graphics API로 다크 테마 패널 렌더링
     const panel = this.scene.add.graphics();
     panel.fillStyle(0x0F172A, 0.98);
     panel.fillRoundedRect(left, top, this.panelWidth, this.panelHeight, s(16));
@@ -51,10 +52,22 @@ export class PopupBase {
     }).setOrigin(0.5);
     this.container.add(titleText);
 
-    // Close button
-    const closeBtn = this.scene.add.text(left + this.panelWidth - s(30), top + s(20), '✕', {
-      fontSize: sf(24), color: '#94A3B8'
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    // Close button — kenney-icon-cross SVG 우선, 없으면 텍스트 폴백
+    let closeBtn;
+    const closeBtnX = left + this.panelWidth - s(30);
+    const closeBtnY = top + s(20);
+    if (this.scene.textures.exists('kenney-icon-cross')) {
+      closeBtn = this.scene.add.image(closeBtnX, closeBtnY, 'kenney-icon-cross');
+      closeBtn.setDisplaySize(s(28), s(28));
+      closeBtn.setAlpha(0.7);
+    } else {
+      closeBtn = this.scene.add.text(closeBtnX, closeBtnY, '✕', {
+        fontSize: sf(24), color: '#94A3B8'
+      }).setOrigin(0.5);
+    }
+    closeBtn.setInteractive({ useHandCursor: true });
+    closeBtn.on('pointerover', () => closeBtn.setAlpha(1));
+    closeBtn.on('pointerout', () => closeBtn.setAlpha(0.7));
     closeBtn.on('pointerdown', () => this.hide());
     this.container.add(closeBtn);
 
