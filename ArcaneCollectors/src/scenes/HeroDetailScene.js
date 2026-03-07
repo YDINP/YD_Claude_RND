@@ -617,23 +617,25 @@ export class HeroDetailScene extends Phaser.Scene {
   }
 
   createActionButtons() {
-    const buttonY = GAME_HEIGHT - 60;
+    const buttonY = GAME_HEIGHT - s(60);
+    const centerX = GAME_WIDTH / 2;
+    const gap = s(150);
 
-    // Level up button
-    this.createActionButton(GAME_WIDTH / 4, buttonY, '레벨업', COLORS.success, () => {
+    // Level up button (좌측)
+    this.createActionButton(centerX - gap, buttonY, '레벨업', COLORS.success, () => {
       this.levelUpHero();
     });
 
-    // Auto Level button (quick level up)
-    this.createActionButton(GAME_WIDTH / 2, buttonY, '자동 레벨업', COLORS.primary, () => {
+    // Auto Level button (중앙)
+    this.createActionButton(centerX, buttonY, '자동 레벨업', COLORS.primary, () => {
       this.autoLevelUp();
     });
 
-    // Evolution button - check if can evolve
+    // Evolution button (우측) - check if can evolve
     const canEvolve = !EvolutionSystem.isMaxRarity(this.hero.rarity);
     const evolveColor = canEvolve ? COLORS.secondary : COLORS.textDark;
 
-    this.createActionButton(GAME_WIDTH * 3 / 4, buttonY, '진화', evolveColor, () => {
+    this.createActionButton(centerX + gap, buttonY, '진화', evolveColor, () => {
       this.evolveHero();
     });
   }
@@ -845,12 +847,12 @@ export class HeroDetailScene extends Phaser.Scene {
   createActionButton(x, y, label, color, callback) {
     const btn = this.add.container(x, y);
 
-    const bg = this.add.rectangle(0, 0, 130, 45, color, 1);
-    bg.setStrokeStyle(2, COLORS.text, 0.2);
+    const bg = this.add.rectangle(0, 0, s(130), s(45), color, 1);
+    bg.setStrokeStyle(s(2), COLORS.text, 0.2);
     bg.setInteractive({ useHandCursor: true });
 
     const text = this.add.text(0, 0, label, {
-      fontSize: '14px',
+      fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
