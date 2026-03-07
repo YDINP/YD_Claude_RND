@@ -4,7 +4,7 @@
 > **브랜치**: `arcane/integration`
 > **테스트**: 1001개 유닛 (1001/1001 통과, 35파일) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [버그 수정] UI 팝업 전수 테스트 발견 HIGH 2건 + MED 2건 수정 완료 (z-order / 젬차감 / i18n) — auto-pipeline APPROVED (commit `f7188a5`)
+> **최근 작업**: [에셋] Kenney UI Pack 17종 SVG 전체 적용 (Button/PopupBase/StarRating 3단계 폴백) + 미수정 UI 버그 6종 수정 완료 — commit `d085808`
 
 ---
 
@@ -249,6 +249,51 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | 6 | HIGH | 💎+ 버튼 클릭 시 젬 50개 즉시 차감 | Modal 확인 팝업 경유 후 충전 실행, 즉시 차감 제거 | `MainMenuScene.js` |
 | 12 | MED | "dragon_scale: 0", "shadow_fragment: 0" 변수명 노출 | `EVENT_CURRENCY_NAMES` 매핑 + `getCurrencyName()` 함수 적용 | `EventDungeonPopup.js` |
 | 9 | MED | GuildPopup 전체 영문 미번역 | 영문 텍스트 18개 한국어 번역 완료 | `GuildPopup.js` |
+
+**결과**: 빌드 ✅ + **1001/1001 테스트 통과** + code-reviewer APPROVED
+
+### UI 팝업 미수정 버그 수정 (2026-03-07) — auto-pipeline 5단계 APPROVED (commit `d9fa52e`)
+
+| # | 심각도 | 버그 | 수정 방법 | 파일 |
+|---|--------|------|---------|------|
+| 2 | MED | 영웅 이름 "???" (빈 문자열 케이스) | `hero.name \|\| hero.id \|\| '???'` — 빈 문자열 id fallback 추가 | `HeroListPopup.js` |
+| 11 | LOW | 타워 "slime x3" 영문 미번역 | `ENEMY_NAMES_KO` 상수 (slime→슬라임, goblin→고블린 등) + 한국어 변환 로직 | `TowerPopup.js` |
+| 13 | MED | 인벤토리 아이콘 전체 동일 + "common" 영문 | `getRarityNameKo()` + slotType별 아이콘 색상 분리 (weapon/armor/accessory/relic) | `InventoryPopup.js` |
+| 5 | LOW | 에너지 바 색상 없음 (투명) | `createFill()` 초기 `setFillStyle()` 명시적 지정 + targetWidth 최소값 보장 | `EnergyBar.js` |
+| 16 | LOW | 파티 슬롯 원형 아이콘 X 표시 | classIcons 없는 class → 이름 이니셜 텍스트 fallback 표시 | `MainMenuScene.js` |
+| 3 | MED | 메인메뉴/타워 버튼 X 아이콘 | 이모지 텍스트 방식으로 구현됨 확인 — 환경별 폰트 렌더링 차이, 코드 수정 범위 외 | (수정 제외) |
+
+> 미수정 항목 #4(버튼 X): 이미 이모지 텍스트 방식으로 구현 확인. 환경별 폰트 렌더링 차이 문제로 코드 수정 불가.
+
+**결과**: 빌드 ✅ + **1001/1001 테스트 통과** + code-reviewer APPROVED
+
+### Kenney UI Pack SVG 에셋 전체 적용 (2026-03-07) — auto-pipeline 5단계 APPROVED (commit `d085808`)
+
+| 에셋 | 경로 | 설명 |
+|------|------|------|
+| blue/button_rectangle | `public/assets/kenney/blue/button_rectangle_flat.svg` | 주 버튼 |
+| blue/button_round | `public/assets/kenney/blue/button_round_flat.svg` | 둥근 버튼 |
+| blue/button_square | `public/assets/kenney/blue/button_square_flat.svg` | 정사각 버튼 |
+| blue/icon_checkmark | `public/assets/kenney/blue/icon_checkmark.svg` | 체크 아이콘 |
+| blue/icon_cross | `public/assets/kenney/blue/icon_cross.svg` | 닫기(X) 아이콘 |
+| blue/icon_circle | `public/assets/kenney/blue/icon_circle.svg` | 원형 아이콘 |
+| blue/star | `public/assets/kenney/blue/star.svg` | 별 (채움) |
+| blue/slide_horizontal_color | `public/assets/kenney/blue/slide_horizontal_color.svg` | 슬라이더 |
+| blue/check_square_color | `public/assets/kenney/blue/check_square_color.svg` | 체크박스 |
+| red/button_rectangle_depth_flat | `public/assets/kenney/red/` | 위험 버튼 |
+| grey/button_rectangle | `public/assets/kenney/grey/` | 비활성 버튼 |
+| grey/button_round | `public/assets/kenney/grey/` | 비활성 둥근 버튼 |
+| grey/star | `public/assets/kenney/grey/star.svg` | 별 (빈) |
+| green/button_rectangle_depth_flat | `public/assets/kenney/green/` | 확인 버튼 |
+| yellow/button_rectangle_depth_flat | `public/assets/kenney/yellow/` | 강조 버튼 |
+| extra/divider | `public/assets/kenney/extra/divider.svg` | 구분선 |
+| extra/input_rectangle | `public/assets/kenney/extra/input_rectangle.svg` | 입력창 |
+
+**적용 컴포넌트**:
+- `PreloadScene.js` — 17종 `load.svg(key, path, {scale: 2})` 등록 (try-catch 방어, 실패 시 게임 진행 차단 없음)
+- `Button.js` — kenney 텍스처 우선 → 기존 PNG → Phaser Graphics 3단계 폴백
+- `PopupBase.js` — 닫기 버튼 `kenney-icon-cross` Image 우선 적용
+- `StarRating.js` — `kenney-star`/`kenney-star-empty` 우선, `_useKenneyStars` 플래그 캐싱 (매 프레임 textures.exists() 방지)
 
 **결과**: 빌드 ✅ + **1001/1001 테스트 통과** + code-reviewer APPROVED
 
