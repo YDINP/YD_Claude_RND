@@ -114,12 +114,12 @@ describe('AWAKENING_PARTICLE_COLORS', () => {
     });
   });
 
-  it('should have prism_stars color as 0xFFD700', () => {
-    expect(AWAKENING_PARTICLE_COLORS.prism_stars).toBe(0xFFD700);
+  it('should have prism_stars color as 0xFF6EB4', () => {
+    expect(AWAKENING_PARTICLE_COLORS.prism_stars).toBe(0xFF6EB4);
   });
 
-  it('should have neon_crow color as 0x00FF41', () => {
-    expect(AWAKENING_PARTICLE_COLORS.neon_crow).toBe(0x00FF41);
+  it('should have neon_crow color as 0x00F5FF', () => {
+    expect(AWAKENING_PARTICLE_COLORS.neon_crow).toBe(0x00F5FF);
   });
 
   it('should have glitch_paradise color as 0xFF00FF', () => {

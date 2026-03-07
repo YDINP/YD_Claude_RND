@@ -604,7 +604,7 @@ export class GachaScene extends Phaser.Scene {
         isNew: r.isNew,
         shardsGained: r.shardsGained,
         mood: charData?.mood || 'brave',
-        cult: charData?.cult || 'cafe_encore',
+        cult: charData?.cult ?? null,
         class: charData?.class || 'warrior'
       };
     });
@@ -649,7 +649,7 @@ export class GachaScene extends Phaser.Scene {
         isNew: r.isNew,
         shardsGained: r.shardsGained,
         mood: charData?.mood || 'brave',
-        cult: charData?.cult || 'cafe_encore',
+        cult: charData?.cult ?? null,
         class: charData?.class || 'warrior'
       };
     });
