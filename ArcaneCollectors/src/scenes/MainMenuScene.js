@@ -869,7 +869,7 @@ export class MainMenuScene extends Phaser.Scene {
   createIdleBattleView() {
     const viewY = s(632);
     const viewWidth = s(560);
-    const viewHeight = s(290);
+    const viewHeight = s(300);
 
     this.idleBattleView = new IdleBattleView(this, GAME_WIDTH / 2, viewY, viewWidth, viewHeight);
     this.idleBattleView.setDepth(Z_INDEX.IDLE_BATTLE);
