@@ -665,8 +665,9 @@ export class MainMenuScene extends Phaser.Scene {
     const parties = saveData?.parties || [];
     const rawParty = parties[0];
     const party = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
-    const partyHeroes = party.map(heroId => (saveData.characters || []).find(c => c.id === heroId)).filter(Boolean);
-    const hasParty = partyHeroes.length > 0;
+    // BUG-1 수정: heroIds 배열이 비어있지 않으면 파티 편성으로 인식
+    // saveData.characters에 없더라도 heroId가 존재하면 파티 있음으로 처리
+    const hasParty = party.length > 0;
 
     // Sweep availability: 파티만 있으면 항상 가능
     const canSweep = hasParty;
@@ -866,7 +867,14 @@ export class MainMenuScene extends Phaser.Scene {
     const parties = saveData.parties || [];
     const rawParty = parties[0];
     const party = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
-    const partyHeroes = party.map(heroId => (saveData.characters || []).find(c => c.id === heroId)).filter(Boolean);
+    // BUG-2 수정: saveData.characters에 없는 영웅도 getCharacter()로 폴백하여 매핑
+    const partyHeroes = party.map(heroId => {
+      const saved = (saveData.characters || []).find(c => c.id === heroId || c.characterId === heroId);
+      if (saved) return saved;
+      const staticData = getCharacter(heroId);
+      if (staticData) return { ...staticData, id: heroId, level: 1 };
+      return null;
+    }).filter(Boolean);
 
     // Check if party is empty
     const hasParty = partyHeroes.length > 0;
@@ -1322,7 +1330,14 @@ export class MainMenuScene extends Phaser.Scene {
       const parties = saveData?.parties || [];
       const rawParty = parties[0];
       const party = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
-      const partyHeroes = party.map(heroId => (saveData.characters || []).find(c => c.id === heroId)).filter(Boolean);
+      // BUG-2 수정: saveData.characters에 없는 영웅도 getCharacter()로 폴백하여 매핑
+      const partyHeroes = party.map(heroId => {
+        const saved = (saveData.characters || []).find(c => c.id === heroId || c.characterId === heroId);
+        if (saved) return saved;
+        const staticData = getCharacter(heroId);
+        if (staticData) return { ...staticData, id: heroId, level: 1 };
+        return null;
+      }).filter(Boolean);
 
       if (partyHeroes.length > 0) {
         this.idleBattleView.updateParty(partyHeroes);
