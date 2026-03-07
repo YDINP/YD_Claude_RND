@@ -253,6 +253,22 @@ export const CULTS = {
 };
 
 // ============================================
+// Cult Korean Names (UI 표시용 한글명 중앙 매핑)
+// ============================================
+export const CULT_KOREAN_NAMES = {
+  prism_stars:     '프리즘 스타즈',
+  neon_crow:       '네온 크로우',
+  ink_cyclone:     '잉크 사이클론',
+  stella_club:     '스텔라 클럽',
+  card_cartel:     '카드 카르텔',
+  buddy_garden:    '버디 가든',
+  glitch_paradise: '글리치 파라다이스',
+  cafe_encore:     '카페 앙코르',
+  lunatic_circus:  '루나틱 서커스',
+  iron_beat:       '아이언 비트'
+};
+
+// ============================================
 // Cult Colors and Info
 // ============================================
 export const CULT_COLORS = {
