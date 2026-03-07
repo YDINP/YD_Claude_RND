@@ -11,6 +11,7 @@ import {
   AWAKENING_REQUIREMENTS,
   AWAKENING_STAGE_NAMES
 } from '../systems/AwakeningSystem.js';
+import { AwakeningCutscene } from '../systems/AwakeningCutscene.js';
 
 export const LEVEL_REQUIREMENTS_BY_RARITY = {
   SSR: 40,
@@ -264,8 +265,11 @@ export class AwakeningPopup extends PopupBase {
     const heroId = this.character.id || this.character.heroId || '';
     const result = this.awakeningSystem.executeAwakening(heroId, this.cultId);
     if (result.success) {
-      if (this.onAwaken) { this.onAwaken(this.cultId); }
-      this.hide();
+      const onComplete = () => {
+        if (this.onAwaken) { this.onAwaken(this.cultId); }
+        this.hide();
+      };
+      AwakeningCutscene.play(this.scene, this.character, this.cultId, onComplete);
     }
   }
 

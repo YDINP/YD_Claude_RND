@@ -148,15 +148,56 @@ function createMockScene() {
     strokeRoundedRect: vi.fn().mockReturnThis(),
     fillStyle: vi.fn().mockReturnThis(),
     fillRoundedRect: vi.fn().mockReturnThis(),
+    fillRect: vi.fn().mockReturnThis(),
     beginPath: vi.fn().mockReturnThis(),
     moveTo: vi.fn().mockReturnThis(),
     lineTo: vi.fn().mockReturnThis(),
     strokePath: vi.fn().mockReturnThis(),
+    setDepth: vi.fn().mockReturnThis(),
+    setAlpha: vi.fn().mockReturnThis(),
     destroy: vi.fn(),
   };
+  const textMock = {
+    setOrigin: vi.fn().mockReturnThis(),
+    setDepth: vi.fn().mockReturnThis(),
+    setAlpha: vi.fn().mockReturnThis(),
+    setStyle: vi.fn().mockReturnThis(),
+    setText: vi.fn().mockReturnThis(),
+    destroy: vi.fn(),
+    text: '',
+    alpha: 1,
+    y: 0,
+  };
+  const circleMock = {
+    setDepth: vi.fn().mockReturnThis(),
+    setAlpha: vi.fn().mockReturnThis(),
+    destroy: vi.fn(),
+    alpha: 1,
+  };
   return {
-    add: { graphics: vi.fn(() => graphicsMock), container: vi.fn(() => ({ add: vi.fn() })) },
-    tweens: { add: vi.fn() },
+    add: {
+      graphics: vi.fn(() => ({ ...graphicsMock })),
+      container: vi.fn(() => ({ add: vi.fn() })),
+      text: vi.fn(() => ({ ...textMock })),
+      circle: vi.fn(() => ({ ...circleMock })),
+    },
+    tweens: {
+      add: vi.fn((config) => {
+        if (config && config.onComplete) config.onComplete();
+        return {};
+      }),
+    },
+    time: {
+      delayedCall: vi.fn((delay, cb) => { if (cb) cb(); return {}; }),
+    },
+    sound: {
+      add: vi.fn(() => ({ play: vi.fn(), destroy: vi.fn() })),
+    },
+    input: {
+      enabled: true,
+      once: vi.fn(),
+      off: vi.fn(),
+    },
     scale: { width: 1080, height: 1920 },
   };
 }
