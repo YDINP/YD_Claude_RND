@@ -649,7 +649,7 @@ export class MainMenuScene extends Phaser.Scene {
    */
   createAdventurePanel() {
     const panelY = s(310);
-    const panelH = s(80);
+    const panelH = s(190);
     const panel = this.add.graphics();
     panel.fillStyle(COLORS.bgLight, 0.9);
     panel.fillRoundedRect(s(20), panelY, GAME_WIDTH - s(40), panelH, s(12));
@@ -869,7 +869,7 @@ export class MainMenuScene extends Phaser.Scene {
   createIdleBattleView() {
     const viewY = s(632);
     const viewWidth = s(560);
-    const viewHeight = s(340);
+    const viewHeight = s(290);
 
     this.idleBattleView = new IdleBattleView(this, GAME_WIDTH / 2, viewY, viewWidth, viewHeight);
     this.idleBattleView.setDepth(Z_INDEX.IDLE_BATTLE);
