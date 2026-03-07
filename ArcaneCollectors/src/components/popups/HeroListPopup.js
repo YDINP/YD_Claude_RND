@@ -616,11 +616,12 @@ export class HeroListPopup extends PopupBase {
     const gridW = cols * cardW + (cols - 1) * spacing;
     const startX = this.contentBounds.centerX - gridW / 2 + cardW / 2;
 
+    const topPadding = cardH / 2;
     filtered.forEach((hero, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
       const x = startX + col * (cardW + spacing);
-      const y = row * (cardH + spacing);
+      const y = topPadding + row * (cardH + spacing);
 
       const card = this.createHeroCard(hero, x, y);
       this.gridContainer.add(card);
@@ -629,7 +630,7 @@ export class HeroListPopup extends PopupBase {
     // Update max scroll
     const rows = Math.ceil(filtered.length / cols);
     const gridHeight = this.contentBounds.height - s(190);
-    this.maxScroll = Math.max(0, rows * (cardH + spacing) - gridHeight);
+    this.maxScroll = Math.max(0, topPadding + rows * (cardH + spacing) - gridHeight);
     this.scrollY = Math.min(this.scrollY, this.maxScroll);
   }
 
