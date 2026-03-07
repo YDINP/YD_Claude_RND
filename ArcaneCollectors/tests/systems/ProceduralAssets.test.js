@@ -22,6 +22,7 @@ const mockCtx = {
   moveTo:      vi.fn(),
   lineTo:      vi.fn(),
   arc:         vi.fn(),
+  arcTo:       vi.fn(),
   stroke:      vi.fn(),
   fill:        vi.fn(),
   closePath:   vi.fn(),
