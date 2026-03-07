@@ -579,7 +579,7 @@ export class BattleScene extends Phaser.Scene {
       // 폴백 버프 표시
       let yOffset = s(-5);
       if (this.synergyBuffs.atk > 0) {
-        const atkText = this.add.text(0, yOffset, `ATK +${Math.round(this.synergyBuffs.atk * 100)}%`, {
+        const atkText = this.add.text(0, yOffset, `공격력 +${Math.round(this.synergyBuffs.atk * 100)}%`, {
           fontSize: sf(9), fontFamily: 'Noto Sans KR',
           color: `#${  COLORS.danger.toString(16).padStart(6, '0')}`
         }).setOrigin(0.5);
@@ -587,7 +587,7 @@ export class BattleScene extends Phaser.Scene {
         yOffset += s(12);
       }
       if (this.synergyBuffs.def > 0) {
-        const defText = this.add.text(0, yOffset, `DEF +${Math.round(this.synergyBuffs.def * 100)}%`, {
+        const defText = this.add.text(0, yOffset, `방어력 +${Math.round(this.synergyBuffs.def * 100)}%`, {
           fontSize: sf(9), fontFamily: 'Noto Sans KR',
           color: `#${  COLORS.primary.toString(16).padStart(6, '0')}`
         }).setOrigin(0.5);
