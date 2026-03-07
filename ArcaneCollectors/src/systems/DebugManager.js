@@ -5,7 +5,6 @@
  */
 import { SaveManager } from './SaveManager.js';
 import { getAllCharacters, getAllChapters, getChapterStages } from '../data/index.js';
-import { DebugFAB } from '../components/debug/DebugFAB.js';
 import { DebugPanel } from '../components/debug/DebugPanel.js';
 import energySystem from './EnergySystem.js';
 import { GachaSystem } from './GachaSystem.js';
@@ -869,27 +868,14 @@ export class DebugManager {
     if (!this.isDebugMode) return;
 
     // 기존 UI 정리
-    this.currentFAB?.destroy();
     this.currentPanel?.destroy();
 
-    // FAB 생성
-    this.currentFAB = new DebugFAB(scene);
+    // DebugPanel 생성 (FAB 제거 — ESC 치트패널로 대체)
     this.currentPanel = new DebugPanel(scene);
-
-    // FAB 콜백 연결
-    this.currentFAB.onToggle = (isOpen) => {
-      if (isOpen) {
-        this.currentPanel.open();
-      } else {
-        this.currentPanel.close();
-      }
-    };
 
     // 씬 종료 시 정리
     scene.events.once('shutdown', () => {
-      this.currentFAB?.destroy();
       this.currentPanel?.destroy();
-      this.currentFAB = null;
       this.currentPanel = null;
     });
   }
