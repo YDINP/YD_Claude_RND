@@ -4,7 +4,7 @@
 > **브랜치**: `arcane/integration`
 > **테스트**: 1001개 유닛 (1001/1001 통과, 35파일) | **빌드**: 0 에러 | **ESLint**: 에러 0개
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: [UI] 메인화면 TopBar UX 개선 + 가챠팝업 전면 리디자인 + 영웅 아이콘 통일 + updateStageInfo 버그 수정 — pt-swarm 5태스크
+> **최근 작업**: [UI/FIX] 버그수정 6종 + UI 리디자인 3종 — pt-swarm 13태스크 병렬 처리
 
 ---
 
@@ -285,6 +285,21 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | SWARM-BUG-1 | TypeError: updateStageInfo is not a function 수정 (MainMenuScene 호출 2곳 제거) | MainMenuScene.js |  | 03-08 |
 
 **결과**: 빌드 ✅ | 1001/1001 테스트 통과 | 5태스크 자동 머지 완료
+
+### UI 버그 수정 + 리디자인 일괄 처리 (2026-03-08) — pt-swarm 13태스크 병렬 실행
+
+| ID | 태스크 | 파일 | 결과 |
+|----|--------|------|------|
+| SWARM-1 | showNextBoss() TypeError 수정 + 보상받기 진행도 초기화 버그 수정 | IdleBattleView.js, MainMenuScene.js | ✅ |
+| SWARM-2 | 현재모험 칸 에너지/스테이지 텍스트 삭제 + 내파티 영웅 y+s(30) + 에너지 depth + 보석/전투력 겹침 수정 + 소탕 보상 팝업 | MainMenuScene.js | ✅ (SWARM-1에 포함) |
+| SWARM-3 | 가챠팝업 픽업배너 y+s(50) 하향 + SSR/SR/R 3색 확률 표시 + 골드 10챠 버튼 리디자인 | GachaPopup.js | ✅ |
+| SWARM-4 | 영웅목록 스크롤뷰 topPadding 추가 (첫 행 마스크 짤림 수정) | HeroListPopup.js | ✅ |
+| SWARM-5 | 영웅상세 하단 버튼 3개 centerX±s(150) 균등 배치 | HeroDetailScene.js | ✅ |
+| SWARM-6 | 시너지 효과 텍스트 영어→한국어 변환 (SynergyDisplay, BattleScene) | SynergyDisplay.js, BattleScene.js | ✅ |
+| SWARM-7 | 파티편성 UI 리디자인 + 하단 버튼 y+s(30) + 영웅 이미지 크기 축소 | PartyEditPopup.js, PartyEditScene.js | ✅ |
+
+**결과**: 빌드 ✅ (11.89s) | 7 swarm 브랜치 자동 머지 완료 | 충돌 0건
+
 
 ### Kenney UI Pack SVG 에셋 전체 적용 (2026-03-07) — auto-pipeline 5단계 APPROVED (commit `d085808`)
 
