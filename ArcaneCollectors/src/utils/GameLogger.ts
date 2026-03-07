@@ -28,6 +28,7 @@ class GameLogger {
     SYNERGY: { enabled: true, color: '#88ffaa', icon: '🔗' },
     UI: { enabled: false, color: '#aaaaaa', icon: '🖥️' },
     DATA: { enabled: false, color: '#8888ff', icon: '📊' },
+    SCHEMA: { enabled: false, color: '#aaddaa', icon: '📋' },
   };
 
   static _history: LogEntry[] = [];
@@ -58,6 +59,28 @@ class GameLogger {
       console.log(`%c${prefix} ${message}`, `color: ${cat.color}; font-weight: bold;`, data);
     } else {
       console.log(`%c${prefix} ${message}`, `color: ${cat.color}; font-weight: bold;`);
+    }
+  }
+
+  /**
+   * 경고 로그 (console.warn 스타일)
+   */
+  static warn(category: string, message: string, data: any = null): void {
+    if (!this._enabled) return;
+
+    const cat = this.categories[category];
+    const icon = cat?.icon || '⚠️';
+    const color = cat?.color || '#ffaa00';
+
+    const timestamp = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+    const entry: LogEntry = { timestamp, category, message, data };
+    this._history.push(entry);
+    if (this._history.length > this._maxHistory) this._history.shift();
+
+    if (data !== null && data !== undefined) {
+      console.warn(`%c${icon} [${category}] ${message}`, `color: ${color}; font-weight: bold;`, data);
+    } else {
+      console.warn(`%c${icon} [${category}] ${message}`, `color: ${color}; font-weight: bold;`);
     }
   }
 

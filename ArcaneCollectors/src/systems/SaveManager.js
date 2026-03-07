@@ -126,6 +126,36 @@ export class SaveManager {
       // CHAR-5: 피티 시스템 마이그레이션 (구버전 세이브 호환)
       if (!data.pity) data.pity = {};
 
+      // COMPAT-ID: 구버전 base_*/asc_* ID를 가진 파티 슬롯 정화
+      // char_N 포맷 외의 ID는 characters.json에 없으므로 ??? 표시됨 → 제거
+      const charList = Array.isArray(charactersData) ? charactersData : (charactersData.characters || []);
+      const validCharIds = new Set(charList.map(c => c.id));
+      let partyDirty = false;
+      if (Array.isArray(data.parties)) {
+        data.parties = data.parties.map(party => {
+          const arr = party?.heroIds || (Array.isArray(party) ? party : []);
+          const clean = arr.filter(id => validCharIds.has(id));
+          if (clean.length !== arr.length) {
+            partyDirty = true;
+            GameLogger.log('SAVE', `파티 레거시 ID 제거: ${arr.filter(id => !validCharIds.has(id)).join(', ')}`);
+          }
+          // 원래 구조 형식 유지
+          if (party?.heroIds !== undefined) return { ...party, heroIds: clean };
+          return clean;
+        });
+      }
+      // 파티가 비었으면 스타터 파티로 복구
+      const firstParty = data.parties?.[0];
+      const firstPartyIds = firstParty?.heroIds || (Array.isArray(firstParty) ? firstParty : []);
+      if (firstPartyIds.length === 0 && partyDirty) {
+        const starters = ['char_1', 'char_2', 'char_3', 'char_4'].filter(id => validCharIds.has(id));
+        data.parties = [starters];
+        GameLogger.log('SAVE', '파티 비어있음 → 스타터 파티로 복구', starters);
+        this.save(data);
+      } else if (partyDirty) {
+        this.save(data);
+      }
+
       return data;
     } catch (error) {
       console.error('SaveManager: 로드 실패', error);

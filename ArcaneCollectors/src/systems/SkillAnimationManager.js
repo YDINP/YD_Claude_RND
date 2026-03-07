@@ -49,7 +49,9 @@ class SkillAnimationManager {
     }
 
     // Create abort controller for cancellation support
+    // Capture locally to prevent null-access when concurrent animations clean up this.abortController
     this.abortController = new AbortController();
+    const abortController = this.abortController;
     this.currentAnimation = { scene, attacker, targets, actionType };
 
     // Get timing configuration for action type
@@ -64,7 +66,7 @@ class SkillAnimationManager {
       await this._playWindup(scene, attacker, timings.windup, vfx);
 
       // Check if animation was aborted
-      if (this.abortController.signal.aborted) {
+      if (abortController.signal.aborted) {
         console.log('[SkillAnimationManager] Animation aborted during windup');
         return;
       }
@@ -92,7 +94,7 @@ class SkillAnimationManager {
       await impactPromise;
 
       // Check if animation was aborted
-      if (this.abortController.signal.aborted) {
+      if (abortController.signal.aborted) {
         console.log('[SkillAnimationManager] Animation aborted during impact');
         return;
       }
@@ -362,7 +364,7 @@ class SkillAnimationManager {
    */
   async playSequence(scene, animationSequence) {
     for (const animConfig of animationSequence) {
-      if (this.abortController?.signal.aborted) {
+      if (this.abortController && this.abortController.signal.aborted) {
         console.log('[SkillAnimationManager] Sequence aborted');
         break;
       }

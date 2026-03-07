@@ -72,7 +72,7 @@ export const MOOD_COLORS = {
 
 // 에너지 UI 설정
 export const ENERGY_UI = {
-    BAR_WIDTH: s(200),
+    BAR_WIDTH: s(150), // [LAYOUT] 상단 재화바 겹침 방지를 위해 축소
     BAR_HEIGHT: s(24),
 
     // 에너지 레벨별 색상
