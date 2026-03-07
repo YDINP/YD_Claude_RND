@@ -103,13 +103,17 @@ export class GachaScene extends Phaser.Scene {
       navigationManager.goBack(this);
     });
 
-    // Title
-    this.add.text(GAME_WIDTH / 2, s(50), '소환', {
-      fontSize: sf(28),
+    // Title — 리디자인: 그라디언트 느낌 타이틀 + 하단 구분선
+    this.add.text(GAME_WIDTH / 2, s(45), '✨ 소환소', {
+      fontSize: sf(30),
       fontFamily: 'Georgia, serif',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
+      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: s(3)
     }).setOrigin(0.5);
+    // 헤더 하단 구분선 (accent color)
+    this.add.rectangle(GAME_WIDTH / 2, s(97), GAME_WIDTH, s(3), COLORS.accent, 0.7);
 
     // Gems display
     let gemIcon;
@@ -226,55 +230,91 @@ export class GachaScene extends Phaser.Scene {
   }
 
   createBannerArea() {
-    // Banner container
-    const bannerY = s(260);
+    // ── 리디자인: 픽업배너 y값 s(20) 하향 ──
+    const bannerY = s(280); // 기존 s(260) → s(280)
 
-    // Banner frame with gradient
-    const bannerBg = this.add.rectangle(GAME_WIDTH / 2, bannerY, GAME_WIDTH - s(40), s(240), COLORS.backgroundLight, 0.6);
-    bannerBg.setStrokeStyle(s(3), COLORS.secondary, 0.8);
+    // ── 배너 외곽 패널 (고급스러운 accent 테두리) ──
+    const panelW = GAME_WIDTH - s(30);
+    const panelH = s(230);
+    const panel = this.add.graphics();
+    // 다크 반투명 배경
+    panel.fillStyle(0x0F172A, 0.92);
+    panel.fillRoundedRect(GAME_WIDTH / 2 - panelW / 2, bannerY - panelH / 2, panelW, panelH, s(16));
+    // accent 테두리
+    panel.lineStyle(s(3), COLORS.accent, 0.9);
+    panel.strokeRoundedRect(GAME_WIDTH / 2 - panelW / 2, bannerY - panelH / 2, panelW, panelH, s(16));
+    // 내부 미묘한 inner glow
+    panel.lineStyle(s(1), COLORS.accent, 0.3);
+    panel.strokeRoundedRect(GAME_WIDTH / 2 - panelW / 2 + s(4), bannerY - panelH / 2 + s(4), panelW - s(8), panelH - s(8), s(12));
 
-    // Animated background particles
-    for (let i = 0; i < 15; i++) {
-      const px = GAME_WIDTH / 2 - s(200) + Phaser.Math.Between(0, s(400));
-      const py = bannerY - s(100) + Phaser.Math.Between(0, s(200));
-      const particle = this.add.circle(px, py, Phaser.Math.FloatBetween(1, 3), COLORS.accent, 0.5);
-
+    // ── 배너 파티클 (내부) ──
+    for (let i = 0; i < 12; i++) {
+      const px = GAME_WIDTH / 2 - s(180) + Phaser.Math.Between(0, s(360));
+      const py = bannerY - s(90) + Phaser.Math.Between(0, s(180));
+      const particle = this.add.circle(px, py, Phaser.Math.FloatBetween(1, 2.5), COLORS.accent, 0.4);
       this.tweens.add({
         targets: particle,
-        x: px + Phaser.Math.Between(s(-30), s(30)),
-        y: py + Phaser.Math.Between(s(-30), s(30)),
-        alpha: { from: 0.2, to: 0.6 },
+        x: px + Phaser.Math.Between(s(-20), s(20)),
+        y: py + Phaser.Math.Between(s(-20), s(20)),
+        alpha: { from: 0.1, to: 0.6 },
         duration: Phaser.Math.Between(2000, 4000),
         yoyo: true,
         repeat: -1
       });
     }
 
-    // Banner title with glow
-    const bannerTitle = this.add.text(GAME_WIDTH / 2, bannerY - s(90), '✨ 발할라의 전사들 픽업! ✨', {
-      fontSize: sf(22),
+    // ── 배너 타이틀 영역 (상단 강조 헤더) ──
+    const titleBg = this.add.graphics();
+    titleBg.fillStyle(COLORS.accent, 0.18);
+    titleBg.fillRoundedRect(GAME_WIDTH / 2 - panelW / 2 + s(3), bannerY - panelH / 2 + s(3), panelW - s(6), s(44), { tl: s(13), tr: s(13), bl: 0, br: 0 });
+
+    const bannerTitle = this.add.text(GAME_WIDTH / 2, bannerY - panelH / 2 + s(25), '✨ 발할라의 전사들 픽업! ✨', {
+      fontSize: sf(20),
       fontFamily: 'Georgia, serif',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
+      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
-      stroke: `#${  COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
-      strokeThickness: s(4)
+      stroke: '#000000',
+      strokeThickness: s(3)
     }).setOrigin(0.5);
 
     this.tweens.add({
       targets: bannerTitle,
-      scaleX: 1.05,
-      scaleY: 1.05,
-      duration: 1500,
+      scaleX: 1.04,
+      scaleY: 1.04,
+      duration: 1600,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
 
-    // Rate up characters (placeholders)
-    const featured = this.add.container(GAME_WIDTH / 2, bannerY);
+    // ── 구분선 ──
+    const divider = this.add.graphics();
+    divider.lineStyle(s(1), COLORS.accent, 0.5);
+    divider.lineBetween(GAME_WIDTH / 2 - panelW / 2 + s(20), bannerY - panelH / 2 + s(50), GAME_WIDTH / 2 + panelW / 2 - s(20), bannerY - panelH / 2 + s(50));
 
-    const featuredBg = this.add.rectangle(0, 0, s(120), s(120), COLORS.raritySR, 0.3);
-    featuredBg.setStrokeStyle(s(3), COLORS.raritySSR);
+    // ── 픽업 캐릭터 영역 ──
+    const charX = GAME_WIDTH / 2 - s(80);
+    const charY = bannerY + s(20);
+
+    // SSR 캐릭터 프레임 (화려한 accent 테두리)
+    const charFrame = this.add.graphics();
+    charFrame.lineStyle(s(3), COLORS.raritySSR, 1);
+    charFrame.strokeRoundedRect(charX - s(50), charY - s(55), s(100), s(110), s(8));
+    charFrame.lineStyle(s(1), COLORS.accent, 0.5);
+    charFrame.strokeRoundedRect(charX - s(46), charY - s(51), s(92), s(102), s(6));
+    // SSR 배경 그라디언트 느낌
+    const charBg = this.add.graphics();
+    charBg.fillStyle(COLORS.raritySSR, 0.08);
+    charBg.fillRoundedRect(charX - s(50), charY - s(55), s(100), s(110), s(8));
+
+    // Glow animation (charFrame)
+    this.tweens.add({
+      targets: charFrame,
+      alpha: { from: 0.7, to: 1 },
+      duration: 900,
+      yoyo: true,
+      repeat: -1
+    });
 
     // 픽업 배너: SSR 캐릭터 실제 이미지 표시 (폴백: hero_placeholder → 텍스트)
     const featuredTextureKey = (() => {
@@ -287,66 +327,98 @@ export class GachaScene extends Phaser.Scene {
       }
       return this.textures.exists('hero_placeholder') ? 'hero_placeholder' : null;
     })();
+
     let featuredChar;
     if (featuredTextureKey) {
-      featuredChar = this.add.image(0, s(-10), featuredTextureKey).setScale(1.2);
+      featuredChar = this.add.image(charX, charY - s(10), featuredTextureKey).setScale(1.1);
     } else {
-      featuredChar = this.add.text(0, s(-10), '👤', { fontSize: sf(60) }).setOrigin(0.5);
+      featuredChar = this.add.text(charX, charY - s(10), '👤', { fontSize: sf(52) }).setOrigin(0.5);
     }
 
-    const featuredLabel = this.add.text(0, s(55), 'SSR 픽업!', {
-      fontSize: sf(14),
-      fontFamily: 'Arial',
-      color: `#${  COLORS.raritySSR.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
+    // SSR 뱃지
+    const ssrBadge = this.add.graphics();
+    ssrBadge.fillStyle(COLORS.raritySSR, 1);
+    ssrBadge.fillRoundedRect(charX - s(22), charY + s(48), s(44), s(18), s(4));
+    this.add.text(charX, charY + s(57), 'SSR 픽업!', {
+      fontSize: sf(10), fontFamily: 'Arial', color: '#ffffff', fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    featured.add([featuredBg, featuredChar, featuredLabel]);
-
-    // Glow animation
+    // 회전 glow 링
+    const glowRing = this.add.graphics();
+    glowRing.lineStyle(s(2), COLORS.raritySSR, 0.6);
+    glowRing.strokeCircle(0, 0, s(58));
+    glowRing.setPosition(charX, charY - s(5));
     this.tweens.add({
-      targets: featuredBg,
-      alpha: { from: 0.3, to: 0.7 },
-      duration: 1000,
-      yoyo: true,
-      repeat: -1
-    });
-
-    // Rotating glow effect
-    const glow = this.add.graphics();
-    glow.lineStyle(s(3), COLORS.raritySSR, 0.5);
-    glow.strokeCircle(GAME_WIDTH / 2, bannerY, s(70));
-    this.tweens.add({
-      targets: glow,
+      targets: glowRing,
       rotation: Math.PI * 2,
-      duration: 3000,
+      duration: 3500,
       repeat: -1,
       ease: 'Linear'
     });
 
-    // Rates info with dynamic pity counter
-    const ratesY = bannerY + s(100);
-    const pityInfo = GachaSystem.getPityInfo();
-    this.bannerPityText = this.add.text(GAME_WIDTH / 2, ratesY - s(10), `천장 카운터: ${pityInfo.current}/${pityInfo.threshold}`, {
-      fontSize: sf(14),
-      fontFamily: 'Arial',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
+    // ── 확률 정보 뱃지 영역 (우측) ──
+    const rateX = GAME_WIDTH / 2 + s(60);
+    const rateY = bannerY - s(10);
+
+    // 확률 패널 배경
+    const rateBg = this.add.graphics();
+    rateBg.fillStyle(0x1E293B, 0.9);
+    rateBg.fillRoundedRect(rateX - s(95), rateY - s(85), s(190), s(170), s(10));
+    rateBg.lineStyle(s(1), COLORS.secondary, 0.4);
+    rateBg.strokeRoundedRect(rateX - s(95), rateY - s(85), s(190), s(170), s(10));
+
+    this.add.text(rateX, rateY - s(70), '소환 확률', {
+      fontSize: sf(13), fontFamily: 'Arial',
+      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
-    // SSR 확률 강조 표시
-    const rateTextX = GAME_WIDTH / 2;
-    const ssrRateText = this.add.text(rateTextX - s(80), ratesY + s(10), `SSR ${pityInfo.currentSSRRate}`, {
+    // 확률 뱃지들
+    const rates = [
+      { label: 'SSR', rate: '3%', color: COLORS.raritySSR, bg: 0x1a120a },
+      { label: 'SR', rate: '15%', color: COLORS.raritySR, bg: 0x120a1a },
+      { label: 'R', rate: '82%', color: COLORS.rarityR || 0x3B82F6, bg: 0x0a0f1a },
+    ];
+    rates.forEach((r, i) => {
+      const by = rateY - s(45) + i * s(40);
+      // 뱃지 배경
+      const bg = this.add.graphics();
+      bg.fillStyle(r.bg, 1);
+      bg.fillRoundedRect(rateX - s(88), by - s(14), s(176), s(28), s(5));
+      bg.lineStyle(s(1), r.color, 0.6);
+      bg.strokeRoundedRect(rateX - s(88), by - s(14), s(176), s(28), s(5));
+      // 등급 라벨
+      this.add.text(rateX - s(62), by, r.label, {
+        fontSize: sf(13), fontFamily: 'Arial',
+        color: `#${r.color.toString(16).padStart(6, '0')}`,
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+      // 구분자
+      this.add.text(rateX, by, '|', {
+        fontSize: sf(11), fontFamily: 'Arial',
+        color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
+      }).setOrigin(0.5);
+      // 확률 값
+      this.add.text(rateX + s(50), by, r.rate, {
+        fontSize: sf(14), fontFamily: 'Arial',
+        color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+    });
+
+    // ── 천장 카운터 (배너 하단) ──
+    const pityInfo = GachaSystem.getPityInfo();
+    const counterY = bannerY + panelH / 2 - s(20);
+
+    // 카운터 배경 라인
+    const counterBg = this.add.graphics();
+    counterBg.fillStyle(0x0F172A, 0.7);
+    counterBg.fillRoundedRect(GAME_WIDTH / 2 - panelW / 2 + s(3), counterY - s(16), panelW - s(6), s(32), { tl: 0, tr: 0, bl: s(13), br: s(13) });
+
+    this.bannerPityText = this.add.text(GAME_WIDTH / 2, counterY, `🔮 천장 카운터: ${pityInfo.current}/${pityInfo.threshold}  |  SSR ${pityInfo.currentSSRRate}`, {
       fontSize: sf(13),
       fontFamily: 'Arial',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
+      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    this.add.text(rateTextX + s(40), ratesY + s(10), 'SR 15%  R 50%  N 32%', {
-      fontSize: sf(12),
-      fontFamily: 'Arial',
-      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
   }
 
@@ -354,11 +426,11 @@ export class GachaScene extends Phaser.Scene {
     // UIX-3.4: 소환 버튼 위치 하단 BottomNav 위 (y=950 정도)
     const buttonY = s(950);
 
-    // Single summon button
-    this.createSummonButton(GAME_WIDTH / 2 - s(110), buttonY, '단일 소환', 300, 1);
+    // Single summon button — 리디자인: 보석 아이콘 + 비용 표기
+    this.createSummonButton(GAME_WIDTH / 2 - s(110), buttonY, '💎 ×1 소환', 300, 1);
 
-    // 10x summon button
-    this.createSummonButton(GAME_WIDTH / 2 + s(110), buttonY, '10연차', 2700, 10, true);
+    // 10x summon button — 리디자인: 할인 비용 표기 (3,000→2,700)
+    this.createSummonButton(GAME_WIDTH / 2 + s(110), buttonY, '💎 ×10 소환', 2700, 10, true);
 
     // Ticket summon buttons
     const ticketY = buttonY + s(40); // BottomNav(y=1160) 겹침 방지: 버튼 하단이 1160 이내
@@ -425,41 +497,54 @@ export class GachaScene extends Phaser.Scene {
   createSummonButton(x, y, label, cost, count, isPremium = false) {
     const btn = this.add.container(x, y);
 
-    // Button background with gradient effect
+    // Button background — 리디자인: primary→accent 그라디언트 느낌 (이중 레이어)
     const bgColor = isPremium ? COLORS.secondary : COLORS.primary;
-    const bg = this.add.rectangle(0, 0, s(180), s(90), bgColor, 1);
-    bg.setStrokeStyle(s(3), COLORS.text, 0.4);
+    const accentBorder = isPremium ? COLORS.accent : COLORS.secondary;
+
+    // 외부 글로우 레이어 (rounded 느낌)
+    const outerGlow = this.add.rectangle(0, 0, s(188), s(98), accentBorder, 0.25);
+    outerGlow.setStrokeStyle(s(1), accentBorder, 0.5);
+    btn.add(outerGlow);
+
+    const bg = this.add.rectangle(0, 0, s(182), s(92), bgColor, 1);
+    bg.setStrokeStyle(s(2), accentBorder, 0.9);
     bg.setInteractive({ useHandCursor: true });
 
-    // Inner glow
-    const innerGlow = this.add.rectangle(0, s(-20), s(170), s(35), 0xffffff, 0.15);
+    // Inner highlight (상단 하이라이트 — 그라디언트 느낌)
+    const innerGlow = this.add.rectangle(0, s(-22), s(172), s(32), 0xffffff, 0.12);
     btn.add(innerGlow);
 
     // Button label
-    const labelText = this.add.text(0, s(-18), label, {
-      fontSize: sf(20),
+    const labelText = this.add.text(0, s(-20), label, {
+      fontSize: sf(18),
       fontFamily: 'Arial',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
+      color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: s(2)
     }).setOrigin(0.5);
 
-    // Cost display
-    const costContainer = this.add.container(0, s(20));
-    let gemIcon;
-    if (this.textures.exists('gem')) {
-      gemIcon = this.add.image(s(-35), 0, 'gem').setScale(0.6);
-    } else {
-      gemIcon = this.add.text(s(-35), 0, '💎', { fontSize: sf(18) }).setOrigin(0.5);
-    }
-    const costText = this.add.text(0, 0, cost.toLocaleString(), {
-      fontSize: sf(18),
+    // Cost display — 리디자인: 할인 표기 (10연차는 취소선 원가 표시)
+    const costY = isPremium ? s(16) : s(20);
+    const costContainer = this.add.container(0, costY);
+    const costText = this.add.text(0, 0, `${cost.toLocaleString()} 💎`, {
+      fontSize: sf(17),
       fontFamily: 'Arial',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
+      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(0, 0.5);
-    costContainer.add([gemIcon, costText]);
+    }).setOrigin(0.5);
+    costContainer.add([costText]);
+
+    // 10연차 할인 표기 (3,000→2,700)
+    if (isPremium) {
+      const discountText = this.add.text(0, s(18), '(3,000 → 2,700 할인!)', {
+        fontSize: sf(10),
+        fontFamily: 'Arial',
+        color: '#22c55e',
+        fontStyle: 'italic'
+      }).setOrigin(0.5);
+      costContainer.add(discountText);
+    }
 
     btn.add([bg, labelText, costContainer]);
 
@@ -545,38 +630,62 @@ export class GachaScene extends Phaser.Scene {
     const pity = pityInfo.current;
     const pityMax = pityInfo.threshold;
 
-    this.add.text(GAME_WIDTH / 2, pityY, '천장 카운터', {
-      fontSize: sf(14),
+    // ── 리디자인: 천장 카운터 섹션 패널 ──
+    const panelBg = this.add.graphics();
+    panelBg.fillStyle(0x0F172A, 0.75);
+    panelBg.fillRoundedRect(GAME_WIDTH / 2 - s(175), pityY - s(14), s(350), s(90), s(10));
+    panelBg.lineStyle(s(1), COLORS.secondary, 0.35);
+    panelBg.strokeRoundedRect(GAME_WIDTH / 2 - s(175), pityY - s(14), s(350), s(90), s(10));
+
+    this.add.text(GAME_WIDTH / 2 - s(120), pityY, '🎯 천장 카운터', {
+      fontSize: sf(13),
       fontFamily: 'Arial',
-      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
+      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0, 0.5);
 
-    // Progress bar background
-    this.add.rectangle(GAME_WIDTH / 2, pityY + s(30), s(300), s(20), COLORS.backgroundLight, 1);
+    // Progress bar background (rounded)
+    const barBg = this.add.graphics();
+    barBg.fillStyle(COLORS.backgroundLight, 1);
+    barBg.fillRoundedRect(GAME_WIDTH / 2 - s(150), pityY + s(18), s(300), s(18), s(9));
 
-    // Progress bar fill
-    this.pityBar = this.add.rectangle(
-      GAME_WIDTH / 2 - s(150) + (s(300) * pity / pityMax) / 2,
-      pityY + s(30),
-      s(300) * pity / pityMax,
-      s(16),
-      COLORS.secondary,
-      1
-    ).setOrigin(0, 0.5);
+    // Progress bar fill (accent color)
+    const progress = pityMax > 0 ? pity / pityMax : 0;
+    const fillW = Math.max(s(18), s(300) * progress);
+    const barFill = this.add.graphics();
+    barFill.fillStyle(COLORS.secondary, 1);
+    barFill.fillRoundedRect(GAME_WIDTH / 2 - s(150), pityY + s(18), fillW, s(18), s(9));
+    this.pityBar = barFill; // updatePityUI 호환 (width tween 대신 redraw 방식)
 
-    // Pity text
-    this.pityText = this.add.text(GAME_WIDTH / 2, pityY + s(30), `${pity}/${pityMax}`, {
-      fontSize: sf(12),
+    // Pity text (바 위)
+    this.pityText = this.add.text(GAME_WIDTH / 2, pityY + s(27), `${pity}/${pityMax}`, {
+      fontSize: sf(11),
       fontFamily: 'Arial',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
+      color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // Info text
-    this.add.text(GAME_WIDTH / 2, pityY + s(60), '90회 소환 시 SSR 확정!', {
+    this.add.text(GAME_WIDTH / 2 + s(70), pityY, '90연 SSR 확정', {
+      fontSize: sf(11),
+      fontFamily: 'Arial',
+      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0, 0.5);
+
+    // ── "픽업 확률 상세 보기" 링크 텍스트 ──
+    const detailLink = this.add.text(GAME_WIDTH / 2, pityY + s(52), '▼ 픽업 확률 상세 보기', {
       fontSize: sf(12),
       fontFamily: 'Arial',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
+      color: `#${COLORS.secondary.toString(16).padStart(6, '0')}`,
+      fontStyle: 'italic'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    detailLink.on('pointerover', () => detailLink.setAlpha(0.7));
+    detailLink.on('pointerout', () => detailLink.setAlpha(1));
+    detailLink.on('pointerdown', () => {
+      this.showMessage('SSR 3% | SR 15% | R 50% | N 32%\n천장(90연): SSR 확정 보장', COLORS.accent);
+    });
   }
 
   performSummon(count) {
@@ -721,18 +830,19 @@ export class GachaScene extends Phaser.Scene {
    */
   updatePityUI(pityInfo) {
     if (this.bannerPityText) {
-      this.bannerPityText.setText(`천장 카운터: ${pityInfo.current}/${pityInfo.threshold}`);
+      this.bannerPityText.setText(`🔮 천장 카운터: ${pityInfo.current}/${pityInfo.threshold}  |  SSR ${pityInfo.currentSSRRate}`);
     }
     if (this.pityText) {
       this.pityText.setText(`${pityInfo.current}/${pityInfo.threshold}`);
     }
     if (this.pityBar) {
-      const progress = pityInfo.current / pityInfo.threshold;
-      this.tweens.add({
-        targets: this.pityBar,
-        width: s(300) * progress,
-        duration: 300
-      });
+      // Graphics 객체이므로 redraw 방식으로 업데이트
+      const progress = pityInfo.threshold > 0 ? pityInfo.current / pityInfo.threshold : 0;
+      const fillW = Math.max(s(18), s(300) * progress);
+      const pityY = s(680);
+      this.pityBar.clear();
+      this.pityBar.fillStyle(COLORS.secondary, 1);
+      this.pityBar.fillRoundedRect(GAME_WIDTH / 2 - s(150), pityY + s(18), fillW, s(18), s(9));
     }
   }
 
