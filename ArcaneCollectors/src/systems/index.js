@@ -66,6 +66,16 @@ export { CouponSystem } from './CouponSystem.js';
 // 퀘스트 시스템
 export { QuestSystem } from './QuestSystem.js';
 
+// 일일 퀘스트 시스템 (GDD v5 기반)
+export {
+  DailyQuestSystem,
+  dailyQuestSystem,
+  DAILY_QUESTS,
+  COMPLETION_BONUS,
+  EVENT_MAP,
+  DAILY_QUEST_STORAGE_KEY
+} from './DailyQuestSystem.js';
+
 // ==================== 인프라 ====================
 
 // 이벤트 버스

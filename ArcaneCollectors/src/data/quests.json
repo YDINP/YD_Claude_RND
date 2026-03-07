@@ -1,4 +1,46 @@
 {
+  "gddDailyQuests": [
+    {
+      "id": "DQ-001",
+      "name": "신성의 흔적",
+      "description": "스테이지 3회 클리어",
+      "goal": { "type": "stage_clear", "count": 3 },
+      "rewards": { "energy_gem": 5, "gold": 1000 }
+    },
+    {
+      "id": "DQ-002",
+      "name": "수집가의 소명",
+      "description": "가챠 1회 이상 시도",
+      "goal": { "type": "gacha_attempt", "count": 1 },
+      "rewards": { "gacha_ticket_free": 1, "gold": 500 }
+    },
+    {
+      "id": "DQ-003",
+      "name": "교단의 시험",
+      "description": "교단 시너지 파티로 스테이지 클리어 1회",
+      "goal": { "type": "synergy_clear", "count": 1 },
+      "rewards": { "energy_gem": 8, "awakening_material": 1 }
+    },
+    {
+      "id": "DQ-004",
+      "name": "불굴의 수련",
+      "description": "누적 적 처치 20마리",
+      "goal": { "type": "kill_count", "count": 20 },
+      "rewards": { "exp_potion_small": 3, "gold": 1500 }
+    },
+    {
+      "id": "DQ-005",
+      "name": "심연의 도전",
+      "description": "Abyss Tower 5층 도달",
+      "goal": { "type": "tower_floor", "count": 5 },
+      "rewards": { "energy_gem": 15, "sr_awakening_material": 1 }
+    }
+  ],
+  "gddCompletionBonus": {
+    "gacha_ticket_free": 3,
+    "cult_material_random": 2,
+    "gold": 3000
+  },
   "dailyQuests": [
     {
       "id": "daily_001",
