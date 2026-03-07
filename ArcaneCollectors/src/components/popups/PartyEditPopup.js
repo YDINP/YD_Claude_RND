@@ -127,8 +127,8 @@ export class PartyEditPopup extends PopupBase {
       const y = gridY + slotSize / 2;
 
       // 슬롯 배경
-      const bg = this.scene.add.rectangle(x, y, slotSize, slotSize + s(30), COLORS.bgLight, 0.7);
-      bg.setStrokeStyle(s(2), COLORS.bgPanel);
+      const bg = this.scene.add.rectangle(x, y, slotSize, slotSize + s(30), COLORS.bgPanel, 0.85);
+      bg.setStrokeStyle(s(2), COLORS.bgLight);
       bg.setInteractive({ useHandCursor: true });
 
       // 슬롯 번호
@@ -139,11 +139,11 @@ export class PartyEditPopup extends PopupBase {
       }).setOrigin(0.5);
 
       // 캐릭터 아이콘 배경 (원형)
-      const iconBg = this.scene.add.circle(x, y - s(10), s(35), COLORS.bgPanel, 0.5);
+      const iconBg = this.scene.add.circle(x, y - s(10), s(38), COLORS.bgLight, 0.5);
 
       // 캐릭터 이미지 (초기: 비표시, 영웅 배정 시 갱신)
       const heroImg = this.scene.add.image(x, y - s(10), 'hero_placeholder')
-        .setDisplaySize(s(64), s(64))
+        .setDisplaySize(s(56), s(56))
         .setVisible(false);
 
       // 캐릭터 이름
@@ -211,7 +211,7 @@ export class PartyEditPopup extends PopupBase {
 
   createActionButtons() {
     const cx = this.contentBounds.centerX;
-    const btnY = this.contentBounds.top + s(430);
+    const btnY = this.contentBounds.top + s(460);
 
     // 전투력 표시
     this.powerText = this.addText(cx, btnY - s(30), '전투력: 0', {
@@ -226,7 +226,7 @@ export class PartyEditPopup extends PopupBase {
     });
 
     // 초기화 버튼
-    this.addButton(cx + s(100), btnY, s(180), s(48), '초기화', COLORS.bgPanel, () => {
+    this.addButton(cx + s(100), btnY, s(180), s(48), '초기화', COLORS.danger, () => {
       this.clearParty();
     });
 
@@ -266,8 +266,8 @@ export class PartyEditPopup extends PopupBase {
           slot.nameText.setText('+');
           slot.infoText.setText('');
           slot.rarityText.setText('');
-          slot.bg.setStrokeStyle(2, COLORS.bgPanel);
-          slot.iconBg.setFillStyle(COLORS.bgPanel, 0.5);
+          slot.bg.setStrokeStyle(s(2), COLORS.bgLight, 0.5);
+          slot.iconBg.setFillStyle(COLORS.bgLight, 0.3);
           slot.removeBtn.setVisible(false);
           if (slot.heroImg) slot.heroImg.setVisible(false);
         }
@@ -276,8 +276,8 @@ export class PartyEditPopup extends PopupBase {
         slot.nameText.setText('+');
         slot.infoText.setText('');
         slot.rarityText.setText('');
-        slot.bg.setStrokeStyle(2, COLORS.bgPanel);
-        slot.iconBg.setFillStyle(COLORS.bgPanel, 0.5);
+        slot.bg.setStrokeStyle(s(2), COLORS.bgLight, 0.5);
+        slot.iconBg.setFillStyle(COLORS.bgLight, 0.3);
         slot.removeBtn.setVisible(false);
         if (slot.heroImg) slot.heroImg.setVisible(false);
       }
