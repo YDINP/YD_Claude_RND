@@ -874,9 +874,6 @@ export class MainMenuScene extends Phaser.Scene {
     this.idleBattleView = new IdleBattleView(this, GAME_WIDTH / 2, viewY, viewWidth, viewHeight);
     this.idleBattleView.setDepth(Z_INDEX.IDLE_BATTLE);
 
-    const currentStage = this.idleSystem.getCurrentStage();
-    this.idleBattleView.updateStageInfo(currentStage.chapter || 1, currentStage.stage || 1, currentStage.name || '슬라임 평원');
-
     const saveData = SaveManager.load();
     const parties = saveData.parties || [];
     const rawParty = parties[0];
@@ -906,7 +903,6 @@ export class MainMenuScene extends Phaser.Scene {
       if (this.bossVictory) {
         this.idleSystem.advanceStage();
         const newStage = this.idleSystem.getCurrentStage();
-        this.idleBattleView.updateStageInfo(newStage.chapter, newStage.stage, newStage.name);
         this.idleBattleView.showStageClear();
         this.showToast(`챕터 ${newStage.chapter}-${newStage.stage} 진출!`);
         // 2초 후 다음 보스 등장
