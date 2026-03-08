@@ -509,8 +509,8 @@ export class IdleProgressSystem {
       return { gold: 0, exp: 0, totalDamage: 0, hasRewards: false };
     }
 
-    // 누적 미수령 데미지 + 현재 진행도(accumulatedDamage) 합산
-    const totalDamage = (this.unclaimedDamage || 0) + (this.accumulatedDamage || 0);
+    // 미수령 데미지만 보상 계산에 사용 (accumulatedDamage는 보스전 진행도이므로 제외)
+    const totalDamage = this.unclaimedDamage || 0;
     if (totalDamage <= 0) {
       return { gold: 0, exp: 0, totalDamage: 0, hasRewards: false };
     }
@@ -531,21 +531,21 @@ export class IdleProgressSystem {
   }
 
   /**
-   * 보상 수령 — 누적 데미지 + 현재 진행도 전부 리셋
-   * BUG-12 수정: 보상 수령 후 bossReady 상태 갱신 (진행도 0%로 리셋)
+   * 보상 수령 — 미수령 데미지(unclaimedDamage)만 정산, 보스전 진행도(accumulatedDamage)는 유지
    * @returns {Object} { gold, exp, totalDamage, hasRewards }
    */
   claimRewards() {
     const rewards = this.getClaimableRewards();
     this.unclaimedDamage = 0;
-    this.accumulatedDamage = 0;
+    // accumulatedDamage는 보스전 진행도이므로 보상 수령 시 리셋하지 않음
     this.saveProgress();
 
-    GameLogger.log('IDLE', '누적 보상 수령 (진행도 리셋)', {
+    GameLogger.log('IDLE', '누적 보상 수령 (진행도 유지)', {
       gold: rewards.gold,
       exp: rewards.exp,
       damageDealt: rewards.totalDamage,
-      bossReady: false // 리셋 후 보스전 준비 해제
+      accumulatedDamage: this.accumulatedDamage,
+      bossReady: this.isBossReady()
     });
 
     return rewards;

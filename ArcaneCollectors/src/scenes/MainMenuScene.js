@@ -950,11 +950,8 @@ export class MainMenuScene extends Phaser.Scene {
     // 보상 팝업 표시 (계산 결과 보여줌)
     this._showClaimRewardsPopup(rewards);
 
-    // 보상 수령 후 IdleBattleView 상태 복원
-    // claimRewards()가 accumulatedDamage를 리셋하므로 진행도 바를 0%로 되돌리고,
-    // 현재 보스 표시는 유지 (bossData는 claimRewards 이후에도 살아있음)
+    // 보상 수령 후 IdleBattleView 상태 복원 (진행도 유지)
     if (this.idleBattleView) {
-      this.idleBattleView.updateProgress(0);
       // 현재 보스가 없으면 다시 로드
       if (!this.idleSystem.currentBossData) {
         this.idleSystem.loadCurrentBoss();
@@ -962,6 +959,11 @@ export class MainMenuScene extends Phaser.Scene {
       if (this.idleSystem.currentBossData) {
         this.idleBattleView.showBoss(this.idleSystem.currentBossData);
       }
+      // 실제 누적 진행도(accumulatedDamage / bossHp)로 바 업데이트
+      const currentProgress = this.idleSystem.currentBossHp > 0
+        ? Math.min(1, (this.idleSystem.accumulatedDamage || 0) / this.idleSystem.currentBossHp)
+        : 0;
+      this.idleBattleView.updateProgress(currentProgress);
     }
   }
 
