@@ -1033,65 +1033,65 @@ export class MainMenuScene extends Phaser.Scene {
     // ──────────────────────────────────────────────
     // P1/P2/P3 계층 UX 구조
     // P1: 전투/스테이지 (최우선 CTA, 펄스 애니메이션)
-    // P2: 가챠, 파티 편성 (중간 크기 2버튼)
-    // P3: 서브 콘텐츠 8개 (소형 아이콘+텍스트, 2행4열)
+    // P2: 가챠, 파티 편성 (중간 크기 2버튼, 균등 배치)
+    // P3: 서브 콘텐츠 8개 (사각 카드, 2행4열, 통일 스타일)
     // ──────────────────────────────────────────────
 
-    const menuBaseY = s(910);
-    const padding = s(20);
+    const padding = s(16);
     const menuWidth = GAME_WIDTH - padding * 2;
+    const menuBaseY = s(910);
 
-    // ── P2: 가챠 + 파티 편성 버튼 ──────────────────
-    // (P1 보스전 버튼은 IdleBattleView 패널 내 버튼으로 통합)
-    const p2BtnW = Math.floor(menuWidth * 0.45);
-    const p2BtnH = s(50);
+    // ── P2: 가챠 + 파티 편성 버튼 (균등 2분할) ──────
     const p2Gap = s(12);
+    const p2BtnW = Math.floor((menuWidth - p2Gap) / 2);
+    const p2BtnH = s(58);
     const p2Y = menuBaseY;
+    const p2StartX = padding;
 
     const p2Items = [
-      { label: '🎰 가챠', popupKey: 'gacha', color: 0x7C3AED },
-      { label: '⚔ 파티 편성', popupKey: 'partyedit', color: 0x1D4ED8 },
+      { label: '🎰 가챠', popupKey: 'gacha', color: 0x7C3AED, borderColor: 0xA78BFA },
+      { label: '⚔ 파티 편성', popupKey: 'partyedit', color: 0x1E40AF, borderColor: 0x60A5FA },
     ];
 
     p2Items.forEach((item, i) => {
-      const totalP2Width = p2BtnW * 2 + p2Gap;
-      const p2StartX = (GAME_WIDTH - totalP2Width) / 2;
       const bx = p2StartX + i * (p2BtnW + p2Gap);
       const bCenterX = bx + p2BtnW / 2;
       const bCenterY = p2Y + p2BtnH / 2;
+      const radius = s(10);
 
       const gfx = this.add.graphics().setDepth(Z_INDEX.BOTTOM_MENU);
-      gfx.fillStyle(item.color, 0.85);
-      gfx.fillRoundedRect(bx, p2Y, p2BtnW, p2BtnH, s(10));
-      gfx.lineStyle(1, 0xA5B4FC, 0.4);
-      gfx.strokeRoundedRect(bx, p2Y, p2BtnW, p2BtnH, s(10));
+      const drawP2Normal = () => {
+        gfx.clear();
+        gfx.fillStyle(item.color, 0.9);
+        gfx.fillRoundedRect(bx, p2Y, p2BtnW, p2BtnH, radius);
+        gfx.lineStyle(s(2), item.borderColor, 0.6);
+        gfx.strokeRoundedRect(bx, p2Y, p2BtnW, p2BtnH, radius);
+      };
+      const drawP2Hover = () => {
+        gfx.clear();
+        gfx.fillStyle(item.color, 1);
+        gfx.fillRoundedRect(bx, p2Y, p2BtnW, p2BtnH, radius);
+        gfx.lineStyle(s(2), item.borderColor, 1);
+        gfx.strokeRoundedRect(bx, p2Y, p2BtnW, p2BtnH, radius);
+      };
+      drawP2Normal();
 
       const txt = this.add.text(bCenterX, bCenterY, item.label, {
-        fontSize: sf(16),
+        fontSize: sf(17),
         fontFamily: '"Noto Sans KR", Arial',
         color: '#FFFFFF',
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 2,
       }).setOrigin(0.5).setDepth(Z_INDEX.BOTTOM_MENU + 1);
 
       const hit = this.add.rectangle(bCenterX, bCenterY, p2BtnW, p2BtnH)
         .setAlpha(0.001).setDepth(Z_INDEX.BOTTOM_MENU + 2).setInteractive({ useHandCursor: true });
 
-      hit.on('pointerover', () => {
-        gfx.clear();
-        gfx.fillStyle(item.color, 1);
-        gfx.fillRoundedRect(bx, p2Y, p2BtnW, p2BtnH, s(10));
-        gfx.lineStyle(2, 0xC4B5FD, 0.7);
-        gfx.strokeRoundedRect(bx, p2Y, p2BtnW, p2BtnH, s(10));
-      });
-      hit.on('pointerout', () => {
-        gfx.clear();
-        gfx.fillStyle(item.color, 0.85);
-        gfx.fillRoundedRect(bx, p2Y, p2BtnW, p2BtnH, s(10));
-        gfx.lineStyle(1, 0xA5B4FC, 0.4);
-        gfx.strokeRoundedRect(bx, p2Y, p2BtnW, p2BtnH, s(10));
-      });
+      hit.on('pointerover', () => { drawP2Hover(); });
+      hit.on('pointerout', () => { drawP2Normal(); });
       hit.on('pointerdown', () => {
-        txt.setScale(0.94);
+        txt.setScale(0.93);
         this.time.delayedCall(100, () => {
           txt.setScale(1);
           this.openPopup(item.popupKey);
@@ -1099,9 +1099,14 @@ export class MainMenuScene extends Phaser.Scene {
       });
     });
 
-    // ── P3: 서브 콘텐츠 소형 버튼 8개 (2행 4열) ──────
+    // ── 구분선 (P2/P3 사이) ──
+    const divY = p2Y + p2BtnH + s(8);
+    this.add.rectangle(GAME_WIDTH / 2, divY, menuWidth, s(1), COLORS.primary, 0.3)
+      .setDepth(Z_INDEX.BOTTOM_MENU);
+
+    // ── P3: 서브 콘텐츠 사각 카드 버튼 8개 (2행 4열) ──────
     const p3Items = [
-      { icon: '📋', label: '일일 퀘스트', popupKey: 'quest' },
+      { icon: '📋', label: '퀘스트', popupKey: 'quest' },
       { icon: '🦸', label: '도감', popupKey: 'herolist' },
       { icon: '⚔️', label: 'PvP', popupKey: 'pvp' },
       { icon: '🏰', label: '길드', popupKey: 'guild' },
@@ -1112,70 +1117,77 @@ export class MainMenuScene extends Phaser.Scene {
     ];
 
     const p3Cols = 4;
-    const p3BtnW = s(70);
-    const p3BtnH = s(70);
-    const p3GapX = s(14);
-    const p3GapY = s(8);
-    const p3StartY = p2Y + p2BtnH + s(14);
-    const p3TotalWidth = p3Cols * p3BtnW + (p3Cols - 1) * p3GapX;
-    const p3StartX = (GAME_WIDTH - p3TotalWidth) / 2;
-    const circleR = s(24);
+    const p3GapX = s(10);
+    const p3GapY = s(10);
+    const p3BtnW = Math.floor((menuWidth - p3GapX * (p3Cols - 1)) / p3Cols);
+    const p3BtnH = s(80);
+    const p3StartY = divY + s(8);
+    const p3StartX = padding;
+    const p3Radius = s(8);
+    // 카드 배경색: bgPanel보다 약간 밝게(대비 강화)
+    const p3BgColor = 0x2D3F5A;
+    const p3BgColorHover = 0x3D5272;
 
     p3Items.forEach((item, i) => {
       const col = i % p3Cols;
       const row = Math.floor(i / p3Cols);
-      const bx = p3StartX + col * (p3BtnW + p3GapX) + p3BtnW / 2;
-      const by = p3StartY + row * (p3BtnH + p3GapY) + p3BtnH / 2 - s(8);
+      const bx = p3StartX + col * (p3BtnW + p3GapX);
+      const by = p3StartY + row * (p3BtnH + p3GapY);
+      const bCenterX = bx + p3BtnW / 2;
+      const bCenterY = by + p3BtnH / 2;
 
       const bg = this.add.graphics().setDepth(Z_INDEX.BOTTOM_MENU);
-      bg.fillStyle(COLORS.bgLight, 0.9);
-      bg.fillCircle(bx, by, circleR);
-      bg.lineStyle(1, COLORS.primary, 0.3);
-      bg.strokeCircle(bx, by, circleR);
+      const drawP3Normal = () => {
+        bg.clear();
+        bg.fillStyle(p3BgColor, 1);
+        bg.fillRoundedRect(bx, by, p3BtnW, p3BtnH, p3Radius);
+        bg.lineStyle(s(1), COLORS.primary, 0.5);
+        bg.strokeRoundedRect(bx, by, p3BtnW, p3BtnH, p3Radius);
+      };
+      const drawP3Hover = () => {
+        bg.clear();
+        bg.fillStyle(p3BgColorHover, 1);
+        bg.fillRoundedRect(bx, by, p3BtnW, p3BtnH, p3Radius);
+        bg.lineStyle(s(2), COLORS.primary, 0.9);
+        bg.strokeRoundedRect(bx, by, p3BtnW, p3BtnH, p3Radius);
+      };
+      drawP3Normal();
 
-      const iconTxt = this.add.text(bx, by - s(2), item.icon, {
-        fontSize: sf(20)
+      // 아이콘: 카드 위쪽 40% 위치
+      const iconY = by + p3BtnH * 0.38;
+      const iconTxt = this.add.text(bCenterX, iconY, item.icon, {
+        fontSize: sf(22),
       }).setOrigin(0.5).setDepth(Z_INDEX.BOTTOM_MENU + 1);
 
-      const labelTxt = this.add.text(bx, by + circleR + s(6), item.label, {
-        fontSize: sf(10),
+      // 레이블: 카드 아래쪽 75% 위치
+      const labelY = by + p3BtnH * 0.75;
+      const labelTxt = this.add.text(bCenterX, labelY, item.label, {
+        fontSize: sf(11),
         fontFamily: '"Noto Sans KR", Arial',
-        color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
+        color: '#CBD5E1',
+        fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(Z_INDEX.BOTTOM_MENU + 1);
 
-      const hitArea = this.add.rectangle(bx, by + s(8), p3BtnW, p3BtnH)
+      const hitArea = this.add.rectangle(bCenterX, bCenterY, p3BtnW, p3BtnH)
         .setAlpha(0.001).setDepth(Z_INDEX.BOTTOM_MENU + 2).setInteractive({ useHandCursor: true });
 
       hitArea.on('pointerover', () => {
-        bg.clear();
-        bg.fillStyle(COLORS.bgPanel, 1);
-        bg.fillCircle(bx, by, circleR);
-        bg.lineStyle(2, COLORS.primary, 0.6);
-        bg.strokeCircle(bx, by, circleR);
-        labelTxt.setColor(`#${COLORS.text.toString(16).padStart(6, '0')}`);
+        drawP3Hover();
+        labelTxt.setColor('#FFFFFF');
       });
       hitArea.on('pointerout', () => {
-        bg.clear();
-        bg.fillStyle(COLORS.bgLight, 0.9);
-        bg.fillCircle(bx, by, circleR);
-        bg.lineStyle(1, COLORS.primary, 0.3);
-        bg.strokeCircle(bx, by, circleR);
-        labelTxt.setColor(`#${COLORS.textDark.toString(16).padStart(6, '0')}`);
+        drawP3Normal();
+        labelTxt.setColor('#CBD5E1');
         iconTxt.setScale(1);
       });
       hitArea.on('pointerdown', () => {
-        iconTxt.setScale(0.9);
+        iconTxt.setScale(0.88);
         this.time.delayedCall(100, () => {
           iconTxt.setScale(1);
           this.openPopup(item.popupKey);
         });
       });
     });
-
-    // ── 구분선 (P2/P3 사이) ──
-    const divY = p2Y + p2BtnH + s(7);
-    const divLine = this.add.rectangle(GAME_WIDTH / 2, divY, menuWidth, 1, COLORS.primary, 0.2)
-      .setDepth(Z_INDEX.BOTTOM_MENU);
   }
 
   openPopup(key) {
