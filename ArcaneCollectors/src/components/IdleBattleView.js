@@ -482,22 +482,33 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
       }
     }
 
-    party.forEach((hero, index) => {
-      if (index >= this.partyAvatars.length) return;
-
-      const avatar = this.partyAvatars[index];
+    // 전체 슬롯 순회: 파티에 있는 슬롯은 표시, 없는 슬롯은 숨김
+    this.partyAvatars.forEach((slot, index) => {
+      const hero = party[index];
       if (hero) {
+        // 슬롯 표시
+        slot.avatar.setVisible(true);
+        slot.emoji.setVisible(true);
+        slot.levelBg.setVisible(true);
+        slot.levelText.setVisible(true);
+
         // 실제 영웅 데이터로 업데이트
-        avatar.emoji.setText(hero.emoji || '⚔️');
+        slot.emoji.setText(hero.emoji || '⚔️');
         // 슬롯 번호(L1~L4) 대신 실제 영웅 레벨 표시
-        avatar.levelText.setText(`Lv.${hero.level || 1}`);
+        slot.levelText.setText(`Lv.${hero.level || 1}`);
         // mood 색상 적용 (optional)
         if (hero.mood && MOOD_COLORS[hero.mood.toUpperCase()]) {
           const moodColor = Phaser.Display.Color.HexStringToColor(
             MOOD_COLORS[hero.mood.toUpperCase()]
           ).color;
-          avatar.avatar.setFillStyle(moodColor, 1);
+          slot.avatar.setFillStyle(moodColor, 1);
         }
+      } else {
+        // 파티에 없는 슬롯 숨김
+        slot.avatar.setVisible(false);
+        slot.emoji.setVisible(false);
+        slot.levelBg.setVisible(false);
+        slot.levelText.setVisible(false);
       }
     });
   }

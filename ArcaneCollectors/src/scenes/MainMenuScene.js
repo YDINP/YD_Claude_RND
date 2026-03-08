@@ -1258,6 +1258,18 @@ export class MainMenuScene extends Phaser.Scene {
         if (!this.idleBattleView.battleCycleTimer && !this.idleBattleView.attackInterval) {
           this.idleBattleView.startBattleCycle();
         }
+      } else {
+        // 파티가 비어있으면 전투 사이클 정지 및 빈 파티 안내 표시
+        if (this.idleBattleView.attackInterval) {
+          this.idleBattleView.attackInterval.remove();
+          this.idleBattleView.attackInterval = null;
+        }
+        if (this.idleBattleView.battleCycleTimer) {
+          this.idleBattleView.battleCycleTimer.remove();
+          this.idleBattleView.battleCycleTimer = null;
+        }
+        this.idleBattleView.updateParty([]);
+        this.idleBattleView.showEmptyPartyMessage();
       }
     }
 
