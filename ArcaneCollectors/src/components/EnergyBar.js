@@ -57,13 +57,11 @@ export default class EnergyBar {
 
     /**
      * 에너지 아이콘 생성
+     * 이모지는 텍스트에 통합되어 별도 아이콘을 사용하지 않음
      */
     createIcon() {
-        this.icon = this.scene.add.text(-ENERGY_UI.BAR_WIDTH / 2 - s(30), 0, '⚡', {
-            fontSize: sf(24)
-        });
-        this.icon.setOrigin(0.5);
-        this.container.add(this.icon);
+        // 이모지를 게이지 내부 텍스트("⚡ 75/100")에 통합하므로 별도 아이콘 미생성
+        this.icon = null;
     }
 
     /**
@@ -116,9 +114,10 @@ export default class EnergyBar {
 
     /**
      * 에너지 텍스트 생성
+     * "⚡ current/max" 형식으로 이모지와 수치를 게이지 내부에 통합 표시
      */
     createText() {
-        this.text = this.scene.add.text(0, 0, '0/0', {
+        this.text = this.scene.add.text(0, 0, '⚡ 0/0', {
             fontSize: `${UI_STYLES.FONT_SIZE.SMALL}px`,
             fontFamily: 'Arial, sans-serif',
             color: UI_STYLES.TEXT.PRIMARY,
@@ -154,9 +153,9 @@ export default class EnergyBar {
             this.fill.setFillStyle(color);
         }
 
-        // 텍스트 업데이트
+        // 텍스트 업데이트: "⚡ current/max" 형식으로 이모지 통합 표시
         if (this.text) {
-            this.text.setText(`${this.currentEnergy}/${this.maxEnergy}`);
+            this.text.setText(`⚡ ${this.currentEnergy}/${this.maxEnergy}`);
         }
 
         // 아이콘 효과 (에너지 부족 시 깜빡임)
@@ -179,20 +178,20 @@ export default class EnergyBar {
     }
 
     /**
-     * 아이콘 효과 업데이트
+     * 텍스트 효과 업데이트 (이모지가 텍스트에 통합된 이후)
      * @param {number} ratio - 에너지 비율
      */
     updateIconEffect(ratio) {
-        if (!this.icon) return;
+        if (!this.text) return;
 
         // 기존 애니메이션 제거
-        this.scene.tweens.killTweensOf(this.icon);
+        this.scene.tweens.killTweensOf(this.text);
 
         if (ratio <= ENERGY_UI.THRESHOLDS.LOW) {
-            // 에너지 부족 - 깜빡임 효과
+            // 에너지 부족 - 텍스트 깜빡임 효과
             this.scene.tweens.add({
-                targets: this.icon,
-                alpha: 0.3,
+                targets: this.text,
+                alpha: 0.4,
                 duration: 500,
                 yoyo: true,
                 repeat: -1,
@@ -200,7 +199,7 @@ export default class EnergyBar {
             });
         } else {
             // 정상 상태 - 알파값 복원
-            this.icon.setAlpha(1);
+            this.text.setAlpha(1);
         }
     }
 
@@ -211,12 +210,12 @@ export default class EnergyBar {
     addEnergy(amount) {
         this.update(this.currentEnergy + amount, this.maxEnergy);
 
-        // 에너지 획득 효과
-        if (amount > 0 && this.icon) {
+        // 에너지 획득 효과 (텍스트 스케일 애니메이션)
+        if (amount > 0 && this.text) {
             this.scene.tweens.add({
-                targets: this.icon,
-                scaleX: 1.3,
-                scaleY: 1.3,
+                targets: this.text,
+                scaleX: 1.2,
+                scaleY: 1.2,
                 duration: 100,
                 yoyo: true,
                 ease: 'Power2'
@@ -318,8 +317,8 @@ export default class EnergyBar {
      * 컴포넌트 제거
      */
     destroy() {
-        if (this.icon) {
-            this.scene.tweens.killTweensOf(this.icon);
+        if (this.text) {
+            this.scene.tweens.killTweensOf(this.text);
         }
         if (this.fill) {
             this.scene.tweens.killTweensOf(this.fill);
