@@ -286,70 +286,69 @@ export class MainMenuScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(topBarDepth + 1);
 
-    // ── 보석(gem) 아이콘 + 수치 (icon:x=s(80)=120px, text:x=s(100)=150px) ──
-    let gemIcon;
-    if (this.textures.exists('gem')) {
-      gemIcon = this.add.image(s(80), barY, 'gem').setScale(1).setDepth(topBarDepth + 1);
-    } else {
-      gemIcon = this.add.text(s(80), barY, '💎', { fontSize: sf(20) }).setOrigin(0.5).setDepth(topBarDepth + 1);
-    }
-
-    const gems = this.registry.get('gems') || 1500;
-    this.gemText = this.add.text(s(100), barY, gems.toLocaleString(), {
-      fontSize: sf(16),
-      fontFamily: '"Noto Sans KR", Arial',
-      color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0, 0.5).setDepth(topBarDepth + 1);
-
-    // ── 골드(gold) 아이콘 + 수치 (icon:x=s(175)=263px, text:x=s(195)=293px) ──
-    let goldIcon;
-    if (this.textures.exists('gold')) {
-      goldIcon = this.add.image(s(175), barY, 'gold').setScale(1).setDepth(topBarDepth + 1);
-    } else {
-      goldIcon = this.add.text(s(175), barY, '🪙', { fontSize: sf(20) }).setOrigin(0.5).setDepth(topBarDepth + 1);
-    }
-
-    const gold = this.registry.get('gold') || 10000;
-    this.goldText = this.add.text(s(195), barY, gold.toLocaleString(), {
-      fontSize: sf(16),
-      fontFamily: '"Noto Sans KR", Arial',
-      color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0, 0.5).setDepth(topBarDepth + 1);
-
-    // ── 중간 구역: 에너지바 (컨테이너 x=s(380)=570px) ──
+    // ── 중간 구역: 에너지바 (x=s(240)=360px) ──
     const energyStatus = energySystem.getStatus() || {};
     this.energyBar = new EnergyBar(this);
-    this.energyBar.create(s(420), barY);
+    this.energyBar.create(s(240), barY);
     this.energyBar.update(energyStatus?.current ?? 0, energyStatus?.max ?? 100);
     if (this.energyBar.container) this.energyBar.container.setDepth(topBarDepth + 2);
     else if (this.energyBar.setDepth) this.energyBar.setDepth(topBarDepth + 2);
 
     // 에너지 회복 타이머 (에너지바 하단 barY+s(16) 에 작게 표시)
     const timeToRecover = energySystem.getTimeToNextRecovery?.() ?? 0;
-    this.energyTimerText = this.add.text(s(420), barY + s(16), timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
+    this.energyTimerText = this.add.text(s(240), barY + s(16), timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
       fontSize: sf(10),
       fontFamily: '"Noto Sans KR", Arial',
       color: '#AAAAAA',
       fontStyle: 'bold'
     }).setOrigin(0.5, 0).setDepth(topBarDepth + 2);
 
-    // ── 에너지 충전 버튼 (x=s(495)=743px): 보석 아이콘과 동일한 그래픽 사용 ──
-    // gem 이미지가 있으면 gem 이미지(scale 0.85), 없으면 💎 이모지 — gemIcon 과 동일 소스
+    // ── 골드(gold) 아이콘 + 수치 (icon:x=s(400)=600px, text:x=s(420)=630px) ──
+    let goldIcon;
+    if (this.textures.exists('gold')) {
+      goldIcon = this.add.image(s(400), barY, 'gold').setScale(1).setDepth(topBarDepth + 1);
+    } else {
+      goldIcon = this.add.text(s(400), barY, '🪙', { fontSize: sf(20) }).setOrigin(0.5).setDepth(topBarDepth + 1);
+    }
+
+    const gold = this.registry.get('gold') || 10000;
+    this.goldText = this.add.text(s(420), barY, gold.toLocaleString(), {
+      fontSize: sf(16),
+      fontFamily: '"Noto Sans KR", Arial',
+      color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0, 0.5).setDepth(topBarDepth + 1);
+
+    // ── 보석(gem) 아이콘 + 수치 (icon:x=s(510)=765px, text:x=s(530)=795px) ──
+    let gemIcon;
+    if (this.textures.exists('gem')) {
+      gemIcon = this.add.image(s(510), barY, 'gem').setScale(1).setDepth(topBarDepth + 1);
+    } else {
+      gemIcon = this.add.text(s(510), barY, '💎', { fontSize: sf(20) }).setOrigin(0.5).setDepth(topBarDepth + 1);
+    }
+
+    const gems = this.registry.get('gems') || 1500;
+    this.gemText = this.add.text(s(530), barY, gems.toLocaleString(), {
+      fontSize: sf(16),
+      fontFamily: '"Noto Sans KR", Arial',
+      color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0, 0.5).setDepth(topBarDepth + 1);
+
+    // ── 보석+ 충전 버튼 (x=s(610)=915px): 보석 아이콘과 동일한 그래픽 사용 ──
     let chargeBtnIcon;
     if (this.textures.exists('gem')) {
-      chargeBtnIcon = this.add.image(s(517), barY, 'gem').setScale(0.85).setDepth(topBarDepth + 2);
+      chargeBtnIcon = this.add.image(s(610), barY, 'gem').setScale(0.85).setDepth(topBarDepth + 2);
     } else {
-      chargeBtnIcon = this.add.text(s(517), barY, '💎', { fontSize: sf(18) }).setOrigin(0.5).setDepth(topBarDepth + 2);
+      chargeBtnIcon = this.add.text(s(610), barY, '💎', { fontSize: sf(18) }).setOrigin(0.5).setDepth(topBarDepth + 2);
     }
-    const chargePlusLabel = this.add.text(s(517) + s(14), barY - s(9), '+', {
+    const chargePlusLabel = this.add.text(s(610) + s(14), barY - s(9), '+', {
       fontSize: sf(12), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold',
       color: '#A78BFA'
     }).setOrigin(0.5).setDepth(topBarDepth + 2);
 
     // 투명 히트 영역으로 클릭 인터랙션 처리
-    const chargeBtnHit = this.add.rectangle(s(517), barY, s(40), s(40), 0x000000, 0)
+    const chargeBtnHit = this.add.rectangle(s(610), barY, s(40), s(40), 0x000000, 0)
       .setDepth(topBarDepth + 2).setInteractive({ useHandCursor: true });
     chargeBtnHit.on('pointerdown', () => {
       const modal = new Modal(this, {
@@ -371,14 +370,14 @@ export class MainMenuScene extends Phaser.Scene {
       chargePlusLabel.setColor('#A78BFA');
     });
 
-    // ── 오른쪽 구역: 전투력 (right-origin, x=GAME_WIDTH-s(98)=933px) + 설정 (x=GAME_WIDTH-s(28)=1038px) ──
+    // ── 전투력 (Lv 배지 오른쪽, x=s(70)=105px, left-origin) + 설정 (x=GAME_WIDTH-s(28)=1038px) ──
     const partyPower = this.idleSystem.getPartyPower();
-    this.powerText = this.add.text(GAME_WIDTH - s(98), barY, `⚔ ${Math.floor(partyPower).toLocaleString()}`, {
+    this.powerText = this.add.text(s(70), barY, `⚔ ${Math.floor(partyPower).toLocaleString()}`, {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
-    }).setOrigin(1, 0.5).setDepth(topBarDepth + 1);
+    }).setOrigin(0, 0.5).setDepth(topBarDepth + 1);
 
     const settingsBtn = this.add.rectangle(GAME_WIDTH - s(28), barY, s(44), s(44), COLORS.bgDark, 0.01)
       .setDepth(topBarDepth + 1)
@@ -656,8 +655,12 @@ export class MainMenuScene extends Phaser.Scene {
     this._bossBtnGfx = this.add.graphics();
     this._bossBtnGfx.fillStyle(bossReady ? COLORS.danger : COLORS.bgPanel, 1);
     this._bossBtnGfx.fillRoundedRect(bossBtnX, btnY, btnW, btnH, s(10));
+    if (bossReady) {
+      this._bossBtnGfx.lineStyle(2, 0xFF6B6B, 0.9);
+      this._bossBtnGfx.strokeRoundedRect(bossBtnX, btnY, btnW, btnH, s(10));
+    }
     this._bossBtnGfx.setDepth(Z_INDEX.PANEL_BUTTONS);
-    this._bossBtnText = this.add.text(bossBtnX + btnW / 2, btnY + btnH / 2, '🗡️ 보스전', {
+    this._bossBtnText = this.add.text(bossBtnX + btnW / 2, btnY + btnH / 2, bossReady ? '🗡️ 보스전 ⚡20' : '🗡️ 보스전', {
       fontSize: sf(15), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_BUTTONS + 1);
     this._bossBtnPanelY = panelY;
@@ -1028,63 +1031,12 @@ export class MainMenuScene extends Phaser.Scene {
     const padding = s(20);
     const menuWidth = GAME_WIDTH - padding * 2;
 
-    // ── P1: 전투/스테이지 진행 버튼 ──────────────────
-    const p1BtnW = Math.floor(menuWidth * 0.7);
-    const p1BtnH = s(60);
-    const p1BtnX = GAME_WIDTH / 2;
-    const p1BtnY = menuBaseY + p1BtnH / 2;
-
-    // P1 배경 그래픽 (빛나는 테두리)
-    const p1Gfx = this.add.graphics().setDepth(Z_INDEX.BOTTOM_MENU);
-    p1Gfx.fillStyle(COLORS.primary, 0.9);
-    p1Gfx.fillRoundedRect(p1BtnX - p1BtnW / 2, menuBaseY, p1BtnW, p1BtnH, s(12));
-    p1Gfx.lineStyle(2, 0xA5B4FC, 0.8);
-    p1Gfx.strokeRoundedRect(p1BtnX - p1BtnW / 2, menuBaseY, p1BtnW, p1BtnH, s(12));
-
-    const p1Label = this.add.text(p1BtnX, p1BtnY, '⚔ 전투 / 스테이지 진행', {
-      fontSize: sf(20),
-      fontFamily: '"Noto Sans KR", Arial',
-      color: '#FFFFFF',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(Z_INDEX.BOTTOM_MENU + 1);
-
-    // P1 펄스 애니메이션
-    this.tweens.add({
-      targets: p1Label,
-      alpha: { from: 0.8, to: 1.0 },
-      duration: 1000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
-
-    // P1 히트 영역
-    const p1Hit = this.add.rectangle(p1BtnX, p1BtnY, p1BtnW, p1BtnH)
-      .setAlpha(0.001).setDepth(Z_INDEX.BOTTOM_MENU + 2).setInteractive({ useHandCursor: true });
-
-    p1Hit.on('pointerover', () => {
-      p1Gfx.clear();
-      p1Gfx.fillStyle(COLORS.primary, 1);
-      p1Gfx.fillRoundedRect(p1BtnX - p1BtnW / 2, menuBaseY, p1BtnW, p1BtnH, s(12));
-      p1Gfx.lineStyle(3, 0xC4B5FD, 1);
-      p1Gfx.strokeRoundedRect(p1BtnX - p1BtnW / 2, menuBaseY, p1BtnW, p1BtnH, s(12));
-    });
-    p1Hit.on('pointerout', () => {
-      p1Gfx.clear();
-      p1Gfx.fillStyle(COLORS.primary, 0.9);
-      p1Gfx.fillRoundedRect(p1BtnX - p1BtnW / 2, menuBaseY, p1BtnW, p1BtnH, s(12));
-      p1Gfx.lineStyle(2, 0xA5B4FC, 0.8);
-      p1Gfx.strokeRoundedRect(p1BtnX - p1BtnW / 2, menuBaseY, p1BtnW, p1BtnH, s(12));
-    });
-    p1Hit.on('pointerdown', () => {
-      this.scene.start('StageSelectScene');
-    });
-
     // ── P2: 가챠 + 파티 편성 버튼 ──────────────────
+    // (P1 보스전 버튼은 IdleBattleView 패널 내 버튼으로 통합)
     const p2BtnW = Math.floor(menuWidth * 0.45);
     const p2BtnH = s(50);
     const p2Gap = s(12);
-    const p2Y = menuBaseY + p1BtnH + s(12);
+    const p2Y = menuBaseY;
 
     const p2Items = [
       { label: '🎰 가챠', popupKey: 'gacha', color: 0x7C3AED },
@@ -1366,6 +1318,11 @@ export class MainMenuScene extends Phaser.Scene {
           this._bossBtnGfx.clear();
           this._bossBtnGfx.fillStyle(nowBossReady ? COLORS.danger : COLORS.bgPanel, 1);
           this._bossBtnGfx.fillRoundedRect(this._bossBtnX, this._bossBtnPanelY + s(80), this._bossBtnW, this._bossBtnH, s(10));
+          if (nowBossReady) {
+            this._bossBtnGfx.lineStyle(2, 0xFF6B6B, 0.9);
+            this._bossBtnGfx.strokeRoundedRect(this._bossBtnX, this._bossBtnPanelY + s(80), this._bossBtnW, this._bossBtnH, s(10));
+          }
+          this._bossBtnText.setText(nowBossReady ? '🗡️ 보스전 ⚡20' : '🗡️ 보스전');
           this._bossBtnText.setAlpha(nowBossReady ? 1 : 0.5);
 
           // 활성화 시 펄스 애니메이션
