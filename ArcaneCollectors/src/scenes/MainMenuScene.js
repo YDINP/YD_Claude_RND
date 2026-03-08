@@ -960,6 +960,12 @@ export class MainMenuScene extends Phaser.Scene {
       }
       if (this.idleSystem.currentBossData) {
         this.idleBattleView.showBoss(this.idleSystem.currentBossData);
+        // showBoss()가 bossReadyShown을 false로 리셋하므로,
+        // 보스가 이미 ready 상태라면 즉시 showBossReady()로 상태 복원.
+        // 이를 통해 update 루프에서 isBossReady() 조건에 의한 중복 연출을 방지한다.
+        if (this.idleSystem.isBossReady?.()) {
+          this.idleBattleView.showBossReady();
+        }
       }
       // 실제 누적 진행도(accumulatedDamage / bossHp)로 바 업데이트
       const currentProgress = this.idleSystem.currentBossHp > 0
