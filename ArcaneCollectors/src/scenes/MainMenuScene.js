@@ -286,17 +286,19 @@ export class MainMenuScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(topBarDepth + 1);
 
-    // ── 중간 구역: 에너지바 (x=s(240)=360px) ──
+    // ── 중간 구역: 에너지바 (x=s(220)=330px, 이모지 통합으로 좌측 이동) ──
+    // 이모지가 게이지 내부 텍스트에 통합("⚡ 75/100")되어 별도 외부 아이콘 없음
+    const ENERGY_X = s(220);
     const energyStatus = energySystem.getStatus() || {};
     this.energyBar = new EnergyBar(this);
-    this.energyBar.create(s(240), barY);
+    this.energyBar.create(ENERGY_X, barY);
     this.energyBar.update(energyStatus?.current ?? 0, energyStatus?.max ?? 100);
     if (this.energyBar.container) this.energyBar.container.setDepth(topBarDepth + 2);
     else if (this.energyBar.setDepth) this.energyBar.setDepth(topBarDepth + 2);
 
     // 에너지 회복 타이머 (에너지바 하단 barY+s(16) 에 작게 표시)
     const timeToRecover = energySystem.getTimeToNextRecovery?.() ?? 0;
-    this.energyTimerText = this.add.text(s(240), barY + s(16), timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
+    this.energyTimerText = this.add.text(ENERGY_X, barY + s(16), timeToRecover > 0 ? `+1 in ${formatTime(timeToRecover)}` : '', {
       fontSize: sf(10),
       fontFamily: '"Noto Sans KR", Arial',
       color: '#AAAAAA',
