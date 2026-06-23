@@ -123,6 +123,7 @@ interface ResultModalProps {
   stageNumber?: number;
   totalStages?: number;
   onClose: () => void;
+  onHome?: () => void;
   onNextStage?: () => void;
   onStageList?: () => void;
 }
@@ -136,6 +137,7 @@ function ResultModal({
   stageNumber,
   totalStages,
   onClose,
+  onHome,
   onNextStage,
   onStageList,
 }: ResultModalProps) {
@@ -206,6 +208,9 @@ function ResultModal({
       role="dialog"
       aria-modal="true"
       aria-label="클리어 결과"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
       style={{
         position: 'fixed',
         inset: 0,
@@ -361,6 +366,25 @@ function ResultModal({
             >
               <span style={{ fontSize: 16 }}>{copied ? '✓' : '📤'}</span>
               <span>{copied ? '복사됨!' : '결과 공유'}</span>
+            </button>
+            <button
+              onClick={onHome}
+              style={{
+                padding: '14px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-default)',
+                background: 'transparent',
+                color: 'var(--text-secondary)',
+                fontSize: 14,
+                fontWeight: 600,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                letterSpacing: '-0.02em',
+                outline: 'none',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              홈으로
             </button>
           </>
         )}
@@ -725,6 +749,7 @@ export default function GamePlay({
           stageNumber={stageMeta?.stageNumber}
           totalStages={TOTAL_STAGES}
           onClose={() => setShowResult(false)}
+          onHome={onBack}
           onNextStage={
             stageMeta && onNextStage
               ? () => onNextStage(stageMeta.stageNumber + 1)
