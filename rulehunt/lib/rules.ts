@@ -46,6 +46,10 @@ const COLOR_SHAPE: Record<Color, Shape> = {
   green: 'star',
 };
 
+/** 색·모양에 부여한 숫자값 (정렬·패리티 규칙용) */
+const COLOR_VAL: Record<Color, number> = { red: 0, blue: 1, yellow: 2, green: 3 };
+const SHAPE_VAL: Record<Shape, number> = { circle: 0, triangle: 1, square: 2, star: 3 };
+
 /** (r,c)를 포함하는 가득 찬 2x2 블록이 모두 같은 색인가 */
 function in2x2SameColor(b: Board, r: number, c: number): boolean {
   const corners: [number, number][] = [
@@ -393,6 +397,72 @@ export const RULES: RuleDef[] = [
         const n = b[nr][nc];
         return n != null && n.shape === t.shape;
       });
+    },
+  },
+
+  // ───────── 신박 규칙 (관계·대칭·숨은 규칙) ─────────
+  {
+    id: 'd1-red-then-blue',
+    theme: 'adjacency',
+    grade: 'medium',
+    difficulty: 3,
+    description: '빨간 타일의 바로 오른쪽 칸은 반드시 파란 타일이어야 한다.',
+    reveal: '빨간 타일의 바로 오른쪽 칸은 항상 파란 타일이어야 합니다.',
+    hints: ['이 규칙은 색과 방향(가로)에 관한 것입니다.', '특정 색 다음에 오는 색이 정해져 있습니다.', '빨강의 오른쪽은 항상 파랑입니다.'],
+    cellViolates: (b, r, c) => {
+      const t = b[r][c]!;
+      // 내가 빨강인데 오른쪽이 파랑이 아니면 위반
+      if (t.color === 'red' && c < SIZE - 1) {
+        const rt = b[r][c + 1];
+        if (rt != null && rt.color !== 'blue') return true;
+      }
+      // 내 왼쪽이 빨강인데 내가 파랑이 아니면 위반
+      if (c > 0) {
+        const l = b[r][c - 1];
+        if (l != null && l.color === 'red' && t.color !== 'blue') return true;
+      }
+      return false;
+    },
+  },
+  {
+    id: 'o1-row-color-sorted',
+    theme: 'color',
+    grade: 'hard',
+    difficulty: 7,
+    description: '각 행은 왼쪽에서 오른쪽으로 색 순서(빨→파→노→초)가 거꾸로 가면 안 된다.',
+    reveal: '각 행은 왼→오로 색 순서(빨강→파랑→노랑→초록)가 거꾸로 갈 수 없습니다. (같은 색 연속은 허용)',
+    hints: ['이 규칙은 색의 순서에 관한 것입니다.', '가로 한 줄을 왼쪽부터 보세요.', '색은 빨→파→노→초 순서로, 거꾸로 갈 수 없습니다.'],
+    cellViolates: (b, r, c) => {
+      if (c === 0) return false;
+      const l = b[r][c - 1];
+      if (l == null) return false;
+      return COLOR_VAL[l.color] > COLOR_VAL[b[r][c]!.color];
+    },
+  },
+  {
+    id: 's1-mirror-color',
+    theme: 'position',
+    grade: 'hard',
+    difficulty: 6,
+    description: '보드의 색이 좌우(세로축 기준)로 대칭이어야 한다.',
+    reveal: '보드의 색 배치가 좌우로 대칭이어야 합니다 — (행,열)과 (행,반대편 열)의 색이 같아야 합니다.',
+    hints: ['이 규칙은 보드 전체의 형태에 관한 것입니다.', '왼쪽 절반과 오른쪽 절반을 비교해 보세요.', '색이 좌우로 거울처럼 대칭이어야 합니다.'],
+    cellViolates: (b, r, c) => {
+      const m = b[r][SIZE - 1 - c];
+      return m != null && m.color !== b[r][c]!.color;
+    },
+  },
+  {
+    id: 'p1-color-shape-parity',
+    theme: 'combo',
+    grade: 'expert',
+    difficulty: 10,
+    description: '색 값과 모양 값의 합이 짝수여야 한다 (빨0·파1·노2·초3 / 원0·삼1·사2·별3).',
+    reveal: '숨은 체크섬: 색 값(빨0·파1·노2·초3)과 모양 값(원0·삼1·사2·별3)의 합이 짝수여야 합니다.',
+    hints: ['이 규칙은 색과 모양을 함께 봐야 합니다.', '색과 모양에 각각 숨은 숫자가 있다고 생각해 보세요.', '색값+모양값이 짝수여야 합니다 (예: 빨강원=0, 파랑삼각=2).'],
+    cellViolates: (b, r, c) => {
+      const t = b[r][c]!;
+      return (COLOR_VAL[t.color] + SHAPE_VAL[t.shape]) % 2 !== 0;
     },
   },
 ];

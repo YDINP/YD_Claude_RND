@@ -4,12 +4,12 @@ import { solve, isClear, isFull, hasViolation, createBoard } from './engine';
 import { SIZE } from './types';
 
 describe('규칙 풀 무결성', () => {
-  it('22개 규칙 (초급7·중급7·고급6·전문가2)', () => {
-    expect(RULES.length).toBe(22);
+  it('26개 규칙 (초급7·중급8·고급8·전문가3)', () => {
+    expect(RULES.length).toBe(26);
     expect(RULES.filter((r) => r.grade === 'easy').length).toBe(7);
-    expect(RULES.filter((r) => r.grade === 'medium').length).toBe(7);
-    expect(RULES.filter((r) => r.grade === 'hard').length).toBe(6);
-    expect(RULES.filter((r) => r.grade === 'expert').length).toBe(2);
+    expect(RULES.filter((r) => r.grade === 'medium').length).toBe(8);
+    expect(RULES.filter((r) => r.grade === 'hard').length).toBe(8);
+    expect(RULES.filter((r) => r.grade === 'expert').length).toBe(3);
   });
 
   it('모든 규칙은 양의 난이도를 가진다', () => {
