@@ -1,0 +1,131 @@
+/* Pretendard 웹폰트 */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+
+@import "tailwindcss";
+
+/* ── 디자인 토큰 ───────────────────────────────────────────── */
+:root {
+  /* 배경 계층 */
+  --bg-base: #0d0d0d;
+  --bg-surface: #161616;
+  --bg-elevated: #1e1e1e;
+  --bg-overlay: #242424;
+
+  /* 테두리 */
+  --border-subtle: #2a2a2a;
+  --border-default: #383838;
+  --border-strong: #505050;
+
+  /* 텍스트 */
+  --text-primary: #f5f5f5;
+  --text-secondary: #a0a0a0;
+  --text-muted: #5a5a5a;
+
+  /* 타일 색상 */
+  --color-red: #ef4444;
+  --color-blue: #3b82f6;
+  --color-yellow: #eab308;
+  --color-green: #22c55e;
+
+  /* 피드백 */
+  --feedback-pass: #22c55e;
+  --feedback-fail: #ef4444;
+  --feedback-pass-glow: rgba(34, 197, 94, 0.35);
+  --feedback-fail-glow: rgba(239, 68, 68, 0.35);
+
+  /* 간격 */
+  --cell-size: 56px;
+  --cell-gap: 6px;
+
+  /* 폰트 */
+  --font-base: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, Roboto, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+
+  /* 반경 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+/* ── 기본 초기화 ───────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-base);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100dvh;
+  background-color: var(--bg-base);
+}
+
+/* ── 셀 흔들림(shake) 애니메이션 ─────────────────────────────── */
+@keyframes shake {
+  0%   { transform: translateX(0); }
+  15%  { transform: translateX(-4px); }
+  30%  { transform: translateX(4px); }
+  45%  { transform: translateX(-3px); }
+  60%  { transform: translateX(3px); }
+  75%  { transform: translateX(-2px); }
+  90%  { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+
+.animate-shake {
+  animation: shake 0.38s ease-in-out;
+}
+
+/* ── 별 펄스 ─────────────────────────────────────────────── */
+@keyframes star-pop {
+  0%   { transform: scale(0.6) rotate(-10deg); opacity: 0; }
+  60%  { transform: scale(1.15) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.animate-star-pop {
+  animation: star-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── 글로우 링 (피드백 준수) ─────────────────────────────────── */
+@keyframes pass-glow {
+  0%   { box-shadow: 0 0 0 0 var(--feedback-pass-glow); }
+  50%  { box-shadow: 0 0 0 6px var(--feedback-pass-glow); }
+  100% { box-shadow: 0 0 0 3px var(--feedback-pass-glow); }
+}
+
+/* ── 페이드인 ─────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out forwards;
+}
+
+/* ── 모달 오버레이 진입 ─────────────────────────────────────── */
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-modal-in {
+  animation: modal-in 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+
+/* ── 카운트다운 모노스페이스 ─────────────────────────────────── */
+.font-mono-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
