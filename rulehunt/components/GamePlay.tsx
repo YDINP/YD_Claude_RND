@@ -226,6 +226,7 @@ function ResultModal({
       <div
         className="animate-modal-in"
         style={{
+          position: 'relative',
           width: '100%',
           maxWidth: '460px',
           background: 'var(--bg-surface)',
@@ -238,6 +239,33 @@ function ResultModal({
           borderBottom: 'none',
         }}
       >
+        {/* 닫기 (예시 다시 보기) */}
+        <button
+          onClick={onClose}
+          aria-label="닫기 (예시 다시 보기)"
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-default)',
+            background: 'var(--bg-elevated)',
+            color: 'var(--text-secondary)',
+            fontSize: 16,
+            lineHeight: 1,
+            cursor: 'pointer',
+            outline: 'none',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          ✕
+        </button>
+
         {/* 헤더 */}
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 28, marginBottom: 6 }}>🎉</div>

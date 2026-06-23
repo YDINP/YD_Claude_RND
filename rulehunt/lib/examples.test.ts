@@ -26,6 +26,27 @@ describe('증거 예시 생성', () => {
     );
   });
 
+  it('✓[0]과 ✗[0]은 최소 대조쌍 — 같은 칸 구성, 딱 한 칸만 다름', () => {
+    for (const r of RULES) {
+      const ex = generateExamples(r, hashSeed('pair:' + r.id));
+      const ok = ex.valid[0];
+      const ng = ex.invalid[0];
+      let filledMismatch = 0;
+      let tileDiff = 0;
+      for (let row = 0; row < SIZE; row++) {
+        for (let col = 0; col < SIZE; col++) {
+          const a = ok[row][col];
+          const b = ng[row][col];
+          if (!!a !== !!b) filledMismatch++;
+          else if (a && b && (a.color !== b.color || a.shape !== b.shape)) tileDiff++;
+        }
+      }
+      // 같은 칸 구성(빈/채움 위치 동일) + 정확히 한 칸만 타일이 다름
+      expect(filledMismatch, `${r.id} 칸 구성 불일치`).toBe(0);
+      expect(tileDiff, `${r.id} 다른 칸 수`).toBe(1);
+    }
+  });
+
   it('✓ 예시는 부분 보드 (전체 정답을 베낄 수 없음)', () => {
     for (const r of RULES) {
       const ex = generateExamples(r, hashSeed('partial:' + r.id));

@@ -11,7 +11,7 @@
 //
 // 모든 출력은 시드로 결정론적 → 데일리는 전 세계 동일 예시.
 
-import { Board, Cell, RuleDef, SIZE, Tile } from './types';
+import { Board, Cell, COLORS, RuleDef, SHAPES, SIZE, Tile } from './types';
 import { allTiles, cloneBoard, createBoard, hasViolation, solve } from './engine';
 
 export interface Examples {
@@ -119,11 +119,82 @@ function mutateToViolation(
   return null;
 }
 
+// ── 최소 대조쌍(minimal pair) ──────────────────────────────────
+// ✓와 ✗가 "딱 한 칸만 다른" 보드가 되도록 만든다.
+// 그 한 칸이 규칙의 트리거를 정확히 드러내므로(예: 빨강 원 vs 빨강 사각형),
+// ✓ 예시도 해답의 근거가 된다.
+
+function hamming(a: Tile, b: Tile): number {
+  return (a.color !== b.color ? 1 : 0) + (a.shape !== b.shape ? 1 : 0);
+}
+
+function kingWindowCoords(r: number, c: number): [number, number][] {
+  const out: [number, number][] = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE) out.push([nr, nc]);
+    }
+  }
+  return out;
+}
+
+function allCellCoords(): [number, number][] {
+  const out: [number, number][] = [];
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) out.push([r, c]);
+  return out;
+}
+
 /**
- * 규칙에 대한 증거 예시 생성.
+ * 유효 보드 V에서 "한 칸만 바꾸면 위반이 되는" 자리와 (정답 타일, 위반 타일)을 찾는다.
+ * 위반 타일 b의 트리거 속성(색/모양)을 유지한 채 한 속성만 고친 정답 g를 우선 선택
+ * → ✓는 g(예: 빨강 원), ✗는 b(예: 빨강 사각형)로 규칙이 또렷이 드러난다.
+ */
+function findDiscriminatingPair(
+  V: Board,
+  rule: RuleDef,
+  rng: Rng
+): { r: number; c: number; good: Tile; bad: Tile } | null {
+  const cells = shuffle(allCellCoords(), rng);
+  const tiles = shuffle(allTiles(), rng);
+
+  for (const [r, c] of cells) {
+    const orig = V[r][c];
+    const validAt = (t: Tile): boolean => {
+      V[r][c] = t;
+      const ok = !hasViolation(V, rule);
+      V[r][c] = orig;
+      return ok;
+    };
+
+    for (const bad of tiles) {
+      if (validAt(bad)) continue; // 위반 타일이어야 함
+      // 1) bad의 색 유지 + 모양만 바꿔 정답이 되는지 (모양 규칙 트리거)
+      let good: Tile | null = null;
+      for (const s of SHAPES) {
+        if (s === bad.shape) continue;
+        const g: Tile = { color: bad.color, shape: s };
+        if (validAt(g)) { good = g; break; }
+      }
+      // 2) 없으면 bad의 모양 유지 + 색만 바꿔 (색 규칙 트리거)
+      if (!good) {
+        for (const col of COLORS) {
+          if (col === bad.color) continue;
+          const g: Tile = { color: col, shape: bad.shape };
+          if (validAt(g)) { good = g; break; }
+        }
+      }
+      if (good) return { r, c, good, bad };
+    }
+  }
+  return null;
+}
+
+/**
+ * 규칙에 대한 증거 예시 생성 (최소 대조쌍 기반).
+ * valid[i] ↔ invalid[i] 는 딱 한 칸만 다른 쌍.
  * @param seed 결정론적 시드 (같은 시드 → 같은 예시)
- * @param validCount ✓ 예시 수 (기본 3)
- * @param invalidCount ✗ 예시 수 (기본 2)
  */
 export function generateExamples(
   rule: RuleDef,
@@ -132,37 +203,55 @@ export function generateExamples(
   invalidCount = 2
 ): Examples {
   const rng = mulberry32(seed);
+  const need = Math.max(validCount, invalidCount);
 
-  // 서로 다른 유효 전체 보드 몇 개 확보
-  const fulls: Board[] = [];
-  for (let i = 0; i < validCount + 1; i++) {
-    const v = solveVariant(rule, rng);
-    if (v) fulls.push(v);
-  }
-  if (fulls.length === 0) return { valid: [], invalid: [] };
-
-  // ✓ 예시: 유효 보드의 부분집합 (위반 없음 보장)
   const valid: Board[] = [];
-  for (let k = 0; k < validCount; k++) {
-    const base = fulls[k % fulls.length];
-    const n = 9 + Math.floor(rng() * 4); // 9~12칸
-    valid.push(keepSubset(base, pickCoords(rng, n)));
+  const invalid: Board[] = [];
+
+  // 1) 최소 대조쌍 생성
+  let guard = 0;
+  while (valid.length < need && guard < 80) {
+    guard++;
+    const V = solveVariant(rule, rng);
+    if (!V) continue;
+    const dp = findDiscriminatingPair(V, rule, rng);
+    if (!dp) continue;
+
+    const win = new Set<string>([`${dp.r},${dp.c}`]);
+    for (const [r, c] of kingWindowCoords(dp.r, dp.c)) win.add(`${r},${c}`);
+    for (const coord of pickCoords(rng, 6)) win.add(coord);
+
+    const vGood = cloneBoard(V);
+    vGood[dp.r][dp.c] = { ...dp.good };
+    const vBad = cloneBoard(V);
+    vBad[dp.r][dp.c] = { ...dp.bad };
+
+    const ok = keepSubset(vGood, win);
+    const ng = keepSubset(vBad, win);
+    if (!hasViolation(ok, rule) && hasViolation(ng, rule)) {
+      valid.push(ok);
+      invalid.push(ng);
+    }
   }
 
-  // ✗ 예시: 위반 셀 + 주변 일부를 남겨 위반이 보이도록
-  const invalid: Board[] = [];
-  let guard = 0;
-  while (invalid.length < invalidCount && guard < 80) {
-    guard++;
-    const base = fulls[Math.floor(rng() * fulls.length)];
-    const mut = mutateToViolation(base, rule, rng);
+  // 2) 폴백: 부족하면 기존 방식으로 보충 (드묾)
+  let pad = 0;
+  while (valid.length < validCount && pad < 60) {
+    pad++;
+    const V = solveVariant(rule, rng);
+    if (V) valid.push(keepSubset(V, pickCoords(rng, 10)));
+  }
+  while (invalid.length < invalidCount && pad < 120) {
+    pad++;
+    const V = solveVariant(rule, rng);
+    if (!V) continue;
+    const mut = mutateToViolation(V, rule, rng);
     if (!mut) continue;
     const keep = new Set<string>(mut.violating);
-    const extra = 7 + Math.floor(rng() * 4); // 위반셀 + 추가 맥락
-    for (const coord of pickCoords(rng, extra)) keep.add(coord);
+    for (const coord of pickCoords(rng, 8)) keep.add(coord);
     const ex = keepSubset(mut.board, keep);
     if (hasViolation(ex, rule)) invalid.push(ex);
   }
 
-  return { valid, invalid };
+  return { valid: valid.slice(0, validCount), invalid: invalid.slice(0, invalidCount) };
 }

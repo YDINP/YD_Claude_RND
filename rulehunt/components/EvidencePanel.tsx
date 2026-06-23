@@ -24,11 +24,16 @@ export default function EvidencePanel({ rule, seed }: EvidencePanelProps) {
     [rule, seed]
   );
 
-  // 통과 먼저, 위반 나중으로 합친 단일 배열
-  const allItems = useMemo(() => [
-    ...examples.valid.map((board) => ({ board, valid: true as const })),
-    ...examples.invalid.map((board) => ({ board, valid: false as const })),
-  ], [examples]);
+  // 대조쌍을 인접 배치: ✓1, ✗1, ✓2, ✗2 … (한 칸만 다른 쌍을 ‹›로 바로 비교)
+  const allItems = useMemo(() => {
+    const out: { board: (typeof examples.valid)[number]; valid: boolean; pair: number }[] = [];
+    const maxLen = Math.max(examples.valid.length, examples.invalid.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (examples.valid[i]) out.push({ board: examples.valid[i], valid: true, pair: i });
+      if (examples.invalid[i]) out.push({ board: examples.invalid[i], valid: false, pair: i });
+    }
+    return out;
+  }, [examples]);
 
   const total = allItems.length;
 
@@ -41,16 +46,10 @@ export default function EvidencePanel({ rule, seed }: EvidencePanelProps) {
   }, [total]);
 
   const current = allItems[currentIdx] ?? null;
-  const validCount = examples.valid.length;
   const isValid = current ? current.valid : true;
   const typeLabel = isValid ? '✓ 통과 예시' : '✗ 위반 예시';
   const accentColor = isValid ? 'var(--feedback-pass)' : 'var(--feedback-fail)';
-
-  // 현재 항목이 valid/invalid 중 몇 번째인지
-  const localIdx = currentIdx < validCount
-    ? currentIdx + 1
-    : currentIdx - validCount + 1;
-  const localTotal = currentIdx < validCount ? validCount : examples.invalid.length;
+  const pairNo = current ? current.pair + 1 : 1;
 
   return (
     <div
@@ -156,13 +155,26 @@ export default function EvidencePanel({ rule, seed }: EvidencePanelProps) {
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
-              {localIdx} / {localTotal}
+              대조쌍 {pairNo}
               <span style={{ marginLeft: 6, color: 'var(--border-default)' }}>·</span>
               <span style={{ marginLeft: 6 }}>
-                전체 {currentIdx + 1} / {total}
+                {currentIdx + 1} / {total}
               </span>
             </span>
           </div>
+
+          {/* 비교 안내 */}
+          <p
+            style={{
+              fontSize: 11,
+              color: 'var(--text-muted)',
+              textAlign: 'center',
+              margin: 0,
+              lineHeight: 1.4,
+            }}
+          >
+            ‹ › 로 통과·위반을 비교하세요 — 짝꿍 예시와 <strong style={{ color: 'var(--text-secondary)' }}>딱 한 칸</strong>만 다릅니다
+          </p>
 
           {/* 보드 + 네비 버튼 */}
           <div
