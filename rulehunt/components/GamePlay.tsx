@@ -1,17 +1,13 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import type { Board as BoardType, Tile, Color, Shape, RuleDef } from '@/lib/types';
-import { COLORS, SHAPES } from '@/lib/types';
-import {
-  createBoard,
-  placeTile,
-  evaluate,
-  isClear,
-  isFull,
-  starRating,
-} from '@/lib/engine';
+import { useState, useCallback, useEffect } from 'react';
+import type { RuleDef } from '@/lib/types';
+import { starRating } from '@/lib/engine';
 import type { Feedback } from '@/lib/engine';
+import {
+  checkAnswer,
+  countCorrectPositions,
+} from '@/lib/phrasing';
 import {
   recordResult,
   recordStageClear,
@@ -22,9 +18,13 @@ import { buildShareText } from '@/lib/share';
 import { msUntilNextKstMidnight } from '@/lib/daily';
 import { TOTAL_STAGES } from '@/lib/stages';
 
-import Board from '@/components/Board';
-import Tray from '@/components/Tray';
 import EvidencePanel from '@/components/EvidencePanel';
+import SentenceBuilder from '@/components/SentenceBuilder';
+
+/* ── 빈 Feedback (share 호환용) ─────────────────────────────── */
+function emptyFeedback(): Feedback {
+  return Array.from({ length: 5 }, () => Array(5).fill(null));
+}
 
 /* ── 요일 라벨 ─────────────────────────────────────────── */
 const WEEKDAY_LABEL: Record<number, string> = {
@@ -37,7 +37,7 @@ const WEEKDAY_LABEL: Record<number, string> = {
   6: '패턴',
 };
 
-/* ── 힌트 토스트 ─────────────────────────────────────────── */
+/* ── 토스트 (힌트) ─────────────────────────────────────────── */
 function HintToast({ text, onDone }: { text: string; onDone: () => void }) {
   useEffect(() => {
     const t = setTimeout(onDone, 3500);
@@ -75,10 +75,10 @@ function HintToast({ text, onDone }: { text: string; onDone: () => void }) {
   );
 }
 
-/* ── 간단 토스트 (25칸 미완성 알림) ─────────────────────────── */
+/* ── 토스트 (오답 알림) ─────────────────────────────────────── */
 function InfoToast({ text, onDone }: { text: string; onDone: () => void }) {
   useEffect(() => {
-    const t = setTimeout(onDone, 2500);
+    const t = setTimeout(onDone, 2800);
     return () => clearTimeout(t);
   }, [onDone]);
 
@@ -105,7 +105,7 @@ function InfoToast({ text, onDone }: { text: string; onDone: () => void }) {
         gap: 10,
       }}
     >
-      <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+      <span style={{ fontSize: 16, flexShrink: 0 }}>🔍</span>
       <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.55, margin: 0 }}>
         {text}
       </p>
@@ -117,15 +117,11 @@ function InfoToast({ text, onDone }: { text: string; onDone: () => void }) {
 interface ResultModalProps {
   mode: 'daily' | 'stage';
   submitCount: number;
-  feedback: Feedback;
   rule: RuleDef;
-  // daily 전용
   puzzleNumber?: number;
   dateStr?: string;
-  // stage 전용
   stageNumber?: number;
   totalStages?: number;
-  // 공유 관련
   onClose: () => void;
   onNextStage?: () => void;
   onStageList?: () => void;
@@ -134,7 +130,6 @@ interface ResultModalProps {
 function ResultModal({
   mode,
   submitCount,
-  feedback,
   rule,
   puzzleNumber,
   dateStr,
@@ -178,12 +173,13 @@ function ResultModal({
   const handleShare = useCallback(async () => {
     if (mode !== 'daily' || !dateStr || !puzzleNumber) return;
     const streak = effectiveStreak(dateStr);
+    // 단어 조합 방식에선 그리드 없음 → 빈 Feedback으로 호환
     const text = buildShareText({
       puzzleNumber,
       attempts: submitCount,
       streak,
       cleared: true,
-      feedback,
+      feedback: emptyFeedback(),
       url: 'rulehunt.today',
     });
     if (navigator.share) {
@@ -201,7 +197,7 @@ function ResultModal({
     } catch {
       // 무시
     }
-  }, [mode, dateStr, puzzleNumber, submitCount, feedback]);
+  }, [mode, dateStr, puzzleNumber, submitCount]);
 
   const hasNextStage = stageNumber != null && totalStages != null && stageNumber < totalStages;
 
@@ -454,92 +450,55 @@ export default function GamePlay({
   const stageMeta = mode === 'stage' ? (meta as StageMeta) : null;
 
   /* 초기 상태: 이미 오늘 클리어했으면 cleared=true */
-  const initCleared = mode === 'daily' && dailyMeta
-    ? getDayResult(dailyMeta.dateStr)?.cleared ?? false
-    : false;
+  const initCleared =
+    mode === 'daily' && dailyMeta
+      ? getDayResult(dailyMeta.dateStr)?.cleared ?? false
+      : false;
 
-  const [board, setBoard] = useState<BoardType>(() => createBoard());
-  const [brush, setBrush] = useState<{ color: Color; shape: Shape }>({
-    color: COLORS[0],
-    shape: SHAPES[0],
-  });
-  // 피드백: null = 중립 (빌드 중), 제출 후에만 위반 표시
-  const [feedback, setFeedback] = useState<Feedback>(() =>
-    Array.from({ length: 5 }, () => Array(5).fill(null))
-  );
   const [submitCount, setSubmitCount] = useState(0);
   const [cleared, setCleared] = useState(initCleared);
   const [hintsShown, setHintsShown] = useState(0);
   const [activeHint, setActiveHint] = useState<string | null>(null);
   const [infoToast, setInfoToast] = useState<string | null>(null);
-  const [lastViolated, setLastViolated] = useState<{ r: number; c: number } | null>(null);
   const [showResult, setShowResult] = useState(initCleared);
-
-  const clearedRef = useRef(initCleared);
+  /** 3회 이상 틀렸을 때 보여줄 부분 정답 칩 개수 */
+  const [partialHint, setPartialHint] = useState<number | null>(null);
 
   const streak = mode === 'daily' && dailyMeta ? effectiveStreak(dailyMeta.dateStr) : 0;
 
-  /* 보드 탭 핸들러 */
-  const handleCellTap = useCallback(
-    (r: number, c: number) => {
+  /* 단어 칩 제출 핸들러 */
+  const handleSubmit = useCallback(
+    (sequence: string[]) => {
       if (cleared) return;
-      const currentCell = board[r][c];
-      let nextBoard: BoardType;
-      if (currentCell) {
-        nextBoard = placeTile(board, r, c, null);
+      const nextSubmit = submitCount + 1;
+      setSubmitCount(nextSubmit);
+
+      if (checkAnswer(rule.id, sequence)) {
+        // 정답!
+        setCleared(true);
+        setShowResult(true);
+        if (mode === 'daily' && dailyMeta) {
+          recordResult(dailyMeta.dateStr, nextSubmit, true);
+        } else if (mode === 'stage' && stageMeta) {
+          recordStageClear(stageMeta.stageNumber, nextSubmit);
+        }
       } else {
-        const tile: Tile = { color: brush.color, shape: brush.shape };
-        nextBoard = placeTile(board, r, c, tile);
-      }
-      setBoard(nextBoard);
-      // 편집 시 직전 제출 피드백 해제 → 중립 복귀
-      setFeedback(Array.from({ length: 5 }, () => Array(5).fill(null)));
-      setLastViolated(null);
-    },
-    [board, brush, cleared]
-  );
-
-  /* 제출 핸들러 */
-  const handleSubmit = useCallback(() => {
-    if (cleared) return;
-    if (!isFull(board)) {
-      setInfoToast('25칸을 모두 채운 뒤 제출하세요');
-      return;
-    }
-    const nextSubmit = submitCount + 1;
-    setSubmitCount(nextSubmit);
-
-    // evaluate: true=준수, false=위반
-    const fb = evaluate(board, rule);
-    setFeedback(fb);
-
-    if (isClear(board, rule)) {
-      // 클리어
-      clearedRef.current = true;
-      setCleared(true);
-      setShowResult(true);
-      if (mode === 'daily' && dailyMeta) {
-        recordResult(dailyMeta.dateStr, nextSubmit, true);
-      } else if (mode === 'stage' && stageMeta) {
-        recordStageClear(stageMeta.stageNumber, nextSubmit);
-      }
-    } else {
-      // 위반 칸 흔들림 트리거: 첫 위반 칸 찾기
-      let found = false;
-      outer: for (let r = 0; r < 5; r++) {
-        for (let c = 0; c < 5; c++) {
-          if (fb[r][c] === false) {
-            setLastViolated({ r, c });
-            found = true;
-            break outer;
-          }
+        // 오답
+        const correctPos = countCorrectPositions(rule.id, sequence);
+        // 3회 이상 틀리면 부분 힌트 표시
+        if (nextSubmit >= 3) {
+          setPartialHint(correctPos);
+          setInfoToast(`아직 정답이 아니에요. 증거를 다시 보세요. (${correctPos}개 위치 일치)`);
+        } else {
+          setPartialHint(null);
+          setInfoToast('아직 정답이 아니에요. 증거를 다시 보세요.');
         }
       }
-      if (!found) setLastViolated(null);
-    }
-  }, [board, cleared, submitCount, rule, mode, dailyMeta, stageMeta]);
+    },
+    [cleared, submitCount, rule, mode, dailyMeta, stageMeta]
+  );
 
-  /* 힌트 */
+  /* 힌트 핸들러 */
   const handleHint = useCallback(() => {
     if (cleared || hintsShown >= 3) return;
     setActiveHint(rule.hints[hintsShown]);
@@ -710,7 +669,7 @@ export default function GamePlay({
         style={{
           width: '100%',
           maxWidth: '460px',
-          padding: '16px 16px 32px',
+          padding: '16px 16px 40px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -721,54 +680,20 @@ export default function GamePlay({
         {/* 증거 패널 */}
         <EvidencePanel rule={rule} seed={seed} />
 
-        {/* 보드 */}
-        <Board
-          board={board}
-          feedback={feedback}
-          onCellTap={handleCellTap}
-          lastViolated={lastViolated}
+        {/* 단어 칩 조합 영역 */}
+        <SentenceBuilder
+          ruleId={rule.id}
+          seed={seed}
+          onSubmit={handleSubmit}
+          disabled={cleared}
+          partialHint={partialHint}
         />
-
-        {/* 트레이 */}
-        {!cleared && (
-          <div style={{ width: '100%' }}>
-            <Tray brush={brush} onPick={setBrush} />
-          </div>
-        )}
-
-        {/* 제출 버튼 */}
-        {!cleared && (
-          <button
-            onClick={handleSubmit}
-            aria-label="보드 제출"
-            style={{
-              width: '100%',
-              maxWidth: '320px',
-              padding: '15px',
-              borderRadius: 'var(--radius-md)',
-              border: 'none',
-              background: 'var(--text-primary)',
-              color: '#0d0d0d',
-              fontSize: 15,
-              fontWeight: 800,
-              fontFamily: 'inherit',
-              cursor: 'pointer',
-              letterSpacing: '-0.02em',
-              outline: 'none',
-              WebkitTapHighlightColor: 'transparent',
-              transition: 'opacity 0.12s ease',
-            }}
-          >
-            제출
-          </button>
-        )}
 
         {/* 클리어 후 안내 */}
         {cleared && (
           <div
             style={{
               width: '100%',
-              maxWidth: '320px',
               padding: '14px 16px',
               borderRadius: 'var(--radius-md)',
               background: 'rgba(34,197,94,0.08)',
@@ -784,21 +709,16 @@ export default function GamePlay({
       </div>
 
       {/* 힌트 토스트 */}
-      {activeHint && (
-        <HintToast text={activeHint} onDone={() => setActiveHint(null)} />
-      )}
+      {activeHint && <HintToast text={activeHint} onDone={() => setActiveHint(null)} />}
 
-      {/* 미완성 토스트 */}
-      {infoToast && (
-        <InfoToast text={infoToast} onDone={() => setInfoToast(null)} />
-      )}
+      {/* 오답 토스트 */}
+      {infoToast && <InfoToast text={infoToast} onDone={() => setInfoToast(null)} />}
 
       {/* 결과 모달 */}
       {showResult && (
         <ResultModal
           mode={mode}
           submitCount={submitCount}
-          feedback={feedback}
           rule={rule}
           puzzleNumber={dailyMeta?.puzzleNumber}
           dateStr={dailyMeta?.dateStr}

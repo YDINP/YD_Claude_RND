@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import type { RuleDef } from '@/lib/types';
 import { generateExamples } from '@/lib/examples';
 import ExampleBoard from './ExampleBoard';
@@ -11,17 +11,46 @@ interface EvidencePanelProps {
 }
 
 /**
- * 증거 패널.
- * ✓ 예시 3개 + ✗ 예시 2개를 가로 스크롤 카드로 제공.
- * 플레이어가 이 패턴들을 비교하여 규칙을 추론한다.
+ * 증거 패널 — 캐러셀 방식.
+ * ✓ 예시 먼저, ✗ 예시 나중 순서로 1개씩 표시.
+ * ‹ › 버튼으로 순환 이동.
  */
 export default function EvidencePanel({ rule, seed }: EvidencePanelProps) {
   const [expanded, setExpanded] = useState(true);
+  const [currentIdx, setCurrentIdx] = useState(0);
 
   const examples = useMemo(
     () => generateExamples(rule, seed),
     [rule, seed]
   );
+
+  // 통과 먼저, 위반 나중으로 합친 단일 배열
+  const allItems = useMemo(() => [
+    ...examples.valid.map((board) => ({ board, valid: true as const })),
+    ...examples.invalid.map((board) => ({ board, valid: false as const })),
+  ], [examples]);
+
+  const total = allItems.length;
+
+  const goNext = useCallback(() => {
+    setCurrentIdx((prev) => (prev + 1) % total);
+  }, [total]);
+
+  const goPrev = useCallback(() => {
+    setCurrentIdx((prev) => (prev - 1 + total) % total);
+  }, [total]);
+
+  const current = allItems[currentIdx] ?? null;
+  const validCount = examples.valid.length;
+  const isValid = current ? current.valid : true;
+  const typeLabel = isValid ? '✓ 통과 예시' : '✗ 위반 예시';
+  const accentColor = isValid ? 'var(--feedback-pass)' : 'var(--feedback-fail)';
+
+  // 현재 항목이 valid/invalid 중 몇 번째인지
+  const localIdx = currentIdx < validCount
+    ? currentIdx + 1
+    : currentIdx - validCount + 1;
+  const localTotal = currentIdx < validCount ? validCount : examples.invalid.length;
 
   return (
     <div
@@ -90,87 +119,170 @@ export default function EvidencePanel({ rule, seed }: EvidencePanelProps) {
         </span>
       </button>
 
-      {/* 예시 카드 영역 */}
-      {expanded && (
+      {/* 캐러셀 본문 */}
+      {expanded && total > 0 && (
         <div
           style={{
-            padding: '10px 14px 14px',
+            padding: '14px 14px 16px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 8,
+            gap: 12,
           }}
         >
-          {/* ✓ 준수 예시 */}
-          <div>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'var(--feedback-pass)',
-                marginBottom: 6,
-              }}
-            >
-              규칙을 따르는 예시
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                gap: 8,
-                overflowX: 'auto',
-                paddingBottom: 4,
-                scrollbarWidth: 'none',
-              }}
-            >
-              {examples.valid.map((board, i) => (
-                <ExampleBoard key={`valid-${i}`} board={board} valid={true} />
-              ))}
-              {examples.valid.length === 0 && (
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>생성 중...</span>
-              )}
-            </div>
-          </div>
-
-          {/* 구분선 */}
+          {/* 타입 라벨 + 인덱스 */}
           <div
             style={{
-              height: 1,
-              background: 'var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
             }}
-          />
-
-          {/* ✗ 위반 예시 */}
-          <div>
-            <div
+          >
+            <span
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 700,
-                letterSpacing: '0.08em',
+                letterSpacing: '0.06em',
                 textTransform: 'uppercase',
-                color: 'var(--feedback-fail)',
-                marginBottom: 6,
+                color: accentColor,
+                transition: 'color 0.2s ease',
               }}
             >
-              규칙을 어기는 예시
-            </div>
+              {typeLabel}
+            </span>
+            <span
+              style={{
+                fontSize: 11,
+                color: 'var(--text-muted)',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {localIdx} / {localTotal}
+              <span style={{ marginLeft: 6, color: 'var(--border-default)' }}>·</span>
+              <span style={{ marginLeft: 6 }}>
+                전체 {currentIdx + 1} / {total}
+              </span>
+            </span>
+          </div>
+
+          {/* 보드 + 네비 버튼 */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+            }}
+          >
+            {/* 이전 버튼 */}
+            <button
+              onClick={goPrev}
+              aria-label="이전 예시"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                border: '1px solid var(--border-default)',
+                background: 'var(--bg-elevated)',
+                color: 'var(--text-secondary)',
+                fontSize: 16,
+                cursor: 'pointer',
+                outline: 'none',
+                WebkitTapHighlightColor: 'transparent',
+                flexShrink: 0,
+                transition: 'background 0.12s ease, opacity 0.12s ease',
+              }}
+            >
+              ‹
+            </button>
+
+            {/* 현재 보드 — 가운데 정렬 */}
             <div
               style={{
                 display: 'flex',
-                gap: 8,
-                overflowX: 'auto',
-                paddingBottom: 4,
-                scrollbarWidth: 'none',
+                justifyContent: 'center',
+                flex: 1,
+                minWidth: 0,
               }}
             >
-              {examples.invalid.map((board, i) => (
-                <ExampleBoard key={`invalid-${i}`} board={board} valid={false} />
-              ))}
-              {examples.invalid.length === 0 && (
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>생성 중...</span>
+              {current && (
+                <ExampleBoard
+                  board={current.board}
+                  valid={current.valid}
+                  size={200}
+                />
               )}
             </div>
+
+            {/* 다음 버튼 */}
+            <button
+              onClick={goNext}
+              aria-label="다음 예시"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                border: '1px solid var(--border-default)',
+                background: 'var(--bg-elevated)',
+                color: 'var(--text-secondary)',
+                fontSize: 16,
+                cursor: 'pointer',
+                outline: 'none',
+                WebkitTapHighlightColor: 'transparent',
+                flexShrink: 0,
+                transition: 'background 0.12s ease, opacity 0.12s ease',
+              }}
+            >
+              ›
+            </button>
           </div>
+
+          {/* 도트 인디케이터 */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 5,
+            }}
+            aria-hidden="true"
+          >
+            {allItems.map((item, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentIdx(i)}
+                aria-label={`${i + 1}번 예시로 이동`}
+                style={{
+                  width: i === currentIdx ? 18 : 6,
+                  height: 6,
+                  borderRadius: 9999,
+                  border: 'none',
+                  background:
+                    i === currentIdx
+                      ? item.valid
+                        ? 'var(--feedback-pass)'
+                        : 'var(--feedback-fail)'
+                      : 'var(--border-default)',
+                  padding: 0,
+                  cursor: 'pointer',
+                  outline: 'none',
+                  transition: 'width 0.2s ease, background 0.2s ease',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 데이터 없을 때 */}
+      {expanded && total === 0 && (
+        <div style={{ padding: '14px', textAlign: 'center' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>생성 중...</span>
         </div>
       )}
     </div>
