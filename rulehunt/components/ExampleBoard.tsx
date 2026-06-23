@@ -15,13 +15,15 @@ interface ExampleBoardProps {
  * ✓ → 초록 테두리, ✗ → 빨강 테두리.
  * 빈 칸은 옅은 점으로 표시.
  */
-export default function ExampleBoard({ board, valid, size = 130 }: ExampleBoardProps) {
+export default function ExampleBoard({ board, valid, size = 116 }: ExampleBoardProps) {
   const accent = valid ? 'var(--feedback-pass)' : 'var(--feedback-fail)';
   const accentBg = valid ? 'rgba(34,197,94,0.06)' : 'rgba(239,68,68,0.06)';
   const PAD = 8; // 양쪽 패딩
+  const BORDER = 1.5; // 양쪽 테두리 (border-box 보정)
   const gap = 3;
-  // 셀 크기 = (전체 - 양쪽패딩 - 4개 간격) / 5  ← 간격을 빼야 그리드가 프레임을 벗어나지 않음
-  const cellSize = (size - PAD * 2 - gap * 4) / 5;
+  // 셀 크기 = (전체 - 양쪽패딩 - 양쪽테두리 - 4개 간격) / 5
+  // 카드는 fit-content로 그리드를 감싸므로 약간의 오차가 있어도 프레임을 벗어나지 않는다.
+  const cellSize = Math.floor((size - PAD * 2 - BORDER * 2 - gap * 4) / 5);
 
   return (
     <div
@@ -33,8 +35,9 @@ export default function ExampleBoard({ board, valid, size = 130 }: ExampleBoardP
         padding: 8,
         borderRadius: 'var(--radius-md)',
         background: accentBg,
-        border: `1.5px solid ${accent}`,
-        width: size,
+        border: `${BORDER}px solid ${accent}`,
+        width: 'fit-content',
+        boxSizing: 'border-box',
         flexShrink: 0,
       }}
     >
