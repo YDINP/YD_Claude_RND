@@ -5,6 +5,7 @@
 
 import { RULES } from './rules';
 import { RuleDef, Theme } from './types';
+import { hashSeed } from './examples';
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -30,6 +31,8 @@ export interface DailyInfo {
   /** 요일 0=일~6=토 */
   weekday: number;
   rule: RuleDef;
+  /** 예시 생성용 결정론적 시드 (전 세계 동일) */
+  seed: number;
 }
 
 function pad(n: number): string {
@@ -60,6 +63,7 @@ export function getDaily(now: Date = new Date()): DailyInfo {
     puzzleNumber: dayIndex - LAUNCH_DAY_INDEX + 1,
     weekday,
     rule: candidates[idx],
+    seed: hashSeed(`${dateStr}:${candidates[idx].id}`),
   };
 }
 

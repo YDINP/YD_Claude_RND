@@ -70,12 +70,12 @@ describe('클리어 판정', () => {
 });
 
 describe('별 등급', () => {
-  it('시도 횟수에 따라 1~3성', () => {
+  it('제출 횟수에 따라 1~3성 (적을수록 고수)', () => {
     expect(starRating(1)).toBe(3);
-    expect(starRating(4)).toBe(3);
+    expect(starRating(2)).toBe(3);
+    expect(starRating(3)).toBe(2);
     expect(starRating(5)).toBe(2);
-    expect(starRating(10)).toBe(2);
-    expect(starRating(11)).toBe(1);
+    expect(starRating(6)).toBe(1);
     expect(starRating(99)).toBe(1);
   });
 });

@@ -64,27 +64,39 @@ export function isClear(board: Board, rule: RuleDef): boolean {
 
 /**
  * 별 등급 (1~3성).
- * 시도 횟수가 적을수록 높은 등급. 난이도별 기준은 단순화.
+ * 제출 횟수가 적을수록 높은 등급 (증거 추리형: 적은 제출 = 명확한 추론).
  */
-export function starRating(attempts: number): 1 | 2 | 3 {
-  if (attempts <= 4) return 3;
-  if (attempts <= 10) return 2;
+export function starRating(submits: number): 1 | 2 | 3 {
+  if (submits <= 2) return 3;
+  if (submits <= 5) return 2;
   return 1;
 }
 
-/**
- * 백트래킹 솔버.
- * 규칙이 풀이 가능한지 검증하고, 검증용 샘플 정답을 생성한다.
- * 모든 규칙이 지역 위반 기반이므로 가지치기가 효과적이다.
- * @returns 가득 찬 클리어 보드, 없으면 null
- */
-export function solve(rule: RuleDef): Board | null {
-  const board = createBoard();
+/** 16종 타일 전체 (색×모양) */
+export function allTiles(): Tile[] {
   const tiles: Tile[] = [];
   for (const color of COLORS) for (const shape of SHAPES) tiles.push({ color, shape });
+  return tiles;
+}
+
+/** 폭주 방지용 백트래킹 스텝 상한 */
+const SOLVE_STEP_CAP = 5_000_000;
+
+/**
+ * 백트래킹 솔버.
+ * 규칙이 풀이 가능한지 검증하고, 검증/예시용 샘플 정답을 생성한다.
+ * 모든 규칙이 지역 위반 기반이므로 가지치기가 효과적이다.
+ * @param tileOrder 시도할 타일 순서 (예시 다양성을 위해 셔플 가능). 기본 = allTiles()
+ * @returns 가득 찬 클리어 보드, 없으면 null (불가능하거나 스텝 상한 초과)
+ */
+export function solve(rule: RuleDef, tileOrder?: Tile[]): Board | null {
+  const board = createBoard();
+  const tiles = tileOrder ?? allTiles();
+  let steps = 0;
 
   function backtrack(idx: number): boolean {
     if (idx === SIZE * SIZE) return true;
+    if (++steps > SOLVE_STEP_CAP) return false;
     const r = Math.floor(idx / SIZE);
     const c = idx % SIZE;
     for (const tile of tiles) {

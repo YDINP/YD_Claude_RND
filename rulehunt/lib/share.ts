@@ -32,9 +32,9 @@ export function buildShareText(opts: ShareOptions): string {
   lines.push(feedbackToEmoji(feedback));
   if (cleared) {
     const stars = STAR.repeat(starRating(attempts));
-    lines.push(`시도: ${attempts}회 | ${stars}`);
+    lines.push(`제출: ${attempts}회 | ${stars}`);
   } else {
-    lines.push(`시도: ${attempts}회 | 미해결`);
+    lines.push(`제출: ${attempts}회 | 미해결`);
   }
   if (streak && streak > 1) lines.push(`🔥 ${streak}일 연속!`);
   lines.push(url ?? 'rulehunt.today');

@@ -4,10 +4,16 @@ import { solve, isClear, isFull, hasViolation, createBoard } from './engine';
 import { SIZE } from './types';
 
 describe('규칙 풀 무결성', () => {
-  it('14개 규칙 (초급 7 + 중급 7)', () => {
-    expect(RULES.length).toBe(14);
+  it('22개 규칙 (초급7·중급7·고급6·전문가2)', () => {
+    expect(RULES.length).toBe(22);
     expect(RULES.filter((r) => r.grade === 'easy').length).toBe(7);
     expect(RULES.filter((r) => r.grade === 'medium').length).toBe(7);
+    expect(RULES.filter((r) => r.grade === 'hard').length).toBe(6);
+    expect(RULES.filter((r) => r.grade === 'expert').length).toBe(2);
+  });
+
+  it('모든 규칙은 양의 난이도를 가진다', () => {
+    for (const r of RULES) expect(r.difficulty).toBeGreaterThan(0);
   });
 
   it('모든 규칙 id가 고유하다', () => {

@@ -20,7 +20,7 @@ export const COLORS: Color[] = ['red', 'blue', 'yellow', 'green'];
 export const SHAPES: Shape[] = ['circle', 'triangle', 'square', 'star'];
 
 export type Theme = 'color' | 'shape' | 'position' | 'adjacency' | 'combo';
-export type Grade = 'easy' | 'medium' | 'hard';
+export type Grade = 'easy' | 'medium' | 'hard' | 'expert';
 
 /**
  * 규칙 정의.
@@ -37,6 +37,8 @@ export interface RuleDef {
   /** 요일 테마 분류 */
   theme: Theme;
   grade: Grade;
+  /** 난이도 (작을수록 쉬움). 스테이지 정렬·난이도 곡선용 */
+  difficulty: number;
   /** 내부용 자연어 설명 (플레이어에게는 클리어 전까지 숨김) */
   description: string;
   /** 클리어 후 공개되는 규칙 문구 */

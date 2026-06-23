@@ -2,11 +2,22 @@
 //
 // 서버 없이 클라이언트에서만 동작. SSR 안전 가드 포함.
 
+import { starRating } from './engine';
+import { TOTAL_STAGES } from './stages';
+
 const KEY = 'rulehunt:v1';
 
 export interface DayResult {
+  /** 제출 횟수 (증거 추리형 점수) */
   attempts: number;
   cleared: boolean;
+}
+
+export interface StageState {
+  /** 스테이지번호 -> 최고 별등급(1~3) */
+  bestStars: Record<number, number>;
+  /** 해금된 최대 스테이지 번호 (1-based) */
+  maxUnlocked: number;
 }
 
 export interface SaveState {
@@ -16,6 +27,8 @@ export interface SaveState {
   maxStreak: number;
   /** 마지막으로 클리어한 KST 날짜 */
   lastClearedDate: string | null;
+  /** 스테이지 모드 진행 */
+  stages: StageState;
 }
 
 const EMPTY: SaveState = {
@@ -23,6 +36,7 @@ const EMPTY: SaveState = {
   currentStreak: 0,
   maxStreak: 0,
   lastClearedDate: null,
+  stages: { bestStars: {}, maxUnlocked: 1 },
 };
 
 function isBrowser(): boolean {
@@ -35,7 +49,15 @@ export function loadState(): SaveState {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return { ...EMPTY };
     const parsed = JSON.parse(raw) as Partial<SaveState>;
-    return { ...EMPTY, ...parsed, results: parsed.results ?? {} };
+    return {
+      ...EMPTY,
+      ...parsed,
+      results: parsed.results ?? {},
+      stages: {
+        bestStars: parsed.stages?.bestStars ?? {},
+        maxUnlocked: parsed.stages?.maxUnlocked ?? 1,
+      },
+    };
   } catch {
     return { ...EMPTY };
   }
@@ -95,4 +117,32 @@ export function effectiveStreak(todayStr: string): number {
     return state.currentStreak;
   }
   return 0;
+}
+
+// ── 스테이지 모드 ──────────────────────────────────────────────
+
+export function getStageState(): StageState {
+  return loadState().stages;
+}
+
+export function isStageUnlocked(stageNumber: number): boolean {
+  return stageNumber <= loadState().stages.maxUnlocked;
+}
+
+export function getStageStars(stageNumber: number): number {
+  return loadState().stages.bestStars[stageNumber] ?? 0;
+}
+
+/** 스테이지 클리어 기록 + 다음 스테이지 해금. 별등급은 제출 횟수 기반 */
+export function recordStageClear(stageNumber: number, submits: number): SaveState {
+  const state = loadState();
+  const stars = starRating(submits);
+  const prevStars = state.stages.bestStars[stageNumber] ?? 0;
+  state.stages.bestStars[stageNumber] = Math.max(prevStars, stars);
+  state.stages.maxUnlocked = Math.min(
+    TOTAL_STAGES,
+    Math.max(state.stages.maxUnlocked, stageNumber + 1)
+  );
+  persist(state);
+  return state;
 }

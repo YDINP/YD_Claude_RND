@@ -89,6 +89,7 @@ interface BoardCellProps {
 }
 
 function BoardCell({ cell, isPass, isFail, isShaking, onTap, row, col }: BoardCellProps) {
+  // fb=null(빌드 중 또는 편집 후)이면 항상 중립
   const ringColor = isPass
     ? 'var(--feedback-pass)'
     : isFail
