@@ -217,14 +217,17 @@ export function generateExamples(
     const dp = findDiscriminatingPair(V, rule, rng);
     if (!dp) continue;
 
-    const win = new Set<string>([`${dp.r},${dp.c}`]);
-    for (const [r, c] of kingWindowCoords(dp.r, dp.c)) win.add(`${r},${c}`);
-    for (const coord of pickCoords(rng, 6)) win.add(coord);
-
     const vGood = cloneBoard(V);
     vGood[dp.r][dp.c] = { ...dp.good };
     const vBad = cloneBoard(V);
     vBad[dp.r][dp.c] = { ...dp.bad };
+
+    const win = new Set<string>([`${dp.r},${dp.c}`]);
+    for (const [r, c] of kingWindowCoords(dp.r, dp.c)) win.add(`${r},${c}`);
+    // 위반에 실제로 관여한 칸을 모두 포함 → 짝꿍/근거 칸이 항상 보임
+    // (좌우 대칭처럼 멀리 떨어진 짝꿍도 화면에 들어오게)
+    for (const coord of violatingCoords(vBad, rule)) win.add(coord);
+    for (const coord of pickCoords(rng, 5)) win.add(coord);
 
     const ok = keepSubset(vGood, win);
     const ng = keepSubset(vBad, win);
