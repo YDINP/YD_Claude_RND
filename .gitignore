@@ -34,9 +34,21 @@ dist/
 temp_*.py
 append_*.py
 
-# Project-specific (managed in separate branches)
+# Project-specific (managed in separate branches/repos)
 ArcaneCollectors/
+goldrush/
+silkworm/
 
 # Tool configs
 .omc/
 .serena/
+
+# 자격증명 포함 — 커밋 금지 (2026-08-23)
+n8n-workflow-raw.json
+n8n-workflow-updated.json
+n8n-patch-payload.json
+n8n-patch-result.json
+n8n-verify.json
+n8n-*.json
+cookie.txt
+D:park*

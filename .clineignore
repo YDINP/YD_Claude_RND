@@ -1,0 +1,31 @@
+# 자격증명 — 에이전트가 외부 프로바이더로 전송하는 것을 차단
+.env
+.env.*
+**/.env
+**/.env.*
+**/*.env
+n8n-workflow-raw.json
+n8n-workflow-updated.json
+n8n-patch-payload.json
+n8n-patch-result.json
+n8n-verify.json
+**/n8n_workflow*.json
+**/n8n-*.json
+cookie.txt
+**/cookie.txt
+**/credentials*
+**/*secret*.json
+**/*.pem
+**/*.key
+**/service-account*.json
+
+# 대용량 — 컨텍스트 낭비
+node_modules/
+dist/
+build/
+.next/
+.astro/
+*.png
+*.jpg
+*.mp4
+*.zip

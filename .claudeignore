@@ -1,0 +1,58 @@
+# ⚠️ 경고: Claude Code는 .claudeignore를 읽지 않습니다 (2026-08-23 바이너리 검증).
+# 실제 차단은 .claude/settings.local.json 의 permissions.deny → Read(...) 규칙으로만 작동함.
+# 이 파일은 다른 툴(일부 서드파티)용으로만 남겨둠. 여기 규칙은 Claude Code에 작동하지 않음.
+# Build artifacts
+dist/
+build/
+.next/
+out/
+*.apk
+*.aab
+
+# Dependencies
+node_modules/
+vendor/
+.yarn/
+.gradle/
+
+# Cache/Logs
+.cache/
+*.log
+.turbo/
+.parcel-cache/
+.astro/
+
+# Media/Binary
+*.mp4
+*.mov
+*.zip
+*.tar.gz
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# Sensitive files
+.env*
+credentials.*
+*.secret
+*.pem
+
+# Test artifacts
+test-results/
+.playwright-mcp/
+playwright-report/
+
+# Misc large/unnecessary
+n8n-workflow-raw.json
+n8n-workflow-updated.json
+n8n-patch-payload.json
+n8n-patch-result.json
+n8n-verify.json
+cookie.txt
+*.png
