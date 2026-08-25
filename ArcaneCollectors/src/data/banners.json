@@ -8,85 +8,67 @@
       "pickupCharacters": [],
       "pickupRate": 0,
       "rates": {
-        "SSR": 0.03,
-        "SR": 0.15,
-        "R": 0.50,
-        "N": 0.32
+        "SSR": 0.015,
+        "SR": 0.085,
+        "R": 0.30,
+        "N": 0.60
       },
       "isActive": true,
       "isPermanent": true
     },
     {
-      "id": "pickup_arcana",
-      "name": "아르카나 픽업",
+      "id": "pickup_iris_olympus",
+      "name": "번개의 아이리스 픽업",
       "type": "pickup",
-      "description": "불꽃의 마녀 아르카나의 픽업 확률이 증가합니다!",
-      "pickupCharacters": ["hero_001"],
+      "description": "올림푸스의 번개, SSR 아이리스의 픽업 확률이 증가합니다!",
+      "pickupCharacters": ["asc_iris_olympus"],
       "pickupRate": 0.5,
       "rates": {
-        "SSR": 0.03,
-        "SR": 0.15,
-        "R": 0.50,
-        "N": 0.32
+        "SSR": 0.015,
+        "SR": 0.085,
+        "R": 0.30,
+        "N": 0.60
+      },
+      "isActive": true,
+      "isPermanent": false,
+      "startDate": "2026-08-24T00:00:00Z",
+      "endDate": "2026-09-30T23:59:59Z"
+    },
+    {
+      "id": "pickup_leon_olympus",
+      "name": "신벌의 레온 픽업",
+      "type": "pickup",
+      "description": "아스가르드의 신벌, SSR 레온의 픽업 확률이 증가합니다!",
+      "pickupCharacters": ["asc_leon_olympus"],
+      "pickupRate": 0.5,
+      "rates": {
+        "SSR": 0.015,
+        "SR": 0.085,
+        "R": 0.30,
+        "N": 0.60
       },
       "isActive": false,
       "isPermanent": false,
-      "startDate": "2025-03-01T00:00:00Z",
-      "endDate": "2025-03-15T23:59:59Z"
+      "startDate": "2026-10-01T00:00:00Z",
+      "endDate": "2026-10-31T23:59:59Z"
     },
     {
-      "id": "pickup_leonhardt",
-      "name": "레온하르트 픽업",
-      "type": "pickup",
-      "description": "성기사 레온하르트의 픽업 확률이 증가합니다!",
-      "pickupCharacters": ["hero_002"],
-      "pickupRate": 0.5,
-      "rates": {
-        "SSR": 0.03,
-        "SR": 0.15,
-        "R": 0.50,
-        "N": 0.32
-      },
-      "isActive": false,
-      "isPermanent": false,
-      "startDate": "2025-03-15T00:00:00Z",
-      "endDate": "2025-03-30T23:59:59Z"
-    },
-    {
-      "id": "pickup_selene",
-      "name": "셀레네 픽업",
-      "type": "pickup",
-      "description": "그림자 암살자 셀레네의 픽업 확률이 증가합니다!",
-      "pickupCharacters": ["hero_003"],
-      "pickupRate": 0.5,
-      "rates": {
-        "SSR": 0.03,
-        "SR": 0.15,
-        "R": 0.50,
-        "N": 0.32
-      },
-      "isActive": false,
-      "isPermanent": false,
-      "startDate": "2025-04-01T00:00:00Z",
-      "endDate": "2025-04-15T23:59:59Z"
-    },
-    {
-      "id": "pickup_dual",
-      "name": "빛과 어둠 듀얼 픽업",
+      "id": "pickup_dual_sera_paolo",
+      "name": "빛과 심연 듀얼 픽업",
       "type": "dual_pickup",
-      "description": "레온하르트와 셀레네의 픽업 확률이 함께 증가합니다!",
-      "pickupCharacters": ["hero_002", "hero_003"],
+      "description": "성약의 세라와 심연학자 파올로의 픽업 확률이 함께 증가합니다!",
+      "pickupCharacters": ["asc_sera_avalon", "asc_paolo_tartarus"],
       "pickupRate": 0.5,
       "rates": {
-        "SSR": 0.03,
-        "SR": 0.15,
-        "R": 0.50,
-        "N": 0.32
+        "SSR": 0.015,
+        "SR": 0.085,
+        "R": 0.30,
+        "N": 0.60
       },
       "isActive": false,
       "isPermanent": false,
-      "startDate": "2025-05-01T00:00:00Z",
-      "endDate": "2025-05-15T23:59:59Z"
+      "startDate": "2026-11-01T00:00:00Z",
+      "endDate": "2026-11-30T23:59:59Z"
     }
   ],
   "pityConfig": {

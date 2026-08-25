@@ -3,6 +3,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { isSupabaseConfigured, supabase, getLocalData } from '../api/supabaseClient.js';
 import { getGuestUserId } from '../services/AuthService.js';
 import { normalizeHeroes } from '../data/index.js';
+import { GachaSystem } from '../systems/GachaSystem.js';
 import { validateAllGameData } from '../schemas/validator.js';
 
 export class BootScene extends Phaser.Scene {
@@ -128,6 +129,9 @@ export class BootScene extends Phaser.Scene {
           }
         });
       }
+
+      // PRD-1: 가챠 풀 초기화 (부팅 시 1회 — pull()에도 lazy 초기화 이중 방어 존재)
+      GachaSystem.initializePool();
 
       // 세션 확인 (스플래시 중 비동기)
       const hasSession = await this._checkExistingSession();

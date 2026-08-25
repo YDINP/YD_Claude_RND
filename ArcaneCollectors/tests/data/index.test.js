@@ -474,21 +474,23 @@ describe('getExpRequiredForLevel', () => {
 describe('getSummonRates', () => {
   it('확률 합이 1.0', () => {
     const rates = getSummonRates();
-    const total = rates.SSR + rates.SR + rates.R;
+    const total = rates.SSR + rates.SR + rates.R + rates.N;
     expect(total).toBeCloseTo(1.0, 5);
   });
 
-  it('SSR < SR < R 순서', () => {
+  it('SSR < SR < R < N 순서', () => {
     const rates = getSummonRates();
     expect(rates.SSR).toBeLessThan(rates.SR);
     expect(rates.SR).toBeLessThan(rates.R);
+    expect(rates.R).toBeLessThan(rates.N);
   });
 
-  it('SSR 3%, SR 15%, R 82%', () => {
+  it('GachaSystem.RATES와 동기화 (SSR 1.5%, SR 8.5%, R 30%, N 60%)', () => {
     const rates = getSummonRates();
-    expect(rates.SSR).toBe(0.03);
-    expect(rates.SR).toBe(0.15);
-    expect(rates.R).toBe(0.82);
+    expect(rates.SSR).toBe(0.015);
+    expect(rates.SR).toBe(0.085);
+    expect(rates.R).toBe(0.30);
+    expect(rates.N).toBe(0.60);
   });
 });
 

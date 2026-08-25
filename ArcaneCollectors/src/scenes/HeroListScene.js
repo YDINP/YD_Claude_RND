@@ -6,7 +6,7 @@ import characterRenderer from '../renderers/CharacterRenderer.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { VirtualCardPool } from '../components/VirtualCardPool.js';
 import { SaveManager } from '../systems/SaveManager.js';
-import { normalizeHeroes } from '../data/index.js';
+import { normalizeHeroes, getCharacterOrHero } from '../data/index.js';
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import navigationManager from '../systems/NavigationManager.js';
@@ -444,8 +444,17 @@ export class HeroListScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    // Hero portrait
-    const portrait = scene.add.image(0, s(-15), 'hero_placeholder').setScale(0.9);
+    // Hero portrait — IMG-3: 실제 포트레이트 우선, 없으면 온디맨드 플레이스홀더
+    const fullData = getCharacterOrHero(hero.id) || hero;
+    const texKey = HeroAssetLoader.ensureTexture(scene, fullData);
+    const portrait = scene.add.image(0, s(-15), texKey || 'hero_placeholder');
+    if (texKey) {
+      // 카드(110×150) 안에 맞추기 (포트레이트 종횡비 보존)
+      const fitScale = Math.min(s(70) / portrait.width, s(80) / portrait.height);
+      portrait.setScale(fitScale);
+    } else {
+      portrait.setScale(0.9);
+    }
 
     const starCount = hero.stars || getRarityNum(hero.rarity) || rarityData.stars || 1;
     const stars = scene.add.text(0, s(40), '★'.repeat(starCount), {
@@ -480,6 +489,14 @@ export class HeroListScene extends Phaser.Scene {
       cardBg.setStrokeStyle(s(2), newRarityColorSet.border);
       rarityBg.setFillStyle(newRarityColorSet.border, 1);
       rarityText.setText(newRKey);
+
+      // IMG-3: 재사용 카드의 포트레이트도 새 영웅 것으로 교체
+      const newFull = getCharacterOrHero(newHero.id) || newHero;
+      const newTexKey = HeroAssetLoader.ensureTexture(scene, newFull);
+      if (newTexKey) {
+        portrait.setTexture(newTexKey);
+        portrait.setScale(Math.min(s(70) / portrait.width, s(80) / portrait.height));
+      }
 
       const newStarCount = newHero.stars || getRarityNum(newHero.rarity) || newRarityData.stars || 1;
       stars.setText('★'.repeat(newStarCount));

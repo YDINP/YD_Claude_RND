@@ -1,4 +1,4 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, LAYOUT, s, sf } from '../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { energySystem } from '../systems/EnergySystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
@@ -11,8 +11,9 @@ import { Modal } from '../components/Modal.js';
 import { formatTime } from '../utils/colorUtils.js';
 import { IdleProgressSystem } from '../systems/IdleProgressSystem.js';
 import { IdleBattleView } from '../components/IdleBattleView.js';
-import { getCharacter, calculatePower, getStage, getChapterStages } from '../data/index.ts';
+import { getCharacter, getCharacterOrHero, calculatePower, getStage, getChapterStages } from '../data/index.ts';
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
+import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 // [DISABLED] gacha system temporarily disabled
 // import { GachaPopup } from '../components/popups/GachaPopup.js';
@@ -503,8 +504,9 @@ export class MainMenuScene extends Phaser.Scene {
       const charClass = staticData?.class || charData?.class || 'warrior';
       const color = classColors[charClass] || 0x64748B;
 
-      // Circular avatar — DiceBear 이미지 우선, 없으면 컬러 원형 폴백
-      const portraitKey = `hero_${heroId}`;
+      // Circular avatar — IMG-3: 온디맨드 텍스처 보장(asc/base 폴백), 그래도 없으면 컬러 원형 폴백
+      const fullData = getCharacterOrHero(heroId) || staticData || charData;
+      const portraitKey = HeroAssetLoader.ensureTexture(this, fullData) || `hero_${heroId}`;
       const avatarR = s(32);
       let avatar;
       if (this.textures.exists(portraitKey)) {

@@ -11,6 +11,7 @@ import charactersData from '../data/characters.json';
 import baseHeroesData from '../data/base-heroes.json';
 import ascendedHeroesData from '../data/ascended-heroes.json';
 import cultsData from '../data/cults.json';
+import { getRarityStars } from '../utils/rarityUtils.js';
 
 export class SaveManager {
   static SAVE_KEY = 'arcane_collectors_save';
@@ -404,11 +405,16 @@ export class SaveManager {
    * @returns {number} 기본 성급
    */
   static getBaseStars(characterId) {
-    // characters.json에서 rarity 필드 직접 참조
+    // characters.json에서 rarity 필드 직접 참조 (레거시 숫자 등급)
     const char = SaveManager._charactersData?.characters?.find(c => c.id === characterId);
     if (char && char.rarity) {
-      return char.rarity;
+      return typeof char.rarity === 'number' ? char.rarity : getRarityStars(char.rarity);
     }
+    // 전직영웅(asc_*)/기본영웅(base_*) 조회 — 문자열 등급을 성급으로 변환
+    const ascended = SaveManager.getAscendedHeroData(characterId);
+    if (ascended && ascended.rarity) return getRarityStars(ascended.rarity);
+    const base = SaveManager.getBaseHeroData(characterId);
+    if (base) return getRarityStars(base.rarity || 'R');
     // fallback: 보유 캐릭터 데이터에서 조회
     const data = this.load();
     const owned = data.characters?.find(c => c.id === characterId);

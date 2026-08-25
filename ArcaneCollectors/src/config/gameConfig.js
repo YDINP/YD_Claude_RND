@@ -131,12 +131,12 @@ export const MOOD_COLORS = {
 };
 
 // ============================================
-// Layout Configuration
+// Layout Configuration (layoutConfig.js와 동기화 — 불일치 통일)
 // ============================================
 export const LAYOUT = {
-  topBar: { height: s(100), padding: s(20) },
-  bottomNav: { height: s(120), y: s(1160) },
-  content: { y: s(120), height: s(1040) },
+  topBar: { height: s(80), padding: s(16) },   // = layoutConfig.TOP_BAR
+  bottomNav: { height: s(120), y: s(1160) },   // = layoutConfig.BOTTOM_NAV (+절대 y)
+  content: { y: s(80), height: GAME_HEIGHT - s(80) - s(120) }, // = layoutConfig.CONTENT 산식
   character: { mainY: s(450), partyY: s(750), size: s(200) },
   button: { width: s(200), height: s(60), spacing: s(20) }
 };
@@ -156,8 +156,9 @@ export const GAME_CONSTANTS = {
   sweepTicketCost: 1,
   battleSpeedOptions: [1, 2, 3],
   gachaCost: { single: 300, multi: 2700 },
-  gachaRates: { SSR: 0.03, SR: 0.15, R: 0.82 },
-  pitySystem: { ssrGuarantee: 90, pickupGuarantee: 180 }
+  // GachaSystem.RATES와 동기화 (SSOT는 GachaSystem)
+  gachaRates: { SSR: 0.015, SR: 0.085, R: 0.30, N: 0.60 },
+  pitySystem: { softPity: 75, ssrGuarantee: 90, pickupGuarantee: 180 }
 };
 
 // ============================================

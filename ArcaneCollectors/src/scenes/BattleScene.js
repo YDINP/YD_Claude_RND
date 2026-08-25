@@ -5,7 +5,7 @@ import { moodSystem } from '../systems/MoodSystem.js';
 import { SynergySystem } from '../systems/SynergySystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
-import { getAllCharacters, getCharacter, getEnemy, calculateEnemyStats } from '../data/index.js';
+import { getAllCharacters, getCharacter, getCharacterOrHero, getEnemy, calculateEnemyStats } from '../data/index.js';
 import { MOOD_COLORS } from '../config/layoutConfig.js';
 import transitionManager from '../utils/TransitionManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
@@ -1245,9 +1245,21 @@ export class BattleScene extends Phaser.Scene {
   createBattlerSprite(x, y, battler, isAlly) {
     const container = this.add.container(x, y);
 
-    // Character sprite
-    const sprite = this.add.image(0, 0, isAlly ? 'hero_placeholder' : 'enemy_placeholder');
-    sprite.setScale(isAlly ? 0.9 : 0.85);
+    // Character sprite — IMG-3: 아군은 실제 포트레이트 우선
+    let sprite;
+    if (isAlly) {
+      const fullData = getCharacterOrHero(battler.id || battler.characterId) || battler;
+      const texKey = HeroAssetLoader.ensureTexture(this, fullData);
+      sprite = this.add.image(0, 0, texKey || 'hero_placeholder');
+      if (texKey) {
+        sprite.setScale(Math.min(s(56) / sprite.width, s(64) / sprite.height));
+      } else {
+        sprite.setScale(0.9);
+      }
+    } else {
+      sprite = this.add.image(0, 0, 'enemy_placeholder');
+      sprite.setScale(0.85);
+    }
     if (!isAlly) sprite.setFlipX(true);
 
     // UIX-2.6.1: Enhanced HP Bar with gradients, animations, and buff icons

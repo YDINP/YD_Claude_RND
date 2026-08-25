@@ -72,6 +72,27 @@ export class HeroAssetLoader {
   }
 
   /**
+   * 텍스처 보장: 없으면 향상된 플레이스홀더를 즉시 생성하고 사용 가능한 키를 반환합니다.
+   * 가챠 결과/영웅 목록 등 동적 표시 지점에서 사용 (IMG-3).
+   * @param {Phaser.Scene} scene
+   * @param {Object} heroData - 최소 id 필요 (cult/mood/class/rarity/name 있으면 고품질 플레이스홀더)
+   * @returns {string|null} 사용 가능한 텍스처 키 (생성 실패 시 null)
+   */
+  static ensureTexture(scene, heroData) {
+    if (!heroData || !heroData.id) return null;
+    const key = HeroAssetLoader.getTextureKey(heroData);
+    if (!scene.textures.exists(key)) {
+      try {
+        HeroAssetLoader._createEnhancedPlaceholder(scene, heroData, key);
+      } catch (e) {
+        console.warn(`[HeroAssetLoader] ensureTexture 실패 (${key}):`, e);
+        return null;
+      }
+    }
+    return key;
+  }
+
+  /**
    * 전체 캐릭터에 대해 향상된 플레이스홀더 생성
    * @param {Phaser.Scene} scene
    * @param {Array} characters - characters.json 데이터

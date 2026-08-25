@@ -194,11 +194,15 @@ export class GachaSystem {
    * @returns {Object} { success, results, pityInfo }
    */
   static pull(count = 1, paymentType = 'gems', options = {}) {
-    // 가챠 비활성화 guard: CHARACTER_POOL이 비어있으면 즉시 반환
-    const hasPool = Object.values(this.CHARACTER_POOL).some(pool => pool.length > 0);
+    // 풀 미초기화 방지: 비어있으면 lazy 자동 초기화 후 재검사 (PRD-1)
+    let hasPool = Object.values(this.CHARACTER_POOL).some(pool => pool.length > 0);
     if (!hasPool) {
-      console.warn('[GachaSystem] Gacha is currently disabled.');
-      return { success: false, error: '가챠 시스템이 현재 비활성화되어 있습니다.', results: [] };
+      this.initializePool();
+      hasPool = Object.values(this.CHARACTER_POOL).some(pool => pool.length > 0);
+    }
+    if (!hasPool) {
+      console.warn('[GachaSystem] CHARACTER_POOL is empty even after initialization.');
+      return { success: false, error: '소환 가능한 캐릭터가 없습니다.', results: [] };
     }
 
 

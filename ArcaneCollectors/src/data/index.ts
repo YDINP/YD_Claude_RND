@@ -452,11 +452,13 @@ export function getQuest(id: string): any | undefined {
  * 등급별 소환 확률을 반환합니다
  * @returns 등급별 확률
  */
-export function getSummonRates(): { SSR: number; SR: number; R: number } {
+export function getSummonRates(): { SSR: number; SR: number; R: number; N: number } {
+  // GachaSystem.RATES와 동기화 (SSOT는 GachaSystem)
   return {
-    SSR: 0.03,  // 3%
-    SR: 0.15,   // 15%
-    R: 0.82     // 82%
+    SSR: 0.015, // 1.5%
+    SR: 0.085,  // 8.5%
+    R: 0.30,    // 30%
+    N: 0.60     // 60%
   };
 }
 

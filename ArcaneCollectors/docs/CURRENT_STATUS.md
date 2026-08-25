@@ -1,10 +1,48 @@
 # ArcaneCollectors 현재 상태
 
-> **최종 업데이트**: 2026-03-06
-> **브랜치**: `arcane/integration`
-> **테스트**: 685개 유닛 (전부 통과) | **빌드**: 0 에러 | **ESLint**: 에러 0개
+> **최종 업데이트**: 2026-08-24
+> **브랜치**: `main`
+> **테스트**: 685개 유닛 (마지막 전수 통과 기준 — 2026-08-24 변경분은 실행 대기, 아래 참조)
 > **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: GP-2 길드 시스템 완료 (GuildSystem + GuildPopup + Supabase 마이그레이션, 테스트 +36개)
+> **최근 작업**: 가챠 시스템 활성화 + 영웅 조회 연쇄 버그 수정 + config SSOT 동기화 + 실포트레이트 표시 (2026-08-24)
+
+---
+
+## 2026-08-24 세션: 가챠 활성화 + 포트레이트 표시 (완벽 구현 Phase 1~3)
+
+### Phase 1: 가챠 시스템 활성화
+| 파일 | 변경 |
+|------|------|
+| `src/systems/GachaSystem.js` | pull() 빈-풀 guard → lazy 자동 초기화 (BootScene 명시 초기화와 이중 방어). RATES/PITY_CONFIG 유지 (SSR 1.5% / softPity 75 / hardPity 90 / pickupPity 180) |
+| `src/scenes/BootScene.js` | 부팅 시 `GachaSystem.initializePool()` 1회 호출 |
+
+### Phase 2: 연쇄 버그 수정 + SSOT 동기화
+| 파일 | 변경 |
+|------|------|
+| `src/systems/SaveManager.js` | getBaseStars — base_*/asc_* 3단계 조회 + 문자열 rarity 변환 (stars=1 버그 해소) |
+| `src/systems/HeroFactory.ts` | adaptToCharacter 헬퍼 — cultId→cult, baseClass→class, baseMood→mood 필드 적응 + getCharacterOrHero 연동 ('???' 폴백 해소) |
+| `src/scenes/GachaScene.js`, `src/components/popups/GachaPopup.js` | getCharacter→getCharacterOrHero 교체 + 결과 매핑 필드 적응 |
+| `src/data/banners.json` | 전면 재작성 — standard + 현행 asc_* 픽업 3개 (iris/leon/sera+paolo), rates SSOT 동기화, 만료 배너 제거 |
+| `src/data/index.js` | 구버전 element 기반 복제본 → `export * from './index.ts'` 순수 shim (.js/.ts 로드 모호성 제거) |
+| `src/config/gameConfig.js` | LAYOUT↔layoutConfig 통일(topBar 80), gachaRates/pitySystem GachaSystem과 동기화 |
+| `src/data/index.ts` | getSummonRates → GachaSystem.RATES 동기화 (N 포함 4키) |
+| `tests/data/index.test.js` | getSummonRates 테스트 3건 갱신 |
+
+### Phase 3: 실제 포트레이트 표시 (IMG-3)
+| 파일 | 변경 |
+|------|------|
+| `src/systems/HeroAssetLoader.js` | `ensureTexture(scene, hero)` 신설 — 텍스처 없으면 향상된 플레이스홀더 온디맨드 생성 후 키 반환 |
+| `src/scenes/GachaScene.js` | 픽업 배너를 활성 배너(banners.json) 기반으로 표시(타이틀+픽업 캐릭터 실사진), 결과 카드 실포트레이트 + 종횡비 보존 스케일, 확률 문구 RATES SSOT 연동 |
+| `src/scenes/HeroListScene.js` | 목록 카드 실포트레이트 + setHeroData 풀 재사용 시 텍스처 교체 |
+| `src/scenes/HeroDetailScene.js` | 상세 화면 실포트레이트 |
+| `src/scenes/BattleScene.js` | 아군 배틀러 스프라이트 실포트레이트 |
+| `src/scenes/MainMenuScene.js` | 파티 아바타 원형 마스크 실포트레이트 (getCharacterOrHero + ensureTexture) |
+| `src/components/HeroCard.js` | 카드 포트레이트 실포트레이트 (emoji/이니셜 폴백 유지) |
+| `src/components/popups/HeroListPopup.js` | 팝업 카드 실포트레이트 |
+| `src/renderers/CharacterRenderer.js` | 코드 폴백 4종(thumbnail/card/battle/portrait) 전부 ensureTexture 선보장 — asc/base도 실루엣 대신 플레이스홀더 표시 |
+
+⚠️ **검증 대기**: 이 세션은 auto-mode Bash 분류기 장애로 vitest/tsc/build/git 커밋 미실행. **Bash 복구 시 최우선**: `npx vitest run` → `npx tsc --noEmit` → `npm run build` → 커밋+푸시.
+⚠️ **Phase 3b(이미지 생성) 블로커**: 사용자 지시 스킬인 gemini / codex(gpt-imagegen)가 이 환경에 설치되어 있지 않음(사용자·프로젝트 `.claude/skills` 및 플러그인 캐시 전수 확인). 대안: (1) 로컬 이미지생성 세팅(D:\AI\models — ComfyUI/Fooocus, Z-Image Turbo)으로 포트레이트 배치 생성, (2) Claude API image generation. 현재는 ensureTexture 고품질 플레이스홀더가 모든 캐릭터를 표기하므로 게임 동작에 지장 없음.
 
 ---
 

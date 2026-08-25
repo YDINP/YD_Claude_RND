@@ -3,9 +3,10 @@ import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
 import GameLogger from '../utils/GameLogger.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { GachaSystem } from '../systems/GachaSystem.js';
+import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
-import { getCharacter, normalizeHeroes } from '../data/index.js';
+import { getCharacterOrHero, normalizeHeroes } from '../data/index.js';
 import transitionManager from '../utils/TransitionManager.js';
 import navigationManager from '../systems/NavigationManager.js';
 
@@ -245,8 +246,17 @@ export class GachaScene extends Phaser.Scene {
       });
     }
 
+    // IMG-3: 활성 픽업 배너 기반 표시 (없으면 standard 폴백)
+    const activeBanners = GachaSystem.getActiveBanners();
+    const pickupBanner = activeBanners.find(b => b.type === 'pickup' || b.type === 'dual_pickup') || null;
+    const pickupId = pickupBanner?.pickupCharacters?.[0] || null;
+    const pickupData = pickupId ? (getCharacterOrHero(pickupId) || null) : null;
+
     // Banner title with glow
-    const bannerTitle = this.add.text(GAME_WIDTH / 2, bannerY - s(90), '✨ 발할라의 전사들 픽업! ✨', {
+    const bannerTitleText = pickupBanner
+      ? `✨ ${pickupBanner.name} ✨`
+      : '✨ 표준 소환 ✨';
+    const bannerTitle = this.add.text(GAME_WIDTH / 2, bannerY - s(90), bannerTitleText, {
       fontSize: sf(22),
       fontFamily: 'Georgia, serif',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
@@ -265,15 +275,19 @@ export class GachaScene extends Phaser.Scene {
       ease: 'Sine.easeInOut'
     });
 
-    // Rate up characters (placeholders)
+    // Rate up character (실제 포트레이트 우선, 없으면 온디맨드 플레이스홀더)
     const featured = this.add.container(GAME_WIDTH / 2, bannerY);
 
     const featuredBg = this.add.rectangle(0, 0, s(120), s(120), COLORS.raritySR, 0.3);
     featuredBg.setStrokeStyle(s(3), COLORS.raritySSR);
 
     let featuredChar;
-    if (this.textures.exists('hero_placeholder')) {
-      featuredChar = this.add.image(0, s(-10), 'hero_placeholder').setScale(1.2);
+    const featuredKey = pickupData ? HeroAssetLoader.ensureTexture(this, pickupData) : null;
+    if (featuredKey) {
+      featuredChar = this.add.image(0, s(-10), featuredKey);
+      // 카드 프레임(s120) 안에 맞추기 (포트레이트 종횡비 보존)
+      const fitScale = Math.min(s(100) / featuredChar.width, s(110) / featuredChar.height);
+      featuredChar.setScale(fitScale);
     } else {
       featuredChar = this.add.text(0, s(-10), '👤', { fontSize: sf(60) }).setOrigin(0.5);
     }
@@ -327,7 +341,10 @@ export class GachaScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    this.add.text(rateTextX + s(40), ratesY + s(10), 'SR 15%  R 50%  N 32%', {
+    // IMG-3: 확률 표시를 GachaSystem.RATES SSOT와 동기화
+    const pct = v => `${(v * 100).toFixed(1)}%`;
+    this.add.text(rateTextX + s(40), ratesY + s(10),
+      `SR ${pct(GachaSystem.RATES.SR)}  R ${pct(GachaSystem.RATES.R)}  N ${pct(GachaSystem.RATES.N)}`, {
       fontSize: sf(12),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
@@ -593,7 +610,7 @@ export class GachaScene extends Phaser.Scene {
 
     // 결과를 씬 UI용 형식으로 변환
     const results = pullResult.results.map(r => {
-      const charData = getCharacter(r.characterId);
+      const charData = getCharacterOrHero(r.characterId);
       return {
         id: r.characterId,
         name: charData?.name || r.characterId,
@@ -603,9 +620,9 @@ export class GachaScene extends Phaser.Scene {
         stats: charData?.stats || { hp: 100, atk: 20, def: 10, spd: 10 },
         isNew: r.isNew,
         shardsGained: r.shardsGained,
-        mood: charData?.mood || 'brave',
-        cult: charData?.cult || 'olympus',
-        class: charData?.class || 'warrior'
+        mood: charData?.mood || charData?.baseMood || 'brave',
+        cult: charData?.cult || charData?.cultId || null,
+        class: charData?.class || charData?.baseClass || 'warrior'
       };
     });
 
@@ -638,7 +655,7 @@ export class GachaScene extends Phaser.Scene {
 
     // 결과를 씬 UI용 형식으로 변환
     const results = result.results.map(r => {
-      const charData = getCharacter(r.characterId);
+      const charData = getCharacterOrHero(r.characterId);
       return {
         id: r.characterId,
         name: charData?.name || r.characterId,
@@ -648,9 +665,9 @@ export class GachaScene extends Phaser.Scene {
         stats: charData?.stats || { hp: 100, atk: 20, def: 10, spd: 10 },
         isNew: r.isNew,
         shardsGained: r.shardsGained,
-        mood: charData?.mood || 'brave',
-        cult: charData?.cult || 'olympus',
-        class: charData?.class || 'warrior'
+        mood: charData?.mood || charData?.baseMood || 'brave',
+        cult: charData?.cult || charData?.cultId || null,
+        class: charData?.class || charData?.baseClass || 'warrior'
       };
     });
 
@@ -1192,8 +1209,17 @@ export class GachaScene extends Phaser.Scene {
     const cardBg = this.add.rectangle(0, 0, s(75), s(110), COLORS.backgroundLight, 1);
     cardBg.setStrokeStyle(s(2), rarityColor);
 
-    // Hero image
-    const heroImg = this.add.image(0, s(-15), 'hero_placeholder').setScale(0.7);
+    // Hero image — IMG-3: 실제 포트레이트 우선, 없으면 온디맨드 플레이스홀더
+    const fullData = getCharacterOrHero(hero.id) || hero;
+    const texKey = HeroAssetLoader.ensureTexture(this, fullData);
+    const heroImg = this.add.image(0, s(-15), texKey || 'hero_placeholder');
+    if (texKey) {
+      // 카드(s75×s110) 안에 맞추기 (포트레이트 종횡비 보존)
+      const fitScale = Math.min(s(58) / heroImg.width, s(66) / heroImg.height);
+      heroImg.setScale(fitScale);
+    } else {
+      heroImg.setScale(0.7);
+    }
 
     // Rarity indicator
     const rarityBg = this.add.rectangle(0, s(-50), s(30), s(18), rarityColor, 1);

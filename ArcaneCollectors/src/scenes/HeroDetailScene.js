@@ -10,6 +10,7 @@ import uiRenderer from '../renderers/UIRenderer.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { RadarChart } from '../components/RadarChart.js';
+import { getCharacterOrHero } from '../data/index.js';
 import navigationManager from '../systems/NavigationManager.js';
 
 export class HeroDetailScene extends Phaser.Scene {
@@ -149,9 +150,15 @@ export class HeroDetailScene extends Phaser.Scene {
     const frame = this.add.rectangle(GAME_WIDTH / 2, displayY, s(180), s(200), frameRarityColorSet.bg, 0.3);
     frame.setStrokeStyle(s(3), frameRarityColorSet.border, 0.8);
 
-    // Hero image
-    const heroImg = this.add.image(GAME_WIDTH / 2, displayY, 'hero_placeholder');
-    heroImg.setScale(2);
+    // Hero image — IMG-3: 실제 포트레이트 우선, 없으면 온디맨드 플레이스홀더
+    const fullData = getCharacterOrHero(this.hero.id) || this.hero;
+    const texKey = HeroAssetLoader.ensureTexture(this, fullData);
+    const heroImg = this.add.image(GAME_WIDTH / 2, displayY, texKey || 'hero_placeholder');
+    if (texKey) {
+      heroImg.setScale(Math.min(s(160) / heroImg.width, s(180) / heroImg.height));
+    } else {
+      heroImg.setScale(2);
+    }
 
     // Idle animation
     this.tweens.add({

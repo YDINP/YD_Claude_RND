@@ -2,7 +2,7 @@ import { PopupBase } from '../PopupBase.js';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, s, sf } from '../../config/gameConfig.js';
 import { GachaSystem } from '../../systems/GachaSystem.js';
 import { SaveManager } from '../../systems/SaveManager.js';
-import { getCharacter } from '../../data/index.js';
+import { getCharacterOrHero } from '../../data/index.js';
 import { getRarityKey, getRarityNum } from '../../utils/rarityUtils.js';
 
 /**
@@ -330,7 +330,7 @@ export class GachaPopup extends PopupBase {
 
     // Convert results to display format
     const results = result.results.map(r => {
-      const charData = getCharacter(r.characterId);
+      const charData = getCharacterOrHero(r.characterId);
       return {
         id: r.characterId,
         name: charData?.name || r.characterId,
@@ -340,9 +340,9 @@ export class GachaPopup extends PopupBase {
         stats: charData?.stats || { hp: 100, atk: 20, def: 10, spd: 10 },
         isNew: r.isNew,
         shardsGained: r.shardsGained,
-        mood: charData?.mood || 'brave',
-        cult: charData?.cult || 'olympus',
-        class: charData?.class || 'warrior'
+        mood: charData?.mood || charData?.baseMood || 'brave',
+        cult: charData?.cult || charData?.cultId || null,
+        class: charData?.class || charData?.baseClass || 'warrior'
       };
     });
 

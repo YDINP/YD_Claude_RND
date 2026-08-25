@@ -4,10 +4,28 @@
  */
 
 import type { Character, OwnedHero, NormalizedHero, CharacterStats } from '../types';
-import { getCharacter } from '../data/index.js';
+import { getCharacter, getCharacterOrHero } from '../data/index.js';
 import { getRarityKey, getRarityStars } from '../utils/rarityUtils.js';
 
 const DEFAULT_STATS: CharacterStats = { hp: 100, atk: 10, def: 10, spd: 10 };
+
+/**
+ * base-heroes / ascended-heroes 데이터를 Character 스키마로 적응시킵니다.
+ * (cultId→cult, baseClass→class, baseMood→mood 필드명 불일치 흡수)
+ */
+function adaptToCharacter(raw: any): Character | null {
+  if (!raw) return null;
+  if (raw.stats || raw.cult) return raw as Character; // 이미 레거시 Character 스키마
+  return {
+    ...raw,
+    cult: raw.cult ?? raw.cultId ?? null,
+    class: raw.class ?? raw.baseClass ?? 'warrior',
+    mood: raw.mood ?? raw.baseMood ?? 'brave',
+    stats: raw.stats ?? DEFAULT_STATS,
+    growthStats: raw.growthStats ?? { hp: 0, atk: 0, def: 0, spd: 0 },
+    skills: raw.skills ?? []
+  } as Character;
+}
 
 /**
  * 영웅 생성 및 정규화를 담당하는 Factory 클래스
@@ -82,7 +100,7 @@ export class HeroFactory {
     const heroId = saveData.id || saveData.characterId;
     if (!heroId) return null;
 
-    const base = getCharacter(heroId);
+    const base = adaptToCharacter(getCharacterOrHero(heroId));
     if (!base) return null;
 
     return HeroFactory.createFromCharacterData(base, saveData);
@@ -115,7 +133,7 @@ export class HeroFactory {
     const heroId = hero.id || hero.characterId;
     if (!heroId) return null;
 
-    const base = getCharacter(heroId);
+    const base = adaptToCharacter(getCharacterOrHero(heroId));
 
     // 캐릭터 데이터가 없으면 기본값으로 생성
     if (!base) {
@@ -170,7 +188,7 @@ export class HeroFactory {
    * @returns 정규화된 영웅 객체
    */
   static createFromGacha(characterId: string, rarity: number): NormalizedHero | null {
-    const charData = getCharacter(characterId);
+    const charData = adaptToCharacter(getCharacterOrHero(characterId));
     if (!charData) return null;
 
     return HeroFactory.createFromCharacterData(charData, {

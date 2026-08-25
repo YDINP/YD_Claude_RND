@@ -7,7 +7,8 @@ import { PopupBase } from '../PopupBase.js';
 import { COLORS, GAME_WIDTH, RARITY, CULT_COLORS, s, sf } from '../../config/gameConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import { HeroInfoPopup } from '../HeroInfoPopup.js';
-import { getCharacter } from '../../data/index.js';
+import { getCharacter, getCharacterOrHero } from '../../data/index.js';
+import { HeroAssetLoader } from '../../systems/HeroAssetLoader.js';
 import { getRarityKey, getRarityNum } from '../../utils/rarityUtils.js';
 import { ProgressionSystem } from '../../systems/ProgressionSystem.js';
 
@@ -332,8 +333,9 @@ export class HeroListPopup extends PopupBase {
       fontSize: sf(11), fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
 
-    // Portrait — DiceBear 이미지 우선, 없으면 emoji 폴백
-    const portraitKey = `hero_${hero.id || hero.characterId}`;
+    // Portrait — IMG-3: 온디맨드 텍스처 보장(asc/base 폴백), 그래도 없으면 emoji 폴백
+    const fullData = getCharacterOrHero(hero.id || hero.characterId) || hero;
+    const portraitKey = HeroAssetLoader.ensureTexture(this.scene, fullData) || `hero_${hero.id || hero.characterId}`;
     let portrait;
     if (this.scene.textures.exists(portraitKey)) {
       portrait = this.scene.add.image(0, s(-15), portraitKey);

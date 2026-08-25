@@ -13,6 +13,7 @@
 import { COLORS, MOODS, CULT_COLORS, RARITY } from '../config/gameConfig.js';
 import { getRarityKey } from '../utils/helpers.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
+import { getCharacterOrHero } from '../data/index.js';
 
 // 에셋 경로 매핑
 const ASSET_PATHS = {
@@ -210,8 +211,9 @@ class CharacterRenderer {
     bg.fillRoundedRect(-halfW, -halfH, width, height, 6);
     container.add(bg);
 
-    // HeroAssetLoader 플레이스홀더 사용 (이미 생성된 텍스처)
-    const heroTextureKey = HeroAssetLoader.getTextureKey(hero);
+    // HeroAssetLoader 플레이스홀더 사용 — IMG-3: asc/base 온디맨드 보장
+    const fullHero = getCharacterOrHero(hero.id) || hero;
+    const heroTextureKey = HeroAssetLoader.ensureTexture(scene, fullHero) || HeroAssetLoader.getTextureKey(fullHero);
     if (scene.textures.exists(heroTextureKey)) {
       const portrait = scene.add.image(0, 0, heroTextureKey);
       portrait.setDisplaySize(width - 8, height - 8);
@@ -281,7 +283,9 @@ class CharacterRenderer {
     const portraitH = height * 0.55;
     const portraitY = -halfH + 20 + portraitH / 2;
 
-    const heroTextureKey = HeroAssetLoader.getTextureKey(hero);
+    // IMG-3: asc/base 온디맨드 텍스처 보장
+    const cardFullHero = getCharacterOrHero(hero.id) || hero;
+    const heroTextureKey = HeroAssetLoader.ensureTexture(scene, cardFullHero) || HeroAssetLoader.getTextureKey(cardFullHero);
     if (scene.textures.exists(heroTextureKey)) {
       const portrait = scene.add.image(0, portraitY, heroTextureKey);
       portrait.setDisplaySize(width - 30, portraitH);
@@ -376,8 +380,9 @@ class CharacterRenderer {
     bg.fillCircle(0, 0, halfW - 2);
     container.add(bg);
 
-    // 캐릭터 이미지
-    const heroTextureKey = HeroAssetLoader.getTextureKey(hero);
+    // 캐릭터 이미지 — IMG-3: asc/base 온디맨드 텍스처 보장
+    const bFullHero = getCharacterOrHero(hero.id) || hero;
+    const heroTextureKey = HeroAssetLoader.ensureTexture(scene, bFullHero) || HeroAssetLoader.getTextureKey(bFullHero);
     if (scene.textures.exists(heroTextureKey)) {
       const portrait = scene.add.image(0, 0, heroTextureKey);
       portrait.setDisplaySize(width - 20, height - 20);
@@ -440,8 +445,9 @@ class CharacterRenderer {
     bg.fillCircle(0, 0, halfW - 2);
     container.add(bg);
 
-    // 캐릭터 이미지
-    const heroTextureKey = HeroAssetLoader.getTextureKey(hero);
+    // 캐릭터 이미지 — IMG-3: asc/base 온디맨드 텍스처 보장
+    const pFullHero = getCharacterOrHero(hero.id) || hero;
+    const heroTextureKey = HeroAssetLoader.ensureTexture(scene, pFullHero) || HeroAssetLoader.getTextureKey(pFullHero);
     if (scene.textures.exists(heroTextureKey)) {
       const portrait = scene.add.image(0, 0, heroTextureKey);
       portrait.setDisplaySize(width - 8, height - 8);

@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { COLORS, RARITY, MOODS, CULT_COLORS, s, sf } from '../config/gameConfig.js';
 import { getRarityKey } from '../utils/rarityUtils.js';
 import { StarRating } from './StarRating.js';
+import { getCharacterOrHero } from '../data/index.js';
+import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 
 export class HeroCard extends Phaser.GameObjects.Container {
   /**
@@ -133,8 +135,9 @@ export class HeroCard extends Phaser.GameObjects.Container {
       s(6)
     );
 
-    // Try to load portrait image
-    const portraitKey = `hero_${this.heroData.id}`;
+    // Try to load portrait image — IMG-3: asc/base 온디맨드 텍스처 보장
+    const fullData = getCharacterOrHero(this.heroData.id) || this.heroData;
+    const portraitKey = HeroAssetLoader.ensureTexture(this.scene, fullData) || `hero_${this.heroData.id}`;
     if (this.scene.textures.exists(portraitKey)) {
       this.portraitImage = this.scene.add.image(0, portraitY, portraitKey);
       this.portraitImage.setDisplaySize(portraitSize - s(4), portraitSize - s(4));
