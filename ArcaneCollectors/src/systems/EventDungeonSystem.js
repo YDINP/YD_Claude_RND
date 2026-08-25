@@ -21,6 +21,32 @@ export const EventDungeonEvents = {
 
 export class EventDungeonSystem {
   /**
+   * 상시 이벤트 여부 (기간 만료 시 연 단위 롤링으로 자동 재개)
+   * @param {Object} event 이벤트 데이터
+   * @returns {boolean}
+   */
+  static _isAlwaysActive(event) {
+    return event?.alwaysActive === true;
+  }
+
+  /**
+   * 유효 종료일 계산 — alwaysActive 이벤트는 종료일이 지나면 연도를 롤링해 현재를 포함
+   * @param {Object} event 이벤트 데이터
+   * @returns {Date} 유효 종료일
+   */
+  static _getEffectiveEndDate(event) {
+    let end = new Date(event.endDate);
+    if (!this._isAlwaysActive(event)) return end;
+
+    const now = new Date();
+    while (end < now) {
+      end = new Date(end);
+      end.setFullYear(end.getFullYear() + 1);
+    }
+    return end;
+  }
+
+  /**
    * 활성 이벤트 목록 가져오기
    * @returns {Array} 활성 이벤트 배열
    */
@@ -30,7 +56,7 @@ export class EventDungeonSystem {
 
     return events.filter(event => {
       const startDate = new Date(event.startDate);
-      const endDate = new Date(event.endDate);
+      const endDate = this._getEffectiveEndDate(event);
       return now >= startDate && now <= endDate;
     });
   }
@@ -44,6 +70,7 @@ export class EventDungeonSystem {
     const events = eventsData.events || [];
 
     return events.filter(event => {
+      if (this._isAlwaysActive(event)) return false;
       const startDate = new Date(event.startDate);
       return now < startDate;
     }).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
@@ -58,6 +85,7 @@ export class EventDungeonSystem {
     const events = eventsData.events || [];
 
     return events.filter(event => {
+      if (this._isAlwaysActive(event)) return false;
       const endDate = new Date(event.endDate);
       return now > endDate;
     });
@@ -84,7 +112,7 @@ export class EventDungeonSystem {
 
     const now = new Date();
     const startDate = new Date(event.startDate);
-    const endDate = new Date(event.endDate);
+    const endDate = this._getEffectiveEndDate(event);
 
     return now >= startDate && now <= endDate;
   }
@@ -463,7 +491,7 @@ export class EventDungeonSystem {
     if (!event) return null;
 
     const now = new Date();
-    const endDate = new Date(event.endDate);
+    const endDate = this._getEffectiveEndDate(event);
     const diffMs = endDate - now;
 
     if (diffMs <= 0) {

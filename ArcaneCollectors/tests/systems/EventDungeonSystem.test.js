@@ -66,16 +66,12 @@ describe('EventDungeonSystem', () => {
       expect(shadowEvent).toBeDefined();
     });
 
-    it('날짜 범위를 올바르게 확인해야 함', () => {
+    it('활성 이벤트는 활성 기간 내에 있어야 함', () => {
       const activeEvents = EventDungeonSystem.getActiveEvents();
-      const now = new Date();
 
       activeEvents.forEach(event => {
-        const startDate = new Date(event.startDate);
-        const endDate = new Date(event.endDate);
-
-        expect(now >= startDate).toBe(true);
-        expect(now <= endDate).toBe(true);
+        // alwaysActive 이벤트는 종료일 연도 롤링을 포함한 유효 기준으로 판정
+        expect(EventDungeonSystem.isEventActive(event.id)).toBe(true);
       });
     });
   });
