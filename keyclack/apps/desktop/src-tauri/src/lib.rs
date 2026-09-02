@@ -322,7 +322,8 @@ pub fn run() {
     let mut cfg = AppConfig::load();
     let _ = std::fs::create_dir_all(cfg.packs_dir());
     // A pack that was deleted or renamed must not keep erroring on every start.
-    let missing = |id: &String| !cfg.packs_dir().join(id).join("config.json").is_file();
+    let packs_dir = cfg.packs_dir();
+    let missing = |id: &String| !packs_dir.join(id).join("config.json").is_file();
     if cfg.pack.as_ref().map(&missing).unwrap_or(false) {
         eprintln!("[config] pack {:?} not found; falling back to built-in", cfg.pack);
         cfg.pack = None;
