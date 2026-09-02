@@ -1,0 +1,340 @@
+.hub-game-screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.hub-game-screen--error {
+  align-items: center;
+  justify-content: center;
+  gap: var(--hub-space-md);
+  padding: var(--hub-space-xl);
+  text-align: center;
+}
+
+.hub-game-screen__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hub-space-sm);
+  padding: var(--hub-space-md) var(--hub-space-lg);
+  background: var(--hub-secondary-bg);
+  border-bottom: 1px solid var(--hub-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.hub-game-screen__back {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--hub-card-bg);
+  color: var(--hub-text);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.hub-game-screen__back--standalone {
+  position: absolute;
+  top: var(--hub-space-lg);
+  left: var(--hub-space-lg);
+}
+
+.hub-game-screen__title {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: var(--hub-font-body);
+  font-weight: 700;
+  color: var(--hub-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hub-game-screen__wallet-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--hub-card-bg);
+  border: 1px solid rgba(216, 169, 74, 0.4);
+  color: var(--hub-gold-light);
+  font-size: var(--hub-font-sub);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.hub-game-screen__stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--hub-bg);
+  overflow: hidden;
+}
+
+.hub-game-screen__canvas {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 100%;
+}
+
+.hub-game-screen__loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hub-text-sub);
+  font-size: var(--hub-font-body);
+}
+
+/* 릴 그래픽 로딩 실패 시 비차단 안내 — 스핀 버튼은 계속 동작한다 */
+.hub-game-screen__renderer-note {
+  position: absolute;
+  bottom: var(--hub-space-md);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(11, 18, 32, 0.85);
+  border: 1px solid var(--hub-border);
+  color: var(--hub-text-sub);
+  font-size: var(--hub-font-small);
+  text-align: center;
+}
+
+.hub-game-screen__win-banner {
+  position: absolute;
+  top: var(--hub-space-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--hub-space-sm) var(--hub-space-lg);
+  border-radius: var(--hub-radius-md);
+  background: rgba(11, 18, 32, 0.85);
+  border: 1px solid rgba(216, 169, 74, 0.4);
+}
+
+.hub-game-screen__win-banner--big {
+  border-color: var(--hub-gold-light);
+  box-shadow: 0 0 24px rgba(244, 217, 138, 0.5);
+}
+
+.hub-game-screen__big-win-label {
+  font-size: var(--hub-font-sub);
+  font-weight: 800;
+  color: var(--hub-gold-light);
+  letter-spacing: 0.06em;
+}
+
+.hub-game-screen__win-label {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hub-game-screen__win-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--hub-gold-light);
+}
+
+.hub-game-screen__controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-sm);
+  padding: var(--hub-space-lg);
+  background: var(--hub-secondary-bg);
+  border-top: 1px solid var(--hub-border);
+}
+
+.hub-game-screen__bet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hub-space-md);
+}
+
+.hub-game-screen__bet-btn {
+  width: var(--hub-touch-min);
+  height: var(--hub-touch-min);
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+  color: var(--hub-text);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.hub-game-screen__bet-btn:disabled {
+  opacity: 0.5;
+}
+
+.hub-game-screen__bet-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 96px;
+}
+
+.hub-game-screen__bet-label {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hub-game-screen__bet-value {
+  font-size: var(--hub-font-title);
+  font-weight: 800;
+  color: var(--hub-gold-light);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-game-screen__spin {
+  min-height: 52px;
+  border-radius: var(--hub-radius-md);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #2a1a04;
+  background: linear-gradient(135deg, var(--hub-gold-light), var(--hub-gold));
+  text-transform: uppercase;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.hub-game-screen__spin:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.hub-game-screen__spin:disabled {
+  opacity: 0.55;
+}
+
+.hub-game-screen__fair-link {
+  align-self: center;
+  background: none;
+  color: var(--hub-link);
+  font-size: var(--hub-font-small);
+  padding: var(--hub-space-xs);
+}
+
+.hub-game-screen__fair-link:disabled {
+  opacity: 0.4;
+}
+
+.hub-game-screen__error-message {
+  color: var(--hub-text-sub);
+}
+
+.hub-game-screen__retry {
+  min-height: var(--hub-touch-min);
+  padding: 0 var(--hub-space-lg);
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-button-bg);
+  color: var(--hub-button-text);
+  font-weight: 700;
+}
+
+/* 하단 시트 (코인 소진 / provably fair) */
+.hub-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 200;
+}
+
+.hub-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--hub-secondary-bg);
+  border: 1px solid var(--hub-border);
+  border-bottom: none;
+  border-radius: var(--hub-radius-lg) var(--hub-radius-lg) 0 0;
+  padding: var(--hub-space-xl) var(--hub-space-lg) calc(var(--hub-space-xl) + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-sm);
+}
+
+.hub-sheet__title {
+  font-size: var(--hub-font-title);
+  color: var(--hub-text);
+  margin: 0;
+}
+
+.hub-sheet__message {
+  color: var(--hub-text-sub);
+}
+
+.hub-sheet__fair-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--hub-space-xs) var(--hub-space-md);
+  margin: 0;
+}
+
+.hub-sheet__fair-list dt {
+  color: var(--hub-text-sub);
+  font-size: var(--hub-font-small);
+}
+
+.hub-sheet__mono {
+  margin: 0;
+  font-family: var(--hub-mono);
+  font-size: var(--hub-font-small);
+  color: var(--hub-text);
+  word-break: break-all;
+}
+
+.hub-sheet__reveal {
+  margin-top: var(--hub-space-sm);
+  min-height: var(--hub-touch-min);
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-button-bg);
+  color: var(--hub-button-text);
+  font-weight: 700;
+}
+
+.hub-sheet__reveal:disabled {
+  opacity: 0.6;
+}
+
+.hub-sheet__verify-status {
+  font-size: var(--hub-font-sub);
+  color: var(--hub-text-sub);
+}
+
+.hub-sheet__verify-status--ok {
+  color: var(--hub-success);
+}
+
+.hub-sheet__verify-status--fail {
+  color: var(--hub-danger);
+}
+
+.hub-sheet__close {
+  min-height: var(--hub-touch-min);
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+  color: var(--hub-text);
+  font-weight: 700;
+}

@@ -15,6 +15,7 @@ function makeConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
     port: 8787,
     allowDevMock: false,
     corsOrigin: '*',
+    spinLockTimeoutMs: 15_000,
     ...overrides,
   }
 }

@@ -8,5 +8,5 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   // 워크스페이스 패키지는 .ts 소스라 번들에 포함. 나머지 deps는 외부 유지.
-  noExternal: ['@tgslot/shared'],
+  noExternal: ['@tgslot/shared', '@tgslot/slot-engine', '@tgslot/game-sdk'],
 })

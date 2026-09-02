@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Wild">
+  <defs>
+    <linearGradient id="wildBody" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#fff3c4"/>
+      <stop offset="0.45" stop-color="#e9c25f"/>
+      <stop offset="1" stop-color="#9a7526"/>
+    </linearGradient>
+  </defs>
+  <path d="M128 20l28 60 66 9-48 46 12 65-58-31-58 31 12-65-48-46 66-9z"
+        fill="url(#wildBody)" stroke="#7a5c1c" stroke-width="9" stroke-linejoin="round"/>
+  <rect x="46" y="126" width="164" height="42" rx="12" fill="#0b1220" opacity="0.86"/>
+  <text x="128" y="148" text-anchor="middle" dominant-baseline="central"
+        font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="700"
+        letter-spacing="5" fill="#f4d98a">WILD</text>
+</svg>

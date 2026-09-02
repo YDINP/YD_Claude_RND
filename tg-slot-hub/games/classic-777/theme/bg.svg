@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" preserveAspectRatio="none" role="img" aria-label="Reel background">
+  <defs>
+    <radialGradient id="vignette" cx="0.5" cy="0.42" r="0.78">
+      <stop offset="0" stop-color="#1b2740"/>
+      <stop offset="0.55" stop-color="#111a2c"/>
+      <stop offset="1" stop-color="#070c16"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#vignette)"/>
+  <g fill="#d8a94a" opacity="0.05">
+    <circle cx="256" cy="214" r="176"/>
+  </g>
+</svg>

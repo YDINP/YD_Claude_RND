@@ -67,3 +67,38 @@ export type GamesResponse = z.infer<typeof GamesResponseSchema>
 
 export const ApiErrorSchema = z.object({ error: z.string(), code: z.string().optional() })
 export type ApiError = z.infer<typeof ApiErrorSchema>
+
+// ---- 스핀 (Phase 2) ----
+export const SpinRequestSchema = z.object({
+  totalBet: z.number().int().min(1),
+  /** 클라이언트가 스핀마다 새로 만드는 키. 재전송 시 같은 결과를 돌려준다 */
+  idempotencyKey: z.string().min(8).max(64),
+})
+export type SpinRequest = z.infer<typeof SpinRequestSchema>
+
+export const WinLineSchema = z.object({
+  line: z.number().int().min(0),
+  symbol: z.string(),
+  count: z.number().int().min(1),
+  multiplier: z.number(),
+  win: z.number().int().min(0),
+  /** [reel, row] 좌표 목록 */
+  positions: z.array(z.tuple([z.number().int(), z.number().int()])),
+})
+export type WinLine = z.infer<typeof WinLineSchema>
+
+export const SpinResponseSchema = z.object({
+  roundId: z.string(),
+  stops: z.array(z.number().int()),
+  /** grid[row][reel] = symbolId */
+  grid: z.array(z.array(z.string())),
+  wins: z.array(WinLineSchema),
+  totalBet: z.number().int(),
+  totalWin: z.number().int(),
+  /** 스핀 반영 후 서버 잔액. 클라이언트는 이 값으로 덮어쓴다 */
+  wallet: WalletSchema,
+  /** provably fair: 라운드 서버 시드의 sha256 hex */
+  seedHash: z.string(),
+  nonce: z.number().int(),
+})
+export type SpinResponse = z.infer<typeof SpinResponseSchema>

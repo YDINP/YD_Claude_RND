@@ -17,7 +17,7 @@ import { createCryptoRng } from '@tgslot/slot-engine/crypto-rng' // 서버 전�
 | `computeExactRtp(math, totalBet)` | 전 조합 전수 조사. 3릴 모델의 **정확한** RTP |
 | `simulate(math, totalBet, spins, rng)` | 몬테카를로. 큰 모델과 회귀 검증용 |
 | `createSeededRng(seed)` | xoshiro128**. 결정론. 테스트·시뮬·provably fair |
-| `createCryptoRng()` | `node:crypto` 기반. **실제 스핀은 이것만 쓴다** |
+| `createCryptoRng()` | `node:crypto` 원시 난수. 실제 스핀은 라운드마다 crypto로 만든 256비트 시드를 `createSeededRng(`${seed}:${nonce}`)`에 넣어 돌린다(provably fair). 이 함수는 검증이 필요 없는 호출자용 |
 
 `createCryptoRng`는 브라우저 번들에 `node:crypto`가 딸려오지 않도록
 `@tgslot/slot-engine/crypto-rng` 서브패스로만 노출한다.

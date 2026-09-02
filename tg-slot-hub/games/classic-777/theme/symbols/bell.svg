@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Bell">
+  <defs>
+    <linearGradient id="bellBody" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#ffe9a8"/>
+      <stop offset="0.45" stop-color="#e5b957"/>
+      <stop offset="1" stop-color="#9a7526"/>
+    </linearGradient>
+  </defs>
+  <path d="M128 34c9 0 16 7 16 16v6c31 11 50 40 50 74v34l16 22H46l16-22v-34c0-34 19-63 50-74v-6c0-9 7-16 16-16z"
+        fill="url(#bellBody)" stroke="#7a5c1c" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M96 74c-14 14-22 34-22 56v30" fill="none" stroke="#fff3c4" stroke-width="9" stroke-linecap="round" opacity="0.65"/>
+  <circle cx="128" cy="204" r="18" fill="url(#bellBody)" stroke="#7a5c1c" stroke-width="8"/>
+</svg>

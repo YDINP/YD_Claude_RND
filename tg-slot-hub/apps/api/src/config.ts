@@ -1,3 +1,5 @@
+import { DEFAULT_SPIN_LOCK_TIMEOUT_MS } from './spin/lock.js'
+
 /** apps/api 런타임 설정. 필수 값이 없으면 부팅 시점에 즉시 에러를 던진다. */
 export interface ApiConfig {
   telegramBotToken: string
@@ -8,6 +10,8 @@ export interface ApiConfig {
   /** true일 때만 `mock:<telegramId>:<firstName>` initData를 서명 검증 없이 허용 */
   allowDevMock: boolean
   corsOrigin: string
+  /** 유저별 스핀 락을 쥔 채 기다릴 수 있는 최대 시간(ms). 넘기면 락을 놓고 503을 돌려준다. */
+  spinLockTimeoutMs: number
 }
 
 const DEFAULT_PORT = 8787
@@ -26,6 +30,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   const port = env.API_PORT ? Number(env.API_PORT) : DEFAULT_PORT
   if (!Number.isFinite(port)) {
     throw new Error(`[config] API_PORT must be a number, got: ${env.API_PORT}`)
+  }
+
+  const spinLockTimeoutMs = env.SPIN_LOCK_TIMEOUT_MS
+    ? Number(env.SPIN_LOCK_TIMEOUT_MS)
+    : DEFAULT_SPIN_LOCK_TIMEOUT_MS
+  if (!Number.isFinite(spinLockTimeoutMs) || spinLockTimeoutMs <= 0) {
+    throw new Error(`[config] SPIN_LOCK_TIMEOUT_MS must be a positive number, got: ${env.SPIN_LOCK_TIMEOUT_MS}`)
   }
 
   const allowDevMock = env.API_ALLOW_DEV_MOCK === 'true'
@@ -47,5 +58,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     port,
     allowDevMock,
     corsOrigin: env.CORS_ORIGIN || '*',
+    spinLockTimeoutMs,
   }
 }

@@ -1,0 +1,58 @@
+import type { GameMath, WinLine } from '@tgslot/slot-engine'
+import { BIG_WIN_BET_MULTIPLIER, WIN_CYCLE_MS } from './constants.js'
+
+/** 승리 라인의 총 지급 코인. */
+export function totalWinOf(wins: readonly WinLine[]): number {
+  return wins.reduce((sum, win) => sum + win.win, 0)
+}
+
+/**
+ * 총 배당이 베팅액의 몇 배인지.
+ * `totalBet`을 주면 정확히 계산하고, 없으면 라인 배수 합을 라인 수로 나눠 추정한다
+ * (엔진은 `win = multiplier x betPerLine`, `totalBet = betPerLine x lines`이므로 둘은 같다).
+ */
+export function winBetMultiple(wins: readonly WinLine[], math: GameMath, totalBet?: number): number {
+  if (typeof totalBet === 'number' && totalBet > 0) return totalWinOf(wins) / totalBet
+  const lines = math.paylines.length
+  if (lines <= 0) return 0
+  return wins.reduce((sum, win) => sum + win.multiplier, 0) / lines
+}
+
+/** 빅윈(코인 샤워) 판정. 기본 기준은 베팅액의 20배. */
+export function isBigWin(
+  wins: readonly WinLine[],
+  math: GameMath,
+  totalBet?: number,
+  threshold: number = BIG_WIN_BET_MULTIPLIER,
+): boolean {
+  if (wins.length === 0) return false
+  return winBetMultiple(wins, math, totalBet) >= threshold
+}
+
+/** 페이라인 색. 라인 인덱스를 팔레트 길이로 감아 고른다. */
+export function paylineColor(palette: readonly string[], line: number): string {
+  if (palette.length === 0) throw new RangeError('winLine 팔레트가 비었다')
+  const color = palette[((line % palette.length) + palette.length) % palette.length]
+  if (color === undefined) throw new RangeError(`팔레트 색을 찾지 못했다: ${line}`)
+  return color
+}
+
+export interface WinCycleStep {
+  /** 이 단계에서 보여줄 승리 라인. */
+  win: WinLine
+  /** 스텝 시작 시각(ms). */
+  atMs: number
+}
+
+/**
+ * 승리 라인을 한 줄씩 순환하는 재생 목록.
+ * `loop`가 false면 목록 1회분만, true면 호출 측이 이 목록을 반복한다.
+ */
+export function buildWinCycle(wins: readonly WinLine[], cycleMs: number = WIN_CYCLE_MS): WinCycleStep[] {
+  return wins.map((win, index) => ({ win, atMs: index * cycleMs }))
+}
+
+/** 라인 옆에 띄우는 배당 라벨. 코인 단위 정수. */
+export function formatWinLabel(win: WinLine): string {
+  return `+${win.win.toLocaleString('en-US')}`
+}

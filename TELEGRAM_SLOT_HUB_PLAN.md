@@ -1,7 +1,7 @@
 # Telegram 슬롯 허브 — 구조 계획서
 
 작성일: 2026-09-02
-상태: Phase 1 엔진 완료 (2026-09-02). 실제 텔레그램 클라이언트 검증은 봇 토큰·공개 URL 확보 후
+상태: Phase 2 첫 게임 완료 (2026-09-02). 아트 생성(Phase A)은 이미지 API 키 대기. 실제 텔레그램 클라이언트 검증은 봇 토큰·공개 URL 확보 후
 
 ## 0. 전제와 가정
 
@@ -47,7 +47,7 @@ tg-slot-hub/
 │   └── fruit-fiesta/   # 2호. 5x3, 20라인 + 프리스핀
 └── tools/
     ├── rtp-sim/        # CLI. math.json → 1천만 스핀 → RTP·분산·히트율·최대배수 리포트
-    └── theme-gen/      # ComfyUI 심볼 세트 생성 파이프라인 (기존 로컬 세팅 재활용)
+    └── theme-gen/      # 심볼·프레임·배경 생성 CLI. 프로바이더: OpenAI gpt-image-1 / Gemini 이미지 / 로컬 ComfyUI
 ```
 
 패키지 매니저는 pnpm workspace. 처음엔 hub 하나로 게임을 코드 스플리팅(`import()`)해 한 번에 배포하고, 게임 수가 늘어 배포 분리가 필요해지면 그때 게임별 번들로 쪼갠다.
@@ -164,11 +164,12 @@ export interface GameClient {
 |---|---|---|---|
 | 0 골격 ✅ | pnpm 모노레포, TMA 로그인(initData HMAC 검증 → JWT), mock 지갑, 로비 화면 | 텔레그램에서 미니앱 열고 내 코인이 보임 (브라우저 dev mock 검증 완료, 실기기 검증은 배포 후) | 완료 2026-09-02 |
 | 1 엔진 ✅ | slot-engine + rtp-sim CLI + 결정론 테스트 | classic-777 전수조사 RTP 95.996%, 적중률 30.49%, 최대 140.6x. 게이트 테스트가 games/* 전부 검사 | 완료 2026-09-02 |
-| 2 첫 게임 | renderer + classic-777 + 서버 spin API + 원장 | 실제 서버 스핀이 end-to-end로 돌고 잔액 불변식 통과 | 2주 |
+| 2 첫 게임 ✅ | renderer + classic-777 + 서버 spin API + 원장 | 브라우저 e2e: 스핀→서버 결과→릴 착지→페이라인 오버레이→서버 잔액 반영. 멱등 재전송·provably fair(시드 해시+정지위치 재현) 검증 | 완료 2026-09-02 |
 | 3 허브 | 데일리 보너스, 잭팟, 리더보드, 미션, 레벨 | 7일 리텐션 루프가 코드로 존재 | 1~2주 |
 | 4 수익화 | Stars 상점, Adsgram, 봇 알림, 추천 딥링크 | 실결제 1건과 광고 리워드 1건 검증 | 1주 |
 | 5 양산 | _template + theme-gen → 게임 2·3호 | **게임 1개 추가에 1~2일** | 반복 |
 | 6 운영 | admin, 지표(ARPDAU, 세션당 스핀, RTP 실측), 튜닝 | 대시보드에서 RTP·보너스 값 변경 가능 | 이후 |
+| A 아트 (Phase 2와 병행) | 이미지 디자인 기획(허브 컨셉·릴 프레임·심볼 세트) → `docs/ART_DIRECTION.md` + 게임별 `art/prompts.json` → `tools/theme-gen`으로 GPT 이미지(gpt-image-1) / Gemini 이미지 / 로컬 ComfyUI 중 가용 프로바이더로 생성 → `theme/` 자동 갱신 | classic-777 심볼 7종·프레임·배경·썸네일이 생성 이미지로 교체되고 렌더러에 표시됨 | 기획·프롬프트·도구 완료. 생성은 `OPENAI_API_KEY` 또는 `GEMINI_API_KEY` 입력 후 `pnpm --filter @tgslot/theme-gen gen games/classic-777` |
 
 각 Phase 완료마다 정리 커밋 + 푸시.
 

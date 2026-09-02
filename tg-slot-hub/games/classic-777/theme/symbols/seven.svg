@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Lucky Seven">
+  <defs>
+    <linearGradient id="sevenBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff5f52"/>
+      <stop offset="1" stop-color="#c1121f"/>
+    </linearGradient>
+    <linearGradient id="sevenEdge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4d98a"/>
+      <stop offset="0.55" stop-color="#d8a94a"/>
+      <stop offset="1" stop-color="#9a7526"/>
+    </linearGradient>
+  </defs>
+  <path d="M62 44h132v30l-60 138h-42l60-134H62z"
+        fill="url(#sevenBody)" stroke="url(#sevenEdge)" stroke-width="11"
+        stroke-linejoin="round"/>
+  <path d="M78 58h100l-6 14H78z" fill="#ffffff" opacity="0.22"/>
+</svg>

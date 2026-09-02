@@ -15,7 +15,9 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
+    "@tgslot/game-sdk": "workspace:*",
     "@tgslot/shared": "workspace:*",
+    "@tgslot/slot-engine": "workspace:*",
     "drizzle-orm": "^0.36.4",
     "hono": "^4.6.9",
     "jose": "^5.9.6",

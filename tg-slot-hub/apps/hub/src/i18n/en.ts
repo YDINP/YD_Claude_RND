@@ -15,6 +15,26 @@ const en = {
   outsideTelegramTitle: 'Open this app inside Telegram',
   outsideTelegramMessage:
     'Slot Hub only works inside the Telegram app. Open it from the bot to start playing.',
+  back: 'Back',
+  spin: 'Spin',
+  bet: 'Bet',
+  totalWin: 'Total win',
+  bigWin: 'BIG WIN!',
+  outOfCoinsTitle: "You're out of coins",
+  outOfCoinsMessage: 'Come back later for a free coin refill, or check the shop soon.',
+  close: 'Close',
+  provablyFair: 'Provably fair',
+  provablyFairSeedHash: 'Seed hash',
+  provablyFairNonce: 'Nonce',
+  revealSeed: 'Reveal seed',
+  verifying: 'Verifying...',
+  fairVerifyHash: 'Seed hash',
+  fairVerifyStops: 'Reel stops',
+  fairVerifyOk: 'Matches',
+  fairVerifyFail: 'Does not match',
+  verifyError: 'Could not verify right now',
+  gameLoadError: 'Could not load this game',
+  graphicsUnavailable: 'Graphics unavailable — spin still works',
 } as const
 
 export default en

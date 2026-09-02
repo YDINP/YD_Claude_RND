@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`formatDryRunPlan > 픽스처 전체 자산 계획을 스냅샷과 비교한다 (--dry-run 출력) 1`] = `
+"  [symbol] seven
+      prompt: flat vector icon, bold clean linework, vibrant saturated colors, centered composition, studio lighting, high detail, a glossy red number seven slot symbol with gold outline
+      size: 1024x1024  transparent: true  out: theme/symbols/seven.webp
+  [symbol] bell
+      prompt: flat vector icon, bold clean linework, vibrant saturated colors, centered composition, studio lighting, high detail, a golden liberty bell slot symbol with sparkle highlights
+      size: 1024x1024  transparent: true  out: theme/symbols/bell.webp
+  [frame] frame
+      prompt: flat vector icon, bold clean linework, vibrant saturated colors, centered composition, studio lighting, high detail, an ornate art-deco gold frame border for a slot machine reel window
+      size: 1024x1536  transparent: true  out: theme/frame.webp
+  [bg] background
+      prompt: flat vector icon, bold clean linework, vibrant saturated colors, centered composition, studio lighting, high detail, a dark velvet casino backdrop with soft bokeh lights
+      size: 1536x1024  transparent: false  out: theme/bg.webp
+  [thumb] thumb
+      prompt: flat vector icon, bold clean linework, vibrant saturated colors, centered composition, studio lighting, high detail, a promotional thumbnail showing the classic 777 slot machine cabinet
+      size: 1024x1024  transparent: false  out: art/thumb.webp"
+`;

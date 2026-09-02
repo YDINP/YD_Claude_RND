@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "symbols": {
+    "wild": "symbols/wild.svg",
+    "seven": "symbols/seven.svg",
+    "bar3": "symbols/bar3.svg",
+    "bar2": "symbols/bar2.svg",
+    "bar1": "symbols/bar1.svg",
+    "bell": "symbols/bell.svg",
+    "cherry": "symbols/cherry.svg",
+    "blank": "symbols/blank.svg"
+  },
+  "background": "bg.svg",
+  "palette": {
+    "frame": "#d8a94a",
+    "reelBg": "#0b1220",
+    "winLine": ["#f4d98a", "#4fc3d9", "#3fae6a", "#e0605c", "#5b9dff"],
+    "text": "#f2f4f8"
+  }
+}

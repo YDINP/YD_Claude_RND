@@ -104,6 +104,39 @@ export function isInsideTelegram(): boolean {
   return getInitDataRaw() !== null
 }
 
+/** 직전에 showBackButton()이 등록한 리스너 해제 함수. 중복 등록을 막는 데 쓴다. */
+let backButtonCleanup: (() => void) | null = null
+
+/**
+ * 텔레그램 BackButton을 보이고 클릭 리스너를 건다.
+ * 텔레그램 밖/미지원이면 조용히 무시된다 (게임 화면은 별도로 인페이지 뒤로가기를 둔다).
+ */
+export function showBackButton(onClick: () => void): void {
+  try {
+    backButtonCleanup?.()
+    backButtonCleanup = null
+
+    if (!backButton.isSupported()) return
+    if (!backButton.isMounted()) backButton.mount()
+
+    backButtonCleanup = backButton.onClick(onClick)
+    backButton.show()
+  } catch {
+    /* noop */
+  }
+}
+
+/** showBackButton()으로 건 리스너를 해제하고 버튼을 숨긴다. */
+export function hideBackButton(): void {
+  try {
+    backButtonCleanup?.()
+    backButtonCleanup = null
+    backButton.hide()
+  } catch {
+    /* noop */
+  }
+}
+
 const THEME_CSS_VAR_MAP = {
   bgColor: '--tg-theme-bg-color',
   textColor: '--tg-theme-text-color',

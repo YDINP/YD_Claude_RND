@@ -32,7 +32,15 @@ function assertMax(maxExclusive: number): void {
 
 /**
  * xoshiro128** 결정론 RNG. 같은 시드는 항상 같은 수열을 만든다.
- * 시뮬레이션·테스트·provably-fair 재현용이며 실제 스핀에는 crypto RNG를 쓴다.
+ *
+ * **실제 스핀도 이것을 쓴다.** 서버가 라운드마다 `node:crypto`로 256비트 시드를 새로 뽑고
+ * `${seed}:${nonce}` 형태로 이 생성기를 시드한다. 난수의 출처는 crypto이고 이 생성기는
+ * 그 시드를 재현 가능한 수열로 펼치는 역할만 한다. 라운드 전에 `sha256(seed)`를 공개하고
+ * 라운드 후 `seed`를 공개하면 유저가 같은 수열을 만들어 결과를 그대로 검증할 수 있다
+ * (provably fair). 시뮬레이션과 테스트도 같은 이유로 이것을 쓴다.
+ *
+ * `@tgslot/slot-engine/crypto-rng`의 `createCryptoRng`는 시드 없이 매 호출마다 crypto에서
+ * 직접 뽑고 싶은 (=검증 불가능한) 호출자를 위해 남겨 둔다.
  */
 export function createSeededRng(seed: number | string): Rng {
   let [s0, s1, s2, s3] = hashSeed(typeof seed === 'number' ? `n:${seed}` : seed)

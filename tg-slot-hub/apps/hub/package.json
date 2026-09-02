@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@tgslot/shared": "workspace:*",
+    "@tgslot/slot-engine": "workspace:*",
+    "@tgslot/renderer": "workspace:*",
     "@telegram-apps/sdk-react": "^3.3.9",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",

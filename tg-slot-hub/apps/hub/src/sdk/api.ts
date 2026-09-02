@@ -6,11 +6,14 @@ import {
   AuthResponseSchema,
   MeResponseSchema,
   GamesResponseSchema,
+  SpinResponseSchema,
   ApiErrorSchema,
   type AuthResponse,
   type MeResponse,
   type GamesResponse,
   type AuthTelegramRequest,
+  type SpinRequest,
+  type SpinResponse,
 } from '@tgslot/shared'
 
 const API_BASE_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8787'
@@ -94,4 +97,64 @@ export async function getMe(token: string): Promise<MeResponse> {
 /** GET /games — 로비용 게임 목록 (이미 필터/정렬된 상태) */
 export async function getGames(): Promise<GamesResponse> {
   return requestJson<GamesResponse>('/games', GamesResponseSchema)
+}
+
+/** 검증 없이 그대로 통과시키는 스키마. math.json은 @tgslot/slot-engine의 parseGameMath()가 검증한다. */
+const passthroughSchema: ParseableSchema<unknown> = {
+  safeParse: (data: unknown) => ({ success: true, data }),
+}
+
+/** GET /games/:id/math — 원시 게임 수학 모델 JSON. 호출부에서 parseGameMath()로 검증한다 */
+export async function getGameMath(gameId: string): Promise<unknown> {
+  return requestJson<unknown>(`/games/${encodeURIComponent(gameId)}/math`, passthroughSchema)
+}
+
+/** POST /games/:id/spin — 서버 권위 스핀. Bearer 토큰 필요 */
+export async function spin(token: string, gameId: string, body: SpinRequest): Promise<SpinResponse> {
+  return requestJson<SpinResponse>(`/games/${encodeURIComponent(gameId)}/spin`, SpinResponseSchema, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  })
+}
+
+export interface RoundSeedResponse {
+  roundId: string
+  gameId: string
+  seed: string
+  seedHash: string
+  nonce: number
+  /** 그 라운드의 릴 정지 위치. 클라이언트가 재생(replay)한 결과와 비교하는 기준값. */
+  stops: number[]
+  /** `createSeededRng(seedInput)`(@tgslot/slot-engine)에 그대로 넣으면 같은 stops가 나온다. */
+  seedInput: string
+}
+
+function isRoundSeedResponse(data: unknown): data is RoundSeedResponse {
+  if (typeof data !== 'object' || data === null) return false
+  const d = data as Record<string, unknown>
+  return (
+    typeof d.roundId === 'string' &&
+    typeof d.gameId === 'string' &&
+    typeof d.seed === 'string' &&
+    typeof d.seedHash === 'string' &&
+    typeof d.nonce === 'number' &&
+    Array.isArray(d.stops) &&
+    d.stops.every((n) => typeof n === 'number') &&
+    typeof d.seedInput === 'string'
+  )
+}
+
+const roundSeedSchema: ParseableSchema<RoundSeedResponse> = {
+  safeParse: (data: unknown) => {
+    if (isRoundSeedResponse(data)) return { success: true, data }
+    return { success: false }
+  },
+}
+
+/** GET /rounds/:id/seed — provably fair 검증용 서버 시드 공개 */
+export async function getRoundSeed(token: string, roundId: string): Promise<RoundSeedResponse> {
+  return requestJson<RoundSeedResponse>(`/rounds/${encodeURIComponent(roundId)}/seed`, roundSeedSchema, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
 }

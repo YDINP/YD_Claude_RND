@@ -1,0 +1,53 @@
+{
+  "game": "classic-777",
+  "concept": "Classic Vegas fruit machine, neon-noir arcade cabinet, warm brass and jewel tones",
+  "stylePrefix": "flat vector icon, bold clean linework, vibrant saturated colors, centered composition, studio lighting, high detail",
+  "negative": "text, watermark, blurry, extra limbs, distorted proportions, low quality, jpeg artifacts",
+  "assets": [
+    {
+      "id": "seven",
+      "kind": "symbol",
+      "prompt": "a glossy red number seven slot symbol with gold outline",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/seven.webp",
+      "outSize": 512
+    },
+    {
+      "id": "bell",
+      "kind": "symbol",
+      "prompt": "a golden liberty bell slot symbol with sparkle highlights",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/bell.webp",
+      "outSize": 512
+    },
+    {
+      "id": "frame",
+      "kind": "frame",
+      "prompt": "an ornate art-deco gold frame border for a slot machine reel window",
+      "size": "1024x1536",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1024
+    },
+    {
+      "id": "background",
+      "kind": "bg",
+      "prompt": "a dark velvet casino backdrop with soft bokeh lights",
+      "size": "1536x1024",
+      "transparent": false,
+      "out": "theme/bg.webp",
+      "outSize": 1536
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "prompt": "a promotional thumbnail showing the classic 777 slot machine cabinet",
+      "size": "1024x1024",
+      "transparent": false,
+      "out": "art/thumb.webp",
+      "outSize": 512
+    }
+  ]
+}

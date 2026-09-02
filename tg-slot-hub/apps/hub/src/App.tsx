@@ -11,6 +11,8 @@ import { Lobby } from './components/Lobby'
 import { Loading } from './components/Loading'
 import { ErrorView } from './components/ErrorView'
 import { OutsideTelegram } from './components/OutsideTelegram'
+import { GameScreen } from './components/game/GameScreen'
+import { useRoute, navigateToGame } from './router'
 import './styles/tokens.css'
 import './styles/global.css'
 
@@ -25,6 +27,8 @@ export function App(): ReactNode {
   const games = useGamesStore((s) => s.games)
   const gamesErrorMessage = useGamesStore((s) => s.errorMessage)
   const loadGames = useGamesStore((s) => s.load)
+
+  const route = useRoute()
 
   useEffect(() => {
     void bootstrap()
@@ -48,6 +52,14 @@ export function App(): ReactNode {
     return <ErrorView message={errorMessage ?? undefined} onRetry={() => void bootstrap()} />
   }
 
+  if (route.name === 'play') {
+    return (
+      <div className="hub-app">
+        <GameScreen gameId={route.gameId} />
+      </div>
+    )
+  }
+
   return (
     <div className="hub-app">
       <Header user={user} wallet={wallet} />
@@ -56,7 +68,7 @@ export function App(): ReactNode {
       ) : gamesStatus === 'loading' || gamesStatus === 'idle' ? (
         <Loading />
       ) : (
-        <Lobby games={games} locale={user.locale} />
+        <Lobby games={games} locale={user.locale} onPlay={navigateToGame} />
       )}
     </div>
   )

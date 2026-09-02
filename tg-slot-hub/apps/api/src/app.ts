@@ -8,17 +8,23 @@ import type { JwtService } from './auth/jwt.js'
 import { createAuthRoute } from './routes/auth.js'
 import { createMeRoute } from './routes/me.js'
 import { createGamesRoute } from './routes/games.js'
+import { createRoundsRoute } from './routes/rounds.js'
+import { getDefaultGameRegistry } from './games/registry.js'
+import type { GameRegistry } from './games/registry.js'
 
 export interface AppDeps {
   config: ApiConfig
   repos: Repos
   /** 테스트에서 고정 jwt 서비스를 주입하고 싶을 때 사용. 없으면 config.jwtSecret으로 생성 */
   jwt?: JwtService
+  /** 테스트에서 임의의 게임 팩 조합을 주입하고 싶을 때 사용. 없으면 디스크에서 읽은 레지스트리 */
+  games?: GameRegistry
 }
 
 /** 테스트가 in-memory repos를 주입할 수 있도록 의존성을 명시적으로 받는 팩토리. */
 export function createApp(deps: AppDeps): Hono {
   const jwt = deps.jwt ?? createJwtService(deps.config.jwtSecret)
+  const registry = deps.games ?? getDefaultGameRegistry()
   const app = new Hono()
 
   app.use('*', logger())
@@ -28,7 +34,8 @@ export function createApp(deps: AppDeps): Hono {
 
   app.route('/auth', createAuthRoute({ config: deps.config, repos: deps.repos, jwt }))
   app.route('/me', createMeRoute({ repos: deps.repos, jwt }))
-  app.route('/games', createGamesRoute())
+  app.route('/games', createGamesRoute({ registry, repos: deps.repos, jwt, config: deps.config }))
+  app.route('/rounds', createRoundsRoute({ repos: deps.repos, jwt }))
 
   // 라우트에서 못 잡은 예외(레포/DB/JWT 내부 에러 등)가 Hono 기본 HTML 에러 페이지로 새지 않도록
   // ApiErrorSchema 모양의 JSON 500으로 통일한다. 4xx는 각 라우트에서 이미 명시적으로 c.json(...)한다.
