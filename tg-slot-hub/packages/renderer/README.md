@@ -27,20 +27,22 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 | `math` | `GameMath` | `math.json`을 `parseGameMath`로 통과시킨 값 |
 | `theme` | `Theme` | `loadTheme`이 만든 값 또는 직접 조립한 값 |
 | `initialStops` | `number[]` | 첫 화면 정지 위치. 없으면 전부 0 |
-| `onEvent` | `(e) => void` | `reelStop` / `spinEnd` / `winShown` |
+| `onEvent` | `(e) => void` | 아래 이벤트 목록 참고 |
 | `reducedMotion` | `boolean` | 미지정 시 `prefers-reduced-motion`을 따른다 |
 | `fit` | `'window' \| 'width'` | 프레임을 맞추는 방식. 기본 `'window'` |
 | `overflowX` | `number` | `'window'`에서 프레임이 폭을 넘어도 되는 비율. 기본 0.30 |
+| `showFreeSpinsPlaque` | `boolean` | 프리스핀 명판을 릴 창 위에 띄울지. 기본 true |
 
 ### `SlotRenderer`
 
 | 멤버 | 시그니처 | 하는 일 |
 |---|---|---|
 | `ready` | `Promise<void>` | 에셋 로딩과 첫 렌더 완료 |
-| `spinTo` | `(stops: number[], opts?: { durationMs?: number; stagger?: number }) => Promise<void>` | 릴을 돌려 `stops`에 **정확히** 멈춘다. 모든 릴이 멈추면 resolve |
-| `showWins` | `(wins, opts?: { loop?; totalBet?; formatLineLabel? }) => Promise<void>` | 아래 "승리 연출" 참고. 첫 바퀴가 끝나면 resolve |
+| `spinTo` | `(stops, opts?: { durationMs?; stagger?; fast? }) => Promise<void>` | 릴을 돌려 `stops`에 **정확히** 멈춘다. `fast`면 회전이 0.8배로 짧아진다 |
+| `showWins` | `(wins, opts?: { loop?; totalBet?; formatLineLabel?; features? }) => Promise<void>` | 아래 "승리 연출" 참고. 첫 바퀴가 끝나면 resolve |
 | `clearWins` | `() => void` | 승리 연출 즉시 정리 |
 | `setSpinningIdle` | `(on: boolean) => void` | 대기 중 미세한 유휴 모션 |
+| `setMode` | `(mode: { freeSpins?: { left, total, multiplier } \| null }) => void` | 프리스핀 표시를 켜고 끈다 |
 | `resize` | `() => void` | 레이아웃 재계산. ResizeObserver가 자동 호출도 한다 |
 | `destroy` | `() => void` | 트윈·옵저버·캔버스까지 해제 |
 
@@ -54,6 +56,7 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 | 단계 | 조건 | 길이 | 화면 |
 |---|---|---|---|
 | A "전체" | 승리 1개 이상 | 등급별 900~2200ms | 이긴 심볼이 **동시에** 연출된다. 나머지는 α 0.5로 눌린다. 페이라인은 아직 안 그린다 |
+| 피처 | 프리스핀 트리거 있음 | 900ms | 스캐터 자리에서 파티클이 창 가운데로 모인다 |
 | B "라인별" | 승리 2개 이상 | 라인당 1400ms | 그 라인 심볼만 연출되고 폴리라인과 명판이 뜬다 |
 
 라인이 바뀔 때는 150ms 크로스페이드로 넘긴다. 모션 축소에서는 즉시 전환한다.
@@ -62,9 +65,34 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 라인 순서는 페이라인 인덱스 오름차순이다.
 
 명판 문구는 `formatLineLabel(win)`으로 갈아끼운다. 렌더러는 번역을 모른다.
-기본값은 `Line {n} · {배당}`이다.
+기본값은 `Line {n} · {group ?? symbol} · {배당}`이다.
 
 `spinTo()`는 진행 중인 연출을 **즉시** 끊는다. 트윈을 죽이고 눌러 둔 밝기도 되돌린다.
+
+### 스캐터와 프리스핀
+
+`showWins(wins, { features })`에 서버가 준 `FeatureTrigger[]`를 그대로 넘긴다.
+모양은 `@tgslot/shared`의 `FeatureTriggerSchema`와 같다.
+
+- `scatterWin.positions`의 자리는 **연출 내내 어두워지지 않는다.** 스캐터는 페이라인과 무관하게
+  이긴 자리라, 라인 순환 중에 눌리면 근거가 사라진다. 금빛 링이 맥동하고 페이라인은 그리지 않는다.
+- `freeSpins`가 있으면 A단계 뒤에 피처 단계가 한 번 끼어 `featureTriggered`를 쏘고
+  스캐터 자리에서 창 가운데로 알갱이가 모인다. 코인 샤워가 바깥으로 쏟아지는 것과 반대 방향이다.
+- 라인 승리가 없고 스캐터만 이겨도 A단계와 피처 단계는 나온다.
+
+### 프리스핀 진행 표시
+
+```ts
+renderer.setMode({ freeSpins: { left: 7, total: 10, multiplier: 2 } })
+renderer.setMode({ freeSpins: null })   // 되돌리기
+```
+
+릴 창 테두리에 금빛을 두르고 위쪽에 `FREE SPINS 7/10 ×2` 명판을 띄운다.
+배수가 1이면 `×1`을 붙이지 않는다. 정보가 없고 시야만 어지럽히기 때문이다.
+허브가 자체 카운터를 이미 보여준다면 `showFreeSpinsPlaque: false`로 명판만 끌 수 있다.
+`setMode`는 `ready` 전에 불러도 잃지 않는다. 초기화가 끝나면 적용된다.
+
+프리스핀 중에는 `spinTo(stops, { fast: true })`로 회전을 0.8배로 당기는 것을 권한다.
 
 순서와 길이는 `buildPresentation(wins, math, opts)`가 정하는 순수 데이터라 타이머 없이 검증한다.
 
@@ -129,11 +157,14 @@ type RendererEvent =
   | { type: 'spinEnd' }
   | { type: 'winTotal'; totalWin: number; tier: WinTier; durationMs: number }
   | { type: 'winLine'; line: number; win: number }
+  | { type: 'featureTriggered'; feature: FeatureTrigger }
 ```
 
 `winTotal`은 승리 연출 A단계가 **시작할 때** 총배당과 등급과 그 단계의 길이를 함께 준다.
 허브는 `durationMs`에 맞춰 배당 카운터를 굴리고 `tier`로 배너를 고르면 된다.
 `winLine`은 B단계에서 라인을 하나 짚을 때마다 온다.
+`featureTriggered`는 프리스핀에 걸렸을 때 A단계가 끝나고 스캐터 연출이 시작하며 온다.
+인트로 배너는 허브가 띄운다. 렌더러는 릴 위 연출만 맡는다.
 
 ### 승리 등급
 
@@ -178,7 +209,7 @@ type RendererEvent =
 | 승리 연출 | A단계 900/1600/2200ms(등급별) → 라인당 1400ms, 전환 150ms |
 | 승리 강조 | 브라스 광채 3겹 + 2px 테두리. 페이라인은 3px, 불투명도 0.6 |
 | 은은한 연출 | 배경 반짝임 6~10개. 릴 창 위에는 놓지 않는다 |
-| 빅윈 | 총배당이 베팅액의 **20배 이상**이면 코인 샤워 (스프라이트 60개 상한) |
+| 빅윈 | 총배당이 베팅액의 **10배 이상**이면 등급이 붙고 코인 샤워 (60개 상한) |
 | 모션 축소 | 전체 스핀 300ms 이하. 반동·마무리·파티클·반짝임 없음. 심볼 연출은 pulse만 |
 
 `showWins`에 `totalBet`을 주면 빅윈 판정이 정확해진다.
@@ -301,6 +332,19 @@ classic-777 창은 가로가 세로보다 넓은데(386x321) 3x3 격자는 정�
 창이 다시 납작해지면(`h`가 작아지면) 격자가 세로에 묶여 심볼이 줄어든다.
 그때는 `overflowX`가 아니라 **아트의 창 세로 비율**을 손봐야 한다.
 
+### 격자 비율과 창 비율
+
+심볼 크기는 창 비율과 격자 비율 중 **더 빡빡한 쪽**이 정한다.
+
+| 격자 | 격자 비율 | 묶이는 축 |
+|---|---|---|
+| 3x3 | 1.0 | 창이 세로로 길면 폭, 가로로 넓으면 세로 |
+| 5x3 | 약 1.68 | 비율 1.68 미만인 창에서는 언제나 폭 |
+
+5x3은 격자 자체가 가로로 길어, 기획된 넓은 창(x 6~94%, y 22~70%, 비율 1.22)에서도
+**폭이 먼저 찬다.** 세로가 기준이 되려면 창 비율이 1.68을 넘어야 한다.
+심볼은 어느 쪽이든 정사각형이다. 한 변 하나로 가로세로를 모두 잡기 때문이다.
+
 순수 계산은 `frameWindowRect(frameW, frameH, window)`, `computeFrameLayout(...)`,
 `computeWindowFitLayout(...)`이 맡고 셋 다 단위 테스트가 있다.
 
@@ -334,6 +378,8 @@ Pixi 없이도 쓸 수 있는 부분은 따로 내보낸다. 허브의 테스트
 | `resolveSymbolFx`, `resolveFxEffect` | 심볼 연출 조회와 기본값 |
 | `resolveFxForPositions`, `symbolsAtPositions` | 승리 좌표별 심볼과 연출 (그룹 배당 대응) |
 | `winTier`, `phaseAllDurationMs` | 승리 등급과 등급별 연출 길이 |
+| `scatterPositions`, `findFreeSpins` | 피처 트리거에서 좌표와 프리스핀 뽑기 |
+| `formatFreeSpinsPlaque`, `shouldShowFreeSpinsPlaque` | 프리스핀 명판 문구와 표시 판정 |
 | `isBigWin`, `winBetMultiple`, `paylineColor`, `buildWinCycle`, `formatWinLabel` | 승리 연출 규칙 |
 | `parseTheme`, `loadTheme`, `resolveSymbolSource`, `resolveFrameWindow` | 테마 검증·로딩 |
 

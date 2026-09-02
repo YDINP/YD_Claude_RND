@@ -1,7 +1,8 @@
 import type { SpinResult, WinLine } from '@tgslot/slot-engine'
-import type { Level, Locale } from '@tgslot/shared'
+import type { FeatureTrigger, FreeSpinsState, Level, Locale } from '@tgslot/shared'
 import type { TelegramUser } from '../auth/initData.js'
 import type { BonusClaims, BonusGrant, BonusKind } from '../economy/bonus.js'
+import type { FreeSpinsAward } from '../economy/freeSpins.js'
 import type { MissionProgress } from '../economy/missions.js'
 
 export interface AppUser {
@@ -71,7 +72,27 @@ export interface RoundRecord {
   jackpotWin?: number
   /** 이 라운드가 만든 레벨업. 같은 이유로 함께 저장한다. */
   levelUp?: { from: number; to: number; bonus: number }
+  /** 프리스핀으로 돈 라운드인지. true면 `bet`은 계산 기준일 뿐 차감되지 않았다. */
+  isFreeSpin: boolean
+  /** 이 스핀이 발동한 피처 */
+  features: FeatureTrigger[]
+  /** 스핀 직후의 프리스핀 상태. 세션이 끝났으면 null */
+  freeSpinsAfter: FreeSpinsState | null
   createdAt: Date
+}
+
+/**
+ * 결과 계산 콜백이 받는 것. nonce는 지갑을 잠근 뒤에야 정해지고,
+ * 프리스핀 여부와 실제 적용 베팅액은 레포가 상태 행을 읽어야 알 수 있다.
+ */
+export interface SpinComputeContext {
+  nonce: number
+  /** 이 스핀에 실제로 적용되는 베팅액. 프리스핀이면 진입 시점에 고정된 값이다. */
+  totalBet: number
+  /** 이 스핀 **직전**의 프리스핀 상태. 엔진에 넘길 라운드 상태를 만드는 재료다. */
+  freeSpins: FreeSpinsState | null
+  /** 이 스핀이 프리스핀인지 (= 차감 없이 도는지) */
+  isFreeSpin: boolean
 }
 
 /** 라운드 nonce가 정해진 뒤에야 시드를 만들 수 있으므로 결과 계산을 콜백으로 받는다. */
@@ -85,6 +106,13 @@ export interface SpinComputation {
    * 릴을 먼저 뽑는 순서를 지켜야 provably fair 재현이 성립한다.
    */
   jackpotRoll: number
+  /**
+   * 이번 스핀이 부여한 프리스핀 (진입 또는 재발동). 엔진 피처를 해석한 결과이며,
+   * 남은 횟수·누적 당첨 계산은 레포가 `economy/freeSpins.ts`로 한다.
+   */
+  freeSpinsAward?: FreeSpinsAward
+  /** 응답과 저장에 쓸 피처 목록 (shared 스키마 모양으로 이미 변환된 것) */
+  features: FeatureTrigger[]
 }
 
 export interface ApplySpinInput {
@@ -93,7 +121,7 @@ export interface ApplySpinInput {
   totalBet: number
   idempotencyKey: string
   /** 지갑을 잠그고 잔액을 확인한 뒤, 트랜잭션 안에서 정확히 한 번 호출된다. */
-  compute: (nonce: number) => SpinComputation
+  compute: (ctx: SpinComputeContext) => SpinComputation
 }
 
 export interface ApplySpinResult {
@@ -112,6 +140,15 @@ export interface ApplySpinResult {
   levelUp?: { from: number; to: number; bonus: number }
   /** 갱신된 오늘의 미션 진행도 */
   missions: MissionProgress[]
+  /** 이 스핀이 프리스핀이었는지 */
+  isFreeSpin: boolean
+  /** 스핀 반영 후 프리스핀 상태. 세션이 끝났거나 없으면 null */
+  freeSpins: FreeSpinsState | null
+}
+
+export interface GameStateRepo {
+  /** 게임별 진행 상태. 지금은 프리스핀 세션뿐이다. */
+  getGameState(userId: string, gameId: string): Promise<FreeSpinsState | null>
 }
 
 // ---- 허브 기능 (Phase 3) ----
@@ -201,4 +238,12 @@ export interface RoundRepo {
   getRoundById(roundId: string): Promise<RoundRecord | null>
 }
 
-export interface Repos extends UserRepo, WalletRepo, RoundRepo, BonusRepo, JackpotRepo, LeaderboardRepo, MissionRepo {}
+export interface Repos
+  extends UserRepo,
+    WalletRepo,
+    RoundRepo,
+    BonusRepo,
+    JackpotRepo,
+    LeaderboardRepo,
+    MissionRepo,
+    GameStateRepo {}

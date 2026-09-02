@@ -79,7 +79,16 @@ describe('computeExactRtp', () => {
     expect(computeExactRtp(TINY, 10).rtp).toBeCloseTo(computeExactRtp(TINY, 1).rtp, 12)
   })
 
-  it('조합 수가 상한을 넘으면 예외', () => {
+  it('작은 모델은 전수 조사 경로를 쓴다', () => {
+    const report = computeExactRtp(TINY, 1)
+    expect(report.method).toBe('enumerate')
+    expect(report.distributionIsExact).toBe(true)
+    expect(report.breakdown.lines).toBeCloseTo(report.rtp, 12)
+    expect(report.breakdown.scatter).toBe(0)
+    expect(report.breakdown.freeSpins).toBe(0)
+  })
+
+  it('조합 수가 상한을 넘으면 해석 경로로 넘어가고 값이 일치한다', () => {
     const symbols = ['a', 'b', 'c', 'd']
     const strip = Array.from({ length: 200 }, (_, i) => symbols[i % symbols.length] ?? 'a')
     const huge = parseGameMath({
@@ -87,7 +96,24 @@ describe('computeExactRtp', () => {
       strips: [strip, strip, strip],
     })
     expect(strip.length ** 3).toBeGreaterThan(MAX_ENUMERATION_COMBOS)
-    expect(() => computeExactRtp(huge, 1)).toThrow(RangeError)
+    const report = computeExactRtp(huge, 1, { sampleSpins: 0 })
+    expect(report.method).toBe('analytic')
+    expect(report.distributionIsExact).toBe(false)
+    // 스트립 구성이 TINY와 같은 균등 분포라 RTP도 같아야 한다.
+    expect(report.rtp).toBeCloseTo(18 / 64, 12)
+  })
+
+  it('해석 경로도 표본을 요청하면 적중률을 채운다', () => {
+    const symbols = ['a', 'b', 'c', 'd']
+    const strip = Array.from({ length: 200 }, (_, i) => symbols[i % symbols.length] ?? 'a')
+    const huge = parseGameMath({
+      ...JSON.parse(JSON.stringify(TINY)),
+      strips: [strip, strip, strip],
+    })
+    const report = computeExactRtp(huge, 1, { sampleSpins: 20_000 })
+    expect(report.hitRate).toBeGreaterThan(0.05)
+    expect(report.hitRate).toBeLessThan(0.11)
+    expect(report.winDistribution.length).toBeGreaterThan(0)
   })
 })
 

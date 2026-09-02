@@ -9,6 +9,17 @@ import type {
 
 const OK = '✅'
 const NG = '❌'
+/** 표본에서 온 값이라는 표시. 전수 조사 값과 섞이지 않게 한다. */
+const ESTIMATED = '_(표본 추정)_'
+
+function methodLabel(method: 'enumerate' | 'analytic'): string {
+  return method === 'enumerate' ? '전수 조사' : '해석적 계산'
+}
+
+/** 확률을 "N회에 1회" 꼴로. 0이면 '-'. */
+function triggerOdds(probability: number): string {
+  return probability <= 0 ? '-' : Math.round(1 / probability).toLocaleString('en-US')
+}
 
 function pct(value: number, digits = 4): string {
   return `${(value * 100).toFixed(digits)}%`
@@ -77,7 +88,7 @@ function histogramTable(rows: HistogramRow[], rtp: number): string {
 
 /** 검수 결과를 한국어 마크다운 리포트로. CLI의 `--out` 파일과 GUI의 내보내기가 같은 함수를 쓴다. */
 export function buildAuditMarkdown(result: AuditResult): string {
-  const { game, exact, mc, agreement, ruin, jackpot } = result
+  const { game, distribution: dist, features, mc, agreement, ruin, jackpot } = result
   const title = game.nameKo ?? game.nameEn ?? game.id
   const passed = result.gates.filter((gate) => gate.pass).length
   const allPass = passed === result.gates.length
@@ -88,8 +99,13 @@ export function buildAuditMarkdown(result: AuditResult): string {
     `# RTP 검수 리포트 — ${title} (\`${game.id}\`)`,
     '',
     `- 생성 시각: ${result.generatedAt}`,
-    `- 검수 베팅액: ${num(result.options.totalBet)} 코인 (라인당 ${num(exact.betPerLine)})`,
+    `- 검수 베팅액: ${num(result.options.totalBet)} 코인 (라인당 ${num(dist.betPerLine)})`,
     `- 몬테카를로: ${num(result.options.spins)} 스핀, 시드 \`${result.options.seed}\``,
+    `- RTP 산출: **${methodLabel(dist.method)}**${
+      dist.estimated
+        ? ` — 분포·기여도는 ${num(dist.observations)} 스핀 표본 추정 (시드 \`${dist.sampleSeed ?? ''}\`)`
+        : ' — 모든 조합을 남김없이 계산'
+    }`,
     '',
     '## 게이트 판정 요약',
     '',
@@ -116,7 +132,7 @@ export function buildAuditMarkdown(result: AuditResult): string {
         ['릴 x 행', `${game.reels} x ${game.rows}`],
         ['페이라인', `${game.lines}개`],
         ['베팅 레벨', game.betLevels.map(num).join(', ')],
-        ['스트립 길이', `${game.stripLengths.join(' x ')} (조합 ${num(exact.combos)})`],
+        ['스트립 길이', `${game.stripLengths.join(' x ')} (조합 ${num(dist.combos)})`],
         ['심볼 수', `${game.symbolCount}개`],
         ['심볼 그룹', groupLine],
         ['변동성', game.volatility],
@@ -136,18 +152,29 @@ export function buildAuditMarkdown(result: AuditResult): string {
     '',
   )
 
+  const estimatedNote = dist.estimated ? ` ${ESTIMATED}` : ''
   sections.push(
-    '## 2. 전수 조사 (exact)',
+    `## 2. RTP 산출 — ${methodLabel(dist.method)}`,
     '',
-    `모든 정지 위치 조합 ${num(exact.combos)}개를 남김없이 계산한 값이다. 표본 오차가 없다.`,
+    dist.estimated
+      ? `정지 조합이 ${num(dist.combos)}개라 전수 조사가 불가능하다. RTP는 닫힌 식으로 **정확히** 구하고,` +
+        ` 적중률·최대 배수·배수 분포·기여도만 ${num(dist.observations)} 스핀 고정 시드 표본으로 추정한다.` +
+        ` 표본에서 온 값에는 ${ESTIMATED} 표시를 붙였다.`
+      : `모든 정지 위치 조합 ${num(dist.combos)}개를 남김없이 계산한 값이다. 표본 오차가 없다.`,
     '',
     table(
       ['지표', '값'],
       [
-        ['RTP', `${pct(exact.rtp)} (목표 대비 ${pp(exact.rtp - game.rtpTarget)})`],
-        ['적중률', pct(exact.hitRate)],
-        ['최대 배수', `${exact.maxWinMultiplier.toFixed(2)}x`],
-        ['승리 조합 수', `${num(exact.winCombos)} / ${num(exact.combos)}`],
+        ['RTP (정확값)', `${pct(dist.rtp)} (목표 대비 ${pp(dist.rtp - game.rtpTarget)})`],
+        ['  ├ 페이라인', pct(dist.breakdown.lines)],
+        ['  ├ 스캐터', pct(dist.breakdown.scatter)],
+        ['  └ 프리스핀', pct(dist.breakdown.freeSpins)],
+        ['적중률', `${pct(dist.hitRate)}${estimatedNote}`],
+        ['최대 배수', `${dist.maxWinMultiplier.toFixed(2)}x${estimatedNote}`],
+        [
+          dist.estimated ? '승리 라운드 수' : '승리 조합 수',
+          `${num(dist.winObservations)} / ${num(dist.observations)}${estimatedNote}`,
+        ],
       ],
     ),
     '',
@@ -160,8 +187,8 @@ export function buildAuditMarkdown(result: AuditResult): string {
         num(row.betPerLine),
         pct(row.rtp),
         pp(row.delta),
-        pct(row.hitRate, 3),
-        `${row.maxWinMultiplier.toFixed(2)}x`,
+        row.hitRate === null ? '-' : pct(row.hitRate, 3),
+        row.maxWinMultiplier === null ? '-' : `${row.maxWinMultiplier.toFixed(2)}x`,
         row.pass ? OK : NG,
       ]),
     ),
@@ -181,6 +208,8 @@ export function buildAuditMarkdown(result: AuditResult): string {
         ['표준편차 (배수)', mc.stdDev.toFixed(4)],
         ['표준오차', pp(agreement.standardError)],
         ['적중률', pct(mc.hitRate)],
+        ['프리스핀 트리거율', pct(mc.triggerRate)],
+        ['돌아간 프리스핀', num(mc.freeSpinsPlayed)],
         ['최대 승리', `${num(mc.maxWin)} 코인 (${(mc.maxWin / mc.totalBet).toFixed(2)}x)`],
         ['소요 시간', `${(mc.elapsedMs / 1000).toFixed(2)}s`],
         [
@@ -197,28 +226,73 @@ export function buildAuditMarkdown(result: AuditResult): string {
   sections.push(
     '## 4. RTP 기여 분해',
     '',
-    '전수 조사에서 나온 승리 라인 하나하나를 지급 근거(심볼·그룹·라인·매치 개수)로 귀속시킨 것이다.',
-    '기여의 총합은 전체 RTP와 정확히 같다.',
+    dist.estimated
+      ? `표본 ${num(dist.observations)} 라운드에서 나온 승리를 지급 근거(심볼·그룹·라인·매치 개수)로 귀속시킨 것이다. ${ESTIMATED}`
+      : '전수 조사에서 나온 승리 라인 하나하나를 지급 근거(심볼·그룹·라인·매치 개수)로 귀속시킨 것이다.',
+    dist.estimated
+      ? `표본 기여 합계 ${pct(dist.contributionTotal)} vs 정확한 RTP ${pct(dist.rtp)} (차이 ${pp(dist.contributionTotal - dist.rtp)}).`
+      : '프리스핀 몫은 같은 스트립을 다시 돌리는 것이므로 기본 게임 기여에 비례 배분했다. 기여의 총합은 전체 RTP와 정확히 같다.',
     '',
     '### 심볼별',
     '',
-    contributionTable(exact.symbols, '심볼'),
+    contributionTable(dist.symbols, '심볼'),
     '',
     '### 그룹별',
     '',
-    contributionTable(exact.groups, '그룹'),
+    contributionTable(dist.groups, '그룹'),
     '',
     '### 페이라인별',
     '',
-    lineTable(exact.lines),
+    lineTable(dist.lines),
     '',
     '### 매치 개수별',
     '',
-    countTable(exact.counts),
+    countTable(dist.counts),
     '',
   )
 
-  sections.push('## 5. 배수 분포', '', histogramTable(exact.histogram, exact.rtp), '')
+  sections.push(
+    '## 5. 배수 분포',
+    '',
+    dist.estimated
+      ? `유료 스핀 ${num(dist.observations)}회의 라운드 배수 분포다 (프리스핀 누적 포함). ${ESTIMATED}`
+      : '모든 조합의 배수 분포다.',
+    '',
+    histogramTable(dist.histogram, dist.rtp),
+    '',
+  )
+
+  if (features !== null) {
+    sections.push(
+      '## 5-1. 스캐터와 프리스핀',
+      '',
+      table(
+        ['항목', '값'],
+        [
+          ['스캐터 심볼', `\`${features.scatterSymbol ?? '없음'}\``],
+          ['프리스핀 트리거 확률', `${pct(features.triggerProbability)} (약 ${triggerOdds(features.triggerProbability)}스핀에 1회)`],
+          ['트리거당 기대 프리스핀', `${features.spinsPerTrigger.toFixed(3)}회${features.retrigger ? ' (리트리거 포함)' : ''}`],
+          ['프리스핀 배수', `${features.multiplier}x`],
+          ['리트리거', features.retrigger ? '있음' : '없음'],
+          ['스캐터 배당 몫', `${pct(features.scatterShare, 2)} of RTP`],
+          ['프리스핀 몫', `${pct(features.freeSpinsShare, 2)} of RTP`],
+          [
+            '표본 관측 트리거율',
+            features.observedTriggerRate === null ? '전수 조사 (표본 없음)' : pct(features.observedTriggerRate),
+          ],
+          [
+            '유료 스핀당 프리스핀',
+            features.observedFreeSpinsPerPaidSpin === null
+              ? '전수 조사 (표본 없음)'
+              : features.observedFreeSpinsPerPaidSpin.toFixed(4),
+          ],
+          ['몬테카를로 트리거율', pct(mc.triggerRate)],
+          ['몬테카를로 프리스핀 수', num(mc.freeSpinsPlayed)],
+        ],
+      ),
+      '',
+    )
+  }
 
   const ruinRows: string[][] = [
     ['표준편차 (배수)', `${mc.stdDev.toFixed(4)} — 스핀당 승리 배수의 표준편차`],

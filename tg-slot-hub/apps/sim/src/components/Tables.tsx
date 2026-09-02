@@ -1,12 +1,14 @@
 import type {
   AgreementVerdict,
   BetLevelRow,
+  FeatureReport,
   ContributionRow,
   CountContributionRow,
   GateRow,
   HistogramRow,
   LineContributionRow,
   MonteCarloResult,
+  RtpBreakdown,
   RuinReport,
 } from '@tgslot/rtp-sim/audit'
 import { mult, num, pct, pp, seconds } from '../lib/format.js'
@@ -58,8 +60,8 @@ export function BetLevelTable({ rows }: { rows: BetLevelRow[] }) {
             <td className="sim-mono">{num(row.betPerLine)}</td>
             <td className="sim-mono">{pct(row.rtp)}</td>
             <td className="sim-mono">{pp(row.delta)}</td>
-            <td className="sim-mono">{pct(row.hitRate, 3)}</td>
-            <td className="sim-mono">{mult(row.maxWinMultiplier)}</td>
+            <td className="sim-mono">{row.hitRate === null ? '-' : pct(row.hitRate, 3)}</td>
+            <td className="sim-mono">{row.maxWinMultiplier === null ? '-' : mult(row.maxWinMultiplier)}</td>
             <td className={row.pass ? 'sim-pass' : 'sim-fail'}>{row.pass ? OK : NG}</td>
           </tr>
         ))}
@@ -218,6 +220,65 @@ export function KeyValueTable({ rows }: { rows: [string, string][] }) {
             <td className="sim-left sim-mono">{value}</td>
           </tr>
         ))}
+      </tbody>
+    </table>
+  )
+}
+
+/** 스캐터·프리스핀 요약. 두 기능이 없는 게임에서는 렌더하지 않는다. */
+export function FeatureTable({ features }: { features: FeatureReport }) {
+  const odds = features.triggerProbability <= 0 ? '-' : num(1 / features.triggerProbability)
+  const rows: [string, string][] = [
+    ['스캐터 심볼', features.scatterSymbol ?? '없음'],
+    ['트리거 확률', `${pct(features.triggerProbability)} (약 ${odds}스핀에 1회)`],
+    ['트리거당 기대 프리스핀', `${features.spinsPerTrigger.toFixed(3)}회`],
+    ['프리스핀 배수', `${features.multiplier}x`],
+    ['리트리거', features.retrigger ? '있음' : '없음'],
+    ['스캐터 배당 몫', `${pct(features.scatterShare, 2)} of RTP`],
+    ['프리스핀 몫', `${pct(features.freeSpinsShare, 2)} of RTP`],
+    [
+      '표본 관측 트리거율',
+      features.observedTriggerRate === null ? '전수 조사 (표본 없음)' : pct(features.observedTriggerRate),
+    ],
+    [
+      '유료 스핀당 프리스핀',
+      features.observedFreeSpinsPerPaidSpin === null
+        ? '전수 조사 (표본 없음)'
+        : features.observedFreeSpinsPerPaidSpin.toFixed(4),
+    ],
+  ]
+  return <KeyValueTable rows={rows} />
+}
+
+/** RTP를 페이라인·스캐터·프리스핀으로 쪼갠 표. */
+export function BreakdownTable({ breakdown, rtp }: { breakdown: RtpBreakdown; rtp: number }) {
+  const rows: [string, number][] = [
+    ['페이라인', breakdown.lines],
+    ['스캐터', breakdown.scatter],
+    ['프리스핀', breakdown.freeSpins],
+  ]
+  return (
+    <table className="sim-table">
+      <thead>
+        <tr>
+          <th className="sim-left">구성</th>
+          <th>RTP</th>
+          <th>전체 대비</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(([label, value]) => (
+          <tr key={label}>
+            <td className="sim-left">{label}</td>
+            <td className="sim-mono">{pct(value)}</td>
+            <td className="sim-mono">{rtp === 0 ? '-' : pct(value / rtp, 2)}</td>
+          </tr>
+        ))}
+        <tr>
+          <td className="sim-left">합계</td>
+          <td className="sim-mono">{pct(rtp)}</td>
+          <td className="sim-mono">100.00%</td>
+        </tr>
       </tbody>
     </table>
   )

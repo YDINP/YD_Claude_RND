@@ -1,6 +1,6 @@
 import type { GameMath } from './schema.js'
-import { evaluate, getBetPerLine } from './evaluate.js'
-import type { Bet, Rng, SpinResult, SymbolId } from './types.js'
+import { evaluate, evaluateScatter, getBetPerLine, triggersFreeSpins } from './evaluate.js'
+import type { Bet, FeatureTrigger, Rng, RoundState, SpinResult, SymbolId } from './types.js'
 
 /**
  * 정지 위치로부터 화면에 보이는 심볼 격자를 만든다.
@@ -43,7 +43,12 @@ export function assertBetLevel(math: GameMath, totalBet: number): void {
  * 베팅 레벨 검사를 건너뛰는 내부 스핀. RTP 도구가 임의 베팅액을 재는 용도로만 쓴다.
  * 패키지 밖으로 내보내지 않는다 (index.ts에 없음). 실제 스핀은 항상 `spin`을 쓸 것.
  */
-export function spinUnchecked(math: GameMath, totalBet: number, rng: Rng): SpinResult {
+export function spinUnchecked(
+  math: GameMath,
+  totalBet: number,
+  rng: Rng,
+  state?: RoundState,
+): SpinResult {
   const betPerLine = getBetPerLine(math, totalBet)
   const stops: number[] = []
   for (let reel = 0; reel < math.reels; reel += 1) {
@@ -52,16 +57,81 @@ export function spinUnchecked(math: GameMath, totalBet: number, rng: Rng): SpinR
     stops.push(rng.nextInt(strip.length))
   }
   const grid = buildGrid(math, stops)
-  const { wins, totalWin } = evaluate(grid, math, betPerLine)
-  return { stops, grid, wins, totalWin, features: [] }
+  return resolveSpin(math, grid, stops, totalBet, betPerLine, state)
 }
 
 /**
- * 스핀 1회. 릴마다 스트립 위 정지 위치를 균등하게 뽑고 페이라인을 평가한다.
+ * 그리드가 정해진 뒤의 정산. 라인·스캐터·프리스핀을 한자리에서 처리한다.
+ * RNG를 쓰지 않으므로 전수 조사와 재현 검증이 같은 코드를 공유한다.
+ */
+export function resolveSpin(
+  math: GameMath,
+  grid: SymbolId[][],
+  stops: number[],
+  totalBet: number,
+  betPerLine: number,
+  state?: RoundState,
+): SpinResult {
+  const { wins, totalWin: lineWin } = evaluate(grid, math, betPerLine)
+  const scatter = evaluateScatter(grid, math, totalBet)
+  const multiplier = state?.multiplier ?? 1
+  const totalWin = Math.round((lineWin + scatter.win) * multiplier)
+
+  const features: FeatureTrigger[] = []
+  if (scatter.win > 0) {
+    features.push({
+      type: 'scatterWin',
+      symbol: math.scatter?.symbol ?? '',
+      count: scatter.count,
+      win: scatter.win,
+      positions: scatter.positions,
+    })
+  }
+
+  const config = math.scatter?.freeSpins
+  const triggered = triggersFreeSpins(scatter.count, math)
+  let nextState: RoundState | undefined
+
+  if (state === undefined) {
+    // 유료 스핀. 트리거되면 프리스핀 세션이 열린다.
+    if (triggered && config !== undefined) {
+      features.push({ type: 'freeSpins', spins: config.count, multiplier: config.multiplier, retrigger: false })
+      nextState = { freeSpinsLeft: config.count, freeSpinsTotal: config.count, multiplier: config.multiplier }
+    }
+  } else {
+    // 프리스핀. 이번 스핀을 소진하고, 리트리거가 허용되면 스핀을 더 얹는다.
+    let left = Math.max(0, state.freeSpinsLeft - 1)
+    let total = state.freeSpinsTotal
+    if (triggered && config !== undefined && config.retrigger) {
+      features.push({ type: 'freeSpins', spins: config.count, multiplier: state.multiplier, retrigger: true })
+      left += config.count
+      total += config.count
+    }
+    if (left > 0) nextState = { freeSpinsLeft: left, freeSpinsTotal: total, multiplier: state.multiplier }
+  }
+
+  const result: SpinResult = {
+    stops,
+    grid,
+    wins,
+    lineWin,
+    scatterWin: scatter.win,
+    totalWin,
+    features,
+  }
+  if (nextState !== undefined) result.nextState = nextState
+  return result
+}
+
+/**
+ * 스핀 1회. 릴마다 스트립 위 정지 위치를 균등하게 뽑고 페이라인과 스캐터를 평가한다.
  * 같은 시드의 RNG를 주면 항상 같은 결과가 나온다 (provably fair 대비).
  * 베팅액은 `math.betLevels`에 선언된 값이어야 한다.
+ *
+ * @param state 있으면 **프리스핀**으로 처리한다. 승리에 `state.multiplier`가 곱해지고
+ *   `state.freeSpinsLeft`가 1 줄어든다. 0이 되면 `nextState`가 없다.
  */
-export function spin(math: GameMath, bet: Bet, rng: Rng): SpinResult {
+export function spin(math: GameMath, bet: Bet, rng: Rng, state?: RoundState): SpinResult {
   assertBetLevel(math, bet.totalBet)
-  return spinUnchecked(math, bet.totalBet, rng)
+  return spinUnchecked(math, bet.totalBet, rng, state)
 }

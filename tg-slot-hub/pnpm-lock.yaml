@@ -217,6 +217,9 @@ importers:
 
   packages/renderer:
     dependencies:
+      '@tgslot/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@tgslot/slot-engine':
         specifier: workspace:*
         version: link:../slot-engine

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { WinLine } from '@tgslot/slot-engine'
+import type { FeatureTrigger } from '@tgslot/shared'
 import {
   PHASE_ALL_BIGWIN_MS,
   PHASE_ALL_MEGA_MS,
   PHASE_ALL_MS,
+  PHASE_FEATURE_MS,
   PHASE_LINE_MS,
   REDUCED_WIN_CYCLE_MS,
   WIN_TIER_MULTIPLIERS,
@@ -175,5 +177,86 @@ describe('phaseAllDurationMs', () => {
 describe('승리 등급 문턱', () => {
   it('10 / 20 / 50 / 100배다', () => {
     expect(WIN_TIER_MULTIPLIERS).toEqual({ big: 10, mega: 20, epic: 50, max: 100 })
+  })
+})
+
+describe('피처가 있는 연출', () => {
+  const freeSpins: FeatureTrigger = { type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }
+  const scatterWin: FeatureTrigger = {
+    type: 'scatterWin',
+    symbol: 'scatter',
+    count: 3,
+    win: 200,
+    positions: [
+      [0, 0],
+      [2, 1],
+      [4, 2],
+    ],
+  }
+
+  it('프리스핀에 걸리면 A단계 바로 뒤에 피처 단계가 낀다', () => {
+    const steps = buildPresentation([makeWin(0, 20, 10)], math, {
+      totalBet: 500,
+      features: [scatterWin, freeSpins],
+    })
+    expect(steps.map((step) => step.phase)).toEqual(['all', 'feature', 'line'])
+  })
+
+  it('피처 단계는 프리스핀 트리거를 그대로 들고 있다', () => {
+    const steps = buildPresentation([], math, { totalBet: 500, features: [scatterWin, freeSpins] })
+    const feature = steps.find((step) => step.phase === 'feature')
+    expect(feature?.phase).toBe('feature')
+    if (feature?.phase === 'feature') expect(feature.feature).toEqual(freeSpins)
+  })
+
+  it('피처 단계 길이는 900ms다', () => {
+    const steps = buildPresentation([], math, { totalBet: 500, features: [freeSpins] })
+    const feature = steps.find((step) => step.phase === 'feature')
+    expect(feature?.durationMs).toBe(PHASE_FEATURE_MS)
+  })
+
+  it('프리스핀이 없으면 피처 단계도 없다', () => {
+    const steps = buildPresentation([makeWin(0, 20, 10)], math, {
+      totalBet: 500,
+      features: [scatterWin],
+    })
+    expect(steps.map((step) => step.phase)).toEqual(['all', 'line'])
+  })
+
+  it('모든 스텝이 스캐터 좌표를 함께 들고 다닌다', () => {
+    const steps = buildPresentation([makeWin(0, 20, 10), makeWin(1, 20, 10)], math, {
+      totalBet: 500,
+      features: [scatterWin, freeSpins],
+    })
+    expect(steps).toHaveLength(4)
+    for (const step of steps) {
+      expect(step.scatters).toEqual(scatterWin.positions)
+    }
+  })
+
+  it('라인 승리가 없어도 스캐터만으로 연출이 생긴다', () => {
+    const steps = buildPresentation([], math, { totalBet: 500, features: [scatterWin] })
+    expect(steps.map((step) => step.phase)).toEqual(['all'])
+    expect(steps[0]?.scatters).toHaveLength(3)
+  })
+
+  it('라인도 피처도 없으면 아무것도 하지 않는다', () => {
+    expect(buildPresentation([], math, { totalBet: 500, features: [] })).toEqual([])
+  })
+
+  it('스캐터가 없으면 좌표 목록이 비어 있다', () => {
+    const steps = buildPresentation([makeWin(0, 20, 10)], math, { totalBet: 500 })
+    expect(steps[0]?.scatters).toEqual([])
+  })
+
+  it('모션 축소에서도 피처 단계는 살아 있고 길이만 줄어든다', () => {
+    const steps = buildPresentation([], math, {
+      totalBet: 500,
+      features: [scatterWin, freeSpins],
+      reducedMotion: true,
+    })
+    const feature = steps.find((step) => step.phase === 'feature')
+    expect(feature).toBeDefined()
+    expect(feature?.durationMs).toBeLessThanOrEqual(REDUCED_WIN_CYCLE_MS)
   })
 })

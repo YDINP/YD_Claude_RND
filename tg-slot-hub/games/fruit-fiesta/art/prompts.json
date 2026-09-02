@@ -1,0 +1,125 @@
+{
+  "game": "fruit-fiesta",
+  "concept": "Brass Lounge: Fruit Fiesta — the hub's second cabinet, same navy+brass lounge family as classic-777 but dressed for a warm terrace party: brushed brass with subtle green and orange enamel accents, fruit symbols rendered as glossy candy-glass with brass stems, a dusk terrace backdrop with paper-lantern bokeh instead of a dim interior. 5 reels x 3 rows, 20 lines, free spins via scatter.",
+  "stylePrefix": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality —",
+  "negative": "photorealistic photography, real human face or body, blurry, out of focus, watermark, signature, extra unintended text, random glyphs, gibberish lettering, busy cluttered background, baked-in drop shadow, harsh outer shadow, cropped edges, multiple duplicate objects, low contrast, dull washed-out colors, noisy grain texture, distorted asymmetric proportions, cheap clip-art look, gradient banding, neon cyberpunk styling",
+  "assets": [
+    {
+      "id": "wild",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — an ornate brass plaque engraved with 'WILD' in bold brass serif caps and a scrollwork border, a large faceted deep-red gem set into the top of the plaque catching a bright specular highlight, warm golden glow radiating from behind the gem, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/wild.webp",
+      "outSize": 512
+    },
+    {
+      "id": "scatter",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a glossy gold five-point star badge with beveled brass edges and a bright center highlight, a brass-and-orange enamel ribbon banner wrapped across the lower half of the star reading 'FREE SPINS' in bold brass serif caps, tiny brass rivets at the star points, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/scatter.webp",
+      "outSize": 512
+    },
+    {
+      "id": "seven",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a single bold chrome-red numeral 7 with a glossy red enamel finish and a beveled brass gold edge trim, a bright diagonal highlight sheen sweeping across the face like polished glass, the numeral tilted slightly forward in 3/4 perspective, same hero-symbol treatment as the classic cabinet for hub-wide consistency, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/seven.webp",
+      "outSize": 512
+    },
+    {
+      "id": "bell",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — an ornate brass bell with a glossy gold gradient body, a round brass clapper hanging inside, a bright specular highlight sweeping down the left curve, faint engraved scrollwork near the rim, small motion lines suggesting a gentle chime, same bell treatment as the classic cabinet for hub-wide consistency, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/bell.webp",
+      "outSize": 512
+    },
+    {
+      "id": "watermelon",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a glossy candy-glass watermelon wedge with a bright pink-red translucent flesh, tiny glossy black candy-glass seeds, a thin green rind edge with a pale inner ring, a small brass stem accent at the top, bright highlight along the curved crust, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/watermelon.webp",
+      "outSize": 512
+    },
+    {
+      "id": "grape",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a small cluster of glossy candy-glass violet-purple grapes with bright individual highlight dots on each grape, joined by a thin brass stem with one small green enamel leaf, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/grape.webp",
+      "outSize": 512
+    },
+    {
+      "id": "plum",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a single glossy candy-glass plum with a deep purple-red gradient body, a soft pale bloom highlight on one side, a thin brass stem with a small green enamel leaf at the top, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/plum.webp",
+      "outSize": 512
+    },
+    {
+      "id": "orange",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a glossy candy-glass orange citrus fruit with a bright orange gradient body, faint segmented rind texture lines, a thin brass stem with a small green enamel leaf at the top, bright highlight dot, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/orange.webp",
+      "outSize": 512
+    },
+    {
+      "id": "lemon",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a glossy candy-glass lemon with a bright yellow gradient body and pointed ends, a thin brass stem with a small green enamel leaf at the top, bright highlight dot, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/lemon.webp",
+      "outSize": 512
+    },
+    {
+      "id": "cherry",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — two glossy candy-glass red cherries of slightly different sizes joined by a thin brass stem with one small green enamel leaf, deep red gradient body with a bright white highlight dot on each cherry, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/cherry.webp",
+      "outSize": 512
+    },
+    {
+      "id": "frame",
+      "kind": "frame",
+      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed portrait artwork with no isolated chroma background around the frame itself — a portrait-orientation warm brass fiesta slot machine bezel frame on a deep navy body, with subtle green and orange enamel inlay accents along the scrollwork (distinct from the classic cabinet's plain brass-on-navy look). Top 0-16% of the frame is a compact dark navy marquee plate with brass-and-orange scrollwork border, engraved wordmark 'FRUIT FIESTA' in bold brass serif caps. Brass scrollwork side pillars with small green enamel leaf motifs run down both edges. A wide rectangular window occupies x 6%-94% and y 20%-72% of the frame to fit five reel columns, filled with a flat solid #00FF00 chroma-key rectangle with NO inner bevel, NO gradient, and NO highlight around its border — the window edge is a single flush flat brass line only (this window will later be replaced with the live reel canvas). Below the window, y 72%-100% is a plain weighted brass base molding with soft ambient shadow and no legend strip or icons on it. Overall symmetrical, centered, no characters, no extraneous text beyond the marquee wordmark.",
+      "size": "1024x1536",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "bg",
+      "kind": "bg",
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — a warm lounge terrace at dusk seen softly out of focus, strings of small paper lanterns creating gentle warm-orange bokeh circles overhead, a soft dusk sky gradient from warm orange-purple near the horizon blending up into the hub's deep navy, faint silhouettes of terrace railings and potted plants at the far edges, a soft radial vignette darkening the corners and edges so foreground content stays legible, calm and uncluttered composition with no characters, no readable text, no sharp details competing for attention, subtle and low-contrast overall so reels and UI read clearly in front of it.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "prompt": "Front-on hero composition (not 3/4 top-down), full-bleed landscape artwork with no isolated chroma background — a burst of glossy candy-glass fruit (a watermelon wedge, a grape cluster, and two cherries) and the brass WILD plaque with its red gem exploding forward together with a shower of brass coins, set against a soft blurred warm dusk lounge terrace backdrop with paper-lantern bokeh, dynamic diagonal composition, small brass plaque wordmark 'FRUIT FIESTA' tucked in a bottom corner, eye-catching and readable even as a small lobby list thumbnail, no clutter, no characters.",
+      "size": "1536x1024",
+      "transparent": false,
+      "out": "thumb.webp",
+      "outSize": 640
+    }
+  ]
+}

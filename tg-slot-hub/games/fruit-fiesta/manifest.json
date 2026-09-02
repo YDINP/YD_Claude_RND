@@ -1,0 +1,31 @@
+{
+  "id": "fruit-fiesta",
+  "name": {
+    "en": "Fruit Fiesta",
+    "ko": "프루트 피에스타"
+  },
+  "version": "1.0.0",
+  "thumbnail": "/games/fruit-fiesta/thumb.webp",
+  "status": "live",
+  "reels": 5,
+  "rows": 3,
+  "lines": 20,
+  "betLevels": [
+    20,
+    40,
+    100,
+    200,
+    400,
+    1000
+  ],
+  "rtpTarget": 0.945,
+  "rtpTotalTarget": 0.96,
+  "jackpotContribution": 0.015,
+  "volatility": "high",
+  "features": [
+    "freeSpins",
+    "scatter",
+    "wild"
+  ],
+  "sort": 1
+}

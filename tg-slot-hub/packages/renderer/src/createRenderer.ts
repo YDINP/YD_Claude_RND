@@ -1,3 +1,4 @@
+import type { RendererMode } from './features.js'
 import type { RendererOptions, ShowWinsOptions, SlotRenderer, SpinToOptions } from './types.js'
 import type { RendererCore, ResolvedRendererOptions } from './internal.js'
 import type { WinLine } from '@tgslot/slot-engine'
@@ -18,6 +19,7 @@ function resolveOptions(options: RendererOptions): ResolvedRendererOptions {
     initialStops,
     fit: options.fit ?? DEFAULT_FIT,
     overflowX: options.overflowX ?? DEFAULT_OVERFLOW_X,
+    showFreeSpinsPlaque: options.showFreeSpinsPlaque ?? true,
   }
 }
 
@@ -30,6 +32,7 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
 
   let core: RendererCore | null = null
   let destroyed = false
+  let pendingMode: RendererMode | null = null
 
   const ready: Promise<void> = (async () => {
     const module = await import('./pixi/pixiRenderer.js')
@@ -39,6 +42,7 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
       return
     }
     core = created
+    if (pendingMode !== null) core.setMode(pendingMode)
   })()
   // ready를 구독하지 않는 호출자 때문에 unhandled rejection이 뜨지 않도록 한 번 삼킨다.
   // 실제 오류는 ready를 await 한 쪽에서 그대로 다시 던져진다.
@@ -59,6 +63,11 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
     },
     setSpinningIdle: (on: boolean) => {
       core?.setSpinningIdle(on)
+    },
+    setMode: (mode: RendererMode) => {
+      // 초기화 전에 불러도 잃지 않도록 기억해 뒀다가 준비되면 적용한다.
+      pendingMode = mode
+      core?.setMode(mode)
     },
     resize: () => {
       core?.resize()

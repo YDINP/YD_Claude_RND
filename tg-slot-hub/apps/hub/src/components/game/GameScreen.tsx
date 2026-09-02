@@ -13,7 +13,7 @@ import {
   type RendererEvent,
 } from '@tgslot/renderer'
 import { createSeededRng, spin as replaySpin } from '@tgslot/slot-engine'
-import { useGameStore } from '../../store/game'
+import { useGameStore, toRendererFreeSpinsMode } from '../../store/game'
 import { useSessionStore } from '../../store/session'
 import { useGamesStore } from '../../store/games'
 import { useHubStore } from '../../store/hub'
@@ -69,6 +69,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const lastResult = useGameStore((s) => s.lastResult)
   const error = useGameStore((s) => s.error)
   const errorCode = useGameStore((s) => s.errorCode)
+  const freeSpins = useGameStore((s) => s.freeSpins)
+  const rendererInstance = useGameStore((s) => s.renderer)
   const load = useGameStore((s) => s.load)
   const setBet = useGameStore((s) => s.setBet)
   const setRenderer = useGameStore((s) => s.setRenderer)
@@ -99,6 +101,46 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     lastResultRef.current = lastResult
   }, [lastResult])
 
+  // 프리스핀 진입/재발동 배너 — 렌더러의 featureTriggered 이벤트가 신호. 최초 진입은 전체화면
+  // 인트로(1.6s), 재발동은 짧은 토스트. 둘 다 지나면 스핀 연출은 평소처럼 이어진다.
+  const [freeSpinsIntro, setFreeSpinsIntro] = useState<{ spins: number; multiplier: number } | null>(null)
+  const [freeSpinsRetrigger, setFreeSpinsRetrigger] = useState<{ spins: number } | null>(null)
+  const introTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const retriggerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 프리스핀 종료 배너 — freeSpins가 (있다가) null이 되는 순간을 감지해 마지막 누적 당첨을 보여준다.
+  // 그 순간 store의 freeSpins는 이미 null이라 값을 알 수 없으므로, 직전 값을 ref로 들고 있는다.
+  const [freeSpinsComplete, setFreeSpinsComplete] = useState<{ accumulatedWin: number } | null>(null)
+  const prevFreeSpinsRef = useRef(freeSpins)
+  const completeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    const prev = prevFreeSpinsRef.current
+    if (prev && !freeSpins) {
+      setFreeSpinsComplete({ accumulatedWin: prev.accumulatedWin })
+      if (completeTimeoutRef.current !== null) clearTimeout(completeTimeoutRef.current)
+      completeTimeoutRef.current = setTimeout(() => {
+        completeTimeoutRef.current = null
+        setFreeSpinsComplete(null)
+      }, 2500)
+    }
+    prevFreeSpinsRef.current = freeSpins
+  }, [freeSpins])
+
+  // 언마운트 시 프리스핀 배너 타이머 정리.
+  useEffect(() => {
+    return () => {
+      if (introTimeoutRef.current !== null) clearTimeout(introTimeoutRef.current)
+      if (retriggerTimeoutRef.current !== null) clearTimeout(retriggerTimeoutRef.current)
+      if (completeTimeoutRef.current !== null) clearTimeout(completeTimeoutRef.current)
+    }
+  }, [])
+
+  // 렌더러가 준비되면(또는 프리스핀 상태가 바뀌면) 시각 모드를 서버 권위 상태에 맞춰 둔다 —
+  // 화면을 나갔다 돌아와 프리스핀을 재개한 경우에도 렌더러가 새로 생성되자마자 반영된다.
+  useEffect(() => {
+    rendererInstance?.setMode?.({ freeSpins: toRendererFreeSpinsMode(freeSpins) })
+  }, [rendererInstance, freeSpins])
+
   // 게임 진입 시 math.json 로드, 이탈 시 store 초기화.
   useEffect(() => {
     void load(gameId)
@@ -123,10 +165,44 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     }, WIN_HOLD_MS[tier])
   }
 
+  /** 프리스핀 최초 진입 — 전체화면 인트로를 1.6초 띄운다. */
+  function showFreeSpinsIntro(spins: number, multiplier: number): void {
+    if (introTimeoutRef.current !== null) clearTimeout(introTimeoutRef.current)
+    setFreeSpinsIntro({ spins, multiplier })
+    introTimeoutRef.current = setTimeout(() => {
+      introTimeoutRef.current = null
+      setFreeSpinsIntro(null)
+    }, 1600)
+  }
+
+  /** 프리스핀 재발동 — 짧은 토스트만 띄운다(전체화면 인트로는 최초 진입 때만). */
+  function showFreeSpinsRetrigger(spins: number): void {
+    if (retriggerTimeoutRef.current !== null) clearTimeout(retriggerTimeoutRef.current)
+    setFreeSpinsRetrigger({ spins })
+    retriggerTimeoutRef.current = setTimeout(() => {
+      retriggerTimeoutRef.current = null
+      setFreeSpinsRetrigger(null)
+    }, 1600)
+  }
+
   // 렌더러 이벤트 — winTotal이 승리 배너를 시작시키고 durationMs에 걸쳐 롤업한다.
   // 등급(tier)은 렌더러가 계산해 함께 보내주는 값을 우선 쓰고, 없으면 로컬로 폴백 계산한다.
+  // featureTriggered는 프리스핀 진입/재발동을 알린다 — 최초 진입이면 전체화면 인트로,
+  // 재발동(retrigger)이면 짧은 토스트.
   // ref/setState만 사용하므로 렌더러 생성 시점에 캡처돼도 값이 오래돼(stale) 문제되지 않는다.
   function handleRendererEvent(event: RendererEvent): void {
+    if (event.type === 'featureTriggered') {
+      const feature = event.feature
+      if (feature.type === 'freeSpins') {
+        if (feature.retrigger) {
+          showFreeSpinsRetrigger(feature.spins)
+        } else {
+          showFreeSpinsIntro(feature.spins, feature.multiplier)
+        }
+      }
+      return
+    }
+
     if (event.type !== 'winTotal') return
 
     const target = event.totalWin
@@ -260,9 +336,12 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   }, [lastResult])
 
   const betLevels = math?.betLevels ?? []
-  const currentBet = betLevels[betIndex] ?? 0
+  // 프리스핀 중에는 진입 시 서버가 고정한 베팅액을 보여준다 — 셀렉터로 바꿀 수 없다.
+  const currentBet = freeSpins ? freeSpins.totalBet : (betLevels[betIndex] ?? 0)
   const betPerLine = math && math.paylines.length > 0 ? currentBet / math.paylines.length : 0
   const isBusy = phase === 'spinning' || phase === 'showingWin'
+  // 프리스핀이 끝난 직후에도 종료 배너가 떠 있는 동안은 셀렉터를 계속 잠가 둔다(배너와 함께 풀린다).
+  const betLocked = freeSpins !== null || freeSpinsComplete !== null
   // 페이테이블에 1개짜리 배당이 하나라도 있으면(단일 심볼이 1번 릴에 있을 때만 인정) 각주를 보여준다.
   const hasSingleCountPay = math ? Object.values(math.paytable).some((rule) => 1 in rule) : false
 
@@ -380,7 +459,28 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             {t('graphicsUnavailable')}
           </div>
         )}
+        {freeSpinsIntro && (
+          <div className="hub-freespins-intro" role="status">
+            <span className="hub-freespins-intro__text">
+              {t('freeSpinsIntro', { spins: freeSpinsIntro.spins, multiplier: freeSpinsIntro.multiplier })}
+            </span>
+          </div>
+        )}
         <div className="hub-game-screen__banners">
+          {freeSpinsRetrigger && (
+            <div className="hub-game-screen__win-banner hub-game-screen__win-banner--freespins">
+              <span className="hub-game-screen__win-tier-label">
+                {t('freeSpinsRetrigger', { spins: freeSpinsRetrigger.spins })}
+              </span>
+            </div>
+          )}
+          {freeSpinsComplete && (
+            <div className="hub-game-screen__win-banner hub-game-screen__win-banner--freespins">
+              <span className="hub-game-screen__win-tier-label">
+                {t('freeSpinsComplete', { total: freeSpinsComplete.accumulatedWin.toLocaleString('en-US') })}
+              </span>
+            </div>
+          )}
           {lastResult?.jackpotWin !== undefined && (
             <div className="hub-game-screen__win-banner hub-game-screen__win-banner--jackpot">
               <span className="hub-game-screen__jackpot-win-label">{t('jackpotWin')}</span>
@@ -417,7 +517,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               type="button"
               className="hub-game-screen__bet-btn"
               onClick={handleBetDec}
-              disabled={isBusy || betLevels.length === 0}
+              disabled={isBusy || betLevels.length === 0 || betLocked}
               aria-label="-"
             >
               −
@@ -430,7 +530,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               type="button"
               className="hub-game-screen__bet-btn"
               onClick={handleBetInc}
-              disabled={isBusy || betLevels.length === 0}
+              disabled={isBusy || betLevels.length === 0 || betLocked}
               aria-label="+"
             >
               +
@@ -438,7 +538,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           </div>
 
           <button type="button" className="hub-game-screen__spin" onClick={handleSpin} disabled={isBusy || !math}>
-            {t('spin')}
+            {freeSpins ? t('freeSpinButton', { n: freeSpins.left }) : t('spin')}
           </button>
         </div>
 

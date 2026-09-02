@@ -1,0 +1,66 @@
+{
+  "id": "fruit-fiesta",
+  "reels": 5,
+  "rows": 3,
+  "symbols": [
+    { "id": "wild", "name": { "en": "Wild Fruit", "ko": "와일드 과일" }, "wild": true },
+    { "id": "scatter", "name": { "en": "Fiesta Star", "ko": "피에스타 스타" }, "scatter": true },
+    { "id": "seven", "name": { "en": "Lucky Seven", "ko": "럭키 세븐" } },
+    { "id": "bell", "name": { "en": "Golden Bell", "ko": "황금 종" } },
+    { "id": "watermelon", "name": { "en": "Watermelon", "ko": "수박" } },
+    { "id": "grape", "name": { "en": "Grape", "ko": "포도" } },
+    { "id": "plum", "name": { "en": "Plum", "ko": "자두" } },
+    { "id": "orange", "name": { "en": "Orange", "ko": "오렌지" } },
+    { "id": "lemon", "name": { "en": "Lemon", "ko": "레몬" } },
+    { "id": "cherry", "name": { "en": "Cherry", "ko": "체리" } }
+  ],
+  "strips": [
+    ["wild","seven","bell","lemon","watermelon","grape","bell","lemon","seven","plum","lemon","orange","lemon","scatter","watermelon","seven","lemon","grape","seven","lemon","bell","cherry","lemon","watermelon","seven","lemon","plum","orange","lemon","grape","lemon","bell","watermelon","seven","lemon","scatter","watermelon","lemon","bell","lemon","grape","lemon","plum","lemon","orange","lemon","cherry","lemon"],
+    ["wild","lemon","bell","lemon","watermelon","grape","orange","lemon","bell","plum","lemon","seven","lemon","scatter","watermelon","lemon","grape","bell","watermelon","lemon","seven","lemon","bell","lemon","grape","lemon","plum","lemon","orange","bell","lemon","seven","lemon","watermelon","grape","lemon","bell","scatter","lemon","seven","lemon","watermelon","plum","lemon","grape","bell","orange","cherry","seven","lemon"],
+    ["wild","cherry","bell","cherry","watermelon","grape","scatter","cherry","seven","bell","cherry","orange","cherry","watermelon","seven","cherry","grape","cherry","bell","cherry","lemon","cherry","watermelon","cherry","seven","bell","cherry","orange","grape","plum","cherry","watermelon","cherry","seven","bell","cherry","scatter","grape","cherry","seven","cherry","watermelon","bell","cherry","lemon","orange","seven","cherry"],
+    ["wild","seven","bell","watermelon","seven","bell","seven","bell","grape","seven","watermelon","bell","scatter","seven","plum","bell","seven","watermelon","bell","orange","seven","bell","wild","seven","watermelon","bell","seven","bell","seven","grape","seven","bell","watermelon","seven","scatter","bell","plum","lemon","seven","bell","seven","watermelon","cherry","bell","seven"],
+    ["wild","seven","bell","watermelon","seven","bell","seven","grape","bell","seven","scatter","watermelon","seven","bell","plum","seven","orange","bell","seven","cherry","watermelon","bell","scatter","seven","bell","seven","bell","watermelon","seven","grape","seven","bell","seven","plum","lemon","seven","bell","orange","watermelon","seven","bell","seven","cherry"]
+  ],
+  "paylines": [
+    [1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0],
+    [2, 2, 2, 2, 2],
+    [0, 1, 2, 1, 0],
+    [2, 1, 0, 1, 2],
+    [0, 0, 1, 0, 0],
+    [2, 2, 1, 2, 2],
+    [1, 0, 0, 0, 1],
+    [1, 2, 2, 2, 1],
+    [1, 0, 1, 0, 1],
+    [1, 2, 1, 2, 1],
+    [0, 1, 1, 1, 0],
+    [2, 1, 1, 1, 2],
+    [1, 1, 0, 1, 1],
+    [1, 1, 2, 1, 1],
+    [0, 1, 0, 1, 0],
+    [2, 1, 2, 1, 2],
+    [0, 0, 2, 0, 0],
+    [2, 2, 0, 2, 2],
+    [0, 2, 0, 2, 0]
+  ],
+  "paytable": {
+    "wild":       { "5": 200 },
+    "seven":      { "3": 50, "4": 150, "5": 500 },
+    "bell":       { "3": 25, "4": 75, "5": 200 },
+    "watermelon": { "3": 15, "4": 40, "5": 100 },
+    "grape":      { "3": 10, "4": 30, "5": 80 },
+    "plum":       { "3": 8, "4": 20, "5": 50 },
+    "orange":     { "3": 5, "4": 15, "5": 40 },
+    "lemon":      { "3": 5, "4": 12, "5": 30 },
+    "cherry":     { "2": 1, "3": 4, "4": 10, "5": 25 }
+  },
+  "wild": { "substitutesFor": "all" },
+  "scatter": {
+    "symbol": "scatter",
+    "pays": { "3": 2, "4": 10, "5": 50 },
+    "freeSpins": { "trigger": 3, "count": 10, "multiplier": 2, "retrigger": true }
+  },
+  "betLevels": [20, 40, 100, 200, 400, 1000],
+  "rtpTarget": 0.945,
+  "volatility": "high"
+}

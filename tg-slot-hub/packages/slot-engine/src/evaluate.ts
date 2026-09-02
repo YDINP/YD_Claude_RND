@@ -1,5 +1,5 @@
 import type { GameMath, SymbolDef } from './schema.js'
-import type { EvaluateResult, GridPosition, GroupId, SymbolId, WinLine } from './types.js'
+import type { EvaluateResult, GridPosition, GroupId, ScatterResult, SymbolId, WinLine } from './types.js'
 
 /**
  * 지급 후보 1개(심볼 또는 그룹)에 대한 사전 계산 결과.
@@ -104,6 +104,23 @@ function buildEvaluator(math: GameMath): Evaluator {
     paylines: math.paylines,
     candidates: [...symbolCandidates, ...groupCandidates],
   }
+}
+
+/** 해석적 RTP 계산기가 읽는 읽기 전용 후보 정보. */
+export interface LineCandidate {
+  key: string
+  group: GroupId | null
+  matches: ReadonlySet<SymbolId>
+  /** index = 왼쪽부터 연속 매치 길이, value = betPerLine 배수. */
+  bestPayout: readonly number[]
+}
+
+/**
+ * 페이라인 지급 후보 목록. `evaluate`가 쓰는 것과 같은 사전 계산 결과다.
+ * 해석적 RTP가 평가 규칙을 따로 구현해 어긋나는 일을 막으려고 노출한다.
+ */
+export function getLineCandidates(math: GameMath): readonly LineCandidate[] {
+  return getEvaluator(math).candidates
 }
 
 const evaluatorCache = new WeakMap<GameMath, Evaluator>()
@@ -214,4 +231,51 @@ export function evaluate(grid: SymbolId[][], math: GameMath, betPerLine: number)
   }
 
   return { wins, totalWin }
+}
+
+/**
+ * 연속 길이별 지급표에서 개수 k에 해당하는 배수를 고른다.
+ * "긴 연속이 이긴다"와 같은 규칙: k 이하 중 정의된 가장 긴 개수를 쓴다.
+ */
+export function payoutForCount(payrule: Record<number, number> | undefined, count: number): number {
+  if (payrule === undefined || count < 1) return 0
+  let best = 0
+  for (const raw of Object.keys(payrule)) {
+    const at = Number(raw)
+    if (at > count) continue
+    const value = payrule[at] ?? 0
+    if (value > 0 && at >= 1) best = Math.max(best, value)
+  }
+  return best
+}
+
+/**
+ * 스캐터를 센다. 페이라인과 무관하게 **화면에 보이는 칸 전부**를 세므로
+ * 한 릴에 2개가 보이면 2개다. 와일드는 스캐터를 대체하지 않는다.
+ *
+ * 배수의 기준은 라인당 베팅액이 아니라 **총 베팅액**이다.
+ * 반환하는 `win`은 프리스핀 배수를 곱하기 전 값이다.
+ */
+export function evaluateScatter(grid: SymbolId[][], math: GameMath, totalBet: number): ScatterResult {
+  const config = math.scatter
+  if (config === undefined) return { count: 0, positions: [], multiplier: 0, win: 0 }
+
+  const positions: GridPosition[] = []
+  for (let row = 0; row < grid.length; row += 1) {
+    const line = grid[row]
+    if (line === undefined) continue
+    for (let reel = 0; reel < line.length; reel += 1) {
+      if (line[reel] === config.symbol) positions.push([reel, row])
+    }
+  }
+
+  const count = positions.length
+  const multiplier = payoutForCount(config.pays, count)
+  return { count, positions, multiplier, win: Math.round(multiplier * totalBet) }
+}
+
+/** 이번 그리드가 프리스핀을 여는가. */
+export function triggersFreeSpins(scatterCount: number, math: GameMath): boolean {
+  const freeSpins = math.scatter?.freeSpins
+  return freeSpins !== undefined && scatterCount >= freeSpins.trigger
 }

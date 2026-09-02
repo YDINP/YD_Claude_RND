@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { STARTING_COINS, STARTING_GEMS } from '@tgslot/shared'
-import type { Locale } from '@tgslot/shared'
+import type { FeatureTrigger, FreeSpinsState, Locale } from '@tgslot/shared'
 import type { WinLine } from '@tgslot/slot-engine'
 import type { DrizzleDb } from '../db/client.js'
 import {
   bonusClaims,
+  gameStates,
   jackpotHits,
   jackpotPool,
   leaderboardWeekly,
@@ -19,6 +20,7 @@ import type { TelegramUser } from '../auth/initData.js'
 import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
 import type { BonusClaim, BonusClaims, BonusKind } from '../economy/bonus.js'
 import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS } from '../economy/config.js'
+import { isFreeSpinsActive, nextFreeSpinsState } from '../economy/freeSpins.js'
 import { hundredthsToCoins, isJackpotHit, jackpotAccrualHundredths } from '../economy/jackpot.js'
 import { levelFromXp, levelUpBonus, toLevelState } from '../economy/level.js'
 import { applySpinToMissions } from '../economy/missions.js'
@@ -83,6 +85,10 @@ function toRoundRecord(row: RoundRow): RoundRecord {
     ...(row.levelUpFrom === null || row.levelUpTo === null || row.levelUpBonus === null
       ? {}
       : { levelUp: { from: row.levelUpFrom, to: row.levelUpTo, bonus: row.levelUpBonus } }),
+    isFreeSpin: row.isFreeSpin,
+    // jsonb라 드라이버가 unknown으로 준다. 쓸 때 이 모양만 넣으므로 여기서 되돌린다.
+    features: (row.features ?? []) as FeatureTrigger[],
+    freeSpinsAfter: (row.freeSpinsAfter ?? null) as FreeSpinsState | null,
     createdAt: row.createdAt,
   }
 }
@@ -240,21 +246,51 @@ export class DrizzleRepos implements Repos {
           level: toLevelState(userRow.xp),
           levelUp: round.levelUp,
           missions,
+          isFreeSpin: round.isFreeSpin,
+          // 세션은 그 사이 더 진행됐을 수 있다. 라운드에 남긴 "그때 값"을 그대로 돌려준다.
+          freeSpins: round.freeSpinsAfter,
         }
       }
 
-      if (locked.coins < input.totalBet) {
-        throw new InsufficientFundsError(input.totalBet, locked.coins)
+      // 프리스핀 세션은 유저 단위 행이라 지갑 락이 이미 직렬화한다. 여기서 읽은 값이 곧
+      // 이 스핀의 진실이다 (요청의 totalBet은 프리스핀 중이면 무시된다).
+      const [stateRow] = await tx
+        .select()
+        .from(gameStates)
+        .where(and(eq(gameStates.userId, input.userId), eq(gameStates.gameId, input.gameId)))
+        .limit(1)
+
+      const freeSpinsBefore = (stateRow?.freeSpins ?? null) as FreeSpinsState | null
+      const isFreeSpin = isFreeSpinsActive(freeSpinsBefore)
+      const totalBet = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.totalBet : input.totalBet
+
+      if (!isFreeSpin && locked.coins < totalBet) {
+        throw new InsufficientFundsError(totalBet, locked.coins)
       }
 
       const nonce = locked.nonce + 1
-      const { result, seed, seedHash, jackpotRoll } = input.compute(nonce)
+      const { result, seed, seedHash, jackpotRoll, freeSpinsAward, features } = input.compute({
+        nonce,
+        totalBet,
+        freeSpins: freeSpinsBefore,
+        isFreeSpin,
+      })
       const roundId = randomUUID()
 
-      const entries: (typeof ledger.$inferInsert)[] = [
-        { userId: input.userId, delta: -input.totalBet, currency: 'coins', reason: 'spin_bet', refId: roundId },
-      ]
-      let walletDelta = -input.totalBet
+      const entries: (typeof ledger.$inferInsert)[] = []
+      let walletDelta = 0
+
+      // 프리스핀은 차감하지 않는다. 원장에 spin_bet 항목 자체가 생기지 않는다.
+      if (!isFreeSpin) {
+        entries.push({
+          userId: input.userId,
+          delta: -totalBet,
+          currency: 'coins',
+          reason: 'spin_bet',
+          refId: roundId,
+        })
+        walletDelta -= totalBet
+      }
 
       if (result.totalWin > 0) {
         entries.push({
@@ -268,8 +304,9 @@ export class DrizzleRepos implements Repos {
       }
 
       // 레벨: xp = 누적 베팅. 여러 레벨을 한 번에 뛸 수 있고 보너스는 도달 레벨 기준 1회다.
+      // xp는 **실제로 건 돈**만 센다. 프리스핀은 베팅이 없었으므로 xp도 오르지 않는다.
       const previousLevel = levelFromXp(userRow.xp)
-      const newXp = userRow.xp + input.totalBet
+      const newXp = userRow.xp + (isFreeSpin ? 0 : totalBet)
       const newLevel = levelFromXp(newXp)
       let levelUp: ApplySpinResult['levelUp']
       if (newLevel > previousLevel) {
@@ -287,7 +324,7 @@ export class DrizzleRepos implements Repos {
       await tx.update(users).set({ xp: newXp, level: newLevel }).where(eq(users.id, input.userId))
 
       // 주간 리더보드
-      const multiplier = result.totalWin / input.totalBet
+      const multiplier = result.totalWin / totalBet
       await tx
         .insert(leaderboardWeekly)
         .values({
@@ -330,6 +367,22 @@ export class DrizzleRepos implements Repos {
           })
       }
 
+      // 프리스핀 세션 갱신. 유저 단위 행이라 전역 잭팟 행보다 먼저 끝내 둔다.
+      const freeSpinsAfter = nextFreeSpinsState(freeSpinsBefore, {
+        gameId: input.gameId,
+        totalBet,
+        isFreeSpin,
+        win: result.totalWin,
+        award: freeSpinsAward,
+      })
+      await tx
+        .insert(gameStates)
+        .values({ userId: input.userId, gameId: input.gameId, freeSpins: freeSpinsAfter, updatedAt: now })
+        .onConflictDoUpdate({
+          target: [gameStates.userId, gameStates.gameId],
+          set: { freeSpins: freeSpinsAfter, updatedAt: now },
+        })
+
       // 잭팟 풀은 **전역 단일 행**이라 모든 유저의 스핀이 여기서 직렬화된다. 그래서 유저 전용 쓰기를
       // 전부 끝낸 뒤 맨 마지막에 만진다. 뒤에 남는 것은 라운드·원장·지갑 쓰기 세 문장뿐이라
       // 이 행을 잡고 커밋까지 가는 구간이 가장 짧다. 락 순서는 항상 wallets -> users -> jackpot_pool이고
@@ -337,7 +390,8 @@ export class DrizzleRepos implements Repos {
       //
       // 적립분은 하우스 몫이라 원장에 남지 않고 베팅 차감도 그대로다. 적립을 먼저 하므로
       // 당첨자는 자기 스핀의 적립분까지 가져간다.
-      const accrual = jackpotAccrualHundredths(input.totalBet)
+      // 잭팟은 **유료 스핀만** 적립하고 판정한다. 프리스핀은 풀에 넣은 돈이 없다.
+      const accrual = isFreeSpin ? 0 : jackpotAccrualHundredths(totalBet)
       const pool = await accrueJackpot(tx, accrual)
       let poolAfterSpin = pool
 
@@ -370,7 +424,7 @@ export class DrizzleRepos implements Repos {
           id: roundId,
           userId: input.userId,
           gameId: input.gameId,
-          bet: input.totalBet,
+          bet: totalBet,
           win: result.totalWin,
           stops: result.stops,
           wins: result.wins,
@@ -382,6 +436,9 @@ export class DrizzleRepos implements Repos {
           levelUpFrom: levelUp?.from ?? null,
           levelUpTo: levelUp?.to ?? null,
           levelUpBonus: levelUp?.bonus ?? null,
+          isFreeSpin,
+          features,
+          freeSpinsAfter,
         })
         .returning()
       if (!insertedRound) throw new Error('[drizzle-repo] round insert failed')
@@ -408,8 +465,20 @@ export class DrizzleRepos implements Repos {
         level: toLevelState(newXp),
         levelUp,
         missions,
+        isFreeSpin,
+        freeSpins: freeSpinsAfter,
       }
     })
+  }
+
+  async getGameState(userId: string, gameId: string): Promise<FreeSpinsState | null> {
+    const [row] = await this.db
+      .select()
+      .from(gameStates)
+      .where(and(eq(gameStates.userId, userId), eq(gameStates.gameId, gameId)))
+      .limit(1)
+
+    return (row?.freeSpins ?? null) as FreeSpinsState | null
   }
 
   async getRoundById(roundId: string): Promise<RoundRecord | null> {

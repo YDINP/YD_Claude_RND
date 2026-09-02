@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { STARTING_COINS, STARTING_GEMS } from '@tgslot/shared'
-import type { Locale } from '@tgslot/shared'
+import type { FreeSpinsState, Locale } from '@tgslot/shared'
 import type { TelegramUser } from '../auth/initData.js'
 import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
 import type { BonusClaim, BonusClaims } from '../economy/bonus.js'
 import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS } from '../economy/config.js'
+import { isFreeSpinsActive, nextFreeSpinsState } from '../economy/freeSpins.js'
 import { hundredthsToCoins, isJackpotHit, jackpotAccrualHundredths } from '../economy/jackpot.js'
 import { levelFromXp, levelUpBonus, toLevelState } from '../economy/level.js'
 import { applySpinToMissions } from '../economy/missions.js'
@@ -81,6 +82,8 @@ export class MemoryRepos implements Repos {
   private readonly leaderboard = new Map<string, LeaderboardState>()
   /** `${userId}:${day}:${missionId}` */
   private readonly missions = new Map<string, MissionState>()
+  /** `${userId}:${gameId}` -> 진행 중인 프리스핀 세션 */
+  private readonly gameStates = new Map<string, FreeSpinsState>()
   /** 1/100 코인 단위. 응답으로 나갈 때만 코인으로 내린다. */
   private jackpotPoolHundredths = JACKPOT_SEED_HUNDREDTHS
   private jackpotLastWin: JackpotState['lastWin'] = null
@@ -173,26 +176,53 @@ export class MemoryRepos implements Repos {
         level: toLevelState(user.xp),
         levelUp: existing.levelUp,
         missions: this.readMissions(input.userId, day),
+        isFreeSpin: existing.isFreeSpin,
+        // 세션은 그 사이 더 진행됐을 수 있다. 라운드에 남긴 "그때 값"을 그대로 돌려준다.
+        freeSpins: existing.freeSpinsAfter,
       }
     }
 
-    if (wallet.coins < input.totalBet) {
-      throw new InsufficientFundsError(input.totalBet, wallet.coins)
+    // 프리스핀은 차감하지 않고, 베팅액도 진입 시점에 고정된 값을 쓴다.
+    const stateKey = gameStateKey(input.userId, input.gameId)
+    const freeSpinsBefore = this.gameStates.get(stateKey) ?? null
+    const isFreeSpin = isFreeSpinsActive(freeSpinsBefore)
+    const totalBet = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.totalBet : input.totalBet
+
+    if (!isFreeSpin && wallet.coins < totalBet) {
+      throw new InsufficientFundsError(totalBet, wallet.coins)
     }
 
     const nonce = wallet.nonce + 1
-    const { result, seed, seedHash, jackpotRoll } = input.compute(nonce)
+    const { result, seed, seedHash, jackpotRoll, freeSpinsAward, features } = input.compute({
+      nonce,
+      totalBet,
+      freeSpins: freeSpinsBefore,
+      isFreeSpin,
+    })
     const roundId = randomUUID()
 
     wallet.nonce = nonce
-    this.credit(input.userId, wallet, 'coins', -input.totalBet, 'spin_bet', roundId)
+    if (!isFreeSpin) {
+      this.credit(input.userId, wallet, 'coins', -totalBet, 'spin_bet', roundId)
+    }
     if (result.totalWin > 0) {
       this.credit(input.userId, wallet, 'coins', result.totalWin, 'spin_win', roundId)
     }
 
+    const freeSpinsAfter = nextFreeSpinsState(freeSpinsBefore, {
+      gameId: input.gameId,
+      totalBet,
+      isFreeSpin,
+      win: result.totalWin,
+      award: freeSpinsAward,
+    })
+    if (freeSpinsAfter) this.gameStates.set(stateKey, freeSpinsAfter)
+    else this.gameStates.delete(stateKey)
+
     // 잭팟 적립은 하우스 몫에서 나가므로 유저 원장에 남지 않는다. 지급될 때만 원장에 찍힌다.
     // 적립을 먼저 하므로 당첨자는 자기 스핀의 적립분까지 가져간다.
-    const accrual = jackpotAccrualHundredths(input.totalBet)
+    // 잭팟은 **유료 스핀만** 적립하고 판정한다. 프리스핀은 풀에 넣은 돈이 없다.
+    const accrual = isFreeSpin ? 0 : jackpotAccrualHundredths(totalBet)
     this.jackpotPoolHundredths += accrual
     let jackpotWin: number | undefined
     if (isJackpotHit(jackpotRoll, accrual)) {
@@ -204,8 +234,9 @@ export class MemoryRepos implements Repos {
     }
 
     // 레벨: xp = 누적 베팅. 여러 레벨을 한 번에 뛸 수 있고 보너스는 도달 레벨 기준 1회다.
+    // xp는 **실제로 건 돈**만 센다. 프리스핀은 베팅이 없었으므로 xp도 오르지 않는다.
     const previousLevel = levelFromXp(user.xp)
-    user.xp += input.totalBet
+    if (!isFreeSpin) user.xp += totalBet
     const newLevel = levelFromXp(user.xp)
     let levelUp: ApplySpinResult['levelUp']
     if (newLevel > previousLevel) {
@@ -226,7 +257,7 @@ export class MemoryRepos implements Repos {
       spins: 0,
     }
     board.totalWin += result.totalWin
-    board.bestMultiplier = Math.max(board.bestMultiplier, result.totalWin / input.totalBet)
+    board.bestMultiplier = Math.max(board.bestMultiplier, result.totalWin / totalBet)
     board.spins += 1
     this.leaderboard.set(boardKey, board)
 
@@ -247,7 +278,7 @@ export class MemoryRepos implements Repos {
       id: roundId,
       userId: input.userId,
       gameId: input.gameId,
-      bet: input.totalBet,
+      bet: totalBet,
       win: result.totalWin,
       stops: [...result.stops],
       wins: result.wins,
@@ -257,6 +288,9 @@ export class MemoryRepos implements Repos {
       idempotencyKey: input.idempotencyKey,
       jackpotWin,
       levelUp,
+      isFreeSpin,
+      features,
+      freeSpinsAfter,
       createdAt: now,
     }
     this.rounds.set(roundId, round)
@@ -271,7 +305,14 @@ export class MemoryRepos implements Repos {
       level: toLevelState(user.xp),
       levelUp,
       missions,
+      isFreeSpin,
+      freeSpins: freeSpinsAfter,
     }
+  }
+
+  async getGameState(userId: string, gameId: string): Promise<FreeSpinsState | null> {
+    const state = this.gameStates.get(gameStateKey(userId, gameId))
+    return state ? { ...state } : null
   }
 
   async getRoundById(roundId: string): Promise<RoundRecord | null> {
@@ -408,12 +449,18 @@ function cloneRound(round: RoundRecord): RoundRecord {
     ...round,
     stops: [...round.stops],
     wins: round.wins.map((win) => ({ ...win })),
+    features: round.features.map((feature) => ({ ...feature })),
+    freeSpinsAfter: round.freeSpinsAfter ? { ...round.freeSpinsAfter } : null,
     ...(round.levelUp ? { levelUp: { ...round.levelUp } } : {}),
   }
 }
 
 function idempotencyMapKey(userId: string, idempotencyKey: string): string {
   return `${userId}:${idempotencyKey}`
+}
+
+function gameStateKey(userId: string, gameId: string): string {
+  return `${userId}:${gameId}`
 }
 
 function missionMapKey(userId: string, day: string, missionId: string): string {

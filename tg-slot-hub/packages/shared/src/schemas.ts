@@ -154,6 +154,12 @@ export const SpinResponseSchema = z.object({
     .optional(),
   /** 이 스핀으로 갱신된 오늘의 미션 진행도 */
   missions: z.array(MissionSchema).optional(),
+  /** 이 스핀이 프리스핀이었는지 (베팅 차감 없음) */
+  isFreeSpin: z.boolean().default(false),
+  /** 이번 스핀에서 발동한 피처(프리스핀 진입/재발동, 스캐터 배당) */
+  features: z.array(z.lazy(() => FeatureTriggerSchema)).default([]),
+  /** 스핀 후 프리스핀 상태. 남은 게 없으면 null */
+  freeSpins: z.lazy(() => FreeSpinsStateSchema).nullable().default(null),
 })
 export type SpinResponse = z.infer<typeof SpinResponseSchema>
 
@@ -235,3 +241,31 @@ export const MissionsResponseSchema = z.object({
   missions: z.array(MissionSchema),
 })
 export type MissionsResponse = z.infer<typeof MissionsResponseSchema>
+
+// ---- 피처: 프리스핀 (Phase 5) ----
+export const FreeSpinsStateSchema = z.object({
+  gameId: z.string(),
+  left: z.number().int().min(0),
+  total: z.number().int().min(0),
+  multiplier: z.number().min(1),
+  /** 프리스핀 진입 시 고정된 베팅액. 프리스핀은 이 금액 기준으로 계산되며 차감되지 않는다 */
+  totalBet: z.number().int().min(1),
+  /** 이 프리스핀 세션에서 누적된 당첨 합계 */
+  accumulatedWin: z.number().int().min(0),
+})
+export type FreeSpinsState = z.infer<typeof FreeSpinsStateSchema>
+
+export const FeatureTriggerSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('freeSpins'), spins: z.number().int().min(1), multiplier: z.number().min(1), retrigger: z.boolean() }),
+  z.object({
+    type: z.literal('scatterWin'),
+    symbol: z.string(),
+    count: z.number().int().min(1),
+    win: z.number().int().min(0),
+    positions: z.array(z.tuple([z.number().int(), z.number().int()])),
+  }),
+])
+export type FeatureTrigger = z.infer<typeof FeatureTriggerSchema>
+
+export const GameStateResponseSchema = z.object({ freeSpins: FreeSpinsStateSchema.nullable() })
+export type GameStateResponse = z.infer<typeof GameStateResponseSchema>

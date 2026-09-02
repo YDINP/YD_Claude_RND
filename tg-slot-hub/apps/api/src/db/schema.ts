@@ -90,6 +90,12 @@ export const rounds = pgTable(
     levelUpFrom: integer('level_up_from'),
     levelUpTo: integer('level_up_to'),
     levelUpBonus: bigint('level_up_bonus', { mode: 'number' }),
+    /** 프리스핀으로 돈 라운드인지. true면 `bet`은 계산 기준일 뿐 차감되지 않았다. */
+    isFreeSpin: boolean('is_free_spin').notNull().default(false),
+    /** 이 스핀이 발동한 피처 (shared `FeatureTrigger[]`) */
+    features: jsonb('features'),
+    /** 스핀 직후의 프리스핀 상태 (shared `FreeSpinsState`). 세션이 끝났으면 null */
+    freeSpinsAfter: jsonb('free_spins_after'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique('rounds_user_id_idempotency_key_unique').on(table.userId, table.idempotencyKey)]
@@ -164,6 +170,26 @@ export const leaderboardWeekly = pgTable(
     primaryKey({ columns: [table.userId, table.week] }),
     index('leaderboard_weekly_week_total_win_idx').on(table.week, table.totalWin),
   ]
+)
+
+/**
+ * 게임별 진행 상태. 지금은 프리스핀 세션 하나뿐이다.
+ *
+ * 지갑처럼 유저 단위 행이라 스핀 트랜잭션이 잡는 지갑 락으로 직렬화된다.
+ * 클라이언트가 새로고침해도 `GET /games/:id/state`로 이어서 돌 수 있게 서버가 들고 있는다.
+ */
+export const gameStates = pgTable(
+  'game_states',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    gameId: text('game_id').notNull(),
+    /** shared `FreeSpinsState`. 진행 중인 세션이 없으면 null */
+    freeSpins: jsonb('free_spins'),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.gameId] })]
 )
 
 /** 데일리 미션 진행도. 미션 정의 자체는 코드(`economy/config.ts`)가 갖는다. */

@@ -88,3 +88,46 @@ export function makeBarMath(overrides: Record<string, unknown> = {}): GameMath {
     ...overrides,
   })
 }
+
+/**
+ * 스캐터 + 프리스핀 검증용 3x3 모델. 조합이 6^3 = 216개라 전수 조사가 가능하고,
+ * 그래서 해석적 계산과 정확히 맞는지 대조할 수 있다.
+ */
+export function makeScatterMath(overrides: Record<string, unknown> = {}): GameMath {
+  return parseGameMath({
+    id: 'scatter',
+    reels: 3,
+    rows: 3,
+    symbols: [
+      { id: 'w', name: { en: 'Wild' }, wild: true },
+      { id: 'a', name: { en: 'Alpha' } },
+      { id: 'b', name: { en: 'Beta' } },
+      { id: 's', name: { en: 'Star' }, scatter: true },
+    ],
+    strips: [
+      ['w', 'a', 'b', 's', 'a', 'b'],
+      ['a', 'w', 'b', 'a', 's', 'b'],
+      ['b', 'a', 'w', 'a', 'b', 's'],
+    ],
+    paylines: [
+      [1, 1, 1],
+      [0, 0, 0],
+      [2, 2, 2],
+    ],
+    paytable: {
+      w: { 3: 50 },
+      a: { 3: 10, 2: 2 },
+      b: { 3: 5 },
+    },
+    wild: { substitutesFor: 'all' },
+    scatter: {
+      symbol: 's',
+      pays: { 2: 1, 3: 5, 4: 20 },
+      freeSpins: { trigger: 3, count: 5, multiplier: 2, retrigger: true },
+    },
+    betLevels: [3, 30],
+    rtpTarget: 0.9,
+    volatility: 'high',
+    ...overrides,
+  })
+}

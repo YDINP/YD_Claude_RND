@@ -2,6 +2,10 @@
 
 `math.json`의 RTP·적중률·최대 배수를 측정하는 CLI, 그리고 CI 게이트 테스트.
 
+3릴처럼 조합이 적으면 전수 조사로, 5릴처럼 수억 개면 해석적 계산으로 RTP를 낸다.
+둘 다 정확값이며 어느 경로였는지는 리포트의 `RTP 계산` 줄에 찍힌다.
+라인·스캐터·프리스핀 기여도 함께 나온다.
+
 ```bash
 pnpm --filter @tgslot/rtp-sim sim classic-777 --exact
 pnpm --filter @tgslot/rtp-sim sim games/classic-777/math.json --bet 100 --spins 1000000 --seed 42
@@ -12,7 +16,8 @@ pnpm --filter @tgslot/rtp-sim sim games/classic-777/math.json --bet 100 --spins 
 | `--bet` | 100 | 총 베팅액. 라인 수로 나누어떨어져야 한다 |
 | `--spins` | 1,000,000 | 몬테카를로 스핀 수 |
 | `--seed` | 42 | 시드. 같은 시드는 같은 결과 |
-| `--exact` | off | 전수 조사만 하고 몬테카를로는 건너뛴다 |
+| `--sample` | 200,000 | 해석 모드에서 적중률·최대 배수를 잴 표본 스핀 수. 0이면 건너뛴다 |
+| `--exact` | off | RTP만 내고 몬테카를로는 건너뛴다 |
 
 대상은 게임 id / 게임 폴더 / `math.json` 경로 아무거나 받는다.
 `pnpm --filter`로 실행돼 cwd가 패키지 폴더여도 워크스페이스 루트 기준으로 다시 찾는다.
@@ -29,7 +34,10 @@ pnpm --filter @tgslot/rtp-sim test
 - `math.json`이 **존재하고** 스키마를 통과
 - `math.json`의 `id`가 폴더 이름과 일치
 - **모든** `betLevels`에서 전수 조사 RTP가 `rtpTarget` ± 0.5%p 안
-- 적중률 10~60%, 최대 배수 100x 이상
+- 적중률 20~60%
+- 최대 배수: 전수 조사 모델은 100x 이상, 해석 모델은 표본 관측 20x 이상
+- RTP 조각(라인·스캐터·프리스핀)의 합이 전체 RTP와 일치
+- 리트리거가 있으면 `count x P(트리거) < 1` (기대 횟수 수렴)
 - `manifest.json`이 **존재하고** `math.json`의 id·reels·rows·라인 수·betLevels·rtpTarget·volatility와 일치
 
 `math.json`이나 `manifest.json`이 없는 폴더는 조용히 건너뛰지 않고 **실패한다**.
@@ -61,6 +69,24 @@ pnpm --filter @tgslot/rtp-sim run audit games/classic-777 --spins 2000000 --seed
 - 몬테카를로 RTP와 95% 신뢰구간(RTP ± 1.96·σ/√n), 전수 조사와의 차이 판정(3·SE)
 - 심볼별·그룹별·라인별·매치 개수별 RTP 기여 (합계는 전체 RTP와 정확히 일치)
 - 배수 분포 히스토그램, 변동성과 파산 확률, 잭팟 회계
+
+### 큰 모델(5릴)은 전수 조사를 하지 않는다
+
+정지 조합이 500만을 넘으면 전수 조사가 불가능하다 (fruit-fiesta는 2억 2천만 조합이다).
+그럴 때는 엔진의 **해석적 RTP**를 쓴다. 기대값은 선형이라 페이라인·스캐터·프리스핀을 따로
+닫힌 식으로 구해 더할 수 있고, 그 값은 근사가 아니라 정확값이다.
+
+닫힌 식으로 나오지 않는 것들(적중률·최대 배수·배수 분포·심볼별 기여)만 고정 시드 표본으로
+추정하고, 리포트에서 그 값에는 `(표본 추정)` 표시를 붙인다. 표본 크기는 `--sample`로 정한다.
+
+| 모델 | RTP | 분포·기여도 | 게이트 |
+|---|---|---|---|
+| 조합 ≤ 500만 (3릴) | 전수 조사 | 전수 조사 | 기여 합계 = RTP 포함 |
+| 조합 > 500만 (5릴) | 해석적 정확값 | 표본 추정 | 기여 합계 게이트는 빠진다 |
+
+최대 배수 하한도 릴 수에 따라 달라진다. 릴이 많을수록 배당이 라인 수로 쪼개져 한 라운드의
+최대 배수가 작아지기 때문에 3릴 100x / 5릴 50x를 쓴다.
+manifest에 `maxWinTarget`이 있으면 그 값이 우선이다.
 
 계산은 전부 `src/audit/`에 있다. 그 폴더는 `node:*`를 쓰지 않아 브라우저에서도 돌고,
 `@tgslot/rtp-sim/audit` 서브패스로 나가 [`apps/sim`](../../apps/sim/README.md) GUI가 같은 함수를 쓴다.

@@ -16,6 +16,7 @@ vi.mock('@tgslot/renderer', () => ({
       showWins: vi.fn().mockResolvedValue(undefined),
       clearWins: vi.fn(),
       setSpinningIdle: vi.fn(),
+      setMode: vi.fn(),
       resize: vi.fn(),
       destroy: vi.fn(),
     }
@@ -32,10 +33,11 @@ vi.mock('../../sdk/api', async () => {
     ...actual,
     getGameMath: vi.fn(),
     spin: vi.fn(),
+    getGameState: vi.fn(),
   }
 })
 
-import { getGameMath, spin as apiSpin } from '../../sdk/api'
+import { getGameMath, spin as apiSpin, getGameState } from '../../sdk/api'
 import { useGameStore } from '../../store/game'
 import { useSessionStore } from '../../store/session'
 import { useGamesStore } from '../../store/games'
@@ -44,6 +46,7 @@ import { GameScreen } from './GameScreen'
 
 const mockedGetGameMath = vi.mocked(getGameMath)
 const mockedApiSpin = vi.mocked(apiSpin)
+const mockedGetGameState = vi.mocked(getGameState)
 
 const rawMath = {
   id: 'classic-777',
@@ -77,6 +80,9 @@ function baseSpinResponse(overrides: Partial<SpinResponse> = {}): SpinResponse {
     seedHash: 'hash',
     nonce: 1,
     jackpot: 0,
+    isFreeSpin: false,
+    features: [],
+    freeSpins: null,
     ...overrides,
   }
 }
@@ -108,6 +114,7 @@ describe('GameScreen', () => {
       refreshError: null,
     })
     mockedGetGameMath.mockResolvedValue(rawMath)
+    mockedGetGameState.mockResolvedValue({ freeSpins: null })
   })
 
   afterEach(() => {
@@ -275,6 +282,134 @@ describe('GameScreen', () => {
           await vi.advanceTimersByTimeAsync(200)
         })
         expect(screen.queryByText('WIN')).not.toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+  })
+
+  describe('free spins', () => {
+    async function spinAndSettle(response: SpinResponse): Promise<void> {
+      mockedApiSpin.mockResolvedValueOnce(response)
+      await act(async () => {
+        screen.getByRole('button', { name: /spin/i }).click()
+      })
+      await waitFor(() => expect(screen.getByRole('button', { name: /spin/i })).not.toBeDisabled())
+    }
+
+    it('shows the full-screen intro banner when the renderer reports a freeSpins featureTriggered event', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+          freeSpins: {
+            gameId: 'classic-777',
+            left: 10,
+            total: 10,
+            multiplier: 2,
+            totalBet: 10,
+            accumulatedWin: 0,
+          },
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({
+          type: 'featureTriggered',
+          feature: { type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false },
+        })
+      })
+
+      expect(await screen.findByText('FREE SPINS! 10 spins ×2')).toBeInTheDocument()
+    })
+
+    it('shows a retrigger toast (not the full intro) when the feature is a retrigger', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          features: [{ type: 'freeSpins', spins: 5, multiplier: 2, retrigger: true }],
+          freeSpins: {
+            gameId: 'classic-777',
+            left: 5,
+            total: 15,
+            multiplier: 2,
+            totalBet: 10,
+            accumulatedWin: 40,
+          },
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({
+          type: 'featureTriggered',
+          feature: { type: 'freeSpins', spins: 5, multiplier: 2, retrigger: true },
+        })
+      })
+
+      expect(await screen.findByText('+5 FREE SPINS')).toBeInTheDocument()
+      expect(screen.queryByText(/FREE SPINS! /)).not.toBeInTheDocument()
+    })
+
+    it('locks the bet selector and shows the locked bet + FREE SPIN(n) label while active', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          isFreeSpin: true,
+          freeSpins: {
+            gameId: 'classic-777',
+            left: 7,
+            total: 10,
+            multiplier: 2,
+            totalBet: 20,
+            accumulatedWin: 30,
+          },
+        }),
+      )
+
+      expect(await screen.findByText('FREE SPIN (7)')).toBeInTheDocument()
+      expect(screen.getByText('20')).toBeInTheDocument() // locked bet, not the selector's own value
+      expect(screen.getByRole('button', { name: '-' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: '+' })).toBeDisabled()
+    })
+
+    it('shows the FREE SPINS COMPLETE banner with the accumulated total once freeSpins becomes null', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      useGameStore.setState({
+        freeSpins: {
+          gameId: 'classic-777',
+          left: 1,
+          total: 10,
+          multiplier: 2,
+          totalBet: 10,
+          accumulatedWin: 320,
+        },
+      })
+      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ isFreeSpin: true, freeSpins: null }))
+
+      // 배너 타이머가 페이크 타이머로 예약되게 스핀 자체를 페이크 타이머 아래서 실행한다 —
+      // 실타이머로 예약된 뒤 페이크로 바꾸면 advanceTimersByTimeAsync가 그 타이머를 건드리지 못한다.
+      vi.useFakeTimers()
+      try {
+        await act(async () => {
+          screen.getByRole('button', { name: /spin/i }).click()
+        })
+
+        expect(screen.getByText('FREE SPINS COMPLETE · total 320')).toBeInTheDocument()
+        // 배너가 떠 있는 동안은 베팅 셀렉터도 함께 잠겨 있는다.
+        expect(screen.getByRole('button', { name: '-' })).toBeDisabled()
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(2600)
+        })
+        expect(screen.queryByText('FREE SPINS COMPLETE · total 320')).not.toBeInTheDocument()
       } finally {
         vi.useRealTimers()
       }

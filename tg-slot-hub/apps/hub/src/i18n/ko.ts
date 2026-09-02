@@ -78,6 +78,11 @@ const ko: Record<TranslationKey, string> = {
   winMega: '메가 윈',
   winEpic: '에픽 윈',
   winMax: '맥스 윈',
+  // free spins
+  freeSpinButton: '프리스핀 ({n})',
+  freeSpinsIntro: '프리스핀 {spins}회 ×{multiplier}',
+  freeSpinsRetrigger: '+{spins} 프리스핀',
+  freeSpinsComplete: '프리스핀 종료 · 총 {total}',
 }
 
 export default ko

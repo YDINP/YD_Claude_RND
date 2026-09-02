@@ -13,6 +13,7 @@ import {
   JackpotSchema,
   LeaderboardResponseSchema,
   MissionsResponseSchema,
+  GameStateResponseSchema,
   type AuthResponse,
   type MeResponse,
   type GamesResponse,
@@ -24,6 +25,7 @@ import {
   type Jackpot,
   type LeaderboardResponse,
   type MissionsResponse,
+  type GameStateResponse,
   type Locale,
 } from '@tgslot/shared'
 
@@ -181,6 +183,19 @@ export async function spin(token: string, gameId: string, body: SpinRequest): Pr
     method: 'POST',
     body: JSON.stringify(body),
   })
+}
+
+/**
+ * GET /games/:id/state — 진행 중인 피처(프리스핀 등) 상태 조회.
+ * 게임 화면에 들어올 때마다 호출해 화면을 나갔다 돌아와도(또는 새로고침해도) 서버에 남아있는
+ * 프리스핀을 그대로 이어서 보여준다.
+ */
+export async function getGameState(token: string, gameId: string): Promise<GameStateResponse> {
+  return authedFetch<GameStateResponse>(
+    `/games/${encodeURIComponent(gameId)}/state`,
+    GameStateResponseSchema,
+    token,
+  )
 }
 
 export interface RoundSeedResponse {

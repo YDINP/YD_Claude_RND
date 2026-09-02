@@ -7,11 +7,13 @@ vi.mock('../sdk/api', async () => {
     getGameMath: vi.fn(),
     spin: vi.fn(),
     getMe: vi.fn(),
+    getGameState: vi.fn(),
   }
 })
 
 import type { GameMath } from '@tgslot/slot-engine'
-import { getGameMath, spin as apiSpin, getMe, ApiClientError } from '../sdk/api'
+import type { SpinResponse, FreeSpinsState } from '@tgslot/shared'
+import { getGameMath, spin as apiSpin, getMe, getGameState, ApiClientError } from '../sdk/api'
 import { useGameStore, type SpinRenderer } from './game'
 import { useSessionStore } from './session'
 import { useHubStore } from './hub'
@@ -19,6 +21,7 @@ import { useHubStore } from './hub'
 const mockedGetGameMath = vi.mocked(getGameMath)
 const mockedApiSpin = vi.mocked(apiSpin)
 const mockedGetMe = vi.mocked(getMe)
+const mockedGetGameState = vi.mocked(getGameState)
 
 const rawMath = {
   id: 'classic-777',
@@ -40,11 +43,44 @@ const rawMath = {
   volatility: 'medium',
 }
 
-function makeRenderer(): SpinRenderer & { spinTo: ReturnType<typeof vi.fn>; showWins: ReturnType<typeof vi.fn> } {
+/** SpinResponse 목(mock) 팩토리 — Phase 5 필드(isFreeSpin/features/freeSpins)를 매번 다시 안 써도 되게. */
+function baseSpinResponse(overrides: Partial<SpinResponse> = {}): SpinResponse {
   return {
-    spinTo: vi.fn().mockResolvedValue(undefined),
-    showWins: vi.fn().mockResolvedValue(undefined),
+    roundId: 'r0',
+    stops: [0, 0, 0],
+    grid: [['seven', 'seven', 'seven']],
+    wins: [],
+    totalBet: 10,
+    totalWin: 0,
+    wallet: { coins: 990, gems: 0 },
+    seedHash: 'hash',
+    nonce: 0,
+    jackpot: 0,
+    isFreeSpin: false,
+    features: [],
+    freeSpins: null,
+    ...overrides,
   }
+}
+
+function makeFreeSpinsState(overrides: Partial<FreeSpinsState> = {}): FreeSpinsState {
+  return {
+    gameId: 'classic-777',
+    left: 9,
+    total: 10,
+    multiplier: 2,
+    totalBet: 10,
+    accumulatedWin: 0,
+    ...overrides,
+  }
+}
+
+function makeRenderer() {
+  const spinTo = vi.fn().mockResolvedValue(undefined)
+  const showWins = vi.fn().mockResolvedValue(undefined)
+  const setMode = vi.fn()
+  const renderer: SpinRenderer = { spinTo, showWins, setMode }
+  return { ...renderer, spinTo, showWins, setMode }
 }
 
 describe('game store', () => {
@@ -52,6 +88,7 @@ describe('game store', () => {
     vi.clearAllMocks()
     localStorage.clear()
     useGameStore.getState().reset()
+    mockedGetGameState.mockResolvedValue({ freeSpins: null })
     useHubStore.setState({
       status: 'idle',
       errorMessage: null,
@@ -102,6 +139,39 @@ describe('game store', () => {
       expect(state.phase).toBe('error')
       expect(state.errorCode).toBe('GAME_NOT_FOUND')
     })
+
+    it('resumes an in-progress free spins session from GET /games/:id/state', async () => {
+      mockedGetGameMath.mockResolvedValue(rawMath)
+      const freeSpins = makeFreeSpinsState({ left: 4, total: 10 })
+      mockedGetGameState.mockResolvedValue({ freeSpins })
+
+      await useGameStore.getState().load('classic-777')
+
+      expect(mockedGetGameState).toHaveBeenCalledWith('test-token', 'classic-777')
+      expect(useGameStore.getState().freeSpins).toEqual(freeSpins)
+    })
+
+    it('does not fail the whole load() when the state resume call errors', async () => {
+      mockedGetGameMath.mockResolvedValue(rawMath)
+      mockedGetGameState.mockRejectedValue(new ApiClientError('offline', 0, 'network_error'))
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      await useGameStore.getState().load('classic-777')
+
+      const state = useGameStore.getState()
+      expect(state.phase).toBe('idle')
+      expect(state.freeSpins).toBeNull()
+      consoleErrorSpy.mockRestore()
+    })
+
+    it('does not call getGameState when there is no token', async () => {
+      useSessionStore.setState({ token: null })
+      mockedGetGameMath.mockResolvedValue(rawMath)
+
+      await useGameStore.getState().load('classic-777')
+
+      expect(mockedGetGameState).not.toHaveBeenCalled()
+    })
   })
 
   describe('spin', () => {
@@ -115,22 +185,13 @@ describe('game store', () => {
       const renderer = makeRenderer()
       useGameStore.getState().setRenderer(renderer)
 
-      mockedApiSpin.mockResolvedValue({
-        roundId: 'r1',
-        stops: [1, 2, 0],
-        grid: [['seven', 'bar', 'seven']],
-        wins: [],
-        totalBet: 10,
-        totalWin: 0,
-        wallet: { coins: 990, gems: 0 },
-        seedHash: 'hash',
-        nonce: 1,
-        jackpot: 0,
-      })
+      mockedApiSpin.mockResolvedValue(
+        baseSpinResponse({ roundId: 'r1', stops: [1, 2, 0], grid: [['seven', 'bar', 'seven']], nonce: 1 }),
+      )
 
       await useGameStore.getState().spin()
 
-      expect(renderer.spinTo).toHaveBeenCalledWith([1, 2, 0])
+      expect(renderer.spinTo).toHaveBeenCalledWith([1, 2, 0], undefined)
       expect(useSessionStore.getState().wallet).toEqual({ coins: 990, gems: 0 })
       expect(useGameStore.getState().phase).toBe('idle')
       expect(useGameStore.getState().lastResult?.roundId).toBe('r1')
@@ -144,18 +205,9 @@ describe('game store', () => {
       const wins = [
         { line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [[0, 1], [1, 1], [2, 1]] as [number, number][] },
       ]
-      mockedApiSpin.mockResolvedValue({
-        roundId: 'r2',
-        stops: [0, 0, 0],
-        grid: [['seven', 'seven', 'seven']],
-        wins,
-        totalBet: 10,
-        totalWin: 100,
-        wallet: { coins: 1090, gems: 0 },
-        seedHash: 'hash',
-        nonce: 2,
-        jackpot: 0,
-      })
+      mockedApiSpin.mockResolvedValue(
+        baseSpinResponse({ roundId: 'r2', wins, totalWin: 100, wallet: { coins: 1090, gems: 0 }, nonce: 2 }),
+      )
 
       await useGameStore.getState().spin()
 
@@ -190,18 +242,9 @@ describe('game store', () => {
           positions: [[0, 1], [1, 1], [2, 1]] as [number, number][],
         },
       ]
-      mockedApiSpin.mockResolvedValue({
-        roundId: 'r2b',
-        stops: [0, 0, 0],
-        grid: [['seven', 'seven', 'seven']],
-        wins,
-        totalBet: 10,
-        totalWin: 100,
-        wallet: { coins: 1090, gems: 0 },
-        seedHash: 'hash',
-        nonce: 2,
-        jackpot: 0,
-      })
+      mockedApiSpin.mockResolvedValue(
+        baseSpinResponse({ roundId: 'r2b', wins, totalWin: 100, wallet: { coins: 1090, gems: 0 }, nonce: 2 }),
+      )
 
       await useGameStore.getState().spin()
 
@@ -220,18 +263,7 @@ describe('game store', () => {
       useGameStore.getState().setRenderer(renderer)
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      mockedApiSpin.mockResolvedValue({
-        roundId: 'r4',
-        stops: [0, 0, 0],
-        grid: [['seven', 'seven', 'seven']],
-        wins: [],
-        totalBet: 10,
-        totalWin: 0,
-        wallet: { coins: 990, gems: 0 },
-        seedHash: 'hash',
-        nonce: 4,
-        jackpot: 0,
-      })
+      mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'r4', nonce: 4 }))
 
       await useGameStore.getState().spin()
 
@@ -243,10 +275,8 @@ describe('game store', () => {
     it('clears the previous lastResult (win banner) as soon as a new spin starts', async () => {
       await loadGame()
       useGameStore.setState({
-        lastResult: {
+        lastResult: baseSpinResponse({
           roundId: 'prev',
-          stops: [0, 0, 0],
-          grid: [['seven', 'seven', 'seven']],
           wins: [
             {
               line: 0,
@@ -257,13 +287,9 @@ describe('game store', () => {
               positions: [[0, 1]] as [number, number][],
             },
           ],
-          totalBet: 10,
           totalWin: 100,
           wallet: { coins: 1090, gems: 0 },
-          seedHash: 'hash',
-          nonce: 1,
-          jackpot: 0,
-        },
+        }),
       })
 
       let resolveSpin: (value: Awaited<ReturnType<typeof apiSpin>>) => void = () => {}
@@ -277,18 +303,7 @@ describe('game store', () => {
 
       expect(useGameStore.getState().lastResult).toBeNull()
 
-      resolveSpin({
-        roundId: 'r5',
-        stops: [0, 0, 0],
-        grid: [['seven', 'seven', 'seven']],
-        wins: [],
-        totalBet: 10,
-        totalWin: 0,
-        wallet: { coins: 990, gems: 0 },
-        seedHash: 'hash',
-        nonce: 5,
-        jackpot: 0,
-      })
+      resolveSpin(baseSpinResponse({ roundId: 'r5', nonce: 5 }))
       await spinPromise
     })
 
@@ -306,18 +321,7 @@ describe('game store', () => {
       const reusedKey = afterFailure.idempotencyKey
       expect(reusedKey).not.toBeNull()
 
-      mockedApiSpin.mockResolvedValueOnce({
-        roundId: 'r3',
-        stops: [0, 0, 0],
-        grid: [['seven', 'seven', 'seven']],
-        wins: [],
-        totalBet: 10,
-        totalWin: 0,
-        wallet: { coins: 990, gems: 0 },
-        seedHash: 'hash',
-        nonce: 3,
-        jackpot: 0,
-      })
+      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'r3', nonce: 3 }))
 
       await useGameStore.getState().spin()
 
@@ -367,19 +371,9 @@ describe('game store', () => {
 
     it('stores jackpotWin on lastResult when the spin response includes it', async () => {
       await loadGame()
-      mockedApiSpin.mockResolvedValue({
-        roundId: 'r9',
-        stops: [0, 0, 0],
-        grid: [['seven', 'seven', 'seven']],
-        wins: [],
-        totalBet: 10,
-        totalWin: 0,
-        wallet: { coins: 5990, gems: 0 },
-        seedHash: 'hash',
-        nonce: 9,
-        jackpot: 0,
-        jackpotWin: 5000,
-      })
+      mockedApiSpin.mockResolvedValue(
+        baseSpinResponse({ roundId: 'r9', wallet: { coins: 5990, gems: 0 }, nonce: 9, jackpotWin: 5000 }),
+      )
 
       await useGameStore.getState().spin()
 
@@ -389,19 +383,7 @@ describe('game store', () => {
     it('adds totalBet to the hub levelInfo xp on every successful spin, not only on levelUp', async () => {
       await loadGame()
       useHubStore.setState({ levelInfo: { level: 1, xp: 40, nextLevelXp: 100, maxBet: 100 } })
-      mockedApiSpin.mockResolvedValue({
-        roundId: 'r10',
-        stops: [0, 0, 0],
-        grid: [['seven', 'seven', 'seven']],
-        wins: [],
-        totalBet: 10,
-        totalWin: 0,
-        wallet: { coins: 990, gems: 0 },
-        seedHash: 'hash',
-        nonce: 10,
-        jackpot: 0,
-        // levelUp이 없는 평범한 스핀
-      })
+      mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'r10', nonce: 10 }))
 
       await useGameStore.getState().spin()
 
@@ -411,18 +393,7 @@ describe('game store', () => {
 
     it('updates the hub jackpot pool immediately from the spin response', async () => {
       await loadGame()
-      mockedApiSpin.mockResolvedValue({
-        roundId: 'r6',
-        stops: [0, 0, 0],
-        grid: [['seven', 'seven', 'seven']],
-        wins: [],
-        totalBet: 10,
-        totalWin: 0,
-        wallet: { coins: 990, gems: 0 },
-        seedHash: 'hash',
-        nonce: 6,
-        jackpot: 555,
-      })
+      mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'r6', nonce: 6, jackpot: 555 }))
 
       await useGameStore.getState().spin()
 
@@ -434,19 +405,7 @@ describe('game store', () => {
       const missions = [
         { id: 'm1', name: { en: 'Spin 100 times' }, target: 100, progress: 5, reward: 50, claimed: false, completed: false },
       ]
-      mockedApiSpin.mockResolvedValue({
-        roundId: 'r7',
-        stops: [0, 0, 0],
-        grid: [['seven', 'seven', 'seven']],
-        wins: [],
-        totalBet: 10,
-        totalWin: 0,
-        wallet: { coins: 990, gems: 0 },
-        seedHash: 'hash',
-        nonce: 7,
-        jackpot: 0,
-        missions,
-      })
+      mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'r7', nonce: 7, missions }))
 
       await useGameStore.getState().spin()
 
@@ -461,19 +420,9 @@ describe('game store', () => {
         levelInfo: { level: 2, xp: 120, nextLevelXp: 300, maxBet: 50 },
         jackpot: 0,
       })
-      mockedApiSpin.mockResolvedValue({
-        roundId: 'r8',
-        stops: [0, 0, 0],
-        grid: [['seven', 'seven', 'seven']],
-        wins: [],
-        totalBet: 10,
-        totalWin: 0,
-        wallet: { coins: 990, gems: 0 },
-        seedHash: 'hash',
-        nonce: 8,
-        jackpot: 0,
-        levelUp: { from: 1, to: 2, bonus: 100 },
-      })
+      mockedApiSpin.mockResolvedValue(
+        baseSpinResponse({ roundId: 'r8', nonce: 8, levelUp: { from: 1, to: 2, bonus: 100 } }),
+      )
 
       await useGameStore.getState().spin()
       await vi.waitFor(() => expect(useHubStore.getState().levelInfo?.level).toBe(2))
@@ -525,6 +474,151 @@ describe('game store', () => {
       await useGameStore.getState().spin()
 
       expect(mockedApiSpin).not.toHaveBeenCalled()
+    })
+
+    describe('free spins', () => {
+      it('locks the bet selector: setBet() is a no-op while a free spins session is active', async () => {
+        await loadGame()
+        useGameStore.getState().setBet(1)
+        expect(useGameStore.getState().betIndex).toBe(1)
+
+        useGameStore.setState({ freeSpins: makeFreeSpinsState() })
+        useGameStore.getState().setBet(2)
+
+        expect(useGameStore.getState().betIndex).toBe(1)
+      })
+
+      it('sends the free-spin session totalBet (not the selector bet) while active', async () => {
+        await loadGame()
+        useGameStore.getState().setBet(2) // 50 — irrelevant once free spins lock the bet
+        useGameStore.setState({ freeSpins: makeFreeSpinsState({ totalBet: 10 }) })
+        mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'fs1', isFreeSpin: true }))
+
+        await useGameStore.getState().spin()
+
+        expect(mockedApiSpin).toHaveBeenCalledWith(
+          'test-token',
+          'classic-777',
+          expect.objectContaining({ totalBet: 10 }),
+        )
+      })
+
+      it('always overwrites the wallet from the server response during free spins — no local debit assumption', async () => {
+        await loadGame()
+        useGameStore.setState({ freeSpins: makeFreeSpinsState() })
+        // 프리스핀은 차감이 없어야 정상이지만, 스토어는 어떤 값이 오든 그대로 반영할 뿐
+        // 스스로 "차감 없음"을 가정해 지갑을 계산하지 않는다는 것이 이 테스트의 요점이다.
+        mockedApiSpin.mockResolvedValue(
+          baseSpinResponse({ roundId: 'fs2', isFreeSpin: true, wallet: { coins: 1234, gems: 0 } }),
+        )
+
+        await useGameStore.getState().spin()
+
+        expect(useSessionStore.getState().wallet).toEqual({ coins: 1234, gems: 0 })
+      })
+
+      it('passes fast: true to renderer.spinTo when the response says this was a free spin', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        useGameStore.getState().setRenderer(renderer)
+        useGameStore.setState({ freeSpins: makeFreeSpinsState() })
+        mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'fs3', isFreeSpin: true }))
+
+        await useGameStore.getState().spin()
+
+        expect(renderer.spinTo).toHaveBeenCalledWith(expect.any(Array), { fast: true })
+      })
+
+      it('updates freeSpins from the response and calls renderer.setMode', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        useGameStore.getState().setRenderer(renderer)
+        const nextFreeSpins = makeFreeSpinsState({ left: 3 })
+        mockedApiSpin.mockResolvedValue(
+          baseSpinResponse({ roundId: 'fs4', isFreeSpin: true, freeSpins: nextFreeSpins }),
+        )
+
+        await useGameStore.getState().spin()
+
+        expect(useGameStore.getState().freeSpins).toEqual(nextFreeSpins)
+        expect(renderer.setMode).toHaveBeenCalledWith({
+          freeSpins: { left: 3, total: nextFreeSpins.total, multiplier: nextFreeSpins.multiplier },
+        })
+      })
+
+      it('calls renderer.setMode with null once free spins end', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        useGameStore.getState().setRenderer(renderer)
+        useGameStore.setState({ freeSpins: makeFreeSpinsState({ left: 1 }) })
+        mockedApiSpin.mockResolvedValue(
+          baseSpinResponse({ roundId: 'fs5', isFreeSpin: true, freeSpins: null }),
+        )
+
+        await useGameStore.getState().spin()
+
+        expect(useGameStore.getState().freeSpins).toBeNull()
+        expect(renderer.setMode).toHaveBeenCalledWith({ freeSpins: null })
+      })
+
+      it('calls showWins even when there are no paying wins, as long as a feature triggered', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        useGameStore.getState().setRenderer(renderer)
+        mockedApiSpin.mockResolvedValue(
+          baseSpinResponse({
+            roundId: 'fs6',
+            wins: [],
+            features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+            freeSpins: makeFreeSpinsState(),
+          }),
+        )
+
+        await useGameStore.getState().spin()
+
+        expect(renderer.showWins).toHaveBeenCalledWith(
+          [],
+          expect.objectContaining({
+            features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+          }),
+        )
+      })
+
+      it('auto-spins the next free spin ~1.2s after the presentation settles, and a manual spin cancels the pending auto-spin', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        useGameStore.getState().setRenderer(renderer)
+        useGameStore.setState({ freeSpins: makeFreeSpinsState({ left: 2 }) })
+
+        vi.useFakeTimers()
+        try {
+          mockedApiSpin.mockResolvedValueOnce(
+            baseSpinResponse({ roundId: 'fs7', isFreeSpin: true, freeSpins: makeFreeSpinsState({ left: 1 }) }),
+          )
+          await useGameStore.getState().spin()
+          expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+
+          // 아직 자동 스핀 지연(1.2s) 전 — 더 호출되면 안 된다.
+          await vi.advanceTimersByTimeAsync(1100)
+          expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+
+          mockedApiSpin.mockResolvedValueOnce(
+            baseSpinResponse({ roundId: 'fs8', isFreeSpin: true, freeSpins: null }),
+          )
+          await vi.advanceTimersByTimeAsync(200)
+          expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+          expect(mockedApiSpin).toHaveBeenLastCalledWith(
+            'test-token',
+            'classic-777',
+            expect.objectContaining({}),
+          )
+          // 프리스핀이 끝났으니 더 이상 자동 스핀이 예약되지 않는다.
+          await vi.advanceTimersByTimeAsync(5000)
+          expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+        } finally {
+          vi.useRealTimers()
+        }
+      })
     })
   })
 

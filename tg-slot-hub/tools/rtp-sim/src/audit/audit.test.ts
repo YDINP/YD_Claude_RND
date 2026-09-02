@@ -144,7 +144,7 @@ describe('신뢰구간 계산', () => {
   })
 
   it('차이가 3 표준오차 안이면 통과다', () => {
-    const mc: McAggregate = { spins: 10_000, rtp: 0.96, hitRate: 0.3, stdDev: 5, maxWin: 1 }
+    const mc: McAggregate = { spins: 10_000, rtp: 0.96, hitRate: 0.3, stdDev: 5, maxWin: 1, freeSpinsPlayed: 0, triggerRate: 0 }
     // SE = 0.05, 임계 0.15
     expect(agreementVerdict(mc, 0.96).pass).toBe(true)
     expect(agreementVerdict(mc, 0.82).pass).toBe(true)
@@ -152,7 +152,7 @@ describe('신뢰구간 계산', () => {
   })
 
   it('표준편차가 0이면 값이 정확히 같을 때만 통과다', () => {
-    const mc: McAggregate = { spins: 100, rtp: 0.5, hitRate: 0, stdDev: 0, maxWin: 0 }
+    const mc: McAggregate = { spins: 100, rtp: 0.5, hitRate: 0, stdDev: 0, maxWin: 0, freeSpinsPlayed: 0, triggerRate: 0 }
     expect(agreementVerdict(mc, 0.5).pass).toBe(true)
     expect(agreementVerdict(mc, 0.5000001).pass).toBe(false)
   })
@@ -189,6 +189,8 @@ describe('몬테카를로 청크 합치기', () => {
         hitRate: xs.filter((x) => x > 0).length / xs.length,
         stdDev: Math.sqrt(Math.max(0, variance)),
         maxWin: Math.max(...xs),
+        freeSpinsPlayed: 0,
+        triggerRate: 0,
       }
     }
     const merged = mergeSimulations([stats(a), stats(b)])
@@ -201,7 +203,15 @@ describe('몬테카를로 청크 합치기', () => {
   })
 
   it('빈 목록은 0으로 떨어진다', () => {
-    expect(mergeSimulations([])).toEqual({ spins: 0, rtp: 0, hitRate: 0, stdDev: 0, maxWin: 0 })
+    expect(mergeSimulations([])).toEqual({
+      spins: 0,
+      rtp: 0,
+      hitRate: 0,
+      stdDev: 0,
+      maxWin: 0,
+      freeSpinsPlayed: 0,
+      triggerRate: 0,
+    })
   })
 
   it('같은 시드는 같은 결과를 내고 수렴 곡선이 총 스핀에서 끝난다', () => {
@@ -264,13 +274,15 @@ describe('샘플 스핀', () => {
     expect(sampleSpins(math, BET, 'x', 5)).toEqual(sampleSpins(math, BET, 'x', 5))
   })
 
-  it('스피너는 호출할 때마다 다음 스핀으로 넘어간다', () => {
+  it('스피너는 호출할 때마다 다음 라운드로 넘어간다', () => {
     const next = createSampleSpinner(math, BET, 'x')
     const first = next()
     const second = next()
-    expect(first.index).toBe(1)
-    expect(second.index).toBe(2)
-    expect(sampleSpins(math, BET, 'x', 2)[1]).toEqual(second)
+    expect(first[0]?.round).toBe(1)
+    expect(second[0]?.round).toBe(2)
+    // 프리스핀이 없는 게임은 라운드마다 스핀 1개다.
+    expect(first).toHaveLength(1)
+    expect(sampleSpins(math, BET, 'x', 2)).toEqual([...first, ...second])
   })
 
   it('승리한 스핀은 하이라이트 좌표를 준다', () => {
@@ -382,7 +394,7 @@ describe('runAudit + 마크다운 리포트', () => {
     for (const heading of [
       '## 게이트 판정 요약',
       '## 1. 게임 요약',
-      '## 2. 전수 조사',
+      '## 2. RTP 산출 — 전수 조사',
       '## 3. 몬테카를로',
       '## 4. RTP 기여 분해',
       '## 5. 배수 분포',
@@ -400,7 +412,7 @@ describe('runAudit + 마크다운 리포트', () => {
       { ...(loadManifest('classic-777') as object), jackpotContribution: 0.01, rtpTotalTarget: 0.97 },
       { totalBet: BET, spins: 2_000, seed: '42', ruinTrials: 5, ruinSpins: 50 },
     )
-    expect(withJackpot.jackpot?.totalRtp).toBeCloseTo(withJackpot.exact.rtp + 0.01, 12)
+    expect(withJackpot.jackpot?.totalRtp).toBeCloseTo(withJackpot.distribution.rtp + 0.01, 12)
     expect(buildAuditMarkdown(withJackpot)).toContain('## 7. 잭팟 회계')
   })
 })

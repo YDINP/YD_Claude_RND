@@ -2,6 +2,7 @@ import type { GameMath, SymbolId, WinLine } from '@tgslot/slot-engine'
 import type { FrameWindow } from './layout.js'
 import type { FxMap } from './theme.js'
 import type { WinTier } from './wins.js'
+import type { FeatureTrigger, RendererMode } from './features.js'
 
 /** 테마가 선택적으로 선언할 수 있는 효과음 키. 파일이 없으면 키를 빼면 된다. */
 export type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
@@ -66,6 +67,11 @@ export type RendererEvent =
   | { type: 'winTotal'; totalWin: number; tier: WinTier; durationMs: number }
   /** 승리 연출 B단계에서 라인 하나를 짚었다. */
   | { type: 'winLine'; line: number; win: number }
+  /**
+   * 프리스핀 같은 피처에 걸렸다. A단계가 끝나고 스캐터 연출이 시작할 때 온다.
+   * 인트로 배너는 허브가 띄운다. 렌더러는 릴 위 연출만 맡는다.
+   */
+  | { type: 'featureTriggered'; feature: FeatureTrigger }
 
 export interface RendererOptions {
   /** 캔버스를 붙일 DOM 요소. 크기는 이 요소의 클라이언트 박스를 따른다. */
@@ -80,6 +86,11 @@ export interface RendererOptions {
   /** 프레임을 맞추는 방식. 기본 `'window'`. */
   fit?: RendererFit
   /**
+   * 프리스핀 중 릴 창 위에 명판을 띄울지. 기본 true.
+   * 허브가 자체 카운터를 이미 보여준다면 false로 꺼도 된다.
+   */
+  showFreeSpinsPlaque?: boolean
+  /**
    * `fit: 'window'`에서 프레임이 컨테이너 폭을 넘어도 되는 비율. 기본 0.30.
    * 키울수록 릴 창이 커지고 좌우 기둥이 더 잘린다. `fit: 'width'`에서는 무시된다.
    */
@@ -91,6 +102,8 @@ export interface SpinToOptions {
   durationMs?: number
   /** 릴 사이 정지 간격(ms). */
   stagger?: number
+  /** 프리스핀처럼 리듬을 당길 때. 회전 시간이 0.8배로 줄어든다. */
+  fast?: boolean
 }
 
 export interface ShowWinsOptions {
@@ -101,6 +114,11 @@ export interface ShowWinsOptions {
    * 기본값은 `Line {n} · {배당}`.
    */
   formatLineLabel?: (win: WinLine) => string
+  /**
+   * 서버가 준 피처 트리거. 스캐터 좌표와 프리스핀 진입이 여기서 온다.
+   * 스캐터 자리는 연출 내내 어두워지지 않고 금빛 링이 맥동한다.
+   */
+  features?: FeatureTrigger[]
   /**
    * 이번 스핀의 총 베팅액. 주면 빅윈 판정이 정확해진다.
    * 없으면 `sum(multiplier) / paylines.length`로 배수를 추정한다.
@@ -118,6 +136,11 @@ export interface SlotRenderer {
   clearWins(): void
   /** 스핀 대기 중 미세한 유휴 모션. */
   setSpinningIdle(on: boolean): void
+  /**
+   * 프리스핀 같은 진행 상태를 갈아 끼운다.
+   * `{ freeSpins: null }`로 되돌리면 금빛 테두리와 명판이 사라진다.
+   */
+  setMode(mode: RendererMode): void
   resize(): void
   destroy(): void
 }

@@ -7,6 +7,8 @@ import {
   CONFETTI_COUNT,
   CONFETTI_FALL_MS,
   MAX_COIN_PARTICLES,
+  PHASE_FEATURE_MS,
+  SCATTER_BURST_PARTICLES,
 } from '../constants.js'
 import type { WinTier } from '../wins.js'
 import type { Layout } from '../layout.js'
@@ -129,5 +131,64 @@ export function burstConfetti(layer: Container, texture: Texture, layout: Layout
   }
 
   gsap.delayedCall((CONFETTI_FALL_MS + 600) / 1000, stop)
+  return stop
+}
+
+/**
+ * 스캐터 트리거 연출. 스캐터가 있던 자리마다 알갱이가 릴 창 **가운데로 모인다**.
+ * 코인 샤워가 바깥으로 쏟아지는 것과 반대 방향이라, 무언가 발동됐다는 인상을 준다.
+ * @returns 중단 함수
+ */
+export function burstScatters(
+  layer: Container,
+  texture: Texture,
+  layout: Layout,
+  positions: readonly (readonly [number, number])[],
+): () => void {
+  const tweens: gsap.core.Tween[] = []
+  const sprites: Sprite[] = []
+  const target = {
+    x: layout.reelArea.x + layout.reelArea.width / 2,
+    y: layout.reelArea.y + layout.reelArea.height / 2,
+  }
+  const pitch = layout.symbolSize + layout.gap
+
+  for (const [reel, row] of positions) {
+    const origin = {
+      x: layout.reelArea.x + reel * pitch + layout.symbolSize / 2,
+      y: layout.reelArea.y + row * pitch + layout.symbolSize / 2,
+    }
+    for (let i = 0; i < SCATTER_BURST_PARTICLES; i += 1) {
+      const spark = new Sprite(texture)
+      spark.anchor.set(0.5)
+      spark.blendMode = 'add'
+      spark.scale.set((layout.symbolSize / 64) * randomBetween(0.18, 0.34))
+      spark.x = origin.x + randomBetween(-1, 1) * layout.symbolSize * 0.3
+      spark.y = origin.y + randomBetween(-1, 1) * layout.symbolSize * 0.3
+      layer.addChild(spark)
+      sprites.push(spark)
+
+      tweens.push(
+        gsap.to(spark, {
+          x: target.x,
+          y: target.y,
+          alpha: 0,
+          duration: (PHASE_FEATURE_MS / 1000) * randomBetween(0.7, 1),
+          delay: randomBetween(0, 0.18),
+          ease: 'power2.in',
+        }),
+      )
+    }
+  }
+
+  let stopped = false
+  const stop = (): void => {
+    if (stopped) return
+    stopped = true
+    for (const tween of tweens) tween.kill()
+    for (const spark of sprites) spark.destroy()
+  }
+
+  gsap.delayedCall((PHASE_FEATURE_MS + 300) / 1000, stop)
   return stop
 }

@@ -36,6 +36,29 @@ export type WildConfig = z.infer<typeof WildConfigSchema>
 /** { 매치 개수: betPerLine 배수 }. JSON 키는 문자열이므로 숫자로 강제 변환한다. */
 export const PayruleSchema = z.record(z.coerce.number().int().positive(), z.number().nonnegative())
 
+/**
+ * 스캐터 설정. 스캐터는 페이라인과 무관하게 **화면에 보이는 칸 전부**를 센다.
+ * 한 릴에 2개가 보이면 2개로 센다. 와일드는 스캐터를 대체하지 않는다.
+ */
+export const ScatterConfigSchema = z.object({
+  symbol: z.string().min(1),
+  /** { 개수: **총 베팅액** 배수 }. 라인당 베팅액이 아니다. */
+  pays: z.record(z.coerce.number().int().positive(), z.number().nonnegative()).optional(),
+  freeSpins: z
+    .object({
+      /** 프리스핀이 열리는 최소 스캐터 개수. */
+      trigger: z.number().int().min(1),
+      /** 한 번 열릴 때 부여되는 스핀 수. */
+      count: z.number().int().min(1),
+      /** 프리스핀 동안 승리에 곱하는 배수. */
+      multiplier: z.number().min(1),
+      /** 프리스핀 중 다시 트리거되면 스핀을 더 주는가. */
+      retrigger: z.boolean(),
+    })
+    .optional(),
+})
+export type ScatterConfig = z.infer<typeof ScatterConfigSchema>
+
 const BaseGameMathSchema = z.object({
   id: z.string().min(1),
   reels: z.number().int().min(1),
@@ -53,6 +76,7 @@ const BaseGameMathSchema = z.object({
    */
   paytable: z.record(z.string().min(1), PayruleSchema),
   wild: WildConfigSchema.optional(),
+  scatter: ScatterConfigSchema.optional(),
   /** 총 베팅액(코인) 후보. 모두 paylines.length로 나누어떨어져야 한다. */
   betLevels: z.array(z.number().int().positive()).min(1),
   /** 기본 게임만의 목표 RTP. 잭팟 같은 허브 기여분은 포함하지 않는다. */
@@ -200,6 +224,59 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
     const targets = math.wild.substitutesFor === 'all' ? [] : math.wild.substitutesFor
     for (const id of [...targets, ...(math.wild.excludes ?? [])]) {
       if (!declared.has(id)) issue(`선언되지 않은 심볼: ${id}`, ['wild'])
+    }
+  }
+
+  if (math.scatter) {
+    const cells = math.reels * math.rows
+    const scatterSymbol = declared.get(math.scatter.symbol)
+    if (scatterSymbol === undefined) {
+      issue(`선언되지 않은 심볼: ${math.scatter.symbol}`, ['scatter', 'symbol'])
+    } else {
+      if (scatterSymbol.scatter !== true) {
+        issue(`${math.scatter.symbol}에 scatter: true가 없다`, ['scatter', 'symbol'])
+      }
+      if (!onStrip.has(math.scatter.symbol)) {
+        issue(`어느 스트립에도 없는 스캐터: ${math.scatter.symbol}`, ['scatter', 'symbol'])
+      }
+    }
+
+    const pays = math.scatter.pays
+    if (pays !== undefined) {
+      const counts = payruleCounts(pays)
+      for (const count of counts) {
+        if (count < 1 || count > cells) {
+          issue(`스캐터 개수 ${count}가 1..${cells} 범위를 벗어났다`, ['scatter', 'pays', String(count)])
+        }
+      }
+      for (let i = 1; i < counts.length; i += 1) {
+        const shorter = counts[i - 1]
+        const longer = counts[i]
+        if (shorter === undefined || longer === undefined) continue
+        if ((pays[shorter] ?? 0) > (pays[longer] ?? 0)) {
+          issue(
+            `스캐터: ${shorter}개 배수가 ${longer}개 배수보다 크다. 많이 나올수록 많이 줘야 한다`,
+            ['scatter', 'pays', String(longer)],
+          )
+        }
+      }
+      // 스캐터 배수는 **총 베팅액** 기준이다. 지급 코인이 정수가 되도록 강제한다.
+      for (const level of math.betLevels) {
+        for (const count of counts) {
+          const multiplier = pays[count] ?? 0
+          if (!Number.isInteger(level * multiplier)) {
+            issue(
+              `스캐터 ${count}개: 총 베팅액 ${level} x 배수 ${multiplier} = ${level * multiplier}로 정수가 아니다`,
+              ['scatter', 'pays', String(count)],
+            )
+          }
+        }
+      }
+    }
+
+    const freeSpins = math.scatter.freeSpins
+    if (freeSpins !== undefined && freeSpins.trigger > cells) {
+      issue(`프리스핀 트리거 ${freeSpins.trigger}개가 화면 칸 수(${cells})보다 많다`, ['scatter', 'freeSpins', 'trigger'])
     }
   }
 })

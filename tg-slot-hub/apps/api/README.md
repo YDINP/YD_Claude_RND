@@ -14,6 +14,7 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
 | PATCH | `/me` | Bearer JWT | `{ locale }`로 표시 언어 변경 → `MeResponse` (GET과 같은 모양) |
 | GET | `/games` | - | `{ games: GameSummary[] }`. `hidden` 제외, `sort` 오름차순 |
 | GET | `/games/:id/math` | - | 검증된 `math.json` 원본. `Cache-Control: public, max-age=300` |
+| GET | `/games/:id/state` | Bearer JWT | `GameStateResponse`. 진행 중인 프리스핀 세션 (없으면 `{ freeSpins: null }`) |
 | POST | `/games/:id/spin` | Bearer JWT | `SpinRequest` → `SpinResponse`. 서버 권위 스핀 1회 |
 | GET | `/rounds/:id/seed` | Bearer JWT | 라운드 서버 시드 공개 (소유자만). provably fair 검증용 |
 | GET | `/bonus` | Bearer JWT | `BonusStatus`. 데일리·4시간·구제 보너스의 수령 가능 여부 |
@@ -188,6 +189,51 @@ DATABASE_URL=postgres://... node dist/scripts/checkLedger.js         # 배포 (�
 {"evt":"ledger_mismatch","userId":"...","currency":"coins","wallet":9900,"ledger":9800,"diff":100}
 ```
 
+## 프리스핀 (Phase 5)
+
+프리스핀 세션은 **서버가 소유한다.** 클라이언트가 새로고침하거나 앱을 껐다 켜도
+`GET /games/:id/state`로 이어서 돌 수 있고, 남은 횟수를 클라이언트가 우길 수 없다.
+
+| 규칙 | 내용 |
+|---|---|
+| 진입 | 기본 스핀에서 `freeSpins` 피처가 뜨면 세션이 생긴다. 그 스핀의 베팅액이 세션 내내 고정된다 |
+| 차감 | 프리스핀은 **코인을 걸지 않는다.** 원장에 `spin_bet` 항목 자체가 생기지 않는다 |
+| 베팅액 | 요청의 `totalBet`은 **무시**한다. 진입 시점에 고정된 값으로 계산하고 응답의 `totalBet`에 그 값을 싣는다 |
+| 재발동 | 이번 프리스핀을 **먼저 소모**하고 새로 받은 횟수를 더한다. 마지막 스핀에서 재발동해도 1회를 잃지 않는다 |
+| 종료 | 남은 횟수가 0이 되면 상태 행을 지우고 응답의 `freeSpins`는 `null`이다 |
+| 누적 | `accumulatedWin`은 프리스핀들의 당첨 합계다. 진입 스핀의 당첨은 포함하지 않는다 |
+
+### 다른 시스템과의 관계
+
+| 시스템 | 프리스핀에서 |
+|---|---|
+| 잭팟 | **적립도 판정도 하지 않는다.** 풀에 넣은 돈이 없으므로 가져갈 자격도 없다 |
+| xp / 레벨 | 오르지 않는다. xp는 "실제로 건 돈"이라 프리스핀은 0이다 |
+| 미션 | 스핀 수로 **센다** (`spin_50` 등이 올라간다) |
+| 리더보드 | 스핀 수와 당첨을 **센다**. 배수는 고정 베팅 기준으로 계산한다 |
+| 원장 | 당첨(`spin_win`)만 기록된다. 불변식은 그대로 유지된다 |
+
+### 요청의 totalBet을 막지 않고 무시하는 이유
+
+프리스핀 중에 클라이언트가 다른 `totalBet`을 보내도 400을 주지 않는다. 어차피 코인을 걸지 않는
+스핀이라 거절할 실익이 없고, 자동 스핀 UI가 기본 베팅을 계속 실어 보내는 흔한 구현을 깨뜨리기
+때문이다. 베팅 레벨 검사와 레벨 상한(`BET_LOCKED`) 검사도 프리스핀 중에는 건너뛴다.
+**응답의 `totalBet`이 실제로 적용된 값**이므로 클라이언트는 그것을 보면 된다.
+
+### 저장 위치
+
+- `game_states(user_id, game_id, free_spins jsonb)` — 진행 중인 세션. 유저 단위 행이라
+  스핀 트랜잭션의 지갑 락이 그대로 직렬화한다.
+- `rounds.is_free_spin` / `features` / `free_spins_after` — 멱등 재전송이 **처음과 똑같은 응답**을
+  돌려주기 위한 스냅샷. 재전송은 상태를 다시 소모하지 않는다.
+- `rounds.bet`은 프리스핀에서도 계산 기준 베팅이 들어간다. 실제 배팅액 합계를 낼 때는
+  `is_free_spin = false`로 걸러야 한다.
+
+프리스핀 트리거를 만드는 것은 `@tgslot/slot-engine`이고, API는 그 결과를 상태로 옮기기만 한다.
+`src/games/engineSpin.ts`가 두 패키지 사이의 유일한 접점이다 (라운드 상태 변환, 피처 변환,
+부여 횟수 해석). 상태 기계 자체(`economy/freeSpins.ts`)는 엔진 구현을 모르므로,
+게임마다 트리거 조건이 달라져도 세션 회계는 그대로 쓰인다.
+
 ## 환경변수
 
 | 변수 | 필수 | 기본값 | 설명 |
@@ -227,6 +273,7 @@ pnpm --filter @tgslot/api db:push       # 실제 DB에 반영. 이 저장소 안
 | `0002_harsh_donald_blake.sql` | `rounds` 테이블 + `wallets.nonce`. `(user_id, idempotency_key)` 유니크가 이중 차감을 DB 레벨에서 차단 |
 | `0003_parallel_dormammu.sql` | 허브 테이블 5종(`bonus_claims`, `jackpot_pool`, `jackpot_hits`, `leaderboard_weekly`, `mission_progress`) + `users.xp`. 맨 끝의 `INSERT INTO jackpot_pool`은 손으로 덧붙인 시드 행이다 (drizzle-kit은 데이터를 만들지 않는다) |
 | `0004_spicy_living_tribunal.sql` | `rounds.jackpot_win` / `level_up_from` / `level_up_to` / `level_up_bonus`. 멱등 재전송이 처음과 **완전히 같은** 응답을 돌려주도록 라운드의 부수 결과를 함께 남긴다 |
+| `0008_legal_bromley.sql` | `game_states` 테이블 + `rounds.is_free_spin`/`features`/`free_spins_after`. 프리스핀 세션과 재전송 스냅샷 |
 | `0007_jackpot_pool_hundredths.sql` | 잭팟 풀·시드 단위를 코인에서 1/100 코인으로 변환(x100). 금액 자체는 그대로다 |
 | `0006_jackpot_seed_25k.sql` | 잭팟 시드를 25,000으로 내린다 (손으로 쓴 커스텀 SQL). 현재 풀은 **아직 아무도 돌리지 않은 초기 상태일 때만** 같이 내린다 |
 | `0005_cynical_jane_foster.sql` | `users.locale_explicit`. 유저가 직접 고른 언어를 로그인이 덮어쓰지 못하게 하는 플래그 |

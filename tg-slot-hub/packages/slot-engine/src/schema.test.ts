@@ -302,3 +302,107 @@ describe('GameMathSchema - 1개 매치 배당', () => {
     expect(safeParseGameMath(withOverride({ paytable: { a: { 0: 1, 3: 10 }, w: { 3: 50 } } })).success).toBe(false)
   })
 })
+
+describe('GameMathSchema - 스캐터', () => {
+  const SCATTERED = {
+    ...JSON.parse(JSON.stringify(VALID)),
+    symbols: [
+      { id: 'w', name: { en: 'Wild' }, wild: true },
+      { id: 'a', name: { en: 'Alpha' } },
+      { id: 's', name: { en: 'Star' }, scatter: true },
+    ],
+    strips: [
+      ['w', 'a', 's', 'a'],
+      ['a', 'w', 's', 'a'],
+      ['a', 's', 'w', 'a'],
+    ],
+    paytable: { a: { 3: 10 }, w: { 3: 50 } },
+    scatter: {
+      symbol: 's',
+      pays: { 3: 2, 4: 10 },
+      freeSpins: { trigger: 3, count: 10, multiplier: 2, retrigger: true },
+    },
+  }
+
+  function scatteredWith(patch: Record<string, unknown>): unknown {
+    return { ...JSON.parse(JSON.stringify(SCATTERED)), ...patch }
+  }
+
+  function scatterMessages(patch: Record<string, unknown>): string {
+    const result = safeParseGameMath(scatteredWith(patch))
+    expect(result.success).toBe(false)
+    return result.success ? '' : result.error.issues.map((issue) => issue.message).join(' | ')
+  }
+
+  it('스캐터가 있는 모델을 통과시킨다', () => {
+    const math = parseGameMath(scatteredWith({}))
+    expect(math.scatter?.symbol).toBe('s')
+    expect(math.scatter?.pays?.[3]).toBe(2)
+    expect(math.scatter?.freeSpins?.count).toBe(10)
+  })
+
+  it('스캐터는 선택이다', () => {
+    expect(parseGameMath(withOverride({})).scatter).toBeUndefined()
+  })
+
+  it('선언되지 않은 스캐터 심볼을 거부한다', () => {
+    expect(scatterMessages({ scatter: { symbol: 'zz' } })).toContain('선언되지 않은 심볼: zz')
+  })
+
+  it('scatter: true가 없는 심볼을 스캐터로 지정하면 거부한다', () => {
+    expect(scatterMessages({ scatter: { symbol: 'a' } })).toContain('scatter: true가 없다')
+  })
+
+  it('어느 스트립에도 없는 스캐터를 거부한다', () => {
+    expect(
+      scatterMessages({
+        strips: [
+          ['w', 'a', 'a', 'a'],
+          ['a', 'w', 'a', 'a'],
+          ['a', 'a', 'w', 'a'],
+        ],
+      }),
+    ).toContain('어느 스트립에도 없는 스캐터')
+  })
+
+  it('화면 칸 수를 넘는 스캐터 개수를 거부한다', () => {
+    expect(scatterMessages({ scatter: { symbol: 's', pays: { 10: 1 } } })).toContain('범위를 벗어났다')
+  })
+
+  it('적게 나올 때 더 주는 스캐터 배당을 거부한다', () => {
+    expect(scatterMessages({ scatter: { symbol: 's', pays: { 3: 50, 4: 1 } } })).toContain(
+      '많이 나올수록 많이 줘야 한다',
+    )
+  })
+
+  it('스캐터 지급액이 정수가 아니면 거부한다', () => {
+    // 스캐터 배수는 총 베팅액 기준. 베팅액 10 x 0.05 = 0.5
+    expect(scatterMessages({ scatter: { symbol: 's', pays: { 3: 0.05 } } })).toContain('정수가 아니다')
+  })
+
+  it('화면 칸 수보다 큰 트리거를 거부한다', () => {
+    expect(
+      scatterMessages({
+        scatter: { symbol: 's', freeSpins: { trigger: 10, count: 5, multiplier: 2, retrigger: false } },
+      }),
+    ).toContain('화면 칸 수')
+  })
+
+  it('배수가 1 미만이면 거부한다', () => {
+    const result = safeParseGameMath(
+      scatteredWith({
+        scatter: { symbol: 's', freeSpins: { trigger: 3, count: 5, multiplier: 0.5, retrigger: false } },
+      }),
+    )
+    expect(result.success).toBe(false)
+  })
+
+  it('스캐터 배당 없이 프리스핀만 둘 수도 있다', () => {
+    const math = parseGameMath(
+      scatteredWith({
+        scatter: { symbol: 's', freeSpins: { trigger: 3, count: 5, multiplier: 2, retrigger: false } },
+      }),
+    )
+    expect(math.scatter?.pays).toBeUndefined()
+  })
+})

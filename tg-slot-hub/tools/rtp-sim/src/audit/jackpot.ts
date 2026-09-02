@@ -26,6 +26,7 @@ export function readManifestExtras(json: unknown): ManifestExtras | null {
   return {
     jackpotContribution: readNumber(source, 'jackpotContribution'),
     rtpTotalTarget: readNumber(source, 'rtpTotalTarget'),
+    maxWinTarget: readNumber(source, 'maxWinTarget'),
     nameKo:
       typeof name === 'object' && name !== null ? readString(name as Record<string, unknown>, 'ko') : undefined,
     nameEn:

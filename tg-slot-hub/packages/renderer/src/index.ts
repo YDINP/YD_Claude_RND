@@ -78,6 +78,19 @@ export {
   type SparklePlanOptions,
 } from './ambient.js'
 export {
+  findFreeSpins,
+  formatFreeSpinsPlaque,
+  isFreeSpinsTrigger,
+  isScatterWinTrigger,
+  scatterPositions,
+  shouldShowFreeSpinsPlaque,
+  type FeatureTrigger,
+  type FreeSpinsMode,
+  type FreeSpinsTrigger,
+  type RendererMode,
+  type ScatterWinTrigger,
+} from './features.js'
+export {
   buildPresentation,
   defaultLineLabel,
   phaseAllDurationMs,

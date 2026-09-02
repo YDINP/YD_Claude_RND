@@ -12,7 +12,15 @@ const NO_JACKPOT_ROLL = JACKPOT_ODDS_DENOMINATOR - 1
 
 /** 엔진을 부르지 않고 결과를 고정해 레포의 회계만 검사한다. */
 function fixedResult(totalWin: number): SpinResult {
-  return { stops: [1, 2, 3], grid: [['a', 'a', 'a']], wins: [], totalWin, features: [] }
+  return {
+    stops: [1, 2, 3],
+    grid: [['a', 'a', 'a']],
+    wins: [],
+    lineWin: totalWin,
+    scatterWin: 0,
+    totalWin,
+    features: [],
+  }
 }
 
 function spinInput(userId: string, overrides: Partial<ApplySpinInput> = {}): ApplySpinInput {
@@ -21,11 +29,12 @@ function spinInput(userId: string, overrides: Partial<ApplySpinInput> = {}): App
     gameId: 'classic-777',
     totalBet: 100,
     idempotencyKey: 'key-000000000001',
-    compute: (nonce) => ({
+    compute: ({ nonce }) => ({
       result: fixedResult(250),
       seed: `seed-${nonce}`,
       seedHash: `hash-${nonce}`,
       jackpotRoll: NO_JACKPOT_ROLL,
+      features: [],
     }),
     ...overrides,
   }
@@ -93,7 +102,13 @@ describe('MemoryRepos.applySpin', () => {
 
     await repos.applySpin(
       spinInput(userId, {
-        compute: () => ({ result: fixedResult(0), seed: 's', seedHash: 'h', jackpotRoll: NO_JACKPOT_ROLL }),
+        compute: () => ({
+          result: fixedResult(0),
+          seed: 's',
+          seedHash: 'h',
+          jackpotRoll: NO_JACKPOT_ROLL,
+          features: [],
+        }),
       })
     )
 
@@ -108,13 +123,14 @@ describe('MemoryRepos.applySpin', () => {
     let computeCalls = 0
     const second = await repos.applySpin(
       spinInput(userId, {
-        compute: (nonce) => {
+        compute: ({ nonce }) => {
           computeCalls += 1
           return {
             result: fixedResult(999),
             seed: `seed-${nonce}`,
             seedHash: `hash-${nonce}`,
             jackpotRoll: NO_JACKPOT_ROLL,
+            features: [],
           }
         },
       })
@@ -137,7 +153,13 @@ describe('MemoryRepos.applySpin', () => {
           totalBet: STARTING_COINS + 1,
           compute: () => {
             computeCalls += 1
-            return { result: fixedResult(0), seed: 's', seedHash: 'h', jackpotRoll: NO_JACKPOT_ROLL }
+            return {
+              result: fixedResult(0),
+              seed: 's',
+              seedHash: 'h',
+              jackpotRoll: NO_JACKPOT_ROLL,
+              features: [],
+            }
           },
         })
       )

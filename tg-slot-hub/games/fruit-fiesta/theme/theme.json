@@ -1,0 +1,174 @@
+{
+  "symbols": {
+    "wild": "symbols/wild.webp",
+    "scatter": "symbols/scatter.webp",
+    "seven": "symbols/seven.webp",
+    "bell": "symbols/bell.webp",
+    "watermelon": "symbols/watermelon.webp",
+    "grape": "symbols/grape.webp",
+    "plum": "symbols/plum.webp",
+    "orange": "symbols/orange.webp",
+    "lemon": "symbols/lemon.webp",
+    "cherry": "symbols/cherry.webp"
+  },
+  "frame": "frame.webp",
+  "background": "bg.webp",
+  "frameLayout": {
+    "window": {
+      "x": 0.12671875,
+      "y": 0.2407291666666667,
+      "w": 0.75046875,
+      "h": 0.4664583333333334
+    }
+  },
+  "palette": {
+    "frame": "#d8a94a",
+    "reelBg": "#0b1220",
+    "winLine": [
+      "#f4d98a",
+      "#4fc3d9",
+      "#3fae6a",
+      "#e0605c",
+      "#5b9dff",
+      "#f28c28"
+    ],
+    "text": "#f2f4f8"
+  },
+  "version": "1.0.0",
+  "fx": {
+    "default": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.12,
+          "durationMs": 600
+        }
+      ]
+    },
+    "wild": {
+      "win": [
+        {
+          "type": "burst",
+          "particles": 24,
+          "durationMs": 1000
+        },
+        {
+          "type": "glow",
+          "color": "#f4d98a",
+          "durationMs": 900
+        }
+      ]
+    },
+    "scatter": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#f4d98a",
+          "durationMs": 800
+        },
+        {
+          "type": "spin",
+          "durationMs": 400,
+          "repeat": 1
+        }
+      ]
+    },
+    "seven": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.15,
+          "durationMs": 700
+        },
+        {
+          "type": "shine",
+          "durationMs": 900,
+          "angle": 25
+        }
+      ]
+    },
+    "bell": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 12,
+          "durationMs": 800
+        },
+        {
+          "type": "glow",
+          "color": "#d8a94a",
+          "durationMs": 800
+        }
+      ]
+    },
+    "watermelon": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.08,
+          "durationMs": 700
+        }
+      ]
+    },
+    "grape": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 8,
+          "durationMs": 700
+        },
+        {
+          "type": "shine",
+          "durationMs": 900,
+          "angle": -20
+        }
+      ]
+    },
+    "plum": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.06,
+          "durationMs": 650
+        }
+      ]
+    },
+    "orange": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.12,
+          "durationMs": 600
+        },
+        {
+          "type": "shine",
+          "durationMs": 900,
+          "angle": 25
+        }
+      ]
+    },
+    "lemon": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 10,
+          "durationMs": 700
+        }
+      ]
+    },
+    "cherry": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.08,
+          "durationMs": 700
+        },
+        {
+          "type": "wobble",
+          "degrees": 6,
+          "durationMs": 700
+        }
+      ]
+    }
+  }
+}

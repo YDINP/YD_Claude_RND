@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 /**
@@ -8,19 +8,28 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 vi.mock('./lib/mcClient.js', () => ({
   CANCELLED: '시뮬레이션이 취소되었다',
   runMcInWorker: vi.fn(() => ({ promise: new Promise(() => {}), cancel: vi.fn() })),
+  runDistributionInWorker: vi.fn(() => ({ promise: new Promise(() => {}), cancel: vi.fn() })),
 }))
 
 const { App } = await import('./App.js')
 const { loadGameCatalog, defaultBet } = await import('./games.js')
-const { enumerateAudit } = await import('@tgslot/rtp-sim/audit')
+const { auditBetLevels, enumerateAudit, sampleDistribution } = await import('@tgslot/rtp-sim/audit')
+
+function pack(id: string) {
+  const found = loadGameCatalog().packs.find((candidate) => candidate.id === id)
+  if (found === undefined) throw new Error(`${id} 팩을 찾지 못했다`)
+  return found
+}
 
 function classic777() {
-  const pack = loadGameCatalog().packs.find((candidate) => candidate.id === 'classic-777')
-  if (pack === undefined) throw new Error('classic-777 팩을 찾지 못했다')
-  return pack
+  return pack('classic-777')
 }
 
 describe('검수 시뮬레이터', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('games/*를 읽어 classic-777을 목록에 올린다', () => {
     render(<App />)
     expect(screen.getByLabelText('게임')).toHaveValue('classic-777')
@@ -51,10 +60,10 @@ describe('검수 시뮬레이터', () => {
     fireEvent.click(screen.getByRole('button', { name: '전수조사 실행' }))
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: '심볼별 RTP 기여' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /심볼별 RTP 기여/ })).toBeInTheDocument()
     })
     expect(screen.getByRole('heading', { name: '라인별 RTP 기여' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '배수 분포 표' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /배수 분포 표/ })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: '배수 구간별 확률' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '베팅 레벨별 전수 조사' })).toBeInTheDocument()
   })
@@ -110,6 +119,84 @@ describe('검수 시뮬레이터', () => {
       expect(screen.getByTestId('kpi-exact-rtp')).not.toHaveTextContent('—')
     })
     expect(screen.getByRole('button', { name: '검수 결과 내보내기' })).toBeDisabled()
+  })
+
+  it('게임 선택기에 두 게임이 모두 올라온다', () => {
+    render(<App />)
+    const select = screen.getByLabelText('게임')
+    const ids = [...select.querySelectorAll('option')].map((option) => option.getAttribute('value'))
+    expect(ids).toContain('classic-777')
+    expect(ids).toContain('fruit-fiesta')
+    // _template은 스캐폴드라 목록에 없다.
+    expect(ids).not.toContain('_template')
+  })
+
+  it('전수조사가 가능한 게임은 전수조사 배지를 단다', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: '전수조사 실행' }))
+    await waitFor(() => {
+      expect(screen.getByTestId('kpi-exact-rtp')).toHaveTextContent('RTP (전수조사)')
+    })
+    expect(screen.getAllByText('전수조사').length).toBeGreaterThan(0)
+    expect(screen.queryByText('표본 추정')).not.toBeInTheDocument()
+  })
+
+  it('5릴 게임을 고르면 버튼이 해석적 산출로 바뀌고 워커가 표본을 맡는다', async () => {
+    const { runDistributionInWorker } = await import('./lib/mcClient.js')
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('게임'), { target: { value: 'fruit-fiesta' } })
+
+    const button = await screen.findByRole('button', { name: '해석적 산출 + 표본' })
+    // 전수 조사가 불가능하므로 표본 크기 선택이 나타난다.
+    expect(screen.getByLabelText('표본 스핀 수 (분포 추정)')).toBeInTheDocument()
+
+    fireEvent.click(button)
+    expect(runDistributionInWorker).toHaveBeenCalledTimes(1)
+    const request = vi.mocked(runDistributionInWorker).mock.calls[0]?.[0]
+    expect(request?.sampleSpins).toBe(1_000_000)
+    expect(request?.totalBet).toBe(defaultBet(pack('fruit-fiesta').math))
+  })
+
+  it('5릴 표본 결과가 오면 표본 추정 배지와 프리스핀 타일이 뜬다', async () => {
+    const { runDistributionInWorker } = await import('./lib/mcClient.js')
+    const fruit = pack('fruit-fiesta')
+    const bet = defaultBet(fruit.math)
+    const distribution = sampleDistribution(fruit.math, bet, { spins: 3_000, seed: 'test' })
+    vi.mocked(runDistributionInWorker).mockReturnValueOnce({
+      promise: Promise.resolve({ distribution, betLevels: auditBetLevels(fruit.math) }),
+      cancel: vi.fn(),
+    })
+
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('게임'), { target: { value: 'fruit-fiesta' } })
+    fireEvent.click(await screen.findByRole('button', { name: '해석적 산출 + 표본' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('kpi-exact-rtp')).toHaveTextContent('RTP (해석적)')
+    })
+    expect(screen.getByTestId('kpi-exact-rtp')).toHaveTextContent(`${(distribution.rtp * 100).toFixed(4)}%`)
+    expect(screen.getAllByText('표본 추정').length).toBeGreaterThan(0)
+    expect(screen.getByTestId('kpi-free-spins')).toBeInTheDocument()
+    expect(screen.getByTestId('kpi-trigger')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '스캐터 · 프리스핀' })).toBeInTheDocument()
+  })
+
+  it('프리스핀이 있는 게임은 세션이 나올 때까지 뽑을 수 있다', async () => {
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('게임'), { target: { value: 'fruit-fiesta' } })
+    fireEvent.click(screen.getByRole('tab', { name: '샘플 스핀' }))
+
+    fireEvent.click(screen.getByRole('button', { name: '프리스핀 나올 때까지' }))
+    await waitFor(() => {
+      expect(screen.getAllByText(/프리스핀 2x/).length).toBeGreaterThan(0)
+    })
+    expect(screen.getAllByText(/프리스핀 \d+회 획득/).length).toBeGreaterThan(0)
+  })
+
+  it('프리스핀이 없는 게임에는 그 버튼이 없다', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('tab', { name: '샘플 스핀' }))
+    expect(screen.queryByRole('button', { name: '프리스핀 나올 때까지' })).not.toBeInTheDocument()
   })
 
   it('샘플 스핀 탭은 격자를 보여 주고 스핀 1회로 늘어난다', async () => {

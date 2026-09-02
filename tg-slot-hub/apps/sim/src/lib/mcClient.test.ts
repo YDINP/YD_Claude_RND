@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CANCELLED, runMcInWorker } from './mcClient.js'
-import type { McRequest, McResponse } from './mcTypes.js'
+import type { McRequest, WorkerResponse } from './mcTypes.js'
 
 /**
  * jsdom에는 Worker가 없다. 진짜 워커 대신 메시지 통로만 흉내 내서
@@ -8,7 +8,7 @@ import type { McRequest, McResponse } from './mcTypes.js'
  * 워커를 만들어 놓고 postMessage를 빼먹어 0%에 멈췄던 버그가 이 파일의 이유다.
  */
 class FakeWorker implements Pick<Worker, 'postMessage' | 'terminate'> {
-  onmessage: ((event: MessageEvent<McResponse>) => void) | null = null
+  onmessage: ((event: MessageEvent<WorkerResponse>) => void) | null = null
   onerror: ((event: ErrorEvent) => void) | null = null
   onmessageerror: (() => void) | null = null
   readonly sent: unknown[] = []
@@ -22,12 +22,13 @@ class FakeWorker implements Pick<Worker, 'postMessage' | 'terminate'> {
     this.terminated += 1
   }
 
-  emit(message: McResponse): void {
-    this.onmessage?.({ data: message } as MessageEvent<McResponse>)
+  emit(message: WorkerResponse): void {
+    this.onmessage?.({ data: message } as MessageEvent<WorkerResponse>)
   }
 }
 
 const request: McRequest = {
+  kind: 'montecarlo',
   mathJson: { id: 'fake' },
   totalBet: 100,
   spins: 1000,
@@ -36,15 +37,18 @@ const request: McRequest = {
   ruinSpins: 50,
 }
 
-function doneMessage(): McResponse {
+function doneMessage(): WorkerResponse {
   return {
     type: 'done',
+    kind: 'montecarlo',
     mc: {
       spins: 1000,
       rtp: 0.94,
       hitRate: 0.4,
       stdDev: 3,
       maxWin: 1000,
+      freeSpinsPlayed: 0,
+      triggerRate: 0,
       seed: '42',
       totalBet: 100,
       elapsedMs: 12,
@@ -62,8 +66,10 @@ function doneMessage(): McResponse {
   }
 }
 
+const { kind: _kind, ...mcRequest } = request
+
 function start(worker: FakeWorker, onProgress?: Parameters<typeof runMcInWorker>[1]) {
-  return runMcInWorker(request, onProgress, () => worker as unknown as Worker)
+  return runMcInWorker(mcRequest, onProgress, () => worker as unknown as Worker)
 }
 
 describe('몬테카를로 워커 클라이언트', () => {

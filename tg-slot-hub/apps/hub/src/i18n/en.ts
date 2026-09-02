@@ -77,6 +77,11 @@ const en = {
   winMega: 'MEGA WIN',
   winEpic: 'EPIC WIN',
   winMax: 'MAX WIN',
+  // free spins
+  freeSpinButton: 'FREE SPIN ({n})',
+  freeSpinsIntro: 'FREE SPINS! {spins} spins ×{multiplier}',
+  freeSpinsRetrigger: '+{spins} FREE SPINS',
+  freeSpinsComplete: 'FREE SPINS COMPLETE · total {total}',
 } as const
 
 export default en

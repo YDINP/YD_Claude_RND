@@ -185,3 +185,24 @@ export const FX_MAX_BURST_PARTICLES = 40
 export const FX_DEFAULT_GLOW_COLOR = '#f4d98a'
 /** `flash` 스태거가 켜졌을 때 심볼 사이 지연(ms). */
 export const FX_STAGGER_STEP_MS = 90
+
+/** 프리스핀 중 스핀이 빨라지는 배수. 1보다 작으면 짧아진다. */
+export const FAST_SPIN_FACTOR = 0.8
+
+/** 스캐터 트리거 연출(파티클이 가운데로 모이는 구간) 길이(ms). */
+export const PHASE_FEATURE_MS = 900
+/** 스캐터 자리에서 가운데로 날아가는 파티클 수(자리 하나당). */
+export const SCATTER_BURST_PARTICLES = 8
+/** 스캐터를 감싸는 금빛 링의 두께(px). */
+export const SCATTER_RING_STROKE_PX = 3
+/** 스캐터 링이 심볼보다 커지는 배수. */
+export const SCATTER_RING_SCALE = 0.62
+/** 스캐터 링 맥동 주기(ms). */
+export const SCATTER_RING_PULSE_MS = 700
+
+/** 프리스핀 중 릴 창 테두리에 입히는 금빛 두께(px). */
+export const FREE_SPINS_EDGE_STROKE_PX = 4
+/** 프리스핀 테두리 불투명도. */
+export const FREE_SPINS_EDGE_ALPHA = 0.55
+/** 프리스핀 명판 글자 크기 = 심볼 한 변 x 이 값. */
+export const FREE_SPINS_PLAQUE_FONT_RATIO = 0.2

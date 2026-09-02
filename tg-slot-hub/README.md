@@ -15,8 +15,9 @@ pnpm test
 CLI와 GUI가 그것을 같이 쓴다. 그래서 리포트 숫자와 화면 숫자가 어긋날 수 없다.
 
 ```
-pnpm --filter @tgslot/rtp-sim run audit classic-777    # docs/RTP_AUDIT_classic-777.md 생성
-pnpm --filter @tgslot/sim dev                          # 검수 시뮬레이터 GUI (5180)
+pnpm --filter @tgslot/rtp-sim run audit classic-777     # docs/RTP_AUDIT_classic-777.md 생성
+pnpm --filter @tgslot/rtp-sim run audit fruit-fiesta    # 5릴 게임은 해석적 계산 + 표본
+pnpm --filter @tgslot/sim dev                           # 검수 시뮬레이터 GUI (5180)
 ```
 
 - [`tools/rtp-sim`](tools/rtp-sim/README.md) — 측정 CLI, 검수 리포트, CI 게이트 테스트

@@ -1,6 +1,6 @@
 import { dirname, join } from 'node:path'
 import { existsSync } from 'node:fs'
-import { computeExactRtp, createSeededRng, MAX_ENUMERATION_COMBOS, parseGameMath, simulate } from '@tgslot/slot-engine'
+import { computeExactRtp, createSeededRng, parseGameMath, simulate } from '@tgslot/slot-engine'
 import { parseGameManifest } from '@tgslot/game-sdk'
 import { readJson, resolveMathPath } from './paths.js'
 import { formatExact, formatHeader, formatSimulation } from './report.js'
@@ -26,6 +26,7 @@ function readJackpotInfo(mathPath: string): JackpotInfo | undefined {
 const DEFAULT_BET = 100
 const DEFAULT_SPINS = 1_000_000
 const DEFAULT_SEED = 42
+const DEFAULT_SAMPLE = 200_000
 
 interface CliOptions {
   target: string
@@ -33,6 +34,7 @@ interface CliOptions {
   spins: number
   seed: string
   exactOnly: boolean
+  sampleSpins: number
 }
 
 const USAGE = `사용법: pnpm --filter @tgslot/rtp-sim sim <게임폴더|math.json|게임id> [옵션]
@@ -41,7 +43,8 @@ const USAGE = `사용법: pnpm --filter @tgslot/rtp-sim sim <게임폴더|math.j
   --bet <coins>     총 베팅액 (기본 ${DEFAULT_BET})
   --spins <n>       몬테카를로 스핀 수 (기본 ${DEFAULT_SPINS.toLocaleString('en-US')})
   --seed <s>        시드 (기본 ${DEFAULT_SEED})
-  --exact           전수 조사만 하고 몬테카를로는 건너뛴다
+  --sample <n>      해석 모드에서 적중률·최대 배수를 잴 표본 스핀 수 (기본 ${DEFAULT_SAMPLE.toLocaleString('en-US')})
+  --exact           RTP만 내고 몬테카를로는 건너뛴다
   -h, --help        도움말`
 
 function parseArgs(argv: string[]): CliOptions {
@@ -50,6 +53,7 @@ function parseArgs(argv: string[]): CliOptions {
   let spins = DEFAULT_SPINS
   let seed = String(DEFAULT_SEED)
   let exactOnly = false
+  let sampleSpins = DEFAULT_SAMPLE
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
@@ -70,6 +74,9 @@ function parseArgs(argv: string[]): CliOptions {
       case '--seed':
         seed = takeValue()
         break
+      case '--sample':
+        sampleSpins = Number(takeValue())
+        break
       case '--exact':
         exactOnly = true
         break
@@ -87,7 +94,10 @@ function parseArgs(argv: string[]): CliOptions {
   if (target === undefined) throw new Error(`대상 게임을 지정할 것\n\n${USAGE}`)
   if (!Number.isInteger(bet) || bet <= 0) throw new Error(`--bet은 양의 정수여야 한다: ${bet}`)
   if (!Number.isInteger(spins) || spins <= 0) throw new Error(`--spins는 양의 정수여야 한다: ${spins}`)
-  return { target, bet, spins, seed, exactOnly }
+  if (!Number.isInteger(sampleSpins) || sampleSpins < 0) {
+    throw new Error(`--sample은 0 이상의 정수여야 한다: ${sampleSpins}`)
+  }
+  return { target, bet, spins, seed, exactOnly, sampleSpins }
 }
 
 function main(): void {
@@ -103,12 +113,9 @@ function main(): void {
   console.log(`\n${mathPath}`)
   console.log(formatHeader(math, options.bet))
 
-  const combos = math.strips.reduce((acc, strip) => acc * strip.length, 1)
-  if (combos <= MAX_ENUMERATION_COMBOS) {
-    console.log(`\n${formatExact(computeExactRtp(math, options.bet), math.rtpTarget, readJackpotInfo(mathPath))}`)
-  } else {
-    console.log(`\n전수 조사 생략: 조합 수 ${combos.toLocaleString('en-US')} > 상한 ${MAX_ENUMERATION_COMBOS.toLocaleString('en-US')}`)
-  }
+  // computeExactRtp가 조합 수를 보고 전수 조사와 해석적 계산 중에 알아서 고른다.
+  const exact = computeExactRtp(math, options.bet, { sampleSpins: options.sampleSpins })
+  console.log(`\n${formatExact(exact, math.rtpTarget, readJackpotInfo(mathPath))}`)
 
   if (!options.exactOnly) {
     const rng = createSeededRng(options.seed)

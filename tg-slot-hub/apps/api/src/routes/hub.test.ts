@@ -9,6 +9,7 @@ import type {
   MissionsResponse,
   SpinResponse,
 } from '@tgslot/shared'
+import type { FeatureTrigger } from '@tgslot/shared'
 import { createSeededRng } from '@tgslot/slot-engine'
 import type { Rng, SpinResult } from '@tgslot/slot-engine'
 import { createApp } from '../app.js'
@@ -114,13 +115,33 @@ async function spinRequest(harness: Harness, idempotencyKey: string, totalBet = 
   })
 }
 
-/** 엔진을 거치지 않고 결과를 고정한 스핀. 리더보드·미션 상태를 결정적으로 만든다. */
+/**
+ * 엔진을 거치지 않고 결과를 고정한 스핀. 리더보드·미션·프리스핀 상태를 결정적으로 만든다.
+ * `features`/`freeSpinsAward`를 주면 엔진이 피처를 뱉은 것처럼 굴 수 있다.
+ */
 function fixedSpin(
   repos: MemoryRepos,
   userId: string,
-  options: { key: string; bet?: number; win?: number; gameId?: string; jackpotRoll?: number }
+  options: {
+    key: string
+    bet?: number
+    win?: number
+    gameId?: string
+    jackpotRoll?: number
+    features?: FeatureTrigger[]
+    freeSpinsAward?: { spins: number; multiplier: number }
+  }
 ) {
-  const result: SpinResult = { stops: [0, 0, 0], grid: [['a', 'a', 'a']], wins: [], totalWin: options.win ?? 0, features: [] }
+  const win = options.win ?? 0
+  const result: SpinResult = {
+    stops: [0, 0, 0],
+    grid: [['a', 'a', 'a']],
+    wins: [],
+    lineWin: win,
+    scatterWin: 0,
+    totalWin: win,
+    features: [],
+  }
   return repos.applySpin({
     userId,
     gameId: options.gameId ?? GAME_ID,
@@ -131,6 +152,8 @@ function fixedSpin(
       seed: 'seed',
       seedHash: 'hash',
       jackpotRoll: options.jackpotRoll ?? JACKPOT_ODDS_DENOMINATOR - 1,
+      features: options.features ?? [],
+      ...(options.freeSpinsAward ? { freeSpinsAward: options.freeSpinsAward } : {}),
     }),
   })
 }

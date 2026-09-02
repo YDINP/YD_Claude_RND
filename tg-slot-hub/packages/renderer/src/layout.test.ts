@@ -513,3 +513,122 @@ describe('computeWindowFitLayout — 실제 배포 아트', () => {
     expect(result.layout.height).toBeLessThan(result.window.height)
   })
 })
+
+describe('5x3 + 가로로 넓은 창 (fruit-fiesta 대비)', () => {
+  // 아직 게임 팩이 없어 합성 픽스처로 잰다. 창은 기획대로 x 6~94%, y 22~70%.
+  const FRAME = { width: 1080, height: 1620 }
+  const WIDE = { x: 0.06, y: 0.22, w: 0.88, h: 0.48 }
+
+  function fit(containerWidth: number, containerHeight: number) {
+    return computeWindowFitLayout({
+      containerWidth,
+      containerHeight,
+      frameWidth: FRAME.width,
+      frameHeight: FRAME.height,
+      window: WIDE,
+      reels: 5,
+      rows: 3,
+    })
+  }
+
+  const layout = fit(390, 760).layout
+
+  it('심볼이 정사각형이다', () => {
+    // 한 변 하나로 가로세로를 모두 잡으므로 비율이 틀어질 수 없다.
+    const cell = layout.reelArea.width - (layout.reels - 1) * layout.gap
+    expect(cell / layout.reels).toBeCloseTo(layout.symbolSize, 9)
+    expect(layout.reelArea.height).toBeCloseTo(3 * layout.symbolSize + 2 * layout.gap, 9)
+  })
+
+  it('격자가 폭에 묶이고 세로로 여유가 남는다', () => {
+    // 5x3 격자는 가로로 길어 넓은 창에서도 폭이 먼저 찬다.
+    const result = fit(390, 760)
+    expect(result.layout.width).toBeCloseTo(result.window.width, 6)
+    expect(result.layout.height).toBeLessThan(result.window.height)
+  })
+
+  it('릴 5개와 행 3개가 모두 창 안에 들어간다', () => {
+    const result = fit(390, 760)
+    expect(result.layout.reels).toBe(5)
+    expect(result.layout.rows).toBe(3)
+    expect(result.layout.width).toBeLessThanOrEqual(result.window.width + 1e-9)
+    expect(result.layout.height).toBeLessThanOrEqual(result.window.height + 1e-9)
+  })
+
+  it('모든 셀 중심이 창 안에 있다', () => {
+    const result = fit(390, 760)
+    for (let reel = 0; reel < 5; reel += 1) {
+      for (let row = 0; row < 3; row += 1) {
+        const center = symbolCenter(result.layout, reel, row)
+        expect(center.x).toBeGreaterThan(0)
+        expect(center.x).toBeLessThan(result.layout.width)
+        expect(center.y).toBeGreaterThan(0)
+        expect(center.y).toBeLessThan(result.layout.height)
+      }
+    }
+  })
+
+  it('20라인짜리 대각선도 꼭짓점이 5개다', () => {
+    expect(paylinePoints(layout, [0, 1, 2, 1, 0])).toHaveLength(5)
+  })
+
+  it('창이 격자보다 더 납작하면 그때는 세로가 묶는다', () => {
+    // 5x3 격자 자체의 비율은 약 1.68이다. 창이 그보다 더 넓어야 높이가 먼저 찬다.
+    // 아래 창은 비율 2.0이라 세로가 기준이 된다.
+    const flat = computeWindowFitLayout({
+      containerWidth: 390,
+      containerHeight: 760,
+      frameWidth: FRAME.width,
+      frameHeight: FRAME.height,
+      window: { x: 0.05, y: 0.3, w: 0.9, h: 0.3 },
+      reels: 5,
+      rows: 3,
+    })
+    expect(flat.layout.height).toBeCloseTo(flat.window.height, 6)
+    expect(flat.layout.width).toBeLessThan(flat.window.width)
+  })
+
+  it('기획된 넓은 창(0.88 x 0.48)에서는 폭이 묶는다', () => {
+    // 창 비율 1.22 < 격자 비율 1.68이라 가로가 먼저 찬다.
+    const windowAspect = (WIDE.w * FRAME.width) / (WIDE.h * FRAME.height)
+    const gridAspect = (5 + 4 * 0.06) / (3 + 2 * 0.06)
+    expect(windowAspect).toBeLessThan(gridAspect)
+  })
+
+  it('넓은 창이 좁은 창보다 심볼을 크게 만든다', () => {
+    const narrow = computeWindowFitLayout({
+      containerWidth: 390,
+      containerHeight: 760,
+      frameWidth: FRAME.width,
+      frameHeight: FRAME.height,
+      window: { x: 0.3, y: 0.22, w: 0.4, h: 0.48 },
+      reels: 5,
+      rows: 3,
+    })
+    expect(layout.symbolSize).toBeGreaterThan(narrow.layout.symbolSize)
+  })
+
+  it('5x3이 3x3보다 심볼이 작다', () => {
+    const threeByThree = computeWindowFitLayout({
+      containerWidth: 390,
+      containerHeight: 760,
+      frameWidth: FRAME.width,
+      frameHeight: FRAME.height,
+      window: WIDE,
+      reels: 3,
+      rows: 3,
+    })
+    expect(layout.symbolSize).toBeLessThan(threeByThree.layout.symbolSize)
+  })
+
+  it('프레임은 여전히 세로로 잘리지 않는다', () => {
+    for (const [w, h] of [
+      [390, 760],
+      [390, 844],
+      [430, 932],
+    ]) {
+      const result = fit(w ?? 0, h ?? 0)
+      expect(result.frameFitsVertically).toBe(true)
+    }
+  })
+})

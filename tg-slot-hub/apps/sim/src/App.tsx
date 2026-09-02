@@ -4,11 +4,21 @@ import {
   agreementVerdict,
   auditBetLevels,
   buildAuditMarkdown,
+  buildFeatureReport,
+  canEnumerate,
   composeAuditResult,
   enumerateAudit,
   jackpotAccounting,
+  maxWinThreshold,
 } from '@tgslot/rtp-sim/audit'
-import type { AuditResult, BetLevelRow, EnumerationReport, MonteCarloResult, RuinReport } from '@tgslot/rtp-sim/audit'
+import type {
+  AuditResult,
+  BetLevelRow,
+  DistributionReport,
+  FeatureReport,
+  MonteCarloResult,
+  RuinReport,
+} from '@tgslot/rtp-sim/audit'
 import { BarChart } from './components/BarChart.js'
 import type { BarRow } from './components/BarChart.js'
 import { ConvergenceChart } from './components/ConvergenceChart.js'
@@ -18,8 +28,10 @@ import type { GateChip } from './components/LeftPanel.js'
 import { SampleSpins } from './components/SampleSpins.js'
 import {
   BetLevelTable,
+  BreakdownTable,
   ContributionTable,
   CountTable,
+  FeatureTable,
   GateTable,
   HistogramTable,
   LineTable,
@@ -27,16 +39,17 @@ import {
   VolatilityTable,
 } from './components/Tables.js'
 import { defaultBet, loadGameCatalog } from './games.js'
+import type { GamePack } from './games.js'
 import { pct } from './lib/format.js'
-import { CANCELLED, runMcInWorker } from './lib/mcClient.js'
-import type { McHandle } from './lib/mcClient.js'
+import { CANCELLED, runDistributionInWorker, runMcInWorker } from './lib/mcClient.js'
+import type { WorkerHandle } from './lib/mcClient.js'
 
 /** GUI의 파산 시뮬 설정. CLI 기본값과 같다. */
 const RUIN_TRIALS = 500
 const RUIN_SPINS = 1000
 
 interface ExactState {
-  exact: EnumerationReport
+  distribution: DistributionReport
   betLevels: BetLevelRow[]
 }
 
@@ -55,13 +68,14 @@ export function App() {
 
   const [totalBet, setTotalBet] = useState(() => (pack === undefined ? 0 : defaultBet(pack.math)))
   const [spins, setSpins] = useState<number>(SPIN_CHOICES[1])
+  const [sampleSpins, setSampleSpins] = useState<number>(SPIN_CHOICES[1])
   const [seed, setSeed] = useState('42')
   const [exactState, setExactState] = useState<ExactState | null>(null)
   const [mcState, setMcState] = useState<McState | null>(null)
   const [busy, setBusy] = useState<{ phase: string; ratio: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('summary')
-  const handleRef = useRef<McHandle | null>(null)
+  const handleRef = useRef<WorkerHandle<unknown> | null>(null)
 
   // 게임이나 베팅액이 바뀌면 이전 측정값은 더 이상 그 조건의 결과가 아니다.
   useEffect(() => {
@@ -84,20 +98,43 @@ export function App() {
   const runExact = useCallback(() => {
     if (pack === undefined) return
     setError(null)
+
+    // 조합이 상한을 넘는 모델은 전수 조사가 불가능하다. 표본을 워커에서 돌린다.
+    if (!canEnumerate(pack.math)) {
+      setBusy({ phase: '표본 분포', ratio: 0 })
+      const handle = runDistributionInWorker(
+        { mathJson: pack.math, totalBet, sampleSpins: sampleSpins, seed },
+        (progress) => setBusy({ phase: progress.phase, ratio: progress.ratio }),
+      )
+      handleRef.current = handle
+      handle.promise
+        .then((done) => setExactState({ distribution: done.distribution, betLevels: done.betLevels }))
+        .catch((thrown: unknown) => {
+          const message = thrown instanceof Error ? thrown.message : String(thrown)
+          if (message === CANCELLED) return
+          setError(message)
+        })
+        .finally(() => {
+          handleRef.current = null
+          setBusy(null)
+        })
+      return
+    }
+
     setBusy({ phase: '전수 조사', ratio: 0 })
-    // 32k~수백만 조합이라 동기로 돌린다. 진행 표시가 한 번은 그려지도록 다음 프레임에 실행한다.
+    // 조합이 적어 동기로 돌린다. 진행 표시가 한 번은 그려지도록 다음 프레임에 실행한다.
     setTimeout(() => {
       try {
-        const exact = enumerateAudit(pack.math, totalBet)
+        const distribution = enumerateAudit(pack.math, totalBet)
         const betLevels = auditBetLevels(pack.math)
-        setExactState({ exact, betLevels })
+        setExactState({ distribution, betLevels })
       } catch (thrown) {
         setError(thrown instanceof Error ? thrown.message : String(thrown))
       } finally {
         setBusy(null)
       }
     }, 0)
-  }, [pack, totalBet])
+  }, [pack, totalBet, sampleSpins, seed])
 
   const runMc = useCallback(() => {
     if (pack === undefined) return
@@ -134,7 +171,12 @@ export function App() {
       pack.math,
       pack.manifestJson,
       { totalBet, spins: mcState.mc.spins, seed: mcState.mc.seed },
-      { exact: exactState.exact, betLevels: exactState.betLevels, mc: mcState.mc, ruin: mcState.ruin },
+      {
+        distribution: exactState.distribution,
+        betLevels: exactState.betLevels,
+        mc: mcState.mc,
+        ruin: mcState.ruin,
+      },
     )
   }, [pack, exactState, mcState, totalBet])
 
@@ -166,10 +208,13 @@ export function App() {
     )
   }
 
-  const agreement = exactState === null || mcState === null ? null : agreementVerdict(mcState.mc, exactState.exact.rtp)
-  const jackpot = exactState === null ? null : jackpotAccounting(exactState.exact.rtp, pack.extras)
+  const agreement =
+    exactState === null || mcState === null ? null : agreementVerdict(mcState.mc, exactState.distribution.rtp)
+  const jackpot = exactState === null ? null : jackpotAccounting(exactState.distribution.rtp, pack.extras)
   const contribution = pack.extras?.jackpotContribution ?? null
-  const chips = buildChips(exactState, pack.math.rtpTarget, jackpot, agreement)
+  const features: FeatureReport | null =
+    exactState === null ? null : buildFeatureReport(pack.math, exactState.distribution)
+  const chips = buildChips(exactState, pack, jackpot, agreement)
 
   return (
     <div className="sim-app">
@@ -182,6 +227,10 @@ export function App() {
         onBetChange={setTotalBet}
         spins={spins}
         onSpinsChange={setSpins}
+        sampleSpins={sampleSpins}
+        onSampleSpinsChange={setSampleSpins}
+        needsSample={!canEnumerate(pack.math)}
+        method={exactState?.distribution.method ?? null}
         seed={seed}
         onSeedChange={setSeed}
         onRunExact={runExact}
@@ -224,6 +273,7 @@ export function App() {
             exactState={exactState}
             mcState={mcState}
             audit={audit}
+            features={features}
             target={pack.math.rtpTarget}
             contribution={contribution}
             rtpTotalTarget={pack.extras?.rtpTotalTarget ?? null}
@@ -236,18 +286,19 @@ export function App() {
 
 function buildChips(
   exactState: ExactState | null,
-  target: number,
+  pack: GamePack,
   jackpot: ReturnType<typeof jackpotAccounting>,
   agreement: ReturnType<typeof agreementVerdict> | null,
 ): GateChip[] {
   const chips: GateChip[] = []
+  const target = pack.math.rtpTarget
   const tolerance = `±${(RTP_TOLERANCE * 100).toFixed(1)}%p`
+  const dist = exactState?.distribution ?? null
 
   chips.push({
     key: 'target',
     label: `목표 ${pct(target, 2)} ${tolerance}`,
-    state:
-      exactState === null ? 'idle' : Math.abs(exactState.exact.rtp - target) <= RTP_TOLERANCE ? 'pass' : 'fail',
+    state: dist === null ? 'idle' : Math.abs(dist.rtp - target) <= RTP_TOLERANCE ? 'pass' : 'fail',
   })
 
   if (jackpot !== null) {
@@ -260,15 +311,15 @@ function buildChips(
 
   chips.push({
     key: 'hit',
-    label: exactState === null ? '적중률' : `적중률 ${pct(exactState.exact.hitRate, 1)}`,
-    state:
-      exactState === null ? 'idle' : exactState.exact.hitRate > 0.1 && exactState.exact.hitRate < 0.6 ? 'pass' : 'fail',
+    label: dist === null ? '적중률' : `적중률 ${pct(dist.hitRate, 1)}`,
+    state: dist === null ? 'idle' : dist.hitRate > 0.1 && dist.hitRate < 0.6 ? 'pass' : 'fail',
   })
 
+  const threshold = maxWinThreshold(pack.math, pack.extras)
   chips.push({
     key: 'maxwin',
-    label: exactState === null ? '최대 배수' : `최대 ${exactState.exact.maxWinMultiplier.toFixed(0)}x`,
-    state: exactState === null ? 'idle' : exactState.exact.maxWinMultiplier >= 100 ? 'pass' : 'fail',
+    label: dist === null ? `최대 배수 ${threshold}x+` : `최대 ${dist.maxWinMultiplier.toFixed(0)}x`,
+    state: dist === null ? 'idle' : dist.maxWinMultiplier >= threshold ? 'pass' : 'fail',
   })
 
   chips.push({
@@ -284,13 +335,14 @@ interface SummaryProps {
   exactState: ExactState | null
   mcState: McState | null
   audit: AuditResult | null
+  features: FeatureReport | null
   target: number
   contribution: number | null
   rtpTotalTarget: number | null
 }
 
-function Summary({ exactState, mcState, audit, target, contribution, rtpTotalTarget }: SummaryProps) {
-  const exact = exactState?.exact ?? null
+function Summary({ exactState, mcState, audit, features, target, contribution, rtpTotalTarget }: SummaryProps) {
+  const exact = exactState?.distribution ?? null
   const agreement = exact === null || mcState === null ? null : agreementVerdict(mcState.mc, exact.rtp)
 
   const symbolBars: BarRow[] =
@@ -307,9 +359,10 @@ function Summary({ exactState, mcState, audit, target, contribution, rtpTotalTar
   return (
     <>
       <KpiTiles
-        exact={exact}
+        distribution={exact}
         mc={mcState?.mc ?? null}
         agreement={agreement}
+        features={features}
         target={target}
         jackpotContribution={contribution}
         rtpTotalTarget={rtpTotalTarget}
@@ -324,14 +377,37 @@ function Summary({ exactState, mcState, audit, target, contribution, rtpTotalTar
 
       {exact === null ? (
         <section className="sim-section">
-          <h2>전수 조사</h2>
-          <p className="sim-empty">왼쪽에서 &quot;전수조사 실행&quot;을 누르면 모든 정지 조합을 계산한다.</p>
+          <h2>RTP 산출</h2>
+          <p className="sim-empty">
+            왼쪽에서 실행 버튼을 누르면 계산한다. 조합이 적은 모델은 전수 조사하고, 큰 모델은 해석적으로 RTP를
+            구한 뒤 분포만 표본으로 추정한다.
+          </p>
         </section>
       ) : (
         <>
           <div className="sim-grid-2">
             <section className="sim-section">
-              <h2>배수 분포 — 확률 (로그 축)</h2>
+              <h2>
+                RTP 구성
+                <MethodBadge distribution={exact} />
+              </h2>
+              <p>페이라인·스캐터·프리스핀으로 쪼갠 값이다. 셋 다 닫힌 식에서 나온 정확값이다.</p>
+              <BreakdownTable breakdown={exact.breakdown} rtp={exact.rtp} />
+            </section>
+            {features !== null && (
+              <section className="sim-section">
+                <h2>스캐터 · 프리스핀</h2>
+                <FeatureTable features={features} />
+              </section>
+            )}
+          </div>
+
+          <div className="sim-grid-2">
+            <section className="sim-section">
+              <h2>
+                배수 분포 — 확률 (로그 축)
+                <MethodBadge distribution={exact} />
+              </h2>
               <p>구간이 로그 간격이라 축도 로그로 그린다. 숫자는 실제 확률이다.</p>
               <BarChart
                 rows={histogramProbabilityBars}
@@ -349,13 +425,19 @@ function Summary({ exactState, mcState, audit, target, contribution, rtpTotalTar
           </div>
 
           <section className="sim-section">
-            <h2>배수 분포 표</h2>
+            <h2>
+              배수 분포 표
+              <MethodBadge distribution={exact} />
+            </h2>
             <HistogramTable rows={exact.histogram} rtp={exact.rtp} />
           </section>
 
           <div className="sim-grid-2">
             <section className="sim-section">
-              <h2>심볼별 RTP 기여</h2>
+              <h2>
+                심볼별 RTP 기여
+                <MethodBadge distribution={exact} />
+              </h2>
               <BarChart rows={symbolBars} format={(value) => pct(value, 3)} title="심볼별 RTP 기여" />
               <ContributionTable rows={exact.symbols} keyHeader="심볼" />
             </section>
@@ -419,5 +501,17 @@ function Summary({ exactState, mcState, audit, target, contribution, rtpTotalTar
         </div>
       )}
     </>
+  )
+}
+
+/** 이 숫자가 전수 조사에서 왔는지 표본에서 왔는지 보여 주는 배지. */
+function MethodBadge({ distribution }: { distribution: DistributionReport }) {
+  if (!distribution.estimated) {
+    return <span className="sim-badge sim-badge--exact">전수조사</span>
+  }
+  return (
+    <span className="sim-badge sim-badge--estimated" title={`${distribution.observations.toLocaleString('en-US')} 스핀 표본`}>
+      표본 추정
+    </span>
   )
 }

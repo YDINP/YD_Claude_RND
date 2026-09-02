@@ -19,6 +19,13 @@ export interface LeftPanelProps {
   onBetChange: (bet: number) => void
   spins: number
   onSpinsChange: (spins: number) => void
+  /** 표본 분포에 쓸 스핀 수. 전수 조사가 가능한 모델에서는 쓰이지 않는다. */
+  sampleSpins: number
+  onSampleSpinsChange: (spins: number) => void
+  /** 전수 조사가 불가능해 표본이 필요한 모델인가. */
+  needsSample: boolean
+  /** 이미 산출했다면 어떤 방법이었는지. */
+  method: 'enumerate' | 'analytic' | null
   seed: string
   onSeedChange: (seed: string) => void
   onRunExact: () => void
@@ -90,6 +97,24 @@ export function LeftPanel(props: LeftPanelProps) {
         </select>
       </div>
 
+      {props.needsSample && (
+        <div className="sim-field">
+          <label htmlFor="sim-sample">표본 스핀 수 (분포 추정)</label>
+          <select
+            id="sim-sample"
+            value={props.sampleSpins}
+            onChange={(event) => props.onSampleSpinsChange(Number(event.target.value))}
+            disabled={running}
+          >
+            {SPIN_CHOICES.map((choice) => (
+              <option key={choice} value={choice}>
+                {compactCount(choice)} 스핀
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="sim-field">
         <label htmlFor="sim-seed">시드</label>
         <input
@@ -102,8 +127,13 @@ export function LeftPanel(props: LeftPanelProps) {
       </div>
 
       <button type="button" className="sim-button" onClick={props.onRunExact} disabled={running}>
-        전수조사 실행
+        {props.needsSample ? '해석적 산출 + 표본' : '전수조사 실행'}
       </button>
+      {props.method !== null && (
+        <div className="sim-progress">
+          방법: {props.method === 'enumerate' ? '전수 조사 (정확)' : '해석적 계산 + 표본 추정'}
+        </div>
+      )}
       <button type="button" className="sim-button" onClick={props.onRunMc} disabled={running}>
         시뮬레이션 실행
       </button>

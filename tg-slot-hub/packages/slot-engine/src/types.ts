@@ -29,34 +29,73 @@ export interface WinLine {
   positions: GridPosition[]
 }
 
-export interface FeatureTrigger {
-  type: string
-  symbol?: SymbolId
-  count?: number
-}
-
 /**
- * 다음 스핀으로 넘길 라운드 상태. 프리스핀 잔여 횟수나 누적 배수 같은 것들.
- * Phase 1 엔진은 만들지 않지만 서버가 라운드를 이어 붙일 자리를 미리 비워 둔다.
+ * 프리스핀 라운드 상태. 서버가 라운드를 이어 붙일 때 `spin`의 4번째 인자로 되돌려 준다.
+ * shared의 `FreeSpinsState`와 1:1로 대응한다 (left / total / multiplier).
  * 시드와 시드 해시는 여기 넣지 않는다. 그것은 API의 라운드 레코드가 소유한다.
  */
-export type RoundState = { freeSpinsLeft?: number; multiplier?: number } & Record<string, unknown>
+export interface RoundState {
+  /** 이 스핀을 **시작하기 전** 남은 프리스핀 횟수. */
+  freeSpinsLeft: number
+  /** 리트리거로 늘어난 것까지 포함한 누적 총 부여 횟수. */
+  freeSpinsTotal: number
+  /** 프리스핀 동안 승리에 곱해지는 배수. */
+  multiplier: number
+}
+
+/** 프리스핀 진입 또는 리트리거. */
+export interface FreeSpinsTrigger {
+  type: 'freeSpins'
+  /** 이번에 새로 부여된 횟수. */
+  spins: number
+  multiplier: number
+  /** 이미 프리스핀 중이었다면 true (리트리거). */
+  retrigger: boolean
+}
+
+/** 스캐터 배당. 라인과 무관하게 화면 어디에 있든 센다. */
+export interface ScatterWinTrigger {
+  type: 'scatterWin'
+  symbol: SymbolId
+  count: number
+  /** 프리스핀 배수를 **곱하기 전** 코인. `SpinResult.totalWin`이 배수를 적용한다. */
+  win: number
+  positions: GridPosition[]
+}
+
+export type FeatureTrigger = FreeSpinsTrigger | ScatterWinTrigger
 
 export interface SpinResult {
   /** 릴별 정지 위치 (스트립 인덱스). */
   stops: number[]
   /** 화면에 보이는 심볼. `grid[row][reel]` 순서다. */
   grid: SymbolId[][]
+  /** 각 항목의 `win`은 프리스핀 배수를 곱하기 전 값이다. */
   wins: WinLine[]
+  /** 페이라인 승리 합계. 배수 적용 전. */
+  lineWin: number
+  /** 스캐터 승리. 배수 적용 전. */
+  scatterWin: number
+  /** 실제 지급 코인. `(lineWin + scatterWin) x multiplier`. */
   totalWin: number
   features: FeatureTrigger[]
-  /** 프리스핀 등 다음 상태가 있을 때만 채워진다. */
+  /** 프리스핀이 남아 있을 때만 채워진다. 0이 되면 undefined. */
   nextState?: RoundState
 }
 
 export interface EvaluateResult {
   wins: WinLine[]
   totalWin: number
+}
+
+/** 화면 전체에서 센 스캐터. */
+export interface ScatterResult {
+  count: number
+  positions: GridPosition[]
+  /** 총 베팅액 배수. */
+  multiplier: number
+  /** 프리스핀 배수를 곱하기 전 코인. */
+  win: number
 }
 
 /** 결정론 시드 RNG와 crypto RNG가 공유하는 최소 인터페이스. */

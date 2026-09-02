@@ -437,3 +437,42 @@ body {
   margin-bottom: var(--sim-space-md);
   flex-wrap: wrap;
 }
+
+/* ---------- 배지 ---------- */
+
+.sim-badge {
+  display: inline-block;
+  margin-left: var(--sim-space-sm);
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: var(--sim-font-small);
+  font-weight: 600;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+
+.sim-badge--exact {
+  background: rgba(79, 195, 217, 0.16);
+  color: var(--sim-gem);
+}
+
+.sim-badge--estimated {
+  background: rgba(216, 169, 74, 0.16);
+  color: var(--sim-brass);
+}
+
+.sim-badge--free {
+  background: rgba(79, 195, 217, 0.18);
+  color: var(--sim-gem);
+  margin-left: var(--sim-space-xs);
+}
+
+.sim-spin--free {
+  border-color: rgba(79, 195, 217, 0.5);
+  background: rgba(79, 195, 217, 0.06);
+}
+
+.sim-spin-round {
+  color: var(--sim-text-sub);
+  opacity: 0.7;
+}

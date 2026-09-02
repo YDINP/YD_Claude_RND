@@ -13,18 +13,32 @@ export function mergeSimulations(chunks: readonly McAggregate[]): McAggregate {
   let squareSum = 0
   let hits = 0
   let maxWin = 0
+  let freeSpinsPlayed = 0
+  let triggers = 0
   for (const chunk of chunks) {
     if (chunk.spins <= 0) continue
     spins += chunk.spins
     sum += chunk.rtp * chunk.spins
     squareSum += chunk.spins * (chunk.stdDev * chunk.stdDev + chunk.rtp * chunk.rtp)
     hits += chunk.hitRate * chunk.spins
+    freeSpinsPlayed += chunk.freeSpinsPlayed
+    triggers += chunk.triggerRate * chunk.spins
     if (chunk.maxWin > maxWin) maxWin = chunk.maxWin
   }
-  if (spins === 0) return { spins: 0, rtp: 0, hitRate: 0, stdDev: 0, maxWin: 0 }
+  if (spins === 0) {
+    return { spins: 0, rtp: 0, hitRate: 0, stdDev: 0, maxWin: 0, freeSpinsPlayed: 0, triggerRate: 0 }
+  }
   const mean = sum / spins
   const variance = Math.max(0, squareSum / spins - mean * mean)
-  return { spins, rtp: mean, hitRate: hits / spins, stdDev: Math.sqrt(variance), maxWin }
+  return {
+    spins,
+    rtp: mean,
+    hitRate: hits / spins,
+    stdDev: Math.sqrt(variance),
+    maxWin,
+    freeSpinsPlayed,
+    triggerRate: triggers / spins,
+  }
 }
 
 /** 총 스핀을 최대 `points`개 청크로 쪼갠다. 나머지는 앞쪽 청크에 하나씩 얹는다. */
@@ -65,6 +79,8 @@ export function runMonteCarlo(
     hitRate: 0,
     stdDev: 0,
     maxWin: 0,
+    freeSpinsPlayed: 0,
+    triggerRate: 0,
     seed,
     totalBet,
     elapsedMs: 0,

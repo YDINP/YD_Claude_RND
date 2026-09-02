@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { assertBetLevel, buildGrid, spin } from './spin.js'
+import type { RoundState, SpinResult } from './types.js'
+import { assertBetLevel, buildGrid, resolveSpin, spin } from './spin.js'
 import { createSeededRng } from './rng/seeded.js'
-import { makeTestMath } from './testFixtures.js'
+import { makeScatterMath, makeTestMath } from './testFixtures.js'
 
 const math = makeTestMath()
 
@@ -90,5 +91,120 @@ describe('assertBetLevel', () => {
 
   it('예외 메시지에 가능한 베팅액을 담는다', () => {
     expect(() => assertBetLevel(math, 9)).toThrow(/3, 6, 30/)
+  })
+})
+
+describe('spin - 스캐터와 프리스핀', () => {
+  const scatterMath = makeScatterMath()
+
+  /** 원하는 스캐터 개수가 나오는 정지 위치를 찾는다. */
+  function findStops(target: number): number[] {
+    for (let a = 0; a < 6; a += 1) {
+      for (let b = 0; b < 6; b += 1) {
+        for (let c = 0; c < 6; c += 1) {
+          const grid = buildGrid(scatterMath, [a, b, c])
+          const count = grid.flat().filter((symbol) => symbol === 's').length
+          if (count === target) return [a, b, c]
+        }
+      }
+    }
+    throw new Error(`스캐터 ${target}개가 나오는 조합이 없다`)
+  }
+
+  function spinAt(stops: number[], state?: RoundState): SpinResult {
+    const grid = buildGrid(scatterMath, stops)
+    return resolveSpin(scatterMath, grid, stops, 3, 1, state)
+  }
+
+  it('스캐터 3개면 프리스핀이 열린다', () => {
+    const result = spinAt(findStops(3))
+    const trigger = result.features.find((feature) => feature.type === 'freeSpins')
+    expect(trigger).toMatchObject({ type: 'freeSpins', spins: 5, multiplier: 2, retrigger: false })
+    expect(result.nextState).toEqual({ freeSpinsLeft: 5, freeSpinsTotal: 5, multiplier: 2 })
+  })
+
+  it('스캐터 배당이 feature로도 나오고 scatterWin에도 잡힌다', () => {
+    const result = spinAt(findStops(3))
+    expect(result.scatterWin).toBe(15) // 3개 = 총 베팅액 3 x 5배
+    const scatterFeature = result.features.find((feature) => feature.type === 'scatterWin')
+    expect(scatterFeature).toMatchObject({ type: 'scatterWin', symbol: 's', count: 3, win: 15 })
+    expect(scatterFeature?.type === 'scatterWin' && scatterFeature.positions).toHaveLength(3)
+  })
+
+  it('스캐터가 부족하면 프리스핀이 열리지 않는다', () => {
+    const result = spinAt(findStops(1))
+    expect(result.features.some((feature) => feature.type === 'freeSpins')).toBe(false)
+    expect(result.nextState).toBeUndefined()
+    expect(result.scatterWin).toBe(0)
+  })
+
+  it('프리스핀 중에는 배수가 곱해진다', () => {
+    const stops = findStops(0)
+    const base = spinAt(stops)
+    const free = spinAt(stops, { freeSpinsLeft: 5, freeSpinsTotal: 5, multiplier: 2 })
+    expect(free.lineWin).toBe(base.lineWin)
+    expect(free.scatterWin).toBe(base.scatterWin)
+    expect(free.totalWin).toBe((base.lineWin + base.scatterWin) * 2)
+  })
+
+  it('프리스핀은 1회씩 줄어든다', () => {
+    const result = spinAt(findStops(0), { freeSpinsLeft: 5, freeSpinsTotal: 5, multiplier: 2 })
+    expect(result.nextState).toEqual({ freeSpinsLeft: 4, freeSpinsTotal: 5, multiplier: 2 })
+  })
+
+  it('마지막 프리스핀이면 nextState가 없다', () => {
+    const result = spinAt(findStops(0), { freeSpinsLeft: 1, freeSpinsTotal: 5, multiplier: 2 })
+    expect(result.nextState).toBeUndefined()
+  })
+
+  it('프리스핀 중 재트리거는 횟수를 더한다', () => {
+    const result = spinAt(findStops(3), { freeSpinsLeft: 2, freeSpinsTotal: 5, multiplier: 2 })
+    expect(result.nextState).toEqual({ freeSpinsLeft: 6, freeSpinsTotal: 10, multiplier: 2 })
+    const trigger = result.features.find((feature) => feature.type === 'freeSpins')
+    expect(trigger).toMatchObject({ retrigger: true, spins: 5, multiplier: 2 })
+  })
+
+  it('retrigger가 꺼져 있으면 프리스핀 중 다시 트리거돼도 늘지 않는다', () => {
+    const noRetrigger = makeScatterMath({
+      scatter: {
+        symbol: 's',
+        pays: { 2: 1, 3: 5, 4: 20 },
+        freeSpins: { trigger: 3, count: 5, multiplier: 2, retrigger: false },
+      },
+    })
+    const stops = findStops(3)
+    const grid = buildGrid(noRetrigger, stops)
+    const result = resolveSpin(noRetrigger, grid, stops, 3, 1, {
+      freeSpinsLeft: 2,
+      freeSpinsTotal: 5,
+      multiplier: 2,
+    })
+    expect(result.nextState).toEqual({ freeSpinsLeft: 1, freeSpinsTotal: 5, multiplier: 2 })
+    expect(result.features.some((feature) => feature.type === 'freeSpins')).toBe(false)
+  })
+
+  it('와일드는 스캐터를 대체하지 않는다', () => {
+    // 와일드가 세 릴에 하나씩 보이는 위치라도 스캐터로는 세지 않는다.
+    const result = spinAt([0, 1, 2])
+    const grid = buildGrid(scatterMath, [0, 1, 2])
+    expect(grid.flat()).toContain('w')
+    const scatterCount = grid.flat().filter((symbol) => symbol === 's').length
+    const feature = result.features.find((f) => f.type === 'scatterWin')
+    expect(feature === undefined ? 0 : feature.type === 'scatterWin' ? feature.count : 0).toBe(
+      scatterCount >= 2 ? scatterCount : 0,
+    )
+  })
+
+  it('스캐터가 없는 모델은 scatterWin이 0이고 features가 비어 있다', () => {
+    const result = spin(math, { totalBet: 30 }, createSeededRng('no-scatter'))
+    expect(result.scatterWin).toBe(0)
+    expect(result.features).toEqual([])
+    expect(result.totalWin).toBe(result.lineWin)
+  })
+
+  it('4번째 인자는 선택이라 기존 호출이 그대로 동작한다', () => {
+    const withoutState = spin(math, { totalBet: 30 }, createSeededRng('compat'))
+    const withUndefined = spin(math, { totalBet: 30 }, createSeededRng('compat'), undefined)
+    expect(withUndefined).toEqual(withoutState)
   })
 })

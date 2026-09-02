@@ -57,6 +57,13 @@
       "when": 1788336803102,
       "tag": "0007_jackpot_pool_hundredths",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788347527946,
+      "tag": "0008_legal_bromley",
+      "breakpoints": true
     }
   ]
 }

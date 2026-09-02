@@ -8,15 +8,25 @@ export {
   MAX_HIT_RATE,
   MIN_HIT_RATE,
   MIN_MAX_WIN_MULTIPLIER,
+  MIN_MAX_WIN_MULTIPLIER_5REEL,
   RTP_TOLERANCE,
   SUM_EPSILON,
+  WIDE_REEL_THRESHOLD,
   auditBetLevels,
   buildGates,
   composeAuditResult,
+  maxWinThreshold,
   runAudit,
 } from './compute.js'
 export type { AuditParts, GateInput } from './compute.js'
 export { enumerateAudit } from './enumerate.js'
+export { analyzeDistribution, buildFeatureReport, canEnumerate } from './distribution.js'
+export type { AnalyzeOptions } from './distribution.js'
+export { DEFAULT_SAMPLE_SPINS, sampleDistribution } from './sampleDistribution.js'
+export type { SampleOptions } from './sampleDistribution.js'
+export { Accumulators, SCATTER_FALLBACK_KEY, comboCount } from './contributions.js'
+export { MAX_FREE_SPINS_PER_ROUND, betPerLineOf, drawSpin, playRound } from './spinner.js'
+export type { RoundSpin } from './spinner.js'
 export { buildLabelMap, readGroups } from './groups.js'
 export { HISTOGRAM_BUCKETS, bucketIndexFor, buildHistogramRows } from './histogram.js'
 export type { HistogramBucket } from './histogram.js'

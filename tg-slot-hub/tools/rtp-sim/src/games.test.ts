@@ -8,6 +8,8 @@ import { listGameDirs, readJson } from './paths.js'
 
 /** Phase 5 양산의 CI 게이트: 새 게임 폴더는 등록 없이 자동으로 검사 대상이 된다. */
 const RTP_TOLERANCE = 0.005
+/** 해석 모드에서 적중률·최대 배수를 잴 표본 스핀 수. */
+const SAMPLE_SPINS = 150_000
 
 interface LoadResult {
   math: GameMath | null
@@ -55,9 +57,10 @@ describe('games/* 수학 모델 게이트', () => {
     })
 
     if (loaded.math !== null) {
-      it.each(loaded.math.betLevels)('베팅액 %i에서 전수 조사 RTP가 목표 ±0.5%%p 안이다', (bet) => {
+      // RTP만 보므로 분포 표본은 뽑지 않는다. 조합이 크면 해석적 계산으로 넘어간다.
+      it.each(loaded.math.betLevels)('베팅액 %i에서 RTP가 목표 ±0.5%%p 안이다', (bet) => {
         const math = requireMath()
-        const report = computeExactRtp(math, bet)
+        const report = computeExactRtp(math, bet, { sampleSpins: 0 })
         expect(report.rtp).toBeGreaterThanOrEqual(math.rtpTarget - RTP_TOLERANCE)
         expect(report.rtp).toBeLessThanOrEqual(math.rtpTarget + RTP_TOLERANCE)
       })
@@ -67,10 +70,32 @@ describe('games/* 수학 모델 게이트', () => {
       const math = requireMath()
       const bet = math.betLevels[0]
       expect(bet).toBeDefined()
-      const report = computeExactRtp(math, bet ?? 1)
+      const report = computeExactRtp(math, bet ?? 1, { sampleSpins: SAMPLE_SPINS })
       expect(report.hitRate).toBeGreaterThan(0.2)
       expect(report.hitRate).toBeLessThan(0.6)
-      expect(report.maxWinMultiplier).toBeGreaterThanOrEqual(100)
+      // 전수 조사는 진짜 최댓값이지만 해석 모드는 표본에서 관측된 값이라
+      // 기준을 낮게 잡는다. 5릴은 라인 하나의 최고 배당 자체가 총 베팅액의 25배 수준이다.
+      const floor = report.method === 'enumerate' ? 100 : 20
+      expect(report.maxWinMultiplier).toBeGreaterThanOrEqual(floor)
+    })
+
+    it('RTP 조각의 합이 전체와 같다', () => {
+      const math = requireMath()
+      const report = computeExactRtp(math, math.betLevels[0] ?? 1, { sampleSpins: 0 })
+      const sum = report.breakdown.lines + report.breakdown.scatter + report.breakdown.freeSpins
+      expect(sum).toBeCloseTo(report.rtp, 10)
+    })
+
+    it('프리스핀이 있으면 기대 횟수가 발산하지 않는다', () => {
+      const math = requireMath()
+      const feature = math.scatter?.freeSpins
+      if (feature === undefined || !feature.retrigger) {
+        expect(true).toBe(true)
+        return
+      }
+      const report = computeExactRtp(math, math.betLevels[0] ?? 1, { sampleSpins: 0 })
+      // count x P(트리거) < 1 이어야 등비급수가 수렴한다.
+      expect(feature.count * report.triggerProbability).toBeLessThan(1)
     })
 
     it('manifest.json이 있고 math.json과 어긋나지 않는다', () => {

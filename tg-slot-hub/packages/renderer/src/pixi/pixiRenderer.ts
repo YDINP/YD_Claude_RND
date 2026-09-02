@@ -1,13 +1,19 @@
 import { Application, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js'
 import { gsap } from 'gsap'
-import type { SymbolId, WinLine } from '@tgslot/slot-engine'
+import type { GridPosition, SymbolId, WinLine } from '@tgslot/slot-engine'
 import {
   ACCEL_DISTANCE_RATIO,
   ACCEL_TIME_RATIO,
   FALLBACK_CONTAINER_WIDTH,
   DIM_ALPHA,
+  FREE_SPINS_EDGE_ALPHA,
+  FREE_SPINS_EDGE_STROKE_PX,
+  FREE_SPINS_PLAQUE_FONT_RATIO,
   IDLE_AMPLITUDE_SYMBOLS,
   PHASE_CROSSFADE_MS,
+  SCATTER_RING_PULSE_MS,
+  SCATTER_RING_SCALE,
+  SCATTER_RING_STROKE_PX,
   IDLE_CYCLE_MS,
   LANDING_SETTLE_SYMBOLS,
   PULL_UP_SYMBOLS,
@@ -35,6 +41,11 @@ import {
 import { resolveResolution } from '../motion.js'
 import { resolveFrameWindow } from '../theme.js'
 import { buildSpinPlan, type ReelSpinPlan, type SpinPlan } from '../timing.js'
+import {
+  formatFreeSpinsPlaque,
+  shouldShowFreeSpinsPlaque,
+  type RendererMode,
+} from '../features.js'
 import { paylineColor } from '../wins.js'
 import { resolveSymbolFx } from '../fx.js'
 import { buildPresentation, defaultLineLabel, type PresentationStep } from '../presentation.js'
@@ -42,7 +53,7 @@ import type { RendererCore, ResolvedRendererOptions } from '../internal.js'
 import { TextureRegistry } from '../textureRegistry.js'
 import type { RendererEvent, ShowWinsOptions, SpinToOptions } from '../types.js'
 import { createSparkleTexture, startSparkles, type AmbientEffect } from './ambient.js'
-import { burstCoins, burstConfetti, coinCountForTier } from './coins.js'
+import { burstCoins, burstConfetti, coinCountForTier, burstScatters } from './coins.js'
 import {
   createCoinTexture,
   createConfettiTexture,
@@ -109,6 +120,9 @@ class PixiRenderer implements RendererCore {
   private readonly winGraphics = new Graphics()
   private readonly fxLayer = new Container()
   private readonly winLabel: Text
+  /** 스캐터 링과 프리스핀 테두리. 승리 오버레이와 수명이 달라 따로 둔다. */
+  private readonly featureGraphics = new Graphics()
+  private readonly modeLabel: Text
 
   private readonly reels: ReelView[] = []
   private readonly backgroundSprite: Sprite | null
@@ -131,6 +145,9 @@ class PixiRenderer implements RendererCore {
   private spinToken = 0
   private stopCoins: (() => void) | null = null
   private stopConfetti: (() => void) | null = null
+  private stopScatterBurst: (() => void) | null = null
+  private scatterTween: gsap.core.Tween | null = null
+  private mode: RendererMode = { freeSpins: null }
   private crossfadeTween: gsap.core.Tween | null = null
   private winToken = 0
   private readonly timers = new Set<ReturnType<typeof setTimeout>>()
@@ -176,12 +193,26 @@ class PixiRenderer implements RendererCore {
     this.winLabel.anchor.set(0.5)
     this.winLabel.visible = false
 
+    this.modeLabel = new Text({
+      text: '',
+      style: {
+        fill: options.theme.palette.frame,
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontSize: Math.round(this.layout.symbolSize * FREE_SPINS_PLAQUE_FONT_RATIO),
+        fontWeight: '700',
+      },
+    })
+    this.modeLabel.anchor.set(0.5, 0)
+    this.modeLabel.visible = false
+
     this.reelsLayer.mask = this.maskGraphics
     this.contentLayer.addChild(
       this.reelsLayer,
       this.maskGraphics,
+      this.featureGraphics,
       this.winGraphics,
       this.winLabel,
+      this.modeLabel,
       this.fxLayer,
     )
     this.root.addChild(this.backgroundLayer)
@@ -290,6 +321,8 @@ class PixiRenderer implements RendererCore {
     else this.drawFrame()
     this.drawMask()
     this.winLabel.style.fontSize = Math.round(this.layout.symbolSize * LABEL_FONT_RATIO)
+    this.modeLabel.style.fontSize = Math.round(this.layout.symbolSize * FREE_SPINS_PLAQUE_FONT_RATIO)
+    this.drawMode()
 
     for (let reel = 0; reel < this.reels.length; reel += 1) {
       const view = this.reels[reel]
@@ -402,6 +435,7 @@ class PixiRenderer implements RendererCore {
       reels: this.options.math.reels,
       ...(opts?.durationMs === undefined ? {} : { durationMs: opts.durationMs }),
       ...(opts?.stagger === undefined ? {} : { stagger: opts.stagger }),
+      ...(opts?.fast === undefined ? {} : { fast: opts.fast }),
       reducedMotion: this.options.reducedMotion,
     })
 
@@ -571,8 +605,9 @@ class PixiRenderer implements RendererCore {
 
     if (step.phase === 'all') {
       const positions = step.wins.flatMap((win) => win.positions)
-      this.dimExcept(positions)
+      this.dimExcept([...positions, ...step.scatters])
       this.playFxAt(positions)
+      this.showScatters(step.scatters)
       // 허브가 배당 카운터를 이 시간에 맞춰 굴릴 수 있도록 시작할 때 알린다.
       this.emit({
         type: 'winTotal',
@@ -583,13 +618,60 @@ class PixiRenderer implements RendererCore {
       return
     }
 
+    if (step.phase === 'feature') {
+      // 스캐터는 계속 밝게 두고, 자리마다 파티클이 가운데로 모인다.
+      this.dimExcept(step.scatters)
+      this.playFxAt(step.scatters)
+      this.showScatters(step.scatters)
+      if (!this.options.reducedMotion && step.scatters.length > 0) {
+        this.stopScatterBurst = burstScatters(this.fxLayer, this.coinTexture, this.layout, step.scatters)
+      }
+      // 인트로 배너는 허브가 띄운다. 여기서는 걸렸다는 사실만 알린다.
+      this.emit({ type: 'featureTriggered', feature: step.feature })
+      return
+    }
+
     const win = step.win
-    this.dimExcept(win.positions)
+    this.dimExcept([...win.positions, ...step.scatters])
     this.playFxAt(win.positions)
+    this.showScatters(step.scatters)
     this.drawWinLine(win)
     this.placeWinLabel(win, label)
     this.crossfadeOverlay()
     this.emit({ type: 'winLine', line: win.line, win: win.win })
+  }
+
+  /**
+   * 스캐터 자리에 맥동하는 금빛 링을 그린다.
+   * 페이라인은 그리지 않는다. 스캐터는 라인과 무관하게 이긴 것이라 선으로 이으면 거짓말이 된다.
+   */
+  private showScatters(positions: readonly GridPosition[]): void {
+    this.scatterTween?.kill()
+    this.scatterTween = null
+    this.featureGraphics.clear()
+    this.drawMode()
+    if (positions.length === 0) return
+
+    const brass = this.options.theme.palette.frame
+    const radius = this.layout.symbolSize * SCATTER_RING_SCALE
+    for (const [reel, row] of positions) {
+      const center = symbolCenter(this.layout, reel, row)
+      this.featureGraphics.circle(center.x, center.y, radius)
+    }
+    this.featureGraphics.stroke({ width: SCATTER_RING_STROKE_PX, color: brass, alpha: 0.95 })
+
+    if (this.options.reducedMotion) return
+    const ring = { alpha: 1 }
+    this.scatterTween = gsap.to(ring, {
+      alpha: 0.35,
+      duration: SCATTER_RING_PULSE_MS / 2000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'sine.inOut',
+      onUpdate: () => {
+        this.featureGraphics.alpha = ring.alpha
+      },
+    })
   }
 
   /** 라인이 바뀔 때 오버레이를 투명에서 끌어올려 툭 끊기지 않게 한다. */
@@ -733,6 +815,13 @@ class PixiRenderer implements RendererCore {
     this.winLabel.visible = false
     this.stopSymbolFx()
     this.clearTimers()
+    this.scatterTween?.kill()
+    this.scatterTween = null
+    this.featureGraphics.clear()
+    this.featureGraphics.alpha = 1
+    this.stopScatterBurst?.()
+    this.stopScatterBurst = null
+    this.drawMode()
     this.crossfadeTween?.kill()
     this.crossfadeTween = null
     this.winGraphics.alpha = 1
@@ -756,6 +845,42 @@ class PixiRenderer implements RendererCore {
   private clearTimers(): void {
     for (const id of this.timers) clearTimeout(id)
     this.timers.clear()
+  }
+
+  // ------------------------------------------------------------- 진행 상태
+
+  setMode(mode: RendererMode): void {
+    this.mode = mode
+    this.drawMode()
+  }
+
+  /**
+   * 프리스핀 표시. 릴 창 테두리에 금빛을 두르고 위쪽에 명판을 띄운다.
+   * 스캐터 링과 같은 Graphics를 쓰므로 링을 다시 그릴 때도 함께 불린다.
+   */
+  private drawMode(): void {
+    const freeSpins = this.mode.freeSpins
+    const show = shouldShowFreeSpinsPlaque(this.mode, this.options.showFreeSpinsPlaque)
+    if (freeSpins === null || freeSpins === undefined) {
+      this.modeLabel.visible = false
+      return
+    }
+
+    const { reelArea, radius } = this.layout
+    this.featureGraphics
+      .roundRect(reelArea.x, reelArea.y, reelArea.width, reelArea.height, radius * 0.5)
+      .stroke({
+        width: FREE_SPINS_EDGE_STROKE_PX,
+        color: this.options.theme.palette.frame,
+        alpha: FREE_SPINS_EDGE_ALPHA,
+      })
+
+    this.modeLabel.visible = show
+    if (!show) return
+    this.modeLabel.text = formatFreeSpinsPlaque(freeSpins)
+    this.modeLabel.x = reelArea.x + reelArea.width / 2
+    // 창 위쪽 안쪽에 붙인다. 심볼과 겹치지 않도록 살짝 띄운다.
+    this.modeLabel.y = reelArea.y + this.layout.symbolSize * 0.06
   }
 
   // ------------------------------------------------------------------ 유휴

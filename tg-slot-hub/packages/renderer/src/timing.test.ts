@@ -3,6 +3,7 @@ import {
   BASE_REVOLUTIONS,
   DEFAULT_SPIN_DURATION_MS,
   DEFAULT_STAGGER_MS,
+  FAST_SPIN_FACTOR,
   LANDING_SETTLE_MS,
   PULL_UP_MS,
   REDUCED_TOTAL_CAP_MS,
@@ -140,5 +141,36 @@ describe('buildSpinPlan 모션 축소', () => {
     for (let i = 1; i < plan.reels.length; i += 1) {
       expect(plan.reels[i]?.endMs ?? 0).toBeGreaterThanOrEqual(plan.reels[i - 1]?.endMs ?? 0)
     }
+  })
+})
+
+describe('buildSpinPlan 빠른 스핀', () => {
+  it('프리스핀에서는 회전이 짧아진다', () => {
+    const normal = buildSpinPlan({ reels: 5 })
+    const fast = buildSpinPlan({ reels: 5, fast: true })
+    expect(fast.totalMs).toBeLessThan(normal.totalMs)
+  })
+
+  it('회전 시간이 정확히 0.8배다', () => {
+    const fast = buildSpinPlan({ reels: 3, durationMs: 1000, stagger: 0, fast: true })
+    const first = fast.reels[0]
+    if (first === undefined) throw new Error('릴 계획 없음')
+    expect(first.endMs - first.startMs).toBeCloseTo(1000 * FAST_SPIN_FACTOR, 9)
+  })
+
+  it('반동 시간은 그대로다', () => {
+    expect(buildSpinPlan({ reels: 3, fast: true }).pullUpMs).toBe(PULL_UP_MS)
+  })
+
+  it('정지 순서는 여전히 왼쪽에서 오른쪽이다', () => {
+    const plan = buildSpinPlan({ reels: 5, fast: true })
+    for (let i = 1; i < plan.reels.length; i += 1) {
+      expect(plan.reels[i]?.endMs ?? 0).toBeGreaterThan(plan.reels[i - 1]?.endMs ?? 0)
+    }
+  })
+
+  it('모션 축소와 함께 써도 상한을 지킨다', () => {
+    const plan = buildSpinPlan({ reels: 5, fast: true, reducedMotion: true })
+    expect(plan.totalMs).toBeLessThanOrEqual(REDUCED_TOTAL_CAP_MS + 1e-9)
   })
 })

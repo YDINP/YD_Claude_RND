@@ -2,6 +2,7 @@ import {
   BASE_REVOLUTIONS,
   DEFAULT_SPIN_DURATION_MS,
   DEFAULT_STAGGER_MS,
+  FAST_SPIN_FACTOR,
   LANDING_SETTLE_MAX_PORTION,
   LANDING_SETTLE_MS,
   PULL_UP_MS,
@@ -15,6 +16,8 @@ export interface SpinPlanInput {
   durationMs?: number
   stagger?: number
   reducedMotion?: boolean
+  /** 프리스핀처럼 리듬을 당겨야 할 때. 회전 시간을 `FAST_SPIN_FACTOR`만큼 줄인다. */
+  fast?: boolean
 }
 
 export interface ReelSpinPlan {
@@ -56,6 +59,7 @@ export function buildSpinPlan(input: SpinPlanInput): SpinPlan {
   const reduced = input.reducedMotion === true
 
   let duration = Math.max(1, input.durationMs ?? (reduced ? REDUCED_SPIN_DURATION_MS : DEFAULT_SPIN_DURATION_MS))
+  if (input.fast === true) duration = Math.max(1, duration * FAST_SPIN_FACTOR)
   let stagger = Math.max(0, input.stagger ?? (reduced ? REDUCED_STAGGER_MS : DEFAULT_STAGGER_MS))
 
   if (reduced) {

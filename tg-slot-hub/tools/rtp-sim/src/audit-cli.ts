@@ -12,7 +12,9 @@ import { parseGameMath } from '@tgslot/slot-engine'
 import {
   DEFAULT_AUDIT_SEED,
   DEFAULT_AUDIT_SPINS,
+  DEFAULT_SAMPLE_SPINS,
   buildAuditMarkdown,
+  canEnumerate,
   runAudit,
 } from './audit/index.js'
 import { findWorkspaceRoot, readJson, resolveMathPath } from './paths.js'
@@ -27,12 +29,16 @@ interface AuditCliOptions {
   bet: number | null
   out: string | null
   stdout: boolean
+  /** 해석 모드에서 분포·기여도를 추정할 표본 스핀 수. */
+  sampleSpins: number
 }
 
 const USAGE = `사용법: pnpm --filter @tgslot/rtp-sim run audit <게임폴더|math.json|게임id> [옵션]
 
 옵션
   --spins <n>    몬테카를로 스핀 수 (기본 ${DEFAULT_AUDIT_SPINS.toLocaleString('en-US')})
+  --sample <n>   전수 조사가 불가능한 모델에서 분포를 추정할 표본 스핀 수
+                 (기본 ${DEFAULT_SAMPLE_SPINS.toLocaleString('en-US')})
   --seed <s>     시드 (기본 ${DEFAULT_AUDIT_SEED})
   --bet <coins>  검수 베팅액 (기본 ${PREFERRED_BET}, 없으면 첫 betLevel)
   --out <path>   리포트 경로 (기본 docs/RTP_AUDIT_<id>.md)
@@ -42,6 +48,7 @@ const USAGE = `사용법: pnpm --filter @tgslot/rtp-sim run audit <게임폴더|
 export function parseAuditArgs(argv: string[]): AuditCliOptions {
   let target: string | undefined
   let spins = DEFAULT_AUDIT_SPINS
+  let sampleSpins = DEFAULT_SAMPLE_SPINS
   let seed = DEFAULT_AUDIT_SEED
   let bet: number | null = null
   let out: string | null = null
@@ -59,6 +66,9 @@ export function parseAuditArgs(argv: string[]): AuditCliOptions {
     switch (arg) {
       case '--spins':
         spins = Number(takeValue())
+        break
+      case '--sample':
+        sampleSpins = Number(takeValue())
         break
       case '--seed':
         seed = takeValue()
@@ -85,8 +95,11 @@ export function parseAuditArgs(argv: string[]): AuditCliOptions {
 
   if (target === undefined) throw new Error(`대상 게임을 지정할 것\n\n${USAGE}`)
   if (!Number.isInteger(spins) || spins <= 0) throw new Error(`--spins는 양의 정수여야 한다: ${spins}`)
+  if (!Number.isInteger(sampleSpins) || sampleSpins <= 0) {
+    throw new Error(`--sample은 양의 정수여야 한다: ${sampleSpins}`)
+  }
   if (bet !== null && (!Number.isInteger(bet) || bet <= 0)) throw new Error(`--bet은 양의 정수여야 한다: ${bet}`)
-  return { target, spins, seed, bet, out, stdout }
+  return { target, spins, seed, bet, out, stdout, sampleSpins }
 }
 
 /** 검수 베팅액을 고른다. 명시값 > 100 > 첫 betLevel 순. */
@@ -124,6 +137,7 @@ function main(): void {
     totalBet,
     spins: options.spins,
     seed: options.seed,
+    sampleSpins: options.sampleSpins,
     onProgress: (phase, ratio) => {
       const percent = Math.round(ratio * 100)
       if (phase !== lastPhase || percent % 10 === 0) {

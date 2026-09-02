@@ -1,49 +1,77 @@
-import { buildGrid, createSeededRng, evaluate, getBetPerLine } from '@tgslot/slot-engine'
-import type { GameMath, Rng } from '@tgslot/slot-engine'
+import { createSeededRng } from '@tgslot/slot-engine'
+import type { GameMath, SpinResult } from '@tgslot/slot-engine'
+import { betPerLineOf, playRound } from './spinner.js'
 import type { SampleSpin } from './types.js'
 
-function drawStops(math: GameMath, rng: Rng): number[] {
-  const stops: number[] = []
-  for (let reel = 0; reel < math.reels; reel += 1) {
-    const strip = math.strips[reel]
-    if (strip === undefined) throw new RangeError(`릴 ${reel}의 스트립이 없다`)
-    stops.push(rng.nextInt(strip.length))
+function winningCellsOf(spin: SpinResult): string[] {
+  const cells = new Set<string>()
+  for (const win of spin.wins) {
+    for (const [reel, row] of win.positions) cells.add(`${reel},${row}`)
   }
-  return stops
+  for (const feature of spin.features) {
+    if (feature.type !== 'scatterWin') continue
+    for (const [reel, row] of feature.positions) cells.add(`${reel},${row}`)
+  }
+  return [...cells]
+}
+
+function scatterInfoOf(spin: SpinResult): { count: number; awarded: number } {
+  let count = 0
+  let awarded = 0
+  for (const feature of spin.features) {
+    if (feature.type === 'scatterWin') count = feature.count
+    if (feature.type === 'freeSpins') awarded += feature.spins
+  }
+  return { count, awarded }
 }
 
 /**
- * 시드로부터 스핀을 계속 뽑는 함수를 만든다. 같은 시드는 항상 같은 순서를 낸다.
- * GUI의 "스핀 1회" 버튼처럼 스트림을 이어가야 하는 곳에서 쓴다.
+ * 시드로부터 라운드를 계속 뽑는 함수를 만든다. 같은 시드는 항상 같은 순서를 낸다.
+ *
+ * 한 번 호출하면 **라운드 하나**가 통째로 나온다. 유료 스핀이 프리스핀을 열었다면
+ * 그 프리스핀들도 같은 배열에 이어 붙는다 (`isFreeSpin: true`).
+ * GUI의 "스핀 1회"가 프리스핀 세션을 반쪽만 보여 주지 않게 하려는 것이다.
  */
-export function createSampleSpinner(math: GameMath, totalBet: number, seed: string): () => SampleSpin {
-  const betPerLine = getBetPerLine(math, totalBet)
+export function createSampleSpinner(math: GameMath, totalBet: number, seed: string): () => SampleSpin[] {
+  const betPerLine = betPerLineOf(math, totalBet)
   const rng = createSeededRng(`${seed}:sample`)
   let index = 0
+  let round = 0
+
   return () => {
-    const stops = drawStops(math, rng)
-    const grid = buildGrid(math, stops)
-    const { wins, totalWin } = evaluate(grid, math, betPerLine)
-    const winningCells = new Set<string>()
-    for (const win of wins) {
-      for (const [reel, row] of win.positions) winningCells.add(`${reel},${row}`)
-    }
-    index += 1
-    return {
-      index,
-      stops,
-      grid,
-      wins,
-      totalWin,
-      multiplier: totalWin / totalBet,
-      winningCells: [...winningCells],
-    }
+    round += 1
+    return playRound(math, totalBet, betPerLine, rng).map((entry) => {
+      index += 1
+      const { count, awarded } = scatterInfoOf(entry.spin)
+      return {
+        index,
+        round,
+        stops: entry.spin.stops,
+        grid: entry.spin.grid,
+        wins: entry.spin.wins,
+        totalWin: entry.spin.totalWin,
+        multiplier: entry.spin.totalWin / totalBet,
+        isFreeSpin: entry.isFreeSpin,
+        winMultiplier: entry.multiplier,
+        scatterCount: count,
+        scatterWin: entry.spin.scatterWin * entry.multiplier,
+        freeSpinsAwarded: awarded,
+        winningCells: winningCellsOf(entry.spin),
+      }
+    })
   }
 }
 
-/** 샘플 스핀 N회. 리포트와 GUI 목록용. */
-export function sampleSpins(math: GameMath, totalBet: number, seed: string, count: number): SampleSpin[] {
-  if (!Number.isInteger(count) || count < 1) throw new RangeError(`count는 1 이상의 정수여야 한다: ${count}`)
+/**
+ * 샘플 라운드 N회를 펼친 스핀 목록. 프리스핀이 붙으면 목록은 N보다 길어진다.
+ * @param rounds 유료 스핀 기준 라운드 수
+ */
+export function sampleSpins(math: GameMath, totalBet: number, seed: string, rounds: number): SampleSpin[] {
+  if (!Number.isInteger(rounds) || rounds < 1) {
+    throw new RangeError(`rounds는 1 이상의 정수여야 한다: ${rounds}`)
+  }
   const next = createSampleSpinner(math, totalBet, seed)
-  return Array.from({ length: count }, () => next())
+  const spins: SampleSpin[] = []
+  for (let i = 0; i < rounds; i += 1) spins.push(...next())
+  return spins
 }

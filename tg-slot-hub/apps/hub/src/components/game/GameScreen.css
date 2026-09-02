@@ -273,6 +273,33 @@
   border-color: var(--hub-success);
 }
 
+.hub-game-screen__win-banner--freespins {
+  border-color: var(--hub-gold-light);
+  box-shadow: 0 0 24px rgba(244, 217, 138, 0.55);
+}
+
+/* 프리스핀 최초 진입 — 전체화면 인트로. 클릭을 막지 않고 잠깐(1.6s) 떠 있다 사라진다. */
+.hub-freespins-intro {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--hub-space-xl);
+  text-align: center;
+  background: radial-gradient(circle, rgba(216, 169, 74, 0.35), rgba(11, 18, 32, 0.85));
+  pointer-events: none;
+}
+
+.hub-freespins-intro__text {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--hub-gold-light);
+  text-shadow: 0 0 18px rgba(244, 217, 138, 0.8);
+  letter-spacing: 0.04em;
+}
+
 .hub-game-screen__level-up-label {
   font-size: var(--hub-font-sub);
   font-weight: 800;
