@@ -274,32 +274,43 @@ fn on_menu(app: &AppHandle, id: &str) {
     }
 }
 
-/// Copy the bundled packs into the user's packs dir once per app version, so they
-/// appear in the list on first run but a user's later edits/deletions stick.
+/// Copy each bundled pack into the user's packs dir the first time it is seen
+/// (tracked in `.builtin-installed`), so new packs in an update appear but a
+/// user's later deletions stick.
 fn install_builtin_packs(app: &AppHandle, packs_dir: &std::path::Path) {
     let Ok(res) = app.path().resource_dir() else { return };
     let src = res.join("packs");
     if !src.is_dir() {
         return;
     }
-    let marker = packs_dir.join(".builtin-version");
-    let version = app.package_info().version.to_string();
-    if std::fs::read_to_string(&marker).map(|v| v.trim() == version).unwrap_or(false) {
-        return;
-    }
+    let marker = packs_dir.join(".builtin-installed");
+    let mut installed: Vec<String> = std::fs::read_to_string(&marker)
+        .map(|s| s.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
+        .unwrap_or_default();
     let _ = std::fs::create_dir_all(packs_dir);
+    let mut changed = false;
     if let Ok(rd) = std::fs::read_dir(&src) {
         for e in rd.flatten() {
             let from = e.path();
-            if from.is_dir() {
-                let to = packs_dir.join(e.file_name());
+            let id = e.file_name().to_string_lossy().to_string();
+            if !from.is_dir() || installed.contains(&id) {
+                continue;
+            }
+            let to = packs_dir.join(&id);
+            if !to.exists() {
                 if let Err(err) = copy_dir(&from, &to) {
                     eprintln!("[packs] copy {}: {err}", from.display());
+                    continue;
                 }
             }
+            installed.push(id);
+            changed = true;
         }
     }
-    let _ = std::fs::write(&marker, version);
+    if changed {
+        let _ = std::fs::write(&marker, installed.join("
+"));
+    }
 }
 
 fn copy_dir(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {

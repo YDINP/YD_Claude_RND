@@ -50,7 +50,7 @@
       }
     },
     "resources": {
-      "../../../packs/builtin/": "packs/"
+      "../../../packs/_external/mechvibes/": "packs/"
     }
   }
 }
