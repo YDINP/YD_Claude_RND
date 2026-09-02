@@ -188,7 +188,13 @@ fn start_audio(device: Option<String>, play_rx: Receiver<PlayCmd>, stats: Arc<Mu
 fn load_pack(cfg: &AppConfig, id: Option<&str>, rate: u32) -> Result<Pack, String> {
     match id {
         None => Ok(Pack::synthetic(rate)),
-        Some(id) => Pack::load(&cfg.packs_dir().join(id), rate),
+        Some(id) => {
+            let dir = cfg.packs_dir().join(id);
+            if !dir.join("config.json").is_file() {
+                return Err(format!("팩 '{id}'이(가) 팩 폴더에 없습니다. 목록에서 다른 팩을 선택하세요. (pack folder missing)"));
+            }
+            Pack::load(&dir, rate)
+        }
     }
 }
 

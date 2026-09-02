@@ -319,8 +319,20 @@ fn copy_dir(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()>
 // ---------- entry ----------
 
 pub fn run() {
-    let cfg = AppConfig::load();
+    let mut cfg = AppConfig::load();
     let _ = std::fs::create_dir_all(cfg.packs_dir());
+    // A pack that was deleted or renamed must not keep erroring on every start.
+    let missing = |id: &String| !cfg.packs_dir().join(id).join("config.json").is_file();
+    if cfg.pack.as_ref().map(&missing).unwrap_or(false) {
+        eprintln!("[config] pack {:?} not found; falling back to built-in", cfg.pack);
+        cfg.pack = None;
+        let _ = cfg.save();
+    }
+    let before = cfg.favorites.len();
+    cfg.favorites.retain(|id| !missing(id));
+    if cfg.favorites.len() != before {
+        let _ = cfg.save();
+    }
     let minimized = std::env::args().any(|a| a == "--minimized");
 
     tauri::Builder::default()
