@@ -17,7 +17,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const OUT_DIR = path.resolve(__dirname, "..", "..", "public", "assets", "characters", "portraits");
+const DEFAULT_OUT_DIR = path.resolve(__dirname, "..", "..", "public", "assets", "characters", "portraits");
 
 // ---------- config ----------
 const argOf = (name, def) => {
@@ -31,11 +31,15 @@ const HEIGHT = parseInt(argOf("--height", "768"), 10);
 const STEPS = parseInt(argOf("--steps", "25"), 10);
 const CFG = parseFloat(argOf("--cfg", "6.0"));
 const POLL_TIMEOUT_MS = 300_000;
+// --out DIR : write candidates elsewhere instead of overwriting the live portraits
+// --variants N : generate N seed variants per character (files get _v1.._vN suffix)
+const OUT_DIR = path.resolve(argOf("--out", DEFAULT_OUT_DIR));
+const VARIANTS = Math.max(1, parseInt(argOf("--variants", "1"), 10));
 
 const STYLE_PREFIX =
-  "masterpiece, best quality, anime style, game character portrait, gacha game card art, single character, upper body, detailed face";
+  "masterpiece, best quality, anime style, game character portrait illustration, single character, bust shot, upper body, face focus, looking at viewer, detailed face, detailed eyes, clean composition, full-bleed painted background, borderless";
 const NEGATIVE =
-  "lowres, bad anatomy, bad hands, extra fingers, text, watermark, signature, blurry, worst quality, low quality, multiple views, multiple boys, multiple girls";
+  "lowres, bad anatomy, bad hands, extra fingers, blurry, worst quality, low quality, multiple views, multiple boys, multiple girls, frame, border, card frame, card border, ornate frame, picture frame, ui, hud, text, letters, numbers, kanji, caption, title, label, star rating, stars icon, logo, emblem badge, icon overlay, watermark, signature, speech bubble, split screen, panel, comic panel, out of frame, cropped head, cleavage, exposed chest, open chest, nsfw, revealing clothes";
 
 // ---------- keyword tables ----------
 const CULT_BG = {
@@ -107,7 +111,7 @@ const CLASS_KW = {
 };
 
 const RARITY_KW = {
-  SSR: "ultra detailed, intricate costume details, golden aura rim light, glowing particle effects",
+  SSR: "ultra detailed, intricate costume details, golden rim light, glowing particle effects, dramatic lighting",
   SR: "detailed, silver aura rim light, subtle particle effects",
   R: "clean vivid colors, simple colored aura",
 };
@@ -161,7 +165,8 @@ const CHARACTERS = [
   {
     num: 11, id: "base_sol", file: "hero_011.png", nameEn: "Sol", gender: "male", cls: "archer",
     mood: "calm", cult: null, rarity: null,
-    looks: "light brown long hair in low ponytail, calm green eyes, forest ranger cloak over leather archer gear",
+    looks: "handsome young man, masculine face, flat chest, light brown hair tied in a short low ponytail, calm green eyes, forest ranger cloak over leather archer gear",
+    neg: "1girl, female, girl, woman, feminine, breasts, hair ribbon, hair bow",
     weapon: "wooden bow etched with faintly glowing nature runes",
     scene: "sun-dappled deep forest clearing, morning mist between trees",
   },
@@ -203,7 +208,8 @@ const CHARACTERS = [
   {
     num: 17, id: "asc_iris_chaos", file: "hero_017.png", nameEn: "Iris of Chaos", gender: "female", cls: "warrior",
     mood: "wild", cult: "chaos", rarity: "SSR",
-    looks: "silver-white hair tipped with shifting prismatic colors, manic glowing multicolor eyes, fractured asymmetric battle outfit leaking raw energy",
+    looks: "fair pale skin, silver-white hair tipped with shifting prismatic colors, manic glowing multicolor eyes, fractured asymmetric battle outfit leaking raw energy",
+    neg: "dark skin, tan skin",
     weapon: "sword dissolving into random-colored lightning arcs",
   },
   {
@@ -269,13 +275,15 @@ const CHARACTERS = [
   {
     num: 28, id: "asc_omar_avalon", file: "hero_028.png", nameEn: "Omar the Holy Fortress", gender: "male", cls: "warrior",
     mood: "stoic", cult: "avalon", rarity: "SR",
-    looks: "bearded dignified face, steady protective dark eyes, radiant white-silver holy knight armor with celtic filigree",
+    looks: "dark tan skin, short black hair, trimmed black beard, bearded dignified mature face, steady protective dark eyes, radiant white-silver holy knight armor with celtic filigree",
+    neg: "white hair, blonde hair, orange hair, pale skin, young boy",
     weapon: "tower shield blessed with glowing sanctified barrier light",
   },
   {
     num: 29, id: "asc_sol_nature", file: "hero_029.png", nameEn: "Sol of the Earth", gender: "male", cls: "archer",
     mood: "calm", cult: "nature", rarity: "SSR",
-    looks: "brown ponytail intertwined with growing vines, serene glowing green eyes, ranger garb blooming with living plants and moss",
+    looks: "handsome young man, masculine face, flat chest, short brown ponytail intertwined with growing vines, serene glowing green eyes, ranger garb blooming with living plants and moss",
+    neg: "1girl, female, girl, woman, feminine, breasts, hair ribbon, hair bow",
     weapon: "bow grown from living wood, arrow sprouting petals mid-draw",
   },
   {
@@ -371,7 +379,7 @@ function buildWorkflow(c, seedOverride) {
     workflow: {
       "1": { class_type: "CheckpointLoaderSimple", inputs: { ckpt_name: MODEL }, _meta: { title: "Load Checkpoint" } },
       "2": { class_type: "CLIPTextEncode", inputs: { text: positive, clip: ["1", 1] }, _meta: { title: "Positive" } },
-      "3": { class_type: "CLIPTextEncode", inputs: { text: NEGATIVE, clip: ["1", 1] }, _meta: { title: "Negative" } },
+      "3": { class_type: "CLIPTextEncode", inputs: { text: c.neg ? `${NEGATIVE}, ${c.neg}` : NEGATIVE, clip: ["1", 1] }, _meta: { title: "Negative" } },
       "4": { class_type: "EmptyLatentImage", inputs: { width: WIDTH, height: HEIGHT, batch_size: 1 }, _meta: { title: "Empty Latent" } },
       "5": {
         class_type: "KSampler",
@@ -452,11 +460,11 @@ function selectTargets() {
   return list;
 }
 
-async function generateOne(c, attempt, altSeed) {
+async function generateOne(c, attempt, altSeed, suffix = "") {
   const { workflow, seed } = buildWorkflow(c, altSeed);
   const promptId = await queuePrompt(workflow);
   const imgInfo = await waitForResult(promptId);
-  const dest = path.join(OUT_DIR, c.file);
+  const dest = path.join(OUT_DIR, c.file.replace(/\.png$/i, `${suffix}.png`));
   const bytes = await downloadImage(imgInfo, dest);
   if (bytes < 50 * 1024) throw new Error(`output suspiciously small: ${bytes}B`);
   return { bytes, seed };
@@ -483,20 +491,24 @@ async function main() {
   const failures = [];
   const t0 = Date.now();
 
-  for (let i = 0; i < targets.length; i++) {
-    const c = targets[i];
-    const label = `[${i + 1}/${targets.length}] ${c.file} (${c.id})`;
+  const jobs = [];
+  for (const c of targets) for (let v = 0; v < VARIANTS; v++) jobs.push({ c, v });
+  for (let i = 0; i < jobs.length; i++) {
+    const { c, v } = jobs[i];
+    const suffix = VARIANTS > 1 ? `_v${v + 1}` : "";
+    const baseSeed = v === 0 ? undefined : (hashSeed(c.id) + v * 104729) % 2147483647;
+    const label = `[${i + 1}/${jobs.length}] ${c.file}${suffix} (${c.id})`;
     const s0 = Date.now();
     process.stdout.write(`${label} ... `);
     try {
-      const { bytes, seed } = await generateOne(c, 1);
+      const { bytes, seed } = await generateOne(c, 1, baseSeed, suffix);
       ok++;
       console.log(`OK ${(bytes / 1024).toFixed(1)}KB seed=${seed} (${((Date.now() - s0) / 1000).toFixed(1)}s)`);
     } catch (e1) {
       process.stdout.write(`retry (${e1.message.slice(0, 120)}) ... `);
       try {
-        const altSeed = (hashSeed(c.id) + 77777) % 2147483647;
-        const { bytes, seed } = await generateOne(c, 2, altSeed);
+        const altSeed = ((baseSeed ?? hashSeed(c.id)) + 77777) % 2147483647;
+        const { bytes, seed } = await generateOne(c, 2, altSeed, suffix);
         ok++;
         console.log(`OK(retry) ${(bytes / 1024).toFixed(1)}KB seed=${seed} (${((Date.now() - s0) / 1000).toFixed(1)}s)`);
       } catch (e2) {
