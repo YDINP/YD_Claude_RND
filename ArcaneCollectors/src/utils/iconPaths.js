@@ -493,6 +493,19 @@ export const ICON_SHAPES = Object.freeze({
     poly([[0.6, 0.08], [0.94, 0.5], [0.6, 0.92], [0.42, 0.92], [0.76, 0.5], [0.42, 0.08]], {
       fill: TONES.BASE
     })
+  ],
+
+  // ---------- 튜토리얼 ----------
+  /** 탭 — 검지를 편 손 (TutorialOverlay 핸드포인터, T-24. 이모지 👆 대체) */
+  tap: [
+    // 엄지
+    poly([[0.2, 0.62], [0.05, 0.5], [0.05, 0.66], [0.2, 0.8]], { fill: TONES.DARK, stroke: false }),
+    // 주먹(손바닥)
+    rect(0.2, 0.46, 0.6, 0.42, { r: 0.16, fill: TONES.BASE }),
+    // 마디 주름
+    bar(0.26, 0.5, 0.74, 0.5, 0.045, { fill: TONES.DEEP }),
+    // 검지
+    rect(0.38, 0.06, 0.22, 0.46, { r: 0.11, fill: TONES.LIGHT })
   ]
 });
 

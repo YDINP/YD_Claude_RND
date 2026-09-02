@@ -11,13 +11,25 @@
 
 import Phaser from 'phaser';
 import { COLORS, MOOD_COLORS, s, sf } from '../config/gameConfig.js';
+import { IconFactory } from '../utils/IconFactory.js';
 
 export class IdleBattleView extends Phaser.GameObjects.Container {
-  constructor(scene, x, y, width, height) {
+  /**
+   * @param {Phaser.Scene} scene
+   * @param {number} x - 중심 x (렌더 px)
+   * @param {number} y - 중심 y (렌더 px)
+   * @param {number} width - 뷰 너비 (렌더 px)
+   * @param {number} height - 뷰 높이 (렌더 px)
+   * @param {object} [options]
+   * @param {boolean} [options.chrome=true] - 자체 배경 패널을 그릴지.
+   *        false 면 호출부(MainMenuScene)가 글래스 관측창을 대신 그린다.
+   */
+  constructor(scene, x, y, width, height, options = {}) {
     super(scene, x, y);
 
     this.viewWidth = width;
     this.viewHeight = height;
+    this.options = { chrome: true, ...options };
     this.currentBoss = null;          // 현재 보스 데이터
     this.bossMaxHp = 0;               // 보스 최대 HP
     this.bossCurrentHp = 0;           // 보스 현재 HP (비주얼용)
@@ -25,7 +37,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     this.isDefeating = false;          // 처치 연출 중 플래그
     this.pendingDelays = [];
 
-    this.createBackground();
+    if (this.options.chrome !== false) this.createBackground();
     this.createPartyDisplay();
     this.createEnemyDisplay();
     this.createEffectLayer();
@@ -65,10 +77,12 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
       const avatar = this.scene.add.circle(startX, y, s(18), COLORS.primary, 1);
       this.add(avatar);
 
-      // 이모지 (임시)
-      const emoji = this.scene.add.text(startX, y, '⚔️', {
-        fontSize: sf(20)
-      }).setOrigin(0.5);
+      // 유닛 토큰 — 시스템 이모지 금지(REDESIGN_PLAN §2-2). 클래스 벡터 아이콘을 쓴다.
+      const tokenKey = IconFactory.create(this.scene, 'warrior', s(22));
+      const emoji = tokenKey
+        ? this.scene.add.image(startX, y, tokenKey).setOrigin(0.5)
+        : this.scene.add.text(startX, y, '', { fontSize: sf(20) }).setOrigin(0.5);
+      emoji.isVectorToken = !!tokenKey;
       this.add(emoji);
 
       // 레벨 배지
@@ -360,7 +374,7 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
     });
 
     // "BOSS READY!" 텍스트
-    this.bossReadyText = this.scene.add.text(0, s(-20), '⚔️ BOSS READY!', {
+    this.bossReadyText = this.scene.add.text(0, s(-20), 'BOSS READY', {
       fontSize: sf(26),
       fontFamily: 'Arial',
       color: '#FF4444',
@@ -544,16 +558,24 @@ export class IdleBattleView extends Phaser.GameObjects.Container {
 
       const avatar = this.partyAvatars[index];
       if (hero) {
-        // 실제 영웅 데이터로 업데이트
-        avatar.emoji.setText(hero.emoji || '⚔️');
-        avatar.levelText.setText(`L${hero.level || 1}`);
         // mood 색상 적용 (optional)
+        let moodColor = null;
         if (hero.mood && MOOD_COLORS[hero.mood.toUpperCase()]) {
-          const moodColor = Phaser.Display.Color.HexStringToColor(
+          moodColor = Phaser.Display.Color.HexStringToColor(
             MOOD_COLORS[hero.mood.toUpperCase()]
           ).color;
           avatar.avatar.setFillStyle(moodColor, 1);
         }
+
+        // 실제 영웅 데이터로 업데이트
+        if (avatar.emoji.isVectorToken) {
+          // 클래스 벡터 아이콘. 배경 원이 mood 색이므로 토큰은 밝게 유지한다.
+          const key = IconFactory.create(this.scene, hero.class || hero.baseClass || 'warrior', s(22));
+          if (key) avatar.emoji.setTexture(key);
+        } else if (typeof avatar.emoji.setText === 'function') {
+          avatar.emoji.setText(hero.emoji || '');
+        }
+        avatar.levelText.setText(`L${hero.level || 1}`);
       }
     });
   }

@@ -10,13 +10,20 @@
  *
  * 강제 스텝(F-1/F-2)만 딤을 쓴다. 안내 스텝은 딤 없이 코치마크만 띄운다(UX 문서 §5-1).
  *
+ * REDESIGN_PLAN §2-3 / T-24 — 딤은 순검정이 아니라 glass.scrim 틴트(bg.primary 심야 인디고,
+ * DESIGN.glass.scrim.tintAlpha=0.72)를 쓴다. 펄스 링·핸드포인터는 brand.accent 한 색으로
+ * 통일해 강조를 팔레트 안에서만 낸다.
+ *
  * 주의: gameConfig/layoutConfig 값을 모듈 스코프에서 평가하지 않는다(순환 import TDZ 방지).
  *       Z_INDEX / COLORS 는 반드시 메서드 내부에서 읽는다.
  */
 import { Z_INDEX } from '../../config/layoutConfig.js';
 import { s } from '../../config/scaleConfig.js';
+import { DESIGN } from '../../config/designSystem.js';
+import { ts } from '../../utils/textStyles.ts';
+import { IconFactory } from '../../utils/IconFactory.js';
 
-/** 딤 알파 기본값 (UX 문서 §5-1: 강제 구간 72%) */
+/** 딤 알파 기본값 (UX 문서 §5-1: 강제 구간 72%. DESIGN.glass.scrim.tintAlpha 와 동일 값의 SSOT) */
 export const DEFAULT_DIM_ALPHA = 0.72;
 
 /** 홀 라운드 반경 (base px) */
@@ -202,7 +209,8 @@ export class TutorialOverlay {
    */
   _drawDim(dim, W, H, alpha) {
     this._dimAlpha = alpha;
-    dim.fillStyle(0x000000, alpha);
+    // glass.scrim 틴트(§2-3) — 순검정이 아니라 배경과 같은 심야 인디고로 딤을 친다
+    dim.fillStyle(DESIGN.colors.bg.primary, alpha);
     dim.fillRect(0, 0, W, H);
 
     if (!this.hole) return;
@@ -236,7 +244,7 @@ export class TutorialOverlay {
     if (!hole) return;
 
     const ring = this.scene.add.graphics();
-    ring.lineStyle(s(3), 0xffffff, 0.9);
+    ring.lineStyle(s(3), DESIGN.colors.brand.accent, 0.9);
     ring.strokeRoundedRect(hole.x, hole.y, hole.w, hole.h, s(HOLE_RADIUS_BASE));
     ring.setDepth(Z_INDEX.TUTORIAL_CONTENT);
     this.root.add(ring);
@@ -258,12 +266,17 @@ export class TutorialOverlay {
     const hole = this.hole;
     if (!hole) return;
 
-    const pointer = this.scene.add.text(
+    // 시스템 이모지(👆) 대체 — IconFactory 벡터 'tap' (검지를 편 손), brand.accent 로 tint
+    const pointer = IconFactory.createImage(
+      this.scene,
       hole.x + hole.w / 2,
       hole.y + hole.h + s(14),
-      '👆',
-      { fontSize: `${s(34)}px` }
-    ).setOrigin(0.5, 0).setDepth(Z_INDEX.TUTORIAL_CONTENT);
+      'tap',
+      'md',
+      { tint: DESIGN.colors.brand.accent }
+    );
+    if (!pointer) return;
+    pointer.setOrigin(0.5, 0).setDepth(Z_INDEX.TUTORIAL_CONTENT);
 
     this.root.add(pointer);
     this._pointer = pointer;
@@ -286,14 +299,11 @@ export class TutorialOverlay {
     let y = hole ? hole.y - s(52) : H - s(280);
     if (y < s(120)) y = hole ? hole.y + hole.h + s(70) : H - s(280);
 
-    const label = this.scene.add.text(W / 2, y, text, {
-      fontSize: `${s(20)}px`,
-      fontFamily: '"Noto Sans KR", Arial',
-      fontStyle: 'bold',
-      color: '#F8FAFC',
+    // §2-6 타이포 스케일 — subtitle(20/700) 토큰이 기존 20px bold 그대로와 정확히 일치한다
+    const label = this.scene.add.text(W / 2, y, text, ts('subtitle', {
       align: 'center',
       wordWrap: { width: s(600) },
-    }).setOrigin(0.5).setDepth(Z_INDEX.TUTORIAL_CONTENT);
+    })).setOrigin(0.5).setDepth(Z_INDEX.TUTORIAL_CONTENT);
 
     this.root.add(label);
     this._instruction = label;

@@ -1,123 +1,74 @@
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
+/**
+ * BootScene — 스플래시 · 세션 확인 (REDESIGN_PLAN §3-8, T-19)
+ *
+ * 부팅 화면과 로그인 화면은 배경(`bg_login`)과 로고를 공유한다. 좌표는
+ * `utils/loginLayout.js` 한 곳에 있고 두 씬이 같은 값을 읽는다 — 그래야 씬이 바뀔 때
+ * 그림이 제자리에 있고 한 장면처럼 이어진다.
+ *
+ * BootScene 은 게임의 첫 씬이라 PreloadScene 의 에셋 로드보다 먼저 뜬다. 그래서 이 화면과
+ * 로그인 화면이 쓰는 최소한의 텍스처(배경 · 로고 · 버튼 프레임)를 여기서 직접 받는다.
+ * 로드 실패는 조용히 흡수한다 — 각 소비처가 textures.exists() 로 폴백한다.
+ *
+ * 하단 문구는 story.json 에서 뽑는다(`utils/bootTips.js`). 대본 SSOT 를 복사하지 않기 위해서다.
+ */
+import { GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
+import { DESIGN, hexToCSS } from '../config/designSystem.js';
+import { ts } from '../utils/textStyles.ts';
 import { SaveManager } from '../systems/SaveManager.js';
 import { isSupabaseConfigured, supabase, getLocalData } from '../api/supabaseClient.js';
-import { getGuestUserId } from '../services/AuthService.js';
 import { normalizeHeroes } from '../data/index.js';
 import { GachaSystem } from '../systems/GachaSystem.js';
 import { validateAllGameData } from '../schemas/validator.js';
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
+import { buildBootTips, cycleIndex } from '../utils/bootTips.js';
+import {
+  BOOT_LAYOUT as L,
+  LOGO_SCRIM,
+  TIP_ROTATE_MS,
+  TIP_FADE_MS,
+  resolveLogoDisplaySize,
+  combineBootProgress
+} from '../utils/loginLayout.js';
+import STORY_DATA from '../data/story.json';
+import ASSET_MANIFEST from '../../tools/art/asset-manifest.json';
+
+/** 부팅 화면과 로그인 화면이 함께 쓰는 최소 텍스처 */
+export const BOOT_ASSET_KEYS = Object.freeze([
+  'bg_login',
+  'bg_login_blur',
+  'logo_arcane_collectors',
+  'btn_primary',
+  'btn_ghost'
+]);
+
+/** 스플래시 유지 시간 (ms) */
+const SPLASH_MS = 2400;
+
+const DEPTH = {
+  BASE: -1,
+  BG: 0,
+  FADE: 5,
+  CONTENT: 10
+};
 
 export class BootScene extends Phaser.Scene {
   constructor() {
     super({ key: 'BootScene' });
+    this._loadProgress = 0;
+    this._bootProgress = 0;
   }
 
   async create() {
     try {
-      // H-9.2: 스플래시 화면 배경
-      this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.bgDark);
-
-      // 장식 파티클 (별)
-      for (let i = 0; i < 20; i++) {
-        const x = Phaser.Math.Between(s(20), GAME_WIDTH - s(20));
-        const y = Phaser.Math.Between(s(50), GAME_HEIGHT - s(50));
-        const star = this.add.circle(x, y, Phaser.Math.Between(1, 3), COLORS.primary, Phaser.Math.FloatBetween(0.1, 0.5));
-        this.tweens.add({
-          targets: star,
-          alpha: { from: star.alpha, to: Phaser.Math.FloatBetween(0.05, 0.3) },
-          duration: Phaser.Math.Between(1000, 2500),
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
-      }
-
-      // H-9.1: 로고 구성
-      const logoY = GAME_HEIGHT * 0.4;
-
-      // 마법진 배경 (장식)
-      const magicRing = this.add.circle(GAME_WIDTH / 2, logoY, 100, 0x000000, 0);
-      magicRing.setStrokeStyle(1, COLORS.primary, 0.3);
-      this.tweens.add({
-        targets: magicRing,
-        scaleX: 1.2, scaleY: 1.2,
-        alpha: 0,
-        duration: 2500,
-        ease: 'Power2'
-      });
-
-      const magicRing2 = this.add.circle(GAME_WIDTH / 2, logoY, 80, 0x000000, 0);
-      magicRing2.setStrokeStyle(1, COLORS.secondary, 0.2);
-      this.tweens.add({
-        targets: magicRing2,
-        angle: 360,
-        scaleX: 1.3, scaleY: 1.3,
-        alpha: 0,
-        duration: 2800,
-        ease: 'Power2'
-      });
-
-      // 메인 타이틀
-      const titleArcane = this.add.text(GAME_WIDTH / 2, logoY - s(20), 'ARCANE', {
-        fontSize: sf(32),
-        fontFamily: 'Noto Sans KR',
-        color: '#6366F1',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 2
-      }).setOrigin(0.5).setAlpha(0);
-
-      const titleCollectors = this.add.text(GAME_WIDTH / 2, logoY + s(20), 'COLLECTORS', {
-        fontSize: sf(24),
-        fontFamily: 'Noto Sans KR',
-        color: '#a5b4fc',
-        letterSpacing: s(4)
-      }).setOrigin(0.5).setAlpha(0);
-
-      const subtitle = this.add.text(GAME_WIDTH / 2, logoY + s(48), '신화의 교단에서 영웅을 모아라', {
-        fontSize: sf(14),
-        fontFamily: 'Noto Sans KR',
-        color: '#94A3B8'
-      }).setOrigin(0.5).setAlpha(0);
-
-      // 하단 저작권
-      const copyright = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - s(40), 'YD Studio © 2025', {
-        fontSize: sf(12),
-        fontFamily: 'Noto Sans KR',
-        color: '#94A3B8'
-      }).setOrigin(0.5).setAlpha(0.5);
-
-      // H-9.2: 페이드 인
-      this.tweens.add({
-        targets: titleArcane,
-        alpha: 1,
-        y: logoY - s(24),
-        duration: 600,
-        ease: 'Back.easeOut'
-      });
-
-      this.tweens.add({
-        targets: titleCollectors,
-        alpha: 1,
-        duration: 400,
-        delay: 200,
-        ease: 'Power2'
-      });
-
-      this.tweens.add({
-        targets: subtitle,
-        alpha: 1,
-        duration: 400,
-        delay: 500,
-        ease: 'Power2'
-      });
-
-      this.tweens.add({
-        targets: copyright,
-        alpha: 0.5,
-        duration: 400,
-        delay: 500,
-        ease: 'Power2'
-      });
+      // 바탕과 진행바를 먼저 세우고, 에셋은 create 안에서 받는다.
+      // preload() 로 받으면 씬이 LOADING 상태에 머물러 scene.isActive() 가 false 가 되고,
+      // "부팅 후 활성 씬이 있는가"를 보는 boot-smoke 가 로드 타이밍에 따라 흔들린다.
+      this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, DESIGN.colors.bg.primary)
+        .setDepth(DEPTH.BASE);
+      this.createProgressBar();
+      this.createFooter();
+      this.loadBootAssets(() => this.buildSplash());
+      this.startProgressAnimation();
 
       // COMPAT-1.5: 개발 모드 스키마 검증 (비동기)
       if (import.meta.env.DEV) {
@@ -136,9 +87,9 @@ export class BootScene extends Phaser.Scene {
       // 세션 확인 (스플래시 중 비동기)
       const hasSession = await this._checkExistingSession();
 
-      // H-9.2: 3초 스플래시 후 페이드 아웃
-      this.time.delayedCall(2400, () => {
-        this.cameras.main.fadeOut(200, 15, 23, 42);
+      // H-9.2: 스플래시 후 페이드 아웃
+      this.time.delayedCall(SPLASH_MS, () => {
+        this.cameras.main.fadeOut(200, 13, 15, 26);
         this.cameras.main.once('camerafadeoutcomplete', () => {
           if (hasSession) {
             this._initRegistry();
@@ -158,6 +109,221 @@ export class BootScene extends Phaser.Scene {
       });
     }
   }
+
+  // ================================================================
+  // 화면
+  // ================================================================
+
+  /**
+   * 이 화면과 로그인 화면이 쓰는 텍스처만 받는다.
+   * 전체 에셋은 PreloadScene 이 맡는다 — 여기서 다 받으면 스플래시가 로딩 화면이 된다.
+   * @param {Function} onDone 로드가 끝났을 때(실패 포함) 호출
+   */
+  loadBootAssets(onDone) {
+    const textures = (ASSET_MANIFEST && ASSET_MANIFEST.textures) || {};
+    let queued = 0;
+
+    BOOT_ASSET_KEYS.forEach((key) => {
+      const meta = textures[key];
+      if (!meta || !meta.path) return;
+      if (this.textures.exists(key)) return;
+      this.load.image(key, meta.path);
+      queued += 1;
+    });
+
+    if (queued === 0) {
+      this._loadProgress = 1;
+      this.drawProgress();
+      onDone();
+      return;
+    }
+
+    this.load.on('progress', (value) => {
+      this._loadProgress = value;
+      this.drawProgress();
+    });
+
+    // 로드 실패는 조용히 흡수한다. 소비처가 각자 폴백한다
+    this.load.on('loaderror', (file) => {
+      console.warn(`[BootScene] 부팅 에셋 로드 실패, 폴백 사용: ${file?.key}`);
+    });
+
+    this.load.once('complete', () => {
+      this._loadProgress = 1;
+      this.drawProgress();
+      onDone();
+    });
+
+    this.load.start();
+  }
+
+  /** 배경·로고·문구. 부팅 에셋 로드가 끝난 뒤에 한 번 그린다 */
+  buildSplash() {
+    if (!this.sys || !this.sys.isActive()) return;
+    this.createBackground();
+    this.createLogo();
+    this.createTips();
+  }
+
+  createBackground() {
+    BackgroundFactory.createSceneBg(this, 'login', { dimAlpha: 0.30, depth: DEPTH.BG });
+
+    const bg = DESIGN.colors.bg.primary;
+    const g = this.add.graphics().setDepth(DEPTH.FADE);
+    g.fillGradientStyle(bg, bg, bg, bg, 0, 0, 0.96, 0.96);
+    g.fillRect(0, s(L.fade.y), GAME_WIDTH, s(L.fade.h));
+    g.fillStyle(bg, 0.96);
+    g.fillRect(0, s(L.fade.y + L.fade.h), GAME_WIDTH, GAME_HEIGHT - s(L.fade.y + L.fade.h));
+
+    // 로고·부제 뒤 어둠 띠 — 배경과 로고 사이(DEPTH.FADE)에 깔아 로고는 밝게 남긴다
+    const scrim = this.add.graphics().setDepth(DEPTH.FADE);
+    LOGO_SCRIM.forEach((band) => {
+      scrim.fillGradientStyle(bg, bg, bg, bg, band.from, band.from, band.to, band.to);
+      scrim.fillRect(0, s(band.y), GAME_WIDTH, s(band.h));
+    });
+  }
+
+  createLogo() {
+    let logo;
+
+    if (this.textures.exists('logo_arcane_collectors')) {
+      const source = this.textures.get('logo_arcane_collectors').getSourceImage();
+      const size = resolveLogoDisplaySize(source.width, source.height, L.logo.w, L.logo.h);
+      logo = this.add.image(s(L.logo.x), s(L.logo.y), 'logo_arcane_collectors')
+        .setDisplaySize(s(size.w), s(size.h))
+        .setDepth(DEPTH.CONTENT)
+        .setAlpha(0);
+    } else {
+      // 폴백 — 로고 에셋이 없어도 화면은 성립해야 한다
+      logo = this.add.container(s(L.logo.x), s(L.logo.y)).setDepth(DEPTH.CONTENT).setAlpha(0);
+      logo.add(this.add.text(0, s(-22), 'ARCANE', ts('display.xl', {
+        color: hexToCSS(DESIGN.colors.brand.primary)
+      })).setOrigin(0.5));
+      logo.add(this.add.text(0, s(26), 'COLLECTORS', ts('display.lg', {
+        color: DESIGN.colors.text.primary
+      })).setOrigin(0.5));
+    }
+
+    this.tweens.add({
+      targets: logo,
+      alpha: 1,
+      y: logo.y - s(6),
+      duration: 620,
+      ease: 'Back.easeOut'
+    });
+
+    // 배경 한가운데가 밝은 그림이라 획을 두껍게 두르지 않으면 부제가 묻힌다
+    const subtitle = this.add.text(s(L.subtitle.x), s(L.subtitle.y), '신화의 교단에서 영웅을 모아라',
+      ts('label', { color: DESIGN.colors.text.primary, stroke: '#0D0F1A', strokeThickness: 5 }))
+      .setOrigin(0.5).setDepth(DEPTH.CONTENT).setAlpha(0);
+
+    this.tweens.add({ targets: subtitle, alpha: 0.92, duration: 420, delay: 320, ease: 'Power2' });
+  }
+
+  /** 세계관 문구를 story.json 에서 뽑아 순환시킨다 */
+  createTips() {
+    this.tips = buildBootTips(STORY_DATA?.scenes);
+    // 매번 같은 문장으로 시작하면 부팅이 한 장면으로 굳는다. 시작점만 무작위로 돌린다
+    this.tipIndex = Math.floor(Math.random() * this.tips.length);
+
+    this.tipText = this.add.text(s(L.tip.x), s(L.tip.y), this.tips[this.tipIndex], ts('label', {
+      color: DESIGN.colors.text.secondary,
+      align: 'center',
+      wordWrap: { width: s(L.tip.wrapWidth) }
+    })).setOrigin(0.5).setDepth(DEPTH.CONTENT).setAlpha(0);
+
+    this.tweens.add({ targets: this.tipText, alpha: 0.85, duration: TIP_FADE_MS, delay: 420 });
+
+    if (this.tips.length < 2) return;
+
+    this.time.addEvent({
+      delay: TIP_ROTATE_MS,
+      loop: true,
+      callback: () => this.rotateTip()
+    });
+  }
+
+  rotateTip() {
+    if (!this.tipText || !this.tipText.scene) return;
+    this.tipIndex = cycleIndex(this.tipIndex + 1, this.tips.length);
+    const next = this.tips[this.tipIndex];
+
+    this.tweens.add({
+      targets: this.tipText,
+      alpha: 0,
+      duration: TIP_FADE_MS,
+      onComplete: () => {
+        if (!this.tipText || !this.tipText.scene) return;
+        this.tipText.setText(next);
+        this.tweens.add({ targets: this.tipText, alpha: 0.85, duration: TIP_FADE_MS });
+      }
+    });
+  }
+
+  /** 글래스 진행바. preload 에서 세워 로드 중에도 화면이 살아 있게 한다 */
+  createProgressBar() {
+    const bar = L.progress;
+    this.progressBar = this.add.graphics().setDepth(DEPTH.CONTENT);
+    this.progressLabel = this.add.text(s(L.progressLabel.x), s(L.progressLabel.y), '', ts('num.sm', {
+      color: DESIGN.colors.text.muted
+    })).setOrigin(0.5).setDepth(DEPTH.CONTENT).setAlpha(0.75);
+    this._progressRect = {
+      x: s(bar.x - bar.w / 2),
+      y: s(bar.y - bar.h / 2),
+      w: s(bar.w),
+      h: s(bar.h)
+    };
+    this.drawProgress();
+  }
+
+  drawProgress() {
+    if (!this.progressBar || !this.progressBar.scene) return;
+    const rect = this._progressRect;
+    const radius = rect.h / 2;
+    const value = combineBootProgress(this._loadProgress, this._bootProgress);
+
+    this.progressBar.clear();
+    // 글래스 트랙 — 배경을 비추는 대신 어두운 틴트 + 얇은 림으로 두께를 만든다
+    this.progressBar.fillStyle(DESIGN.colors.bg.primary, 0.72);
+    this.progressBar.fillRoundedRect(rect.x, rect.y, rect.w, rect.h, radius);
+
+    const fill = rect.w * value;
+    if (fill > 0) {
+      this.progressBar.fillStyle(DESIGN.colors.brand.primary, 0.95);
+      this.progressBar.fillRoundedRect(rect.x, rect.y, Math.max(fill, rect.h), rect.h, radius);
+    }
+
+    this.progressBar.lineStyle(Math.max(1, s(1)), DESIGN.glass.rim.topColor, 0.16);
+    this.progressBar.strokeRoundedRect(rect.x, rect.y, rect.w, rect.h, radius);
+
+    if (this.progressLabel && this.progressLabel.scene) {
+      this.progressLabel.setText(`${Math.round(value * 100)}%`);
+    }
+  }
+
+  /** 로드가 끝난 뒤에도 막대가 멈춰 있지 않도록 스플래시 구간을 채운다 */
+  startProgressAnimation() {
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: SPLASH_MS,
+      ease: 'Sine.easeInOut',
+      onUpdate: (tween) => {
+        this._bootProgress = tween.getValue();
+        this.drawProgress();
+      }
+    });
+  }
+
+  createFooter() {
+    this.add.text(s(L.footer.x), s(L.footer.y), 'YD Studio © 2025', ts('caption', {
+      color: DESIGN.colors.text.muted
+    })).setOrigin(0.5).setDepth(DEPTH.CONTENT).setAlpha(0.5);
+  }
+
+  // ================================================================
+  // 세션
+  // ================================================================
 
   /**
    * AUTH-1.1: 기존 세션 또는 자동로그인 확인

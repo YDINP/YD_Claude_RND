@@ -5,11 +5,17 @@
  *  - docs/story/UX_ONBOARDING_FLOW.md §5-1 — 안내 스텝은 **딤이 없다**. 다른 곳을 눌러도 전부 동작한다.
  *  - §6-3 코치마크 닫기 버튼 최소 탭 타겟 56x56(base)
  *  - UXI-09 — 말풍선은 **가변폭(base 240~560) + 최대 2줄**. 넘치면 sf(16) → sf(14) 자동 축소.
+ *  - REDESIGN_PLAN §2-3 / T-24 — 말풍선 표면은 `glass.panel`(교단색 아웃라인, 없으면 brand.primary로
+ *    자동 대체). 강조 링·화살표는 brand.accent(신성/보상 액센트) 한 색으로 통일해 "여기를 보라"는
+ *    신호를 팔레트 안에서만 낸다.
  *
  * 주의: gameConfig/layoutConfig 값을 모듈 스코프에서 평가하지 않는다(순환 import TDZ 방지).
  */
 import { Z_INDEX } from '../../config/layoutConfig.js';
 import { s } from '../../config/scaleConfig.js';
+import { DESIGN, hexToCSS } from '../../config/designSystem.js';
+import { GlassPanel, GLASS_VARIANT } from '../GlassPanel.js';
+import { ts } from '../../utils/textStyles.ts';
 
 /** 말풍선 폭 (base px) */
 export const BUBBLE_WIDTH_BASE = { MIN: 240, MAX: 560 };
@@ -74,13 +80,12 @@ export class CoachMark {
     const bubbleW = s(metrics.widthBase);
     const padding = s(16);
 
-    const label = this.scene.add.text(0, 0, text, {
-      fontSize: `${s(metrics.fontBase)}px`,
-      fontFamily: '"Noto Sans KR", Arial',
-      color: '#F8FAFC',
+    // 본문 폰트는 measure() 가 고른 base(16=body, 14=label)를 그대로 타이포 토큰에 매핑한다
+    const typoToken = metrics.fontBase === BUBBLE_FONT_BASE.SHRUNK ? 'label' : 'body';
+    const label = this.scene.add.text(0, 0, text, ts(typoToken, {
       align: 'left',
       wordWrap: { width: bubbleW - padding * 2 },
-    }).setOrigin(0, 0);
+    })).setOrigin(0, 0);
 
     const bubbleH = Math.max(label.height + padding * 2, s(56));
 
@@ -90,12 +95,16 @@ export class CoachMark {
     const bubbleX = Math.min(Math.max(cx - bubbleW / 2, s(20)), W - bubbleW - s(20));
     const bubbleY = placement.y;
 
-    const bg = this.scene.add.graphics();
-    bg.fillStyle(0x0f172a, 0.94);
-    bg.fillRoundedRect(bubbleX, bubbleY, bubbleW, bubbleH, s(12));
-    bg.lineStyle(s(2), 0x6366f1, 0.9);
-    bg.strokeRoundedRect(bubbleX, bubbleY, bubbleW, bubbleH, s(12));
-    this.root.add(bg);
+    // 글래스 규칙(§2-3) — panel 변형은 교단색 아웃라인을 지원하고, 교단색이 없으면
+    // GlassPanel 자체가 brand.primary 로 대체한다(GlassPanel.resolveSpec)
+    const bubble = GlassPanel.create(this.scene, {
+      x: bubbleX + bubbleW / 2,
+      y: bubbleY + bubbleH / 2,
+      w: bubbleW,
+      h: bubbleH,
+      variant: GLASS_VARIANT.PANEL,
+    });
+    this.root.add(bubble);
 
     label.setPosition(bubbleX + padding, bubbleY + padding);
     this.root.add(label);
@@ -103,7 +112,7 @@ export class CoachMark {
     // 대상 강조 테두리 (딤 없이 테두리만 — 안내는 명령이 아니다)
     if (this.target) {
       const ring = this.scene.add.graphics();
-      ring.lineStyle(s(3), 0x6366f1, 0.9);
+      ring.lineStyle(s(3), DESIGN.colors.brand.accent, 0.9);
       ring.strokeRoundedRect(this.target.x, this.target.y, this.target.w, this.target.h, s(10));
       this.root.add(ring);
 
@@ -123,7 +132,7 @@ export class CoachMark {
         cx,
         placement.direction === ARROW_DIRECTION.DOWN ? bubbleY + bubbleH : bubbleY,
         placement.direction === ARROW_DIRECTION.DOWN ? '▼' : '▲',
-        { fontSize: `${s(18)}px`, color: '#6366F1' }
+        { fontSize: `${s(18)}px`, color: hexToCSS(DESIGN.colors.brand.accent) }
       ).setOrigin(0.5, placement.direction === ARROW_DIRECTION.DOWN ? 0 : 1);
       this.root.add(arrow);
     }
@@ -133,7 +142,7 @@ export class CoachMark {
       const closeY = bubbleY + s(CLOSE_HIT_BASE) / 2 - s(4);
       const closeText = this.scene.add.text(closeX, closeY, '✕', {
         fontSize: `${s(18)}px`,
-        color: '#94A3B8',
+        color: DESIGN.colors.text.secondary,
       }).setOrigin(0.5);
       const closeHit = this.scene.add
         .rectangle(closeX, closeY, s(CLOSE_HIT_BASE), s(CLOSE_HIT_BASE))

@@ -70,7 +70,10 @@ async function safeEvaluate(page, fn, arg) {
 
 /** CutsceneScene 이 떠 있으면 mode 에 따라 처리하고, 없으면 즉시 반환한다 */
 async function handleCutsceneIfAny(page, mode) {
-  const up = await waitFor(page, () => !!window.game?.scene.isActive('CutsceneScene'), 2500);
+  // 보스 스테이지(1-5)는 BattleScene.create() 진입 1200ms 후 battleEntryTransition이 끝나며
+  // boss_before 컷씬이 뜬다(실측 1400~2400ms). 감지 창이 짧으면 컷씬이 뜨기 전에 폴링이
+  // 끝나버려 "컷씬 없음"으로 오판하므로 여유 있게 4000ms로 잡는다.
+  const up = await waitFor(page, () => !!window.game?.scene.isActive('CutsceneScene'), 4000);
   if (!up) return false;
 
   if (mode === 'skip') {
@@ -251,7 +254,14 @@ async function clearStage(page, stageId, mode) {
 
   let victory = false;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
-    const battleUp = await waitFor(page, () => !!window.game?.scene.isActive('BattleScene'), 15000);
+    // battleEntryTransition(1200ms) 직후 BattleScene이 boss_before 컷씬으로 즉시 scene.pause()될
+    // 수 있다(1-5). Phaser의 isActive()는 PAUSED 상태를 false로 보고하므로 isActive만 보면
+    // 이미 생성됐지만 일시정지된 BattleScene을 "아직 진입 안 함"으로 오판한다. isPaused도 함께 본다.
+    const battleUp = await waitFor(
+      page,
+      () => !!(window.game?.scene.isActive('BattleScene') || window.game?.scene.isPaused('BattleScene')),
+      15000
+    );
     if (!battleUp) throw new Error(`[${stageId}] BattleScene 진입 실패 (시도 ${attempt})`);
 
     await safeEvaluate(page, (speed) => {

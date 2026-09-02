@@ -7,11 +7,22 @@ import { DebugManager } from '../../systems/DebugManager.js';
  * 지금까지 부딪힌 것들
  *  - 우상단 (GAME_WIDTH - s(40), s(120)) : 편성 버튼과 팝업 닫기 ✕(약 652,108)를 가렸다
  *  - 우하단 (660, 1200)                  : 영웅 상세 하단 액션바의 "진화" 버튼(y 1160~1232)과 겹쳤다
+ *  - 좌상단 (60, 150)                    : 리디자인된 메인 메뉴의 파티 1번 아바타와 겹쳤다
  *
- * 좌상단 (60, 150)은 상단바(h 80) 아래이면서 팝업 ✕(x 652)의 반대편이고,
- * 하단 메뉴 그리드(y 1046~)와 액션바(y 1160~) 어느 쪽과도 만나지 않는다.
+ * 좌하단 (40, 1000)은 수익 요약(y 900~952)과 메뉴 그리드(y 1046~) 사이의 좌측 여백이다.
+ * 파티 패널·현재 모험 패널·액션바·팝업 ✕ 어느 것과도 만나지 않는다.
  */
-export const FAB_BASE_POSITION = Object.freeze({ x: 60, y: 150 });
+export const FAB_BASE_POSITION = Object.freeze({ x: 40, y: 1000 });
+
+/**
+ * 이전 기본 좌표들. 저장된 값이 **직접 옮긴 적 없는 옛 기본값**이면
+ * 새 기본값으로 1회 올려준다. 옛 기본값 그대로 두면 겹침이 그대로 남기 때문이다.
+ * 사용자가 그 좌표로 직접 끌어다 놓은 경우도 한 번은 초기화되지만,
+ * 다시 옮기면 그 값이 남으므로 되풀이되지 않는다.
+ */
+export const LEGACY_DEFAULT_POSITIONS = Object.freeze([
+  Object.freeze({ x: 60, y: 150 }),
+]);
 
 /** 드래그로 옮긴 위치를 저장하는 키 (base 좌표로 저장한다) */
 export const FAB_POSITION_STORAGE_KEY = 'arcane_debug_fab_pos';
@@ -29,6 +40,11 @@ export const FAB_BASE_BOUNDS = Object.freeze({
 
 /** 탭으로 인정하는 최대 이동 거리 (base). 이보다 움직이면 드래그로 본다. */
 export const TAP_MOVE_TOLERANCE = 6;
+
+/** 평소 알파 — 화면을 가리지 않도록 반투명하게 둔다 */
+export const ALPHA_IDLE = 0.55;
+/** 만지는 동안(또는 패널이 열린 동안) 알파 */
+export const ALPHA_ACTIVE = 1;
 
 /** 평소 depth — 게임 UI 위 */
 const DEPTH_NORMAL = 8000;
@@ -68,15 +84,28 @@ export function clampFabPosition(pos) {
   };
 }
 
+/** 저장된 값이 옛 기본 좌표 그대로인지 */
+export function isLegacyDefaultPosition(pos) {
+  return LEGACY_DEFAULT_POSITIONS.some(
+    (legacy) => Number(pos?.x) === legacy.x && Number(pos?.y) === legacy.y
+  );
+}
+
 /**
  * 저장된 FAB 위치(base 좌표)를 읽는다. 없거나 깨졌으면 기본 위치.
+ * 옛 기본값이 저장돼 있으면 새 기본값으로 올리고 저장까지 마친다(1회 마이그레이션).
  * @returns {{x: number, y: number}}
  */
 export function loadFabPosition() {
   try {
     const raw = localStorage.getItem(FAB_POSITION_STORAGE_KEY);
     if (!raw) return { ...FAB_BASE_POSITION };
-    return clampFabPosition(JSON.parse(raw));
+
+    const stored = JSON.parse(raw);
+    if (isLegacyDefaultPosition(stored)) {
+      return saveFabPosition(FAB_BASE_POSITION);
+    }
+    return clampFabPosition(stored);
   } catch {
     return { ...FAB_BASE_POSITION };
   }
@@ -135,6 +164,7 @@ export class DebugFAB {
     }).setOrigin(0.5).setDepth(DEPTH_NORMAL + 3).setVisible(false);
 
     this._bindInput();
+    this.setActiveAlpha(false);
 
     // 뱃지 + 팝업 가림 상태 폴링
     this.updateTimer = this.scene.time.addEvent({
@@ -150,12 +180,29 @@ export class DebugFAB {
     this.updateDepth();
   }
 
+  /**
+   * 알파 전환. 평소에는 반투명해서 아래 UI가 비치고, 만지는 동안·패널이 열린 동안만 또렷해진다.
+   * @param {boolean} active
+   */
+  setActiveAlpha(active) {
+    if (!this.bg) return;
+    const alpha = active || this.isOpen ? ALPHA_ACTIVE : ALPHA_IDLE;
+    this.bg.setAlpha(alpha);
+    this.icon.setAlpha(alpha);
+    this.badge.setAlpha(alpha);
+    this.badgeText.setAlpha(alpha);
+  }
+
   /** 탭(패널 토글)과 드래그(위치 이동)를 구분해 바인딩한다 */
   _bindInput() {
+    this.bg.on('pointerover', () => this.setActiveAlpha(true));
+    this.bg.on('pointerout', () => this.setActiveAlpha(false));
+
     this.bg.on('pointerdown', (pointer) => {
       this._pointerDownTime = pointer.downTime;
       this._pointerDownPos = { x: pointer.x, y: pointer.y };
       this._dragged = false;
+      this.setActiveAlpha(true);
     });
 
     this.bg.on('drag', (pointer, dragX, dragY) => {
@@ -170,6 +217,7 @@ export class DebugFAB {
 
     this.bg.on('dragend', () => {
       if (this._dragged) this.basePos = saveFabPosition(this.basePos);
+      this.setActiveAlpha(false);
     });
 
     this.bg.on('pointerup', (pointer) => {
@@ -177,6 +225,7 @@ export class DebugFAB {
       // 끌어서 옮긴 것은 탭이 아니다. 옮길 때마다 패널이 열리면 못 쓴다.
       if (this._dragged) {
         this._dragged = false;
+        this.setActiveAlpha(false);
         return;
       }
       if (elapsed < 800) {
@@ -185,6 +234,8 @@ export class DebugFAB {
         if (this.onToggle) this.onToggle(this.isOpen);
         this._updateVisual();
       }
+      // 패널이 열려 있으면 또렷하게 유지한다(_updateVisual 이후에 판단)
+      this.setActiveAlpha(false);
     });
   }
 
@@ -238,8 +289,8 @@ export class DebugFAB {
     if (!this.bg) return;
     const count = this._getActiveCheatCount();
     if (count > 0) {
-      this.badge.setVisible(true);
-      this.badgeText.setVisible(true).setText(String(count));
+      this.badge.setVisible(true).setAlpha(this.bg.alpha);
+      this.badgeText.setVisible(true).setAlpha(this.bg.alpha).setText(String(count));
       this.bg.setStrokeStyle(s(2), 0xEF4444);
     } else {
       this.badge.setVisible(false);

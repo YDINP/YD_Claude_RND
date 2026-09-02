@@ -182,15 +182,20 @@ async function run() {
       lazyLoadedAsRealImage.length > 0 ? `의도치 않게 로드됨: ${lazyLoadedAsRealImage.join(', ')}` : ''
     );
 
+    // fullbody 34장은 Phase0 에서 일괄 로드하지 않는다.
+    // 다만 T-10 이후 MainMenuScene 이 유휴전투 관측창 장식으로 **파티 1번 영웅 1장만**
+    // 지연 로드한다(REDESIGN_PLAN §3-1). 그래서 "0장"이 아니라 "PreloadScene 이 굽지
+    // 않았고 1장을 넘지 않는다"를 검사한다.
     const fbKeys = Object.keys(manifest.fullbody || {});
-    const fbStillUnloaded = await page.evaluate((keys) => {
+    const fbLoaded = await page.evaluate((keys) => {
       const tm = window.game.textures;
       return keys.filter((k) => tm.exists(k));
     }, fbKeys);
+    const fbFromPreload = fbLoaded.filter((k) => (textureReport.assetLoadedKeys || []).includes(k));
     assert(
-      fbStillUnloaded.length === 0,
-      'fullbody 웹은 Phase0에서 로드하지 않음(HeroDetail 지연 로드 대상)',
-      fbStillUnloaded.length > 0 ? `의도치 않게 로드됨: ${fbStillUnloaded.join(', ')}` : ''
+      fbFromPreload.length === 0 && fbLoaded.length <= 1,
+      'fullbody 웹은 Phase0에서 일괄 로드하지 않음 (메인 메뉴 장식 1장만 지연 로드 허용)',
+      `preload=${fbFromPreload.join(', ') || '없음'} / 지연로드=${fbLoaded.join(', ') || '없음'}`
     );
 
     // 3) HTTP 로 모든 eager 경로의 상태/콘텐츠 타입/바이트 수 확인

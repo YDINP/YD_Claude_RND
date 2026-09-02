@@ -1,34 +1,100 @@
+/**
+ * StageSelectScene — 모험 · 스테이지 선택 (REDESIGN_PLAN §3-4, T-16)
+ *
+ * 리디자인 이전에는 챕터 제목이 리스트 첫 카드 위에 겹쳐 그려졌고, 챕터명이 씬 파일에
+ * 하드코딩(어둠의 숲 / 얼음 동굴 / 화염 계곡)되어 stages.json 의 실제 챕터명과 달랐다.
+ * 이제 챕터는 전용 헤더 패널을 갖고, 이름·스테이지·보스 판정은 전부 데이터에서 온다.
+ *
+ * 배치 계산은 `utils/stageSelectLayout.js`(순수 모듈)가 하고 이 파일은 그리기만 한다.
+ * 벽 경고 판정은 `systems/StageWallRules.js`, 보스 판정도 같은 모듈이 SSOT다.
+ */
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js';
+import { DESIGN, getCultColor, hexToCSS } from '../config/designSystem.js';
+import { ts } from '../utils/textStyles.ts';
 import GameLogger from '../utils/GameLogger.js';
 import { energySystem } from '../systems/EnergySystem.js';
 import { PartyManager } from '../systems/PartyManager.js';
 import { SynergySystem } from '../systems/SynergySystem.js';
 import { sweepSystem } from '../systems/SweepSystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
-import { getAllCharacters, getChapterStages } from '../data/index.js';
+import { getAllCharacters, getChapterStages, getAllChapters, getChapter } from '../data/index.js';
 import transitionManager from '../utils/TransitionManager.js';
 import navigationManager from '../systems/NavigationManager.js';
 import { StoryManager } from '../systems/StoryManager.js';
-import { buildWallWarning } from '../systems/StageWallRules.js';
+import { buildWallWarning, isBossStage, getDifficultyBand, getPowerRatio } from '../systems/StageWallRules.js';
 import { countAscendableHeroes } from '../systems/ReturningPlayerRules.js';
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
+import { GlassPanel, GLASS_VARIANT } from '../components/GlassPanel.js';
+import { NineSliceFrame } from '../components/NineSliceFrame.js';
+import { IconFactory } from '../utils/IconFactory.js';
+import {
+  STAGE_SELECT_LAYOUT as L,
+  CARD_SLOTS,
+  MIN_TOUCH,
+  chapterIdFor,
+  clampChapter,
+  resolveChapterCult,
+  getChapterHeaderLayout,
+  buildChapterProgress,
+  getProgressFillWidth,
+  getStageCardRect,
+  getListMetrics,
+  clampScroll,
+  resolveStageState,
+  getStarOffsets,
+  estimateHeroPower,
+  estimatePartyPower,
+  buildChapterStoryProgress,
+  hasViewedStageStory
+} from '../utils/stageSelectLayout.js';
+
+/** 무채색 잠금 표현에 쓰는 회색 (DESIGN.colors.text.muted 와 같은 값의 Phaser hex) */
+const MUTED_HEX = 0x64748B;
+
+/** 씬 depth 규약 — 배경 0/1, 콘텐츠 10대, 헤더 20대, 모달 50 이상 */
+const DEPTH = {
+  BG: 0,
+  CONTENT: 10,
+  CARD: 12,
+  CARD_TOP: 14,
+  HEADER: 20,
+  HEADER_TOP: 22,
+  MODAL: 50,
+  SWEEP: 60,
+  TOAST: 100
+};
 
 export class StageSelectScene extends Phaser.Scene {
   constructor() {
     super({ key: 'StageSelectScene' });
     this.selectedStage = null;
     this.currentChapter = 1;
+    this.listScroll = 0;
+    this._cardTweenTargets = [];
   }
 
   create() {
     try {
-    this.cameras.main.fadeIn(300);
+      this.cameras.main.fadeIn(300);
 
-    this.createBackground();
-    this.createHeader();
-    this.createChapterTitle();
-    this.createStageList();
-    this.createPartySelectModal();
-    this.createSweepModal();
+      this.chapters = getAllChapters() || [];
+      this.chapterCount = Math.max(1, this.chapters.length);
+      this.currentChapter = clampChapter(this.currentChapter, this.chapterCount);
+      this.listScroll = 0;
+
+      // 모달을 먼저 세운다. 출격과 소탕은 이 화면의 기능 계약이고, 배경·카드 같은
+      // 표현 계층이 무슨 이유로든 실패해도 계약이 함께 사라지면 안 된다.
+      // (표현이 죽으면 화면이 볼품없어지지만, 계약이 죽으면 전투에 들어갈 수 없다)
+      this.createPartySelectModal();
+      this.createSweepModal();
+
+      this._installBackgroundGuard();
+      this.applyChapterBackground();
+      this.createHeader();
+      this.createChapterHeader();
+      this.createStageList();
+      this.createLorePanel();
+      this.createFooter();
     } catch (error) {
       console.error('[StageSelectScene] create() 실패:', error);
       this.add.text(s(360), s(640), '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -40,150 +106,351 @@ export class StageSelectScene extends Phaser.Scene {
     }
   }
 
-  createBackground() {
-    // ART-1: 배경 텍스처 사용 (폴백: 기존 그래디언트)
-    if (this.textures.exists('bg_stage')) {
-      this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'bg_stage').setOrigin(0.5);
-    } else {
-      // Fallback: Forest theme gradient
-      const graphics = this.add.graphics();
+  // ================================================================
+  // 색 · 배경
+  // ================================================================
 
-      for (let y = 0; y < GAME_HEIGHT; y++) {
-        const ratio = y / GAME_HEIGHT;
-        const r = Math.floor(10 + ratio * 5);
-        const g = Math.floor(20 + ratio * 10);
-        const b = Math.floor(15 + ratio * 5);
-        graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
-        graphics.fillRect(0, y, GAME_WIDTH, 1);
+  /**
+   * 현재 챕터의 지배 교단색. 화면 액센트(패널 아웃라인, 육각 배지, 진행바)가 이 색을 따른다.
+   * @returns {number} Phaser hex
+   */
+  cultColor() {
+    const cult = resolveChapterCult(this.currentChapter);
+    return cult ? getCultColor(cult) : DESIGN.colors.brand.primary;
+  }
+
+  /** 현재 챕터의 배경 텍스처 키 (글래스 백드롭이 같은 키의 블러본을 찾는다) */
+  bgTextureKey() {
+    return `bg_${chapterIdFor(this.currentChapter)}`;
+  }
+
+  /**
+   * 챕터 배경 지연 로드가 늦게 끝나 **다른 챕터의 배경을 덮어쓰는 것**을 막는다.
+   *
+   * BackgroundFactory 는 로드 완료 시 `scene.sceneBackground` 에 새 배경을 대입한다.
+   * 사용자가 로드 도중 챕터를 넘기면 옛 챕터의 완료 콜백이 뒤늦게 화면 맨 위에 그림을
+   * 얹어 버린다. 대입을 가로채 현재 챕터가 아닌 배경은 즉시 파괴한다.
+   */
+  _installBackgroundGuard() {
+    if (this._bgGuardInstalled) return;
+    let current = null;
+    Object.defineProperty(this, 'sceneBackground', {
+      configurable: true,
+      get: () => current,
+      set: (value) => {
+        const expected = this._expectedBgKey;
+        if (value && expected && value.textureKey && value.textureKey !== expected) {
+          this._destroyBackground(value);
+          return;
+        }
+        current = value;
       }
+    });
+    this._bgGuardInstalled = true;
+  }
 
-      // Decorative trees/fog
-      for (let i = 0; i < 15; i++) {
-        const x = Phaser.Math.Between(0, GAME_WIDTH);
-        const y = Phaser.Math.Between(s(100), GAME_HEIGHT - s(100));
-        const size = Phaser.Math.Between(s(30), s(80));
-        const alpha = Phaser.Math.FloatBetween(0.05, 0.15);
-
-        graphics.fillStyle(0x1a472a, alpha);
-        graphics.fillTriangle(
-          x, y - size,
-          x - size / 2, y + size / 2,
-          x + size / 2, y + size / 2
-        );
+  /**
+   * 배경 상태 객체가 들고 있는 표시물을 전부 파괴한다.
+   * @param {{image?:Object, dim?:Object, fallback?:*}|null} state
+   */
+  _destroyBackground(state) {
+    if (!state) return;
+    const visit = (value) => {
+      if (!value) return;
+      if (typeof value.destroy === 'function') {
+        value.destroy();
+        return;
       }
+      if (Array.isArray(value)) {
+        value.forEach(visit);
+        return;
+      }
+      if (typeof value === 'object') Object.values(value).forEach(visit);
+    };
+    visit(state.image);
+    visit(state.dim);
+    visit(state.fallback);
+  }
+
+  /** 현재 챕터 배경으로 교체한다. 지연 로드 중이면 프로시저럴 폴백이 먼저 뜬다. */
+  applyChapterBackground() {
+    const previous = this.sceneBackground;
+    this._expectedBgKey = null;        // 정리하는 동안에는 가드를 끈다
+    if (previous) {
+      this._destroyBackground(previous);
+      this.sceneBackground = null;
+    }
+    this._expectedBgKey = this.bgTextureKey();
+    BackgroundFactory.createSceneBg(this, chapterIdFor(this.currentChapter), { depth: DEPTH.BG });
+  }
+
+  // ================================================================
+  // 헤더
+  // ================================================================
+
+  createHeader() {
+    const h = s(L.header.h);
+    const cy = h / 2;
+
+    this.headerPanel = GlassPanel.create(this, {
+      x: GAME_WIDTH / 2,
+      y: cy,
+      w: GAME_WIDTH,
+      h,
+      variant: GLASS_VARIANT.HUD,
+      bgKey: this.bgTextureKey(),
+      depth: DEPTH.HEADER
+    });
+
+    // 교단색 헤어라인 — 이 화면의 액센트가 어디서 오는지 알리는 2px
+    this.headerLine = this.add.graphics().setDepth(DEPTH.HEADER + 1);
+    this.headerLine.fillStyle(this.cultColor(), 0.75);
+    this.headerLine.fillRect(0, h - s(2), GAME_WIDTH, s(2));
+
+    // 뒤로 — 히트 영역 96x60(기획) = 144x90(렌더)
+    this.createHitArea(s(56), cy, s(96), s(60), () => {
+      if (!navigationManager.goBack(this)) this.scene.start('MainMenuScene');
+    }, DEPTH.HEADER_TOP);
+
+    this.add.text(s(56), cy, '← 뒤로', ts('label', {
+      color: DESIGN.colors.text.primary
+    })).setOrigin(0.5).setDepth(DEPTH.HEADER_TOP);
+
+    this.add.text(GAME_WIDTH / 2, cy, '모험', ts('title', {
+      color: DESIGN.colors.text.primary
+    })).setOrigin(0.5).setDepth(DEPTH.HEADER_TOP);
+
+    // 에너지 — 이모지 대신 벡터 번개. 수치는 고정폭이라 갱신 시 좌우로 흔들리지 않는다
+    const status = energySystem.getStatus();
+    this.drawBolt(GAME_WIDTH - s(146), cy, s(9), DESIGN.colors.brand.accent, DEPTH.HEADER_TOP);
+    this.energyText = this.add.text(GAME_WIDTH - s(28), cy, `${status.current}/${status.max}`, ts('num.md', {
+      color: hexToCSS(DESIGN.colors.brand.accent)
+    })).setOrigin(1, 0.5).setDepth(DEPTH.HEADER_TOP);
+  }
+
+  // ================================================================
+  // 챕터 헤더 패널
+  // ================================================================
+
+  createChapterHeader() {
+    const H = getChapterHeaderLayout();
+    const cult = this.cultColor();
+
+    this.chapterPanel = GlassPanel.create(this, {
+      x: s(H.panel.cx),
+      y: s(H.panel.cy),
+      w: s(H.panel.w),
+      h: s(H.panel.h),
+      variant: GLASS_VARIANT.PANEL,
+      tint: cult,
+      bgKey: this.bgTextureKey(),
+      depth: DEPTH.CONTENT
+    });
+
+    // 챕터 번호 — Orbitron. 한글 챕터명과 서체를 분리해 위계를 만든다
+    this.chapterNumberText = this.add.text(s(H.number.x), s(H.number.y), '', ts('display.lg', {
+      color: hexToCSS(cult)
+    })).setOrigin(0.5).setDepth(DEPTH.CONTENT + 2);
+
+    this.chapterNameText = this.add.text(s(H.name.x), s(H.name.y), '', ts('title', {
+      color: DESIGN.colors.text.primary,
+      align: 'center'
+    })).setOrigin(0.5).setDepth(DEPTH.CONTENT + 2);
+
+    this.chapterProgressBar = this.add.graphics().setDepth(DEPTH.CONTENT + 2);
+    this.chapterProgressText = this.add.text(s(H.progressText.x), s(H.progressText.y), '', ts('num.sm', {
+      color: DESIGN.colors.text.secondary
+    })).setOrigin(0, 0.5).setDepth(DEPTH.CONTENT + 2);
+
+    this.chapterArrows = [
+      this.createChapterArrow(H.prev, '◀', -1),
+      this.createChapterArrow(H.next, '▶', 1)
+    ];
+
+    this.updateChapterHeader();
+  }
+
+  /**
+   * 챕터 이동 화살표. 히트 영역은 아이콘 크기와 분리해 MIN_TOUCH 이상을 유지한다.
+   * @param {{x:number,y:number,w:number,h:number}} slot
+   * @param {string} glyph
+   * @param {number} delta
+   */
+  createChapterArrow(slot, glyph, delta) {
+    const w = s(Math.max(slot.w, MIN_TOUCH));
+    const h = s(Math.max(slot.h, MIN_TOUCH));
+    const hit = this.createHitArea(s(slot.x), s(slot.y), w, h, () => this.changeChapter(delta), DEPTH.CONTENT + 3);
+    const label = this.add.text(s(slot.x), s(slot.y), glyph, ts('subtitle', {
+      color: DESIGN.colors.text.secondary
+    })).setOrigin(0.5).setDepth(DEPTH.CONTENT + 3);
+    return { hit, label, delta };
+  }
+
+  /**
+   * 챕터 이동. 범위를 벗어나면 아무 일도 하지 않는다.
+   * @param {number} delta -1 또는 +1
+   */
+  changeChapter(delta) {
+    const next = clampChapter(this.currentChapter + delta, this.chapterCount);
+    if (next === this.currentChapter) return;
+
+    this.currentChapter = next;
+    this.listScroll = 0;
+    this.applyChapterBackground();
+    this.updateChapterHeader();
+    this.refreshStages();
+    this.updateLorePanel();
+    this.repaintCultAccents();
+  }
+
+  updateChapterHeader() {
+    const H = getChapterHeaderLayout();
+    const chapter = getChapter(chapterIdFor(this.currentChapter)) || null;
+    const stages = this.generateStages(this.currentChapter);
+    const progress = buildChapterProgress(stages, this.registry.get('clearedStages') || {});
+    const cult = this.cultColor();
+
+    this.chapterNumberText.setText(`CHAPTER ${this.currentChapter}`).setColor(hexToCSS(cult));
+    this.chapterNameText.setText(chapter?.name || `챕터 ${this.currentChapter}`);
+    this.chapterProgressText.setText(progress.text);
+
+    const bar = H.progressBar;
+    const w = s(bar.w);
+    const h = s(bar.h);
+    const x = s(bar.x);
+    const y = s(bar.y);
+    const r = h / 2;
+
+    this.chapterProgressBar.clear();
+    this.chapterProgressBar.fillStyle(DESIGN.colors.bg.primary, 0.65);
+    this.chapterProgressBar.fillRoundedRect(x, y, w, h, r);
+    const fill = s(getProgressFillWidth(progress.ratio, bar.w));
+    if (fill > 0) {
+      this.chapterProgressBar.fillStyle(cult, 1);
+      this.chapterProgressBar.fillRoundedRect(x, y, Math.max(fill, h), h, r);
+    }
+    this.chapterProgressBar.lineStyle(s(1), DESIGN.glass.rim.topColor, 0.18);
+    this.chapterProgressBar.strokeRoundedRect(x, y, w, h, r);
+
+    // 양 끝 챕터에서는 화살표를 흐리게 — 눌러도 아무 일이 없다는 것을 미리 보여준다
+    this.chapterArrows?.forEach(({ label, delta }) => {
+      const target = this.currentChapter + delta;
+      label.setAlpha(target >= 1 && target <= this.chapterCount ? 1 : 0.25);
+    });
+  }
+
+  /**
+   * 챕터가 바뀌면 교단색과 블러 백드롭을 함께 다시 만든다.
+   *
+   * 글래스 패널은 만들어질 때 아웃라인 색과 배경 crop 을 굳힌다. 챕터가 바뀌면 둘 다
+   * 달라지므로 색만 고쳐서는 백드롭이 옛 챕터 배경으로 남는다. 그래서 통째로 다시 만든다.
+   * 텍스트는 depth 로 위에 있으므로 z 순서가 흐트러지지 않는다.
+   */
+  repaintCultAccents() {
+    const cult = this.cultColor();
+    const bgKey = this.bgTextureKey();
+
+    if (this.headerLine) {
+      this.headerLine.clear();
+      this.headerLine.fillStyle(cult, 0.75);
+      this.headerLine.fillRect(0, s(L.header.h) - s(2), GAME_WIDTH, s(2));
+    }
+
+    if (this.headerPanel) {
+      this.headerPanel.destroy();
+      this.headerPanel = GlassPanel.create(this, {
+        x: GAME_WIDTH / 2, y: s(L.header.h) / 2, w: GAME_WIDTH, h: s(L.header.h),
+        variant: GLASS_VARIANT.HUD, bgKey, depth: DEPTH.HEADER
+      });
+    }
+
+    if (this.chapterPanel) {
+      const H = getChapterHeaderLayout();
+      this.chapterPanel.destroy();
+      this.chapterPanel = GlassPanel.create(this, {
+        x: s(H.panel.cx), y: s(H.panel.cy), w: s(H.panel.w), h: s(H.panel.h),
+        variant: GLASS_VARIANT.PANEL, tint: cult, bgKey, depth: DEPTH.CONTENT
+      });
+    }
+
+    if (this.lorePanel) {
+      const p = L.lorePanel;
+      this.lorePanel.destroy();
+      this.lorePanel = GlassPanel.create(this, {
+        x: s(p.x + p.w / 2), y: s(p.y + p.h / 2), w: s(p.w), h: s(p.h),
+        variant: GLASS_VARIANT.PANEL, tint: cult, bgKey, depth: DEPTH.CONTENT
+      });
     }
   }
 
-  createHeader() {
-    // LAYOUT 통일: Header background (100px)
-    const headerBg = this.add.rectangle(GAME_WIDTH / 2, s(50), GAME_WIDTH, s(100), COLORS.backgroundLight, 0.9);
-    headerBg.setDepth(20);
-
-    // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
-    const backBtn = this.add.container(s(30), s(50)).setDepth(21);
-    const backBg = this.add.rectangle(0, 0, s(50), s(40), COLORS.backgroundLight, 0.8)
-      .setInteractive({ useHandCursor: true });
-    const backText = this.add.text(0, 0, '← 뒤로', {
-      fontSize: sf(14),
-      fontFamily: 'Arial',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-
-    backBtn.add([backBg, backText]);
-
-    backBg.on('pointerdown', () => {
-      navigationManager.goBack(this);
-    });
-
-    // Title
-    this.add.text(GAME_WIDTH / 2, s(50), '모험', {
-      fontSize: sf(28),
-      fontFamily: 'Georgia, serif',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(21);
-
-    // Energy display (동적)
-    const energyStatus = energySystem.getStatus();
-    this.energyText = this.add.text(GAME_WIDTH - s(30), s(50), `⚡ ${energyStatus.current}/${energyStatus.max}`, {
-      fontSize: sf(14),
-      fontFamily: 'Arial',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
-    }).setOrigin(1, 0.5).setDepth(21);
-  }
-
-  createChapterTitle() {
-    // LAYOUT 통일: 챕터 타이틀 영역 y=120 (content 시작)
-    const titleY = s(120);
-
-    // Chapter navigation
-    const prevBtn = this.add.text(s(30), titleY, '◀', {
-      fontSize: sf(24),
-      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-    const nextBtn = this.add.text(GAME_WIDTH - s(30), titleY, '▶', {
-      fontSize: sf(24),
-      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-    // Chapter title
-    this.chapterTitle = this.add.text(GAME_WIDTH / 2, titleY, '', {
-      fontSize: sf(20),
-      fontFamily: 'Georgia, serif',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    this.updateChapterTitle();
-
-    prevBtn.on('pointerdown', () => {
-      if (this.currentChapter > 1) {
-        this.currentChapter--;
-        this.updateChapterTitle();
-        this.refreshStages();
-      }
-    });
-
-    nextBtn.on('pointerdown', () => {
-      if (this.currentChapter < 3) { // 3 chapters for demo
-        this.currentChapter++;
-        this.updateChapterTitle();
-        this.refreshStages();
-      }
-    });
-  }
-
-  updateChapterTitle() {
-    const chapters = {
-      1: 'Chapter 1: 어둠의 숲',
-      2: 'Chapter 2: 얼음 동굴',
-      3: 'Chapter 3: 화염 계곡'
-    };
-    this.chapterTitle.setText(chapters[this.currentChapter] || 'Chapter 1');
-  }
+  // ================================================================
+  // 스테이지 리스트
+  // ================================================================
 
   createStageList() {
-    this.stageContainer = this.add.container(0, 0);
+    this.stageContainer = this.add.container(0, 0).setDepth(DEPTH.CARD);
+
+    // 리스트 영역 밖으로 카드가 새지 않게 자른다 (스크롤 대비)
+    const mask = this.make.graphics({ add: false });
+    mask.fillRect(s(L.list.x), s(L.list.y), s(L.list.w), s(L.list.h));
+    this.stageContainer.setMask(mask.createGeometryMask());
+    this._listMask = mask;
+
     this.refreshStages();
+    this.setupListScroll();
   }
 
   refreshStages() {
+    // 카드를 지우기 전에 카드에 걸린 트윈을 먼저 끊는다.
+    // 파괴된 대상에 남은 트윈은 다음 프레임에 죽은 객체를 만진다.
+    (this._cardTweenTargets || []).forEach((target) => this.tweens.killTweensOf(target));
+    this._cardTweenTargets = [];
+
     this.stageContainer.removeAll(true);
 
     const clearedStages = this.registry.get('clearedStages') || {};
     const stages = this.generateStages(this.currentChapter);
+    const chapterId = chapterIdFor(this.currentChapter);
+    const story = this.getStorySnapshot();
+    const partyPower = estimatePartyPower(this.registry.get('ownedHeroes') || []);
 
-    // LAYOUT 통일: 스테이지 버튼 그리드 시작 y=160
-    const startY = s(160);
-    const stageHeight = s(90);
+    this._listMetrics = getListMetrics(stages.length);
+    this.listScroll = clampScroll(this.listScroll, this._listMetrics.maxScroll);
 
     stages.forEach((stage, index) => {
-      const y = startY + index * stageHeight;
-      const isCleared = clearedStages[stage.id] !== undefined;
-      const isLocked = index > 0 && clearedStages[stages[index - 1].id] === undefined;
+      const state = resolveStageState({
+        stages,
+        index,
+        clearedStages,
+        isBoss: isBossStage(stage)
+      });
+      const rect = getStageCardRect(index);
+      this.createStageCard({
+        stage,
+        state,
+        rect,
+        partyPower,
+        chapterId,
+        hasStory: hasViewedStageStory(story.scenes, stage.id, story.viewed)
+      });
+    });
 
-      this.createStageCard(stage, y, isCleared, isLocked);
+    this.stageContainer.y = -s(this.listScroll);
+  }
+
+  /**
+   * 휠 스크롤. 카드가 뷰포트를 넘칠 때만 실제로 움직인다 —
+   * 챕터마다 스테이지 수가 다를 수 있으므로 바인딩 자체는 항상 해 둔다.
+   */
+  setupListScroll() {
+    if (this._scrollBound) return;
+    this._scrollBound = true;
+
+    this.input.on('wheel', (pointer, over, dx, dy) => {
+      if (!this._listMetrics?.scrollable) return;
+      if (this.partyModal?.visible || this.sweepModal?.visible) return;
+      this.listScroll = clampScroll(this.listScroll + dy / 3, this._listMetrics.maxScroll);
+      this.stageContainer.y = -s(this.listScroll);
     });
   }
 
@@ -192,191 +459,538 @@ export class StageSelectScene extends Phaser.Scene {
     // getChapterStages 는 `chapter_1` 형태의 id를 받는다. 숫자를 넘기면 항상 빈 배열이 돌아와
     // 아래 하드코딩 폴백이 쓰이고, 그러면 1-4의 권장 전투력이 500(의도된 벽)이 아니라
     // 폴백 공식값 1,900이 되어 T-Q3 경고가 잘못된 숫자를 말한다.
-    const chapterId = typeof chapter === 'string' && chapter.startsWith('chapter_')
-      ? chapter
-      : `chapter_${chapter}`;
+    const chapterId = chapterIdFor(chapter);
+    const chapterNumber = Number(String(chapterId).replace('chapter_', '')) || 1;
     const dataStages = getChapterStages(chapterId);
 
     if (dataStages && dataStages.length > 0) {
-      console.log(`[StageSelect] Loaded ${dataStages.length} stages from data for chapter ${chapter}`);
       return dataStages.map((stage, i) => ({
-        id: stage.id || `${chapter}-${i + 1}`,
-        number: stage.number || `${chapter}-${i + 1}`,
+        id: stage.id || `${chapterNumber}-${i + 1}`,
+        number: stage.number || stage.id || `${chapterNumber}-${i + 1}`,
         name: stage.name || `스테이지 ${i + 1}`,
-        recommendedPower: stage.recommendedPower || 1000 + (chapter - 1) * 2000 + i * 300,
+        recommendedPower: stage.recommendedPower || 1000 + (chapterNumber - 1) * 2000 + i * 300,
         enemyCount: stage.enemyCount || 3 + Math.floor(i / 3),
-        // 아래 3개는 전투/결과 화면이 쓴다. 여기서 떨어뜨리면 보스 판정과
+        // 아래 4개는 전투/결과 화면이 쓴다. 여기서 떨어뜨리면 보스 판정과
         // 패배 시 에너지 환급(LV-01)이 전부 기본값으로 흘러간다.
         energyCost: stage.energyCost,
         isBoss: stage.isBoss,
+        isElite: stage.isElite,
         enemies: stage.enemies,
         retryPolicy: stage.retryPolicy,
+        // 챕터 이야기 패널의 "다음 · ..." 한 줄이 쓴다 (story.json _meta 가 정한 용도)
+        story_intro: stage.story_intro,
         rewards: stage.rewards || {
-          gold: 100 + i * 50 + (chapter - 1) * 200,
-          exp: 50 + i * 20 + (chapter - 1) * 100
+          gold: 100 + i * 50 + (chapterNumber - 1) * 200,
+          exp: 50 + i * 20 + (chapterNumber - 1) * 100
         }
       }));
     }
 
-    // 폴백: 하드코딩 스테이지
+    // 폴백: 데이터가 없는 챕터. 숫자만으로 최소한의 목록을 만든다
     console.log(`[StageSelect] No data for chapter ${chapter}, using fallback`);
     const stages = [];
-    const stageNames = {
-      1: ['숲의 입구', '어두운 오솔길', '고목 광장', '독버섯 군락', '늑대 서식지',
-          '폐허된 오두막', '늪지대', '검은 안개', '고대 제단', '숲의 군주'],
-      2: ['얼음 문', '서리 터널', '빙하 호수', '눈폭풍', '얼음 정령',
-          '동굴 심층부', '수정 방', '얼어붙은 감옥', '빙룡의 둥지', '프로스트 드래곤'],
-      3: ['화염 관문', '용암 다리', '재의 평원', '불기둥', '화염 정령',
-          '마그마 심연', '불타는 요새', '지옥 문턱', '용의 보좌', '화염의 왕']
-    };
-
-    const names = stageNames[chapter] || stageNames[1];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 5; i++) {
       stages.push({
-        id: `${chapter}-${i + 1}`,
-        number: `${chapter}-${i + 1}`,
-        name: names[i] || `스테이지 ${i + 1}`,
-        recommendedPower: 1000 + (chapter - 1) * 2000 + i * 300,
+        id: `${chapterNumber}-${i + 1}`,
+        number: `${chapterNumber}-${i + 1}`,
+        name: `스테이지 ${i + 1}`,
+        recommendedPower: 1000 + (chapterNumber - 1) * 2000 + i * 300,
         enemyCount: 3 + Math.floor(i / 3),
         rewards: {
-          gold: 100 + i * 50 + (chapter - 1) * 200,
-          exp: 50 + i * 20 + (chapter - 1) * 100
+          gold: 100 + i * 50 + (chapterNumber - 1) * 200,
+          exp: 50 + i * 20 + (chapterNumber - 1) * 100
         }
       });
     }
-
     return stages;
   }
 
-  createStageCard(stage, y, isCleared, isLocked) {
-    const card = this.add.container(GAME_WIDTH / 2, y);
+  /**
+   * 스테이지 카드 한 장.
+   * @param {Object} params
+   */
+  createStageCard({ stage, state, rect, partyPower, hasStory }) {
+    const cult = this.cultColor();
+    const card = this.add.container(s(rect.cx), s(rect.cy));
 
-    // Card background
-    const bgColor = isLocked ? 0x1a1a2e : COLORS.backgroundLight;
-    const bgAlpha = isLocked ? 0.5 : 0.8;
+    const w = s(rect.w);
+    const h = s(rect.h);
 
-    const cardBg = this.add.rectangle(0, 0, GAME_WIDTH - s(40), s(80), bgColor, bgAlpha);
-    cardBg.setStrokeStyle(s(2), isCleared ? COLORS.success : (isLocked ? COLORS.textDark : COLORS.primary), 0.5);
+    // 카드 표면 — 글래스 카드 + 보스는 9-slice 프레임을 덧대 무게를 준다.
+    // bgKey 를 주지 않는다: 블러 백드롭은 화면 좌표에 고정된 crop 이라 스크롤하는 리스트
+    // 안에서는 배경과 어긋난다. 카드는 fallbackTintAlpha(0.90) 경로를 쓴다(§2-3).
+    const glass = GlassPanel.create(this, {
+      x: 0, y: 0, w, h,
+      variant: GLASS_VARIANT.CARD
+    });
+    card.add(glass);
 
-    // 클리어 상태 좌측 컬러 스트라이프
-    if (isCleared) {
-      const stars = (this.registry.get('clearedStages') || {})[stage.id] || 0;
-      const stripeColor = stars >= 3 ? COLORS.accent : COLORS.success;
-      const stripe = this.add.rectangle(-(GAME_WIDTH - s(40)) / 2 + s(3), 0, s(6), s(76), stripeColor, 1);
-      card.add(stripe);
+    const accent = state.isBoss
+      ? DESIGN.colors.brand.secondary
+      : (state.isCleared ? cult : DESIGN.colors.brand.primary);
+
+    // 보스는 테두리 두 겹으로 무게를 준다. 9-slice 프레임을 쓰지 않는 이유는
+    // frame_panel 의 최소 렌더 크기가 192x192 라 92 높이 카드를 밖으로 밀어내기 때문이다.
+    if (state.isBoss) {
+      const r = s(DESIGN.radius.md);
+      const halo = this.add.graphics();
+      halo.lineStyle(s(4), accent, 0.22);
+      halo.strokeRoundedRect(-w / 2 - s(2), -h / 2 - s(2), w + s(4), h + s(4), r + s(2));
+      halo.lineStyle(s(2), accent, 0.85);
+      halo.strokeRoundedRect(-w / 2, -h / 2, w, h, r);
+      card.add(halo);
     }
 
-    // 잠김 상태 오버레이
-    if (isLocked) {
-      const lockOverlay = this.add.rectangle(0, 0, GAME_WIDTH - s(44), s(76), 0x000000, 0.3);
-      card.add(lockOverlay);
-    }
+    // 좌측 상태 스트라이프 — 클리어/현재/잠금을 색 하나로 훑어볼 수 있게 한다
+    const stripe = this.add.graphics();
+    const stripeColor = state.isLocked
+      ? MUTED_HEX
+      : (state.isCleared ? (state.stars >= 3 ? DESIGN.colors.brand.accent : cult) : accent);
+    stripe.fillStyle(stripeColor, 1);
+    stripe.fillRoundedRect(-w / 2, -h / 2 + s(8), s(6), h - s(16), s(3));
+    card.add(stripe);
 
-    if (!isLocked) {
-      cardBg.setInteractive({ useHandCursor: true });
-    }
-
-    // Stage number
-    const numberBg = this.add.circle(s(-185), 0, s(25), isCleared ? COLORS.success : (isLocked ? COLORS.textDark : COLORS.primary), 1);
-    const numberText = this.add.text(s(-185), 0, stage.number, {
-      fontSize: sf(14),
-      fontFamily: 'Arial',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Stage name
-    const nameColor = isLocked ? COLORS.textDark : COLORS.text;
-    const nameText = this.add.text(s(-140), s(-15), stage.name, {
-      fontSize: sf(16),
-      fontFamily: 'Arial',
-      color: `#${  nameColor.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0, 0.5);
-
-    // Recommended power
-    const powerText = this.add.text(s(-140), s(10), `추천 전투력: ${stage.recommendedPower.toLocaleString()}`, {
-      fontSize: sf(12),
-      fontFamily: 'Arial',
-      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0, 0.5);
-
-    // Stars earned
-    const clearedStages = this.registry.get('clearedStages') || {};
-    const stars = clearedStages[stage.id] || 0;
-    const starsText = this.add.text(s(170), s(-10), '★'.repeat(stars) + '☆'.repeat(3 - stars), {
-      fontSize: sf(16),
-      color: `#${  (stars > 0 ? COLORS.accent : COLORS.textDark).toString(16).padStart(6, '0')}`
-    }).setOrigin(1, 0.5);
-
-    // Lock icon
-    if (isLocked) {
-      const lockIcon = this.add.text(s(160), 0, '🔒', {
-        fontSize: sf(24)
-      }).setOrigin(0.5);
-      const lockLabel = this.add.text(s(160), s(22), '잠김', {
-        fontSize: sf(10),
-        fontFamily: 'Noto Sans KR',
-        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-      }).setOrigin(0.5);
-      card.add([lockIcon, lockLabel]);
-    }
-
-    // 소탕 버튼 (3성 클리어 시)
-    if (stars >= 3) {
-      const sweepBtn = this.add.rectangle(s(140), s(12), s(60), s(22), COLORS.success, 0.8)
-        .setStrokeStyle(s(1), 0xFFFFFF, 0.2)
+    // 카드 본문 전체가 진입 동선이다. 진입/소탕 버튼이 이 위에 얹혀 우선한다
+    if (!state.isLocked) {
+      const bodyHit = this.add.rectangle(0, 0, w, h, 0x000000, 0)
         .setInteractive({ useHandCursor: true });
-      const sweepLabel = this.add.text(s(140), s(12), '⚡소탕', {
-        fontSize: sf(11), fontFamily: 'Arial',
-        color: '#FFFFFF', fontStyle: 'bold'
-      }).setOrigin(0.5);
-
-      sweepBtn.on('pointerdown', (pointer, localX, localY, event) => {
-        event.stopPropagation();
-        this.showSweepModal(stage);
-      });
-
-      card.add([sweepBtn, sweepLabel]);
-    }
-
-    card.add([cardBg, numberBg, numberText, nameText, powerText, starsText]);
-    this.stageContainer.add(card);
-
-    // Interactions
-    if (!isLocked) {
-      cardBg.on('pointerover', () => {
-        cardBg.setFillStyle(COLORS.primary, 0.3);
-        this.tweens.add({
-          targets: card,
-          scaleX: 1.02,
-          scaleY: 1.02,
-          duration: 150,
-          ease: 'Power2'
-        });
-      });
-
-      cardBg.on('pointerout', () => {
-        cardBg.setFillStyle(COLORS.backgroundLight, 0.8);
-        this.tweens.add({
-          targets: card,
-          scaleX: 1,
-          scaleY: 1,
-          duration: 150,
-          ease: 'Power2'
-        });
-      });
-
-      cardBg.on('pointerdown', () => {
+      bodyHit.on('pointerover', () => glass.setAlpha(0.86));
+      bodyHit.on('pointerout', () => glass.setAlpha(1));
+      bodyHit.on('pointerdown', () => {
         this.selectedStage = stage;
         this.showPartySelect();
       });
+      card.add(bodyHit);
+    }
+
+    card.add(this.createHexBadge(state, accent, cult));
+    card.add(this.createStarRow(state));
+
+    // 이름
+    const nameColor = state.isLocked ? DESIGN.colors.text.muted : DESIGN.colors.text.primary;
+    card.add(this.add.text(s(CARD_SLOTS.name.x), s(CARD_SLOTS.name.y), stage.name, ts('subtitle', {
+      color: nameColor,
+      wordWrap: { width: s(CARD_SLOTS.name.wrapWidth) }
+    })).setOrigin(0, 0.5));
+
+    // 추천 전투력 — 고정폭 수치
+    const powerText = this.add.text(s(CARD_SLOTS.power.x), s(CARD_SLOTS.power.y),
+      `추천 ${Math.round(stage.recommendedPower).toLocaleString()}`,
+      ts('num.sm', { color: DESIGN.colors.text.secondary })).setOrigin(0, 0.5);
+    card.add(powerText);
+
+    // 소모 에너지 — 출격 전에 비용을 알아야 에너지가 없다는 것을 모달에서 처음 알지 않는다
+    const energyCost = Number(stage.energyCost) || 0;
+    if (energyCost > 0) {
+      const costX = powerText.x + powerText.width + s(18);
+      card.add(this.drawBolt(costX, s(CARD_SLOTS.power.y), s(6), DESIGN.colors.brand.accent));
+      card.add(this.add.text(costX + s(10), s(CARD_SLOTS.power.y), `${energyCost}`,
+        ts('num.sm', { color: hexToCSS(DESIGN.colors.brand.accent) })).setOrigin(0, 0.5));
+    }
+
+    // 난이도 밴드 — 판정은 StageWallRules 가 한다
+    const band = getDifficultyBand(getPowerRatio(partyPower, stage.recommendedPower));
+    card.add(this.add.text(s(CARD_SLOTS.difficulty.x), s(CARD_SLOTS.difficulty.y), band.label,
+      ts('num.sm', { color: hexToCSS(band.color) })).setOrigin(1, 0.5));
+
+    // 등급 칩
+    if (state.chip) {
+      card.add(this.createChip(state.chip, state.isBoss ? DESIGN.colors.brand.secondary : cult));
+    }
+
+    // 이야기 표시 — 시청한 컷씬이 있는 스테이지에만 붙는다(미시청은 스포일러라 감춘다)
+    if (hasStory && !state.isLocked) {
+      // 크기는 렌더 px 로 직접 준다 — IconFactory 의 토큰은 기획 px 라 1080 화면에서 작다
+      const mark = IconFactory.createImage(
+        this, s(CARD_SLOTS.storyMark.x), s(CARD_SLOTS.storyMark.y), 'collection',
+        s(CARD_SLOTS.storyMark.size),
+        { tint: DESIGN.colors.brand.accent }
+      );
+      if (mark) {
+        mark.setAlpha(0.9);
+        card.add(mark);
+      }
+    }
+
+    // 액션 — 잠금은 자물쇠 하나만, 나머지는 진입 버튼
+    if (state.isLocked) {
+      card.add(this.createLockGlyph());
+    } else {
+      card.add(this.createEnterButton(stage, accent, state));
+      if (state.stars >= 3) card.add(this.createSweepButton(stage));
+    }
+
+    // 잠김 표현 — 컨테이너 전체에 α0.45 를 걸면 글래스 표면까지 투명해져 생성 배경 위에서
+    // 스테이지 이름이 읽히지 않는다. 표면은 오히려 더 어둡게 눌러 두고 내용만 흐린다.
+    if (state.isLocked) {
+      const mute = this.add.graphics();
+      mute.fillStyle(DESIGN.colors.bg.primary, 0.5);
+      mute.fillRoundedRect(-w / 2, -h / 2, w, h, s(DESIGN.radius.md));
+      card.addAt(mute, 1);
+      card.list.forEach((child) => {
+        if (child !== glass && child !== mute) child.setAlpha(state.alpha);
+      });
+    }
+
+    this.stageContainer.add(card);
+  }
+
+  /** 육각 번호 배지. frame_hex 텍스처가 없으면 폴리곤으로 그린다 */
+  createHexBadge(state, accent, cult) {
+    const slot = CARD_SLOTS.hex;
+    const x = s(slot.x);
+    const y = s(slot.y);
+    const r = s(slot.r);
+    const parts = [];
+
+    const fill = state.isLocked
+      ? DESIGN.colors.bg.surface
+      : (state.isCleared ? cult : DESIGN.colors.bg.secondary);
+
+    if (this.textures.exists('frame_hex')) {
+      const hex = this.add.image(x, y, 'frame_hex').setDisplaySize(r * 2.2, r * 2.2);
+      hex.setTint(fill);
+      parts.push(hex);
+    } else {
+      const g = this.add.graphics();
+      const points = [];
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i - Math.PI / 2;
+        points.push({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r });
+      }
+      g.fillStyle(fill, 0.95);
+      g.fillPoints(points, true);
+      g.lineStyle(s(2), accent, state.isLocked ? 0.3 : 0.85);
+      g.strokePoints(points, true, true);
+      parts.push(g);
+    }
+
+    const numberColor = state.isLocked ? DESIGN.colors.text.muted : DESIGN.colors.text.primary;
+    parts.push(this.add.text(x, y, String(state.stage?.number ?? ''), ts('num.sm', {
+      color: numberColor
+    })).setOrigin(0.5));
+
+    // 지금 도전할 칸에만 시안 펄스 — 시선을 한 곳으로 모은다
+    if (state.isCurrent) {
+      const ring = this.add.graphics();
+      ring.lineStyle(s(2), DESIGN.colors.brand.primary, 0.9);
+      ring.strokeCircle(x, y, r + s(5));
+      this.tweens.add({
+        targets: ring,
+        alpha: { from: 0.9, to: 0.15 },
+        duration: 1100,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+      this._cardTweenTargets.push(ring);
+      parts.push(ring);
+    }
+
+    return parts;
+  }
+
+  /** 별 3개. 획득분은 골드로 채우고 나머지는 외곽선만 남긴다 */
+  createStarRow(state) {
+    const slot = CARD_SLOTS.stars;
+    const g = this.add.graphics();
+    getStarOffsets(3).forEach((offset, i) => {
+      const filled = i < state.stars;
+      const color = filled ? DESIGN.colors.brand.accent : DESIGN.colors.text.muted;
+      this.drawStar(g, s(offset), s(slot.y), s(slot.size / 2), color, filled ? 1 : 0.35, filled);
+    });
+    return [g];
+  }
+
+  /** 등급 칩 (BOSS · 정예) */
+  createChip(label, color) {
+    const slot = CARD_SLOTS.chip;
+    const g = this.add.graphics();
+    const w = s(slot.w);
+    const h = s(slot.h);
+    g.fillStyle(color, 0.22);
+    g.fillRoundedRect(s(slot.x) - w / 2, s(slot.y) - h / 2, w, h, s(DESIGN.radius.sm));
+    g.lineStyle(s(1), color, 0.8);
+    g.strokeRoundedRect(s(slot.x) - w / 2, s(slot.y) - h / 2, w, h, s(DESIGN.radius.sm));
+
+    const text = this.add.text(s(slot.x), s(slot.y), label, ts('num.sm', {
+      color: hexToCSS(color)
+    })).setOrigin(0.5);
+
+    return [g, text];
+  }
+
+  /** 진입 버튼 (btn_primary 9-slice, 없으면 폴백 프레임) */
+  createEnterButton(stage, accent, state) {
+    const slot = CARD_SLOTS.action;
+    const w = s(slot.w);
+    const h = s(slot.h);
+    const x = s(slot.x);
+    const y = s(slot.y);
+
+    const frame = NineSliceFrame.create(this, {
+      x, y, w, h,
+      key: state.isBoss ? 'btn_secondary' : 'btn_primary',
+      tint: state.isCleared ? accent : null
+    });
+
+    // btn_* 원본은 장식이 많은 판이다. 라벨 자리만 어둡게 눌러 글자를 읽히게 한다
+    const plate = this.add.graphics();
+    plate.fillStyle(DESIGN.colors.bg.primary, 0.55);
+    plate.fillRoundedRect(x - w / 2 + s(16), y - s(15), w - s(32), s(30), s(DESIGN.radius.sm));
+
+    const label = this.add.text(x, y, state.isBoss ? '결전' : '진입', ts('body', {
+      color: DESIGN.colors.text.primary
+    })).setOrigin(0.5);
+
+    const hit = this.add.rectangle(x, y, Math.max(w, s(MIN_TOUCH)), Math.max(h, s(MIN_TOUCH)), 0x000000, 0)
+      .setInteractive({ useHandCursor: true });
+
+    hit.on('pointerover', () => frame.setAlpha(0.82));
+    hit.on('pointerout', () => frame.setAlpha(1));
+    hit.on('pointerdown', (pointer, lx, ly, event) => {
+      event?.stopPropagation?.();
+      this.selectedStage = stage;
+      this.showPartySelect();
+    });
+
+    return [frame, plate, label, hit];
+  }
+
+  /** 소탕 버튼 — 3성 클리어 스테이지에만 나온다 */
+  createSweepButton(stage) {
+    const slot = CARD_SLOTS.sweep;
+    const w = s(slot.w);
+    const h = s(slot.h);
+    const x = s(slot.x);
+    const y = s(slot.y);
+
+    const frame = NineSliceFrame.create(this, {
+      x, y, w, h, key: 'btn_ghost', tint: DESIGN.colors.status.success
+    });
+    const label = this.add.text(x + s(8), y, '소탕', ts('label', {
+      color: hexToCSS(DESIGN.colors.status.success)
+    })).setOrigin(0.5);
+    const bolt = this.drawBolt(x - s(24), y, s(7), DESIGN.colors.status.success);
+
+    const hit = this.add.rectangle(x, y, w, Math.max(h, s(MIN_TOUCH)), 0x000000, 0)
+      .setInteractive({ useHandCursor: true });
+    hit.on('pointerdown', (pointer, lx, ly, event) => {
+      event?.stopPropagation?.();
+      this.showSweepModal(stage);
+    });
+
+    return [frame, bolt, label, hit];
+  }
+
+  /** 잠금 자물쇠 — 텍스트 '잠김'은 없앤다. 카드 전체 알파가 이미 상태를 말한다 */
+  createLockGlyph() {
+    const slot = CARD_SLOTS.action;
+    const x = s(slot.x);
+    const y = s(slot.y);
+    const g = this.add.graphics();
+    const w = s(22);
+    const h = s(18);
+    g.fillStyle(MUTED_HEX, 0.9);
+    g.fillRoundedRect(x - w / 2, y - h / 2 + s(4), w, h, s(3));
+    g.lineStyle(s(3), MUTED_HEX, 0.9);
+    g.beginPath();
+    g.arc(x, y - h / 2 + s(4), s(7), Math.PI, 0);
+    g.strokePath();
+    return g;
+  }
+
+  // ================================================================
+  // 챕터 이야기 패널 · 액션 바
+  // ================================================================
+
+  createLorePanel() {
+    const p = L.lorePanel;
+    this.lorePanel = GlassPanel.create(this, {
+      x: s(p.x + p.w / 2),
+      y: s(p.y + p.h / 2),
+      w: s(p.w),
+      h: s(p.h),
+      variant: GLASS_VARIANT.PANEL,
+      tint: this.cultColor(),
+      bgKey: this.bgTextureKey(),
+      depth: DEPTH.CONTENT
+    });
+
+    this.loreTitle = this.add.text(s(p.x + 24), s(p.y + 32), '이 챕터의 이야기', ts('subtitle', {
+      color: DESIGN.colors.text.primary
+    })).setOrigin(0, 0.5).setDepth(DEPTH.CONTENT + 2);
+
+    this.loreProgressText = this.add.text(s(p.x + p.w - 24), s(p.y + 32), '', ts('num.sm', {
+      color: DESIGN.colors.text.secondary
+    })).setOrigin(1, 0.5).setDepth(DEPTH.CONTENT + 2);
+
+    this.loreBody = this.add.text(s(p.x + 24), s(p.y + 64), '', ts('label', {
+      color: DESIGN.colors.text.secondary,
+      wordWrap: { width: s(p.w - 48) },
+      lineSpacing: s(6)
+    })).setOrigin(0, 0).setDepth(DEPTH.CONTENT + 2);
+
+    // 다음에 할 일 한 줄. stages.json 의 story_intro 는 이 자리를 위해 쓰인 캡션이다
+    this.loreNextText = this.add.text(s(p.x + 24), s(p.y + p.h - 30), '', ts('caption', {
+      color: DESIGN.colors.text.muted,
+      wordWrap: { width: s(p.w - 48) }
+    })).setOrigin(0, 0.5).setDepth(DEPTH.CONTENT + 2);
+
+    this.updateLorePanel();
+  }
+
+  /**
+   * 이 챕터에서 다음에 도전할 스테이지. 전부 클리어했으면 null.
+   * @returns {Object|null}
+   */
+  findNextStage() {
+    const stages = this.generateStages(this.currentChapter);
+    const cleared = this.registry.get('clearedStages') || {};
+    for (let i = 0; i < stages.length; i++) {
+      const state = resolveStageState({ stages, index: i, clearedStages: cleared });
+      if (state.isCurrent) return stages[i];
+    }
+    return null;
+  }
+
+  updateLorePanel() {
+    if (!this.loreBody) return;
+    const chapterId = chapterIdFor(this.currentChapter);
+    const chapter = getChapter(chapterId) || null;
+    const story = this.getStorySnapshot();
+    const progress = buildChapterStoryProgress(story.scenes, chapterId, story.viewed);
+
+    const text = chapter?.lore || chapter?.description || '아직 기록되지 않은 장입니다.';
+    this.loreBody.setText(this.truncate(text, 96));
+    this.loreProgressText.setText(progress.text);
+
+    const next = this.findNextStage();
+    if (this.loreNextText) {
+      this.loreNextText.setText(next
+        ? `다음 · ${next.name} — ${this.truncate(next.story_intro || '', 40)}`.trim().replace(/ —\s*$/, '')
+        : '이 챕터를 모두 정리했습니다');
     }
   }
 
+  createFooter() {
+    const f = L.footer;
+    const w = s(f.w * 0.62);
+    const h = s(64);
+    const x = s(f.x + f.w / 2);
+    const y = s(f.y + f.h / 2);
+
+    // 교단색 대신 brand.primary — 챕터가 바뀌어도 이 버튼의 뜻은 그대로다
+    const frame = NineSliceFrame.create(this, {
+      x, y, w, h, key: 'btn_ghost', tint: DESIGN.colors.brand.primary, depth: DEPTH.CONTENT
+    });
+    this.add.text(x, y, '이야기 다시 보기', ts('body', {
+      color: DESIGN.colors.text.primary
+    })).setOrigin(0.5).setDepth(DEPTH.CONTENT + 2);
+
+    const hit = this.createHitArea(x, y, w, Math.max(h, s(MIN_TOUCH)), () => {
+      // 도감의 이야기 탭이 재감상 SSOT다. 여기서 목록을 다시 그리지 않고 그쪽으로 보낸다
+      this.scene.start('MainMenuScene', { openPopup: 'storylog' });
+    }, DEPTH.CONTENT + 3);
+
+    hit.on('pointerover', () => frame.setAlpha(0.82));
+    hit.on('pointerout', () => frame.setAlpha(1));
+  }
+
+  // ================================================================
+  // 공통 그리기 도구
+  // ================================================================
+
+  /**
+   * 보이지 않는 히트 영역. 시각 요소 크기와 터치 타겟을 분리한다(§2-5).
+   * @returns {Phaser.GameObjects.Rectangle}
+   */
+  createHitArea(x, y, w, h, onTap, depth) {
+    const hit = this.add.rectangle(x, y, Math.max(w, s(MIN_TOUCH)), Math.max(h, s(MIN_TOUCH)), 0x000000, 0)
+      .setInteractive({ useHandCursor: true });
+    if (typeof depth === 'number') hit.setDepth(depth);
+    hit.on('pointerdown', (pointer, lx, ly, event) => {
+      event?.stopPropagation?.();
+      onTap();
+    });
+    return hit;
+  }
+
+  /**
+   * 별 하나를 그린다. 시스템 이모지(★) 대신 벡터를 쓴다.
+   * @param {Phaser.GameObjects.Graphics} g
+   */
+  drawStar(g, cx, cy, radius, color, alpha, filled) {
+    const points = [];
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? radius : radius * 0.45;
+      const a = (Math.PI / 5) * i - Math.PI / 2;
+      points.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+    }
+    if (filled) {
+      g.fillStyle(color, alpha);
+      g.fillPoints(points, true);
+    } else {
+      g.lineStyle(Math.max(1, radius * 0.22), color, alpha);
+      g.strokePoints(points, true, true);
+    }
+  }
+
+  /**
+   * 번개 글리프. 에너지 표시의 ⚡ 이모지를 대체한다.
+   * @returns {Phaser.GameObjects.Graphics}
+   */
+  drawBolt(cx, cy, size, color, depth) {
+    const g = this.add.graphics();
+    g.fillStyle(color, 1);
+    g.fillPoints([
+      { x: cx + size * 0.25, y: cy - size * 1.4 },
+      { x: cx - size * 0.75, y: cy + size * 0.15 },
+      { x: cx - size * 0.05, y: cy + size * 0.15 },
+      { x: cx - size * 0.3, y: cy + size * 1.4 },
+      { x: cx + size * 0.8, y: cy - size * 0.25 },
+      { x: cx + size * 0.05, y: cy - size * 0.25 }
+    ], true);
+    if (typeof depth === 'number') g.setDepth(depth);
+    return g;
+  }
+
+  /**
+   * 문장을 길이로 자른다. 자를 때만 말줄임표를 붙인다.
+   * @param {string} text
+   * @param {number} max
+   * @returns {string}
+   */
+  truncate(text, max) {
+    const value = typeof text === 'string' ? text.trim() : '';
+    if (value.length <= max) return value;
+    return `${value.slice(0, max - 1)}…`;
+  }
+
+  /**
+   * 컷씬 목록과 시청 이력 스냅샷. 카드마다 세이브를 다시 읽지 않도록 한 번만 만든다.
+   * @returns {{scenes: Array, viewed: Set<string>}}
+   */
+  getStorySnapshot() {
+    try {
+      const state = StoryManager.getStoryState();
+      return {
+        scenes: StoryManager.getAllScenes() || [],
+        viewed: new Set(state.viewedCutscenes || [])
+      };
+    } catch (e) {
+      GameLogger.log('SCENE', '스토리 상태 조회 실패', { error: e?.message });
+      return { scenes: [], viewed: new Set() };
+    }
+  }
+
+  // ================================================================
+  // 파티 선택 모달 (기능 불변)
+  // ================================================================
+
   createPartySelectModal() {
     // Modal container (hidden by default)
-    this.partyModal = this.add.container(0, 0).setDepth(50).setVisible(false);
+    this.partyModal = this.add.container(0, 0).setDepth(DEPTH.MODAL).setVisible(false);
 
     // Overlay
     const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
@@ -508,16 +1122,52 @@ export class StageSelectScene extends Phaser.Scene {
 
     this.partyModal.add([
       overlay, modalBg, this.modalTitle, this.stageInfoText,
-      ...this.partySlots.map(s => s.container),
+      ...this.partySlots.map(slot => slot.container),
       autoBtn, startBtn, closeBtn, this.totalPowerText,
       this.wallWarningText, this.wallCtaText
     ]);
   }
 
+  /**
+   * 파티 선택 모달이 서 있는지 보장한다.
+   *
+   * create() 가 끝나기 전이거나 표현 계층이 실패해 create() 가 중단된 상태에서
+   * showPartySelect() 가 불릴 수 있다(외부 호출·e2e 포함). 그때 모달을 그 자리에서
+   * 다시 세운다. 없는 참조에 setText 를 걸어 TypeError 로 죽는 것보다 낫다.
+   * @returns {boolean} 모달을 쓸 수 있는가
+   */
+  ensurePartySelectModal() {
+    if (this.stageInfoText && this.partyModal && this.partySlots?.length) return true;
+    try {
+      this.createPartySelectModal();
+      return !!(this.stageInfoText && this.partyModal);
+    } catch (error) {
+      console.error('[StageSelectScene] 파티 선택 모달 생성 실패:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 소탕 모달이 서 있는지 보장한다. 이유는 ensurePartySelectModal 과 같다.
+   * @returns {boolean}
+   */
+  ensureSweepModal() {
+    if (this.sweepModal && this.sweepStageInfo && this.sweepCountBtns?.length) return true;
+    try {
+      this.createSweepModal();
+      return !!(this.sweepModal && this.sweepStageInfo);
+    } catch (error) {
+      console.error('[StageSelectScene] 소탕 모달 생성 실패:', error);
+      return false;
+    }
+  }
+
   showPartySelect() {
     if (!this.selectedStage) return;
+    if (!this.ensurePartySelectModal()) return;
 
-    this.stageInfoText.setText(`${this.selectedStage.name} | 추천 전투력: ${this.selectedStage.recommendedPower.toLocaleString()}`);
+    const recommended = Number(this.selectedStage.recommendedPower) || 0;
+    this.stageInfoText.setText(`${this.selectedStage.name} | 추천 전투력: ${recommended.toLocaleString()}`);
 
     // Clear party slots
     this.partySlots.forEach(slot => {
@@ -545,8 +1195,8 @@ export class StageSelectScene extends Phaser.Scene {
 
     // Get heroes not already in party
     const partyHeroIds = this.partySlots
-      .filter(s => s.hero)
-      .map(s => s.hero.id);
+      .filter(slot => slot.hero)
+      .map(slot => slot.hero.id);
 
     const availableHeroes = heroes.filter(h => !partyHeroIds.includes(h.id));
 
@@ -574,6 +1224,7 @@ export class StageSelectScene extends Phaser.Scene {
   }
 
   autoFillParty() {
+    if (!this.ensurePartySelectModal()) return;
     const heroes = this.registry.get('ownedHeroes') || [];
 
     if (heroes.length === 0) {
@@ -607,12 +1258,11 @@ export class StageSelectScene extends Phaser.Scene {
   }
 
   updateTotalPower() {
+    // 카드의 난이도 밴드와 같은 식을 쓴다(stageSelectLayout.estimateHeroPower).
+    // 둘이 다른 숫자를 말하면 벽 경고가 신뢰를 잃는다.
     let total = 0;
     this.partySlots.forEach(slot => {
-      if (slot.hero) {
-        const stats = slot.hero.stats;
-        total += stats.hp + stats.atk * 5 + stats.def * 3 + stats.spd * 2;
-      }
+      if (slot.hero) total += estimateHeroPower(slot.hero);
     });
     this.totalPowerText.setText(`총 전투력: ${total.toLocaleString()}`);
 
@@ -676,8 +1326,8 @@ export class StageSelectScene extends Phaser.Scene {
     this.synergyPreviewTexts = [];
 
     const partyHeroIds = this.partySlots
-      .filter(s => s.hero)
-      .map(s => s.hero.id)
+      .filter(slot => slot.hero)
+      .map(slot => slot.hero.id)
       .filter(Boolean);
 
     if (partyHeroIds.length < 2) return;
@@ -688,24 +1338,23 @@ export class StageSelectScene extends Phaser.Scene {
     if (synergies.length === 0) return;
 
     const baseY = GAME_HEIGHT / 2 + s(110);
-    const typeIcons = { cult: '⛪', mood: '🎭', role: '⚔️', special: '✨' };
 
     synergies.slice(0, 3).forEach((syn, i) => {
-      const icon = typeIcons[syn.type] || '●';
-      const text = this.add.text(GAME_WIDTH / 2, baseY + i * s(18), `${icon} ${syn.name || syn.type}`, {
+      const text = this.add.text(GAME_WIDTH / 2, baseY + i * s(18), `${syn.name || syn.type}`, {
         fontSize: sf(11),
         fontFamily: 'Arial',
         color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
-      }).setOrigin(0.5).setDepth(60);
+      }).setOrigin(0.5).setDepth(DEPTH.SWEEP);
       this.partyModal.add(text);
       this.synergyPreviewTexts.push(text);
     });
   }
 
   startBattle() {
+    if (!this.ensurePartySelectModal()) return;
     const partyHeroes = this.partySlots
-      .filter(s => s.hero)
-      .map(s => s.hero);
+      .filter(slot => slot.hero)
+      .map(slot => slot.hero);
 
     if (partyHeroes.length === 0) {
       this.showMessage('파티에 영웅을 배치해주세요!');
@@ -718,7 +1367,7 @@ export class StageSelectScene extends Phaser.Scene {
     const consumeResult = energySystem.consumeEnergy(stageCost);
 
     if (!consumeResult.success) {
-      this.showMessage(`⚡ 에너지가 부족합니다! (필요: ${stageCost})`, COLORS.danger);
+      this.showMessage(`에너지가 부족합니다! (필요: ${stageCost})`, COLORS.danger);
       return;
     }
 
@@ -757,7 +1406,7 @@ export class StageSelectScene extends Phaser.Scene {
   refreshEnergyDisplay() {
     const status = energySystem.getStatus();
     if (this.energyText) {
-      this.energyText.setText(`⚡ ${status.current}/${status.max}`);
+      this.energyText.setText(`${status.current}/${status.max}`);
     }
   }
 
@@ -784,8 +1433,12 @@ export class StageSelectScene extends Phaser.Scene {
     });
   }
 
+  // ================================================================
+  // 소탕 모달 (기능 불변)
+  // ================================================================
+
   createSweepModal() {
-    this.sweepModal = this.add.container(0, 0).setDepth(60).setVisible(false);
+    this.sweepModal = this.add.container(0, 0).setDepth(DEPTH.SWEEP).setVisible(false);
 
     // Overlay
     const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
@@ -800,7 +1453,7 @@ export class StageSelectScene extends Phaser.Scene {
     sweepModalBg.strokeRoundedRect(GAME_WIDTH / 2 - s(170), GAME_HEIGHT / 2 - s(160), s(340), s(320), s(16));
 
     // Title
-    this.sweepTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(130), '⚡ 소탕', {
+    this.sweepTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(130), '소탕', {
       fontSize: sf(20), fontFamily: 'Georgia, serif',
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold'
@@ -870,6 +1523,7 @@ export class StageSelectScene extends Phaser.Scene {
   }
 
   showSweepModal(stage) {
+    if (!this.ensureSweepModal()) return;
     this._sweepStage = stage;
     const cost = stage.energyCost || 6;
     const status = energySystem.getStatus();
@@ -888,7 +1542,7 @@ export class StageSelectScene extends Phaser.Scene {
       const canTicket = tickets >= count;
       const available = canAfford && canDaily && canTicket;
 
-      costLabel.setText(`⚡${totalCost}`);
+      costLabel.setText(`에너지 ${totalCost}`);
       bg.setAlpha(available ? 1 : 0.4);
       label.setAlpha(available ? 1 : 0.4);
       bg.setInteractive(available ? { useHandCursor: true } : false);
@@ -896,7 +1550,7 @@ export class StageSelectScene extends Phaser.Scene {
       else bg.setInteractive({ useHandCursor: true });
     });
 
-    this.sweepCostInfo.setText(`보유 에너지: ⚡${status.current}/${status.max}`);
+    this.sweepCostInfo.setText(`보유 에너지: ${status.current}/${status.max}`);
     this.sweepModal.setVisible(true);
   }
 
@@ -942,7 +1596,7 @@ export class StageSelectScene extends Phaser.Scene {
       this.hideSweepModal();
       this.refreshEnergyDisplay();
       this.showMessage(
-        `⚡ ${count}회 소탕 완료! 🪙+${totalGold} ✨+${totalExp}`,
+        `${count}회 소탕 완료! 골드 +${totalGold} 경험치 +${totalExp}`,
         COLORS.success
       );
     } else {
@@ -955,6 +1609,11 @@ export class StageSelectScene extends Phaser.Scene {
     this.tweens.killAll();
     if (this.input) {
       this.input.removeAllListeners();
+    }
+    this._scrollBound = false;
+    if (this._listMask) {
+      this._listMask.destroy();
+      this._listMask = null;
     }
     if (this.energyTimer) {
       this.energyTimer.remove();
@@ -969,7 +1628,7 @@ export class StageSelectScene extends Phaser.Scene {
       color: `#${  color.toString(16).padStart(6, '0')}`,
       backgroundColor: `#${  COLORS.background.toString(16).padStart(6, '0')}`,
       padding: { x: s(20), y: s(12) }
-    }).setOrigin(0.5).setDepth(100);
+    }).setOrigin(0.5).setDepth(DEPTH.TOAST);
 
     this.tweens.add({
       targets: msg,

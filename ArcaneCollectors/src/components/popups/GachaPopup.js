@@ -1,24 +1,50 @@
+/**
+ * GachaPopup — 소환 팝업 (REDESIGN_PLAN §3-2, T-12)
+ *
+ * 이전 화면은 배너 자리에 회색 플레이스홀더가 있고 그 아래 720px(base)이 비어 있었으며,
+ * 하단 4버튼이 소환권 안내 텍스트를 덮었다. 이번 재배치는 화면을 7개 세로 밴드로 나눈다.
+ *
+ *   탭 → 배너(픽업 일러스트 + 전신) → 확률 고지 → 천장 → 젬 소환 → 티켓 소환 → 확률 정보
+ *
+ * 밴드 높이는 `utils/gachaBannerLayout.js`(순수 모듈)가 계산한다. 같은 함수를
+ * GachaScene 이 더 큰 높이로 호출해 두 화면이 같은 규칙을 공유한다.
+ *
+ * ## 보존해야 하는 계약
+ * - **온보딩 모드** (`open({ onboarding: true })`, UXI-04 / 튜토리얼 T-05):
+ *   탭·단발·장비를 숨기고 무료 10연 버튼만 노출하며, 확률 고지를 상시 임베드하고
+ *   닫기(✕/오버레이)를 잠근다. 버튼은 `gacha.button.multi_ticket` 로 등록돼
+ *   튜토리얼 마스킹 홀의 기준이 된다.
+ * - **확률/천장 수치는 GachaSystem SSOT** 에서만 읽는다. 하드코딩 금지.
+ * - **결과 오버레이는 팝업 라이프사이클에 묶는다.** GachaResultOverlay 는 씬 루트의
+ *   depth 3010 전면 레이어다. 팝업만 닫고 남기면 전체 화면 입력을 삼킨다.
+ *   destroy() 가 반드시 정리한다.
+ *
+ * ## 알려진 제약 (이 트랙에서 고치지 않음)
+ * 팝업의 '장비 소환' 탭은 표시만 전환하고 실제 뽑기는 영웅 풀로 나간다. 배너 스트립도
+ * 마찬가지로 표시 전용이다 — `GachaSystem.pull()` 이 배너·장비 인자를 받지 않기 때문이다.
+ * 시스템 SSOT 를 건드리는 수정이라 UI 트랙 범위 밖이다.
+ */
 import { PopupBase } from '../PopupBase.js';
-import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, s, sf } from '../../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, RARITY, SCALE_FACTOR, s, sf } from '../../config/gameConfig.js';
+import { DESIGN } from '../../config/designSystem.js';
+import { ts } from '../../utils/textStyles.ts';
 import { Z_INDEX } from '../../config/layoutConfig.js';
 import { GachaSystem } from '../../systems/GachaSystem.js';
 import { SaveManager } from '../../systems/SaveManager.js';
-import { HeroAssetLoader } from '../../systems/HeroAssetLoader.js';
 import { getCharacterOrHero } from '../../data/index.js';
 import { getRarityKey, getRarityNum } from '../../utils/rarityUtils.js';
 import { RateDisclosurePanel, renderRateTable } from './RateDisclosurePanel.js';
 import { collectLiveRateRows } from '../../utils/gachaRateDisclosure.js';
 import { TutorialTargetRegistry } from '../../systems/TutorialTargetRegistry.js';
+import { GlassPanel, GLASS_VARIANT } from '../GlassPanel.js';
+import { NineSliceFrame } from '../NineSliceFrame.js';
+import { GachaBannerPanel } from '../GachaBannerPanel.js';
+import { GachaResultOverlay } from '../GachaResultOverlay.js';
+import { computeGachaLayout, computeButtonRow } from '../../utils/gachaBannerLayout.js';
 
-/**
- * GachaPopup - 소환 팝업
- * 영웅/장비 소환, 천장 시스템, 결과 표시
- *
- * 온보딩 모드(T-05 첫 무료 10연, UXI-04): `new GachaPopup(scene, { onboarding: true }).show()`
- * 또는 `new GachaPopup(scene).open({ onboarding: true })` 로 호출한다.
- * 탭/단발 소환/장비 소환을 숨기고 첫 무료 10연 버튼만 노출하며, 확률 고지 패널을
- * 상시 임베드하고 닫기(✕/오버레이 클릭)를 잠근다.
- */
+/** 렌더 px → base px */
+const toBase = (px) => px / SCALE_FACTOR;
+
 export class GachaPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
@@ -32,13 +58,15 @@ export class GachaPopup extends PopupBase {
     this.isAnimating = false;
     this.onboarding = !!options.onboarding;
 
-    // Resource display references
-    this.gemText = null;
-    this.ticketText = null;
+    // 표시 참조
     this.pityBar = null;
     this.pityText = null;
-    this.bannerPityText = null;
+    this.pityFillMax = 0;
+    this.pityFillLeft = 0;
+    this.bannerPanel = null;
+    this.resultOverlay = null;
     this._ratePanel = null;
+    this._rateSummaryTexts = [];
   }
 
   /**
@@ -52,9 +80,19 @@ export class GachaPopup extends PopupBase {
     return this;
   }
 
+  // ================================================================
+  // 구축
+  // ================================================================
+
   buildContent() {
-    // Top: Resource display
-    this.createResourceDisplay();
+    const b = this.contentBounds;
+
+    // 밴드 배치는 base 좌표계에서 계산하고 그릴 때 s() 로 옮긴다
+    this.layout = computeGachaLayout({
+      top: toBase(b.top),
+      height: toBase(b.height),
+      showTabs: !this.onboarding
+    });
 
     if (this.onboarding) {
       this._lockClose();
@@ -62,19 +100,11 @@ export class GachaPopup extends PopupBase {
       return;
     }
 
-    // Tab buttons
     this.createTabButtons();
-
-    // Banner area
     this.createBannerArea();
-
-    // Pity counter
+    this.createRateSummary();
     this.createPityDisplay();
-
-    // Summon buttons
     this.createSummonButtons();
-
-    // Rate disclosure entry point (nested popup)
     this.createRateInfoButton();
   }
 
@@ -105,28 +135,46 @@ export class GachaPopup extends PopupBase {
     return this;
   }
 
-  /** 온보딩 모드 화면: 탭/단발/장비 숨김, 확률 고지 상시 노출, 첫 무료 10연 버튼만 */
+  // ----------------------------------------------------------------
+  // 온보딩 모드 (T-05)
+  // ----------------------------------------------------------------
+
+  /** 온보딩 화면: 탭/단발/장비 숨김, 확률 고지 상시 노출, 첫 무료 10연 버튼만 */
   buildOnboardingContent() {
     const b = this.contentBounds;
 
-    this.addText(b.centerX, b.top + s(30), '동료를 불러오세요', {
-      fontSize: sf(20), fontStyle: 'bold', color: '#F8FAFC'
-    }).setOrigin(0.5);
+    this.addText(b.centerX, b.top + s(30), '동료를 불러오세요', ts('title', {
+      color: DESIGN.colors.text.primary
+    })).setOrigin(0.5);
 
-    this.addText(b.centerX, b.top + s(58), '처음 한 번은 완전히 무료입니다', {
-      fontSize: sf(13), color: '#94A3B8'
-    }).setOrigin(0.5);
+    this.addText(b.centerX, b.top + s(62), '처음 한 번은 완전히 무료입니다', ts('label', {
+      color: DESIGN.colors.text.secondary
+    })).setOrigin(0.5);
+
+    // 픽업 배너 — 무엇을 뽑는지 보여주지 않으면 무료 소환이 성의 없이 읽힌다
+    const bannerH = s(300);
+    const bannerY = b.top + s(104) + bannerH / 2;
+    this.bannerPanel = new GachaBannerPanel(this.scene, {
+      x: b.centerX,
+      y: bannerY,
+      w: b.width - s(8),
+      h: bannerH,
+      showStrip: false,
+      showResources: false,
+      bgKey: 'bg_main'
+    });
+    this.contentContainer.add(this.bannerPanel.container);
 
     const rows = collectLiveRateRows();
     const { endY } = renderRateTable(this.scene, this.contentContainer, {
-      left: b.left,
-      top: b.top + s(95),
-      width: b.width,
+      left: b.left + s(16),
+      top: bannerY + bannerH / 2 + s(34),
+      width: b.width - s(32),
       rows,
       lineHeight: s(26)
     });
 
-    const buttonY = Math.min(endY + s(55), b.bottom - s(70));
+    const buttonY = Math.min(endY + s(58), b.bottom - s(70));
     this.createFreeTenPullButton(b.centerX, buttonY);
   }
 
@@ -137,7 +185,7 @@ export class GachaPopup extends PopupBase {
 
     const { bg } = this.addButton(
       x, y, s(340), s(72),
-      alreadyUsed ? '무료 10연 소환 완료' : '🎁 첫 무료 10연 소환',
+      alreadyUsed ? '무료 10연 소환 완료' : '첫 무료 10연 소환',
       COLORS.secondary,
       () => this.performFreeTenPull()
     );
@@ -150,24 +198,313 @@ export class GachaPopup extends PopupBase {
       bg.setAlpha(0.5);
     }
 
-    this.addText(x + s(140), y - s(34), '무료', {
-      fontSize: sf(13), fontStyle: 'bold', color: '#0F172A',
-      backgroundColor: '#FACC15', padding: { x: s(8), y: s(3) }
-    }).setOrigin(0.5);
+    this.addText(x + s(140), y - s(34), '무료', ts('num.sm', {
+      color: DESIGN.colors.text.inverse,
+      fontStyle: 'bold',
+      backgroundColor: `#${DESIGN.colors.brand.accent.toString(16).padStart(6, '0')}`,
+      padding: { x: s(8), y: s(3) }
+    })).setOrigin(0.5);
 
-    this.addText(x, y + s(48), '에너지 0 · 젬 0 · 티켓 0 소모', {
-      fontSize: sf(12), color: '#64748B'
-    }).setOrigin(0.5);
+    this.addText(x, y + s(50), '에너지 0 · 젬 0 · 티켓 0 소모', ts('caption', {
+      color: DESIGN.colors.text.muted
+    })).setOrigin(0.5);
   }
 
-  /** 확률 정보 진입점 — 일반 모드에서 RateDisclosurePanel을 중첩 팝업으로 연다 */
-  createRateInfoButton() {
+  // ----------------------------------------------------------------
+  // 일반 모드
+  // ----------------------------------------------------------------
+
+  /** 영웅/장비 탭. 히트 영역은 터치 하한(48 base)을 지킨다 */
+  createTabButtons() {
+    const band = this.layout.bands.tabs;
     const b = this.contentBounds;
-    const y = b.top + s(750);
-    const { bg } = this.addButton(b.centerX, y, s(220), s(44), '📋 확률 정보', COLORS.backgroundLight, () => {
-      this.openRateDisclosure();
+    const y = s(band.centerY);
+    const slots = computeButtonRow({
+      width: toBase(b.width),
+      margin: 0,
+      gap: 10,
+      ratio: [1, 1],
+      y: band.y,
+      h: band.h
     });
-    bg.setStrokeStyle(s(1), COLORS.primary, 0.6);
+
+    const make = (slot, label, active) => {
+      const cx = b.left + s(slot.centerX);
+      const bg = this.scene.add.graphics();
+      const text = this.scene.add.text(cx, y, label, ts('subtitle', {
+        color: active ? DESIGN.colors.text.primary : DESIGN.colors.text.secondary
+      })).setOrigin(0.5);
+      const hit = this.scene.add.rectangle(
+        cx, y, s(slot.w), Math.max(s(band.h), s(DESIGN.touch.minTarget)), 0xffffff, 0
+      ).setInteractive({ useHandCursor: true });
+
+      this.contentContainer.add([bg, text, hit]);
+      return { bg, text, hit, slot };
+    };
+
+    this.heroTabUI = make(slots[0], '영웅 소환', true);
+    this.equipTabUI = make(slots[1], '장비 소환', false);
+
+    this.heroTabUI.hit.on('pointerdown', () => {
+      if (this.currentTab === 'hero' || this.isAnimating) return;
+      this.switchTab('hero');
+    });
+    this.equipTabUI.hit.on('pointerdown', () => {
+      if (this.currentTab === 'equipment' || this.isAnimating) return;
+      this.switchTab('equipment');
+    });
+
+    this._paintTabs();
+  }
+
+  /** @private 탭 표면. 활성 탭만 아래에 교단·브랜드색 언더라인이 붙는다 */
+  _paintTabs() {
+    const band = this.layout.bands.tabs;
+    const b = this.contentBounds;
+    const accent = this.bannerPanel ? this.bannerPanel.accentColor : DESIGN.colors.brand.primary;
+
+    [
+      { ui: this.heroTabUI, active: this.currentTab === 'hero' },
+      { ui: this.equipTabUI, active: this.currentTab === 'equipment' }
+    ].forEach(({ ui, active }) => {
+      if (!ui) return;
+      const x = b.left + s(ui.slot.x);
+      const w = s(ui.slot.w);
+      const top = s(band.y);
+      const h = s(band.h);
+
+      ui.bg.clear();
+      ui.bg.fillStyle(DESIGN.colors.bg.secondary, active ? 0.92 : 0.45);
+      ui.bg.fillRoundedRect(x, top, w, h, s(DESIGN.radius.md));
+      if (active) {
+        ui.bg.fillStyle(accent, 0.95);
+        ui.bg.fillRect(x + s(12), top + h - s(3), w - s(24), s(3));
+      }
+      ui.text.setColor(active ? DESIGN.colors.text.primary : DESIGN.colors.text.secondary);
+      ui.text.setStyle({ fontStyle: active ? 'bold' : 'normal' });
+    });
+  }
+
+  switchTab(tab) {
+    this.currentTab = tab;
+    this._paintTabs();
+
+    // 천장은 영웅 소환에만 있다
+    const showPity = tab === 'hero';
+    [this.pityBar, this.pityText, this.pityLabel, this.pityInfoText].forEach((obj) => {
+      if (obj && obj.setVisible) obj.setVisible(showPity);
+    });
+    if (this.equipNoteText) this.equipNoteText.setVisible(!showPity);
+  }
+
+  /** 배너 — 픽업 일러스트 + 전신 시트 + 배너 탭 스트립 + 재화 칩 */
+  createBannerArea() {
+    const band = this.layout.bands.banner;
+    const b = this.contentBounds;
+
+    this.bannerPanel = new GachaBannerPanel(this.scene, {
+      x: b.centerX,
+      y: s(band.centerY),
+      w: b.width - s(8),
+      h: s(band.h),
+      bgKey: 'bg_main',
+      onSelect: () => this._paintTabs()
+    });
+    this.contentContainer.add(this.bannerPanel.container);
+    this._paintTabs();
+  }
+
+  /** 확률 고지 요약 — BLK-07. 수치는 GachaSystem SSOT 에서만 읽는다 */
+  createRateSummary() {
+    const band = this.layout.bands.rates;
+    const b = this.contentBounds;
+
+    const glass = GlassPanel.create(this.scene, {
+      x: b.centerX, y: s(band.centerY), w: b.width - s(8), h: s(band.h),
+      variant: GLASS_VARIANT.CARD,
+      tint: this.bannerPanel ? this.bannerPanel.accentColor : DESIGN.colors.brand.primary
+    });
+    this.contentContainer.add(glass);
+
+    const left = b.left + s(20);
+    const right = b.right - s(20);
+
+    this.contentContainer.add(this.scene.add.text(left, s(band.y + 24), '등급별 제공 확률', ts('label', {
+      color: DESIGN.colors.text.secondary
+    })).setOrigin(0, 0.5));
+
+    this.contentContainer.add(this.scene.add.text(right, s(band.y + 24), '상세 ▸', ts('label', {
+      color: `#${DESIGN.colors.brand.primary.toString(16).padStart(6, '0')}`
+    })).setOrigin(1, 0.5));
+
+    // 등급 행만 뽑아 한 줄로 편다. 고정폭(num.md)이라 자릿수가 흔들리지 않는다
+    const rarityRows = collectLiveRateRows().filter((row) => row.type === 'rarity');
+    const usable = (right - left);
+    rarityRows.forEach((row, index) => {
+      const x = left + (usable * (index + 0.5)) / Math.max(1, rarityRows.length);
+      const color = RARITY[row.grade]?.color ?? COLORS.text;
+      this.contentContainer.add(this.scene.add.text(x, s(band.y + 56), row.grade, ts('caption', {
+        color: `#${color.toString(16).padStart(6, '0')}`, fontStyle: 'bold'
+      })).setOrigin(0.5));
+      this.contentContainer.add(this.scene.add.text(x, s(band.y + 80), `${row.ratePercent}%`, ts('num.md', {
+        color: DESIGN.colors.text.primary
+      })).setOrigin(0.5));
+    });
+  }
+
+  /** 천장 — GachaSystem.getPityInfo() SSOT */
+  createPityDisplay() {
+    const band = this.layout.bands.pity;
+    const b = this.contentBounds;
+    const info = GachaSystem.getPityInfo();
+
+    const glass = GlassPanel.create(this.scene, {
+      x: b.centerX, y: s(band.centerY), w: b.width - s(8), h: s(band.h),
+      variant: GLASS_VARIANT.CARD,
+      tint: DESIGN.colors.brand.accent
+    });
+    this.contentContainer.add(glass);
+
+    const left = b.left + s(20);
+    const barLeft = left;
+    const barW = b.width - s(48);
+    const barY = s(band.y + band.h - 20);
+
+    this.pityLabel = this.scene.add.text(left, s(band.y + 22), '천장 카운터', ts('label', {
+      color: DESIGN.colors.text.secondary
+    })).setOrigin(0, 0.5);
+
+    this.pityText = this.scene.add.text(b.right - s(20), s(band.y + 22),
+      `${info.current} / ${info.threshold}`, ts('num.md', {
+        color: DESIGN.colors.text.primary
+      })).setOrigin(1, 0.5);
+
+    const track = this.scene.add.graphics();
+    track.fillStyle(DESIGN.colors.bg.surface, 1);
+    track.fillRoundedRect(barLeft, barY - s(7), barW, s(14), s(7));
+    // 카운터가 0 일 때도 트랙이 보여야 "차오르는 자리" 라는 게 읽힌다
+    track.lineStyle(s(1), DESIGN.colors.brand.accent, 0.3);
+    track.strokeRoundedRect(barLeft, barY - s(7), barW, s(14), s(7));
+
+    this.pityFillLeft = barLeft;
+    this.pityFillMax = barW;
+    this.pityBar = this.scene.add.graphics();
+    this._paintPityBar(info.current / info.threshold);
+
+    this.pityInfoText = this.scene.add.text(b.centerX, s(band.y + 22),
+      `${info.threshold}회 소환 시 SSR 확정`, ts('caption', {
+        color: `#${DESIGN.colors.brand.accent.toString(16).padStart(6, '0')}`
+      })).setOrigin(0.5);
+
+    this.contentContainer.add([this.pityLabel, this.pityText, track, this.pityBar, this.pityInfoText]);
+  }
+
+  /** @private */
+  _paintPityBar(ratio) {
+    if (!this.pityBar) return;
+    const band = this.layout.bands.pity;
+    const barY = s(band.y + band.h - 20);
+    const clamped = Math.max(0, Math.min(1, Number.isFinite(ratio) ? ratio : 0));
+    this.pityBar.clear();
+    if (clamped <= 0) return;
+    this.pityBar.fillStyle(DESIGN.colors.brand.accent, 1);
+    this.pityBar.fillRoundedRect(this.pityFillLeft, barY - s(7), this.pityFillMax * clamped, s(14), s(7));
+  }
+
+  /** 젬 2버튼(2:3) + 티켓 2버튼. 텍스트를 덮지 않도록 밴드가 분리돼 있다 */
+  createSummonButtons() {
+    const b = this.contentBounds;
+    const gems = this.layout.bands.gems;
+    const tickets = this.layout.bands.tickets;
+    const width = toBase(b.width);
+    const resources = SaveManager.getResources();
+
+    const gemSlots = computeButtonRow({ width, margin: 4, gap: 12, ratio: [2, 3], y: gems.y, h: gems.h });
+    this._summonButton({
+      slot: gemSlots[0], band: gems, variant: 'btn_secondary',
+      tint: DESIGN.colors.brand.secondary,
+      label: '단일 소환', sub: `${GachaSystem.SINGLE_COST.toLocaleString()} 젬`,
+      onClick: () => this.performSummon(1, false)
+    });
+    this._summonButton({
+      slot: gemSlots[1], band: gems, variant: 'btn_primary',
+      tint: DESIGN.colors.brand.primary,
+      label: '10연차', sub: `${GachaSystem.MULTI_COST.toLocaleString()} 젬 · SR 이상 확정`,
+      onClick: () => this.performSummon(10, false)
+    });
+
+    const ticketSlots = computeButtonRow({ width, margin: 4, gap: 12, ratio: [2, 3], y: tickets.y, h: tickets.h });
+    this.ticketSingleLabel = this._summonButton({
+      slot: ticketSlots[0], band: tickets, variant: 'btn_ghost',
+      tint: DESIGN.colors.brand.primary,
+      label: '티켓 ×1', sub: `보유 ${resources.summonTickets || 0}장`,
+      onClick: () => this.performSummon(1, true)
+    });
+    this.ticketMultiLabel = this._summonButton({
+      slot: ticketSlots[1], band: tickets, variant: 'btn_ghost',
+      tint: DESIGN.colors.brand.primary,
+      label: '티켓 ×10', sub: `보유 ${resources.summonTickets || 0}장`,
+      onClick: () => this.performSummon(10, true)
+    });
+
+    // 장비 탭 안내 — 탭 전환 시에만 보인다
+    this.equipNoteText = this.scene.add.text(b.centerX, s(gems.y - 10),
+      '장비 소환은 소환 화면에서 이용할 수 있습니다', ts('caption', {
+        color: DESIGN.colors.text.muted
+      })).setOrigin(0.5).setVisible(false);
+    this.contentContainer.add(this.equipNoteText);
+  }
+
+  /**
+   * @private 9-slice 소환 버튼 1개.
+   * @returns {Phaser.GameObjects.Text} 보조 라벨 (보유 수량 갱신용)
+   */
+  _summonButton({ slot, band, variant, tint, label, sub, onClick }) {
+    const b = this.contentBounds;
+    const cx = b.left + s(slot.centerX);
+    const cy = s(band.centerY);
+    const w = s(slot.w);
+    const h = s(band.h);
+
+    const frame = NineSliceFrame.create(this.scene, { x: cx, y: cy, w, h, key: variant, tint });
+    const main = this.scene.add.text(cx, cy - s(12), label, ts('subtitle', {
+      color: DESIGN.colors.text.primary
+    })).setOrigin(0.5);
+    // 밝은 btn_primary 위에서 text.secondary 는 뭉개진다. 보조 라벨도 본문색을 쓰고 알파로만 낮춘다
+    const subText = this.scene.add.text(cx, cy + s(14), sub, ts('caption', {
+      color: DESIGN.colors.text.primary
+    })).setOrigin(0.5).setAlpha(0.85);
+
+    const hit = this.scene.add.rectangle(
+      cx, cy, Math.max(w, s(DESIGN.touch.minTarget)), Math.max(h, s(DESIGN.touch.minTarget)), 0xffffff, 0
+    ).setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => frame.setAlpha?.(0.85));
+    hit.on('pointerout', () => frame.setAlpha?.(1));
+    hit.on('pointerdown', onClick);
+
+    this.contentContainer.add([frame, main, subText, hit]);
+    return subText;
+  }
+
+  /** 확률 정보 진입점 — 상시 노출 (BLK-07). RateDisclosurePanel 을 중첩 팝업으로 연다 */
+  createRateInfoButton() {
+    const band = this.layout.bands.info;
+    const b = this.contentBounds;
+    const cy = s(band.centerY);
+
+    const frame = NineSliceFrame.create(this.scene, {
+      x: b.centerX, y: cy, w: s(300), h: s(band.h),
+      key: 'btn_ghost', tint: DESIGN.colors.brand.primary
+    });
+    const text = this.scene.add.text(b.centerX, cy, '확률 및 천장 상세 보기', ts('label', {
+      color: DESIGN.colors.text.primary
+    })).setOrigin(0.5);
+    const hit = this.scene.add.rectangle(
+      b.centerX, cy, s(300), Math.max(s(band.h), s(DESIGN.touch.minTarget)), 0xffffff, 0
+    ).setInteractive({ useHandCursor: true });
+    hit.on('pointerdown', () => this.openRateDisclosure());
+
+    this.contentContainer.add([frame, text, hit]);
   }
 
   openRateDisclosure() {
@@ -181,258 +518,15 @@ export class GachaPopup extends PopupBase {
     }
   }
 
-  createResourceDisplay() {
-    const b = this.contentBounds;
-    const resources = SaveManager.getResources();
-
-    // Gems
-    const gemIcon = this.scene.add.text(b.centerX - s(120), b.top + s(10), '💎', {
-      fontSize: sf(20)
-    }).setOrigin(0.5);
-    this.gemText = this.addText(b.centerX - s(85), b.top + s(10), resources.gems.toLocaleString(), {
-      fontSize: sf(18),
-      fontStyle: 'bold',
-      color: '#FFD700'
-    }).setOrigin(0, 0.5);
-
-    // Tickets
-    const ticketIcon = this.scene.add.text(b.centerX + s(20), b.top + s(10), '🎫', {
-      fontSize: sf(20)
-    }).setOrigin(0.5);
-    this.ticketText = this.addText(b.centerX + s(55), b.top + s(10), `${resources.summonTickets}개`, {
-      fontSize: sf(18),
-      fontStyle: 'bold',
-      color: '#87CEEB'
-    }).setOrigin(0, 0.5);
-
-    this.contentContainer.add([gemIcon, ticketIcon]);
-  }
-
-  createTabButtons() {
-    const b = this.contentBounds;
-    const tabY = b.top + s(50);
-    const tabWidth = s(180);
-
-    // Hero tab
-    this.heroTab = this.scene.add.container(b.centerX - tabWidth / 2 - s(10), tabY);
-    const heroTabBg = this.scene.add.rectangle(0, 0, tabWidth, s(40), COLORS.primary, 1);
-    heroTabBg.setStrokeStyle(s(2), COLORS.text, 0.3);
-    const heroTabText = this.scene.add.text(0, 0, '⭐ 영웅 소환', {
-      fontSize: sf(16),
-      fontFamily: 'Arial',
-      color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    this.heroTab.add([heroTabBg, heroTabText]);
-    heroTabBg.setInteractive({ useHandCursor: true });
-
-    // Equipment tab
-    this.equipTab = this.scene.add.container(b.centerX + tabWidth / 2 + s(10), tabY);
-    const equipTabBg = this.scene.add.rectangle(0, 0, tabWidth, s(40), COLORS.backgroundLight, 0.6);
-    equipTabBg.setStrokeStyle(s(2), COLORS.textDark, 0.3);
-    const equipTabText = this.scene.add.text(0, 0, '⚔️ 장비 소환', {
-      fontSize: sf(16),
-      fontFamily: 'Arial',
-      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-    this.equipTab.add([equipTabBg, equipTabText]);
-    equipTabBg.setInteractive({ useHandCursor: true });
-
-    // Store references
-    this.heroTabBg = heroTabBg;
-    this.heroTabText = heroTabText;
-    this.equipTabBg = equipTabBg;
-    this.equipTabText = equipTabText;
-
-    // Tab interactions
-    heroTabBg.on('pointerdown', () => {
-      if (this.currentTab === 'hero' || this.isAnimating) return;
-      this.switchTab('hero');
-    });
-
-    equipTabBg.on('pointerdown', () => {
-      if (this.currentTab === 'equipment' || this.isAnimating) return;
-      this.switchTab('equipment');
-    });
-
-    this.contentContainer.add([this.heroTab, this.equipTab]);
-  }
-
-  switchTab(tab) {
-    this.currentTab = tab;
-
-    if (tab === 'hero') {
-      // Activate hero tab
-      this.heroTabBg.setFillStyle(COLORS.primary, 1);
-      this.heroTabBg.setStrokeStyle(s(2), COLORS.text, 0.3);
-      this.heroTabText.setColor(`#${COLORS.text.toString(16).padStart(6, '0')}`);
-      this.heroTabText.setStyle({ fontStyle: 'bold' });
-
-      // Deactivate equipment tab
-      this.equipTabBg.setFillStyle(COLORS.backgroundLight, 0.6);
-      this.equipTabBg.setStrokeStyle(s(2), COLORS.textDark, 0.3);
-      this.equipTabText.setColor(`#${COLORS.textDark.toString(16).padStart(6, '0')}`);
-      this.equipTabText.setStyle({ fontStyle: 'normal' });
-
-      // Show/hide pity info
-      if (this.pityBar) this.pityBar.setVisible(true);
-      if (this.pityText) this.pityText.setVisible(true);
-    } else {
-      // Activate equipment tab
-      this.equipTabBg.setFillStyle(COLORS.primary, 1);
-      this.equipTabBg.setStrokeStyle(s(2), COLORS.text, 0.3);
-      this.equipTabText.setColor(`#${COLORS.text.toString(16).padStart(6, '0')}`);
-      this.equipTabText.setStyle({ fontStyle: 'bold' });
-
-      // Deactivate hero tab
-      this.heroTabBg.setFillStyle(COLORS.backgroundLight, 0.6);
-      this.heroTabBg.setStrokeStyle(s(2), COLORS.textDark, 0.3);
-      this.heroTabText.setColor(`#${COLORS.textDark.toString(16).padStart(6, '0')}`);
-      this.heroTabText.setStyle({ fontStyle: 'normal' });
-
-      // Hide pity info (equipment doesn't use pity)
-      if (this.pityBar) this.pityBar.setVisible(false);
-      if (this.pityText) this.pityText.setVisible(false);
-    }
-  }
-
-  createBannerArea() {
-    const b = this.contentBounds;
-    const bannerY = b.top + s(150);
-
-    // Banner background
-    const bannerBg = this.scene.add.rectangle(b.centerX, bannerY, b.width - s(40), s(200), COLORS.backgroundLight, 0.6);
-    bannerBg.setStrokeStyle(s(3), COLORS.secondary, 0.8);
-    this.contentContainer.add(bannerBg);
-
-    // Banner title
-    const bannerTitle = this.scene.add.text(b.centerX, bannerY - s(70), '✨ 발할라의 전사들 픽업! ✨', {
-      fontSize: sf(18),
-      fontFamily: 'Georgia, serif',
-      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    this.contentContainer.add(bannerTitle);
-
-    // Featured hero placeholder
-    const featuredIcon = this.scene.add.text(b.centerX, bannerY - s(10), '👤', {
-      fontSize: sf(60)
-    }).setOrigin(0.5);
-    this.contentContainer.add(featuredIcon);
-
-    const featuredLabel = this.scene.add.text(b.centerX, bannerY + s(45), 'SSR 픽업!', {
-      fontSize: sf(14),
-      fontFamily: 'Arial',
-      color: `#${COLORS.raritySSR.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    this.contentContainer.add(featuredLabel);
-
-    // Rates info
-    const ratesY = bannerY + s(80);
-    const pityInfo = GachaSystem.getPityInfo();
-    this.bannerPityText = this.scene.add.text(b.centerX, ratesY, `천장 카운터: ${pityInfo.current}/${pityInfo.threshold}`, {
-      fontSize: sf(14),
-      fontFamily: 'Arial',
-      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    this.contentContainer.add(this.bannerPityText);
-
-    const ratesText = this.scene.add.text(b.centerX, ratesY + s(20), `SSR ${pityInfo.currentSSRRate}  SR 15%  R 50%  N 32%`, {
-      fontSize: sf(12),
-      fontFamily: 'Arial',
-      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-    this.contentContainer.add(ratesText);
-  }
-
-  createPityDisplay() {
-    const b = this.contentBounds;
-    const pityY = b.top + s(380);
-
-    const pityInfo = GachaSystem.getPityInfo();
-    const pity = pityInfo.current;
-    const pityMax = pityInfo.threshold;
-
-    const pityLabel = this.scene.add.text(b.centerX, pityY, '천장 카운터', {
-      fontSize: sf(14),
-      fontFamily: 'Arial',
-      color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-    this.contentContainer.add(pityLabel);
-
-    // Progress bar background
-    const barBg = this.scene.add.rectangle(b.centerX, pityY + s(30), s(300), s(20), COLORS.backgroundLight, 1);
-    this.contentContainer.add(barBg);
-
-    // Progress bar fill
-    this.pityBar = this.scene.add.rectangle(
-      b.centerX - s(150) + (s(300) * pity / pityMax) / 2,
-      pityY + s(30),
-      s(300) * pity / pityMax,
-      s(16),
-      COLORS.secondary,
-      1
-    ).setOrigin(0, 0.5);
-    this.contentContainer.add(this.pityBar);
-
-    // Pity text
-    this.pityText = this.scene.add.text(b.centerX, pityY + s(30), `${pity}/${pityMax}`, {
-      fontSize: sf(12),
-      fontFamily: 'Arial',
-      color: `#${COLORS.text.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-    this.contentContainer.add(this.pityText);
-
-    // Info text
-    const infoText = this.scene.add.text(b.centerX, pityY + s(60), '90회 소환 시 SSR 확정!', {
-      fontSize: sf(12),
-      fontFamily: 'Arial',
-      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-    this.contentContainer.add(infoText);
-  }
-
-  createSummonButtons() {
-    const b = this.contentBounds;
-    const buttonY = b.top + s(500);
-
-    // Gem summon buttons
-    this.addButton(b.centerX - s(110), buttonY, s(180), s(80), '단일 소환\n💎 300', COLORS.primary, () => {
-      this.performSummon(1, false);
-    });
-
-    this.addButton(b.centerX + s(110), buttonY, s(180), s(80), '10연차\n💎 2700', COLORS.secondary, () => {
-      this.performSummon(10, false);
-    });
-
-    // Ticket summon buttons
-    const ticketY = buttonY + s(100);
-    const resources = SaveManager.getResources();
-
-    this.ticketLabelText = this.scene.add.text(b.centerX, ticketY, `🎫 소환권: ${resources.summonTickets}개`, {
-      fontSize: sf(14),
-      fontFamily: 'Arial',
-      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-    this.contentContainer.add(this.ticketLabelText);
-
-    this.addButton(b.centerX - s(110), ticketY + s(40), s(180), s(50), '🎫 ×1 소환', 0x2a5298, () => {
-      this.performSummon(1, true);
-    });
-
-    this.addButton(b.centerX + s(110), ticketY + s(40), s(180), s(50), '🎫 ×10 소환', 0x2a5298, () => {
-      this.performSummon(10, true);
-    });
-  }
+  // ================================================================
+  // 소환 실행
+  // ================================================================
 
   performSummon(count, useTickets) {
     if (this.isAnimating) return;
 
     const paymentType = useTickets ? 'tickets' : 'gems';
 
-    // Check resources
     if (!GachaSystem.canPull(count, paymentType)) {
       const message = useTickets ? '소환권이 부족합니다!' : '보석이 부족합니다!';
       this.showToast(message, COLORS.danger);
@@ -441,7 +535,7 @@ export class GachaPopup extends PopupBase {
 
     this.isAnimating = true;
     const result = GachaSystem.pull(count, paymentType);
-    this._handlePullResult(result);
+    this._handlePullResult(result, () => this.performSummon(count, useTickets));
   }
 
   /**
@@ -460,30 +554,21 @@ export class GachaPopup extends PopupBase {
 
     this.isAnimating = true;
     const result = GachaSystem.pull(10, 'gems', { skipEnergyCheck: true });
-    this._handlePullResult(result);
+    this._handlePullResult(result, null);
   }
 
   /** performSummon / performFreeTenPull 공용 결과 처리 (중복 제거) */
-  _handlePullResult(result) {
+  _handlePullResult(result, onPullAgain) {
     if (!result.success) {
       this.showToast(result.error, COLORS.danger);
       this.isAnimating = false;
       return;
     }
 
-    // Update resource display (온보딩 모드에는 pity/ticket 라벨이 없을 수 있어 존재 확인)
-    const resources = SaveManager.getResources();
-    if (this.gemText) this.gemText.setText(resources.gems.toLocaleString());
-    if (this.ticketText) this.ticketText.setText(`${resources.summonTickets}개`);
-    if (this.ticketLabelText) {
-      this.ticketLabelText.setText(`🎫 소환권: ${resources.summonTickets}개`);
-    }
-
-    // Update pity display
+    this.refreshResourceUI();
     this.updatePityUI(result.pityInfo);
 
-    // Convert results to display format
-    const results = result.results.map(r => {
+    const results = result.results.map((r) => {
       const charData = getCharacterOrHero(r.characterId);
       return {
         id: r.characterId,
@@ -500,276 +585,89 @@ export class GachaPopup extends PopupBase {
       };
     });
 
-    // Show animation and results
-    this.showSummonAnimation(results);
+    this.showSummonAnimation(results, onPullAgain);
+  }
+
+  /** 재화 표시 갱신 — 배너 칩과 티켓 버튼의 보유 수량 */
+  refreshResourceUI() {
+    const resources = SaveManager.getResources();
+    if (this.bannerPanel) this.bannerPanel.refreshResources();
+    const label = `보유 ${resources.summonTickets || 0}장`;
+    if (this.ticketSingleLabel) this.ticketSingleLabel.setText(label);
+    if (this.ticketMultiLabel) this.ticketMultiLabel.setText(label);
   }
 
   updatePityUI(pityInfo) {
-    if (this.bannerPityText) {
-      this.bannerPityText.setText(`천장 카운터: ${pityInfo.current}/${pityInfo.threshold}`);
-    }
-    if (this.pityText) {
-      this.pityText.setText(`${pityInfo.current}/${pityInfo.threshold}`);
-    }
-    if (this.pityBar) {
-      const progress = pityInfo.current / pityInfo.threshold;
-      this.scene.tweens.add({
-        targets: this.pityBar,
-        width: s(300) * progress,
-        x: this.contentBounds.centerX - s(150) + (s(300) * progress) / 2,
-        duration: 300
-      });
-    }
+    if (!pityInfo) return;
+    if (this.pityText) this.pityText.setText(`${pityInfo.current} / ${pityInfo.threshold}`);
+    this._paintPityBar(pityInfo.current / pityInfo.threshold);
   }
 
-  showSummonAnimation(results) {
-    // Create overlay
-    // 주의: 이 오버레이와 결과 컨테이너는 팝업 컨테이너의 자식이 아니다.
-    //       팝업만 닫으면 살아남아 전체 화면 입력을 삼키므로 인스턴스에 보관하고 destroy()에서 함께 정리한다.
-    const overlay = this.scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0);
-    overlay.setDepth(3000);
-    overlay.setInteractive();
-    this._summonOverlay = overlay;
+  /**
+   * 결과 연출 (T-14 GachaResultOverlay).
+   * 오버레이는 씬 루트의 전면 레이어이므로 반드시 인스턴스에 보관하고 destroy() 에서 정리한다.
+   * 남으면 depth 3010 오버레이가 모든 입력을 삼킨다.
+   */
+  showSummonAnimation(results, onPullAgain = null) {
+    this._clearSummonOverlay();
 
-    this.scene.tweens.add({
-      targets: overlay,
-      alpha: 0.9,
-      duration: 400,
-      ease: 'Power2'
+    this.resultOverlay = new GachaResultOverlay(this.scene, {
+      onPullAgain: onPullAgain && !this.onboarding ? onPullAgain : null,
+      onClose: () => {
+        this.resultOverlay = null;
+        this.isAnimating = false;
+      }
     });
-
-    // Check for SSR/SR
-    const hasSSR = results.some(hero => hero.rarity === 'SSR');
-    const hasSR = results.some(hero => hero.rarity === 'SR');
-
-    // Magic circle effect
-    const circleGraphics = this.scene.add.graphics().setDepth(3001);
-    const effectColor = hasSSR ? COLORS.raritySSR : (hasSR ? COLORS.raritySR : COLORS.primary);
-    circleGraphics.lineStyle(s(4), effectColor, 1);
-
-    for (let i = 0; i < 3; i++) {
-      circleGraphics.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, s(100) + i * s(30));
-    }
-
-    circleGraphics.setAlpha(0).setScale(0);
-
-    this.scene.tweens.add({
-      targets: circleGraphics,
-      scale: 1.5,
-      alpha: 1,
-      rotation: Math.PI * 2,
-      duration: 1500,
-      ease: 'Cubic.easeOut'
-    });
-
-    // Particles
-    const particles = [];
-    const particleCount = hasSSR ? 40 : (hasSR ? 30 : 20);
-
-    for (let i = 0; i < particleCount; i++) {
-      const angle = (i / particleCount) * Math.PI * 2;
-      const particle = this.scene.add.circle(
-        GAME_WIDTH / 2,
-        GAME_HEIGHT / 2,
-        hasSSR ? s(6) : s(4),
-        effectColor
-      ).setDepth(3002).setAlpha(0);
-
-      particles.push(particle);
-
-      this.scene.tweens.add({
-        targets: particle,
-        x: GAME_WIDTH / 2 + Math.cos(angle) * (hasSSR ? s(200) : s(150)),
-        y: GAME_HEIGHT / 2 + Math.sin(angle) * (hasSSR ? s(200) : s(150)),
-        alpha: { from: 1, to: 0 },
-        duration: hasSSR ? 1500 : 1000,
-        delay: 400 + i * (hasSSR ? 30 : 50),
-        ease: 'Cubic.easeOut'
-      });
-    }
-
-    // SSR flash effect
-    if (hasSSR) {
-      const flash = this.scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0);
-      flash.setDepth(3005);
-
-      this.scene.tweens.add({
-        targets: flash,
-        alpha: { from: 0, to: 0.7 },
-        duration: 600,
-        delay: 800,
-        yoyo: true,
-        onComplete: () => flash.destroy()
-      });
-
-      this.scene.cameras.main.shake(300, 0.01);
-    }
-
-    // Show results after animation
-    const animDuration = hasSSR ? 2500 : 2000;
-    this.scene.time.delayedCall(animDuration, () => {
-      circleGraphics.destroy();
-      particles.forEach(p => p.destroy());
-      this.showResults(results, overlay);
-    });
+    this.resultOverlay.show(results);
   }
 
-  showResults(results, overlay) {
-    // (결과 컨테이너는 아래에서 생성되는 즉시 인스턴스에 보관한다)
-    const resultContainer = this.scene.add.container(0, 0).setDepth(3010);
-    this._summonResult = resultContainer;
-
-    // Results background
-    const resultBg = this.scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - s(60), GAME_HEIGHT - s(300), COLORS.backgroundLight, 0.95);
-    resultBg.setStrokeStyle(s(2), COLORS.primary);
-    resultContainer.add(resultBg);
-
-    // Title
-    const title = this.scene.add.text(GAME_WIDTH / 2, s(200), '소환 결과', {
-      fontSize: sf(24),
-      fontFamily: 'Georgia, serif',
-      color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    resultContainer.add(title);
-
-    // Display heroes in grid
-    const cols = Math.min(5, results.length);
-    const startX = GAME_WIDTH / 2 - ((cols - 1) * s(85)) / 2;
-    const startY = s(300);
-
-    results.forEach((hero, index) => {
-      const col = index % cols;
-      const row = Math.floor(index / cols);
-      const x = startX + col * s(85);
-      const y = startY + row * s(130);
-
-      this.scene.time.delayedCall(index * 100, () => {
-        this.createHeroCard(resultContainer, x, y, hero);
-      });
-    });
-
-    // Close button
-    const closeBtn = this.scene.add.container(GAME_WIDTH / 2, GAME_HEIGHT - s(150));
-    const closeBg = this.scene.add.rectangle(0, 0, s(150), s(50), COLORS.primary, 1)
-      .setInteractive({ useHandCursor: true });
-    const closeText = this.scene.add.text(0, 0, '확인', {
-      fontSize: sf(18),
-      fontFamily: 'Arial',
-      color: `#${COLORS.text.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-
-    closeBtn.add([closeBg, closeText]);
-    resultContainer.add(closeBtn);
-
-    closeBg.on('pointerdown', () => {
-      resultContainer.destroy();
-      overlay.destroy();
-      this._summonResult = null;
-      this._summonOverlay = null;
-      this.isAnimating = false;
-    });
-  }
-
-  /** 결과 연출 잔여물 정리 — 남으면 depth 3000 오버레이가 모든 입력을 삼킨다 */
+  /** 결과 연출 잔여물 정리 — 남으면 전면 오버레이가 모든 입력을 삼킨다 */
   _clearSummonOverlay() {
-    if (this._summonResult) {
-      this._summonResult.destroy();
-      this._summonResult = null;
-    }
-    if (this._summonOverlay) {
-      this._summonOverlay.destroy();
-      this._summonOverlay = null;
+    if (this.resultOverlay) {
+      const overlay = this.resultOverlay;
+      this.resultOverlay = null;
+      overlay.destroy();
     }
     this.isAnimating = false;
   }
 
+  /**
+   * 팝업이 닫힐 때 결과 연출을 어떻게 할 것인가.
+   *
+   * 튜토리얼 T-05 는 무료 10연이 세이브에 기록되는 즉시 스텝을 커밋하고,
+   * `TutorialFlow._releaseLockedPopup()` 이 약 1초 안에 이 팝업을 닫는다.
+   * 그때 결과 연출까지 같이 부수면 유저는 자기가 무엇을 뽑았는지 못 본다
+   * (온보딩 e2e 의 `[T-05] 소환 결과 [확인] 탭으로 연출 종료` 가 이 지점을 잡는다).
+   *
+   * 그래서 **연출이 아직 살아 있으면 파괴하지 않고 소유권만 놓는다**.
+   * 고아가 되어 입력을 영구히 삼키던 과거의 결함은 오버레이 쪽에서 세 겹으로 막는다.
+   *   1. [확인] 버튼이 시작과 동시에 존재한다 (카드 공개 후 활성)
+   *   2. 스크림 탭·[건너뛰기] 가 1단계부터 항상 살아 있다
+   *   3. 오버레이가 씬의 shutdown/destroy 에 스스로를 걸어 둔다
+   */
+  _detachSummonOverlay() {
+    const overlay = this.resultOverlay;
+    this.resultOverlay = null;
+    this.isAnimating = false;
+    if (!overlay || overlay.destroyed) return;
+    overlay.onClose = null;   // 파괴된 팝업의 콜백을 다시 부르지 않는다
+  }
+
   destroy() {
-    this._clearSummonOverlay();
+    this._detachSummonOverlay();
+    if (this.bannerPanel) {
+      this.bannerPanel.destroy();
+      this.bannerPanel = null;
+    }
     super.destroy();
   }
 
-  createHeroCard(container, x, y, hero) {
-    const card = this.scene.add.container(x, y);
-
-    // Card background with rarity color
-    const rKey = getRarityKey(hero.rarity);
-    const rarityData = RARITY[rKey] || RARITY.N;
-    const rarityColor = rarityData.color;
-    const cardBg = this.scene.add.rectangle(0, 0, s(75), s(110), COLORS.backgroundLight, 1);
-    cardBg.setStrokeStyle(s(2), rarityColor);
-
-    // Hero image — IMG-3: 실제 포트레이트 우선, 없으면 온디맨드 플레이스홀더 (GachaScene.js와 동일 패턴)
-    const fullData = getCharacterOrHero(hero.id) || hero;
-    const texKey = HeroAssetLoader.ensureTexture(this.scene, fullData);
-    const heroImg = this.scene.add.image(0, s(-15), texKey || 'hero_placeholder');
-    if (texKey) {
-      // 카드(s75×s110) 안에 맞추기 (포트레이트 종횡비 보존)
-      const fitScale = Math.min(s(58) / heroImg.width, s(66) / heroImg.height);
-      heroImg.setScale(fitScale);
-    } else {
-      heroImg.setScale(0.7);
-    }
-
-    // Rarity indicator
-    const rarityBg = this.scene.add.rectangle(0, s(-50), s(30), s(18), rarityColor, 1);
-    const rarityText = this.scene.add.text(0, s(-50), rKey, {
-      fontSize: sf(10),
-      fontFamily: 'Arial',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Stars
-    const starCount = hero.stars || getRarityNum(hero.rarity) || rarityData.stars || 1;
-    const stars = this.scene.add.text(0, s(25), '★'.repeat(starCount), {
-      fontSize: sf(10),
-      color: `#${COLORS.accent.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-
-    // Name (truncated)
-    const heroName = hero.name || '???';
-    const name = heroName.length > 6 ? `${heroName.substring(0, 6)}..` : heroName;
-    const nameText = this.scene.add.text(0, s(42), name, {
-      fontSize: sf(10),
-      fontFamily: 'Arial',
-      color: `#${COLORS.text.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-
-    card.add([cardBg, heroImg, rarityBg, rarityText, stars, nameText]);
-    container.add(card);
-
-    // Entrance animation
-    card.setScale(0);
-    this.scene.tweens.add({
-      targets: card,
-      scale: 1,
-      duration: 200,
-      ease: 'Back.easeOut'
-    });
-
-    // SSR special effect
-    if (hero.rarity === 'SSR') {
-      const glow = this.scene.add.circle(x, y, s(50), COLORS.raritySSR, 0.3);
-      container.add(glow);
-      container.sendToBack(glow);
-
-      this.scene.tweens.add({
-        targets: glow,
-        scale: { from: 0.8, to: 1.2 },
-        alpha: { from: 0.5, to: 0 },
-        duration: 1000,
-        repeat: -1
-      });
-    }
-  }
-
   showToast(text, color = COLORS.text) {
-    const toast = this.scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, text, {
+    const toast = this.scene.add.text(GAME_WIDTH / 2, s(1400), text, {
       fontSize: sf(18),
-      fontFamily: 'Arial',
+      fontFamily: '"Noto Sans KR", sans-serif',
       color: `#${color.toString(16).padStart(6, '0')}`,
-      backgroundColor: `#${COLORS.backgroundLight.toString(16).padStart(6, '0')}`,
+      backgroundColor: `#${DESIGN.colors.bg.secondary.toString(16).padStart(6, '0')}`,
       padding: { x: s(20), y: s(12) }
     }).setOrigin(0.5).setDepth(4000);
 
