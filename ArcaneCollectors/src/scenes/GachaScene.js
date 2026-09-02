@@ -293,7 +293,7 @@ export class GachaScene extends Phaser.Scene {
     this.pityBarY = s(band.y + band.h - 26);
 
     this.pityTrack = this.add.graphics().setDepth(Z_INDEX.PANEL_CONTENT);
-    this.pityTrack.fillStyle(DESIGN.colors.bg.surface, 1);
+    this.pityTrack.fillStyle(DESIGN.colors.track, 1);
     this.pityTrack.fillRoundedRect(this.pityFillLeft, this.pityBarY - s(8), this.pityFillMax, s(16), s(8));
     // 카운터가 0 일 때도 트랙이 보여야 "차오르는 자리" 라는 게 읽힌다
     this.pityTrack.lineStyle(s(1), DESIGN.colors.brand.accent, 0.3);

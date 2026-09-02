@@ -297,6 +297,54 @@ export function computeActionSlots(count, rect, options = {}) {
 }
 
 /**
+ * 액션 바 버튼 1개가 만들어내는 자식 오브젝트 수.
+ * `PopupBase.buildActions()` 가 슬롯마다 [프레임, 라벨, 히트영역] 세 개를 순서대로 넣는다.
+ */
+export const ACTION_CHILDREN_PER_SLOT = 3;
+
+/** 액션 버튼의 파트 이름 → 슬롯 내 오프셋 */
+export const ACTION_CHILD_OFFSET = Object.freeze({ frame: 0, label: 1, hit: 2 });
+
+/**
+ * 액션 바 컨테이너에서 N 번째 버튼의 자식 인덱스를 계산한다.
+ *
+ * 튜토리얼 타깃(TID)으로 등록해야 하는 버튼을 액션 바로 옮길 때 쓴다.
+ * `setActions()` 는 체이닝을 위해 `this` 를 돌려주므로 버튼 오브젝트를 직접 주지 않는다.
+ * 대신 `actionContainer.list` 의 인덱스가 결정적이라는 사실을 이 함수가 계약으로 고정한다.
+ *
+ * @param {number} index - 액션 순번 (0-based)
+ * @returns {{frame:number,label:number,hit:number}|null} 음수·비정수면 null
+ */
+export function actionChildIndices(index) {
+  const i = Math.floor(num(index, -1));
+  if (i < 0) return null;
+  const base = i * ACTION_CHILDREN_PER_SLOT;
+  return {
+    frame: base + ACTION_CHILD_OFFSET.frame,
+    label: base + ACTION_CHILD_OFFSET.label,
+    hit: base + ACTION_CHILD_OFFSET.hit
+  };
+}
+
+/**
+ * 액션 바 자식 목록에서 N 번째 버튼의 특정 파트를 꺼낸다.
+ * 배열만 다루므로 Phaser 없이 테스트된다.
+ *
+ * @param {Array} list - `actionContainer.list`
+ * @param {number} index - 액션 순번 (0-based)
+ * @param {string} [part] - 'frame' | 'label' | 'hit'. 기본 'hit'
+ * @returns {*} 없으면 null
+ */
+export function pickActionChild(list, index, part = 'hit') {
+  if (!Array.isArray(list)) return null;
+  const indices = actionChildIndices(index);
+  if (!indices) return null;
+  const at = indices[part];
+  if (!Number.isFinite(at)) return null;
+  return list[at] === undefined ? null : list[at];
+}
+
+/**
  * 요약 항목을 열로 나눈다. 각 열의 중심 x 를 돌려준다.
  *
  * @param {number} count - 항목 개수
@@ -361,5 +409,9 @@ export default {
   resolveActionStyle,
   computeActionSlots,
   computeSummaryColumns,
-  normalizeSummary
+  normalizeSummary,
+  ACTION_CHILDREN_PER_SLOT,
+  ACTION_CHILD_OFFSET,
+  actionChildIndices,
+  pickActionChild
 };

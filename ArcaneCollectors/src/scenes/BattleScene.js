@@ -44,6 +44,7 @@ import {
   getAllySlots,
   getEnemySlots,
   getUnitAttachments,
+  formatHpReadout,
   getSkillSlots,
   computeCooldownArc,
   computeTurnOrderSlots,
@@ -1445,7 +1446,16 @@ export class BattleScene extends Phaser.Scene {
       animationDuration: 300
     });
 
-    // Name tag — HP바 아래. 이름이 HP바를 덮던 결함(§1-1)의 해소점이다
+    // HP 수치 — HP바 바로 아래 (A11Y 이슈 8 / WCAG 1.4.1).
+    // 채움색(초록·노랑·빨강)만으로는 색을 구분하지 못하는 사용자에게 남은 체력이
+    // 전달되지 않는다. 바가 말하는 값을 숫자로 한 번 더 말한다. 아군·적 모두 붙인다.
+    const hpValue = this.add.text(0, s(attach.hpValueY), '', ts('num.sm', {
+      color: DESIGN.colors.text.primary,
+      stroke: '#000000',
+      strokeThickness: s(3)
+    })).setOrigin(0.5);
+
+    // Name tag — HP 수치 아래. 이름이 HP바를 덮던 결함(§1-1)의 해소점이다
     const battlerName = battler.name || '???';
     const name = battlerName.length > 6 ? battlerName.substring(0, 6) : battlerName;
     const nameTag = this.add.text(0, s(attach.nameY), name, ts('caption', {
@@ -1457,19 +1467,44 @@ export class BattleScene extends Phaser.Scene {
     // 교단 메커니즘 배지 (Divine Charge / Doom / Holy Ward / Rune)
     const badgeLayer = this.add.container(s(attach.badgeX), s(attach.badgeY));
 
-    container.add([shadow, sprite, hpBar, nameTag, badgeLayer]);
+    container.add([shadow, sprite, hpBar, hpValue, nameTag, badgeLayer]);
 
     // Store references
     container.setData('battler', battler);
     container.setData('sprite', sprite);
     container.setData('hpBar', hpBar);
+    container.setData('hpValue', hpValue);
     container.setData('badgeLayer', badgeLayer);
     container.setData('attach', attach);
     container.setData('originalX', x); // 피격 흔들림 복원용
 
+    this.renderHpReadout(container, battler);
+
     this.renderCultBadges(container, battler);
 
     return container;
+  }
+
+  /**
+   * HP 수치 표기를 갱신한다 (A11Y 이슈 8 / WCAG 1.4.1, 표시 전용).
+   * 폭이 모자라면 `현재/최대` 대신 `NN%` 로 내려간다.
+   *
+   * @param {Phaser.GameObjects.Container} container - createBattlerSprite 가 만든 유닛 컨테이너
+   * @param {object} battler
+   */
+  renderHpReadout(container, battler) {
+    const label = container?.getData?.('hpValue');
+    if (!label) return;
+
+    const attach = container.getData('attach') || getUnitAttachments();
+    const readout = formatHpReadout(battler?.currentHp, battler?.maxHp, {
+      maxWidth: attach.hpValueMaxW
+    });
+
+    label.setText(readout.text);
+    // 위험 구간은 색까지 함께 바꾼다. 색은 보조 신호이고 숫자가 본체다
+    label.setColor(readout.percent <= 25 ? '#FCA5A5' : DESIGN.colors.text.primary);
+    label.setVisible(battler?.isAlive !== false);
   }
 
   /**
@@ -2100,6 +2135,9 @@ export class BattleScene extends Phaser.Scene {
     if (hpBar) {
       hpBar.updateHP(battler.currentHp, battler.maxHp, true);
     }
+
+    // A11Y: HP 수치 동기화 (표시 전용)
+    this.renderHpReadout(sprite, battler);
 
     // MECH-02 표기: 교단 상태 배지 동기화 (표시 전용)
     this.renderCultBadges(sprite, battler);

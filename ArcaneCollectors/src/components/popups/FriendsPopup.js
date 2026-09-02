@@ -14,15 +14,25 @@
 import { PopupBase } from '../PopupBase.js';
 import { COLORS, s, sf } from '../../config/gameConfig.js';
 import { FriendSystem } from '../../systems/FriendSystem.js';
+import { DESIGN, hexToCSS } from '../../config/designSystem.js';
+import { POPUP_SLOT } from '../../utils/popupLayout.js';
 
 const TAB = { LIST: 0, ADD: 1, SHOP: 2 };
+
+/** 헤더 타이틀 */
+const TITLE = '친구';
+
+/** 탭 스트립 높이 (기획 px) */
+const TAB_STRIP_HEIGHT = 44;
 
 export class FriendsPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '👥 친구',
-      width: s(680),
-      height: s(1100),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.status.success,
       ...options
     });
     this._activeTab = TAB.LIST;
@@ -34,8 +44,45 @@ export class FriendsPopup extends PopupBase {
   }
 
   buildContent() {
+    this.setTitle(TITLE);
+    this._applySummary();
+    this._applyActions(TAB.LIST);
     this._renderTabs();
     this._loadAndRenderTab(TAB.LIST);
+  }
+
+  /** 슬롯 2 — 친구 수 · 오늘 대여 · 호감도 */
+  _applySummary() {
+    const balance = FriendSystem.getPointBalance();
+    const rentInfo = FriendSystem.getDailyRentCount();
+    this.setSummary([
+      { label: '친구', value: `${this._friends.length} / ${FriendSystem.MAX_FRIENDS}` },
+      { label: '오늘 대여', value: `${rentInfo.todayCount} / ${rentInfo.limit}` },
+      { label: '호감도', value: `${balance.pointBalance}pt` }
+    ]);
+  }
+
+  /** 슬롯 4 — 탭별 주 행동. 콜백이 자기 액션 바를 지우지 않도록 한 프레임 미룬다 */
+  _applyActions(tabIdx) {
+    const defer = (fn) => this.scene.time.delayedCall(0, fn);
+    if (tabIdx === TAB.SHOP) {
+      this.setActions([
+        { label: '호감도 수령', variant: 'primary', onClick: () => defer(() => this._onClaimPoints()) },
+        { label: '닫기', variant: 'ghost', onClick: () => this.hide() }
+      ]);
+      return;
+    }
+    if (tabIdx === TAB.ADD) {
+      this.setActions([
+        { label: '친구 목록', variant: 'secondary', onClick: () => defer(() => this._loadAndRenderTab(TAB.LIST)) },
+        { label: '닫기', variant: 'ghost', onClick: () => this.hide() }
+      ]);
+      return;
+    }
+    this.setActions([
+      { label: '친구 추가', variant: 'primary', onClick: () => defer(() => this._loadAndRenderTab(TAB.ADD)) },
+      { label: '닫기', variant: 'ghost', onClick: () => this.hide() }
+    ]);
   }
 
   // ─────────────────────────────────────────
@@ -49,11 +96,11 @@ export class FriendsPopup extends PopupBase {
 
     tabLabels.forEach((label, idx) => {
       const tx = b.left + tabW * idx + tabW / 2;
-      const ty = b.top + s(20);
+      const ty = b.top + s(TAB_STRIP_HEIGHT) / 2;
       const isActive = idx === this._activeTab;
 
-      const bg = this.scene.add.rectangle(tx, ty, tabW - s(4), s(36),
-        isActive ? COLORS.primary : COLORS.bgLight, 1);
+      const bg = this.scene.add.rectangle(tx, ty, tabW - s(4), s(TAB_STRIP_HEIGHT - 8),
+        isActive ? DESIGN.colors.status.success : DESIGN.colors.bg.surface, isActive ? 0.9 : 0.6);
       bg.setInteractive({ useHandCursor: true });
       bg.on('pointerdown', () => {
         if (!this._isLoading) this._loadAndRenderTab(idx);
@@ -65,7 +112,7 @@ export class FriendsPopup extends PopupBase {
         fontSize: sf(15),
         fontFamily: '"Noto Sans KR", sans-serif',
         fontStyle: isActive ? 'bold' : 'normal',
-        color: isActive ? '#FFFFFF' : '#94A3B8'
+        color: isActive ? DESIGN.colors.text.primary : DESIGN.colors.text.secondary
       }).setOrigin(0.5);
       this.contentContainer.add(txt);
       this._tabObjects.push(txt);
@@ -75,10 +122,11 @@ export class FriendsPopup extends PopupBase {
   _loadAndRenderTab(tabIdx) {
     this._activeTab = tabIdx;
     this._clearTabContent();
+    this._applyActions(tabIdx);
     this._renderTabs();
 
     const b = this.contentBounds;
-    const contentTop = b.top + s(60);
+    const contentTop = b.top + s(TAB_STRIP_HEIGHT + 12);
 
     if (tabIdx === TAB.LIST) this._renderListTab(contentTop);
     else if (tabIdx === TAB.ADD) this._renderAddTab(contentTop);
@@ -109,7 +157,7 @@ export class FriendsPopup extends PopupBase {
     const txt = this.scene.add.text(x, y, label, {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontStyle: 'bold', color: '#FFFFFF'
+      fontStyle: 'bold', color: DESIGN.colors.text.primary
     }).setOrigin(0.5);
     this._add(txt);
     return { bg, txt };
@@ -145,24 +193,14 @@ export class FriendsPopup extends PopupBase {
     const cx = b.centerX;
     let y = contentTop;
 
-    // 상단 정보 바
-    const balance = FriendSystem.getPointBalance();
-    const rentInfo = FriendSystem.getDailyRentCount();
-
-    this._add(this.scene.add.text(cx, y + s(10),
-      '친구 ' + this._friends.length + '/' + FriendSystem.MAX_FRIENDS
-      + '   |   대여 ' + rentInfo.todayCount + '/' + rentInfo.limit
-      + '   |   호감도 ' + balance.pointBalance + 'pt', {
-      fontSize: sf(12),
-      fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#94A3B8'
-    }).setOrigin(0.5));
+    // 친구 수·대여·호감도는 요약 슬롯(슬롯 2)이 표시한다
+    this._applySummary();
 
     if (this._friends.length === 0) {
       this._add(this.scene.add.text(cx, y + s(80), '친구가 없습니다.\n친구 추가 탭에서 닉네임으로 검색하세요.', {
         fontSize: sf(15),
         fontFamily: '"Noto Sans KR", sans-serif',
-        color: '#94A3B8', align: 'center',
+        color: DESIGN.colors.text.secondary, align: 'center',
         wordWrap: { width: b.width - s(40) }
       }).setOrigin(0.5));
       return;
@@ -170,7 +208,7 @@ export class FriendsPopup extends PopupBase {
 
     const itemH = s(78);
     this._friends.slice(0, FriendSystem.MAX_FRIENDS).forEach((friend, idx) => {
-      const iy = y + s(40) + idx * (itemH + s(6));
+      const iy = y + s(12) + idx * (itemH + s(6));
       this._renderFriendRow(friend, cx, iy, b.width - s(30), itemH);
     });
   }
@@ -185,14 +223,14 @@ export class FriendsPopup extends PopupBase {
       friend.friend_name || '모험가', {
       fontSize: sf(15),
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontStyle: 'bold', color: '#F8FAFC'
+      fontStyle: 'bold', color: DESIGN.colors.text.primary
     }).setOrigin(0, 0.5));
 
     this._add(this.scene.add.text(cx - w / 2 + s(12), cy + s(12),
       'Lv.' + (friend.friend_level || 1), {
       fontSize: sf(12),
       fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#64748B'
+      color: DESIGN.colors.text.muted
     }).setOrigin(0, 0.5));
 
     // 대여 버튼
@@ -213,7 +251,7 @@ export class FriendsPopup extends PopupBase {
       r.success
         ? '영웅 대여 완료! (오늘 ' + r.rentInfo.todayCount + '/' + r.rentInfo.limit + ')'
         : (r.error || '대여 실패'),
-      r.success ? '#10B981' : '#EF4444'
+      r.success ? hexToCSS(DESIGN.colors.status.success) : hexToCSS(DESIGN.colors.status.error)
     );
   }
 
@@ -227,7 +265,7 @@ export class FriendsPopup extends PopupBase {
       r.success
         ? '5pt 전송! (오늘 ' + r.dailySent + '/20pt)'
         : (r.error || '전송 실패'),
-      r.success ? '#10B981' : '#EF4444'
+      r.success ? hexToCSS(DESIGN.colors.status.success) : hexToCSS(DESIGN.colors.status.error)
     );
   }
 
@@ -243,18 +281,18 @@ export class FriendsPopup extends PopupBase {
     this._add(this.scene.add.text(cx, y + s(10), '닉네임으로 친구를 검색하세요', {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#94A3B8'
+      color: DESIGN.colors.text.secondary
     }).setOrigin(0.5));
 
     // 검색 박스 (간이 입력 영역 — 클릭 시 토글은 시뮬레이션)
-    const searchBox = this.scene.add.rectangle(cx, y + s(50), b.width - s(40), s(40), 0x0F172A, 1);
+    const searchBox = this.scene.add.rectangle(cx, y + s(50), b.width - s(40), s(40), DESIGN.colors.bg.primary, 1);
     searchBox.setStrokeStyle(s(1), COLORS.primary, 0.5);
     this._add(searchBox);
 
     const searchHint = this.scene.add.text(cx, y + s(50), '닉네임 입력 (2자 이상)', {
       fontSize: sf(13),
       fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#64748B'
+      color: DESIGN.colors.text.muted
     }).setOrigin(0.5);
     this._add(searchHint);
 
@@ -285,14 +323,14 @@ export class FriendsPopup extends PopupBase {
 
   _renderSearchResultRow(user, cx, cy, w, h) {
     const bg = this.scene.add.rectangle(cx, cy, w, h, COLORS.bgLight, 0.85);
-    bg.setStrokeStyle(s(1), 0x334155, 0.4);
+    bg.setStrokeStyle(s(1), DESIGN.colors.bg.surface, 0.4);
     this._add(bg);
 
     this._add(this.scene.add.text(cx - w / 2 + s(12), cy,
       user.nickname + '  Lv.' + (user.level || 1), {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#F8FAFC'
+      color: DESIGN.colors.text.primary
     }).setOrigin(0, 0.5));
 
     this._addButton(cx + w / 2 - s(40), cy, s(70), s(30), '추가', COLORS.primary,
@@ -309,7 +347,7 @@ export class FriendsPopup extends PopupBase {
       r.success
         ? '"' + query + '" 검색: ' + this._searchResults.length + '명' + (r.offline ? ' (오프라인)' : '')
         : (r.error || '검색 실패'),
-      r.success ? '#10B981' : '#EF4444'
+      r.success ? hexToCSS(DESIGN.colors.status.success) : hexToCSS(DESIGN.colors.status.error)
     );
     this._loadAndRenderTab(TAB.ADD);
   }
@@ -323,7 +361,7 @@ export class FriendsPopup extends PopupBase {
       r.success
         ? friendName + '님을 친구로 추가했습니다!' + (r.offline ? ' (오프라인)' : '')
         : (r.error || '추가 실패'),
-      r.success ? '#10B981' : '#EF4444'
+      r.success ? hexToCSS(DESIGN.colors.status.success) : hexToCSS(DESIGN.colors.status.error)
     );
     // 검색 결과에서 제거
     this._searchResults = this._searchResults.filter(function(u) { return u.user_id !== friendId; });
@@ -340,29 +378,21 @@ export class FriendsPopup extends PopupBase {
     let y = contentTop;
 
     const balance = FriendSystem.getPointBalance();
-    this._add(this.scene.add.text(cx, y + s(10), '내 호감도: ' + balance.pointBalance + ' pt', {
-      fontSize: sf(16),
-      fontFamily: '"Noto Sans KR", sans-serif',
-      fontStyle: 'bold', color: '#F59E0B'
-    }).setOrigin(0.5));
+    this._applySummary();
 
-    this._add(this.scene.add.text(cx, y + s(40),
+    this._add(this.scene.add.text(cx, y + s(16),
       '친구에게 포인트를 받으면 호감도가 쌓입니다.\n상점에서 다양한 보상으로 교환하세요.', {
       fontSize: sf(12),
       fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#94A3B8', align: 'center',
+      color: DESIGN.colors.text.secondary, align: 'center',
       wordWrap: { width: b.width - s(40) }
     }).setOrigin(0.5));
 
-    // 수령 버튼
-    this._addButton(cx, y + s(110), s(180), s(38), '호감도 수령', COLORS.success,
-      () => this._onClaimPoints());
-
-    // 상점 아이템
+    // '호감도 수령' 은 액션 바(슬롯 4)로 옮겼다
     const items = FriendSystem.getPointShopItems();
     const itemH = s(60);
     items.forEach((item, idx) => {
-      const iy = y + s(170) + idx * (itemH + s(6));
+      const iy = y + s(80) + idx * (itemH + s(6));
       this._renderShopItemRow(item, cx, iy, b.width - s(30), itemH, balance.pointBalance);
     });
   }
@@ -370,18 +400,18 @@ export class FriendsPopup extends PopupBase {
   _renderShopItemRow(item, cx, cy, w, h, balance) {
     const canBuy = balance >= item.cost;
     const bg = this.scene.add.rectangle(cx, cy, w, h, COLORS.bgLight, 0.9);
-    bg.setStrokeStyle(s(1), canBuy ? COLORS.primary : 0x334155, 0.5);
+    bg.setStrokeStyle(s(1), canBuy ? COLORS.primary : DESIGN.colors.bg.surface, 0.5);
     this._add(bg);
 
     this._add(this.scene.add.text(cx - w / 2 + s(12), cy,
       item.label, {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", sans-serif',
-      color: canBuy ? '#F8FAFC' : '#64748B'
+      color: canBuy ? DESIGN.colors.text.primary : DESIGN.colors.text.muted
     }).setOrigin(0, 0.5));
 
     this._addButton(cx + w / 2 - s(40), cy, s(70), s(36), item.cost + 'pt',
-      canBuy ? COLORS.primary : 0x334155,
+      canBuy ? COLORS.primary : DESIGN.colors.bg.surface,
       () => this._onBuyItem(item.id));
   }
 
@@ -394,7 +424,7 @@ export class FriendsPopup extends PopupBase {
       r.success
         ? r.receivedCount + '건 수령! +' + r.receivedAmount + 'pt (잔액: ' + r.pointBalance + 'pt)'
         : (r.error === 'No receivable points' ? '받을 호감도가 없습니다' : (r.error || '수령 실패')),
-      r.success ? '#10B981' : '#94A3B8'
+      r.success ? hexToCSS(DESIGN.colors.status.success) : DESIGN.colors.text.secondary
     );
     if (r.success) this._loadAndRenderTab(TAB.SHOP);
   }
@@ -403,7 +433,7 @@ export class FriendsPopup extends PopupBase {
     const r = FriendSystem.buyPointShopItem(itemId);
     this._showFeedback(
       r.success ? '구매 완료! (잔액: ' + r.pointBalance + 'pt)' : (r.error || '구매 실패'),
-      r.success ? '#10B981' : '#EF4444'
+      r.success ? hexToCSS(DESIGN.colors.status.success) : hexToCSS(DESIGN.colors.status.error)
     );
     if (r.success) this._loadAndRenderTab(TAB.SHOP);
   }

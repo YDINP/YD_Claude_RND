@@ -4,6 +4,25 @@ import { SaveManager } from '../../systems/SaveManager.js';
 import { EvolutionSystem } from '../../systems/EvolutionSystem.js';
 import { StoryManager } from '../../systems/StoryManager.js';
 import { TutorialTargetRegistry } from '../../systems/TutorialTargetRegistry.js';
+import { DESIGN, hexToCSS } from '../../config/designSystem.js';
+import { POPUP_SLOT, pickActionChild } from '../../utils/popupLayout.js';
+
+/** 헤더 타이틀 */
+const TITLE = '기관 각인';
+
+/** Step 3 액션 바에서 '각인 실행' 이 놓이는 순번 — 튜토리얼 타깃 재등록용 */
+const ASCEND_ACTION_INDEX = 0;
+
+/**
+ * Step 1 기본영웅 목록 카드 (기획 px).
+ * 기본영웅 10명 × (72 + 8) = 800 으로 콘텐츠 슬롯 888 안에 전부 들어간다.
+ */
+const HERO_ITEM_HEIGHT = 72;
+const HERO_ITEM_GAP = 8;
+
+/** 카드 좌측 클래스 라벨 열의 중심 x 오프셋과 이름 열 시작 x 오프셋 */
+const CLASS_COLUMN_X = 44;
+const NAME_COLUMN_X = 96;
 
 /**
  * AscensionPopup - 기관 각인 팝업 (CHAR-3)
@@ -15,9 +34,11 @@ import { TutorialTargetRegistry } from '../../systems/TutorialTargetRegistry.js'
 export class AscensionPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '기관 각인',
-      width: s(680),
-      height: s(1100),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.cult.yomi,
       ...options
     });
 
@@ -28,7 +49,32 @@ export class AscensionPopup extends PopupBase {
   }
 
   buildContent() {
+    this.setTitle(TITLE);
     this.buildStep1();
+  }
+
+  /**
+   * 슬롯 2 — 현재 단계와 선택 상태.
+   * 항목 수가 항상 3개라 단계가 바뀌어도 콘텐츠 높이가 흔들리지 않는다.
+   */
+  _applySummary(step) {
+    this.setSummary([
+      { label: '단계', value: `${step} / 3` },
+      { label: '기본영웅', value: this.selectedBaseHero ? this.selectedBaseHero.name : '미선택' },
+      { label: '기관', value: this.selectedRoute ? this._routeCultName(this.selectedRoute) : '미선택' }
+    ]);
+  }
+
+  /** cultId → 표시 이름 (요약 슬롯용) */
+  _routeCultName(route) {
+    const cultData = SaveManager.getCultData(route.cultId);
+    return cultData ? cultData.nameKr : route.cultId;
+  }
+
+  /** 액션 바 콜백이 자기 액션 바를 지우지 않도록 한 프레임 미룬다 */
+  _deferStep(fn) {
+    if (this.scene?.time?.delayedCall) this.scene.time.delayedCall(0, fn);
+    else fn();
   }
 
   // ─────────────────────────────────────────
@@ -105,14 +151,14 @@ export class AscensionPopup extends PopupBase {
 
   buildStep1() {
     this.currentStep = 1;
+    this.selectedRoute = null;
     this._clearStep();
+    this._applySummary(1);
+    this.setActions([{ label: '닫기', variant: 'ghost', onClick: () => this.hide() }]);
     const b = this.contentBounds;
 
-    // 스텝 인디케이터
-    this._renderStepIndicator(1);
-
     // 안내 텍스트
-    this.addText(b.centerX, b.top + s(70), '각인할 기본영웅을 선택하세요', {
+    this.addText(b.centerX, b.top + s(20), '각인할 기본영웅을 선택하세요', {
       fontSize: sf(16),
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
@@ -122,17 +168,17 @@ export class AscensionPopup extends PopupBase {
     if (allBase.length === 0) {
       this.addText(b.centerX, this._centerY(), '기본영웅 데이터를 불러올 수 없습니다.', {
         fontSize: sf(15),
-        color: '#FF6B6B'
+        color: hexToCSS(DESIGN.colors.status.error)
       }).setOrigin(0.5);
       return;
     }
 
-    const itemH = s(90);
-    const listTop = b.top + s(100);
-    const listW = b.width - s(40);
+    const itemH = s(HERO_ITEM_HEIGHT);
+    const listTop = b.top + s(64);
+    const listW = b.width - s(16);
 
     allBase.forEach((hero, i) => {
-      const itemY = listTop + i * (itemH + s(10));
+      const itemY = listTop + i * (itemH + s(HERO_ITEM_GAP));
       this._renderHeroListItem(hero, b.centerX, itemY, listW, itemH);
     });
   }
@@ -157,15 +203,17 @@ export class AscensionPopup extends PopupBase {
     TutorialTargetRegistry.register(`ascension.card.${hero.id}`, bg, this.scene?.scene?.key);
 
     // 영웅 아이콘 (이모지 대체)
-    const icon = this.scene.add.text(cx - w / 2 + s(40), cy, this._getClassIcon(hero.baseClass), {
-      fontSize: sf(32)
+    const icon = this.scene.add.text(cx - w / 2 + s(CLASS_COLUMN_X), cy, this._getClassIcon(hero.baseClass), {
+      fontSize: sf(13),
+      fontFamily: '"Noto Sans KR", Arial',
+      color: `#${COLORS.primary.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
     this.contentContainer.add(icon);
     this._track(icon);
 
     // 영웅 이름
-    const nameText = this.scene.add.text(cx - w / 2 + s(85), cy - s(16), hero.name, {
-      fontSize: sf(18),
+    const nameText = this.scene.add.text(cx - w / 2 + s(NAME_COLUMN_X), cy - s(13), hero.name, {
+      fontSize: sf(17),
       fontFamily: '"Noto Sans KR", Arial',
       fontStyle: 'bold',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
@@ -175,7 +223,7 @@ export class AscensionPopup extends PopupBase {
 
     // 클래스 + 기관 루트 수
     const routeCount = (hero.ascensionRoutes || []).length;
-    const subText = this.scene.add.text(cx - w / 2 + s(85), cy + s(16), `${this._classLabel(hero.baseClass)} · 루트 ${routeCount}종`, {
+    const subText = this.scene.add.text(cx - w / 2 + s(NAME_COLUMN_X), cy + s(14), `루트 ${routeCount}종`, {
       fontSize: sf(13),
       fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
@@ -190,11 +238,11 @@ export class AscensionPopup extends PopupBase {
       let pityBg = null;
 
       if (pityInfo.isHardPity || pityInfo.count >= 50) {
-        pityLabel = '⚡ 확정';
+        pityLabel = '확정';
         pityColor = '#000000';
         pityBg = 0xFFD700;
       } else if (pityInfo.isSoftPity) {
-        pityLabel = '🔥 소프트 피티';
+        pityLabel = '소프트 피티';
         pityColor = '#ffffff';
         pityBg = 0xFF8C00;
       } else {
@@ -203,7 +251,7 @@ export class AscensionPopup extends PopupBase {
         pityBg = null;
       }
 
-      const pityText = this.scene.add.text(cx + w / 2 - s(55), cy - s(18), pityLabel, {
+      const pityText = this.scene.add.text(cx + w / 2 - s(52), cy - s(14), pityLabel, {
         fontSize: sf(11),
         fontFamily: '"Noto Sans KR", Arial',
         fontStyle: 'bold',
@@ -246,18 +294,18 @@ export class AscensionPopup extends PopupBase {
 
   buildStep2() {
     this.currentStep = 2;
+    this.selectedRoute = null;
     this._clearStep();
+    this._applySummary(2);
+    this.setActions([
+      { label: '뒤로', variant: 'secondary', onClick: () => this._deferStep(() => this.buildStep1()) },
+      { label: '닫기', variant: 'ghost', onClick: () => this.hide() }
+    ]);
     const b = this.contentBounds;
     const hero = this.selectedBaseHero;
 
-    // 스텝 인디케이터
-    this._renderStepIndicator(2);
-
-    // 뒤로가기
-    this._renderBackButton(() => this.buildStep1());
-
     // 영웅 이름 헤더
-    this.addText(b.centerX, b.top + s(70), `${hero.name}의 각인 루트`, {
+    this.addText(b.centerX, b.top + s(20), `${hero.name}의 각인 루트`, {
       fontSize: sf(17),
       fontStyle: 'bold',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
@@ -268,14 +316,14 @@ export class AscensionPopup extends PopupBase {
     if (routes.length === 0) {
       this.addText(b.centerX, this._centerY(), '각인 가능한 루트가 없습니다.', {
         fontSize: sf(15),
-        color: '#FF6B6B'
+        color: hexToCSS(DESIGN.colors.status.error)
       }).setOrigin(0.5);
       return;
     }
 
     const itemH = s(110);
-    const listTop = b.top + s(105);
-    const listW = b.width - s(40);
+    const listTop = b.top + s(72);
+    const listW = b.width - s(16);
 
     routes.forEach((route, i) => {
       const itemY = listTop + i * (itemH + s(12));
@@ -350,7 +398,7 @@ export class AscensionPopup extends PopupBase {
       const boostText = this.scene.add.text(cx + w / 2 - s(20), cy, '공명 ▲', {
         fontSize: sf(12),
         fontStyle: 'bold',
-        color: '#FFD700'
+        color: hexToCSS(DESIGN.colors.brand.accent)
       }).setOrigin(1, 0.5);
       this.contentContainer.add(boostText);
       this._track(boostText);
@@ -417,23 +465,19 @@ export class AscensionPopup extends PopupBase {
     const cultColor = cultData ? parseInt(cultData.color.replace('#', '0x')) : COLORS.primary;
     const cultName = cultData ? cultData.nameKr : route.cultId;
 
-    // 스텝 인디케이터
-    this._renderStepIndicator(3);
-
-    // 뒤로가기
-    this._renderBackButton(() => this.buildStep2());
+    this._applySummary(3);
 
     // 제목
-    this.addText(b.centerX, b.top + s(70), '각인을 확인하세요', {
+    this.addText(b.centerX, b.top + s(20), '각인을 확인하세요', {
       fontSize: sf(17),
       fontStyle: 'bold',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
     // 확인 카드 배경
-    const cardY = b.top + s(230);
+    const cardY = b.top + s(190);
     const cardH = s(280);
-    const cardW = b.width - s(40);
+    const cardW = b.width - s(16);
     const cardBg = this.scene.add.rectangle(b.centerX, cardY, cardW, cardH, COLORS.bgLight, 0.95);
     cardBg.setStrokeStyle(s(3), cultColor, 0.9);
     this.contentContainer.add(cardBg);
@@ -464,8 +508,10 @@ export class AscensionPopup extends PopupBase {
     // 전직영웅
     const ascData = SaveManager.getAscendedHeroData(route.ascendedHeroId);
     const ascName = ascData ? ascData.name : route.ascendedHeroId;
-    this.addText(b.centerX + s(160), arrowY - s(25), '✨', {
-      fontSize: sf(36)
+    this.addText(b.centerX + s(160), arrowY - s(25), '각인', {
+      fontSize: sf(20),
+      fontFamily: '"Noto Sans KR", Arial',
+      color: `#${cultColor.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
     this.addText(b.centerX + s(160), arrowY + s(20), ascName, {
       fontSize: sf(15),
@@ -484,9 +530,9 @@ export class AscensionPopup extends PopupBase {
 
     // 공명 보정
     if (route.resonanceBoost) {
-      this.addText(b.centerX, arrowY + s(90), '★ 공명 보정 적용 (등급 1단계 상향)', {
+      this.addText(b.centerX, arrowY + s(90), '공명 보정 적용 (등급 1단계 상향)', {
         fontSize: sf(13),
-        color: '#FFD700'
+        color: hexToCSS(DESIGN.colors.brand.accent)
       }).setOrigin(0.5);
     }
 
@@ -506,34 +552,34 @@ export class AscensionPopup extends PopupBase {
 
     // 조각
     const fragOk = ownedFrag >= fragRequired;
-    this.addText(b.centerX - s(90), costY + s(30), `📜 영웅 조각 × ${fragRequired}개`, {
+    this.addText(b.centerX - s(90), costY + s(30), `영웅 조각 × ${fragRequired}개`, {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", Arial',
-      color: fragOk ? '#4ADE80' : '#FF6B6B'
+      color: fragOk ? '#4ADE80' : hexToCSS(DESIGN.colors.status.error)
     }).setOrigin(0, 0.5);
     this.addText(b.centerX + s(90), costY + s(30), `보유: ${ownedFrag}`, {
       fontSize: sf(13),
-      color: fragOk ? '#4ADE80' : '#FF6B6B'
+      color: fragOk ? '#4ADE80' : hexToCSS(DESIGN.colors.status.error)
     }).setOrigin(1, 0.5);
 
     // 정령석(젬)
     const gemsOk = ownedGems >= stonesRequired;
-    this.addText(b.centerX - s(90), costY + s(60), `💎 정령석 × ${stonesRequired}개`, {
+    this.addText(b.centerX - s(90), costY + s(60), `정령석 × ${stonesRequired}개`, {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", Arial',
-      color: gemsOk ? '#4ADE80' : '#FF6B6B'
+      color: gemsOk ? '#4ADE80' : hexToCSS(DESIGN.colors.status.error)
     }).setOrigin(0, 0.5);
     this.addText(b.centerX + s(90), costY + s(60), `보유: ${ownedGems}`, {
       fontSize: sf(13),
-      color: gemsOk ? '#4ADE80' : '#FF6B6B'
+      color: gemsOk ? '#4ADE80' : hexToCSS(DESIGN.colors.status.error)
     }).setOrigin(1, 0.5);
 
     // T-C8: 첫 각인 보증 안내 (계정당 1회, 기관 재화 부족분 자동 보전)
     if (EvolutionSystem.isFirstAscensionGuaranteeAvailable()) {
-      this.addText(b.centerX - s(90), costY + s(90), '🎁 첫 각인 보증 — 기관 재화는 이번 1회 자동 보전', {
+      this.addText(b.centerX - s(90), costY + s(90), '첫 각인 보증 — 기관 재화는 이번 1회 자동 보전', {
         fontSize: sf(13),
         fontFamily: '"Noto Sans KR", Arial',
-        color: '#FFD700'
+        color: hexToCSS(DESIGN.colors.brand.accent)
       }).setOrigin(0, 0.5);
     }
 
@@ -548,32 +594,30 @@ export class AscensionPopup extends PopupBase {
       }).setOrigin(0.5, 0);
     }
 
-    // 각인 실행 버튼
-    const btnY = b.bottom - s(80);
+    // 각인 실행 — 액션 바(슬롯 4)로 이관.
+    // 튜토리얼 타깃(`ascension.button.confirm` / `.ascend`)은 setActions 가 만든
+    // 히트 영역을 다시 찾아 등록한다(인덱스 계약은 popupLayout.pickActionChild).
     const canAscendResult = SaveManager.canAscend(hero.id, route.cultId);
-    const btnColor = canAscendResult.canAscend ? 0x6366F1 : 0x555555;
+    this.setActions([
+      {
+        label: canAscendResult.canAscend ? '각인 실행' : `각인 불가 — ${canAscendResult.reason}`,
+        variant: 'primary',
+        disabled: !canAscendResult.canAscend,
+        onClick: () => this._deferStep(() => this._executeAscension())
+      },
+      { label: '뒤로', variant: 'secondary', onClick: () => this._deferStep(() => this.buildStep2()) }
+    ]);
+    this._registerAscendTarget();
+  }
 
-    const { bg: ascBtn } = this.addButton(
-      b.centerX,
-      btnY,
-      b.width - s(80),
-      s(64),
-      canAscendResult.canAscend ? '✨ 각인 실행' : `각인 불가 — ${canAscendResult.reason}`,
-      btnColor,
-      () => {
-        if (!canAscendResult.canAscend) return;
-        this._executeAscension();
-      }
-    );
-
-    if (!canAscendResult.canAscend) {
-      ascBtn.setAlpha(0.5);
-      ascBtn.disableInteractive();
-    }
-
-    // 튜토리얼 타깃 (T-07/T-09 확정 버튼). ascend 는 tutorial.json 의 기존 키 별칭.
-    TutorialTargetRegistry.register('ascension.button.confirm', ascBtn, this.scene?.scene?.key);
-    TutorialTargetRegistry.register('ascension.button.ascend', ascBtn, this.scene?.scene?.key);
+  /** 액션 바의 '각인 실행' 을 튜토리얼 타깃으로 등록한다 (T-07 / T-09) */
+  _registerAscendTarget() {
+    const btn = pickActionChild(this.actionContainer?.list, ASCEND_ACTION_INDEX);
+    if (!btn) return;
+    const sceneKey = this.scene?.scene?.key;
+    // ascend 는 tutorial.json 의 기존 키 별칭이다. 둘 다 같은 오브젝트를 가리킨다.
+    TutorialTargetRegistry.register('ascension.button.confirm', btn, sceneKey);
+    TutorialTargetRegistry.register('ascension.button.ascend', btn, sceneKey);
   }
 
   // ─────────────────────────────────────────
@@ -612,13 +656,10 @@ export class AscensionPopup extends PopupBase {
    */
   _showSuccessScreen(ascName, cultName, rarity) {
     this._clearStep();
+    this._applySummary(3);
+    this.setActions([{ label: '확인', variant: 'primary', onClick: () => this.close() }]);
     const b = this.contentBounds;
     const rarityColor = this._rarityColor(rarity);
-
-    // 성공 이모지
-    this.addText(b.centerX, this._centerY() - s(120), '✨', {
-      fontSize: sf(72)
-    }).setOrigin(0.5);
 
     this.addText(b.centerX, this._centerY(), `${ascName}`, {
       fontSize: sf(24),
@@ -639,17 +680,6 @@ export class AscensionPopup extends PopupBase {
       color: `#${rarityColor.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
-    // 닫기 버튼
-    this.addButton(
-      b.centerX,
-      b.bottom - s(80),
-      b.width - s(80),
-      s(64),
-      '확인',
-      COLORS.primary,
-      () => this.close()
-    );
-
     // 팝업 닫힌 후 리소스 갱신 트리거 (scene refresh)
     this.scene.time.delayedCall(200, () => {
       if (this.scene && this.scene.refreshAfterPopup) {
@@ -663,47 +693,6 @@ export class AscensionPopup extends PopupBase {
   // ─────────────────────────────────────────
 
   /**
-   * 스텝 인디케이터 (1/2/3 도트)
-   */
-  _renderStepIndicator(current) {
-    const b = this.contentBounds;
-    const totalSteps = 3;
-    const dotR = s(6);
-    const gapX = s(20);
-    const startX = b.centerX - (totalSteps - 1) * gapX / 2;
-    const dotY = b.top + s(30);
-
-    for (let i = 1; i <= totalSteps; i++) {
-      const x = startX + (i - 1) * gapX;
-      const color = i === current ? COLORS.primary : COLORS.bgLight;
-      const dot = this.scene.add.graphics();
-      dot.fillStyle(color, 1);
-      dot.fillCircle(x, dotY, dotR);
-      this.contentContainer.add(dot);
-      this._track(dot);
-    }
-  }
-
-  /**
-   * 뒤로가기 버튼
-   */
-  _renderBackButton(callback) {
-    const b = this.contentBounds;
-    const backBtn = this.scene.add.text(b.left + s(10), b.top + s(30), '‹ 뒤로', {
-      fontSize: sf(15),
-      fontFamily: '"Noto Sans KR", Arial',
-      color: `#${COLORS.primary.toString(16).padStart(6, '0')}`
-    }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
-
-    backBtn.on('pointerover', () => backBtn.setAlpha(0.7));
-    backBtn.on('pointerout', () => backBtn.setAlpha(1));
-    backBtn.on('pointerdown', callback);
-
-    this.contentContainer.add(backBtn);
-    this._track(backBtn);
-  }
-
-  /**
    * 팝업 내 토스트 메시지
    */
   _showToastInPopup(message) {
@@ -711,7 +700,7 @@ export class AscensionPopup extends PopupBase {
     const toast = this.scene.add.text(b.centerX, b.bottom - s(40), message, {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", Arial',
-      color: '#FF6B6B',
+      color: hexToCSS(DESIGN.colors.status.error),
       backgroundColor: '#1A1A2E',
       padding: { x: s(16), y: s(8) }
     }).setOrigin(0.5).setDepth(3100);
@@ -727,16 +716,13 @@ export class AscensionPopup extends PopupBase {
   // 유틸
   // ─────────────────────────────────────────
 
+  /**
+   * 클래스 표기. 이모지 대신 짧은 한글 라벨을 쓴다.
+   * 벡터 아이콘(IconFactory)은 warrior/mage/archer/healer 4종만 있어
+   * rogue/tank 가 빈칸이 되므로 목록에서는 텍스트로 통일한다.
+   */
   _getClassIcon(baseClass) {
-    const icons = {
-      warrior: '⚔️',
-      mage: '🔮',
-      archer: '🏹',
-      healer: '✨',
-      rogue: '🗡️',
-      tank: '🛡️'
-    };
-    return icons[baseClass] || '👤';
+    return this._classLabel(baseClass);
   }
 
   _classLabel(baseClass) {

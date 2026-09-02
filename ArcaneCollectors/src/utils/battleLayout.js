@@ -46,21 +46,40 @@ export const SKILL_SLOT = Object.freeze({
 
 /** 유닛 진영 배치 파라미터. arcDepth 부호가 아크의 방향을 정한다 */
 export const UNIT_BAND = Object.freeze({
-  ally:  { centerX: 360, baseY: 850, spread: 456, arcDepth: 30,  maxPerRow: 4, rowGap: 74 },
+  ally:  { centerX: 360, baseY: 838, spread: 456, arcDepth: 26,  maxPerRow: 4, rowGap: 74 },
   enemy: { centerX: 360, baseY: 430, spread: 480, arcDepth: -24, maxPerRow: 5, rowGap: 82 }
 });
 
-/** 유닛에 부착되는 정보의 발밑 기준 오프셋 (§3-5: HP바를 유닛에 부착) */
+/**
+ * 유닛에 부착되는 정보의 발밑 기준 오프셋 (§3-5: HP바를 유닛에 부착)
+ *
+ * 세로 순서는 HP바 → HP 수치 → 이름이다. HP 수치가 바로 아래 붙는 이유는
+ * 접근성 감사(WCAG 1.4.1, 색상만으로 정보 전달 금지) 때문이다. 초록/노랑/빨강
+ * 채움색만으로는 색을 구분하지 못하는 사용자에게 남은 체력이 전달되지 않는다.
+ */
 export const UNIT_ATTACH = Object.freeze({
   hpBarDy: 12,     // 발밑 아래 12 → HP바 중심
   hpBarW: 96,
   hpBarH: 10,
-  nameDy: 34,      // HP바 아래. 이름이 HP바를 덮던 결함(§1-1)의 해소점이다
+  hpValueDy: 30,   // HP바 바로 아래. 바가 말하는 값을 숫자로 중복해서 말한다
+  nameDy: 50,      // HP 수치 아래. 이름이 HP바를 덮던 결함(§1-1)의 해소점이다
   // 배지는 몸통 옆에서 위로 쌓는다. 발밑 근처에 두면 옆 유닛의 HP바를 덮는다
   badgeDy: -60,
   badgeDx: 50,
   badgeGap: -24,   // 음수 = 위로 쌓임
   bossScale: 1.3
+});
+
+/**
+ * HP 수치 표기 규격.
+ * charWidth 는 num.sm(Roboto Mono 12 base px)의 글자당 진행폭 실측 근사값이다.
+ * 순수 모듈이라 실제 텍스트를 잴 수 없으므로 글자 수로 폭을 추정해
+ * 넘칠 때만 퍼센트 표기로 내린다.
+ */
+export const HP_READOUT = Object.freeze({
+  charWidth: 7.2,
+  /** 표기가 차지해도 되는 최대 폭 = HP바 폭 × 이 배수 */
+  widthFactor: 1.35
 });
 
 /** 전투 로그 대역이 유지하는 줄 수 */
@@ -183,24 +202,73 @@ export function getEnemySlots(count) {
 }
 
 /**
- * 유닛에 붙는 HP바·이름·배지의 발밑 기준 상대 좌표.
+ * 유닛에 붙는 HP바·HP 수치·이름·배지의 발밑 기준 상대 좌표.
  * 보스는 스프라이트가 커지므로 부착물도 같은 비율로 밀어 준다.
  *
  * @param {{isBoss?:boolean}} [options]
- * @returns {{hpBarY:number,hpBarW:number,hpBarH:number,nameY:number,
- *            badgeY:number,badgeX:number,badgeGap:number}}
+ * @returns {{hpBarY:number,hpBarW:number,hpBarH:number,hpValueY:number,
+ *            hpValueMaxW:number,nameY:number,badgeY:number,badgeX:number,badgeGap:number}}
  */
 export function getUnitAttachments({ isBoss = false } = {}) {
   const k = isBoss ? UNIT_ATTACH.bossScale : 1;
+  const hpBarW = UNIT_ATTACH.hpBarW * k;
   return {
     hpBarY: UNIT_ATTACH.hpBarDy * k,
-    hpBarW: UNIT_ATTACH.hpBarW * k,
+    hpBarW,
     hpBarH: UNIT_ATTACH.hpBarH,
+    hpValueY: UNIT_ATTACH.hpValueDy * k,
+    hpValueMaxW: hpBarW * HP_READOUT.widthFactor,
     nameY: UNIT_ATTACH.nameDy * k,
     badgeY: UNIT_ATTACH.badgeDy * k,
     badgeX: UNIT_ATTACH.badgeDx * k,
     badgeGap: UNIT_ATTACH.badgeGap
   };
+}
+
+/**
+ * 천 단위 구분 (로케일 비의존). toLocaleString 은 환경마다 결과가 달라
+ * 테스트가 흔들리므로 쓰지 않는다.
+ * @param {number} value
+ * @returns {string}
+ */
+function groupThousands(value) {
+  const n = Math.trunc(Math.abs(value));
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/**
+ * HP바 옆에 붙일 수치 표기를 만든다 (WCAG 1.4.1 — 색상만으로 정보 전달 금지).
+ *
+ * 기본은 `현재/최대` 다. 추정 렌더 폭이 maxWidth 를 넘으면 `NN%` 로 내린다.
+ * 두 값 모두 못 쓰는 상황(최대 HP 가 0 이하)은 `0%` 로 고정한다 —
+ * 빈 문자열을 돌려주면 HP바만 남아 원래 문제로 되돌아가기 때문이다.
+ *
+ * @param {number} current - 현재 HP
+ * @param {number} max - 최대 HP
+ * @param {{maxWidth?:number, forcePercent?:boolean}} [options] - maxWidth 는 base px
+ * @returns {{text:string, mode:'ratio'|'percent', percent:number}}
+ */
+export function formatHpReadout(current, max, options = {}) {
+  const { maxWidth = UNIT_ATTACH.hpBarW * HP_READOUT.widthFactor, forcePercent = false } = options;
+
+  const maxHp = Number(max);
+  if (!Number.isFinite(maxHp) || maxHp <= 0) {
+    return { text: '0%', mode: 'percent', percent: 0 };
+  }
+
+  const raw = Number(current);
+  const cur = Math.min(maxHp, Math.max(0, Number.isFinite(raw) ? raw : 0));
+  const percent = Math.round((cur / maxHp) * 100);
+
+  if (forcePercent) {
+    return { text: `${percent}%`, mode: 'percent', percent };
+  }
+
+  const ratio = `${groupThousands(cur)}/${groupThousands(maxHp)}`;
+  if (ratio.length * HP_READOUT.charWidth <= maxWidth) {
+    return { text: ratio, mode: 'ratio', percent };
+  }
+  return { text: `${percent}%`, mode: 'percent', percent };
 }
 
 // ============================================================

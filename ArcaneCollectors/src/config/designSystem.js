@@ -33,7 +33,7 @@ export const DESIGN = {
     text: {
       primary: '#F8FAFC',
       secondary: '#94A3B8',
-      muted: '#64748B',
+      muted: '#7B8FA6',
       inverse: '#0F172A'
     },
 
@@ -63,9 +63,9 @@ export const DESIGN = {
 
     // 등급 (이름 키)
     rarityNamed: {
-      N:   { hex: 0x9CA3AF, css: '#9CA3AF', bg: 0x374151, glow: null },
-      R:   { hex: 0x3B82F6, css: '#3B82F6', bg: 0x1E3A5F, glow: 0x3B82F6 },
-      SR:  { hex: 0xA855F7, css: '#A855F7', bg: 0x4C1D95, glow: 0xA855F7 },
+      N:   { hex: 0x9CA3AF, css: '#9CA3AF', bg: 0x1F2937, glow: null },
+      R:   { hex: 0x3B82F6, css: '#3B82F6', bg: 0x0F1D30, glow: 0x3B82F6 },
+      SR:  { hex: 0xA855F7, css: '#A855F7', bg: 0x1A0A3C, glow: 0xA855F7 },
       SSR: { hex: 0xFFD60A, css: '#FFD60A', bg: 0x78350F, glow: 0xFFD60A }
     },
 
@@ -75,7 +75,7 @@ export const DESIGN = {
       fierce:  0xFF5722,  // 격렬 - 주홍
       wild:    0x27AE60,  // 광폭 - 초록
       calm:    0x3498DB,  // 고요 - 파랑
-      stoic:   0x607D8B,  // 의연 - 청회색
+      stoic:   0x78909C,  // 의연 - 청회색
       devoted: 0xE91E63,  // 헌신 - 핑크
       cunning: 0x9B59B6,  // 냉철 - 보라
       noble:   0xFFD700,  // 고결 - 금색
@@ -88,7 +88,7 @@ export const DESIGN = {
       fierce:  '#FF5722',
       wild:    '#27AE60',
       calm:    '#3498DB',
-      stoic:   '#607D8B',
+      stoic:   '#78909C',
       devoted: '#E91E63',
       cunning: '#9B59B6',
       noble:   '#FFD700',
@@ -101,8 +101,8 @@ export const DESIGN = {
       takamagahara:  0xFFD700,  // 타카마가하라 - 빛의 황금
       olympus:       0xFF6B35,  // 올림푸스 - 불의 주황
       asgard:        0x5DADE2,  // 아스가르드 - 물의 청록
-      yomi:          0x8E44AD,  // 요미 - 어둠의 보라
-      tartarus:      0x2C3E50,  // 타르타로스 - 심연의 짙은 남색
+      yomi:          0xB060D0,  // 요미 - 어둠의 보라
+      tartarus:      0x506888,  // 타르타로스 - 심연의 짙은 남색
       avalon:        0x4ECDC4,  // 아발론 - 요정의 청록민트
       helheim:       0xB0C4DE,  // 헬하임 - 죽음의 연청회
       kunlun:        0x50C878,  // 곤륜 - 선계의 에메랄드
@@ -140,7 +140,10 @@ export const DESIGN = {
       gold: '#F59E0B',
       gem: '#EC4899',
       stamina: '#22C55E'
-    }
+    },
+
+    // 진행바 트랙(빈 배경) — bg.surface보다 밝혀 채움색과의 대비를 확보 (A11Y_AUDIT 2026-09-03)
+    track: 0x2C3350
   },
 
   // ----------------------------------------
@@ -220,7 +223,7 @@ export const DESIGN = {
     panel: {
       tintAlpha: 0.55,
       fallbackTintAlpha: 0.88,
-      outline: { width: 2, color: null, alpha: 0.45 },  // color=null → 교단색, 없으면 brand.primary
+      outline: { width: 2, color: null, alpha: 0.70 },  // color=null → 교단색, 없으면 brand.primary
       useCultOutline: true,
       rim: true,
       radius: 'lg'

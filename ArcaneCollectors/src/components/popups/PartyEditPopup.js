@@ -8,6 +8,25 @@ import { PartyManager } from '../../systems/PartyManager.js';
 import { ProgressionSystem } from '../../systems/ProgressionSystem.js';
 import { SynergySystem } from '../../systems/SynergySystem.js';
 import { getCharacter, getAllCharacters } from '../../data/index.js';
+import { DESIGN, hexToCSS } from '../../config/designSystem.js';
+import { POPUP_SLOT, pickActionChild } from '../../utils/popupLayout.js';
+
+/** 헤더 타이틀 */
+const TITLE = '파티 편성';
+
+/** 파티 슬롯 탭 — 콘텐츠 폭 608(기획 px) 안에 5개가 들어가는 값 */
+const PARTY_TAB_COUNT = 5;
+const PARTY_TAB_WIDTH = 112;
+const PARTY_TAB_GAP = 8;
+const PARTY_TAB_HEIGHT = 40;
+
+/** 영웅 슬롯 그리드 (4열) */
+const HERO_SLOT_COUNT = 4;
+const HERO_SLOT_SIZE = 136;
+const HERO_SLOT_GAP = 14;
+
+/** 액션 바 순번 — 튜토리얼 타깃(TID) 재등록에 쓴다 */
+const ACTION_INDEX = Object.freeze({ AUTO: 0, CLEAR: 1, SAVE: 2 });
 
 /**
  * PartyEditPopup - 파티 편성 팝업
@@ -23,9 +42,11 @@ import { getCharacter, getAllCharacters } from '../../data/index.js';
 export class PartyEditPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '파티 편성',
-      width: s(680),
-      height: s(1100),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.brand.primary,
       ...options
     });
 
@@ -40,11 +61,50 @@ export class PartyEditPopup extends PopupBase {
 
   buildContent() {
     this.loadPartyData();
+    this.setTitle(TITLE);
+    this.applySummary(0, 0);
+    this.applyActions();
+
     this.createSlotTabs();
     this.createPartyGrid();
     this.createSynergyPreview();
-    this.createActionButtons();
     this.refreshPartyDisplay();
+  }
+
+  /** 슬롯 2 — 활성 파티 · 편성 인원 · 전투력 */
+  applySummary(memberCount, power) {
+    this.setSummary([
+      { label: '파티', value: `${this.activeSlot}번` },
+      { label: '편성', value: `${memberCount} / ${HERO_SLOT_COUNT}` },
+      { label: '전투력', value: Math.floor(power).toLocaleString() }
+    ]);
+  }
+
+  /**
+   * 슬롯 4 — 자동 편성 / 초기화 / 저장.
+   *
+   * 세 버튼은 원래 콘텐츠 안에 흩어져 있었다. 액션 바로 옮기면서
+   * 튜토리얼 타깃(`partyedit.button.auto` · `partyedit.button.save`)을 잃지 않도록
+   * `setActions()` 가 만든 히트 영역을 다시 찾아 레지스트리에 등록한다.
+   * 인덱스 계산은 `popupLayout.pickActionChild` 가 계약으로 고정한다.
+   */
+  applyActions() {
+    this.setActions([
+      { label: '자동 편성', variant: 'secondary', onClick: () => this.autoFormParty() },
+      { label: '초기화', variant: 'ghost', onClick: () => this.clearParty() },
+      { label: '파티 저장', variant: 'primary', onClick: () => this.saveCurrentParty() }
+    ]);
+    this.registerActionTargets();
+  }
+
+  /** 액션 바 버튼을 튜토리얼 타깃으로 다시 등록한다 (T-08 코치마크) */
+  registerActionTargets() {
+    const list = this.actionContainer?.list;
+    const sceneKey = this.scene?.scene?.key;
+    const autoBtn = pickActionChild(list, ACTION_INDEX.AUTO);
+    const saveBtn = pickActionChild(list, ACTION_INDEX.SAVE);
+    if (autoBtn) TutorialTargetRegistry.register('partyedit.button.auto', autoBtn, sceneKey);
+    if (saveBtn) TutorialTargetRegistry.register('partyedit.button.save', saveBtn, sceneKey);
   }
 
   loadPartyData() {
@@ -74,25 +134,25 @@ export class PartyEditPopup extends PopupBase {
   }
 
   createSlotTabs() {
-    const tabY = this.contentBounds.top + s(10);
-    const tabW = s(120);
-    const spacing = s(10);
-    const totalW = tabW * 5 + spacing * 4;
+    const tabY = this.contentBounds.top + s(PARTY_TAB_HEIGHT) / 2;
+    const tabW = s(PARTY_TAB_WIDTH);
+    const spacing = s(PARTY_TAB_GAP);
+    const totalW = tabW * PARTY_TAB_COUNT + spacing * (PARTY_TAB_COUNT - 1);
     const startX = this.contentBounds.centerX - totalW / 2 + tabW / 2;
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < PARTY_TAB_COUNT; i++) {
       const x = startX + i * (tabW + spacing);
       const slot = i + 1;
       const isActive = slot === this.activeSlot;
 
-      const bg = this.scene.add.rectangle(x, tabY, tabW, s(40),
-        isActive ? COLORS.primary : COLORS.bgPanel, isActive ? 1 : 0.6);
+      const bg = this.scene.add.rectangle(x, tabY, tabW, s(PARTY_TAB_HEIGHT),
+        isActive ? DESIGN.colors.brand.primary : DESIGN.colors.bg.surface, isActive ? 1 : 0.6);
       bg.setInteractive({ useHandCursor: true });
 
       const label = this.scene.add.text(x, tabY, `파티 ${slot}`, {
         fontSize: sf(14),
         fontFamily: '"Noto Sans KR", sans-serif',
-        color: '#FFFFFF',
+        color: DESIGN.colors.text.primary,
         fontStyle: isActive ? 'bold' : 'normal'
       }).setOrigin(0.5);
 
@@ -109,7 +169,7 @@ export class PartyEditPopup extends PopupBase {
     // 탭 UI 갱신
     this.tabButtons.forEach(tab => {
       const isActive = tab.slot === slot;
-      tab.bg.setFillStyle(isActive ? COLORS.primary : COLORS.bgPanel, isActive ? 1 : 0.6);
+      tab.bg.setFillStyle(isActive ? DESIGN.colors.brand.primary : DESIGN.colors.bg.surface, isActive ? 1 : 0.6);
       tab.label.setFontStyle(isActive ? 'bold' : 'normal');
     });
 
@@ -117,13 +177,13 @@ export class PartyEditPopup extends PopupBase {
   }
 
   createPartyGrid() {
-    const gridY = this.contentBounds.top + s(70);
-    const slotSize = s(140);
-    const spacing = s(15);
-    const totalW = slotSize * 4 + spacing * 3;
+    const gridY = this.contentBounds.top + s(PARTY_TAB_HEIGHT + 18);
+    const slotSize = s(HERO_SLOT_SIZE);
+    const spacing = s(HERO_SLOT_GAP);
+    const totalW = slotSize * HERO_SLOT_COUNT + spacing * (HERO_SLOT_COUNT - 1);
     const startX = this.contentBounds.centerX - totalW / 2 + slotSize / 2;
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < HERO_SLOT_COUNT; i++) {
       const x = startX + i * (slotSize + spacing);
       const y = gridY + slotSize / 2;
 
@@ -136,7 +196,7 @@ export class PartyEditPopup extends PopupBase {
       const slotLabel = this.scene.add.text(x, y - slotSize / 2 + s(12), `슬롯 ${i + 1}`, {
         fontSize: sf(11),
         fontFamily: '"Noto Sans KR", sans-serif',
-        color: '#64748B'
+        color: DESIGN.colors.text.muted
       }).setOrigin(0.5);
 
       // 캐릭터 아이콘 배경 (원형)
@@ -146,7 +206,7 @@ export class PartyEditPopup extends PopupBase {
       const nameText = this.scene.add.text(x, y + s(35), '+', {
         fontSize: sf(14),
         fontFamily: '"Noto Sans KR", sans-serif',
-        color: '#F8FAFC',
+        color: DESIGN.colors.text.primary,
         fontStyle: 'bold'
       }).setOrigin(0.5);
 
@@ -154,7 +214,7 @@ export class PartyEditPopup extends PopupBase {
       const infoText = this.scene.add.text(x, y + s(55), '', {
         fontSize: sf(11),
         fontFamily: '"Noto Sans KR", sans-serif',
-        color: '#64748B'
+        color: DESIGN.colors.text.muted
       }).setOrigin(0.5);
 
       // 등급 표시
@@ -165,7 +225,7 @@ export class PartyEditPopup extends PopupBase {
       // 제거 버튼
       const removeBtn = this.scene.add.text(x + slotSize / 2 - s(8), y - slotSize / 2 - s(5), '✕', {
         fontSize: sf(16),
-        color: '#FF5555'
+        color: hexToCSS(DESIGN.colors.status.error)
       }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false);
 
       removeBtn.on('pointerdown', () => this.removeHeroFromSlot(i));
@@ -180,7 +240,7 @@ export class PartyEditPopup extends PopupBase {
   }
 
   createSynergyPreview() {
-    const y = this.contentBounds.top + s(280);
+    const y = this.contentBounds.top + s(PARTY_TAB_HEIGHT + HERO_SLOT_SIZE + 90);
     const cx = this.contentBounds.centerX;
     const left = this.contentBounds.left;
 
@@ -192,47 +252,17 @@ export class PartyEditPopup extends PopupBase {
     this.addText(cx, y, '시너지 효과', {
       fontSize: sf(14),
       fontStyle: 'bold',
-      color: '#64748B'
+      color: DESIGN.colors.text.muted
     }).setOrigin(0.5);
 
     this.synergyTexts = [];
     for (let i = 0; i < 3; i++) {
       const text = this.addText(left + s(30), y + s(20) + i * s(25), '', {
         fontSize: sf(13),
-        color: '#F8FAFC'
+        color: DESIGN.colors.text.primary
       });
       this.synergyTexts.push(text);
     }
-  }
-
-  createActionButtons() {
-    const cx = this.contentBounds.centerX;
-    const btnY = this.contentBounds.top + s(430);
-
-    // 전투력 표시
-    this.powerText = this.addText(cx, btnY - s(30), '전투력: 0', {
-      fontSize: sf(16),
-      fontStyle: 'bold',
-      color: '#F59E0B'
-    }).setOrigin(0.5);
-
-    // 자동 편성 버튼
-    const { bg: autoBtn } = this.addButton(cx - s(100), btnY, s(180), s(48), '⚡ 자동 편성', COLORS.primary, () => {
-      this.autoFormParty();
-    });
-    // 튜토리얼 타깃 (T-08 코치마크)
-    TutorialTargetRegistry.register('partyedit.button.auto', autoBtn, this.scene?.scene?.key);
-
-    // 초기화 버튼
-    this.addButton(cx + s(100), btnY, s(180), s(48), '초기화', COLORS.bgPanel, () => {
-      this.clearParty();
-    });
-
-    // 저장 버튼
-    const { bg: saveBtn } = this.addButton(cx, btnY + s(65), s(220), s(53), '💾 파티 저장', COLORS.success || 0x10B981, () => {
-      this.saveCurrentParty();
-    });
-    TutorialTargetRegistry.register('partyedit.button.save', saveBtn, this.scene?.scene?.key);
   }
 
   refreshPartyDisplay() {
@@ -315,7 +345,8 @@ export class PartyEditPopup extends PopupBase {
         totalPower += Math.floor((stats.hp || 0) / 10 + (stats.atk || 0) + (stats.def || 0) + (stats.spd || 0));
       }
     });
-    this.powerText.setText(`전투력: ${Math.floor(totalPower).toLocaleString()}`);
+    // 전투력·편성 인원은 요약 슬롯(슬롯 2)이 표시한다
+    this.applySummary(heroes.length, totalPower);
   }
 
   updateSynergies() {
@@ -336,13 +367,13 @@ export class PartyEditPopup extends PopupBase {
 
       if (synergies && synergies.length > 0) {
         synergies.slice(0, 3).forEach((syn, i) => {
-          const icon = syn.type === 'cult' ? '⛪' : syn.type === 'mood' ? '🎭' : syn.type === 'role' ? '⚔️' : '✨';
+          const icon = syn.type === 'cult' ? '교단' : syn.type === 'mood' ? '무드' : syn.type === 'role' ? '역할' : '기타';
           let effectStr = '';
           if (syn.effect && typeof syn.effect === 'object') {
             const labels = { atk: '공격', def: '방어', hp: 'HP', spd: '속도', all: '전체', skill_dmg: '스킬뎀', lifesteal: '흡혈', crit_rate: '치확', crit_dmg: '치뎀' };
             effectStr = Object.entries(syn.effect).map(([k, v]) => `${labels[k] || k}+${v}%`).join(' ');
           }
-          this.synergyTexts[i].setText(`${icon} ${syn.name}${effectStr ? ' ' + effectStr : ''}`);
+          this.synergyTexts[i].setText(`[${icon}] ${syn.name}${effectStr ? ` ${effectStr}` : ''}`);
         });
       } else {
         this.synergyTexts[0].setText('활성 시너지 없음');
@@ -399,7 +430,7 @@ export class PartyEditPopup extends PopupBase {
         fontSize: sf(20),
         fontFamily: '"Noto Sans KR", sans-serif',
         fontStyle: 'bold',
-        color: '#F8FAFC'
+        color: DESIGN.colors.text.primary
       }
     ).setOrigin(0.5).setDepth(2102);
 
@@ -411,7 +442,7 @@ export class PartyEditPopup extends PopupBase {
       '✕',
       {
         fontSize: sf(24),
-        color: '#FFFFFF'
+        color: DESIGN.colors.text.primary
       }
     ).setOrigin(0.5).setDepth(2102).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.closeHeroSelect());
@@ -424,7 +455,7 @@ export class PartyEditPopup extends PopupBase {
         {
           fontSize: sf(16),
           fontFamily: '"Noto Sans KR", sans-serif',
-          color: '#64748B'
+          color: DESIGN.colors.text.muted
         }
       ).setOrigin(0.5).setDepth(2102);
       return;
@@ -510,7 +541,7 @@ export class PartyEditPopup extends PopupBase {
         this.getRarityStars(hero.rarity),
         {
           fontSize: sf(14),
-          color: '#FFD700'
+          color: hexToCSS(DESIGN.colors.brand.accent)
         }
       ).setOrigin(0.5);
 
@@ -522,7 +553,7 @@ export class PartyEditPopup extends PopupBase {
         {
           fontSize: sf(13),
           fontFamily: '"Noto Sans KR", sans-serif',
-          color: isInParty ? '#64748B' : '#F8FAFC',
+          color: isInParty ? DESIGN.colors.text.muted : DESIGN.colors.text.primary,
           fontStyle: 'bold',
           wordWrap: { width: cardW - s(10) },
           align: 'center'
@@ -537,7 +568,7 @@ export class PartyEditPopup extends PopupBase {
         {
           fontSize: sf(12),
           fontFamily: '"Noto Sans KR", sans-serif',
-          color: isInParty ? '#64748B' : '#94A3B8'
+          color: isInParty ? DESIGN.colors.text.muted : DESIGN.colors.text.secondary
         }
       ).setOrigin(0.5);
 
@@ -551,8 +582,8 @@ export class PartyEditPopup extends PopupBase {
           {
             fontSize: sf(11),
             fontFamily: '"Noto Sans KR", sans-serif',
-            color: '#64748B',
-            backgroundColor: '#1E293B',
+            color: DESIGN.colors.text.muted,
+            backgroundColor: hexToCSS(DESIGN.colors.bg.secondary),
             padding: { x: s(6), y: s(3) }
           }
         ).setOrigin(0.5);
@@ -757,8 +788,8 @@ export class PartyEditPopup extends PopupBase {
     const toast = this.scene.add.text(this.contentBounds.centerX, this.contentBounds.bottom - s(50), message, {
       fontSize: sf(16),
       fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#FFFFFF',
-      backgroundColor: '#334155',
+      color: DESIGN.colors.text.primary,
+      backgroundColor: hexToCSS(DESIGN.colors.bg.surface),
       padding: { x: s(16), y: s(10) }
     }).setOrigin(0.5).setDepth(2100);
 

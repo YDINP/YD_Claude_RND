@@ -16,7 +16,10 @@ import {
   computeSummaryColumns,
   normalizeActions,
   normalizeSummary,
-  resolveActionStyle
+  resolveActionStyle,
+  ACTION_CHILDREN_PER_SLOT,
+  actionChildIndices,
+  pickActionChild
 } from '../../src/utils/popupLayout.js';
 import { s } from '../../src/config/scaleConfig.js';
 
@@ -323,5 +326,80 @@ describe('LEGACY_SLOT 상수', () => {
     expect(LEGACY_SLOT.dividerInset).toBe(20);
     expect(LEGACY_SLOT.summaryHeight).toBe(0);
     expect(LEGACY_SLOT.actionBarHeight).toBe(0);
+  });
+});
+
+
+describe('POPUP_SLOT 상수 — 리디자인 규격 (T-22)', () => {
+  it('§3-6 표의 헤더 88 / 요약 112 / 액션바 88 을 담는다', () => {
+    expect(POPUP_SLOT.headerHeight).toBe(88);
+    expect(POPUP_SLOT.summaryHeight).toBe(112);
+    expect(POPUP_SLOT.actionBarHeight).toBe(88);
+    expect(POPUP_SLOT.padX).toBe(24);
+    expect(POPUP_SLOT.titleAlign).toBe('left');
+  });
+
+  it('패널이 좌우 여백 32 · 상하 여백 48 을 지킨다 (x 32~688 / y 48~1232)', () => {
+    expect(POPUP_SLOT.panelWidth).toBe(720 - POPUP_SLOT.margin * 2);
+    expect(720 - POPUP_SLOT.panelWidth).toBe(64);
+    expect(1280 - POPUP_SLOT.panelHeight).toBe(96);
+  });
+
+  it('요약과 액션바가 붙으면 콘텐츠가 정확히 그만큼 줄어든다', () => {
+    const base = {
+      screenWidth: 720, screenHeight: 1280,
+      width: POPUP_SLOT.panelWidth, height: POPUP_SLOT.panelHeight,
+      headerHeight: POPUP_SLOT.headerHeight,
+      padX: POPUP_SLOT.padX, padBottom: POPUP_SLOT.padBottom
+    };
+    const bare = computePopupSlots(base).content;
+    const full = computePopupSlots({
+      ...base,
+      summaryHeight: POPUP_SLOT.summaryHeight,
+      actionBarHeight: POPUP_SLOT.actionBarHeight
+    }).content;
+
+    expect(bare.height - full.height).toBe(POPUP_SLOT.summaryHeight + POPUP_SLOT.actionBarHeight);
+    expect(full.top - bare.top).toBe(POPUP_SLOT.summaryHeight);
+    expect(bare.width).toBe(POPUP_SLOT.panelWidth - POPUP_SLOT.padX * 2);
+  });
+
+  it('콘텐츠와 액션바가 겹치지 않는다', () => {
+    const slots = computePopupSlots({
+      screenWidth: 720, screenHeight: 1280,
+      width: POPUP_SLOT.panelWidth, height: POPUP_SLOT.panelHeight,
+      headerHeight: POPUP_SLOT.headerHeight,
+      summaryHeight: POPUP_SLOT.summaryHeight,
+      actionBarHeight: POPUP_SLOT.actionBarHeight,
+      padX: POPUP_SLOT.padX, padBottom: POPUP_SLOT.padBottom
+    });
+    expect(slots.content.bottom).toBeLessThanOrEqual(slots.actions.top);
+    expect(slots.summary.bottom).toBe(slots.content.top);
+  });
+});
+
+describe('actionChildIndices / pickActionChild — 액션 버튼 재조회 (T-22)', () => {
+  it('슬롯마다 3개의 자식을 만든다는 계약을 고정한다', () => {
+    expect(ACTION_CHILDREN_PER_SLOT).toBe(3);
+    expect(actionChildIndices(0)).toEqual({ frame: 0, label: 1, hit: 2 });
+    expect(actionChildIndices(2)).toEqual({ frame: 6, label: 7, hit: 8 });
+  });
+
+  it('음수·비수치 순번은 null', () => {
+    expect(actionChildIndices(-1)).toBeNull();
+    expect(actionChildIndices(NaN)).toBeNull();
+  });
+
+  it('컨테이너 자식 배열에서 히트 영역을 꺼낸다', () => {
+    const list = ['f0', 'l0', 'h0', 'f1', 'l1', 'h1'];
+    expect(pickActionChild(list, 0)).toBe('h0');
+    expect(pickActionChild(list, 1, 'label')).toBe('l1');
+    expect(pickActionChild(list, 1, 'frame')).toBe('f1');
+  });
+
+  it('범위를 벗어나거나 배열이 아니면 null — 튜토리얼 등록이 예외로 죽지 않는다', () => {
+    expect(pickActionChild(['f0', 'l0', 'h0'], 1)).toBeNull();
+    expect(pickActionChild(null, 0)).toBeNull();
+    expect(pickActionChild(['f0', 'l0', 'h0'], 0, 'nope')).toBeNull();
   });
 });

@@ -14,6 +14,11 @@
 import { PopupBase } from '../PopupBase.js';
 import { COLORS, RARITY, s, sf } from '../../config/gameConfig.js';
 import { collectLiveRateRows } from '../../utils/gachaRateDisclosure.js';
+import { DESIGN } from '../../config/designSystem.js';
+import { POPUP_SLOT } from '../../utils/popupLayout.js';
+
+/** 헤더 타이틀 */
+const TITLE = '확률 정보';
 
 export { buildRateRows, collectLiveRateRows } from '../../utils/gachaRateDisclosure.js';
 
@@ -82,7 +87,7 @@ export function renderRateTable(scene, container, { left, top, width, rows, line
   const sectionTitle = (text) => {
     const t = scene.add.text(left, y, text, {
       fontSize: sf(14), fontFamily: '"Noto Sans KR", sans-serif',
-      fontStyle: 'bold', color: '#F8FAFC'
+      fontStyle: 'bold', color: DESIGN.colors.text.primary
     }).setOrigin(0, 0.5);
     container.add(t);
     elements.push(t);
@@ -121,20 +126,25 @@ export function renderRateTable(scene, container, { left, top, width, rows, line
 export class RateDisclosurePanel extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '확률 정보',
-      width: s(620),
-      height: s(760),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.brand.accent,
       ...options
     });
     this.bannerId = options.bannerId || null;
   }
 
   buildContent() {
+    this.setTitle(TITLE);
+    this.setActions([{ label: '확인', variant: 'primary', onClick: () => this.hide() }]);
+
     const b = this.contentBounds;
 
     this.addText(b.left, b.top, '소환 확률과 천장(피티) 시스템을 안내합니다.', {
       fontSize: sf(13),
-      color: '#94A3B8',
+      color: DESIGN.colors.text.secondary,
       wordWrap: { width: b.width }
     });
 
@@ -149,7 +159,7 @@ export class RateDisclosurePanel extends PopupBase {
     this.addText(b.left, Math.min(endY + s(14), b.bottom - s(20)),
       '확률 표시는 게임물관리위원회 확률형 아이템 표시 기준을 따릅니다.', {
         fontSize: sf(11),
-        color: '#64748B',
+        color: DESIGN.colors.text.muted,
         wordWrap: { width: b.width }
       });
   }

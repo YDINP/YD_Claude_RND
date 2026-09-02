@@ -123,6 +123,16 @@ async function findByLabel(page, sceneKeys, label) {
   }, { keys: Array.isArray(sceneKeys) ? sceneKeys : [sceneKeys], text: label });
 }
 
+/** 라벨이 화면에 나타날 때까지 기다린다 (고정 sleep 대신 조건 대기) */
+async function waitForLabel(page, sceneKeys, label, timeout = 15000) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (await findByLabel(page, sceneKeys, label)) return true;
+    await page.waitForTimeout(200);
+  }
+  return false;
+}
+
 /** 라벨로 찾은 버튼을 실제로 탭한다 */
 async function tapLabel(page, sceneKeys, label, { required = true } = {}) {
   const found = await findByLabel(page, sceneKeys, label);
@@ -160,6 +170,27 @@ async function hitTestWorld(page, wx, wy, sceneKey = 'MainMenuScene') {
       })),
     };
   }, sceneKey);
+}
+
+/**
+ * 소환 결과 연출을 실제로 닫는다.
+ * `GachaResultOverlay` 는 공개 연출 도중의 탭을 '건너뛰기'로 쓰기 때문에
+ * 한 번의 [확인] 탭으로 닫히지 않을 수 있다. 전면 레이어(depth 3010)가
+ * 사라질 때까지 최대 `attempts` 회 탭한다.
+ */
+async function confirmSummonResult(page, attempts = 8) {
+  // [확인] 라벨이 사라지면 연출이 끝난 것이다(버튼째 파괴된다).
+  const stillOpen = async () => !!(await findByLabel(page, ['MainMenuScene'], '확인'));
+
+  if (!(await stillOpen())) return true;
+
+  for (let i = 0; i < attempts; i += 1) {
+    const tapped = await tapLabel(page, ['MainMenuScene'], '확인', { required: false });
+    if (!tapped) return true;
+    await page.waitForTimeout(900);
+    if (!(await stillOpen())) return true;
+  }
+  return false;
 }
 
 /** 튜토리얼 화면 상태 (읽기 전용) */
@@ -559,13 +590,25 @@ async function runPart1(page) {
 
   const shardsBefore = (await readSave(page)).resources.characterShards?.base_omar || 0;
   await tapWorld(page, t05Ui.hole.x + t05Ui.hole.w / 2, t05Ui.hole.y + t05Ui.hole.h / 2);
-  await page.waitForTimeout(6000);
+
+  // 고정 대기(6초)는 머신 부하에 따라 결과 연출을 앞질러 [확인] 탭이 헛돌았다.
+  // 그러면 depth 3010 전면 스크림이 살아남아 T-07 이후 모든 탭을 삼킨다.
+  // 조건을 직접 기다린다: 세이브 기록 → [확인] 버튼 등장.
+  await waitFor(
+    page,
+    () => JSON.parse(localStorage.getItem('arcane_collectors_save'))?.gacha?.freeTenPullUsed === true,
+    20000
+  );
+  await waitForLabel(page, ['MainMenuScene'], '확인', 20000);
+  await page.waitForTimeout(600);
 
   save = await readSave(page);
   assert(save.gacha.freeTenPullUsed === true, '[T-05] 홀 탭으로 무료 10연 실행');
 
-  // 결과 연출의 [확인]을 실제로 탭해 닫는다 (닫지 않으면 depth 3000 오버레이가 입력을 막는다)
-  const confirmed = await tapLabel(page, ['MainMenuScene'], '확인', { required: false });
+  // 결과 연출의 [확인]을 실제로 탭해 닫는다.
+  // 카드 공개가 끝나기 전의 탭은 '건너뛰기'로 소비되므로, 전면 레이어가 사라질 때까지 반복한다.
+  // 남겨 두면 depth 3010 스크림이 이후 스텝의 탭을 통째로 삼킨다(T-07 이 여기서 막혔다).
+  const confirmed = await confirmSummonResult(page);
   assert(confirmed, '[T-05] 소환 결과 [확인] 탭으로 연출 종료');
   await page.waitForTimeout(700);
   assert(save.tutorial.completedSteps.includes('T-05'), '[T-05] 커밋 (gacha_result_confirmed)');

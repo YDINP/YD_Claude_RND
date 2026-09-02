@@ -85,8 +85,8 @@
 | Takamagahara | `0xFFD700` | `#FFD700` | 타카마가하라 | 일본 신화 |
 | Olympus | `0xFF6B35` | `#FF6B35` | 올림푸스 | 그리스 신화 |
 | Asgard | `0x5DADE2` | `#5DADE2` | 아스가르드 | 북유럽 신화 |
-| Yomi | `0x8E44AD` | `#8E44AD` | 요미 | 일본 신화 |
-| Tartarus | `0xB71C1C` | `#B71C1C` | 타르타로스 | 그리스 신화 |
+| Yomi | `0xB060D0` | `#B060D0` | 요미 | 일본 신화 |
+| Tartarus | `0x506888` | `#506888` | 타르타로스 | 그리스 신화 |
 | Avalon | `0x4CAF50` | `#4CAF50` | 아발론 | 켈트 신화 |
 | Helheim | `0x37474F` | `#37474F` | 헬하임 | 북유럽 신화 |
 | Kunlun | `0x00BCD4` | `#00BCD4` | 곤륜 | 중국 신화 |

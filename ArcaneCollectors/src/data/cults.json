@@ -78,7 +78,7 @@
       "synergy_bonus": {
         "crit_dmg": 0.2
       },
-      "color": "#8E44AD",
+      "color": "#B060D0",
       "lore": "지하 깊은 곳에 존재하는 황천의 나라. 한 번 들어가면 되돌아올 수 없는 죽음의 세계.",
       "baseRarity": "SSR",
       "enabled": true
@@ -129,7 +129,7 @@
         "atk": 0.1,
         "crit_rate": 0.05
       },
-      "color": "#2C3E50",
+      "color": "#506888",
       "lore": "대지 아래 무한히 깊은 곳에 위치한 최초의 심연. 크로노스와 티탄들이 봉인된 가장 오래된 감옥.",
       "baseRarity": "SR",
       "enabled": true

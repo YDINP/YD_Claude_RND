@@ -146,6 +146,13 @@ export function progressFillWidth(ratio, width) {
  * 상단바 배경(depth 300)보다 낮은 200 이라 배경에 덮이는 것이었다. 그래서 씬이
  * 상단바와 같은 depth 로 직접 그리도록 좌표만 여기서 준다.
  *
+ * 각 슬롯의 `interactive` 는 접근성 계약이다 (A11Y_AUDIT §(d)).
+ *   - true  → `hit` 사각형이 반드시 있고 터치 하한(48x48 base)을 넘어야 한다
+ *   - false → 표시 전용. 씬은 setInteractive 를 붙이지 않는다
+ * level/gem/gold 는 수치를 읽기만 하는 표시 전용이라 시각 크기(30px, 22px)가
+ * 하한보다 작아도 위반이 아니다. 탭 동작이 생기면 이 플래그를 true 로 바꾸고
+ * hit 을 추가해야 하며, 테스트가 그때 실패해 누락을 잡는다.
+ *
  * @returns {Object} base 좌표 슬롯 모음
  */
 export function computeTopBarSlots() {
@@ -155,13 +162,14 @@ export function computeTopBarSlots() {
   return {
     bar,
     midY,
-    level:   { x: 40, y: midY, w: 56, h: 30 },
-    gem:     { iconX: 96,  textX: 118, y: midY, iconSize: 22 },
-    gold:    { iconX: 208, textX: 230, y: midY, iconSize: 22 },
-    energy:  { iconX: 340, x: 356, y: midY - 9, w: 150, h: 18, textX: 431, textY: midY },
-    timer:   { x: 431, y: midY + 21 },
-    charge:  { x: 540, y: midY, w: 44, h: 44, hit: { w: MIN_TOUCH, h: MIN_TOUCH } },
-    settings:{ x: 684, y: midY, w: MIN_TOUCH, h: MIN_TOUCH }
+    level:   { x: 40, y: midY, w: 56, h: 30, interactive: false },
+    gem:     { iconX: 96,  textX: 118, y: midY, iconSize: 22, interactive: false },
+    gold:    { iconX: 208, textX: 230, y: midY, iconSize: 22, interactive: false },
+    energy:  { iconX: 340, x: 356, y: midY - 9, w: 150, h: 18, textX: 431, textY: midY, interactive: false },
+    timer:   { x: 431, y: midY + 21, interactive: false },
+    charge:  { x: 540, y: midY, w: 44, h: 44, interactive: true, hit: { w: MIN_TOUCH, h: MIN_TOUCH } },
+    settings:{ x: 684, y: midY, w: MIN_TOUCH, h: MIN_TOUCH, interactive: true,
+               hit: { w: MIN_TOUCH, h: MIN_TOUCH } }
   };
 }
 
@@ -176,6 +184,15 @@ export function computeEnergyFill(current, max) {
   const ratio = Math.max(0, Math.min(1, (Number.isFinite(current) ? current : 0) / safeMax));
   const { w } = computeTopBarSlots().energy;
   return { ratio, fillW: w * ratio };
+}
+
+/**
+ * 상단바에서 탭 가능한 슬롯 이름 목록 (A11Y_AUDIT §(d) 검증용).
+ * @returns {string[]}
+ */
+export function interactiveTopBarSlots() {
+  const slots = computeTopBarSlots();
+  return Object.keys(slots).filter((name) => slots[name] && slots[name].interactive === true);
 }
 
 // ------------------------------------------------------------------
@@ -482,6 +499,7 @@ export default {
   toCenterRect,
   progressFillWidth,
   computeTopBarSlots,
+  interactiveTopBarSlots,
   computeEnergyFill,
   computePartySlots,
   computePartyHeader,

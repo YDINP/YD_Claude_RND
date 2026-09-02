@@ -19,6 +19,7 @@ import {
   toCenterRect,
   progressFillWidth,
   computeTopBarSlots,
+  interactiveTopBarSlots,
   computeEnergyFill,
   computePartySlots,
   computePartyHeader,
@@ -163,6 +164,27 @@ describe('mainMenuLayout — 터치 타깃 (§2-5)', () => {
     const slots = computeTopBarSlots();
     expect(meetsTouchTarget(slots.settings, DESIGN.touch.minTarget)).toBe(true);
     expect(meetsTouchTarget(slots.charge.hit, DESIGN.touch.minTarget)).toBe(true);
+  });
+
+  // A11Y_AUDIT §(d) — 상단바 소형 요소가 표시 전용임을 계약으로 고정한다.
+  // level(30px) / gem·gold(22px) 는 시각 크기가 하한보다 작지만 탭 대상이 아니다.
+  // 나중에 탭 동작이 붙으면 interactive 를 true 로 바꿔야 하고, 그 순간 아래 두 테스트가
+  // hit 누락을 잡아낸다.
+  it('상단바에서 탭 가능한 슬롯은 설정과 충전 둘뿐이다 (level/gem/gold 는 표시 전용)', () => {
+    expect(interactiveTopBarSlots().sort()).toEqual(['charge', 'settings']);
+    const slots = computeTopBarSlots();
+    ['level', 'gem', 'gold', 'energy', 'timer'].forEach((name) => {
+      expect(slots[name].interactive, name).toBe(false);
+      expect(slots[name].hit, name).toBeUndefined();
+    });
+  });
+
+  it('탭 가능한 상단바 슬롯은 예외 없이 hit 사각형과 터치 하한을 가진다', () => {
+    const slots = computeTopBarSlots();
+    interactiveTopBarSlots().forEach((name) => {
+      expect(slots[name].hit, name).toBeDefined();
+      expect(meetsTouchTarget(slots[name].hit, DESIGN.touch.minTarget), name).toBe(true);
+    });
   });
 
   it('편성 버튼은 시각 알약이 낮아도 히트 박스가 하한을 지킨다', () => {

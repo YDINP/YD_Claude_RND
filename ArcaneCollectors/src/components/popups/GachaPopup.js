@@ -41,16 +41,25 @@ import { NineSliceFrame } from '../NineSliceFrame.js';
 import { GachaBannerPanel } from '../GachaBannerPanel.js';
 import { GachaResultOverlay } from '../GachaResultOverlay.js';
 import { computeGachaLayout, computeButtonRow } from '../../utils/gachaBannerLayout.js';
+import { POPUP_SLOT, pickActionChild } from '../../utils/popupLayout.js';
 
 /** 렌더 px → base px */
 const toBase = (px) => px / SCALE_FACTOR;
 
+/** 헤더 타이틀 */
+const TITLE = '소환';
+
+/** 온보딩 무료 10연 버튼이 놓이는 액션 바 순번 — 튜토리얼 타깃 재등록용 */
+const FREE_PULL_ACTION_INDEX = 0;
+
 export class GachaPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '소환',
-      width: s(680),
-      height: s(1100),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.brand.accent,
       ...options
     });
 
@@ -85,6 +94,12 @@ export class GachaPopup extends PopupBase {
   // ================================================================
 
   buildContent() {
+    // 헤더/요약/액션 슬롯을 먼저 확정한다. 셋 다 콘텐츠 높이를 바꾸므로
+    // 밴드 계산(computeGachaLayout)보다 반드시 앞에 와야 한다.
+    this.setTitle(TITLE);
+    this.applySummary();
+    this.applyActions();
+
     const b = this.contentBounds;
 
     // 밴드 배치는 base 좌표계에서 계산하고 그릴 때 s() 로 옮긴다
@@ -105,7 +120,61 @@ export class GachaPopup extends PopupBase {
     this.createRateSummary();
     this.createPityDisplay();
     this.createSummonButtons();
-    this.createRateInfoButton();
+    this.createLegalNote();
+  }
+
+  /**
+   * 슬롯 2 — 보유 젬 · 소환권 · 천장.
+   * 수치는 SaveManager / GachaSystem SSOT 에서만 읽는다 (하드코딩 금지).
+   */
+  applySummary() {
+    const resources = SaveManager.getResources();
+    const pity = GachaSystem.getPityInfo();
+    if (this.onboarding) {
+      this.setSummary([
+        { label: '비용', value: '무료' },
+        { label: '천장', value: `${pity.current} / ${pity.threshold}` }
+      ]);
+      return;
+    }
+    this.setSummary([
+      { label: '젬', value: (resources.gems || 0).toLocaleString() },
+      { label: '소환권', value: `${resources.summonTickets || 0}장` },
+      { label: '천장', value: `${pity.current} / ${pity.threshold}` }
+    ]);
+  }
+
+  /**
+   * 슬롯 4 — 액션 바.
+   * 온보딩에서는 무료 10연 버튼 하나만 남고, 그 버튼이 튜토리얼 마스킹 홀의 기준
+   * (`gacha.button.multi_ticket`)이 된다. 일반 모드에서는 확률 고지 진입점이 온다.
+   */
+  applyActions() {
+    if (this.onboarding) {
+      const gachaInfo = SaveManager.getGachaInfo();
+      const alreadyUsed = !!gachaInfo.freeTenPullUsed;
+      this.setActions([{
+        label: alreadyUsed ? '무료 10연 소환 완료' : '첫 무료 10연 소환',
+        variant: 'primary',
+        disabled: alreadyUsed,
+        onClick: () => this.performFreeTenPull()
+      }]);
+      this.registerFreePullTarget();
+      return;
+    }
+
+    this.setActions([{
+      label: '확률 및 천장 상세 보기',
+      variant: 'ghost',
+      onClick: () => this.scene.time.delayedCall(0, () => this.openRateDisclosure())
+    }]);
+  }
+
+  /** 무료 10연 버튼을 튜토리얼 타깃으로 다시 등록한다 (T-05 강제 마스킹 홀) */
+  registerFreePullTarget() {
+    const btn = pickActionChild(this.actionContainer?.list, FREE_PULL_ACTION_INDEX);
+    if (!btn) return;
+    TutorialTargetRegistry.register('gacha.button.multi_ticket', btn, this.scene?.scene?.key);
   }
 
   /** T-05 강제 스텝: ✕ 및 오버레이 클릭 닫기를 잠근다 (UX_ONBOARDING_FLOW §2-4 popupOptions.lockCloseButton) */
@@ -174,38 +243,9 @@ export class GachaPopup extends PopupBase {
       lineHeight: s(26)
     });
 
-    const buttonY = Math.min(endY + s(58), b.bottom - s(70));
-    this.createFreeTenPullButton(b.centerX, buttonY);
-  }
-
-  /** 첫 무료 10연 버튼 — "무료" 배지, 비용 0 표기. GachaSystem.pull()의 isFreeTenPull 판정을 그대로 재사용 */
-  createFreeTenPullButton(x, y) {
-    const gachaInfo = SaveManager.getGachaInfo();
-    const alreadyUsed = !!gachaInfo.freeTenPullUsed;
-
-    const { bg } = this.addButton(
-      x, y, s(340), s(72),
-      alreadyUsed ? '무료 10연 소환 완료' : '첫 무료 10연 소환',
-      COLORS.secondary,
-      () => this.performFreeTenPull()
-    );
-
-    // 튜토리얼 타깃 (T-05 강제 마스킹 홀)
-    TutorialTargetRegistry.register('gacha.button.multi_ticket', bg, this.scene?.scene?.key);
-
-    if (alreadyUsed) {
-      bg.disableInteractive();
-      bg.setAlpha(0.5);
-    }
-
-    this.addText(x + s(140), y - s(34), '무료', ts('num.sm', {
-      color: DESIGN.colors.text.inverse,
-      fontStyle: 'bold',
-      backgroundColor: `#${DESIGN.colors.brand.accent.toString(16).padStart(6, '0')}`,
-      padding: { x: s(8), y: s(3) }
-    })).setOrigin(0.5);
-
-    this.addText(x, y + s(50), '에너지 0 · 젬 0 · 티켓 0 소모', ts('caption', {
+    // 무료 10연 버튼은 액션 바(슬롯 4)로 옮겼다. 비용 표기만 콘텐츠에 남긴다.
+    const noteY = Math.min(endY + s(34), b.bottom - s(20));
+    this.addText(b.centerX, noteY, '에너지 0 · 젬 0 · 티켓 0 소모', ts('caption', {
       color: DESIGN.colors.text.muted
     })).setOrigin(0.5);
   }
@@ -486,25 +526,18 @@ export class GachaPopup extends PopupBase {
     return subText;
   }
 
-  /** 확률 정보 진입점 — 상시 노출 (BLK-07). RateDisclosurePanel 을 중첩 팝업으로 연다 */
-  createRateInfoButton() {
+  /**
+   * 확률 고지 법정 문구 — 상시 노출 (BLK-07).
+   * 상세 보기 버튼은 액션 바(슬롯 4)로 올라갔고, 이 자리에는 근거 문구만 남는다.
+   */
+  createLegalNote() {
     const band = this.layout.bands.info;
     const b = this.contentBounds;
-    const cy = s(band.centerY);
-
-    const frame = NineSliceFrame.create(this.scene, {
-      x: b.centerX, y: cy, w: s(300), h: s(band.h),
-      key: 'btn_ghost', tint: DESIGN.colors.brand.primary
-    });
-    const text = this.scene.add.text(b.centerX, cy, '확률 및 천장 상세 보기', ts('label', {
-      color: DESIGN.colors.text.primary
-    })).setOrigin(0.5);
-    const hit = this.scene.add.rectangle(
-      b.centerX, cy, s(300), Math.max(s(band.h), s(DESIGN.touch.minTarget)), 0xffffff, 0
-    ).setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', () => this.openRateDisclosure());
-
-    this.contentContainer.add([frame, text, hit]);
+    const note = this.scene.add.text(b.centerX, s(band.centerY),
+      '확률 표시는 게임물관리위원회 확률형 아이템 표시 기준을 따릅니다', ts('caption', {
+        color: DESIGN.colors.text.muted
+      })).setOrigin(0.5);
+    this.contentContainer.add(note);
   }
 
   openRateDisclosure() {
@@ -591,6 +624,7 @@ export class GachaPopup extends PopupBase {
   /** 재화 표시 갱신 — 배너 칩과 티켓 버튼의 보유 수량 */
   refreshResourceUI() {
     const resources = SaveManager.getResources();
+    this.applySummary();
     if (this.bannerPanel) this.bannerPanel.refreshResources();
     const label = `보유 ${resources.summonTickets || 0}장`;
     if (this.ticketSingleLabel) this.ticketSingleLabel.setText(label);

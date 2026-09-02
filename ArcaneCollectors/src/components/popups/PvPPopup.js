@@ -12,16 +12,24 @@
 import { PopupBase } from '../PopupBase.js';
 import { COLORS, s, sf } from '../../config/gameConfig.js';
 import { PvPSystem } from '../../systems/PvPSystem.js';
+import { DESIGN, hexToCSS } from '../../config/designSystem.js';
+import { POPUP_SLOT } from '../../utils/popupLayout.js';
 
 // 탭 인덱스 상수
 const TAB = { BATTLE: 0, RESULT: 1, RANKING: 2 };
+
+/** 헤더 타이틀 */
+const TITLE = 'PvP 아레나';
+
+/** 탭 스트립 높이 (기획 px) */
+const TAB_STRIP_HEIGHT = 44;
 
 // 랭크 티어별 색상
 const TIER_COLORS = {
   master:   '#FF4500',
   diamond:  '#00BFFF',
   platinum: '#40E0D0',
-  gold:     '#FFD700',
+  gold:     hexToCSS(DESIGN.colors.brand.accent),
   silver:   '#C0C0C0',
   bronze:   '#CD7F32'
 };
@@ -34,17 +42,19 @@ const RESULT_LABELS = {
 };
 
 const RESULT_COLORS = {
-  win:  '#10B981',
-  lose: '#EF4444',
-  draw: '#F59E0B'
+  win:  hexToCSS(DESIGN.colors.status.success),
+  lose: hexToCSS(DESIGN.colors.status.error),
+  draw: hexToCSS(DESIGN.colors.status.warning)
 };
 
 export class PvPPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '⚔️ PvP 아레나',
-      width: s(680),
-      height: s(1100),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.status.error,
       ...options
     });
 
@@ -58,8 +68,44 @@ export class PvPPopup extends PopupBase {
   }
 
   buildContent() {
+    this.setTitle(TITLE);
+    this._applySummary(null);
+    this._applyActions(TAB.BATTLE);
     this._renderTabs();
     this._loadAndRenderTab(TAB.BATTLE);
+  }
+
+  /** 슬롯 2 — 티어 · 점수 · 전적 */
+  _applySummary(record) {
+    if (!record) {
+      this.setSummary([
+        { label: '티어', value: '-' },
+        { label: '점수', value: '-' },
+        { label: '전적', value: '-' }
+      ]);
+      return;
+    }
+    this.setSummary([
+      { label: '티어', value: (record.rank_tier || 'bronze').toUpperCase() },
+      { label: '점수', value: `${record.score || 0}` },
+      { label: '전적', value: `${record.wins || 0}승 ${record.losses || 0}패` }
+    ]);
+  }
+
+  /** 슬롯 4 — 탭별 주 행동. 콜백이 자기 액션 바를 지우지 않도록 한 프레임 미룬다 */
+  _applyActions(tabIdx) {
+    const defer = (fn) => this.scene.time.delayedCall(0, fn);
+    const label = tabIdx === TAB.RANKING ? '랭킹 새로고침' : '상대 새로고침';
+    const target = tabIdx === TAB.RANKING ? TAB.RANKING : TAB.BATTLE;
+    this.setActions([
+      {
+        label,
+        variant: 'primary',
+        disabled: this._isLoading,
+        onClick: () => defer(() => this._loadAndRenderTab(target))
+      },
+      { label: '닫기', variant: 'ghost', onClick: () => this.hide() }
+    ]);
   }
 
   // ─────────────────────────────────────────
@@ -73,11 +119,11 @@ export class PvPPopup extends PopupBase {
 
     tabLabels.forEach((label, idx) => {
       const tx = b.left + tabW * idx + tabW / 2;
-      const ty = b.top + s(20);
+      const ty = b.top + s(TAB_STRIP_HEIGHT) / 2;
 
       const isActive = idx === this._activeTab;
-      const bg = this.scene.add.rectangle(tx, ty, tabW - s(4), s(36),
-        isActive ? COLORS.primary : COLORS.bgLight, 1);
+      const bg = this.scene.add.rectangle(tx, ty, tabW - s(4), s(TAB_STRIP_HEIGHT - 8),
+        isActive ? DESIGN.colors.status.error : DESIGN.colors.bg.surface, isActive ? 0.9 : 0.6);
       bg.setInteractive({ useHandCursor: true });
       bg.on('pointerdown', () => {
         if (!this._isLoading) this._loadAndRenderTab(idx);
@@ -88,7 +134,7 @@ export class PvPPopup extends PopupBase {
         fontSize: sf(15),
         fontFamily: '"Noto Sans KR", sans-serif',
         fontStyle: isActive ? 'bold' : 'normal',
-        color: isActive ? '#FFFFFF' : '#94A3B8'
+        color: isActive ? DESIGN.colors.text.primary : DESIGN.colors.text.secondary
       }).setOrigin(0.5);
       this.contentContainer.add(txt);
     });
@@ -101,16 +147,17 @@ export class PvPPopup extends PopupBase {
   _loadAndRenderTab(tabIdx) {
     this._activeTab = tabIdx;
     this._clearTabContent();
+    this._applyActions(tabIdx);
     this._renderTabs();
 
     const b = this.contentBounds;
-    const contentTop = b.top + s(60);
+    const contentTop = b.top + s(TAB_STRIP_HEIGHT + 12);
 
     this._isLoading = true;
     const loadingText = this.scene.add.text(b.centerX, contentTop + s(60), '로딩 중...', {
       fontSize: sf(16),
       fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#94A3B8'
+      color: DESIGN.colors.text.secondary
     }).setOrigin(0.5);
     this.contentContainer.add(loadingText);
     this._tabObjects.push(loadingText);
@@ -158,7 +205,7 @@ export class PvPPopup extends PopupBase {
     const infoLabel = this.scene.add.text(cx, contentTop, infoText, {
       fontSize: sf(13),
       fontFamily: '"Noto Sans KR", sans-serif',
-      color: opponentResult.offline ? '#F59E0B' : '#94A3B8'
+      color: opponentResult.offline ? hexToCSS(DESIGN.colors.status.warning) : DESIGN.colors.text.secondary
     }).setOrigin(0.5);
     this.contentContainer.add(infoLabel);
     this._tabObjects.push(infoLabel);
@@ -168,7 +215,7 @@ export class PvPPopup extends PopupBase {
         '매칭 가능한 상대가 없습니다\n전투력이 비슷한 플레이어를 기다리는 중...', {
           fontSize: sf(15),
           fontFamily: '"Noto Sans KR", sans-serif',
-          color: '#94A3B8',
+          color: DESIGN.colors.text.secondary,
           align: 'center',
           wordWrap: { width: b.width - s(40) }
         }).setOrigin(0.5);
@@ -200,7 +247,7 @@ export class PvPPopup extends PopupBase {
         fontSize: sf(17),
         fontFamily: '"Noto Sans KR", sans-serif',
         fontStyle: 'bold',
-        color: '#F8FAFC'
+        color: DESIGN.colors.text.primary
       }).setOrigin(0, 0.5);
     this.contentContainer.add(nameText);
     this._tabObjects.push(nameText);
@@ -210,7 +257,7 @@ export class PvPPopup extends PopupBase {
       `전투력 ${(opponent.combat_power || 0).toLocaleString()}`, {
         fontSize: sf(13),
         fontFamily: '"Noto Sans KR", sans-serif',
-        color: '#94A3B8'
+        color: DESIGN.colors.text.secondary
       }).setOrigin(0, 0.5);
     this.contentContainer.add(powerText);
     this._tabObjects.push(powerText);
@@ -229,7 +276,7 @@ export class PvPPopup extends PopupBase {
       fontSize: sf(16),
       fontFamily: '"Noto Sans KR", sans-serif',
       fontStyle: 'bold',
-      color: '#FFFFFF'
+      color: DESIGN.colors.text.primary
     }).setOrigin(0.5);
     this.contentContainer.add(btnText);
     this._tabObjects.push(btnText);
@@ -250,7 +297,7 @@ export class PvPPopup extends PopupBase {
       fontSize: sf(20),
       fontFamily: '"Noto Sans KR", sans-serif',
       fontStyle: 'bold',
-      color: '#F59E0B'
+      color: hexToCSS(DESIGN.colors.status.warning)
     }).setOrigin(0.5);
     this.contentContainer.add(loadingText);
     this._tabObjects.push(loadingText);
@@ -271,6 +318,7 @@ export class PvPPopup extends PopupBase {
     const myRecord = await PvPSystem.getMyRecord();
     if (loadingText && loadingText.scene) loadingText.destroy();
     this._isLoading = false;
+    if (myRecord.success && myRecord.record) this._applySummary(myRecord.record);
 
     const b = this.contentBounds;
     const cx = b.centerX;
@@ -279,7 +327,7 @@ export class PvPPopup extends PopupBase {
     // 마지막 전투 결과 표시
     if (this._lastBattleResult) {
       const { result, scoreChange, newScore, log, opponent } = this._lastBattleResult;
-      const resultColor = RESULT_COLORS[result] || '#94A3B8';
+      const resultColor = RESULT_COLORS[result] || DESIGN.colors.text.secondary;
       const resultLabel = RESULT_LABELS[result] || result;
 
       const resultText = this.scene.add.text(cx, offsetY + s(30), resultLabel, {
@@ -295,7 +343,7 @@ export class PvPPopup extends PopupBase {
         `vs ${opponent?.player_name || '???'}`, {
           fontSize: sf(15),
           fontFamily: '"Noto Sans KR", sans-serif',
-          color: '#94A3B8'
+          color: DESIGN.colors.text.secondary
         }).setOrigin(0.5);
       this.contentContainer.add(vsText);
       this._tabObjects.push(vsText);
@@ -305,7 +353,7 @@ export class PvPPopup extends PopupBase {
         `점수 변동: ${scoreSign}  →  ${newScore}점`, {
           fontSize: sf(16),
           fontFamily: '"Noto Sans KR", sans-serif',
-          color: scoreChange >= 0 ? '#10B981' : '#EF4444'
+          color: scoreChange >= 0 ? hexToCSS(DESIGN.colors.status.success) : hexToCSS(DESIGN.colors.status.error)
         }).setOrigin(0.5);
       this.contentContainer.add(scoreText);
       this._tabObjects.push(scoreText);
@@ -316,7 +364,7 @@ export class PvPPopup extends PopupBase {
           const logLine = this.scene.add.text(cx, offsetY + s(135) + i * s(22), line, {
             fontSize: sf(12),
             fontFamily: '"Noto Sans KR", sans-serif',
-            color: '#64748B',
+            color: DESIGN.colors.text.muted,
             wordWrap: { width: b.width - s(40) }
           }).setOrigin(0.5);
           this.contentContainer.add(logLine);
@@ -327,30 +375,7 @@ export class PvPPopup extends PopupBase {
       offsetY += s(280);
     }
 
-    // 내 전적 요약
-    if (myRecord.success && myRecord.record) {
-      const rec = myRecord.record;
-      const tierColor = TIER_COLORS[rec.rank_tier] || '#C0C0C0';
-
-      const tierText = this.scene.add.text(cx, offsetY + s(20),
-        `${rec.rank_tier?.toUpperCase() || 'BRONZE'} — ${rec.score || 0}점`, {
-          fontSize: sf(22),
-          fontFamily: '"Noto Sans KR", sans-serif',
-          fontStyle: 'bold',
-          color: tierColor
-        }).setOrigin(0.5);
-      this.contentContainer.add(tierText);
-      this._tabObjects.push(tierText);
-
-      const wldText = this.scene.add.text(cx, offsetY + s(55),
-        `${rec.wins || 0}승 ${rec.losses || 0}패 ${rec.draws || 0}무`, {
-          fontSize: sf(16),
-          fontFamily: '"Noto Sans KR", sans-serif',
-          color: '#94A3B8'
-        }).setOrigin(0.5);
-      this.contentContainer.add(wldText);
-      this._tabObjects.push(wldText);
-    }
+    // 티어·점수·전적은 요약 슬롯(슬롯 2)이 표시한다
   }
 
   // ─────────────────────────────────────────
@@ -371,7 +396,7 @@ export class PvPPopup extends PopupBase {
       const offlineNote = this.scene.add.text(cx, contentTop, '오프라인 — 캐시 데이터', {
         fontSize: sf(12),
         fontFamily: '"Noto Sans KR", sans-serif',
-        color: '#F59E0B'
+        color: hexToCSS(DESIGN.colors.status.warning)
       }).setOrigin(0.5);
       this.contentContainer.add(offlineNote);
       this._tabObjects.push(offlineNote);
@@ -382,7 +407,7 @@ export class PvPPopup extends PopupBase {
         '랭킹 데이터가 없습니다', {
           fontSize: sf(16),
           fontFamily: '"Noto Sans KR", sans-serif',
-          color: '#94A3B8'
+          color: DESIGN.colors.text.secondary
         }).setOrigin(0.5);
       this.contentContainer.add(emptyText);
       this._tabObjects.push(emptyText);
@@ -421,7 +446,7 @@ export class PvPPopup extends PopupBase {
     this._tabObjects.push(bg);
 
     // 순위
-    const rankColor = ['#FFD700', '#C0C0C0', '#CD7F32'][idx] || '#94A3B8';
+    const rankColor = [hexToCSS(DESIGN.colors.brand.accent), '#C0C0C0', '#CD7F32'][idx] || DESIGN.colors.text.secondary;
     const rankText = this.scene.add.text(cx - w / 2 + s(20), cy,
       `${entry.rank}`, {
         fontSize: sf(isTop3 ? 18 : 14),
@@ -433,14 +458,14 @@ export class PvPPopup extends PopupBase {
     this._tabObjects.push(rankText);
 
     // 티어 뱃지
-    const tierColor = TIER_COLORS[entry.rank_tier] || '#94A3B8';
+    const tierColor = TIER_COLORS[entry.rank_tier] || DESIGN.colors.text.secondary;
     const tierBadge = this.scene.add.text(cx - w / 2 + s(48), cy,
       entry.rank_tier?.toUpperCase()?.slice(0, 2) || 'BR', {
         fontSize: sf(10),
         fontFamily: '"Noto Sans KR", sans-serif',
         fontStyle: 'bold',
         color: tierColor,
-        backgroundColor: '#1E293B',
+        backgroundColor: hexToCSS(DESIGN.colors.bg.secondary),
         padding: { x: s(3), y: s(2) }
       }).setOrigin(0.5);
     this.contentContainer.add(tierBadge);
@@ -451,7 +476,7 @@ export class PvPPopup extends PopupBase {
       entry.player_name || '???', {
         fontSize: sf(14),
         fontFamily: '"Noto Sans KR", sans-serif',
-        color: '#F8FAFC'
+        color: DESIGN.colors.text.primary
       }).setOrigin(0, 0.5);
     this.contentContainer.add(nameText);
     this._tabObjects.push(nameText);
@@ -462,7 +487,7 @@ export class PvPPopup extends PopupBase {
         fontSize: sf(14),
         fontFamily: '"Noto Sans KR", sans-serif',
         fontStyle: 'bold',
-        color: '#F59E0B'
+        color: hexToCSS(DESIGN.colors.status.warning)
       }).setOrigin(0.5);
     this.contentContainer.add(scoreText);
     this._tabObjects.push(scoreText);
@@ -472,7 +497,7 @@ export class PvPPopup extends PopupBase {
       `${entry.wins}W ${entry.losses}L`, {
         fontSize: sf(11),
         fontFamily: '"Noto Sans KR", sans-serif',
-        color: '#64748B'
+        color: DESIGN.colors.text.muted
       }).setOrigin(0.5);
     this.contentContainer.add(wlText);
     this._tabObjects.push(wlText);

@@ -5,13 +5,31 @@
 import { PopupBase } from '../PopupBase.js';
 import { COLORS, s, sf, GAME_WIDTH, GAME_HEIGHT } from '../../config/gameConfig.js';
 import { QuestSystem } from '../../systems/QuestSystem.js';
+import { DESIGN, hexToCSS } from '../../config/designSystem.js';
+import { POPUP_SLOT } from '../../utils/popupLayout.js';
+import { IconFactory } from '../../utils/IconFactory.js';
+
+/** 헤더 타이틀 (§3-6 헤더 슬롯) */
+const TITLE = '일일 퀘스트';
+
+/** 진행 바 높이 (기획 px) */
+const PROGRESS_BAR_HEIGHT = 8;
+
+/**
+ * 퀘스트 카드 크기 (기획 px).
+ * 일일 퀘스트 9종 × (88 + 4) = 828 로 콘텐츠 슬롯 888 안에 들어간다.
+ */
+const CARD_HEIGHT = 88;
+const CARD_GAP = 4;
 
 export class QuestPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '일일 퀘스트',
-      width: s(680),
-      height: s(1100),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.status.warning,
       ...options
     });
 
@@ -20,17 +38,43 @@ export class QuestPopup extends PopupBase {
   }
 
   buildContent() {
-    // Load quest data
+    // 데이터 → 요약/액션 슬롯 → 콘텐츠 순서. 요약·액션이 콘텐츠 높이를 줄이므로 먼저 확정한다.
     this.loadQuests();
+    this.setTitle(TITLE);
+    this.applySummary();
+    this.applyActions();
 
-    // Summary panel
-    this.createQuestSummary();
-
-    // Quest list
+    this.createProgressBar();
     this.createQuestList();
+  }
 
-    // Claim all button
-    this.createClaimAllButton();
+  /** 슬롯 2 — 완료/수령 대기 요약 */
+  applySummary() {
+    const total = this.quests.length;
+    const completed = this.quests.filter(q => q.completed).length;
+    this.setSummary([
+      { label: '완료', value: `${completed} / ${total}` },
+      { label: '수령 대기', value: `${this.claimable.length}` }
+    ]);
+  }
+
+  /** 슬롯 4 — 전체 수령. 수령할 것이 없으면 비활성으로 남겨 자리를 지킨다 */
+  applyActions() {
+    const count = this.claimable.length;
+    this.setActions([{
+      label: count > 0 ? `전체 수령 (${count})` : '수령할 보상 없음',
+      variant: 'primary',
+      disabled: count === 0,
+      onClick: () => this.claimAll()
+    }]);
+  }
+
+  claimAll() {
+    const result = QuestSystem.claimAllRewards();
+    if (!result.success) return;
+    this.showRewardToast(result.totalRewards);
+    // 액션 바를 그린 핸들러 안에서 그 액션 바를 지우지 않도록 한 프레임 미룬다
+    this.scene.time.delayedCall(0, () => this.refresh());
   }
 
   loadQuests() {
@@ -38,57 +82,33 @@ export class QuestPopup extends PopupBase {
     this.claimable = QuestSystem.getClaimableQuests();
   }
 
-  createQuestSummary() {
-    const { left, top, width, centerX } = this.contentBounds;
-    const y = top;
-
+  /** 콘텐츠 상단 진행 바. 수치는 요약 슬롯이 맡고 여기는 비율만 보여준다 */
+  createProgressBar() {
+    const { left, top, width } = this.contentBounds;
     const total = this.quests.length;
     const completed = this.quests.filter(q => q.completed).length;
-    const claimed = this.quests.filter(q => q.claimed).length;
-
-    // Summary panel
-    const panel = this.scene.add.graphics();
-    panel.fillStyle(0x1E293B, 0.9);
-    panel.fillRoundedRect(left, y, width, s(80), s(12));
-    this.contentContainer.add(panel);
-
-    // Progress bar
-    const barX = left + s(20);
-    const barW = width - s(40);
-    const barH = s(8);
-    const barY = y + s(55);
     const progress = total > 0 ? completed / total : 0;
+    const barH = s(PROGRESS_BAR_HEIGHT);
+    const radius = s(DESIGN.radius.sm);
 
     const barBg = this.scene.add.graphics();
-    barBg.fillStyle(0x334155, 1);
-    barBg.fillRoundedRect(barX, barY, barW, barH, s(4));
+    barBg.fillStyle(DESIGN.colors.bg.surface, 1);
+    barBg.fillRoundedRect(left, top + s(6), width, barH, radius);
     this.contentContainer.add(barBg);
 
     if (progress > 0) {
       const barFill = this.scene.add.graphics();
-      barFill.fillStyle(COLORS.success, 1);
-      barFill.fillRoundedRect(barX, barY, barW * progress, barH, s(4));
+      barFill.fillStyle(DESIGN.colors.status.success, 1);
+      barFill.fillRoundedRect(left, top + s(6), width * progress, barH, radius);
       this.contentContainer.add(barFill);
     }
-
-    // Text
-    this.addText(left + s(20), y + s(15), `완료: ${completed}/${total}`, {
-      fontSize: sf(18),
-      fontStyle: 'bold',
-      color: '#F8FAFC'
-    });
-
-    this.addText(left + width - s(20), y + s(15), `수령 대기: ${this.claimable.length}`, {
-      fontSize: sf(16),
-      color: this.claimable.length > 0 ? '#F59E0B' : '#64748B'
-    }).setOrigin(1, 0);
   }
 
   createQuestList() {
     const { left, top, width } = this.contentBounds;
-    const startY = top + s(100);
-    const cardH = s(100);
-    const gap = s(10);
+    const startY = top + s(28);
+    const cardH = s(CARD_HEIGHT);
+    const gap = s(CARD_GAP);
 
     this.quests.forEach((quest, index) => {
       const y = startY + index * (cardH + gap);
@@ -99,7 +119,7 @@ export class QuestPopup extends PopupBase {
   createQuestCard(quest, x, y, cardW, cardH) {
     // Card background
     const card = this.scene.add.graphics();
-    const bgColor = quest.claimed ? 0x1a2332 : quest.completed ? 0x1E3A2F : 0x1E293B;
+    const bgColor = quest.claimed ? DESIGN.colors.bg.primary : DESIGN.colors.bg.secondary;
     card.fillStyle(bgColor, 0.95);
     card.fillRoundedRect(x, y, cardW, cardH, s(12));
 
@@ -110,28 +130,28 @@ export class QuestPopup extends PopupBase {
     this.contentContainer.add(card);
 
     // Quest name
-    const nameColor = quest.claimed ? '#64748B' : '#F8FAFC';
-    this.addText(x + s(15), y + s(12), quest.name, {
+    const nameColor = quest.claimed ? DESIGN.colors.text.muted : DESIGN.colors.text.primary;
+    this.addText(x + s(15), y + s(8), quest.name, {
       fontSize: sf(17),
       fontStyle: 'bold',
       color: nameColor
     });
 
     // Description
-    this.addText(x + s(15), y + s(38), quest.description, {
+    this.addText(x + s(15), y + s(30), quest.description, {
       fontSize: sf(13),
-      color: '#94A3B8'
+      color: DESIGN.colors.text.secondary
     });
 
     // Progress bar
     const barX = x + s(15);
-    const barY = y + s(65);
+    const barY = y + s(54);
     const barW = cardW - s(150);
     const barH = s(10);
     const progressPercent = quest.progressPercent / 100;
 
     const barBg = this.scene.add.graphics();
-    barBg.fillStyle(0x334155, 1);
+    barBg.fillStyle(DESIGN.colors.bg.surface, 1);
     barBg.fillRoundedRect(barX, barY, barW, barH, s(5));
     this.contentContainer.add(barBg);
 
@@ -146,19 +166,25 @@ export class QuestPopup extends PopupBase {
     // Progress text
     this.addText(barX + barW + s(8), barY - s(2), `${quest.progress}/${quest.target}`, {
       fontSize: sf(13),
-      color: quest.completed ? '#10B981' : '#94A3B8'
+      color: quest.completed ? hexToCSS(DESIGN.colors.status.success) : DESIGN.colors.text.secondary
     });
 
-    // Rewards
+    // 보상 — 이모지 대신 벡터 아이콘(IconFactory)을 앞에 세우고 텍스트는 수치만 남긴다
     const rewardParts = [];
-    if (quest.rewards.gold) rewardParts.push(`💰${quest.rewards.gold}`);
-    if (quest.rewards.gems) rewardParts.push(`💎${quest.rewards.gems}`);
-    if (quest.rewards.summonTickets) rewardParts.push(`🎫${quest.rewards.summonTickets}`);
-    if (quest.rewards.skillBooks) rewardParts.push(`📕${quest.rewards.skillBooks}`);
+    if (quest.rewards.gold) rewardParts.push(`골드 ${quest.rewards.gold}`);
+    if (quest.rewards.gems) rewardParts.push(`젬 ${quest.rewards.gems}`);
+    if (quest.rewards.summonTickets) rewardParts.push(`소환권 ${quest.rewards.summonTickets}`);
+    if (quest.rewards.skillBooks) rewardParts.push(`스킬북 ${quest.rewards.skillBooks}`);
 
-    this.addText(x + s(15), y + cardH - s(22), rewardParts.join('  '), {
+    const rewardIcon = IconFactory.createImage(
+      this.scene, x + s(22), y + cardH - s(13), 'quest', 'xs',
+      { tint: DESIGN.colors.brand.accent }
+    );
+    if (rewardIcon) this.contentContainer.add(rewardIcon);
+
+    this.addText(x + s(36), y + cardH - s(20), rewardParts.join('  '), {
       fontSize: sf(12),
-      color: '#F59E0B'
+      color: hexToCSS(DESIGN.colors.status.warning)
     });
 
     // Claim button (completed & not claimed)
@@ -174,7 +200,7 @@ export class QuestPopup extends PopupBase {
       const btnText = this.addText(btnX + s(32), btnY, '수령', {
         fontSize: sf(15),
         fontStyle: 'bold',
-        color: '#FFFFFF'
+        color: DESIGN.colors.text.primary
       }).setOrigin(0.5);
 
       const btnHit = this.scene.add.rectangle(btnX + s(32), btnY, s(65), s(36))
@@ -189,55 +215,23 @@ export class QuestPopup extends PopupBase {
         }
       });
     } else if (quest.claimed) {
-      this.addText(x + cardW - s(55), y + cardH / 2, '✅ 완료', {
+      this.addText(x + cardW - s(55), y + cardH / 2, '수령 완료', {
         fontSize: sf(14),
-        color: '#64748B'
+        color: DESIGN.colors.text.muted
       }).setOrigin(0.5);
     }
   }
 
-  createClaimAllButton() {
-    if (this.claimable.length === 0) return;
-
-    const { bottom, centerX } = this.contentBounds;
-    const btnY = bottom - s(40);
-    const btnW = s(280);
-    const btnH = s(55);
-
-    const btn = this.scene.add.graphics();
-    btn.fillStyle(COLORS.accent, 1);
-    btn.fillRoundedRect(centerX - btnW / 2, btnY, btnW, btnH, s(14));
-    this.contentContainer.add(btn);
-
-    this.addText(centerX, btnY + btnH / 2, `🎁 전체 수령 (${this.claimable.length}개)`, {
-      fontSize: sf(18),
-      fontStyle: 'bold',
-      color: '#FFFFFF'
-    }).setOrigin(0.5);
-
-    const hitArea = this.scene.add.rectangle(centerX, btnY + btnH / 2, btnW, btnH)
-      .setAlpha(0.001).setInteractive({ useHandCursor: true });
-    this.contentContainer.add(hitArea);
-
-    hitArea.on('pointerdown', () => {
-      const result = QuestSystem.claimAllRewards();
-      if (result.success) {
-        this.showRewardToast(result.totalRewards);
-        this.refresh();
-      }
-    });
-  }
-
   showRewardToast(rewards) {
     const parts = [];
-    if (rewards.gold) parts.push(`💰 ${rewards.gold}`);
-    if (rewards.gems) parts.push(`💎 ${rewards.gems}`);
-    if (rewards.summonTickets) parts.push(`🎫 ${rewards.summonTickets}`);
+    if (rewards.gold) parts.push(`골드 ${rewards.gold}`);
+    if (rewards.gems) parts.push(`젬 ${rewards.gems}`);
+    if (rewards.summonTickets) parts.push(`소환권 ${rewards.summonTickets}`);
     const message = `보상 수령: ${parts.join('  ')}`;
 
     const toast = this.scene.add.text(this.contentBounds.centerX, this.contentBounds.top + s(200), message, {
       fontSize: sf(18), fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#FFFFFF', backgroundColor: '#10B981', padding: { x: s(24), y: s(14) }
+      color: DESIGN.colors.text.primary, backgroundColor: hexToCSS(DESIGN.colors.status.success), padding: { x: s(24), y: s(14) }
     }).setOrigin(0.5).setDepth(3000);
 
     this.scene.tweens.add({

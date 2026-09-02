@@ -4,6 +4,7 @@
  * 모든 픽셀값은 s() 헬퍼로 동적 스케일링
  */
 import { GAME_WIDTH, GAME_HEIGHT, s } from './scaleConfig.js';
+import { DESIGN } from './designSystem.js';
 
 // 기본 레이아웃 설정
 export const LAYOUT = {
@@ -129,8 +130,8 @@ export const CULT_COLORS = {
     takamagahara: 0xFFD700,  // 타카마가하라 - 빛의 황금
     olympus: 0xFF6B35,       // 올림푸스 - 불의 주황
     asgard: 0x5DADE2,        // 아스가르드 - 물의 청록
-    yomi: 0x8E44AD,          // 요미 - 어둠의 보라
-    tartarus: 0x2C3E50,      // 타르타로스 - 심연의 짙은 남색
+    yomi: 0xB060D0,          // 요미 - 어둠의 보라
+    tartarus: 0x506888,      // 타르타로스 - 심연의 짙은 남색
     avalon: 0x4ECDC4,        // 아발론 - 요정의 청록민트
     helheim: 0xB0C4DE,       // 헬하임 - 죽음의 연청회
     kunlun: 0x50C878,        // 곤륜 - 선계의 에메랄드
@@ -141,11 +142,12 @@ export const CULT_COLORS = {
 };
 
 // 등급별 프레임 색상 — R 이상 전부 글로우 적용 (서브컬쳐 연출)
+// bg 는 designSystem.js `colors.rarityNamed.*.bg` 에서 파생한다 (A11Y_AUDIT 2026-09-03 SSOT 통일)
 export const RARITY_COLORS = {
-    N: { border: 0x6B7280, bg: 0x374151, glow: null },
-    R: { border: 0x3B82F6, bg: 0x1E3A5F, glow: 0x3B82F6 },
-    SR: { border: 0xA855F7, bg: 0x4C1D95, glow: 0xA855F7 },
-    SSR: { border: 0xFFD60A, bg: 0x78350F, glow: 0xFFD60A }
+    N: { border: 0x6B7280, bg: DESIGN.colors.rarityNamed.N.bg, glow: null },
+    R: { border: 0x3B82F6, bg: DESIGN.colors.rarityNamed.R.bg, glow: 0x3B82F6 },
+    SR: { border: 0xA855F7, bg: DESIGN.colors.rarityNamed.SR.bg, glow: 0xA855F7 },
+    SSR: { border: 0xFFD60A, bg: DESIGN.colors.rarityNamed.SSR.bg, glow: 0xFFD60A }
 };
 
 // Z-인덱스 레이어

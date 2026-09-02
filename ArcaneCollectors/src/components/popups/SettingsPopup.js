@@ -7,13 +7,24 @@ import { COLORS, s, sf, GAME_WIDTH, GAME_HEIGHT } from '../../config/gameConfig.
 import { SaveManager } from '../../systems/SaveManager.js';
 import { CouponSystem } from '../../systems/CouponSystem.js';
 import { DebugManager } from '../../systems/DebugManager.js';
+import { DESIGN, hexToCSS } from '../../config/designSystem.js';
+import { POPUP_SLOT } from '../../utils/popupLayout.js';
+
+/** 헤더 타이틀 */
+const TITLE = '설정';
+
+/** 설정 행 높이 · 간격 (기획 px) */
+const ROW_HEIGHT = 45;
+const ROW_GAP = 10;
 
 export class SettingsPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '설정',
-      width: s(680),
-      height: s(900),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.brand.primary,
       ...options
     });
 
@@ -21,34 +32,62 @@ export class SettingsPopup extends PopupBase {
   }
 
   buildContent() {
+    this.setTitle(TITLE);
+    this.applySummary();
+    this.applyActions();
+
     this.createSettingsSection();
     this.createDebugToggle();
     this.createAccountManagement(); // AUTH-1.2: 계정 관리 섹션
     this.createAccountInfo();
   }
 
+  /** 슬롯 2 — 계정 요약 */
+  applySummary() {
+    const data = SaveManager.load();
+    const player = data.player || {};
+    const charCount = Object.keys(data.characters || {}).length;
+    this.setSummary([
+      { label: '레벨', value: `${player.level || 1}` },
+      { label: '보유 캐릭터', value: `${charCount}명` },
+      { label: '계정', value: this._getAccountShortText() }
+    ]);
+  }
+
+  /** 슬롯 4 — 쿠폰 / 계정 변경 / 데이터 초기화. 모달을 여는 콜백은 한 프레임 미룬다 */
+  applyActions() {
+    const defer = (fn) => this.scene.time.delayedCall(0, fn);
+    this.setActions([
+      { label: '쿠폰 입력', variant: 'primary', onClick: () => defer(() => this.showCouponModal()) },
+      { label: '계정 변경', variant: 'secondary', onClick: () => defer(() => this.showAccountChangeConfirm()) },
+      { label: '데이터 초기화', variant: 'ghost', onClick: () => defer(() => this.showResetConfirm()) }
+    ]);
+  }
+
+  /** 요약 슬롯용 짧은 계정 표기 */
+  _getAccountShortText() {
+    const authData = this._loadAutoLoginData();
+    if (!authData) return '게스트';
+    if (authData.authType === 'email' && authData.email) return authData.email.split('@')[0];
+    return '게스트';
+  }
+
   createSettingsSection() {
     const { left, top, width } = this.contentBounds;
     const sectionY = top;
 
-    this.addText(left + s(10), sectionY, '설정', {
-      fontSize: sf(20),
-      fontStyle: 'bold',
-      color: '#F8FAFC'
-    });
-
     const settings = [
-      { label: '🔊 사운드', key: 'sound', type: 'toggle' },
-      { label: '🎵 BGM', key: 'bgm', type: 'toggle' },
-      { label: '📳 진동', key: 'vibration', type: 'toggle' },
-      { label: '🔔 알림', key: 'notification', type: 'toggle' }
+      { label: '사운드', key: 'sound', type: 'toggle' },
+      { label: 'BGM', key: 'bgm', type: 'toggle' },
+      { label: '진동', key: 'vibration', type: 'toggle' },
+      { label: '알림', key: 'notification', type: 'toggle' }
     ];
 
     const data = SaveManager.load();
     const settingsData = data.settings || {};
 
     settings.forEach((setting, i) => {
-      const y = sectionY + s(45) + i * s(55);
+      const y = sectionY + i * s(ROW_HEIGHT + ROW_GAP);
       this.createSettingRow(setting, y, settingsData);
     });
   }
@@ -58,22 +97,22 @@ export class SettingsPopup extends PopupBase {
    */
   createDebugToggle() {
     const { left, top, width } = this.contentBounds;
-    const y = top + s(45) + 4 * s(55); // 4개 설정 행 아래
+    const y = top + 4 * s(ROW_HEIGHT + ROW_GAP); // 4개 설정 행 아래
 
     const rowBg = this.scene.add.graphics();
-    rowBg.fillStyle(0x1E293B, 0.8);
-    rowBg.fillRoundedRect(left, y, width, s(45), s(10));
+    rowBg.fillStyle(DESIGN.colors.bg.secondary, 0.8);
+    rowBg.fillRoundedRect(left, y, width, s(ROW_HEIGHT), s(DESIGN.radius.md));
     this.contentContainer.add(rowBg);
 
-    this.addText(left + s(20), y + s(12), '🛠️ 개발자 모드', {
+    this.addText(left + s(20), y + s(12), '개발자 모드', {
       fontSize: sf(16),
-      color: '#F59E0B'
+      color: hexToCSS(DESIGN.colors.status.warning)
     });
 
     const isOn = DebugManager.isDebugMode;
     const toggleX = left + width - s(50);
     const toggleBg = this.scene.add.graphics();
-    toggleBg.fillStyle(isOn ? 0xF59E0B : 0x475569, 1);
+    toggleBg.fillStyle(isOn ? 0xF59E0B : DESIGN.colors.bg.surface, 1);
     toggleBg.fillRoundedRect(toggleX, y + s(10), s(44), s(24), s(12));
     this.contentContainer.add(toggleBg);
 
@@ -112,13 +151,13 @@ export class SettingsPopup extends PopupBase {
     const { left, width } = this.contentBounds;
 
     const rowBg = this.scene.add.graphics();
-    rowBg.fillStyle(0x1E293B, 0.8);
-    rowBg.fillRoundedRect(left, y, width, s(45), s(10));
+    rowBg.fillStyle(DESIGN.colors.bg.secondary, 0.8);
+    rowBg.fillRoundedRect(left, y, width, s(ROW_HEIGHT), s(DESIGN.radius.md));
     this.contentContainer.add(rowBg);
 
     this.addText(left + s(20), y + s(12), setting.label, {
       fontSize: sf(16),
-      color: '#F8FAFC'
+      color: DESIGN.colors.text.primary
     });
 
     const isOn = settingsData[setting.key] !== false;
@@ -126,7 +165,7 @@ export class SettingsPopup extends PopupBase {
     // Toggle
     const toggleX = left + width - s(50);
     const toggleBg = this.scene.add.graphics();
-    const toggleColor = isOn ? COLORS.success : 0x475569;
+    const toggleColor = isOn ? COLORS.success : DESIGN.colors.bg.surface;
     toggleBg.fillStyle(toggleColor, 1);
     toggleBg.fillRoundedRect(toggleX, y + s(10), s(44), s(24), s(12));
     this.contentContainer.add(toggleBg);
@@ -154,12 +193,12 @@ export class SettingsPopup extends PopupBase {
    */
   createAccountManagement() {
     const { left, top, width } = this.contentBounds;
-    const y = top + s(335); // s(280) + s(55) for debug toggle row
+    const y = top + 5 * s(ROW_HEIGHT + ROW_GAP) + s(16); // 설정 4행 + 개발자 모드 행 아래
 
     this.addText(left + s(10), y, '계정 관리', {
       fontSize: sf(20),
       fontStyle: 'bold',
-      color: '#F8FAFC'
+      color: DESIGN.colors.text.primary
     });
 
     // 현재 로그인 정보 표시
@@ -167,41 +206,22 @@ export class SettingsPopup extends PopupBase {
     const currentAccountText = this._getAccountDisplayText(authData);
 
     const accountInfoBg = this.scene.add.graphics();
-    accountInfoBg.fillStyle(0x1E293B, 0.8);
+    accountInfoBg.fillStyle(DESIGN.colors.bg.secondary, 0.8);
     accountInfoBg.fillRoundedRect(left, y + s(35), width, s(50), s(10));
     this.contentContainer.add(accountInfoBg);
 
     this.addText(left + s(20), y + s(47), '현재 계정:', {
       fontSize: sf(14),
-      color: '#94A3B8'
+      color: DESIGN.colors.text.secondary
     });
 
     this.addText(left + s(20), y + s(67), currentAccountText, {
       fontSize: sf(15),
-      color: '#F8FAFC',
+      color: DESIGN.colors.text.primary,
       fontStyle: 'bold'
     });
 
-    // 계정 변경 버튼
-    const changeBtnY = y + s(100);
-    const changeBtn = this.scene.add.graphics();
-    changeBtn.fillStyle(0xEF4444, 1);
-    changeBtn.fillRoundedRect(left + s(10), changeBtnY, s(200), s(40), s(10));
-    this.contentContainer.add(changeBtn);
-
-    this.addText(left + s(110), changeBtnY + s(20), '🔄 계정 변경', {
-      fontSize: sf(14),
-      fontStyle: 'bold',
-      color: '#FFFFFF'
-    }).setOrigin(0.5);
-
-    const changeHit = this.scene.add.rectangle(left + s(110), changeBtnY + s(20), s(200), s(40))
-      .setAlpha(0.001).setInteractive({ useHandCursor: true });
-    this.contentContainer.add(changeHit);
-
-    changeHit.on('pointerdown', () => {
-      this.showAccountChangeConfirm();
-    });
+    // '계정 변경' 버튼은 액션 바(슬롯 4)로 옮겼다
   }
 
   /**
@@ -247,7 +267,7 @@ export class SettingsPopup extends PopupBase {
     elements.push(overlay);
 
     const dialog = this.scene.add.graphics().setDepth(3001);
-    dialog.fillStyle(0x1E293B, 1);
+    dialog.fillStyle(DESIGN.colors.bg.secondary, 1);
     dialog.fillRoundedRect(centerX - s(180), dialogY - s(100), s(360), s(200), s(16));
     dialog.lineStyle(s(2), 0xEF4444, 0.5);
     dialog.strokeRoundedRect(centerX - s(180), dialogY - s(100), s(360), s(200), s(16));
@@ -256,7 +276,7 @@ export class SettingsPopup extends PopupBase {
     const msg = this.scene.add.text(centerX, dialogY - s(50),
       '계정을 변경하시겠습니까?\n\n로그인 화면으로 이동하며,\n현재 데이터는 저장됩니다.', {
         fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(15),
-        color: '#F8FAFC', align: 'center'
+        color: DESIGN.colors.text.primary, align: 'center'
       }).setOrigin(0.5).setDepth(3002);
     elements.push(msg);
 
@@ -265,7 +285,7 @@ export class SettingsPopup extends PopupBase {
     elements.push(confirmBg);
     const confirmLabel = this.scene.add.text(centerX - s(85), dialogY + s(55), '변경', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16),
-      fontStyle: 'bold', color: '#FFFFFF'
+      fontStyle: 'bold', color: DESIGN.colors.text.primary
     }).setOrigin(0.5).setDepth(3003);
     elements.push(confirmLabel);
 
@@ -283,11 +303,11 @@ export class SettingsPopup extends PopupBase {
       this.scene.scene.start('LoginScene');
     });
 
-    const cancelBg = this.scene.add.rectangle(centerX + s(85), dialogY + s(55), s(140), s(40), 0x475569)
+    const cancelBg = this.scene.add.rectangle(centerX + s(85), dialogY + s(55), s(140), s(40), DESIGN.colors.bg.surface)
       .setDepth(3002).setInteractive({ useHandCursor: true });
     elements.push(cancelBg);
     const cancelLabel = this.scene.add.text(centerX + s(85), dialogY + s(55), '취소', {
-      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16), color: '#94A3B8'
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16), color: DESIGN.colors.text.secondary
     }).setOrigin(0.5).setDepth(3003);
     elements.push(cancelLabel);
 
@@ -298,12 +318,12 @@ export class SettingsPopup extends PopupBase {
 
   createAccountInfo() {
     const { left, top, width } = this.contentBounds;
-    const y = top + s(515); // AUTH-1.2: Y 위치 조정 (계정 관리 + 디버그 토글 아래로)
+    const y = top + 5 * s(ROW_HEIGHT + ROW_GAP) + s(140); // 계정 관리 섹션 아래
 
     this.addText(left + s(10), y, '계정 정보', {
       fontSize: sf(20),
       fontStyle: 'bold',
-      color: '#F8FAFC'
+      color: DESIGN.colors.text.primary
     });
 
     const data = SaveManager.load();
@@ -320,50 +340,11 @@ export class SettingsPopup extends PopupBase {
     infoItems.forEach((text, i) => {
       this.addText(left + s(20), y + s(35) + i * s(28), text, {
         fontSize: sf(15),
-        color: '#94A3B8'
+        color: DESIGN.colors.text.secondary
       });
     });
 
-    // Coupon button
-    const couponY = y + s(35) + infoItems.length * s(28) + s(15);
-    const couponBtn = this.scene.add.graphics();
-    couponBtn.fillStyle(COLORS.primary, 1);
-    couponBtn.fillRoundedRect(left + s(10), couponY, s(180), s(40), s(10));
-    this.contentContainer.add(couponBtn);
-
-    this.addText(left + s(100), couponY + s(20), '🎫 쿠폰 입력', {
-      fontSize: sf(14),
-      fontStyle: 'bold',
-      color: '#FFFFFF'
-    }).setOrigin(0.5);
-
-    const couponHit = this.scene.add.rectangle(left + s(100), couponY + s(20), s(180), s(40))
-      .setAlpha(0.001).setInteractive({ useHandCursor: true });
-    this.contentContainer.add(couponHit);
-
-    couponHit.on('pointerdown', () => {
-      this.showCouponModal();
-    });
-
-    // Data reset button
-    const resetY = couponY + s(50);
-    const resetBtn = this.scene.add.graphics();
-    resetBtn.fillStyle(0x334155, 1);
-    resetBtn.fillRoundedRect(left + s(10), resetY, s(180), s(40), s(10));
-    this.contentContainer.add(resetBtn);
-
-    this.addText(left + s(100), resetY + s(20), '🗑️ 데이터 초기화', {
-      fontSize: sf(14),
-      color: '#EF4444'
-    }).setOrigin(0.5);
-
-    const resetHit = this.scene.add.rectangle(left + s(100), resetY + s(20), s(180), s(40))
-      .setAlpha(0.001).setInteractive({ useHandCursor: true });
-    this.contentContainer.add(resetHit);
-
-    resetHit.on('pointerdown', () => {
-      this.showResetConfirm();
-    });
+    // '쿠폰 입력' · '데이터 초기화' 버튼은 액션 바(슬롯 4)로 옮겼다
   }
 
   showCouponModal() {
@@ -376,7 +357,7 @@ export class SettingsPopup extends PopupBase {
     elements.push(overlay);
 
     const modal = this.scene.add.graphics().setDepth(3001);
-    modal.fillStyle(0x1E293B, 1);
+    modal.fillStyle(DESIGN.colors.bg.secondary, 1);
     modal.fillRoundedRect(centerX - s(160), modalY - s(100), s(320), s(200), s(16));
     modal.lineStyle(s(2), COLORS.primary, 0.5);
     modal.strokeRoundedRect(centerX - s(160), modalY - s(100), s(320), s(200), s(16));
@@ -384,7 +365,7 @@ export class SettingsPopup extends PopupBase {
 
     const title = this.scene.add.text(centerX, modalY - s(75), '쿠폰 입력', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(20),
-      fontStyle: 'bold', color: '#F8FAFC'
+      fontStyle: 'bold', color: DESIGN.colors.text.primary
     }).setOrigin(0.5).setDepth(3002);
     elements.push(title);
 
@@ -427,7 +408,7 @@ export class SettingsPopup extends PopupBase {
 
     const submitLabel = this.scene.add.text(centerX, modalY + s(40), '적용', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16),
-      fontStyle: 'bold', color: '#FFFFFF'
+      fontStyle: 'bold', color: DESIGN.colors.text.primary
     }).setOrigin(0.5).setDepth(3003);
     elements.push(submitLabel);
 
@@ -464,7 +445,7 @@ export class SettingsPopup extends PopupBase {
 
     // Close
     const closeLabel = this.scene.add.text(centerX, modalY + s(75), '닫기', {
-      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(14), color: '#94A3B8'
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(14), color: DESIGN.colors.text.secondary
     }).setOrigin(0.5).setDepth(3003).setInteractive({ useHandCursor: true });
     elements.push(closeLabel);
 
@@ -485,14 +466,14 @@ export class SettingsPopup extends PopupBase {
     elements.push(overlay);
 
     const dialog = this.scene.add.graphics().setDepth(3001);
-    dialog.fillStyle(0x1E293B, 1);
+    dialog.fillStyle(DESIGN.colors.bg.secondary, 1);
     dialog.fillRoundedRect(centerX - s(160), dialogY - s(80), s(320), s(160), s(16));
     elements.push(dialog);
 
     const msg = this.scene.add.text(centerX, dialogY - s(35),
       '모든 데이터가 삭제됩니다.\n정말 초기화하시겠습니까?', {
         fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16),
-        color: '#F8FAFC', align: 'center'
+        color: DESIGN.colors.text.primary, align: 'center'
       }).setOrigin(0.5).setDepth(3002);
     elements.push(msg);
 
@@ -501,7 +482,7 @@ export class SettingsPopup extends PopupBase {
     elements.push(confirmBg);
     const confirmLabel = this.scene.add.text(centerX - s(75), dialogY + s(35), '초기화', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16),
-      fontStyle: 'bold', color: '#FFFFFF'
+      fontStyle: 'bold', color: DESIGN.colors.text.primary
     }).setOrigin(0.5).setDepth(3003);
     elements.push(confirmLabel);
 
@@ -510,11 +491,11 @@ export class SettingsPopup extends PopupBase {
       location.reload();
     });
 
-    const cancelBg = this.scene.add.rectangle(centerX + s(75), dialogY + s(35), s(120), s(40), 0x475569)
+    const cancelBg = this.scene.add.rectangle(centerX + s(75), dialogY + s(35), s(120), s(40), DESIGN.colors.bg.surface)
       .setDepth(3002).setInteractive({ useHandCursor: true });
     elements.push(cancelBg);
     const cancelLabel = this.scene.add.text(centerX + s(75), dialogY + s(35), '취소', {
-      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16), color: '#94A3B8'
+      fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(16), color: DESIGN.colors.text.secondary
     }).setOrigin(0.5).setDepth(3003);
     elements.push(cancelLabel);
 
@@ -527,7 +508,7 @@ export class SettingsPopup extends PopupBase {
     const { centerX, top } = this.contentBounds;
     const toast = this.scene.add.text(centerX, top + s(200), message, {
       fontSize: sf(16), fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#FFFFFF', backgroundColor: '#334155', padding: { x: s(20), y: s(12) }
+      color: DESIGN.colors.text.primary, backgroundColor: hexToCSS(DESIGN.colors.bg.surface), padding: { x: s(20), y: s(12) }
     }).setOrigin(0.5).setDepth(4000);
 
     this.scene.tweens.add({

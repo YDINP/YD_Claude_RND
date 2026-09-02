@@ -106,11 +106,11 @@ export const COLORS = {
     takamagahara: 0xFFD700,
     olympus: 0xFF6B35,
     asgard: 0x5DADE2,
-    yomi: 0x8E44AD,
-    tartarus: 0xB71C1C,
-    avalon: 0x4CAF50,
-    helheim: 0x37474F,
-    kunlun: 0x00BCD4
+    yomi: 0xB060D0,
+    tartarus: 0x506888,
+    avalon: 0x4ECDC4,
+    helheim: 0xB0C4DE,
+    kunlun: 0x50C878
   }
 };
 
@@ -259,11 +259,11 @@ export const CULT_COLORS = {
   takamagahara: 0xFFD700,  // 타카마가하라 - 빛의 황금
   olympus: 0xFF6B35,       // 올림푸스 - 불의 주황
   asgard: 0x5DADE2,        // 아스가르드 - 물의 청록
-  yomi: 0x8E44AD,          // 요미 - 어둠의 보라
-  tartarus: 0xB71C1C,      // 타르타로스 - 심연의 진홍
-  avalon: 0x4CAF50,        // 아발론 - 요정의 초록
-  helheim: 0x37474F,       // 헬하임 - 죽음의 청흑
-  kunlun: 0x00BCD4         // 곤륜 - 선계의 청옥
+  yomi: 0xB060D0,          // 요미 - 어둠의 보라
+  tartarus: 0x506888,      // 타르타로스 - 심연의 짙은 남색
+  avalon: 0x4ECDC4,        // 아발론 - 요정의 청록민트
+  helheim: 0xB0C4DE,       // 헬하임 - 죽음의 연청회
+  kunlun: 0x50C878         // 곤륜 - 선계의 에메랄드
 };
 
 export const CULT_INFO = {

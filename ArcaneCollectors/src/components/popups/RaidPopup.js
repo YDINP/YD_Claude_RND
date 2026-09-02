@@ -7,8 +7,16 @@
 import { PopupBase } from '../PopupBase.js';
 import { COLORS, s, sf, MOODS } from '../../config/gameConfig.js';
 import { RaidSystem } from '../../systems/RaidSystem.js';
+import { DESIGN, hexToCSS } from '../../config/designSystem.js';
+import { POPUP_SLOT } from '../../utils/popupLayout.js';
 
 const TAB = { STATUS: 0, REWARDS: 1 };
+
+/** 헤더 타이틀 — 이모지는 헤더 언더라인 교단색이 대신한다 */
+const TITLE = '주간 레이드';
+
+/** 탭 스트립 높이 (기획 px) */
+const TAB_STRIP_HEIGHT = 44;
 
 const CULT_LABELS = {
   valhalla: '발할라',
@@ -21,9 +29,11 @@ const CULT_LABELS = {
 export class RaidPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '⚔ 주간 레이드',
-      width: s(680),
-      height: s(1100),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.cult.olympus,
       ...options
     });
     this._activeTab = TAB.STATUS;
@@ -32,8 +42,55 @@ export class RaidPopup extends PopupBase {
   }
 
   buildContent() {
+    this.setTitle(TITLE);
+    this._applySummary(null);
+    this._applyActions(TAB.STATUS, null);
     this._renderTabs();
     this._loadAndRenderTab(TAB.STATUS);
+  }
+
+  /** 슬롯 2 — 보스 잔여 HP · 내 기여도 */
+  _applySummary(status) {
+    if (!status || !status.success) {
+      this.setSummary([
+        { label: '보스 HP', value: '-' },
+        { label: '내 기여도', value: '-' }
+      ]);
+      return;
+    }
+    const ratio = Math.max(0, Math.min(1, status.remainingRatio));
+    this.setSummary([
+      { label: '보스 HP', value: `${Math.ceil(ratio * 100)}%` },
+      { label: '내 기여도', value: `${status.damagePct.toFixed(2)}%` },
+      { label: '구간', value: status.tierRank || '미달' }
+    ]);
+  }
+
+  /** 슬롯 4 — 탭별 주 행동. 콜백이 자기 액션 바를 지우지 않도록 한 프레임 미룬다 */
+  _applyActions(tabIdx, status) {
+    const bossId = status && status.boss ? status.boss.id : null;
+    const defer = (fn) => this.scene.time.delayedCall(0, fn);
+    if (tabIdx === TAB.REWARDS) {
+      this.setActions([
+        {
+          label: '보상 수령',
+          variant: 'primary',
+          disabled: !bossId,
+          onClick: () => defer(() => this._onClaimPressed(bossId))
+        },
+        { label: '닫기', variant: 'ghost', onClick: () => this.hide() }
+      ]);
+      return;
+    }
+    this.setActions([
+      {
+        label: '레이드 입장',
+        variant: 'primary',
+        disabled: !bossId,
+        onClick: () => defer(() => this._onEnterPressed(bossId))
+      },
+      { label: '닫기', variant: 'ghost', onClick: () => this.hide() }
+    ]);
   }
 
   // ─────────────────────────────────────────
@@ -47,11 +104,11 @@ export class RaidPopup extends PopupBase {
 
     tabLabels.forEach((label, idx) => {
       const tx = b.left + tabW * idx + tabW / 2;
-      const ty = b.top + s(20);
+      const ty = b.top + s(TAB_STRIP_HEIGHT) / 2;
 
       const isActive = idx === this._activeTab;
-      const bg = this.scene.add.rectangle(tx, ty, tabW - s(4), s(36),
-        isActive ? COLORS.primary : COLORS.bgLight, 1);
+      const bg = this.scene.add.rectangle(tx, ty, tabW - s(4), s(TAB_STRIP_HEIGHT - 8),
+        isActive ? DESIGN.colors.cult.olympus : DESIGN.colors.bg.surface, isActive ? 0.9 : 0.6);
       bg.setInteractive({ useHandCursor: true });
       bg.on('pointerdown', () => {
         if (!this._isLoading) this._loadAndRenderTab(idx);
@@ -63,7 +120,7 @@ export class RaidPopup extends PopupBase {
         fontSize: sf(15),
         fontFamily: '"Noto Sans KR", sans-serif',
         fontStyle: isActive ? 'bold' : 'normal',
-        color: isActive ? '#FFFFFF' : '#94A3B8'
+        color: isActive ? DESIGN.colors.text.primary : DESIGN.colors.text.secondary
       }).setOrigin(0.5);
       this.contentContainer.add(txt);
       this._tabObjects.push(txt);
@@ -76,7 +133,7 @@ export class RaidPopup extends PopupBase {
     this._renderTabs();
 
     const b = this.contentBounds;
-    const contentTop = b.top + s(60);
+    const contentTop = b.top + s(TAB_STRIP_HEIGHT + 12);
     this._isLoading = true;
 
     if (tabIdx === TAB.STATUS) {
@@ -107,6 +164,8 @@ export class RaidPopup extends PopupBase {
     const weekly = RaidSystem.getWeeklyRaid();
     const status = RaidSystem.getRaidStatus(weekly.boss.id);
     this._isLoading = false;
+    this._applySummary(status);
+    this._applyActions(TAB.STATUS, status);
 
     const b = this.contentBounds;
     const cx = b.centerX;
@@ -114,7 +173,7 @@ export class RaidPopup extends PopupBase {
 
     if (!status.success) {
       this._add(this.scene.add.text(cx, y + s(60), '레이드 데이터를 불러올 수 없습니다', {
-        fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif', color: '#94A3B8'
+        fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif', color: DESIGN.colors.text.secondary
       }).setOrigin(0.5));
       return;
     }
@@ -123,13 +182,13 @@ export class RaidPopup extends PopupBase {
     const moodInfo = MOODS[boss.weakMood];
     const moodColor = moodInfo
       ? '#' + moodInfo.color.toString(16).padStart(6, '0')
-      : '#F8FAFC';
+      : DESIGN.colors.text.primary;
 
     // 보스 이름
     this._add(this.scene.add.text(cx, y + s(30), boss.name, {
       fontSize: sf(30),
       fontFamily: '"Noto Sans KR", sans-serif',
-      fontStyle: 'bold', color: '#F8FAFC'
+      fontStyle: 'bold', color: DESIGN.colors.text.primary
     }).setOrigin(0.5));
 
     // 교단 + 약점 무드
@@ -137,7 +196,7 @@ export class RaidPopup extends PopupBase {
     const weaknessName = moodInfo ? moodInfo.name : boss.weakMood;
     this._add(this.scene.add.text(cx - s(40), y + s(70),
       cultLabel + '  |  약점 무드:', {
-        fontSize: sf(13), fontFamily: '"Noto Sans KR", sans-serif', color: '#94A3B8'
+        fontSize: sf(13), fontFamily: '"Noto Sans KR", sans-serif', color: DESIGN.colors.text.secondary
       }).setOrigin(0.5));
     this._add(this.scene.add.text(cx + s(120), y + s(70), weaknessName, {
       fontSize: sf(13),
@@ -149,9 +208,9 @@ export class RaidPopup extends PopupBase {
     const barW = b.width - s(60);
     const barY = y + s(130);
     this._add(this.scene.add.text(b.left + s(10), barY - s(24), 'BOSS HP', {
-      fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif', color: '#64748B'
+      fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif', color: DESIGN.colors.text.muted
     }).setOrigin(0, 0.5));
-    const barBg = this.scene.add.rectangle(cx, barY, barW, s(22), 0x0F172A, 1);
+    const barBg = this.scene.add.rectangle(cx, barY, barW, s(22), DESIGN.colors.bg.primary, 1);
     barBg.setStrokeStyle(s(1), COLORS.bgPanel, 1);
     this._add(barBg);
     const ratio = Math.max(0, Math.min(1, status.remainingRatio));
@@ -163,7 +222,7 @@ export class RaidPopup extends PopupBase {
     this._add(this.scene.add.text(cx, barY + s(26),
       Math.floor(status.maxHp * ratio).toLocaleString() + ' / ' + status.maxHp.toLocaleString()
       + '  (' + Math.ceil(ratio * 100) + '%)', {
-        fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif', color: '#94A3B8'
+        fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif', color: DESIGN.colors.text.secondary
       }).setOrigin(0.5));
 
     // 내 누적 데미지
@@ -172,14 +231,14 @@ export class RaidPopup extends PopupBase {
     this._add(dmgBox);
     this._add(this.scene.add.text(cx - s(10), y + s(212),
       '내 누적 데미지', {
-        fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif', color: '#64748B'
+        fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif', color: DESIGN.colors.text.muted
       }).setOrigin(0.5));
     this._add(this.scene.add.text(cx - s(10), y + s(240),
       status.myDamage.toLocaleString()
       + '  (' + status.damagePct.toFixed(2) + '%)', {
         fontSize: sf(18),
         fontFamily: '"Noto Sans KR", sans-serif',
-        fontStyle: 'bold', color: '#F59E0B'
+        fontStyle: 'bold', color: hexToCSS(DESIGN.colors.status.warning)
       }).setOrigin(0.5));
 
     // 기여도 구간 표시
@@ -190,16 +249,13 @@ export class RaidPopup extends PopupBase {
       fontSize: sf(14),
       fontFamily: '"Noto Sans KR", sans-serif',
       fontStyle: 'bold',
-      color: status.tierRank ? '#10B981' : '#94A3B8'
+      color: status.tierRank ? hexToCSS(DESIGN.colors.status.success) : DESIGN.colors.text.secondary
     }).setOrigin(0.5));
 
-    // 입장 버튼
-    this._addButton(cx, y + s(345), s(220), s(50), '레이드 입장', COLORS.primary,
-      () => this._onEnterPressed(boss.id));
   }
 
   async _onEnterPressed(bossId) {
-    if (this._isLoading) return;
+    if (this._isLoading || !bossId) return;
     this._isLoading = true;
     const result = await RaidSystem.enterRaid(bossId);
     this._isLoading = false;
@@ -207,7 +263,7 @@ export class RaidPopup extends PopupBase {
       result.success
         ? result.boss.name + ' 전장에 입장했습니다!'
         : (result.error || '입장 실패'),
-      result.success ? '#10B981' : '#EF4444'
+      result.success ? hexToCSS(DESIGN.colors.status.success) : hexToCSS(DESIGN.colors.status.error)
     );
   }
 
@@ -219,6 +275,8 @@ export class RaidPopup extends PopupBase {
     const weekly = RaidSystem.getWeeklyRaid();
     const status = RaidSystem.getRaidStatus(weekly.boss.id);
     this._isLoading = false;
+    this._applySummary(status);
+    this._applyActions(TAB.REWARDS, status);
 
     const b = this.contentBounds;
     const cx = b.centerX;
@@ -226,7 +284,7 @@ export class RaidPopup extends PopupBase {
 
     if (!status.success) {
       this._add(this.scene.add.text(cx, y + s(60), '보상 정보를 불러올 수 없습니다', {
-        fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif', color: '#94A3B8'
+        fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif', color: DESIGN.colors.text.secondary
       }).setOrigin(0.5));
       return;
     }
@@ -238,18 +296,13 @@ export class RaidPopup extends PopupBase {
       this._renderRewardRow(reward, cx, iy, b.width - s(30), itemH, status.damagePct,
         claimedSet.has(reward.tier));
     });
-
-    // 전체 수령 버튼
-    const btnY = y + s(20) + status.rewards.length * (itemH + s(6)) + s(16);
-    this._addButton(cx, btnY, s(220), s(50), '보상 수령', COLORS.success,
-      () => this._onClaimPressed(status.boss.id));
   }
 
   _renderRewardRow(reward, cx, cy, w, h, damagePct, claimed) {
     const reached = damagePct >= reward.minDamagePct;
     const rowColor = claimed ? COLORS.bgPanel : (reached ? COLORS.bgLight : COLORS.bgDark);
     const bg = this.scene.add.rectangle(cx, cy, w, h, rowColor, 0.9);
-    bg.setStrokeStyle(s(1), claimed ? COLORS.success : (reached ? COLORS.primary : 0x334155), 0.5);
+    bg.setStrokeStyle(s(1), claimed ? COLORS.success : (reached ? COLORS.primary : DESIGN.colors.bg.surface), 0.5);
     this._add(bg);
 
     // 좌측: 구간명 + 필요 기여도
@@ -258,28 +311,28 @@ export class RaidPopup extends PopupBase {
         fontSize: sf(15),
         fontFamily: '"Noto Sans KR", sans-serif',
         fontStyle: 'bold',
-        color: claimed ? '#10B981' : (reached ? '#FFFFFF' : '#64748B')
+        color: claimed ? hexToCSS(DESIGN.colors.status.success) : (reached ? DESIGN.colors.text.primary : DESIGN.colors.text.muted)
       }).setOrigin(0, 0.5));
     this._add(this.scene.add.text(cx - w / 2 + s(14), cy + s(12),
       '필요 기여도 ' + reward.minDamagePct + '% 이상', {
-        fontSize: sf(11), fontFamily: '"Noto Sans KR", sans-serif', color: '#64748B'
+        fontSize: sf(11), fontFamily: '"Noto Sans KR", sans-serif', color: DESIGN.colors.text.muted
       }).setOrigin(0, 0.5));
 
     // 우측: 보상 요약
     const parts = [];
-    parts.push('G ' + reward.gold.toLocaleString());
-    parts.push('💎 ' + reward.gems);
+    parts.push('골드 ' + reward.gold.toLocaleString());
+    parts.push('젬 ' + reward.gems);
     parts.push('조각 x' + reward.equipmentFragment);
     if (reward.ssrTicket > 0) parts.push('SSR권 x' + reward.ssrTicket);
     this._add(this.scene.add.text(cx + w / 2 - s(14), cy, parts.join('   '), {
       fontSize: sf(12),
       fontFamily: '"Noto Sans KR", sans-serif',
-      color: reached && !claimed ? '#F59E0B' : '#94A3B8'
+      color: reached && !claimed ? hexToCSS(DESIGN.colors.status.warning) : DESIGN.colors.text.secondary
     }).setOrigin(1, 0.5));
   }
 
   async _onClaimPressed(bossId) {
-    if (this._isLoading) return;
+    if (this._isLoading || !bossId) return;
     this._isLoading = true;
     const result = await RaidSystem.claimRewards(bossId);
     this._isLoading = false;
@@ -287,38 +340,21 @@ export class RaidPopup extends PopupBase {
     if (result.success) {
       const r = result.rewards;
       this._showFeedback(
-        '보상 수령! G ' + r.gold.toLocaleString() + ' / 💎 ' + r.gems
+        '보상 수령! 골드 ' + r.gold.toLocaleString() + ' / 젬 ' + r.gems
         + ' / 조각 x' + r.equipmentFragment
         + (r.ssrTicket > 0 ? ' / SSR권 x' + r.ssrTicket : ''),
-        '#10B981');
+        hexToCSS(DESIGN.colors.status.success));
       this._loadAndRenderTab(TAB.REWARDS);
     } else {
       this._showFeedback(result.error === 'No claimable rewards'
         ? '수령 가능한 보상이 없습니다'
-        : (result.error || '수령 실패'), '#EF4444');
+        : (result.error || '수령 실패'), hexToCSS(DESIGN.colors.status.error));
     }
   }
 
   // ─────────────────────────────────────────
   // 공통 유틸
   // ─────────────────────────────────────────
-
-  _addButton(x, y, w, h, label, color, callback) {
-    const bg = this.scene.add.rectangle(x, y, w, h, color, 1);
-    bg.setInteractive({ useHandCursor: true });
-    bg.on('pointerover', () => bg.setAlpha(0.85));
-    bg.on('pointerout', () => bg.setAlpha(1));
-    bg.on('pointerdown', callback);
-    this._add(bg);
-
-    const txt = this.scene.add.text(x, y, label, {
-      fontSize: sf(16),
-      fontFamily: '"Noto Sans KR", sans-serif',
-      fontStyle: 'bold', color: '#FFFFFF'
-    }).setOrigin(0.5);
-    this._add(txt);
-    return { bg, txt };
-  }
 
   _showFeedback(message, color) {
     const b = this.contentBounds;

@@ -12,6 +12,9 @@ import {
   getAllySlots,
   getEnemySlots,
   getUnitAttachments,
+  formatHpReadout,
+  HP_READOUT,
+  UNIT_ATTACH,
   getSkillSlot,
   getSkillSlots,
   computeCooldownArc,
@@ -106,10 +109,38 @@ describe('battleLayout — 유닛 배치', () => {
     expect(computeUnitSlots()).toEqual([]);
   });
 
-  it('부착물은 HP바 아래에 이름을 두어 겹침을 없앤다', () => {
+  it('부착물은 HP바 → HP 수치 → 이름 순으로 겹치지 않게 쌓인다', () => {
     const attach = getUnitAttachments();
-    expect(attach.nameY).toBeGreaterThan(attach.hpBarY);
+    expect(attach.hpValueY).toBeGreaterThan(attach.hpBarY);
+    expect(attach.nameY).toBeGreaterThan(attach.hpValueY);
     expect(attach.badgeY).toBeLessThan(attach.hpBarY);
+    // HP바 하단(중심 + 절반)보다 수치가 아래에 있어야 바를 덮지 않는다
+    expect(attach.hpValueY).toBeGreaterThan(attach.hpBarY + attach.hpBarH / 2);
+  });
+
+  it('HP 수치는 배지 열과 세로로 분리된다', () => {
+    const attach = getUnitAttachments();
+    // 배지는 발밑 위, HP 수치는 발밑 아래 — 같은 x 열이어도 서로 닿지 않는다
+    expect(attach.badgeY).toBeLessThan(0);
+    expect(attach.hpValueY).toBeGreaterThan(0);
+  });
+
+  it('HP 수치가 이웃 유닛의 HP바를 침범하지 않는 폭으로 제한된다', () => {
+    const attach = getUnitAttachments();
+    const slots = getAllySlots(4);
+    const spacing = slots[1].x - slots[0].x;
+    // 수치 절반 폭 + 이웃 HP바 절반 폭이 유닛 간격을 넘지 않아야 한다
+    expect(attach.hpValueMaxW / 2 + attach.hpBarW / 2).toBeLessThan(spacing);
+  });
+
+  it('아군 4인의 이름 줄까지 아군 대역 안에 들어간다', () => {
+    const attach = getUnitAttachments();
+    for (const slot of getAllySlots(4)) {
+      expect(slot.y + attach.nameY).toBeLessThanOrEqual(BATTLE_LAYOUT.allyBand.bottom);
+    }
+    for (const slot of getEnemySlots(5)) {
+      expect(slot.y + attach.nameY).toBeLessThanOrEqual(BATTLE_LAYOUT.enemyBand.bottom);
+    }
   });
 
   it('보스는 부착물이 스프라이트 확대 비율만큼 밀린다', () => {
@@ -259,6 +290,51 @@ describe('battleLayout — 교단 배지', () => {
     expect(badges).toHaveLength(1);
     expect(badges[0].label).toBe('CURS');
     expect(badges[0].value).toBe(3);
+  });
+});
+
+describe('battleLayout — HP 수치 표기 (WCAG 1.4.1)', () => {
+  it('기본은 현재/최대 비율 표기다', () => {
+    const out = formatHpReadout(742, 900);
+    expect(out.mode).toBe('ratio');
+    expect(out.text).toBe('742/900');
+    expect(out.percent).toBe(82);
+  });
+
+  it('천 단위는 로케일과 무관하게 쉼표로 끊는다', () => {
+    expect(formatHpReadout(12345, 20000, { maxWidth: 999 }).text).toBe('12,345/20,000');
+  });
+
+  it('폭이 모자라면 퍼센트 표기로 내려간다', () => {
+    const narrow = formatHpReadout(123456, 999999, { maxWidth: 40 });
+    expect(narrow.mode).toBe('percent');
+    expect(narrow.text).toMatch(/^\d+%$/);
+  });
+
+  it('forcePercent 는 폭과 무관하게 퍼센트를 강제한다', () => {
+    const out = formatHpReadout(50, 200, { maxWidth: 999, forcePercent: true });
+    expect(out.mode).toBe('percent');
+    expect(out.text).toBe('25%');
+  });
+
+  it('최대 HP가 0 이하이거나 값이 깨져도 빈 문자열을 돌려주지 않는다', () => {
+    expect(formatHpReadout(5, 0).text).toBe('0%');
+    expect(formatHpReadout(5, -3).text).toBe('0%');
+    expect(formatHpReadout(NaN, NaN).text).toBe('0%');
+    expect(formatHpReadout(undefined, 100).text).toBe('0/100');
+  });
+
+  it('현재 HP는 0과 최대치 사이로 잘린다', () => {
+    expect(formatHpReadout(-40, 100).text).toBe('0/100');
+    expect(formatHpReadout(400, 100).text).toBe('100/100');
+    expect(formatHpReadout(-40, 100).percent).toBe(0);
+  });
+
+  it('기본 최대 폭은 HP바 폭에서 파생된다', () => {
+    const attach = getUnitAttachments();
+    expect(attach.hpValueMaxW).toBeCloseTo(UNIT_ATTACH.hpBarW * HP_READOUT.widthFactor, 5);
+    // 보스는 바가 커지므로 표기 허용폭도 함께 커진다
+    expect(getUnitAttachments({ isBoss: true }).hpValueMaxW).toBeGreaterThan(attach.hpValueMaxW);
   });
 });
 

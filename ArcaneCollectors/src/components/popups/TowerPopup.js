@@ -5,6 +5,15 @@ import { TowerSystem } from '../../systems/TowerSystem.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import energySystem from '../../systems/EnergySystem.js';
 import transitionManager from '../../utils/TransitionManager.js';
+import { DESIGN, hexToCSS } from '../../config/designSystem.js';
+import { POPUP_SLOT } from '../../utils/popupLayout.js';
+
+/** 헤더 타이틀 */
+const TITLE = '무한의 탑';
+
+/** 보스 층 도전 에너지 / 일반 층 에너지 */
+const ENERGY_COST_BOSS = 20;
+const ENERGY_COST_NORMAL = 12;
 
 /**
  * TowerPopup - 무한의 탑 팝업
@@ -13,9 +22,11 @@ import transitionManager from '../../utils/TransitionManager.js';
 export class TowerPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '무한의 탑',
-      width: s(680),
-      height: s(1100),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.cult.tartarus,
       ...options
     });
 
@@ -25,10 +36,43 @@ export class TowerPopup extends PopupBase {
 
   buildContent() {
     this.loadTowerData();
+    this.setTitle(TITLE);
+    this.applySummary();
+    this.applyActions();
+
     this.createFloorDisplay();
     this.createFloorInfo();
     this.createProgressBar();
-    this.createActionButtons();
+  }
+
+  /** 슬롯 2 — 현재 층 · 최고 기록 · 총 클리어 */
+  applySummary() {
+    this.setSummary([
+      { label: '현재 층', value: `${this.progress.currentFloor}층` },
+      { label: '최고 기록', value: `${this.progress.highestFloor}층` },
+      { label: '총 클리어', value: `${this.progress.totalClears}회` }
+    ]);
+  }
+
+  /** 슬롯 4 — 도전 / 리셋. 정복 완료면 도전이 비활성으로 남는다 */
+  applyActions() {
+    const canChallenge = this.currentFloorInfo !== null;
+    const actions = [{
+      label: canChallenge ? `${this.progress.currentFloor}층 도전` : '정복 완료',
+      variant: 'primary',
+      disabled: !canChallenge,
+      onClick: () => this.startTowerBattle()
+    }];
+
+    if (this.progress.currentFloor > 1) {
+      actions.push({
+        label: '탑 리셋',
+        variant: 'ghost',
+        onClick: () => this.scene.time.delayedCall(0, () => this.confirmReset())
+      });
+    }
+
+    this.setActions(actions);
   }
 
   loadTowerData() {
@@ -41,7 +85,7 @@ export class TowerPopup extends PopupBase {
     const top = this.contentBounds.top;
 
     // 현재 층 표시 (큰 원)
-    const circleY = top + s(100);
+    const circleY = top + s(96);
     const isBoss = this.currentFloorInfo?.isBoss;
     const circleColor = isBoss ? 0xEF4444 : COLORS.primary;
 
@@ -56,37 +100,26 @@ export class TowerPopup extends PopupBase {
     this.addText(cx, circleY - s(15), `${this.progress.currentFloor}`, {
       fontSize: sf(48),
       fontStyle: 'bold',
-      color: isBoss ? '#EF4444' : '#F8FAFC'
+      color: isBoss ? hexToCSS(DESIGN.colors.status.error) : DESIGN.colors.text.primary
     }).setOrigin(0.5);
 
     this.addText(cx, circleY + s(25), isBoss ? 'BOSS FLOOR' : 'FLOOR', {
       fontSize: sf(14),
-      color: isBoss ? '#FCA5A5' : '#94A3B8'
+      color: isBoss ? '#FCA5A5' : DESIGN.colors.text.secondary
     }).setOrigin(0.5);
 
-    // 최고 기록
-    this.addText(cx, circleY + s(60), `최고 기록: ${this.progress.highestFloor}층`, {
-      fontSize: sf(16),
-      color: '#F59E0B'
-    }).setOrigin(0.5);
-
-    // 총 클리어 횟수
-    this.addText(cx, circleY + s(85), `총 클리어: ${this.progress.totalClears}회`, {
-      fontSize: sf(14),
-      color: '#64748B'
-    }).setOrigin(0.5);
   }
 
   createFloorInfo() {
     const cx = this.contentBounds.centerX;
     const left = this.contentBounds.left;
-    const panelY = this.contentBounds.top + s(270);
+    const panelY = this.contentBounds.top + s(216);
     const panelW = this.contentBounds.width;
     const panelH = s(220);
 
     // 패널 배경
     const panel = this.scene.add.graphics();
-    panel.fillStyle(0x1E293B, 0.9);
+    panel.fillStyle(DESIGN.colors.bg.secondary, 0.9);
     panel.fillRoundedRect(left, panelY, panelW, panelH, s(16));
     panel.lineStyle(s(2), COLORS.primary, 0.3);
     panel.strokeRoundedRect(left, panelY, panelW, panelH, s(16));
@@ -95,13 +128,13 @@ export class TowerPopup extends PopupBase {
     this.addText(left + s(20), panelY + s(15), '층 정보', {
       fontSize: sf(18),
       fontStyle: 'bold',
-      color: '#F8FAFC'
+      color: DESIGN.colors.text.primary
     });
 
     if (!this.currentFloorInfo) {
       this.addText(cx, panelY + panelH / 2, '탑 정복 완료!', {
         fontSize: sf(20),
-        color: '#F59E0B',
+        color: hexToCSS(DESIGN.colors.status.warning),
         fontStyle: 'bold'
       }).setOrigin(0.5);
       return;
@@ -110,11 +143,11 @@ export class TowerPopup extends PopupBase {
     // 난이도
     const diff = this.currentFloorInfo.difficulty;
     const diffLabel = diff < 1.5 ? '쉬움' : diff < 2.5 ? '보통' : diff < 4 ? '어려움' : '극한';
-    const diffColor = diff < 1.5 ? '#10B981' : diff < 2.5 ? '#F59E0B' : diff < 4 ? '#EF4444' : '#DC2626';
+    const diffColor = diff < 1.5 ? hexToCSS(DESIGN.colors.status.success) : diff < 2.5 ? hexToCSS(DESIGN.colors.status.warning) : diff < 4 ? hexToCSS(DESIGN.colors.status.error) : '#DC2626';
 
     this.addText(left + s(20), panelY + s(50), '난이도:', {
       fontSize: sf(15),
-      color: '#94A3B8'
+      color: DESIGN.colors.text.secondary
     });
     this.addText(left + s(100), panelY + s(50), `${diffLabel} (x${diff.toFixed(2)})`, {
       fontSize: sf(15),
@@ -126,27 +159,27 @@ export class TowerPopup extends PopupBase {
     const enemies = this.currentFloorInfo.enemies || [];
     this.addText(left + s(20), panelY + s(80), '적:', {
       fontSize: sf(15),
-      color: '#94A3B8'
+      color: DESIGN.colors.text.secondary
     });
     const enemyText = enemies.map(e => `${e.id.replace('enemy_', '')} x${e.count}`).join(', ');
     this.addText(left + s(100), panelY + s(80), enemyText || '알 수 없음', {
       fontSize: sf(15),
-      color: '#F8FAFC'
+      color: DESIGN.colors.text.primary
     });
 
     // 보상 미리보기
     const rewards = this.currentFloorInfo.rewards;
     this.addText(left + s(20), panelY + s(115), '보상:', {
       fontSize: sf(15),
-      color: '#94A3B8'
+      color: DESIGN.colors.text.secondary
     });
     if (rewards) {
       const rewardParts = [];
-      if (rewards.gold) rewardParts.push(`💰 ${rewards.gold}`);
-      if (rewards.exp) rewardParts.push(`✨ ${rewards.exp} EXP`);
+      if (rewards.gold) rewardParts.push(`골드 ${rewards.gold}`);
+      if (rewards.exp) rewardParts.push(`경험치 ${rewards.exp}`);
       this.addText(left + s(100), panelY + s(115), rewardParts.join('  '), {
         fontSize: sf(15),
-        color: '#F8FAFC'
+        color: DESIGN.colors.text.primary
       });
     }
 
@@ -154,13 +187,13 @@ export class TowerPopup extends PopupBase {
     if (this.currentFloorInfo.bossReward) {
       const br = this.currentFloorInfo.bossReward;
       const bossRewardParts = [];
-      if (br.gems) bossRewardParts.push(`💎 ${br.gems}`);
-      if (br.srTicket) bossRewardParts.push(`🎫 SR티켓 x${br.srTicket}`);
-      if (br.ssrTicket) bossRewardParts.push(`🎫 SSR티켓 x${br.ssrTicket}`);
+      if (br.gems) bossRewardParts.push(`젬 ${br.gems}`);
+      if (br.srTicket) bossRewardParts.push(`SR 티켓 x${br.srTicket}`);
+      if (br.ssrTicket) bossRewardParts.push(`SSR 티켓 x${br.ssrTicket}`);
 
       this.addText(left + s(20), panelY + s(150), '보스 보너스:', {
         fontSize: sf(15),
-        color: '#EF4444'
+        color: hexToCSS(DESIGN.colors.status.error)
       });
       this.addText(left + s(140), panelY + s(150), bossRewardParts.join('  '), {
         fontSize: sf(15),
@@ -172,31 +205,31 @@ export class TowerPopup extends PopupBase {
     if (this.progress.nextBossFloor) {
       this.addText(left + s(20), panelY + s(185), `다음 보스: ${this.progress.nextBossFloor}층`, {
         fontSize: sf(14),
-        color: '#64748B'
+        color: DESIGN.colors.text.muted
       });
     }
   }
 
   createProgressBar() {
     const left = this.contentBounds.left;
-    const barY = this.contentBounds.top + s(530);
+    const barY = this.contentBounds.top + s(500);
     const barW = this.contentBounds.width;
     const barH = s(12);
     const progress = Math.min(this.progress.currentFloor / TowerSystem.MAX_FLOOR, 1);
 
     this.addText(left, barY - s(20), '탑 진행도', {
       fontSize: sf(14),
-      color: '#64748B'
+      color: DESIGN.colors.text.muted
     });
 
     this.addText(left + barW, barY - s(20),
       `${this.progress.currentFloor - 1} / ${TowerSystem.MAX_FLOOR}`, {
         fontSize: sf(14),
-        color: '#94A3B8'
+        color: DESIGN.colors.text.secondary
       }).setOrigin(1, 0);
 
     const barBg = this.scene.add.graphics();
-    barBg.fillStyle(0x1E293B, 1);
+    barBg.fillStyle(DESIGN.colors.bg.secondary, 1);
     barBg.fillRoundedRect(left, barY, barW, barH, s(6));
     this.contentContainer.add(barBg);
 
@@ -218,41 +251,9 @@ export class TowerPopup extends PopupBase {
     });
   }
 
-  createActionButtons() {
-    const cx = this.contentBounds.centerX;
-    const btnY = this.contentBounds.top + s(650);
-
-    // 도전 버튼
-    const canChallenge = this.currentFloorInfo !== null;
-    const challengeColor = canChallenge ? COLORS.primary : 0x475569;
-    const challengeLabel = canChallenge ? `⚔️ ${this.progress.currentFloor}층 도전` : '정복 완료';
-
-    if (canChallenge) {
-      this.addButton(cx, btnY, s(280), s(60), challengeLabel, challengeColor, () => {
-        this.startTowerBattle();
-      });
-    } else {
-      // 비활성화 버튼 (클릭 불가)
-      const bg = this.scene.add.rectangle(cx, btnY, s(280), s(60), challengeColor, 1);
-      const text = this.scene.add.text(cx, btnY, challengeLabel, {
-        fontSize: sf(20),
-        fontFamily: '"Noto Sans KR", sans-serif',
-        fontStyle: 'bold',
-        color: '#FFFFFF'
-      }).setOrigin(0.5);
-      this.contentContainer.add([bg, text]);
-    }
-
-    // 리셋 버튼 (1층보다 높을 때만)
-    if (this.progress.currentFloor > 1) {
-      this.addButton(cx, btnY + s(75), s(200), s(45), '🔄 탑 리셋', 0x334155, () => {
-        this.confirmReset();
-      });
-    }
-  }
-
   startTowerBattle() {
-    const energyCost = this.currentFloorInfo.isBoss ? 20 : 12;
+    if (!this.currentFloorInfo) return;
+    const energyCost = this.currentFloorInfo.isBoss ? ENERGY_COST_BOSS : ENERGY_COST_NORMAL;
     const currentEnergy = energySystem.getCurrentEnergy();
 
     if (currentEnergy < energyCost) {
@@ -289,7 +290,7 @@ export class TowerPopup extends PopupBase {
       .setDepth(2100).setInteractive();
 
     const dialog = this.scene.add.graphics().setDepth(2101);
-    dialog.fillStyle(0x1E293B, 1);
+    dialog.fillStyle(DESIGN.colors.bg.secondary, 1);
     dialog.fillRoundedRect(this.contentBounds.centerX - s(160), this.contentBounds.top + s(300), s(320), s(160), s(16));
     dialog.lineStyle(s(2), 0xEF4444, 0.5);
     dialog.strokeRoundedRect(this.contentBounds.centerX - s(160), this.contentBounds.top + s(300), s(320), s(160), s(16));
@@ -298,7 +299,7 @@ export class TowerPopup extends PopupBase {
       '탑을 리셋하시겠습니까?\n진행도가 1층으로 돌아갑니다.', {
         fontFamily: '"Noto Sans KR", sans-serif',
         fontSize: sf(16),
-        color: '#F8FAFC',
+        color: DESIGN.colors.text.primary,
         align: 'center'
       }).setOrigin(0.5).setDepth(2102);
 
@@ -309,7 +310,7 @@ export class TowerPopup extends PopupBase {
       fontFamily: '"Noto Sans KR", sans-serif',
       fontSize: sf(16),
       fontStyle: 'bold',
-      color: '#FFFFFF'
+      color: DESIGN.colors.text.primary
     }).setOrigin(0.5).setDepth(2103);
 
     confirmBg.on('pointerdown', () => {
@@ -323,12 +324,12 @@ export class TowerPopup extends PopupBase {
     });
 
     // 취소 버튼
-    const cancelBg = this.scene.add.rectangle(this.contentBounds.centerX + s(75), this.contentBounds.top + s(400), s(120), s(40), 0x475569)
+    const cancelBg = this.scene.add.rectangle(this.contentBounds.centerX + s(75), this.contentBounds.top + s(400), s(120), s(40), DESIGN.colors.bg.surface)
       .setDepth(2102).setInteractive({ useHandCursor: true });
     const cancelLabel = this.scene.add.text(this.contentBounds.centerX + s(75), this.contentBounds.top + s(400), '취소', {
       fontFamily: '"Noto Sans KR", sans-serif',
       fontSize: sf(16),
-      color: '#94A3B8'
+      color: DESIGN.colors.text.secondary
     }).setOrigin(0.5).setDepth(2103);
 
     cancelBg.on('pointerdown', () => {
@@ -340,8 +341,8 @@ export class TowerPopup extends PopupBase {
     const toast = this.scene.add.text(this.contentBounds.centerX, this.contentBounds.top + s(50), message, {
       fontSize: sf(18),
       fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#FFFFFF',
-      backgroundColor: '#334155',
+      color: DESIGN.colors.text.primary,
+      backgroundColor: hexToCSS(DESIGN.colors.bg.surface),
       padding: { x: s(24), y: s(14) }
     }).setOrigin(0.5).setDepth(2100);
 

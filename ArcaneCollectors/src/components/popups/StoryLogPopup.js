@@ -9,6 +9,8 @@ import {
   LOCKED_GROUP_TITLE,
 } from '../../systems/StoryLogRules.js';
 import { COLLECTION_TABS } from './CollectionPopup.js';
+import { DESIGN } from '../../config/designSystem.js';
+import { POPUP_SLOT } from '../../utils/popupLayout.js';
 
 /**
  * StoryLogPopup — 도감 '이야기' 탭 (T-Q4)
@@ -30,7 +32,14 @@ const ROW_HEIGHT = 62;
 const GROUP_HEADER_HEIGHT = 48;
 /** 탭 스트립 높이 — CollectionPopup 과 같아야 탭 전환 시 목록이 튀지 않는다 */
 const TAB_STRIP_HEIGHT = 44;
-const LIST_TOP_OFFSET = 96 + TAB_STRIP_HEIGHT;
+/**
+ * 진행도 요약은 T-22 에서 팝업 요약 슬롯(§3-6 슬롯 2)으로 올라갔다.
+ * 콘텐츠 안에서는 탭 스트립 높이 + 여백만 비운다.
+ */
+const LIST_TOP_OFFSET = TAB_STRIP_HEIGHT + 12;
+
+/** 헤더 타이틀 */
+const TITLE = '이야기';
 
 // 목록 파생은 순수 모듈이 담당한다. 여기서는 그리기만 한다.
 export {
@@ -47,9 +56,11 @@ export {
 export class StoryLogPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '이야기',
-      width: s(680),
-      height: s(1100),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.cult.takamagahara,
       ...options,
     });
 
@@ -67,10 +78,35 @@ export class StoryLogPopup extends PopupBase {
 
   buildContent() {
     this.loadData();
+    this.setTitle(TITLE);
+    this.applySummary();
+    this.applyActions();
     this.createTabs();
-    this.createSummary();
     this.createList();
     this.setupScrolling();
+  }
+
+  /**
+   * 슬롯 2 — 감상 진행도 · 놓친 이야기.
+   * 수치는 `buildStoryLog` 결과(SSOT)에서 직접 읽는다. 표시 문구는 요약 슬롯이 만든다.
+   */
+  applySummary() {
+    this.setSummary([
+      { label: '본 이야기', value: `${this.log?.viewedTotal ?? 0} / ${this.log?.sceneTotal ?? 0}` },
+      { label: '놓친 이야기', value: `${this.log?.skippedTotal ?? 0}편` }
+    ]);
+  }
+
+  /** 슬롯 4 — 도감(영웅 탭)으로 돌아가기 + 닫기 */
+  applyActions() {
+    this.setActions([
+      {
+        label: '도감으로',
+        variant: 'secondary',
+        onClick: () => this.scene?.time?.delayedCall?.(0, () => this.openTab('collection'))
+      },
+      { label: '닫기', variant: 'ghost', onClick: () => this.hide() }
+    ]);
   }
 
   /** 도감과 동일한 탭 스트립. '영웅'을 누르면 컬렉션으로 돌아간다. */
@@ -93,7 +129,7 @@ export class StoryLogPopup extends PopupBase {
       this.addText(cx, top + tabH / 2, tab.label, {
         fontSize: sf(15),
         fontStyle: 'bold',
-        color: active ? '#F8FAFC' : '#94A3B8',
+        color: active ? DESIGN.colors.text.primary : DESIGN.colors.text.secondary,
       }).setOrigin(0.5);
 
       if (active) return;
@@ -130,29 +166,6 @@ export class StoryLogPopup extends PopupBase {
       heroName: (heroId) => getCharacterOrHero(heroId)?.name || null,
     });
     this.summary = buildStoryLogSummary(this.log);
-  }
-
-  // ==================== 상단 요약 ====================
-
-  createSummary() {
-    const { left, width, centerX } = this.contentBounds;
-    const top = this.contentBounds.top + s(TAB_STRIP_HEIGHT);
-
-    const card = this.scene.add.graphics();
-    card.fillStyle(COLORS.bgLight, 0.9);
-    card.fillRoundedRect(left, top, width, s(76), s(12));
-    card.lineStyle(s(1), COLORS.primary, 0.4);
-    card.strokeRoundedRect(left, top, width, s(76), s(12));
-    this.contentContainer.add(card);
-
-    this.addText(centerX, top + s(24), this.summary.progressText, {
-      fontSize: sf(18), fontStyle: 'bold', color: '#F8FAFC',
-    }).setOrigin(0.5);
-
-    this.addText(centerX, top + s(52), this.summary.skippedText || '탭하면 다시 볼 수 있습니다', {
-      fontSize: sf(13),
-      color: this.summary.skippedText ? '#FBBF24' : '#64748B',
-    }).setOrigin(0.5);
   }
 
   // ==================== 목록 ====================
@@ -200,7 +213,7 @@ export class StoryLogPopup extends PopupBase {
     const count = this.scene.add.text(
       left + width - s(12), y + s(12),
       `[${group.viewedCount} / ${group.total}]`,
-      { fontSize: sf(13), fontFamily: '"Noto Sans KR", sans-serif', color: '#64748B' }
+      { fontSize: sf(13), fontFamily: '"Noto Sans KR", sans-serif', color: DESIGN.colors.text.muted }
     ).setOrigin(1, 0);
     this.listContainer.add(count);
   }
@@ -216,15 +229,15 @@ export class StoryLogPopup extends PopupBase {
     bg.strokeRoundedRect(left + s(8), y, width - s(16), rowH, s(8));
     this.listContainer.add(bg);
 
-    const badge = entry.skipped ? '⏭' : '👁';
+    const badge = entry.skipped ? '건너뜀' : '감상함';
     const label = `${badge}  ${entry.title}${entry.subtitle ? ` · ${entry.subtitle}` : ''}`;
     const text = this.scene.add.text(left + s(24), y + rowH / 2, label, {
       fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif',
-      color: '#F8FAFC',
+      color: DESIGN.colors.text.primary,
     }).setOrigin(0, 0.5);
     this.listContainer.add(text);
 
-    const play = this.scene.add.text(left + width - s(24), y + rowH / 2, '▶ 재생', {
+    const play = this.scene.add.text(left + width - s(24), y + rowH / 2, '재생 ▸', {
       fontSize: sf(14), fontFamily: '"Noto Sans KR", sans-serif', color: '#38BDF8',
     }).setOrigin(1, 0.5);
     this.listContainer.add(play);

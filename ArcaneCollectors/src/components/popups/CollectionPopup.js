@@ -4,6 +4,8 @@ import { COLORS, s, sf } from '../../config/gameConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import { CollectionSystem } from '../../systems/CollectionSystem.js';
 import cultsData from '../../data/cults.json';
+import { DESIGN, hexToCSS } from '../../config/designSystem.js';
+import { POPUP_SLOT } from '../../utils/popupLayout.js';
 
 /**
  * CollectionPopup - 컬렉션 도감 (COLL-01)
@@ -21,7 +23,7 @@ import cultsData from '../../data/cults.json';
  * 따라서 이 파일의 모듈 스코프에서는 COLORS를 참조하지 않고 리터럴만 둔다(TDZ 방지).
  */
 const TIER_COLORS = {
-  0: 0x475569,
+  0: DESIGN.colors.bg.surface,
   1: 0x6366F1,
   2: 0xF59E0B,
 };
@@ -45,8 +47,15 @@ const ROW_HEIGHT = 118;
 const ROW_GAP = 10;
 /** 탭 스트립 높이 (T-Q4) */
 const TAB_STRIP_HEIGHT = 44;
-/** 목록 영역이 시작되는 헤더 높이 — 탭 스트립만큼 아래로 밀린다 */
-const LIST_TOP_OFFSET = 130 + TAB_STRIP_HEIGHT;
+/**
+ * 목록 영역이 시작되는 높이.
+ * 진행도 요약은 T-22 에서 팝업 요약 슬롯(§3-6 슬롯 2)으로 올라갔으므로
+ * 콘텐츠 안에서는 탭 스트립 높이 + 여백만 비운다.
+ */
+const LIST_TOP_OFFSET = TAB_STRIP_HEIGHT + 12;
+
+/** 헤더 타이틀 */
+const TITLE = '컬렉션';
 
 /**
  * 도감 탭 (UX_ONBOARDING_FLOW.md §3-7).
@@ -61,9 +70,11 @@ export const COLLECTION_TABS = Object.freeze([
 export class CollectionPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '컬렉션',
-      width: s(680),
-      height: s(1100),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.cult.avalon,
       ...options,
     });
 
@@ -82,10 +93,34 @@ export class CollectionPopup extends PopupBase {
 
   buildContent() {
     this.loadData();
+    this.setTitle(TITLE);
+    this.applySummary();
+    this.applyActions();
     this.createTabs();
-    this.createSummary();
+    this.createProgressBar();
     this.createList();
     this.setupScrolling();
+  }
+
+  /** 슬롯 2 — 계정 진행도 요약 */
+  applySummary() {
+    this.setSummary([
+      { label: '수집 루트', value: `${this.summary.obtainedRoutes} / ${this.summary.totalRoutes}` },
+      { label: '완성', value: `${this.summary.completed} / ${this.summary.totalCollections}` },
+      { label: '세계수의 씨앗', value: `${this.seeds}` }
+    ]);
+  }
+
+  /** 슬롯 4 — 계정 완성 보너스 안내 + 닫기 */
+  applyActions() {
+    this.setActions([
+      {
+        label: this.summary.accountComplete ? '계정 완성 · ATK/DEF +2%' : `공명 ${this.summary.tier1}종`,
+        variant: 'secondary',
+        disabled: true
+      },
+      { label: '닫기', variant: 'ghost', onClick: () => this.hide() }
+    ]);
   }
 
   // ==================== 탭 (T-Q4) ====================
@@ -114,7 +149,7 @@ export class CollectionPopup extends PopupBase {
       this.addText(cx, top + tabH / 2, tab.label, {
         fontSize: sf(15),
         fontStyle: 'bold',
-        color: active ? '#F8FAFC' : '#94A3B8',
+        color: active ? DESIGN.colors.text.primary : DESIGN.colors.text.secondary,
       }).setOrigin(0.5);
 
       if (active) return;
@@ -156,48 +191,21 @@ export class CollectionPopup extends PopupBase {
 
   // ==================== 상단 요약 ====================
 
-  createSummary() {
-    const { left, width, centerX } = this.contentBounds;
-    const top = this.contentBounds.top + s(TAB_STRIP_HEIGHT);
+  /** 콘텐츠 상단 진행 바. 수치는 요약 슬롯이 맡는다 */
+  createProgressBar() {
+    const { left, width } = this.contentBounds;
+    const top = this.contentBounds.top + s(TAB_STRIP_HEIGHT - 4);
+    const barH = s(6);
+    const radius = s(DESIGN.radius.sm);
 
-    const card = this.scene.add.graphics();
-    card.fillStyle(COLORS.bgLight, 0.9);
-    card.fillRoundedRect(left, top, width, s(110), s(12));
-    card.lineStyle(s(1), COLORS.primary, 0.4);
-    card.strokeRoundedRect(left, top, width, s(110), s(12));
-    this.contentContainer.add(card);
-
-    this.addText(centerX, top + s(24),
-      `수집 루트 ${this.summary.obtainedRoutes} / ${this.summary.totalRoutes}`, {
-        fontSize: sf(20), fontStyle: 'bold', color: '#F8FAFC',
-      }).setOrigin(0.5);
-
-    this.addText(centerX, top + s(52),
-      `완성 ${this.summary.completed} / ${this.summary.totalCollections}    공명 ${this.summary.tier1}`, {
-        fontSize: sf(14), color: '#94A3B8',
-      }).setOrigin(0.5);
-
-    // 진행 바
-    const barW = width - s(60);
-    const barX = left + s(30);
-    const barY = top + s(74);
     const bar = this.scene.add.graphics();
-    bar.fillStyle(0x0F172A, 1);
-    bar.fillRoundedRect(barX, barY, barW, s(8), s(4));
+    bar.fillStyle(DESIGN.colors.bg.primary, 1);
+    bar.fillRoundedRect(left, top, width, barH, radius);
     if (this.summary.rate > 0) {
-      bar.fillStyle(COLORS.accent, 1);
-      bar.fillRoundedRect(barX, barY, Math.max(s(8), barW * this.summary.rate), s(8), s(4));
+      bar.fillStyle(DESIGN.colors.brand.accent, 1);
+      bar.fillRoundedRect(left, top, Math.max(barH, width * this.summary.rate), barH, radius);
     }
     this.contentContainer.add(bar);
-
-    const seedLabel = `🌱 세계수의 씨앗 ${this.seeds}`;
-    const bonusLabel = this.summary.accountComplete
-      ? '   ·   계정 완성 보너스 ATK/DEF +2%'
-      : '';
-    this.addText(centerX, top + s(94), seedLabel + bonusLabel, {
-      fontSize: sf(13),
-      color: this.summary.accountComplete ? '#F59E0B' : '#64748B',
-    }).setOrigin(0.5);
   }
 
   // ==================== 목록 ====================
@@ -243,7 +251,7 @@ export class CollectionPopup extends PopupBase {
     // 기본영웅 이름
     const name = this.scene.add.text(left + s(16), y + s(14), progress.baseHeroName, {
       fontSize: sf(18), fontFamily: '"Noto Sans KR", sans-serif',
-      fontStyle: 'bold', color: progress.tier > 0 ? '#F8FAFC' : '#94A3B8',
+      fontStyle: 'bold', color: progress.tier > 0 ? DESIGN.colors.text.primary : DESIGN.colors.text.secondary,
     });
     this.listContainer.add(name);
 
@@ -251,7 +259,7 @@ export class CollectionPopup extends PopupBase {
     const count = this.scene.add.text(
       left + width - s(16), y + s(16),
       `${progress.obtained.length} / ${progress.total}`,
-      { fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif', color: '#94A3B8' }
+      { fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif', color: DESIGN.colors.text.secondary }
     ).setOrigin(1, 0);
     this.listContainer.add(count);
 
@@ -261,7 +269,7 @@ export class CollectionPopup extends PopupBase {
       : '미개방';
     const badge = this.scene.add.text(left + s(16), y + s(40), badgeText, {
       fontSize: sf(13), fontFamily: '"Noto Sans KR", sans-serif',
-      color: progress.tier === 2 ? '#FBBF24' : (progress.tier === 1 ? '#A5B4FC' : '#475569'),
+      color: progress.tier === 2 ? hexToCSS(DESIGN.colors.brand.accent) : (progress.tier === 1 ? '#A5B4FC' : '#475569'),
     });
     this.listContainer.add(badge);
 
@@ -269,7 +277,7 @@ export class CollectionPopup extends PopupBase {
     const bonusLabel = this.formatBonus(progress.tier);
     if (bonusLabel) {
       const bonus = this.scene.add.text(left + width - s(16), y + s(40), bonusLabel, {
-        fontSize: sf(13), fontFamily: '"Noto Sans KR", sans-serif', color: '#10B981',
+        fontSize: sf(13), fontFamily: '"Noto Sans KR", sans-serif', color: hexToCSS(DESIGN.colors.status.success),
       }).setOrigin(1, 0);
       this.listContainer.add(bonus);
     }
@@ -287,7 +295,7 @@ export class CollectionPopup extends PopupBase {
 
     progress.routes.forEach((route, index) => {
       const cx = x + index * (chipW + gap);
-      const color = route.owned ? getRarityColor(route.resultRarity) : 0x334155;
+      const color = route.owned ? getRarityColor(route.resultRarity) : DESIGN.colors.bg.surface;
 
       const chip = this.scene.add.graphics();
       chip.fillStyle(color, route.owned ? 0.25 : 0.35);
@@ -300,14 +308,14 @@ export class CollectionPopup extends PopupBase {
       const label = `${mark} ${this.getCultName(route.cultId)}`;
       const text = this.scene.add.text(cx + chipW / 2, y + chipH / 2, label, {
         fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif',
-        color: route.owned ? '#F8FAFC' : '#64748B',
+        color: route.owned ? DESIGN.colors.text.primary : DESIGN.colors.text.muted,
       }).setOrigin(0.5);
       this.listContainer.add(text);
 
       // 등급 표기 (칩 우상단)
       const rarity = this.scene.add.text(cx + chipW - s(4), y + s(2), route.resultRarity, {
         fontSize: sf(9), fontFamily: '"Noto Sans KR", sans-serif',
-        color: route.owned ? '#FBBF24' : '#475569',
+        color: route.owned ? hexToCSS(DESIGN.colors.brand.accent) : '#475569',
       }).setOrigin(1, 0);
       this.listContainer.add(rarity);
     });

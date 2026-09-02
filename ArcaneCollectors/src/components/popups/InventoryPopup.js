@@ -3,17 +3,30 @@
  * 인벤토리 팝업 - InventoryScene 로직을 팝업으로 변환
  * 3탭: 장비, 소비, 재료
  */
+import Phaser from 'phaser';
 import { PopupBase } from '../PopupBase.js';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, s, sf } from '../../config/gameConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import { getItemsByType } from '../../data/index.js';
+import { DESIGN, hexToCSS } from '../../config/designSystem.js';
+import { POPUP_SLOT } from '../../utils/popupLayout.js';
+import { IconFactory } from '../../utils/IconFactory.js';
+
+/** 헤더 타이틀 */
+const TITLE = '인벤토리';
+
+/** 탭 스트립 높이 + 목록 시작 오프셋 (기획 px) */
+const TAB_STRIP_HEIGHT = 44;
+const LIST_TOP_OFFSET = TAB_STRIP_HEIGHT + 12;
 
 export class InventoryPopup extends PopupBase {
   constructor(scene, options = {}) {
     super(scene, {
-      title: '인벤토리',
-      width: s(680),
-      height: s(1100),
+      title: TITLE,
+      width: s(POPUP_SLOT.panelWidth),
+      height: s(POPUP_SLOT.panelHeight),
+      layoutSpec: 'redesign',
+      accentColor: DESIGN.colors.status.info,
       ...options
     });
 
@@ -31,9 +44,24 @@ export class InventoryPopup extends PopupBase {
 
   buildContent() {
     this.loadData();
-    this.createTopInfo();
+    this.setTitle(TITLE);
+    this.applySummary(0);
+    this.applyActions();
     this.createTabs();
     this.createItemList();
+  }
+
+  /** 슬롯 2 — 보유 골드 · 현재 탭 아이템 수 */
+  applySummary(itemCount) {
+    this.setSummary([
+      { label: '골드', value: this.gold.toLocaleString() },
+      { label: '보유 아이템', value: `${itemCount}개` }
+    ]);
+  }
+
+  /** 슬롯 4 — 닫기 */
+  applyActions() {
+    this.setActions([{ label: '닫기', variant: 'ghost', onClick: () => this.hide() }]);
   }
 
   loadData() {
@@ -43,46 +71,37 @@ export class InventoryPopup extends PopupBase {
     this.gold = this.scene.registry?.get('gold') || saved?.resources?.gold || 0;
   }
 
-  createTopInfo() {
-    const { centerX, top } = this.contentBounds;
-
-    // Gold display
-    this.goldText = this.addText(centerX, top + s(10), `🪙 ${this.gold.toLocaleString()}`, {
-      fontSize: sf(16), fontStyle: 'bold', color: '#FFD700'
-    });
-    this.goldText.setOrigin(0.5);
-
-    // Item count
-    this.countText = this.addText(centerX, top + s(35), '', {
-      fontSize: sf(14), color: '#94A3B8'
-    });
-    this.countText.setOrigin(0.5);
-  }
-
   createTabs() {
     const { left, top, width } = this.contentBounds;
 
     const tabs = [
-      { key: 'equipment', label: '⚔️ 장비' },
-      { key: 'consumable', label: '🧪 소비' },
-      { key: 'material', label: '🔧 재료' }
+      { key: 'equipment', label: '장비', icon: 'atk' },
+      { key: 'consumable', label: '소비', icon: 'hp' },
+      { key: 'material', label: '재료', icon: 'inventory' }
     ];
 
-    const tabY = top + s(60);
+    const tabY = top + s(TAB_STRIP_HEIGHT) / 2;
     const tabW = width / tabs.length;
 
     tabs.forEach((tab, i) => {
       const x = left + i * tabW;
       const isActive = tab.key === this.activeTab;
 
-      const bg = this.scene.add.rectangle(x + tabW / 2, tabY, tabW - s(4), s(40),
-        isActive ? COLORS.primary : 0x334155, isActive ? 0.9 : 0.5);
+      const bg = this.scene.add.rectangle(x + tabW / 2, tabY, tabW - s(4), s(TAB_STRIP_HEIGHT - 8),
+        isActive ? DESIGN.colors.status.info : DESIGN.colors.bg.surface, isActive ? 0.9 : 0.5);
       bg.setInteractive({ useHandCursor: true });
 
-      const label = this.scene.add.text(x + tabW / 2, tabY, tab.label, {
+      const label = this.scene.add.text(x + tabW / 2 + s(10), tabY, tab.label, {
         fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif',
-        color: '#FFFFFF', fontStyle: isActive ? 'bold' : 'normal'
+        color: DESIGN.colors.text.primary, fontStyle: isActive ? 'bold' : 'normal'
       }).setOrigin(0.5);
+
+      // 이모지 대신 벡터 아이콘. 정의가 없는 키는 null 을 돌려주므로 라벨만 남는다
+      const icon = IconFactory.createImage(
+        this.scene, x + tabW / 2 - s(22), tabY, tab.icon, 'xs',
+        { tint: isActive ? DESIGN.colors.text.primary : DESIGN.colors.brand.primary }
+      );
+      if (icon) this.contentContainer.add(icon);
 
       bg.on('pointerdown', () => this.switchTab(tab.key));
 
@@ -97,7 +116,7 @@ export class InventoryPopup extends PopupBase {
     // Update tab styles
     this.tabElements.forEach(tab => {
       const isActive = tab.key === tabKey;
-      tab.bg.setFillStyle(isActive ? COLORS.primary : 0x334155, isActive ? 0.9 : 0.5);
+      tab.bg.setFillStyle(isActive ? COLORS.primary : DESIGN.colors.bg.surface, isActive ? 0.9 : 0.5);
       tab.label.setFontStyle(isActive ? 'bold' : 'normal');
     });
 
@@ -107,12 +126,12 @@ export class InventoryPopup extends PopupBase {
   createItemList() {
     const { left, top, width, height } = this.contentBounds;
 
-    this.listContainer = this.scene.add.container(0, top + s(110));
+    this.listContainer = this.scene.add.container(0, top + s(LIST_TOP_OFFSET));
     this.contentContainer.add(this.listContainer);
 
     // Mask for scrolling
     const maskShape = this.scene.make.graphics();
-    maskShape.fillRect(left, top + s(110), width, height - s(110));
+    maskShape.fillRect(left, top + s(LIST_TOP_OFFSET), width, height - s(LIST_TOP_OFFSET));
     const mask = maskShape.createGeometryMask();
     this.listContainer.setMask(mask);
 
@@ -134,10 +153,8 @@ export class InventoryPopup extends PopupBase {
       items = this.getMaterialList();
     }
 
-    // Update count
-    if (this.countText) {
-      this.countText.setText(`${items.length}개`);
-    }
+    // 아이템 수는 요약 슬롯(슬롯 2)이 표시한다
+    this.applySummary(items.length);
 
     if (items.length === 0) {
       const emptyText = this.scene.add.text(
@@ -147,7 +164,7 @@ export class InventoryPopup extends PopupBase {
         {
           fontSize: sf(16),
           fontFamily: '"Noto Sans KR", sans-serif',
-          color: '#94A3B8'
+          color: DESIGN.colors.text.secondary
         }
       ).setOrigin(0.5);
       this.listContainer.add(emptyText);
@@ -165,7 +182,7 @@ export class InventoryPopup extends PopupBase {
     });
 
     // Update max scroll
-    this.maxScroll = Math.max(0, items.length * itemH - (this.contentBounds.height - s(110)));
+    this.maxScroll = Math.max(0, items.length * itemH - (this.contentBounds.height - s(LIST_TOP_OFFSET)));
     this.scrollY = Math.min(this.scrollY, this.maxScroll);
   }
 
@@ -179,7 +196,7 @@ export class InventoryPopup extends PopupBase {
       y + s(35),
       rowW,
       s(68),
-      index % 2 === 0 ? 0x1E293B : 0x334155,
+      index % 2 === 0 ? DESIGN.colors.bg.secondary : DESIGN.colors.bg.surface,
       0.4
     );
     rowBg.setInteractive({ useHandCursor: true });
@@ -204,7 +221,7 @@ export class InventoryPopup extends PopupBase {
       this.contentBounds.left + padX + s(28),
       y + s(35),
       slotIcon,
-      { fontSize: sf(20) }
+      { fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif', color: DESIGN.colors.text.primary }
     ).setOrigin(0.5);
     elements.push(iconText);
 
@@ -217,7 +234,7 @@ export class InventoryPopup extends PopupBase {
         fontSize: sf(15),
         fontFamily: '"Noto Sans KR", sans-serif',
         fontStyle: 'bold',
-        color: '#FFFFFF'
+        color: DESIGN.colors.text.primary
       }
     ).setOrigin(0, 0.5);
     elements.push(name);
@@ -239,7 +256,7 @@ export class InventoryPopup extends PopupBase {
       {
         fontSize: sf(12),
         fontFamily: 'Arial',
-        color: '#94A3B8'
+        color: DESIGN.colors.text.secondary
       }
     ).setOrigin(0, 0.5);
     elements.push(info);
@@ -254,7 +271,7 @@ export class InventoryPopup extends PopupBase {
         fontSize: sf(13),
         fontFamily: 'Arial',
         fontStyle: 'bold',
-        color: '#FFD700',
+        color: hexToCSS(DESIGN.colors.brand.accent),
         align: 'right'
       }
     ).setOrigin(1, 0.5);
@@ -263,7 +280,7 @@ export class InventoryPopup extends PopupBase {
     // Hover effect
     rowBg.on('pointerover', () => rowBg.setFillStyle(COLORS.primary, 0.2));
     rowBg.on('pointerout', () =>
-      rowBg.setFillStyle(index % 2 === 0 ? 0x1E293B : 0x334155, 0.4)
+      rowBg.setFillStyle(index % 2 === 0 ? DESIGN.colors.bg.secondary : DESIGN.colors.bg.surface, 0.4)
     );
 
     // Click handler (simple for now)
@@ -334,11 +351,11 @@ export class InventoryPopup extends PopupBase {
 
   getSlotIcon(item) {
     if (this.activeTab !== 'equipment') {
-      const typeIcons = { consumable: '🧪', material: '🔧', currency: '💎' };
-      return typeIcons[item.type] || '📦';
+      const typeLabels = { consumable: '소비', material: '재료', currency: '재화' };
+      return typeLabels[item.type] || '기타';
     }
-    const icons = { weapon: '⚔️', armor: '🛡️', accessory: '💍', relic: '🔮' };
-    return icons[item.slotType] || '📦';
+    const labels = { weapon: '무기', armor: '방어', accessory: '악세', relic: '유물' };
+    return labels[item.slotType] || '기타';
   }
 
   getSlotName(slotType) {
@@ -362,8 +379,8 @@ export class InventoryPopup extends PopupBase {
 
   setupScrolling() {
     const { left, top, width, height } = this.contentBounds;
-    const scrollTop = top + s(110);
-    const scrollHeight = height - s(110);
+    const scrollTop = top + s(LIST_TOP_OFFSET);
+    const scrollHeight = height - s(LIST_TOP_OFFSET);
 
     this.scene.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
       if (!this.isOpen) return;
@@ -378,7 +395,7 @@ export class InventoryPopup extends PopupBase {
 
   updateListPosition() {
     if (this.listContainer) {
-      this.listContainer.y = this.contentBounds.top + s(110) - this.scrollY;
+      this.listContainer.y = this.contentBounds.top + s(LIST_TOP_OFFSET) - this.scrollY;
     }
   }
 }
