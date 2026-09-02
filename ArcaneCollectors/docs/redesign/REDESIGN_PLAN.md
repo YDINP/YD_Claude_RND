@@ -738,3 +738,51 @@ localhost에서의 시간 단축이 전송량 감소폭에 못 미치는 것은 
 | D-3 | 저사양 블러 폴백 | 기본 ON. 기기 판별 없이 설정 화면 토글로 노출 | T-05 |
 | D-4 | 전신 시트 미보유 58명 | 포트레이트 확대 + 하단 페이드 폴백 | T-15 |
 | D-5 | 소환 시스템 재활성화 | `MainMenuScene.js:1083`에서 gacha 팝업이 주석 처리되어 있다. 확률 고지(T-13) 완료가 재활성화 조건 | T-13 |
+
+---
+
+## 6. T-26 결과 — before/after 캡처 대조 (2026-09-03)
+
+### 캡처
+
+`tools/art/capture-before.mjs`를 복제해 `tools/art/capture-after.mjs`를 만들고, 동일한 29개 화면 상태를 현재 코드(포트 3000)로 캡처했다. `screenshots/after-full/`에 29장 전부 저장됨(누락 없음, before와 파일명 1:1 일치).
+
+before 스크립트와의 차이는 두 가지다.
+
+1. **프롤로그 컷씬 처리** — 신규 게스트 계정은 로그인 직후 T-01/T-02 컷씬이 자동 재생되며 `MainMenuScene`을 일시정지시킨다. `tests/e2e/skip-path-parity.mjs`의 `handleCutsceneIfAny`/`clearPrologue` 패턴을 이식해 Skip All로 2건을 처리했다.
+2. **온보딩 메뉴 게이트 우회** — `MenuGridGate`(T-C7 점진 해금)가 도입되어 튜토리얼 미완료 신규 계정은 그리드 메뉴 13종이 전부 잠긴 채 그려지지 않는다. 캡처 스크립트가 `openPopup()`을 강제 호출해 팝업을 열어도, 잠금 상태에서는 콘텐츠 없이 튜토리얼 코치마크(다음 행동 유도 오버레이)만 남아 화면이 비어 보였다. 세이브에 `tutorial.completed = true`를 주입해 전량 해금한 뒤 `MainMenuScene`을 재시작하는 방식으로 우회해, before와 공정하게 비교 가능한 실제 콘텐츠를 캡처했다. `BattleResultScene`도 결과창 표시 전에 `stage_clear` 컷씬을 먼저 띄우므로 동일하게 Skip All을 선행시켰다.
+
+### 대조 시트
+
+Python Pillow로 29쌍을 좌(BEFORE)/우(AFTER) 배치한 대조 시트 3장을 생성했다.
+
+- `docs/redesign/screenshots/BEFORE_AFTER_2026-09-03_1.jpg` (10쌍 — 01-boot ~ 10-popup-herolist)
+- `docs/redesign/screenshots/BEFORE_AFTER_2026-09-03_2.jpg` (10쌍 — 10-popup-inventory ~ 22-stageselect)
+- `docs/redesign/screenshots/BEFORE_AFTER_2026-09-03_3.jpg` (9쌍 — 23-inventory-scene ~ 42-battleresult)
+
+생성 스크립트: `tools/art/build-before-after-sheet.py`.
+
+### 화면별 변화 한 줄 요약
+
+| 화면 | 변화 |
+|------|------|
+| 01-boot / 02-login | 빈 로딩 화면 → 실제 로고·배경 아트, 글래스 로그인 버튼 노출 |
+| 03-mainmenu / 04-mainmenu-idle-battle | 좌측 UI 패널 → 파티 카드·전투력·현재 모험 진행바·유휴전투 프리뷰가 있는 정보 계층 구조로 재구성. 하단 그리드 아이콘 13종에 원형 배지 통일 |
+| 10-popup-\* (13종) | 텍스트 목록형 팝업 → 유리질감 카드·헤더 구분선·아이콘화된 공통 팝업 프레임으로 통일 |
+| 20-gacha | 단색 배경 리스트 → 캐릭터 풀샷 일러스트 + 배너 카드형 뽑기 화면으로 전면 재설계 |
+| 21-herolist-scene | 텍스트 목록 → 캐릭터 초상 카드 그리드 |
+| 22-stageselect | 단순 스테이지 리스트 → 챕터 헤더(진행률 바)와 배경 아트, 스토리 요약 카드가 추가된 계층 구조 |
+| 23~27 (인벤토리/퀘스트/무한탑/파티편성/설정) | 프레임·타이포·컬러 토큰 통일. 기능 배치 자체는 before와 동일 |
+| 30-herodetail | 물음표 placeholder 초상화 → T-03/T-29로 활성화된 실제 1024px 포트레이트, 스탯 레이더 차트 추가 |
+| 40-battle / 41-battle-midfight | 단색 배경 → 배경 아트(숲) 적용. 다만 캐릭터 유닛은 before와 마찬가지로 실제 포트레이트가 아닌 플레이스홀더(색상 테두리 실루엣)로 표시됨(아래 결함 1) |
+| 42-battleresult | 어두운 배경 승리 텍스트 → 골드 톤 승리 카드, 보상 아이템 슬롯화 |
+
+### 발견한 시각 결함
+
+1. **`StageSelectScene` — "이 챕터의 이야기" 카드 텍스트 겹침 (회귀).** `22-stageselect` after 캡처 하단 스토리 카드에서 챕터 요약 문단과 "다음: 어두운 숲 입구 — …" 프리뷰 문단이 같은 좌표에 겹쳐 렌더링된다. 좌하단 재생(▶) 아이콘도 텍스트와 겹친다. before(단순 리스트, 스토리 카드 없음)에는 없던 신규 레이아웃 버그. `docs/redesign/screenshots/after-full/22-stageselect.png` 하단 참조.
+2. **`BattleScene` — 전투 중 캐릭터 실제 포트레이트 미표시 (기존 문제 잔존, 회귀 아님).** before는 `?` placeholder, after는 색상 테두리 실루엣 아이콘으로 표시 방식만 바뀌었을 뿐, 둘 다 실제 캐릭터 아트가 전투 화면에 노출되지 않는다. `HeroDetailScene`(T-03/T-29)에서는 포트레이트가 정상 표시되므로, `BattleScene`의 유닛 렌더링 경로만 별도로 포트레이트를 참조하지 않는 것으로 보인다.
+3. **색상 대비 판정 보류.** `10-popup-ascension` 등 팝업 내 보조 라벨(회색 텍스트)이 대조 시트 축소본에서는 흐릿해 보였으나, 원본 해상도 확인 결과 육안상 즉시 결함으로 단정하기 어려웠다. 정밀 대비율 판정은 SSOT인 `accessibility` 에이전트에 위임한다(T-28과 동일 대상).
+
+### 미대조 화면
+
+없음. 29/29 전 화면이 before/after 쌍으로 정상 대조됨. 다만 before 세트 중 `04-mainmenu-idle-battle.png`, `10-popup-pvp.png`, `10-popup-partyedit.png` 3장은 캡처 당시 계정 상태(진행도) 차이로 보이는 완전 공백 화면이라, 해당 3쌍은 레이아웃 비교보다는 "빈 화면 → 실제 콘텐츠 렌더링" 정도로만 참고하는 것이 안전하다.

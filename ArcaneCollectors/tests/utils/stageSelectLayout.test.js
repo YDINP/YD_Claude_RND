@@ -27,7 +27,10 @@ import {
   estimateHeroPower,
   estimatePartyPower,
   buildChapterStoryProgress,
-  hasViewedStageStory
+  hasViewedStageStory,
+  LORE_PANEL,
+  fitWrappedLines,
+  resolveLorePlacement
 } from '../../src/utils/stageSelectLayout.js';
 
 const stages = [
@@ -236,6 +239,61 @@ describe('전투력 추정', () => {
     expect(estimatePartyPower(heroes, 2)).toBe(900);
     expect(estimatePartyPower([])).toBe(0);
     expect(estimatePartyPower(null)).toBe(0);
+  });
+});
+
+describe('챕터 이야기 패널', () => {
+  it('줄 수 상한을 넘으면 마지막 줄에 말줄임을 붙여 자른다', () => {
+    const lines = ['첫째 줄', '둘째 줄', '셋째 줄', '넷째 줄'];
+
+    const cut = fitWrappedLines(lines, 2);
+    expect(cut.lines).toHaveLength(2);
+    expect(cut.truncated).toBe(true);
+    expect(cut.lines[1]).toBe('둘째 줄…');
+    expect(cut.text).toBe('첫째 줄\n둘째 줄…');
+
+    const kept = fitWrappedLines(lines, 4);
+    expect(kept.truncated).toBe(false);
+    expect(kept.text).toBe(lines.join('\n'));
+
+    // 말줄임이 두 번 붙지 않는다
+    expect(fitWrappedLines(['가나다…', '라마바'], 1).lines[0]).toBe('가나다…');
+    expect(fitWrappedLines([], 2).text).toBe('');
+    expect(fitWrappedLines(null, 2).lines).toEqual([]);
+  });
+
+  it('실측 높이로 두 문단을 배치하고 겹치면 fits=false 로 알린다', () => {
+    const base = {
+      panelTop: 840,
+      panelHeight: 200,
+      bodyTop: LORE_PANEL.bodyTop,
+      bottomPad: LORE_PANEL.bottomPad,
+      gap: LORE_PANEL.gap,
+      previewHeight: 20
+    };
+
+    // 본문이 짧으면 들어가고, 본문 아래에 gap 이 남는다
+    const ok = resolveLorePlacement({ ...base, bodyHeight: 46 });
+    expect(ok.fits).toBe(true);
+    expect(ok.bodyY).toBe(840 + LORE_PANEL.bodyTop);
+    expect(ok.previewY).toBe(840 + 200 - LORE_PANEL.bottomPad - 20);
+    expect(ok.bodyY + 46 + LORE_PANEL.gap).toBeLessThanOrEqual(ok.previewY);
+
+    // 본문이 길면 겹침으로 판정하고 쓸 수 있는 높이를 돌려준다
+    const overflow = resolveLorePlacement({ ...base, bodyHeight: 400 });
+    expect(overflow.fits).toBe(false);
+    expect(overflow.maxBodyHeight).toBe(ok.maxBodyHeight);
+    expect(overflow.maxBodyHeight).toBeGreaterThan(0);
+
+    // 프리뷰가 두 줄로 커지면 본문이 쓸 수 있는 높이가 그만큼 줄어든다
+    const tallPreview = resolveLorePlacement({ ...base, previewHeight: 60, bodyHeight: 46 });
+    expect(tallPreview.previewY).toBeLessThan(ok.previewY);
+    expect(tallPreview.maxBodyHeight).toBe(ok.maxBodyHeight - 40);
+
+    // 값이 없어도 숫자를 돌려준다
+    const empty = resolveLorePlacement();
+    expect(Number.isFinite(empty.bodyY)).toBe(true);
+    expect(Number.isFinite(empty.previewY)).toBe(true);
   });
 });
 

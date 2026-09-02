@@ -83,6 +83,27 @@ export const STAGE_CHIP = Object.freeze({
   elite: '정예'
 });
 
+/**
+ * 챕터 이야기 패널의 내부 여백과 줄 수 상한 (기획 px).
+ *
+ * 이 패널은 길이를 모르는 두 문단을 담는다 — 챕터 요약(`stages.json` chapter.lore)과
+ * 다음 스테이지 프리뷰(stage.story_intro)다. 글자 수로 자르면 줄바꿈 결과를 알 수 없어
+ * 둘이 겹칠 수 있으므로, 씬이 **줄바꿈 후 실측 높이**를 재서 배치한다.
+ * 그 계산이 `resolveLorePlacement()` 이고 여기 값은 그 입력이다.
+ */
+export const LORE_PANEL = Object.freeze({
+  paddingX: 24,
+  titleY: 32,       // 패널 상단 기준 제목 중심
+  bodyTop: 64,      // 패널 상단 기준 본문 상단
+  gap: 14,          // 본문과 프리뷰 사이 최소 간격
+  bottomPad: 18,    // 프리뷰 아래 여백
+  bodyMaxLines: 3,
+  previewMaxLines: 2
+});
+
+/** 말줄임 문자 */
+export const ELLIPSIS = '…';
+
 // ------------------------------------------------------------------
 // 챕터
 // ------------------------------------------------------------------
@@ -355,6 +376,79 @@ export function estimatePartyPower(heroes, size = 4) {
 }
 
 // ------------------------------------------------------------------
+// 챕터 이야기 패널
+// ------------------------------------------------------------------
+
+/**
+ * 줄바꿈된 줄 배열을 최대 줄 수로 자르고, 잘렸으면 마지막 줄에 말줄임을 붙인다.
+ *
+ * Phaser 의 `Text.getWrappedText()` 결과를 그대로 받는다. 글자 수로 미리 자르지 않는 이유는
+ * 줄바꿈 위치가 서체와 폭에 달려 있어 글자 수로는 줄 수를 예측할 수 없기 때문이다.
+ *
+ * @param {string[]} lines 줄바꿈된 줄
+ * @param {number} maxLines 최대 줄 수
+ * @returns {{lines: string[], text: string, truncated: boolean}}
+ */
+export function fitWrappedLines(lines, maxLines) {
+  const list = Array.isArray(lines) ? lines.filter((l) => typeof l === 'string') : [];
+  const max = Number.isFinite(maxLines) && maxLines > 0 ? Math.floor(maxLines) : 1;
+
+  if (list.length <= max) {
+    return { lines: list, text: list.join('\n'), truncated: false };
+  }
+
+  const kept = list.slice(0, max);
+  const last = kept[max - 1].replace(/\s+$/, '');
+  kept[max - 1] = last.endsWith(ELLIPSIS) ? last : last + ELLIPSIS;
+  return { lines: kept, text: kept.join('\n'), truncated: true };
+}
+
+/**
+ * 실측 높이로 본문과 프리뷰의 y 를 정한다.
+ *
+ * 본문은 패널 위에서 아래로, 프리뷰는 패널 아래에서 위로 자란다. 둘 사이에 `gap` 이
+ * 남지 않으면 겹친 것이므로 `fits: false` 와 함께 본문이 쓸 수 있는 최대 높이를 돌려준다.
+ * 호출부는 그 높이에 맞춰 본문 줄을 줄이고 다시 부른다.
+ *
+ * 단위는 입력과 출력이 같다. 씬은 렌더 px 로, 테스트는 기획 px 로 부른다.
+ *
+ * @param {Object} params
+ * @param {number} params.panelTop 패널 상단 y
+ * @param {number} params.panelHeight 패널 높이
+ * @param {number} params.bodyTop 패널 상단 기준 본문 상단 오프셋
+ * @param {number} params.bottomPad 프리뷰 아래 여백
+ * @param {number} params.gap 두 문단 사이 최소 간격
+ * @param {number} params.bodyHeight 줄바꿈 후 실측 본문 높이
+ * @param {number} params.previewHeight 줄바꿈 후 실측 프리뷰 높이
+ * @returns {{bodyY:number, previewY:number, fits:boolean, maxBodyHeight:number}}
+ *          y 는 둘 다 상단 기준이다 (origin 0,0)
+ */
+export function resolveLorePlacement({
+  panelTop = 0,
+  panelHeight = 0,
+  bodyTop = 0,
+  bottomPad = 0,
+  gap = 0,
+  bodyHeight = 0,
+  previewHeight = 0
+} = {}) {
+  const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+  const top = num(panelTop);
+  const height = num(panelHeight);
+  const bodyY = top + num(bodyTop);
+  const previewBottom = top + height - num(bottomPad);
+  const previewY = previewBottom - num(previewHeight);
+  const maxBodyHeight = Math.max(0, previewY - num(gap) - bodyY);
+
+  return {
+    bodyY,
+    previewY,
+    fits: num(bodyHeight) <= maxBodyHeight,
+    maxBodyHeight
+  };
+}
+
+// ------------------------------------------------------------------
 // 이야기 진행
 // ------------------------------------------------------------------
 
@@ -403,6 +497,10 @@ export default {
   CHAPTER_CULT,
   CARD_SLOTS,
   STAGE_CHIP,
+  LORE_PANEL,
+  ELLIPSIS,
+  fitWrappedLines,
+  resolveLorePlacement,
   chapterNumberFromId,
   chapterIdFor,
   clampChapter,

@@ -40,6 +40,9 @@ import {
   getStageCardRect,
   getListMetrics,
   clampScroll,
+  LORE_PANEL,
+  fitWrappedLines,
+  resolveLorePlacement,
   resolveStageState,
   getStarOffsets,
   estimateHeroPower,
@@ -817,27 +820,54 @@ export class StageSelectScene extends Phaser.Scene {
       depth: DEPTH.CONTENT
     });
 
-    this.loreTitle = this.add.text(s(p.x + 24), s(p.y + 32), '이 챕터의 이야기', ts('subtitle', {
+    const LP = LORE_PANEL;
+    const textX = s(p.x + LP.paddingX);
+    const wrapWidth = s(p.w - LP.paddingX * 2);
+
+    this.loreTitle = this.add.text(textX, s(p.y + LP.titleY), '이 챕터의 이야기', ts('subtitle', {
       color: DESIGN.colors.text.primary
     })).setOrigin(0, 0.5).setDepth(DEPTH.CONTENT + 2);
 
-    this.loreProgressText = this.add.text(s(p.x + p.w - 24), s(p.y + 32), '', ts('num.sm', {
+    this.loreProgressText = this.add.text(s(p.x + p.w - LP.paddingX), s(p.y + LP.titleY), '', ts('num.sm', {
       color: DESIGN.colors.text.secondary
     })).setOrigin(1, 0.5).setDepth(DEPTH.CONTENT + 2);
 
-    this.loreBody = this.add.text(s(p.x + 24), s(p.y + 64), '', ts('label', {
+    // 두 문단 모두 상단 기준(origin 0,0)이다. y 는 updateLorePanel 이 실측 높이로 정한다
+    this.loreBody = this.add.text(textX, s(p.y + LP.bodyTop), '', ts('label', {
       color: DESIGN.colors.text.secondary,
-      wordWrap: { width: s(p.w - 48) },
+      wordWrap: { width: wrapWidth },
       lineSpacing: s(6)
     })).setOrigin(0, 0).setDepth(DEPTH.CONTENT + 2);
 
-    // 다음에 할 일 한 줄. stages.json 의 story_intro 는 이 자리를 위해 쓰인 캡션이다
-    this.loreNextText = this.add.text(s(p.x + 24), s(p.y + p.h - 30), '', ts('caption', {
+    // 다음에 할 일. stages.json 의 story_intro 는 이 자리를 위해 쓰인 캡션이다
+    this.loreNextText = this.add.text(textX, s(p.y + p.h - LP.bottomPad), '', ts('caption', {
       color: DESIGN.colors.text.muted,
-      wordWrap: { width: s(p.w - 48) }
-    })).setOrigin(0, 0.5).setDepth(DEPTH.CONTENT + 2);
+      wordWrap: { width: wrapWidth },
+      lineSpacing: s(4)
+    })).setOrigin(0, 0).setDepth(DEPTH.CONTENT + 2);
 
     this.updateLorePanel();
+  }
+
+  /**
+   * 텍스트를 줄바꿈시킨 뒤 최대 줄 수로 잘라 넣는다.
+   * 글자 수로 미리 자르지 않는 이유는 줄바꿈 위치가 서체와 폭에 달려 있어
+   * 글자 수로는 줄 수를 예측할 수 없기 때문이다.
+   *
+   * @param {Phaser.GameObjects.Text} textObject
+   * @param {string} value
+   * @param {number} maxLines
+   * @returns {number} 적용 후 실측 높이 (렌더 px)
+   */
+  setClampedText(textObject, value, maxLines) {
+    if (!textObject) return 0;
+    textObject.setText(value || '');
+    const wrapped = typeof textObject.getWrappedText === 'function'
+      ? textObject.getWrappedText()
+      : String(value || '').split(/\r?\n/);
+    const fitted = fitWrappedLines(wrapped, maxLines);
+    if (fitted.text !== textObject.text) textObject.setText(fitted.text);
+    return textObject.height;
   }
 
   /**
@@ -861,16 +891,39 @@ export class StageSelectScene extends Phaser.Scene {
     const story = this.getStorySnapshot();
     const progress = buildChapterStoryProgress(story.scenes, chapterId, story.viewed);
 
-    const text = chapter?.lore || chapter?.description || '아직 기록되지 않은 장입니다.';
-    this.loreBody.setText(this.truncate(text, 96));
     this.loreProgressText.setText(progress.text);
 
     const next = this.findNextStage();
-    if (this.loreNextText) {
-      this.loreNextText.setText(next
-        ? `다음 · ${next.name} — ${this.truncate(next.story_intro || '', 40)}`.trim().replace(/ —\s*$/, '')
-        : '이 챕터를 모두 정리했습니다');
+    const previewText = next
+      ? `다음 · ${next.name} — ${next.story_intro || ''}`.trim().replace(/ —\s*$/, '')
+      : '이 챕터를 모두 정리했습니다';
+    const bodyText = chapter?.lore || chapter?.description || '아직 기록되지 않은 장입니다.';
+
+    // 프리뷰를 먼저 확정한다. 아래에서 위로 자라므로 본문이 쓸 수 있는 높이를 이것이 정한다.
+    const LP = LORE_PANEL;
+    const previewHeight = this.setClampedText(this.loreNextText, previewText, LP.previewMaxLines);
+
+    // 본문은 상한 줄 수에서 시작해, 프리뷰와 겹치면 한 줄씩 줄인다.
+    // 글자 수가 아니라 줄바꿈 후 실측 높이로 판정하므로 어떤 챕터 문장에도 겹치지 않는다.
+    const p = L.lorePanel;
+    const geometry = {
+      panelTop: s(p.y),
+      panelHeight: s(p.h),
+      bodyTop: s(LP.bodyTop),
+      bottomPad: s(LP.bottomPad),
+      gap: s(LP.gap),
+      previewHeight
+    };
+
+    let placement = null;
+    for (let lines = LP.bodyMaxLines; lines >= 1; lines--) {
+      const bodyHeight = this.setClampedText(this.loreBody, bodyText, lines);
+      placement = resolveLorePlacement({ ...geometry, bodyHeight });
+      if (placement.fits) break;
     }
+
+    this.loreBody.setY(placement.bodyY);
+    this.loreNextText.setY(placement.previewY);
   }
 
   createFooter() {

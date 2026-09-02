@@ -27,6 +27,20 @@ export const LEGACY_DEFAULT_POSITIONS = Object.freeze([
 /** 드래그로 옮긴 위치를 저장하는 키 (base 좌표로 저장한다) */
 export const FAB_POSITION_STORAGE_KEY = 'arcane_debug_fab_pos';
 
+/** 표시 여부를 저장하는 키 */
+export const FAB_VISIBILITY_STORAGE_KEY = 'arcane_debug_fab_visible';
+
+/**
+ * 비밀 제스처 영역 (base 720×1280) — 상단바 좌측.
+ * 여기를 가로채지 않고 `scene.input` 의 pointerdown 을 **엿듣기만** 한다.
+ * 투명 히트박스를 깔면 그 아래의 레벨 배지·자원 표시 탭이 죽는다.
+ */
+export const SECRET_TAP_ZONE_BASE = Object.freeze({ x: 0, y: 0, w: 120, h: 80 });
+
+/** 제스처 성립 조건: 1.5초 안에 5회 */
+export const SECRET_TAP_COUNT = 5;
+export const SECRET_TAP_WINDOW_MS = 1500;
+
 /**
  * 드래그 이동 가능 범위 (base). 상단바 아래 ~ 화면 안쪽.
  * FAB 반지름(22)만큼 여백을 두어 화면 밖으로 나가지 않게 한다.
@@ -122,6 +136,52 @@ export function saveFabPosition(pos) {
   }
 }
 
+/**
+ * FAB을 띄울지. **기본값은 숨김**이다.
+ * 개발 빌드에서도 리디자인된 화면의 콘텐츠를 가리므로, 필요할 때만 제스처로 부른다.
+ * @returns {boolean}
+ */
+export function loadFabVisible() {
+  try {
+    return localStorage.getItem(FAB_VISIBILITY_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+/** 표시 여부 저장. 실패해도 조용히 넘어간다(디버그 편의 기능). */
+export function saveFabVisible(visible) {
+  const next = Boolean(visible);
+  try {
+    localStorage.setItem(FAB_VISIBILITY_STORAGE_KEY, String(next));
+  } catch { /* 무시 */ }
+  return next;
+}
+
+/**
+ * 캔버스 좌표가 비밀 제스처 영역 안인지 (base 기준으로 환산해 비교).
+ * @param {number} canvasX
+ * @param {number} canvasY
+ * @returns {boolean}
+ */
+export function isInSecretTapZone(canvasX, canvasY) {
+  const z = SECRET_TAP_ZONE_BASE;
+  const bx = Number(canvasX) / SCALE_FACTOR;
+  const by = Number(canvasY) / SCALE_FACTOR;
+  if (!Number.isFinite(bx) || !Number.isFinite(by)) return false;
+  return bx >= z.x && bx <= z.x + z.w && by >= z.y && by <= z.y + z.h;
+}
+
+/**
+ * 탭 시각 목록에서 최근 창(window) 안의 것만 남긴다.
+ * @param {number[]} taps 밀리초 타임스탬프
+ * @param {number} now
+ * @returns {number[]}
+ */
+export function pruneTapHistory(taps, now) {
+  return (taps || []).filter((t) => now - t <= SECRET_TAP_WINDOW_MS);
+}
+
 export class DebugFAB {
   constructor(scene) {
     this.scene = scene;
@@ -131,6 +191,9 @@ export class DebugFAB {
     this._pointerDownPos = null;
     this._dragged = false;
     this._coveredByPopup = false;
+    this._fabVisible = loadFabVisible();
+    this._tapHistory = [];
+    this._onScenePointerDown = null;
     this._create();
   }
 
@@ -164,7 +227,10 @@ export class DebugFAB {
     }).setOrigin(0.5).setDepth(DEPTH_NORMAL + 3).setVisible(false);
 
     this._bindInput();
+    this._bindSecretGesture();
+    this._exposeApi();
     this.setActiveAlpha(false);
+    this._applyVisibility();
 
     // 뱃지 + 팝업 가림 상태 폴링
     this.updateTimer = this.scene.time.addEvent({
@@ -178,6 +244,89 @@ export class DebugFAB {
 
     this.updateBadge();
     this.updateDepth();
+  }
+
+  // ==================== 표시 / 숨김 ====================
+
+  /**
+   * 상단바 좌측(base 0~120 × 0~80)을 1.5초 안에 5회 탭하면 FAB이 켜지고 꺼진다.
+   * 입력을 가로채지 않고 씬의 pointerdown 을 엿듣기만 하므로 그 아래 UI는 그대로 동작한다.
+   */
+  _bindSecretGesture() {
+    this._onScenePointerDown = (pointer) => {
+      if (!isInSecretTapZone(pointer.x, pointer.y)) return;
+      const now = pointer.downTime ?? Date.now();
+      this._tapHistory = pruneTapHistory([...this._tapHistory, now], now);
+      if (this._tapHistory.length >= SECRET_TAP_COUNT) {
+        this._tapHistory = [];
+        this.toggleFabVisible();
+      }
+    };
+    this.scene.input.on('pointerdown', this._onScenePointerDown);
+  }
+
+  /**
+   * 표시 여부 설정.
+   * @param {boolean} visible
+   * @param {{persist?: boolean}} [options] persist=false 면 저장하지 않는다(초기 복원용)
+   * @returns {boolean} 적용된 값
+   */
+  setFabVisible(visible, options = {}) {
+    this._fabVisible = Boolean(visible);
+    if (options.persist !== false) saveFabVisible(this._fabVisible);
+    this._applyVisibility();
+    return this._fabVisible;
+  }
+
+  /** 표시 ↔ 숨김 토글 */
+  toggleFabVisible() {
+    return this.setFabVisible(!this._fabVisible);
+  }
+
+  /** 현재 표시 여부 */
+  isFabVisible() {
+    return Boolean(this._fabVisible);
+  }
+
+  /**
+   * 표시 상태를 실제 오브젝트에 반영한다.
+   * 숨길 때는 입력도 함께 끈다. 보이지 않는 원이 탭을 먹으면 그 아래 버튼이 죽는다.
+   */
+  _applyVisibility() {
+    if (!this.bg) return;
+    const on = this._fabVisible;
+    this.bg.setVisible(on);
+    this.icon.setVisible(on);
+    if (on) {
+      this.bg.setInteractive({ useHandCursor: true, draggable: true });
+    } else {
+      this.bg.disableInteractive();
+      this.badge.setVisible(false);
+      this.badgeText.setVisible(false);
+    }
+    this.updateBadge();
+  }
+
+  /**
+   * `window.debug.showFab()/hideFab()/toggleFab()` 노출 (캡처·e2e 스크립트용).
+   *
+   * `window.debug` 는 `DebugManager` 본체다(DebugManager 가 등록한다).
+   * 여기에 얹되, 호출 시점의 **현재 FAB**을 `DebugManager.currentFAB` 으로 다시 찾는다.
+   * 씬이 바뀔 때마다 FAB 인스턴스가 새로 만들어지므로 생성 당시 인스턴스를 가두면 안 된다.
+   */
+  _exposeApi() {
+    if (typeof window === 'undefined') return;
+    const api = window.debug || (window.debug = {});
+    const apply = (visible) => {
+      saveFabVisible(visible);
+      // FAB이 아직 없어도 플래그는 남으므로 다음 씬에서 그대로 반영된다.
+      DebugManager.currentFAB?.setFabVisible(visible);
+      return visible;
+    };
+    api.showFab = () => apply(true);
+    api.hideFab = () => apply(false);
+    api.toggleFab = () => apply(!loadFabVisible());
+    api.isFabVisible = () => loadFabVisible();
   }
 
   /**
@@ -261,7 +410,7 @@ export class DebugFAB {
    * 순환에 물려 있어 디버그 컴포넌트가 끌어오면 부팅 TDZ 위험이 생긴다.
    */
   updateDepth() {
-    if (!this.bg) return;
+    if (!this.bg || !this._fabVisible) return;
     const covered = this._isCoveredByOverlay();
     if (covered === this._coveredByPopup) return;
 
@@ -288,7 +437,7 @@ export class DebugFAB {
   updateBadge() {
     if (!this.bg) return;
     const count = this._getActiveCheatCount();
-    if (count > 0) {
+    if (count > 0 && this._fabVisible) {
       this.badge.setVisible(true).setAlpha(this.bg.alpha);
       this.badgeText.setVisible(true).setAlpha(this.bg.alpha).setText(String(count));
       this.bg.setStrokeStyle(s(2), 0xEF4444);
@@ -322,20 +471,21 @@ export class DebugFAB {
     }
   }
 
+  /** 표시 (저장까지 함) — `window.debug.showFab()` 과 같은 동작 */
   show() {
-    this.bg?.setVisible(true);
-    this.icon?.setVisible(true);
-    this.updateBadge();
+    this.setFabVisible(true);
   }
 
+  /** 숨김 (저장까지 함) — `window.debug.hideFab()` 과 같은 동작 */
   hide() {
-    this.bg?.setVisible(false);
-    this.icon?.setVisible(false);
-    this.badge?.setVisible(false);
-    this.badgeText?.setVisible(false);
+    this.setFabVisible(false);
   }
 
   destroy() {
+    if (this._onScenePointerDown && this.scene?.input) {
+      this.scene.input.off('pointerdown', this._onScenePointerDown);
+      this._onScenePointerDown = null;
+    }
     this.bg?.destroy();
     this.icon?.destroy();
     this.badge?.destroy();

@@ -34,18 +34,17 @@ async function shot(page, name) {
   log(`  [shot] docs/redesign/screenshots/after/${name}.png`);
 }
 
-/** 디버그 FAB 은 캡처에 남기지 않는다 (T-21 이 위치를 옮기기 전까지 챕터 헤더를 가린다) */
+/**
+ * 디버그 FAB 은 캡처에 남기지 않는다.
+ * FAB 은 이제 기본 숨김이지만, 이전에 켜 둔 상태가 localStorage 에 남아 있을 수 있으므로
+ * 캡처 전에 명시적으로 끈다. `window.debug` 는 DebugManager 가 등록한 본체다
+ * (동적 import 로 받은 모듈은 Vite HMR 쿼리 때문에 다른 인스턴스가 될 수 있어 쓰지 않는다).
+ */
 async function hideDebugFab(page) {
   await page.evaluate(() => {
-    // window.debug 는 setDebugMode(true) 가 등록한 DebugManager 본체다.
-    // 동적 import 로 받은 모듈은 Vite HMR 쿼리 때문에 다른 인스턴스가 될 수 있어 쓰지 않는다.
-    const dm = window.debug;
-    if (!dm) return;
-    dm.isDebugMode = false;   // 새 씬마다 다시 붙으므로 모드 자체를 끈다
-    dm.currentPanel?.destroy?.();
-    dm.currentFAB?.destroy?.();
-    dm.currentPanel = null;
-    dm.currentFAB = null;
+    window.debug?.hideFab?.();
+    window.debug?.currentPanel?.destroy?.();
+    if (window.debug) window.debug.currentPanel = null;
   });
   await page.waitForTimeout(200);
 }

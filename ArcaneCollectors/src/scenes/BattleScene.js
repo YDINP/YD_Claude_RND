@@ -2573,10 +2573,15 @@ export class BattleScene extends Phaser.Scene {
    * 씬 정리
    */
   shutdown() {
-    // RES-ABS-4: 메모리 해제
-    if (this._loadedHeroIds && this._loadedHeroIds.length > 0) {
-      HeroAssetLoader.unloadTextures(this, this._loadedHeroIds);
-    }
+    // 포트레이트 텍스처는 해제하지 않는다.
+    //
+    // 예전에는 여기서 HeroAssetLoader.unloadTextures(this, this._loadedHeroIds) 로
+    // 파티 영웅의 런타임 텍스처(hero_<id>, 512 WebP)를 지웠다. 그 키는 이 씬 전용이
+    // 아니라 PreloadScene 이 굽고 메인 메뉴·영웅 목록·유휴전투 뷰가 함께 쓰는 공용
+    // 자원이다. 지우면 전투를 한 번 다녀온 뒤 모든 화면의 영웅이 플레이스홀더
+    // 캔버스로 되돌아간다 — T-29 가 HeroDetailScene/HeroListScene 에서 고친 것과
+    // 같은 결함이고 BattleScene 만 남아 있었다.
+    // (현재 Phaser 가 이 메서드를 자동 호출하지 않아 표면화되지 않았을 뿐이다.)
 
     // 판정 엔진의 이벤트 리스너 해제 (씬 재진입 시 중복 구독 방지)
     if (this.battleSystem) {
