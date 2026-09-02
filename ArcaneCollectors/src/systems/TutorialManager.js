@@ -16,6 +16,7 @@
 import tutorialData from '../data/tutorial.json';
 import { SaveManager } from './SaveManager.js';
 import { EventBus, GameEvents } from './EventBus.js';
+import { grantTutorialReward } from './TutorialRewards.js';
 
 /** 튜토리얼 전용 이벤트 이름 */
 export const TutorialEvents = {
@@ -42,13 +43,18 @@ export const COMMIT_RESULT = {
 
 export class TutorialManager {
   /**
-   * 보상 지급 핸들러. commitStep 2단계에서 호출된다.
-   * 보상 시스템 담당이 `TutorialManager.rewardHandler = (rewardId, save) => {...}` 로 주입한다.
+   * 보상 지급 핸들러 오버라이드. 기본값은 `TutorialRewards.grantTutorialReward` 이며,
+   * 별도 주입이 없어도 보상이 지급된다(주입 누락으로 보상이 사라지는 사고 방지).
    * @type {((rewardId: string, save: object, stepId: string) => void)|null}
    */
   static rewardHandler = null;
 
   static _unsubscribers = [];
+
+  /** 실제로 사용되는 보상 핸들러 (오버라이드 > 내장 기본값) */
+  static getRewardHandler() {
+    return typeof this.rewardHandler === 'function' ? this.rewardHandler : grantTutorialReward;
+  }
 
   // ==================== 데이터 접근 ====================
 
@@ -222,6 +228,10 @@ export class TutorialManager {
     const step = stepId ? this.getStep(stepId) : this.getCurrentStep();
     if (!scene || !step?.targetPopup) return null;
 
+    // 이미 팝업이 열려 있으면 새로 만들지 않는다.
+    // 두 번 만들면 앞의 인스턴스가 고아가 되고, 그 전체화면 오버레이가 이후 모든 입력을 삼킨다.
+    if (scene.activePopup) return scene.activePopup;
+
     const onboarding = step.popupOptions?.mode === 'onboarding';
     // 팝업이 닫히는 시점 = 결과 확인. 조건을 재평가해 커밋을 시도한다.
     const onClose = () => {
@@ -286,10 +296,10 @@ export class TutorialManager {
 
     const skipped = mode === COMPLETION_MODE.SKIPPED;
 
-    // 2. 보상 지급 (주입된 핸들러에 위임 — 컷씬 콜백 지급 금지)
-    if (step.rewardId && typeof this.rewardHandler === 'function') {
+    // 2. 보상 지급 (핸들러에 위임 — 컷씬 콜백 지급 금지, save 를 in-place 변경한다)
+    if (step.rewardId) {
       try {
-        this.rewardHandler(step.rewardId, save, stepId);
+        this.getRewardHandler()(step.rewardId, save, stepId);
       } catch (error) {
         console.error('[TutorialManager] 보상 지급 실패', step.rewardId, error);
       }

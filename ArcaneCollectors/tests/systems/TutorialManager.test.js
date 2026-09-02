@@ -206,9 +206,10 @@ describe('TutorialManager', () => {
       commitAll(['T-01', 'T-02', 'T-03', 'T-04']);
       const result = TutorialManager.commitStep('T-05');
 
-      expect(result.unlockedMenus).toEqual(['herolist', 'partyedit']);
+      // 각인 아이콘은 T-06 안내 대상이므로 T-05 커밋에서 함께 열린다(2026-09-02 정정)
+      expect(result.unlockedMenus).toEqual(['herolist', 'partyedit', 'ascension']);
       const saved = JSON.parse(localStorage.getItem(SaveManager.SAVE_KEY));
-      expect(saved.onboarding.unlockedMenus).toEqual(['herolist', 'partyedit']);
+      expect(saved.onboarding.unlockedMenus).toEqual(['herolist', 'partyedit', 'ascension']);
     });
 
     it('T-12 까지 전부 커밋하면 completed=true, currentStep=null', () => {
@@ -355,7 +356,7 @@ describe('TutorialManager', () => {
 
       expect(TutorialManager.evaluate()).toContain('T-05');
       expect(TutorialManager.getCurrentStepId()).toBe('T-06');
-      expect(SaveManager.load().onboarding.unlockedMenus).toEqual(['herolist', 'partyedit']);
+      expect(SaveManager.load().onboarding.unlockedMenus).toEqual(['herolist', 'partyedit', 'ascension']);
     });
 
     it('CHARACTER_ADDED 이벤트가 T-05 완료를 트리거한다', () => {
@@ -449,12 +450,12 @@ describe('MenuGridGate', () => {
     expect(MenuGridGate.shouldRenderGrid(visible.length)).toBe(false);
   });
 
-  it('UX 문서 §2-6 노출 수 추이를 따른다 (T-05→2, T-06→3, T-10→4, T-11→7)', () => {
+  it('UX 문서 §2-6 노출 수 추이를 따른다 (T-05→3, T-06→3, T-10→4, T-11→7)', () => {
     putSave();
     const count = () => MenuGridGate.filterMenuItems(ALL_MENU_ITEMS, SaveManager.load()).length;
 
     commitAll(['T-01', 'T-02', 'T-03', 'T-04', 'T-05']);
-    expect(count()).toBe(2);
+    expect(count()).toBe(3);
 
     TutorialManager.commitStep('T-06');
     expect(count()).toBe(3);

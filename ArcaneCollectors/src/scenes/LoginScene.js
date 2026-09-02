@@ -7,6 +7,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { isSupabaseConfigured, supabase } from '../api/supabaseClient.js';
 import { guestLogin } from '../services/AuthService.js';
 import { normalizeHeroes } from '../data/index.js';
+import { TutorialManager } from '../systems/TutorialManager.js';
 
 export class LoginScene extends Phaser.Scene {
   constructor() {
@@ -416,6 +417,15 @@ export class LoginScene extends Phaser.Scene {
   _goToPreload() {
     // 로그인 후 registry 초기화
     const saveData = SaveManager.load();
+
+    // account_created 트리거 — 신규 계정이면 T-01부터 시작한다.
+    // 완주 유저/진행 중 유저에게는 start()가 아무것도 바꾸지 않는다(멱등).
+    try {
+      TutorialManager.start();
+    } catch (error) {
+      console.error('[LoginScene] 튜토리얼 시작 실패', error);
+    }
+
     this.registry.set('saveData', saveData);
     this.registry.set('gems', saveData.resources.gems);
     this.registry.set('gold', saveData.resources.gold);

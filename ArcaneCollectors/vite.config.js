@@ -30,10 +30,53 @@ function resolveJsToTs() {
   };
 }
 
+/**
+ * T-04 — dev 서버가 없는 에셋에 index.html(200) 을 돌려주는 SPA 폴백을 차단한다.
+ *
+ * Vite 의 html 폴백은 /assets/foo.png 가 없어도 index.html 을 200 으로 준다.
+ * 그러면 Phaser 로더는 "받긴 받았는데 이미지가 아니다" 상태가 되어 실패가 조용히 묻힌다.
+ * /assets/ 아래의 없는 파일은 404 로 돌려 로드 실패를 즉시 표면화한다.
+ * 정적 서빙보다 앞에 서므로 실제 존재하는 파일은 next() 로 그대로 흘려보낸다.
+ */
+function assetNotFoundGuard(rootDir) {
+  const ASSET_PREFIX = '/assets/';
+  const PUBLIC_DIR = 'public';
+
+  return {
+    name: 'asset-404-guard',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const rawUrl = req.url || '';
+        if (!rawUrl.startsWith(ASSET_PREFIX)) return next();
+
+        let pathname;
+        try {
+          pathname = decodeURIComponent(rawUrl.split('?')[0].split('#')[0]);
+        } catch {
+          pathname = rawUrl.split('?')[0].split('#')[0];
+        }
+
+        // public/ 과 프로젝트 루트 양쪽을 본다 (Vite 정적 서빙 경로와 동일)
+        const candidates = [
+          pathResolve(rootDir, PUBLIC_DIR, '.' + pathname),
+          pathResolve(rootDir, '.' + pathname)
+        ];
+        if (candidates.some((candidate) => existsSync(candidate))) return next();
+
+        res.statusCode = 404;
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.end(`404 asset not found: ${pathname}`);
+      });
+    }
+  };
+}
+
 export default defineConfig(({ mode }) => ({
   base: './',
   plugins: [
     resolveJsToTs(),
+    assetNotFoundGuard(__dirname),
     // 번들 분석 플러그인 (analyze 모드에서만)
     ...(mode === 'analyze' ? [
       {

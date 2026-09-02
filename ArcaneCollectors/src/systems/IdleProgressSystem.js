@@ -2,19 +2,25 @@
  * IdleProgressSystem - 방치형 진행 시스템
  *
  * 오프라인 보상 및 자동 전투 시뮬레이션 관리
- * - 오프라인 시간 계산 (최대 12시간)
+ * - 오프라인 시간 계산 (상한: onboardingConfig.OFFLINE_REWARD_CAP_HOURS)
  * - 자동 전투 시뮬레이션
  * - 시간당 골드/경험치 계산
  * - 현재 스테이지 정보
  */
 
 import { SaveManager } from './SaveManager.js';
+import { OFFLINE_REWARD_CAP_HOURS } from '../config/onboardingConfig.js';
 import GameLogger from '../utils/GameLogger.js';
 import { ProgressionSystem } from './ProgressionSystem.js';
 import { getChapter, getEnemy, getChapterStages, calculateEnemyStats } from '../data/index.ts';
 
 export class IdleProgressSystem {
-  static MAX_OFFLINE_HOURS = 12;
+  /**
+   * 오프라인 보상 상한 (ISS-01 확정 — `onboardingConfig.OFFLINE_REWARD_CAP_HOURS`).
+   * 실제 재화 지급은 `SaveManager.claimOfflineRewards()`(24h)가 담당하므로
+   * 표시·누적 계산도 같은 상한을 쓴다. 두 값이 갈라지면 고지한 상한과 지급이 어긋난다.
+   */
+  static MAX_OFFLINE_HOURS = OFFLINE_REWARD_CAP_HOURS;
   static BASE_GOLD_PER_SEC = 5;
   static BASE_EXP_PER_SEC = 1.5;
 
@@ -82,7 +88,7 @@ export class IdleProgressSystem {
     const now = Date.now();
     const offlineMs = now - lastLogoutTime;
 
-    // 최대 12시간으로 제한
+    // ISS-01 확정 상한으로 제한
     const maxMs = this.constructor.MAX_OFFLINE_HOURS * 60 * 60 * 1000;
     const cappedMs = Math.min(offlineMs, maxMs);
     const offlineSec = cappedMs / 1000;

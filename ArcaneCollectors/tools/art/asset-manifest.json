@@ -1,0 +1,694 @@
+{
+  "$schema": "internal://arcanecollectors/asset-manifest/v1",
+  "generatedBy": "tools/art/postprocess-assets.py",
+  "generatedAt": "2026-09-02T10:56:27Z",
+  "textures": {
+    "bg_main": {
+      "path": "assets/backgrounds/scenes/bg_main.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_main_blur": {
+      "path": "assets/backgrounds/scenes/bg_main_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_login": {
+      "path": "assets/backgrounds/scenes/bg_login.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_login_blur": {
+      "path": "assets/backgrounds/scenes/bg_login_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "frame_panel": {
+      "path": "assets/ui/frames/frame_panel.webp",
+      "width": 512,
+      "height": 512,
+      "category": "frame",
+      "priority": "P1",
+      "nineSlice": {
+        "left": 96,
+        "right": 96,
+        "top": 96,
+        "bottom": 96
+      }
+    },
+    "frame_popup": {
+      "path": "assets/ui/frames/frame_popup.webp",
+      "width": 512,
+      "height": 512,
+      "category": "frame",
+      "priority": "P1",
+      "nineSlice": {
+        "left": 96,
+        "right": 96,
+        "top": 120,
+        "bottom": 96
+      }
+    },
+    "frame_card_N": {
+      "path": "assets/ui/frames/frame_card_N.webp",
+      "width": 512,
+      "height": 512,
+      "category": "frame",
+      "priority": "P1",
+      "nineSlice": {
+        "left": 64,
+        "right": 64,
+        "top": 64,
+        "bottom": 64
+      }
+    },
+    "frame_card_R": {
+      "path": "assets/ui/frames/frame_card_R.webp",
+      "width": 512,
+      "height": 512,
+      "category": "frame",
+      "priority": "P1",
+      "nineSlice": {
+        "left": 64,
+        "right": 64,
+        "top": 64,
+        "bottom": 64
+      }
+    },
+    "frame_card_SR": {
+      "path": "assets/ui/frames/frame_card_SR.webp",
+      "width": 512,
+      "height": 512,
+      "category": "frame",
+      "priority": "P1",
+      "nineSlice": {
+        "left": 64,
+        "right": 64,
+        "top": 64,
+        "bottom": 64
+      }
+    },
+    "frame_card_SSR": {
+      "path": "assets/ui/frames/frame_card_SSR.webp",
+      "width": 512,
+      "height": 512,
+      "category": "frame",
+      "priority": "P1",
+      "nineSlice": {
+        "left": 64,
+        "right": 64,
+        "top": 64,
+        "bottom": 64
+      }
+    },
+    "frame_hex": {
+      "path": "assets/ui/frames/frame_hex.webp",
+      "width": 256,
+      "height": 256,
+      "category": "frame",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "btn_primary": {
+      "path": "assets/ui/buttons/btn_primary.webp",
+      "width": 512,
+      "height": 160,
+      "category": "button",
+      "priority": "P1",
+      "nineSlice": {
+        "left": 72,
+        "right": 72,
+        "top": 40,
+        "bottom": 40
+      }
+    },
+    "btn_secondary": {
+      "path": "assets/ui/buttons/btn_secondary.webp",
+      "width": 512,
+      "height": 160,
+      "category": "button",
+      "priority": "P1",
+      "nineSlice": {
+        "left": 72,
+        "right": 72,
+        "top": 40,
+        "bottom": 40
+      }
+    },
+    "btn_ghost": {
+      "path": "assets/ui/buttons/btn_ghost.webp",
+      "width": 512,
+      "height": 160,
+      "category": "button",
+      "priority": "P1",
+      "nineSlice": {
+        "left": 72,
+        "right": 72,
+        "top": 40,
+        "bottom": 40
+      }
+    },
+    "logo_arcane_collectors": {
+      "path": "assets/ui/logo_arcane_collectors.png",
+      "width": 512,
+      "height": 256,
+      "category": "logo",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_currency_gold": {
+      "path": "assets/ui/icons/currency/gold.png",
+      "width": 192,
+      "height": 246,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_currency_gem": {
+      "path": "assets/ui/icons/currency/gem.png",
+      "width": 178,
+      "height": 256,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_currency_energy": {
+      "path": "assets/ui/icons/currency/energy.png",
+      "width": 236,
+      "height": 256,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_currency_ticket": {
+      "path": "assets/ui/icons/currency/ticket.png",
+      "width": 256,
+      "height": 221,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_currency_spirit_stone": {
+      "path": "assets/ui/icons/currency/spirit_stone.png",
+      "width": 256,
+      "height": 254,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_cult_valhalla": {
+      "path": "assets/ui/icons/cults/valhalla.png",
+      "width": 256,
+      "height": 255,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_cult_takamagahara": {
+      "path": "assets/ui/icons/cults/takamagahara.png",
+      "width": 256,
+      "height": 256,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_cult_olympus": {
+      "path": "assets/ui/icons/cults/olympus.png",
+      "width": 256,
+      "height": 256,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_cult_asgard": {
+      "path": "assets/ui/icons/cults/asgard.png",
+      "width": 256,
+      "height": 256,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_cult_yomi": {
+      "path": "assets/ui/icons/cults/yomi.png",
+      "width": 252,
+      "height": 256,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_cult_tartarus": {
+      "path": "assets/ui/icons/cults/tartarus.png",
+      "width": 256,
+      "height": 256,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_cult_avalon": {
+      "path": "assets/ui/icons/cults/avalon.png",
+      "width": 238,
+      "height": 256,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_cult_helheim": {
+      "path": "assets/ui/icons/cults/helheim.png",
+      "width": 256,
+      "height": 256,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "icon_cult_kunlun": {
+      "path": "assets/ui/icons/cults/kunlun.png",
+      "width": 256,
+      "height": 256,
+      "category": "icon",
+      "priority": "P1",
+      "nineSlice": null
+    }
+  },
+  "lazyTextures": {
+    "bg_gacha": {
+      "path": "assets/backgrounds/scenes/bg_gacha.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_gacha_blur": {
+      "path": "assets/backgrounds/scenes/bg_gacha_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_stageselect": {
+      "path": "assets/backgrounds/scenes/bg_stageselect.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_stageselect_blur": {
+      "path": "assets/backgrounds/scenes/bg_stageselect_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_tower": {
+      "path": "assets/backgrounds/scenes/bg_tower.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_tower_blur": {
+      "path": "assets/backgrounds/scenes/bg_tower_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_result_victory": {
+      "path": "assets/backgrounds/scenes/bg_result_victory.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_result_victory_blur": {
+      "path": "assets/backgrounds/scenes/bg_result_victory_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_result_defeat": {
+      "path": "assets/backgrounds/scenes/bg_result_defeat.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_result_defeat_blur": {
+      "path": "assets/backgrounds/scenes/bg_result_defeat_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_chapter_1": {
+      "path": "assets/backgrounds/battle/bg_chapter_1.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_chapter_1_blur": {
+      "path": "assets/backgrounds/battle/bg_chapter_1_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_chapter_2": {
+      "path": "assets/backgrounds/battle/bg_chapter_2.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_chapter_2_blur": {
+      "path": "assets/backgrounds/battle/bg_chapter_2_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_chapter_3": {
+      "path": "assets/backgrounds/battle/bg_chapter_3.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P2",
+      "nineSlice": null
+    },
+    "bg_chapter_3_blur": {
+      "path": "assets/backgrounds/battle/bg_chapter_3_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P2",
+      "nineSlice": null
+    },
+    "bg_chapter_4": {
+      "path": "assets/backgrounds/battle/bg_chapter_4.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P2",
+      "nineSlice": null
+    },
+    "bg_chapter_4_blur": {
+      "path": "assets/backgrounds/battle/bg_chapter_4_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P2",
+      "nineSlice": null
+    },
+    "bg_chapter_5": {
+      "path": "assets/backgrounds/battle/bg_chapter_5.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P2",
+      "nineSlice": null
+    },
+    "bg_chapter_5_blur": {
+      "path": "assets/backgrounds/battle/bg_chapter_5_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P2",
+      "nineSlice": null
+    },
+    "bg_pvp": {
+      "path": "assets/backgrounds/scenes/bg_pvp.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P2",
+      "nineSlice": null
+    },
+    "bg_pvp_blur": {
+      "path": "assets/backgrounds/scenes/bg_pvp_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P2",
+      "nineSlice": null
+    },
+    "bg_raid": {
+      "path": "assets/backgrounds/scenes/bg_raid.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P2",
+      "nineSlice": null
+    },
+    "bg_raid_blur": {
+      "path": "assets/backgrounds/scenes/bg_raid_blur.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
+      "priority": "P2",
+      "nineSlice": null
+    },
+    "banner_pickup_iris": {
+      "path": "assets/ui/panels/banner_pickup_iris.png",
+      "width": 680,
+      "height": 560,
+      "category": "banner",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "banner_pickup_generic": {
+      "path": "assets/ui/panels/banner_pickup_generic.png",
+      "width": 680,
+      "height": 560,
+      "category": "banner",
+      "priority": "P2",
+      "nineSlice": null
+    },
+    "fx_summon_circle": {
+      "path": "assets/effects/skills/fx_summon_circle.png",
+      "width": 512,
+      "height": 512,
+      "category": "banner",
+      "priority": "P1",
+      "nineSlice": null
+    }
+  },
+  "fullbody": {
+    "fb_hero_005": {
+      "path": "assets/characters/fullbody/hero_005.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_006": {
+      "path": "assets/characters/fullbody/hero_006.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_007": {
+      "path": "assets/characters/fullbody/hero_007.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_008": {
+      "path": "assets/characters/fullbody/hero_008.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_009": {
+      "path": "assets/characters/fullbody/hero_009.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_010": {
+      "path": "assets/characters/fullbody/hero_010.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_011": {
+      "path": "assets/characters/fullbody/hero_011.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_012": {
+      "path": "assets/characters/fullbody/hero_012.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_013": {
+      "path": "assets/characters/fullbody/hero_013.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_014": {
+      "path": "assets/characters/fullbody/hero_014.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_015": {
+      "path": "assets/characters/fullbody/hero_015.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_016": {
+      "path": "assets/characters/fullbody/hero_016.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_017": {
+      "path": "assets/characters/fullbody/hero_017.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_018": {
+      "path": "assets/characters/fullbody/hero_018.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_019": {
+      "path": "assets/characters/fullbody/hero_019.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_020": {
+      "path": "assets/characters/fullbody/hero_020.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_021": {
+      "path": "assets/characters/fullbody/hero_021.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_022": {
+      "path": "assets/characters/fullbody/hero_022.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_023": {
+      "path": "assets/characters/fullbody/hero_023.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_024": {
+      "path": "assets/characters/fullbody/hero_024.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_025": {
+      "path": "assets/characters/fullbody/hero_025.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_026": {
+      "path": "assets/characters/fullbody/hero_026.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_027": {
+      "path": "assets/characters/fullbody/hero_027.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_028": {
+      "path": "assets/characters/fullbody/hero_028.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_029": {
+      "path": "assets/characters/fullbody/hero_029.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_030": {
+      "path": "assets/characters/fullbody/hero_030.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_031": {
+      "path": "assets/characters/fullbody/hero_031.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_032": {
+      "path": "assets/characters/fullbody/hero_032.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_033": {
+      "path": "assets/characters/fullbody/hero_033.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_034": {
+      "path": "assets/characters/fullbody/hero_034.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_035": {
+      "path": "assets/characters/fullbody/hero_035.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_036": {
+      "path": "assets/characters/fullbody/hero_036.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_037": {
+      "path": "assets/characters/fullbody/hero_037.webp",
+      "width": 683,
+      "height": 1024
+    },
+    "fb_hero_038": {
+      "path": "assets/characters/fullbody/hero_038.webp",
+      "width": 683,
+      "height": 1024
+    }
+  },
+  "missing": [
+    "enemy_cerberus",
+    "enemy_goblin",
+    "enemy_goblin_king",
+    "enemy_golem",
+    "enemy_jormungandr",
+    "enemy_mushroom",
+    "enemy_slime",
+    "enemy_treant",
+    "enemy_wolf",
+    "enemy_yamata",
+    "fullbody_hero_001",
+    "fullbody_hero_002",
+    "fullbody_hero_003",
+    "fullbody_hero_004"
+  ],
+  "skippedNoAlpha": [],
+  "excluded": [
+    "panel_header_ornament"
+  ]
+}

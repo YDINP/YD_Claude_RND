@@ -17,11 +17,14 @@
 | **로드 경로** | `scene.load.image()`의 두 번째 인자. `public/`을 뺀 경로다 |
 | **사용처** | 이 에셋을 참조하는 씬 또는 컴포넌트 |
 
-**로드 규칙 3가지**
+**로드 규칙 4가지 (2026-09-02 전송량 예산 대응으로 갱신 — §11-6 참조)**
 
-1. 배경·프레임·버튼·아이콘·로고는 `PreloadScene.loadPhase0_Assets()`에서 **일괄 등록**한다. 전 씬이 공유하므로 한 번만 로드한다.
-2. 배너와 전신·적 스프라이트는 **지연 로드**한다. 배너는 교체 주기가 짧고, 전신은 조회 대상 1명만 필요하며, 적은 스테이지마다 다르다.
-3. 모든 로드에는 **프로시저럴 폴백이 남아 있어야 한다.** 이미지가 없으면 기존 `TextureGenerator` / `BackgroundFactory` / `IconFactory` 결과를 그대로 쓴다. 에셋 도입이 회귀를 만들지 않게 하는 조건이다.
+1. **배경은 `bg_main`/`bg_login`만** `PreloadScene.loadPhase0_Assets()`에서 일괄(eager) 등록한다. 나머지 12종(gacha/stageselect/tower/result_*/chapter_1~5/pvp/raid, 각 본+블러)은 `tools/art/asset-manifest.json`의 `lazyTextures`에 있고, `BackgroundFactory.createSceneBg(scene, key)`가 씬 진입 시점에 동적으로 로드한다(로드 중엔 프로시저럴 폴백 표시, 실패 시 폴백 유지).
+2. 프레임·버튼·아이콘·로고는 계속 `PreloadScene.loadPhase0_Assets()`에서 **일괄 등록**한다(eager, `manifest.textures`). 전 씬이 공유하므로 한 번만 로드한다.
+3. 배너와 전신·적 스프라이트는 **지연 로드**한다(`manifest.lazyTextures`/`manifest.fullbody`). 배너는 교체 주기가 짧고, 전신은 조회 대상 1명만 필요하며, 적은 스테이지마다 다르다.
+4. 모든 로드에는 **프로시저럴 폴백이 남아 있어야 한다.** 이미지가 없으면(또는 로드 실패 시) 기존 `TextureGenerator` / `BackgroundFactory` / `IconFactory` 결과를 그대로 쓴다. 에셋 도입이 회귀를 만들지 않게 하는 조건이다.
+
+> **캔버스 vs 실이미지 키 충돌 주의**: `TextureGenerator`가 `bg_main`/`bg_gacha`/`bg_tower`/`bg_battle`/`bg_stage`에 무조건 캔버스 플레이스홀더를 만들어 둔다. `bg_gacha`/`bg_tower`는 lazyTextures이기도 해서, `scene.textures.exists(key)` 만으로는 "실제 아트 로드됨"과 "이름만 같은 캔버스"를 구분할 수 없다. `PreloadScene._promoteRealTexture()`와 `BackgroundFactory._isCanvasTexture()` + `_loadLazyBg()`가 둘 다 임시 키 로드 → 캔버스 제거 → `renameTexture` 승격 패턴으로 이 문제를 푼다.
 
 ---
 
@@ -245,3 +248,67 @@ public/assets/characters/fullbody/    ← (신규 생성 필요) 전신 시트
 1. `node tools/art/capture-before.mjs` 계열 스크립트로 `screenshots/after/`를 뽑아 before와 대조한다.
 2. 로드 스모크(태스크 T-27)로 이 표의 모든 텍스처 키가 **실제 이미지**인지 검사한다. 캔버스 폴백이 남아 있으면 실패로 본다.
 3. Vite dev 서버가 없는 에셋에 `index.html`을 200으로 돌려주므로(태스크 T-04 이전) 404가 마스킹된다. 검증은 텍스처 크기로 하고 HTTP 상태로 하지 않는다.
+
+---
+
+## 11. 생성·적용 현황 (2026-09-02)
+
+T-02(`PreloadScene.loadPhase0_Assets()`) + T-27(`tests/e2e/asset-smoke.mjs`) + 후처리 파이프라인(`tools/art/postprocess-assets.py`) 완료 시점의 스냅샷. `node tools/art/postprocess-assets.mjs`(멱등, Codex가 소스를 계속 추가하는 대로 재실행하면 자동으로 따라잡는다)를 다시 돌리면 이 표는 갱신되지 않는다 — 수동 갱신 문서다.
+
+### 11-1. 배경 (전부 완료, 14/14) — **2026-09-02 WebP 전환 + eager/lazy 분리**
+
+`art/gen/assets_bg2/`가 소스. 전부 v1 채택, **`bg_chapter_2`만 v2 채택**(v1은 도리이 문에 문자 흔적이 남아 리롤). `public/assets/backgrounds/{scenes,battle}/`에 1082×1581 **WebP q80**(무알파) + `_blur` 페어(가우시안 24px + 밝기 −15%, 역시 WebP q80)로 저장 완료. 예전 PNG 산출물은 정리했다(§11-6).
+
+**eager(2종)**: `bg_main`, `bg_login` — `PreloadScene.loadPhase0_Assets()`가 부팅 시 로드.
+**lazy(12종)**: `bg_gacha`, `bg_stageselect`, `bg_tower`, `bg_result_victory`, `bg_result_defeat`, `bg_chapter_1~5`, `bg_pvp`, `bg_raid` — `manifest.lazyTextures`에 등록, `BackgroundFactory.createSceneBg(scene, key)`가 씬 진입 시점에 동적 로드.
+
+### 11-2. UI 요소 (frame/button/logo/icon) — 부분 완료 12/22 (Codex가 계속 생성 중이라 계속 늘어난다)
+
+| id | 상태 | 비고 |
+|----|------|------|
+| `frame_panel`, `frame_popup`, `frame_card_N`, `frame_card_R`, `frame_card_SR`, `frame_card_SSR`, `frame_hex` | ✅ 완료 | `public/assets/ui/frames/*.webp` (q85, 알파 유지). 9-slice 코너값은 스케일 비율만큼 줄여 `asset-manifest.json`에 기록 |
+| `btn_primary`, `btn_secondary`, `btn_ghost` | ✅ 완료 | `public/assets/ui/buttons/*.webp` (q85, 알파 유지). 소스가 1024×320(스펙과 일치)이라 왜곡 없이 512×160으로 다운스케일 |
+| `icon_currency_gold/gem/energy/ticket/spirit_stone`(5) | ✅ 완료 | PNG 유지(포맷 미변경). 콘텐츠 트림 + 8px 패딩이라 종별 크기가 다름 |
+| `panel_header_ornament` | ⛔ **제외됨** | 소스가 2172×724(≈3:1)인데 목표가 512×64(8:1)라 심하게 눌려서 manifest에서 완전히 뺐다. `tools/art/regen-list.json`에 재생성 필요 사유 기록(1024×128, 8:1 권장) |
+| `logo_arcane_collectors`, `icon_cult_*`(9) | ⏳ 소스 대기 | `art/gen/assets/`에 아직 파일 없음. `node tools/art/postprocess-assets.mjs` 재실행 시 자동 처리(멱등) |
+| `fx_summon_circle` | ⛔ **제외됨** | 소스(`art/gen/assets/fx_summon_circle.png`)가 RGB(알파 없음)라 manifest에서 뺐다. `tools/art/regen-list.json`에 기록. 스펙은 "alpha via chroma key" 전제인데 실제로는 배경 합성이 안 되어 있음 — **알파 있는 버전으로 재생성 필요** |
+
+### 11-3. 배너 (완료 2/2, 지연 로드)
+
+`banner_pickup_iris`, `banner_pickup_generic` 전부 완료. `art/gen/assets/`의 v1 채택, 680×560 크롭 + 하단 20% `#0D0F1A` 그라데이션 페이드 적용(PNG 유지, 포맷 미변경). `manifest.lazyTextures`에 등록되며 **PreloadScene이 로드하지 않는다**(GachaScene/GachaPopup 진입 시 지연 로드 대상, 소비 코드는 별도 트랙).
+
+### 11-4. 적 유닛 (소스 없음 0/10)
+
+`enemy_slime` 등 10종 전부 `art/gen/assets/`에 소스가 없어 스킵. 생성 트랙이 아직 이 배치를 시작하지 않은 것으로 보인다. 재실행 시 자동 처리됨.
+
+### 11-5. 전신 히어로 (완료 30/34, 스펙 밖 별도 트랙)
+
+`art/gen/fullbody/hero_XXX.png`(RGBA) → `public/assets/characters/fullbody/hero_XXX.webp`(긴 변 1024 상한, q85, 알파 유지). `hero_007~010` 4장은 재생성 대기 중이라 소스 자체가 없어 스킵(팀 리드 사전 고지). `manifest.fullbody`에 `fb_hero_XXX` 키로 노출되며 **PreloadScene이 로드하지 않는다.** HeroDetailScene의 지연 로드 도입(W2)이 소비할 차례.
+
+> `asset-spec.json`의 `fullbody_hero_001~004` 4개 항목은 실제 소스가 없는 구버전 스텁이다(별도 트랙의 실제 산출물은 `hero_005~038`). 후처리 스크립트가 조용히 건너뛴다.
+
+### 11-6. 초기 전송량 예산 — 해결됨 (36.8MB → 1.09MB)
+
+| 항목 | 이전(2026-09-02 1차) | 이후(2026-09-02 2차, 현재) |
+|------|----------------------|----------------------------|
+| eager 텍스처 구성 | 배경 14종×2(본+블러, PNG 무알파) + 프레임/버튼 11종 | 배경 2종×2(본+블러, WebP q80) + 프레임/버튼 10종(WebP q85) + 아이콘 5종(PNG) |
+| 초기 전송량 | **36.79 MB** | **1.09 MB** (−97%) |
+| 예산 | 8 MB (경고만, 실패 아님) | **6 MB (asset-smoke가 실패로 카운트)** |
+| 판정 | ❌ 초과 4.6배 | ✅ 예산의 18% |
+
+조치 내역: (1) `bg_main`/`bg_login` 외 배경 12종을 `lazyTextures`로 옮기고 `BackgroundFactory.createSceneBg()`가 씬 진입 시 동적 로드하도록 확장. (2) 배경 본+블러, 프레임, 버튼을 PNG에서 WebP로 전환(배경 q80 무알파, 프레임·버튼 q85 알파 유지) — SSOT는 `tools/art/_build-asset-spec.mjs`, 재생성은 `node tools/art/_build-asset-spec.mjs`. (3) `panel_header_ornament`(종횡비 왜곡)와 `fx_summon_circle`(알파 없음)을 manifest에서 제외하고 `tools/art/regen-list.json`에 재생성 필요 항목으로 기록.
+
+**구현 중 발견한 버그 2건(둘 다 이 작업 중 수정)**:
+- `BackgroundFactory.createSceneBg()`의 기존 텍스처 존재 검사가 `TextureGenerator`의 캔버스 플레이스홀더(`bg_gacha`, `bg_tower`에 항상 존재)를 "실제 아트 로드됨"으로 오인해, 이 두 키는 동적 로드가 영원히 트리거되지 않는 상태였다. `_isCanvasTexture()` 판별을 추가해 캔버스면 여전히 폴백 경로로 보내도록 수정.
+- `BackgroundFactory.createGachaBg()`(기존 프로시저럴 폴백, 이번 트랙 신규 코드 아님)가 `circle.add(hexagram)`을 호출하는데 `circle`이 `Graphics`라 `.add()`가 없어 크래시했다. 이전엔 아무도 이 경로를 실행한 적이 없어 발견되지 않았던 잠재 버그. 불필요한 호출을 제거해 수정(시각적 차이 없음 — `hexagram`은 이미 독립된 씬 오브젝트).
+
+### 11-7. 검증 결과 (2026-09-02, 최종)
+
+| 항목 | 결과 |
+|------|------|
+| `npx tsc --noEmit` | 통과 (0 errors) |
+| `npm run build` | 통과 (54.3s) |
+| `npx vitest run` | **1183/1183 통과** (0 실패 — 이전 보고했던 `IdleProgressSystem` 실패는 다른 트랙이 해결함) |
+| `node tests/e2e/boot-smoke.mjs` | 6/6 통과 |
+| `node tests/e2e/asset-smoke.mjs` | **9/9 통과** (예산 6MB 이내 확인, 실패 시 종료 코드 1) |
+| `BackgroundFactory.createSceneBg()` 동적 로드 수동 검증 | `gacha`/`tower`(캔버스 충돌 케이스), `pvp`/`chapter_3`(무캔버스 케이스) 4종 전부 폴백→실이미지 승격 확인(임시 playwright 스크립트로 검증 후 삭제, 커밋 없음) |

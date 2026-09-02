@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { SaveManager } from '../../src/systems/SaveManager.js';
 import { STAGE_UNLOCKS } from '../../src/systems/MenuGridGate.js';
+import { OFFLINE_REWARD_CAP_HOURS } from '../../src/config/onboardingConfig.js';
 
 const tutorial = JSON.parse(
   readFileSync(new URL('../../src/data/tutorial.json', import.meta.url), 'utf-8')
@@ -127,10 +128,9 @@ describe('tutorial.json 스키마', () => {
   it('unlockMenus 합계가 시스템 문서 §4-2 온보딩 구간 해금 순서와 일치한다', () => {
     const unlockOrder = STEPS.flatMap((s) => s.unlockMenus);
     expect(unlockOrder).toEqual([
-      'herolist', 'partyedit',      // T-05
-      'ascension',                  // T-06
-      'quest',                      // T-10
-      'inventory', 'gacha', 'collection', // T-11
+      'herolist', 'partyedit', 'ascension', // T-05 (각인 아이콘은 T-06 안내 대상이라 함께 열린다)
+      'quest',                              // T-10
+      'inventory', 'gacha', 'collection',   // T-11
     ]);
     expect(new Set(unlockOrder).size).toBe(unlockOrder.length);
   });
@@ -148,9 +148,10 @@ describe('tutorial.json 스키마', () => {
     expect(total).toBeLessThanOrEqual(900);
   });
 
-  it('T-12 의 오프라인 상한은 ISS-01 미해결 플레이스홀더다 (릴리스 전 확정 필요)', () => {
+  it('T-12 의 오프라인 상한은 ISS-01 확정값(24h)이며 코드 SSOT 와 일치한다', () => {
     const t12 = STEPS.find((s) => s.id === 'T-12');
-    expect(t12.offlineCapHours).toBe('TBD_ISS-01');
+    expect(t12.offlineCapHours).toBe(OFFLINE_REWARD_CAP_HOURS);
+    expect(t12.offlineCapHours).toBe(24);
   });
 });
 

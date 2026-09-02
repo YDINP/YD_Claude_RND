@@ -3,6 +3,7 @@ import { COLORS, s, sf } from '../../config/gameConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import { EvolutionSystem } from '../../systems/EvolutionSystem.js';
 import { StoryManager } from '../../systems/StoryManager.js';
+import { TutorialTargetRegistry } from '../../systems/TutorialTargetRegistry.js';
 
 /**
  * AscensionPopup - 기관 각인 팝업 (CHAR-3)
@@ -152,6 +153,9 @@ export class AscensionPopup extends PopupBase {
     this.contentContainer.add(bg);
     this._track(bg);
 
+    // 튜토리얼 타깃 (T-07/T-09) — 예: ascension.card.base_omar
+    TutorialTargetRegistry.register(`ascension.card.${hero.id}`, bg, this.scene?.scene?.key);
+
     // 영웅 아이콘 (이모지 대체)
     const icon = this.scene.add.text(cx - w / 2 + s(40), cy, this._getClassIcon(hero.baseClass), {
       fontSize: sf(32)
@@ -277,6 +281,14 @@ export class AscensionPopup extends PopupBase {
       const itemY = listTop + i * (itemH + s(12));
       this._renderRouteItem(route, b.centerX, itemY, listW, itemH);
     });
+
+    // 튜토리얼 타깃 (T-09 mask_choice) — 루트 카드 전체를 감싸는 영역.
+    // Graphics 대신 Zone 을 쓰는 이유는 getBounds() 신뢰성(UX 문서 §4-1 바운드 규약).
+    const listH = routes.length * itemH + (routes.length - 1) * s(12);
+    const listZone = this.scene.add.zone(b.centerX, listTop + listH / 2 - itemH / 2, listW, listH);
+    this.contentContainer.add(listZone);
+    this._track(listZone);
+    TutorialTargetRegistry.register('ascension.route.list', listZone, this.scene?.scene?.key);
   }
 
   /**
@@ -294,6 +306,9 @@ export class AscensionPopup extends PopupBase {
     bg.setStrokeStyle(s(3), cultColor, isOwned ? 0.3 : 0.8);
     this.contentContainer.add(bg);
     this._track(bg);
+
+    // 튜토리얼 타깃 (T-09 루트 카드)
+    TutorialTargetRegistry.register(`ascension.route.${route.cultId}`, bg, this.scene?.scene?.key);
 
     // 기관 색상 왼쪽 띠
     const stripe = this.scene.add.rectangle(cx - w / 2 + s(6), cy, s(8), h - s(10), cultColor, isOwned ? 0.3 : 1);
@@ -555,6 +570,10 @@ export class AscensionPopup extends PopupBase {
       ascBtn.setAlpha(0.5);
       ascBtn.disableInteractive();
     }
+
+    // 튜토리얼 타깃 (T-07/T-09 확정 버튼). ascend 는 tutorial.json 의 기존 키 별칭.
+    TutorialTargetRegistry.register('ascension.button.confirm', ascBtn, this.scene?.scene?.key);
+    TutorialTargetRegistry.register('ascension.button.ascend', ascBtn, this.scene?.scene?.key);
   }
 
   // ─────────────────────────────────────────

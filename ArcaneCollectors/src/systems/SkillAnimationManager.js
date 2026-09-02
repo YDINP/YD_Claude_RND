@@ -24,6 +24,41 @@ import {
 } from '../config/skillAnimationConfig.js';
 import ParticleManager from './ParticleManager.js';
 
+/**
+ * MOOD_VFX에 없는 분위기의 대체 프리셋.
+ * 기본영웅은 mood가 null이라 유닛 생성 시 'neutral'이 되는데 MOOD_VFX에는 그 키가 없다.
+ * 예전에는 `attacker.mood || 'brave'`가 null을 걸러 줬지만 'neutral'은 truthy라 통과한다.
+ * 조회 실패를 그대로 두면 `vfx.trail`에서 TypeError가 나 windup 프로미스가 거부되고,
+ * playAnimation의 catch가 이를 삼키면서 onImpact(피해 판정)가 아예 실행되지 않는다.
+ */
+const FALLBACK_MOOD_VFX = Object.freeze({
+  color: 0xB0BEC5,
+  particle: 'basic_hit',
+  trail: false,
+  description: 'Neutral fallback — 분위기 정보가 없는 유닛'
+});
+
+/**
+ * 분위기 VFX 프리셋 조회 (없으면 중립 프리셋)
+ * @param {string} mood
+ * @returns {object}
+ */
+export function resolveMoodVfx(mood) {
+  return MOOD_VFX[mood] || FALLBACK_MOOD_VFX;
+}
+
+/**
+ * 이 분위기에 전용 연출 자산이 있는지.
+ * MOOD_VFX의 분위기 키는 파티클 프리셋·상성표의 9종과 같은 집합이다.
+ * 'neutral'처럼 프리셋이 없는 값을 그대로 넘기면 ParticleManager가 매 타격마다
+ * "Unknown mood" 경고를 찍고, MoodSystem은 예외를 던진다. 호출 전에 걸러 낸다.
+ * @param {string} mood
+ * @returns {boolean}
+ */
+export function hasMoodPreset(mood) {
+  return !!MOOD_VFX[mood];
+}
+
 class SkillAnimationManager {
   constructor() {
     this.currentAnimation = null;
@@ -41,21 +76,36 @@ class SkillAnimationManager {
    * @returns {Promise<void>}
    */
   async playAnimation(scene, attacker, targets, actionType, options = {}) {
+    // 피해 판정(onImpact)은 연출 성공 여부와 무관하게 정확히 한 번 실행되어야 한다.
+    // 연출 예외가 판정을 삼키면 그 턴은 아무 일도 일어나지 않고 전투가 제자리를 돈다.
+    let impactRan = false;
+    const runImpact = async () => {
+      if (impactRan || !options.onImpact) return;
+      impactRan = true;
+      await options.onImpact();
+    };
+
     // Check feature flag for rollback capability
     if (!FEATURE_FLAGS.useNewAnimations) {
       // Fallback: immediate execution without animations
-      if (options.onImpact) await options.onImpact();
+      await runImpact();
       return;
     }
 
-    // Create abort controller for cancellation support
-    this.abortController = new AbortController();
+    // Create abort controller for cancellation support.
+    // 이 매니저는 싱글턴이라 광역 스킬이나 겹치는 턴에서 호출이 중첩된다. 늦게 시작한 호출이
+    // this.abortController를 갈아끼우고 먼저 끝난 호출이 finally에서 null로 지우면,
+    // 남은 호출이 this.abortController.signal을 읽다 터진다. 자기 컨트롤러를 지역에 붙잡는다.
+    const abortController = new AbortController();
+    this.abortController = abortController;
     this.currentAnimation = { scene, attacker, targets, actionType };
 
     // Get timing configuration for action type
     const timings = BASE_TIMINGS[actionType] || BASE_TIMINGS.basic_attack;
     const mood = attacker.mood || 'brave';
-    const vfx = MOOD_VFX[mood];
+    const vfx = resolveMoodVfx(mood);
+
+    let aborted = false;
 
     try {
       // ==========================================
@@ -64,8 +114,9 @@ class SkillAnimationManager {
       await this._playWindup(scene, attacker, timings.windup, vfx);
 
       // Check if animation was aborted
-      if (this.abortController.signal.aborted) {
+      if (abortController.signal.aborted) {
         console.log('[SkillAnimationManager] Animation aborted during windup');
+        aborted = true;
         return;
       }
 
@@ -84,16 +135,15 @@ class SkillAnimationManager {
 
       // Execute damage calculation callback during impact phase
       // This ensures damage numbers appear at the right moment
-      if (options.onImpact) {
-        await options.onImpact();
-      }
+      await runImpact();
 
       // Wait for impact visuals to complete
       await impactPromise;
 
       // Check if animation was aborted
-      if (this.abortController.signal.aborted) {
+      if (abortController.signal.aborted) {
         console.log('[SkillAnimationManager] Animation aborted during impact');
+        aborted = true;
         return;
       }
 
@@ -103,15 +153,27 @@ class SkillAnimationManager {
       await this._playRecovery(scene, attacker, timings.recovery);
 
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === 'AbortError' || abortController.signal.aborted) {
         console.log('[SkillAnimationManager] Animation aborted:', error.message);
+        aborted = true;
       } else {
         console.warn('[SkillAnimationManager] Animation error:', error);
       }
     } finally {
-      // Clean up animation state
-      this.currentAnimation = null;
-      this.abortController = null;
+      // 연출이 실패했더라도(중단이 아니라면) 판정은 반드시 치른다
+      if (!aborted) {
+        try {
+          await runImpact();
+        } catch (impactError) {
+          console.warn('[SkillAnimationManager] onImpact error:', impactError);
+        }
+      }
+
+      // Clean up animation state — 내 컨트롤러가 아직 현재 것일 때만 지운다
+      if (this.abortController === abortController) {
+        this.currentAnimation = null;
+        this.abortController = null;
+      }
     }
   }
 
@@ -191,9 +253,12 @@ class SkillAnimationManager {
       const target = targets[0]; // Primary target
       const particleManager = scene.particleManager || new ParticleManager(scene);
       const mood = attacker.mood || 'brave';
+      // 분위기 전용 파티클이 없는 유닛(기본영웅 등)은 분위기 연출을 건너뛴다 — 화면 흔들림과
+      // 피격 플래시 같은 공통 연출은 그대로 나간다.
+      const moodVisualsReady = hasMoodPreset(mood);
 
       // VFX-2.2: Play mood-specific attack particle (from attacker to target)
-      if (FEATURE_FLAGS.enableParticles && actionType !== 'heal') {
+      if (FEATURE_FLAGS.enableParticles && moodVisualsReady && actionType !== 'heal') {
         particleManager.playMoodAttack(
           mood,
           attacker.x,
@@ -218,13 +283,14 @@ class SkillAnimationManager {
       await scene.time.delayedCall(duration * 0.4, () => {});
 
       // VFX-2.2: Play mood-specific hit effect at target
-      if (FEATURE_FLAGS.enableParticles && actionType !== 'heal') {
+      if (FEATURE_FLAGS.enableParticles && moodVisualsReady && actionType !== 'heal') {
         particleManager.playMoodHit(mood, target.x, target.y)
           .catch(err => console.warn('[SkillAnimationManager] Mood hit particle error:', err));
       }
 
       // VFX-2.3: Show type advantage effect if available
-      if (target.mood && attacker.mood && FEATURE_FLAGS.enableParticles) {
+      // 양쪽 모두 상성이 성립하는 분위기일 때만 조회한다 (MoodSystem은 모르는 값에 예외를 던진다)
+      if (moodVisualsReady && hasMoodPreset(target.mood) && FEATURE_FLAGS.enableParticles) {
         // Import MoodSystem to check advantage
         import('./MoodSystem.js').then(({ moodSystem }) => {
           const matchup = moodSystem.getMatchupMultiplier(attacker.mood, target.mood);

@@ -11,12 +11,17 @@ import { Modal } from '../components/Modal.js';
 import { formatTime } from '../utils/colorUtils.js';
 import { IdleProgressSystem } from '../systems/IdleProgressSystem.js';
 import { IdleBattleView } from '../components/IdleBattleView.js';
-import { getCharacter, getCharacterOrHero, calculatePower, getStage, getChapterStages } from '../data/index.ts';
+import { getCharacter, getCharacterOrHero, calculatePower, getStage, getChapterStages, normalizeHeroes } from '../data/index.ts';
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import { MenuGridGate } from '../systems/MenuGridGate.js';
 import { TutorialTargetRegistry } from '../systems/TutorialTargetRegistry.js';
+import { TutorialManager } from '../systems/TutorialManager.js';
+import { TutorialFlow } from '../components/tutorial/TutorialFlow.js';
+import { StoryManager } from '../systems/StoryManager.js';
+import { TutorialEvents } from '../systems/TutorialManager.js';
+import { EventBus } from '../systems/EventBus.js';
 import { GachaPopup } from '../components/popups/GachaPopup.js';
 import { HeroListPopup } from '../components/popups/HeroListPopup.js';
 import { PartyEditPopup } from '../components/popups/PartyEditPopup.js';
@@ -31,6 +36,10 @@ import { GuildPopup } from '../components/popups/GuildPopup.js';
 import { RaidPopup } from '../components/popups/RaidPopup.js';
 import { FriendsPopup } from '../components/popups/FriendsPopup.js';
 import { CollectionPopup } from '../components/popups/CollectionPopup.js';
+import { StoryLogPopup } from '../components/popups/StoryLogPopup.js';
+import { ReturningPlayerCard } from '../components/ReturningPlayerCard.js';
+import { buildReturnSummary } from '../systems/ReturningPlayerRules.js';
+import { RETURN_TIER } from '../config/onboardingConfig.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -41,6 +50,8 @@ export class MainMenuScene extends Phaser.Scene {
     this.showOfflineRewards = data?.showOfflineRewards || null;
     this.bossVictory = data?.bossVictory || false;
     this.bossDefeat = data?.bossDefeat || false;
+    // 다른 씬(스테이지 선택 경고 CTA 등)이 지정한 자동 오픈 팝업
+    this.pendingPopupKey = data?.openPopup || null;
     // 빈 화면 방지: shutdown()이 호출되지 않는 비정상 경로 대비
     this._uiCreated = false;
   }
@@ -99,6 +110,10 @@ export class MainMenuScene extends Phaser.Scene {
     // BUG-01 수정: UI 생성 완료 플래그 설정 (중복 생성 방지)
     this._uiCreated = true;
 
+    // 튜토리얼 배선 — 현재 스텝을 화면(컷씬/마스킹/코치마크)으로 옮긴다
+    this.tutorialFlow = new TutorialFlow(this).start();
+    this._menusUnlockedOff = EventBus.on(TutorialEvents.MENUS_UNLOCKED, () => this.refreshBottomMenu());
+
     // 오프라인 보상: IdleProgressSystem의 DPS 기반으로 재계산
     if (this.showOfflineRewards && (this.showOfflineRewards?.gold ?? 0) > 0) {
       const lastLogoutTime = fullSaveData?.lastLogoutTime || fullSaveData?.lastOnline || Date.now();
@@ -125,6 +140,16 @@ export class MainMenuScene extends Phaser.Scene {
         this.showOfflineRewardsPopup(this.showOfflineRewards);
       });
     }
+
+    // T-Q5/T-25: 복귀 유저 요약 카드 (조건부 1회). 컷씬은 자동 재생하지 않는다(UX §5-3).
+    this.maybeShowReturningPlayerCard(fullSaveData);
+
+    // 다른 씬이 요청한 팝업 자동 오픈 (스테이지 선택 벽 경고 CTA 등)
+    if (this.pendingPopupKey) {
+      const key = this.pendingPopupKey;
+      this.pendingPopupKey = null;
+      this.time.delayedCall(300, () => this.openPopup(key));
+    }
     } catch (error) {
       console.error('[MainMenuScene] create() 실패:', error);
       this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -139,6 +164,15 @@ export class MainMenuScene extends Phaser.Scene {
   shutdown() {
     // BUG-01 수정: UI 생성 플래그 리셋 (씬이 완전히 종료될 때)
     this._uiCreated = false;
+
+    if (this._menusUnlockedOff) {
+      this._menusUnlockedOff();
+      this._menusUnlockedOff = null;
+    }
+    if (this.tutorialFlow) {
+      this.tutorialFlow.destroy();
+      this.tutorialFlow = null;
+    }
 
     if (this.particles) {
       this.particles.destroy();
@@ -171,6 +205,84 @@ export class MainMenuScene extends Phaser.Scene {
     }
   }
 
+
+  /**
+   * 복귀 유저 요약 카드 표시 (T-Q5 / T-25).
+   *
+   * 표시 조건: 이탈 3일 이상 && 이번 복귀 보상을 아직 받지 않았을 것.
+   * 판정과 문구는 전부 `ReturningPlayerCard`의 순수 함수가 만들고, 여기서는 띄우기만 한다.
+   * 오프라인 보상 팝업과 겹치지 않도록 그보다 뒤(900ms)에 띄운다.
+   *
+   * @param {object|null} saveData SaveManager.load() 결과
+   * @returns {boolean} 카드를 띄웠는지
+   */
+  maybeShowReturningPlayerCard(saveData) {
+    try {
+      const save = saveData || SaveManager.load();
+      const summary = buildReturnSummary(save, {
+        stageName: (stageId) => {
+          const chapterNo = String(stageId || '').split('-')[0];
+          return getStage(`chapter_${chapterNo}`, stageId)?.name || null;
+        },
+      });
+
+      if (!summary.visible) return false;
+
+      // 같은 복귀 구간에서 두 번 띄우지 않는다.
+      // `lastOnline`은 저장할 때마다 갱신되므로 기준이 될 수 없다. 마지막 수령 시각으로 판단한다.
+      const lastRewardAt = save?.onboarding?.lastReturnRewardAt ?? null;
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      if (lastRewardAt && Date.now() - lastRewardAt < DAY_MS) return false;
+
+      this.time.delayedCall(900, () => {
+        this.returningCard = new ReturningPlayerCard(this, summary, {
+          onClaim: (result) => this.claimReturnGift(result),
+          onCta: (key) => {
+            if (key === 'collection' || key === 'ascension') this.openPopup(key);
+          },
+        });
+        this.returningCard.show();
+      });
+      return true;
+    } catch (error) {
+      console.warn('[MainMenuScene] 복귀 카드 표시 실패:', error?.message);
+      return false;
+    }
+  }
+
+  /**
+   * 복귀 선물 지급. `onboarding.lastReturnRewardAt`으로 중복 수령을 막는다.
+   * @param {object} summary buildReturnSummary 결과
+   */
+  claimReturnGift(summary) {
+    const gift = summary?.gift;
+    if (!gift) return;
+
+    try {
+      const save = SaveManager.load();
+      const res = save.resources || (save.resources = {});
+      res.gems = (res.gems || 0) + gift.gems;
+      res.gold = (res.gold || 0) + gift.gold;
+      res.summonTickets = (res.summonTickets || 0) + gift.summonTickets;
+      res.spiritStones = (res.spiritStones || 0) + gift.spiritStones;
+
+      if (!save.onboarding || typeof save.onboarding !== 'object') save.onboarding = {};
+      save.onboarding.returningPlayerTier = summary.tier ?? RETURN_TIER.NONE;
+      save.onboarding.lastReturnRewardAt = Date.now();
+      SaveManager.save(save);
+
+      if (gift.energyFull) {
+        energySystem.addEnergy(energySystem.getMaxEnergy());
+      }
+
+      const newResources = SaveManager.getResources() || {};
+      this.registry.set('gems', newResources?.gems ?? 0);
+      this.registry.set('gold', newResources?.gold ?? 0);
+      this.showToast('복귀 선물을 받았습니다!');
+    } catch (error) {
+      console.warn('[MainMenuScene] 복귀 선물 지급 실패:', error?.message);
+    }
+  }
 
   showOfflineRewardsPopup(rewards) {
     if (!rewards) {
@@ -683,6 +795,13 @@ export class MainMenuScene extends Phaser.Scene {
     // Sweep availability: 파티만 있으면 항상 가능
     const canSweep = hasParty;
 
+    // 온보딩 구간에는 소탕/보스전 대신 단일 CTA만 노출한다 (UX_ONBOARDING_FLOW §2-7).
+    // 클리어한 스테이지가 0개인 유저에게 소탕 버튼은 "누르면 실패하는 버튼"이다.
+    const tutorialActive = !TutorialManager.isCompleted();
+    if (tutorialActive) {
+      this._createOnboardingBattleCta(panelY);
+    } else {
+
     // Sweep button (인스턴스 변수로 보관)
     const sweepBtnX = s(40);
     const sweepBtnW = GAME_WIDTH / 2 - s(60);
@@ -744,6 +863,8 @@ export class MainMenuScene extends Phaser.Scene {
     if (!bossReady) {
       this._bossBtnText.setAlpha(0.5);
     }
+    }
+
 
     // Energy display (EnergySystem 시간 회복 반영)
     const esStatus = energySystem.getStatus() || {};
@@ -759,6 +880,147 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: sf(13), fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0).setDepth(Z_INDEX.PANEL_CONTENT);
+  }
+
+  /**
+   * 온보딩 단일 CTA — "▶ 전투 시작" (UX_ONBOARDING_FLOW §2-7)
+   * 현재 튜토리얼 스텝이 요구하는 스테이지로 실제 전투를 시작한다.
+   * 튜토리얼 완주 유저에게는 그리지 않는다(기존 소탕/보스전 2분할 유지).
+   */
+  _createOnboardingBattleCta(panelY) {
+    const btnX = s(40);
+    const btnW = GAME_WIDTH - s(80);
+    const btnH = s(50);
+    const centerY = panelY + s(105);
+    const stageId = this._onboardingStageId();
+
+    const gfx = this.add.graphics();
+    gfx.fillStyle(COLORS.primary, 1);
+    gfx.fillRoundedRect(btnX, panelY + s(80), btnW, btnH, s(10));
+    gfx.setDepth(Z_INDEX.PANEL_BUTTONS);
+
+    this._onboardingCtaText = this.add.text(btnX + btnW / 2, centerY, `▶ 전투 시작 (${stageId})`, {
+      fontSize: sf(18), fontFamily: '"Noto Sans KR", Arial', fontStyle: 'bold', color: '#FFFFFF'
+    }).setOrigin(0.5).setDepth(Z_INDEX.PANEL_BUTTONS + 1);
+
+    const hit = this.add.rectangle(btnX + btnW / 2, centerY, btnW, btnH)
+      .setAlpha(0.001).setDepth(Z_INDEX.PANEL_BUTTONS + 2).setInteractive({ useHandCursor: true });
+    hit.on('pointerdown', () => this.startOnboardingBattle());
+
+    // T-03/T-04/T-10/T-11 하이라이트 대상
+    TutorialTargetRegistry.register('mainmenu.adventure.battle_start', hit, 'MainMenuScene');
+    this._onboardingCtaHit = hit;
+  }
+
+  /** 지금 도전해야 할 스테이지 ID — 현재 튜토리얼 스텝의 완료 조건에서 도출한다 */
+  _onboardingStageId() {
+    const cleared = SaveManager.load()?.progress?.clearedStages || {};
+    const isCleared = (id) => cleared[id] !== undefined && cleared[id] !== null;
+
+    const cond = TutorialManager.getCurrentStep()?.completionCondition;
+    if (cond?.type === 'stage_clear' && cond.stageId && !isCleared(cond.stageId)) return cond.stageId;
+    if (cond?.type === 'stage_clear_all') {
+      const next = (cond.stageIds || []).find((id) => !isCleared(id));
+      if (next) return next;
+    }
+
+    for (let i = 1; i <= 5; i++) {
+      const id = `1-${i}`;
+      if (!isCleared(id)) return id;
+    }
+    return '1-5';
+  }
+
+  /** 세이브의 파티를 전투용 객체 배열로 만든다. 비어 있으면 보유 캐릭터로 자동 채운다(T-08 폴백). */
+  _buildOnboardingParty() {
+    const saveData = SaveManager.load();
+    const rawParty = (saveData?.parties || [])[0];
+    let heroIds = (rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []) || []).filter(Boolean);
+
+    // T-08 폴백: 슬롯이 비어 있으면 보유 캐릭터로 4인까지 자동으로 채운다.
+    // (UX_ONBOARDING_FLOW §2-3 "미편성 상태로 진입 시 파티 자동 채움 — 진행 차단 금지")
+    if (heroIds.length < 4) {
+      const owned = (saveData?.characters || []).map((c) => c.id).filter(Boolean);
+      const filled = [...heroIds];
+      owned.forEach((id) => {
+        if (filled.length < 4 && !filled.includes(id)) filled.push(id);
+      });
+      const changed = filled.length !== heroIds.length;
+      heroIds = filled;
+      if (changed && heroIds.length > 0) {
+        const parties = saveData.parties || [];
+        parties[0] = [...heroIds, null, null, null].slice(0, 4);
+        saveData.parties = parties;
+        SaveManager.save(saveData);
+        this.showToast('파티를 자동으로 편성했습니다');
+      }
+    }
+
+    // 전투에 넘기는 영웅은 다른 진입 경로(StageSelectScene)와 동일한 소스를 쓴다.
+    // StageSelectScene 은 registry.ownedHeroes(정규화 완료본)를 쓰므로 그것을 우선하고,
+    // 없을 때만 세이브를 정규화한다. 정규화를 건너뛰면 mood 가 'neutral' 로 남아
+    // 전투 중 분위기 상성 계산이 실패한다.
+    const registryHeroes = this.registry.get('ownedHeroes');
+    const normalized = (Array.isArray(registryHeroes) && registryHeroes.length > 0)
+      ? registryHeroes
+      : (normalizeHeroes(saveData?.characters || []) || []);
+
+    return heroIds.map((id) => {
+      const hero = normalized.find((h) => h.id === id || h.characterId === id);
+      if (hero) return hero;
+
+      const charData = (saveData?.characters || []).find((c) => c.id === id || c.characterId === id);
+      const staticData = getCharacterOrHero(id);
+      if (!charData && !staticData) return null;
+      return normalizeHeroes([{ ...staticData, ...charData, id }])[0] || null;
+    }).filter(Boolean);
+  }
+
+  /**
+   * 온보딩 CTA 진입 — StageSelectScene.startBattle()과 동일한 계약
+   * (에너지 차감 → chapter_enter/stage_enter 컷씬 → 전투 진입)
+   */
+  startOnboardingBattle() {
+    const stageId = this._onboardingStageId();
+    const chapterNum = parseInt(stageId.split('-')[0], 10) || 1;
+    const chapterId = `chapter_${chapterNum}`;
+    const stage = getStage(chapterId, stageId);
+    if (!stage) {
+      this.showToast('스테이지 정보를 찾을 수 없습니다');
+      return;
+    }
+
+    const party = this._buildOnboardingParty();
+    if (party.length === 0) {
+      this.showToast('파티를 먼저 편성해주세요!');
+      return;
+    }
+
+    const cost = energySystem.getStageCost(stage.type || 'NORMAL');
+    const consumed = energySystem.consumeEnergy(cost);
+    if (!consumed.success) {
+      this.showToast(`에너지가 부족합니다! (필요: ${cost}🔋)`);
+      return;
+    }
+
+    this.registry.set('currentTeam', party);
+
+    // 메인 메뉴는 네비게이션 루트다. 여기서 CTA를 누른 시점에 진행 중인 전환은 있을 수 없으므로,
+    // 이전 전환이 중간에 끊겨 isTransitioning 이 잠긴 경우를 풀어 준다.
+    // (잠긴 채로 두면 battleEntryTransition 이 조용히 무시되어 전투가 시작되지 않는다)
+    transitionManager.reset?.();
+    console.log('[MainMenu] 온보딩 전투 시작', stageId,
+      party.map((h) => `${h.id}:Lv${h.level || 1}`).join(','));
+
+    const triggers = stageId.endsWith('-1') ? ['chapter_enter', 'stage_enter'] : ['stage_enter'];
+    StoryManager.triggerSequence(triggers, {
+      scene: this,
+      stageId,
+      chapterId,
+      onComplete: () => {
+        transitionManager.battleEntryTransition(this, { stage, party });
+      }
+    });
   }
 
   /**
@@ -936,6 +1198,9 @@ export class MainMenuScene extends Phaser.Scene {
     const summaryBg = this.add.rectangle(GAME_WIDTH / 2, summaryY, s(640), s(50), COLORS.bgLight, 0.5);
     summaryBg.setStrokeStyle(1, COLORS.primary, 0.3);
     summaryBg.setDepth(Z_INDEX.CLAIM_BUTTON - 1);
+
+    // T-12 스포트라이트 2번째 대상 (오프라인 보상 예고)
+    TutorialTargetRegistry.register('mainmenu.adventure.offline_notice', summaryBg, 'MainMenuScene');
 
     const partyPower = this.idleSystem.getPartyPower();
     const rates = this.idleSystem.getIdleBattleRate(partyPower);
@@ -1118,6 +1383,7 @@ export class MainMenuScene extends Phaser.Scene {
     // 0개면 그리드 영역 자체를 그리지 않는다 (신규 유저 첫 화면)
     if (!MenuGridGate.shouldRenderGrid(menuItems.length)) return;
 
+    this._menuObjects = [];
     const cols = MenuGridGate.getColumnCount(menuItems.length);
     const labelFontBase = MenuGridGate.getLabelFontSize(menuItems.length);
     const btnSize = s(80);
@@ -1161,6 +1427,7 @@ export class MainMenuScene extends Phaser.Scene {
       TutorialTargetRegistry.register(
         `mainmenu.menu.${item.popupKey}`, hitArea, 'MainMenuScene'
       );
+      this._menuObjects.push(bg, icon, label, hitArea);
 
       hitArea.on('pointerover', () => {
         bg.clear();
@@ -1189,9 +1456,59 @@ export class MainMenuScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * 메뉴 해금이 갱신되면 그리드를 다시 그린다.
+   * 그리지 않으면 T-06처럼 "방금 열린 메뉴를 눌러라"는 안내의 대상이 화면에 없다.
+   */
+  refreshBottomMenu() {
+    if (!this._uiCreated) return;
+    (this._menuObjects || []).forEach((obj) => obj?.destroy?.());
+    this._menuObjects = [];
+    this.createBottomMenu();
+    this.tutorialFlow?.scheduleRefresh(150);
+  }
+
+  /**
+   * 고아 팝업 컨테이너 정리.
+   * PopupBase 는 depth 2000 컨테이너에 전체화면 오버레이(2160x3840, interactive)를 담는다.
+   * 어떤 이유로든 파괴되지 않고 남으면 화면 전체 입력을 삼켜 메뉴가 눌리지 않는다.
+   * (씬이 일시정지된 사이 hide 트윈이 멈춘 경우 등)
+   */
+  destroyOrphanPopups() {
+    // 살아 있는 팝업은 건드리지 않는다. 화면에 보이지 않는데(alpha 0 / invisible)
+    // 파괴되지 않은 컨테이너만 고아로 판정한다.
+    const alive = [this.activePopup?.container, this.heroPopup?.container].filter(Boolean);
+    const orphans = [];
+
+    const walk = (list) => {
+      (list || []).forEach((obj) => {
+        if (!obj) return;
+        if (obj.type === 'Container') {
+          // 팝업 레이어(2000~2999) 컨테이너는 activePopup / heroPopup 둘 중 하나여야 한다.
+          // 그 외는 파괴에 실패하고 남은 고아이며, 전체화면 오버레이로 입력을 삼킨다.
+          const isPopupLayer = obj.depth >= 2000 && obj.depth < 3000;
+          if (isPopupLayer && !alive.includes(obj)) {
+            orphans.push(obj);
+            return;   // 컨테이너째 제거하므로 더 내려갈 필요 없다
+          }
+          walk(obj.list);
+        }
+      });
+    };
+
+    walk(this.children.list);
+    orphans.forEach((obj) => obj.destroy(true));
+    if (orphans.length > 0) {
+      console.warn(`[MainMenuScene] 고아 팝업 컨테이너 ${orphans.length}개 정리`);
+    }
+    return orphans.length;
+  }
+
   openPopup(key) {
     // 이미 열린 팝업이 있으면 무시
     if (this.activePopup) return;
+
+    this.destroyOrphanPopups();
 
     const popups = {
       gacha: GachaPopup,
@@ -1208,17 +1525,21 @@ export class MainMenuScene extends Phaser.Scene {
       raid: RaidPopup,
       friends: FriendsPopup,
       collection: CollectionPopup,
+      // T-Q4: 도감 '이야기' 탭. 도감에서 진입하지만 다른 경로(복귀 카드 등)에서도 열 수 있다.
+      storylog: StoryLogPopup,
     };
     const PopupClass = popups[key];
     if (PopupClass) {
       const popup = new PopupClass(this, {
         onClose: () => {
           this.activePopup = null;
+          this.tutorialFlow?.notifyPopupClosed();
           this.refreshAfterPopup();
         }
       });
       this.activePopup = popup;
       popup.show();
+      this.tutorialFlow?.notifyPopupOpened(key);
     }
   }
 

@@ -120,6 +120,15 @@ export class PopupBase {
         this.destroy();
       }
     });
+
+    // 안전장치: 트윈이 어떤 이유로든 완료되지 않아도 반드시 파괴한다.
+    // 남으면 오버레이(2160x3840)와 패널 블로커가 인터랙티브 상태로 화면 전체 입력을 삼킨다.
+    this.scene.time?.delayedCall?.(400, () => {
+      if (this.container) {
+        console.warn('[PopupBase] hide 트윈 미완료 — 강제 파괴');
+        this.destroy();
+      }
+    });
   }
 
   destroy() {

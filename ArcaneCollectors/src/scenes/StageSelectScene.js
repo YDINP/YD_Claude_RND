@@ -9,6 +9,8 @@ import { getAllCharacters, getChapterStages } from '../data/index.js';
 import transitionManager from '../utils/TransitionManager.js';
 import navigationManager from '../systems/NavigationManager.js';
 import { StoryManager } from '../systems/StoryManager.js';
+import { buildWallWarning } from '../systems/StageWallRules.js';
+import { countAscendableHeroes } from '../systems/ReturningPlayerRules.js';
 
 export class StageSelectScene extends Phaser.Scene {
   constructor() {
@@ -187,7 +189,13 @@ export class StageSelectScene extends Phaser.Scene {
 
   generateStages(chapter) {
     // data/index.js에서 동적 로드 시도
-    const dataStages = getChapterStages(chapter);
+    // getChapterStages 는 `chapter_1` 형태의 id를 받는다. 숫자를 넘기면 항상 빈 배열이 돌아와
+    // 아래 하드코딩 폴백이 쓰이고, 그러면 1-4의 권장 전투력이 500(의도된 벽)이 아니라
+    // 폴백 공식값 1,900이 되어 T-Q3 경고가 잘못된 숫자를 말한다.
+    const chapterId = typeof chapter === 'string' && chapter.startsWith('chapter_')
+      ? chapter
+      : `chapter_${chapter}`;
+    const dataStages = getChapterStages(chapterId);
 
     if (dataStages && dataStages.length > 0) {
       console.log(`[StageSelect] Loaded ${dataStages.length} stages from data for chapter ${chapter}`);
@@ -197,6 +205,12 @@ export class StageSelectScene extends Phaser.Scene {
         name: stage.name || `스테이지 ${i + 1}`,
         recommendedPower: stage.recommendedPower || 1000 + (chapter - 1) * 2000 + i * 300,
         enemyCount: stage.enemyCount || 3 + Math.floor(i / 3),
+        // 아래 3개는 전투/결과 화면이 쓴다. 여기서 떨어뜨리면 보스 판정과
+        // 패배 시 에너지 환급(LV-01)이 전부 기본값으로 흘러간다.
+        energyCost: stage.energyCost,
+        isBoss: stage.isBoss,
+        enemies: stage.enemies,
+        retryPolicy: stage.retryPolicy,
         rewards: stage.rewards || {
           gold: 100 + i * 50 + (chapter - 1) * 200,
           exp: 50 + i * 20 + (chapter - 1) * 100
@@ -472,10 +486,31 @@ export class StageSelectScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
+    // T-Q3: 권장 전투력 대비 부족 경고 (UX §2-5 / 시스템 §B-4 표시 의무).
+    // 진입을 막지 않는다. 못 이긴다는 사실을 숫자로 보여주고 강화 동선만 준다.
+    this.wallWarningText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(140), '', {
+      fontSize: sf(13),
+      fontFamily: '"Noto Sans KR", Arial',
+      color: '#F97316',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setVisible(false);
+
+    this.wallCtaText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(118), '', {
+      fontSize: sf(13),
+      fontFamily: '"Noto Sans KR", Arial',
+      color: '#38BDF8'
+    }).setOrigin(0.5).setVisible(false).setInteractive({ useHandCursor: true });
+
+    this.wallCtaText.on('pointerup', () => {
+      if (!this._wallCtaKey) return;
+      this.scene.start('MainMenuScene', { openPopup: this._wallCtaKey });
+    });
+
     this.partyModal.add([
       overlay, modalBg, this.modalTitle, this.stageInfoText,
       ...this.partySlots.map(s => s.container),
-      autoBtn, startBtn, closeBtn, this.totalPowerText
+      autoBtn, startBtn, closeBtn, this.totalPowerText,
+      this.wallWarningText, this.wallCtaText
     ]);
   }
 
@@ -589,6 +624,45 @@ export class StageSelectScene extends Phaser.Scene {
       else if (ratio >= 0.8) color = COLORS.accent;
       this.totalPowerText.setColor(`#${  color.toString(16).padStart(6, '0')}`);
     }
+
+    this.updateWallWarning(total);
+  }
+
+  /**
+   * T-Q3: 권장 전투력 미달 경고 갱신.
+   * 판정은 `StageWallRules.buildWallWarning`이 하고 여기서는 그리기만 한다.
+   * @param {number} totalPower 현재 편성의 총 전투력
+   */
+  updateWallWarning(totalPower) {
+    if (!this.wallWarningText || !this.wallCtaText) return;
+
+    if (!this.selectedStage) {
+      this.wallWarningText.setVisible(false);
+      this.wallCtaText.setVisible(false);
+      return;
+    }
+
+    let ascendableCount = 0;
+    try {
+      ascendableCount = countAscendableHeroes(SaveManager.load());
+    } catch (e) {
+      GameLogger.log('SCENE', '각인 가능 영웅 수 계산 실패', { error: e?.message });
+    }
+
+    const warning = buildWallWarning(
+      totalPower,
+      this.selectedStage.recommendedPower,
+      { ascendableCount }
+    );
+
+    this._wallCtaKey = warning.ctaKey || null;
+    this.wallWarningText
+      .setText(warning.text)
+      .setColor(`#${warning.color.toString(16).padStart(6, '0')}`)
+      .setVisible(warning.visible);
+    this.wallCtaText
+      .setText(warning.ctaLabel ? `▸ ${warning.ctaLabel}` : '')
+      .setVisible(warning.visible && Boolean(warning.ctaLabel));
   }
 
   /**

@@ -9,6 +9,17 @@
  */
 
 import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import {
+  resolveBgKeys,
+  coverFit,
+  resolveDimAlpha,
+  getDimColor,
+  resolveFallbackMethod,
+  resolveLazyBgEntry
+} from './bgLayout.js';
+
+/** lazyTextures 동적 로드 시 충돌 방지용 임시 키 접두어(승격 후 제거) */
+const LAZY_BG_TEMP_PREFIX = '__lazybg__';
 
 export class BackgroundFactory {
   /**
@@ -293,7 +304,8 @@ export class BackgroundFactory {
         GAME_HEIGHT / 2 + Math.sin(angle2) * 100
       );
     }
-    circle.add(hexagram);
+    // circle/hexagram 은 둘 다 독립된 Graphics 오브젝트다(Container 아님 — .add() 불가).
+    // 각자 별도 회전 트윈으로 애니메이션한다.
 
     // 회전 애니메이션 (2개 방향)
     scene.tweens.add({
@@ -481,6 +493,217 @@ export class BackgroundFactory {
     vignette.setBlendMode(Phaser.BlendModes.MULTIPLY);
 
     return { graphics, stars, torches, vignette };
+  }
+
+  /**
+   * 씬 배경을 만든다 (REDESIGN_PLAN 2-7, T-09).
+   *
+   * 텍스처 bg_<key> 가 로드되어 있으면 cover-fit 으로 깔고 딤을 얹는다.
+   * 없으면 기존 프로시저럴 배경으로 폴백한다. 아트가 준비되기 전에도 화면이 성립해야 한다.
+   * 블러본 bg_<key>_blur 이 있으면 반환값에 담아 GlassPanel 이 백드롭으로 쓰게 한다.
+   *
+   * @param {Phaser.Scene} scene
+   * @param {string} key - 씬 키 (예: main, battle, chapter_1) 또는 완성된 텍스처 키
+   * @param {Object} [options]
+   * @param {number} [options.dimAlpha] - 딤 알파 강제 지정
+   * @param {number} [options.depth] - 배경 depth. 기본 0
+   * @returns {{ key:string, textureKey:string, blurKey:string|null, hasImage:boolean,
+   *             image:Phaser.GameObjects.Image|null, dim:Phaser.GameObjects.Graphics|null,
+   *             fallback:Object|null }}
+   */
+  static createSceneBg(scene, key, options = {}) {
+    const keys = resolveBgKeys(key);
+    const depth = options.depth ?? 0;
+
+    // TextureGenerator.generateBackgrounds() 는 bg_gacha/bg_tower 등 일부 키에
+    // Phase1 에서 무조건 캔버스 플레이스홀더를 만들어 둔다. exists() 만으로는 "실제
+    // 아트가 이미 로드됨"과 "이름만 같은 캔버스 폴백" 을 구분할 수 없다 — 구분하지
+    // 않으면 lazyTextures 동적 로드가 영원히 트리거되지 않는다(캔버스를 진짜처럼
+    // 오인해 그대로 써버리므로). 그래서 캔버스인 경우도 "텍스처 없음"과 동일하게
+    // 취급해 폴백 경로로 보낸다.
+    const hasRealTexture =
+      keys && scene.textures && scene.textures.exists(keys.textureKey) &&
+      !BackgroundFactory._isCanvasTexture(scene, keys.textureKey);
+
+    if (!keys || !hasRealTexture) {
+      const method = resolveFallbackMethod(key);
+      const fallback = typeof BackgroundFactory[method] === 'function'
+        ? BackgroundFactory[method](scene)
+        : BackgroundFactory.createGradientBg(scene);
+      const result = {
+        key,
+        textureKey: keys ? keys.textureKey : null,
+        blurKey: null,
+        hasImage: false,
+        image: null,
+        dim: null,
+        fallback
+      };
+      scene.sceneBackground = result;
+
+      // lazyTextures(예: bg_gacha, bg_tower)에 실제 아트가 있으면 동적으로 불러와
+      // 폴백을 실제 이미지로 교체한다. 실패해도 폴백이 그대로 남으므로 화면은 항상 성립한다.
+      if (keys && scene.load) {
+        const dimAlpha = options.dimAlpha ?? resolveDimAlpha(key);
+        BackgroundFactory._loadLazyBg(scene, keys, fallback, depth, dimAlpha);
+      }
+
+      return result;
+    }
+
+    const source = scene.textures.get(keys.textureKey).getSourceImage();
+    const fit = coverFit(source.width, source.height);
+
+    const image = scene.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, keys.textureKey);
+    image.setDisplaySize(fit.displayWidth, fit.displayHeight);
+    image.setDepth(depth);
+    image.setScrollFactor(0);
+
+    // 전 화면 공통 딤 — 배경 위 텍스트 대비 확보
+    const dimAlpha = options.dimAlpha ?? resolveDimAlpha(key);
+    const dim = scene.add.graphics();
+    dim.fillStyle(getDimColor(), dimAlpha);
+    dim.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    dim.setDepth(depth + 1);
+    dim.setScrollFactor(0);
+
+    const hasBlur = scene.textures.exists(keys.blurKey);
+    const result = {
+      key,
+      textureKey: keys.textureKey,
+      blurKey: hasBlur ? keys.blurKey : null,
+      hasImage: true,
+      image,
+      dim,
+      fallback: null
+    };
+    scene.sceneBackground = result;
+    return result;
+  }
+
+  /**
+   * 텍스처가 (addCanvas 로 만들어진) 캔버스 플레이스홀더인지 확인한다.
+   * @param {Phaser.Scene} scene
+   * @param {string} textureKey
+   * @returns {boolean}
+   */
+  static _isCanvasTexture(scene, textureKey) {
+    const tex = scene.textures.get(textureKey);
+    const src = tex && tex.source && tex.source[0];
+    return !!(src && src.image && src.image.tagName === 'CANVAS');
+  }
+
+  /**
+   * lazyTextures 배경(bg_gacha, bg_tower 등)을 동적으로 로드해 프로시저럴 폴백을
+   * 실제 이미지로 교체한다. createSceneBg 가 텍스처 미존재로 폴백을 반환한 직후에만
+   * 호출된다. 로드 실패/씬 종료 시 아무 것도 하지 않고 폴백을 그대로 둔다.
+   *
+   * 임시 키(`__lazybg__<key>`)로 로드한 뒤 승격하는 이유는 PreloadScene.loadPhase0_Assets()
+   * 와 동일하다 — TextureGenerator 가 같은 키로 캔버스 폴백을 이미 만들어 둔 경우(예:
+   * bg_gacha, bg_tower) Phaser TextureManager.addImage() 가 키 충돌로 조용히 실이미지를
+   * 버리기 때문이다.
+   *
+   * @param {Phaser.Scene} scene
+   * @param {{textureKey:string, blurKey:string}} keys - resolveBgKeys() 결과
+   * @param {*} fallbackState - createSceneBg 가 만든 폴백 반환값(교체 시 파괴 대상)
+   * @param {number} depth
+   * @param {number} dimAlpha
+   */
+  static _loadLazyBg(scene, keys, fallbackState, depth, dimAlpha) {
+    const entry = resolveLazyBgEntry(keys.textureKey);
+    if (!entry) return;
+
+    const tempKey = `${LAZY_BG_TEMP_PREFIX}${keys.textureKey}`;
+    const tempBlurKey = entry.blurPath ? `${LAZY_BG_TEMP_PREFIX}${keys.blurKey}` : null;
+
+    // keys.textureKey 가 이미 "실제 이미지"로 존재하면(캔버스 아님) 승격이 끝난 것이므로
+    // 재큐잉하지 않는다. 캔버스인 경우는 아직 승격 전이므로 그대로 진행해야 한다 —
+    // createSceneBg 가 이 함수를 호출하는 것 자체가 "아직 실제 텍스처가 없다"는 뜻이다.
+    if (
+      (scene.textures.exists(keys.textureKey) && !BackgroundFactory._isCanvasTexture(scene, keys.textureKey)) ||
+      scene.textures.exists(tempKey)
+    ) {
+      return;
+    }
+
+    scene.load.image(tempKey, entry.path);
+    if (tempBlurKey) scene.load.image(tempBlurKey, entry.blurPath);
+
+    const promoteMain = () => {
+      if (!scene.sys || !scene.sys.isActive() || !scene.textures.exists(tempKey)) return;
+
+      if (scene.textures.exists(keys.textureKey)) scene.textures.remove(keys.textureKey);
+      scene.textures.renameTexture(tempKey, keys.textureKey);
+
+      // 폴백 표시물 제거
+      BackgroundFactory._destroyFallbackObjects(fallbackState);
+
+      const source = scene.textures.get(keys.textureKey).getSourceImage();
+      const fit = coverFit(source.width, source.height);
+
+      const image = scene.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, keys.textureKey);
+      image.setDisplaySize(fit.displayWidth, fit.displayHeight);
+      image.setDepth(depth);
+      image.setScrollFactor(0);
+
+      const dim = scene.add.graphics();
+      dim.fillStyle(getDimColor(), dimAlpha);
+      dim.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+      dim.setDepth(depth + 1);
+      dim.setScrollFactor(0);
+
+      const prevBlurKey = scene.sceneBackground && scene.sceneBackground.blurKey;
+      scene.sceneBackground = {
+        key: scene.sceneBackground ? scene.sceneBackground.key : keys.textureKey,
+        textureKey: keys.textureKey,
+        blurKey: prevBlurKey || null,
+        hasImage: true,
+        image,
+        dim,
+        fallback: null
+      };
+    };
+
+    const promoteBlur = () => {
+      if (!scene.sys || !scene.sys.isActive() || !scene.textures.exists(tempBlurKey)) return;
+      if (scene.textures.exists(keys.blurKey)) scene.textures.remove(keys.blurKey);
+      scene.textures.renameTexture(tempBlurKey, keys.blurKey);
+      if (scene.sceneBackground && scene.sceneBackground.textureKey === keys.textureKey) {
+        scene.sceneBackground.blurKey = keys.blurKey;
+      }
+    };
+
+    const onFileComplete = (loadedKey) => {
+      if (loadedKey === tempKey) promoteMain();
+      else if (tempBlurKey && loadedKey === tempBlurKey) promoteBlur();
+    };
+    scene.load.on('filecomplete', onFileComplete);
+
+    if (!scene.load.isLoading()) scene.load.start();
+  }
+
+  /**
+   * 프로시저럴 폴백 반환값(Graphics 단일 객체 또는 {graphics, stars, ...} 형태의
+   * 혼합 객체)을 형태에 관계없이 전부 파괴한다.
+   * @param {*} fallback
+   */
+  static _destroyFallbackObjects(fallback) {
+    if (!fallback) return;
+
+    if (typeof fallback.destroy === 'function') {
+      fallback.destroy();
+      return;
+    }
+
+    const visit = (val) => {
+      if (!val) return;
+      if (typeof val.destroy === 'function') {
+        val.destroy();
+      } else if (Array.isArray(val)) {
+        val.forEach(visit);
+      }
+    };
+    Object.values(fallback).forEach(visit);
   }
 
   /**

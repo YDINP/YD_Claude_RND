@@ -7,31 +7,22 @@
  * 목표: 스테이지별 "권장 전투력 파티 vs 실제 스테이지 적" 전투를 시뮬레이션해
  * 소요 턴수가 설계 목표(일반 3-8턴, BALANCE_DESIGN_v1.md §6-1)를 만족하는지 검증한다.
  *
- * ── 왜 BattleSystem.js를 직접 import하지 않는가 ──────────────────────
- * src/systems/BattleSystem.js → src/systems/SaveManager.js → src/utils/GameLogger.js
- * 로 이어지는 임포트 체인이 .ts 확장자 파일을 확장자 없이 참조하며, 이 해석은
- * Vite/Vitest의 리졸버에 의존한다. 순수 `node` 실행에서는 해석되지 않는다
- * (tools/simulate/gacha-sim.mjs가 동일한 이유로 GachaSystem.js를 직접 import하지
- * 않고 SSOT 값을 이식한 전례를 따른다). 따라서 이 스크립트는 실제 전투 로직을
- * "파일+라인 인용과 함께 그대로 이식"한다 — 재량으로 새 공식을 만들지 않는다.
+ * ── 실제 전투 엔진을 그대로 돌린다 ──────────────────────────────────
+ * 예전 이 스크립트는 데미지식·AI·턴 루프를 "파일+라인 인용과 함께 이식"해 썼다.
+ * BattleScene이 BattleSystem으로 판정을 위임한 지금은 이식본을 유지할 이유가 없다.
+ * Vite의 SSR 로더(ssrLoadModule)로 src/systems/BattleSystem.js와
+ * src/systems/BattleSceneAdapter.js를 그대로 불러 **실제 전투 코드**를 실행한다.
+ * (순수 node는 .ts 확장자 해석과 JSON import attribute 때문에 이 체인을 못 읽는다.
+ *  vitest가 쓰는 것과 같은 vite.config.js 리졸버를 그대로 재사용한다.)
  *
- * SSOT (실제 시스템에서 그대로 이식, 인용):
- *   - src/systems/BattleSystem.js
- *       calculateDamage()      L1070-1119 (ATK×배율 → DEF 감쇠 → 분위기 → 크리 → 분산)
- *       getMoodBonus()         L1127-1158 (분위기 상성 매트릭스, ±20%)
- *       getAIAction()          L1165-1223 (스킬 게이지 충분 시 skill1 우선, 아니면 기본공격)
- *       selectTarget()         L1230-1236 (최소 HP 타겟)
- *       BattleUnit.critRate/critDmg 기본값 L336-337 (0.05 / 1.5)
- *       BasicAttackStrategy    L32-57  (게이지 충전, PowerStrikeStrategy L84 게이지 소비→0)
- *       processTurn/getNextUnit L700-832 (라운드 1바퀴 = turnCount 1 증가, maxTurns=30 L517)
- *   - src/data/index.ts calculateEnemyStats() L380-391 (base + growth×(level-1), floor 없음)
- *   - src/scenes/BattleScene.js L296-301 (적 스킬 kit: basic mult1.0/gaugeCost0/gaugeGain30
- *       + enemyData.skills 각각 mult1.3/gaugeCost40)
- *   - 아군 스킬 kit: ascended-heroes.json 24명 평균값으로 대표 파티 구성
- *       (basic gaugeGain 25, skill1 multiplier 1.80/gaugeCost 100 — 본 스크립트에서 직접 집계)
+ * 턴 루프는 BattleScene.processTurn/executeBattlerAction과 같은 순서다:
+ *   턴 시작 교단 훅 → 행동 결정(getAIAction+스마트타겟) → 시전 훅 → resolveDamage → 게이지
+ * 대상 확장(AoE 0.7배)과 게이지 규칙은 BattleSceneAdapter의 함수를 공유한다.
  *
  * ── 단순화(명시) ──────────────────────────────────────────────────────
- * CultMechanicsSystem(방어막/룬/상태이상)은 모델링하지 않는다(교단 배율=1 고정).
+ * 교단 메커니즘은 이제 실제로 돈다. 다만 대표 파티에 교단을 부여하지 않으므로
+ * (아래 makeAllyParty는 cult 없는 대표 유닛을 만든다) 아군 쪽 교단 효과는 발동하지 않는다.
+ * 적은 enemies.json의 실제 데이터를 쓰므로 교단이 있으면 그대로 반영된다.
  * 아군 스킬2/궁극기/힐러는 대표 파티에 포함하지 않는다(스킬1까지만 — 설계 §3-1
  * "스킬Lv0" 밴드 정의보다는 여유를 준 실전형 가정). 이는 실전 대비 다소 보수적인
  * (턴수를 늘리는 방향의) 근사이며, 결과가 "너무 느림(>8턴)"으로 나오면 실제로는
@@ -56,6 +47,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createServer } from 'vite';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -70,6 +62,28 @@ const baseHeroes = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/data/base-her
 const ascendedHeroes = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/data/ascended-heroes.json'), 'utf-8')).ascendedHeroes;
 
 const enemyById = new Map(enemiesData.map(e => [e.id, e]));
+
+// ---------- 실제 전투 코드 로드 (vite SSR — vitest와 동일한 리졸버) ----------
+const viteServer = await createServer({
+  root: ROOT,
+  server: { middlewareMode: true },
+  appType: 'custom',
+  logLevel: 'error',
+  optimizeDeps: { noDiscovery: true }
+});
+const {
+  toBattleUnit,
+  createSceneBattleSystem,
+  decideSceneAction,
+  expandActionTargets,
+  applyGaugeAfterAction
+} = await viteServer.ssrLoadModule('/src/systems/BattleSceneAdapter.js');
+
+/** BattleSystem은 진행 상황을 console.log로 쏟아 낸다. 시뮬레이션 동안만 막는다 */
+const realLog = console.log;
+const silence = () => { console.log = () => {}; };
+const unsilence = () => { console.log = realLog; };
+
 
 // ---------- 대표 아군 스탯 비율 (34명 만렙 기준, grade-order.mjs와 동일 SSOT) ----------
 const MAX_LEVEL = { N: 30, R: 40, SR: 50, SSR: 60 };
@@ -160,29 +174,8 @@ function computeAllySkillKit() {
 const ALLY_SKILLS = computeAllySkillKit();
 
 const MOODS = ['brave', 'fierce', 'wild', 'calm', 'stoic', 'devoted', 'cunning', 'noble', 'mystic'];
-const MOOD_ADVANTAGE = {
-  brave: ['wild', 'cunning'],
-  fierce: ['brave', 'noble'],
-  wild: ['fierce', 'mystic'],
-  calm: ['devoted', 'fierce'],
-  stoic: ['calm', 'wild'],
-  devoted: ['stoic', 'brave'],
-  cunning: ['mystic', 'calm'],
-  noble: ['cunning', 'devoted'],
-  mystic: ['noble', 'stoic']
-};
 
-function getMoodBonus(attackerMood, defenderMood) {
-  if (!attackerMood || !defenderMood || attackerMood === defenderMood) return 0;
-  if (attackerMood === 'neutral' || defenderMood === 'neutral') return 0;
-  const advantages = MOOD_ADVANTAGE[attackerMood];
-  if (!advantages) return 0;
-  if (advantages.includes(defenderMood)) return 0.2;
-  const defAdv = MOOD_ADVANTAGE[defenderMood];
-  if (defAdv && defAdv.includes(attackerMood)) return -0.2;
-  return 0;
-}
-
+/** 대표 아군 4인 — 교단 없음(cult=null), 스킬은 24명 평균 킷 */
 function makeAllyParty(partyPower) {
   const perHero = partyPower / 4;
   const party = [];
@@ -191,25 +184,21 @@ function makeAllyParty(partyPower) {
     const atk = Math.max(1, Math.floor(perHero * STAT_SHARE.atk));
     const def = Math.max(0, Math.floor(perHero * STAT_SHARE.def));
     const spd = Math.max(1, Math.floor(perHero * STAT_SHARE.spd));
-    party.push({
-      id: `ally_${i}`,
-      isEnemy: false,
-      maxHp: hp,
-      currentHp: hp,
-      atk,
-      def,
-      spd,
+    party.push(toBattleUnit({
+      id: `sim_ally_${i}`,
+      name: `아군${i}`,
+      isAlly: true,
+      position: i,
       mood: MOODS[i % MOODS.length],
-      critRate: 0.05,
-      critDmg: 1.5,
-      skillGauge: 0,
-      skills: { basic: ALLY_SKILLS.basic, skill1: ALLY_SKILLS.skill1 },
-      isAlive: true
-    });
+      stats: { hp, atk, def, spd },
+      skills: [ALLY_SKILLS.basic, ALLY_SKILLS.skill1],
+      source: { id: `sim_ally_${i}` }
+    }));
   }
   return party;
 }
 
+/** 스테이지 적 — enemies.json 실데이터 + BattleScene과 같은 스킬 킷 구성 */
 function makeEnemies(stage) {
   return stage.enemies.map((def, i) => {
     const enemyData = enemyById.get(def.id);
@@ -218,93 +207,65 @@ function makeEnemies(stage) {
     }
     const level = def.level || 1;
     const lvSteps = level - 1;
-    const hp = enemyData.stats.hp + enemyData.growthStats.hp * lvSteps;
-    const atk = enemyData.stats.atk + enemyData.growthStats.atk * lvSteps;
-    const edef = enemyData.stats.def + enemyData.growthStats.def * lvSteps;
-    const spd = enemyData.stats.spd + enemyData.growthStats.spd * lvSteps;
-    const extraSkills = (enemyData.skills || []).map(sId => ({
-      id: sId, multiplier: 1.3, gaugeCost: 40, target: 'single'
-    }));
-    return {
-      id: `${def.id}_${i}`,
-      isEnemy: true,
-      maxHp: hp,
-      currentHp: hp,
-      atk,
-      def: edef,
-      spd,
+    return toBattleUnit({
+      id: def.id,
+      name: enemyData.name || def.id,
+      isAlly: false,
+      position: i,
+      level,
       mood: enemyData.mood || 'brave',
-      critRate: 0.05,
-      critDmg: 1.5,
-      skillGauge: 0,
-      skills: {
-        basic: { id: 'basic', multiplier: 1.0, gaugeCost: 0, gaugeGain: 30, target: 'single' },
-        skill1: extraSkills[0] || null
+      stats: {
+        hp: enemyData.stats.hp + enemyData.growthStats.hp * lvSteps,
+        atk: enemyData.stats.atk + enemyData.growthStats.atk * lvSteps,
+        def: enemyData.stats.def + enemyData.growthStats.def * lvSteps,
+        spd: enemyData.stats.spd + enemyData.growthStats.spd * lvSteps
       },
-      isAlive: true
-    };
+      skills: [
+        { id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 30 },
+        ...(enemyData.skills || []).map(sId => ({
+          id: sId, name: sId, multiplier: 1.3, gaugeCost: 40, target: 'single', gaugeGain: 0
+        }))
+      ],
+      isBoss: def.isBoss || enemyData.type === 'boss',
+      source: enemyData
+    });
   });
 }
 
-function calculateDamage(attacker, target, skill) {
-  let baseDamage = attacker.atk * skill.multiplier;
-  const defReduction = Math.min(0.9, target.def / 1000);
-  baseDamage *= (1 - defReduction);
-  const moodBonus = getMoodBonus(attacker.mood, target.mood);
-  baseDamage *= (1 + moodBonus);
-  const isCrit = Math.random() < attacker.critRate;
-  if (isCrit) baseDamage *= attacker.critDmg;
-  const variance = 0.9 + Math.random() * 0.2;
-  return Math.max(1, Math.floor(baseDamage * variance));
-}
-
-function selectTarget(targets) {
-  return targets.reduce((min, cur) => (cur.currentHp < min.currentHp ? cur : min));
-}
-
-function decideAction(unit) {
-  const skill1 = unit.skills.skill1;
-  if (skill1 && unit.skillGauge >= (skill1.gaugeCost || 100)) {
-    return skill1;
-  }
-  return unit.skills.basic;
-}
-
 /**
- * 전투 1회 시뮬레이션. BattleSystem.processTurn/getNextUnit 의미론 그대로:
- * 라운드 1바퀴(살아있는 전원 1회 행동) = turnCount 1 증가. maxTurns=30.
+ * 전투 1회 시뮬레이션 — BattleScene.processTurn/executeBattlerAction과 같은 순서로
+ * 실제 BattleSystem API만 호출한다. 라운드 1바퀴 = turnCount 1 증가, maxTurns=30.
  * @returns {{ outcome: 'victory'|'defeat'|'timeout', turns: number }}
  */
 function simulateBattle(allies, enemies) {
-  const MAX_TURNS = 30;
-  let turnCount = 0;
+  const battleSystem = createSceneBattleSystem(allies, enemies);
+  const MAX_TURNS = battleSystem.maxTurns;
 
-  while (turnCount < MAX_TURNS) {
-    const allUnits = [...allies, ...enemies].filter(u => u.isAlive);
-    const order = allUnits.slice().sort((a, b) => b.spd - a.spd);
+  for (let turn = 1; turn <= MAX_TURNS; turn++) {
+    battleSystem.turnCount = turn;
+    battleSystem.calculateTurnOrder();
 
-    for (const unit of order) {
+    for (const unit of battleSystem.turnOrder.filter(u => u.isAlive)) {
       if (!unit.isAlive) continue;
-      const targets = (unit.isEnemy ? allies : enemies).filter(t => t.isAlive);
-      if (targets.length === 0) break;
 
-      const skill = decideAction(unit);
-      const target = selectTarget(targets);
-      const dmg = calculateDamage(unit, target, skill);
-      target.currentHp = Math.max(0, target.currentHp - dmg);
-      if (target.currentHp <= 0) target.isAlive = false;
+      const cultTurn = battleSystem.applyCultTurnStart(unit);
+      if (!unit.isAlive || cultTurn.blocked) continue;
 
-      if (skill.id === 'basic') {
-        unit.skillGauge = Math.min(100, unit.skillGauge + (skill.gaugeGain || 25));
-      } else {
-        unit.skillGauge = 0;
+      const action = decideSceneAction(battleSystem, unit);
+      if (!action) break;
+
+      battleSystem.applyCultSkillUse(unit, action.targets, action.skill);
+
+      const { targets, multiplier } = expandActionTargets(battleSystem, unit, action);
+      for (const target of targets) {
+        if (!target.isAlive) continue;
+        battleSystem.resolveDamage(unit, target, { ...action.skill, multiplier });
       }
+      applyGaugeAfterAction(unit, action);
 
-      if (enemies.every(e => !e.isAlive)) return { outcome: 'victory', turns: turnCount + 1 };
-      if (allies.every(a => !a.isAlive)) return { outcome: 'defeat', turns: turnCount + 1 };
+      if (battleSystem.isVictory()) return { outcome: 'victory', turns: turn };
+      if (battleSystem.isDefeat()) return { outcome: 'defeat', turns: turn };
     }
-
-    turnCount++;
   }
 
   return { outcome: 'timeout', turns: MAX_TURNS };
@@ -328,6 +289,7 @@ for (const chapter of stagesData.chapters) {
 }
 
 const results = [];
+silence(); // BattleSystem의 진행 로그를 시뮬레이션 동안만 막는다
 flatStages.forEach((stage, index) => {
   const partyPower = partyPowerForStageIndex(index);
   const turnsList = [];
@@ -358,6 +320,8 @@ flatStages.forEach((stage, index) => {
     timeouts
   });
 });
+unsilence();
+await viteServer.close();
 
 console.log('스테이지  요구BP  파티BP  비율   중앙값턴  최소-최대  승/패/시간초과  판정');
 const failures = [];

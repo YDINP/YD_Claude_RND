@@ -20,6 +20,9 @@
     "test:e2e": "node tests/e2e/browser-test.mjs",
     "test:e2e:headed": "node tests/e2e/browser-test.mjs --headed",
     "test:e2e:smoke": "node tests/e2e/boot-smoke.mjs",
+    "test:e2e:assets": "node tests/e2e/asset-smoke.mjs",
+    "test:e2e:story": "node tests/e2e/boot-smoke.mjs && node tests/e2e/cutscene-smoke.mjs && node tests/e2e/ascension-cutscene-smoke.mjs && node tests/e2e/skip-path-parity.mjs && node tests/e2e/onboarding-full.mjs",
+    "art:postprocess": "node tools/art/postprocess-assets.mjs",
     "validate:data": "node scripts/validate-data.js",
     "prebuild": "npm run validate:data"
   },

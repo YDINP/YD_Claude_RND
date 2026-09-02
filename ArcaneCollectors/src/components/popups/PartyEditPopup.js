@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PopupBase } from '../PopupBase.js';
+import { TutorialTargetRegistry } from '../../systems/TutorialTargetRegistry.js';
 import { COLORS, MOODS, s, sf, GAME_WIDTH, GAME_HEIGHT } from '../../config/gameConfig.js';
 import { RARITY_COLORS } from '../../config/layoutConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
@@ -216,9 +217,11 @@ export class PartyEditPopup extends PopupBase {
     }).setOrigin(0.5);
 
     // 자동 편성 버튼
-    this.addButton(cx - s(100), btnY, s(180), s(48), '⚡ 자동 편성', COLORS.primary, () => {
+    const { bg: autoBtn } = this.addButton(cx - s(100), btnY, s(180), s(48), '⚡ 자동 편성', COLORS.primary, () => {
       this.autoFormParty();
     });
+    // 튜토리얼 타깃 (T-08 코치마크)
+    TutorialTargetRegistry.register('partyedit.button.auto', autoBtn, this.scene?.scene?.key);
 
     // 초기화 버튼
     this.addButton(cx + s(100), btnY, s(180), s(48), '초기화', COLORS.bgPanel, () => {
@@ -226,9 +229,10 @@ export class PartyEditPopup extends PopupBase {
     });
 
     // 저장 버튼
-    this.addButton(cx, btnY + s(65), s(220), s(53), '💾 파티 저장', COLORS.success || 0x10B981, () => {
+    const { bg: saveBtn } = this.addButton(cx, btnY + s(65), s(220), s(53), '💾 파티 저장', COLORS.success || 0x10B981, () => {
       this.saveCurrentParty();
     });
+    TutorialTargetRegistry.register('partyedit.button.save', saveBtn, this.scene?.scene?.key);
   }
 
   refreshPartyDisplay() {

@@ -5,6 +5,10 @@ import { SaveManager } from '../systems/SaveManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import uiRenderer from '../renderers/UIRenderer.js';
 import { TextureGenerator } from '../utils/TextureGenerator.js';
+import ASSET_MANIFEST from '../../tools/art/asset-manifest.json';
+
+/** 실제 아트 텍스처를 임시 키로 로드한 뒤 최종 키로 승격할 때 붙이는 접두어 */
+const REAL_ASSET_TEMP_PREFIX = '__real__';
 
 /**
  * PreloadScene - 에셋 프리로드 씬
@@ -28,6 +32,9 @@ export class PreloadScene extends Phaser.Scene {
     // 로딩 UI 생성
     this.createLoadingBar();
 
+    // Phase 0: asset-manifest.json 기반 실제 아트 일괄 등록 (비동기, 실패해도 무해)
+    this.loadPhase0_Assets();
+
     // Phase 1~4: 코드 기반 플레이스홀더 생성 (동기)
     this.loadPhase1_UIPlaceholders();
     this.loadPhase2_CharacterPlaceholders();
@@ -36,6 +43,90 @@ export class PreloadScene extends Phaser.Scene {
 
     // Phase 5: 렌더러 에셋 (비동기 이미지 로드, 에셋 모드 시)
     this.loadPhase5_RendererAssets();
+  }
+
+  // ============================================
+  // Phase 0: asset-manifest.json 기반 에셋 일괄 로드 (T-02)
+  // ============================================
+  /**
+   * tools/art/postprocess-assets.py 가 구운 tools/art/asset-manifest.json 만 읽어
+   * 배경·프레임·버튼·아이콘·로고·적 유닛을 일괄 등록한다.
+   *
+   * 프로시저럴 폴백과의 공존 규칙:
+   *   - 같은 텍스처 키를 TextureGenerator 가 이미 캔버스로 만들어 둔 경우(bg_main,
+   *     bg_gacha, bg_tower 등) Phaser 의 TextureManager.addImage() 는 키 충돌 시
+   *     아무 것도 하지 않고 조용히 실패한다(경고만 남기고 실이미지를 버림).
+   *     그래서 실제 파일은 임시 키(`__real__<key>`)로 로드한 뒤 filecomplete 에서
+   *     기존 캔버스 텍스처를 제거하고 renameTexture 로 승격한다. 이 경로면
+   *     새 키든 충돌 키든 항상 "실제 이미지가 있으면 우선한다"가 성립한다.
+   *   - 로드 실패(loaderror)는 조용히 흡수한다. 프로시저럴 폴백이 없는 신규 키
+   *     (frame_card_SSR 등)는 각 소비 컴포넌트가 자체적으로 textures.exists() 를
+   *     확인해 폴백하는 책임을 진다(BackgroundFactory/IconFactory/GlassPanel 등,
+   *     별도 트랙). 여기서는 실패 키 목록만 남겨 디버깅과 asset-smoke 검증에 쓴다.
+   *   - 전신(fullbody) 웹은 여기서 로드하지 않는다. HeroDetailScene 이 조회 시점에
+   *     지연 로드한다(W2). manifest.fullbody 는 키/경로 조회용으로만 노출한다.
+   */
+  loadPhase0_Assets() {
+    this._updatePhaseText('아트 에셋 확인...');
+
+    /** 로드 실패해 프로시저럴 폴백이 필요한 키 목록 (asset-smoke, 디버깅용) */
+    this.assetFallbackKeys = [];
+    /** 실제 이미지로 성공 승격된 키 목록 */
+    this.assetLoadedKeys = [];
+    /** tempKey -> finalKey 매핑 */
+    this._pendingRealAssetKeys = new Map();
+
+    let manifest;
+    try {
+      manifest = ASSET_MANIFEST;
+    } catch (e) {
+      console.warn('[PreloadScene] asset-manifest.json 로드 실패, 프로시저럴 폴백만 사용:', e);
+      return;
+    }
+
+    const textures = (manifest && manifest.textures) || {};
+    const entries = Object.entries(textures);
+
+    if (entries.length === 0) {
+      console.warn('[PreloadScene] asset-manifest.json 에 등록된 텍스처가 없습니다. 프로시저럴 폴백만 사용.');
+      return;
+    }
+
+    entries.forEach(([key, meta]) => {
+      if (!meta || !meta.path) return;
+      const tempKey = `${REAL_ASSET_TEMP_PREFIX}${key}`;
+      this._pendingRealAssetKeys.set(tempKey, key);
+      this.load.image(tempKey, meta.path);
+    });
+
+    this.load.on('filecomplete', (loadedKey) => {
+      if (!this._pendingRealAssetKeys.has(loadedKey)) return;
+      const finalKey = this._pendingRealAssetKeys.get(loadedKey);
+      this._promoteRealTexture(finalKey, loadedKey);
+    });
+
+    this.load.on('loaderror', (file) => {
+      const finalKey = this._pendingRealAssetKeys.get(file.key);
+      if (!finalKey) return;
+      this.assetFallbackKeys.push(finalKey);
+      console.warn(`[PreloadScene] 에셋 로드 실패, 프로시저럴 폴백 유지: ${finalKey} (${file.src})`);
+    });
+  }
+
+  /**
+   * 임시 키로 로드된 실제 텍스처를 최종 키로 승격한다.
+   * 최종 키에 이미 프로시저럴 캔버스 텍스처가 있으면 제거 후 교체해
+   * 실제 아트가 항상 우선하도록 한다.
+   * @param {string} finalKey - 씬 코드가 실제로 참조할 텍스처 키 (예: 'bg_main')
+   * @param {string} tempKey - 로드에 사용한 임시 키 (예: '__real__bg_main')
+   */
+  _promoteRealTexture(finalKey, tempKey) {
+    if (!this.textures.exists(tempKey)) return;
+    if (this.textures.exists(finalKey)) {
+      this.textures.remove(finalKey);
+    }
+    this.textures.renameTexture(tempKey, finalKey);
+    this.assetLoadedKeys.push(finalKey);
   }
 
   // ============================================

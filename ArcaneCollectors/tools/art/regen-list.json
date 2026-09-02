@@ -1,0 +1,13 @@
+{
+  "$schema": "internal://arcanecollectors/regen-list/v1",
+  "generatedBy": "tools/art/postprocess-assets.py",
+  "generatedAt": "2026-09-02T10:56:27Z",
+  "note": "manifest 에서 제외된 항목. 원인을 해결해 art/gen/assets/ 에 재생성하면 다음 실행에서 자동 포함된다.",
+  "items": [
+    {
+      "id": "panel_header_ornament",
+      "reason": "소스 종횡비 3:1(2172x724)이 목표 8:1(512x64)과 맞지 않아 심하게 눌림. 1024x128(8:1)로 재생성 필요.",
+      "targetPath": "assets/ui/panels/panel_header_ornament.webp"
+    }
+  ]
+}

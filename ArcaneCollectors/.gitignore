@@ -27,3 +27,6 @@ npm-debug.log*
 
 # Vercel local config
 .vercel/
+
+# 임시 검증 하네스 (커밋 제외)
+tests/e2e/*.tmp.mjs

@@ -31,6 +31,7 @@ export class CoachMark {
     this.scene = scene;
     this.root = null;
     this.target = null;
+    this.closeHit = null;
     this._autoDismissEvent = null;
     this._onDismiss = null;
   }
@@ -55,6 +56,7 @@ export class CoachMark {
       autoDismissMs = 0,
       showClose = true,
       onDismiss = null,
+      onTargetTap = null,
     } = options;
 
     if (!this.scene || !this.scene.add) return this;
@@ -105,6 +107,18 @@ export class CoachMark {
       ring.strokeRoundedRect(this.target.x, this.target.y, this.target.w, this.target.h, s(10));
       this.root.add(ring);
 
+      // 강조 영역을 코치마크 위에서 직접 누를 수 있게 한다.
+      // 코치마크는 팝업 레이어(2000)보다 위(3010)라, 아래 레이어가 입력을 삼켜도 안내가 동작한다.
+      if (typeof onTargetTap === 'function') {
+        const tapZone = this.scene.add
+          .zone(this.target.x, this.target.y, this.target.w, this.target.h)
+          .setOrigin(0, 0)
+          .setInteractive({ useHandCursor: true });
+        tapZone.on('pointerdown', () => onTargetTap());
+        this.root.add(tapZone);
+        this.targetTapZone = tapZone;
+      }
+
       const arrow = this.scene.add.text(
         cx,
         placement.direction === ARROW_DIRECTION.DOWN ? bubbleY + bubbleH : bubbleY,
@@ -128,6 +142,7 @@ export class CoachMark {
       closeHit.on('pointerdown', () => this.dismiss());
       this.root.add(closeText);
       this.root.add(closeHit);
+      this.closeHit = closeHit;   // 좌표 탭 테스트/자동화가 찾을 수 있게 보관
     }
 
     if (autoDismissMs > 0 && this.scene.time?.delayedCall) {
@@ -153,6 +168,8 @@ export class CoachMark {
     if (this.root) this.root.destroy(true);
     this.root = null;
     this.target = null;
+    this.closeHit = null;
+    this.targetTapZone = null;
     this._onDismiss = null;
     return this;
   }

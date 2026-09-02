@@ -5,7 +5,7 @@
  */
 import { SaveManager } from './SaveManager.js';
 import { getAllCharacters, getAllChapters, getChapterStages } from '../data/index.js';
-import { DebugFAB } from '../components/debug/DebugFAB.js';
+import { DebugFAB, isDebugUiAllowed } from '../components/debug/DebugFAB.js';
 import { DebugPanel } from '../components/debug/DebugPanel.js';
 import energySystem from './EnergySystem.js';
 import { GachaSystem } from './GachaSystem.js';
@@ -867,6 +867,9 @@ export class DebugManager {
    */
   static attachToScene(scene) {
     if (!this.isDebugMode) return;
+    // T-21: 프로덕션 번들에서는 디버그 UI를 아예 붙이지 않는다.
+    // localStorage 플래그(arcane_debug_enabled)로도 되살아나지 않는다.
+    if (!isDebugUiAllowed()) return;
 
     // 기존 UI 정리
     this.currentFAB?.destroy();

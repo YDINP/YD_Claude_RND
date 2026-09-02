@@ -11,5 +11,6 @@ export { PvPPopup } from './PvPPopup.js';
 export { GuildPopup } from './GuildPopup.js';
 export { RaidPopup } from './RaidPopup.js';
 export { FriendsPopup } from './FriendsPopup.js';
-export { CollectionPopup } from './CollectionPopup.js';
+export { CollectionPopup, COLLECTION_TABS } from './CollectionPopup.js';
+export { StoryLogPopup, buildStoryLog, buildStoryLogSummary } from './StoryLogPopup.js';
 export { RateDisclosurePanel } from './RateDisclosurePanel.js';

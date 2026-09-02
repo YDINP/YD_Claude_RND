@@ -104,7 +104,7 @@
       "cutsceneIds": [],
       "completionCondition": { "type": "gacha_result_confirmed" },
       "rewardId": "grant_awakening_guide",
-      "unlockMenus": ["herolist", "partyedit"],
+      "unlockMenus": ["herolist", "partyedit", "ascension"],
       "resumeAt": { "scene": "MainMenuScene", "reopenPopup": "gacha", "reattachHighlight": true },
       "estimatedSec": 75,
       "nextStepId": "T-06",
@@ -133,9 +133,11 @@
       "cutsceneIds": [],
       "completionCondition": { "type": "popup_open", "popupKey": "ascension" },
       "rewardId": null,
-      "unlockMenus": ["ascension"],
+      "unlockMenus": [],
       "resumeAt": { "scene": "MainMenuScene", "reattachHighlight": true },
       "estimatedSec": 15,
+      "note": "각인 아이콘 해금은 T-05 커밋에서 이뤄진다. T-06의 완료 조건이 '각인 팝업 진입'이라 아이콘이 먼저 존재해야 하며, 해금을 T-06 커밋에 두면 스텝을 끝낼 방법이 없다(2026-09-02 정정).",
+
       "nextStepId": "T-07",
       "fallbackPolicy": {
         "autoCommitAfterSec": 60,
@@ -148,9 +150,9 @@
       "trigger": { "type": "step_complete", "after": "T-06" },
       "targetScene": "MainMenuScene",
       "targetPopup": "ascension",
-      "targetElement": "ascension.button.ascend",
-      "fallbackAnchor": { "x": 210, "y": 1050, "w": 300, "h": 60 },
-      "instructionText": "오마르를 각성시키세요",
+      "targetElement": "ascension.card.base_omar",
+      "fallbackAnchor": { "x": 40, "y": 400, "w": 640, "h": 90 },
+      "instructionText": "오마르를 각인시키세요",
       "forced": true,
       "forceRule": "F-1",
       "skipGroup": null,
@@ -160,9 +162,10 @@
       "rewardId": null,
       "unlockMenus": [],
       "resumeAt": { "scene": "MainMenuScene", "reopenPopup": "ascension", "reattachHighlight": true },
-      "estimatedSec": 25,
+      "estimatedSec": 45,
       "nextStepId": "T-08",
-      "highlightSequence": ["ascension.card.base_omar", "ascension.button.ascend"]
+      "highlightSequence": ["ascension.card.base_omar", "ascension.route.list", "ascension.button.confirm"],
+      "note": "실제 AscensionPopup은 1(영웅 선택)→2(루트 선택)→3(확정) 3단계다. 문서의 '카드→각성 버튼 2탭'은 구현과 어긋나 2026-09-02 정정(UX_ONBOARDING_FLOW §2-2 각주 3)."
     },
     {
       "id": "T-08",
@@ -208,6 +211,7 @@
       "resumeAt": { "scene": "MainMenuScene", "reopenPopup": "ascension", "skipCutsceneIfViewed": true },
       "estimatedSec": 80,
       "nextStepId": "T-10",
+      "highlightSequence": ["ascension.card.base_iris", "ascension.route.list", "ascension.button.confirm"],
       "confirmDialog": {
         "title": "이 문으로 보냅니다",
         "body": "각인은 되돌릴 수 없습니다.",
@@ -278,7 +282,7 @@
       "estimatedSec": 40,
       "nextStepId": null,
       "highlightSequence": ["mainmenu.idle.view", "mainmenu.adventure.offline_notice"],
-      "offlineCapHours": "TBD_ISS-01"
+      "offlineCapHours": 24
     }
   ]
 }

@@ -43,8 +43,20 @@ function getRarityColor(rarity) {
 /** 행 높이 (루트 수와 무관하게 고정) */
 const ROW_HEIGHT = 118;
 const ROW_GAP = 10;
-/** 목록 영역이 시작되는 헤더 높이 */
-const LIST_TOP_OFFSET = 130;
+/** 탭 스트립 높이 (T-Q4) */
+const TAB_STRIP_HEIGHT = 44;
+/** 목록 영역이 시작되는 헤더 높이 — 탭 스트립만큼 아래로 밀린다 */
+const LIST_TOP_OFFSET = 130 + TAB_STRIP_HEIGHT;
+
+/**
+ * 도감 탭 (UX_ONBOARDING_FLOW.md §3-7).
+ * '이야기'는 별도 팝업(`StoryLogPopup`)으로 열린다. 컷씬 목록은 스크롤·재생 동선이
+ * 컬렉션 목록과 전혀 달라서 같은 컨테이너에 겹쳐 그리면 스크롤 핸들러가 서로 잡아먹는다.
+ */
+export const COLLECTION_TABS = Object.freeze([
+  Object.freeze({ key: 'collection', label: '영웅' }),
+  Object.freeze({ key: 'storylog', label: '이야기' }),
+]);
 
 export class CollectionPopup extends PopupBase {
   constructor(scene, options = {}) {
@@ -70,9 +82,69 @@ export class CollectionPopup extends PopupBase {
 
   buildContent() {
     this.loadData();
+    this.createTabs();
     this.createSummary();
     this.createList();
     this.setupScrolling();
+  }
+
+  // ==================== 탭 (T-Q4) ====================
+
+  /**
+   * 상단 탭 스트립. '이야기'를 누르면 이 팝업을 닫고 `StoryLogPopup`을 연다.
+   * Skip All 확인 문구가 "도감에서 다시 볼 수 있습니다"로 확정되어 있으므로(시스템 §6-2)
+   * 진입점은 반드시 도감 안에 있어야 한다.
+   */
+  createTabs() {
+    const { left, top, width } = this.contentBounds;
+    const tabW = width / COLLECTION_TABS.length;
+    const tabH = s(TAB_STRIP_HEIGHT - 8);
+
+    COLLECTION_TABS.forEach((tab, index) => {
+      const active = tab.key === 'collection';
+      const cx = left + tabW * index + tabW / 2;
+
+      const bg = this.scene.add.graphics();
+      bg.fillStyle(active ? COLORS.primary : COLORS.bgLight, active ? 0.35 : 0.6);
+      bg.fillRoundedRect(left + tabW * index + s(4), top, tabW - s(8), tabH, s(8));
+      bg.lineStyle(s(1), COLORS.primary, active ? 0.9 : 0.3);
+      bg.strokeRoundedRect(left + tabW * index + s(4), top, tabW - s(8), tabH, s(8));
+      this.contentContainer.add(bg);
+
+      this.addText(cx, top + tabH / 2, tab.label, {
+        fontSize: sf(15),
+        fontStyle: 'bold',
+        color: active ? '#F8FAFC' : '#94A3B8',
+      }).setOrigin(0.5);
+
+      if (active) return;
+
+      const hit = this.scene.add.rectangle(cx, top + tabH / 2, tabW - s(8), tabH)
+        .setAlpha(0.001).setInteractive({ useHandCursor: true });
+      hit.on('pointerup', () => this.openTab(tab.key));
+      this.contentContainer.add(hit);
+    });
+  }
+
+  /**
+   * 다른 탭으로 이동. 씬의 `openPopup`이 있으면 그것을 통해 열어
+   * `activePopup` 단일 관리(NavigationManager 스택)를 깨지 않는다.
+   * @param {string} key COLLECTION_TABS의 key
+   */
+  openTab(key) {
+    const scene = this.scene;
+    if (typeof scene?.openPopup !== 'function') {
+      this.hide();
+      return;
+    }
+    // 닫힘 콜백에 이어붙인다. 지연 호출로 추측하면 페이드아웃(150ms)이 끝나기 전에 열려
+    // `openPopup`의 중복 오픈 가드(activePopup)에 조용히 막힌다.
+    const prevOnClose = this.onCloseCallback;
+    this.onCloseCallback = () => {
+      prevOnClose?.();
+      scene.openPopup(key);
+    };
+    this.hide();
   }
 
   loadData() {
@@ -85,7 +157,8 @@ export class CollectionPopup extends PopupBase {
   // ==================== 상단 요약 ====================
 
   createSummary() {
-    const { left, top, width, centerX } = this.contentBounds;
+    const { left, width, centerX } = this.contentBounds;
+    const top = this.contentBounds.top + s(TAB_STRIP_HEIGHT);
 
     const card = this.scene.add.graphics();
     card.fillStyle(COLORS.bgLight, 0.9);

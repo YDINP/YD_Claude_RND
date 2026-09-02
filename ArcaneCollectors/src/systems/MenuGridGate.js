@@ -39,8 +39,15 @@ export const STAGE_UNLOCKS = {
  */
 export const ALWAYS_UNLOCKED = [];
 
-/** 그리드 열 수 상한 */
-export const MAX_COLUMNS = 4;
+/**
+ * 그리드 열 수 상한 (T-11 / REDESIGN_PLAN §3-1).
+ * 13개를 4열로 놓으면 4/4/4/1 — 마지막 행에 1개만 남는 고아 행이 생긴다.
+ * 5열이면 5/5/3이 되어 고아 행이 사라지고 그리드 높이도 1행 줄어든다.
+ */
+export const MAX_COLUMNS = 5;
+
+/** 라벨을 크게 유지할 수 있는 최대 열 수. 5열이 되면 폭이 좁아 DENSE로 내린다. */
+export const WIDE_LABEL_MAX_COLUMNS = 4;
 
 /** 라벨 폰트 (base px) — 항목이 적을 때는 열을 줄이고 라벨을 키운다(§6-1) */
 export const LABEL_FONT_BASE = { WIDE: 13, DENSE: 11 };
@@ -106,18 +113,33 @@ export class MenuGridGate {
   }
 
   /**
-   * 항목 수에 따른 열 수. 3개 이하면 열을 줄여 라벨/탭 타겟을 키운다(§6-1).
+   * 항목 수에 따른 열 수 (REDESIGN_PLAN §3-1 + UX §6-1).
+   *
+   *  ~5개  → 한 줄에 전부. 열을 줄여 라벨/탭 타겟을 키운다.
+   *  6~8개 → 4열. 5열로 두면 6→5/1, 7→5/2 로 마지막 행이 헐거워진다.
+   *  9개+  → 5열. 13개가 5/5/3 이 되어 고아 행이 사라진다.
+   *
    * @param {number} count
+   * @returns {number} 0 이상
    */
   static getColumnCount(count) {
     if (!count || count <= 0) return 0;
-    if (count <= 3) return count;
+    if (count <= MAX_COLUMNS) return count;
+    if (count <= 8) return WIDE_LABEL_MAX_COLUMNS;
     return MAX_COLUMNS;
   }
 
-  /** 항목 수에 따른 라벨 폰트 크기 (base px) */
+  /** 열 수에 따른 라벨 폰트 크기 (base px). 5열은 폭이 좁아 DENSE로 내린다. */
   static getLabelFontSize(count) {
-    return count <= MAX_COLUMNS ? LABEL_FONT_BASE.WIDE : LABEL_FONT_BASE.DENSE;
+    return this.getColumnCount(count) <= WIDE_LABEL_MAX_COLUMNS
+      ? LABEL_FONT_BASE.WIDE
+      : LABEL_FONT_BASE.DENSE;
+  }
+
+  /** 항목 수에 따른 행 수 */
+  static getRowCount(count) {
+    const cols = this.getColumnCount(count);
+    return cols > 0 ? Math.ceil(count / cols) : 0;
   }
 
   /** 그리드를 그려야 하는지 (0개면 영역 자체를 그리지 않는다) */

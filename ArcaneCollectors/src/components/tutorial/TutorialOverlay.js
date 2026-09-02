@@ -42,6 +42,7 @@ export class TutorialOverlay {
     this._onBlockedTap = null;
     this._holeShape = null;
     this._holeMask = null;
+    this.holeTarget = null;
     this._dimAlpha = DEFAULT_DIM_ALPHA;
   }
 
@@ -68,6 +69,7 @@ export class TutorialOverlay {
       instructionText = null,
       pulse = true,
       onBlockedTap = null,
+      holeTarget = null,
     } = options;
 
     if (!this.scene || !this.scene.add) return this;
@@ -88,14 +90,35 @@ export class TutorialOverlay {
     this.root.add(dim);
     this._dim = dim;
 
-    // ---- 입력: 전체화면 Zone + 커스텀 hitArea ----
+    // ---- 입력: 전체화면 Zone ----
+    // 강조 대상 오브젝트를 아는 경우에는 홀 안쪽 탭을 **직접 전달**한다.
+    // 통과 방식(hitArea 콜백)은 아래 레이어에 남은 오브젝트가 먼저 잡히면 어긋나는데,
+    // 전달 방식은 홀과 대상이 절대 어긋나지 않는다.
+    // 대상이 인터랙티브할 때만 전달한다. 영역 표시용 Zone(예: ascension.route.list)처럼
+    // 핸들러가 없는 대상에는 전달해봐야 아무 일도 일어나지 않으므로 통과 방식을 쓴다.
+    this.holeTarget = holeTarget?.input ? holeTarget : null;
+
     if (blockInput) {
+      const forwarding = !!this.holeTarget;
       const blocker = this.scene.add.zone(0, 0, W, H).setOrigin(0, 0);
-      blocker.setInteractive((_hitArea, x, y) => !this._isInsideHole(x, y));
-      blocker.on('pointerdown', () => {
+
+      if (forwarding) {
+        blocker.setInteractive();
+      } else {
+        blocker.setInteractive((_hitArea, x, y) => !this._isInsideHole(x, y));
+      }
+
+      blocker.on('pointerdown', (pointer) => {
+        const inside = this._isInsideHole(pointer?.worldX ?? -1, pointer?.worldY ?? -1);
+        if (forwarding && inside) {
+          this.holeTarget.emit('pointerdown', pointer);
+          this.holeTarget.emit('pointerup', pointer);
+          return;
+        }
         this.scene.events?.emit?.('tutorial:blockedTap', { hole: this.hole });
         if (typeof this._onBlockedTap === 'function') this._onBlockedTap();
       });
+
       this.root.add(blocker);
       this.blocker = blocker;
     }

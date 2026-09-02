@@ -41,7 +41,8 @@ const bg = (id, targetPath, subject, extra = {}) => ({
   id,
   category: 'background',
   priority: extra.priority || 'P1',
-  targetPath,
+  // 전송량 예산 초과(§ASSET_USAGE_MAP §11-6)로 배경 본+블러 페어를 WebP q80 무알파로 전환.
+  targetPath: targetPath.replace(/\.png$/, '.webp'),
   width: 832,
   height: 1216,
   count: extra.count || 2,
@@ -52,8 +53,8 @@ const bg = (id, targetPath, subject, extra = {}) => ({
     '동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것',
   postProcess: [
     'upscale x1.30 (Lanczos) -> 1082x1581',
-    'derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png',
-    'export both as PNG, no alpha'
+    'derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.webp',
+    'export both as WebP q80, no alpha'
   ],
   usedBy: extra.usedBy || []
 });
@@ -62,7 +63,8 @@ const frame = (id, targetPath, subject, corners, extra = {}) => ({
   id,
   category: 'frame',
   priority: extra.priority || 'P1',
-  targetPath,
+  // 전송량 예산 초과(§ASSET_USAGE_MAP §11-6)로 알파 유지 WebP q85 로 전환.
+  targetPath: targetPath.replace(/\.png$/, '.webp'),
   width: extra.width || 1024,
   height: extra.height || 1024,
   count: extra.count || 3,
@@ -72,6 +74,7 @@ const frame = (id, targetPath, subject, corners, extra = {}) => ({
   postProcess: [
     `alpha via chroma key #00FF00 (despill 적용)`,
     `downscale ${extra.out || 512}`,
+    `export as WebP q85 (알파 유지)`,
     `9-slice ${corners}`
   ],
   usedBy: extra.usedBy || []
@@ -81,14 +84,14 @@ const button = (id, targetPath, subject, extra = {}) => ({
   id,
   category: 'button',
   priority: extra.priority || 'P1',
-  targetPath,
+  targetPath: targetPath.replace(/\.png$/, '.webp'),
   width: 1024,
   height: 320,
   count: 3,
   positive: `${QUALITY}, horizontal ui button plate, ${subject}, ${CHROMA}, flat orthographic front view, perfectly symmetrical left and right, empty center label area, game ui asset`,
   negative: NEG_FRAME + ', text label, icon in center',
   seedNote: 'primary/secondary/ghost 3종은 같은 seed 로 뽑아 실루엣을 일치시킨다',
-  postProcess: ['alpha via chroma key #00FF00', 'downscale 512x160', '9-slice 72,72,40,40'],
+  postProcess: ['alpha via chroma key #00FF00', 'downscale 512x160', 'export as WebP q85 (알파 유지)', '9-slice 72,72,40,40'],
   usedBy: extra.usedBy || []
 });
 

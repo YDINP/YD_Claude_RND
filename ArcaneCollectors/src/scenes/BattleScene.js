@@ -15,6 +15,51 @@ import SkillAnimationManager from '../systems/SkillAnimationManager.js';
 import { EnhancedHPBar } from '../components/EnhancedHPBar.js';
 import { TowerSystem } from '../systems/TowerSystem.js';
 import { sweepSystem } from '../systems/SweepSystem.js';
+import {
+  toBattleUnit,
+  createSceneBattleSystem,
+  decideSceneAction,
+  selectSmartTarget,
+  describeMoodAdvantage,
+  collectNewDeaths,
+  affectedUnitsOf,
+  drainBattleLog,
+  isHealSkill,
+  applyGaugeAfterAction,
+  resolveMoodMatchup,
+  AOE_DAMAGE_MULTIPLIER
+} from '../systems/BattleSceneAdapter.js';
+// T-17 리디자인 — 렌더/레이아웃 전용 의존. 전투 로직은 건드리지 않는다
+import { GlassPanel, GLASS_VARIANT } from '../components/GlassPanel.js';
+import { BackgroundFactory } from '../utils/BackgroundFactory.js';
+import { IconFactory } from '../utils/IconFactory.js';
+import { ts } from '../utils/textStyles.ts';
+import { DESIGN, getCultColor } from '../config/designSystem.js';
+import { DIM_ALPHA } from '../utils/bgLayout.js';
+import {
+  BATTLE_LAYOUT,
+  SKILL_SLOT,
+  LOG_LINES,
+  resolveBattleBgKey,
+  getAllySlots,
+  getEnemySlots,
+  getUnitAttachments,
+  getSkillSlots,
+  computeCooldownArc,
+  computeTurnOrderSlots,
+  pushLogLine,
+  getLogLineY,
+  buildCultBadges
+} from '../utils/battleLayout.js';
+
+/** 렌더 레이어. 궁극기 컷인(30~32)과 인트로(50)는 기존 값을 그대로 둔다 */
+const BATTLE_DEPTH = Object.freeze({
+  unit: 10,
+  log: 24,
+  hud: 26,
+  hudContent: 27,
+  manualTurn: 28
+});
 
 /**
  * BattleScene - 전투 씬
@@ -140,6 +185,7 @@ export class BattleScene extends Phaser.Scene {
   initBattle() {
     this.initializeBattlers();
     this.calculateSynergy();
+    this.createBattleSystem();
     this.createBackground();
     this.createTurnOrderBar();
     this.createBattleUI();
@@ -159,6 +205,30 @@ export class BattleScene extends Phaser.Scene {
         this.playBattleIntro();
       }
     });
+  }
+
+  /**
+   * MECH-02 통합: 전투 판정 엔진(BattleSystem) 부착.
+   *
+   * 씬은 이 시점부터 데미지식·AI·상태이상을 직접 계산하지 않는다. 연출·입력·HUD만
+   * 담당하고, 판정은 전부 BattleSystem의 단일 경로(resolveDamage / getAIAction /
+   * applyCultTurnStart)를 지난다. 시너지는 이미 calculateSynergy()가 stats에 반영했으므로
+   * BattleSystem.initBattle()이 아니라 어댑터의 씬 전용 초기화를 쓴다(이중 가산 방지).
+   */
+  createBattleSystem() {
+    this.battleSystem = createSceneBattleSystem(this.allies, this.enemies, {
+      synergyBuffs: this.synergyBuffs
+    });
+
+    // BattleSystem이 기록한 문구(교단 효과·반사·사망)를 화면 로그 대역으로 옮기는 커서
+    this._battleLogCursor = 0;
+
+    // 판정 측 사망 이벤트를 씬 이벤트 버스로 중계 (연출은 syncDeaths가 담당)
+    this.battleSystem.on('unitDeath', ({ unit, killedBy }) => {
+      this.emitBattleEvent('unitDeath', { unit, killedBy });
+    });
+
+    console.log('[Battle] BattleSystem attached — 판정 위임 완료');
   }
 
   /**
@@ -244,30 +314,28 @@ export class BattleScene extends Phaser.Scene {
     GameLogger.log('BATTLE', `전투 초기화 - 스테이지: ${this.stage?.name || 'unknown'}`, { partySize: this.party.length });
 
     // Initialize party battlers
-    this.allies = this.party.map((hero, index) => {
-      const stats = hero.stats || { hp: 100, atk: 10, def: 10, spd: 10 };
-      return {
-      ...hero,
+    // MECH-02 통합: 배틀러를 BattleSystem이 그대로 쓰는 BattleUnit으로 만든다.
+    // 씬 표시 계약(stats/isAlly/position)은 어댑터가 유지하므로 렌더 코드는 그대로다.
+    this.allies = this.party.map((hero, index) => toBattleUnit({
+      id: hero.id || hero.characterId,
       name: hero.name || hero.id || '???',
-      stats,
-      currentHp: stats.hp,
-      maxHp: stats.hp,
-      skillGauge: 0,
-      maxSkillGauge: 100,
-      position: index,
+      stats: hero.stats,
+      level: hero.level,
       isAlly: true,
-      isAlive: true,
+      position: index,
+      mood: hero.mood,
       class: hero.class || 'warrior',
+      role: hero.role || hero.class,
       skills: hero.skills && hero.skills.length > 0 ? hero.skills : (() => {
         try {
           const charData = getCharacter(hero.id || hero.characterId);
-          return charData?.skills || [{ id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 30 }];
+          return charData?.skills || null;
         } catch {
-          return [{ id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 30 }];
+          return null;
         }
-      })()
-    };
-    });
+      })(),
+      source: hero
+    }));
 
     console.log(`[Battle] Initialized ${this.allies.length} allies`);
 
@@ -281,17 +349,13 @@ export class BattleScene extends Phaser.Scene {
         const level = enemyDef.level || 1;
         const stats = calculateEnemyStats(enemyData, level);
 
-        return {
+        return toBattleUnit({
           id: enemyData.id,
           name: enemyData.name || enemyData.nameEn || '???',
           stats: { ...stats },
-          currentHp: stats.hp,
-          maxHp: stats.hp,
-          skillGauge: 0,
-          maxSkillGauge: 100,
-          position: i,
+          level,
           isAlly: false,
-          isAlive: true,
+          position: i,
           mood: enemyData.mood || 'brave',
           skills: [
             { id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 30 },
@@ -302,8 +366,8 @@ export class BattleScene extends Phaser.Scene {
           isBoss: enemyDef.isBoss || enemyData.type === 'boss',
           expReward: enemyData.expReward || 10,
           goldReward: enemyData.goldReward || 15,
-          level
-        };
+          source: enemyData
+        });
       });
     } else {
       // 레거시: 랜덤 적 생성
@@ -313,8 +377,6 @@ export class BattleScene extends Phaser.Scene {
         this.enemies.push(this._createRandomEnemy(i));
       }
     }
-
-    this.enemies.forEach(e => { if (!e.maxHp) e.maxHp = e.currentHp; });
 
     console.log(`[Battle] Initialized ${this.enemies.length} enemies`);
 
@@ -340,76 +402,63 @@ export class BattleScene extends Phaser.Scene {
    */
   _createRandomEnemy(index) {
     const baseStats = 500 + (this.stage?.recommendedPower || 1000) / 5;
-    const currentHp = Math.floor(baseStats * (0.8 + Math.random() * 0.4));
-    return {
+    const hp = Math.floor(baseStats * (0.8 + Math.random() * 0.4));
+    return toBattleUnit({
       id: `enemy_${index}`,
       name: this.getEnemyName(),
-      currentHp,
-      maxHp: currentHp,
       stats: {
+        hp,
         atk: Math.floor(baseStats / 8 * (0.8 + Math.random() * 0.4)),
         def: Math.floor(baseStats / 10 * (0.8 + Math.random() * 0.4)),
         spd: Math.floor(30 + Math.random() * 30)
       },
-      skillGauge: 0,
-      maxSkillGauge: 100,
-      position: index,
+      level: 1,
       isAlly: false,
-      isAlive: true,
+      position: index,
       mood: this.getRandomMood(),
+      skills: [{ id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 30 }],
       isBoss: false,
       expReward: 10,
       goldReward: 15,
-      level: 1
-    };
+      source: { id: `enemy_${index}` }
+    });
   }
 
   /**
-   * Mood 상성 배율 계산
+   * Mood 상성 배율 계산 (표시·타겟팅용 휴리스틱).
+   * 분위기가 없는 유닛(기본영웅 등)은 어댑터가 걸러 1.0으로 내려보낸다 —
+   * MoodSystem은 모르는 분위기에 예외를 던지므로 호출 자체를 하지 않는다.
    * @returns {{ multiplier: number, advantage: string }}
    */
   getMoodMatchup(attackerMood, defenderMood) {
-    if (!attackerMood || !defenderMood) {
-      return { multiplier: 1.0, advantage: 'NEUTRAL' };
-    }
-    try {
-      return moodSystem.getMatchupMultiplier(attackerMood, defenderMood);
-    } catch (e) {
-      console.warn('[Battle] Mood matchup error:', e.message);
-      return { multiplier: 1.0, advantage: 'NEUTRAL' };
-    }
+    return resolveMoodMatchup(
+      attackerMood,
+      defenderMood,
+      (a, d) => moodSystem.getMatchupMultiplier(a, d)
+    );
+  }
+
+  /**
+   * 화면 액센트 색. 스테이지·탑·레이드가 서로 다른 표정을 갖도록
+   * 지배 교단색을 쓰고, 알 수 없으면 브랜드 시안으로 내려간다 (Cult Tint, §2-1).
+   * @returns {number} Phaser hex
+   */
+  getBattleAccent() {
+    const cult = this.stage?.cult || this.stage?.dominantCult
+      || this.enemies?.find(e => e.isBoss)?.cult
+      || this.allies?.[0]?.cult;
+    return cult ? getCultColor(cult) : DESIGN.colors.brand.primary;
   }
 
   createBackground() {
-    // ART-1: 배경 텍스처 사용 (폴백: 기존 그래디언트)
-    if (this.textures.exists('bg_battle')) {
-      this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'bg_battle').setOrigin(0.5);
-    } else {
-      // Fallback: Battle arena background
-      const graphics = this.add.graphics();
-
-      // Sky gradient
-      for (let y = 0; y < GAME_HEIGHT * 0.6; y++) {
-        const ratio = y / (GAME_HEIGHT * 0.6);
-        const r = Math.floor(20 + ratio * 10);
-        const g = Math.floor(15 + ratio * 15);
-        const b = Math.floor(40 + ratio * 20);
-        graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
-        graphics.fillRect(0, y, GAME_WIDTH, 1);
-      }
-
-      // Ground
-      graphics.fillStyle(0x2a1a0a, 1);
-      graphics.fillRect(0, GAME_HEIGHT * 0.6, GAME_WIDTH, GAME_HEIGHT * 0.4);
-
-      // Ground texture
-      for (let i = 0; i < 20; i++) {
-        const x = Phaser.Math.Between(0, GAME_WIDTH);
-        const y = Phaser.Math.Between(GAME_HEIGHT * 0.6, GAME_HEIGHT * 0.85);
-        graphics.fillStyle(0x3a2a1a, 0.5);
-        graphics.fillCircle(x, y, Phaser.Math.Between(2, 5));
-      }
-    }
+    // §3-5: 2색 블록 배경을 모드별 일러스트로 교체한다.
+    // 챕터/탑/레이드 키는 asset-manifest 의 lazyTextures 라 BackgroundFactory 가
+    // 프로시저럴 폴백을 먼저 그린 뒤 로드가 끝나면 실제 이미지로 갈아 끼운다.
+    this.battleBgKey = resolveBattleBgKey({ mode: this.mode, stage: this.stage });
+    BackgroundFactory.createSceneBg(this, this.battleBgKey, {
+      depth: 0,
+      dimAlpha: DIM_ALPHA.BATTLE   // 전투만 0.20 — 배경을 더 보여준다
+    });
   }
 
   /**
@@ -418,21 +467,15 @@ export class BattleScene extends Phaser.Scene {
   createTurnOrderBar() {
     console.log('[Battle] Creating turn order bar...');
 
-    // 턴 순서 바 컨테이너
-    this.turnOrderContainer = this.add.container(0, s(70)).setDepth(15);
+    const row = BATTLE_LAYOUT.turnRow;
 
-    // 턴 순서 바 배경
-    const turnBarBg = this.add.rectangle(GAME_WIDTH / 2, 0, GAME_WIDTH - s(20), s(50), COLORS.bgLight, 0.9);
-    turnBarBg.setStrokeStyle(s(2), COLORS.primary);
-    this.turnOrderContainer.add(turnBarBg);
+    // 턴 순서 배지가 놓이는 대역. HUD 글래스 위에 얹힌다
+    this.turnOrderContainer = this.add.container(0, 0).setDepth(BATTLE_DEPTH.hudContent);
 
-    // 턴 순서 라벨
-    const turnLabel = this.add.text(s(20), 0, '턴 순서:', {
-      fontSize: sf(12),
-      fontFamily: 'Noto Sans KR',
-      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0, 0.5);
-    this.turnOrderContainer.add(turnLabel);
+    const label = this.add.text(s(24), s(row.y + 14), '턴 순서', ts('caption', {
+      color: DESIGN.colors.text.muted
+    })).setOrigin(0, 0.5);
+    this.turnOrderContainer.add(label);
 
     // 턴 순서 아이콘들
     this.turnOrderIcons = [];
@@ -440,78 +483,129 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 턴 순서 바 업데이트
+   * 턴 순서 바 업데이트 — 정렬 기준은 processTurn 과 동일(SPD 내림차순)
    */
   updateTurnOrderBar() {
+    if (!this.turnOrderContainer) return;
+
     // 기존 아이콘 제거
     this.turnOrderIcons.forEach(icon => icon.destroy());
     this.turnOrderIcons = [];
 
-    // SPD 기준 정렬
-    const activeBattlers = this.allBattlers.filter(b => b.isAlive);
-    activeBattlers.sort((a, b) => (b.stats?.spd || 0) - (a.stats?.spd || 0));
+    const slots = computeTurnOrderSlots(this.allBattlers, {
+      max: 8, startX: 120, spacing: 52, y: BATTLE_LAYOUT.turnRow.y + 14
+    });
+    const accent = this.getBattleAccent();
 
-    const startX = s(90);
-    const spacing = s(45);
-    const maxIcons = Math.min(8, activeBattlers.length);
+    slots.forEach(slot => {
+      const x = s(slot.x);
+      const y = s(slot.y);
+      const r = slot.isCurrent ? s(19) : s(15);
+      const sideColor = slot.isAlly ? DESIGN.colors.brand.primary : DESIGN.colors.status.error;
 
-    activeBattlers.slice(0, maxIcons).forEach((battler, index) => {
-      const x = startX + index * spacing;
-      const isCurrentTurn = index === 0;
+      // 육각 배지 — 원형 하나로 통일돼 있던 것을 진영·현재턴으로 구분한다
+      const badge = this.add.graphics();
+      badge.fillStyle(sideColor, slot.isCurrent ? 0.95 : 0.55);
+      badge.fillCircle(x, y, r);
+      badge.lineStyle(s(slot.isCurrent ? 3 : 1), slot.isCurrent ? accent : DESIGN.effects.borderColor, 0.9);
+      badge.strokeCircle(x, y, r);
 
-      // 아이콘 배경
-      const iconBg = this.add.circle(x, 0, isCurrentTurn ? s(18) : s(15),
-        battler.isAlly ? COLORS.primary : COLORS.danger, isCurrentTurn ? 1 : 0.7);
-      if (isCurrentTurn) {
-        iconBg.setStrokeStyle(s(3), COLORS.accent);
-      }
-
-      // 유닛 이름 첫글자
-      const initial = (battler.name || '?').charAt(0);
-      const iconText = this.add.text(x, 0, initial, {
-        fontSize: isCurrentTurn ? sf(14) : sf(11),
-        fontFamily: 'Noto Sans KR',
-        color: '#ffffff',
+      const initial = this.add.text(x, y, slot.initial, ts(slot.isCurrent ? 'body' : 'caption', {
+        color: DESIGN.colors.text.primary,
         fontStyle: 'bold'
-      }).setOrigin(0.5);
+      })).setOrigin(0.5);
 
-      // SPD 표시
-      const spdText = this.add.text(x, s(20), `${battler.stats?.spd || 0}`, {
-        fontSize: sf(8),
-        fontFamily: 'Noto Sans KR',
-        color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-      }).setOrigin(0.5);
+      const spd = this.add.text(x, y + s(23), `${slot.spd}`, ts('num.sm', {
+        color: DESIGN.colors.text.secondary
+      })).setOrigin(0.5);
 
-      this.turnOrderContainer.add([iconBg, iconText, spdText]);
-      this.turnOrderIcons.push(iconBg, iconText, spdText);
+      this.turnOrderContainer.add([badge, initial, spd]);
+      this.turnOrderIcons.push(badge, initial, spd);
     });
 
-    console.log('[Battle] Turn order updated:', activeBattlers.map(b => `${b.name}(SPD:${b.stats?.spd || 0})`).join(' > '));
+    console.log('[Battle] Turn order updated:', slots.map(sl => `${sl.initial}(SPD:${sl.spd})`).join(' > '));
   }
 
   createBattleUI() {
-    // Top status bar
-    const topBar = this.add.rectangle(GAME_WIDTH / 2, s(30), GAME_WIDTH, s(60), COLORS.bgLight, 0.9);
-    topBar.setDepth(10);
+    const hud = BATTLE_LAYOUT.hud;
+    const accent = this.getBattleAccent();
 
-    // Stage name
-    this.add.text(s(20), s(30), this.stage?.name || 'Battle', {
-      fontSize: sf(16),
-      fontFamily: 'Noto Sans KR',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0, 0.5).setDepth(11);
+    // 상단 전투 HUD — 글래스 hud 표면 (§2-3 알파 표)
+    GlassPanel.create(this, {
+      x: GAME_WIDTH / 2,
+      y: s(hud.y + hud.h / 2),
+      w: GAME_WIDTH,
+      h: s(hud.h),
+      variant: GLASS_VARIANT.HUD,
+      bgKey: this.battleBgKey,
+      depth: BATTLE_DEPTH.hud
+    });
 
-    // Turn counter
-    this.turnText = this.add.text(GAME_WIDTH / 2, s(30), 'Turn 0', {
-      fontSize: sf(16),
-      fontFamily: 'Noto Sans KR',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setDepth(11);
+    // 교단색 언더라인 — 화면이 어느 진영의 전장인지 한 줄로 말한다
+    const underline = this.add.graphics().setDepth(BATTLE_DEPTH.hudContent);
+    underline.fillStyle(accent, 0.75);
+    underline.fillRect(0, s(hud.h) - s(3), GAME_WIDTH, s(3));
 
-    // Battle log area
-    this.logContainer = this.add.container(0, 0).setDepth(5);
+    // 스테이지 제목 (영문 'Battle' → 한글 스테이지명)
+    this.add.text(s(24), s(38), this.getBattleTitle(), ts('title', {
+      color: DESIGN.colors.text.primary
+    })).setOrigin(0, 0.5).setDepth(BATTLE_DEPTH.hudContent);
+
+    // 턴 카운터 — Orbitron + 고정폭 수치
+    this.add.text(GAME_WIDTH - s(120), s(30), 'TURN', ts('caption', {
+      color: DESIGN.colors.text.muted
+    })).setOrigin(0.5, 0.5).setDepth(BATTLE_DEPTH.hudContent);
+
+    this.turnText = this.add.text(GAME_WIDTH - s(120), s(52), '0', ts('num.lg', {
+      color: DESIGN.colors.brand.accent
+    })).setOrigin(0.5, 0.5).setDepth(BATTLE_DEPTH.hudContent);
+
+    // 전투 로그 전용 대역 (HUD 위 토스트 → 하단 분리, §3-5)
+    this.createLogBand();
+  }
+
+  /**
+   * HUD 타이틀 — 모드별로 무엇을 하는 전투인지 한글로 밝힌다.
+   * @returns {string}
+   */
+  getBattleTitle() {
+    if (this.mode === 'tower' && this.towerFloor) return `무한의 탑 ${this.towerFloor}층`;
+    if (this.mode === 'raid') return '레이드';
+    const name = this.stage?.name;
+    const id = this.stage?.id;
+    if (name && id) return `${id}  ${name}`;
+    return name || (id ? `스테이지 ${id}` : '전투');
+  }
+
+  /**
+   * 전투 로그 대역 (§3-5: y=964~1052, 최근 2줄).
+   * 턴 순서 바를 덮던 토스트를 화면 하단의 고정 대역으로 옮긴다.
+   */
+  createLogBand() {
+    const band = BATTLE_LAYOUT.log;
+
+    // 글래스 표면보다 위. 같은 depth 면 나중에 만든 글래스가 텍스트를 덮는다
+    this.logContainer = this.add.container(0, 0).setDepth(BATTLE_DEPTH.log + 1);
+    GlassPanel.create(this, {
+      x: s(band.x + band.w / 2),
+      y: s(band.y + band.h / 2),
+      w: s(band.w),
+      h: s(band.h),
+      variant: GLASS_VARIANT.HUD,
+      bgKey: this.battleBgKey,
+      depth: BATTLE_DEPTH.log
+    });
+
     this.battleLogs = [];
+    this.logTexts = [];
+    for (let i = 0; i < LOG_LINES; i++) {
+      const text = this.add.text(s(band.x + 20), s(getLogLineY(i, LOG_LINES)), '', ts('label', {
+        color: DESIGN.colors.text.secondary,
+        wordWrap: { width: s(band.w - 236) }   // 오른쪽 '다음 턴' 버튼 자리를 비워 둔다
+      })).setOrigin(0, 0.5).setAlpha(0);
+      this.logContainer.add(text);
+      this.logTexts.push(text);
+    }
   }
 
   /**
@@ -527,59 +621,67 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
-    // 시너지 컨테이너
-    const containerHeight = Math.max(s(60), synergies.length * s(20) + s(30));
-    this.synergyContainer = this.add.container(GAME_WIDTH - s(100), s(130)).setDepth(12);
+    // HUD 바로 아래 오른쪽. 유닛 대역(y=300~)을 침범하지 않는다
+    const rows = synergies.length > 0 ? synergies.length : 2;
+    const panelW = s(180);
+    const panelH = s(Math.max(56, 30 + rows * 20));
+    const panelX = GAME_WIDTH - panelW / 2 - s(20);
+    const panelY = s(BATTLE_LAYOUT.hud.h + 20) + panelH / 2;
 
-    // 시너지 배경
-    const synergyBg = this.add.rectangle(0, 0, s(100), containerHeight, COLORS.bgLight, 0.85);
-    synergyBg.setStrokeStyle(s(1), COLORS.accent);
-    this.synergyContainer.add(synergyBg);
+    this.synergyContainer = this.add.container(panelX, panelY).setDepth(BATTLE_DEPTH.hudContent);
 
-    // 시너지 타이틀
-    const synergyTitle = this.add.text(0, -containerHeight / 2 + s(10), '시너지', {
-      fontSize: sf(10),
-      fontFamily: 'Noto Sans KR',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    this.synergyContainer.add(synergyTitle);
+    const glass = GlassPanel.create(this, {
+      x: panelX,
+      y: panelY,
+      w: panelW,
+      h: panelH,
+      variant: GLASS_VARIANT.CARD,
+      bgKey: this.battleBgKey,
+      depth: BATTLE_DEPTH.log
+    });
+    this.synergyGlass = glass;
+
+    const title = this.add.text(0, -panelH / 2 + s(14), '시너지', ts('caption', {
+      color: DESIGN.colors.text.muted
+    })).setOrigin(0.5);
+    this.synergyContainer.add(title);
 
     if (synergies.length > 0) {
-      // SynergySystem 기반 표시
-      let yOffset = -containerHeight / 2 + s(28);
-      const typeIcons = { cult: '⛪', mood: '🎭', role: '⚔️', special: '✨', mood_balance: '☯️', mood_special: '🌟' };
-      const typeColors = { cult: COLORS.secondary, mood: COLORS.primary, role: COLORS.danger, special: COLORS.accent, mood_balance: COLORS.success, mood_special: COLORS.accent };
+      // SynergySystem 기반 표시 — 이모지 대신 교단/역할 색 점으로 종류를 구분한다
+      let yOffset = -panelH / 2 + s(34);
+      const typeColors = {
+        cult: DESIGN.colors.brand.secondary,
+        mood: DESIGN.colors.brand.primary,
+        role: DESIGN.colors.status.error,
+        special: DESIGN.colors.brand.accent,
+        mood_balance: DESIGN.colors.status.success,
+        mood_special: DESIGN.colors.brand.accent
+      };
 
       synergies.forEach(syn => {
-        const icon = typeIcons[syn.type] || '●';
-        const color = typeColors[syn.type] || COLORS.text;
-        const label = `${icon} ${syn.name || syn.type}`;
-        const synText = this.add.text(0, yOffset, label, {
-          fontSize: sf(9),
-          fontFamily: 'Noto Sans KR',
-          color: `#${  color.toString(16).padStart(6, '0')}`
-        }).setOrigin(0.5);
-        this.synergyContainer.add(synText);
-        yOffset += s(16);
+        const color = typeColors[syn.type] || DESIGN.colors.brand.primary;
+        const dot = this.add.graphics();
+        dot.fillStyle(color, 1);
+        dot.fillCircle(-panelW / 2 + s(16), yOffset, s(4));
+
+        const synText = this.add.text(-panelW / 2 + s(28), yOffset, syn.name || syn.type, ts('caption', {
+          color: DESIGN.colors.text.secondary
+        })).setOrigin(0, 0.5);
+
+        this.synergyContainer.add([dot, synText]);
+        yOffset += s(20);
       });
     } else {
       // 폴백 버프 표시
-      let yOffset = s(-5);
+      let yOffset = -panelH / 2 + s(36);
       if (this.synergyBuffs.atk > 0) {
-        const atkText = this.add.text(0, yOffset, `ATK +${Math.round(this.synergyBuffs.atk * 100)}%`, {
-          fontSize: sf(9), fontFamily: 'Noto Sans KR',
-          color: `#${  COLORS.danger.toString(16).padStart(6, '0')}`
-        }).setOrigin(0.5);
-        this.synergyContainer.add(atkText);
-        yOffset += s(12);
+        this.synergyContainer.add(this.add.text(0, yOffset, `ATK +${Math.round(this.synergyBuffs.atk * 100)}%`,
+          ts('num.sm', { color: DESIGN.colors.battle.damage })).setOrigin(0.5));
+        yOffset += s(18);
       }
       if (this.synergyBuffs.def > 0) {
-        const defText = this.add.text(0, yOffset, `DEF +${Math.round(this.synergyBuffs.def * 100)}%`, {
-          fontSize: sf(9), fontFamily: 'Noto Sans KR',
-          color: `#${  COLORS.primary.toString(16).padStart(6, '0')}`
-        }).setOrigin(0.5);
-        this.synergyContainer.add(defText);
+        this.synergyContainer.add(this.add.text(0, yOffset, `DEF +${Math.round(this.synergyBuffs.def * 100)}%`,
+          ts('num.sm', { color: DESIGN.colors.battle.buff })).setOrigin(0.5));
       }
     }
   }
@@ -590,111 +692,187 @@ export class BattleScene extends Phaser.Scene {
   createSkillCards() {
     console.log('[Battle] Creating skill cards...');
 
-    // 스킬 카드 컨테이너 (하단)
-    this.skillCardContainer = this.add.container(0, GAME_HEIGHT - s(160)).setDepth(20);
+    // §3-5: 4칸 고정 그리드. 아군이 4명 미만이어도 빈 칸이 자리를 지켜
+    // 전투 중 파티 구성이 바뀌어도 버튼 위치가 흔들리지 않는다
+    this.skillCardContainer = this.add.container(0, 0).setDepth(BATTLE_DEPTH.hudContent);
 
-    // 스킬 카드 배경
-    const cardAreaBg = this.add.rectangle(GAME_WIDTH / 2, 0, GAME_WIDTH, s(60), COLORS.background, 0.9);
-    this.skillCardContainer.add(cardAreaBg);
+    const action = BATTLE_LAYOUT.action;
+    GlassPanel.create(this, {
+      x: GAME_WIDTH / 2,
+      y: s(action.y + action.h / 2),
+      w: GAME_WIDTH,
+      h: s(action.h),
+      variant: GLASS_VARIANT.HUD,
+      bgKey: this.battleBgKey,
+      depth: BATTLE_DEPTH.hud
+    });
 
-    // 각 아군 영웅별 스킬 카드 생성
     this.skillCards = [];
-    const cardWidth = s(70);
-    const cardSpacing = s(10);
-    const totalWidth = this.allies.length * (cardWidth + cardSpacing) - cardSpacing;
-    const startX = (GAME_WIDTH - totalWidth) / 2 + cardWidth / 2;
+    const slots = getSkillSlots();
 
-    this.allies.forEach((ally, index) => {
-      const x = startX + index * (cardWidth + cardSpacing);
-      const card = this.createSkillCard(x, 0, ally, index);
+    slots.forEach((slot, index) => {
+      const ally = this.allies[index];
+      if (!ally) {
+        this.createEmptySkillSlot(slot);
+        return;
+      }
+      const card = this.createSkillCard(s(slot.x), s(slot.y), ally, index);
       this.skillCards.push(card);
     });
   }
 
   /**
-   * 개별 스킬 카드 생성
+   * 빈 스킬 슬롯 — 점선 자리 표시. 자물쇠나 물음표는 쓰지 않는다
+   * @param {{x:number,y:number,w:number,h:number}} slot - base px 슬롯
+   */
+  createEmptySkillSlot(slot) {
+    const w = s(slot.w);
+    const h = s(slot.h);
+    const g = this.add.graphics().setDepth(BATTLE_DEPTH.hudContent);
+    g.lineStyle(s(2), DESIGN.effects.borderColor, 0.8);
+    g.strokeRoundedRect(s(slot.x) - w / 2, s(slot.y) - h / 2, w, h, s(DESIGN.radius.md));
+    this.skillCardContainer.add(g);
+  }
+
+  /**
+   * 개별 스킬 카드 — 포트레이트 + 쿨다운 링 + 스킬명
+   * @param {number} x - 렌더 px (슬롯 중심)
+   * @param {number} y - 렌더 px (슬롯 중심)
+   * @param {object} ally
+   * @param {number} index
    */
   createSkillCard(x, y, ally, index) {
-    const card = this.add.container(x, y);
+    const card = this.add.container(x, y).setDepth(BATTLE_DEPTH.hudContent);
 
-    // 스킬 게이지 비율
-    const gaugePercent = ally.skillGauge / ally.maxSkillGauge;
     const isReady = ally.skillGauge >= ally.maxSkillGauge;
+    const cardW = s(SKILL_SLOT.w);
+    const cardH = s(SKILL_SLOT.h);
+    const ringRadius = s(38);
+    const ringY = s(-16);
+    const accent = this.getBattleAccent();
 
-    // 카드 배경 (둥근 모서리)
-    const cardW = s(70);
-    const cardH = s(55);
+    // 카드 표면
     const cardBg = this.add.graphics();
-    cardBg.fillStyle(isReady ? COLORS.secondary : COLORS.bgLight, isReady ? 1 : 0.7);
-    cardBg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, s(8));
-    cardBg.lineStyle(s(2), isReady ? COLORS.accent : COLORS.primary, isReady ? 1 : 0.4);
-    cardBg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, s(8));
-    // 인터랙션 히트영역
-    const cardHit = this.add.rectangle(0, 0, cardW, cardH, 0x000000, 0);
+    this.paintSkillCardBg(cardBg, cardW, cardH, isReady, accent);
 
+    // 히트 영역은 시각 크기와 분리한다 (터치 타겟 최소 48dp 확보)
+    const cardHit = this.add.rectangle(0, 0, cardW, cardH, 0x000000, 0);
     if (isReady) {
       cardHit.setInteractive({ useHandCursor: true });
       cardHit.on('pointerdown', () => this.onSkillCardClick(ally, index));
     }
 
+    // 클래스 아이콘 (이모지 대체, IconFactory 벡터)
+    const classIcon = IconFactory.createImage(this, 0, ringY, ally.class || 'warrior', 'lg', {
+      tint: isReady ? accent : DESIGN.colors.brand.primary
+    });
+    if (classIcon) classIcon.setAlpha(isReady ? 1 : 0.55);
+
+    // 쿨다운 링 — 게이지가 링을 시계 방향으로 채운다
+    const ring = this.add.graphics();
+    this.paintCooldownRing(ring, ally, ringRadius, ringY, accent);
+
     // 영웅 이름
     const allyName = ally.name || '???';
-    const heroName = allyName.length > 4 ? allyName.substring(0, 4) : allyName;
-    const nameText = this.add.text(0, s(-17), heroName, {
-      fontSize: sf(9),
-      fontFamily: 'Noto Sans KR',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
+    const heroName = allyName.length > 5 ? `${allyName.substring(0, 5)}…` : allyName;
+    const nameText = this.add.text(0, s(34), heroName, ts('caption', {
+      color: DESIGN.colors.text.secondary
+    })).setOrigin(0.5);
+
+    // 스킬명 (내부 ID 노출 금지 — 이름이 없으면 '스킬'로 대체)
+    const skillText = this.add.text(0, s(52), this.getSkillLabel(ally), ts('label', {
+      color: isReady ? '#FFD60A' : '#64748B',
       fontStyle: 'bold'
-    }).setOrigin(0.5);
+    })).setOrigin(0.5);
 
-    // A-5: 스킬명 표시 (skill1 우선, skill2 있으면 표시)
-    const skill1 = ally.skills?.find(sk => sk.id === 'skill1') || ally.skills?.[1];
-    const skill2 = ally.skills?.find(sk => sk.id === 'skill2') || ally.skills?.[2];
-    const activeSkill = skill1;
-    const skillLabel = activeSkill ? (activeSkill.name.length > 5 ? activeSkill.name.substring(0, 5) : activeSkill.name) : '스킬';
-    const hasSkill2 = skill2 && ally.skillGauge >= (skill2.gaugeCost || 150);
-    const skillText = this.add.text(0, s(-6), hasSkill2 ? `★${  skillLabel}` : skillLabel, {
-      fontSize: sf(7),
-      fontFamily: 'Noto Sans KR',
-      color: isReady ? (hasSkill2 ? '#FF6B6B' : '#FFD700') : '#94A3B8'
-    }).setOrigin(0.5);
+    const parts = [cardBg, cardHit, ring, nameText, skillText];
+    if (classIcon) parts.splice(2, 0, classIcon);
+    card.add(parts);
 
-    // 스킬 게이지 바
-    const gaugeBg = this.add.rectangle(0, s(8), s(55), s(6), 0x374151, 1);
-    const gaugeFill = this.add.rectangle(s(-27.5), s(8), s(55) * gaugePercent, s(4), isReady ? COLORS.accent : COLORS.secondary, 1);
-    gaugeFill.setOrigin(0, 0.5);
+    if (isReady) this.startSkillCardPulse(card);
 
-    // 게이지 텍스트
-    const gaugeText = this.add.text(0, s(19), `${ally.skillGauge}/${ally.maxSkillGauge}`, {
-      fontSize: sf(8),
-      fontFamily: 'Noto Sans KR',
-      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-
-    card.add([cardBg, cardHit, nameText, skillText, gaugeBg, gaugeFill, gaugeText]);
-
-    // 준비 완료 시 빛남(pulse) 효과
-    if (isReady) {
-      this.tweens.add({
-        targets: card,
-        alpha: { from: 1, to: 0.6 },
-        duration: 600,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
-    }
     card.setData('ally', ally);
     card.setData('index', index);
     card.setData('cardBg', cardBg);
     card.setData('cardHit', cardHit);
-    card.setData('gaugeFill', gaugeFill);
-    card.setData('gaugeText', gaugeText);
+    card.setData('ring', ring);
+    card.setData('ringRadius', ringRadius);
+    card.setData('ringY', ringY);
+    card.setData('classIcon', classIcon);
     card.setData('skillText', skillText);
 
     this.skillCardContainer.add(card);
 
     return card;
+  }
+
+  /**
+   * 스킬 카드 표면을 다시 그린다 (생성·갱신 공용).
+   * @param {Phaser.GameObjects.Graphics} g
+   * @param {number} w
+   * @param {number} h
+   * @param {boolean} isReady
+   * @param {number} accent
+   */
+  paintSkillCardBg(g, w, h, isReady, accent) {
+    const r = s(DESIGN.radius.md);
+    g.clear();
+    g.fillStyle(DESIGN.colors.bg.secondary, isReady ? 0.92 : 0.72);
+    g.fillRoundedRect(-w / 2, -h / 2, w, h, r);
+    g.lineStyle(s(2), isReady ? accent : DESIGN.effects.borderColor, isReady ? 0.9 : 0.7);
+    g.strokeRoundedRect(-w / 2, -h / 2, w, h, r);
+  }
+
+  /**
+   * 쿨다운 링을 다시 그린다. 준비 완료면 링이 한 바퀴 닫히고 액센트로 빛난다.
+   * @param {Phaser.GameObjects.Graphics} g
+   * @param {object} ally
+   * @param {number} radius
+   * @param {number} cy
+   * @param {number} accent
+   */
+  paintCooldownRing(g, ally, radius, cy, accent) {
+    const arc = computeCooldownArc(ally.skillGauge, ally.maxSkillGauge);
+    g.clear();
+    // 트랙 — 배경이 어두우므로 표면보다 밝은 회청색을 쓴다
+    g.lineStyle(s(5), 0x334155, 1);
+    g.strokeCircle(0, cy, radius);
+    // 진행
+    if (arc.ratio > 0) {
+      g.lineStyle(s(5), arc.ready ? accent : DESIGN.colors.brand.primary, 1);
+      g.beginPath();
+      g.arc(0, cy, radius, arc.startAngle, arc.endAngle, false);
+      g.strokePath();
+    }
+  }
+
+  /**
+   * 표시용 스킬 이름. 내부 id('basic', 'skill1')는 그대로 노출하지 않는다.
+   * @param {object} ally
+   * @returns {string}
+   */
+  getSkillLabel(ally) {
+    const skill = ally.skills?.find(sk => sk.id === 'skill1') || ally.skills?.[1] || ally.skills?.[0];
+    const name = skill?.name;
+    if (!name || /^(basic|skill\d+)$/i.test(name)) return '스킬';
+    return name.length > 6 ? `${name.substring(0, 6)}…` : name;
+  }
+
+  /**
+   * 준비 완료 카드의 숨쉬기 효과. 중복 등록을 막기 위해 기존 트윈을 먼저 끈다.
+   * @param {Phaser.GameObjects.Container} card
+   */
+  startSkillCardPulse(card) {
+    this.tweens.killTweensOf(card);
+    card.setAlpha(1);
+    this.tweens.add({
+      targets: card,
+      alpha: { from: 1, to: 0.62 },
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
   }
 
   /**
@@ -769,6 +947,11 @@ export class BattleScene extends Phaser.Scene {
     attacker.skillGauge = 0;
     this.updateSkillCardUI(attacker);
 
+    // MECH-02: 시전 훅 (아군 방어막/룬 계열)
+    const castEffects = this.battleSystem.applyCultSkillUse(attacker, [target], skill);
+    this.syncCultEffects(castEffects);
+    this.drainSystemLog();
+
     // AoE 스킬: 전체 적 공격
     if (skill.target === 'all') {
       const aliveEnemies = this.enemies.filter(e => e.isAlive);
@@ -796,32 +979,34 @@ export class BattleScene extends Phaser.Scene {
   _applyManualDamage(attacker, target, skill) {
     if (!target.isAlive || this.battleEnded) return;
 
-    const baseDamage = attacker.stats?.atk || 100;
-    const defense = target.stats?.def || 50;
-    const moodResult = this.getMoodMatchup(attacker.mood, target.mood);
-    const critChance = attacker.critRate || 0.1;
-    const isCrit = Math.random() < critChance;
-    const critMultiplier = isCrit ? (attacker.critDmg || 1.5) : 1;
+    // 수동 발동도 자동 전투와 같은 단일 경로를 지난다 (교단 훅 포함)
     const aoeMod = skill.target === 'all' ? 0.7 : 1.0;
-    const damage = Math.max(1, Math.floor(baseDamage * skill.multiplier * aoeMod * critMultiplier * moodResult.multiplier * (1 - defense / (defense + 200))));
+    const { damage, damageResult, cultEffects } = this.battleSystem.resolveDamage(
+      attacker,
+      target,
+      { ...skill, multiplier: skill.multiplier * aoeMod }
+    );
+
+    const dealt = damageResult.actualDamage;
+    const isCrit = damage.isCrit;
+    const moodAdvantage = describeMoodAdvantage(damage.moodBonus);
 
     if (isCrit) this.cameras.main.shake(150, 0.005);
 
-    target.currentHp = Math.max(0, target.currentHp - damage);
     this.updateBattlerUI(target);
+    this.updateBattlerUI(attacker);
     this.playSkillEffect(attacker, target, isCrit, true, skill);
-    this.showDamage(target, damage, isCrit, moodResult.advantage);
+    if (dealt > 0) {
+      this.showDamage(target, dealt, isCrit, moodAdvantage);
+    } else if (damageResult.absorbed > 0) {
+      this.showDamage(target, damageResult.absorbed, false, 'NEUTRAL');
+    }
 
     const critText = isCrit ? ' (크리티컬!)' : '';
-    const moodText = moodResult.advantage === 'ADVANTAGE' ? ' (유리▲)' : moodResult.advantage === 'DISADVANTAGE' ? ' (불리▼)' : '';
-    this.addBattleLog(`  → ${target.name}에게 ${damage} 데미지${critText}${moodText}`);
+    const moodText = moodAdvantage === 'ADVANTAGE' ? ' (유리▲)' : moodAdvantage === 'DISADVANTAGE' ? ' (불리▼)' : '';
+    this.addBattleLog(`  → ${target.name}에게 ${dealt} 데미지${critText}${moodText}`);
 
-    if (target.currentHp <= 0) {
-      target.isAlive = false;
-      this.playDeathAnimation(target);
-      this.addBattleLog(`${target.name} 쓰러짐!`);
-    }
-    this.updateTurnOrderBar();
+    this.syncAfterResolve(cultEffects);
   }
 
   /**
@@ -831,54 +1016,33 @@ export class BattleScene extends Phaser.Scene {
     const card = this.skillCards.find(c => c.getData('ally') === ally);
     if (!card) return;
 
-    const gaugePercent = ally.skillGauge / ally.maxSkillGauge;
     const isReady = ally.skillGauge >= ally.maxSkillGauge;
+    const accent = this.getBattleAccent();
 
     const cardBg = card.getData('cardBg');
     const cardHit = card.getData('cardHit');
-    const gaugeFill = card.getData('gaugeFill');
-    const gaugeText = card.getData('gaugeText');
+    const ring = card.getData('ring');
+    const classIcon = card.getData('classIcon');
 
-    // Graphics 기반 카드 배경 다시 그리기
-    const cardW = s(70);
-    const cardH = s(55);
-    cardBg.clear();
-    cardBg.fillStyle(isReady ? COLORS.secondary : COLORS.bgLight, isReady ? 1 : 0.7);
-    cardBg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, s(8));
-    cardBg.lineStyle(s(2), isReady ? COLORS.accent : COLORS.primary, isReady ? 1 : 0.4);
-    cardBg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, s(8));
+    if (cardBg) this.paintSkillCardBg(cardBg, s(SKILL_SLOT.w), s(SKILL_SLOT.h), isReady, accent);
+    if (ring) this.paintCooldownRing(ring, ally, card.getData('ringRadius'), card.getData('ringY'), accent);
+    if (classIcon) classIcon.setAlpha(isReady ? 1 : 0.55);
 
-    this.tweens.add({
-      targets: gaugeFill,
-      width: s(55) * gaugePercent,
-      duration: 200
-    });
-
-    gaugeText.setText(`${ally.skillGauge}/${ally.maxSkillGauge}`);
-
-    // 스킬명 색상 업데이트
     const skillTextObj = card.getData('skillText');
     if (skillTextObj) {
-      skillTextObj.setColor(isReady ? '#FFD700' : '#94A3B8');
+      skillTextObj.setText(this.getSkillLabel(ally));
+      skillTextObj.setColor(isReady ? '#FFD60A' : '#64748B');
     }
 
     // 인터랙티브 상태 업데이트
     if (isReady && cardHit && !cardHit.input) {
       cardHit.setInteractive({ useHandCursor: true });
       cardHit.on('pointerdown', () => this.onSkillCardClick(ally, card.getData('index')));
-      // 준비 완료 시 빛남 효과
-      this.tweens.add({
-        targets: card,
-        alpha: { from: 1, to: 0.6 },
-        duration: 600,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
+      this.startSkillCardPulse(card);
     } else if (!isReady && cardHit && cardHit.input) {
       cardHit.removeInteractive();
       this.tweens.killTweensOf(card);
-      card.setAlpha(0.7);
+      card.setAlpha(0.82);
     }
   }
 
@@ -897,7 +1061,7 @@ export class BattleScene extends Phaser.Scene {
 
     const mood = attacker.mood || 'brave';
     const x = targetSprite.x;
-    const y = targetSprite.y;
+    const y = this.getUnitBodyY(targetSprite);
 
     if (this.particles) {
       const skillId = skill?.id || '';
@@ -976,7 +1140,7 @@ export class BattleScene extends Phaser.Scene {
     const targetSprite = targetSprites[target.position];
     if (!targetSprite || !this.particles) return;
 
-    this.particles.showDamageNumber(targetSprite.x, targetSprite.y - s(30), value, type);
+    this.particles.showDamageNumber(targetSprite.x, this.getUnitBodyY(targetSprite) - s(30), value, type);
   }
 
   /**
@@ -989,11 +1153,11 @@ export class BattleScene extends Phaser.Scene {
 
     // ParticleManager의 showDamageNumber를 사용 (heal 타입)
     if (this.particles) {
-      this.particles.showDamageNumber(sprite.x, sprite.y - s(30), healAmount, 'heal');
+      this.particles.showDamageNumber(sprite.x, this.getUnitBodyY(sprite) - s(30), healAmount, 'heal');
     }
 
     // 추가 힐 텍스트 (떠오르는 +HP)
-    const healText = this.add.text(sprite.x, sprite.y - s(60), `+${healAmount}`, {
+    const healText = this.add.text(sprite.x, this.getUnitBodyY(sprite) - s(60), `+${healAmount}`, {
       fontSize: sf(22), fontFamily: 'Noto Sans KR',
       color: '#4ADE80', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: s(3)
@@ -1096,15 +1260,13 @@ export class BattleScene extends Phaser.Scene {
       const bossName = bossEnemy?.name || 'BOSS';
 
       // 보스 배틀 타이틀
-      const bossTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(80), '⚔️ BOSS BATTLE ⚔️', {
-        fontSize: sf(32), fontFamily: 'Georgia, serif', color: '#FF4444', fontStyle: 'bold',
-        stroke: '#000000', strokeThickness: s(5)
-      }).setOrigin(0.5).setDepth(50).setAlpha(0);
+      const bossTitle = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(80), 'BOSS BATTLE', ts('display.lg', {
+        color: '#EF4444', stroke: '#000000', strokeThickness: s(5)
+      })).setOrigin(0.5).setDepth(50).setAlpha(0);
 
-      const bossNameText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(30), bossName, {
-        fontSize: sf(24), fontFamily: 'Noto Sans KR', color: '#FFD700', fontStyle: 'bold',
-        stroke: '#000000', strokeThickness: s(3)
-      }).setOrigin(0.5).setDepth(50).setAlpha(0);
+      const bossNameText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(30), bossName, ts('title', {
+        color: '#FFD60A', fontStyle: 'bold', stroke: '#000000', strokeThickness: s(3)
+      })).setOrigin(0.5).setDepth(50).setAlpha(0);
 
       this.tweens.add({
         targets: [bossTitle, bossNameText],
@@ -1131,18 +1293,13 @@ export class BattleScene extends Phaser.Scene {
 
     // 스테이지 이름 표시
     const stageName = this.stage?.name || '전투 시작';
-    const stageText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(20), stageName, {
-      fontSize: sf(28), fontFamily: 'Georgia, serif',
-      color: '#FFFFFF', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: s(4)
-    }).setOrigin(0.5).setDepth(51).setAlpha(0);
+    const stageText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(20), stageName, ts('title', {
+      color: '#F8FAFC', fontStyle: 'bold', stroke: '#000000', strokeThickness: s(4)
+    })).setOrigin(0.5).setDepth(51).setAlpha(0);
 
-    const battleText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + s(20), '⚔️ BATTLE START ⚔️', {
-      fontSize: sf(18), fontFamily: 'Noto Sans KR',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: s(3)
-    }).setOrigin(0.5).setDepth(51).setAlpha(0);
+    const battleText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + s(20), 'BATTLE START', ts('display.lg', {
+      color: '#FFD60A', stroke: '#000000', strokeThickness: s(3)
+    })).setOrigin(0.5).setDepth(51).setAlpha(0);
 
     // 와이프인 텍스트
     this.tweens.add({
@@ -1178,19 +1335,24 @@ export class BattleScene extends Phaser.Scene {
   createManualTurnButton() {
     console.log('[Battle] Creating manual turn button...');
 
-    // 수동 턴 버튼 (AUTO OFF일 때만 표시)
-    this.manualTurnBtn = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT - s(95)).setDepth(21);
+    // 수동 턴 버튼 (AUTO OFF일 때만 표시).
+    // 로그 대역 오른쪽 끝에 붙인다 — 아군 유닛 위를 덮지 않으면서
+    // 스킬 액션바 바로 위라 손가락 이동이 짧다
+    const band = BATTLE_LAYOUT.log;
+    const btnW = s(176);
+    const btnH = s(60);
+    const x = s(band.x + band.w) - btnW / 2 - s(12);
+    const y = s(band.y + band.h / 2);
+    this.manualTurnBtn = this.add.container(x, y).setDepth(BATTLE_DEPTH.manualTurn);
 
-    const btnBg = this.add.rectangle(0, 0, s(120), s(40), COLORS.accent, 1)
+    const btnBg = this.add.rectangle(0, 0, btnW, btnH, DESIGN.colors.brand.accent, 1)
       .setInteractive({ useHandCursor: true })
-      .setStrokeStyle(s(2), COLORS.primary);
+      .setStrokeStyle(s(2), DESIGN.colors.brand.primary);
 
-    const btnText = this.add.text(0, 0, '다음 턴', {
-      fontSize: sf(16),
-      fontFamily: 'Noto Sans KR',
-      color: '#000000',
+    const btnText = this.add.text(0, 0, '다음 턴', ts('body', {
+      color: '#0F172A',
       fontStyle: 'bold'
-    }).setOrigin(0.5);
+    })).setOrigin(0.5);
 
     this.manualTurnBtn.add([btnBg, btnText]);
     this.manualTurnBtn.setData('bg', btnBg);
@@ -1208,51 +1370,41 @@ export class BattleScene extends Phaser.Scene {
   }
 
   createBattlers() {
-    // Ally positions (left side)
-    const allyStartX = s(80);
-    const allyStartY = s(350);
-    const allySpacing = s(90);
-
-    this.allySprites = [];
-    this.allies.forEach((ally, index) => {
-      const y = allyStartY + index * allySpacing;
-      if (y < GAME_HEIGHT - s(150)) {
-        const sprite = this.createBattlerSprite(allyStartX, y, ally, true);
-        this.allySprites.push(sprite);
-      }
+    // §3-5: 상단 3분의 1 편중을 없애고 적(y=300~520) / 아군(y=700~920) 대칭 배치로 바꾼다.
+    // 슬롯 개수가 유닛 수와 항상 일치하므로 sprites[position] 인덱스가 어긋나지 않는다.
+    const allySlots = getAllySlots(this.allies.length);
+    this.allySprites = this.allies.map((ally, index) => {
+      const slot = allySlots[index];
+      return this.createBattlerSprite(s(slot.x), s(slot.y), ally, true);
     });
 
-    // Enemy positions (right side)
-    const enemyStartX = GAME_WIDTH - s(80);
-    const enemyStartY = s(350);
-    const enemySpacing = s(90);
+    const enemySlots = getEnemySlots(this.enemies.length);
+    this.enemySprites = this.enemies.map((enemy, index) => {
+      const slot = enemySlots[index];
+      const sprite = this.createBattlerSprite(s(slot.x), s(slot.y), enemy, false);
 
-    this.enemySprites = [];
-    this.enemies.forEach((enemy, index) => {
-      const y = enemyStartY + index * enemySpacing;
-      if (y < GAME_HEIGHT - s(150)) {
-        const sprite = this.createBattlerSprite(enemyStartX, y, enemy, false);
-        this.enemySprites.push(sprite);
-
-        // 보스 시각 처리
-        if (enemy.isBoss) {
-          // 보스 스케일 증가
-          const enemySprite = sprite.getData('sprite');
-          if (enemySprite) {
-            enemySprite.setScale(enemySprite.scaleX * 1.3, enemySprite.scaleY * 1.3);
-          }
-          // 보스 라벨
-          const bossLabel = this.add.text(enemyStartX, y - s(60), '👑 BOSS', {
-            fontSize: sf(14), fontFamily: 'Noto Sans KR', color: '#FFD700', fontStyle: 'bold',
-            stroke: '#000000', strokeThickness: s(3)
-          }).setOrigin(0.5).setDepth(15);
+      // 보스 시각 처리
+      if (enemy.isBoss) {
+        const enemySprite = sprite.getData('sprite');
+        if (enemySprite) {
+          enemySprite.setScale(enemySprite.scaleX * 1.3, enemySprite.scaleY * 1.3);
         }
+        const bossLabel = this.add.text(0, s(-118), 'BOSS', ts('caption', {
+          color: '#FFD60A',
+          fontStyle: 'bold',
+          stroke: '#000000',
+          strokeThickness: s(3)
+        })).setOrigin(0.5);
+        sprite.add(bossLabel);
       }
+      return sprite;
     });
   }
 
   createBattlerSprite(x, y, battler, isAlly) {
-    const container = this.add.container(x, y);
+    // 유닛은 발밑(origin 0.5,1)을 기준으로 선다. HP바·이름·배지가 그 발밑에 붙는다
+    const container = this.add.container(x, y).setDepth(BATTLE_DEPTH.unit);
+    const attach = getUnitAttachments({ isBoss: !!battler.isBoss });
 
     // Character sprite — IMG-3: 아군은 실제 포트레이트 우선
     let sprite;
@@ -1261,67 +1413,198 @@ export class BattleScene extends Phaser.Scene {
       const texKey = HeroAssetLoader.ensureTexture(this, fullData);
       sprite = this.add.image(0, 0, texKey || 'hero_placeholder');
       if (texKey) {
-        sprite.setScale(Math.min(s(56) / sprite.width, s(64) / sprite.height));
+        sprite.setScale(Math.min(s(104) / sprite.width, s(124) / sprite.height));
       } else {
-        sprite.setScale(0.9);
+        sprite.setScale(1.1);
       }
     } else {
-      sprite = this.add.image(0, 0, 'enemy_placeholder');
-      sprite.setScale(0.85);
+      // 적 포트레이트 아트는 아직 없다(regen-list 미생성). 기존 코드가 존재하지 않는
+      // 'enemy_placeholder' 를 요구해 Phaser 미싱 텍스처(초록 사각형 + 대각선)가
+      // 그대로 화면에 나오고 있었다(§1-1). 분위기색 실루엣으로 대체한다.
+      sprite = this.add.image(0, 0, this.ensureEnemySilhouette(battler));
+      sprite.setScale(1.0);
     }
+    sprite.setOrigin(0.5, 1);
     if (!isAlly) sprite.setFlipX(true);
 
-    // UIX-2.6.1: Enhanced HP Bar with gradients, animations, and buff icons
-    const hpBar = new EnhancedHPBar(this, 0, s(-55), s(80), {
-      height: s(12),
+    // 접지 그림자 — 유닛이 배경 위에 떠 보이지 않게 잡아 준다
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.32);
+    shadow.fillEllipse(0, 0, s(attach.hpBarW * 0.8), s(14));
+
+    // UIX-2.6.1: Enhanced HP Bar — 유닛 발밑에 부착 (§3-5)
+    const hpBar = new EnhancedHPBar(this, 0, s(attach.hpBarY), s(attach.hpBarW), {
+      height: s(attach.hpBarH),
       currentHP: battler.currentHp,
       maxHP: battler.maxHp,
       currentSkill: battler.skillGauge || 0,
       maxSkill: battler.maxSkillGauge || 100,
-      showSkillBar: true,
-      showBuffIcons: true,
+      showSkillBar: isAlly,
+      showBuffIcons: false,
       delayDuration: 500,
       animationDuration: 300
     });
 
-    // Name tag
+    // Name tag — HP바 아래. 이름이 HP바를 덮던 결함(§1-1)의 해소점이다
     const battlerName = battler.name || '???';
     const name = battlerName.length > 6 ? battlerName.substring(0, 6) : battlerName;
-    const nameTag = this.add.text(0, s(45), name, {
-      fontSize: sf(11),
-      fontFamily: 'Noto Sans KR',
-      color: `#${  (isAlly ? COLORS.text : COLORS.danger).toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
+    const nameTag = this.add.text(0, s(attach.nameY), name, ts('caption', {
+      color: isAlly ? DESIGN.colors.text.primary : '#FCA5A5',
+      stroke: '#000000',
+      strokeThickness: s(2)
+    })).setOrigin(0.5);
 
-    // UIX-2.6.1: Add components with enhanced HP bar
-    container.add([sprite, hpBar, nameTag]);
+    // 교단 메커니즘 배지 (Divine Charge / Doom / Holy Ward / Rune)
+    const badgeLayer = this.add.container(s(attach.badgeX), s(attach.badgeY));
+
+    container.add([shadow, sprite, hpBar, nameTag, badgeLayer]);
 
     // Store references
     container.setData('battler', battler);
     container.setData('sprite', sprite);
-    container.setData('hpBar', hpBar); // UIX-2.6.1: Store enhanced HP bar reference
+    container.setData('hpBar', hpBar);
+    container.setData('badgeLayer', badgeLayer);
+    container.setData('attach', attach);
     container.setData('originalX', x); // 피격 흔들림 복원용
+
+    this.renderCultBadges(container, battler);
 
     return container;
   }
 
-  createControlButtons() {
-    const controlY = GAME_HEIGHT - s(50);
+  /**
+   * 교단 메커니즘 상태 배지를 유닛 옆에 다시 그린다 (MECH-02 표기, 표시 전용).
+   * cultState 가 없으면 아무것도 그리지 않는다 — 값이 붙는 순간만 눈에 띄게 하기 위해서다.
+   * @param {Phaser.GameObjects.Container} container - createBattlerSprite 가 만든 유닛 컨테이너
+   * @param {object} battler
+   */
+  renderCultBadges(container, battler) {
+    const layer = container?.getData?.('badgeLayer');
+    if (!layer) return;
 
-    // Control bar background
-    this.add.rectangle(GAME_WIDTH / 2, controlY, GAME_WIDTH, s(100), COLORS.bgLight, 0.95).setDepth(10);
+    layer.removeAll(true);
+    const badges = buildCultBadges(battler?.cultState, { max: 3 });
+    if (badges.length === 0) return;
+
+    const attach = container.getData('attach') || getUnitAttachments();
+    badges.forEach((badge, index) => {
+      const y = index * s(attach.badgeGap);
+      const label = badge.value === null ? badge.label : `${badge.label} ${badge.value}`;
+      const text = this.add.text(0, y, label, ts('num.sm', {
+        color: DESIGN.colors.text.primary
+      })).setOrigin(0, 0.5);
+
+      const padX = s(6);
+      const pill = this.add.graphics();
+      pill.fillStyle(badge.color, 0.85);
+      pill.fillRoundedRect(-padX, y - s(9), text.width + padX * 2, s(18), s(9));
+
+      layer.add([pill, text]);
+    });
+  }
+
+  /**
+   * 유닛의 교단 배지를 갱신한다 (턴 진행 중 표시 동기화).
+   * @param {object} battler
+   */
+  updateCultBadges(battler) {
+    const sprites = battler.isAlly ? this.allySprites : this.enemySprites;
+    const container = sprites?.[battler.position];
+    if (container) this.renderCultBadges(container, battler);
+  }
+
+  /**
+   * 적 실루엣 텍스처를 만들고 키를 돌려준다. 같은 색이면 다시 굽지 않는다.
+   * 분위기(mood)색 림라이트를 넣어 어떤 성향의 적인지 형태만으로 구분되게 한다.
+   *
+   * @param {object} battler
+   * @returns {string} 텍스처 키
+   */
+  ensureEnemySilhouette(battler) {
+    const mood = String(battler?.mood || 'brave').toUpperCase();
+    const color = MOOD_COLORS[mood] || MOOD_COLORS.BRAVE;
+    const big = !!battler?.isBoss;
+    const key = `enemy_sil_${color.toString(16)}_${big ? 'boss' : 'std'}`;
+    if (this.textures.exists(key)) return key;
+
+    const w = s(big ? 120 : 96);
+    const h = s(big ? 150 : 120);
+    const g = this.add.graphics();
+
+    // 몸통 — 어깨가 넓고 아래로 좁아지는 덩어리
+    const body = DESIGN.colors.bg.primary;
+    g.fillStyle(body, 1);
+    g.beginPath();
+    g.moveTo(w * 0.5, h * 0.20);
+    g.lineTo(w * 0.86, h * 0.44);
+    g.lineTo(w * 0.74, h * 1.0);
+    g.lineTo(w * 0.26, h * 1.0);
+    g.lineTo(w * 0.14, h * 0.44);
+    g.closePath();
+    g.fillPath();
+
+    // 머리
+    g.fillCircle(w * 0.5, h * 0.16, w * 0.17);
+
+    // 분위기색 림라이트 — 배경 위에서 형태가 사라지지 않게 한다
+    g.lineStyle(s(3), color, 0.95);
+    g.beginPath();
+    g.moveTo(w * 0.5, h * 0.20);
+    g.lineTo(w * 0.86, h * 0.44);
+    g.lineTo(w * 0.74, h * 1.0);
+    g.lineTo(w * 0.26, h * 1.0);
+    g.lineTo(w * 0.14, h * 0.44);
+    g.closePath();
+    g.strokePath();
+    g.strokeCircle(w * 0.5, h * 0.16, w * 0.17);
+
+    // 눈 — 실루엣이 이쪽을 보고 있다는 최소 신호
+    g.fillStyle(color, 1);
+    g.fillCircle(w * 0.40, h * 0.14, s(3));
+    g.fillCircle(w * 0.60, h * 0.14, s(3));
+
+    g.generateTexture(key, w, h);
+    g.destroy();
+    return key;
+  }
+
+  /**
+   * 유닛 컨테이너의 몸통 중앙 y. 유닛 원점이 발밑이라 이펙트·데미지 숫자를
+   * 그대로 두면 지면에서 터진다. 표시 좌표만 위로 올린다.
+   * @param {Phaser.GameObjects.Container} container
+   * @returns {number} 렌더 px
+   */
+  getUnitBodyY(container) {
+    return (container?.y ?? 0) - s(52);
+  }
+
+  createControlButtons() {
+    // §3-5: 하단 조작 대역 y=1216~1272. AUTO / 배속 / 퇴각
+    const bar = BATTLE_LAYOUT.control;
+    const controlY = s(bar.y + bar.h / 2);
+    const btnH = s(bar.h);
+
+    GlassPanel.create(this, {
+      x: GAME_WIDTH / 2,
+      y: controlY,
+      w: GAME_WIDTH,
+      h: btnH + s(8),
+      variant: GLASS_VARIANT.HUD,
+      bgKey: this.battleBgKey,
+      depth: BATTLE_DEPTH.hud
+    });
+
+    const accent = this.getBattleAccent();
 
     // Auto battle toggle
-    this.autoBtn = this.add.container(s(80), controlY).setDepth(11);
-    const autoBg = this.add.rectangle(0, 0, s(100), s(44), this.autoBattle ? COLORS.success : COLORS.bgLight, 1)
+    this.autoBtn = this.add.container(s(96), controlY).setDepth(BATTLE_DEPTH.hudContent);
+    const autoBg = this.add.rectangle(0, 0, s(136), btnH, this.autoBattle ? DESIGN.colors.status.success : DESIGN.colors.bg.surface, 1)
       .setInteractive({ useHandCursor: true })
-      .setStrokeStyle(s(2), COLORS.primary);
-    const autoText = this.add.text(0, 0, this.autoBattle ? 'AUTO ON' : 'AUTO OFF', {
-      fontSize: sf(12),
-      fontFamily: 'Noto Sans KR',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
+      .setStrokeStyle(s(2), this.autoBattle ? DESIGN.colors.status.success : DESIGN.effects.borderColor);
+    const autoText = this.add.text(0, 0, this.autoBattle ? 'AUTO ON' : 'AUTO OFF', ts('label', {
+      color: DESIGN.colors.text.primary,
       fontStyle: 'bold'
-    }).setOrigin(0.5);
+    })).setOrigin(0.5);
 
     this.autoBtn.add([autoBg, autoText]);
     this.autoBtn.setData('bg', autoBg);
@@ -1330,7 +1613,8 @@ export class BattleScene extends Phaser.Scene {
     autoBg.on('pointerdown', () => {
       this.autoBattle = !this.autoBattle;
       this.registry.set('autoBattle', this.autoBattle);
-      autoBg.setFillStyle(this.autoBattle ? COLORS.success : COLORS.bgLight, 1);
+      autoBg.setFillStyle(this.autoBattle ? DESIGN.colors.status.success : DESIGN.colors.bg.surface, 1);
+      autoBg.setStrokeStyle(s(2), this.autoBattle ? DESIGN.colors.status.success : DESIGN.effects.borderColor);
       autoText.setText(this.autoBattle ? 'AUTO ON' : 'AUTO OFF');
 
       console.log(`[Battle] Auto battle toggled: ${this.autoBattle ? 'ON' : 'OFF'}`);
@@ -1350,18 +1634,16 @@ export class BattleScene extends Phaser.Scene {
     // Speed buttons
     const speeds = [1, 2, 3];
     speeds.forEach((speed, index) => {
-      const x = s(200) + index * s(60);
-      const btn = this.add.container(x, controlY).setDepth(11);
+      const x = s(232) + index * s(76);
+      const btn = this.add.container(x, controlY).setDepth(BATTLE_DEPTH.hudContent);
 
       const isActive = this.battleSpeed === speed;
-      const bg = this.add.rectangle(0, 0, s(50), s(44), isActive ? COLORS.primary : COLORS.bgLight, 1)
+      const bg = this.add.rectangle(0, 0, s(68), btnH, isActive ? accent : DESIGN.colors.bg.surface, 1)
         .setInteractive({ useHandCursor: true })
-        .setStrokeStyle(s(1), COLORS.primary);
-      const text = this.add.text(0, 0, `${speed}x`, {
-        fontSize: sf(14),
-        fontFamily: 'Noto Sans KR',
-        color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
-      }).setOrigin(0.5);
+        .setStrokeStyle(s(1), isActive ? accent : DESIGN.effects.borderColor);
+      const text = this.add.text(0, 0, `${speed}x`, ts('num.md', {
+        color: DESIGN.colors.text.primary
+      })).setOrigin(0.5);
 
       btn.add([bg, text]);
       btn.setData('speed', speed);
@@ -1379,15 +1661,14 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // Retreat button
-    const retreatBtn = this.add.container(GAME_WIDTH - s(70), controlY).setDepth(11);
-    const retreatBg = this.add.rectangle(0, 0, s(100), s(44), COLORS.danger, 1)
-      .setInteractive({ useHandCursor: true });
-    const retreatText = this.add.text(0, 0, '퇴각', {
-      fontSize: sf(14),
-      fontFamily: 'Noto Sans KR',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
+    const retreatBtn = this.add.container(GAME_WIDTH - s(90), controlY).setDepth(BATTLE_DEPTH.hudContent);
+    const retreatBg = this.add.rectangle(0, 0, s(128), btnH, DESIGN.colors.bg.surface, 1)
+      .setInteractive({ useHandCursor: true })
+      .setStrokeStyle(s(2), DESIGN.colors.status.error, 0.8);
+    const retreatText = this.add.text(0, 0, '퇴각', ts('label', {
+      color: '#FCA5A5',
       fontStyle: 'bold'
-    }).setOrigin(0.5);
+    })).setOrigin(0.5);
 
     retreatBtn.add([retreatBg, retreatText]);
 
@@ -1400,11 +1681,14 @@ export class BattleScene extends Phaser.Scene {
 
   updateSpeedButtons() {
     if (!this.speedButtons) return;
+    const accent = this.getBattleAccent();
     this.speedButtons.forEach(btn => {
       const bg = btn.getData('bg');
       const speed = btn.getData('speed');
+      const isActive = this.battleSpeed === speed;
       if (bg && bg.setFillStyle) {
-        bg.setFillStyle(this.battleSpeed === speed ? COLORS.primary : COLORS.bgLight, 1);
+        bg.setFillStyle(isActive ? accent : DESIGN.colors.bg.surface, 1);
+        bg.setStrokeStyle(s(1), isActive ? accent : DESIGN.effects.borderColor);
       }
     });
   }
@@ -1419,66 +1703,90 @@ export class BattleScene extends Phaser.Scene {
     this.processTurn();
   }
 
+  /**
+   * 한 라운드 진행. 판정은 BattleSystem, 씬은 스케줄링과 연출만 맡는다.
+   *
+   * 예외 안전: 어떤 단계에서 예외가 나도 `isProcessingTurn`이 반드시 풀리고 다음 턴이
+   * 이어지게 한다. 연출 한 줄이 실패해 전투가 영원히 멈추는 상태(턴 잠금)를 막기 위해서다.
+   */
   processTurn() {
     if (this.battleEnded || this.isProcessingTurn) return;
 
     console.log(`[Battle] Processing turn ${this.turn + 1}, autoBattle: ${this.autoBattle}`);
 
     this.isProcessingTurn = true;
-    this.turn++;
-    this.turnText.setText(`Turn ${this.turn}`);
 
-    // 턴 순서 바 업데이트
-    this.updateTurnOrderBar();
-
-    // Sort battlers by speed
-    const activeBattlers = this.allBattlers.filter(b => b.isAlive);
-    activeBattlers.sort((a, b) => (b.stats?.spd || 0) - (a.stats?.spd || 0));
-
-    console.log(`[Battle] Turn order: ${activeBattlers.map(b => `${b.name}(${b.stats?.spd || 0})`).join(' > ')}`);
-
-    // 전투 이벤트 발행
-    this.emitBattleEvent('turnStart', { turn: this.turn, order: activeBattlers.map(b => b.name) });
-
-    // Process each battler's action
     let delay = 0;
-    const baseDelay = 1000 / this.battleSpeed;
 
-    activeBattlers.forEach((battler, index) => {
-      this.time.delayedCall(delay, () => {
-        if (this.battleEnded || !battler.isAlive) return;
-        this.executeBattlerAction(battler);
+    try {
+      this.turn++;
+      this.turnText.setText(`${this.turn}`);
 
-        // 턴 순서 바 현재 유닛 하이라이트
-        this.highlightCurrentTurnUnit(index);
+      // 턴 순서 바 업데이트
+      this.updateTurnOrderBar();
+
+      // 턴 순서는 BattleSystem이 결정한다 — 룬(SPD +15%) 같은 교단 보정이 반영된 실효 SPD 기준
+      this.battleSystem.turnCount = this.turn;
+      this.battleSystem.calculateTurnOrder();
+      const activeBattlers = this.battleSystem.turnOrder.filter(b => b.isAlive);
+
+      console.log(`[Battle] Turn order: ${activeBattlers.map(b => `${b.name}(${b.spd})`).join(' > ')}`);
+
+      // 전투 이벤트 발행
+      this.emitBattleEvent('turnStart', { turn: this.turn, order: activeBattlers.map(b => b.name) });
+
+      // Process each battler's action
+      const baseDelay = 1000 / this.battleSpeed;
+
+      activeBattlers.forEach((battler, index) => {
+        this.time.delayedCall(delay, () => {
+          if (this.battleEnded || !battler.isAlive) return;
+          try {
+            this.executeBattlerAction(battler);
+          } catch (error) {
+            // 한 유닛의 행동이 실패해도 라운드는 계속된다
+            console.error('[Battle] 행동 처리 실패:', battler?.name, error);
+          }
+
+          // 턴 순서 바 현재 유닛 하이라이트
+          this.highlightCurrentTurnUnit(index);
+        });
+        delay += baseDelay;
       });
-      delay += baseDelay;
-    });
+    } catch (error) {
+      console.error('[Battle] 턴 준비 실패:', error);
+    }
 
     // Check battle end and start next turn
     this.time.delayedCall(delay + 500 / this.battleSpeed, () => {
       this.isProcessingTurn = false;
 
-      if (this.checkBattleEnd()) return;
+      try {
+        if (this.checkBattleEnd()) return;
+      } catch (error) {
+        console.error('[Battle] 전투 종료 판정 실패:', error);
+        return;
+      }
 
       // AUTO ON: 자동 진행
       // AUTO OFF: 수동 입력 대기
       if (this.autoBattle) {
         this.processTurn();
-      } else {
-        console.log('[Battle] Waiting for manual input (AUTO OFF)');
-        this.waitingForManualInput = true;
+        return;
+      }
 
-        // 수동 턴 버튼 강조
-        if (this.manualTurnBtn) {
-          this.tweens.add({
-            targets: this.manualTurnBtn,
-            scale: 1.1,
-            duration: 300,
-            yoyo: true,
-            repeat: 2
-          });
-        }
+      console.log('[Battle] Waiting for manual input (AUTO OFF)');
+      this.waitingForManualInput = true;
+
+      // 수동 턴 버튼 강조
+      if (this.manualTurnBtn) {
+        this.tweens.add({
+          targets: this.manualTurnBtn,
+          scale: 1.1,
+          duration: 300,
+          yoyo: true,
+          repeat: 2
+        });
       }
     });
   }
@@ -1510,123 +1818,59 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 스마트 AI 타겟 선택
+   * 스마트 AI 타겟 선택 — 구현은 BattleSceneAdapter(순수 함수)에 있다.
    * 우선순위: 1) 힐러(healer) > 2) 상성 유리 > 3) 낮은 HP > 4) 고위협 대상
    */
   selectSmartTarget(battler, aliveTargets) {
-    if (aliveTargets.length === 1) return aliveTargets[0];
-
-    // 각 타겟에 점수 부여
-    const scored = aliveTargets.map(target => {
-      let score = 0;
-
-      // 1) HP 비율이 낮은 대상 선호 (처치 가능성)
-      const hpRatio = target.currentHp / target.maxHp;
-      score += (1 - hpRatio) * 30;
-
-      // 2) 상성 유리 대상 보너스
-      const matchup = this.getMoodMatchup(battler.mood, target.mood);
-      if (matchup.advantage === 'ADVANTAGE') score += 25;
-      else if (matchup.advantage === 'DISADVANTAGE') score -= 15;
-
-      // 3) 힐러/서포터 우선 제거 (적 진영)
-      const role = target.role || target.class || '';
-      if (role === 'healer') score += 20;
-      else if (role === 'mage') score += 10;
-
-      // 4) 높은 ATK 대상 우선 (위협 제거)
-      const atk = target.stats?.atk || 0;
-      score += atk / 20;
-
-      // 5) 처치 가능 대상 최우선 (킬 확인)
-      const estDmg = (battler.stats?.atk || 100) * 0.5;
-      if (target.currentHp <= estDmg) score += 40;
-
-      return { target, score };
-    });
-
-    // 점수 높은 순 정렬
-    scored.sort((a, b) => b.score - a.score);
-    return scored[0].target;
+    return selectSmartTarget(battler, aliveTargets, (a, d) => this.getMoodMatchup(a, d));
   }
 
   /**
-   * A-5: 카드 덱에서 사용 가능한 스킬 선택
-   * A-6: 스마트 AI 스킬/타겟 결정
+   * 턴 실행 — 판정은 BattleSystem, 씬은 연출만 한다.
+   *
+   * (b) 턴 시작: applyCultTurnStart() — 상태이상 틱(저주 도트/행동불가) +
+   *     교단 턴 시작 패시브(Holy Ward 방어막 / Glory Aura)
+   * (c) 행동 선택: BattleSystem.getAIAction() — 힐러 우선 / 게이지 스킬 판단.
+   *     단일 대상 공격에 한해 연출용 스마트 타겟으로 대상만 바꾼다.
    */
   executeBattlerAction(battler) {
     if (!battler.isAlive || this.battleEnded) return;
 
     console.log(`[Battle] ${battler.name} is taking action`);
 
-    const targets = battler.isAlly ? this.enemies : this.allies;
-    const aliveTargets = targets.filter(t => t.isAlive);
-    if (aliveTargets.length === 0) return;
+    // ── (b) 턴 시작 교단 훅 ──
+    const hpBeforeTick = battler.currentHp;
+    const cultTurn = this.battleSystem.applyCultTurnStart(battler);
+    const dotDamage = Math.max(0, hpBeforeTick - battler.currentHp);
+    if (dotDamage > 0) this.showDamage(battler, dotDamage, false, 'NEUTRAL');
+    this.updateBattlerUI(battler);
+    this.syncAfterResolve(cultTurn.effects);
 
-    // A-5: 스킬 목록 (basic, skill1, skill2)
-    const basicSkill = battler.skills?.find(sk => sk.id === 'basic') || battler.skills?.[0] || { name: '기본 공격', multiplier: 1.0, gaugeGain: 30 };
-    const skill1 = battler.skills?.find(sk => sk.id === 'skill1') || battler.skills?.[1];
-    const skill2 = battler.skills?.find(sk => sk.id === 'skill2') || battler.skills?.[2];
-
-    // A-6: 힐러 AI — HP 낮은 아군 힐 우선
-    const role = battler.role || battler.class || '';
-    if (role === 'healer' && battler.isAlly) {
-      const allies = this.allies.filter(a => a.isAlive);
-      const lowestHp = allies.reduce((min, a) => a.currentHp / a.maxHp < min.currentHp / min.maxHp ? a : min);
-      if (lowestHp.currentHp / lowestHp.maxHp < 0.5) {
-        const healSkill = battler.skills?.find(sk =>
-          sk.isHeal || sk.target === 'ally' || sk.target === 'all_allies' ||
-          sk.name?.includes('힐') || sk.name?.includes('치유') || sk.name?.includes('회복')
-        );
-        if (healSkill && battler.skillGauge >= (healSkill.gaugeCost || battler.maxSkillGauge)) {
-          this.playUltimateCutIn(battler, () => {
-            this._executeAttack(battler, lowestHp, healSkill.multiplier, healSkill.name, true, healSkill);
-          });
-          return;
-        }
-      }
+    if (!battler.isAlive) return;
+    if (cultTurn.blocked) {
+      this.addBattleLog(`${battler.name}은(는) 행동할 수 없다!`);
+      return;
     }
 
-    // A-6: 궁극기 사용 여부 결정 (스마트 로직)
-    let chosenSkill = basicSkill;
-    let isUltimate = false;
+    // ── (c) 행동 결정 ──
+    const action = decideSceneAction(this.battleSystem, battler, {
+      getMoodMatchup: (a, d) => this.getMoodMatchup(a, d)
+    });
+    if (!action) return;
 
-    // 스킬2 우선 체크 (더 강한 궁극기)
-    if (skill2 && battler.skillGauge >= (skill2.gaugeCost || 150)) {
-      // A-6.4: 보스전 보존 — 마지막 웨이브가 아닌 경우 보존
-      const shouldPreserve = this.stage?.waves && this.currentWave < (this.stage.waves.length || 1) - 1;
-      if (!shouldPreserve) {
-        chosenSkill = skill2;
-        isUltimate = true;
-      }
-    }
+    const target = action.targets[0];
+    const { skill, isUltimate } = action;
 
-    // 스킬1 체크
-    if (!isUltimate && skill1 && battler.skillGauge >= (skill1.gaugeCost || battler.maxSkillGauge)) {
-      // A-6.1: 광역 vs 단일 스킬 선택
-      if (skill1.target === 'all' && aliveTargets.length >= 3) {
-        chosenSkill = skill1;
-        isUltimate = true;
-      } else if (skill1.target !== 'all') {
-        chosenSkill = skill1;
-        isUltimate = true;
-      } else if (aliveTargets.length < 3 && skill1.target === 'all') {
-        // 적이 적으면 기본공격이 효율적
-        chosenSkill = basicSkill;
-        isUltimate = false;
-      }
-    }
+    // 궁극기 컷인 연출.
+    // _executeAttack은 async라 예외가 미처리 거부로 새어 나간다 — 여기서 붙잡아 로그만 남긴다.
+    const onActionError = (error) => console.error('[Battle] 공격 처리 실패:', battler?.name, error);
 
-    // 타겟 선택
-    const target = this.selectSmartTarget(battler, aliveTargets);
-
-    // 궁극기 컷인 연출
     if (isUltimate) {
       this.playUltimateCutIn(battler, () => {
-        this._executeAttack(battler, target, chosenSkill.multiplier, chosenSkill.name, true, chosenSkill);
+        this._executeAttack(battler, target, skill.multiplier, skill.name, true, skill).catch(onActionError);
       });
     } else {
-      this._executeAttack(battler, target, chosenSkill.multiplier, chosenSkill.name, false, chosenSkill);
+      this._executeAttack(battler, target, skill.multiplier, skill.name, false, skill).catch(onActionError);
     }
   }
 
@@ -1636,7 +1880,16 @@ export class BattleScene extends Phaser.Scene {
   async _executeAttack(battler, target, skillMultiplier, skillName, isUltimate, skill = null) {
     if (!target.isAlive || this.battleEnded) return;
 
-    // AoE 스킬: target: "all" → 살아있는 적 전체 공격
+    // MECH-02: 시전 훅 — 아군 대상 방어막/룬 계열은 피해 확정 전에 붙어야 한다
+    const castEffects = this.battleSystem.applyCultSkillUse(
+      battler,
+      [target],
+      skill || { id: 'basic', multiplier: skillMultiplier }
+    );
+    this.syncCultEffects(castEffects);
+    this.drainSystemLog();
+
+    // AoE 스킬: target: "all" → 살아있는 적 전체 공격 (대상당 배율은 어댑터가 단일 진실)
     if (isUltimate && skill?.target === 'all') {
       const targets = battler.isAlly ? this.enemies : this.allies;
       const aliveTargets = targets.filter(t => t.isAlive);
@@ -1644,7 +1897,9 @@ export class BattleScene extends Phaser.Scene {
         if (i > 0) {
           await new Promise(resolve => this.time.delayedCall(100 / this.battleSpeed, resolve));
         }
-        await this._executeSingleAttack(battler, aliveTargets[i], skillMultiplier * 0.7, skillName, isUltimate, skill);
+        await this._executeSingleAttack(
+          battler, aliveTargets[i], skillMultiplier * AOE_DAMAGE_MULTIPLIER, skillName, isUltimate, skill
+        );
       }
       // AoE 게이지 처리
       battler.skillGauge = 0;
@@ -1656,13 +1911,8 @@ export class BattleScene extends Phaser.Scene {
 
     await this._executeSingleAttack(battler, target, skillMultiplier, skillName, isUltimate, skill);
 
-    // 스킬 게이지 처리
-    const gaugeGain = skill?.gaugeGain || 30;
-    if (isUltimate) {
-      battler.skillGauge = 0;
-    } else {
-      battler.skillGauge = Math.min(battler.maxSkillGauge, battler.skillGauge + gaugeGain);
-    }
+    // 스킬 게이지 처리 (규칙은 어댑터가 단일 진실 — 시뮬레이터와 동일 경로)
+    applyGaugeAfterAction(battler, { skill, isUltimate });
     this.updateSkillGauge(battler);
 
     // 아군의 경우 스킬 카드 UI 업데이트
@@ -1677,9 +1927,8 @@ export class BattleScene extends Phaser.Scene {
   async _executeSingleAttack(battler, target, skillMultiplier, skillName, isUltimate, skill = null) {
     if (!target.isAlive || this.battleEnded) return;
 
-    // 힐 스킬 판정
-    const isHealSkill = skill?.isHeal || skill?.target === 'ally' || skill?.target === 'all_allies' ||
-      skill?.name?.includes('힐') || skill?.name?.includes('치유') || skill?.name?.includes('회복');
+    // 힐 스킬 판정 (씬·시스템 공통 규칙 — 어댑터가 단일 진실)
+    const isHeal = isHealSkill(skill);
 
     // Determine action type for animation system
     let actionType = 'basic_attack';
@@ -1693,7 +1942,7 @@ export class BattleScene extends Phaser.Scene {
       }
     } else if (skill?.id === 'skill1') {
       actionType = 'skill1';
-    } else if (isHealSkill) {
+    } else if (isHeal) {
       actionType = 'heal';
     }
 
@@ -1724,14 +1973,16 @@ export class BattleScene extends Phaser.Scene {
         onImpact: async () => {
           // All damage calculation and effects happen here (at impact moment)
 
-          if (isHealSkill) {
-            // ======== 힐 스킬 처리 ========
-            const baseHeal = (battler.stats?.atk || 100) * skillMultiplier;
+          if (isHeal) {
+            // ======== 힐 스킬 처리 — 회복량 보정(Round Table Bond)은 BattleSystem이 판단 ========
+            const healBonus = this.battleSystem.getCultHealMultiplier(battler);
+            const baseHeal = battler.atk * skillMultiplier * healBonus;
             const healAmount = Math.max(1, Math.floor(baseHeal * (0.9 + Math.random() * 0.2)));
 
-            target.currentHp = Math.min(target.maxHp, target.currentHp + healAmount);
+            const healResult = target.heal(healAmount);
+            const healed = healResult.actualHeal;
 
-            console.log(`[Battle] Heal: ${battler.name} -> ${target.name} +${healAmount} HP`);
+            console.log(`[Battle] Heal: ${battler.name} -> ${target.name} +${healed} HP (cult x${healBonus})`);
 
             // UI 업데이트
             this.updateBattlerUI(target);
@@ -1743,47 +1994,45 @@ export class BattleScene extends Phaser.Scene {
             this.showHealNumber(target, healAmount);
 
             // 로그
-            this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name} HP +${healAmount} 회복!`);
+            this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name} HP +${healed} 회복!`);
 
             // 턴 순서 바 업데이트
             this.updateTurnOrderBar();
             return;
           }
 
-          // ======== 공격 스킬 처리 ========
-          const baseDamage = battler.stats?.atk || 100;
-          const defense = target.stats?.def || 50;
+          // ======== 공격 스킬 처리 — 판정은 전부 BattleSystem.resolveDamage 단일 경로 ========
+          // 방어 감쇠·분위기 상성·교단 배율·크리티컬·분산 계산, 방어막 흡수, 적중 훅
+          // (Divine Charge / Doom / 반사), 사망 처리가 이 한 번의 호출 안에서 끝난다.
+          const { damage, damageResult, cultEffects } = this.battleSystem.resolveDamage(
+            battler,
+            target,
+            { ...(skill || {}), multiplier: skillMultiplier }
+          );
 
-          // 분위기(Mood) 상성 배율 계산
-          const moodResult = this.getMoodMatchup(battler.mood, target.mood);
-          const moodMultiplier = moodResult.multiplier;
+          const dealt = damageResult.actualDamage;
+          const isCrit = damage.isCrit;
+          const moodAdvantage = describeMoodAdvantage(damage.moodBonus);
 
-          // 크리티컬 계산
-          const critChance = battler.critRate || 0.1;
-          const isCrit = Math.random() < critChance;
-          const critMultiplier = isCrit ? (battler.critDmg || 1.5) : 1.0;
-
-          const damage = Math.max(1, Math.floor(
-            baseDamage * skillMultiplier * critMultiplier * moodMultiplier *
-            (1 - defense / (defense + 200)) * (0.9 + Math.random() * 0.2)
-          ));
-
-          console.log(`[Battle] Damage calc: base=${baseDamage}, skill=${skillMultiplier}x, crit=${critMultiplier}x, mood=${moodMultiplier}x, def=${defense}, final=${damage}`);
-          GameLogger.log('BATTLE', `${battler.name} → ${target.name}: ${damage}dmg (${skillName})`, { mood: battler.mood, crit: isCrit, moodAdv: moodResult.advantage });
-
-          // Apply damage
-          target.currentHp = Math.max(0, target.currentHp - damage);
+          GameLogger.log('BATTLE', `${battler.name} → ${target.name}: ${dealt}dmg (${skillName})`, {
+            mood: battler.mood, crit: isCrit, moodAdv: moodAdvantage, absorbed: damageResult.absorbed
+          });
 
           // A-8.3: 크리티컬 화면 흔들림 강화 (SkillAnimationManager가 기본 shake 처리, 추가 효과만)
           if (isCrit && !isUltimate) {
             this.cameras.main.shake(80, 0.003); // Reduced since SkillAnimationManager adds shake
           }
 
-          // Update UI
+          // Update UI (공격자도 반사 피해/게이지가 바뀔 수 있다)
           this.updateBattlerUI(target);
+          this.updateBattlerUI(battler);
 
-          // Show damage (상성 정보 포함)
-          this.showDamage(target, damage, isCrit, moodResult.advantage);
+          // Show damage (상성 정보 포함) — 방어막에 전부 막히면 흡수량을 대신 보여 준다
+          if (dealt > 0) {
+            this.showDamage(target, dealt, isCrit, moodAdvantage);
+          } else if (damageResult.absorbed > 0) {
+            this.showDamage(target, damageResult.absorbed, false, 'NEUTRAL');
+          }
 
           // Attack animation + A-8.1 스킬 이펙트 (keep existing effects)
           this.playAttackAnimation(battler, target, isCrit);
@@ -1791,30 +2040,59 @@ export class BattleScene extends Phaser.Scene {
 
           // Log
           const critText = isCrit ? ' (크리티컬!)' : '';
-          const moodText = moodResult.advantage === 'ADVANTAGE' ? ' (유리▲)' : moodResult.advantage === 'DISADVANTAGE' ? ' (불리▼)' : '';
-          this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name}에게 ${damage} 데미지${critText}${moodText}`);
+          const moodText = moodAdvantage === 'ADVANTAGE' ? ' (유리▲)' : moodAdvantage === 'DISADVANTAGE' ? ' (불리▼)' : '';
+          this.addBattleLog(`${battler.name}의 ${skillName}! ${target.name}에게 ${dealt} 데미지${critText}${moodText}`);
 
-          // 턴 순서 바 업데이트
-          this.updateTurnOrderBar();
-
-          // Check if target died
-          if (target.currentHp <= 0) {
-            target.isAlive = false;
-            this.playDeathAnimation(target);
-            this.addBattleLog(`${target.name} 쓰러짐!`);
-
-            // 전투 이벤트 발행
-            this.emitBattleEvent('unitDeath', { unit: target.name, killedBy: battler.name });
-          }
+          // 교단 효과 표시 + 시스템 로그 배출 + 사망 연출 + 턴 순서 바
+          this.syncAfterResolve(cultEffects);
         }
       }
     );
   }
 
 
+  /**
+   * BattleSystem이 쌓아 둔 로그를 화면 로그 대역으로 옮긴다.
+   * 교단 효과(Lightning Strike / 성스러운 가시 / 저주 도트)와 사망 문구가 이 경로로 뜬다.
+   */
+  drainSystemLog() {
+    if (!this.battleSystem) return;
+    const { messages, cursor } = drainBattleLog(this.battleSystem, this._battleLogCursor || 0);
+    this._battleLogCursor = cursor;
+    messages.forEach(message => this.addBattleLog(message));
+  }
+
+  /**
+   * 판정 결과로 죽은 유닛의 사망 연출을 재생한다.
+   * 반사·도트·추가 피해 등 죽는 경로가 여러 개라 개별 호출부가 아니라 스윕으로 감지한다.
+   */
+  syncDeaths() {
+    collectNewDeaths(this.allBattlers || []).forEach(unit => {
+      this.playDeathAnimation(unit);
+    });
+  }
+
+  /**
+   * 교단 효과가 건드린 유닛들의 HP·배지 표시를 갱신한다.
+   * @param {Array<object>} effects CultMechanicsSystem 효과 서술자
+   */
+  syncCultEffects(effects) {
+    affectedUnitsOf(effects).forEach(unit => this.updateBattlerUI(unit));
+  }
+
+  /**
+   * 한 행동이 끝난 뒤의 표시 동기화 묶음 (로그 → 사망 연출 → 턴 순서 바)
+   */
+  syncAfterResolve(effects = null) {
+    if (effects) this.syncCultEffects(effects);
+    this.drainSystemLog();
+    this.syncDeaths();
+    this.updateTurnOrderBar();
+  }
+
   updateBattlerUI(battler) {
     const sprites = battler.isAlly ? this.allySprites : this.enemySprites;
-    const sprite = sprites[battler.position];
+    const sprite = sprites?.[battler.position];
     if (!sprite) return;
 
     // UIX-2.6.1: Use enhanced HP bar
@@ -1822,6 +2100,9 @@ export class BattleScene extends Phaser.Scene {
     if (hpBar) {
       hpBar.updateHP(battler.currentHp, battler.maxHp, true);
     }
+
+    // MECH-02 표기: 교단 상태 배지 동기화 (표시 전용)
+    this.renderCultBadges(sprite, battler);
   }
 
   updateSkillGauge(battler) {
@@ -1863,7 +2144,7 @@ export class BattleScene extends Phaser.Scene {
       this.cameras.main.flash(150, 255, 200, 50, true);
     }
 
-    const dmgText = this.add.text(sprite.x, sprite.y - s(70), `-${damage}`, {
+    const dmgText = this.add.text(sprite.x, this.getUnitBodyY(sprite) - s(70), `-${damage}`, {
       fontSize, fontFamily: 'Noto Sans KR',
       color: `#${  color.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
@@ -1884,7 +2165,7 @@ export class BattleScene extends Phaser.Scene {
 
     // 상성 표시 (기존 유지 + 약간 개선)
     if (moodAdvantage === 'ADVANTAGE') {
-      const advLabel = this.add.text(sprite.x + s(45), sprite.y - s(75), '▲유리', {
+      const advLabel = this.add.text(sprite.x + s(45), this.getUnitBodyY(sprite) - s(75), '▲유리', {
         fontSize: sf(12), fontFamily: 'Noto Sans KR',
         color: '#FFD700', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: s(2)
@@ -1896,7 +2177,7 @@ export class BattleScene extends Phaser.Scene {
         onComplete: () => advLabel.destroy()
       });
     } else if (moodAdvantage === 'DISADVANTAGE') {
-      const disLabel = this.add.text(sprite.x + s(45), sprite.y - s(75), '▼불리', {
+      const disLabel = this.add.text(sprite.x + s(45), this.getUnitBodyY(sprite) - s(75), '▼불리', {
         fontSize: sf(12), fontFamily: 'Noto Sans KR',
         color: '#3498DB', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: s(2)
@@ -1911,7 +2192,7 @@ export class BattleScene extends Phaser.Scene {
 
     // A-8.3: 크리티컬 라벨 강화 (스케일 펀치)
     if (isCrit) {
-      const critLabel = this.add.text(sprite.x, sprite.y - s(100), '💥 CRITICAL!', {
+      const critLabel = this.add.text(sprite.x, this.getUnitBodyY(sprite) - s(100), 'CRITICAL!', {
         fontSize: sf(16), fontFamily: 'Noto Sans KR',
         color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold',
@@ -1981,7 +2262,7 @@ export class BattleScene extends Phaser.Scene {
 
       // 히트 이펙트
       const hitColor = isCrit ? COLORS.accent : 0xffffff;
-      const hitEffect = this.add.circle(targetSprite.x, targetSprite.y, s(5), hitColor, 0.8);
+      const hitEffect = this.add.circle(targetSprite.x, this.getUnitBodyY(targetSprite), s(5), hitColor, 0.8);
       hitEffect.setDepth(25);
 
       this.tweens.add({
@@ -2003,7 +2284,7 @@ export class BattleScene extends Phaser.Scene {
     for (let i = 0; i < 6; i++) {
       const shard = this.add.circle(
         sprite.x + Phaser.Math.Between(s(-15), s(15)),
-        sprite.y + Phaser.Math.Between(s(-15), s(15)),
+        this.getUnitBodyY(sprite) + Phaser.Math.Between(s(-15), s(15)),
         Phaser.Math.Between(s(2), s(5)),
         battler.isAlly ? COLORS.primary : COLORS.danger,
         0.8
@@ -2028,22 +2309,42 @@ export class BattleScene extends Phaser.Scene {
   }
 
   addBattleLog(message) {
-    // Simple floating log
-    const logText = this.add.text(GAME_WIDTH / 2, s(100), message, {
-      fontSize: sf(14),
-      fontFamily: 'Noto Sans KR',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
-      backgroundColor: 'rgba(0,0,0,0.7)',
-      padding: { x: s(10), y: s(5) }
-    }).setOrigin(0.5).setDepth(15);
+    // §3-5: HUD 위 토스트가 턴 순서 바를 덮던 문제 → 하단 전용 대역의 최근 2줄로 고정
+    this.battleLogs = pushLogLine(this.battleLogs, message, LOG_LINES);
+    this.renderLogBand();
+  }
 
-    this.tweens.add({
-      targets: logText,
-      y: logText.y - s(30),
-      alpha: 0,
-      duration: 2000 / this.battleSpeed,
-      delay: 1000 / this.battleSpeed,
-      onComplete: () => logText.destroy()
+  /**
+   * 로그 대역을 다시 그린다. 가장 최근 줄이 아래이고 밝다.
+   */
+  renderLogBand() {
+    if (!this.logTexts) return;
+    const lines = this.battleLogs || [];
+
+    this.logTexts.forEach((text, index) => {
+      const line = lines[index];
+      if (!line) {
+        text.setText('');
+        text.setAlpha(0);
+        return;
+      }
+      const isLatest = index === lines.length - 1;
+      text.setText(line);
+      text.setColor(isLatest ? DESIGN.colors.text.primary : DESIGN.colors.text.secondary);
+      text.setY(s(getLogLineY(index, lines.length)));
+
+      // 새 줄만 살짝 밀어 올리며 등장시킨다. 두 줄이 동시에 움직이면 읽히지 않는다
+      if (isLatest) {
+        text.setAlpha(0);
+        this.tweens.add({
+          targets: text,
+          alpha: 1,
+          duration: 220 / this.battleSpeed,
+          ease: 'Sine.easeOut'
+        });
+      } else {
+        text.setAlpha(0.9);
+      }
     });
   }
 
@@ -2088,11 +2389,9 @@ export class BattleScene extends Phaser.Scene {
       this.cameras.main.flash(400, 255, 215, 0, true);
 
       // 승리 텍스트
-      const victoryText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(50), '✨ VICTORY ✨', {
-        fontSize: sf(36), fontFamily: 'Georgia, serif',
-        color: '#FFD700', fontStyle: 'bold',
-        stroke: '#000000', strokeThickness: s(5)
-      }).setOrigin(0.5).setDepth(40).setScale(0);
+      const victoryText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(50), 'VICTORY', ts('display.xl', {
+        color: '#FFD60A', stroke: '#000000', strokeThickness: s(5)
+      })).setOrigin(0.5).setDepth(40).setScale(0);
 
       this.tweens.add({
         targets: victoryText,
@@ -2110,11 +2409,9 @@ export class BattleScene extends Phaser.Scene {
       this.cameras.main.fade(600, 50, 0, 0, true);
 
       // 패배 텍스트
-      const defeatText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(50), 'DEFEAT', {
-        fontSize: sf(36), fontFamily: 'Georgia, serif',
-        color: '#EF4444', fontStyle: 'bold',
-        stroke: '#000000', strokeThickness: s(5)
-      }).setOrigin(0.5).setDepth(40).setAlpha(0);
+      const defeatText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(50), 'DEFEAT', ts('display.xl', {
+        color: '#EF4444', stroke: '#000000', strokeThickness: s(5)
+      })).setOrigin(0.5).setDepth(40).setAlpha(0);
 
       this.tweens.add({
         targets: defeatText,
@@ -2207,7 +2504,9 @@ export class BattleScene extends Phaser.Scene {
       aliveCount,
       totalAllies,
       mode: this.mode,  // 추가: 보스전 모드 전달
-      towerFloor: this.towerFloor  // 추가: 타워 층 전달
+      towerFloor: this.towerFloor,  // 추가: 타워 층 전달
+      // T-Q3: 패배 화면 진단용 — 얼마나 근접했는지를 보여주면 재도전 동기가 유지된다
+      enemyHpRemainRatio: this._getEnemyHpRemainRatio()
     };
     this.time.delayedCall(800 / this.battleSpeed, () => {
       if (victory) {
@@ -2241,6 +2540,12 @@ export class BattleScene extends Phaser.Scene {
       HeroAssetLoader.unloadTextures(this, this._loadedHeroIds);
     }
 
+    // 판정 엔진의 이벤트 리스너 해제 (씬 재진입 시 중복 구독 방지)
+    if (this.battleSystem) {
+      this.battleSystem.cleanup();
+      this.battleSystem = null;
+    }
+
     this.time.removeAllEvents();
     this.tweens.killAll();
     this.battleEventListeners = [];
@@ -2250,4 +2555,18 @@ export class BattleScene extends Phaser.Scene {
       this.input.removeAllListeners();
     }
   }
+
+  /**
+   * 적 진영의 남은 HP 비율 (0~1). 패배 화면의 "적 체력 N% 남음" 표시에 쓴다.
+   * @returns {number}
+   */
+  _getEnemyHpRemainRatio() {
+    const enemies = Array.isArray(this.enemies) ? this.enemies : [];
+    if (enemies.length === 0) return 0;
+    const max = enemies.reduce((sum, e) => sum + (e.maxHp || 0), 0);
+    if (max <= 0) return 0;
+    const current = enemies.reduce((sum, e) => sum + Math.max(0, e.currentHp || 0), 0);
+    return Math.min(1, Math.max(0, current / max));
+  }
+
 }

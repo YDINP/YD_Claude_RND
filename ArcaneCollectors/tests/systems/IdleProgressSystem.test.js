@@ -71,6 +71,7 @@ vi.mock('../../src/data/index.ts', () => ({
 
 import { IdleProgressSystem } from '../../src/systems/IdleProgressSystem.js';
 import { SaveManager } from '../../src/systems/SaveManager.js';
+import { OFFLINE_REWARD_CAP_HOURS } from '../../src/config/onboardingConfig.js';
 
 describe('IdleProgressSystem', () => {
   let scene;
@@ -362,18 +363,21 @@ describe('IdleProgressSystem', () => {
       expect(rewards.progressGained).toBeGreaterThanOrEqual(0);
     });
 
-    it('caps offline rewards at 12 hours', () => {
-      const thirteenHoursAgo = Date.now() - (13 * 60 * 60 * 1000);
-      const maxMs = 12 * 60 * 60 * 1000;
+    it('caps offline rewards at the ISS-01 SSOT cap', () => {
+      // ISS-01 확정: 실제 지급 경로(SaveManager.claimOfflineRewards)가 24h 상한을 쓰므로
+      // 표시·누적 계산도 같은 상한을 쓴다. onboardingConfig 가 정본이다.
+      const capHours = IdleProgressSystem.MAX_OFFLINE_HOURS;
+      expect(capHours).toBe(OFFLINE_REWARD_CAP_HOURS);
 
-      const reward13h = idleSystem.calculateOfflineRewards(thirteenHoursAgo);
+      const maxMs = capHours * 60 * 60 * 1000;
+      const overCap = idleSystem.calculateOfflineRewards(Date.now() - (maxMs + 60 * 60 * 1000));
 
-      // Verify that duration is capped at 12 hours max
-      expect(reward13h.duration).toBe(maxMs);
+      // Verify that duration is capped
+      expect(overCap.duration).toBe(maxMs);
 
       // Verify rewards are non-zero (capped, but still rewarded)
-      expect(reward13h.gold).toBeGreaterThan(0);
-      expect(reward13h.exp).toBeGreaterThan(0);
+      expect(overCap.gold).toBeGreaterThan(0);
+      expect(overCap.exp).toBeGreaterThan(0);
     });
 
     it('generates items based on offline hours', () => {

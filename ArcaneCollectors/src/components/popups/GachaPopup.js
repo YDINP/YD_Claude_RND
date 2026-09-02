@@ -8,6 +8,7 @@ import { getCharacterOrHero } from '../../data/index.js';
 import { getRarityKey, getRarityNum } from '../../utils/rarityUtils.js';
 import { RateDisclosurePanel, renderRateTable } from './RateDisclosurePanel.js';
 import { collectLiveRateRows } from '../../utils/gachaRateDisclosure.js';
+import { TutorialTargetRegistry } from '../../systems/TutorialTargetRegistry.js';
 
 /**
  * GachaPopup - 소환 팝업
@@ -88,6 +89,22 @@ export class GachaPopup extends PopupBase {
     }
   }
 
+  /**
+   * 강제 스텝이 끝나면 닫기를 다시 허용한다.
+   * 잠금을 풀지 않으면 T-05 커밋 후에도 팝업을 닫을 수 없어 유저가 갇힌다(SPIKE §7-3 동일 취지).
+   */
+  unlockClose() {
+    this.onboarding = false;
+    if (this.closeBtn) {
+      this.closeBtn.setInteractive({ useHandCursor: true });
+      this.closeBtn.setAlpha(1);
+    }
+    if (this.overlay) {
+      this.overlay.setInteractive();
+    }
+    return this;
+  }
+
   /** 온보딩 모드 화면: 탭/단발/장비 숨김, 확률 고지 상시 노출, 첫 무료 10연 버튼만 */
   buildOnboardingContent() {
     const b = this.contentBounds;
@@ -124,6 +141,9 @@ export class GachaPopup extends PopupBase {
       COLORS.secondary,
       () => this.performFreeTenPull()
     );
+
+    // 튜토리얼 타깃 (T-05 강제 마스킹 홀)
+    TutorialTargetRegistry.register('gacha.button.multi_ticket', bg, this.scene?.scene?.key);
 
     if (alreadyUsed) {
       bg.disableInteractive();
@@ -504,9 +524,12 @@ export class GachaPopup extends PopupBase {
 
   showSummonAnimation(results) {
     // Create overlay
+    // 주의: 이 오버레이와 결과 컨테이너는 팝업 컨테이너의 자식이 아니다.
+    //       팝업만 닫으면 살아남아 전체 화면 입력을 삼키므로 인스턴스에 보관하고 destroy()에서 함께 정리한다.
     const overlay = this.scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0);
     overlay.setDepth(3000);
     overlay.setInteractive();
+    this._summonOverlay = overlay;
 
     this.scene.tweens.add({
       targets: overlay,
@@ -592,7 +615,9 @@ export class GachaPopup extends PopupBase {
   }
 
   showResults(results, overlay) {
+    // (결과 컨테이너는 아래에서 생성되는 즉시 인스턴스에 보관한다)
     const resultContainer = this.scene.add.container(0, 0).setDepth(3010);
+    this._summonResult = resultContainer;
 
     // Results background
     const resultBg = this.scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - s(60), GAME_HEIGHT - s(300), COLORS.backgroundLight, 0.95);
@@ -640,8 +665,28 @@ export class GachaPopup extends PopupBase {
     closeBg.on('pointerdown', () => {
       resultContainer.destroy();
       overlay.destroy();
+      this._summonResult = null;
+      this._summonOverlay = null;
       this.isAnimating = false;
     });
+  }
+
+  /** 결과 연출 잔여물 정리 — 남으면 depth 3000 오버레이가 모든 입력을 삼킨다 */
+  _clearSummonOverlay() {
+    if (this._summonResult) {
+      this._summonResult.destroy();
+      this._summonResult = null;
+    }
+    if (this._summonOverlay) {
+      this._summonOverlay.destroy();
+      this._summonOverlay = null;
+    }
+    this.isAnimating = false;
+  }
+
+  destroy() {
+    this._clearSummonOverlay();
+    super.destroy();
   }
 
   createHeroCard(container, x, y, hero) {
