@@ -20,7 +20,8 @@ vi.mock('../../src/systems/SaveManager.js', () => ({
     save: vi.fn(),
     addGold: vi.fn(),
     addGems: vi.fn(),
-    addSummonTickets: vi.fn()
+    addSummonTickets: vi.fn(),
+    addWorldTreeSeeds: vi.fn()
   }
 }));
 
@@ -257,6 +258,57 @@ describe('TowerSystem', () => {
         })
       );
     });
+
+    it('grants 1 world tree seed on a floor-20+ new-record clear (COLL-02)', () => {
+      SaveManager.load.mockReturnValue({
+        tower: {
+          currentFloor: 20,
+          highestFloor: 19,
+          totalClears: 0,
+          bossClears: {}
+        }
+      });
+
+      const result = TowerSystem.clearFloor(20, { victory: true });
+
+      expect(result.newHighFloor).toBe(true);
+      expect(result.rewards.worldTreeSeeds).toBe(1);
+      expect(SaveManager.addWorldTreeSeeds).toHaveBeenCalledWith(1);
+    });
+
+    it('does not grant a world tree seed on a new-record clear below floor 20', () => {
+      SaveManager.load.mockReturnValue({
+        tower: {
+          currentFloor: 19,
+          highestFloor: 18,
+          totalClears: 0,
+          bossClears: {}
+        }
+      });
+
+      const result = TowerSystem.clearFloor(19, { victory: true });
+
+      expect(result.newHighFloor).toBe(true);
+      expect(result.rewards.worldTreeSeeds).toBe(0);
+      expect(SaveManager.addWorldTreeSeeds).not.toHaveBeenCalled();
+    });
+
+    it('does not grant a world tree seed on a re-clear of an already-cleared floor 20', () => {
+      SaveManager.load.mockReturnValue({
+        tower: {
+          currentFloor: 20,
+          highestFloor: 20,
+          totalClears: 1,
+          bossClears: {}
+        }
+      });
+
+      const result = TowerSystem.clearFloor(20, { victory: true });
+
+      expect(result.newHighFloor).toBe(false);
+      expect(result.rewards.worldTreeSeeds).toBe(0);
+      expect(SaveManager.addWorldTreeSeeds).not.toHaveBeenCalled();
+    });
   });
 
   describe('nextFloor', () => {
@@ -279,6 +331,51 @@ describe('TowerSystem', () => {
       const result = TowerSystem.nextFloor();
 
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe('buildStageForFloor', () => {
+    it('expands {id,count} enemy defs into a flat {id,level} array', () => {
+      const floorInfo = {
+        enemies: [
+          { id: 'enemy_goblin', count: 3 },
+          { id: 'enemy_wolf', count: 2 }
+        ]
+      };
+
+      const stage = TowerSystem.buildStageForFloor(1, floorInfo);
+
+      expect(stage.enemies).toHaveLength(5);
+      expect(stage.enemies.filter(e => e.id === 'enemy_goblin')).toHaveLength(3);
+      expect(stage.enemies.filter(e => e.id === 'enemy_wolf')).toHaveLength(2);
+    });
+
+    it('clamps enemy level to floor/10 within [1, 10]', () => {
+      const floorInfo = { enemies: [{ id: 'enemy_slime', count: 1 }] };
+
+      expect(TowerSystem.buildStageForFloor(1, floorInfo).enemies[0].level).toBe(1);
+      expect(TowerSystem.buildStageForFloor(35, floorInfo).enemies[0].level).toBe(3);
+      expect(TowerSystem.buildStageForFloor(150, floorInfo).enemies[0].level).toBe(10);
+    });
+
+    it('formats stage id as tower_floor_N', () => {
+      const floorInfo = { enemies: [{ id: 'enemy_slime', count: 1 }] };
+
+      const stage = TowerSystem.buildStageForFloor(42, floorInfo);
+
+      expect(stage.id).toBe('tower_floor_42');
+      expect(stage.name).toContain('42');
+    });
+
+    it('handles missing count as 1 and empty enemies gracefully', () => {
+      const stage = TowerSystem.buildStageForFloor(1, { enemies: [{ id: 'enemy_boss' }] });
+      expect(stage.enemies).toEqual([{ id: 'enemy_boss', level: 1 }]);
+
+      const emptyStage = TowerSystem.buildStageForFloor(1, { enemies: [] });
+      expect(emptyStage.enemies).toEqual([]);
+
+      const nullStage = TowerSystem.buildStageForFloor(1, null);
+      expect(nullStage.enemies).toEqual([]);
     });
   });
 

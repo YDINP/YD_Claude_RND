@@ -9,3 +9,6 @@ export { EventDungeonPopup } from './EventDungeonPopup.js';
 export { AscensionPopup } from './AscensionPopup.js';
 export { PvPPopup } from './PvPPopup.js';
 export { GuildPopup } from './GuildPopup.js';
+export { RaidPopup } from './RaidPopup.js';
+export { FriendsPopup } from './FriendsPopup.js';
+export { CollectionPopup } from './CollectionPopup.js';

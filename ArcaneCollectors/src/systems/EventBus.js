@@ -176,6 +176,12 @@ export const GameEvents = {
   /** 캐릭터 장비 변경 */
   EQUIPMENT_CHANGED: 'equipment_changed',
 
+  // ========== 컬렉션 관련 (COLL-01) ==========
+  /** 컬렉션 진행도 갱신 */
+  COLLECTION_UPDATED: 'collection:updated',
+  /** 컬렉션 완성 (Tier2 달성) */
+  COLLECTION_COMPLETED: 'collection:completed',
+
   // ========== 전투 관련 ==========
   /** 전투 시작 */
   BATTLE_START: 'battle_start',

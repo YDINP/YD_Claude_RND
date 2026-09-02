@@ -36,7 +36,12 @@ export class SaveManager {
         gems: 2700,
         summonTickets: 10,
         skillBooks: 0,
-        characterShards: {}
+        characterShards: {},
+        // COLL-02: 진화/컬렉션 재화 (설계노트 §5)
+        worldTreeSeeds: 0,   // 세계수의 씨앗 - 추가 루트 개방
+        cultEssence: {},     // { [cultId]: number }
+        institutionSeal: 0,  // 각인서
+        awakeningFlame: 0    // 각성의 불꽃
       },
       characters: this._createStarterCharacters(), // 스타터 캐릭터 4명
       parties: [['char_1', 'char_2', 'char_3', 'char_4']], // 스타터 파티
@@ -72,6 +77,8 @@ export class SaveManager {
       // ========== 진화 시스템 ==========
       baseHeroes: [],        // [{ baseHeroId, fragmentCount, openedRoutes[] }]
       ascendedHeroes: [],    // [{ ascendedHeroId, baseHeroId, cultId, rarity, obtainedAt }]
+      // COLL-01: 컬렉션 (파생값 비저장 - obtained 목록만 저장)
+      collections: {},       // { [collectionId]: { obtained[], completedAt, titleClaimed } }
       lastOnline: Date.now(),
       lastLogoutTime: Date.now(), // 오프라인 보상 계산용
       createdAt: Date.now()
@@ -122,6 +129,9 @@ export class SaveManager {
       // CHAR-5: 피티 시스템 마이그레이션 (구버전 세이브 호환)
       if (!data.pity) data.pity = {};
 
+      // COLL-01/COLL-02: 컬렉션 필드 마이그레이션 (구버전 세이브 호환)
+      this._migrateCollectionSchema(data);
+
       return data;
     } catch (error) {
       console.error('SaveManager: 로드 실패', error);
@@ -152,6 +162,44 @@ export class SaveManager {
       }
       return hero;
     });
+  }
+
+  /**
+   * COLL-01/COLL-02: 컬렉션 관련 필드 기본값 보장 (구버전 세이브 마이그레이션)
+   * 파생값(tier/rate/bonus)은 저장하지 않으므로 보유 목록/재화만 채운다.
+   * @param {Object} data - 저장 데이터 (in-place)
+   * @returns {Object} 동일 객체
+   */
+  static _migrateCollectionSchema(data) {
+    if (!data) return data;
+    if (!data.collections || typeof data.collections !== 'object') data.collections = {};
+    if (!data.resources || typeof data.resources !== 'object') data.resources = {};
+
+    const r = data.resources;
+    if (r.worldTreeSeeds === undefined) r.worldTreeSeeds = 0;
+    if (!r.cultEssence || typeof r.cultEssence !== 'object') r.cultEssence = {};
+    if (r.institutionSeal === undefined) r.institutionSeal = 0;
+    if (r.awakeningFlame === undefined) r.awakeningFlame = 0;
+
+    if (!Array.isArray(data.baseHeroes)) data.baseHeroes = [];
+    data.baseHeroes.forEach(entry => {
+      if (entry && !Array.isArray(entry.openedRoutes)) entry.openedRoutes = [];
+    });
+
+    return data;
+  }
+
+  /**
+   * COLL-02: 세계수의 씨앗 증감
+   * @param {number} amount - 증가량 (음수 불가)
+   * @returns {number} 증가 후 보유량
+   */
+  static addWorldTreeSeeds(amount) {
+    const data = this.load();
+    const gain = Math.max(0, Math.floor(amount || 0));
+    data.resources.worldTreeSeeds = (data.resources.worldTreeSeeds || 0) + gain;
+    this.save(data);
+    return data.resources.worldTreeSeeds;
   }
 
   /**
@@ -226,6 +274,8 @@ export class SaveManager {
   static migrate(oldData) {
     const newData = { ...this.getDefaultSave(), ...oldData };
     newData.version = this.VERSION;
+    // COLL-01/COLL-02: 얕은 병합으로 덮인 resources/collections 기본값 재보장
+    this._migrateCollectionSchema(newData);
     this.save(newData);
     return newData;
   }

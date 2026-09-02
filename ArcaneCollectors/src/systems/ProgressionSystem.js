@@ -6,6 +6,7 @@ import { SaveManager } from './SaveManager.js';
 import { EventBus, GameEvents } from './EventBus.js';
 import { getRarityKey } from '../utils/rarityUtils.js';
 import { getCharacter } from '../data/index.js';
+import { CollectionSystem } from './CollectionSystem.js';
 
 export class ProgressionSystem {
   // 최대 레벨 (등급별)
@@ -428,6 +429,44 @@ export class ProgressionSystem {
   // ========== 전투력 계산 ==========
 
   /**
+   * COLL-01/C-4: 컬렉션 완성 보너스 배율 조회
+   * 단위 보너스(Tier1 +3% / Tier2 +6%) + 계정 공용 보너스(10/10 완성 시 ATK·DEF +2%)
+   * @param {Object} character 캐릭터 데이터
+   * @returns {Object} { hp, atk, def, spd } 배율 (0 = 보너스 없음)
+   */
+  static getCollectionBonus(character) {
+    const none = { hp: 0, atk: 0, def: 0, spd: 0 };
+    if (!character) return none;
+    try {
+      const heroId = character.sourceBaseHeroId || character.characterId || character.id;
+      return CollectionSystem.getStatMultipliers(heroId) || none;
+    } catch {
+      return none;
+    }
+  }
+
+  /**
+   * 캐릭터 최종 스탯 (성급 보너스 + 컬렉션 완성 보너스 반영)
+   * 전투력 계산의 SSOT — 스탯 표시 UI도 이 메서드를 사용한다.
+   * @param {Object} character 캐릭터 데이터
+   * @returns {Object} { hp, atk, def, spd }
+   */
+  static getFinalStats(character) {
+    if (!character) return { hp: 0, atk: 0, def: 0, spd: 0 };
+
+    const stats = this.getStatsAtLevel(character.characterId, character.level);
+    const starBonus = this.getStarBonus(character.stars);
+    const collectionBonus = this.getCollectionBonus(character);
+
+    return {
+      hp: Math.floor(stats.hp * (1 + starBonus.hp / 100) * (1 + collectionBonus.hp)),
+      atk: Math.floor(stats.atk * (1 + starBonus.atk / 100) * (1 + collectionBonus.atk)),
+      def: Math.floor(stats.def * (1 + starBonus.def / 100) * (1 + collectionBonus.def)),
+      spd: Math.floor(stats.spd * (1 + starBonus.spd / 100) * (1 + collectionBonus.spd))
+    };
+  }
+
+  /**
    * 캐릭터 전투력 계산
    * @param {Object} character 캐릭터 데이터
    * @returns {number} 전투력
@@ -435,16 +474,7 @@ export class ProgressionSystem {
   static calculatePower(character) {
     if (!character) return 0;
 
-    const stats = this.getStatsAtLevel(character.characterId, character.level);
-    const starBonus = this.getStarBonus(character.stars);
-
-    // 성급 보너스 적용
-    const finalStats = {
-      hp: Math.floor(stats.hp * (1 + starBonus.hp / 100)),
-      atk: Math.floor(stats.atk * (1 + starBonus.atk / 100)),
-      def: Math.floor(stats.def * (1 + starBonus.def / 100)),
-      spd: Math.floor(stats.spd * (1 + starBonus.spd / 100))
-    };
+    const finalStats = this.getFinalStats(character);
 
     // 스킬 레벨 보너스
     const skillBonus = character.skillLevels.reduce((sum, lv) => sum + lv, 0) * 10;
@@ -491,6 +521,9 @@ export class ProgressionSystem {
       maxLevel,
       stats,
       starBonus,
+      // COLL-01/C-4: 컬렉션 완성 보너스 (기존 stats 필드는 하위 호환 위해 유지)
+      collectionBonus: this.getCollectionBonus(character),
+      finalStats: this.getFinalStats(character),
       power,
       expProgress: {
         current: character.exp,

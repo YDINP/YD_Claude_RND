@@ -11,6 +11,7 @@ import { EventBus, GameEvents } from './EventBus.js';
 import { SaveManager } from './SaveManager.js';
 import { getCharacter, getCharacterOrHero } from '../data/index.js';
 import { AttackCommand, SkillCommand, DefendCommand } from './commands/index.js';
+import { CultMechanicsSystem } from './CultMechanicsSystem.js';
 
 // ============================================
 // Strategy Pattern: 스킬 효과 전략
@@ -29,22 +30,22 @@ class SkillStrategy {
  * 기본 공격 전략
  */
 class BasicAttackStrategy extends SkillStrategy {
-  execute(attacker, targets, battleSystem) {
+  execute(attacker, targets, battleSystem, skill = null) {
     console.log(`[Battle] BasicAttackStrategy: ${attacker.name} attacks`);
     const results = [];
 
     targets.forEach(target => {
       if (!target.isAlive) return;
 
-      const damage = battleSystem.calculateDamage(attacker, target, { multiplier: 1 });
-      const damageResult = target.takeDamage(damage.finalDamage);
+      const resolved = battleSystem.resolveDamage(attacker, target, { ...(skill || {}), multiplier: 1 });
 
       results.push({
         target: target.id,
         type: 'damage',
-        amount: damageResult.actualDamage,
-        isCrit: damage.isCrit,
-        isDead: damageResult.isDead
+        amount: resolved.damageResult.actualDamage,
+        isCrit: resolved.damage.isCrit,
+        isDead: resolved.damageResult.isDead,
+        cultEffects: resolved.cultEffects
       });
 
       // 게이지 충전
@@ -59,23 +60,23 @@ class BasicAttackStrategy extends SkillStrategy {
  * 강력 일격 전략
  */
 class PowerStrikeStrategy extends SkillStrategy {
-  execute(attacker, targets, battleSystem) {
+  execute(attacker, targets, battleSystem, skill = null) {
     console.log(`[Battle] PowerStrikeStrategy: ${attacker.name} uses Power Strike`);
     const results = [];
 
     targets.forEach(target => {
       if (!target.isAlive) return;
 
-      const damage = battleSystem.calculateDamage(attacker, target, { multiplier: 2.5 });
-      const damageResult = target.takeDamage(damage.finalDamage);
+      const resolved = battleSystem.resolveDamage(attacker, target, { ...(skill || {}), multiplier: 2.5 });
 
       results.push({
         target: target.id,
         type: 'damage',
-        amount: damageResult.actualDamage,
-        isCrit: damage.isCrit,
-        isDead: damageResult.isDead,
-        isSkill: true
+        amount: resolved.damageResult.actualDamage,
+        isCrit: resolved.damage.isCrit,
+        isDead: resolved.damageResult.isDead,
+        isSkill: true,
+        cultEffects: resolved.cultEffects
       });
     });
 
@@ -90,14 +91,15 @@ class PowerStrikeStrategy extends SkillStrategy {
  * 힐 전략
  */
 class HealStrategy extends SkillStrategy {
-  execute(attacker, targets, battleSystem) {
+  execute(attacker, targets, battleSystem, skill = null) {
     console.log(`[Battle] HealStrategy: ${attacker.name} heals`);
     const results = [];
+    const healBonus = battleSystem.getCultHealMultiplier(attacker);
 
     targets.forEach(target => {
       if (!target.isAlive) return;
 
-      const healAmount = Math.floor(attacker.atk * 2);
+      const healAmount = Math.floor(attacker.atk * HEAL_STRATEGY_MULTIPLIER * healBonus);
       const healResult = target.heal(healAmount);
 
       results.push({
@@ -118,7 +120,7 @@ class HealStrategy extends SkillStrategy {
  * 전체 공격 전략
  */
 class AoeAttackStrategy extends SkillStrategy {
-  execute(attacker, targets, battleSystem) {
+  execute(attacker, targets, battleSystem, skill = null) {
     console.log(`[Battle] AoeAttackStrategy: ${attacker.name} uses AOE attack`);
     const results = [];
 
@@ -126,16 +128,16 @@ class AoeAttackStrategy extends SkillStrategy {
       if (!target.isAlive) return;
 
       // AOE는 데미지가 70%
-      const damage = battleSystem.calculateDamage(attacker, target, { multiplier: 1.5 });
-      const damageResult = target.takeDamage(damage.finalDamage);
+      const resolved = battleSystem.resolveDamage(attacker, target, { ...(skill || {}), multiplier: 1.5 });
 
       results.push({
         target: target.id,
         type: 'damage',
-        amount: damageResult.actualDamage,
-        isCrit: damage.isCrit,
-        isDead: damageResult.isDead,
-        isAoe: true
+        amount: resolved.damageResult.actualDamage,
+        isCrit: resolved.damage.isCrit,
+        isDead: resolved.damageResult.isDead,
+        isAoe: true,
+        cultEffects: resolved.cultEffects
       });
     });
 
@@ -145,6 +147,9 @@ class AoeAttackStrategy extends SkillStrategy {
     return results;
   }
 }
+
+// 힐 전략 기본 배율 (ATK 대비)
+const HEAL_STRATEGY_MULTIPLIER = 2;
 
 // 스킬 전략 맵
 const SKILL_STRATEGIES = {
@@ -282,6 +287,24 @@ class SynergyCalculator {
 }
 
 /**
+ * 캐릭터 데이터에서 교단 ID 해석
+ * characters.json은 `cult`, ascended-heroes.json은 `cultId` 필드를 쓴다.
+ * @param {Object} characterData 캐릭터 데이터
+ * @returns {string|null} 교단 ID
+ */
+function resolveCultId(characterData) {
+  if (characterData?.cultId) return characterData.cultId;
+  if (characterData?.cult) return characterData.cult;
+  try {
+    if (typeof getCharacterOrHero !== 'function') return null;
+    const found = getCharacterOrHero(characterData?.id);
+    return found?.cultId || found?.cult || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * 전투 유닛 클래스
  */
 export class BattleUnit {
@@ -299,6 +322,10 @@ export class BattleUnit {
     this.isEnemy = isEnemy;
     this.mood = characterData.mood || 'neutral';
     this.rarity = characterData.rarity || 'N';
+
+    // MECH-02: 교단 소속 + 교단 런타임 상태 (divinity/doom/barrier/rune/statuses)
+    this.cult = resolveCultId(characterData);
+    this.cultState = CultMechanicsSystem.createCultState();
 
     // 스탯 계산
     this.maxHp = this.calculateStat('hp');
@@ -370,9 +397,17 @@ export class BattleUnit {
    * @param {number} amount 피해량
    * @returns {Object} { actualDamage, isDead }
    */
-  takeDamage(amount) {
-    // 방어력 적용
-    const actualDamage = Math.max(1, Math.floor(amount));
+  takeDamage(amount, context = {}) {
+    const incoming = Math.max(1, Math.floor(amount));
+
+    // MECH-02: 피해 확정 전 흡수 (Holy Ward 방어막 / Rune Shield)
+    const absorb = CultMechanicsSystem.beforeDamage({
+      target: this,
+      attacker: context.attacker || null,
+      damage: incoming
+    });
+
+    const actualDamage = absorb.damage;
     this.currentHp = Math.max(0, this.currentHp - actualDamage);
 
     if (this.currentHp <= 0) {
@@ -383,7 +418,9 @@ export class BattleUnit {
     return {
       actualDamage,
       remainingHp: this.currentHp,
-      isDead: !this.isAlive
+      isDead: !this.isAlive,
+      absorbed: absorb.absorbed,
+      reflect: absorb.reflect
     };
   }
 
@@ -616,6 +653,9 @@ export class BattleSystem {
       unit.debuffs = [];
     });
 
+    // MECH-02: 교단 런타임 상태 초기화
+    CultMechanicsSystem.onBattleStart([...this.allies, ...this.enemies]);
+
     // 시너지 계산 및 적용
     this.synergyBuffs = SynergyCalculator.calculate(this.allies);
     SynergyCalculator.apply(this.allies, this.synergyBuffs);
@@ -659,7 +699,9 @@ export class BattleSystem {
    */
   calculateTurnOrder() {
     const allUnits = [...this.allies, ...this.enemies].filter(u => u.isAlive);
-    this.turnOrder = allUnits.sort((a, b) => b.spd - a.spd);
+    this.turnOrder = allUnits.sort(
+      (a, b) => CultMechanicsSystem.getEffectiveSpd(b) - CultMechanicsSystem.getEffectiveSpd(a)
+    );
     this.currentTurnIndex = 0;
 
     console.log('[Battle] Turn order calculated:', this.turnOrder.map(u => `${u.name}(SPD:${u.spd})`).join(' > '));
@@ -725,27 +767,41 @@ export class BattleSystem {
     // PAT-1.1: 만료된 버프 해제 (방어 커맨드 등)
     this._processExpiredBuffs(unit);
 
+    // MECH-02: 교단 턴 시작 훅 (상태이상 틱 + Holy Ward / Glory Aura)
+    const cultTurn = this.applyCultTurnStart(unit);
+
     this.setState(BattleState.PROCESSING_ACTION);
 
-    // AI 액션 결정
-    const action = this.getAIAction(unit);
-
-    console.log(`[Battle] AI decision: ${action.skill.name} -> ${action.targets.map(t => t.name).join(', ')}`);
-
-    // Strategy Pattern: 스킬 전략 실행
-    const strategy = SKILL_STRATEGIES[action.skill.id] || SKILL_STRATEGIES.basic;
     let turnResult;
 
-    if (strategy) {
-      const results = strategy.execute(unit, action.targets, this);
+    if (cultTurn.blocked) {
+      this.log(`${unit.name}은(는) 행동할 수 없다!`);
+      turnResult = {
+        attacker: unit.id,
+        skill: null,
+        results: [],
+        blockedBy: cultTurn.blockedBy,
+        cultEffects: cultTurn.effects
+      };
+    } else {
+      // AI 액션 결정
+      const action = this.getAIAction(unit);
+
+      console.log(`[Battle] AI decision: ${action.skill.name} -> ${action.targets.map(t => t.name).join(', ')}`);
+
+      // MECH-02: 시전 훅 (아군 방어막/룬 계열)
+      const castEffects = this.applyCultSkillUse(unit, action.targets, action.skill);
+
+      // Strategy Pattern: 스킬 전략 실행
+      const strategy = SKILL_STRATEGIES[action.skill.id] || SKILL_STRATEGIES.basic;
+      const results = strategy.execute(unit, action.targets, this, action.skill);
+
       turnResult = {
         attacker: unit.id,
         skill: action.skill.id,
-        results
+        results,
+        cultEffects: [...cultTurn.effects, ...castEffects]
       };
-    } else {
-      // 폴백: 기존 방식
-      turnResult = this.executeAction(unit, action.skill, action.targets);
     }
 
     this.setState(BattleState.TURN_END);
@@ -787,12 +843,15 @@ export class BattleSystem {
 
     const results = [];
 
+    // MECH-02: 시전 훅 (아군 방어막/룬 계열)
+    const castEffects = this.applyCultSkillUse(unit, targets, skill);
+
     targets.forEach(target => {
       if (!target.isAlive) return;
 
       if (skill.isHeal) {
-        // 힐 스킬
-        const healAmount = Math.floor(unit.atk * skill.multiplier);
+        // 힐 스킬 (Round Table Bond 보정)
+        const healAmount = Math.floor(unit.atk * skill.multiplier * this.getCultHealMultiplier(unit));
         const healResult = target.heal(healAmount);
         results.push({
           target: target.id,
@@ -811,8 +870,7 @@ export class BattleSystem {
         });
       } else {
         // 공격 스킬
-        const damage = this.calculateDamage(unit, target, skill);
-        const damageResult = target.takeDamage(damage.finalDamage);
+        const { damage, damageResult, cultEffects } = this.resolveDamage(unit, target, skill);
 
         results.push({
           target: target.id,
@@ -820,7 +878,8 @@ export class BattleSystem {
           amount: damageResult.actualDamage,
           isCrit: damage.isCrit,
           moodBonus: damage.moodBonus,
-          isDead: damageResult.isDead
+          isDead: damageResult.isDead,
+          cultEffects
         });
 
         const critText = damage.isCrit ? '크리티컬! ' : '';
@@ -836,17 +895,6 @@ export class BattleSystem {
           isCrit: damage.isCrit,
           moodBonus: damage.moodBonus
         });
-
-        if (damageResult.isDead) {
-          this.log(`${target.name} 쓰러짐!`);
-          console.log(`[Battle] Unit died: ${target.name}`);
-
-          // Observer Pattern: 사망 이벤트
-          this.emit('unitDeath', {
-            unit: target.id,
-            killedBy: unit.id
-          });
-        }
 
         // 최고 데미지 기록
         SaveManager.updateHighestDamage(damageResult.actualDamage);
@@ -866,8 +914,150 @@ export class BattleSystem {
     return {
       attacker: unit.id,
       skill: skill.id,
-      results
+      results,
+      cultEffects: castEffects
     };
+  }
+
+  // ============================================
+  // MECH-02: 교단 메커니즘 훅 (CultMechanicsSystem 위임)
+  // ============================================
+
+  /**
+   * 유닛 기준 진영 조회
+   * @param {BattleUnit} unit 기준 유닛
+   * @returns {Object} { allies, enemies }
+   */
+  getSideOf(unit) {
+    return unit?.isEnemy
+      ? { allies: this.enemies, enemies: this.allies }
+      : { allies: this.allies, enemies: this.enemies };
+  }
+
+  /**
+   * 교단 회복 배율 (Avalon - Round Table Bond)
+   * @param {BattleUnit} healer 시전자
+   * @returns {number} 배율 (아발론 아군 없으면 1)
+   */
+  getCultHealMultiplier(healer) {
+    return CultMechanicsSystem.getHealMultiplier(healer, this.getSideOf(healer).allies);
+  }
+
+  /**
+   * 턴 시작 교단 훅 — 상태이상 틱(DoT/행동불가) + 턴 시작 패시브
+   * @param {BattleUnit} unit 행동 유닛
+   * @returns {Object} { blocked, blockedBy, dotDamage, effects }
+   */
+  applyCultTurnStart(unit) {
+    const side = this.getSideOf(unit);
+    const turn = CultMechanicsSystem.onTurnStart({
+      unit,
+      allies: side.allies.filter(u => u.isAlive),
+      enemies: side.enemies.filter(u => u.isAlive),
+      turn: this.turnCount
+    });
+
+    if (turn.dotDamage > 0) {
+      const dotResult = unit.takeDamage(turn.dotDamage, { isCultEffect: true });
+      this.log(`${unit.name}이(가) 저주로 ${dotResult.actualDamage} 피해!`);
+      if (dotResult.isDead) this.handleUnitDeath(unit, null);
+    }
+
+    return { ...turn, blocked: turn.blocked || !unit.isAlive };
+  }
+
+  /**
+   * 스킬 시전 교단 훅 — 아군 대상 방어막/룬 계열 (피해 확정 전)
+   * @param {BattleUnit} attacker 시전자
+   * @param {Array<BattleUnit>} targets 대상
+   * @param {Object} skill 스킬
+   * @returns {Array<Object>} 효과 서술자
+   */
+  applyCultSkillUse(attacker, targets, skill) {
+    const side = this.getSideOf(attacker);
+    return CultMechanicsSystem.onSkillUse({
+      attacker,
+      targets,
+      skill,
+      allies: side.allies,
+      enemies: side.enemies
+    });
+  }
+
+  /**
+   * 피해 해결 — 계산 → 적용 → 교단 적중 훅 → 반사 → 사망 처리
+   * 모든 스킬 전략과 executeAction이 공유하는 단일 경로
+   * @param {BattleUnit} attacker 공격자
+   * @param {BattleUnit} target 대상
+   * @param {Object} skill 스킬
+   * @returns {Object} { damage, damageResult, cultEffects }
+   */
+  resolveDamage(attacker, target, skill) {
+    const damage = this.calculateDamage(attacker, target, skill);
+    const damageResult = target.takeDamage(damage.finalDamage, { attacker, skill });
+    CultMechanicsSystem.consumeRuneburst(attacker);
+
+    const cultEffects = this.applyCultHits(attacker, target, skill);
+
+    if (damageResult.reflect > 0 && attacker.isAlive) {
+      const reflected = attacker.takeDamage(damageResult.reflect, { attacker: target, isReflect: true });
+      this.log(`${target.name}의 성스러운 가시! ${attacker.name}에게 ${reflected.actualDamage} 반사 피해!`);
+      cultEffects.push({ kind: 'reflect', targetId: attacker.id, amount: reflected.actualDamage });
+      if (reflected.isDead) this.handleUnitDeath(attacker, target);
+    }
+
+    if (damageResult.isDead) this.handleUnitDeath(target, attacker);
+
+    return { damage, damageResult, cultEffects };
+  }
+
+  /**
+   * 교단 적중 훅 실행 + 추가 피해 적용
+   * @param {BattleUnit} attacker 공격자
+   * @param {BattleUnit} target 대상
+   * @param {Object} skill 스킬
+   * @returns {Array<Object>} 적용된 효과 서술자
+   */
+  applyCultHits(attacker, target, skill) {
+    const side = this.getSideOf(attacker);
+    const effects = CultMechanicsSystem.onHit({
+      attacker,
+      target,
+      skill,
+      allies: side.allies,
+      enemies: side.enemies
+    });
+
+    return effects.map(effect => {
+      if (effect.kind !== 'extraDamage' || !effect.target?.isAlive) return effect;
+
+      const extra = effect.target.takeDamage(effect.amount, { attacker, isCultEffect: true });
+      this.log(`${attacker.name}의 ${effect.label}! ${effect.target.name}에게 ${extra.actualDamage} 추가 피해!`);
+      if (extra.isDead) this.handleUnitDeath(effect.target, attacker);
+
+      return { ...effect, applied: extra.actualDamage };
+    });
+  }
+
+  /**
+   * 사망 처리 — 로그/이벤트 + 교단 사망 훅 (Doom 전이, Bifrost Link)
+   * @param {BattleUnit} unit 사망 유닛
+   * @param {BattleUnit|null} killer 처치자
+   * @returns {Array<Object>} 효과 서술자
+   */
+  handleUnitDeath(unit, killer) {
+    this.log(`${unit.name} 쓰러짐!`);
+    console.log(`[Battle] Unit died: ${unit.name}`);
+
+    this.emit('unitDeath', { unit: unit.id, killedBy: killer?.id || null });
+
+    const side = this.getSideOf(unit);
+    return CultMechanicsSystem.onDeath({
+      unit,
+      killer,
+      allies: side.allies,
+      enemies: side.enemies
+    });
   }
 
   /**
@@ -878,17 +1068,19 @@ export class BattleSystem {
    * @returns {Object} { baseDamage, finalDamage, isCrit, moodBonus }
    */
   calculateDamage(attacker, defender, skill) {
-    // 기본 데미지 = ATK * 배율
+    // 기본 데미지 = (ATK + 교단 플랫 보너스) * 배율
     const multiplier = skill.multiplier || 1;
-    let baseDamage = attacker.atk * multiplier;
+    const effectiveAtk = attacker.atk + CultMechanicsSystem.getFlatAtkBonus(attacker);
+    let baseDamage = effectiveAtk * multiplier;
 
-    console.log(`[Battle] Damage calc start: ATK=${attacker.atk}, multiplier=${multiplier}, base=${baseDamage}`);
+    console.log(`[Battle] Damage calc start: ATK=${effectiveAtk}, multiplier=${multiplier}, base=${baseDamage}`);
 
-    // 방어력 적용 (1 - DEF/1000, 최소 10%)
-    const defReduction = Math.min(0.9, defender.def / 1000);
+    // 방어력 적용 (1 - DEF/1000, 최소 10%) — 룬 방어 보정 반영
+    const effectiveDef = CultMechanicsSystem.getEffectiveDef(defender);
+    const defReduction = Math.min(0.9, effectiveDef / 1000);
     baseDamage *= (1 - defReduction);
 
-    console.log(`[Battle] After DEF reduction (${defender.def}): ${baseDamage.toFixed(0)}`);
+    console.log(`[Battle] After DEF reduction (${effectiveDef}): ${baseDamage.toFixed(0)}`);
 
     // 분위기 상성
     const moodBonus = this.getMoodBonus(attacker.mood, defender.mood);
@@ -897,6 +1089,12 @@ export class BattleSystem {
     if (moodBonus !== 0) {
       console.log(`[Battle] Mood bonus (${attacker.mood} vs ${defender.mood}): ${moodBonus > 0 ? '+' : ''}${(moodBonus * 100).toFixed(0)}%`);
     }
+
+    // MECH-02: 교단 메커니즘 배율 (룬/Runeburst/Glory Aura/Underworld Link × Thunderstruck 증폭)
+    const cultMultiplier =
+      CultMechanicsSystem.getOutgoingDamageMultiplier(attacker, { allies: this.getSideOf(attacker).allies }) *
+      CultMechanicsSystem.getIncomingDamageMultiplier(defender);
+    baseDamage *= cultMultiplier;
 
     // 크리티컬
     const isCrit = Math.random() < attacker.critRate;
@@ -915,7 +1113,8 @@ export class BattleSystem {
       baseDamage: Math.floor(baseDamage),
       finalDamage,
       isCrit,
-      moodBonus: moodBonus * 100 // 퍼센트로 변환
+      moodBonus: moodBonus * 100, // 퍼센트로 변환
+      cultMultiplier
     };
   }
 

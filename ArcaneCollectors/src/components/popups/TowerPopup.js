@@ -262,13 +262,19 @@ export class TowerPopup extends PopupBase {
 
     energySystem.consumeEnergy(energyCost);
 
+    // TOWER_AUDIT B-6: BattleScene은 data.stage만 소비하므로
+    // TowerScene과 동일하게 TowerSystem.buildStageForFloor로 stage.enemies({id,level}) 배열을 구성해 전달
+    const floor = this.progress.currentFloor;
+    const stage = TowerSystem.buildStageForFloor(floor, this.currentFloorInfo);
+
     // 팝업을 먼저 닫고, 완전히 닫힌 후 전투 시작
     this.hide();
 
     this.scene.time.delayedCall(200, () => {
       transitionManager.battleEntryTransition(this.scene, {
         mode: 'tower',
-        towerFloor: this.progress.currentFloor,
+        towerFloor: floor,
+        stage,
         enemies: this.currentFloorInfo.enemies,
         isBoss: this.currentFloorInfo.isBoss,
         returnScene: 'MainMenuScene'  // TowerScene -> MainMenuScene로 변경

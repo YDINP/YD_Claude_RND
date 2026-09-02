@@ -159,3 +159,117 @@ export const CultEffectRegistry = {
 - **12기관 × 시그니처 메커니즘: 0/12 구현** (부분 판정도 없음 — 데이터 토큰만 존재).
 - 구현된 것은 **스탯 레이어 3종**(교단 시너지/교단×성격/교단×분위기)이며, 이마저 ①구형 BattleSystem·PvP 미연동, ②9기관 커버리지, ③데이터-동작 불일치 3건의 결함을 포함한다.
 - `cultEffect` 57개 토큰은 **레지스트리 패턴 + 6종 라이프사이클 훅**으로 §3-2의 H1~H9 지점에 붙이면 BattleSystem 코어 수정을 최소화하며 단계적 구현이 가능하다.
+
+---
+
+## 5. MECH-02 구현 내역 (2026-09-02)
+
+> **범위**: `docs/PLAN_COMPLETION_STAGE.md` MECH-02 — 4그룹 대표 기관.
+> **신규 모듈**: `src/systems/CultMechanicsSystem.js` (토큰 파서 + 훅 레지스트리 + 순수 계산 함수)
+> **테스트**: `tests/systems/CultMechanicsSystem.test.js` (44개, 파서 8 / olympus 7 / yomi 8 / avalon 7 / asgard 8 / BattleSystem 통합 6)
+
+### 5-1. 12기관 × 구현여부 매트릭스 (갱신)
+
+| # | 기관 | 그룹 | 시그니처 메커니즘 | 상태 | 구현된 토큰 |
+|---|------|------|------------------|------|------------|
+| 1 | **olympus** | 공세 | Divine Charge → Lightning Strike, Thunderstruck, Glory Aura | ✅ **구현** | `thunderstruck_25/_40/_100`, `lightning_judgment`, `divine_judgment` (5) |
+| 2 | valhalla | 공세 | Berserker Rage / Last Stand | ❌ 미구현 | — (4 토큰 no-op) |
+| 3 | **asgard** | 균형 | Rune Inscription → Runeburst, Rune Shield, Bifrost Link | ✅ **구현** | `rune_stack_1`, `rune_burst`, `rune_mastery`, `rune_atk_stack`, `rune_party_buff` (5) |
+| 4 | **avalon** | 지속 | Holy Ward 방어막, Holy Thorns 반사, Round Table Bond | ✅ **구현** | `shield_all`, `fortress_shield`, `cover_shield`, `full_heal_reflect` (4) |
+| 5 | takamagahara | 균형 | Kami no Ma 선제 / Extra Action | ❌ 미구현 | — (3) |
+| 6 | kunlun | 지속 | Five Poisons → Chaos Bloom | ❌ 미구현 | — (3) |
+| 7 | **yomi** | 제어 | Death Gaze(Doom) → Death Sentence, Doom 전이, Underworld Link | ✅ **구현** | `doom_stack_1`, `execution_doom5`, `mass_doom_3`, `curse_dot`, `curse_execute`, `mass_curse` (6) |
+| 8 | helheim | 제어 | Frost Cage / Permafrost | ❌ 미구현 | — (4) |
+| 9 | tartarus | 제어 | Titan Force 방어 관통 | ❌ 미구현 | — (5) |
+| 10 | chaos | 공세 | Wild Card 무작위 | ❌ 미구현 | — (9) |
+| 11 | nature | 지속 | Growth Ring 누적 | ❌ 미구현 | — (4) |
+| 12 | balance | 균형 | Equilibrium / Neutrality | ❌ 미구현 | — (4) |
+
+- **구현 4/12** (4그룹 각 1기관), 토큰 기준 **20/56 구현 · 36 미구현**.
+- 미구현 토큰은 파싱만 되고 동작 없음(no-op). 목록은 `getUnimplementedEffects()`로 조회한다.
+- 참고: 감사 §1-1의 "57개 토큰"은 실측 결과 **56개**(ascended-heroes.json v2.0 기준, 중복 없음)다.
+
+### 5-2. 메커니즘별 수치 공식
+
+모든 상수는 `CULT_MECHANICS_CONFIG`(CultMechanicsSystem.js)에 노출된다.
+
+**Olympus (공세)**
+
+| 항목 | 공식 |
+|------|------|
+| Divine Charge 충전 | 기본공격 `+15`, 스킬 `+30`, 각성기 `0`(사용 시 게이지 리셋) |
+| Lightning Strike 발동 | `divinity ≥ 100` → 발동 후 `divinity = 0` |
+| Lightning Strike 피해 | `floor(ATK × 0.5 × (1 − min(0.9, DEF_eff/1000) × (1 − 0.15)))` (방어 15% 관통) |
+| Lightning Strike 스턴 | 확률 20% → Thunderstruck |
+| Thunderstruck | 지속 1턴, 해당 턴 행동 불가 + 받는 피해 `×1.30` |
+| `thunderstruck_N` | 확률 `N/100`으로 Thunderstruck 부여 |
+| `lightning_judgment` | 게이지와 무관하게 Lightning Strike 확정 발동 |
+| `divine_judgment` | Lightning Strike 확정 + Thunderstruck 확정 |
+| Glory Aura(패시브) | 턴 시작 시 HP 비율 최고 아군에게 ATK `×1.10` 1턴 |
+
+**Yomi (제어)**
+
+| 항목 | 공식 |
+|------|------|
+| Death Gaze(패시브) | 피해 적중 1회당 대상 Doom `+1` (토큰이 Doom을 다루면 중복 누적 없음) |
+| Death Sentence | `Doom ≥ 10` → 추가 피해 `floor(대상 현재HP × 0.20)`, Doom `= 0` |
+| `doom_stack_1` / `mass_doom_3` | Doom `+1` / `+3` (임계 10) |
+| `execution_doom5` / `curse_execute` | Doom `+1`, 처형 임계 `5`로 인하 |
+| `curse_dot` / `mass_curse` | 저주 2턴 + Doom `+1`. 저주 DoT = `floor(시전자 ATK × 0.15)` / 턴 |
+| Doom 전이(사망 시) | `floor(사망자 Doom × 0.5)`를 같은 진영 생존자 1명에게 이관 |
+| Underworld Link(패시브) | 사망 아군 1명당 피해 `+10%`, 상한 `+30%` |
+
+**Avalon (지속)**
+
+| 항목 | 공식 |
+|------|------|
+| Holy Ward(패시브) | 턴 시작 시 HP 비율 최저 아군에게 방어막 `floor(ATK × 0.3)` |
+| `shield_all` / `cover_shield` | 아군 전체 / 최저 HP 1명에게 `floor(ATK × 0.3)` |
+| `fortress_shield` / `full_heal_reflect` | 아군 전체에 `floor(ATK × 0.5)` (후자는 전회복 동반) |
+| 방어막 흡수 | 피해를 방어막 잔량만큼 차감, 잔량 0이 되면 파괴 |
+| Holy Thorns | 방어막 파괴 시 **파괴한 원 피해량**의 `50%`를 공격자에게 반사 |
+| Round Table Bond | 아발론 아군 1명당 치유 `+10%`, 상한 `+40%` |
+
+**Asgard (균형)**
+
+| 항목 | 공식 |
+|------|------|
+| 룬 효과 | `atk`/`def`/`spd` 룬 1개당 해당 스탯 `+15%` (중첩 가산) |
+| Runeburst | 룬 3개 적층 → 룬 소모, 다음 피해 `+40%`(1회) + Rune Shield 1회분 |
+| `rune_stack_1` | 무작위 아군 1명에게 무작위 룬 1개 |
+| `rune_burst` / `rune_mastery` | 시전자에게 룬 1개 / 3종 전부(즉시 Runeburst) |
+| `rune_atk_stack` / `rune_party_buff` | 아군 전체에 공격 룬 / 시전자 룬을 아군에게 복사 |
+| Rune Shield | 피해 1회를 전량 흡수 (방어막보다 우선) |
+| Bifrost Link(사망 시) | 사망 아군의 ATK를 생존 아군 전체에 플랫 가산 1턴 |
+
+### 5-3. 훅 지점 (file:line)
+
+훅은 7종이다: `onBattleStart / onTurnStart / onSkillUse / beforeDamage / onHit / onDamaged / onDeath`.
+(감사 §3-1의 6종 안 대비 `onSkillUse`를 추가 — 아발론/아스가르드의 아군 대상 효과가 피해 확정 전에 적용돼야 하기 때문)
+
+| # | 훅 | 위치 | 내용 |
+|---|-----|------|------|
+| H1 | 유닛 상태 보존 | `src/systems/BattleSystem.js:295` `resolveCultId()`, `:327-328` `BattleUnit` 생성자 | `this.cult` + `this.cultState`(divinity/doom/barrier/runes/statuses) 저장 |
+| H2 | `beforeDamage` | `src/systems/BattleSystem.js:404` `BattleUnit.takeDamage()` | 방어막/Rune Shield 흡수, 반사량 산출 (`context.attacker` 선택 인자) |
+| H3 | `onBattleStart` | `src/systems/BattleSystem.js:657` `initBattle()` | 전 유닛 `cultState` 초기화 |
+| H4 | 유효 SPD | `src/systems/BattleSystem.js:703` `calculateTurnOrder()` | 속도 룬 반영 턴 순서 |
+| H5 | `onTurnStart` | `src/systems/BattleSystem.js:771` `processTurn()` → `:951` `applyCultTurnStart()` | 상태이상 틱(DoT/행동불가) + Holy Ward/Glory Aura. 행동 불가 시 턴 스킵 |
+| H6 | `onSkillUse` | `src/systems/BattleSystem.js:793`(processTurn), `:847`(executeAction) → `:978` `applyCultSkillUse()` | 아군 방어막/룬 계열 |
+| H7 | 피해 단일 경로 | `src/systems/BattleSystem.js:995` `resolveDamage()` | 계산 → 적용 → `onHit` → 반사 → 사망. 전 스킬 전략(`:40`, `:70`, `:131`)과 `executeAction`이 공유 |
+| H8 | `onHit` | `src/systems/BattleSystem.js:1021` `applyCultHits()` | 토큰 효과 + 공격자 교단 패시브. `kind==='extraDamage'`만 실제 HP에 적용 |
+| H9 | `onDeath` | `src/systems/BattleSystem.js:1048` `handleUnitDeath()` | Doom 전이(yomi) / Bifrost Link(asgard) + `unitDeath` 이벤트 일원화 |
+| H10 | 데미지식 | `src/systems/BattleSystem.js:1073`(플랫 ATK), `:1079`(유효 DEF), `:1095-1096`(교단 배율) | 룬/Runeburst/Glory Aura/Underworld Link × Thunderstruck 증폭 |
+| H11 | 치유 보정 | `src/systems/BattleSystem.js:942` `getCultHealMultiplier()` | Round Table Bond (HealStrategy + executeAction 힐 분기) |
+
+### 5-4. 회귀 안전성
+
+- `cult`가 없거나 미구현 기관인 유닛은 `getOutgoingDamageMultiplier`/`getIncomingDamageMultiplier` = `1`,
+  `getEffectiveDef/Spd` = 원본 스탯, `getFlatAtkBonus` = `0`, 흡수량 `0` → **기존 전투 수치가 그대로 유지**된다.
+- 검증(2026-09-02): `vitest 884 passed (29 files)` · `tsc --noEmit` 0 errors · `vite build` 성공.
+
+### 5-5. 남은 작업 (MECH-03 후보)
+
+1. 미구현 8기관(36 토큰) — 특히 상태이상 매니저를 공유하는 helheim/kunlun은 본 모듈의 `statuses` 규약을 그대로 확장하면 된다.
+2. 교단 상성 테이블(`×1.25/×0.80`, 감사 §3-3) — 본 작업 범위 밖. 전 기관 수치에 영향을 주므로 별도 밸런스 검증 필요.
+3. `PersonalitySystem.getCultPersonalityBonus()` 데이터-동작 불일치(감사 §1-3 결함 1) 미해소.
+4. `PvPSystem`/`commands/*`는 `resolveDamage()`를 거치지 않아 반사(Holy Thorns)가 적용되지 않는다. 흡수는 `takeDamage` 내부라 정상 동작.

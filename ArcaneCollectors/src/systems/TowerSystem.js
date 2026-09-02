@@ -138,6 +138,7 @@ export class TowerSystem {
 
     // 보상 지급
     const rewards = this._grantRewards(floor, floorInfo);
+    rewards.worldTreeSeeds = 0;
 
     // 최고 층 갱신
     let newHighFloor = false;
@@ -145,6 +146,12 @@ export class TowerSystem {
       this._updateHighestFloor(floor);
       newHighFloor = true;
       EventBus.emit(TowerEvents.NEW_HIGH_FLOOR, { floor, previousHigh: towerProgress.highestFloor });
+
+      // COLL-02: 20층 이상 신기록 클리어 시 세계수의 씨앗 1개 지급 (재클리어는 미지급)
+      if (floor >= 20) {
+        SaveManager.addWorldTreeSeeds(1);
+        rewards.worldTreeSeeds = 1;
+      }
     }
 
     // 현재 층 업데이트
@@ -517,6 +524,29 @@ export class TowerSystem {
       success: true,
       newFloor: targetFloor,
       floorInfo: this.getFloorInfo(targetFloor)
+    };
+  }
+
+  /**
+   * 층 정보({id,count} 적 구성)를 BattleScene이 소비하는 stage.enemies({id,level} 배열) 형태로 변환
+   * TowerScene / TowerPopup 양쪽의 전투 진입 로직에서 공유하는 순수 함수 (TOWER_AUDIT B-6)
+   * @param {number} floor 층 번호
+   * @param {Object} floorInfo TowerSystem.getFloorInfo(floor) 결과
+   * @returns {Object} { id, name, enemies } 형태의 stage 객체
+   */
+  static buildStageForFloor(floor, floorInfo) {
+    const enemyLevel = Math.min(10, Math.max(1, Math.floor(floor / 10)));
+    const stageEnemies = [];
+    (floorInfo?.enemies || []).forEach(def => {
+      for (let i = 0; i < (def.count || 1); i++) {
+        stageEnemies.push({ id: def.id, level: enemyLevel });
+      }
+    });
+
+    return {
+      id: `tower_floor_${floor}`,
+      name: `무한의 탑 ${floor}층`,
+      enemies: stageEnemies
     };
   }
 

@@ -122,3 +122,9 @@ export default {
   sweepSystem: () => import('./SweepSystem.js').then(m => m.sweepSystem),
   towerSystem: () => import('./TowerSystem.js').then(m => m.towerSystem),
 };
+
+// 컬렉션 시스템 (COLL-01/COLL-02)
+export { CollectionSystem } from './CollectionSystem.js';
+
+// 교단 메커니즘 시스템 (MECH-02)
+export { CultMechanicsSystem, CULT_MECHANICS_CONFIG, parseCultEffect, getUnimplementedEffects } from './CultMechanicsSystem.js';
