@@ -23,7 +23,7 @@ import { getRoundSeed } from '../../sdk/api'
 import { Odometer } from '../Odometer'
 import { useT, useEffectiveLocale } from '../../i18n'
 import { useSettingsStore } from '../../store/settings'
-import { winTierLabelKey } from '../../lib/winTier'
+import { winTierLabelKey, resolveWinTier, WIN_HOLD_MS } from '../../lib/winTier'
 import './GameScreen.css'
 
 interface GameScreenProps {
@@ -95,13 +95,20 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   /** 배당표에 심볼 이미지를 보여주기 위해 로드된 테마를 들고 있는다. 렌더러 생성 성공 여부와 무관하다. */
   const [theme, setTheme] = useState<Theme | null>(null)
 
-  // 승리 배너 — 렌더러의 winTotal 이벤트가 시작 신호. tier는 렌더러가 계산해 보내주므로
-  // 허브는 그대로 받아 라벨만 고르고, 금액만 durationMs에 걸쳐 롤업한다.
+  // 승리 배너 — 렌더러의 winTotal 이벤트가 시작 신호. tier는 렌더러가 계산해 보내주는 값을
+  // 우선 신뢰하고(없으면 로컬 폴백), 금액은 durationMs에 걸쳐 롤업한 뒤 등급별 시간만큼 화면에
+  // 머문다(WIN_HOLD_MS). 탭하면 현재 단계(롤업 → 홀드)를 한 번에 하나씩 건너뛴다.
   const [winBanner, setWinBanner] = useState<{ tier: WinTier } | null>(null)
   const [winBannerValue, setWinBannerValue] = useState(0)
   const winRafRef = useRef<number | null>(null)
+  const winHoldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** 스테이지 탭으로 카운터를 즉시 목표값으로 점프시키는 플래그. 릴 연출 자체는 건드리지 않는다. */
   const winSkipRef = useRef(false)
+  /** onEvent 콜백은 렌더러 생성 시점에 한 번만 캡처되므로, 폴백 등급 계산에 쓸 최신 베팅액은 ref로 읽는다. */
+  const lastResultRef = useRef(lastResult)
+  useEffect(() => {
+    lastResultRef.current = lastResult
+  }, [lastResult])
 
   // 게임 진입 시 math.json 로드, 이탈 시 store 초기화.
   useEffect(() => {
@@ -118,18 +125,34 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     return () => hideBackButton()
   }, [])
 
+  /** 롤업이 끝나면(자연 종료든 탭 스킵이든) 등급별 시간만큼 배너를 붙잡아 둔다. */
+  function startWinHold(tier: WinTier): void {
+    if (winHoldTimeoutRef.current !== null) clearTimeout(winHoldTimeoutRef.current)
+    winHoldTimeoutRef.current = setTimeout(() => {
+      winHoldTimeoutRef.current = null
+      setWinBanner(null)
+    }, WIN_HOLD_MS[tier])
+  }
+
   // 렌더러 이벤트 — winTotal이 승리 배너를 시작시키고 durationMs에 걸쳐 롤업한다.
-  // 등급(tier)은 렌더러가 계산해 함께 보내주므로 허브에서 다시 계산하지 않는다.
+  // 등급(tier)은 렌더러가 계산해 함께 보내주는 값을 우선 쓰고, 없으면 로컬로 폴백 계산한다.
   // ref/setState만 사용하므로 렌더러 생성 시점에 캡처돼도 값이 오래돼(stale) 문제되지 않는다.
   function handleRendererEvent(event: RendererEvent): void {
     if (event.type !== 'winTotal') return
 
     const target = event.totalWin
     const duration = event.durationMs > 0 ? event.durationMs : 1
+    const bet = lastResultRef.current?.totalBet ?? 0
+    const multiple = bet > 0 ? target / bet : 0
+    const tier = resolveWinTier(event.tier, multiple)
 
     winSkipRef.current = false
     if (winRafRef.current !== null) cancelAnimationFrame(winRafRef.current)
-    setWinBanner({ tier: event.tier })
+    if (winHoldTimeoutRef.current !== null) {
+      clearTimeout(winHoldTimeoutRef.current)
+      winHoldTimeoutRef.current = null
+    }
+    setWinBanner({ tier })
     setWinBannerValue(0)
 
     // 첫 rAF 틱의 timestamp 자체를 기준점으로 삼는다 (Odometer.tsx와 동일한 패턴) —
@@ -139,6 +162,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       if (winSkipRef.current) {
         setWinBannerValue(target)
         winRafRef.current = null
+        startWinHold(tier)
         return
       }
       if (startTs === null) startTs = ts
@@ -148,6 +172,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         winRafRef.current = requestAnimationFrame(step)
       } else {
         winRafRef.current = null
+        startWinHold(tier)
       }
     }
     winRafRef.current = requestAnimationFrame(step)
@@ -163,18 +188,35 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       cancelAnimationFrame(winRafRef.current)
       winRafRef.current = null
     }
+    if (winHoldTimeoutRef.current !== null) {
+      clearTimeout(winHoldTimeoutRef.current)
+      winHoldTimeoutRef.current = null
+    }
   }, [phase])
 
-  // 언마운트 시 진행 중인 롤업 애니메이션을 정리한다.
+  // 언마운트 시 진행 중인 롤업 애니메이션/홀드 타이머를 정리한다.
   useEffect(() => {
     return () => {
       if (winRafRef.current !== null) cancelAnimationFrame(winRafRef.current)
+      if (winHoldTimeoutRef.current !== null) clearTimeout(winHoldTimeoutRef.current)
     }
   }, [])
 
-  /** 승리 연출 중 스테이지를 탭하면 카운터만 목표값으로 즉시 점프한다 — 릴 라인 순환은 그대로 둔다. */
+  /**
+   * 승리 연출 중 스테이지를 탭하면 현재 단계를 한 번에 하나씩 건너뛴다 — 릴 라인 순환 자체는
+   * 건드리지 않는다: 롤업 중이면 카운터만 목표값으로 점프(그 뒤 홀드로 넘어간다),
+   * 홀드 중이면 배너를 바로 닫는다.
+   */
   const handleStageTap = (): void => {
-    if (winRafRef.current !== null) winSkipRef.current = true
+    if (winRafRef.current !== null) {
+      winSkipRef.current = true
+      return
+    }
+    if (winHoldTimeoutRef.current !== null) {
+      clearTimeout(winHoldTimeoutRef.current)
+      winHoldTimeoutRef.current = null
+      setWinBanner(null)
+    }
   }
 
   // math가 준비되면 테마를 읽고 렌더러를 만든다. 실패해도 서버 스핀 자체는 막지 않는다.

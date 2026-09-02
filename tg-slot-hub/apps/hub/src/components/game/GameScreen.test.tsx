@@ -234,6 +234,50 @@ describe('GameScreen', () => {
       if (stage) fireEvent.click(stage)
 
       await waitFor(() => expect(screen.getByText('50')).toBeInTheDocument())
+
+      // 첫 탭은 롤업을 건너뛰고 홀드로 넘어간다 — 두 번째 탭은 그 홀드를 즉시 끝낸다.
+      if (stage) fireEvent.click(stage)
+      await waitFor(() => expect(screen.queryByText('50')).not.toBeInTheDocument())
+    })
+
+    it('auto-dismisses the banner after the tier hold time when not tapped', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 50,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 5, win: 50, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+
+      vi.useFakeTimers()
+      try {
+        // WIN_HOLD_MS.none = 1500ms
+        act(() => {
+          mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 50, tier: 'none', durationMs: 10 })
+        })
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(50)
+        })
+        expect(screen.getByText('50')).toBeInTheDocument()
+
+        // 홀드 시간 이전에는 아직 떠 있는다.
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1_400)
+        })
+        expect(screen.getByText('WIN')).toBeInTheDocument()
+
+        // 홀드 시간을 넘기면 탭 없이도 사라진다.
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(200)
+        })
+        expect(screen.queryByText('WIN')).not.toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 })

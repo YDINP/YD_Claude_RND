@@ -30,11 +30,11 @@ describe('resolveWinTier', () => {
   })
 
   it('falls back to a local calculation when the event tier is missing', () => {
-    expect(resolveWinTier(undefined, 25)).toBe('big')
+    expect(resolveWinTier(undefined, 15)).toBe('big')
   })
 
   it('falls back to a local calculation when the event tier is not a known value', () => {
-    expect(resolveWinTier('not-a-tier', 25)).toBe('big')
+    expect(resolveWinTier('not-a-tier', 15)).toBe('big')
   })
 
   describe('fallback thresholds', () => {
