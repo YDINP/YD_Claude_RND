@@ -1,0 +1,5 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildCodexInstruction > 스냅샷: 표준 배경 지시문 (불투명, 1536x1024) 1`] = `"Use your image generation tool (image_gen__imagegen) to generate exactly ONE image and save it as out.png in the current working directory. Size: 1536x1024 pixels. Opaque full-bleed image. Do not create or modify any other files. Image description: a dark velvet casino backdrop. When the file is saved, reply with the single word DONE."`;
+
+exports[`buildCodexInstruction > 스냅샷: 표준 심볼 지시문 (투명, 1024x1024) 1`] = `"Use your image generation tool (image_gen__imagegen) to generate exactly ONE image and save it as out.png in the current working directory. Size: 1024x1024 pixels. Background must be fully transparent (PNG alpha). Do not create or modify any other files. Image description: a glossy red seven with gold trim. When the file is saved, reply with the single word DONE."`;

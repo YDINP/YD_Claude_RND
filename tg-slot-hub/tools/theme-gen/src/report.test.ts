@@ -37,6 +37,14 @@ describe('formatProviderLine', () => {
   it('openai/gemini는 dry-run이어도 그대로다', () => {
     expect(formatProviderLine('openai', undefined, true)).toBe('  provider: openai\n')
   })
+
+  it('dry-run + codex면 로그인 확인 생략 문구를 붙인다', () => {
+    expect(formatProviderLine('codex', undefined, true)).toBe('  provider: codex (로그인 확인 생략)\n')
+  })
+
+  it('dry-run이 아니면 codex여도 문구를 안 붙인다', () => {
+    expect(formatProviderLine('codex', undefined, false)).toBe('  provider: codex\n')
+  })
 })
 
 describe('formatDryRunPlan', () => {

@@ -22,7 +22,10 @@ export function symbolThumbPath(outPath: string, id: string): string {
   return join(dirname(outPath), `${id}@128.webp`)
 }
 
-/** gpt-image-1은 네이티브 투명 배경을 지원해 크로마키가 필요 없다. gemini/comfy는 필요하다. */
+/**
+ * gpt-image-1은 네이티브 투명 배경을 지원해 크로마키가 필요 없다. gemini/comfy는 필요하다.
+ * codex는 제외한다 — codex 프로바이더가 내부에서 필요할 때만 스스로 폴백 크로마키를 적용해서 돌려준다.
+ */
 function needsChromaKey(providerName: string, transparent: boolean): boolean {
   return transparent && (providerName === 'gemini' || providerName === 'comfy')
 }
@@ -90,6 +93,7 @@ export async function generateAsset(
 
   const started = Date.now()
   const generated = await provider.generate({
+    id: asset.id,
     prompt: resolveAssetPrompt(file, asset),
     negative: file.negative,
     size: asset.size,

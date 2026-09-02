@@ -3,48 +3,74 @@ import { checkComfyAvailable, ProviderSelectionError, selectProviderName } from 
 
 describe('selectProviderName', () => {
   it('명시적 --provider가 최우선이다', async () => {
+    const checkCodex = vi.fn(async () => true)
     const checkComfy = vi.fn(async () => true)
-    const name = await selectProviderName('gemini', { OPENAI_API_KEY: 'sk-x' }, checkComfy)
+    const name = await selectProviderName('gemini', { OPENAI_API_KEY: 'sk-x' }, checkCodex, checkComfy)
     expect(name).toBe('gemini')
+    expect(checkCodex).not.toHaveBeenCalled()
     expect(checkComfy).not.toHaveBeenCalled()
   })
 
+  it('명시적 --provider로 codex도 고를 수 있다', async () => {
+    const name = await selectProviderName('codex', {}, vi.fn(), vi.fn())
+    expect(name).toBe('codex')
+  })
+
   it('알 수 없는 --provider 값은 던진다', async () => {
-    await expect(selectProviderName('bogus', {}, vi.fn())).rejects.toThrow(ProviderSelectionError)
+    await expect(selectProviderName('bogus', {}, vi.fn(), vi.fn())).rejects.toThrow(ProviderSelectionError)
   })
 
   it('THEME_GEN_PROVIDER 환경변수를 명시값 다음으로 본다', async () => {
+    const checkCodex = vi.fn(async () => true)
     const checkComfy = vi.fn(async () => true)
-    const name = await selectProviderName(undefined, { THEME_GEN_PROVIDER: 'comfy' }, checkComfy)
+    const name = await selectProviderName(undefined, { THEME_GEN_PROVIDER: 'comfy' }, checkCodex, checkComfy)
     expect(name).toBe('comfy')
+    expect(checkCodex).not.toHaveBeenCalled()
     expect(checkComfy).not.toHaveBeenCalled()
   })
 
   it('OPENAI_API_KEY가 있으면 openai를 고른다', async () => {
-    const name = await selectProviderName(undefined, { OPENAI_API_KEY: 'sk-x', GEMINI_API_KEY: 'g-x' }, vi.fn(async () => true))
+    const name = await selectProviderName(
+      undefined,
+      { OPENAI_API_KEY: 'sk-x', GEMINI_API_KEY: 'g-x' },
+      vi.fn(async () => true),
+      vi.fn(async () => true),
+    )
     expect(name).toBe('openai')
   })
 
   it('OPENAI 없고 GEMINI_API_KEY만 있으면 gemini를 고른다', async () => {
-    const name = await selectProviderName(undefined, { GEMINI_API_KEY: 'g-x' }, vi.fn(async () => true))
+    const name = await selectProviderName(undefined, { GEMINI_API_KEY: 'g-x' }, vi.fn(async () => true), vi.fn(async () => true))
     expect(name).toBe('gemini')
   })
 
-  it('키가 하나도 없으면 comfy 가용성을 확인해 comfy를 고른다', async () => {
+  it('키가 없어도 codex 로그인이 확인되면 comfy보다 먼저 codex를 고른다', async () => {
+    const checkCodex = vi.fn(async () => true)
     const checkComfy = vi.fn(async () => true)
-    const name = await selectProviderName(undefined, {}, checkComfy)
+    const name = await selectProviderName(undefined, {}, checkCodex, checkComfy)
+    expect(name).toBe('codex')
+    expect(checkCodex).toHaveBeenCalledTimes(1)
+    expect(checkComfy).not.toHaveBeenCalled()
+  })
+
+  it('codex 로그인이 안 되면 comfy 가용성을 확인해 comfy를 고른다', async () => {
+    const checkCodex = vi.fn(async () => false)
+    const checkComfy = vi.fn(async () => true)
+    const name = await selectProviderName(undefined, {}, checkCodex, checkComfy)
     expect(name).toBe('comfy')
     expect(checkComfy).toHaveBeenCalledWith('http://127.0.0.1:8188')
   })
 
   it('COMFY_URL을 지정하면 그 주소로 확인한다', async () => {
     const checkComfy = vi.fn(async () => true)
-    await selectProviderName(undefined, { COMFY_URL: 'http://example:9000' }, checkComfy)
+    await selectProviderName(undefined, { COMFY_URL: 'http://example:9000' }, vi.fn(async () => false), checkComfy)
     expect(checkComfy).toHaveBeenCalledWith('http://example:9000')
   })
 
-  it('아무것도 안 되면 세 가지 옵션을 안내하며 던진다', async () => {
-    await expect(selectProviderName(undefined, {}, vi.fn(async () => false))).rejects.toThrow(/OPENAI_API_KEY.*GEMINI_API_KEY.*ComfyUI/s)
+  it('아무것도 안 되면 네 가지 옵션을 안내하며 던진다', async () => {
+    await expect(
+      selectProviderName(undefined, {}, vi.fn(async () => false), vi.fn(async () => false)),
+    ).rejects.toThrow(/OPENAI_API_KEY.*GEMINI_API_KEY.*codex.*ComfyUI/s)
   })
 })
 

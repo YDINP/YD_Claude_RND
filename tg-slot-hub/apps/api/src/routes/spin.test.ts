@@ -5,6 +5,8 @@ import type { SpinResponse } from '@tgslot/shared'
 import { createSeededRng, parseGameMath, spin } from '@tgslot/slot-engine'
 import { createApp } from '../app.js'
 import { MemoryRepos } from '../repos/memory.js'
+import { InsufficientFundsError } from '../repos/types.js'
+import type { ApplySpinInput } from '../repos/types.js'
 import { loadGamePacks } from '../games/packs.js'
 import { createGameRegistry } from '../games/registry.js'
 import type { GamePack } from '../games/packs.js'
@@ -13,9 +15,8 @@ import type { ApiConfig } from '../config.js'
 import type { RoundSeedResponse } from './rounds.js'
 
 const GAME_ID = 'classic-777'
+/** 레벨 1이 해금한 상한(100)과 같은 베팅. 레벨 잠금에 걸리지 않는 최대값이다. */
 const BET = 100
-/** STARTING_COINS보다 크고 라인 수(5)로 나누어떨어지는 베팅 레벨. 잔액 부족 경로 전용. */
-const UNAFFORDABLE_BET = 1_000_000
 
 function makeConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
   return {
@@ -36,12 +37,6 @@ function classicPack(): GamePack {
   const pack = diskPacks.find((candidate) => candidate.id === GAME_ID)
   if (!pack) throw new Error(`${GAME_ID} 팩이 없다`)
   return pack
-}
-
-/** 잔액 부족을 결정적으로 만들기 위해 감당 못 할 베팅 레벨을 하나 더 붙인 팩. */
-function packWithUnaffordableBet(): GamePack {
-  const pack = classicPack()
-  return { ...pack, math: { ...pack.math, betLevels: [...pack.math.betLevels, UNAFFORDABLE_BET] } }
 }
 
 function hiddenPack(): GamePack {
@@ -153,9 +148,12 @@ describe('POST /games/:id/spin', () => {
   })
 
   it('rejects a bet the wallet cannot cover with 402 INSUFFICIENT_FUNDS', async () => {
-    const harness = await setup(createGameRegistry([packWithUnaffordableBet()]))
+    // 레벨 1의 베팅 상한(100)보다 큰 베팅은 잔액 판정 전에 BET_LOCKED로 막히므로,
+    // 잔액 부족은 레포가 던지게 해서 라우트의 402 번역만 확인한다.
+    // 지갑/원장이 그대로 남는다는 사실 자체는 repos/memory.test.ts가 검사한다.
+    const harness = await setup(undefined, { repos: new BrokeRepos() })
 
-    const res = await spinRequest(harness, { idempotencyKey: 'key-broke-000001', totalBet: UNAFFORDABLE_BET })
+    const res = await spinRequest(harness, { idempotencyKey: 'key-broke-000001' })
 
     expect(res.status).toBe(402)
     expect(((await res.json()) as { code: string }).code).toBe('INSUFFICIENT_FUNDS')
@@ -343,6 +341,13 @@ describe('GET /games/:id/math', () => {
     expect((await harness.app.request('/games/secret-lab/math')).status).toBe(404)
   })
 })
+
+/** 잔액이 항상 모자란 레포. 라우트의 402 번역만 결정적으로 확인한다. */
+class BrokeRepos extends MemoryRepos {
+  override applySpin(input: ApplySpinInput): Promise<never> {
+    return Promise.reject(new InsufficientFundsError(input.totalBet, 0))
+  }
+}
 
 /** applySpin이 영원히 끝나지 않는 레포. 멈춰 선 DB 질의를 흉내낸다. */
 class HungRepos extends MemoryRepos {

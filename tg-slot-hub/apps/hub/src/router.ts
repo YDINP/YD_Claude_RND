@@ -1,10 +1,14 @@
 /**
  * 해시 기반 라우터 — 별도 라이브러리 없이 최소 구현.
- * `#/` = 로비, `#/play/:gameId` = 게임 화면.
+ * `#/` = 로비, `#/play/:gameId` = 게임 화면, `#/missions` = 미션, `#/leaderboard` = 리더보드.
  */
 import { useEffect, useState } from 'react'
 
-export type Route = { name: 'lobby' } | { name: 'play'; gameId: string }
+export type Route =
+  | { name: 'lobby' }
+  | { name: 'play'; gameId: string }
+  | { name: 'missions' }
+  | { name: 'leaderboard' }
 
 const PLAY_PATH_RE = /^\/play\/([^/]+)\/?$/
 
@@ -16,6 +20,8 @@ export function parseHash(hash: string): Route {
     const gameId = decodeURIComponent(match[1] ?? '')
     if (gameId) return { name: 'play', gameId }
   }
+  if (/^\/missions\/?$/.exec(path)) return { name: 'missions' }
+  if (/^\/leaderboard\/?$/.exec(path)) return { name: 'leaderboard' }
   return { name: 'lobby' }
 }
 
@@ -36,6 +42,14 @@ export function navigateToLobby(): void {
 
 export function navigateToGame(gameId: string): void {
   navigate(`/play/${encodeURIComponent(gameId)}`)
+}
+
+export function navigateToMissions(): void {
+  navigate('/missions')
+}
+
+export function navigateToLeaderboard(): void {
+  navigate('/leaderboard')
 }
 
 /** 현재 해시 라우트를 구독하는 훅. hashchange 이벤트에 반응해 리렌더한다. */

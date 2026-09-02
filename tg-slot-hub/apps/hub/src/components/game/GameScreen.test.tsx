@@ -31,6 +31,7 @@ import { getGameMath, spin as apiSpin } from '../../sdk/api'
 import { useGameStore } from '../../store/game'
 import { useSessionStore } from '../../store/session'
 import { useGamesStore } from '../../store/games'
+import { useHubStore } from '../../store/hub'
 import { GameScreen } from './GameScreen'
 
 const mockedGetGameMath = vi.mocked(getGameMath)
@@ -67,6 +68,7 @@ function baseSpinResponse(overrides: Partial<SpinResponse> = {}): SpinResponse {
     wallet: { coins: 990, gems: 0 },
     seedHash: 'hash',
     nonce: 1,
+    jackpot: 0,
     ...overrides,
   }
 }
@@ -76,10 +78,22 @@ describe('GameScreen', () => {
     vi.clearAllMocks()
     useGameStore.getState().reset()
     useGamesStore.setState({ status: 'ready', games: [], errorMessage: null })
+    useHubStore.setState({
+      status: 'idle',
+      errorMessage: null,
+      bonusStatus: null,
+      jackpot: null,
+      missions: null,
+      leaderboard: null,
+      levelInfo: null,
+      claimingBonus: null,
+      claimingMissionId: null,
+      bonusClaimError: null,
+    })
     useSessionStore.setState({
       status: 'ready',
       token: 'test-token',
-      user: { id: 'u1', telegramId: 1, firstName: 'Dev', locale: 'en', level: 1 },
+      user: { id: 'u1', telegramId: 1, firstName: 'Dev', locale: 'en', level: 1, xp: 0 },
       wallet: { coins: 1000, gems: 0 },
       errorMessage: null,
       refreshError: null,

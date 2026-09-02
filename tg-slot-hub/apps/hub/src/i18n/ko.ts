@@ -36,6 +36,22 @@ const ko: Record<TranslationKey, string> = {
   verifyError: '지금은 검증할 수 없어요',
   gameLoadError: '게임을 불러오지 못했어요',
   graphicsUnavailable: '그래픽을 불러올 수 없어요 — 스핀은 계속 가능해요',
+  jackpotLastWin: '{player}님이 획득 · +{amount}',
+  jackpotWin: '잭팟!',
+  maxBetHint: '최대 베팅 {amount}',
+  dailyBonus: '데일리 보너스',
+  streakLabel: '연속 출석 {day}일차',
+  timedBonus: '4시간 보너스',
+  rescueBonus: '구제 코인',
+  claim: '받기',
+  tabLobby: '로비',
+  tabMissions: '미션',
+  tabLeaderboard: '리더보드',
+  missionsResetIn: '{time} 후 초기화',
+  leaderboardWeekOf: '{week} 주차',
+  leaderboardEndsIn: '남은 시간 {time}',
+  levelUp: '레벨 업! {from} → {to}',
+  betLockedHint: '현재 레벨의 최대 베팅은 {maxBet}이에요',
 }
 
 export default ko

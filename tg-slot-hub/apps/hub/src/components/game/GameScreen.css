@@ -57,7 +57,8 @@
   white-space: nowrap;
 }
 
-.hub-game-screen__wallet-pill {
+.hub-game-screen__wallet-pill,
+.hub-game-screen__jackpot-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -69,6 +70,11 @@
   font-size: var(--hub-font-sub);
   font-weight: 700;
   flex-shrink: 0;
+}
+
+.hub-game-screen__jackpot-pill {
+  color: var(--hub-gem);
+  border-color: rgba(79, 195, 217, 0.4);
 }
 
 .hub-game-screen__stage {
@@ -113,11 +119,18 @@
   text-align: center;
 }
 
-.hub-game-screen__win-banner {
+.hub-game-screen__banners {
   position: absolute;
   top: var(--hub-space-lg);
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hub-space-sm);
+}
+
+.hub-game-screen__win-banner {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -131,6 +144,30 @@
 .hub-game-screen__win-banner--big {
   border-color: var(--hub-gold-light);
   box-shadow: 0 0 24px rgba(244, 217, 138, 0.5);
+}
+
+.hub-game-screen__win-banner--jackpot {
+  border-color: var(--hub-gem);
+  box-shadow: 0 0 32px rgba(79, 195, 217, 0.6);
+  padding: var(--hub-space-md) var(--hub-space-xl);
+}
+
+.hub-game-screen__jackpot-win-label {
+  font-size: var(--hub-font-title);
+  font-weight: 800;
+  color: var(--hub-gem);
+  letter-spacing: 0.08em;
+}
+
+.hub-game-screen__win-banner--levelup {
+  border-color: var(--hub-success);
+}
+
+.hub-game-screen__level-up-label {
+  font-size: var(--hub-font-sub);
+  font-weight: 800;
+  color: var(--hub-success);
+  letter-spacing: 0.04em;
 }
 
 .hub-game-screen__big-win-label {
@@ -203,6 +240,12 @@
   font-weight: 800;
   color: var(--hub-gold-light);
   font-variant-numeric: tabular-nums;
+}
+
+.hub-game-screen__bet-hint {
+  text-align: center;
+  font-size: var(--hub-font-small);
+  color: var(--hub-danger);
 }
 
 .hub-game-screen__spin {

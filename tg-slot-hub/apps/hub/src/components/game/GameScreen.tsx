@@ -9,6 +9,7 @@ import { createSeededRng, spin as replaySpin } from '@tgslot/slot-engine'
 import { useGameStore } from '../../store/game'
 import { useSessionStore } from '../../store/session'
 import { useGamesStore } from '../../store/games'
+import { useHubStore } from '../../store/hub'
 import { navigateToLobby } from '../../router'
 import { showBackButton, hideBackButton, haptic } from '../../sdk/tma'
 import { getRoundSeed } from '../../sdk/api'
@@ -48,6 +49,12 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const wallet = useSessionStore((s) => s.wallet)
   const locale = useSessionStore((s) => s.user?.locale ?? 'en')
   const gameSummary = useGamesStore((s) => s.games.find((g) => g.id === gameId))
+
+  const jackpotPool = useHubStore((s) => s.jackpot?.pool ?? 0)
+  const hubLevelInfo = useHubStore((s) => s.levelInfo)
+  const bonusStatus = useHubStore((s) => s.bonusStatus)
+  const claimingBonus = useHubStore((s) => s.claimingBonus)
+  const claimRescue = useHubStore((s) => s.claimRescue)
 
   const math = useGameStore((s) => s.math)
   const phase = useGameStore((s) => s.phase)
@@ -137,12 +144,19 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
 
   const handleBetDec = (): void => {
     if (betLevels.length === 0) return
+    if (errorCode === 'BET_LOCKED') dismissError()
     setBet((betIndex - 1 + betLevels.length) % betLevels.length)
   }
 
   const handleBetInc = (): void => {
     if (betLevels.length === 0) return
+    if (errorCode === 'BET_LOCKED') dismissError()
     setBet((betIndex + 1) % betLevels.length)
+  }
+
+  const handleRescueClaim = async (): Promise<void> => {
+    const result = await claimRescue()
+    if (result) dismissError()
   }
 
   const handleRevealSeed = async (): Promise<void> => {
@@ -203,6 +217,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           ←
         </button>
         <span className="hub-game-screen__title">{title}</span>
+        <span className="hub-game-screen__jackpot-pill" aria-label={t('jackpot')}>
+          <span aria-hidden="true">🎰</span>
+          <Odometer value={jackpotPool} />
+        </span>
         <span className="hub-game-screen__wallet-pill" aria-label={t('coins')}>
           <span aria-hidden="true">🪙</span>
           <Odometer value={wallet?.coins ?? 0} />
@@ -217,19 +235,39 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             {t('graphicsUnavailable')}
           </div>
         )}
-        {lastResult && lastResult.wins.length > 0 && (
-          <div
-            className={
-              isBigWin
-                ? 'hub-game-screen__win-banner hub-game-screen__win-banner--big'
-                : 'hub-game-screen__win-banner'
-            }
-          >
-            {isBigWin && <span className="hub-game-screen__big-win-label">{t('bigWin')}</span>}
-            <span className="hub-game-screen__win-label">{t('totalWin')}</span>
-            <Odometer className="hub-game-screen__win-value" value={lastResult.totalWin} />
-          </div>
-        )}
+        <div className="hub-game-screen__banners">
+          {lastResult?.jackpotWin !== undefined && (
+            <div className="hub-game-screen__win-banner hub-game-screen__win-banner--jackpot">
+              <span className="hub-game-screen__jackpot-win-label">{t('jackpotWin')}</span>
+              <Odometer className="hub-game-screen__win-value" value={lastResult.jackpotWin} />
+            </div>
+          )}
+          {lastResult?.levelUp && (
+            <div className="hub-game-screen__win-banner hub-game-screen__win-banner--levelup">
+              <span className="hub-game-screen__level-up-label">
+                {t('levelUp', { from: lastResult.levelUp.from, to: lastResult.levelUp.to })}
+              </span>
+              {lastResult.levelUp.bonus > 0 && (
+                <span className="hub-game-screen__win-label">
+                  +{lastResult.levelUp.bonus.toLocaleString('en-US')} 🪙
+                </span>
+              )}
+            </div>
+          )}
+          {lastResult && lastResult.wins.length > 0 && (
+            <div
+              className={
+                isBigWin
+                  ? 'hub-game-screen__win-banner hub-game-screen__win-banner--big'
+                  : 'hub-game-screen__win-banner'
+              }
+            >
+              {isBigWin && <span className="hub-game-screen__big-win-label">{t('bigWin')}</span>}
+              <span className="hub-game-screen__win-label">{t('totalWin')}</span>
+              <Odometer className="hub-game-screen__win-value" value={lastResult.totalWin} />
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="hub-game-screen__controls">
@@ -258,6 +296,12 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           </button>
         </div>
 
+        {errorCode === 'BET_LOCKED' && (
+          <p className="hub-game-screen__bet-hint" role="alert">
+            {t('betLockedHint', { maxBet: (hubLevelInfo?.maxBet ?? 0).toLocaleString('en-US') })}
+          </p>
+        )}
+
         <button type="button" className="hub-game-screen__spin" onClick={handleSpin} disabled={isBusy || !math}>
           {t('spin')}
         </button>
@@ -282,6 +326,16 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           >
             <h2 className="hub-sheet__title">{t('outOfCoinsTitle')}</h2>
             <p className="hub-sheet__message">{t('outOfCoinsMessage')}</p>
+            {bonusStatus?.rescue.claimable && (
+              <button
+                type="button"
+                className="hub-sheet__reveal"
+                onClick={() => void handleRescueClaim()}
+                disabled={claimingBonus === 'rescue'}
+              >
+                {t('rescueBonus')} · +{bonusStatus.rescue.amount.toLocaleString('en-US')} 🪙
+              </button>
+            )}
             <button type="button" className="hub-sheet__close" onClick={dismissError}>
               {t('close')}
             </button>

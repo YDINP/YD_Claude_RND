@@ -69,12 +69,16 @@ Vercel 등에 배포할 때는 반드시 프로젝트 환경변수에 `VITE_API_
 
 ```
 src/
-├── router.ts             # 해시 기반 라우터 (#/, #/play/:gameId). navigate(), useRoute()
+├── router.ts             # 해시 기반 라우터 (#/, #/play/:gameId, #/missions, #/leaderboard)
 ├── sdk/                   # tma.ts(텔레그램 SDK 래퍼), api.ts(타입세이프 fetch 클라이언트)
-├── store/                 # session.ts(인증/지갑), games.ts(로비 목록), game.ts(게임 화면 스핀 플로우)
+├── store/                 # session.ts(인증/지갑), games.ts(로비 목록), game.ts(게임 화면 스핀 플로우),
+│                          # hub.ts(보너스/잭팟/미션/리더보드/레벨)
+├── lib/countdown.ts       # useCountdown()/formatCountdown() — 목표 ISO 시각까지 남은 시간
 ├── i18n/                  # en/ko 플랫 키맵 + t()/useT()
 ├── components/
-│   └── game/GameScreen.tsx  # 게임 화면(릴 캔버스, 베팅, 스핀, provably fair 시트)
+│   ├── game/GameScreen.tsx  # 게임 화면(릴 캔버스, 베팅, 스핀, provably fair 시트, 잭팟/레벨업 배너)
+│   └── hub/                 # JackpotBar, LevelBar, BonusRow/BonusTile, BottomTabs,
+│                             # MissionsScreen, LeaderboardScreen, RewardToast
 └── styles/                # tokens.css(텔레그램 테마 변수), global.css
 ```
 
@@ -84,13 +88,40 @@ src/
 
 | 경로 | 화면 |
 |---|---|
-| `#/` | 로비 (`Header` + `Lobby`) |
-| `#/play/:gameId` | 게임 화면 (`GameScreen`) |
+| `#/` | 로비 (`Header` + `LevelBar` + `Lobby` + `BottomTabs`) |
+| `#/play/:gameId` | 게임 화면 (`GameScreen`, 전체 화면 — 탭바 없음) |
+| `#/missions` | 오늘의 미션 (`MissionsScreen`) |
+| `#/leaderboard` | 주간 리더보드 (`LeaderboardScreen`) |
 
 `GameCard`의 Play 버튼이 `navigateToGame(gameId)`를 호출한다. `GameScreen`은 텔레그램
 네이티브 BackButton(`sdk/tma.ts`의 `showBackButton`/`hideBackButton`)과 화면 좌상단의
 인페이지 뒤로가기 버튼을 함께 제공한다 — 텔레그램 밖(브라우저) dev 환경에서는 네이티브
 BackButton이 없으므로 인페이지 버튼이 유일한 복귀 수단이다.
+
+## 허브 기능 (`store/hub.ts`, Phase 3)
+
+`useHubStore`가 보너스(데일리/4시간/구제), 프로그레시브 잭팟, 오늘의 미션, 주간 리더보드,
+레벨 정보를 소유한다. `loadAll()`을 세션이 준비되면 `App.tsx`가 1회 호출해 다섯 가지를
+한번에 불러온다.
+
+- **보너스**: `claimDaily()/claimTimed()/claimRescue()`는 모두 응답의 `wallet`로 세션 지갑을
+  덮어쓰고, 성공 후 `GET /bonus`를 다시 불러 쿨다운을 갱신한다. 409 `NOT_CLAIMABLE`은
+  `bonusClaimError`에만 남고 지갑은 건드리지 않는다. 로비의 `BonusRow`가 세 타일을 그리고,
+  구제 코인 타일은 `claimable`일 때만 보인다. 코인 소진 시트(`GameScreen`)에도 같은 구제
+  버튼이 뜬다.
+- **잭팟**: `Lobby`가 마운트돼 있는 동안 `startJackpotPolling()`이 `GET /jackpot`을 15초마다
+  호출한다(`document.hidden`이면 건너뛴다). 스핀 응답의 `jackpot`(반영 후 풀 잔액)은
+  `setJackpotPool()`로 폴링을 기다리지 않고 즉시 반영된다. 게임 화면 상단바에도 잭팟 풀이
+  뜬다. `jackpotWin`이 스핀 응답에 있으면 BIG WIN보다 큰 잭팟 배너를 띄운다.
+- **미션**: 스핀 응답의 `missions`(갱신된 진행도)를 `setMissions()`로 즉시 반영한다.
+  `MissionsScreen`은 완료·미수령 미션에 Claim 버튼을 보여주고, 자정(로컬) 리셋까지 남은
+  시간을 카운트다운한다.
+- **레벨**: `levelInfo`(레벨/xp/다음 레벨 xp/베팅 상한)는 `GET /me`에서 온다. 스핀 응답에
+  `levelUp{from,to,bonus}`이 있으면(수치만 있고 새 xp/상한은 없음) `refreshLevelInfo()`로
+  `/me`를 다시 불러 갱신한다. 400 `BET_LOCKED`(레벨이 해금한 상한을 넘는 베팅)를 받으면
+  `store/game.ts`가 베팅 셀렉터를 상한 이하 가장 높은 레벨로 자동으로 낮추고 힌트를 띄운다.
+- **리더보드**: `LeaderboardScreen`은 상위 항목 + `endsAt`까지 남은 시간을 보여주고,
+  내 순위가 보이는 목록 밖이면 하단에 고정 행으로 따로 붙인다.
 
 ## 게임 테마 에셋 서빙 (`games/<id>/theme/**`)
 

@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { STARTING_COINS } from '@tgslot/shared'
 import type { SpinResult } from '@tgslot/slot-engine'
+import { JACKPOT_ODDS_DENOMINATOR } from '../economy/config.js'
 import { MemoryRepos } from './memory.js'
 import { InsufficientFundsError } from './types.js'
 import type { ApplySpinInput } from './types.js'
 import type { TelegramUser } from '../auth/initData.js'
+
+/** 잭팟이 절대 터지지 않는 판정값. `jackpotRoll < totalBet`이 당첨 조건이다. */
+const NO_JACKPOT_ROLL = JACKPOT_ODDS_DENOMINATOR - 1
 
 /** 엔진을 부르지 않고 결과를 고정해 레포의 회계만 검사한다. */
 function fixedResult(totalWin: number): SpinResult {
@@ -17,7 +21,12 @@ function spinInput(userId: string, overrides: Partial<ApplySpinInput> = {}): App
     gameId: 'classic-777',
     totalBet: 100,
     idempotencyKey: 'key-000000000001',
-    compute: (nonce) => ({ result: fixedResult(250), seed: `seed-${nonce}`, seedHash: `hash-${nonce}` }),
+    compute: (nonce) => ({
+      result: fixedResult(250),
+      seed: `seed-${nonce}`,
+      seedHash: `hash-${nonce}`,
+      jackpotRoll: NO_JACKPOT_ROLL,
+    }),
     ...overrides,
   }
 }
@@ -83,7 +92,9 @@ describe('MemoryRepos.applySpin', () => {
     const { repos, userId } = await newUser()
 
     await repos.applySpin(
-      spinInput(userId, { compute: () => ({ result: fixedResult(0), seed: 's', seedHash: 'h' }) })
+      spinInput(userId, {
+        compute: () => ({ result: fixedResult(0), seed: 's', seedHash: 'h', jackpotRoll: NO_JACKPOT_ROLL }),
+      })
     )
 
     expect(repos.countLedgerEntries(userId, 'spin_win')).toBe(0)
@@ -99,7 +110,12 @@ describe('MemoryRepos.applySpin', () => {
       spinInput(userId, {
         compute: (nonce) => {
           computeCalls += 1
-          return { result: fixedResult(999), seed: `seed-${nonce}`, seedHash: `hash-${nonce}` }
+          return {
+            result: fixedResult(999),
+            seed: `seed-${nonce}`,
+            seedHash: `hash-${nonce}`,
+            jackpotRoll: NO_JACKPOT_ROLL,
+          }
         },
       })
     )
@@ -121,7 +137,7 @@ describe('MemoryRepos.applySpin', () => {
           totalBet: STARTING_COINS + 1,
           compute: () => {
             computeCalls += 1
-            return { result: fixedResult(0), seed: 's', seedHash: 'h' }
+            return { result: fixedResult(0), seed: 's', seedHash: 'h', jackpotRoll: NO_JACKPOT_ROLL }
           },
         })
       )

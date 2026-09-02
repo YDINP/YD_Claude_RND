@@ -35,6 +35,22 @@ const en = {
   verifyError: 'Could not verify right now',
   gameLoadError: 'Could not load this game',
   graphicsUnavailable: 'Graphics unavailable — spin still works',
+  jackpotLastWin: 'Won by {player} · +{amount}',
+  jackpotWin: 'JACKPOT!',
+  maxBetHint: 'Max bet {amount}',
+  dailyBonus: 'Daily bonus',
+  streakLabel: 'Day {day} streak',
+  timedBonus: '4h bonus',
+  rescueBonus: 'Rescue coins',
+  claim: 'Claim',
+  tabLobby: 'Lobby',
+  tabMissions: 'Missions',
+  tabLeaderboard: 'Leaderboard',
+  missionsResetIn: 'Resets in {time}',
+  leaderboardWeekOf: 'Week {week}',
+  leaderboardEndsIn: 'Ends in {time}',
+  levelUp: 'Level up! {from} → {to}',
+  betLockedHint: 'Max bet at your level is {maxBet}',
 } as const
 
 export default en

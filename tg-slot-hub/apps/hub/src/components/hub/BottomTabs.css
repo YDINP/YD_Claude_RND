@@ -1,0 +1,37 @@
+.hub-bottom-tabs {
+  display: flex;
+  align-items: stretch;
+  background: var(--hub-secondary-bg);
+  border-top: 1px solid var(--hub-border);
+  padding-bottom: env(safe-area-inset-bottom);
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+}
+
+.hub-bottom-tabs__tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--hub-space-sm) 0;
+  min-height: var(--hub-touch-min);
+  background: none;
+  color: var(--hub-text-sub);
+}
+
+.hub-bottom-tabs__tab[data-active='true'] {
+  color: var(--hub-gold-light);
+}
+
+.hub-bottom-tabs__icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.hub-bottom-tabs__label {
+  font-size: 10px;
+  font-weight: 700;
+}

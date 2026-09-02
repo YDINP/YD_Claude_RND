@@ -1,0 +1,4 @@
+.hub-bonus-row {
+  display: flex;
+  gap: var(--hub-space-sm);
+}

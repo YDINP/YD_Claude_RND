@@ -7,6 +7,7 @@ import { parseGameMath, type GameMath } from '@tgslot/slot-engine'
 import type { SpinResponse, WinLine } from '@tgslot/shared'
 import { getGameMath, spin as apiSpin, ApiClientError } from '../sdk/api'
 import { useSessionStore } from './session'
+import { useHubStore } from './hub'
 
 export type GamePhase = 'loading' | 'idle' | 'spinning' | 'showingWin' | 'error'
 
@@ -152,6 +153,34 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return
       }
 
+      // 레벨이 해금한 베팅 상한을 넘겨 시도한 경우 — 화면을 막지 않고 셀렉터를 상한으로 내려준다.
+      if (err instanceof ApiClientError && err.code === 'BET_LOCKED') {
+        // 게임 화면에 바로 진입한 경로 등 levelInfo가 아직 없을 수 있으므로 클램프 전에 채워둔다.
+        if (useHubStore.getState().levelInfo === null) {
+          await useHubStore.getState().refreshLevelInfo()
+        }
+        if (get().gameId !== gameId) return
+
+        const maxBet = useHubStore.getState().levelInfo?.maxBet
+        let clampedIndex = betIndex
+        if (maxBet !== undefined) {
+          const validIndex = math.betLevels.reduce(
+            (best, level, idx) => (level <= maxBet ? idx : best),
+            -1,
+          )
+          if (validIndex >= 0) clampedIndex = validIndex
+        }
+        writeStoredBetIndex(gameId, clampedIndex)
+        set({
+          phase: 'idle',
+          error: err.message,
+          errorCode: 'BET_LOCKED',
+          betIndex: clampedIndex,
+          idempotencyKey: null,
+        })
+        return
+      }
+
       // status 0(네트워크 오류)이나 SPIN_IN_PROGRESS(409)만 같은 idempotencyKey를 유지해 재시도를 허용한다.
       // 그 외 확정적인 4xx(예: INVALID_BET)는 서버가 이미 그 키로 실패를 기록했을 수 있으니 다음 시도에 새 키를 쓴다.
       const message = err instanceof ApiClientError ? err.message : '스핀에 실패했습니다'
@@ -169,6 +198,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 서버 잔액을 가드보다도 먼저 즉시 반영한다 — 이후 렌더러가 실패하거나(throw) 화면을 벗어나도
     // 이미 확정된 권위 있는 잔액이 유실되지 않게 한다.
     useSessionStore.setState({ wallet: result.wallet })
+
+    // 허브 스토어(잭팟 풀/미션 진행도/레벨 xp)도 다음 폴링을 기다리지 않고 즉시 반영한다.
+    useHubStore.getState().setJackpotPool(result.jackpot)
+    if (result.missions && result.missions.length > 0) {
+      useHubStore.getState().setMissions(result.missions)
+    }
+    // xp는 누적 베팅액이므로 매 스핀마다 로컬로 즉시 반영해 레벨 바가 부드럽게 채워지게 한다.
+    // levelUp에는 from/to/bonus만 있고 새 xp/maxBet은 없으므로, 레벨이 오른 스핀은 /me로 확정값을 덮어쓴다.
+    useHubStore.getState().addXp(result.totalBet)
+    if (result.levelUp) {
+      void useHubStore.getState().refreshLevelInfo()
+    }
 
     if (get().gameId !== gameId) return
 

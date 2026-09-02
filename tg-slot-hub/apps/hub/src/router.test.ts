@@ -1,6 +1,14 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { navigate, navigateToGame, navigateToLobby, parseHash, useRoute } from './router'
+import {
+  navigate,
+  navigateToGame,
+  navigateToLeaderboard,
+  navigateToLobby,
+  navigateToMissions,
+  parseHash,
+  useRoute,
+} from './router'
 
 function resetHash(): void {
   window.location.hash = ''
@@ -30,6 +38,14 @@ describe('parseHash', () => {
   it('falls back to lobby when the gameId segment is empty', () => {
     expect(parseHash('#/play/')).toEqual({ name: 'lobby' })
   })
+
+  it('parses "#/missions" as the missions route', () => {
+    expect(parseHash('#/missions')).toEqual({ name: 'missions' })
+  })
+
+  it('parses "#/leaderboard" as the leaderboard route', () => {
+    expect(parseHash('#/leaderboard')).toEqual({ name: 'leaderboard' })
+  })
 })
 
 describe('navigate helpers', () => {
@@ -51,6 +67,16 @@ describe('navigate helpers', () => {
   it('navigateToGame() encodes the gameId', () => {
     navigateToGame('fruit fiesta')
     expect(window.location.hash).toBe('#/play/fruit%20fiesta')
+  })
+
+  it('navigateToMissions() sets the hash to /missions', () => {
+    navigateToMissions()
+    expect(window.location.hash).toBe('#/missions')
+  })
+
+  it('navigateToLeaderboard() sets the hash to /leaderboard', () => {
+    navigateToLeaderboard()
+    expect(window.location.hash).toBe('#/leaderboard')
   })
 })
 

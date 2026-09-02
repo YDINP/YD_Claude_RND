@@ -28,6 +28,7 @@ const mockUser = {
   firstName: 'Dev',
   locale: 'en' as const,
   level: 1,
+  xp: 0,
 }
 
 function resetStore(): void {
@@ -83,6 +84,8 @@ describe('session store bootstrap', () => {
     mockedGetMe.mockResolvedValue({
       user: mockUser,
       wallet: { coins: 5_000, gems: 2 },
+      levelInfo: { level: 1, xp: 0, nextLevelXp: 100, maxBet: 1000 },
+      jackpot: 0,
     })
 
     await useSessionStore.getState().bootstrap()

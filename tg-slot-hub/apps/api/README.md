@@ -15,6 +15,14 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
 | GET | `/games/:id/math` | - | 검증된 `math.json` 원본. `Cache-Control: public, max-age=300` |
 | POST | `/games/:id/spin` | Bearer JWT | `SpinRequest` → `SpinResponse`. 서버 권위 스핀 1회 |
 | GET | `/rounds/:id/seed` | Bearer JWT | 라운드 서버 시드 공개 (소유자만). provably fair 검증용 |
+| GET | `/bonus` | Bearer JWT | `BonusStatus`. 데일리·4시간·구제 보너스의 수령 가능 여부 |
+| POST | `/bonus/daily/claim` | Bearer JWT | 데일리 로그인 보너스 수령 → `BonusClaimResponse` (`streakDay` 포함) |
+| POST | `/bonus/timed/claim` | Bearer JWT | 4시간 보너스 수령 → `BonusClaimResponse` |
+| POST | `/bonus/rescue/claim` | Bearer JWT | 파산 구제 보너스 수령 → `BonusClaimResponse` |
+| GET | `/jackpot` | - | `Jackpot`. 현재 풀과 최근 당첨. **허브에서 유일한 무인증 조회** |
+| GET | `/leaderboard` | Bearer JWT | `LeaderboardResponse`. 이번 ISO 주차 상위 50 + 내 순위 |
+| GET | `/missions` | Bearer JWT | `MissionsResponse`. 오늘(UTC)의 미션과 진행도 |
+| POST | `/missions/:id/claim` | Bearer JWT | 완료한 미션 보상 수령 → `BonusClaimResponse` |
 
 인증 실패는 `401 { error, code: 'UNAUTHORIZED' | 'INVALID_INIT_DATA' }` 형태로 응답한다.
 
@@ -24,11 +32,14 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
 |---|---|---|
 | 400 | `BAD_REQUEST` | 본문이 `SpinRequestSchema`를 통과하지 못함 (`idempotencyKey`는 8~64자) |
 | 400 | `INVALID_BET` | `totalBet`이 게임의 `betLevels`에 없는 값 |
+| 400 | `BET_LOCKED` | `totalBet`이 **내 레벨이 해금한 상한**을 넘음 (레벨 1~2: 100, 3~5: 200, 6+: 500) |
 | 401 | `UNAUTHORIZED` | 토큰 없음/만료/위조 |
 | 402 | `INSUFFICIENT_FUNDS` | 잔액 < 베팅액. 지갑과 원장은 그대로 |
 | 404 | `GAME_NOT_FOUND` | 없는 게임 id이거나 `status: hidden` |
 | 404 | `ROUND_NOT_FOUND` | 없는 라운드이거나 **남의 라운드** (존재 여부를 알려주지 않음) |
+| 404 | `MISSION_NOT_FOUND` | 미션 정의에 없는 id |
 | 409 | `SPIN_IN_PROGRESS` | 같은 유저의 **다른** 스핀이 진행 중 |
+| 409 | `NOT_CLAIMABLE` | 보너스 쿨다운 미경과, 미션 미완료, 또는 이미 수령함 |
 | 500 | `INTERNAL` | 라우트가 잡지 못한 예외 |
 | 503 | `SPIN_TIMEOUT` | 스핀이 `SPIN_LOCK_TIMEOUT_MS` 안에 끝나지 않음. **같은 키로 재시도**하면 된다 |
 
@@ -48,12 +59,93 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
   "totalWin": 0,
   "wallet": { "coins": 9900, "gems": 0 },// 스핀 반영 후 **서버** 잔액
   "seedHash": "fdfab40a...",             // sha256(라운드 서버 시드)
-  "nonce": 1                             // 유저별 스핀 카운터
+  "nonce": 1,                            // 유저별 스핀 카운터
+  "jackpot": 50001,                      // 이 스핀 반영 후 잭팟 풀
+  "jackpotWin": 50001,                   // 터졌을 때만. wallet에 이미 반영됨
+  "levelUp": { "from": 1, "to": 2, "bonus": 400 },  // 올랐을 때만. bonus도 wallet에 반영됨
+  "missions": [                          // 이 스핀으로 갱신된 오늘의 진행도
+    { "id": "spin_50", "name": { "en": "Spin 50 times" }, "target": 50,
+      "progress": 1, "reward": 1000, "claimed": false, "completed": false }
+  ]
 }
 ```
 
 같은 `idempotencyKey`로 다시 보내면 지갑을 건드리지 않고 **완전히 같은 응답**을 돌려준다
 (네트워크 재전송 대비). 진행 중인 스핀이 있는 상태에서 **다른** 키가 오면 409다.
+
+## 허브 경제 (Phase 3)
+
+**튜닝 값은 전부 `src/economy/config.ts` 한 파일에 있다.** 로직(판정·계산)은 옆 파일이 갖고
+config는 숫자만 갖는다. 운영이 값을 바꿀 때 다른 파일을 볼 필요가 없게 하기 위해서다.
+
+| 기능 | 규칙 | 원장 사유 |
+|---|---|---|
+| 데일리 로그인 | 연속 1~7일차 `500 / 800 / 1200 / 1600 / 2000 / 2500 / 3500`, 8일차부터 3500 반복. **UTC 날짜**가 하루 넘어가면 수령 가능, 하루를 건너뛰면 1일차로 리셋 | `daily_bonus` |
+| 4시간 보너스 | 마지막 수령으로부터 4시간 뒤 300 코인 | `timed_bonus` |
+| 파산 구제 | 코인 < 10이고 마지막 구제로부터 6시간 경과 시 500 코인 | `rescue_bonus` |
+| 잭팟 | 시드 50,000. 스핀마다 `round(totalBet * 1%)` 적립, `rng.nextInt(50_000) < 적립액`이면 당첨 | `jackpot_win` |
+| 주간 리더보드 | ISO 주차(UTC, 월요일 시작) 단위로 `totalWin` / `bestMultiplier` / `spins` 집계. 상위 50 + 내 순위 | - |
+| 데일리 미션 | `spin_50`(50스핀 → 1000), `win_3`(당첨 3회 → 500), `classic_20`(classic-777 20스핀 → 500). UTC 날짜 단위 | `mission_reward` |
+| 레벨 | `xp` = 누적 베팅. 레벨 n 문턱 = `round(2000 * n^1.6)` (레벨 1은 0). 레벨업 시 `200 × 도달 레벨` 지급 | `level_up` |
+
+베팅 상한은 레벨로 해금된다: 레벨 1~2 → 100, 3~5 → 200, 6+ → 500. 게임의 `betLevels`에 있는
+값이라도 레벨이 낮으면 400 `BET_LOCKED`로 막힌다.
+
+### 잭팟 적립과 확률이 묶여 있는 이유
+
+적립은 `round(totalBet * 1%)`이고, 당첨 확률은 베팅액이 아니라 **그 스핀이 실제로 넣은 적립액**에
+비례한다 (`rng.nextInt(50_000) < accrual`).
+
+| 베팅 | 적립 | 당첨 확률 |
+|---|---|---|
+| 10 | 0 | 0 |
+| 20 | 0 | 0 |
+| 50 | 1 | 1/50,000 |
+| 100 | 1 | 1/50,000 |
+| 200 | 2 | 2/50,000 |
+| 500 | 5 | 5/50,000 |
+
+`floor`로 깎고 확률만 베팅에 비례시키면 10 베팅이 **풀에 0원을 넣고도** 당첨 기회를 갖게 되어
+최소 베팅 연타가 지배 전략이 되고, 계획서 §6의 "모든 베팅의 1% 적립"도 성립하지 않는다.
+그래서 반올림으로 적립을 만들고, 적립이 0인 스핀에는 기회를 주지 않는다.
+
+### 잭팟이 회계를 건드리지 않는 방식
+
+적립분은 **하우스 몫에서** 나간다. 베팅 차감액은 그대로이고 적립은 원장에 남지 않는다
+(유저 잔액이 아니라 풀 잔액이므로). 유저 원장에 찍히는 것은 당첨 지급(`jackpot_win`) 뿐이라
+`SUM(ledger.delta) == wallets.coins` 불변식이 그대로 유지된다. 적립을 먼저 하고 판정하므로
+당첨자는 자기 스핀의 적립분까지 가져간다.
+
+**추첨 순서가 계약이다.** 라운드 RNG에서 릴을 먼저 뽑고 **그 다음** `nextInt(50_000)`으로
+잭팟 판정값을 뽑는다. 순서를 바꾸면 공개된 시드로 라운드를 재현했을 때 릴이 달라져 provably fair가 깨진다.
+
+**전역 단일 행이라 맨 마지막에 만진다.** `jackpot_pool`은 허브 전체가 공유하는 한 행이라 모든 유저의
+스핀이 여기서 직렬화된다. 그래서 유저 전용 쓰기(레벨·리더보드·미션)를 전부 끝낸 뒤 잭팟을 처리하고,
+뒤에는 라운드·원장·지갑 쓰기 세 문장만 남긴다. 락 순서는 항상 `wallets` → `users` → `jackpot_pool`이다.
+
+### 시간 처리
+
+데일리/주간 버킷과 쿨다운은 전부 **UTC**다 (`src/economy/time.ts`). 서버 로컬 타임존에 기대면
+배포 리전을 옮기는 순간 보너스 경계가 흔들린다. 현재 시각은 `Clock`(`() => Date`)으로 주입되며
+레포와 라우트가 **같은 시계**를 본다. 테스트는 이 시계를 앞으로 돌려 "하루 뒤"를 재현한다.
+
+## 원장 불변식 검사 (시간마다)
+
+계획서 §5의 불변식 잡이다. 모든 유저에 대해 `SUM(ledger.delta) == wallets.<currency>`를 확인하고
+어긋난 유저가 있으면 목록을 찍고 **exit 1**로 끝난다 (없으면 exit 0).
+
+```bash
+DATABASE_URL=postgres://... pnpm --filter @tgslot/api check:ledger   # 개발 (tsx)
+DATABASE_URL=postgres://... node dist/scripts/checkLedger.js         # 배포 (빌드 산출물)
+```
+
+**운영: 1시간 주기로 돌린다.** Render Cron Job(`0 * * * *`)에 위 명령을 걸고, exit 1이면 알림이
+가도록 설정한다. `DATABASE_URL`이 없으면 exit 2다. 출력은 한 줄 JSON이라 로그 수집기가 바로 파싱한다.
+
+```jsonc
+{"evt":"ledger_check","ok":true,"mismatches":0}
+{"evt":"ledger_mismatch","userId":"...","currency":"coins","wallet":9900,"ledger":9800,"diff":100}
+```
 
 ## 환경변수
 
@@ -92,6 +184,8 @@ pnpm --filter @tgslot/api db:push       # 실제 DB에 반영. 이 저장소 안
 | `0000_burly_zombie.sql` | `users`/`wallets`/`ledger` 초기 테이블 (drizzle-kit generate 자동 생성) |
 | `0001_ledger_append_only_trigger.sql` | `ledger`에 `BEFORE UPDATE OR DELETE` 트리거를 달아 애플리케이션 버그로도 원장을 못 고치게 DB 레벨에서 강제 |
 | `0002_harsh_donald_blake.sql` | `rounds` 테이블 + `wallets.nonce`. `(user_id, idempotency_key)` 유니크가 이중 차감을 DB 레벨에서 차단 |
+| `0003_parallel_dormammu.sql` | 허브 테이블 5종(`bonus_claims`, `jackpot_pool`, `jackpot_hits`, `leaderboard_weekly`, `mission_progress`) + `users.xp`. 맨 끝의 `INSERT INTO jackpot_pool`은 손으로 덧붙인 시드 행이다 (drizzle-kit은 데이터를 만들지 않는다) |
+| `0004_spicy_living_tribunal.sql` | `rounds.jackpot_win` / `level_up_from` / `level_up_to` / `level_up_bonus`. 멱등 재전송이 처음과 **완전히 같은** 응답을 돌려주도록 라운드의 부수 결과를 함께 남긴다 |
 
 스키마(`src/db/schema.ts`)를 바꾸면 `db:generate`로 새 마이그레이션을 추가하고, 커스텀 SQL(트리거 등)이 필요하면 `drizzle-kit generate --custom --name <name>`으로 빈 파일을 만든 뒤 채운다.
 
@@ -134,6 +228,22 @@ pnpm --filter @tgslot/api db:push       # 실제 DB에 반영. 이 저장소 안
   타임아웃이 락을 놓아주므로 그 유저의 이후 스핀이 프로세스가 죽을 때까지 전부 409가 되는 일은 없다.
   시간을 넘긴 작업 자체는 백그라운드에서 계속될 수 있지만, 트랜잭션이 원자적이고 멱등키가 유니크라
   유저가 **같은 키로** 재시도해도 이중 차감은 없고 원래 작업이 끝났다면 그 결과를 그대로 받는다.
+- **허브 상태는 스핀 트랜잭션 안에서 갱신된다**: `applySpin`이 지갑·원장·라운드에 더해 잭팟 적립/판정,
+  주간 리더보드 집계, 데일리 미션 진행도, xp/레벨업까지 **한 트랜잭션**에서 처리한다. 스핀이 실패하면
+  이것들도 전부 없던 일이 된다. 락 획득 순서는 항상 `wallets`(유저) → `jackpot_pool`(전역)이라
+  모든 스핀이 같은 순서를 지키므로 교착이 생기지 않는다. 잭팟 풀은 전역 단일 행이라 스핀이
+  이 행에서 직렬화된다 — 처리량이 문제가 되면 풀을 샤딩하거나 적립을 배치로 미루는 것이 다음 수순이다.
+- **멱등 재전송은 부수 결과까지 복원한다**: 잭팟 당첨액과 레벨업은 지갑에 이미 반영된 뒤라
+  다시 계산할 수 없다. 그래서 라운드 행에 `jackpot_win`/`level_up_*`을 함께 저장하고 재전송 시
+  그대로 되돌려준다. 지급은 여전히 한 번뿐이다 (원장 항목도 1건). 잭팟 풀·레벨·미션 진행도는
+  "지금" 값을 주는데, 재전송 사이에 다른 스핀이 있었을 수 있기 때문이다.
+- **보너스·미션 수령의 중복 방어**: 조회 시점의 판정을 재사용하지 않는다. 지갑 row lock을 잡은 뒤
+  트랜잭션 안에서 최신 기록으로 **다시** 판정하고(`decide` 콜백), 판정이 실패하면 `null`을 돌려
+  라우트가 409 `NOT_CLAIMABLE`로 번역한다. 조회와 수령 사이에 다른 요청이 끼어들어도 두 번 지급되지 않는다.
+- **레벨업 보너스는 도달 레벨 기준 1회**: xp가 크게 튀어 여러 레벨을 한 번에 건너뛰어도
+  `200 × 도달 레벨`을 **한 번만** 지급한다 (구간별로 합산하지 않는다).
+- **level은 파생 값이다**: `users.level`은 캐시일 뿐이고 응답에 싣는 값은 `xp`에서 다시 계산한다.
+  문턱 공식을 바꿔도 기존 행을 마이그레이션할 필요가 없다.
 - **grid는 저장하지 않는다**: `stops`와 `math.json`만 있으면 `buildGrid`로 항상 같은 격자가 나온다.
   라운드 테이블에는 `stops`/`wins`만 저장하고 응답의 `grid`는 매번 재구성한다.
 

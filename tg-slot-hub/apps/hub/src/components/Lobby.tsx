@@ -1,9 +1,13 @@
 /**
- * 로비 화면 — 잭팟 배너(placeholder) + 게임 카드 그리드(2열).
+ * 로비 화면 — 잭팟 바(실시간) + 보너스 3종 타일 + 게임 카드 그리드(2열).
+ * 잭팟 폴링은 이 화면이 마운트돼 있는 동안만 돈다 (언마운트 시 정지).
  */
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import type { GameSummary, Locale } from '@tgslot/shared'
 import { GameCard } from './GameCard'
+import { JackpotBar } from './hub/JackpotBar'
+import { BonusRow } from './hub/BonusRow'
+import { useHubStore } from '../store/hub'
 import { t } from '../i18n'
 import './Lobby.css'
 
@@ -13,21 +17,22 @@ interface LobbyProps {
   onPlay?: (gameId: string) => void
 }
 
-// TODO(Phase 3): 실제 프로그레시브 잭팟 API 연동 전까지 표시하는 정적 placeholder 값.
-// UI에는 노출하지 않고 코드 주석으로만 placeholder임을 표시한다.
-const JACKPOT_PLACEHOLDER_VALUE = 128_450
-
 export function Lobby({ games, locale, onPlay }: LobbyProps): ReactNode {
+  const jackpot = useHubStore((s) => s.jackpot)
+  const startJackpotPolling = useHubStore((s) => s.startJackpotPolling)
+  const stopJackpotPolling = useHubStore((s) => s.stopJackpotPolling)
+
+  useEffect(() => {
+    startJackpotPolling()
+    return () => stopJackpotPolling()
+  }, [startJackpotPolling, stopJackpotPolling])
+
   const sorted = [...games].sort((a, b) => a.sort - b.sort)
 
   return (
     <div className="hub-lobby">
-      <div className="hub-lobby__jackpot" role="status">
-        <span className="hub-lobby__jackpot-label">{t(locale, 'jackpot')}</span>
-        <span className="hub-lobby__jackpot-value">
-          {JACKPOT_PLACEHOLDER_VALUE.toLocaleString('en-US')}
-        </span>
-      </div>
+      <JackpotBar jackpot={jackpot} />
+      <BonusRow />
       <h2 className="hub-lobby__title">{t(locale, 'lobbyTitle')}</h2>
       <div className="hub-lobby__grid">
         {sorted.map((game) => (

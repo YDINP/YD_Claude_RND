@@ -8,8 +8,10 @@ export function formatHeader(gameDirName: string, promptsPath: string, file: Pro
 }
 
 export function formatProviderLine(providerName: ProviderName, comfyUrl: string | undefined, dryRun: boolean): string {
-  if (providerName !== 'comfy' || !dryRun) return `  provider: ${providerName}\n`
-  return `  provider: ${providerName} (연결 확인 생략, ${comfyUrl ?? DEFAULT_COMFY_URL})\n`
+  if (!dryRun) return `  provider: ${providerName}\n`
+  if (providerName === 'comfy') return `  provider: ${providerName} (연결 확인 생략, ${comfyUrl ?? DEFAULT_COMFY_URL})\n`
+  if (providerName === 'codex') return `  provider: ${providerName} (로그인 확인 생략)\n`
+  return `  provider: ${providerName}\n`
 }
 
 /** `--dry-run`에서 실제 호출 없이 계획만 사람이 읽을 수 있게 찍는다. */

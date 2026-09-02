@@ -15,7 +15,7 @@ describe('createGeminiProvider', () => {
     )
 
     const provider = createGeminiProvider({ apiKey: 'g-test', fetchImpl: fetchImpl as unknown as typeof fetch })
-    const result = await provider.generate({ prompt: 'a gold bell', negative: 'blurry', size: '1024x1024', transparent: true })
+    const result = await provider.generate({ id: 'bell', prompt: 'a gold bell', negative: 'blurry', size: '1024x1024', transparent: true })
 
     expect(provider.name).toBe('gemini')
     expect(result.buffer.toString()).toBe('fake-image-bytes')
@@ -33,7 +33,7 @@ describe('createGeminiProvider', () => {
     const b64 = Buffer.from('x').toString('base64')
     const fetchImpl = vi.fn(async () => jsonResponse({ candidates: [{ content: { parts: [{ inlineData: { data: b64 } }] } }] }))
     const provider = createGeminiProvider({ apiKey: 'g-test', fetchImpl: fetchImpl as unknown as typeof fetch })
-    await provider.generate({ prompt: 'a dark backdrop', negative: 'n', size: '1536x1024', transparent: false })
+    await provider.generate({ id: 'bg', prompt: 'a dark backdrop', negative: 'n', size: '1536x1024', transparent: false })
 
     const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit]
     const body = JSON.parse(init.body as string) as { contents: { parts: { text: string }[] }[] }
@@ -43,7 +43,7 @@ describe('createGeminiProvider', () => {
   it('이미지 파트가 없으면 던진다', async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ candidates: [{ content: { parts: [{ text: 'no image' }] } }] }))
     const provider = createGeminiProvider({ apiKey: 'g-test', fetchImpl: fetchImpl as unknown as typeof fetch })
-    await expect(provider.generate({ prompt: 'p', negative: 'n', size: '1024x1024', transparent: false })).rejects.toThrow(
+    await expect(provider.generate({ id: 'a', prompt: 'p', negative: 'n', size: '1024x1024', transparent: false })).rejects.toThrow(
       /gemini 응답에 이미지가 없다/,
     )
   })

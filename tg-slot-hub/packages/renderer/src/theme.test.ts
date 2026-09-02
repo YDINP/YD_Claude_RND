@@ -128,7 +128,7 @@ describe('classic-777 실제 테마 팩', () => {
   it('math.json의 심볼을 하나도 빠짐없이 덮는다', () => {
     const theme = parseTheme(loadThemeJson('classic-777'), '/games/classic-777', { require: math })
     for (const symbol of math.symbols) {
-      expect(theme.symbols[symbol.id]).toMatch(/^\/games\/classic-777\/theme\/symbols\/.+\.svg$/)
+      expect(theme.symbols[symbol.id]).toMatch(/^\/games\/classic-777\/theme\/symbols\/.+\.(svg|webp|png)$/)
     }
   })
 

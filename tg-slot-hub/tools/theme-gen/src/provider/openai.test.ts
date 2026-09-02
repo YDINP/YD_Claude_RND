@@ -11,7 +11,7 @@ describe('createOpenAiProvider', () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ data: [{ b64_json: b64 }] }))
 
     const provider = createOpenAiProvider({ apiKey: 'sk-test', fetchImpl: fetchImpl as unknown as typeof fetch })
-    const result = await provider.generate({ prompt: 'a red seven', negative: 'blurry', size: '1024x1024', transparent: true })
+    const result = await provider.generate({ id: 'seven', prompt: 'a red seven', negative: 'blurry', size: '1024x1024', transparent: true })
 
     expect(provider.name).toBe('openai')
     expect(result.mimeType).toBe('image/png')
@@ -33,7 +33,7 @@ describe('createOpenAiProvider', () => {
   it('transparent가 false면 background 필드를 안 보낸다', async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ data: [{ b64_json: Buffer.from('x').toString('base64') }] }))
     const provider = createOpenAiProvider({ apiKey: 'sk-test', fetchImpl: fetchImpl as unknown as typeof fetch })
-    await provider.generate({ prompt: 'p', negative: 'n', size: '1536x1024', transparent: false })
+    await provider.generate({ id: 'a', prompt: 'p', negative: 'n', size: '1536x1024', transparent: false })
 
     const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit]
     const body = JSON.parse(init.body as string) as Record<string, unknown>
@@ -44,7 +44,7 @@ describe('createOpenAiProvider', () => {
     const fetchImpl = vi.fn(async () => new Response('rate limited', { status: 429 }))
     const provider = createOpenAiProvider({ apiKey: 'sk-test', fetchImpl: fetchImpl as unknown as typeof fetch })
     await expect(
-      provider.generate({ prompt: 'p', negative: 'n', size: '1024x1024', transparent: false }),
+      provider.generate({ id: 'a', prompt: 'p', negative: 'n', size: '1024x1024', transparent: false }),
     ).rejects.toThrow(/openai 이미지 생성 실패 \(429\)/)
     expect(fetchImpl).toHaveBeenCalledTimes(3)
   })

@@ -1,0 +1,83 @@
+.hub-leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-sm);
+  padding: var(--hub-space-lg);
+  flex: 1;
+}
+
+.hub-leaderboard__header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--hub-space-sm);
+}
+
+.hub-leaderboard__title {
+  font-size: var(--hub-font-title);
+  margin: 0;
+}
+
+.hub-leaderboard__week,
+.hub-leaderboard__ends {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+}
+
+.hub-leaderboard__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hub-leaderboard__row,
+.hub-leaderboard__me-pinned {
+  display: grid;
+  grid-template-columns: 32px 1fr auto auto;
+  align-items: center;
+  gap: var(--hub-space-sm);
+  padding: var(--hub-space-sm) var(--hub-space-md);
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-card-bg);
+}
+
+.hub-leaderboard__row[data-me='true'] {
+  border: 1px solid var(--hub-gold-light);
+}
+
+.hub-leaderboard__me-pinned {
+  margin-top: var(--hub-space-sm);
+  border: 1px solid var(--hub-gold-light);
+  background: rgba(216, 169, 74, 0.12);
+}
+
+.hub-leaderboard__rank {
+  font-size: var(--hub-font-sub);
+  font-weight: 800;
+  color: var(--hub-text-sub);
+  text-align: center;
+}
+
+.hub-leaderboard__name {
+  font-size: var(--hub-font-body);
+  color: var(--hub-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hub-leaderboard__win {
+  font-size: var(--hub-font-sub);
+  font-weight: 700;
+  color: var(--hub-gold-light);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-leaderboard__mult {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  font-variant-numeric: tabular-nums;
+}

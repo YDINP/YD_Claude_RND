@@ -1,17 +1,42 @@
 import { randomUUID } from 'node:crypto'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { STARTING_COINS, STARTING_GEMS } from '@tgslot/shared'
 import type { Locale } from '@tgslot/shared'
 import type { WinLine } from '@tgslot/slot-engine'
 import type { DrizzleDb } from '../db/client.js'
-import { ledger, rounds, users, wallets } from '../db/schema.js'
+import {
+  bonusClaims,
+  jackpotHits,
+  jackpotPool,
+  leaderboardWeekly,
+  ledger,
+  missionProgress,
+  rounds,
+  users,
+  wallets,
+} from '../db/schema.js'
 import type { TelegramUser } from '../auth/initData.js'
+import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
+import type { BonusClaim, BonusClaims, BonusKind } from '../economy/bonus.js'
+import { JACKPOT_SEED, LEDGER_REASONS } from '../economy/config.js'
+import { isJackpotHit, jackpotAccrual } from '../economy/jackpot.js'
+import { levelFromXp, levelUpBonus, toLevelState } from '../economy/level.js'
+import { applySpinToMissions } from '../economy/missions.js'
+import type { MissionProgress } from '../economy/missions.js'
+import { isoWeekKey, systemClock, utcDayKey } from '../economy/time.js'
+import type { Clock } from '../economy/time.js'
 import { InsufficientFundsError } from './types.js'
 import type {
   AppUser,
   AppWallet,
   ApplySpinInput,
   ApplySpinResult,
+  ClaimBonusInput,
+  ClaimMissionInput,
+  ClaimResult,
+  JackpotState,
+  LeaderboardRow,
+  LeaderboardSnapshot,
   Repos,
   RoundRecord,
   UpsertResult,
@@ -21,6 +46,9 @@ type UserRow = typeof users.$inferSelect
 type WalletRow = typeof wallets.$inferSelect
 type RoundRow = typeof rounds.$inferSelect
 
+/** 잭팟 풀 단일 행의 고정 id. 허브 전체가 이 한 행을 공유한다. */
+const JACKPOT_ROW_ID = 1
+
 function toAppUser(row: UserRow): AppUser {
   return {
     id: row.id,
@@ -29,6 +57,7 @@ function toAppUser(row: UserRow): AppUser {
     username: row.username ?? undefined,
     locale: row.locale as Locale,
     level: row.level,
+    xp: row.xp,
   }
 }
 
@@ -50,13 +79,20 @@ function toRoundRecord(row: RoundRow): RoundRecord {
     seedHash: row.seedHash,
     nonce: row.nonce,
     idempotencyKey: row.idempotencyKey,
+    ...(row.jackpotWin === null ? {} : { jackpotWin: row.jackpotWin }),
+    ...(row.levelUpFrom === null || row.levelUpTo === null || row.levelUpBonus === null
+      ? {}
+      : { levelUp: { from: row.levelUpFrom, to: row.levelUpTo, bonus: row.levelUpBonus } }),
     createdAt: row.createdAt,
   }
 }
 
 /** Postgres(Supabase) 구현. 신규 유저 생성/지급은 트랜잭션 + row lock으로 처리한다. */
 export class DrizzleRepos implements Repos {
-  constructor(private readonly db: DrizzleDb) {}
+  constructor(
+    private readonly db: DrizzleDb,
+    private readonly clock: Clock = systemClock
+  ) {}
 
   async upsertFromTelegram(tgUser: TelegramUser, locale: Locale): Promise<UpsertResult> {
     return this.db.transaction(async (tx) => {
@@ -150,6 +186,10 @@ export class DrizzleRepos implements Repos {
   }
 
   async applySpin(input: ApplySpinInput): Promise<ApplySpinResult> {
+    const now = this.clock()
+    const day = utcDayKey(now)
+    const week = isoWeekKey(now)
+
     return this.db.transaction(async (tx) => {
       // 이 유저의 동시 스핀을 트랜잭션 하나로 직렬화하는 지점.
       // 락을 먼저 잡아야 멱등키 확인과 잔액 확인이 같은 스냅샷 위에서 이뤄진다.
@@ -162,6 +202,11 @@ export class DrizzleRepos implements Repos {
 
       if (!locked) throw new Error('[drizzle-repo] wallet not found for spin')
 
+      // xp를 읽어 더한 값을 다시 쓰므로 유저 행도 잠근다. 지갑 락만으로는 users를 건드리는
+      // 다른 경로(레벨 보정 잡 등)와의 경합을 막지 못한다.
+      const [userRow] = await tx.select().from(users).where(eq(users.id, input.userId)).limit(1).for('update')
+      if (!userRow) throw new Error('[drizzle-repo] user not found for spin')
+
       const [existingRound] = await tx
         .select()
         .from(rounds)
@@ -170,7 +215,21 @@ export class DrizzleRepos implements Repos {
 
       // 재전송: 지갑을 건드리지 않고 기존 라운드를 그대로 돌려준다.
       if (existingRound) {
-        return { round: toRoundRecord(existingRound), wallet: toAppWallet(locked), replayed: true }
+        const [poolRow] = await tx.select().from(jackpotPool).where(eq(jackpotPool.id, JACKPOT_ROW_ID)).limit(1)
+        const missions = await readMissionRows(tx, input.userId, day)
+        const round = toRoundRecord(existingRound)
+        // 응답은 처음과 **완전히 같아야** 한다. 그때 터진 잭팟/레벨업은 라운드에 저장해 둔 값으로 복원하고,
+        // 잭팟 풀·레벨·미션은 지금 상태를 준다 (그 사이 다른 스핀이 있었을 수 있다).
+        return {
+          round,
+          wallet: toAppWallet(locked),
+          replayed: true,
+          jackpot: poolRow?.pool ?? JACKPOT_SEED,
+          jackpotWin: round.jackpotWin,
+          level: toLevelState(userRow.xp),
+          levelUp: round.levelUp,
+          missions,
+        }
       }
 
       if (locked.coins < input.totalBet) {
@@ -178,12 +237,14 @@ export class DrizzleRepos implements Repos {
       }
 
       const nonce = locked.nonce + 1
-      const { result, seed, seedHash } = input.compute(nonce)
+      const { result, seed, seedHash, jackpotRoll } = input.compute(nonce)
       const roundId = randomUUID()
 
       const entries: (typeof ledger.$inferInsert)[] = [
         { userId: input.userId, delta: -input.totalBet, currency: 'coins', reason: 'spin_bet', refId: roundId },
       ]
+      let walletDelta = -input.totalBet
+
       if (result.totalWin > 0) {
         entries.push({
           userId: input.userId,
@@ -192,9 +253,105 @@ export class DrizzleRepos implements Repos {
           reason: 'spin_win',
           refId: roundId,
         })
+        walletDelta += result.totalWin
       }
-      await tx.insert(ledger).values(entries)
 
+      // 레벨: xp = 누적 베팅. 여러 레벨을 한 번에 뛸 수 있고 보너스는 도달 레벨 기준 1회다.
+      const previousLevel = levelFromXp(userRow.xp)
+      const newXp = userRow.xp + input.totalBet
+      const newLevel = levelFromXp(newXp)
+      let levelUp: ApplySpinResult['levelUp']
+      if (newLevel > previousLevel) {
+        const bonus = levelUpBonus(newLevel)
+        entries.push({
+          userId: input.userId,
+          delta: bonus,
+          currency: 'coins',
+          reason: LEDGER_REASONS.levelUp,
+          refId: roundId,
+        })
+        walletDelta += bonus
+        levelUp = { from: previousLevel, to: newLevel, bonus }
+      }
+      await tx.update(users).set({ xp: newXp, level: newLevel }).where(eq(users.id, input.userId))
+
+      // 주간 리더보드
+      const multiplier = result.totalWin / input.totalBet
+      await tx
+        .insert(leaderboardWeekly)
+        .values({
+          userId: input.userId,
+          week,
+          totalWin: result.totalWin,
+          bestMultiplier: multiplier,
+          spins: 1,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [leaderboardWeekly.userId, leaderboardWeekly.week],
+          set: {
+            totalWin: sql`${leaderboardWeekly.totalWin} + ${result.totalWin}`,
+            bestMultiplier: sql`greatest(${leaderboardWeekly.bestMultiplier}, ${multiplier})`,
+            spins: sql`${leaderboardWeekly.spins} + 1`,
+            updatedAt: now,
+          },
+        })
+
+      // 데일리 미션
+      const missions = applySpinToMissions(await readMissionRows(tx, input.userId, day), {
+        gameId: input.gameId,
+        win: result.totalWin,
+      })
+      for (const mission of missions) {
+        await tx
+          .insert(missionProgress)
+          .values({
+            userId: input.userId,
+            day,
+            missionId: mission.missionId,
+            progress: mission.progress,
+            claimed: mission.claimed,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: [missionProgress.userId, missionProgress.day, missionProgress.missionId],
+            set: { progress: mission.progress, updatedAt: now },
+          })
+      }
+
+      // 잭팟 풀은 **전역 단일 행**이라 모든 유저의 스핀이 여기서 직렬화된다. 그래서 유저 전용 쓰기를
+      // 전부 끝낸 뒤 맨 마지막에 만진다. 뒤에 남는 것은 라운드·원장·지갑 쓰기 세 문장뿐이라
+      // 이 행을 잡고 커밋까지 가는 구간이 가장 짧다. 락 순서는 항상 wallets -> users -> jackpot_pool이고
+      // 모든 스핀이 같은 순서를 지키므로 교착은 생기지 않는다.
+      //
+      // 적립분은 하우스 몫이라 원장에 남지 않고 베팅 차감도 그대로다. 적립을 먼저 하므로
+      // 당첨자는 자기 스핀의 적립분까지 가져간다.
+      const accrual = jackpotAccrual(input.totalBet)
+      const pool = await accrueJackpot(tx, accrual)
+      let poolAfterSpin = pool
+
+      let jackpotWin: number | undefined
+      if (isJackpotHit(jackpotRoll, accrual)) {
+        jackpotWin = pool
+        entries.push({
+          userId: input.userId,
+          delta: jackpotWin,
+          currency: 'coins',
+          reason: LEDGER_REASONS.jackpotWin,
+          refId: roundId,
+        })
+        walletDelta += jackpotWin
+        const [resetRow] = await tx
+          .update(jackpotPool)
+          .set({ pool: sql`${jackpotPool.seed}`, updatedAt: now })
+          .where(eq(jackpotPool.id, JACKPOT_ROW_ID))
+          .returning()
+        if (!resetRow) throw new Error('[drizzle-repo] jackpot pool reset failed')
+        poolAfterSpin = resetRow.pool
+        await tx.insert(jackpotHits).values({ userId: input.userId, roundId, amount: jackpotWin, wonAt: now })
+      }
+
+      // 라운드는 잭팟 결과를 함께 실어야 하므로(멱등 재전송 복원용) 잭팟 판정 뒤에 넣는다.
       const [insertedRound] = await tx
         .insert(rounds)
         .values({
@@ -209,22 +366,37 @@ export class DrizzleRepos implements Repos {
           seedHash,
           nonce,
           idempotencyKey: input.idempotencyKey,
+          jackpotWin: jackpotWin ?? null,
+          levelUpFrom: levelUp?.from ?? null,
+          levelUpTo: levelUp?.to ?? null,
+          levelUpBonus: levelUp?.bonus ?? null,
         })
         .returning()
       if (!insertedRound) throw new Error('[drizzle-repo] round insert failed')
 
+      await tx.insert(ledger).values(entries)
+
       const [updatedWallet] = await tx
         .update(wallets)
         .set({
-          coins: sql`${wallets.coins} + ${result.totalWin - input.totalBet}`,
+          coins: sql`${wallets.coins} + ${walletDelta}`,
           nonce,
-          updatedAt: new Date(),
+          updatedAt: now,
         })
         .where(eq(wallets.userId, input.userId))
         .returning()
       if (!updatedWallet) throw new Error('[drizzle-repo] wallet update failed')
 
-      return { round: toRoundRecord(insertedRound), wallet: toAppWallet(updatedWallet), replayed: false }
+      return {
+        round: toRoundRecord(insertedRound),
+        wallet: toAppWallet(updatedWallet),
+        replayed: false,
+        jackpot: poolAfterSpin,
+        jackpotWin,
+        level: toLevelState(newXp),
+        levelUp,
+        missions,
+      }
     })
   }
 
@@ -232,4 +404,239 @@ export class DrizzleRepos implements Repos {
     const [row] = await this.db.select().from(rounds).where(eq(rounds.id, roundId)).limit(1)
     return row ? toRoundRecord(row) : null
   }
+
+  // ---- 보너스 ----
+
+  async getBonusClaims(userId: string): Promise<BonusClaims> {
+    const claims = emptyBonusClaims()
+    const rows = await Promise.all(BONUS_KINDS.map((kind) => this.lastBonusClaim(this.db, userId, kind)))
+    BONUS_KINDS.forEach((kind, index) => {
+      claims[kind] = rows[index] ?? null
+    })
+    return claims
+  }
+
+  async claimBonus(input: ClaimBonusInput): Promise<ClaimResult | null> {
+    const now = this.clock()
+
+    return this.db.transaction(async (tx) => {
+      // 지갑 락이 같은 유저의 동시 수령을 직렬화한다. 판정은 락을 잡은 뒤에 다시 굴린다.
+      const [locked] = await tx
+        .select()
+        .from(wallets)
+        .where(eq(wallets.userId, input.userId))
+        .limit(1)
+        .for('update')
+      if (!locked) throw new Error('[drizzle-repo] wallet not found for bonus claim')
+
+      const lastClaim = await this.lastBonusClaim(tx, input.userId, input.kind)
+      const grant = input.decide({ lastClaim, wallet: toAppWallet(locked), now })
+      if (!grant) return null
+
+      await tx.insert(ledger).values({
+        userId: input.userId,
+        delta: grant.amount,
+        currency: 'coins',
+        reason: input.reason,
+      })
+      await tx.insert(bonusClaims).values({
+        userId: input.userId,
+        kind: input.kind,
+        claimedAt: now,
+        streakDay: grant.streakDay,
+      })
+
+      const [updated] = await tx
+        .update(wallets)
+        .set({ coins: sql`${wallets.coins} + ${grant.amount}`, updatedAt: now })
+        .where(eq(wallets.userId, input.userId))
+        .returning()
+      if (!updated) throw new Error('[drizzle-repo] wallet update failed on bonus claim')
+
+      return { amount: grant.amount, wallet: toAppWallet(updated), streakDay: grant.streakDay }
+    })
+  }
+
+  // ---- 잭팟 ----
+
+  async getJackpot(): Promise<JackpotState> {
+    const [poolRow] = await this.db.select().from(jackpotPool).where(eq(jackpotPool.id, JACKPOT_ROW_ID)).limit(1)
+    const [hit] = await this.db.select().from(jackpotHits).orderBy(desc(jackpotHits.wonAt)).limit(1)
+
+    return {
+      pool: poolRow?.pool ?? JACKPOT_SEED,
+      lastWin: hit ? { amount: hit.amount, at: hit.wonAt, userId: hit.userId } : null,
+    }
+  }
+
+  // ---- 리더보드 ----
+
+  async getLeaderboard(week: string, limit: number, userId: string): Promise<LeaderboardSnapshot> {
+    const rows = await this.db
+      .select({
+        userId: leaderboardWeekly.userId,
+        firstName: users.firstName,
+        totalWin: leaderboardWeekly.totalWin,
+        bestMultiplier: leaderboardWeekly.bestMultiplier,
+        spins: leaderboardWeekly.spins,
+      })
+      .from(leaderboardWeekly)
+      .innerJoin(users, eq(users.id, leaderboardWeekly.userId))
+      .where(eq(leaderboardWeekly.week, week))
+      .orderBy(
+        desc(leaderboardWeekly.totalWin),
+        desc(leaderboardWeekly.bestMultiplier),
+        leaderboardWeekly.userId
+      )
+      .limit(limit)
+
+    const entries: LeaderboardRow[] = rows.map((row, index) => ({ ...row, rank: index + 1 }))
+    const inTop = entries.find((row) => row.userId === userId)
+    if (inTop) return { entries, me: inTop }
+
+    const [mine] = await this.db
+      .select({
+        userId: leaderboardWeekly.userId,
+        firstName: users.firstName,
+        totalWin: leaderboardWeekly.totalWin,
+        bestMultiplier: leaderboardWeekly.bestMultiplier,
+        spins: leaderboardWeekly.spins,
+      })
+      .from(leaderboardWeekly)
+      .innerJoin(users, eq(users.id, leaderboardWeekly.userId))
+      .where(and(eq(leaderboardWeekly.week, week), eq(leaderboardWeekly.userId, userId)))
+      .limit(1)
+
+    if (!mine) return { entries, me: null }
+
+    // 나보다 **앞선** 행의 수 + 1. 정렬 키와 같은 순서(총 승리 → 최고 배수 → userId)를 그대로 쓴다.
+    const [counted] = await this.db
+      .select({ ahead: sql<number>`count(*)::int` })
+      .from(leaderboardWeekly)
+      .where(
+        and(
+          eq(leaderboardWeekly.week, week),
+          sql`(
+            ${leaderboardWeekly.totalWin} > ${mine.totalWin}
+            or (${leaderboardWeekly.totalWin} = ${mine.totalWin} and ${leaderboardWeekly.bestMultiplier} > ${mine.bestMultiplier})
+            or (${leaderboardWeekly.totalWin} = ${mine.totalWin} and ${leaderboardWeekly.bestMultiplier} = ${mine.bestMultiplier} and ${leaderboardWeekly.userId} < ${userId})
+          )`
+        )
+      )
+
+    return { entries, me: { ...mine, rank: (counted?.ahead ?? entries.length) + 1 } }
+  }
+
+  // ---- 미션 ----
+
+  async getMissionProgress(userId: string, day: string): Promise<MissionProgress[]> {
+    return readMissionRows(this.db, userId, day)
+  }
+
+  async claimMission(input: ClaimMissionInput): Promise<ClaimResult | null> {
+    const now = this.clock()
+
+    return this.db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select()
+        .from(wallets)
+        .where(eq(wallets.userId, input.userId))
+        .limit(1)
+        .for('update')
+      if (!locked) throw new Error('[drizzle-repo] wallet not found for mission claim')
+
+      const [row] = await tx
+        .select()
+        .from(missionProgress)
+        .where(
+          and(
+            eq(missionProgress.userId, input.userId),
+            eq(missionProgress.day, input.day),
+            eq(missionProgress.missionId, input.missionId)
+          )
+        )
+        .limit(1)
+        .for('update')
+
+      if (!row || row.claimed || row.progress < input.target) return null
+
+      await tx
+        .update(missionProgress)
+        .set({ claimed: true, updatedAt: now })
+        .where(
+          and(
+            eq(missionProgress.userId, input.userId),
+            eq(missionProgress.day, input.day),
+            eq(missionProgress.missionId, input.missionId)
+          )
+        )
+
+      await tx.insert(ledger).values({
+        userId: input.userId,
+        delta: input.reward,
+        currency: 'coins',
+        reason: input.reason,
+      })
+
+      const [updated] = await tx
+        .update(wallets)
+        .set({ coins: sql`${wallets.coins} + ${input.reward}`, updatedAt: now })
+        .where(eq(wallets.userId, input.userId))
+        .returning()
+      if (!updated) throw new Error('[drizzle-repo] wallet update failed on mission claim')
+
+      return { amount: input.reward, wallet: toAppWallet(updated), streakDay: 1 }
+    })
+  }
+
+  private async lastBonusClaim(
+    db: DrizzleDb | DrizzleTx,
+    userId: string,
+    kind: BonusKind
+  ): Promise<BonusClaim | null> {
+    const [row] = await db
+      .select()
+      .from(bonusClaims)
+      .where(and(eq(bonusClaims.userId, userId), eq(bonusClaims.kind, kind)))
+      .orderBy(desc(bonusClaims.claimedAt))
+      .limit(1)
+
+    return row ? { kind, claimedAt: row.claimedAt, streakDay: row.streakDay } : null
+  }
+}
+
+/** 트랜잭션 핸들. drizzle이 콜백에 넘겨주는 타입을 그대로 쓴다. */
+type DrizzleTx = Parameters<Parameters<DrizzleDb['transaction']>[0]>[0]
+
+/**
+ * 잭팟 풀에 적립하고 적립 후 잔액을 돌려준다.
+ * 풀 행이 아직 없으면(마이그레이션 시드 누락 등) 시드 금액으로 만들어 두고 진행한다.
+ */
+async function accrueJackpot(tx: DrizzleTx, accrual: number): Promise<number> {
+  await tx
+    .insert(jackpotPool)
+    .values({ id: JACKPOT_ROW_ID, pool: JACKPOT_SEED, seed: JACKPOT_SEED })
+    .onConflictDoNothing({ target: jackpotPool.id })
+
+  const [row] = await tx
+    .update(jackpotPool)
+    .set({ pool: sql`${jackpotPool.pool} + ${accrual}`, updatedAt: new Date() })
+    .where(eq(jackpotPool.id, JACKPOT_ROW_ID))
+    .returning()
+
+  if (!row) throw new Error('[drizzle-repo] jackpot pool row missing')
+  return row.pool
+}
+
+async function readMissionRows(
+  db: DrizzleDb | DrizzleTx,
+  userId: string,
+  day: string
+): Promise<MissionProgress[]> {
+  const rows = await db
+    .select()
+    .from(missionProgress)
+    .where(and(eq(missionProgress.userId, userId), eq(missionProgress.day, day)))
+
+  return rows.map((row) => ({ missionId: row.missionId, progress: row.progress, claimed: row.claimed }))
 }

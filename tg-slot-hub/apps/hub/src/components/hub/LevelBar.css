@@ -1,0 +1,44 @@
+.hub-level-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--hub-space-sm);
+  padding: var(--hub-space-xs) var(--hub-space-lg) var(--hub-space-sm);
+  background: var(--hub-secondary-bg);
+  border-bottom: 1px solid var(--hub-border);
+}
+
+.hub-level-bar__label {
+  font-size: var(--hub-font-small);
+  font-weight: 700;
+  color: var(--hub-gold-light);
+  flex-shrink: 0;
+}
+
+.hub-level-bar__track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--hub-card-bg);
+  overflow: hidden;
+}
+
+.hub-level-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--hub-gold), var(--hub-gold-light));
+  transition: width 0.4s ease-out;
+}
+
+.hub-level-bar__xp {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.hub-level-bar__maxbet {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  flex-shrink: 0;
+  white-space: nowrap;
+}

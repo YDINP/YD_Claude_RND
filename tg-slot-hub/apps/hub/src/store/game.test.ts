@@ -6,15 +6,18 @@ vi.mock('../sdk/api', async () => {
     ...actual,
     getGameMath: vi.fn(),
     spin: vi.fn(),
+    getMe: vi.fn(),
   }
 })
 
-import { getGameMath, spin as apiSpin, ApiClientError } from '../sdk/api'
+import { getGameMath, spin as apiSpin, getMe, ApiClientError } from '../sdk/api'
 import { useGameStore, type SpinRenderer } from './game'
 import { useSessionStore } from './session'
+import { useHubStore } from './hub'
 
 const mockedGetGameMath = vi.mocked(getGameMath)
 const mockedApiSpin = vi.mocked(apiSpin)
+const mockedGetMe = vi.mocked(getMe)
 
 const rawMath = {
   id: 'classic-777',
@@ -48,6 +51,18 @@ describe('game store', () => {
     vi.clearAllMocks()
     localStorage.clear()
     useGameStore.getState().reset()
+    useHubStore.setState({
+      status: 'idle',
+      errorMessage: null,
+      bonusStatus: null,
+      jackpot: null,
+      missions: null,
+      leaderboard: null,
+      levelInfo: null,
+      claimingBonus: null,
+      claimingMissionId: null,
+      bonusClaimError: null,
+    })
     useSessionStore.setState({
       status: 'ready',
       token: 'test-token',
@@ -57,6 +72,7 @@ describe('game store', () => {
         firstName: 'Dev',
         locale: 'en',
         level: 1,
+        xp: 0,
       },
       wallet: { coins: 1000, gems: 0 },
       errorMessage: null,
@@ -108,6 +124,7 @@ describe('game store', () => {
         wallet: { coins: 990, gems: 0 },
         seedHash: 'hash',
         nonce: 1,
+        jackpot: 0,
       })
 
       await useGameStore.getState().spin()
@@ -136,6 +153,7 @@ describe('game store', () => {
         wallet: { coins: 1090, gems: 0 },
         seedHash: 'hash',
         nonce: 2,
+        jackpot: 0,
       })
 
       await useGameStore.getState().spin()
@@ -160,6 +178,7 @@ describe('game store', () => {
         wallet: { coins: 990, gems: 0 },
         seedHash: 'hash',
         nonce: 4,
+        jackpot: 0,
       })
 
       await useGameStore.getState().spin()
@@ -191,6 +210,7 @@ describe('game store', () => {
           wallet: { coins: 1090, gems: 0 },
           seedHash: 'hash',
           nonce: 1,
+          jackpot: 0,
         },
       })
 
@@ -215,6 +235,7 @@ describe('game store', () => {
         wallet: { coins: 990, gems: 0 },
         seedHash: 'hash',
         nonce: 5,
+        jackpot: 0,
       })
       await spinPromise
     })
@@ -243,6 +264,7 @@ describe('game store', () => {
         wallet: { coins: 990, gems: 0 },
         seedHash: 'hash',
         nonce: 3,
+        jackpot: 0,
       })
 
       await useGameStore.getState().spin()
@@ -289,6 +311,159 @@ describe('game store', () => {
       expect(state.phase).toBe('error')
       expect(state.errorCode).toBe('INSUFFICIENT_FUNDS')
       expect(state.idempotencyKey).toBeNull()
+    })
+
+    it('stores jackpotWin on lastResult when the spin response includes it', async () => {
+      await loadGame()
+      mockedApiSpin.mockResolvedValue({
+        roundId: 'r9',
+        stops: [0, 0, 0],
+        grid: [['seven', 'seven', 'seven']],
+        wins: [],
+        totalBet: 10,
+        totalWin: 0,
+        wallet: { coins: 5990, gems: 0 },
+        seedHash: 'hash',
+        nonce: 9,
+        jackpot: 0,
+        jackpotWin: 5000,
+      })
+
+      await useGameStore.getState().spin()
+
+      expect(useGameStore.getState().lastResult?.jackpotWin).toBe(5000)
+    })
+
+    it('adds totalBet to the hub levelInfo xp on every successful spin, not only on levelUp', async () => {
+      await loadGame()
+      useHubStore.setState({ levelInfo: { level: 1, xp: 40, nextLevelXp: 100, maxBet: 100 } })
+      mockedApiSpin.mockResolvedValue({
+        roundId: 'r10',
+        stops: [0, 0, 0],
+        grid: [['seven', 'seven', 'seven']],
+        wins: [],
+        totalBet: 10,
+        totalWin: 0,
+        wallet: { coins: 990, gems: 0 },
+        seedHash: 'hash',
+        nonce: 10,
+        jackpot: 0,
+        // levelUp이 없는 평범한 스핀
+      })
+
+      await useGameStore.getState().spin()
+
+      expect(useHubStore.getState().levelInfo?.xp).toBe(50)
+      expect(mockedGetMe).not.toHaveBeenCalled()
+    })
+
+    it('updates the hub jackpot pool immediately from the spin response', async () => {
+      await loadGame()
+      mockedApiSpin.mockResolvedValue({
+        roundId: 'r6',
+        stops: [0, 0, 0],
+        grid: [['seven', 'seven', 'seven']],
+        wins: [],
+        totalBet: 10,
+        totalWin: 0,
+        wallet: { coins: 990, gems: 0 },
+        seedHash: 'hash',
+        nonce: 6,
+        jackpot: 555,
+      })
+
+      await useGameStore.getState().spin()
+
+      expect(useHubStore.getState().jackpot).toEqual({ pool: 555 })
+    })
+
+    it('applies the missions progress from the spin response to the hub store', async () => {
+      await loadGame()
+      const missions = [
+        { id: 'm1', name: { en: 'Spin 100 times' }, target: 100, progress: 5, reward: 50, claimed: false, completed: false },
+      ]
+      mockedApiSpin.mockResolvedValue({
+        roundId: 'r7',
+        stops: [0, 0, 0],
+        grid: [['seven', 'seven', 'seven']],
+        wins: [],
+        totalBet: 10,
+        totalWin: 0,
+        wallet: { coins: 990, gems: 0 },
+        seedHash: 'hash',
+        nonce: 7,
+        jackpot: 0,
+        missions,
+      })
+
+      await useGameStore.getState().spin()
+
+      expect(useHubStore.getState().missions?.missions).toEqual(missions)
+    })
+
+    it('refreshes the hub levelInfo when the spin response includes a levelUp', async () => {
+      await loadGame()
+      mockedGetMe.mockResolvedValue({
+        user: { id: 'u1', telegramId: 1, firstName: 'Dev', locale: 'en', level: 2, xp: 120 },
+        wallet: { coins: 990, gems: 0 },
+        levelInfo: { level: 2, xp: 120, nextLevelXp: 300, maxBet: 50 },
+        jackpot: 0,
+      })
+      mockedApiSpin.mockResolvedValue({
+        roundId: 'r8',
+        stops: [0, 0, 0],
+        grid: [['seven', 'seven', 'seven']],
+        wins: [],
+        totalBet: 10,
+        totalWin: 0,
+        wallet: { coins: 990, gems: 0 },
+        seedHash: 'hash',
+        nonce: 8,
+        jackpot: 0,
+        levelUp: { from: 1, to: 2, bonus: 100 },
+      })
+
+      await useGameStore.getState().spin()
+      await vi.waitFor(() => expect(useHubStore.getState().levelInfo?.level).toBe(2))
+
+      expect(mockedGetMe).toHaveBeenCalledWith('test-token')
+    })
+
+    it('clamps the bet index to the level maxBet and sets BET_LOCKED without blocking the phase', async () => {
+      await loadGame()
+      useGameStore.getState().setBet(2) // bet 50
+      useHubStore.setState({ levelInfo: { level: 1, xp: 0, nextLevelXp: 100, maxBet: 15 } })
+      mockedApiSpin.mockRejectedValueOnce(new ApiClientError('bet locked', 400, 'BET_LOCKED'))
+
+      await useGameStore.getState().spin()
+
+      const state = useGameStore.getState()
+      expect(state.phase).toBe('idle')
+      expect(state.errorCode).toBe('BET_LOCKED')
+      expect(state.betIndex).toBe(0) // 10 is the highest level <= maxBet(15)
+      expect(state.idempotencyKey).toBeNull()
+    })
+
+    it('refreshes levelInfo before clamping when entering the game screen directly (levelInfo is null)', async () => {
+      await loadGame()
+      useGameStore.getState().setBet(2) // bet 50
+      expect(useHubStore.getState().levelInfo).toBeNull()
+      mockedGetMe.mockResolvedValue({
+        user: { id: 'u1', telegramId: 1, firstName: 'Dev', locale: 'en', level: 1, xp: 0 },
+        wallet: { coins: 1000, gems: 0 },
+        levelInfo: { level: 1, xp: 0, nextLevelXp: 100, maxBet: 15 },
+        jackpot: 0,
+      })
+      mockedApiSpin.mockRejectedValueOnce(new ApiClientError('bet locked', 400, 'BET_LOCKED'))
+
+      await useGameStore.getState().spin()
+
+      expect(mockedGetMe).toHaveBeenCalledWith('test-token')
+      const state = useGameStore.getState()
+      expect(state.phase).toBe('idle')
+      expect(state.errorCode).toBe('BET_LOCKED')
+      expect(state.betIndex).toBe(0) // 10 is the highest level <= maxBet(15), fetched via refreshLevelInfo()
+      expect(useHubStore.getState().levelInfo?.maxBet).toBe(15)
     })
 
     it('does nothing when a spin is already in flight', async () => {

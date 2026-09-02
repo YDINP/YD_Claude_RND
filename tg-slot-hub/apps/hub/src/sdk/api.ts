@@ -8,12 +8,22 @@ import {
   GamesResponseSchema,
   SpinResponseSchema,
   ApiErrorSchema,
+  BonusStatusSchema,
+  BonusClaimResponseSchema,
+  JackpotSchema,
+  LeaderboardResponseSchema,
+  MissionsResponseSchema,
   type AuthResponse,
   type MeResponse,
   type GamesResponse,
   type AuthTelegramRequest,
   type SpinRequest,
   type SpinResponse,
+  type BonusStatus,
+  type BonusClaimResponse,
+  type Jackpot,
+  type LeaderboardResponse,
+  type MissionsResponse,
 } from '@tgslot/shared'
 
 const API_BASE_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8787'
@@ -157,4 +167,65 @@ export async function getRoundSeed(token: string, roundId: string): Promise<Roun
   return requestJson<RoundSeedResponse>(`/rounds/${encodeURIComponent(roundId)}/seed`, roundSeedSchema, {
     headers: { Authorization: `Bearer ${token}` },
   })
+}
+
+// ---- 허브 기능 (Phase 3) ----
+
+/** GET /bonus — 데일리/4시간/구제 보너스 수령 가능 상태 */
+export async function getBonusStatus(token: string): Promise<BonusStatus> {
+  return requestJson<BonusStatus>('/bonus', BonusStatusSchema, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+/** POST /bonus/daily/claim — 실패 시 서버가 409 NOT_CLAIMABLE을 돌려줄 수 있다 */
+export async function claimDailyBonus(token: string): Promise<BonusClaimResponse> {
+  return requestJson<BonusClaimResponse>('/bonus/daily/claim', BonusClaimResponseSchema, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+/** POST /bonus/timed/claim */
+export async function claimTimedBonus(token: string): Promise<BonusClaimResponse> {
+  return requestJson<BonusClaimResponse>('/bonus/timed/claim', BonusClaimResponseSchema, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+/** POST /bonus/rescue/claim */
+export async function claimRescueBonus(token: string): Promise<BonusClaimResponse> {
+  return requestJson<BonusClaimResponse>('/bonus/rescue/claim', BonusClaimResponseSchema, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+/** GET /jackpot — 공개 엔드포인트, 토큰이 없어도 조회 가능 */
+export async function getJackpot(): Promise<Jackpot> {
+  return requestJson<Jackpot>('/jackpot', JackpotSchema)
+}
+
+/** GET /leaderboard — 이번 주 리더보드 */
+export async function getLeaderboard(token: string): Promise<LeaderboardResponse> {
+  return requestJson<LeaderboardResponse>('/leaderboard', LeaderboardResponseSchema, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+/** GET /missions — 오늘의 미션 목록 */
+export async function getMissions(token: string): Promise<MissionsResponse> {
+  return requestJson<MissionsResponse>('/missions', MissionsResponseSchema, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+/** POST /missions/:id/claim — 보너스 수령과 같은 응답 형태(amount + wallet)를 쓴다 */
+export async function claimMission(token: string, missionId: string): Promise<BonusClaimResponse> {
+  return requestJson<BonusClaimResponse>(
+    `/missions/${encodeURIComponent(missionId)}/claim`,
+    BonusClaimResponseSchema,
+    { method: 'POST', headers: { Authorization: `Bearer ${token}` } },
+  )
 }

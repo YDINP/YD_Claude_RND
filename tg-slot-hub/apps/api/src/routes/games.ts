@@ -2,7 +2,10 @@ import { Hono } from 'hono'
 import { SpinRequestSchema } from '@tgslot/shared'
 import type { GamesResponse, SpinResponse, WinLine as SharedWinLine } from '@tgslot/shared'
 import { buildGrid, spin } from '@tgslot/slot-engine'
-import type { WinLine as EngineWinLine } from '@tgslot/slot-engine'
+import type { Rng, WinLine as EngineWinLine } from '@tgslot/slot-engine'
+import { JACKPOT_ODDS_DENOMINATOR } from '../economy/config.js'
+import { toLevelState } from '../economy/level.js'
+import { toMissionDtos } from '../economy/missions.js'
 import type { ApiConfig } from '../config.js'
 import type { GameRegistry } from '../games/registry.js'
 import type { Repos } from '../repos/types.js'
@@ -23,6 +26,11 @@ export interface GamesRouteDeps {
   config: Pick<ApiConfig, 'spinLockTimeoutMs'>
   /** 테스트에서 락을 공유하고 싶을 때 주입. 없으면 config의 타임아웃으로 새로 만든다. */
   lock?: SpinLock
+  /**
+   * 라운드 RNG 팩토리. 기본은 `createRoundRng`(=시드+nonce 결정론 RNG)이고,
+   * 테스트가 잭팟 당첨 같은 희귀 경로를 강제할 때만 갈아끼운다.
+   */
+  createRng?: (seed: string, nonce: number) => Rng
 }
 
 /** 엔진의 WinLine과 shared의 WinLine은 모양이 같지만 소유 패키지가 다르므로 명시적으로 옮긴다. */
@@ -40,6 +48,7 @@ function toSharedWinLine(win: EngineWinLine): SharedWinLine {
 export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVariables }> {
   const route = new Hono<{ Variables: AuthVariables }>()
   const lock = deps.lock ?? new SpinLock(deps.config.spinLockTimeoutMs)
+  const createRng = deps.createRng ?? createRoundRng
 
   route.get('/', (c) => {
     const response: GamesResponse = { games: deps.registry.list() }
@@ -76,8 +85,21 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
       )
     }
 
+    // 베팅 상한은 레벨로 해금된다. 게임의 betLevels에 있는 값이라도 레벨이 낮으면 막는다.
+    const user = await deps.repos.getById(auth.sub)
+    if (!user) return c.json({ error: 'User not found', code: 'NOT_FOUND' }, 404)
+
+    // 저장된 level 컬럼이 아니라 xp에서 다시 계산한다. /me가 보여주는 상한과 항상 같아야 한다.
+    const maxBet = toLevelState(user.xp).maxBet
+    if (totalBet > maxBet) {
+      return c.json(
+        { error: `Bet ${totalBet} is locked. Your level allows up to ${maxBet}`, code: 'BET_LOCKED' },
+        400
+      )
+    }
+
     try {
-      const { round, wallet, replayed } = await lock.run(auth.sub, idempotencyKey, () =>
+      const applied = await lock.run(auth.sub, idempotencyKey, () =>
         deps.repos.applySpin({
           userId: auth.sub,
           gameId: pack.id,
@@ -85,14 +107,20 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
           idempotencyKey,
           compute: (nonce) => {
             const seed = createRoundSeed()
+            const rng = createRng(seed, nonce)
+            // 릴을 **먼저** 뽑고 그 다음 잭팟을 뽑는다. 이 순서가 바뀌면 공개된 시드로
+            // 라운드를 재현할 수 없게 되므로 provably fair가 깨진다.
+            const result = spin(pack.math, { totalBet }, rng)
             return {
-              result: spin(pack.math, { totalBet }, createRoundRng(seed, nonce)),
+              result,
               seed,
               seedHash: hashSeed(seed),
+              jackpotRoll: rng.nextInt(JACKPOT_ODDS_DENOMINATOR),
             }
           },
         })
       )
+      const { round, wallet, replayed } = applied
 
       console.log(
         JSON.stringify({
@@ -103,6 +131,8 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
           win: round.win,
           nonce: round.nonce,
           replayed,
+          jackpotWin: applied.jackpotWin,
+          levelUp: applied.levelUp?.to,
         })
       )
 
@@ -117,6 +147,10 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
         wallet,
         seedHash: round.seedHash,
         nonce: round.nonce,
+        ...(applied.jackpotWin === undefined ? {} : { jackpotWin: applied.jackpotWin }),
+        jackpot: applied.jackpot,
+        ...(applied.levelUp ? { levelUp: applied.levelUp } : {}),
+        missions: toMissionDtos(applied.missions),
       }
       return c.json(response, 200)
     } catch (error) {

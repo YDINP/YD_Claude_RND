@@ -1,0 +1,35 @@
+.hub-jackpot-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--hub-space-md) var(--hub-space-lg);
+  border-radius: var(--hub-radius-lg);
+  background: linear-gradient(90deg, #241a0a, #3a2810);
+  border: 1px solid rgba(216, 169, 74, 0.35);
+}
+
+.hub-jackpot-bar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hub-jackpot-bar__label {
+  font-size: var(--hub-font-sub);
+  color: var(--hub-gold-light);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.hub-jackpot-bar__value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--hub-gold-light);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-jackpot-bar__last-win {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+}

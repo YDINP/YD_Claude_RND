@@ -28,3 +28,7 @@ export function logError(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error)
   console.error(`[theme-gen] ${redact(message)}`)
 }
+
+export function logWarn(message: string): void {
+  console.warn(`[theme-gen] ${redact(message)}`)
+}

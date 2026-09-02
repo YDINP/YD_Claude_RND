@@ -45,3 +45,16 @@ export const RETRY_BASE_DELAY_MS = 500
 
 /** 원본 프로바이더 출력을 보관하는 폴더 이름 (`<gameDir>/art/<이 값>/<id>.png`). */
 export const RAW_DIR_NAME = 'raw'
+
+/** codex CLI 한 번 실행 상한(ms). 이미지 생성 1건에 1~3분 걸릴 수 있다. */
+export const DEFAULT_CODEX_TIMEOUT_MS = 300_000
+/** `codex login status`로 가용성을 확인할 때 쓰는 상한(ms). */
+export const DEFAULT_CODEX_AVAILABILITY_TIMEOUT_MS = 10_000
+/** codex 작업용 임시 폴더 접두사. `os.tmpdir()` 아래 `<이 값><asset id>-<랜덤6글자>`로 만들어진다. */
+export const CODEX_TEMP_DIR_PREFIX = 'tgslot-codex-'
+/** codex가 결과를 저장하도록 지시하는 파일 이름 (임시 폴더 안). */
+export const CODEX_OUTPUT_FILENAME = 'out.png'
+/** codex 실행 로그를 담는 파일 이름 (`-o` 옵션, 임시 폴더 안). */
+export const CODEX_LOG_FILENAME = 'last.txt'
+/** 실패 메시지에 붙이는 stdout/stderr 꼬리 최대 길이(문자 수). */
+export const CODEX_OUTPUT_TAIL_LENGTH = 2000
