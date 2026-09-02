@@ -129,6 +129,28 @@ importers:
         specifier: ^4.1.7
         version: 4.1.11(@types/node@24.13.3)(jsdom@25.0.1)(vite@6.4.3(@types/node@24.13.3)(tsx@4.23.13))
 
+  packages/game-sdk:
+    dependencies:
+      '@tgslot/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@tgslot/slot-engine':
+        specifier: workspace:*
+        version: link:../slot-engine
+      zod:
+        specifier: ^4.1.13
+        version: 4.5.4
+    devDependencies:
+      '@types/node':
+        specifier: ^24.12.3
+        version: 24.13.3
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.11(@types/node@24.13.3)(jsdom@25.0.1)(vite@6.4.3(@types/node@24.13.3)(tsx@4.23.13))
+
   packages/shared:
     dependencies:
       zod:
@@ -138,6 +160,47 @@ importers:
       '@types/node':
         specifier: ^24.12.3
         version: 24.13.3
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.11(@types/node@24.13.3)(jsdom@25.0.1)(vite@6.4.3(@types/node@24.13.3)(tsx@4.23.13))
+
+  packages/slot-engine:
+    dependencies:
+      '@tgslot/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: ^4.1.13
+        version: 4.5.4
+    devDependencies:
+      '@types/node':
+        specifier: ^24.12.3
+        version: 24.13.3
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.11(@types/node@24.13.3)(jsdom@25.0.1)(vite@6.4.3(@types/node@24.13.3)(tsx@4.23.13))
+
+  tools/rtp-sim:
+    dependencies:
+      '@tgslot/game-sdk':
+        specifier: workspace:*
+        version: link:../../packages/game-sdk
+      '@tgslot/slot-engine':
+        specifier: workspace:*
+        version: link:../../packages/slot-engine
+    devDependencies:
+      '@types/node':
+        specifier: ^24.12.3
+        version: 24.13.3
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.13
       typescript:
         specifier: ~5.9.3
         version: 5.9.3

@@ -1,0 +1,21 @@
+{
+  "name": "@tgslot/rtp-sim",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sim": "tsx src/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tgslot/game-sdk": "workspace:*",
+    "@tgslot/slot-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.3",
+    "tsx": "^4.19.2",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.7"
+  }
+}

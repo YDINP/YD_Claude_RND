@@ -26,6 +26,13 @@ export type Wallet = z.infer<typeof WalletSchema>
 export const GameStatusSchema = z.enum(['live', 'soon', 'hidden'])
 export type GameStatus = z.infer<typeof GameStatusSchema>
 
+/**
+ * 게임 변동성 등급. 수학 모델(slot-engine)과 로비 메타데이터(game-sdk)가 함께 쓰므로
+ * 두 패키지의 공통 상위인 shared가 소유한다.
+ */
+export const VolatilitySchema = z.enum(['low', 'medium', 'high'])
+export type Volatility = z.infer<typeof VolatilitySchema>
+
 /** 로비 카드에 필요한 최소 게임 정보 (manifest의 요약본) */
 export const GameSummarySchema = z.object({
   id: z.string(),
