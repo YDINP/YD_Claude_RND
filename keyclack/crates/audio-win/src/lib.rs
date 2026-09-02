@@ -25,7 +25,7 @@ use windows::Win32::System::Threading::{
     AvRevertMmThreadCharacteristics, AvSetMmThreadCharacteristicsW, CreateEventW, WaitForSingleObject,
 };
 
-use crate::mixer::Mixer;
+use keyclack_core::Mixer;
 
 pub struct Info {
     pub name: String,
@@ -57,9 +57,29 @@ fn pick_device(enumerator: &IMMDeviceEnumerator, substr: Option<&str>) -> Result
                         return Ok(d);
                     }
                 }
-                panic!("no output device matching --device");
+                Err(windows::core::Error::new(windows::core::HRESULT(-1), "no output device matching that name"))
             }
         }
+    }
+}
+
+/// Friendly names of active render endpoints.
+pub fn list_devices() -> Vec<String> {
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let mut out = Vec::new();
+        let Ok(enumerator) = CoCreateInstance::<_, IMMDeviceEnumerator>(&MMDeviceEnumerator, None, CLSCTX_ALL) else {
+            return out;
+        };
+        let Ok(coll) = enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE) else {
+            return out;
+        };
+        for i in 0..coll.GetCount().unwrap_or(0) {
+            if let Ok(d) = coll.Item(i) {
+                out.push(device_name(&d));
+            }
+        }
+        out
     }
 }
 
@@ -121,7 +141,7 @@ unsafe fn run(
     let mut min_p = 0u32;
     let mut max_p = 0u32;
     client.GetSharedModeEnginePeriod(fmt_ptr, &mut default_p, &mut fundamental_p, &mut min_p, &mut max_p)?;
-    println!(
+    eprintln!(
         "[wasapi3] engine period frames: default={} fundamental={} min={} max={} ({:.2} ms min)",
         default_p,
         fundamental_p,

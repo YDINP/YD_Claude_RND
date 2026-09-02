@@ -44,20 +44,3 @@ pub fn click_down(rate: u32) -> Vec<f32> {
 pub fn click_up(rate: u32) -> Vec<f32> {
     render(rate, 40.0, &[(3400.0, 0.4, 350.0), (7000.0, 0.2, 600.0)], 0.4, 500.0)
 }
-
-pub fn resample_linear(src: &[f32], from: u32, to: u32) -> Vec<f32> {
-    if from == to || src.is_empty() {
-        return src.to_vec();
-    }
-    let ratio = from as f64 / to as f64;
-    let n = (src.len() as f64 / ratio) as usize;
-    (0..n)
-        .map(|i| {
-            let p = i as f64 * ratio;
-            let i0 = p as usize;
-            let i1 = (i0 + 1).min(src.len() - 1);
-            let f = (p - i0 as f64) as f32;
-            src[i0] * (1.0 - f) + src[i1] * f
-        })
-        .collect()
-}

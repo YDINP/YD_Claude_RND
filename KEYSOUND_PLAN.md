@@ -1,7 +1,7 @@
 # KeyClack — 기계식 키보드 사운드 시뮬레이터 계획서
 
 작성일: 2026-09-02
-상태: **Phase 0 스파이크 완료 (2026-09-02)**. 훅·재생·지연 측정 동작 확인. 결과는 §10
+상태: **Phase 1 코어 엔진 완료 (2026-09-02)**. Mechvibes 팩(ogg 스프라이트·mp3 멀티·키업) 로드·재생 검증, core 테스트 30개. Phase 0 결과는 §10, Phase 1 결과는 §11
 프로젝트 폴더: `keyclack/`
 
 ## 0. 목표와 전제
@@ -107,16 +107,27 @@ Mechvibes 포맷을 1:1로 읽는다. 두 가지 모드가 있다.
 { "key_define_type": "multi", "defines": { "1": "esc.ogg", "28": "enter.ogg" } }
 ```
 
-`defines`의 키는 **PC/XT 스캔코드(set 1)** 이며 확장키는 `0xE000 | scancode`다 (예: Enter 28, Space 57, 오른쪽 Ctrl 0xE01D = 57373, 위 화살표 0xE048 = 57416). WH_KEYBOARD_LL이 주는 `scanCode`와 `LLKHF_EXTENDED` 플래그로 바로 만들 수 있어 변환 테이블이 필요 없다. 키보드 레이아웃(한/영, Dvorak)과 무관하게 물리 키 기준으로 동작한다.
+`defines`의 키는 **libuiohook 키코드**다. Windows에서는 set-1 스캔코드에 접두사가 붙은 값이며, 실제 팩으로 검증한 대응표 (`keycode.rs`):
 
-자체 확장 (없으면 기본값으로 동작, 기존 팩과 호환 유지):
+| 키 종류 | 코드 | 예 |
+|---|---|---|
+| 일반 키 | `sc` | Enter 28, Space 57, A 30 |
+| E0 확장 화살표 | `0xE000 \| sc` | ↑ 57416, ← 57419, → 57421, ↓ 57424 |
+| 그 외 E0 확장키 | `0x0E00 \| sc` | 오른쪽 Ctrl 3613, 오른쪽 Alt 3640, 왼쪽 Win 3675, Delete 3667, 키패드 Enter 3612 |
+| 넘록 꺼진 키패드(내비 동작) | `0xEE00 \| sc` | KP Home 60999, KP ↑ 61000 |
+
+WH_KEYBOARD_LL이 주는 `scanCode`·`LLKHF_EXTENDED`·`vkCode`(넘록 판별용)로 바로 만들 수 있어 변환 테이블이 필요 없다. 키보드 레이아웃(한/영, Dvorak)과 무관하게 물리 키 기준으로 동작한다. (계획 초안의 "0xE000 | sc 단일 규칙"은 틀렸고 Phase 1에서 실제 팩으로 바로잡음.)
+
+**v2 포맷이 이미 키업·변주를 지원한다.** 자체 확장을 만들 필요가 없었다:
 
 | 필드 | 의미 |
 |---|---|
-| `defines_up` | 키 뗄 때 소리. 청축·백축은 up 소리가 체감을 크게 좌우 |
-| `variants` | 슬롯당 샘플 여러 개. 라운드로빈 + 랜덤 |
-| `groups` | `space`, `enter`, `backspace`, `modifier`, `default` 그룹 폴백. 미정의 키는 그룹 소리로 |
-| `pitch_jitter`, `gain_jitter` | 기본 0.02 / 0.1 |
+| `"28-up": ...` | 키 뗄 때 소리 (single 모드의 스프라이트 구간, multi 모드의 파일 모두 가능) |
+| `"sound": "GENERIC_R{0-4}.mp3"` | multi 모드의 기본 소리. `{a-b}` 범위 = 변주 파일 5개, 랜덤 재생 |
+| `"soundup": "release/GENERIC.mp3"` | 기본 키업 소리 |
+| `"version": 2` | 위 기능이 있는 팩 |
+
+엔진 쪽 추가: single 팩(키업 없음)의 미정의 키는 알파벳 줄 소리 중 하나로 폴백, 같은 키 연속 입력 시 같은 변주 회피, 피치 ±2 %·게인 ±10 % 지터는 엔진 설정.
 
 ## 5. 실행 계층 상세
 
@@ -145,8 +156,8 @@ Mechvibes 포맷을 1:1로 읽는다. 두 가지 모드가 있다.
 
 | Phase | 내용 | 완료 기준 | 예상 |
 |---|---|---|---|
-| **0 스파이크** | `cli/`에서 훅 + wav 1개 재생. `latency-bench`로 지연 측정 | 지연 수치 확인, 15 ms 이하 달성 가능 판정 | 0.5일 |
-| **1 코어 엔진** | 팩 파서(Mechvibes 2모드), 매퍼, 그룹 폴백, 리피트 억제, 믹서 변주(피치·게인), 프리디코드 | 커뮤니티 팩 3종 그대로 로드해 정상 재생. core 유닛 테스트 통과 | 2일 |
+| **0 스파이크** ✅ | `cli/`에서 훅 + wav 1개 재생. `latency-bench`로 지연 측정 | 지연 수치 확인, 15 ms 이하 달성 가능 판정 | 0.5일 |
+| **1 코어 엔진** ✅ | 팩 파서(Mechvibes 2모드), 매퍼, 그룹 폴백, 리피트 억제, 믹서 변주(피치·게인), 프리디코드 | 커뮤니티 팩 3종 그대로 로드해 정상 재생. core 유닛 테스트 통과 | 2일 → 실제 0.5일 |
 | **2 상주 앱** | Tauri 골격, 트레이, 설정 저장, 팩 전환, 볼륨, 음소거 핫키, 제외 앱, 자동 시작 | 하루 종일 켜 두고 일해도 크래시·훅 탈락 없음 | 2일 |
 | **3 사운드 팩** | `pack-builder` CLI, 자체 팩 2~3종 (청축·갈축·저소음적축), 키 up 소리, 변주 | 팩 스키마 검증 통과, 실제 타건과 A/B 청취 | 2일 |
 | **4 배포** | Tauri 번들(NSIS 인스톨러), 코드 서명 여부 결정, 자동 업데이트, README | 깨끗한 PC에 설치해 첫 실행 성공 | 1일 |
@@ -223,3 +234,18 @@ cargo run --release -- --list-devices
 cargo run --release -- --device "USB HIFI"          # 실제 키보드로 쳐 보기. Ctrl+C 종료
 cargo run --release -- --backend cpal --seconds 10   # 비교용
 ```
+
+## 11. Phase 1 결과 (2026-09-02)
+
+크레이트 분리 완료: `core`(OS 의존 0) / `input-win` / `audio-win` / `cli`. cpal·kira 제거.
+
+| 검증 | 결과 |
+|---|---|
+| `cargo test --workspace` | 30 passed (keycode 5, decode 2, pack 7, engine 9, mixer 6, 실제 팩 로드 1) |
+| cherrymx-blue-abs (ogg 스프라이트, 114키) | 로드 44 ms, 재생 정상, est. p50 15.1 ms |
+| holy-pandas (mp3 멀티 v2, 키업·변주) | 재생 정상, 키업 소리 확인, est. p50 14.5 ms |
+| eg-oreo (ogg 스프라이트) | 로드 테스트 통과 |
+
+실행: `cargo run --release -- --pack packs/_external/holy-pandas --device "USB HIFI"`
+
+남은 것 (Phase 2로): 설정 저장, 트레이, 팩 전환 UI, 제외 앱, 핫키, 장치 변경 감지, exclusive 옵션. 알려진 미처리: Pause 키(E1 접두사)의 uiohook 코드 3653 매핑.

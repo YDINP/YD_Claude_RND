@@ -3,15 +3,14 @@ name = "keyclack-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Phase 0 spike: global keyboard hook -> click sound, latency bench"
+description = "Headless keyclack: hook + engine + audio, latency bench"
 
 [[bin]]
 name = "keyclack"
 path = "src/main.rs"
 
 [dependencies]
-cpal = "0.18.2"
+keyclack-core = { path = "../core" }
+keyclack-input-win = { path = "../input-win" }
+keyclack-audio-win = { path = "../audio-win" }
 crossbeam-channel = "0.5.16"
-hound = "3.5.1"
-windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Media_Audio", "Win32_Media", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_UI_Shell_PropertiesSystem", "Win32_Devices_FunctionDiscovery", "Win32_System_Threading", "Win32_Media_KernelStreaming", "Win32_Media_Multimedia"] }
-windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_Threading"] }

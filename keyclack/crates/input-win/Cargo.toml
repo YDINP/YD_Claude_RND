@@ -1,0 +1,11 @@
+[package]
+name = "keyclack-input-win"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Windows low-level keyboard hook producing KeyEvents"
+
+[dependencies]
+crossbeam-channel = "0.5.16"
+keyclack-core = { path = "../core" }
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse"] }
