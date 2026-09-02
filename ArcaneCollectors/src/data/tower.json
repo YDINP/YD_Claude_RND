@@ -1,85 +1,173 @@
 {
   "config": {
     "maxFloor": 100,
-    "bossFloors": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+    "bossFloors": [
+      10,
+      20,
+      30,
+      40,
+      50,
+      60,
+      70,
+      80,
+      90,
+      100
+    ],
     "resetType": "monthly"
   },
   "rewards": {
     "1-10": {
       "gold": 1000,
       "exp": 500,
-      "equipmentChance": 0
+      "equipmentChance": 0,
+      "shardRarity": null
     },
     "11-30": {
       "gold": 2000,
       "exp": 1000,
-      "equipmentChance": 0.1
+      "equipmentChance": 0.1,
+      "shardRarity": "R"
     },
     "31-50": {
       "gold": 5000,
       "exp": 2000,
-      "equipmentChance": 0.2
+      "equipmentChance": 0.2,
+      "shardRarity": "SR"
     },
     "51-70": {
       "gold": 10000,
       "exp": 5000,
-      "equipmentChance": 0.3
+      "equipmentChance": 0.3,
+      "shardRarity": "SSR"
     },
     "71-100": {
       "gold": 20000,
       "exp": 10000,
-      "equipmentChance": 0.5
+      "equipmentChance": 0.5,
+      "shardRarity": "LEGENDARY"
     }
   },
   "floors": [
     {
       "floor": 1,
-      "enemies": [{"id": "enemy_slime", "count": 3}],
+      "enemies": [
+        {
+          "id": "enemy_slime",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 500,
       "isBoss": false
     },
     {
       "floor": 2,
-      "enemies": [{"id": "enemy_slime", "count": 3}, {"id": "enemy_goblin", "count": 1}],
+      "enemies": [
+        {
+          "id": "enemy_slime",
+          "count": 3
+        },
+        {
+          "id": "enemy_goblin",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 750,
       "isBoss": false
     },
     {
       "floor": 3,
-      "enemies": [{"id": "enemy_goblin", "count": 3}],
+      "enemies": [
+        {
+          "id": "enemy_goblin",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 990,
       "isBoss": false
     },
     {
       "floor": 4,
-      "enemies": [{"id": "enemy_goblin", "count": 2}, {"id": "enemy_wolf", "count": 2}],
+      "enemies": [
+        {
+          "id": "enemy_goblin",
+          "count": 2
+        },
+        {
+          "id": "enemy_wolf",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 1240,
       "isBoss": false
     },
     {
       "floor": 5,
-      "enemies": [{"id": "enemy_goblin_archer", "count": 3}],
+      "enemies": [
+        {
+          "id": "enemy_goblin_archer",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 1490,
       "isBoss": false
     },
     {
       "floor": 6,
-      "enemies": [{"id": "enemy_wolf", "count": 4}],
+      "enemies": [
+        {
+          "id": "enemy_wolf",
+          "count": 4
+        }
+      ],
+      "recommendedPower": 1740,
       "isBoss": false
     },
     {
       "floor": 7,
-      "enemies": [{"id": "enemy_mushroom", "count": 4}],
+      "enemies": [
+        {
+          "id": "enemy_mushroom",
+          "count": 4
+        }
+      ],
+      "recommendedPower": 1980,
       "isBoss": false
     },
     {
       "floor": 8,
-      "enemies": [{"id": "enemy_goblin_shaman", "count": 2}],
+      "enemies": [
+        {
+          "id": "enemy_goblin_shaman",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 2230,
       "isBoss": false
     },
     {
       "floor": 9,
-      "enemies": [{"id": "enemy_goblin_warrior", "count": 2}, {"id": "enemy_goblin_archer", "count": 2}],
+      "enemies": [
+        {
+          "id": "enemy_goblin_warrior",
+          "count": 2
+        },
+        {
+          "id": "enemy_goblin_archer",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 2480,
       "isBoss": false
     },
     {
       "floor": 10,
-      "enemies": [{"id": "enemy_goblin_king", "count": 1}],
+      "enemies": [
+        {
+          "id": "enemy_tower_guardian_10",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 2730,
       "isBoss": true,
       "bossReward": {
         "gems": 50,
@@ -88,13 +176,125 @@
       }
     },
     {
+      "floor": 11,
+      "enemies": [
+        {
+          "id": "enemy_harpy",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 2970,
+      "isBoss": false
+    },
+    {
+      "floor": 12,
+      "enemies": [
+        {
+          "id": "enemy_brownie",
+          "count": 3
+        },
+        {
+          "id": "enemy_sidhe",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 3220,
+      "isBoss": false
+    },
+    {
+      "floor": 13,
+      "enemies": [
+        {
+          "id": "enemy_centaur",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 3470,
+      "isBoss": false
+    },
+    {
+      "floor": 14,
+      "enemies": [
+        {
+          "id": "enemy_valkyrie_fallen",
+          "count": 2
+        },
+        {
+          "id": "enemy_green_knight",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 3720,
+      "isBoss": false
+    },
+    {
       "floor": 15,
-      "enemies": [{"id": "enemy_wolf_alpha", "count": 2}],
+      "enemies": [
+        {
+          "id": "enemy_wolf_alpha",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 3960,
+      "isBoss": false
+    },
+    {
+      "floor": 16,
+      "enemies": [
+        {
+          "id": "enemy_slime_large",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 4210,
+      "isBoss": false
+    },
+    {
+      "floor": 17,
+      "enemies": [
+        {
+          "id": "enemy_treant",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 4460,
+      "isBoss": false
+    },
+    {
+      "floor": 18,
+      "enemies": [
+        {
+          "id": "enemy_berserker",
+          "count": 2
+        },
+        {
+          "id": "enemy_priestess",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 4710,
+      "isBoss": false
+    },
+    {
+      "floor": 19,
+      "enemies": [
+        {
+          "id": "enemy_minotaur",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 4950,
       "isBoss": false
     },
     {
       "floor": 20,
-      "enemies": [{"id": "enemy_treant", "count": 1}],
+      "enemies": [
+        {
+          "id": "enemy_tower_guardian_20",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 5200,
       "isBoss": true,
       "bossReward": {
         "gems": 70,
@@ -103,13 +303,137 @@
       }
     },
     {
+      "floor": 21,
+      "enemies": [
+        {
+          "id": "enemy_medusa",
+          "count": 2
+        },
+        {
+          "id": "enemy_harpy",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 5450,
+      "isBoss": false
+    },
+    {
+      "floor": 22,
+      "enemies": [
+        {
+          "id": "enemy_spriggan",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 5700,
+      "isBoss": false
+    },
+    {
+      "floor": 23,
+      "enemies": [
+        {
+          "id": "enemy_elemental",
+          "count": 2
+        },
+        {
+          "id": "enemy_kappa",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 5940,
+      "isBoss": false
+    },
+    {
+      "floor": 24,
+      "enemies": [
+        {
+          "id": "enemy_tengu",
+          "count": 2
+        },
+        {
+          "id": "enemy_kappa",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 6190,
+      "isBoss": false
+    },
+    {
       "floor": 25,
-      "enemies": [{"id": "enemy_slime_large", "count": 3}],
+      "enemies": [
+        {
+          "id": "enemy_slime_large",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 6440,
+      "isBoss": false
+    },
+    {
+      "floor": 26,
+      "enemies": [
+        {
+          "id": "enemy_oni_minor",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 6690,
+      "isBoss": false
+    },
+    {
+      "floor": 27,
+      "enemies": [
+        {
+          "id": "enemy_jiangshi",
+          "count": 3
+        },
+        {
+          "id": "enemy_gui",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 6930,
+      "isBoss": false
+    },
+    {
+      "floor": 28,
+      "enemies": [
+        {
+          "id": "enemy_terra_cotta",
+          "count": 4
+        }
+      ],
+      "recommendedPower": 7180,
+      "isBoss": false
+    },
+    {
+      "floor": 29,
+      "enemies": [
+        {
+          "id": "enemy_goblin_warrior",
+          "count": 3
+        },
+        {
+          "id": "enemy_goblin_shaman",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 7430,
       "isBoss": false
     },
     {
       "floor": 30,
-      "enemies": [{"id": "enemy_goblin_king", "count": 1}, {"id": "enemy_goblin_shaman", "count": 2}],
+      "enemies": [
+        {
+          "id": "enemy_tower_guardian_30",
+          "count": 1
+        },
+        {
+          "id": "enemy_goblin_shaman",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 7680,
       "isBoss": true,
       "bossReward": {
         "gems": 100,
@@ -118,8 +442,129 @@
       }
     },
     {
+      "floor": 31,
+      "enemies": [
+        {
+          "id": "enemy_frost_dwarf",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 7920,
+      "isBoss": false
+    },
+    {
+      "floor": 32,
+      "enemies": [
+        {
+          "id": "enemy_ice_wolf",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 8170,
+      "isBoss": false
+    },
+    {
+      "floor": 33,
+      "enemies": [
+        {
+          "id": "enemy_cyclops_minor",
+          "count": 2
+        },
+        {
+          "id": "enemy_frost_dwarf",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 8420,
+      "isBoss": false
+    },
+    {
+      "floor": 34,
+      "enemies": [
+        {
+          "id": "enemy_death_knight",
+          "count": 2
+        },
+        {
+          "id": "enemy_wraith",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 8670,
+      "isBoss": false
+    },
+    {
+      "floor": 35,
+      "enemies": [
+        {
+          "id": "enemy_banshee",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 8910,
+      "isBoss": false
+    },
+    {
+      "floor": 36,
+      "enemies": [
+        {
+          "id": "enemy_shade",
+          "count": 2
+        },
+        {
+          "id": "enemy_mimic",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 9160,
+      "isBoss": false
+    },
+    {
+      "floor": 37,
+      "enemies": [
+        {
+          "id": "enemy_dullahan",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 9410,
+      "isBoss": false
+    },
+    {
+      "floor": 38,
+      "enemies": [
+        {
+          "id": "enemy_spriggan",
+          "count": 2
+        },
+        {
+          "id": "enemy_elemental",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 9660,
+      "isBoss": false
+    },
+    {
+      "floor": 39,
+      "enemies": [
+        {
+          "id": "enemy_draugr",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 9900,
+      "isBoss": false
+    },
+    {
       "floor": 40,
-      "enemies": [{"id": "enemy_treant", "count": 2}],
+      "enemies": [
+        {
+          "id": "enemy_tower_guardian_40",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 10150,
       "isBoss": true,
       "bossReward": {
         "gems": 130,
@@ -128,8 +573,141 @@
       }
     },
     {
+      "floor": 41,
+      "enemies": [
+        {
+          "id": "enemy_lich",
+          "count": 1
+        },
+        {
+          "id": "enemy_wraith",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 10400,
+      "isBoss": false
+    },
+    {
+      "floor": 42,
+      "enemies": [
+        {
+          "id": "enemy_fomorian",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 10650,
+      "isBoss": false
+    },
+    {
+      "floor": 43,
+      "enemies": [
+        {
+          "id": "enemy_taotie",
+          "count": 2
+        },
+        {
+          "id": "enemy_yaoguai",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 10890,
+      "isBoss": false
+    },
+    {
+      "floor": 44,
+      "enemies": [
+        {
+          "id": "enemy_kitsune",
+          "count": 2
+        },
+        {
+          "id": "enemy_tengu",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 11140,
+      "isBoss": false
+    },
+    {
+      "floor": 45,
+      "enemies": [
+        {
+          "id": "enemy_oni_warlord",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 11390,
+      "isBoss": false
+    },
+    {
+      "floor": 46,
+      "enemies": [
+        {
+          "id": "enemy_fenrir_pup",
+          "count": 2
+        },
+        {
+          "id": "enemy_ice_wolf",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 11640,
+      "isBoss": false
+    },
+    {
+      "floor": 47,
+      "enemies": [
+        {
+          "id": "enemy_death_knight",
+          "count": 3
+        },
+        {
+          "id": "enemy_banshee",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 11880,
+      "isBoss": false
+    },
+    {
+      "floor": 48,
+      "enemies": [
+        {
+          "id": "enemy_draugr",
+          "count": 2
+        },
+        {
+          "id": "enemy_lich",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 12130,
+      "isBoss": false
+    },
+    {
+      "floor": 49,
+      "enemies": [
+        {
+          "id": "enemy_dullahan",
+          "count": 2
+        },
+        {
+          "id": "enemy_fomorian",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 12380,
+      "isBoss": false
+    },
+    {
       "floor": 50,
-      "enemies": [{"id": "enemy_goblin_king", "count": 2}],
+      "enemies": [
+        {
+          "id": "enemy_tower_guardian_50",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 12630,
       "isBoss": true,
       "bossReward": {
         "gems": 180,
@@ -138,8 +716,141 @@
       }
     },
     {
+      "floor": 51,
+      "enemies": [
+        {
+          "id": "enemy_lich",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 12870,
+      "isBoss": false
+    },
+    {
+      "floor": 52,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 1
+        },
+        {
+          "id": "enemy_wraith",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 13120,
+      "isBoss": false
+    },
+    {
+      "floor": 53,
+      "enemies": [
+        {
+          "id": "enemy_draugr",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 13370,
+      "isBoss": false
+    },
+    {
+      "floor": 54,
+      "enemies": [
+        {
+          "id": "enemy_fomorian",
+          "count": 2
+        },
+        {
+          "id": "enemy_dullahan",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 13620,
+      "isBoss": false
+    },
+    {
+      "floor": 55,
+      "enemies": [
+        {
+          "id": "enemy_fenrir_pup",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 13860,
+      "isBoss": false
+    },
+    {
+      "floor": 56,
+      "enemies": [
+        {
+          "id": "enemy_lich",
+          "count": 2
+        },
+        {
+          "id": "enemy_shade",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 14110,
+      "isBoss": false
+    },
+    {
+      "floor": 57,
+      "enemies": [
+        {
+          "id": "enemy_taotie",
+          "count": 2
+        },
+        {
+          "id": "enemy_yaoguai",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 14360,
+      "isBoss": false
+    },
+    {
+      "floor": 58,
+      "enemies": [
+        {
+          "id": "enemy_oni_warlord",
+          "count": 2
+        },
+        {
+          "id": "enemy_kitsune",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 14610,
+      "isBoss": false
+    },
+    {
+      "floor": 59,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 1
+        },
+        {
+          "id": "enemy_lich",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 14850,
+      "isBoss": false
+    },
+    {
       "floor": 60,
-      "enemies": [{"id": "enemy_treant", "count": 2}, {"id": "enemy_wolf_alpha", "count": 2}],
+      "enemies": [
+        {
+          "id": "enemy_tower_guardian_60",
+          "count": 1
+        },
+        {
+          "id": "enemy_wolf_alpha",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 15100,
       "isBoss": true,
       "bossReward": {
         "gems": 230,
@@ -148,8 +859,141 @@
       }
     },
     {
+      "floor": 61,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 1
+        },
+        {
+          "id": "enemy_banshee",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 15350,
+      "isBoss": false
+    },
+    {
+      "floor": 62,
+      "enemies": [
+        {
+          "id": "enemy_lich",
+          "count": 2
+        },
+        {
+          "id": "enemy_wraith",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 15600,
+      "isBoss": false
+    },
+    {
+      "floor": 63,
+      "enemies": [
+        {
+          "id": "enemy_fenrir_pup",
+          "count": 2
+        },
+        {
+          "id": "enemy_draugr",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 15840,
+      "isBoss": false
+    },
+    {
+      "floor": 64,
+      "enemies": [
+        {
+          "id": "enemy_fomorian",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 16090,
+      "isBoss": false
+    },
+    {
+      "floor": 65,
+      "enemies": [
+        {
+          "id": "enemy_dullahan",
+          "count": 2
+        },
+        {
+          "id": "enemy_taotie",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 16340,
+      "isBoss": false
+    },
+    {
+      "floor": 66,
+      "enemies": [
+        {
+          "id": "enemy_oni_warlord",
+          "count": 2
+        },
+        {
+          "id": "enemy_death_knight",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 16590,
+      "isBoss": false
+    },
+    {
+      "floor": 67,
+      "enemies": [
+        {
+          "id": "enemy_kitsune",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 16830,
+      "isBoss": false
+    },
+    {
+      "floor": 68,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 17080,
+      "isBoss": false
+    },
+    {
+      "floor": 69,
+      "enemies": [
+        {
+          "id": "enemy_lich",
+          "count": 2
+        },
+        {
+          "id": "enemy_shade",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 17330,
+      "isBoss": false
+    },
+    {
       "floor": 70,
-      "enemies": [{"id": "enemy_goblin_king", "count": 2}, {"id": "enemy_goblin_warrior", "count": 3}],
+      "enemies": [
+        {
+          "id": "enemy_tower_guardian_70",
+          "count": 1
+        },
+        {
+          "id": "enemy_oni_warlord",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 17580,
       "isBoss": true,
       "bossReward": {
         "gems": 280,
@@ -158,8 +1002,149 @@
       }
     },
     {
+      "floor": 71,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 1
+        },
+        {
+          "id": "enemy_fenrir_pup",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 17820,
+      "isBoss": false
+    },
+    {
+      "floor": 72,
+      "enemies": [
+        {
+          "id": "enemy_lich",
+          "count": 2
+        },
+        {
+          "id": "enemy_banshee",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 18070,
+      "isBoss": false
+    },
+    {
+      "floor": 73,
+      "enemies": [
+        {
+          "id": "enemy_wraith",
+          "count": 3
+        },
+        {
+          "id": "enemy_shade",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 18320,
+      "isBoss": false
+    },
+    {
+      "floor": 74,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 1
+        },
+        {
+          "id": "enemy_dullahan",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 18570,
+      "isBoss": false
+    },
+    {
+      "floor": 75,
+      "enemies": [
+        {
+          "id": "enemy_lich",
+          "count": 2
+        },
+        {
+          "id": "enemy_fomorian",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 18810,
+      "isBoss": false
+    },
+    {
+      "floor": 76,
+      "enemies": [
+        {
+          "id": "enemy_banshee",
+          "count": 3
+        },
+        {
+          "id": "enemy_wraith",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 19060,
+      "isBoss": false
+    },
+    {
+      "floor": 77,
+      "enemies": [
+        {
+          "id": "enemy_fenrir_pup",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 19310,
+      "isBoss": false
+    },
+    {
+      "floor": 78,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 2
+        },
+        {
+          "id": "enemy_lich",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 19560,
+      "isBoss": false
+    },
+    {
+      "floor": 79,
+      "enemies": [
+        {
+          "id": "enemy_taotie",
+          "count": 2
+        },
+        {
+          "id": "enemy_oni_warlord",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 19800,
+      "isBoss": false
+    },
+    {
       "floor": 80,
-      "enemies": [{"id": "enemy_treant", "count": 3}],
+      "enemies": [
+        {
+          "id": "enemy_tower_guardian_80",
+          "count": 1
+        },
+        {
+          "id": "enemy_lich",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 20050,
       "isBoss": true,
       "bossReward": {
         "gems": 350,
@@ -168,8 +1153,145 @@
       }
     },
     {
+      "floor": 81,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 1
+        },
+        {
+          "id": "enemy_wraith",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 20300,
+      "isBoss": false
+    },
+    {
+      "floor": 82,
+      "enemies": [
+        {
+          "id": "enemy_lich",
+          "count": 2
+        },
+        {
+          "id": "enemy_draugr",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 20550,
+      "isBoss": false
+    },
+    {
+      "floor": 83,
+      "enemies": [
+        {
+          "id": "enemy_banshee",
+          "count": 2
+        },
+        {
+          "id": "enemy_shade",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 20790,
+      "isBoss": false
+    },
+    {
+      "floor": 84,
+      "enemies": [
+        {
+          "id": "enemy_fenrir_pup",
+          "count": 2
+        },
+        {
+          "id": "enemy_dullahan",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 21040,
+      "isBoss": false
+    },
+    {
+      "floor": 85,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 21290,
+      "isBoss": false
+    },
+    {
+      "floor": 86,
+      "enemies": [
+        {
+          "id": "enemy_lich",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 21540,
+      "isBoss": false
+    },
+    {
+      "floor": 87,
+      "enemies": [
+        {
+          "id": "enemy_fomorian",
+          "count": 2
+        },
+        {
+          "id": "enemy_taotie",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 21780,
+      "isBoss": false
+    },
+    {
+      "floor": 88,
+      "enemies": [
+        {
+          "id": "enemy_oni_warlord",
+          "count": 2
+        },
+        {
+          "id": "enemy_kitsune",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 22030,
+      "isBoss": false
+    },
+    {
+      "floor": 89,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 1
+        },
+        {
+          "id": "enemy_lich",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 22280,
+      "isBoss": false
+    },
+    {
       "floor": 90,
-      "enemies": [{"id": "enemy_goblin_king", "count": 2}, {"id": "enemy_treant", "count": 2}],
+      "enemies": [
+        {
+          "id": "enemy_tower_guardian_90",
+          "count": 1
+        },
+        {
+          "id": "enemy_death_dragon",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 22530,
       "isBoss": true,
       "bossReward": {
         "gems": 450,
@@ -178,8 +1300,149 @@
       }
     },
     {
+      "floor": 91,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 2
+        },
+        {
+          "id": "enemy_banshee",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 22770,
+      "isBoss": false
+    },
+    {
+      "floor": 92,
+      "enemies": [
+        {
+          "id": "enemy_lich",
+          "count": 2
+        },
+        {
+          "id": "enemy_wraith",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 23020,
+      "isBoss": false
+    },
+    {
+      "floor": 93,
+      "enemies": [
+        {
+          "id": "enemy_fenrir_pup",
+          "count": 2
+        },
+        {
+          "id": "enemy_taotie",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 23270,
+      "isBoss": false
+    },
+    {
+      "floor": 94,
+      "enemies": [
+        {
+          "id": "enemy_dullahan",
+          "count": 2
+        },
+        {
+          "id": "enemy_fomorian",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 23520,
+      "isBoss": false
+    },
+    {
+      "floor": 95,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 23760,
+      "isBoss": false
+    },
+    {
+      "floor": 96,
+      "enemies": [
+        {
+          "id": "enemy_lich",
+          "count": 2
+        },
+        {
+          "id": "enemy_shade",
+          "count": 2
+        }
+      ],
+      "recommendedPower": 24010,
+      "isBoss": false
+    },
+    {
+      "floor": 97,
+      "enemies": [
+        {
+          "id": "enemy_oni_warlord",
+          "count": 3
+        }
+      ],
+      "recommendedPower": 24260,
+      "isBoss": false
+    },
+    {
+      "floor": 98,
+      "enemies": [
+        {
+          "id": "enemy_death_dragon",
+          "count": 2
+        },
+        {
+          "id": "enemy_lich",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 24510,
+      "isBoss": false
+    },
+    {
+      "floor": 99,
+      "enemies": [
+        {
+          "id": "enemy_wraith",
+          "count": 2
+        },
+        {
+          "id": "enemy_banshee",
+          "count": 2
+        },
+        {
+          "id": "enemy_lich",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 24750,
+      "isBoss": false
+    },
+    {
       "floor": 100,
-      "enemies": [{"id": "enemy_goblin_king", "count": 3}, {"id": "enemy_treant", "count": 2}],
+      "enemies": [
+        {
+          "id": "enemy_tower_guardian_100",
+          "count": 1
+        },
+        {
+          "id": "enemy_dark_lord",
+          "count": 1
+        }
+      ],
+      "recommendedPower": 25000,
       "isBoss": true,
       "bossReward": {
         "gems": 600,

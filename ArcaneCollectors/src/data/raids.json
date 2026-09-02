@@ -1,0 +1,101 @@
+{
+  "config": {
+    "version": "1.0",
+    "weekStartDay": "monday",
+    "rotationLength": 5,
+    "weaknessMultiplier": 1.5,
+    "baseHpUnit": 1000000
+  },
+  "bosses": [
+    {
+      "id": "raid_nidhogg",
+      "name": "니드호그",
+      "nameEn": "Nidhogg",
+      "cultId": "valhalla",
+      "enemyId": "enemy_nidhogg",
+      "weakMood": "brave",
+      "baseHp": 80,
+      "weeklyResetDay": "monday",
+      "description": "발할라의 뿌리를 갉아먹는 사악한 용. 열혈(brave)한 영웅의 일격에 약점을 드러낸다.",
+      "rewards": [
+        { "tier": 1, "rank": "참전", "minDamagePct": 0.05, "gold": 5000, "gems": 5, "equipmentFragment": 1, "ssrTicket": 0 },
+        { "tier": 2, "rank": "분전", "minDamagePct": 0.2, "gold": 12000, "gems": 10, "equipmentFragment": 2, "ssrTicket": 0 },
+        { "tier": 3, "rank": "공헌", "minDamagePct": 0.5, "gold": 25000, "gems": 20, "equipmentFragment": 3, "ssrTicket": 0 },
+        { "tier": 4, "rank": "활약", "minDamagePct": 1.0, "gold": 50000, "gems": 35, "equipmentFragment": 5, "ssrTicket": 0 },
+        { "tier": 5, "rank": "결전", "minDamagePct": 3.0, "gold": 100000, "gems": 60, "equipmentFragment": 10, "ssrTicket": 1 }
+      ]
+    },
+    {
+      "id": "raid_yamata_no_orochi",
+      "name": "야마타노오로치",
+      "nameEn": "Yamata no Orochi",
+      "cultId": "takamagahara",
+      "enemyId": "enemy_yamata",
+      "weakMood": "cunning",
+      "baseHp": 100,
+      "weeklyResetDay": "monday",
+      "description": "여덟 개의 머리를 지닌 괴사. 냉철(cunning)한 지략만이 여덟 목을 동시에 벨 수 있다.",
+      "rewards": [
+        { "tier": 1, "rank": "참전", "minDamagePct": 0.05, "gold": 6000, "gems": 6, "equipmentFragment": 1, "ssrTicket": 0 },
+        { "tier": 2, "rank": "분전", "minDamagePct": 0.2, "gold": 14000, "gems": 12, "equipmentFragment": 2, "ssrTicket": 0 },
+        { "tier": 3, "rank": "공헌", "minDamagePct": 0.5, "gold": 30000, "gems": 24, "equipmentFragment": 4, "ssrTicket": 0 },
+        { "tier": 4, "rank": "활약", "minDamagePct": 1.0, "gold": 60000, "gems": 42, "equipmentFragment": 6, "ssrTicket": 0 },
+        { "tier": 5, "rank": "결전", "minDamagePct": 3.0, "gold": 120000, "gems": 72, "equipmentFragment": 12, "ssrTicket": 1 }
+      ]
+    },
+    {
+      "id": "raid_typhon",
+      "name": "티폰",
+      "nameEn": "Typhon",
+      "cultId": "olympus",
+      "enemyId": "enemy_typhon",
+      "weakMood": "calm",
+      "baseHp": 90,
+      "weeklyResetDay": "monday",
+      "description": "제우스를 몰라붙였던 백 마리 용왕. 고요(calm)한 중심만이 폭풍의 심장을 꿰뚫는다.",
+      "rewards": [
+        { "tier": 1, "rank": "참전", "minDamagePct": 0.05, "gold": 5500, "gems": 6, "equipmentFragment": 1, "ssrTicket": 0 },
+        { "tier": 2, "rank": "분전", "minDamagePct": 0.2, "gold": 13000, "gems": 11, "equipmentFragment": 2, "ssrTicket": 0 },
+        { "tier": 3, "rank": "공헌", "minDamagePct": 0.5, "gold": 28000, "gems": 22, "equipmentFragment": 4, "ssrTicket": 0 },
+        { "tier": 4, "rank": "활약", "minDamagePct": 1.0, "gold": 55000, "gems": 38, "equipmentFragment": 6, "ssrTicket": 0 },
+        { "tier": 5, "rank": "결전", "minDamagePct": 3.0, "gold": 110000, "gems": 66, "equipmentFragment": 11, "ssrTicket": 1 }
+      ]
+    },
+    {
+      "id": "raid_fenrir",
+      "name": "펜리르",
+      "nameEn": "Fenrir",
+      "cultId": "asgard",
+      "enemyId": "enemy_fenrir_wolf",
+      "weakMood": "wild",
+      "baseHp": 110,
+      "weeklyResetDay": "monday",
+      "description": "신들을 삼킬 마랑의 늑대. 광폭(wild)하게 맞서야 그 이빨을 꺾을 수 있다.",
+      "rewards": [
+        { "tier": 1, "rank": "참전", "minDamagePct": 0.05, "gold": 6500, "gems": 7, "equipmentFragment": 2, "ssrTicket": 0 },
+        { "tier": 2, "rank": "분전", "minDamagePct": 0.2, "gold": 15000, "gems": 13, "equipmentFragment": 3, "ssrTicket": 0 },
+        { "tier": 3, "rank": "공헌", "minDamagePct": 0.5, "gold": 32000, "gems": 26, "equipmentFragment": 4, "ssrTicket": 0 },
+        { "tier": 4, "rank": "활약", "minDamagePct": 1.0, "gold": 65000, "gems": 45, "equipmentFragment": 7, "ssrTicket": 0 },
+        { "tier": 5, "rank": "결전", "minDamagePct": 3.0, "gold": 130000, "gems": 78, "equipmentFragment": 13, "ssrTicket": 1 }
+      ]
+    },
+    {
+      "id": "raid_izanami",
+      "name": "이자나미",
+      "nameEn": "Izanami",
+      "cultId": "yomi",
+      "enemyId": "enemy_izanami",
+      "weakMood": "mystic",
+      "baseHp": 130,
+      "weeklyResetDay": "monday",
+      "description": "요미의 문을 닫은 여신. 신비(mystic)한 힘만이 저승의 굳은 문을 여는 열쇠다.",
+      "rewards": [
+        { "tier": 1, "rank": "참전", "minDamagePct": 0.05, "gold": 7500, "gems": 8, "equipmentFragment": 2, "ssrTicket": 0 },
+        { "tier": 2, "rank": "분전", "minDamagePct": 0.2, "gold": 18000, "gems": 15, "equipmentFragment": 3, "ssrTicket": 0 },
+        { "tier": 3, "rank": "공헌", "minDamagePct": 0.5, "gold": 38000, "gems": 30, "equipmentFragment": 5, "ssrTicket": 0 },
+        { "tier": 4, "rank": "활약", "minDamagePct": 1.0, "gold": 75000, "gems": 52, "equipmentFragment": 8, "ssrTicket": 0 },
+        { "tier": 5, "rank": "결전", "minDamagePct": 3.0, "gold": 150000, "gems": 90, "equipmentFragment": 15, "ssrTicket": 1 }
+      ]
+    }
+  ]
+}

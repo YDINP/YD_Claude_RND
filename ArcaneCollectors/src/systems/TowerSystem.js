@@ -53,6 +53,9 @@ export class TowerSystem {
       enemies: floorData.enemies,
       isBoss,
       difficulty: this.calculateDifficulty(floor),
+      recommendedPower: typeof floorData.recommendedPower === 'number'
+        ? floorData.recommendedPower
+        : this.getRecommendedPower(floor),
       rewards: this.calculateRewards(floor),
       bossReward: floorData.bossReward || null
     };
@@ -90,6 +93,7 @@ export class TowerSystem {
       enemies,
       isBoss,
       difficulty: this.calculateDifficulty(floor),
+      recommendedPower: this.getRecommendedPower(floor),
       rewards: this.calculateRewards(floor),
       bossReward: isBoss ? this._generateBossReward(floor) : null
     };
@@ -268,13 +272,21 @@ export class TowerSystem {
 
   /**
    * 층별 권장 전투력 계산
+   * tower.json에 권장 전투력이 정의되어 있으면 그 값 사용,
+   * 없으면 1층 ~500 → 최고층 ~25000 선형 곡선으로 산출 (PRD §5.2)
    * @param {number} floor 층 번호
    * @returns {number} 권장 전투력
    */
   static getRecommendedPower(floor) {
-    const basePower = 1000;
-    const difficulty = this.calculateDifficulty(floor);
-    return Math.floor(basePower * difficulty);
+    const floorData = towerData.floors.find(f => f.floor === floor);
+    if (floorData && typeof floorData.recommendedPower === 'number') {
+      return floorData.recommendedPower;
+    }
+
+    const basePower = 500;
+    const maxPower = 25000;
+    const step = (maxPower - basePower) / Math.max(1, this.MAX_FLOOR - 1);
+    return Math.floor(basePower + (floor - 1) * step);
   }
 
   /**
@@ -291,7 +303,8 @@ export class TowerSystem {
       return {
         gold: 500 * floor,
         exp: 250 * floor,
-        equipmentChance: 0
+        equipmentChance: 0,
+        shardRarity: null
       };
     }
 
@@ -301,7 +314,8 @@ export class TowerSystem {
     return {
       gold: Math.floor(baseRewards.gold * floorBonus),
       exp: Math.floor(baseRewards.exp * floorBonus),
-      equipmentChance: baseRewards.equipmentChance || 0
+      equipmentChance: baseRewards.equipmentChance || 0,
+      shardRarity: baseRewards.shardRarity || null
     };
   }
 

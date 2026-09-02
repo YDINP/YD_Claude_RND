@@ -1,9 +1,9 @@
 /**
  * TowerSystem.test.js
  * Unit tests for TowerSystem - 무한의 탑 시스템
- * 16 tests total
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'fs';
 
 // Mock dependencies
 vi.mock('../../src/systems/SaveManager.js', () => ({
@@ -44,12 +44,13 @@ vi.mock('../../src/data/tower.json', () => ({
       {
         floor: 1,
         enemies: [{ id: 'enemy_slime', count: 2 }],
+        recommendedPower: 500,
         bossReward: null
       }
     ],
     rewards: {
       '1-10': { gold: 500, exp: 250, equipmentChance: 0 },
-      '11-30': { gold: 800, exp: 400, equipmentChance: 0.05 },
+      '11-30': { gold: 800, exp: 400, equipmentChance: 0.05, shardRarity: 'R' },
       '31-50': { gold: 1200, exp: 600, equipmentChance: 0.1 },
       '51-70': { gold: 1800, exp: 900, equipmentChance: 0.15 },
       '71-100': { gold: 2500, exp: 1250, equipmentChance: 0.2 }
@@ -122,6 +123,24 @@ describe('TowerSystem', () => {
       const power20 = TowerSystem.getRecommendedPower(20);
 
       expect(power20).toBeGreaterThan(power1);
+    });
+
+    it('uses tower.json recommendedPower when defined', () => {
+      const info = TowerSystem.getFloorInfo(1);
+
+      expect(info.recommendedPower).toBe(500);
+    });
+
+    it('falls back to linear curve (~500 -> ~25000) monotonically', () => {
+      const floors = [2, 20, 40, 60, 80, 100];
+      const powers = floors.map(f => TowerSystem.getRecommendedPower(f));
+
+      for (let i = 1; i < powers.length; i++) {
+        expect(powers[i]).toBeGreaterThan(powers[i - 1]);
+      }
+      // 1층 ~500, 100층 ~25000 (PRD §5.2 난이도 곡선)
+      expect(TowerSystem.getRecommendedPower(100)).toBeGreaterThanOrEqual(24000);
+      expect(TowerSystem.getRecommendedPower(100)).toBeLessThanOrEqual(25000);
     });
   });
 
@@ -196,6 +215,22 @@ describe('TowerSystem', () => {
 
       expect(result.success).toBe(true);
       expect(result.isBossCleared).toBe(true);
+    });
+
+    it('passes reward tier shardRarity through on clear (PRD §5.2)', () => {
+      SaveManager.load.mockReturnValue({
+        tower: {
+          currentFloor: 11,
+          highestFloor: 10,
+          totalClears: 0,
+          bossClears: {}
+        }
+      });
+
+      const result = TowerSystem.clearFloor(11, { victory: true });
+
+      expect(result.success).toBe(true);
+      expect(result.rewards.shardRarity).toBe('R');
     });
 
     it('updates currentFloor to next floor on victory', () => {
@@ -329,6 +364,87 @@ describe('TowerSystem', () => {
       expect(summary).toHaveProperty('progressPercent');
       expect(summary).toHaveProperty('recommendedPower');
       expect(summary).toHaveProperty('currentFloorInfo');
+    });
+  });
+
+  // TOWER-02: 실제 데이터 파일 무결성 (vi.mock 우회 — fs 직접 읽기)
+  describe('tower.json data integrity (real file)', () => {
+    const realTower = JSON.parse(
+      readFileSync(new URL('../../src/data/tower.json', import.meta.url), 'utf-8')
+    );
+    const realEnemies = JSON.parse(
+      readFileSync(new URL('../../src/data/enemies.json', import.meta.url), 'utf-8')
+    );
+    const enemyIds = new Set(realEnemies.enemies.map(e => e.id));
+
+    it('has exactly 100 floors covering 1..100 without gaps', () => {
+      expect(realTower.floors).toHaveLength(100);
+      const nums = realTower.floors.map(f => f.floor).sort((a, b) => a - b);
+      for (let i = 0; i < 100; i++) {
+        expect(nums[i]).toBe(i + 1);
+      }
+    });
+
+    it('marks exactly config.bossFloors as boss floors with bossReward', () => {
+      const bossFloors = realTower.floors.filter(f => f.isBoss);
+      expect(bossFloors.map(f => f.floor)).toEqual([...realTower.config.bossFloors]);
+
+      bossFloors.forEach(f => {
+        expect(f.bossReward).toBeTruthy();
+        expect(f.bossReward.gems).toBeGreaterThan(0);
+        expect(typeof f.bossReward.srTicket).toBe('number');
+        expect(typeof f.bossReward.ssrTicket).toBe('number');
+      });
+
+      realTower.floors
+        .filter(f => !f.isBoss)
+        .forEach(f => expect(f.bossReward).toBeUndefined());
+    });
+
+    it('uses only enemy ids that exist in enemies.json', () => {
+      realTower.floors.forEach(floor => {
+        floor.enemies.forEach(def => {
+          expect(enemyIds.has(def.id)).toBe(true);
+        });
+      });
+    });
+
+    it('keeps enemy counts within 1..5 per entry', () => {
+      realTower.floors.forEach(floor => {
+        floor.enemies.forEach(def => {
+          expect(def.count).toBeGreaterThanOrEqual(1);
+          expect(def.count).toBeLessThanOrEqual(5);
+        });
+      });
+    });
+
+    it('has monotonic recommendedPower from ~500 to ~25000', () => {
+      const byFloor = [...realTower.floors].sort((a, b) => a.floor - b.floor);
+
+      for (let i = 1; i < byFloor.length; i++) {
+        expect(byFloor[i].recommendedPower).toBeGreaterThan(byFloor[i - 1].recommendedPower);
+      }
+      expect(byFloor[0].recommendedPower).toBeGreaterThanOrEqual(450);
+      expect(byFloor[0].recommendedPower).toBeLessThanOrEqual(550);
+      expect(byFloor[99].recommendedPower).toBe(25000);
+    });
+
+    it('maps reward bands to PRD §5.2 shard rarities', () => {
+      expect(realTower.rewards['1-10'].shardRarity).toBeNull();
+      expect(realTower.rewards['11-30'].shardRarity).toBe('R');
+      expect(realTower.rewards['31-50'].shardRarity).toBe('SR');
+      expect(realTower.rewards['51-70'].shardRarity).toBe('SSR');
+      expect(realTower.rewards['71-100'].shardRarity).toBe('LEGENDARY');
+    });
+
+    it('escalates boss gem rewards without decrease', () => {
+      const gems = realTower.config.bossFloors.map(
+        f => realTower.floors.find(fl => fl.floor === f).bossReward.gems
+      );
+
+      for (let i = 1; i < gems.length; i++) {
+        expect(gems[i]).toBeGreaterThanOrEqual(gems[i - 1]);
+      }
     });
   });
 });

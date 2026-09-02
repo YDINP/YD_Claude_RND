@@ -1207,6 +1207,136 @@
       "goldReward": 300
     },
     {
+      "id": "enemy_tower_guardian_60",
+      "name": "수호자 Lv60",
+      "nameEn": "Tower Guardian Lv60",
+      "mood": "wild",
+      "type": "tower_boss",
+      "stats": {
+        "hp": 8500,
+        "atk": 150,
+        "def": 88,
+        "spd": 84
+      },
+      "growthStats": {
+        "hp": 950,
+        "atk": 38,
+        "def": 22,
+        "spd": 4
+      },
+      "skills": [
+        "skill_guardian_fury",
+        "skill_tower_shield",
+        "skill_rampage"
+      ],
+      "expReward": 240,
+      "goldReward": 340
+    },
+    {
+      "id": "enemy_tower_guardian_70",
+      "name": "수호자 Lv70",
+      "nameEn": "Tower Guardian Lv70",
+      "mood": "mystic",
+      "type": "tower_boss",
+      "stats": {
+        "hp": 11500,
+        "atk": 170,
+        "def": 100,
+        "spd": 86
+      },
+      "growthStats": {
+        "hp": 1150,
+        "atk": 44,
+        "def": 25,
+        "spd": 4
+      },
+      "skills": [
+        "skill_mystic_blast",
+        "skill_arcane_shield",
+        "skill_death_gaze"
+      ],
+      "expReward": 280,
+      "goldReward": 380
+    },
+    {
+      "id": "enemy_tower_guardian_80",
+      "name": "수호자 Lv80",
+      "nameEn": "Tower Guardian Lv80",
+      "mood": "fierce",
+      "type": "tower_boss",
+      "stats": {
+        "hp": 15000,
+        "atk": 195,
+        "def": 112,
+        "spd": 88
+      },
+      "growthStats": {
+        "hp": 1400,
+        "atk": 50,
+        "def": 28,
+        "spd": 4
+      },
+      "skills": [
+        "skill_guardian_slash",
+        "skill_impenetrable_wall",
+        "skill_hellfire_breath"
+      ],
+      "expReward": 320,
+      "goldReward": 430
+    },
+    {
+      "id": "enemy_tower_guardian_90",
+      "name": "수호자 Lv90",
+      "nameEn": "Tower Guardian Lv90",
+      "mood": "noble",
+      "type": "tower_boss",
+      "stats": {
+        "hp": 19000,
+        "atk": 220,
+        "def": 125,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 1700,
+        "atk": 57,
+        "def": 32,
+        "spd": 5
+      },
+      "skills": [
+        "skill_divine_strike",
+        "skill_holy_barrier",
+        "skill_heaven_judgment"
+      ],
+      "expReward": 370,
+      "goldReward": 480
+    },
+    {
+      "id": "enemy_tower_guardian_100",
+      "name": "수호자 Lv100",
+      "nameEn": "Tower Guardian Lv100",
+      "mood": "cunning",
+      "type": "tower_boss",
+      "stats": {
+        "hp": 24000,
+        "atk": 250,
+        "def": 140,
+        "spd": 92
+      },
+      "growthStats": {
+        "hp": 2000,
+        "atk": 64,
+        "def": 36,
+        "spd": 5
+      },
+      "skills": [
+        "skill_divine_strike",
+        "skill_arcane_shield",
+        "skill_ultimate_judgment"
+      ],
+      "expReward": 450,
+      "goldReward": 600
+    },
+    {
       "id": "enemy_brownie",
       "name": "브라우니",
       "nameEn": "Brownie",

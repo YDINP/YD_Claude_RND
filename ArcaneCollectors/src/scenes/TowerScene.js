@@ -338,9 +338,25 @@ export class TowerScene extends Phaser.Scene {
 
     energySystem.consumeEnergy(energyCost);
 
+    // TOWER-01 픽스: BattleScene은 data.stage만 소비하므로
+    // tower.json의 {id,count} 구성을 stage.enemies({id,level}) 배열로 확장해 전달
+    const floor = this.progress.currentFloor;
+    const enemyLevel = Math.min(10, Math.max(1, Math.floor(floor / 10)));
+    const stageEnemies = [];
+    (this.currentFloorInfo.enemies || []).forEach(def => {
+      for (let i = 0; i < (def.count || 1); i++) {
+        stageEnemies.push({ id: def.id, level: enemyLevel });
+      }
+    });
+
     transitionManager.battleEntryTransition(this, {
       mode: 'tower',
-      towerFloor: this.progress.currentFloor,
+      towerFloor: floor,
+      stage: {
+        id: `tower_floor_${floor}`,
+        name: `무한의 탑 ${floor}층`,
+        enemies: stageEnemies
+      },
       enemies: this.currentFloorInfo.enemies,
       isBoss: this.currentFloorInfo.isBoss,
       returnScene: 'TowerScene'
