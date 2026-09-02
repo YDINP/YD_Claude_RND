@@ -92,10 +92,17 @@ export const rounds = pgTable(
     levelUpBonus: bigint('level_up_bonus', { mode: 'number' }),
     /** 프리스핀으로 돈 라운드인지. true면 `bet`은 계산 기준일 뿐 차감되지 않았다. */
     isFreeSpin: boolean('is_free_spin').notNull().default(false),
+    /**
+     * 이 스핀에 실제로 적용된 승수. 기본 게임은 1, 프리스핀이면 세션 배수다.
+     * 시드 공개로 라운드를 재현하려면 스핀 **직전**의 배수를 알아야 한다.
+     */
+    multiplier: doublePrecision('multiplier').notNull().default(1),
     /** 이 스핀이 발동한 피처 (shared `FeatureTrigger[]`) */
     features: jsonb('features'),
     /** 스핀 직후의 프리스핀 상태 (shared `FreeSpinsState`). 세션이 끝났으면 null */
     freeSpinsAfter: jsonb('free_spins_after'),
+    /** 이 스핀으로 세션이 끝났을 때의 요약 `{ total, spins }`. 재전송 복원용 */
+    freeSpinsSummary: jsonb('free_spins_summary'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique('rounds_user_id_idempotency_key_unique').on(table.userId, table.idempotencyKey)]
@@ -185,8 +192,11 @@ export const gameStates = pgTable(
       .notNull()
       .references(() => users.id),
     gameId: text('game_id').notNull(),
-    /** shared `FreeSpinsState`. 진행 중인 세션이 없으면 null */
-    freeSpins: jsonb('free_spins'),
+    /**
+     * shared `GameState`. 지금은 `{ freeSpins }` 하나지만 캐스케이드·리스핀·스티키·미터·갬블이
+     * 같은 자리에 들어온다. 피처마다 컬럼을 늘리지 않으려고 컨테이너 하나로 둔다.
+     */
+    state: jsonb('state'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.gameId] })]

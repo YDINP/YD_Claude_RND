@@ -1,7 +1,9 @@
 import type { GameMath } from './schema.js'
-import { evaluate, evaluateScatter, getBetPerLine, triggersFreeSpins } from './evaluate.js'
+import { evaluate, evaluateScatter, triggersFreeSpins } from './evaluate.js'
+import { getBetUnit } from './spin.js'
+import { evaluateWays } from './ways.js'
 import { buildGrid, spinUnchecked } from './spin.js'
-import { computeAnalyticRtp, expectedFreeSpinsPerTrigger } from './analytic.js'
+import { computeAnalyticRtp, expectedFreeSpinsPerTrigger, isAnalytic } from './analytic.js'
 import type { RtpBreakdown } from './analytic.js'
 import { createSeededRng } from './rng/seeded.js'
 import type { Rng, RoundState } from './types.js'
@@ -16,6 +18,10 @@ export const DEFAULT_SAMPLE_SEED = 'rtp-sample'
 /** 한 라운드가 낳을 수 있는 프리스핀 상한. 넘으면 모델이 발산한 것으로 보고 막는다. */
 export const MAX_FREE_SPINS_PER_ROUND = 10_000
 
+/** 몬테카를로 경로의 기본 스핀 수와 시드. 고정 시드라 CI에서 그대로 재현된다. */
+export const DEFAULT_MC_SPINS = 2_000_000
+export const DEFAULT_MC_SEED = 'monte-carlo'
+
 export interface WinBucket {
   /** 총 베팅액 대비 배수. */
   multiplier: number
@@ -25,7 +31,7 @@ export interface WinBucket {
   rtpShare: number
 }
 
-export type RtpMethod = 'enumerate' | 'analytic'
+export type RtpMethod = 'enumerate' | 'analytic' | 'monte-carlo'
 
 export interface ExactRtpOptions {
   /**
@@ -34,6 +40,20 @@ export interface ExactRtpOptions {
    */
   sampleSpins?: number
   sampleSeed?: string | number
+  /** 몬테카를로 경로에서 돌릴 유료 스핀 수. */
+  mcSpins?: number
+  /** 몬테카를로 경로 시드. 바꾸면 값이 달라지므로 리포트에 함께 기록한다. */
+  mcSeed?: string
+}
+
+/** 몬테카를로로 잰 RTP의 신뢰 구간. 감사 게이트가 이 값을 요구한다. */
+export interface MonteCarloRtpInfo {
+  spins: number
+  seed: string
+  /** 스핀당 지급 배수의 표본표준편차 / sqrt(n). */
+  stdErr: number
+  /** 95% 신뢰 구간 [하한, 상한]. */
+  ci95: [number, number]
 }
 
 export interface ExactRtpReport {
@@ -58,6 +78,8 @@ export interface ExactRtpReport {
   distributionIsExact: boolean
   /** 한 스핀이 프리스핀을 열 확률. */
   triggerProbability: number
+  /** `method`가 'monte-carlo'일 때만 채워진다. */
+  monteCarlo?: MonteCarloRtpInfo
 }
 
 interface BaseAccumulator {
@@ -84,7 +106,7 @@ function freeSpinsContribution(math: GameMath, base: number, triggerProbability:
 
 /** 모든 정지 위치 조합을 실제로 돌려 본다. 3릴처럼 조합이 적은 모델에서만 쓴다. */
 function enumerateRtp(math: GameMath, totalBet: number, combos: number): ExactRtpReport {
-  const betPerLine = getBetPerLine(math, totalBet)
+  const betPerLine = getBetUnit(math, totalBet)
   const lengths = math.strips.map((strip) => strip.length)
   const stops = new Array<number>(math.reels).fill(0)
   const buckets = new Map<number, number>()
@@ -92,7 +114,9 @@ function enumerateRtp(math: GameMath, totalBet: number, combos: number): ExactRt
 
   for (let i = 0; i < combos; i += 1) {
     const grid = buildGrid(math, stops)
-    const { totalWin: lineWin } = evaluate(grid, math, betPerLine)
+    // 페이 모델에 맞는 평가기를 쓴다. ways 게임을 라인으로 평가하면 전부 0이 된다.
+    const { totalWin: lineWin } =
+      math.payModel === 'ways' ? evaluateWays(grid, math, betPerLine) : evaluate(grid, math, betPerLine)
     const scatter = evaluateScatter(grid, math, totalBet)
     const baseWin = lineWin + scatter.win
 
@@ -184,6 +208,98 @@ function sampleBaseDistribution(
 }
 
 /**
+ * 몬테카를로로 RTP를 잰다. 뮤테이션처럼 닫힌 식이 없는 모델의 1급 경로다.
+ *
+ * 유료 스핀 1회가 프리스핀을 열면 그 라운드를 끝까지 돌린 뒤 다음 유료 스핀으로 넘어간다.
+ * 분모는 유료 스핀 수다. 시드가 고정이라 같은 입력이면 같은 값이 나온다.
+ */
+function monteCarloRtp(
+  math: GameMath,
+  totalBet: number,
+  spins: number,
+  seed: string,
+): ExactRtpReport {
+  if (!Number.isInteger(spins) || spins < 1) {
+    throw new RangeError(`mcSpins는 1 이상의 정수여야 한다: ${spins}`)
+  }
+  const rng = createSeededRng(seed)
+  const buckets = new Map<number, number>()
+  let roundSum = 0
+  let squareSum = 0
+  let baseLineSum = 0
+  let baseScatterSum = 0
+  let hits = 0
+  let maxBaseWin = 0
+  let triggers = 0
+
+  for (let i = 0; i < spins; i += 1) {
+    const paid = spinUnchecked(math, totalBet, rng)
+    baseLineSum += paid.lineWin
+    baseScatterSum += paid.scatterWin
+    const baseWin = paid.lineWin + paid.scatterWin
+    if (baseWin > 0) {
+      hits += 1
+      if (baseWin > maxBaseWin) maxBaseWin = baseWin
+      const multiplier = baseWin / totalBet
+      buckets.set(multiplier, (buckets.get(multiplier) ?? 0) + 1)
+    }
+
+    let roundWin = paid.totalWin
+    let state: RoundState | undefined = paid.nextState
+    if (state !== undefined) triggers += 1
+    let played = 0
+    while (state !== undefined) {
+      played += 1
+      if (played > MAX_FREE_SPINS_PER_ROUND) {
+        throw new RangeError(`한 라운드의 프리스핀이 ${MAX_FREE_SPINS_PER_ROUND}회를 넘었다. 모델이 발산한다`)
+      }
+      const free = spinUnchecked(math, totalBet, rng, state)
+      roundWin += free.totalWin
+      state = free.nextState
+    }
+
+    roundSum += roundWin
+    const roundMultiplier = roundWin / totalBet
+    squareSum += roundMultiplier * roundMultiplier
+  }
+
+  const denominator = spins * totalBet
+  const rtp = roundSum / denominator
+  const variance = Math.max(0, squareSum / spins - rtp * rtp)
+  const stdErr = Math.sqrt(variance / spins)
+  const lines = baseLineSum / denominator
+  const scatter = baseScatterSum / denominator
+
+  const winDistribution: WinBucket[] = [...buckets.entries()]
+    .map(([multiplier, count]) => ({
+      multiplier,
+      combos: count,
+      probability: count / spins,
+      rtpShare: (multiplier * count) / spins,
+    }))
+    .sort((a, b) => a.multiplier - b.multiplier)
+
+  return {
+    rtp,
+    hitRate: hits / spins,
+    combos: math.strips.reduce((acc, strip) => acc * strip.length, 1),
+    maxWinMultiplier: maxBaseWin / totalBet,
+    winDistribution,
+    method: 'monte-carlo',
+    // 프리스핀 몫은 전체에서 기본 게임 몫을 뺀 나머지다.
+    breakdown: { lines, scatter, freeSpins: Math.max(0, rtp - lines - scatter) },
+    distributionIsExact: false,
+    triggerProbability: triggers / spins,
+    monteCarlo: {
+      spins,
+      seed,
+      stdErr,
+      ci95: [rtp - 1.96 * stdErr, rtp + 1.96 * stdErr],
+    },
+  }
+}
+
+/**
  * 정확한 RTP. 조합 수가 상한 이하면 전수 조사하고, 넘으면 해석적으로 계산한다.
  * 어느 쪽이든 `rtp`는 정확값이며 `method`로 어떤 경로였는지 알 수 있다.
  *
@@ -197,8 +313,15 @@ export function computeExactRtp(
   totalBet: number,
   options: ExactRtpOptions = {},
 ): ExactRtpReport {
+  // 닫힌 식이 없는 모델(확률형 뮤테이션, ways+뮤테이션)은 몬테카를로가 유일한 경로다.
+  if (!isAnalytic(math)) {
+    return monteCarloRtp(math, totalBet, options.mcSpins ?? DEFAULT_MC_SPINS, options.mcSeed ?? DEFAULT_MC_SEED)
+  }
+
   const combos = math.strips.reduce((acc, strip) => acc * strip.length, 1)
-  if (combos <= MAX_ENUMERATION_COMBOS) return enumerateRtp(math, totalBet, combos)
+  const hasMutations = (math.mutations ?? []).length > 0
+  // 뮤테이션이 있으면 전수 조사가 공개 추첨까지 돌지 못하므로 해석 경로로 간다.
+  if (!hasMutations && combos <= MAX_ENUMERATION_COMBOS) return enumerateRtp(math, totalBet, combos)
 
   const analytic = computeAnalyticRtp(math, totalBet)
   const spins = options.sampleSpins ?? DEFAULT_SAMPLE_SPINS

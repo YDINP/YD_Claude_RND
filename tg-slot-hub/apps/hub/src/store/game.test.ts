@@ -14,7 +14,7 @@ vi.mock('../sdk/api', async () => {
 import type { GameMath } from '@tgslot/slot-engine'
 import type { SpinResponse, FreeSpinsState } from '@tgslot/shared'
 import { getGameMath, spin as apiSpin, getMe, getGameState, ApiClientError } from '../sdk/api'
-import { useGameStore, type SpinRenderer } from './game'
+import { useGameStore, type SpinRenderer, type SpinToHandle } from './game'
 import { useSessionStore } from './session'
 import { useHubStore } from './hub'
 
@@ -83,12 +83,30 @@ function makeRenderer() {
   return { ...renderer, spinTo, showWins, setMode }
 }
 
+/**
+ * spinTo()가 돌려주는 손잡이를 흉내낸다 — 진짜 Promise 위에 skip()을 얹어 thenable +
+ * skip 가능한 형태로 만든다. resolveFn을 밖에서 쥐고 있다가 원할 때 "릴이 멈췄다"를 흉내낸다.
+ */
+function makeControllableSpinHandle(): {
+  handle: SpinToHandle
+  skip: ReturnType<typeof vi.fn>
+  resolve: () => void
+} {
+  let resolveFn: () => void = () => {}
+  const promise = new Promise<void>((resolve) => {
+    resolveFn = resolve
+  })
+  const skip = vi.fn()
+  const handle = Object.assign(promise, { skip }) as SpinToHandle
+  return { handle, skip, resolve: resolveFn }
+}
+
 describe('game store', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
     useGameStore.getState().reset()
-    mockedGetGameState.mockResolvedValue({ freeSpins: null })
+    mockedGetGameState.mockResolvedValue({ freeSpins: null, state: { freeSpins: null } })
     useHubStore.setState({
       status: 'idle',
       errorMessage: null,
@@ -143,7 +161,7 @@ describe('game store', () => {
     it('resumes an in-progress free spins session from GET /games/:id/state', async () => {
       mockedGetGameMath.mockResolvedValue(rawMath)
       const freeSpins = makeFreeSpinsState({ left: 4, total: 10 })
-      mockedGetGameState.mockResolvedValue({ freeSpins })
+      mockedGetGameState.mockResolvedValue({ freeSpins, state: { freeSpins } })
 
       await useGameStore.getState().load('classic-777')
 
@@ -476,6 +494,68 @@ describe('game store', () => {
       expect(mockedApiSpin).not.toHaveBeenCalled()
     })
 
+    describe('requestSkip (UX round 3 — tap/Space skip-to-result)', () => {
+      it('does nothing when called outside phase === spinning', () => {
+        useGameStore.setState({ phase: 'idle' })
+
+        expect(() => useGameStore.getState().requestSkip()).not.toThrow()
+      })
+
+      it('calls handle.skip() when the server result already arrived and spinTo is in flight', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        const { handle, skip, resolve } = makeControllableSpinHandle()
+        renderer.spinTo.mockReturnValue(handle)
+        useGameStore.getState().setRenderer(renderer)
+        mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'skip-after' }))
+
+        const spinPromise = useGameStore.getState().spin()
+
+        // apiSpin이 이미 resolve된 값이라 다음 microtask 틱에서 spinTo가 불릴 때까지 기다린다 —
+        // 즉 "결과가 이미 도착해 spinTo가 진행 중"인 상황을 재현한다.
+        await vi.waitFor(() => expect(renderer.spinTo).toHaveBeenCalled())
+
+        useGameStore.getState().requestSkip()
+
+        expect(skip).toHaveBeenCalledTimes(1)
+
+        resolve()
+        await spinPromise
+      })
+
+      it('defers the skip via a flag until spinTo starts, when the result has not arrived yet', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        const { handle, skip, resolve } = makeControllableSpinHandle()
+        renderer.spinTo.mockReturnValue(handle)
+        useGameStore.getState().setRenderer(renderer)
+
+        let resolveApiSpin: (value: SpinResponse) => void = () => {}
+        mockedApiSpin.mockReturnValue(
+          new Promise((res) => {
+            resolveApiSpin = res
+          }),
+        )
+
+        const spinPromise = useGameStore.getState().spin()
+        await vi.waitFor(() => expect(useGameStore.getState().phase).toBe('spinning'))
+        expect(renderer.spinTo).not.toHaveBeenCalled()
+
+        // 탭/스페이스가 결과보다 먼저 눌렸다 — 아직 건너뛸 손잡이가 없으므로 skip이 불리면 안 된다.
+        useGameStore.getState().requestSkip()
+        expect(skip).not.toHaveBeenCalled()
+
+        resolveApiSpin(baseSpinResponse({ roundId: 'skip-before' }))
+        await vi.waitFor(() => expect(renderer.spinTo).toHaveBeenCalled())
+
+        // spinTo가 막 시작되는 순간, 미뤄뒀던 건너뛰기 요청이 즉시 실행된다.
+        expect(skip).toHaveBeenCalledTimes(1)
+
+        resolve()
+        await spinPromise
+      })
+    })
+
     describe('free spins', () => {
       it('locks the bet selector: setBet() is a no-op while a free spins session is active', async () => {
         await loadGame()
@@ -619,6 +699,138 @@ describe('game store', () => {
           vi.useRealTimers()
         }
       })
+
+      describe('FS transition gating (round 3b)', () => {
+        it('BLOCKER FIX: latches a modeTransition release that arrives before spinTo/showWins finish, so the first free spin still auto-starts', async () => {
+          // 실제 렌더러 타이밍: modeTransition(to:'freeSpins', phase:'end')은 renderer.setMode()
+          // 직후(spinTo/showWins가 끝나기 한참 전에) 온다 — 그 시점엔 아직 spin()의 finally가
+          // 실행되기 전이라 pendingAutoSpinRelease가 비어 있다. 그래도 첫 프리스핀이 자동으로
+          // 시작돼야 한다(래치 없인 영원히 안 걸리는 게 버그였다).
+          await loadGame()
+          const renderer = makeRenderer()
+          const { handle, resolve } = makeControllableSpinHandle()
+          renderer.spinTo.mockReturnValue(handle)
+          useGameStore.getState().setRenderer(renderer)
+          mockedApiSpin.mockResolvedValueOnce(
+            baseSpinResponse({
+              roundId: 'gate-blocker',
+              features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+              freeSpins: makeFreeSpinsState({ left: 10 }),
+            }),
+          )
+
+          // finally에서 scheduleAutoSpin()이 곧장 불릴 수 있으므로(래치가 서 있으면), 그 setTimeout이
+          // 실타이머로 잡혔다가 나중에 페이크로 바꾸는 일이 없도록 처음부터 페이크 타이머 아래서 돌린다.
+          vi.useFakeTimers()
+          try {
+            const spinPromise = useGameStore.getState().spin()
+            // apiSpin의 await 이후 spinTo가 불릴 때까지 마이크로태스크를 한 틱 흘려보낸다
+            // (페이크 타이머는 setTimeout류만 가짜로 만들 뿐 마이크로태스크 큐는 그대로 동작한다).
+            await Promise.resolve()
+            expect(renderer.spinTo).toHaveBeenCalled()
+
+            // spinTo는 아직 안 끝났는데(handle이 pending) 전환-끝 이벤트가 먼저 도착한다.
+            useGameStore.getState().releaseFreeSpinsEntryGate()
+
+            resolve()
+            await spinPromise
+
+            mockedApiSpin.mockResolvedValueOnce(
+              baseSpinResponse({ roundId: 'gate-blocker-2', isFreeSpin: true, freeSpins: makeFreeSpinsState({ left: 9 }) }),
+            )
+            // 래치돼 있었으므로 게이트를 다시 풀 필요 없이 평소 자동 스핀 지연만큼만 기다리면 된다.
+            await vi.advanceTimersByTimeAsync(1300)
+            expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+          } finally {
+            vi.useRealTimers()
+          }
+        })
+
+        it('does NOT auto-spin the first free spin until releaseFreeSpinsEntryGate() is called', async () => {
+          await loadGame()
+          const renderer = makeRenderer()
+          useGameStore.getState().setRenderer(renderer)
+          // freeSpins가 pre-spin 시점에는 null이었다가 이번 결과로 새로 생긴다 — "첫 진입".
+          mockedApiSpin.mockResolvedValueOnce(
+            baseSpinResponse({
+              roundId: 'gate1',
+              features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+              freeSpins: makeFreeSpinsState({ left: 10 }),
+            }),
+          )
+
+          vi.useFakeTimers()
+          try {
+            await useGameStore.getState().spin()
+            expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+
+            // 게이트가 안 풀렸으면 아무리 기다려도 자동 스핀이 안 걸린다.
+            await vi.advanceTimersByTimeAsync(5000)
+            expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+
+            mockedApiSpin.mockResolvedValueOnce(
+              baseSpinResponse({ roundId: 'gate2', isFreeSpin: true, freeSpins: makeFreeSpinsState({ left: 9 }) }),
+            )
+            useGameStore.getState().releaseFreeSpinsEntryGate()
+            // 이제 평소 자동 스핀 지연(1.2s) 만큼만 기다리면 된다.
+            await vi.advanceTimersByTimeAsync(1300)
+            expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+          } finally {
+            vi.useRealTimers()
+          }
+        })
+
+        it('releaseFreeSpinsEntryGate() does nothing when there is no pending gate', () => {
+          expect(() => useGameStore.getState().releaseFreeSpinsEntryGate()).not.toThrow()
+        })
+
+        it('a manual spin while the entry gate is pending cancels it (no double auto-spin later)', async () => {
+          await loadGame()
+          const renderer = makeRenderer()
+          useGameStore.getState().setRenderer(renderer)
+          mockedApiSpin.mockResolvedValueOnce(
+            baseSpinResponse({
+              roundId: 'gate3',
+              features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+              freeSpins: makeFreeSpinsState({ left: 10 }),
+            }),
+          )
+
+          vi.useFakeTimers()
+          try {
+            await useGameStore.getState().spin()
+            expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+
+            // 유저가 게이트가 풀리기 전에 직접 FREE SPIN 버튼을 눌렀다(수동 스핀) — 이 응답으로 프리스핀이 끝난다.
+            mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'gate4', isFreeSpin: true, freeSpins: null }))
+            await useGameStore.getState().spin()
+            expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+
+            // 뒤늦게 (이제는 낡은) 게이트 해제 신호가 와도 중복 스핀을 만들지 않는다 — 게이트가 안 지워졌다면
+            // 여기서 스핀이 또 걸려 3번째 호출이 생겼을 것이다.
+            useGameStore.getState().releaseFreeSpinsEntryGate()
+            await vi.advanceTimersByTimeAsync(5000)
+            expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+          } finally {
+            vi.useRealTimers()
+          }
+        })
+      })
+    })
+  })
+
+  describe('setBet (round 3 hub review)', () => {
+    it('clears a retained idempotencyKey so a new bet never replays a failed spin at the old totalBet', async () => {
+      mockedGetGameMath.mockResolvedValue(rawMath)
+      await useGameStore.getState().load('classic-777')
+
+      mockedApiSpin.mockRejectedValueOnce(new ApiClientError('offline', 0, 'network_error'))
+      await useGameStore.getState().spin()
+      expect(useGameStore.getState().idempotencyKey).not.toBeNull()
+
+      useGameStore.getState().setBet(1)
+
+      expect(useGameStore.getState().idempotencyKey).toBeNull()
     })
   })
 

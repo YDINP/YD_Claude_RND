@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { computeExactRtp, MAX_ENUMERATION_COMBOS, simulate } from './rtp.js'
 import { createSeededRng } from './rng/seeded.js'
 import { parseGameMath } from './schema.js'
+import { makeMutationMath } from './testFixtures.js'
 
 /**
  * 손으로 계산 가능한 모델. 릴 3개 x 심볼 4종, 1행 1라인.
@@ -142,5 +143,72 @@ describe('simulate', () => {
 
   it('스핀 수가 0 이하면 예외', () => {
     expect(() => simulate(TINY, 1, 0, createSeededRng('x'))).toThrow(RangeError)
+  })
+})
+
+describe('RTP 경로 선택', () => {
+  it('미스터리만 있으면 해석 경로를 쓴다', () => {
+    const math = makeMutationMath()
+    const report = computeExactRtp(math, 3, { sampleSpins: 0 })
+    expect(report.method).toBe('analytic')
+  })
+
+  it('미스터리 해석값이 몬테카를로와 3 표준오차 안에서 맞는다', () => {
+    const math = makeMutationMath()
+    const spins = 400_000
+    const analytic = computeExactRtp(math, 3, { sampleSpins: 0 })
+    const mc = simulate(math, 3, spins, createSeededRng('mystery-cross'))
+    const standardError = mc.stdDev / Math.sqrt(spins)
+    expect(Math.abs(mc.rtp - analytic.rtp)).toBeLessThan(3 * standardError)
+  })
+
+  it('확장 와일드가 있으면 몬테카를로로 넘어간다', () => {
+    const math = makeMutationMath({
+      mutations: [{ type: 'expandWild', symbol: 'w', reels: [1], minCount: 1 }],
+    })
+    const report = computeExactRtp(math, 3, { mcSpins: 50_000, mcSeed: 'exp' })
+    expect(report.method).toBe('monte-carlo')
+    expect(report.monteCarlo).toMatchObject({ spins: 50_000, seed: 'exp' })
+    expect(report.monteCarlo?.stdErr).toBeGreaterThan(0)
+    const ci = report.monteCarlo?.ci95
+    expect(ci?.[0]).toBeLessThan(report.rtp)
+    expect(ci?.[1]).toBeGreaterThan(report.rtp)
+  })
+
+  it('랜덤 와일드 드롭도 몬테카를로다', () => {
+    const math = makeMutationMath({
+      mutations: [{ type: 'randomWild', symbol: 'w', chance: 0.2, countWeights: { 1: 1 }, reels: [0, 1] }],
+    })
+    expect(computeExactRtp(math, 3, { mcSpins: 20_000 }).method).toBe('monte-carlo')
+  })
+
+  it('몬테카를로 경로는 같은 시드면 같은 값을 낸다', () => {
+    const math = makeMutationMath({
+      mutations: [{ type: 'randomWild', symbol: 'w', chance: 0.2, countWeights: { 1: 1 } }],
+    })
+    const first = computeExactRtp(math, 3, { mcSpins: 30_000, mcSeed: 'fixed' })
+    const second = computeExactRtp(math, 3, { mcSpins: 30_000, mcSeed: 'fixed' })
+    expect(second.rtp).toBe(first.rtp)
+    expect(second.monteCarlo?.stdErr).toBe(first.monteCarlo?.stdErr)
+  })
+
+  it('몬테카를로 조각의 합이 전체 RTP와 같다', () => {
+    const math = makeMutationMath({
+      mutations: [{ type: 'expandWild', symbol: 'w', reels: [0, 1, 2], minCount: 1 }],
+    })
+    const report = computeExactRtp(math, 3, { mcSpins: 40_000 })
+    const sum = report.breakdown.lines + report.breakdown.scatter + report.breakdown.freeSpins
+    expect(sum).toBeCloseTo(report.rtp, 10)
+  })
+
+  it('표준오차가 스핀 수의 제곱근에 반비례한다', () => {
+    const math = makeMutationMath({
+      mutations: [{ type: 'randomWild', symbol: 'w', chance: 0.3, countWeights: { 1: 1 } }],
+    })
+    const small = computeExactRtp(math, 3, { mcSpins: 40_000, mcSeed: 's' })
+    const large = computeExactRtp(math, 3, { mcSpins: 160_000, mcSeed: 's' })
+    const ratio = (small.monteCarlo?.stdErr ?? 0) / (large.monteCarlo?.stdErr ?? 1)
+    expect(ratio).toBeGreaterThan(1.6)
+    expect(ratio).toBeLessThan(2.4)
   })
 })

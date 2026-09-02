@@ -47,14 +47,15 @@ export function winTierLabelKey(tier: WinTier): TranslationKey {
 }
 
 /**
- * 카운터가 목표값까지 다 돌거나 탭으로 건너뛴 뒤, 배너를 화면에 붙잡아두는 시간(ms).
- * 등급이 높을수록 오래 머문다 — 기획 값. `none`(문턱 미만의 일반 승리)은 지정된 값이 없어
- * big보다 짧은 기본값을 쓴다.
+ * 등급 배너(릴 위 오버레이)를 화면에 붙잡아두는 시간(ms).
+ * 배너는 이제 금액 없이 등급 단어만 보여준다(실제 금액은 WinStrip이 맡는다) — 그래서 "크고 짧게"
+ * 1.2~2초 범위 안에서만 등급별로 살짝 차이를 둔다. 카운터 롤업 자체(그리고 WinStrip에 남는 최종
+ * 금액)는 이 타이머와 무관하게 다음 스핀이 시작되기 전까지 그대로 유지된다.
  */
 export const WIN_HOLD_MS: Record<WinTier, number> = {
-  none: 1500,
-  big: 2000,
-  mega: 3000,
-  epic: 4500,
-  max: 6500,
+  none: 1200,
+  big: 1400,
+  mega: 1600,
+  epic: 1800,
+  max: 2000,
 }

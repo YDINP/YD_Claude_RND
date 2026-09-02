@@ -117,3 +117,19 @@ export function defaultLineLabel(win: WinLine): string {
   const name = win.group ?? win.symbol
   return `Line ${win.line + 1} · ${name} · ${win.win.toLocaleString('en-US')}`
 }
+
+/**
+ * `showWins`의 옵션을 연출 계획 옵션으로 옮긴다.
+ *
+ * 손으로 옮기다 `features`를 빠뜨리면 스캐터 링도 피처 단계도 조용히 사라진다.
+ * 실제로 그런 적이 있어서 이 한 줄을 따로 떼어 테스트한다.
+ */
+export function presentationOptionsFor(
+  opts: { totalBet?: number; features?: readonly FeatureTrigger[] } | undefined,
+  reducedMotion: boolean,
+): PresentationOptions {
+  const options: PresentationOptions = { reducedMotion }
+  if (opts?.totalBet !== undefined) options.totalBet = opts.totalBet
+  if (opts?.features !== undefined) options.features = opts.features
+  return options
+}

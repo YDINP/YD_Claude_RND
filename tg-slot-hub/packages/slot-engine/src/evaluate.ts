@@ -113,6 +113,8 @@ export interface LineCandidate {
   matches: ReadonlySet<SymbolId>
   /** index = 왼쪽부터 연속 매치 길이, value = betPerLine 배수. */
   bestPayout: readonly number[]
+  /** index = 연속 매치 길이, value = 실제로 지급되는 매치 개수. */
+  bestCount: readonly number[]
 }
 
 /**

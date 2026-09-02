@@ -9,14 +9,13 @@ import type {
 import { buildGrid } from '@tgslot/slot-engine'
 import type { Rng, WinLine as EngineWinLine } from '@tgslot/slot-engine'
 import { JACKPOT_ODDS_DENOMINATOR } from '../economy/config.js'
-import { isFreeSpinsActive } from '../economy/freeSpins.js'
 import { toLevelState } from '../economy/level.js'
 import { toMissionDtos } from '../economy/missions.js'
-import { freeSpinsAwardFrom, spinWithState, toRoundState, toSharedFeatures } from '../games/engineSpin.js'
+import { spinWithState, toRoundState, toSharedFeatures } from '../games/engineSpin.js'
 import type { ApiConfig } from '../config.js'
 import type { GameRegistry } from '../games/registry.js'
 import type { Repos } from '../repos/types.js'
-import { InsufficientFundsError } from '../repos/types.js'
+import { BetRuleError, InsufficientFundsError } from '../repos/types.js'
 import type { JwtService } from '../auth/jwt.js'
 import { authMiddleware } from '../middleware/auth.js'
 import type { AuthVariables } from '../middleware/auth.js'
@@ -80,8 +79,8 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
     if (!pack) return c.json({ error: 'Game not found', code: 'GAME_NOT_FOUND' }, 404)
 
     // 새로고침한 클라이언트가 진행 중인 프리스핀을 이어서 돌 수 있게 서버 상태를 그대로 준다.
-    const freeSpins = await deps.repos.getGameState(c.get('auth').sub, pack.id)
-    const response: GameStateResponse = { freeSpins }
+    const state = await deps.repos.getGameState(c.get('auth').sub, pack.id)
+    const response: GameStateResponse = { freeSpins: state.freeSpins, state }
     return c.json(response, 200)
   })
 
@@ -99,31 +98,9 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
     }
     const { totalBet, idempotencyKey } = parsed.data
 
-    // 프리스핀 중이면 요청의 totalBet은 **무시**하고 진입 시점에 고정된 베팅으로 돈다.
-    // 그래서 베팅 레벨·상한 검사도 건너뛴다. 어차피 이 스핀은 코인을 걸지 않는다.
-    // (여기서 읽은 상태는 검사 생략 판단에만 쓴다. 실제 적용 베팅은 레포가 락을 잡고 다시 읽는다.)
-    const stateBefore = await deps.repos.getGameState(auth.sub, pack.id)
-
-    if (!isFreeSpinsActive(stateBefore)) {
-      // 엔진의 assertBetLevel이 던지기 전에 먼저 걸러 400 INVALID_BET으로 응답한다.
-      if (!pack.math.betLevels.includes(totalBet)) {
-        return c.json(
-          { error: `Bet ${totalBet} is not an allowed bet level`, code: 'INVALID_BET' },
-          400
-        )
-      }
-
-      // 베팅 상한은 레벨로 해금된다. 게임의 betLevels에 있는 값이라도 레벨이 낮으면 막는다.
-      // 유저는 미들웨어가 이미 읽어 컨텍스트에 실어 뒀다.
-      // 저장된 level 컬럼이 아니라 xp에서 다시 계산한다. /me가 보여주는 상한과 항상 같아야 한다.
-      const maxBet = toLevelState(c.get('user').xp).maxBet
-      if (totalBet > maxBet) {
-        return c.json(
-          { error: `Bet ${totalBet} is locked. Your level allows up to ${maxBet}`, code: 'BET_LOCKED' },
-          400
-        )
-      }
-    }
+    // 베팅 상한은 레벨로 해금된다. 유저는 미들웨어가 이미 읽어 컨텍스트에 실어 뒀고,
+    // 저장된 level 컬럼이 아니라 xp에서 다시 계산한다 (/me가 보여주는 상한과 항상 같아야 한다).
+    const maxBet = toLevelState(c.get('user').xp).maxBet
 
     try {
       const applied = await lock.run(auth.sub, idempotencyKey, () =>
@@ -133,20 +110,40 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
           totalBet,
           idempotencyKey,
           compute: (ctx) => {
+            // 베팅 규칙은 **락을 잡은 뒤** 확정된 값으로 검사한다. 트랜잭션 밖에서 읽은
+            // 상태로 판단하면 그 사이 프리스핀이 시작/종료됐을 때 잘못된 판정이 나온다.
+            // 프리스핀은 코인을 걸지 않으므로 두 검사 모두 건너뛴다.
+            if (!ctx.isFreeSpin) {
+              if (!pack.math.betLevels.includes(ctx.totalBet)) {
+                throw new BetRuleError('INVALID_BET', `Bet ${ctx.totalBet} is not an allowed bet level`)
+              }
+              if (ctx.totalBet > maxBet) {
+                throw new BetRuleError(
+                  'BET_LOCKED',
+                  `Bet ${ctx.totalBet} is locked. Your level allows up to ${maxBet}`
+                )
+              }
+            }
+
             const seed = createRoundSeed()
             const rng = createRng(seed, ctx.nonce)
             // 릴을 **먼저** 뽑고 그 다음 잭팟을 뽑는다. 이 순서가 바뀌면 공개된 시드로
             // 라운드를 재현할 수 없게 되므로 provably fair가 깨진다.
             // 베팅액과 라운드 상태는 레포가 락을 잡고 읽은 값이다 (프리스핀이면 고정 베팅).
-            const result = spinWithState(pack.math, ctx.totalBet, rng, toRoundState(ctx.freeSpins))
-            const features = toSharedFeatures(result.features)
+            // 라운드 상태는 **프리스핀일 때만** 넘긴다. 유료 스핀에 넘기면 엔진이 그 스핀을
+            // 프리스핀으로 취급해 남은 횟수를 깎는다.
+            const result = spinWithState(
+              pack.math,
+              ctx.totalBet,
+              rng,
+              ctx.isFreeSpin ? toRoundState(ctx.freeSpins) : undefined
+            )
             return {
               result,
               seed,
               seedHash: hashSeed(seed),
               jackpotRoll: rng.nextInt(JACKPOT_ODDS_DENOMINATOR),
-              features,
-              freeSpinsAward: freeSpinsAwardFrom(features),
+              features: toSharedFeatures(result.features),
             }
           },
         })
@@ -187,11 +184,16 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
         isFreeSpin: round.isFreeSpin,
         features: round.features,
         freeSpins: applied.freeSpins,
+        ...(applied.freeSpinsSummary ? { freeSpinsSummary: applied.freeSpinsSummary } : {}),
       }
       return c.json(response, 200)
     } catch (error) {
       if (error instanceof SpinInProgressError) {
         return c.json({ error: 'Another spin is already in progress', code: 'SPIN_IN_PROGRESS' }, 409)
+      }
+      // 베팅 규칙 위반은 트랜잭션 안에서 판정하고 여기서 400으로 번역한다.
+      if (error instanceof BetRuleError) {
+        return c.json({ error: error.message, code: error.code }, 400)
       }
       if (error instanceof InsufficientFundsError) {
         return c.json({ error: 'Not enough coins', code: 'INSUFFICIENT_FUNDS' }, 402)

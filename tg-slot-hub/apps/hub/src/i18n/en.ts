@@ -81,7 +81,21 @@ const en = {
   freeSpinButton: 'FREE SPIN ({n})',
   freeSpinsIntro: 'FREE SPINS! {spins} spins ×{multiplier}',
   freeSpinsRetrigger: '+{spins} FREE SPINS',
-  freeSpinsComplete: 'FREE SPINS COMPLETE · total {total}',
+  freeSpinsComplete: 'FREE SPINS COMPLETE',
+  // win strip (round 3b)
+  winStripLabel: 'WIN',
+  freeSpinsTotalLabel: 'FREE SPINS TOTAL',
+  // help paging (round 3b)
+  tabFeatures: 'Features',
+  tabFairness: 'Fairness',
+  featuresWildTitle: 'Wild',
+  wildSubstitutesSome: 'Wild substitutes for {symbols}',
+  featuresScatterTitle: 'Scatter',
+  scatterPayOfTotalBet: '×{n} total bet',
+  freeSpinsTriggerRule: '{count}+ scatters trigger free spins',
+  freeSpinsGrantRule: '{spins} spins, ×{multiplier} multiplier',
+  freeSpinsRetriggerRule: 'Retriggering during free spins adds more spins',
+  fairnessNoRoundYet: 'Spin once to see the fairness proof for that round.',
 } as const
 
 export default en

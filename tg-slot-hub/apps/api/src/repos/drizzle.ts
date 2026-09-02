@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { STARTING_COINS, STARTING_GEMS } from '@tgslot/shared'
-import type { FeatureTrigger, FreeSpinsState, Locale } from '@tgslot/shared'
+import type { FeatureTrigger, FreeSpinsState, GameState, Locale } from '@tgslot/shared'
 import type { WinLine } from '@tgslot/slot-engine'
 import type { DrizzleDb } from '../db/client.js'
 import {
@@ -20,7 +20,7 @@ import type { TelegramUser } from '../auth/initData.js'
 import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
 import type { BonusClaim, BonusClaims, BonusKind } from '../economy/bonus.js'
 import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS } from '../economy/config.js'
-import { isFreeSpinsActive, nextFreeSpinsState } from '../economy/freeSpins.js'
+import { freeSpinsSummary, isFreeSpinsActive, wrapFreeSpinsState } from '../economy/freeSpins.js'
 import { hundredthsToCoins, isJackpotHit, jackpotAccrualHundredths } from '../economy/jackpot.js'
 import { levelFromXp, levelUpBonus, toLevelState } from '../economy/level.js'
 import { applySpinToMissions } from '../economy/missions.js'
@@ -86,9 +86,13 @@ function toRoundRecord(row: RoundRow): RoundRecord {
       ? {}
       : { levelUp: { from: row.levelUpFrom, to: row.levelUpTo, bonus: row.levelUpBonus } }),
     isFreeSpin: row.isFreeSpin,
+    multiplier: row.multiplier,
     // jsonb라 드라이버가 unknown으로 준다. 쓸 때 이 모양만 넣으므로 여기서 되돌린다.
     features: (row.features ?? []) as FeatureTrigger[],
     freeSpinsAfter: (row.freeSpinsAfter ?? null) as FreeSpinsState | null,
+    ...(row.freeSpinsSummary
+      ? { freeSpinsSummary: row.freeSpinsSummary as { total: number; spins: number } }
+      : {}),
     createdAt: row.createdAt,
   }
 }
@@ -249,6 +253,7 @@ export class DrizzleRepos implements Repos {
           isFreeSpin: round.isFreeSpin,
           // 세션은 그 사이 더 진행됐을 수 있다. 라운드에 남긴 "그때 값"을 그대로 돌려준다.
           freeSpins: round.freeSpinsAfter,
+          freeSpinsSummary: round.freeSpinsSummary,
         }
       }
 
@@ -260,16 +265,18 @@ export class DrizzleRepos implements Repos {
         .where(and(eq(gameStates.userId, input.userId), eq(gameStates.gameId, input.gameId)))
         .limit(1)
 
-      const freeSpinsBefore = (stateRow?.freeSpins ?? null) as FreeSpinsState | null
-      const isFreeSpin = isFreeSpinsActive(freeSpinsBefore)
+      const stateBefore = (stateRow?.state ?? null) as GameState | null
+      const freeSpinsBefore = stateBefore?.freeSpins ?? null
+      const isFreeSpin = isFreeSpinsActive(freeSpinsBefore, now)
       const totalBet = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.totalBet : input.totalBet
+      const spinMultiplier = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.multiplier : 1
 
       if (!isFreeSpin && locked.coins < totalBet) {
         throw new InsufficientFundsError(totalBet, locked.coins)
       }
 
       const nonce = locked.nonce + 1
-      const { result, seed, seedHash, jackpotRoll, freeSpinsAward, features } = input.compute({
+      const { result, seed, seedHash, jackpotRoll, features } = input.compute({
         nonce,
         totalBet,
         freeSpins: freeSpinsBefore,
@@ -349,6 +356,7 @@ export class DrizzleRepos implements Repos {
       const missions = applySpinToMissions(await readMissionRows(tx, input.userId, day), {
         gameId: input.gameId,
         win: result.totalWin,
+        isFreeSpin,
       })
       for (const mission of missions) {
         await tx
@@ -368,20 +376,32 @@ export class DrizzleRepos implements Repos {
       }
 
       // 프리스핀 세션 갱신. 유저 단위 행이라 전역 잭팟 행보다 먼저 끝내 둔다.
-      const freeSpinsAfter = nextFreeSpinsState(freeSpinsBefore, {
+      // 남은 횟수·배수는 엔진의 nextState가 결정하고, 서버는 고정 베팅과 누적 당첨만 얹는다.
+      const freeSpinsAfter = wrapFreeSpinsState(freeSpinsBefore, {
         gameId: input.gameId,
         totalBet,
         isFreeSpin,
         win: result.totalWin,
-        award: freeSpinsAward,
+        nextState: result.nextState,
+        now,
       })
-      await tx
-        .insert(gameStates)
-        .values({ userId: input.userId, gameId: input.gameId, freeSpins: freeSpinsAfter, updatedAt: now })
-        .onConflictDoUpdate({
-          target: [gameStates.userId, gameStates.gameId],
-          set: { freeSpins: freeSpinsAfter, updatedAt: now },
-        })
+      const summary = freeSpinsSummary(freeSpinsBefore, {
+        isFreeSpin,
+        win: result.totalWin,
+        ended: freeSpinsAfter === null,
+      })
+
+      // 앞뒤로 아무 상태가 없으면 건드리지 않는다. 기본 게임 스핀 대부분이 여기 해당한다.
+      if (freeSpinsBefore !== null || freeSpinsAfter !== null) {
+        const state: GameState = { freeSpins: freeSpinsAfter }
+        await tx
+          .insert(gameStates)
+          .values({ userId: input.userId, gameId: input.gameId, state, updatedAt: now })
+          .onConflictDoUpdate({
+            target: [gameStates.userId, gameStates.gameId],
+            set: { state, updatedAt: now },
+          })
+      }
 
       // 잭팟 풀은 **전역 단일 행**이라 모든 유저의 스핀이 여기서 직렬화된다. 그래서 유저 전용 쓰기를
       // 전부 끝낸 뒤 맨 마지막에 만진다. 뒤에 남는 것은 라운드·원장·지갑 쓰기 세 문장뿐이라
@@ -438,7 +458,9 @@ export class DrizzleRepos implements Repos {
           levelUpBonus: levelUp?.bonus ?? null,
           isFreeSpin,
           features,
+          multiplier: spinMultiplier,
           freeSpinsAfter,
+          freeSpinsSummary: summary ?? null,
         })
         .returning()
       if (!insertedRound) throw new Error('[drizzle-repo] round insert failed')
@@ -467,18 +489,22 @@ export class DrizzleRepos implements Repos {
         missions,
         isFreeSpin,
         freeSpins: freeSpinsAfter,
+        freeSpinsSummary: summary,
       }
     })
   }
 
-  async getGameState(userId: string, gameId: string): Promise<FreeSpinsState | null> {
+  async getGameState(userId: string, gameId: string): Promise<GameState> {
     const [row] = await this.db
       .select()
       .from(gameStates)
       .where(and(eq(gameStates.userId, userId), eq(gameStates.gameId, gameId)))
       .limit(1)
 
-    return (row?.freeSpins ?? null) as FreeSpinsState | null
+    const state = (row?.state ?? null) as GameState | null
+    const freeSpins = state?.freeSpins ?? null
+    // 만료된 세션은 없는 것으로 본다.
+    return { freeSpins: isFreeSpinsActive(freeSpins, this.clock()) ? freeSpins : null }
   }
 
   async getRoundById(roundId: string): Promise<RoundRecord | null> {

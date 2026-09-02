@@ -20,6 +20,15 @@ export interface RoundSeedResponse {
   stops: number[]
   /** `createSeededRng(seedInput)`에 그대로 넣으면 같은 stops가 나온다. */
   seedInput: string
+  /** 프리스핀으로 돈 라운드인지. 베팅은 차감되지 않았다. */
+  isFreeSpin: boolean
+  /**
+   * 이 스핀에 적용된 승수 (스핀 **직전**의 세션 배수). 기본 게임은 1.
+   * 재현할 때 `totalWin`을 맞추려면 이 값이 필요하다.
+   */
+  multiplier: number
+  /** 재현에 쓸 베팅액. 프리스핀이면 진입 시점에 고정된 값이다. */
+  totalBet: number
 }
 
 export function createRoundsRoute(deps: RoundsRouteDeps): Hono<{ Variables: AuthVariables }> {
@@ -42,6 +51,9 @@ export function createRoundsRoute(deps: RoundsRouteDeps): Hono<{ Variables: Auth
       nonce: round.nonce,
       stops: round.stops,
       seedInput: roundSeedInput(round.seed, round.nonce),
+      isFreeSpin: round.isFreeSpin,
+      multiplier: round.multiplier,
+      totalBet: round.bet,
     }
     return c.json(response, 200)
   })

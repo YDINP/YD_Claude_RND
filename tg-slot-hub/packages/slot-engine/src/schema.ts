@@ -59,6 +59,69 @@ export const ScatterConfigSchema = z.object({
 })
 export type ScatterConfig = z.infer<typeof ScatterConfigSchema>
 
+/**
+ * 정지 그리드를 평가 **직전에** 변형하는 파이프라인. 선언된 순서대로 적용한다.
+ *
+ * RNG 소비 순서는 `릴 정지 -> 뮤테이션(선언 순서)`으로 고정한다.
+ * provably fair 검증이 같은 시드로 같은 결과를 재현하려면 이 순서가 계약이다.
+ */
+export const MutationSchema = z.discriminatedUnion('type', [
+  /** 미스터리 심볼을 가중 추첨한 심볼 하나로 **일괄** 교체한다. 스핀당 추첨 1회. */
+  z.object({
+    type: z.literal('mystery'),
+    symbol: z.string().min(1),
+    weights: z.record(z.string().min(1), z.number().positive()),
+  }),
+  /** 지정 릴에 와일드가 minCount개 이상이면 그 릴 전체를 와일드로 덮는다. */
+  z.object({
+    type: z.literal('expandWild'),
+    symbol: z.string().min(1),
+    /** 대상 릴 인덱스. 없으면 전 릴. */
+    reels: z.array(z.number().int().min(0)).optional(),
+    minCount: z.number().int().min(1).default(1),
+    /** 스캐터 칸까지 덮을지. 기본은 덮지 않는다 (프리스핀 RTP가 흔들린다). */
+    coverScatter: z.boolean().default(false),
+    /** 확장 후 승리가 있을 때만 확장을 남긴다. */
+    onlyIfWin: z.boolean().default(false),
+  }),
+  /** from 심볼이 화면에 minCount개 이상이면 to 심볼로 승급한다. */
+  z.object({
+    type: z.literal('upgrade'),
+    from: z.string().min(1),
+    to: z.string().min(1),
+    minCount: z.number().int().min(1),
+    /** 확률형으로 쓰려면 지정. 없으면 조건 충족 시 항상 승급. */
+    chance: z.number().gt(0).max(1).optional(),
+  }),
+  /** 확률 chance로 와일드 k개를 빈 칸에 떨어뜨린다. k는 countWeights 가중 추첨. */
+  z.object({
+    type: z.literal('randomWild'),
+    symbol: z.string().min(1),
+    chance: z.number().gt(0).max(1),
+    countWeights: z.record(z.coerce.number().int().positive(), z.number().positive()),
+    reels: z.array(z.number().int().min(0)).optional(),
+    coverScatter: z.boolean().default(false),
+  }),
+])
+export type Mutation = z.infer<typeof MutationSchema>
+export type MutationType = Mutation['type']
+
+/**
+ * ways 페이 모델 설정.
+ *
+ * 배당 기준은 **"웨이당 베팅액" = 총 베팅액 / betDivisor**다. 총 베팅액이 아니다.
+ * 243 ways 게임의 5연속이 총 베팅액의 500배면 말이 안 되므로, 라인 게임의
+ * "라인당 베팅액"에 해당하는 단위를 하나 둔다. 업계 관례대로 기본값은 25다.
+ */
+export const WaysConfigSchema = z.object({
+  /** 경로 수. `rows^reels`와 같아야 한다 (5x3=243, 5x4=1024). refine이 강제한다. */
+  base: z.number().int().min(2),
+  /** 오른쪽에서 왼쪽으로도 평가한다. 전 릴 매칭은 한 번만 센다. */
+  bothWays: z.boolean().default(false),
+  betDivisor: z.number().int().positive().default(25),
+})
+export type WaysConfig = z.infer<typeof WaysConfigSchema>
+
 const BaseGameMathSchema = z.object({
   id: z.string().min(1),
   reels: z.number().int().min(1),
@@ -68,8 +131,13 @@ const BaseGameMathSchema = z.object({
   groups: z.record(z.string().min(1), SymbolGroupSchema).optional(),
   /** 릴별 스트립. strips.length === reels. */
   strips: z.array(z.array(z.string().min(1)).min(1)).min(1),
-  /** 페이라인 1개 = 릴별 행 인덱스 배열. 예: [1,1,1]은 가운데 가로줄. */
-  paylines: z.array(z.array(z.number().int().min(0)).min(1)).min(1),
+  /** 'lines'면 페이라인, 'ways'면 인접 카운트 곱. 없으면 'lines'. */
+  payModel: z.enum(['lines', 'ways']).default('lines'),
+  ways: WaysConfigSchema.optional(),
+  /** 페이라인 1개 = 릴별 행 인덱스 배열. 예: [1,1,1]은 가운데 가로줄. ways 게임은 비운다. */
+  paylines: z.array(z.array(z.number().int().min(0)).min(1)).default([]),
+  /** 평가 직전에 그리드를 변형하는 파이프라인. 선언 순서대로 적용한다. */
+  mutations: z.array(MutationSchema).optional(),
   /**
    * `심볼 id 또는 그룹 id` -> { 매치 개수: betPerLine 배수 }.
    * 왼쪽에서 오른쪽으로 연속 매치. 매치 개수 1은 릴 0만 맞으면 지급한다는 뜻이다.
@@ -159,12 +227,33 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
     seenPaylines.add(key)
   })
 
-  const lineCount = math.paylines.length
-  math.betLevels.forEach((level, index) => {
-    if (level % lineCount !== 0) {
-      issue(`베팅액 ${level}이 라인 수(${lineCount})로 나누어떨어지지 않는다`, ['betLevels', index])
+  // ways 게임은 페이라인이 없고 배당 단위가 betDivisor다. 라인 게임은 라인 수가 단위다.
+  if (math.payModel === 'ways') {
+    if (math.ways === undefined) {
+      issue("payModel이 'ways'면 ways 설정이 필요하다", ['ways'])
+    } else {
+      const expected = math.rows ** math.reels
+      if (math.ways.base !== expected) {
+        issue(`ways.base(${math.ways.base})가 rows^reels(${expected})와 다르다`, ['ways', 'base'])
+      }
     }
-  })
+    if (math.paylines.length > 0) {
+      issue('ways 게임은 paylines를 두지 않는다', ['paylines'])
+    }
+  } else if (math.paylines.length === 0) {
+    issue("payModel이 'lines'면 paylines가 최소 1개 필요하다", ['paylines'])
+  }
+
+  const unitCount = math.payModel === 'ways' ? (math.ways?.betDivisor ?? 25) : math.paylines.length
+  const unitLabel = math.payModel === 'ways' ? 'betDivisor' : '라인 수'
+  if (unitCount > 0) {
+    math.betLevels.forEach((level, index) => {
+      if (level % unitCount !== 0) {
+        issue(`베팅액 ${level}이 ${unitLabel}(${unitCount})로 나누어떨어지지 않는다`, ['betLevels', index])
+      }
+    })
+  }
+  const lineCount = unitCount
 
   for (const [key, payrule] of Object.entries(math.paytable)) {
     const symbol = declared.get(key)
@@ -226,6 +315,82 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
       if (!declared.has(id)) issue(`선언되지 않은 심볼: ${id}`, ['wild'])
     }
   }
+
+  const declaredIds = new Set(declared.keys())
+  const cellCount = math.reels * math.rows
+  ;(math.mutations ?? []).forEach((mutation, index) => {
+    const at = (field: string): (string | number)[] => ['mutations', index, field]
+    const requireSymbol = (id: string, field: string): void => {
+      if (!declaredIds.has(id)) issue(`선언되지 않은 심볼: ${id}`, at(field))
+      else if (!onStrip.has(id)) issue(`어느 스트립에도 없는 심볼: ${id}`, at(field))
+    }
+    const requireReels = (reels: number[] | undefined): void => {
+      for (const reel of reels ?? []) {
+        if (reel >= math.reels) issue(`릴 인덱스 ${reel}이 reels(${math.reels}) 범위를 벗어났다`, at('reels'))
+      }
+    }
+
+    switch (mutation.type) {
+      case 'mystery': {
+        requireSymbol(mutation.symbol, 'symbol')
+        // 미스터리 심볼 자체는 배당이 없다. 공개된 뒤의 심볼로만 지급한다.
+        if (math.paytable[mutation.symbol] !== undefined) {
+          issue(`미스터리 심볼 ${mutation.symbol}은 페이테이블을 가질 수 없다`, at('symbol'))
+        }
+        const entries = Object.entries(mutation.weights)
+        if (entries.length === 0) issue('공개 가중 표가 비었다', at('weights'))
+        for (const [id] of entries) {
+          const target = declared.get(id)
+          if (target === undefined) {
+            issue(`선언되지 않은 심볼: ${id}`, at('weights'))
+            continue
+          }
+          // 공개 후 스캐터가 늘면 프리스핀 트리거가 흔들린다. 와일드도 같은 이유로 뺀다.
+          if (target.scatter === true) issue(`스캐터 ${id}는 공개 풀에 넣을 수 없다`, at('weights'))
+          if (target.wild === true) issue(`와일드 ${id}는 공개 풀에 넣을 수 없다`, at('weights'))
+          if (math.paytable[id] === undefined) {
+            issue(`공개 풀 심볼 ${id}에 페이테이블이 없다`, at('weights'))
+          }
+        }
+        break
+      }
+      case 'expandWild': {
+        requireSymbol(mutation.symbol, 'symbol')
+        if (declared.get(mutation.symbol)?.wild !== true) {
+          issue(`${mutation.symbol}에 wild: true가 없다`, at('symbol'))
+        }
+        requireReels(mutation.reels)
+        if (mutation.minCount > math.rows) {
+          issue(`minCount(${mutation.minCount})가 rows(${math.rows})보다 크다`, at('minCount'))
+        }
+        break
+      }
+      case 'upgrade': {
+        requireSymbol(mutation.from, 'from')
+        requireSymbol(mutation.to, 'to')
+        if (mutation.from === mutation.to) issue('from과 to가 같다', at('to'))
+        if (mutation.minCount > cellCount) {
+          issue(`minCount(${mutation.minCount})가 화면 칸 수(${cellCount})보다 많다`, at('minCount'))
+        }
+        break
+      }
+      case 'randomWild': {
+        requireSymbol(mutation.symbol, 'symbol')
+        if (declared.get(mutation.symbol)?.wild !== true) {
+          issue(`${mutation.symbol}에 wild: true가 없다`, at('symbol'))
+        }
+        requireReels(mutation.reels)
+        const counts = Object.keys(mutation.countWeights).map(Number)
+        if (counts.length === 0) issue('개수 가중 표가 비었다', at('countWeights'))
+        for (const count of counts) {
+          if (count > cellCount) {
+            issue(`드롭 개수 ${count}가 화면 칸 수(${cellCount})보다 많다`, at('countWeights'))
+          }
+        }
+        break
+      }
+    }
+  })
 
   if (math.scatter) {
     const cells = math.reels * math.rows

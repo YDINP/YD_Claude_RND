@@ -1,8 +1,9 @@
 import type { GameMath, SymbolId, WinLine } from '@tgslot/slot-engine'
 import type { FrameWindow } from './layout.js'
-import type { FxMap } from './theme.js'
+import type { FxMap, SheetMap } from './theme.js'
 import type { WinTier } from './wins.js'
 import type { FeatureTrigger, RendererMode } from './features.js'
+import type { ModeTarget } from './transition.js'
 
 /** 테마가 선택적으로 선언할 수 있는 효과음 키. 파일이 없으면 키를 빼면 된다. */
 export type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
@@ -33,6 +34,11 @@ export interface Theme {
   /** 배경 이미지 URL. 없으면 팔레트 색만 쓴다. */
   background?: string
   /**
+   * 프리스핀 중에 쓰는 배경 이미지 URL.
+   * 없으면 기본 배경 위에 금빛 틴트를 덧씌워 같은 전환을 낸다.
+   */
+  backgroundFreeSpins?: string
+  /**
    * 릴을 감싸는 베젤 아트 URL. 릴 창은 알파로 뚫려 있어야 한다.
    * 있으면 렌더러가 벡터 베젤 대신 이 이미지를 릴 위에 얹는다.
    */
@@ -41,6 +47,11 @@ export interface Theme {
   frameLayout?: FrameLayout
   /** 심볼 승리 연출. 심볼 id 또는 `default`를 키로 쓴다. */
   fx?: FxMap
+  /**
+   * 심볼별 스프라이트 시트. 값은 사이드카 JSON 경로이고 아틀라스는 같은 이름의 `.webp`다.
+   * 있으면 승리 연출 동안 정지 이미지를 애니메이션으로 갈아 끼운다.
+   */
+  sheets?: SheetMap
   palette: ThemePalette
   /** 효과음 URL. 렌더러는 재생하지 않고 허브의 AudioBus가 쓴다. */
   sfx?: Partial<Record<SfxKey, string>>
@@ -54,6 +65,13 @@ export interface Theme {
  * 프레임 이미지가 없으면 두 값 모두 같은 결과를 낸다.
  */
 export type RendererFit = 'width' | 'window'
+
+/**
+ * 당첨 라인을 보여주는 방식.
+ * - `effect`(기본): 빛 한 점이 당첨 심볼을 왼쪽부터 훑고 지나간다. 선을 그리지 않는다.
+ * - `line`: 예전의 3px 폴리라인. 좌표를 눈으로 확인할 때만 쓴다.
+ */
+export type PaylineStyle = 'effect' | 'line'
 
 export type RendererEvent =
   /** 릴 하나가 정확한 정지 위치에 닿았다. */
@@ -72,6 +90,16 @@ export type RendererEvent =
    * 인트로 배너는 허브가 띄운다. 렌더러는 릴 위 연출만 맡는다.
    */
   | { type: 'featureTriggered'; feature: FeatureTrigger }
+  /**
+   * 배경 전환이 시작하거나 끝났다.
+   * 허브가 프리스핀 인트로/종료 배너를 이 신호에 맞춰 띄우고 내리라고 있는 이벤트다.
+   */
+  | { type: 'modeTransition'; to: ModeTarget; phase: 'start' | 'end' }
+  /**
+   * 승리 라인을 훑는 빛이 심볼 하나에 닿았다.
+   * 허브가 여기에 짧은 효과음을 붙이라고 있는 이벤트다.
+   */
+  | { type: 'pulseArrive'; line: number; reel: number; row: number }
 
 export interface RendererOptions {
   /** 캔버스를 붙일 DOM 요소. 크기는 이 요소의 클라이언트 박스를 따른다. */
@@ -85,14 +113,19 @@ export interface RendererOptions {
   reducedMotion?: boolean
   /** 프레임을 맞추는 방식. 기본 `'window'`. */
   fit?: RendererFit
+  /** 당첨 라인 표시 방식. 기본 `'effect'`. */
+  paylineStyle?: PaylineStyle
   /**
    * 프리스핀 중 릴 창 위에 명판을 띄울지. 기본 true.
    * 허브가 자체 카운터를 이미 보여준다면 false로 꺼도 된다.
    */
   showFreeSpinsPlaque?: boolean
   /**
-   * `fit: 'window'`에서 프레임이 컨테이너 폭을 넘어도 되는 비율. 기본 0.30.
-   * 키울수록 릴 창이 커지고 좌우 기둥이 더 잘린다. `fit: 'width'`에서는 무시된다.
+   * `fit: 'window'`에서 프레임이 컨테이너 폭을 넘어도 되는 **상한**. 기본 0.40.
+   *
+   * 배율은 보통 "창 폭 = 컨테이너 폭"이나 세로 규칙이 먼저 정한다.
+   * 이 값은 그 위에 얹는 안전장치라 창이 아주 좁은 아트가 아니면 실제로 작동하지 않는다.
+   * `fit: 'width'`에서는 무시된다.
    */
   overflowX?: number
 }
@@ -126,11 +159,28 @@ export interface ShowWinsOptions {
   totalBet?: number
 }
 
+/**
+ * 스핀 하나를 다루는 손잡이.
+ *
+ * `await renderer.spinTo(...)`가 그대로 되도록 thenable이다.
+ * 결과를 기다리지 않고 건너뛰려면 `skip()`을 부른다.
+ */
+export interface SpinHandle extends PromiseLike<void> {
+  /** 모든 릴이 멈추면 resolve. */
+  done: Promise<void>
+  /**
+   * 남은 회전을 접고 곧장 정지 위치로 붙인다.
+   * 착지 좌표는 그대로이고 `reelStop`/`spinEnd`도 정상적으로 발생한다.
+   * 이미 멈춘 뒤에 불러도 아무 일도 일어나지 않는다.
+   */
+  skip(): void
+}
+
 export interface SlotRenderer {
   /** 에셋 로딩과 첫 렌더가 끝나면 resolve. */
   ready: Promise<void>
-  /** 모든 릴이 `stops`에 정확히 멈추면 resolve. */
-  spinTo(stops: number[], opts?: SpinToOptions): Promise<void>
+  /** 릴을 돌려 `stops`에 정확히 멈춘다. 기다리거나 건너뛸 수 있는 손잡이를 돌려준다. */
+  spinTo(stops: number[], opts?: SpinToOptions): SpinHandle
   /** 승리 라인 하이라이트. `loop: false`면 한 바퀴를 다 보여준 뒤 resolve. */
   showWins(wins: WinLine[], opts?: ShowWinsOptions): Promise<void>
   clearWins(): void

@@ -9,6 +9,8 @@ import {
   REDUCED_SPIN_DURATION_MS,
   REDUCED_STAGGER_MS,
   REDUCED_TOTAL_CAP_MS,
+  SKIP_STAGGER_MS,
+  SKIP_TOTAL_MS,
 } from './constants.js'
 
 export interface SpinPlanInput {
@@ -92,4 +94,32 @@ export function buildSpinPlan(input: SpinPlanInput): SpinPlan {
 
   const last = plans[plans.length - 1]
   return { reels: plans, pullUpMs, totalMs: last?.endMs ?? pullUpMs, reduced }
+}
+
+export interface SkipPlan {
+  /** 릴별 정지 시각(ms, 스킵을 누른 순간 기준). */
+  reels: { reel: number; durationMs: number }[]
+  /** 마지막 릴이 멈추는 시각(ms). */
+  totalMs: number
+}
+
+/**
+ * 스킵했을 때의 감속 계획.
+ *
+ * 남은 회전을 버리고 곧장 정지 위치로 붙는다. 그래도 한꺼번에 툭 서지 않도록
+ * 왼쪽부터 `SKIP_STAGGER_MS` 간격을 남겨 리듬은 지킨다.
+ * 착지 좌표는 계획과 무관하게 `stops`로 다시 확정되므로 결정론은 깨지지 않는다.
+ */
+export function buildSkipPlan(reels: number, totalMs: number = SKIP_TOTAL_MS): SkipPlan {
+  const count = Math.max(1, Math.floor(reels))
+  const budget = Math.max(1, totalMs)
+  // 간격을 다 합쳐도 예산을 넘지 않게 줄인다. 릴이 많으면 간격이 좁아진다.
+  const stagger = count > 1 ? Math.min(SKIP_STAGGER_MS, budget / (2 * (count - 1))) : 0
+  const first = budget - stagger * (count - 1)
+
+  const plans = []
+  for (let reel = 0; reel < count; reel += 1) {
+    plans.push({ reel, durationMs: first + stagger * reel })
+  }
+  return { reels: plans, totalMs: budget }
 }

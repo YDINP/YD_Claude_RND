@@ -25,9 +25,9 @@
   "frame": "frame.webp",
   "frameLayout": {
     "window": {
-      "x": 0.1384375,
+      "x": 0.0915625,
       "y": 0.18083333333333335,
-      "w": 0.723125,
+      "w": 0.82078125,
       "h": 0.6279166666666667
     }
   },
@@ -129,6 +129,14 @@
           "durationMs": 700
         }
       ]
+    }
+  },
+  "sheets": {
+    "seven": {
+      "win": "sheets/seven-win.json"
+    },
+    "wild": {
+      "win": "sheets/wild-win.json"
     }
   }
 }

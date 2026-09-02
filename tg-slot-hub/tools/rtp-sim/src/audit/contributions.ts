@@ -1,5 +1,11 @@
 import type { GameMath, WinLine } from '@tgslot/slot-engine'
-import type { ContributionRow, CountContributionRow, LineContributionRow } from './types.js'
+import type {
+  ContributionRow,
+  CountContributionRow,
+  LineContributionRow,
+  MutationStatRow,
+  WaysContributionRow,
+} from './types.js'
 
 /** 스캐터 배당을 심볼 기여 표에 넣을 때 쓰는 키. 스캐터 심볼 id를 모를 때의 폴백. */
 export const SCATTER_FALLBACK_KEY = 'scatter'
@@ -28,6 +34,12 @@ export class Accumulators {
   readonly counts = new Map<number, Bucket>()
   readonly lineWin: number[]
   readonly lineHits: number[]
+  /** ways 지급을 (경로 수, 방향)별로 나눠 담는다. 라인 게임에서는 비어 있다. */
+  readonly ways = new Map<string, Bucket & { ways: number; direction: 'ltr' | 'rtl' }>()
+  /** 뮤테이션 종류별 발동 스핀 수와 바뀐 칸 수. */
+  readonly mutations = new Map<string, { spins: number; cells: number; win: number }>()
+  /** 뮤테이션 통계를 잰 스핀 수 (프리스핀 포함). */
+  mutationObservations = 0
   /** 담긴 지급 코인 총합. */
   total = 0
   /** 스캐터로 지급된 코인 총합. */
@@ -57,8 +69,21 @@ export class Accumulators {
       found.hits += 1
     }
 
-    this.lineWin[win.line] = (this.lineWin[win.line] ?? 0) + paid
-    this.lineHits[win.line] = (this.lineHits[win.line] ?? 0) + 1
+    if (win.ways === undefined) {
+      this.lineWin[win.line] = (this.lineWin[win.line] ?? 0) + paid
+      this.lineHits[win.line] = (this.lineHits[win.line] ?? 0) + 1
+      return
+    }
+
+    // ways 지급은 페이라인이 없다. 경로 수와 방향으로 나눠 담는다.
+    const direction = win.direction ?? 'ltr'
+    const key = `${win.ways}:${direction}`
+    const waysBucket = this.ways.get(key)
+    if (waysBucket === undefined) this.ways.set(key, { win: paid, hits: 1, ways: win.ways, direction })
+    else {
+      waysBucket.win += paid
+      waysBucket.hits += 1
+    }
   }
 
   /** 스캐터 승리 1건. 라인이 아니므로 라인 표에는 넣지 않고 심볼 표에만 넣는다. */
@@ -74,6 +99,41 @@ export class Accumulators {
     else {
       found.win += paidWin
       found.hits += 1
+    }
+  }
+
+  /**
+   * 라운드 하나(유료 스핀 + 프리스핀)의 뮤테이션을 기록한다.
+   *
+   * 발동 횟수와 바뀐 칸은 **스핀마다** 센다. 반면 지급액은 라운드 단위로만 알 수 있으므로
+   * 한 라운드에서 같은 종류가 여러 번 떠도 **한 번만** 얹는다. 그러지 않으면
+   * 프리스핀이 긴 라운드에서 같은 금액이 반복 계상돼 몫이 부풀려진다.
+   */
+  addRoundMutations(
+    spins: readonly { readonly mutations: readonly { type: string; cells: readonly unknown[] }[] }[],
+    roundWin: number,
+  ): void {
+    const typesInRound = new Set<string>()
+
+    for (const spin of spins) {
+      this.mutationObservations += 1
+      const seen = new Set<string>()
+      for (const event of spin.mutations) {
+        if (seen.has(event.type)) continue
+        seen.add(event.type)
+        typesInRound.add(event.type)
+        const stat = this.mutations.get(event.type)
+        if (stat === undefined) this.mutations.set(event.type, { spins: 1, cells: event.cells.length, win: 0 })
+        else {
+          stat.spins += 1
+          stat.cells += event.cells.length
+        }
+      }
+    }
+
+    for (const type of typesInRound) {
+      const stat = this.mutations.get(type)
+      if (stat !== undefined) stat.win += roundWin
     }
   }
 }
@@ -138,4 +198,44 @@ export function countRows(acc: Accumulators, denominator: number, uplift: number
       hits: bucket.hits,
     }))
     .sort((a, b) => a.count - b.count)
+}
+
+export function waysRows(acc: Accumulators, denominator: number, uplift: number): WaysContributionRow[] {
+  const total = [...acc.ways.values()].reduce((sum, bucket) => sum + bucket.win, 0)
+  return [...acc.ways.values()]
+    .map((bucket) => ({
+      ways: bucket.ways,
+      direction: bucket.direction,
+      win: bucket.win,
+      rtp: (bucket.win / denominator) * uplift,
+      share: total === 0 ? 0 : bucket.win / total,
+      hits: bucket.hits,
+    }))
+    .sort((a, b) => a.ways - b.ways || a.direction.localeCompare(b.direction))
+}
+
+/**
+ * 뮤테이션 통계를 표로.
+ * @param paidSpins 유료 스핀 수. RTP 몫의 분모다.
+ * @param totalRtp 전체 RTP. 몫의 기준.
+ */
+export function mutationRows(
+  acc: Accumulators,
+  paidSpins: number,
+  totalBet: number,
+  totalRtp: number,
+): MutationStatRow[] {
+  return [...acc.mutations.entries()]
+    .map(([type, stat]) => {
+      const rtp = stat.win / (paidSpins * totalBet)
+      return {
+        type,
+        spins: stat.spins,
+        frequency: acc.mutationObservations === 0 ? 0 : stat.spins / acc.mutationObservations,
+        cellsChanged: stat.cells,
+        rtp,
+        share: totalRtp === 0 ? 0 : rtp / totalRtp,
+      }
+    })
+    .sort((a, b) => b.rtp - a.rtp)
 }

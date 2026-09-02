@@ -49,7 +49,14 @@ export function KpiTiles({
 }: KpiTilesProps) {
   const totalRtp = distribution === null ? null : distribution.rtp + (jackpotContribution ?? 0)
   const estimated = distribution?.estimated ?? false
-  const methodLabel = distribution === null ? null : distribution.method === 'enumerate' ? '전수조사' : '해석적'
+  const methodLabel =
+    distribution === null
+      ? null
+      : distribution.method === 'enumerate'
+        ? '전수조사'
+        : distribution.method === 'analytic'
+          ? '해석적'
+          : '몬테카를로'
 
   return (
     <div className="sim-kpis">
@@ -61,7 +68,9 @@ export function KpiTiles({
         note={
           distribution === null
             ? '전수조사를 실행하세요'
-            : `목표 ${pct(target, 2)} 대비 ${pp(distribution.rtp - target)}`
+            : distribution.precision === null
+              ? `목표 ${pct(target, 2)} 대비 ${pp(distribution.rtp - target)}`
+              : `${pp(distribution.rtp - target)} · 95% CI ±${pp(distribution.precision.ci95HalfWidth)}`
         }
       />
       <Tile

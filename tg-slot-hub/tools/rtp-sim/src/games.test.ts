@@ -1,10 +1,11 @@
 import { basename, join } from 'node:path'
-import { existsSync } from 'node:fs'
-import { describe, expect, it } from 'vitest'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { afterAll, describe, expect, it } from 'vitest'
 import { computeExactRtp, parseGameMath } from '@tgslot/slot-engine'
 import type { GameMath } from '@tgslot/slot-engine'
 import { parseGameManifest } from '@tgslot/game-sdk'
-import { listGameDirs, readJson } from './paths.js'
+import { listArtOnlyDirs, listGameDirs, listGamePackDirs, readJson } from './paths.js'
 
 /** Phase 5 양산의 CI 게이트: 새 게임 폴더는 등록 없이 자동으로 검사 대상이 된다. */
 const RTP_TOLERANCE = 0.005
@@ -28,7 +29,19 @@ function loadMath(dir: string): LoadResult {
   }
 }
 
-const gameDirs = listGameDirs()
+/**
+ * 검사 대상은 manifest.json이 있는 폴더뿐이다.
+ * 아트만 먼저 생긴 폴더(`games/<id>/art`)는 아직 게임이 아니므로 건너뛴다.
+ * manifest가 있는데 math.json이 없거나 깨진 폴더는 건너뛰지 않고 실패한다.
+ */
+const gameDirs = listGamePackDirs()
+const artOnlyDirs = listArtOnlyDirs()
+
+if (artOnlyDirs.length > 0) {
+  console.warn(
+    `[games] manifest.json이 없어 건너뛴 폴더 ${artOnlyDirs.length}개: ${artOnlyDirs.map((dir) => basename(dir)).join(', ')}`,
+  )
+}
 
 describe('games/* 수학 모델 게이트', () => {
   it('검사할 게임이 최소 1개는 있다', () => {
@@ -36,7 +49,21 @@ describe('games/* 수학 모델 게이트', () => {
   })
 
   it('_로 시작하는 폴더는 검사 대상에서 제외된다', () => {
-    expect(gameDirs.map((dir) => basename(dir))).not.toContain('_template')
+    expect(listGameDirs().map((dir) => basename(dir))).not.toContain('_template')
+  })
+
+  it('manifest가 없는 폴더는 검사 대상에서 빠진다', () => {
+    // 아트가 먼저 생성된 폴더 때문에 CI가 막히면 안 된다.
+    for (const dir of artOnlyDirs) {
+      expect(gameDirs).not.toContain(dir)
+    }
+    expect([...gameDirs, ...artOnlyDirs].sort()).toEqual(listGameDirs().sort())
+  })
+
+  it('검사 대상은 전부 manifest.json을 갖고 있다', () => {
+    for (const dir of gameDirs) {
+      expect(existsSync(join(dir, 'manifest.json'))).toBe(true)
+    }
   })
 
   describe.each(gameDirs.map((dir) => [basename(dir), dir] as const))('%s', (name, dir) => {
@@ -133,5 +160,57 @@ describe('classic-777 회귀 고정값', () => {
     expect(report.rtp).toBeCloseTo(0.9449438505560954, 12)
     expect(report.hitRate).toBeCloseTo(0.41619425547996974, 12)
     expect(report.maxWinMultiplier).toBeCloseTo(131.6, 6)
+  })
+})
+
+/**
+ * 분류 규칙의 반대쪽 절반. 아트만 있는 폴더는 건너뛰지만,
+ * manifest가 있는 반쪽짜리 팩은 반드시 실패로 잡혀야 한다.
+ * 저장소에 그런 폴더를 남길 수는 없으므로 임시 폴더로 검증한다.
+ */
+describe('반쪽짜리 팩 처리', () => {
+  const root = mkdtempSync(join(tmpdir(), 'rtp-sim-gate-'))
+
+  // 아트만 있는 폴더 — 건너뛴다.
+  mkdirSync(join(root, 'art-only', 'art'), { recursive: true })
+
+  // manifest는 있는데 math.json이 없다 — 검사 대상에 들어가고 실패한다.
+  mkdirSync(join(root, 'no-math'))
+  writeFileSync(join(root, 'no-math', 'manifest.json'), '{}')
+
+  // manifest도 math도 있지만 math가 스키마를 통과하지 못한다 — 역시 실패한다.
+  mkdirSync(join(root, 'bad-math'))
+  writeFileSync(join(root, 'bad-math', 'manifest.json'), '{}')
+  writeFileSync(join(root, 'bad-math', 'math.json'), '{"id":"bad-math"}')
+
+  afterAll(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('아트만 있는 폴더는 대상에서 빠진다', () => {
+    const packs = listGamePackDirs(root).map((dir) => basename(dir))
+    expect(packs).not.toContain('art-only')
+    expect(listArtOnlyDirs(root).map((dir) => basename(dir))).toEqual(['art-only'])
+  })
+
+  it('manifest만 있는 폴더는 대상에 들어간다', () => {
+    expect(listGamePackDirs(root).map((dir) => basename(dir))).toEqual(['bad-math', 'no-math'])
+  })
+
+  it('math.json이 없으면 로딩이 실패로 보고된다', () => {
+    const loaded = loadMath(join(root, 'no-math'))
+    expect(loaded.math).toBeNull()
+    expect(loaded.error).toContain('ENOENT')
+  })
+
+  it('math.json이 스키마를 못 통과해도 실패로 보고된다', () => {
+    const loaded = loadMath(join(root, 'bad-math'))
+    expect(loaded.math).toBeNull()
+    expect(loaded.error).not.toBeNull()
+  })
+
+  it('아트만 있는 폴더는 로딩 자체를 시도하지 않는다', () => {
+    // 대상 목록에 없으므로 describe.each가 만들지 않는다. 규칙을 한 줄로 못박아 둔다.
+    expect(listGamePackDirs(root).some((dir) => basename(dir) === 'art-only')).toBe(false)
   })
 })

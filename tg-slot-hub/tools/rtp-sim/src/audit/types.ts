@@ -40,6 +40,37 @@ export interface CountContributionRow {
   hits: number
 }
 
+/** ways 지급 1건이 몇 개의 경로로 지급됐는지의 분포. 라인 게임에는 없다. */
+export interface WaysContributionRow {
+  /** 이 지급이 커버한 경로 수 (`WinLine.ways`). */
+  ways: number
+  /** 방향별로 나눠 본다. bothWays가 아니면 전부 ltr이다. */
+  direction: 'ltr' | 'rtl'
+  win: number
+  rtp: number
+  share: number
+  hits: number
+}
+
+/** 뮤테이션 1종이 표본에서 얼마나 자주 발동했고 얼마를 만들었는지. */
+export interface MutationStatRow {
+  /** 엔진의 `MutationEvent.type`. mystery / expandWild / upgrade / randomWild. */
+  type: string
+  /** 이 뮤테이션이 실제로 무언가를 바꾼 스핀 수 (프리스핀 포함). */
+  spins: number
+  /** 관측 스핀 대비 발동 빈도. */
+  frequency: number
+  /** 바꾼 칸 수 합계. */
+  cellsChanged: number
+  /**
+   * 이 뮤테이션이 발동한 스핀들이 지급한 코인의, 유료 스핀당 기대 배수.
+   * 한 스핀에 여러 뮤테이션이 겹칠 수 있으므로 종류별 값의 합은 전체 RTP를 넘을 수 있다.
+   */
+  rtp: number
+  /** 전체 RTP 대비. 위와 같은 이유로 합이 1을 넘을 수 있다. */
+  share: number
+}
+
 /** 배수 분포 히스토그램의 한 칸. */
 export interface HistogramRow {
   key: string
@@ -50,8 +81,31 @@ export interface HistogramRow {
   rtpShare: number
 }
 
-/** 분포를 얻은 방법. 엔진의 `ExactRtpReport.method`와 같은 값이다. */
-export type DistributionMethod = 'enumerate' | 'analytic'
+/**
+ * 분포를 얻은 방법. 엔진의 `ExactRtpReport.method`와 같은 값이다.
+ *
+ * - `enumerate` — 모든 정지 조합을 계산. RTP가 정확값이다.
+ * - `analytic` — 닫힌 식. RTP는 정확값이고 분포만 표본이다.
+ * - `monte-carlo` — RTP까지 표본이다. 뮤테이션·캐스케이드처럼 릴 독립이 깨져
+ *   닫힌 식이 없는 모델이 여기로 온다. 이때는 정밀도(`precision`)가 게이트의 일부다.
+ */
+export type DistributionMethod = 'enumerate' | 'analytic' | 'monte-carlo'
+
+/**
+ * 표본으로 낸 RTP의 정밀도. `monte-carlo` 방법일 때만 채워진다.
+ * 감사 리포트는 이 넷(spins·seed·stdErr·ci95)을 반드시 기록해야 한다.
+ */
+export interface RtpPrecision {
+  /** 유료 스핀 수. */
+  spins: number
+  seed: string
+  /** 표준오차 = 라운드 배수의 표본표준편차 / sqrt(n). */
+  stdErr: number
+  /** 95% 신뢰구간 반폭 = 1.96 x stdErr. */
+  ci95HalfWidth: number
+  ci95Low: number
+  ci95High: number
+}
 
 /** 프리스핀·스캐터 요약. 두 기능이 다 없는 게임은 null이다. */
 export interface FeatureReport {
@@ -103,10 +157,27 @@ export interface DistributionReport {
   /** 그룹 배당(`WinLine.group`)으로 지급된 몫. 그룹이 없는 게임은 빈 배열. */
   groups: ContributionRow[]
   lines: LineContributionRow[]
+  /** ways 게임의 경로 수 분포. 라인 게임은 빈 배열. */
+  ways: WaysContributionRow[]
+  /** 이 게임이 ways 모델인가. 표를 라인 대신 웨이즈로 그릴지 정한다. */
+  isWays: boolean
   counts: CountContributionRow[]
   histogram: HistogramRow[]
+  /** 뮤테이션 종류별 발동 통계. 표본 모드에서만 채워진다. */
+  mutations: MutationStatRow[]
   /** 표본에서 실제로 관측한 프리스핀 통계. 전수 모드에서는 null. */
   observedFeatures: ObservedFeatures | null
+  /** RTP가 표본에서 나왔을 때의 정밀도. enumerate/analytic이면 null. */
+  precision: RtpPrecision | null
+}
+
+/** 샘플 스핀에 붙는 뮤테이션 요약. 엔진 `MutationEvent`를 화면용으로 줄인 것. */
+export interface SampleMutation {
+  type: string
+  symbol?: string
+  reels?: number[]
+  /** 바뀐 칸 좌표 (`reel,row`). 전/후 격자 비교 하이라이트용. */
+  cells: string[]
 }
 
 export interface ObservedFeatures {
@@ -126,6 +197,10 @@ export interface BetLevelRow {
   /** 해석 모드에서는 베팅 레벨마다 표본을 돌리지 않으므로 null이다. */
   hitRate: number | null
   maxWinMultiplier: number | null
+  /** 이 행의 RTP를 어떻게 냈는지. */
+  method: DistributionMethod
+  /** 표본으로 낸 행이면 95% 신뢰구간 반폭. 아니면 null. */
+  ci95HalfWidth: number | null
   /** 목표 RTP와의 차이 (%p 아님, 소수). */
   delta: number
   pass: boolean
@@ -251,6 +326,10 @@ export interface SampleSpin {
   multiplier: number
   /** 프리스핀이면 true. */
   isFreeSpin: boolean
+  /** 뮤테이션 적용 **전** 격자. 없으면 grid와 같다. */
+  gridBefore: SymbolId[][]
+  /** 이 스핀에서 발동한 뮤테이션. */
+  mutations: SampleMutation[]
   /** 이 스핀에 곱해진 프리스핀 배수. 유료 스핀은 1. */
   winMultiplier: number
   /** 화면에 보인 스캐터 개수. */
@@ -278,6 +357,10 @@ export interface AuditOptions {
   sampleSpins?: number
   /** 전수 조사를 시도할 조합 수 상한. 기본은 엔진의 MAX_ENUMERATION_COMBOS. */
   maxCombos?: number
+  /** 산출 방법을 직접 지정한다. 지정하지 않으면 모델에서 판단한다. */
+  forceMethod?: DistributionMethod
+  /** 몬테카를로 모델에서 베팅 레벨마다 돌릴 스핀 수. */
+  betLevelSpins?: number
   /** 리포트에 찍을 생성 시각. 테스트 결정성을 위해 주입 가능. */
   generatedAt?: Date
   /** 0~1 진행률. 무거운 단계 사이에 호출된다. */

@@ -2,7 +2,7 @@ import { buildGrid, computeExactRtp, evaluate, evaluateScatter, getBetPerLine } 
 import type { GameMath } from '@tgslot/slot-engine'
 import { buildLabelMap } from './groups.js'
 import { HISTOGRAM_BUCKETS, bucketIndexFor, buildHistogramRows } from './histogram.js'
-import { Accumulators, comboCount, countRows, lineRows, toContributionRows } from './contributions.js'
+import { Accumulators, comboCount, countRows, lineRows, toContributionRows, waysRows } from './contributions.js'
 import type { DistributionReport } from './types.js'
 
 /**
@@ -79,8 +79,13 @@ export function enumerateAudit(math: GameMath, totalBet: number): DistributionRe
     symbols: toContributionRows(acc.symbols, labels, denominator, uplift),
     groups: toContributionRows(acc.groups, labels, denominator, uplift),
     lines: lineRows(math, acc, denominator, uplift),
+    ways: waysRows(acc, denominator, uplift),
+    isWays: math.payModel === 'ways',
+    // 전수 조사는 뮤테이션을 거치지 않은 정지 그리드를 세므로 뮤테이션 통계가 없다.
+    mutations: [],
     counts: countRows(acc, denominator, uplift),
     histogram: buildHistogramRows(bucketCombos, bucketMultiplier, combos),
     observedFeatures: null,
+    precision: null,
   }
 }

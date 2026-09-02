@@ -15,6 +15,7 @@ import {
   defaultLineLabel,
   phaseAllDurationMs,
   presentationCycleMs,
+  presentationOptionsFor,
 } from './presentation.js'
 import { loadGameMath } from './testSupport.js'
 
@@ -258,5 +259,56 @@ describe('피처가 있는 연출', () => {
     const feature = steps.find((step) => step.phase === 'feature')
     expect(feature).toBeDefined()
     expect(feature?.durationMs).toBeLessThanOrEqual(REDUCED_WIN_CYCLE_MS)
+  })
+})
+
+describe('showWins 옵션 전달', () => {
+  const scatterWin: FeatureTrigger = {
+    type: 'scatterWin',
+    symbol: 'scatter',
+    count: 3,
+    win: 200,
+    positions: [[0, 0]],
+  }
+  const freeSpins: FeatureTrigger = { type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }
+
+  it('피처를 그대로 넘긴다', () => {
+    // 이걸 빠뜨리면 스캐터 링도 피처 단계도 조용히 사라진다.
+    const options = presentationOptionsFor({ features: [scatterWin, freeSpins] }, false)
+    expect(options.features).toEqual([scatterWin, freeSpins])
+  })
+
+  it('베팅액을 그대로 넘긴다', () => {
+    expect(presentationOptionsFor({ totalBet: 50 }, false).totalBet).toBe(50)
+  })
+
+  it('모션 축소 여부를 함께 싣는다', () => {
+    expect(presentationOptionsFor(undefined, true).reducedMotion).toBe(true)
+  })
+
+  it('옵션이 없어도 동작한다', () => {
+    const options = presentationOptionsFor(undefined, false)
+    expect(options.features).toBeUndefined()
+    expect(options.totalBet).toBeUndefined()
+  })
+
+  it('옮긴 옵션으로 피처 단계가 실제로 생긴다', () => {
+    // showWins가 실제로 만드는 계획과 같은 경로다.
+    const steps = buildPresentation(
+      [],
+      math,
+      presentationOptionsFor({ totalBet: 500, features: [scatterWin, freeSpins] }, false),
+    )
+    expect(steps.map((step) => step.phase)).toEqual(['all', 'feature'])
+    expect(steps[0]?.scatters).toEqual([[0, 0]])
+  })
+
+  it('라인 승리가 없어도 스캐터만으로 연출이 생긴다', () => {
+    const steps = buildPresentation(
+      [],
+      math,
+      presentationOptionsFor({ features: [scatterWin] }, false),
+    )
+    expect(steps.length).toBeGreaterThan(0)
   })
 })

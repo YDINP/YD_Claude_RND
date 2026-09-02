@@ -125,3 +125,42 @@ describe('normalizePosition', () => {
     expect(normalizePosition(-0.25, 32)).toBeCloseTo(31.75, 10)
   })
 })
+
+describe('spinTargetPosition 0바퀴 (스킵 경로)', () => {
+  const length = 32
+
+  it('한 바퀴도 돌지 않고 남은 거리만 간다', () => {
+    // 9에서 2로 가는 데 7칸이면 충분하다. 스트립 전체를 다시 돌 이유가 없다.
+    expect(9 - spinTargetPosition(9, 2, length, 0)).toBeCloseTo(7, 10)
+  })
+
+  it('이동 거리가 스트립 길이보다 짧다', () => {
+    for (const [from, stop] of [
+      [0, 31],
+      [5, 5],
+      [17, 3],
+      [31.5, 0],
+    ]) {
+      const distance = (from ?? 0) - spinTargetPosition(from ?? 0, stop ?? 0, length, 0)
+      expect(distance).toBeGreaterThanOrEqual(0)
+      expect(distance).toBeLessThan(length)
+    }
+  })
+
+  it('이미 정지 위치면 움직이지 않는다', () => {
+    expect(spinTargetPosition(7, 7, length, 0)).toBeCloseTo(7, 10)
+  })
+
+  it('그래도 목표는 정확히 정지 위치다', () => {
+    for (const stop of [0, 1, 15, 31]) {
+      expect(normalizePosition(spinTargetPosition(11.4, stop, length, 0), length)).toBeCloseTo(stop, 10)
+    }
+  })
+
+  it('한 바퀴짜리보다 언제나 가깝다', () => {
+    const zero = 9 - spinTargetPosition(9, 2, length, 0)
+    const one = 9 - spinTargetPosition(9, 2, length, 1)
+    expect(zero).toBeLessThan(one)
+    expect(one - zero).toBeCloseTo(length, 10)
+  })
+})

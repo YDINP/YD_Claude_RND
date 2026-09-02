@@ -49,7 +49,18 @@ export const FrameWindowSchema = z
 export const FrameLayoutSchema = z.object({ window: FrameWindowSchema })
 
 /** 심볼 연출 종류. 각 타입이 쓰는 추가 필드는 아래 스키마의 주석을 볼 것. */
-export const FX_TYPES = ['pulse', 'shine', 'wobble', 'bounce', 'burst', 'glow', 'flash', 'spin'] as const
+export const FX_TYPES = [
+  'pulse',
+  'shine',
+  'wobble',
+  'bounce',
+  'burst',
+  'glow',
+  'flash',
+  'spin',
+  /** 스프라이트 시트 재생. `theme.sheets[symbol].win`이 있어야 동작한다. */
+  'sheet',
+] as const
 
 /**
  * 심볼 연출 1개. 모든 필드가 선택이고 빠진 값은 `resolveFxEffect`가 채운다.
@@ -93,6 +104,17 @@ export const FxMapSchema = z.record(z.string().min(1), FxSymbolSchema)
 export type FxMap = z.infer<typeof FxMapSchema>
 
 /**
+ * 심볼 1개의 스프라이트 시트. 값은 사이드카 JSON 경로다.
+ * 아틀라스 이미지는 같은 경로의 `.webp`라 따로 적지 않는다.
+ */
+export const SheetSymbolSchema = z.object({ win: z.string().min(1).optional() })
+export type SheetSymbol = z.infer<typeof SheetSymbolSchema>
+
+/** 심볼 id -> 시트. `default`는 쓰지 않는다. 시트는 심볼마다 그림이 다르기 때문이다. */
+export const SheetMapSchema = z.record(z.string().min(1), SheetSymbolSchema)
+export type SheetMap = z.infer<typeof SheetMapSchema>
+
+/**
  * `games/<id>/theme/theme.json`의 스키마. 경로는 theme.json 파일 기준 상대 경로다.
  * 파일이 없는 효과음은 키 자체를 넣지 않는다 (빈 문자열 금지).
  */
@@ -101,12 +123,16 @@ export const ThemeFileSchema = z.object({
   version: z.string().min(1).optional(),
   symbols: z.record(z.string().min(1), z.string().min(1)),
   background: z.string().min(1).optional(),
+  /** 프리스핀 중에 쓰는 배경. 없으면 기본 배경 위에 금빛 틴트를 덧씌운다. */
+  backgroundFreeSpins: z.string().min(1).optional(),
   /** 릴을 감싸는 베젤 아트. 없으면 렌더러가 벡터 베젤을 직접 그린다. */
   frame: z.string().min(1).optional(),
   /** 프레임 아트의 릴 창 위치. 없으면 `DEFAULT_FRAME_WINDOW`를 쓴다. */
   frameLayout: FrameLayoutSchema.optional(),
   /** 심볼 승리 연출. 없으면 전부 내장 pulse를 쓴다. */
   fx: FxMapSchema.optional(),
+  /** 심볼별 스프라이트 시트. 있으면 승리 연출에서 정지 이미지 대신 재생한다. */
+  sheets: SheetMapSchema.optional(),
   palette: ThemePaletteSchema,
   sfx: SfxSchema.optional(),
 })
@@ -180,6 +206,9 @@ export function parseTheme(json: unknown, baseUrl: string, options: ParseThemeOp
     palette: { ...file.palette, winLine: [...file.palette.winLine] },
   }
   if (file.background !== undefined) theme.background = resolveAssetUrl(baseUrl, file.background)
+  if (file.backgroundFreeSpins !== undefined) {
+    theme.backgroundFreeSpins = resolveAssetUrl(baseUrl, file.backgroundFreeSpins)
+  }
   if (file.frame !== undefined) theme.frame = resolveAssetUrl(baseUrl, file.frame)
   // 프레임 아트가 있으면 창 좌표를 반드시 갖게 한다. 생성기(theme-gen)는 frameLayout을 쓰지 않으므로
   // 기본값(ART_DIRECTION §5)을 여기서 채워 넣어 렌더러가 분기하지 않게 한다.
@@ -189,6 +218,15 @@ export function parseTheme(json: unknown, baseUrl: string, options: ParseThemeOp
     theme.frameLayout = { window: { ...DEFAULT_FRAME_WINDOW } }
   }
   if (file.fx !== undefined) theme.fx = file.fx
+  if (file.sheets !== undefined) {
+    const sheets: SheetMap = {}
+    for (const [symbolId, entry] of Object.entries(file.sheets)) {
+      const resolved: SheetSymbol = {}
+      if (entry.win !== undefined) resolved.win = resolveAssetUrl(baseUrl, entry.win)
+      sheets[symbolId] = resolved
+    }
+    theme.sheets = sheets
+  }
   if (Object.keys(sfx).length > 0) theme.sfx = sfx
   return theme
 }

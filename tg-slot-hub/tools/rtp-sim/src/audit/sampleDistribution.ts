@@ -1,10 +1,19 @@
 import { computeAnalyticRtp, createSeededRng } from '@tgslot/slot-engine'
+import { Z95 } from './stats.js'
 import type { GameMath } from '@tgslot/slot-engine'
-import { Accumulators, comboCount, countRows, lineRows, toContributionRows } from './contributions.js'
+import {
+  Accumulators,
+  comboCount,
+  countRows,
+  lineRows,
+  mutationRows,
+  toContributionRows,
+  waysRows,
+} from './contributions.js'
 import { buildLabelMap } from './groups.js'
 import { HISTOGRAM_BUCKETS, bucketIndexFor, buildHistogramRows } from './histogram.js'
 import { betPerLineOf, playRound } from './spinner.js'
-import type { DistributionReport } from './types.js'
+import type { DistributionMethod, DistributionReport, RtpPrecision } from './types.js'
 
 /** 해석 모드에서 분포·기여도를 추정할 기본 유료 스핀 수. */
 export const DEFAULT_SAMPLE_SPINS = 2_000_000
@@ -12,6 +21,12 @@ export const DEFAULT_SAMPLE_SPINS = 2_000_000
 export interface SampleOptions {
   spins?: number
   seed?: string
+  /**
+   * RTP를 어디서 가져올지.
+   * - `analytic`(기본) — 닫힌 식의 정확값. 표본은 분포·기여도만 맡는다.
+   * - `sample` — 표본 평균. 닫힌 식이 없는 모델(뮤테이션·캐스케이드 등)에서 쓴다.
+   */
+  rtpSource?: 'analytic' | 'sample'
   /** 라운드를 나눠 돌리며 0~1 진행률을 알린다. */
   onProgress?: (ratio: number) => void
 }
@@ -39,7 +54,9 @@ export function sampleDistribution(
     throw new RangeError(`표본 스핀 수는 1 이상의 정수여야 한다: ${spins}`)
   }
 
+  const rtpSource = options.rtpSource ?? 'analytic'
   const betPerLine = betPerLineOf(math, totalBet)
+  // 표본이 RTP까지 맡는 경우에도 분해(라인/스캐터/프리스핀)는 닫힌 식 쪽을 참고값으로 남긴다.
   const analytic = computeAnalyticRtp(math, totalBet)
   const labels = buildLabelMap(math)
   const acc = new Accumulators(math)
@@ -52,6 +69,8 @@ export function sampleDistribution(
   let maxWin = 0
   let freeSpinsPlayed = 0
   let triggers = 0
+  let multiplierSum = 0
+  let multiplierSquareSum = 0
 
   for (let i = 0; i < spins; i += 1) {
     const round = playRound(math, totalBet, betPerLine, rng)
@@ -67,6 +86,11 @@ export function sampleDistribution(
         acc.addScatter(count, entry.spin.scatterWin * entry.multiplier)
       }
     }
+    // 뮤테이션의 RTP 몫은 라운드 총액을 알아야 하므로 라운드가 끝난 뒤 기록한다.
+    acc.addRoundMutations(
+      round.map((entry) => entry.spin),
+      roundWin,
+    )
     if (round.length > 1) triggers += 1
 
     if (roundWin > 0) {
@@ -74,6 +98,8 @@ export function sampleDistribution(
       if (roundWin > maxWin) maxWin = roundWin
     }
     const multiplier = roundWin / totalBet
+    multiplierSum += multiplier
+    multiplierSquareSum += multiplier * multiplier
     const bucket = bucketIndexFor(multiplier)
     bucketCounts[bucket] = (bucketCounts[bucket] ?? 0) + 1
     bucketMultiplier[bucket] = (bucketMultiplier[bucket] ?? 0) + multiplier
@@ -83,15 +109,33 @@ export function sampleDistribution(
   options.onProgress?.(1)
 
   const denominator = spins * totalBet
+  const sampledRtp = multiplierSum / spins
+  const variance = Math.max(0, multiplierSquareSum / spins - sampledRtp * sampledRtp)
+  const stdErr = Math.sqrt(variance) / Math.sqrt(spins)
+  const halfWidth = Z95 * stdErr
+  const method: DistributionMethod = rtpSource === 'sample' ? 'monte-carlo' : 'analytic'
+  const rtp = rtpSource === 'sample' ? sampledRtp : analytic.rtp
+  const precision: RtpPrecision | null =
+    rtpSource === 'sample'
+      ? {
+          spins,
+          seed,
+          stdErr,
+          ci95HalfWidth: halfWidth,
+          ci95Low: rtp - halfWidth,
+          ci95High: rtp + halfWidth,
+        }
+      : null
+
   return {
-    method: 'analytic',
+    method,
     estimated: true,
     totalBet,
     betPerLine,
     combos: comboCount(math),
     observations: spins,
     sampleSeed: seed,
-    rtp: analytic.rtp,
+    rtp,
     breakdown: analytic.breakdown,
     contributionTotal: acc.total / denominator,
     hitRate: hits / spins,
@@ -100,8 +144,12 @@ export function sampleDistribution(
     symbols: toContributionRows(acc.symbols, labels, denominator, 1),
     groups: toContributionRows(acc.groups, labels, denominator, 1),
     lines: lineRows(math, acc, denominator, 1),
+    ways: waysRows(acc, denominator, 1),
+    isWays: math.payModel === 'ways',
+    mutations: mutationRows(acc, spins, totalBet, rtp),
     counts: countRows(acc, denominator, 1),
     histogram: buildHistogramRows(bucketCounts, bucketMultiplier, spins),
     observedFeatures: { triggers, freeSpins: freeSpinsPlayed, spins },
+    precision,
   }
 }

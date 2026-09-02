@@ -89,3 +89,43 @@ describe('브라우저 전용 코드 격리', () => {
     expect(entry).toContain('export async function createPixiRendererCore')
   })
 })
+
+describe('리뷰에서 잡힌 회귀 방지', () => {
+  const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+
+  it('showWins가 피처 옵션을 계획으로 넘긴다', () => {
+    expect(renderer()).toContain('presentationOptionsFor(opts, this.options.reducedMotion)')
+  })
+
+  it('라인 승리가 없다고 곧장 돌아서지 않는다', () => {
+    // 스캐터나 프리스핀만 있는 스핀도 보여줄 것이 있다.
+    expect(renderer()).not.toContain('this.destroyed || wins.length === 0')
+  })
+
+  it('빛이 같은 셀을 다시 터뜨리기 전에 앞의 연출을 끈다', () => {
+    expect(renderer()).toContain('this.stopCellFx(key)')
+  })
+
+  it('연출을 정리할 때 정지 스프라이트를 되살린다', () => {
+    // 시트가 숨겨 둔 채 끝나면 심볼이 영영 사라진다.
+    expect(renderer()).toContain('cell.sprite.visible = true')
+  })
+
+  it('모드 테두리를 그리기 전에 자기 층을 비운다', () => {
+    expect(renderer()).toContain('this.modeGraphics.clear()')
+  })
+
+  it('전환을 끊을 때도 끝을 알리는 한 곳을 지난다', () => {
+    const source = renderer()
+    expect(source).toContain('private finishModeTransition()')
+    expect(source).toContain("phase: 'end'")
+  })
+
+  it('스킵은 한 바퀴를 더 돌지 않는다', () => {
+    expect(renderer()).toContain('active.stripLength, 0)')
+  })
+
+  it('이미 접은 릴은 다시 접지 않는다', () => {
+    expect(renderer()).toContain('if (active.skipped) continue')
+  })
+})

@@ -4,8 +4,10 @@ import { fileURLToPath } from 'node:url'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { afterAll, describe, expect, it } from 'vitest'
+import type { GenerateAssetResult } from './pipeline.js'
 import { planAssets } from './pipeline.js'
-import { formatDryRunPlan, formatHeader, formatProviderLine } from './report.js'
+import { formatDryRunPlan, formatHeader, formatProviderLine, formatRunSummary } from './report.js'
+import type { PromptAsset } from './schema.js'
 import { parsePromptsFile } from './schema.js'
 
 const fixturePath = fileURLToPath(new URL('../fixtures/prompts.json', import.meta.url))
@@ -57,5 +59,45 @@ describe('formatDryRunPlan', () => {
     const plans = planAssets(emptyGameDir, file, file.assets, false).map((plan) => ({ ...plan, willSkip: true }))
     const lines = formatDryRunPlan(plans)
     expect(lines[0]).toContain('skip 예정')
+  })
+})
+
+const dummyAsset: PromptAsset = { id: 'a', kind: 'symbol', prompt: 'p', size: '1024x1024', transparent: false, out: 'a.webp', outSize: 100 }
+
+describe('formatRunSummary', () => {
+  it('생성/skip 개수와 총 시간/바이트를 합산한다', () => {
+    const results: GenerateAssetResult[] = [
+      { asset: dummyAsset, skipped: false, ms: 500, bytes: 1000 },
+      { asset: dummyAsset, skipped: false, ms: 1500, bytes: 2_000_000 },
+      { asset: dummyAsset, skipped: true, ms: 0, bytes: 0 },
+    ]
+    const summary = formatRunSummary(results)
+    expect(summary).toContain('자산 3개')
+    expect(summary).toContain('생성 2')
+    expect(summary).toContain('skip 1')
+    expect(summary).toContain('2.0s') // 500+1500ms
+    expect(summary).toContain('1.91MB') // 2_001_000 bytes
+  })
+
+  it('skip된 자산의 ms/bytes는 합계에 안 들어간다', () => {
+    const results: GenerateAssetResult[] = [
+      { asset: dummyAsset, skipped: false, ms: 100, bytes: 500 },
+      { asset: dummyAsset, skipped: true, ms: 9999, bytes: 9999 },
+    ]
+    const summary = formatRunSummary(results)
+    expect(summary).toContain('100ms')
+    expect(summary).toContain('500B')
+  })
+
+  it('결과가 비어 있어도 안 던진다', () => {
+    expect(formatRunSummary([])).toContain('자산 0개')
+  })
+
+  it('1초 미만은 ms 단위, 1초 이상은 s 단위로 보여준다', () => {
+    const under = formatRunSummary([{ asset: dummyAsset, skipped: false, ms: 999, bytes: 1 }])
+    expect(under).toContain('999ms')
+
+    const over = formatRunSummary([{ asset: dummyAsset, skipped: false, ms: 1000, bytes: 1 }])
+    expect(over).toContain('1.0s')
   })
 })

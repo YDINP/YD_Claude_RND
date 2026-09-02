@@ -82,7 +82,21 @@ const ko: Record<TranslationKey, string> = {
   freeSpinButton: '프리스핀 ({n})',
   freeSpinsIntro: '프리스핀 {spins}회 ×{multiplier}',
   freeSpinsRetrigger: '+{spins} 프리스핀',
-  freeSpinsComplete: '프리스핀 종료 · 총 {total}',
+  freeSpinsComplete: '프리스핀 종료',
+  // win strip (round 3b)
+  winStripLabel: '당첨',
+  freeSpinsTotalLabel: '프리스핀 누적',
+  // help paging (round 3b)
+  tabFeatures: '피처',
+  tabFairness: '공정성',
+  featuresWildTitle: '와일드',
+  wildSubstitutesSome: '와일드는 {symbols}를 대체합니다',
+  featuresScatterTitle: '스캐터',
+  scatterPayOfTotalBet: '총 베팅의 ×{n}',
+  freeSpinsTriggerRule: '스캐터 {count}개 이상이면 프리스핀 발동',
+  freeSpinsGrantRule: '{spins}회, 배수 ×{multiplier}',
+  freeSpinsRetriggerRule: '프리스핀 중 재발동하면 스핀이 추가돼요',
+  fairnessNoRoundYet: '스핀을 한 번 하면 그 라운드의 공정성 증명을 볼 수 있어요.',
 }
 
 export default ko

@@ -72,7 +72,12 @@ export function App(): ReactNode {
   if (route.name === 'play') {
     return (
       <div className="hub-app">
-        <GameScreen gameId={route.gameId} />
+        {/* key={gameId}: 게임을 바꿔 타면(리로드 없이) 완전히 새로 마운트되게 강제한다.
+            gameId prop만 바뀌면 같은 인스턴스가 재사용돼 "새 gameId + 이전 게임의 math"로
+            렌더러 세팅 effect가 한 틱 잘못 돌거나(테마/수학 불일치 ThemeError), WinStrip 같은
+            컴포넌트 로컬 state(승리 금액 등)가 그대로 남는 문제가 있었다 — 리마운트로 둘 다
+            한번에 해결한다(store reset도 언마운트 cleanup에서 새 마운트보다 먼저 실행됨). */}
+        <GameScreen key={route.gameId} gameId={route.gameId} />
       </div>
     )
   }

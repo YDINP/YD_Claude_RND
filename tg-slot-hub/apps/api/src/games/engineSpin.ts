@@ -7,7 +7,6 @@ import type {
   SpinResult,
 } from '@tgslot/slot-engine'
 import type { FeatureTrigger, FreeSpinsState } from '@tgslot/shared'
-import type { FreeSpinsAward } from '../economy/freeSpins.js'
 
 /** 저장된 프리스핀 세션 → 엔진이 받는 라운드 상태. 필드 이름만 옮긴다. */
 export function toRoundState(freeSpins: FreeSpinsState | null): RoundState | undefined {
@@ -51,19 +50,4 @@ export function toSharedFeature(feature: EngineFeatureTrigger): FeatureTrigger {
 
 export function toSharedFeatures(features: readonly EngineFeatureTrigger[]): FeatureTrigger[] {
   return features.map(toSharedFeature)
-}
-
-/**
- * 이번 스핀이 부여한 프리스핀. 한 스핀에 `freeSpins` 피처가 여러 개 올 일은 없지만,
- * 온다면 횟수는 더하고 배수는 큰 쪽을 쓴다 (세션 배수는 하나뿐이다).
- */
-export function freeSpinsAwardFrom(features: readonly FeatureTrigger[]): FreeSpinsAward | undefined {
-  let award: FreeSpinsAward | undefined
-  for (const feature of features) {
-    if (feature.type !== 'freeSpins') continue
-    award = award
-      ? { spins: award.spins + feature.spins, multiplier: Math.max(award.multiplier, feature.multiplier) }
-      : { spins: feature.spins, multiplier: feature.multiplier }
-  }
-  return award
 }

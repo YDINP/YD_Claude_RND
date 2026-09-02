@@ -72,6 +72,15 @@ function listPackDirs(gamesDir: string): string[] {
 }
 
 /**
+ * manifest.json이 있는 폴더인지. **아트만 있는 폴더와 진짜 게임 팩을 가르는 기준**이다.
+ * 아트 파이프라인이 `games/<id>/art`와 `theme`를 수학 팩보다 며칠 먼저 만들기 때문에
+ * 이 구분이 없으면 아트 생성만으로 서버 부팅과 테스트가 통째로 막힌다.
+ */
+function hasManifest(dir: string): boolean {
+  return existsSync(join(dir, MANIFEST_FILE))
+}
+
+/**
  * 게임 팩 1개를 읽고 검증한다.
  * manifest.id === math.id === 폴더 이름이 아니면 던진다.
  * 부팅 시점에 터지는 편이 잘못된 팩으로 스핀을 받는 것보다 낫다.
@@ -94,7 +103,22 @@ export function loadGamePack(dir: string): GamePack {
   return { id, manifest, math, rawMath, summary: toGameSummary(manifest) }
 }
 
-/** games 디렉터리 전체를 읽는다. 팩이 하나라도 깨져 있으면 부팅을 막는다. */
+/**
+ * games 디렉터리 전체를 읽는다.
+ *
+ * - `manifest.json`이 **아예 없는** 폴더는 아직 게임이 아니라고 보고 경고만 남기고 건너뛴다
+ *   (아트가 먼저 생성된 폴더). 이것 때문에 부팅이나 테스트가 막히면 안 된다.
+ * - `manifest.json`은 있는데 `math.json`이 없거나 깨졌으면 **던진다.** 만들다 만 팩을 로비에
+ *   올리는 것이 조용히 빠뜨리는 것보다 위험하다.
+ */
 export function loadGamePacks(gamesDir: string = resolveGamesDir()): GamePack[] {
-  return listPackDirs(gamesDir).map((dir) => loadGamePack(dir))
+  const packs: GamePack[] = []
+  for (const dir of listPackDirs(gamesDir)) {
+    if (!hasManifest(dir)) {
+      console.warn(`[games] skipping incomplete pack ${basename(dir)}`)
+      continue
+    }
+    packs.push(loadGamePack(dir))
+  }
+  return packs
 }

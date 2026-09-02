@@ -160,6 +160,15 @@ export const SpinResponseSchema = z.object({
   features: z.array(z.lazy(() => FeatureTriggerSchema)).default([]),
   /** 스핀 후 프리스핀 상태. 남은 게 없으면 null */
   freeSpins: z.lazy(() => FreeSpinsStateSchema).nullable().default(null),
+  /** 이 스핀으로 프리스핀 세션이 **끝났을 때만**. 결과 화면에 띄우는 총합이다 */
+  freeSpinsSummary: z
+    .object({
+      /** 세션 전체 누적 당첨 (이 스핀 포함) */
+      total: z.number().int().min(0),
+      /** 세션에서 실제로 돈 프리스핀 횟수 (리트리거 포함) */
+      spins: z.number().int().min(0),
+    })
+    .optional(),
 })
 export type SpinResponse = z.infer<typeof SpinResponseSchema>
 
@@ -252,6 +261,11 @@ export const FreeSpinsStateSchema = z.object({
   totalBet: z.number().int().min(1),
   /** 이 프리스핀 세션에서 누적된 당첨 합계 */
   accumulatedWin: z.number().int().min(0),
+  /**
+   * 세션 만료 시각 (ISO 8601). 지나면 없는 것으로 취급한다.
+   * 오래된 행에는 없을 수 있어 선택 필드다 (없으면 만료되지 않는다).
+   */
+  expiresAt: z.string().optional(),
 })
 export type FreeSpinsState = z.infer<typeof FreeSpinsStateSchema>
 
@@ -267,5 +281,18 @@ export const FeatureTriggerSchema = z.discriminatedUnion('type', [
 ])
 export type FeatureTrigger = z.infer<typeof FeatureTriggerSchema>
 
-export const GameStateResponseSchema = z.object({ freeSpins: FreeSpinsStateSchema.nullable() })
+/**
+ * 게임별 진행 상태 묶음. 지금은 프리스핀뿐이지만 앞으로 캐스케이드·리스핀·스티키·미터·갬블이
+ * 같은 자리에 들어온다. 필드를 늘려도 저장 스키마를 바꾸지 않도록 컨테이너로 둔다.
+ */
+export const GameStateSchema = z.object({
+  freeSpins: FreeSpinsStateSchema.nullable().default(null),
+})
+export type GameState = z.infer<typeof GameStateSchema>
+
+export const GameStateResponseSchema = z.object({
+  /** `state.freeSpins`와 같은 값. 자주 쓰는 값이라 위로 꺼내 둔다 */
+  freeSpins: FreeSpinsStateSchema.nullable(),
+  state: GameStateSchema,
+})
 export type GameStateResponse = z.infer<typeof GameStateResponseSchema>

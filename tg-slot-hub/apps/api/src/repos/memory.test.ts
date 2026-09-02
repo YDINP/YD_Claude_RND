@@ -14,7 +14,9 @@ const NO_JACKPOT_ROLL = JACKPOT_ODDS_DENOMINATOR - 1
 function fixedResult(totalWin: number): SpinResult {
   return {
     stops: [1, 2, 3],
+    gridBefore: [['a', 'a', 'a']],
     grid: [['a', 'a', 'a']],
+    mutations: [],
     wins: [],
     lineWin: totalWin,
     scatterWin: 0,

@@ -9,7 +9,7 @@ import { createGeminiProvider } from './provider/gemini.js'
 import { createOpenAiProvider } from './provider/openai.js'
 import { checkComfyAvailable, selectProviderName, type SelectProviderEnv } from './provider/select.js'
 import type { ImageProvider, ProviderName } from './provider/types.js'
-import { formatDryRunPlan, formatHeader, formatProviderLine } from './report.js'
+import { formatDryRunPlan, formatHeader, formatProviderLine, formatRunSummary } from './report.js'
 import { parsePromptsFile, type PromptAsset, type PromptsFile } from './schema.js'
 import type { ThemeUpdate } from './themeWriter.js'
 
@@ -155,11 +155,13 @@ async function main(): Promise<void> {
   if (options.reprocess) {
     console.log('  provider: (none — --reprocess, art/raw/<id>.png에서 후처리만 다시 돌린다)\n')
     const themeUpdate: ThemeUpdate = {}
+    const results = []
     for (const asset of assets) {
-      await reprocessAsset(gameDir, asset, themeUpdate)
+      results.push(await reprocessAsset(gameDir, asset, themeUpdate))
     }
     applyThemeUpdate(gameDir, themeUpdate)
-    console.log('\n완료')
+    console.log(formatRunSummary(results))
+    console.log('완료')
     return
   }
 
@@ -180,14 +182,17 @@ async function main(): Promise<void> {
   console.log(formatProviderLine(providerName, env.COMFY_URL, false))
   const provider = buildProvider(providerName)
   const themeUpdate: ThemeUpdate = {}
+  const results = []
 
   for (const asset of assets) {
     const result = await generateAsset(gameDir, file, asset, provider, options.force, themeUpdate)
     if (result.skipped) console.log(`  [skip] ${asset.id} (이미 있음, --force로 재생성)`)
+    results.push(result)
   }
 
   applyThemeUpdate(gameDir, themeUpdate)
-  console.log('\n완료')
+  console.log(formatRunSummary(results))
+  console.log('완료')
 }
 
 main().catch((error: unknown) => {

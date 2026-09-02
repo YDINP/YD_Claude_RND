@@ -14,7 +14,7 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
 | PATCH | `/me` | Bearer JWT | `{ locale }`로 표시 언어 변경 → `MeResponse` (GET과 같은 모양) |
 | GET | `/games` | - | `{ games: GameSummary[] }`. `hidden` 제외, `sort` 오름차순 |
 | GET | `/games/:id/math` | - | 검증된 `math.json` 원본. `Cache-Control: public, max-age=300` |
-| GET | `/games/:id/state` | Bearer JWT | `GameStateResponse`. 진행 중인 프리스핀 세션 (없으면 `{ freeSpins: null }`) |
+| GET | `/games/:id/state` | Bearer JWT | `GameStateResponse`. 진행 중인 게임 상태. `{ freeSpins, state }` |
 | POST | `/games/:id/spin` | Bearer JWT | `SpinRequest` → `SpinResponse`. 서버 권위 스핀 1회 |
 | GET | `/rounds/:id/seed` | Bearer JWT | 라운드 서버 시드 공개 (소유자만). provably fair 검증용 |
 | GET | `/bonus` | Bearer JWT | `BonusStatus`. 데일리·4시간·구제 보너스의 수령 가능 여부 |
@@ -89,7 +89,7 @@ config는 숫자만 갖는다. 운영이 값을 바꿀 때 다른 파일을 볼 
 | 파산 구제 | 코인 < 10이고 마지막 구제로부터 6시간 경과 시 500 코인 | `rescue_bonus` |
 | 잭팟 | 시드 25,000코인. 스핀마다 베팅의 1%를 **1/100 코인 단위**로 적립, `rng.nextInt(5_000_000) < 적립액`이면 당첨 | `jackpot_win` |
 | 주간 리더보드 | ISO 주차(UTC, 월요일 시작) 단위로 `totalWin` / `bestMultiplier` / `spins` 집계. 상위 50 + 내 순위 | - |
-| 데일리 미션 | `spin_50`(50스핀 → 1000), `win_3`(당첨 3회 → 500), `classic_20`(classic-777 20스핀 → 500). UTC 날짜 단위 | `mission_reward` |
+| 데일리 미션 | `spin_50`(**유료** 50스핀 → 1000), `win_3`(당첨 3회 → 500), `classic_20`(classic-777 20스핀 → 500). UTC 날짜 단위 | `mission_reward` |
 | 레벨 | `xp` = 누적 베팅. 레벨 n 문턱 = `round(2000 * n^1.6)` (레벨 1은 0). 레벨업 시 `200 × 도달 레벨` 지급 | `level_up` |
 
 베팅 상한은 레벨로 해금된다: 레벨 1~2 → 100, 3~5 → 200, 6+ → 500. 게임의 `betLevels`에 있는
@@ -197,11 +197,21 @@ DATABASE_URL=postgres://... node dist/scripts/checkLedger.js         # 배포 (�
 | 규칙 | 내용 |
 |---|---|
 | 진입 | 기본 스핀에서 `freeSpins` 피처가 뜨면 세션이 생긴다. 그 스핀의 베팅액이 세션 내내 고정된다 |
+| 남은 횟수 | **엔진의 `nextState`가 정한다.** 소진·리트리거 계산은 엔진 안에만 있다 |
 | 차감 | 프리스핀은 **코인을 걸지 않는다.** 원장에 `spin_bet` 항목 자체가 생기지 않는다 |
 | 베팅액 | 요청의 `totalBet`은 **무시**한다. 진입 시점에 고정된 값으로 계산하고 응답의 `totalBet`에 그 값을 싣는다 |
 | 재발동 | 이번 프리스핀을 **먼저 소모**하고 새로 받은 횟수를 더한다. 마지막 스핀에서 재발동해도 1회를 잃지 않는다 |
-| 종료 | 남은 횟수가 0이 되면 상태 행을 지우고 응답의 `freeSpins`는 `null`이다 |
+| 종료 | 엔진이 `nextState`를 주지 않으면 세션이 끝난다. 상태를 비우고 응답의 `freeSpins`는 `null`이다 |
 | 누적 | `accumulatedWin`은 프리스핀들의 당첨 합계다. 진입 스핀의 당첨은 포함하지 않는다 |
+| 요약 | 세션을 끝낸 스핀의 응답에만 `freeSpinsSummary: { total, spins }`가 실린다 |
+| 만료 | 세션에 7일 `expiresAt`이 붙는다. 지난 세션은 없는 것으로 보고 다시 유료 스핀이 된다 |
+
+### 남은 횟수는 엔진이 정한다
+
+서버는 엔진이 준 `nextState`(남은 횟수·총 횟수·배수)를 그대로 받아 적고, **엔진이 모르는 두 가지만**
+얹는다: 진입 시점에 고정된 베팅액과 세션 누적 당첨. 소진과 리트리거를 서버가 또 계산하면 둘이
+어긋나는 순간 어느 쪽이 맞는지 아무도 모른다. `economy/freeSpins.ts`는 그래서 상태 기계가 아니라
+포장지다.
 
 ### 다른 시스템과의 관계
 
@@ -209,7 +219,7 @@ DATABASE_URL=postgres://... node dist/scripts/checkLedger.js         # 배포 (�
 |---|---|
 | 잭팟 | **적립도 판정도 하지 않는다.** 풀에 넣은 돈이 없으므로 가져갈 자격도 없다 |
 | xp / 레벨 | 오르지 않는다. xp는 "실제로 건 돈"이라 프리스핀은 0이다 |
-| 미션 | 스핀 수로 **센다** (`spin_50` 등이 올라간다) |
+| 미션 | `spin_50`처럼 **횟수만 세는 미션(`any-spin`)은 세지 않는다.** 트리거 한 번으로 10~20칸이 공짜로 채워지면 "오늘 N번 돌기"가 의미를 잃는다. 당첨 조건(`win_3`)과 게임 지정(`classic_20`)은 프리스핀도 센다 |
 | 리더보드 | 스핀 수와 당첨을 **센다**. 배수는 고정 베팅 기준으로 계산한다 |
 | 원장 | 당첨(`spin_win`)만 기록된다. 불변식은 그대로 유지된다 |
 
@@ -220,12 +230,24 @@ DATABASE_URL=postgres://... node dist/scripts/checkLedger.js         # 배포 (�
 때문이다. 베팅 레벨 검사와 레벨 상한(`BET_LOCKED`) 검사도 프리스핀 중에는 건너뛴다.
 **응답의 `totalBet`이 실제로 적용된 값**이므로 클라이언트는 그것을 보면 된다.
 
+### 베팅 규칙은 트랜잭션 안에서 판정한다
+
+베팅 레벨 검사와 레벨 상한(`BET_LOCKED`) 검사는 **지갑 락을 잡은 뒤** 확정된 베팅액으로 한다
+(`compute(ctx)` 안). 트랜잭션 밖에서 읽은 상태로 판단하면 그 사이 프리스핀이 시작되거나 끝났을 때
+잘못된 판정이 나온다. 위반은 `BetRuleError`로 던져 라우트가 400으로 옮긴다.
+
+라운드 상태는 **프리스핀일 때만** 엔진에 넘긴다. 유료 스핀에 넘기면 엔진이 그 스핀을 프리스핀으로
+취급해 남은 횟수를 깎는다.
+
 ### 저장 위치
 
-- `game_states(user_id, game_id, free_spins jsonb)` — 진행 중인 세션. 유저 단위 행이라
-  스핀 트랜잭션의 지갑 락이 그대로 직렬화한다.
-- `rounds.is_free_spin` / `features` / `free_spins_after` — 멱등 재전송이 **처음과 똑같은 응답**을
-  돌려주기 위한 스냅샷. 재전송은 상태를 다시 소모하지 않는다.
+- `game_states(user_id, game_id, state jsonb)` — 게임별 진행 상태 컨테이너. 지금은
+  `{ freeSpins }` 하나지만 캐스케이드·리스핀·스티키·미터·갬블이 같은 자리에 들어온다.
+  피처마다 컬럼을 늘리지 않으려는 것이다. 유저 단위 행이라 스핀 트랜잭션의 지갑 락이 그대로
+  직렬화하고, 앞뒤로 아무 상태가 없으면 아예 쓰지 않는다.
+- `rounds.is_free_spin` / `features` / `multiplier` / `free_spins_after` / `free_spins_summary` —
+  멱등 재전송이 **처음과 똑같은 응답**을 돌려주기 위한 스냅샷. 재전송은 상태를 다시 소모하지 않는다.
+  `multiplier`는 스핀 **직전**의 세션 배수라, 마지막 프리스핀이라 세션이 사라진 뒤에도 남는다.
 - `rounds.bet`은 프리스핀에서도 계산 기준 베팅이 들어간다. 실제 배팅액 합계를 낼 때는
   `is_free_spin = false`로 걸러야 한다.
 
@@ -274,6 +296,7 @@ pnpm --filter @tgslot/api db:push       # 실제 DB에 반영. 이 저장소 안
 | `0003_parallel_dormammu.sql` | 허브 테이블 5종(`bonus_claims`, `jackpot_pool`, `jackpot_hits`, `leaderboard_weekly`, `mission_progress`) + `users.xp`. 맨 끝의 `INSERT INTO jackpot_pool`은 손으로 덧붙인 시드 행이다 (drizzle-kit은 데이터를 만들지 않는다) |
 | `0004_spicy_living_tribunal.sql` | `rounds.jackpot_win` / `level_up_from` / `level_up_to` / `level_up_bonus`. 멱등 재전송이 처음과 **완전히 같은** 응답을 돌려주도록 라운드의 부수 결과를 함께 남긴다 |
 | `0008_legal_bromley.sql` | `game_states` 테이블 + `rounds.is_free_spin`/`features`/`free_spins_after`. 프리스핀 세션과 재전송 스냅샷 |
+| `0009_acoustic_madrox.sql` | `game_states.free_spins` → 범용 `state` jsonb (0008을 아직 push하지 않았으므로 DROP + ADD로 낸다) + `rounds.multiplier`/`free_spins_summary` |
 | `0007_jackpot_pool_hundredths.sql` | 잭팟 풀·시드 단위를 코인에서 1/100 코인으로 변환(x100). 금액 자체는 그대로다 |
 | `0006_jackpot_seed_25k.sql` | 잭팟 시드를 25,000으로 내린다 (손으로 쓴 커스텀 SQL). 현재 풀은 **아직 아무도 돌리지 않은 초기 상태일 때만** 같이 내린다 |
 | `0005_cynical_jane_foster.sql` | `users.locale_explicit`. 유저가 직접 고른 언어를 로그인이 덮어쓰지 못하게 하는 플래그 |
@@ -312,8 +335,13 @@ pnpm --filter @tgslot/api db:push       # 실제 DB에 반영. 이 저장소 안
   통일해서 반환한다 (`ApiErrorSchema`와 동일한 모양).
 - **게임 레지스트리는 디스크에서 온다**: 부팅 시 `<repo>/games/*/`를 훑어 `manifest.json`(`GameManifestSchema`)과
   `math.json`(`parseGameMath`)을 검증하고, `manifest.id === math.id === 폴더 이름`을 강제한다.
-  `_`로 시작하는 폴더(`_template`)는 건너뛴다. 팩이 하나라도 깨져 있으면 **부팅이 실패한다** —
-  잘못된 팩으로 스핀을 받는 것보다 낫다. 게임 추가는 폴더 추가가 전부이고 API 코드는 건드리지 않는다.
+  `_`로 시작하는 폴더(`_template`)는 건너뛴다. 게임 추가는 폴더 추가가 전부이고 API 코드는 건드리지 않는다.
+
+  **미완성 폴더는 두 종류를 다르게 다룬다.** `manifest.json`이 아예 없으면 아직 게임이 아니라고 보고
+  `[games] skipping incomplete pack <id>` 경고만 남기고 건너뛴다 — 아트 파이프라인이 `art/`와 `theme/`를
+  수학 팩보다 며칠 먼저 만들기 때문에, 이것 때문에 서버가 못 뜨면 안 된다. 반대로 `manifest.json`은
+  있는데 `math.json`이 없거나 깨졌으면 **부팅이 실패한다** — 만들다 만 팩이 로비에서 조용히 사라지는
+  것보다 터지는 편이 낫다.
 - **스핀 원자성**: `applySpin`이 한 트랜잭션 안에서 지갑 row lock(`FOR UPDATE`) → 멱등키 확인 →
   잔액 확인 → nonce 증가 → 결과 계산 → 원장 2건(`spin_bet`, `spin_win`) → 라운드 저장 → 지갑 갱신을 처리한다.
   실패하면 아무것도 남지 않으므로 `sum(ledger.delta) == wallets.coins` 불변식이 깨지지 않는다.
@@ -355,10 +383,13 @@ pnpm --filter @tgslot/api db:push       # 실제 DB에 반영. 이 저장소 안
 
 1. 스핀 응답에서 `roundId`, `seedHash`, `nonce`, `stops`를 받는다.
 2. `GET /rounds/:roundId/seed`로 `seed`를 받는다 (본인 라운드만).
-3. `sha256(seed) === seedHash`인지 확인한다. 스핀 시점에 이미 공개된 해시이므로 시드는 사후 변경이 불가능하다.
-4. `createSeededRng(`${seed}:${nonce}`)`로 RNG를 만들고 `spin(math, { totalBet }, rng)`를 돌린다.
-   `math`는 `GET /games/:id/math`로 받는다.
-5. 재현된 `stops`/`grid`/`totalWin`이 응답과 같은지 비교한다.
+3. 프리스핀 라운드라면 `isFreeSpin`, `multiplier`, `totalBet`도 함께 받는다.
+   `totalWin`은 `(lineWin + scatterWin) x multiplier`라서 배수를 모르면 재현값이 맞지 않는다.
+4. `sha256(seed) === seedHash`인지 확인한다. 스핀 시점에 이미 공개된 해시이므로 시드는 사후 변경이 불가능하다.
+5. `createSeededRng(`${seed}:${nonce}`)`로 RNG를 만들고 `spin(math, { totalBet }, rng, state?)`를 돌린다.
+   `math`는 `GET /games/:id/math`로 받는다. 프리스핀 라운드면 `state`에
+   `{ freeSpinsLeft, freeSpinsTotal, multiplier }`를 넣는다 (배수는 공개된 `multiplier`).
+6. 재현된 `stops`/`grid`/`totalWin`이 응답과 같은지 비교한다.
 
 ```bash
 curl -s localhost:8787/rounds/$ROUND/seed -H "authorization: Bearer $TOKEN"

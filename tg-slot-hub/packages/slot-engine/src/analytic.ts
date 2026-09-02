@@ -1,5 +1,6 @@
 import type { GameMath } from './schema.js'
 import { getLineCandidates, payoutForCount } from './evaluate.js'
+import type { Mutation } from './schema.js'
 import type { SymbolId } from './types.js'
 
 /** RTP를 조각으로 나눈 것. 셋 다 **총 베팅액** 기준 기대 배수이고 합이 RTP다. */
@@ -48,9 +49,12 @@ export function symbolFrequencies(math: GameMath): Map<SymbolId, number>[] {
  * 죽는 순간의 연속 길이로 배당이 확정된다. 살아남은 후보가 하나도 없으면
  * 남은 릴이 무엇이든 결과가 바뀌지 않으므로 거기서 가지를 자른다.
  */
-export function expectedLineMultiplier(math: GameMath): number {
+export function expectedLineMultiplier(
+  math: GameMath,
+  override?: Map<SymbolId, number>[],
+): number {
   const candidates = getLineCandidates(math)
-  const frequencies = symbolFrequencies(math).map((map) => [...map.entries()])
+  const frequencies = (override ?? symbolFrequencies(math)).map((map) => [...map.entries()])
 
   const walk = (reel: number, alive: readonly number[], best: number, probability: number): number => {
     if (probability === 0) return 0
@@ -163,7 +167,13 @@ export function expectedFreeSpinsPerTrigger(
  */
 export function computeAnalyticRtp(math: GameMath, totalBet: number): AnalyticRtpReport {
   assertAnalyticBet(math, totalBet)
-  const lines = expectedLineMultiplier(math)
+  const lines =
+    math.payModel === 'ways'
+      ? expectedWaysMultiplier(math) / (math.ways?.betDivisor ?? 25)
+      : mysteryRevealCases(math).reduce(
+          (acc, revealCase) => acc + revealCase.probability * expectedLineMultiplier(math, revealCase.frequencies),
+          0,
+        )
   const scatterDistribution = scatterCountDistribution(math)
 
   let scatter = 0
@@ -203,7 +213,146 @@ export function assertAnalyticBet(math: GameMath, totalBet: number): void {
   if (!Number.isInteger(totalBet) || totalBet <= 0) {
     throw new RangeError(`totalBet은 양의 정수여야 한다: ${totalBet}`)
   }
-  if (totalBet % math.paylines.length !== 0) {
-    throw new RangeError(`totalBet(${totalBet})이 라인 수(${math.paylines.length})로 나누어떨어지지 않는다`)
+  const divisor = math.payModel === 'ways' ? (math.ways?.betDivisor ?? 25) : math.paylines.length
+  if (divisor <= 0 || totalBet % divisor !== 0) {
+    throw new RangeError(`totalBet(${totalBet})이 배당 단위 수(${divisor})로 나누어떨어지지 않는다`)
   }
+}
+
+// ---- ways 페이 모델 ----
+
+interface ReelMatchStats {
+  /** 보이는 창에서 일치하는 칸 수의 기대값. */
+  expected: number
+  /** 창에 일치가 하나도 없을 확률. */
+  zero: number
+  /** 창에 일치가 하나 이상 있을 확률. */
+  nonZero: number
+}
+
+/**
+ * 릴별 매칭 통계. `expected`는 릴 창의 칸이 각각 스트립 위에서 균등하므로
+ * `rows x 스트립 빈도`로 정확히 나온다. `zero`는 스트립을 한 바퀴 훑어 센다.
+ */
+function reelMatchStats(math: GameMath, matches: ReadonlySet<SymbolId>): ReelMatchStats[] {
+  return math.strips.map((strip) => {
+    const length = strip.length
+    let hits = 0
+    let zeroStops = 0
+    for (const symbol of strip) {
+      if (matches.has(symbol)) hits += 1
+    }
+    for (let stop = 0; stop < length; stop += 1) {
+      let found = false
+      for (let row = 0; row < math.rows; row += 1) {
+        if (matches.has(strip[(stop + row) % length] as SymbolId)) {
+          found = true
+          break
+        }
+      }
+      if (!found) zeroStops += 1
+    }
+    const zero = zeroStops / length
+    return { expected: (math.rows * hits) / length, zero, nonZero: 1 - zero }
+  })
+}
+
+/**
+ * ways 게임의 기대 배수 (웨이당 베팅액 기준).
+ *
+ * 지급액은 `경로 수 x 배수 x 웨이당 베팅액`이고 경로 수는 릴별 매칭 칸 수의 곱이다.
+ * 릴이 독립이므로 곱의 기대값은 기대값의 곱으로 인수분해된다.
+ * 연속 길이가 정확히 k라는 사건은 `앞 k릴이 모두 비지 않음 x 릴 k가 빔`이고,
+ * 앞 k릴의 곱은 0이면 자동으로 0이 되므로 지시함수를 따로 곱할 필요가 없다.
+ *
+ *     E[s] = Σ_k 배수(k) x (Π_{i<j} E[c_i]) x (Π_{j<=i<k} P(c_i>0)) x P(c_k=0)
+ *
+ * 여기서 j는 실제로 지급되는 길이다. 4연속인데 3개까지만 배당이 있으면 곱은 3릴까지만 센다.
+ */
+export function expectedWaysMultiplier(math: GameMath): number {
+  const candidates = getLineCandidates(math)
+  const bothWays = math.ways?.bothWays === true
+  const forward = Array.from({ length: math.reels }, (_, index) => index)
+  const orders: number[][] = bothWays ? [forward, [...forward].reverse()] : [forward]
+
+  let total = 0
+  for (const candidate of candidates) {
+    const stats = reelMatchStats(math, candidate.matches)
+
+    orders.forEach((order, directionIndex) => {
+      for (let k = 1; k <= math.reels; k += 1) {
+        // 전 릴 매칭은 왼쪽 방향에서 이미 셌다.
+        if (directionIndex > 0 && k === math.reels) continue
+        const multiplier = candidate.bestPayout[k] ?? 0
+        if (multiplier <= 0) continue
+        const paidCount = candidate.bestCount[k] ?? k
+
+        let term = 1
+        for (let i = 0; i < paidCount; i += 1) {
+          term *= stats[order[i] ?? 0]?.expected ?? 0
+        }
+        for (let i = paidCount; i < k; i += 1) {
+          term *= stats[order[i] ?? 0]?.nonZero ?? 0
+        }
+        if (k < math.reels) term *= stats[order[k] ?? 0]?.zero ?? 0
+        if (term === 0) continue
+        total += multiplier * term
+      }
+    })
+  }
+  return total
+}
+
+// ---- 미스터리 공개 ----
+
+interface RevealCase {
+  probability: number
+  frequencies: Map<SymbolId, number>[]
+}
+
+/** 미스터리 뮤테이션만 골라낸다. 여러 개면 첫 번째만 해석 대상이다. */
+function mysteryMutation(math: GameMath): Extract<Mutation, { type: 'mystery' }> | undefined {
+  for (const mutation of math.mutations ?? []) {
+    if (mutation.type === 'mystery') return mutation
+  }
+  return undefined
+}
+
+/**
+ * 공개 심볼로 조건부화하면 릴 독립이 복원된다.
+ *
+ * 미스터리는 스핀당 한 번만 뽑고 화면의 모든 미스터리 칸이 같은 심볼이 되므로,
+ * "공개가 s였다"는 조건 아래에서 그리드는 미스터리 심볼이 s로 치환된 것과 같다.
+ * 릴별 분포는 미스터리의 확률 질량이 s로 옮겨간 것이고, 릴끼리는 여전히 독립이다.
+ * 따라서 전체 기대값은 공개 확률로 가중한 조건부 기대값의 합이다.
+ */
+export function mysteryRevealCases(math: GameMath): RevealCase[] {
+  const mutation = mysteryMutation(math)
+  const base = symbolFrequencies(math)
+  if (mutation === undefined) return [{ probability: 1, frequencies: base }]
+
+  const entries = Object.entries(mutation.weights).filter(([, weight]) => weight > 0)
+  const total = entries.reduce((acc, [, weight]) => acc + weight, 0)
+  if (total <= 0) return [{ probability: 1, frequencies: base }]
+
+  return entries.map(([revealed, weight]) => ({
+    probability: weight / total,
+    frequencies: base.map((map) => {
+      const next = new Map(map)
+      const mysteryMass = next.get(mutation.symbol) ?? 0
+      if (mysteryMass > 0) {
+        next.delete(mutation.symbol)
+        next.set(revealed, (next.get(revealed) ?? 0) + mysteryMass)
+      }
+      return next
+    }),
+  }))
+}
+
+/** 해석적 경로를 쓸 수 있는 모델인지. 쓸 수 없으면 몬테카를로로 가야 한다. */
+export function isAnalytic(math: GameMath): boolean {
+  const mutations = math.mutations ?? []
+  if (mutations.length === 0) return true
+  // 미스터리만 있으면 공개 조건부화로 닫힌 식이 된다. ways와 섞이면 창 분포까지 바뀌어 어렵다.
+  return math.payModel !== 'ways' && mutations.every((mutation) => mutation.type === 'mystery')
 }

@@ -62,7 +62,7 @@ describe('검수 시뮬레이터', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /심볼별 RTP 기여/ })).toBeInTheDocument()
     })
-    expect(screen.getByRole('heading', { name: '라인별 RTP 기여' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /라인별 RTP 기여/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /배수 분포 표/ })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: '배수 구간별 확률' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '베팅 레벨별 전수 조사' })).toBeInTheDocument()
@@ -179,6 +179,33 @@ describe('검수 시뮬레이터', () => {
     expect(screen.getByTestId('kpi-free-spins')).toBeInTheDocument()
     expect(screen.getByTestId('kpi-trigger')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '스캐터 · 프리스핀' })).toBeInTheDocument()
+  })
+
+  it('몬테카를로 결과는 몬테카를로 배지와 정밀도 표를 띄운다', async () => {
+    const { runDistributionInWorker } = await import('./lib/mcClient.js')
+    const fruit = pack('fruit-fiesta')
+    const bet = defaultBet(fruit.math)
+    const distribution = sampleDistribution(fruit.math, bet, {
+      spins: 3_000,
+      seed: 'mc',
+      rtpSource: 'sample',
+    })
+    vi.mocked(runDistributionInWorker).mockReturnValueOnce({
+      promise: Promise.resolve({ distribution, betLevels: [] }),
+      cancel: vi.fn(),
+    })
+
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('게임'), { target: { value: 'fruit-fiesta' } })
+    fireEvent.click(await screen.findByRole('button', { name: '해석적 산출 + 표본' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('kpi-exact-rtp')).toHaveTextContent('RTP (몬테카를로)')
+    })
+    expect(screen.getAllByText('몬테카를로').length).toBeGreaterThan(0)
+    expect(screen.getByRole('heading', { name: /RTP 정밀도/ })).toBeInTheDocument()
+    // 신뢰구간이 KPI 노트에 함께 뜬다.
+    expect(screen.getByTestId('kpi-exact-rtp')).toHaveTextContent('95% CI')
   })
 
   it('프리스핀이 있는 게임은 세션이 나올 때까지 뽑을 수 있다', async () => {

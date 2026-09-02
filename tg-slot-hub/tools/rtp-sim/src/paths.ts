@@ -19,10 +19,12 @@ export function gamesDir(): string {
   return join(findWorkspaceRoot(), 'games')
 }
 
+export const MANIFEST_FILE = 'manifest.json'
+export const MATH_FILE = 'math.json'
+
 /**
- * 게이트 검사 대상 게임 폴더 전부.
- * `_`로 시작하는 폴더(_template)만 제외하고, math.json이 없는 폴더도 **포함한다**.
- * 파일이 빠진 팩은 조용히 건너뛰는 대신 게이트 테스트에서 실패해야 하기 때문이다.
+ * `_`로 시작하지 않는 games 하위 폴더 전부. 분류하기 전의 날것이다.
+ * 게이트가 실제로 검사할 대상은 `listGamePackDirs`를 쓴다.
  */
 export function listGameDirs(root: string = gamesDir()): string[] {
   if (!existsSync(root)) return []
@@ -31,6 +33,32 @@ export function listGameDirs(root: string = gamesDir()): string[] {
     .map((name) => join(root, name))
     .filter((dir) => statSync(dir).isDirectory())
     .sort()
+}
+
+/**
+ * manifest.json이 있는 폴더인지. **아트만 있는 폴더와 진짜 게임 팩을 가르는 기준**이다.
+ * `apps/api/src/games/packs.ts`의 로더와 같은 규칙을 쓴다.
+ */
+export function hasManifest(dir: string): boolean {
+  return existsSync(join(dir, MANIFEST_FILE))
+}
+
+/**
+ * 게이트 검사 대상 게임 팩.
+ *
+ * 아트 파이프라인이 `games/<id>/art`를 수학 팩보다 며칠 먼저 만든다. manifest가 없는 폴더는
+ * 아직 게임이 아니라고 보고 건너뛴다. 그러지 않으면 아트를 만드는 것만으로 CI가 통째로 막힌다.
+ *
+ * 반대로 manifest가 **있는데** math.json이 없거나 깨진 폴더는 건너뛰지 않는다.
+ * 만들다 만 팩을 조용히 빠뜨리는 것이 실패로 세우는 것보다 위험하기 때문이다.
+ */
+export function listGamePackDirs(root: string = gamesDir()): string[] {
+  return listGameDirs(root).filter(hasManifest)
+}
+
+/** manifest가 없어 검사에서 빠진 폴더. 한 번 로그로 알리는 용도다. */
+export function listArtOnlyDirs(root: string = gamesDir()): string[] {
+  return listGameDirs(root).filter((dir) => !hasManifest(dir))
 }
 
 /**

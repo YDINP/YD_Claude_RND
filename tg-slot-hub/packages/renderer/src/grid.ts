@@ -70,7 +70,11 @@ export function normalizePosition(position: number, stripLength: number): number
 
 /**
  * 현재 위치에서 `stop`까지 아래로 내려가며 돌 때의 목표 위치.
- * 릴은 아래로 흐르므로 위치는 감소한다. 최소 `revolutions`바퀴는 돈다.
+ *
+ * 릴은 아래로 흐르므로 위치는 감소한다. `revolutions`바퀴를 먼저 돌고 남은 거리를 마저 간다.
+ * **0을 주면 한 바퀴도 돌지 않고 남은 거리만 간다.** 스킵이 이 경로를 쓴다.
+ * 한 바퀴를 억지로 더 돌리면 260ms 안에 스트립 전체가 지나가 화면이 번쩍인다.
+ *
  * 결과는 항상 `stop`과 스트립 길이 나머지가 같다.
  */
 export function spinTargetPosition(
@@ -82,7 +86,7 @@ export function spinTargetPosition(
   const from = normalizePosition(current, stripLength)
   const to = normalizePosition(stop, stripLength)
   const gap = normalizePosition(from - to, stripLength)
-  const turns = Math.max(1, Math.floor(revolutions))
+  const turns = Math.max(0, Math.floor(revolutions))
   return from - (turns * stripLength + gap)
 }
 

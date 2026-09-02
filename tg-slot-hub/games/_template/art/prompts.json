@@ -87,6 +87,15 @@
       "outSize": 1080
     },
     {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "prompt": "TODO: 이 게임에 프리스핀/보너스 라운드가 있을 때만 필요한 asset이다 (없으면 이 항목 전체를 삭제하라). theme-gen이 stylePrefix를 자동으로 앞에 붙이므로 여기서 다시 쓰지 마라. 맨 앞에 오버라이드 문장을 명시하라. 예: 'Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background, identical camera framing and horizon line to the base background so the two can crossfade cleanly — ' 그다음에 base `bg`와 같은 장소·카메라·구도를 유지한 채 더 화려하고 축제적인 변형을 설명한다 (예: 불꽃놀이, 빛 폭발, 더 따뜻하고 강한 조명). 크로스페이드로 자연스럽게 전환되도록 실루엣 배치(난간·소품 등)는 base `bg`와 동일한 위치를 유지하라.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg-freespins.webp",
+      "outSize": 1080
+    },
+    {
       "id": "thumb",
       "kind": "thumb",
       "prompt": "TODO: theme-gen이 stylePrefix를 자동으로 앞에 붙이므로 여기서 다시 쓰지 마라. 맨 앞에 오버라이드 문장을 명시하라. 예: 'Front-on hero composition (not 3/4 top-down), full-bleed landscape artwork with no isolated chroma background — ' 그다음에 로비 카드용 히어로 샷 설명을 이어 쓴다 (이 게임의 대표 심볼 1-2개가 크게 보이는 다이나믹 구도). 작은 크기(로비 리스트)에서도 무슨 게임인지 즉시 읽혀야 한다.",

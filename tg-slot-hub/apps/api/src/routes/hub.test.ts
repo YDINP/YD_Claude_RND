@@ -117,7 +117,7 @@ async function spinRequest(harness: Harness, idempotencyKey: string, totalBet = 
 
 /**
  * 엔진을 거치지 않고 결과를 고정한 스핀. 리더보드·미션·프리스핀 상태를 결정적으로 만든다.
- * `features`/`freeSpinsAward`를 주면 엔진이 피처를 뱉은 것처럼 굴 수 있다.
+ * `features`를 주면 엔진이 피처를 뱉은 것처럼 굴 수 있다.
  */
 function fixedSpin(
   repos: MemoryRepos,
@@ -129,13 +129,14 @@ function fixedSpin(
     gameId?: string
     jackpotRoll?: number
     features?: FeatureTrigger[]
-    freeSpinsAward?: { spins: number; multiplier: number }
   }
 ) {
   const win = options.win ?? 0
   const result: SpinResult = {
     stops: [0, 0, 0],
+    gridBefore: [['a', 'a', 'a']],
     grid: [['a', 'a', 'a']],
+    mutations: [],
     wins: [],
     lineWin: win,
     scatterWin: 0,
@@ -153,7 +154,6 @@ function fixedSpin(
       seedHash: 'hash',
       jackpotRoll: options.jackpotRoll ?? JACKPOT_ODDS_DENOMINATOR - 1,
       features: options.features ?? [],
-      ...(options.freeSpinsAward ? { freeSpinsAward: options.freeSpinsAward } : {}),
     }),
   })
 }

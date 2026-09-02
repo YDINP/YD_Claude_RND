@@ -1,6 +1,9 @@
 import { pp } from './stats.js'
 import type {
   AuditResult,
+  DistributionMethod,
+  MutationStatRow,
+  WaysContributionRow,
   ContributionRow,
   CountContributionRow,
   HistogramRow,
@@ -12,8 +15,9 @@ const NG = '❌'
 /** 표본에서 온 값이라는 표시. 전수 조사 값과 섞이지 않게 한다. */
 const ESTIMATED = '_(표본 추정)_'
 
-function methodLabel(method: 'enumerate' | 'analytic'): string {
-  return method === 'enumerate' ? '전수 조사' : '해석적 계산'
+function methodLabel(method: DistributionMethod): string {
+  if (method === 'enumerate') return '전수 조사'
+  return method === 'analytic' ? '해석적 계산' : '몬테카를로'
 }
 
 /** 확률을 "N회에 1회" 꼴로. 0이면 '-'. */
@@ -66,6 +70,36 @@ function lineTable(rows: LineContributionRow[]): string {
   )
 }
 
+function waysTable(rows: WaysContributionRow[]): string {
+  if (rows.length === 0) return '_해당 없음._'
+  return table(
+    ['경로 수', '방향', 'RTP 기여', '전체 대비', '지급 건수', '지급 코인'],
+    rows.map((row) => [
+      `${num(row.ways)} ways`,
+      row.direction === 'ltr' ? '왼→오' : '오→왼',
+      pct(row.rtp),
+      pct(row.share, 2),
+      num(row.hits),
+      num(row.win),
+    ]),
+  )
+}
+
+function mutationTable(rows: MutationStatRow[]): string {
+  if (rows.length === 0) return '_해당 없음._'
+  return table(
+    ['뮤테이션', '발동 스핀', '발동 빈도', '바뀐 칸', 'RTP 몫', '전체 대비'],
+    rows.map((row) => [
+      `\`${row.type}\``,
+      num(row.spins),
+      pct(row.frequency, 3),
+      num(row.cellsChanged),
+      pct(row.rtp),
+      pct(row.share, 2),
+    ]),
+  )
+}
+
 function countTable(rows: CountContributionRow[]): string {
   return table(
     ['매치 개수', 'RTP 기여', '전체 대비', '지급 라인 수', '지급 코인'],
@@ -106,6 +140,13 @@ export function buildAuditMarkdown(result: AuditResult): string {
         ? ` — 분포·기여도는 ${num(dist.observations)} 스핀 표본 추정 (시드 \`${dist.sampleSeed ?? ''}\`)`
         : ' — 모든 조합을 남김없이 계산'
     }`,
+    ...(dist.precision === null
+      ? []
+      : [
+          `- RTP 정밀도: 표준오차 ${pp(dist.precision.stdErr)}, 95% CI ±${(dist.precision.ci95HalfWidth * 100).toFixed(3)}%p` +
+            ` (${pct(dist.precision.ci95Low)} ~ ${pct(dist.precision.ci95High)}),` +
+            ` ${num(dist.precision.spins)} 스핀, 시드 \`${dist.precision.seed}\``,
+        ]),
     '',
     '## 게이트 판정 요약',
     '',
@@ -130,7 +171,12 @@ export function buildAuditMarkdown(result: AuditResult): string {
       ['항목', '값'],
       [
         ['릴 x 행', `${game.reels} x ${game.rows}`],
-        ['페이라인', `${game.lines}개`],
+        [
+          '배당 모델',
+          dist.isWays
+            ? `ways (${num(dist.totalBet / dist.betPerLine)} 단위, 웨이당 베팅액 ${num(dist.betPerLine)})`
+            : `lines (${game.lines}개)`,
+        ],
         ['베팅 레벨', game.betLevels.map(num).join(', ')],
         ['스트립 길이', `${game.stripLengths.join(' x ')} (조합 ${num(dist.combos)})`],
         ['심볼 수', `${game.symbolCount}개`],
@@ -165,7 +211,21 @@ export function buildAuditMarkdown(result: AuditResult): string {
     table(
       ['지표', '값'],
       [
-        ['RTP (정확값)', `${pct(dist.rtp)} (목표 대비 ${pp(dist.rtp - game.rtpTarget)})`],
+        [
+          dist.method === 'monte-carlo' ? 'RTP (표본 추정)' : 'RTP (정확값)',
+          `${pct(dist.rtp)} (목표 대비 ${pp(dist.rtp - game.rtpTarget)})`,
+        ],
+        ...(dist.precision === null
+          ? []
+          : ([
+              ['  ├ 표준오차 (SE)', pp(dist.precision.stdErr)],
+              [
+                '  ├ 95% 신뢰구간',
+                `±${(dist.precision.ci95HalfWidth * 100).toFixed(3)}%p (${pct(dist.precision.ci95Low)} ~ ${pct(dist.precision.ci95High)})`,
+              ],
+              ['  ├ 스핀 수', num(dist.precision.spins)],
+              ['  └ 시드', `\`${dist.precision.seed}\``],
+            ] as [string, string][])),
         ['  ├ 페이라인', pct(dist.breakdown.lines)],
         ['  ├ 스캐터', pct(dist.breakdown.scatter)],
         ['  └ 프리스핀', pct(dist.breakdown.freeSpins)],
@@ -181,14 +241,16 @@ export function buildAuditMarkdown(result: AuditResult): string {
     '### 베팅 레벨별',
     '',
     table(
-      ['총 베팅액', '라인당', 'RTP', '목표 대비', '적중률', '최대 배수', '판정'],
+      ['총 베팅액', '라인당', 'RTP', '목표 대비', '95% CI', '적중률', '최대 배수', '방법', '판정'],
       result.betLevels.map((row) => [
         num(row.totalBet),
         num(row.betPerLine),
         pct(row.rtp),
         pp(row.delta),
+        row.ci95HalfWidth === null ? '-' : `±${(row.ci95HalfWidth * 100).toFixed(3)}%p`,
         row.hitRate === null ? '-' : pct(row.hitRate, 3),
         row.maxWinMultiplier === null ? '-' : `${row.maxWinMultiplier.toFixed(2)}x`,
+        methodLabel(row.method),
         row.pass ? OK : NG,
       ]),
     ),
@@ -241,9 +303,15 @@ export function buildAuditMarkdown(result: AuditResult): string {
     '',
     contributionTable(dist.groups, '그룹'),
     '',
-    '### 페이라인별',
+    dist.isWays ? '### 웨이즈 수 분포' : '### 페이라인별',
     '',
-    lineTable(dist.lines),
+    dist.isWays
+      ? `이 게임은 페이라인이 없다. 인접 릴의 심볼 개수를 곱해 경로 수를 세고, 웨이당 베팅액(총 베팅액 / ${num(
+          dist.totalBet / dist.betPerLine,
+        )})에 배수를 곱해 지급한다.`
+      : '',
+    dist.isWays ? '' : lineTable(dist.lines),
+    dist.isWays ? waysTable(dist.ways) : '',
     '',
     '### 매치 개수별',
     '',
@@ -261,6 +329,19 @@ export function buildAuditMarkdown(result: AuditResult): string {
     histogramTable(dist.histogram, dist.rtp),
     '',
   )
+
+  if (dist.mutations.length > 0) {
+    sections.push(
+      '## 5-2. 뮤테이션',
+      '',
+      '정지 그리드를 평가 직전에 바꾸는 단계다. 표본에서 실제로 발동한 것만 센다.',
+      '한 스핀에 여러 종류가 겹칠 수 있어 RTP 몫의 합은 전체 RTP를 넘을 수 있다.',
+      `발동 빈도의 분모는 관측 스핀(유료 + 프리스핀)이다. ${ESTIMATED}`,
+      '',
+      mutationTable(dist.mutations),
+      '',
+    )
+  }
 
   if (features !== null) {
     sections.push(

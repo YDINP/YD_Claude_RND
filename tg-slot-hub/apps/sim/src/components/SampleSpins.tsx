@@ -91,8 +91,39 @@ export function SampleSpins({ math, totalBet, seed }: SampleSpinsProps) {
   )
 }
 
+function Grid({
+  grid,
+  reels,
+  winning,
+  changed,
+}: {
+  grid: string[][]
+  reels: number
+  winning?: Set<string>
+  changed?: Set<string>
+}) {
+  return (
+    <div className="sim-grid" style={{ gridTemplateColumns: `repeat(${reels}, 1fr)` }}>
+      {grid.map((row, rowIndex) =>
+        row.map((symbol, reelIndex) => {
+          const key = `${reelIndex},${rowIndex}`
+          const classNames = ['sim-cell']
+          if (winning?.has(key) === true) classNames.push('sim-cell--win')
+          if (changed?.has(key) === true) classNames.push('sim-cell--changed')
+          return (
+            <div key={`${rowIndex}-${reelIndex}`} className={classNames.join(' ')}>
+              {symbol}
+            </div>
+          )
+        }),
+      )}
+    </div>
+  )
+}
+
 function SpinCard({ spin, math }: { spin: SampleSpin; math: GameMath }) {
   const winning = new Set(spin.winningCells)
+  const changedCells = new Set(spin.mutations.flatMap((event) => event.cells))
   const classNames = ['sim-spin']
   if (spin.totalWin > 0) classNames.push('sim-spin--win')
   if (spin.isFreeSpin) classNames.push('sim-spin--free')
@@ -110,24 +141,36 @@ function SpinCard({ spin, math }: { spin: SampleSpin; math: GameMath }) {
         </span>
       </header>
 
-      <div className="sim-grid" style={{ gridTemplateColumns: `repeat(${math.reels}, 1fr)` }}>
-        {spin.grid.map((row, rowIndex) =>
-          row.map((symbol, reelIndex) => (
-            <div
-              key={`${rowIndex}-${reelIndex}`}
-              className={`sim-cell${winning.has(`${reelIndex},${rowIndex}`) ? ' sim-cell--win' : ''}`}
-            >
-              {symbol}
-            </div>
-          )),
-        )}
-      </div>
+      {spin.mutations.length > 0 ? (
+        <div className="sim-grid-pair">
+          <div>
+            <div className="sim-grid-caption">변형 전</div>
+            <Grid grid={spin.gridBefore} reels={math.reels} changed={changedCells} />
+          </div>
+          <div className="sim-grid-arrow" aria-hidden="true">
+            ▶
+          </div>
+          <div>
+            <div className="sim-grid-caption">변형 후</div>
+            <Grid grid={spin.grid} reels={math.reels} winning={winning} changed={changedCells} />
+          </div>
+        </div>
+      ) : (
+        <Grid grid={spin.grid} reels={math.reels} winning={winning} />
+      )}
 
-      {(spin.wins.length > 0 || spin.scatterWin > 0 || spin.freeSpinsAwarded > 0) && (
+      {(spin.wins.length > 0 || spin.scatterWin > 0 || spin.freeSpinsAwarded > 0 || spin.mutations.length > 0) && (
         <ul className="sim-spin-lines">
+          {spin.mutations.map((event) => (
+            <li key={`${event.type}-${event.cells.join()}`} className="sim-mutation-line">
+              {event.type}
+              {event.symbol === undefined ? '' : ` → ${event.symbol}`}
+              {event.reels === undefined ? '' : ` (릴 ${event.reels.join(', ')})`} · {event.cells.length}칸
+            </li>
+          ))}
           {spin.wins.map((win) => (
-            <li key={`${win.line}-${win.symbol}`}>
-              라인 #{win.line} · {win.symbol}
+            <li key={`${win.line}-${win.symbol}-${win.ways ?? 'l'}`}>
+              {win.ways === undefined ? `라인 #${win.line}` : `${win.ways} ways`} · {win.symbol}
               {win.group === undefined ? '' : ` (${win.group})`} x{win.count} → {win.multiplier}x ={' '}
               {num(win.win * spin.winMultiplier)}
             </li>

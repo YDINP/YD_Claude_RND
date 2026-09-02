@@ -22,7 +22,11 @@ export interface WinLine {
   /** 그룹 배당으로 지급된 경우에만 채워진다. 클라이언트가 "Any BAR"로 표기할 때 쓴다. */
   group?: GroupId
   count: number
-  /** betPerLine 배수. */
+  /** ways 지급일 때 경로 수. 라인 지급이면 없다. */
+  ways?: number
+  /** ways 지급 방향. `bothWays` 게임에서 어느 쪽으로 읽었는지. */
+  direction?: 'ltr' | 'rtl'
+  /** 라인 게임은 betPerLine 배수, ways 게임은 웨이당 베팅액 배수. */
   multiplier: number
   /** 실제 지급 코인 (정수). */
   win: number
@@ -65,11 +69,32 @@ export interface ScatterWinTrigger {
 
 export type FeatureTrigger = FreeSpinsTrigger | ScatterWinTrigger
 
+/** 뮤테이션이 바꾼 칸 하나. */
+export interface MutationCellChange {
+  position: GridPosition
+  from: SymbolId
+  to: SymbolId
+}
+
+/** 뮤테이션 1단계가 실제로 무엇을 바꿨는지. 렌더러가 이걸 보고 연출한다. */
+export interface MutationEvent {
+  type: 'mystery' | 'expandWild' | 'upgrade' | 'randomWild'
+  /** mystery면 공개된 심볼, upgrade면 승급 결과, 와일드 계열이면 와일드 id. */
+  symbol?: SymbolId
+  /** expandWild가 덮은 릴 인덱스. */
+  reels?: number[]
+  cells: MutationCellChange[]
+}
+
 export interface SpinResult {
   /** 릴별 정지 위치 (스트립 인덱스). */
   stops: number[]
-  /** 화면에 보이는 심볼. `grid[row][reel]` 순서다. */
+  /** 뮤테이션을 적용하기 **전**, 릴이 그대로 멈춘 그리드. 리빌·확장 연출의 시작 프레임이다. */
+  gridBefore: SymbolId[][]
+  /** 평가에 실제로 쓰인 그리드. 뮤테이션이 없으면 `gridBefore`와 같다. */
   grid: SymbolId[][]
+  /** 적용된 뮤테이션. 선언 순서대로, 실제로 무언가 바꾼 것만 담긴다. */
+  mutations: MutationEvent[]
   /** 각 항목의 `win`은 프리스핀 배수를 곱하기 전 값이다. */
   wins: WinLine[]
   /** 페이라인 승리 합계. 배수 적용 전. */

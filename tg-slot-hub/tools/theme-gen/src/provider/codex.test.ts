@@ -187,16 +187,32 @@ describe('createCodexProvider', () => {
     expect(spawned?.kill).toHaveBeenCalledTimes(1)
   })
 
-  it('spawn 자체가 실패하면(codex 미설치 등) 에러를 던지고 임시 폴더를 남긴다', async () => {
-    const spawnImpl: SpawnFn = () => {
+  it('spawn 자체가 실패하면(codex 미설치 등) 2번 재시도한 뒤 에러를 던지고 임시 폴더를 남긴다', async () => {
+    const spawnImpl = vi.fn(() => {
       throw new Error('ENOENT: codex not found')
-    }
-    const provider = createCodexProvider({ spawnImpl, tmpDirBase: tmpBase, timeoutMs: 2000 })
+    })
+    const sleep = vi.fn(async () => {})
+    const provider = createCodexProvider({ spawnImpl, tmpDirBase: tmpBase, timeoutMs: 2000, sleep })
 
     await expect(
       provider.generate({ id: 'blank', prompt: 'p', negative: 'n', size: '1024x1024', transparent: false }),
     ).rejects.toThrow(/ENOENT/)
+    // 재시도 2회 = 총 시도 3회 (다른 프로바이더와 동일한 RETRY_COUNT 정책).
+    expect(spawnImpl).toHaveBeenCalledTimes(3)
+    expect(sleep).toHaveBeenCalledTimes(2)
     expect(readdirSync(tmpBase).length).toBe(1)
+  })
+
+  it('시간 초과는 재시도하지 않는다(정확히 1번만 실행)', async () => {
+    const spawnImpl = vi.fn((): FakeChild => new FakeChild())
+    const sleep = vi.fn(async () => {})
+    const provider = createCodexProvider({ spawnImpl: spawnImpl as unknown as SpawnFn, tmpDirBase: tmpBase, timeoutMs: 20, sleep })
+
+    await expect(
+      provider.generate({ id: 'wild2', prompt: 'p', negative: 'n', size: '1024x1024', transparent: false }),
+    ).rejects.toThrow(/시간 초과/)
+    expect(spawnImpl).toHaveBeenCalledTimes(1)
+    expect(sleep).not.toHaveBeenCalled()
   })
 
   it('transparent 요청인데 알파가 아예 없으면 폴백 크로마키를 적용한다', async () => {

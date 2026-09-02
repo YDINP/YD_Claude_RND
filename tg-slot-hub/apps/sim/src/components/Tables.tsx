@@ -8,8 +8,11 @@ import type {
   HistogramRow,
   LineContributionRow,
   MonteCarloResult,
+  MutationStatRow,
   RtpBreakdown,
+  RtpPrecision,
   RuinReport,
+  WaysContributionRow,
 } from '@tgslot/rtp-sim/audit'
 import { mult, num, pct, pp, seconds } from '../lib/format.js'
 
@@ -123,6 +126,78 @@ export function LineTable({ rows }: { rows: LineContributionRow[] }) {
       </tbody>
     </table>
   )
+}
+
+/** ways 게임의 경로 수 분포. 페이라인 표를 대신한다. */
+export function WaysTable({ rows }: { rows: WaysContributionRow[] }) {
+  if (rows.length === 0) return <p className="sim-empty">아직 지급된 웨이즈가 없다.</p>
+  return (
+    <table className="sim-table">
+      <thead>
+        <tr>
+          <th className="sim-left">경로 수</th>
+          <th className="sim-left">방향</th>
+          <th>RTP 기여</th>
+          <th>전체 대비</th>
+          <th>지급 건수</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={`${row.ways}-${row.direction}`}>
+            <td className="sim-left sim-mono">{num(row.ways)} ways</td>
+            <td className="sim-left">{row.direction === 'ltr' ? '왼→오' : '오→왼'}</td>
+            <td className="sim-mono">{pct(row.rtp)}</td>
+            <td className="sim-mono">{pct(row.share, 2)}</td>
+            <td className="sim-mono">{num(row.hits)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+/** 뮤테이션 종류별 발동 통계. 표본에서만 나온다. */
+export function MutationTable({ rows }: { rows: MutationStatRow[] }) {
+  if (rows.length === 0) return <p className="sim-empty">이 게임에는 뮤테이션이 없다.</p>
+  return (
+    <table className="sim-table">
+      <thead>
+        <tr>
+          <th className="sim-left">뮤테이션</th>
+          <th>발동 스핀</th>
+          <th>발동 빈도</th>
+          <th>바뀐 칸</th>
+          <th>RTP 몫</th>
+          <th>전체 대비</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.type}>
+            <td className="sim-left sim-mono">{row.type}</td>
+            <td className="sim-mono">{num(row.spins)}</td>
+            <td className="sim-mono">{pct(row.frequency, 3)}</td>
+            <td className="sim-mono">{num(row.cellsChanged)}</td>
+            <td className="sim-mono">{pct(row.rtp)}</td>
+            <td className="sim-mono">{pct(row.share, 2)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+/** 몬테카를로로 낸 RTP의 정밀도. 게이트가 이 값을 본다. */
+export function PrecisionTable({ precision }: { precision: RtpPrecision }) {
+  const rows: [string, string][] = [
+    ['스핀 수', num(precision.spins)],
+    ['시드', precision.seed],
+    ['표준오차 (SE)', pp(precision.stdErr)],
+    ['95% 신뢰구간', `±${(precision.ci95HalfWidth * 100).toFixed(3)}%p`],
+    ['구간', `${pct(precision.ci95Low)} ~ ${pct(precision.ci95High)}`],
+  ]
+  return <KeyValueTable rows={rows} />
 }
 
 export function CountTable({ rows }: { rows: CountContributionRow[] }) {

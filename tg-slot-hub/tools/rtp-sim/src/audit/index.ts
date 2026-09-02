@@ -5,6 +5,8 @@
 export {
   DEFAULT_AUDIT_SEED,
   DEFAULT_AUDIT_SPINS,
+  BET_LEVEL_MC_SPINS,
+  MAX_CI95_HALF_WIDTH,
   MAX_HIT_RATE,
   MIN_HIT_RATE,
   MIN_MAX_WIN_MULTIPLIER,
@@ -16,11 +18,21 @@ export {
   buildGates,
   composeAuditResult,
   maxWinThreshold,
+  rtpGate,
   runAudit,
 } from './compute.js'
+export type { BetLevelOptions } from './compute.js'
 export type { AuditParts, GateInput } from './compute.js'
 export { enumerateAudit } from './enumerate.js'
-export { analyzeDistribution, buildFeatureReport, canEnumerate } from './distribution.js'
+export {
+  MONTE_CARLO_MUTATIONS,
+  analyzeDistribution,
+  buildFeatureReport,
+  canEnumerate,
+  engineMethod,
+  requiresMonteCarlo,
+  resolveMethod,
+} from './distribution.js'
 export type { AnalyzeOptions } from './distribution.js'
 export { DEFAULT_SAMPLE_SPINS, sampleDistribution } from './sampleDistribution.js'
 export type { SampleOptions } from './sampleDistribution.js'

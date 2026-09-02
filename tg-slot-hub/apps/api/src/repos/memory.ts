@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { STARTING_COINS, STARTING_GEMS } from '@tgslot/shared'
-import type { FreeSpinsState, Locale } from '@tgslot/shared'
+import type { GameState, Locale } from '@tgslot/shared'
 import type { TelegramUser } from '../auth/initData.js'
 import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
 import type { BonusClaim, BonusClaims } from '../economy/bonus.js'
 import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS } from '../economy/config.js'
-import { isFreeSpinsActive, nextFreeSpinsState } from '../economy/freeSpins.js'
+import { freeSpinsSummary, isFreeSpinsActive, wrapFreeSpinsState } from '../economy/freeSpins.js'
 import { hundredthsToCoins, isJackpotHit, jackpotAccrualHundredths } from '../economy/jackpot.js'
 import { levelFromXp, levelUpBonus, toLevelState } from '../economy/level.js'
 import { applySpinToMissions } from '../economy/missions.js'
@@ -82,8 +82,8 @@ export class MemoryRepos implements Repos {
   private readonly leaderboard = new Map<string, LeaderboardState>()
   /** `${userId}:${day}:${missionId}` */
   private readonly missions = new Map<string, MissionState>()
-  /** `${userId}:${gameId}` -> 진행 중인 프리스핀 세션 */
-  private readonly gameStates = new Map<string, FreeSpinsState>()
+  /** `${userId}:${gameId}` -> 게임별 진행 상태 컨테이너 */
+  private readonly gameStates = new Map<string, GameState>()
   /** 1/100 코인 단위. 응답으로 나갈 때만 코인으로 내린다. */
   private jackpotPoolHundredths = JACKPOT_SEED_HUNDREDTHS
   private jackpotLastWin: JackpotState['lastWin'] = null
@@ -179,21 +179,24 @@ export class MemoryRepos implements Repos {
         isFreeSpin: existing.isFreeSpin,
         // 세션은 그 사이 더 진행됐을 수 있다. 라운드에 남긴 "그때 값"을 그대로 돌려준다.
         freeSpins: existing.freeSpinsAfter,
+        freeSpinsSummary: existing.freeSpinsSummary,
       }
     }
 
     // 프리스핀은 차감하지 않고, 베팅액도 진입 시점에 고정된 값을 쓴다.
     const stateKey = gameStateKey(input.userId, input.gameId)
-    const freeSpinsBefore = this.gameStates.get(stateKey) ?? null
-    const isFreeSpin = isFreeSpinsActive(freeSpinsBefore)
+    const stateBefore = this.gameStates.get(stateKey) ?? null
+    const freeSpinsBefore = stateBefore?.freeSpins ?? null
+    const isFreeSpin = isFreeSpinsActive(freeSpinsBefore, now)
     const totalBet = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.totalBet : input.totalBet
+    const multiplier = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.multiplier : 1
 
     if (!isFreeSpin && wallet.coins < totalBet) {
       throw new InsufficientFundsError(totalBet, wallet.coins)
     }
 
     const nonce = wallet.nonce + 1
-    const { result, seed, seedHash, jackpotRoll, freeSpinsAward, features } = input.compute({
+    const { result, seed, seedHash, jackpotRoll, features } = input.compute({
       nonce,
       totalBet,
       freeSpins: freeSpinsBefore,
@@ -209,15 +212,24 @@ export class MemoryRepos implements Repos {
       this.credit(input.userId, wallet, 'coins', result.totalWin, 'spin_win', roundId)
     }
 
-    const freeSpinsAfter = nextFreeSpinsState(freeSpinsBefore, {
+    // 남은 횟수·배수는 엔진의 nextState가 결정한다. 서버는 고정 베팅과 누적 당첨만 얹는다.
+    const freeSpinsAfter = wrapFreeSpinsState(freeSpinsBefore, {
       gameId: input.gameId,
       totalBet,
       isFreeSpin,
       win: result.totalWin,
-      award: freeSpinsAward,
+      nextState: result.nextState,
+      now,
     })
-    if (freeSpinsAfter) this.gameStates.set(stateKey, freeSpinsAfter)
-    else this.gameStates.delete(stateKey)
+    const summary = freeSpinsSummary(freeSpinsBefore, {
+      isFreeSpin,
+      win: result.totalWin,
+      ended: freeSpinsAfter === null,
+    })
+
+    // 앞뒤로 아무 상태가 없으면 쓸 이유가 없다 (기본 게임 스핀의 대부분).
+    if (freeSpinsAfter) this.gameStates.set(stateKey, { freeSpins: freeSpinsAfter })
+    else if (freeSpinsBefore) this.gameStates.delete(stateKey)
 
     // 잭팟 적립은 하우스 몫에서 나가므로 유저 원장에 남지 않는다. 지급될 때만 원장에 찍힌다.
     // 적립을 먼저 하므로 당첨자는 자기 스핀의 적립분까지 가져간다.
@@ -265,6 +277,7 @@ export class MemoryRepos implements Repos {
     const missions = applySpinToMissions(this.readMissions(input.userId, day), {
       gameId: input.gameId,
       win: result.totalWin,
+      isFreeSpin,
     })
     for (const mission of missions) {
       this.missions.set(missionMapKey(input.userId, day, mission.missionId), {
@@ -290,7 +303,9 @@ export class MemoryRepos implements Repos {
       levelUp,
       isFreeSpin,
       features,
+      multiplier,
       freeSpinsAfter,
+      freeSpinsSummary: summary,
       createdAt: now,
     }
     this.rounds.set(roundId, round)
@@ -307,12 +322,15 @@ export class MemoryRepos implements Repos {
       missions,
       isFreeSpin,
       freeSpins: freeSpinsAfter,
+      freeSpinsSummary: summary,
     }
   }
 
-  async getGameState(userId: string, gameId: string): Promise<FreeSpinsState | null> {
+  async getGameState(userId: string, gameId: string): Promise<GameState> {
     const state = this.gameStates.get(gameStateKey(userId, gameId))
-    return state ? { ...state } : null
+    const freeSpins = state?.freeSpins ?? null
+    // 만료된 세션은 없는 것으로 본다.
+    return { freeSpins: isFreeSpinsActive(freeSpins, this.clock()) ? { ...freeSpins! } : null }
   }
 
   async getRoundById(roundId: string): Promise<RoundRecord | null> {
@@ -451,6 +469,7 @@ function cloneRound(round: RoundRecord): RoundRecord {
     wins: round.wins.map((win) => ({ ...win })),
     features: round.features.map((feature) => ({ ...feature })),
     freeSpinsAfter: round.freeSpinsAfter ? { ...round.freeSpinsAfter } : null,
+    ...(round.freeSpinsSummary ? { freeSpinsSummary: { ...round.freeSpinsSummary } } : {}),
     ...(round.levelUp ? { levelUp: { ...round.levelUp } } : {}),
   }
 }

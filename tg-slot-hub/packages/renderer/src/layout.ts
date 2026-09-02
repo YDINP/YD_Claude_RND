@@ -279,8 +279,10 @@ export interface WindowFitLayout {
  * 릴 **창**을 컨테이너에 최대한 채우는 배치.
  *
  * 프레임 전체를 폭에 맞추면(=`fit: 'width'`) 마퀴와 레전드가 자리를 다 먹어 릴이 작아진다.
- * 그래서 폭으로는 `overflowX`만큼 넘치게 두어 좌우 기둥을 잘라낸다.
+ * 그래서 **릴 창의 폭이 컨테이너 폭과 같아지는** 배율을 노린다. 좌우 기둥은 잘려 나가도 좋다.
+ * `overflowX`는 그 위에 얹는 안전 상한이고,
  * 세로로는 프레임 전체가 컨테이너에 들어오는 배율을 상한으로 삼는다.
+ * 셋 중 가장 빡빡한 것이 이긴다. 보통은 세로가 먼저 걸린다.
  *
  * 캔버스는 **언제나 컨테이너 전체**다. 잘라내는 일은 컨테이너의 overflow만 한다.
  * 프레임이 세로로 들어가면 프레임 전체를 가운데 맞추고, 넘치면 **창**을 가운데 맞춘다.
@@ -295,10 +297,13 @@ export function computeWindowFitLayout(input: WindowFitInput): WindowFitLayout {
   const containerHeight = Math.max(0, input.containerHeight)
   const overflowX = Math.max(0, input.overflowX ?? DEFAULT_OVERFLOW_X)
 
+  // 목표: 릴 창의 폭이 컨테이너 폭과 같아진다. 좌우 기둥은 통째로 잘려도 좋다.
+  const byWindowWidth = containerWidth / (window.w * frameWidth)
+  // 그래도 프레임이 무한정 커지지는 않게 넘침 허용치로 한 번 더 묶는다.
   const byWidth = (containerWidth * (1 + overflowX)) / frameWidth
   // 높이를 못 재는 컨테이너(레이아웃 전)에서는 폭만으로 정한다.
   const byHeight = containerHeight > 0 ? containerHeight / frameHeight : Number.POSITIVE_INFINITY
-  const scale = Math.max(Number.MIN_VALUE, Math.min(byWidth, byHeight))
+  const scale = Math.max(Number.MIN_VALUE, Math.min(byWindowWidth, byWidth, byHeight))
 
   const frameDisplayWidth = frameWidth * scale
   const frameDisplayHeight = frameHeight * scale
@@ -311,14 +316,18 @@ export function computeWindowFitLayout(input: WindowFitInput): WindowFitLayout {
     ? (containerHeight - frameDisplayHeight) / 2
     : containerHeight / 2 - (window.y + window.h / 2) * frameDisplayHeight
 
+  // 가로 중심을 맞추는 대상은 프레임이 아니라 **창**이다.
+  // 아트의 창이 프레임 정중앙에 있지 않을 수 있는데, 그때 프레임을 가운데 두면
+  // 창이 한쪽으로 밀려 컨테이너 폭을 넘어간다.
+  const windowLeft = (containerWidth - windowWidth) / 2
   const frameRect: Rect = {
-    x: (containerWidth - frameDisplayWidth) / 2,
+    x: windowLeft - window.x * frameDisplayWidth,
     y: frameTop,
     width: frameDisplayWidth,
     height: frameDisplayHeight,
   }
   const windowRect: Rect = {
-    x: frameRect.x + window.x * frameDisplayWidth,
+    x: windowLeft,
     y: frameRect.y + window.y * frameDisplayHeight,
     width: windowWidth,
     height: windowHeight,

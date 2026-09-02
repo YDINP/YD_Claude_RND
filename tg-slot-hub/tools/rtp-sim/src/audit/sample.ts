@@ -1,7 +1,19 @@
 import { createSeededRng } from '@tgslot/slot-engine'
 import type { GameMath, SpinResult } from '@tgslot/slot-engine'
 import { betPerLineOf, playRound } from './spinner.js'
-import type { SampleSpin } from './types.js'
+import type { SampleMutation, SampleSpin } from './types.js'
+
+function mutationsOf(spin: SpinResult): SampleMutation[] {
+  return spin.mutations.map((event) => {
+    const summary: SampleMutation = {
+      type: event.type,
+      cells: event.cells.map((cell) => `${cell.position[0]},${cell.position[1]}`),
+    }
+    if (event.symbol !== undefined) summary.symbol = event.symbol
+    if (event.reels !== undefined) summary.reels = [...event.reels]
+    return summary
+  })
+}
 
 function winningCellsOf(spin: SpinResult): string[] {
   const cells = new Set<string>()
@@ -47,7 +59,9 @@ export function createSampleSpinner(math: GameMath, totalBet: number, seed: stri
         index,
         round,
         stops: entry.spin.stops,
+        gridBefore: entry.spin.gridBefore,
         grid: entry.spin.grid,
+        mutations: mutationsOf(entry.spin),
         wins: entry.spin.wins,
         totalWin: entry.spin.totalWin,
         multiplier: entry.spin.totalWin / totalBet,

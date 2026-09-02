@@ -170,7 +170,7 @@ describe('레벨', () => {
 
 describe('미션 진행도', () => {
   it('스핀 1회가 조건에 맞는 미션만 올린다', () => {
-    const progress = applySpinToMissions([], { gameId: 'classic-777', win: 0 })
+    const progress = applySpinToMissions([], { gameId: 'classic-777', win: 0, isFreeSpin: false })
     expect(progress).toEqual([
       { missionId: 'spin_50', progress: 1, claimed: false },
       { missionId: 'win_3', progress: 0, claimed: false },
@@ -179,7 +179,7 @@ describe('미션 진행도', () => {
   })
 
   it('당첨 스핀은 win_3을, 다른 게임 스핀은 classic_20을 올리지 않는다', () => {
-    const progress = applySpinToMissions([], { gameId: 'fruit-fiesta', win: 250 })
+    const progress = applySpinToMissions([], { gameId: 'fruit-fiesta', win: 250, isFreeSpin: false })
     expect(progress.find((row) => row.missionId === 'win_3')?.progress).toBe(1)
     expect(progress.find((row) => row.missionId === 'classic_20')?.progress).toBe(0)
   })
@@ -188,8 +188,19 @@ describe('미션 진행도', () => {
     const progress = applySpinToMissions([{ missionId: 'win_3', progress: 3, claimed: false }], {
       gameId: 'classic-777',
       win: 100,
+      isFreeSpin: false,
     })
     expect(progress.find((row) => row.missionId === 'win_3')?.progress).toBe(3)
+  })
+
+  it('프리스핀은 "아무 게임 N스핀"을 채우지 않는다', () => {
+    // 트리거 한 번으로 10~20칸이 공짜로 채워지면 "오늘 N번 돌기"가 의미를 잃는다.
+    const progress = applySpinToMissions([], { gameId: 'classic-777', win: 250, isFreeSpin: true })
+
+    expect(progress.find((row) => row.missionId === 'spin_50')?.progress).toBe(0)
+    // 당첨 조건과 게임 지정 미션은 프리스핀도 센다.
+    expect(progress.find((row) => row.missionId === 'win_3')?.progress).toBe(1)
+    expect(progress.find((row) => row.missionId === 'classic_20')?.progress).toBe(1)
   })
 
   it('DTO는 완료 여부를 목표 대비로 계산한다', () => {

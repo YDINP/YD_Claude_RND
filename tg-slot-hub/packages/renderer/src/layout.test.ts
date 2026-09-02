@@ -303,8 +303,9 @@ describe('computeWindowFitLayout', () => {
       expect(fit.frameRect.y + fit.frameRect.height).toBeLessThanOrEqual(760 + 1e-9)
     })
 
-    it('프레임은 가로 가운데에 놓이고 좌우로 넘친다', () => {
-      expect(fit.frameRect.x + fit.frameRect.width / 2).toBeCloseTo(195, 9)
+    it('가로 가운데를 맞추는 것은 프레임이 아니라 창이다', () => {
+      // 아트의 창이 프레임 정중앙이 아닐 수 있어 창 기준으로 맞춘다.
+      expect(fit.window.x + fit.window.width / 2).toBeCloseTo(195, 9)
       expect(fit.frameRect.x).toBeLessThan(0)
     })
 
@@ -340,10 +341,13 @@ describe('computeWindowFitLayout', () => {
       expect(fitTo(390, 2000)).toEqual(fitTo(390, 2000, DEFAULT_OVERFLOW_X))
     })
 
-    it('폭이 배율을 정할 때 허용치만큼만 넘친다', () => {
+    it('폭이 배율을 정할 때 창 폭이 컨테이너를 채운다', () => {
       // 세로를 넉넉히 줘서 폭 항이 이기게 만든다.
       const fit = fitTo(390, 2000)
-      expect(fit.frameRect.width).toBeCloseTo(390 * (1 + DEFAULT_OVERFLOW_X), 9)
+      expect(fit.window.width).toBeCloseTo(390, 6)
+      // 프레임은 그만큼 넘치되 허용치 안이다.
+      expect(fit.frameRect.width).toBeCloseTo(390 / WINDOW.w, 6)
+      expect(fit.frameRect.width).toBeLessThanOrEqual(390 * (1 + DEFAULT_OVERFLOW_X) + 1e-9)
     })
 
     it('키우면 창이 커지고 더 많이 잘린다', () => {
@@ -394,7 +398,9 @@ describe('computeWindowFitLayout', () => {
 
     it('높이를 못 재면 폭만으로 정한다', () => {
       const fit = fitTo(390, 0)
-      expect(fit.scale).toBeCloseTo((390 * (1 + DEFAULT_OVERFLOW_X)) / FRAME.width, 9)
+      const byWindow = 390 / (WINDOW.w * FRAME.width)
+      const byOverflow = (390 * (1 + DEFAULT_OVERFLOW_X)) / FRAME.width
+      expect(fit.scale).toBeCloseTo(Math.min(byWindow, byOverflow), 9)
     })
   })
 
@@ -630,5 +636,64 @@ describe('5x3 + 가로로 넓은 창 (fruit-fiesta 대비)', () => {
       const result = fit(w ?? 0, h ?? 0)
       expect(result.frameFitsVertically).toBe(true)
     }
+  })
+})
+
+describe('창이 컨테이너 폭을 채운다', () => {
+  const FRAME = { width: 1080, height: 1620 }
+
+  function fitWith(window: { x: number; y: number; w: number; h: number }, ch = 760) {
+    return computeWindowFitLayout({
+      containerWidth: 390,
+      containerHeight: ch,
+      frameWidth: FRAME.width,
+      frameHeight: FRAME.height,
+      window,
+      reels: 3,
+      rows: 3,
+    })
+  }
+
+  it('기본 넘침 허용치가 0.40이다', () => {
+    expect(DEFAULT_OVERFLOW_X).toBe(0.4)
+  })
+
+  it('세로가 넉넉하면 창 폭이 컨테이너 폭과 같아진다', () => {
+    // 세로 제약을 풀면 창 폭 목표가 그대로 이긴다.
+    const fit = fitWith({ x: 0.14, y: 0.18, w: 0.72, h: 0.63 }, 4000)
+    expect(fit.window.width).toBeCloseTo(390, 6)
+    expect(fit.window.x).toBeCloseTo(0, 6)
+  })
+
+  it('창이 컨테이너 폭을 절대 넘지 않는다', () => {
+    for (const w of [0.5, 0.72, 0.88, 0.95]) {
+      const fit = fitWith({ x: (1 - w) / 2, y: 0.18, w, h: 0.63 }, 4000)
+      expect(fit.window.width).toBeLessThanOrEqual(390 + 1e-6)
+    }
+  })
+
+  it('창이 좁을수록 프레임이 더 크게 넘친다', () => {
+    const narrow = fitWith({ x: 0.25, y: 0.18, w: 0.5, h: 0.63 }, 4000)
+    const wide = fitWith({ x: 0.06, y: 0.18, w: 0.88, h: 0.63 }, 4000)
+    expect(narrow.frameRect.width).toBeGreaterThan(wide.frameRect.width)
+  })
+
+  it('세로 규칙은 그대로라 프레임이 잘리지 않는다', () => {
+    const fit = fitWith({ x: 0.14, y: 0.18, w: 0.72, h: 0.63 })
+    expect(fit.frameFitsVertically).toBe(true)
+    expect(fit.frameRect.y).toBeGreaterThanOrEqual(0)
+  })
+
+  it('세로가 빡빡하면 세로가 이겨 창이 폭을 다 못 채운다', () => {
+    // 390x760에서는 프레임 전체가 들어와야 해서 창이 폭보다 작아진다. 의도된 절충이다.
+    const fit = fitWith({ x: 0.14, y: 0.18, w: 0.72, h: 0.63 })
+    expect(fit.window.width).toBeLessThan(390)
+    expect(fit.scale).toBeCloseTo(760 / FRAME.height, 9)
+  })
+
+  it('창이 세로로 커진 아트에서 심볼이 더 커진다', () => {
+    const short = fitWith({ x: 0.14, y: 0.18, w: 0.72, h: 0.42 })
+    const tall = fitWith({ x: 0.14, y: 0.18, w: 0.72, h: 0.72 })
+    expect(tall.layout.symbolSize).toBeGreaterThan(short.layout.symbolSize)
   })
 })

@@ -17,11 +17,25 @@ export function findMissionDef(missionId: string): MissionDef | undefined {
   return MISSION_DEFS.find((def) => def.id === missionId)
 }
 
-/** 이 스핀이 미션 진행도를 얼마나 올리는지. 지금은 0 또는 1이다. */
-export function missionIncrement(def: MissionDef, spin: { gameId: string; win: number }): number {
+/** 미션 진행도 판정에 필요한 스핀 정보. */
+export interface MissionSpin {
+  gameId: string
+  win: number
+  /** 프리스핀이면 true. "아무 게임 N스핀"류는 이것을 세지 않는다. */
+  isFreeSpin: boolean
+}
+
+/**
+ * 이 스핀이 미션 진행도를 얼마나 올리는지. 지금은 0 또는 1이다.
+ *
+ * `any-spin`은 **유료 스핀만** 센다. 프리스핀까지 세면 트리거 한 번으로 10~20칸이 공짜로
+ * 채워져서 "오늘 N번 돌기" 미션이 의미를 잃는다. 반대로 당첨 조건(`winning-spin`)과
+ * 게임 지정(`game`)은 프리스핀도 센다. 그쪽은 "얼마나 많이 걸었나"를 묻는 미션이 아니다.
+ */
+export function missionIncrement(def: MissionDef, spin: MissionSpin): number {
   switch (def.scope.kind) {
     case 'any-spin':
-      return 1
+      return spin.isFreeSpin ? 0 : 1
     case 'winning-spin':
       return spin.win > 0 ? 1 : 0
     case 'game':
@@ -35,7 +49,7 @@ export function missionIncrement(def: MissionDef, spin: { gameId: string; win: n
  */
 export function applySpinToMissions(
   current: readonly MissionProgress[],
-  spin: { gameId: string; win: number }
+  spin: MissionSpin
 ): MissionProgress[] {
   return MISSION_DEFS.map((def) => {
     const existing = current.find((row) => row.missionId === def.id)

@@ -1,12 +1,14 @@
 export { createSlotRenderer } from './createRenderer.js'
 export type {
   FrameLayout,
+  PaylineStyle,
   RendererEvent,
   RendererFit,
   RendererOptions,
   SfxKey,
   ShowWinsOptions,
   SlotRenderer,
+  SpinHandle,
   SpinToOptions,
   Theme,
   ThemePalette,
@@ -22,6 +24,8 @@ export {
   FrameWindowSchema,
   FxEffectSchema,
   FxMapSchema,
+  SheetMapSchema,
+  SheetSymbolSchema,
   FxSymbolSchema,
   FX_TYPES,
   ThemeError,
@@ -35,6 +39,8 @@ export {
   type FxEffect,
   type FxMap,
   type FxSymbol,
+  type SheetMap,
+  type SheetSymbol,
   type SymbolSourceKind,
   type ThemeFile,
 } from './theme.js'
@@ -69,14 +75,47 @@ export {
   type WindowFitInput,
   type WindowFitLayout,
 } from './layout.js'
-export { buildSpinPlan, type ReelSpinPlan, type SpinPlan, type SpinPlanInput } from './timing.js'
+export {
+  buildSkipPlan,
+  buildSpinPlan,
+  type ReelSpinPlan,
+  type SkipPlan,
+  type SpinPlan,
+  type SpinPlanInput,
+} from './timing.js'
+export { buildPulsePath, pulsePointAt, type PulsePath, type PulseWaypoint } from './pulse.js'
 export { isChromaGreen, keyOutGreen } from './chromaKey.js'
+export {
+  atlasUrlFor,
+  isSheetOnly,
+  parseSpriteSheet,
+  planSheetFx,
+  sheetAnimationSpeed,
+  sheetDurationMs,
+  sheetFrameIndexAt,
+  sheetFrameMs,
+  sheetScaleFor,
+  SheetError,
+  SheetFrameSchema,
+  SpriteSheetSchema,
+  type SheetFrame,
+  type SheetFxPlan,
+  type SpriteSheet,
+} from './sheet.js'
 export {
   planSparkles,
   type RandomFn,
   type SparklePlacement,
   type SparklePlanOptions,
 } from './ambient.js'
+export {
+  buildModeTransition,
+  isFreeSpinsActive,
+  modeTransitionTarget,
+  type ModeTarget,
+  type TransitionOptions,
+  type TransitionPlan,
+} from './transition.js'
 export {
   findFreeSpins,
   formatFreeSpinsPlaque,

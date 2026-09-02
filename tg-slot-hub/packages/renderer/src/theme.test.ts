@@ -430,3 +430,78 @@ describe('배당 없는 심볼이 팩에서 빠져도 견딘다', () => {
     expect(parseTheme(withoutBlank, '/games/classic-777').fx?.['blank']).toBeUndefined()
   })
 })
+
+describe('프리스핀 배경', () => {
+  it('경로를 기본 배경과 같은 규칙으로 푼다', () => {
+    const theme = parseTheme({ ...validJson, backgroundFreeSpins: 'bg-fs.webp' }, '/games/demo')
+    expect(theme.backgroundFreeSpins).toBe('/games/demo/theme/bg-fs.webp')
+  })
+
+  it('절대 URL은 그대로 둔다', () => {
+    const theme = parseTheme(
+      { ...validJson, backgroundFreeSpins: 'https://cdn.example/fs.webp' },
+      '/games/demo',
+    )
+    expect(theme.backgroundFreeSpins).toBe('https://cdn.example/fs.webp')
+  })
+
+  it('없으면 만들지 않는다', () => {
+    // 렌더러가 금빛 틴트로 대신한다.
+    expect(parseTheme(validJson, '/games/demo').backgroundFreeSpins).toBeUndefined()
+  })
+
+  it('빈 문자열은 거부한다', () => {
+    expect(() => parseTheme({ ...validJson, backgroundFreeSpins: '' }, '/games/demo')).toThrow(ThemeError)
+  })
+
+  it('기본 배경과 따로 논다', () => {
+    const theme = parseTheme(
+      { ...validJson, background: 'bg.webp', backgroundFreeSpins: 'bg-fs.webp' },
+      '/games/demo',
+    )
+    expect(theme.background).toBe('/games/demo/theme/bg.webp')
+    expect(theme.backgroundFreeSpins).toBe('/games/demo/theme/bg-fs.webp')
+  })
+})
+
+describe('스프라이트 시트 선언', () => {
+  const withSheets = {
+    ...validJson,
+    sheets: { a: { win: 'sheets/a.json' }, b: {} },
+  }
+
+  it('시트 경로를 다른 에셋과 같은 규칙으로 푼다', () => {
+    const theme = parseTheme(withSheets, '/games/demo')
+    expect(theme.sheets?.['a']?.win).toBe('/games/demo/theme/sheets/a.json')
+  })
+
+  it('절대 URL은 그대로 둔다', () => {
+    const theme = parseTheme(
+      { ...validJson, sheets: { a: { win: 'https://cdn.example/a.json' } } },
+      '/games/demo',
+    )
+    expect(theme.sheets?.['a']?.win).toBe('https://cdn.example/a.json')
+  })
+
+  it('win이 없는 항목도 받아들인다', () => {
+    expect(parseTheme(withSheets, '/games/demo').sheets?.['b']).toEqual({})
+  })
+
+  it('sheets가 없으면 만들지 않는다', () => {
+    expect(parseTheme(validJson, '/games/demo').sheets).toBeUndefined()
+  })
+
+  it('빈 경로는 거부한다', () => {
+    expect(() => parseTheme({ ...validJson, sheets: { a: { win: '' } } }, '/games/demo')).toThrow(
+      ThemeError,
+    )
+  })
+
+  it('fx 타입으로 sheet를 쓸 수 있다', () => {
+    const theme = parseTheme(
+      { ...validJson, fx: { a: { win: [{ type: 'sheet' }] } }, sheets: { a: { win: 'sheets/a.json' } } },
+      '/games/demo',
+    )
+    expect(theme.fx?.['a']?.win?.[0]?.type).toBe('sheet')
+  })
+})

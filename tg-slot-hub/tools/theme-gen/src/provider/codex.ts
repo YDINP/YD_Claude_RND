@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -11,8 +11,11 @@ import {
   CODEX_TEMP_DIR_PREFIX,
   DEFAULT_CODEX_AVAILABILITY_TIMEOUT_MS,
   DEFAULT_CODEX_TIMEOUT_MS,
+  RETRY_BASE_DELAY_MS,
+  RETRY_COUNT,
 } from '../constants.js'
 import { logWarn } from '../log.js'
+import { withRetry } from '../retry.js'
 import type { AssetSize } from '../schema.js'
 import type { GenerateOptions, GeneratedImage, ImageProvider } from './types.js'
 
@@ -32,6 +35,8 @@ export interface WritableLike {
  * `ChildProcess`의 전체 타입을 요구하지 않아 테스트에서 EventEmitter 기반 fake를 쉽게 만들 수 있다.
  */
 export interface SpawnedProcessLike {
+  /** 트리/그룹 kill에 필요하다. 실제 spawn은 항상 채워주고, fake는 없어도 된다(그러면 child.kill()로 폴백). */
+  pid?: number
   stdin: WritableLike | null
   stdout: ReadableLike | null
   stderr: ReadableLike | null
@@ -43,8 +48,33 @@ export interface SpawnedProcessLike {
 export type SpawnFn = (
   command: string,
   args: string[],
-  options: { cwd: string; stdio: ['pipe' | 'ignore', 'pipe', 'pipe']; shell?: boolean },
+  options: { cwd: string; stdio: ['pipe' | 'ignore', 'pipe', 'pipe']; shell?: boolean; detached?: boolean },
 ) => SpawnedProcessLike
+
+/**
+ * 타임아웃으로 죽일 때 `child.kill()`만 부르면 `shell: true`로 띄운 Windows에서는 cmd.exe만
+ * 죽고 그 아래 codex.cmd → node.exe(→ codex가 또 띄웠을 수 있는 프로세스)는 고아로 남는다.
+ * Windows는 `taskkill /T`로 트리 전체를, POSIX는 (spawn 시 `detached: true`로 새 프로세스
+ * 그룹을 만들어 뒀으므로) 음수 pid로 그룹 전체를 죽인다. 둘 다 실패해도 최소한 직계 자식은
+ * `child.kill()`로 정리한다.
+ */
+function killProcessTree(child: SpawnedProcessLike): void {
+  const pid = child.pid
+  if (pid !== undefined) {
+    if (process.platform === 'win32') {
+      execFile('taskkill', ['/pid', String(pid), '/T', '/F'], () => {
+        /* fire-and-forget — 이미 타임아웃으로 실패 처리했으니 결과를 기다릴 이유가 없다 */
+      })
+    } else {
+      try {
+        process.kill(-pid, 'SIGKILL')
+      } catch {
+        /* 그룹 kill 실패 — 아래 child.kill()로 폴백 */
+      }
+    }
+  }
+  child.kill()
+}
 
 /** Windows npm 글로벌 설치는 `.cmd` 래퍼를 쓴다. `spawn`으로 `.cmd`를 직접 실행하려면 shell이 필요하다. */
 export function resolveCodexBinary(): string {
@@ -87,6 +117,9 @@ function runProcess(spawnImpl: SpawnFn, command: string, args: string[], cwd: st
     cwd,
     stdio: [stdin !== undefined ? 'pipe' : 'ignore', 'pipe', 'pipe'],
     shell: process.platform === 'win32',
+    // POSIX에서만 켠다 — 새 프로세스 그룹을 만들어야 음수 pid로 그룹 전체를 죽일 수 있다.
+    // Windows는 detached가 별도 콘솔 창을 띄우는 부작용이 있고, 어차피 taskkill /T를 쓴다.
+    detached: process.platform !== 'win32',
   })
 
   return new Promise<RunResult>((resolve, reject) => {
@@ -97,7 +130,7 @@ function runProcess(spawnImpl: SpawnFn, command: string, args: string[], cwd: st
     const timer = setTimeout(() => {
       if (settled) return
       settled = true
-      child.kill()
+      killProcessTree(child)
       resolve({ stdout, stderr, timedOut: true, exitCode: null })
     }, timeoutMs)
 
@@ -165,6 +198,8 @@ export interface CodexProviderOptions {
   timeoutMs?: number
   /** 테스트에서 `os.tmpdir()` 대신 격리된 폴더를 쓰기 위한 오버라이드. */
   tmpDirBase?: string
+  /** spawn 실패 재시도 백오프에 쓰는 sleep. 테스트에서 실제 타이머 없이 빠르게 돌리는 용도. */
+  sleep?: (ms: number) => Promise<void>
 }
 
 /**
@@ -176,6 +211,7 @@ export function createCodexProvider(options: CodexProviderOptions = {}): ImagePr
   const spawnImpl = options.spawnImpl ?? (spawn as unknown as SpawnFn)
   const timeoutMs = options.timeoutMs ?? DEFAULT_CODEX_TIMEOUT_MS
   const tmpBase = options.tmpDirBase ?? tmpdir()
+  const sleep = options.sleep
 
   return {
     name: 'codex',
@@ -192,7 +228,14 @@ export function createCodexProvider(options: CodexProviderOptions = {}): ImagePr
 
       let result: RunResult
       try {
-        result = await runProcess(spawnImpl, resolveCodexBinary(), args, tempDir, timeoutMs, instruction)
+        // 타임아웃은 여기서 던지지 않고 `{timedOut: true}`로 정상 resolve된다(아래에서 따로 처리) —
+        // 그러니 이 재시도는 spawn 실패 같은 진짜 일시적 오류에만 걸리고, 시간 초과는 절대 재시도하지 않는다.
+        result = await withRetry(() => runProcess(spawnImpl, resolveCodexBinary(), args, tempDir, timeoutMs, instruction), {
+          retries: RETRY_COUNT,
+          baseDelayMs: RETRY_BASE_DELAY_MS,
+          shouldRetry: () => true,
+          ...(sleep !== undefined ? { sleep } : {}),
+        })
       } catch (err) {
         logWarn(`codex: ${id} 실행 자체가 실패해 임시 폴더를 남겨둔다: ${tempDir}`)
         throw err

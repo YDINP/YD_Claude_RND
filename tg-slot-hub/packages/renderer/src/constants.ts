@@ -119,9 +119,9 @@ export const DEFAULT_FRAME_WINDOW = { x: 0.08, y: 0.22, w: 0.84, h: 0.46 } as co
 
 /**
  * `fit: 'window'`에서 프레임이 컨테이너 폭을 넘어도 되는 비율.
- * 0.30이면 폭의 130%까지 키운다. 좌우 기둥은 잘리지만 릴 창이 컨테이너를 거의 다 채운다.
+ * 0.40이면 폭의 140%까지 키운다. 좌우 기둥이 통째로 잘려 나가도 릴 창이 컨테이너 폭을 채운다.
  */
-export const DEFAULT_OVERFLOW_X = 0.3
+export const DEFAULT_OVERFLOW_X = 0.4
 
 /** 크로마키 판정: 초록 채널이 이 값보다 커야 후보가 된다. */
 export const CHROMA_GREEN_MIN = 140
@@ -206,3 +206,38 @@ export const FREE_SPINS_EDGE_STROKE_PX = 4
 export const FREE_SPINS_EDGE_ALPHA = 0.55
 /** 프리스핀 명판 글자 크기 = 심볼 한 변 x 이 값. */
 export const FREE_SPINS_PLAQUE_FONT_RATIO = 0.2
+
+/** 프리스핀 진입/이탈 전환 길이(ms). */
+export const MODE_TRANSITION_MS = 700
+/** 모션 축소 시 전환 길이(ms). */
+export const REDUCED_MODE_TRANSITION_MS = 220
+/** 전환에서 금빛 섬광이 차지하는 시간 비율. */
+export const MODE_FLASH_PORTION = 0.25
+/** 전환에서 방사형 와이프가 차지하는 시간 비율. */
+export const MODE_WIPE_PORTION = 0.55
+/** 섬광 최대 불투명도. */
+export const MODE_FLASH_ALPHA = 0.55
+/** 전환 섬광 색. 브라스 팔레트에 맞춘 밝은 금빛. */
+export const MODE_FLASH_COLOR = '#fff3c4'
+/** 프리스핀 배경 이미지가 없을 때 덧씌우는 금빛 틴트의 불투명도. */
+export const MODE_TINT_ALPHA = 0.22
+
+/** 승리 빛이 심볼 하나에서 다음 심볼로 건너가는 시간(ms). */
+export const PULSE_HOP_MS = 120
+/**
+ * 등급이 오를수록 빛이 느긋하게 움직인다. 큰 승리일수록 오래 보게 만드는 장치다.
+ */
+export const PULSE_HOP_MS_BY_TIER = { none: 120, big: 150, mega: 180, epic: 220, max: 220 } as const
+/** 등급별 잔상 길이. 느린 빛일수록 꼬리가 길어야 균형이 맞는다. */
+export const PULSE_TRAIL_BY_TIER = { none: 6, big: 8, mega: 10, epic: 12, max: 12 } as const
+/** 마지막 심볼에 닿은 뒤 잠시 머무는 시간(ms). */
+export const PULSE_HOLD_MS = 260
+/** 승리 빛 스프라이트 지름 = 심볼 한 변 x 이 값. */
+export const PULSE_SIZE_RATIO = 0.85
+/** 승리 빛 뒤에 남는 잔상 개수. */
+export const PULSE_TRAIL_COUNT = 6
+
+/** 스킵했을 때 모든 릴이 멈추기까지의 총 시간(ms). */
+export const SKIP_TOTAL_MS = 260
+/** 스킵 시 릴 사이 정지 간격(ms). */
+export const SKIP_STAGGER_MS = 40

@@ -68,9 +68,39 @@
       "outSize": 512
     },
     {
+      "id": "seven-win",
+      "kind": "sheet",
+      "symbol": "seven",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a single bold chrome-red numeral 7 with a glossy red enamel finish and a beveled brass gold edge trim, a bright diagonal highlight sheen sweeping across the face like polished glass, the numeral tilted slightly forward in 3/4 perspective to read as the hero symbol, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background. Win-celebration animation timeline across the sequence: frames 1-3 the numeral scales up slightly larger while a warm gold glow ignites and builds around its edges; frames 4-6 a brilliant diagonal light sweep passes across the glossy red face like a lens flare, with small bright sparkles bursting off the numeral's edges; frames 7-9 the numeral settles back down to its resting scale as the gold glow fades smoothly back toward the idle state, matching frame 1 closely enough for a seamless loop back to the start.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/seven-win.webp",
+      "outSize": 768
+    },
+    {
+      "id": "wild-win",
+      "kind": "sheet",
+      "symbol": "wild",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a faceted gold diamond-cut eight-pointed starburst gem with a glowing warm citrine core, thin radiating brass light rays fanning out symmetrically behind the star, a small dark navy plaque at the base engraved with 'WILD' in bold brass serif caps, warm golden glow emanating from the center, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background. Win-celebration animation timeline across the sequence: the WILD badge pulses steadily brighter and dimmer throughout, the brass starburst's rays extend slightly outward and rotate a total of 20 degrees clockwise across the sequence, individual facets of the starburst flash brightly in quick succession as the rays sweep past them, small warm gold particles drift and orbit slowly around the starburst, ending close enough to frame 1's rotation and brightness for a seamless loop back to the start.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/wild-win.webp",
+      "outSize": 768
+    },
+    {
       "id": "frame",
       "kind": "frame",
-      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed portrait artwork with no isolated chroma background around the frame itself — a portrait-orientation ornate brass slot machine bezel frame on a deep navy body. Top 0-15% of the frame is a compact dark navy marquee plate with brass scrollwork border, engraved wordmark 'CLASSIC 777' in bold brass serif caps. Brass scrollwork side pillars run down both edges. A very large rectangular window occupies x 8%-92% and y 16%-84% of the frame (the window is the dominant element, taller than it is wide relative to a 3x3 reel grid), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO inner bevel, NO gradient and NO highlight inside it; only a thin 1% brass rim outside the green (this window will later be replaced with the live reel canvas). Below the window, y 84%-100% is only a weighted brass base molding with a small central gem and soft ambient shadow. NO payline legend, NO icons, NO buttons, NO text below the window. Overall symmetrical, centered, no characters, no extraneous text beyond the marquee wordmark.",
+      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed portrait artwork with no isolated chroma background around the frame itself — a vertical-focused portrait brass slot machine cabinet frame on a deep navy body, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-13%: a dark navy plate with minimal brass scrollwork border, engraved wordmark 'CLASSIC 777' in bold brass serif caps, no other text. The reel window occupies x 4%-96% and y 14%-86% (the dominant element of the frame), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a thin 1% brass rim running just outside the green (this window will later be replaced with the live reel canvas). Two slim brass side rails run the height of the window, each at most 3% of the frame width, styled as narrow fluted brass bars each holding 2-3 small inset gems for detail without bulk — not wide ornate pillars. The bottom y 87%-100% is a plain weighted brass base molding with soft ambient shadow, no legend strip, no payline icons, no buttons, no additional text. Overall symmetrical, centered, no characters.",
       "size": "1024x1536",
       "transparent": true,
       "out": "theme/frame.webp",

@@ -1,6 +1,8 @@
 import type { GameMath } from './schema.js'
 import { evaluate, evaluateScatter, getBetPerLine, triggersFreeSpins } from './evaluate.js'
-import type { Bet, FeatureTrigger, Rng, RoundState, SpinResult, SymbolId } from './types.js'
+import { applyMutations } from './mutations.js'
+import { evaluateWays, getBetPerWay } from './ways.js'
+import type { Bet, FeatureTrigger, MutationEvent, Rng, RoundState, SpinResult, SymbolId } from './types.js'
 
 /**
  * 정지 위치로부터 화면에 보이는 심볼 격자를 만든다.
@@ -33,6 +35,14 @@ export function buildGrid(math: GameMath, stops: number[]): SymbolId[][] {
  * 총 베팅액이 `math.betLevels`에 선언된 값인지 확인한다.
  * 클라이언트가 임의 금액을 보내 페이테이블 라운딩을 노리는 것을 막는 서버 측 관문이다.
  */
+/**
+ * 배당 단위. 라인 게임은 라인당 베팅액, ways 게임은 웨이당 베팅액이다.
+ * 어느 쪽이든 `단위 x 단위 수 = 총 베팅액`이 성립하도록 스키마가 강제한다.
+ */
+export function getBetUnit(math: GameMath, totalBet: number): number {
+  return math.payModel === 'ways' ? getBetPerWay(math, totalBet) : getBetPerLine(math, totalBet)
+}
+
 export function assertBetLevel(math: GameMath, totalBet: number): void {
   if (!math.betLevels.includes(totalBet)) {
     throw new RangeError(`베팅액 ${totalBet}은 허용된 값이 아니다. 가능한 값: ${math.betLevels.join(', ')}`)
@@ -49,15 +59,17 @@ export function spinUnchecked(
   rng: Rng,
   state?: RoundState,
 ): SpinResult {
-  const betPerLine = getBetPerLine(math, totalBet)
+  const betUnit = getBetUnit(math, totalBet)
+  // RNG 소비 순서는 계약이다. 릴 정지를 전부 뽑은 **뒤에** 뮤테이션이 뽑는다.
   const stops: number[] = []
   for (let reel = 0; reel < math.reels; reel += 1) {
     const strip = math.strips[reel]
     if (strip === undefined) throw new RangeError(`릴 ${reel}의 스트립이 없다`)
     stops.push(rng.nextInt(strip.length))
   }
-  const grid = buildGrid(math, stops)
-  return resolveSpin(math, grid, stops, totalBet, betPerLine, state)
+  const gridBefore = buildGrid(math, stops)
+  const mutated = applyMutations(math, gridBefore, rng)
+  return resolveSpin(math, mutated.grid, stops, totalBet, betUnit, state, gridBefore, mutated.events)
 }
 
 /**
@@ -69,10 +81,13 @@ export function resolveSpin(
   grid: SymbolId[][],
   stops: number[],
   totalBet: number,
-  betPerLine: number,
+  betUnit: number,
   state?: RoundState,
+  gridBefore: SymbolId[][] = grid,
+  mutations: MutationEvent[] = [],
 ): SpinResult {
-  const { wins, totalWin: lineWin } = evaluate(grid, math, betPerLine)
+  const { wins, totalWin: lineWin } =
+    math.payModel === 'ways' ? evaluateWays(grid, math, betUnit) : evaluate(grid, math, betUnit)
   const scatter = evaluateScatter(grid, math, totalBet)
   const multiplier = state?.multiplier ?? 1
   const totalWin = Math.round((lineWin + scatter.win) * multiplier)
@@ -112,7 +127,9 @@ export function resolveSpin(
 
   const result: SpinResult = {
     stops,
+    gridBefore,
     grid,
+    mutations,
     wins,
     lineWin,
     scatterWin: scatter.win,

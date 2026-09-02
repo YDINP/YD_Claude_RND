@@ -8,6 +8,7 @@ import { readJsonOptional, writeBuffer, writeJson } from './paths.js'
 import { processFlat, processFrame, processSymbol } from './postProcess.js'
 import type { ImageProvider } from './provider/types.js'
 import { resolveAssetPrompt, type PromptAsset, type PromptsFile } from './schema.js'
+import { processSheet } from './spriteSheet.js'
 import { mergeTheme, type ThemeUpdate } from './themeWriter.js'
 
 export function assetOutPath(gameDir: string, asset: PromptAsset): string {
@@ -20,6 +21,27 @@ export function assetRawPath(gameDir: string, asset: PromptAsset): string {
 
 export function symbolThumbPath(outPath: string, id: string): string {
   return join(dirname(outPath), `${id}@128.webp`)
+}
+
+/** sprite sheet 아틀라스 webp 옆에 나란히 두는 JSON 경로. 같은 폴더, 같은 이름, 확장자만 다르다. */
+export function sheetJsonPath(outPath: string): string {
+  return outPath.replace(/\.webp$/i, '.json')
+}
+
+/** `theme.json` 파일 기준 상대 경로로 바꾸고 구분자를 `/`로 통일한다(Windows에서도 URL처럼 쓸 수 있게). */
+function relativeToThemeDir(gameDir: string, absPath: string): string {
+  const themeDir = join(gameDir, 'theme')
+  return relative(themeDir, absPath).split(sep).join('/')
+}
+
+/**
+ * `kind: "sheet"` asset id에서 애니메이션 이름을 뽑는다. `<symbol>-<animation>` 컨벤션을 쓴다
+ * (예: symbol `seven` + id `seven-win` → `win`). 컨벤션을 안 따르는 id면 id 전체를 이름으로 쓴다.
+ */
+function sheetAnimationName(asset: PromptAsset): string {
+  const symbol = asset.symbol ?? ''
+  const prefix = `${symbol}-`
+  return asset.id.startsWith(prefix) ? asset.id.slice(prefix.length) : asset.id
 }
 
 /**
@@ -59,16 +81,26 @@ export interface GenerateAssetResult {
   bytes: number
 }
 
+/**
+ * `kind: "bg"` asset의 id를 theme.json 키로 매핑한다. `bg`는 기본 배경, `bgFreeSpins`는
+ * 프리스핀 전용 배경(`backgroundFreeSpins`). 목록에 없는 id는 기존처럼 기본 배경으로 본다
+ * (지금까지 게임 팩들이 `bg` 하나만 썼던 것과 하위 호환).
+ */
+const BG_ASSET_ID_TO_THEME_KEY: Record<string, 'background' | 'backgroundFreeSpins'> = {
+  bg: 'background',
+  bgFreeSpins: 'backgroundFreeSpins',
+}
+
 function recordThemeUpdate(gameDir: string, asset: PromptAsset, outPath: string, themeUpdate: ThemeUpdate): void {
-  const themeDir = join(gameDir, 'theme')
-  const relPath = relative(themeDir, outPath).split(sep).join('/')
+  const relPath = relativeToThemeDir(gameDir, outPath)
 
   if (asset.kind === 'symbol') {
     themeUpdate.symbols = { ...(themeUpdate.symbols ?? {}), [asset.id]: relPath }
   } else if (asset.kind === 'frame') {
     themeUpdate.frame = relPath
   } else if (asset.kind === 'bg') {
-    themeUpdate.background = relPath
+    const themeKey = BG_ASSET_ID_TO_THEME_KEY[asset.id] ?? 'background'
+    themeUpdate[themeKey] = relPath
   }
   // kind === 'thumb'는 theme.json이 아니라 manifest.json 소관이라 여기서 다루지 않는다.
 }
@@ -96,6 +128,27 @@ async function writeAssetOutputs(gameDir: string, asset: PromptAsset, input: Buf
     } else {
       logWarn(`frame: ${asset.id}에서 릴 창을 찾지 못해 frameLayout을 갱신하지 않는다 (렌더러 기본값을 쓰게 된다)`)
     }
+  } else if (asset.kind === 'sheet') {
+    if (asset.symbol === undefined || asset.grid === undefined || asset.fps === undefined) {
+      throw new Error(`sheet asset ${asset.id}에 symbol/grid/fps가 없다 (prompts.json 스키마 검증을 거쳤는지 확인할 것)`)
+    }
+    const { atlas, json } = await processSheet(input, {
+      cols: asset.grid.cols,
+      rows: asset.grid.rows,
+      fps: asset.fps,
+      symbol: asset.symbol,
+      outSize: asset.outSize,
+    })
+    writeBuffer(outPath, atlas)
+    const jsonPath = sheetJsonPath(outPath)
+    writeJson(jsonPath, json)
+
+    const animation = sheetAnimationName(asset)
+    themeUpdate.sheets = {
+      ...(themeUpdate.sheets ?? {}),
+      [asset.symbol]: { ...(themeUpdate.sheets?.[asset.symbol] ?? {}), [animation]: relativeToThemeDir(gameDir, jsonPath) },
+    }
+    logInfo(`sheet: ${asset.id} → symbol=${asset.symbol} anim=${animation} frames=${json.count} (${json.frameW}x${json.frameH})`)
   } else {
     writeBuffer(outPath, await processFlat(input, asset.outSize))
   }
@@ -179,7 +232,14 @@ export async function reprocessAsset(gameDir: string, asset: PromptAsset, themeU
 
 /** 누적된 ThemeUpdate를 실제 `theme.json`에 병합해 쓴다. 반영할 게 없으면 아무것도 안 한다. */
 export function applyThemeUpdate(gameDir: string, update: ThemeUpdate): void {
-  if (update.symbols === undefined && update.frame === undefined && update.background === undefined && update.frameLayout === undefined) {
+  if (
+    update.symbols === undefined &&
+    update.frame === undefined &&
+    update.background === undefined &&
+    update.backgroundFreeSpins === undefined &&
+    update.frameLayout === undefined &&
+    update.sheets === undefined
+  ) {
     return
   }
   const themePath = join(gameDir, 'theme', 'theme.json')

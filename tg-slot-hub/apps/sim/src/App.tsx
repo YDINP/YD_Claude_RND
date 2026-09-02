@@ -36,7 +36,10 @@ import {
   HistogramTable,
   LineTable,
   McTable,
+  MutationTable,
+  PrecisionTable,
   VolatilityTable,
+  WaysTable,
 } from './components/Tables.js'
 import { defaultBet, loadGameCatalog } from './games.js'
 import type { GamePack } from './games.js'
@@ -400,6 +403,32 @@ function Summary({ exactState, mcState, audit, features, target, contribution, r
                 <FeatureTable features={features} />
               </section>
             )}
+            {exact.precision !== null && (
+              <section className="sim-section">
+                <h2>
+                  RTP 정밀도
+                  <MethodBadge distribution={exact} />
+                </h2>
+                <p>
+                  RTP까지 표본에서 나온 모델이다. 게이트는 목표와의 거리와 신뢰구간 폭을 함께 본다. 반폭이
+                  0.2%p를 넘으면 표본 부족으로 떨어진다.
+                </p>
+                <PrecisionTable precision={exact.precision} />
+              </section>
+            )}
+            {exact.mutations.length > 0 && (
+              <section className="sim-section">
+                <h2>
+                  뮤테이션
+                  <MethodBadge distribution={exact} />
+                </h2>
+                <p>
+                  정지 그리드를 평가 직전에 바꾸는 단계다. 한 스핀에 여러 종류가 겹칠 수 있어 RTP 몫의 합은
+                  전체를 넘을 수 있다.
+                </p>
+                <MutationTable rows={exact.mutations} />
+              </section>
+            )}
           </div>
 
           <div className="sim-grid-2">
@@ -442,9 +471,29 @@ function Summary({ exactState, mcState, audit, features, target, contribution, r
               <ContributionTable rows={exact.symbols} keyHeader="심볼" />
             </section>
             <section className="sim-section">
-              <h2>라인별 RTP 기여</h2>
-              <BarChart rows={lineBars} format={(value) => pct(value, 3)} color="var(--sim-gem)" title="라인별 RTP 기여" />
-              <LineTable rows={exact.lines} />
+              <h2>
+                {exact.isWays ? '웨이즈 수 분포' : '라인별 RTP 기여'}
+                <MethodBadge distribution={exact} />
+              </h2>
+              {exact.isWays ? (
+                <>
+                  <p>
+                    페이라인이 없는 모델이다. 인접 릴의 심볼 개수를 곱해 경로 수를 세고 웨이당 베팅액에 배수를
+                    곱해 지급한다.
+                  </p>
+                  <WaysTable rows={exact.ways} />
+                </>
+              ) : (
+                <>
+                  <BarChart
+                    rows={lineBars}
+                    format={(value) => pct(value, 3)}
+                    color="var(--sim-gem)"
+                    title="라인별 RTP 기여"
+                  />
+                  <LineTable rows={exact.lines} />
+                </>
+              )}
             </section>
           </div>
 
@@ -509,9 +558,13 @@ function MethodBadge({ distribution }: { distribution: DistributionReport }) {
   if (!distribution.estimated) {
     return <span className="sim-badge sim-badge--exact">전수조사</span>
   }
+  const label = distribution.method === 'monte-carlo' ? '몬테카를로' : '표본 추정'
   return (
-    <span className="sim-badge sim-badge--estimated" title={`${distribution.observations.toLocaleString('en-US')} 스핀 표본`}>
-      표본 추정
+    <span
+      className="sim-badge sim-badge--estimated"
+      title={`${distribution.observations.toLocaleString('en-US')} 스핀 표본`}
+    >
+      {label}
     </span>
   )
 }

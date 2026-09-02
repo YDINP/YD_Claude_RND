@@ -97,7 +97,7 @@
     {
       "id": "frame",
       "kind": "frame",
-      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed portrait artwork with no isolated chroma background around the frame itself — a portrait-orientation warm brass fiesta slot machine bezel frame on a deep navy body, with subtle green and orange enamel inlay accents along the scrollwork (distinct from the classic cabinet's plain brass-on-navy look). Top 0-16% of the frame is a compact dark navy marquee plate with brass-and-orange scrollwork border, engraved wordmark 'FRUIT FIESTA' in bold brass serif caps. Brass scrollwork side pillars with small green enamel leaf motifs run down both edges. A wide rectangular window occupies x 6%-94% and y 20%-72% of the frame to fit five reel columns, filled with a flat solid #00FF00 chroma-key rectangle with NO inner bevel, NO gradient, and NO highlight around its border — the window edge is a single flush flat brass line only (this window will later be replaced with the live reel canvas). Below the window, y 72%-100% is a plain weighted brass base molding with soft ambient shadow and no legend strip or icons on it. Overall symmetrical, centered, no characters, no extraneous text beyond the marquee wordmark.",
+      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed portrait artwork with no isolated chroma background around the frame itself — a vertical-focused portrait warm brass fiesta cabinet frame on a deep navy body with subtle green and orange enamel inlay accents, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-13%: a dark navy plate with minimal brass-and-orange scrollwork border, engraved wordmark 'FRUIT FIESTA' in bold brass serif caps, no other text. The reel window occupies x 4%-96% and y 14%-86% (the dominant element of the frame, wide enough for five reel columns), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a thin 1% brass rim running just outside the green (this window will later be replaced with the live reel canvas). Two slim brass side rails run the height of the window, each at most 3% of the frame width, styled as narrow fluted brass bars with small green enamel leaf accents and 2-3 small inset gems for detail without bulk — not wide ornate pillars. The bottom y 87%-100% is a plain weighted brass base molding with soft ambient shadow, no legend strip, no payline icons, no additional text. Overall symmetrical, centered, no characters.",
       "size": "1024x1536",
       "transparent": true,
       "out": "theme/frame.webp",
@@ -110,6 +110,15 @@
       "size": "1024x1536",
       "transparent": false,
       "out": "theme/bg.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background, identical camera framing and horizon line to the base terrace background so the two can crossfade cleanly — the same lounge terrace now seen at full night for a free-spins celebration moment: the deep navy sky is filled with soft golden firework bursts and trailing sparks, dozens of small paper lanterns drift upward with a noticeably richer and warmer gold glow than the base scene, the terrace railing and potted plant silhouettes stay in the same positions at the far edges, a soft radial vignette still darkens the corners and edges so foreground content stays legible, more festive and luminous than the base background but still calm enough not to fight with reels and UI, no characters, no readable text, no sharp details competing for attention.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg-freespins.webp",
       "outSize": 1080
     },
     {

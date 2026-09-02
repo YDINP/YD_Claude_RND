@@ -225,17 +225,9 @@
   color: var(--hub-gold-light);
 }
 
-.hub-game-screen__win-banner--big .hub-game-screen__win-value {
-  font-size: 26px;
-}
-
 .hub-game-screen__win-banner--mega .hub-game-screen__win-tier-label {
   font-size: var(--hub-font-title);
   color: var(--hub-gold-light);
-}
-
-.hub-game-screen__win-banner--mega .hub-game-screen__win-value {
-  font-size: 30px;
 }
 
 .hub-game-screen__win-banner--epic .hub-game-screen__win-tier-label {
@@ -243,17 +235,9 @@
   color: var(--hub-gem);
 }
 
-.hub-game-screen__win-banner--epic .hub-game-screen__win-value {
-  font-size: 34px;
-}
-
 .hub-game-screen__win-banner--max .hub-game-screen__win-tier-label {
   font-size: 26px;
   color: var(--hub-gold-light);
-}
-
-.hub-game-screen__win-banner--max .hub-game-screen__win-value {
-  font-size: 40px;
 }
 
 .hub-game-screen__win-banner--jackpot {
@@ -320,6 +304,34 @@
   color: var(--hub-gold-light);
 }
 
+/* 릴 위가 아니라 컨트롤 바로 위에 고정으로 떠 있는 당첨금 표시줄. 등급 배너는 이제 금액이
+   없으므로 실제 금액은 항상 여기서만 보여준다. */
+.hub-win-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 var(--hub-space-lg);
+  background: var(--hub-secondary-bg);
+  border-top: 1px solid var(--hub-border);
+  flex-shrink: 0;
+}
+
+.hub-win-strip__label {
+  font-size: var(--hub-font-small);
+  font-weight: 700;
+  color: var(--hub-text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hub-win-strip__amount {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--hub-gold-light);
+  font-variant-numeric: tabular-nums;
+}
+
 .hub-game-screen__controls {
   display: flex;
   flex-direction: column;
@@ -366,6 +378,14 @@
   flex-direction: column;
   align-items: center;
   min-width: 72px;
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  border-radius: var(--hub-radius-sm);
+}
+
+.hub-game-screen__bet-display:disabled {
+  opacity: 0.6;
 }
 
 .hub-game-screen__bet-label {
@@ -718,4 +738,101 @@
 
 .hub-sheet__footer-link:disabled {
   opacity: 0.4;
+}
+
+/* 베팅 목록 시트 — 큼직하게 탭할 수 있는 행 목록. */
+.hub-bet-picker__list {
+  list-style: none;
+  margin: var(--hub-space-sm) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-sm);
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.hub-bet-picker__row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--hub-touch-min);
+  padding: var(--hub-space-md);
+  border-radius: var(--hub-radius-md);
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+}
+
+.hub-bet-picker__row--current {
+  border-color: var(--hub-gold-light);
+  box-shadow: 0 0 0 1px var(--hub-gold-light) inset;
+}
+
+.hub-bet-picker__row--locked {
+  opacity: 0.5;
+}
+
+.hub-bet-picker__row:disabled {
+  opacity: 0.5;
+}
+
+.hub-bet-picker__amount {
+  font-size: var(--hub-font-title);
+  font-weight: 800;
+  color: var(--hub-gold-light);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-bet-picker__per-line {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+}
+
+/* 도움말 시트 상단 세그먼트 컨트롤(배당표/페이라인/피처/공정성). */
+.hub-help-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+  border-radius: var(--hub-radius-md);
+  margin-top: var(--hub-space-sm);
+}
+
+.hub-help-tabs__btn {
+  flex: 1;
+  min-height: 34px;
+  border-radius: var(--hub-radius-sm);
+  background: none;
+  color: var(--hub-text-sub);
+  font-size: var(--hub-font-small);
+  font-weight: 700;
+}
+
+.hub-help-tabs__btn--active {
+  background: var(--hub-secondary-bg);
+  color: var(--hub-gold-light);
+}
+
+/* 피처 탭 — 와일드/스캐터 규칙. */
+.hub-features__section {
+  margin-top: var(--hub-space-md);
+}
+
+.hub-features__section:first-child {
+  margin-top: var(--hub-space-sm);
+}
+
+.hub-features__freespins-rules {
+  margin-top: var(--hub-space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hub-features__freespins-rules p {
+  margin: 0;
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
 }

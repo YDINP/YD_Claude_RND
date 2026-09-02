@@ -30,7 +30,8 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 | `onEvent` | `(e) => void` | 아래 이벤트 목록 참고 |
 | `reducedMotion` | `boolean` | 미지정 시 `prefers-reduced-motion`을 따른다 |
 | `fit` | `'window' \| 'width'` | 프레임을 맞추는 방식. 기본 `'window'` |
-| `overflowX` | `number` | `'window'`에서 프레임이 폭을 넘어도 되는 비율. 기본 0.30 |
+| `overflowX` | `number` | 프레임 폭 넘침 **상한**. 기본 0.40. 보통은 다른 규칙이 먼저 정한다 |
+| `paylineStyle` | `'effect' \| 'line'` | 당첨 라인 표시 방식. 기본 `'effect'` |
 | `showFreeSpinsPlaque` | `boolean` | 프리스핀 명판을 릴 창 위에 띄울지. 기본 true |
 
 ### `SlotRenderer`
@@ -38,7 +39,7 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 | 멤버 | 시그니처 | 하는 일 |
 |---|---|---|
 | `ready` | `Promise<void>` | 에셋 로딩과 첫 렌더 완료 |
-| `spinTo` | `(stops, opts?: { durationMs?; stagger?; fast? }) => Promise<void>` | 릴을 돌려 `stops`에 **정확히** 멈춘다. `fast`면 회전이 0.8배로 짧아진다 |
+| `spinTo` | `(stops, opts?: { durationMs?; stagger?; fast? }) => SpinHandle` | 릴을 돌려 `stops`에 **정확히** 멈춘다. `fast`면 회전이 0.8배로 짧아진다 |
 | `showWins` | `(wins, opts?: { loop?; totalBet?; formatLineLabel?; features? }) => Promise<void>` | 아래 "승리 연출" 참고. 첫 바퀴가 끝나면 resolve |
 | `clearWins` | `() => void` | 승리 연출 즉시 정리 |
 | `setSpinningIdle` | `(on: boolean) => void` | 대기 중 미세한 유휴 모션 |
@@ -49,6 +50,25 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 `showWins`에 `loop: true`를 주면 첫 바퀴가 끝난 시점에 resolve하고,
 이후로는 `clearWins()`나 다음 `spinTo()`가 멈출 때까지 계속 순환한다.
 
+### 스핀 건너뛰기
+
+`spinTo`는 thenable 손잡이를 돌려준다. 기다리는 코드는 그대로 두고, 필요할 때만 접으면 된다.
+
+```ts
+await renderer.spinTo(stops)              // 예전처럼 그대로 된다
+
+const spin = renderer.spinTo(stops)
+onTap(() => spin.skip())                  // 남은 회전을 접는다
+await spin.done
+```
+
+`skip()`은 남은 회전을 버리고 260ms 안에 모든 릴을 정지 위치로 붙인다.
+한 바퀴를 더 돌지 않고 **남은 거리만** 간다. 짧은 시간에 스트립 전체가 지나가면 화면이 번쩍인다.
+두 번 눌러도 처음 한 번만 듣는다.
+그래도 왼쪽부터 40ms 간격은 남겨 한꺼번에 툭 서지 않게 한다.
+착지 좌표는 원래 경로와 똑같이 `stops`로 확정되고 `reelStop`과 `spinEnd`도 정상적으로 발생한다.
+이미 멈춘 뒤에 불러도, 초기화가 끝나기 전에 불러도 안전하다.
+
 ## 승리 연출
 
 프라그마틱 계열 슬롯의 순서를 따른다. 한 바퀴는 **A단계 → B단계**다.
@@ -57,7 +77,7 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 |---|---|---|---|
 | A "전체" | 승리 1개 이상 | 등급별 900~2200ms | 이긴 심볼이 **동시에** 연출된다. 나머지는 α 0.5로 눌린다. 페이라인은 아직 안 그린다 |
 | 피처 | 프리스핀 트리거 있음 | 900ms | 스캐터 자리에서 파티클이 창 가운데로 모인다 |
-| B "라인별" | 승리 2개 이상 | 라인당 1400ms | 그 라인 심볼만 연출되고 폴리라인과 명판이 뜬다 |
+| B "라인별" | 승리 2개 이상 | 라인당 1400ms | 그 라인 심볼만 연출되고 빛이 훑고 지나가며 명판이 뜬다 |
 
 라인이 바뀔 때는 150ms 크로스페이드로 넘긴다. 모션 축소에서는 즉시 전환한다.
 
@@ -68,6 +88,31 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 기본값은 `Line {n} · {group ?? symbol} · {배당}`이다.
 
 `spinTo()`는 진행 중인 연출을 **즉시** 끊는다. 트윈을 죽이고 눌러 둔 밝기도 되돌린다.
+
+### 당첨 라인은 선이 아니라 빛이다
+
+기본값(`paylineStyle: 'effect'`)에서는 **선을 긋지 않는다.**
+밝은 빛 한 점이 당첨 심볼의 중심을 왼쪽부터 차례로 지나가고, 뒤에 짧은 잔상을 남긴다.
+한 칸 건너가는 데 120ms가 걸리고, 빛이 닿는 순간 그 심볼이 자기 fx를 한 번 터뜨린다.
+
+선을 없앤 이유는 단순하다. 선은 심볼 위를 덮어 그림을 가리는데,
+빛 한 점은 같은 순서를 말하면서도 지나간 자리를 비워 준다.
+심볼 둘레의 브라스 광채는 그대로 남고, **명판은 빛이 마지막 심볼에 닿을 때** 뜬다.
+금액이 근거보다 먼저 나오지 않게 하려는 것이다.
+
+빛의 속도는 등급을 따른다. 큰 승리일수록 느긋하게 움직이고 잔상도 길어진다.
+
+| 등급 | 한 칸 이동 | 잔상 |
+|---|---|---|
+| `none` | 120ms | 6 |
+| `big` | 150ms | 8 |
+| `mega` | 180ms | 10 |
+| `epic` / `max` | 220ms | 12 |
+
+`paylineStyle: 'line'`로 두면 예전 3px 폴리라인을 덧그린다. 좌표를 눈으로 확인할 때만 쓴다.
+모션 축소에서는 빛을 움직이지 않고 당첨 심볼을 한 번에 강조한다.
+
+경로와 시각은 `buildPulsePath(layout, positions)`가 정하는 순수 데이터다.
 
 ### 스캐터와 프리스핀
 
@@ -91,6 +136,20 @@ renderer.setMode({ freeSpins: null })   // 되돌리기
 배수가 1이면 `×1`을 붙이지 않는다. 정보가 없고 시야만 어지럽히기 때문이다.
 허브가 자체 카운터를 이미 보여준다면 `showFreeSpinsPlaque: false`로 명판만 끌 수 있다.
 `setMode`는 `ready` 전에 불러도 잃지 않는다. 초기화가 끝나면 적용된다.
+
+#### 배경 전환
+
+프리스핀이 **켜지거나 꺼지는 순간에만** 700ms 전환이 돈다.
+금빛 섬광이 시선을 한 번 끊고, 그 틈에 방사형 와이프가 배경을 교차시키며,
+릴 창 테두리 광채가 함께 차오른다. 끝날 때는 같은 절차를 반대로 재생한다.
+
+남은 횟수나 배수가 바뀌었다고는 **다시 돌지 않는다.** 매 스핀 화면이 번쩍이면 피곤하기 때문이다.
+판정은 `modeTransitionTarget(previous, next)`가 맡는 순수 함수다.
+
+배경은 `theme.json`의 `backgroundFreeSpins`를 쓴다. 없으면 기본 배경 위에
+금빛 틴트를 덧씌워 **같은 전환**을 낸다. 이미지가 없다고 전환이 사라지지는 않는다.
+
+전환 시작과 끝에 `modeTransition` 이벤트가 온다.
 
 프리스핀 중에는 `spinTo(stops, { fast: true })`로 회전을 0.8배로 당기는 것을 권한다.
 
@@ -118,6 +177,7 @@ renderer.setMode({ freeSpins: null })   // 되돌리기
 | `glow` | 뒤에서 광채가 번진다 | `color` |
 | `flash` | 밝기가 깜빡인다 | `stagger`, `segments` |
 | `spin` | 가로로 뒤집힌다 | 없음 |
+| `sheet` | 스프라이트 시트를 재생한다 | 없음 (`theme.sheets`가 그림을 정한다) |
 
 공통 필드는 `durationMs`(기본 700), `loop`(기본 true), `intensity`(0~1, 기본 1),
 그리고 `repeat`(유한 반복 횟수)다. `repeat`을 주면 그 횟수만 돌고 원래 상태로 멈춘다. `loop`보다 우선한다.
@@ -127,6 +187,42 @@ renderer.setMode({ freeSpins: null })   // 되돌리기
 꺼져 있으면 띠가 동시에 밝아진다. 상한은 6이다.
 
 **한 심볼의 `win` 배열은 순서가 아니라 조합이다.** 안에 든 스텝이 전부 동시에 재생된다.
+
+## 스프라이트 시트 (`theme.json`의 `sheets`)
+
+정지 이미지 대신 프레임 애니메이션을 재생한다. 절차적 연출로는 못 만드는 움직임에 쓴다.
+
+```json
+"sheets": { "seven": { "win": "sheets/seven.json" } }
+```
+
+값은 **사이드카 JSON 경로**다. 아틀라스 이미지는 같은 이름의 `.webp`라 따로 적지 않는다.
+
+```json
+{ "frameW": 256, "frameH": 256, "cols": 4, "rows": 2,
+  "count": 8, "fps": 24, "symbol": "seven",
+  "frames": [{ "x": 0, "y": 0, "w": 256, "h": 256 }] }
+```
+
+`parseSpriteSheet`가 `count`와 `frames` 개수가 맞는지, 격자 용량을 넘지 않는지,
+프레임이 아틀라스 밖을 가리키지 않는지 검사한다. 하나라도 어긋나면 시트를 쓰지 않는다.
+
+동작:
+
+- 승리 연출 동안 정지 스프라이트를 **숨기고** `AnimatedSprite`를 그 자리에 올린다.
+  원본 텍스처는 건드리지 않으므로 연출이 끝나면 그대로 돌아온다.
+- 크기는 `frameW`를 심볼의 실제 폭에 맞춰 유지한다. 프레임마다 폭이 달라도 흔들리지 않는다.
+- `fx`에 적어 둔 절차적 연출은 시트 **위에 겹쳐** 재생된다.
+  겹치기가 싫으면 `"fx": { "seven": { "win": [{ "type": "sheet" }] } }`처럼 시트만 선언한다.
+- 아틀라스가 없거나 검증에 실패하면 조용히 절차적 연출로 돌아간다.
+  시트만 선언한 심볼도 내장 pulse를 받아 아무 반응 없는 상태가 되지 않는다.
+- 모션 축소에서는 재생하지 않는다. 반복 애니메이션도 모션이다.
+
+시트는 **처음 쓸 때** 불러온다. 아직 준비되지 않았으면 그 판은 절차적 연출로 보여주고,
+도착하는 즉시 갈아 끼운다. 같은 URL은 한 번만 받아 renderer 인스턴스끼리 나눠 쓴다.
+
+프레임 텍스처는 아틀라스 원본을 잘라 본 것이라 `TextureRegistry`에 넣지 않는다.
+등록해서 함께 파괴하면 `Assets` 캐시에 남은 원본까지 죽는다.
 
 ### 그룹 배당과 연출 조회
 
@@ -158,6 +254,8 @@ type RendererEvent =
   | { type: 'winTotal'; totalWin: number; tier: WinTier; durationMs: number }
   | { type: 'winLine'; line: number; win: number }
   | { type: 'featureTriggered'; feature: FeatureTrigger }
+  | { type: 'modeTransition'; to: 'freeSpins' | 'base'; phase: 'start' | 'end' }
+  | { type: 'pulseArrive'; line: number; reel: number; row: number }
 ```
 
 `winTotal`은 승리 연출 A단계가 **시작할 때** 총배당과 등급과 그 단계의 길이를 함께 준다.
@@ -165,6 +263,9 @@ type RendererEvent =
 `winLine`은 B단계에서 라인을 하나 짚을 때마다 온다.
 `featureTriggered`는 프리스핀에 걸렸을 때 A단계가 끝나고 스캐터 연출이 시작하며 온다.
 인트로 배너는 허브가 띄운다. 렌더러는 릴 위 연출만 맡는다.
+`modeTransition`은 배경 전환의 시작과 끝에 **정확히 한 번씩** 온다.
+전환이 중간에 끊겨도 `end`는 반드시 나가므로, 이 신호를 기다리는 쪽이 매달릴 일이 없다.
+`pulseArrive`는 승리 빛이 심볼 하나에 닿을 때마다 온다. 짧은 효과음을 붙이는 자리다.
 
 ### 승리 등급
 
@@ -207,6 +308,8 @@ type RendererEvent =
 | 정지 순서 | 왼쪽 → 오른쪽, `stagger` 간격 (기본 160ms) |
 | 정지 | 튕기지 않는다. 0.04칸(90ms)만 아주 짧게 자리를 잡는다 |
 | 승리 연출 | A단계 900/1600/2200ms(등급별) → 라인당 1400ms, 전환 150ms |
+| 당첨 라인 | 선 없음. 빛이 심볼당 120~220ms(등급별)로 훑고 지나간다 |
+| 스킵 | 260ms 안에 전부 착지, 왼쪽부터 40ms 간격 |
 | 승리 강조 | 브라스 광채 3겹 + 2px 테두리. 페이라인은 3px, 불투명도 0.6 |
 | 은은한 연출 | 배경 반짝임 6~10개. 릴 창 위에는 놓지 않는다 |
 | 빅윈 | 총배당이 베팅액의 **10배 이상**이면 등급이 붙고 코인 샤워 (60개 상한) |
@@ -276,6 +379,7 @@ const theme = await loadTheme('/games/classic-777', math)
 | 필드 | 타입 | 기본값 |
 |---|---|---|
 | `frame` | 경로 문자열 (`background`와 같은 규칙으로 풀린다) | 없음 |
+| `backgroundFreeSpins` | 프리스핀 중 배경. 없으면 금빛 틴트로 대신 | 없음 |
 | `frameLayout.window` | `{ x, y, w, h }` — 프레임 이미지 크기에 대한 **분수** | `x 0.08, y 0.22, w 0.84, h 0.46` |
 
 기본 창 분수는 `docs/ART_DIRECTION.md` §5의 릴 창(x 8~92%, y 22~68%)과 같은 값이고,
@@ -320,16 +424,17 @@ scale = min(containerW * (1 + overflowX) / frameW,  containerH / frameH)
 `overflowX`를 키워도 릴이 무한정 커지지는 않는다. 창보다 격자가 먼저 묶이기 때문이다.
 classic-777 창은 가로가 세로보다 넓은데(386x321) 3x3 격자는 정사각형이라 **세로에 묶인다**.
 
-현재 배포된 classic-777 프레임(창 `w 0.723, h 0.628`) 기준:
+현재 배포된 classic-777 프레임(창 `w 0.821, h 0.628`) 기준:
 
-| 컨테이너 | 배율 | 프레임 | 창 | 심볼 |
-|---|---|---|---|---|
-| 390x760 | 0.469 | 506.7x760.0 | 366.4x477.2 | 117.4px |
-| 390x844 | 0.469 | 507.0x760.5 | 366.6x477.5 | 117.5px |
-| 430x932 | 0.518 | 559.0x838.5 | 404.2x526.5 | 129.6px |
+| 컨테이너 | 배율 | 프레임 | 창 | 폭 점유 | 심볼 |
+|---|---|---|---|---|---|
+| 390x760 | 0.440 | 475.2x712.7 | 390.0x447.5 | 100% | 125.0px |
+| 390x844 | 0.440 | 475.2x712.7 | 390.0x447.5 | 100% | 125.0px |
+| 430x932 | 0.485 | 523.9x785.8 | 430.0x493.4 | 100% | 137.8px |
 
-창이 세로로 길어 격자가 **폭에 묶인다**. 이 상태가 심볼이 가장 커지는 배치다.
-창이 다시 납작해지면(`h`가 작아지면) 격자가 세로에 묶여 심볼이 줄어든다.
+창 폭이 컨테이너 폭과 정확히 같아진다. 좌우 기둥은 통째로 잘려 나간다.
+격자는 **폭에 묶이고** 이 상태가 심볼이 가장 커지는 배치다.
+창이 납작해지면(`h`가 작아지면) 격자가 세로에 묶여 심볼이 줄어든다.
 그때는 `overflowX`가 아니라 **아트의 창 세로 비율**을 손봐야 한다.
 
 ### 격자 비율과 창 비율
@@ -377,9 +482,13 @@ Pixi 없이도 쓸 수 있는 부분은 따로 내보낸다. 허브의 테스트
 | `buildPresentation`, `defaultLineLabel` | 승리 연출 순서와 길이 |
 | `resolveSymbolFx`, `resolveFxEffect` | 심볼 연출 조회와 기본값 |
 | `resolveFxForPositions`, `symbolsAtPositions` | 승리 좌표별 심볼과 연출 (그룹 배당 대응) |
+| `parseSpriteSheet`, `sheetFrameIndexAt`, `planSheetFx` | 시트 검증, 프레임 타이밍, 시트/절차 혼합 규칙 |
 | `winTier`, `phaseAllDurationMs` | 승리 등급과 등급별 연출 길이 |
+| `buildPulsePath`, `pulsePointAt` | 당첨 라인을 훑는 빛의 경로와 시각 |
+| `buildSkipPlan` | 스킵했을 때 릴별 감속 시간 |
 | `scatterPositions`, `findFreeSpins` | 피처 트리거에서 좌표와 프리스핀 뽑기 |
 | `formatFreeSpinsPlaque`, `shouldShowFreeSpinsPlaque` | 프리스핀 명판 문구와 표시 판정 |
+| `modeTransitionTarget`, `buildModeTransition` | 배경 전환 여부와 구간 타이밍 |
 | `isBigWin`, `winBetMultiple`, `paylineColor`, `buildWinCycle`, `formatWinLabel` | 승리 연출 규칙 |
 | `parseTheme`, `loadTheme`, `resolveSymbolSource`, `resolveFrameWindow` | 테마 검증·로딩 |
 

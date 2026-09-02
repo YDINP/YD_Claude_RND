@@ -1,8 +1,7 @@
 import type { SpinResult, WinLine } from '@tgslot/slot-engine'
-import type { FeatureTrigger, FreeSpinsState, Level, Locale } from '@tgslot/shared'
+import type { FeatureTrigger, FreeSpinsState, GameState, Level, Locale } from '@tgslot/shared'
 import type { TelegramUser } from '../auth/initData.js'
 import type { BonusClaims, BonusGrant, BonusKind } from '../economy/bonus.js'
-import type { FreeSpinsAward } from '../economy/freeSpins.js'
 import type { MissionProgress } from '../economy/missions.js'
 
 export interface AppUser {
@@ -76,8 +75,12 @@ export interface RoundRecord {
   isFreeSpin: boolean
   /** 이 스핀이 발동한 피처 */
   features: FeatureTrigger[]
+  /** 이 스핀에 적용된 승수. 기본 게임은 1 */
+  multiplier: number
   /** 스핀 직후의 프리스핀 상태. 세션이 끝났으면 null */
   freeSpinsAfter: FreeSpinsState | null
+  /** 이 스핀으로 세션이 끝났을 때의 요약 */
+  freeSpinsSummary?: { total: number; spins: number }
   createdAt: Date
 }
 
@@ -106,13 +109,22 @@ export interface SpinComputation {
    * 릴을 먼저 뽑는 순서를 지켜야 provably fair 재현이 성립한다.
    */
   jackpotRoll: number
-  /**
-   * 이번 스핀이 부여한 프리스핀 (진입 또는 재발동). 엔진 피처를 해석한 결과이며,
-   * 남은 횟수·누적 당첨 계산은 레포가 `economy/freeSpins.ts`로 한다.
-   */
-  freeSpinsAward?: FreeSpinsAward
   /** 응답과 저장에 쓸 피처 목록 (shared 스키마 모양으로 이미 변환된 것) */
   features: FeatureTrigger[]
+}
+
+/**
+ * `compute`가 베팅 규칙 위반을 알리는 방법. 라우트가 400으로 번역한다.
+ * 락을 잡은 뒤 확정된 베팅액으로 검사해야 하므로 판정이 트랜잭션 **안**에서 일어난다.
+ */
+export class BetRuleError extends Error {
+  constructor(
+    readonly code: 'INVALID_BET' | 'BET_LOCKED',
+    message: string
+  ) {
+    super(message)
+    this.name = 'BetRuleError'
+  }
 }
 
 export interface ApplySpinInput {
@@ -144,11 +156,16 @@ export interface ApplySpinResult {
   isFreeSpin: boolean
   /** 스핀 반영 후 프리스핀 상태. 세션이 끝났거나 없으면 null */
   freeSpins: FreeSpinsState | null
+  /** 이 스핀으로 프리스핀 세션이 끝났을 때만 */
+  freeSpinsSummary?: { total: number; spins: number }
 }
 
 export interface GameStateRepo {
-  /** 게임별 진행 상태. 지금은 프리스핀 세션뿐이다. */
-  getGameState(userId: string, gameId: string): Promise<FreeSpinsState | null>
+  /**
+   * 게임별 진행 상태. 진행 중인 것이 없으면 빈 상태(`{ freeSpins: null }`)를 준다.
+   * 만료된 프리스핀 세션은 없는 것으로 걸러서 돌려준다.
+   */
+  getGameState(userId: string, gameId: string): Promise<GameState>
 }
 
 // ---- 허브 기능 (Phase 3) ----

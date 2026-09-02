@@ -1,5 +1,13 @@
+import type { DistributionMethod } from '@tgslot/rtp-sim/audit'
 import type { GamePack } from '../games.js'
 import { compactCount, num, pct } from '../lib/format.js'
+
+/** 산출 방법을 사람이 읽는 말로. */
+const METHOD_LABELS: Record<DistributionMethod, string> = {
+  enumerate: '전수 조사 (정확)',
+  analytic: '해석적 계산 + 표본 추정',
+  'monte-carlo': '몬테카를로 (RTP도 표본)',
+}
 
 /** 몬테카를로 스핀 수 선택지. */
 export const SPIN_CHOICES = [100_000, 1_000_000, 5_000_000] as const
@@ -25,7 +33,7 @@ export interface LeftPanelProps {
   /** 전수 조사가 불가능해 표본이 필요한 모델인가. */
   needsSample: boolean
   /** 이미 산출했다면 어떤 방법이었는지. */
-  method: 'enumerate' | 'analytic' | null
+  method: DistributionMethod | null
   seed: string
   onSeedChange: (seed: string) => void
   onRunExact: () => void
@@ -131,7 +139,7 @@ export function LeftPanel(props: LeftPanelProps) {
       </button>
       {props.method !== null && (
         <div className="sim-progress">
-          방법: {props.method === 'enumerate' ? '전수 조사 (정확)' : '해석적 계산 + 표본 추정'}
+          방법: {METHOD_LABELS[props.method]}
         </div>
       )}
       <button type="button" className="sim-button" onClick={props.onRunMc} disabled={running}>

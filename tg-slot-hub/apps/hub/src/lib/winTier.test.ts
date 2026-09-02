@@ -65,13 +65,19 @@ describe('resolveWinTier', () => {
 })
 
 describe('WIN_HOLD_MS', () => {
-  it('escalates with tier: big < mega < epic < max', () => {
-    expect(WIN_HOLD_MS.big).toBe(2000)
-    expect(WIN_HOLD_MS.mega).toBe(3000)
-    expect(WIN_HOLD_MS.epic).toBe(4500)
-    expect(WIN_HOLD_MS.max).toBe(6500)
+  // 등급 배너는 이제 금액 없이 단어만 보여주므로(실제 금액은 WinStrip 몫) "크고 짧게" 1.2~2초
+  // 범위 안에서만 등급별로 차이를 둔다(round 3b).
+  it('escalates with tier: big < mega < epic < max, all within 1.2~2s', () => {
+    expect(WIN_HOLD_MS.big).toBe(1400)
+    expect(WIN_HOLD_MS.mega).toBe(1600)
+    expect(WIN_HOLD_MS.epic).toBe(1800)
+    expect(WIN_HOLD_MS.max).toBe(2000)
     expect(WIN_HOLD_MS.big).toBeLessThan(WIN_HOLD_MS.mega)
     expect(WIN_HOLD_MS.mega).toBeLessThan(WIN_HOLD_MS.epic)
     expect(WIN_HOLD_MS.epic).toBeLessThan(WIN_HOLD_MS.max)
+    for (const value of Object.values(WIN_HOLD_MS)) {
+      expect(value).toBeGreaterThanOrEqual(1200)
+      expect(value).toBeLessThanOrEqual(2000)
+    }
   })
 })

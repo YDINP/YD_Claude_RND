@@ -89,8 +89,8 @@ export function createCoinTexture(theme: Theme, registry?: TextureRegistry): Tex
   )
 }
 
-/** 흰 사각형 1장. tint로 색을 입혀 색종이 조각으로 쓴다. */
-export function createConfettiTexture(registry?: TextureRegistry): Texture {
+/** 흰 사각형 1장. tint로 색을 입혀 색종이·섬광·틴트로 쓴다. */
+export function createSolidTexture(registry?: TextureRegistry): Texture {
   return createCanvasTexture(
     8,
     8,

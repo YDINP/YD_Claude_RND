@@ -80,3 +80,20 @@ export const FRAME_WINDOW_EXPAND_RATIO = 0.01
 export const FRAME_WINDOW_CORNER_RADIUS_RATIO = 0.02
 /** 창 경계 페더링 반경(px). */
 export const FRAME_WINDOW_FEATHER_PX = 2
+
+/**
+ * 허브 공통 기본 팔레트. theme-gen이 `theme.json`을 새로 만들 때 이 값으로 채운다.
+ * 렌더러의 `ThemePaletteSchema`(`packages/renderer/src/theme.ts`)는 네 필드가 전부 있어야
+ * 통과하므로, 빈 `{}`를 남기면 렌더러 쪽에서 검증 실패로 깨진다.
+ */
+export const THEME_DEFAULT_PALETTE = {
+  frame: '#d8a94a',
+  reelBg: '#0b1220',
+  winLine: ['#f4d98a', '#4fc3d9', '#3fae6a', '#e0605c', '#5b9dff'],
+  text: '#f2f4f8',
+} as const
+/** theme.json을 새로 만들 때 쓰는 기본 버전 문자열. */
+export const THEME_DEFAULT_VERSION = '1.0.0'
+
+/** sprite sheet 셀 콘텐츠 바운딩 박스를 구할 때, 이 알파값 이하 픽셀은 "빈 배경"으로 본다. */
+export const SHEET_CONTENT_ALPHA_THRESHOLD = 10

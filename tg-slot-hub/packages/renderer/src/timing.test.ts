@@ -7,8 +7,10 @@ import {
   LANDING_SETTLE_MS,
   PULL_UP_MS,
   REDUCED_TOTAL_CAP_MS,
+  SKIP_STAGGER_MS,
+  SKIP_TOTAL_MS,
 } from './constants.js'
-import { buildSpinPlan } from './timing.js'
+import { buildSkipPlan, buildSpinPlan } from './timing.js'
 
 describe('buildSpinPlan 기본값', () => {
   const plan = buildSpinPlan({ reels: 5 })
@@ -172,5 +174,58 @@ describe('buildSpinPlan 빠른 스핀', () => {
   it('모션 축소와 함께 써도 상한을 지킨다', () => {
     const plan = buildSpinPlan({ reels: 5, fast: true, reducedMotion: true })
     expect(plan.totalMs).toBeLessThanOrEqual(REDUCED_TOTAL_CAP_MS + 1e-9)
+  })
+})
+
+describe('buildSkipPlan', () => {
+  const plan = buildSkipPlan(5)
+
+  it('릴 수만큼 계획을 만든다', () => {
+    expect(plan.reels).toHaveLength(5)
+  })
+
+  it('전체가 260ms 안에 끝난다', () => {
+    expect(plan.totalMs).toBe(SKIP_TOTAL_MS)
+    for (const reel of plan.reels) {
+      expect(reel.durationMs).toBeLessThanOrEqual(SKIP_TOTAL_MS + 1e-9)
+    }
+  })
+
+  it('왼쪽부터 차례로 멈춘다', () => {
+    for (let i = 1; i < plan.reels.length; i += 1) {
+      expect(plan.reels[i]?.durationMs ?? 0).toBeGreaterThan(plan.reels[i - 1]?.durationMs ?? 0)
+    }
+  })
+
+  it('마지막 릴이 예산을 다 쓴다', () => {
+    expect(plan.reels[plan.reels.length - 1]?.durationMs).toBeCloseTo(SKIP_TOTAL_MS, 9)
+  })
+
+  it('릴이 3개면 간격이 40ms다', () => {
+    const three = buildSkipPlan(3)
+    const gap = (three.reels[1]?.durationMs ?? 0) - (three.reels[0]?.durationMs ?? 0)
+    expect(gap).toBeCloseTo(SKIP_STAGGER_MS, 9)
+  })
+
+  it('릴이 많으면 간격을 줄여 예산을 지킨다', () => {
+    const many = buildSkipPlan(20)
+    expect(many.totalMs).toBe(SKIP_TOTAL_MS)
+    const gap = (many.reels[1]?.durationMs ?? 0) - (many.reels[0]?.durationMs ?? 0)
+    expect(gap).toBeLessThan(SKIP_STAGGER_MS)
+    expect(many.reels[0]?.durationMs ?? 0).toBeGreaterThan(0)
+  })
+
+  it('릴이 하나면 간격이 없다', () => {
+    const one = buildSkipPlan(1)
+    expect(one.reels).toHaveLength(1)
+    expect(one.reels[0]?.durationMs).toBe(SKIP_TOTAL_MS)
+  })
+
+  it('스킵이 정상 스핀보다 훨씬 짧다', () => {
+    expect(buildSkipPlan(5).totalMs).toBeLessThan(buildSpinPlan({ reels: 5 }).totalMs)
+  })
+
+  it('예산을 직접 줄 수 있다', () => {
+    expect(buildSkipPlan(3, 500).totalMs).toBe(500)
   })
 })
