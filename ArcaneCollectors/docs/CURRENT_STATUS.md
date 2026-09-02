@@ -1,14 +1,62 @@
 # ArcaneCollectors 현재 상태
 
-> **최종 업데이트**: 2026-09-02
+> **최종 업데이트**: 2026-09-03
 > **브랜치**: `main`
-> **테스트**: `npx vitest run` 29파일 884개 전량 통과 (실측) / `npx tsc --noEmit` 0 에러 / `npm run build` 성공
-> **번들 크기**: 568KB gzip (2026-08-24 기준 최적화 유지)
-> **최근 작업**: 무한의 탑 100층 완성 + 레이드/친구 시스템 신설 + 교단 메커니즘 4기관 + 컬렉션 시스템 + 포트레이트 34장 교체 (2026-09-02)
+> **테스트**: `npx vitest run` 58파일 1476개 전량 통과 (실측) / `npx tsc --noEmit` 0 에러 / `npm run build` 성공 / E2E 스모크 스위트 전량 통과(아래 검증 표 참고)
+> **번들 크기**: 568KB gzip (2026-08-24 기준 최적화 유지, 09-02~03 아트 자산 추가는 lazy-load라 초기 번들 미포함)
+> **최근 작업**: 스토리 모드 GDD 웨이브 1~3 전 구현 + 비주얼 리디자인 계획 28태스크 전 완료(T-26까지, T-29 포함) + 접근성 감사 P0/P1 전 해소 (2026-09-02~03)
 
 > ⚠️ **`.gitignore` 주의**: 루트 `.gitignore:38`이 `ArcaneCollectors/` 디렉터리 전체를 무시한다. 이 모노레포에서 신규 파일을 커밋하려면 `git add -f`가 필수이며, 누락 시 워커 산출물이 미추적 상태로 남는다(2026-08-25 산출물이 이 문제로 누락되었다가 2026-09-02에 정식 추적됨).
 
-**08-24 세션의 "⚠️ 검증 대기" 경고와 `PLAN_COMPLETION_STAGE.md` §0에 기록된 P0 파손(GuildPopup.js 문자열 리터럴 개행, helpers.js 파스 오류, EventDungeonSystem 이벤트 만료)은 2026-09-02 기준 전부 해소되었다.**
+> ⚠️ **배포 상태 주의**: Vercel 프로덕션(`https://arcane-collectors.vercel.app`)은 2026-03 빌드에 고정되어 있다. `main` 브랜치 푸시는 Vercel Preview만 생성하고 프로덕션을 자동 갱신하지 않는다. 09-02~03 세션의 방대한 변경분(스토리 모드, 리디자인, 아트 34장 등)이 프로덕션에 반영되려면 `vercel --prod` 수동 배포가 필요하다 — 실행 여부는 결정 대기.
+
+**08-24 세션의 "⚠️ 검증 대기" 경고와 `PLAN_COMPLETION_STAGE.md` §0에 기록된 P0 파손(GuildPopup.js 문자열 리터럴 개행, helpers.js 파스 오류, EventDungeonSystem 이벤트 만료)은 2026-09-02 기준 전부 해소되었다. 이후 09-02~03 세션에서 발견된 스토리 모드 관련 릴리스 차단 결함(BLK-01~07, `PLAN_COMPLETION_STAGE.md` 부록 C)도 전부 해소되었다(커밋 `1a9c27e`).**
+
+---
+
+## 2026-09-02~03 세션: 스토리 모드 전 웨이브 + 비주얼 리디자인 전 태스크 + 접근성 감사
+
+10개 커밋에 걸친 대형 세션. 스토리 모드 GDD(웨이브 1~3)와 비주얼 리디자인 계획(T-01~T-29)이 모두 완료되어, 09-02 오전 세션(아래 상세 섹션)까지 포함해 이 두 날짜의 작업 전체를 아우른다. 해시·파일 목록은 `git log --oneline -14`, `git show --stat <hash>`로 직접 확인 가능.
+
+| 커밋 | 내용 |
+|------|------|
+| `ad21817` | 무한의 탑 100층 완성 + 레이드/친구 시스템 신규 + 가챠/경제 시뮬레이션 + 감사 문서 추적 |
+| `cc0e4fb` | 교단 메커니즘 4기관(`CultMechanicsSystem`) + 컬렉션 시스템 + 메인 메뉴 팝업 연결 + 탑 층 전달 버그 수정 |
+| `fbeb58b` | 포트레이트 34장(hero_005~038) ComfyUI 1024px 교체 |
+| `ea53d75` / `0cf112a` | 문서 정리 + `STORY_MODE_GDD.md` 등 스토리 모드 기획 문서 신설 |
+| `1a9c27e` | 스토리 모드 웨이브 1 — `PLAN_COMPLETION_STAGE.md` 부록 C의 릴리스 차단 결함 BLK-01~07 전 해소 + 부팅 핫픽스 |
+| `0096ec6` | 웨이브 2 — 세이브 v2, 컷씬, 튜토리얼, 확률 고지 UI(BLK-07 대응), 밸런스 v1.2, 이미지 WebP 전환 |
+| `eabad0e` | 비주얼 리디자인 W1(공통 컴포넌트) + 스토리 웨이브 3 + 튜토리얼 배선 + 전투 엔진 통합 |
+| `eb4fc38` | 비주얼 리디자인 W2(화면별 씬 재작성) |
+| `02b30a3` | 팝업 16종 재작성 + 접근성 보강 + HP 수치 표시 |
+| 6144486 | T-26 before/after 캡처 대조 + 대조로 발견한 결함 수정 + 디버그 FAB 프로덕션 숨김 |
+
+**검증 (2026-09-03, 실측)**
+
+| 항목 | 결과 |
+|------|------|
+| `npx vitest run` | 58파일 1476개 전량 통과 |
+| `npx tsc --noEmit` | 0 에러 |
+| `npm run build` | 성공 |
+| `npm run test:e2e:smoke` (boot-smoke) | 6/6 통과 |
+| `npm run test:e2e:assets` (asset-smoke) | 9/9 통과 |
+| `battle-cult-live.mjs` | 23/23 통과 |
+| `returning-storylog-smoke.mjs` | 34/34 통과 |
+| `verify-w1-components.mjs` | 20/20 통과 |
+| `popup-title-check.mjs` | 31/31 통과 |
+| `verify-t03.mjs` | 14/14 통과 |
+| `npm run test:e2e:story` (boot 6 + cutscene 16 + ascension 21 + skip-path-parity 17 + onboarding-full 54) | 114/114 통과 |
+
+**콘텐츠 완료 범위**
+- `docs/STORY_MODE_GDD.md` 웨이브 1~3 전부 구현 완료.
+- `docs/redesign/REDESIGN_PLAN.md`의 28태스크(T-01~T-28)가 전부 완료 상태(T-29 페이로드 최적화 포함, 총 29개). §6 T-26 before/after 대조 결과는 같은 문서에 기록.
+- `docs/redesign/A11Y_AUDIT_2026-09-03.md`: P0 2건·P1 6건 전부 해소. P2는 2건 중 1건 해소, 1건(소환 화면 천장 진행바 트랙 대비 3:1 미만) 잔존.
+
+**아트 현황**
+- 전신 일러스트(fullbody) 34장 — `public/assets/characters/fullbody/hero_005~038.webp` (Codex `image_gen`).
+- 포트레이트 34장 — 1024px 원본을 512px WebP로 런타임 축소(T-29), `portraits@2x/`에 원본 지연 로드.
+- UI 요소 27건, ComfyUI 배경 14종 신규 생성.
+- 초기 페이지 로드 전송량: 포트레이트 1.86MB + 그 외 에셋 1.09MB.
 
 ---
 
@@ -249,25 +297,23 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 ---
 
-## 남은 작업 (2026-09-02 기준, PLAN_COMPLETION_STAGE 갭 ID)
+## 남은 작업 (2026-09-03 기준)
 
-> 전체 근거·WBS·리스크는 [`docs/PLAN_COMPLETION_STAGE.md`](./PLAN_COMPLETION_STAGE.md) 참고. 아래는 2026-09-02 세션 이후 남은 갭만 요약.
+> 전체 근거·WBS·리스크는 [`docs/PLAN_COMPLETION_STAGE.md`](./PLAN_COMPLETION_STAGE.md) 참고. 스토리 모드 웨이브 1~3, 리디자인 T-01~T-29, 접근성 P0/P1은 전부 완료되어 목록에서 제외. 아래는 09-02~03 세션 이후에도 남아 있는 갭만 요약.
 
-| 갭 ID | 항목 | 상태 |
-|-------|------|------|
-| G-06 → RAID | 레이드 시스템 | ✅ 09-02 구현 완료 (RAID-01/02) — 갱신 필요 |
-| G-07 → FRIEND | 친구 시스템 | ✅ 09-02 구현 완료 (FRIEND-01/02) — 갱신 필요 |
-| G-08 → COLL | 컬렉션/도감 완성 | ✅ 09-02 구현 완료 (COLL-01/02) — 갱신 필요 |
-| G-09 → MECH | 교단 시그니처 메커니즘 | 🔶 부분 완료 — 4기관 구현(MECH-02), **나머지 8기관·36토큰 미구현** + 교단 상성 테이블 없음 |
-| **TOWER-03** | 탑 시즌/순위 | ❌ 미구현 (월간 리셋 + 순위표) |
-| **PvP Holy Thorns** | PvP/commands 경로 반영 | ❌ 미적용 (Holy Thorns 효과가 PvP 시뮬레이션 경로에 빠져 있음) |
-| **파티 동일영웅 제한** | 기본영웅 1체 제한 | 🔶 검증 함수만 존재, `PartyManager`에 미연결 |
-| **DATA-01/02** | 캐릭터/장비 데이터 확장 | ❌ 미착수 (레거시 char_1~4 정리, N등급, equipment backup/new 정리) |
-| **SND-01/02** | 사운드 | ❌ 미착수 — `public/assets/audio` 오디오 에셋 0개 |
-| **ART-01 잔여** | 최종 포트레이트 | 🔶 hero_005~038(34장) 09-02 교체 완료. **hero_001~004 + hero_039~091은 여전히 CC0 카툰 플레이스홀더** |
-| **QA-01~03** | 전면 회귀·수동 E2E·크로스브라우저 | ❌ 미착수 |
-| **OPS-01/02** | 에러 모니터링·세이브 export/import | ❌ 미착수 |
-| **DOC-01** | 문서 SSOT 정리 | 🔶 이 갱신으로 부분 진행, PRD v5.2 이슈 목록 해소/잔존 마킹은 미완 |
+| 항목 | 상태 |
+|------|------|
+| 팝업 3종 스크롤 부재 | 🔶 Ascension/Quest/EventDungeon 팝업에 스크롤이 없어 데이터가 늘어나면 콘텐츠가 넘침 |
+| 스테이지 12/25 턴수 밴드 이탈 | 🔶 적 성장률 문제로 일부 스테이지가 목표 턴수 밴드를 벗어남. `docs/balance/BALANCE_DESIGN_v1.md` §9-4에 조정안 제시됨, 미적용 |
+| 교단 시그니처 메커니즘 | 🔶 4기관·토큰 20종만 구현(`CultMechanicsSystem`), **나머지 8기관·토큰 36종 미구현** |
+| PvP Holy Thorns 미반영 | ❌ Holy Thorns 효과가 PvP/`commands` 시뮬레이션 경로에 빠져 있음 |
+| 적 유닛 아트 | ❌ 미생성 — 전투 화면 적 유닛은 여전히 실루엣 표시 |
+| `fx_summon_circle` 알파 문제 | ❌ 소환 이펙트 알파 채널 미적용 |
+| 가챠 배너별 픽업 라우팅 | 🔶 `GachaSystem.pull()`이 배너 인자를 받지 않아 배너 UI는 표시 전용이고 실제 확률 라우팅과 분리됨 |
+| TOWER-03 (탑 시즌/순위) | ❌ 미구현 (월간 리셋 + 순위표) |
+| SND-01/02 (사운드) | ❌ 미착수 — `public/assets/audio` 오디오 에셋 0개 |
+| 접근성 P2 잔여 1건 | 🔶 소환 화면 천장(피티) 진행바 트랙 대비가 3:1 미만 (`A11Y_AUDIT_2026-09-03.md`) |
+| 프로덕션 배포 | ⚠️ Vercel 프로덕션이 2026-03 빌드에 고정, `main` 푸시는 Preview만 생성 — `vercel --prod` 수동 배포 결정 대기 |
 
 ---
 
@@ -300,50 +346,31 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 ## 테스트 현황
 
-### Vitest 유닛 테스트 (649개, 25파일)
-| # | 파일 | 테스트 수 |
-|---|------|----------|
-| 1 | data/index.test.js | 62 |
-| 2 | BattleSystem.test.js | 45 |
-| 3 | EquipmentSystem.test.js | 44 |
-| 4 | constants.test.js | 37 |
-| 5 | PartyManager.test.js | 33 |
-| 6 | SaveManager.test.js | 41 (+8 CHAR-5) |
-| 7 | EventDungeonSystem.test.js | 28 |
-| 8 | IdleProgressSystem.test.js | 28 |
-| 9 | ProgressionSystem.test.js | 26 |
-| 10 | SweepSystem.test.js | 25 |
-| 11 | CouponSystem.test.js | 24 |
-| 12 | EvolutionSystem.test.js | 24 |
-| 13 | EventBus.test.js | 23 |
-| 14 | errorPatterns.test.js | 23 |
-| 15 | MoodSystem.test.js | 21 |
-| 16 | TowerSystem.test.js | 21 |
-| 17 | QuestSystem.test.js | 20 |
-| 18 | EnergySystem.test.js | 17 |
-| 19 | GachaSystem.test.js | 16 |
-| 20 | SynergySystem.test.js | 16 |
-| 21 | AutoLogin.test.js | 16 |
-| 22 | helpers.test.js | 13 |
-| 23 | **PitySystem.test.js** | **14 (CHAR-5 신규)** |
-| 24 | **PvPSystem.test.js** | **24 (GP-1 신규)** |
-| 25 | (기타) | — |
+> **2026-09-03 실측**: Vitest 58파일 1476개 전량 통과. 파일별 세부 개수는 09-02 세션 이후 33개 파일이 신규 추가(스토리/튜토리얼/리디자인 컴포넌트/레이아웃 유틸 등)되어 파일당 브레이크다운은 이 문서에서 관리하지 않는다. 전체 파일 목록은 `tests/**/*.test.js`.
 
-### Playwright E2E 테스트 (34개)
-| 카테고리 | 테스트 수 | 내용 |
-|----------|----------|------|
-| 로그인 플로우 | 3 | 캔버스, LoginScene, MainMenu 전환 |
-| 메인 메뉴 | 3 | 활성화, IdleBattleView, UI 요소 |
-| 팝업 7종 | 21 | 열기/닫기/복귀 × 7 |
-| 자동전투 | 4 | HP바, 전투사이클, 적 유닛 |
-| 자동 로그인 | 3 | localStorage, 씬 스킵 |
+### E2E 테스트 — Playwright 기반 커스텀 스모크 스크립트 (34개 항목 → 스크립트 체계로 전환)
+
+과거 `npx playwright test` 스펙 파일 방식에서 `tests/e2e/*.mjs` 커스텀 스모크 스크립트 방식으로 전환되었다 (플레이라이트 라이브러리 자체는 계속 사용, 실행 엔트리포인트만 변경).
+
+| 스크립트 | 검증 항목 수 | 내용 |
+|----------|-------------|------|
+| `boot-smoke.mjs` | 6 | 부팅, 로그인, 메인 메뉴 전환 |
+| `asset-smoke.mjs` | 9 | 등록된 텍스처 키가 실제 이미지인지(프로시저럴 폴백 아님) 검증 |
+| `battle-cult-live.mjs` | 23 | 전투 중 교단 메커니즘 실동작 |
+| `returning-storylog-smoke.mjs` | 34 | 복귀 유저 카드, 스토리 로그 |
+| `verify-w1-components.mjs` | 20 | 리디자인 W1 공통 컴포넌트 |
+| `popup-title-check.mjs` | 31 | 팝업 16종 타이틀/골격 |
+| `verify-t03.mjs` | 14 | 포트레이트 로드 회귀 가드 |
+| `test:e2e:story` (5개 스크립트 통합) | 114 | boot 6 + cutscene 16 + ascension 21 + skip-path-parity 17 + onboarding-full 54 |
 
 실행 명령:
 ```bash
-npm test              # Vitest 유닛 테스트
-npm run test:e2e      # Playwright E2E (headless)
-npm run test:e2e:headed  # E2E (브라우저 표시)
-npm run build:analyze  # 번들 분석
+npm test                    # Vitest 유닛 테스트
+npm run test:e2e            # 기본 브라우저 E2E
+npm run test:e2e:smoke      # 부팅 스모크
+npm run test:e2e:assets     # 에셋 로드 스모크
+npm run test:e2e:story      # 스토리 모드 5종 통합
+npm run build:analyze       # 번들 분석
 ```
 
 ---
@@ -408,10 +435,10 @@ docs/
 | 번들러 | Vite 5 |
 | 모듈 | ES Modules |
 | 해상도 | 720x1280 |
-| 유닛 테스트 | Vitest (649개, 25파일) |
-| E2E 테스트 | Playwright (34개) |
+| 유닛 테스트 | Vitest (1476개, 58파일) |
+| E2E 테스트 | Playwright 기반 커스텀 스모크 스크립트 (`tests/e2e/*.mjs`, 웨이브당 6~114개) |
 | 타입체크 | TypeScript (tsc --noEmit) |
 | 백엔드 | Supabase (하이브리드 저장) |
 | CI/CD | GitHub Actions (ci + deploy + pr-check) |
-| 배포 | Vercel (https://arcane-collectors.vercel.app) |
-| 빌드 크기 | 568KB gzip (73% 압축) |
+| 배포 | Vercel (https://arcane-collectors.vercel.app — ⚠️ 2026-03 빌드에 고정, `vercel --prod` 수동 배포 필요) |
+| 빌드 크기 | 568KB gzip (73% 압축, 초기 번들 기준) |
