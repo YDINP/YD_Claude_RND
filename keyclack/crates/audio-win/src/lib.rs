@@ -33,6 +33,9 @@ pub struct Info {
     pub channels: usize,
     pub period_frames: u32,
     pub buffer_frames: u32,
+    /// Cleared when the render thread exits for any reason (device removed,
+    /// invalidated, repeated timeouts). The owner should reopen the stream.
+    pub alive: Arc<AtomicBool>,
 }
 
 fn device_name(d: &IMMDevice) -> String {
@@ -95,9 +98,11 @@ pub fn start(
     std::thread::Builder::new()
         .name("keyclack-wasapi".into())
         .spawn(move || unsafe {
+            let tx2 = tx.clone();
             let r = run(device_substr, make_mixer, stop, tx);
             if let Err(e) = r {
                 eprintln!("[wasapi3] thread error: {e}");
+                let _ = tx2.send(Err(e)); // ignored if Info was already reported
             }
         })
         .expect("spawn wasapi thread");
@@ -169,31 +174,46 @@ unsafe fn run(
         render.ReleaseBuffer(buffer_frames, 0)?;
     }
     client.Start()?;
+    let alive = Arc::new(AtomicBool::new(true));
     let _ = report.send(Ok(Info {
         name,
         sample_rate,
         channels,
         period_frames: min_p,
         buffer_frames,
+        alive: alive.clone(),
     }));
 
-    while !stop.load(Ordering::Relaxed) {
-        if WaitForSingleObject(event, 2000) != WAIT_OBJECT_0 {
-            eprintln!("[wasapi3] event timeout");
-            continue;
+    // Never leave the stream started on the way out: a started stream with no writer
+    // makes some virtual devices repeat the last buffer forever.
+    let mut timeouts = 0;
+    let result: Result<()> = (|| {
+        while !stop.load(Ordering::Relaxed) {
+            if WaitForSingleObject(event, 500) != WAIT_OBJECT_0 {
+                timeouts += 1;
+                if timeouts >= 4 {
+                    return Err(windows::core::Error::new(windows::core::HRESULT(-1), "audio device stopped signalling"));
+                }
+                continue;
+            }
+            timeouts = 0;
+            let padding = client.GetCurrentPadding()?;
+            let avail = buffer_frames - padding;
+            if avail == 0 {
+                continue;
+            }
+            let p = render.GetBuffer(avail)?;
+            let out = std::slice::from_raw_parts_mut(p as *mut f32, avail as usize * channels);
+            mixer.render(out);
+            render.ReleaseBuffer(avail, 0)?;
         }
-        let padding = client.GetCurrentPadding()?;
-        let avail = buffer_frames - padding;
-        if avail == 0 {
-            continue;
-        }
-        let p = render.GetBuffer(avail)?;
-        let out = std::slice::from_raw_parts_mut(p as *mut f32, avail as usize * channels);
-        mixer.render(out);
-        render.ReleaseBuffer(avail, 0)?;
+        Ok(())
+    })();
+    if let Err(e) = &result {
+        eprintln!("[wasapi3] render loop ended: {e}");
     }
-
     let _ = client.Stop();
+    alive.store(false, Ordering::Relaxed);
     if let Ok(h) = avrt {
         let _ = AvRevertMmThreadCharacteristics(h);
     }

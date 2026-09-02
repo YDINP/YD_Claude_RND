@@ -19,6 +19,7 @@ pub enum Kind {
 }
 
 #[derive(Clone, Copy, PartialEq)]
+#[allow(dead_code)]
 pub enum Extra {
     None,
     /// Metallic type-bar ring + platen thud.
@@ -102,17 +103,17 @@ pub const MODELS: &[Model] = &[
         cap_hz: 1300.0, body_hz: 120.0, modes: SOFT, burst_lo_hz: 200.0, burst_hi_hz: 2200.0, burst_tau_ms: 4.0,
         thock: 0.9, body_amp: 0.7, body_tau_ms: 16.0, damp_hz: 3600.0, up_peak: 0.3, seed: 0x7777,
     },
-    // 타자기: type-bar strike, metallic ring, platen thud.
+    // 크림(POM): muted, plasticky-soft linear with a rounded mid. "creamy".
     Model {
-        id: "kc-typewriter", name: "KeyClack Typewriter (타자기)", kind: Kind::Clicky, extra: Extra::Typewriter,
-        cap_hz: 3400.0, body_hz: 140.0, modes: GLASS, burst_lo_hz: 800.0, burst_hi_hz: 9000.0, burst_tau_ms: 2.5,
-        thock: 0.8, body_amp: 0.6, body_tau_ms: 18.0, damp_hz: 0.0, up_peak: 0.45, seed: 0x8888,
+        id: "kc-cream-pom", name: "KeyClack Cream Linear (POM)", kind: Kind::Linear, extra: Extra::None,
+        cap_hz: 1200.0, body_hz: 125.0, modes: SOFT, burst_lo_hz: 250.0, burst_hi_hz: 3000.0, burst_tau_ms: 4.5,
+        thock: 1.1, body_amp: 0.75, body_tau_ms: 18.0, damp_hz: 3400.0, up_peak: 0.28, seed: 0xAAAA,
     },
-    // 버블: soft pop, almost no noise. For people who want "cute".
+    // 알루미늄 케이스 클래키: MX Black on an aluminium plate. Bright, hard, ringing plate.
     Model {
-        id: "kc-bubble", name: "KeyClack Bubble (버블)", kind: Kind::Linear, extra: Extra::Bubble,
-        cap_hz: 700.0, body_hz: 160.0, modes: SOFT, burst_lo_hz: 300.0, burst_hi_hz: 1500.0, burst_tau_ms: 2.0,
-        thock: 0.3, body_amp: 0.2, body_tau_ms: 10.0, damp_hz: 4000.0, up_peak: 0.2, seed: 0x9999,
+        id: "kc-clacky-alu", name: "KeyClack Clacky (Alu case)", kind: Kind::Linear, extra: Extra::None,
+        cap_hz: 2900.0, body_hz: 240.0, modes: GLASS, burst_lo_hz: 900.0, burst_hi_hz: 8500.0, burst_tau_ms: 2.2,
+        thock: 1.0, body_amp: 0.4, body_tau_ms: 9.0, damp_hz: 0.0, up_peak: 0.4, seed: 0xBBBB,
     },
 ];
 

@@ -164,6 +164,7 @@ fn spawn_preview(pack: Arc<Pack>, play_tx: Sender<PlayCmd>) {
 
 struct Audio {
     stop: Arc<AtomicBool>,
+    alive: Arc<AtomicBool>,
     sample_rate: u32,
     period_ms: f64,
     device: String,
@@ -177,6 +178,7 @@ fn start_audio(device: Option<String>, play_rx: Receiver<PlayCmd>, stats: Arc<Mu
         .map_err(|e| e.to_string())?;
     Ok(Audio {
         stop,
+        alive: info.alive,
         sample_rate: info.sample_rate,
         period_ms: info.period_frames as f64 * 1000.0 / info.sample_rate as f64,
         device: info.name,
@@ -222,9 +224,12 @@ fn run(
     let mut engine = Engine::new(Arc::new(Pack::synthetic(48000)), EngineConfig::default());
     let mut key_count = 0u64;
 
+    // Snapshot first, then call out: the callback may hop to the UI thread, which
+    // in turn may be waiting on the status lock. Never hold `status` across the call.
     let notify = |status: &Arc<Mutex<Status>>| {
+        let snapshot = status.lock().unwrap().clone();
         if let Some(f) = on_change.lock().unwrap().as_ref() {
-            f(&status.lock().unwrap());
+            f(&snapshot);
         }
     };
 
@@ -290,8 +295,22 @@ fn run(
     notify(&status);
 
     let mut last_stats = Instant::now();
+    let watchdog = crossbeam_channel::tick(Duration::from_millis(1000));
     loop {
         select! {
+            recv(watchdog) -> _ => {
+                // Audio thread died (device unplugged / invalidated)? Reopen.
+                let dead = audio.as_ref().map(|a| !a.alive.load(Ordering::Relaxed)).unwrap_or(true);
+                if dead {
+                    reconcile(&cfg, &eff, manual_mute, &mut audio, &mut audio_device_req, &mut loaded_pack_id, &mut engine, true);
+                    if let Some(a) = audio.as_ref() {
+                        let mut s = status.lock().unwrap();
+                        s.last_error = None;
+                        s.device = a.device.clone();
+                    }
+                    notify(&status);
+                }
+            }
             recv(key_rx) -> ev => {
                 let Ok(ev) = ev else { break };
                 if let Some(cmd) = engine.on_key(ev) {

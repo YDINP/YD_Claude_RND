@@ -132,6 +132,9 @@ fn apply_hotkey(app: &AppHandle, hotkey: &str) {
 
 fn apply_autostart(app: &AppHandle, enabled: bool) {
     let al = app.autolaunch();
+    if al.is_enabled().unwrap_or(false) == enabled {
+        return;
+    }
     let r = if enabled { al.enable() } else { al.disable() };
     if let Err(e) = r {
         eprintln!("[autostart] {e}");
@@ -355,20 +358,26 @@ pub fn run() {
             {
                 let handle = app.handle().clone();
                 service.set_on_change(move |s: &Status| {
+                    // Runs on the service thread. Tray/menu calls must execute on the main
+                    // thread and would block here waiting for it, so queue them instead.
                     let _ = handle.emit("status", s.clone());
-                    if let Some(state) = handle.try_state::<AppState>() {
-                        if let Some(item) = state.mute_item.lock().unwrap().as_ref() {
-                            let _ = item.set_checked(s.manual_mute);
+                    let manual_mute = s.manual_mute;
+                    let tip = if s.effective_muted {
+                        format!("KeyClack — {}", s.reason.clone().unwrap_or_else(|| "muted".into()))
+                    } else {
+                        format!("KeyClack — {}", s.pack_name)
+                    };
+                    let h = handle.clone();
+                    let _ = handle.run_on_main_thread(move || {
+                        if let Some(state) = h.try_state::<AppState>() {
+                            if let Some(item) = state.mute_item.lock().unwrap().as_ref() {
+                                let _ = item.set_checked(manual_mute);
+                            }
                         }
-                    }
-                    if let Some(tray) = handle.tray_by_id(TRAY_ID) {
-                        let tip = if s.effective_muted {
-                            format!("KeyClack — {}", s.reason.clone().unwrap_or_else(|| "muted".into()))
-                        } else {
-                            format!("KeyClack — {}", s.pack_name)
-                        };
-                        let _ = tray.set_tooltip(Some(tip));
-                    }
+                        if let Some(tray) = h.tray_by_id(TRAY_ID) {
+                            let _ = tray.set_tooltip(Some(tip));
+                        }
+                    });
                 });
             }
             app.manage(AppState { service, config: Mutex::new(cfg.clone()), mute_item: Mutex::new(None) });
