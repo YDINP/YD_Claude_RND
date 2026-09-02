@@ -1,7 +1,7 @@
 # KeyClack — 기계식 키보드 사운드 시뮬레이터 계획서
 
 작성일: 2026-09-02
-상태: **Phase 1 코어 엔진 완료 (2026-09-02)**. Mechvibes 팩(ogg 스프라이트·mp3 멀티·키업) 로드·재생 검증, core 테스트 30개. Phase 0 결과는 §10, Phase 1 결과는 §11
+상태: **Phase 2 상주 앱 완료 (2026-09-02)**. Tauri 트레이 앱 + 설정 UI + 앱별 프로필 + 회의 자동 음소거 동작 검증, 테스트 44개. Phase 0 §10, Phase 1 §11, Phase 2 §12
 프로젝트 폴더: `keyclack/`
 
 ## 0. 목표와 전제
@@ -148,9 +148,18 @@ WH_KEYBOARD_LL이 주는 `scanCode`·`LLKHF_EXTENDED`·`vkCode`(넘록 판별용
 - 옵션으로 exclusive 모드 제공 (지연 더 줄지만 다른 앱 소리를 뺏음. 기본 off).
 - 출력 디바이스 변경(이어폰 꽂기)을 감지해 스트림을 다시 연다.
 
-### 5.4 UI (Tauri)
-- 팩 목록 + 미리듣기, 마스터 볼륨, 키 up 소리 on/off, 제외 앱, 핫키, Windows 시작 시 실행, 지연 측정값 표시.
-- 창을 닫으면 트레이로 내려감. 첫 실행에만 창을 띄움.
+### 5.4 서비스 계층 (`crates/app`) — Phase 2에서 추가
+- `config.rs` `%APPDATA%/keyclack/config.json`. 팩·볼륨·장치·핫키·자동시작·규칙.
+- `rules.rs` 순수 함수 `resolve(cfg, 포그라운드 exe, 마이크 사용중, 수동음소거) → Effective{muted, pack, volume, reason}`. 우선순위: 수동 음소거 > 회의 자동 음소거 > 앱 규칙(첫 매치) > 기본.
+- `context.rs` 400 ms마다 포그라운드 프로세스 이름, 1.5 s마다 마이크 사용 여부(레지스트리 `CapabilityAccessManager\ConsentStore\microphone`의 `LastUsedTimeStop == 0`).
+- `service.rs` 훅·엔진·오디오·컨텍스트 스레드 소유. UI는 `apply_config`/`toggle_mute`와 `Status` 스냅샷·변경 콜백만 쓴다. 장치 변경 시 오디오 재시작, 샘플레이트 바뀌면 팩 재로드.
+- **앱별 프로필** = 규칙의 동작 3종: 음소거 / 팩 지정 / 볼륨 배율. 리서치에서 확인한 차별화 포인트(컨텍스트 자동 전환)를 여기서 가져간다.
+
+### 5.5 UI (Tauri 2, `apps/desktop`)
+- IPC 계약: `apps/desktop/IPC.md`. 명령 11개 + `status` 이벤트 1개.
+- 트레이: 음소거 체크, 팩 목록(체크), 설정 열기, 종료. 툴팁에 현재 팩/음소거 사유.
+- 설정 창(React, 한국어 기본 + 영어): 상태 바, 팩 목록, 소리(볼륨·키업·반복·장치·독점), 앱 규칙 편집, 일반(핫키·자동시작·시작 시 창 표시).
+- 전역 핫키(`tauri-plugin-global-shortcut`), 자동 시작(`tauri-plugin-autostart`, `--minimized` 인자로 창 숨김 시작). 창 닫기 = 트레이로.
 
 ## 6. 개발 단계
 
@@ -158,7 +167,7 @@ WH_KEYBOARD_LL이 주는 `scanCode`·`LLKHF_EXTENDED`·`vkCode`(넘록 판별용
 |---|---|---|---|
 | **0 스파이크** ✅ | `cli/`에서 훅 + wav 1개 재생. `latency-bench`로 지연 측정 | 지연 수치 확인, 15 ms 이하 달성 가능 판정 | 0.5일 |
 | **1 코어 엔진** ✅ | 팩 파서(Mechvibes 2모드), 매퍼, 그룹 폴백, 리피트 억제, 믹서 변주(피치·게인), 프리디코드 | 커뮤니티 팩 3종 그대로 로드해 정상 재생. core 유닛 테스트 통과 | 2일 → 실제 0.5일 |
-| **2 상주 앱** | Tauri 골격, 트레이, 설정 저장, 팩 전환, 볼륨, 음소거 핫키, 제외 앱, 자동 시작 | 하루 종일 켜 두고 일해도 크래시·훅 탈락 없음 | 2일 |
+| **2 상주 앱** ✅ | Tauri 골격, 트레이, 설정 저장, 팩 전환, 볼륨, 음소거 핫키, **앱별 프로필 + 회의 자동 음소거**, 자동 시작 | 하루 종일 켜 두고 일해도 크래시·훅 탈락 없음 | 2일 |
 | **3 사운드 팩** | `pack-builder` CLI, 자체 팩 2~3종 (청축·갈축·저소음적축), 키 up 소리, 변주 | 팩 스키마 검증 통과, 실제 타건과 A/B 청취 | 2일 |
 | **4 배포** | Tauri 번들(NSIS 인스톨러), 코드 서명 여부 결정, 자동 업데이트, README | 깨끗한 PC에 설치해 첫 실행 성공 | 1일 |
 | **5 크로스플랫폼** | macOS(CGEventTap + 손쉬운 사용 권한), Linux(evdev, `input` 그룹) | 각 OS에서 Phase 2 기능 동작 | 3일 |
@@ -249,3 +258,26 @@ cargo run --release -- --backend cpal --seconds 10   # 비교용
 실행: `cargo run --release -- --pack packs/_external/holy-pandas --device "USB HIFI"`
 
 남은 것 (Phase 2로): 설정 저장, 트레이, 팩 전환 UI, 제외 앱, 핫키, 장치 변경 감지, exclusive 옵션. 알려진 미처리: Pause 키(E1 접두사)의 uiohook 코드 3653 매핑.
+
+## 12. Phase 2 결과 (2026-09-02)
+
+`crates/app`(서비스 계층) + `apps/desktop`(Tauri 2 + React 19). `npm run tauri dev`로 실행.
+
+| 검증 | 결과 |
+|---|---|
+| `cargo test --workspace` | 44 passed (core 30 + app 14) |
+| 설정 창 | 상태 바·팩 목록·소리·앱 규칙·일반 5개 패널, 한/영 전환. 실제 데이터로 렌더링 확인 |
+| 회의 자동 음소거 | Discord가 마이크를 잡고 있어 자동 음소거 → UI의 "이 앱 무시" 클릭 → 즉시 재생 상태로 복귀. 설정 파일에 `meeting_ignore` 저장 확인 |
+| 팩 전환 | UI 클릭으로 pandas 선택 → 상태 반영, 합성 키 입력으로 키 카운트 증가 확인 |
+| 지연 | UI 표시 p50 5.2 ms (훅→오디오 콜백, 디버그 빌드) |
+| 트레이 | 음소거 체크·팩 목록·설정 열기·종료. 툴팁에 현재 팩/음소거 사유 |
+| 핫키·자동시작 | 코드 연결 완료(`Ctrl+Shift+M`, `--minimized`). 실기기 확인은 사용자 |
+
+**발견**
+- Discord처럼 음성 채널에 상주하는 앱은 마이크를 계속 잡고 있어 "회의 중"으로 잡힌다. 그래서 `mic_app`(누가 잡고 있는지)을 상태에 노출하고 `meeting_ignore` 목록을 추가했다. 첫 실행에서 사용자가 한 번 "이 앱 무시"를 누르면 끝.
+- 설정 파일을 Notepad/PowerShell로 편집하면 UTF-8 BOM이 붙어 파싱이 실패한다 → 로더에서 BOM 제거.
+- 주입 키 테스트는 `KEYCLACK_ALLOW_INJECTED=1` 환경변수로만 허용(기본은 무시). 자동화 검증용.
+
+**미구현 (Phase 2 범위였으나 이월)**: WASAPI exclusive 모드(토글만 저장), 출력 장치 변경 자동 감지(현재는 설정에서 장치를 바꿀 때만 재시작), 실제 핫키/자동시작 실기기 검증, Pause 키 매핑.
+
+**다음 Phase 3**: 자체 사운드 팩(녹음 또는 합성) 2~3종 + 팩 빌더 CLI, 첫 실행 시 내장 팩 복사. 그 다음 Phase 4 배포(NSIS 인스톨러, 코드 서명 검토, Microsoft Store).

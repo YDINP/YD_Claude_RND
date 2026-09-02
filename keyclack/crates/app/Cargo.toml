@@ -1,0 +1,16 @@
+[package]
+name = "keyclack-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Service layer: config, rules, pack scanning, context detection, engine service"
+
+[dependencies]
+keyclack-core = { path = "../core" }
+keyclack-input-win = { path = "../input-win" }
+keyclack-audio-win = { path = "../audio-win" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+crossbeam-channel = "0.5.16"
+winreg = "0.56.0"
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading"] }
