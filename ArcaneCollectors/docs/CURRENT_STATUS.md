@@ -1,10 +1,32 @@
 # ArcaneCollectors 현재 상태
 
-> **최종 업데이트**: 2026-08-24
+> **최종 업데이트**: 2026-09-02
 > **브랜치**: `main`
-> **테스트**: 685개 유닛 (마지막 전수 통과 기준 — 2026-08-24 변경분은 실행 대기, 아래 참조)
-> **번들 크기**: 568KB gzip (최적화 완료)
-> **최근 작업**: 가챠 시스템 활성화 + 영웅 조회 연쇄 버그 수정 + config SSOT 동기화 + 실포트레이트 표시 (2026-08-24)
+> **테스트**: `npx vitest run` 29파일 884개 전량 통과 (실측) / `npx tsc --noEmit` 0 에러 / `npm run build` 성공
+> **번들 크기**: 568KB gzip (2026-08-24 기준 최적화 유지)
+> **최근 작업**: 무한의 탑 100층 완성 + 레이드/친구 시스템 신설 + 교단 메커니즘 4기관 + 컬렉션 시스템 + 포트레이트 34장 교체 (2026-09-02)
+
+> ⚠️ **`.gitignore` 주의**: 루트 `.gitignore:38`이 `ArcaneCollectors/` 디렉터리 전체를 무시한다. 이 모노레포에서 신규 파일을 커밋하려면 `git add -f`가 필수이며, 누락 시 워커 산출물이 미추적 상태로 남는다(2026-08-25 산출물이 이 문제로 누락되었다가 2026-09-02에 정식 추적됨).
+
+**08-24 세션의 "⚠️ 검증 대기" 경고와 `PLAN_COMPLETION_STAGE.md` §0에 기록된 P0 파손(GuildPopup.js 문자열 리터럴 개행, helpers.js 파스 오류, EventDungeonSystem 이벤트 만료)은 2026-09-02 기준 전부 해소되었다.**
+
+---
+
+## 2026-09-02 세션: 탑 100층 + 레이드/친구 + 교단 메커니즘 + 컬렉션
+
+커밋 3건 (해시/파일 목록은 `git log --oneline -4`, `git show --stat <hash>`로 직접 확인).
+
+| 커밋 | 태스크 | 내용 |
+|------|--------|------|
+| `ad21817` | TOWER-01/02, RAID-01/02, FRIEND-01/02, BAL-01 | 무한의 탑 100층 완성 + 레이드/친구 시스템 신규 구현 + 가챠/경제 시뮬레이션 + 감사 문서 추적 |
+| `cc0e4fb` | MECH-02, COLL-01/02 | `CultMechanicsSystem` — 교단 메커니즘 4기관(토큰 20/56 구현) + `CollectionSystem`/`CollectionPopup`(세계수 씨앗) + `MainMenuScene`에 레이드/친구/도감 팝업 연결 + `TowerSystem.buildStageForFloor` 미전달 버그 통합 수정(`TowerScene`/`TowerPopup`) + 탑 20층+ 신기록 씨앗 지급 |
+| `fbeb58b` | ART-01 (부분) | ComfyUI 1024px 포트레이트 34장(hero_005~038) 교체, `art/portraits/` 관리 폴더 신설 |
+
+**검증**: `npx vitest run` 29파일 884 테스트 전량 통과 / `npx tsc --noEmit` 0 에러 / `npm run build` 성공.
+
+**진행 중**: 스토리 모드/온보딩 기획 (game-design-director 팀). 산출물 예정 위치 `docs/story/*` + `docs/STORY_MODE_GDD.md`.
+
+자세한 갭 분석은 [`docs/PLAN_COMPLETION_STAGE.md`](./PLAN_COMPLETION_STAGE.md) §3 WBS 표를 참고 (완료 태스크에 ✅ 표기됨).
 
 ---
 
@@ -227,7 +249,29 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 ---
 
-## 남은 태스크 (백로그)
+## 남은 작업 (2026-09-02 기준, PLAN_COMPLETION_STAGE 갭 ID)
+
+> 전체 근거·WBS·리스크는 [`docs/PLAN_COMPLETION_STAGE.md`](./PLAN_COMPLETION_STAGE.md) 참고. 아래는 2026-09-02 세션 이후 남은 갭만 요약.
+
+| 갭 ID | 항목 | 상태 |
+|-------|------|------|
+| G-06 → RAID | 레이드 시스템 | ✅ 09-02 구현 완료 (RAID-01/02) — 갱신 필요 |
+| G-07 → FRIEND | 친구 시스템 | ✅ 09-02 구현 완료 (FRIEND-01/02) — 갱신 필요 |
+| G-08 → COLL | 컬렉션/도감 완성 | ✅ 09-02 구현 완료 (COLL-01/02) — 갱신 필요 |
+| G-09 → MECH | 교단 시그니처 메커니즘 | 🔶 부분 완료 — 4기관 구현(MECH-02), **나머지 8기관·36토큰 미구현** + 교단 상성 테이블 없음 |
+| **TOWER-03** | 탑 시즌/순위 | ❌ 미구현 (월간 리셋 + 순위표) |
+| **PvP Holy Thorns** | PvP/commands 경로 반영 | ❌ 미적용 (Holy Thorns 효과가 PvP 시뮬레이션 경로에 빠져 있음) |
+| **파티 동일영웅 제한** | 기본영웅 1체 제한 | 🔶 검증 함수만 존재, `PartyManager`에 미연결 |
+| **DATA-01/02** | 캐릭터/장비 데이터 확장 | ❌ 미착수 (레거시 char_1~4 정리, N등급, equipment backup/new 정리) |
+| **SND-01/02** | 사운드 | ❌ 미착수 — `public/assets/audio` 오디오 에셋 0개 |
+| **ART-01 잔여** | 최종 포트레이트 | 🔶 hero_005~038(34장) 09-02 교체 완료. **hero_001~004 + hero_039~091은 여전히 CC0 카툰 플레이스홀더** |
+| **QA-01~03** | 전면 회귀·수동 E2E·크로스브라우저 | ❌ 미착수 |
+| **OPS-01/02** | 에러 모니터링·세이브 export/import | ❌ 미착수 |
+| **DOC-01** | 문서 SSOT 정리 | 🔶 이 갱신으로 부분 진행, PRD v5.2 이슈 목록 해소/잔존 마킹은 미완 |
+
+---
+
+## 남은 태스크 (백로그) — 구버전 (2026-03 기준, 참고용)
 
 ### P0: 캐릭터 진화 시스템 구현
 | ID | 태스크 | 난이도 | 상태 | 설명 |
