@@ -1,7 +1,7 @@
 # KeyClack — 기계식 키보드 사운드 시뮬레이터 계획서
 
 작성일: 2026-09-02
-상태: **Phase 2 상주 앱 완료 (2026-09-02)**. Tauri 트레이 앱 + 설정 UI + 앱별 프로필 + 회의 자동 음소거 동작 검증, 테스트 44개. Phase 0 §10, Phase 1 §11, Phase 2 §12
+상태: **Phase 3 사운드 팩 완료 (2026-09-02)**. 절차적 합성 팩 3종 내장 + 팩 빌더 CLI(녹음 슬라이서) + 첫 실행 자동 설치. 테스트 46개. Phase 0 §10, Phase 1 §11, Phase 2 §12, Phase 3 §13. 안드로이드 기획은 `keyclack/docs/ANDROID_PLAN.md`
 프로젝트 폴더: `keyclack/`
 
 ## 0. 목표와 전제
@@ -168,7 +168,7 @@ WH_KEYBOARD_LL이 주는 `scanCode`·`LLKHF_EXTENDED`·`vkCode`(넘록 판별용
 | **0 스파이크** ✅ | `cli/`에서 훅 + wav 1개 재생. `latency-bench`로 지연 측정 | 지연 수치 확인, 15 ms 이하 달성 가능 판정 | 0.5일 |
 | **1 코어 엔진** ✅ | 팩 파서(Mechvibes 2모드), 매퍼, 그룹 폴백, 리피트 억제, 믹서 변주(피치·게인), 프리디코드 | 커뮤니티 팩 3종 그대로 로드해 정상 재생. core 유닛 테스트 통과 | 2일 → 실제 0.5일 |
 | **2 상주 앱** ✅ | Tauri 골격, 트레이, 설정 저장, 팩 전환, 볼륨, 음소거 핫키, **앱별 프로필 + 회의 자동 음소거**, 자동 시작 | 하루 종일 켜 두고 일해도 크래시·훅 탈락 없음 | 2일 |
-| **3 사운드 팩** | `pack-builder` CLI, 자체 팩 2~3종 (청축·갈축·저소음적축), 키 up 소리, 변주 | 팩 스키마 검증 통과, 실제 타건과 A/B 청취 | 2일 |
+| **3 사운드 팩** ✅ | `packtool` CLI(synth/slice/assemble/check), 절차적 합성 팩 3종 (청축·갈축·저소음적축), 키 up 소리, 변주 5종 | 엔진 로드 통과, 첫 실행 자동 설치 확인. 청취 A/B는 사용자 | 2일 → 0.5일 |
 | **4 배포** | Tauri 번들(NSIS 인스톨러), 코드 서명 여부 결정, 자동 업데이트, README | 깨끗한 PC에 설치해 첫 실행 성공 | 1일 |
 | **5 크로스플랫폼** | macOS(CGEventTap + 손쉬운 사용 권한), Linux(evdev, `input` 그룹) | 각 OS에서 Phase 2 기능 동작 | 3일 |
 
@@ -281,3 +281,24 @@ cargo run --release -- --backend cpal --seconds 10   # 비교용
 **미구현 (Phase 2 범위였으나 이월)**: WASAPI exclusive 모드(토글만 저장), 출력 장치 변경 자동 감지(현재는 설정에서 장치를 바꿀 때만 재시작), 실제 핫키/자동시작 실기기 검증, Pause 키 매핑.
 
 **다음 Phase 3**: 자체 사운드 팩(녹음 또는 합성) 2~3종 + 팩 빌더 CLI, 첫 실행 시 내장 팩 복사. 그 다음 Phase 4 배포(NSIS 인스톨러, 코드 서명 검토, Microsoft Store).
+
+## 13. Phase 3 결과 (2026-09-02)
+
+마이크 녹음 없이 진행해야 했으므로 **절차적 합성**으로 팩 3종을 만들고, 녹음이 생기면 바로 팩으로 만들 수 있는 **슬라이서**를 함께 만들었다.
+
+| 산출물 | 내용 |
+|---|---|
+| `crates/packtool` | `synth <dir>` 내장 팩 생성 / `slice <녹음> <dir>` 온셋 검출로 GENERIC_R{n} 분리 / `assemble <dir> --name` config.json 작성 / `check <dir>` 엔진 로드 검증 |
+| `packs/builtin/kc-clicky-blue` | 청축 모델: 클릭 트랜지언트 + 클릭바 핑 + 바텀아웃 + 케이스 썸프. 키업에 클릭바 리셋음 |
+| `packs/builtin/kc-tactile-brown` | 갈축: 택타일 범프(중역 짧은 노이즈) + 바텀아웃 |
+| `packs/builtin/kc-silent-red` | 저소음 적축: 클릭 없음, 3.2 kHz 로패스로 댐핑 |
+| 키별 차별화 | 스페이스(피치 0.62·길게), 엔터, 백스페이스, 탭/캡스/시프트/컨트롤/알트/윈 별도 파일. 일반 키 변주 5종, 키업 변주 5종 |
+| 첫 실행 설치 | Tauri 리소스로 번들 → `%APPDATA%/keyclack/packs`에 앱 버전당 1회 복사(`.builtin-version` 마커). 사용자가 지우면 다시 안 생김 |
+
+합성 모델(`synth_pack.rs`): 키스트로크 = 클릭 트랜지언트(청축) / 택타일 범프(갈축) + 바텀아웃(노이즈 버스트 밴드패스 + 키캡 공진 3모드) + 케이스 저역 썸프. 라이선스 CC0.
+
+슬라이서 검증: cherrymx-blue-abs의 스프라이트 원본(실제 녹음)에서 온셋 6개를 정확히 잘라냈다.
+
+**청취 평가는 사용자가 해야 한다.** 합성음은 실제 녹음보다 "장난감 같다"고 느껴질 수 있다. 녹음 팩 제작 절차: 조용한 방에서 키 하나를 15회 누른 wav → `packtool slice rec.wav packs/my --max 8` → 스페이스·엔터·백스페이스도 각각 `--name SPACE --max 1` 등으로 → `packtool assemble packs/my --name "내 키보드"`.
+
+**다음**: Phase 4 배포(NSIS 인스톨러는 `npm run tauri build`로 이미 가능, 코드 서명·MS Store MSIX 검토) 또는 안드로이드 A0.

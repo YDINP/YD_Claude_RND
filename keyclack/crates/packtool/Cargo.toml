@@ -1,0 +1,15 @@
+[package]
+name = "keyclack-packtool"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Sound pack tools: procedural pack synthesis and recording slicer"
+
+[[bin]]
+name = "keyclack-packtool"
+path = "src/main.rs"
+
+[dependencies]
+hound = "3.5.1"
+keyclack-core = { path = "../core" }
+serde_json = "1.0.151"

@@ -195,6 +195,48 @@ fn on_menu(app: &AppHandle, id: &str) {
     }
 }
 
+/// Copy the bundled packs into the user's packs dir once per app version, so they
+/// appear in the list on first run but a user's later edits/deletions stick.
+fn install_builtin_packs(app: &AppHandle, packs_dir: &std::path::Path) {
+    let Ok(res) = app.path().resource_dir() else { return };
+    let src = res.join("packs");
+    if !src.is_dir() {
+        return;
+    }
+    let marker = packs_dir.join(".builtin-version");
+    let version = app.package_info().version.to_string();
+    if std::fs::read_to_string(&marker).map(|v| v.trim() == version).unwrap_or(false) {
+        return;
+    }
+    let _ = std::fs::create_dir_all(packs_dir);
+    if let Ok(rd) = std::fs::read_dir(&src) {
+        for e in rd.flatten() {
+            let from = e.path();
+            if from.is_dir() {
+                let to = packs_dir.join(e.file_name());
+                if let Err(err) = copy_dir(&from, &to) {
+                    eprintln!("[packs] copy {}: {err}", from.display());
+                }
+            }
+        }
+    }
+    let _ = std::fs::write(&marker, version);
+}
+
+fn copy_dir(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for e in std::fs::read_dir(from)?.flatten() {
+        let p = e.path();
+        let dest = to.join(e.file_name());
+        if p.is_dir() {
+            copy_dir(&p, &dest)?;
+        } else {
+            std::fs::copy(&p, &dest)?;
+        }
+    }
+    Ok(())
+}
+
 // ---------- entry ----------
 
 pub fn run() {
@@ -231,6 +273,7 @@ pub fn run() {
             quit
         ])
         .setup(move |app| {
+            install_builtin_packs(app.handle(), &cfg.packs_dir());
             let service = Service::start(cfg.clone());
             {
                 let handle = app.handle().clone();
