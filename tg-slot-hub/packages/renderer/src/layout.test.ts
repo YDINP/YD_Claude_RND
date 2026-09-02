@@ -12,7 +12,8 @@ import {
   rowTop,
   symbolCenter,
 } from './layout.js'
-import { loadGameMath } from './testSupport.js'
+import { parseTheme } from './theme.js'
+import { loadGameMath, loadThemeJson } from './testSupport.js'
 
 const math = loadGameMath('classic-777')
 const layout = computeLayout({ containerWidth: 360, reels: math.reels, rows: math.rows })
@@ -447,5 +448,68 @@ describe('computeWindowFitLayout', () => {
         }),
       ).toThrow(RangeError)
     })
+  })
+})
+
+describe('computeWindowFitLayout — 실제 배포 아트', () => {
+  // 합성 픽스처가 아니라 games/classic-777이 지금 들고 있는 값으로 잰다.
+  // 아트가 다시 생성되면 이 수치가 따라 움직인다.
+  const shipped = parseTheme(loadThemeJson('classic-777'), '/games/classic-777')
+  const window = shipped.frameLayout?.window
+
+  function fit(containerWidth: number, containerHeight: number) {
+    return computeWindowFitLayout({
+      containerWidth,
+      containerHeight,
+      frameWidth: 1080,
+      frameHeight: 1620,
+      ...(window === undefined ? {} : { window }),
+      reels: 3,
+      rows: 3,
+    })
+  }
+
+  it('390x760에서 심볼이 110px을 넘는다', () => {
+    expect(fit(390, 760).layout.symbolSize).toBeGreaterThan(110)
+  })
+
+  it('작은 기기(360x640)에서도 90px을 넘는다', () => {
+    expect(fit(360, 640).layout.symbolSize).toBeGreaterThan(90)
+  })
+
+  it('큰 기기(430x932)에서 더 커진다', () => {
+    expect(fit(430, 932).layout.symbolSize).toBeGreaterThan(fit(390, 760).layout.symbolSize)
+  })
+
+  it('창이 컨테이너 폭 안에 들어온다', () => {
+    for (const [w, h] of [
+      [390, 760],
+      [390, 844],
+      [360, 640],
+      [430, 932],
+    ]) {
+      const result = fit(w ?? 0, h ?? 0)
+      expect(result.window.x).toBeGreaterThanOrEqual(0)
+      expect(result.window.x + result.window.width).toBeLessThanOrEqual((w ?? 0) + 1e-9)
+    }
+  })
+
+  it('프레임이 세로로 잘리지 않는다', () => {
+    for (const [w, h] of [
+      [390, 760],
+      [390, 844],
+      [430, 932],
+    ]) {
+      const result = fit(w ?? 0, h ?? 0)
+      expect(result.frameFitsVertically).toBe(true)
+      expect(result.frameRect.y).toBeGreaterThanOrEqual(0)
+    }
+  })
+
+  it('격자가 폭에 묶이고 세로로 여유가 남는다', () => {
+    // 창이 세로로 길어진 덕분이다. 반대가 되면 심볼이 다시 작아진다.
+    const result = fit(390, 760)
+    expect(result.layout.width).toBeCloseTo(result.window.width, 6)
+    expect(result.layout.height).toBeLessThan(result.window.height)
   })
 })

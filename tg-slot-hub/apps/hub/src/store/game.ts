@@ -17,7 +17,8 @@ export type GamePhase = 'loading' | 'idle' | 'spinning' | 'showingWin' | 'error'
  */
 export interface SpinRenderer {
   spinTo(stops: number[], options?: { durationMs?: number; stagger?: number }): Promise<void>
-  showWins(wins: WinLine[], options?: { loop?: boolean }): Promise<void>
+  /** totalBet을 주면 렌더러가 winTotal 이벤트의 등급(tier)을 라인 배수 추정 없이 정확히 계산한다. */
+  showWins(wins: WinLine[], options?: { loop?: boolean; totalBet?: number }): Promise<void>
 }
 
 const BET_INDEX_KEY_PREFIX = 'tgslot.bet.'
@@ -229,7 +230,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (result.wins.length > 0) {
         set({ phase: 'showingWin' })
         if (renderer) {
-          await renderer.showWins(result.wins)
+          await renderer.showWins(result.wins, { totalBet: result.totalBet })
         }
       }
     } catch (err) {

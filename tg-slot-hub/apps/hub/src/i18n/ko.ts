@@ -71,6 +71,12 @@ const ko: Record<TranslationKey, string> = {
     '모든 스핀은 플레이 전에 서버 시드의 해시를 먼저 공개하고, 이후 실제 시드를 공개해요. 결과가 조작되지 않았는지 직접 확인할 수 있어요.',
   version: '버전',
   supportId: '지원 ID',
+  // win banner tiers
+  winPlain: '윈',
+  winBig: '빅 윈',
+  winMega: '메가 윈',
+  winEpic: '에픽 윈',
+  winMax: '맥스 윈',
 }
 
 export default ko

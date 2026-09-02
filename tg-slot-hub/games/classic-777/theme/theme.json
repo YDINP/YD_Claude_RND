@@ -26,10 +26,113 @@
   "frame": "frame.webp",
   "frameLayout": {
     "window": {
-      "x": 0.099375,
-      "y": 0.206875,
-      "w": 0.80125,
-      "h": 0.5003125
+      "x": 0.1384375,
+      "y": 0.18083333333333335,
+      "w": 0.723125,
+      "h": 0.6279166666666667
+    }
+  },
+  "fx": {
+    "default": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.12,
+          "durationMs": 600
+        }
+      ]
+    },
+    "wild": {
+      "win": [
+        {
+          "type": "burst",
+          "particles": 24,
+          "durationMs": 1000
+        },
+        {
+          "type": "glow",
+          "color": "#f4d98a",
+          "durationMs": 900
+        },
+        {
+          "type": "spin",
+          "durationMs": 300,
+          "repeat": 1
+        }
+      ]
+    },
+    "seven": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.15,
+          "durationMs": 700
+        },
+        {
+          "type": "shine",
+          "durationMs": 900,
+          "angle": 25
+        }
+      ]
+    },
+    "bar3": {
+      "win": [
+        {
+          "type": "flash",
+          "durationMs": 500,
+          "stagger": true,
+          "segments": 3
+        }
+      ]
+    },
+    "bar2": {
+      "win": [
+        {
+          "type": "flash",
+          "durationMs": 500,
+          "stagger": true,
+          "segments": 2
+        }
+      ]
+    },
+    "bar1": {
+      "win": [
+        {
+          "type": "flash",
+          "durationMs": 500
+        }
+      ]
+    },
+    "bell": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 12,
+          "durationMs": 800
+        },
+        {
+          "type": "glow",
+          "color": "#d8a94a",
+          "durationMs": 800
+        }
+      ]
+    },
+    "cherry": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.08,
+          "durationMs": 700
+        },
+        {
+          "type": "wobble",
+          "degrees": 6,
+          "durationMs": 700
+        }
+      ]
+    },
+    "blank": {
+      "win": []
     }
   }
 }

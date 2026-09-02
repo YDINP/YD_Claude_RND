@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_FRAME_WINDOW } from './constants.js'
+import { resolveSymbolFx } from './fx.js'
 import {
   loadTheme,
   parseTheme,
@@ -158,14 +159,24 @@ describe('classic-777 실제 테마 팩', () => {
     expect(window.h).toBeGreaterThan(0.2)
   })
 
-  it('실측 창이 기획 기본값에서 크게 벗어나지 않는다', () => {
-    // 아트 생성이 크게 어긋나면(창을 엉뚱한 데 그렸다면) 여기서 걸린다.
+  it('실측 창이 가로로 거의 가운데에 있다', () => {
+    // 아트 생성이 크게 어긋나 창을 한쪽으로 몰아 그렸다면 여기서 걸린다.
+    // 세로 위치는 마퀴가 위를 차지하므로 가운데가 아니어도 정상이다.
     const window = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').frameLayout?.window
     if (window === undefined) throw new Error('frameLayout 없음')
-    expect(Math.abs(window.x - DEFAULT_FRAME_WINDOW.x)).toBeLessThan(0.1)
-    expect(Math.abs(window.y - DEFAULT_FRAME_WINDOW.y)).toBeLessThan(0.1)
-    expect(Math.abs(window.w - DEFAULT_FRAME_WINDOW.w)).toBeLessThan(0.15)
-    expect(Math.abs(window.h - DEFAULT_FRAME_WINDOW.h)).toBeLessThan(0.15)
+    const leftGap = window.x
+    const rightGap = 1 - (window.x + window.w)
+    expect(Math.abs(leftGap - rightGap)).toBeLessThan(0.05)
+  })
+
+  it('창 비율이 3x3 격자를 담기에 무리가 없다', () => {
+    // 창이 지나치게 납작하면 격자가 세로에 묶여 심볼이 작아진다.
+    // 이 값이 1보다 작아야(=세로가 더 긺) 심볼이 폭 기준으로 커진다.
+    const window = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').frameLayout?.window
+    if (window === undefined) throw new Error('frameLayout 없음')
+    const aspect = (window.w * 1080) / (window.h * 1620)
+    expect(aspect).toBeGreaterThan(0.6)
+    expect(aspect).toBeLessThan(1.15)
   })
 
   it('생성된 에셋은 전부 webp다', () => {
@@ -246,5 +257,114 @@ describe('resolveFrameWindow', () => {
 
   it('없으면 기본 창으로 되돌린다', () => {
     expect(resolveFrameWindow({})).toEqual({ ...DEFAULT_FRAME_WINDOW })
+  })
+})
+
+describe('심볼 연출(fx) 스키마', () => {
+  const withFx = {
+    ...validJson,
+    fx: {
+      default: { win: [{ type: 'pulse', scale: 1.12, durationMs: 600 }] },
+      a: { win: [{ type: 'burst', particles: 24 }, { type: 'glow', color: '#f4d98a' }] },
+      b: { win: [] },
+    },
+  }
+
+  it('fx가 없어도 파싱된다', () => {
+    expect(parseTheme(validJson, '/games/demo').fx).toBeUndefined()
+  })
+
+  it('fx를 그대로 실어 나른다', () => {
+    const theme = parseTheme(withFx, '/games/demo')
+    expect(theme.fx?.['a']?.win?.[0]?.type).toBe('burst')
+    expect(theme.fx?.['default']?.win).toHaveLength(1)
+  })
+
+  it('빈 연출 배열을 지운 것으로 착각하지 않는다', () => {
+    expect(parseTheme(withFx, '/games/demo').fx?.['b']?.win).toEqual([])
+  })
+
+  it('여덟 가지 타입을 모두 받는다', () => {
+    const all = ['pulse', 'shine', 'wobble', 'bounce', 'burst', 'glow', 'flash', 'spin']
+    const theme = parseTheme(
+      { ...validJson, fx: { a: { win: all.map((type) => ({ type })) } } },
+      '/games/demo',
+    )
+    expect(theme.fx?.['a']?.win?.map((effect) => effect.type)).toEqual(all)
+  })
+
+  it('모르는 타입은 거부한다', () => {
+    expect(() =>
+      parseTheme({ ...validJson, fx: { a: { win: [{ type: 'explode' }] } } }, '/games/demo'),
+    ).toThrow(ThemeError)
+  })
+
+  it('길이나 파티클 수가 0 이하면 거부한다', () => {
+    expect(() =>
+      parseTheme({ ...validJson, fx: { a: { win: [{ type: 'pulse', durationMs: 0 }] } } }, '/games/demo'),
+    ).toThrow(ThemeError)
+    expect(() =>
+      parseTheme({ ...validJson, fx: { a: { win: [{ type: 'burst', particles: -1 }] } } }, '/games/demo'),
+    ).toThrow(ThemeError)
+  })
+
+  it('intensity 범위를 벗어나면 거부한다', () => {
+    expect(() =>
+      parseTheme({ ...validJson, fx: { a: { win: [{ type: 'pulse', intensity: 2 }] } } }, '/games/demo'),
+    ).toThrow(ThemeError)
+  })
+
+  it('glow 색은 팔레트와 같은 형식만 받는다', () => {
+    expect(() =>
+      parseTheme({ ...validJson, fx: { a: { win: [{ type: 'glow', color: 'gold' }] } } }, '/games/demo'),
+    ).toThrow(ThemeError)
+  })
+})
+
+describe('classic-777 연출 팩', () => {
+  const math = loadGameMath('classic-777')
+
+  it('math의 심볼을 모두 덮고 default도 갖는다', () => {
+    const fx = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').fx
+    expect(fx).toBeDefined()
+    expect(fx?.['default']?.win?.length).toBeGreaterThan(0)
+    for (const symbol of math.symbols) {
+      expect(fx?.[symbol.id]).toBeDefined()
+    }
+  })
+
+  it('blank는 조용하고 wild는 화려하다', () => {
+    const fx = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').fx
+    expect(fx?.['blank']?.win).toEqual([])
+    expect(fx?.['wild']?.win?.map((effect) => effect.type)).toEqual(['burst', 'glow', 'spin'])
+  })
+
+  it('BAR 3종이 구획 수만 다르고 나머지는 같다', () => {
+    const fx = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').fx
+    expect(fx?.['bar3']?.win?.[0]).toMatchObject({ type: 'flash', segments: 3, stagger: true })
+    expect(fx?.['bar2']?.win?.[0]).toMatchObject({ type: 'flash', segments: 2, stagger: true })
+    // bar1은 구획을 나누지 않아 통째로 깜빡인다.
+    expect(fx?.['bar1']?.win?.[0]?.segments).toBeUndefined()
+  })
+
+  it('와일드의 회전은 한 번만 돌고 멈춘다', () => {
+    const fx = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').fx
+    const spin = fx?.['wild']?.win?.find((effect) => effect.type === 'spin')
+    expect(spin?.repeat).toBe(1)
+  })
+
+  it('벨과 체리는 두 연출을 겹쳐 재생한다', () => {
+    const fx = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').fx
+    expect(fx?.['bell']?.win?.map((effect) => effect.type)).toEqual(['wobble', 'glow'])
+    expect(fx?.['cherry']?.win?.map((effect) => effect.type)).toEqual(['bounce', 'wobble'])
+  })
+
+  it('모든 심볼이 모션 축소에서 pulse 하나로 줄어든다', () => {
+    const fx = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').fx
+    for (const symbol of math.symbols) {
+      const effects = resolveSymbolFx(fx, symbol.id, true)
+      expect(effects.length).toBeLessThanOrEqual(1)
+      for (const effect of effects) expect(effect.type).toBe('pulse')
+    }
   })
 })

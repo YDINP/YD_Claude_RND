@@ -67,10 +67,26 @@ export const WIN_GLOW_LAYERS = [
   { widthPx: 4, alpha: 0.3 },
 ] as const
 
-/** 총 배당이 베팅액의 이 배수 이상이면 빅윈. */
-export const BIG_WIN_BET_MULTIPLIER = 20
+/**
+ * 승리 등급 문턱(총 베팅액 대비 배수). `docs/REFERENCE_PRAGMATIC.md` §2의 업계 관행 구간이다.
+ * 배수가 큰 등급부터 검사해야 하므로 순서대로 읽을 것.
+ */
+export const WIN_TIER_MULTIPLIERS = { big: 10, mega: 20, epic: 50, max: 100 } as const
+
+/** 총 배당이 베팅액의 이 배수 이상이면 빅윈(가장 낮은 등급) 이상이다. */
+export const BIG_WIN_BET_MULTIPLIER = WIN_TIER_MULTIPLIERS.big
 /** 코인 파티클 개수 상한. 저사양 기기 보호. */
 export const MAX_COIN_PARTICLES = 60
+
+/** 등급별 코인 샤워 세기(파티클 수). 등급이 오를수록 쏟아진다. */
+export const COIN_COUNT_BY_TIER = { none: 0, big: 20, mega: 35, epic: 50, max: MAX_COIN_PARTICLES } as const
+
+/** 색종이 개수. 최고 등급에서만 뿌린다. */
+export const CONFETTI_COUNT = 36
+/** 색종이 낙하 시간(ms). */
+export const CONFETTI_FALL_MS = 2000
+/** 색종이 색. 브라스 팔레트에 붉은/푸른 강조를 섞는다. */
+export const CONFETTI_COLORS = ['#f4d98a', '#d8a94a', '#e0605c', '#4fc3d9', '#f2f4f8'] as const
 /** 코인 파티클 낙하 시간(ms). */
 export const COIN_FALL_MS = 1400
 
@@ -112,25 +128,60 @@ export const CHROMA_GREEN_MIN = 140
 /** 크로마키 판정: 초록이 빨강·파랑보다 이만큼은 더 커야 한다. */
 export const CHROMA_GREEN_DOMINANCE = 50
 
-/** 빛 쓸기 1회 주기(ms). 이 간격으로 반복한다. */
-export const SWEEP_CYCLE_MS = 6000
-/** 빛 쓸기가 화면을 가로지르는 시간(ms). */
-export const SWEEP_TRAVEL_MS = 1400
-/** 빛 쓸기 불투명도. */
-export const SWEEP_ALPHA = 0.18
-/** 빛 쓸기 기울기(도). 음수면 오른쪽 위로 기운다. */
-export const SWEEP_ANGLE_DEG = -20
-/** 빛 쓸기 띠 폭 = 영역 폭 x 이 값. */
-export const SWEEP_WIDTH_RATIO = 0.18
-
 /** 반짝임 개수 하한. */
-export const SPARKLE_MIN_COUNT = 12
-/** 반짝임 개수 상한. 저사양 기기 보호. */
-export const SPARKLE_MAX_COUNT = 20
+export const SPARKLE_MIN_COUNT = 6
+/** 반짝임 개수 상한. 은은해야 하므로 낮게 잡는다. */
+export const SPARKLE_MAX_COUNT = 10
+/** 반짝임 최대 불투명도. 1이면 눈에 띄어 릴을 방해한다. */
+export const SPARKLE_ALPHA = 0.5
 /** 반짝임 1회 페이드 인/아웃 시간(ms). */
 export const SPARKLE_FADE_MS = 1200
 /** 반짝임 크기 범위(스프라이트 배율). */
-export const SPARKLE_MIN_SCALE = 0.35
-export const SPARKLE_MAX_SCALE = 0.9
+export const SPARKLE_MIN_SCALE = 0.25
+export const SPARKLE_MAX_SCALE = 0.6
 /** 반짝임이 다시 나타나기까지의 최대 대기(ms). */
 export const SPARKLE_MAX_DELAY_MS = 4200
+/** 반짝임을 릴 창에서 밀어낼 때 두는 여유(창 크기 대비 비율). */
+export const SPARKLE_WINDOW_MARGIN = 0.04
+/** 반짝임 자리를 다시 뽑아 보는 최대 횟수. 못 찾으면 그 하나는 버린다. */
+export const SPARKLE_PLACEMENT_ATTEMPTS = 12
+
+/** 승리 연출 A단계(전체 승리 동시 재생) 길이(ms). 등급 없는 보통 승리. */
+export const PHASE_ALL_MS = 900
+/** BIG 등급의 A단계 길이(ms). 카운터가 올라갈 시간을 준다. */
+export const PHASE_ALL_BIGWIN_MS = 1600
+/** MEGA 이상의 A단계 길이(ms). 숫자가 클수록 천천히 올라가야 무게감이 산다. */
+export const PHASE_ALL_MEGA_MS = 2200
+/** 승리 연출 B단계(라인 하나씩) 한 스텝 길이(ms). 라벨을 읽을 시간을 준다. */
+export const PHASE_LINE_MS = 1400
+/** 라인이 바뀔 때 겹쳐 넘기는 시간(ms). */
+export const PHASE_CROSSFADE_MS = 150
+/** 연출 중 참여하지 않는 심볼의 불투명도. */
+export const DIM_ALPHA = 0.5
+
+/** fx에서 길이를 지정하지 않았을 때의 기본값(ms). */
+export const FX_DEFAULT_DURATION_MS = 700
+/** 내장 폴백 pulse의 주기(ms). 업계 관행 0.4~0.6초의 중간값. */
+export const BUILTIN_PULSE_MS = 500
+/** `flash`의 기본 구획 수. 1이면 심볼 전체가 한 번에 깜빡인다. */
+export const FX_DEFAULT_SEGMENTS = 1
+/** `flash` 구획 사이 지연(ms). 위에서 아래로 훑는 리듬을 만든다. */
+export const FX_SEGMENT_DELAY_MS = 120
+/** 구획 수 상한. 심볼 하나에 스프라이트를 무한정 쌓지 않는다. */
+export const FX_MAX_SEGMENTS = 6
+/** `pulse` 기본 배율. */
+export const FX_DEFAULT_PULSE_SCALE = 1.12
+/** `shine` 기본 기울기(도). */
+export const FX_DEFAULT_SHINE_ANGLE = 25
+/** `wobble` 기본 회전 폭(도). */
+export const FX_DEFAULT_WOBBLE_DEGREES = 12
+/** `bounce` 기본 이동량(심볼 높이 대비). */
+export const FX_DEFAULT_BOUNCE_PX = 0.08
+/** `burst` 기본 파티클 수. */
+export const FX_DEFAULT_BURST_PARTICLES = 24
+/** `burst` 파티클 수 상한. 저사양 기기 보호. */
+export const FX_MAX_BURST_PARTICLES = 40
+/** `glow` 기본 색. 팔레트를 못 읽는 자리에서 쓰는 브라스. */
+export const FX_DEFAULT_GLOW_COLOR = '#f4d98a'
+/** `flash` 스태거가 켜졌을 때 심볼 사이 지연(ms). */
+export const FX_STAGGER_STEP_MS = 90

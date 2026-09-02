@@ -158,7 +158,8 @@ describe('game store', () => {
 
       await useGameStore.getState().spin()
 
-      expect(renderer.showWins).toHaveBeenCalledWith(wins)
+      // totalBet을 함께 넘겨야 렌더러가 winTotal 이벤트의 등급(tier)을 라인 추정 없이 정확히 계산한다.
+      expect(renderer.showWins).toHaveBeenCalledWith(wins, { totalBet: 10 })
     })
 
     it('applies the server wallet immediately even if renderer.spinTo throws, and still returns phase to idle', async () => {

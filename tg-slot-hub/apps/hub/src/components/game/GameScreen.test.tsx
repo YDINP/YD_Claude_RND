@@ -1,17 +1,25 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SpinResponse } from '@tgslot/shared'
 
+// GameScreen이 createSlotRenderer(...)에 넘긴 onEvent를 테스트에서 직접 호출할 수 있도록 캡처해둔다.
+const mockRenderer = vi.hoisted(() => ({
+  onEvent: null as ((e: { type: string; [key: string]: unknown }) => void) | null,
+}))
+
 vi.mock('@tgslot/renderer', () => ({
-  createSlotRenderer: vi.fn(() => ({
-    ready: Promise.resolve(),
-    spinTo: vi.fn().mockResolvedValue(undefined),
-    showWins: vi.fn().mockResolvedValue(undefined),
-    clearWins: vi.fn(),
-    setSpinningIdle: vi.fn(),
-    resize: vi.fn(),
-    destroy: vi.fn(),
-  })),
+  createSlotRenderer: vi.fn((options: { onEvent?: (e: { type: string }) => void }) => {
+    mockRenderer.onEvent = options.onEvent ?? null
+    return {
+      ready: Promise.resolve(),
+      spinTo: vi.fn().mockResolvedValue(undefined),
+      showWins: vi.fn().mockResolvedValue(undefined),
+      clearWins: vi.fn(),
+      setSpinningIdle: vi.fn(),
+      resize: vi.fn(),
+      destroy: vi.fn(),
+    }
+  }),
   loadTheme: vi.fn().mockResolvedValue({
     symbols: {},
     palette: { frame: '#000000', reelBg: '#000000', winLine: ['#ffffff'], text: '#ffffff' },
@@ -76,6 +84,7 @@ function baseSpinResponse(overrides: Partial<SpinResponse> = {}): SpinResponse {
 describe('GameScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockRenderer.onEvent = null
     useGameStore.getState().reset()
     useGamesStore.setState({ status: 'ready', games: [], errorMessage: null })
     useHubStore.setState({
@@ -167,5 +176,64 @@ describe('GameScreen', () => {
     screen.getByRole('button', { name: 'Help' }).click()
 
     expect(await screen.findByText('Wild substitutes for all symbols')).toBeInTheDocument()
+  })
+
+  describe('win banner (winTotal renderer event)', () => {
+    async function spinAndSettle(response: SpinResponse): Promise<void> {
+      mockedApiSpin.mockResolvedValueOnce(response)
+      await act(async () => {
+        screen.getByRole('button', { name: 'Spin' }).click()
+      })
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Spin' })).not.toBeDisabled())
+    }
+
+    it('rolls the counter up to the total and shows the tier label the renderer sent', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 250,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 25, win: 250, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+
+      expect(mockRenderer.onEvent).not.toBeNull()
+
+      // tier는 허브가 계산하지 않고 렌더러가 보내주는 값을 그대로 라벨로 옮긴다.
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 250, tier: 'big', durationMs: 30 })
+      })
+
+      expect(await screen.findByText('BIG WIN')).toBeInTheDocument()
+      await waitFor(() => expect(screen.getByText('250')).toBeInTheDocument())
+    })
+
+    it('jumps the counter to the final value immediately when the stage is tapped', async () => {
+      const { container } = render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 50,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 5, win: 50, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+
+      // 아주 긴 durationMs — 탭하지 않으면 짧은 시간 안에 목표값에 도달할 수 없다.
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 50, tier: 'none', durationMs: 60_000 })
+      })
+      expect(await screen.findByText('WIN')).toBeInTheDocument()
+      expect(screen.queryByText('50')).not.toBeInTheDocument()
+
+      const stage = container.querySelector('.hub-game-screen__stage')
+      expect(stage).not.toBeNull()
+      if (stage) fireEvent.click(stage)
+
+      await waitFor(() => expect(screen.getByText('50')).toBeInTheDocument())
+    })
   })
 })

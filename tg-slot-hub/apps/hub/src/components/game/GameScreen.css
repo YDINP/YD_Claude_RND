@@ -157,9 +157,103 @@
   border: 1px solid rgba(216, 169, 74, 0.4);
 }
 
+/* 승리 배너 등급 — 렌더러가 계산해 보내는 tier(none < big < mega < epic < max)를 그대로 쓴다
+   (@tgslot/renderer의 WinTier, 10/20/50/100배). 등급이 오를수록 테두리 글로우와 글자 크기가 커진다. */
+.hub-game-screen__win-banner--none {
+  border-color: rgba(216, 169, 74, 0.4);
+}
+
 .hub-game-screen__win-banner--big {
   border-color: var(--hub-gold-light);
   box-shadow: 0 0 24px rgba(244, 217, 138, 0.5);
+}
+
+.hub-game-screen__win-banner--mega {
+  border-color: var(--hub-gold-light);
+  box-shadow: 0 0 40px rgba(244, 217, 138, 0.7);
+  padding: var(--hub-space-md) var(--hub-space-xl);
+}
+
+.hub-game-screen__win-banner--epic {
+  border-color: var(--hub-gem);
+  box-shadow: 0 0 56px rgba(79, 195, 217, 0.8);
+  padding: var(--hub-space-lg) var(--hub-space-xl);
+}
+
+.hub-game-screen__win-banner--max {
+  border-color: var(--hub-gold-light);
+  box-shadow:
+    0 0 72px rgba(244, 217, 138, 0.85),
+    0 0 32px rgba(79, 195, 217, 0.6);
+  padding: var(--hub-space-lg) calc(var(--hub-space-xl) + var(--hub-space-sm));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hub-game-screen__win-banner--mega,
+  .hub-game-screen__win-banner--epic {
+    animation: hub-win-pulse 1.1s ease-in-out infinite;
+  }
+
+  .hub-game-screen__win-banner--max {
+    animation: hub-win-pulse 0.7s ease-in-out infinite;
+  }
+}
+
+@keyframes hub-win-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+.hub-game-screen__win-tier-label {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hub-game-screen__win-banner--none .hub-game-screen__win-tier-label {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+}
+
+.hub-game-screen__win-banner--big .hub-game-screen__win-tier-label {
+  font-size: var(--hub-font-sub);
+  color: var(--hub-gold-light);
+}
+
+.hub-game-screen__win-banner--big .hub-game-screen__win-value {
+  font-size: 26px;
+}
+
+.hub-game-screen__win-banner--mega .hub-game-screen__win-tier-label {
+  font-size: var(--hub-font-title);
+  color: var(--hub-gold-light);
+}
+
+.hub-game-screen__win-banner--mega .hub-game-screen__win-value {
+  font-size: 30px;
+}
+
+.hub-game-screen__win-banner--epic .hub-game-screen__win-tier-label {
+  font-size: 22px;
+  color: var(--hub-gem);
+}
+
+.hub-game-screen__win-banner--epic .hub-game-screen__win-value {
+  font-size: 34px;
+}
+
+.hub-game-screen__win-banner--max .hub-game-screen__win-tier-label {
+  font-size: 26px;
+  color: var(--hub-gold-light);
+}
+
+.hub-game-screen__win-banner--max .hub-game-screen__win-value {
+  font-size: 40px;
 }
 
 .hub-game-screen__win-banner--jackpot {
@@ -184,13 +278,6 @@
   font-weight: 800;
   color: var(--hub-success);
   letter-spacing: 0.04em;
-}
-
-.hub-game-screen__big-win-label {
-  font-size: var(--hub-font-sub);
-  font-weight: 800;
-  color: var(--hub-gold-light);
-  letter-spacing: 0.06em;
 }
 
 .hub-game-screen__win-label {

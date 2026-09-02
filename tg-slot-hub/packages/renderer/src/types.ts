@@ -1,5 +1,7 @@
 import type { GameMath, SymbolId, WinLine } from '@tgslot/slot-engine'
 import type { FrameWindow } from './layout.js'
+import type { FxMap } from './theme.js'
+import type { WinTier } from './wins.js'
 
 /** 테마가 선택적으로 선언할 수 있는 효과음 키. 파일이 없으면 키를 빼면 된다. */
 export type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
@@ -36,6 +38,8 @@ export interface Theme {
   frame?: string
   /** 프레임 아트 안의 릴 창 위치. 없으면 `DEFAULT_FRAME_WINDOW`를 쓴다. */
   frameLayout?: FrameLayout
+  /** 심볼 승리 연출. 심볼 id 또는 `default`를 키로 쓴다. */
+  fx?: FxMap
   palette: ThemePalette
   /** 효과음 URL. 렌더러는 재생하지 않고 허브의 AudioBus가 쓴다. */
   sfx?: Partial<Record<SfxKey, string>>
@@ -51,9 +55,17 @@ export interface Theme {
 export type RendererFit = 'width' | 'window'
 
 export type RendererEvent =
+  /** 릴 하나가 정확한 정지 위치에 닿았다. */
   | { type: 'reelStop'; reel: number }
+  /** 모든 릴이 멈췄다. */
   | { type: 'spinEnd' }
-  | { type: 'winShown'; line: number }
+  /**
+   * 승리 연출 A단계가 시작됐다. 총배당과 그 단계의 길이를 함께 준다.
+   * 허브가 배당 카운터를 이 시간에 맞춰 굴리라고 있는 이벤트다.
+   */
+  | { type: 'winTotal'; totalWin: number; tier: WinTier; durationMs: number }
+  /** 승리 연출 B단계에서 라인 하나를 짚었다. */
+  | { type: 'winLine'; line: number; win: number }
 
 export interface RendererOptions {
   /** 캔버스를 붙일 DOM 요소. 크기는 이 요소의 클라이언트 박스를 따른다. */
@@ -84,6 +96,11 @@ export interface SpinToOptions {
 export interface ShowWinsOptions {
   /** true면 정지 없이 계속 순환한다. false면 한 바퀴 돌고 끝낸다. */
   loop?: boolean
+  /**
+   * 라인 명판 문구를 만드는 함수. 렌더러는 번역을 모르므로 허브가 넣어 준다.
+   * 기본값은 `Line {n} · {배당}`.
+   */
+  formatLineLabel?: (win: WinLine) => string
   /**
    * 이번 스핀의 총 베팅액. 주면 빅윈 판정이 정확해진다.
    * 없으면 `sum(multiplier) / paylines.length`로 배수를 추정한다.

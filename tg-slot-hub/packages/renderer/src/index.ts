@@ -20,6 +20,10 @@ export {
   themeFileUrl,
   FrameLayoutSchema,
   FrameWindowSchema,
+  FxEffectSchema,
+  FxMapSchema,
+  FxSymbolSchema,
+  FX_TYPES,
   ThemeError,
   ThemeFileSchema,
   ThemePaletteSchema,
@@ -28,6 +32,9 @@ export {
   type LoadThemeOptions,
   type ParseThemeOptions,
   type SymbolSource,
+  type FxEffect,
+  type FxMap,
+  type FxSymbol,
   type SymbolSourceKind,
   type ThemeFile,
 } from './theme.js'
@@ -63,12 +70,31 @@ export {
 export { buildSpinPlan, type ReelSpinPlan, type SpinPlan, type SpinPlanInput } from './timing.js'
 export { isChromaGreen, keyOutGreen } from './chromaKey.js'
 export {
-  planLightSweep,
   planSparkles,
   type RandomFn,
   type SparklePlacement,
-  type SweepPlan,
+  type SparklePlanOptions,
 } from './ambient.js'
+export {
+  buildPresentation,
+  defaultLineLabel,
+  phaseAllDurationMs,
+  presentationCycleMs,
+  type PresentationOptions,
+  type PresentationStep,
+} from './presentation.js'
+export {
+  fxAmplitude,
+  fxPulseScale,
+  fxSegmentDelayMs,
+  fxStaggerDelayMs,
+  resolveFxEffect,
+  resolveSymbolFx,
+  BUILTIN_FX,
+  FX_DEFAULT_KEY,
+  type FxType,
+  type ResolvedFxEffect,
+} from './fx.js'
 export {
   buildWinCycle,
   formatWinLabel,
@@ -76,7 +102,10 @@ export {
   paylineColor,
   totalWinOf,
   winBetMultiple,
+  winTier,
+  WIN_TIERS,
   type WinCycleStep,
+  type WinTier,
 } from './wins.js'
 export { resolveReducedMotion, resolveResolution } from './motion.js'
 export * from './constants.js'

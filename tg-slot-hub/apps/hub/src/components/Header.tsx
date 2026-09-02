@@ -4,7 +4,7 @@
 import { useState, type ReactNode } from 'react'
 import type { PublicUser, Wallet } from '@tgslot/shared'
 import { Odometer } from './Odometer'
-import { SettingsSheet } from './SettingsSheet'
+import { SettingsModal } from './SettingsModal'
 import { useT } from '../i18n'
 import './Header.css'
 
@@ -51,7 +51,7 @@ export function Header({ user, wallet }: HeaderProps): ReactNode {
           <span aria-hidden="true">⚙️</span>
         </button>
       </div>
-      {settingsOpen && <SettingsSheet user={user} onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && <SettingsModal user={user} onClose={() => setSettingsOpen(false)} />}
     </header>
   )
 }

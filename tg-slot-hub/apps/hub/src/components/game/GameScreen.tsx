@@ -4,7 +4,14 @@
  * 스핀 결과와 잔액은 항상 서버 값(store/game.ts의 spin())을 그대로 반영한다.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { createSlotRenderer, loadTheme, type SlotRenderer, type Theme } from '@tgslot/renderer'
+import {
+  createSlotRenderer,
+  loadTheme,
+  type SlotRenderer,
+  type Theme,
+  type WinTier,
+  type RendererEvent,
+} from '@tgslot/renderer'
 import { createSeededRng, spin as replaySpin } from '@tgslot/slot-engine'
 import { useGameStore } from '../../store/game'
 import { useSessionStore } from '../../store/session'
@@ -16,14 +23,12 @@ import { getRoundSeed } from '../../sdk/api'
 import { Odometer } from '../Odometer'
 import { useT, useEffectiveLocale } from '../../i18n'
 import { useSettingsStore } from '../../store/settings'
+import { winTierLabelKey } from '../../lib/winTier'
 import './GameScreen.css'
 
 interface GameScreenProps {
   gameId: string
 }
-
-/** 총 베팅액의 이 배수 이상을 따면 빅윈 연출을 켠다. */
-const BIG_WIN_MULTIPLIER = 20
 
 async function sha256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input)
@@ -90,6 +95,14 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   /** 배당표에 심볼 이미지를 보여주기 위해 로드된 테마를 들고 있는다. 렌더러 생성 성공 여부와 무관하다. */
   const [theme, setTheme] = useState<Theme | null>(null)
 
+  // 승리 배너 — 렌더러의 winTotal 이벤트가 시작 신호. tier는 렌더러가 계산해 보내주므로
+  // 허브는 그대로 받아 라벨만 고르고, 금액만 durationMs에 걸쳐 롤업한다.
+  const [winBanner, setWinBanner] = useState<{ tier: WinTier } | null>(null)
+  const [winBannerValue, setWinBannerValue] = useState(0)
+  const winRafRef = useRef<number | null>(null)
+  /** 스테이지 탭으로 카운터를 즉시 목표값으로 점프시키는 플래그. 릴 연출 자체는 건드리지 않는다. */
+  const winSkipRef = useRef(false)
+
   // 게임 진입 시 math.json 로드, 이탈 시 store 초기화.
   useEffect(() => {
     void load(gameId)
@@ -104,6 +117,65 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     showBackButton(navigateToLobby)
     return () => hideBackButton()
   }, [])
+
+  // 렌더러 이벤트 — winTotal이 승리 배너를 시작시키고 durationMs에 걸쳐 롤업한다.
+  // 등급(tier)은 렌더러가 계산해 함께 보내주므로 허브에서 다시 계산하지 않는다.
+  // ref/setState만 사용하므로 렌더러 생성 시점에 캡처돼도 값이 오래돼(stale) 문제되지 않는다.
+  function handleRendererEvent(event: RendererEvent): void {
+    if (event.type !== 'winTotal') return
+
+    const target = event.totalWin
+    const duration = event.durationMs > 0 ? event.durationMs : 1
+
+    winSkipRef.current = false
+    if (winRafRef.current !== null) cancelAnimationFrame(winRafRef.current)
+    setWinBanner({ tier: event.tier })
+    setWinBannerValue(0)
+
+    // 첫 rAF 틱의 timestamp 자체를 기준점으로 삼는다 (Odometer.tsx와 동일한 패턴) —
+    // 별도로 `performance.now()`를 부르면 환경에 따라 rAF의 timestamp와 기준이 어긋날 수 있다.
+    let startTs: number | null = null
+    const step = (ts: number): void => {
+      if (winSkipRef.current) {
+        setWinBannerValue(target)
+        winRafRef.current = null
+        return
+      }
+      if (startTs === null) startTs = ts
+      const progress = Math.min(1, (ts - startTs) / duration)
+      setWinBannerValue(Math.round(target * progress))
+      if (progress < 1) {
+        winRafRef.current = requestAnimationFrame(step)
+      } else {
+        winRafRef.current = null
+      }
+    }
+    winRafRef.current = requestAnimationFrame(step)
+  }
+
+  // 새 스핀이 시작되면 이전 승리 배너를 지운다.
+  useEffect(() => {
+    if (phase !== 'spinning') return
+    setWinBanner(null)
+    setWinBannerValue(0)
+    winSkipRef.current = false
+    if (winRafRef.current !== null) {
+      cancelAnimationFrame(winRafRef.current)
+      winRafRef.current = null
+    }
+  }, [phase])
+
+  // 언마운트 시 진행 중인 롤업 애니메이션을 정리한다.
+  useEffect(() => {
+    return () => {
+      if (winRafRef.current !== null) cancelAnimationFrame(winRafRef.current)
+    }
+  }, [])
+
+  /** 승리 연출 중 스테이지를 탭하면 카운터만 목표값으로 즉시 점프한다 — 릴 라인 순환은 그대로 둔다. */
+  const handleStageTap = (): void => {
+    if (winRafRef.current !== null) winSkipRef.current = true
+  }
 
   // math가 준비되면 테마를 읽고 렌더러를 만든다. 실패해도 서버 스핀 자체는 막지 않는다.
   useEffect(() => {
@@ -127,6 +199,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           // 마운트 시점 값만 읽는다(구독 아님) — 설정을 바꿔도 이 화면에 있는 동안은 재생성하지
           // 않고, 게임을 나갔다 다시 들어올 때 반영된다. 설정 시트 안내 문구에도 그렇게 적혀 있다.
           reducedMotion: useSettingsStore.getState().reducedMotion,
+          onEvent: handleRendererEvent,
         })
         await renderer.ready
         if (cancelled) {
@@ -159,8 +232,6 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const currentBet = betLevels[betIndex] ?? 0
   const betPerLine = math && math.paylines.length > 0 ? currentBet / math.paylines.length : 0
   const isBusy = phase === 'spinning' || phase === 'showingWin'
-  const isBigWin =
-    lastResult !== null && lastResult.wins.length > 0 && lastResult.totalWin >= lastResult.totalBet * BIG_WIN_MULTIPLIER
 
   const title = gameSummary ? (locale === 'ko' && gameSummary.name.ko ? gameSummary.name.ko : gameSummary.name.en) : gameId
 
@@ -264,7 +335,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         </span>
       </div>
 
-      <div className="hub-game-screen__stage" data-phase={phase}>
+      <div
+        className="hub-game-screen__stage"
+        data-phase={phase}
+        onClick={handleStageTap}
+      >
         <div ref={containerRef} className="hub-game-screen__canvas" />
         {phase === 'loading' && <div className="hub-game-screen__loading">{t('loading')}</div>}
         {rendererError && (
@@ -291,17 +366,12 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               )}
             </div>
           )}
-          {lastResult && lastResult.wins.length > 0 && (
-            <div
-              className={
-                isBigWin
-                  ? 'hub-game-screen__win-banner hub-game-screen__win-banner--big'
-                  : 'hub-game-screen__win-banner'
-              }
-            >
-              {isBigWin && <span className="hub-game-screen__big-win-label">{t('bigWin')}</span>}
-              <span className="hub-game-screen__win-label">{t('totalWin')}</span>
-              <Odometer className="hub-game-screen__win-value" value={lastResult.totalWin} />
+          {winBanner && (
+            <div className={`hub-game-screen__win-banner hub-game-screen__win-banner--${winBanner.tier}`}>
+              <span className="hub-game-screen__win-tier-label">{t(winTierLabelKey(winBanner.tier))}</span>
+              {/* 일반 Odometer(자체 600ms 스무딩)를 쓰지 않는다 — 아래 rAF 롤업 자체가 이미
+                  "숫자가 올라가는" 연출이라 이중으로 겹치면 오히려 굼떠 보인다. */}
+              <span className="hub-game-screen__win-value">{winBannerValue.toLocaleString('en-US')}</span>
             </div>
           )}
         </div>

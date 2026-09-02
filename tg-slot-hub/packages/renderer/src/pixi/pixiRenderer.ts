@@ -5,19 +5,17 @@ import {
   ACCEL_DISTANCE_RATIO,
   ACCEL_TIME_RATIO,
   FALLBACK_CONTAINER_WIDTH,
+  DIM_ALPHA,
   IDLE_AMPLITUDE_SYMBOLS,
+  PHASE_CROSSFADE_MS,
   IDLE_CYCLE_MS,
   LANDING_SETTLE_SYMBOLS,
   PULL_UP_SYMBOLS,
-  REDUCED_WIN_CYCLE_MS,
   SYMBOL_FILL_RATIO,
-  WIN_CYCLE_MS,
   WIN_GLOW_LAYERS,
   WIN_HIGHLIGHT_STROKE_PX,
   WIN_LINE_ALPHA,
   WIN_LINE_STROKE_PX,
-  WIN_PULSE_MS,
-  WIN_PULSE_SCALE,
 } from '../constants.js'
 import { normalizePosition, spinTargetPosition, wrapIndex } from '../grid.js'
 import {
@@ -37,19 +35,22 @@ import {
 import { resolveResolution } from '../motion.js'
 import { resolveFrameWindow } from '../theme.js'
 import { buildSpinPlan, type ReelSpinPlan, type SpinPlan } from '../timing.js'
-import { formatWinLabel, isBigWin, paylineColor } from '../wins.js'
+import { paylineColor } from '../wins.js'
+import { resolveSymbolFx } from '../fx.js'
+import { buildPresentation, defaultLineLabel, type PresentationStep } from '../presentation.js'
 import type { RendererCore, ResolvedRendererOptions } from '../internal.js'
 import { TextureRegistry } from '../textureRegistry.js'
 import type { RendererEvent, ShowWinsOptions, SpinToOptions } from '../types.js'
+import { createSparkleTexture, startSparkles, type AmbientEffect } from './ambient.js'
+import { burstCoins, burstConfetti, coinCountForTier } from './coins.js'
 import {
-  createShineTexture,
-  createSparkleTexture,
-  startLightSweep,
-  startSparkles,
-  type AmbientEffect,
-} from './ambient.js'
-import { burstCoins } from './coins.js'
-import { createCoinTexture, loadBackgroundTexture, loadFrameTexture, loadSymbolTextures } from './textures.js'
+  createCoinTexture,
+  createConfettiTexture,
+  loadBackgroundTexture,
+  loadFrameTexture,
+  loadSymbolTextures,
+} from './textures.js'
+import { createFxTextures, playSymbolFxSet, type FxTextures, type SymbolFxHandle } from './symbolFx.js'
 
 interface Cell {
   view: Container
@@ -79,6 +80,8 @@ interface Geometry {
   canvasHeight: number
   /** 프레임 스프라이트를 놓을 사각형. 프레임 이미지가 없으면 null. 캔버스 밖으로 나갈 수 있다. */
   frameRect: Rect | null
+  /** 릴 창(캔버스 좌표). 프레임 이미지가 없으면 null. */
+  window: Rect | null
   /** 릴 레이아웃. 좌표는 `content`를 원점으로 하는 지역 좌표계다. */
   layout: Layout
   /** 릴 레이아웃이 놓이는 캔버스 좌표. */
@@ -91,6 +94,7 @@ class PixiRenderer implements RendererCore {
   private readonly app: Application
   private readonly textures: Map<SymbolId, Texture>
   private readonly coinTexture: Texture
+  private readonly confettiTexture: Texture
   /** 이 인스턴스가 직접 만든 텍스처. 해제할 때 GPU 리소스까지 되돌려준다. */
   private readonly ownedTextures: TextureRegistry
 
@@ -112,22 +116,22 @@ class PixiRenderer implements RendererCore {
   private readonly frameSprite: Sprite | null
   /** 배경 위 반짝임. 프레임보다 아래에 둔다. */
   private readonly sparkleLayer = new Container()
-  /** 프레임 위를 지나가는 빛. 항상 맨 위다. */
-  private readonly ambientLayer = new Container()
-  private readonly shineTexture: Texture | null
   private readonly sparkleTexture: Texture | null
+  private readonly fxTextures: FxTextures
   private ambient: AmbientEffect[] = []
   /** 캔버스가 컨테이너를 넘칠 수 있어 overflow를 바꾼다. 해제할 때 원래 값으로 되돌린다. */
   private readonly previousOverflow: string
 
   private resizeObserver: ResizeObserver | null = null
   private idleTweens: gsap.core.Tween[] = []
-  private pulseTweens: gsap.core.Tween[] = []
+  private fxHandles: SymbolFxHandle[] = []
   private spinTimelines: gsap.core.Timeline[] = []
   /** 중단된 스핀의 대기자를 풀어 주기 위한 resolver 목록. */
   private spinResolvers: (() => void)[] = []
   private spinToken = 0
   private stopCoins: (() => void) | null = null
+  private stopConfetti: (() => void) | null = null
+  private crossfadeTween: gsap.core.Tween | null = null
   private winToken = 0
   private readonly timers = new Set<ReturnType<typeof setTimeout>>()
   private destroyed = false
@@ -146,6 +150,7 @@ class PixiRenderer implements RendererCore {
     this.textures = textures
     this.coinTexture = coinTexture
     this.ownedTextures = ownedTextures
+    this.confettiTexture = createConfettiTexture(ownedTextures)
     this.frameSprite = frameTexture === null ? null : new Sprite(frameTexture)
     this.geometry = this.measureGeometry()
 
@@ -153,9 +158,8 @@ class PixiRenderer implements RendererCore {
     this.previousOverflow = options.container.style.overflow
     options.container.style.overflow = 'hidden'
 
-    const ambientOn = !options.reducedMotion
-    this.shineTexture = ambientOn ? createShineTexture(ownedTextures) : null
-    this.sparkleTexture = ambientOn ? createSparkleTexture(ownedTextures) : null
+    this.sparkleTexture = options.reducedMotion ? null : createSparkleTexture(ownedTextures)
+    this.fxTextures = createFxTextures(ownedTextures)
 
     this.backgroundSprite = backgroundTexture === null ? null : new Sprite(backgroundTexture)
     if (this.backgroundSprite !== null) this.backgroundLayer.addChild(this.backgroundSprite)
@@ -187,7 +191,6 @@ class PixiRenderer implements RendererCore {
     // 베젤 아트는 릴을 살짝 덮어야 안쪽 하이라이트가 살아난다. 릴 위에 둔다.
     // 베젤이 배경을 거의 다 가리므로 반짝임은 그 위로 올려야 보인다. 브라스가 반짝이는 것처럼 읽힌다.
     if (this.frameSprite !== null) this.root.addChild(this.frameSprite, this.sparkleLayer)
-    this.root.addChild(this.ambientLayer)
     this.app.stage.addChild(this.root)
 
     this.buildReels()
@@ -227,6 +230,7 @@ class PixiRenderer implements RendererCore {
           canvasWidth: fitted.canvasWidth,
           canvasHeight: fitted.canvasHeight,
           frameRect: fitted.frameRect,
+          window: fitted.window,
           layout: fitted.layout,
           content: fitted.content,
           framed: true,
@@ -246,6 +250,7 @@ class PixiRenderer implements RendererCore {
         canvasWidth: framed.canvasWidth,
         canvasHeight: framed.canvasHeight,
         frameRect: { x: 0, y: 0, width: framed.canvasWidth, height: framed.canvasHeight },
+        window: framed.window,
         layout: framed.layout,
         content: framed.content,
         framed: true,
@@ -257,6 +262,7 @@ class PixiRenderer implements RendererCore {
       canvasWidth: layout.width,
       canvasHeight: layout.height,
       frameRect: null,
+      window: null,
       layout,
       content: { x: 0, y: 0 },
       framed: false,
@@ -509,46 +515,164 @@ class PixiRenderer implements RendererCore {
 
   // ------------------------------------------------------------------ 승리
 
+  /**
+   * 승리 연출. 한 바퀴는 A단계(전체 동시) → B단계(라인 하나씩) 순서다.
+   *
+   * 첫 바퀴가 끝나면 resolve한다. `loop`면 그 뒤로도 `clearWins()`나 다음 `spinTo()`까지 계속 돈다.
+   * 실제 순서와 길이는 `buildPresentation`이 정한다. 여기서는 그리기와 대기만 한다.
+   */
   async showWins(wins: WinLine[], opts?: ShowWinsOptions): Promise<void> {
     this.clearWins()
     if (this.destroyed || wins.length === 0) return
 
     const token = this.winToken
-    const cycleMs = this.options.reducedMotion ? REDUCED_WIN_CYCLE_MS : WIN_CYCLE_MS
+    const steps = buildPresentation(wins, this.options.math, {
+      ...(opts?.totalBet === undefined ? {} : { totalBet: opts.totalBet }),
+      reducedMotion: this.options.reducedMotion,
+    })
+    if (steps.length === 0) return
 
-    if (!this.options.reducedMotion && isBigWin(wins, this.options.math, opts?.totalBet)) {
-      this.stopCoins = burstCoins(this.fxLayer, this.coinTexture, this.layout)
-    }
-
-    const runPass = async (): Promise<void> => {
-      for (const win of wins) {
-        if (token !== this.winToken || this.destroyed) return
-        this.drawWin(win)
-        this.emit({ type: 'winShown', line: win.line })
-        await this.wait(cycleMs)
+    const first = steps[0]
+    const tier = first !== undefined && first.phase === 'all' ? first.tier : 'none'
+    if (!this.options.reducedMotion && tier !== 'none') {
+      this.stopCoins = burstCoins(this.fxLayer, this.coinTexture, this.layout, coinCountForTier(tier))
+      // 색종이는 최고 등급에만. 아래 등급까지 뿌리면 특별함이 사라진다.
+      if (tier === 'max') {
+        this.stopConfetti = burstConfetti(this.fxLayer, this.confettiTexture, this.layout)
       }
     }
 
-    await runPass()
+    const label = opts?.formatLineLabel ?? defaultLineLabel
 
-    // loop면 첫 바퀴가 끝난 시점에 resolve하고, 이후는 clearWins/spinTo가 멈출 때까지 계속 돈다.
+    const runCycle = async (): Promise<void> => {
+      for (const step of steps) {
+        if (token !== this.winToken || this.destroyed) return
+        this.renderStep(step, label)
+        await this.wait(step.durationMs)
+      }
+    }
+
+    await runCycle()
+
     if (opts?.loop === true && token === this.winToken && !this.destroyed) {
       void (async () => {
         while (token === this.winToken && !this.destroyed) {
-          await runPass()
+          await runCycle()
         }
       })()
     }
   }
 
-  private drawWin(win: WinLine): void {
+  /** 연출 한 스텝을 화면에 올린다. 이전 스텝의 fx와 딤은 먼저 걷어낸다. */
+  private renderStep(step: PresentationStep, label: (win: WinLine) => string): void {
+    this.stopSymbolFx()
+    this.winGraphics.clear()
+    this.winLabel.visible = false
+
+    if (step.phase === 'all') {
+      const positions = step.wins.flatMap((win) => win.positions)
+      this.dimExcept(positions)
+      this.playFxAt(positions)
+      // 허브가 배당 카운터를 이 시간에 맞춰 굴릴 수 있도록 시작할 때 알린다.
+      this.emit({
+        type: 'winTotal',
+        totalWin: step.totalWin,
+        tier: step.tier,
+        durationMs: step.durationMs,
+      })
+      return
+    }
+
+    const win = step.win
+    this.dimExcept(win.positions)
+    this.playFxAt(win.positions)
+    this.drawWinLine(win)
+    this.placeWinLabel(win, label)
+    this.crossfadeOverlay()
+    this.emit({ type: 'winLine', line: win.line, win: win.win })
+  }
+
+  /** 라인이 바뀔 때 오버레이를 투명에서 끌어올려 툭 끊기지 않게 한다. */
+  private crossfadeOverlay(): void {
+    this.crossfadeTween?.kill()
+    if (this.options.reducedMotion) {
+      this.winGraphics.alpha = 1
+      this.winLabel.alpha = 1
+      return
+    }
+    this.winGraphics.alpha = 0
+    this.winLabel.alpha = 0
+    const overlay = { value: 0 }
+    this.crossfadeTween = gsap.to(overlay, {
+      value: 1,
+      duration: PHASE_CROSSFADE_MS / 1000,
+      ease: 'sine.out',
+      onUpdate: () => {
+        this.winGraphics.alpha = overlay.value
+        this.winLabel.alpha = overlay.value
+      },
+    })
+  }
+
+  /** 승리에 참여하지 않는 심볼을 어둡게 눌러 이긴 심볼만 도드라지게 한다. */
+  private dimExcept(positions: readonly (readonly [number, number])[]): void {
+    const lit = new Set(positions.map(([reel, row]) => `${reel}:${row}`))
+    for (let reel = 0; reel < this.reels.length; reel += 1) {
+      const view = this.reels[reel]
+      if (view === undefined) continue
+      for (let k = 0; k < view.cells.length; k += 1) {
+        const cell = view.cells[k]
+        if (cell === undefined) continue
+        // 셀 인덱스 0은 위쪽 오버스캔이라 화면 행은 k - 1이다.
+        cell.view.alpha = lit.has(`${reel}:${k - 1}`) ? 1 : DIM_ALPHA
+      }
+    }
+  }
+
+  private undim(): void {
+    for (const view of this.reels) {
+      for (const cell of view.cells) cell.view.alpha = 1
+    }
+  }
+
+  /** 좌표 목록의 심볼에 테마가 정한 연출을 건다. */
+  private playFxAt(positions: readonly (readonly [number, number])[]): void {
+    positions.forEach(([reel, row], index) => {
+      const cell = this.reels[reel]?.cells[row + 1]
+      if (cell === undefined || cell.symbol === null) return
+      const effects = resolveSymbolFx(this.options.theme.fx, cell.symbol, this.options.reducedMotion)
+      if (effects.length === 0) return
+      this.fxHandles.push(
+        playSymbolFxSet(
+          { view: cell.view, sprite: cell.sprite, symbolSize: this.layout.symbolSize, index },
+          effects,
+          this.fxTextures,
+        ),
+      )
+    })
+  }
+
+  private stopSymbolFx(): void {
+    for (const handle of this.fxHandles) handle.stop()
+    this.fxHandles = []
+    this.undim()
+    for (const view of this.reels) {
+      for (const cell of view.cells) {
+        cell.view.scale.set(1)
+        cell.view.rotation = 0
+        cell.sprite.alpha = 1
+        cell.sprite.y = 0
+      }
+    }
+  }
+
+  /** 페이라인 폴리라인과 승리 심볼 둘레의 브라스 광채. */
+  private drawWinLine(win: WinLine): void {
     const payline = this.options.math.paylines[win.line]
     if (payline === undefined) return
     const lineColor = paylineColor(this.options.theme.palette.winLine, win.line)
     const brass = this.options.theme.palette.frame
     const radius = this.layout.radius * 0.5
-
-    this.winGraphics.clear()
 
     const points = paylinePoints(this.layout, payline)
     const first = points[0]
@@ -579,60 +703,38 @@ class PixiRenderer implements RendererCore {
       this.winGraphics.roundRect(rect.x, rect.y, rect.width, rect.height, radius)
     }
     this.winGraphics.stroke({ width: WIN_HIGHLIGHT_STROKE_PX, color: brass, alpha: 0.95, join: 'round' })
-
-    this.placeWinLabel(win, payline)
-    this.pulseWinSymbols(win)
   }
 
-  private placeWinLabel(win: WinLine, payline: readonly number[]): void {
+  /** 라인 끝 심볼 옆에 "Line n · 배당" 명판을 띄운다. */
+  private placeWinLabel(win: WinLine, label: (win: WinLine) => string): void {
+    const payline = this.options.math.paylines[win.line]
+    if (payline === undefined) return
     const lastReel = Math.max(0, win.positions.length - 1)
     const row = payline[lastReel] ?? 0
     const center = symbolCenter(this.layout, lastReel, row)
-    this.winLabel.text = formatWinLabel(win)
+    this.winLabel.text = label(win)
     this.winLabel.x = Math.min(
-      center.x + this.layout.symbolSize * 0.5,
-      this.layout.width - this.layout.symbolSize * 0.4,
+      Math.max(this.winLabel.width / 2, center.x + this.layout.symbolSize * 0.5),
+      this.layout.width - this.winLabel.width / 2,
     )
-    this.winLabel.y = center.y - this.layout.symbolSize * 0.5
+    this.winLabel.y = center.y - this.layout.symbolSize * 0.55
     this.winLabel.visible = true
-  }
-
-  private pulseWinSymbols(win: WinLine): void {
-    this.killPulses()
-    if (this.options.reducedMotion) return
-    for (const [reel, row] of win.positions) {
-      const cell = this.reels[reel]?.cells[row + 1]
-      if (cell === undefined) continue
-      cell.view.scale.set(1)
-      this.pulseTweens.push(
-        gsap.to(cell.view.scale, {
-          x: WIN_PULSE_SCALE,
-          y: WIN_PULSE_SCALE,
-          duration: WIN_PULSE_MS / 2000,
-          yoyo: true,
-          repeat: -1,
-          ease: 'sine.inOut',
-        }),
-      )
-    }
-  }
-
-  private killPulses(): void {
-    for (const tween of this.pulseTweens) tween.kill()
-    this.pulseTweens = []
-    for (const view of this.reels) {
-      for (const cell of view.cells) cell.view.scale.set(1)
-    }
   }
 
   clearWins(): void {
     this.winToken += 1
     this.winGraphics.clear()
     this.winLabel.visible = false
-    this.killPulses()
+    this.stopSymbolFx()
     this.clearTimers()
+    this.crossfadeTween?.kill()
+    this.crossfadeTween = null
+    this.winGraphics.alpha = 1
+    this.winLabel.alpha = 1
     this.stopCoins?.()
     this.stopCoins = null
+    this.stopConfetti?.()
+    this.stopConfetti = null
   }
 
   private wait(ms: number): Promise<void> {
@@ -689,11 +791,10 @@ class PixiRenderer implements RendererCore {
     for (const effect of this.ambient) effect.stop()
     this.ambient = []
     this.sparkleLayer.removeChildren()
-    this.ambientLayer.removeChildren()
   }
 
   /**
-   * 배경 반짝임과 프레임 위 빛 쓸기를 다시 건다.
+   * 배경 반짝임을 다시 건다.
    * 배치가 캔버스 크기에 묶여 있어 레이아웃이 바뀔 때마다 새로 시작한다.
    * 모션 축소에서는 텍스처조차 만들지 않으므로 아무것도 하지 않는다.
    */
@@ -706,11 +807,13 @@ class PixiRenderer implements RendererCore {
 
     if (this.sparkleTexture !== null) {
       const area = { x: 0, y: 0, width: canvasWidth, height: canvasHeight }
-      this.ambient.push(startSparkles(this.sparkleLayer, this.sparkleTexture, area))
-    }
-    // 빛 쓸기는 훑을 표면이 있을 때만 의미가 있다. 벡터 베젤에는 걸지 않는다.
-    if (this.shineTexture !== null && frameRect !== null) {
-      this.ambient.push(startLightSweep(this.ambientLayer, this.shineTexture, frameRect))
+      // 릴 창 위에서는 반짝이지 않는다. 심볼을 읽는 데 방해가 된다.
+      const window = this.geometry.window
+      this.ambient.push(
+        startSparkles(this.sparkleLayer, this.sparkleTexture, area, {
+          ...(window === null ? {} : { exclude: window }),
+        }),
+      )
     }
   }
 

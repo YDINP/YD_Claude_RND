@@ -70,6 +70,12 @@ const en = {
     'Every spin publishes a hashed server seed before you play and reveals the real seed after, so you can verify the result yourself.',
   version: 'Version',
   supportId: 'Support ID',
+  // win banner tiers
+  winPlain: 'WIN',
+  winBig: 'BIG WIN',
+  winMega: 'MEGA WIN',
+  winEpic: 'EPIC WIN',
+  winMax: 'MAX WIN',
 } as const
 
 export default en

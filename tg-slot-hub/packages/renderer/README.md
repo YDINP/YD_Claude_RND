@@ -38,14 +38,72 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 |---|---|---|
 | `ready` | `Promise<void>` | 에셋 로딩과 첫 렌더 완료 |
 | `spinTo` | `(stops: number[], opts?: { durationMs?: number; stagger?: number }) => Promise<void>` | 릴을 돌려 `stops`에 **정확히** 멈춘다. 모든 릴이 멈추면 resolve |
-| `showWins` | `(wins: WinLine[], opts?: { loop?: boolean; totalBet?: number }) => Promise<void>` | 페이라인 오버레이 + 심볼 펄스 + 배당 라벨. 첫 바퀴가 끝나면 resolve |
+| `showWins` | `(wins, opts?: { loop?; totalBet?; formatLineLabel? }) => Promise<void>` | 아래 "승리 연출" 참고. 첫 바퀴가 끝나면 resolve |
 | `clearWins` | `() => void` | 승리 연출 즉시 정리 |
 | `setSpinningIdle` | `(on: boolean) => void` | 대기 중 미세한 유휴 모션 |
 | `resize` | `() => void` | 레이아웃 재계산. ResizeObserver가 자동 호출도 한다 |
 | `destroy` | `() => void` | 트윈·옵저버·캔버스까지 해제 |
 
 `showWins`에 `loop: true`를 주면 첫 바퀴가 끝난 시점에 resolve하고,
-이후로는 `clearWins()`나 다음 `spinTo()`가 멈출 때까지 라인을 계속 순환한다.
+이후로는 `clearWins()`나 다음 `spinTo()`가 멈출 때까지 계속 순환한다.
+
+## 승리 연출
+
+프라그마틱 계열 슬롯의 순서를 따른다. 한 바퀴는 **A단계 → B단계**다.
+
+| 단계 | 조건 | 길이 | 화면 |
+|---|---|---|---|
+| A "전체" | 승리 1개 이상 | 등급별 900~2200ms | 이긴 심볼이 **동시에** 연출된다. 나머지는 α 0.5로 눌린다. 페이라인은 아직 안 그린다 |
+| B "라인별" | 승리 2개 이상 | 라인당 1400ms | 그 라인 심볼만 연출되고 폴리라인과 명판이 뜬다 |
+
+라인이 바뀔 때는 150ms 크로스페이드로 넘긴다. 모션 축소에서는 즉시 전환한다.
+
+승리가 하나뿐이면 B단계 없이 그 라인 하나가 A단계 뒤에 붙어 그대로 반복된다.
+라인 순서는 페이라인 인덱스 오름차순이다.
+
+명판 문구는 `formatLineLabel(win)`으로 갈아끼운다. 렌더러는 번역을 모른다.
+기본값은 `Line {n} · {배당}`이다.
+
+`spinTo()`는 진행 중인 연출을 **즉시** 끊는다. 트윈을 죽이고 눌러 둔 밝기도 되돌린다.
+
+순서와 길이는 `buildPresentation(wins, math, opts)`가 정하는 순수 데이터라 타이머 없이 검증한다.
+
+## 심볼 연출 (`theme.json`의 `fx`)
+
+심볼마다 승리 연출을 데이터로 지정한다. 코드 수정 없이 게임 팩에서 바꾼다.
+
+```json
+"fx": {
+  "default": { "win": [{ "type": "pulse", "scale": 1.12, "durationMs": 600 }] },
+  "wild":    { "win": [{ "type": "burst", "particles": 24 }, { "type": "glow", "color": "#f4d98a" }] },
+  "blank":   { "win": [] }
+}
+```
+
+| 타입 | 하는 일 | 고유 필드 |
+|---|---|---|
+| `pulse` | 커졌다 작아진다 | `scale` |
+| `shine` | 심볼 모양 안에서 빛줄기가 대각선으로 지나간다 | `angle` (도) |
+| `wobble` | 좌우로 갸웃거린다 | `degrees` |
+| `bounce` | 위아래로 튄다 | `px` (심볼 높이 대비 비율) |
+| `burst` | 파티클이 사방으로 퍼진다 | `particles` |
+| `glow` | 뒤에서 광채가 번진다 | `color` |
+| `flash` | 밝기가 깜빡인다 | `stagger`, `segments` |
+| `spin` | 가로로 뒤집힌다 | 없음 |
+
+공통 필드는 `durationMs`(기본 700), `loop`(기본 true), `intensity`(0~1, 기본 1),
+그리고 `repeat`(유한 반복 횟수)다. `repeat`을 주면 그 횟수만 돌고 원래 상태로 멈춘다. `loop`보다 우선한다.
+
+`flash`의 `segments`는 심볼을 가로 띠 N개로 나눠 **위에서 아래로** 차례로 번쩍이게 한다.
+3단 BAR에 한 칸씩 불이 들어오는 연출이 이것이다. `stagger`가 켜져 있어야 순차로 흐르고,
+꺼져 있으면 띠가 동시에 밝아진다. 상한은 6이다.
+
+**한 심볼의 `win` 배열은 순서가 아니라 조합이다.** 안에 든 스텝이 전부 동시에 재생된다.
+
+찾는 순서는 `fx[심볼id].win` → `fx.default.win` → 내장 pulse다.
+**빈 배열은 "연출 없음"**이라 기본값으로 되돌아가지 않는다. `blank`를 조용히 두는 방법이다.
+
+모션 축소에서는 pulse 하나만 남는다. 파티클은 전부 사라진다.
 
 이벤트:
 
@@ -53,8 +111,27 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 type RendererEvent =
   | { type: 'reelStop'; reel: number }
   | { type: 'spinEnd' }
-  | { type: 'winShown'; line: number }
+  | { type: 'winTotal'; totalWin: number; tier: WinTier; durationMs: number }
+  | { type: 'winLine'; line: number; win: number }
 ```
+
+`winTotal`은 승리 연출 A단계가 **시작할 때** 총배당과 등급과 그 단계의 길이를 함께 준다.
+허브는 `durationMs`에 맞춰 배당 카운터를 굴리고 `tier`로 배너를 고르면 된다.
+`winLine`은 B단계에서 라인을 하나 짚을 때마다 온다.
+
+### 승리 등급
+
+`docs/REFERENCE_PRAGMATIC.md` §2의 업계 관행 구간을 그대로 쓴다. 기준은 **총 베팅액 대비 배수**다.
+
+| 등급 | 배수 | A단계 길이 | 코인 | 색종이 |
+|---|---|---|---|---|
+| `none` | 10배 미만 | 900ms | 없음 | 없음 |
+| `big` | 10배 이상 | 1600ms | 20개 | 없음 |
+| `mega` | 20배 이상 | 2200ms | 35개 | 없음 |
+| `epic` | 50배 이상 | 2200ms | 50개 | 없음 |
+| `max` | 100배 이상 | 2200ms | 60개 | 36장 |
+
+`winTier(wins, math, totalBet)`가 순수 함수로 등급을 낸다. `totalBet`을 생략하면 라인 배수 합으로 유도한다.
 
 ## 좌표 규약
 
@@ -82,11 +159,11 @@ type RendererEvent =
 | 스핀 | 가속(`power2.in`) → 감속(`power2.out`) |
 | 정지 순서 | 왼쪽 → 오른쪽, `stagger` 간격 (기본 160ms) |
 | 정지 | 튕기지 않는다. 0.04칸(90ms)만 아주 짧게 자리를 잡는다 |
-| 승리 라인 순환 | 900ms 주기, 심볼 펄스 1 → 1.12 → 1 |
+| 승리 연출 | A단계 900/1600/2200ms(등급별) → 라인당 1400ms, 전환 150ms |
 | 승리 강조 | 브라스 광채 3겹 + 2px 테두리. 페이라인은 3px, 불투명도 0.6 |
-| 은은한 연출 | 프레임 위 대각선 빛 쓸기(6초 주기), 배경 반짝임 12~20개 |
+| 은은한 연출 | 배경 반짝임 6~10개. 릴 창 위에는 놓지 않는다 |
 | 빅윈 | 총배당이 베팅액의 **20배 이상**이면 코인 샤워 (스프라이트 60개 상한) |
-| 모션 축소 | 전체 스핀 300ms 이하. 반동·마무리·펄스·파티클·빛 쓸기·반짝임 모두 없음 |
+| 모션 축소 | 전체 스핀 300ms 이하. 반동·마무리·파티클·반짝임 없음. 심볼 연출은 pulse만 |
 
 `showWins`에 `totalBet`을 주면 빅윈 판정이 정확해진다.
 없으면 `sum(multiplier) / paylines.length`로 같은 값을 유도한다
@@ -138,7 +215,7 @@ const theme = await loadTheme('/games/classic-777', math)
 | 출처 | 소유자 | `destroy()` 때 |
 |---|---|---|
 | `Assets.load` (심볼·배경·프레임 이미지) | Pixi 전역 에셋 캐시 | 건드리지 않는다 (다음 진입에서 재사용) |
-| 캔버스로 그린 폴백 심볼·코인·빛·반짝임 텍스처 | **이 렌더러 인스턴스** | GPU 리소스까지 해제한다 |
+| 캔버스로 그린 폴백 심볼·코인·반짝임·연출 텍스처 | **이 렌더러 인스턴스** | GPU 리소스까지 해제한다 |
 | 크로마키를 다시 돌려 만든 프레임 텍스처 | **이 렌더러 인스턴스** | GPU 리소스까지 해제한다 |
 
 캔버스 텍스처는 캐시가 소유하지 않으므로 렌더러가 직접 정리하지 않으면
@@ -196,13 +273,17 @@ scale = min(containerW * (1 + overflowX) / frameW,  containerH / frameH)
 `overflowX`를 키워도 릴이 무한정 커지지는 않는다. 창보다 격자가 먼저 묶이기 때문이다.
 classic-777 창은 가로가 세로보다 넓은데(386x321) 3x3 격자는 정사각형이라 **세로에 묶인다**.
 
+현재 배포된 classic-777 프레임(창 `w 0.723, h 0.628`) 기준:
+
 | 컨테이너 | 배율 | 프레임 | 창 | 심볼 |
 |---|---|---|---|---|
-| 390x760 | 0.469 | 506.7x760.0 | 386.2x320.9 (폭의 99%) | 102.8px |
-| 390x844 | 0.469 | 507.0x760.5 | 386.4x321.1 (폭의 99%) | 102.9px |
-| 430x932 | 0.518 | 559.0x838.5 | 426.1x354.0 (폭의 99%) | 113.5px |
+| 390x760 | 0.469 | 506.7x760.0 | 366.4x477.2 | 117.4px |
+| 390x844 | 0.469 | 507.0x760.5 | 366.6x477.5 | 117.5px |
+| 430x932 | 0.518 | 559.0x838.5 | 404.2x526.5 | 129.6px |
 
-심볼을 더 키우려면 `overflowX`가 아니라 **아트의 창 세로 비율**(`frameLayout.window.h`)을 키워야 한다.
+창이 세로로 길어 격자가 **폭에 묶인다**. 이 상태가 심볼이 가장 커지는 배치다.
+창이 다시 납작해지면(`h`가 작아지면) 격자가 세로에 묶여 심볼이 줄어든다.
+그때는 `overflowX`가 아니라 **아트의 창 세로 비율**을 손봐야 한다.
 
 순수 계산은 `frameWindowRect(frameW, frameH, window)`, `computeFrameLayout(...)`,
 `computeWindowFitLayout(...)`이 맡고 셋 다 단위 테스트가 있다.
@@ -232,7 +313,10 @@ Pixi 없이도 쓸 수 있는 부분은 따로 내보낸다. 허브의 테스트
 | `frameWindowRect`, `computeFrameLayout`, `computeWindowFitLayout` | 프레임 아트 안의 릴 창 배치 |
 | `buildSpinPlan` | 릴별 타이밍 계획. 반동 시간과 마무리 시간을 포함한다 |
 | `isChromaGreen`, `keyOutGreen` | 잔여 크로마키 판정과 제거 |
-| `planSparkles`, `planLightSweep` | 은은한 연출 배치 |
+| `planSparkles` | 배경 반짝임 배치. 릴 창을 피한다 |
+| `buildPresentation`, `defaultLineLabel` | 승리 연출 순서와 길이 |
+| `resolveSymbolFx`, `resolveFxEffect` | 심볼 연출 조회와 기본값 |
+| `winTier`, `phaseAllDurationMs` | 승리 등급과 등급별 연출 길이 |
 | `isBigWin`, `winBetMultiple`, `paylineColor`, `buildWinCycle`, `formatWinLabel` | 승리 연출 규칙 |
 | `parseTheme`, `loadTheme`, `resolveSymbolSource`, `resolveFrameWindow` | 테마 검증·로딩 |
 

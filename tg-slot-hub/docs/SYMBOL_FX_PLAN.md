@@ -1,0 +1,220 @@
+# 심볼별 당첨 연출 기획 (Symbol Win FX Plan)
+
+작성일: 2026-09-02
+적용 범위: `games/classic-777` 1차 적용, `fx` 스키마는 모든 게임 팩이 공유
+참고 문서: `docs/ART_DIRECTION.md`(심볼 컨셉·모션 노트), `games/classic-777/math.json`(심볼/배당),
+`games/classic-777/theme/theme.json`(현재 팔레트), `packages/renderer/README.md`(렌더러 계약)
+
+현재 렌더러(`packages/renderer/src/pixi/pixiRenderer.ts`)는 모든 당첨 심볼에 **동일한** 스케일 펄스
+(`WIN_PULSE_SCALE 1.12`, 왕복 `WIN_PULSE_MS 420ms`)와 공용 브라스 글로우 3겹만 적용한다. 이 문서는 심볼마다
+다른 모션을 주는 `fx` 스키마를 제안하고, `math.json`의 배당 티어(와일드 500 > 세븐 120 > 바3 75 > 바2 30 >
+바1 20 > 벨 15 > 체리 10 > 빈칸 0)가 화면에서도 위계로 읽히게 만든다.
+
+---
+
+## 1. 원칙
+
+1. **당첨 심볼은 살아난다, 비당첨은 물러난다.** 당첨 라인에 포함되지 않은 심볼은 알파 `0.45`로 어둡게
+   가라앉혀(dim) 당첨 심볼과의 대비를 만든다. 대비가 곧 가독성이므로 dim 값은 심볼마다 바뀌지 않는다.
+2. **위계는 배당 티어를 따른다.** 와일드·세븐(히어로 심볼)은 가장 화려한 연출(파티클·글로우·스윕)을,
+   바 시리즈는 절제된 순차 반짝임을, 벨·체리는 캐릭터성 있는 물리 모션을(흔들림, 통통 튐), 빈칸은
+   연출 자체가 없다. 연출 강도가 배당표 순서를 배신하면 안 된다.
+3. **전체 강조 → 라인 순환 2단 구성.** 스핀 정지 직후에는 당첨된 모든 심볼이 **동시에** fx를 재생해
+   "이번 스핀이 이겼다"를 즉시 전달하고, 그다음 라인별로 순환하며 각 라인의 근거(페이라인 모양 + 금액)를
+   설명한다. 순서를 반대로 하면(라인부터) 첫 인상이 약해진다.
+4. **루프 주기는 0.9~1.2초, 예산은 모바일 60fps.** 현재 렌더러 상수 `WIN_CYCLE_MS = 900ms`가 이미 이
+   범위의 하한과 일치하므로 기본값은 유지하고, 심볼별 fx의 `durationMs`만 900~1200ms 사이에서 캐릭터에
+   맞게 조정한다. 심볼 하나당 필터·파티클 레이어를 3개 이상 쌓지 않는다 (글로우 1 + 모션 1 + 선택적
+   파티클 1로 상한).
+5. **정지 이미지 자산은 그대로 쓴다.** `theme/symbols/*.webp`는 프레임 시퀀스가 아니라 단일 정지 프레임이므로,
+   연출은 전부 그 위에 얹는 변형(트윈)이어야 한다. 아트를 다시 찍지 않고도 연출을 바꿀 수 있는 것이
+   이 스키마의 핵심 이점이다.
+
+---
+
+## 2. 심볼별 기획표 (classic-777, 8종)
+
+배당 순서(높은 배당 → 낮은 배당)로 정렬. `math.json`의 `paytable` 기준.
+
+| 심볼 | 아이디어 (1줄) | 모션 타입 | 파라미터 (강도/주기) | 사운드 힌트 | 빅윈 시 추가 연출 |
+|---|---|---|---|---|---|
+| `wild` | 브라스 별이 폭발하듯 광선을 뿜고 반짝이가 흩날린다 | `burst` + `glow` + `spin` | burst: particles 24, 1000ms, 360° 방사 / glow: color `#f4d98a`, radius ×1.4, 900ms / spin: scale.x flip 1회, 300ms | 크리스탈 차임 상행 아르페지오 + 저음 스웰 | particles 48로 배증, 골드 링 웨이브 2회 추가 재생, glow radius ×1.8 |
+| `seven` | 크롬 레드 세븐 표면을 금빛 하이라이트가 대각선으로 훑고 지나간다 | `pulse` + `shine` | pulse: scale 1.15, 700ms / shine: angle 25°, width 0.3, 900ms | 크롬 스윕(화이트노이즈 스침) + 벨 딩 단음 | shine 2연속 재생(딜레이 120ms), 배경 라이트닝 플래시 1회 |
+| `bar3` | 3단 블랙 바가 위→아래로 순차 반짝인다 | `flash` (stagger) | durationMs 500, stagger true, segment 3, segmentDelayMs 120, fromAlpha 0.4 | 메탈 클릭 ×3 (상→하) | 3단 동시 골드 테두리 glow 추가 (color `#f4d98a`, 700ms) |
+| `bar2` | 2단 블랙 바가 순차 반짝인다 | `flash` (stagger) | durationMs 500, stagger true, segment 2, segmentDelayMs 150, fromAlpha 0.45 | 메탈 클릭 ×2 | bar3와 동일 규칙, glow radius 소폭 축소 |
+| `bar1` | 1단 블랙 바가 반짝인다 | `flash` | durationMs 500, stagger false, fromAlpha 0.5 | 메탈 클릭 ×1 | 옅은 glow 추가(700ms, radius ×1.15) |
+| `bell` | 종이 좌우로 흔들리며 울림이 퍼진다 | `wobble` + `glow` | wobble: degrees ±12, 800ms / glow: color `#d8a94a`, radius ×1.2, 800ms (동기화, 울림 링처럼 은은히 맥동) | 벨 울림(짧은 리버브 테일) | wobble 각도 ±18°, glow 울림 2겹(딜레이 200ms) |
+| `cherry` | 체리 두 알이 통통 튀며 줄기가 함께 흔들린다 | `bounce` + `wobble` | bounce: px 0.08(심볼 높이 비), 700ms, squash true / wobble: degrees ±6, 700ms(동기) | 통통 튀는 팝(pop) 사운드 | bounce 진폭 ×1.5, 빨간 스파클 파티클 6개(burst, 400ms) 추가 |
+| `blank` | 연출 없음 — 당첨 불가 심볼 | 없음 | `"win": []` | 없음 | 없음 (빈칸은 `paytable`에 항목이 없어 원천적으로 당첨 라인에 포함되지 않는다) |
+
+**메모**
+- 세븐은 `math.json`에서 2개만 맞아도 배당(`"2": 8`)이 있는 유일한 비와일드 심볼이라, 2매칭 상태에서도
+  동일한 `win` fx를 그대로 적용한다(강도 차등 없음 — 매칭 개수가 아니라 라인 성립 여부로만 트리거).
+- 바 시리즈 3종은 `flash`의 `segment`/`segmentDelayMs`만 다르고 나머지 재질 언어를 통일해
+  ART_DIRECTION의 "bar3/bar2/bar1은 동일 재질 언어" 원칙을 연출에도 유지한다.
+- 벨의 `glow`는 별도 파티클 텍스처 없이 기존 `glow` 레이어(브라스 3겹 글로우와 같은 리소스)를 재사용해
+  구현 비용을 늘리지 않는다.
+
+---
+
+## 3. 구현 방식 3안 비교
+
+| 안 | 방식 | 장점 | 단점 | 비용/일정 |
+|---|---|---|---|---|
+| **A. 프로시저럴 Pixi 트윈** | GSAP으로 스케일·회전·틴트·알파·마스크 스윕을 정지 이미지(`webp`) 위에 실시간 적용 | 지금 바로 가능(아트 재생성 불필요), 8종 전부 일관 적용, 파일 용량 증가 없음, `reducedMotion` 대응 쉬움(트윈 스킵) | 손으로 그린 듯한 디테일(옷감 흔들림 등)은 못 만듦, 파티클류(`burst`)는 별도 텍스처 필요(이미 `coins.ts`/`ambient.ts`에 유사 자산 존재) | 낮음. 렌더러 팀이 `fx` 스키마 파서 + 트윈 매퍼만 추가하면 됨 |
+| **B. 이미지 생성 프레임 시퀀스 스프라이트시트** | `gpt-image-1`로 심볼당 N프레임(예: 8프레임) 생성 후 스프라이트시트로 재생 | 손으로 그린 것 같은 유기적 모션 가능 | **프레임 간 일관성이 현재 파이프라인의 한계다** — 같은 프롬프트로 여러 번 생성해도 조명/각도/디테일이 미세하게 흔들려 루프가 "깜빡"거림. 심볼 8종 × 8프레임 = 64장 생성·키잉·QA, 512px 기준 텍스처 메모리도 8배. `theme-gen`(P5 예정)이 아직 단일 프레임만 계약함 | 높음. 파이프라인 재설계 필요, 반복 생성 비용도 큼 |
+| **C. Spine/Rive 리깅** | 심볼을 파츠로 분리해 스켈레탈 애니메이션으로 리깅 | 가장 매끄러운 루프, 물리 기반 흔들림(체리 줄기, 벨 추 등) 가능, 프레임 일관성 문제 없음(원본 아트 그대로) | 리깅 인력/툴 비용, `pixi-spine` 등 런타임 의존성 추가, 파츠 분리를 위해 심볼 아트를 레이어드로 다시 준비해야 함(현재는 단일 flat webp) | 심볼당 리깅 작업 필요. 전 심볼 적용은 비현실적 |
+
+**권장: A를 v1 기본안으로 전 8종에 적용한다.** B는 현재 이미지 생성 파이프라인의 프레임 일관성 한계
+때문에 채택하지 않는다(팀 리서치 결과와 일치). C는 나중에 **히어로 심볼(`wild`, `seven`)에 한해서만**
+검토한다 — 이 둘이 최고 배당 심볼이라 투자 대비 체감 효과가 가장 크고, 파츠 분리(별 광선 vs 별 몸통,
+세븐 숫자 vs 베젤)도 상대적으로 단순하기 때문이다. 나머지 6종은 A만으로 충분하다.
+
+---
+
+## 4. `theme.json` `fx` 스키마 제안
+
+렌더러 팀이 이 스키마 그대로 파서와 트윈 매퍼를 구현한다. `theme.json`에 최상위 키 `fx`를 추가하고,
+심볼 id별로(또는 `default`로) `win` 스텝 배열을 정의한다. **한 심볼의 `win` 배열 안 스텝들은 동시에(레이어로)
+재생된다** — 순서가 아니라 조합이다.
+
+```json
+"fx": {
+  "default": {
+    "win": [{ "type": "pulse", "scale": 1.12, "durationMs": 600 }]
+  },
+  "wild": {
+    "win": [
+      { "type": "burst", "particles": 24, "durationMs": 1000 },
+      { "type": "glow", "color": "#f4d98a", "durationMs": 900 },
+      { "type": "spin", "durationMs": 300, "repeat": 1 }
+    ]
+  },
+  "seven": {
+    "win": [
+      { "type": "pulse", "scale": 1.15, "durationMs": 700 },
+      { "type": "shine", "durationMs": 900, "angle": 25 }
+    ]
+  },
+  "bar3": {
+    "win": [{ "type": "flash", "durationMs": 500, "stagger": true, "segments": 3 }]
+  },
+  "bar2": {
+    "win": [{ "type": "flash", "durationMs": 500, "stagger": true, "segments": 2 }]
+  },
+  "bar1": {
+    "win": [{ "type": "flash", "durationMs": 500 }]
+  },
+  "bell": {
+    "win": [
+      { "type": "wobble", "degrees": 12, "durationMs": 800 },
+      { "type": "glow", "color": "#d8a94a", "durationMs": 800 }
+    ]
+  },
+  "cherry": {
+    "win": [
+      { "type": "bounce", "px": 0.08, "durationMs": 700 },
+      { "type": "wobble", "degrees": 6, "durationMs": 700 }
+    ]
+  },
+  "blank": {
+    "win": []
+  }
+}
+```
+
+- `default`는 `fx`에 명시되지 않은 심볼(향후 신규 게임에서 아직 연출을 설계하지 못한 심볼 등)에 적용되는
+  안전망이다. 렌더러 README의 "에셋 하나 때문에 렌더러가 멈추는 일은 없다" 원칙을 연출에도 그대로
+  적용한 것 — `fx` 자체가 없는 테마는 전 심볼이 `default` pulse로 동작해야 한다.
+- `blank`는 `math.json`의 `paytable`에 항목이 없어 실제로는 절대 트리거되지 않지만, QA 명확성을 위해
+  빈 배열로 명시한다.
+
+### FX 타입별 파라미터 표
+
+| type | 설명 | 파라미터 | 기본값 |
+|---|---|---|---|
+| `pulse` | 스케일 맥동 (1 → scale → 1, 반복) | `scale`(number, >1), `durationMs`, `easing`(선택) | `scale` 1.12, `durationMs` 600, ease `sine.inOut` |
+| `shine` | 대각선 하이라이트 밴드가 심볼 위를 스윕 (마스크) | `angle`(deg, 0=수평), `width`(0~1, 밴드 폭 비율), `durationMs` | `angle` 25, `width` 0.3, `durationMs` 900 |
+| `wobble` | 회전 흔들림(rock), 중심축 기준 좌우 | `degrees`(±범위), `durationMs`, `cycles`(선택, 반복 횟수) | `degrees` 10, `durationMs` 800 |
+| `bounce` | Y축 통통 튐 (선택적 스쿼시&스트레치 병행) | `px`(심볼 높이 대비 비율, 0~1), `durationMs`, `squash`(bool) | `px` 0.08, `durationMs` 700, `squash` true |
+| `burst` | 파티클 방출 (스타버스트류) | `particles`(개수), `durationMs`, `spread`(deg, 방출 각도) | `particles` 16, `durationMs` 1000, `spread` 360 |
+| `glow` | 외곽 발광 레이어 (기존 브라스 글로우 리소스 재사용) | `color`(hex), `durationMs`, `radius`(스케일 배수) | `color` 심볼 티어 색, `durationMs` 900, `radius` 1.3 |
+| `flash` | 틴트/알파 깜빡임. `stagger`면 구획별 순차 재생 | `durationMs`, `stagger`(bool), `segments`(구획 수, stagger일 때만), `segmentDelayMs`, `fromAlpha` | `durationMs` 500, `stagger` false, `fromAlpha` 0.4 |
+| `spin` | 좌우 반전 회전 (scale.x flip) | `durationMs`, `axis`(`'x'`\|`'y'`), `repeat`(반복 횟수) | `durationMs` 300, `axis` `'x'`, `repeat` 1 |
+
+**공통 필드** (모든 스텝에 적용): `type`(필수), `durationMs`(필수). `loop`는 명시하지 않으면 `true` —
+해당 심볼이 당첨 강조 상태로 화면에 떠 있는 동안 계속 반복하고, 강조가 끝나면(다음 라인으로 순환하거나
+`clearWins()` 호출 시) 즉시 정지한다. `intensity`(0~1, 선택, 기본 1)는 접근성 설정(모션 강도 슬라이더 등
+향후 확장)에서 전체 진폭을 낮추는 전역 배율로 예약해 둔다.
+
+**렌더러 구현 메모**: 현재 `WIN_PULSE_SCALE`(1.12) / `WIN_PULSE_MS`(420ms) 상수는 `default` 항목의
+기본값과 정확히 대응하도록 맞췄다. 즉 `fx`가 없는 기존 테마(`bar1`~`bell` 등 아직 스키마를 채우지 않은
+게임 팩)를 로드해도 지금과 동일하게 보인다 — 마이그레이션 시 시각적 회귀가 없다.
+
+---
+
+## 5. 연출 타임라인 (Pragmatic 스타일)
+
+```
+정지(모든 릴 착지)
+  │
+  ▼ +0.15s
+전체 당첨 심볼 동시 강조
+  - 당첨 라인에 포함된 모든 심볼이 각자의 fx.win을 동시에 재생 (심볼별로 다른 모션)
+  - 비당첨 심볼은 알파 0.45로 dim
+  - 총 배당액 카운트업 시작
+      · 일반 당첨: 0.8s 동안 0 → 총액
+      · 빅윈(20배 이상): 1.6s 동안 카운트업 (숫자가 더 크게, 더 천천히 올라가야 무게감이 산다)
+  │
+  ▼ 카운트업 종료 후
+라인별 순환 (각 라인 슬롯 1.1s)
+  - 해당 라인의 심볼만 fx 강조 유지, 나머지는 dim으로 되돌아감
+  - 페이라인 그래픽 표시(브라스 광채 3겹 + 2px 테두리, 페이라인 자체는 3px/불투명도 0.6 — 기존 규칙 유지)
+  - "라인 N · 금액" 라벨 표시
+  - 다음 라인으로 크로스페이드 전환(150ms)
+  │
+  ▼ 전체 라인 순환 완료
+다음 스핀 입력 대기까지 처음부터 루프 반복
+  (플레이어가 다음 스핀을 누르면 즉시 clearWins() 후 새 스핀 시작 — 순환 도중이어도 중단 가능해야 함)
+
+빅윈 티어 (배율은 totalBet 대비)
+  ┌─────────┬────────┬──────────────────────────────────┐
+  │ 티어    │ 배율   │ 연출                               │
+  ├─────────┼────────┼──────────────────────────────────┤
+  │ BIG     │ ×20    │ 배너("BIG WIN") + 코인 샤워(기존 60개 상한 유지) │
+  │ MEGA    │ ×50    │ BIG 연출 + 화면 전체 브라스 라이트 플래시, 카운트업 2.0s │
+  │ EPIC    │ ×100   │ MEGA 연출 + 배너 확장(풀스크린), 카운트업 2.4s, 스킵 탭으로만 진행 │
+  └─────────┴────────┴──────────────────────────────────┘
+  - 스킵 탭: 화면 아무 곳이나 탭하면 카운트업을 즉시 최종값으로 스냅하고 라인 순환으로 넘어간다
+    (Pragmatic류 관례 — 강제로 연출을 다 보게 하지 않는다)
+```
+
+**현재 구현과의 차이 (렌더러 팀 확인 필요)**: `packages/renderer`는 현재 `BIG_WIN_BET_MULTIPLIER = 20`
+단일 임계값만 있고 코인 샤워 하나로 처리한다. 이 문서는 MEGA(×50)/EPIC(×100) 2단계를 추가로 제안한다.
+`WIN_CYCLE_MS = 900ms`(라인 순환 주기)는 이 문서의 "라인 슬롯 1.1s"와 200ms 차이가 나는데, 이는 기존 상수를
+그대로 쓸지(연출 단순 유지) 1.1s로 늘릴지(라벨을 읽을 시간 확보) 렌더러 팀의 결정 사항으로 남긴다 —
+900ms는 심볼 펄스만 있던 시절 값이라, 페이라인 라벨까지 읽어야 하는 지금은 살짝 늘리는 쪽을 권장한다.
+
+---
+
+## 6. 작업 리스트
+
+| 우선순위 | 작업 | 오너 | 비고 |
+|---|---|---|---|
+| **P0** | `theme.json` `fx` 스키마 파서 + `parseTheme` 검증 로직 추가 (타입별 필드 검증, `default` 폴백) | renderer | `packages/renderer/src` 내 `parseTheme`/`resolveSymbolSource`와 같은 계층 |
+| **P0** | `pulseWinSymbols`를 확장해 심볼별 `fx.win` 스텝 배열을 GSAP 타임라인으로 매핑 (`pulse`/`wobble`/`bounce`/`flash`는 스케일·회전·알파 트윈만으로 구현 가능) | renderer | 기존 `killPulses()` 정리 로직 재사용 |
+| **P0** | `shine`(마스크 스윕), `glow`(기존 브라스 글로우 레이어 재사용), `burst`(파티클) 3종 구현 — `coins.ts`/`ambient.ts`의 기존 텍스처·트윈 패턴 재활용 | renderer | 신규 텍스처 최소화가 목표, `spin`은 `scale.x` 트윈으로 충분 |
+| **P0** | `games/classic-777/theme/theme.json`에 §4 예시 `fx` 블록 반영 | hub / renderer | `math.json` 심볼 id와 1:1 대응 확인 (테스트로 강제) |
+| **P1** | 라인 순환 주기(`WIN_CYCLE_MS`) 900ms → 1.1s 조정 여부 결정 + `formatWinLabel`을 라인별 슬롯에 노출하는 타이밍 검증 | renderer | §5 타임라인 차이점 참고 |
+| **P1** | 빅윈 3단계(BIG ×20 / MEGA ×50 / EPIC ×100) 배너·카운트업 시간 분기 구현 | renderer / hub | 현재 `isBigWin` 단일 임계값 → 티어 함수로 확장 |
+| **P1** | "전체 동시 강조 → 라인 순환" 2단계 시퀀싱을 `showWins()` API에 구현 (현재는 라인 순환만 있음) | renderer | `buildWinCycle` 앞단에 "전체 강조" 스텝 삽입 |
+| **P1** | 비당첨 심볼 dim(alpha 0.45) 적용 — 현재는 당첨 심볼만 펄스, 비당첨은 그대로 두는 상태 | renderer | 대비 확보가 §1 원칙의 핵심 |
+| **P2** | 스킵 탭(카운트업 스냅) 인터랙션 추가 | hub | 게임 셸이 캔버스 위 탭 이벤트를 받아 렌더러에 신호 |
+| **P2** | 접근성용 `intensity` 전역 배율 슬라이더 연결 (모션 감도 낮추기, `reducedMotion`과는 별개로 "약하게"만 원하는 유저용) | hub | §4 공통 필드에 이미 예약된 값 |
+| **P3** | 히어로 심볼(`wild`, `seven`) Spine/Rive 리깅 검토 (안 C) | art | A안으로 충분히 검증된 이후 착수, 파츠 분리 아트 필요 |
+
+---
+
+**최종 `fx` 스키마(요약)**: `theme.json`에 `fx.{symbolId}.win` = FX 스텝 배열(동시 재생), `fx.default.win`이
+안전망. 타입 8종 — `pulse`, `shine`, `wobble`, `bounce`, `burst`, `glow`, `flash`, `spin` — 각각 §4 표의
+파라미터·기본값을 따른다. 전체 JSON 예시는 §4 코드 블록 참고.

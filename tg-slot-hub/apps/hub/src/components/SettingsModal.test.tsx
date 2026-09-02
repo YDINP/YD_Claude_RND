@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PublicUser } from '@tgslot/shared'
 
@@ -10,7 +10,7 @@ vi.mock('../sdk/api', async () => {
 import { patchMe } from '../sdk/api'
 import { useSessionStore } from '../store/session'
 import { useSettingsStore } from '../store/settings'
-import { SettingsSheet } from './SettingsSheet'
+import { SettingsModal } from './SettingsModal'
 
 const mockedPatchMe = vi.mocked(patchMe)
 
@@ -23,7 +23,7 @@ const baseUser: PublicUser = {
   xp: 0,
 }
 
-describe('SettingsSheet', () => {
+describe('SettingsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useSettingsStore.setState({ locale: 'auto', sound: true, haptics: true, reducedMotion: false })
@@ -37,11 +37,31 @@ describe('SettingsSheet', () => {
     })
   })
 
-  it('renders the settings sheet with the Telegram support id and app version', () => {
-    render(<SettingsSheet user={baseUser} onClose={() => {}} />)
+  it('renders as a centered modal with the Telegram support id and app version', () => {
+    render(<SettingsModal user={baseUser} onClose={() => {}} />)
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toBeInTheDocument()
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
     expect(screen.getByText(/424242/)).toBeInTheDocument()
+  })
+
+  it('closes when Escape is pressed', () => {
+    const onClose = vi.fn()
+    render(<SettingsModal user={baseUser} onClose={onClose} />)
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes when the backdrop is tapped', () => {
+    const onClose = vi.fn()
+    render(<SettingsModal user={baseUser} onClose={onClose} />)
+
+    fireEvent.click(screen.getByRole('presentation'))
+
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('switching the language to Korean immediately re-renders labels and persists via PATCH /me', async () => {
@@ -52,7 +72,7 @@ describe('SettingsSheet', () => {
       jackpot: 0,
     })
 
-    render(<SettingsSheet user={baseUser} onClose={() => {}} />)
+    render(<SettingsModal user={baseUser} onClose={() => {}} />)
 
     const koButton = screen.getByRole('radio', { name: '한국어' })
     await act(async () => {
@@ -60,7 +80,7 @@ describe('SettingsSheet', () => {
     })
 
     expect(useSettingsStore.getState().locale).toBe('ko')
-    // 화면 전체가 즉시 한국어로 바뀐다 — 시트 제목이 '설정'으로 리렌더된다.
+    // 화면 전체가 즉시 한국어로 바뀐다 — 모달 제목이 '설정'으로 리렌더된다.
     expect(await screen.findByText('설정')).toBeInTheDocument()
     expect(mockedPatchMe).toHaveBeenCalledWith('test-token', 'ko')
   })
@@ -68,7 +88,7 @@ describe('SettingsSheet', () => {
   it('does not call PATCH /me when the language is set back to Auto', async () => {
     useSettingsStore.setState({ locale: 'ko' })
 
-    render(<SettingsSheet user={baseUser} onClose={() => {}} />)
+    render(<SettingsModal user={baseUser} onClose={() => {}} />)
 
     // locale이 이미 'ko'이므로 화면 라벨도 한국어로 렌더된다 ('자동' = Auto).
     const autoButton = screen.getByRole('radio', { name: '자동' })
@@ -84,7 +104,7 @@ describe('SettingsSheet', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockedPatchMe.mockRejectedValue(new Error('network down'))
 
-    render(<SettingsSheet user={baseUser} onClose={() => {}} />)
+    render(<SettingsModal user={baseUser} onClose={() => {}} />)
 
     const koButton = screen.getByRole('radio', { name: '한국어' })
     await act(async () => {
@@ -98,7 +118,7 @@ describe('SettingsSheet', () => {
   })
 
   it('toggles sound/haptics/reducedMotion in the settings store', async () => {
-    render(<SettingsSheet user={baseUser} onClose={() => {}} />)
+    render(<SettingsModal user={baseUser} onClose={() => {}} />)
 
     const soundSwitch = screen.getByRole('switch', { name: 'Sound' })
     await act(async () => {
@@ -121,7 +141,7 @@ describe('SettingsSheet', () => {
 
   it('calls onClose when the close button is clicked', async () => {
     const onClose = vi.fn()
-    render(<SettingsSheet user={baseUser} onClose={onClose} />)
+    render(<SettingsModal user={baseUser} onClose={onClose} />)
 
     await act(async () => {
       screen.getByRole('button', { name: 'Close' }).click()

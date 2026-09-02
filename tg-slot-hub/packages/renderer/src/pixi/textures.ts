@@ -89,6 +89,19 @@ export function createCoinTexture(theme: Theme, registry?: TextureRegistry): Tex
   )
 }
 
+/** 흰 사각형 1장. tint로 색을 입혀 색종이 조각으로 쓴다. */
+export function createConfettiTexture(registry?: TextureRegistry): Texture {
+  return createCanvasTexture(
+    8,
+    8,
+    (ctx, width, height) => {
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, width, height)
+    },
+    registry,
+  )
+}
+
 /**
  * 테마의 심볼 이미지를 모두 불러온다. 개별 실패는 폴백 텍스처로 대체하고 전체는 절대 실패하지 않는다.
  * `Assets.load`로 받은 것은 전역 캐시 소유라 `registry`에 넣지 않는다. 폴백만 등록한다.

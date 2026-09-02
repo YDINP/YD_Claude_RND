@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { createSeededRng, getBetPerLine, spin, type WinLine } from '@tgslot/slot-engine'
 import { BIG_WIN_BET_MULTIPLIER, WIN_CYCLE_MS } from './constants.js'
-import { buildWinCycle, formatWinLabel, isBigWin, paylineColor, totalWinOf, winBetMultiple } from './wins.js'
+import {
+  buildWinCycle,
+  formatWinLabel,
+  isBigWin,
+  paylineColor,
+  totalWinOf,
+  winBetMultiple,
+  winTier,
+  WIN_TIERS,
+} from './wins.js'
 import { loadGameMath } from './testSupport.js'
 
 const math = loadGameMath('classic-777')
@@ -111,5 +120,53 @@ describe('formatWinLabel', () => {
   it('부호와 천 단위 구분을 붙인다', () => {
     expect(formatWinLabel(makeWin(0, 1234, 617))).toBe('+1,234')
     expect(formatWinLabel(makeWin(0, 7, 7))).toBe('+7')
+  })
+})
+
+describe('winTier', () => {
+  function winOf(multiple: number): WinLine {
+    // 베팅 10, 라인 5 -> 라인당 2. multiple배가 되도록 총배당을 맞춘다.
+    return makeWin(0, 10 * multiple, 5 * multiple)
+  }
+
+  it('승리가 없으면 등급도 없다', () => {
+    expect(winTier([], math, 10)).toBe('none')
+  })
+
+  it('10배 미만은 등급이 붙지 않는다', () => {
+    expect(winTier([winOf(9.9)], math, 10)).toBe('none')
+  })
+
+  it('문턱마다 등급이 올라간다', () => {
+    expect(winTier([winOf(10)], math, 10)).toBe('big')
+    expect(winTier([winOf(20)], math, 10)).toBe('mega')
+    expect(winTier([winOf(50)], math, 10)).toBe('epic')
+    expect(winTier([winOf(100)], math, 10)).toBe('max')
+  })
+
+  it('문턱 바로 아래는 한 단계 낮다', () => {
+    expect(winTier([winOf(19.9)], math, 10)).toBe('big')
+    expect(winTier([winOf(49.9)], math, 10)).toBe('mega')
+    expect(winTier([winOf(99.9)], math, 10)).toBe('epic')
+  })
+
+  it('문턱을 한참 넘어도 최고 등급에서 멈춘다', () => {
+    expect(winTier([winOf(5000)], math, 10)).toBe('max')
+  })
+
+  it('totalBet이 없어도 라인 배수 합으로 같은 등급을 낸다', () => {
+    const wins = [winOf(30)]
+    expect(winTier(wins, math)).toBe(winTier(wins, math, 10))
+  })
+
+  it('등급이 붙으면 빅윈이다', () => {
+    for (const multiple of [10, 20, 50, 100]) {
+      expect(isBigWin([winOf(multiple)], math, 10)).toBe(true)
+    }
+    expect(isBigWin([winOf(9)], math, 10)).toBe(false)
+  })
+
+  it('등급 목록이 낮은 순서다', () => {
+    expect(WIN_TIERS).toEqual(['none', 'big', 'mega', 'epic', 'max'])
   })
 })
