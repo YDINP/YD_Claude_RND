@@ -42,12 +42,20 @@ export class HeroDetailScene extends Phaser.Scene {
 
     // RES-ABS-4: 단일 히어로 카드 동적 로드
     this._loadedHeroId = this.hero.id;
+
+    // T-29: 큰 표시용 원본(@2x, 최대 1024 PNG)을 이 씬에서만 지연 로드한다.
+    // 공용 런타임 텍스처는 512 WebP 이므로, 상세 화면의 확대 표시에만 원본이 필요하다.
+    const heroFullData = getCharacterOrHero(this.hero.id) || this.hero;
+    this._hiresKey = HeroAssetLoader.queueHiresTexture(this, heroFullData);
+
     if (characterRenderer.useAssets) {
       characterRenderer.preloadAssets(this, [this.hero], { ids: [this.hero.id], types: ['card'] });
+    }
+
+    if (this.load.list.size > 0) {
+      // @2x 로드가 실패해도 화면은 떠야 한다. complete 는 실패 파일이 있어도 발생한다.
+      this.load.once('complete', () => this.initUI());
       this.load.start();
-      this.load.once('complete', () => {
-        this.initUI();
-      });
     } else {
       this.initUI();
     }
@@ -151,8 +159,11 @@ export class HeroDetailScene extends Phaser.Scene {
     frame.setStrokeStyle(s(3), frameRarityColorSet.border, 0.8);
 
     // Hero image — IMG-3: 실제 포트레이트 우선, 없으면 온디맨드 플레이스홀더
+    // T-29: @2x 원본이 로드됐으면 그것을 쓰고, 실패했으면 512 런타임 텍스처로 폴백한다.
     const fullData = getCharacterOrHero(this.hero.id) || this.hero;
-    const texKey = HeroAssetLoader.ensureTexture(this, fullData);
+    const texKey =
+      (this._hiresKey && this.textures.exists(this._hiresKey) ? this._hiresKey : null) ||
+      HeroAssetLoader.ensureTexture(this, fullData);
     const heroImg = this.add.image(GAME_WIDTH / 2, displayY, texKey || 'hero_placeholder');
     if (texKey) {
       heroImg.setScale(Math.min(s(160) / heroImg.width, s(180) / heroImg.height));
@@ -1043,9 +1054,12 @@ export class HeroDetailScene extends Phaser.Scene {
   }
 
   shutdown() {
-    // RES-ABS-4: 메모리 해제
-    if (this._loadedHeroId) {
-      HeroAssetLoader.unloadTextures(this, [this._loadedHeroId]);
+    // T-29: 이 씬이 직접 로드한 @2x 원본만 해제한다.
+    // 512 런타임 텍스처는 PreloadScene 소유의 공용 자산이므로 여기서 지우면
+    // 메인 메뉴·영웅 목록이 플레이스홀더로 되돌아간다.
+    if (this._hiresKey && this.textures.exists(this._hiresKey)) {
+      this.textures.remove(this._hiresKey);
+      this._hiresKey = null;
     }
 
     this.time.removeAllEvents();

@@ -8,6 +8,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { getAllCharacters, getChapterStages } from '../data/index.js';
 import transitionManager from '../utils/TransitionManager.js';
 import navigationManager from '../systems/NavigationManager.js';
+import { StoryManager } from '../systems/StoryManager.js';
 
 export class StageSelectScene extends Phaser.Scene {
   constructor() {
@@ -655,10 +656,24 @@ export class StageSelectScene extends Phaser.Scene {
 
     GameLogger.log('SCENE', `스테이지 선택: ${this.selectedStage?.name || this.selectedStage?.id}`, { chapter: this.currentChapter, partySize: partyHeroes.length, energy: consumeResult.currentEnergy });
 
-    // Transition to battle with dramatic entry
-    transitionManager.battleEntryTransition(this, {
-      stage: this.selectedStage,
-      party: partyHeroes
+    // T-Q1: 스토리 컷씬 트리거 (chapter_enter → stage_enter → 전투)
+    // 보스 스테이지는 stage_enter를 정의하지 않고 BattleScene의 boss_before를 쓴다(내러티브 §5-3).
+    const stage = this.selectedStage;
+    const stageId = stage?.id;
+    const chapterId = `chapter_${this.currentChapter}`;
+    const isChapterFirstStage = typeof stageId === 'string' && stageId.endsWith('-1');
+    const triggers = isChapterFirstStage ? ['chapter_enter', 'stage_enter'] : ['stage_enter'];
+
+    StoryManager.triggerSequence(triggers, {
+      scene: this,
+      stageId,
+      chapterId,
+      onComplete: () => {
+        transitionManager.battleEntryTransition(this, {
+          stage,
+          party: partyHeroes
+        });
+      }
     });
   }
 

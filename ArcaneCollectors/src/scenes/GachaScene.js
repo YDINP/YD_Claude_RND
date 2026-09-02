@@ -9,6 +9,8 @@ import { ParticleManager } from '../systems/ParticleManager.js';
 import { getCharacterOrHero, normalizeHeroes } from '../data/index.js';
 import transitionManager from '../utils/TransitionManager.js';
 import navigationManager from '../systems/NavigationManager.js';
+import { Z_INDEX } from '../config/layoutConfig.js';
+import { RateDisclosurePanel } from '../components/popups/RateDisclosurePanel.js';
 
 export class GachaScene extends Phaser.Scene {
   constructor() {
@@ -30,6 +32,7 @@ export class GachaScene extends Phaser.Scene {
     this.createBannerArea();
     this.createSummonButtons();
     this.createPityDisplay();
+    this.createRateInfoButton();
     } catch (error) {
       console.error('[GachaScene] create() 실패:', error);
       this.add.text(s(360), s(640), '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -578,6 +581,35 @@ export class GachaScene extends Phaser.Scene {
       fontFamily: 'Arial',
       color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
+  }
+
+  /** 확률 정보 진입점 (GA-4 법적 요구) — RateDisclosurePanel을 중첩 팝업으로 연다 */
+  createRateInfoButton() {
+    const y = s(765);
+    const bg = this.add.rectangle(GAME_WIDTH / 2, y, s(220), s(44), COLORS.backgroundLight, 0.8)
+      .setStrokeStyle(s(1), COLORS.primary, 0.6)
+      .setInteractive({ useHandCursor: true });
+    this.add.text(GAME_WIDTH / 2, y, '📋 확률 정보', {
+      fontSize: sf(14),
+      fontFamily: 'Arial',
+      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    bg.on('pointerdown', () => this.openRateDisclosure());
+    bg.on('pointerover', () => bg.setAlpha(0.7));
+    bg.on('pointerout', () => bg.setAlpha(1));
+  }
+
+  openRateDisclosure() {
+    if (this._ratePanel) return;
+    this._ratePanel = new RateDisclosurePanel(this, {
+      onClose: () => { this._ratePanel = null; }
+    });
+    this._ratePanel.show();
+    if (this._ratePanel.container) {
+      this._ratePanel.container.setDepth(Z_INDEX.POPUP_NESTED);
+    }
   }
 
   performSummon(count) {

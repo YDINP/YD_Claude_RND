@@ -12,3 +12,4 @@ export { GuildPopup } from './GuildPopup.js';
 export { RaidPopup } from './RaidPopup.js';
 export { FriendsPopup } from './FriendsPopup.js';
 export { CollectionPopup } from './CollectionPopup.js';
+export { RateDisclosurePanel } from './RateDisclosurePanel.js';

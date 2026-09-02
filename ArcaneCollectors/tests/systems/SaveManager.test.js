@@ -394,4 +394,177 @@ describe('SaveManager', () => {
       expect(typeof loaded.pity).toBe('object');
     });
   });
+
+  // ==================== T-C2: 신규 계정 초기 상태 ====================
+
+  describe('신규 계정 초기 상태 (T-C2)', () => {
+    it('레거시 스타터 4명 대신 base_iris 1인 파티로 시작한다', () => {
+      mockLocalStorage.clear();
+
+      const fresh = SaveManager.load();
+
+      expect(fresh.characters).toHaveLength(1);
+      expect(fresh.characters[0].characterId).toBe('base_iris');
+      expect(fresh.parties[0]).toEqual(['base_iris', null, null, null]);
+      expect(fresh.baseHeroes.map(h => h.baseHeroId)).toEqual(['base_iris']);
+      expect(fresh.statistics.charactersCollected).toBe(1);
+
+      const ownedIds = fresh.characters.map(c => c.characterId);
+      SaveManager.LEGACY_STARTER_IDS.forEach(id => {
+        expect(ownedIds).not.toContain(id);
+      });
+    });
+
+    it('초기 지급 재화가 설계 표와 일치한다', () => {
+      mockLocalStorage.clear();
+
+      const { resources } = SaveManager.load();
+
+      expect(resources.gold).toBe(10000);
+      expect(resources.gems).toBe(1500);
+      expect(resources.summonTickets).toBe(10);
+      expect(resources.spiritStones).toBe(6);
+      expect(resources.institutionSeal).toBe(1);
+      expect(resources.awakeningFlame).toBe(0);
+      expect(resources.worldTreeSeeds).toBe(0);
+      expect(resources.cultEssence).toEqual({});
+      expect(resources.characterShards).toEqual({ base_omar: 0 });
+    });
+
+    it('신규 세이브는 튜토리얼 미시작 상태이고 해금된 메뉴가 없다', () => {
+      mockLocalStorage.clear();
+
+      const fresh = SaveManager.load();
+
+      expect(fresh.version).toBe(2);
+      expect(fresh.tutorial.currentStep).toBe('T-01');
+      expect(fresh.tutorial.completedSteps).toEqual([]);
+      expect(fresh.tutorial.completed).toBe(false);
+      expect(fresh.story.viewedCutscenes).toEqual([]);
+      expect(fresh.onboarding.unlockedMenus).toEqual([]);
+      expect(fresh.onboarding.firstAscensionGrantUsed).toBe(false);
+      expect(fresh.onboarding.starterHeroId).toBe('base_iris');
+    });
+  });
+
+  // ==================== T-C1: 세이브 스키마 v1 -> v2 마이그레이션 ====================
+
+  describe('세이브 스키마 v1 → v2 마이그레이션 (T-C1)', () => {
+    /** 온보딩 도입 이전의 v1 세이브 (tutorial/story/onboarding 없음) */
+    const makeV1Save = (overrides = {}) => ({
+      version: 1,
+      player: { name: '구버전', level: 1, exp: 0 },
+      resources: { gold: 10000, gems: 2700, summonTickets: 10, skillBooks: 0, characterShards: {} },
+      characters: [
+        { id: 'char_1', characterId: 'char_1', level: 12, exp: 0, stars: 2, skillLevels: [1, 1, 1] },
+        { id: 'char_2', characterId: 'char_2', level: 10, exp: 0, stars: 2, skillLevels: [1, 1, 1] }
+      ],
+      parties: [['char_1', 'char_2', null, null]],
+      inventory: [],
+      progress: { currentChapter: 'chapter_1', clearedStages: { stage_1_1: 3 }, towerFloor: 1, totalBattles: 12 },
+      gacha: { pityCounter: 4, totalPulls: 12 },
+      quests: { daily: {}, dailyProgress: {}, lastReset: null },
+      settings: { bgmVolume: 1, sfxVolume: 1, autoSkip: false, battleSpeed: 1 },
+      statistics: { totalGoldEarned: 500, totalGemsSpent: 0, charactersCollected: 2, highestDamage: 0 },
+      createdAt: 1700000000000,
+      ...overrides
+    });
+
+    it('version 1 세이브가 로드 후 version 2가 되고 신규 섹션 기본값을 갖는다', () => {
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(makeV1Save()));
+
+      const loaded = SaveManager.load();
+
+      expect(loaded.version).toBe(2);
+      expect(loaded.tutorial).toBeDefined();
+      expect(loaded.story).toBeDefined();
+      expect(loaded.onboarding).toBeDefined();
+      expect(Array.isArray(loaded.tutorial.completedSteps)).toBe(true);
+      expect(Array.isArray(loaded.story.viewedCutscenes)).toBe(true);
+      expect(loaded.resources.spiritStones).toBeGreaterThanOrEqual(0);
+      // 기존 진행도는 보존된다
+      expect(loaded.progress.clearedStages.stage_1_1).toBe(3);
+      expect(loaded.gacha.pityCounter).toBe(4);
+    });
+
+    it('진행 이력이 있는 기존 유저는 튜토리얼 완주 처리되고 메뉴 13개가 열린다', () => {
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(makeV1Save()));
+
+      const loaded = SaveManager.load();
+
+      expect(loaded.tutorial.completed).toBe(true);
+      expect(loaded.tutorial.skipped).toBe(true);
+      expect(loaded.tutorial.currentStep).toBeNull();
+      expect(loaded.tutorial.completedSteps).toEqual(SaveManager.TUTORIAL_STEP_IDS);
+      expect(loaded.onboarding.unlockedMenus).toEqual(SaveManager.ALL_MENU_KEYS);
+      expect(loaded.onboarding.unlockedMenus).toHaveLength(13);
+    });
+
+    it('레거시 char_1~4는 회수하지 않고 legacyStarter 태그만 부여한다', () => {
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(makeV1Save()));
+
+      const loaded = SaveManager.load();
+
+      const legacy = loaded.characters.filter(c => SaveManager.LEGACY_STARTER_IDS.includes(c.characterId));
+      expect(legacy).toHaveLength(2);
+      legacy.forEach(c => expect(c.legacyStarter).toBe(true));
+      // 레벨 등 기존 데이터는 그대로 유지된다
+      expect(loaded.characters.find(c => c.characterId === 'char_1').level).toBe(12);
+    });
+
+    it('온보딩 미경험 기존 유저에게 소급 지급이 1회만 적용된다', () => {
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(makeV1Save()));
+
+      const first = SaveManager.load();
+
+      expect(first.characters.some(c => c.characterId === 'base_iris')).toBe(true);
+      expect(first.baseHeroes.some(h => h.baseHeroId === 'base_iris')).toBe(true);
+      expect(first.resources.characterShards.base_omar).toBe(30);
+      expect(first.resources.spiritStones).toBe(6);
+      expect(first.resources.institutionSeal).toBe(1);
+      expect(first.onboarding.grantVersion).toBe(SaveManager.ONBOARDING_GRANT_VERSION);
+      // 기존 편성은 덮어쓰지 않는다
+      expect(first.parties[0]).toEqual(['char_1', 'char_2', null, null]);
+
+      const second = SaveManager.load();
+
+      expect(second.characters.filter(c => c.characterId === 'base_iris')).toHaveLength(1);
+      expect(second.resources.characterShards.base_omar).toBe(30);
+      expect(second.resources.spiritStones).toBe(6);
+      expect(second.resources.institutionSeal).toBe(1);
+    });
+
+    it('이미 진화 시스템을 사용한 기존 유저는 소급 지급 대상이 아니다', () => {
+      const v1 = makeV1Save({
+        baseHeroes: [{ baseHeroId: 'base_sera', fragmentCount: 12, openedRoutes: [] }],
+        ascendedHeroes: []
+      });
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(v1));
+
+      const loaded = SaveManager.load();
+
+      expect(loaded.characters.some(c => c.characterId === 'base_iris')).toBe(false);
+      expect(loaded.resources.characterShards.base_omar).toBeUndefined();
+      expect(loaded.resources.spiritStones).toBe(0);
+      expect(loaded.onboarding.grantVersion).toBe(SaveManager.ONBOARDING_GRANT_VERSION);
+    });
+
+    it('v2 세이브를 다시 로드해도 진행 중인 튜토리얼 상태가 덮이지 않는다', () => {
+      mockLocalStorage.clear();
+      const data = SaveManager.load();
+      data.tutorial.currentStep = 'T-05';
+      data.tutorial.completedSteps = ['T-01', 'T-02', 'T-03', 'T-04'];
+      data.onboarding.unlockedMenus = ['herolist', 'partyedit'];
+      data.onboarding.freeMultiPullUsed = true;
+      SaveManager.save(data);
+
+      const reloaded = SaveManager.load();
+
+      expect(reloaded.tutorial.currentStep).toBe('T-05');
+      expect(reloaded.tutorial.completedSteps).toEqual(['T-01', 'T-02', 'T-03', 'T-04']);
+      expect(reloaded.tutorial.completed).toBe(false);
+      expect(reloaded.onboarding.unlockedMenus).toEqual(['herolist', 'partyedit']);
+      expect(reloaded.onboarding.freeMultiPullUsed).toBe(true);
+    });
+  });
 });

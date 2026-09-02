@@ -35,7 +35,12 @@ const POLL_TIMEOUT_MS = 300_000;
 // --variants N : generate N seed variants per character (files get _v1.._vN suffix)
 const OUT_DIR = path.resolve(argOf("--out", DEFAULT_OUT_DIR));
 const VARIANTS = Math.max(1, parseInt(argOf("--variants", "1"), 10));
+// --fullbody : full-body character sheet (portrait aspect, simple backdrop, no scene) — use with --width 832 --height 1216
+const FULLBODY = process.argv.includes("--fullbody");
+const SUFFIX_ARG = argOf("--suffix", "");
 
+const STYLE_PREFIX_FULLBODY =
+  "masterpiece, best quality, anime style, game character design sheet, full body, standing pose, front view, single character, looking at viewer, detailed face, detailed eyes, detailed outfit, feet visible, whole body in frame, plain flat light gray background, simple background, soft studio lighting";
 const STYLE_PREFIX =
   "masterpiece, best quality, anime style, game character portrait illustration, single character, bust shot, upper body, face focus, looking at viewer, detailed face, detailed eyes, clean composition, full-bleed painted background, borderless";
 const NEGATIVE =
@@ -353,7 +358,7 @@ function hashSeed(str) {
 }
 
 function buildPrompt(c) {
-  const parts = [STYLE_PREFIX];
+  const parts = [FULLBODY ? STYLE_PREFIX_FULLBODY : STYLE_PREFIX];
   parts.push(c.gender === "female" ? "1girl" : "1boy");
   parts.push(`${c.gender} ${c.cls}`);
   if (MOOD_KW[c.mood]) parts.push(MOOD_KW[c.mood]);
@@ -364,8 +369,8 @@ function buildPrompt(c) {
   const cultDef = c.cult ? CULT_BG[c.cult] : null;
   if (cultDef) {
     parts.push(cultDef.outfit);
-    parts.push(cultDef.bg);
-  } else if (c.scene) {
+    if (!FULLBODY) parts.push(cultDef.bg);
+  } else if (c.scene && !FULLBODY) {
     parts.push(c.scene);
   }
   if (RARITY_KW[c.rarity]) parts.push(RARITY_KW[c.rarity]);
@@ -379,7 +384,7 @@ function buildWorkflow(c, seedOverride) {
     workflow: {
       "1": { class_type: "CheckpointLoaderSimple", inputs: { ckpt_name: MODEL }, _meta: { title: "Load Checkpoint" } },
       "2": { class_type: "CLIPTextEncode", inputs: { text: positive, clip: ["1", 1] }, _meta: { title: "Positive" } },
-      "3": { class_type: "CLIPTextEncode", inputs: { text: c.neg ? `${NEGATIVE}, ${c.neg}` : NEGATIVE, clip: ["1", 1] }, _meta: { title: "Negative" } },
+      "3": { class_type: "CLIPTextEncode", inputs: { text: [NEGATIVE, c.neg, FULLBODY ? "close-up, bust shot, portrait, cropped legs, cropped feet, scenery, complex background" : ""].filter(Boolean).join(", "), clip: ["1", 1] }, _meta: { title: "Negative" } },
       "4": { class_type: "EmptyLatentImage", inputs: { width: WIDTH, height: HEIGHT, batch_size: 1 }, _meta: { title: "Empty Latent" } },
       "5": {
         class_type: "KSampler",
@@ -464,7 +469,7 @@ async function generateOne(c, attempt, altSeed, suffix = "") {
   const { workflow, seed } = buildWorkflow(c, altSeed);
   const promptId = await queuePrompt(workflow);
   const imgInfo = await waitForResult(promptId);
-  const dest = path.join(OUT_DIR, c.file.replace(/\.png$/i, `${suffix}.png`));
+  const dest = path.join(OUT_DIR, c.file.replace(/\.png$/i, `${SUFFIX_ARG}${suffix}.png`));
   const bytes = await downloadImage(imgInfo, dest);
   if (bytes < 50 * 1024) throw new Error(`output suspiciously small: ${bytes}B`);
   return { bytes, seed };
@@ -472,6 +477,7 @@ async function generateOne(c, attempt, altSeed, suffix = "") {
 
 // ---------- main ----------
 async function main() {
+  if (process.argv.includes("--dump-json")) { console.log(JSON.stringify(CHARACTERS)); return; }
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const targets = selectTargets();
   console.log(`Server: ${SERVER} | model: ${MODEL} | ${WIDTH}x${HEIGHT} | steps=${STEPS} cfg=${CFG}`);

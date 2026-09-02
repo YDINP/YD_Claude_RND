@@ -15,10 +15,43 @@ import { getRarityStars } from '../utils/rarityUtils.js';
 
 export class SaveManager {
   static SAVE_KEY = 'arcane_collectors_save';
-  static VERSION = 1;
+  static VERSION = 2;
   static _syncInProgress = false;
   static _pendingSync = false;
   static _userId = null;
+
+  // ===== T-C1/T-C2: 온보딩 스키마 상수 (SYSTEM_ONBOARDING_ECONOMY §1-4, §4-2, §5-1) =====
+
+  /** 온보딩 지급 정책 버전. 정책 변경 시 증가시켜 소급 지급을 재실행한다 */
+  static ONBOARDING_GRANT_VERSION = 2;
+
+  /** 신규 계정 확정 지급 기본영웅 (§1-3) */
+  static STARTER_BASE_HERO_ID = 'base_iris';
+
+  /** 두 번째 각성 대상 기본영웅 — 조각 지급 대상 (§1-3) */
+  static SECOND_BASE_HERO_ID = 'base_omar';
+
+  /** 폐지된 레거시 스타터 ID. 기존 세이브 태깅 전용 (§1-2) */
+  static LEGACY_STARTER_IDS = ['char_1', 'char_2', 'char_3', 'char_4'];
+
+  /** 튜토리얼 스텝 ID 전량 (§5-1) */
+  static TUTORIAL_STEP_IDS = [
+    'T-01', 'T-02', 'T-03', 'T-04', 'T-05', 'T-06',
+    'T-07', 'T-08', 'T-09', 'T-10', 'T-11', 'T-12'
+  ];
+
+  /** 점진 해금 대상 메뉴 popupKey 13종 (§4-2). settings는 그리드 밖 상시 노출이라 제외 */
+  static ALL_MENU_KEYS = [
+    'herolist', 'partyedit', 'ascension', 'quest', 'inventory', 'gacha',
+    'collection', 'tower', 'eventdungeon', 'pvp', 'guild', 'friends', 'raid'
+  ];
+
+  /** 온보딩 미경험 기존 유저 소급 지급량 (§5-2 마이그레이션 방침) */
+  static RETRO_GRANT = {
+    secondHeroShards: 30,
+    spiritStones: 6,
+    institutionSeal: 1
+  };
 
   /**
    * 기본 저장 데이터 구조 반환
@@ -31,20 +64,22 @@ export class SaveManager {
         level: 1,
         exp: 0
       },
+      // T-C2: 초기 지급 재화 (SYSTEM_ONBOARDING_ECONOMY §1-4)
       resources: {
         gold: 10000,
-        gems: 2700,
-        summonTickets: 10,
+        gems: 1500,          // 2700 → 1500 (Day3에 두 번째 10연이 열리도록 조정)
+        summonTickets: 10,   // 첫 무료 10연 1회분
         skillBooks: 0,
-        characterShards: {},
+        spiritStones: 6,     // 정령석 — 각성 2회분
+        characterShards: { [this.SECOND_BASE_HERO_ID]: 0 },
         // COLL-02: 진화/컬렉션 재화 (설계노트 §5)
         worldTreeSeeds: 0,   // 세계수의 씨앗 - 추가 루트 개방
         cultEssence: {},     // { [cultId]: number }
-        institutionSeal: 0,  // 각인서
+        institutionSeal: 1,  // 각인서 - 첫 각인 1회분
         awakeningFlame: 0    // 각성의 불꽃
       },
-      characters: this._createStarterCharacters(), // 스타터 캐릭터 4명
-      parties: [['char_1', 'char_2', 'char_3', 'char_4']], // 스타터 파티
+      characters: [this._createStarterHeroRecord()],       // T-C2: base_iris 1인
+      parties: [[this.STARTER_BASE_HERO_ID, null, null, null]], // 1인 파티로 시작 (§1-1)
       inventory: [],
       progress: {
         currentChapter: 'chapter_1',
@@ -72,11 +107,19 @@ export class SaveManager {
       statistics: {
         totalGoldEarned: 0,
         totalGemsSpent: 0,
-        charactersCollected: 0,
+        charactersCollected: 1,
         highestDamage: 0
       },
+      // ========== T-C1: 온보딩/튜토리얼/스토리 (스키마 v2) ==========
+      tutorial: this._createDefaultTutorial(),
+      story: this._createDefaultStory(),
+      onboarding: this._createDefaultOnboarding(),
       // ========== 진화 시스템 ==========
-      baseHeroes: [],        // [{ baseHeroId, fragmentCount, openedRoutes[] }]
+      baseHeroes: [{
+        baseHeroId: this.STARTER_BASE_HERO_ID,
+        fragmentCount: 0,
+        openedRoutes: []
+      }],                    // [{ baseHeroId, fragmentCount, openedRoutes[] }]
       ascendedHeroes: [],    // [{ ascendedHeroId, baseHeroId, cultId, rarity, obtainedAt }]
       // COLL-01: 컬렉션 (파생값 비저장 - obtained 목록만 저장)
       collections: {},       // { [collectionId]: { obtained[], completedAt, titleClaimed } }
@@ -112,17 +155,6 @@ export class SaveManager {
         data.characters = this._migrateHeroesSchema(data.characters);
       }
 
-      // 기존 빈 세이브에 스타터 캐릭터 제공 (신규 계정 마이그레이션)
-      if ((!data.characters || data.characters.length === 0) && data.progress?.totalBattles === 0) {
-        data.characters = this._createStarterCharacters();
-        if (!data.parties || data.parties.length === 0) {
-          data.parties = [['char_1', 'char_2', 'char_3', 'char_4']];
-        }
-        data.statistics.charactersCollected = 4;
-        this.save(data);
-        GameLogger.log('SAVE', '스타터 캐릭터 4명 마이그레이션 적용');
-      }
-
       // CHAR-3: 진화 시스템 필드 마이그레이션 (구버전 세이브 호환)
       if (!data.baseHeroes) data.baseHeroes = [];
       if (!data.ascendedHeroes) data.ascendedHeroes = [];
@@ -135,6 +167,14 @@ export class SaveManager {
 
       // T-S2/BLK-05: 무료 10연 플래그 마이그레이션 (구버전 세이브 호환)
       this._migrateGachaSchema(data);
+
+      // T-C1: 온보딩/튜토리얼/스토리 섹션 기본값 보장 + 기존 유저 처리
+      // 소급 지급이 발생했다면 즉시 영속화한다 (다음 로드에서 재지급되지 않도록)
+      const grantVersionBefore = data.onboarding?.grantVersion ?? -1;
+      this._migrateOnboardingSchema(data);
+      if ((data.onboarding?.grantVersion ?? -1) !== grantVersionBefore) {
+        this.save(data);
+      }
 
       return data;
     } catch (error) {
@@ -184,6 +224,9 @@ export class SaveManager {
     if (!r.cultEssence || typeof r.cultEssence !== 'object') r.cultEssence = {};
     if (r.institutionSeal === undefined) r.institutionSeal = 0;
     if (r.awakeningFlame === undefined) r.awakeningFlame = 0;
+    // T-C2: 정령석 필드 신설 (구세이브는 0에서 시작, 소급 지급 대상만 별도 보전)
+    if (r.spiritStones === undefined) r.spiritStones = 0;
+    if (!r.characterShards || typeof r.characterShards !== 'object') r.characterShards = {};
 
     if (!Array.isArray(data.baseHeroes)) data.baseHeroes = [];
     data.baseHeroes.forEach(entry => {
@@ -206,6 +249,201 @@ export class SaveManager {
       data.gacha.freeTenPullUsed = false;
     }
     return data;
+  }
+
+  /**
+   * T-C1: 튜토리얼 섹션 기본값 (SYSTEM_ONBOARDING_ECONOMY §5-2)
+   * @returns {Object}
+   */
+  static _createDefaultTutorial() {
+    return {
+      currentStep: this.TUTORIAL_STEP_IDS[0],
+      completedSteps: [],
+      skippedSteps: [],
+      skipped: false,
+      completed: false,
+      startedAt: null,
+      completedAt: null
+    };
+  }
+
+  /**
+   * T-C1: 스토리 섹션 기본값 (SYSTEM_ONBOARDING_ECONOMY §5-2)
+   * @returns {Object}
+   */
+  static _createDefaultStory() {
+    return {
+      viewedCutscenes: [],
+      skippedCutscenes: [],
+      currentChapterStory: 'chapter_1',
+      lastViewedAt: null
+    };
+  }
+
+  /**
+   * T-C1: 온보딩 섹션 기본값 (SYSTEM_ONBOARDING_ECONOMY §5-2)
+   * @returns {Object}
+   */
+  static _createDefaultOnboarding() {
+    return {
+      grantVersion: this.ONBOARDING_GRANT_VERSION,
+      starterHeroGranted: true,
+      starterHeroId: this.STARTER_BASE_HERO_ID,
+      freeMultiPullUsed: false,
+      freeMultiPullAt: null,
+      firstAscensionGrantUsed: false,
+      firstAscensionCultId: null,
+      unlockedMenus: [],
+      idleIntroShown: false,
+      returningPlayerTier: null,
+      lastReturnRewardAt: null
+    };
+  }
+
+  /**
+   * T-C1: 온보딩/튜토리얼/스토리 섹션 마이그레이션 (v1 → v2)
+   * - 누락 필드를 기본값으로 채운다 (in-place)
+   * - 기존 유저(진행 이력 존재)는 튜토리얼 완주 처리 + 메뉴 전량 개방
+   * - 온보딩 미경험 기존 유저에게 계정당 1회 소급 지급
+   * @param {Object} data - 저장 데이터 (in-place)
+   * @returns {Object} 동일 객체
+   */
+  static _migrateOnboardingSchema(data) {
+    if (!data) return data;
+
+    // 스키마 v2 이전 세이브인지 판정한다. 완주 처리·메뉴 개방은 최초 1회만 수행해야 하며,
+    // 이미 v2인 세이브(튜토리얼 진행 중인 신규 유저 포함)를 건드려서는 안 된다.
+    const hadTutorial = !!(data.tutorial && typeof data.tutorial === 'object');
+    const hadOnboarding = !!(data.onboarding && typeof data.onboarding === 'object');
+
+    // --- 1. 섹션 기본값 보장 (부분 손상 세이브도 필드 단위로 복구) ---
+    const tutorialDefaults = this._createDefaultTutorial();
+    if (!data.tutorial || typeof data.tutorial !== 'object') data.tutorial = tutorialDefaults;
+    else this._fillMissingKeys(data.tutorial, tutorialDefaults);
+    if (!Array.isArray(data.tutorial.completedSteps)) data.tutorial.completedSteps = [];
+    if (!Array.isArray(data.tutorial.skippedSteps)) data.tutorial.skippedSteps = [];
+
+    const storyDefaults = this._createDefaultStory();
+    if (!data.story || typeof data.story !== 'object') data.story = storyDefaults;
+    else this._fillMissingKeys(data.story, storyDefaults);
+    if (!Array.isArray(data.story.viewedCutscenes)) data.story.viewedCutscenes = [];
+    if (!Array.isArray(data.story.skippedCutscenes)) data.story.skippedCutscenes = [];
+
+    // 온보딩은 "신규 계정 기본값(지급 완료 상태)"을 그대로 쓰면 안 된다.
+    // 구세이브는 미지급 상태에서 출발해 아래 소급 지급 분기를 타야 한다.
+    const onboardingDefaults = this._createDefaultOnboarding();
+    if (!data.onboarding || typeof data.onboarding !== 'object') {
+      data.onboarding = {
+        ...onboardingDefaults,
+        grantVersion: 0,
+        starterHeroGranted: false,
+        starterHeroId: null
+      };
+    } else {
+      this._fillMissingKeys(data.onboarding, onboardingDefaults);
+    }
+    if (!Array.isArray(data.onboarding.unlockedMenus)) data.onboarding.unlockedMenus = [];
+
+    // --- 2. 기존 유저 판정 ---
+    const totalBattles = data.progress?.totalBattles || 0;
+    const ownedCharacters = Array.isArray(data.characters) ? data.characters : [];
+    const isExistingPlayer = totalBattles > 0 || ownedCharacters.length > 0;
+
+    if (!hadTutorial && isExistingPlayer && !data.tutorial.completed) {
+      // 완주 유저에게 튜토리얼을 다시 틀지 않는다 (§5-3 재노출 정책)
+      data.tutorial.completedSteps = [...this.TUTORIAL_STEP_IDS];
+      data.tutorial.skippedSteps = [...this.TUTORIAL_STEP_IDS];
+      data.tutorial.skipped = true;
+      data.tutorial.completed = true;
+      data.tutorial.currentStep = null;
+      if (!data.tutorial.startedAt) data.tutorial.startedAt = data.createdAt || Date.now();
+      if (!data.tutorial.completedAt) data.tutorial.completedAt = Date.now();
+    }
+
+    if (!hadOnboarding && isExistingPlayer) {
+      // 메뉴가 사라지는 사고 방지 — 13개 전량 주입
+      data.onboarding.unlockedMenus = [...this.ALL_MENU_KEYS];
+    }
+
+    // --- 3. 레거시 스타터 태깅 (회수하지 않고 표시만) ---
+    ownedCharacters.forEach(c => {
+      if (!c) return;
+      const id = c.characterId || c.id;
+      if (this.LEGACY_STARTER_IDS.includes(id)) c.legacyStarter = true;
+    });
+
+    // --- 4. 소급 지급 (계정당 1회, grantVersion으로 중복 차단) ---
+    if ((data.onboarding.grantVersion || 0) < this.ONBOARDING_GRANT_VERSION) {
+      const hasBase = Array.isArray(data.baseHeroes) && data.baseHeroes.length > 0;
+      const hasAscended = Array.isArray(data.ascendedHeroes) && data.ascendedHeroes.length > 0;
+
+      if (!hasBase && !hasAscended) {
+        this._grantStarterHero(data);
+
+        // 진행 이력이 있는 유저만 소급 재화를 받는다.
+        // 이력이 없는 빈 세이브는 튜토리얼 보상 경로로 정상 수급한다 (§1-2).
+        if (isExistingPlayer) {
+          const r = data.resources;
+          const shardId = this.SECOND_BASE_HERO_ID;
+          r.characterShards[shardId] = (r.characterShards[shardId] || 0) + this.RETRO_GRANT.secondHeroShards;
+          r.spiritStones = (r.spiritStones || 0) + this.RETRO_GRANT.spiritStones;
+          r.institutionSeal = (r.institutionSeal || 0) + this.RETRO_GRANT.institutionSeal;
+          GameLogger.log('SAVE', '온보딩 소급 지급 적용', { heroId: this.STARTER_BASE_HERO_ID });
+        }
+      }
+
+      data.onboarding.grantVersion = this.ONBOARDING_GRANT_VERSION;
+    }
+
+    return data;
+  }
+
+  /**
+   * 대상 객체에 없는 키만 기본값으로 채운다 (기존 값은 보존)
+   * @param {Object} target
+   * @param {Object} defaults
+   */
+  static _fillMissingKeys(target, defaults) {
+    Object.keys(defaults).forEach(key => {
+      if (target[key] === undefined) target[key] = defaults[key];
+    });
+  }
+
+  /**
+   * T-C2: base_iris 확정 지급 (멱등)
+   * characters / baseHeroes / parties 세 곳을 동시에 정합화한다.
+   * @param {Object} data - 저장 데이터 (in-place)
+   * @returns {boolean} 실제로 지급했는지 여부
+   */
+  static _grantStarterHero(data) {
+    const heroId = this.STARTER_BASE_HERO_ID;
+    if (!Array.isArray(data.characters)) data.characters = [];
+    if (!Array.isArray(data.baseHeroes)) data.baseHeroes = [];
+
+    let granted = false;
+
+    if (!data.characters.some(c => c && (c.characterId || c.id) === heroId)) {
+      data.characters.push(this._createStarterHeroRecord());
+      if (!data.statistics) data.statistics = {};
+      data.statistics.charactersCollected = (data.statistics.charactersCollected || 0) + 1;
+      granted = true;
+    }
+
+    if (!data.baseHeroes.some(h => h && h.baseHeroId === heroId)) {
+      data.baseHeroes.push({ baseHeroId: heroId, fragmentCount: 0, openedRoutes: [] });
+    }
+
+    // 편성된 영웅이 하나도 없을 때만 1인 파티를 만든다 (기존 편성은 건드리지 않는다)
+    const hasAnyMember = Array.isArray(data.parties) &&
+      data.parties.some(p => Array.isArray(p) && p.some(slot => !!slot));
+    if (!hasAnyMember) {
+      data.parties = [[heroId, null, null, null]];
+    }
+
+    data.onboarding.starterHeroGranted = true;
+    data.onboarding.starterHeroId = heroId;
+
+    return granted;
   }
 
   /**
@@ -291,12 +529,27 @@ export class SaveManager {
    * @returns {Object} 마이그레이션된 데이터
    */
   static migrate(oldData) {
+    // 얕은 병합은 기본값의 onboarding(지급 완료 상태)을 그대로 물려준다.
+    // 구세이브가 소급 지급 분기를 타도록, 원본에 없던 섹션은 병합 후 제거한다.
+    const hadOnboarding = !!(oldData && oldData.onboarding);
     const newData = { ...this.getDefaultSave(), ...oldData };
     newData.version = this.VERSION;
+    if (!hadOnboarding) {
+      delete newData.onboarding;
+      if (!oldData?.tutorial) delete newData.tutorial;
+      if (!oldData?.story) delete newData.story;
+      // 신규 계정 확정 지급분(base_iris 레코드/파티/baseHeroes)이 구세이브에 새어들면
+      // 소급 지급 판정이 왜곡된다. 원본에 없던 항목은 빈 상태로 되돌린다.
+      if (!Array.isArray(oldData?.characters)) newData.characters = [];
+      if (!Array.isArray(oldData?.baseHeroes)) newData.baseHeroes = [];
+      if (!Array.isArray(oldData?.parties)) newData.parties = [];
+    }
     // COLL-01/COLL-02: 얕은 병합으로 덮인 resources/collections 기본값 재보장
     this._migrateCollectionSchema(newData);
     // T-S2/BLK-05: 얕은 병합으로 덮인 gacha.freeTenPullUsed 기본값 재보장
     this._migrateGachaSchema(newData);
+    // T-C1: v1 → v2 온보딩/튜토리얼/스토리 섹션 마이그레이션
+    this._migrateOnboardingSchema(newData);
     this.save(newData);
     return newData;
   }
@@ -444,30 +697,27 @@ export class SaveManager {
   }
 
   /**
-   * 신규 계정용 스타터 캐릭터 4명 생성
-   * 4개 클래스 × 1명 (R등급): warrior, mage, archer, healer
+   * T-C2: 신규 계정 확정 지급 기본영웅 레코드 생성 (base_iris 1인)
+   * 레거시 char_1~4 스타터는 폐지되었다 (SYSTEM_ONBOARDING_ECONOMY §1-1 옵션 B).
+   * @returns {Object} 캐릭터 인스턴스
    */
-  static _createStarterCharacters() {
-    const starters = [
-      { id: 'char_1', stars: 2 }, // 요정기사 (warrior, avalon)
-      { id: 'char_2', stars: 2 }, // 스베르탈프 (mage, helheim)
-      { id: 'char_3', stars: 2 }, // 하피 (archer, tartarus)
-      { id: 'char_4', stars: 2 }, // 님프 (healer, olympus)
-    ];
+  static _createStarterHeroRecord() {
+    const heroId = this.STARTER_BASE_HERO_ID;
     const now = Date.now();
-    return starters.map((s, i) => ({
-      id: s.id,
-      instanceId: `${s.id}_starter_${now + i}`,
-      characterId: s.id,
+    return {
+      id: heroId,
+      instanceId: `${heroId}_starter_${now}`,
+      characterId: heroId,
       level: 1,
       exp: 0,
-      stars: s.stars,
+      stars: getRarityStars('R'),
       skillLevels: [1, 1, 1],
       equipped: null,
       equipment: { weapon: null, armor: null, accessory: null },
       constellation: 0,
-      acquiredAt: now
-    }));
+      acquiredAt: now,
+      isBaseHero: true
+    };
   }
 
   /**

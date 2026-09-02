@@ -1,6 +1,8 @@
 import { PopupBase } from '../PopupBase.js';
 import { COLORS, s, sf } from '../../config/gameConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
+import { EvolutionSystem } from '../../systems/EvolutionSystem.js';
+import { StoryManager } from '../../systems/StoryManager.js';
 
 /**
  * AscensionPopup - 기관 각인 팝업 (CHAR-3)
@@ -56,6 +58,46 @@ export class AscensionPopup extends PopupBase {
     return obj;
   }
 
+  /**
+   * 컷씬 재생 중 팝업이 닫히거나 씬이 전환되었는지 확인.
+   * StoryManager.trigger의 onComplete는 부모 씬 resume 이후에 호출되므로,
+   * 그 사이에 팝업이 사라졌을 수 있다.
+   * @returns {boolean} 후속 UI를 그려도 안전한지 여부
+   */
+  _isAlive() {
+    return this.isOpen && !!this.scene && !!this.contentContainer;
+  }
+
+  /**
+   * 콘텐츠 영역의 세로 중앙 좌표.
+   * `PopupBase.contentBounds`는 centerX만 제공하고 centerY는 정의하지 않는다.
+   * contentBounds에서 centerY를 직접 읽으면 undefined 연산이 NaN이 되어 텍스트가 화면 밖으로 나간다.
+   * @returns {number}
+   */
+  _centerY() {
+    const b = this.contentBounds;
+    return (b.top + b.bottom) / 2;
+  }
+
+  /**
+   * T-Q1: 스토리 컷씬 트리거 후 콜백 실행.
+   * 재생할 씬이 없으면 StoryManager가 onComplete를 즉시 동기 호출하므로
+   * 호출부는 컷씬 유무와 무관하게 동일한 흐름을 갖는다.
+   * @param {string} triggerName - evolve_gate / hero_evolve 등
+   * @param {Object} ctx - { heroId, cultId }
+   * @param {Function} next - 컷씬 종료 후 실행할 다음 단계
+   */
+  _playCutsceneThen(triggerName, ctx, next) {
+    StoryManager.trigger(triggerName, {
+      ...ctx,
+      scene: this.scene,
+      onComplete: () => {
+        if (!this._isAlive()) return;
+        next();
+      }
+    });
+  }
+
   // ─────────────────────────────────────────
   // Step 1: 기본영웅 선택
   // ─────────────────────────────────────────
@@ -77,7 +119,7 @@ export class AscensionPopup extends PopupBase {
     // 기본영웅 목록
     const allBase = SaveManager.getAllBaseHeroes();
     if (allBase.length === 0) {
-      this.addText(b.centerX, b.centerY, '기본영웅 데이터를 불러올 수 없습니다.', {
+      this.addText(b.centerX, this._centerY(), '기본영웅 데이터를 불러올 수 없습니다.', {
         fontSize: sf(15),
         color: '#FF6B6B'
       }).setOrigin(0.5);
@@ -188,7 +230,9 @@ export class AscensionPopup extends PopupBase {
     });
     bg.on('pointerdown', () => {
       this.selectedBaseHero = hero;
-      this.buildStep2();
+      // T-Q1: 기관 선택 화면 최초 진입 직전에 evolve_gate 컷씬을 재생한다
+      // (NARRATIVE_STORY_MODE R-04 체인: 벽 인지 → evolve_gate → 기관 선택 → hero_evolve)
+      this._playCutsceneThen('evolve_gate', { heroId: hero.id }, () => this.buildStep2());
     });
   }
 
@@ -218,7 +262,7 @@ export class AscensionPopup extends PopupBase {
     // 각 루트 카드
     const routes = hero.ascensionRoutes || [];
     if (routes.length === 0) {
-      this.addText(b.centerX, b.centerY, '각인 가능한 루트가 없습니다.', {
+      this.addText(b.centerX, this._centerY(), '각인 가능한 루트가 없습니다.', {
         fontSize: sf(15),
         color: '#FF6B6B'
       }).setOrigin(0.5);
@@ -469,6 +513,15 @@ export class AscensionPopup extends PopupBase {
       color: gemsOk ? '#4ADE80' : '#FF6B6B'
     }).setOrigin(1, 0.5);
 
+    // T-C8: 첫 각인 보증 안내 (계정당 1회, 기관 재화 부족분 자동 보전)
+    if (EvolutionSystem.isFirstAscensionGuaranteeAvailable()) {
+      this.addText(b.centerX - s(90), costY + s(90), '🎁 첫 각인 보증 — 기관 재화는 이번 1회 자동 보전', {
+        fontSize: sf(13),
+        fontFamily: '"Noto Sans KR", Arial',
+        color: '#FFD700'
+      }).setOrigin(0, 0.5);
+    }
+
     // 로어 힌트
     if (route.loreHint) {
       this.addText(b.centerX, cardY + s(130), `"${route.loreHint}"`, {
@@ -512,6 +565,10 @@ export class AscensionPopup extends PopupBase {
     const hero = this.selectedBaseHero;
     const route = this.selectedRoute;
 
+    // T-C8: 기관 선택 확정 시점에 레이어 2 재화 부족분을 1회 한정 보전한다.
+    // 각인 실행보다 먼저 수행해야 첫 전직이 재화 부족으로 막히지 않는다.
+    EvolutionSystem.applyFirstAscensionGuarantee(hero.id, route.cultId);
+
     const result = SaveManager.performAscension(hero.id, route.cultId);
 
     if (result.success) {
@@ -519,7 +576,13 @@ export class AscensionPopup extends PopupBase {
       const cultName = cultData ? cultData.nameKr : route.cultId;
       const ascData = SaveManager.getAscendedHeroData(route.ascendedHeroId);
       const ascName = ascData ? ascData.name : route.ascendedHeroId;
-      this._showSuccessScreen(ascName, cultName, route.resultRarity);
+      // T-Q1: 전직 확정 직후 해당 루트의 전직 대사를 재생하고, 종료 후 성공 화면으로 넘어간다.
+      // 첫 각인 보증은 위에서 이미 소모했으므로 이 콜백에서 재적용하지 않는다.
+      this._playCutsceneThen(
+        'hero_evolve',
+        { heroId: hero.id, cultId: route.cultId },
+        () => this._showSuccessScreen(ascName, cultName, route.resultRarity)
+      );
     } else {
       this._showToastInPopup(`각인 실패: ${result.error}`);
     }
@@ -534,24 +597,24 @@ export class AscensionPopup extends PopupBase {
     const rarityColor = this._rarityColor(rarity);
 
     // 성공 이모지
-    this.addText(b.centerX, b.centerY - s(120), '✨', {
+    this.addText(b.centerX, this._centerY() - s(120), '✨', {
       fontSize: sf(72)
     }).setOrigin(0.5);
 
-    this.addText(b.centerX, b.centerY, `${ascName}`, {
+    this.addText(b.centerX, this._centerY(), `${ascName}`, {
       fontSize: sf(24),
       fontFamily: '"Noto Sans KR", Arial',
       fontStyle: 'bold',
       color: `#${rarityColor.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
-    this.addText(b.centerX, b.centerY + s(40), `${cultName} 교단 각인 완료!`, {
+    this.addText(b.centerX, this._centerY() + s(40), `${cultName} 교단 각인 완료!`, {
       fontSize: sf(17),
       fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
-    this.addText(b.centerX, b.centerY + s(75), rarity, {
+    this.addText(b.centerX, this._centerY() + s(75), rarity, {
       fontSize: sf(20),
       fontStyle: 'bold',
       color: `#${rarityColor.toString(16).padStart(6, '0')}`

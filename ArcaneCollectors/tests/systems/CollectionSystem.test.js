@@ -452,7 +452,7 @@ describe('CollectionSystem', () => {
       expect(fresh.collections).toEqual({});
       expect(fresh.resources.worldTreeSeeds).toBe(0);
       expect(fresh.resources.cultEssence).toEqual({});
-      expect(fresh.resources.institutionSeal).toBe(0);
+      expect(fresh.resources.institutionSeal).toBe(1); // T-C2: 첫 각인 1회분 초기 지급
       expect(fresh.resources.awakeningFlame).toBe(0);
     });
 
@@ -473,7 +473,8 @@ describe('CollectionSystem', () => {
       expect(loaded.collections).toEqual({});
       expect(loaded.resources.worldTreeSeeds).toBe(0);
       expect(loaded.resources.cultEssence).toEqual({});
-      expect(loaded.baseHeroes).toEqual([]);
+      // T-C2: 온보딩 미경험 기존 유저는 로드 시 base_iris를 소급 지급받는다
+      expect(loaded.baseHeroes.map(h => h.baseHeroId)).toEqual(['base_iris']);
       expect(CollectionSystem.getAllProgress(loaded)).toHaveLength(10);
       expect(CollectionSystem.getTierBonus('base_iris', loaded)).toEqual(COLLECTION_BONUS_TIERS[0]);
     });

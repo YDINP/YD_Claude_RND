@@ -515,15 +515,22 @@ describe('TowerSystem', () => {
       });
     });
 
-    it('has monotonic recommendedPower from ~500 to ~25000', () => {
+    // BAL-BLK03 밸런스 v1.1 (docs/balance/BALANCE_DESIGN_v1.md §9-3/§9-6):
+    // v1의 400+140×(floor−1)(층100=14,260)이 등급 역전 수정(Omar/Leon Asgard 하향)으로
+    // 재계산된 파티 상한(13,347)을 초과해 94~100층 도달 불가 상태였다.
+    // v1.1에서 recommendedPower = 400 + 128 × (floor − 1) 로 재재스케일링했다
+    // (층1=400, 층100=13,072 ≤ 파티 상한 13,347).
+    it('has monotonic recommendedPower following 400 + 128*(floor-1), floor100 = 13072', () => {
       const byFloor = [...realTower.floors].sort((a, b) => a.floor - b.floor);
 
       for (let i = 1; i < byFloor.length; i++) {
         expect(byFloor[i].recommendedPower).toBeGreaterThan(byFloor[i - 1].recommendedPower);
       }
-      expect(byFloor[0].recommendedPower).toBeGreaterThanOrEqual(450);
-      expect(byFloor[0].recommendedPower).toBeLessThanOrEqual(550);
-      expect(byFloor[99].recommendedPower).toBe(25000);
+      byFloor.forEach((f, i) => {
+        expect(f.recommendedPower).toBe(400 + 128 * i);
+      });
+      expect(byFloor[0].recommendedPower).toBe(400);
+      expect(byFloor[99].recommendedPower).toBe(13072);
     });
 
     it('maps reward bands to PRD §5.2 shard rarities', () => {

@@ -25,6 +25,7 @@ export class PopupBase {
     overlay.setInteractive();
     overlay.on('pointerdown', () => this.hide());
     this.container.add(overlay);
+    this.overlay = overlay;
 
     // Panel
     const px = GAME_WIDTH / 2;
@@ -57,6 +58,7 @@ export class PopupBase {
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.hide());
     this.container.add(closeBtn);
+    this.closeBtn = closeBtn;
 
     // Separator line
     const sep = this.scene.add.graphics();

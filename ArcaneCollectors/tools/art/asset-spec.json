@@ -1,0 +1,1275 @@
+{
+  "$schema": "internal://arcanecollectors/asset-spec/v1",
+  "generatedBy": "tools/art/_build-asset-spec.mjs",
+  "generatedAt": "2026-09-02",
+  "relatedDocs": [
+    "docs/redesign/REDESIGN_PLAN.md",
+    "docs/redesign/ASSET_USAGE_MAP.md",
+    "docs/DESIGN_SYSTEM.md"
+  ],
+  "generator": {
+    "backend": "local ComfyUI",
+    "model": "novaAnimeXL (SDXL)",
+    "notes": [
+      "SDXL 은 문자를 렌더하지 못한다. 모든 텍스트는 Phaser 코드에서 그린다.",
+      "세로 배경은 832x1216, 가로 배경은 1216x832 를 넘기지 않는다. 그 이상은 구도가 붕괴한다.",
+      "알파가 필요한 항목은 순수 크로마 그린 #00FF00 배경으로 생성한 뒤 키잉한다. despill 을 반드시 적용한다.",
+      "9-slice 대상은 코너 영역 안쪽에 형태를 두지 않아야 한다. 프롬프트의 hollow empty center 가 이 조건이다.",
+      "배경은 1080x1920 cover-fit 시 가로 약 24% 가 잘린다. 주요 형태를 중앙 60% 안에 둔다."
+    ]
+  },
+  "conventions": {
+    "baseResolution": "720x1280 (렌더 1080x1920, s() = x1.5)",
+    "blurPair": "category=background 인 항목은 전부 {name}_blur.png 페어를 빌드 스크립트로 함께 굽는다. glass 패널 백드롭에 쓰인다.",
+    "chromaKey": "#00FF00",
+    "priority": {
+      "P1": "필수 — 리디자인 W2 착수 전 준비",
+      "P2": "권장 — 이후 보강"
+    }
+  },
+  "summary": {
+    "total": 57,
+    "P1": 43,
+    "P2": 14,
+    "byCategory": {
+      "background": 14,
+      "frame": 8,
+      "button": 3,
+      "icon": 14,
+      "banner": 3,
+      "logo": 1,
+      "fullbody-extra": 14
+    }
+  },
+  "assets": [
+    {
+      "id": "bg_main",
+      "category": "background",
+      "priority": "P1",
+      "targetPath": "public/assets/backgrounds/scenes/bg_main.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, vast ruined mythic sanctuary hall at night, towering broken stone pillars, floating glowing runic shards, a hairline dimensional rift crack glowing cyan in the far center, cold moonlight from above, drifting dust motes, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "MainMenuScene"
+      ]
+    },
+    {
+      "id": "bg_login",
+      "category": "background",
+      "priority": "P1",
+      "targetPath": "public/assets/backgrounds/scenes/bg_login.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, three heroic silhouettes standing in backlight on a cliff edge facing a colossal glowing dimensional rift in the night sky, gold and cyan light bleeding from the rift, epic scale, figures small and dark against the light, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "LoginScene",
+        "BootScene"
+      ]
+    },
+    {
+      "id": "bg_gacha",
+      "category": "background",
+      "priority": "P1",
+      "targetPath": "public/assets/backgrounds/scenes/bg_gacha.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, ornate summoning chamber, huge glowing golden magic circle on the floor seen in perspective, vertical light pillars rising, floating golden particles, deep violet and gold, altar in center, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "GachaScene",
+        "GachaPopup"
+      ]
+    },
+    {
+      "id": "bg_stageselect",
+      "category": "background",
+      "priority": "P1",
+      "targetPath": "public/assets/backgrounds/scenes/bg_stageselect.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, ancient star map chamber, a great celestial constellation chart projected in the air, faint continent outlines, brass astrolabe rings, deep indigo with cyan constellation lines, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "StageSelectScene"
+      ]
+    },
+    {
+      "id": "bg_tower",
+      "category": "background",
+      "priority": "P1",
+      "targetPath": "public/assets/backgrounds/scenes/bg_tower.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, endless black spire tower ascending into a storm sky, seen from its base looking up, countless floors receding, torch lights spiraling upward, ominous scale, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "TowerPopup",
+        "TowerScene"
+      ]
+    },
+    {
+      "id": "bg_result_victory",
+      "category": "background",
+      "priority": "P1",
+      "targetPath": "public/assets/backgrounds/scenes/bg_result_victory.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, triumphant golden dawn light breaking through storm clouds over a battlefield, radiant god rays from top center, floating gold embers, warm gold against deep indigo, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "BattleResultScene"
+      ]
+    },
+    {
+      "id": "bg_result_defeat",
+      "category": "background",
+      "priority": "P1",
+      "targetPath": "public/assets/backgrounds/scenes/bg_result_defeat.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, cold desolate battlefield under ashen sky, shattered weapons in the ground, grey falling ash, muted desaturated blue and grey, somber, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "BattleResultScene"
+      ]
+    },
+    {
+      "id": "bg_chapter_1",
+      "category": "background",
+      "priority": "P1",
+      "targetPath": "public/assets/backgrounds/battle/bg_chapter_1.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, dark ancient forest at night, colossal twisted trees, faint bioluminescent green fungi, thin mist between the trunks, a narrow moonlit clearing in the center as the fighting ground, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "BattleScene(ch1)",
+        "StageSelectScene(ch1)",
+        "CutsceneScene"
+      ]
+    },
+    {
+      "id": "bg_chapter_2",
+      "category": "background",
+      "priority": "P1",
+      "targetPath": "public/assets/backgrounds/battle/bg_chapter_2.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, battlefield where two mythologies collide, half japanese torii gate ruins and half nordic stone runes, sky split between gold dawn and violet dusk, cracked ground in the center, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "BattleScene(ch2)",
+        "StageSelectScene(ch2)",
+        "CutsceneScene"
+      ]
+    },
+    {
+      "id": "bg_chapter_3",
+      "category": "background",
+      "priority": "P2",
+      "targetPath": "public/assets/backgrounds/battle/bg_chapter_3.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, the underworld Yomi, black rock cavern with rivers of pale violet spirit fire, hanging paper talismans, endless dark depth behind, flat dark stone floor in the center, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "BattleScene(ch3)",
+        "StageSelectScene(ch3)",
+        "CutsceneScene"
+      ]
+    },
+    {
+      "id": "bg_chapter_4",
+      "category": "background",
+      "priority": "P2",
+      "targetPath": "public/assets/backgrounds/battle/bg_chapter_4.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, collapsing greek marble temple on a mountain peak above the clouds, broken corinthian columns, orange volcanic fissures splitting the white marble, sunset amber and white, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "BattleScene(ch4)",
+        "StageSelectScene(ch4)",
+        "CutsceneScene"
+      ]
+    },
+    {
+      "id": "bg_chapter_5",
+      "category": "background",
+      "priority": "P2",
+      "targetPath": "public/assets/backgrounds/battle/bg_chapter_5.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, Ragnarok final battlefield, the world tree burning in the far distance, sky torn open with white light, scorched earth, all mythologies converging, apocalyptic scale, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "BattleScene(ch5)",
+        "StageSelectScene(ch5)",
+        "CutsceneScene"
+      ]
+    },
+    {
+      "id": "bg_pvp",
+      "category": "background",
+      "priority": "P2",
+      "targetPath": "public/assets/backgrounds/scenes/bg_pvp.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, grand colosseum arena at night lit by cyan braziers, empty tiered stands rising into darkness, sand floor in the center, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "PvPPopup"
+      ]
+    },
+    {
+      "id": "bg_raid",
+      "category": "background",
+      "priority": "P2",
+      "targetPath": "public/assets/backgrounds/scenes/bg_raid.png",
+      "width": 832,
+      "height": 1216,
+      "count": 2,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, enormous draconic silhouette coiled in a dark cavern, only its glowing eye and scale highlights visible, overwhelming scale, deep red rim light against black, vertical portrait composition, main subject centered within the middle 60 percent of the width, empty atmospheric margins on left and right, clear negative space in the lower third for UI overlay",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "동일 계열 배경끼리는 seed 를 100 단위로 묶어 기록한다. 채택본 seed 를 이 필드에 덮어쓸 것",
+      "postProcess": [
+        "upscale x1.30 (Lanczos) -> 1082x1581",
+        "derive blur pair: gaussian 24px + brightness -15% -> {targetPath 파일명}_blur.png",
+        "export both as PNG, no alpha"
+      ],
+      "usedBy": [
+        "RaidPopup"
+      ]
+    },
+    {
+      "id": "frame_panel",
+      "category": "frame",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/frames/frame_panel.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, ornate ui frame border only, hollow empty center, thin dark metal panel border with subtle cyan energy line running along the inner edge, restrained sci-fi arcane ornament, corners slightly reinforced, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, perfectly symmetrical, flat orthographic front view, game ui asset sheet",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, filled center, solid center, content inside frame, character, asymmetric corners, perspective, tilted, 3d rotation",
+      "seedNote": "동일 세트(N/R/SR/SSR)는 같은 seed 로 뽑아 형태를 일치시키고 색만 프롬프트로 바꾼다",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill 적용)",
+        "downscale 512",
+        "9-slice 96,96,96,96"
+      ],
+      "usedBy": [
+        "GlassPanel",
+        "all scenes"
+      ]
+    },
+    {
+      "id": "frame_popup",
+      "category": "frame",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/frames/frame_popup.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, ornate ui frame border only, hollow empty center, modal window border, dark metal, with a wider decorated header bar across the top edge, small emblem notch centered on the top bar, cyan accent line, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, perfectly symmetrical, flat orthographic front view, game ui asset sheet",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, filled center, solid center, content inside frame, character, asymmetric corners, perspective, tilted, 3d rotation",
+      "seedNote": "동일 세트(N/R/SR/SSR)는 같은 seed 로 뽑아 형태를 일치시키고 색만 프롬프트로 바꾼다",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill 적용)",
+        "downscale 512",
+        "9-slice 96,96,120,96"
+      ],
+      "usedBy": [
+        "PopupBase"
+      ]
+    },
+    {
+      "id": "frame_card_N",
+      "category": "frame",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/frames/frame_card_N.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, ornate ui frame border only, hollow empty center, trading card border frame, plain dark iron border, matte grey metal, no ornament, minimal, hollow empty center, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, perfectly symmetrical, flat orthographic front view, game ui asset sheet",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, filled center, solid center, content inside frame, character, asymmetric corners, perspective, tilted, 3d rotation",
+      "seedNote": "동일 세트(N/R/SR/SSR)는 같은 seed 로 뽑아 형태를 일치시키고 색만 프롬프트로 바꾼다",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill 적용)",
+        "downscale 512",
+        "9-slice 64,64,64,64"
+      ],
+      "usedBy": [
+        "HeroCard",
+        "GachaResultOverlay",
+        "BattleResultScene",
+        "InventoryPopup"
+      ]
+    },
+    {
+      "id": "frame_card_R",
+      "category": "frame",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/frames/frame_card_R.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, ornate ui frame border only, hollow empty center, trading card border frame, polished steel border with a thin blue enamel inlay, restrained ornament, hollow empty center, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, perfectly symmetrical, flat orthographic front view, game ui asset sheet",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, filled center, solid center, content inside frame, character, asymmetric corners, perspective, tilted, 3d rotation",
+      "seedNote": "동일 세트(N/R/SR/SSR)는 같은 seed 로 뽑아 형태를 일치시키고 색만 프롬프트로 바꾼다",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill 적용)",
+        "downscale 512",
+        "9-slice 64,64,64,64"
+      ],
+      "usedBy": [
+        "HeroCard",
+        "GachaResultOverlay",
+        "BattleResultScene",
+        "InventoryPopup"
+      ]
+    },
+    {
+      "id": "frame_card_SR",
+      "category": "frame",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/frames/frame_card_SR.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, ornate ui frame border only, hollow empty center, trading card border frame, silver border with violet crystal shards embedded at the corners, arcane engraving, hollow empty center, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, perfectly symmetrical, flat orthographic front view, game ui asset sheet",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, filled center, solid center, content inside frame, character, asymmetric corners, perspective, tilted, 3d rotation",
+      "seedNote": "동일 세트(N/R/SR/SSR)는 같은 seed 로 뽑아 형태를 일치시키고 색만 프롬프트로 바꾼다",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill 적용)",
+        "downscale 512",
+        "9-slice 64,64,64,64"
+      ],
+      "usedBy": [
+        "HeroCard",
+        "GachaResultOverlay",
+        "BattleResultScene",
+        "InventoryPopup"
+      ]
+    },
+    {
+      "id": "frame_card_SSR",
+      "category": "frame",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/frames/frame_card_SSR.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, ornate ui frame border only, hollow empty center, trading card border frame, radiant gold border with glowing golden filigree and small light flares at the corners, most ornate, hollow empty center, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, perfectly symmetrical, flat orthographic front view, game ui asset sheet",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, filled center, solid center, content inside frame, character, asymmetric corners, perspective, tilted, 3d rotation",
+      "seedNote": "동일 세트(N/R/SR/SSR)는 같은 seed 로 뽑아 형태를 일치시키고 색만 프롬프트로 바꾼다",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill 적용)",
+        "downscale 512",
+        "9-slice 64,64,64,64"
+      ],
+      "usedBy": [
+        "HeroCard",
+        "GachaResultOverlay",
+        "BattleResultScene",
+        "InventoryPopup"
+      ]
+    },
+    {
+      "id": "frame_hex",
+      "category": "frame",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/frames/frame_hex.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, ornate ui frame border only, hollow empty center, hexagonal portrait socket frame, dark metal ring with six small notches, hollow empty center, used for party slots and stage number badges, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, perfectly symmetrical, flat orthographic front view, game ui asset sheet",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, filled center, solid center, content inside frame, character, asymmetric corners, perspective, tilted, 3d rotation",
+      "seedNote": "동일 세트(N/R/SR/SSR)는 같은 seed 로 뽑아 형태를 일치시키고 색만 프롬프트로 바꾼다",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill 적용)",
+        "downscale 256",
+        "9-slice 0,0,0,0 (9-slice 미사용, 단일 스프라이트)"
+      ],
+      "usedBy": [
+        "MainMenuScene party slots",
+        "StageSelectScene stage badge"
+      ]
+    },
+    {
+      "id": "panel_header_ornament",
+      "category": "frame",
+      "priority": "P2",
+      "targetPath": "public/assets/ui/panels/panel_header_ornament.png",
+      "width": 1024,
+      "height": 128,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, ornate ui frame border only, hollow empty center, thin horizontal decorative divider bar, symmetrical, small diamond at the center, tapering cyan energy line to both ends, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, perfectly symmetrical, flat orthographic front view, game ui asset sheet",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, filled center, solid center, content inside frame, character, asymmetric corners, perspective, tilted, 3d rotation",
+      "seedNote": "동일 세트(N/R/SR/SSR)는 같은 seed 로 뽑아 형태를 일치시키고 색만 프롬프트로 바꾼다",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill 적용)",
+        "downscale 512x64",
+        "9-slice 160,160,0,0 (가로 3-slice)"
+      ],
+      "usedBy": [
+        "PopupBase header",
+        "section titles"
+      ]
+    },
+    {
+      "id": "btn_primary",
+      "category": "button",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/buttons/btn_primary.png",
+      "width": 1024,
+      "height": 320,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, horizontal ui button plate, bright cyan energy filled plate with a glowing outer rim and a subtle inner highlight along the top edge, confident and prominent, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, flat orthographic front view, perfectly symmetrical left and right, empty center label area, game ui asset",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, filled center, solid center, content inside frame, character, asymmetric corners, perspective, tilted, 3d rotation, text label, icon in center",
+      "seedNote": "primary/secondary/ghost 3종은 같은 seed 로 뽑아 실루엣을 일치시킨다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 512x160",
+        "9-slice 72,72,40,40"
+      ],
+      "usedBy": [
+        "all CTA buttons"
+      ]
+    },
+    {
+      "id": "btn_secondary",
+      "category": "button",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/buttons/btn_secondary.png",
+      "width": 1024,
+      "height": 320,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, horizontal ui button plate, dark slate metal plate with a thin cyan outline, matte and recessive, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, flat orthographic front view, perfectly symmetrical left and right, empty center label area, game ui asset",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, filled center, solid center, content inside frame, character, asymmetric corners, perspective, tilted, 3d rotation, text label, icon in center",
+      "seedNote": "primary/secondary/ghost 3종은 같은 seed 로 뽑아 실루엣을 일치시킨다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 512x160",
+        "9-slice 72,72,40,40"
+      ],
+      "usedBy": [
+        "secondary actions"
+      ]
+    },
+    {
+      "id": "btn_ghost",
+      "category": "button",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/buttons/btn_ghost.png",
+      "width": 1024,
+      "height": 320,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, horizontal ui button plate, nearly transparent plate, outline only, thin grey border with faint corner ticks, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, flat orthographic front view, perfectly symmetrical left and right, empty center label area, game ui asset",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, filled center, solid center, content inside frame, character, asymmetric corners, perspective, tilted, 3d rotation, text label, icon in center",
+      "seedNote": "primary/secondary/ghost 3종은 같은 seed 로 뽑아 실루엣을 일치시킨다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 512x160",
+        "9-slice 72,72,40,40"
+      ],
+      "usedBy": [
+        "tertiary actions, cancel"
+      ]
+    },
+    {
+      "id": "icon_currency_gold",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/currency/gold.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, a stack of ancient gold coins with a rune stamped on the top coin, warm gold #F59E0B, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "TopBar",
+        "reward displays",
+        "GachaScene",
+        "QuestPopup"
+      ]
+    },
+    {
+      "id": "icon_currency_gem",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/currency/gem.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, a faceted magenta crystal gem, sharp facets catching light, #EC4899, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "TopBar",
+        "reward displays",
+        "GachaScene",
+        "QuestPopup"
+      ]
+    },
+    {
+      "id": "icon_currency_energy",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/currency/energy.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, a stylized lightning bolt inside a hexagon, bright cyan #06BBFA, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "TopBar",
+        "reward displays",
+        "GachaScene",
+        "QuestPopup"
+      ]
+    },
+    {
+      "id": "icon_currency_ticket",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/currency/ticket.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, an ornate summoning ticket with a rune seal and a torn edge, gold and violet, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "TopBar",
+        "reward displays",
+        "GachaScene",
+        "QuestPopup"
+      ]
+    },
+    {
+      "id": "icon_currency_spirit_stone",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/currency/spirit_stone.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, a smooth polished spirit stone orb with an inner glow, pale gold #FFD60A, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "TopBar",
+        "reward displays",
+        "GachaScene",
+        "QuestPopup"
+      ]
+    },
+    {
+      "id": "icon_cult_valhalla",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/cults/valhalla.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, heraldic emblem crest, crossed nordic axes over a winged helm, wind-blue #4A90D9, engraved metal medallion style, bold symmetrical silhouette, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "HeroDetailScene watermark",
+        "CollectionPopup",
+        "AscensionPopup",
+        "HeroCard badge"
+      ]
+    },
+    {
+      "id": "icon_cult_takamagahara",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/cults/takamagahara.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, heraldic emblem crest, a radiant sun disc with eight rays and a torii silhouette, gold #FFD700, engraved metal medallion style, bold symmetrical silhouette, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "HeroDetailScene watermark",
+        "CollectionPopup",
+        "AscensionPopup",
+        "HeroCard badge"
+      ]
+    },
+    {
+      "id": "icon_cult_olympus",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/cults/olympus.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, heraldic emblem crest, a lightning bolt gripped by an eagle claw, fire orange #FF6B35, engraved metal medallion style, bold symmetrical silhouette, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "HeroDetailScene watermark",
+        "CollectionPopup",
+        "AscensionPopup",
+        "HeroCard badge"
+      ]
+    },
+    {
+      "id": "icon_cult_asgard",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/cults/asgard.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, heraldic emblem crest, the rainbow bridge arch over a fortress gate, cyan blue #5DADE2, engraved metal medallion style, bold symmetrical silhouette, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "HeroDetailScene watermark",
+        "CollectionPopup",
+        "AscensionPopup",
+        "HeroCard badge"
+      ]
+    },
+    {
+      "id": "icon_cult_yomi",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/cults/yomi.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, heraldic emblem crest, a cracked oni mask half in shadow, dark violet #8E44AD, engraved metal medallion style, bold symmetrical silhouette, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "HeroDetailScene watermark",
+        "CollectionPopup",
+        "AscensionPopup",
+        "HeroCard badge"
+      ]
+    },
+    {
+      "id": "icon_cult_tartarus",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/cults/tartarus.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, heraldic emblem crest, a broken chain over an abyssal spiral, deep navy #2C3E50, engraved metal medallion style, bold symmetrical silhouette, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "HeroDetailScene watermark",
+        "CollectionPopup",
+        "AscensionPopup",
+        "HeroCard badge"
+      ]
+    },
+    {
+      "id": "icon_cult_avalon",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/cults/avalon.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, heraldic emblem crest, a sword through a chalice wreathed in leaves, mint teal #4ECDC4, engraved metal medallion style, bold symmetrical silhouette, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "HeroDetailScene watermark",
+        "CollectionPopup",
+        "AscensionPopup",
+        "HeroCard badge"
+      ]
+    },
+    {
+      "id": "icon_cult_helheim",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/cults/helheim.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, heraldic emblem crest, a frozen skull half buried in ice crystals, pale steel #B0C4DE, engraved metal medallion style, bold symmetrical silhouette, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "HeroDetailScene watermark",
+        "CollectionPopup",
+        "AscensionPopup",
+        "HeroCard badge"
+      ]
+    },
+    {
+      "id": "icon_cult_kunlun",
+      "category": "icon",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/icons/cults/kunlun.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, single game ui icon, heraldic emblem crest, a coiled eastern dragon around a peach of immortality, emerald #50C878, engraved metal medallion style, bold symmetrical silhouette, centered, flat orthographic front view, thick clean silhouette, strong readable shape at small size, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, thin lines, intricate tiny details, multiple icons, grid of icons",
+      "seedNote": "같은 카테고리 아이콘은 seed 를 연속 배정해 스타일 일관성을 확보한다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 256",
+        "trim to content + 8px padding"
+      ],
+      "usedBy": [
+        "HeroDetailScene watermark",
+        "CollectionPopup",
+        "AscensionPopup",
+        "HeroCard badge"
+      ]
+    },
+    {
+      "id": "banner_pickup_iris",
+      "category": "banner",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/panels/banner_pickup_iris.png",
+      "width": 832,
+      "height": 1216,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, gacha pickup banner key visual, a single female anime warrior with lightning magic, dynamic hero pose, full body, lightning arcs and gold sparks around her, dramatic backlight, empty darker area across the bottom fifth for the text plate",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "픽업 캐릭터는 hero_005(base_iris) 포트레이트와 머리색·의상 실루엣을 맞출 것. 참조 이미지로 IPAdapter 권장",
+      "postProcess": [
+        "crop to 680x560 display area (base 720 기준), keep character in upper 70%",
+        "bake bottom gradient fade to #0D0F1A over the lowest 20%"
+      ],
+      "usedBy": [
+        "GachaScene",
+        "GachaPopup"
+      ]
+    },
+    {
+      "id": "banner_pickup_generic",
+      "category": "banner",
+      "priority": "P2",
+      "targetPath": "public/assets/ui/panels/banner_pickup_generic.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, gacha standard banner key visual, an ornate empty summoning altar with a glowing silhouette forming above it, no defined character face, gold particles, empty darker area across the bottom fifth",
+      "negative": "text, letters, words, watermark, signature, logo, ui, hud, interface, buttons, people, face, portrait, close-up character, blurry, lowres, jpeg artifacts, bright daylight, washed out, flat lighting, oversaturated, purple white gradient",
+      "seedNote": "bg_gacha 와 다른 seed 로 뽑아 배경과 배너가 겹쳐 보이지 않게 한다",
+      "postProcess": [
+        "crop to 680x560 display area",
+        "bake bottom gradient fade to #0D0F1A"
+      ],
+      "usedBy": [
+        "GachaScene 상시 배너"
+      ]
+    },
+    {
+      "id": "fx_summon_circle",
+      "category": "banner",
+      "priority": "P1",
+      "targetPath": "public/assets/effects/skills/fx_summon_circle.png",
+      "width": 1024,
+      "height": 1024,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, a single ornate circular magic summoning sigil seen flat from directly above, concentric rune rings, radially symmetrical, pure white and light grey lines only so it can be tinted in engine, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, color, colored, perspective, tilted, character, altar",
+      "seedNote": "엔진에서 setTint 로 등급별 색을 입히므로 반드시 무채색으로 생성",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "desaturate to pure greyscale",
+        "downscale 512"
+      ],
+      "usedBy": [
+        "GachaResultOverlay 2단계"
+      ]
+    },
+    {
+      "id": "logo_arcane_collectors",
+      "category": "logo",
+      "priority": "P1",
+      "targetPath": "public/assets/ui/logo_arcane_collectors.png",
+      "width": 1024,
+      "height": 512,
+      "count": 4,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, a game logo emblem MARK ONLY with no text, a winged arcane sigil over crossed keys inside a broken circle, gold and cyan metal, symmetrical, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, text, letters, typography, wordmark, title",
+      "seedNote": "SDXL 은 문자를 못 만든다. \"ARCANE COLLECTORS\" 워드마크는 Orbitron 700 으로 코드에서 렌더하고, 이 에셋은 그 위의 엠블럼으로만 쓴다",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "downscale 512x256"
+      ],
+      "usedBy": [
+        "LoginScene",
+        "BootScene"
+      ]
+    },
+    {
+      "id": "enemy_slime",
+      "category": "fullbody-extra",
+      "priority": "P1",
+      "targetPath": "public/assets/characters/battle/enemy_slime.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime game monster design, a translucent green slime blob with a glowing core, simple and round, full body, standing on the ground, three quarter view facing left, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, consistent flat lighting with cyan rim light from behind",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, human, girl, boy, weapon rack, environment, ground shadow",
+      "seedNote": "적 전체를 같은 seed 대역(9000~9100)으로 묶어 조명과 두께감을 통일",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill)",
+        "trim to content",
+        "downscale to 512 height, anchor origin (0.5, 1.0)"
+      ],
+      "usedBy": [
+        "BattleScene",
+        "IdleBattleView",
+        "TowerPopup 층 정보"
+      ]
+    },
+    {
+      "id": "enemy_goblin",
+      "category": "fullbody-extra",
+      "priority": "P1",
+      "targetPath": "public/assets/characters/battle/enemy_goblin.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime game monster design, a small hunched green goblin with a rusty dagger, mischievous, full body, standing on the ground, three quarter view facing left, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, consistent flat lighting with cyan rim light from behind",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, human, girl, boy, weapon rack, environment, ground shadow",
+      "seedNote": "적 전체를 같은 seed 대역(9000~9100)으로 묶어 조명과 두께감을 통일",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill)",
+        "trim to content",
+        "downscale to 512 height, anchor origin (0.5, 1.0)"
+      ],
+      "usedBy": [
+        "BattleScene",
+        "IdleBattleView",
+        "TowerPopup 층 정보"
+      ]
+    },
+    {
+      "id": "enemy_wolf",
+      "category": "fullbody-extra",
+      "priority": "P1",
+      "targetPath": "public/assets/characters/battle/enemy_wolf.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime game monster design, a lean grey dire wolf snarling, low stance, full body, standing on the ground, three quarter view facing left, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, consistent flat lighting with cyan rim light from behind",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, human, girl, boy, weapon rack, environment, ground shadow",
+      "seedNote": "적 전체를 같은 seed 대역(9000~9100)으로 묶어 조명과 두께감을 통일",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill)",
+        "trim to content",
+        "downscale to 512 height, anchor origin (0.5, 1.0)"
+      ],
+      "usedBy": [
+        "BattleScene",
+        "IdleBattleView",
+        "TowerPopup 층 정보"
+      ]
+    },
+    {
+      "id": "enemy_mushroom",
+      "category": "fullbody-extra",
+      "priority": "P1",
+      "targetPath": "public/assets/characters/battle/enemy_mushroom.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime game monster design, a walking poisonous mushroom creature with a spotted violet cap, spores drifting, full body, standing on the ground, three quarter view facing left, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, consistent flat lighting with cyan rim light from behind",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, human, girl, boy, weapon rack, environment, ground shadow",
+      "seedNote": "적 전체를 같은 seed 대역(9000~9100)으로 묶어 조명과 두께감을 통일",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill)",
+        "trim to content",
+        "downscale to 512 height, anchor origin (0.5, 1.0)"
+      ],
+      "usedBy": [
+        "BattleScene",
+        "IdleBattleView",
+        "TowerPopup 층 정보"
+      ]
+    },
+    {
+      "id": "enemy_treant",
+      "category": "fullbody-extra",
+      "priority": "P1",
+      "targetPath": "public/assets/characters/battle/enemy_treant.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime game monster design, a hulking moss covered tree ent with glowing amber eyes, elite, full body, standing on the ground, three quarter view facing left, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, consistent flat lighting with cyan rim light from behind",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, human, girl, boy, weapon rack, environment, ground shadow",
+      "seedNote": "적 전체를 같은 seed 대역(9000~9100)으로 묶어 조명과 두께감을 통일",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill)",
+        "trim to content",
+        "downscale to 512 height, anchor origin (0.5, 1.0)"
+      ],
+      "usedBy": [
+        "BattleScene",
+        "IdleBattleView",
+        "TowerPopup 층 정보"
+      ]
+    },
+    {
+      "id": "enemy_golem",
+      "category": "fullbody-extra",
+      "priority": "P1",
+      "targetPath": "public/assets/characters/battle/enemy_golem.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime game monster design, a stone statue golem carved with runes, cracked and mossy, elite, full body, standing on the ground, three quarter view facing left, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, consistent flat lighting with cyan rim light from behind",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, human, girl, boy, weapon rack, environment, ground shadow",
+      "seedNote": "적 전체를 같은 seed 대역(9000~9100)으로 묶어 조명과 두께감을 통일",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill)",
+        "trim to content",
+        "downscale to 512 height, anchor origin (0.5, 1.0)"
+      ],
+      "usedBy": [
+        "BattleScene",
+        "IdleBattleView",
+        "TowerPopup 층 정보"
+      ]
+    },
+    {
+      "id": "enemy_goblin_king",
+      "category": "fullbody-extra",
+      "priority": "P1",
+      "targetPath": "public/assets/characters/battle/enemy_goblin_king.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime game monster design, an armored goblin king wearing a crooked gold crown, sitting weight, boss scale, full body, standing on the ground, three quarter view facing left, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, consistent flat lighting with cyan rim light from behind",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, human, girl, boy, weapon rack, environment, ground shadow",
+      "seedNote": "적 전체를 같은 seed 대역(9000~9100)으로 묶어 조명과 두께감을 통일",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill)",
+        "trim to content",
+        "downscale to 512 height, anchor origin (0.5, 1.0)"
+      ],
+      "usedBy": [
+        "BattleScene",
+        "IdleBattleView",
+        "TowerPopup 층 정보"
+      ]
+    },
+    {
+      "id": "enemy_cerberus",
+      "category": "fullbody-extra",
+      "priority": "P2",
+      "targetPath": "public/assets/characters/battle/enemy_cerberus.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime game monster design, a three headed black hound wreathed in ember, boss scale, full body, standing on the ground, three quarter view facing left, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, consistent flat lighting with cyan rim light from behind",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, human, girl, boy, weapon rack, environment, ground shadow",
+      "seedNote": "적 전체를 같은 seed 대역(9000~9100)으로 묶어 조명과 두께감을 통일",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill)",
+        "trim to content",
+        "downscale to 512 height, anchor origin (0.5, 1.0)"
+      ],
+      "usedBy": [
+        "BattleScene",
+        "IdleBattleView",
+        "TowerPopup 층 정보"
+      ]
+    },
+    {
+      "id": "enemy_yamata",
+      "category": "fullbody-extra",
+      "priority": "P2",
+      "targetPath": "public/assets/characters/battle/enemy_yamata.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime game monster design, an eight headed serpent, violet scales, boss scale, full body, standing on the ground, three quarter view facing left, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, consistent flat lighting with cyan rim light from behind",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, human, girl, boy, weapon rack, environment, ground shadow",
+      "seedNote": "적 전체를 같은 seed 대역(9000~9100)으로 묶어 조명과 두께감을 통일",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill)",
+        "trim to content",
+        "downscale to 512 height, anchor origin (0.5, 1.0)"
+      ],
+      "usedBy": [
+        "BattleScene",
+        "IdleBattleView",
+        "TowerPopup 층 정보"
+      ]
+    },
+    {
+      "id": "enemy_jormungandr",
+      "category": "fullbody-extra",
+      "priority": "P2",
+      "targetPath": "public/assets/characters/battle/enemy_jormungandr.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime game monster design, a colossal world serpent coiling, blue-green scales, boss scale, full body, standing on the ground, three quarter view facing left, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient, consistent flat lighting with cyan rim light from behind",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, human, girl, boy, weapon rack, environment, ground shadow",
+      "seedNote": "적 전체를 같은 seed 대역(9000~9100)으로 묶어 조명과 두께감을 통일",
+      "postProcess": [
+        "alpha via chroma key #00FF00 (despill)",
+        "trim to content",
+        "downscale to 512 height, anchor origin (0.5, 1.0)"
+      ],
+      "usedBy": [
+        "BattleScene",
+        "IdleBattleView",
+        "TowerPopup 층 정보"
+      ]
+    },
+    {
+      "id": "fullbody_hero_001",
+      "category": "fullbody-extra",
+      "priority": "P2",
+      "targetPath": "public/assets/characters/fullbody/hero_001.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, a single anime hero character, full body, standing hero pose, facing viewer, detailed fantasy armor and cloak, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, multiple characters, cropped limbs, environment, ground shadow",
+      "seedNote": "기존 portraits/hero_001.png (256px 카툰 플레이스홀더) 를 교체하는 것이 목적이므로 원본과 닮을 필요 없음. char_1 의 교단·클래스에 맞춘 색만 유지",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "trim to content",
+        "origin (0.5, 0.0) 기준 정렬"
+      ],
+      "usedBy": [
+        "HeroDetailScene 전신 영역"
+      ]
+    },
+    {
+      "id": "fullbody_hero_002",
+      "category": "fullbody-extra",
+      "priority": "P2",
+      "targetPath": "public/assets/characters/fullbody/hero_002.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, a single anime hero character, full body, standing hero pose, facing viewer, detailed fantasy armor and cloak, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, multiple characters, cropped limbs, environment, ground shadow",
+      "seedNote": "기존 portraits/hero_002.png (256px 카툰 플레이스홀더) 를 교체하는 것이 목적이므로 원본과 닮을 필요 없음. char_2 의 교단·클래스에 맞춘 색만 유지",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "trim to content",
+        "origin (0.5, 0.0) 기준 정렬"
+      ],
+      "usedBy": [
+        "HeroDetailScene 전신 영역"
+      ]
+    },
+    {
+      "id": "fullbody_hero_003",
+      "category": "fullbody-extra",
+      "priority": "P2",
+      "targetPath": "public/assets/characters/fullbody/hero_003.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, a single anime hero character, full body, standing hero pose, facing viewer, detailed fantasy armor and cloak, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, multiple characters, cropped limbs, environment, ground shadow",
+      "seedNote": "기존 portraits/hero_003.png (256px 카툰 플레이스홀더) 를 교체하는 것이 목적이므로 원본과 닮을 필요 없음. char_3 의 교단·클래스에 맞춘 색만 유지",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "trim to content",
+        "origin (0.5, 0.0) 기준 정렬"
+      ],
+      "usedBy": [
+        "HeroDetailScene 전신 영역"
+      ]
+    },
+    {
+      "id": "fullbody_hero_004",
+      "category": "fullbody-extra",
+      "priority": "P2",
+      "targetPath": "public/assets/characters/fullbody/hero_004.png",
+      "width": 832,
+      "height": 1216,
+      "count": 3,
+      "positive": "masterpiece, best quality, highly detailed, sharp focus, dramatic cinematic lighting, anime key visual, gacha mobile game art, dark fantasy mythology, deep indigo night palette, cyan and gold rim light, a single anime hero character, full body, standing hero pose, facing viewer, detailed fantasy armor and cloak, isolated on a pure flat chroma green background #00FF00, no shadow, no gradient",
+      "negative": "text, letters, words, watermark, signature, background scenery, gradient background, shadow on background, multiple objects, cluttered, blurry, lowres, jpeg artifacts, photo, realistic photograph, drop shadow, reflection, multiple characters, cropped limbs, environment, ground shadow",
+      "seedNote": "기존 portraits/hero_004.png (256px 카툰 플레이스홀더) 를 교체하는 것이 목적이므로 원본과 닮을 필요 없음. char_4 의 교단·클래스에 맞춘 색만 유지",
+      "postProcess": [
+        "alpha via chroma key #00FF00",
+        "trim to content",
+        "origin (0.5, 0.0) 기준 정렬"
+      ],
+      "usedBy": [
+        "HeroDetailScene 전신 영역"
+      ]
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import { ParticleManager } from '../systems/ParticleManager.js';
 import { getAllCharacters, getCharacter, getCharacterOrHero, getEnemy, calculateEnemyStats } from '../data/index.js';
 import { MOOD_COLORS } from '../config/layoutConfig.js';
 import transitionManager from '../utils/TransitionManager.js';
+import { StoryManager } from '../systems/StoryManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import SkillAnimationManager from '../systems/SkillAnimationManager.js';
@@ -148,8 +149,16 @@ export class BattleScene extends Phaser.Scene {
     this.createSynergyDisplay();
     this.createManualTurnButton();
 
-    // A-8.5: 전투 시작 트랜지션
-    this.playBattleIntro();
+    // T-Q1: 보스 스테이지 진입 컷씬(boss_before) → 전투 시작 트랜지션
+    // 컷씬이 없으면 onComplete가 즉시 호출되므로 일반 스테이지 흐름은 그대로다.
+    StoryManager.trigger('boss_before', {
+      scene: this,
+      stageId: this.stage?.id,
+      onComplete: () => {
+        // A-8.5: 전투 시작 트랜지션
+        this.playBattleIntro();
+      }
+    });
   }
 
   /**

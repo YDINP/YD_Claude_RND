@@ -1,0 +1,313 @@
+[
+  {
+    "_comment": "=== 섹션 1: 스테이지 요구 전투력 (Option A) ===",
+    "file": "src/data/stages.json",
+    "path": "stages[23].requirePower",
+    "heroId": null,
+    "from": 14000,
+    "to": 12500,
+    "reason": "5-4 미달 해소 (Option A): 파티 최대(14,348) 대비 요구값을 달성 가능 범위로 조정. 1.14× 비율 유지."
+  },
+  {
+    "file": "src/data/stages.json",
+    "path": "stages[24].requirePower",
+    "heroId": null,
+    "from": 15000,
+    "to": 13500,
+    "reason": "5-5 미달 해소 (Option A): 파티 최대(14,348) 대비 1.063× 여유 확보. Day30 플레이어가 도달 가능한 수준."
+  },
+
+  {
+    "_comment": "=== 섹션 2: 탑 recommendedPower 전면 재스케일링 ===",
+    "_formula": "recommendedPower = 400 + 140 × (floor − 1). 층100 = 14,260 ≤ 파티 최대 14,348",
+    "file": "src/data/tower.json",
+    "path": "floors[*].recommendedPower",
+    "heroId": null,
+    "from": "500→25000 (현행 선형, 층56부터 파티 상한 초과)",
+    "to": {
+      "floorRecommendedPower": [
+        400, 540, 680, 820, 960,
+        1100, 1240, 1380, 1520, 1660,
+        1800, 1940, 2080, 2220, 2360,
+        2500, 2640, 2780, 2920, 3060,
+        3200, 3340, 3480, 3620, 3760,
+        3900, 4040, 4180, 4320, 4460,
+        4600, 4740, 4880, 5020, 5160,
+        5300, 5440, 5580, 5720, 5860,
+        6000, 6140, 6280, 6420, 6560,
+        6700, 6840, 6980, 7120, 7260,
+        7400, 7540, 7680, 7820, 7960,
+        8100, 8240, 8380, 8520, 8660,
+        8800, 8940, 9080, 9220, 9360,
+        9500, 9640, 9780, 9920, 10060,
+        10200, 10340, 10480, 10620, 10760,
+        10900, 11040, 11180, 11320, 11460,
+        11600, 11740, 11880, 12020, 12160,
+        12300, 12440, 12580, 12720, 12860,
+        13000, 13140, 13280, 13420, 13560,
+        13700, 13840, 13980, 14120, 14260
+      ],
+      "_note": "배열 인덱스 0 = 층1. floors[i].recommendedPower = floorRecommendedPower[i]"
+    },
+    "reason": "층100(현 ~25,000)이 파티 최대 전투력(14,348)을 대폭 초과. 층60(15,100)부터 클리어 불가 상태. 400+140×(n-1) 공식으로 재스케일. 층100=14,260으로 Max 파티(14,348)로 달성 가능."
+  },
+
+  {
+    "_comment": "=== 섹션 3: SR 영웅 하향 — Omar Valhalla (등급 역전 수정) ===",
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_omar_valhalla].stats.hp",
+    "heroId": "asc_omar_valhalla",
+    "from": 700,
+    "to": 650,
+    "reason": "Omar SR Lv50·3성 BP 1,383 → 970으로 하향. SSR 밴드(1,000+)와 역전 해소. HP base 축소."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_omar_valhalla].stats.def",
+    "heroId": "asc_omar_valhalla",
+    "from": 128,
+    "to": 80,
+    "reason": "Omar SR DEF가 BP 공식에서 ATK와 동일 기여. Lv50 DEF 500+ 상태 해소. SR 탱커 특화는 def growth로도 표현 가능."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_omar_valhalla].growthStats.hp",
+    "heroId": "asc_omar_valhalla",
+    "from": 75,
+    "to": 50,
+    "reason": "HP growth 축소로 최대레벨 HP 과잉 억제."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_omar_valhalla].growthStats.def",
+    "heroId": "asc_omar_valhalla",
+    "from": 7.6,
+    "to": 3.5,
+    "reason": "DEF growth 7.6/레벨이 Lv50에서 DEF+372.4 → 총 500.4 유발. SR 평균 수준(3.0~4.5)으로 조정."
+  },
+
+  {
+    "_comment": "=== 섹션 3: SR 영웅 하향 — Omar Avalon (등급 역전 수정) ===",
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_omar_avalon].stats.hp",
+    "heroId": "asc_omar_avalon",
+    "from": 680,
+    "to": 640,
+    "reason": "Omar Avalon SR Lv50·3성 BP 1,366 → 940으로 하향."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_omar_avalon].stats.def",
+    "heroId": "asc_omar_avalon",
+    "from": 138,
+    "to": 82,
+    "reason": "DEF base 과잉. SR 방패형 탱커 특성 유지하며 BP 기여 축소."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_omar_avalon].growthStats.hp",
+    "heroId": "asc_omar_avalon",
+    "from": 72,
+    "to": 48,
+    "reason": "HP growth 축소."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_omar_avalon].growthStats.def",
+    "heroId": "asc_omar_avalon",
+    "from": 7.8,
+    "to": 3.5,
+    "reason": "DEF growth 7.8/레벨이 Lv50에서 DEF+382.2 → 총 520.2 유발."
+  },
+
+  {
+    "_comment": "=== 섹션 3: SR 영웅 하향 — Leon Asgard (SSR 하한선 이하로 조정) ===",
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_leon_asgard].stats.hp",
+    "heroId": "asc_leon_asgard",
+    "from": 580,
+    "to": 560,
+    "reason": "Leon Asgard SR Lv50·3성 BP 1,097 → 958로 하향. SSR 최소(1,000) 아래로 조정."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_leon_asgard].growthStats.hp",
+    "heroId": "asc_leon_asgard",
+    "from": 56,
+    "to": 46,
+    "reason": "HP growth 소폭 축소."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_leon_asgard].growthStats.def",
+    "heroId": "asc_leon_asgard",
+    "from": 4.5,
+    "to": 3.0,
+    "reason": "DEF growth 과잉으로 Lv50에서 DEF+220.5. SR 평균 수준으로 조정."
+  },
+
+  {
+    "_comment": "=== 섹션 4: SSR 영웅 상향 — asc_luca_asgard (BP 940 → 1,008) ===",
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_luca_asgard].growthStats.hp",
+    "heroId": "asc_luca_asgard",
+    "from": 36,
+    "to": 42,
+    "reason": "SSR 밴드(1,000+) 미달(940). growthStats.hp+6으로 Lv60 최대치 상승."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_luca_asgard].growthStats.atk",
+    "heroId": "asc_luca_asgard",
+    "from": 4.1,
+    "to": 4.5,
+    "reason": "growthStats.atk+0.4로 DPS 성장율 보강."
+  },
+
+  {
+    "_comment": "=== 섹션 4: SSR 영웅 상향 — asc_iris_chaos (BP 944 → 1,012) ===",
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_iris_chaos].growthStats.hp",
+    "heroId": "asc_iris_chaos",
+    "from": 37,
+    "to": 43,
+    "reason": "SSR 밴드 미달(944). growthStats.hp+6."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_iris_chaos].growthStats.atk",
+    "heroId": "asc_iris_chaos",
+    "from": 3.8,
+    "to": 4.2,
+    "reason": "growthStats.atk+0.4."
+  },
+
+  {
+    "_comment": "=== 섹션 4: SSR 영웅 상향 — asc_hana_chaos (BP 967 → 1,035) ===",
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_hana_chaos].growthStats.hp",
+    "heroId": "asc_hana_chaos",
+    "from": 33,
+    "to": 39,
+    "reason": "SSR 밴드 미달(967). growthStats.hp+6."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_hana_chaos].growthStats.atk",
+    "heroId": "asc_hana_chaos",
+    "from": 4.9,
+    "to": 5.3,
+    "reason": "growthStats.atk+0.4."
+  },
+
+  {
+    "_comment": "=== 섹션 4: SSR 영웅 상향 — asc_iris_olympus (BP 973 → 1,041) ===",
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_iris_olympus].growthStats.hp",
+    "heroId": "asc_iris_olympus",
+    "from": 42,
+    "to": 48,
+    "reason": "SSR 밴드 미달(973). growthStats.hp+6."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_iris_olympus].growthStats.atk",
+    "heroId": "asc_iris_olympus",
+    "from": 3.4,
+    "to": 3.8,
+    "reason": "growthStats.atk+0.4."
+  },
+
+  {
+    "_comment": "=== 섹션 4: SSR 영웅 상향 — asc_iris_valhalla (BP 975 → 1,044) ===",
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_iris_valhalla].growthStats.hp",
+    "heroId": "asc_iris_valhalla",
+    "from": 45,
+    "to": 51,
+    "reason": "SSR 밴드 미달(975). growthStats.hp+6."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_iris_valhalla].growthStats.atk",
+    "heroId": "asc_iris_valhalla",
+    "from": 3.1,
+    "to": 3.5,
+    "reason": "growthStats.atk+0.4."
+  },
+
+  {
+    "_comment": "=== 섹션 4: SSR 영웅 상향 — asc_paolo_tartarus (BP 981 → 1,050) ===",
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_paolo_tartarus].growthStats.hp",
+    "heroId": "asc_paolo_tartarus",
+    "from": 36,
+    "to": 42,
+    "reason": "SSR 밴드 미달(981). growthStats.hp+6."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_paolo_tartarus].growthStats.atk",
+    "heroId": "asc_paolo_tartarus",
+    "from": 4.8,
+    "to": 5.2,
+    "reason": "growthStats.atk+0.4."
+  },
+
+  {
+    "_comment": "=== 섹션 4: SSR 영웅 상향 — asc_hana_yomi (BP 985 → 1,053) ===",
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_hana_yomi].growthStats.hp",
+    "heroId": "asc_hana_yomi",
+    "from": 36,
+    "to": 42,
+    "reason": "SSR 밴드 미달(985). growthStats.hp+6."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_hana_yomi].growthStats.atk",
+    "heroId": "asc_hana_yomi",
+    "from": 4.7,
+    "to": 5.1,
+    "reason": "growthStats.atk+0.4."
+  },
+
+  {
+    "_comment": "=== 섹션 4: SSR 영웅 상향 — asc_paolo_chaos (BP 993 → 1,061) ===",
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_paolo_chaos].growthStats.hp",
+    "heroId": "asc_paolo_chaos",
+    "from": 34,
+    "to": 40,
+    "reason": "SSR 밴드 미달(993). growthStats.hp+6."
+  },
+  {
+    "file": "src/data/ascended-heroes.json",
+    "path": "ascendedHeroes[id=asc_paolo_chaos].growthStats.atk",
+    "heroId": "asc_paolo_chaos",
+    "from": 5.2,
+    "to": 5.6,
+    "reason": "growthStats.atk+0.4."
+  },
+
+  {
+    "_comment": "=== 메타 정보 ===",
+    "_summary": {
+      "totalChanges": 33,
+      "filesAffected": ["src/data/stages.json", "src/data/tower.json", "src/data/ascended-heroes.json"],
+      "stageChanges": 2,
+      "towerChanges": 1,
+      "heroChanges": 30,
+      "heroesAffected": {
+        "SR_nerf": ["asc_omar_valhalla", "asc_omar_avalon", "asc_leon_asgard"],
+        "SSR_buff": [
+          "asc_luca_asgard", "asc_iris_chaos", "asc_hana_chaos",
+          "asc_iris_olympus", "asc_iris_valhalla", "asc_paolo_tartarus",
+          "asc_hana_yomi", "asc_paolo_chaos"
+        ]
+      },
+      "pathConvention": "ascendedHeroes[id=X]는 ascendedHeroes 배열에서 id===X인 객체를 찾아 해당 필드를 수정. 배열 인덱스: iris_olympus=0, iris_valhalla=1, iris_chaos=2, luca_asgard=6, hana_yomi=16, hana_chaos=18, paolo_tartarus=21, paolo_chaos=22, omar_valhalla=12, omar_avalon=13, leon_asgard=19",
+      "towerNote": "floors[*].recommendedPower: floors[i].recommendedPower = floorRecommendedPower[i] (i=0 → 층1). 100개 값 배열 참조."
+    }
+  }
+]

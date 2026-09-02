@@ -619,10 +619,10 @@ export class HeroListScene extends Phaser.Scene {
       this.cardPool = null;
     }
 
-    // RES-ABS-4: 메모리 해제
-    if (this._loadedHeroIds && this._loadedHeroIds.length > 0) {
-      HeroAssetLoader.unloadTextures(this, this._loadedHeroIds);
-    }
+    // T-29: 공용 런타임 텍스처(512 WebP)는 PreloadScene 소유이므로 여기서 지우지 않는다.
+    // 지우면 메인 메뉴로 돌아갔을 때 실포트레이트가 플레이스홀더로 되돌아간다.
+    // 이 씬은 자체적으로 로드하는 텍스처가 없다.
+    this._loadedHeroIds = [];
 
     this.time.removeAllEvents();
     this.tweens.killAll();

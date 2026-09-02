@@ -1,6 +1,6 @@
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, s, sf } from '../config/gameConfig.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
-import { getAllCharacters } from '../data/index.js';
+import { getAllPortraitHeroes } from '../data/index.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import uiRenderer from '../renderers/UIRenderer.js';
@@ -237,15 +237,26 @@ export class PreloadScene extends Phaser.Scene {
       this.textures.addCanvas(`char_full_${name}`, fullCanvas);
     });
 
-    // H-2: 91명 전체 캐릭터 — 실제 이미지 로드 (실패 시 플레이스홀더 폴백)
+    // H-2: 전체 로스터 — 실제 이미지 로드 (실패 시 플레이스홀더 폴백)
+    //
+    // getAllCharacters()는 characters.json(레거시 4명)만 반환하므로 base-heroes 10명과
+    // ascended-heroes 24명의 포트레이트가 로더 큐에 들어가지 못했다. 그 결과
+    // hero_005~038의 실제 아트가 존재함에도 전부 캔버스 플레이스홀더로 표시됐다.
+    // getAllPortraitHeroes()가 세 소스를 합쳐 38명을 반환한다.
     try {
-      const characters = getAllCharacters();
-      HeroAssetLoader.loadImages(this, characters, 'assets/characters/portraits/');
+      const roster = getAllPortraitHeroes();
+      const { queued, skipped } = HeroAssetLoader.loadImages(this, roster);
+      this._portraitLoadStats = { roster: roster.length, queued: queued.length, skipped: skipped.length };
+      // 큐가 비면 로스터 병합이 다시 깨진 것이다. 조용히 넘어가면 이 버그가 재발한다.
+      if (queued.length === 0) {
+        console.warn(
+          `[PreloadScene] 포트레이트 큐가 비어 있습니다. 로스터 ${roster.length}명 전원이 portrait-mapping.json에 없습니다.`
+        );
+      }
     } catch (e) {
       console.warn('HeroAssetLoader: Failed to load hero images, using placeholders', e);
       try {
-        const characters = getAllCharacters();
-        HeroAssetLoader.generatePlaceholders(this, characters);
+        HeroAssetLoader.generatePlaceholders(this, getAllPortraitHeroes());
       } catch (e2) {
         console.warn('HeroAssetLoader: Failed to generate placeholders', e2);
       }
@@ -394,8 +405,9 @@ export class PreloadScene extends Phaser.Scene {
     // 현재는 기본적으로 코드 렌더링 모드이므로 스킵
     if (characterRenderer.useAssets) {
       try {
-        // RES-ABS-4: 파티 영웅만 초기 로드 (전체 91명 아님)
-        const allCharacters = getAllCharacters();
+        // RES-ABS-4: 파티 영웅만 초기 로드 (전체 로스터 아님)
+        // 파티 id는 base_iris / asc_… 형태이므로 characters.json만으로는 매칭되지 않는다.
+        const allCharacters = getAllPortraitHeroes();
         const partyIds = SaveManager.getParty() || [];
         const partyCharacters = allCharacters.filter(c => partyIds.includes(c.id));
 

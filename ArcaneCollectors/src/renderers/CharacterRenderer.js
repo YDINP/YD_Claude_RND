@@ -711,10 +711,21 @@ class CharacterRenderer {
     filteredCharacters.forEach(hero => {
       types.forEach(type => {
         const key = this._getTextureKey(hero, type);
-        if (!scene.textures.exists(key)) {
-          const path = `${ASSET_PATHS[type]}${hero.id}.png`;
-          scene.load.image(key, path);
+        if (scene.textures.exists(key)) return;
+
+        if (type === 'portrait') {
+          // 포트레이트만 실제 파일이 존재한다. 파일명은 portrait-mapping.json 을 거쳐야 하고
+          // (hero.id 와 다르다), 런타임본은 512 WebP 다. 미등록 영웅은 요청하지 않는다.
+          const fileName = HeroAssetLoader.getFileName(hero);
+          if (!fileName) return;
+          scene.load.image(
+            key,
+            `${HeroAssetLoader.RUNTIME_PATH}${fileName}${HeroAssetLoader.RUNTIME_EXT}`
+          );
+          return;
         }
+
+        scene.load.image(key, `${ASSET_PATHS[type]}${hero.id}.png`);
       });
     });
 

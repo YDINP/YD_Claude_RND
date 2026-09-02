@@ -164,7 +164,12 @@ export const Z_INDEX = {
     MODAL: 400,
     TOOLTIP: 500,
     POPUP_BASE: 2000,    // PopupBase 기본 depth
-    POPUP_NESTED: 2100   // 중첩 팝업 (HeroInfoPopup 등)
+    POPUP_NESTED: 2100,  // 중첩 팝업 (HeroInfoPopup 등)
+
+    // 튜토리얼 오버레이 (docs/story/SPIKE_OVERLAY_INPUT.md §5 — 같은 Scene 내 depth 3000 컨테이너)
+    TUTORIAL: 3000,          // 튜토리얼 루트 컨테이너
+    TUTORIAL_MASK: 3000,     // 딤 + 홀 마스크 (POPUP_NESTED 2100 초과)
+    TUTORIAL_CONTENT: 3010   // 핸드포인터 · 펄스 링 · 코치마크 · 지시문
 };
 
 export default {

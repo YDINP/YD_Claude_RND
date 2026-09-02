@@ -15,8 +15,9 @@ import { getCharacter, getCharacterOrHero, calculatePower, getStage, getChapterS
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
-// [DISABLED] gacha system temporarily disabled
-// import { GachaPopup } from '../components/popups/GachaPopup.js';
+import { MenuGridGate } from '../systems/MenuGridGate.js';
+import { TutorialTargetRegistry } from '../systems/TutorialTargetRegistry.js';
+import { GachaPopup } from '../components/popups/GachaPopup.js';
 import { HeroListPopup } from '../components/popups/HeroListPopup.js';
 import { PartyEditPopup } from '../components/popups/PartyEditPopup.js';
 import { QuestPopup } from '../components/popups/QuestPopup.js';
@@ -80,6 +81,11 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Hero info popup instance
     this.heroPopup = new HeroInfoPopup(this);
+
+    // 튜토리얼 타깃은 UI를 다시 그리기 직전에 비운다.
+    // shutdown()에서 비우면 create()가 _uiCreated 가드로 조기 반환할 때 재등록 기회가 없어
+    // 코치마크가 3단계(fallbackAnchor)로 강등된다. 등록이 항상 마지막 기록자가 되게 한다.
+    TutorialTargetRegistry.clearScope('mainmenu');
 
     this.createBackground();
     this.createTopBar();
@@ -692,6 +698,10 @@ export class MainMenuScene extends Phaser.Scene {
     this._sweepHit = this.add.rectangle(sweepBtnX + sweepBtnW / 2, panelY + s(105), sweepBtnW, btnH)
       .setAlpha(0.001).setDepth(Z_INDEX.PANEL_BUTTONS + 2);
 
+    // 튜토리얼 하이라이트 대상 등록 — 현재 모험 패널의 1순위 CTA
+    TutorialTargetRegistry.register('mainmenu.adventure.sweep', this._sweepHit, 'MainMenuScene');
+    TutorialTargetRegistry.register('mainmenu.adventure.battle_start', this._sweepHit, 'MainMenuScene');
+
     if (canSweep) {
       this._sweepHit.setInteractive({ useHandCursor: true });
       this._sweepHit.on('pointerdown', () => {
@@ -718,6 +728,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     this._bossHit = this.add.rectangle(bossBtnX + bossBtnW / 2, panelY + s(105), bossBtnW, btnH)
       .setAlpha(0.001).setDepth(Z_INDEX.PANEL_BUTTONS + 2);
+
+    TutorialTargetRegistry.register('mainmenu.adventure.boss', this._bossHit, 'MainMenuScene');
 
     // 보스전 버튼은 항상 인터랙티브 등록 (상태는 update에서 동적 관리)
     this._bossHit.setInteractive({ useHandCursor: true });
@@ -864,6 +876,9 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.idleBattleView = new IdleBattleView(this, GAME_WIDTH / 2, viewY, viewWidth, viewHeight);
     this.idleBattleView.setDepth(Z_INDEX.IDLE_BATTLE);
+
+    // T-12 스포트라이트 대상
+    TutorialTargetRegistry.register('mainmenu.idle.view', this.idleBattleView, 'MainMenuScene');
 
     const currentStage = this.idleSystem.getCurrentStage();
     this.idleBattleView.updateStageInfo(currentStage.chapter || 1, currentStage.stage || 1, currentStage.name || '슬라임 평원');
@@ -1078,9 +1093,8 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   createBottomMenu() {
-    const menuItems = [
-      // [DISABLED] gacha button - gacha system temporarily disabled
-      // { icon: '🎲', label: '소환', popupKey: 'gacha' },
+    const allMenuItems = [
+      { icon: '🎲', label: '소환', popupKey: 'gacha' },
       { icon: '🦸', label: '영웅', popupKey: 'herolist' },
       { icon: '👥', label: '파티', popupKey: 'partyedit' },
       { icon: '📜', label: '퀘스트', popupKey: 'quest' },
@@ -1096,7 +1110,16 @@ export class MainMenuScene extends Phaser.Scene {
       { icon: '📖', label: '도감', popupKey: 'collection' },
     ];
 
-    const cols = 4;
+    // T-C7 MenuGridGate: 튜토리얼 진행에서 파생한 해금 목록으로 필터링한다.
+    // 잠긴 항목은 자물쇠로 표시하지 않고 아예 그리지 않는다 (UX 문서 §1-2).
+    const saveDataForMenu = SaveManager.load();
+    const menuItems = MenuGridGate.filterMenuItems(allMenuItems, saveDataForMenu);
+
+    // 0개면 그리드 영역 자체를 그리지 않는다 (신규 유저 첫 화면)
+    if (!MenuGridGate.shouldRenderGrid(menuItems.length)) return;
+
+    const cols = MenuGridGate.getColumnCount(menuItems.length);
+    const labelFontBase = MenuGridGate.getLabelFontSize(menuItems.length);
     const btnSize = s(80);
     const gapX = s(20);
     const gapY = s(10);
@@ -1126,13 +1149,18 @@ export class MainMenuScene extends Phaser.Scene {
 
       // Label
       const label = this.add.text(x, y + s(22), item.label, {
-        fontSize: sf(11), fontFamily: '"Noto Sans KR", Arial',
+        fontSize: sf(labelFontBase), fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0.5).setDepth(Z_INDEX.BOTTOM_MENU + 1);
 
       // Hit area
       const hitArea = this.add.rectangle(x, y + s(5), btnSize, btnSize + s(10))
         .setAlpha(0.001).setDepth(Z_INDEX.BOTTOM_MENU + 2).setInteractive({ useHandCursor: true });
+
+      // 튜토리얼 하이라이트 대상 등록 (TID = mainmenu.menu.{popupKey})
+      TutorialTargetRegistry.register(
+        `mainmenu.menu.${item.popupKey}`, hitArea, 'MainMenuScene'
+      );
 
       hitArea.on('pointerover', () => {
         bg.clear();
@@ -1166,8 +1194,7 @@ export class MainMenuScene extends Phaser.Scene {
     if (this.activePopup) return;
 
     const popups = {
-      // [DISABLED] gacha system temporarily disabled
-      // gacha: GachaPopup,
+      gacha: GachaPopup,
       herolist: HeroListPopup,
       partyedit: PartyEditPopup,
       quest: QuestPopup,

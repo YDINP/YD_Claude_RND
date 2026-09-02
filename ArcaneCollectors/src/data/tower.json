@@ -56,7 +56,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 500,
+      "recommendedPower": 400,
       "isBoss": false
     },
     {
@@ -71,7 +71,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 750,
+      "recommendedPower": 528,
       "isBoss": false
     },
     {
@@ -82,7 +82,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 990,
+      "recommendedPower": 656,
       "isBoss": false
     },
     {
@@ -97,7 +97,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 1240,
+      "recommendedPower": 784,
       "isBoss": false
     },
     {
@@ -108,7 +108,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 1490,
+      "recommendedPower": 912,
       "isBoss": false
     },
     {
@@ -119,7 +119,7 @@
           "count": 4
         }
       ],
-      "recommendedPower": 1740,
+      "recommendedPower": 1040,
       "isBoss": false
     },
     {
@@ -130,7 +130,7 @@
           "count": 4
         }
       ],
-      "recommendedPower": 1980,
+      "recommendedPower": 1168,
       "isBoss": false
     },
     {
@@ -141,7 +141,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 2230,
+      "recommendedPower": 1296,
       "isBoss": false
     },
     {
@@ -156,7 +156,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 2480,
+      "recommendedPower": 1424,
       "isBoss": false
     },
     {
@@ -167,7 +167,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 2730,
+      "recommendedPower": 1552,
       "isBoss": true,
       "bossReward": {
         "gems": 50,
@@ -183,7 +183,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 2970,
+      "recommendedPower": 1680,
       "isBoss": false
     },
     {
@@ -198,7 +198,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 3220,
+      "recommendedPower": 1808,
       "isBoss": false
     },
     {
@@ -209,7 +209,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 3470,
+      "recommendedPower": 1936,
       "isBoss": false
     },
     {
@@ -224,7 +224,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 3720,
+      "recommendedPower": 2064,
       "isBoss": false
     },
     {
@@ -235,7 +235,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 3960,
+      "recommendedPower": 2192,
       "isBoss": false
     },
     {
@@ -246,7 +246,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 4210,
+      "recommendedPower": 2320,
       "isBoss": false
     },
     {
@@ -257,7 +257,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 4460,
+      "recommendedPower": 2448,
       "isBoss": false
     },
     {
@@ -272,7 +272,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 4710,
+      "recommendedPower": 2576,
       "isBoss": false
     },
     {
@@ -283,7 +283,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 4950,
+      "recommendedPower": 2704,
       "isBoss": false
     },
     {
@@ -294,7 +294,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 5200,
+      "recommendedPower": 2832,
       "isBoss": true,
       "bossReward": {
         "gems": 70,
@@ -314,7 +314,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 5450,
+      "recommendedPower": 2960,
       "isBoss": false
     },
     {
@@ -325,7 +325,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 5700,
+      "recommendedPower": 3088,
       "isBoss": false
     },
     {
@@ -340,7 +340,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 5940,
+      "recommendedPower": 3216,
       "isBoss": false
     },
     {
@@ -355,7 +355,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 6190,
+      "recommendedPower": 3344,
       "isBoss": false
     },
     {
@@ -366,7 +366,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 6440,
+      "recommendedPower": 3472,
       "isBoss": false
     },
     {
@@ -377,7 +377,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 6690,
+      "recommendedPower": 3600,
       "isBoss": false
     },
     {
@@ -392,7 +392,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 6930,
+      "recommendedPower": 3728,
       "isBoss": false
     },
     {
@@ -403,7 +403,7 @@
           "count": 4
         }
       ],
-      "recommendedPower": 7180,
+      "recommendedPower": 3856,
       "isBoss": false
     },
     {
@@ -418,7 +418,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 7430,
+      "recommendedPower": 3984,
       "isBoss": false
     },
     {
@@ -433,7 +433,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 7680,
+      "recommendedPower": 4112,
       "isBoss": true,
       "bossReward": {
         "gems": 100,
@@ -449,7 +449,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 7920,
+      "recommendedPower": 4240,
       "isBoss": false
     },
     {
@@ -460,7 +460,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 8170,
+      "recommendedPower": 4368,
       "isBoss": false
     },
     {
@@ -475,7 +475,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 8420,
+      "recommendedPower": 4496,
       "isBoss": false
     },
     {
@@ -490,7 +490,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 8670,
+      "recommendedPower": 4624,
       "isBoss": false
     },
     {
@@ -501,7 +501,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 8910,
+      "recommendedPower": 4752,
       "isBoss": false
     },
     {
@@ -516,7 +516,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 9160,
+      "recommendedPower": 4880,
       "isBoss": false
     },
     {
@@ -527,7 +527,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 9410,
+      "recommendedPower": 5008,
       "isBoss": false
     },
     {
@@ -542,7 +542,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 9660,
+      "recommendedPower": 5136,
       "isBoss": false
     },
     {
@@ -553,7 +553,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 9900,
+      "recommendedPower": 5264,
       "isBoss": false
     },
     {
@@ -564,7 +564,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 10150,
+      "recommendedPower": 5392,
       "isBoss": true,
       "bossReward": {
         "gems": 130,
@@ -584,7 +584,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 10400,
+      "recommendedPower": 5520,
       "isBoss": false
     },
     {
@@ -595,7 +595,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 10650,
+      "recommendedPower": 5648,
       "isBoss": false
     },
     {
@@ -610,7 +610,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 10890,
+      "recommendedPower": 5776,
       "isBoss": false
     },
     {
@@ -625,7 +625,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 11140,
+      "recommendedPower": 5904,
       "isBoss": false
     },
     {
@@ -636,7 +636,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 11390,
+      "recommendedPower": 6032,
       "isBoss": false
     },
     {
@@ -651,7 +651,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 11640,
+      "recommendedPower": 6160,
       "isBoss": false
     },
     {
@@ -666,7 +666,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 11880,
+      "recommendedPower": 6288,
       "isBoss": false
     },
     {
@@ -681,7 +681,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 12130,
+      "recommendedPower": 6416,
       "isBoss": false
     },
     {
@@ -696,7 +696,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 12380,
+      "recommendedPower": 6544,
       "isBoss": false
     },
     {
@@ -707,7 +707,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 12630,
+      "recommendedPower": 6672,
       "isBoss": true,
       "bossReward": {
         "gems": 180,
@@ -723,7 +723,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 12870,
+      "recommendedPower": 6800,
       "isBoss": false
     },
     {
@@ -738,7 +738,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 13120,
+      "recommendedPower": 6928,
       "isBoss": false
     },
     {
@@ -749,7 +749,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 13370,
+      "recommendedPower": 7056,
       "isBoss": false
     },
     {
@@ -764,7 +764,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 13620,
+      "recommendedPower": 7184,
       "isBoss": false
     },
     {
@@ -775,7 +775,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 13860,
+      "recommendedPower": 7312,
       "isBoss": false
     },
     {
@@ -790,7 +790,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 14110,
+      "recommendedPower": 7440,
       "isBoss": false
     },
     {
@@ -805,7 +805,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 14360,
+      "recommendedPower": 7568,
       "isBoss": false
     },
     {
@@ -820,7 +820,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 14610,
+      "recommendedPower": 7696,
       "isBoss": false
     },
     {
@@ -835,7 +835,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 14850,
+      "recommendedPower": 7824,
       "isBoss": false
     },
     {
@@ -850,7 +850,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 15100,
+      "recommendedPower": 7952,
       "isBoss": true,
       "bossReward": {
         "gems": 230,
@@ -870,7 +870,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 15350,
+      "recommendedPower": 8080,
       "isBoss": false
     },
     {
@@ -885,7 +885,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 15600,
+      "recommendedPower": 8208,
       "isBoss": false
     },
     {
@@ -900,7 +900,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 15840,
+      "recommendedPower": 8336,
       "isBoss": false
     },
     {
@@ -911,7 +911,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 16090,
+      "recommendedPower": 8464,
       "isBoss": false
     },
     {
@@ -926,7 +926,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 16340,
+      "recommendedPower": 8592,
       "isBoss": false
     },
     {
@@ -941,7 +941,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 16590,
+      "recommendedPower": 8720,
       "isBoss": false
     },
     {
@@ -952,7 +952,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 16830,
+      "recommendedPower": 8848,
       "isBoss": false
     },
     {
@@ -963,7 +963,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 17080,
+      "recommendedPower": 8976,
       "isBoss": false
     },
     {
@@ -978,7 +978,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 17330,
+      "recommendedPower": 9104,
       "isBoss": false
     },
     {
@@ -993,7 +993,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 17580,
+      "recommendedPower": 9232,
       "isBoss": true,
       "bossReward": {
         "gems": 280,
@@ -1013,7 +1013,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 17820,
+      "recommendedPower": 9360,
       "isBoss": false
     },
     {
@@ -1028,7 +1028,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 18070,
+      "recommendedPower": 9488,
       "isBoss": false
     },
     {
@@ -1043,7 +1043,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 18320,
+      "recommendedPower": 9616,
       "isBoss": false
     },
     {
@@ -1058,7 +1058,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 18570,
+      "recommendedPower": 9744,
       "isBoss": false
     },
     {
@@ -1073,7 +1073,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 18810,
+      "recommendedPower": 9872,
       "isBoss": false
     },
     {
@@ -1088,7 +1088,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 19060,
+      "recommendedPower": 10000,
       "isBoss": false
     },
     {
@@ -1099,7 +1099,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 19310,
+      "recommendedPower": 10128,
       "isBoss": false
     },
     {
@@ -1114,7 +1114,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 19560,
+      "recommendedPower": 10256,
       "isBoss": false
     },
     {
@@ -1129,7 +1129,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 19800,
+      "recommendedPower": 10384,
       "isBoss": false
     },
     {
@@ -1144,7 +1144,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 20050,
+      "recommendedPower": 10512,
       "isBoss": true,
       "bossReward": {
         "gems": 350,
@@ -1164,7 +1164,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 20300,
+      "recommendedPower": 10640,
       "isBoss": false
     },
     {
@@ -1179,7 +1179,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 20550,
+      "recommendedPower": 10768,
       "isBoss": false
     },
     {
@@ -1194,7 +1194,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 20790,
+      "recommendedPower": 10896,
       "isBoss": false
     },
     {
@@ -1209,7 +1209,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 21040,
+      "recommendedPower": 11024,
       "isBoss": false
     },
     {
@@ -1220,7 +1220,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 21290,
+      "recommendedPower": 11152,
       "isBoss": false
     },
     {
@@ -1231,7 +1231,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 21540,
+      "recommendedPower": 11280,
       "isBoss": false
     },
     {
@@ -1246,7 +1246,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 21780,
+      "recommendedPower": 11408,
       "isBoss": false
     },
     {
@@ -1261,7 +1261,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 22030,
+      "recommendedPower": 11536,
       "isBoss": false
     },
     {
@@ -1276,7 +1276,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 22280,
+      "recommendedPower": 11664,
       "isBoss": false
     },
     {
@@ -1291,7 +1291,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 22530,
+      "recommendedPower": 11792,
       "isBoss": true,
       "bossReward": {
         "gems": 450,
@@ -1311,7 +1311,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 22770,
+      "recommendedPower": 11920,
       "isBoss": false
     },
     {
@@ -1326,7 +1326,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 23020,
+      "recommendedPower": 12048,
       "isBoss": false
     },
     {
@@ -1341,7 +1341,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 23270,
+      "recommendedPower": 12176,
       "isBoss": false
     },
     {
@@ -1356,7 +1356,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 23520,
+      "recommendedPower": 12304,
       "isBoss": false
     },
     {
@@ -1367,7 +1367,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 23760,
+      "recommendedPower": 12432,
       "isBoss": false
     },
     {
@@ -1382,7 +1382,7 @@
           "count": 2
         }
       ],
-      "recommendedPower": 24010,
+      "recommendedPower": 12560,
       "isBoss": false
     },
     {
@@ -1393,7 +1393,7 @@
           "count": 3
         }
       ],
-      "recommendedPower": 24260,
+      "recommendedPower": 12688,
       "isBoss": false
     },
     {
@@ -1408,7 +1408,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 24510,
+      "recommendedPower": 12816,
       "isBoss": false
     },
     {
@@ -1427,7 +1427,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 24750,
+      "recommendedPower": 12944,
       "isBoss": false
     },
     {
@@ -1442,7 +1442,7 @@
           "count": 1
         }
       ],
-      "recommendedPower": 25000,
+      "recommendedPower": 13072,
       "isBoss": true,
       "bossReward": {
         "gems": 600,

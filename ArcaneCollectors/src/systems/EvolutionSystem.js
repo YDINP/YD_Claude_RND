@@ -304,4 +304,132 @@ export class EvolutionSystem {
     const index = this.RARITY_ORDER.indexOf(rarity);
     return index >= this.RARITY_ORDER.length - 1;
   }
+
+  // ========== T-C8: 첫 각인 보증 (SYSTEM_ONBOARDING_ECONOMY §1-6) ==========
+  //
+  // 레이어 2 재화(기관 에센스 / 각인서 / 각성의 불꽃)는 현재 획득처가 없다.
+  // 첫 전직이 재화 부족으로 영구히 막히는 것을 막기 위해,
+  // "기관 선택 확정 순간"에 부족분만 1회 한정으로 보전한다.
+  // 두 번째 각인부터는 보전하지 않는다 (정상 경제).
+
+  /**
+   * 각인 루트의 레이어 2 요구 재화 조회
+   * @param {string} baseHeroId - 기본영웅 ID
+   * @param {string} cultId - 기관 ID
+   * @returns {Object|null} { ascendedHeroId, cultEssence, institutionSeal, awakeningFlame }
+   */
+  static getAscensionRouteCost(baseHeroId, cultId) {
+    const heroData = SaveManager.getBaseHeroData(baseHeroId);
+    if (!heroData) return null;
+
+    const route = (heroData.ascensionRoutes || []).find(r => r.cultId === cultId);
+    if (!route) return null;
+
+    const ascData = SaveManager.getAscendedHeroData(route.ascendedHeroId);
+    const cost = (ascData && ascData.acquisitionCost) || {};
+
+    return {
+      ascendedHeroId: route.ascendedHeroId,
+      cultEssence: cost.cultEssence || {},
+      institutionSeal: cost.institutionSeal || 0,
+      awakeningFlame: cost.awakeningFlame || 0
+    };
+  }
+
+  /**
+   * 첫 각인 보증을 아직 사용할 수 있는지 확인
+   * @returns {boolean}
+   */
+  static isFirstAscensionGuaranteeAvailable() {
+    const data = SaveManager.load();
+    return data.onboarding?.firstAscensionGrantUsed !== true;
+  }
+
+  /**
+   * 보증 대상 부족분 계산 (지급하지 않고 계산만)
+   * @param {string} baseHeroId - 기본영웅 ID
+   * @param {string} cultId - 기관 ID
+   * @returns {Object|null} { institutionSeal, awakeningFlame, cultEssence: { [cultId]: n }, hasShortfall }
+   */
+  static getFirstAscensionShortfall(baseHeroId, cultId) {
+    const cost = this.getAscensionRouteCost(baseHeroId, cultId);
+    if (!cost) return null;
+
+    const resources = SaveManager.load().resources || {};
+    const ownedEssence = resources.cultEssence || {};
+
+    const shortfall = {
+      institutionSeal: Math.max(0, cost.institutionSeal - (resources.institutionSeal || 0)),
+      awakeningFlame: Math.max(0, cost.awakeningFlame - (resources.awakeningFlame || 0)),
+      cultEssence: {}
+    };
+
+    Object.entries(cost.cultEssence).forEach(([essenceCultId, required]) => {
+      const lack = Math.max(0, required - (ownedEssence[essenceCultId] || 0));
+      if (lack > 0) shortfall.cultEssence[essenceCultId] = lack;
+    });
+
+    shortfall.hasShortfall =
+      shortfall.institutionSeal > 0 ||
+      shortfall.awakeningFlame > 0 ||
+      Object.keys(shortfall.cultEssence).length > 0;
+
+    return shortfall;
+  }
+
+  /**
+   * 첫 각인 보증 적용 — 부족분을 필요량까지 보전하고 계정당 1회로 플래그를 잠근다.
+   * 각인 확정(기관 선택 확정) 직전에 호출한다.
+   * @param {string} baseHeroId - 기본영웅 ID
+   * @param {string} cultId - 기관 ID
+   * @returns {Object} { applied, reason?, granted? }
+   */
+  static applyFirstAscensionGuarantee(baseHeroId, cultId) {
+    const data = SaveManager.load();
+
+    if (!data.onboarding || typeof data.onboarding !== 'object') {
+      data.onboarding = SaveManager._createDefaultOnboarding();
+    }
+    if (data.onboarding.firstAscensionGrantUsed === true) {
+      return { applied: false, reason: 'already_used' };
+    }
+
+    const shortfall = this.getFirstAscensionShortfall(baseHeroId, cultId);
+    if (!shortfall) {
+      return { applied: false, reason: 'invalid_route' };
+    }
+
+    if (!data.resources) data.resources = {};
+    if (!data.resources.cultEssence || typeof data.resources.cultEssence !== 'object') {
+      data.resources.cultEssence = {};
+    }
+
+    data.resources.institutionSeal = (data.resources.institutionSeal || 0) + shortfall.institutionSeal;
+    data.resources.awakeningFlame = (data.resources.awakeningFlame || 0) + shortfall.awakeningFlame;
+    Object.entries(shortfall.cultEssence).forEach(([essenceCultId, lack]) => {
+      data.resources.cultEssence[essenceCultId] =
+        (data.resources.cultEssence[essenceCultId] || 0) + lack;
+    });
+
+    // 보전량이 0이어도 "첫 각인은 1회뿐"이라는 성질은 동일하게 소모된다.
+    data.onboarding.firstAscensionGrantUsed = true;
+    data.onboarding.firstAscensionCultId = cultId;
+
+    SaveManager.save(data);
+
+    EventBus.emit(GameEvents.FIRST_ASCENSION_GRANTED || 'firstAscensionGranted', {
+      baseHeroId,
+      cultId,
+      granted: shortfall
+    });
+
+    return {
+      applied: true,
+      granted: {
+        institutionSeal: shortfall.institutionSeal,
+        awakeningFlame: shortfall.awakeningFlame,
+        cultEssence: shortfall.cultEssence
+      }
+    };
+  }
 }

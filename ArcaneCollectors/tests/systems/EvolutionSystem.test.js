@@ -426,4 +426,99 @@ describe('EvolutionSystem', () => {
       expect(EvolutionSystem.isMaxRarity('SR')).toBe(false);
     });
   });
+
+  // ==================== T-C8: 첫 각인 보증 ====================
+
+  describe('첫 각인 보증 (T-C8)', () => {
+    // SYSTEM_ONBOARDING_ECONOMY §1-6 — 기관 선택 확정 시점에 레이어 2 재화
+    // 부족분을 계정당 1회 한정으로 보전한다.
+    const IRIS_OLYMPUS_COST = { cultEssence: { olympus: 30 }, institutionSeal: 1, awakeningFlame: 3 };
+
+    let mockSave;
+
+    beforeEach(() => {
+      mockSave = {
+        resources: {
+          gold: 10000,
+          gems: 1500,
+          spiritStones: 6,
+          characterShards: {},
+          cultEssence: {},
+          institutionSeal: 0,
+          awakeningFlame: 0
+        },
+        onboarding: {
+          grantVersion: 2,
+          firstAscensionGrantUsed: false,
+          firstAscensionCultId: null
+        }
+      };
+
+      SaveManager.load.mockImplementation(() => mockSave);
+      SaveManager.save.mockImplementation(data => { mockSave = data; return true; });
+      SaveManager.getBaseHeroData = vi.fn(id => (id === 'base_iris' ? {
+        id: 'base_iris',
+        ascensionRoutes: [{ cultId: 'olympus', ascendedHeroId: 'asc_iris_olympus', resultRarity: 'SSR' }]
+      } : null));
+      SaveManager.getAscendedHeroData = vi.fn(id => (id === 'asc_iris_olympus' ? {
+        id: 'asc_iris_olympus',
+        acquisitionCost: IRIS_OLYMPUS_COST
+      } : null));
+      SaveManager._createDefaultOnboarding = vi.fn(() => ({
+        grantVersion: 2,
+        firstAscensionGrantUsed: false,
+        firstAscensionCultId: null
+      }));
+    });
+
+    it('보유 0에서 각인 루트가 요구하는 레이어 2 재화를 필요량까지 보전한다', () => {
+      const result = EvolutionSystem.applyFirstAscensionGuarantee('base_iris', 'olympus');
+
+      expect(result.applied).toBe(true);
+      expect(mockSave.resources.institutionSeal).toBe(1);
+      expect(mockSave.resources.cultEssence.olympus).toBe(30);
+      expect(mockSave.resources.awakeningFlame).toBe(3);
+      expect(mockSave.onboarding.firstAscensionGrantUsed).toBe(true);
+      expect(mockSave.onboarding.firstAscensionCultId).toBe('olympus');
+    });
+
+    it('이미 보유한 만큼은 지급하지 않고 부족분만 보전한다', () => {
+      mockSave.resources.institutionSeal = 1;
+      mockSave.resources.cultEssence.olympus = 12;
+      mockSave.resources.awakeningFlame = 3;
+
+      const result = EvolutionSystem.applyFirstAscensionGuarantee('base_iris', 'olympus');
+
+      expect(result.granted).toEqual({
+        institutionSeal: 0,
+        awakeningFlame: 0,
+        cultEssence: { olympus: 18 }
+      });
+      expect(mockSave.resources.cultEssence.olympus).toBe(30);
+      expect(mockSave.resources.institutionSeal).toBe(1);
+      expect(mockSave.resources.awakeningFlame).toBe(3);
+    });
+
+    it('두 번째 각인부터는 보증이 적용되지 않는다 (계정당 1회)', () => {
+      EvolutionSystem.applyFirstAscensionGuarantee('base_iris', 'olympus');
+      const afterFirst = JSON.parse(JSON.stringify(mockSave.resources));
+
+      expect(EvolutionSystem.isFirstAscensionGuaranteeAvailable()).toBe(false);
+
+      const second = EvolutionSystem.applyFirstAscensionGuarantee('base_iris', 'olympus');
+
+      expect(second.applied).toBe(false);
+      expect(second.reason).toBe('already_used');
+      expect(mockSave.resources).toEqual(afterFirst);
+    });
+
+    it('존재하지 않는 각인 루트는 보증을 소모하지 않는다', () => {
+      const result = EvolutionSystem.applyFirstAscensionGuarantee('base_iris', 'unknown_cult');
+
+      expect(result.applied).toBe(false);
+      expect(result.reason).toBe('invalid_route');
+      expect(mockSave.onboarding.firstAscensionGrantUsed).toBe(false);
+      expect(EvolutionSystem.isFirstAscensionGuaranteeAvailable()).toBe(true);
+    });
+  });
 });

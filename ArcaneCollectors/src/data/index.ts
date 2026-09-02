@@ -128,6 +128,52 @@ export function getAscendedHeroesByBase(baseHeroId: string): any[] {
 }
 
 /**
+ * 포트레이트 로드 대상 전체 로스터를 가져옵니다.
+ *
+ * `getAllCharacters()`는 characters.json(레거시 4명)만 반환하므로,
+ * base-heroes(10명)와 ascended-heroes(24명)의 포트레이트가 로더 큐에 들어가지 못합니다.
+ * PreloadScene이 실제 이미지를 로드하려면 세 소스를 합친 이 목록을 써야 합니다.
+ *
+ * 우선순위는 `getCharacterOrHero()`와 동일하게 characters → ascended → base 이며,
+ * 같은 id가 중복되면 앞선 소스가 이깁니다.
+ *
+ * 필드명 불일치를 흡수해 `HeroAssetLoader`가 요구하는 형태를 보장합니다.
+ *   - `cultId` → `cult`
+ *   - `baseClass` → `class`
+ *   - `baseMood` → `mood`
+ *
+ * base-heroes에는 `rarity` 필드가 없습니다. 값을 지어내지 않고 그대로 두며,
+ * `getRarityKey(undefined)`가 'N'으로 폴백해 플레이스홀더 등급 표시에만 영향을 줍니다.
+ *
+ * @returns 중복 없는 영웅 배열 (현재 38명)
+ */
+export function getAllPortraitHeroes(): any[] {
+  const adapt = (raw: any): any => ({
+    ...raw,
+    cult: raw.cult ?? raw.cultId ?? null,
+    class: raw.class ?? raw.baseClass ?? null,
+    mood: raw.mood ?? raw.baseMood ?? null,
+  });
+
+  const merged: any[] = [];
+  const seen = new Set<string>();
+
+  const push = (list: any[], needsAdapt: boolean) => {
+    for (const raw of list) {
+      if (!raw || !raw.id || seen.has(raw.id)) continue;
+      seen.add(raw.id);
+      merged.push(needsAdapt ? adapt(raw) : raw);
+    }
+  };
+
+  push(characters.characters, false);
+  push(ascendedHeroes.ascendedHeroes, true);
+  push(baseHeroes.baseHeroes, true);
+
+  return merged;
+}
+
+/**
  * 진화 데이터를 통합 조회합니다 (characters.json → ascended-heroes → base-heroes 순서)
  * BattleSystem.js 폴백 로직에서 사용
  * @param id - 캐릭터/영웅 ID
@@ -515,6 +561,7 @@ export default {
   getAscendedHero,
   getAllAscendedHeroes,
   getAscendedHeroesByBase,
+  getAllPortraitHeroes,
   getCharacterOrHero,
 
   // Skill

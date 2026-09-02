@@ -1,0 +1,24 @@
+[
+  {
+    "_comment": "=== v1.2: 5-5 추가 인하 (stage-clearable.mjs 1.05x 마진 기준 충족) ===",
+    "_context": "BALANCE_DESIGN_v1.md §9-6-2: v1.1의 5-5=12,900은 파티 상한(13,347) 대비 1.035x로 stage-clearable.mjs의 1.05x 마진 기준(요구치 12,711 이하 필요)을 만족하지 못했음. team-lead 승인으로 12,700까지 추가 인하.",
+    "file": "src/data/stages.json",
+    "path": "stages[24].requirePower",
+    "heroId": null,
+    "from": 12900,
+    "to": 12700,
+    "reason": "파티 상한 13,347 / 12,700 = 1.0509x >= 1.05x 마진 기준 충족(12,700*1.05=13,335 <= 13,347). 5-4(12,500) < 5-5(12,700) 단조 유지."
+  },
+
+  {
+    "_comment": "=== 메타 정보 ===",
+    "_summary": {
+      "totalChanges": 1,
+      "filesAffected": ["src/data/stages.json"],
+      "stageChanges": 1,
+      "towerChanges": 0,
+      "heroChanges": 0,
+      "supersedes": "balance-changes-v1.1.json 적용 이후에만 유효 (v1.2는 v1.1 델타)"
+    }
+  }
+]

@@ -3,6 +3,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { sweepSystem } from '../systems/SweepSystem.js';
 import transitionManager from '../utils/TransitionManager.js';
 import navigationManager from '../systems/NavigationManager.js';
+import { StoryManager } from '../systems/StoryManager.js';
 
 /**
  * BattleResultScene - 전투 결과 화면
@@ -35,13 +36,17 @@ export class BattleResultScene extends Phaser.Scene {
     try {
       this.createBackground();
 
-      if (this.victory) {
-        this.createVictoryDisplay();
-      } else {
-        this.createDefeatDisplay();
-      }
+      // T-Q1: 승리 정산 직전 컷씬 (stage_clear / boss_after → epilogue)
+      // 컷씬이 없으면 onComplete가 즉시 호출되므로 기존 흐름과 동일하다.
+      this.playClearCutscene(() => {
+        if (this.victory) {
+          this.createVictoryDisplay();
+        } else {
+          this.createDefeatDisplay();
+        }
 
-      this.createActionButtons();
+        this.createActionButtons();
+      });
     } catch (error) {
       console.error('[BattleResultScene] create() 실패:', error);
       this.add.text(s(360), s(640), '씬 로드 실패\n메인으로 돌아갑니다', {
@@ -51,6 +56,31 @@ export class BattleResultScene extends Phaser.Scene {
         this.scene.start('MainMenuScene');
       });
     }
+  }
+
+  /**
+   * 승리 시 스테이지 클리어 컷씬을 재생하고 콜백으로 결과 화면을 구성한다.
+   * 보스는 `boss_after`(+ 최종 보스는 `epilogue`), 일반 스테이지는 `stage_clear`를 쓴다.
+   * @param {Function} onDone
+   */
+  playClearCutscene(onDone) {
+    const stageId = this.stage?.id;
+    const isStoryStage = this.victory && typeof stageId === 'string' && /^\d+-\d+$/.test(stageId);
+
+    if (!isStoryStage) {
+      onDone();
+      return;
+    }
+
+    const chapterId = `chapter_${stageId.split('-')[0]}`;
+    const triggers = this.stage?.isBoss ? ['boss_after', 'epilogue'] : ['stage_clear'];
+
+    StoryManager.triggerSequence(triggers, {
+      scene: this,
+      stageId,
+      chapterId,
+      onComplete: onDone
+    });
   }
 
   createBackground() {

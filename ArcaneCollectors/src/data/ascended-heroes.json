@@ -11,23 +11,43 @@
       "mood": "brave",
       "maxLevel": 60,
       "statModifier": {
-        "hp": 1.0,
+        "hp": 1,
         "atk": 1.1,
         "def": 0.95,
         "spd": 1.05
       },
       "baseStats": {
-        "lv1": { "hp": 450, "atk": 55, "def": 42, "spd": 92 },
-        "lv60": { "hp": 2950, "atk": 258, "def": 195, "spd": 110 }
+        "lv1": {
+          "hp": 450,
+          "atk": 55,
+          "def": 42,
+          "spd": 92
+        },
+        "lv60": {
+          "hp": 2950,
+          "atk": 258,
+          "def": 195,
+          "spd": 110
+        }
       },
-      "stats": { "hp": 450, "atk": 55, "def": 42, "spd": 92 },
-      "growthStats": { "hp": 42, "atk": 3.4, "def": 2.6, "spd": 0.3 },
+      "stats": {
+        "hp": 450,
+        "atk": 55,
+        "def": 42,
+        "spd": 92
+      },
+      "growthStats": {
+        "hp": 48,
+        "atk": 3.8,
+        "def": 2.6,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "번개 참격",
           "description": "번개를 담은 검격으로 적을 베어낸다.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -51,7 +71,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "olympus": 30 },
+        "cultEssence": {
+          "olympus": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -74,22 +96,42 @@
       "maxLevel": 60,
       "statModifier": {
         "hp": 1.15,
-        "atk": 1.0,
-        "def": 1.0,
-        "spd": 1.0
+        "atk": 1,
+        "def": 1,
+        "spd": 1
       },
       "baseStats": {
-        "lv1": { "hp": 520, "atk": 50, "def": 44, "spd": 90 },
-        "lv60": { "hp": 3200, "atk": 235, "def": 200, "spd": 108 }
+        "lv1": {
+          "hp": 520,
+          "atk": 50,
+          "def": 44,
+          "spd": 90
+        },
+        "lv60": {
+          "hp": 3200,
+          "atk": 235,
+          "def": 200,
+          "spd": 108
+        }
       },
-      "stats": { "hp": 520, "atk": 50, "def": 44, "spd": 90 },
-      "growthStats": { "hp": 45, "atk": 3.1, "def": 2.6, "spd": 0.3 },
+      "stats": {
+        "hp": 520,
+        "atk": 50,
+        "def": 44,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 51,
+        "atk": 3.5,
+        "def": 2.6,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "폭풍 검격",
           "description": "거친 폭풍을 담아 적을 베어낸다.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25
         },
         {
@@ -105,7 +147,7 @@
           "id": "awakening",
           "name": "라그나로크 폭풍",
           "description": "SSR 각성 스킬. 피해량이 낮을수록 배율 증가. 최대 ATK×350% 단일 피해.",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 0,
           "target": "single",
           "cooldown": 3,
@@ -113,7 +155,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "valhalla": 30 },
+        "cultEssence": {
+          "valhalla": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -141,17 +185,37 @@
         "spd": 1.1
       },
       "baseStats": {
-        "lv1": { "hp": 400, "atk": 65, "def": 36, "spd": 98 },
-        "lv60": { "hp": 2600, "atk": 295, "def": 168, "spd": 118 }
+        "lv1": {
+          "hp": 400,
+          "atk": 65,
+          "def": 36,
+          "spd": 98
+        },
+        "lv60": {
+          "hp": 2600,
+          "atk": 295,
+          "def": 168,
+          "spd": 118
+        }
       },
-      "stats": { "hp": 400, "atk": 65, "def": 36, "spd": 98 },
-      "growthStats": { "hp": 37, "atk": 3.8, "def": 2.2, "spd": 0.3 },
+      "stats": {
+        "hp": 400,
+        "atk": 65,
+        "def": 36,
+        "spd": 98
+      },
+      "growthStats": {
+        "hp": 43,
+        "atk": 4.2,
+        "def": 2.2,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "혼돈 참격",
           "description": "무작위 배율의 검격을 가한다 (0.8x ~ 2.0x).",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "cultEffect": "random_multiplier"
         },
@@ -168,7 +232,7 @@
           "id": "awakening",
           "name": "혼돈의 해방",
           "description": "SSR 각성 스킬. 전체 적에게 무작위 강력 효과 3회 발동. 극고분산.",
-          "multiplier": 3.0,
+          "multiplier": 3,
           "gaugeCost": 0,
           "target": "all",
           "cooldown": 4,
@@ -176,7 +240,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "chaos": 30 },
+        "cultEssence": {
+          "chaos": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -201,20 +267,40 @@
         "hp": 1.1,
         "atk": 0.9,
         "def": 1.1,
-        "spd": 1.0
+        "spd": 1
       },
       "baseStats": {
-        "lv1": { "hp": 550, "atk": 42, "def": 68, "spd": 80 },
-        "lv60": { "hp": 3400, "atk": 185, "def": 285, "spd": 98 }
+        "lv1": {
+          "hp": 550,
+          "atk": 42,
+          "def": 68,
+          "spd": 80
+        },
+        "lv60": {
+          "hp": 3400,
+          "atk": 185,
+          "def": 285,
+          "spd": 98
+        }
       },
-      "stats": { "hp": 550, "atk": 42, "def": 68, "spd": 80 },
-      "growthStats": { "hp": 48, "atk": 2.4, "def": 3.6, "spd": 0.3 },
+      "stats": {
+        "hp": 550,
+        "atk": 42,
+        "def": 68,
+        "spd": 80
+      },
+      "growthStats": {
+        "hp": 48,
+        "atk": 2.4,
+        "def": 3.6,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "성약의 빛",
           "description": "가장 HP가 낮은 아군을 치유한다.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "target": "ally_lowest_hp"
         },
@@ -231,7 +317,7 @@
           "id": "awakening",
           "name": "신성한 서약",
           "description": "SSR 각성 스킬. 전체 아군 HP 완전 회복 + 2턴간 피해 반사 30%.",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 0,
           "target": "all_allies",
           "cooldown": 5,
@@ -239,7 +325,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "avalon": 30 },
+        "cultEssence": {
+          "avalon": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -261,23 +349,43 @@
       "mood": "devoted",
       "maxLevel": 50,
       "statModifier": {
-        "hp": 1.0,
+        "hp": 1,
         "atk": 0.95,
         "def": 1.05,
-        "spd": 1.0
+        "spd": 1
       },
       "baseStats": {
-        "lv1": { "hp": 500, "atk": 38, "def": 62, "spd": 80 },
-        "lv50": { "hp": 2800, "atk": 168, "def": 248, "spd": 96 }
+        "lv1": {
+          "hp": 500,
+          "atk": 38,
+          "def": 62,
+          "spd": 80
+        },
+        "lv50": {
+          "hp": 2800,
+          "atk": 168,
+          "def": 248,
+          "spd": 96
+        }
       },
-      "stats": { "hp": 500, "atk": 38, "def": 62, "spd": 80 },
-      "growthStats": { "hp": 48, "atk": 2.7, "def": 3.8, "spd": 0.3 },
+      "stats": {
+        "hp": 500,
+        "atk": 38,
+        "def": 62,
+        "spd": 80
+      },
+      "growthStats": {
+        "hp": 48,
+        "atk": 2.7,
+        "def": 3.8,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "선계 치유",
           "description": "아군 1명을 치유하고 디버프 1개를 제거한다.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "target": "ally_single"
         },
@@ -292,7 +400,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "kunlun": 20 },
+        "cultEssence": {
+          "kunlun": 20
+        },
         "institutionSeal": 1,
         "awakeningFlame": 0
       },
@@ -316,15 +426,35 @@
       "statModifier": {
         "hp": 1.05,
         "atk": 0.95,
-        "def": 1.0,
-        "spd": 1.0
+        "def": 1,
+        "spd": 1
       },
       "baseStats": {
-        "lv1": { "hp": 520, "atk": 36, "def": 60, "spd": 78 },
-        "lv50": { "hp": 2900, "atk": 162, "def": 240, "spd": 94 }
+        "lv1": {
+          "hp": 520,
+          "atk": 36,
+          "def": 60,
+          "spd": 78
+        },
+        "lv50": {
+          "hp": 2900,
+          "atk": 162,
+          "def": 240,
+          "spd": 94
+        }
       },
-      "stats": { "hp": 520, "atk": 36, "def": 60, "spd": 78 },
-      "growthStats": { "hp": 48, "atk": 2.5, "def": 3.6, "spd": 0.3 },
+      "stats": {
+        "hp": 520,
+        "atk": 36,
+        "def": 60,
+        "spd": 78
+      },
+      "growthStats": {
+        "hp": 48,
+        "atk": 2.5,
+        "def": 3.6,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
@@ -338,14 +468,16 @@
           "id": "skill1",
           "name": "생명의 순환",
           "description": "전투 경과 턴수에 비례해 아군 ATK/DEF 상승. 최대 +30%.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeCost": 100,
           "target": "all_allies",
           "cultEffect": "growth_buff"
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "nature": 20 },
+        "cultEssence": {
+          "nature": 20
+        },
         "institutionSeal": 1,
         "awakeningFlame": 0
       },
@@ -373,17 +505,37 @@
         "spd": 1.05
       },
       "baseStats": {
-        "lv1": { "hp": 380, "atk": 68, "def": 35, "spd": 88 },
-        "lv60": { "hp": 2500, "atk": 308, "def": 162, "spd": 108 }
+        "lv1": {
+          "hp": 380,
+          "atk": 68,
+          "def": 35,
+          "spd": 88
+        },
+        "lv60": {
+          "hp": 2500,
+          "atk": 308,
+          "def": 162,
+          "spd": 108
+        }
       },
-      "stats": { "hp": 380, "atk": 68, "def": 35, "spd": 88 },
-      "growthStats": { "hp": 36, "atk": 4.1, "def": 2.1, "spd": 0.3 },
+      "stats": {
+        "hp": 380,
+        "atk": 68,
+        "def": 35,
+        "spd": 88
+      },
+      "growthStats": {
+        "hp": 42,
+        "atk": 4.5,
+        "def": 2.1,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "룬 주문",
           "description": "룬 에너지를 담은 기본 마법 공격. 룬 스택 +1.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "cultEffect": "rune_stack_1"
         },
@@ -400,7 +552,7 @@
           "id": "awakening",
           "name": "룬의 집대성",
           "description": "SSR 각성 스킬. 전체 아군 ATK +25% + 전체 적에게 룬 데미지.",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 0,
           "target": "all",
           "cooldown": 4,
@@ -408,7 +560,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "asgard": 30 },
+        "cultEssence": {
+          "asgard": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -433,20 +587,40 @@
         "hp": 0.9,
         "atk": 1.15,
         "def": 0.85,
-        "spd": 1.0
+        "spd": 1
       },
       "baseStats": {
-        "lv1": { "hp": 340, "atk": 75, "def": 30, "spd": 85 },
-        "lv50": { "hp": 2200, "atk": 338, "def": 140, "spd": 102 }
+        "lv1": {
+          "hp": 340,
+          "atk": 75,
+          "def": 30,
+          "spd": 85
+        },
+        "lv50": {
+          "hp": 2200,
+          "atk": 338,
+          "def": 140,
+          "spd": 102
+        }
       },
-      "stats": { "hp": 340, "atk": 75, "def": 30, "spd": 85 },
-      "growthStats": { "hp": 38, "atk": 4.4, "def": 2.2, "spd": 0.3 },
+      "stats": {
+        "hp": 340,
+        "atk": 75,
+        "def": 30,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 38,
+        "atk": 4.4,
+        "def": 2.2,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "심연 주문",
           "description": "방어력을 무시하는 어둠의 마법 공격.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "cultEffect": "armor_pierce_20"
         },
@@ -454,14 +628,16 @@
           "id": "skill1",
           "name": "타르타로스 균열",
           "description": "단일 적에게 방어 무시 ATK×200% 피해. 방어막 관통.",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "single",
           "cultEffect": "shield_break"
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "tartarus": 20 },
+        "cultEssence": {
+          "tartarus": 20
+        },
         "institutionSeal": 1,
         "awakeningFlame": 0
       },
@@ -489,17 +665,37 @@
         "spd": 1.1
       },
       "baseStats": {
-        "lv1": { "hp": 420, "atk": 72, "def": 38, "spd": 108 },
-        "lv60": { "hp": 2750, "atk": 325, "def": 178, "spd": 128 }
+        "lv1": {
+          "hp": 420,
+          "atk": 72,
+          "def": 38,
+          "spd": 108
+        },
+        "lv60": {
+          "hp": 2750,
+          "atk": 325,
+          "def": 178,
+          "spd": 128
+        }
       },
-      "stats": { "hp": 420, "atk": 72, "def": 38, "spd": 108 },
-      "growthStats": { "hp": 39, "atk": 4.3, "def": 2.4, "spd": 0.3 },
+      "stats": {
+        "hp": 420,
+        "atk": 72,
+        "def": 38,
+        "spd": 108
+      },
+      "growthStats": {
+        "hp": 39,
+        "atk": 4.3,
+        "def": 2.4,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "저승의 칼",
           "description": "빠른 베기. Doom 스택 +1 부여.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "cultEffect": "doom_stack_1"
         },
@@ -524,7 +720,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "yomi": 30 },
+        "cultEssence": {
+          "yomi": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -546,23 +744,43 @@
       "mood": "stoic",
       "maxLevel": 50,
       "statModifier": {
-        "hp": 1.0,
-        "atk": 1.0,
-        "def": 1.0,
+        "hp": 1,
+        "atk": 1,
+        "def": 1,
         "spd": 1.05
       },
       "baseStats": {
-        "lv1": { "hp": 450, "atk": 62, "def": 42, "spd": 105 },
-        "lv50": { "hp": 2650, "atk": 278, "def": 188, "spd": 122 }
+        "lv1": {
+          "hp": 450,
+          "atk": 62,
+          "def": 42,
+          "spd": 105
+        },
+        "lv50": {
+          "hp": 2650,
+          "atk": 278,
+          "def": 188,
+          "spd": 122
+        }
       },
-      "stats": { "hp": 450, "atk": 62, "def": 42, "spd": 105 },
-      "growthStats": { "hp": 44, "atk": 3.6, "def": 2.9, "spd": 0.3 },
+      "stats": {
+        "hp": 450,
+        "atk": 62,
+        "def": 42,
+        "spd": 105
+      },
+      "growthStats": {
+        "hp": 44,
+        "atk": 3.6,
+        "def": 2.9,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "냉기 칼날",
           "description": "냉기를 담은 베기. 빙결 20% 확률.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "cultEffect": "freeze_20"
         },
@@ -577,7 +795,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "helheim": 20 },
+        "cultEssence": {
+          "helheim": 20
+        },
         "institutionSeal": 1,
         "awakeningFlame": 0
       },
@@ -599,17 +819,37 @@
       "mood": "mystic",
       "maxLevel": 60,
       "statModifier": {
-        "hp": 1.0,
+        "hp": 1,
         "atk": 0.95,
-        "def": 1.0,
+        "def": 1,
         "spd": 1.15
       },
       "baseStats": {
-        "lv1": { "hp": 480, "atk": 48, "def": 58, "spd": 115 },
-        "lv60": { "hp": 3100, "atk": 215, "def": 248, "spd": 138 }
+        "lv1": {
+          "hp": 480,
+          "atk": 48,
+          "def": 58,
+          "spd": 115
+        },
+        "lv60": {
+          "hp": 3100,
+          "atk": 215,
+          "def": 248,
+          "spd": 138
+        }
       },
-      "stats": { "hp": 480, "atk": 48, "def": 58, "spd": 115 },
-      "growthStats": { "hp": 44, "atk": 2.8, "def": 3.2, "spd": 0.4 },
+      "stats": {
+        "hp": 480,
+        "atk": 48,
+        "def": 58,
+        "spd": 115
+      },
+      "growthStats": {
+        "hp": 44,
+        "atk": 2.8,
+        "def": 3.2,
+        "spd": 0.4
+      },
       "skills": [
         {
           "id": "basic",
@@ -624,7 +864,7 @@
           "id": "skill1",
           "name": "선제 신탁",
           "description": "아군 중 가장 빠른 캐릭터가 즉시 추가 행동 1회 획득.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeCost": 100,
           "target": "ally_fastest",
           "cultEffect": "extra_action"
@@ -633,7 +873,7 @@
           "id": "awakening",
           "name": "천상의 신탁",
           "description": "SSR 각성 스킬. 전체 아군 SPD +30% + 3턴간 행동 순서 우선권 획득.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeCost": 0,
           "target": "all_allies",
           "cooldown": 5,
@@ -641,7 +881,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "takamagahara": 30 },
+        "cultEssence": {
+          "takamagahara": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -663,17 +905,37 @@
       "mood": "mystic",
       "maxLevel": 40,
       "statModifier": {
-        "hp": 1.0,
-        "atk": 1.0,
-        "def": 1.0,
-        "spd": 1.0
+        "hp": 1,
+        "atk": 1,
+        "def": 1,
+        "spd": 1
       },
       "baseStats": {
-        "lv1": { "hp": 460, "atk": 44, "def": 56, "spd": 98 },
-        "lv40": { "hp": 2200, "atk": 185, "def": 215, "spd": 112 }
+        "lv1": {
+          "hp": 460,
+          "atk": 44,
+          "def": 56,
+          "spd": 98
+        },
+        "lv40": {
+          "hp": 2200,
+          "atk": 185,
+          "def": 215,
+          "spd": 112
+        }
       },
-      "stats": { "hp": 460, "atk": 44, "def": 56, "spd": 98 },
-      "growthStats": { "hp": 46, "atk": 3.6, "def": 4.0, "spd": 0.4 },
+      "stats": {
+        "hp": 460,
+        "atk": 44,
+        "def": 56,
+        "spd": 98
+      },
+      "growthStats": {
+        "hp": 46,
+        "atk": 3.6,
+        "def": 4,
+        "spd": 0.4
+      },
       "skills": [
         {
           "id": "basic",
@@ -688,14 +950,16 @@
           "id": "skill1",
           "name": "상성 무력화",
           "description": "전체 아군 2턴간 상성 피해 무효. 적 상성 이익도 차단.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeCost": 100,
           "target": "all_allies",
           "cultEffect": "mood_neutral_all"
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "balance": 10 },
+        "cultEssence": {
+          "balance": 10
+        },
         "institutionSeal": 1,
         "awakeningFlame": 0
       },
@@ -718,22 +982,42 @@
       "maxLevel": 50,
       "statModifier": {
         "hp": 1.2,
-        "atk": 1.0,
+        "atk": 1,
         "def": 1.1,
         "spd": 0.9
       },
       "baseStats": {
-        "lv1": { "hp": 700, "atk": 58, "def": 128, "spd": 65 },
-        "lv50": { "hp": 4200, "atk": 248, "def": 498, "spd": 80 }
+        "lv1": {
+          "hp": 700,
+          "atk": 58,
+          "def": 128,
+          "spd": 65
+        },
+        "lv50": {
+          "hp": 4200,
+          "atk": 248,
+          "def": 498,
+          "spd": 80
+        }
       },
-      "stats": { "hp": 700, "atk": 58, "def": 128, "spd": 65 },
-      "growthStats": { "hp": 75, "atk": 3.8, "def": 7.6, "spd": 0.3 },
+      "stats": {
+        "hp": 650,
+        "atk": 58,
+        "def": 80,
+        "spd": 65
+      },
+      "growthStats": {
+        "hp": 50,
+        "atk": 3.8,
+        "def": 3.5,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "방패 강타",
           "description": "방패로 적을 가격. HP가 낮을수록 피해 증가.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "cultEffect": "low_hp_bonus"
         },
@@ -748,7 +1032,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "valhalla": 20 },
+        "cultEssence": {
+          "valhalla": 20
+        },
         "institutionSeal": 1,
         "awakeningFlame": 0
       },
@@ -776,11 +1062,31 @@
         "spd": 0.95
       },
       "baseStats": {
-        "lv1": { "hp": 680, "atk": 52, "def": 138, "spd": 67 },
-        "lv50": { "hp": 4100, "atk": 228, "def": 528, "spd": 82 }
+        "lv1": {
+          "hp": 680,
+          "atk": 52,
+          "def": 138,
+          "spd": 67
+        },
+        "lv50": {
+          "hp": 4100,
+          "atk": 228,
+          "def": 528,
+          "spd": 82
+        }
       },
-      "stats": { "hp": 680, "atk": 52, "def": 138, "spd": 67 },
-      "growthStats": { "hp": 72, "atk": 3.5, "def": 7.8, "spd": 0.3 },
+      "stats": {
+        "hp": 640,
+        "atk": 52,
+        "def": 82,
+        "spd": 67
+      },
+      "growthStats": {
+        "hp": 48,
+        "atk": 3.5,
+        "def": 3.5,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
@@ -795,14 +1101,16 @@
           "id": "skill1",
           "name": "성약의 성채",
           "description": "전체 아군에게 방어막 부여 (ATK×200% 상당). 오마르는 추가 반격 획득.",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "all_allies",
           "cultEffect": "fortress_shield"
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "avalon": 20 },
+        "cultEssence": {
+          "avalon": 20
+        },
         "institutionSeal": 1,
         "awakeningFlame": 0
       },
@@ -824,23 +1132,43 @@
       "mood": "calm",
       "maxLevel": 60,
       "statModifier": {
-        "hp": 1.0,
+        "hp": 1,
         "atk": 1.1,
         "def": 0.95,
-        "spd": 1.0
+        "spd": 1
       },
       "baseStats": {
-        "lv1": { "hp": 460, "atk": 68, "def": 42, "spd": 88 },
-        "lv60": { "hp": 3000, "atk": 305, "def": 192, "spd": 106 }
+        "lv1": {
+          "hp": 460,
+          "atk": 68,
+          "def": 42,
+          "spd": 88
+        },
+        "lv60": {
+          "hp": 3000,
+          "atk": 305,
+          "def": 192,
+          "spd": 106
+        }
       },
-      "stats": { "hp": 460, "atk": 68, "def": 42, "spd": 88 },
-      "growthStats": { "hp": 43, "atk": 4.1, "def": 2.5, "spd": 0.3 },
+      "stats": {
+        "hp": 460,
+        "atk": 68,
+        "def": 42,
+        "spd": 88
+      },
+      "growthStats": {
+        "hp": 43,
+        "atk": 4.1,
+        "def": 2.5,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "대지의 화살",
           "description": "자연의 힘을 담은 화살. 전투 시간이 지날수록 위력 증가 (+2%/턴).",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "cultEffect": "growth_atk"
         },
@@ -857,7 +1185,7 @@
           "id": "awakening",
           "name": "대지 해방",
           "description": "SSR 각성 스킬. 전체 적에게 ATK×(턴수×20%) 피해. 후반 극강.",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 0,
           "target": "all",
           "cooldown": 4,
@@ -865,7 +1193,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "nature": 30 },
+        "cultEssence": {
+          "nature": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -893,11 +1223,31 @@
         "spd": 1.05
       },
       "baseStats": {
-        "lv1": { "hp": 420, "atk": 68, "def": 38, "spd": 91 },
-        "lv50": { "hp": 2500, "atk": 305, "def": 172, "spd": 108 }
+        "lv1": {
+          "hp": 420,
+          "atk": 68,
+          "def": 38,
+          "spd": 91
+        },
+        "lv50": {
+          "hp": 2500,
+          "atk": 305,
+          "def": 172,
+          "spd": 108
+        }
       },
-      "stats": { "hp": 420, "atk": 68, "def": 38, "spd": 91 },
-      "growthStats": { "hp": 42, "atk": 4.7, "def": 2.7, "spd": 0.3 },
+      "stats": {
+        "hp": 420,
+        "atk": 68,
+        "def": 38,
+        "spd": 91
+      },
+      "growthStats": {
+        "hp": 42,
+        "atk": 4.7,
+        "def": 2.7,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
@@ -918,7 +1268,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "kunlun": 20 },
+        "cultEssence": {
+          "kunlun": 20
+        },
         "institutionSeal": 1,
         "awakeningFlame": 0
       },
@@ -943,14 +1295,34 @@
         "hp": 0.9,
         "atk": 1.2,
         "def": 0.85,
-        "spd": 1.0
+        "spd": 1
       },
       "baseStats": {
-        "lv1": { "hp": 385, "atk": 78, "def": 30, "spd": 92 },
-        "lv60": { "hp": 2500, "atk": 355, "def": 148, "spd": 110 }
+        "lv1": {
+          "hp": 385,
+          "atk": 78,
+          "def": 30,
+          "spd": 92
+        },
+        "lv60": {
+          "hp": 2500,
+          "atk": 355,
+          "def": 148,
+          "spd": 110
+        }
       },
-      "stats": { "hp": 385, "atk": 78, "def": 30, "spd": 92 },
-      "growthStats": { "hp": 36, "atk": 4.7, "def": 2.0, "spd": 0.3 },
+      "stats": {
+        "hp": 385,
+        "atk": 78,
+        "def": 30,
+        "spd": 92
+      },
+      "growthStats": {
+        "hp": 42,
+        "atk": 5.1,
+        "def": 2,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
@@ -981,7 +1353,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "yomi": 30 },
+        "cultEssence": {
+          "yomi": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -1006,14 +1380,34 @@
         "hp": 0.95,
         "atk": 1.05,
         "def": 0.9,
-        "spd": 1.0
+        "spd": 1
       },
       "baseStats": {
-        "lv1": { "hp": 365, "atk": 68, "def": 28, "spd": 90 },
-        "lv40": { "hp": 1900, "atk": 285, "def": 128, "spd": 105 }
+        "lv1": {
+          "hp": 365,
+          "atk": 68,
+          "def": 28,
+          "spd": 90
+        },
+        "lv40": {
+          "hp": 1900,
+          "atk": 285,
+          "def": 128,
+          "spd": 105
+        }
       },
-      "stats": { "hp": 365, "atk": 68, "def": 28, "spd": 90 },
-      "growthStats": { "hp": 40, "atk": 5.6, "def": 2.5, "spd": 0.4 },
+      "stats": {
+        "hp": 365,
+        "atk": 68,
+        "def": 28,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 40,
+        "atk": 5.6,
+        "def": 2.5,
+        "spd": 0.4
+      },
       "skills": [
         {
           "id": "basic",
@@ -1027,14 +1421,16 @@
           "id": "skill1",
           "name": "헬하임의 봉인",
           "description": "적 전체를 공포 상태로 만든다 (행동력 -30%, 2턴).",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeCost": 100,
           "target": "all",
           "cultEffect": "terror_all"
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "helheim": 10 },
+        "cultEssence": {
+          "helheim": 10
+        },
         "institutionSeal": 1,
         "awakeningFlame": 0
       },
@@ -1062,17 +1458,37 @@
         "spd": 1.1
       },
       "baseStats": {
-        "lv1": { "hp": 360, "atk": 85, "def": 26, "spd": 100 },
-        "lv60": { "hp": 2350, "atk": 378, "def": 128, "spd": 120 }
+        "lv1": {
+          "hp": 360,
+          "atk": 85,
+          "def": 26,
+          "spd": 100
+        },
+        "lv60": {
+          "hp": 2350,
+          "atk": 378,
+          "def": 128,
+          "spd": 120
+        }
       },
-      "stats": { "hp": 360, "atk": 85, "def": 26, "spd": 100 },
-      "growthStats": { "hp": 33, "atk": 4.9, "def": 1.7, "spd": 0.3 },
+      "stats": {
+        "hp": 360,
+        "atk": 85,
+        "def": 26,
+        "spd": 100
+      },
+      "growthStats": {
+        "hp": 39,
+        "atk": 5.3,
+        "def": 1.7,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "광기의 손길",
           "description": "무작위 효과 기본 공격 (저주/빙결/침묵 중 하나 30% 확률).",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "cultEffect": "random_debuff"
         },
@@ -1080,7 +1496,7 @@
           "id": "skill1",
           "name": "혼돈 폭풍",
           "description": "무작위 대상에게 ATK×(1.5~5.0)% 피해 3회 발동.",
-          "multiplier": 3.0,
+          "multiplier": 3,
           "gaugeCost": 100,
           "target": "random",
           "cultEffect": "chaos_storm"
@@ -1089,7 +1505,7 @@
           "id": "awakening",
           "name": "광기 해방",
           "description": "SSR 각성 스킬. 전체 적/아군 무작위 강력 효과 발동. 최강 또는 최악의 결과.",
-          "multiplier": 4.0,
+          "multiplier": 4,
           "gaugeCost": 0,
           "target": "all",
           "cooldown": 5,
@@ -1097,7 +1513,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "chaos": 30 },
+        "cultEssence": {
+          "chaos": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -1122,20 +1540,40 @@
         "hp": 1.05,
         "atk": 1.05,
         "def": 1.05,
-        "spd": 1.0
+        "spd": 1
       },
       "baseStats": {
-        "lv1": { "hp": 580, "atk": 65, "def": 72, "spd": 82 },
-        "lv50": { "hp": 3400, "atk": 285, "def": 298, "spd": 98 }
+        "lv1": {
+          "hp": 580,
+          "atk": 65,
+          "def": 72,
+          "spd": 82
+        },
+        "lv50": {
+          "hp": 3400,
+          "atk": 285,
+          "def": 298,
+          "spd": 98
+        }
       },
-      "stats": { "hp": 580, "atk": 65, "def": 72, "spd": 82 },
-      "growthStats": { "hp": 56, "atk": 4.4, "def": 4.5, "spd": 0.3 },
+      "stats": {
+        "hp": 560,
+        "atk": 65,
+        "def": 72,
+        "spd": 82
+      },
+      "growthStats": {
+        "hp": 46,
+        "atk": 4.4,
+        "def": 3,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "룬 각인",
           "description": "검에 룬을 새겨 공격. 아군 전체 ATK +3% 버프 적층 (최대 5중).",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "target": "all_allies",
           "cultEffect": "rune_atk_stack"
@@ -1144,14 +1582,16 @@
           "id": "skill1",
           "name": "아스가르드 결전",
           "description": "룬 스택 수만큼 아군 전체 강화 + 적 단일 강타.",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 100,
           "target": "single",
           "cultEffect": "rune_party_buff"
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "asgard": 20 },
+        "cultEssence": {
+          "asgard": 20
+        },
         "institutionSeal": 1,
         "awakeningFlame": 0
       },
@@ -1173,23 +1613,43 @@
       "mood": "brave",
       "maxLevel": 60,
       "statModifier": {
-        "hp": 1.0,
+        "hp": 1,
         "atk": 1.2,
         "def": 0.95,
-        "spd": 1.0
+        "spd": 1
       },
       "baseStats": {
-        "lv1": { "hp": 580, "atk": 82, "def": 68, "spd": 82 },
-        "lv60": { "hp": 3600, "atk": 368, "def": 285, "spd": 98 }
+        "lv1": {
+          "hp": 580,
+          "atk": 82,
+          "def": 68,
+          "spd": 82
+        },
+        "lv60": {
+          "hp": 3600,
+          "atk": 368,
+          "def": 285,
+          "spd": 98
+        }
       },
-      "stats": { "hp": 580, "atk": 82, "def": 68, "spd": 82 },
-      "growthStats": { "hp": 51, "atk": 4.8, "def": 3.6, "spd": 0.3 },
+      "stats": {
+        "hp": 580,
+        "atk": 82,
+        "def": 68,
+        "spd": 82
+      },
+      "growthStats": {
+        "hp": 51,
+        "atk": 4.8,
+        "def": 3.6,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "번개 심판",
           "description": "번개를 담은 검격. Thunderstruck 25% 확률.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "cultEffect": "thunderstruck_25"
         },
@@ -1206,7 +1666,7 @@
           "id": "awakening",
           "name": "신벌 선고",
           "description": "SSR 각성 스킬. 전체 적에게 ATK×200% 번개 피해 + 2턴 행동력 -50%.",
-          "multiplier": 2.0,
+          "multiplier": 2,
           "gaugeCost": 0,
           "target": "all",
           "cooldown": 4,
@@ -1214,7 +1674,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "olympus": 30 },
+        "cultEssence": {
+          "olympus": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -1242,17 +1704,37 @@
         "spd": 1.05
       },
       "baseStats": {
-        "lv1": { "hp": 390, "atk": 80, "def": 30, "spd": 86 },
-        "lv60": { "hp": 2550, "atk": 365, "def": 145, "spd": 105 }
+        "lv1": {
+          "hp": 390,
+          "atk": 80,
+          "def": 30,
+          "spd": 86
+        },
+        "lv60": {
+          "hp": 2550,
+          "atk": 365,
+          "def": 145,
+          "spd": 105
+        }
       },
-      "stats": { "hp": 390, "atk": 80, "def": 30, "spd": 86 },
-      "growthStats": { "hp": 36, "atk": 4.8, "def": 1.9, "spd": 0.3 },
+      "stats": {
+        "hp": 390,
+        "atk": 80,
+        "def": 30,
+        "spd": 86
+      },
+      "growthStats": {
+        "hp": 42,
+        "atk": 5.2,
+        "def": 1.9,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
           "name": "분해 공식",
           "description": "적의 방어막과 방어력을 분해하는 연금술 공격. DEF -5% 적층.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "cultEffect": "armor_shred"
         },
@@ -1277,7 +1759,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "tartarus": 30 },
+        "cultEssence": {
+          "tartarus": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -1305,11 +1789,31 @@
         "spd": 1.05
       },
       "baseStats": {
-        "lv1": { "hp": 370, "atk": 88, "def": 28, "spd": 86 },
-        "lv60": { "hp": 2400, "atk": 398, "def": 138, "spd": 105 }
+        "lv1": {
+          "hp": 370,
+          "atk": 88,
+          "def": 28,
+          "spd": 86
+        },
+        "lv60": {
+          "hp": 2400,
+          "atk": 398,
+          "def": 138,
+          "spd": 105
+        }
       },
-      "stats": { "hp": 370, "atk": 88, "def": 28, "spd": 86 },
-      "growthStats": { "hp": 34, "atk": 5.2, "def": 1.8, "spd": 0.3 },
+      "stats": {
+        "hp": 370,
+        "atk": 88,
+        "def": 28,
+        "spd": 86
+      },
+      "growthStats": {
+        "hp": 40,
+        "atk": 5.6,
+        "def": 1.8,
+        "spd": 0.3
+      },
       "skills": [
         {
           "id": "basic",
@@ -1332,7 +1836,7 @@
           "id": "awakening",
           "name": "원소 붕괴",
           "description": "SSR 각성 스킬. 모든 원소를 동시에 해방. 무작위 강력 효과 5회.",
-          "multiplier": 5.0,
+          "multiplier": 5,
           "gaugeCost": 0,
           "target": "all",
           "cooldown": 5,
@@ -1340,7 +1844,9 @@
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "chaos": 30 },
+        "cultEssence": {
+          "chaos": 30
+        },
         "institutionSeal": 1,
         "awakeningFlame": 3
       },
@@ -1362,23 +1868,43 @@
       "mood": "cunning",
       "maxLevel": 40,
       "statModifier": {
-        "hp": 1.0,
-        "atk": 1.0,
-        "def": 1.0,
-        "spd": 1.0
+        "hp": 1,
+        "atk": 1,
+        "def": 1,
+        "spd": 1
       },
       "baseStats": {
-        "lv1": { "hp": 440, "atk": 68, "def": 40, "spd": 82 },
-        "lv40": { "hp": 2200, "atk": 285, "def": 168, "spd": 98 }
+        "lv1": {
+          "hp": 440,
+          "atk": 68,
+          "def": 40,
+          "spd": 82
+        },
+        "lv40": {
+          "hp": 2200,
+          "atk": 285,
+          "def": 168,
+          "spd": 98
+        }
       },
-      "stats": { "hp": 440, "atk": 68, "def": 40, "spd": 82 },
-      "growthStats": { "hp": 46, "atk": 5.4, "def": 3.2, "spd": 0.4 },
+      "stats": {
+        "hp": 440,
+        "atk": 68,
+        "def": 40,
+        "spd": 82
+      },
+      "growthStats": {
+        "hp": 46,
+        "atk": 5.4,
+        "def": 3.2,
+        "spd": 0.4
+      },
       "skills": [
         {
           "id": "basic",
           "name": "촉매 반응",
           "description": "상성 유불리를 무시하고 중립 피해를 준다.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeGain": 25,
           "cultEffect": "neutral_damage"
         },
@@ -1386,14 +1912,16 @@
           "id": "skill1",
           "name": "균형 조율",
           "description": "아군 전체의 상성 피해를 중립화. 적의 상성 이득도 차단. 3턴.",
-          "multiplier": 1.0,
+          "multiplier": 1,
           "gaugeCost": 100,
           "target": "all_allies",
           "cultEffect": "balance_field"
         }
       ],
       "acquisitionCost": {
-        "cultEssence": { "balance": 10 },
+        "cultEssence": {
+          "balance": 10
+        },
         "institutionSeal": 1,
         "awakeningFlame": 0
       },

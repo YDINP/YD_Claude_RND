@@ -14,6 +14,7 @@ import { TowerScene } from '../scenes/TowerScene.js';
 import { QuestScene } from '../scenes/QuestScene.js';
 import { SettingsScene } from '../scenes/SettingsScene.js';
 import { LoginScene } from '../scenes/LoginScene.js';
+import { CutsceneScene } from '../scenes/CutsceneScene.js';
 
 // Re-export from scaleConfig (순환 의존성 방지)
 export { GAME_WIDTH, GAME_HEIGHT, BASE_WIDTH, SCALE_FACTOR, s, sf } from './scaleConfig.js';
@@ -53,7 +54,8 @@ export const gameConfig = {
     InventoryScene,
     TowerScene,
     QuestScene,
-    SettingsScene
+    SettingsScene,
+    CutsceneScene
   ]
 };
 

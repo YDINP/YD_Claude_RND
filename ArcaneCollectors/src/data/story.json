@@ -1,0 +1,3042 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "lastUpdated": "2026-09-02",
+    "schema": "NARRATIVE_STORY_MODE.md v1.0",
+    "note": "컷씬 대본 SSOT (NARRATIVE_STORY_MODE.md §2/§3/§5). stages.json의 story_intro/story_clear는 스테이지 카드용 요약 캡션으로 별도 유지.",
+    "speakerTypes": [
+      "narrator",
+      "hero",
+      "enemy",
+      "npc",
+      "player",
+      "unknown"
+    ],
+    "emotions": [
+      "neutral",
+      "calm",
+      "tense",
+      "angry",
+      "sad",
+      "joy",
+      "awe",
+      "resolute"
+    ],
+    "triggers": [
+      "chapter_enter",
+      "stage_enter",
+      "stage_clear",
+      "boss_before",
+      "boss_after",
+      "epilogue",
+      "first_hero",
+      "hero_ascend",
+      "evolve_gate",
+      "hero_evolve"
+    ],
+    "vars": {
+      "ascendedCount": "보유 전직영웅 총 수 (최소 1 보장)",
+      "institutionCount": "보유 전직영웅이 속한 서로 다른 기관 수 (1~12)"
+    },
+    "counts": {
+      "storyScenes": 26,
+      "heroDialogueScenes": 44,
+      "sharedScenes": [
+        "cs_first_hero_iris"
+      ],
+      "total": 69
+    },
+    "storySceneTriggers": [
+      "chapter_enter",
+      "stage_enter",
+      "stage_clear",
+      "boss_before",
+      "boss_after",
+      "epilogue",
+      "evolve_gate"
+    ],
+    "heroSceneTriggers": [
+      "first_hero",
+      "hero_ascend",
+      "hero_evolve"
+    ]
+  },
+  "scenes": [
+    {
+      "id": "cs_ch1_enter",
+      "trigger": "chapter_enter",
+      "chapterId": "chapter_1",
+      "stageId": null,
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_guild_registry",
+      "bgm": "bgm_story_calm",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "세계는 조용히 금이 갔다. 소리도, 경고도 없었다."
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "신들은 그날 이후 조금씩 작아지기 시작했고, 사람들은 그것을 흉년이라고 불렀다."
+        },
+        {
+          "speaker": "???",
+          "speakerType": "unknown",
+          "portraitId": null,
+          "text": "\"거기 있는 사람. 그 빛에 손대지 마.\"",
+          "emotion": "tense",
+          "revealAs": "npc_registrar"
+        },
+        {
+          "speaker": "???",
+          "speakerType": "unknown",
+          "portraitId": null,
+          "text": "\"그건 미정령이야. 이름도, 형태도, 갈 곳도 없는 것. 균열이 흘린 조각이지.\"",
+          "revealAs": "npc_registrar"
+        },
+        {
+          "speaker": "???",
+          "speakerType": "unknown",
+          "portraitId": null,
+          "text": "\"…그런데 지금, 그게 네 손을 잡았군.\"",
+          "revealAs": "npc_registrar"
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "수집가 길드의 등록부에 새 이름이 적힌다. 지난 열두 해 만의 첫 등록이었다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"길드에 온 걸 환영해. 나는 등록관이야. 네가 뭘 주워오든 장부에 적는 게 내 일이지.\"",
+          "emotion": "calm"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"가라. 숲이 이상하다는 신고가 들어와 있어. 하나만 기억해 — 네가 그걸 어디로 데려가느냐가, 그게 무엇이 될지를 정한다.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_1_1_enter",
+      "trigger": "stage_enter",
+      "chapterId": "chapter_1",
+      "stageId": "1-1",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_forest_entrance",
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "숲은 평범했다. 새소리가 없다는 것만 빼면."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"고블린 정도야 흔해. 문제는 그것들이 왜 여기까지 내려왔느냐지.\""
+        },
+        {
+          "speaker": "고블린",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"…빛나. 저 빛… 우리 거.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"봤지? 저것들도 미정령을 쫓고 있어. 배가 고파서가 아니야.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"균열 근처의 것들은 전부 굶주려 있어. 신성이 빠져나간 자리는 허기부터 채우려 들거든.\""
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "첫 번째 발소리가 풀을 밟았다."
+        }
+      ]
+    },
+    {
+      "id": "cs_1_1_clear",
+      "trigger": "stage_clear",
+      "chapterId": "chapter_1",
+      "stageId": "1-1",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_forest_entrance",
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "고블린들이 흩어진 자리에, 손바닥만 한 빛이 떠 있었다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…조각이군. 미정령의 파편이야. 하나로는 아무것도 안 돼.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"서른 개. 서른 개를 모으면 그건 이름을 가질 수 있어.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"이름이 생기면 그건 더 이상 '그것'이 아니야. '누군가'가 되지.\"",
+          "emotion": "calm"
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "빛은 손안에서 미지근했다. 살아있는 것의 온도였다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"장부에 적어둘게. 첫 조각, 확인.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_1_2_enter",
+      "trigger": "stage_enter",
+      "chapterId": "chapter_1",
+      "stageId": "1-2",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_forest_deep",
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "나무가 빽빽해질수록 그림자가 늘었다. 나무보다 많았다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"그림자 수를 세지 마. 세다 보면 하나가 늘어.\""
+        },
+        {
+          "speaker": "야생 늑대",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"……\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"늑대가 무리를 흩뜨렸어. 우두머리를 잃었거나 — 더 큰 걸 피해 도망친 거야.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"숲 안쪽에 뭔가 앉아 있어. 그게 뭐든, 오늘은 아직 만나지 마.\""
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "품속의 조각이 미약하게 떨렸다. 무서워하는 것처럼."
+        }
+      ]
+    },
+    {
+      "id": "cs_1_2_clear",
+      "trigger": "stage_clear",
+      "chapterId": "chapter_1",
+      "stageId": "1-2",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_forest_deep",
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "늑대들의 사냥은 끝났다. 그들이 무엇을 사냥하려 했는지는 끝내 알 수 없었다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"조각이 또 늘었군. …이 속도면 곧 서른이야. 아까부터 네 옆에서 검을 휘두르는 그 빛도, 슬슬 제 이름을 갖겠어.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"미리 말해두는데, 각성은 되돌릴 수 없어.\"",
+          "emotion": "calm"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"이름 없는 빛으로 남는 게 편했을지도 몰라. 이름이 붙는 순간 잃을 게 생기니까.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…그래도 할 거지? 그래. 나도 그랬어.\""
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "숲에 들어선 순간부터 내내 곁에서 싸우던 빛이, 처음으로 스스로 밝아졌다."
+        }
+      ]
+    },
+    {
+      "id": "cs_first_hero_iris",
+      "trigger": "first_hero",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_iris",
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_guild_registry",
+      "bgm": "bgm_story_awakening",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "조각이 서른 개째 겹쳐지는 순간, 빛은 형태를 고르기 시작했다."
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "그것은 오래 망설이지 않았다. 마치 이미 정해두었던 것처럼."
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…아. 손이 있네. 손이 있으면 검을 쥘 수 있잖아.\"",
+          "emotion": "awe"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"이름? 아이리스. 방금 정했어. 네가 준 게 아니라 내가 고른 거야.\"",
+          "emotion": "resolute"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"말해두는데, 나는 네 것이 아니야. 내 힘은 내 것이다. 그건 안 바뀌어.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"그래도 — 잡아줘서 고마워. 그건 인정할게.\"",
+          "emotion": "calm"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…성격 있는 애가 나왔군. 장부에 뭐라고 적지.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"'기본영웅 제1호, 아이리스.' 축하해. 이제 넌 진짜 수집가야.\"",
+          "emotion": "calm"
+        }
+      ]
+    },
+    {
+      "id": "cs_1_3_enter",
+      "trigger": "stage_enter",
+      "chapterId": "chapter_1",
+      "stageId": "1-3",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_mushroom_colony",
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "사람 키를 넘는 버섯들이 늘어서 있었다. 어제까지 이 자리에 없던 것들이다."
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"이거 버섯 맞아? 숨 쉬는 소리가 나는데.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"균열이 흘린 신성이 아무 데나 고이면 저렇게 돼. 나무든 돌이든 상관없어.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"미정령이 될 수도 있었던 것들이야. 다만 아무도 손을 잡아주지 않았을 뿐이지.\"",
+          "emotion": "sad"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…그럼 얘들은 뭐가 되고 싶었던 건데.\"",
+          "emotion": "sad"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"몰라. 그래서 슬픈 거야.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_1_3_clear",
+      "trigger": "stage_clear",
+      "chapterId": "chapter_1",
+      "stageId": "1-3",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_mushroom_colony",
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "갓이 터지자 포자 대신 희미한 빛이 흩어졌다."
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…빛이었어. 우리랑 같은.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"그래. 방향이 없었을 뿐이야.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"그게 기관이 존재하는 이유야, 수집가. 힘을 주는 곳이 아니라 — 방향을 주는 곳이지.\"",
+          "emotion": "calm"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"방향이라. 난 이미 정했는데.\"",
+          "emotion": "resolute"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…그럴까. 문 앞에 서면 다들 그렇게 말하더라.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_gate_first",
+      "trigger": "evolve_gate",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_iris",
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_twelve_gates",
+      "bgm": "bgm_story_gates",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "\"등록되지 않은 자는 통과할 수 없다.\" — 폐허의 문지기는 그렇게 말했다. 그것은 경고가 아니라 절차 안내였다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"들었지. 등록이 없으면 저 안쪽은 못 지나가. 그리고 등록은 저기서 하는 게 아니라 — 여기서 해.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "길드 안쪽, 열두 개의 문이 원형으로 늘어서 있었다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"여기부터는 내 일이 아니야. 나는 적기만 해.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"고를 사람은 둘이지. 문 앞에 설 자와, 그 손을 잡고 온 자.\"",
+          "emotion": "calm"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…열두 개 전부 나한테 열려 있는 건 아니지?\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"그래. 세 개야. 나머지 아홉은 너를 받지 않아. 억지로 넣으면 부서지고.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"잔인하네. 근데 차라리 나아. 전부 열려 있었으면 못 골랐을 거야.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…수집가. 네가 정해. 나는 네가 정한 문으로 걸어들어갈 거야.\"",
+          "emotion": "resolute"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"대신 그다음부터는 내 방식대로 할 거야. 그건 각오해.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_1_4_enter",
+      "trigger": "stage_enter",
+      "chapterId": "chapter_1",
+      "stageId": "1-4",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_ancient_ruins",
+      "bgm": "bgm_story_mystery",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "숲 한가운데 무너진 석조 건물이 있었다. 어느 신화의 양식도 아니었다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…이건 보고에 없던 건데.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"벽에 글자가 있어. 읽을 수는 없는데… 읽고 싶어져.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"손대지 마. 골렘이 움직인다.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "석상 골렘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"…등록되지 않은 자. …통과 불가.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"'등록'? …저게 지금 뭐라고 했지.\"",
+          "emotion": "awe"
+        }
+      ]
+    },
+    {
+      "id": "cs_1_4_clear",
+      "trigger": "stage_clear",
+      "chapterId": "chapter_1",
+      "stageId": "1-4",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_ancient_ruins",
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "골렘의 가슴에서 굳은 문장 하나가 떨어져 나왔다. 저울과 열쇠가 겹친 문양이었다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…길드 문장이야. 그것도 아주 오래된 판본.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"당신네 건물이었어?\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"우리 건물이었던 적이 있었지. 수집가가 지금보다 훨씬 많던 시절에.\"",
+          "emotion": "sad"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"저 골렘은 문지기였어. 등록증 없는 자를 막는 게 일이었고 — 그 일을 아직 하고 있었던 거야.\""
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "벽에 새겨진 글자는 열두 줄이었다. 열두 개의 문 이름이었다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"숲 안쪽으로 가. 신고의 진짜 원인이 거기 있어.\"",
+          "emotion": "tense"
+        }
+      ]
+    },
+    {
+      "id": "cs_1_5_boss_before",
+      "trigger": "boss_before",
+      "chapterId": "chapter_1",
+      "stageId": "1-5",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_forest_heart",
+      "bgm": "bgm_boss_ch1",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "숲의 가장 깊은 곳. 나무들이 안쪽을 향해 휘어 있었다. 무언가에 짓눌린 것처럼."
+        },
+        {
+          "speaker": "고블린 왕",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"인간이냐. 이 숲에서 나가라.\"",
+          "emotion": "angry"
+        },
+        {
+          "speaker": "고블린 왕",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"여기는 이제 우리 것이다. 신이 버린 땅은, 주운 자의 것이니까.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…말이 통하잖아. 고블린 왕이.\"",
+          "emotion": "awe"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"균열 근처에서 오래 있으면 저렇게 돼. 신성을 주워 먹으면서 말을 배우는 거야.\""
+        },
+        {
+          "speaker": "고블린 왕",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"너도 주우러 온 거지. 냄새가 난다. 손안의 그 빛.\""
+        },
+        {
+          "speaker": "고블린 왕",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"우리는 굶주려서 줍는다. 너는 왜 줍지?\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…대답해줄 필요 없어. 검으로 하면 돼.\"",
+          "emotion": "resolute"
+        }
+      ]
+    },
+    {
+      "id": "cs_1_5_boss_after",
+      "trigger": "boss_after",
+      "chapterId": "chapter_1",
+      "stageId": "1-5",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_forest_heart",
+      "bgm": "bgm_story_aftermath",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "왕관이 흙 위로 떨어졌다. 나뭇가지를 엮어 만든 것이었다."
+        },
+        {
+          "speaker": "고블린 왕",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"…끝났다고 생각하나.\""
+        },
+        {
+          "speaker": "고블린 왕",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"균열은 이제 시작일 뿐이다. 더 강한 자들이 온다. 우리보다 훨씬… 배고픈 것들이.\""
+        },
+        {
+          "speaker": "고블린 왕",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"너는 아직 대답 안 했다. 왜 줍는지.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "숲의 지배자는 대답을 기다리지 않고 흩어졌다."
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…뭐야. 마지막까지 기분 나쁘게.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"수집가. 안쪽에 균열이 하나 더 열려 있어. 이건 신고 건이 아니야.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"장부를 새로 펴야겠군. …이번엔 첫 장부터야. 네가 문 하나를 고른 뒤의 장부니까.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_ch2_enter",
+      "trigger": "chapter_enter",
+      "chapterId": "chapter_2",
+      "stageId": null,
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_two_skies",
+      "bgm": "bgm_story_ch2",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "숲을 나오자 하늘이 둘이었다."
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "한쪽에는 잿빛 전운이, 다른 쪽에는 아침의 금빛이 걸려 있었다. 경계선에서 두 하늘이 서로를 갈아내고 있었다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…발할라의 하늘과 타카마가하라의 하늘이야. 만나면 안 되는 두 개가 만났어.\"",
+          "emotion": "awe"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"균열이 숲 하나를 삼킨 게 아니었어. 세계의 지도를 찢어서 다시 붙이고 있는 거야.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"저기 싸우는 것들, 서로 왜 죽여? 사이가 나쁜 것도 아닐 텐데.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"서로가 왜 여기 있는지 모르니까. 모르면 일단 베는 게 전사의 문법이지.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"여기서부터는 신들의 사정에 발을 들이는 거야. 수집가는 원래 신의 일에 끼지 않아.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…그래도 갈 거잖아. 장부는 챙겨갈게.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_2_5_boss_before",
+      "trigger": "boss_before",
+      "chapterId": "chapter_2",
+      "stageId": "2-5",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rift_frontier",
+      "bgm": "bgm_boss_ch2",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "균열 앞에, 룬이 새겨진 갑주 하나가 서 있었다. 몇 해째 그 자리인 듯 이끼가 끼어 있었다."
+        },
+        {
+          "speaker": "???",
+          "speakerType": "unknown",
+          "portraitId": null,
+          "text": "\"정지. 여기서부터는 아무도 지나가지 못한다.\"",
+          "revealAs": "enemy_rift_guardian"
+        },
+        {
+          "speaker": "???",
+          "speakerType": "unknown",
+          "portraitId": null,
+          "text": "\"신이든, 인간이든, 마물이든 — 균열을 건드리려는 자는 전부 죽는다.\"",
+          "revealAs": "enemy_rift_guardian"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"지키는 거야, 막는 거야?\""
+        },
+        {
+          "speaker": "???",
+          "speakerType": "unknown",
+          "portraitId": null,
+          "text": "\"…같은 말이다.\"",
+          "revealAs": "enemy_rift_guardian"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"갑옷의 룬을 봐. 아스가르드 양식이야. 저건 파견 감시자야.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"아스가르드가 균열에 말뚝을 하나 박아둔 거지. 그런데 몇 해째 교대가 안 온 모양이군.\""
+        },
+        {
+          "speaker": "???",
+          "speakerType": "unknown",
+          "portraitId": null,
+          "text": "\"교대는 오지 않는다. …명령은 아직 유효하다.\"",
+          "emotion": "sad",
+          "revealAs": "enemy_rift_guardian"
+        }
+      ]
+    },
+    {
+      "id": "cs_2_5_boss_after",
+      "trigger": "boss_after",
+      "chapterId": "chapter_2",
+      "stageId": "2-5",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rift_frontier",
+      "bgm": "bgm_story_aftermath",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "갑주가 갈라지자, 안쪽은 비어 있었다. 룬만이 형태를 붙들고 있었던 것이다."
+        },
+        {
+          "speaker": "균열의 수호자",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"…고맙다는 말은 하지 않겠다.\""
+        },
+        {
+          "speaker": "균열의 수호자",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"내 임무는 균열을 막는 것이 아니었다. 균열을 여는 자들이 다시 오는지 지켜보는 것이었다.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"여는 자들? 균열은 사고잖아.\"",
+          "emotion": "awe"
+        },
+        {
+          "speaker": "균열의 수호자",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"균열의 배후에는 신들이 있다. 아스가르드는 그것을 알고 나를 여기 세웠다.\""
+        },
+        {
+          "speaker": "균열의 수호자",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"…그리고 아무에게도 알리지 않았다.\"",
+          "emotion": "sad"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…미친 소리야. 신들이 왜 자기 세계를 찢어.\"",
+          "emotion": "angry"
+        },
+        {
+          "speaker": "균열의 수호자",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"그 답은 더 아래에 있다. 죽은 자들이 먼저 알고 있을 것이다.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_ch3_enter",
+      "trigger": "chapter_enter",
+      "chapterId": "chapter_3",
+      "stageId": null,
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_yomi_descent",
+      "bgm": "bgm_story_ch3",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "땅이 아래로 열렸다. 계단은 아니었지만, 발이 알아서 내려갔다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"여긴 요미야. 산 사람이 서류 없이 들어가면 안 되는 곳.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"서류? 저승에 서류가 있어?\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"저승이야말로 서류의 나라지. 다들 자기가 언제 죽었는지 적어두거든.\""
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "강 건너편에서 누군가가 이쪽을 오래 바라보고 있었다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…수집가. 여기서는 미정령을 줍지 마.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"여기 떠도는 빛은 균열이 흘린 게 아니야. 누군가가 놓친 거야. 주인이 있다고.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"주인이… 찾으러 온다는 뜻이지.\"",
+          "emotion": "tense"
+        }
+      ]
+    },
+    {
+      "id": "cs_3_5_boss_before",
+      "trigger": "boss_before",
+      "chapterId": "chapter_3",
+      "stageId": "3-5",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_yomi_palace",
+      "bgm": "bgm_boss_ch3",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "궁전에는 문이 없었다. 벽이 스스로 비켜섰다."
+        },
+        {
+          "speaker": "이자나미",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"산 자구나.\"",
+          "emotion": "calm"
+        },
+        {
+          "speaker": "이자나미",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"네 손을 봤다. 빛을 여럿 쥐었더군.\""
+        },
+        {
+          "speaker": "이자나미",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"그것들에게 이름을 주었지. 문을 골라주었고.\""
+        },
+        {
+          "speaker": "이자나미",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"…그것이 친절이라고 생각하나.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…무슨 뜻이야.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "이자나미",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"이름이 없으면 죽지 않는다. 문이 없으면 잃을 것도 없다.\""
+        },
+        {
+          "speaker": "이자나미",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"너는 자유로운 것들을 데려다가, 죽을 수 있는 것으로 만들었다.\""
+        },
+        {
+          "speaker": "이자나미",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"네 영혼은 여기 남겨두겠다. 여기서는 아무것도 고르지 않아도 된다.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_3_5_boss_after",
+      "trigger": "boss_after",
+      "chapterId": "chapter_3",
+      "stageId": "3-5",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_yomi_palace",
+      "bgm": "bgm_story_aftermath",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "여신은 쓰러지지 않았다. 다만 조금 옅어졌다."
+        },
+        {
+          "speaker": "이자나미",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"…놀랍구나. 산 자가 여기서 이겼다.\""
+        },
+        {
+          "speaker": "이자나미",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"하지만 죽음은 끝이 아니다. 나는 소멸하지 않는다. 되돌아온다.\""
+        },
+        {
+          "speaker": "이자나미",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"그리고 이것도 알아두어라 — 균열은 내 것이 아니다.\""
+        },
+        {
+          "speaker": "이자나미",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"균열은 더 큰 존재들의 계획일 뿐. 나는 그 하류에서 흘러온 것을 주웠을 뿐이다.\""
+        },
+        {
+          "speaker": "이자나미",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"…너처럼.\"",
+          "emotion": "calm"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"……\"",
+          "emotion": "sad"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…수집가. 저 말은 잊어. 지금은 잊어.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"위로 올라가야 해. 계획을 세운 쪽은 아래가 아니라 위에 있어.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_ch4_enter",
+      "trigger": "chapter_enter",
+      "chapterId": "chapter_4",
+      "stageId": null,
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_olympus_slope",
+      "bgm": "bgm_story_ch4",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "산은 위로 갈수록 좁아졌고, 공기는 위로 갈수록 무거워졌다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"올림푸스야. 여긴 신들이 아직 자기가 신인 줄 아는 유일한 곳이지.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…비꼬는 거야?\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"칭찬이야. 다들 작아지는 시대에 저렇게 버티는 것도 재주지.\"",
+          "emotion": "calm"
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "전령들이 길을 막았다. 검을 뽑지 않고, 다만 이름을 물었다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"이름을 대. 여기서는 등록되지 않은 자를 존재하지 않는 것으로 쳐.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…그러고 보니, 그건 우리 길드가 저기서 배워온 규칙이었지.\"",
+          "emotion": "awe"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"가자. 이번엔 문을 두드리는 게 아니라, 부수고 들어가는 거야.\"",
+          "emotion": "resolute"
+        }
+      ]
+    },
+    {
+      "id": "cs_4_5_boss_before",
+      "trigger": "boss_before",
+      "chapterId": "chapter_4",
+      "stageId": "4-5",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_olympus_temple",
+      "bgm": "bgm_boss_ch4",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "신전 꼭대기에서 하늘이 갈라졌다. 이번엔 균열이 아니었다."
+        },
+        {
+          "speaker": "제우스",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"필멸자여. 신의 영역에 오른 용기는 칭찬한다.\""
+        },
+        {
+          "speaker": "제우스",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"그러나 네 여정은 여기서 끝난다. 그것은 자비다.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…자비?\""
+        },
+        {
+          "speaker": "제우스",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"네가 위에서 볼 것은, 네가 아래에서 본 것보다 나쁘다.\""
+        },
+        {
+          "speaker": "제우스",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"나는 이 산을 지킨다. 세계가 얇아져도 이 산만은 두껍게 남을 것이다.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…저건 방어야. 공격이 아니라.\"",
+          "emotion": "awe"
+        },
+        {
+          "speaker": "제우스",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"번개를 받아라. 그리고 증명해라 — 네가 들을 자격이 있는지를.\"",
+          "emotion": "resolute"
+        }
+      ]
+    },
+    {
+      "id": "cs_4_5_boss_after",
+      "trigger": "boss_after",
+      "chapterId": "chapter_4",
+      "stageId": "4-5",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_olympus_temple",
+      "bgm": "bgm_story_aftermath",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "번개가 멎자, 산 위는 이상하리만치 조용했다."
+        },
+        {
+          "speaker": "제우스",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"…훌륭하다. 오랜만에 진짜 싸움이었다.\""
+        },
+        {
+          "speaker": "제우스",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"들어라, 수집가. 균열은 내가 만든 것이 아니다.\""
+        },
+        {
+          "speaker": "제우스",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"더 큰 세력이 있다. 모든 신화를 하나로 통합하려는 자들이.\""
+        },
+        {
+          "speaker": "제우스",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"그들은 우리에게 제안했다. 하나가 되면 아무도 사라지지 않는다고.\""
+        },
+        {
+          "speaker": "제우스",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"올림푸스는 거절했다. 하나가 된 것은 이미 우리가 아니니까.\"",
+          "emotion": "resolute"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…누가 제안했는데.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "제우스",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"북쪽이다. 외눈을 가진 자. 그는 늘 알고 있으면서 묻는다.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…오딘.\"",
+          "emotion": "awe"
+        }
+      ]
+    },
+    {
+      "id": "cs_ch5_enter",
+      "trigger": "chapter_enter",
+      "chapterId": "chapter_5",
+      "stageId": null,
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_helheim_gate",
+      "bgm": "bgm_story_ch5",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "북쪽 하늘에는 별이 없었다. 뿔피리 소리만 있었다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"라그나로크야. 예언대로. …너무 정확해서 이상할 만큼 예언대로.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"예언이 맞으면 좋은 거 아니야?\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"예언이 맞는 게 아니라, 누가 예언에 맞춰 일정을 짜고 있는 거라면?\""
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "헬헤임의 문이 열리고, 모든 신화의 망자가 한 전장으로 쏟아졌다. 그리스의 망자와 일본의 망자가 나란히 걷고 있었다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…봐. 저것들은 이미 하나가 됐어. 죽은 쪽이 먼저 통합된 거야.\"",
+          "emotion": "awe"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"수집가. 마지막으로 물을게. 여기서 돌아가도 아무도 널 비겁하다고 안 해.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…물어볼 사람을 잘못 골랐네, 등록관. 얘는 여기까지 오는 동안 한 번도 안 돌아갔어.\"",
+          "emotion": "resolute"
+        }
+      ]
+    },
+    {
+      "id": "cs_5_5_boss_before",
+      "trigger": "boss_before",
+      "chapterId": "chapter_5",
+      "stageId": "5-5",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_yggdrasil_crown",
+      "bgm": "bgm_boss_final",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "세계수의 가장 높은 가지 위에 노인이 앉아 있었다. 창을 무릎에 눕히고, 기다리는 자세로."
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"왔군. 예정보다 이틀 빠르다.\"",
+          "emotion": "calm"
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"앉아라. …아니, 그럴 성격이 아니지.\""
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"말해두마. 균열은 우리가 만든 것이다.\""
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"신성은 유한하다. 열두 세계가 각자 나눠 쓰면 열둘이 전부 굶어 죽는다.\""
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"하나로 합치면 하나는 산다. 나는 계산을 했을 뿐이다.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…열한 개를 죽여서 하나를 살리는 게 계산이야?\"",
+          "emotion": "angry"
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"그렇다. 그리고 나는 그 계산에 내 눈도 넣었다. 아무것도 아끼지 않았다.\""
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"이제 네 차례다. 네 계산을 보여라.\"",
+          "emotion": "resolute"
+        }
+      ]
+    },
+    {
+      "id": "cs_5_5_boss_after",
+      "trigger": "boss_after",
+      "chapterId": "chapter_5",
+      "stageId": "5-5",
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_yggdrasil_crown",
+      "bgm": "bgm_story_aftermath",
+      "varsUsed": [
+        "ascendedCount",
+        "institutionCount"
+      ],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "창이 손에서 떨어졌다. 노인은 그것을 줍지 않았다."
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"훌륭하다. …정말로.\""
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"나는 처음부터 이기려던 게 아니었다. 넘겨줄 자를 찾고 있었다.\""
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"봐라. 네가 데려온 자들을.\""
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"너는 {{ascendedCount}}명을 문 앞에 세웠고, 그중 {{institutionCount}}개의 서로 다른 문을 골랐다.\""
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"나는 열둘을 하나로 만들려 했다. 너는 하나를 열둘로 나누어 세웠다.\""
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"…어느 쪽이 옳은지는 모른다. 다만 네 방식은 아직 아무도 해보지 않았다.\"",
+          "emotion": "calm"
+        },
+        {
+          "speaker": "오딘",
+          "speakerType": "enemy",
+          "portraitId": null,
+          "text": "\"네가 새로운 세계의 시작이 될 것이다. 왕좌는 비워두마.\"",
+          "emotion": "resolute"
+        }
+      ]
+    },
+    {
+      "id": "cs_5_epilogue",
+      "trigger": "epilogue",
+      "chapterId": "chapter_5",
+      "stageId": null,
+      "heroId": null,
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_guild_registry",
+      "bgm": "bgm_story_epilogue",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "세계수가 무너지는 소리는 생각보다 부드러웠다. 오래된 문이 닫히는 소리에 가까웠다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…왕좌래. 어떻게 할래, 수집가.\""
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"받으면 네가 신이 돼. 열두 개를 하나로 합칠 힘도 생기고.\""
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"…야. 그거 받으면 나 너 안 따라간다.\"",
+          "emotion": "tense"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"장부를 펴놓을게. 뭐라고 적을지는 네가 말해.\""
+        },
+        {
+          "speaker": "수집가",
+          "speakerType": "player",
+          "portraitId": null,
+          "text": "\"…비워둬.\"",
+          "emotion": "resolute"
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…뭐?\"",
+          "emotion": "awe"
+        },
+        {
+          "speaker": "수집가",
+          "speakerType": "player",
+          "portraitId": null,
+          "text": "\"왕좌는 비워둬. 대신 문을 다시 열어. 열두 개 전부.\"",
+          "emotion": "resolute"
+        },
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "등록관은 오랫동안 아무 말도 하지 않았다. 그리고 장부의 첫 장을 새로 폈다."
+        },
+        {
+          "speaker": "등록관",
+          "speakerType": "npc",
+          "portraitId": null,
+          "text": "\"…'수집가 길드, 재개(再開).' 됐어. 다음 미정령은 어디서 주울까?\"",
+          "emotion": "joy"
+        }
+      ]
+    },
+    {
+      "id": "cs_hero_ascend_iris",
+      "trigger": "hero_ascend",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_iris",
+      "cultId": null,
+      "priority": 20,
+      "skipable": true,
+      "oncePerAccount": false,
+      "background": null,
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"더 무거워졌어. 좋아 — 무거운 만큼 멀리 나가니까.\"",
+          "emotion": "resolute"
+        },
+        {
+          "speaker": "아이리스",
+          "speakerType": "hero",
+          "portraitId": "base_iris",
+          "text": "\"성장? 그런 말 쓰지 마. 나는 원래 이만큼이었어. 이제 꺼낸 것뿐이야.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_iris_olympus",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_iris",
+      "cultId": "olympus",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_olympus",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "산 정상. 폭풍이 하룻밤 내내 그녀를 시험했고, 그녀는 한 번도 웅크리지 않았다."
+        },
+        {
+          "speaker": "번개의 아이리스",
+          "speakerType": "hero",
+          "portraitId": "asc_iris_olympus",
+          "text": "\"번개한테 무릎 꿇으라고? …아니. 나는 번개가 될 거야.\"",
+          "emotion": "resolute"
+        },
+        {
+          "speaker": "번개의 아이리스",
+          "speakerType": "hero",
+          "portraitId": "asc_iris_olympus",
+          "text": "\"권위는 받는 게 아니라 치는 거야. 봐, 지금부터.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_iris_valhalla",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_iris",
+      "cultId": "valhalla",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_valhalla",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "일곱 번째 전사가 물러섰다. 모래 위에 쓰러진 횟수는 아무도 세지 않았다. 일어난 횟수만 셌다."
+        },
+        {
+          "speaker": "폭풍의 아이리스",
+          "speakerType": "hero",
+          "portraitId": "asc_iris_valhalla",
+          "text": "\"일곱 번 쓰러뜨리랬지. 나는 여덟 번 일어날 거야.\"",
+          "emotion": "resolute"
+        },
+        {
+          "speaker": "폭풍의 아이리스",
+          "speakerType": "hero",
+          "portraitId": "asc_iris_valhalla",
+          "text": "\"약해질수록 세진다니 — 그거 딱 내 얘기잖아.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_iris_chaos",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_iris",
+      "cultId": "chaos",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_chaos",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "",
+          "speakerType": "narrator",
+          "portraitId": null,
+          "text": "밀폐된 방의 문이 열렸다. 안에서 무엇이 방출됐는지는 기록되지 않았다 — 기록하지 않는 것이 이 기관의 규칙이다."
+        },
+        {
+          "speaker": "혼돈의 아이리스",
+          "speakerType": "hero",
+          "portraitId": "asc_iris_chaos",
+          "text": "\"다음에 뭐가 나올지 나도 몰라. …이거 꽤 마음에 드는데.\"",
+          "emotion": "joy"
+        },
+        {
+          "speaker": "혼돈의 아이리스",
+          "speakerType": "hero",
+          "portraitId": "asc_iris_chaos",
+          "text": "\"예측당하는 순간 내 힘은 남의 것이 돼. 그래서 안 정할래.\"",
+          "emotion": "resolute"
+        }
+      ]
+    },
+    {
+      "id": "cs_first_hero_sera",
+      "trigger": "first_hero",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_sera",
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_guild_registry",
+      "bgm": "bgm_story_awakening",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "세라",
+          "speakerType": "hero",
+          "portraitId": "base_sera",
+          "text": "\"…아파요. 당신 말고, 이 근처 전부가.\""
+        },
+        {
+          "speaker": "세라",
+          "speakerType": "hero",
+          "portraitId": "base_sera",
+          "text": "\"저는 그걸 못 지나쳐요. 그래서 여기까지 따라온 거예요.\""
+        },
+        {
+          "speaker": "세라",
+          "speakerType": "hero",
+          "portraitId": "base_sera",
+          "text": "\"이름은 세라예요. 누가 지어준 건 아니고… 아픈 사람이 저를 그렇게 불렀어요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_hero_ascend_sera",
+      "trigger": "hero_ascend",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_sera",
+      "cultId": null,
+      "priority": 20,
+      "skipable": true,
+      "oncePerAccount": false,
+      "background": null,
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "세라",
+          "speakerType": "hero",
+          "portraitId": "base_sera",
+          "text": "\"더 멀리까지 느껴져요. …좋은 일인지는 아직 모르겠지만요.\""
+        },
+        {
+          "speaker": "세라",
+          "speakerType": "hero",
+          "portraitId": "base_sera",
+          "text": "\"손이 조금 덜 떨려요. 이제 놓치는 사람이 줄겠죠.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_sera_avalon",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_sera",
+      "cultId": "avalon",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_avalon",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "성약의 세라",
+          "speakerType": "hero",
+          "portraitId": "asc_sera_avalon",
+          "text": "\"'내 앞에 쓰러진 자를 먼저 일으킨다.' …서약할 필요도 없었어요. 저는 원래 그랬으니까.\""
+        },
+        {
+          "speaker": "성약의 세라",
+          "speakerType": "hero",
+          "portraitId": "asc_sera_avalon",
+          "text": "\"방어막이 다할 때까지라고요? 그럼 다하지 않게 하면 되겠네요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_sera_kunlun",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_sera",
+      "cultId": "kunlun",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_kunlun",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "선의 세라",
+          "speakerType": "hero",
+          "portraitId": "asc_sera_kunlun",
+          "text": "\"독을 죽이지 말고 흘려보내라고요? …네. 아픈 것도 살아있는 거니까요.\""
+        },
+        {
+          "speaker": "선의 세라",
+          "speakerType": "hero",
+          "portraitId": "asc_sera_kunlun",
+          "text": "\"예순 시간이었어요. 다섯 번 아팠고, 다섯 번 다 견뎠어요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_sera_nature",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_sera",
+      "cultId": "nature",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_nature",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "대지의 세라",
+          "speakerType": "hero",
+          "portraitId": "asc_sera_nature",
+          "text": "\"빨리 낫게 하는 건 못 해요. 대신 끝까지 곁에 있을게요. 봄처럼요.\""
+        },
+        {
+          "speaker": "대지의 세라",
+          "speakerType": "hero",
+          "portraitId": "asc_sera_nature",
+          "text": "\"숲은 저를 치료하지 않았어요. 그냥 옆에 있어줬어요. 그게 방법이었어요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_first_hero_luca",
+      "trigger": "first_hero",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_luca",
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_guild_registry",
+      "bgm": "bgm_story_awakening",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "루카",
+          "speakerType": "hero",
+          "portraitId": "base_luca",
+          "text": "\"잠깐, 저 지금 소환된 거예요? 아니면 각성? 용어 정리부터 좀…\""
+        },
+        {
+          "speaker": "루카",
+          "speakerType": "hero",
+          "portraitId": "base_luca",
+          "text": "\"루카예요. 견습. 앞에 '영원한'이 붙는다는 소리를 좀 들었지만요.\""
+        },
+        {
+          "speaker": "루카",
+          "speakerType": "hero",
+          "portraitId": "base_luca",
+          "text": "\"마법은 열두 가지쯤 알아요. 전부 얕게요. 그래서 아무 데서도 안 받아줬고요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_hero_ascend_luca",
+      "trigger": "hero_ascend",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_luca",
+      "cultId": null,
+      "priority": 20,
+      "skipable": true,
+      "oncePerAccount": false,
+      "background": null,
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "루카",
+          "speakerType": "hero",
+          "portraitId": "base_luca",
+          "text": "\"어? 방금 그거 성공했는데. …왜 성공했지?\""
+        },
+        {
+          "speaker": "루카",
+          "speakerType": "hero",
+          "portraitId": "base_luca",
+          "text": "\"조금씩 깊어지네요. 얕은 게 열두 개면 깊은 게 한 개보다 나을 때도 있거든요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_luca_asgard",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_luca",
+      "cultId": "asgard",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_asgard",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "룬학자 루카",
+          "speakerType": "hero",
+          "portraitId": "asc_luca_asgard",
+          "text": "\"룬이었어요. 제가 배운 열두 가지 전부 뿌리가 이거였어요.\""
+        },
+        {
+          "speaker": "룬학자 루카",
+          "speakerType": "hero",
+          "portraitId": "asc_luca_asgard",
+          "text": "\"…저 드디어 학파가 생겼어요. 소리 안 냈어요, 새기는 동안. 한 번도요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_luca_tartarus",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_luca",
+      "cultId": "tartarus",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_tartarus",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "심연의 루카",
+          "speakerType": "hero",
+          "portraitId": "asc_luca_tartarus",
+          "text": "\"저는 방어막을 못 뚫었어요. 그래서 뚫는 법 대신 없애는 법을 배웠죠.\""
+        },
+        {
+          "speaker": "심연의 루카",
+          "speakerType": "hero",
+          "portraitId": "asc_luca_tartarus",
+          "text": "\"공식이 안 통하면 공식 쪽을 부수면 되더군요. 왜 아무도 안 알려줬을까요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_first_hero_kai",
+      "trigger": "first_hero",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_kai",
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_guild_registry",
+      "bgm": "bgm_story_awakening",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "카이",
+          "speakerType": "hero",
+          "portraitId": "base_kai",
+          "text": "\"…부르지 마라. 이름은 버렸다.\""
+        },
+        {
+          "speaker": "카이",
+          "speakerType": "hero",
+          "portraitId": "base_kai",
+          "text": "\"…카이. 그렇게 불렸다는 것만 기억난다.\""
+        },
+        {
+          "speaker": "카이",
+          "speakerType": "hero",
+          "portraitId": "base_kai",
+          "text": "\"손이 먼저 움직인다. 나는 그걸 못 멈춘다. 그러니 등 뒤에 서지 마라.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_hero_ascend_kai",
+      "trigger": "hero_ascend",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_kai",
+      "cultId": null,
+      "priority": 20,
+      "skipable": true,
+      "oncePerAccount": false,
+      "background": null,
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "카이",
+          "speakerType": "hero",
+          "portraitId": "base_kai",
+          "text": "\"몸이 더 잘 기억한다. …반갑지 않군.\""
+        },
+        {
+          "speaker": "카이",
+          "speakerType": "hero",
+          "portraitId": "base_kai",
+          "text": "\"…빨라졌다. 그건 인정한다.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_kai_yomi",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_kai",
+      "cultId": "yomi",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_yomi",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "사신의 카이",
+          "speakerType": "hero",
+          "portraitId": "asc_kai_yomi",
+          "text": "\"사흘간 저승을 걷고 왔다. 거기서 내가 죽인 자들을 전부 만났다.\""
+        },
+        {
+          "speaker": "사신의 카이",
+          "speakerType": "hero",
+          "portraitId": "asc_kai_yomi",
+          "text": "\"…이제 도망치지 않는다. 배달할 뿐이다.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_kai_helheim",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_kai",
+      "cultId": "helheim",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_helheim",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "빙한의 카이",
+          "speakerType": "hero",
+          "portraitId": "asc_kai_helheim",
+          "text": "\"감정을 얼리면 손이 안 떨린다더군. …이미 얼어 있었다. 방식만 배우면 됐다.\""
+        },
+        {
+          "speaker": "빙한의 카이",
+          "speakerType": "hero",
+          "portraitId": "asc_kai_helheim",
+          "text": "\"차갑다는 말은 안 한다. 원래 그랬으니까.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_first_hero_lin",
+      "trigger": "first_hero",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_lin",
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_guild_registry",
+      "bgm": "bgm_story_awakening",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "린",
+          "speakerType": "hero",
+          "portraitId": "base_lin",
+          "text": "\"…신의 뜻을 읽을 수는 있어요. 다만 누구의 뜻인지를 몰라요.\""
+        },
+        {
+          "speaker": "린",
+          "speakerType": "hero",
+          "portraitId": "base_lin",
+          "text": "\"린이라고 해요. 신사 하나를 열여섯 해 지켰는데, 끝내 아무도 안 오시더군요.\""
+        },
+        {
+          "speaker": "린",
+          "speakerType": "hero",
+          "portraitId": "base_lin",
+          "text": "\"당신은 신이 아니죠. …그런데 왜 목소리가 들릴까요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_hero_ascend_lin",
+      "trigger": "hero_ascend",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_lin",
+      "cultId": null,
+      "priority": 20,
+      "skipable": true,
+      "oncePerAccount": false,
+      "background": null,
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "린",
+          "speakerType": "hero",
+          "portraitId": "base_lin",
+          "text": "\"기도가 더 멀리 닿아요. 대답은 여전히 없지만요.\""
+        },
+        {
+          "speaker": "린",
+          "speakerType": "hero",
+          "portraitId": "base_lin",
+          "text": "\"…괜찮아요. 대답이 없어도 기도는 제 것이니까요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_lin_takamagahara",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_lin",
+      "cultId": "takamagahara",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_takamagahara",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "천무 린",
+          "speakerType": "hero",
+          "portraitId": "asc_lin_takamagahara",
+          "text": "\"드디어 오셨어요. 열여섯 해 만에요. …늦으셨습니다, 라고는 안 할게요.\""
+        },
+        {
+          "speaker": "천무 린",
+          "speakerType": "hero",
+          "portraitId": "asc_lin_takamagahara",
+          "text": "\"먼저 치는 자가 이긴다고 하셨죠. 저는 열여섯 해를 기다렸어요. 이제 안 기다립니다.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_lin_balance",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_lin",
+      "cultId": "balance",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_balance",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "균형의 린",
+          "speakerType": "hero",
+          "portraitId": "asc_lin_balance",
+          "text": "\"아무도 안 오신 게 아니었어요. 제가 어느 쪽도 안 고른 거였어요.\""
+        },
+        {
+          "speaker": "균형의 린",
+          "speakerType": "hero",
+          "portraitId": "asc_lin_balance",
+          "text": "\"그럼 제가 저울이 될게요. 저울은 어느 쪽에도 안 서니까요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_first_hero_omar",
+      "trigger": "first_hero",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_omar",
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_guild_registry",
+      "bgm": "bgm_story_awakening",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "오마르",
+          "speakerType": "hero",
+          "portraitId": "base_omar",
+          "text": "\"…방패는 어디 있나. 방패부터 찾아야겠는데.\""
+        },
+        {
+          "speaker": "오마르",
+          "speakerType": "hero",
+          "portraitId": "base_omar",
+          "text": "\"오마르요. 삼십 년간 남의 짐을 지켰소. 짐이 아니라 사람을 지킨 건 몇 번 안 되지만.\""
+        },
+        {
+          "speaker": "오마르",
+          "speakerType": "hero",
+          "portraitId": "base_omar",
+          "text": "\"고용주가 바뀐 건 처음이 아니오. 규칙은 하나요 — 내 뒤는 안전해야 하오.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_hero_ascend_omar",
+      "trigger": "hero_ascend",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_omar",
+      "cultId": null,
+      "priority": 20,
+      "skipable": true,
+      "oncePerAccount": false,
+      "background": null,
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "오마르",
+          "speakerType": "hero",
+          "portraitId": "base_omar",
+          "text": "\"무게가 늘었군. 좋은 신호요. 가벼운 방패는 아무도 못 지키오.\""
+        },
+        {
+          "speaker": "오마르",
+          "speakerType": "hero",
+          "portraitId": "base_omar",
+          "text": "\"…이제 두 사람쯤은 더 뒤에 세울 수 있겠소.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_omar_valhalla",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_omar",
+      "cultId": "valhalla",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_valhalla",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "철혈의 오마르",
+          "speakerType": "hero",
+          "portraitId": "asc_omar_valhalla",
+          "text": "\"일곱 번 쓰러뜨려 보시오. 여덟 번째에도 이 자리요.\""
+        },
+        {
+          "speaker": "철혈의 오마르",
+          "speakerType": "hero",
+          "portraitId": "asc_omar_valhalla",
+          "text": "\"'죽는 법을 배울 자격'이라. …나는 삼십 년간 안 죽는 법만 배웠는데 말이오.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_omar_avalon",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_omar",
+      "cultId": "avalon",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_avalon",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "성채의 오마르",
+          "speakerType": "hero",
+          "portraitId": "asc_omar_avalon",
+          "text": "\"'내 방패가 다할 때까지.' …그 말이 마음에 드오. 방패는 아직 안 다했소.\""
+        },
+        {
+          "speaker": "성채의 오마르",
+          "speakerType": "hero",
+          "portraitId": "asc_omar_avalon",
+          "text": "\"빛이 손에 내려오더군. 무겁지 않았소. 그게 제일 놀라웠소.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_first_hero_sol",
+      "trigger": "first_hero",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_sol",
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_guild_registry",
+      "bgm": "bgm_story_awakening",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "솔",
+          "speakerType": "hero",
+          "portraitId": "base_sol",
+          "text": "\"…쉿. 지금 바람이 바뀌고 있어.\""
+        },
+        {
+          "speaker": "솔",
+          "speakerType": "hero",
+          "portraitId": "base_sol",
+          "text": "\"…이제 됐다. 솔이야. 급한 사람이면 미리 말해줘. 나는 안 급하거든.\""
+        },
+        {
+          "speaker": "솔",
+          "speakerType": "hero",
+          "portraitId": "base_sol",
+          "text": "\"화살은 하나면 돼. 대신 언제 쏠지는 내가 정한다.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_hero_ascend_sol",
+      "trigger": "hero_ascend",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_sol",
+      "cultId": null,
+      "priority": 20,
+      "skipable": true,
+      "oncePerAccount": false,
+      "background": null,
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "솔",
+          "speakerType": "hero",
+          "portraitId": "base_sol",
+          "text": "\"…호흡이 길어졌네. 좋아.\""
+        },
+        {
+          "speaker": "솔",
+          "speakerType": "hero",
+          "portraitId": "base_sol",
+          "text": "\"나무가 한 해 자란 만큼이야. 대단해 보이지 않지만, 백 년이면 숲이 돼.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_sol_nature",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_sol",
+      "cultId": "nature",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_nature",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "대지의 솔",
+          "speakerType": "hero",
+          "portraitId": "asc_sol_nature",
+          "text": "\"숲이 나를 받아줬어. 일흔두 시간 만에… 아니, 평생 걸린 거지.\""
+        },
+        {
+          "speaker": "대지의 솔",
+          "speakerType": "hero",
+          "portraitId": "asc_sol_nature",
+          "text": "\"동물들이 안 도망가더라. 그게 합격 통지였어.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_sol_kunlun",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_sol",
+      "cultId": "kunlun",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_kunlun",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "독화살의 솔",
+          "speakerType": "hero",
+          "portraitId": "asc_sol_kunlun",
+          "text": "\"독은 서두르지 않아. 나랑 성격이 맞아.\""
+        },
+        {
+          "speaker": "독화살의 솔",
+          "speakerType": "hero",
+          "portraitId": "asc_sol_kunlun",
+          "text": "\"한 발이면 돼. 나머지는 시간이 쏴줄 거야.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_first_hero_hana",
+      "trigger": "first_hero",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_hana",
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_guild_registry",
+      "bgm": "bgm_story_awakening",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "하나",
+          "speakerType": "hero",
+          "portraitId": "base_hana",
+          "text": "\"…어라. 저 아직 여기 있네요?\""
+        },
+        {
+          "speaker": "하나",
+          "speakerType": "hero",
+          "portraitId": "base_hana",
+          "text": "\"돌아가는 문을 못 찾았어요. 제가 문지기였는데도요. 웃기죠?\""
+        },
+        {
+          "speaker": "하나",
+          "speakerType": "hero",
+          "portraitId": "base_hana",
+          "text": "\"하나예요. 산 사람 손 잡는 건 규칙 위반인데… 뭐, 이미 위반했으니까요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_hero_ascend_hana",
+      "trigger": "hero_ascend",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_hana",
+      "cultId": null,
+      "priority": 20,
+      "skipable": true,
+      "oncePerAccount": false,
+      "background": null,
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "하나",
+          "speakerType": "hero",
+          "portraitId": "base_hana",
+          "text": "\"경계가 얇아져요. 저한테는 좋은 일이에요. 당신한테는 모르겠고요.\""
+        },
+        {
+          "speaker": "하나",
+          "speakerType": "hero",
+          "portraitId": "base_hana",
+          "text": "\"…저 점점 살아있는 쪽에 가까워지는 걸까요, 아니면 반대쪽일까요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_hana_yomi",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_hana",
+      "cultId": "yomi",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_yomi",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "황천의 하나",
+          "speakerType": "hero",
+          "portraitId": "asc_hana_yomi",
+          "text": "\"여왕님이 문을 열어주셨어요. 돌아가라는 게 아니라, 문지기로 다시 오라고요.\""
+        },
+        {
+          "speaker": "황천의 하나",
+          "speakerType": "hero",
+          "portraitId": "asc_hana_yomi",
+          "text": "\"이제 제가 여는 쪽이에요. 열어드릴까요?\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_hana_helheim",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_hana",
+      "cultId": "helheim",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_helheim",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "서리의 하나",
+          "speakerType": "hero",
+          "portraitId": "asc_hana_helheim",
+          "text": "\"여긴 춥지만 조용해요. 저는 조용한 게 좋아요. 저승도 원래 조용했거든요.\""
+        },
+        {
+          "speaker": "서리의 하나",
+          "speakerType": "hero",
+          "portraitId": "asc_hana_helheim",
+          "text": "\"눈 색이 변했대요. 거울이 없어서 확인은 못 했지만요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_hana_chaos",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_hana",
+      "cultId": "chaos",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_chaos",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "광란의 하나",
+          "speakerType": "hero",
+          "portraitId": "asc_hana_chaos",
+          "text": "\"경계를 넘은 애한테 규칙을 물어보면 안 되죠.\""
+        },
+        {
+          "speaker": "광란의 하나",
+          "speakerType": "hero",
+          "portraitId": "asc_hana_chaos",
+          "text": "\"다음에 뭘 할지 저도 몰라요. 재밌죠? …재밌다고 해주세요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_first_hero_leon",
+      "trigger": "first_hero",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_leon",
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_guild_registry",
+      "bgm": "bgm_story_awakening",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "레온",
+          "speakerType": "hero",
+          "portraitId": "base_leon",
+          "text": "\"…왕국의 기사였다. 과거형으로만 말하겠다.\""
+        },
+        {
+          "speaker": "레온",
+          "speakerType": "hero",
+          "portraitId": "base_leon",
+          "text": "\"레온이다. 이 이름을 아직 아는 자가 있다면, 그건 나를 판 자들뿐이겠지.\""
+        },
+        {
+          "speaker": "레온",
+          "speakerType": "hero",
+          "portraitId": "base_leon",
+          "text": "\"충성은 다시 안 한다. 계약은 하겠다. 차이는 알 거라고 본다.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_hero_ascend_leon",
+      "trigger": "hero_ascend",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_leon",
+      "cultId": null,
+      "priority": 20,
+      "skipable": true,
+      "oncePerAccount": false,
+      "background": null,
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "레온",
+          "speakerType": "hero",
+          "portraitId": "base_leon",
+          "text": "\"…강해지는 건 좋다. 다만 그것만으로는 배신을 못 막더군.\""
+        },
+        {
+          "speaker": "레온",
+          "speakerType": "hero",
+          "portraitId": "base_leon",
+          "text": "\"룬을 하나 더 읽었다. 이건 아무도 못 뺏는 힘이다.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_leon_asgard",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_leon",
+      "cultId": "asgard",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_asgard",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "룬전사 레온",
+          "speakerType": "hero",
+          "portraitId": "asc_leon_asgard",
+          "text": "\"새겨넣었다. 이제 내 힘은 내 살에 있다. …아무도 회수 못 한다.\""
+        },
+        {
+          "speaker": "룬전사 레온",
+          "speakerType": "hero",
+          "portraitId": "asc_leon_asgard",
+          "text": "\"전쟁의 기억이 문자가 되더군. 잊는 것보다 이 편이 낫다.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_leon_olympus",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_leon",
+      "cultId": "olympus",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_olympus",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "신벌의 레온",
+          "speakerType": "hero",
+          "portraitId": "asc_leon_olympus",
+          "text": "\"권위를 받는 건 두 번째다. 첫 번째는 배신당했지.\""
+        },
+        {
+          "speaker": "신벌의 레온",
+          "speakerType": "hero",
+          "portraitId": "asc_leon_olympus",
+          "text": "\"…이번 건 받은 게 아니라 산 위에서 직접 뺏어온 거다.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_first_hero_paolo",
+      "trigger": "first_hero",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_paolo",
+      "cultId": null,
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_guild_registry",
+      "bgm": "bgm_story_awakening",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "파올로",
+          "speakerType": "hero",
+          "portraitId": "base_paolo",
+          "text": "\"가문은 없어졌고 서재만 남았습니다. 그래서 저는 서재 쪽 사람이 됐죠.\""
+        },
+        {
+          "speaker": "파올로",
+          "speakerType": "hero",
+          "portraitId": "base_paolo",
+          "text": "\"파올로입니다. 무엇이든 분해해 드립니다. 조립은… 경우에 따라서요.\""
+        },
+        {
+          "speaker": "파올로",
+          "speakerType": "hero",
+          "portraitId": "base_paolo",
+          "text": "\"보수는 재료로 받겠습니다. 금은 이미 한 번 저를 배신했거든요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_hero_ascend_paolo",
+      "trigger": "hero_ascend",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_paolo",
+      "cultId": null,
+      "priority": 20,
+      "skipable": true,
+      "oncePerAccount": false,
+      "background": null,
+      "bgm": null,
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "파올로",
+          "speakerType": "hero",
+          "portraitId": "base_paolo",
+          "text": "\"반응식이 한 줄 줄었습니다. 줄었다는 건 이해했다는 뜻이죠.\""
+        },
+        {
+          "speaker": "파올로",
+          "speakerType": "hero",
+          "portraitId": "base_paolo",
+          "text": "\"이제 제 손으로 분해 못 하는 게 몇 개 안 남았습니다.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_paolo_tartarus",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_paolo",
+      "cultId": "tartarus",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_tartarus",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "심연학자 파올로",
+          "speakerType": "hero",
+          "portraitId": "asc_paolo_tartarus",
+          "text": "\"티탄의 힘으로 분해한 건 재조합되지 않더군요.\""
+        },
+        {
+          "speaker": "심연학자 파올로",
+          "speakerType": "hero",
+          "portraitId": "asc_paolo_tartarus",
+          "text": "\"…드디어 되돌릴 수 없는 걸 만들었습니다. 가문도 못 했던 일이죠.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_paolo_chaos",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_paolo",
+      "cultId": "chaos",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_chaos",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "혼돈연금사 파올로",
+          "speakerType": "hero",
+          "portraitId": "asc_paolo_chaos",
+          "text": "\"공식을 버렸습니다. 버리고 나니 전부 가능해지더군요. 무섭게도요.\""
+        },
+        {
+          "speaker": "혼돈연금사 파올로",
+          "speakerType": "hero",
+          "portraitId": "asc_paolo_chaos",
+          "text": "\"백 가지 중 하나가 나왔다는데, 어느 하나였는지는 안 알려주더군요.\""
+        }
+      ]
+    },
+    {
+      "id": "cs_evolve_paolo_balance",
+      "trigger": "hero_evolve",
+      "chapterId": null,
+      "stageId": null,
+      "heroId": "base_paolo",
+      "cultId": "balance",
+      "priority": 10,
+      "skipable": true,
+      "oncePerAccount": true,
+      "background": "bg_rite_balance",
+      "bgm": "bgm_rite_strike",
+      "varsUsed": [],
+      "lines": [
+        {
+          "speaker": "균형조율사 파올로",
+          "speakerType": "hero",
+          "portraitId": "asc_paolo_balance",
+          "text": "\"저는 아무것도 안 터뜨릴 겁니다. 대신 남이 터지게 두죠.\""
+        },
+        {
+          "speaker": "균형조율사 파올로",
+          "speakerType": "hero",
+          "portraitId": "asc_paolo_balance",
+          "text": "\"촉매의 미학입니다. 반응에 참여하지 않고 반응을 지배하는 것.\""
+        }
+      ]
+    }
+  ]
+}

@@ -1,13 +1,22 @@
 import { PopupBase } from '../PopupBase.js';
 import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, s, sf } from '../../config/gameConfig.js';
+import { Z_INDEX } from '../../config/layoutConfig.js';
 import { GachaSystem } from '../../systems/GachaSystem.js';
 import { SaveManager } from '../../systems/SaveManager.js';
+import { HeroAssetLoader } from '../../systems/HeroAssetLoader.js';
 import { getCharacterOrHero } from '../../data/index.js';
 import { getRarityKey, getRarityNum } from '../../utils/rarityUtils.js';
+import { RateDisclosurePanel, renderRateTable } from './RateDisclosurePanel.js';
+import { collectLiveRateRows } from '../../utils/gachaRateDisclosure.js';
 
 /**
  * GachaPopup - 소환 팝업
  * 영웅/장비 소환, 천장 시스템, 결과 표시
+ *
+ * 온보딩 모드(T-05 첫 무료 10연, UXI-04): `new GachaPopup(scene, { onboarding: true }).show()`
+ * 또는 `new GachaPopup(scene).open({ onboarding: true })` 로 호출한다.
+ * 탭/단발 소환/장비 소환을 숨기고 첫 무료 10연 버튼만 노출하며, 확률 고지 패널을
+ * 상시 임베드하고 닫기(✕/오버레이 클릭)를 잠근다.
  */
 export class GachaPopup extends PopupBase {
   constructor(scene, options = {}) {
@@ -20,6 +29,7 @@ export class GachaPopup extends PopupBase {
 
     this.currentTab = 'hero'; // 'hero' or 'equipment'
     this.isAnimating = false;
+    this.onboarding = !!options.onboarding;
 
     // Resource display references
     this.gemText = null;
@@ -27,13 +37,29 @@ export class GachaPopup extends PopupBase {
     this.pityBar = null;
     this.pityText = null;
     this.bannerPityText = null;
+    this._ratePanel = null;
+  }
+
+  /**
+   * 튜토리얼(T-05) 등 외부에서 옵션과 함께 팝업을 여는 편의 메서드.
+   * @param {{ onboarding?: boolean }} options
+   * @returns {GachaPopup} this (체이닝용)
+   */
+  open(options = {}) {
+    if (options.onboarding !== undefined) this.onboarding = !!options.onboarding;
+    this.show();
+    return this;
   }
 
   buildContent() {
-    const b = this.contentBounds;
-
     // Top: Resource display
     this.createResourceDisplay();
+
+    if (this.onboarding) {
+      this._lockClose();
+      this.buildOnboardingContent();
+      return;
+    }
 
     // Tab buttons
     this.createTabButtons();
@@ -46,6 +72,93 @@ export class GachaPopup extends PopupBase {
 
     // Summon buttons
     this.createSummonButtons();
+
+    // Rate disclosure entry point (nested popup)
+    this.createRateInfoButton();
+  }
+
+  /** T-05 강제 스텝: ✕ 및 오버레이 클릭 닫기를 잠근다 (UX_ONBOARDING_FLOW §2-4 popupOptions.lockCloseButton) */
+  _lockClose() {
+    if (this.closeBtn) {
+      this.closeBtn.disableInteractive();
+      this.closeBtn.setAlpha(0.25);
+    }
+    if (this.overlay) {
+      this.overlay.disableInteractive();
+    }
+  }
+
+  /** 온보딩 모드 화면: 탭/단발/장비 숨김, 확률 고지 상시 노출, 첫 무료 10연 버튼만 */
+  buildOnboardingContent() {
+    const b = this.contentBounds;
+
+    this.addText(b.centerX, b.top + s(30), '동료를 불러오세요', {
+      fontSize: sf(20), fontStyle: 'bold', color: '#F8FAFC'
+    }).setOrigin(0.5);
+
+    this.addText(b.centerX, b.top + s(58), '처음 한 번은 완전히 무료입니다', {
+      fontSize: sf(13), color: '#94A3B8'
+    }).setOrigin(0.5);
+
+    const rows = collectLiveRateRows();
+    const { endY } = renderRateTable(this.scene, this.contentContainer, {
+      left: b.left,
+      top: b.top + s(95),
+      width: b.width,
+      rows,
+      lineHeight: s(26)
+    });
+
+    const buttonY = Math.min(endY + s(55), b.bottom - s(70));
+    this.createFreeTenPullButton(b.centerX, buttonY);
+  }
+
+  /** 첫 무료 10연 버튼 — "무료" 배지, 비용 0 표기. GachaSystem.pull()의 isFreeTenPull 판정을 그대로 재사용 */
+  createFreeTenPullButton(x, y) {
+    const gachaInfo = SaveManager.getGachaInfo();
+    const alreadyUsed = !!gachaInfo.freeTenPullUsed;
+
+    const { bg } = this.addButton(
+      x, y, s(340), s(72),
+      alreadyUsed ? '무료 10연 소환 완료' : '🎁 첫 무료 10연 소환',
+      COLORS.secondary,
+      () => this.performFreeTenPull()
+    );
+
+    if (alreadyUsed) {
+      bg.disableInteractive();
+      bg.setAlpha(0.5);
+    }
+
+    this.addText(x + s(140), y - s(34), '무료', {
+      fontSize: sf(13), fontStyle: 'bold', color: '#0F172A',
+      backgroundColor: '#FACC15', padding: { x: s(8), y: s(3) }
+    }).setOrigin(0.5);
+
+    this.addText(x, y + s(48), '에너지 0 · 젬 0 · 티켓 0 소모', {
+      fontSize: sf(12), color: '#64748B'
+    }).setOrigin(0.5);
+  }
+
+  /** 확률 정보 진입점 — 일반 모드에서 RateDisclosurePanel을 중첩 팝업으로 연다 */
+  createRateInfoButton() {
+    const b = this.contentBounds;
+    const y = b.top + s(750);
+    const { bg } = this.addButton(b.centerX, y, s(220), s(44), '📋 확률 정보', COLORS.backgroundLight, () => {
+      this.openRateDisclosure();
+    });
+    bg.setStrokeStyle(s(1), COLORS.primary, 0.6);
+  }
+
+  openRateDisclosure() {
+    if (this._ratePanel) return;
+    this._ratePanel = new RateDisclosurePanel(this.scene, {
+      onClose: () => { this._ratePanel = null; }
+    });
+    this._ratePanel.show();
+    if (this._ratePanel.container) {
+      this._ratePanel.container.setDepth(Z_INDEX.POPUP_NESTED);
+    }
   }
 
   createResourceDisplay() {
@@ -307,20 +420,41 @@ export class GachaPopup extends PopupBase {
     }
 
     this.isAnimating = true;
-
-    // Perform pull
     const result = GachaSystem.pull(count, paymentType);
+    this._handlePullResult(result);
+  }
 
+  /**
+   * T-05 첫 무료 10연 — GachaSystem.pull()의 isFreeTenPull(count===10 && !freeTenPullUsed)
+   * 내부 판정이 재화/에너지 체크를 자동으로 면제하므로, 여기서는 canPull() 사전 검사를
+   * 하지 않는다(초기 재화가 0이어도 무료 10연은 항상 성립해야 함).
+   */
+  performFreeTenPull() {
+    if (this.isAnimating) return;
+
+    const gachaInfo = SaveManager.getGachaInfo();
+    if (gachaInfo.freeTenPullUsed) {
+      this.showToast('이미 사용한 무료 소환입니다', COLORS.danger);
+      return;
+    }
+
+    this.isAnimating = true;
+    const result = GachaSystem.pull(10, 'gems', { skipEnergyCheck: true });
+    this._handlePullResult(result);
+  }
+
+  /** performSummon / performFreeTenPull 공용 결과 처리 (중복 제거) */
+  _handlePullResult(result) {
     if (!result.success) {
       this.showToast(result.error, COLORS.danger);
       this.isAnimating = false;
       return;
     }
 
-    // Update resource display
+    // Update resource display (온보딩 모드에는 pity/ticket 라벨이 없을 수 있어 존재 확인)
     const resources = SaveManager.getResources();
-    this.gemText.setText(resources.gems.toLocaleString());
-    this.ticketText.setText(`${resources.summonTickets}개`);
+    if (this.gemText) this.gemText.setText(resources.gems.toLocaleString());
+    if (this.ticketText) this.ticketText.setText(`${resources.summonTickets}개`);
     if (this.ticketLabelText) {
       this.ticketLabelText.setText(`🎫 소환권: ${resources.summonTickets}개`);
     }
@@ -520,8 +654,17 @@ export class GachaPopup extends PopupBase {
     const cardBg = this.scene.add.rectangle(0, 0, s(75), s(110), COLORS.backgroundLight, 1);
     cardBg.setStrokeStyle(s(2), rarityColor);
 
-    // Hero image placeholder
-    const heroImg = this.scene.add.text(0, s(-15), '👤', { fontSize: sf(40) }).setOrigin(0.5);
+    // Hero image — IMG-3: 실제 포트레이트 우선, 없으면 온디맨드 플레이스홀더 (GachaScene.js와 동일 패턴)
+    const fullData = getCharacterOrHero(hero.id) || hero;
+    const texKey = HeroAssetLoader.ensureTexture(this.scene, fullData);
+    const heroImg = this.scene.add.image(0, s(-15), texKey || 'hero_placeholder');
+    if (texKey) {
+      // 카드(s75×s110) 안에 맞추기 (포트레이트 종횡비 보존)
+      const fitScale = Math.min(s(58) / heroImg.width, s(66) / heroImg.height);
+      heroImg.setScale(fitScale);
+    } else {
+      heroImg.setScale(0.7);
+    }
 
     // Rarity indicator
     const rarityBg = this.scene.add.rectangle(0, s(-50), s(30), s(18), rarityColor, 1);
