@@ -9,13 +9,15 @@
     { "id": "bar2", "name": { "en": "Double BAR", "ko": "더블 바" } },
     { "id": "bar1", "name": { "en": "Single BAR", "ko": "싱글 바" } },
     { "id": "bell", "name": { "en": "Bell", "ko": "벨" } },
-    { "id": "cherry", "name": { "en": "Cherry", "ko": "체리" } },
-    { "id": "blank", "name": { "en": "Blank", "ko": "빈칸" } }
+    { "id": "cherry", "name": { "en": "Cherry", "ko": "체리" } }
   ],
+  "groups": {
+    "anybar": { "name": { "en": "Any BAR", "ko": "아무 BAR" }, "members": ["bar1", "bar2", "bar3"] }
+  },
   "strips": [
-    ["wild","seven","bar3","bar2","bar1","blank","bell","cherry","blank","bar1","bell","bar2","cherry","blank","bar3","bar1","bell","blank","seven","cherry","bar2","blank","bar1","bell","bar3","cherry","blank","bar2","bar1","bell","cherry","blank"],
-    ["wild","seven","bar3","bar2","bar1","bell","blank","cherry","bar1","blank","bell","bar2","cherry","bar3","blank","wild","bar1","bell","seven","cherry","bar2","blank","bar1","bell","bar3","cherry","blank","bar2","bar1","bell","cherry","blank"],
-    ["wild","seven","bar3","bar2","bar1","bell","cherry","blank","cherry","bar1","blank","bell","bar2","bar3","cherry","blank","bar1","bell","seven","bar2","cherry","blank","bar1","bell","bar3","cherry","blank","bar2","bar1","bell","cherry","blank"]
+    ["wild","seven","bell","bar3","bell","bar2","bell","cherry","bar1","bell","bar3","bell","seven","bell","bar2","bar1","bell","bar1","bell","bar3","bell","bar2","seven","bell","bell","bar1","bell","bar3","bell","bar2","bell","bar1","seven","bell","bell","bar3","bell","bar2","bell","bar1","bell","bell"],
+    ["wild","seven","cherry","bar3","bell","bar1","bar2","cherry","bell","cherry","bar1","cherry","bell","bar3","cherry","bar2","seven","bell","cherry","bar1","cherry","wild","bell","cherry","bar3","bar1","bar2","cherry","bell","cherry","seven","bell","bar1","cherry","bar3","cherry","bell","bar2","cherry","bar1","bell","cherry"],
+    ["wild","cherry","seven","bar3","cherry","bar2","cherry","bar1","cherry","bell","seven","cherry","cherry","bar3","cherry","bar2","cherry","bar1","cherry","bell","cherry","cherry","cherry","bar3","cherry","bar2","cherry","bar1","cherry","bell","seven","cherry","cherry","cherry","bar3","cherry","bar2","bar1","cherry","bell","cherry","cherry"]
   ],
   "paylines": [
     [1, 1, 1],
@@ -26,15 +28,16 @@
   ],
   "paytable": {
     "wild":   { "3": 500 },
-    "seven":  { "3": 120, "2": 8 },
-    "bar3":   { "3": 75 },
+    "seven":  { "3": 150, "2": 8 },
+    "bar3":   { "3": 50 },
     "bar2":   { "3": 30 },
     "bar1":   { "3": 20 },
-    "bell":   { "3": 15 },
-    "cherry": { "3": 10, "2": 2 }
+    "bell":   { "3": 6 },
+    "cherry": { "3": 4, "2": 2, "1": 1 },
+    "anybar": { "3": 5 }
   },
   "wild": { "substitutesFor": "all" },
   "betLevels": [10, 20, 50, 100, 200, 500],
-  "rtpTarget": 0.96,
+  "rtpTarget": 0.945,
   "volatility": "medium"
 }

@@ -33,19 +33,36 @@ export const RESCUE_BONUS_COIN_THRESHOLD = 10
 export const RESCUE_BONUS_COOLDOWN_MS = 6 * 60 * 60 * 1000
 
 // ---- 프로그레시브 잭팟 ----
-/** 당첨 후 풀이 되돌아가는 시드 금액 */
-export const JACKPOT_SEED = 50_000
 /**
- * 스핀마다 `round(totalBet * RATE)`가 풀에 적립된다. 하우스 몫에서 나가고 베팅 차감은 그대로다.
- * `floor`가 아니라 `round`인 이유: floor면 10/20 베팅의 적립이 0인데도 당첨 확률은 붙어서
- * 최소 베팅만 돌리는 것이 지배 전략이 된다.
+ * 잭팟 풀의 내부 단위. 풀은 **코인의 1/100 단위(전)** 정수로 들고 다닌다.
+ *
+ * 코인 단위로 들면 `round(10 * 1%) = 0`처럼 작은 베팅의 적립이 반올림에 먹혀
+ * 베팅 레벨마다 실효 적립률이 달라진다 (10 → 0%, 50 → 2%). 100배 단위로 두면
+ * 모든 베팅 레벨에서 정확히 1%가 쌓이므로 RTP 기여도 전 구간 동일해진다.
+ * API 응답은 항상 코인으로 내림해서 내보낸다.
+ */
+export const JACKPOT_HUNDREDTHS_PER_COIN = 100
+/**
+ * 당첨 후 풀이 되돌아가는 시드. **1/100 코인 단위**다 (2,500,000 = 25,000 코인).
+ * 하우스가 넣는 돈이다.
+ *
+ * 이 값이 곧 잭팟의 RTP 기여를 정한다. 정상 상태에서 당첨 시점의 평균 풀은
+ * `SEED + ODDS_DENOMINATOR`이므로 스핀당 기대 지급은 `(SEED + DENOM) / DENOM × 적립액`이다.
+ * 2,500,000이면 적립액의 1.5배 = 베팅의 1.5%가 된다. README의 "RTP 회계" 참고.
+ */
+export const JACKPOT_SEED_HUNDREDTHS = 2_500_000
+/** 시드를 코인으로 본 값. 표시·문서용. */
+export const JACKPOT_SEED_COINS = JACKPOT_SEED_HUNDREDTHS / JACKPOT_HUNDREDTHS_PER_COIN
+/**
+ * 스핀마다 `totalBet * RATE`가 풀에 적립된다. 하우스 몫에서 나가고 베팅 차감은 그대로다.
+ * 1/100 코인 단위로 계산하므로 1%에서는 적립값이 곧 `totalBet`이다 (10 베팅 → 0.1 코인).
  */
 export const JACKPOT_ACCRUAL_RATE = 0.01
 /**
  * 당첨 판정의 분모. `rng.nextInt(DENOM) < accrual`이므로 확률은 **실제 적립액에 비례**한다.
- * 적립이 0인 베팅(10, 20)은 당첨 기회도 0이다. 100 베팅은 적립 1 → 5만분의 1.
+ * 적립 단위가 1/100 코인이라 분모도 100배다. 100 베팅은 적립 100 → 정확히 5만분의 1.
  */
-export const JACKPOT_ODDS_DENOMINATOR = 50_000
+export const JACKPOT_ODDS_DENOMINATOR = 5_000_000
 
 // ---- 주간 리더보드 ----
 export const LEADERBOARD_TOP_N = 50

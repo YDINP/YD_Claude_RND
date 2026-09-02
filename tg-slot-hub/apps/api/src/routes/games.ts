@@ -33,7 +33,10 @@ export interface GamesRouteDeps {
   createRng?: (seed: string, nonce: number) => Rng
 }
 
-/** 엔진의 WinLine과 shared의 WinLine은 모양이 같지만 소유 패키지가 다르므로 명시적으로 옮긴다. */
+/**
+ * 엔진의 WinLine과 shared의 WinLine은 모양이 같지만 소유 패키지가 다르므로 명시적으로 옮긴다.
+ * 필드를 하나씩 옮기는 구조라 엔진에 필드가 늘면 여기도 같이 늘려야 한다.
+ */
 function toSharedWinLine(win: EngineWinLine): SharedWinLine {
   return {
     line: win.line,
@@ -42,6 +45,8 @@ function toSharedWinLine(win: EngineWinLine): SharedWinLine {
     multiplier: win.multiplier,
     win: win.win,
     positions: win.positions.map(([reel, row]) => [reel, row] as [number, number]),
+    // 심볼 그룹(Any BAR 등)으로 지급된 라인일 때만 있다. 연출이 그룹 이름을 띄우는 데 쓴다.
+    ...(win.group === undefined ? {} : { group: win.group }),
   }
 }
 

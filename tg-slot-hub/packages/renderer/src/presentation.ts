@@ -76,7 +76,13 @@ export function presentationCycleMs(steps: readonly PresentationStep[]): number 
   return steps.reduce((sum, step) => sum + step.durationMs, 0)
 }
 
-/** 라인 옆 명판에 찍는 기본 문구. 게임이 `formatLineLabel`로 갈아끼울 수 있다. */
+/**
+ * 라인 옆 명판에 찍는 기본 문구. 게임이 `formatLineLabel`로 갈아끼울 수 있다.
+ *
+ * 이름 자리에는 그룹 배당이면 그룹 id(`anybar` 등), 아니면 심볼 id가 온다.
+ * 렌더러는 번역을 모르므로 id를 그대로 쓴다. 사람이 읽을 이름은 허브가 넣는다.
+ */
 export function defaultLineLabel(win: WinLine): string {
-  return `Line ${win.line + 1} · ${win.win.toLocaleString('en-US')}`
+  const name = win.group ?? win.symbol
+  return `Line ${win.line + 1} · ${name} · ${win.win.toLocaleString('en-US')}`
 }

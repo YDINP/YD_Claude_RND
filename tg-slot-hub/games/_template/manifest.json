@@ -18,10 +18,14 @@
     200,
     500
   ],
-  "rtpTarget": 0.96,
+  "rtpTarget": 0.945,
+  "rtpTotalTarget": 0.96,
+  "jackpotContribution": 0.015,
   "volatility": "medium",
   "features": [
-    "wild"
+    "wild",
+    "any-bar",
+    "single-cherry"
   ],
   "sort": 999
 }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { DAILY_BONUS_BY_STREAK_DAY } from './config.js'
+import {
+  DAILY_BONUS_BY_STREAK_DAY,
+  JACKPOT_HUNDREDTHS_PER_COIN,
+  JACKPOT_ODDS_DENOMINATOR,
+  JACKPOT_SEED_COINS,
+  JACKPOT_SEED_HUNDREDTHS,
+} from './config.js'
+import { hundredthsToCoins, isJackpotHit, jackpotAccrualHundredths } from './jackpot.js'
 import { dailyAmountForStreakDay, decideDaily, decideRescue, decideTimed, projectDaily } from './bonus.js'
 import type { BonusClaim } from './bonus.js'
 import { levelFromXp, levelUpBonus, maxBetForLevel, toLevelState, xpForLevel } from './level.js'
@@ -91,6 +98,48 @@ describe('시간·구제 보너스 판정', () => {
     const last: BonusClaim = { kind: 'rescue', claimedAt: new Date('2026-09-02T10:00:00Z'), streakDay: 1 }
     expect(decideRescue(last, 0, new Date('2026-09-02T15:59:59Z'))).toBeNull()
     expect(decideRescue(last, 0, new Date('2026-09-02T16:00:00Z'))).toEqual({ amount: 500, streakDay: 1 })
+  })
+})
+
+describe('잭팟 경제', () => {
+  const BET_LEVELS = [10, 20, 50, 100, 200, 500]
+
+  it('적립은 1/100 코인 단위라 모든 베팅에서 정확히 1%다', () => {
+    // 1/100 코인 단위에서 1% 적립은 곧 베팅액과 같은 수다 (10 베팅 -> 0.1 코인).
+    expect(BET_LEVELS.map(jackpotAccrualHundredths)).toEqual(BET_LEVELS)
+
+    for (const bet of BET_LEVELS) {
+      const rate = jackpotAccrualHundredths(bet) / JACKPOT_HUNDREDTHS_PER_COIN / bet
+      expect(rate).toBeCloseTo(0.01, 12)
+    }
+  })
+
+  it('당첨 확률은 적립액에 비례하고 적립이 0이면 기회가 없다', () => {
+    expect(isJackpotHit(0, 0)).toBe(false)
+    expect(isJackpotHit(0, 1)).toBe(true)
+    expect(isJackpotHit(1, 1)).toBe(false)
+    // 100 베팅은 적립 100, 분모 500만이라 정확히 5만분의 1이다.
+    expect(JACKPOT_ODDS_DENOMINATOR / jackpotAccrualHundredths(100)).toBe(50_000)
+  })
+
+  it('1/100 코인은 코인으로 내림해서 나간다', () => {
+    expect(JACKPOT_SEED_COINS).toBe(25_000)
+    expect(hundredthsToCoins(JACKPOT_SEED_HUNDREDTHS)).toBe(JACKPOT_SEED_COINS)
+    expect(hundredthsToCoins(2_500_099)).toBe(25_000)
+    expect(hundredthsToCoins(2_500_100)).toBe(25_001)
+  })
+
+  it('잭팟의 RTP 기여가 모든 베팅 레벨에서 1.5%다', () => {
+    // 정상 상태에서 당첨 시점의 평균 풀 = 시드 + 분모 (적립 1단위당 위험률이 1/분모라
+    // 리셋 이후 누적액이 평균 분모만큼 쌓인다). 단위는 1/100 코인.
+    const expectedPoolAtHit = JACKPOT_SEED_HUNDREDTHS + JACKPOT_ODDS_DENOMINATOR
+    expect(expectedPoolAtHit / JACKPOT_ODDS_DENOMINATOR).toBe(1.5)
+
+    for (const bet of BET_LEVELS) {
+      const hitChance = jackpotAccrualHundredths(bet) / JACKPOT_ODDS_DENOMINATOR
+      const expectedPayoutCoins = (hitChance * expectedPoolAtHit) / JACKPOT_HUNDREDTHS_PER_COIN
+      expect(expectedPayoutCoins / bet).toBeCloseTo(0.015, 12)
+    }
   })
 })
 

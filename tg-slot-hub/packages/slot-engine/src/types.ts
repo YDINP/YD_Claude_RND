@@ -1,6 +1,12 @@
 /** 심볼 식별자. math.json의 `symbols[].id`와 `strips` 항목이 이 값을 공유한다. */
 export type SymbolId = string
 
+/**
+ * 심볼 묶음 식별자. "아무 BAR"처럼 여러 심볼이 섞여도 지급하는 배당을 만들 때 쓴다.
+ * 페이테이블에서 심볼 id와 같은 자리에 쓰이므로 둘은 이름이 겹칠 수 없다.
+ */
+export type GroupId = string
+
 export interface Bet {
   totalBet: number
 }
@@ -11,7 +17,10 @@ export type GridPosition = [number, number]
 export interface WinLine {
   /** `math.paylines`의 인덱스. */
   line: number
-  symbol: SymbolId
+  /** 심볼 지급이면 심볼 id, 그룹 지급이면 그룹 id. */
+  symbol: SymbolId | GroupId
+  /** 그룹 배당으로 지급된 경우에만 채워진다. 클라이언트가 "Any BAR"로 표기할 때 쓴다. */
+  group?: GroupId
   count: number
   /** betPerLine 배수. */
   multiplier: number

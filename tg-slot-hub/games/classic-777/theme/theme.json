@@ -7,8 +7,7 @@
     "bar2": "symbols/bar2.webp",
     "bar1": "symbols/bar1.webp",
     "bell": "symbols/bell.webp",
-    "cherry": "symbols/cherry.webp",
-    "blank": "symbols/blank.webp"
+    "cherry": "symbols/cherry.webp"
   },
   "background": "bg.webp",
   "palette": {
@@ -130,9 +129,6 @@
           "durationMs": 700
         }
       ]
-    },
-    "blank": {
-      "win": []
     }
   }
 }

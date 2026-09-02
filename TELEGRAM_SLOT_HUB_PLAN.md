@@ -207,4 +207,6 @@ export interface GameClient {
 | 2026-09-02 | 릴 하단 당첨선 레전드 제거 | 프레임 아트 재생성(레전드 없음, 창 세로 63%) → 심볼 약 130px |
 | 2026-09-02 | 설정은 중앙 팝업 | `Modal` 컴포넌트(중앙 카드, 백드롭/Esc 닫기, 포커스 트랩) → `SettingsModal` |
 | 2026-09-02 | 심볼 자체 당첨 애니메이션 기획 | `docs/SYMBOL_FX_PLAN.md` + theme.json `fx` 스키마(pulse/shine/wobble/bounce/burst/glow/flash/spin, segments/repeat) 렌더러 구현, classic-777 8종 적용 |
+| 2026-09-02 | 빈칸 심볼 없애기 + RTP 96% | classic-777에서 blank 제거(7심볼, 스트립 42), Any BAR 그룹 {3:5}·체리 1개 배당 추가, 기본 RTP 94.494%(전수조사) + 잭팟 1.5%(풀 1/100코인 단위, 시드 25,000) = 총 95.99%. 적중률 41.6%, 최대 131.6× |
+| 2026-09-02 | 시뮬레이터 검수 + GUI | `pnpm --filter @tgslot/rtp-sim run audit classic-777` → `docs/RTP_AUDIT_classic-777.md`(게이트 8종). `apps/sim`(포트 5180): 전수조사·몬테카를로(워커)·배수 분포·심볼/그룹/라인 기여·파산 확률·샘플 스핀·리포트 내보내기 |
 | 2026-09-02 | 설정이 없음(언어 등) | 헤더 톱니 → 설정 시트(언어 자동/EN/KO, 사운드, 햅틱, 모션 줄이기, 공정성 설명, 버전/지원 ID). 언어는 `PATCH /me`로 서버 저장, 로그인이 덮어쓰지 않음 |

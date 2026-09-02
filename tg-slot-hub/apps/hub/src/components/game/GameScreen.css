@@ -568,6 +568,56 @@
   flex-shrink: 0;
 }
 
+/* 그룹 배당(예: "Any BAR") — 구성원 심볼 이미지를 최대 3장 겹쳐 쌓는다. */
+.hub-paytable__symbol-stack {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.hub-paytable__symbol-stack-img {
+  position: absolute;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-bg);
+  box-shadow: 0 0 0 1px var(--hub-border);
+}
+
+.hub-paytable__symbol-stack-img--fallback {
+  background: var(--hub-card-bg);
+}
+
+/* 스택 안에서 왼쪽 위부터 오른쪽 아래로 살짝씩 어긋나게 겹친다(최대 3장). */
+.hub-paytable__symbol-stack-img:nth-child(1) {
+  left: 0;
+  top: 0;
+}
+.hub-paytable__symbol-stack-img:nth-child(2) {
+  left: 6px;
+  top: 4px;
+}
+.hub-paytable__symbol-stack-img:nth-child(3) {
+  left: 12px;
+  top: 8px;
+}
+
+.hub-paytable__row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.hub-paytable__row-label {
+  font-size: var(--hub-font-small);
+  font-weight: 700;
+  color: var(--hub-text);
+}
+
 .hub-paytable__chips {
   display: flex;
   flex-wrap: wrap;

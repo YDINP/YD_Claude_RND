@@ -44,6 +44,8 @@ export {
   spinTargetPosition,
   stopsToGrid,
   symbolAt,
+  symbolAtPosition,
+  symbolsAtPositions,
   wrapIndex,
 } from './grid.js'
 export {
@@ -89,10 +91,12 @@ export {
   fxSegmentDelayMs,
   fxStaggerDelayMs,
   resolveFxEffect,
+  resolveFxForPositions,
   resolveSymbolFx,
   BUILTIN_FX,
   FX_DEFAULT_KEY,
   type FxType,
+  type PositionFx,
   type ResolvedFxEffect,
 } from './fx.js'
 export {

@@ -73,8 +73,8 @@ describe('GameMathSchema', () => {
     expect(messagesFor({ betLevels: [7] })).toContain('나누어떨어지지 않는다')
   })
 
-  it('페이테이블 키가 선언되지 않은 심볼이면 거부한다', () => {
-    expect(messagesFor({ paytable: { zz: { 3: 10 } } })).toContain('선언되지 않은 심볼의 페이테이블')
+  it('페이테이블 키가 선언되지 않은 심볼/그룹이면 거부한다', () => {
+    expect(messagesFor({ paytable: { zz: { 3: 10 } } })).toContain('선언되지 않은 심볼/그룹의 페이테이블')
   })
 
   it('매치 개수가 릴 수를 넘으면 거부한다', () => {
@@ -170,5 +170,135 @@ describe('GameMathSchema', () => {
 
   it('parseGameMath는 실패 시 예외를 던진다', () => {
     expect(() => parseGameMath({})).toThrow()
+  })
+})
+
+describe('GameMathSchema - 심볼 그룹', () => {
+  const GROUPED = {
+    ...JSON.parse(JSON.stringify(VALID)),
+    symbols: [
+      { id: 'w', name: { en: 'Wild' }, wild: true },
+      { id: 'a', name: { en: 'Alpha' } },
+      { id: 'b', name: { en: 'Beta' } },
+    ],
+    strips: [
+      ['w', 'a', 'b', 'a'],
+      ['a', 'w', 'b', 'a'],
+      ['a', 'b', 'w', 'a'],
+    ],
+    groups: { anyab: { name: { en: 'Any AB', ko: '아무 AB' }, members: ['a', 'b'] } },
+    paytable: { a: { 3: 10 }, w: { 3: 50 }, anyab: { 3: 3 } },
+  }
+
+  function groupedWith(patch: Record<string, unknown>): unknown {
+    return { ...JSON.parse(JSON.stringify(GROUPED)), ...patch }
+  }
+
+  function groupMessages(patch: Record<string, unknown>): string {
+    const result = safeParseGameMath(groupedWith(patch))
+    expect(result.success).toBe(false)
+    return result.success ? '' : result.error.issues.map((issue) => issue.message).join(' | ')
+  }
+
+  it('그룹이 있는 모델을 통과시킨다', () => {
+    const math = parseGameMath(groupedWith({}))
+    expect(math.groups?.['anyab']?.members).toEqual(['a', 'b'])
+    expect(math.paytable['anyab']?.[3]).toBe(3)
+  })
+
+  it('그룹이 없어도 된다', () => {
+    expect(parseGameMath(withOverride({})).groups).toBeUndefined()
+  })
+
+  it('그룹 id가 심볼 id와 겹치면 거부한다', () => {
+    expect(groupMessages({ groups: { a: { name: { en: 'Clash' }, members: ['a', 'b'] } } })).toContain(
+      '심볼 id와 겹친다',
+    )
+  })
+
+  it('선언되지 않은 멤버를 거부한다', () => {
+    expect(groupMessages({ groups: { anyab: { name: { en: 'Any' }, members: ['a', 'zz'] } } })).toContain(
+      '선언되지 않은 심볼: zz',
+    )
+  })
+
+  it('스캐터를 멤버로 넣으면 거부한다', () => {
+    expect(
+      groupMessages({
+        symbols: [
+          { id: 'w', name: { en: 'Wild' }, wild: true },
+          { id: 'a', name: { en: 'Alpha' } },
+          { id: 's', name: { en: 'Scatter' }, scatter: true },
+        ],
+        strips: [
+          ['w', 'a', 's', 'a'],
+          ['a', 'w', 's', 'a'],
+          ['a', 's', 'w', 'a'],
+        ],
+        groups: { anyas: { name: { en: 'Any' }, members: ['a', 's'] } },
+        paytable: { a: { 3: 10 }, w: { 3: 50 }, anyas: { 3: 3 } },
+      }),
+    ).toContain('그룹 멤버가 될 수 없다')
+  })
+
+  it('어느 스트립에도 없는 멤버를 거부한다', () => {
+    expect(
+      groupMessages({
+        symbols: [
+          { id: 'w', name: { en: 'Wild' }, wild: true },
+          { id: 'a', name: { en: 'Alpha' } },
+          { id: 'b', name: { en: 'Beta' } },
+          { id: 'ghost', name: { en: 'Ghost' } },
+        ],
+        groups: { anyab: { name: { en: 'Any' }, members: ['a', 'ghost'] } },
+      }),
+    ).toContain('어느 스트립에도 없는 그룹 멤버')
+  })
+
+  it('중복 멤버를 거부한다', () => {
+    expect(groupMessages({ groups: { anyab: { name: { en: 'Any' }, members: ['a', 'a'] } } })).toContain(
+      '중복 그룹 멤버',
+    )
+  })
+
+  it('멤버가 1개면 거부한다', () => {
+    expect(groupMessages({ groups: { anyab: { name: { en: 'Any' }, members: ['a'] } } })).not.toBe('')
+  })
+
+  it('그룹 페이테이블도 매치 개수 범위를 검사한다', () => {
+    expect(groupMessages({ paytable: { a: { 3: 10 }, w: { 3: 50 }, anyab: { 4: 3 } } })).toContain(
+      '범위를 벗어났다',
+    )
+  })
+
+  it('그룹 페이테이블도 단조증가를 강제한다', () => {
+    expect(groupMessages({ paytable: { a: { 3: 10 }, w: { 3: 50 }, anyab: { 2: 9, 3: 1 } } })).toContain(
+      '긴 연속이 더 많이 줘야 한다',
+    )
+  })
+
+  it('그룹 페이테이블도 정수 지급액을 강제한다', () => {
+    expect(groupMessages({ paytable: { a: { 3: 10 }, w: { 3: 50 }, anyab: { 3: 0.5 } } })).toContain('정수가 아니다')
+  })
+
+  it('선언되지 않은 그룹의 페이테이블을 거부한다', () => {
+    expect(groupMessages({ paytable: { a: { 3: 10 }, w: { 3: 50 }, nogroup: { 3: 3 } } })).toContain(
+      '선언되지 않은 심볼/그룹의 페이테이블',
+    )
+  })
+
+  it('그룹에 페이테이블이 없어도 된다', () => {
+    expect(safeParseGameMath(groupedWith({ paytable: { a: { 3: 10 }, w: { 3: 50 } } })).success).toBe(true)
+  })
+})
+
+describe('GameMathSchema - 1개 매치 배당', () => {
+  it('매치 개수 1을 허용한다', () => {
+    const math = parseGameMath(withOverride({ paytable: { a: { 1: 1, 2: 2, 3: 10 }, w: { 3: 50 } } }))
+    expect(math.paytable['a']?.[1]).toBe(1)
+  })
+
+  it('매치 개수 0은 거부한다', () => {
+    expect(safeParseGameMath(withOverride({ paytable: { a: { 0: 1, 3: 10 }, w: { 3: 50 } } })).success).toBe(false)
   })
 })

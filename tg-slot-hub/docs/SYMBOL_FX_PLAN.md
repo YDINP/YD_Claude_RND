@@ -1,5 +1,7 @@
 # 심볼별 당첨 연출 기획 (Symbol Win FX Plan)
 
+> **2026-09-02 변경**: 릴에 빈칸(blank) 심볼을 두지 않기로 확정(모든 칸에 실심볼). 아래 본문의 blank 관련 항목은 무시한다. classic-777은 7심볼 + Any BAR 그룹 + 체리 1개 배당, 기본 RTP 94.5% + 잭팟 1.5% = 총 96%.
+
 작성일: 2026-09-02
 적용 범위: `games/classic-777` 1차 적용, `fx` 스키마는 모든 게임 팩이 공유
 참고 문서: `docs/ART_DIRECTION.md`(심볼 컨셉·모션 노트), `games/classic-777/math.json`(심볼/배당),

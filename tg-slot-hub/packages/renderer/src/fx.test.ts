@@ -14,12 +14,14 @@ import {
   FX_SEGMENT_DELAY_MS,
   FX_STAGGER_STEP_MS,
 } from './constants.js'
+import type { GridPosition } from '@tgslot/slot-engine'
 import {
   fxAmplitude,
   fxPulseScale,
   fxSegmentDelayMs,
   fxStaggerDelayMs,
   resolveFxEffect,
+  resolveFxForPositions,
   resolveSymbolFx,
 } from './fx.js'
 import type { FxMap } from './theme.js'
@@ -199,5 +201,73 @@ describe('segments와 repeat', () => {
 
   it('내장 폴백 pulse는 500ms 주기다', () => {
     expect(resolveSymbolFx(undefined, 'x')[0]?.durationMs).toBe(BUILTIN_PULSE_MS)
+  })
+})
+
+describe('그룹 배당의 좌표별 연출', () => {
+  // Any BAR 라인: 한 라인에 bar1, bar2, bar3이 섞여 있다.
+  // WinLine.symbol은 'anybar'(그룹 id)라 테마의 어떤 심볼과도 맞지 않는다.
+  const grid = [
+    ['seven', 'seven', 'seven'],
+    ['bar1', 'bar2', 'bar3'],
+    ['bell', 'bell', 'bell'],
+  ]
+  const positions: GridPosition[] = [
+    [0, 1],
+    [1, 1],
+    [2, 1],
+  ]
+  const fx: FxMap = {
+    default: { win: [{ type: 'pulse', scale: 1.12 }] },
+    bar1: { win: [{ type: 'flash', durationMs: 500 }] },
+    bar2: { win: [{ type: 'flash', durationMs: 500, segments: 2, stagger: true }] },
+    bar3: { win: [{ type: 'flash', durationMs: 500, segments: 3, stagger: true }] },
+    seven: { win: [{ type: 'shine' }] },
+  }
+
+  it('그룹 id가 아니라 자리에 놓인 심볼로 찾는다', () => {
+    const resolved = resolveFxForPositions(fx, grid, positions)
+    expect(resolved.map((entry) => entry.symbol)).toEqual(['bar1', 'bar2', 'bar3'])
+  })
+
+  it('같은 라인 안에서 심볼마다 다른 연출이 나온다', () => {
+    const resolved = resolveFxForPositions(fx, grid, positions)
+    expect(resolved.map((entry) => entry.effects[0]?.segments)).toEqual([1, 2, 3])
+  })
+
+  it('그룹 id로 찾으면 default로 떨어져 셋 다 같아진다', () => {
+    // 이것이 하면 안 되는 방식이다. 위 결과와 달라야 규칙이 지켜진 것이다.
+    const wrong = ['anybar', 'anybar', 'anybar'].map((id) => resolveSymbolFx(fx, id))
+    expect(wrong.map((effects) => effects[0]?.type)).toEqual(['pulse', 'pulse', 'pulse'])
+    const right = resolveFxForPositions(fx, grid, positions)
+    expect(right.map((entry) => entry.effects[0]?.type)).toEqual(['flash', 'flash', 'flash'])
+  })
+
+  it('좌표를 그대로 돌려준다', () => {
+    expect(resolveFxForPositions(fx, grid, positions).map((entry) => entry.position)).toEqual(positions)
+  })
+
+  it('행이 다른 대각선 라인도 각 자리의 심볼을 읽는다', () => {
+    const diagonal: GridPosition[] = [
+      [0, 0],
+      [1, 1],
+      [2, 2],
+    ]
+    expect(resolveFxForPositions(fx, grid, diagonal).map((entry) => entry.symbol)).toEqual([
+      'seven',
+      'bar2',
+      'bell',
+    ])
+  })
+
+  it('모션 축소는 좌표별로도 pulse만 남긴다', () => {
+    const resolved = resolveFxForPositions(fx, grid, positions, true)
+    for (const entry of resolved) {
+      expect(entry.effects.every((effect) => effect.type === 'pulse')).toBe(true)
+    }
+  })
+
+  it('격자 밖 좌표는 던진다', () => {
+    expect(() => resolveFxForPositions(fx, grid, [[0, 9]])).toThrow(RangeError)
   })
 })

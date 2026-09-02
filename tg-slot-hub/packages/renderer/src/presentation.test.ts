@@ -134,9 +134,20 @@ describe('buildPresentation 모션 축소', () => {
 })
 
 describe('defaultLineLabel', () => {
-  it('1부터 세는 라인 번호와 배당을 보여준다', () => {
-    expect(defaultLineLabel(makeWin(0, 1234, 617))).toBe('Line 1 · 1,234')
-    expect(defaultLineLabel(makeWin(4, 20, 10))).toBe('Line 5 · 20')
+  it('라인 번호와 심볼 이름과 배당을 보여준다', () => {
+    expect(defaultLineLabel(makeWin(0, 1234, 617))).toBe('Line 1 · seven · 1,234')
+    expect(defaultLineLabel(makeWin(4, 20, 10))).toBe('Line 5 · seven · 20')
+  })
+
+  it('그룹 배당이면 그룹 id를 쓴다', () => {
+    // win.symbol이 그룹 id와 같더라도 group 쪽을 우선한다.
+    const groupWin = { ...makeWin(2, 60, 30), symbol: 'anybar', group: 'anybar' }
+    expect(defaultLineLabel(groupWin)).toBe('Line 3 · anybar · 60')
+  })
+
+  it('그룹이 없으면 심볼 id로 되돌아간다', () => {
+    const plain = { ...makeWin(1, 40, 20), symbol: 'bell' }
+    expect(defaultLineLabel(plain)).toBe('Line 2 · bell · 40')
   })
 })
 

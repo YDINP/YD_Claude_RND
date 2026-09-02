@@ -1,14 +1,15 @@
 import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { STARTING_COINS } from '@tgslot/shared'
+import { STARTING_COINS, SpinResponseSchema } from '@tgslot/shared'
 import type { SpinResponse } from '@tgslot/shared'
 import { createSeededRng, parseGameMath, spin } from '@tgslot/slot-engine'
+import type { WinLine as EngineWinLine } from '@tgslot/slot-engine'
 import { randomUUID } from 'node:crypto'
 import { createApp } from '../app.js'
 import { createJwtService } from '../auth/jwt.js'
 import { MemoryRepos } from '../repos/memory.js'
 import { InsufficientFundsError } from '../repos/types.js'
-import type { ApplySpinInput } from '../repos/types.js'
+import type { ApplySpinInput, ApplySpinResult } from '../repos/types.js'
 import { loadGamePacks } from '../games/packs.js'
 import { createGameRegistry } from '../games/registry.js'
 import type { GamePack } from '../games/packs.js'
@@ -233,6 +234,34 @@ describe('POST /games/:id/spin', () => {
   })
 })
 
+describe('심볼 그룹 당첨 라인', () => {
+  it('group을 응답에 그대로 싣고, 재전송에서도 복원한다', async () => {
+    const harness = await setup(undefined, { repos: new FixedWinRepos(GROUP_WIN) })
+
+    const first = (await (await spinRequest(harness, { idempotencyKey: 'key-group-00001' })).json()) as SpinResponse
+    expect(first.wins).toHaveLength(1)
+    expect(first.wins[0]?.group).toBe('anybar')
+    expect(first.wins[0]?.symbol).toBe('bar1')
+
+    // 재전송은 저장된 라운드(wins jsonb)에서 복원한다. group이 살아남아야 한다.
+    const replay = (await (await spinRequest(harness, { idempotencyKey: 'key-group-00001' })).json()) as SpinResponse
+    expect(replay).toEqual(first)
+    expect(replay.wins[0]?.group).toBe('anybar')
+
+    // 스키마도 통과해야 한다 (group은 optional).
+    expect(SpinResponseSchema.safeParse(replay).success).toBe(true)
+  })
+
+  it('group이 없는 라인은 응답에 키를 만들지 않는다', async () => {
+    const harness = await setup(undefined, { repos: new FixedWinRepos(PLAIN_WIN) })
+
+    const body = (await (await spinRequest(harness, { idempotencyKey: 'key-nogroup-0001' })).json()) as SpinResponse
+
+    expect(body.wins).toHaveLength(1)
+    expect(Object.prototype.hasOwnProperty.call(body.wins[0], 'group')).toBe(false)
+  })
+})
+
 describe('spin concurrency', () => {
   it('never corrupts the balance when 5 spins with different keys race', async () => {
     const harness = await setup()
@@ -356,6 +385,47 @@ describe('GET /games/:id/math', () => {
     expect((await harness.app.request('/games/secret-lab/math')).status).toBe(404)
   })
 })
+
+/**
+ * 엔진 결과의 wins만 갈아끼우는 레포. 심볼 그룹(Any BAR)으로 지급된 라인은 실제로 만들려면
+ * 특정 스트립 조합을 노려야 해서, 회계·저장 경로는 그대로 두고 결과만 바꾼다.
+ */
+class FixedWinRepos extends MemoryRepos {
+  constructor(private readonly winLine: EngineWinLine) {
+    super()
+  }
+
+  override applySpin(input: ApplySpinInput): Promise<ApplySpinResult> {
+    return super.applySpin({
+      ...input,
+      compute: (nonce) => {
+        const computed = input.compute(nonce)
+        return {
+          ...computed,
+          result: { ...computed.result, wins: [this.winLine], totalWin: this.winLine.win },
+        }
+      },
+    })
+  }
+}
+
+/** 그룹으로 지급된 라인 1건. `group`이 라운드 저장까지 살아남는지 확인하는 데 쓴다. */
+const GROUP_WIN: EngineWinLine = {
+  line: 0,
+  symbol: 'bar1',
+  count: 3,
+  multiplier: 4,
+  win: 80,
+  positions: [
+    [0, 1],
+    [1, 1],
+    [2, 1],
+  ],
+  group: 'anybar',
+}
+
+/** 같은 라인인데 그룹 없이 단일 심볼로 지급된 경우. 응답에 `group` 키가 없어야 한다. */
+const PLAIN_WIN: EngineWinLine = { ...GROUP_WIN, group: undefined }
 
 /** 잔액이 항상 모자란 레포. 라우트의 402 번역만 결정적으로 확인한다. */
 class BrokeRepos extends MemoryRepos {

@@ -10,6 +10,7 @@ vi.mock('../sdk/api', async () => {
   }
 })
 
+import type { GameMath } from '@tgslot/slot-engine'
 import { getGameMath, spin as apiSpin, getMe, ApiClientError } from '../sdk/api'
 import { useGameStore, type SpinRenderer } from './game'
 import { useSessionStore } from './session'
@@ -159,7 +160,57 @@ describe('game store', () => {
       await useGameStore.getState().spin()
 
       // totalBet을 함께 넘겨야 렌더러가 winTotal 이벤트의 등급(tier)을 라인 추정 없이 정확히 계산한다.
-      expect(renderer.showWins).toHaveBeenCalledWith(wins, { totalBet: 10 })
+      // formatLineLabel도 항상 넘긴다 — 정확한 문구는 아래 별도 테스트가 검증한다.
+      expect(renderer.showWins).toHaveBeenCalledWith(
+        wins,
+        expect.objectContaining({ totalBet: 10, formatLineLabel: expect.any(Function) }),
+      )
+    })
+
+    it('builds a formatLineLabel that uses the symbol name for a plain win and the group name for a group win', async () => {
+      await loadGame()
+      // math.groups는 아직 실제 GameMath 타입/스키마에 없을 수 있으므로(엔진 작업 중) 캐스트로
+      // 주입한다 — labels.test.ts와 같은 이유다.
+      const mathWithGroup = {
+        ...rawMath,
+        groups: { anybar: { name: { en: 'Any BAR' }, members: ['bar'] } },
+      } as unknown as GameMath
+      useGameStore.setState({ math: mathWithGroup })
+
+      const renderer = makeRenderer()
+      useGameStore.getState().setRenderer(renderer)
+
+      const wins = [
+        {
+          line: 0,
+          symbol: 'seven',
+          count: 3,
+          multiplier: 10,
+          win: 100,
+          positions: [[0, 1], [1, 1], [2, 1]] as [number, number][],
+        },
+      ]
+      mockedApiSpin.mockResolvedValue({
+        roundId: 'r2b',
+        stops: [0, 0, 0],
+        grid: [['seven', 'seven', 'seven']],
+        wins,
+        totalBet: 10,
+        totalWin: 100,
+        wallet: { coins: 1090, gems: 0 },
+        seedHash: 'hash',
+        nonce: 2,
+        jackpot: 0,
+      })
+
+      await useGameStore.getState().spin()
+
+      const { formatLineLabel } = renderer.showWins.mock.calls[0]![1] as {
+        formatLineLabel: (win: (typeof wins)[number] & { group?: string }) => string
+      }
+
+      expect(formatLineLabel(wins[0]!)).toBe('Seven · 100')
+      expect(formatLineLabel({ ...wins[0]!, symbol: 'anybar', group: 'anybar' })).toBe('Any BAR · 100')
     })
 
     it('applies the server wallet immediately even if renderer.spinTo throws, and still returns phase to idle', async () => {

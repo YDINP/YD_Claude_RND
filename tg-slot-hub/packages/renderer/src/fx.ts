@@ -1,4 +1,5 @@
-import type { SymbolId } from '@tgslot/slot-engine'
+import type { GridPosition, SymbolId } from '@tgslot/slot-engine'
+import { symbolsAtPositions } from './grid.js'
 import {
   BUILTIN_PULSE_MS,
   FX_DEFAULT_BOUNCE_PX,
@@ -137,4 +138,32 @@ export function fxAmplitude(base: number, intensity: number): number {
 /** `pulse`의 최종 배율. 강도가 낮으면 1에 가까워진다. */
 export function fxPulseScale(effect: ResolvedFxEffect): number {
   return 1 + (effect.scale - 1) * effect.intensity
+}
+
+/** 승리 좌표 하나와 거기에 걸릴 연출. */
+export interface PositionFx {
+  position: GridPosition
+  /** 그 자리에 실제로 보이는 심볼. 그룹 배당이어도 그룹 id가 아니다. */
+  symbol: SymbolId
+  effects: ResolvedFxEffect[]
+}
+
+/**
+ * 승리 좌표별 연출을 뽑는다.
+ *
+ * **`win.symbol`로 찾지 않는다.** 그룹 배당(Any BAR 등)에서 그 값은 그룹 id라
+ * 테마의 심볼 연출과 맞지 않는다. 언제나 격자에 실제로 놓인 심볼로 찾는다.
+ * 그래서 같은 라인 안에서 BAR 1·2·3이 각자 다른 연출을 낸다.
+ */
+export function resolveFxForPositions(
+  fx: FxMap | undefined,
+  grid: readonly (readonly SymbolId[])[],
+  positions: readonly GridPosition[],
+  reducedMotion = false,
+): PositionFx[] {
+  return symbolsAtPositions(grid, positions).map((symbol, index) => ({
+    position: positions[index] as GridPosition,
+    symbol,
+    effects: resolveSymbolFx(fx, symbol, reducedMotion),
+  }))
 }

@@ -68,15 +68,6 @@
       "outSize": 512
     },
     {
-      "id": "blank",
-      "kind": "symbol",
-      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a warm brass rim light, deep navy (#0b1220) and brass gold (#d8a94a) color story with cyan gem (#4fc3d9) accents, polished glass and brushed metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a minimal dim brass-outlined empty tile, a flat muted navy plaque with a faint thin engraved diamond outline in low-contrast brass, no icon and no text, deliberately low visual weight and low contrast so it reads as empty filler space, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
-      "size": "1024x1024",
-      "transparent": true,
-      "out": "theme/symbols/blank.webp",
-      "outSize": 512
-    },
-    {
       "id": "frame",
       "kind": "frame",
       "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed portrait artwork with no isolated chroma background around the frame itself — a portrait-orientation ornate brass slot machine bezel frame on a deep navy body. Top 0-15% of the frame is a compact dark navy marquee plate with brass scrollwork border, engraved wordmark 'CLASSIC 777' in bold brass serif caps. Brass scrollwork side pillars run down both edges. A very large rectangular window occupies x 8%-92% and y 16%-84% of the frame (the window is the dominant element, taller than it is wide relative to a 3x3 reel grid), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO inner bevel, NO gradient and NO highlight inside it; only a thin 1% brass rim outside the green (this window will later be replaced with the live reel canvas). Below the window, y 84%-100% is only a weighted brass base molding with a small central gem and soft ambient shadow. NO payline legend, NO icons, NO buttons, NO text below the window. Overall symmetrical, centered, no characters, no extraneous text beyond the marquee wordmark.",

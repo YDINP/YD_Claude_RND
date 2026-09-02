@@ -4,8 +4,8 @@ import type { Locale } from '@tgslot/shared'
 import type { TelegramUser } from '../auth/initData.js'
 import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
 import type { BonusClaim, BonusClaims } from '../economy/bonus.js'
-import { JACKPOT_SEED, LEDGER_REASONS } from '../economy/config.js'
-import { isJackpotHit, jackpotAccrual } from '../economy/jackpot.js'
+import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS } from '../economy/config.js'
+import { hundredthsToCoins, isJackpotHit, jackpotAccrualHundredths } from '../economy/jackpot.js'
 import { levelFromXp, levelUpBonus, toLevelState } from '../economy/level.js'
 import { applySpinToMissions } from '../economy/missions.js'
 import type { MissionProgress } from '../economy/missions.js'
@@ -81,7 +81,8 @@ export class MemoryRepos implements Repos {
   private readonly leaderboard = new Map<string, LeaderboardState>()
   /** `${userId}:${day}:${missionId}` */
   private readonly missions = new Map<string, MissionState>()
-  private jackpotPool = JACKPOT_SEED
+  /** 1/100 코인 단위. 응답으로 나갈 때만 코인으로 내린다. */
+  private jackpotPoolHundredths = JACKPOT_SEED_HUNDREDTHS
   private jackpotLastWin: JackpotState['lastWin'] = null
   private nextLedgerId = 1
 
@@ -167,7 +168,7 @@ export class MemoryRepos implements Repos {
         round: cloneRound(existing),
         wallet: toAppWallet(wallet),
         replayed: true,
-        jackpot: this.jackpotPool,
+        jackpot: hundredthsToCoins(this.jackpotPoolHundredths),
         jackpotWin: existing.jackpotWin,
         level: toLevelState(user.xp),
         levelUp: existing.levelUp,
@@ -191,13 +192,14 @@ export class MemoryRepos implements Repos {
 
     // 잭팟 적립은 하우스 몫에서 나가므로 유저 원장에 남지 않는다. 지급될 때만 원장에 찍힌다.
     // 적립을 먼저 하므로 당첨자는 자기 스핀의 적립분까지 가져간다.
-    const accrual = jackpotAccrual(input.totalBet)
-    this.jackpotPool += accrual
+    const accrual = jackpotAccrualHundredths(input.totalBet)
+    this.jackpotPoolHundredths += accrual
     let jackpotWin: number | undefined
     if (isJackpotHit(jackpotRoll, accrual)) {
-      jackpotWin = this.jackpotPool
+      // 지급은 코인 단위로 내린다. 1코인 미만 잔돈은 풀에 남기지 않고 버린다.
+      jackpotWin = hundredthsToCoins(this.jackpotPoolHundredths)
       this.credit(input.userId, wallet, 'coins', jackpotWin, LEDGER_REASONS.jackpotWin, roundId)
-      this.jackpotPool = JACKPOT_SEED
+      this.jackpotPoolHundredths = JACKPOT_SEED_HUNDREDTHS
       this.jackpotLastWin = { amount: jackpotWin, at: now, userId: input.userId }
     }
 
@@ -264,7 +266,7 @@ export class MemoryRepos implements Repos {
       round: cloneRound(round),
       wallet: toAppWallet(wallet),
       replayed: false,
-      jackpot: this.jackpotPool,
+      jackpot: hundredthsToCoins(this.jackpotPoolHundredths),
       jackpotWin,
       level: toLevelState(user.xp),
       levelUp,
@@ -314,7 +316,10 @@ export class MemoryRepos implements Repos {
   // ---- 잭팟 ----
 
   async getJackpot(): Promise<JackpotState> {
-    return { pool: this.jackpotPool, lastWin: this.jackpotLastWin ? { ...this.jackpotLastWin } : null }
+    return {
+      pool: hundredthsToCoins(this.jackpotPoolHundredths),
+      lastWin: this.jackpotLastWin ? { ...this.jackpotLastWin } : null,
+    }
   }
 
   // ---- 리더보드 ----
@@ -361,11 +366,6 @@ export class MemoryRepos implements Repos {
   /** 테스트용. 특정 사유의 원장 항목 수. */
   countLedgerEntries(userId: string, reason: string): number {
     return this.ledger.filter((entry) => entry.userId === userId && entry.reason === reason).length
-  }
-
-  /** 테스트용. 잭팟 풀을 특정 값으로 맞춘다. */
-  setJackpotPool(pool: number): void {
-    this.jackpotPool = pool
   }
 
   private readMissions(userId: string, day: string): MissionProgress[] {

@@ -58,6 +58,7 @@ const ko: Record<TranslationKey, string> = {
   paylinesTitle: '페이라인',
   betPerLine: '라인당 베팅: {amount}',
   wildSubstitutesAll: '와일드는 모든 심볼을 대체합니다',
+  singlePayFootnote: '1개는 1번 릴에 있을 때만 인정돼요',
   // settings
   settings: '설정',
   language: '언어',

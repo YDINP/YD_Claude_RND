@@ -333,10 +333,34 @@ describe('classic-777 연출 팩', () => {
     }
   })
 
-  it('blank는 조용하고 wild는 화려하다', () => {
+  it('그룹 id는 연출 키가 아니다', () => {
+    // 그룹 배당은 자리마다 실제 심볼로 연출을 찾으므로 그룹 항목을 둘 이유가 없다.
     const fx = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').fx
-    expect(fx?.['blank']?.win).toEqual([])
+    for (const groupId of Object.keys(math.groups ?? {})) {
+      expect(fx?.[groupId]).toBeUndefined()
+    }
+  })
+
+  it('그룹 멤버는 저마다 연출을 갖는다', () => {
+    const fx = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').fx
+    for (const group of Object.values(math.groups ?? {})) {
+      for (const member of group.members) {
+        expect(fx?.[member]).toBeDefined()
+      }
+    }
+  })
+
+  it('와일드는 가장 화려하다', () => {
+    const fx = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').fx
     expect(fx?.['wild']?.win?.map((effect) => effect.type)).toEqual(['burst', 'glow', 'spin'])
+  })
+
+  it('연출 없는 심볼이 있다면 빈 배열로 명시돼 있다', () => {
+    // `blank`처럼 배당이 없는 심볼은 팩에서 빠질 수 있다. 있을 때만 규칙을 검사한다.
+    const fx = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').fx
+    const silent = fx?.['blank']
+    if (silent === undefined) return
+    expect(silent.win).toEqual([])
   })
 
   it('BAR 3종이 구획 수만 다르고 나머지는 같다', () => {
@@ -366,5 +390,43 @@ describe('classic-777 연출 팩', () => {
       expect(effects.length).toBeLessThanOrEqual(1)
       for (const effect of effects) expect(effect.type).toBe('pulse')
     }
+  })
+})
+
+describe('배당 없는 심볼이 팩에서 빠져도 견딘다', () => {
+  // 엔진이 `blank`를 걷어내는 중이다. 있든 없든 테마 검증이 통과해야 한다.
+  function stripSymbol(json: unknown, id: string): unknown {
+    const theme = structuredClone(json) as {
+      symbols: Record<string, string>
+      fx?: Record<string, unknown>
+    }
+    delete theme.symbols[id]
+    if (theme.fx !== undefined) delete theme.fx[id]
+    return theme
+  }
+
+  const math = loadGameMath('classic-777')
+  const withoutBlank = stripSymbol(loadThemeJson('classic-777'), 'blank')
+  const remaining = math.symbols.filter((symbol) => symbol.id !== 'blank')
+
+  it('blank를 뺀 테마도 그대로 파싱된다', () => {
+    expect(() => parseTheme(withoutBlank, '/games/classic-777')).not.toThrow()
+  })
+
+  it('남은 심볼만 요구하면 커버리지 검사를 통과한다', () => {
+    expect(() =>
+      parseTheme(withoutBlank, '/games/classic-777', { require: { symbols: remaining } }),
+    ).not.toThrow()
+  })
+
+  it('blank가 없어도 나머지 심볼은 전부 연출을 갖는다', () => {
+    const fx = parseTheme(withoutBlank, '/games/classic-777').fx
+    for (const symbol of remaining) {
+      expect(fx?.[symbol.id]).toBeDefined()
+    }
+  })
+
+  it('blank가 빠지면 그 심볼 연출도 함께 사라진다', () => {
+    expect(parseTheme(withoutBlank, '/games/classic-777').fx?.['blank']).toBeUndefined()
   })
 })

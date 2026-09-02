@@ -68,7 +68,7 @@ describe('games/* 수학 모델 게이트', () => {
       const bet = math.betLevels[0]
       expect(bet).toBeDefined()
       const report = computeExactRtp(math, bet ?? 1)
-      expect(report.hitRate).toBeGreaterThan(0.1)
+      expect(report.hitRate).toBeGreaterThan(0.2)
       expect(report.hitRate).toBeLessThan(0.6)
       expect(report.maxWinMultiplier).toBeGreaterThanOrEqual(100)
     })
@@ -85,6 +85,10 @@ describe('games/* 수학 모델 게이트', () => {
       expect(manifest.betLevels).toEqual(math.betLevels)
       expect(manifest.rtpTarget).toBe(math.rtpTarget)
       expect(manifest.volatility).toBe(math.volatility)
+      // 허브 기여분을 적어 뒀다면 기본 RTP와 합이 맞아야 한다. 표시용 숫자가 따로 놀지 않게.
+      if (manifest.jackpotContribution !== undefined && manifest.rtpTotalTarget !== undefined) {
+        expect(manifest.rtpTarget + manifest.jackpotContribution).toBeCloseTo(manifest.rtpTotalTarget, 6)
+      }
     })
   })
 })
@@ -100,9 +104,9 @@ describe('classic-777 회귀 고정값', () => {
     if (dir === undefined) throw new Error('classic-777 폴더가 없다')
     const math = parseGameMath(readJson(join(dir, 'math.json')))
     const report = computeExactRtp(math, 100)
-    expect(report.combos).toBe(32_768)
-    expect(report.rtp).toBeCloseTo(0.9599609375, 10)
-    expect(report.hitRate).toBeCloseTo(0.304931640625, 10)
-    expect(report.maxWinMultiplier).toBeCloseTo(140.6, 6)
+    expect(report.combos).toBe(74_088)
+    expect(report.rtp).toBeCloseTo(0.9449438505560954, 12)
+    expect(report.hitRate).toBeCloseTo(0.41619425547996974, 12)
+    expect(report.maxWinMultiplier).toBeCloseTo(131.6, 6)
   })
 })

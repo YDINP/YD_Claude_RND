@@ -1,4 +1,4 @@
-import type { GameMath, SymbolId } from '@tgslot/slot-engine'
+import type { GameMath, GridPosition, SymbolId } from '@tgslot/slot-engine'
 
 /**
  * 스트립 인덱스를 길이로 정규화한다. 음수도 감아 준다.
@@ -84,4 +84,28 @@ export function spinTargetPosition(
   const gap = normalizePosition(from - to, stripLength)
   const turns = Math.max(1, Math.floor(revolutions))
   return from - (turns * stripLength + gap)
+}
+
+/**
+ * 화면 격자에서 `[reel, row]` 좌표의 심볼.
+ * 격자는 `grid[row][reel]` 순서라는 엔진 규약을 여기서 한 번만 푼다.
+ */
+export function symbolAtPosition(grid: readonly (readonly SymbolId[])[], position: GridPosition): SymbolId {
+  const [reel, row] = position
+  const symbol = grid[row]?.[reel]
+  if (symbol === undefined) throw new RangeError(`격자 범위를 벗어난 좌표: [${reel}, ${row}]`)
+  return symbol
+}
+
+/**
+ * 승리 좌표 목록에 **실제로 놓인** 심볼들.
+ *
+ * 그룹 배당(`WinLine.group`)에서는 `win.symbol`이 그룹 id(`anybar` 등)라서
+ * 심볼 에셋이나 연출을 찾는 열쇠로 쓸 수 없다. 화면에 무엇이 보이는지는 격자만 안다.
+ */
+export function symbolsAtPositions(
+  grid: readonly (readonly SymbolId[])[],
+  positions: readonly GridPosition[],
+): SymbolId[] {
+  return positions.map((position) => symbolAtPosition(grid, position))
 }

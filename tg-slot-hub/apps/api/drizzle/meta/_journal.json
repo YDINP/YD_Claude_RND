@@ -43,6 +43,20 @@
       "when": 1788328317685,
       "tag": "0005_cynical_jane_foster",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788336462778,
+      "tag": "0006_jackpot_seed_25k",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788336803102,
+      "tag": "0007_jackpot_pool_hundredths",
+      "breakpoints": true
     }
   ]
 }

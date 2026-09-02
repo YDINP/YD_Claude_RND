@@ -18,8 +18,8 @@ import {
 import type { TelegramUser } from '../auth/initData.js'
 import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
 import type { BonusClaim, BonusClaims, BonusKind } from '../economy/bonus.js'
-import { JACKPOT_SEED, LEDGER_REASONS } from '../economy/config.js'
-import { isJackpotHit, jackpotAccrual } from '../economy/jackpot.js'
+import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS } from '../economy/config.js'
+import { hundredthsToCoins, isJackpotHit, jackpotAccrualHundredths } from '../economy/jackpot.js'
 import { levelFromXp, levelUpBonus, toLevelState } from '../economy/level.js'
 import { applySpinToMissions } from '../economy/missions.js'
 import type { MissionProgress } from '../economy/missions.js'
@@ -235,7 +235,7 @@ export class DrizzleRepos implements Repos {
           round,
           wallet: toAppWallet(locked),
           replayed: true,
-          jackpot: poolRow?.pool ?? JACKPOT_SEED,
+          jackpot: hundredthsToCoins(poolRow?.pool ?? JACKPOT_SEED_HUNDREDTHS),
           jackpotWin: round.jackpotWin,
           level: toLevelState(userRow.xp),
           levelUp: round.levelUp,
@@ -337,13 +337,14 @@ export class DrizzleRepos implements Repos {
       //
       // 적립분은 하우스 몫이라 원장에 남지 않고 베팅 차감도 그대로다. 적립을 먼저 하므로
       // 당첨자는 자기 스핀의 적립분까지 가져간다.
-      const accrual = jackpotAccrual(input.totalBet)
+      const accrual = jackpotAccrualHundredths(input.totalBet)
       const pool = await accrueJackpot(tx, accrual)
       let poolAfterSpin = pool
 
       let jackpotWin: number | undefined
       if (isJackpotHit(jackpotRoll, accrual)) {
-        jackpotWin = pool
+        // 지급은 코인 단위로 내린다. 1코인 미만 잔돈은 풀에 남기지 않고 버린다.
+        jackpotWin = hundredthsToCoins(pool)
         entries.push({
           userId: input.userId,
           delta: jackpotWin,
@@ -402,7 +403,7 @@ export class DrizzleRepos implements Repos {
         round: toRoundRecord(insertedRound),
         wallet: toAppWallet(updatedWallet),
         replayed: false,
-        jackpot: poolAfterSpin,
+        jackpot: hundredthsToCoins(poolAfterSpin),
         jackpotWin,
         level: toLevelState(newXp),
         levelUp,
@@ -475,7 +476,7 @@ export class DrizzleRepos implements Repos {
     const [hit] = await this.db.select().from(jackpotHits).orderBy(desc(jackpotHits.wonAt)).limit(1)
 
     return {
-      pool: poolRow?.pool ?? JACKPOT_SEED,
+      pool: hundredthsToCoins(poolRow?.pool ?? JACKPOT_SEED_HUNDREDTHS),
       lastWin: hit ? { amount: hit.amount, at: hit.wonAt, userId: hit.userId } : null,
     }
   }
@@ -620,13 +621,13 @@ export class DrizzleRepos implements Repos {
 type DrizzleTx = Parameters<Parameters<DrizzleDb['transaction']>[0]>[0]
 
 /**
- * 잭팟 풀에 적립하고 적립 후 잔액을 돌려준다.
+ * 잭팟 풀에 적립하고 적립 후 잔액을 돌려준다. 입출력 모두 **1/100 코인 단위**다.
  * 풀 행이 아직 없으면(마이그레이션 시드 누락 등) 시드 금액으로 만들어 두고 진행한다.
  */
 async function accrueJackpot(tx: DrizzleTx, accrual: number): Promise<number> {
   await tx
     .insert(jackpotPool)
-    .values({ id: JACKPOT_ROW_ID, pool: JACKPOT_SEED, seed: JACKPOT_SEED })
+    .values({ id: JACKPOT_ROW_ID, pool: JACKPOT_SEED_HUNDREDTHS, seed: JACKPOT_SEED_HUNDREDTHS })
     .onConflictDoNothing({ target: jackpotPool.id })
 
   const [row] = await tx

@@ -1,0 +1,439 @@
+@import './tokens.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--sim-bg);
+  color: var(--sim-text);
+  font-family: var(--sim-sans);
+  font-size: var(--sim-font-body);
+}
+
+.sim-app {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-height: 100%;
+}
+
+/* ---------- 왼쪽 패널 ---------- */
+
+.sim-panel {
+  background: var(--sim-panel);
+  border-right: 1px solid var(--sim-border);
+  padding: var(--sim-space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sim-space-lg);
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+
+.sim-brand {
+  font-size: var(--sim-font-title);
+  font-weight: 700;
+  color: var(--sim-brass);
+  letter-spacing: 0.5px;
+}
+
+.sim-brand small {
+  display: block;
+  font-size: var(--sim-font-small);
+  font-weight: 400;
+  color: var(--sim-text-sub);
+  letter-spacing: 0;
+  margin-top: 2px;
+}
+
+.sim-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sim-space-xs);
+}
+
+.sim-field > label {
+  font-size: var(--sim-font-small);
+  color: var(--sim-text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.sim-field select,
+.sim-field input {
+  background: var(--sim-card);
+  color: var(--sim-text);
+  border: 1px solid var(--sim-border);
+  border-radius: var(--sim-radius-sm);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: var(--sim-font-sub);
+}
+
+.sim-field select:focus,
+.sim-field input:focus {
+  outline: 2px solid var(--sim-brass);
+  outline-offset: 1px;
+}
+
+.sim-button {
+  background: var(--sim-brass);
+  color: #1a1305;
+  border: none;
+  border-radius: var(--sim-radius-sm);
+  padding: 11px 12px;
+  font-family: inherit;
+  font-size: var(--sim-font-sub);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sim-button:hover:not(:disabled) {
+  background: var(--sim-brass-light);
+}
+
+.sim-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sim-button--ghost {
+  background: transparent;
+  color: var(--sim-brass);
+  border: 1px solid var(--sim-brass);
+}
+
+.sim-button--ghost:hover:not(:disabled) {
+  background: rgba(216, 169, 74, 0.12);
+}
+
+.sim-progress {
+  font-size: var(--sim-font-small);
+  color: var(--sim-text-sub);
+}
+
+.sim-progress-bar {
+  height: 4px;
+  background: var(--sim-card);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: var(--sim-space-xs);
+}
+
+.sim-progress-bar > div {
+  height: 100%;
+  background: var(--sim-gem);
+}
+
+.sim-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sim-space-xs);
+}
+
+.sim-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--sim-font-small);
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--sim-border);
+  background: var(--sim-card);
+  color: var(--sim-text-sub);
+}
+
+.sim-chip--pass {
+  border-color: rgba(63, 174, 106, 0.6);
+  color: var(--sim-success);
+}
+
+.sim-chip--fail {
+  border-color: rgba(224, 96, 92, 0.6);
+  color: var(--sim-danger);
+}
+
+/* 워커 실패처럼 문장이 긴 오류는 칩을 한 줄에 가두지 않고 접어서 보여 준다. */
+.sim-chip--block {
+  display: block;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.5;
+  background: rgba(224, 96, 92, 0.1);
+}
+
+/* ---------- 메인 ---------- */
+
+.sim-main {
+  padding: var(--sim-space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sim-space-xl);
+  min-width: 0;
+}
+
+.sim-tabs {
+  display: flex;
+  gap: var(--sim-space-sm);
+  border-bottom: 1px solid var(--sim-border);
+}
+
+.sim-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--sim-text-sub);
+  font-family: inherit;
+  font-size: var(--sim-font-body);
+  padding: 8px 4px;
+  cursor: pointer;
+}
+
+.sim-tab[aria-selected='true'] {
+  color: var(--sim-brass);
+  border-bottom-color: var(--sim-brass);
+  font-weight: 700;
+}
+
+.sim-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--sim-space-md);
+}
+
+.sim-kpi {
+  background: var(--sim-card);
+  border: 1px solid var(--sim-border);
+  border-radius: var(--sim-radius-md);
+  padding: var(--sim-space-md) var(--sim-space-lg);
+}
+
+.sim-kpi-label {
+  font-size: var(--sim-font-small);
+  color: var(--sim-text-sub);
+  letter-spacing: 0.5px;
+}
+
+.sim-kpi-value {
+  font-family: var(--sim-mono);
+  font-size: 24px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.sim-kpi-note {
+  font-size: var(--sim-font-small);
+  color: var(--sim-text-sub);
+  margin-top: 4px;
+  font-family: var(--sim-mono);
+}
+
+.sim-kpi--brass .sim-kpi-value {
+  color: var(--sim-brass);
+}
+
+.sim-kpi--gem .sim-kpi-value {
+  color: var(--sim-gem);
+}
+
+.sim-section {
+  background: var(--sim-card);
+  border: 1px solid var(--sim-border);
+  border-radius: var(--sim-radius-lg);
+  padding: var(--sim-space-lg);
+}
+
+.sim-section > h2 {
+  margin: 0 0 var(--sim-space-md);
+  font-size: var(--sim-font-body);
+  letter-spacing: 0.5px;
+  color: var(--sim-brass);
+}
+
+.sim-section > p {
+  margin: 0 0 var(--sim-space-md);
+  color: var(--sim-text-sub);
+  font-size: var(--sim-font-sub);
+}
+
+.sim-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: var(--sim-space-lg);
+}
+
+.sim-empty {
+  color: var(--sim-text-sub);
+  font-size: var(--sim-font-sub);
+  padding: var(--sim-space-lg) 0;
+}
+
+/* ---------- 표 ---------- */
+
+.sim-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--sim-font-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-table th,
+.sim-table td {
+  padding: 7px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--sim-border);
+  white-space: nowrap;
+}
+
+.sim-table th:first-child,
+.sim-table td:first-child,
+.sim-table th.sim-left,
+.sim-table td.sim-left {
+  text-align: left;
+}
+
+.sim-table thead th {
+  color: var(--sim-text-sub);
+  font-weight: 500;
+  font-size: var(--sim-font-small);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sim-table tbody tr:hover {
+  background: var(--sim-card-alt);
+}
+
+.sim-mono {
+  font-family: var(--sim-mono);
+}
+
+.sim-pass {
+  color: var(--sim-success);
+}
+
+.sim-fail {
+  color: var(--sim-danger);
+}
+
+/* ---------- 차트 ---------- */
+
+.sim-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.sim-chart text {
+  font-family: var(--sim-sans);
+  fill: var(--sim-text-sub);
+  font-size: 10px;
+}
+
+.sim-chart .sim-chart-value {
+  fill: var(--sim-text);
+  font-family: var(--sim-mono);
+}
+
+.sim-legend {
+  display: flex;
+  gap: var(--sim-space-md);
+  font-size: var(--sim-font-small);
+  color: var(--sim-text-sub);
+  margin-top: var(--sim-space-sm);
+}
+
+.sim-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  background: currentColor;
+}
+
+/* ---------- 샘플 스핀 ---------- */
+
+.sim-spins {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--sim-space-md);
+}
+
+.sim-spin {
+  background: var(--sim-card-alt);
+  border: 1px solid var(--sim-border);
+  border-radius: var(--sim-radius-md);
+  padding: var(--sim-space-md);
+}
+
+.sim-spin--win {
+  border-color: rgba(216, 169, 74, 0.55);
+}
+
+.sim-spin-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--sim-font-small);
+  color: var(--sim-text-sub);
+  margin-bottom: var(--sim-space-sm);
+}
+
+.sim-spin-win {
+  font-family: var(--sim-mono);
+  font-weight: 700;
+  color: var(--sim-brass);
+}
+
+.sim-grid {
+  display: grid;
+  gap: 4px;
+}
+
+.sim-cell {
+  background: var(--sim-card);
+  border: 1px solid var(--sim-border);
+  border-radius: var(--sim-radius-sm);
+  padding: 6px 4px;
+  text-align: center;
+  font-size: var(--sim-font-small);
+  font-family: var(--sim-mono);
+  color: var(--sim-text-sub);
+}
+
+.sim-cell--win {
+  background: rgba(216, 169, 74, 0.18);
+  border-color: var(--sim-brass);
+  color: var(--sim-brass-light);
+  font-weight: 700;
+}
+
+.sim-spin-lines {
+  margin: var(--sim-space-sm) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--sim-font-small);
+  color: var(--sim-text-sub);
+  font-family: var(--sim-mono);
+}
+
+.sim-toolbar {
+  display: flex;
+  gap: var(--sim-space-sm);
+  align-items: center;
+  margin-bottom: var(--sim-space-md);
+  flex-wrap: wrap;
+}

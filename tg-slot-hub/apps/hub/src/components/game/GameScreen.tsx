@@ -24,6 +24,7 @@ import { Odometer } from '../Odometer'
 import { useT, useEffectiveLocale } from '../../i18n'
 import { useSettingsStore } from '../../store/settings'
 import { winTierLabelKey, resolveWinTier, WIN_HOLD_MS } from '../../lib/winTier'
+import { groupLabel, groupMembers, symbolLabel } from '../../game/labels'
 import './GameScreen.css'
 
 interface GameScreenProps {
@@ -47,18 +48,6 @@ interface VerifyResult {
 
 function stopsEqual(a: number[], b: number[]): boolean {
   return a.length === b.length && a.every((value, i) => value === b[i])
-}
-
-/** math.symbols[id].name을 로케일에 맞춰 고른다. 없으면 심볼 id 그대로 보여준다. */
-function symbolLabel(
-  symbols: { id: string; name: { en: string; ko?: string } }[],
-  symbolId: string,
-  locale: string,
-): string {
-  const symbol = symbols.find((s) => s.id === symbolId)
-  if (!symbol) return symbolId
-  if (locale === 'ko' && symbol.name.ko) return symbol.name.ko
-  return symbol.name.en
 }
 
 export function GameScreen({ gameId }: GameScreenProps): ReactNode {
@@ -274,6 +263,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const currentBet = betLevels[betIndex] ?? 0
   const betPerLine = math && math.paylines.length > 0 ? currentBet / math.paylines.length : 0
   const isBusy = phase === 'spinning' || phase === 'showingWin'
+  // 페이테이블에 1개짜리 배당이 하나라도 있으면(단일 심볼이 1번 릴에 있을 때만 인정) 각주를 보여준다.
+  const hasSingleCountPay = math ? Object.values(math.paytable).some((rule) => 1 in rule) : false
 
   const title = gameSummary ? (locale === 'ko' && gameSummary.name.ko ? gameSummary.name.ko : gameSummary.name.en) : gameId
 
@@ -556,18 +547,44 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               <h3 className="hub-sheet__subtitle">{t('paytableTitle')}</h3>
               <p className="hub-paytable__bet-per-line">{t('betPerLine', { amount: betPerLine })}</p>
               <ul className="hub-paytable__list">
-                {Object.entries(math.paytable).map(([symbolId, payrule]) => {
-                  const label = symbolLabel(math.symbols, symbolId, locale)
+                {Object.entries(math.paytable).map(([id, payrule]) => {
+                  const isGroup = Boolean(math.groups?.[id])
+                  const label = isGroup ? groupLabel(math, id, locale) : symbolLabel(math, id, locale)
                   const counts = Object.keys(payrule)
                     .map(Number)
                     .sort((a, b) => a - b)
-                  const symbolImage = theme?.symbols[symbolId]
+
                   return (
-                    <li key={symbolId} className="hub-paytable__row">
-                      {symbolImage ? (
+                    <li key={id} className="hub-paytable__row">
+                      {isGroup ? (
+                        <div className="hub-paytable__symbol-stack" aria-hidden="true">
+                          {groupMembers(math, id)
+                            .slice(0, 3)
+                            .map((memberId, i) => {
+                              const memberImage = theme?.symbols[memberId]
+                              return memberImage ? (
+                                <img
+                                  key={memberId}
+                                  className="hub-paytable__symbol-stack-img"
+                                  style={{ zIndex: i }}
+                                  src={memberImage}
+                                  alt=""
+                                  width={40}
+                                  height={40}
+                                />
+                              ) : (
+                                <span
+                                  key={memberId}
+                                  className="hub-paytable__symbol-stack-img hub-paytable__symbol-stack-img--fallback"
+                                  style={{ zIndex: i }}
+                                />
+                              )
+                            })}
+                        </div>
+                      ) : theme?.symbols[id] ? (
                         <img
                           className="hub-paytable__symbol-img"
-                          src={symbolImage}
+                          src={theme.symbols[id]}
                           alt={label}
                           width={40}
                           height={40}
@@ -577,18 +594,22 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                           {label}
                         </span>
                       )}
-                      <div className="hub-paytable__chips">
-                        {counts.map((count) => (
-                          <span key={count} className="hub-paytable__chip">
-                            {count}: ×{payrule[count]}
-                          </span>
-                        ))}
+                      <div className="hub-paytable__row-body">
+                        {isGroup && <span className="hub-paytable__row-label">{label}</span>}
+                        <div className="hub-paytable__chips">
+                          {counts.map((count) => (
+                            <span key={count} className="hub-paytable__chip">
+                              {count}: ×{payrule[count]}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </li>
                   )
                 })}
               </ul>
               {math.wild && <p className="hub-paytable__wild-note">{t('wildSubstitutesAll')}</p>}
+              {hasSingleCountPay && <p className="hub-paytable__wild-note">{t('singlePayFootnote')}</p>}
 
               <h3 className="hub-sheet__subtitle">{t('paylinesTitle')}</h3>
               <div className="hub-paylines__grid-list">

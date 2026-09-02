@@ -16,6 +16,16 @@ export const SymbolDefSchema = z.object({
 })
 export type SymbolDef = z.infer<typeof SymbolDefSchema>
 
+/**
+ * 심볼 묶음. "아무 BAR"처럼 종류가 섞여도 지급하는 배당을 위한 것이다.
+ * 페이테이블에서 그룹 id를 심볼 id와 같은 자리에 쓴다.
+ */
+export const SymbolGroupSchema = z.object({
+  name: SymbolNameSchema,
+  members: z.array(z.string().min(1)).min(2),
+})
+export type SymbolGroup = z.infer<typeof SymbolGroupSchema>
+
 export const WildConfigSchema = z.object({
   /** 'all'이면 스캐터와 다른 와일드를 제외한 모든 심볼을 대체한다. */
   substitutesFor: z.union([z.literal('all'), z.array(z.string().min(1))]),
@@ -31,15 +41,21 @@ const BaseGameMathSchema = z.object({
   reels: z.number().int().min(1),
   rows: z.number().int().min(1),
   symbols: z.array(SymbolDefSchema).min(1),
+  /** 심볼 묶음 배당. 없으면 생략. */
+  groups: z.record(z.string().min(1), SymbolGroupSchema).optional(),
   /** 릴별 스트립. strips.length === reels. */
   strips: z.array(z.array(z.string().min(1)).min(1)).min(1),
   /** 페이라인 1개 = 릴별 행 인덱스 배열. 예: [1,1,1]은 가운데 가로줄. */
   paylines: z.array(z.array(z.number().int().min(0)).min(1)).min(1),
-  /** symbol -> { 매치 개수: betPerLine 배수 }. 왼쪽에서 오른쪽으로 연속 매치. */
+  /**
+   * `심볼 id 또는 그룹 id` -> { 매치 개수: betPerLine 배수 }.
+   * 왼쪽에서 오른쪽으로 연속 매치. 매치 개수 1은 릴 0만 맞으면 지급한다는 뜻이다.
+   */
   paytable: z.record(z.string().min(1), PayruleSchema),
   wild: WildConfigSchema.optional(),
   /** 총 베팅액(코인) 후보. 모두 paylines.length로 나누어떨어져야 한다. */
   betLevels: z.array(z.number().int().positive()).min(1),
+  /** 기본 게임만의 목표 RTP. 잭팟 같은 허브 기여분은 포함하지 않는다. */
   rtpTarget: z.number().gt(0).max(1),
   volatility: VolatilitySchema,
 })
@@ -81,6 +97,31 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
     })
   })
 
+  const groups = math.groups ?? {}
+  for (const [groupId, group] of Object.entries(groups)) {
+    if (declared.has(groupId)) {
+      issue(`그룹 id ${groupId}가 심볼 id와 겹친다`, ['groups', groupId])
+    }
+    const seenMembers = new Set<string>()
+    group.members.forEach((memberId, index) => {
+      const member = declared.get(memberId)
+      if (member === undefined) {
+        issue(`선언되지 않은 심볼: ${memberId}`, ['groups', groupId, 'members', index])
+        return
+      }
+      if (member.scatter === true) {
+        issue(`스캐터 ${memberId}는 그룹 멤버가 될 수 없다`, ['groups', groupId, 'members', index])
+      }
+      if (!onStrip.has(memberId)) {
+        issue(`어느 스트립에도 없는 그룹 멤버: ${memberId}`, ['groups', groupId, 'members', index])
+      }
+      if (seenMembers.has(memberId)) {
+        issue(`중복 그룹 멤버: ${memberId}`, ['groups', groupId, 'members', index])
+      }
+      seenMembers.add(memberId)
+    })
+  }
+
   const seenPaylines = new Set<string>()
   math.paylines.forEach((line, index) => {
     if (line.length !== math.reels) {
@@ -101,24 +142,27 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
     }
   })
 
-  for (const [symbolId, payrule] of Object.entries(math.paytable)) {
-    const symbol = declared.get(symbolId)
-    if (symbol === undefined) {
-      issue(`선언되지 않은 심볼의 페이테이블: ${symbolId}`, ['paytable', symbolId])
+  for (const [key, payrule] of Object.entries(math.paytable)) {
+    const symbol = declared.get(key)
+    const isGroup = Object.prototype.hasOwnProperty.call(groups, key)
+    if (symbol === undefined && !isGroup) {
+      issue(`선언되지 않은 심볼/그룹의 페이테이블: ${key}`, ['paytable', key])
       continue
     }
-    // 스캐터는 라인이 아니라 화면 전체로 세므로 페이라인 페이테이블을 가질 수 없다.
-    if (symbol.scatter === true) {
-      issue(`스캐터 ${symbolId}는 페이라인 페이테이블을 가질 수 없다`, ['paytable', symbolId])
-    }
-    if (!onStrip.has(symbolId)) {
-      issue(`어느 스트립에도 없는 심볼의 페이테이블: ${symbolId}`, ['paytable', symbolId])
+    if (symbol !== undefined) {
+      // 스캐터는 라인이 아니라 화면 전체로 세므로 페이라인 페이테이블을 가질 수 없다.
+      if (symbol.scatter === true) {
+        issue(`스캐터 ${key}는 페이라인 페이테이블을 가질 수 없다`, ['paytable', key])
+      }
+      if (!onStrip.has(key)) {
+        issue(`어느 스트립에도 없는 심볼의 페이테이블: ${key}`, ['paytable', key])
+      }
     }
 
     const counts = payruleCounts(payrule)
     for (const count of counts) {
       if (count < 1 || count > math.reels) {
-        issue(`매치 개수 ${count}가 1..${math.reels} 범위를 벗어났다`, ['paytable', symbolId, String(count)])
+        issue(`매치 개수 ${count}가 1..${math.reels} 범위를 벗어났다`, ['paytable', key, String(count)])
       }
     }
     // "긴 연속이 이긴다" 규칙이 성립하려면 배수가 매치 개수에 대해 단조증가여야 한다.
@@ -130,8 +174,8 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
       const longPay = payrule[longer] ?? 0
       if (shortPay > longPay) {
         issue(
-          `${symbolId}: ${shorter}개 배수(${shortPay})가 ${longer}개 배수(${longPay})보다 크다. 긴 연속이 더 많이 줘야 한다`,
-          ['paytable', symbolId, String(longer)],
+          `${key}: ${shorter}개 배수(${shortPay})가 ${longer}개 배수(${longPay})보다 크다. 긴 연속이 더 많이 줘야 한다`,
+          ['paytable', key, String(longer)],
         )
       }
     }
@@ -144,8 +188,8 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
         const multiplier = payrule[count] ?? 0
         if (!Number.isInteger(betPerLine * multiplier)) {
           issue(
-            `${symbolId} ${count}개: 베팅액 ${level}(라인당 ${betPerLine}) x 배수 ${multiplier} = ${betPerLine * multiplier}로 정수가 아니다`,
-            ['paytable', symbolId, String(count)],
+            `${key} ${count}개: 베팅액 ${level}(라인당 ${betPerLine}) x 배수 ${multiplier} = ${betPerLine * multiplier}로 정수가 아니다`,
+            ['paytable', key, String(count)],
           )
         }
       }

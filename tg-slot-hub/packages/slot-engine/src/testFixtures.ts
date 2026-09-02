@@ -44,3 +44,47 @@ export function makeGrid(rows: string[][]): string[][] {
 }
 
 export const BLANK_ROW = ['_', '_', '_']
+
+/**
+ * 그룹(믹스 배당) 검증용 3x3 모델. 심볼은 와일드와 BAR 3종, 채움용 블랭크.
+ * `anybar` 그룹은 종류가 섞인 BAR 3개에 지급한다.
+ */
+export function makeBarMath(overrides: Record<string, unknown> = {}): GameMath {
+  return parseGameMath({
+    id: 'bars',
+    reels: 3,
+    rows: 3,
+    symbols: [
+      { id: 'w', name: { en: 'Wild' }, wild: true },
+      { id: 'bar3', name: { en: 'Triple BAR' } },
+      { id: 'bar2', name: { en: 'Double BAR' } },
+      { id: 'bar1', name: { en: 'Single BAR' } },
+      { id: '_', name: { en: 'Blank' } },
+    ],
+    groups: {
+      anybar: { name: { en: 'Any BAR', ko: '아무 BAR' }, members: ['bar1', 'bar2', 'bar3'] },
+    },
+    strips: [
+      ['w', 'bar3', 'bar2', 'bar1', '_', 'bar1'],
+      ['bar1', 'w', 'bar2', '_', 'bar3', 'bar2'],
+      ['bar2', 'bar1', 'w', '_', 'bar3', 'bar1'],
+    ],
+    paylines: [
+      [1, 1, 1],
+      [0, 0, 0],
+      [2, 2, 2],
+    ],
+    paytable: {
+      w: { 3: 100 },
+      bar3: { 3: 50 },
+      bar2: { 3: 25 },
+      bar1: { 3: 15 },
+      anybar: { 3: 5 },
+    },
+    wild: { substitutesFor: 'all' },
+    betLevels: [3, 30],
+    rtpTarget: 0.96,
+    volatility: 'medium',
+    ...overrides,
+  })
+}

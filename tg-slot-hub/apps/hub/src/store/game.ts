@@ -8,6 +8,7 @@ import type { SpinResponse, WinLine } from '@tgslot/shared'
 import { getGameMath, spin as apiSpin, ApiClientError } from '../sdk/api'
 import { useSessionStore } from './session'
 import { useHubStore } from './hub'
+import { winLineLabel } from '../game/labels'
 
 export type GamePhase = 'loading' | 'idle' | 'spinning' | 'showingWin' | 'error'
 
@@ -17,8 +18,14 @@ export type GamePhase = 'loading' | 'idle' | 'spinning' | 'showingWin' | 'error'
  */
 export interface SpinRenderer {
   spinTo(stops: number[], options?: { durationMs?: number; stagger?: number }): Promise<void>
-  /** totalBet을 주면 렌더러가 winTotal 이벤트의 등급(tier)을 라인 배수 추정 없이 정확히 계산한다. */
-  showWins(wins: WinLine[], options?: { loop?: boolean; totalBet?: number }): Promise<void>
+  /**
+   * totalBet을 주면 렌더러가 winTotal 이벤트의 등급(tier)을 라인 배수 추정 없이 정확히 계산한다.
+   * formatLineLabel은 라인 명판 문구를 만든다 — 렌더러는 번역/그룹 이름을 모르므로 store가 넣어 준다.
+   */
+  showWins(
+    wins: WinLine[],
+    options?: { loop?: boolean; totalBet?: number; formatLineLabel?: (win: WinLine) => string },
+  ): Promise<void>
 }
 
 const BET_INDEX_KEY_PREFIX = 'tgslot.bet.'
@@ -230,7 +237,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (result.wins.length > 0) {
         set({ phase: 'showingWin' })
         if (renderer) {
-          await renderer.showWins(result.wins, { totalBet: result.totalBet })
+          const locale = useSessionStore.getState().user?.locale ?? 'en'
+          await renderer.showWins(result.wins, {
+            totalBet: result.totalBet,
+            // 그룹으로 맞은 라인(win.group 있음)은 그룹 이름을, 아니면 심볼 이름을 라인 명판에 쓴다.
+            formatLineLabel: (win) => `${winLineLabel(math, win, locale)} · ${win.win.toLocaleString('en-US')}`,
+          })
         }
       }
     } catch (err) {

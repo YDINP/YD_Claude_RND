@@ -1,0 +1,35 @@
+/* 검수 시뮬레이터 토큰. apps/hub의 다크 네이비 + 브라스 팔레트를 그대로 쓰되
+   텔레그램 테마 변수는 없으므로(미니앱이 아니다) 고정값으로 둔다. */
+:root {
+  --sim-bg: #0b1220;
+  --sim-panel: #131c2e;
+  --sim-card: #16213a;
+  --sim-card-alt: #1b2743;
+  --sim-text: #f2f4f8;
+  --sim-text-sub: #8792a8;
+  --sim-border: #202c47;
+
+  --sim-brass: #d8a94a;
+  --sim-brass-light: #f4d98a;
+  --sim-gem: #4fc3d9;
+  --sim-danger: #e0605c;
+  --sim-success: #3fae6a;
+
+  --sim-font-title: 20px;
+  --sim-font-body: 14px;
+  --sim-font-sub: 13px;
+  --sim-font-small: 11px;
+
+  --sim-space-xs: 4px;
+  --sim-space-sm: 8px;
+  --sim-space-md: 12px;
+  --sim-space-lg: 16px;
+  --sim-space-xl: 24px;
+
+  --sim-radius-sm: 8px;
+  --sim-radius-md: 12px;
+  --sim-radius-lg: 18px;
+
+  --sim-sans: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', 'Apple SD Gothic Neo', 'Segoe UI', sans-serif;
+  --sim-mono: 'SF Mono', ui-monospace, Consolas, monospace;
+}

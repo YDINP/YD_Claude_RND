@@ -120,6 +120,8 @@ export const WinLineSchema = z.object({
   count: z.number().int().min(1),
   multiplier: z.number(),
   win: z.number().int().min(0),
+  /** 그룹 배당(예: Any BAR)으로 지급된 경우 그룹 id. symbol에는 같은 그룹 id가 들어간다 */
+  group: z.string().optional(),
   /** [reel, row] 좌표 목록 */
   positions: z.array(z.tuple([z.number().int(), z.number().int()])),
 })

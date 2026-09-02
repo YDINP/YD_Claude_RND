@@ -57,6 +57,7 @@ const en = {
   paylinesTitle: 'Paylines',
   betPerLine: 'Bet per line: {amount}',
   wildSubstitutesAll: 'Wild substitutes for all symbols',
+  singlePayFootnote: 'A single symbol pays only on reel 1',
   // settings
   settings: 'Settings',
   language: 'Language',

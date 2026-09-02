@@ -4,6 +4,17 @@ import { describe, expect, it } from 'vitest'
 
 const srcDir = resolve(process.cwd(), 'src')
 
+/** 줄 주석과 블록 주석 본문을 걷어낸 소스. 규칙을 설명하는 문장이 검사에 걸리지 않게 한다. */
+function stripComments(source: string): string {
+  return source
+    .split('\n')
+    .filter((line) => {
+      const trimmed = line.trimStart()
+      return !trimmed.startsWith('//') && !trimmed.startsWith('*') && !trimmed.startsWith('/*')
+    })
+    .join('\n')
+}
+
 function listTsFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
@@ -48,6 +59,21 @@ describe('브라우저 전용 코드 격리', () => {
     const facade = readFileSync(join(srcDir, 'createRenderer.ts'), 'utf8')
     expect(facade).toContain("await import('./pixi/pixiRenderer.js')")
     expect(facade).not.toContain("from './pixi/")
+  })
+
+  it('그리는 쪽은 win.symbol을 아예 읽지 않는다', () => {
+    // 그룹 배당에서 win.symbol은 그룹 id(anybar)라 테마에 없는 키다.
+    // 화면에 무엇이 보이는지는 격자만 알고, 렌더러는 셀이 들고 있는 심볼을 쓴다.
+    // (설명 주석에는 그 이름이 나오므로 주석을 걷어내고 검사한다.)
+    for (const file of listTsFiles(join(srcDir, 'pixi'))) {
+      if (file.endsWith('.test.ts')) continue
+      expect(stripComments(readFileSync(file, 'utf8'))).not.toContain('win.symbol')
+    }
+  })
+
+  it('연출은 셀에 그려진 심볼로 찾는다', () => {
+    const entry = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    expect(entry).toContain('resolveSymbolFx(this.options.theme.fx, cell.symbol')
   })
 
   it('해제할 때 직접 만든 텍스처를 정리한다', () => {

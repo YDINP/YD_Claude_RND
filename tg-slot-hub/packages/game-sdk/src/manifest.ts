@@ -16,7 +16,15 @@ export const GameManifestSchema = z.object({
   rows: z.number().int().min(1),
   lines: z.number().int().min(1),
   betLevels: z.array(z.number().int().positive()).min(1),
+  /** 기본 게임만의 목표 RTP. math.json의 rtpTarget과 같아야 한다. */
   rtpTarget: z.number().gt(0).max(1),
+  /**
+   * 허브 기여분까지 더한 플레이어 체감 RTP. 표시용이며 엔진은 쓰지 않는다.
+   * 보통 `rtpTarget + jackpotContribution`.
+   */
+  rtpTotalTarget: z.number().gt(0).max(1).optional(),
+  /** 잭팟 등 허브가 얹어 주는 기대 환급률. 베팅액 대비 비율. */
+  jackpotContribution: z.number().min(0).max(1).optional(),
   volatility: VolatilitySchema,
   /** 'wild', 'freespins', 'jackpot' 등 로비 배지에 쓰는 자유 태그. */
   features: z.array(z.string().min(1)).default([]),

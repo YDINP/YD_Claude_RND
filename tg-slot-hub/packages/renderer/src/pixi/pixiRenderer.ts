@@ -635,7 +635,13 @@ class PixiRenderer implements RendererCore {
     }
   }
 
-  /** 좌표 목록의 심볼에 테마가 정한 연출을 건다. */
+  /**
+   * 좌표 목록의 심볼에 테마가 정한 연출을 건다.
+   *
+   * 연출은 **그 자리에 실제로 그려진 심볼**(`cell.symbol`)로 찾는다. `win.symbol`은 쓰지 않는다.
+   * 그룹 배당(Any BAR 등)에서 `win.symbol`은 그룹 id라 테마에 그런 심볼이 없기 때문이다.
+   * 덕분에 한 라인 안에서 BAR 1·2·3이 각자 다른 연출을 낸다.
+   */
   private playFxAt(positions: readonly (readonly [number, number])[]): void {
     positions.forEach(([reel, row], index) => {
       const cell = this.reels[reel]?.cells[row + 1]

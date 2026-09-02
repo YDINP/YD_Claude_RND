@@ -100,6 +100,22 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 
 **한 심볼의 `win` 배열은 순서가 아니라 조합이다.** 안에 든 스텝이 전부 동시에 재생된다.
 
+### 그룹 배당과 연출 조회
+
+연출은 **그 자리에 실제로 보이는 심볼**로 찾는다. `WinLine.symbol`로 찾지 않는다.
+
+Any BAR 같은 그룹 배당에서 `win.symbol`은 그룹 id(`anybar`)라 테마에 그런 심볼이 없다.
+그것으로 찾으면 라인 전체가 `default` 하나로 뭉개진다.
+격자를 보고 찾으면 한 라인 안에서 BAR 1·2·3이 각자의 연출을 낸다.
+
+```ts
+resolveFxForPositions(theme.fx, grid, win.positions, reducedMotion)
+// -> [{ position, symbol: 'bar1', effects }, { symbol: 'bar2', ... }, ...]
+```
+
+명판 문구만은 그룹 이름을 쓴다. 기본 라벨은 `Line {n} · {group ?? symbol} · {배당}`이고,
+사람이 읽을 이름은 허브가 `formatLineLabel`로 넣는다. 렌더러는 번역을 모른다.
+
 찾는 순서는 `fx[심볼id].win` → `fx.default.win` → 내장 pulse다.
 **빈 배열은 "연출 없음"**이라 기본값으로 되돌아가지 않는다. `blank`를 조용히 두는 방법이다.
 
@@ -316,6 +332,7 @@ Pixi 없이도 쓸 수 있는 부분은 따로 내보낸다. 허브의 테스트
 | `planSparkles` | 배경 반짝임 배치. 릴 창을 피한다 |
 | `buildPresentation`, `defaultLineLabel` | 승리 연출 순서와 길이 |
 | `resolveSymbolFx`, `resolveFxEffect` | 심볼 연출 조회와 기본값 |
+| `resolveFxForPositions`, `symbolsAtPositions` | 승리 좌표별 심볼과 연출 (그룹 배당 대응) |
 | `winTier`, `phaseAllDurationMs` | 승리 등급과 등급별 연출 길이 |
 | `isBigWin`, `winBetMultiple`, `paylineColor`, `buildWinCycle`, `formatWinLabel` | 승리 연출 규칙 |
 | `parseTheme`, `loadTheme`, `resolveSymbolSource`, `resolveFrameWindow` | 테마 검증·로딩 |

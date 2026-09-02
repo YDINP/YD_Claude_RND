@@ -17,7 +17,7 @@ import { loadGamePacks } from '../games/packs.js'
 import { createGameRegistry } from '../games/registry.js'
 import type { GamePack } from '../games/packs.js'
 import type { ApiConfig } from '../config.js'
-import { JACKPOT_ODDS_DENOMINATOR, JACKPOT_SEED } from '../economy/config.js'
+import { JACKPOT_ODDS_DENOMINATOR, JACKPOT_SEED_COINS } from '../economy/config.js'
 
 const GAME_ID = 'classic-777'
 const BET = 100
@@ -271,28 +271,28 @@ describe('POST /bonus/rescue/claim', () => {
 })
 
 describe('잭팟 적립과 확률', () => {
-  // 적립은 round(bet * 1%)이고 당첨 확률은 **적립액**에 비례한다 (roll < accrual).
-  // floor였다면 10/20 베팅이 0원을 넣고도 당첨 기회를 가져 최소 베팅이 지배 전략이 된다.
-  const cases: { bet: number; accrual: number }[] = [
-    { bet: 10, accrual: 0 },
-    { bet: 20, accrual: 0 },
-    { bet: 50, accrual: 1 },
-    { bet: 100, accrual: 1 },
-    { bet: 200, accrual: 2 },
-    { bet: 500, accrual: 5 },
+  // 풀은 1/100 코인 단위로 쌓여서 모든 베팅이 정확히 1%를 넣는다.
+  // 응답에는 코인으로 내림해서 나가므로, 100 미만 베팅은 한 번에 코인 자릿수를 못 올린다.
+  const cases: { bet: number; visibleCoinGain: number; payoutOnHit: number }[] = [
+    { bet: 10, visibleCoinGain: 0, payoutOnHit: JACKPOT_SEED_COINS },
+    { bet: 20, visibleCoinGain: 0, payoutOnHit: JACKPOT_SEED_COINS },
+    { bet: 50, visibleCoinGain: 0, payoutOnHit: JACKPOT_SEED_COINS },
+    { bet: 100, visibleCoinGain: 1, payoutOnHit: JACKPOT_SEED_COINS + 1 },
+    { bet: 200, visibleCoinGain: 2, payoutOnHit: JACKPOT_SEED_COINS + 2 },
+    { bet: 500, visibleCoinGain: 5, payoutOnHit: JACKPOT_SEED_COINS + 5 },
   ]
 
-  for (const { bet, accrual } of cases) {
-    it(`베팅 ${bet}은 ${accrual}을 적립한다`, async () => {
+  for (const { bet, visibleCoinGain, payoutOnHit } of cases) {
+    it(`베팅 ${bet} 한 번은 표시 풀을 ${visibleCoinGain}코인 올린다`, async () => {
       const harness = await setup()
 
       const applied = await fixedSpin(harness.repos, harness.userId, { key: `acc-${bet}-000001`, bet, win: 0 })
 
-      expect(applied.jackpot).toBe(JACKPOT_SEED + accrual)
+      expect(applied.jackpot).toBe(JACKPOT_SEED_COINS + visibleCoinGain)
       expect(applied.jackpotWin).toBeUndefined()
     })
 
-    it(`베팅 ${bet}에서 판정값 0은 ${accrual > 0 ? '당첨된다' : '당첨되지 않는다'}`, async () => {
+    it(`베팅 ${bet}도 판정값 0이면 당첨된다`, async () => {
       const harness = await setup()
 
       const applied = await fixedSpin(harness.repos, harness.userId, {
@@ -302,28 +302,40 @@ describe('잭팟 적립과 확률', () => {
         jackpotRoll: 0,
       })
 
-      if (accrual > 0) {
-        expect(applied.jackpotWin).toBe(JACKPOT_SEED + accrual)
-        expect(applied.jackpot).toBe(JACKPOT_SEED)
-      } else {
-        // 적립이 0이면 판정값이 아무리 낮아도 기회가 없다.
-        expect(applied.jackpotWin).toBeUndefined()
-        expect(applied.jackpot).toBe(JACKPOT_SEED)
-      }
+      // 모든 베팅이 1%를 넣으므로 모든 베팅에 당첨 기회가 있다. 확률만 적립액에 비례한다.
+      expect(applied.jackpotWin).toBe(payoutOnHit)
+      expect(applied.jackpot).toBe(JACKPOT_SEED_COINS)
 
       const wallet = await harness.repos.getWallet(harness.userId)
       expect(harness.repos.getLedgerSum(harness.userId)).toBe(wallet?.coins)
     })
   }
 
-  it('적립이 0인 베팅을 아무리 반복해도 풀이 늘지 않는다', async () => {
+  it('최소 베팅도 1%를 쌓는다: 10 베팅 10회면 풀이 정확히 1코인 오른다', async () => {
     const harness = await setup()
 
-    for (let i = 0; i < 20; i += 1) {
+    for (let i = 0; i < 10; i += 1) {
       await fixedSpin(harness.repos, harness.userId, { key: `min-${String(i).padStart(8, '0')}`, bet: 10, win: 0 })
     }
 
-    expect((await harness.repos.getJackpot()).pool).toBe(JACKPOT_SEED)
+    // 10 x 0.1 코인 = 1 코인. 코인 단위로 반올림했다면 0이 됐을 값이다.
+    expect((await harness.repos.getJackpot()).pool).toBe(JACKPOT_SEED_COINS + 1)
+  })
+
+  it('같은 총 베팅이면 잘게 나눠 걸어도 적립 총액이 같다', async () => {
+    const harness = await setup()
+
+    // 500 한 번 vs 10 x 50번. 둘 다 총 베팅 500이므로 적립도 5코인으로 같아야 한다.
+    await fixedSpin(harness.repos, harness.userId, { key: 'split-big-00001', bet: 500, win: 0 })
+    const afterBig = (await harness.repos.getJackpot()).pool
+
+    for (let i = 0; i < 50; i += 1) {
+      await fixedSpin(harness.repos, harness.userId, { key: `split-sm-${String(i).padStart(6, '0')}`, bet: 10, win: 0 })
+    }
+    const afterSmall = (await harness.repos.getJackpot()).pool
+
+    expect(afterBig - JACKPOT_SEED_COINS).toBe(5)
+    expect(afterSmall - afterBig).toBe(5)
   })
 })
 
@@ -334,7 +346,7 @@ describe('잭팟', () => {
     const res = await harness.app.request('/jackpot')
     expect(res.status).toBe(200)
     const body = (await res.json()) as Jackpot
-    expect(body.pool).toBe(JACKPOT_SEED)
+    expect(body.pool).toBe(JACKPOT_SEED_COINS)
     expect(body.lastWin).toBeUndefined()
   })
 
@@ -344,14 +356,14 @@ describe('잭팟', () => {
     const res = await spinRequest(harness, 'key-accrue-00001')
     const body = (await res.json()) as SpinResponse
 
-    expect(body.jackpot).toBe(JACKPOT_SEED + 1)
+    expect(body.jackpot).toBe(JACKPOT_SEED_COINS + 1)
     expect(body.jackpotWin).toBeUndefined()
     // 적립은 하우스 몫이라 유저 지갑에서 더 빠지지 않는다.
     expect(body.wallet.coins).toBe(STARTING_COINS - BET + body.totalWin)
     expect(harness.repos.getLedgerSum(harness.userId)).toBe(body.wallet.coins)
 
     const second = (await (await spinRequest(harness, 'key-accrue-00002')).json()) as SpinResponse
-    expect(second.jackpot).toBe(JACKPOT_SEED + 2)
+    expect(second.jackpot).toBe(JACKPOT_SEED_COINS + 2)
   })
 
   it('당첨되면 풀 전액을 지급하고 시드로 되돌린다', async () => {
@@ -360,15 +372,15 @@ describe('잭팟', () => {
     const body = (await (await spinRequest(harness, 'key-jackpot-0001')).json()) as SpinResponse
 
     // 이 스핀의 적립분까지 포함해서 가져간다.
-    expect(body.jackpotWin).toBe(JACKPOT_SEED + 1)
-    expect(body.jackpot).toBe(JACKPOT_SEED)
-    expect(body.wallet.coins).toBe(STARTING_COINS - BET + body.totalWin + JACKPOT_SEED + 1)
+    expect(body.jackpotWin).toBe(JACKPOT_SEED_COINS + 1)
+    expect(body.jackpot).toBe(JACKPOT_SEED_COINS)
+    expect(body.wallet.coins).toBe(STARTING_COINS - BET + body.totalWin + JACKPOT_SEED_COINS + 1)
     expect(harness.repos.getLedgerSum(harness.userId)).toBe(body.wallet.coins)
     expect(harness.repos.countLedgerEntries(harness.userId, 'jackpot_win')).toBe(1)
 
     const jackpot = (await (await harness.app.request('/jackpot')).json()) as Jackpot
-    expect(jackpot.pool).toBe(JACKPOT_SEED)
-    expect(jackpot.lastWin?.amount).toBe(JACKPOT_SEED + 1)
+    expect(jackpot.pool).toBe(JACKPOT_SEED_COINS)
+    expect(jackpot.lastWin?.amount).toBe(JACKPOT_SEED_COINS + 1)
     expect(jackpot.lastWin?.userId).toBe(harness.userId)
     expect(jackpot.lastWin?.at).toBe(new Date(START_AT).toISOString())
   })
@@ -507,7 +519,7 @@ describe('레벨', () => {
     expect(me.user.level).toBe(2)
     expect(me.user.xp).toBe(6100)
     expect(me.levelInfo).toEqual({ level: 2, xp: 6100, nextLevelXp: 11599, maxBet: 100 })
-    expect(me.jackpot).toBe(JACKPOT_SEED + 61)
+    expect(me.jackpot).toBe(JACKPOT_SEED_COINS + 61)
   })
 })
 
@@ -519,7 +531,7 @@ describe('확장된 스핀 응답', () => {
     const parsed = SpinResponseSchema.safeParse(await res.json())
 
     expect(parsed.success).toBe(true)
-    expect(parsed.data?.jackpot).toBe(JACKPOT_SEED + 1)
+    expect(parsed.data?.jackpot).toBe(JACKPOT_SEED_COINS + 1)
     expect(parsed.data?.missions?.map((mission) => mission.id)).toEqual(['spin_50', 'win_3', 'classic_20'])
   })
 
@@ -530,14 +542,14 @@ describe('확장된 스핀 응답', () => {
     const second = (await (await spinRequest(harness, 'key-replay-00001')).json()) as SpinResponse
 
     expect(second).toEqual(first)
-    expect(((await (await harness.app.request('/jackpot')).json()) as Jackpot).pool).toBe(JACKPOT_SEED + 1)
+    expect(((await (await harness.app.request('/jackpot')).json()) as Jackpot).pool).toBe(JACKPOT_SEED_COINS + 1)
   })
 
   it('잭팟이 터진 스핀을 재전송해도 같은 jackpotWin을 돌려준다', async () => {
     const harness = await setup({ spinRng: alwaysJackpotRng })
 
     const first = (await (await spinRequest(harness, 'key-replayjp-0001')).json()) as SpinResponse
-    expect(first.jackpotWin).toBe(JACKPOT_SEED + 1)
+    expect(first.jackpotWin).toBe(JACKPOT_SEED_COINS + 1)
 
     const second = (await (await spinRequest(harness, 'key-replayjp-0001')).json()) as SpinResponse
 
@@ -546,7 +558,7 @@ describe('확장된 스핀 응답', () => {
     expect(second.wallet).toEqual(first.wallet)
     expect(harness.repos.countLedgerEntries(harness.userId, 'jackpot_win')).toBe(1)
     // 재전송 시점의 풀은 당첨으로 리셋된 값이다.
-    expect(second.jackpot).toBe(JACKPOT_SEED)
+    expect(second.jackpot).toBe(JACKPOT_SEED_COINS)
   })
 
   it('레벨업을 만든 스핀을 재전송해도 같은 levelUp을 돌려준다', async () => {

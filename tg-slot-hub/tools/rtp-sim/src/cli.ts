@@ -1,6 +1,27 @@
+import { dirname, join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { computeExactRtp, createSeededRng, MAX_ENUMERATION_COMBOS, parseGameMath, simulate } from '@tgslot/slot-engine'
+import { parseGameManifest } from '@tgslot/game-sdk'
 import { readJson, resolveMathPath } from './paths.js'
 import { formatExact, formatHeader, formatSimulation } from './report.js'
+import type { JackpotInfo } from './report.js'
+
+/**
+ * math.json 옆 manifest.json에서 허브 잭팟 기여분을 읽는다.
+ * manifest가 없거나 깨져도 시뮬레이션 자체는 계속한다. 수학 모델과 무관한 표시용 값이다.
+ */
+function readJackpotInfo(mathPath: string): JackpotInfo | undefined {
+  const manifestPath = join(dirname(mathPath), 'manifest.json')
+  if (!existsSync(manifestPath)) return undefined
+  try {
+    const manifest = parseGameManifest(readJson(manifestPath))
+    if (manifest.jackpotContribution === undefined) return undefined
+    return { contribution: manifest.jackpotContribution, totalTarget: manifest.rtpTotalTarget }
+  } catch (error) {
+    console.warn(`[rtp-sim] manifest.json을 읽지 못했다: ${error instanceof Error ? error.message : String(error)}`)
+    return undefined
+  }
+}
 
 const DEFAULT_BET = 100
 const DEFAULT_SPINS = 1_000_000
@@ -84,7 +105,7 @@ function main(): void {
 
   const combos = math.strips.reduce((acc, strip) => acc * strip.length, 1)
   if (combos <= MAX_ENUMERATION_COMBOS) {
-    console.log(`\n${formatExact(computeExactRtp(math, options.bet), math.rtpTarget)}`)
+    console.log(`\n${formatExact(computeExactRtp(math, options.bet), math.rtpTarget, readJackpotInfo(mathPath))}`)
   } else {
     console.log(`\n전수 조사 생략: 조합 수 ${combos.toLocaleString('en-US')} > 상한 ${MAX_ENUMERATION_COMBOS.toLocaleString('en-US')}`)
   }

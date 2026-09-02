@@ -117,11 +117,16 @@ export const bonusClaims = pgTable(
   (table) => [index('bonus_claims_user_kind_claimed_at_idx').on(table.userId, table.kind, table.claimedAt)]
 )
 
-/** 허브 전체가 공유하는 잭팟 풀. 항상 `id = 1` 한 행만 쓴다. */
+/**
+ * 허브 전체가 공유하는 잭팟 풀. 항상 `id = 1` 한 행만 쓴다.
+ * `pool`과 `seed`는 **1/100 코인 단위 정수**다 (2,500,000 = 25,000 코인).
+ * 코인 단위로 들면 작은 베팅의 1% 적립이 반올림에 먹혀 베팅별 적립률이 달라진다.
+ */
 export const jackpotPool = pgTable('jackpot_pool', {
   id: integer('id').primaryKey(),
+  /** 1/100 코인 단위 */
   pool: bigint('pool', { mode: 'number' }).notNull(),
-  /** 당첨 후 풀이 되돌아가는 시드 금액 */
+  /** 당첨 후 풀이 되돌아가는 시드. 1/100 코인 단위 */
   seed: bigint('seed', { mode: 'number' }).notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
@@ -133,6 +138,7 @@ export const jackpotHits = pgTable('jackpot_hits', {
     .notNull()
     .references(() => users.id),
   roundId: uuid('round_id'),
+  /** 실제 지급액. 지갑에 들어간 값이므로 **코인 단위**다. */
   amount: bigint('amount', { mode: 'number' }).notNull(),
   wonAt: timestamp('won_at', { withTimezone: true }).notNull().defaultNow(),
 })
