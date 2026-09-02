@@ -41,7 +41,7 @@
       "name": "소환 1회",
       "nameEn": "Summon Once",
       "description": "캐릭터를 1회 소환하세요",
-      "type": "summon",
+      "type": "summon_count",
       "target": 1,
       "rewards": {
         "gems": 30,
@@ -57,7 +57,7 @@
       "target": 4,
       "rewards": {
         "gems": 50,
-        "summon_ticket": 1
+        "summonTickets": 1
       }
     }
   ],

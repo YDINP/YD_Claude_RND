@@ -7,9 +7,18 @@ import { COLORS, GAME_WIDTH, s, sf } from '../config/gameConfig.js';
  */
 export class Toast {
   static activeToasts = [];
-  static toastHeight = s(40);
-  static toastSpacing = s(10);
-  static startY = s(70); // Below top bar
+
+  // 아래 세 값은 static getter다.
+  // static 필드로 두면 클래스 정의 시점(= 모듈 초기화)에 s()가 실행되는데,
+  // s()는 scaleConfig의 SCALE_FACTOR(const)를 읽는다.
+  // gameConfig.js가 씬들을 먼저 import하고 scaleConfig를 나중에 가져오므로,
+  // 씬 그래프에 속한 모듈이 모듈 초기화 시점에 s()를 부르면 TDZ로 부팅이 실패한다.
+  /** @returns {number} 토스트 높이 */
+  static get toastHeight() { return s(40); }
+  /** @returns {number} 토스트 간격 */
+  static get toastSpacing() { return s(10); }
+  /** @returns {number} 첫 토스트 Y 좌표 (상단바 아래) */
+  static get startY() { return s(70); }
 
   /**
    * Show a toast notification

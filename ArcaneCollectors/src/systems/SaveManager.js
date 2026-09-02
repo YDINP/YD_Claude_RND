@@ -54,7 +54,8 @@ export class SaveManager {
       },
       gacha: {
         pityCounter: 0,
-        totalPulls: 0
+        totalPulls: 0,
+        freeTenPullUsed: false // T-S2/BLK-05: 첫 무료 10연 사용 여부
       },
       pity: {},
       quests: {
@@ -132,6 +133,9 @@ export class SaveManager {
       // COLL-01/COLL-02: 컬렉션 필드 마이그레이션 (구버전 세이브 호환)
       this._migrateCollectionSchema(data);
 
+      // T-S2/BLK-05: 무료 10연 플래그 마이그레이션 (구버전 세이브 호환)
+      this._migrateGachaSchema(data);
+
       return data;
     } catch (error) {
       console.error('SaveManager: 로드 실패', error);
@@ -186,6 +190,21 @@ export class SaveManager {
       if (entry && !Array.isArray(entry.openedRoutes)) entry.openedRoutes = [];
     });
 
+    return data;
+  }
+
+  /**
+   * T-S2/BLK-05: 가챠 관련 필드 기본값 보장 (구버전 세이브 마이그레이션)
+   * @param {Object} data - 저장 데이터 (in-place)
+   * @returns {Object} 동일 객체
+   */
+  static _migrateGachaSchema(data) {
+    if (!data) return data;
+    if (!data.gacha || typeof data.gacha !== 'object') {
+      data.gacha = { pityCounter: 0, totalPulls: 0, freeTenPullUsed: false };
+    } else if (data.gacha.freeTenPullUsed === undefined) {
+      data.gacha.freeTenPullUsed = false;
+    }
     return data;
   }
 
@@ -276,6 +295,8 @@ export class SaveManager {
     newData.version = this.VERSION;
     // COLL-01/COLL-02: 얕은 병합으로 덮인 resources/collections 기본값 재보장
     this._migrateCollectionSchema(newData);
+    // T-S2/BLK-05: 얕은 병합으로 덮인 gacha.freeTenPullUsed 기본값 재보장
+    this._migrateGachaSchema(newData);
     this.save(newData);
     return newData;
   }

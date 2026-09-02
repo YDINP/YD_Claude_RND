@@ -565,10 +565,14 @@ describe('RaidSystem', () => {
     it('visual 폴백: enemies.json에 등록된 보스는 데이터를 반환한다', () => {
       expect(RaidSystem.getBossVisual('raid_yamata_no_orochi')).toMatchObject({ id: 'enemy_yamata' });
       expect(RaidSystem.getBossVisual('raid_izanami')).toMatchObject({ id: 'enemy_izanami' });
+      // T-D1: enemy_nidhogg가 enemies.json에 신규 정의되어 더 이상 미등록이 아님
+      expect(RaidSystem.getBossVisual('raid_nidhogg')).toMatchObject({ id: 'enemy_nidhogg' });
     });
 
     it('visual 폴백: 미등록 보스는 null을 반환한다 (안전 폴백)', () => {
-      expect(RaidSystem.getBossVisual('raid_nidhogg')).toBeNull();
+      // raid_typhon: raids.json에는 등록되어 있으나 enemyId(enemy_typhon)가 enemies.json에 없는 경우
+      expect(RaidSystem.getBossVisual('raid_typhon')).toBeNull();
+      // raid_ghost: raids.json에 raid 자체가 등록되어 있지 않은 경우
       expect(RaidSystem.getBossVisual('raid_ghost')).toBeNull();
     });
   });

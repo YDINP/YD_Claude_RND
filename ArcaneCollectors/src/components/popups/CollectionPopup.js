@@ -15,19 +15,30 @@ import cultsData from '../../data/cults.json';
  * 설계 근거: docs/COLLECTION_DESIGN_NOTE.md §1(S-1) / §2(C-4)
  */
 
-/** 티어별 표시 색상 */
+/**
+ * 티어별 표시 색상.
+ * gameConfig.js는 최상단에서 씬들을 import하므로 COLORS 선언보다 씬 그래프가 먼저 평가된다.
+ * 따라서 이 파일의 모듈 스코프에서는 COLORS를 참조하지 않고 리터럴만 둔다(TDZ 방지).
+ */
 const TIER_COLORS = {
   0: 0x475569,
   1: 0x6366F1,
   2: 0xF59E0B,
 };
 
-/** 등급별 칩 색상 */
-const RARITY_COLORS = {
-  SSR: COLORS.raritySSR,
-  SR: COLORS.raritySR,
-  R: COLORS.rarityR,
-};
+/**
+ * 등급별 칩 색상 — 호출 시점에 COLORS를 읽는다(모듈 초기화 시점 평가 금지).
+ * @param {string} rarity 'SSR' | 'SR' | 'R'
+ * @returns {number} 색상값
+ */
+function getRarityColor(rarity) {
+  const table = {
+    SSR: COLORS.raritySSR,
+    SR: COLORS.raritySR,
+    R: COLORS.rarityR,
+  };
+  return table[rarity] || COLORS.primary;
+}
 
 /** 행 높이 (루트 수와 무관하게 고정) */
 const ROW_HEIGHT = 118;
@@ -203,9 +214,7 @@ export class CollectionPopup extends PopupBase {
 
     progress.routes.forEach((route, index) => {
       const cx = x + index * (chipW + gap);
-      const color = route.owned
-        ? (RARITY_COLORS[route.resultRarity] || COLORS.primary)
-        : 0x334155;
+      const color = route.owned ? getRarityColor(route.resultRarity) : 0x334155;
 
       const chip = this.scene.add.graphics();
       chip.fillStyle(color, route.owned ? 0.25 : 0.35);

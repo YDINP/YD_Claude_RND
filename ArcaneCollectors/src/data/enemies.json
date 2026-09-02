@@ -1761,6 +1761,559 @@
       ],
       "expReward": 200,
       "goldReward": 300
+    },
+    {
+      "id": "enemy_einherjar_warrior",
+      "name": "아인헤리아르 전사",
+      "nameEn": "Einherjar Warrior",
+      "mood": "brave",
+      "type": "normal",
+      "stats": {
+        "hp": 300,
+        "atk": 48,
+        "def": 18,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 58,
+        "atk": 12,
+        "def": 4,
+        "spd": 3
+      },
+      "skills": [
+        "skill_power_strike",
+        "skill_iron_will"
+      ],
+      "expReward": 18,
+      "goldReward": 28
+    },
+    {
+      "id": "enemy_tengu_warrior",
+      "name": "텐구 무사",
+      "nameEn": "Tengu Warrior",
+      "mood": "cunning",
+      "type": "normal",
+      "stats": {
+        "hp": 320,
+        "atk": 52,
+        "def": 16,
+        "spd": 115
+      },
+      "growthStats": {
+        "hp": 60,
+        "atk": 12,
+        "def": 4,
+        "spd": 5
+      },
+      "skills": [
+        "skill_wind_blade",
+        "skill_swift_strike"
+      ],
+      "expReward": 20,
+      "goldReward": 30
+    },
+    {
+      "id": "enemy_bifrost_guardian",
+      "name": "비프로스트 수호병",
+      "nameEn": "Bifrost Guardian",
+      "mood": "noble",
+      "type": "elite",
+      "stats": {
+        "hp": 650,
+        "atk": 58,
+        "def": 30,
+        "spd": 75
+      },
+      "growthStats": {
+        "hp": 110,
+        "atk": 14,
+        "def": 7,
+        "spd": 3
+      },
+      "skills": [
+        "skill_prism_barrier",
+        "skill_guardian_strike"
+      ],
+      "expReward": 30,
+      "goldReward": 45
+    },
+    {
+      "id": "enemy_dimension_beast",
+      "name": "차원의 짐승",
+      "nameEn": "Dimension Beast",
+      "mood": "wild",
+      "type": "elite",
+      "stats": {
+        "hp": 500,
+        "atk": 50,
+        "def": 25,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 85,
+        "atk": 12,
+        "def": 6,
+        "spd": 3
+      },
+      "skills": [
+        "skill_void_claw",
+        "skill_dimension_shift"
+      ],
+      "expReward": 26,
+      "goldReward": 38
+    },
+    {
+      "id": "enemy_dimension_horror",
+      "name": "차원의 공포",
+      "nameEn": "Dimension Horror",
+      "mood": "mystic",
+      "type": "elite",
+      "stats": {
+        "hp": 550,
+        "atk": 55,
+        "def": 22,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 95,
+        "atk": 13,
+        "def": 5,
+        "spd": 4
+      },
+      "skills": [
+        "skill_reality_tear",
+        "skill_horror_wail"
+      ],
+      "expReward": 28,
+      "goldReward": 42
+    },
+    {
+      "id": "enemy_rift_guardian",
+      "name": "균열의 수호자",
+      "nameEn": "Rift Guardian",
+      "mood": "stoic",
+      "type": "boss",
+      "stats": {
+        "hp": 3200,
+        "atk": 95,
+        "def": 55,
+        "spd": 65
+      },
+      "growthStats": {
+        "hp": 410,
+        "atk": 22,
+        "def": 13,
+        "spd": 3
+      },
+      "skills": [
+        "skill_rift_slam",
+        "skill_void_barrier",
+        "skill_dimensional_collapse"
+      ],
+      "expReward": 140,
+      "goldReward": 210
+    },
+    {
+      "id": "enemy_yomi_soldier",
+      "name": "요미 병사",
+      "nameEn": "Yomi Soldier",
+      "mood": "stoic",
+      "type": "normal",
+      "stats": {
+        "hp": 380,
+        "atk": 48,
+        "def": 25,
+        "spd": 60
+      },
+      "growthStats": {
+        "hp": 70,
+        "atk": 11,
+        "def": 6,
+        "spd": 2
+      },
+      "skills": [
+        "skill_spear_thrust",
+        "skill_death_ward"
+      ],
+      "expReward": 22,
+      "goldReward": 32
+    },
+    {
+      "id": "enemy_river_guardian",
+      "name": "강의 수호자",
+      "nameEn": "River Guardian",
+      "mood": "calm",
+      "type": "elite",
+      "stats": {
+        "hp": 600,
+        "atk": 45,
+        "def": 35,
+        "spd": 50
+      },
+      "growthStats": {
+        "hp": 100,
+        "atk": 10,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        "skill_river_surge",
+        "skill_shell_defense"
+      ],
+      "expReward": 30,
+      "goldReward": 44
+    },
+    {
+      "id": "enemy_soul_eater",
+      "name": "영혼 포식자",
+      "nameEn": "Soul Eater",
+      "mood": "cunning",
+      "type": "elite",
+      "stats": {
+        "hp": 550,
+        "atk": 62,
+        "def": 20,
+        "spd": 90
+      },
+      "growthStats": {
+        "hp": 95,
+        "atk": 14,
+        "def": 5,
+        "spd": 4
+      },
+      "skills": [
+        "skill_soul_drain",
+        "skill_spectral_touch"
+      ],
+      "expReward": 32,
+      "goldReward": 46
+    },
+    {
+      "id": "enemy_cursed_warrior",
+      "name": "저주받은 전사",
+      "nameEn": "Cursed Warrior",
+      "mood": "fierce",
+      "type": "elite",
+      "stats": {
+        "hp": 650,
+        "atk": 60,
+        "def": 32,
+        "spd": 70
+      },
+      "growthStats": {
+        "hp": 110,
+        "atk": 13,
+        "def": 7,
+        "spd": 3
+      },
+      "skills": [
+        "skill_cursed_blade",
+        "skill_dark_charge"
+      ],
+      "expReward": 34,
+      "goldReward": 48
+    },
+    {
+      "id": "enemy_cursed_general",
+      "name": "저주받은 장군",
+      "nameEn": "Cursed General",
+      "mood": "brave",
+      "type": "elite",
+      "stats": {
+        "hp": 850,
+        "atk": 70,
+        "def": 38,
+        "spd": 68
+      },
+      "growthStats": {
+        "hp": 140,
+        "atk": 16,
+        "def": 8,
+        "spd": 3
+      },
+      "skills": [
+        "skill_devastating_blow",
+        "skill_war_cry"
+      ],
+      "expReward": 42,
+      "goldReward": 58
+    },
+    {
+      "id": "enemy_palace_guard",
+      "name": "궁전 수호병",
+      "nameEn": "Palace Guard",
+      "mood": "devoted",
+      "type": "elite",
+      "stats": {
+        "hp": 750,
+        "atk": 58,
+        "def": 45,
+        "spd": 55
+      },
+      "growthStats": {
+        "hp": 125,
+        "atk": 12,
+        "def": 9,
+        "spd": 2
+      },
+      "skills": [
+        "skill_guardian_strike",
+        "skill_death_ward"
+      ],
+      "expReward": 36,
+      "goldReward": 52
+    },
+    {
+      "id": "enemy_olympus_herald",
+      "name": "올림푸스 전령",
+      "nameEn": "Olympus Herald",
+      "mood": "noble",
+      "type": "normal",
+      "stats": {
+        "hp": 340,
+        "atk": 52,
+        "def": 20,
+        "spd": 95
+      },
+      "growthStats": {
+        "hp": 62,
+        "atk": 12,
+        "def": 5,
+        "spd": 3
+      },
+      "skills": [
+        "skill_holy_light",
+        "skill_swift_strike"
+      ],
+      "expReward": 24,
+      "goldReward": 34
+    },
+    {
+      "id": "enemy_titan_minor",
+      "name": "하급 타이탄",
+      "nameEn": "Minor Titan",
+      "mood": "fierce",
+      "type": "elite",
+      "stats": {
+        "hp": 900,
+        "atk": 75,
+        "def": 45,
+        "spd": 50
+      },
+      "growthStats": {
+        "hp": 150,
+        "atk": 17,
+        "def": 9,
+        "spd": 2
+      },
+      "skills": [
+        "skill_giant_slam",
+        "skill_ground_slam"
+      ],
+      "expReward": 45,
+      "goldReward": 62
+    },
+    {
+      "id": "enemy_garden_guardian",
+      "name": "정원의 수호자",
+      "nameEn": "Garden Guardian",
+      "mood": "noble",
+      "type": "elite",
+      "stats": {
+        "hp": 800,
+        "atk": 65,
+        "def": 50,
+        "spd": 60
+      },
+      "growthStats": {
+        "hp": 135,
+        "atk": 15,
+        "def": 10,
+        "spd": 2
+      },
+      "skills": [
+        "skill_nature_shield",
+        "skill_holy_light"
+      ],
+      "expReward": 42,
+      "goldReward": 58
+    },
+    {
+      "id": "enemy_zeus",
+      "name": "제우스",
+      "nameEn": "Zeus",
+      "mood": "brave",
+      "type": "boss",
+      "stats": {
+        "hp": 4200,
+        "atk": 110,
+        "def": 70,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 540,
+        "atk": 25,
+        "def": 16,
+        "spd": 3
+      },
+      "skills": [
+        "skill_thunder_judgment",
+        "skill_meteor",
+        "skill_divine_judgment"
+      ],
+      "expReward": 280,
+      "goldReward": 400
+    },
+    {
+      "id": "enemy_fire_giant",
+      "name": "불의 거인",
+      "nameEn": "Fire Giant",
+      "mood": "fierce",
+      "type": "elite",
+      "stats": {
+        "hp": 750,
+        "atk": 80,
+        "def": 40,
+        "spd": 55
+      },
+      "growthStats": {
+        "hp": 125,
+        "atk": 18,
+        "def": 8,
+        "spd": 2
+      },
+      "skills": [
+        "skill_fire_dance",
+        "skill_giant_slam"
+      ],
+      "expReward": 40,
+      "goldReward": 58
+    },
+    {
+      "id": "enemy_jotun",
+      "name": "요툰",
+      "nameEn": "Jotun",
+      "mood": "brave",
+      "type": "elite",
+      "stats": {
+        "hp": 850,
+        "atk": 78,
+        "def": 48,
+        "spd": 50
+      },
+      "growthStats": {
+        "hp": 140,
+        "atk": 17,
+        "def": 9,
+        "spd": 2
+      },
+      "skills": [
+        "skill_frost_nova",
+        "skill_ice_smash"
+      ],
+      "expReward": 42,
+      "goldReward": 60
+    },
+    {
+      "id": "enemy_surtr",
+      "name": "수르트",
+      "nameEn": "Surtr",
+      "mood": "fierce",
+      "type": "elite",
+      "stats": {
+        "hp": 1100,
+        "atk": 95,
+        "def": 50,
+        "spd": 60
+      },
+      "growthStats": {
+        "hp": 180,
+        "atk": 20,
+        "def": 10,
+        "spd": 3
+      },
+      "skills": [
+        "skill_hellfire_breath",
+        "skill_flame_spirit"
+      ],
+      "expReward": 55,
+      "goldReward": 78
+    },
+    {
+      "id": "enemy_hel_servant",
+      "name": "헬의 종자",
+      "nameEn": "Servant of Hel",
+      "mood": "devoted",
+      "type": "elite",
+      "stats": {
+        "hp": 700,
+        "atk": 68,
+        "def": 35,
+        "spd": 75
+      },
+      "growthStats": {
+        "hp": 115,
+        "atk": 15,
+        "def": 7,
+        "spd": 3
+      },
+      "skills": [
+        "skill_death_ward",
+        "skill_wail_of_death"
+      ],
+      "expReward": 38,
+      "goldReward": 54
+    },
+    {
+      "id": "enemy_nidhogg",
+      "name": "니드호그",
+      "nameEn": "Nidhogg",
+      "mood": "wild",
+      "type": "elite",
+      "stats": {
+        "hp": 1300,
+        "atk": 100,
+        "def": 55,
+        "spd": 65
+      },
+      "growthStats": {
+        "hp": 210,
+        "atk": 22,
+        "def": 11,
+        "spd": 3
+      },
+      "skills": [
+        "skill_root_bind",
+        "skill_venom_deluge"
+      ],
+      "expReward": 62,
+      "goldReward": 88
+    },
+    {
+      "id": "enemy_odin_allfather",
+      "name": "오딘",
+      "nameEn": "Odin",
+      "mood": "noble",
+      "type": "boss",
+      "stats": {
+        "hp": 9500,
+        "atk": 150,
+        "def": 80,
+        "spd": 85
+      },
+      "growthStats": {
+        "hp": 1200,
+        "atk": 32,
+        "def": 18,
+        "spd": 3
+      },
+      "skills": [
+        "skill_gungnir_strike",
+        "skill_ravens_judgment",
+        "skill_allfather_wrath"
+      ],
+      "expReward": 480,
+      "goldReward": 700
     }
   ]
 }

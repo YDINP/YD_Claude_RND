@@ -19,6 +19,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "node tests/e2e/browser-test.mjs",
     "test:e2e:headed": "node tests/e2e/browser-test.mjs --headed",
+    "test:e2e:smoke": "node tests/e2e/boot-smoke.mjs",
     "validate:data": "node scripts/validate-data.js",
     "prebuild": "npm run validate:data"
   },

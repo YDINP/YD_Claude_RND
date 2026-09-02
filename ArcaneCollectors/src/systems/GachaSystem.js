@@ -10,12 +10,12 @@ import { getAllAscendedHeroes, getAllBaseHeroes } from '../data/index.js';
 import energySystem from './EnergySystem.js';
 
 export class GachaSystem {
-  // 등급별 기본 확률 (PRD v5.2 명세)
+  // 등급별 기본 확률 (T-S2: N등급 캐릭터 풀 공백으로 인한 크래시(GA-1/BLK-02) 대응 — N 확률을 R로 흡수)
   static RATES = {
     SSR: 0.015, // 1.5%
     SR: 0.085, // 8.5%
-    R: 0.30, // 30%
-    N: 0.60 // 60%
+    R: 0.90, // 90% (기존 N 60%를 흡수)
+    N: 0 // 0% (N등급 캐릭터 데이터 없음 — 확률 배정 안 함)
   };
 
   // 천장 시스템 설정 (v5)
@@ -206,36 +206,40 @@ export class GachaSystem {
     }
 
 
-    // PRD-3: 에너지 소비 (skipEnergyCheck 옵션으로 기존 테스트 보호)
+    // T-S2/BLK-05: 첫 무료 10연은 재화/에너지 모두 면제
+    const gachaInfo = SaveManager.getGachaInfo();
+    const isFreeTenPull = count === 10 && !gachaInfo.freeTenPullUsed;
+
+    // PRD-3: 에너지 소비 (skipEnergyCheck 옵션으로 기존 테스트 보호, 무료 10연은 면제)
     const energyCost = (count || 1) * this.ENERGY_COST_PER_PULL;
-    if (!options.skipEnergyCheck) {
+    if (!isFreeTenPull && !options.skipEnergyCheck) {
       const energyResult = energySystem.consume(energyCost, 'gacha');
       if (!energyResult.success) {
         return { success: false, error: '에너지가 부족합니다.', results: [], energyRequired: energyCost };
       }
     }
 
-    // 비용 확인 및 차감
-    if (!this.canPull(count, paymentType)) {
-      return {
-        success: false,
-        error: paymentType === 'gems' ? '젬이 부족합니다' : '소환 티켓이 부족합니다',
-        results: []
-      };
-    }
+    // 비용 확인 및 차감 (무료 10연은 면제)
+    if (!isFreeTenPull) {
+      if (!this.canPull(count, paymentType)) {
+        return {
+          success: false,
+          error: paymentType === 'gems' ? '젬이 부족합니다' : '소환 티켓이 부족합니다',
+          results: []
+        };
+      }
 
-    // 비용 차감
-    if (paymentType === 'gems') {
-      const cost = count === 10 ? this.MULTI_COST : this.SINGLE_COST * count;
-      SaveManager.spendGems(cost);
-    } else {
-      const ticketCost = count === 10 ? this.TICKET_MULTI : this.TICKET_SINGLE * count;
-      SaveManager.spendSummonTickets(ticketCost);
+      if (paymentType === 'gems') {
+        const cost = count === 10 ? this.MULTI_COST : this.SINGLE_COST * count;
+        SaveManager.spendGems(cost);
+      } else {
+        const ticketCost = count === 10 ? this.TICKET_MULTI : this.TICKET_SINGLE * count;
+        SaveManager.spendSummonTickets(ticketCost);
+      }
     }
 
     const results = [];
     let gotSSR = false;
-    const gachaInfo = SaveManager.getGachaInfo();
     let currentPity = gachaInfo.pityCounter;
 
     for (let i = 0; i < count; i++) {
@@ -289,6 +293,11 @@ export class GachaSystem {
 
     // 가챠 카운터 업데이트 (뽑기 횟수, SSR 획득 여부)
     SaveManager.updateGachaCounter(count, gotSSR);
+
+    // T-S2/BLK-05: 무료 10연 사용 처리 (재사용 방지 플래그)
+    if (isFreeTenPull) {
+      SaveManager.saveGachaInfo({ freeTenPullUsed: true });
+    }
 
     // 이벤트 발생
     results.forEach(result => {
@@ -357,13 +366,33 @@ export class GachaSystem {
    */
   static getRandomCharacterByRarity(rarity) {
     const pool = this.CHARACTER_POOL[rarity];
-    if (!pool || pool.length === 0) {
-      console.warn(`[GachaSystem] ${rarity} 캐릭터 풀이 비어있습니다 (가챠 비활성화 상태)`);
-      return null; // 폴백: 빈 풀일 때 null 반환
+    if (pool && pool.length > 0) {
+      const randomIndex = Math.floor(Math.random() * pool.length);
+      return pool[randomIndex];
     }
 
-    const randomIndex = Math.floor(Math.random() * pool.length);
-    return pool[randomIndex];
+    // GA-1/BLK-02: 풀이 비어있으면 null을 반환하지 않고 인접 등급으로 폴백한다.
+    // 아래 등급 → 위 등급 순으로 탐색해 가장 가까운 비어있지 않은 풀을 사용한다.
+    console.warn(`[GachaSystem] ${rarity} 캐릭터 풀이 비어있습니다. 인접 등급으로 폴백합니다.`);
+    const rarityOrder = ['N', 'R', 'SR', 'SSR'];
+    const currentIndex = rarityOrder.indexOf(rarity);
+
+    for (let i = currentIndex - 1; i >= 0; i--) {
+      const fallbackPool = this.CHARACTER_POOL[rarityOrder[i]];
+      if (fallbackPool && fallbackPool.length > 0) {
+        return fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
+      }
+    }
+    for (let i = currentIndex + 1; i < rarityOrder.length; i++) {
+      const fallbackPool = this.CHARACTER_POOL[rarityOrder[i]];
+      if (fallbackPool && fallbackPool.length > 0) {
+        return fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
+      }
+    }
+
+    // 모든 등급의 풀이 비어있는 극단적 상황에서만 null 반환
+    console.error('[GachaSystem] 모든 등급의 캐릭터 풀이 비어있습니다.');
+    return null;
   }
 
   /**

@@ -4,7 +4,7 @@
  */
 import { SaveManager } from './SaveManager.js';
 import { EventBus, GameEvents } from './EventBus.js';
-import { EQUIPMENT_SLOTS, EQUIPMENT_RARITY } from '../config/gameConfig.js';
+import { EQUIPMENT_SLOTS, EQUIPMENT_RARITY } from '../config/equipmentConfig.js';
 
 export class EquipmentSystem {
   // 장비 슬롯 타입

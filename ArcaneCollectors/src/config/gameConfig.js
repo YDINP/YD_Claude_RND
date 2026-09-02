@@ -156,8 +156,8 @@ export const GAME_CONSTANTS = {
   sweepTicketCost: 1,
   battleSpeedOptions: [1, 2, 3],
   gachaCost: { single: 300, multi: 2700 },
-  // GachaSystem.RATES와 동기화 (SSOT는 GachaSystem)
-  gachaRates: { SSR: 0.015, SR: 0.085, R: 0.30, N: 0.60 },
+  // GachaSystem.RATES와 동기화 (SSOT는 GachaSystem) — T-S2: N풀 공백 대응, N확률을 R로 흡수
+  gachaRates: { SSR: 0.015, SR: 0.085, R: 0.90, N: 0 },
   pitySystem: { softPity: 75, ssrGuarantee: 90, pickupGuarantee: 180 }
 };
 
@@ -289,18 +289,7 @@ export const ROLES = {
 // ============================================
 // Equipment Configuration
 // ============================================
-export const EQUIPMENT_SLOTS = {
-  weapon: { name: '무기', icon: 'weapon' },
-  armor: { name: '방어구', icon: 'armor' },
-  accessory: { name: '악세서리', icon: 'accessory' },
-  relic: { name: '유물', icon: 'relic' }
-};
-
-export const EQUIPMENT_RARITY = {
-  N: { name: 'N', color: 0x9CA3AF, multiplier: 1.0 },
-  R: { name: 'R', color: 0x3B82F6, multiplier: 1.2 },
-  SR: { name: 'SR', color: 0xA855F7, multiplier: 1.5 },
-  SSR: { name: 'SSR', color: 0xF59E0B, multiplier: 2.0 }
-};
+// Re-export from equipmentConfig (Phaser 의존성 전파 방지 — SSOT는 equipmentConfig.js)
+export { EQUIPMENT_SLOTS, EQUIPMENT_RARITY } from './equipmentConfig.js';
 
 export default gameConfig;

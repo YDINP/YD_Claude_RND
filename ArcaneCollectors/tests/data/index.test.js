@@ -478,19 +478,19 @@ describe('getSummonRates', () => {
     expect(total).toBeCloseTo(1.0, 5);
   });
 
-  it('SSR < SR < R < N 순서', () => {
+  it('SSR < SR < R 순서, N은 0 (T-S2: N등급 풀 공백으로 확률을 R이 흡수)', () => {
     const rates = getSummonRates();
     expect(rates.SSR).toBeLessThan(rates.SR);
     expect(rates.SR).toBeLessThan(rates.R);
-    expect(rates.R).toBeLessThan(rates.N);
+    expect(rates.N).toBe(0);
   });
 
-  it('GachaSystem.RATES와 동기화 (SSR 1.5%, SR 8.5%, R 30%, N 60%)', () => {
+  it('GachaSystem.RATES와 동기화 (SSR 1.5%, SR 8.5%, R 90%, N 0%)', () => {
     const rates = getSummonRates();
     expect(rates.SSR).toBe(0.015);
     expect(rates.SR).toBe(0.085);
-    expect(rates.R).toBe(0.30);
-    expect(rates.N).toBe(0.60);
+    expect(rates.R).toBe(0.90);
+    expect(rates.N).toBe(0);
   });
 });
 

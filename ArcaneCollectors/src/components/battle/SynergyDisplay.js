@@ -5,27 +5,38 @@
 import { COLORS, GAME_WIDTH, s, sf } from '../../config/gameConfig.js';
 
 /**
- * 시너지 타입 정의
+ * 시너지 타입 정의 (지연 평가 + 메모이제이션)
+ *
+ * gameConfig.js는 최상단에서 씬들을 import하고 COLORS는 그보다 아래에 선언된다.
+ * 따라서 씬 import 그래프에 속한 모듈이 모듈 스코프에서 COLORS를 읽으면
+ * "Cannot access 'COLORS' before initialization"으로 앱 부팅이 통째로 실패한다.
+ * COLORS 참조는 반드시 첫 호출 시점으로 미룬다.
+ * @returns {Object} { class, mood }
  */
-const SYNERGY_TYPES = {
-  class: {
-    warrior: { name: '전사', color: COLORS.danger },
-    mage: { name: '마법사', color: COLORS.primary },
-    archer: { name: '궁수', color: COLORS.success },
-    healer: { name: '힐러', color: COLORS.secondary }
-  },
-  mood: {
-    brave: { name: '열혈', color: 0xE74C3C },
-    fierce: { name: '격렬', color: 0xFF5722 },
-    wild: { name: '광폭', color: 0x27AE60 },
-    calm: { name: '고요', color: 0x3498DB },
-    stoic: { name: '의연', color: 0x607D8B },
-    devoted: { name: '헌신', color: 0xE91E63 },
-    cunning: { name: '냉철', color: 0x9B59B6 },
-    noble: { name: '고결', color: 0xFFD700 },
-    mystic: { name: '신비', color: 0xF39C12 }
-  }
-};
+let _synergyTypes = null;
+function getSynergyTypes() {
+  if (_synergyTypes) return _synergyTypes;
+  _synergyTypes = {
+    class: {
+      warrior: { name: '전사', color: COLORS.danger },
+      mage: { name: '마법사', color: COLORS.primary },
+      archer: { name: '궁수', color: COLORS.success },
+      healer: { name: '힐러', color: COLORS.secondary }
+    },
+    mood: {
+      brave: { name: '열혈', color: 0xE74C3C },
+      fierce: { name: '격렬', color: 0xFF5722 },
+      wild: { name: '광폭', color: 0x27AE60 },
+      calm: { name: '고요', color: 0x3498DB },
+      stoic: { name: '의연', color: 0x607D8B },
+      devoted: { name: '헌신', color: 0xE91E63 },
+      cunning: { name: '냉철', color: 0x9B59B6 },
+      noble: { name: '고결', color: 0xFFD700 },
+      mystic: { name: '신비', color: 0xF39C12 }
+    }
+  };
+  return _synergyTypes;
+}
 
 export class SynergyDisplay {
   /**
@@ -72,7 +83,7 @@ export class SynergyDisplay {
     // 클래스 시너지 계산
     Object.entries(classCounts).forEach(([cls, count]) => {
       if (count >= 2) {
-        const synergyInfo = SYNERGY_TYPES.class[cls] || { name: cls, color: COLORS.primary };
+        const synergyInfo = getSynergyTypes().class[cls] || { name: cls, color: COLORS.primary };
         let buff = {};
 
         if (count >= 4) {
@@ -116,7 +127,7 @@ export class SynergyDisplay {
     // 분위기 시너지 계산
     Object.entries(moodCounts).forEach(([mood, count]) => {
       if (count >= 2) {
-        const synergyInfo = SYNERGY_TYPES.mood[mood] || { name: mood, color: COLORS.primary };
+        const synergyInfo = getSynergyTypes().mood[mood] || { name: mood, color: COLORS.primary };
         let buff = {};
 
         if (count >= 3) {

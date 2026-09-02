@@ -8,7 +8,8 @@
  *       git 사용 금지 환경이므로 커밋 해시 대신 파일+라인으로 고정):
  *
  *   [G] src/systems/GachaSystem.js
- *      - RATES        : L14-L19   { SSR 0.015, SR 0.085, R 0.30, N 0.60 }
+ *      - RATES        : L14-L19   { SSR 0.015, SR 0.085, R 0.90, N 0 } (T-S2/GA-1: N풀 공백 대응,
+ *          2026-09-02 N 60%를 R로 흡수 조정 — 상세: docs/story/SYSTEM_ONBOARDING_ECONOMY.md GA-1)
  *      - PITY_CONFIG  : L22-L27   { softPity 75, hardPity 90, softPityBonus 0.06, pickupPity 180 }
  *      - PITY_THRESHOLD=90(L30), SOFT_PITY_START=75(L31)
  *      - SINGLE_COST 300 / MULTI_COST 2700 / TICKET (L34-L37)
@@ -41,7 +42,7 @@
  */
 
 // ---------- SSOT 상수 (위 주석 출처 그대로) ----------
-const RATES = { SSR: 0.015, SR: 0.085, R: 0.3, N: 0.6 }; // [G] L14-19
+const RATES = { SSR: 0.015, SR: 0.085, R: 0.90, N: 0 }; // [G] L14-19 (T-S2: N풀 공백 대응, N을 R로 흡수)
 const PITY_CONFIG = { softPity: 75, hardPity: 90, softPityBonus: 0.06, pickupPity: 180 }; // [G] L22-27
 const PITY_THRESHOLD = 90; // [G] L30
 const SOFT_PITY_START = 75; // [G] L31
@@ -184,7 +185,10 @@ function simulateAccount(rng, totalPulls, mode) {
     if (mode === 'multi' && batch.length === 10) {
       const hasSrPlus = batch.some((r) => r === 'SR' || r === 'SSR');
       if (!hasSrPlus) {
-        counts.N--; // N 하나가 SR로 대체됨
+        // T-S2: RATES 변경(R 90%/N 0%)으로 교체 대상이 더 이상 N이라는 보장이 없으므로
+        // 실제 마지막 결과의 등급(batch[9])에서 차감한다 (기존엔 N 하드코딩 차감 → RATES 변경 후 음수 버그 발생)
+        const replacedRarity = batch[9];
+        counts[replacedRarity]--;
         counts.SR++;
       }
     }

@@ -12,7 +12,8 @@ vi.mock('../../src/systems/SaveManager.js', () => ({
       pityCounter: 0,
       totalPulls: 0,
       totalSSR: 0,
-      banners: {}
+      banners: {},
+      freeTenPullUsed: true // T-S2: 기본값은 '이미 사용함' — 기존 유료 소환 테스트 보호
     })),
     getResources: vi.fn(() => ({
       gems: 10000,
@@ -92,7 +93,8 @@ describe('GachaSystem', () => {
       pityCounter: 0,
       totalPulls: 0,
       totalSSR: 0,
-      banners: {}
+      banners: {},
+      freeTenPullUsed: true // T-S2: 기본값은 '이미 사용함' — 기존 유료 소환 테스트 보호
     });
     SaveManager.getResources.mockReturnValue({
       gems: 10000,
@@ -223,8 +225,9 @@ describe('GachaSystem', () => {
         rarities[rarity]++;
       }
 
-      // N should be most common, SSR should be rarest
-      expect(rarities.N).toBeGreaterThan(rarities.SSR);
+      // T-S2: N등급 풀 공백으로 확률을 R이 흡수 — R이 가장 흔하고, SSR이 가장 희귀함
+      expect(rarities.R).toBeGreaterThan(rarities.SSR);
+      expect(rarities.N).toBe(0);
     });
 
     it('returns valid character IDs for each rarity', () => {
@@ -312,6 +315,117 @@ describe('GachaSystem', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('에너지');
+    });
+  });
+
+  // T-S2/GA-1: N등급 캐릭터 풀 공백(BLK-02) 대응
+  describe('N등급 풀 공백 대응 (T-S2/GA-1)', () => {
+    it('RATES 확률 합이 1.0', () => {
+      const sum = GachaSystem.RATES.SSR + GachaSystem.RATES.SR + GachaSystem.RATES.R + GachaSystem.RATES.N;
+      expect(sum).toBeCloseTo(1.0, 5);
+    });
+
+    it('N등급 확률은 0이며 R등급이 60%p를 흡수한다', () => {
+      expect(GachaSystem.RATES.N).toBe(0);
+      expect(GachaSystem.RATES.R).toBe(0.90);
+    });
+
+    it('getRandomCharacterByRarity: N풀이 비어있으면 인접 등급(R)으로 폴백하고 null을 반환하지 않음', () => {
+      GachaSystem.CHARACTER_POOL.N = [];
+
+      const charId = GachaSystem.getRandomCharacterByRarity('N');
+
+      expect(charId).not.toBeNull();
+      expect(typeof charId).toBe('string');
+      expect(GachaSystem.CHARACTER_POOL.R).toContain(charId);
+    });
+
+    it('getRandomCharacterByRarity: 중간 등급(SR) 풀이 비어있어도 아래 등급(R)으로 폴백함', () => {
+      GachaSystem.CHARACTER_POOL.SR = [];
+
+      const charId = GachaSystem.getRandomCharacterByRarity('SR');
+
+      expect(charId).not.toBeNull();
+      expect(GachaSystem.CHARACTER_POOL.R).toContain(charId);
+    });
+
+    it('getRandomCharacterByRarity: 모든 풀이 비어있으면 null을 반환함 (극단 케이스)', () => {
+      GachaSystem.CHARACTER_POOL = { SSR: [], SR: [], R: [], N: [] };
+
+      const charId = GachaSystem.getRandomCharacterByRarity('N');
+
+      expect(charId).toBeNull();
+    });
+
+    it('10연 결과에 null 캐릭터가 없음 (N풀 공백 상태에서도)', () => {
+      GachaSystem.CHARACTER_POOL.N = []; // 실제 프로덕션 상태 재현 (N등급 캐릭터 데이터 없음)
+
+      const result = GachaSystem.pull(10, 'gems');
+
+      expect(result.success).toBe(true);
+      result.results.forEach(r => {
+        expect(r.characterId).not.toBeNull();
+      });
+    });
+
+    it('1,000회 시뮬레이션 결과 등급 분포가 RATES ±3%p 이내', () => {
+      const sim = GachaSystem.simulate(1000);
+
+      Object.keys(GachaSystem.RATES).forEach(rarity => {
+        const expectedPercent = GachaSystem.RATES[rarity] * 100;
+        const actualPercent = (sim.results[rarity] / sim.totalPulls) * 100;
+        expect(Math.abs(actualPercent - expectedPercent)).toBeLessThanOrEqual(3);
+      });
+    });
+  });
+
+  // T-S2/BLK-05: 첫 무료 10연 에너지/재화 면제
+  describe('첫 무료 10연 (T-S2/BLK-05)', () => {
+    it('freeTenPullUsed가 false면 첫 10연은 재화/에너지를 소비하지 않음', async () => {
+      const { default: energySystemMock } = await import('../../src/systems/EnergySystem.js');
+      SaveManager.getGachaInfo.mockReturnValue({
+        pityCounter: 0, totalPulls: 0, totalSSR: 0, banners: {}, freeTenPullUsed: false
+      });
+
+      const result = GachaSystem.pull(10, 'gems');
+
+      expect(result.success).toBe(true);
+      expect(SaveManager.spendGems).not.toHaveBeenCalled();
+      expect(SaveManager.spendSummonTickets).not.toHaveBeenCalled();
+      expect(energySystemMock.consume).not.toHaveBeenCalled();
+    });
+
+    it('첫 무료 10연 완료 후 freeTenPullUsed 플래그를 true로 저장함', () => {
+      SaveManager.getGachaInfo.mockReturnValue({
+        pityCounter: 0, totalPulls: 0, totalSSR: 0, banners: {}, freeTenPullUsed: false
+      });
+
+      GachaSystem.pull(10, 'gems');
+
+      expect(SaveManager.saveGachaInfo).toHaveBeenCalledWith({ freeTenPullUsed: true });
+    });
+
+    it('freeTenPullUsed가 true면 두 번째 10연부터는 정상 과금됨', async () => {
+      const { default: energySystemMock } = await import('../../src/systems/EnergySystem.js');
+      SaveManager.getGachaInfo.mockReturnValue({
+        pityCounter: 0, totalPulls: 10, totalSSR: 0, banners: {}, freeTenPullUsed: true
+      });
+
+      const result = GachaSystem.pull(10, 'gems');
+
+      expect(result.success).toBe(true);
+      expect(SaveManager.spendGems).toHaveBeenCalledWith(GachaSystem.MULTI_COST);
+      expect(energySystemMock.consume).toHaveBeenCalledWith(100, 'gacha');
+    });
+
+    it('1회 소환(count=1)은 freeTenPullUsed와 무관하게 항상 과금됨', () => {
+      SaveManager.getGachaInfo.mockReturnValue({
+        pityCounter: 0, totalPulls: 0, totalSSR: 0, banners: {}, freeTenPullUsed: false
+      });
+
+      GachaSystem.pull(1, 'gems');
+
+      expect(SaveManager.spendGems).toHaveBeenCalledWith(GachaSystem.SINGLE_COST);
     });
   });
 });

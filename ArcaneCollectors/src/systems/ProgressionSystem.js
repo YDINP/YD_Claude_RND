@@ -5,8 +5,9 @@
 import { SaveManager } from './SaveManager.js';
 import { EventBus, GameEvents } from './EventBus.js';
 import { getRarityKey } from '../utils/rarityUtils.js';
-import { getCharacter } from '../data/index.js';
+import { getCharacter, getCharacterOrHero } from '../data/index.js';
 import { CollectionSystem } from './CollectionSystem.js';
+import { EquipmentSystem } from './EquipmentSystem.js';
 
 export class ProgressionSystem {
   // 최대 레벨 (등급별)
@@ -22,6 +23,47 @@ export class ProgressionSystem {
 
   // 스킬 최대 레벨
   static MAX_SKILL_LEVEL = 10;
+
+  // ===== 전투력 공식 상수 (BLK-03 통합 SSOT) =====
+
+  /** 전투력에 산입되는 스탯 키 */
+  static POWER_STAT_KEYS = ['hp', 'atk', 'def', 'spd'];
+
+  /** 전투력 산식에서 HP를 나누는 값 (HP/10 + ATK + DEF + SPD) */
+  static POWER_HP_DIVISOR = 10;
+
+  /** 스킬 레벨 1당 전투력 가산치 */
+  static POWER_PER_SKILL_LEVEL = 10;
+
+  /** skillLevels 필드가 없는 레거시/신규 세이브의 기본값 */
+  static DEFAULT_SKILL_LEVELS = [1, 1];
+
+  /** 성급 미기재 시 등급에서 유도할 기본 성급 */
+  static DEFAULT_STARS_BY_RARITY = { N: 1, R: 2, SR: 3, SSR: 4 };
+
+  /** EquipmentSystem 스탯 키 → 전투력 스탯 키 매핑 (CRIT_*는 전투력 미산입) */
+  static EQUIPMENT_STAT_MAP = { HP: 'hp', ATK: 'atk', DEF: 'def', SPD: 'spd' };
+
+  /** 캐릭터 데이터를 찾지 못했을 때의 등급별 기본 스탯 폴백 */
+  static FALLBACK_BASE_STATS = {
+    N: { hp: 800, atk: 80, def: 40, spd: 95 },
+    R: { hp: 1000, atk: 100, def: 50, spd: 100 },
+    SR: { hp: 1200, atk: 120, def: 60, spd: 105 },
+    SSR: { hp: 1500, atk: 150, def: 75, spd: 110 }
+  };
+
+  /** 폴백 성장률 (등급별) */
+  static FALLBACK_GROWTH_STATS = {
+    N: { hp: 80, atk: 8, def: 4, spd: 1 },
+    R: { hp: 100, atk: 10, def: 5, spd: 1.5 },
+    SR: { hp: 120, atk: 12, def: 6, spd: 2 },
+    SSR: { hp: 150, atk: 15, def: 7.5, spd: 2.5 }
+  };
+
+  /** 스탯 0 객체 */
+  static get ZERO_STATS() {
+    return { hp: 0, atk: 0, def: 0, spd: 0 };
+  }
 
   /**
    * 레벨업에 필요한 경험치 계산
@@ -138,35 +180,78 @@ export class ProgressionSystem {
    * @returns {Object} 스탯
    */
   static getStatsAtLevel(characterId, level) {
-    const charData = getCharacter(characterId);
-    const savedChar = SaveManager.getCharacter(characterId);
+    const charData = this.lookupCharacterData(characterId);
+    let savedChar = null;
+    try {
+      savedChar = SaveManager.getCharacter(characterId);
+    } catch {
+      savedChar = null;
+    }
     const rarity = getRarityKey(savedChar?.rarity ?? charData?.rarity ?? 1);
 
-    // 기본 스탯 (등급별 베이스)
-    const baseStats = {
-      N: { hp: 800, atk: 80, def: 40, spd: 95 },
-      R: { hp: 1000, atk: 100, def: 50, spd: 100 },
-      SR: { hp: 1200, atk: 120, def: 60, spd: 105 },
-      SSR: { hp: 1500, atk: 150, def: 75, spd: 110 }
-    };
+    return this.getBaseStatsAtLevel(charData, level, rarity);
+  }
 
-    // 성장률 (등급별)
-    const growth = {
-      N: { hp: 80, atk: 8, def: 4, spd: 1 },
-      R: { hp: 100, atk: 10, def: 5, spd: 1.5 },
-      SR: { hp: 120, atk: 12, def: 6, spd: 2 },
-      SSR: { hp: 150, atk: 15, def: 7.5, spd: 2.5 }
-    };
+  /**
+   * 캐릭터 ID로 원천 데이터를 조회한다.
+   * 레거시 characters.json 뿐 아니라 base-heroes / ascended-heroes 까지 포함한다.
+   * (기존 getCharacter() 단독 조회는 base_ / asc_ 접두 ID에서 undefined를 반환해
+   *  모든 전직영웅이 N등급 폴백 스탯으로 계산되는 원인이었다 — BLK-03)
+   * @param {string} characterId
+   * @returns {Object|null}
+   */
+  static lookupCharacterData(characterId) {
+    if (!characterId) return null;
+    try {
+      const hero = typeof getCharacterOrHero === 'function'
+        ? getCharacterOrHero(characterId)
+        : null;
+      if (hero) return hero;
+    } catch {
+      // 데이터 모듈 미가용 — 아래 레거시 조회로 폴백
+    }
+    try {
+      return getCharacter(characterId) || null;
+    } catch {
+      return null;
+    }
+  }
 
-    const base = baseStats[rarity] || baseStats.N;
-    const growthRate = growth[rarity] || growth.N;
+  /**
+   * 전투력 계산에 쓰이는 캐릭터 원천 데이터를 해석한다.
+   * 스탯을 직접 들고 있는 객체(JSON 캐릭터/정규화된 영웅)면 그대로 쓰고,
+   * 세이브 레코드처럼 ID만 있으면 데이터 모듈에서 조회한다.
+   * @param {Object} character
+   * @returns {Object|null}
+   */
+  static resolveCharacterData(character) {
+    if (!character) return null;
+    if (character.stats) return character;
+    return this.lookupCharacterData(character.characterId || character.id);
+  }
 
-    return {
-      hp: Math.floor(base.hp + growthRate.hp * (level - 1)),
-      atk: Math.floor(base.atk + growthRate.atk * (level - 1)),
-      def: Math.floor(base.def + growthRate.def * (level - 1)),
-      spd: Math.floor(base.spd + growthRate.spd * (level - 1))
-    };
+  /**
+   * 레벨 반영 기본 스탯 (성급·장비·컬렉션 이전 단계).
+   * JSON의 stats + growthStats 가 있으면 그것을 쓰고, 없을 때만 등급 테이블로 폴백한다.
+   * @param {Object|null} charData 캐릭터 원천 데이터
+   * @param {number} level 레벨
+   * @param {string} rarityKey 등급 키 (N/R/SR/SSR)
+   * @returns {Object} { hp, atk, def, spd }
+   */
+  static getBaseStatsAtLevel(charData, level, rarityKey) {
+    const lv = Math.max(1, Number(level) || 1);
+    const levelSteps = lv - 1;
+
+    const base = charData?.stats || this.FALLBACK_BASE_STATS[rarityKey] || this.FALLBACK_BASE_STATS.N;
+    const growth = charData?.stats
+      ? (charData.growthStats || this.ZERO_STATS)
+      : (this.FALLBACK_GROWTH_STATS[rarityKey] || this.FALLBACK_GROWTH_STATS.N);
+
+    const result = {};
+    for (const key of this.POWER_STAT_KEYS) {
+      result[key] = Math.floor((base[key] || 0) + (growth[key] || 0) * levelSteps);
+    }
+    return result;
   }
 
   // ========== 스킬 강화 ==========
@@ -452,23 +537,96 @@ export class ProgressionSystem {
    * @returns {Object} { hp, atk, def, spd }
    */
   static getFinalStats(character) {
-    if (!character) return { hp: 0, atk: 0, def: 0, spd: 0 };
+    if (!character) return this.ZERO_STATS;
 
-    const stats = this.getStatsAtLevel(character.characterId, character.level);
-    const starBonus = this.getStarBonus(character.stars);
+    const charData = this.resolveCharacterData(character);
+    const rarityKey = getRarityKey(character.rarity ?? charData?.rarity ?? 1);
+
+    const stats = this.getBaseStatsAtLevel(charData, character.level, rarityKey);
+    const starBonus = this.getStarBonus(this.resolveStars(character, rarityKey));
+    const equipmentBonus = this.getEquipmentBonus(character);
     const collectionBonus = this.getCollectionBonus(character);
 
-    return {
-      hp: Math.floor(stats.hp * (1 + starBonus.hp / 100) * (1 + collectionBonus.hp)),
-      atk: Math.floor(stats.atk * (1 + starBonus.atk / 100) * (1 + collectionBonus.atk)),
-      def: Math.floor(stats.def * (1 + starBonus.def / 100) * (1 + collectionBonus.def)),
-      spd: Math.floor(stats.spd * (1 + starBonus.spd / 100) * (1 + collectionBonus.spd))
-    };
+    // 적용 순서: 기본(레벨) → 성급(%) → 장비(가산) → 컬렉션(곱)
+    const result = {};
+    for (const key of this.POWER_STAT_KEYS) {
+      const withStars = stats[key] * (1 + (starBonus[key] || 0) / 100);
+      const withEquipment = withStars + (equipmentBonus[key] || 0);
+      result[key] = Math.floor(withEquipment * (1 + (collectionBonus[key] || 0)));
+    }
+    return result;
   }
 
   /**
-   * 캐릭터 전투력 계산
+   * 성급 해석. 세이브에 stars가 없으면 등급에서 유도한다(레거시 세이브 안전장치).
+   * @param {Object} character
+   * @param {string} rarityKey
+   * @returns {number} 성급
+   */
+  static resolveStars(character, rarityKey) {
+    const stars = Number(character?.stars);
+    if (Number.isFinite(stars) && stars > 0) return stars;
+    return this.DEFAULT_STARS_BY_RARITY[rarityKey] || 1;
+  }
+
+  /**
+   * BLK-03: 장착 장비의 스탯 합(기본 스탯 + 강화 보너스 + 장비 등급 배율)
+   * EquipmentSystem.getTotalEquipmentStats()가 SSOT이며 여기서는 키 매핑만 한다.
    * @param {Object} character 캐릭터 데이터
+   * @returns {Object} { hp, atk, def, spd } 가산치
+   */
+  static getEquipmentBonus(character) {
+    const none = this.ZERO_STATS;
+    if (!character) return none;
+
+    // 호출부가 이미 합산한 장비 스탯을 넘긴 경우(전투 프리뷰 등) 그대로 사용
+    if (character.equipmentStats) {
+      return this.mapEquipmentStats(character.equipmentStats);
+    }
+
+    const heroId = character.characterId || character.id;
+    if (!heroId) return none;
+
+    try {
+      return this.mapEquipmentStats(EquipmentSystem.getTotalEquipmentStats(heroId));
+    } catch {
+      return none;
+    }
+  }
+
+  /**
+   * EquipmentSystem 스탯 키(ATK/DEF/HP/SPD)를 전투력 스탯 키로 변환
+   * @param {Object} equipmentStats
+   * @returns {Object} { hp, atk, def, spd }
+   */
+  static mapEquipmentStats(equipmentStats) {
+    const result = this.ZERO_STATS;
+    if (!equipmentStats) return result;
+
+    for (const [equipKey, statKey] of Object.entries(this.EQUIPMENT_STAT_MAP)) {
+      result[statKey] += Number(equipmentStats[equipKey]) || 0;
+    }
+    return result;
+  }
+
+  /**
+   * 스킬 레벨 배열 해석. 누락/비정상 시 기본값으로 대체한다.
+   * @param {Object} character
+   * @returns {Array<number>}
+   */
+  static resolveSkillLevels(character) {
+    const levels = character?.skillLevels;
+    if (!Array.isArray(levels) || levels.length === 0) {
+      return [...this.DEFAULT_SKILL_LEVELS];
+    }
+    return levels.map(lv => Number(lv) || 0);
+  }
+
+  /**
+   * 캐릭터 전투력 계산 — 프로젝트 전체의 SSOT (BLK-03)
+   * 공식: floor(HP/10 + ATK + DEF + SPD + 스킬레벨합 × 10)
+   * 스탯 적용 순서: 기본(레벨) → 성급(%) → 장비(가산) → 컬렉션(곱)
+   * @param {Object} character 캐릭터 데이터 (세이브 레코드 또는 JSON 캐릭터)
    * @returns {number} 전투력
    */
   static calculatePower(character) {
@@ -476,12 +634,13 @@ export class ProgressionSystem {
 
     const finalStats = this.getFinalStats(character);
 
-    // 스킬 레벨 보너스
-    const skillBonus = character.skillLevels.reduce((sum, lv) => sum + lv, 0) * 10;
+    // 스킬 레벨 보너스 (skillLevels 누락 시 기본값 — 레거시 세이브 안전)
+    const skillBonus = this.resolveSkillLevels(character)
+      .reduce((sum, lv) => sum + lv, 0) * this.POWER_PER_SKILL_LEVEL;
 
     // 전투력 = HP/10 + ATK + DEF + SPD + 스킬 보너스
     return Math.floor(
-      finalStats.hp / 10 +
+      finalStats.hp / this.POWER_HP_DIVISOR +
       finalStats.atk +
       finalStats.def +
       finalStats.spd +

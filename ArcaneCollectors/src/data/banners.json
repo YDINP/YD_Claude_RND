@@ -10,8 +10,8 @@
       "rates": {
         "SSR": 0.015,
         "SR": 0.085,
-        "R": 0.30,
-        "N": 0.60
+        "R": 0.90,
+        "N": 0
       },
       "isActive": true,
       "isPermanent": true
@@ -26,8 +26,8 @@
       "rates": {
         "SSR": 0.015,
         "SR": 0.085,
-        "R": 0.30,
-        "N": 0.60
+        "R": 0.90,
+        "N": 0
       },
       "isActive": true,
       "isPermanent": false,
@@ -44,8 +44,8 @@
       "rates": {
         "SSR": 0.015,
         "SR": 0.085,
-        "R": 0.30,
-        "N": 0.60
+        "R": 0.90,
+        "N": 0
       },
       "isActive": false,
       "isPermanent": false,
@@ -62,8 +62,8 @@
       "rates": {
         "SSR": 0.015,
         "SR": 0.085,
-        "R": 0.30,
-        "N": 0.60
+        "R": 0.90,
+        "N": 0
       },
       "isActive": false,
       "isPermanent": false,

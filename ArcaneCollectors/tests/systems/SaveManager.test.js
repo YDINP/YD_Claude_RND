@@ -146,6 +146,39 @@ describe('SaveManager', () => {
       expect(loaded.player.level).toBe(8);
       expect(loaded.resources.gold).toBe(8888);
     });
+
+    it('T-S2/BLK-05: gacha.freeTenPullUsed 필드가 없는 구버전 세이브는 기본값 false로 마이그레이션됨', () => {
+      const oldData = {
+        version: SaveManager.VERSION, // 버전은 최신이지만 gacha 필드가 옛 스키마인 경우
+        player: { name: 'OldGachaPlayer', level: 3, exp: 100 },
+        resources: { gold: 1000 },
+        gacha: { pityCounter: 12, totalPulls: 12 } // freeTenPullUsed 없음
+      };
+
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(oldData));
+
+      const loaded = SaveManager.load();
+
+      expect(loaded.gacha.freeTenPullUsed).toBe(false);
+      expect(loaded.gacha.pityCounter).toBe(12); // 기존 값 보존
+    });
+
+    it('T-S2/BLK-05: 버전 마이그레이션(migrate()) 경로에서도 freeTenPullUsed 기본값이 보장됨', () => {
+      const oldData = {
+        version: 0,
+        player: { name: 'AncientPlayer', level: 1, exp: 0 },
+        resources: { gold: 500 },
+        gacha: { pityCounter: 5, totalPulls: 5 } // freeTenPullUsed 없음
+      };
+
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(oldData));
+
+      const loaded = SaveManager.load();
+
+      expect(loaded.version).toBe(SaveManager.VERSION);
+      expect(loaded.gacha.freeTenPullUsed).toBe(false);
+      expect(loaded.gacha.pityCounter).toBe(5);
+    });
   });
 
   describe('에러 처리', () => {

@@ -24,8 +24,9 @@ import itemsData from './items.json';
 import questsData from './quests.json';
 import baseHeroesData from './base-heroes.json';
 import ascendedHeroesData from './ascended-heroes.json';
-import { getRarityKey, getRarityStars } from '../utils/rarityUtils.js';
+import { getRarityKey } from '../utils/rarityUtils.js';
 import { HeroFactory } from '../systems/HeroFactory.js';
+import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 
 // Type assertions for imported JSON
 const characters = charactersData as CharactersData;
@@ -174,49 +175,23 @@ export function getCharactersByClass(charClass: string): Character[] {
 
 /**
  * 캐릭터의 전투력을 계산합니다
- * NOTE: This matches ProgressionSystem.calculatePower() formula
- * Formula: HP/10 + ATK + DEF + SPD + skillBonus (with star multiplier)
- * @param character - 캐릭터 데이터
+ *
+ * BLK-03: 전투력 공식의 SSOT는 `ProgressionSystem.calculatePower()` 하나뿐이며
+ * 이 함수는 "레벨을 인자로 받는 JSON 캐릭터용" 얇은 위임 래퍼입니다.
+ * 적용 순서: 기본(레벨) → 성급(%) → 장비(가산) → 컬렉션(곱) → 스킬 보너스
+ *
+ * @param character - 캐릭터 데이터 (stats 필수)
  * @param level - 캐릭터 레벨 (기본값: 1)
- * @returns 전투력
+ * @returns 전투력 (stats 없으면 0)
  */
 export function calculatePower(character: Character | OwnedHero, level: number = 1): number {
-  const base = character.stats;
-  if (!base) return 0;
-  const growthStats = character.growthStats || { hp: 0, atk: 0, def: 0, spd: 0 };
-  const levelMultiplier = level - 1;
+  if (!character || !character.stats) return 0;
 
-  // Calculate level-scaled stats
-  const levelStats = {
-    hp: base.hp + (growthStats.hp * levelMultiplier),
-    atk: base.atk + (growthStats.atk * levelMultiplier),
-    def: base.def + (growthStats.def * levelMultiplier),
-    spd: base.spd + (growthStats.spd * levelMultiplier)
-  };
-
-  // Apply star bonus (5% per star)
-  const stars = (character as OwnedHero).stars || getRarityStars(character.rarity) || 1;
-  const starBonusPercent = (stars - 1) * 5;
-
-  const finalStats = {
-    hp: Math.floor(levelStats.hp * (1 + starBonusPercent / 100)),
-    atk: Math.floor(levelStats.atk * (1 + starBonusPercent / 100)),
-    def: Math.floor(levelStats.def * (1 + starBonusPercent / 100)),
-    spd: Math.floor(levelStats.spd * (1 + starBonusPercent / 100))
-  };
-
-  // Skill level bonus (10 per skill level)
-  const skillLevels = (character as OwnedHero).skillLevels || [1, 1];
-  const skillBonus = skillLevels.reduce((sum, lv) => sum + lv, 0) * 10;
-
-  // Canonical formula: HP/10 + ATK + DEF + SPD + skillBonus
-  return Math.floor(
-    finalStats.hp / 10 +
-    finalStats.atk +
-    finalStats.def +
-    finalStats.spd +
-    skillBonus
-  );
+  return ProgressionSystem.calculatePower({
+    ...(character as any),
+    characterId: (character as any).characterId ?? (character as any).id,
+    level
+  });
 }
 
 /**
@@ -454,11 +429,12 @@ export function getQuest(id: string): any | undefined {
  */
 export function getSummonRates(): { SSR: number; SR: number; R: number; N: number } {
   // GachaSystem.RATES와 동기화 (SSOT는 GachaSystem)
+  // T-S2/GA-1: N등급 캐릭터 풀 공백(BLK-02) 대응 — N 확률을 R로 흡수
   return {
     SSR: 0.015, // 1.5%
     SR: 0.085,  // 8.5%
-    R: 0.30,    // 30%
-    N: 0.60     // 60%
+    R: 0.90,    // 90%
+    N: 0        // 0% (N등급 캐릭터 데이터 없음)
   };
 }
 

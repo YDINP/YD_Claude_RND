@@ -148,11 +148,11 @@
           "story_clear": "유적의 보호자들을 물리쳤다. 벽에 낯설지 않은 문자가 보인다. 신들의 메시지인가?",
           "enemies": [
             {
-              "id": "enemy_stone_golem",
+              "id": "enemy_golem",
               "level": 5
             },
             {
-              "id": "enemy_stone_golem",
+              "id": "enemy_golem",
               "level": 5
             }
           ],
@@ -257,7 +257,7 @@
               "level": 12
             },
             {
-              "id": "enemy_tengu_scout",
+              "id": "enemy_tengu",
               "level": 12
             }
           ],
@@ -489,11 +489,11 @@
           "story_clear": "망령들을 정화했다. 하지만 더 깊은 곳에서 무언가 부르고 있다.",
           "enemies": [
             {
-              "id": "enemy_yomi_wraith",
+              "id": "enemy_wraith",
               "level": 18
             },
             {
-              "id": "enemy_yomi_wraith",
+              "id": "enemy_wraith",
               "level": 18
             },
             {
@@ -771,11 +771,11 @@
           "story_clear": "미궁의 괴물들을 처치했다. 하지만 이건 시작에 불과하다.",
           "enemies": [
             {
-              "id": "enemy_minotaur_minion",
+              "id": "enemy_minotaur",
               "level": 42
             },
             {
-              "id": "enemy_minotaur_minion",
+              "id": "enemy_minotaur",
               "level": 42
             },
             {
@@ -822,7 +822,7 @@
               "level": 45
             },
             {
-              "id": "enemy_cyclops",
+              "id": "enemy_cyclops_minor",
               "level": 46
             }
           ],
@@ -977,7 +977,7 @@
               "level": 60
             },
             {
-              "id": "enemy_fenrir_wolf",
+              "id": "enemy_fenrir_pup",
               "level": 62
             }
           ],
@@ -1011,7 +1011,7 @@
           "story_clear": "거인들을 막아냈다. 하지만 비프로스트는 이미 파괴되었다. 아스가르드가 위험하다!",
           "enemies": [
             {
-              "id": "enemy_frost_giant",
+              "id": "enemy_frost_giant_minor",
               "level": 65
             },
             {
@@ -1108,7 +1108,7 @@
               "level": 75
             },
             {
-              "id": "enemy_world_serpent",
+              "id": "enemy_jormungandr",
               "level": 73
             }
           ],

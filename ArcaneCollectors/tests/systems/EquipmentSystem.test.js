@@ -17,8 +17,8 @@ vi.mock('../../src/systems/EventBus.js', () => ({
   }
 }));
 
-// Mock gameConfig to avoid Phaser dependencies
-vi.mock('../../src/config/gameConfig.js', () => ({
+// Mock equipmentConfig (Phaser 비의존 모듈로 분리됨)
+vi.mock('../../src/config/equipmentConfig.js', () => ({
   EQUIPMENT_SLOTS: ['weapon', 'armor', 'accessory', 'relic'],
   EQUIPMENT_RARITY: {
     N: { multiplier: 1.0 },

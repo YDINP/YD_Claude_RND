@@ -450,4 +450,83 @@ describe('QuestSystem', () => {
       expect(totals.gems).toBeGreaterThan(0);
     });
   });
+
+  // T-D2/GA-8/ISS-07: 가챠 재활성화 이후 daily_004(소환)/daily_005(전체완료) 도달 가능성 확인
+  describe('전체 완료 자동완료 (T-D2/GA-8/ISS-07)', () => {
+    const buildDailyQuests = (overrides = {}) => ({
+      daily_login: {
+        id: 'daily_login', type: 'login', name: '매일 출석',
+        progress: 1, target: 1, completed: true, claimed: false
+      },
+      daily_battle_3: {
+        id: 'daily_battle_3', type: 'battle_count', name: '전투 3회',
+        progress: 3, target: 3, completed: true, claimed: false
+      },
+      daily_summon_1: {
+        id: 'daily_summon_1', type: 'summon_count', name: '소환 1회',
+        progress: 0, target: 1, completed: false, claimed: false
+      },
+      daily_enhance_1: {
+        id: 'daily_enhance_1', type: 'enhance_count', name: '강화 1회',
+        progress: 1, target: 1, completed: true, claimed: false
+      },
+      daily_stage_3star: {
+        id: 'daily_stage_3star', type: 'stage_clear', name: '3성 클리어',
+        progress: 1, target: 1, completed: true, claimed: false
+      },
+      daily_gold_5000: {
+        id: 'daily_gold_5000', type: 'collect_gold', name: '골드 수집',
+        progress: 5000, target: 5000, completed: true, claimed: false
+      },
+      daily_complete_all: {
+        id: 'daily_complete_all', type: 'complete_all_daily', name: '일일 퀘스트 전체 완료',
+        progress: 0, target: 8, completed: false, claimed: false
+      },
+      ...overrides
+    });
+
+    it('10연 소환 1회 후 소환 퀘스트(daily_004 상당)가 완료되고, 나머지가 모두 끝나 있었다면 전체완료 퀘스트(daily_005 상당)도 함께 완료됨', () => {
+      let dailyState = buildDailyQuests();
+      SaveManager.load.mockImplementation(() => ({
+        quests: { daily: dailyState, dailyProgress: {}, lastReset: Date.now() },
+        resources: { gold: 10000, gems: 500, summonTickets: 10, skillBooks: 20 }
+      }));
+      SaveManager.save.mockImplementation((data) => {
+        dailyState = data.quests.daily;
+      });
+
+      // GachaSystem.pull(10)이 신규 캐릭터를 얻을 때마다 발행하는 CHARACTER_ADDED를
+      // QuestSystem.registerEventHandlers()가 SUMMON_COUNT 진행도로 카운트하는 경로를 재현한다.
+      const updated = QuestSystem.updateProgress(QuestSystem.QUEST_TYPES.SUMMON_COUNT, 1);
+
+      expect(updated).toBe(true);
+      expect(dailyState.daily_summon_1.completed).toBe(true);
+      expect(dailyState.daily_complete_all.completed).toBe(true);
+      expect(EventBus.emit).toHaveBeenCalledWith(
+        GameEvents.QUEST_COMPLETE,
+        expect.objectContaining({ questId: 'daily_complete_all' })
+      );
+    });
+
+    it('다른 일일 퀘스트가 아직 남아있으면 전체완료 퀘스트는 완료되지 않음', () => {
+      let dailyState = buildDailyQuests({
+        daily_enhance_1: {
+          id: 'daily_enhance_1', type: 'enhance_count', name: '강화 1회',
+          progress: 0, target: 1, completed: false, claimed: false // 강화 미완료
+        }
+      });
+      SaveManager.load.mockImplementation(() => ({
+        quests: { daily: dailyState, dailyProgress: {}, lastReset: Date.now() },
+        resources: { gold: 10000, gems: 500, summonTickets: 10, skillBooks: 20 }
+      }));
+      SaveManager.save.mockImplementation((data) => {
+        dailyState = data.quests.daily;
+      });
+
+      QuestSystem.updateProgress(QuestSystem.QUEST_TYPES.SUMMON_COUNT, 1);
+
+      expect(dailyState.daily_summon_1.completed).toBe(true);
+      expect(dailyState.daily_complete_all.completed).toBe(false);
+    });
+  });
 });

@@ -15,7 +15,9 @@ export class QuestSystem {
     COLLECT_GOLD: 'collect_gold',
     LOGIN: 'login',
     EVOLVE: 'evolve',
-    SKILL_ENHANCE: 'skill_enhance'
+    SKILL_ENHANCE: 'skill_enhance',
+    // T-D2/GA-8/ISS-07: '일일 퀘스트 전체 완료' — 다른 일일 퀘스트가 전부 완료되면 자동 완료됨
+    COMPLETE_ALL_DAILY: 'complete_all_daily'
   };
 
   // 일일 퀘스트 템플릿
@@ -83,6 +85,15 @@ export class QuestSystem {
       description: '골드 5000 획득',
       target: 5000,
       rewards: { summonTickets: 1 }
+    },
+    {
+      // T-D2/GA-8/ISS-07: 나머지 일일 퀘스트 8개가 모두 완료되면 updateProgress()에서 자동 완료 처리
+      id: 'daily_complete_all',
+      type: 'complete_all_daily',
+      name: '일일 퀘스트 전체 완료',
+      description: '위의 모든 일일 퀘스트를 완료하세요',
+      target: 8,
+      rewards: { gems: 50, summonTickets: 1 }
     }
   ];
 
@@ -210,12 +221,48 @@ export class QuestSystem {
       }
     });
 
+    // T-D2/GA-8/ISS-07: 다른 일일 퀘스트가 전부 완료되면 '전체 완료' 퀘스트를 자동 완료 처리
+    if (this._checkCompleteAllDaily(quests)) {
+      updated = true;
+    }
+
     if (updated) {
       data.quests.daily = quests;
       SaveManager.save(data);
     }
 
     return updated;
+  }
+
+  /**
+   * T-D2/GA-8/ISS-07: '전체 완료' 퀘스트 자동 완료 체크
+   * complete_all_daily 타입 퀘스트는 개별 진행 이벤트가 없으므로,
+   * 다른 모든 일일 퀘스트가 완료되었는지 여기서 직접 확인해 완료 처리한다.
+   * @param {Object} quests data.quests.daily 객체 (in-place 수정)
+   * @returns {boolean} '전체 완료' 퀘스트가 새로 완료되었는지 여부
+   */
+  static _checkCompleteAllDaily(quests) {
+    const completeAllQuest = Object.values(quests).find(
+      q => q.type === this.QUEST_TYPES.COMPLETE_ALL_DAILY
+    );
+    if (!completeAllQuest || completeAllQuest.completed) return false;
+
+    const otherQuests = Object.values(quests).filter(
+      q => q.type !== this.QUEST_TYPES.COMPLETE_ALL_DAILY
+    );
+    const allOthersCompleted = otherQuests.length > 0 && otherQuests.every(q => q.completed);
+
+    if (!allOthersCompleted) return false;
+
+    completeAllQuest.progress = completeAllQuest.target;
+    completeAllQuest.completed = true;
+
+    EventBus.emit(GameEvents.QUEST_COMPLETE, {
+      questId: completeAllQuest.id,
+      questName: completeAllQuest.name
+    });
+
+    return true;
   }
 
   /**
