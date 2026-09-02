@@ -356,7 +356,7 @@ describe('GET /games/:id/state', () => {
 
     const empty = await gameState(harness)
     expect(empty.freeSpins).toBeNull()
-    expect(empty.state).toEqual({ freeSpins: null })
+    expect(empty.state).toEqual({ freeSpins: null, gamble: null })
 
     await triggerFreeSpins(harness)
     const active = await gameState(harness)

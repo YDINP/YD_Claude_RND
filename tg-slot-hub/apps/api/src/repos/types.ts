@@ -1,5 +1,15 @@
-import type { SpinResult, WinLine } from '@tgslot/slot-engine'
-import type { FeatureTrigger, FreeSpinsState, GameState, Level, Locale } from '@tgslot/shared'
+import type { GambleConfig, SpinResult, WinLine } from '@tgslot/slot-engine'
+import type {
+  FeatureTrigger,
+  FreeSpinsState,
+  GambleSide,
+  GambleState,
+  GambleStep,
+  GameState,
+  Level,
+  Locale,
+  MutationEvent,
+} from '@tgslot/shared'
 import type { TelegramUser } from '../auth/initData.js'
 import type { BonusClaims, BonusGrant, BonusKind } from '../economy/bonus.js'
 import type { MissionProgress } from '../economy/missions.js'
@@ -62,6 +72,10 @@ export interface RoundRecord {
   bet: number
   win: number
   stops: number[]
+  /** 뮤테이션 적용 전 격자. 뮤테이션이 없으면 평가 격자와 같다 */
+  gridBefore: string[][] | null
+  /** 이 스핀에 적용된 뮤테이션 */
+  mutations: MutationEvent[]
   wins: WinLine[]
   seed: string
   seedHash: string
@@ -81,6 +95,8 @@ export interface RoundRecord {
   freeSpinsAfter: FreeSpinsState | null
   /** 이 스핀으로 세션이 끝났을 때의 요약 */
   freeSpinsSummary?: { total: number; spins: number }
+  /** 이 라운드에서 진행한 더블업 단계 기록 (provably fair 공개용) */
+  gambleSteps: GambleStepRecord[]
   createdAt: Date
 }
 
@@ -132,6 +148,8 @@ export interface ApplySpinInput {
   gameId: string
   totalBet: number
   idempotencyKey: string
+  /** 이 게임의 더블업 설정. 없으면 더블업을 열지 않는다 */
+  gamble?: GambleConfig
   /** 지갑을 잠그고 잔액을 확인한 뒤, 트랜잭션 안에서 정확히 한 번 호출된다. */
   compute: (ctx: SpinComputeContext) => SpinComputation
 }
@@ -158,6 +176,58 @@ export interface ApplySpinResult {
   freeSpins: FreeSpinsState | null
   /** 이 스핀으로 프리스핀 세션이 끝났을 때만 */
   freeSpinsSummary?: { total: number; spins: number }
+  /** 이 당첨을 더블업에 걸 수 있을 때만 */
+  gambleOffer?: { pendingWin: number; maxSteps: number; expiresAt: string }
+}
+
+// ---- 더블업 (Wave 1) ----
+
+/** 더블업 한 단계의 기록. 상태와 라운드가 같은 모양을 공유한다. */
+export type GambleStepRecord = GambleStep
+
+export interface GambleDecisionContext {
+  round: RoundRecord
+  state: GambleState
+}
+
+export interface GambleDecision {
+  side: GambleSide
+  won: boolean
+  seedInput: string
+}
+
+export interface ApplyGambleInput {
+  userId: string
+  gameId: string
+  roundId: string
+  pick: GambleSide
+  /** 재전송 방어 키. 같은 키가 이미 처리됐으면 저장된 결과를 그대로 돌려준다 */
+  idempotencyKey: string
+  config: GambleConfig
+  /** 트랜잭션 안에서 라운드 시드로 판정한다. 라우트가 RNG를 만들어 넣는다. */
+  decide: (ctx: GambleDecisionContext) => GambleDecision
+}
+
+export interface GambleOutcome {
+  outcome: 'win' | 'lose' | 'collected'
+  side?: GambleSide
+  pendingWin: number
+  wallet: AppWallet
+  stepsLeft: number
+  seedInput: string
+  /** 상한(단계/금액/만료)에 걸려 서버가 알아서 회수했는지 */
+  autoCollected: boolean
+  /** 같은 멱등키로 이미 처리한 단계를 그대로 돌려준 경우 true */
+  replayed: boolean
+  /** 세션이 아직 열려 있을 때의 만료 시각 (ISO 8601) */
+  expiresAt?: string
+}
+
+export interface GambleRepo {
+  /** 한 단계 도전. 자격이 없으면 `null` (라우트가 409로 번역한다). */
+  applyGamble(input: ApplyGambleInput): Promise<GambleOutcome | null>
+  /** 지금 판돈을 확정하고 세션을 닫는다. 자격이 없으면 `null`. */
+  collectGamble(input: { userId: string; gameId: string; roundId: string }): Promise<GambleOutcome | null>
 }
 
 export interface GameStateRepo {
@@ -263,4 +333,5 @@ export interface Repos
     JackpotRepo,
     LeaderboardRepo,
     MissionRepo,
-    GameStateRepo {}
+    GameStateRepo,
+    GambleRepo {}

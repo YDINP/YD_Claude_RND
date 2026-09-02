@@ -1,0 +1,491 @@
+{
+  "id": "royal-diamond-777",
+  "reels": 5,
+  "rows": 3,
+  "symbols": [
+    {
+      "id": "wild",
+      "name": {
+        "en": "Royal Wild",
+        "ko": "로열 와일드"
+      },
+      "wild": true
+    },
+    {
+      "id": "mystery",
+      "name": {
+        "en": "Mystery Card",
+        "ko": "미스터리 카드"
+      }
+    },
+    {
+      "id": "scatter",
+      "name": {
+        "en": "Deco Star",
+        "ko": "데코 스타"
+      },
+      "scatter": true
+    },
+    {
+      "id": "seven",
+      "name": {
+        "en": "Lucky Seven",
+        "ko": "럭키 세븐"
+      }
+    },
+    {
+      "id": "diamond",
+      "name": {
+        "en": "Blue Diamond",
+        "ko": "블루 다이아"
+      }
+    },
+    {
+      "id": "bar3",
+      "name": {
+        "en": "Triple BAR",
+        "ko": "트리플 바"
+      }
+    },
+    {
+      "id": "bar2",
+      "name": {
+        "en": "Double BAR",
+        "ko": "더블 바"
+      }
+    },
+    {
+      "id": "bar1",
+      "name": {
+        "en": "Single BAR",
+        "ko": "싱글 바"
+      }
+    },
+    {
+      "id": "bell",
+      "name": {
+        "en": "Brass Bell",
+        "ko": "브라스 벨"
+      }
+    },
+    {
+      "id": "cherry",
+      "name": {
+        "en": "Velvet Cherry",
+        "ko": "벨벳 체리"
+      }
+    }
+  ],
+  "strips": [
+    [
+      "wild",
+      "mystery",
+      "seven",
+      "bar2",
+      "bar3",
+      "scatter",
+      "diamond",
+      "bell",
+      "bar1",
+      "bar2",
+      "bell",
+      "cherry",
+      "bar3",
+      "seven",
+      "bar1",
+      "bar2",
+      "diamond",
+      "bell",
+      "bar3",
+      "bar2",
+      "bar1",
+      "seven",
+      "bell",
+      "cherry",
+      "wild",
+      "mystery",
+      "bar2",
+      "bar3",
+      "scatter",
+      "diamond",
+      "bell",
+      "bar1",
+      "seven",
+      "bar2",
+      "bell",
+      "cherry",
+      "bar3",
+      "bar1",
+      "bar2",
+      "diamond",
+      "bell",
+      "seven",
+      "bar3",
+      "bar2",
+      "bar1",
+      "bell",
+      "cherry"
+    ],
+    [
+      "wild",
+      "mystery",
+      "seven",
+      "bar3",
+      "bell",
+      "bar2",
+      "bar1",
+      "scatter",
+      "diamond",
+      "bell",
+      "cherry",
+      "bar1",
+      "bar3",
+      "bar2",
+      "bell",
+      "seven",
+      "diamond",
+      "bar1",
+      "bar3",
+      "bell",
+      "bar2",
+      "cherry",
+      "wild",
+      "bar1",
+      "bell",
+      "mystery",
+      "seven",
+      "bar3",
+      "scatter",
+      "diamond",
+      "bar2",
+      "bell",
+      "bar1",
+      "cherry",
+      "bar3",
+      "bell",
+      "bar2",
+      "bar1",
+      "seven",
+      "diamond",
+      "bell",
+      "bar3",
+      "bar2",
+      "bar1",
+      "cherry",
+      "bell"
+    ],
+    [
+      "wild",
+      "mystery",
+      "seven",
+      "bar3",
+      "bar2",
+      "bar1",
+      "diamond",
+      "bell",
+      "cherry",
+      "scatter",
+      "cherry",
+      "bell",
+      "bar1",
+      "bar3",
+      "bar2",
+      "cherry",
+      "seven",
+      "diamond",
+      "bell",
+      "bar1",
+      "bar3",
+      "bar2",
+      "cherry",
+      "bell",
+      "wild",
+      "bar1",
+      "cherry",
+      "mystery",
+      "seven",
+      "bar3",
+      "diamond",
+      "bell",
+      "bar2",
+      "cherry",
+      "bar1",
+      "bell",
+      "bar3",
+      "bar2",
+      "cherry",
+      "bar1",
+      "seven",
+      "diamond",
+      "bell",
+      "cherry",
+      "bar3",
+      "bar2",
+      "bar1",
+      "bell",
+      "cherry"
+    ],
+    [
+      "wild",
+      "seven",
+      "mystery",
+      "diamond",
+      "bell",
+      "bar2",
+      "bar1",
+      "cherry",
+      "scatter",
+      "diamond",
+      "bell",
+      "cherry",
+      "seven",
+      "bar1",
+      "bar3",
+      "bar2",
+      "bell",
+      "cherry",
+      "diamond",
+      "seven",
+      "bar1",
+      "bell",
+      "bar2",
+      "cherry",
+      "diamond",
+      "bar1",
+      "bell",
+      "cherry",
+      "seven",
+      "mystery",
+      "scatter",
+      "bar2",
+      "diamond",
+      "bell",
+      "cherry",
+      "bar1",
+      "seven",
+      "bar3",
+      "bell",
+      "bar2",
+      "cherry",
+      "diamond",
+      "bar1",
+      "bell",
+      "cherry",
+      "seven",
+      "diamond",
+      "bar2",
+      "bar1",
+      "bell",
+      "cherry"
+    ],
+    [
+      "wild",
+      "mystery",
+      "seven",
+      "diamond",
+      "bell",
+      "bar1",
+      "scatter",
+      "bar3",
+      "bar2",
+      "cherry",
+      "seven",
+      "bell",
+      "diamond",
+      "bar1",
+      "cherry",
+      "seven",
+      "bar3",
+      "bell",
+      "bar2",
+      "mystery",
+      "bar1",
+      "diamond",
+      "seven",
+      "cherry",
+      "bell",
+      "wild",
+      "bar3",
+      "bar2",
+      "bar1",
+      "bell",
+      "seven",
+      "cherry",
+      "diamond",
+      "scatter",
+      "bell",
+      "seven",
+      "bar1",
+      "bar3",
+      "mystery",
+      "cherry",
+      "bar2",
+      "diamond",
+      "bell",
+      "seven",
+      "bar1",
+      "cherry",
+      "bell",
+      "diamond",
+      "bar3",
+      "seven",
+      "bar2",
+      "bar1",
+      "bell",
+      "cherry"
+    ]
+  ],
+  "paylines": [
+    [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    [
+      0,
+      1,
+      2,
+      1,
+      0
+    ],
+    [
+      2,
+      1,
+      0,
+      1,
+      2
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      2,
+      2,
+      1,
+      2,
+      2
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      2,
+      2,
+      2,
+      1
+    ],
+    [
+      1,
+      0,
+      1,
+      0,
+      1
+    ]
+  ],
+  "mutations": [
+    {
+      "type": "mystery",
+      "symbol": "mystery",
+      "weights": {
+        "seven": 4,
+        "diamond": 6,
+        "bar3": 8,
+        "bell": 14,
+        "cherry": 26
+      }
+    }
+  ],
+  "paytable": {
+    "wild": {
+      "5": 500
+    },
+    "seven": {
+      "3": 40,
+      "4": 120,
+      "5": 400
+    },
+    "diamond": {
+      "3": 30,
+      "4": 90,
+      "5": 300
+    },
+    "bar3": {
+      "3": 20,
+      "4": 60,
+      "5": 200
+    },
+    "bar2": {
+      "3": 15,
+      "4": 40,
+      "5": 120
+    },
+    "bar1": {
+      "3": 10,
+      "4": 30,
+      "5": 80
+    },
+    "bell": {
+      "3": 5,
+      "4": 20,
+      "5": 60
+    },
+    "cherry": {
+      "2": 1,
+      "3": 4,
+      "4": 12,
+      "5": 40
+    }
+  },
+  "wild": {
+    "substitutesFor": "all"
+  },
+  "scatter": {
+    "symbol": "scatter",
+    "pays": {
+      "3": 2,
+      "4": 10,
+      "5": 40
+    },
+    "freeSpins": {
+      "trigger": 3,
+      "count": 8,
+      "multiplier": 2,
+      "retrigger": true
+    }
+  },
+  "betLevels": [
+    10,
+    20,
+    50,
+    100,
+    200,
+    500
+  ],
+  "rtpTarget": 0.945,
+  "volatility": "medium"
+}

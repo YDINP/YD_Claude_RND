@@ -1,4 +1,4 @@
-import { applyMutations, buildGrid, getBetUnit, resolveSpin } from '@tgslot/slot-engine'
+import { MAX_FREE_SPINS_PER_ROUND, applyMutations, buildGrid, getBetUnit, resolveSpin } from '@tgslot/slot-engine'
 import type { GameMath, Rng, RoundState, SpinResult } from '@tgslot/slot-engine'
 
 /** 이 게임이 정지 그리드를 평가 전에 변형하는가. */
@@ -32,8 +32,7 @@ export function drawSpin(
   return resolveSpin(math, mutated.grid, stops, totalBet, betUnit, state, gridBefore, mutated.events)
 }
 
-/** 한 라운드가 낳을 수 있는 프리스핀 상한. 엔진과 같은 값으로 발산을 막는다. */
-export const MAX_FREE_SPINS_PER_ROUND = 10_000
+export { MAX_FREE_SPINS_PER_ROUND }
 
 export interface RoundSpin {
   spin: SpinResult
@@ -54,8 +53,12 @@ export function playRound(math: GameMath, totalBet: number, betPerLine: number, 
   let played = 0
   while (state !== undefined) {
     played += 1
+    // 엔진이 캡으로 강제하므로 여기까지 오면 캡이 동작하지 않았다는 뜻이다.
+    // 시뮬레이터가 무한 루프에 빠지지 않도록 남겨 두는 방어적 단언이다.
     if (played > MAX_FREE_SPINS_PER_ROUND) {
-      throw new RangeError(`한 라운드의 프리스핀이 ${MAX_FREE_SPINS_PER_ROUND}회를 넘었다. 모델이 발산한다`)
+      throw new RangeError(
+        `한 라운드의 프리스핀이 상한 ${MAX_FREE_SPINS_PER_ROUND}회를 넘었다. 엔진의 캡이 동작하지 않았다`,
+      )
     }
     const multiplier = state.multiplier
     const free = drawSpin(math, totalBet, betPerLine, rng, state)
@@ -74,6 +77,15 @@ export function betPerLineOf(math: GameMath, totalBet: number): number {
 }
 
 /** ways 게임인가. 라인 표를 웨이즈 표로 바꿀지 정하는 데 쓴다. */
+/**
+ * 배당 단위의 개수. 라인 게임은 페이라인 수, ways 게임은 `ways.betDivisor`다.
+ * `단위 수 x 단위당 베팅액 = 총 베팅액`이 성립한다.
+ */
+export function betUnitCount(math: GameMath, totalBet: number): number {
+  return Math.round(totalBet / getBetUnit(math, totalBet))
+}
+
+/** ways 게임인가. 표를 라인 대신 웨이즈로 그릴지 정한다. */
 export function isWaysGame(math: GameMath): boolean {
   return math.payModel === 'ways'
 }

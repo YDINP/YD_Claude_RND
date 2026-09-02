@@ -8,6 +8,7 @@ import {
   symbolFrequencies,
 } from './analytic.js'
 import { computeExactRtp, simulate } from './rtp.js'
+import { buildGrid, getBetUnit, resolveSpin } from './spin.js'
 import { createSeededRng } from './rng/seeded.js'
 import { parseGameMath } from './schema.js'
 import { makeScatterMath, makeTestMath } from './testFixtures.js'
@@ -168,5 +169,124 @@ describe('computeAnalyticRtp', () => {
     const mc = simulate(scatterMath, 3, spins, createSeededRng('free-spin-count'))
     const expectedPerPaidSpin = analytic.triggerProbability * analytic.expectedFreeSpinsPerTrigger
     expect(mc.freeSpinsPlayed / spins).toBeCloseTo(expectedPerPaidSpin, 1)
+  })
+})
+
+describe('프리스핀 닫힌 식 (손계산 픽스처)', () => {
+  // 2릴 1행. 릴마다 스트립 4칸 중 a 2칸, b 1칸, s(스캐터) 1칸.
+  // 손으로 셀 수 있는 값만 나온다:
+  //   P(a a) = 1/2 x 1/2 = 1/4        -> 라인 = 1/4 x 1 = 0.25
+  //   P(스캐터 2개) = 1/4 x 1/4 = 1/16 -> 스캐터 = 1/16 x 2 = 0.125
+  //   base = 0.375, 트리거 확률 p = 1/16, count = 2, 배수 = 3
+  const tiny = parseGameMath({
+    id: 'tiny-free',
+    reels: 2,
+    rows: 1,
+    symbols: [
+      { id: 'a', name: { en: 'Alpha' } },
+      { id: 'b', name: { en: 'Beta' } },
+      { id: 's', name: { en: 'Star' }, scatter: true },
+    ],
+    strips: [
+      ['a', 'a', 'b', 's'],
+      ['a', 'a', 'b', 's'],
+    ],
+    paylines: [[0, 0]],
+    paytable: { a: { 2: 1 } },
+    scatter: {
+      symbol: 's',
+      pays: { 2: 2 },
+      freeSpins: { trigger: 2, count: 2, multiplier: 3, retrigger: true },
+    },
+    betLevels: [1, 10],
+    rtpTarget: 0.5,
+    volatility: 'medium',
+  })
+
+  const TRIGGER_P = 1 / 16
+  const FREE_COUNT = 2
+  const FREE_MULTIPLIER = 3
+
+  it('손으로 센 값과 조각별로 맞는다', () => {
+    const report = computeAnalyticRtp(tiny, 1)
+    expect(report.breakdown.lines).toBeCloseTo(0.25, 12)
+    expect(report.breakdown.scatter).toBeCloseTo(0.125, 12)
+    expect(report.triggerProbability).toBeCloseTo(TRIGGER_P, 12)
+
+    // 트리거 1회가 낳는 기대 스핀 수를 급수로 따로 더한다: Σ_n count x (count x p)^n.
+    let pending = FREE_COUNT
+    let expectedSpins = 0
+    for (let n = 0; n < 500; n += 1) {
+      expectedSpins += pending
+      pending *= FREE_COUNT * TRIGGER_P
+    }
+    expect(report.expectedFreeSpinsPerTrigger).toBeCloseTo(expectedSpins, 12)
+
+    const base = 0.25 + 0.125
+    expect(report.breakdown.freeSpins).toBeCloseTo(TRIGGER_P * expectedSpins * FREE_MULTIPLIER * base, 12)
+    expect(report.rtp).toBeCloseTo(base + TRIGGER_P * expectedSpins * FREE_MULTIPLIER * base, 12)
+  })
+
+  it('엔진만으로 라운드 기대값을 수치로 풀어도 같은 값이 나온다', () => {
+    // 닫힌 식을 전혀 쓰지 않는 검증 경로다. 모든 정지 조합을 실제로 정산해 표를 만들고,
+    // "남은 프리스핀 k회" 상태 위의 확률 질량을 앞으로 굴려 기대 지급을 그냥 더한다.
+    const totalBet = 1
+    const betUnit = getBetUnit(tiny, totalBet)
+    const stops: [number, number][] = []
+    for (let left = 0; left < 4; left += 1) {
+      for (let right = 0; right < 4; right += 1) stops.push([left, right])
+    }
+
+    // 프리스핀 1회의 정지별 결과 (배수 3이 이미 곱해진 지급액과 리트리거 여부).
+    const freeOutcomes = stops.map((stop) => {
+      const result = resolveSpin(tiny, buildGrid(tiny, stop), stop, totalBet, betUnit, {
+        freeSpinsLeft: 5,
+        freeSpinsTotal: 5,
+        multiplier: FREE_MULTIPLIER,
+      })
+      return {
+        win: result.totalWin,
+        retrigger: result.features.some((feature) => feature.type === 'freeSpins' && feature.retrigger),
+      }
+    })
+
+    // 상태 = 남은 프리스핀 횟수. count회로 시작해 질량이 다 빠질 때까지 굴린다.
+    const MAX_STATE = 300
+    const STEPS = 2000
+    let mass = new Array<number>(MAX_STATE + 1).fill(0)
+    mass[FREE_COUNT] = 1
+    let freeWinPerTrigger = 0
+    for (let step = 0; step < STEPS; step += 1) {
+      const next = new Array<number>(MAX_STATE + 1).fill(0)
+      let moved = 0
+      for (let k = 1; k <= MAX_STATE; k += 1) {
+        const here = mass[k] ?? 0
+        if (here === 0) continue
+        moved += here
+        for (const outcome of freeOutcomes) {
+          const share = here / freeOutcomes.length
+          freeWinPerTrigger += share * outcome.win
+          const after = Math.min(MAX_STATE, outcome.retrigger ? k - 1 + FREE_COUNT : k - 1)
+          if (after > 0) next[after] = (next[after] ?? 0) + share
+        }
+      }
+      mass = next
+      if (moved === 0) break
+    }
+
+    let paidSum = 0
+    let roundSum = 0
+    for (const stop of stops) {
+      const result = resolveSpin(tiny, buildGrid(tiny, stop), stop, totalBet, betUnit)
+      paidSum += result.totalWin
+      roundSum += result.totalWin + (result.nextState === undefined ? 0 : freeWinPerTrigger)
+    }
+
+    const report = computeAnalyticRtp(tiny, totalBet)
+    expect(paidSum / stops.length / totalBet).toBeCloseTo(
+      report.breakdown.lines + report.breakdown.scatter,
+      12,
+    )
+    expect(roundSum / stops.length / totalBet).toBeCloseTo(report.rtp, 12)
   })
 })

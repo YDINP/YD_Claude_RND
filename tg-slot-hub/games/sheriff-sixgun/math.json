@@ -1,0 +1,574 @@
+{
+  "id": "sheriff-sixgun",
+  "reels": 5,
+  "rows": 3,
+  "symbols": [
+    {
+      "id": "wild",
+      "name": {
+        "en": "Sheriff Badge",
+        "ko": "보안관 배지"
+      },
+      "wild": true
+    },
+    {
+      "id": "scatter",
+      "name": {
+        "en": "Wanted Poster",
+        "ko": "수배 전단"
+      },
+      "scatter": true
+    },
+    {
+      "id": "sheriff",
+      "name": {
+        "en": "Sheriff",
+        "ko": "보안관"
+      }
+    },
+    {
+      "id": "bandit",
+      "name": {
+        "en": "Bandit",
+        "ko": "무법자"
+      }
+    },
+    {
+      "id": "revolver",
+      "name": {
+        "en": "Revolver",
+        "ko": "리볼버"
+      }
+    },
+    {
+      "id": "dynamite",
+      "name": {
+        "en": "Dynamite",
+        "ko": "다이너마이트"
+      }
+    },
+    {
+      "id": "horseshoe",
+      "name": {
+        "en": "Horseshoe",
+        "ko": "편자"
+      }
+    },
+    {
+      "id": "whiskey",
+      "name": {
+        "en": "Whiskey",
+        "ko": "위스키"
+      }
+    },
+    {
+      "id": "cactus",
+      "name": {
+        "en": "Cactus",
+        "ko": "선인장"
+      }
+    },
+    {
+      "id": "boot",
+      "name": {
+        "en": "Leather Boot",
+        "ko": "가죽 부츠"
+      }
+    }
+  ],
+  "strips": [
+    [
+      "wild",
+      "scatter",
+      "cactus",
+      "bandit",
+      "horseshoe",
+      "cactus",
+      "sheriff",
+      "cactus",
+      "dynamite",
+      "cactus",
+      "revolver",
+      "horseshoe",
+      "cactus",
+      "whiskey",
+      "bandit",
+      "cactus",
+      "boot",
+      "cactus",
+      "scatter",
+      "horseshoe",
+      "cactus",
+      "cactus",
+      "bandit",
+      "cactus",
+      "dynamite",
+      "horseshoe",
+      "cactus",
+      "cactus",
+      "whiskey",
+      "sheriff",
+      "cactus",
+      "boot",
+      "horseshoe",
+      "cactus",
+      "bandit",
+      "scatter",
+      "revolver",
+      "cactus",
+      "cactus",
+      "horseshoe",
+      "cactus",
+      "dynamite",
+      "cactus",
+      "bandit",
+      "cactus",
+      "whiskey",
+      "horseshoe",
+      "cactus",
+      "boot",
+      "cactus"
+    ],
+    [
+      "wild",
+      "sheriff",
+      "cactus",
+      "scatter",
+      "revolver",
+      "cactus",
+      "whiskey",
+      "cactus",
+      "dynamite",
+      "cactus",
+      "sheriff",
+      "cactus",
+      "whiskey",
+      "revolver",
+      "cactus",
+      "bandit",
+      "horseshoe",
+      "boot",
+      "cactus",
+      "whiskey",
+      "cactus",
+      "sheriff",
+      "cactus",
+      "revolver",
+      "cactus",
+      "dynamite",
+      "whiskey",
+      "cactus",
+      "scatter",
+      "cactus",
+      "boot",
+      "sheriff",
+      "cactus",
+      "whiskey",
+      "revolver",
+      "cactus",
+      "cactus",
+      "cactus",
+      "horseshoe",
+      "whiskey",
+      "dynamite",
+      "sheriff",
+      "cactus",
+      "revolver",
+      "cactus",
+      "cactus",
+      "whiskey",
+      "boot",
+      "cactus"
+    ],
+    [
+      "wild",
+      "boot",
+      "sheriff",
+      "revolver",
+      "horseshoe",
+      "boot",
+      "bandit",
+      "scatter",
+      "boot",
+      "revolver",
+      "boot",
+      "boot",
+      "horseshoe",
+      "whiskey",
+      "boot",
+      "sheriff",
+      "revolver",
+      "boot",
+      "boot",
+      "horseshoe",
+      "cactus",
+      "boot",
+      "revolver",
+      "bandit",
+      "boot",
+      "boot",
+      "wild",
+      "dynamite",
+      "horseshoe",
+      "boot",
+      "sheriff",
+      "revolver",
+      "whiskey",
+      "boot",
+      "boot",
+      "horseshoe",
+      "revolver",
+      "boot",
+      "boot",
+      "bandit",
+      "boot",
+      "horseshoe",
+      "sheriff",
+      "revolver",
+      "boot",
+      "boot",
+      "cactus",
+      "whiskey",
+      "boot",
+      "revolver",
+      "horseshoe",
+      "boot",
+      "boot"
+    ],
+    [
+      "wild",
+      "sheriff",
+      "scatter",
+      "bandit",
+      "revolver",
+      "dynamite",
+      "sheriff",
+      "revolver",
+      "bandit",
+      "sheriff",
+      "revolver",
+      "dynamite",
+      "bandit",
+      "sheriff",
+      "boot",
+      "revolver",
+      "whiskey",
+      "bandit",
+      "scatter",
+      "sheriff",
+      "cactus",
+      "revolver",
+      "dynamite",
+      "sheriff",
+      "bandit",
+      "revolver",
+      "wild",
+      "sheriff",
+      "revolver",
+      "dynamite",
+      "bandit",
+      "horseshoe",
+      "boot",
+      "sheriff",
+      "revolver",
+      "scatter",
+      "bandit",
+      "sheriff",
+      "dynamite",
+      "revolver",
+      "bandit",
+      "sheriff",
+      "whiskey",
+      "revolver",
+      "cactus",
+      "dynamite",
+      "bandit",
+      "sheriff",
+      "revolver",
+      "boot"
+    ],
+    [
+      "wild",
+      "sheriff",
+      "bandit",
+      "scatter",
+      "sheriff",
+      "horseshoe",
+      "whiskey",
+      "bandit",
+      "sheriff",
+      "revolver",
+      "dynamite",
+      "bandit",
+      "sheriff",
+      "horseshoe",
+      "whiskey",
+      "boot",
+      "wild",
+      "sheriff",
+      "bandit",
+      "sheriff",
+      "horseshoe",
+      "whiskey",
+      "bandit",
+      "sheriff",
+      "scatter",
+      "bandit",
+      "sheriff",
+      "horseshoe",
+      "whiskey",
+      "boot",
+      "wild",
+      "sheriff",
+      "revolver",
+      "bandit",
+      "dynamite",
+      "sheriff",
+      "horseshoe",
+      "whiskey",
+      "cactus",
+      "bandit",
+      "sheriff",
+      "bandit",
+      "sheriff",
+      "horseshoe",
+      "whiskey",
+      "boot"
+    ]
+  ],
+  "paylines": [
+    [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    [
+      0,
+      1,
+      2,
+      1,
+      0
+    ],
+    [
+      2,
+      1,
+      0,
+      1,
+      2
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      2,
+      2,
+      1,
+      2,
+      2
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      2,
+      2,
+      2,
+      1
+    ],
+    [
+      1,
+      0,
+      1,
+      0,
+      1
+    ],
+    [
+      1,
+      2,
+      1,
+      2,
+      1
+    ],
+    [
+      0,
+      1,
+      1,
+      1,
+      0
+    ],
+    [
+      2,
+      1,
+      1,
+      1,
+      2
+    ],
+    [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    [
+      1,
+      1,
+      2,
+      1,
+      1
+    ],
+    [
+      0,
+      1,
+      0,
+      1,
+      0
+    ],
+    [
+      2,
+      1,
+      2,
+      1,
+      2
+    ],
+    [
+      0,
+      0,
+      2,
+      0,
+      0
+    ],
+    [
+      2,
+      2,
+      0,
+      2,
+      2
+    ],
+    [
+      0,
+      2,
+      0,
+      2,
+      0
+    ]
+  ],
+  "mutations": [
+    {
+      "type": "expandWild",
+      "symbol": "wild",
+      "reels": [
+        1,
+        2,
+        3
+      ],
+      "minCount": 1,
+      "coverScatter": false,
+      "onlyIfWin": false
+    }
+  ],
+  "paytable": {
+    "wild": {
+      "5": 340
+    },
+    "sheriff": {
+      "3": 45,
+      "4": 140,
+      "5": 450
+    },
+    "bandit": {
+      "3": 28,
+      "4": 85,
+      "5": 280
+    },
+    "revolver": {
+      "3": 17,
+      "4": 51,
+      "5": 170
+    },
+    "dynamite": {
+      "3": 14,
+      "4": 40,
+      "5": 110
+    },
+    "horseshoe": {
+      "3": 9,
+      "4": 28,
+      "5": 80
+    },
+    "whiskey": {
+      "3": 7,
+      "4": 20,
+      "5": 57
+    },
+    "cactus": {
+      "3": 5,
+      "4": 14,
+      "5": 40
+    },
+    "boot": {
+      "2": 1,
+      "3": 3,
+      "4": 11,
+      "5": 28
+    }
+  },
+  "wild": {
+    "substitutesFor": "all"
+  },
+  "scatter": {
+    "symbol": "scatter",
+    "pays": {
+      "3": 2,
+      "4": 8,
+      "5": 30
+    },
+    "freeSpins": {
+      "trigger": 3,
+      "count": 8,
+      "multiplier": 2,
+      "retrigger": true
+    }
+  },
+  "gamble": {
+    "type": "coin-flip",
+    "chance": 0.5,
+    "payout": 2,
+    "maxSteps": 5
+  },
+  "betLevels": [
+    20,
+    40,
+    100,
+    200,
+    400,
+    1000
+  ],
+  "rtpTarget": 0.945,
+  "volatility": "medium"
+}

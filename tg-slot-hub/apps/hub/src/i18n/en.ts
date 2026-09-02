@@ -96,6 +96,24 @@ const en = {
   freeSpinsGrantRule: '{spins} spins, ×{multiplier} multiplier',
   freeSpinsRetriggerRule: 'Retriggering during free spins adds more spins',
   fairnessNoRoundYet: 'Spin once to see the fairness proof for that round.',
+  // ways games (Wave 1)
+  tabWays: 'Ways',
+  waysExplainer: '{base} ways to win — matching symbols on adjacent reels pay regardless of position on the reel.',
+  waysBothWaysNote: 'Pays both left-to-right and right-to-left.',
+  betPerWay: 'Bet per way: {amount}',
+  // gamble / double-up (Wave 1)
+  gambleCollect: 'Collect',
+  gambleDouble: 'Double ({percent}%)',
+  gambleRetry: 'Retry',
+  gamblePendingWinLabel: 'PENDING WIN',
+  gambleTitle: 'Double or Nothing (×{payout})',
+  gamblePendingWin: 'Risking {amount}',
+  gambleHeads: 'Heads',
+  gambleTails: 'Tails',
+  gambleWin: 'You called it! Double up.',
+  gambleLose: 'Wrong side — this round is over.',
+  gambleCollected: 'Already collected — your win is safe in your wallet.',
+  gambleExpiresIn: 'Expires in {time}',
 } as const
 
 export default en

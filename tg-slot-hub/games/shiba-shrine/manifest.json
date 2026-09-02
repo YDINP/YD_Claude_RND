@@ -1,0 +1,33 @@
+{
+  "id": "shiba-shrine",
+  "name": {
+    "en": "Shiba Shrine",
+    "ko": "시바 신사"
+  },
+  "version": "1.0.0",
+  "thumbnail": "/games/shiba-shrine/thumb.webp",
+  "status": "live",
+  "reels": 5,
+  "rows": 3,
+  "lines": 243,
+  "betLevels": [
+    25,
+    50,
+    100,
+    250,
+    500,
+    1000
+  ],
+  "rtpTarget": 0.945,
+  "rtpTotalTarget": 0.96,
+  "jackpotContribution": 0.015,
+  "volatility": "medium",
+  "features": [
+    "ways",
+    "randomWild",
+    "freeSpins",
+    "scatter",
+    "wild"
+  ],
+  "sort": 4
+}

@@ -1,5 +1,5 @@
 import type { GameMath } from './schema.js'
-import { getLineCandidates, payoutForCount } from './evaluate.js'
+import { getLineCandidates, getWildChampions, getWildIds, payoutForCount } from './evaluate.js'
 import type { Mutation } from './schema.js'
 import type { SymbolId } from './types.js'
 
@@ -258,6 +258,37 @@ function reelMatchStats(math: GameMath, matches: ReadonlySet<SymbolId>): ReelMat
 }
 
 /**
+ * 릴별로 "창의 매치가 전부 와일드일 때의 매치 칸 수" 기대값.
+ *
+ * 와일드가 아닌 매치가 한 칸이라도 있으면 0으로 친다. 곧
+ * `E[매치 수 x 1{창에 와일드 아닌 매치 없음}]`이고, ways 지급에서 챔피언이 아닌 후보의
+ * 와일드-전용 몫을 빼는 데 쓴다. 릴끼리 독립이므로 이 인수들의 곱이 그대로
+ * "지급 창이 전부 와일드인 사건에 걸린 기대 경로 수"가 된다.
+ */
+function reelWildOnlyExpectation(
+  math: GameMath,
+  matches: ReadonlySet<SymbolId>,
+  wildIds: ReadonlySet<SymbolId>,
+): number[] {
+  return math.strips.map((strip) => {
+    const length = strip.length
+    let sum = 0
+    for (let stop = 0; stop < length; stop += 1) {
+      let matched = 0
+      let nonWild = 0
+      for (let row = 0; row < math.rows; row += 1) {
+        const symbol = strip[(stop + row) % length] as SymbolId
+        if (!matches.has(symbol)) continue
+        matched += 1
+        if (!wildIds.has(symbol)) nonWild += 1
+      }
+      if (nonWild === 0) sum += matched
+    }
+    return sum / length
+  })
+}
+
+/**
  * ways 게임의 기대 배수 (웨이당 베팅액 기준).
  *
  * 지급액은 `경로 수 x 배수 x 웨이당 베팅액`이고 경로 수는 릴별 매칭 칸 수의 곱이다.
@@ -268,9 +299,15 @@ function reelMatchStats(math: GameMath, matches: ReadonlySet<SymbolId>): ReelMat
  *     E[s] = Σ_k 배수(k) x (Π_{i<j} E[c_i]) x (Π_{j<=i<k} P(c_i>0)) x P(c_k=0)
  *
  * 여기서 j는 실제로 지급되는 길이다. 4연속인데 3개까지만 배당이 있으면 곱은 3릴까지만 센다.
+ *
+ * 평가기는 지급 창이 전부 와일드인 해석을 챔피언 후보 하나로 접는다. 해석식도 같은 규칙을
+ * 따라야 하므로, 챔피언이 아닌 후보에서는 "지급 창이 전부 와일드"인 몫을 뺀다.
+ * 그 몫도 릴별 인수의 곱으로 갈라지므로(`reelWildOnlyExpectation`) 닫힌 식이 유지된다.
  */
 export function expectedWaysMultiplier(math: GameMath): number {
   const candidates = getLineCandidates(math)
+  const wildIds = getWildIds(math)
+  const champions = getWildChampions(math)
   const bothWays = math.ways?.bothWays === true
   const forward = Array.from({ length: math.reels }, (_, index) => index)
   const orders: number[][] = bothWays ? [forward, [...forward].reverse()] : [forward]
@@ -278,23 +315,30 @@ export function expectedWaysMultiplier(math: GameMath): number {
   let total = 0
   for (const candidate of candidates) {
     const stats = reelMatchStats(math, candidate.matches)
+    const wildOnly = reelWildOnlyExpectation(math, candidate.matches, wildIds)
 
     orders.forEach((order, directionIndex) => {
       for (let k = 1; k <= math.reels; k += 1) {
-        // 전 릴 매칭은 왼쪽 방향에서 이미 셌다.
-        if (directionIndex > 0 && k === math.reels) continue
         const multiplier = candidate.bestPayout[k] ?? 0
         if (multiplier <= 0) continue
         const paidCount = candidate.bestCount[k] ?? k
+        // 지급 칸이 전 릴을 덮으면 좌우가 같은 사건이다. 왼쪽에서 이미 셌다.
+        if (directionIndex > 0 && paidCount === math.reels) continue
 
-        let term = 1
+        let head = 1
+        let headWildOnly = candidate.key === champions[k] ? 0 : 1
         for (let i = 0; i < paidCount; i += 1) {
-          term *= stats[order[i] ?? 0]?.expected ?? 0
+          const reel = order[i] ?? 0
+          head *= stats[reel]?.expected ?? 0
+          headWildOnly *= wildOnly[reel] ?? 0
         }
+        let tail = 1
         for (let i = paidCount; i < k; i += 1) {
-          term *= stats[order[i] ?? 0]?.nonZero ?? 0
+          tail *= stats[order[i] ?? 0]?.nonZero ?? 0
         }
-        if (k < math.reels) term *= stats[order[k] ?? 0]?.zero ?? 0
+        if (k < math.reels) tail *= stats[order[k] ?? 0]?.zero ?? 0
+
+        const term = (head - headWildOnly) * tail
         if (term === 0) continue
         total += multiplier * term
       }

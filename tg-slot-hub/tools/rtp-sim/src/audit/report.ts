@@ -369,6 +369,14 @@ export function buildAuditMarkdown(result: AuditResult): string {
           ],
           ['몬테카를로 트리거율', pct(mc.triggerRate)],
           ['몬테카를로 프리스핀 수', num(mc.freeSpinsPlayed)],
+          [
+            '프리스핀 상한에 걸린 스핀',
+            features.cappedSpins === null
+              ? '전수 조사 (표본 없음)'
+              : features.cappedSpins === 0
+                ? '0회 (캡에 닿지 않았다)'
+                : `${num(features.cappedSpins)}회, 잘린 프리스핀 ${num(features.cappedSpinsLost ?? 0)}회`,
+          ],
         ],
       ),
       '',

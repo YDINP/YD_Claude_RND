@@ -1,5 +1,5 @@
 import type { GameMath } from './schema.js'
-import { getLineCandidates } from './evaluate.js'
+import { getLineCandidates, getWildChampions, getWildIds } from './evaluate.js'
 import type { EvaluateResult, GridPosition, SymbolId, WinLine } from './types.js'
 
 /** ways 게임의 "웨이당 베팅액". 총 베팅액을 `ways.betDivisor`로 나눈다. */
@@ -14,13 +14,15 @@ export function getBetPerWay(math: GameMath, totalBet: number): number {
   return totalBet / divisor
 }
 
-/** 릴별로 후보 심볼과 일치하는 칸 수와 좌표. */
+/** 릴별로 후보 심볼과 일치하는 칸 수와 좌표. `nonWild`는 그중 와일드가 아닌 칸 수다. */
 function reelMatches(
   grid: SymbolId[][],
   math: GameMath,
   matches: ReadonlySet<SymbolId>,
-): { counts: number[]; cells: GridPosition[][] } {
+  wildIds: ReadonlySet<SymbolId>,
+): { counts: number[]; nonWild: number[]; cells: GridPosition[][] } {
   const counts = new Array<number>(math.reels).fill(0)
+  const nonWild = new Array<number>(math.reels).fill(0)
   const cells: GridPosition[][] = Array.from({ length: math.reels }, () => [])
   for (let row = 0; row < math.rows; row += 1) {
     const line = grid[row]
@@ -29,10 +31,11 @@ function reelMatches(
       const symbol = line[reel]
       if (symbol === undefined || !matches.has(symbol)) continue
       counts[reel] = (counts[reel] ?? 0) + 1
+      if (!wildIds.has(symbol)) nonWild[reel] = (nonWild[reel] ?? 0) + 1
       cells[reel]?.push([reel, row])
     }
   }
-  return { counts, cells }
+  return { counts, nonWild, cells }
 }
 
 interface Direction {
@@ -47,11 +50,17 @@ interface Direction {
  * 왼쪽 릴부터 연속으로 매칭이 이어져야 하고, 끊긴 지점에서 길이가 확정된다.
  * 지급액 = 경로 수 x 배수 x 웨이당 베팅액.
  *
- * `bothWays`면 오른쪽에서도 훑는다. 전 릴 매칭은 양방향이 같은 사건이므로
- * 왼쪽 방향에서 한 번만 센다.
+ * `bothWays`면 오른쪽에서도 훑는다. 지급 칸이 전 릴을 덮으면 양방향이 같은 사건이므로
+ * 왼쪽 방향에서 한 번만 센다. **연속이 전 릴이어도 지급 길이가 더 짧으면** 두 방향의
+ * 지급 칸이 달라지므로 각각 센다.
+ *
+ * 지급 칸이 전부 와일드인 해석은 후보마다 중복 성립하므로 챔피언 하나로 접는다
+ * (`getWildChampions`). 그러지 않으면 와일드 3개짜리 줄이 후보 수만큼 지급된다.
  */
 export function evaluateWays(grid: SymbolId[][], math: GameMath, betPerWay: number): EvaluateResult {
   const candidates = getLineCandidates(math)
+  const wildIds = getWildIds(math)
+  const wildChampions = getWildChampions(math)
   const bothWays = math.ways?.bothWays === true
   const forward: number[] = Array.from({ length: math.reels }, (_, index) => index)
   const directions: Direction[] = bothWays
@@ -65,7 +74,7 @@ export function evaluateWays(grid: SymbolId[][], math: GameMath, betPerWay: numb
   let totalWin = 0
 
   for (const candidate of candidates) {
-    const { counts, cells } = reelMatches(grid, math, candidate.matches)
+    const { counts, nonWild, cells } = reelMatches(grid, math, candidate.matches, wildIds)
 
     for (const direction of directions) {
       // 릴별 누적 곱을 들고 간다. 지급 길이가 연속 길이보다 짧을 수 있기 때문이다.
@@ -78,12 +87,23 @@ export function evaluateWays(grid: SymbolId[][], math: GameMath, betPerWay: numb
         run += 1
       }
       if (run === 0) continue
-      // 전 릴 매칭은 왼쪽 방향에서 이미 셌다. 오른쪽에서 다시 세면 이중 지급이다.
-      if (direction.label === 'rtl' && run === math.reels) continue
 
       const multiplier = candidate.bestPayout[run] ?? 0
       if (multiplier <= 0) continue
       const paidCount = candidate.bestCount[run] ?? run
+      // 지급 칸이 전 릴을 덮으면 좌우가 같은 사건이다. 오른쪽에서 다시 세면 이중 지급이다.
+      if (direction.label === 'rtl' && paidCount === math.reels) continue
+      // 지급 칸이 전부 와일드면 챔피언 후보만 지급한다.
+      let allWild = true
+      for (let i = 0; i < paidCount; i += 1) {
+        const reel = direction.order[i]
+        if (reel === undefined) continue
+        if ((nonWild[reel] ?? 0) > 0) {
+          allWild = false
+          break
+        }
+      }
+      if (allWild && wildChampions[run] !== candidate.key) continue
       // 경로 수는 **지급되는 길이까지만** 곱한다. 4연속인데 3개까지만 배당이 있으면 3릴 곱이다.
       const ways = cumulative[paidCount] ?? 0
       if (ways <= 0) continue

@@ -4,6 +4,7 @@ import { createSeededRng } from './rng/seeded.js'
 import { parseGameMath, safeParseGameMath } from './schema.js'
 import { spin } from './spin.js'
 import { makeGrid, makeMutationMath } from './testFixtures.js'
+import type { Rng } from './types.js'
 
 const BASE = {
   id: 'mut',
@@ -329,6 +330,169 @@ describe('randomWild', () => {
   })
 })
 
+describe('expandWild onlyIfWin', () => {
+  const mutation = { type: 'expandWild', symbol: 'w', reels: [1], minCount: 1 }
+  const always = mathWith([{ ...mutation, onlyIfWin: false }])
+  const onlyIfWin = mathWith([{ ...mutation, onlyIfWin: true }])
+
+  // 릴 0이 전부 b라서 b는 2연속 배당이 없고, 릴 2에는 b가 없다.
+  // 릴 1을 와일드로 덮어도 어떤 라인도 지급 길이에 닿지 못한다.
+  const noWinGrid = (): string[][] =>
+    makeGrid([
+      ['b', 'w', 'a'],
+      ['b', 'a', 'a'],
+      ['b', 'b', 'a'],
+    ])
+
+  // 같은 구조인데 릴 2가 b라서 확장하면 b 3연속이 두 줄 생긴다.
+  const winGrid = (): string[][] =>
+    makeGrid([
+      ['b', 'w', 'a'],
+      ['b', 'a', 'b'],
+      ['b', 'a', 'b'],
+    ])
+
+  it('확장해도 지급이 늘지 않으면 되돌린다', () => {
+    const before = noWinGrid()
+    const { grid, events } = applyMutations(onlyIfWin, before, createSeededRng('x'))
+    expect(events).toHaveLength(0)
+    expect(grid).toEqual(noWinGrid())
+  })
+
+  it('같은 그리드라도 onlyIfWin이 꺼져 있으면 그대로 확장한다', () => {
+    const { grid, events } = applyMutations(always, noWinGrid(), createSeededRng('x'))
+    expect(events).toHaveLength(1)
+    expect([grid[0]?.[1], grid[1]?.[1], grid[2]?.[1]]).toEqual(['w', 'w', 'w'])
+  })
+
+  it('확장이 지급을 만들면 확장을 남긴다', () => {
+    const { grid, events } = applyMutations(onlyIfWin, winGrid(), createSeededRng('x'))
+    expect(events).toHaveLength(1)
+    expect([grid[0]?.[1], grid[1]?.[1], grid[2]?.[1]]).toEqual(['w', 'w', 'w'])
+  })
+
+  it('이미 있던 승리는 확장의 성과로 치지 않는다', () => {
+    // 릴 1의 와일드가 이미 a 3연속을 만들어 두었고, 확장해도 더 늘어나는 줄이 없다.
+    const grid = makeGrid([
+      ['a', 'w', 'a'],
+      ['b', 'a', 'c'],
+      ['b', 'a', 'c'],
+    ])
+    const withFiller = parseGameMath({
+      ...JSON.parse(JSON.stringify(BASE)),
+      symbols: [...BASE.symbols, { id: 'c', name: { en: 'Filler' } }],
+      strips: BASE.strips.map((strip) => [...strip, 'c']),
+      mutations: [{ ...mutation, onlyIfWin: true }],
+    })
+    const result = applyMutations(withFiller, grid, createSeededRng('x'))
+    expect(result.events).toHaveLength(0)
+    expect(result.grid[1]?.[1]).toBe('a')
+  })
+
+  it('되돌리든 말든 RNG는 한 번도 쓰지 않는다', () => {
+    let draws = 0
+    const counting: Rng = {
+      nextInt: (bound: number) => {
+        draws += 1
+        return bound - 1
+      },
+    }
+    applyMutations(onlyIfWin, noWinGrid(), counting)
+    applyMutations(onlyIfWin, winGrid(), counting)
+    expect(draws).toBe(0)
+  })
+})
+
+describe('가중 추첨의 정밀도', () => {
+  it('정수 가중치는 반올림 없이 그대로 쓴다', () => {
+    // 가중치 {a:1, b:3}이면 눈금은 4칸이다. 마지막 눈금(=3)을 뽑으면 b가 나와야 한다.
+    const math = mathWith([{ type: 'mystery', symbol: 'q', weights: { a: 1, b: 3 } }])
+    const grid = makeGrid([
+      ['q', 'a', 'b'],
+      ['a', 'b', 'a'],
+      ['b', 'a', 'b'],
+    ])
+    const bounds: number[] = []
+    const probe: Rng = {
+      nextInt: (bound: number) => {
+        bounds.push(bound)
+        return 0
+      },
+    }
+    const { events } = applyMutations(math, grid, probe)
+    expect(bounds).toEqual([4])
+    expect(events[0]?.symbol).toBe('a')
+  })
+
+  it('소수 가중치는 100만 눈금으로 환산한다', () => {
+    const math = mathWith([{ type: 'mystery', symbol: 'q', weights: { a: 0.5, b: 1.5 } }])
+    const grid = makeGrid([
+      ['q', 'a', 'b'],
+      ['a', 'b', 'a'],
+      ['b', 'a', 'b'],
+    ])
+    const bounds: number[] = []
+    const probe: Rng = {
+      nextInt: (bound: number) => {
+        bounds.push(bound)
+        return 0
+      },
+    }
+    applyMutations(math, grid, probe)
+    expect(bounds[0]).toBe(1_000_000)
+  })
+})
+
+describe('뮤테이션 스키마 제약', () => {
+  function reject(mutations: unknown[]): void {
+    expect(safeParseGameMath({ ...JSON.parse(JSON.stringify(BASE)), mutations }).success).toBe(false)
+  }
+
+  it('와일드를 미스터리 심볼로 쓰면 거부한다', () => {
+    reject([{ type: 'mystery', symbol: 'w', weights: { a: 1, b: 1 } }])
+  })
+
+  it('스캐터를 미스터리 심볼로 쓰면 거부한다', () => {
+    reject([{ type: 'mystery', symbol: 's', weights: { a: 1, b: 1 } }])
+  })
+
+  it('두 뮤테이션이 같은 심볼을 읽으면 거부한다', () => {
+    reject([
+      { type: 'mystery', symbol: 'q', weights: { a: 1, b: 1 } },
+      { type: 'upgrade', from: 'q', to: 'a', minCount: 2 },
+    ])
+  })
+
+  it('같은 심볼을 읽는 미스터리 둘도 거부한다', () => {
+    reject([
+      { type: 'mystery', symbol: 'q', weights: { a: 1 } },
+      { type: 'mystery', symbol: 'q', weights: { b: 1 } },
+    ])
+  })
+
+  it('랜덤 와일드로 뿌린 뒤 확장하는 조합은 허용한다', () => {
+    const result = safeParseGameMath({
+      ...JSON.parse(JSON.stringify(BASE)),
+      mutations: [
+        { type: 'randomWild', symbol: 'w', chance: 0.2, countWeights: { 1: 1 }, reels: [1] },
+        { type: 'expandWild', symbol: 'w', reels: [1] },
+      ],
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('읽는 심볼이 다르면 여러 단계를 허용한다', () => {
+    const result = safeParseGameMath({
+      ...JSON.parse(JSON.stringify(BASE)),
+      mutations: [
+        { type: 'mystery', symbol: 'q', weights: { a: 1, b: 1 } },
+        { type: 'upgrade', from: 'b', to: 'a', minCount: 2 },
+      ],
+    })
+    expect(result.success).toBe(true)
+  })
+})
+
 describe('파이프라인 순서와 재현성', () => {
   it('선언 순서대로 적용되고 뒤 단계가 앞 결과 위에서 동작한다', () => {
     const math = mathWith([
@@ -376,5 +540,60 @@ describe('파이프라인 순서와 재현성', () => {
     const result = spin(plain, { totalBet: 3 }, createSeededRng('plain'))
     expect(result.grid).toEqual(result.gridBefore)
     expect(result.mutations).toEqual([])
+  })
+})
+
+describe('RNG 소비 순서 계약', () => {
+  /** 뽑을 때마다 maxExclusive를 기록하는 래퍼. */
+  function tracingRng(seed: string): { rng: Rng; draws: number[] } {
+    const inner = createSeededRng(seed)
+    const draws: number[] = []
+    return {
+      draws,
+      rng: {
+        nextInt(maxExclusive: number): number {
+          draws.push(maxExclusive)
+          return inner.nextInt(maxExclusive)
+        },
+      },
+    }
+  }
+
+  it('릴 정지를 전부 뽑은 뒤에 뮤테이션이 뽑는다', () => {
+    const math = mathWith([
+      { type: 'randomWild', symbol: 'w', chance: 1, countWeights: { 2: 1 }, reels: [0, 1] },
+    ])
+    const { rng, draws } = tracingRng('order-contract')
+    spin(math, { totalBet: 3 }, rng)
+
+    // 앞 3개는 릴별 스트립 길이로 뽑은 정지 위치다.
+    const stripLengths = math.strips.map((strip) => strip.length)
+    expect(draws.slice(0, math.reels)).toEqual(stripLengths)
+    // 그 뒤가 뮤테이션 몫이다. 확률 판정 1회 + 개수 추첨 1회 + 위치 추첨 2회.
+    expect(draws.length).toBe(math.reels + 4)
+  })
+
+  it('스캐터 집계와 프리스핀 판정은 RNG를 쓰지 않는다', () => {
+    // 뮤테이션이 없는 모델이면 뽑는 것은 릴 정지뿐이다.
+    // 스캐터 개수와 프리스핀 트리거는 확정된 그리드의 함수라 추첨이 없다.
+    const plain = parseGameMath(JSON.parse(JSON.stringify(BASE)))
+    const { rng, draws } = tracingRng('no-extra-draws')
+    const result = spin(plain, { totalBet: 3 }, rng)
+    expect(draws.length).toBe(plain.reels)
+    expect(result.scatterWin).toBeGreaterThanOrEqual(0)
+  })
+
+  it('프리스핀 중에도 추첨 순서는 같다', () => {
+    const plain = parseGameMath(JSON.parse(JSON.stringify(BASE)))
+    const { rng, draws } = tracingRng('free-spin-draws')
+    spin(plain, { totalBet: 3 }, rng, { freeSpinsLeft: 5, freeSpinsTotal: 5, multiplier: 2 })
+    expect(draws.length).toBe(plain.reels)
+  })
+
+  it('확장 와일드는 RNG를 전혀 쓰지 않는다', () => {
+    const math = mathWith([{ type: 'expandWild', symbol: 'w', reels: [1], minCount: 1 }])
+    const { rng, draws } = tracingRng('expand-no-draw')
+    spin(math, { totalBet: 3 }, rng)
+    expect(draws.length).toBe(math.reels)
   })
 })

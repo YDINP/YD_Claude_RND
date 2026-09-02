@@ -45,6 +45,7 @@ export {
   type ThemeFile,
 } from './theme.js'
 export {
+  dedupePositions,
   normalizePosition,
   reelStripWindow,
   spinTargetPosition,
@@ -163,5 +164,28 @@ export {
   type WinCycleStep,
   type WinTier,
 } from './wins.js'
+export {
+  applyMutationEventsToGrid,
+  buildMutationPlan,
+  mutationCellDelayMs,
+  mutationCommitMs,
+  mutationDurationMs,
+  mutationReels,
+  type MutationKind,
+  type MutationPlan,
+  type MutationPlanOptions,
+  type MutationStep,
+} from './mutations.js'
+export {
+  betUnitCount,
+  defaultWaysLabel,
+  isBothWays,
+  isWaysGame,
+  isWaysWin,
+  sortWaysWins,
+  waysCountOf,
+  waysDirectionOf,
+  type WaysDirection,
+} from './ways.js'
 export { resolveReducedMotion, resolveResolution } from './motion.js'
 export * from './constants.js'

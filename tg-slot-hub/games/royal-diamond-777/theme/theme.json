@@ -1,0 +1,180 @@
+{
+  "symbols": {
+    "wild": "symbols/wild.webp",
+    "mystery": "symbols/mystery.webp",
+    "scatter": "symbols/scatter.webp",
+    "seven": "symbols/seven.webp",
+    "diamond": "symbols/diamond.webp",
+    "bar3": "symbols/bar3.webp",
+    "bar2": "symbols/bar2.webp",
+    "bar1": "symbols/bar1.webp",
+    "bell": "symbols/bell.webp",
+    "cherry": "symbols/cherry.webp"
+  },
+  "frame": "frame.webp",
+  "background": "bg.webp",
+  "frameLayout": {
+    "window": {
+      "x": 0.08375,
+      "y": 0.29859375,
+      "w": 0.83640625,
+      "h": 0.4809375
+    }
+  },
+  "version": "1.0.0",
+  "palette": {
+    "frame": "#d7dbe0",
+    "reelBg": "#0d0c14",
+    "winLine": [
+      "#d7dbe0",
+      "#8fe3f2",
+      "#8f1f2e",
+      "#3fae6a",
+      "#f4d98a",
+      "#5b9dff"
+    ],
+    "text": "#f2f4f8"
+  },
+  "fx": {
+    "default": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.12,
+          "durationMs": 600
+        }
+      ]
+    },
+    "wild": {
+      "win": [
+        {
+          "type": "burst",
+          "particles": 24,
+          "durationMs": 1000
+        },
+        {
+          "type": "glow",
+          "color": "#8fe3f2",
+          "durationMs": 900
+        },
+        {
+          "type": "spin",
+          "durationMs": 300,
+          "repeat": 1
+        }
+      ]
+    },
+    "mystery": {
+      "win": [
+        {
+          "type": "flash",
+          "durationMs": 500,
+          "fromAlpha": 0.3
+        },
+        {
+          "type": "glow",
+          "color": "#8fe3f2",
+          "durationMs": 700
+        }
+      ]
+    },
+    "scatter": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#8fe3f2",
+          "durationMs": 800
+        },
+        {
+          "type": "spin",
+          "durationMs": 400,
+          "repeat": 1
+        }
+      ]
+    },
+    "seven": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.15,
+          "durationMs": 700
+        },
+        {
+          "type": "shine",
+          "durationMs": 900,
+          "angle": 25
+        }
+      ]
+    },
+    "diamond": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#8fe3f2",
+          "durationMs": 800
+        },
+        {
+          "type": "shine",
+          "durationMs": 800,
+          "angle": 20
+        }
+      ]
+    },
+    "bar3": {
+      "win": [
+        {
+          "type": "flash",
+          "durationMs": 500,
+          "stagger": true,
+          "segments": 3
+        }
+      ]
+    },
+    "bar2": {
+      "win": [
+        {
+          "type": "flash",
+          "durationMs": 500,
+          "stagger": true,
+          "segments": 2
+        }
+      ]
+    },
+    "bar1": {
+      "win": [
+        {
+          "type": "flash",
+          "durationMs": 500
+        }
+      ]
+    },
+    "bell": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 12,
+          "durationMs": 800
+        },
+        {
+          "type": "glow",
+          "color": "#d7dbe0",
+          "durationMs": 800
+        }
+      ]
+    },
+    "cherry": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.08,
+          "durationMs": 700
+        },
+        {
+          "type": "wobble",
+          "degrees": 6,
+          "durationMs": 700
+        }
+      ]
+    }
+  }
+}

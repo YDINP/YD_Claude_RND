@@ -76,4 +76,16 @@ describe('winLineLabel', () => {
     expect(winLineLabel(math, { symbol: 'anybar', group: 'anybar' }, 'ko')).toBe('바 아무거나')
     expect(winLineLabel(math, { symbol: 'anybar', group: 'anybar' }, 'en')).toBe('Any BAR')
   })
+
+  it('appends "× N ways" for a ways win (Wave 1)', () => {
+    expect(winLineLabel(math, { symbol: 'seven', ways: 8 }, 'en')).toBe('Seven × 8 ways')
+  })
+
+  it('keeps the "ways" word untranslated even in Korean (genre term, matches renderer example)', () => {
+    expect(winLineLabel(math, { symbol: 'seven', ways: 27 }, 'ko')).toBe('세븐 × 27 ways')
+  })
+
+  it('does not append anything when ways is absent (line games)', () => {
+    expect(winLineLabel(math, { symbol: 'seven', ways: undefined }, 'en')).toBe('Seven')
+  })
 })

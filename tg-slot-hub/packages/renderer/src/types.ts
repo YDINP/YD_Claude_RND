@@ -1,4 +1,4 @@
-import type { GameMath, SymbolId, WinLine } from '@tgslot/slot-engine'
+import type { GameMath, MutationEvent, SymbolId, WinLine } from '@tgslot/slot-engine'
 import type { FrameWindow } from './layout.js'
 import type { FxMap, SheetMap } from './theme.js'
 import type { WinTier } from './wins.js'
@@ -100,6 +100,17 @@ export type RendererEvent =
    * 허브가 여기에 짧은 효과음을 붙이라고 있는 이벤트다.
    */
   | { type: 'pulseArrive'; line: number; reel: number; row: number }
+  /**
+   * 변형(미스터리 리빌·확장 와일드·승급·랜덤 와일드) 한 단계가 시작하거나 끝났다.
+   * 배너와 효과음은 허브가 띄운다. 렌더러는 릴 위 연출만 맡는다.
+   *
+   * `start` 하나에 `end` 하나가 반드시 따른다. 중간에 `skip()`으로 접어도 마찬가지다.
+   * 다만 아직 시작하지 않은 단계는 건너뛰므로 `start`도 `end`도 나오지 않는다.
+   *
+   * `symbol`은 `mutation.symbol`과 같은 값이다. 배너가 "무엇으로 바뀌었는지"를
+   * 한 단계 더 들어가지 않고 읽도록 맨 위에도 올려 둔다. 이벤트에 없으면 정의되지 않는다.
+   */
+  | { type: 'mutation'; mutation: MutationEvent; symbol?: SymbolId; phase: 'start' | 'end' }
 
 export interface RendererOptions {
   /** 캔버스를 붙일 DOM 요소. 크기는 이 요소의 클라이언트 박스를 따른다. */
@@ -137,6 +148,16 @@ export interface SpinToOptions {
   stagger?: number
   /** 프리스핀처럼 리듬을 당길 때. 회전 시간이 0.8배로 줄어든다. */
   fast?: boolean
+  /**
+   * 릴이 그대로 멈춘 그리드(`SpinResult.gridBefore`, `grid[row][reel]`).
+   * 변형 연출의 첫 프레임이다. 주지 않으면 `stops`와 스트립에서 되짚는다.
+   */
+  gridBefore?: readonly (readonly SymbolId[])[]
+  /**
+   * 착지 뒤에 순서대로 재생할 변형(`SpinResult.mutations`).
+   * 재생이 끝나면 화면은 엔진의 `SpinResult.grid`와 정확히 같아진다.
+   */
+  mutations?: readonly MutationEvent[]
 }
 
 export interface ShowWinsOptions {
@@ -171,7 +192,10 @@ export interface SpinHandle extends PromiseLike<void> {
   /**
    * 남은 회전을 접고 곧장 정지 위치로 붙인다.
    * 착지 좌표는 그대로이고 `reelStop`/`spinEnd`도 정상적으로 발생한다.
-   * 이미 멈춘 뒤에 불러도 아무 일도 일어나지 않는다.
+   *
+   * 변형 연출 중이면 남은 단계를 접고 최종 그리드로 곧장 넘어간다.
+   * 화면은 언제나 엔진의 최종 그리드와 같아지므로 결과가 달라지지 않는다.
+   * 이미 다 끝난 뒤에 불러도 아무 일도 일어나지 않는다.
    */
   skip(): void
 }
@@ -179,7 +203,12 @@ export interface SpinHandle extends PromiseLike<void> {
 export interface SlotRenderer {
   /** 에셋 로딩과 첫 렌더가 끝나면 resolve. */
   ready: Promise<void>
-  /** 릴을 돌려 `stops`에 정확히 멈춘다. 기다리거나 건너뛸 수 있는 손잡이를 돌려준다. */
+  /**
+   * 릴을 돌려 `stops`에 정확히 멈춘다. 기다리거나 건너뛸 수 있는 손잡이를 돌려준다.
+   *
+   * `mutations`를 주면 착지 뒤에 변형 연출을 순서대로 재생하고, 그것까지 끝난 뒤에
+   * `spinEnd`를 내보내며 resolve한다. 승리 연출은 변형이 끝난 그리드 위에서 시작해야 한다.
+   */
   spinTo(stops: number[], opts?: SpinToOptions): SpinHandle
   /** 승리 라인 하이라이트. `loop: false`면 한 바퀴를 다 보여준 뒤 resolve. */
   showWins(wins: WinLine[], opts?: ShowWinsOptions): Promise<void>

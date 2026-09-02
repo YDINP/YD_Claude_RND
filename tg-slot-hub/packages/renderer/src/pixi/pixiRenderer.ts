@@ -26,7 +26,13 @@ import {
   WIN_LINE_ALPHA,
   WIN_LINE_STROKE_PX,
 } from '../constants.js'
-import { normalizePosition, spinTargetPosition, wrapIndex } from '../grid.js'
+import {
+  dedupePositions,
+  normalizePosition,
+  spinTargetPosition,
+  stopsToGrid,
+  wrapIndex,
+} from '../grid.js'
 import {
   cellPitch,
   computeFrameLayout,
@@ -60,6 +66,13 @@ import {
   type PresentationStep,
 } from '../presentation.js'
 import { buildPulsePath, pulseHopMsForTier, pulseTrailForTier } from '../pulse.js'
+import {
+  buildMutationPlan,
+  mutationReels,
+  type MutationPlan,
+  type MutationStep,
+} from '../mutations.js'
+import { isWaysGame, waysDirectionOf } from '../ways.js'
 import type { RendererCore, ResolvedRendererOptions } from '../internal.js'
 import type { ResolvedFxEffect } from '../fx.js'
 import { TextureRegistry } from '../textureRegistry.js'
@@ -77,6 +90,12 @@ import {
 import { createFxTextures, playSymbolFxSet, type FxTextures, type SymbolFxHandle } from './symbolFx.js'
 import { createPulseTexture, playWinPulse, type WinPulseHandle } from './winPulse.js'
 import { loadSheetFrames, peekSheet, playSheetFx } from './sheetFx.js'
+import {
+  playMutationFx,
+  MutationSpritePool,
+  type MutationCellTarget,
+  type MutationFxHandle,
+} from './mutationFx.js'
 
 interface Cell {
   view: Container
@@ -146,6 +165,10 @@ class PixiRenderer implements RendererCore {
   private readonly maskGraphics = new Graphics()
   private readonly winGraphics = new Graphics()
   private readonly fxLayer = new Container()
+  /** 변형 연출의 기둥·먼지가 사는 층. 릴 마스크 밖이라 잘리지 않는다. */
+  private readonly mutationLayer = new Container()
+  /** 변형 파티클 재사용 풀. 스핀마다 수백 개를 새로 만들지 않으려고 둔다. */
+  private readonly mutationPool = new MutationSpritePool(this.mutationLayer)
   private readonly winLabel: Text
   /** 스캐터 링. 맥동하느라 alpha가 계속 움직여서 다른 것과 섞으면 안 된다. */
   private readonly featureGraphics = new Graphics()
@@ -203,6 +226,17 @@ class PixiRenderer implements RendererCore {
   private crossfadeTween: gsap.core.Tween | null = null
   private winPulse: WinPulseHandle | null = null
   private winToken = 0
+  /**
+   * 변형이 끝난 뒤의 화면 그리드(`grid[row][reel]`). null이면 스트립이 보이는 대로다.
+   *
+   * 변형은 스트립에 없는 심볼을 칸에 앉힌다(물음표가 체리가 되는 식). 스트립만 읽으면
+   * 다시 그릴 때마다 원래 심볼로 되돌아가므로, 화면이 무엇을 보여줄지는 이 층이 정한다.
+   */
+  private gridOverride: readonly (readonly SymbolId[])[] | null = null
+  /** 재생 중인 변형 한 단계. 스킵이 이걸 붙잡아 곧장 끝낸다. */
+  private activeMutation: { finish: () => void } | null = null
+  /** 스킵이 눌린 스핀. 변형 단계가 이 값을 보고 남은 단계를 접는다. */
+  private skipRequestedToken = -1
   private readonly timers = new Set<ReturnType<typeof setTimeout>>()
   private destroyed = false
 
@@ -279,6 +313,7 @@ class PixiRenderer implements RendererCore {
     this.contentLayer.addChild(
       this.reelsLayer,
       this.maskGraphics,
+      this.mutationLayer,
       this.featureGraphics,
       this.modeGraphics,
       this.winGraphics,
@@ -488,7 +523,9 @@ class PixiRenderer implements RendererCore {
       const cell = view.cells[k]
       if (cell === undefined) continue
       const row = k - 1
-      const symbol = strip[wrapIndex(base + row, strip.length)]
+      // 변형이 앉힌 심볼이 스트립보다 우선한다. 오버스캔 칸(row -1, rows)에는 없다.
+      const overridden = this.gridOverride?.[row]?.[reel]
+      const symbol = overridden ?? strip[wrapIndex(base + row, strip.length)]
       if (symbol !== undefined) this.setCellSymbol(cell, symbol)
       cell.view.y = rowTop(this.layout, row) + this.layout.symbolSize / 2 - fraction * pitch
     }
@@ -503,9 +540,12 @@ class PixiRenderer implements RendererCore {
   spinTo(stops: number[], opts?: SpinToOptions): SpinHandle {
     const done = this.runSpin(stops, opts)
     void done.catch(() => undefined)
+    // runSpin은 첫 await 전에 토큰을 올린다. 그래서 여기서 이 스핀의 토큰을 붙잡을 수 있다.
+    // 붙잡지 않으면 지난 스핀의 손잡이가 다음 스핀의 변형을 접어 버린다.
+    const token = this.spinToken
     return {
       done,
-      skip: () => this.skipSpin(),
+      skip: () => this.skipSpin(token),
       then: (onFulfilled, onRejected) => done.then(onFulfilled, onRejected),
     }
   }
@@ -515,8 +555,14 @@ class PixiRenderer implements RendererCore {
    * 왼쪽부터 짧은 간격을 남겨 한꺼번에 툭 서지 않게 한다.
    * 착지는 원래 경로와 똑같이 `stops`로 확정되므로 결과가 달라지지 않는다.
    */
-  private skipSpin(): void {
-    if (this.destroyed || this.activeReels.size === 0) return
+  private skipSpin(token: number): void {
+    // 이미 지나간 스핀의 손잡이는 아무것도 접지 않는다.
+    if (this.destroyed || token !== this.spinToken) return
+    // 이 스핀은 접기로 했다. 아직 시작하지 않은 변형 단계도 이 표식을 보고 건너뛴다.
+    this.skipRequestedToken = token
+    // 변형 재생 중이면 그 단계를 곧장 끝낸다. 최종 그리드는 그대로 확정된다.
+    this.activeMutation?.finish()
+    if (this.activeReels.size === 0) return
     const plan = buildSkipPlan(this.options.math.reels)
 
     for (const [reel, active] of [...this.activeReels]) {
@@ -551,6 +597,8 @@ class PixiRenderer implements RendererCore {
     this.clearWins()
     this.setSpinningIdle(false)
     this.killSpinTimelines()
+    // 지난 스핀의 변형은 여기서 사라진다. 릴은 언제나 스트립 그대로 돌기 시작한다.
+    this.clearGridOverride()
     const token = (this.spinToken += 1)
 
     const plan = buildSpinPlan({
@@ -574,6 +622,14 @@ class PixiRenderer implements RendererCore {
     this.spinTimelines = []
     this.spinResolvers = []
     this.activeReels.clear()
+
+    // 변형은 착지와 승리 사이에 온다. 승리 연출은 변형이 끝난 그리드 위에서 시작해야 한다.
+    const mutationPlan = this.planMutations(stops, opts)
+    if (mutationPlan !== null) {
+      await this.runMutationPhase(mutationPlan, token)
+      if (this.destroyed || token !== this.spinToken) return
+    }
+
     this.emit({ type: 'spinEnd' })
   }
 
@@ -676,9 +732,174 @@ class PixiRenderer implements RendererCore {
     for (const timeline of this.spinTimelines) timeline.kill()
     this.spinTimelines = []
     this.activeReels.clear()
+    // 재생 중이던 변형도 함께 끊는다. 끊긴 단계는 자기 그리드를 확정하고 물러난다.
+    this.activeMutation?.finish()
     const resolvers = this.spinResolvers
     this.spinResolvers = []
     for (const resolve of resolvers) resolve()
+  }
+
+
+  // ------------------------------------------------------------------ 변형
+
+  /**
+   * 화면 그리드를 갈아 끼운다. 스트립에 없는 심볼도 이 층을 통해 칸에 앉는다.
+   * 다시 그릴 때마다 스트립으로 되돌아가는 것을 막는 유일한 장치다.
+   */
+  private applyGridOverride(grid: readonly (readonly SymbolId[])[]): void {
+    this.gridOverride = grid.map((row) => [...row])
+    for (let reel = 0; reel < this.reels.length; reel += 1) this.renderReel(reel)
+  }
+
+  /** 변형 층을 걷어 내고 스트립이 보이는 그대로 되돌린다. */
+  private clearGridOverride(): void {
+    if (this.gridOverride === null) return
+    this.gridOverride = null
+    for (let reel = 0; reel < this.reels.length; reel += 1) this.renderReel(reel)
+  }
+
+  /**
+   * 이번 스핀의 변형 계획. 재생할 것이 없으면 null이다.
+   *
+   * `gridBefore`를 주지 않았으면 정지 위치에서 되짚는데, 정지 위치가 스트립과 맞지 않으면
+   * 여기서 예외가 난다. 그 예외로 스핀이 멎으면 spinEnd가 영영 안 나가고 허브가 멈춘다.
+   * 변형은 연출이지 결과가 아니므로, 되짚기에 실패하면 변형만 건너뛰고 스핀은 정상 종료시킨다.
+   */
+  private planMutations(stops: number[], opts?: SpinToOptions): MutationPlan | null {
+    const mutations = opts?.mutations ?? []
+    if (mutations.length === 0) return null
+
+    let gridBefore = opts?.gridBefore
+    if (gridBefore === undefined) {
+      try {
+        gridBefore = stopsToGrid(this.options.math, stops)
+      } catch {
+        return null
+      }
+    }
+
+    const plan = buildMutationPlan(gridBefore, mutations, {
+      reducedMotion: this.options.reducedMotion,
+    })
+    return plan.steps.length === 0 ? null : plan
+  }
+
+  /**
+   * 변형 단계를 순서대로 재생한다.
+   *
+   * 단계마다 `start`를 내고 연출을 끝낸 뒤 `end`를 낸다. 짝이 어긋나면 허브의 배너가
+   * 걸린 채로 남는다. 스킵이 눌리면 아직 시작하지 않은 단계는 아예 열지 않는다.
+   *
+   * 어떻게 끝나든 마지막에 화면은 `plan.finalGrid`, 즉 엔진의 `SpinResult.grid`와 같다.
+   */
+  private async runMutationPhase(plan: MutationPlan, token: number): Promise<void> {
+    for (const step of plan.steps) {
+      if (this.destroyed || token !== this.spinToken) return
+      if (this.skipRequestedToken === token) break
+      this.emitMutation(step, 'start')
+      await this.playMutationStep(step)
+      // start를 냈으면 end도 반드시 낸다. 새 스핀이나 destroy가 끼어들어도 마찬가지다.
+      // 짝이 어긋나면 이 신호를 기다리는 배너가 걸린 채로 남는다.
+      this.emitMutation(step, 'end')
+      if (this.destroyed || token !== this.spinToken) return
+    }
+    if (this.destroyed || token !== this.spinToken) return
+    this.applyGridOverride(plan.finalGrid)
+  }
+
+  /**
+   * 변형 이벤트 하나. 배너가 "무엇으로 바뀌었는지"를 바로 읽을 수 있도록
+   * 공개된 심볼(리빌 결과·와일드 id)을 이벤트 맨 위에도 함께 올린다.
+   */
+  private emitMutation(step: MutationStep, phase: 'start' | 'end'): void {
+    const symbol = step.mutation.symbol
+    this.emit({
+      type: 'mutation',
+      mutation: step.mutation,
+      ...(symbol === undefined ? {} : { symbol }),
+      phase,
+    })
+  }
+
+  /** 변형 단계 하나가 끝날 때까지 기다린다. 끝나는 길은 정상 종료와 스킵 둘뿐이다. */
+  private playMutationStep(step: MutationStep): Promise<void> {
+    return new Promise<void>((resolve) => {
+      let handle: MutationFxHandle | null = null
+      let hold: ReturnType<typeof setTimeout> | null = null
+      let settled = false
+      // 정상 종료든 스킵이든 같은 문을 지난다. 그래야 화면이 갈리지 않는다.
+      const finish = (): void => {
+        if (settled) return
+        settled = true
+        this.activeMutation = null
+        if (hold !== null) clearTimeout(hold)
+        handle?.stop()
+        this.applyGridOverride(step.grid)
+        resolve()
+      }
+      this.activeMutation = { finish }
+
+      const targets = this.mutationTargets(step)
+      handle = playMutationFx(step, targets, this.mutationContext(step), {
+        onCommit: () => this.applyGridOverride(step.grid),
+        onComplete: finish,
+      })
+      // 연출이 없으면 끝을 알려 줄 타임라인도 없다. 그렇다고 0ms에 닫으면 계획이 말한
+      // 길이와 화면이 갈린다. 바뀐 결과를 읽을 시간은 계획이 정한 만큼 그대로 준다.
+      // 이 타이머는 clearWins가 걷어 가는 목록에 넣지 않는다. 걷히면 단계가 안 닫힌다.
+      if (this.options.reducedMotion || targets.length === 0) {
+        hold = setTimeout(finish, step.durationMs)
+      }
+    })
+  }
+
+  /** 이 단계가 실제로 건드리는 화면 칸. 격자 밖 좌표는 조용히 버린다. */
+  private mutationTargets(step: MutationStep): MutationCellTarget[] {
+    const targets: MutationCellTarget[] = []
+    for (const change of step.cells) {
+      const [reel, row] = change.position
+      const cell = this.reels[reel]?.cells[row + 1]
+      if (cell === undefined) continue
+      targets.push({
+        view: cell.view,
+        sprite: cell.sprite,
+        center: symbolCenter(this.layout, reel, row),
+      })
+    }
+    return targets
+  }
+
+  private mutationContext(step: MutationStep): {
+    layer: Container
+    pool: MutationSpritePool
+    textures: FxTextures
+    color: string
+    symbolSize: number
+    columns: Rect[]
+    reducedMotion: boolean
+  } {
+    return {
+      layer: this.mutationLayer,
+      pool: this.mutationPool,
+      textures: this.fxTextures,
+      color: this.options.theme.palette.frame,
+      symbolSize: this.layout.symbolSize,
+      columns: step.type === 'expandWild' ? this.reelColumns(mutationReels(step.mutation)) : [],
+      reducedMotion: this.options.reducedMotion,
+    }
+  }
+
+  /** 릴 한 줄이 차지하는 사각형(콘텐츠 좌표). 확장 와일드 기둥이 여기에 선다. */
+  private reelColumns(reels: readonly number[]): Rect[] {
+    const { reelArea, symbolSize } = this.layout
+    return reels
+      .filter((reel) => reel >= 0 && reel < this.reels.length)
+      .map((reel) => ({
+        x: reelLeft(this.layout, reel),
+        y: reelArea.y,
+        width: symbolSize,
+        height: reelArea.height,
+      }))
   }
 
   // ------------------------------------------------------------------ 승리
@@ -742,7 +963,9 @@ class PixiRenderer implements RendererCore {
     this.winLabel.visible = false
 
     if (step.phase === 'all') {
-      const positions = step.wins.flatMap((win) => win.positions)
+      // ways 게임은 여러 심볼의 승리가 같은 칸을 겹쳐 짚는다. 겹친 채로 두면 한 칸에
+      // 연출을 몇 겹씩 걸었다 끄기를 반복하고 stagger 인덱스도 실제 칸 수를 넘는다.
+      const positions = dedupePositions(step.wins.flatMap((win) => win.positions))
       this.dimExcept([...positions, ...step.scatters])
       this.playFxAt(positions)
       this.showScatters(step.scatters)
@@ -776,7 +999,7 @@ class PixiRenderer implements RendererCore {
     this.crossfadeOverlay()
     // 라벨은 빛이 마지막 심볼에 닿을 때 뜬다. 미리 띄우면 금액이 근거보다 먼저 나온다.
     this.winLabel.visible = false
-    this.playWinPath(win, step.durationMs, () => this.placeWinLabel(win, label))
+    this.playWinPath(win, step.durationMs, (arrival) => this.placeWinLabel(win, label, arrival))
     this.emit({ type: 'winLine', line: win.line, win: win.win })
   }
 
@@ -956,12 +1179,12 @@ class PixiRenderer implements RendererCore {
    * `paylineStyle: 'line'`일 때만 예전 폴리라인을 덧그린다(좌표 확인용).
    */
   private drawWinHighlight(win: WinLine): void {
-    const payline = this.options.math.paylines[win.line]
-    if (payline === undefined) return
     const brass = this.options.theme.palette.frame
     const radius = this.layout.radius * 0.5
+    // ways 게임에는 페이라인이 없다(`line`은 -1). 선을 그릴 좌표 자체가 없으므로 광채만 남는다.
+    const payline = this.options.math.paylines[win.line]
 
-    if (this.options.paylineStyle === 'line') {
+    if (this.options.paylineStyle === 'line' && payline !== undefined) {
       const lineColor = paylineColor(this.options.theme.palette.winLine, win.line)
       const points = paylinePoints(this.layout, payline)
       const first = points[0]
@@ -999,17 +1222,30 @@ class PixiRenderer implements RendererCore {
    * 당첨 심볼을 왼쪽부터 훑는 빛. 빛이 닿는 순간 그 심볼이 fx를 한 번 터뜨린다.
    * 선을 대신하는 연출이라 `paylineStyle: 'line'`에서도 함께 돈다(선은 참고용 덧그림).
    */
-  private playWinPath(win: WinLine, stepMs: number, onFinalArrive: () => void): void {
+  private playWinPath(
+    win: WinLine,
+    stepMs: number,
+    onFinalArrive: (arrival: GridPosition) => void,
+  ): void {
     this.stopWinPulse()
     // 등급이 높을수록 빛이 느긋하게 간다. 큰 승리를 더 오래 보게 만드는 장치다.
-    const path = buildPulsePath(this.layout, win.positions, pulseHopMsForTier(this.winTier))
+    // `bothWays`에서 오른쪽으로 읽은 승리는 빛도 오른쪽에서 왼쪽으로 흐른다.
+    const direction = isWaysGame(this.options.math) ? waysDirectionOf(win) : 'ltr'
+    const path = buildPulsePath(
+      this.layout,
+      win.positions,
+      pulseHopMsForTier(this.winTier),
+      direction,
+    )
     const last = path.waypoints.length - 1
     if (last < 0) return
+    const finalPosition = path.waypoints[last]?.position
+    if (finalPosition === undefined) return
 
     if (this.options.reducedMotion) {
       // 모션 축소에서는 빛을 움직이지 않고 심볼만 한 번에 강조한다.
       this.playFxAt(win.positions)
-      onFinalArrive()
+      onFinalArrive(finalPosition)
       return
     }
 
@@ -1023,7 +1259,7 @@ class PixiRenderer implements RendererCore {
         if (position === undefined) return
         this.playFxAt([position])
         this.emit({ type: 'pulseArrive', line: win.line, reel: position[0], row: position[1] })
-        if (index === last) onFinalArrive()
+        if (index === last) onFinalArrive(position)
       },
     })
   }
@@ -1033,13 +1269,14 @@ class PixiRenderer implements RendererCore {
     this.winPulse = null
   }
 
-  /** 라인 끝 심볼 옆에 "Line n · 배당" 명판을 띄운다. */
-  private placeWinLabel(win: WinLine, label: (win: WinLine) => string): void {
-    const payline = this.options.math.paylines[win.line]
-    if (payline === undefined) return
-    const lastReel = Math.max(0, win.positions.length - 1)
-    const row = payline[lastReel] ?? 0
-    const center = symbolCenter(this.layout, lastReel, row)
+  /**
+   * 빛이 마지막으로 닿은 심볼 옆에 명판을 띄운다.
+   *
+   * 좌표는 페이라인이 아니라 **실제 승리 자리**에서 온다. ways 게임에는 페이라인이 없고,
+   * 오른쪽으로 읽은 승리는 마지막 자리가 왼쪽 끝이기 때문이다.
+   */
+  private placeWinLabel(win: WinLine, label: (win: WinLine) => string, arrival: GridPosition): void {
+    const center = symbolCenter(this.layout, arrival[0], arrival[1])
     this.winLabel.text = label(win)
     this.winLabel.x = Math.min(
       Math.max(this.winLabel.width / 2, center.x + this.layout.symbolSize * 0.5),

@@ -43,6 +43,17 @@ export function useEffectiveLocale(): Locale {
 }
 
 /**
+ * useEffectiveLocale()과 같은 계산을 훅 밖(store 액션 등 리액트 컴포넌트가 아닌 곳)에서 쓴다 —
+ * 구독 없이 지금 이 순간의 값만 한 번 읽는다. renderer의 formatLineLabel처럼 렌더 사이클과
+ * 무관하게 그때그때 값이 필요한 콜백에 쓴다.
+ */
+export function getEffectiveLocale(): Locale {
+  const settingsLocale = useSettingsStore.getState().locale
+  const userLocale = useSessionStore.getState().user?.locale ?? DEFAULT_LOCALE
+  return settingsLocale === 'auto' ? userLocale : settingsLocale
+}
+
+/**
  * 유효 locale(위 `useEffectiveLocale()`)을 반영하는 번역 훅.
  * locale prop을 이미 가진 컴포넌트(GameCard, Lobby 등)는 t()를 직접 쓰는 편이
  * 테스트하기 쉽다 — 이 훅은 세션/설정 컨텍스트가 자연스러운 상위 컴포넌트용.

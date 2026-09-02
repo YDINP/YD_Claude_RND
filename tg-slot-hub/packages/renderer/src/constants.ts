@@ -241,3 +241,50 @@ export const PULSE_TRAIL_COUNT = 6
 export const SKIP_TOTAL_MS = 260
 /** 스킵 시 릴 사이 정지 간격(ms). */
 export const SKIP_STAGGER_MS = 40
+
+/**
+ * 변형(뮤테이션) 연출 길이(ms). 종류마다 다른 이유가 있다.
+ * 확장 와일드는 릴 한 줄이 통째로 자라므로 가장 길고, 승급은 크로스페이드뿐이라 짧다.
+ */
+export const MUTATION_MS_BY_TYPE = {
+  mystery: 600,
+  expandWild: 700,
+  upgrade: 550,
+  randomWild: 650,
+} as const
+
+/** 모션 축소 시 변형 1단계 길이(ms). 결과만 보여주고 넘어간다. */
+export const REDUCED_MUTATION_MS = 200
+
+/**
+ * 단계 시작 기준으로 텍스처를 갈아 끼우는 시점의 비율.
+ *
+ * 뒤집기·크로스페이드는 한가운데에서 바꿔야 "변했다"가 읽힌다.
+ * 낙하는 떨어지는 것 자체가 와일드라 시작하자마자 바꾼다.
+ */
+export const MUTATION_COMMIT_RATIO = {
+  mystery: 0.5,
+  expandWild: 0.55,
+  upgrade: 0.5,
+  randomWild: 0,
+} as const
+
+/** 와일드가 칸마다 차례로 떨어지는 간격(ms). */
+export const MUTATION_DROP_STAGGER_MS = 90
+/** 칸 사이 지연이 단계 길이에서 차지할 수 있는 최대 비율. */
+export const MUTATION_MAX_STAGGER_PORTION = 0.4
+/** 와일드가 떨어지기 시작하는 높이(심볼 한 변 대비). */
+export const MUTATION_DROP_HEIGHT_SYMBOLS = 1.6
+/** 낙하 착지 먼지 파티클 수(칸 하나당). */
+export const MUTATION_DUST_PARTICLES = 10
+/** 미스터리 리빌·승급에서 터지는 금빛 파티클 수(칸 하나당). */
+export const MUTATION_BURST_PARTICLES = 14
+/** 변형 파티클이 날아가는 거리 = 심볼 한 변 x 이 값. */
+export const MUTATION_PARTICLE_DISTANCE_RATIO = 0.8
+/** 확장 와일드 기둥의 최대 불투명도. */
+export const MUTATION_COLUMN_ALPHA = 0.55
+/** 확장 와일드 기둥이 릴 폭보다 넓어지는 배수. */
+export const MUTATION_COLUMN_WIDTH_SCALE = 1.35
+
+/** ways 게임에서 `ways.betDivisor`를 읽지 못했을 때의 기본 배당 단위. 엔진 기본값과 같다. */
+export const DEFAULT_WAYS_BET_DIVISOR = 25

@@ -1,8 +1,17 @@
 export * from './types.js'
 export * from './schema.js'
-export { evaluate, evaluateScatter, getBetPerLine, getLineCandidates, payoutForCount, triggersFreeSpins } from './evaluate.js'
+export {
+  evaluate,
+  evaluateScatter,
+  getBetPerLine,
+  getLineCandidates,
+  getWildChampions,
+  getWildIds,
+  payoutForCount,
+  triggersFreeSpins,
+} from './evaluate.js'
 export type { LineCandidate } from './evaluate.js'
-export { assertBetLevel, buildGrid, getBetUnit, resolveSpin, spin } from './spin.js'
+export { assertBetLevel, buildGrid, getBetUnit, resolveSpin, spin, spinUnchecked } from './spin.js'
 export { applyMutations, isProbabilistic } from './mutations.js'
 export { evaluateWays, getBetPerWay } from './ways.js'
 export {
@@ -26,7 +35,6 @@ export {
   DEFAULT_MC_SEED,
   DEFAULT_MC_SPINS,
   MAX_ENUMERATION_COMBOS,
-  MAX_FREE_SPINS_PER_ROUND,
   type MonteCarloRtpInfo,
   type ExactRtpOptions,
   type ExactRtpReport,
@@ -34,4 +42,5 @@ export {
   type SimulationReport,
   type WinBucket,
 } from './rtp.js'
+export { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 export { createSeededRng } from './rng/seeded.js'

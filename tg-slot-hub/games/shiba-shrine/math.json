@@ -1,0 +1,435 @@
+{
+  "id": "shiba-shrine",
+  "reels": 5,
+  "rows": 3,
+  "symbols": [
+    {
+      "id": "wild",
+      "name": {
+        "en": "Torii Wild",
+        "ko": "토리이 와일드"
+      },
+      "wild": true
+    },
+    {
+      "id": "scatter",
+      "name": {
+        "en": "Shrine Lantern",
+        "ko": "신사 등롱"
+      },
+      "scatter": true
+    },
+    {
+      "id": "shiba",
+      "name": {
+        "en": "Shiba",
+        "ko": "시바"
+      }
+    },
+    {
+      "id": "panda",
+      "name": {
+        "en": "Panda",
+        "ko": "판다"
+      }
+    },
+    {
+      "id": "capy",
+      "name": {
+        "en": "Capybara",
+        "ko": "카피바라"
+      }
+    },
+    {
+      "id": "tanuki",
+      "name": {
+        "en": "Tanuki",
+        "ko": "너구리"
+      }
+    },
+    {
+      "id": "cat",
+      "name": {
+        "en": "Lucky Cat",
+        "ko": "복고양이"
+      }
+    },
+    {
+      "id": "koi",
+      "name": {
+        "en": "Koi",
+        "ko": "비단잉어"
+      }
+    },
+    {
+      "id": "dango",
+      "name": {
+        "en": "Dango",
+        "ko": "당고"
+      }
+    },
+    {
+      "id": "charm",
+      "name": {
+        "en": "Omamori",
+        "ko": "오마모리"
+      }
+    }
+  ],
+  "strips": [
+    [
+      "wild",
+      "charm",
+      "scatter",
+      "shiba",
+      "charm",
+      "panda",
+      "tanuki",
+      "cat",
+      "capy",
+      "charm",
+      "koi",
+      "charm",
+      "charm",
+      "cat",
+      "charm",
+      "tanuki",
+      "charm",
+      "koi",
+      "capy",
+      "charm",
+      "shiba",
+      "charm",
+      "panda",
+      "cat",
+      "charm",
+      "tanuki",
+      "charm",
+      "koi",
+      "scatter",
+      "charm",
+      "capy",
+      "cat",
+      "charm",
+      "charm",
+      "tanuki",
+      "charm",
+      "shiba",
+      "koi",
+      "charm",
+      "panda",
+      "cat",
+      "dango",
+      "charm",
+      "capy",
+      "charm",
+      "tanuki",
+      "charm",
+      "cat",
+      "koi",
+      "charm",
+      "charm"
+    ],
+    [
+      "wild",
+      "scatter",
+      "charm",
+      "capy",
+      "panda",
+      "charm",
+      "shiba",
+      "charm",
+      "tanuki",
+      "koi",
+      "cat",
+      "charm",
+      "charm",
+      "capy",
+      "charm",
+      "dango",
+      "charm",
+      "panda",
+      "charm",
+      "koi",
+      "scatter",
+      "charm",
+      "tanuki",
+      "capy",
+      "cat",
+      "charm",
+      "charm",
+      "charm",
+      "charm",
+      "koi",
+      "capy",
+      "panda",
+      "charm",
+      "shiba",
+      "dango",
+      "charm",
+      "tanuki",
+      "cat",
+      "charm",
+      "scatter",
+      "charm",
+      "capy",
+      "koi",
+      "charm",
+      "charm",
+      "panda",
+      "charm",
+      "charm",
+      "tanuki",
+      "cat",
+      "capy",
+      "charm",
+      "dango",
+      "koi",
+      "charm",
+      "charm"
+    ],
+    [
+      "wild",
+      "shiba",
+      "scatter",
+      "dango",
+      "panda",
+      "dango",
+      "dango",
+      "capy",
+      "dango",
+      "shiba",
+      "koi",
+      "cat",
+      "dango",
+      "dango",
+      "panda",
+      "dango",
+      "shiba",
+      "dango",
+      "scatter",
+      "dango",
+      "dango",
+      "koi",
+      "charm",
+      "dango",
+      "shiba",
+      "panda",
+      "capy",
+      "dango",
+      "tanuki",
+      "cat",
+      "dango",
+      "dango",
+      "shiba",
+      "dango",
+      "dango",
+      "panda",
+      "koi",
+      "scatter",
+      "dango",
+      "dango",
+      "shiba",
+      "dango",
+      "capy",
+      "dango",
+      "panda",
+      "cat",
+      "dango",
+      "shiba",
+      "dango",
+      "koi",
+      "charm",
+      "dango",
+      "dango"
+    ],
+    [
+      "wild",
+      "shiba",
+      "panda",
+      "scatter",
+      "capy",
+      "tanuki",
+      "shiba",
+      "koi",
+      "cat",
+      "tanuki",
+      "panda",
+      "shiba",
+      "capy",
+      "shiba",
+      "wild",
+      "koi",
+      "tanuki",
+      "panda",
+      "capy",
+      "cat",
+      "dango",
+      "shiba",
+      "tanuki",
+      "shiba",
+      "koi",
+      "panda",
+      "scatter",
+      "capy",
+      "shiba",
+      "tanuki",
+      "cat",
+      "wild",
+      "panda",
+      "shiba",
+      "capy",
+      "koi",
+      "tanuki",
+      "shiba",
+      "panda",
+      "capy",
+      "cat",
+      "dango",
+      "charm",
+      "shiba",
+      "tanuki",
+      "koi"
+    ],
+    [
+      "wild",
+      "shiba",
+      "scatter",
+      "capy",
+      "panda",
+      "tanuki",
+      "cat",
+      "shiba",
+      "capy",
+      "tanuki",
+      "cat",
+      "wild",
+      "panda",
+      "capy",
+      "shiba",
+      "koi",
+      "tanuki",
+      "cat",
+      "capy",
+      "charm",
+      "shiba",
+      "panda",
+      "wild",
+      "tanuki",
+      "cat",
+      "scatter",
+      "capy",
+      "shiba",
+      "tanuki",
+      "cat",
+      "panda",
+      "capy",
+      "shiba",
+      "wild",
+      "tanuki",
+      "cat",
+      "capy",
+      "dango",
+      "koi",
+      "panda",
+      "shiba",
+      "capy",
+      "tanuki",
+      "cat",
+      "charm"
+    ]
+  ],
+  "payModel": "ways",
+  "ways": {
+    "base": 243,
+    "bothWays": false,
+    "betDivisor": 25
+  },
+  "mutations": [
+    {
+      "type": "randomWild",
+      "symbol": "wild",
+      "chance": 0.2,
+      "countWeights": {
+        "1": 60,
+        "2": 30,
+        "3": 10
+      },
+      "reels": [
+        1,
+        2,
+        3
+      ],
+      "coverScatter": false
+    }
+  ],
+  "paytable": {
+    "shiba": {
+      "3": 15,
+      "4": 44,
+      "5": 151
+    },
+    "panda": {
+      "3": 9,
+      "4": 26,
+      "5": 87
+    },
+    "capy": {
+      "3": 7,
+      "4": 22,
+      "5": 66
+    },
+    "tanuki": {
+      "3": 6,
+      "4": 17,
+      "5": 51
+    },
+    "cat": {
+      "3": 4,
+      "4": 13,
+      "5": 36
+    },
+    "koi": {
+      "3": 3,
+      "4": 9,
+      "5": 26
+    },
+    "dango": {
+      "3": 2,
+      "4": 7,
+      "5": 18
+    },
+    "charm": {
+      "3": 1,
+      "4": 4,
+      "5": 13
+    }
+  },
+  "wild": {
+    "substitutesFor": "all"
+  },
+  "scatter": {
+    "symbol": "scatter",
+    "pays": {
+      "3": 2,
+      "4": 8,
+      "5": 30
+    },
+    "freeSpins": {
+      "trigger": 3,
+      "count": 8,
+      "multiplier": 2,
+      "retrigger": true
+    }
+  },
+  "betLevels": [
+    25,
+    50,
+    100,
+    250,
+    500,
+    1000
+  ],
+  "rtpTarget": 0.945,
+  "volatility": "medium"
+}

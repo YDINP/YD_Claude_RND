@@ -14,18 +14,19 @@ export {
   RTP_TOLERANCE,
   SUM_EPSILON,
   WIDE_REEL_THRESHOLD,
+  acceptMonteCarloRtp,
   auditBetLevels,
+  betLevelPasses,
   buildGates,
   composeAuditResult,
   maxWinThreshold,
   rtpGate,
   runAudit,
 } from './compute.js'
-export type { BetLevelOptions } from './compute.js'
+export type { BetLevelOptions, McAcceptance, McGateMode, McMeasurement } from './compute.js'
 export type { AuditParts, GateInput } from './compute.js'
 export { enumerateAudit } from './enumerate.js'
 export {
-  MONTE_CARLO_MUTATIONS,
   analyzeDistribution,
   buildFeatureReport,
   canEnumerate,
@@ -34,10 +35,18 @@ export {
   resolveMethod,
 } from './distribution.js'
 export type { AnalyzeOptions } from './distribution.js'
-export { DEFAULT_SAMPLE_SPINS, sampleDistribution } from './sampleDistribution.js'
+export { DEFAULT_MC_SAMPLE_SPINS, DEFAULT_SAMPLE_SPINS, sampleDistribution } from './sampleDistribution.js'
 export type { SampleOptions } from './sampleDistribution.js'
 export { Accumulators, SCATTER_FALLBACK_KEY, comboCount } from './contributions.js'
-export { MAX_FREE_SPINS_PER_ROUND, betPerLineOf, drawSpin, playRound } from './spinner.js'
+export {
+  MAX_FREE_SPINS_PER_ROUND,
+  betPerLineOf,
+  betUnitCount,
+  drawSpin,
+  hasMutations,
+  isWaysGame,
+  playRound,
+} from './spinner.js'
 export type { RoundSpin } from './spinner.js'
 export { buildLabelMap, readGroups } from './groups.js'
 export { HISTOGRAM_BUCKETS, bucketIndexFor, buildHistogramRows } from './histogram.js'

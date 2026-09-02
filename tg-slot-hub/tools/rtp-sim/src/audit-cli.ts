@@ -8,10 +8,11 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
-import { parseGameMath } from '@tgslot/slot-engine'
+import { getBetUnit, parseGameMath } from '@tgslot/slot-engine'
 import {
   DEFAULT_AUDIT_SEED,
   DEFAULT_AUDIT_SPINS,
+  DEFAULT_MC_SAMPLE_SPINS,
   DEFAULT_SAMPLE_SPINS,
   buildAuditMarkdown,
   canEnumerate,
@@ -30,7 +31,7 @@ interface AuditCliOptions {
   out: string | null
   stdout: boolean
   /** 해석 모드에서 분포·기여도를 추정할 표본 스핀 수. */
-  sampleSpins: number
+  sampleSpins: number | null
 }
 
 const USAGE = `사용법: pnpm --filter @tgslot/rtp-sim run audit <게임폴더|math.json|게임id> [옵션]
@@ -38,7 +39,8 @@ const USAGE = `사용법: pnpm --filter @tgslot/rtp-sim run audit <게임폴더|
 옵션
   --spins <n>    몬테카를로 스핀 수 (기본 ${DEFAULT_AUDIT_SPINS.toLocaleString('en-US')})
   --sample <n>   전수 조사가 불가능한 모델에서 분포를 추정할 표본 스핀 수
-                 (기본 ${DEFAULT_SAMPLE_SPINS.toLocaleString('en-US')})
+                 (해석 모델 기본 ${DEFAULT_SAMPLE_SPINS.toLocaleString('en-US')},
+                  몬테카를로 모델 기본 ${DEFAULT_MC_SAMPLE_SPINS.toLocaleString('en-US')})
   --seed <s>     시드 (기본 ${DEFAULT_AUDIT_SEED})
   --bet <coins>  검수 베팅액 (기본 ${PREFERRED_BET}, 없으면 첫 betLevel)
   --out <path>   리포트 경로 (기본 docs/RTP_AUDIT_<id>.md)
@@ -48,7 +50,8 @@ const USAGE = `사용법: pnpm --filter @tgslot/rtp-sim run audit <게임폴더|
 export function parseAuditArgs(argv: string[]): AuditCliOptions {
   let target: string | undefined
   let spins = DEFAULT_AUDIT_SPINS
-  let sampleSpins = DEFAULT_SAMPLE_SPINS
+  // 지정하지 않으면 방법에 따라 고른다 (해석 200만 / 몬테카를로 2천5백만).
+  let sampleSpins: number | null = null
   let seed = DEFAULT_AUDIT_SEED
   let bet: number | null = null
   let out: string | null = null
@@ -95,7 +98,7 @@ export function parseAuditArgs(argv: string[]): AuditCliOptions {
 
   if (target === undefined) throw new Error(`대상 게임을 지정할 것\n\n${USAGE}`)
   if (!Number.isInteger(spins) || spins <= 0) throw new Error(`--spins는 양의 정수여야 한다: ${spins}`)
-  if (!Number.isInteger(sampleSpins) || sampleSpins <= 0) {
+  if (sampleSpins !== null && (!Number.isInteger(sampleSpins) || sampleSpins <= 0)) {
     throw new Error(`--sample은 양의 정수여야 한다: ${sampleSpins}`)
   }
   if (bet !== null && (!Number.isInteger(bet) || bet <= 0)) throw new Error(`--bet은 양의 정수여야 한다: ${bet}`)
@@ -126,9 +129,13 @@ function main(): void {
   }
 
   const totalBet = pickBet(math.betLevels, options.bet)
-  const lines = math.paylines.length
-  if (totalBet % lines !== 0) {
-    throw new Error(`--bet ${totalBet}이 라인 수(${lines})로 나누어떨어지지 않는다. 예: ${math.betLevels.join(', ')}`)
+  // 배당 단위는 라인 수일 수도 ways.betDivisor일 수도 있다. 판단은 엔진에 맡긴다.
+  // (ways 게임은 paylines가 비어 있어 라인 수로 나누면 0으로 나누게 된다.)
+  try {
+    getBetUnit(math, totalBet)
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    throw new Error(`--bet ${totalBet}을 쓸 수 없다: ${reason}. 가능한 값: ${math.betLevels.join(', ')}`)
   }
 
   process.stderr.write(`[rtp-sim] ${mathPath}\n`)
@@ -137,7 +144,7 @@ function main(): void {
     totalBet,
     spins: options.spins,
     seed: options.seed,
-    sampleSpins: options.sampleSpins,
+    ...(options.sampleSpins === null ? {} : { sampleSpins: options.sampleSpins }),
     onProgress: (phase, ratio) => {
       const percent = Math.round(ratio * 100)
       if (phase !== lastPhase || percent % 10 === 0) {

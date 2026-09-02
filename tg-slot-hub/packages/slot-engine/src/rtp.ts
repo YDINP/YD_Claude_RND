@@ -6,6 +6,7 @@ import { buildGrid, spinUnchecked } from './spin.js'
 import { computeAnalyticRtp, expectedFreeSpinsPerTrigger, isAnalytic } from './analytic.js'
 import type { RtpBreakdown } from './analytic.js'
 import { createSeededRng } from './rng/seeded.js'
+import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 import type { Rng, RoundState } from './types.js'
 
 /** 전수 조사 상한. 이보다 큰 모델은 해석적으로 계산한다. */
@@ -14,9 +15,6 @@ export const MAX_ENUMERATION_COMBOS = 5_000_000
 /** 해석 모드에서 분포(적중률·최대 배수)를 추정할 기본 스핀 수. */
 export const DEFAULT_SAMPLE_SPINS = 100_000
 export const DEFAULT_SAMPLE_SEED = 'rtp-sample'
-
-/** 한 라운드가 낳을 수 있는 프리스핀 상한. 넘으면 모델이 발산한 것으로 보고 막는다. */
-export const MAX_FREE_SPINS_PER_ROUND = 10_000
 
 /** 몬테카를로 경로의 기본 스핀 수와 시드. 고정 시드라 CI에서 그대로 재현된다. */
 export const DEFAULT_MC_SPINS = 2_000_000
@@ -251,7 +249,10 @@ function monteCarloRtp(
     while (state !== undefined) {
       played += 1
       if (played > MAX_FREE_SPINS_PER_ROUND) {
-        throw new RangeError(`한 라운드의 프리스핀이 ${MAX_FREE_SPINS_PER_ROUND}회를 넘었다. 모델이 발산한다`)
+        // 엔진이 라운드를 캡으로 끊으므로 여기에 걸리면 엔진 불변식이 깨진 것이다.
+        throw new RangeError(
+          `한 라운드의 프리스핀이 상한 ${MAX_FREE_SPINS_PER_ROUND}회를 넘었다. 엔진 캡이 동작하지 않았다`,
+        )
       }
       const free = spinUnchecked(math, totalBet, rng, state)
       roundWin += free.totalWin
@@ -265,7 +266,8 @@ function monteCarloRtp(
 
   const denominator = spins * totalBet
   const rtp = roundSum / denominator
-  const variance = Math.max(0, squareSum / spins - rtp * rtp)
+  // 표본분산(n-1). 모분산이 아니라 추정량이므로 자유도를 하나 뺀다.
+  const variance = spins > 1 ? Math.max(0, (squareSum - spins * rtp * rtp) / (spins - 1)) : 0
   const stdErr = Math.sqrt(variance / spins)
   const lines = baseLineSum / denominator
   const scatter = baseScatterSum / denominator
@@ -392,7 +394,10 @@ export function simulate(math: GameMath, totalBet: number, spins: number, rng: R
     while (state !== undefined) {
       played += 1
       if (played > MAX_FREE_SPINS_PER_ROUND) {
-        throw new RangeError(`한 라운드의 프리스핀이 ${MAX_FREE_SPINS_PER_ROUND}회를 넘었다. 모델이 발산한다`)
+        // 엔진이 라운드를 캡으로 끊으므로 여기에 걸리면 엔진 불변식이 깨진 것이다.
+        throw new RangeError(
+          `한 라운드의 프리스핀이 상한 ${MAX_FREE_SPINS_PER_ROUND}회를 넘었다. 엔진 캡이 동작하지 않았다`,
+        )
       }
       const free = spinUnchecked(math, totalBet, rng, state)
       roundWin += free.totalWin
@@ -407,7 +412,9 @@ export function simulate(math: GameMath, totalBet: number, spins: number, rng: R
   }
 
   const meanMultiplier = winSum / spins / totalBet
-  const variance = Math.max(0, squareSum / spins - meanMultiplier * meanMultiplier)
+  // 표본분산(n-1). `stdErr = stdDev / sqrt(n)`로 쓰이므로 monteCarloRtp와 같은 정의를 쓴다.
+  const variance =
+    spins > 1 ? Math.max(0, (squareSum - spins * meanMultiplier * meanMultiplier) / (spins - 1)) : 0
   return {
     rtp: meanMultiplier,
     hitRate: hits / spins,

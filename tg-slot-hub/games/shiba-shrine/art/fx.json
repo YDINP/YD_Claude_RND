@@ -1,0 +1,146 @@
+{
+  "fx": {
+    "default": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.12,
+          "durationMs": 600
+        }
+      ]
+    },
+    "wild": {
+      "win": [
+        {
+          "type": "burst",
+          "particles": 16,
+          "durationMs": 800
+        },
+        {
+          "type": "glow",
+          "color": "#e05a3c",
+          "durationMs": 800
+        }
+      ]
+    },
+    "scatter": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#e05a3c",
+          "durationMs": 800
+        },
+        {
+          "type": "spin",
+          "durationMs": 400,
+          "repeat": 1
+        }
+      ]
+    },
+    "shiba": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.09,
+          "durationMs": 700
+        },
+        {
+          "type": "wobble",
+          "degrees": 8,
+          "durationMs": 700
+        }
+      ]
+    },
+    "panda": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.07,
+          "durationMs": 750
+        },
+        {
+          "type": "wobble",
+          "degrees": 6,
+          "durationMs": 750
+        }
+      ]
+    },
+    "capy": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 5,
+          "durationMs": 900
+        }
+      ]
+    },
+    "tanuki": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.08,
+          "durationMs": 700
+        }
+      ]
+    },
+    "cat": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.13,
+          "durationMs": 700
+        },
+        {
+          "type": "glow",
+          "color": "#8fd6c0",
+          "durationMs": 700
+        }
+      ]
+    },
+    "koi": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 12,
+          "durationMs": 800
+        },
+        {
+          "type": "glow",
+          "color": "#8fd6c0",
+          "durationMs": 800
+        }
+      ]
+    },
+    "dango": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.06,
+          "durationMs": 650
+        }
+      ]
+    },
+    "charm": {
+      "win": [
+        {
+          "type": "flash",
+          "durationMs": 500,
+          "fromAlpha": 0.45
+        }
+      ]
+    }
+  },
+  "palette": {
+    "frame": "#e05a3c",
+    "reelBg": "#243252",
+    "winLine": [
+      "#f6c0cf",
+      "#e05a3c",
+      "#8fd6c0",
+      "#f4d98a",
+      "#5b9dff",
+      "#a78bfa"
+    ],
+    "text": "#fdf6f0"
+  }
+}

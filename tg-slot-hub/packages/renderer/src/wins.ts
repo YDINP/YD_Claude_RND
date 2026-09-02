@@ -1,5 +1,6 @@
 import type { GameMath, WinLine } from '@tgslot/slot-engine'
 import { BIG_WIN_BET_MULTIPLIER, WIN_CYCLE_MS, WIN_TIER_MULTIPLIERS } from './constants.js'
+import { betUnitCount, isWaysGame, waysCountOf } from './ways.js'
 
 /** 승리 라인의 총 지급 코인. */
 export function totalWinOf(wins: readonly WinLine[]): number {
@@ -8,14 +9,21 @@ export function totalWinOf(wins: readonly WinLine[]): number {
 
 /**
  * 총 배당이 베팅액의 몇 배인지.
- * `totalBet`을 주면 정확히 계산하고, 없으면 라인 배수 합을 라인 수로 나눠 추정한다
- * (엔진은 `win = multiplier x betPerLine`, `totalBet = betPerLine x lines`이므로 둘은 같다).
+ *
+ * `totalBet`을 주면 정확히 계산한다. 없으면 배당 단위로 나눠 추정한다.
+ * - 라인 게임: `win = multiplier x betPerLine`, `totalBet = betPerLine x lines`
+ * - ways 게임: `win = ways x multiplier x betPerWay`, `totalBet = betPerWay x betDivisor`
+ *
+ * ways에서 라인 수로 나누면 0으로 나누게 된다. 페이라인이 아예 없기 때문이다.
  */
 export function winBetMultiple(wins: readonly WinLine[], math: GameMath, totalBet?: number): number {
   if (typeof totalBet === 'number' && totalBet > 0) return totalWinOf(wins) / totalBet
-  const lines = math.paylines.length
-  if (lines <= 0) return 0
-  return wins.reduce((sum, win) => sum + win.multiplier, 0) / lines
+  const units = betUnitCount(math)
+  if (units <= 0) return 0
+  if (isWaysGame(math)) {
+    return wins.reduce((sum, win) => sum + waysCountOf(win) * win.multiplier, 0) / units
+  }
+  return wins.reduce((sum, win) => sum + win.multiplier, 0) / units
 }
 
 /**

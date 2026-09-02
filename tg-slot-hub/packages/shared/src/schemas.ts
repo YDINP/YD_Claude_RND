@@ -114,24 +114,61 @@ export const SpinRequestSchema = z.object({
 })
 export type SpinRequest = z.infer<typeof SpinRequestSchema>
 
-export const WinLineSchema = z.object({
-  line: z.number().int().min(0),
-  symbol: z.string(),
-  count: z.number().int().min(1),
-  multiplier: z.number(),
-  win: z.number().int().min(0),
-  /** 그룹 배당(예: Any BAR)으로 지급된 경우 그룹 id. symbol에는 같은 그룹 id가 들어간다 */
-  group: z.string().optional(),
-  /** [reel, row] 좌표 목록 */
-  positions: z.array(z.tuple([z.number().int(), z.number().int()])),
-})
+export const WinLineSchema = z
+  .object({
+    /** 페이라인 인덱스. `-1`은 페이라인이 아닌 ways 당첨을 뜻한다 (이때 `ways`가 함께 온다) */
+    line: z.number().int().min(-1),
+    symbol: z.string(),
+    count: z.number().int().min(1),
+    multiplier: z.number(),
+    win: z.number().int().min(0),
+    /** 그룹 배당(예: Any BAR)으로 지급된 경우 그룹 id. symbol에는 같은 그룹 id가 들어간다 */
+    group: z.string().optional(),
+    /** ways 지급일 때 경로 수. 라인 지급이면 없다 */
+    ways: z.number().int().min(1).optional(),
+    /** ways 지급 방향. `bothWays` 게임에서 어느 쪽으로 읽었는지 */
+    direction: z.enum(['ltr', 'rtl']).optional(),
+    /** [reel, row] 좌표 목록 */
+    positions: z.array(z.tuple([z.number().int(), z.number().int()])),
+  })
+  .refine((v) => (v.line === -1) === (v.ways !== undefined), {
+    message: 'line이 -1이면 ways가 있어야 하고, ways가 있으면 line은 -1이어야 한다',
+  })
 export type WinLine = z.infer<typeof WinLineSchema>
+
+/** 뮤테이션이 바꾼 칸 하나. 렌더러가 from → to 전환을 그린다. */
+export const MutationCellChangeSchema = z.object({
+  /** [reel, row] */
+  position: z.tuple([z.number().int(), z.number().int()]),
+  from: z.string(),
+  to: z.string(),
+})
+export type MutationCellChange = z.infer<typeof MutationCellChangeSchema>
+
+/** 뮤테이션 1단계가 실제로 무엇을 바꿨는지. `@tgslot/slot-engine`의 `MutationEvent`와 같은 모양이다. */
+export const MutationEventSchema = z.object({
+  type: z.enum(['mystery', 'expandWild', 'upgrade', 'randomWild']),
+  /** mystery면 공개된 심볼, upgrade면 승급 결과, 와일드 계열이면 와일드 id */
+  symbol: z.string().optional(),
+  /** expandWild가 덮은 릴 인덱스 */
+  reels: z.array(z.number().int()).optional(),
+  cells: z.array(MutationCellChangeSchema),
+})
+export type MutationEvent = z.infer<typeof MutationEventSchema>
 
 export const SpinResponseSchema = z.object({
   roundId: z.string(),
   stops: z.array(z.number().int()),
-  /** grid[row][reel] = symbolId */
+  /** grid[row][reel] = symbolId. 뮤테이션까지 적용된, 평가에 쓰인 격자 */
   grid: z.array(z.array(z.string())),
+  /**
+   * 뮤테이션 적용 **전** 격자. 리빌·확장 연출의 시작 프레임이다.
+   * 서버는 항상 채워서 보내고, 뮤테이션이 없으면 `grid`와 같다.
+   * (이 필드가 없던 시절의 라운드를 파싱할 수 있도록 선택 필드로 둔다.)
+   */
+  gridBefore: z.array(z.array(z.string())).optional(),
+  /** 적용된 뮤테이션. 선언 순서대로, 실제로 무언가 바꾼 것만 담긴다 */
+  mutations: z.array(MutationEventSchema).default([]),
   wins: z.array(WinLineSchema),
   totalBet: z.number().int(),
   totalWin: z.number().int(),
@@ -160,6 +197,18 @@ export const SpinResponseSchema = z.object({
   features: z.array(z.lazy(() => FeatureTriggerSchema)).default([]),
   /** 스핀 후 프리스핀 상태. 남은 게 없으면 null */
   freeSpins: z.lazy(() => FreeSpinsStateSchema).nullable().default(null),
+  /**
+   * 이 스핀의 당첨을 더블업에 걸 수 있을 때만. 다음 스핀을 돌리면 사라진다.
+   * 당첨금은 이미 `wallet`에 들어가 있고, 더블업은 그것을 다시 거는 것이다.
+   */
+  gambleOffer: z
+    .object({
+      pendingWin: z.number().int().min(1),
+      maxSteps: z.number().int().min(1),
+      /** 이 시각이 지나면 판돈이 자동 회수된다 (ISO 8601). 카운트다운 표시용 */
+      expiresAt: z.string(),
+    })
+    .optional(),
   /** 이 스핀으로 프리스핀 세션이 **끝났을 때만**. 결과 화면에 띄우는 총합이다 */
   freeSpinsSummary: z
     .object({
@@ -278,8 +327,91 @@ export const FeatureTriggerSchema = z.discriminatedUnion('type', [
     win: z.number().int().min(0),
     positions: z.array(z.tuple([z.number().int(), z.number().int()])),
   }),
+  /**
+   * 리트리거가 라운드 상한(`MAX_FREE_SPINS_PER_ROUND`)에 걸려 잘렸다는 기록.
+   * 엔진이 예외를 던지는 대신 잘라내고 남기는 방어적 신호라, 실전에서는 사실상 나오지 않는다.
+   */
+  z.object({
+    type: z.literal('freeSpinsCapped'),
+    requested: z.number().int().min(1),
+    granted: z.number().int().min(0),
+    cap: z.number().int().min(1),
+  }),
 ])
 export type FeatureTrigger = z.infer<typeof FeatureTriggerSchema>
+
+// ---- 더블업 (Wave 1) ----
+
+export const GambleSideSchema = z.enum(['heads', 'tails'])
+export type GambleSide = z.infer<typeof GambleSideSchema>
+
+export const GambleRequestSchema = z.object({
+  pick: GambleSideSchema,
+  /**
+   * 재전송 방어 키. 헤더 `Idempotency-Key`로 보내도 된다.
+   * 같은 키로 다시 부르면 저장된 결과를 그대로 돌려주고 판정을 다시 하지 않는다.
+   */
+  idempotencyKey: z.string().min(8).max(64).optional(),
+})
+export type GambleRequest = z.infer<typeof GambleRequestSchema>
+
+/** 더블업 한 단계의 기록. 재전송 복원과 provably fair 공개에 함께 쓰인다. */
+export const GambleStepSchema = z.object({
+  step: z.number().int().min(1),
+  /** 이 단계를 만든 요청의 멱등키 */
+  idempotencyKey: z.string(),
+  pick: GambleSideSchema,
+  side: GambleSideSchema,
+  won: z.boolean(),
+  /** 판정 전 판돈 */
+  stake: z.number().int().min(0),
+  /** 판정 후 판돈 */
+  pendingWin: z.number().int().min(0),
+  /** 이 단계가 자동 회수로 끝났는지 */
+  autoCollected: z.boolean(),
+  seedInput: z.string(),
+})
+export type GambleStep = z.infer<typeof GambleStepSchema>
+
+/**
+ * 진행 중인 더블업. 스핀 한 번이면 사라진다.
+ *
+ * `pendingWin`은 **지갑 밖에 잠겨 있는 돈**이다. 제안이 열릴 때 지갑에서 빠져나오고
+ * 회수할 때 돌아온다. 그래서 더블업 중에는 지갑 잔액에 이 금액이 보이지 않는다.
+ */
+export const GambleStateSchema = z.object({
+  roundId: z.string(),
+  /** 지금 잠겨 있는 금액. 이기면 2배, 지면 0이 된다 */
+  pendingWin: z.number().int().min(0),
+  /** 지금까지 진행한 단계 기록 */
+  steps: z.array(GambleStepSchema).default([]),
+  maxSteps: z.number().int().min(1),
+  /** 이 시각이 지나면 자동 회수된다 (ISO 8601) */
+  expiresAt: z.string().optional(),
+})
+export type GambleState = z.infer<typeof GambleStateSchema>
+
+export const GambleResponseSchema = z.object({
+  /** `win`이면 2배, `lose`면 0, `collected`면 그대로 챙기고 종료 */
+  outcome: z.enum(['win', 'lose', 'collected']),
+  /** 상한(단계/금액/만료)에 걸려 서버가 알아서 회수했는지. 이때 판돈은 지갑에 들어가 있다 */
+  autoCollected: z.boolean().default(false),
+  /** 실제로 뒤집힌 면. 회수(`collected`)에는 없다 */
+  side: GambleSideSchema.optional(),
+  /** 판정 후 걸려 있는 금액. 종료됐으면 0이거나 이미 지갑에 들어간 값이다 */
+  pendingWin: z.number().int().min(0),
+  wallet: WalletSchema,
+  /** 더 도전할 수 있는 횟수. 0이면 끝났다 */
+  stepsLeft: z.number().int().min(0),
+  /** 이 판정을 재현하는 RNG 시드 입력. 회수에는 빈 문자열 */
+  seedInput: z.string(),
+  /**
+   * 세션이 아직 열려 있을 때의 만료 시각 (ISO 8601). 단계마다 새로 밀린다.
+   * 끝난 판정(패배·회수·자동 회수)에는 없다.
+   */
+  expiresAt: z.string().optional(),
+})
+export type GambleResponse = z.infer<typeof GambleResponseSchema>
 
 /**
  * 게임별 진행 상태 묶음. 지금은 프리스핀뿐이지만 앞으로 캐스케이드·리스핀·스티키·미터·갬블이
@@ -287,6 +419,7 @@ export type FeatureTrigger = z.infer<typeof FeatureTriggerSchema>
  */
 export const GameStateSchema = z.object({
   freeSpins: FreeSpinsStateSchema.nullable().default(null),
+  gamble: GambleStateSchema.nullable().default(null),
 })
 export type GameState = z.infer<typeof GameStateSchema>
 

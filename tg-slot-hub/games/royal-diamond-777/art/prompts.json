@@ -1,0 +1,125 @@
+{
+  "game": "royal-diamond-777",
+  "concept": "Royal Diamond Deco — the art-deco heir of the hub's Brass Lounge family: instead of navy-and-brass, this cabinet is deep black velvet and polished platinum with diamond-cyan facet accents and velvet-red jewel highlights. Same glossy 3D toy-render language and hero-symbol logic as classic-777, but dressed for a private high-roller salon. Headline mechanic: mystery-symbol tiles reveal all at once as a matching set.",
+  "stylePrefix": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality —",
+  "negative": "photorealistic photography, real human face or body, blurry, out of focus, watermark, signature, extra unintended text, random glyphs, gibberish lettering, busy cluttered background, baked-in drop shadow, harsh outer shadow, cropped edges, multiple duplicate objects, low contrast, dull washed-out colors, noisy grain texture, distorted asymmetric proportions, cheap clip-art look, gradient banding, neon cyberpunk styling",
+  "assets": [
+    {
+      "id": "wild",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a faceted diamond-cyan star gem set into a platinum art-deco sunburst medallion, thin platinum rays fanning symmetrically behind it in a stepped chevron pattern, a small black velvet plaque at the base engraved 'WILD' in bold platinum art-deco caps, cool cyan glow emanating from the center, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/wild.webp",
+      "outSize": 512
+    },
+    {
+      "id": "mystery",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a polished black velvet tile set in a bevelled platinum art-deco frame, a large faceted diamond-cyan question mark '?' cut like a gemstone at the center, a soft cyan glow radiating from behind the question mark, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/mystery.webp",
+      "outSize": 512
+    },
+    {
+      "id": "scatter",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a large faceted diamond-cyan gemstone cut in a classic round brilliant shape, set on a small platinum art-deco pedestal with stepped chevron detailing, bright sparkle highlights radiating from its facets, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/scatter.webp",
+      "outSize": 512
+    },
+    {
+      "id": "seven",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a single bold velvet-red enamel numeral 7 with a beveled platinum art-deco edge trim, a bright diagonal highlight sheen sweeping across the glossy face, the numeral tilted slightly forward in 3/4 perspective to read as the hero symbol, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/seven.webp",
+      "outSize": 512
+    },
+    {
+      "id": "diamond",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a single large faceted diamond-cyan gemstone in a classic diamond-suit silhouette, cut with sharp geometric facets that catch bright specular highlights, a thin platinum outline tracing its edge, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/diamond.webp",
+      "outSize": 512
+    },
+    {
+      "id": "bar3",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — three stacked glossy black velvet enamel bars of equal width with polished platinum beveled borders, the word 'BAR' embossed in bold platinum art-deco caps centered on each bar, tiny platinum rivets at the corners, a subtle glass-like top sheen along the upper edge of each bar, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/bar3.webp",
+      "outSize": 512
+    },
+    {
+      "id": "bar2",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — two stacked glossy black velvet enamel bars of equal width with polished platinum beveled borders, the word 'BAR' embossed in bold platinum art-deco caps centered on each bar, a subtle glass-like top sheen along the upper edge of each bar, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/bar2.webp",
+      "outSize": 512
+    },
+    {
+      "id": "bar1",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — one glossy black velvet enamel bar with a polished platinum beveled border, the word 'BAR' embossed in bold platinum art-deco caps centered on the bar, a subtle glass-like top sheen along the upper edge, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/bar1.webp",
+      "outSize": 512
+    },
+    {
+      "id": "bell",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — an ornate platinum bell with a glossy cool-silver gradient body, a round platinum clapper hanging inside, a bright specular highlight sweeping down the left curve, faint engraved art-deco fluting near the rim, small motion lines suggesting a gentle chime, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/bell.webp",
+      "outSize": 512
+    },
+    {
+      "id": "cherry",
+      "kind": "symbol",
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — two glossy velvet-red cherries of slightly different sizes joined by a thin polished platinum stem with one small faceted diamond-cyan leaf, deep red gradient body with a bright white highlight dot on each cherry, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/cherry.webp",
+      "outSize": 512
+    },
+    {
+      "id": "frame",
+      "kind": "frame",
+      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed square artwork with no isolated chroma background around the frame itself — a wide-window square art-deco cabinet frame on a deep black velvet body with polished platinum fluting, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-17%: a black velvet plate with a platinum art-deco sunburst border, engraved wordmark 'ROYAL DIAMOND 777' in bold platinum art-deco caps, no other text. The reel window occupies x 4%-96% and y 19%-81% (the dominant element of the frame), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a thin 1% platinum rim running just outside the green (this window will later be replaced with the live reel canvas). Two slim platinum side rails run the height of the window, each at most 3% of the frame width, styled as narrow stepped-chevron art-deco fluting each holding 2-3 small inset diamond-cyan gems for detail without bulk. The bottom y 83%-100% is a plain weighted platinum base molding with soft ambient shadow, no legend strip, no payline icons, no additional text. Overall symmetrical, centered, no characters. The reel window is clearly wider than tall (about 3:2 landscape proportion) so a 5-reel by 3-row grid fills it edge to edge; the frame's overall canvas is square.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "bg",
+      "kind": "bg",
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — a deep black velvet lounge interior seen softly out of focus, faint platinum art-deco wall fluting catching soft cool highlights, a scatter of tiny out-of-focus diamond-cyan sparkle points suggesting distant chandelier light, a soft radial vignette darkening the corners and edges so foreground content stays legible, calm and uncluttered composition with no characters, no readable text, no sharp details competing for attention, subtle and low-contrast overall so reels and UI read clearly in front of it.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "prompt": "Front-on hero composition (not 3/4 top-down), full-bleed landscape artwork with no isolated chroma background — an oversized glossy velvet-red numeral 7 and a large faceted diamond-cyan gemstone bursting forward with a shower of platinum coins and radiating cool light rays, set against a soft blurred deep black velvet lounge backdrop, dynamic diagonal composition, small platinum plaque wordmark 'ROYAL DIAMOND 777' tucked in a bottom corner, eye-catching and readable even as a small lobby list thumbnail, no clutter, no characters.",
+      "size": "1536x1024",
+      "transparent": false,
+      "out": "thumb.webp",
+      "outSize": 640
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+.hub-gamble-coin {
+  width: 96px;
+  height: 96px;
+  margin: var(--hub-space-md) auto;
+  perspective: 600px;
+}
+
+.hub-gamble-coin__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateY(0deg);
+  transition: transform 1.1s cubic-bezier(0.34, 1.2, 0.4, 1);
+}
+
+/* 앞면 결과 — 여러 바퀴 돌고 0도(앞면)로 정확히 떨어진다. */
+.hub-gamble-coin__inner--land-heads {
+  transform: rotateY(1800deg);
+}
+
+/* 뒷면 결과 — 여러 바퀴 돌고 180도(뒷면)로 떨어진다. */
+.hub-gamble-coin__inner--land-tails {
+  transform: rotateY(1980deg);
+}
+
+/* 모션 줄이기 설정 — 회전 없이 바로 결과 면을 보여준다. */
+.hub-gamble-coin__inner--no-motion {
+  transition: none;
+}
+
+.hub-gamble-coin__inner--land-tails-instant {
+  transform: rotateY(180deg);
+}
+
+.hub-gamble-coin__face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  backface-visibility: hidden;
+  font-size: var(--hub-font-small);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+}
+
+.hub-gamble-coin__face--heads {
+  background: linear-gradient(135deg, var(--hub-gold-light), var(--hub-gold));
+  color: #2a1a04;
+}
+
+.hub-gamble-coin__face--tails {
+  background: linear-gradient(135deg, var(--hub-secondary-bg), var(--hub-card-bg));
+  color: var(--hub-text);
+  transform: rotateY(180deg);
+}
+
+.hub-gamble-picks {
+  display: flex;
+  gap: var(--hub-space-sm);
+}
+
+.hub-gamble-picks .hub-sheet__reveal {
+  flex: 1;
+  margin-top: 0;
+}

@@ -11,7 +11,7 @@ import type { Rng, WinLine as EngineWinLine } from '@tgslot/slot-engine'
 import { JACKPOT_ODDS_DENOMINATOR } from '../economy/config.js'
 import { toLevelState } from '../economy/level.js'
 import { toMissionDtos } from '../economy/missions.js'
-import { spinWithState, toRoundState, toSharedFeatures } from '../games/engineSpin.js'
+import { applyMutationsToGrid, spinWithState, toRoundState, toSharedFeatures } from '../games/engineSpin.js'
 import type { ApiConfig } from '../config.js'
 import type { GameRegistry } from '../games/registry.js'
 import type { Repos } from '../repos/types.js'
@@ -53,6 +53,9 @@ function toSharedWinLine(win: EngineWinLine): SharedWinLine {
     positions: win.positions.map(([reel, row]) => [reel, row] as [number, number]),
     // 심볼 그룹(Any BAR 등)으로 지급된 라인일 때만 있다. 연출이 그룹 이름을 띄우는 데 쓴다.
     ...(win.group === undefined ? {} : { group: win.group }),
+    // ways 지급일 때만. 라인 게임에는 없다.
+    ...(win.ways === undefined ? {} : { ways: win.ways }),
+    ...(win.direction === undefined ? {} : { direction: win.direction }),
   }
 }
 
@@ -109,6 +112,8 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
           gameId: pack.id,
           totalBet,
           idempotencyKey,
+          // 더블업 설정은 math.json이 갖고 있다. 없는 게임이면 제안이 열리지 않는다.
+          ...(pack.math.gamble ? { gamble: pack.math.gamble } : {}),
           compute: (ctx) => {
             // 베팅 규칙은 **락을 잡은 뒤** 확정된 값으로 검사한다. 트랜잭션 밖에서 읽은
             // 상태로 판단하면 그 사이 프리스핀이 시작/종료됐을 때 잘못된 판정이 나온다.
@@ -166,11 +171,18 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
         })
       )
 
+      // 뮤테이션이 있으면 평가 격자는 stops만으로 되살릴 수 없다. 저장해 둔 것을 쓰고,
+      // 뮤테이션이 없거나 이 필드가 없던 시절의 라운드면 stops로 재구성한다.
+      const rebuiltGrid = buildGrid(pack.math, round.stops)
+      const gridBefore = round.gridBefore ?? rebuiltGrid
+      const grid = applyMutationsToGrid(gridBefore, round.mutations)
+
       const response: SpinResponse = {
         roundId: round.id,
         stops: round.stops,
-        // grid는 저장하지 않는다. stops + math.json으로 항상 같은 격자가 나온다.
-        grid: buildGrid(pack.math, round.stops),
+        grid,
+        gridBefore,
+        mutations: round.mutations,
         wins: round.wins.map(toSharedWinLine),
         totalBet: round.bet,
         totalWin: round.win,
@@ -185,6 +197,7 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
         features: round.features,
         freeSpins: applied.freeSpins,
         ...(applied.freeSpinsSummary ? { freeSpinsSummary: applied.freeSpinsSummary } : {}),
+        ...(applied.gambleOffer ? { gambleOffer: applied.gambleOffer } : {}),
       }
       return c.json(response, 200)
     } catch (error) {

@@ -67,7 +67,21 @@ export interface ScatterWinTrigger {
   positions: GridPosition[]
 }
 
-export type FeatureTrigger = FreeSpinsTrigger | ScatterWinTrigger
+/**
+ * 리트리거가 라운드 상한에 걸려 잘렸다는 기록.
+ * 엔진은 예외를 던지지 않고 잘라내되, 무슨 일이 있었는지는 반드시 남긴다.
+ */
+export interface FreeSpinsCappedTrigger {
+  type: 'freeSpinsCapped'
+  /** 규칙대로면 부여됐어야 할 횟수. */
+  requested: number
+  /** 상한에 걸려 실제로 부여된 횟수. 0일 수 있다. */
+  granted: number
+  /** 라운드당 프리스핀 상한 (`MAX_FREE_SPINS_PER_ROUND`). */
+  cap: number
+}
+
+export type FeatureTrigger = FreeSpinsTrigger | ScatterWinTrigger | FreeSpinsCappedTrigger
 
 /** 뮤테이션이 바꾼 칸 하나. */
 export interface MutationCellChange {

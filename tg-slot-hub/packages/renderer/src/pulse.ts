@@ -2,6 +2,7 @@ import type { GridPosition } from '@tgslot/slot-engine'
 import { PULSE_HOLD_MS, PULSE_HOP_MS, PULSE_HOP_MS_BY_TIER, PULSE_TRAIL_BY_TIER } from './constants.js'
 import { symbolCenter, type Layout, type Point } from './layout.js'
 import type { WinTier } from './wins.js'
+import type { WaysDirection } from './ways.js'
 
 /** 등급에 맞는 한 칸 이동 시간(ms). */
 export function pulseHopMsForTier(tier: WinTier): number {
@@ -34,10 +35,14 @@ export interface PulsePath {
 }
 
 /**
- * 승리 좌표를 왼쪽에서 오른쪽으로 훑는 빛의 경로.
+ * 승리 좌표를 훑는 빛의 경로. 기본은 왼쪽에서 오른쪽이다.
  *
  * 페이라인을 선으로 그리는 대신 빛 한 점이 심볼 중심을 차례로 지나간다.
  * 선이 심볼을 가리지 않으면서도 "이 자리들이 이겼다"를 같은 순서로 말해 준다.
+ *
+ * `direction: 'rtl'`이면 오른쪽 릴부터 훑는다. `bothWays` 게임에서 오른쪽으로 읽은 승리는
+ * 빛도 같은 방향으로 흘러야 어느 쪽에서 이겼는지가 화면만 보고 읽힌다.
+ * 같은 릴에 여러 칸이 걸리는 ways 승리를 위해 릴이 같으면 위쪽 행부터 간다.
  *
  * 순수 함수라 타이머 없이 순서와 시각을 그대로 검증할 수 있다.
  */
@@ -45,8 +50,10 @@ export function buildPulsePath(
   layout: Layout,
   positions: readonly GridPosition[],
   hopMs: number = PULSE_HOP_MS,
+  direction: WaysDirection = 'ltr',
 ): PulsePath {
-  const ordered = [...positions].sort((a, b) => a[0] - b[0])
+  const reelOrder = direction === 'rtl' ? -1 : 1
+  const ordered = [...positions].sort((a, b) => (a[0] - b[0]) * reelOrder || a[1] - b[1])
   const step = Math.max(1, hopMs)
 
   const waypoints = ordered.map((position, index) => ({

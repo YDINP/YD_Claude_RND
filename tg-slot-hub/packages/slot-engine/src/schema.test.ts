@@ -406,3 +406,55 @@ describe('GameMathSchema - 스캐터', () => {
     expect(math.scatter?.pays).toBeUndefined()
   })
 })
+
+describe('GameMathSchema - 갬블', () => {
+  const withGamble = (gamble: unknown): unknown => ({ ...JSON.parse(JSON.stringify(VALID)), gamble })
+
+  it('코인 플립 설정을 통과시킨다', () => {
+    const math = parseGameMath(withGamble({ type: 'coin-flip', chance: 0.5, payout: 2, maxSteps: 5 }))
+    expect(math.gamble).toEqual({ type: 'coin-flip', chance: 0.5, payout: 2, maxSteps: 5 })
+  })
+
+  it('갬블은 선택이다', () => {
+    expect(parseGameMath(withOverride({})).gamble).toBeUndefined()
+  })
+
+  it('기대값이 1을 넘으면 거부한다', () => {
+    // 0.6 x 2 = 1.2 이면 갬블만 반복해 하우스 엣지가 사라진다.
+    const result = safeParseGameMath(withGamble({ type: 'coin-flip', chance: 0.6, payout: 2, maxSteps: 5 }))
+    expect(result.success).toBe(false)
+    const message = result.success ? '' : result.error.issues.map((issue) => issue.message).join(' | ')
+    expect(message).toContain('기대값')
+  })
+
+  it('기대값이 1보다 작은 것은 허용한다', () => {
+    expect(safeParseGameMath(withGamble({ type: 'coin-flip', chance: 0.45, payout: 2, maxSteps: 5 })).success).toBe(
+      true,
+    )
+  })
+
+  it('확률이 0이나 1이면 거부한다', () => {
+    for (const chance of [0, 1]) {
+      expect(safeParseGameMath(withGamble({ type: 'coin-flip', chance, payout: 2, maxSteps: 5 })).success).toBe(false)
+    }
+  })
+
+  it('배수가 1 이하면 거부한다', () => {
+    expect(safeParseGameMath(withGamble({ type: 'coin-flip', chance: 0.5, payout: 1, maxSteps: 5 })).success).toBe(
+      false,
+    )
+  })
+
+  it('단계 상한이 10을 넘으면 거부한다', () => {
+    expect(safeParseGameMath(withGamble({ type: 'coin-flip', chance: 0.5, payout: 2, maxSteps: 11 })).success).toBe(
+      false,
+    )
+  })
+
+  it('maxWinCap은 선택이다', () => {
+    const math = parseGameMath(
+      withGamble({ type: 'coin-flip', chance: 0.5, payout: 2, maxSteps: 5, maxWinCap: 500 }),
+    )
+    expect(math.gamble?.maxWinCap).toBe(500)
+  })
+})

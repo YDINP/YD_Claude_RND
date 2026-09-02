@@ -33,6 +33,8 @@ export interface AppDeps {
   clock?: Clock
   /** 테스트가 잭팟 당첨 같은 희귀 경로를 강제할 때만 주입하는 라운드 RNG 팩토리 */
   spinRng?: (seed: string, nonce: number) => Rng
+  /** 테스트가 더블업 승패를 강제할 때만 주입하는 RNG 팩토리 */
+  gambleRng?: (seedInput: string) => Rng
 }
 
 /** 테스트가 in-memory repos를 주입할 수 있도록 의존성을 명시적으로 받는 팩토리. */
@@ -53,7 +55,10 @@ export function createApp(deps: AppDeps): Hono {
     '/games',
     createGamesRoute({ registry, repos: deps.repos, jwt, config: deps.config, createRng: deps.spinRng })
   )
-  app.route('/rounds', createRoundsRoute({ repos: deps.repos, jwt }))
+  app.route(
+    '/rounds',
+    createRoundsRoute({ repos: deps.repos, jwt, registry, createRng: deps.gambleRng, config: deps.config })
+  )
   app.route('/bonus', createBonusRoute({ repos: deps.repos, jwt, clock }))
   app.route('/jackpot', createJackpotRoute({ repos: deps.repos }))
   app.route('/leaderboard', createLeaderboardRoute({ repos: deps.repos, jwt, clock }))

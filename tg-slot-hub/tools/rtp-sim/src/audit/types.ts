@@ -123,6 +123,10 @@ export interface FeatureReport {
   scatterShare: number
   /** 표본에서 관측된 트리거 비율. 표본을 돌리지 않았으면 null. */
   observedTriggerRate: number | null
+  /** 프리스핀 상한에 걸린 스핀 수. 표본이 없으면 null. */
+  cappedSpins: number | null
+  /** 캡 때문에 날아간 프리스핀 총합. 표본이 없으면 null. */
+  cappedSpinsLost: number | null
   /** 유료 스핀 1회당 실제로 돌아간 프리스핀 수. 표본이 없으면 null. */
   observedFreeSpinsPerPaidSpin: number | null
 }
@@ -187,6 +191,13 @@ export interface ObservedFeatures {
   freeSpins: number
   /** 관측한 유료 스핀 수. */
   spins: number
+  /**
+   * 라운드당 프리스핀 상한에 걸려 부여 횟수가 잘린 스핀 수.
+   * 0이 아니면 모델이 상한 근처에서 돌고 있다는 뜻이라 RTP가 캡에 눌린다.
+   */
+  cappedSpins: number
+  /** 캡 때문에 부여되지 못한 프리스핀 총합. */
+  cappedSpinsLost: number
 }
 
 /** 베팅 레벨별 전수 조사 요약. */

@@ -1,0 +1,134 @@
+{
+  "game": "shiba-shrine",
+  "concept": "Shiba Shrine — the hub's first cute-animal chibi cel-shaded cabinet, deliberately distinct from the 3D toy-render Brass Lounge family: soft sakura pastels and torii vermilion, thick clean outlines, flat cel-shaded fills instead of glossy gradients. Headline mechanic: the shiba mascot sweeps across the reels dropping paw-print wilds on a 243-ways board.",
+  "stylePrefix": "Kawaii chibi cel-shaded icon render, 3/4 top-down camera angle, soft even pastel lighting with a gentle vermilion rim light, sakura pink (#f6c0cf) and night indigo (#243252) color story with torii vermilion (#e05a3c) and mint (#8fd6c0) accents, thick clean black outlines, flat cel-shaded color fills with matte ceramic-glaze texture, rounded soft silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality —",
+  "negative": "photorealistic photography, real human face or body, blurry, out of focus, watermark, signature, extra unintended text, random glyphs, gibberish lettering, busy cluttered background, baked-in drop shadow, harsh outer shadow, cropped edges, multiple duplicate objects, low contrast, dull washed-out colors, noisy grain texture, distorted asymmetric proportions, cheap clip-art look, gradient banding, neon cyberpunk styling",
+  "assets": [
+    {
+      "id": "wild",
+      "kind": "symbol",
+      "prompt": "Kawaii chibi cel-shaded icon render, 3/4 top-down camera angle, soft even pastel lighting with a gentle vermilion rim light, sakura pink (#f6c0cf) and night indigo (#243252) color story with torii vermilion (#e05a3c) and mint (#8fd6c0) accents, thick clean black outlines, flat cel-shaded color fills with matte ceramic-glaze texture, rounded soft silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a chibi cel-shaded shiba inu paw print stamped in glossy vermilion ink on a small round rice-paper seal, thick clean black outline around the paw shape, a soft mint sparkle burst behind it, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/wild.webp",
+      "outSize": 512
+    },
+    {
+      "id": "scatter",
+      "kind": "symbol",
+      "prompt": "Kawaii chibi cel-shaded icon render, 3/4 top-down camera angle, soft even pastel lighting with a gentle vermilion rim light, sakura pink (#f6c0cf) and night indigo (#243252) color story with torii vermilion (#e05a3c) and mint (#8fd6c0) accents, thick clean black outlines, flat cel-shaded color fills with matte ceramic-glaze texture, rounded soft silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a small chibi cel-shaded shrine bell (suzu) with a red-and-white silk cord, thick clean black outline, a soft sakura-pink glow around the bell, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/scatter.webp",
+      "outSize": 512
+    },
+    {
+      "id": "shiba",
+      "kind": "symbol",
+      "prompt": "Kawaii chibi cel-shaded icon render, 3/4 top-down camera angle, soft even pastel lighting with a gentle vermilion rim light, sakura pink (#f6c0cf) and night indigo (#243252) color story with torii vermilion (#e05a3c) and mint (#8fd6c0) accents, thick clean black outlines, flat cel-shaded color fills with matte ceramic-glaze texture, rounded soft silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a chibi cel-shaded shiba inu character sitting upright with a big round head, perky triangular ears, a curled tail, and a cream-and-orange coat, wearing a tiny red haori jacket, thick clean black outline, flat cel-shaded color fill with soft cheek blush, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/shiba.webp",
+      "outSize": 512
+    },
+    {
+      "id": "panda",
+      "kind": "symbol",
+      "prompt": "Kawaii chibi cel-shaded icon render, 3/4 top-down camera angle, soft even pastel lighting with a gentle vermilion rim light, sakura pink (#f6c0cf) and night indigo (#243252) color story with torii vermilion (#e05a3c) and mint (#8fd6c0) accents, thick clean black outlines, flat cel-shaded color fills with matte ceramic-glaze texture, rounded soft silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a chibi cel-shaded panda character sitting upright with a round head and black-and-white patched fur, wearing a tiny mint-green scarf, thick clean black outline, flat cel-shaded color fill with soft cheek blush, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/panda.webp",
+      "outSize": 512
+    },
+    {
+      "id": "capy",
+      "kind": "symbol",
+      "prompt": "Kawaii chibi cel-shaded icon render, 3/4 top-down camera angle, soft even pastel lighting with a gentle vermilion rim light, sakura pink (#f6c0cf) and night indigo (#243252) color story with torii vermilion (#e05a3c) and mint (#8fd6c0) accents, thick clean black outlines, flat cel-shaded color fills with matte ceramic-glaze texture, rounded soft silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a chibi cel-shaded capybara character sitting upright with a round brown body and a calm sleepy expression, wearing a tiny citrus slice on its head like a hat, thick clean black outline, flat cel-shaded color fill with soft cheek blush, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/capy.webp",
+      "outSize": 512
+    },
+    {
+      "id": "tanuki",
+      "kind": "symbol",
+      "prompt": "Kawaii chibi cel-shaded icon render, 3/4 top-down camera angle, soft even pastel lighting with a gentle vermilion rim light, sakura pink (#f6c0cf) and night indigo (#243252) color story with torii vermilion (#e05a3c) and mint (#8fd6c0) accents, thick clean black outlines, flat cel-shaded color fills with matte ceramic-glaze texture, rounded soft silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a chibi cel-shaded tanuki character sitting upright with a round belly and a striped tail, wearing a tiny woven straw hat, thick clean black outline, flat cel-shaded color fill with soft cheek blush, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/tanuki.webp",
+      "outSize": 512
+    },
+    {
+      "id": "cat",
+      "kind": "symbol",
+      "prompt": "Kawaii chibi cel-shaded icon render, 3/4 top-down camera angle, soft even pastel lighting with a gentle vermilion rim light, sakura pink (#f6c0cf) and night indigo (#243252) color story with torii vermilion (#e05a3c) and mint (#8fd6c0) accents, thick clean black outlines, flat cel-shaded color fills with matte ceramic-glaze texture, rounded soft silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a chibi cel-shaded calico cat character sitting upright in a beckoning maneki-neko pose with one paw raised, wearing a small red bell collar, thick clean black outline, flat cel-shaded color fill with soft cheek blush, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/cat.webp",
+      "outSize": 512
+    },
+    {
+      "id": "koi",
+      "kind": "symbol",
+      "prompt": "Kawaii chibi cel-shaded icon render, 3/4 top-down camera angle, soft even pastel lighting with a gentle vermilion rim light, sakura pink (#f6c0cf) and night indigo (#243252) color story with torii vermilion (#e05a3c) and mint (#8fd6c0) accents, thick clean black outlines, flat cel-shaded color fills with matte ceramic-glaze texture, rounded soft silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a chibi cel-shaded koi fish curled into a circular pose, glossy orange-and-white patterned scales with a thick clean black outline, small flowing fins, a soft mint water-ripple motif beneath it, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/koi.webp",
+      "outSize": 512
+    },
+    {
+      "id": "dango",
+      "kind": "symbol",
+      "prompt": "Kawaii chibi cel-shaded icon render, 3/4 top-down camera angle, soft even pastel lighting with a gentle vermilion rim light, sakura pink (#f6c0cf) and night indigo (#243252) color story with torii vermilion (#e05a3c) and mint (#8fd6c0) accents, thick clean black outlines, flat cel-shaded color fills with matte ceramic-glaze texture, rounded soft silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — three chibi cel-shaded dango rice dumplings on a wooden skewer, colored pastel pink, white, and mint green, thick clean black outline, a small glossy highlight on each dumpling, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/dango.webp",
+      "outSize": 512
+    },
+    {
+      "id": "charm",
+      "kind": "symbol",
+      "prompt": "Kawaii chibi cel-shaded icon render, 3/4 top-down camera angle, soft even pastel lighting with a gentle vermilion rim light, sakura pink (#f6c0cf) and night indigo (#243252) color story with torii vermilion (#e05a3c) and mint (#8fd6c0) accents, thick clean black outlines, flat cel-shaded color fills with matte ceramic-glaze texture, rounded soft silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a small chibi cel-shaded omamori shrine charm pouch in sakura-pink brocade fabric with a gold tassel cord, thick clean black outline, a subtle glossy fabric sheen, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/charm.webp",
+      "outSize": 512
+    },
+    {
+      "id": "frame",
+      "kind": "frame",
+      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed square artwork with no isolated chroma background around the frame itself — a wide-window square shrine-gate cabinet frame built around two red torii-lacquer pillars with a shimenawa braided straw rope strung between them near the top, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-17%: a small wooden shrine plaque with the shimenawa rope and two paper shide zigzag streamers, engraved wordmark 'SHIBA SHRINE' in bold rounded chibi-style caps, no other text. The reel window occupies x 4%-96% and y 19%-81% (the dominant element of the frame), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a thin 1% torii-vermilion rim running just outside the green (this window will later be replaced with the live reel canvas). Two slim torii-lacquer side rails run the height of the window, each at most 3% of the frame width, styled as narrow red lacquer columns each holding 2-3 small hanging paper lantern charms for detail without bulk. The bottom y 83%-100% is a plain weighted stone shrine-step base molding with soft ambient shadow, no legend strip, no payline icons, no additional text. Overall symmetrical, centered, no characters. The reel window is clearly wider than tall (about 3:2 landscape proportion) so a 5-reel by 3-row grid fills it edge to edge; the frame's overall canvas is square.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "bg",
+      "kind": "bg",
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — a small Japanese shrine courtyard seen softly out of focus in daytime, blurred sakura-pink cherry blossom trees drifting petals, distant red torii gate silhouettes and stone lanterns, a soft mint-and-sakura sky gradient blending into the hub's deep navy at the top, a soft radial vignette darkening the corners and edges so foreground content stays legible, calm and uncluttered composition with no characters, no readable text, no sharp details competing for attention, subtle and low-contrast overall so reels and UI read clearly in front of it.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background, identical camera framing and horizon line to the base shrine courtyard background so the two can crossfade cleanly — the same shrine courtyard now seen at dusk for a festive blessing moment: strings of small paper lanterns glow warm vermilion overhead, more cherry blossom petals drift thickly through the air, a soft warm sunset gradient blends into deep navy at the top, richer and more festive lighting than the base scene, a soft radial vignette still darkens the corners and edges so foreground content stays legible, no characters, no readable text, no sharp details competing for attention.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg-freespins.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "prompt": "Front-on hero composition (not 3/4 top-down), full-bleed landscape artwork with no isolated chroma background — an oversized chibi cel-shaded shiba inu character mid-leap with a vermilion paw-print wild stamp bursting beside it and a shower of small gold coins, set against a soft blurred sakura shrine courtyard backdrop, dynamic diagonal composition, small wooden plaque wordmark 'SHIBA SHRINE' tucked in a bottom corner, eye-catching and readable even as a small lobby list thumbnail, no clutter.",
+      "size": "1536x1024",
+      "transparent": false,
+      "out": "thumb.webp",
+      "outSize": 640
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "game": "sheriff-sixgun",
+  "concept": "Sheriff's Six-Gun — a stylized-3D Wild West cabinet distinct from the Brass Lounge family: desert ochre and night-sky navy with sage and sunset-orange accents, worn leather and weathered wood instead of navy-velvet and polished brass. Headline mechanic: an expanding sheriff-badge wild covers a whole reel, and wins can be gambled on a red/black card flip.",
+  "stylePrefix": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality —",
+  "negative": "photorealistic photography, real human face or body, blurry, out of focus, watermark, signature, extra unintended text, random glyphs, gibberish lettering, busy cluttered background, baked-in drop shadow, harsh outer shadow, cropped edges, multiple duplicate objects, low contrast, dull washed-out colors, noisy grain texture, distorted asymmetric proportions, cheap clip-art look, gradient banding, neon cyberpunk styling",
+  "assets": [
+    {
+      "id": "wild",
+      "kind": "symbol",
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a glossy brass sheriff star badge with five points, a weathered leather backing strap, engraved 'WILD' in bold brass western slab-serif caps across the center, a subtle dusty patina on the brass surface, warm golden glow emanating from the star's points, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/wild.webp",
+      "outSize": 512
+    },
+    {
+      "id": "scatter",
+      "kind": "symbol",
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a round weathered bronze bounty coin embossed with a horseshoe-and-star relief, a frayed rope loop threaded through a small hole at the top, sunset-orange highlight along one edge, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/scatter.webp",
+      "outSize": 512
+    },
+    {
+      "id": "sheriff",
+      "kind": "symbol",
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a stylized 3D toy-like bust portrait of a rugged cartoon sheriff character wearing a worn brown leather hat and a brass star badge on his vest, a thick sun-weathered mustache, warm sunset-orange rim light along one side of his face, painted-toy material finish, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/sheriff.webp",
+      "outSize": 512
+    },
+    {
+      "id": "bandit",
+      "kind": "symbol",
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a stylized 3D toy-like bust portrait of a cartoon outlaw bandit character wearing a dark neckerchief mask and a dusty black hat, narrowed eyes, sage-green shirt collar, cool night-sky rim light along one side of his face, painted-toy material finish, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/bandit.webp",
+      "outSize": 512
+    },
+    {
+      "id": "revolver",
+      "kind": "symbol",
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a glossy stylized 3D toy revolver with a dark gunmetal barrel and a carved wood grip, a brass cylinder catching a bright highlight, angled slightly in 3/4 perspective to show its silhouette clearly, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/revolver.webp",
+      "outSize": 512
+    },
+    {
+      "id": "dynamite",
+      "kind": "symbol",
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a bundle of three glossy stylized 3D toy dynamite sticks wrapped with brown paper and tied with rope, a curled fuse with a small spark glow at the tip, sunset-orange highlight along the paper wrap, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/dynamite.webp",
+      "outSize": 512
+    },
+    {
+      "id": "horseshoe",
+      "kind": "symbol",
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a glossy stylized 3D toy iron horseshoe with a brushed dark-metal finish and small nail holes, a warm brass shine along its curved highlight edge, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/horseshoe.webp",
+      "outSize": 512
+    },
+    {
+      "id": "whiskey",
+      "kind": "symbol",
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a stylized 3D toy whiskey bottle with warm amber glass and a small paper label, a matching short glass tumbler beside it catching a bright highlight, sunset-orange glow through the amber liquid, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/whiskey.webp",
+      "outSize": 512
+    },
+    {
+      "id": "cactus",
+      "kind": "symbol",
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a stylized 3D toy saguaro cactus with a matte sage-green ribbed body and small warm-white flower blooms near its top, a rounded toy-like silhouette, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/cactus.webp",
+      "outSize": 512
+    },
+    {
+      "id": "boot",
+      "kind": "symbol",
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a stylized 3D toy cowboy boot in worn brown leather with hand-stitched detailing and a brass spur at the heel, a warm sunset-orange highlight along the leather's curve, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/boot.webp",
+      "outSize": 512
+    },
+    {
+      "id": "frame",
+      "kind": "frame",
+      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed square artwork with no isolated chroma background around the frame itself — a wide-window square saloon-sign cabinet frame on a weathered dark wood body with brass rivets, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-17%: a dark wood plank plate with a carved rope-lettering border, engraved wordmark 'SHERIFF'S SIX-GUN' in bold western slab-serif caps burned into the wood, no other text. The reel window occupies x 4%-96% and y 19%-81% (the dominant element of the frame), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a thin 1% brass rim running just outside the green (this window will later be replaced with the live reel canvas). Two slim weathered-wood side rails run the height of the window, each at most 3% of the frame width, studded with small brass rivets for detail without bulk. The bottom y 83%-100% is a plain weighted dark wood base molding shaped like a horseshoe, with soft ambient shadow, no legend strip, no payline icons, no additional text. Overall symmetrical, centered, no characters. The reel window is clearly wider than tall (about 3:2 landscape proportion) so a 5-reel by 3-row grid fills it edge to edge; the frame's overall canvas is square.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "bg",
+      "kind": "bg",
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — a dusty desert town main street seen softly out of focus at late afternoon, distant saloon buildings and a windmill silhouette against a warm sunset-orange sky blending up into deep night-sky navy, faint drifting dust motes catching the light, a soft radial vignette darkening the corners and edges so foreground content stays legible, calm and uncluttered composition with no characters, no readable text, no sharp details competing for attention, subtle and low-contrast overall so reels and UI read clearly in front of it.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background, identical camera framing and horizon line to the base desert town background so the two can crossfade cleanly — the same desert town main street now seen at full night under a large warm-toned moon, the saloon windows glow with warm amber lantern light, faint drifting dust and a lone tumbleweed silhouette at the far edge, richer and more dramatic lighting than the base scene for a showdown mood, a soft radial vignette still darkens the corners and edges so foreground content stays legible, no characters, no readable text, no sharp details competing for attention.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg-freespins.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "prompt": "Front-on hero composition (not 3/4 top-down), full-bleed landscape artwork with no isolated chroma background — an oversized glossy brass sheriff star badge and a stylized 3D toy revolver crossing in front of it, with a shower of brass coins and warm sunset-orange light rays, set against a soft blurred dusty desert town backdrop, dynamic diagonal composition, small wood-plank plaque wordmark 'SHERIFF'S SIX-GUN' tucked in a bottom corner, eye-catching and readable even as a small lobby list thumbnail, no clutter, no characters.",
+      "size": "1536x1024",
+      "transparent": false,
+      "out": "thumb.webp",
+      "outSize": 640
+    }
+  ]
+}

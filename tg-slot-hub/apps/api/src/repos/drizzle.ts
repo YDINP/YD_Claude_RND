@@ -1,7 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { STARTING_COINS, STARTING_GEMS } from '@tgslot/shared'
-import type { FeatureTrigger, FreeSpinsState, GameState, Locale } from '@tgslot/shared'
+import type {
+  FeatureTrigger,
+  FreeSpinsState,
+  GambleState,
+  GambleStep,
+  GameState,
+  Locale,
+  MutationEvent,
+} from '@tgslot/shared'
 import type { WinLine } from '@tgslot/slot-engine'
 import type { DrizzleDb } from '../db/client.js'
 import {
@@ -21,6 +29,18 @@ import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
 import type { BonusClaim, BonusClaims, BonusKind } from '../economy/bonus.js'
 import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS } from '../economy/config.js'
 import { freeSpinsSummary, isFreeSpinsActive, wrapFreeSpinsState } from '../economy/freeSpins.js'
+import {
+  findStepByKey,
+  gambleEscrowRefId,
+  gambleExpiresAt,
+  gamblePayout,
+  gambleRefId,
+  isGambleActive,
+  isGambleEligible,
+  isGambleExpired,
+  shouldAutoCollect,
+  stepsLeft,
+} from '../economy/gamble.js'
 import { hundredthsToCoins, isJackpotHit, jackpotAccrualHundredths } from '../economy/jackpot.js'
 import { levelFromXp, levelUpBonus, toLevelState } from '../economy/level.js'
 import { applySpinToMissions } from '../economy/missions.js'
@@ -31,8 +51,11 @@ import { InsufficientFundsError } from './types.js'
 import type {
   AppUser,
   AppWallet,
+  ApplyGambleInput,
   ApplySpinInput,
   ApplySpinResult,
+  GambleOutcome,
+  GambleStepRecord,
   ClaimBonusInput,
   ClaimMissionInput,
   ClaimResult,
@@ -75,6 +98,9 @@ function toRoundRecord(row: RoundRow): RoundRecord {
     bet: row.bet,
     win: row.win,
     stops: row.stops,
+    gridBefore: (row.gridBefore ?? null) as string[][] | null,
+    mutations: (row.mutations ?? []) as MutationEvent[],
+    gambleSteps: (row.gambleSteps ?? []) as GambleStepRecord[],
     // jsonb 컬럼이라 드라이버가 unknown으로 준다. 쓸 때 WinLine[]만 넣으므로 여기서 되돌린다.
     wins: row.wins as WinLine[],
     seed: row.seed,
@@ -234,6 +260,16 @@ export class DrizzleRepos implements Repos {
         .where(and(eq(rounds.userId, input.userId), eq(rounds.idempotencyKey, input.idempotencyKey)))
         .limit(1)
 
+      // 프리스핀 세션은 유저 단위 행이라 지갑 락이 이미 직렬화한다. 여기서 읽은 값이 곧
+      // 이 스핀의 진실이다 (요청의 totalBet은 프리스핀 중이면 무시된다).
+      const [stateRow] = await tx
+        .select()
+        .from(gameStates)
+        .where(and(eq(gameStates.userId, input.userId), eq(gameStates.gameId, input.gameId)))
+        .limit(1)
+
+      const stateBefore = (stateRow?.state ?? null) as GameState | null
+
       // 재전송: 지갑을 건드리지 않고 기존 라운드를 그대로 돌려준다.
       if (existingRound) {
         const [poolRow] = await tx.select().from(jackpotPool).where(eq(jackpotPool.id, JACKPOT_ROW_ID)).limit(1)
@@ -254,25 +290,23 @@ export class DrizzleRepos implements Repos {
           // 세션은 그 사이 더 진행됐을 수 있다. 라운드에 남긴 "그때 값"을 그대로 돌려준다.
           freeSpins: round.freeSpinsAfter,
           freeSpinsSummary: round.freeSpinsSummary,
+          // 재전송이면 제안도 그대로 살아 있다 (스핀을 다시 돌린 게 아니므로).
+          ...(gambleOfferFor(stateBefore, round.id) ? { gambleOffer: gambleOfferFor(stateBefore, round.id) } : {}),
         }
       }
 
-      // 프리스핀 세션은 유저 단위 행이라 지갑 락이 이미 직렬화한다. 여기서 읽은 값이 곧
-      // 이 스핀의 진실이다 (요청의 totalBet은 프리스핀 중이면 무시된다).
-      const [stateRow] = await tx
-        .select()
-        .from(gameStates)
-        .where(and(eq(gameStates.userId, input.userId), eq(gameStates.gameId, input.gameId)))
-        .limit(1)
-
-      const stateBefore = (stateRow?.state ?? null) as GameState | null
       const freeSpinsBefore = stateBefore?.freeSpins ?? null
       const isFreeSpin = isFreeSpinsActive(freeSpinsBefore, now)
+
+      // 스핀 한 번이면 이전 더블업은 끝난다. 잠겨 있던 판돈을 **잔액을 확인하기 전에** 돌려준다
+      // (그 돈으로 이번 스핀을 돌릴 수 있어야 한다).
+      const escrowBefore = stateBefore?.gamble ?? null
+      const escrowRelease = escrowBefore?.pendingWin ?? 0
       const totalBet = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.totalBet : input.totalBet
       const spinMultiplier = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.multiplier : 1
 
-      if (!isFreeSpin && locked.coins < totalBet) {
-        throw new InsufficientFundsError(totalBet, locked.coins)
+      if (!isFreeSpin && locked.coins + escrowRelease < totalBet) {
+        throw new InsufficientFundsError(totalBet, locked.coins + escrowRelease)
       }
 
       const nonce = locked.nonce + 1
@@ -286,6 +320,17 @@ export class DrizzleRepos implements Repos {
 
       const entries: (typeof ledger.$inferInsert)[] = []
       let walletDelta = 0
+
+      if (escrowBefore && escrowRelease > 0) {
+        entries.push({
+          userId: input.userId,
+          delta: escrowRelease,
+          currency: 'coins',
+          reason: LEDGER_REASONS.gambleCollect,
+          refId: gambleRefId(escrowBefore.roundId, escrowBefore.steps.length),
+        })
+        walletDelta += escrowRelease
+      }
 
       // 프리스핀은 차감하지 않는다. 원장에 spin_bet 항목 자체가 생기지 않는다.
       if (!isFreeSpin) {
@@ -391,9 +436,36 @@ export class DrizzleRepos implements Repos {
         ended: freeSpinsAfter === null,
       })
 
+      // 새 당첨이면 그 금액을 지갑 밖으로 잠그고 제안을 연다. 잠겨 있는 동안에는 잔액에 보이지 않으므로
+      // 다른 게임에서 다 써 버린 뒤 더블업으로 마이너스를 만드는 경로가 생기지 않는다.
+      let gambleAfter: GambleState | null = null
+      let gambleOffer: ApplySpinResult['gambleOffer']
+      if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, config: input.gamble }) && input.gamble) {
+        // 방어: 이번 스핀의 당첨금이 그대로 잠기므로 잔액이 모자랄 수 없다.
+        if (locked.coins + walletDelta >= result.totalWin) {
+          entries.push({
+            userId: input.userId,
+            delta: -result.totalWin,
+            currency: 'coins',
+            reason: LEDGER_REASONS.gambleEscrow,
+            refId: gambleEscrowRefId(roundId),
+          })
+          walletDelta -= result.totalWin
+          const expiresAt = gambleExpiresAt(now)
+          gambleAfter = {
+            roundId,
+            pendingWin: result.totalWin,
+            steps: [],
+            maxSteps: input.gamble.maxSteps,
+            expiresAt,
+          }
+          gambleOffer = { pendingWin: gambleAfter.pendingWin, maxSteps: gambleAfter.maxSteps, expiresAt }
+        }
+      }
+
       // 앞뒤로 아무 상태가 없으면 건드리지 않는다. 기본 게임 스핀 대부분이 여기 해당한다.
-      if (freeSpinsBefore !== null || freeSpinsAfter !== null) {
-        const state: GameState = { freeSpins: freeSpinsAfter }
+      if (stateBefore !== null || freeSpinsAfter !== null || gambleAfter !== null) {
+        const state: GameState = { freeSpins: freeSpinsAfter, gamble: gambleAfter }
         await tx
           .insert(gameStates)
           .values({ userId: input.userId, gameId: input.gameId, state, updatedAt: now })
@@ -447,6 +519,8 @@ export class DrizzleRepos implements Repos {
           bet: totalBet,
           win: result.totalWin,
           stops: result.stops,
+          gridBefore: result.gridBefore,
+          mutations: result.mutations,
           wins: result.wins,
           seed,
           seedHash,
@@ -461,6 +535,7 @@ export class DrizzleRepos implements Repos {
           multiplier: spinMultiplier,
           freeSpinsAfter,
           freeSpinsSummary: summary ?? null,
+          gambleSteps: [],
         })
         .returning()
       if (!insertedRound) throw new Error('[drizzle-repo] round insert failed')
@@ -490,11 +565,145 @@ export class DrizzleRepos implements Repos {
         isFreeSpin,
         freeSpins: freeSpinsAfter,
         freeSpinsSummary: summary,
+        ...(gambleOffer ? { gambleOffer } : {}),
       }
     })
   }
 
+  async applyGamble(input: ApplyGambleInput): Promise<GambleOutcome | null> {
+    const now = this.clock()
+
+    return this.db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select()
+        .from(wallets)
+        .where(eq(wallets.userId, input.userId))
+        .limit(1)
+        .for('update')
+      if (!locked) throw new Error('[drizzle-repo] wallet not found for gamble')
+
+      const [stateRow] = await tx
+        .select()
+        .from(gameStates)
+        .where(and(eq(gameStates.userId, input.userId), eq(gameStates.gameId, input.gameId)))
+        .limit(1)
+
+      const state = (stateRow?.state ?? null) as GameState | null
+      const gamble = state?.gamble ?? null
+
+      const [roundRow] = await tx.select().from(rounds).where(eq(rounds.id, input.roundId)).limit(1)
+      if (!roundRow) return null
+      const round = toRoundRecord(roundRow)
+      // 방어: 남의 라운드나 프리스핀 라운드로는 애초에 제안이 열리지 않지만, 상태가 꼬였을 때를 대비한다.
+      if (round.userId !== input.userId || round.isFreeSpin) return null
+
+      // 같은 키가 이미 처리됐으면 판정을 다시 하지 않고 그때 결과를 그대로 돌려준다.
+      // 세션이 닫힌 뒤(패배·자동 회수)의 재전송도 여기서 걸린다 — 라운드 기록은 남아 있다.
+      const replay = findStepByKey(round.gambleSteps, input.idempotencyKey)
+      if (replay) return toOutcome(replay, toAppWallet(locked), gamble, true)
+
+      if (!gamble || gamble.roundId !== input.roundId) return null
+
+      // 만료됐으면 도전 대신 자동 회수로 끝낸다. 잠긴 돈을 잃게 두지 않는다.
+      if (isGambleExpired(gamble, now)) {
+        return releaseEscrow(tx, input.userId, input.gameId, locked, state, gamble, now, true)
+      }
+      if (!isGambleActive(gamble, now)) return null
+
+      const decision = input.decide({ round, state: gamble })
+      const stake = gamble.pendingWin
+      const pendingWin = decision.won ? gamblePayout(stake, input.config.payout) : 0
+      const step = gamble.steps.length + 1
+
+      const draft: GambleState = {
+        ...gamble,
+        pendingWin,
+        steps: [
+          ...gamble.steps,
+          {
+            step,
+            idempotencyKey: input.idempotencyKey,
+            pick: input.pick,
+            side: decision.side,
+            won: decision.won,
+            stake,
+            pendingWin,
+            autoCollected: false,
+            seedInput: decision.seedInput,
+          },
+        ],
+        expiresAt: gambleExpiresAt(now),
+      }
+
+      // 졌으면 잠긴 돈이 그대로 사라진다 (에스크로가 이미 지갑에서 빠져 있다).
+      // 이겼는데 상한에 닿으면 늘어난 판돈을 바로 돌려준다.
+      const autoCollected = decision.won && shouldAutoCollect(draft, input.config, round.bet)
+      const lastStep: GambleStep = { ...draft.steps[draft.steps.length - 1]!, autoCollected }
+      const steps = [...draft.steps.slice(0, -1), lastStep]
+      const finished = !decision.won || autoCollected
+
+      let wallet = toAppWallet(locked)
+      if (autoCollected && pendingWin > 0) {
+        await tx.insert(ledger).values({
+          userId: input.userId,
+          delta: pendingWin,
+          currency: 'coins',
+          reason: LEDGER_REASONS.gambleCollect,
+          refId: gambleRefId(round.id, step),
+        })
+        const [updated] = await tx
+          .update(wallets)
+          .set({ coins: sql`${wallets.coins} + ${pendingWin}`, updatedAt: now })
+          .where(eq(wallets.userId, input.userId))
+          .returning()
+        if (!updated) throw new Error('[drizzle-repo] wallet update failed on gamble collect')
+        wallet = toAppWallet(updated)
+      }
+
+      const nextState: GameState = {
+        freeSpins: state?.freeSpins ?? null,
+        gamble: finished ? null : { ...draft, steps },
+      }
+      await tx
+        .update(gameStates)
+        .set({ state: nextState, updatedAt: now })
+        .where(and(eq(gameStates.userId, input.userId), eq(gameStates.gameId, input.gameId)))
+
+      await tx.update(rounds).set({ gambleSteps: steps }).where(eq(rounds.id, round.id))
+
+      return toOutcome(lastStep, wallet, finished ? null : draft, false)
+    })
+  }
+
+  async collectGamble(input: { userId: string; gameId: string; roundId: string }): Promise<GambleOutcome | null> {
+    const now = this.clock()
+
+    return this.db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select()
+        .from(wallets)
+        .where(eq(wallets.userId, input.userId))
+        .limit(1)
+        .for('update')
+      if (!locked) throw new Error('[drizzle-repo] wallet not found for gamble collect')
+
+      const [stateRow] = await tx
+        .select()
+        .from(gameStates)
+        .where(and(eq(gameStates.userId, input.userId), eq(gameStates.gameId, input.gameId)))
+        .limit(1)
+
+      const state = (stateRow?.state ?? null) as GameState | null
+      const gamble = state?.gamble ?? null
+      if (!gamble || gamble.roundId !== input.roundId) return null
+
+      // 만료됐어도 회수는 된다. 잠긴 돈은 언제나 유저 것이다.
+      return releaseEscrow(tx, input.userId, input.gameId, locked, state, gamble, now, false)
+    })
+  }
+
   async getGameState(userId: string, gameId: string): Promise<GameState> {
+    const now = this.clock()
     const [row] = await this.db
       .select()
       .from(gameStates)
@@ -502,9 +711,43 @@ export class DrizzleRepos implements Repos {
       .limit(1)
 
     const state = (row?.state ?? null) as GameState | null
+    const gamble = state?.gamble ?? null
+
+    // 만료된 더블업은 **이 자리에서 회수한다.** 숨기기만 하면 다음 스핀 전까지 돈이 잠긴 채로 남는다.
+    // 만료를 발견했을 때만 트랜잭션을 여니 평범한 조회는 그대로 select 한 번이다.
+    if (gamble && isGambleExpired(gamble, now)) {
+      return this.db.transaction(async (tx) => {
+        const [locked] = await tx
+          .select()
+          .from(wallets)
+          .where(eq(wallets.userId, userId))
+          .limit(1)
+          .for('update')
+        if (!locked) throw new Error('[drizzle-repo] wallet not found for gamble expiry')
+
+        // 락을 잡은 뒤 다시 읽는다. 그 사이 다른 요청이 이미 회수했을 수 있다.
+        const [fresh] = await tx
+          .select()
+          .from(gameStates)
+          .where(and(eq(gameStates.userId, userId), eq(gameStates.gameId, gameId)))
+          .limit(1)
+        const freshState = (fresh?.state ?? null) as GameState | null
+        const freshGamble = freshState?.gamble ?? null
+
+        if (freshGamble && isGambleExpired(freshGamble, now)) {
+          await releaseEscrow(tx, userId, gameId, locked, freshState, freshGamble, now, true)
+        }
+
+        const freeSpins = freshState?.freeSpins ?? null
+        return { freeSpins: isFreeSpinsActive(freeSpins, now) ? freeSpins : null, gamble: null }
+      })
+    }
+
     const freeSpins = state?.freeSpins ?? null
-    // 만료된 세션은 없는 것으로 본다.
-    return { freeSpins: isFreeSpinsActive(freeSpins, this.clock()) ? freeSpins : null }
+    return {
+      freeSpins: isFreeSpinsActive(freeSpins, now) ? freeSpins : null,
+      gamble,
+    }
   }
 
   async getRoundById(roundId: string): Promise<RoundRecord | null> {
@@ -710,6 +953,89 @@ export class DrizzleRepos implements Repos {
 
     return row ? { kind, claimedAt: row.claimedAt, streakDay: row.streakDay } : null
   }
+}
+
+/** 단계 기록 하나를 응답 모양으로 옮긴다. 재전송과 새 판정이 같은 코드를 쓴다. */
+function toOutcome(
+  step: GambleStep,
+  wallet: AppWallet,
+  remaining: GambleState | null,
+  replayed: boolean
+): GambleOutcome {
+  return {
+    outcome: step.won ? 'win' : 'lose',
+    side: step.side,
+    pendingWin: step.pendingWin,
+    wallet,
+    stepsLeft: step.won && !step.autoCollected ? stepsLeft(remaining) : 0,
+    seedInput: step.seedInput,
+    autoCollected: step.autoCollected,
+    replayed,
+    // 세션이 계속 열려 있을 때만. 클라이언트는 이 값으로 카운트다운을 다시 맞춘다.
+    ...(remaining?.expiresAt !== undefined && !step.autoCollected && step.won
+      ? { expiresAt: remaining.expiresAt }
+      : {}),
+  }
+}
+
+/** 잠긴 판돈을 지갑으로 돌려주고 세션을 닫는다. */
+async function releaseEscrow(
+  tx: DrizzleTx,
+  userId: string,
+  gameId: string,
+  lockedWallet: typeof wallets.$inferSelect,
+  state: GameState | null,
+  gamble: GambleState,
+  now: Date,
+  autoCollected: boolean
+): Promise<GambleOutcome> {
+  let wallet = toAppWallet(lockedWallet)
+
+  if (gamble.pendingWin > 0) {
+    await tx.insert(ledger).values({
+      userId,
+      delta: gamble.pendingWin,
+      currency: 'coins',
+      reason: LEDGER_REASONS.gambleCollect,
+      refId: gambleRefId(gamble.roundId, gamble.steps.length),
+    })
+    const [updated] = await tx
+      .update(wallets)
+      .set({ coins: sql`${wallets.coins} + ${gamble.pendingWin}`, updatedAt: now })
+      .where(eq(wallets.userId, userId))
+      .returning()
+    if (!updated) throw new Error('[drizzle-repo] wallet update failed on gamble collect')
+    wallet = toAppWallet(updated)
+  }
+
+  const nextState: GameState = { freeSpins: state?.freeSpins ?? null, gamble: null }
+  await tx
+    .update(gameStates)
+    .set({ state: nextState, updatedAt: now })
+    .where(and(eq(gameStates.userId, userId), eq(gameStates.gameId, gameId)))
+
+  return {
+    outcome: 'collected',
+    pendingWin: gamble.pendingWin,
+    wallet,
+    stepsLeft: 0,
+    seedInput: '',
+    autoCollected,
+    replayed: false,
+  }
+}
+
+/** 저장된 상태에서 이 라운드의 더블업 제안을 꺼낸다. 다른 라운드 것이면 없는 셈이다. */
+function gambleOfferFor(
+  state: GameState | null,
+  roundId: string
+): { pendingWin: number; maxSteps: number; expiresAt: string } | undefined {
+  const gamble = state?.gamble
+  if (!gamble || gamble.roundId !== roundId || gamble.pendingWin <= 0) return undefined
+  // 만료 시각이 없는 상태는 이 필드가 생기기 전에 만들어진 것이다. 10분짜리 세션이라
+  // 실제로는 남아 있을 수 없지만, 그런 상태는 제안으로 다시 광고하지 않는다.
+  if (gamble.expiresAt === undefined) return undefined
+  return { pendingWin: gamble.pendingWin, maxSteps: gamble.maxSteps, expiresAt: gamble.expiresAt }
 }
 
 /** 트랜잭션 핸들. drizzle이 콜백에 넘겨주는 타입을 그대로 쓴다. */

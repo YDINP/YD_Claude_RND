@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { RoundState, SpinResult } from './types.js'
 import { assertBetLevel, buildGrid, resolveSpin, spin } from './spin.js'
+import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 import { createSeededRng } from './rng/seeded.js'
 import { makeScatterMath, makeTestMath } from './testFixtures.js'
 
@@ -206,5 +207,58 @@ describe('spin - 스캐터와 프리스핀', () => {
     const withoutState = spin(math, { totalBet: 30 }, createSeededRng('compat'))
     const withUndefined = spin(math, { totalBet: 30 }, createSeededRng('compat'), undefined)
     expect(withUndefined).toEqual(withoutState)
+  })
+})
+
+describe('라운드 프리스핀 상한', () => {
+  const scatterMath = makeScatterMath()
+  const TOTAL_BET = 3
+  const BET_UNIT = 1
+  // 스캐터 3개 = 트리거. 나머지 칸은 지급되지 않는 조합으로 채운다.
+  const triggerGrid = (): string[][] => [
+    ['s', 'b', 'a'],
+    ['a', 's', 'b'],
+    ['b', 'a', 's'],
+  ]
+
+  function retriggerAt(freeSpinsTotal: number): SpinResult {
+    const state: RoundState = { freeSpinsLeft: 1, freeSpinsTotal, multiplier: 2 }
+    return resolveSpin(scatterMath, triggerGrid(), [0, 0, 0], TOTAL_BET, BET_UNIT, state)
+  }
+
+  it('여유가 있으면 규칙대로 다 얹고 캡 기록을 남기지 않는다', () => {
+    const result = retriggerAt(5)
+    expect(result.features).toContainEqual({ type: 'freeSpins', spins: 5, multiplier: 2, retrigger: true })
+    expect(result.features.some((feature) => feature.type === 'freeSpinsCapped')).toBe(false)
+    expect(result.nextState).toMatchObject({ freeSpinsLeft: 5, freeSpinsTotal: 10 })
+  })
+
+  it('상한을 넘기는 리트리거는 남은 만큼만 얹고 사실을 기록한다', () => {
+    const result = retriggerAt(MAX_FREE_SPINS_PER_ROUND - 2)
+    expect(result.features).toContainEqual({ type: 'freeSpins', spins: 2, multiplier: 2, retrigger: true })
+    expect(result.features).toContainEqual({
+      type: 'freeSpinsCapped',
+      requested: 5,
+      granted: 2,
+      cap: MAX_FREE_SPINS_PER_ROUND,
+    })
+    expect(result.nextState?.freeSpinsTotal).toBe(MAX_FREE_SPINS_PER_ROUND)
+  })
+
+  it('상한에 닿으면 한 회도 얹지 않고 라운드를 끝낸다', () => {
+    const result = retriggerAt(MAX_FREE_SPINS_PER_ROUND)
+    expect(result.features.some((feature) => feature.type === 'freeSpins')).toBe(false)
+    expect(result.features).toContainEqual({
+      type: 'freeSpinsCapped',
+      requested: 5,
+      granted: 0,
+      cap: MAX_FREE_SPINS_PER_ROUND,
+    })
+    // 남은 1회를 이 스핀이 소진했으므로 라운드가 여기서 끝난다.
+    expect(result.nextState).toBeUndefined()
+  })
+
+  it('예외를 던지지 않는다. 라운드는 반드시 끝나야 한다', () => {
+    expect(() => retriggerAt(MAX_FREE_SPINS_PER_ROUND)).not.toThrow()
   })
 })

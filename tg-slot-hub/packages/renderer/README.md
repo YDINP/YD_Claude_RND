@@ -39,7 +39,7 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 | 멤버 | 시그니처 | 하는 일 |
 |---|---|---|
 | `ready` | `Promise<void>` | 에셋 로딩과 첫 렌더 완료 |
-| `spinTo` | `(stops, opts?: { durationMs?; stagger?; fast? }) => SpinHandle` | 릴을 돌려 `stops`에 **정확히** 멈춘다. `fast`면 회전이 0.8배로 짧아진다 |
+| `spinTo` | `(stops, opts?: { durationMs?; stagger?; fast?; gridBefore?; mutations? }) => SpinHandle` | 릴을 돌려 `stops`에 **정확히** 멈춘다. `fast`면 회전이 0.8배로 짧아진다. `mutations`를 주면 착지 뒤에 변형 연출을 재생한다 |
 | `showWins` | `(wins, opts?: { loop?; totalBet?; formatLineLabel?; features? }) => Promise<void>` | 아래 "승리 연출" 참고. 첫 바퀴가 끝나면 resolve |
 | `clearWins` | `() => void` | 승리 연출 즉시 정리 |
 | `setSpinningIdle` | `(on: boolean) => void` | 대기 중 미세한 유휴 모션 |
@@ -68,6 +68,63 @@ await spin.done
 그래도 왼쪽부터 40ms 간격은 남겨 한꺼번에 툭 서지 않게 한다.
 착지 좌표는 원래 경로와 똑같이 `stops`로 확정되고 `reelStop`과 `spinEnd`도 정상적으로 발생한다.
 이미 멈춘 뒤에 불러도, 초기화가 끝나기 전에 불러도 안전하다.
+
+## 변형 연출 (`gridBefore` + `mutations`)
+
+엔진은 릴이 그대로 멈춘 그리드(`SpinResult.gridBefore`)와 평가에 쓴 그리드(`SpinResult.grid`),
+그 사이에 무엇이 일어났는지(`SpinResult.mutations`)를 함께 준다.
+렌더러는 **`gridBefore`에 착지**한 뒤 변형을 순서대로 재생하고, 그 결과가 `grid`와 같아지도록 만든다.
+
+```ts
+const spin = renderer.spinTo(result.stops, {
+  gridBefore: result.gridBefore,
+  mutations: result.mutations,
+})
+await spin.done          // 착지 + 변형까지 끝난 뒤 resolve
+await renderer.showWins(result.wins, { totalBet, features: result.features })
+```
+
+`spinEnd`는 변형까지 끝난 **뒤에** 나간다. 승리 연출은 변형이 끝난 그리드 위에서 시작해야 하기 때문이다.
+`gridBefore`를 생략하면 `stops`와 스트립에서 되짚는다. 값은 같지만 넘겨주는 쪽이 한 번 덜 계산한다.
+
+| 종류 | 화면 | 길이 | 얼굴이 바뀌는 시점 |
+|---|---|---|---|
+| `mystery` | 물음표 칸이 **동시에** 가로로 접혔다 펴지며 금빛이 터진다 | 600ms | 한가운데 (300ms) |
+| `expandWild` | 브라스 기둥이 릴을 위아래로 덮고 빛줄기가 훑고 내려간다 | 700ms | 55% (385ms) |
+| `upgrade` | 얼굴이 녹아 다른 얼굴로 바뀌는 크로스페이드 + 반짝임 | 550ms | 한가운데 (275ms) |
+| `randomWild` | 와일드가 위에서 떨어져 튕기고 먼지가 퍼진다 | 650ms | 시작 (0ms) |
+
+낙하만 칸마다 90ms씩 어긋나게 떨어진다. 리빌·승급·확장은 "일괄"로 읽혀야 하므로 동시에 움직인다.
+칸이 많아도 어긋남의 총합은 단계 길이의 40%를 넘지 않는다.
+
+모션 축소에서는 어느 종류든 200ms 동안 결과만 보여준다. 반복 애니메이션도 모션이다.
+연출이 없어도 **머무는 시간은 그대로 지킨다.** 길이의 기준은 언제나 `buildMutationPlan`이고,
+0ms에 닫아 버리면 계획이 말한 길이와 화면이 갈린다.
+
+파티클은 스핀마다 새로 만들지 않고 풀에서 꺼내 쓴다. 리빌 한 번에 칸마다 십여 개가 나므로
+매번 만들고 버리면 저사양 기기에서 GC로 끊긴다.
+
+### 화면과 배당은 갈라질 수 없다
+
+변형은 스트립에 **없는** 심볼을 칸에 앉힌다(물음표가 체리가 되는 식).
+스트립만 읽고 다시 그리면 원래 심볼로 되돌아가므로, 변형이 끝난 칸은 별도의 층이 정한다.
+그 층의 값은 순수 함수 하나가 만든다.
+
+```ts
+applyMutationEventsToGrid(result.gridBefore, result.mutations)  // === result.grid
+```
+
+이 등식은 테스트가 실제 엔진 스핀 수백 회로 직접 확인한다. 어긋나면 화면이 배당과 다른 것을 말하게 된다.
+
+### 건너뛰기
+
+`skip()`은 변형 중에도 듣는다. 재생 중인 단계는 곧장 끝나고, 아직 열지 않은 단계는 건너뛴 뒤
+화면이 최종 그리드로 확정된다. 어떻게 끝나든 마지막 화면은 언제나 `SpinResult.grid`와 같다.
+
+### 시트와 fx는 그때의 심볼로 찾는다
+
+`fx`와 `sheets`는 심볼 id를 키로 쓴다. 변형으로 심볼이 바뀐 칸은 **바뀐 뒤의** 심볼로 찾는다.
+렌더러가 그 자리에 실제로 그려진 심볼(`cell.symbol`)만 보기 때문에 별도 처리가 필요 없다.
 
 ## 승리 연출
 
@@ -256,6 +313,7 @@ type RendererEvent =
   | { type: 'featureTriggered'; feature: FeatureTrigger }
   | { type: 'modeTransition'; to: 'freeSpins' | 'base'; phase: 'start' | 'end' }
   | { type: 'pulseArrive'; line: number; reel: number; row: number }
+  | { type: 'mutation'; mutation: MutationEvent; symbol?: SymbolId; phase: 'start' | 'end' }
 ```
 
 `winTotal`은 승리 연출 A단계가 **시작할 때** 총배당과 등급과 그 단계의 길이를 함께 준다.
@@ -266,6 +324,26 @@ type RendererEvent =
 `modeTransition`은 배경 전환의 시작과 끝에 **정확히 한 번씩** 온다.
 전환이 중간에 끊겨도 `end`는 반드시 나가므로, 이 신호를 기다리는 쪽이 매달릴 일이 없다.
 `pulseArrive`는 승리 빛이 심볼 하나에 닿을 때마다 온다. 짧은 효과음을 붙이는 자리다.
+`mutation`은 변형 한 단계의 시작과 끝에 **정확히 한 번씩** 온다.
+아직 시작하지 않은 단계를 `skip()`으로 건너뛰면 그 단계는 `start`도 `end`도 내지 않는다.
+`symbol`은 `mutation.symbol`과 같은 값을 맨 위로 올려 둔 것이다.
+배너가 "무엇으로 바뀌었는지"를 한 단계 더 들어가지 않고 읽으라고 있다.
+
+### ways 게임 (`math.payModel === 'ways'`)
+
+페이라인이 없으므로 선을 그릴 좌표 자체가 없다. 렌더러는 선 대신 광채와 빛만 쓴다.
+
+- B단계가 **라인 하나씩**이 아니라 **이긴 심볼 하나씩**이다. 배당이 큰 심볼부터 보여준다.
+- 강조 범위는 그 심볼이 걸린 릴별 칸 **전부**다 (엔진이 `positions`에 그대로 담아 준다).
+- 기본 명판 문구는 `{심볼} × {경로 수} ways · {배당}`이다. 라인 명판과 정보량을 맞췄다.
+- 경로 수는 `WinLine.ways`를 쓰고, 없으면 좌표에서 릴별 칸 수의 곱으로 되짚는다.
+- `bothWays` 게임에서 오른쪽으로 읽은 승리(`direction: 'rtl'`)는 **빛도 오른쪽에서 왼쪽으로** 흐른다.
+- 같은 릴에 여러 칸이 걸리면 빛은 위쪽 행부터 들른다.
+- A단계는 겹친 좌표를 하나로 줄인 뒤 연출을 건다. ways에서는 여러 심볼이 같은 칸을 겹쳐 짚는다.
+
+승리 등급도 그대로 동작한다. `totalBet`을 생략했을 때만 계산식이 다르다:
+라인 게임은 배수 합을 라인 수로 나누지만, ways 게임은 `경로 수 × 배수`의 합을 `ways.betDivisor`로 나눈다.
+ways에는 페이라인이 없어 라인 수로 나누면 0으로 나누게 된다.
 
 ### 승리 등급
 
@@ -473,6 +551,7 @@ Pixi 없이도 쓸 수 있는 부분은 따로 내보낸다. 허브의 테스트
 |---|---|
 | `stopsToGrid(math, stops)` | 엔진 `buildGrid`와 같은 값. 렌더 결과 검증용 |
 | `symbolAt`, `reelStripWindow`, `wrapIndex` | 스트립 조회 |
+| `dedupePositions` | 겹친 좌표를 하나로. ways 승리가 같은 칸을 겹쳐 짚을 때 쓴다 |
 | `normalizePosition`, `spinTargetPosition` | 릴 위치 계산 |
 | `computeLayout`, `symbolCenter`, `paylinePoints`, `positionRects` | 기하 계산 |
 | `frameWindowRect`, `computeFrameLayout`, `computeWindowFitLayout` | 프레임 아트 안의 릴 창 배치 |
@@ -486,6 +565,13 @@ Pixi 없이도 쓸 수 있는 부분은 따로 내보낸다. 허브의 테스트
 | `winTier`, `phaseAllDurationMs` | 승리 등급과 등급별 연출 길이 |
 | `buildPulsePath`, `pulsePointAt` | 당첨 라인을 훑는 빛의 경로와 시각 |
 | `buildSkipPlan` | 스킵했을 때 릴별 감속 시간 |
+| `applyMutationEventsToGrid` | 착지 그리드에 변형을 얹는다. 엔진 `SpinResult.grid`와 같아야 한다 |
+| `buildMutationPlan` | 변형 재생 순서·길이·단계별 그리드 |
+| `mutationDurationMs`, `mutationCommitMs`, `mutationCellDelayMs` | 변형 타이밍 규칙 |
+| `mutationReels` | 확장 와일드가 덮은 릴 |
+| `isWaysGame`, `isBothWays`, `betUnitCount` | ways 게임 판정과 배당 단위 |
+| `waysCountOf`, `waysDirectionOf`, `isWaysWin` | ways 승리의 경로 수·방향·판별 |
+| `defaultWaysLabel`, `sortWaysWins` | ways 명판 문구와 재생 순서 |
 | `scatterPositions`, `findFreeSpins` | 피처 트리거에서 좌표와 프리스핀 뽑기 |
 | `formatFreeSpinsPlaque`, `shouldShowFreeSpinsPlaque` | 프리스핀 명판 문구와 표시 판정 |
 | `modeTransitionTarget`, `buildModeTransition` | 배경 전환 여부와 구간 타이밍 |

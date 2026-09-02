@@ -97,6 +97,24 @@ const ko: Record<TranslationKey, string> = {
   freeSpinsGrantRule: '{spins}회, 배수 ×{multiplier}',
   freeSpinsRetriggerRule: '프리스핀 중 재발동하면 스핀이 추가돼요',
   fairnessNoRoundYet: '스핀을 한 번 하면 그 라운드의 공정성 증명을 볼 수 있어요.',
+  // ways games (Wave 1)
+  tabWays: '웨이즈',
+  waysExplainer: '{base} 웨이즈 — 인접한 릴에 심볼이 이어지면 릴 안 위치와 상관없이 당첨돼요.',
+  waysBothWaysNote: '왼쪽→오른쪽, 오른쪽→왼쪽 양방향으로 지급돼요.',
+  betPerWay: '웨이당 베팅: {amount}',
+  // gamble / double-up (Wave 1)
+  gambleCollect: '받기',
+  gambleDouble: '더블 ({percent}%)',
+  gambleRetry: '다시 시도',
+  gamblePendingWinLabel: '더블업 대기중',
+  gambleTitle: '더블업 (×{payout})',
+  gamblePendingWin: '{amount} 걸려있어요',
+  gambleHeads: '앞면',
+  gambleTails: '뒷면',
+  gambleWin: '맞혔어요! 두 배로 불었어요.',
+  gambleLose: '틀렸어요 — 이번 판은 여기까지예요.',
+  gambleCollected: '이미 회수됐어요 — 당첨금은 지갑에 안전하게 들어가 있어요.',
+  gambleExpiresIn: '{time} 후 만료',
 }
 
 export default ko

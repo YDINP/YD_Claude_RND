@@ -8,20 +8,33 @@ vi.mock('../sdk/api', async () => {
     spin: vi.fn(),
     getMe: vi.fn(),
     getGameState: vi.fn(),
+    gamble: vi.fn(),
+    collectGamble: vi.fn(),
   }
 })
 
 import type { GameMath } from '@tgslot/slot-engine'
-import type { SpinResponse, FreeSpinsState } from '@tgslot/shared'
-import { getGameMath, spin as apiSpin, getMe, getGameState, ApiClientError } from '../sdk/api'
+import type { SpinResponse, FreeSpinsState, MutationEvent, GambleResponse } from '@tgslot/shared'
+import {
+  getGameMath,
+  spin as apiSpin,
+  getMe,
+  getGameState,
+  gamble as apiGamble,
+  collectGamble as apiCollectGamble,
+  ApiClientError,
+} from '../sdk/api'
 import { useGameStore, type SpinRenderer, type SpinToHandle } from './game'
 import { useSessionStore } from './session'
 import { useHubStore } from './hub'
+import { useSettingsStore } from './settings'
 
 const mockedGetGameMath = vi.mocked(getGameMath)
 const mockedApiSpin = vi.mocked(apiSpin)
 const mockedGetMe = vi.mocked(getMe)
 const mockedGetGameState = vi.mocked(getGameState)
+const mockedApiGamble = vi.mocked(apiGamble)
+const mockedApiCollectGamble = vi.mocked(apiCollectGamble)
 
 const rawMath = {
   id: 'classic-777',
@@ -59,6 +72,7 @@ function baseSpinResponse(overrides: Partial<SpinResponse> = {}): SpinResponse {
     isFreeSpin: false,
     features: [],
     freeSpins: null,
+    mutations: [],
     ...overrides,
   }
 }
@@ -71,6 +85,19 @@ function makeFreeSpinsState(overrides: Partial<FreeSpinsState> = {}): FreeSpinsS
     multiplier: 2,
     totalBet: 10,
     accumulatedWin: 0,
+    ...overrides,
+  }
+}
+
+function makeGambleResponse(overrides: Partial<GambleResponse> = {}): GambleResponse {
+  return {
+    outcome: 'win',
+    autoCollected: false,
+    side: 'heads',
+    pendingWin: 20,
+    wallet: { coins: 1000, gems: 0 },
+    stepsLeft: 2,
+    seedInput: 'gamble-seed',
     ...overrides,
   }
 }
@@ -106,7 +133,7 @@ describe('game store', () => {
     vi.clearAllMocks()
     localStorage.clear()
     useGameStore.getState().reset()
-    mockedGetGameState.mockResolvedValue({ freeSpins: null, state: { freeSpins: null } })
+    mockedGetGameState.mockResolvedValue({ freeSpins: null, state: { freeSpins: null, gamble: null } })
     useHubStore.setState({
       status: 'idle',
       errorMessage: null,
@@ -161,7 +188,7 @@ describe('game store', () => {
     it('resumes an in-progress free spins session from GET /games/:id/state', async () => {
       mockedGetGameMath.mockResolvedValue(rawMath)
       const freeSpins = makeFreeSpinsState({ left: 4, total: 10 })
-      mockedGetGameState.mockResolvedValue({ freeSpins, state: { freeSpins } })
+      mockedGetGameState.mockResolvedValue({ freeSpins, state: { freeSpins, gamble: null } })
 
       await useGameStore.getState().load('classic-777')
 
@@ -215,6 +242,81 @@ describe('game store', () => {
       expect(useGameStore.getState().lastResult?.roundId).toBe('r1')
     })
 
+    describe('mutations (Wave 1)', () => {
+      it('passes gridBefore/mutations through to spinTo when the response has them', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        useGameStore.getState().setRenderer(renderer)
+
+        const mutations: MutationEvent[] = [
+          {
+            type: 'mystery',
+            symbol: 'seven',
+            cells: [{ position: [0, 1], from: 'q', to: 'seven' }],
+          },
+        ]
+        mockedApiSpin.mockResolvedValue(
+          baseSpinResponse({
+            roundId: 'mut1',
+            stops: [1, 2, 0],
+            gridBefore: [['q', 'bar', 'seven']],
+            grid: [['seven', 'bar', 'seven']],
+            mutations,
+          }),
+        )
+
+        await useGameStore.getState().spin()
+
+        expect(renderer.spinTo).toHaveBeenCalledWith(
+          [1, 2, 0],
+          expect.objectContaining({ gridBefore: [['q', 'bar', 'seven']], mutations }),
+        )
+      })
+
+      it('does not add spinTo options at all when there is nothing special (no mutations, no free spin)', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        useGameStore.getState().setRenderer(renderer)
+
+        mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'mut2', stops: [0, 1, 2] }))
+
+        await useGameStore.getState().spin()
+
+        expect(renderer.spinTo).toHaveBeenCalledWith([0, 1, 2], undefined)
+      })
+
+      it('win presentation (showWins) only starts after spinTo (which plays the mutation reveal) resolves', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        const { handle, resolve } = makeControllableSpinHandle()
+        renderer.spinTo.mockReturnValue(handle)
+        useGameStore.getState().setRenderer(renderer)
+
+        const wins = [
+          { line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [[0, 1], [1, 1], [2, 1]] as [number, number][] },
+        ]
+        mockedApiSpin.mockResolvedValue(
+          baseSpinResponse({
+            roundId: 'mut3',
+            wins,
+            totalWin: 100,
+            mutations: [{ type: 'expandWild', symbol: 'wild', reels: [1], cells: [] }],
+          }),
+        )
+
+        const spinPromise = useGameStore.getState().spin()
+        await Promise.resolve()
+        expect(renderer.spinTo).toHaveBeenCalled()
+        // 손잡이(=뮤테이션 리빌 연출 포함)가 아직 안 끝났으니 showWins는 아직 불리면 안 된다.
+        expect(renderer.showWins).not.toHaveBeenCalled()
+
+        resolve()
+        await spinPromise
+
+        expect(renderer.showWins).toHaveBeenCalledWith(wins, expect.objectContaining({ totalBet: 10 }))
+      })
+    })
+
     it('calls showWins on the renderer when the result has wins', async () => {
       await loadGame()
       const renderer = makeRenderer()
@@ -235,6 +337,36 @@ describe('game store', () => {
         wins,
         expect.objectContaining({ totalBet: 10, formatLineLabel: expect.any(Function) }),
       )
+    })
+
+    it('accepts a ways win (line: -1, ways set) from the response: wallet updated, lastResult set, showWins called', async () => {
+      await loadGame()
+      const renderer = makeRenderer()
+      useGameStore.getState().setRenderer(renderer)
+
+      const waysWins = [
+        {
+          line: -1,
+          symbol: 'charm',
+          count: 5,
+          multiplier: 13,
+          win: 52,
+          positions: [[0, 0], [1, 1]] as [number, number][],
+          ways: 4,
+          direction: 'ltr' as const,
+        },
+      ]
+      mockedApiSpin.mockResolvedValue(
+        baseSpinResponse({ roundId: 'ways1', wins: waysWins, totalWin: 52, wallet: { coins: 1042, gems: 0 }, nonce: 11 }),
+      )
+
+      await useGameStore.getState().spin()
+
+      expect(useSessionStore.getState().wallet).toEqual({ coins: 1042, gems: 0 })
+      expect(useGameStore.getState().lastResult?.roundId).toBe('ways1')
+      expect(useGameStore.getState().lastResult?.wins).toEqual(waysWins)
+      expect(useGameStore.getState().phase).toBe('idle')
+      expect(renderer.showWins).toHaveBeenCalledWith(waysWins, expect.objectContaining({ totalBet: 10 }))
     })
 
     it('builds a formatLineLabel that uses the symbol name for a plain win and the group name for a group win', async () => {
@@ -272,6 +404,46 @@ describe('game store', () => {
 
       expect(formatLineLabel(wins[0]!)).toBe('Seven · 100')
       expect(formatLineLabel({ ...wins[0]!, symbol: 'anybar', group: 'anybar' })).toBe('Any BAR · 100')
+    })
+
+    it('formatLineLabel follows the settings locale (not just the session user locale) — user.locale stays en but settings.locale=ko wins', async () => {
+      await loadGame()
+      const mathWithKoName = {
+        ...rawMath,
+        symbols: [{ id: 'seven', name: { en: 'Seven', ko: '세븐' } }, { id: 'bar', name: { en: 'Bar' } }],
+      } as unknown as GameMath
+      useGameStore.setState({ math: mathWithKoName })
+      // 세션 유저 로케일은 여전히 en이다 — 설정에서 ko를 고르면 그걸 우선해야 한다(원래 버그:
+      // formatLineLabel이 user.locale만 봐서 설정을 ko로 바꿔도 라인 명판이 영어로 나왔다).
+      useSettingsStore.setState({ locale: 'ko' })
+
+      try {
+        const renderer = makeRenderer()
+        useGameStore.getState().setRenderer(renderer)
+
+        const wins = [
+          {
+            line: 0,
+            symbol: 'seven',
+            count: 3,
+            multiplier: 10,
+            win: 100,
+            positions: [[0, 1], [1, 1], [2, 1]] as [number, number][],
+          },
+        ]
+        mockedApiSpin.mockResolvedValue(
+          baseSpinResponse({ roundId: 'r2c', wins, totalWin: 100, wallet: { coins: 1090, gems: 0 }, nonce: 3 }),
+        )
+
+        await useGameStore.getState().spin()
+
+        const { formatLineLabel } = renderer.showWins.mock.calls[0]![1] as {
+          formatLineLabel: (win: (typeof wins)[number]) => string
+        }
+        expect(formatLineLabel(wins[0]!)).toBe('세븐 · 100')
+      } finally {
+        useSettingsStore.setState({ locale: 'auto' })
+      }
     })
 
     it('applies the server wallet immediately even if renderer.spinTo throws, and still returns phase to idle', async () => {
@@ -371,6 +543,46 @@ describe('game store', () => {
       expect(state.phase).toBe('idle')
       expect(state.errorCode).toBe('INVALID_BET')
       expect(state.idempotencyKey).toBeNull()
+    })
+
+    it('invalid_response (schema mismatch on a 200) resyncs freeSpins/gamble via GET /state and wallet via /me — client no longer trusts its own stale free-spins count', async () => {
+      await loadGame()
+      // 클라이언트는 아직 프리스핀이 진행 중인 줄 안다(예: 이전 스핀에서 받은 값) — 실제로는
+      // 서버가 이미 끝냈는데 이번 스핀 응답이 스키마와 안 맞아(invalid_response) 그 사실을 놓쳤다.
+      useGameStore.setState({
+        freeSpins: {
+          gameId: 'classic-777',
+          left: 2,
+          total: 10,
+          multiplier: 2,
+          totalBet: 10,
+          accumulatedWin: 40,
+        },
+      })
+      mockedApiSpin.mockRejectedValueOnce(new ApiClientError('bad shape', 200, 'invalid_response'))
+      mockedGetGameState.mockResolvedValueOnce({
+        freeSpins: null, // 서버 기준 진실 — 프리스핀은 이미 끝났다.
+        state: { freeSpins: null, gamble: null },
+      })
+      mockedGetMe.mockResolvedValueOnce({
+        user: { id: 'u1', telegramId: 1, firstName: 'Dev', locale: 'en', level: 1, xp: 0 },
+        wallet: { coins: 1234, gems: 0 },
+        levelInfo: { level: 1, xp: 0, nextLevelXp: 100, maxBet: 50 },
+        jackpot: 0,
+      })
+
+      await useGameStore.getState().spin()
+
+      const state = useGameStore.getState()
+      expect(state.phase).toBe('idle')
+      expect(state.errorCode).toBe('invalid_response') // 비차단 안내는 그대로 뜬다.
+      // GET /games/:id/state로 다시 물어 프리스핀이 실제로 끝났다는 걸 반영한다 — "프리스핀 (2)"
+      // 처럼 서버와 어긋난 채로 자동진행이 멈춰 있지 않는다.
+      expect(mockedGetGameState).toHaveBeenCalledWith('test-token', 'classic-777')
+      expect(state.freeSpins).toBeNull()
+      // 지갑도 /me로 다시 맞춘다.
+      await vi.waitFor(() => expect(mockedGetMe).toHaveBeenCalled())
+      await vi.waitFor(() => expect(useSessionStore.getState().wallet).toEqual({ coins: 1234, gems: 0 }))
     })
 
     it('sets phase to error with INSUFFICIENT_FUNDS code without retrying the idempotencyKey', async () => {
@@ -831,6 +1043,312 @@ describe('game store', () => {
       useGameStore.getState().setBet(1)
 
       expect(useGameStore.getState().idempotencyKey).toBeNull()
+    })
+  })
+
+  describe('gamble (Wave 1 — double-up)', () => {
+    async function loadGameWithGambleOffer(): Promise<void> {
+      mockedGetGameMath.mockResolvedValue(rawMath)
+      await useGameStore.getState().load('classic-777')
+      mockedApiSpin.mockResolvedValue(
+        baseSpinResponse({
+          roundId: 'gr1',
+          totalWin: 20,
+          wallet: { coins: 1020, gems: 0 },
+          gambleOffer: { pendingWin: 20, maxSteps: 3, expiresAt: '2099-01-01T00:00:10.000Z' },
+        }),
+      )
+      await useGameStore.getState().spin()
+    }
+
+    it('opens a gambleSession from the spin response gambleOffer', async () => {
+      await loadGameWithGambleOffer()
+
+      expect(useGameStore.getState().gambleSession).toEqual({
+        roundId: 'gr1',
+        pendingWin: 20,
+        stepsLeft: 3,
+        maxSteps: 3,
+        expiresAt: '2099-01-01T00:00:10.000Z',
+      })
+    })
+
+    it('does not open a gambleSession when the spin response has no gambleOffer', async () => {
+      mockedGetGameMath.mockResolvedValue(rawMath)
+      await useGameStore.getState().load('classic-777')
+      mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'gr-none' }))
+
+      await useGameStore.getState().spin()
+
+      expect(useGameStore.getState().gambleSession).toBeNull()
+    })
+
+    it('gamble(pick) on a win: applies the server wallet and keeps the session going with the new pendingWin/stepsLeft', async () => {
+      await loadGameWithGambleOffer()
+      mockedApiGamble.mockResolvedValueOnce(
+        makeGambleResponse({ outcome: 'win', pendingWin: 40, stepsLeft: 2, wallet: { coins: 1000, gems: 0 } }),
+      )
+
+      const response = await useGameStore.getState().gamble('heads')
+
+      // idempotencyKey는 매 판마다 새로 만든다 — 정확한 값이 아니라 "문자열이 실려 갔다"만 본다.
+      expect(mockedApiGamble).toHaveBeenCalledWith('test-token', 'gr1', 'heads', expect.any(String))
+      expect(response?.outcome).toBe('win')
+      expect(useSessionStore.getState().wallet).toEqual({ coins: 1000, gems: 0 })
+      expect(useGameStore.getState().gambleSession).toEqual({
+        roundId: 'gr1',
+        pendingWin: 40,
+        stepsLeft: 2,
+        maxSteps: 3,
+        expiresAt: '2099-01-01T00:00:10.000Z',
+      })
+    })
+
+    it('gamble(pick) on a loss: clears the session (pendingWin is gone) and still applies the server wallet', async () => {
+      await loadGameWithGambleOffer()
+      mockedApiGamble.mockResolvedValueOnce(
+        makeGambleResponse({ outcome: 'lose', pendingWin: 0, stepsLeft: 3, wallet: { coins: 1000, gems: 0 } }),
+      )
+
+      await useGameStore.getState().gamble('tails')
+
+      expect(useSessionStore.getState().wallet).toEqual({ coins: 1000, gems: 0 })
+      expect(useGameStore.getState().gambleSession).toBeNull()
+    })
+
+    it('gamble(pick) that reaches stepsLeft === 0 clears the session even though it was a win', async () => {
+      await loadGameWithGambleOffer()
+      mockedApiGamble.mockResolvedValueOnce(
+        makeGambleResponse({ outcome: 'win', pendingWin: 160, stepsLeft: 0, wallet: { coins: 1000, gems: 0 } }),
+      )
+
+      await useGameStore.getState().gamble('heads')
+
+      expect(useGameStore.getState().gambleSession).toBeNull()
+    })
+
+    it('gamble() does nothing (and does not call the API) when there is no active session', async () => {
+      mockedGetGameMath.mockResolvedValue(rawMath)
+      await useGameStore.getState().load('classic-777')
+
+      const response = await useGameStore.getState().gamble('heads')
+
+      expect(response).toBeNull()
+      expect(mockedApiGamble).not.toHaveBeenCalled()
+    })
+
+    it('collectGamble(): banks the pending win, applies the server wallet, and clears the session', async () => {
+      await loadGameWithGambleOffer()
+      mockedApiCollectGamble.mockResolvedValueOnce(
+        makeGambleResponse({ outcome: 'collected', pendingWin: 0, stepsLeft: 0, wallet: { coins: 1020, gems: 0 } }),
+      )
+
+      await useGameStore.getState().collectGamble()
+
+      expect(mockedApiCollectGamble).toHaveBeenCalledWith('test-token', 'gr1')
+      expect(useSessionStore.getState().wallet).toEqual({ coins: 1020, gems: 0 })
+      expect(useGameStore.getState().gambleSession).toBeNull()
+    })
+
+    it('collectGamble() does nothing (and does not call the API) when there is no active session', async () => {
+      mockedGetGameMath.mockResolvedValue(rawMath)
+      await useGameStore.getState().load('classic-777')
+
+      await useGameStore.getState().collectGamble()
+
+      expect(mockedApiCollectGamble).not.toHaveBeenCalled()
+    })
+
+    it('starting a new spin clears any pending gamble session locally WITHOUT calling collectGamble — the server auto-releases escrow before the bet check, so the spin response wallet is already final', async () => {
+      await loadGameWithGambleOffer()
+      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'gr2', wallet: { coins: 1020, gems: 0 } }))
+
+      await useGameStore.getState().spin()
+
+      // 스핀 전에 별도로 회수 요청을 보내지 않는다 — 서버가 스핀 처리 안에서 알아서 돌려준다.
+      expect(mockedApiCollectGamble).not.toHaveBeenCalled()
+      expect(useGameStore.getState().gambleSession).toBeNull()
+      expect(useSessionStore.getState().wallet).toEqual({ coins: 1020, gems: 0 })
+      expect(useGameStore.getState().lastResult?.roundId).toBe('gr2')
+    })
+
+    it('resumes an in-progress gamble session from GET /games/:id/state on load()', async () => {
+      mockedGetGameMath.mockResolvedValue(rawMath)
+      mockedGetGameState.mockResolvedValueOnce({
+        freeSpins: null,
+        state: {
+          freeSpins: null,
+          gamble: {
+            roundId: 'resumed-round',
+            pendingWin: 80,
+            // stepsLeft(3) = maxSteps(5) - steps.length(2) — 지금까지 두 단계를 진행했다는 뜻.
+            steps: [
+              {
+                step: 1,
+                idempotencyKey: 'k1',
+                pick: 'heads',
+                side: 'heads',
+                won: true,
+                stake: 20,
+                pendingWin: 40,
+                autoCollected: false,
+                seedInput: 'seed-1',
+              },
+              {
+                step: 2,
+                idempotencyKey: 'k2',
+                pick: 'tails',
+                side: 'tails',
+                won: true,
+                stake: 40,
+                pendingWin: 80,
+                autoCollected: false,
+                seedInput: 'seed-2',
+              },
+            ],
+            maxSteps: 5,
+            expiresAt: '2099-01-01T00:00:00.000Z',
+          },
+        },
+      })
+
+      await useGameStore.getState().load('classic-777')
+
+      expect(useGameStore.getState().gambleSession).toEqual({
+        roundId: 'resumed-round',
+        pendingWin: 80,
+        stepsLeft: 3,
+        maxSteps: 5,
+        expiresAt: '2099-01-01T00:00:00.000Z',
+      })
+    })
+
+    it('syncGambleExpiry(): re-reads GET /games/:id/state (not POST /collect) and clears the session when the server reports it already collected', async () => {
+      await loadGameWithGambleOffer()
+      mockedGetGameState.mockResolvedValueOnce({
+        freeSpins: null,
+        state: { freeSpins: null, gamble: null },
+      })
+      mockedGetMe.mockResolvedValueOnce({
+        user: { id: 'u1', telegramId: 1, firstName: 'Dev', locale: 'en', level: 1, xp: 0 },
+        wallet: { coins: 1020, gems: 0 },
+        levelInfo: { level: 1, xp: 0, nextLevelXp: 100, maxBet: 50 },
+        jackpot: 0,
+      })
+
+      await useGameStore.getState().syncGambleExpiry()
+
+      expect(mockedApiCollectGamble).not.toHaveBeenCalled()
+      expect(useGameStore.getState().gambleSession).toBeNull()
+      // 상태 응답엔 지갑이 없다 — 세션이 사라졌을 때만 /me로 따로 잔액을 맞춘다.
+      await vi.waitFor(() => expect(mockedGetMe).toHaveBeenCalled())
+      await vi.waitFor(() => expect(useSessionStore.getState().wallet).toEqual({ coins: 1020, gems: 0 }))
+    })
+
+    it('syncGambleExpiry(): keeps the session (and does not refresh /me) when the server still reports it open', async () => {
+      await loadGameWithGambleOffer()
+      mockedGetGameState.mockResolvedValueOnce({
+        freeSpins: null,
+        state: {
+          freeSpins: null,
+          gamble: { roundId: 'gr1', pendingWin: 20, steps: [], maxSteps: 3, expiresAt: '2099-01-01T00:00:00.000Z' },
+        },
+      })
+
+      await useGameStore.getState().syncGambleExpiry()
+
+      expect(useGameStore.getState().gambleSession).toEqual({
+        roundId: 'gr1',
+        pendingWin: 20,
+        stepsLeft: 3,
+        maxSteps: 3,
+        expiresAt: '2099-01-01T00:00:00.000Z',
+      })
+      expect(mockedGetMe).not.toHaveBeenCalled()
+    })
+
+    it('syncGambleExpiry() does nothing when there is no active session', async () => {
+      mockedGetGameMath.mockResolvedValue(rawMath)
+      await useGameStore.getState().load('classic-777')
+
+      await useGameStore.getState().syncGambleExpiry()
+
+      expect(mockedGetGameState).toHaveBeenCalledTimes(1) // load()의 초기 조회 한 번뿐
+    })
+
+    it('reuses the same idempotencyKey when a gamble call fails with a retryable error (network/409/503), and mints a new one after any other failure or a success', async () => {
+      await loadGameWithGambleOffer()
+
+      mockedApiGamble.mockRejectedValueOnce(new ApiClientError('네트워크 오류', 0, 'network_error'))
+      await expect(useGameStore.getState().gamble('heads')).rejects.toThrow()
+      const [, , , firstKey] = mockedApiGamble.mock.calls[0]!
+
+      mockedApiGamble.mockRejectedValueOnce(new ApiClientError('진행 중', 409, 'GAMBLE_IN_PROGRESS'))
+      await expect(useGameStore.getState().gamble('heads')).rejects.toThrow()
+      const [, , , secondKey] = mockedApiGamble.mock.calls[1]!
+      expect(secondKey).toBe(firstKey) // 재시도 가능한 실패는 같은 키를 재사용한다.
+
+      mockedApiGamble.mockResolvedValueOnce(
+        makeGambleResponse({ outcome: 'win', pendingWin: 40, stepsLeft: 2, wallet: { coins: 1000, gems: 0 } }),
+      )
+      await useGameStore.getState().gamble('heads')
+      const [, , , thirdKey] = mockedApiGamble.mock.calls[2]!
+      expect(thirdKey).toBe(firstKey) // 세 번째 시도도 같은 키를 재사용해 성공한다.
+
+      // 성공 후에는 pending 키가 지워지므로, 다음(별개의) 판은 새 키를 쓴다.
+      mockedApiGamble.mockResolvedValueOnce(
+        makeGambleResponse({ outcome: 'win', pendingWin: 80, stepsLeft: 1, wallet: { coins: 1000, gems: 0 } }),
+      )
+      await useGameStore.getState().gamble('tails')
+      const [, , , fourthKey] = mockedApiGamble.mock.calls[3]!
+      expect(fourthKey).not.toBe(firstKey)
+    })
+
+    it('NOT_GAMBLEABLE clears the local session and refreshes /me — the server already considers it over (e.g. expired and auto-collected server-side)', async () => {
+      await loadGameWithGambleOffer()
+      mockedGetMe.mockResolvedValueOnce({
+        user: { id: 'u1', telegramId: 1, firstName: 'Dev', locale: 'en', level: 1, xp: 0 },
+        wallet: { coins: 1020, gems: 0 },
+        levelInfo: { level: 1, xp: 0, nextLevelXp: 100, maxBet: 50 },
+        jackpot: 0,
+      })
+
+      mockedApiGamble.mockRejectedValueOnce(new ApiClientError('사용 불가', 409, 'NOT_GAMBLEABLE'))
+      await expect(useGameStore.getState().gamble('heads')).rejects.toThrow()
+
+      expect(useGameStore.getState().gambleSession).toBeNull()
+      await vi.waitFor(() => expect(mockedGetMe).toHaveBeenCalled())
+      await vi.waitFor(() => expect(useSessionStore.getState().wallet).toEqual({ coins: 1020, gems: 0 }))
+
+      // 세션이 사라졌으니 다음 gamble() 호출은 API를 부르지도 않고 null을 돌려준다.
+      const response = await useGameStore.getState().gamble('heads')
+      expect(response).toBeNull()
+      expect(mockedApiGamble).toHaveBeenCalledTimes(1)
+    })
+
+    it('reuses the idempotencyKey across an unclassified failure too, and mints a new one only once a step actually succeeds', async () => {
+      await loadGameWithGambleOffer()
+
+      mockedApiGamble.mockRejectedValueOnce(new ApiClientError('서버 오류', 500, 'INTERNAL'))
+      await expect(useGameStore.getState().gamble('heads')).rejects.toThrow()
+      const [, , , firstKey] = mockedApiGamble.mock.calls[0]!
+      // 세션은 그대로 남는다 — 알 수 없는 오류라고 함부로 지우지 않는다.
+      expect(useGameStore.getState().gambleSession).not.toBeNull()
+
+      mockedApiGamble.mockResolvedValueOnce(
+        makeGambleResponse({ outcome: 'win', pendingWin: 40, stepsLeft: 2, wallet: { coins: 1000, gems: 0 } }),
+      )
+      await useGameStore.getState().gamble('heads')
+      const [, , , secondKey] = mockedApiGamble.mock.calls[1]!
+      expect(secondKey).toBe(firstKey) // 미분류 오류도 같은 키로 재시도한다.
+
+      // 그 시도가 성공했으니, 다음(별개의) 판은 새 키를 쓴다.
+      mockedApiGamble.mockResolvedValueOnce(
+        makeGambleResponse({ outcome: 'win', pendingWin: 80, stepsLeft: 1, wallet: { coins: 1000, gems: 0 } }),
+      )
+      await useGameStore.getState().gamble('tails')
+      const [, , , thirdKey] = mockedApiGamble.mock.calls[2]!
+      expect(thirdKey).not.toBe(firstKey)
     })
   })
 

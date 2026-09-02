@@ -14,6 +14,10 @@ export const LEDGER_REASONS = {
   jackpotWin: 'jackpot_win',
   missionReward: 'mission_reward',
   levelUp: 'level_up',
+  /** 더블업에 걸린 당첨금을 지갑 밖으로 잠글 때 (음수) */
+  gambleEscrow: 'gamble_escrow',
+  /** 잠겼던 판돈을 지갑으로 돌려줄 때 (양수). 회수·자동 회수·만료 모두 이 사유다 */
+  gambleCollect: 'gamble_collect',
 } as const
 
 // ---- 데일리 로그인 보너스 ----

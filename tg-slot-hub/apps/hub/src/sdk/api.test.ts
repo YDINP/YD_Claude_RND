@@ -120,4 +120,48 @@ describe('authedFetch (via getMe/spin)', () => {
     expect(authHeaderOf(fetchSpy.mock.calls[1]!)).toBe('Bearer new-token')
     expect(result.roundId).toBe('r1')
   })
+
+  it('parses a 243-ways spin response (win.line === -1, ways set) without throwing invalid_response', async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({
+        ...spinResponseBody,
+        roundId: 'ways-r1',
+        wins: [
+          {
+            line: -1,
+            symbol: 'charm',
+            count: 5,
+            multiplier: 13,
+            win: 52,
+            positions: [
+              [0, 0],
+              [1, 1],
+            ],
+            ways: 4,
+            direction: 'ltr',
+          },
+        ],
+        totalWin: 52,
+      }),
+    )
+
+    const result = await spin('token', 'shiba-shrine', { totalBet: 10, idempotencyKey: 'key-ways' })
+
+    expect(result.roundId).toBe('ways-r1')
+    expect(result.wins).toEqual([
+      {
+        line: -1,
+        symbol: 'charm',
+        count: 5,
+        multiplier: 13,
+        win: 52,
+        positions: [
+          [0, 0],
+          [1, 1],
+        ],
+        ways: 4,
+        direction: 'ltr',
+      },
+    ])
+  })
 })

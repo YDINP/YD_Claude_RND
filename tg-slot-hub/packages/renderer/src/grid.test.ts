@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { buildGrid, createSeededRng, evaluate, getBetPerLine, spin } from '@tgslot/slot-engine'
-import { normalizePosition, reelStripWindow, spinTargetPosition, stopsToGrid, symbolAt, wrapIndex } from './grid.js'
+import type { GridPosition } from '@tgslot/slot-engine'
+import {
+  dedupePositions,
+  normalizePosition,
+  reelStripWindow,
+  spinTargetPosition,
+  stopsToGrid,
+  symbolAt,
+  wrapIndex,
+} from './grid.js'
 import { loadGameMath } from './testSupport.js'
 
 const math = loadGameMath('classic-777')
@@ -162,5 +171,51 @@ describe('spinTargetPosition 0바퀴 (스킵 경로)', () => {
     const one = 9 - spinTargetPosition(9, 2, length, 1)
     expect(zero).toBeLessThan(one)
     expect(one - zero).toBeCloseTo(length, 10)
+  })
+})
+
+describe('dedupePositions', () => {
+  it('같은 칸을 가리키는 좌표를 하나로 줄인다', () => {
+    const unique = dedupePositions([
+      [0, 1],
+      [1, 2],
+      [0, 1],
+    ])
+    expect(unique).toEqual([
+      [0, 1],
+      [1, 2],
+    ])
+  })
+
+  it('처음 나온 순서를 지킨다', () => {
+    const unique = dedupePositions([
+      [2, 0],
+      [0, 0],
+      [2, 0],
+      [1, 0],
+    ])
+    expect(unique.map(([reel]) => reel)).toEqual([2, 0, 1])
+  })
+
+  it('릴이 같아도 행이 다르면 남긴다', () => {
+    const unique = dedupePositions([
+      [1, 0],
+      [1, 1],
+      [1, 2],
+    ])
+    expect(unique).toHaveLength(3)
+  })
+
+  it('빈 목록은 빈 목록이다', () => {
+    expect(dedupePositions([])).toEqual([])
+  })
+
+  it('입력 배열을 건드리지 않는다', () => {
+    const input: GridPosition[] = [
+      [0, 0],
+      [0, 0],
+    ]
+    dedupePositions(input)
+    expect(input).toHaveLength(2)
   })
 })

@@ -14,6 +14,7 @@ import {
   type RendererEvent,
 } from '@tgslot/renderer'
 import { createSeededRng, spin as replaySpin } from '@tgslot/slot-engine'
+import type { GambleSide } from '@tgslot/shared'
 import { useGameStore, toRendererFreeSpinsMode } from '../../store/game'
 import { useSessionStore } from '../../store/session'
 import { useGamesStore } from '../../store/games'
@@ -28,6 +29,7 @@ import { winTierLabelKey, resolveWinTier, WIN_HOLD_MS } from '../../lib/winTier'
 import { groupLabel, groupMembers, symbolLabel } from '../../game/labels'
 import { useDialog } from '../../hooks/useDialog'
 import { WinStrip } from './WinStrip'
+import { GambleModal } from './GambleModal'
 import './GameScreen.css'
 
 interface GameScreenProps {
@@ -51,6 +53,14 @@ interface VerifyResult {
 
 function stopsEqual(a: number[], b: number[]): boolean {
   return a.length === b.length && a.every((value, i) => value === b[i])
+}
+
+/** 남은 시간(ms)을 "M:SS"로 짧게 보여준다 — 더블업 제안 만료 카운트다운용. */
+function formatGambleCountdown(remainingMs: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
 type HelpPage = 'paytable' | 'paylines' | 'features' | 'fairness'
@@ -94,11 +104,15 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const error = useGameStore((s) => s.error)
   const errorCode = useGameStore((s) => s.errorCode)
   const freeSpins = useGameStore((s) => s.freeSpins)
+  const gambleSession = useGameStore((s) => s.gambleSession)
   const rendererInstance = useGameStore((s) => s.renderer)
   const load = useGameStore((s) => s.load)
   const setBet = useGameStore((s) => s.setBet)
   const setRenderer = useGameStore((s) => s.setRenderer)
   const spinAction = useGameStore((s) => s.spin)
+  const gambleAction = useGameStore((s) => s.gamble)
+  const collectGambleAction = useGameStore((s) => s.collectGamble)
+  const syncGambleExpiryAction = useGameStore((s) => s.syncGambleExpiry)
   const dismissError = useGameStore((s) => s.dismissError)
 
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -110,6 +124,28 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const [rendererError, setRendererError] = useState(false)
   /** 배당표에 심볼 이미지를 보여주기 위해 로드된 테마를 들고 있는다. 렌더러 생성 성공 여부와 무관하다. */
   const [theme, setTheme] = useState<Theme | null>(null)
+
+  // 더블업(Wave 1) — WinStrip의 "더블" 버튼이 이 모달을 연다. flipping은 서버 응답을 기다리는 동안,
+  // side/outcome은 방금 판정 결과를 잠깐 보여주는 용도(둘 다 서버가 알려준 값 그대로).
+  // outcome이 'collected'면(만료 등으로 판정 없이 회수됐거나, 이겼지만 상한에 닿아 즉시 회수된
+  // 경우) side는 항상 null이고 코인은 뒤집히지 않은 채로 보여준다 — 추측하지 않는다.
+  const [gambleModalOpen, setGambleModalOpen] = useState(false)
+  const [gambleFlip, setGambleFlip] = useState<{
+    flipping: boolean
+    side: GambleSide | null
+    outcome: 'win' | 'lose' | 'collected' | null
+  }>({ flipping: false, side: null, outcome: null })
+  const gambleResultTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** "받기" 요청이 날아가 있는 동안 WinStrip의 받기/더블 버튼을 잠깐 잠근다. */
+  const [gambleCollecting, setGambleCollecting] = useState(false)
+  /** 만료 카운트다운을 1초마다 다시 그리기 위한 틱 — 실제 만료 판정은 store의 expiresAt이 한다. */
+  const [gambleNowTick, setGambleNowTick] = useState(() => Date.now())
+  /**
+   * 재시도 가능한 실패(store가 idempotencyKey를 그대로 들고 있는 경우) 뒤에는 원래 고른 면으로만
+   * 다시 시도할 수 있게 잠근다 — 다른 면으로 재시도하면 서버가 같은 키의 저장된 결과(원래 픽
+   * 기준 판정)를 그대로 돌려줄 수 있어, 사용자가 지금 고른 면과 다른 결과가 나올 수 있다.
+   */
+  const [gambleLockedPick, setGambleLockedPick] = useState<GambleSide | null>(null)
 
   // 하단 시트 3개(도움말/베팅 목록/코인 소진) 모두 포커스 트랩 + Esc로 닫기 + 배경 스크롤 잠금을
   // 공유한다(useDialog) — 각 시트가 실제로 열려 있을 때만(enabled) 동작한다.
@@ -166,12 +202,13 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     }, 2500)
   }
 
-  // 언마운트 시 프리스핀 배너 타이머 정리.
+  // 언마운트 시 프리스핀 배너/더블업 결과 타이머 정리.
   useEffect(() => {
     return () => {
       if (introTimeoutRef.current !== null) clearTimeout(introTimeoutRef.current)
       if (retriggerTimeoutRef.current !== null) clearTimeout(retriggerTimeoutRef.current)
       if (completeTimeoutRef.current !== null) clearTimeout(completeTimeoutRef.current)
+      if (gambleResultTimeoutRef.current !== null) clearTimeout(gambleResultTimeoutRef.current)
     }
   }, [])
 
@@ -369,6 +406,13 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // math가 준비되면 테마를 읽고 렌더러를 만든다. 실패해도 서버 스핀 자체는 막지 않는다.
   useEffect(() => {
     if (!math || !containerRef.current) return
+    // 로비를 거치지 않고 게임→게임으로 바로 전환하면(App.tsx의 key={gameId} 리마운트) 이 컴포넌트의
+    // "첫 렌더"는 store가 아직 이전 게임의 math를 들고 있을 때 계산된다(위의 load(gameId) effect가
+    // store를 리셋하는 건 커밋 이후다) — 그 결과 이 effect의 클로저는 "새 gameId + 이전 게임의
+    // math" 조합으로 고정될 수 있다. 지금 store의 실제 값과 다르면(=곧 다시 실행될 낡은 조합이면)
+    // 조용히 건너뛴다 — 그대로 진행하면 다른 게임의 심볼로 ThemeError가 난다.
+    const live = useGameStore.getState()
+    if (live.gameId !== gameId || live.math !== math) return
     let cancelled = false
     let renderer: SlotRenderer | null = null
     setRendererError(false)
@@ -420,7 +464,16 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const betLevels = math?.betLevels ?? []
   // 프리스핀 중에는 진입 시 서버가 고정한 베팅액을 보여준다 — 셀렉터로 바꿀 수 없다.
   const currentBet = freeSpins ? freeSpins.totalBet : (betLevels[betIndex] ?? 0)
-  const betPerLine = math && math.paylines.length > 0 ? currentBet / math.paylines.length : 0
+  // ways 게임(payModel === 'ways')은 페이라인이 없다 — "라인당 베팅" 대신 "웨이당 베팅"을
+  // 보여주고, 나누는 단위도 paylines.length가 아니라 ways.betDivisor(관례상 25)다.
+  const isWays = math?.payModel === 'ways'
+  const betPerLine = math
+    ? isWays
+      ? currentBet / (math.ways?.betDivisor ?? 25)
+      : math.paylines.length > 0
+        ? currentBet / math.paylines.length
+        : 0
+    : 0
   const isBusy = phase === 'spinning' || phase === 'showingWin'
   // 프리스핀이 끝난 직후에도 종료 배너가 떠 있는 동안은 셀렉터를 계속 잠가 둔다(배너와 함께 풀린다).
   const betLocked = freeSpins !== null || freeSpinsComplete
@@ -432,13 +485,72 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     if (betLocked) setBetSheetOpen(false)
   }, [betLocked])
 
+  // 더블업 제안은 서버가 expiresAt(만료 시각)이 지나면 알아서 회수한다 — GET /games/:id/state를
+  // "읽기만 해도" 그 자리에서 회수되므로, syncGambleExpiry()가 POST 없이 그 상태 조회로 화면을
+  // 맞춘다("결과 표시" 없이 조용히 사라진다 — 이미 서버가 회수했으므로 새로 뭘 판정하는 게
+  // 아니라 세션/잔액을 동기화하는 것뿐이다).
+  useEffect(() => {
+    const expiresAt = gambleSession?.expiresAt
+    if (!expiresAt) return
+    const expiresAtMs = new Date(expiresAt).getTime()
+    // setTimeout의 지연은 32비트 부호 있는 정수라 ~24.8일을 넘기면 오버플로해 거의 즉시 발동해
+    // 버린다(만료 전인데 회수된 것처럼 보이는 버그) — 남은 시간이 그보다 길면 상한만큼만 자고
+    // 다시 재보는 식으로 안전하게 스스로 재예약한다.
+    const MAX_DELAY_MS = 2_000_000_000
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    let cancelled = false
+    const tick = (): void => {
+      if (cancelled) return
+      const remainingMs = expiresAtMs - Date.now()
+      if (remainingMs <= 0) {
+        void syncGambleExpiryAction()
+        return
+      }
+      timeoutId = setTimeout(tick, Math.min(remainingMs, MAX_DELAY_MS))
+    }
+    tick()
+    return () => {
+      cancelled = true
+      if (timeoutId !== null) clearTimeout(timeoutId)
+    }
+  }, [gambleSession?.roundId, gambleSession?.expiresAt, syncGambleExpiryAction])
+
+  // 카운트다운 텍스트를 부드럽게 갱신하기 위한 1초 틱 — 위 effect(만료 동기화)와는 별개다.
+  // 실제 만료 판정/서버 동기화는 항상 expiresAt 값 자체가 하고, 이 틱은 화면 표시만 건드린다.
+  useEffect(() => {
+    if (!gambleSession?.expiresAt) return
+    const id = setInterval(() => setGambleNowTick(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [gambleSession?.roundId, gambleSession?.expiresAt])
+
+  const gambleExpiresAtMs = gambleSession?.expiresAt ? new Date(gambleSession.expiresAt).getTime() : null
+  const gambleRemainingMs = gambleExpiresAtMs !== null ? Math.max(0, gambleExpiresAtMs - gambleNowTick) : null
+  // 남은 시간이 0이 되면(로컬 시계 기준) "더블"부터 바로 숨긴다 — 실제 회수 동기화(위 effect)가
+  // 끝나길 기다리지 않고 즉시 반응하게 한다. "받기"는 서버가 회수를 마칠 때까지 계속 눌러도 된다.
+  const gambleExpired = gambleRemainingMs !== null && gambleRemainingMs <= 0
+  // "더블" 버튼에 실제 확률을 보여준다 — math.gamble이 없을 리 없다(showGambleActions가 이미
+  // 그 존재를 전제한다), 그래도 방어적으로 50%를 기본값으로 둔다.
+  const gambleChancePercent = math?.gamble ? Math.round(math.gamble.chance * 100) : 50
+
   const title = gameSummary ? (locale === 'ko' && gameSummary.name.ko ? gameSummary.name.ko : gameSummary.name.en) : gameId
 
-  // WinStrip 표시값 — winBannerValue가 0이 아니면(굴러가는 중이거나, 홀드가 끝났지만 다음 스핀
-  // 전이라 최종값이 그대로 남아 있는 경우) 그걸 "WIN"으로 보여준다. 0이고 프리스핀 중이면 지금까지
-  // 누적된 총액을 "FREE SPINS TOTAL"로, 그 외(진짜 유휴)에는 "WIN 0"을 보여준다.
-  const winStripAmount = freeSpins && winBannerValue === 0 ? freeSpins.accumulatedWin : winBannerValue
-  const winStripLabel = freeSpins && winBannerValue === 0 ? t('freeSpinsTotalLabel') : t('winStripLabel')
+  // WinStrip 표시값 — 우선순위: (1) 더블업 세션이 있고 승리 배너가 안 떠 있으면(롤업/홀드가
+  // 끝났으면) 걸려 있는 금액 + 받기/더블 버튼, (2) winBannerValue가 0이 아니면(굴러가는 중이거나
+  // 홀드가 끝났지만 다음 스핀 전이라 최종값이 남아 있는 경우) "WIN", (3) 0이고 프리스핀 중이면
+  // 누적 총액을 "FREE SPINS TOTAL", (4) 그 외(진짜 유휴)엔 "WIN 0".
+  // math.gamble이 없는데(설정이 아예 없는 게임) gambleSession이 있는 건 있을 수 없는 상태지만,
+  // 방어적으로 한 번 더 걸어 둔다 — 서버/엔진 쪽 계약이 어긋나도 UI가 조용히 숨는 쪽이 안전하다.
+  const showGambleActions = gambleSession !== null && math?.gamble !== undefined && !winBanner
+  const winStripAmount = showGambleActions
+    ? gambleSession.pendingWin
+    : freeSpins && winBannerValue === 0
+      ? freeSpins.accumulatedWin
+      : winBannerValue
+  const winStripLabel = showGambleActions
+    ? t('gamblePendingWinLabel')
+    : freeSpins && winBannerValue === 0
+      ? t('freeSpinsTotalLabel')
+      : t('winStripLabel')
 
   const handleSpin = (): void => {
     if (isBusy || !math) return
@@ -451,7 +563,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // 둘 다 페이지 스크롤을 막고, 키를 누르고 있어도(오토리핏) keyup 전까지 한 번만 반응한다.
   // 텍스트 입력/모달에 포커스가 가 있으면 아예 가로채지 않는다.
   useEffect(() => {
-    const isModalOpen = betSheetOpen || helpSheetOpen || errorCode === 'INSUFFICIENT_FUNDS'
+    const isModalOpen = betSheetOpen || helpSheetOpen || errorCode === 'INSUFFICIENT_FUNDS' || gambleModalOpen
 
     function isEditableTarget(target: EventTarget | null): boolean {
       if (!(target instanceof HTMLElement)) return false
@@ -500,7 +612,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     }
     // handleSpin은 매 렌더마다 새로 만들어지는 클로저라 deps에 넣어도 사실상 매번 재구독되지만,
     // 명시해 두는 편이 "이 값들이 바뀌면 다시 걸어야 한다"는 의도를 정확히 드러낸다.
-  }, [phase, betSheetOpen, helpSheetOpen, errorCode, freeSpins, handleSpin])
+  }, [phase, betSheetOpen, helpSheetOpen, errorCode, freeSpins, gambleModalOpen, handleSpin])
 
   const handleBetDec = (): void => {
     if (betLevels.length === 0) return
@@ -523,6 +635,92 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const handleRescueClaim = async (): Promise<void> => {
     const result = await claimRescue()
     if (result) dismissError()
+  }
+
+  const openGambleModal = (): void => {
+    if (gambleResultTimeoutRef.current !== null) {
+      clearTimeout(gambleResultTimeoutRef.current)
+      gambleResultTimeoutRef.current = null
+    }
+    setGambleFlip({ flipping: false, side: null, outcome: null })
+    setGambleLockedPick(null)
+    setGambleModalOpen(true)
+  }
+
+  const closeGambleModal = (): void => {
+    if (gambleResultTimeoutRef.current !== null) {
+      clearTimeout(gambleResultTimeoutRef.current)
+      gambleResultTimeoutRef.current = null
+    }
+    setGambleModalOpen(false)
+    setGambleFlip({ flipping: false, side: null, outcome: null })
+    setGambleLockedPick(null)
+  }
+
+  const handleGambleCollect = (): void => {
+    // 성공하면 WinStrip이 다음 스핀 전까지 보여줄 최종 금액을 지금 아는 pendingWin으로 맞춘다 —
+    // 안 그러면 더블업을 시작하기 전의(더블업과 무관한) 오래된 당첨액이 그대로 남아있는 것처럼 보인다.
+    const pendingAtCollect = gambleSession?.pendingWin ?? 0
+    setGambleCollecting(true)
+    void collectGambleAction()
+      .then(() => setWinBannerValue(pendingAtCollect))
+      .catch((err: unknown) => {
+        // store가 이미 NOT_GAMBLEABLE(서버엔 세션이 없었음)은 로컬 세션 정리 + 잔액 새로고침까지
+        // 끝내둔다 — 여기선 예외가 처리되지 않은 채 남지 않게만 한다.
+        console.error('[game] collect failed', err)
+      })
+      .finally(() => setGambleCollecting(false))
+  }
+
+  /**
+   * 서버 응답만 신뢰한다 — pick이 맞았는지는 절대 스스로 계산하지 않는다.
+   * outcome은 항상 response.outcome을 그대로 따른다('win'|'lose'|'collected'). 'collected'는
+   * 판정 없이 이미 회수됐거나(예: 막 만료됐는데 픽이 들어온 경쟁 상황) 이겼지만 상한(단계/금액)에
+   * 닿아 즉시 회수된 경우다 — 두 경우 다 코인을 뒤집힌 것처럼 보여주면 안 되므로, side는
+   * response.side가 실제로 있을 때만 쓰고 pick으로 대체하지 않는다.
+   */
+  const handleGamblePick = async (pick: GambleSide): Promise<void> => {
+    setGambleFlip({ flipping: true, side: null, outcome: null })
+    haptic('medium')
+    try {
+      const response = await gambleAction(pick)
+      if (!response) return
+
+      // 성공했으니(응답을 받았으니) 더 이상 잠글 이유가 없다 — 다음 픽은 새 키로 자유롭게 고른다.
+      setGambleLockedPick(null)
+
+      const outcome: 'win' | 'lose' | 'collected' =
+        response.outcome === 'collected' || response.autoCollected
+          ? 'collected'
+          : response.outcome === 'win'
+            ? 'win'
+            : 'lose'
+      const side = outcome === 'collected' ? null : (response.side ?? null)
+      setGambleFlip({ flipping: false, side, outcome })
+      haptic(outcome === 'win' ? 'success' : 'light')
+
+      // 더블업 세션이 끝났으면(졌거나, 이겼지만 상한에 닿아 즉시 회수됐거나, 판정 없이 회수됐으면)
+      // WinStrip이 다음 스핀 전까지 보여줄 금액을 이 결과로 맞춘다 — response.pendingWin은
+      // 졌을 땐 이미 0이고, 회수된 경우엔 지갑에 들어간 금액 그대로다. 세션이 계속되면(이겨서
+      // 다음 단계로 넘어가면) gambleSession.pendingWin이 표시를 대신 맡으므로 손대지 않는다.
+      if (outcome !== 'win' || response.stepsLeft === 0) {
+        setWinBannerValue(response.pendingWin)
+      }
+
+      if (gambleResultTimeoutRef.current !== null) clearTimeout(gambleResultTimeoutRef.current)
+      gambleResultTimeoutRef.current = setTimeout(() => {
+        gambleResultTimeoutRef.current = null
+        setGambleModalOpen(false)
+        setGambleFlip({ flipping: false, side: null, outcome: null })
+      }, 1800)
+    } catch (err) {
+      console.error('[game] gamble pick failed', err)
+      setGambleFlip({ flipping: false, side: null, outcome: null })
+      // idempotencyKey가 남아 있으면(store가 재시도 가능한 실패로 판단해 키를 그대로 들고 있음)
+      // 서버가 다음 요청을 "같은 시도의 재전송"으로 보므로, 재시도는 반드시 같은 픽이어야 한다 —
+      // 다른 면을 고르면 서버가 원래 픽 기준으로 이미 저장된 판정을 그대로 돌려줄 수 있다.
+      setGambleLockedPick(useGameStore.getState().gambleIdempotencyKey !== null ? pick : null)
+    }
   }
 
   const handleRevealSeed = async (): Promise<void> => {
@@ -658,12 +856,45 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         </div>
       </div>
 
-      {/* 굴러가는 중/홀드 중일 때만 탭 가능하게 한다 — 평소(유휴)엔 WinStrip이 그냥 숫자판이다. */}
+      {/* 굴러가는 중/홀드 중일 때만 탭 가능하게 한다 — 평소(유휴)엔 WinStrip이 그냥 숫자판이다.
+          더블업 세션이 있으면(그리고 승리 배너가 안 떠 있으면) 탭 대신 받기/더블 버튼을 보여준다. */}
       <WinStrip
         label={winStripLabel}
         amount={winStripAmount}
         onTap={winBanner ? handleWinPresentationTap : undefined}
+        gambleActions={
+          showGambleActions
+            ? {
+                onCollect: handleGambleCollect,
+                onDouble: openGambleModal,
+                collectLabel: t('gambleCollect'),
+                doubleLabel: t('gambleDouble', { percent: gambleChancePercent }),
+                disabled: gambleCollecting || gambleFlip.flipping,
+                // 만료됐으면(로컬 시계 기준) "더블"부터 숨긴다 — "받기"는 서버 동기화가 끝날 때까지 남겨둔다.
+                hideDouble: gambleExpired,
+                expiresInLabel:
+                  gambleRemainingMs !== null && !gambleExpired
+                    ? t('gambleExpiresIn', { time: formatGambleCountdown(gambleRemainingMs) })
+                    : undefined,
+              }
+            : undefined
+        }
       />
+
+      {/* gambleSession이 아니라 gambleModalOpen만으로 마운트를 결정한다 — 지는 픽은 세션을
+          즉시 지우므로(store), 세션 존재를 조건으로 걸면 결과가 뜨기도 전에 모달이 닫혀버린다. */}
+      {gambleModalOpen && (
+        <GambleModal
+          onClose={closeGambleModal}
+          onPick={(pick) => void handleGamblePick(pick)}
+          flipping={gambleFlip.flipping}
+          revealedSide={gambleFlip.side}
+          outcome={gambleFlip.outcome}
+          pendingWin={gambleSession?.pendingWin ?? 0}
+          payout={math?.gamble?.payout ?? 2}
+          lockedPick={gambleLockedPick}
+        />
+      )}
 
       <div className="hub-game-screen__controls">
         <div className="hub-game-screen__controls-row">
@@ -744,7 +975,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             <h2 className="hub-sheet__title">{t('bet')}</h2>
             <ul className="hub-bet-picker__list">
               {betLevels.map((level, index) => {
-                const lineBet = math.paylines.length > 0 ? level / math.paylines.length : level
+                const lineBet = isWays
+                  ? level / (math.ways?.betDivisor ?? 25)
+                  : math.paylines.length > 0
+                    ? level / math.paylines.length
+                    : level
                 const isCurrent = index === betIndex
                 // 현재 레벨의 최대 베팅을 넘는 항목은 골라도 어차피 서버가 BET_LOCKED로 거절한다 —
                 // 미리 비활성화하고 표시해 헛걸음을 막는다.
@@ -766,7 +1001,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       <span className="hub-bet-picker__amount">{level}</span>
                       <span className="hub-bet-picker__per-line">
                         {locked ? '🔒 ' : ''}
-                        {t('betPerLine', { amount: lineBet.toLocaleString('en-US') })}
+                        {t(isWays ? 'betPerWay' : 'betPerLine', { amount: lineBet.toLocaleString('en-US') })}
                       </span>
                     </button>
                   </li>
@@ -816,7 +1051,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 }
                 onClick={() => setHelpPage('paylines')}
               >
-                {t('paylinesTitle')}
+                {isWays ? t('tabWays') : t('paylinesTitle')}
               </button>
               {hasFeaturesPage && (
                 <button
@@ -848,7 +1083,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               {helpPage === 'paytable' && (
                 <>
                   <p className="hub-paytable__bet-per-line">
-                    {t('betPerLine', { amount: betPerLine.toLocaleString('en-US') })}
+                    {t(isWays ? 'betPerWay' : 'betPerLine', { amount: betPerLine.toLocaleString('en-US') })}
                   </p>
                   <ul className="hub-paytable__list">
                     {Object.entries(math.paytable).map(([id, payrule]) => {
@@ -917,7 +1152,14 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 </>
               )}
 
-              {helpPage === 'paylines' && (
+              {helpPage === 'paylines' && isWays && (
+                <div className="hub-paylines__ways-explainer">
+                  <p className="hub-sheet__message">{t('waysExplainer', { base: math.ways?.base ?? 0 })}</p>
+                  {math.ways?.bothWays && <p className="hub-sheet__message">{t('waysBothWaysNote')}</p>}
+                </div>
+              )}
+
+              {helpPage === 'paylines' && !isWays && (
                 <div className="hub-paylines__grid-list">
                   {math.paylines.map((line, index) => (
                     <div key={index} className="hub-paylines__item">

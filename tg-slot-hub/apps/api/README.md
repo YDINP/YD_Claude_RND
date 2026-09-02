@@ -17,6 +17,8 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
 | GET | `/games/:id/state` | Bearer JWT | `GameStateResponse`. 진행 중인 게임 상태. `{ freeSpins, state }` |
 | POST | `/games/:id/spin` | Bearer JWT | `SpinRequest` → `SpinResponse`. 서버 권위 스핀 1회 |
 | GET | `/rounds/:id/seed` | Bearer JWT | 라운드 서버 시드 공개 (소유자만). provably fair 검증용 |
+| POST | `/rounds/:id/gamble` | Bearer JWT | 더블업 한 단계. `{ pick, idempotencyKey }` → `GambleResponse` |
+| POST | `/rounds/:id/collect` | Bearer JWT | 더블업 판돈을 확정하고 종료 → `GambleResponse` |
 | GET | `/bonus` | Bearer JWT | `BonusStatus`. 데일리·4시간·구제 보너스의 수령 가능 여부 |
 | POST | `/bonus/daily/claim` | Bearer JWT | 데일리 로그인 보너스 수령 → `BonusClaimResponse` (`streakDay` 포함) |
 | POST | `/bonus/timed/claim` | Bearer JWT | 4시간 보너스 수령 → `BonusClaimResponse` |
@@ -44,6 +46,10 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
 | 404 | `MISSION_NOT_FOUND` | 미션 정의에 없는 id |
 | 409 | `SPIN_IN_PROGRESS` | 같은 유저의 **다른** 스핀이 진행 중 |
 | 409 | `NOT_CLAIMABLE` | 보너스 쿨다운 미경과, 미션 미완료, 또는 이미 수령함 |
+| 409 | `GAMBLE_UNAVAILABLE` | 그 게임에 더블업 설정(`math.json`의 `gamble`)이 없음 |
+| 409 | `NOT_GAMBLEABLE` | 그 라운드의 더블업 제안이 없거나 이미 끝남 (진 뒤, 회수 뒤, 새 스핀 뒤) |
+| 409 | `GAMBLE_IN_PROGRESS` | 같은 유저의 **다른 키** 더블업이 진행 중 |
+| 503 | `GAMBLE_TIMEOUT` | 더블업이 락 제한 시간 안에 끝나지 않음. **같은 키로 재시도**하면 된다 |
 | 500 | `INTERNAL` | 라우트가 잡지 못한 예외 |
 | 503 | `SPIN_TIMEOUT` | 스핀이 `SPIN_LOCK_TIMEOUT_MS` 안에 끝나지 않음. **같은 키로 재시도**하면 된다 |
 
@@ -256,6 +262,94 @@ DATABASE_URL=postgres://... node dist/scripts/checkLedger.js         # 배포 (�
 부여 횟수 해석). 상태 기계 자체(`economy/freeSpins.ts`)는 엔진 구현을 모르므로,
 게임마다 트리거 조건이 달라져도 세션 회계는 그대로 쓰인다.
 
+## 더블업 (Wave 1)
+
+당첨금을 다시 걸어 배로 불리는 코인 플립이다. `math.json`에 `gamble` 블록이 있는 게임만 열린다.
+
+```jsonc
+// games/sheriff-sixgun/math.json
+"gamble": { "type": "coin-flip", "chance": 0.5, "payout": 2, "maxSteps": 5, "maxWinCap": 500 }
+```
+
+설정은 **엔진이 소유하고 검증한다** (`GambleConfigSchema`). 확률 범위, `payout > 1`, 단계 상한 1~10,
+그리고 기대값 중립(`chance x payout <= 1`)까지 `parseGameMath`가 부팅 시점에 확인한다. API는
+`pack.math.gamble`을 그대로 읽어 추첨과 세션 회계만 한다.
+
+`maxWinCap`은 **총 베팅액의 배수**다. 베팅 100에 `maxWinCap: 500`이면 50,000코인에서 자동 회수된다.
+`math.json` 루트의 `maxWinCap`(게임 전체 최대 배당)과는 다른 값이라 서로 끌어다 쓰지 않는다.
+
+### 판돈은 지갑 밖에 잠긴다 (에스크로)
+
+제안이 열리는 순간 당첨금이 **지갑에서 빠져나온다.**
+
+| 시점 | 원장 | 지갑 |
+|---|---|---|
+| 당첨 스핀 | `spin_win` +400, `gamble_escrow` -400 | 변화 없음 (400은 잠김) |
+| 한 단계 승리 | 없음 | 변화 없음 (잠긴 판돈이 800으로) |
+| 한 단계 패배 | 없음 | 변화 없음 (잠긴 400이 사라짐) |
+| 회수·자동 회수 | `gamble_collect` +판돈 | 판돈만큼 증가 |
+
+**이렇게 하지 않으면 지갑이 음수가 된다.** 당첨금이 지갑에 남아 있는 채로 더블업을 "차감 후 배로
+지급"으로 구현하면, 게임 A에서 딴 돈을 게임 B에서 전부 쓴 뒤 A의 더블업을 걸어 잔액보다 큰 금액을
+차감할 수 있다. 잠가 두면 애초에 쓸 수 없는 돈이라 그 경로가 사라진다. 어느 경로에서도
+`SUM(ledger.delta) == wallets.coins`가 유지된다.
+
+잠긴 돈은 **잃지 않는다.** 다음 넷 중 먼저 오는 것으로 돌아온다.
+
+1. 그 게임의 다음 스핀 (베팅을 확인하기 **전**에 먼저 돌려주므로 그 돈으로 다시 돌릴 수 있다)
+2. `POST /rounds/:id/collect` (만료된 뒤에도 회수된다)
+3. 만료(10분, `GAMBLE_TTL_MS`) 뒤의 도전. 판정 대신 자동 회수로 끝난다
+4. 만료 뒤의 **상태 조회**. `GET /games/:id/state`가 만료를 발견하면 그 자리에서 회수한다
+   (지갑 락을 잡은 트랜잭션 안에서). 숨기기만 하면 다음 스핀 전까지 돈이 잠긴 채로 남는다
+
+> 에스크로는 **게임별**이다. 게임 A의 판돈은 A를 다시 돌리거나, 회수하거나, 만료 뒤 A의 상태를
+> 조회할 때 돌아온다. 허브 화면이 게임 상태를 읽기만 해도 정리되므로 잠긴 채 잊히지 않는다.
+
+| 규칙 | 내용 |
+|---|---|
+| 자격 | **유료 스핀의 당첨**만. 프리스핀 당첨은 제외한다 (공짜로 얻은 돈을 무한히 굴리게 두지 않는다) |
+| 수명 | 그 게임의 다음 스핀 한 번이면 끝난다. 라운드 id로 묶여 있어 옛 라운드로는 걸 수 없다 |
+| 종료 | 지거나, 회수하거나, `maxSteps`에 닿거나, `maxWinCap`을 넘거나, 만료되면 닫힌다 |
+| 자동 회수 | 상한·만료로 서버가 닫은 경우 응답의 `autoCollected`가 true다 |
+| 카운트다운 | 당첨 스핀의 `gambleOffer.expiresAt`과, 세션이 이어지는 판정의 `GambleResponse.expiresAt`으로 남은 시간을 표시한다. 단계마다 10분이 다시 밀린다 |
+
+### 재전송 방어
+
+`idempotencyKey`가 **필수**다 (본문 또는 `Idempotency-Key` 헤더, 8자 이상). 같은 키로 다시 부르면
+판정을 다시 하지 않고 그때 결과를 그대로 돌려준다. 키는 단계 기록에 남는데, 상태(`state.gamble.steps[]`)
+뿐 아니라 **라운드(`rounds.gamble_steps`)에도 함께** 남긴다. 세션이 닫힌 뒤(패배·자동 회수)에는 상태가
+비어 있어서, 라운드 기록이 없으면 네트워크 재전송이 409를 받게 된다.
+같은 유저의 **다른 키**가 진행 중이면 409 `GAMBLE_IN_PROGRESS`다 (스핀 락과 같은 장치).
+
+### 승패 판정과 검증
+
+라운드 시드를 이어 붙여 단계마다 새 RNG를 만든다.
+
+```
+seedInput = `${seed}:${nonce}:gamble:${step}`
+won       = rng.nextInt(1_000_000) < round(chance * 1_000_000)
+side      = won ? 고른 면 : 반대 면
+```
+
+**승패를 먼저 뽑고 보여 줄 면이 거기서 따라온다.** 면을 먼저 뽑아 맞히는 방식으로 하면 확률이
+항상 1/2로 고정되어 `chance` 설정이 죽는다. 이 방식은 `chance`가 0.5가 아니어도 그대로 지켜지고,
+시드·단계·고른 면만 알면 누구나 재현할 수 있다. `GET /rounds/:id/seed`의 `gamble` 배열에
+단계별 `pick`/`side`/`won`/`idempotencyKey`/`seedInput`이 모두 들어 있다.
+
+## 뮤테이션과 ways (Wave 1)
+
+`SpinResponse`가 연출에 필요한 두 가지를 더 싣는다.
+
+- `gridBefore` — 뮤테이션 적용 **전** 격자. 리빌·확장 연출의 시작 프레임이다.
+- `mutations` — 무엇이 어떻게 바뀌었는지 (`mystery`/`expandWild`/`upgrade`/`randomWild`).
+
+뮤테이션은 RNG를 더 소모해 결정되므로 `stops`만으로는 되살릴 수 없다. 그래서 라운드에
+`grid_before`와 `mutations`를 저장하고, 응답의 `grid`는 저장된 시작 격자에 뮤테이션을 다시 입혀
+만든다. 멱등 재전송이 처음과 똑같은 격자를 돌려주는 이유다.
+
+ways 게임의 당첨 라인은 `ways`(경로 수)와 `direction`(`ltr`/`rtl`)을 함께 싣는다.
+라인 게임에는 두 필드가 없다.
+
 ## 환경변수
 
 | 변수 | 필수 | 기본값 | 설명 |
@@ -295,11 +389,12 @@ pnpm --filter @tgslot/api db:push       # 실제 DB에 반영. 이 저장소 안
 | `0002_harsh_donald_blake.sql` | `rounds` 테이블 + `wallets.nonce`. `(user_id, idempotency_key)` 유니크가 이중 차감을 DB 레벨에서 차단 |
 | `0003_parallel_dormammu.sql` | 허브 테이블 5종(`bonus_claims`, `jackpot_pool`, `jackpot_hits`, `leaderboard_weekly`, `mission_progress`) + `users.xp`. 맨 끝의 `INSERT INTO jackpot_pool`은 손으로 덧붙인 시드 행이다 (drizzle-kit은 데이터를 만들지 않는다) |
 | `0004_spicy_living_tribunal.sql` | `rounds.jackpot_win` / `level_up_from` / `level_up_to` / `level_up_bonus`. 멱등 재전송이 처음과 **완전히 같은** 응답을 돌려주도록 라운드의 부수 결과를 함께 남긴다 |
+| `0005_cynical_jane_foster.sql` | `users.locale_explicit`. 유저가 직접 고른 언어를 로그인이 덮어쓰지 못하게 하는 플래그 |
+| `0006_jackpot_seed_25k.sql` | 잭팟 시드를 25,000으로 내린다 (손으로 쓴 커스텀 SQL). 현재 풀은 **아직 아무도 돌리지 않은 초기 상태일 때만** 같이 내린다 |
+| `0007_jackpot_pool_hundredths.sql` | 잭팟 풀·시드 단위를 코인에서 1/100 코인으로 변환(x100). 금액 자체는 그대로다 |
 | `0008_legal_bromley.sql` | `game_states` 테이블 + `rounds.is_free_spin`/`features`/`free_spins_after`. 프리스핀 세션과 재전송 스냅샷 |
 | `0009_acoustic_madrox.sql` | `game_states.free_spins` → 범용 `state` jsonb (0008을 아직 push하지 않았으므로 DROP + ADD로 낸다) + `rounds.multiplier`/`free_spins_summary` |
-| `0007_jackpot_pool_hundredths.sql` | 잭팟 풀·시드 단위를 코인에서 1/100 코인으로 변환(x100). 금액 자체는 그대로다 |
-| `0006_jackpot_seed_25k.sql` | 잭팟 시드를 25,000으로 내린다 (손으로 쓴 커스텀 SQL). 현재 풀은 **아직 아무도 돌리지 않은 초기 상태일 때만** 같이 내린다 |
-| `0005_cynical_jane_foster.sql` | `users.locale_explicit`. 유저가 직접 고른 언어를 로그인이 덮어쓰지 못하게 하는 플래그 |
+| `0010_polite_tarantula.sql` | `rounds.grid_before`/`mutations`/`gamble_steps`. 뮤테이션 재생과 더블업 공개용 |
 
 스키마(`src/db/schema.ts`)를 바꾸면 `db:generate`로 새 마이그레이션을 추가하고, 커스텀 SQL(트리거 등)이 필요하면 `drizzle-kit generate --custom --name <name>`으로 빈 파일을 만든 뒤 채운다.
 

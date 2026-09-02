@@ -3,11 +3,12 @@ import {
   computeAnalyticRtp,
   computeExactRtp,
   expectedFreeSpinsPerTrigger,
+  isAnalytic,
 } from '@tgslot/slot-engine'
 import type { GameMath } from '@tgslot/slot-engine'
 import { comboCount } from './contributions.js'
 import { enumerateAudit } from './enumerate.js'
-import { DEFAULT_SAMPLE_SPINS, sampleDistribution } from './sampleDistribution.js'
+import { DEFAULT_MC_SAMPLE_SPINS, DEFAULT_SAMPLE_SPINS, sampleDistribution } from './sampleDistribution.js'
 import type { DistributionMethod, DistributionReport, FeatureReport } from './types.js'
 
 export interface AnalyzeOptions {
@@ -24,37 +25,17 @@ export interface AnalyzeOptions {
 /**
  * 릴 독립을 깨는 피처가 있어 닫힌 식이 성립하지 않는 모델인가.
  *
- * 엔진이 아직 이 필드들을 스키마에 넣지 않았으므로 **방어적으로** 읽는다.
- * 엔진이 `computeExactRtp`에서 `method: 'monte-carlo'`를 돌려주기 시작하면
- * 그 값이 우선이고, 이 함수는 그 전까지의 다리 역할이다.
+ * 판단은 **엔진의 `isAnalytic`에 맡긴다.** 예전에는 뮤테이션 이름 목록을 여기서 들고 있었는데,
+ * 엔진은 `expandWild`도 닫힌 식이 아니라고 보고 ways와 섞인 경우까지 따진다. 목록을 따로 두면
+ * 그 판단이 갈라져 감사와 엔진이 서로 다른 RTP를 쓰게 된다.
  *
- * 판단 기준은 GAME_CATALOG의 "프리미티브별 RTP 산출 방식" 표다.
- * mystery·expand·upgrade는 조건부화하면 독립이 복원돼 해석적으로 풀리지만,
- * 배치 배타성(drop)과 스핀 간 이월(sticky·walking), 캐스케이드·클러스터·리스핀은 그렇지 않다.
+ * 이것이 중요한 이유: `computeAnalyticRtp`는 닫힌 식이 성립하지 않는 모델에도 **던지지 않고**
+ * 조용히 틀린 값을 준다 (sheriff-sixgun에서 43% vs 실제 94.6%). 방법 선택을 틀리면 그 값이
+ * 그대로 리포트에 실린다.
  */
 export function requiresMonteCarlo(math: GameMath): boolean {
-  const extended = math as unknown as Record<string, unknown>
-  for (const key of ['cascade', 'cluster', 'respin', 'holdAndSpin']) {
-    if (extended[key] !== undefined && extended[key] !== null) return true
-  }
-  const mutations = extended['mutations']
-  if (Array.isArray(mutations)) {
-    return mutations.some((entry) => {
-      const type = typeof entry === 'object' && entry !== null ? (entry as { type?: unknown }).type : entry
-      return typeof type === 'string' && MONTE_CARLO_MUTATIONS.has(type)
-    })
-  }
-  return false
+  return !isAnalytic(math)
 }
-
-/**
- * 닫힌 식을 깨는 뮤테이션 종류.
- *
- * `randomWild`는 빈 칸에 배타적으로 떨어뜨리므로 릴 사이에 상관이 생겨 인수분해가 안 된다.
- * `sticky`·`walking`은 스핀 간 이월이라 라운드가 마르코프 사슬이 된다.
- * 나머지(mystery·expandWild·upgrade)는 조건부화하면 릴 독립이 복원돼 해석적으로 풀린다.
- */
-export const MONTE_CARLO_MUTATIONS = new Set(['randomWild', 'random-wild-drop', 'drop', 'sticky', 'walking'])
 
 /**
  * 엔진이 이 모델을 어떤 방법으로 재는지 물어본다.
@@ -105,8 +86,9 @@ export function analyzeDistribution(
     options.onProgress?.(1)
     return report
   }
+  const defaultSpins = method === 'monte-carlo' ? DEFAULT_MC_SAMPLE_SPINS : DEFAULT_SAMPLE_SPINS
   return sampleDistribution(math, totalBet, {
-    spins: options.sampleSpins ?? DEFAULT_SAMPLE_SPINS,
+    spins: options.sampleSpins ?? defaultSpins,
     seed: options.sampleSeed,
     rtpSource: method === 'monte-carlo' ? 'sample' : 'analytic',
     onProgress: options.onProgress,
@@ -138,6 +120,8 @@ export function buildFeatureReport(math: GameMath, distribution: DistributionRep
     freeSpinsShare: distribution.rtp === 0 ? 0 : distribution.breakdown.freeSpins / distribution.rtp,
     scatterShare: distribution.rtp === 0 ? 0 : distribution.breakdown.scatter / distribution.rtp,
     observedTriggerRate: observed === null ? null : observed.triggers / observed.spins,
+    cappedSpins: observed?.cappedSpins ?? null,
+    cappedSpinsLost: observed?.cappedSpinsLost ?? null,
     observedFreeSpinsPerPaidSpin: observed === null ? null : observed.freeSpins / observed.spins,
   }
 }

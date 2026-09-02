@@ -332,6 +332,56 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 더블업 세션 중(Wave 1) — 금액 옆에 받기/더블 버튼 두 개가 붙어 한 줄 높이를 넘어간다. */
+.hub-win-strip--gamble {
+  height: auto;
+  min-height: 44px;
+  padding: var(--hub-space-sm) var(--hub-space-lg);
+  gap: var(--hub-space-md);
+}
+
+.hub-win-strip__gamble-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.hub-win-strip__gamble-countdown {
+  font-size: var(--hub-font-tiny, 11px);
+  color: var(--hub-text-sub);
+}
+
+.hub-win-strip__gamble-actions {
+  display: flex;
+  gap: var(--hub-space-sm);
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.hub-win-strip__gamble-btn {
+  min-height: 38px;
+  padding: 0 var(--hub-space-md);
+  border-radius: var(--hub-radius-sm);
+  font-size: var(--hub-font-small);
+  font-weight: 700;
+}
+
+.hub-win-strip__gamble-btn--collect {
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+  color: var(--hub-text);
+}
+
+.hub-win-strip__gamble-btn--double {
+  background: linear-gradient(135deg, var(--hub-gold-light), var(--hub-gold));
+  color: #2a1a04;
+}
+
+.hub-win-strip__gamble-btn:disabled {
+  opacity: 0.6;
+}
+
 .hub-game-screen__controls {
   display: flex;
   flex-direction: column;

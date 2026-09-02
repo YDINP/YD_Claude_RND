@@ -1,0 +1,151 @@
+{
+  "fx": {
+    "default": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.12,
+          "durationMs": 600
+        }
+      ]
+    },
+    "wild": {
+      "win": [
+        {
+          "type": "shine",
+          "durationMs": 900,
+          "angle": 0
+        },
+        {
+          "type": "glow",
+          "color": "#d8a94a",
+          "durationMs": 900
+        }
+      ]
+    },
+    "scatter": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#e2683a",
+          "durationMs": 800
+        },
+        {
+          "type": "spin",
+          "durationMs": 400,
+          "repeat": 1
+        }
+      ]
+    },
+    "sheriff": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.15,
+          "durationMs": 700
+        },
+        {
+          "type": "shine",
+          "durationMs": 900,
+          "angle": 25
+        }
+      ]
+    },
+    "bandit": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.13,
+          "durationMs": 700
+        },
+        {
+          "type": "glow",
+          "color": "#7e9a72",
+          "durationMs": 800
+        }
+      ]
+    },
+    "revolver": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 8,
+          "durationMs": 700
+        },
+        {
+          "type": "shine",
+          "durationMs": 800,
+          "angle": -20
+        }
+      ]
+    },
+    "dynamite": {
+      "win": [
+        {
+          "type": "flash",
+          "durationMs": 500,
+          "fromAlpha": 0.4
+        },
+        {
+          "type": "glow",
+          "color": "#e2683a",
+          "durationMs": 700
+        }
+      ]
+    },
+    "horseshoe": {
+      "win": [
+        {
+          "type": "flash",
+          "durationMs": 500,
+          "fromAlpha": 0.45
+        }
+      ]
+    },
+    "whiskey": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.07,
+          "durationMs": 700
+        },
+        {
+          "type": "wobble",
+          "degrees": 6,
+          "durationMs": 700
+        }
+      ]
+    },
+    "cactus": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 8,
+          "durationMs": 800
+        }
+      ]
+    },
+    "boot": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.08,
+          "durationMs": 700
+        }
+      ]
+    }
+  },
+  "palette": {
+    "frame": "#c9884a",
+    "reelBg": "#1b2437",
+    "winLine": [
+      "#c9884a",
+      "#e2683a",
+      "#7e9a72",
+      "#e0605c",
+      "#5b9dff",
+      "#f4d98a"
+    ],
+    "text": "#f5ecd9"
+  }
+}

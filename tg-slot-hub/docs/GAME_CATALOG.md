@@ -1,5 +1,7 @@
 # 게임 카탈로그 — 신작 10종 (#3~#12)
 
+> **구현 메모(2026-09-03, 웨이브 1 엔진 반영)**: 뮤테이션 type은 camelCase(`mystery`/`expandWild`/`upgrade`/`randomWild`). sheriff-sixgun은 확장 와일드가 행별 조건부 분포를 만들어 **monte-carlo**로 산출한다(해석식은 후속). ways 배수 단위는 총베팅/`ways.betDivisor`(기본 25). `upgrade`는 `{from,to,minCount,chance?}`. 검수는 2단계 — CI 게이트(games.test, 40만 스핀): |rtp−target| ≤ max(0.5pp, 3·SE); 정식 검수 리포트(run audit, MC 2천5백만 스핀): |rtp−target| ≤ 0.5pp 이고 ci95 반폭 ≤ 0.2pp.
+
 작성일: 2026-09-03 · 작성자: game-design-director · 상태: 초안(엔진/렌더러/아트 착수 대기)
 참조: `TELEGRAM_SLOT_HUB_PLAN.md` §3 §6 §8 · `docs/ART_DIRECTION.md` · `docs/SYMBOL_FX_PLAN.md` · `packages/slot-engine/README.md` · `games/_template/HOWTO.md`
 
@@ -65,7 +67,7 @@
 
 ```json
 "mutations": [
-  { "type": "mystery-reveal", "symbol": "mystery", "scope": "grid",
+  { "type": "mystery", "symbol": "mystery", "scope": "grid",
     "weights": { "seven": 4, "diamond": 6, "bar3": 8, "bell": 14, "cherry": 26 } }
 ]
 ```
@@ -92,7 +94,7 @@
 
 ```json
 "mutations": [
-  { "type": "expand-wild", "symbol": "wild", "reels": [1, 2, 3], "minCount": 1, "coverScatter": false }
+  { "type": "expandWild", "symbol": "wild", "reels": [1, 2, 3], "minCount": 1, "coverScatter": false }
 ],
 "gamble": { "type": "coin-flip", "chance": 0.5, "payout": 2, "maxSteps": 5 }
 ```
@@ -120,7 +122,7 @@
 ```json
 "payModel": { "type": "ways", "ways": 243, "adjacentFrom": 0, "bothWays": false },
 "mutations": [
-  { "type": "random-wild-drop", "chance": 0.2, "countWeights": { "1": 60, "2": 30, "3": 10 },
+  { "type": "randomWild-drop", "chance": 0.2, "countWeights": { "1": 60, "2": 30, "3": 10 },
     "reels": [1, 2, 3], "coverScatter": false }
 ]
 ```
@@ -361,7 +363,7 @@ export interface RoundState {
 | 1 | **RTP 감사 게이트에 `method: 'monte-carlo'` 수용** | 10종 중 7종 | 없음 | 8h |
 | 2 | **P1 `mutations` 파이프라인**(무상태 3종: mystery·expand·upgrade) | #3 #4 #10 | 1 | 14h |
 | 3 | **P2 `ways` 평가기**(243/1024 + `bothWays`) | #5 #8 #11 #12 | 없음 | 12h |
-| 4 | **P1 확장: 확률형 배치**(random-wild-drop) | #5 | 2·3 | 6h |
+| 4 | **P1 확장: 확률형 배치**(randomWild-drop) | #5 | 2·3 | 6h |
 | 5 | **`RoundState` 캐리 상태 일반화**(스핀 간 상태 저장·복원·서버 세션) | #8 #9 #11 #12 | 없음 | 10h |
 | 6 | **P3 `cascade` 엔진**(제거·리필·재평가 + 배수 사다리) | #6 #7 | 5 | 18h |
 | 7 | **P4 `cluster` 평가기**(flood-fill) + `pay-anywhere` 변형 | #6 #7 | 6 | 14h |
@@ -383,13 +385,26 @@ export interface RoundState {
 | P5 respin | **`monte-carlo`** SE ≤ 0.07%p (5M 진입) | 흡수 마르코프 체인이나 코인값·잭팟 결합분포까지 닫는 실익이 없다 |
 | P6 bonus | `analytic` | 가중 이산 분포. pick-me는 비복원 추출 + 흡수 확률, wheel은 티어 전이 행렬 |
 
-**감사 게이트 확장 요구** — `tools/rtp-sim/src/games.test.ts`가 지금은 전수 조사와 해석 경로만 통과시킨다. `method: 'monte-carlo'`를 1급으로 받아야 하고, 수용 조건은 (1) `|rtp − rtpTarget| ≤ 0.5%p **이고** ci95 반폭 ≤ 0.2%p (표본 부족이면 FAIL)`, (2) 고정 시드로 CI 재현 가능, (3) 리포트에 `spins`·`stderr`·`seed`·`ci95` 필수 기록이다. SE는 스핀당 지급액 표본표준편차 ÷ √n.
+> **[감사 도구 메모 — 2026-09-03]** 이 규칙은 **1차 관문(CI, 40만 스핀)** 기준으로 채택했다.
+> `max(0.5%p, 3×SE)`는 표본이 부실할수록 허용 오차가 넓어지므로 그것만으로 "목표를 맞췄다"고
+> 결론지을 수 없다. 최종 판정은 정식 감사(`run audit`, 2천5백만 스핀)가 내리며 기준은
+> `|rtp−target| ≤ 0.5%p` **그리고** `95% CI 반폭 ≤ 0.2%p`, 못 미치면 `표본 부족` FAIL이다.
+> 자세한 내용은 `tools/rtp-sim/README.md`.
+
+**감사 게이트 확장 요구** — `tools/rtp-sim/src/games.test.ts`가 지금은 전수 조사와 해석 경로만 통과시킨다. `method: 'monte-carlo'`를 1급으로 받아야 하고, 수용 조건은 (1) `CI 게이트 |rtp − rtpTarget| ≤ max(0.5%p, 3×SE) / 정식 검수 리포트 |rtp − rtpTarget| ≤ 0.5%p **이고** ci95 반폭 ≤ 0.2%p (MC 2천5백만 스핀, 표본 부족이면 FAIL)`, (2) 고정 시드로 CI 재현 가능, (3) 리포트에 `spins`·`stderr`·`seed`·`ci95` 필수 기록이다. SE는 스핀당 지급액 표본표준편차 ÷ √n.
 
 **종료·발산 방지 규칙 (엔진이 강제, 위반 시 `parseGameMath` 예외)**
 
 1. **기대 반복 수렴** — 자기 재진입이 있는 모든 피처는 `E[반복] = 1/(1−r)`, `r < 1`이 정적으로 검증돼야 한다. 기존 리트리거의 `count × P(trigger) < 1`을 일반화한 것이다. 프리스핀은 `count × p`, 홀드&스핀은 `q_lock × emptyCells`, 텀블은 `P(연쇄 지속)`. 스티키·워커처럼 `r`이 변하는 피처는 `r`이 단조 비증가임을 보이거나 상한 `r_max < 1`을 명시해야 한다.
 2. **모든 루프에 정수 하드 캡 + 지급 캡** — `maxCascades`·`respin.hardCap`·`maxWalkers`·`maxPicks`·`maxUpgrades`·`gamble.maxSteps`는 필수 필드다. 전 게임 공통 `maxWinCap`(총 베팅 5,000×)에 도달하면 진행 중 피처를 즉시 종료하고 캡 금액으로 지급한다. **캡은 RTP 계산에도 똑같이 적용해야 한다** — 캡 없이 튜닝하고 캡 있게 서비스하면 실 RTP가 목표보다 낮아진다.
 3. **단조 감소 변이 척도** — 모든 루프는 반복마다 엄격히 감소하는 음이 아닌 정수 척도를 하나 지정한다. 리스핀 `respinsLeft`, 워킹 `Σ(walker.reel+1)`, 픽미 `picksLeft`, 텀블 `maxCascades − totalCascades`, 휠 `maxUpgrades − upgradesUsed`. 척도를 되돌리는 전이(리셋·리트리거·워커 추가)는 캡 미만일 때만 허용하고 그 횟수 자체가 별도 카운터로 상한된다. 0이 되면 무조건 종료로 전이한다.
+
+**Wave 1 엔진 재검수(2026-09-03, APPROVED)에서 넘긴 엔진 백로그**
+
+- 와일드 전용 줄 접기를 **창 단위**에서 **릴별 와일드 칸 수의 곱** 단위로 정밀화. 지금은 와일드+심볼이 섞인 창에서 순수 와일드 경로가 비챔피언 후보와 챔피언에 이중 계상된다(RTP는 그 규칙대로 측정돼 정확하나 배당표 정합성 문제). 해석식의 `headWildOnly`도 `Π E[와일드 칸 수]`로 함께 수정 → shiba-shrine 재튜닝 필요.
+- 와일드 심볼 복수 선언 시 챔피언 표가 "같은 대체 규칙" 전제라 all-wild 창 미지급 가능 → 스키마에서 와일드 1종만 허용하거나 와일드 id별 챔피언 계산.
+- `expandWild.onlyIfWin`이 스핀당 `probeWin` 2회 호출(라인/ways + 스캐터) → 한 번에 합산하도록 최적화. 현재 팩엔 `onlyIfWin: true`가 없어 실측 영향 없음.
+- 정식 감사 25M MC의 ci95 반폭 여유가 5~14%라 분산이 커지는 재튜닝은 스핀 수 증액 필요. CI 게이트는 400k 느슨 규칙, 정식 감사만 엄격 규칙(두 단계) 유지.
 
 ## 5. 신규 공용 UI 컴포넌트
 
@@ -421,7 +436,7 @@ export interface RoundState {
 D1        엔진: 감사 게이트 MC 수용(항목 1) + P1 무상태 3종 ┐
           렌더러: SymbolMorphFX + MascotSweepLayer          ├ 병렬
           아트: #3 #4 심볼·프레임 생성                        ┘
-D2        엔진: P2 ways 평가기 + random-wild-drop
+D2        엔진: P2 ways 평가기 + randomWild-drop
           아트: #5 심볼·프레임 + 3종 배경/썸네일
 D3        3종 math.json 튜닝 → 감사 통과 → 허브 로비 등록 → 웨이브 1 커밋
 D4–D5     엔진: RoundState 캐리 일반화 → P3 cascade
@@ -444,7 +459,7 @@ D12       4종 감사 + 상태 복원 e2e(새로고침) → 웨이브 3 커밋
 | # | 리스크 | 영향 | 완화 |
 |---|---|---|---|
 | R1 | **텀블·클러스터 RTP 튜닝이 가장 어렵다.** 심볼 밀도를 1개 바꾸면 연쇄 길이 분포가 통째로 움직여 선형 직관이 통하지 않는다 | #6 #7 일정 지연 | 20M 스핀 튜닝 루프를 워커 병렬로 돌리고, 밀도 → 발생률 → RTP 3단 감도표를 먼저 만들어 이분 탐색한다 |
-| R2 | **해석적 RTP가 불가능한 게임이 7종.** 감사 게이트가 전수·해석만 받으면 7종이 통과 자체를 못 한다 | 전 웨이브 차단 | 백로그 1번을 최우선. `method: 'monte-carlo'` + `|rtp−target| ≤ 0.5%p 이고 ci95 반폭 ≤ 0.2%p` + 고정 시드로 CI 재현 |
+| R2 | **해석적 RTP가 불가능한 게임이 7종.** 감사 게이트가 전수·해석만 받으면 7종이 통과 자체를 못 한다 | 전 웨이브 차단 | 백로그 1번을 최우선. `method: 'monte-carlo'` + `CI: |rtp−target| ≤ max(0.5%p, 3×SE) / 정식 검수: |rtp−target| ≤ 0.5%p 이고 ci95 반폭 ≤ 0.2%p` + 고정 시드로 CI 재현 |
 | R3 | **잭팟 이중 계상.** #9의 게임 내 4단 잭팟과 허브 프로그레시브 잭팟(1.5%)이 별개인데 섞이면 실효 RTP가 96%를 넘는다 | 경제 붕괴 | 게임 내 잭팟은 `math.json`의 94.5% 안에 포함되는 고정 배수, 허브 잭팟은 모델 밖. 원장 `reason`을 분리해 매시간 불변식 검사에 포함 |
 | R4 | **바이 피처 차익.** 바이 경로 RTP가 기본보다 높으면 유저가 바이만 반복해 하우스 엣지가 사라진다 | #12 수익성 | 가격을 `E[피처 총승리]/0.945`로 역산하고, 게이트가 `바이 RTP ≤ 기본 RTP`를 검사 |
 | R5 | **스핀 간 상태의 서버 복원.** 프리스핀·홀드&스핀·픽미 도중 앱이 죽으면 상태를 잃거나 중복 지급될 수 있다 | 원장 정합성 | `game_states`에 `RoundState` 전체를 저장하고 재개는 서버 재조회만 인정. 클라 로컬 복원 금지, 멱등키 필수 |
@@ -463,7 +478,7 @@ D12       4종 감사 + 상태 복원 e2e(새로고침) → 웨이브 3 커밋
 [ ] 3. 신규 심볼(mystery·coin·bonus 등) 페이테이블·매치배수가 스키마 통과
 [ ] 4. rtp-sim으로 RTP가 rtpTarget(94.5%) ±0.5%p 이내, 적중률·최대배수 목표 충족
 [ ] 5. pnpm --filter @tgslot/rtp-sim test 게이트 통과
-[ ] 6. 몬테카를로 채택 시 리포트에 spins·seed·stderr·ci95 기록, |rtp−target| ≤ 0.5%p 이고 ci95 반폭 ≤ 0.2%p
+[ ] 6. 몬테카를로 채택 시 리포트에 spins·seed·stderr·ci95 기록, CI: |rtp−target| ≤ max(0.5%p, 3×SE) / 정식 검수: |rtp−target| ≤ 0.5%p 이고 ci95 반폭 ≤ 0.2%p
 [ ] 7. 루프 하드 캡 필드가 전부 존재하고 maxWinCap이 RTP 계산에도 적용됨
 [ ] 8. 발산 검사 통과 (r < 1 정적 검증, 단조 감소 척도 지정)
 [ ] 9. 신규 메커닉 상태가 SpinResult.nextState / RoundState에 빠짐없이 실림

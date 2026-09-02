@@ -1,11 +1,23 @@
 import { randomUUID } from 'node:crypto'
 import { STARTING_COINS, STARTING_GEMS } from '@tgslot/shared'
-import type { GameState, Locale } from '@tgslot/shared'
+import type { GambleState, GambleStep, GameState, Locale } from '@tgslot/shared'
 import type { TelegramUser } from '../auth/initData.js'
 import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
 import type { BonusClaim, BonusClaims } from '../economy/bonus.js'
 import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS } from '../economy/config.js'
 import { freeSpinsSummary, isFreeSpinsActive, wrapFreeSpinsState } from '../economy/freeSpins.js'
+import {
+  findStepByKey,
+  gambleEscrowRefId,
+  gambleExpiresAt,
+  gamblePayout,
+  gambleRefId,
+  isGambleActive,
+  isGambleEligible,
+  isGambleExpired,
+  shouldAutoCollect,
+  stepsLeft,
+} from '../economy/gamble.js'
 import { hundredthsToCoins, isJackpotHit, jackpotAccrualHundredths } from '../economy/jackpot.js'
 import { levelFromXp, levelUpBonus, toLevelState } from '../economy/level.js'
 import { applySpinToMissions } from '../economy/missions.js'
@@ -16,8 +28,11 @@ import { InsufficientFundsError } from './types.js'
 import type {
   AppUser,
   AppWallet,
+  ApplyGambleInput,
   ApplySpinInput,
   ApplySpinResult,
+  GambleOutcome,
+  GambleStepRecord,
   ClaimBonusInput,
   ClaimMissionInput,
   ClaimResult,
@@ -180,12 +195,30 @@ export class MemoryRepos implements Repos {
         // 세션은 그 사이 더 진행됐을 수 있다. 라운드에 남긴 "그때 값"을 그대로 돌려준다.
         freeSpins: existing.freeSpinsAfter,
         freeSpinsSummary: existing.freeSpinsSummary,
+        // 재전송이면 제안도 그대로 살아 있다 (스핀을 다시 돌린 게 아니므로).
+        ...(gambleOfferFor(this.gameStates.get(gameStateKey(input.userId, input.gameId)) ?? null, existing.id)
+          ? { gambleOffer: gambleOfferFor(this.gameStates.get(gameStateKey(input.userId, input.gameId)) ?? null, existing.id) }
+          : {}),
       }
     }
 
     // 프리스핀은 차감하지 않고, 베팅액도 진입 시점에 고정된 값을 쓴다.
     const stateKey = gameStateKey(input.userId, input.gameId)
     const stateBefore = this.gameStates.get(stateKey) ?? null
+
+    // 스핀 한 번이면 이전 더블업은 끝난다. 잠겨 있던 판돈을 **베팅을 확인하기 전에** 돌려준다
+    // (그 돈으로 이번 스핀을 돌릴 수 있어야 한다).
+    const escrowBefore = stateBefore?.gamble ?? null
+    if (escrowBefore && escrowBefore.pendingWin > 0) {
+      this.credit(
+        input.userId,
+        wallet,
+        'coins',
+        escrowBefore.pendingWin,
+        LEDGER_REASONS.gambleCollect,
+        gambleRefId(escrowBefore.roundId, escrowBefore.steps.length)
+      )
+    }
     const freeSpinsBefore = stateBefore?.freeSpins ?? null
     const isFreeSpin = isFreeSpinsActive(freeSpinsBefore, now)
     const totalBet = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.totalBet : input.totalBet
@@ -227,9 +260,36 @@ export class MemoryRepos implements Repos {
       ended: freeSpinsAfter === null,
     })
 
+    // 새 당첨이면 그 금액을 지갑 밖으로 잠그고 제안을 연다. 잠겨 있는 동안에는 잔액에 보이지 않으므로
+    // 다른 게임에서 다 써 버린 뒤 더블업으로 마이너스를 만드는 경로가 생기지 않는다.
+    let gambleAfter: GambleState | null = null
+    let gambleOffer: ApplySpinResult['gambleOffer']
+    if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, config: input.gamble }) && input.gamble) {
+      // 방어: 방금 당첨금을 넣었으므로 잔액이 모자랄 수 없다. 그래도 확인하고 못 잠그면 제안을 열지 않는다.
+      if (wallet.coins >= result.totalWin) {
+        this.credit(
+          input.userId,
+          wallet,
+          'coins',
+          -result.totalWin,
+          LEDGER_REASONS.gambleEscrow,
+          gambleEscrowRefId(roundId)
+        )
+        const expiresAt = gambleExpiresAt(now)
+        gambleAfter = {
+          roundId,
+          pendingWin: result.totalWin,
+          steps: [],
+          maxSteps: input.gamble.maxSteps,
+          expiresAt,
+        }
+        gambleOffer = { pendingWin: gambleAfter.pendingWin, maxSteps: gambleAfter.maxSteps, expiresAt }
+      }
+    }
+
     // 앞뒤로 아무 상태가 없으면 쓸 이유가 없다 (기본 게임 스핀의 대부분).
-    if (freeSpinsAfter) this.gameStates.set(stateKey, { freeSpins: freeSpinsAfter })
-    else if (freeSpinsBefore) this.gameStates.delete(stateKey)
+    if (freeSpinsAfter || gambleAfter) this.gameStates.set(stateKey, { freeSpins: freeSpinsAfter, gamble: gambleAfter })
+    else if (stateBefore) this.gameStates.delete(stateKey)
 
     // 잭팟 적립은 하우스 몫에서 나가므로 유저 원장에 남지 않는다. 지급될 때만 원장에 찍힌다.
     // 적립을 먼저 하므로 당첨자는 자기 스핀의 적립분까지 가져간다.
@@ -294,6 +354,8 @@ export class MemoryRepos implements Repos {
       bet: totalBet,
       win: result.totalWin,
       stops: [...result.stops],
+      gridBefore: result.gridBefore.map((row) => [...row]),
+      mutations: result.mutations,
       wins: result.wins,
       seed,
       seedHash,
@@ -306,6 +368,7 @@ export class MemoryRepos implements Repos {
       multiplier,
       freeSpinsAfter,
       freeSpinsSummary: summary,
+      gambleSteps: [],
       createdAt: now,
     }
     this.rounds.set(roundId, round)
@@ -323,14 +386,145 @@ export class MemoryRepos implements Repos {
       isFreeSpin,
       freeSpins: freeSpinsAfter,
       freeSpinsSummary: summary,
+      ...(gambleOffer ? { gambleOffer } : {}),
+    }
+  }
+
+  async applyGamble(input: ApplyGambleInput): Promise<GambleOutcome | null> {
+    const wallet = this.wallets.get(input.userId)
+    if (!wallet) throw new Error('[memory-repo] wallet not found')
+
+    const now = this.clock()
+    const stateKey = gameStateKey(input.userId, input.gameId)
+    const state = this.gameStates.get(stateKey) ?? null
+    const gamble = state?.gamble ?? null
+    const round = this.rounds.get(input.roundId)
+
+    if (!round) return null
+    // 방어: 남의 라운드나 프리스핀 라운드로는 애초에 제안이 열리지 않지만, 상태가 꼬였을 때를 대비한다.
+    if (round.userId !== input.userId || round.isFreeSpin) return null
+
+    // 같은 키가 이미 처리됐으면 판정을 다시 하지 않고 그때 결과를 그대로 돌려준다.
+    // 세션이 닫힌 뒤(패배·자동 회수)의 재전송도 여기서 걸린다 — 라운드 기록은 남아 있다.
+    const replay = findStepByKey(round.gambleSteps, input.idempotencyKey)
+    if (replay) return toOutcome(replay, toAppWallet(wallet), gamble, true)
+
+    if (!gamble || gamble.roundId !== input.roundId) return null
+
+    // 만료됐으면 도전 대신 자동 회수로 끝낸다. 잠긴 돈을 잃게 두지 않는다.
+    if (isGambleExpired(gamble, now)) {
+      return this.releaseEscrow(input.userId, input.gameId, wallet, state, gamble, true)
+    }
+    if (!isGambleActive(gamble, now)) return null
+
+    const decision = input.decide({ round: cloneRound(round), state: { ...gamble } })
+    const stake = gamble.pendingWin
+    const pendingWin = decision.won ? gamblePayout(stake, input.config.payout) : 0
+    const step = gamble.steps.length + 1
+
+    const nextGamble: GambleState = {
+      ...gamble,
+      pendingWin,
+      steps: [
+        ...gamble.steps,
+        {
+          step,
+          idempotencyKey: input.idempotencyKey,
+          pick: input.pick,
+          side: decision.side,
+          won: decision.won,
+          stake,
+          pendingWin,
+          autoCollected: false,
+          seedInput: decision.seedInput,
+        },
+      ],
+      expiresAt: gambleExpiresAt(now),
+    }
+
+    // 졌으면 잠긴 돈이 그대로 사라진다 (에스크로가 이미 지갑에서 빠져 있다).
+    // 이겼는데 상한에 닿으면 늘어난 판돈을 바로 돌려준다.
+    const autoCollected = decision.won && shouldAutoCollect(nextGamble, input.config, round.bet)
+    if (autoCollected) {
+      this.credit(input.userId, wallet, 'coins', pendingWin, LEDGER_REASONS.gambleCollect, gambleRefId(round.id, step))
+    }
+
+    const finished = !decision.won || autoCollected
+    const lastStep = { ...nextGamble.steps[nextGamble.steps.length - 1]!, autoCollected }
+    const storedSteps = [...nextGamble.steps.slice(0, -1), lastStep]
+
+    this.gameStates.set(stateKey, {
+      freeSpins: state?.freeSpins ?? null,
+      gamble: finished ? null : { ...nextGamble, steps: storedSteps },
+    })
+    this.rounds.set(round.id, { ...round, gambleSteps: storedSteps })
+
+    return toOutcome(lastStep, toAppWallet(wallet), finished ? null : nextGamble, false)
+  }
+
+  async collectGamble(input: { userId: string; gameId: string; roundId: string }): Promise<GambleOutcome | null> {
+    const wallet = this.wallets.get(input.userId)
+    if (!wallet) throw new Error('[memory-repo] wallet not found')
+
+    const stateKey = gameStateKey(input.userId, input.gameId)
+    const state = this.gameStates.get(stateKey) ?? null
+    const gamble = state?.gamble ?? null
+    if (!gamble || gamble.roundId !== input.roundId) return null
+
+    // 만료됐어도 회수는 된다. 잠긴 돈은 언제나 유저 것이다.
+    return this.releaseEscrow(input.userId, input.gameId, wallet, state, gamble, false)
+  }
+
+  /** 잠긴 판돈을 지갑으로 돌려주고 세션을 닫는다. */
+  private releaseEscrow(
+    userId: string,
+    gameId: string,
+    wallet: WalletState,
+    state: GameState | null,
+    gamble: GambleState,
+    autoCollected: boolean
+  ): GambleOutcome {
+    if (gamble.pendingWin > 0) {
+      this.credit(
+        userId,
+        wallet,
+        'coins',
+        gamble.pendingWin,
+        LEDGER_REASONS.gambleCollect,
+        gambleRefId(gamble.roundId, gamble.steps.length)
+      )
+    }
+    this.gameStates.set(gameStateKey(userId, gameId), { freeSpins: state?.freeSpins ?? null, gamble: null })
+
+    return {
+      outcome: 'collected',
+      pendingWin: gamble.pendingWin,
+      wallet: toAppWallet(wallet),
+      stepsLeft: 0,
+      seedInput: '',
+      autoCollected,
+      replayed: false,
     }
   }
 
   async getGameState(userId: string, gameId: string): Promise<GameState> {
-    const state = this.gameStates.get(gameStateKey(userId, gameId))
-    const freeSpins = state?.freeSpins ?? null
-    // 만료된 세션은 없는 것으로 본다.
-    return { freeSpins: isFreeSpinsActive(freeSpins, this.clock()) ? { ...freeSpins! } : null }
+    const now = this.clock()
+    const state = this.gameStates.get(gameStateKey(userId, gameId)) ?? null
+    const gamble = state?.gamble ?? null
+
+    // 만료된 더블업은 **이 자리에서 회수한다.** 숨기기만 하면 다음 스핀 전까지 돈이 잠긴 채로 남는다.
+    if (gamble && isGambleExpired(gamble, now)) {
+      const wallet = this.wallets.get(userId)
+      if (wallet) this.releaseEscrow(userId, gameId, wallet, state, gamble, true)
+    }
+
+    const current = this.gameStates.get(gameStateKey(userId, gameId)) ?? null
+    const freeSpins = current?.freeSpins ?? null
+    const active = current?.gamble ?? null
+    return {
+      freeSpins: isFreeSpinsActive(freeSpins, now) && freeSpins ? { ...freeSpins } : null,
+      gamble: active ? { ...active } : null,
+    }
   }
 
   async getRoundById(roundId: string): Promise<RoundRecord | null> {
@@ -466,6 +660,9 @@ function cloneRound(round: RoundRecord): RoundRecord {
   return {
     ...round,
     stops: [...round.stops],
+    gridBefore: round.gridBefore ? round.gridBefore.map((row) => [...row]) : null,
+    mutations: round.mutations.map((mutation) => ({ ...mutation })),
+    gambleSteps: round.gambleSteps.map((step) => ({ ...step })),
     wins: round.wins.map((win) => ({ ...win })),
     features: round.features.map((feature) => ({ ...feature })),
     freeSpinsAfter: round.freeSpinsAfter ? { ...round.freeSpinsAfter } : null,
@@ -476,6 +673,42 @@ function cloneRound(round: RoundRecord): RoundRecord {
 
 function idempotencyMapKey(userId: string, idempotencyKey: string): string {
   return `${userId}:${idempotencyKey}`
+}
+
+/** 단계 기록 하나를 응답 모양으로 옮긴다. 재전송과 새 판정이 같은 코드를 쓴다. */
+function toOutcome(
+  step: GambleStep,
+  wallet: AppWallet,
+  remaining: GambleState | null,
+  replayed: boolean
+): GambleOutcome {
+  return {
+    outcome: step.won ? 'win' : 'lose',
+    side: step.side,
+    pendingWin: step.pendingWin,
+    wallet,
+    stepsLeft: step.won && !step.autoCollected ? stepsLeft(remaining) : 0,
+    seedInput: step.seedInput,
+    autoCollected: step.autoCollected,
+    replayed,
+    // 세션이 계속 열려 있을 때만. 클라이언트는 이 값으로 카운트다운을 다시 맞춘다.
+    ...(remaining?.expiresAt !== undefined && !step.autoCollected && step.won
+      ? { expiresAt: remaining.expiresAt }
+      : {}),
+  }
+}
+
+/** 저장된 상태에서 이 라운드의 더블업 제안을 꺼낸다. 다른 라운드 것이면 없는 셈이다. */
+function gambleOfferFor(
+  state: GameState | null,
+  roundId: string
+): { pendingWin: number; maxSteps: number; expiresAt: string } | undefined {
+  const gamble = state?.gamble
+  if (!gamble || gamble.roundId !== roundId || gamble.pendingWin <= 0) return undefined
+  // 만료 시각이 없는 상태는 이 필드가 생기기 전에 만들어진 것이다. 10분짜리 세션이라
+  // 실제로는 남아 있을 수 없지만, 그런 상태는 제안으로 다시 광고하지 않는다.
+  if (gamble.expiresAt === undefined) return undefined
+  return { pendingWin: gamble.pendingWin, maxSteps: gamble.maxSteps, expiresAt: gamble.expiresAt }
 }
 
 function gameStateKey(userId: string, gameId: string): string {

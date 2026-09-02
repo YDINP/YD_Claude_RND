@@ -1,4 +1,5 @@
 import type { ExactRtpReport, GameMath, SimulationReport } from '@tgslot/slot-engine'
+import { betUnitCount } from './audit/index.js'
 
 export const TOP_BUCKETS = 10
 
@@ -15,12 +16,22 @@ function row(label: string, value: string): string {
 }
 
 export function formatHeader(math: GameMath, totalBet: number): string {
+  const ways = math.payModel === 'ways'
+  const divisor = betUnitCount(math, totalBet)
+  const shape = ways
+    ? `${math.ways?.base ?? 0} ways${math.ways?.bothWays === true ? ' 양방향' : ''}`
+    : `${math.paylines.length} lines`
+  const unitLabel = ways ? '웨이당' : '라인당'
   const lines = [
-    `게임: ${math.id}  (${math.reels}x${math.rows}, ${math.paylines.length} lines, ${math.volatility})`,
-    row('총 베팅액', `${totalBet} coins (라인당 ${totalBet / math.paylines.length})`),
+    `게임: ${math.id}  (${math.reels}x${math.rows}, ${shape}, ${math.volatility})`,
+    row('총 베팅액', `${totalBet} coins (${unitLabel} ${divisor > 0 ? totalBet / divisor : 0})`),
     row('목표 RTP', pct(math.rtpTarget)),
     row('스트립 길이', math.strips.map((strip) => strip.length).join(' x ')),
   ]
+  const mutations = math.mutations ?? []
+  if (mutations.length > 0) {
+    lines.push(row('뮤테이션', mutations.map((mutation) => mutation.type).join(' -> ')))
+  }
   return lines.join('\n')
 }
 
@@ -32,11 +43,27 @@ export interface JackpotInfo {
 
 export function formatExact(report: ExactRtpReport, target: number, jackpot?: JackpotInfo): string {
   const delta = report.rtp - target
-  const method = report.method === 'enumerate' ? '전수 조사' : '해석적 계산'
+  const methodLabel: Record<string, string> = {
+    enumerate: '전수 조사',
+    analytic: '해석적 계산',
+    'monte-carlo': '몬테카를로',
+  }
+  const method = methodLabel[report.method] ?? report.method
   const lines = [
     `RTP 계산: ${method} (조합 ${report.combos.toLocaleString('en-US')}개)`,
     row('RTP (기본 게임)', `${pct(report.rtp)}  (목표 대비 ${delta >= 0 ? '+' : ''}${(delta * 100).toFixed(3)}%p)`),
   ]
+  const mc = report.monteCarlo
+  if (mc !== undefined) {
+    lines.push(
+      row('  표본', `${mc.spins.toLocaleString('en-US')} 스핀 · seed "${mc.seed}"`),
+      row('  표준오차', `${(mc.stdErr * 100).toFixed(4)}%p`),
+      row(
+        '  95% 신뢰구간',
+        `[${pct(mc.ci95[0])}, ${pct(mc.ci95[1])}]  (반폭 ${(1.96 * mc.stdErr * 100).toFixed(4)}%p)`,
+      ),
+    )
+  }
   if (jackpot !== undefined) {
     const total = report.rtp + jackpot.contribution
     lines.push(row('+ 허브 잭팟 기여', pct(jackpot.contribution)))

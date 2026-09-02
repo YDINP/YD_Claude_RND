@@ -23,6 +23,10 @@ interface Evaluator {
   paylines: number[][]
   /** 심볼 후보가 앞, 그룹 후보가 뒤. 동점일 때 심볼 해석이 이기도록 하기 위한 순서다. */
   candidates: CandidatePlan[]
+  /** wild: true인 심볼 id. */
+  wildIds: Set<SymbolId>
+  /** index = 연속 길이, value = 와일드만으로 이뤄진 연속에서 이기는 후보 key. 없으면 null. */
+  wildChampions: (string | null)[]
 }
 
 /** 와일드가 target을 대체할 수 있는지. 스캐터와 다른 와일드는 절대 대체하지 않는다. */
@@ -99,11 +103,64 @@ function buildEvaluator(math: GameMath): Evaluator {
     groupCandidates.push({ key: groupId, group: groupId, matches, ...ladder })
   }
 
+  const candidates = [...symbolCandidates, ...groupCandidates]
+  const wildSet = new Set<SymbolId>(wildIds)
   return {
     reels: math.reels,
     paylines: math.paylines,
-    candidates: [...symbolCandidates, ...groupCandidates],
+    candidates,
+    wildIds: wildSet,
+    wildChampions: buildWildChampions(candidates, wildSet, math.reels),
   }
+}
+
+/**
+ * 와일드만으로 이뤄진 연속은 **후보 하나로만** 지급한다.
+ *
+ * 와일드는 (거의) 모든 후보를 대체하므로, 와일드 3개짜리 연속은 시바·판다·카피…
+ * 모든 후보의 매치 집합에 동시에 들어간다. 페이라인 평가기는 라인당 최고 해석 하나만
+ * 고르므로 이 문제가 없지만, ways 평가기는 후보별로 따로 더하기 때문에 그대로 두면
+ * 같은 경로를 여러 번 지급한다. 그래서 길이별 "챔피언"을 미리 정해 두고,
+ * 와일드만으로 채워진 창은 챔피언만 지급하게 한다.
+ *
+ * 우선순위는 페이라인 평가기의 비교 규칙과 **같다**: 배수 > 순수 심볼 > 긴 연속 > 선언 순서.
+ * 그래야 같은 그리드를 라인 모델로 읽든 ways 모델로 읽든 "와일드 줄은 무엇으로 쳐 주는가"의
+ * 답이 하나로 유지된다. 그리드가 아니라 배당표만 보고 정해지므로 해석적 RTP도 정확히 따라간다.
+ */
+function buildWildChampions(
+  candidates: readonly CandidatePlan[],
+  wildIds: ReadonlySet<SymbolId>,
+  reels: number,
+): (string | null)[] {
+  const champions: (string | null)[] = [null]
+  for (let k = 1; k <= reels; k += 1) {
+    let best: CandidatePlan | null = null
+    for (const candidate of candidates) {
+      // 매치 집합에 와일드가 없으면 와일드만으로 채워진 창에서 애초에 성립하지 않는다.
+      let coversWild = false
+      for (const wildId of wildIds) {
+        if (candidate.matches.has(wildId)) {
+          coversWild = true
+          break
+        }
+      }
+      if (!coversWild) continue
+      const multiplier = candidate.bestPayout[k] ?? 0
+      if (multiplier <= 0) continue
+      if (best === null) {
+        best = candidate
+        continue
+      }
+      const bestMultiplier = best.bestPayout[k] ?? 0
+      let better: boolean
+      if (multiplier !== bestMultiplier) better = multiplier > bestMultiplier
+      else if ((candidate.group === null) !== (best.group === null)) better = candidate.group === null
+      else better = (candidate.bestCount[k] ?? 0) > (best.bestCount[k] ?? 0)
+      if (better) best = candidate
+    }
+    champions.push(best === null ? null : best.key)
+  }
+  return champions
 }
 
 /** 해석적 RTP 계산기가 읽는 읽기 전용 후보 정보. */
@@ -123,6 +180,19 @@ export interface LineCandidate {
  */
 export function getLineCandidates(math: GameMath): readonly LineCandidate[] {
   return getEvaluator(math).candidates
+}
+
+/** `wild: true`인 심볼 id 집합. */
+export function getWildIds(math: GameMath): ReadonlySet<SymbolId> {
+  return getEvaluator(math).wildIds
+}
+
+/**
+ * 와일드만으로 채워진 연속에서 지급할 후보. index = 연속 길이, value = 후보 key(없으면 null).
+ * ways 평가기와 해석적 RTP가 **같은 표**를 보게 하려고 노출한다.
+ */
+export function getWildChampions(math: GameMath): readonly (string | null)[] {
+  return getEvaluator(math).wildChampions
 }
 
 const evaluatorCache = new WeakMap<GameMath, Evaluator>()

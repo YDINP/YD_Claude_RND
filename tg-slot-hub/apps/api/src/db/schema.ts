@@ -76,6 +76,13 @@ export const rounds = pgTable(
     win: bigint('win', { mode: 'number' }).notNull().default(0),
     /** 릴별 정지 위치. grid는 math.json + stops로 언제든 재구성할 수 있어 저장하지 않는다. */
     stops: jsonb('stops').$type<number[]>().notNull(),
+    /**
+     * 뮤테이션 적용 **전** 격자. 뮤테이션은 RNG를 더 소모해 만들어지므로 stops만으로는
+     * 되살릴 수 없다. 연출 재생과 멱등 재전송을 위해 그대로 남긴다.
+     */
+    gridBefore: jsonb('grid_before'),
+    /** 적용된 뮤테이션 (shared `MutationEvent[]`) */
+    mutations: jsonb('mutations'),
     wins: jsonb('wins').notNull(),
     /** 라운드 서버 시드 (hex). 라운드가 끝난 뒤 소유자에게만 공개한다. */
     seed: text('seed').notNull(),
@@ -103,6 +110,8 @@ export const rounds = pgTable(
     freeSpinsAfter: jsonb('free_spins_after'),
     /** 이 스핀으로 세션이 끝났을 때의 요약 `{ total, spins }`. 재전송 복원용 */
     freeSpinsSummary: jsonb('free_spins_summary'),
+    /** 이 라운드에서 진행한 더블업 단계 기록. provably fair 공개에 쓴다 */
+    gambleSteps: jsonb('gamble_steps'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique('rounds_user_id_idempotency_key_unique').on(table.userId, table.idempotencyKey)]

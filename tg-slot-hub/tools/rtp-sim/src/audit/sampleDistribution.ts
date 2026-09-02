@@ -1,5 +1,4 @@
-import { computeAnalyticRtp, createSeededRng } from '@tgslot/slot-engine'
-import { Z95 } from './stats.js'
+import { computeAnalyticRtp, computeExactRtp, createSeededRng, isAnalytic } from '@tgslot/slot-engine'
 import type { GameMath } from '@tgslot/slot-engine'
 import {
   Accumulators,
@@ -17,6 +16,16 @@ import type { DistributionMethod, DistributionReport, RtpPrecision } from './typ
 
 /** 해석 모드에서 분포·기여도를 추정할 기본 유료 스핀 수. */
 export const DEFAULT_SAMPLE_SPINS = 2_000_000
+
+/**
+ * 몬테카를로 모델의 기본 스핀 수.
+ *
+ * RTP까지 표본이라 95% 신뢰구간 반폭 0.2%p를 맞춰야 게이트를 통과한다.
+ * 지금 팩들의 분산에서 그 폭을 넘기려면 2천3백만 스핀쯤이 필요하다. 여유를 둬 2천5백만으로 잡는다.
+ * (2천만에서는 sheriff-sixgun이 반폭 0.214%p로 아슬하게 걸렸다.)
+ * 2백만으로는 0.6%p 수준이라 "목표 안에 있다"는 판정 자체가 성립하지 않는다.
+ */
+export const DEFAULT_MC_SAMPLE_SPINS = 25_000_000
 
 export interface SampleOptions {
   spins?: number
@@ -56,8 +65,21 @@ export function sampleDistribution(
 
   const rtpSource = options.rtpSource ?? 'analytic'
   const betPerLine = betPerLineOf(math, totalBet)
-  // 표본이 RTP까지 맡는 경우에도 분해(라인/스캐터/프리스핀)는 닫힌 식 쪽을 참고값으로 남긴다.
-  const analytic = computeAnalyticRtp(math, totalBet)
+
+  /*
+   * RTP와 그 분해는 **엔진의 디스패처**에서 가져온다.
+   *
+   * 닫힌 식이 성립하는 모델은 `computeAnalyticRtp`가 정확값을 주지만, 성립하지 않는 모델에서는
+   * 그 함수가 던지지 않고 조용히 틀린 값을 준다 (뮤테이션 몫을 통째로 빼먹는다).
+   * 그래서 `isAnalytic`으로 갈라 몬테카를로 모델은 `computeExactRtp`의 몬테카를로 경로를 쓴다.
+   * 게이트 테스트도 같은 함수를 부르므로 두 곳의 숫자가 어긋날 수 없다.
+   */
+  const analyticSafe = isAnalytic(math)
+  const engineMc =
+    rtpSource === 'sample' || !analyticSafe
+      ? computeExactRtp(math, totalBet, { mcSpins: spins, mcSeed: seed, sampleSpins: 0 })
+      : null
+  const analytic = analyticSafe ? computeAnalyticRtp(math, totalBet) : null
   const labels = buildLabelMap(math)
   const acc = new Accumulators(math)
   const bucketCounts = new Array<number>(HISTOGRAM_BUCKETS.length).fill(0)
@@ -69,8 +91,8 @@ export function sampleDistribution(
   let maxWin = 0
   let freeSpinsPlayed = 0
   let triggers = 0
-  let multiplierSum = 0
-  let multiplierSquareSum = 0
+  let cappedSpins = 0
+  let cappedSpinsLost = 0
 
   for (let i = 0; i < spins; i += 1) {
     const round = playRound(math, totalBet, betPerLine, rng)
@@ -79,6 +101,11 @@ export function sampleDistribution(
     for (const entry of round) {
       if (entry.isFreeSpin) freeSpinsPlayed += 1
       roundWin += entry.spin.totalWin
+      for (const feature of entry.spin.features) {
+        if (feature.type !== 'freeSpinsCapped') continue
+        cappedSpins += 1
+        cappedSpinsLost += feature.requested - feature.granted
+      }
       for (const win of entry.spin.wins) acc.addLine(win, entry.multiplier)
       if (entry.spin.scatterWin > 0) {
         const scatterFeature = entry.spin.features.find((feature) => feature.type === 'scatterWin')
@@ -98,8 +125,6 @@ export function sampleDistribution(
       if (roundWin > maxWin) maxWin = roundWin
     }
     const multiplier = roundWin / totalBet
-    multiplierSum += multiplier
-    multiplierSquareSum += multiplier * multiplier
     const bucket = bucketIndexFor(multiplier)
     bucketCounts[bucket] = (bucketCounts[bucket] ?? 0) + 1
     bucketMultiplier[bucket] = (bucketMultiplier[bucket] ?? 0) + multiplier
@@ -109,23 +134,24 @@ export function sampleDistribution(
   options.onProgress?.(1)
 
   const denominator = spins * totalBet
-  const sampledRtp = multiplierSum / spins
-  const variance = Math.max(0, multiplierSquareSum / spins - sampledRtp * sampledRtp)
-  const stdErr = Math.sqrt(variance) / Math.sqrt(spins)
-  const halfWidth = Z95 * stdErr
-  const method: DistributionMethod = rtpSource === 'sample' ? 'monte-carlo' : 'analytic'
-  const rtp = rtpSource === 'sample' ? sampledRtp : analytic.rtp
+  const useEngineMc = engineMc !== null
+  const method: DistributionMethod = useEngineMc ? 'monte-carlo' : 'analytic'
+  const rtp = useEngineMc ? engineMc.rtp : (analytic?.rtp ?? 0)
+  const breakdown = useEngineMc ? engineMc.breakdown : (analytic?.breakdown ?? { lines: 0, scatter: 0, freeSpins: 0 })
+
+  const mcInfo = engineMc?.monteCarlo
+  const halfWidth = mcInfo === undefined ? 0 : (mcInfo.ci95[1] - mcInfo.ci95[0]) / 2
   const precision: RtpPrecision | null =
-    rtpSource === 'sample'
-      ? {
-          spins,
-          seed,
-          stdErr,
+    mcInfo === undefined
+      ? null
+      : {
+          spins: mcInfo.spins,
+          seed: mcInfo.seed,
+          stdErr: mcInfo.stdErr,
           ci95HalfWidth: halfWidth,
-          ci95Low: rtp - halfWidth,
-          ci95High: rtp + halfWidth,
+          ci95Low: mcInfo.ci95[0],
+          ci95High: mcInfo.ci95[1],
         }
-      : null
 
   return {
     method,
@@ -136,7 +162,7 @@ export function sampleDistribution(
     observations: spins,
     sampleSeed: seed,
     rtp,
-    breakdown: analytic.breakdown,
+    breakdown,
     contributionTotal: acc.total / denominator,
     hitRate: hits / spins,
     maxWinMultiplier: maxWin / totalBet,
@@ -149,7 +175,7 @@ export function sampleDistribution(
     mutations: mutationRows(acc, spins, totalBet, rtp),
     counts: countRows(acc, denominator, 1),
     histogram: buildHistogramRows(bucketCounts, bucketMultiplier, spins),
-    observedFeatures: { triggers, freeSpins: freeSpinsPlayed, spins },
+    observedFeatures: { triggers, freeSpins: freeSpinsPlayed, spins, cappedSpins, cappedSpinsLost },
     precision,
   }
 }

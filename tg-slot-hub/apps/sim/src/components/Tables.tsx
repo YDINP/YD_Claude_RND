@@ -321,6 +321,14 @@ export function FeatureTable({ features }: { features: FeatureReport }) {
         ? '전수 조사 (표본 없음)'
         : features.observedFreeSpinsPerPaidSpin.toFixed(4),
     ],
+    [
+      '프리스핀 상한에 걸린 스핀',
+      features.cappedSpins === null
+        ? '전수 조사 (표본 없음)'
+        : features.cappedSpins === 0
+          ? '0회'
+          : `${num(features.cappedSpins)}회 (잘린 ${num(features.cappedSpinsLost ?? 0)}회)`,
+    ],
   ]
   return <KeyValueTable rows={rows} />
 }

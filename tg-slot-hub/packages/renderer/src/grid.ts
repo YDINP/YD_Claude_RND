@@ -32,6 +32,24 @@ export function symbolAt(math: GameMath, reel: number, stop: number, row: number
  * 렌더러는 엔진을 런타임 의존성으로 끌어오지 않기 위해 이 함수를 따로 갖고,
  * 테스트에서 엔진 결과와 교차 검증한다.
  */
+/**
+ * 같은 칸을 가리키는 좌표를 하나로 줄인다. 처음 나온 순서는 그대로 지킨다.
+ *
+ * ways 게임에서는 여러 심볼의 승리가 같은 칸을 겹쳐 짚는다. 그대로 두면 한 칸에
+ * 연출을 몇 겹씩 걸었다가 끄는 일이 반복되고, `stagger` 인덱스도 실제 칸 수보다 커진다.
+ */
+export function dedupePositions(positions: readonly GridPosition[]): GridPosition[] {
+  const seen = new Set<string>()
+  const unique: GridPosition[] = []
+  for (const position of positions) {
+    const key = `${position[0]}:${position[1]}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    unique.push(position)
+  }
+  return unique
+}
+
 export function stopsToGrid(math: GameMath, stops: readonly number[]): SymbolId[][] {
   if (stops.length !== math.reels) {
     throw new RangeError(`stops 개수(${stops.length})가 reels(${math.reels})와 다르다`)

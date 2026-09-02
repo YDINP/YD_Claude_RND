@@ -122,6 +122,25 @@ export const WaysConfigSchema = z.object({
 })
 export type WaysConfig = z.infer<typeof WaysConfigSchema>
 
+/**
+ * 더블업(갬블) 설정. **엔진은 검증만 하고 추첨은 API가 한다.**
+ *
+ * 승리 후 판돈을 걸어 `chance` 확률로 `payout`배가 되거나 전부 잃는다.
+ * 기대값이 중립(`chance x payout = 1`)이면 RTP를 바꾸지 않고 분산만 키운다.
+ */
+export const GambleConfigSchema = z.object({
+  type: z.literal('coin-flip'),
+  /** 한 단계 성공 확률. 0과 1 사이의 열린 구간. */
+  chance: z.number().gt(0).lt(1),
+  /** 성공 시 배수. 코인 플립은 2. */
+  payout: z.number().gt(1),
+  /** 연속 도전 상한. 여기 도달하면 자동 회수한다. */
+  maxSteps: z.number().int().min(1).max(10),
+  /** 자동 회수를 부르는 판돈 상한. **총 베팅액의 배수**다. */
+  maxWinCap: z.number().gt(0).optional(),
+})
+export type GambleConfig = z.infer<typeof GambleConfigSchema>
+
 const BaseGameMathSchema = z.object({
   id: z.string().min(1),
   reels: z.number().int().min(1),
@@ -145,6 +164,8 @@ const BaseGameMathSchema = z.object({
   paytable: z.record(z.string().min(1), PayruleSchema),
   wild: WildConfigSchema.optional(),
   scatter: ScatterConfigSchema.optional(),
+  /** 더블업. 엔진은 검증만 하고 추첨은 API가 한다. */
+  gamble: GambleConfigSchema.optional(),
   /** 총 베팅액(코인) 후보. 모두 paylines.length로 나누어떨어져야 한다. */
   betLevels: z.array(z.number().int().positive()).min(1),
   /** 기본 게임만의 목표 RTP. 잭팟 같은 허브 기여분은 포함하지 않는다. */
@@ -337,6 +358,14 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
         if (math.paytable[mutation.symbol] !== undefined) {
           issue(`미스터리 심볼 ${mutation.symbol}은 페이테이블을 가질 수 없다`, at('symbol'))
         }
+        // 스캐터가 공개로 사라지면 트리거 확률이, 와일드면 대체 규칙이 스핀마다 흔들린다.
+        const placeholder = declared.get(mutation.symbol)
+        if (placeholder?.scatter === true) {
+          issue(`스캐터 ${mutation.symbol}은 미스터리 심볼이 될 수 없다`, at('symbol'))
+        }
+        if (placeholder?.wild === true) {
+          issue(`와일드 ${mutation.symbol}은 미스터리 심볼이 될 수 없다`, at('symbol'))
+        }
         const entries = Object.entries(mutation.weights)
         if (entries.length === 0) issue('공개 가중 표가 비었다', at('weights'))
         for (const [id] of entries) {
@@ -391,6 +420,43 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
       }
     }
   })
+
+  // 두 뮤테이션이 같은 심볼을 **읽으면** 결과가 선언 순서에 통째로 좌우된다.
+  // (예: q를 공개하는 미스터리 둘, 또는 q를 승급시키면서 동시에 공개하는 조합)
+  // 앞 단계가 그 심볼을 화면에서 지워 버리므로 뒤 단계는 사실상 죽은 규칙이 되고,
+  // 해석적 RTP도 어느 쪽을 기준으로 삼아야 할지 정할 수 없다. 그래서 막는다.
+  // randomWild의 symbol은 **놓는** 심볼이라 읽기 대상이 아니다.
+  // 랜덤 와일드로 뿌린 뒤 확장 와일드로 늘리는 조합은 의도된 설계라 허용한다.
+  const mutationSources = new Map<string, number>()
+  ;(math.mutations ?? []).forEach((mutation, index) => {
+    const source =
+      mutation.type === 'upgrade'
+        ? mutation.from
+        : mutation.type === 'randomWild'
+          ? undefined
+          : mutation.symbol
+    if (source === undefined) return
+    const first = mutationSources.get(source)
+    if (first !== undefined) {
+      issue(
+        `뮤테이션 ${first}과 ${index}가 같은 심볼(${source})을 읽는다. 순서에 따라 결과가 달라진다`,
+        ['mutations', index],
+      )
+      return
+    }
+    mutationSources.set(source, index)
+  })
+
+  if (math.gamble) {
+    // 기대값이 1을 넘으면 갬블만 반복해 하우스 엣지가 사라진다.
+    const expected = math.gamble.chance * math.gamble.payout
+    if (expected > 1 + 1e-9) {
+      issue(
+        `갬블 기대값(${expected})이 1을 넘는다. chance x payout <= 1 이어야 한다`,
+        ['gamble', 'payout'],
+      )
+    }
+  }
 
   if (math.scatter) {
     const cells = math.reels * math.rows

@@ -5,7 +5,7 @@ import { runMonteCarlo } from './mc.js'
 import { Z95 } from './stats.js'
 import { readGroups } from './groups.js'
 import { jackpotAccounting, readManifestExtras } from './jackpot.js'
-import { DEFAULT_SAMPLE_SPINS } from './sampleDistribution.js'
+import { DEFAULT_MC_SAMPLE_SPINS, DEFAULT_SAMPLE_SPINS } from './sampleDistribution.js'
 import { DEFAULT_RUIN_SPINS, DEFAULT_RUIN_START_MULTIPLE, DEFAULT_RUIN_TRIALS, simulateRuin } from './ruin.js'
 import { agreementVerdict, pp } from './stats.js'
 import type {
@@ -48,8 +48,14 @@ export const DEFAULT_AUDIT_SEED = '42'
  */
 export const MAX_CI95_HALF_WIDTH = 0.002
 
-/** 몬테카를로 게임의 베팅 레벨별 검증에 쓰는 스핀 수. 전체 검수보다 작게 잡는다. */
-export const BET_LEVEL_MC_SPINS = 500_000
+/**
+ * 몬테카를로 게임의 베팅 레벨별 검증에 쓰는 스핀 수.
+ *
+ * 레벨마다 전체 검수(2천5백만)를 다시 돌릴 수는 없다. 대신 판정을 표본에 맞춘다 —
+ * 아래 `betLevelPasses`를 볼 것. 스핀을 줄이면 신뢰구간이 넓어져 판정이 느슨해질 뿐,
+ * 없는 근거로 실패시키지는 않는다.
+ */
+export const BET_LEVEL_MC_SPINS = 2_000_000
 
 function pct(value: number, digits = 4): string {
   return `${(value * 100).toFixed(digits)}%`
@@ -110,7 +116,7 @@ export function auditBetLevels(
         method,
         ci95HalfWidth: halfWidth,
         delta,
-        pass: Math.abs(delta) <= RTP_TOLERANCE,
+        pass: betLevelPasses(delta, halfWidth),
       })
     } else {
       const report = computeExactRtp(math, totalBet, { sampleSpins: 0 })
@@ -136,6 +142,21 @@ function onProgress(options: BetLevelOptions, ratio: number): void {
   options.onProgress?.(ratio)
 }
 
+/**
+ * 표본으로 잰 베팅 레벨을 통과시킬지.
+ *
+ * 고정 오차 ±0.5%p로 자르면 안 된다. 50만 스핀에서 신뢰구간 반폭은 1.4%p라
+ * 0.9%p 벗어난 추정값도 순수한 표본 오차로 흔히 나온다. 그것을 실패로 세우면
+ * 게이트가 무작위로 깜빡인다 (실제로 sheriff-sixgun에서 3개 레벨이 그렇게 떨어졌다).
+ *
+ * 그래서 "목표를 벗어났다는 **근거**가 있는가"로 묻는다. 허용 오차에 그 레벨 자신의
+ * 신뢰구간을 더한 것보다 멀면, 표본 오차만으로는 설명되지 않으므로 실패다.
+ */
+export function betLevelPasses(delta: number, ci95HalfWidth: number | null): boolean {
+  const allowance = RTP_TOLERANCE + (ci95HalfWidth ?? 0)
+  return Math.abs(delta) <= allowance
+}
+
 export interface GateInput {
   math: GameMath
   extras: ManifestExtras | null
@@ -143,6 +164,69 @@ export interface GateInput {
   betLevels: BetLevelRow[]
   agreement: AgreementVerdict
   jackpot: JackpotAccounting | null
+}
+
+/**
+ * 몬테카를로 RTP 판정 모드.
+ *
+ * - `ci` — 빠른 1차 관문. 40만 스핀으로 몇 초 안에 돈다. 규칙은 카탈로그의
+ *   `|rtp-target| <= max(0.5%p, 3xSE)`. 표본이 거칠수록 허용 오차가 넓어지므로
+ *   **크게 어긋난 모델만** 잡는다. 이걸 통과했다고 "목표를 맞췄다"고 말할 수 없다.
+ * - `audit` — 정식 감사. 2천5백만 스핀 이상으로 돌리고 거리와 정밀도를 함께 본다.
+ *   최종 판정은 여기서만 나오며 근거는 커밋된 리포트에 남는다.
+ */
+export type McGateMode = 'ci' | 'audit'
+
+export interface McMeasurement {
+  rtp: number
+  target: number
+  /** 스핀당 지급 배수의 표본표준편차 / sqrt(n). 엔진의 `monteCarlo.stdErr`. */
+  stdErr: number
+}
+
+/** 몬테카를로 RTP 수용 판정. 게이트 테스트와 검수 리포트가 이 함수 하나를 공유한다. */
+export interface McAcceptance {
+  mode: McGateMode
+  /** 목표와의 거리가 이 모드의 허용 오차 안인가. */
+  withinTarget: boolean
+  /** 신뢰구간이 판정할 수 있을 만큼 좁은가. `ci` 모드에서는 요구하지 않으므로 항상 true. */
+  precise: boolean
+  pass: boolean
+  /** 이 모드가 적용한 거리 허용 오차. */
+  tolerance: number
+  ci95HalfWidth: number
+  delta: number
+}
+
+/**
+ * 몬테카를로로 낸 RTP를 받아들일지 정한다. 두 관문이 이 함수 하나를 나눠 쓴다.
+ *
+ * 규칙을 두 곳에 따로 적으면 CI는 통과하는데 리포트는 실패하는(또는 그 반대) 상태가 생긴다.
+ * 그래서 분기는 `mode` 하나로만 두고, 어느 규칙이 적용됐는지 결과에 실어 보낸다.
+ */
+export function acceptMonteCarloRtp(measurement: McMeasurement, mode: McGateMode): McAcceptance {
+  const { rtp, target, stdErr } = measurement
+  const delta = rtp - target
+  const ci95HalfWidth = Z95 * stdErr
+
+  if (mode === 'ci') {
+    // 표본이 거칠면 허용 오차가 넓어진다. 정밀도는 따로 묻지 않는다.
+    const tolerance = Math.max(RTP_TOLERANCE, 3 * stdErr)
+    const withinTarget = Math.abs(delta) <= tolerance
+    return { mode, withinTarget, precise: true, pass: withinTarget, tolerance, ci95HalfWidth, delta }
+  }
+
+  const withinTarget = Math.abs(delta) <= RTP_TOLERANCE
+  const precise = ci95HalfWidth <= MAX_CI95_HALF_WIDTH
+  return {
+    mode,
+    withinTarget,
+    precise,
+    pass: withinTarget && precise,
+    tolerance: RTP_TOLERANCE,
+    ci95HalfWidth,
+    delta,
+  }
 }
 
 /**
@@ -174,12 +258,15 @@ export function rtpGate(
     }
   }
 
-  const precise = precision.ci95HalfWidth <= MAX_CI95_HALF_WIDTH
+  const verdict = acceptMonteCarloRtp(
+    { rtp: distribution.rtp, target: math.rtpTarget, stdErr: precision.stdErr },
+    'audit',
+  )
   const detail =
     `${pct(distribution.rtp)} (${pp(delta)}), 95% CI ±${(precision.ci95HalfWidth * 100).toFixed(3)}%p` +
     ` / ${precision.spins.toLocaleString('en-US')} 스핀, 시드 ${precision.seed}` +
-    (precise ? '' : ' — 표본 부족')
-  return { label: `${label} + 95% CI 반폭 ≤ 0.2%p`, pass: withinTarget && precise, detail }
+    (verdict.precise ? '' : ' — 표본 부족')
+  return { label: `${label} + 95% CI 반폭 ≤ 0.2%p`, pass: verdict.pass, detail }
 }
 
 /** 리포트 맨 위에 오는 합격/불합격 목록. */
@@ -195,7 +282,10 @@ export function buildGates(input: GateInput): GateRow[] {
   const gates: GateRow[] = [rtpGate(math, distribution, delta, methodLabel)]
   gates.push(
     {
-      label: '모든 베팅 레벨에서 목표 ± 0.5%p 안',
+      label:
+        distribution.method === 'monte-carlo'
+          ? '모든 베팅 레벨이 목표 ± 0.5%p + 자기 신뢰구간 안'
+          : '모든 베팅 레벨에서 목표 ± 0.5%p 안',
       pass: failedLevels.length === 0,
       detail:
         failedLevels.length === 0
@@ -321,8 +411,17 @@ export function runAudit(math: GameMath, manifestJson: unknown, options: AuditOp
   const phase =
     method === 'enumerate' ? '전수 조사' : method === 'analytic' ? '해석적 계산 + 표본' : '몬테카를로 표본'
 
+  // 표본 수를 지정하지 않으면 방법에 맡긴다. 몬테카를로 모델은 정밀도 게이트 때문에
+  // 훨씬 큰 표본이 필요하므로 여기서 2백만으로 못박으면 항상 "표본 부족"으로 떨어진다.
+  /*
+   * 몬테카를로 모델에서는 이 표본이 곧 RTP 측정이다. 그래서 `--spins`(options.spins)를
+   * 그대로 받아들인다 — 사용자가 "스핀 수"라고 말할 때 뜻하는 것이 이 값이기 때문이다.
+   * 해석 모델에서 `--spins`는 교차 검증용 몬테카를로이고 분포 표본과 별개다.
+   */
+  const defaultSampleSpins =
+    method === 'monte-carlo' ? Math.max(spins, DEFAULT_MC_SAMPLE_SPINS) : DEFAULT_SAMPLE_SPINS
   const distribution = analyzeDistribution(math, totalBet, {
-    sampleSpins: options.sampleSpins ?? DEFAULT_SAMPLE_SPINS,
+    sampleSpins: options.sampleSpins ?? defaultSampleSpins,
     sampleSeed: seed,
     maxCombos: options.maxCombos,
     forceMethod: method,

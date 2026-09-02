@@ -71,6 +71,13 @@
       "when": 1788373558213,
       "tag": "0009_acoustic_madrox",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788375283949,
+      "tag": "0010_polite_tarantula",
+      "breakpoints": true
     }
   ]
 }

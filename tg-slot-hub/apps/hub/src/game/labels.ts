@@ -33,7 +33,17 @@ export function groupMembers(math: GameMath, groupId: string): string[] {
   return math.groups?.[groupId]?.members ?? []
 }
 
-/** 승리 라인 하나의 표시 이름. `group`으로 맞았으면 그룹 이름, 아니면 심볼 이름. */
-export function winLineLabel(math: GameMath, win: { symbol: string; group?: string }, locale: Locale): string {
-  return win.group ? groupLabel(math, win.group, locale) : symbolLabel(math, win.symbol, locale)
+/**
+ * 승리 라인 하나의 표시 이름. `group`으로 맞았으면 그룹 이름, 아니면 심볼 이름.
+ * ways 지급(`win.ways`가 있음)이면 "심볼 × N ways"로 붙인다 — "ways"는 장르 용어라 로케일과
+ * 무관하게 영어 그대로 둔다(렌더러 팀 예시 문구도 한국어 라벨에서 "ways"를 그대로 썼다).
+ * 라인 게임은 라인 1개당 배당이라 경로 수 개념이 없으므로 `ways`가 없으면 이름만 돌려준다.
+ */
+export function winLineLabel(
+  math: GameMath,
+  win: { symbol: string; group?: string; ways?: number },
+  locale: Locale,
+): string {
+  const label = win.group ? groupLabel(math, win.group, locale) : symbolLabel(math, win.symbol, locale)
+  return win.ways ? `${label} × ${win.ways} ways` : label
 }

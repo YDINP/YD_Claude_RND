@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { evaluateWays, getBetPerWay } from './ways.js'
+import { getWildChampions } from './evaluate.js'
 import { computeAnalyticRtp, expectedWaysMultiplier } from './analytic.js'
 import { computeExactRtp, simulate } from './rtp.js'
 import { createSeededRng } from './rng/seeded.js'
@@ -142,6 +143,120 @@ describe('bothWays', () => {
       ['b', 'a', 'a'],
     ])
     expect(evaluateWays(grid, math, BET_PER_WAY).wins.some((win) => win.symbol === 'a')).toBe(false)
+  })
+})
+
+describe('와일드만으로 채워진 줄', () => {
+  it('후보마다 쌓지 않고 챔피언 하나로만 지급한다', () => {
+    // 6칸이 전부 와일드다. a·b·w 모두 3연속이 성립하지만 배수가 가장 큰 w만 지급한다.
+    const grid = makeGrid([
+      ['w', 'w', 'w'],
+      ['w', 'w', 'w'],
+    ])
+    const result = evaluateWays(grid, math, BET_PER_WAY)
+    expect(result.wins).toHaveLength(1)
+    expect(result.wins[0]).toMatchObject({ symbol: 'w', count: 3, ways: 8, multiplier: 200 })
+    expect(result.totalWin).toBe(1600)
+  })
+
+  it('지급 칸에 와일드가 아닌 매치가 섞이면 후보별로 그대로 지급한다', () => {
+    // 릴 2에 a와 b가 하나씩 있어 두 후보 모두 "전부 와일드"가 아니다.
+    const grid = makeGrid([
+      ['w', 'w', 'a'],
+      ['w', 'w', 'b'],
+    ])
+    const result = evaluateWays(grid, math, BET_PER_WAY)
+    const symbols = result.wins.map((win) => win.symbol).sort()
+    expect(symbols).toEqual(['a', 'b'])
+    expect(result.wins.find((win) => win.symbol === 'a')).toMatchObject({ ways: 4, multiplier: 100 })
+    expect(result.wins.find((win) => win.symbol === 'b')).toMatchObject({ ways: 4, multiplier: 20 })
+  })
+
+  it('챔피언은 배당표만 보고 정해진다 (길이별 최고 배수)', () => {
+    // 길이 2에서 배당이 있는 후보는 a뿐이고, 길이 3에서는 w가 가장 크다.
+    expect(getWildChampions(math)).toEqual([null, null, 'a', 'w'])
+  })
+
+  it('와일드가 없는 모델은 접을 것이 없다', () => {
+    const noWild = parseGameMath({
+      ...JSON.parse(JSON.stringify(makeWaysMath())),
+      symbols: [
+        { id: 'w', name: { en: 'NotWild' } },
+        { id: 'a', name: { en: 'Alpha' } },
+        { id: 'b', name: { en: 'Beta' } },
+      ],
+      wild: undefined,
+    })
+    expect(getWildChampions(noWild)).toEqual([null, null, null, null])
+  })
+})
+
+/** 배당이 릴 수보다 짧게 끊기는 bothWays 모델. 좌우의 지급 칸이 서로 다르다. */
+function makeShortLadderMath(overrides: Record<string, unknown> = {}): ReturnType<typeof parseGameMath> {
+  return parseGameMath({
+    id: 'short-ladder',
+    reels: 3,
+    rows: 2,
+    payModel: 'ways',
+    ways: { base: 8, betDivisor: 5, bothWays: true },
+    symbols: [
+      { id: 'w', name: { en: 'Wild' }, wild: true },
+      { id: 'a', name: { en: 'Alpha' } },
+      { id: 'b', name: { en: 'Beta' } },
+      { id: 'c', name: { en: 'Filler' } },
+    ],
+    strips: [
+      ['a', 'c', 'c', 'b', 'c', 'c', 'w', 'c'],
+      ['a', 'c', 'c', 'b', 'c', 'c', 'w', 'c'],
+      ['a', 'c', 'c', 'b', 'c', 'c', 'w', 'c'],
+    ],
+    // 배당이 2연속에서 끝난다. 3연속이어도 지급 칸은 2릴뿐이다.
+    paytable: { a: { 2: 10 }, b: { 2: 4 }, w: { 2: 50 } },
+    wild: { substitutesFor: 'all' },
+    betLevels: [5, 50],
+    rtpTarget: 0.9,
+    volatility: 'high',
+    ...overrides,
+  })
+}
+
+describe('bothWays와 짧은 배당표', () => {
+  const short = makeShortLadderMath()
+
+  it('연속이 전 릴이어도 지급 칸이 짧으면 좌우를 따로 센다', () => {
+    const grid = makeGrid([
+      ['a', 'a', 'a'],
+      ['a', 'a', 'a'],
+    ])
+    const result = evaluateWays(grid, short, BET_PER_WAY)
+    const aWins = result.wins.filter((win) => win.symbol === 'a')
+    expect(aWins.map((win) => win.direction).sort()).toEqual(['ltr', 'rtl'])
+    // 지급 칸은 각 방향의 앞 2릴, 경로 수는 2 x 2 = 4다.
+    expect(aWins.every((win) => win.count === 2 && win.ways === 4 && win.multiplier === 10)).toBe(true)
+    expect(result.totalWin).toBe(80)
+  })
+
+  it('지급 칸이 전 릴을 덮으면 왼쪽에서 한 번만 센다', () => {
+    const full = makeShortLadderMath({ paytable: { a: { 2: 10, 3: 30 }, b: { 2: 4 }, w: { 2: 50 } } })
+    const grid = makeGrid([
+      ['a', 'a', 'a'],
+      ['a', 'a', 'a'],
+    ])
+    const aWins = evaluateWays(grid, full, BET_PER_WAY).wins.filter((win) => win.symbol === 'a')
+    expect(aWins).toHaveLength(1)
+    expect(aWins[0]).toMatchObject({ direction: 'ltr', count: 3, ways: 8, multiplier: 30 })
+  })
+
+  it('전수 조사와 해석값이 정확히 일치한다', () => {
+    const enumerated = computeExactRtp(short, 50, { sampleSpins: 0 })
+    expect(enumerated.method).toBe('enumerate')
+    expect(computeAnalyticRtp(short, 50).rtp).toBeCloseTo(enumerated.rtp, 12)
+  })
+
+  it('한 방향만 읽는 같은 모델도 전수 조사와 일치한다', () => {
+    const oneWay = makeShortLadderMath({ ways: { base: 8, betDivisor: 5, bothWays: false } })
+    const enumerated = computeExactRtp(oneWay, 50, { sampleSpins: 0 })
+    expect(computeAnalyticRtp(oneWay, 50).rtp).toBeCloseTo(enumerated.rtp, 12)
   })
 })
 

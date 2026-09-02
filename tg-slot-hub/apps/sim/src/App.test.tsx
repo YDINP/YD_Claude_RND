@@ -13,7 +13,8 @@ vi.mock('./lib/mcClient.js', () => ({
 
 const { App } = await import('./App.js')
 const { loadGameCatalog, defaultBet } = await import('./games.js')
-const { auditBetLevels, enumerateAudit, sampleDistribution } = await import('@tgslot/rtp-sim/audit')
+const { isAnalytic } = await import('@tgslot/slot-engine')
+const { analyzeDistribution, auditBetLevels, enumerateAudit, sampleDistribution } = await import('@tgslot/rtp-sim/audit')
 
 function pack(id: string) {
   const found = loadGameCatalog().packs.find((candidate) => candidate.id === id)
@@ -183,20 +184,22 @@ describe('검수 시뮬레이터', () => {
 
   it('몬테카를로 결과는 몬테카를로 배지와 정밀도 표를 띄운다', async () => {
     const { runDistributionInWorker } = await import('./lib/mcClient.js')
-    const fruit = pack('fruit-fiesta')
-    const bet = defaultBet(fruit.math)
-    const distribution = sampleDistribution(fruit.math, bet, {
-      spins: 3_000,
-      seed: 'mc',
-      rtpSource: 'sample',
-    })
+    // 방법은 엔진 디스패처가 고른다. 닫힌 식이 없는 팩이어야 몬테카를로가 나온다.
+    const mcPack = loadGameCatalog().packs.find((candidate) => !isAnalytic(candidate.math))
+    expect(mcPack).toBeDefined()
+    if (mcPack === undefined) return
+
+    const bet = defaultBet(mcPack.math)
+    const distribution = analyzeDistribution(mcPack.math, bet, { sampleSpins: 2_000, sampleSeed: 'mc' })
+    expect(distribution.method).toBe('monte-carlo')
+
     vi.mocked(runDistributionInWorker).mockReturnValueOnce({
       promise: Promise.resolve({ distribution, betLevels: [] }),
       cancel: vi.fn(),
     })
 
     render(<App />)
-    fireEvent.change(screen.getByLabelText('게임'), { target: { value: 'fruit-fiesta' } })
+    fireEvent.change(screen.getByLabelText('게임'), { target: { value: mcPack.id } })
     fireEvent.click(await screen.findByRole('button', { name: '해석적 산출 + 표본' }))
 
     await waitFor(() => {

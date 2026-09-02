@@ -14,6 +14,7 @@ import {
   LeaderboardResponseSchema,
   MissionsResponseSchema,
   GameStateResponseSchema,
+  GambleResponseSchema,
   type AuthResponse,
   type MeResponse,
   type GamesResponse,
@@ -26,6 +27,8 @@ import {
   type LeaderboardResponse,
   type MissionsResponse,
   type GameStateResponse,
+  type GambleResponse,
+  type GambleSide,
   type Locale,
 } from '@tgslot/shared'
 
@@ -235,6 +238,32 @@ const roundSeedSchema: ParseableSchema<RoundSeedResponse> = {
 /** GET /rounds/:id/seed — provably fair 검증용 서버 시드 공개 */
 export async function getRoundSeed(token: string, roundId: string): Promise<RoundSeedResponse> {
   return authedFetch<RoundSeedResponse>(`/rounds/${encodeURIComponent(roundId)}/seed`, roundSeedSchema, token)
+}
+
+/**
+ * POST /rounds/:id/gamble — 더블업 한 판. `pick`(heads/tails)이 실제로 뒤집힌 면과 같으면 2배,
+ * 다르면 0. 클라이언트는 절대 결과를 스스로 계산하지 않는다 — 서버 응답만 신뢰한다.
+ * `idempotencyKey`는 서버가 사실상 필수로 요구한다(8자 미만/누락이면 400 BAD_REQUEST) — 재전송
+ * 방어를 위해 호출부(store)가 매 단계 새 키를 만들고, 네트워크 오류/GAMBLE_IN_PROGRESS(409)/
+ * GAMBLE_TIMEOUT(503)일 때만 같은 키로 재시도한다.
+ */
+export async function gamble(
+  token: string,
+  roundId: string,
+  pick: GambleSide,
+  idempotencyKey: string,
+): Promise<GambleResponse> {
+  return authedFetch<GambleResponse>(`/rounds/${encodeURIComponent(roundId)}/gamble`, GambleResponseSchema, token, {
+    method: 'POST',
+    body: JSON.stringify({ pick, idempotencyKey }),
+  })
+}
+
+/** POST /rounds/:id/collect — 지금까지 걸려 있는 더블업 당첨금을 챙기고 세션을 끝낸다. */
+export async function collectGamble(token: string, roundId: string): Promise<GambleResponse> {
+  return authedFetch<GambleResponse>(`/rounds/${encodeURIComponent(roundId)}/collect`, GambleResponseSchema, token, {
+    method: 'POST',
+  })
 }
 
 // ---- 허브 기능 (Phase 3) ----
