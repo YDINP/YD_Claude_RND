@@ -52,6 +52,8 @@ pub struct AppConfig {
     /// when you sit in a voice channel all day). Same matching as rules.
     pub meeting_ignore: Vec<String>,
     pub rules: Vec<AppRule>,
+    /// Favourite pack ids, shown first in lists and in the tray menu.
+    pub favorites: Vec<String>,
     /// Show the settings window on launch (false after first run).
     pub show_window_on_start: bool,
 }
@@ -71,6 +73,7 @@ impl Default for AppConfig {
             meeting_auto_mute: true,
             meeting_ignore: vec![],
             rules: vec![],
+            favorites: vec![],
             show_window_on_start: true,
         }
     }

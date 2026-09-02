@@ -50,6 +50,7 @@ export type AppConfig = {
   meeting_ignore: string[]; // 이 앱들의 마이크 사용은 회의로 치지 않음 (규칙과 같은 매칭)
   rules: AppRule[];
   show_window_on_start: boolean;
+  favorites: string[]; // 즐겨찾기 팩 id 목록. 목록 상단·트레이 메뉴에 먼저 표시
 };
 
 export type PackInfo = {
@@ -74,6 +75,8 @@ export const toggleMute = () => invoke<boolean>("toggle_mute");
 export const setMute = (muted: boolean) =>
   invoke<void>("set_mute", { muted });
 export const openPacksDir = () => invoke<void>("open_packs_dir");
+export const previewPack = (id: string | null) =>
+  invoke<void>("preview_pack", { id });
 export const showWindow = () => invoke<void>("show_window");
 export const hideWindow = () => invoke<void>("hide_window");
 export const quitApp = () => invoke<void>("quit");

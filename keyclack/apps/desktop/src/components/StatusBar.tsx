@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Dict } from "../i18n";
 import type { Status } from "../ipc";
 
@@ -21,6 +22,7 @@ export function StatusBar({
   onIgnoreMicApp,
   micAppIgnored,
 }: StatusBarProps) {
+  const [testValue, setTestValue] = useState("");
   const muted = status?.effective_muted ?? false;
   const packLabel = status
     ? status.pack_id === null
@@ -102,6 +104,21 @@ export function StatusBar({
       {status && !status.hook_installed && (
         <div className="status-warning">{t.statusHookMissing}</div>
       )}
+
+      <div className="typing-test">
+        <span className="field-label">{t.typingTestLabel}</span>
+        <input
+          type="text"
+          className="typing-test-input"
+          value={testValue}
+          onChange={(e) => setTestValue(e.target.value)}
+          onBlur={() => setTestValue("")}
+          placeholder={t.typingTestPlaceholder}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <p className="field-description">{t.typingTestHint}</p>
+      </div>
     </section>
   );
 }

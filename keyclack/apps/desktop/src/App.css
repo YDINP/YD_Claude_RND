@@ -368,6 +368,18 @@ select {
   padding: 5px 8px;
 }
 
+.typing-test {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.typing-test-input {
+  width: 100%;
+}
+
 /* ---------- packs ---------- */
 
 .pack-list {
@@ -444,6 +456,68 @@ select {
   font-weight: 700;
   color: var(--accent);
   flex: 0 0 auto;
+}
+
+.pack-list-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 2px 0;
+}
+
+.pack-preview-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.pack-preview-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.pack-preview-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pack-favorite-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.pack-favorite-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pack-favorite-btn-active {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* ---------- fields ---------- */

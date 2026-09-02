@@ -8,6 +8,7 @@ import {
   listPacks,
   onStatus,
   openPacksDir,
+  previewPack,
   setConfig as saveConfig,
   toggleMute,
   type AppConfig,
@@ -120,6 +121,32 @@ function App() {
     }
   }, []);
 
+  const handlePreviewPack = useCallback(async (id: string | null) => {
+    try {
+      await previewPack(id);
+    } catch (err) {
+      setLoadError(String(err));
+    }
+  }, []);
+
+  const handleToggleFavorite = useCallback(
+    (id: string) => {
+      setConfig((prev) => {
+        if (!prev) return prev;
+        const isFavorite = prev.favorites.includes(id);
+        const next = {
+          ...prev,
+          favorites: isFavorite
+            ? prev.favorites.filter((f) => f !== id)
+            : [...prev.favorites, id],
+        };
+        scheduleSave(next);
+        return next;
+      });
+    },
+    [scheduleSave],
+  );
+
   const handleIgnoreMicApp = useCallback(
     (exe: string) => {
       setConfig((prev) => {
@@ -165,7 +192,10 @@ function App() {
           t={t}
           packs={packs}
           selectedPack={config?.pack ?? null}
+          favorites={config?.favorites ?? []}
           onSelect={(id) => updateConfig({ pack: id })}
+          onToggleFavorite={handleToggleFavorite}
+          onPreview={handlePreviewPack}
           onOpenFolder={handleOpenFolder}
           onRefresh={refreshPacks}
           refreshing={refreshingPacks}

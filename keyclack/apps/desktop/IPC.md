@@ -14,6 +14,7 @@
 | `toggle_mute` | – | `boolean` | 수동 음소거 토글, 새 값 반환 |
 | `set_mute` | `{ muted: boolean }` | – | 수동 음소거 설정 |
 | `open_packs_dir` | – | – | 탐색기로 팩 폴더 열기 (없으면 생성) |
+| `preview_pack` | `{ id: string \| null }` | – | 현재 팩을 바꾸지 않고 해당 팩으로 짧은 타건 시퀀스(약 1초)를 재생. null = 내장 합성음 |
 | `show_window` / `hide_window` | – | – | 설정 창 표시/숨김 |
 | `quit` | – | – | 앱 종료 |
 
@@ -70,6 +71,7 @@ type AppConfig = {
   meeting_ignore: string[];      // 이 앱들의 마이크 사용은 회의로 치지 않음 (규칙과 같은 매칭). 예: ["discord.exe"]
   rules: AppRule[];
   show_window_on_start: boolean;
+  favorites: string[];           // 즐겨찾기 팩 id 목록. 목록 상단·트레이 메뉴에 먼저 표시
 };
 
 type PackInfo = {

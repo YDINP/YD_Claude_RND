@@ -40,6 +40,11 @@ const ko = {
   packsVersion: "버전",
   packsSelected: "선택됨",
   packsSelect: "선택",
+  packsFavoritesLabel: "즐겨찾기",
+  packsFavoriteAdd: "즐겨찾기에 추가",
+  packsFavoriteRemove: "즐겨찾기에서 해제",
+  packsPreview: "미리듣기",
+  packsPreviewing: "재생 중…",
 
   // Sound
   soundHeading: "소리",
@@ -78,6 +83,12 @@ const ko = {
   generalAutostart: "Windows 시작 시 실행",
   generalShowOnStart: "시작 시 창 표시",
 
+  // Typing test
+  typingTestLabel: "타이핑 테스트",
+  typingTestPlaceholder: "여기에 타이핑해서 소리를 확인해 보세요",
+  typingTestHint:
+    "이 앱은 전역에서 키 입력을 감지하므로, 여기에 입력해도 다른 곳과 동일하게 현재 팩 소리가 재생됩니다. 입력한 내용은 저장·전송되지 않으며 포커스를 벗어나면 지워집니다.",
+
   // Footer
   footerKeyCount: "입력한 키 수",
   footerPrivacy: "키 값은 저장·전송하지 않습니다. 개수만 셉니다.",
@@ -112,6 +123,11 @@ const en: Dict = {
   packsVersion: "version",
   packsSelected: "Selected",
   packsSelect: "Select",
+  packsFavoritesLabel: "Favorites",
+  packsFavoriteAdd: "Add to favorites",
+  packsFavoriteRemove: "Remove from favorites",
+  packsPreview: "Preview",
+  packsPreviewing: "Playing…",
 
   soundHeading: "Sound",
   soundVolume: "Volume",
@@ -146,6 +162,11 @@ const en: Dict = {
   generalHotkeyPlaceholder: "e.g. Ctrl+Shift+M",
   generalAutostart: "Run at Windows startup",
   generalShowOnStart: "Show window on startup",
+
+  typingTestLabel: "Typing test",
+  typingTestPlaceholder: "Type here to hear the current sound",
+  typingTestHint:
+    "This app hooks keys system-wide, so typing here plays the current pack's sound just like anywhere else. Nothing you type is stored or sent, and it clears when you leave the field.",
 
   footerKeyCount: "Keys typed",
   footerPrivacy: "Key values are never stored or sent. Only the count is kept.",

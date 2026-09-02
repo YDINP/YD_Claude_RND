@@ -48,6 +48,7 @@ enum Cmd {
     Config(AppConfig),
     ManualMute(bool),
     Context { foreground: Option<String>, mic: Option<String> },
+    Preview(Option<String>),
     Shutdown,
 }
 
@@ -128,9 +129,37 @@ impl Service {
         next
     }
 
+    /// Play a short typing sequence with `pack` (dir name, or None for the built-in
+    /// click) without changing the active pack.
+    pub fn preview(&self, pack: Option<String>) {
+        let _ = self.cmd_tx.send(Cmd::Preview(pack));
+    }
+
     pub fn shutdown(&self) {
         let _ = self.cmd_tx.send(Cmd::Shutdown);
     }
+}
+
+/// Keycodes of the preview phrase: a few letters, space, more letters, enter, backspace.
+const PREVIEW_SEQ: &[u32] = &[20, 23, 24, 57, 19, 24, 31, 28, 14];
+
+fn spawn_preview(pack: Arc<Pack>, play_tx: Sender<PlayCmd>) {
+    std::thread::Builder::new()
+        .name("keyclack-preview".into())
+        .spawn(move || {
+            let mut engine = Engine::new(pack, EngineConfig { allow_injected: true, volume: 0.9, ..Default::default() });
+            for &code in PREVIEW_SEQ {
+                let (sc, ext) = if code >= 0x0E00 { ((code & 0xFF) as u8, true) } else { (code as u8, false) };
+                let mut ev = KeyEvent { scancode: sc, extended: ext, numpad_nav: false, injected: true, is_down: true, t: Instant::now() };
+                if let Some(c) = engine.on_key(ev) { let _ = play_tx.try_send(c); }
+                std::thread::sleep(Duration::from_millis(70));
+                ev.is_down = false;
+                ev.t = Instant::now();
+                if let Some(c) = engine.on_key(ev) { let _ = play_tx.try_send(c); }
+                std::thread::sleep(Duration::from_millis(if code == 57 || code == 28 { 160 } else { 95 }));
+            }
+        })
+        .expect("spawn preview thread");
 }
 
 struct Audio {
@@ -321,6 +350,20 @@ fn run(
                             reconcile(&cfg, &eff, manual_mute, &mut audio, &mut audio_device_req, &mut loaded_pack_id, &mut engine, false);
                         }
                         notify(&status);
+                    }
+                    Cmd::Preview(id) => {
+                        let rate = audio.as_ref().map(|a| a.sample_rate).unwrap_or(48000);
+                        if loaded_pack_id.as_ref() == Some(&id) {
+                            spawn_preview(engine.pack().clone(), play_tx.clone());
+                        } else {
+                            match load_pack(&cfg, id.as_deref(), rate) {
+                                Ok(p) => spawn_preview(Arc::new(p), play_tx.clone()),
+                                Err(e) => {
+                                    status.lock().unwrap().last_error = Some(format!("preview {id:?}: {e}"));
+                                    notify(&status);
+                                }
+                            }
+                        }
                     }
                     Cmd::Shutdown => break,
                 }

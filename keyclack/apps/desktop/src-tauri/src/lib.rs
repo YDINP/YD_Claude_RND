@@ -4,7 +4,7 @@
 use std::sync::Mutex;
 
 use keyclack_app::{packs, AppConfig, PackInfo, Service, Status};
-use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{CheckMenuItem, IsMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent, Wry};
 use tauri_plugin_autostart::ManagerExt as _;
@@ -44,7 +44,7 @@ fn set_config(app: AppHandle, state: State<AppState>, config: AppConfig) -> Resu
     if prev.autostart != config.autostart {
         apply_autostart(&app, config.autostart);
     }
-    if prev.pack != config.pack || prev.packs_dir != config.packs_dir {
+    if prev.pack != config.pack || prev.packs_dir != config.packs_dir || prev.favorites != config.favorites || prev.autostart != config.autostart {
         rebuild_tray_menu(&app);
     }
     Ok(config)
@@ -74,6 +74,11 @@ fn toggle_mute(state: State<AppState>) -> bool {
 #[tauri::command]
 fn set_mute(state: State<AppState>, muted: bool) {
     state.service.set_manual_mute(muted);
+}
+
+#[tauri::command]
+fn preview_pack(state: State<AppState>, id: Option<String>) {
+    state.service.preview(id);
 }
 
 #[tauri::command]
@@ -133,42 +138,103 @@ fn apply_autostart(app: &AppHandle, enabled: bool) {
     }
 }
 
+fn pack_item(app: &AppHandle, id: &str, label: &str, checked: bool) -> Option<CheckMenuItem<Wry>> {
+    CheckMenuItem::with_id(app, format!("pack:{id}"), label, true, checked, None::<&str>).ok()
+}
+
+/// Tray menu:
+///   [x] 음소거
+///   ---
+///   ★ favourite packs (checkable)      — only if any
+///   ---
+///   [x] 내장 합성음 / 사운드팩 ▸ (all packs, checkable)
+///   ---
+///   설정 열기 / 팩 폴더 열기 / [x] Windows 시작 시 실행
+///   ---
+///   종료
 fn rebuild_tray_menu(app: &AppHandle) {
     let state = app.state::<AppState>();
     let cfg = state.config.lock().unwrap().clone();
     let status = state.service.status();
-    let Ok(mute) = CheckMenuItem::with_id(app, "mute", "음소거 (Mute)", true, status.manual_mute, None::<&str>) else {
+    let Ok(mute) = CheckMenuItem::with_id(app, "mute", "음소거 (Mute)	Ctrl+Shift+M", true, status.manual_mute, None::<&str>) else {
         return;
     };
-    let mut items: Vec<Box<dyn tauri::menu::IsMenuItem<Wry>>> = vec![Box::new(mute.clone())];
-    if let Ok(sep) = PredefinedMenuItem::separator(app) {
-        items.push(Box::new(sep));
+    let all = packs::scan(&cfg.packs_dir());
+    let is_current = |id: &str| cfg.pack.as_deref() == Some(id);
+    let mut items: Vec<Box<dyn IsMenuItem<Wry>>> = vec![Box::new(mute.clone())];
+    let sep = |items: &mut Vec<Box<dyn IsMenuItem<Wry>>>| {
+        if let Ok(s) = PredefinedMenuItem::separator(app) {
+            items.push(Box::new(s));
+        }
+    };
+    sep(&mut items);
+
+    let favs: Vec<_> = all.iter().filter(|p| cfg.favorites.iter().any(|f| f == &p.id)).collect();
+    if !favs.is_empty() {
+        for p in &favs {
+            if let Some(i) = pack_item(app, &p.id, &format!("★ {}", p.name), is_current(&p.id)) {
+                items.push(Box::new(i));
+            }
+        }
+        sep(&mut items);
     }
-    if let Ok(i) = CheckMenuItem::with_id(app, "pack:", "내장 합성음", true, cfg.pack.is_none(), None::<&str>) {
+    if let Some(i) = pack_item(app, "", "내장 합성음 (Built-in)", cfg.pack.is_none()) {
         items.push(Box::new(i));
     }
-    for p in packs::scan(&cfg.packs_dir()) {
-        let checked = cfg.pack.as_deref() == Some(p.id.as_str());
-        if let Ok(i) = CheckMenuItem::with_id(app, format!("pack:{}", p.id), &p.name, true, checked, None::<&str>) {
-            items.push(Box::new(i));
+    {
+        let mut sub_items: Vec<Box<dyn IsMenuItem<Wry>>> = Vec::new();
+        for p in &all {
+            if let Some(i) = pack_item(app, &p.id, &p.name, is_current(&p.id)) {
+                sub_items.push(Box::new(i));
+            }
+        }
+        if sub_items.is_empty() {
+            if let Ok(i) = MenuItem::with_id(app, "noop", "(팩 없음 — 팩 폴더에 넣으세요)", false, None::<&str>) {
+                sub_items.push(Box::new(i));
+            }
+        }
+        let refs: Vec<&dyn IsMenuItem<Wry>> = sub_items.iter().map(|b| b.as_ref()).collect();
+        if let Ok(sub) = Submenu::with_items(app, format!("사운드팩 (Packs) — {}", all.len()), true, &refs) {
+            items.push(Box::new(sub));
         }
     }
-    if let Ok(sep) = PredefinedMenuItem::separator(app) {
-        items.push(Box::new(sep));
-    }
+    sep(&mut items);
     if let Ok(i) = MenuItem::with_id(app, "open", "설정 열기 (Settings)", true, None::<&str>) {
         items.push(Box::new(i));
     }
+    if let Ok(i) = MenuItem::with_id(app, "folder", "팩 폴더 열기 (Open packs folder)", true, None::<&str>) {
+        items.push(Box::new(i));
+    }
+    if let Ok(i) = CheckMenuItem::with_id(app, "autostart", "Windows 시작 시 실행 (Run at startup)", true, cfg.autostart, None::<&str>) {
+        items.push(Box::new(i));
+    }
+    sep(&mut items);
     if let Ok(i) = MenuItem::with_id(app, "quit", "종료 (Quit)", true, None::<&str>) {
         items.push(Box::new(i));
     }
-    let refs: Vec<&dyn tauri::menu::IsMenuItem<Wry>> = items.iter().map(|b| b.as_ref()).collect();
-    if let Ok(menu) = Menu::with_items(app, &refs) {
-        if let Some(tray) = app.tray_by_id(TRAY_ID) {
-            let _ = tray.set_menu(Some(menu));
+    let refs: Vec<&dyn IsMenuItem<Wry>> = items.iter().map(|b| b.as_ref()).collect();
+    match Menu::with_items(app, &refs) {
+        Ok(menu) => {
+            if let Some(tray) = app.tray_by_id(TRAY_ID) {
+                if let Err(e) = tray.set_menu(Some(menu)) {
+                    eprintln!("[tray] set_menu: {e}");
+                }
+            } else {
+                eprintln!("[tray] no tray icon {TRAY_ID:?}");
+            }
         }
+        Err(e) => eprintln!("[tray] build menu: {e}"),
     }
     *state.mute_item.lock().unwrap() = Some(mute);
+}
+
+fn save_and_apply(app: &AppHandle, cfg: AppConfig) {
+    let state = app.state::<AppState>();
+    if let Err(e) = cfg.save() {
+        eprintln!("[config] save: {e}");
+    }
+    *state.config.lock().unwrap() = cfg.clone();
+    state.service.apply_config(cfg);
 }
 
 fn on_menu(app: &AppHandle, id: &str) {
@@ -178,6 +244,18 @@ fn on_menu(app: &AppHandle, id: &str) {
             state.service.toggle_mute();
         }
         "open" => show_main(app),
+        "folder" => {
+            let dir = state.config.lock().unwrap().packs_dir();
+            let _ = std::fs::create_dir_all(&dir);
+            let _ = tauri_plugin_opener::open_path(dir.to_string_lossy().to_string(), None::<&str>);
+        }
+        "autostart" => {
+            let mut cfg = state.config.lock().unwrap().clone();
+            cfg.autostart = !cfg.autostart;
+            apply_autostart(app, cfg.autostart);
+            save_and_apply(app, cfg);
+            rebuild_tray_menu(app);
+        }
         "quit" => {
             state.service.shutdown();
             app.exit(0);
@@ -186,9 +264,7 @@ fn on_menu(app: &AppHandle, id: &str) {
             if let Some(pack) = other.strip_prefix("pack:") {
                 let mut cfg = state.config.lock().unwrap().clone();
                 cfg.pack = if pack.is_empty() { None } else { Some(pack.to_string()) };
-                let _ = cfg.save();
-                *state.config.lock().unwrap() = cfg.clone();
-                state.service.apply_config(cfg);
+                save_and_apply(app, cfg);
                 rebuild_tray_menu(app);
             }
         }
@@ -268,6 +344,7 @@ pub fn run() {
             toggle_mute,
             set_mute,
             open_packs_dir,
+            preview_pack,
             show_window,
             hide_window,
             quit

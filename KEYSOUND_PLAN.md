@@ -1,7 +1,7 @@
 # KeyClack — 기계식 키보드 사운드 시뮬레이터 계획서
 
 작성일: 2026-09-02
-상태: **Phase 3 사운드 팩 완료 (2026-09-02)**. 절차적 합성 팩 3종 내장 + 팩 빌더 CLI(녹음 슬라이서) + 첫 실행 자동 설치. 테스트 46개. Phase 0 §10, Phase 1 §11, Phase 2 §12, Phase 3 §13. 안드로이드 기획은 `keyclack/docs/ANDROID_PLAN.md`
+상태: **Phase 3 사운드 팩 완료 + 3.5 사용성 (2026-09-02)**. 절차적 합성 팩 9종 내장, 즐겨찾기, 미리듣기, 트레이 메뉴 확장 + 팩 빌더 CLI(녹음 슬라이서) + 첫 실행 자동 설치. 테스트 46개. Phase 0 §10, Phase 1 §11, Phase 2 §12, Phase 3 §13. 안드로이드 기획은 `keyclack/docs/ANDROID_PLAN.md`
 프로젝트 폴더: `keyclack/`
 
 ## 0. 목표와 전제
@@ -302,3 +302,14 @@ cargo run --release -- --backend cpal --seconds 10   # 비교용
 **청취 평가는 사용자가 해야 한다.** 합성음은 실제 녹음보다 "장난감 같다"고 느껴질 수 있다. 녹음 팩 제작 절차: 조용한 방에서 키 하나를 15회 누른 wav → `packtool slice rec.wav packs/my --max 8` → 스페이스·엔터·백스페이스도 각각 `--name SPACE --max 1` 등으로 → `packtool assemble packs/my --name "내 키보드"`.
 
 **다음**: Phase 4 배포(NSIS 인스톨러는 `npm run tauri build`로 이미 가능, 코드 서명·MS Store MSIX 검토) 또는 안드로이드 A0.
+
+## 14. Phase 3.5 — 사용자 요청 반영 (2026-09-02)
+
+| 요청 | 구현 |
+|---|---|
+| 팩 더 많이 (도각도각·조약돌 등) | 합성 모델 9종: 청축·갈축·저소음 적축 + **Thock(도각도각)**·**Pebble(조약돌, 비화성 부분음)**·Marble(유리구슬)·Topre(러버돔 붕괴음)·Typewriter(타자바 링)·Bubble(사인 처프). `synth_pack.rs`의 `Model`에 partials/burst/damp/extra 필드로 일반화 |
+| 즐겨찾기 | `AppConfig.favorites`. UI 별표 토글 + 즐겨찾기 먼저 정렬, 트레이 메뉴 상단 ★ 섹션 |
+| 앱에서 미리듣기 | `preview_pack(id)`: 현재 팩을 바꾸지 않고 9키 타건 시퀀스(글자·스페이스·엔터·백스페이스) 재생. UI 각 팩 ▶ 버튼. 상태 바에 타이핑 테스트 칸(저장 안 함) |
+| 트레이 우클릭 메뉴 | 음소거 / ★즐겨찾기 / 내장 합성음 / 사운드팩 서브메뉴(N개) / 설정 열기 / 팩 폴더 열기 / 시작 시 실행 체크 / 종료. UI 자동화로 실제 표시 검증 |
+
+검증: 릴리스 빌드(`npm run tauri build`) → NSIS 설치 파일 + 단독 exe. UI 클릭으로 미리듣기 호출·팩 선택 저장 확인. 트레이 메뉴 캡처 확인.
