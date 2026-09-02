@@ -1,7 +1,16 @@
+/** 렌더러의 `FrameWindowSchema`와 같은 모양. `packages/renderer/src/theme.ts` 참고. */
+export interface ThemeFrameWindow {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 export interface ThemeUpdate {
   symbols?: Record<string, string>
   frame?: string
   background?: string
+  frameLayout?: { window: ThemeFrameWindow }
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -24,6 +33,7 @@ export function mergeTheme(existing: unknown, update: ThemeUpdate): Record<strin
 
   if (update.frame !== undefined) base.frame = update.frame
   if (update.background !== undefined) base.background = update.background
+  if (update.frameLayout !== undefined) base.frameLayout = { window: { ...update.frameLayout.window } }
   if (base.palette === undefined) base.palette = {}
 
   return base

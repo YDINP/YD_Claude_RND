@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { basename, resolve } from 'node:path'
 import { logError } from './log.js'
 import { promptsJsonPath, readJson, resolveGameDir } from './paths.js'
-import { applyThemeUpdate, generateAsset, planAssets } from './pipeline.js'
+import { applyThemeUpdate, generateAsset, planAssets, reprocessAsset } from './pipeline.js'
 import { checkCodexAvailable, createCodexProvider } from './provider/codex.js'
 import { createComfyProvider } from './provider/comfy.js'
 import { createGeminiProvider } from './provider/gemini.js'
@@ -20,6 +20,7 @@ const USAGE = `사용법: pnpm --filter @tgslot/theme-gen gen <게임 폴더> [�
   --only <id1,id2,...>                     지정한 asset id만 생성
   --dry-run                                실제 호출 없이 계획만 출력
   --force                                  기존 출력 파일이 있어도 다시 생성
+  --reprocess                              프로바이더를 호출하지 않고 art/raw/<id>.png에서 후처리만 다시 돌린다
   -h, --help                               도움말
 
 자동 선택 순서: --provider → THEME_GEN_PROVIDER → OPENAI_API_KEY → GEMINI_API_KEY → codex 로그인 → 로컬 ComfyUI
@@ -31,6 +32,7 @@ interface CliOptions {
   only?: string[]
   dryRun: boolean
   force: boolean
+  reprocess: boolean
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -39,6 +41,7 @@ function parseArgs(argv: string[]): CliOptions {
   let only: string[] | undefined
   let dryRun = false
   let force = false
+  let reprocess = false
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
@@ -70,6 +73,9 @@ function parseArgs(argv: string[]): CliOptions {
       case '--force':
         force = true
         break
+      case '--reprocess':
+        reprocess = true
+        break
       case '-h':
       case '--help':
         console.log(USAGE)
@@ -82,7 +88,7 @@ function parseArgs(argv: string[]): CliOptions {
   }
 
   if (target === undefined) throw new Error(`대상 게임 폴더를 지정할 것\n\n${USAGE}`)
-  const options: CliOptions = { target, dryRun, force }
+  const options: CliOptions = { target, dryRun, force, reprocess }
   if (provider !== undefined) options.provider = provider
   if (only !== undefined) options.only = only
   return options
@@ -145,6 +151,17 @@ async function main(): Promise<void> {
   const assets = selectAssets(file, options.only)
 
   console.log(formatHeader(basename(gameDir), promptsPath, file))
+
+  if (options.reprocess) {
+    console.log('  provider: (none — --reprocess, art/raw/<id>.png에서 후처리만 다시 돌린다)\n')
+    const themeUpdate: ThemeUpdate = {}
+    for (const asset of assets) {
+      await reprocessAsset(gameDir, asset, themeUpdate)
+    }
+    applyThemeUpdate(gameDir, themeUpdate)
+    console.log('\n완료')
+    return
+  }
 
   const env = readEnv()
   const checkCodex = options.dryRun

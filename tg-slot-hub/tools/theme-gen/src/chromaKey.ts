@@ -42,8 +42,25 @@ function hueDistance(a: number, b: number): number {
   return diff > 180 ? 360 - diff : diff
 }
 
-/** 알파 채널만 대상으로 하는 박스 블러. 경계 밖은 무시(clamp)한다. */
-function featherAlpha(rgba: Buffer, width: number, height: number, radius: number): Buffer {
+/** 3채널(RGB) 입력을 alpha=255로 채운 4채널(RGBA) 버퍼로 만든다. 이미 4채널이면 복사만 한다. */
+export function toRgbaBuffer(image: RawImage): Buffer {
+  if (image.channels === 4) return Buffer.from(image.data)
+
+  const { data, width, height, channels } = image
+  const rgba = Buffer.alloc(width * height * 4)
+  for (let i = 0; i < width * height; i += 1) {
+    const src = i * channels
+    const dst = i * 4
+    rgba[dst] = data[src] ?? 0
+    rgba[dst + 1] = data[src + 1] ?? 0
+    rgba[dst + 2] = data[src + 2] ?? 0
+    rgba[dst + 3] = 255
+  }
+  return rgba
+}
+
+/** 알파 채널만 대상으로 하는 박스 블러. 경계 밖은 무시(clamp)한다. frameWindow의 창 경계 페더링에도 재사용한다. */
+export function featherAlpha(rgba: Buffer, width: number, height: number, radius: number): Buffer {
   const out = Buffer.from(rgba)
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {

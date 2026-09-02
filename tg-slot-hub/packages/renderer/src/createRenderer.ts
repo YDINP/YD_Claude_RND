@@ -1,14 +1,24 @@
 import type { RendererOptions, ShowWinsOptions, SlotRenderer, SpinToOptions } from './types.js'
 import type { RendererCore, ResolvedRendererOptions } from './internal.js'
 import type { WinLine } from '@tgslot/slot-engine'
+import { DEFAULT_OVERFLOW_X } from './constants.js'
 import { resolveReducedMotion } from './motion.js'
+
+/** 릴을 크게 보여주는 쪽이 기본이다. 프레임 가장자리는 잘려도 된다. */
+const DEFAULT_FIT = 'window'
 
 function resolveOptions(options: RendererOptions): ResolvedRendererOptions {
   const initialStops =
     options.initialStops !== undefined && options.initialStops.length === options.math.reels
       ? [...options.initialStops]
       : new Array<number>(options.math.reels).fill(0)
-  return { ...options, reducedMotion: resolveReducedMotion(options.reducedMotion), initialStops }
+  return {
+    ...options,
+    reducedMotion: resolveReducedMotion(options.reducedMotion),
+    initialStops,
+    fit: options.fit ?? DEFAULT_FIT,
+    overflowX: options.overflowX ?? DEFAULT_OVERFLOW_X,
+  }
 }
 
 /**

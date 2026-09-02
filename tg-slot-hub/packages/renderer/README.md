@@ -29,6 +29,8 @@ PixiJS는 이 안에서 **동적 import** 되므로 순수 로직만 쓰는 코�
 | `initialStops` | `number[]` | 첫 화면 정지 위치. 없으면 전부 0 |
 | `onEvent` | `(e) => void` | `reelStop` / `spinEnd` / `winShown` |
 | `reducedMotion` | `boolean` | 미지정 시 `prefers-reduced-motion`을 따른다 |
+| `fit` | `'window' \| 'width'` | 프레임을 맞추는 방식. 기본 `'window'` |
+| `overflowX` | `number` | `'window'`에서 프레임이 폭을 넘어도 되는 비율. 기본 0.30 |
 
 ### `SlotRenderer`
 
@@ -76,11 +78,15 @@ type RendererEvent =
 
 | 항목 | 값 |
 |---|---|
-| 스핀 | 가속(`power2.in`) → 감속(`power2.out`) → 오버슛 후 바운스 복귀 |
+| 스핀 시작 | 모든 릴이 함께 위로 0.25칸 반동(110ms, `power2.out`) 후 아래로 튕겨 나간다 |
+| 스핀 | 가속(`power2.in`) → 감속(`power2.out`) |
 | 정지 순서 | 왼쪽 → 오른쪽, `stagger` 간격 (기본 160ms) |
+| 정지 | 튕기지 않는다. 0.04칸(90ms)만 아주 짧게 자리를 잡는다 |
 | 승리 라인 순환 | 900ms 주기, 심볼 펄스 1 → 1.12 → 1 |
+| 승리 강조 | 브라스 광채 3겹 + 2px 테두리. 페이라인은 3px, 불투명도 0.6 |
+| 은은한 연출 | 프레임 위 대각선 빛 쓸기(6초 주기), 배경 반짝임 12~20개 |
 | 빅윈 | 총배당이 베팅액의 **20배 이상**이면 코인 샤워 (스프라이트 60개 상한) |
-| 모션 축소 | 전체 스핀 300ms 이하, 오버슛·펄스·파티클 없음 |
+| 모션 축소 | 전체 스핀 300ms 이하. 반동·마무리·펄스·파티클·빛 쓸기·반짝임 모두 없음 |
 
 `showWins`에 `totalBet`을 주면 빅윈 판정이 정확해진다.
 없으면 `sum(multiplier) / paylines.length`로 같은 값을 유도한다
@@ -132,7 +138,8 @@ const theme = await loadTheme('/games/classic-777', math)
 | 출처 | 소유자 | `destroy()` 때 |
 |---|---|---|
 | `Assets.load` (심볼·배경·프레임 이미지) | Pixi 전역 에셋 캐시 | 건드리지 않는다 (다음 진입에서 재사용) |
-| 캔버스로 그린 폴백 심볼·코인 텍스처 | **이 렌더러 인스턴스** | GPU 리소스까지 해제한다 |
+| 캔버스로 그린 폴백 심볼·코인·빛·반짝임 텍스처 | **이 렌더러 인스턴스** | GPU 리소스까지 해제한다 |
+| 크로마키를 다시 돌려 만든 프레임 텍스처 | **이 렌더러 인스턴스** | GPU 리소스까지 해제한다 |
 
 캔버스 텍스처는 캐시가 소유하지 않으므로 렌더러가 직접 정리하지 않으면
 로비 → 게임 → 로비를 오갈 때마다 GPU에 쌓인다. `destroy()`는 앱을 내린 뒤
@@ -154,14 +161,63 @@ const theme = await loadTheme('/games/classic-777', math)
 
 동작:
 
-- `frame`이 **있으면** 캔버스 크기가 프레임 이미지 크기(컨테이너 폭에 맞춘 배율)가 되고,
-  릴·마스크·페이라인 오버레이가 통째로 `window` 사각형 안으로 들어간다.
+- `frame`이 **있으면** 릴·마스크·페이라인 오버레이가 통째로 `window` 사각형 안으로 들어간다.
   창보다 릴이 작으면 가운데 정렬한다. 벡터 베젤은 그리지 않는다.
 - 프레임 스프라이트는 릴 **위에** 얹는다. 창이 알파로 뚫려 있어야 릴이 비쳐 보인다
   (아트 파이프라인의 크로마키 절차가 그 구멍을 만든다). 창이 불투명하면 릴이 가려진다.
 - `frame`이 **없으면** 지금까지의 벡터 베젤 경로를 그대로 탄다. 이미지 로딩이 실패해도 같은 경로로 되돌아간다.
 
-순수 계산은 `frameWindowRect(frameW, frameH, window)`와 `computeFrameLayout(...)`이 맡고 둘 다 단위 테스트가 있다.
+### `fit`: 릴을 얼마나 크게 볼 것인가
+
+| 값 | 캔버스 | 배율 기준 | 잘리는 것 |
+|---|---|---|---|
+| `'window'` (기본) | **언제나 컨테이너 전체** | 릴 창을 키우되 프레임이 세로로 다 들어오게 | 프레임 좌우 기둥 |
+| `'width'` | 프레임 표시 크기 | 프레임 **전체**가 폭에 들어오도록 | 없음 |
+
+프레임 전체를 폭에 맞추면 마퀴와 페이라인 레전드가 세로를 다 먹어 릴이 작아진다. 그래서:
+
+```
+scale = min(containerW * (1 + overflowX) / frameW,  containerH / frameH)
+```
+
+폭으로는 `overflowX`(기본 0.30)만큼 넘치게 두어 좌우 기둥을 잘라낸다.
+세로 항이 프레임 전체 높이를 기준으로 하므로, **높이를 잰 컨테이너에서는 프레임이 세로로 절대 넘치지 않는다.**
+마퀴와 레전드가 잘리지 않는다는 뜻이다.
+
+캔버스는 언제나 컨테이너 전체다. 무언가를 자르는 것은 컨테이너의 `overflow`뿐이고 캔버스는 아니다.
+프레임은 가로 가운데에 놓고, 세로로는 프레임 전체를 가운데 맞춘다.
+높이를 아직 못 잰 동안에만 프레임이 컨테이너보다 커질 수 있고, 그때는 **창**을 가운데로 맞춘다.
+
+넘친 프레임을 잘라내야 하므로 렌더러가 컨테이너의 `overflow`를 `hidden`으로 바꾼다.
+원래 값은 기억해 두었다가 `destroy()`에서 되돌린다.
+
+### 심볼 크기는 창 비율이 정한다
+
+`overflowX`를 키워도 릴이 무한정 커지지는 않는다. 창보다 격자가 먼저 묶이기 때문이다.
+classic-777 창은 가로가 세로보다 넓은데(386x321) 3x3 격자는 정사각형이라 **세로에 묶인다**.
+
+| 컨테이너 | 배율 | 프레임 | 창 | 심볼 |
+|---|---|---|---|---|
+| 390x760 | 0.469 | 506.7x760.0 | 386.2x320.9 (폭의 99%) | 102.8px |
+| 390x844 | 0.469 | 507.0x760.5 | 386.4x321.1 (폭의 99%) | 102.9px |
+| 430x932 | 0.518 | 559.0x838.5 | 426.1x354.0 (폭의 99%) | 113.5px |
+
+심볼을 더 키우려면 `overflowX`가 아니라 **아트의 창 세로 비율**(`frameLayout.window.h`)을 키워야 한다.
+
+순수 계산은 `frameWindowRect(frameW, frameH, window)`, `computeFrameLayout(...)`,
+`computeWindowFitLayout(...)`이 맡고 셋 다 단위 테스트가 있다.
+
+### 잔여 크로마키 제거
+
+프레임 텍스처를 올리기 전에 CPU에서 초록 키잉을 한 번 더 돌린다.
+아트 파이프라인의 디스필이 놓친 가장자리 초록이 릴 창 둘레에 남는 것을 막기 위해서다.
+
+판정식은 `g > 140 && g > r + 50 && g > b + 50`(`isChromaGreen`)이다.
+브라스(빨강 ≈ 초록)와 청록(파랑이 큼)은 걸리지 않는다.
+**대신 채도 높은 초록은 무엇이든 뚫린다.** 프레임 아트에 초록 잎이나 보석을 넣으면 안 된다.
+
+지울 초록이 없으면 텍스처를 새로 만들지 않고 원본을 그대로 쓴다.
+크로스오리진 이미지라 픽셀을 못 읽는 경우에도 원본으로 되돌아가므로 프레임이 사라지지 않는다.
 
 ## 순수 로직 export
 
@@ -173,8 +229,10 @@ Pixi 없이도 쓸 수 있는 부분은 따로 내보낸다. 허브의 테스트
 | `symbolAt`, `reelStripWindow`, `wrapIndex` | 스트립 조회 |
 | `normalizePosition`, `spinTargetPosition` | 릴 위치 계산 |
 | `computeLayout`, `symbolCenter`, `paylinePoints`, `positionRects` | 기하 계산 |
-| `frameWindowRect`, `computeFrameLayout` | 프레임 아트 안의 릴 창 배치 |
-| `buildSpinPlan` | 릴별 타이밍 계획 |
+| `frameWindowRect`, `computeFrameLayout`, `computeWindowFitLayout` | 프레임 아트 안의 릴 창 배치 |
+| `buildSpinPlan` | 릴별 타이밍 계획. 반동 시간과 마무리 시간을 포함한다 |
+| `isChromaGreen`, `keyOutGreen` | 잔여 크로마키 판정과 제거 |
+| `planSparkles`, `planLightSweep` | 은은한 연출 배치 |
 | `isBigWin`, `winBetMultiple`, `paylineColor`, `buildWinCycle`, `formatWinLabel` | 승리 연출 규칙 |
 | `parseTheme`, `loadTheme`, `resolveSymbolSource`, `resolveFrameWindow` | 테마 검증·로딩 |
 

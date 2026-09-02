@@ -51,6 +51,25 @@ const en = {
   leaderboardEndsIn: 'Ends in {time}',
   levelUp: 'Level up! {from} → {to}',
   betLockedHint: 'Max bet at your level is {maxBet}',
+  // game help
+  help: 'Help',
+  paytableTitle: 'Paytable',
+  paylinesTitle: 'Paylines',
+  betPerLine: 'Bet per line: {amount}',
+  wildSubstitutesAll: 'Wild substitutes for all symbols',
+  // settings
+  settings: 'Settings',
+  language: 'Language',
+  localeAuto: 'Auto',
+  sound: 'Sound',
+  haptics: 'Haptics',
+  reduceMotion: 'Reduce motion',
+  reduceMotionHint: 'Applies next time you open a game',
+  fairnessSectionTitle: 'Fairness check',
+  fairnessExplainer:
+    'Every spin publishes a hashed server seed before you play and reveals the real seed after, so you can verify the result yourself.',
+  version: 'Version',
+  supportId: 'Support ID',
 } as const
 
 export default en

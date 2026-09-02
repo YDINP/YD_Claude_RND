@@ -97,4 +97,102 @@ describe('session store bootstrap', () => {
     expect(mockedGetMe).toHaveBeenCalledWith('stored-token')
     expect(mockedAuthTelegram).not.toHaveBeenCalled()
   })
+
+  it('uses the refreshed token when getMe() reauthenticates internally (stale token recovery)', async () => {
+    sessionStorage.setItem('tgslot.token', 'stale-token')
+    mockedGetMe.mockImplementation(async () => {
+      // sdk/api.ts의 authedFetch가 401을 받아 내부적으로 reauth()한 것을 흉내낸다 — reauth()는
+      // getMe()가 resolve되기 전에 store의 token을 이미 새 값으로 갱신해 둔다.
+      useSessionStore.setState({ token: 'fresh-token' })
+      return {
+        user: mockUser,
+        wallet: { coins: 7_000, gems: 0 },
+        levelInfo: { level: 1, xp: 0, nextLevelXp: 100, maxBet: 1000 },
+        jackpot: 0,
+      }
+    })
+
+    await useSessionStore.getState().bootstrap()
+
+    const state = useSessionStore.getState()
+    expect(state.status).toBe('ready')
+    expect(state.token).toBe('fresh-token')
+    expect(state.wallet).toEqual({ coins: 7_000, gems: 0 })
+  })
+})
+
+describe('session store reauth', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockedGetInitDataRaw.mockReturnValue(null)
+    sessionStorage.clear()
+    resetStore()
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('clears the stored token, re-authenticates with initData, and updates token/user/wallet without touching status', async () => {
+    vi.stubEnv('VITE_DEV_MOCK_TMA', 'true')
+    sessionStorage.setItem('tgslot.token', 'stale-token')
+    useSessionStore.setState({ status: 'ready', token: 'stale-token' })
+    mockedAuthTelegram.mockResolvedValue({
+      token: 'fresh-token',
+      user: mockUser,
+      wallet: { coins: 3_000, gems: 0 },
+    })
+
+    const newToken = await useSessionStore.getState().reauth()
+
+    expect(newToken).toBe('fresh-token')
+    const state = useSessionStore.getState()
+    expect(state.status).toBe('ready')
+    expect(state.token).toBe('fresh-token')
+    expect(state.user).toEqual(mockUser)
+    expect(state.wallet).toEqual({ coins: 3_000, gems: 0 })
+    expect(sessionStorage.getItem('tgslot.token')).toBe('fresh-token')
+  })
+
+  it('returns null and clears the token when there is no available initData', async () => {
+    vi.stubEnv('VITE_DEV_MOCK_TMA', 'false')
+    useSessionStore.setState({ status: 'ready', token: 'stale-token' })
+
+    const newToken = await useSessionStore.getState().reauth()
+
+    expect(newToken).toBeNull()
+    expect(useSessionStore.getState().token).toBeNull()
+    expect(mockedAuthTelegram).not.toHaveBeenCalled()
+  })
+
+  it('returns null and clears the token when authTelegram fails', async () => {
+    vi.stubEnv('VITE_DEV_MOCK_TMA', 'true')
+    useSessionStore.setState({ status: 'ready', token: 'stale-token' })
+    mockedAuthTelegram.mockRejectedValue(new Error('boom'))
+
+    const newToken = await useSessionStore.getState().reauth()
+
+    expect(newToken).toBeNull()
+    expect(useSessionStore.getState().token).toBeNull()
+  })
+
+  it('shares a single in-flight reauth across concurrent callers', async () => {
+    vi.stubEnv('VITE_DEV_MOCK_TMA', 'true')
+    let resolveAuth: (value: Awaited<ReturnType<typeof authTelegram>>) => void = () => {}
+    mockedAuthTelegram.mockReturnValue(
+      new Promise((resolve) => {
+        resolveAuth = resolve
+      }),
+    )
+
+    const first = useSessionStore.getState().reauth()
+    const second = useSessionStore.getState().reauth()
+
+    resolveAuth({ token: 'fresh-token', user: mockUser, wallet: { coins: 1, gems: 0 } })
+
+    const [a, b] = await Promise.all([first, second])
+    expect(a).toBe('fresh-token')
+    expect(b).toBe('fresh-token')
+    expect(mockedAuthTelegram).toHaveBeenCalledTimes(1)
+  })
 })

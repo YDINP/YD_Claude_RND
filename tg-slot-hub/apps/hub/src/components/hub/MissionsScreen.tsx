@@ -3,15 +3,14 @@
  */
 import { useEffect, type ReactNode } from 'react'
 import { useHubStore } from '../../store/hub'
-import { useSessionStore } from '../../store/session'
-import { useT } from '../../i18n'
+import { useT, useEffectiveLocale } from '../../i18n'
 import { useCountdown, formatCountdown, nextUtcMidnightIso } from '../../lib/countdown'
 import { Loading } from '../Loading'
 import './MissionsScreen.css'
 
 export function MissionsScreen(): ReactNode {
   const t = useT()
-  const locale = useSessionStore((s) => s.user?.locale ?? 'en')
+  const locale = useEffectiveLocale()
   const status = useHubStore((s) => s.status)
   const missions = useHubStore((s) => s.missions)
   const claimingMissionId = useHubStore((s) => s.claimingMissionId)

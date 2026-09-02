@@ -18,25 +18,37 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--hub-space-sm);
-  padding: var(--hub-space-md) var(--hub-space-lg);
+  height: 52px;
+  padding: 0 var(--hub-space-md);
   background: var(--hub-secondary-bg);
   border-bottom: 1px solid var(--hub-border);
   position: sticky;
   top: 0;
   z-index: 100;
+  flex-shrink: 0;
 }
 
-.hub-game-screen__back {
-  width: 36px;
-  height: 36px;
+.hub-game-screen__back,
+.hub-game-screen__icon-btn {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--hub-card-bg);
   color: var(--hub-text);
-  font-size: 18px;
+  font-size: 16px;
   flex-shrink: 0;
+}
+
+.hub-game-screen__icon-btn {
+  border: 1px solid var(--hub-border);
+  font-weight: 800;
+}
+
+.hub-game-screen__icon-btn:disabled {
+  opacity: 0.4;
 }
 
 .hub-game-screen__back--standalone {
@@ -89,9 +101,13 @@
 }
 
 .hub-game-screen__canvas {
+  /* fit: 'window' 렌더러가 이 컨테이너를 꽉 채우도록 자른다. stage(position: relative)의
+     세로 공간 전부를 차지해야 하므로 flex 자식의 height:100%에 기대지 않고 absolute로 꽉 채운다. */
+  position: absolute;
+  inset: 0;
   width: 100%;
-  aspect-ratio: 1 / 1;
-  max-height: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .hub-game-screen__loading {
@@ -121,7 +137,7 @@
 
 .hub-game-screen__banners {
   position: absolute;
-  top: var(--hub-space-lg);
+  top: 8px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -194,16 +210,25 @@
   display: flex;
   flex-direction: column;
   gap: var(--hub-space-sm);
-  padding: var(--hub-space-lg);
+  padding: var(--hub-space-md) var(--hub-space-lg);
   background: var(--hub-secondary-bg);
   border-top: 1px solid var(--hub-border);
+  flex-shrink: 0;
+}
+
+/* 베팅 셀렉터 + 스핀을 한 줄에: [−] [bet] [+] … [SPIN] */
+.hub-game-screen__controls-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hub-space-md);
 }
 
 .hub-game-screen__bet {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--hub-space-md);
+  gap: var(--hub-space-sm);
+  flex-shrink: 0;
 }
 
 .hub-game-screen__bet-btn {
@@ -215,6 +240,7 @@
   color: var(--hub-text);
   font-size: 20px;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .hub-game-screen__bet-btn:disabled {
@@ -225,7 +251,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 96px;
+  min-width: 72px;
 }
 
 .hub-game-screen__bet-label {
@@ -249,6 +275,7 @@
 }
 
 .hub-game-screen__spin {
+  flex: 1;
   min-height: 52px;
   border-radius: var(--hub-radius-md);
   font-size: 18px;
@@ -268,16 +295,29 @@
   opacity: 0.55;
 }
 
-.hub-game-screen__fair-link {
-  align-self: center;
-  background: none;
-  color: var(--hub-link);
-  font-size: var(--hub-font-small);
-  padding: var(--hub-space-xs);
-}
+/* 좁은 폰(≤400px)에서 컨트롤 영역을 더 촘촘하게 */
+@media (max-width: 400px) {
+  .hub-game-screen__controls {
+    padding: var(--hub-space-sm) var(--hub-space-md);
+  }
 
-.hub-game-screen__fair-link:disabled {
-  opacity: 0.4;
+  .hub-game-screen__controls-row {
+    gap: var(--hub-space-sm);
+  }
+
+  .hub-game-screen__bet-display {
+    min-width: 56px;
+  }
+
+  .hub-game-screen__bet-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .hub-game-screen__spin {
+    min-height: 46px;
+    font-size: 15px;
+  }
 }
 
 .hub-game-screen__error-message {
@@ -380,4 +420,138 @@
   border: 1px solid var(--hub-border);
   color: var(--hub-text);
   font-weight: 700;
+}
+
+/* 도움말 시트 (배당표 / 페이라인) */
+.hub-sheet__subtitle {
+  font-size: var(--hub-font-body);
+  font-weight: 700;
+  color: var(--hub-text);
+  margin: var(--hub-space-md) 0 var(--hub-space-xs);
+}
+
+.hub-sheet__scroll {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.hub-paytable__bet-per-line {
+  font-size: var(--hub-font-sub);
+  color: var(--hub-text-sub);
+  margin: 0;
+}
+
+.hub-paytable__list {
+  list-style: none;
+  margin: var(--hub-space-sm) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-sm);
+}
+
+.hub-paytable__row {
+  display: flex;
+  align-items: center;
+  gap: var(--hub-space-md);
+  padding-bottom: var(--hub-space-sm);
+  border-bottom: 1px solid var(--hub-border);
+}
+
+.hub-paytable__symbol-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.hub-paytable__symbol-fallback {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  font-size: 10px;
+  line-height: 1.1;
+  text-align: center;
+  color: var(--hub-text-sub);
+  background: var(--hub-card-bg);
+  border-radius: var(--hub-radius-sm);
+  flex-shrink: 0;
+}
+
+.hub-paytable__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hub-paytable__chip {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--hub-card-bg);
+  border: 1px solid rgba(216, 169, 74, 0.4);
+  color: var(--hub-gold-light);
+  font-size: var(--hub-font-small);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-paytable__wild-note {
+  margin: var(--hub-space-sm) 0 0;
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+}
+
+.hub-paylines__grid-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hub-space-md);
+}
+
+.hub-paylines__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.hub-paylines__mini-grid {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  gap: 2px;
+  padding: 2px;
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+  border-radius: 4px;
+}
+
+.hub-paylines__cell {
+  background: var(--hub-secondary-bg);
+  border-radius: 2px;
+}
+
+.hub-paylines__cell--active {
+  background: var(--hub-gold-light);
+}
+
+.hub-paylines__number {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  font-weight: 700;
+}
+
+.hub-sheet__footer-link {
+  align-self: center;
+  background: none;
+  color: var(--hub-link);
+  font-size: var(--hub-font-small);
+  padding: var(--hub-space-xs);
+  margin-top: var(--hub-space-sm);
+}
+
+.hub-sheet__footer-link:disabled {
+  opacity: 0.4;
 }

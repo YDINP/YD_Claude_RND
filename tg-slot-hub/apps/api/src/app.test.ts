@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { STARTING_COINS } from '@tgslot/shared'
+import { MeResponseSchema, STARTING_COINS } from '@tgslot/shared'
+import type { MeResponse } from '@tgslot/shared'
+import { randomUUID } from 'node:crypto'
 import { createApp } from './app.js'
+import { createJwtService } from './auth/jwt.js'
 import { MemoryRepos } from './repos/memory.js'
 import { buildInitData } from './auth/initData.js'
 import type { ApiConfig } from './config.js'
@@ -20,15 +23,32 @@ function makeConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
   }
 }
 
-function makeInitData(telegramId: number, firstName = 'Ada'): string {
+function makeInitData(telegramId: number, firstName = 'Ada', languageCode = 'en'): string {
   const authDate = Math.floor(Date.now() / 1000)
   return buildInitData(
     {
       auth_date: String(authDate),
-      user: JSON.stringify({ id: telegramId, first_name: firstName, language_code: 'en' }),
+      user: JSON.stringify({ id: telegramId, first_name: firstName, language_code: languageCode }),
     },
     BOT_TOKEN
   )
+}
+
+async function login(app: ReturnType<typeof createApp>, telegramId: number, languageCode = 'en') {
+  const res = await app.request('/auth/telegram', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ initData: makeInitData(telegramId, 'Ada', languageCode) }),
+  })
+  return (await res.json()) as { token: string; user: { id: string; locale: string } }
+}
+
+async function patchMe(app: ReturnType<typeof createApp>, token: string, body: unknown): Promise<Response> {
+  return app.request('/me', {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  })
 }
 
 async function loginAndGetToken(app: ReturnType<typeof createApp>, telegramId: number): Promise<string> {
@@ -128,6 +148,108 @@ describe('GET /me', () => {
   it('rejects a request with an invalid token', async () => {
     const app = createApp({ config: makeConfig(), repos: new MemoryRepos() })
     const res = await app.request('/me', { headers: { authorization: 'Bearer not-a-real-token' } })
+    expect(res.status).toBe(401)
+  })
+})
+
+/** 서명은 멀쩡한데 그 유저가 없는 토큰. 유저 삭제나 in-memory 레포 재시작 상황이다. */
+async function tokenForMissingUser(): Promise<string> {
+  const jwt = createJwtService(makeConfig().jwtSecret)
+  return jwt.signToken({ sub: randomUUID(), tid: 999_999 })
+}
+
+describe('유효한 토큰인데 유저가 없을 때', () => {
+  it('GET /me는 401 USER_NOT_FOUND다', async () => {
+    const app = createApp({ config: makeConfig(), repos: new MemoryRepos() })
+    const token = await tokenForMissingUser()
+
+    const res = await app.request('/me', { headers: { authorization: `Bearer ${token}` } })
+
+    expect(res.status).toBe(401)
+    expect(await res.json()).toEqual({ error: 'User not found', code: 'USER_NOT_FOUND' })
+  })
+
+  it('다른 인증 라우트도 같은 401을 준다', async () => {
+    const app = createApp({ config: makeConfig(), repos: new MemoryRepos() })
+    const token = await tokenForMissingUser()
+    const headers = { authorization: `Bearer ${token}` }
+
+    for (const path of ['/bonus', '/missions', '/leaderboard']) {
+      const res = await app.request(path, { headers })
+      expect(res.status).toBe(401)
+      expect(((await res.json()) as { code: string }).code).toBe('USER_NOT_FOUND')
+    }
+  })
+
+  it('토큰 자체가 없거나 위조된 경우는 여전히 UNAUTHORIZED다', async () => {
+    const app = createApp({ config: makeConfig(), repos: new MemoryRepos() })
+
+    const missing = await app.request('/me')
+    expect(missing.status).toBe(401)
+    expect(((await missing.json()) as { code: string }).code).toBe('UNAUTHORIZED')
+
+    const forged = await app.request('/me', { headers: { authorization: 'Bearer not-a-real-token' } })
+    expect(((await forged.json()) as { code: string }).code).toBe('UNAUTHORIZED')
+  })
+})
+
+describe('PATCH /me', () => {
+  it('언어를 바꾸고 GET /me와 같은 모양을 돌려준다', async () => {
+    const app = createApp({ config: makeConfig(), repos: new MemoryRepos() })
+    const { token } = await login(app, 3001, 'en')
+
+    const res = await patchMe(app, token, { locale: 'ko' })
+
+    expect(res.status).toBe(200)
+    const parsed = MeResponseSchema.safeParse(await res.json())
+    expect(parsed.success).toBe(true)
+    expect(parsed.data?.user.locale).toBe('ko')
+
+    const me = (await (await app.request('/me', { headers: { authorization: `Bearer ${token}` } })).json()) as MeResponse
+    expect(me.user.locale).toBe('ko')
+  })
+
+  it('직접 고른 언어는 다음 로그인의 language_code가 덮어쓰지 않는다', async () => {
+    const app = createApp({ config: makeConfig(), repos: new MemoryRepos() })
+    const { token } = await login(app, 3002, 'en')
+    await patchMe(app, token, { locale: 'ko' })
+
+    // 텔레그램 앱 언어가 en인 채로 다시 로그인해도 고른 값이 유지된다.
+    const relogin = await login(app, 3002, 'en')
+    expect(relogin.user.locale).toBe('ko')
+  })
+
+  it('직접 고르기 전이라면 로그인이 language_code를 반영한다', async () => {
+    const app = createApp({ config: makeConfig(), repos: new MemoryRepos() })
+    await login(app, 3003, 'en')
+
+    const relogin = await login(app, 3003, 'ko')
+    expect(relogin.user.locale).toBe('ko')
+  })
+
+  it('지원하지 않는 언어는 400 BAD_REQUEST다', async () => {
+    const app = createApp({ config: makeConfig(), repos: new MemoryRepos() })
+    const { token } = await login(app, 3004)
+
+    for (const body of [{ locale: 'fr' }, { locale: 1 }, {}, null]) {
+      const res = await patchMe(app, token, body)
+      expect(res.status).toBe(400)
+      expect(((await res.json()) as { code: string }).code).toBe('BAD_REQUEST')
+    }
+
+    const me = (await (await app.request('/me', { headers: { authorization: `Bearer ${token}` } })).json()) as MeResponse
+    expect(me.user.locale).toBe('en')
+  })
+
+  it('인증 없이는 401이다', async () => {
+    const app = createApp({ config: makeConfig(), repos: new MemoryRepos() })
+
+    const res = await app.request('/me', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ locale: 'ko' }),
+    })
+
     expect(res.status).toBe(401)
   })
 })

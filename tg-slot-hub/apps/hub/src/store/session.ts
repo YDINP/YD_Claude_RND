@@ -5,7 +5,7 @@
 import { create } from 'zustand'
 import type { PublicUser, Wallet } from '@tgslot/shared'
 import { initTma, getInitDataRaw } from '../sdk/tma'
-import { authTelegram, getMe, ApiClientError } from '../sdk/api'
+import { authTelegram, getMe, ApiClientError, registerReauthHandler } from '../sdk/api'
 
 export type SessionStatus = 'idle' | 'authing' | 'ready' | 'outside' | 'error'
 
@@ -37,6 +37,20 @@ function errorMessageOf(err: unknown, fallback: string): string {
   return err instanceof ApiClientError ? err.message : fallback
 }
 
+/** bootstrap()과 reauth()가 공유하는 initData 판별 로직. 실기기 initData가 없으면 dev mock으로 폴백한다 */
+function resolveInitData(): string | null {
+  const realInitData = getInitDataRaw()
+  const devMockEnabled = import.meta.env.VITE_DEV_MOCK_TMA === 'true'
+  return realInitData ?? (devMockEnabled ? DEV_MOCK_INIT_DATA : null)
+}
+
+/**
+ * 동시에 여러 authedFetch 호출이 401/USER_NOT_FOUND를 받아도 재인증은 한 번만 실행되도록
+ * 진행 중인 Promise를 모듈 스코프에서 공유한다. 스토어 state가 아니라 여기 두는 이유는
+ * 상태 갱신마다 새 참조가 생기는 zustand set()과 섞이지 않게 하기 위해서다.
+ */
+let reauthPromise: Promise<string | null> | null = null
+
 export interface SessionState {
   status: SessionStatus
   token: string | null
@@ -52,6 +66,14 @@ export interface SessionActions {
   bootstrap: () => Promise<void>
   /** 현재 토큰으로 /me 재조회 (지갑 갱신 등) */
   refreshMe: () => Promise<void>
+  /**
+   * sdk/api.ts의 authedFetch가 401/404 USER_NOT_FOUND를 받았을 때 호출하는 재인증.
+   * 저장된 토큰을 버리고 bootstrap()과 같은 initData/mock 인증을 다시 밟아 token/user/wallet을
+   * 갱신한다. 이미 어떤 화면이 떠 있는 상태(ready)에서 벌어지는 일이라 status는 건드리지 않는다 —
+   * 'authing'으로 바꾸면 App이 전체 화면 로딩으로 전환되며 지금 보던 화면(게임 등)이 사라진다.
+   * 성공하면 새 토큰을, 실패(초기화 불가·initData 없음 등)하면 null을 반환한다.
+   */
+  reauth: () => Promise<string | null>
 }
 
 export type SessionStore = SessionState & SessionActions
@@ -83,23 +105,24 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     if (storedToken) {
       try {
         const me = await getMe(storedToken)
+        // getMe()는 authedFetch를 거치므로 storedToken이 만료됐어도 내부적으로 reauth()가 이미
+        // 실행돼 성공했을 수 있다 — 그 경우 store의 token은 새 값으로 갱신돼 있으니 그걸 쓴다.
+        // reauth가 없었다면(정상 케이스) get().token은 여전히 null이라 storedToken으로 폴백한다.
         set({
           status: 'ready',
-          token: storedToken,
+          token: get().token ?? storedToken,
           user: me.user,
           wallet: me.wallet,
           errorMessage: null,
         })
         return
       } catch {
-        // 저장된 토큰이 만료/무효 — 지우고 initData 플로우로 계속 진행
+        // 저장된 토큰이 만료/무효이고 재인증까지 실패 — 지우고 initData 플로우로 계속 진행
         writeStoredToken(null)
       }
     }
 
-    const realInitData = getInitDataRaw()
-    const devMockEnabled = import.meta.env.VITE_DEV_MOCK_TMA === 'true'
-    const initData = realInitData ?? (devMockEnabled ? DEV_MOCK_INIT_DATA : null)
+    const initData = resolveInitData()
 
     if (!initData) {
       set({ status: 'outside' })
@@ -121,6 +144,37 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }
   },
 
+  async reauth() {
+    if (reauthPromise) return reauthPromise
+
+    reauthPromise = (async () => {
+      // 오래된(존재하지 않는 유저의) 토큰이므로 먼저 지운다 — 실패해도 다시 쓰지 않는다.
+      writeStoredToken(null)
+
+      const initData = resolveInitData()
+      if (!initData) {
+        set({ token: null })
+        return null
+      }
+
+      try {
+        const auth = await authTelegram(initData)
+        writeStoredToken(auth.token)
+        set({ token: auth.token, user: auth.user, wallet: auth.wallet, errorMessage: null })
+        return auth.token
+      } catch {
+        set({ token: null })
+        return null
+      }
+    })()
+
+    try {
+      return await reauthPromise
+    } finally {
+      reauthPromise = null
+    }
+  },
+
   async refreshMe() {
     const { token } = get()
     if (!token) return
@@ -134,3 +188,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }
   },
 }))
+
+// sdk/api.ts의 authedFetch가 401/404 USER_NOT_FOUND를 받았을 때 쓸 재인증 훅을 등록한다.
+// api.ts가 이 스토어를 직접 import하면 순환 import가 되므로(테스트에서 실제로 깨졌었다) 이렇게
+// 스토어가 만들어진 뒤 지연 등록하는 방식으로 피한다.
+registerReauthHandler(() => useSessionStore.getState().reauth())

@@ -138,4 +138,34 @@ describe('GameScreen', () => {
 
     await waitFor(() => expect(spinButton).not.toBeDisabled())
   })
+
+  it('opens the help sheet with the paytable and payline grids when the help button is clicked', async () => {
+    render(<GameScreen gameId="classic-777" />)
+    await screen.findByText('10')
+
+    const helpButton = screen.getByRole('button', { name: 'Help' })
+    expect(helpButton).not.toBeDisabled()
+    helpButton.click()
+
+    expect(await screen.findByText('Paytable')).toBeInTheDocument()
+    expect(screen.getByText('Paylines')).toBeInTheDocument()
+    expect(screen.getByText('Bet per line: 10')).toBeInTheDocument()
+    expect(screen.getByText('3: ×10')).toBeInTheDocument()
+    expect(screen.getByText('3: ×5')).toBeInTheDocument()
+  })
+
+  it('shows a wild note in the help sheet when the game has a wild symbol', async () => {
+    mockedGetGameMath.mockResolvedValue({
+      ...rawMath,
+      symbols: [...rawMath.symbols, { id: 'wild', name: { en: 'Wild' }, wild: true }],
+      wild: { substitutesFor: 'all' },
+    })
+
+    render(<GameScreen gameId="classic-777" />)
+    await screen.findByText('10')
+
+    screen.getByRole('button', { name: 'Help' }).click()
+
+    expect(await screen.findByText('Wild substitutes for all symbols')).toBeInTheDocument()
+  })
 })

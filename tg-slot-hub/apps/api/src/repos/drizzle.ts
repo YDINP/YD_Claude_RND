@@ -159,7 +159,8 @@ export class DrizzleRepos implements Repos {
         .set({
           firstName: tgUser.firstName,
           username: tgUser.username ?? existing.username,
-          locale,
+          // 직접 고른 언어는 텔레그램 앱 언어보다 우선한다.
+          locale: existing.localeExplicit ? existing.locale : locale,
           lastSeenAt: new Date(),
         })
         .where(eq(users.id, existing.id))
@@ -177,6 +178,16 @@ export class DrizzleRepos implements Repos {
 
   async getById(userId: string): Promise<AppUser | null> {
     const [row] = await this.db.select().from(users).where(eq(users.id, userId)).limit(1)
+    return row ? toAppUser(row) : null
+  }
+
+  async updateLocale(userId: string, locale: Locale): Promise<AppUser | null> {
+    const [row] = await this.db
+      .update(users)
+      .set({ locale, localeExplicit: true })
+      .where(eq(users.id, userId))
+      .returning()
+
     return row ? toAppUser(row) : null
   }
 

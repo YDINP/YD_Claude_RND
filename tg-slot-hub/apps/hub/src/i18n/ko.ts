@@ -52,6 +52,25 @@ const ko: Record<TranslationKey, string> = {
   leaderboardEndsIn: '남은 시간 {time}',
   levelUp: '레벨 업! {from} → {to}',
   betLockedHint: '현재 레벨의 최대 베팅은 {maxBet}이에요',
+  // game help
+  help: '도움말',
+  paytableTitle: '배당표',
+  paylinesTitle: '페이라인',
+  betPerLine: '라인당 베팅: {amount}',
+  wildSubstitutesAll: '와일드는 모든 심볼을 대체합니다',
+  // settings
+  settings: '설정',
+  language: '언어',
+  localeAuto: '자동',
+  sound: '사운드',
+  haptics: '진동',
+  reduceMotion: '모션 줄이기',
+  reduceMotionHint: '다음에 게임을 열 때부터 적용돼요',
+  fairnessSectionTitle: '공정성 검증',
+  fairnessExplainer:
+    '모든 스핀은 플레이 전에 서버 시드의 해시를 먼저 공개하고, 이후 실제 시드를 공개해요. 결과가 조작되지 않았는지 직접 확인할 수 있어요.',
+  version: '버전',
+  supportId: '지원 ID',
 }
 
 export default ko

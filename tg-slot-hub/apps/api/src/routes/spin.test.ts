@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest'
 import { STARTING_COINS } from '@tgslot/shared'
 import type { SpinResponse } from '@tgslot/shared'
 import { createSeededRng, parseGameMath, spin } from '@tgslot/slot-engine'
+import { randomUUID } from 'node:crypto'
 import { createApp } from '../app.js'
+import { createJwtService } from '../auth/jwt.js'
 import { MemoryRepos } from '../repos/memory.js'
 import { InsufficientFundsError } from '../repos/types.js'
 import type { ApplySpinInput } from '../repos/types.js'
@@ -197,6 +199,19 @@ describe('POST /games/:id/spin', () => {
     })
 
     expect(res.status).toBe(401)
+  })
+
+  it('rejects a token whose user no longer exists with 401 USER_NOT_FOUND', async () => {
+    const harness = await setup()
+    const jwt = createJwtService(makeConfig().jwtSecret)
+    const orphanToken = await jwt.signToken({ sub: randomUUID(), tid: 999_999 })
+
+    const res = await spinRequest(harness, { idempotencyKey: 'key-orphan-00001', token: orphanToken })
+
+    expect(res.status).toBe(401)
+    expect(await res.json()).toEqual({ error: 'User not found', code: 'USER_NOT_FOUND' })
+    // 인증에서 잘렸으므로 회계는 그대로다.
+    expect(harness.repos.getLedgerSum(harness.userId)).toBe(STARTING_COINS)
   })
 
   it('returns 404 GAME_NOT_FOUND for an unknown game', async () => {

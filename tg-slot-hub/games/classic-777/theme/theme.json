@@ -1,16 +1,16 @@
 {
   "version": "1.0.0",
   "symbols": {
-    "wild": "symbols/wild.svg",
-    "seven": "symbols/seven.svg",
-    "bar3": "symbols/bar3.svg",
-    "bar2": "symbols/bar2.svg",
-    "bar1": "symbols/bar1.svg",
+    "wild": "symbols/wild.webp",
+    "seven": "symbols/seven.webp",
+    "bar3": "symbols/bar3.webp",
+    "bar2": "symbols/bar2.webp",
+    "bar1": "symbols/bar1.webp",
     "bell": "symbols/bell.webp",
-    "cherry": "symbols/cherry.svg",
-    "blank": "symbols/blank.svg"
+    "cherry": "symbols/cherry.webp",
+    "blank": "symbols/blank.webp"
   },
-  "background": "bg.svg",
+  "background": "bg.webp",
   "palette": {
     "frame": "#d8a94a",
     "reelBg": "#0b1220",
@@ -22,5 +22,14 @@
       "#5b9dff"
     ],
     "text": "#f2f4f8"
+  },
+  "frame": "frame.webp",
+  "frameLayout": {
+    "window": {
+      "x": 0.099375,
+      "y": 0.206875,
+      "w": 0.80125,
+      "h": 0.5003125
+    }
   }
 }

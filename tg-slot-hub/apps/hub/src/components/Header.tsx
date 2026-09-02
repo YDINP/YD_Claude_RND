@@ -1,9 +1,10 @@
 /**
- * 허브 헤더 — 아바타 이니셜 + 이름 + 레벨, 코인/젬 지갑 필(오도미터 애니메이션)
+ * 허브 헤더 — 아바타 이니셜 + 이름 + 레벨, 코인/젬 지갑 필(오도미터 애니메이션), 설정 버튼.
  */
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { PublicUser, Wallet } from '@tgslot/shared'
 import { Odometer } from './Odometer'
+import { SettingsSheet } from './SettingsSheet'
 import { useT } from '../i18n'
 import './Header.css'
 
@@ -14,6 +15,7 @@ interface HeaderProps {
 
 export function Header({ user, wallet }: HeaderProps): ReactNode {
   const t = useT()
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const initial = user.firstName.trim().charAt(0).toUpperCase() || '?'
 
   return (
@@ -40,7 +42,16 @@ export function Header({ user, wallet }: HeaderProps): ReactNode {
           </span>
           <Odometer value={wallet.gems} />
         </span>
+        <button
+          type="button"
+          className="hub-header__settings-btn"
+          aria-label={t('settings')}
+          onClick={() => setSettingsOpen(true)}
+        >
+          <span aria-hidden="true">⚙️</span>
+        </button>
       </div>
+      {settingsOpen && <SettingsSheet user={user} onClose={() => setSettingsOpen(false)} />}
     </header>
   )
 }

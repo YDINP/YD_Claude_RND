@@ -10,7 +10,8 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
 |---|---|---|---|
 | GET | `/health` | - | 헬스체크. `{ ok: true }` |
 | POST | `/auth/telegram` | - | `{ initData }` 검증 → 유저 upsert → `{ token, user, wallet }` |
-| GET | `/me` | Bearer JWT | `{ user, wallet }` |
+| GET | `/me` | Bearer JWT | `MeResponse`. `{ user, wallet, levelInfo, jackpot }` |
+| PATCH | `/me` | Bearer JWT | `{ locale }`로 표시 언어 변경 → `MeResponse` (GET과 같은 모양) |
 | GET | `/games` | - | `{ games: GameSummary[] }`. `hidden` 제외, `sort` 오름차순 |
 | GET | `/games/:id/math` | - | 검증된 `math.json` 원본. `Cache-Control: public, max-age=300` |
 | POST | `/games/:id/spin` | Bearer JWT | `SpinRequest` → `SpinResponse`. 서버 권위 스핀 1회 |
@@ -24,17 +25,19 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
 | GET | `/missions` | Bearer JWT | `MissionsResponse`. 오늘(UTC)의 미션과 진행도 |
 | POST | `/missions/:id/claim` | Bearer JWT | 완료한 미션 보상 수령 → `BonusClaimResponse` |
 
-인증 실패는 `401 { error, code: 'UNAUTHORIZED' | 'INVALID_INIT_DATA' }` 형태로 응답한다.
+인증 실패는 `401 { error, code: 'UNAUTHORIZED' | 'INVALID_INIT_DATA' | 'USER_NOT_FOUND' }` 형태로 응답한다.
 
 ### 에러 코드
 
 | HTTP | code | 언제 |
 |---|---|---|
-| 400 | `BAD_REQUEST` | 본문이 `SpinRequestSchema`를 통과하지 못함 (`idempotencyKey`는 8~64자) |
+| 400 | `BAD_REQUEST` | 본문이 요청 스키마를 통과하지 못함 (`SpinRequest`의 `idempotencyKey`는 8~64자, `PATCH /me`의 `locale`은 `en`/`ko`) |
 | 400 | `INVALID_BET` | `totalBet`이 게임의 `betLevels`에 없는 값 |
 | 400 | `BET_LOCKED` | `totalBet`이 **내 레벨이 해금한 상한**을 넘음 (레벨 1~2: 100, 3~5: 200, 6+: 500) |
 | 401 | `UNAUTHORIZED` | 토큰 없음/만료/위조 |
+| 401 | `USER_NOT_FOUND` | 토큰 서명은 유효하지만 그 유저가 더 이상 없음. 클라이언트는 재로그인해야 한다 |
 | 402 | `INSUFFICIENT_FUNDS` | 잔액 < 베팅액. 지갑과 원장은 그대로 |
+| 404 | `NOT_FOUND` | 유저는 있는데 지갑 행이 없는 내부 불일치 (정상 흐름에서는 나오지 않는다) |
 | 404 | `GAME_NOT_FOUND` | 없는 게임 id이거나 `status: hidden` |
 | 404 | `ROUND_NOT_FOUND` | 없는 라운드이거나 **남의 라운드** (존재 여부를 알려주지 않음) |
 | 404 | `MISSION_NOT_FOUND` | 미션 정의에 없는 id |
@@ -186,6 +189,7 @@ pnpm --filter @tgslot/api db:push       # 실제 DB에 반영. 이 저장소 안
 | `0002_harsh_donald_blake.sql` | `rounds` 테이블 + `wallets.nonce`. `(user_id, idempotency_key)` 유니크가 이중 차감을 DB 레벨에서 차단 |
 | `0003_parallel_dormammu.sql` | 허브 테이블 5종(`bonus_claims`, `jackpot_pool`, `jackpot_hits`, `leaderboard_weekly`, `mission_progress`) + `users.xp`. 맨 끝의 `INSERT INTO jackpot_pool`은 손으로 덧붙인 시드 행이다 (drizzle-kit은 데이터를 만들지 않는다) |
 | `0004_spicy_living_tribunal.sql` | `rounds.jackpot_win` / `level_up_from` / `level_up_to` / `level_up_bonus`. 멱등 재전송이 처음과 **완전히 같은** 응답을 돌려주도록 라운드의 부수 결과를 함께 남긴다 |
+| `0005_cynical_jane_foster.sql` | `users.locale_explicit`. 유저가 직접 고른 언어를 로그인이 덮어쓰지 못하게 하는 플래그 |
 
 스키마(`src/db/schema.ts`)를 바꾸면 `db:generate`로 새 마이그레이션을 추가하고, 커스텀 SQL(트리거 등)이 필요하면 `drizzle-kit generate --custom --name <name>`으로 빈 파일을 만든 뒤 채운다.
 
@@ -203,8 +207,18 @@ pnpm --filter @tgslot/api db:push       # 실제 DB에 반영. 이 저장소 안
   그 외에는 항상 `null`을 반환해 실제 initData 서명 검증 경로로 폴백한다. 켜져 있으면 부팅 시
   `src/config.ts`가 콘솔에 눈에 띄는 경고를 찍는다.
 - **로케일/프로필 갱신**: `initData.user.language_code`가 `SUPPORTED_LOCALES`(`en`,`ko`)에 없으면
-  `DEFAULT_LOCALE`(`en`)로 저장한다. 재로그인마다 `locale`/`first_name`/`username`을 최신 initData로 갱신한다
+  `DEFAULT_LOCALE`(`en`)로 저장한다. 재로그인마다 `first_name`/`username`을 최신 initData로 갱신한다
   (username이 없는 로그인은 기존 값을 유지).
+- **인증 미들웨어가 유저를 한 번만 읽는다**: 토큰을 검증한 뒤 곧바로 유저 행을 읽어 컨텍스트에 싣는다.
+  없으면 401 `USER_NOT_FOUND`다. JWT는 7일짜리라 유저가 지워지거나 in-memory 레포로 뜬 서버가
+  재시작된 뒤에도 서명은 통과하는데, 그때 라우트마다 404를 내면 클라이언트가 "재로그인" 신호로
+  읽지 못한다. 인증 실패로 통일한 이유다. 라우트(`/me`, 스핀의 베팅 상한 판정 등)는 이 값을 재사용하고
+  다시 조회하지 않는다. 트랜잭션 안의 row lock은 그대로다 — 미들웨어가 읽은 값은 게이트 판정용이고,
+  잔액·xp를 실제로 바꾸는 계산은 잠근 행을 다시 읽어서 한다.
+- **직접 고른 언어가 이긴다**: `PATCH /me`로 언어를 바꾸면 `users.locale_explicit`이 켜지고,
+  그 뒤로는 재로그인해도 `language_code`가 이 값을 덮어쓰지 않는다. 텔레그램 앱 언어와 게임 언어를
+  다르게 두려는 유저가 매 로그인마다 설정을 잃지 않게 하기 위해서다. 직접 고르기 전에는
+  기존대로 로그인이 `language_code`를 반영한다.
 - **initData 시간 검증**: `auth_date`가 서버 시각보다 300초 넘게 미래이거나, `INIT_DATA_MAX_AGE_SEC`(24시간)보다
   오래됐으면 거부한다.
 - **에러 응답 형식**: 라우트에서 못 잡은 예외는 `app.onError`가 `{ error, code: 'INTERNAL' }` 500 JSON으로

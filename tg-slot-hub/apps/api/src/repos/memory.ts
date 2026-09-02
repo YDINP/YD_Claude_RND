@@ -73,6 +73,8 @@ export class MemoryRepos implements Repos {
   private readonly rounds = new Map<string, RoundRecord>()
   /** `${userId}:${idempotencyKey}` -> roundId. Postgres의 unique 제약과 같은 역할. */
   private readonly roundIdsByKey = new Map<string, string>()
+  /** 앱에서 언어를 직접 고른 유저. 재로그인 때 initData가 덮어쓰지 못하게 막는다. */
+  private readonly localeExplicit = new Set<string>()
   /** `${userId}:${kind}` -> 마지막 수령 기록 */
   private readonly bonusClaims = new Map<string, BonusClaim>()
   /** `${userId}:${week}` */
@@ -95,7 +97,8 @@ export class MemoryRepos implements Repos {
         throw new Error('[memory-repo] inconsistent state: user/wallet missing for known telegramId')
       }
       user.firstName = tgUser.firstName
-      user.locale = locale
+      // 직접 고른 언어는 텔레그램 앱 언어보다 우선한다.
+      if (!this.localeExplicit.has(existingId)) user.locale = locale
       if (tgUser.username) user.username = tgUser.username
       return { user: { ...user }, wallet: toAppWallet(wallet), created: false }
     }
@@ -124,6 +127,15 @@ export class MemoryRepos implements Repos {
   async getById(userId: string): Promise<AppUser | null> {
     const user = this.usersById.get(userId)
     return user ? { ...user } : null
+  }
+
+  async updateLocale(userId: string, locale: Locale): Promise<AppUser | null> {
+    const user = this.usersById.get(userId)
+    if (!user) return null
+
+    user.locale = locale
+    this.localeExplicit.add(userId)
+    return { ...user }
   }
 
   async getWallet(userId: string): Promise<AppWallet | null> {

@@ -32,3 +32,7 @@ export function logError(error: unknown): void {
 export function logWarn(message: string): void {
   console.warn(`[theme-gen] ${redact(message)}`)
 }
+
+export function logInfo(message: string): void {
+  console.log(`[theme-gen] ${redact(message)}`)
+}

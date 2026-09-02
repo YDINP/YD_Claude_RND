@@ -3,6 +3,7 @@ import {
   FRAME_BORDER_RATIO,
   FRAME_PADDING_RATIO,
   FRAME_RADIUS_RATIO,
+  DEFAULT_OVERFLOW_X,
   MAX_SYMBOL_SIZE,
   MIN_SYMBOL_SIZE,
   SYMBOL_GAP_RATIO,
@@ -243,6 +244,106 @@ export function computeFrameLayout(input: FramedLayoutInput): FramedLayout {
     content: {
       x: window.x + (window.width - layout.width) / 2,
       y: window.y + (window.height - layout.height) / 2,
+    },
+  }
+}
+
+export interface WindowFitInput {
+  containerWidth: number
+  containerHeight: number
+  frameWidth: number
+  frameHeight: number
+  window?: FrameWindow
+  reels: number
+  rows: number
+  /** 프레임이 컨테이너 폭을 넘어도 되는 비율. 기본 `DEFAULT_OVERFLOW_X`(0.30). */
+  overflowX?: number
+}
+
+export interface WindowFitLayout {
+  /** 캔버스 = **언제나** 컨테이너 전체. 캔버스가 무언가를 자르는 일은 없다. */
+  canvasWidth: number
+  canvasHeight: number
+  scale: number
+  /** 프레임 스프라이트를 놓을 사각형. 캔버스 밖으로 삐져나갈 수 있다. */
+  frameRect: Rect
+  /** 릴 창. */
+  window: Rect
+  /** 프레임 전체가 컨테이너 세로에 들어갔는지. false면 창을 세로 가운데로 맞춘 것이다. */
+  frameFitsVertically: boolean
+  layout: Layout
+  content: Point
+}
+
+/**
+ * 릴 **창**을 컨테이너에 최대한 채우는 배치.
+ *
+ * 프레임 전체를 폭에 맞추면(=`fit: 'width'`) 마퀴와 레전드가 자리를 다 먹어 릴이 작아진다.
+ * 그래서 폭으로는 `overflowX`만큼 넘치게 두어 좌우 기둥을 잘라낸다.
+ * 세로로는 프레임 전체가 컨테이너에 들어오는 배율을 상한으로 삼는다.
+ *
+ * 캔버스는 **언제나 컨테이너 전체**다. 잘라내는 일은 컨테이너의 overflow만 한다.
+ * 프레임이 세로로 들어가면 프레임 전체를 가운데 맞추고, 넘치면 **창**을 가운데 맞춘다.
+ */
+export function computeWindowFitLayout(input: WindowFitInput): WindowFitLayout {
+  const { frameWidth, frameHeight } = input
+  if (frameWidth <= 0 || frameHeight <= 0) {
+    throw new RangeError(`프레임 크기가 올바르지 않다: ${frameWidth}x${frameHeight}`)
+  }
+  const window = input.window ?? DEFAULT_FRAME_WINDOW
+  const containerWidth = Math.max(1, input.containerWidth)
+  const containerHeight = Math.max(0, input.containerHeight)
+  const overflowX = Math.max(0, input.overflowX ?? DEFAULT_OVERFLOW_X)
+
+  const byWidth = (containerWidth * (1 + overflowX)) / frameWidth
+  // 높이를 못 재는 컨테이너(레이아웃 전)에서는 폭만으로 정한다.
+  const byHeight = containerHeight > 0 ? containerHeight / frameHeight : Number.POSITIVE_INFINITY
+  const scale = Math.max(Number.MIN_VALUE, Math.min(byWidth, byHeight))
+
+  const frameDisplayWidth = frameWidth * scale
+  const frameDisplayHeight = frameHeight * scale
+  const windowWidth = window.w * frameDisplayWidth
+  const windowHeight = window.h * frameDisplayHeight
+
+  // 세로로 들어가면 프레임을 통째로 가운데. 넘치면 창을 가운데 두고 마퀴/레전드를 희생한다.
+  const frameFitsVertically = frameDisplayHeight <= containerHeight
+  const frameTop = frameFitsVertically
+    ? (containerHeight - frameDisplayHeight) / 2
+    : containerHeight / 2 - (window.y + window.h / 2) * frameDisplayHeight
+
+  const frameRect: Rect = {
+    x: (containerWidth - frameDisplayWidth) / 2,
+    y: frameTop,
+    width: frameDisplayWidth,
+    height: frameDisplayHeight,
+  }
+  const windowRect: Rect = {
+    x: frameRect.x + window.x * frameDisplayWidth,
+    y: frameRect.y + window.y * frameDisplayHeight,
+    width: windowWidth,
+    height: windowHeight,
+  }
+
+  const layout = computeLayout({
+    containerWidth: windowRect.width,
+    containerHeight: windowRect.height,
+    reels: input.reels,
+    rows: input.rows,
+    chrome: false,
+    minSymbolSize: 1,
+  })
+
+  return {
+    canvasWidth: containerWidth,
+    canvasHeight: containerHeight,
+    scale,
+    frameRect,
+    window: windowRect,
+    frameFitsVertically,
+    layout,
+    content: {
+      x: windowRect.x + (windowRect.width - layout.width) / 2,
+      y: windowRect.y + (windowRect.height - layout.height) / 2,
     },
   }
 }

@@ -21,6 +21,11 @@ export const users = pgTable('users', {
   firstName: text('first_name').notNull(),
   username: text('username'),
   locale: text('locale').notNull().default('en'),
+  /**
+   * 유저가 앱에서 언어를 직접 골랐는지. true면 재로그인 때 initData의 `language_code`로
+   * 덮어쓰지 않는다. 텔레그램 앱 언어와 게임 언어를 다르게 두고 싶은 유저를 위한 것이다.
+   */
+  localeExplicit: boolean('locale_explicit').notNull().default(false),
   level: integer('level').notNull().default(1),
   /** 누적 베팅액. level은 여기서 파생된다. */
   xp: bigint('xp', { mode: 'number' }).notNull().default(0),

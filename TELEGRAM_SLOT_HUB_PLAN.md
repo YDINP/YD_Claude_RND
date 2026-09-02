@@ -1,7 +1,7 @@
 # Telegram 슬롯 허브 — 구조 계획서
 
 작성일: 2026-09-02
-상태: Phase 3 허브 기능 완료 (2026-09-02). 아트 생성(Phase A)은 Codex CLI 이미지 도구로 진행 중. 실제 텔레그램 클라이언트 검증은 봇 토큰·공개 URL 확보 후
+상태: Phase 3 허브 기능 + 아트 생성(Phase A) 완료 (2026-09-02). classic-777 11장 gpt-image(Codex CLI) 생성본 적용, UX 피드백 1차 반영(도움말 시트·릴 확대·설정). 실제 텔레그램 클라이언트 검증은 봇 토큰·공개 URL 확보 후
 
 ## 0. 전제와 가정
 
@@ -169,7 +169,7 @@ export interface GameClient {
 | 4 수익화 | Stars 상점, Adsgram, 봇 알림, 추천 딥링크 | 실결제 1건과 광고 리워드 1건 검증 | 1주 |
 | 5 양산 | _template + theme-gen → 게임 2·3호 | **게임 1개 추가에 1~2일** | 반복 |
 | 6 운영 | admin, 지표(ARPDAU, 세션당 스핀, RTP 실측), 튜닝. ⚠튜닝 메모: 잭팟 시드 50,000 + 분모 50,000이면 당첨액이 누적 적립의 약 2배라 실효 RTP ≈ 98%. 시드를 낮추거나 분모를 올려 조정(`apps/api/src/economy/config.ts`) | 대시보드에서 RTP·보너스 값 변경 가능 | 이후 |
-| A 아트 (Phase 2와 병행) | 이미지 디자인 기획(허브 컨셉·릴 프레임·심볼 세트) → `docs/ART_DIRECTION.md` + 게임별 `art/prompts.json` → `tools/theme-gen`으로 GPT 이미지(gpt-image-1) / Gemini 이미지 / 로컬 ComfyUI 중 가용 프로바이더로 생성 → `theme/` 자동 갱신 | classic-777 심볼 7종·프레임·배경·썸네일이 생성 이미지로 교체되고 렌더러에 표시됨 | 기획·프롬프트·도구 완료. 생성 프로바이더는 **Codex CLI(`image_gen__imagegen`, ChatGPT 로그인, 키 불필요)** 확정. `pnpm --filter @tgslot/theme-gen gen games/classic-777 --provider codex` |
+| A 아트 (Phase 2와 병행) | 이미지 디자인 기획(허브 컨셉·릴 프레임·심볼 세트) → `docs/ART_DIRECTION.md` + 게임별 `art/prompts.json` → `tools/theme-gen`으로 GPT 이미지(gpt-image-1) / Gemini 이미지 / 로컬 ComfyUI 중 가용 프로바이더로 생성 → `theme/` 자동 갱신 | classic-777 심볼 7종·프레임·배경·썸네일이 생성 이미지로 교체되고 렌더러에 표시됨 | ✅ 완료. Codex CLI(`image_gen__imagegen`, ChatGPT 로그인, 키 불필요)로 11장 생성·적용. 프레임은 창 영역 자동 검출→알파 펀치→`frameLayout` 기록(`--reprocess`로 재후처리 가능). 프레임 창은 세로 50% 이상으로 그려야 3x3 릴이 크게 나온다 |
 
 각 Phase 완료마다 정리 커밋 + 푸시.
 
@@ -192,3 +192,14 @@ export interface GameClient {
 | 인프라 | **Supabase 단일** (Postgres). Redis는 Phase 0~2에선 생략, 스핀 직렬화는 Postgres row lock으로. 레이트리밋·리더보드가 필요해지는 Phase 3에서 Upstash 추가 검토 |
 
 프로젝트 폴더: `tg-slot-hub/`
+
+## 11. UX 피드백 반영 이력
+
+| 날짜 | 피드백 | 반영 |
+|---|---|---|
+| 2026-09-02 | 당첨 규칙은 도움말 버튼으로 | 게임 상단 `?` → 배당표(심볼 이미지·배수 칩·라인당 베팅)·페이라인 미니그리드·공정성 검증 시트 |
+| 2026-09-02 | 슬롯 화면이 너무 작음 | 렌더러 `fit:'window'`(창 기준 맞춤, 가로 30% 넘침 허용) + 스테이지 absolute 채움 + 프레임 아트 창 42%→50% 재생성. 390px 폭에서 심볼 약 120px |
+| 2026-09-02 | 테두리 녹색 인글로우 | 프레임 크로마 잔여 CPU 키잉 + 당첨 하이라이트를 초록 박스→브라스 글로우 3겹, 페이라인 3px/α0.6 |
+| 2026-09-02 | 스핀 시 릴 연출 | 스핀 시작 시 릴이 잠깐 위로 당겨졌다 내려가며 회전 시작(정지 튕김은 제거) |
+| 2026-09-02 | 머신·배경 반짝임 | 프레임 위 6초 주기 광택 스윕(ADD) + 반짝임 12~20개, reduced-motion 시 생략 |
+| 2026-09-02 | 설정이 없음(언어 등) | 헤더 톱니 → 설정 시트(언어 자동/EN/KO, 사운드, 햅틱, 모션 줄이기, 공정성 설명, 버전/지원 ID). 언어는 `PATCH /me`로 서버 저장, 로그인이 덮어쓰지 않음 |

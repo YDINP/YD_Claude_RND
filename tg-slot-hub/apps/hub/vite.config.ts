@@ -1,9 +1,16 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { gamesAssetsPlugin } from './vite-plugins/gamesAssets.js'
 
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as {
+  version?: string
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
+  // 설정 시트의 앱 버전 표시용 — 환경변수로 명시하지 않으면 package.json version을 심는다.
+  const appVersion = env.VITE_APP_VERSION || pkg.version || 'dev'
 
   // 프로덕션 빌드에서 VITE_API_URL 누락 시 조용히 localhost로 폴백하면
   // 배포 후 "로그인 안 됨"만 보이고 원인 파악이 어려우므로 빌드 타임에 바로 막는다.
@@ -22,6 +29,9 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       target: 'esnext',
+    },
+    define: {
+      'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
     },
   }
 })

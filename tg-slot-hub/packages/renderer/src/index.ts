@@ -2,6 +2,7 @@ export { createSlotRenderer } from './createRenderer.js'
 export type {
   FrameLayout,
   RendererEvent,
+  RendererFit,
   RendererOptions,
   SfxKey,
   ShowWinsOptions,
@@ -42,6 +43,7 @@ export {
   cellPitch,
   computeFrameLayout,
   computeLayout,
+  computeWindowFitLayout,
   frameWindowRect,
   paylinePoints,
   positionRects,
@@ -55,8 +57,18 @@ export {
   type LayoutInput,
   type Point,
   type Rect,
+  type WindowFitInput,
+  type WindowFitLayout,
 } from './layout.js'
 export { buildSpinPlan, type ReelSpinPlan, type SpinPlan, type SpinPlanInput } from './timing.js'
+export { isChromaGreen, keyOutGreen } from './chromaKey.js'
+export {
+  planLightSweep,
+  planSparkles,
+  type RandomFn,
+  type SparklePlacement,
+  type SweepPlan,
+} from './ambient.js'
 export {
   buildWinCycle,
   formatWinLabel,

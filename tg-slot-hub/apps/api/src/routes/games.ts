@@ -63,7 +63,7 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
     return c.json(pack.rawMath, 200)
   })
 
-  route.post('/:id/spin', authMiddleware(deps.jwt), async (c) => {
+  route.post('/:id/spin', authMiddleware(deps.jwt, deps.repos), async (c) => {
     const auth = c.get('auth')
     const gameId = c.req.param('id')
 
@@ -86,11 +86,9 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
     }
 
     // 베팅 상한은 레벨로 해금된다. 게임의 betLevels에 있는 값이라도 레벨이 낮으면 막는다.
-    const user = await deps.repos.getById(auth.sub)
-    if (!user) return c.json({ error: 'User not found', code: 'NOT_FOUND' }, 404)
-
+    // 유저는 미들웨어가 이미 읽어 컨텍스트에 실어 뒀다.
     // 저장된 level 컬럼이 아니라 xp에서 다시 계산한다. /me가 보여주는 상한과 항상 같아야 한다.
-    const maxBet = toLevelState(user.xp).maxBet
+    const maxBet = toLevelState(c.get('user').xp).maxBet
     if (totalBet > maxBet) {
       return c.json(
         { error: `Bet ${totalBet} is locked. Your level allows up to ${maxBet}`, code: 'BET_LOCKED' },

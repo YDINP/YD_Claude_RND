@@ -52,7 +52,7 @@ export function createBonusRoute(deps: BonusRouteDeps): Hono<{ Variables: AuthVa
   const route = new Hono<{ Variables: AuthVariables }>()
   const clock = deps.clock ?? systemClock
 
-  route.use('*', authMiddleware(deps.jwt))
+  route.use('*', authMiddleware(deps.jwt, deps.repos))
 
   route.get('/', async (c) => {
     const auth = c.get('auth')
@@ -60,7 +60,7 @@ export function createBonusRoute(deps: BonusRouteDeps): Hono<{ Variables: AuthVa
       deps.repos.getBonusClaims(auth.sub),
       deps.repos.getWallet(auth.sub),
     ])
-    if (!wallet) return c.json({ error: 'User not found', code: 'NOT_FOUND' }, 404)
+    if (!wallet) return c.json({ error: 'Wallet not found', code: 'NOT_FOUND' }, 404)
 
     const response: BonusStatus = buildBonusStatus(claims, wallet.coins, clock())
     return c.json(response, 200)

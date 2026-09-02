@@ -18,6 +18,7 @@ import { BottomTabs } from './components/hub/BottomTabs'
 import { MissionsScreen } from './components/hub/MissionsScreen'
 import { LeaderboardScreen } from './components/hub/LeaderboardScreen'
 import { useRoute, navigateToGame } from './router'
+import { useEffectiveLocale } from './i18n'
 import './styles/tokens.css'
 import './styles/global.css'
 
@@ -38,6 +39,7 @@ export function App(): ReactNode {
   const loadHub = useHubStore((s) => s.loadAll)
 
   const route = useRoute()
+  const effectiveLocale = useEffectiveLocale()
 
   useEffect(() => {
     void bootstrap()
@@ -89,7 +91,7 @@ export function App(): ReactNode {
         ) : gamesStatus === 'loading' || gamesStatus === 'idle' ? (
           <Loading />
         ) : (
-          <Lobby games={games} locale={user.locale} onPlay={navigateToGame} />
+          <Lobby games={games} locale={effectiveLocale} onPlay={navigateToGame} />
         )}
       </div>
       <BottomTabs />

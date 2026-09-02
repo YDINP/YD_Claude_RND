@@ -41,6 +41,15 @@ export interface Theme {
   sfx?: Partial<Record<SfxKey, string>>
 }
 
+/**
+ * 릴 프레임을 컨테이너에 맞추는 방식.
+ * - `window`(기본): 릴 **창**을 최대한 키운다. 프레임의 기둥과 마퀴가 잘려 나갈 수 있다.
+ * - `width`: 프레임 **전체**가 폭에 들어오게 맞춘다. 아무것도 잘리지 않지만 릴이 작아진다.
+ *
+ * 프레임 이미지가 없으면 두 값 모두 같은 결과를 낸다.
+ */
+export type RendererFit = 'width' | 'window'
+
 export type RendererEvent =
   | { type: 'reelStop'; reel: number }
   | { type: 'spinEnd' }
@@ -56,6 +65,13 @@ export interface RendererOptions {
   onEvent?: (e: RendererEvent) => void
   /** true면 긴 애니메이션을 건너뛴다. 미지정 시 `prefers-reduced-motion`을 따른다. */
   reducedMotion?: boolean
+  /** 프레임을 맞추는 방식. 기본 `'window'`. */
+  fit?: RendererFit
+  /**
+   * `fit: 'window'`에서 프레임이 컨테이너 폭을 넘어도 되는 비율. 기본 0.30.
+   * 키울수록 릴 창이 커지고 좌우 기둥이 더 잘린다. `fit: 'width'`에서는 무시된다.
+   */
+  overflowX?: number
 }
 
 export interface SpinToOptions {

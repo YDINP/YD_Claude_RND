@@ -58,3 +58,25 @@ export const CODEX_OUTPUT_FILENAME = 'out.png'
 export const CODEX_LOG_FILENAME = 'last.txt'
 /** 실패 메시지에 붙이는 stdout/stderr 꼬리 최대 길이(문자 수). */
 export const CODEX_OUTPUT_TAIL_LENGTH = 2000
+
+/**
+ * 프레임 아트 안에서 릴 창(placeholder 초록/흰색 사각형)을 찾을 때 쓰는 기본값.
+ * 바깥 여백(투명 배경)과 상단 마퀴/하단 몰딩을 피해 중앙 영역만 본다.
+ */
+export const FRAME_WINDOW_REGION = { xMin: 0.05, xMax: 0.95, yMin: 0.1, yMax: 0.8 } as const
+/** 연결 성분 탐지용 다운샘플 배율. 4면 가로세로 4픽셀당 1개만 본다. */
+export const FRAME_WINDOW_DOWNSCALE = 4
+/** 이 알파값 이하 픽셀은 이미 투명하다고 보고 색상 판정에서 뺀다. */
+export const FRAME_WINDOW_ALPHA_THRESHOLD = 10
+/** 초록 판정 하한: g가 이 값보다 커야 한다. */
+export const FRAME_WINDOW_GREEN_MIN_GREEN = 140
+/** 초록 판정 마진: g가 r/b보다 이만큼 더 커야 한다. */
+export const FRAME_WINDOW_GREEN_MARGIN = 50
+/** 흰색 판정: r,g,b 모두 이 값보다 커야 한다. */
+export const FRAME_WINDOW_WHITE_MIN_CHANNEL = 235
+/** 탐지한 바운딩 박스를 이미지 폭의 이 비율만큼 사방으로 늘린다 (안티에일리어싱 초록 테두리 포함). */
+export const FRAME_WINDOW_EXPAND_RATIO = 0.01
+/** 창을 뚫을 때 둥근 모서리 반경 = 이미지 폭 x 이 비율. */
+export const FRAME_WINDOW_CORNER_RADIUS_RATIO = 0.02
+/** 창 경계 페더링 반경(px). */
+export const FRAME_WINDOW_FEATHER_PX = 2

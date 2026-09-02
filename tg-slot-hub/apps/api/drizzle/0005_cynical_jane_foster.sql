@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "locale_explicit" boolean DEFAULT false NOT NULL;

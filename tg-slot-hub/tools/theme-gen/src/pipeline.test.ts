@@ -2,8 +2,9 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import sharp from 'sharp'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { applyThemeUpdate, generateAsset } from './pipeline.js'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { applyThemeUpdate, assetRawPath, generateAsset, reprocessAsset } from './pipeline.js'
+import { writeBuffer } from './paths.js'
 import type { GeneratedImage, GenerateOptions, ImageProvider } from './provider/types.js'
 import type { PromptAsset, PromptsFile } from './schema.js'
 import type { ThemeUpdate } from './themeWriter.js'
@@ -201,6 +202,87 @@ describe('generateAsset', () => {
   })
 })
 
+/** 브라스 테두리(불투명) 위에 초록 릴 창 placeholder를 그린 합성 프레임 PNG (200x300). */
+async function buildSyntheticFramePng(): Promise<Buffer> {
+  return sharp({ create: { width: 200, height: 300, channels: 4, background: { r: 216, g: 169, b: 74, alpha: 255 } } })
+    .composite([
+      {
+        input: await sharp({ create: { width: 160, height: 180, channels: 4, background: { r: 0, g: 255, b: 0, alpha: 255 } } })
+          .png()
+          .toBuffer(),
+        left: 20,
+        top: 60,
+      },
+    ])
+    .png()
+    .toBuffer()
+}
+
+describe('reprocessAsset', () => {
+  const frameAsset: PromptAsset = {
+    id: 'frame',
+    kind: 'frame',
+    prompt: 'p',
+    size: '1024x1536',
+    transparent: true,
+    out: 'theme/frame.webp',
+    outSize: 200,
+  }
+
+  it('프로바이더를 전혀 호출하지 않고 art/raw에서 재처리해 frameLayout을 기록한다', async () => {
+    writeBuffer(assetRawPath(gameDir, frameAsset), await buildSyntheticFramePng())
+
+    const providerSpy = vi.fn(async (): Promise<GeneratedImage> => ({ buffer: await fakePng(), mimeType: 'image/png' }))
+    // reprocessAsset은 애초에 provider 인자를 받지 않는다 — 스파이가 있어도 호출될 방법이 없다는 걸 명시적으로 확인한다.
+
+    const themeUpdate: ThemeUpdate = {}
+    const result = await reprocessAsset(gameDir, frameAsset, themeUpdate)
+
+    expect(result.skipped).toBe(false)
+    expect(providerSpy).not.toHaveBeenCalled()
+    expect(existsSync(join(gameDir, 'theme', 'frame.webp'))).toBe(true)
+    expect(themeUpdate.frame).toBe('frame.webp')
+    expect(themeUpdate.frameLayout).toBeDefined()
+    expect(themeUpdate.frameLayout?.window.x).toBeGreaterThan(0)
+    expect(themeUpdate.frameLayout?.window.w).toBeGreaterThan(0)
+  })
+
+  it('art/raw에 원본이 없으면 명확한 에러를 던진다', async () => {
+    const themeUpdate: ThemeUpdate = {}
+    await expect(reprocessAsset(gameDir, frameAsset, themeUpdate)).rejects.toThrow(/원본이 없다/)
+  })
+
+  it('symbol kind도 재처리할 수 있다 (썸네일 포함)', async () => {
+    const symbolAsset: PromptAsset = {
+      id: 'seven',
+      kind: 'symbol',
+      prompt: 'p',
+      size: '1024x1024',
+      transparent: true,
+      out: 'theme/symbols/seven.webp',
+      outSize: 64,
+    }
+    writeBuffer(assetRawPath(gameDir, symbolAsset), await fakePng())
+
+    const themeUpdate: ThemeUpdate = {}
+    await reprocessAsset(gameDir, symbolAsset, themeUpdate)
+
+    expect(existsSync(join(gameDir, 'theme', 'symbols', 'seven.webp'))).toBe(true)
+    expect(existsSync(join(gameDir, 'theme', 'symbols', 'seven@128.webp'))).toBe(true)
+    expect(themeUpdate.symbols).toEqual({ seven: 'symbols/seven.webp' })
+  })
+
+  it('기존 출력을 덮어쓴다 (재처리는 항상 다시 쓴다)', async () => {
+    writeBuffer(assetRawPath(gameDir, frameAsset), await buildSyntheticFramePng())
+    writeBuffer(join(gameDir, 'theme', 'frame.webp'), Buffer.from('stale-placeholder'))
+
+    await reprocessAsset(gameDir, frameAsset, {})
+
+    const written = readFileSync(join(gameDir, 'theme', 'frame.webp'))
+    expect(written.equals(Buffer.from('stale-placeholder'))).toBe(false)
+  })
+})
+
 describe('applyThemeUpdate', () => {
   it('업데이트가 비어 있으면 theme.json을 건드리지 않는다', () => {
     applyThemeUpdate(gameDir, {})
@@ -214,5 +296,13 @@ describe('applyThemeUpdate', () => {
     const written = JSON.parse(readFileSync(themePath, 'utf8')) as { symbols: Record<string, string>; palette: unknown }
     expect(written.symbols.seven).toBe('symbols/seven.webp')
     expect(written.palette).toEqual({})
+  })
+
+  it('frameLayout만 있어도 theme.json을 쓴다', () => {
+    applyThemeUpdate(gameDir, { frameLayout: { window: { x: 0.09, y: 0.19, w: 0.82, h: 0.61 } } })
+    const themePath = join(gameDir, 'theme', 'theme.json')
+    expect(existsSync(themePath)).toBe(true)
+    const written = JSON.parse(readFileSync(themePath, 'utf8')) as { frameLayout: { window: { x: number } } }
+    expect(written.frameLayout.window.x).toBeCloseTo(0.09, 5)
   })
 })

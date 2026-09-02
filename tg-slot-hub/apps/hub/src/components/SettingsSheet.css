@@ -1,0 +1,103 @@
+.hub-settings__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hub-settings__label {
+  font-size: var(--hub-font-sub);
+  font-weight: 700;
+  color: var(--hub-text);
+}
+
+.hub-settings__segmented {
+  display: flex;
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+  overflow: hidden;
+}
+
+.hub-settings__segmented button {
+  flex: 1;
+  min-height: var(--hub-touch-min);
+  background: none;
+  color: var(--hub-text-sub);
+  font-size: var(--hub-font-sub);
+  font-weight: 700;
+}
+
+.hub-settings__segmented button[data-active='true'] {
+  background: linear-gradient(135deg, var(--hub-gold-light), var(--hub-gold));
+  color: #2a1a04;
+}
+
+.hub-settings__toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hub-space-md);
+}
+
+.hub-settings__toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hub-settings__hint {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+}
+
+.hub-settings__switch {
+  flex-shrink: 0;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  transition: background 0.15s ease-out;
+}
+
+.hub-settings__switch[data-on='true'] {
+  background: linear-gradient(135deg, var(--hub-gold-light), var(--hub-gold));
+  justify-content: flex-end;
+  border-color: transparent;
+}
+
+.hub-settings__switch-knob {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--hub-text);
+}
+
+.hub-settings__switch[data-on='true'] .hub-settings__switch-knob {
+  background: #2a1a04;
+}
+
+.hub-settings__explainer {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  line-height: 1.5;
+}
+
+.hub-settings__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: var(--hub-space-sm);
+  border-top: 1px solid var(--hub-border);
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+}
+
+.hub-settings__support-id {
+  font-family: var(--hub-mono);
+}

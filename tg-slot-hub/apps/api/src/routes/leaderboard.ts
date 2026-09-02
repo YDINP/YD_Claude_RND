@@ -18,7 +18,7 @@ export function createLeaderboardRoute(deps: LeaderboardRouteDeps): Hono<{ Varia
   const route = new Hono<{ Variables: AuthVariables }>()
   const clock = deps.clock ?? systemClock
 
-  route.get('/', authMiddleware(deps.jwt), async (c) => {
+  route.get('/', authMiddleware(deps.jwt, deps.repos), async (c) => {
     const auth = c.get('auth')
     const now = clock()
     const week = isoWeekKey(now)

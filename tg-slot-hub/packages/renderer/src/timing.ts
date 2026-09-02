@@ -1,8 +1,10 @@
 import {
   BASE_REVOLUTIONS,
-  BOUNCE_PORTION,
   DEFAULT_SPIN_DURATION_MS,
   DEFAULT_STAGGER_MS,
+  LANDING_SETTLE_MAX_PORTION,
+  LANDING_SETTLE_MS,
+  PULL_UP_MS,
   REDUCED_SPIN_DURATION_MS,
   REDUCED_STAGGER_MS,
   REDUCED_TOTAL_CAP_MS,
@@ -17,12 +19,15 @@ export interface SpinPlanInput {
 
 export interface ReelSpinPlan {
   reel: number
-  /** 이 릴이 돌기 시작하는 시각(ms, 스핀 시작 기준). 모든 릴이 동시에 출발한다. */
+  /**
+   * 이 릴이 아래로 돌기 시작하는 시각(ms, 스핀 시작 기준).
+   * 뒤로 당기는 구간이 끝난 시점이라 모든 릴이 같은 값을 갖는다.
+   */
   startMs: number
   /** 감속 전 등속 구간까지 포함한 회전 시간(ms). */
   spinMs: number
-  /** 정지 직전 바운스 시간(ms). */
-  bounceMs: number
+  /** 정지 직전 마무리 시간(ms). 튕김이 아니라 아주 짧게 자리를 잡는 구간이다. */
+  settleMs: number
   /** 이 릴이 완전히 멈추는 시각(ms). */
   endMs: number
   /** 최소 회전 바퀴 수. 오른쪽 릴일수록 더 돈다. */
@@ -31,14 +36,19 @@ export interface ReelSpinPlan {
 
 export interface SpinPlan {
   reels: ReelSpinPlan[]
-  /** 마지막 릴이 멈추는 시각(ms). */
+  /** 모든 릴이 함께 뒤로 당기는 시간(ms). 모션 축소면 0이다. */
+  pullUpMs: number
+  /** 마지막 릴이 멈추는 시각(ms). 뒤로 당기는 시간을 포함한다. */
   totalMs: number
   /** 모션 축소가 적용됐는지. 파티클 생략 판단에 쓴다. */
   reduced: boolean
 }
 
 /**
- * 릴별 스핀 타이밍 계획. 모든 릴이 같이 출발해 왼쪽부터 `stagger` 간격으로 멈춘다.
+ * 릴별 스핀 타이밍 계획.
+ *
+ * 모든 릴이 **함께 뒤로 당겼다가**(`pullUpMs`) 같이 출발해
+ * 왼쪽부터 `stagger` 간격으로 멈춘다.
  * 계획은 순수 데이터라 애니메이션 엔진 없이 테스트할 수 있다.
  */
 export function buildSpinPlan(input: SpinPlanInput): SpinPlan {
@@ -59,20 +69,23 @@ export function buildSpinPlan(input: SpinPlanInput): SpinPlan {
     duration = Math.min(duration, REDUCED_TOTAL_CAP_MS - stagger * (reels - 1))
   }
 
+  // 모션 축소에서는 반동도 마무리도 없다. 짧게 돌고 딱 멈춘다.
+  const pullUpMs = reduced ? 0 : PULL_UP_MS
+
   const plans: ReelSpinPlan[] = []
   for (let reel = 0; reel < reels; reel += 1) {
-    const total = duration + stagger * reel
-    const bounceMs = total * BOUNCE_PORTION
+    const spinTotal = duration + stagger * reel
+    const settleMs = reduced ? 0 : Math.min(LANDING_SETTLE_MS, spinTotal * LANDING_SETTLE_MAX_PORTION)
     plans.push({
       reel,
-      startMs: 0,
-      spinMs: total - bounceMs,
-      bounceMs,
-      endMs: total,
+      startMs: pullUpMs,
+      spinMs: spinTotal - settleMs,
+      settleMs,
+      endMs: pullUpMs + spinTotal,
       revolutions: BASE_REVOLUTIONS + reel,
     })
   }
 
   const last = plans[plans.length - 1]
-  return { reels: plans, totalMs: last?.endMs ?? 0, reduced }
+  return { reels: plans, pullUpMs, totalMs: last?.endMs ?? pullUpMs, reduced }
 }

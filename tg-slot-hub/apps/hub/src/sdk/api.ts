@@ -24,9 +24,24 @@ import {
   type Jackpot,
   type LeaderboardResponse,
   type MissionsResponse,
+  type Locale,
 } from '@tgslot/shared'
 
 const API_BASE_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8787'
+
+/**
+ * 세션 재인증 훅. store/session.ts가 모듈 로드 시 registerReauthHandler()로 딱 한 번 등록한다.
+ * 여기서 '../store/session'을 직접 import하지 않는 이유: session.ts가 이미 이 파일(../sdk/api)을
+ * import하고 있어서 정적 순환 import가 되면(특히 Vitest의 vi.mock 호이스팅 순서와 얽혀) 모듈 초기화
+ * 순서가 깨진다 — 실제로 시도해보니 session.test.ts의 기존 테스트까지 깨졌다. 지연 등록으로 피한다.
+ */
+type ReauthHandler = () => Promise<string | null>
+let reauthHandler: ReauthHandler | null = null
+
+/** store/session.ts 전용. 다른 곳에서 호출할 필요 없다. */
+export function registerReauthHandler(handler: ReauthHandler): void {
+  reauthHandler = handler
+}
 
 export class ApiClientError extends Error {
   readonly status: number
@@ -88,6 +103,41 @@ async function requestJson<T>(
   return parsed.data
 }
 
+/**
+ * 인증이 필요한 요청 공통 래퍼.
+ * API가 프로세스 재시작(인메모리 repo) 등으로 토큰의 유저를 더 이상 모르면 401(UNAUTHORIZED)이나
+ * 404 code=USER_NOT_FOUND를 돌려준다 — 코드 문자열은 apps/api/src/middleware/auth.ts가 쓰는 것과
+ * 정확히 같아야 한다. 이 경우 세션을 재인증(reauth)한 뒤 새 토큰으로 원래 요청을 딱 한 번만
+ * 재시도한다. body(idempotencyKey 포함)는 그대로 재사용된다 — 서버는 idempotencyKey를 유저별로
+ * 스코프하므로 재인증으로 유저가 바뀌어도 같은 키를 재사용해 문제 없다.
+ * 재인증까지 실패하면(초기화 안 됨, initData 없음 등) 원래 에러를 그대로 던진다.
+ */
+async function authedFetch<T>(
+  path: string,
+  schema: ParseableSchema<T>,
+  token: string,
+  init?: RequestInit,
+): Promise<T> {
+  const withToken = (t: string): RequestInit => ({
+    ...init,
+    headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${t}` },
+  })
+
+  try {
+    return await requestJson<T>(path, schema, withToken(token))
+  } catch (err) {
+    const isStaleToken =
+      err instanceof ApiClientError &&
+      (err.status === 401 || (err.status === 404 && err.code === 'USER_NOT_FOUND'))
+    if (!isStaleToken || !reauthHandler) throw err
+
+    const newToken = await reauthHandler()
+    if (!newToken) throw err
+
+    return requestJson<T>(path, schema, withToken(newToken))
+  }
+}
+
 /** POST /auth/telegram — initData 검증 후 JWT + 유저 + 지갑 반환 */
 export async function authTelegram(initData: string): Promise<AuthResponse> {
   const body: AuthTelegramRequest = { initData }
@@ -99,8 +149,14 @@ export async function authTelegram(initData: string): Promise<AuthResponse> {
 
 /** GET /me — Authorization: Bearer 토큰으로 내 정보 조회 */
 export async function getMe(token: string): Promise<MeResponse> {
-  return requestJson<MeResponse>('/me', MeResponseSchema, {
-    headers: { Authorization: `Bearer ${token}` },
+  return authedFetch<MeResponse>('/me', MeResponseSchema, token)
+}
+
+/** PATCH /me — 언어(locale)를 서버에 저장한다. 'auto'는 로컬에서만 다루고 서버에는 보내지 않는다 */
+export async function patchMe(token: string, locale: Locale): Promise<MeResponse> {
+  return authedFetch<MeResponse>('/me', MeResponseSchema, token, {
+    method: 'PATCH',
+    body: JSON.stringify({ locale }),
   })
 }
 
@@ -121,9 +177,8 @@ export async function getGameMath(gameId: string): Promise<unknown> {
 
 /** POST /games/:id/spin — 서버 권위 스핀. Bearer 토큰 필요 */
 export async function spin(token: string, gameId: string, body: SpinRequest): Promise<SpinResponse> {
-  return requestJson<SpinResponse>(`/games/${encodeURIComponent(gameId)}/spin`, SpinResponseSchema, {
+  return authedFetch<SpinResponse>(`/games/${encodeURIComponent(gameId)}/spin`, SpinResponseSchema, token, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
   })
 }
@@ -164,41 +219,34 @@ const roundSeedSchema: ParseableSchema<RoundSeedResponse> = {
 
 /** GET /rounds/:id/seed — provably fair 검증용 서버 시드 공개 */
 export async function getRoundSeed(token: string, roundId: string): Promise<RoundSeedResponse> {
-  return requestJson<RoundSeedResponse>(`/rounds/${encodeURIComponent(roundId)}/seed`, roundSeedSchema, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  return authedFetch<RoundSeedResponse>(`/rounds/${encodeURIComponent(roundId)}/seed`, roundSeedSchema, token)
 }
 
 // ---- 허브 기능 (Phase 3) ----
 
 /** GET /bonus — 데일리/4시간/구제 보너스 수령 가능 상태 */
 export async function getBonusStatus(token: string): Promise<BonusStatus> {
-  return requestJson<BonusStatus>('/bonus', BonusStatusSchema, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  return authedFetch<BonusStatus>('/bonus', BonusStatusSchema, token)
 }
 
 /** POST /bonus/daily/claim — 실패 시 서버가 409 NOT_CLAIMABLE을 돌려줄 수 있다 */
 export async function claimDailyBonus(token: string): Promise<BonusClaimResponse> {
-  return requestJson<BonusClaimResponse>('/bonus/daily/claim', BonusClaimResponseSchema, {
+  return authedFetch<BonusClaimResponse>('/bonus/daily/claim', BonusClaimResponseSchema, token, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
   })
 }
 
 /** POST /bonus/timed/claim */
 export async function claimTimedBonus(token: string): Promise<BonusClaimResponse> {
-  return requestJson<BonusClaimResponse>('/bonus/timed/claim', BonusClaimResponseSchema, {
+  return authedFetch<BonusClaimResponse>('/bonus/timed/claim', BonusClaimResponseSchema, token, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
   })
 }
 
 /** POST /bonus/rescue/claim */
 export async function claimRescueBonus(token: string): Promise<BonusClaimResponse> {
-  return requestJson<BonusClaimResponse>('/bonus/rescue/claim', BonusClaimResponseSchema, {
+  return authedFetch<BonusClaimResponse>('/bonus/rescue/claim', BonusClaimResponseSchema, token, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
   })
 }
 
@@ -209,23 +257,20 @@ export async function getJackpot(): Promise<Jackpot> {
 
 /** GET /leaderboard — 이번 주 리더보드 */
 export async function getLeaderboard(token: string): Promise<LeaderboardResponse> {
-  return requestJson<LeaderboardResponse>('/leaderboard', LeaderboardResponseSchema, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  return authedFetch<LeaderboardResponse>('/leaderboard', LeaderboardResponseSchema, token)
 }
 
 /** GET /missions — 오늘의 미션 목록 */
 export async function getMissions(token: string): Promise<MissionsResponse> {
-  return requestJson<MissionsResponse>('/missions', MissionsResponseSchema, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  return authedFetch<MissionsResponse>('/missions', MissionsResponseSchema, token)
 }
 
 /** POST /missions/:id/claim — 보너스 수령과 같은 응답 형태(amount + wallet)를 쓴다 */
 export async function claimMission(token: string, missionId: string): Promise<BonusClaimResponse> {
-  return requestJson<BonusClaimResponse>(
+  return authedFetch<BonusClaimResponse>(
     `/missions/${encodeURIComponent(missionId)}/claim`,
     BonusClaimResponseSchema,
-    { method: 'POST', headers: { Authorization: `Bearer ${token}` } },
+    token,
+    { method: 'POST' },
   )
 }

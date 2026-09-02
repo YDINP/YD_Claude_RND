@@ -96,6 +96,10 @@ export const MeResponseSchema = z.object({
 })
 export type MeResponse = z.infer<typeof MeResponseSchema>
 
+/** `PATCH /me` 본문. 지금은 언어만 바꾼다. */
+export const UpdateMeRequestSchema = z.object({ locale: LocaleSchema })
+export type UpdateMeRequest = z.infer<typeof UpdateMeRequestSchema>
+
 export const GamesResponseSchema = z.object({ games: z.array(GameSummarySchema) })
 export type GamesResponse = z.infer<typeof GamesResponseSchema>
 

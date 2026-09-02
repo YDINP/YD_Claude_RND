@@ -20,7 +20,7 @@ export function createMissionsRoute(deps: MissionsRouteDeps): Hono<{ Variables: 
   const route = new Hono<{ Variables: AuthVariables }>()
   const clock = deps.clock ?? systemClock
 
-  route.use('*', authMiddleware(deps.jwt))
+  route.use('*', authMiddleware(deps.jwt, deps.repos))
 
   route.get('/', async (c) => {
     const auth = c.get('auth')

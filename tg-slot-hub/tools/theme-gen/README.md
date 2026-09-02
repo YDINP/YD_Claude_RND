@@ -7,6 +7,7 @@
 pnpm --filter @tgslot/theme-gen gen games/classic-777 --dry-run
 pnpm --filter @tgslot/theme-gen gen games/classic-777
 pnpm --filter @tgslot/theme-gen gen games/classic-777 --only wild,seven --force
+pnpm --filter @tgslot/theme-gen gen games/classic-777 --reprocess --only frame
 ```
 
 ## 옵션
@@ -17,6 +18,13 @@ pnpm --filter @tgslot/theme-gen gen games/classic-777 --only wild,seven --force
 | `--only <id1,id2,...>` | 전체 | 지정한 asset id만 생성 |
 | `--dry-run` | off | 실제 호출 없이 계획(프롬프트·경로)만 출력 |
 | `--force` | off | 기존 출력 파일이 있어도 다시 생성 |
+| `--reprocess` | off | 프로바이더를 아예 호출하지 않고 `art/raw/<id>.png`에서 후처리만 다시 돌린다 |
+
+`--reprocess`는 이미지 생성 없이 후처리 로직(트림/패딩/릴 창 감지 등)만 고쳤을 때 쓴다.
+프로바이더 선택 로직 자체를 안 타므로 API 키도, codex 로그인도 필요 없다. 대상 asset의
+`art/raw/<id>.png`가 미리 있어야 한다(없으면 명확한 에러로 실패). `frame` 외 kind(symbol/bg/thumb)도
+재처리는 되지만, 원본이 아직 초록/흰색 배경을 갖고 있다면(gemini/comfy가 만들고 그때 크로마키를
+안 돌린 raw라면) 재처리로는 못 고친다 — 그럴 땐 `--force`로 프로바이더를 다시 불러야 한다.
 
 대상은 게임 폴더(`games/<id>` 절대/상대 경로) 하나만 받는다. `pnpm --filter`로 실행돼 cwd가
 패키지 폴더여도 워크스페이스 루트 기준으로 다시 찾는다.
@@ -101,26 +109,46 @@ API 키가 필요 없는 대신, **자산 1개에 1~3분** 걸릴 수 있어 (CO
 
 - **symbol**: 투명 여백 트림 → 8% 마진을 둔 정사각 캔버스에 중앙 배치 → `outSize` 정사각으로
   리사이즈해 webp(품질 90) → `<id>@128.webp` 128px 썸네일도 함께 만든다.
-- **frame / bg / thumb**: 트림 없이 폭 기준으로 `outSize`에 맞춰 리사이즈한 webp만 만든다.
+- **bg / thumb**: 트림 없이 폭 기준으로 `outSize`에 맞춰 리사이즈한 webp만 만든다.
+- **frame**: 위 둘과 달리 릴 창까지 손본다. 아래 별도 절 참고.
 
-원본 프로바이더 출력은 재처리에 쓸 수 있도록 `<gameDir>/art/raw/<id>.png`에 그대로 보관한다.
+원본 프로바이더 출력은 재처리에 쓸 수 있도록 `<gameDir>/art/raw/<id>.png`에 그대로 보관한다
+(`--reprocess`가 이걸 읽는다).
+
+### frame 전용: 릴 창 감지 & 펀칭
+
+`kind: "frame"` 프롬프트는 보통 릴이 들어갈 자리에 순수 초록(또는 흰색) placeholder 사각형을
+그리게 시킨다. 문제는 openai/codex의 "네이티브 투명 배경"이 이미지 **바깥** 배경만 투명하게
+만들 뿐, 모델이 의도적으로 그린 그 placeholder 사각형은 "배경"으로 인식하지 않아 그대로
+남는다는 것 — 렌더러가 프레임을 릴 위에 덧그리므로, 이 사각형이 안 뚫리면 릴이 안 보인다.
+`processFrame`(`src/postProcess.ts`, 탐지/펀칭 로직은 `src/frameWindow.ts`)이 이걸 고친다:
+
+1. **탐지**: 이미지 중앙 영역(x 5-95%, y 10-80% — 바깥 여백과 상단 마퀴/하단 몰딩을 피한다)에서
+   초록(`g > 140 && g > r+50 && g > b+50`) 또는 흰색(`r,g,b 모두 > 235`)이면서 이미 투명하지
+   않은(`alpha > 10`) 픽셀을 표시하고, 다운샘플 그리드(4px당 1칸) 위에서 BFS로 가장 큰 연결
+   덩어리를 찾아 바운딩 박스를 구한다. 안티에일리어싱된 초록 테두리까지 포함하도록 폭의 1%만큼
+   사방으로 넓힌다.
+2. **펀칭**: 찾은 박스 안쪽 알파를 0으로 만든다. 모서리를 폭의 2%만큼 둥글리고 경계를 2px
+   페더링해 딱딱한 사각형 윤곽이 남지 않게 한다. 박스 바깥 픽셀의 알파는 건드리지 않는다.
+3. **마무리 크로마키**: 그러고도 남을 수 있는 초록 번짐(창 밖 가장자리 등)을 잡기 위해 이미지
+   전체에 일반 크로마키를 한 번 더 돌린다.
+
+창을 못 찾으면(placeholder가 없거나 색이 안 맞으면) 예외 없이 그냥 리사이즈만 하고 경고 로그를
+남긴다 — `frameLayout`은 갱신되지 않고 렌더러 기본값(`DEFAULT_FRAME_WINDOW`)이 쓰인다.
+탐지된 좌표는 `[theme-gen] frame: <id> 릴 창 감지 x=... y=... w=... h=...`로 로그에 남는다.
 
 ## theme.json 반영
 
 `kind: "symbol"` 에셋은 `theme.json`의 `symbols[id]`에, `kind: "frame"`은 `frame`에,
-`kind: "bg"`는 `background`에 (모두 `theme.json` 파일 기준 상대 경로로) 반영한다.
+`kind: "bg"`는 `background`에 (모두 `theme.json` 파일 기준 상대 경로로) 반영한다. `frame`
+에셋에서 릴 창을 찾았으면 `frameLayout: { window: { x, y, w, h } }`(이미지 크기 대비 분수)도
+함께 쓴다 — 렌더러의 `FrameWindowSchema`(`packages/renderer/src/theme.ts`)가 읽는 필드다.
 `kind: "thumb"`는 게임 목록 썸네일이라 `theme.json`이 아니라 게임 폴더에 파일만 쓴다
 (로비 카드 소스는 `manifest.json`의 몫).
 
 병합은 항상 **merge, never drop unknown keys**다. `version`, `palette`, `sfx` 등 기존 키는
-그대로 두고 심볼만 채워 넣는다(겹치는 id는 새 값으로 덮는다). `theme.json`이 아예 없으면
-빈 `palette: {}`로 새로 만든다.
-
-> `frame`은 렌더러의 현재 `theme.json` 스키마(`packages/renderer/src/theme.ts`)에는 없는
-> 필드다. 지금 프레임 이미지는 렌더러가 아직 소비하지 않는 새 키로 추가되니, 렌더러 쪽에서
-> 프레임 이미지를 쓰기로 하면 스키마에 `frame`을 정식으로 추가해야 한다.
-> **consumed by the renderer once its schema supports `frame` image (in progress)** —
-> 그 전까지는 `theme.json`에 값만 쌓이고 렌더러는 무시한다(merge 정책이라 안전).
+그대로 두고 심볼/frame/frameLayout만 채워 넣는다(겹치면 새 값이 이긴다). `theme.json`이 아예
+없으면 빈 `palette: {}`로 새로 만든다.
 
 ## 재생성 / 부분 재실행
 
@@ -154,3 +182,7 @@ pnpm --filter @tgslot/theme-gen test
 - codex 지시문 생성기(크기/투명 변형 스냅샷), spawn 래퍼(가짜 프로세스로 happy path/누락 파일/시간
   초과/spawn 실패), 투명 폴백 크로마키 적용 여부, `codex login status` 가용성 확인 — **실제
   codex는 테스트에서 절대 호출하지 않는다**
+- 프레임 릴 창 탐지(합성 200×300 이미지, 바운딩 박스 ±2px, 중앙 영역 밖은 무시)와 펀칭(창
+  안쪽 alpha 0 / 바깥은 원래 알파 보존, 둥근 모서리, 페더링)
+- `--reprocess`: 픽스처 raw png로 프로바이더 호출 없이 웹프를 만드는지(스파이 미호출로 확인),
+  원본이 없으면 명확히 실패하는지, 기존 출력을 덮어쓰는지

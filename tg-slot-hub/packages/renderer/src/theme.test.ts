@@ -139,15 +139,40 @@ describe('classic-777 실제 테마 팩', () => {
 
   it('배경을 선언하고 효과음은 선언하지 않는다', () => {
     const theme = parseTheme(loadThemeJson('classic-777'), '/games/classic-777')
-    expect(theme.background).toBe('/games/classic-777/theme/bg.svg')
+    expect(theme.background).toBe('/games/classic-777/theme/bg.webp')
     expect(theme.sfx).toBeUndefined()
   })
 
-  it('아직 프레임 아트가 없어 벡터 베젤 경로를 탄다', () => {
-    // theme-gen이 frame.webp를 만들어 theme.json에 기록하면 이 기대값이 바뀐다.
+  it('프레임 아트와 실측된 창을 함께 선언한다', () => {
+    // theme-gen이 생성한 이미지에서 초록 창을 직접 재어 기록한다.
+    // 값은 아트가 바뀌면 달라지므로 고정하지 않고 "창이 프레임 안에 있다"만 확인한다.
     const theme = parseTheme(loadThemeJson('classic-777'), '/games/classic-777')
-    expect(theme.frame).toBeUndefined()
-    expect(theme.frameLayout).toBeUndefined()
+    expect(theme.frame).toBe('/games/classic-777/theme/frame.webp')
+
+    const window = theme.frameLayout?.window
+    expect(window).toBeDefined()
+    if (window === undefined) return
+    expect(window.x + window.w).toBeLessThanOrEqual(1)
+    expect(window.y + window.h).toBeLessThanOrEqual(1)
+    expect(window.w).toBeGreaterThan(0.5)
+    expect(window.h).toBeGreaterThan(0.2)
+  })
+
+  it('실측 창이 기획 기본값에서 크게 벗어나지 않는다', () => {
+    // 아트 생성이 크게 어긋나면(창을 엉뚱한 데 그렸다면) 여기서 걸린다.
+    const window = parseTheme(loadThemeJson('classic-777'), '/games/classic-777').frameLayout?.window
+    if (window === undefined) throw new Error('frameLayout 없음')
+    expect(Math.abs(window.x - DEFAULT_FRAME_WINDOW.x)).toBeLessThan(0.1)
+    expect(Math.abs(window.y - DEFAULT_FRAME_WINDOW.y)).toBeLessThan(0.1)
+    expect(Math.abs(window.w - DEFAULT_FRAME_WINDOW.w)).toBeLessThan(0.15)
+    expect(Math.abs(window.h - DEFAULT_FRAME_WINDOW.h)).toBeLessThan(0.15)
+  })
+
+  it('생성된 에셋은 전부 webp다', () => {
+    const theme = parseTheme(loadThemeJson('classic-777'), '/games/classic-777')
+    for (const url of Object.values(theme.symbols)) {
+      expect(url).toMatch(/\.webp$/)
+    }
   })
 })
 

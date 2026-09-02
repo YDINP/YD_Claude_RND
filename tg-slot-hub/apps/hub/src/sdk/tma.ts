@@ -14,6 +14,7 @@ import {
   hapticFeedback,
   retrieveRawInitData,
 } from '@telegram-apps/sdk-react'
+import { useSettingsStore } from '../store/settings'
 
 export type HapticKind = 'light' | 'medium' | 'success'
 
@@ -169,8 +170,9 @@ export function getThemeColors(): ThemeColors {
   }
 }
 
-/** TMA 햅틱 피드백. 텔레그램 밖이거나 미지원이면 조용히 무시된다. */
+/** TMA 햅틱 피드백. 설정에서 진동이 꺼져 있거나, 텔레그램 밖/미지원이면 조용히 무시된다. */
 export function haptic(kind: HapticKind): void {
+  if (!useSettingsStore.getState().haptics) return
   try {
     if (kind === 'success') {
       hapticFeedback.notificationOccurred('success')

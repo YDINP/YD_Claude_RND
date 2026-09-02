@@ -6,3 +6,5 @@ dist/
 *.log
 .DS_Store
 coverage/
+# theme-gen 원본(대용량). webp 산출물만 추적
+games/*/art/raw/

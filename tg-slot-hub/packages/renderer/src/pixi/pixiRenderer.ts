@@ -7,11 +7,15 @@ import {
   FALLBACK_CONTAINER_WIDTH,
   IDLE_AMPLITUDE_SYMBOLS,
   IDLE_CYCLE_MS,
-  OVERSHOOT_SYMBOLS,
+  LANDING_SETTLE_SYMBOLS,
+  PULL_UP_SYMBOLS,
   REDUCED_WIN_CYCLE_MS,
   SYMBOL_FILL_RATIO,
   WIN_CYCLE_MS,
-  WIN_LINE_WIDTH_RATIO,
+  WIN_GLOW_LAYERS,
+  WIN_HIGHLIGHT_STROKE_PX,
+  WIN_LINE_ALPHA,
+  WIN_LINE_STROKE_PX,
   WIN_PULSE_MS,
   WIN_PULSE_SCALE,
 } from '../constants.js'
@@ -20,6 +24,7 @@ import {
   cellPitch,
   computeFrameLayout,
   computeLayout,
+  computeWindowFitLayout,
   paylinePoints,
   positionRects,
   reelLeft,
@@ -27,16 +32,24 @@ import {
   symbolCenter,
   type Layout,
   type Point,
+  type Rect,
 } from '../layout.js'
 import { resolveResolution } from '../motion.js'
 import { resolveFrameWindow } from '../theme.js'
-import { buildSpinPlan, type ReelSpinPlan } from '../timing.js'
+import { buildSpinPlan, type ReelSpinPlan, type SpinPlan } from '../timing.js'
 import { formatWinLabel, isBigWin, paylineColor } from '../wins.js'
 import type { RendererCore, ResolvedRendererOptions } from '../internal.js'
 import { TextureRegistry } from '../textureRegistry.js'
 import type { RendererEvent, ShowWinsOptions, SpinToOptions } from '../types.js'
+import {
+  createShineTexture,
+  createSparkleTexture,
+  startLightSweep,
+  startSparkles,
+  type AmbientEffect,
+} from './ambient.js'
 import { burstCoins } from './coins.js'
-import { createCoinTexture, loadBackgroundTexture, loadImageTexture, loadSymbolTextures } from './textures.js'
+import { createCoinTexture, loadBackgroundTexture, loadFrameTexture, loadSymbolTextures } from './textures.js'
 
 interface Cell {
   view: Container
@@ -64,6 +77,8 @@ const LABEL_FONT_RATIO = 0.24
 interface Geometry {
   canvasWidth: number
   canvasHeight: number
+  /** 프레임 스프라이트를 놓을 사각형. 프레임 이미지가 없으면 null. 캔버스 밖으로 나갈 수 있다. */
+  frameRect: Rect | null
   /** 릴 레이아웃. 좌표는 `content`를 원점으로 하는 지역 좌표계다. */
   layout: Layout
   /** 릴 레이아웃이 놓이는 캔버스 좌표. */
@@ -95,6 +110,15 @@ class PixiRenderer implements RendererCore {
   private readonly backgroundSprite: Sprite | null
   /** 베젤 아트. 릴 창이 알파로 뚫려 있어 릴 **위에** 얹는다. */
   private readonly frameSprite: Sprite | null
+  /** 배경 위 반짝임. 프레임보다 아래에 둔다. */
+  private readonly sparkleLayer = new Container()
+  /** 프레임 위를 지나가는 빛. 항상 맨 위다. */
+  private readonly ambientLayer = new Container()
+  private readonly shineTexture: Texture | null
+  private readonly sparkleTexture: Texture | null
+  private ambient: AmbientEffect[] = []
+  /** 캔버스가 컨테이너를 넘칠 수 있어 overflow를 바꾼다. 해제할 때 원래 값으로 되돌린다. */
+  private readonly previousOverflow: string
 
   private resizeObserver: ResizeObserver | null = null
   private idleTweens: gsap.core.Tween[] = []
@@ -125,6 +149,14 @@ class PixiRenderer implements RendererCore {
     this.frameSprite = frameTexture === null ? null : new Sprite(frameTexture)
     this.geometry = this.measureGeometry()
 
+    // 창 맞춤에서는 프레임이 컨테이너 밖으로 나가므로 잘라 줘야 한다.
+    this.previousOverflow = options.container.style.overflow
+    options.container.style.overflow = 'hidden'
+
+    const ambientOn = !options.reducedMotion
+    this.shineTexture = ambientOn ? createShineTexture(ownedTextures) : null
+    this.sparkleTexture = ambientOn ? createSparkleTexture(ownedTextures) : null
+
     this.backgroundSprite = backgroundTexture === null ? null : new Sprite(backgroundTexture)
     if (this.backgroundSprite !== null) this.backgroundLayer.addChild(this.backgroundSprite)
 
@@ -148,9 +180,14 @@ class PixiRenderer implements RendererCore {
       this.winLabel,
       this.fxLayer,
     )
-    this.root.addChild(this.backgroundLayer, this.frameGraphics, this.contentLayer)
-    // 베젤 아트는 릴을 살짝 덮어야 안쪽 하이라이트가 살아난다. 항상 맨 위에 둔다.
-    if (this.frameSprite !== null) this.root.addChild(this.frameSprite)
+    this.root.addChild(this.backgroundLayer)
+    // 베젤 아트가 없을 때만 반짝임이 진짜 "배경"에 놓인다.
+    if (this.frameSprite === null) this.root.addChild(this.sparkleLayer)
+    this.root.addChild(this.frameGraphics, this.contentLayer)
+    // 베젤 아트는 릴을 살짝 덮어야 안쪽 하이라이트가 살아난다. 릴 위에 둔다.
+    // 베젤이 배경을 거의 다 가리므로 반짝임은 그 위로 올려야 보인다. 브라스가 반짝이는 것처럼 읽힌다.
+    if (this.frameSprite !== null) this.root.addChild(this.frameSprite, this.sparkleLayer)
+    this.root.addChild(this.ambientLayer)
     this.app.stage.addChild(this.root)
 
     this.buildReels()
@@ -173,18 +210,42 @@ class PixiRenderer implements RendererCore {
 
     const frameTexture = this.frameSprite?.texture
     if (frameTexture !== undefined && frameTexture.width > 0 && frameTexture.height > 0) {
+      const window = resolveFrameWindow(this.options.theme)
+      // 창 맞춤은 컨테이너 높이를 알아야 성립한다. 아직 못 쟀으면 폭 맞춤으로 물러선다.
+      if (this.options.fit === 'window' && containerHeight > 0) {
+        const fitted = computeWindowFitLayout({
+          containerWidth,
+          containerHeight,
+          frameWidth: frameTexture.width,
+          frameHeight: frameTexture.height,
+          window,
+          reels,
+          rows,
+          overflowX: this.options.overflowX,
+        })
+        return {
+          canvasWidth: fitted.canvasWidth,
+          canvasHeight: fitted.canvasHeight,
+          frameRect: fitted.frameRect,
+          layout: fitted.layout,
+          content: fitted.content,
+          framed: true,
+        }
+      }
+
       const framed = computeFrameLayout({
         containerWidth,
         containerHeight,
         frameWidth: frameTexture.width,
         frameHeight: frameTexture.height,
-        window: resolveFrameWindow(this.options.theme),
+        window,
         reels,
         rows,
       })
       return {
         canvasWidth: framed.canvasWidth,
         canvasHeight: framed.canvasHeight,
+        frameRect: { x: 0, y: 0, width: framed.canvasWidth, height: framed.canvasHeight },
         layout: framed.layout,
         content: framed.content,
         framed: true,
@@ -195,6 +256,7 @@ class PixiRenderer implements RendererCore {
     return {
       canvasWidth: layout.width,
       canvasHeight: layout.height,
+      frameRect: null,
       layout,
       content: { x: 0, y: 0 },
       framed: false,
@@ -202,16 +264,17 @@ class PixiRenderer implements RendererCore {
   }
 
   private applyLayout(): void {
-    const { canvasWidth, canvasHeight, content, framed } = this.geometry
+    const { canvasWidth, canvasHeight, content, framed, frameRect } = this.geometry
     this.app.renderer.resize(canvasWidth, canvasHeight)
 
     if (this.backgroundSprite !== null) {
       this.backgroundSprite.width = canvasWidth
       this.backgroundSprite.height = canvasHeight
     }
-    if (this.frameSprite !== null) {
-      this.frameSprite.width = canvasWidth
-      this.frameSprite.height = canvasHeight
+    if (this.frameSprite !== null && frameRect !== null) {
+      this.frameSprite.position.set(frameRect.x, frameRect.y)
+      this.frameSprite.width = frameRect.width
+      this.frameSprite.height = frameRect.height
     }
 
     this.contentLayer.position.set(content.x, content.y)
@@ -234,6 +297,8 @@ class PixiRenderer implements RendererCore {
       }
       this.renderReel(reel)
     }
+
+    this.startAmbient()
   }
 
   private drawFrame(): void {
@@ -338,7 +403,7 @@ class PixiRenderer implements RendererCore {
       plan.reels.map(async (reelPlan) => {
         const stop = stops[reelPlan.reel]
         if (stop === undefined) return
-        await this.spinReel(reelPlan, stop, token)
+        await this.spinReel(reelPlan, stop, token, plan)
       }),
     )
 
@@ -350,21 +415,31 @@ class PixiRenderer implements RendererCore {
   }
 
   /**
-   * 릴 1개를 가속 → 감속 → 바운스 순으로 돌린다.
-   * 착지는 애니메이션 값이 아니라 정확한 정지 위치로 확정하므로 결정론이 깨지지 않는다.
+   * 릴 1개를 반동 → 가속 → 감속 → 마무리 순으로 돌린다.
+   *
+   * 반동은 스핀을 **시작할 때** 모든 릴이 함께 살짝 위로 당겼다가 아래로 튕겨 나가는 구간이다.
+   * 멈출 때는 튕기지 않는다. `LANDING_SETTLE_SYMBOLS`만큼만 아주 짧게 자리를 잡는다.
+   *
+   * 착지는 애니메이션이 도달한 값이 아니라 정확한 정지 위치로 다시 확정하므로
+   * 반동과 마무리가 어떻게 움직이든 결정론이 깨지지 않는다.
    */
-  private spinReel(plan: ReelSpinPlan, stop: number, token: number): Promise<void> {
+  private spinReel(plan: ReelSpinPlan, stop: number, token: number, spinPlan: SpinPlan): Promise<void> {
     const view = this.reels[plan.reel]
     const strip = this.options.math.strips[plan.reel]
     if (view === undefined || strip === undefined) return Promise.resolve()
 
+    const reduced = this.options.reducedMotion
     const length = strip.length
-    const target = spinTargetPosition(view.position, stop, length, plan.revolutions)
-    const overshoot = this.options.reducedMotion ? 0 : OVERSHOOT_SYMBOLS
-    const landing = target - overshoot
-    const distance = view.position - landing
-    const accelTo = view.position - distance * ACCEL_DISTANCE_RATIO
-    const state = { p: view.position }
+    const start = view.position
+    // 양수가 위쪽이다. 반동은 릴을 위로 끌어올린다.
+    const pullUpTo = reduced ? start : start + PULL_UP_SYMBOLS
+    const target = spinTargetPosition(start, stop, length, plan.revolutions)
+    const settle = reduced ? 0 : LANDING_SETTLE_SYMBOLS
+    const landing = target - settle
+    const distance = pullUpTo - landing
+    const accelTo = pullUpTo - distance * ACCEL_DISTANCE_RATIO
+
+    const state = { p: start }
     const onUpdate = (): void => {
       view.position = state.p
       this.renderReel(plan.reel)
@@ -383,6 +458,16 @@ class PixiRenderer implements RendererCore {
           resolve()
         },
       })
+
+      if (spinPlan.pullUpMs > 0) {
+        timeline.to(state, {
+          p: pullUpTo,
+          duration: spinPlan.pullUpMs / 1000,
+          ease: 'power2.out',
+          onUpdate,
+        })
+      }
+
       timeline
         .to(state, {
           p: accelTo,
@@ -396,12 +481,16 @@ class PixiRenderer implements RendererCore {
           ease: 'power2.out',
           onUpdate,
         })
-        .to(state, {
+
+      if (plan.settleMs > 0) {
+        timeline.to(state, {
           p: target,
-          duration: plan.bounceMs / 1000,
+          duration: plan.settleMs / 1000,
           ease: 'power2.out',
           onUpdate,
         })
+      }
+
       this.spinTimelines.push(timeline)
     })
   }
@@ -455,8 +544,9 @@ class PixiRenderer implements RendererCore {
   private drawWin(win: WinLine): void {
     const payline = this.options.math.paylines[win.line]
     if (payline === undefined) return
-    const color = paylineColor(this.options.theme.palette.winLine, win.line)
-    const width = this.layout.symbolSize * WIN_LINE_WIDTH_RATIO
+    const lineColor = paylineColor(this.options.theme.palette.winLine, win.line)
+    const brass = this.options.theme.palette.frame
+    const radius = this.layout.radius * 0.5
 
     this.winGraphics.clear()
 
@@ -468,14 +558,27 @@ class PixiRenderer implements RendererCore {
         const point = points[i]
         if (point !== undefined) this.winGraphics.lineTo(point.x, point.y)
       }
-      this.winGraphics.stroke({ width, color, alpha: 0.95, cap: 'round', join: 'round' })
+      this.winGraphics.stroke({
+        width: WIN_LINE_STROKE_PX,
+        color: lineColor,
+        alpha: WIN_LINE_ALPHA,
+        cap: 'round',
+        join: 'round',
+      })
     }
 
-    for (const rect of positionRects(this.layout, win.positions)) {
-      this.winGraphics
-        .roundRect(rect.x, rect.y, rect.width, rect.height, this.layout.radius * 0.5)
-        .stroke({ width: width * 0.8, color, alpha: 0.9 })
+    // 승리 심볼은 브라스 광채로 감싼다. 굵고 흐린 선부터 겹쳐 블러 없이 번짐을 만든다.
+    const rects = positionRects(this.layout, win.positions)
+    for (const glow of WIN_GLOW_LAYERS) {
+      for (const rect of rects) {
+        this.winGraphics.roundRect(rect.x, rect.y, rect.width, rect.height, radius)
+      }
+      this.winGraphics.stroke({ width: glow.widthPx, color: brass, alpha: glow.alpha, join: 'round' })
     }
+    for (const rect of rects) {
+      this.winGraphics.roundRect(rect.x, rect.y, rect.width, rect.height, radius)
+    }
+    this.winGraphics.stroke({ width: WIN_HIGHLIGHT_STROKE_PX, color: brass, alpha: 0.95, join: 'round' })
 
     this.placeWinLabel(win, payline)
     this.pulseWinSymbols(win)
@@ -580,6 +683,37 @@ class PixiRenderer implements RendererCore {
     }
   }
 
+  // ------------------------------------------------------------------ 은은한 연출
+
+  private stopAmbient(): void {
+    for (const effect of this.ambient) effect.stop()
+    this.ambient = []
+    this.sparkleLayer.removeChildren()
+    this.ambientLayer.removeChildren()
+  }
+
+  /**
+   * 배경 반짝임과 프레임 위 빛 쓸기를 다시 건다.
+   * 배치가 캔버스 크기에 묶여 있어 레이아웃이 바뀔 때마다 새로 시작한다.
+   * 모션 축소에서는 텍스처조차 만들지 않으므로 아무것도 하지 않는다.
+   */
+  private startAmbient(): void {
+    this.stopAmbient()
+    if (this.destroyed || this.options.reducedMotion) return
+
+    const { canvasWidth, canvasHeight, frameRect } = this.geometry
+    if (canvasWidth <= 0 || canvasHeight <= 0) return
+
+    if (this.sparkleTexture !== null) {
+      const area = { x: 0, y: 0, width: canvasWidth, height: canvasHeight }
+      this.ambient.push(startSparkles(this.sparkleLayer, this.sparkleTexture, area))
+    }
+    // 빛 쓸기는 훑을 표면이 있을 때만 의미가 있다. 벡터 베젤에는 걸지 않는다.
+    if (this.shineTexture !== null && frameRect !== null) {
+      this.ambient.push(startLightSweep(this.ambientLayer, this.shineTexture, frameRect))
+    }
+  }
+
   // -------------------------------------------------------------- 리사이즈
 
   private observeResize(): void {
@@ -605,10 +739,12 @@ class PixiRenderer implements RendererCore {
     this.destroyed = true
     this.clearWins()
     this.killSpinTimelines()
+    this.stopAmbient()
     for (const tween of this.idleTweens) tween.kill()
     this.idleTweens = []
     this.resizeObserver?.disconnect()
     this.resizeObserver = null
+    this.options.container.style.overflow = this.previousOverflow
     this.app.destroy({ removeView: true }, { children: true })
     // 앱을 내린 뒤에 정리한다. 스프라이트는 기본적으로 텍스처를 파괴하지 않으므로
     // 캔버스로 만든 폴백·코인 텍스처는 여기서만 해제된다.
@@ -641,7 +777,7 @@ export async function createPixiRendererCore(options: ResolvedRendererOptions): 
   const [textures, backgroundTexture, frameTexture] = await Promise.all([
     loadSymbolTextures(options.theme, symbolIds, ownedTextures),
     loadBackgroundTexture(options.theme),
-    loadImageTexture(options.theme.frame),
+    loadFrameTexture(options.theme.frame, ownedTextures),
   ])
   const coinTexture = createCoinTexture(options.theme, ownedTextures)
 

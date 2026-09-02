@@ -29,8 +29,14 @@ export interface UpsertResult {
 }
 
 export interface UserRepo {
+  /**
+   * 로그인 upsert. `locale`은 **신규 생성일 때만** 그대로 반영되고,
+   * 기존 유저가 `PATCH /me`로 언어를 직접 고른 뒤라면 무시된다.
+   */
   upsertFromTelegram(tgUser: TelegramUser, locale: Locale): Promise<UpsertResult>
   getById(userId: string): Promise<AppUser | null>
+  /** 유저가 직접 고른 언어로 바꾸고, 이후 로그인이 덮어쓰지 못하게 표시한다. */
+  updateLocale(userId: string, locale: Locale): Promise<AppUser | null>
 }
 
 export interface WalletRepo {

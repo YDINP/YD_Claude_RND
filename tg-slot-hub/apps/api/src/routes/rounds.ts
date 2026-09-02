@@ -25,7 +25,7 @@ export interface RoundSeedResponse {
 export function createRoundsRoute(deps: RoundsRouteDeps): Hono<{ Variables: AuthVariables }> {
   const route = new Hono<{ Variables: AuthVariables }>()
 
-  route.get('/:id/seed', authMiddleware(deps.jwt), async (c) => {
+  route.get('/:id/seed', authMiddleware(deps.jwt, deps.repos), async (c) => {
     const auth = c.get('auth')
     const round = await deps.repos.getRoundById(c.req.param('id'))
 

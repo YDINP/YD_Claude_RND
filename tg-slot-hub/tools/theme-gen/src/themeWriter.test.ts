@@ -43,4 +43,20 @@ describe('mergeTheme', () => {
     const merged = mergeTheme(existing, { frame: 'frame.webp' })
     expect(merged.symbols).toBeUndefined()
   })
+
+  it('frameLayout을 지정했을 때만 덮어쓰고 다른 키는 보존한다', () => {
+    const existing = { frame: 'frame.webp', frameLayout: { window: { x: 0.1, y: 0.1, w: 0.5, h: 0.5 } }, palette: {} }
+
+    const untouched = mergeTheme(existing, { symbols: {} })
+    expect(untouched.frameLayout).toEqual({ window: { x: 0.1, y: 0.1, w: 0.5, h: 0.5 } })
+
+    const updated = mergeTheme(existing, { frameLayout: { window: { x: 0.09, y: 0.19, w: 0.82, h: 0.61 } } })
+    expect(updated.frameLayout).toEqual({ window: { x: 0.09, y: 0.19, w: 0.82, h: 0.61 } })
+    expect(updated.frame).toBe('frame.webp')
+  })
+
+  it('frameLayout이 없던 파일에도 새로 추가한다', () => {
+    const merged = mergeTheme({ palette: {} }, { frameLayout: { window: { x: 0, y: 0, w: 1, h: 1 } } })
+    expect(merged.frameLayout).toEqual({ window: { x: 0, y: 0, w: 1, h: 1 } })
+  })
 })
