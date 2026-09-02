@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Classic 777">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1c2740"/>
+      <stop offset="100%" stop-color="#0b1220"/>
+    </linearGradient>
+    <linearGradient id="reel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a2010"/>
+      <stop offset="100%" stop-color="#1a1408"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg)"/>
+  <rect x="16" y="60" width="168" height="80" rx="10" fill="#0d1424" stroke="#d8a94a" stroke-width="2"/>
+  <g font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="52" fill="#f4d98a" text-anchor="middle">
+    <rect x="24" y="68" width="46" height="64" rx="6" fill="url(#reel)"/>
+    <text x="47" y="116">7</text>
+    <rect x="77" y="68" width="46" height="64" rx="6" fill="url(#reel)"/>
+    <text x="100" y="116">7</text>
+    <rect x="130" y="68" width="46" height="64" rx="6" fill="url(#reel)"/>
+    <text x="153" y="116">7</text>
+  </g>
+  <text x="100" y="176" font-family="-apple-system, sans-serif" font-weight="700" font-size="14" fill="#8792a8" text-anchor="middle">CLASSIC 777</text>
+</svg>

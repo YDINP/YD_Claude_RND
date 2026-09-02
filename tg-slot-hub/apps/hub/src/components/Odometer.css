@@ -1,0 +1,4 @@
+.hub-odometer {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--hub-mono);
+}

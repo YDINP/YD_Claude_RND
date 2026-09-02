@@ -1,0 +1,40 @@
+/* tg-slot-hub — 허브 디자인 토큰. 텔레그램 테마 CSS 변수(--tg-theme-*)를 우선하고
+   그 값이 없을 때(개발 모드, 미지원 클라이언트)는 다크 네이비 + 브라스/골드 폴백을 쓴다. */
+:root {
+  --hub-bg: var(--tg-theme-bg-color, #0b1220);
+  --hub-secondary-bg: var(--tg-theme-secondary-bg-color, #131c2e);
+  --hub-card-bg: #16213a;
+  --hub-text: var(--tg-theme-text-color, #f2f4f8);
+  --hub-text-sub: var(--tg-theme-hint-color, #8792a8);
+  --hub-link: var(--tg-theme-link-color, #5b9dff);
+  --hub-button-bg: var(--tg-theme-button-color, #2f6fed);
+  --hub-button-text: var(--tg-theme-button-text-color, #ffffff);
+  --hub-border: #202c47;
+
+  --hub-gold: #d8a94a;
+  --hub-gold-light: #f4d98a;
+  --hub-gem: #4fc3d9;
+  --hub-danger: #e0605c;
+  --hub-success: #3fae6a;
+
+  --hub-font-title: 20px;
+  --hub-font-body: 15px;
+  --hub-font-sub: 13px;
+  --hub-font-small: 11px;
+
+  --hub-space-xs: 4px;
+  --hub-space-sm: 8px;
+  --hub-space-md: 12px;
+  --hub-space-lg: 16px;
+  --hub-space-xl: 20px;
+
+  --hub-radius-sm: 10px;
+  --hub-radius-md: 14px;
+  --hub-radius-lg: 20px;
+
+  --hub-touch-min: 48px;
+
+  --hub-sans: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', 'Apple SD Gothic Neo', 'Segoe UI',
+    sans-serif;
+  --hub-mono: 'SF Mono', ui-monospace, Consolas, monospace;
+}

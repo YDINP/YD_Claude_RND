@@ -1,0 +1,33 @@
+{
+  "name": "@tgslot/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@tgslot/shared": "workspace:*",
+    "drizzle-orm": "^0.36.4",
+    "hono": "^4.6.9",
+    "jose": "^5.9.6",
+    "postgres": "^3.4.5",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.3",
+    "drizzle-kit": "^0.28.1",
+    "tsx": "^4.19.2",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.7",
+    "tsup": "^8.5.0"
+  }
+}

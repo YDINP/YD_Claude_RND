@@ -1,0 +1,38 @@
+.hub-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: var(--hub-space-xl);
+  text-align: center;
+  gap: var(--hub-space-sm);
+}
+
+.hub-error__icon {
+  font-size: 40px;
+}
+
+.hub-error__title {
+  font-size: var(--hub-font-title);
+  font-weight: 800;
+  color: var(--hub-text);
+  margin: 0;
+}
+
+.hub-error__message {
+  font-size: var(--hub-font-sub);
+  color: var(--hub-text-sub);
+  max-width: 320px;
+}
+
+.hub-error__retry {
+  margin-top: var(--hub-space-sm);
+  min-height: var(--hub-touch-min);
+  padding: 0 var(--hub-space-xl);
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-button-bg);
+  color: var(--hub-button-text);
+  font-weight: 700;
+  font-size: var(--hub-font-body);
+}

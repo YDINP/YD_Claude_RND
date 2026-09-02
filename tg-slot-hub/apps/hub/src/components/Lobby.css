@@ -1,0 +1,45 @@
+.hub-lobby {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-lg);
+  padding: var(--hub-space-lg);
+  flex: 1;
+}
+
+.hub-lobby__jackpot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--hub-space-md) var(--hub-space-lg);
+  border-radius: var(--hub-radius-lg);
+  background: linear-gradient(90deg, #241a0a, #3a2810);
+  border: 1px solid rgba(216, 169, 74, 0.35);
+}
+
+.hub-lobby__jackpot-label {
+  font-size: var(--hub-font-sub);
+  color: var(--hub-gold-light);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.hub-lobby__jackpot-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--hub-gold-light);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-lobby__title {
+  font-size: var(--hub-font-title);
+  font-weight: 800;
+  color: var(--hub-text);
+  margin: 0;
+}
+
+.hub-lobby__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--hub-space-md);
+}

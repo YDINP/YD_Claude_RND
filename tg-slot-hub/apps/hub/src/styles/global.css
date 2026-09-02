@@ -1,0 +1,82 @@
+/* tg-slot-hub — 전역 리셋 + 레이아웃 베이스 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--hub-bg);
+}
+
+body {
+  color: var(--hub-text);
+  font: var(--hub-font-body)/1.5 var(--hub-sans);
+  letter-spacing: -0.01em;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--hub-bg);
+}
+
+.hub-app {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--hub-sans);
+  font-weight: 700;
+  color: var(--hub-text);
+  line-height: 1.3;
+}
+
+p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+button {
+  font-family: var(--hub-sans);
+  cursor: pointer;
+  border: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+@keyframes hub-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
