@@ -29,6 +29,8 @@ use keyclack_core::Mixer;
 
 pub struct Info {
     pub name: String,
+    /// Endpoint id of the device actually opened (compare with [`default_render_id`]).
+    pub device_id: String,
     pub sample_rate: u32,
     pub channels: usize,
     pub period_frames: u32,
@@ -66,6 +68,21 @@ fn pick_device(enumerator: &IMMDeviceEnumerator, substr: Option<&str>) -> Result
     }
 }
 
+fn device_id(d: &IMMDevice) -> String {
+    unsafe { d.GetId().ok().map(|p| p.to_string().unwrap_or_default()).unwrap_or_default() }
+}
+
+/// Endpoint id of the current default render device, so a caller can notice when
+/// Windows switches outputs (headset plugged in, FxSound toggled) and reopen.
+pub fn default_render_id() -> Option<String> {
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok()?;
+        let d = enumerator.GetDefaultAudioEndpoint(eRender, eConsole).ok()?;
+        Some(device_id(&d))
+    }
+}
+
 /// Friendly names of active render endpoints.
 pub fn list_devices() -> Vec<String> {
     unsafe {
@@ -91,7 +108,7 @@ pub fn list_devices() -> Vec<String> {
 /// stream is started.
 pub fn start(
     device_substr: Option<String>,
-    make_mixer: impl FnOnce(usize) -> Mixer + Send + 'static,
+    make_mixer: impl FnOnce(usize, u32) -> Mixer + Send + 'static,
     stop: Arc<AtomicBool>,
 ) -> Result<Info> {
     let (tx, rx) = std::sync::mpsc::channel::<Result<Info>>();
@@ -111,7 +128,7 @@ pub fn start(
 
 unsafe fn run(
     device_substr: Option<String>,
-    make_mixer: impl FnOnce(usize) -> Mixer,
+    make_mixer: impl FnOnce(usize, u32) -> Mixer,
     stop: Arc<AtomicBool>,
     report: std::sync::mpsc::Sender<Result<Info>>,
 ) -> Result<()> {
@@ -119,6 +136,7 @@ unsafe fn run(
     let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
     let device = pick_device(&enumerator, device_substr.as_deref())?;
     let name = device_name(&device);
+    let dev_id = device_id(&device);
     let client: IAudioClient3 = device.Activate(CLSCTX_ALL, None)?;
 
     let fmt_ptr: *mut WAVEFORMATEX = client.GetMixFormat()?;
@@ -166,7 +184,7 @@ unsafe fn run(
     let mut task_index = 0u32;
     let avrt = AvSetMmThreadCharacteristicsW(windows::core::w!("Pro Audio"), &mut task_index);
 
-    let mut mixer = make_mixer(channels);
+    let mut mixer = make_mixer(channels, sample_rate);
     // Pre-fill with silence so the first period has data.
     {
         let p = render.GetBuffer(buffer_frames)?;
@@ -177,6 +195,7 @@ unsafe fn run(
     let alive = Arc::new(AtomicBool::new(true));
     let _ = report.send(Ok(Info {
         name,
+        device_id: dev_id,
         sample_rate,
         channels,
         period_frames: min_p,

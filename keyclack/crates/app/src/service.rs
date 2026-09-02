@@ -165,6 +165,7 @@ fn spawn_preview(pack: Arc<Pack>, play_tx: Sender<PlayCmd>) {
 struct Audio {
     stop: Arc<AtomicBool>,
     alive: Arc<AtomicBool>,
+    device_id: String,
     sample_rate: u32,
     period_ms: f64,
     device: String,
@@ -174,11 +175,12 @@ fn start_audio(device: Option<String>, play_rx: Receiver<PlayCmd>, stats: Arc<Mu
     let stop = Arc::new(AtomicBool::new(false));
     let rx = play_rx;
     let st = stats;
-    let info = keyclack_audio_win::start(device, move |ch| Mixer::new(rx, ch, Some(st)), stop.clone())
+    let info = keyclack_audio_win::start(device, move |ch, rate| Mixer::new(rx, ch, rate, Some(st)), stop.clone())
         .map_err(|e| e.to_string())?;
     Ok(Audio {
         stop,
         alive: info.alive,
+        device_id: info.device_id,
         sample_rate: info.sample_rate,
         period_ms: info.period_frames as f64 * 1000.0 / info.sample_rate as f64,
         device: info.name,
@@ -305,9 +307,14 @@ fn run(
     loop {
         select! {
             recv(watchdog) -> _ => {
-                // Audio thread died (device unplugged / invalidated)? Reopen.
+                // Audio thread died (device unplugged / invalidated)? Or, when following the
+                // system default, did Windows switch to another output? Reopen either way.
                 let dead = audio.as_ref().map(|a| !a.alive.load(Ordering::Relaxed)).unwrap_or(true);
-                if dead {
+                let default_moved = cfg.device.is_none()
+                    && audio.as_ref().map(|a| {
+                        keyclack_audio_win::default_render_id().map(|id| id != a.device_id).unwrap_or(false)
+                    }).unwrap_or(false);
+                if dead || default_moved {
                     reconcile(&cfg, &eff, manual_mute, &mut audio, &mut audio_device_req, &mut loaded_pack_id, &mut engine, true);
                     if let Some(a) = audio.as_ref() {
                         let mut s = status.lock().unwrap();

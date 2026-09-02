@@ -94,7 +94,7 @@ fn main() {
     let info = {
         let rx = play_rx.clone();
         let st = stats.clone();
-        match keyclack_audio_win::start(args.device.clone(), move |ch| Mixer::new(rx, ch, Some(st)), stop.clone()) {
+        match keyclack_audio_win::start(args.device.clone(), move |ch, rate| Mixer::new(rx, ch, rate, Some(st)), stop.clone()) {
             Ok(i) => i,
             Err(e) => {
                 eprintln!("[audio] failed to open output: {e}");
