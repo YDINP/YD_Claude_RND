@@ -500,16 +500,15 @@ describe('SaveManager', () => {
       expect(loaded.onboarding.unlockedMenus).toHaveLength(13);
     });
 
-    it('레거시 char_1~4는 회수하지 않고 legacyStarter 태그만 부여한다', () => {
+    it('레거시 char_1~4는 로드 시 제거되고 레벨이 보유 영웅에 승계된다', () => {
       mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(makeV1Save()));
 
       const loaded = SaveManager.load();
 
       const legacy = loaded.characters.filter(c => SaveManager.LEGACY_STARTER_IDS.includes(c.characterId));
-      expect(legacy).toHaveLength(2);
-      legacy.forEach(c => expect(c.legacyStarter).toBe(true));
-      // 레벨 등 기존 데이터는 그대로 유지된다
-      expect(loaded.characters.find(c => c.characterId === 'char_1').level).toBe(12);
+      expect(legacy).toHaveLength(0);
+      // char_1의 레벨 12가 소실되지 않고 이관된다
+      expect(loaded.characters.find(c => c.characterId === 'base_iris').level).toBe(12);
     });
 
     it('온보딩 미경험 기존 유저에게 소급 지급이 1회만 적용된다', () => {
@@ -523,8 +522,8 @@ describe('SaveManager', () => {
       expect(first.resources.spiritStones).toBe(6);
       expect(first.resources.institutionSeal).toBe(1);
       expect(first.onboarding.grantVersion).toBe(SaveManager.ONBOARDING_GRANT_VERSION);
-      // 기존 편성은 덮어쓰지 않는다
-      expect(first.parties[0]).toEqual(['char_1', 'char_2', null, null]);
+      // 레거시 편성은 보유 영웅으로 교체된다
+      expect(first.parties[0]).toEqual(['base_iris', null, null, null]);
 
       const second = SaveManager.load();
 
@@ -543,10 +542,13 @@ describe('SaveManager', () => {
 
       const loaded = SaveManager.load();
 
-      expect(loaded.characters.some(c => c.characterId === 'base_iris')).toBe(false);
+      // 소급 재화는 지급되지 않는다
       expect(loaded.resources.characterShards.base_omar).toBeUndefined();
       expect(loaded.resources.spiritStones).toBe(0);
+      expect(loaded.resources.institutionSeal).toBe(0);
       expect(loaded.onboarding.grantVersion).toBe(SaveManager.ONBOARDING_GRANT_VERSION);
+      // 다만 레거시 정리로 보유 캐릭터가 0이 되므로 진행 가능하도록 base_iris는 편성된다
+      expect(loaded.characters.map(c => c.characterId)).toEqual(['base_iris']);
     });
 
     it('v2 세이브를 다시 로드해도 진행 중인 튜토리얼 상태가 덮이지 않는다', () => {
@@ -565,6 +567,243 @@ describe('SaveManager', () => {
       expect(reloaded.tutorial.completed).toBe(false);
       expect(reloaded.onboarding.unlockedMenus).toEqual(['herolist', 'partyedit']);
       expect(reloaded.onboarding.freeMultiPullUsed).toBe(true);
+    });
+  });
+
+  // ==================== 레거시 스타터(char_1~4) 정리 마이그레이션 ====================
+
+  describe('레거시 스타터 정리 (char_1~4 제거)', () => {
+    /** char_1~4를 보유한 v1 세이브. 장비 1점과 파티 편성 포함 */
+    const makeLegacySave = (overrides = {}) => ({
+      version: 1,
+      player: { name: '구버전', level: 1, exp: 0 },
+      resources: { gold: 10000, gems: 2700, summonTickets: 10, skillBooks: 0, characterShards: {} },
+      characters: [
+        {
+          id: 'char_1', characterId: 'char_1', level: 27, exp: 340, stars: 2, skillLevels: [1, 1, 1],
+          equipment: { weapon: 'eq_sword_01', armor: null, accessory: null }
+        },
+        { id: 'char_2', characterId: 'char_2', level: 12, exp: 60, stars: 2, skillLevels: [1, 1, 1] },
+        { id: 'char_3', characterId: 'char_3', level: 8, exp: 10, stars: 2, skillLevels: [1, 1, 1] },
+        { id: 'char_4', characterId: 'char_4', level: 5, exp: 0, stars: 2, skillLevels: [1, 1, 1] }
+      ],
+      parties: [['char_1', 'char_2', 'char_3', 'char_4']],
+      inventory: { equipment: [{ id: 'eq_sword_01', slotType: 'weapon', equippedBy: 'char_1' }] },
+      progress: { currentChapter: 'chapter_1', clearedStages: { stage_1_1: 3 }, towerFloor: 1, totalBattles: 20 },
+      gacha: { pityCounter: 0, totalPulls: 0 },
+      quests: { daily: {}, dailyProgress: {}, lastReset: null },
+      settings: { bgmVolume: 1, sfxVolume: 1, autoSkip: false, battleSpeed: 1 },
+      statistics: { totalGoldEarned: 0, totalGemsSpent: 0, charactersCollected: 4, highestDamage: 0 },
+      createdAt: 1700000000000,
+      ...overrides
+    });
+
+    it('레거시 캐릭터를 제거하고 최고 레벨과 누적 경험치를 보유 영웅에게 이관한다', () => {
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(makeLegacySave()));
+
+      const loaded = SaveManager.load();
+
+      const remainingIds = loaded.characters.map(c => c.characterId);
+      SaveManager.LEGACY_STARTER_IDS.forEach(id => expect(remainingIds).not.toContain(id));
+
+      const heir = loaded.characters.find(c => c.characterId === 'base_iris');
+      expect(heir).toBeDefined();
+      // 최고 레거시 레벨 27 승계 (base_iris 상한 30 이내)
+      expect(heir.level).toBe(27);
+      // 누적 경험치 340 + 60 + 10 + 0
+      expect(heir.exp).toBe(410);
+      expect(loaded.onboarding.legacyMigratedAt).toEqual(expect.any(Number));
+    });
+
+    it('레거시가 장착 중이던 장비를 해제해 인벤토리로 되돌린다', () => {
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(makeLegacySave()));
+
+      const loaded = SaveManager.load();
+
+      const item = loaded.inventory.equipment.find(e => e.id === 'eq_sword_01');
+      expect(item).toBeDefined();
+      expect(item.equippedBy).toBeNull();
+      // 장비 자체는 소멸하지 않는다
+      expect(loaded.inventory.equipment).toHaveLength(1);
+    });
+
+    it('파티 슬롯의 레거시 id를 보유 영웅으로 교체하고 남는 칸은 null로 둔다', () => {
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(makeLegacySave()));
+
+      const loaded = SaveManager.load();
+
+      expect(loaded.parties[0]).toEqual(['base_iris', null, null, null]);
+      const ownedIds = loaded.characters.map(c => c.characterId);
+      loaded.parties[0].filter(Boolean).forEach(id => expect(ownedIds).toContain(id));
+    });
+
+    it('보유 영웅이 레거시뿐이면 base_iris를 지급해 진행이 막히지 않게 한다', () => {
+      const onlyLegacy = makeLegacySave({
+        characters: [{ id: 'char_3', characterId: 'char_3', level: 4, exp: 0, stars: 2, skillLevels: [1, 1, 1] }],
+        parties: [['char_3', null, null, null]]
+      });
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(onlyLegacy));
+
+      const loaded = SaveManager.load();
+
+      expect(loaded.characters).toHaveLength(1);
+      expect(loaded.characters[0].characterId).toBe('base_iris');
+      expect(loaded.baseHeroes.some(h => h.baseHeroId === 'base_iris')).toBe(true);
+      expect(loaded.parties[0][0]).toBe('base_iris');
+    });
+
+    it('재로드해도 결과가 변하지 않는다 (멱등)', () => {
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(makeLegacySave()));
+
+      const first = SaveManager.load();
+      const snapshot = {
+        characters: first.characters.map(c => ({ id: c.characterId, level: c.level, exp: c.exp })),
+        parties: JSON.parse(JSON.stringify(first.parties)),
+        legacyMigratedAt: first.onboarding.legacyMigratedAt
+      };
+
+      const second = SaveManager.load();
+
+      expect(second.characters.map(c => ({ id: c.characterId, level: c.level, exp: c.exp })))
+        .toEqual(snapshot.characters);
+      expect(second.parties).toEqual(snapshot.parties);
+      // 이미 정리된 계정은 시각을 덮어쓰지 않는다
+      expect(second.onboarding.legacyMigratedAt).toBe(snapshot.legacyMigratedAt);
+    });
+
+    it('신규 세이브는 정리 대상이 없어 아무 영향도 받지 않는다', () => {
+      mockLocalStorage.clear();
+
+      const fresh = SaveManager.load();
+
+      expect(fresh.characters).toHaveLength(1);
+      expect(fresh.characters[0].characterId).toBe('base_iris');
+      expect(fresh.characters[0].level).toBe(1);
+      expect(fresh.characters[0].exp).toBe(0);
+      expect(fresh.parties[0]).toEqual(['base_iris', null, null, null]);
+      // 정리를 수행하지 않았으므로 시각도 찍히지 않는다
+      expect(fresh.onboarding.legacyMigratedAt).toBeNull();
+    });
+
+    // QA P1-5: 보유 영웅 4→1 변화를 아무 말 없이 하면 유저는 계정 손상으로 읽는다
+    describe('1회성 통합 안내 (legacyMigrationNotice)', () => {
+      it('정리를 수행하면 이관 내역을 담은 안내 플래그가 남는다', () => {
+        mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(makeLegacySave()));
+
+        const notice = SaveManager.load().onboarding.legacyMigrationNotice;
+
+        expect(notice).toBeDefined();
+        expect(notice.removedCount).toBe(4);
+        expect(notice.removedIds).toEqual(['char_1', 'char_2', 'char_3', 'char_4']);
+        expect(notice.heirId).toBe('base_iris');
+        expect(notice.heirLevel).toBe(27);
+        expect(notice.equipmentReturned).toBe(1);
+      });
+
+      it('안내의 파티는 자동 편성까지 끝난 최종 편성과 같다', () => {
+        mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(makeLegacySave()));
+
+        const loaded = SaveManager.load();
+        const notice = loaded.onboarding.legacyMigrationNotice;
+
+        expect(notice.partyIds).toEqual(SaveManager._readPartySlots(loaded.parties[0]).filter(Boolean));
+      });
+
+      it('consumeLegacyMigrationNotice 는 한 번만 값을 주고 플래그를 지운다', () => {
+        mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(makeLegacySave()));
+
+        const first = SaveManager.consumeLegacyMigrationNotice();
+        const second = SaveManager.consumeLegacyMigrationNotice();
+
+        expect(first?.removedCount).toBe(4);
+        expect(second).toBeNull();
+        expect(SaveManager.load().onboarding.legacyMigrationNotice).toBeUndefined();
+      });
+
+      it('신규 세이브에는 안내할 것이 없다', () => {
+        mockLocalStorage.clear();
+
+        expect(SaveManager.load().onboarding.legacyMigrationNotice).toBeUndefined();
+        expect(SaveManager.consumeLegacyMigrationNotice()).toBeNull();
+      });
+    });
+  });
+
+  // ==================== 현재 파티 자동 편성 보장 ====================
+
+  describe('현재 파티 자동 편성 (ensureActiveParty)', () => {
+    it('신규 세이브의 현재 파티에 base_iris가 편성되어 있다', () => {
+      mockLocalStorage.clear();
+
+      const fresh = SaveManager.load();
+
+      expect(SaveManager._readPartySlots(fresh.parties[0])).toContain('base_iris');
+    });
+
+    it('파티가 비어 있으면 보유 영웅 상위 4명으로 채운다', () => {
+      mockLocalStorage.clear();
+      const data = SaveManager.load();
+      data.characters = [
+        { id: 'base_iris', characterId: 'base_iris', level: 5, exp: 0, stars: 3, skillLevels: [1, 1, 1] },
+        { id: 'asc_iris_olympus', characterId: 'asc_iris_olympus', level: 5, exp: 0, stars: 5, skillLevels: [1, 1, 1] },
+        { id: 'base_omar', characterId: 'base_omar', level: 9, exp: 0, stars: 3, skillLevels: [1, 1, 1] }
+      ];
+      data.parties = [[null, null, null, null]];
+
+      const changed = SaveManager.ensureActiveParty(data);
+
+      expect(changed).toBe(true);
+      // 성급 → 레벨 순으로 강한 영웅이 앞 슬롯에 온다
+      expect(data.parties[0]).toEqual(['asc_iris_olympus', 'base_omar', 'base_iris', null]);
+    });
+
+    it('이미 보유 영웅이 편성되어 있으면 건드리지 않는다', () => {
+      mockLocalStorage.clear();
+      const data = SaveManager.load();
+      data.parties = [['base_iris', null, null, null]];
+
+      const changed = SaveManager.ensureActiveParty(data);
+
+      expect(changed).toBe(false);
+      expect(data.parties[0]).toEqual(['base_iris', null, null, null]);
+    });
+
+    it('{ heroIds } 형식의 파티도 형식을 유지한 채 채운다', () => {
+      mockLocalStorage.clear();
+      const data = SaveManager.load();
+      data.parties = [{ heroIds: [], name: '파티 1', isActive: true }];
+
+      const changed = SaveManager.ensureActiveParty(data);
+
+      expect(changed).toBe(true);
+      expect(data.parties[0].name).toBe('파티 1');
+      expect(data.parties[0].heroIds).toEqual(['base_iris', null, null, null]);
+    });
+
+    it('레거시 세이브를 로드하면 파티가 비어 있지 않다', () => {
+      const legacy = {
+        version: 1,
+        player: { name: '구버전', level: 1, exp: 0 },
+        resources: { gold: 1000, gems: 100, characterShards: {} },
+        characters: [{ id: 'char_1', characterId: 'char_1', level: 9, exp: 0, stars: 2, skillLevels: [1, 1, 1] }],
+        parties: [['char_1', null, null, null]],
+        progress: { currentChapter: 'chapter_1', clearedStages: {}, towerFloor: 1, totalBattles: 7 },
+        statistics: {}
+      };
+      mockLocalStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(legacy));
+
+      const loaded = SaveManager.load();
+
+      const slots = SaveManager._readPartySlots(loaded.parties[0]);
+      expect(slots.filter(Boolean).length).toBeGreaterThan(0);
+      expect(slots).toContain('base_iris');
+    });
+
+    it('보유 영웅이 없으면 편성을 시도하지 않는다', () => {
+      const data = { characters: [], parties: [[null, null, null, null]] };
+
+      expect(SaveManager.ensureActiveParty(data)).toBe(false);
+      expect(data.parties[0]).toEqual([null, null, null, null]);
     });
   });
 });

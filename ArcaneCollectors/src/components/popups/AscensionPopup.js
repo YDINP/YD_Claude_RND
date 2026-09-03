@@ -6,6 +6,7 @@ import { StoryManager } from '../../systems/StoryManager.js';
 import { TutorialTargetRegistry } from '../../systems/TutorialTargetRegistry.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT, pickActionChild } from '../../utils/popupLayout.js';
+import { ScrollContainer } from '../ScrollContainer.js';
 
 /** 헤더 타이틀 */
 const TITLE = '기관 각인';
@@ -15,10 +16,19 @@ const ASCEND_ACTION_INDEX = 0;
 
 /**
  * Step 1 기본영웅 목록 카드 (기획 px).
- * 기본영웅 10명 × (72 + 8) = 800 으로 콘텐츠 슬롯 888 안에 전부 들어간다.
+ * CHAR-3 원안 규격(90 / gap 10)으로 복원한다 — 콘텐츠 슬롯(888)에 맞추려 72/8로
+ * 줄여 넣었던 값이었다. 지금은 `ScrollContainer` 가 넘치는 만큼 스크롤로 받아준다.
  */
-const HERO_ITEM_HEIGHT = 72;
-const HERO_ITEM_GAP = 8;
+const HERO_ITEM_HEIGHT = 90;
+const HERO_ITEM_GAP = 10;
+
+/** Step 1 목록 상단 여백 — 안내 텍스트 아래 스크롤 뷰포트가 시작되는 지점 */
+const HERO_LIST_TOP_OFFSET = 64;
+
+/** Step 2 루트 카드 (기획 px) — CHAR-3 원안과 동일, 리디자인에서도 줄어들지 않았다 */
+const ROUTE_ITEM_HEIGHT = 110;
+const ROUTE_ITEM_GAP = 12;
+const ROUTE_LIST_TOP_OFFSET = 72;
 
 /** 카드 좌측 클래스 라벨 열의 중심 x 오프셋과 이름 열 시작 x 오프셋 */
 const CLASS_COLUMN_X = 44;
@@ -46,6 +56,7 @@ export class AscensionPopup extends PopupBase {
     this.selectedBaseHero = null;   // 기본영웅 데이터 객체 (base-heroes.json)
     this.selectedRoute = null;      // ascensionRoutes[] 항목
     this._stepObjects = [];         // 현재 스텝에서 추가된 씬 오브젝트 (clear용)
+    this._scroll = null;            // 현재 스텝의 목록을 담는 ScrollContainer
   }
 
   buildContent() {
@@ -85,6 +96,13 @@ export class AscensionPopup extends PopupBase {
    * 현재 스텝 오브젝트를 모두 제거하고 새 스텝을 렌더링
    */
   _clearStep() {
+    // ScrollContainer 는 scene.input 전역 리스너를 갖고 있어 먼저 명시적으로 정리한다.
+    // root.destroy(true) 가 자식(카드 등)도 함께 파괴하므로 아래 _stepObjects 순회는
+    // 이미 죽은 오브젝트를 다시 만나도 `obj.scene` 가드로 안전하다.
+    if (this._scroll) {
+      this._scroll.destroy();
+      this._scroll = null;
+    }
     this._stepObjects.forEach(obj => {
       if (obj && obj.scene) {
         obj.destroy();
@@ -95,6 +113,19 @@ export class AscensionPopup extends PopupBase {
     if (this.contentContainer) {
       this.contentContainer.removeAll(true);
     }
+  }
+
+  /**
+   * 팝업 자체가 닫힐 때(PopupBase.hide → destroy)도 ScrollContainer 의
+   * scene.input 리스너를 반드시 해제한다. PopupBase.js 는 수정하지 않으므로
+   * 서브클래스에서 훅을 잡아 처리한다.
+   */
+  destroy() {
+    if (this._scroll) {
+      this._scroll.destroy();
+      this._scroll = null;
+    }
+    super.destroy();
   }
 
   /**
@@ -174,33 +205,52 @@ export class AscensionPopup extends PopupBase {
     }
 
     const itemH = s(HERO_ITEM_HEIGHT);
-    const listTop = b.top + s(64);
+    const gap = s(HERO_ITEM_GAP);
+    const listTop = b.top + s(HERO_LIST_TOP_OFFSET); // 첫 카드의 "중심" y (카드는 origin 0.5,0.5)
     const listW = b.width - s(16);
+    // 카드는 중심 기준이라 실제 위쪽 가장자리는 listTop - itemH/2 다.
+    // 뷰포트를 listTop 에 맞추면 첫 카드 위쪽 절반이 마스크에 잘린다.
+    const viewTop = listTop - itemH / 2;
+    const viewportHeight = b.bottom - viewTop;
+
+    // ScrollContainer 콘텐츠는 기존과 동일한 절대 화면 좌표를 그대로 쓴다 —
+    // scrollY=0일 때 이전 하드코딩 레이아웃과 픽셀 단위로 같다.
+    this._scroll = new ScrollContainer(this.scene, {
+      x: b.left, y: viewTop, width: b.width, height: viewportHeight,
+      fadeColor: 0x0F172A,
+      parent: this.contentContainer
+    });
 
     allBase.forEach((hero, i) => {
-      const itemY = listTop + i * (itemH + s(HERO_ITEM_GAP));
+      const itemY = listTop + i * (itemH + gap);
       this._renderHeroListItem(hero, b.centerX, itemY, listW, itemH);
     });
+
+    const lastCenterY = listTop + (allBase.length - 1) * (itemH + gap);
+    const span = (lastCenterY + itemH / 2) - viewTop;
+    this._scroll.setContentHeight(span);
   }
 
   /**
    * 영웅 목록 아이템 렌더링 (Step 1)
    */
   _renderHeroListItem(hero, cx, cy, w, h) {
-    const b = this.contentBounds;
-
     // CHAR-5: 피티 정보 조회
     const pityInfo = SaveManager.getPityInfo(hero.id);
 
     // 배경 카드
     const bg = this.scene.add.rectangle(cx, cy, w, h, COLORS.bgLight, 0.9);
     bg.setStrokeStyle(s(2), COLORS.primary, 0.3);
-    bg.setInteractive({ useHandCursor: true });
-    this.contentContainer.add(bg);
+    this._scroll.add(bg);
+    // e2e(ascension-cutscene-smoke) 가 `popup._stepObjects.find(o => o.type==='Rectangle' && o.input)`
+    // 로 카드를 직접 찾아 `card.emit('pointerdown')` 하므로 계속 _stepObjects 에 등록해 둔다.
     this._track(bg);
 
-    // 튜토리얼 타깃 (T-07/T-09) — 예: ascension.card.base_omar
-    TutorialTargetRegistry.register(`ascension.card.${hero.id}`, bg, this.scene?.scene?.key);
+    // 튜토리얼 타깃 (T-07/T-09) — 예: ascension.card.base_omar.
+    // ensureVisible: 마스크 밖(스크롤 아웃)이어도 코치마크/하이라이트가 뜨기 전에 카드가 보이게 한다.
+    TutorialTargetRegistry.register(`ascension.card.${hero.id}`, bg, this.scene?.scene?.key, {
+      ensureVisible: (target) => this._scroll?.scrollTo(target)
+    });
 
     // 영웅 아이콘 (이모지 대체)
     const icon = this.scene.add.text(cx - w / 2 + s(CLASS_COLUMN_X), cy, this._getClassIcon(hero.baseClass), {
@@ -208,8 +258,7 @@ export class AscensionPopup extends PopupBase {
       fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.primary.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
-    this.contentContainer.add(icon);
-    this._track(icon);
+    this._scroll.add(icon);
 
     // 영웅 이름
     const nameText = this.scene.add.text(cx - w / 2 + s(NAME_COLUMN_X), cy - s(13), hero.name, {
@@ -218,8 +267,7 @@ export class AscensionPopup extends PopupBase {
       fontStyle: 'bold',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`
     }).setOrigin(0, 0.5);
-    this.contentContainer.add(nameText);
-    this._track(nameText);
+    this._scroll.add(nameText);
 
     // 클래스 + 기관 루트 수
     const routeCount = (hero.ascensionRoutes || []).length;
@@ -228,8 +276,7 @@ export class AscensionPopup extends PopupBase {
       fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0, 0.5);
-    this.contentContainer.add(subText);
-    this._track(subText);
+    this._scroll.add(subText);
 
     // CHAR-5: 피티 배지 렌더링
     if (pityInfo.count > 0) {
@@ -259,8 +306,7 @@ export class AscensionPopup extends PopupBase {
         backgroundColor: pityBg ? `#${pityBg.toString(16).padStart(6, '0')}` : undefined,
         padding: pityBg ? { x: s(4), y: s(2) } : undefined
       }).setOrigin(1, 0.5);
-      this.contentContainer.add(pityText);
-      this._track(pityText);
+      this._scroll.add(pityText);
     }
 
     // 화살표
@@ -268,8 +314,7 @@ export class AscensionPopup extends PopupBase {
       fontSize: sf(28),
       color: `#${COLORS.primary.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
-    this.contentContainer.add(arrow);
-    this._track(arrow);
+    this._scroll.add(arrow);
 
     // 인터랙션
     bg.on('pointerover', () => {
@@ -280,7 +325,10 @@ export class AscensionPopup extends PopupBase {
       bg.setFillStyle(COLORS.bgLight, 0.9);
       bg.setStrokeStyle(s(2), COLORS.primary, 0.3);
     });
-    bg.on('pointerdown', () => {
+    // attachTap: 스크롤 드래그(threshold 8px 초과) 중이면 탭을 무시한다.
+    // pointerdown 자체는 그대로 트리거로 남아 있어 `card.emit('pointerdown')` 로 여는
+    // 기존 e2e 시나리오(ascension-cutscene-smoke)와 호환된다.
+    this._scroll.attachTap(bg, () => {
       this.selectedBaseHero = hero;
       // T-Q1: 기관 선택 화면 최초 진입 직전에 evolve_gate 컷씬을 재생한다
       // (NARRATIVE_STORY_MODE R-04 체인: 벽 인지 → evolve_gate → 기관 선택 → hero_evolve)
@@ -321,22 +369,37 @@ export class AscensionPopup extends PopupBase {
       return;
     }
 
-    const itemH = s(110);
-    const listTop = b.top + s(72);
+    const itemH = s(ROUTE_ITEM_HEIGHT);
+    const gap = s(ROUTE_ITEM_GAP);
+    const listTop = b.top + s(ROUTE_LIST_TOP_OFFSET); // 첫 카드의 "중심" y
     const listW = b.width - s(16);
+    // 카드는 중심 기준이라 실제 위쪽 가장자리는 listTop - itemH/2 다(Step 1과 동일 이유).
+    const viewTop = listTop - itemH / 2;
+    const viewportHeight = b.bottom - viewTop;
+
+    this._scroll = new ScrollContainer(this.scene, {
+      x: b.left, y: viewTop, width: b.width, height: viewportHeight,
+      fadeColor: 0x0F172A,
+      parent: this.contentContainer
+    });
 
     routes.forEach((route, i) => {
-      const itemY = listTop + i * (itemH + s(12));
+      const itemY = listTop + i * (itemH + gap);
       this._renderRouteItem(route, b.centerX, itemY, listW, itemH);
     });
 
     // 튜토리얼 타깃 (T-09 mask_choice) — 루트 카드 전체를 감싸는 영역.
     // Graphics 대신 Zone 을 쓰는 이유는 getBounds() 신뢰성(UX 문서 §4-1 바운드 규약).
-    const listH = routes.length * itemH + (routes.length - 1) * s(12);
+    const listH = routes.length * itemH + (routes.length - 1) * gap;
     const listZone = this.scene.add.zone(b.centerX, listTop + listH / 2 - itemH / 2, listW, listH);
-    this.contentContainer.add(listZone);
-    this._track(listZone);
-    TutorialTargetRegistry.register('ascension.route.list', listZone, this.scene?.scene?.key);
+    this._scroll.add(listZone);
+    TutorialTargetRegistry.register('ascension.route.list', listZone, this.scene?.scene?.key, {
+      ensureVisible: (target) => this._scroll?.scrollTo(target)
+    });
+
+    const lastCenterY = listTop + (routes.length - 1) * (itemH + gap);
+    const span = (lastCenterY + itemH / 2) - viewTop;
+    this._scroll.setContentHeight(span);
   }
 
   /**
@@ -352,16 +415,16 @@ export class AscensionPopup extends PopupBase {
     const alpha = isOwned ? 0.4 : 0.9;
     const bg = this.scene.add.rectangle(cx, cy, w, h, COLORS.bgLight, alpha);
     bg.setStrokeStyle(s(3), cultColor, isOwned ? 0.3 : 0.8);
-    this.contentContainer.add(bg);
-    this._track(bg);
+    this._scroll.add(bg);
 
     // 튜토리얼 타깃 (T-09 루트 카드)
-    TutorialTargetRegistry.register(`ascension.route.${route.cultId}`, bg, this.scene?.scene?.key);
+    TutorialTargetRegistry.register(`ascension.route.${route.cultId}`, bg, this.scene?.scene?.key, {
+      ensureVisible: (target) => this._scroll?.scrollTo(target)
+    });
 
     // 기관 색상 왼쪽 띠
     const stripe = this.scene.add.rectangle(cx - w / 2 + s(6), cy, s(8), h - s(10), cultColor, isOwned ? 0.3 : 1);
-    this.contentContainer.add(stripe);
-    this._track(stripe);
+    this._scroll.add(stripe);
 
     // 기관명
     const nameText = this.scene.add.text(cx - w / 2 + s(25), cy - s(30), cultName, {
@@ -370,8 +433,7 @@ export class AscensionPopup extends PopupBase {
       fontStyle: 'bold',
       color: `#${cultColor.toString(16).padStart(6, '0')}`
     }).setOrigin(0, 0.5);
-    this.contentContainer.add(nameText);
-    this._track(nameText);
+    this._scroll.add(nameText);
 
     // 등급 배지
     const rarityColor = this._rarityColor(route.resultRarity);
@@ -380,8 +442,7 @@ export class AscensionPopup extends PopupBase {
       fontStyle: 'bold',
       color: `#${rarityColor.toString(16).padStart(6, '0')}`
     }).setOrigin(1, 0.5);
-    this.contentContainer.add(rarityBadge);
-    this._track(rarityBadge);
+    this._scroll.add(rarityBadge);
 
     // 키워드
     const keywords = (route.routeKeywords || []).slice(0, 3).join(' · ');
@@ -390,8 +451,7 @@ export class AscensionPopup extends PopupBase {
       fontFamily: '"Noto Sans KR", Arial',
       color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0, 0.5);
-    this.contentContainer.add(kwText);
-    this._track(kwText);
+    this._scroll.add(kwText);
 
     // 공명 보정 표시
     if (route.resonanceBoost) {
@@ -400,8 +460,7 @@ export class AscensionPopup extends PopupBase {
         fontStyle: 'bold',
         color: hexToCSS(DESIGN.colors.brand.accent)
       }).setOrigin(1, 0.5);
-      this.contentContainer.add(boostText);
-      this._track(boostText);
+      this._scroll.add(boostText);
     }
 
     // 이미 보유 or 선택 가능 상태
@@ -411,8 +470,7 @@ export class AscensionPopup extends PopupBase {
         fontFamily: '"Noto Sans KR", Arial',
         color: '#888888'
       }).setOrigin(0, 0.5);
-      this.contentContainer.add(ownedText);
-      this._track(ownedText);
+      this._scroll.add(ownedText);
     } else {
       // 비용 표시
       const hero = this.selectedBaseHero;
@@ -423,11 +481,9 @@ export class AscensionPopup extends PopupBase {
         fontFamily: '"Noto Sans KR", Arial',
         color: `#${COLORS.textDark.toString(16).padStart(6, '0')}`
       }).setOrigin(0, 0.5);
-      this.contentContainer.add(costText);
-      this._track(costText);
+      this._scroll.add(costText);
 
       // 인터랙션
-      bg.setInteractive({ useHandCursor: true });
       bg.on('pointerover', () => {
         bg.setFillStyle(COLORS.bgPanel, 1);
         bg.setStrokeStyle(s(3), cultColor, 1);
@@ -436,7 +492,7 @@ export class AscensionPopup extends PopupBase {
         bg.setFillStyle(COLORS.bgLight, 0.9);
         bg.setStrokeStyle(s(3), cultColor, 0.8);
       });
-      bg.on('pointerdown', () => {
+      this._scroll.attachTap(bg, () => {
         this.selectedRoute = route;
         this.buildStep3();
       });
@@ -446,8 +502,7 @@ export class AscensionPopup extends PopupBase {
         fontSize: sf(22),
         color: `#${COLORS.primary.toString(16).padStart(6, '0')}`
       }).setOrigin(1, 0.5);
-      this.contentContainer.add(arrow);
-      this._track(arrow);
+      this._scroll.add(arrow);
     }
   }
 

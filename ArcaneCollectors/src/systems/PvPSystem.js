@@ -72,6 +72,7 @@ function createBattleUnitFromChar(charData) {
     rarity: charData.rarity || 'N',
     class: charData.class || charData.role || 'warrior',
     role: charData.role || 'warrior',
+    cult: charData.cult || charData.cultId || null,
     stats: charData.stats || { hp: 1000, atk: 100, def: 50, spd: 100 },
     growth: charData.growth || { hp: 100, atk: 10, def: 5, spd: 2 },
     skills: charData.skills || [
@@ -258,7 +259,7 @@ export class PvPSystem {
 
     const battle = new BattleSystem(attackerUnits, defenderUnits);
     battle.maxTurns = PVP_MAX_TURNS;
-    battle.initialize();
+    battle.initBattle();
 
     const battleLog = [];
     let turnCount = 0;

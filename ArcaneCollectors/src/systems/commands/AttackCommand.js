@@ -26,13 +26,13 @@ export class AttackCommand extends BaseCommand {
     this.targets.forEach(target => {
       if (!target.isAlive) return;
 
-      // 데미지 계산
-      const damage = this.battleSystem.calculateDamage(
+      // MECH-03: 피해는 BattleSystem.resolveDamage 단일 경로를 지난다
+      // (교단 적중 훅 / Holy Thorns 반사 / 사망 처리가 커맨드 경로에서도 동일하게 적용된다)
+      const { damage, damageResult, cultEffects } = this.battleSystem.resolveDamage(
         this.unit,
         target,
         { multiplier: this.damageMultiplier }
       );
-      const damageResult = target.takeDamage(damage.finalDamage);
 
       results.push({
         target: target.id,
@@ -40,7 +40,8 @@ export class AttackCommand extends BaseCommand {
         amount: damageResult.actualDamage,
         isCrit: damage.isCrit,
         moodBonus: damage.moodBonus,
-        isDead: damageResult.isDead
+        isDead: damageResult.isDead,
+        cultEffects
       });
 
       // 로그 기록
@@ -57,14 +58,6 @@ export class AttackCommand extends BaseCommand {
         isCrit: damage.isCrit,
         moodBonus: damage.moodBonus
       });
-
-      if (damageResult.isDead) {
-        this.battleSystem.log(`${target.name} 쓰러짐!`);
-        this.battleSystem.emit('unitDeath', {
-          unit: target.id,
-          killedBy: this.unit.id
-        });
-      }
     });
 
     // 스킬 게이지 충전

@@ -19,6 +19,8 @@ const SHOT_DIR = new URL('../../docs/story/screenshots/', import.meta.url);
 /** 게임 해상도 = 뷰포트 (동일 종횡비 → 레터박스 없음, 좌표 변환이 단순 스케일) */
 const VIEWPORT = { width: 720, height: 1280 };
 const GAME_WIDTH = 1080;
+/** 부팅·씬 전환 대기 상한 (에셋 로드량과 머신 부하에 따라 변동) */
+const BOOT_TIMEOUT_MS = 40000;
 
 let passed = 0;
 let failed = 0;
@@ -66,6 +68,11 @@ async function run() {
   const browser = await chromium.launch({ headless });
   const page = await browser.newPage({ viewport: VIEWPORT });
 
+  // 개발 서버는 팀이 공유한다. 다른 작업자가 파일을 저장하면 HMR 이 페이지를 통째로
+  // 새로고침해 실행 중인 검증이 "Execution context was destroyed" 로 죽는다.
+  // HMR 웹소켓만 가로채 끊어두면 서버를 건드리지 않고도 실행이 결정적이 된다.
+  await page.routeWebSocket(/vite|24678/, () => {});
+
   const pageErrors = [];
   page.on('pageerror', (err) => pageErrors.push(`${err.name}: ${err.message}`));
 
@@ -75,16 +82,17 @@ async function run() {
     await page.goto(BASE_URL);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
-    await page.waitForTimeout(3000);
 
     // 1. 게스트 로그인
-    const loginReady = await waitFor(page, () => !!window.game?.scene.isActive('LoginScene'));
+    // 부팅(Boot → Preload → Login)은 에셋 로드량에 따라 수 초에서 십수 초까지 걸린다.
+    // 고정 대기 대신 씬 활성화를 조건으로 기다린다.
+    const loginReady = await waitFor(page, () => !!window.game?.scene.isActive('LoginScene'), BOOT_TIMEOUT_MS);
     assert(loginReady, 'LoginScene 활성화');
 
     await page.evaluate(() => {
       window.game.scene.getScene('LoginScene')?._handleGuestLogin?.();
     });
-    const mainMenu = await waitFor(page, () => !!window.game?.scene.isActive('MainMenuScene'), 15000);
+    const mainMenu = await waitFor(page, () => !!window.game?.scene.isActive('MainMenuScene'), BOOT_TIMEOUT_MS);
     assert(mainMenu, '게스트 로그인 → MainMenuScene');
 
     // 2. 스테이지 선택 진입 후 1-1 출격 (실제 startBattle 경로)
@@ -206,6 +214,62 @@ async function run() {
     await page.waitForTimeout(800);
     await page.screenshot({ path: new URL('cutscene_1_1_after_skip.png', SHOT_DIR).pathname.slice(1) });
     console.log('   📸 docs/story/screenshots/cutscene_1_1_after_skip.png');
+
+    // 8. 전신 시트 화자 — 1-1 대본에는 영웅 대사가 없으므로 첫 각성 씬으로 확인한다
+    // 전투 진입 직후라 활성 씬이 BattleScene / BattleResultScene 어느 쪽일지 확정되지 않는다.
+    // 지금 살아 있는 씬에서 메인 메뉴로 돌린다.
+    const backToMenu = await waitFor(
+      page,
+      () => {
+        if (window.game.scene.isActive('MainMenuScene')) return true;
+        const active = window.game.scene.scenes.find((sc) => sc.scene.isActive());
+        active?.scene.start('MainMenuScene');
+        return false;
+      },
+      BOOT_TIMEOUT_MS
+    );
+    assert(backToMenu, '메인 메뉴 복귀');
+
+    await page.evaluate(async () => {
+      const mod = await import('/src/systems/StoryManager.js');
+      const menu = window.game.scene.getScene('MainMenuScene');
+      mod.StoryManager.trigger('first_hero', { scene: menu, heroId: 'base_iris', allowRepeat: true });
+    });
+    const heroCutscene = await waitFor(page, () => !!window.game?.scene.isActive('CutsceneScene'));
+    assert(heroCutscene, '영웅 컷씬(cs_first_hero_iris) 표시');
+
+    // 아이리스가 말하는 줄까지 진행한다 (앞 2줄은 내레이션)
+    const heroTap = await tapPoint(page, 360, 640);
+    for (let i = 0; i < 4; i += 1) {
+      await page.mouse.click(heroTap.x, heroTap.y);
+      await page.waitForTimeout(400);
+    }
+    const actor = await page.evaluate(() => {
+      const player = window.game.scene.getScene('CutsceneScene').player;
+      const line = player.queue[player.sceneIndex].lines[player.lineIndex];
+      const ids = player.characterStage.getActorIds();
+      const object = player.silhouette.current;
+      return {
+        speakerType: line.speakerType,
+        portraitId: line.portraitId,
+        side: player._activeSide,
+        ids,
+        texture: object?.texture?.key ?? null
+      };
+    });
+    assert(actor.speakerType === 'hero', '영웅 대사 줄 도달', JSON.stringify(actor));
+    assert(
+      actor.ids.right === 'base_iris' && actor.side === 'right',
+      '영웅이 오른쪽 슬롯에 선다',
+      JSON.stringify(actor.ids)
+    );
+    assert(
+      actor.texture === 'fb_hero_005' || actor.texture === 'hero_base_iris',
+      '전신 시트(폴백은 포트레이트) 텍스처 적용',
+      String(actor.texture)
+    );
+    await page.screenshot({ path: new URL('cutscene_hero_fullbody.png', SHOT_DIR).pathname.slice(1) });
+    console.log('   📸 docs/story/screenshots/cutscene_hero_fullbody.png');
 
     assert(pageErrors.length === 0, '처리되지 않은 예외 0건', pageErrors.join(' | '));
   } catch (error) {

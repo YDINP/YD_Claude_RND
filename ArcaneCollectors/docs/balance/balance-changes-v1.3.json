@@ -1,0 +1,390 @@
+[
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_mushroom].stats.hp",
+    "from": 150,
+    "to": 400,
+    "_comment": "=== enemy_mushroom: 1-3 중앙값 2턴 (<3, 튜토리얼 하한 이탈) ===",
+    "_context": "combat-turns.mjs 1-3: 파티BP 1600 vs 요구BP 200(8.00x)로 압승이 지나쳐 2턴 만에 종료. HP 상향으로 3턴대 진입시켜 하한 이탈 해소."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_mushroom].growthStats.hp",
+    "from": 30,
+    "to": 60
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_harpy].stats.hp",
+    "from": 220,
+    "to": 130,
+    "_comment": "=== enemy_harpy: 4-2 중앙값 11턴 (>8, 과다) — 미노타우로스와 동일 스테이지 ===",
+    "_context": "combat-turns.mjs 4-2 3체 중 1체. HP 약 59%로 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_harpy].growthStats.hp",
+    "from": 44,
+    "to": 26
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_cyclops_minor].stats.hp",
+    "from": 350,
+    "to": 160,
+    "_comment": "=== enemy_cyclops_minor: 4-3 중앙값 17턴 (>8, 과다) — 타이탄과 동일 스테이지 ===",
+    "_context": "combat-turns.mjs 4-3 3체 중 1체. HP 약 46%로 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_cyclops_minor].growthStats.hp",
+    "from": 70,
+    "to": 29
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_minotaur].stats.hp",
+    "from": 700,
+    "to": 400,
+    "_comment": "=== enemy_minotaur: 4-2 중앙값 11턴 (>8, 과다) ===",
+    "_context": "combat-turns.mjs 4-2: 3체(미노타우로스x2+하피) 합산 HP 과다. HP 약 57%로 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_minotaur].growthStats.hp",
+    "from": 140,
+    "to": 78
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_frost_giant_minor].stats.hp",
+    "from": 500,
+    "to": 300,
+    "_comment": "=== enemy_frost_giant_minor: 5-2 중앙값 20턴 (>8, 과다) — 3체 중 1체 ===",
+    "_context": "combat-turns.mjs 5-2 동일 원인(DEF growth 캡 근접). DEF growth 3으로 하향 + HP 약 50%로 동반 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_frost_giant_minor].growthStats.hp",
+    "from": 100,
+    "to": 55
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_frost_giant_minor].growthStats.def",
+    "from": 8,
+    "to": 3
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_draugr].stats.hp",
+    "from": 1000,
+    "to": 350,
+    "_comment": "=== enemy_draugr: 5-1 전패 (0승/60패) ===",
+    "_context": "combat-turns.mjs 5-1: DEF 758(lv60 환산, 캡 근접)로 파티 유효 데미지가 짓눌려 파티가 먼저 전멸. DEF growth 12→3으로 캡 이탈시킨 뒤 재검산에서 드러난 장기전(18턴) 해소를 위해 HP도 약 35%로 동반 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_draugr].growthStats.hp",
+    "from": 200,
+    "to": 70
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_draugr].growthStats.def",
+    "from": 12,
+    "to": 3
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_fenrir_pup].stats.hp",
+    "from": 700,
+    "to": 250,
+    "_comment": "=== enemy_fenrir_pup: 5-1 전패 (0승/60패) — draugr와 동일 스테이지 ===",
+    "_context": "combat-turns.mjs 5-1 동일 원인(DEF 391 캡 근접). DEF growth 6→2, HP 약 36%로 동반 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_fenrir_pup].growthStats.hp",
+    "from": 140,
+    "to": 50
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_fenrir_pup].growthStats.def",
+    "from": 6,
+    "to": 2
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_jormungandr].stats.hp",
+    "from": 3000,
+    "to": 700,
+    "_comment": "=== enemy_jormungandr: 5-4 전무승부 (0승/0패/60시간초과) — nidhogg와 동일 스테이지 ===",
+    "_context": "combat-turns.mjs 5-4: DEF 1063(lv73 환산, 90% 캡 도달)이 근본원인. 원래 챕터4 최종보스급 스탯(base HP 3000/growth 390)이 5-4 보조 적으로 재사용된 것 자체가 과도했음 — HP 약 23%, ATK 약 43%, DEF growth 14→3으로 3종 대폭 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_jormungandr].growthStats.hp",
+    "from": 390,
+    "to": 100
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_jormungandr].growthStats.atk",
+    "from": 25,
+    "to": 12
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_jormungandr].growthStats.def",
+    "from": 14,
+    "to": 3
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_izanami].stats.hp",
+    "from": 4000,
+    "to": 1200,
+    "_comment": "=== enemy_izanami: 3-5 전패 (0승/60패) ===",
+    "_context": "combat-turns.mjs 3-5: 파티(비율1.49x)가 100% 패배. HP·ATK·DEF 3종 동시 과다 — HP 46%, ATK 71%, DEF 83%로 하향해 파티가 승리 가능한 수준으로 조정."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_izanami].stats.atk",
+    "from": 120,
+    "to": 85
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_izanami].stats.def",
+    "from": 60,
+    "to": 50
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_izanami].growthStats.hp",
+    "from": 520,
+    "to": 156
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_izanami].growthStats.atk",
+    "from": 28,
+    "to": 20
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_izanami].growthStats.def",
+    "from": 15,
+    "to": 12
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_rift_guardian].stats.hp",
+    "from": 3200,
+    "to": 1120,
+    "_comment": "=== enemy_rift_guardian: 2-5 중앙값 19턴 (>8, 과다) ===",
+    "_context": "combat-turns.mjs 2-5: 단일 보스 HP(lv25 환산 13,040)가 파티 DPS 대비 과다. HP를 약 35%로 대폭 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_rift_guardian].growthStats.hp",
+    "from": 410,
+    "to": 144
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_titan_minor].stats.hp",
+    "from": 900,
+    "to": 380,
+    "_comment": "=== enemy_titan_minor: 4-3 중앙값 17턴 (>8, 과다) ===",
+    "_context": "combat-turns.mjs 4-3: 3체(타이탄x2+사이클롭스) 합산 HP 과다. HP 약 42%로 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_titan_minor].growthStats.hp",
+    "from": 150,
+    "to": 62
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_garden_guardian].stats.hp",
+    "from": 800,
+    "to": 400,
+    "_comment": "=== enemy_garden_guardian: 4-4 중앙값 13턴 (>8, 과다) ===",
+    "_context": "combat-turns.mjs 4-4: 2체 합산 HP 과다(비율 1.15x로 마진이 좁아 과감히 낮추지 않음). HP 50%로 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_garden_guardian].growthStats.hp",
+    "from": 135,
+    "to": 68
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_zeus].stats.hp",
+    "from": 4200,
+    "to": 900,
+    "_comment": "=== enemy_zeus: 4-5 사실상 전무승부 (1패/59시간초과) ===",
+    "_context": "combat-turns.mjs 4-5: DEF 934(lv55 환산)가 데미지감소 90% 캡에 근접해 파티 유효 데미지가 10%까지 짓눌림(근본원인). growthStats.def를 16→5로 대폭 하향(캡 이탈)하고 HP도 33,360→9,000 수준으로 동반 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_zeus].growthStats.hp",
+    "from": 540,
+    "to": 150
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_zeus].growthStats.def",
+    "from": 16,
+    "to": 5
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_fire_giant].stats.hp",
+    "from": 750,
+    "to": 350,
+    "_comment": "=== enemy_fire_giant: 5-2 중앙값 20턴 (>8, 과다) — 3체 중 1체 ===",
+    "_context": "combat-turns.mjs 5-2: DEF growth가 8이라 lv65 환산 DEF 552로 캡 근접, 파티 데미지 저하가 장기전의 원인. DEF growth 3으로 하향 + HP 약 50%로 동반 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_fire_giant].growthStats.hp",
+    "from": 125,
+    "to": 65
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_fire_giant].growthStats.def",
+    "from": 8,
+    "to": 3
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_jotun].stats.hp",
+    "from": 850,
+    "to": 380,
+    "_comment": "=== enemy_jotun: 5-2 중앙값 20턴 (>8, 과다) — 3체 중 1체 ===",
+    "_context": "combat-turns.mjs 5-2 동일 원인(DEF growth 캡 근접). DEF growth 3으로 하향 + HP 약 47%로 동반 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_jotun].growthStats.hp",
+    "from": 140,
+    "to": 68
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_jotun].growthStats.def",
+    "from": 9,
+    "to": 3
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_surtr].stats.hp",
+    "from": 1100,
+    "to": 400,
+    "_comment": "=== enemy_surtr: 5-3 중앙값 30턴 (1승/59시간초과) — 파티 자체가 요구BP 미달(0.94x)인 마일스톤 시점 ===",
+    "_context": "combat-turns.mjs 5-3: DEF 740(lv70 환산, 캡 근접) + HP 과다가 겹쳐 열세 파티가 사실상 승산이 없었음. DEF growth 10→3, HP 약 36%로 동반 하향해 열세 파티도 클리어 가능하게 조정."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_surtr].growthStats.hp",
+    "from": 180,
+    "to": 75
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_surtr].growthStats.def",
+    "from": 10,
+    "to": 3
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_hel_servant].stats.hp",
+    "from": 700,
+    "to": 280,
+    "_comment": "=== enemy_hel_servant: 5-3 중앙값 30턴 (1승/59시간초과) — surtr와 동일 스테이지 ===",
+    "_context": "combat-turns.mjs 5-3 동일 원인. DEF growth 7→3, HP 약 40%로 동반 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_hel_servant].growthStats.hp",
+    "from": 115,
+    "to": 48
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_hel_servant].growthStats.def",
+    "from": 7,
+    "to": 3
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_nidhogg].stats.hp",
+    "from": 1300,
+    "to": 450,
+    "_comment": "=== enemy_nidhogg: 5-4 전무승부 (0승/0패/60시간초과) ===",
+    "_context": "combat-turns.mjs 5-4: DEF 869(lv75 환산, 캡 근접)이 근본원인. DEF growth 11→3으로 캡 이탈 + HP 약 37%, ATK 약 49%로 동반 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_nidhogg].growthStats.hp",
+    "from": 210,
+    "to": 78
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_nidhogg].growthStats.atk",
+    "from": 22,
+    "to": 10
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_nidhogg].growthStats.def",
+    "from": 11,
+    "to": 3
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_odin_allfather].stats.hp",
+    "from": 9500,
+    "to": 3000,
+    "_comment": "=== enemy_odin_allfather: 5-5 전무승부 (0승/0패/60시간초과) ===",
+    "_context": "combat-turns.mjs 5-5: DEF 1502(lv80 환산, 90% 캡 초과)로 파티 데미지가 완전히 무력화된 것이 근본원인 — DEF growth 18→4로 캡에서 벗어나게 하향. HP도 lv80 환산 104,300이라는 극단적 과다치였어 15% 수준(base+growth 환산 약 16,983)으로 대폭 하향, ATK growth도 32→15로 하향. 최종보스 특성상 챕터 내에서는 여전히 최고 스탯 유지."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_odin_allfather].growthStats.hp",
+    "from": 1200,
+    "to": 177
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_odin_allfather].growthStats.atk",
+    "from": 32,
+    "to": 15
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_odin_allfather].growthStats.def",
+    "from": 18,
+    "to": 4
+  },
+  {
+    "_comment": "=== 메타 정보 ===",
+    "_summary": {
+      "totalChanges": 56,
+      "filesAffected": [
+        "src/data/enemies.json"
+      ],
+      "enemiesAffected": 19,
+      "stageChanges": 0,
+      "towerChanges": 0,
+      "heroChanges": 0,
+      "supersedes": "balance-changes-v1.2.json 적용 이후에만 유효 (v1.3은 v1.2 델타, enemies.json 최초 변경분). BALANCE_DESIGN_v1.md §9-4 combat-turns.mjs 12/25 이탈(1-3 하한 1건 + 챕터2후반~5 과다/패배 11건) 전부 해소 — 25/25 PASS"
+    }
+  }
+]

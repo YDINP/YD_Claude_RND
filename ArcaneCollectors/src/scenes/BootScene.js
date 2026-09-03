@@ -18,6 +18,7 @@ import { SaveManager } from '../systems/SaveManager.js';
 import { isSupabaseConfigured, supabase, getLocalData } from '../api/supabaseClient.js';
 import { normalizeHeroes } from '../data/index.js';
 import { GachaSystem } from '../systems/GachaSystem.js';
+import { soundManager } from '../systems/SoundManager.js';
 import { validateAllGameData } from '../schemas/validator.js';
 import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { buildBootTips, cycleIndex } from '../utils/bootTips.js';
@@ -60,6 +61,10 @@ export class BootScene extends Phaser.Scene {
 
   async create() {
     try {
+      // SND-01: 사운드 초기화 + 로비 테마 예약(자동재생 잠금이 풀리면 재생된다)
+      soundManager.init(this);
+      soundManager.playBGM('main_theme');
+
       // 바탕과 진행바를 먼저 세우고, 에셋은 create 안에서 받는다.
       // preload() 로 받으면 씬이 LOADING 상태에 머물러 scene.isActive() 가 false 가 되고,
       // "부팅 후 활성 씬이 있는가"를 보는 boot-smoke 가 로드 타이밍에 따라 흔들린다.

@@ -158,7 +158,9 @@ try {
       const src = t.get(k).getSourceImage();
       return { key: k, size: `${src.width}x${src.height}` };
     });
-    assert(detailTex && detailTex.size === '1024x1024', '@2x 텍스처가 1024x1024',
+    // 2026-09-03: 포트레이트 소스를 전신 시트 크롭(512×512, 정체성 100% 일치)으로 교체.
+    // @2x 원본이 더는 1024가 아니라 512다 — 해상도보다 정체성 일치를 우선한 트레이드오프.
+    assert(detailTex && detailTex.size === '512x512', '@2x 텍스처가 512x512(전신 크롭 소스)',
       detailTex ? `${detailTex.key} ${detailTex.size}` : 'none');
   } else assert(false, 'HeroDetailScene 진입', `heroId=${heroId}`);
 

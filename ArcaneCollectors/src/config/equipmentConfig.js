@@ -22,3 +22,18 @@ export const EQUIPMENT_RARITY = {
   SR: { name: 'SR', color: 0xA855F7, multiplier: 1.5 },
   SSR: { name: 'SSR', color: 0xF59E0B, multiplier: 2.0 }
 };
+
+/**
+ * 장비 가챠 SSOT (GachaSystem.pullEquipment() 전용).
+ * gameConfig.js GAME_CONSTANTS.gachaCost 와 동일한 값을 쓴다(기존 GachaScene 장비 탭이
+ * 젬 소환은 영웅 가챠와 같은 비용을 썼던 관행을 그대로 승격). gameConfig.js 는 Phaser/전
+ * Scene 을 import하므로 GachaSystem(Phaser 비의존, vitest node 테스트 대상)에서 직접
+ * import할 수 없다 — 그래서 이 Phaser 비의존 설정 파일에 둔다.
+ * rates 는 기존 GachaScene.performEquipmentPull()에 하드코딩돼 있던 값을 그대로 승격했다.
+ */
+export const EQUIPMENT_GACHA = {
+  rates: { SSR: 0.015, SR: 0.085, R: 0.30, N: 0.60 },
+  cost: { single: 300, multi: 2700 },
+  ticketCost: { single: 1, multi: 10 },
+  slotIcons: { weapon: '⚔️', armor: '🛡️', accessory: '💍', relic: '🔮' }
+};

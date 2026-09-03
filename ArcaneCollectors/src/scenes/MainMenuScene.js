@@ -12,6 +12,12 @@ import { IdleProgressSystem } from '../systems/IdleProgressSystem.js';
 import { IdleBattleView } from '../components/IdleBattleView.js';
 import { getCharacter, getCharacterOrHero, calculatePower, getStage, getChapterStages, normalizeHeroes } from '../data/index.ts';
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
+import { OVERLAY_ROOT_NAME as GACHA_OVERLAY_NAME } from '../components/GachaResultOverlay.js';
+import {
+  LEGACY_NOTICE_TITLE,
+  LEGACY_NOTICE_CONFIRM,
+  formatLegacyMigrationNotice
+} from '../utils/legacyMigrationNotice.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import { MenuGridGate } from '../systems/MenuGridGate.js';
@@ -21,6 +27,7 @@ import { TutorialFlow } from '../components/tutorial/TutorialFlow.js';
 import { StoryManager } from '../systems/StoryManager.js';
 import { TutorialEvents } from '../systems/TutorialManager.js';
 import { EventBus } from '../systems/EventBus.js';
+import { LABEL_PLATE } from '../components/NineSliceFrame.js';
 import { GachaPopup } from '../components/popups/GachaPopup.js';
 import { HeroListPopup } from '../components/popups/HeroListPopup.js';
 import { PartyEditPopup } from '../components/popups/PartyEditPopup.js';
@@ -38,6 +45,7 @@ import { CollectionPopup } from '../components/popups/CollectionPopup.js';
 import { StoryLogPopup } from '../components/popups/StoryLogPopup.js';
 import { ReturningPlayerCard } from '../components/ReturningPlayerCard.js';
 import { buildReturnSummary } from '../systems/ReturningPlayerRules.js';
+import { soundManager } from '../systems/SoundManager.js';
 import { RETURN_TIER } from '../config/onboardingConfig.js';
 
 // --- T-10 비주얼 리디자인 (REDESIGN_PLAN §3-1) ---
@@ -46,10 +54,26 @@ import { ts } from '../utils/textStyles.ts';
 import { GlassPanel, GLASS_VARIANT } from '../components/GlassPanel.js';
 import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { IconFactory } from '../utils/IconFactory.js';
-import { resolveFullbodyKey, fullbodyPath, hasFullbodyAsset } from '../utils/heroDetailLayout.js';
-import PORTRAIT_MAP from '../data/portrait-mapping.json';
-import ASSET_MANIFEST from '../../tools/art/asset-manifest.json';
 import * as ML from '../utils/mainMenuLayout.js';
+import {
+  computeMenuBadges,
+  formatBadgeCount,
+  summarizeBadges,
+  markMenuSeen,
+  BADGE_TYPE
+} from '../systems/MenuBadgeRules.js';
+import { QuestSystem } from '../systems/QuestSystem.js';
+import { EvolutionSystem } from '../systems/EvolutionSystem.js';
+import { EventDungeonSystem } from '../systems/EventDungeonSystem.js';
+import { GameEvents } from '../systems/EventBus.js';
+
+/**
+ * 레거시 통합 안내 (QA P1-5) 표시 규격.
+ * depth 는 복귀 카드(2500) 위, 튜토리얼 루트(Z_INDEX.TUTORIAL = 3000) 아래여야 한다.
+ * 지연은 씬이 다 그려진 뒤에 뜨게 하는 최소값이다.
+ */
+const LEGACY_NOTICE_DEPTH = 2600;
+const LEGACY_NOTICE_DELAY = 400;
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -62,6 +86,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.bossDefeat = data?.bossDefeat || false;
     // 다른 씬(스테이지 선택 경고 CTA 등)이 지정한 자동 오픈 팝업
     this.pendingPopupKey = data?.openPopup || null;
+    this.activePopupKey = null;
     // 빈 화면 방지: shutdown()이 호출되지 않는 비정상 경로 대비
     this._uiCreated = false;
   }
@@ -77,6 +102,10 @@ export class MainMenuScene extends Phaser.Scene {
       this.registry.set('gold', resources?.gold ?? 10000);
       return;
     }
+
+    // SND-01: 로비 BGM
+    soundManager.init(this);
+    soundManager.playBGM('main_theme');
 
     // NavigationManager 초기화 (메인 메뉴 = 네비게이션 루트)
     navigationManager.reset();
@@ -126,6 +155,7 @@ export class MainMenuScene extends Phaser.Scene {
     // 튜토리얼 배선 — 현재 스텝을 화면(컷씬/마스킹/코치마크)으로 옮긴다
     this.tutorialFlow = new TutorialFlow(this).start();
     this._menusUnlockedOff = EventBus.on(TutorialEvents.MENUS_UNLOCKED, () => this.refreshBottomMenu());
+    this._badgeEventsOff = this._subscribeMenuBadgeEvents();
 
     // 오프라인 보상: IdleProgressSystem의 DPS 기반으로 재계산
     if (this.showOfflineRewards && (this.showOfflineRewards?.gold ?? 0) > 0) {
@@ -153,6 +183,9 @@ export class MainMenuScene extends Phaser.Scene {
         this.showOfflineRewardsPopup(this.showOfflineRewards);
       });
     }
+
+    // QA P1-5: 레거시 스타터 통합 안내 (조건부 1회). 복귀 카드보다 먼저 알린다.
+    this.maybeShowLegacyMigrationNotice();
 
     // T-Q5/T-25: 복귀 유저 요약 카드 (조건부 1회). 컷씬은 자동 재생하지 않는다(UX §5-3).
     this.maybeShowReturningPlayerCard(fullSaveData);
@@ -182,6 +215,15 @@ export class MainMenuScene extends Phaser.Scene {
       this._menusUnlockedOff();
       this._menusUnlockedOff = null;
     }
+    if (this._badgeEventsOff) {
+      this._badgeEventsOff();
+      this._badgeEventsOff = null;
+    }
+    if (this._badgeRefreshTimer) {
+      this._badgeRefreshTimer.remove(false);
+      this._badgeRefreshTimer = null;
+    }
+    this._menuTiles = {};
     if (this.tutorialFlow) {
       this.tutorialFlow.destroy();
       this.tutorialFlow = null;
@@ -209,8 +251,6 @@ export class MainMenuScene extends Phaser.Scene {
       this._idleMaskGfx = null;
       this._idleMask = null;
     }
-    this._idleFullbody = null;
-    this._idleFullbodyGlow = null;
     if (this.heroPopup) {
       this.heroPopup.destroy();
       this.heroPopup = null;
@@ -226,6 +266,52 @@ export class MainMenuScene extends Phaser.Scene {
     }
   }
 
+
+  /**
+   * 메뉴를 열었다고 기록한다. NEW 배지는 이 시각을 기준으로 꺼진다.
+   * @param {string} popupKey
+   */
+  markMenuSeen(popupKey) {
+    try {
+      const save = SaveManager.load();
+      markMenuSeen(save, popupKey);
+      SaveManager.save(save);
+    } catch (error) {
+      console.warn('[MainMenuScene] 메뉴 확인 기록 실패:', error?.message);
+    }
+  }
+
+  /**
+   * 배지를 바꿀 수 있는 게임 이벤트를 구독한다.
+   * 개별 이벤트마다 다시 계산하면 프레임을 먹으므로 300ms 로 모아 한 번만 계산한다.
+   * @returns {Function} 해제 함수
+   */
+  _subscribeMenuBadgeEvents() {
+    const events = [
+      GameEvents.QUEST_COMPLETE,
+      GameEvents.QUEST_REWARD_CLAIMED,
+      GameEvents.QUEST_PROGRESS,
+      GameEvents.DAILY_RESET,
+      GameEvents.CHARACTER_ADDED,
+      GameEvents.EVOLVE,
+      GameEvents.COLLECTION_UPDATED,
+      GameEvents.COLLECTION_COMPLETED,
+      GameEvents.GACHA_COMPLETE,
+      GameEvents.RESOURCE_CHANGED,
+      GameEvents.STAGE_CLEARED
+    ].filter(Boolean);
+
+    const schedule = () => {
+      if (this._badgeRefreshTimer) this._badgeRefreshTimer.remove(false);
+      this._badgeRefreshTimer = this.time.delayedCall(300, () => {
+        this._badgeRefreshTimer = null;
+        this.refreshMenuBadges();
+      });
+    };
+
+    const offs = events.map((name) => EventBus.on(name, schedule));
+    return () => offs.forEach((off) => off?.());
+  }
 
   /**
    * 화면 액센트로 쓸 교단을 정한다 (§2-1 Cult Tint).
@@ -287,6 +373,46 @@ export class MainMenuScene extends Phaser.Scene {
       return true;
     } catch (error) {
       console.warn('[MainMenuScene] 복귀 카드 표시 실패:', error?.message);
+      return false;
+    }
+  }
+
+  /**
+   * 레거시 스타터 통합 1회성 안내 (QA P1-5).
+   *
+   * 마이그레이션은 보유 영웅 4명을 1명으로 줄이면서 레벨을 승계하고 장비를 반환한다.
+   * 아무 말 없이 벌어지면 유저는 계정이 손상됐다고 읽는다. 무엇이 어디로 갔는지 한 번 알린다.
+   *
+   * 플래그는 `SaveManager.consumeLegacyMigrationNotice()` 가 꺼내는 즉시 지운다.
+   * depth 는 복귀 카드(2500) 위 · 튜토리얼(3000) 아래다.
+   *
+   * @returns {boolean} 안내를 띄웠는지
+   */
+  maybeShowLegacyMigrationNotice() {
+    try {
+      const notice = SaveManager.consumeLegacyMigrationNotice();
+      const message = formatLegacyMigrationNotice(notice, {
+        resolveName: (id) => getCharacterOrHero(id)?.name || getCharacter(id)?.name || id
+      });
+      if (!message) return false;
+
+      this.time.delayedCall(LEGACY_NOTICE_DELAY, () => {
+        if (!this.scene?.isActive?.()) return;
+        const modal = new Modal(this, {
+          title: LEGACY_NOTICE_TITLE,
+          content: message,
+          width: s(420),
+          height: s(300),
+          closeOnOverlay: false,
+          buttons: [{ text: LEGACY_NOTICE_CONFIRM, onClick: () => {} }]
+        });
+        modal.setDepth(LEGACY_NOTICE_DEPTH);
+        modal.once('hide', () => modal.destroy());
+        modal.show();
+      });
+      return true;
+    } catch (error) {
+      console.warn('[MainMenuScene] 레거시 통합 안내 표시 실패:', error?.message);
       return false;
     }
   }
@@ -522,6 +648,12 @@ export class MainMenuScene extends Phaser.Scene {
     settingsHit.on('pointerover', () => settingsIcon?.setAlpha(0.75));
     settingsHit.on('pointerout', () => settingsIcon?.setAlpha(1));
     settingsHit.on('pointerdown', () => this.openPopup('settings'));
+
+    // 종합 알림 점 — 어느 메뉴든 받을 것/확인할 것이 있으면 켜진다
+    this._topBarAlertDot = this.add.circle(
+      s(L.settings.x + 15), s(L.settings.y - 14), s(6), DESIGN.colors.status.error, 1
+    ).setDepth(d + 5).setVisible(false);
+    this._topBarAlertDot.setStrokeStyle(s(2), DESIGN.colors.bg.primary, 0.9);
   }
 
   /**
@@ -687,16 +819,39 @@ export class MainMenuScene extends Phaser.Scene {
       ring.lineStyle(s(2), ringColor, 0.9);
       ring.strokeCircle(x, y, r + s(2));
 
-      const name = (staticData?.name || fullData?.name || charData?.name || '???').substring(0, 5);
-      this.add.text(x, s(slot.nameY), name,
+      // QA P2-6: `substring(0, 5)` 는 `번개의 아이리스`를 `번개의 아`로 음절 중간에서 잘랐다.
+      // 어절 단위 말줄임으로 바꾸고, 그래도 슬롯 폭을 넘으면 폰트를 한 단계 줄인다.
+      const rawName = staticData?.name || fullData?.name || charData?.name || '???';
+      const nameText = this.add.text(x, s(slot.nameY), ML.fitPartySlotName(rawName),
         ts('caption', { color: DESIGN.colors.text.primary })).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
+      this._shrinkTextToWidth(nameText, s(slot.nameMaxWidth));
       this.add.text(x, s(slot.levelY), `Lv.${charData?.level || 1}`,
         ts('num.sm', { color: DESIGN.colors.text.secondary })).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
 
-      hit.on('pointerdown', () => this.heroPopup?.show(heroId));
+      hit.on('pointerdown', () => this.openHeroInfo(heroId));
       hit.on('pointerover', () => ring.setAlpha(0.6));
       hit.on('pointerout', () => ring.setAlpha(1));
     });
+  }
+
+  /**
+   * 서체 폴백 등으로 라벨이 예상보다 넓으면 폰트를 한 단계씩 줄여 폭 안에 넣는다.
+   * 말줄임(`fitPartySlotName`)만으로는 글자수만 통제되고 실제 픽셀 폭은 통제되지 않는다.
+   *
+   * @param {Phaser.GameObjects.Text} textObj
+   * @param {number} maxWidth 렌더 px
+   * @param {number} [minFontPx=s(9)] 이 아래로는 줄이지 않는다
+   */
+  _shrinkTextToWidth(textObj, maxWidth, minFontPx = s(9)) {
+    if (!textObj || !Number.isFinite(maxWidth) || maxWidth <= 0) return textObj;
+    let guard = 0;
+    while (textObj.width > maxWidth && guard < 8) {
+      const current = parseFloat(textObj.style.fontSize);
+      if (!Number.isFinite(current) || current <= minFontPx) break;
+      textObj.setFontSize(Math.max(minFontPx, current - 1));
+      guard += 1;
+    }
+    return textObj;
   }
 
   /**
@@ -719,8 +874,9 @@ export class MainMenuScene extends Phaser.Scene {
     }
     this.add.text(x, y, '+', ts('title', { color: DESIGN.colors.text.muted })).setOrigin(0.5)
       .setDepth(Z_INDEX.PANEL_CONTENT + 1);
-    this.add.text(x, s(slot.nameY), '동료 없음',
+    const emptyLabel = this.add.text(x, s(slot.nameY), '동료 없음',
       ts('caption', { color: DESIGN.colors.text.muted })).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
+    this._shrinkTextToWidth(emptyLabel, s(slot.nameMaxWidth));
 
     const hit = this.add.circle(x, y, Math.max(r, s(24)), 0x000000, 0.001)
       .setDepth(Z_INDEX.PANEL_CONTENT + 2).setInteractive({ useHandCursor: true });
@@ -933,6 +1089,19 @@ export class MainMenuScene extends Phaser.Scene {
     g.fillRoundedRect(s(slot.x), s(slot.y), s(slot.w), s(slot.h), s(DESIGN.radius.lg));
     g.lineStyle(s(1), 0xFFFFFF, 0.12);
     g.strokeRoundedRect(s(slot.x), s(slot.y), s(slot.w), s(slot.h), s(DESIGN.radius.lg));
+
+    // 라벨 캡슐 — 흰 라벨이 status.success(초록)·accent 위에서 대비 3:1 아래로 떨어진다.
+    // 같은 Graphics 에 이어 그려 오브젝트 수를 늘리지 않는다(상태 변경 시 함께 다시 그려진다)
+    const inset = s(LABEL_PLATE.inset);
+    const plateW = Math.max(0, s(slot.w) - inset * 2);
+    const plateH = Math.max(0, s(slot.h) - inset);
+    if (plateW > 0 && plateH > 0) {
+      g.fillStyle(DESIGN.colors.bg.primary, LABEL_PLATE.alpha);
+      g.fillRoundedRect(
+        s(slot.x) + inset, s(slot.y) + inset / 2, plateW, plateH,
+        Math.min(plateH / 2, s(DESIGN.radius.md))
+      );
+    }
     return g;
   }
 
@@ -1281,9 +1450,6 @@ export class MainMenuScene extends Phaser.Scene {
     const mask = maskGfx.createGeometryMask();
     this._idleMask = mask;
 
-    // 대표 영웅 전신 장식 (지연 로드). 에셋이 없으면 조용히 생략한다
-    this._createIdleFullbody(mask);
-
     this.idleBattleView = new IdleBattleView(
       this, s(view.cx), s(view.cy), s(view.w), s(view.h), { chrome: false }
     );
@@ -1315,7 +1481,10 @@ export class MainMenuScene extends Phaser.Scene {
       // 보스 로드 + 표시
       this.idleSystem.loadCurrentBoss();
       if (this.idleSystem.currentBossData) {
-        this.idleBattleView.showBoss(this.idleSystem.currentBossData);
+        // 오프라인 복귀 시 0 에서 채우는 연출을 건너뛰고 마지막 상태로 즉시 스냅한다
+        this.idleBattleView.showBoss(this.idleSystem.currentBossData, {
+          accumulatedDamage: this.idleSystem.accumulatedDamage || 0
+        });
       }
       this.idleBattleView.startBattleCycle();
 
@@ -1368,84 +1537,6 @@ export class MainMenuScene extends Phaser.Scene {
         mood: charData.mood || staticData.mood || staticData.baseMood || null
       };
     }).filter(Boolean);
-  }
-
-  /**
-   * 관측창 뒤 대표 영웅 전신 장식.
-   *
-   * 전신 시트는 첫 로드에 넣지 않는다(PreloadScene 은 fullbody 를 건너뛴다).
-   * 매니페스트에 있는 키만 지연 로드하고, 없거나 실패하면 장식 없이 지나간다.
-   * 마스크가 씌워져 있어 대역 밖으로는 나가지 않는다.
-   *
-   * @param {Phaser.Display.Masks.GeometryMask} mask 대역 클리핑 마스크
-   */
-  _createIdleFullbody(mask) {
-    try {
-      const saveData = SaveManager.load();
-      const rawParty = (saveData?.parties || [])[0];
-      const heroIds = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []) || [];
-      const leadId = heroIds.find(Boolean);
-      if (!leadId) return;
-
-      const key = resolveFullbodyKey(leadId, PORTRAIT_MAP);
-      if (!key || !hasFullbodyAsset(key, ASSET_MANIFEST.fullbody)) return;
-
-      if (this.textures.exists(key)) {
-        this._placeIdleFullbody(key, mask);
-        return;
-      }
-
-      const path = fullbodyPath(key);
-      if (!path) return;
-
-      // 완료 시 배치는 항상 예약한다. 로드 요청만 중복을 막는다.
-      // scene.restart() 가 로드 완료 전에 들어오면 같은 키를 두 번 요청해
-      // "Texture key already in use" 경고와 중복 네트워크 요청이 난다.
-      this.load.once(`filecomplete-image-${key}`, () => {
-        if (!this.sys || !this.sys.isActive() || !this.textures.exists(key)) return;
-        this._placeIdleFullbody(key, mask);
-      });
-
-      this._fullbodyRequested = this._fullbodyRequested || new Set();
-      if (this._fullbodyRequested.has(key)) return;
-      this._fullbodyRequested.add(key);
-      this.load.image(key, path);
-      this.load.once('loaderror', (file) => {
-        if (file && file.key === key) {
-          console.warn(`[MainMenuScene] 전신 장식 로드 실패, 생략: ${key}`);
-        }
-      });
-      if (!this.load.isLoading()) this.load.start();
-    } catch (error) {
-      console.warn('[MainMenuScene] 전신 장식 준비 실패:', error?.message);
-    }
-  }
-
-  /**
-   * 전신 장식을 관측창 뒤에 세운다.
-   * @param {string} key 전신 텍스처 키 (fb_hero_XXX)
-   * @param {Phaser.Display.Masks.GeometryMask} mask
-   */
-  _placeIdleFullbody(key, mask) {
-    const source = this.textures.get(key).getSourceImage();
-    const decor = ML.computeFullbodyDecor(source?.width, source?.height);
-    if (!decor) return;
-
-    const glow = this.add.graphics().setDepth(Z_INDEX.IDLE_BATTLE - 3);
-    glow.fillStyle(this._accent.color, decor.glow.alpha);
-    glow.fillCircle(s(decor.glow.x), s(decor.glow.y), s(decor.glow.r));
-    glow.setMask(mask);
-
-    const image = this.add.image(s(decor.x), s(decor.y), key)
-      .setOrigin(0.5, 1)
-      .setDisplaySize(s(decor.w), s(decor.h))
-      .setAlpha(0)
-      .setDepth(Z_INDEX.IDLE_BATTLE - 2);
-    image.setMask(mask);
-    this.tweens.add({ targets: image, alpha: decor.alpha, duration: 500, ease: 'Sine.easeOut' });
-
-    this._idleFullbody = image;
-    this._idleFullbodyGlow = glow;
   }
 
   /**
@@ -1628,10 +1719,14 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   /**
-   * 메뉴 그리드 (§3-1: 5열, startY=1040).
+   * 메뉴 그리드 (§3-1 + 사용자 피드백 반영).
    *
-   * 아이콘은 전부 `IconFactory` 벡터다. 시스템 이모지는 OS·브라우저마다 그림이 달라
-   * 선 굵기와 채도가 제각각이었다 (§1-1). popupKey 는 별칭으로 해석되므로
+   * 원형 아이콘 나열에서 **타일**로 바꿨다. 배경 일러스트 위에 아이콘만 떠 있으면
+   * 실루엣이 분리되지 않아 "눈에 안 들어온다". 어두운 플레이트로 바닥을 깔고,
+   * 아이콘을 icon.xl(64) 로 키우고, 라벨을 body bold + 스트로크로 올린다.
+   * 받을 것이 있는 메뉴에는 배지가 붙는다(MenuBadgeRules).
+   *
+   * 아이콘은 전부 IconFactory 벡터다. popupKey 는 별칭으로 해석되므로
    * herolist → heroes, partyedit → party 로 자동 매핑된다.
    */
   createBottomMenu() {
@@ -1658,72 +1753,235 @@ export class MainMenuScene extends Phaser.Scene {
     const menuItems = MenuGridGate.filterMenuItems(allMenuItems, saveDataForMenu);
 
     // 0개면 그리드 영역 자체를 그리지 않는다 (신규 유저 첫 화면)
-    if (!MenuGridGate.shouldRenderGrid(menuItems.length)) return;
+    if (!MenuGridGate.shouldRenderGrid(menuItems.length)) {
+      this._menuTiles = {};
+      this.refreshMenuBadges();
+      return;
+    }
 
     this._menuObjects = [];
+    this._menuTiles = {};
     const cols = MenuGridGate.getColumnCount(menuItems.length);
-    const labelFontBase = MenuGridGate.getLabelFontSize(menuItems.length);
     const grid = ML.computeMenuGrid(menuItems.length, cols);
     const accent = this._accent.color;
-    const idleCss = DESIGN.colors.text.secondary;
-    const activeCss = DESIGN.colors.text.primary;
 
     grid.cells.forEach((cell, i) => {
       const item = menuItems[i];
-      const x = s(cell.x);
-      const iconY = s(cell.iconY);
-      const r = s(cell.iconR);
+      this._createMenuTile(cell, item, accent);
+    });
 
-      // Graphics 는 셀마다 새로 만든다. 씬 프로퍼티에 캐시하면 scene.restart() 후
-      // 이미 파괴된 객체를 다시 잡아 플레이트가 통째로 사라진다.
-      const bg = this.add.graphics().setDepth(Z_INDEX.BOTTOM_MENU);
-      const drawPlate = (hover) => {
-        bg.clear();
-        bg.fillStyle(hover ? DESIGN.colors.bg.surface : DESIGN.colors.bg.secondary, hover ? 0.95 : 0.8);
-        bg.fillCircle(x, iconY, r);
-        bg.lineStyle(s(2), accent, hover ? 0.85 : 0.4);
-        bg.strokeCircle(x, iconY, r);
-      };
-      drawPlate(false);
+    this.refreshMenuBadges();
+  }
 
-      const icon = IconFactory.createImage(this, x, iconY, item.popupKey, s(DESIGN.icon.lg - 8), {
-        tint: DESIGN.colors.text.primary
-      });
-      icon?.setDepth(Z_INDEX.BOTTOM_MENU + 1);
+  /**
+   * 메뉴 타일 하나. 플레이트 → 아이콘 → 라벨 → 배지 순으로 쌓는다.
+   *
+   * @param {object} cell computeMenuGrid() 항목
+   * @param {{label:string, popupKey:string}} item
+   * @param {number} accent 교단 액센트 색
+   */
+  _createMenuTile(cell, item, accent) {
+    const d = Z_INDEX.BOTTOM_MENU;
+    const tile = cell.tile;
+    const x = s(tile.x);
+    const y = s(tile.y);
+    const w = s(tile.w);
+    const h = s(tile.h);
+    const r = s(tile.radius);
 
-      const label = this.add.text(x, s(cell.labelY), item.label,
-        ts('caption', { color: idleCss, fontSize: sf(labelFontBase) }))
-        .setOrigin(0.5).setDepth(Z_INDEX.BOTTOM_MENU + 1);
+    // 1) 플레이트 — 배경 일러스트에서 타일을 떼어 내는 바닥
+    const plate = this.add.graphics().setDepth(d);
+    const drawPlate = (pressed) => {
+      plate.clear();
+      plate.fillStyle(DESIGN.colors.bg.surface, pressed ? 0.95 : 0.85);
+      plate.fillRoundedRect(x - w / 2, y - h / 2, w, h, r);
+      plate.lineStyle(s(1), pressed ? accent : 0xFFFFFF, pressed ? 0.9 : 0.22);
+      plate.strokeRoundedRect(x - w / 2, y - h / 2, w, h, r);
+    };
+    drawPlate(false);
 
-      // 히트 영역 — 시각 원(반지름 28)보다 크게 잡아 터치 하한을 지킨다 (§2-5)
-      const hitArea = this.add.rectangle(s(cell.hit.x), s(cell.hit.y), s(cell.hit.w), s(cell.hit.h))
-        .setAlpha(0.001).setDepth(Z_INDEX.BOTTOM_MENU + 2).setInteractive({ useHandCursor: true });
+    // 2) 아이콘 — icon.xl. 아래로 짙은 그림자를 한 겹 깔아 실루엣을 분리한다
+    const iconPx = s(cell.iconSize);
+    const iconY = s(cell.iconY);
+    const shadowKey = IconFactory.create(this, item.popupKey, iconPx, { tint: 0x000000 });
+    if (shadowKey) {
+      this.add.image(x, iconY + s(3), shadowKey).setAlpha(0.55).setDepth(d + 1);
+    }
+    const icon = IconFactory.createImage(this, x, iconY, item.popupKey, iconPx, {
+      tint: DESIGN.colors.text.primary
+    });
+    icon?.setDepth(d + 2);
 
-      // 튜토리얼 하이라이트 대상 등록 (TID = mainmenu.menu.{popupKey})
-      TutorialTargetRegistry.register(
-        `mainmenu.menu.${item.popupKey}`, hitArea, 'MainMenuScene'
-      );
-      this._menuObjects.push(bg, label, hitArea);
-      if (icon) this._menuObjects.push(icon);
+    // 3) 라벨 — body(16) bold + 스트로크. 배경이 어떤 밝기든 읽힌다
+    const label = this.add.text(x, s(cell.labelY), item.label, ts('body', {
+      color: DESIGN.colors.text.primary,
+      fontStyle: 'bold',
+      stroke: '#0D0F1A',
+      strokeThickness: s(2)
+    })).setOrigin(0.5).setDepth(d + 2);
 
-      hitArea.on('pointerover', () => {
-        drawPlate(true);
-        label.setColor(activeCss);
-        icon?.setScale(1.08);
-      });
-      hitArea.on('pointerout', () => {
+    // 4) 히트 영역 — 타일 전체 (base 120x100)
+    const hitArea = this.add.rectangle(s(cell.hit.x), s(cell.hit.y), s(cell.hit.w), s(cell.hit.h))
+      .setAlpha(0.001).setDepth(d + 4).setInteractive({ useHandCursor: true });
+
+    // 튜토리얼 하이라이트 대상 등록 (TID = mainmenu.menu.{popupKey})
+    TutorialTargetRegistry.register(
+      `mainmenu.menu.${item.popupKey}`, hitArea, 'MainMenuScene'
+    );
+
+    this._menuObjects.push(plate, label, hitArea);
+    if (icon) this._menuObjects.push(icon);
+
+    this._menuTiles[item.popupKey] = { cell, icon, label, plate, badge: null };
+
+    hitArea.on('pointerover', () => { drawPlate(true); icon?.setScale(1.06); });
+    hitArea.on('pointerout', () => { drawPlate(false); icon?.setScale(1); });
+    hitArea.on('pointerdown', () => {
+      drawPlate(true);
+      icon?.setScale(0.92);
+      this.time.delayedCall(100, () => {
         drawPlate(false);
-        label.setColor(idleCss);
         icon?.setScale(1);
-      });
-      hitArea.on('pointerdown', () => {
-        icon?.setScale(0.92);
-        this.time.delayedCall(100, () => {
-          icon?.setScale(1);
-          this.openPopup(item.popupKey);
-        });
+        this.openPopup(item.popupKey);
       });
     });
+  }
+
+  /**
+   * 배지 계산에 필요한 수치를 시스템에서 모은다.
+   *
+   * 조회마다 try/catch 를 따로 건다. 한 시스템이 실패해도 나머지 배지는 살아야 하고,
+   * 실패한 항목은 아예 넘기지 않아 그 메뉴가 조용히 배지 없이 지나간다.
+   * **잘못된 알림보다 없는 알림이 낫다** — 눌러 봤더니 아무것도 없으면 다음부터 무시한다.
+   *
+   * 비동기 API(FriendSystem 등)와 데이터 원천이 없는 항목(도감 완성 보너스)은 넣지 않는다.
+   *
+   * @param {object} save
+   * @returns {object} computeMenuBadges 의 ctx
+   */
+  _collectMenuBadgeContext(save) {
+    const ctx = {};
+
+    try {
+      ctx.claimableQuests = (QuestSystem.getClaimableQuests() || []).length;
+    } catch (error) { /* 퀘스트 배지 생략 */ }
+
+    try {
+      ctx.ascendableHeroes = (save?.characters || [])
+        .filter((c) => c && EvolutionSystem.canEvolve(c.id)?.canEvolve === true).length;
+    } catch (error) { /* 각인 배지 생략 */ }
+
+    try {
+      // 한 번도 오르지 않은 탑은 "확인해 볼 것"이다
+      ctx.towerBossReady = (save?.tower?.highestFloor ?? 0) === 0;
+    } catch (error) { /* 무한탑 배지 생략 */ }
+
+    try {
+      // getEventProgress() 는 세이브를 쓰므로 부르지 않는다. 세이브를 직접 읽는다
+      const cleared = save?.eventDungeons || {};
+      ctx.eventStages = (EventDungeonSystem.getActiveEvents() || []).reduce((acc, event) => {
+        const stages = event?.stages?.length || 0;
+        const done = Object.keys(cleared[event.id]?.clearedStages || {}).length;
+        return acc + Math.max(0, stages - done);
+      }, 0);
+    } catch (error) { /* 이벤트 배지 생략 */ }
+
+    return ctx;
+  }
+
+  /**
+   * 배지를 다시 계산해 타일 위에 그린다. 타일 자체는 다시 만들지 않는다.
+   */
+  refreshMenuBadges() {
+    if (!this._uiCreated && !this._menuTiles) return;
+
+    let badges = {};
+    try {
+      const save = SaveManager.load();
+      badges = computeMenuBadges(save, this._collectMenuBadgeContext(save));
+    } catch (error) {
+      console.warn('[MainMenuScene] 메뉴 배지 계산 실패:', error?.message);
+    }
+    this._menuBadges = badges;
+
+    Object.entries(this._menuTiles || {}).forEach(([key, tile]) => {
+      this._renderMenuBadge(tile, badges[key] || null);
+    });
+    this._renderTopBarAlertDot(summarizeBadges(badges));
+  }
+
+  /**
+   * 타일 하나의 배지를 그린다. 없으면 지운다.
+   * @param {object} tile _menuTiles 항목
+   * @param {{type:string,count:number}|null} badge
+   */
+  _renderMenuBadge(tile, badge) {
+    if (tile.badge) {
+      tile.badge.objects.forEach((o) => o?.destroy?.());
+      tile.badge.glow?.stop?.();
+      tile.badge = null;
+    }
+    if (!badge) return;
+
+    const d = Z_INDEX.BOTTOM_MENU + 3;
+    const slot = tile.cell.badge;
+    const x = s(slot.x);
+    const y = s(slot.y);
+    const r = s(slot.r);
+    const objects = [];
+
+    if (badge.type === BADGE_TYPE.NEW) {
+      // NEW 리본 — 숫자 대신 글자로. "새로 생겼다"는 개수가 중요하지 않다
+      const ribbon = this.add.graphics().setDepth(d);
+      ribbon.fillStyle(DESIGN.colors.brand.primary, 0.95);
+      ribbon.fillRoundedRect(x - s(20), y - s(9), s(40), s(18), s(9));
+      const text = this.add.text(x, y, 'NEW',
+        ts('num.sm', { color: '#0D0F1A', fontStyle: 'bold' })).setOrigin(0.5).setDepth(d + 1);
+      objects.push(ribbon, text);
+    } else {
+      const isReward = badge.type === BADGE_TYPE.REWARD;
+      const color = isReward ? DESIGN.colors.brand.accent : DESIGN.colors.status.error;
+      const dot = this.add.circle(x, y, r, color, 1).setDepth(d);
+      dot.setStrokeStyle(s(2), DESIGN.colors.bg.primary, 0.9);
+      objects.push(dot);
+
+      const label = formatBadgeCount(badge.count);
+      if (label) {
+        objects.push(this.add.text(x, y, label,
+          ts('num.sm', { color: '#0D0F1A', fontStyle: 'bold' })).setOrigin(0.5).setDepth(d + 1));
+      }
+
+      // 받을 것이 있으면 아이콘을 골드로 물들이고 배지를 맥동시킨다.
+      // 트윈은 배지마다 1개만 쓴다(무대 트윈 예산과 겹치지 않게).
+      if (isReward) {
+        tile.icon?.setTint(DESIGN.colors.brand.accent);
+        const glow = this.tweens.add({
+          targets: dot,
+          scale: { from: 1, to: 1.25 },
+          duration: 600,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+        tile.badge = { objects, glow };
+        this._menuObjects.push(...objects);
+        return;
+      }
+    }
+
+    tile.badge = { objects, glow: null };
+    this._menuObjects.push(...objects);
+  }
+
+  /**
+   * 상단바 우측 종합 알림 점. 어느 메뉴든 하나라도 켜져 있으면 보인다.
+   * @param {{visible:boolean, hasReward:boolean, total:number}} summary
+   */
+  _renderTopBarAlertDot(summary) {
+    if (!this._topBarAlertDot) return;
+    const color = summary.hasReward ? DESIGN.colors.brand.accent : DESIGN.colors.status.error;
+    this._topBarAlertDot.setVisible(!!summary.visible);
+    this._topBarAlertDot.setFillStyle(color, 1);
   }
 
   /**
@@ -1734,6 +1992,8 @@ export class MainMenuScene extends Phaser.Scene {
     if (!this._uiCreated) return;
     (this._menuObjects || []).forEach((obj) => obj?.destroy?.());
     this._menuObjects = [];
+    Object.values(this._menuTiles || {}).forEach((tile) => tile.badge?.glow?.stop?.());
+    this._menuTiles = {};
     this.createBottomMenu();
     this.tutorialFlow?.scheduleRefresh(150);
   }
@@ -1747,7 +2007,12 @@ export class MainMenuScene extends Phaser.Scene {
   destroyOrphanPopups() {
     // 살아 있는 팝업은 건드리지 않는다. 화면에 보이지 않는데(alpha 0 / invisible)
     // 파괴되지 않은 컨테이너만 고아로 판정한다.
-    const alive = [this.activePopup?.container, this.heroPopup?.container].filter(Boolean);
+    // 열려 있는 팝업이 자기 안에서 띄운 중첩 팝업(HeroListPopup → HeroInfoPopup)도 살아 있는 쪽이다.
+    const alive = [
+      this.activePopup?.container,
+      this.activePopup?.heroPopup?.container,
+      this.heroPopup?.container
+    ].filter(Boolean);
     const orphans = [];
 
     const walk = (list) => {
@@ -1767,11 +2032,48 @@ export class MainMenuScene extends Phaser.Scene {
     };
 
     walk(this.children.list);
+
+    // 소환 결과 오버레이(depth 3010)는 팝업 레이어 밖의 씬 루트에 산다.
+    // 팝업이 소유권을 놓고 사라지면 전면 입력을 삼키는 고아가 되므로 여기서 같이 회수한다.
+    const overlayOrphans = this.collectOrphanOverlays();
+
     orphans.forEach((obj) => obj.destroy(true));
-    if (orphans.length > 0) {
-      console.warn(`[MainMenuScene] 고아 팝업 컨테이너 ${orphans.length}개 정리`);
+    overlayOrphans.forEach((overlay) => {
+      // 오버레이는 타이머·트윈·텍스처를 들고 있으므로 컨테이너가 아니라 인스턴스를 파괴한다.
+      if (typeof overlay.destroy === 'function') overlay.destroy();
+    });
+
+    const total = orphans.length + overlayOrphans.length;
+    if (total > 0) {
+      console.warn(`[MainMenuScene] 고아 팝업 컨테이너 ${total}개 정리`);
     }
-    return orphans.length;
+    return total;
+  }
+
+  /**
+   * 살아 있는 팝업이 소유하지 않은 소환 결과 오버레이를 찾는다.
+   *
+   * depth 3010 에는 튜토리얼 코치마크도 산다. 그래서 depth 가 아니라 루트 컨테이너 이름
+   * (`OVERLAY_ROOT_NAME`)으로 판정하고, 역참조로 오버레이 인스턴스를 되찾는다 (QA P1-3).
+   *
+   * @returns {Array<Object>} 고아 오버레이 인스턴스 목록
+   */
+  collectOrphanOverlays() {
+    const owned = [this.activePopup?.resultOverlay, this.heroPopup?.resultOverlay].filter(Boolean);
+    return (this.children?.list || [])
+      .filter((obj) => obj && obj.name === GACHA_OVERLAY_NAME)
+      .map((obj) => obj.__gachaResultOverlay)
+      .filter((overlay) => overlay && !overlay.destroyed && !owned.includes(overlay));
+  }
+
+  /**
+   * 영웅 정보 팝업을 연다. 여는 김에 고아 오버레이를 회수한다 —
+   * 소환 결과 오버레이가 남아 있으면 이 팝업을 덮어 조작이 불가능해진다 (QA P1-3).
+   * @param {string} heroId
+   */
+  openHeroInfo(heroId) {
+    this.destroyOrphanPopups();
+    this.heroPopup?.show(heroId);
   }
 
   openPopup(key) {
@@ -1803,12 +2105,18 @@ export class MainMenuScene extends Phaser.Scene {
       const popup = new PopupClass(this, {
         onClose: () => {
           this.activePopup = null;
+          this.activePopupKey = null;
+          this.refreshMenuBadges();
           this.tutorialFlow?.notifyPopupClosed();
           this.refreshAfterPopup();
         }
       });
       this.activePopup = popup;
+      // 어떤 팝업이 열려 있는지 TutorialFlow 가 알아야 한다.
+      // 스텝과 무관한 팝업 위에 코치마크(depth 3010)를 띄우면 팝업을 뚫고 나온다.
+      this.activePopupKey = key;
       popup.show();
+      this.markMenuSeen(key);
       this.tutorialFlow?.notifyPopupOpened(key);
     }
   }

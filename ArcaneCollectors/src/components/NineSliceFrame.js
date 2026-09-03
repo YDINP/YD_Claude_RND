@@ -65,6 +65,70 @@ export const CARD_FRAME_BY_RARITY = {
   SSR: 'frame_card_SSR'
 };
 
+/**
+ * 라벨 플레이트 규격 — btn_* 아트는 가운데가 밝은 장식판이라 흰 라벨이 묻힌다.
+ * 라벨 자리만 어두운 캡슐로 눌러 대비를 확보한다. 값은 base px (s() 적용 대상).
+ */
+export const LABEL_PLATE = Object.freeze({
+  /**
+   * 캡슐 알파. 0.55 로 시작했으나 실측에서 4.19:1 이 나와 기준(4.5:1)에 못 미쳤다.
+   * btn_primary 아트의 중앙부가 거의 흰색이라 0.55 로는 합성 결과가 충분히 어두워지지
+   * 않는다. 흰 아트 위 최악 조건에서 약 7.6:1 이 나오는 0.72 로 올렸다.
+   * 측정은 tests/e2e/button-contrast-smoke.mjs 가 한다.
+   */
+  alpha: 0.72,
+  /** 라벨 좌우 여백 */
+  padX: 14,
+  /** 라벨 상하 여백 */
+  padY: 6,
+  /** 캡슐이 버튼 밖으로 나가지 않도록 남기는 안쪽 여백 */
+  inset: 12,
+  /** 라벨 외곽선 두께 — 캡슐 밖으로 삐져나온 글자를 붙잡는다 */
+  strokeThickness: 2,
+  /** 라벨 그림자 오프셋과 블러 */
+  shadow: Object.freeze({ offsetX: 0, offsetY: 2, blur: 4, alpha: 0.85 })
+});
+
+/**
+ * 라벨 플레이트 사각형을 계산한다 (순수 함수).
+ *
+ * 라벨 크기에 여백을 더한 캡슐을 만들되, 버튼 안쪽 여백을 넘지 않게 가둔다.
+ * 라벨이 버튼보다 크면 캡슐은 버튼 폭에 맞춰 잘린다.
+ *
+ * @param {Object} params
+ * @param {number} params.buttonW - 버튼 너비 (렌더 px)
+ * @param {number} params.buttonH - 버튼 높이 (렌더 px)
+ * @param {number} params.labelW - 라벨 실측 너비 (렌더 px)
+ * @param {number} params.labelH - 라벨 실측 높이 (렌더 px)
+ * @param {number} [params.padX] - 좌우 여백 (렌더 px)
+ * @param {number} [params.padY] - 상하 여백 (렌더 px)
+ * @param {number} [params.inset] - 버튼 안쪽 여백 (렌더 px)
+ * @param {number} [params.offsetX] - 캡슐 중심의 가로 오프셋 (렌더 px). 라벨이 치우친 버튼용
+ * @param {number} [params.offsetY] - 캡슐 중심의 세로 오프셋 (렌더 px)
+ * @returns {{w:number,h:number,radius:number,offsetX:number,offsetY:number}|null} 라벨이 없으면 null
+ */
+export function computeLabelPlate({ buttonW, buttonH, labelW, labelH, padX, padY, inset, offsetX, offsetY }) {
+  if (!(labelW > 0) || !(labelH > 0)) return null;
+
+  const px = Number.isFinite(padX) ? padX : s(LABEL_PLATE.padX);
+  const py = Number.isFinite(padY) ? padY : s(LABEL_PLATE.padY);
+  const inner = Number.isFinite(inset) ? inset : s(LABEL_PLATE.inset);
+
+  const maxW = Math.max(0, buttonW - inner * 2);
+  const maxH = Math.max(0, buttonH - inner);
+
+  const w = Math.min(labelW + px * 2, maxW || labelW + px * 2);
+  const h = Math.min(labelH + py * 2, maxH || labelH + py * 2);
+
+  return {
+    w,
+    h,
+    radius: Math.min(h / 2, s(DESIGN.radius.md)),
+    offsetX: Number.isFinite(offsetX) ? offsetX : 0,
+    offsetY: Number.isFinite(offsetY) ? offsetY : 0
+  };
+}
+
 export class NineSliceFrame {
   // ------------------------------------------------------------------
   // 순수 함수 — Phaser 없이 단위 테스트 가능
@@ -141,11 +205,13 @@ export class NineSliceFrame {
    * @param {number|null} [options.tint] - 틴트 색 (Phaser hex). 폴백에서는 테두리 색이 된다
    * @param {number} [options.alpha] - 알파. 기본 1
    * @param {number} [options.depth] - depth
+   * @param {{w:number,h:number,radius?:number}|null} [options.labelPlate] - 라벨 뒤 어두운 캡슐.
+   *        주면 반환값이 [프레임, 캡슐] 을 담은 Container 가 된다. computeLabelPlate() 로 계산한다
    * @returns {Phaser.GameObjects.GameObject} nineslice 또는 폴백 Graphics.
    *          isFallback / frameSize 프로퍼티가 붙는다
    */
   static create(scene, options = {}) {
-    const { x = 0, y = 0, w = 0, h = 0, key = '', tint = null, alpha = 1, depth } = options;
+    const { x = 0, y = 0, w = 0, h = 0, key = '', tint = null, alpha = 1, depth, labelPlate = null } = options;
     const size = NineSliceFrame.clampSize(key, w, h);
 
     const spec = NineSliceFrame.getFrameSpec(key);
@@ -164,10 +230,51 @@ export class NineSliceFrame {
       object = NineSliceFrame._createNineSlice(scene, x, y, size.w, size.h, key, tint);
     }
 
+    // 라벨 플레이트를 요청하면 프레임과 캡슐을 한 컨테이너로 묶어 돌려준다.
+    // 호출부가 다루는 오브젝트 수가 늘지 않아야 기존 자식 인덱스 계약이 깨지지 않는다.
+    if (labelPlate) {
+      const plate = NineSliceFrame._createLabelPlate(scene, labelPlate);
+      // 알파는 아트에만 건다. 캡슐까지 함께 흐려지면 비활성 버튼의 라벨 대비가
+      // 1:1 까지 무너진다(실측). 비활성은 아트가 흐려지는 것으로 충분히 읽힌다
+      object.setAlpha(alpha);
+      object.setPosition(0, 0);
+      const group = scene.add.container(x, y, [object, plate]);
+      group.isFallback = object.isFallback;
+      group.hasLabelPlate = true;
+      group.artObject = object;
+      return NineSliceFrame._finish(group, size, depth);
+    }
+
+    if (object.isFallback === undefined) object.isFallback = false;
+
     object.setAlpha(alpha);
+    return NineSliceFrame._finish(object, size, depth);
+  }
+
+  /**
+   * depth 와 크기 정보를 붙여 마무리한다.
+   * @private
+   */
+  static _finish(object, size, depth) {
     if (typeof depth === 'number') object.setDepth(depth);
     object.frameSize = { w: size.w, h: size.h, clamped: size.clamped };
     return object;
+  }
+
+  /**
+   * 라벨 뒤 어두운 캡슐. 컨테이너 로컬 원점(버튼 중심) 기준으로 그린다.
+   * @private
+   */
+  static _createLabelPlate(scene, plate) {
+    const radius = Number.isFinite(plate.radius)
+      ? plate.radius
+      : Math.min(plate.h / 2, s(DESIGN.radius.md));
+    const cx = Number.isFinite(plate.offsetX) ? plate.offsetX : 0;
+    const cy = Number.isFinite(plate.offsetY) ? plate.offsetY : 0;
+    const graphics = scene.add.graphics();
+    graphics.fillStyle(DESIGN.colors.bg.primary, LABEL_PLATE.alpha);
+    graphics.fillRoundedRect(cx - plate.w / 2, cy - plate.h / 2, plate.w, plate.h, radius);
+    return graphics;
   }
 
   /** @private */

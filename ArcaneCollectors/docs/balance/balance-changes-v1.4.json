@@ -1,0 +1,72 @@
+[
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_goblin].growthStats.hp",
+    "from": 40,
+    "to": 15,
+    "_comment": "=== enemy_goblin: 1-2 온보딩 실파티(아이리스 1인) 중앙값 7턴(>6) — 튜토리얼 벽 ===",
+    "_context": "온보딩 모드(combat-turns.mjs --onboarding): 1-2는 실제로 아이리스 Lv1(온보딩 경험치 곡선 재계산 결과 — BALANCE_DESIGN_v1.md §9-9)이 1인으로 치르는 전투다. lv2(1-2용) growthStats.hp만 40→15로 낮춰 1-1(lv1, 영향 없음)은 그대로 유지하면서 1-2만 완화했다."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_wolf].stats.hp",
+    "from": 180,
+    "to": 120,
+    "_comment": "=== enemy_wolf: 1-2 온보딩 실파티 중앙값 7턴(>6) — 1-2 전용 적(다른 스테이지 재사용 없음) ===",
+    "_context": "온보딩 모드: goblin과 동일 스테이지의 3번째 적. HP 180→120으로 하향."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_mushroom].stats.hp",
+    "from": 400,
+    "to": 130,
+    "_comment": "=== enemy_mushroom: v1.3에서 4인 마일스톤 1-3 2턴 하한을 막으려 올린 HP(150→400/30→60)가 온보딩 실파티(아이리스 1인, Lv2)에는 과도해 1-3 중앙값 13턴으로 급증 — 사용자 피드백(1-3에서 지는 게 이해가 안 간다)의 근본 원인 ===",
+    "_context": "HP를 130/45로 재조정(v1.3 이전 원본 150/30보다는 높지만 v1.3의 400/60보다는 훨씬 낮음). 그 결과 온보딩 1-3은 승률100%·중앙값6턴으로 목표 충족하지만, 4인 마일스톤 1-3은 다시 중앙값2턴(<3)으로 돌아간다 — BALANCE_DESIGN_v1.md §9-9-3에 상세 설명된 구조적 트레이드오프(단일 스탯으로 8배 차이 나는 두 파티 규모를 동시에 만족시킬 수 없음). 이번 라운드는 실제 신규 유저 승률(사용자 피드백)을 우선했다."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_mushroom].growthStats.hp",
+    "from": 60,
+    "to": 45
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_golem].stats.hp",
+    "from": 800,
+    "to": 300,
+    "_comment": "=== enemy_golem: 1-4 온보딩 실파티(아이리스Lv2+오마르Lv1) 승률 40.5% — 목표(≥90%) 미달, 실질적 패배 경험 ===",
+    "_context": "온보딩 모드: 골렘 2마리(Lv5 환산 HP1,440·ATK67)가 2인 초반 파티에 압도적으로 강해 승패가 반반이었다. HP(800→300/160→60)·ATK(35→25/8→5) 동시 하향으로 승률100%까지 개선. 골렘은 1-4에만 등장(다른 스테이지 재사용 없음)해 4인 마일스톤 결과는 영향 없이 오히려 여유가 늘었다(3턴, 기존 6턴에서 단축)."
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_golem].stats.atk",
+    "from": 35,
+    "to": 25
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_golem].growthStats.hp",
+    "from": 160,
+    "to": 60
+  },
+  {
+    "file": "src/data/enemies.json",
+    "path": "enemies[id=enemy_golem].growthStats.atk",
+    "from": 8,
+    "to": 5
+  },
+  {
+    "_comment": "=== 메타 정보 ===",
+    "_summary": {
+      "totalChanges": 8,
+      "filesAffected": [
+        "src/data/enemies.json"
+      ],
+      "enemiesAffected": 4,
+      "stageChanges": 0,
+      "towerChanges": 0,
+      "heroChanges": 0,
+      "supersedes": "balance-changes-v1.3.json 적용 이후에만 유효 (v1.4는 v1.3 델타). BALANCE_DESIGN_v1.md §9-9: 온보딩 실파티(1-1~1-3 아이리스 1인, 1-4~1-5 아이리스+오마르 2인) combat-turns.mjs --onboarding 모드 신설 + 챕터1 4개 적 조정. 4인 마일스톤 combat-turns 24/25 유지(1-3만 실패, §9-9-3 트레이드오프 설명), stage-clearable/tower-ceiling/grade-order/economy-flow 25/25·100/100·PASS·PASS 전부 유지."
+    }
+  }
+]

@@ -513,4 +513,50 @@ export class PartyManager {
     // 상위 4명 선택
     return candidates.slice(0, this.PARTY_SIZE).map(h => h.id);
   }
+
+  /**
+   * 저장된 파티 슬롯(ID 배열)을 보유 영웅 객체로 되돌린다.
+   *
+   * 세이브의 파티는 id 문자열만 들고 있어 그대로는 슬롯에 그릴 수 없다.
+   * 보유 목록에 없는 id(마이그레이션으로 사라진 영웅 등)는 빈 칸으로 남긴다.
+   * 순수 함수이며 Phaser·세이브 I/O를 만지지 않는다.
+   *
+   * @param {Array<string|null>} slotIds 저장된 슬롯 id 배열
+   * @param {Array<Object>} ownedHeroes 보유 영웅 객체 배열
+   * @param {number} [size=PARTY_SIZE] 슬롯 수
+   * @returns {Array<Object|null>} 길이 size 의 영웅 객체 배열 (빈 칸은 null)
+   */
+  static resolvePartyHeroes(slotIds, ownedHeroes, size = this.PARTY_SIZE) {
+    const owned = Array.isArray(ownedHeroes) ? ownedHeroes.filter(Boolean) : [];
+    const ids = Array.isArray(slotIds) ? slotIds : [];
+    const used = new Set();
+
+    return Array.from({ length: size }, (_, i) => {
+      const id = typeof ids[i] === 'string' ? ids[i] : (ids[i]?.id || ids[i]?.characterId || null);
+      if (!id || used.has(id)) return null;
+      const hero = owned.find(h => (h.id || h.characterId) === id);
+      if (!hero) return null;
+      used.add(id);
+      return hero;
+    });
+  }
+
+  /**
+   * 화면에 세울 파티를 정한다 — 저장된 편성이 우선, 비어 있으면 상위 4인 자동 편성.
+   *
+   * 파티 편성 화면에서 저장한 편성이 전투 진입 모달에서 버려지던 결함(QA P1-1)의 SSOT다.
+   *
+   * @param {Array<string|null>} slotIds 저장된 슬롯 id 배열
+   * @param {Array<Object>} ownedHeroes 보유 영웅 객체 배열
+   * @param {number} [size=PARTY_SIZE] 슬롯 수
+   * @returns {Array<Object|null>} 길이 size 의 영웅 객체 배열
+   */
+  static resolveDisplayParty(slotIds, ownedHeroes, size = this.PARTY_SIZE) {
+    const restored = this.resolvePartyHeroes(slotIds, ownedHeroes, size);
+    if (restored.some(Boolean)) return restored;
+
+    const owned = Array.isArray(ownedHeroes) ? ownedHeroes.filter(Boolean) : [];
+    if (owned.length === 0) return restored;
+    return this.resolvePartyHeroes(this.autoFormParty(owned), owned, size);
+  }
 }

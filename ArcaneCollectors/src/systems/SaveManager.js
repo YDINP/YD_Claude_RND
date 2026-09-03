@@ -12,6 +12,7 @@ import baseHeroesData from '../data/base-heroes.json';
 import ascendedHeroesData from '../data/ascended-heroes.json';
 import cultsData from '../data/cults.json';
 import { getRarityStars } from '../utils/rarityUtils.js';
+import { DEFAULT_AUDIO_SETTINGS } from '../config/audioAssets.js';
 
 export class SaveManager {
   static SAVE_KEY = 'arcane_collectors_save';
@@ -34,10 +35,15 @@ export class SaveManager {
   /** 폐지된 레거시 스타터 ID. 기존 세이브 태깅 전용 (§1-2) */
   static LEGACY_STARTER_IDS = ['char_1', 'char_2', 'char_3', 'char_4'];
 
+  /** 파티 1개의 슬롯 수 */
+  static PARTY_SIZE = 4;
+
   /** 튜토리얼 스텝 ID 전량 (§5-1) */
   static TUTORIAL_STEP_IDS = [
     'T-01', 'T-02', 'T-03', 'T-04', 'T-05', 'T-06',
-    'T-07', 'T-08', 'T-09', 'T-10', 'T-11', 'T-12'
+    'T-07', 'T-08', 'T-09', 'T-10', 'T-11', 'T-12',
+    // 전투 트랙(첫 전투 1-1 안에서만 1회 재생, 계정 진행도와 독립)
+    'B-1', 'B-2', 'B-3', 'B-4', 'B-5'
   ];
 
   /** 점진 해금 대상 메뉴 popupKey 13종 (§4-2). settings는 그리드 밖 상시 노출이라 제외 */
@@ -90,7 +96,8 @@ export class SaveManager {
       gacha: {
         pityCounter: 0,
         totalPulls: 0,
-        freeTenPullUsed: false // T-S2/BLK-05: 첫 무료 10연 사용 여부
+        freeTenPullUsed: false, // T-S2/BLK-05: 첫 무료 10연 사용 여부
+        banners: {} // 배너별 픽업 천장 카운터 { [bannerId]: { pickupPityCounter, lost5050, totalPulls, totalSSR } }
       },
       pity: {},
       quests: {
@@ -102,7 +109,9 @@ export class SaveManager {
         bgmVolume: 1,
         sfxVolume: 1,
         autoSkip: false,
-        battleSpeed: 1
+        battleSpeed: 1,
+        // SND-01/SND-02: 음량·음소거. SoundManager 가 읽고 쓴다
+        audio: { ...DEFAULT_AUDIO_SETTINGS }
       },
       statistics: {
         totalGoldEarned: 0,
@@ -165,14 +174,23 @@ export class SaveManager {
       // COLL-01/COLL-02: 컬렉션 필드 마이그레이션 (구버전 세이브 호환)
       this._migrateCollectionSchema(data);
 
+      // SND-01: 오디오 설정 보강
+      this._migrateAudioSettingsSchema(data);
+
       // T-S2/BLK-05: 무료 10연 플래그 마이그레이션 (구버전 세이브 호환)
       this._migrateGachaSchema(data);
 
       // T-C1: 온보딩/튜토리얼/스토리 섹션 기본값 보장 + 기존 유저 처리
-      // 소급 지급이 발생했다면 즉시 영속화한다 (다음 로드에서 재지급되지 않도록)
+      // 소급 지급·레거시 정리가 발생했다면 즉시 영속화한다 (다음 로드에서 재실행되지 않도록)
       const grantVersionBefore = data.onboarding?.grantVersion ?? -1;
+      const legacyMigratedBefore = data.onboarding?.legacyMigratedAt ?? null;
+      const partiesBefore = JSON.stringify(data.parties ?? null);
       this._migrateOnboardingSchema(data);
-      if ((data.onboarding?.grantVersion ?? -1) !== grantVersionBefore) {
+      const changed =
+        (data.onboarding?.grantVersion ?? -1) !== grantVersionBefore ||
+        (data.onboarding?.legacyMigratedAt ?? null) !== legacyMigratedBefore ||
+        JSON.stringify(data.parties ?? null) !== partiesBefore;
+      if (changed) {
         this.save(data);
       }
 
@@ -206,6 +224,26 @@ export class SaveManager {
       }
       return hero;
     });
+  }
+
+  /**
+   * SND-01: settings.audio 기본값 보장 (구버전 세이브 마이그레이션)
+   *
+   * migrate() 의 얕은 병합은 구세이브의 settings 객체를 통째로 물려주기 때문에
+   * 기본값에만 있던 audio 필드가 사라진다. 여기서 누락 필드를 채워
+   * SoundManager 가 항상 완전한 설정을 읽도록 한다.
+   * @param {Object} data - 저장 데이터 (in-place)
+   * @returns {Object} 동일 객체
+   */
+  static _migrateAudioSettingsSchema(data) {
+    if (!data) return data;
+    if (!data.settings || typeof data.settings !== 'object') data.settings = {};
+    const stored = data.settings.audio;
+    data.settings.audio = {
+      ...DEFAULT_AUDIO_SETTINGS,
+      ...(stored && typeof stored === 'object' ? stored : {})
+    };
+    return data;
   }
 
   /**
@@ -244,9 +282,13 @@ export class SaveManager {
   static _migrateGachaSchema(data) {
     if (!data) return data;
     if (!data.gacha || typeof data.gacha !== 'object') {
-      data.gacha = { pityCounter: 0, totalPulls: 0, freeTenPullUsed: false };
+      data.gacha = { pityCounter: 0, totalPulls: 0, freeTenPullUsed: false, banners: {} };
     } else if (data.gacha.freeTenPullUsed === undefined) {
       data.gacha.freeTenPullUsed = false;
+    }
+    // 배너별 픽업 천장 카운터(BLK-XX) — 구버전 세이브는 이 필드가 없다
+    if (!data.gacha.banners || typeof data.gacha.banners !== 'object') {
+      data.gacha.banners = {};
     }
     return data;
   }
@@ -296,7 +338,9 @@ export class SaveManager {
       unlockedMenus: [],
       idleIntroShown: false,
       returningPlayerTier: null,
-      lastReturnRewardAt: null
+      lastReturnRewardAt: null,
+      // 레거시 스타터(char_1~4) 정리 완료 시각. null이면 아직 정리하지 않았다는 뜻
+      legacyMigratedAt: null
     };
   }
 
@@ -365,14 +409,7 @@ export class SaveManager {
       data.onboarding.unlockedMenus = [...this.ALL_MENU_KEYS];
     }
 
-    // --- 3. 레거시 스타터 태깅 (회수하지 않고 표시만) ---
-    ownedCharacters.forEach(c => {
-      if (!c) return;
-      const id = c.characterId || c.id;
-      if (this.LEGACY_STARTER_IDS.includes(id)) c.legacyStarter = true;
-    });
-
-    // --- 4. 소급 지급 (계정당 1회, grantVersion으로 중복 차단) ---
+    // --- 3. 소급 지급 (계정당 1회, grantVersion으로 중복 차단) ---
     if ((data.onboarding.grantVersion || 0) < this.ONBOARDING_GRANT_VERSION) {
       const hasBase = Array.isArray(data.baseHeroes) && data.baseHeroes.length > 0;
       const hasAscended = Array.isArray(data.ascendedHeroes) && data.ascendedHeroes.length > 0;
@@ -395,7 +432,262 @@ export class SaveManager {
       data.onboarding.grantVersion = this.ONBOARDING_GRANT_VERSION;
     }
 
+    // --- 4. 레거시 스타터 정리 (소급 지급 뒤에 실행해야 이관 대상이 확보된다) ---
+    this._migrateLegacyStarters(data);
+
+    // --- 5. 현재 파티 보장 (편성이 비어 있으면 보유 영웅으로 채운다) ---
+    this.ensureActiveParty(data);
+
+    // 안내 문구의 파티는 자동 편성까지 끝난 최종 편성이어야 한다.
+    const notice = data.onboarding?.legacyMigrationNotice;
+    if (notice) notice.partyIds = this._readPartySlots(data.parties?.[0]).filter(Boolean);
+
     return data;
+  }
+
+  /**
+   * 현재 파티(`parties[0]`)에 보유 영웅이 하나도 없으면 전투력 상위 4명으로 자동 편성한다.
+   * 신규 계정과 마이그레이션 계정 모두 파티 편성 화면이 비어 보이지 않도록 보장한다.
+   *
+   * 배열 형식과 `{ heroIds: [...] }` 형식을 모두 지원하며, 원래 형식을 유지한 채 채운다.
+   *
+   * @param {Object} data - 저장 데이터 (in-place)
+   * @param {number} [slotIndex=0] - 대상 파티 슬롯
+   * @returns {boolean} 실제로 편성을 변경했는지 여부
+   */
+  static ensureActiveParty(data, slotIndex = 0) {
+    if (!data || !Array.isArray(data.characters) || data.characters.length === 0) return false;
+    if (!Array.isArray(data.parties)) data.parties = [];
+
+    const party = data.parties[slotIndex];
+    const ownedIds = new Set(data.characters.map(c => c.characterId || c.id));
+    const slots = this._readPartySlots(party);
+
+    // 보유 영웅이 한 명이라도 편성되어 있으면 그대로 둔다
+    if (slots.some(id => id && ownedIds.has(id))) return false;
+
+    const top = this._sortByStrength(data.characters)
+      .slice(0, this.PARTY_SIZE)
+      .map(c => c.characterId || c.id);
+    const filled = Array.from({ length: this.PARTY_SIZE }, (_, i) => top[i] || null);
+
+    data.parties[slotIndex] = this._writePartySlots(party, filled);
+    GameLogger.log('SAVE', '현재 파티 자동 편성', { party: filled.filter(Boolean) });
+    return true;
+  }
+
+  /**
+   * 파티 슬롯 배열 읽기 (배열 / { heroIds } 두 형식 지원)
+   * @param {Array|Object} party
+   * @returns {Array}
+   */
+  static _readPartySlots(party) {
+    if (Array.isArray(party)) return party;
+    if (party && Array.isArray(party.heroIds)) return party.heroIds;
+    return [];
+  }
+
+  /**
+   * 파티 슬롯 배열 쓰기 — 원본과 같은 형식을 유지한다
+   * @param {Array|Object} party - 원본 파티 (형식 판별용)
+   * @param {Array} slots
+   * @returns {Array|Object}
+   */
+  static _writePartySlots(party, slots) {
+    if (party && !Array.isArray(party) && Array.isArray(party.heroIds)) {
+      return { ...party, heroIds: slots };
+    }
+    return slots;
+  }
+
+  /**
+   * 레거시 스타터(char_1~4) 정리.
+   *
+   * char_1~4는 폐지된 플레이스홀더로, 포트레이트가 구버전 카툰 이미지(hero_001~004)다.
+   * 보유 자산은 살리고 캐릭터 레코드만 제거한다.
+   *   1. characters[]에서 레거시 제거
+   *   2. 최고 레벨/누적 경험치를 보유 영웅에게 이관 (보유 영웅이 없으면 base_iris 지급)
+   *   3. 장착 장비는 해제해 인벤토리로 반환
+   *   4. 파티 슬롯의 레거시 id를 보유 영웅으로 교체, 남는 칸은 null
+   *
+   * `onboarding.legacyMigratedAt`으로 완료를 표시하며, 레거시가 없으면 아무것도 하지 않는다(멱등).
+   *
+   * @param {Object} data - 저장 데이터 (in-place)
+   * @returns {boolean} 실제로 정리를 수행했는지 여부
+   */
+  static _migrateLegacyStarters(data) {
+    if (!data || !Array.isArray(data.characters)) return false;
+
+    const legacy = data.characters.filter(c => this._isLegacyStarter(c));
+    if (legacy.length === 0) return false;
+
+    // 1. 레거시 레코드 제거
+    data.characters = data.characters.filter(c => !this._isLegacyStarter(c));
+
+    // 2. 이관 대상 확보 — 남은 영웅이 없으면 base_iris를 지급한다
+    if (data.characters.length === 0) {
+      this._grantStarterHero(data);
+    }
+
+    // 3. 레벨/경험치 이관 — 최고 레벨은 승계하되 대상의 상한을 넘지 않는다
+    const heir = this._pickStrongestCharacter(data.characters);
+    if (heir) {
+      const bestLegacyLevel = legacy.reduce((max, c) => Math.max(max, c.level || 1), 1);
+      const maxLevel = this._getMaxLevelFor(heir.characterId || heir.id);
+      heir.level = Math.min(maxLevel, Math.max(heir.level || 1, bestLegacyLevel));
+      heir.exp = (heir.exp || 0) + legacy.reduce((sum, c) => sum + (c.exp || 0), 0);
+    }
+
+    // 4. 장비 해제 → 인벤토리 반환
+    const equipmentReturned = this._releaseLegacyEquipment(data, legacy);
+
+    // 5. 파티 슬롯 재구성
+    this._rebuildPartiesWithoutLegacy(data);
+
+    if (!data.onboarding || typeof data.onboarding !== 'object') {
+      data.onboarding = this._createDefaultOnboarding();
+    }
+    data.onboarding.legacyMigratedAt = Date.now();
+
+    // 6. 1회성 안내 예약 — 보유 영웅이 예고 없이 줄어든 이유를 한 번은 말해야 한다 (QA P1-5).
+    //    표시와 소거는 MainMenuScene 이 consumeLegacyMigrationNotice() 로 한다.
+    data.onboarding.legacyMigrationNotice = {
+      removedCount: legacy.length,
+      removedIds: legacy.map(c => c.characterId || c.id).filter(Boolean),
+      heirId: heir ? (heir.characterId || heir.id) : null,
+      heirLevel: heir ? (heir.level || 1) : 0,
+      equipmentReturned,
+      partyIds: this._readPartySlots(data.parties?.[0]).filter(Boolean),
+      at: Date.now()
+    };
+    if (data.statistics) {
+      data.statistics.charactersCollected = data.characters.length;
+    }
+
+    GameLogger.log('SAVE', '레거시 스타터 정리', {
+      removed: legacy.map(c => c.characterId || c.id),
+      heir: heir ? (heir.characterId || heir.id) : null
+    });
+
+    return true;
+  }
+
+  /**
+   * 레거시 스타터 판정. id 목록과 과거 마이그레이션이 남긴 태그를 함께 본다.
+   * @param {Object} character
+   * @returns {boolean}
+   */
+  static _isLegacyStarter(character) {
+    if (!character) return false;
+    if (character.legacyStarter === true) return true;
+    return this.LEGACY_STARTER_IDS.includes(character.characterId || character.id);
+  }
+
+  /**
+   * 보유 영웅 중 가장 강한 1명 선택.
+   * 전투력 공식(ProgressionSystem)은 SaveManager를 역참조하므로 import할 수 없다.
+   * 세이브 레코드만으로 계산 가능한 성급 → 레벨 → 경험치 순 근사를 쓴다.
+   * @param {Array} characters
+   * @returns {Object|null}
+   */
+  static _pickStrongestCharacter(characters) {
+    return this._sortByStrength(characters)[0] || null;
+  }
+
+  /**
+   * 보유 영웅을 강한 순으로 정렬한 새 배열 반환
+   * @param {Array} characters
+   * @returns {Array}
+   */
+  static _sortByStrength(characters) {
+    return (Array.isArray(characters) ? characters : [])
+      .filter(Boolean)
+      .slice()
+      .sort((a, b) =>
+        (b.stars || 0) - (a.stars || 0) ||
+        (b.level || 0) - (a.level || 0) ||
+        (b.exp || 0) - (a.exp || 0)
+      );
+  }
+
+  /**
+   * 캐릭터의 레벨 상한 조회 (기본영웅 30 / 전직영웅 60)
+   * @param {string} characterId
+   * @returns {number}
+   */
+  static _getMaxLevelFor(characterId) {
+    const ascended = this.getAscendedHeroData(characterId);
+    if (ascended && ascended.maxLevel) return ascended.maxLevel;
+    const base = this.getBaseHeroData(characterId);
+    if (base && base.maxLevel) return base.maxLevel;
+    return 60;
+  }
+
+  /**
+   * 레거시 캐릭터가 장착 중이던 장비를 해제해 인벤토리로 되돌린다.
+   * 장비 실체는 이미 `inventory.equipment`에 있으므로 소유 표시만 끊는다.
+   * @param {Object} data - 저장 데이터 (in-place)
+   * @param {Array} legacyCharacters
+   * @returns {number} 가방으로 돌아간 장비 수 (안내 문구가 쓴다)
+   */
+  static _releaseLegacyEquipment(data, legacyCharacters) {
+    const stock = Array.isArray(data.inventory?.equipment) ? data.inventory.equipment : [];
+    const legacyIds = new Set(
+      legacyCharacters.map(c => c.characterId || c.id).filter(Boolean)
+    );
+    const returned = new Set();
+
+    legacyCharacters.forEach(character => {
+      const slots = character.equipment || {};
+      Object.values(slots).forEach(equipId => {
+        if (!equipId) return;
+        returned.add(equipId);
+        const item = stock.find(e => e && e.id === equipId);
+        if (item) item.equippedBy = null;
+      });
+      character.equipment = { weapon: null, armor: null, accessory: null };
+      character.equipped = null;
+    });
+
+    // 레거시를 가리키는 잔여 소유 표시도 함께 정리한다
+    stock.forEach(item => {
+      if (item && legacyIds.has(item.equippedBy)) {
+        item.equippedBy = null;
+        returned.add(item.id);
+      }
+    });
+
+    return returned.size;
+  }
+
+  /**
+   * 파티 슬롯에서 레거시/미보유 id를 제거하고 보유 영웅으로 채운다.
+   * 배열 형식과 `{ heroIds: [...] }` 형식을 모두 지원한다.
+   * @param {Object} data - 저장 데이터 (in-place)
+   */
+  static _rebuildPartiesWithoutLegacy(data) {
+    const ownedIds = new Set(data.characters.map(c => c.characterId || c.id));
+    const ranked = this._sortByStrength(data.characters).map(c => c.characterId || c.id);
+
+    const rebuildSlots = slots => {
+      const kept = slots.map(id => (id && ownedIds.has(id) ? id : null));
+      const used = new Set(kept.filter(Boolean));
+      const spare = ranked.filter(id => !used.has(id));
+      return kept.map(id => (id ? id : spare.shift() || null));
+    };
+
+    if (!Array.isArray(data.parties) || data.parties.length === 0) {
+      data.parties = [rebuildSlots([null, null, null, null])];
+      return;
+    }
+
+    data.parties = data.parties.map(party => {
+      if (Array.isArray(party)) return rebuildSlots(party);
+      if (party && Array.isArray(party.heroIds)) {
+        return { ...party, heroIds: rebuildSlots(party.heroIds) };
+      }
+      return party;
+    });
   }
 
   /**
@@ -440,6 +732,10 @@ export class SaveManager {
       data.parties = [[heroId, null, null, null]];
     }
 
+    // 마이그레이션 밖(파티 화면 폴백)에서도 호출되므로 섹션 존재를 보장한다
+    if (!data.onboarding || typeof data.onboarding !== 'object') {
+      data.onboarding = this._createDefaultOnboarding();
+    }
     data.onboarding.starterHeroGranted = true;
     data.onboarding.starterHeroId = heroId;
 
@@ -479,6 +775,32 @@ export class SaveManager {
     } catch (error) {
       console.error('SaveManager: 저장 실패', error);
       return false;
+    }
+  }
+
+  /**
+   * 레거시 통합 1회성 안내를 꺼내고 즉시 소거한다 (QA P1-5).
+   *
+   * 읽기만 하고 플래그를 남기면 메인 메뉴에 들어올 때마다 같은 안내가 뜬다.
+   * 그래서 **꺼내는 순간 지우고 저장**한다. 저장에 실패하면 안내도 하지 않는다
+   * (다음 진입에 다시 시도하는 편이, 알린 뒤 플래그가 살아남는 것보다 낫다).
+   *
+   * @returns {Object|null} 안내 내용. 없으면 null
+   */
+  static consumeLegacyMigrationNotice() {
+    try {
+      const data = this.load();
+      const notice = data?.onboarding?.legacyMigrationNotice;
+      if (!notice) return null;
+
+      delete data.onboarding.legacyMigrationNotice;
+      if (!this.save(data)) return null;
+
+      GameLogger.log('SAVE', '레거시 통합 안내 소비', { removed: notice.removedCount });
+      return notice;
+    } catch (error) {
+      console.warn('SaveManager: 레거시 통합 안내 조회 실패', error?.message);
+      return null;
     }
   }
 
@@ -550,6 +872,8 @@ export class SaveManager {
     this._migrateGachaSchema(newData);
     // T-C1: v1 → v2 온보딩/튜토리얼/스토리 섹션 마이그레이션
     this._migrateOnboardingSchema(newData);
+    // SND-01: settings.audio 기본값 보강 (구세이브는 얕은 병합으로 settings 를 통째로 덮어쓴다)
+    this._migrateAudioSettingsSchema(newData);
     this.save(newData);
     return newData;
   }
@@ -654,6 +978,13 @@ export class SaveManager {
    * @returns {Object} 추가된 캐릭터 인스턴스
    */
   static addCharacter(characterId, level = 1) {
+    // 폐지된 레거시 스타터는 지급하지 않는다.
+    // 지급해도 다음 로드에서 정리되므로 조용히 사라지는 레코드가 생긴다.
+    if (this.LEGACY_STARTER_IDS.includes(characterId)) {
+      GameLogger.log('SAVE', '레거시 스타터 지급 차단', { characterId });
+      return { duplicate: false, character: null, blocked: true };
+    }
+
     const data = this.load();
 
     // 이미 보유 중인 캐릭터인지 확인

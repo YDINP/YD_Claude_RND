@@ -124,6 +124,9 @@ try {
     throw new Error('BattleScene 진입 실패');
   }
   await page.waitForTimeout(3600);   // 인트로(1.5s) + 1턴 진행
+  // 챕터 배경은 lazyTextures 라 지연 로드된다. 폴백 상태로 찍히면 대조가 무의미하다
+  await waitFor(page, `!!window.game.scene.getScene('BattleScene')?.sceneBackground?.hasImage`, 15000);
+  await page.waitForTimeout(3000);   // 1턴 진행 후 (로그·데미지 표기 포함)
 
   // 아군 스프라이트가 실제 포트레이트인지(플레이스홀더 캔버스가 아닌지) 확인
   const portraits = await page.evaluate(() => {

@@ -33,7 +33,7 @@ export function lazyTexturePath(manifest, key) {
  * @param {Phaser.Scene} scene
  * @param {string} key - 텍스처 키
  * @param {string} path - public 기준 상대 경로
- * @param {Function} [onDone] - 성공 시 호출 (key)
+ * @param {Function} [onDone] - 성공 시 호출 (key, added). added 는 이 호출이 실제로 텍스처를 등록했는지다.
  * @param {Function} [onFail] - 실패 시 호출 (key)
  * @returns {boolean} 이미 존재해 즉시 끝났으면 true
  */
@@ -43,7 +43,7 @@ export function ensureTextureFromPath(scene, key, path, onDone, onFail) {
     return false;
   }
   if (scene.textures && scene.textures.exists(key)) {
-    if (onDone) onDone(key);
+    if (onDone) onDone(key, false);
     return true;
   }
   if (typeof Image === 'undefined') {
@@ -56,16 +56,21 @@ export function ensureTextureFromPath(scene, key, path, onDone, onFail) {
     // 로드 도중 씬이 내려갔으면 텍스처만 남기고 콜백은 부르지 않는다
     const alive = scene.sys && typeof scene.sys.isActive === 'function' ? scene.sys.isActive() : true;
     if (!scene.textures) return;
+
+    // 같은 키를 다른 쪽이 먼저 올렸을 수 있다. 그 경우 added=false 로 알려
+    // 호출부가 "내가 올린 것만 해제한다" 규칙을 지킬 수 있게 한다.
+    let added = false;
     if (!scene.textures.exists(key)) {
       try {
         scene.textures.addImage(key, img);
+        added = true;
       } catch (e) {
         console.warn(`[lazyTexture] 텍스처 등록 실패: ${key}`, e);
         if (onFail) onFail(key);
         return;
       }
     }
-    if (alive && onDone) onDone(key);
+    if (alive && onDone) onDone(key, added);
   };
   img.onerror = () => {
     console.warn(`[lazyTexture] 로드 실패, 폴백 유지: ${key} (${path})`);

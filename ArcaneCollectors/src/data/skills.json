@@ -7,7 +7,7 @@
       "description": "적 1명에게 공격력의 100%의 데미지를 입힌다",
       "type": "basic",
       "target": "enemy_single",
-      "multiplier": 1.0,
+      "multiplier": 1,
       "cooldown": 0,
       "effects": []
     },
@@ -29,10 +29,14 @@
       "description": "적 전체에게 공격력의 200%의 화염 데미지를 입힌다",
       "type": "ultimate",
       "target": "enemy_all",
-      "multiplier": 2.0,
+      "multiplier": 2,
       "chargeRequired": 100,
       "effects": [
-        { "type": "burn", "chance": 0.5, "duration": 2 }
+        {
+          "type": "burn",
+          "chance": 0.5,
+          "duration": 2
+        }
       ]
     },
     {
@@ -45,7 +49,10 @@
       "multiplier": 1.6,
       "cooldown": 4,
       "effects": [
-        { "type": "self_heal", "value": 0.1 }
+        {
+          "type": "self_heal",
+          "value": 0.1
+        }
       ]
     },
     {
@@ -58,7 +65,11 @@
       "multiplier": 1.8,
       "chargeRequired": 100,
       "effects": [
-        { "type": "bonus_damage", "condition": "wild", "bonus": 0.5 }
+        {
+          "type": "bonus_damage",
+          "condition": "wild",
+          "bonus": 0.5
+        }
       ]
     },
     {
@@ -71,7 +82,11 @@
       "multiplier": 1.7,
       "cooldown": 3,
       "effects": [
-        { "type": "blind", "chance": 0.3, "duration": 2 }
+        {
+          "type": "blind",
+          "chance": 0.3,
+          "duration": 2
+        }
       ]
     },
     {
@@ -107,7 +122,10 @@
       "multiplier": 1.5,
       "chargeRequired": 100,
       "effects": [
-        { "type": "cleanse", "target": "all_debuffs" }
+        {
+          "type": "cleanse",
+          "target": "all_debuffs"
+        }
       ]
     },
     {
@@ -131,7 +149,12 @@
       "multiplier": 1.6,
       "chargeRequired": 100,
       "effects": [
-        { "type": "self_buff", "stat": "spd", "value": 0.3, "duration": 3 }
+        {
+          "type": "self_buff",
+          "stat": "spd",
+          "value": 0.3,
+          "duration": 3
+        }
       ]
     },
     {
@@ -144,7 +167,11 @@
       "multiplier": 1.5,
       "cooldown": 3,
       "effects": [
-        { "type": "burn", "chance": 0.2, "duration": 2 }
+        {
+          "type": "burn",
+          "chance": 0.2,
+          "duration": 2
+        }
       ]
     },
     {
@@ -180,7 +207,12 @@
       "multiplier": 1.4,
       "chargeRequired": 100,
       "effects": [
-        { "type": "debuff", "stat": "def", "value": -0.2, "duration": 3 }
+        {
+          "type": "debuff",
+          "stat": "def",
+          "value": -0.2,
+          "duration": 3
+        }
       ]
     },
     {
@@ -203,7 +235,10 @@
       "target": "ally_dead",
       "chargeRequired": 100,
       "effects": [
-        { "type": "revive", "hp_percent": 0.5 }
+        {
+          "type": "revive",
+          "hp_percent": 0.5
+        }
       ]
     },
     {
@@ -226,7 +261,12 @@
       "target": "self",
       "cooldown": 4,
       "effects": [
-        { "type": "self_buff", "stat": "def", "value": 0.3, "duration": 3 }
+        {
+          "type": "self_buff",
+          "stat": "def",
+          "value": 0.3,
+          "duration": 3
+        }
       ]
     },
     {
@@ -250,7 +290,13 @@
       "multiplier": 1.3,
       "cooldown": 4,
       "effects": [
-        { "type": "debuff", "stat": "spd", "value": -0.2, "chance": 0.3, "duration": 2 }
+        {
+          "type": "debuff",
+          "stat": "spd",
+          "value": -0.2,
+          "chance": 0.3,
+          "duration": 2
+        }
       ]
     },
     {
@@ -274,7 +320,12 @@
       "multiplier": 1.5,
       "cooldown": 3,
       "effects": [
-        { "type": "self_buff", "stat": "spd", "value": 0.15, "duration": 2 }
+        {
+          "type": "self_buff",
+          "stat": "spd",
+          "value": 0.15,
+          "duration": 2
+        }
       ]
     },
     {
@@ -297,7 +348,12 @@
       "target": "ally_all",
       "cooldown": 4,
       "effects": [
-        { "type": "buff", "stat": "atk", "value": 0.15, "duration": 2 }
+        {
+          "type": "buff",
+          "stat": "atk",
+          "value": 0.15,
+          "duration": 2
+        }
       ]
     },
     {
@@ -320,7 +376,12 @@
       "target": "enemy_single",
       "cooldown": 4,
       "effects": [
-        { "type": "debuff", "stat": "atk", "value": -0.2, "duration": 2 }
+        {
+          "type": "debuff",
+          "stat": "atk",
+          "value": -0.2,
+          "duration": 2
+        }
       ]
     },
     {
@@ -333,7 +394,11 @@
       "multiplier": 1.4,
       "cooldown": 3,
       "effects": [
-        { "type": "burn", "chance": 0.15, "duration": 2 }
+        {
+          "type": "burn",
+          "chance": 0.15,
+          "duration": 2
+        }
       ]
     },
     {
@@ -357,7 +422,11 @@
       "multiplier": 1.5,
       "cooldown": 4,
       "effects": [
-        { "type": "stun", "chance": 0.2, "duration": 1 }
+        {
+          "type": "stun",
+          "chance": 0.2,
+          "duration": 1
+        }
       ]
     },
     {
@@ -369,7 +438,12 @@
       "target": "self",
       "cooldown": 4,
       "effects": [
-        { "type": "self_buff", "stat": "def", "value": 0.25, "duration": 3 }
+        {
+          "type": "self_buff",
+          "stat": "def",
+          "value": 0.25,
+          "duration": 3
+        }
       ]
     },
     {
@@ -379,7 +453,7 @@
       "description": "적 1명에게 공격력의 100%의 데미지를 입힌다",
       "type": "basic",
       "target": "enemy_single",
-      "multiplier": 1.0,
+      "multiplier": 1,
       "cooldown": 0,
       "effects": []
     },
@@ -403,7 +477,10 @@
       "target": "self",
       "cooldown": 3,
       "effects": [
-        { "type": "self_heal", "value": 0.1 }
+        {
+          "type": "self_heal",
+          "value": 0.1
+        }
       ]
     },
     {
@@ -416,7 +493,11 @@
       "multiplier": 0.8,
       "cooldown": 3,
       "effects": [
-        { "type": "poison", "chance": 0.2, "duration": 2 }
+        {
+          "type": "poison",
+          "chance": 0.2,
+          "duration": 2
+        }
       ]
     },
     {
@@ -427,6 +508,1712 @@
       "type": "active",
       "target": "enemy_single",
       "multiplier": 1.4,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_talon_strike",
+      "name": "발톱 가르기",
+      "nameEn": "Talon Strike",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_screech",
+      "name": "째지는 울음",
+      "nameEn": "Screech",
+      "description": "적 1명에게 공격력의 110%의 데미지를 입히고 방어력을 15% 감소시킨다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.1,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "debuff",
+          "stat": "def",
+          "value": -0.15,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "id": "skill_charge",
+      "name": "돌진",
+      "nameEn": "Charge",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_spear_thrust",
+      "name": "창 찌르기",
+      "nameEn": "Spear Thrust",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_boulder_throw",
+      "name": "바위 던지기",
+      "nameEn": "Boulder Throw",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_ground_slam",
+      "name": "대지 강타",
+      "nameEn": "Ground Slam",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_music_charm",
+      "name": "홀리는 선율",
+      "nameEn": "Charming Melody",
+      "description": "적 1명에게 공격력의 110%의 데미지를 입히고 공격력을 15% 감소시킨다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.1,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "debuff",
+          "stat": "atk",
+          "value": -0.15,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "id": "skill_rampage",
+      "name": "광란",
+      "nameEn": "Rampage",
+      "description": "자신의 공격력을 30% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "atk",
+          "value": 0.3,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_bull_charge",
+      "name": "황소 돌진",
+      "nameEn": "Bull Charge",
+      "description": "적 1명에게 공격력의 160%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.6,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_petrifying_gaze",
+      "name": "석화의 눈길",
+      "nameEn": "Petrifying Gaze",
+      "description": "적 1명에게 공격력의 110%의 데미지를 입히고 속도을 25% 감소시킨다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.1,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "debuff",
+          "stat": "spd",
+          "value": -0.25,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "id": "skill_serpent_strike",
+      "name": "뱀머리 강타",
+      "nameEn": "Serpent Strike",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_triple_bite",
+      "name": "세 겹 물어뜯기",
+      "nameEn": "Triple Bite",
+      "description": "적 1명에게 공격력의 160%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.6,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_hellfire_breath",
+      "name": "지옥불 숨결",
+      "nameEn": "Hellfire Breath",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_dark_howl",
+      "name": "어둠의 포효",
+      "nameEn": "Dark Howl",
+      "description": "적 1명에게 공격력의 110%의 데미지를 입히고 공격력을 20% 감소시킨다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.1,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "debuff",
+          "stat": "atk",
+          "value": -0.2,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "id": "skill_club_smash",
+      "name": "몽둥이 내리치기",
+      "nameEn": "Club Smash",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_war_cry",
+      "name": "전투 함성",
+      "nameEn": "War Cry",
+      "description": "아군 전체의 공격력을 20% 증가시킨다",
+      "type": "active",
+      "target": "ally_all",
+      "cooldown": 4,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "atk",
+          "value": 0.2,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_wind_blade",
+      "name": "바람 칼날",
+      "nameEn": "Wind Blade",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_swift_strike",
+      "name": "질풍 일격",
+      "nameEn": "Swift Strike",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_water_jet",
+      "name": "물줄기",
+      "nameEn": "Water Jet",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_shell_defense",
+      "name": "등딱지 방어",
+      "nameEn": "Shell Defense",
+      "description": "자신의 방어력을 35% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.35,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_spirit_bolt",
+      "name": "정령 탄",
+      "nameEn": "Spirit Bolt",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_nature_blessing",
+      "name": "자연의 축복",
+      "nameEn": "Nature's Blessing",
+      "description": "아군 전체의 HP를 공격력의 80%만큼 회복시킨다",
+      "type": "active",
+      "target": "ally_all",
+      "cooldown": 4,
+      "effects": [
+        {
+          "type": "heal",
+          "value": 0.8
+        }
+      ]
+    },
+    {
+      "id": "skill_devastating_blow",
+      "name": "파괴의 일격",
+      "nameEn": "Devastating Blow",
+      "description": "적 1명에게 공격력의 160%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.6,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_iron_resolve",
+      "name": "강철 의지",
+      "nameEn": "Iron Resolve",
+      "description": "자신의 방어력을 30% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.3,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_fox_fire",
+      "name": "여우불",
+      "nameEn": "Fox Fire",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_illusion_veil",
+      "name": "환영의 장막",
+      "nameEn": "Illusion Veil",
+      "description": "자신의 방어력을 25% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.25,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_eight_headed_strike",
+      "name": "여덟 머리의 일격",
+      "nameEn": "Eight-Headed Strike",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_poison_breath",
+      "name": "독 숨결",
+      "nameEn": "Poison Breath",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_tail_whip",
+      "name": "꼬리 후려치기",
+      "nameEn": "Tail Whip",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_hammer_strike",
+      "name": "망치 내리치기",
+      "nameEn": "Hammer Strike",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_ice_armor",
+      "name": "얼음 갑주",
+      "nameEn": "Ice Armor",
+      "description": "자신의 방어력을 30% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.3,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_frost_bite",
+      "name": "서리 물어뜯기",
+      "nameEn": "Frost Bite",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_ice_claw",
+      "name": "얼음 발톱",
+      "nameEn": "Ice Claw",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_dark_spear",
+      "name": "어둠의 창",
+      "nameEn": "Dark Spear",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_corrupted_aura",
+      "name": "타락의 기운",
+      "nameEn": "Corrupted Aura",
+      "description": "적 1명에게 공격력의 110%의 데미지를 입히고 방어력을 20% 감소시킨다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.1,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "debuff",
+          "stat": "def",
+          "value": -0.2,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "id": "skill_ice_smash",
+      "name": "빙괴 강타",
+      "nameEn": "Ice Smash",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_frost_shield",
+      "name": "서리 방패",
+      "nameEn": "Frost Shield",
+      "description": "자신의 방어력을 30% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.3,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_undying_fury",
+      "name": "불사의 분노",
+      "nameEn": "Undying Fury",
+      "description": "자신의 공격력을 25% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "atk",
+          "value": 0.25,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_bone_armor",
+      "name": "뼈 갑옷",
+      "nameEn": "Bone Armor",
+      "description": "자신의 방어력을 25% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.25,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_savage_bite",
+      "name": "야수의 이빨",
+      "nameEn": "Savage Bite",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_moonlit_howl",
+      "name": "달빛 울부짖음",
+      "nameEn": "Moonlit Howl",
+      "description": "자신의 속도을 20% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "spd",
+          "value": 0.2,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_world_serpent_coil",
+      "name": "세계뱀의 조임",
+      "nameEn": "World Serpent's Coil",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_venom_deluge",
+      "name": "맹독의 범람",
+      "nameEn": "Venom Deluge",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_tidal_crash",
+      "name": "해일 강타",
+      "nameEn": "Tidal Crash",
+      "description": "적 1명에게 공격력의 160%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.6,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_shadow_strike",
+      "name": "그림자 일격",
+      "nameEn": "Shadow Strike",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_phase_shift",
+      "name": "위상 이동",
+      "nameEn": "Phase Shift",
+      "description": "자신의 속도을 25% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "spd",
+          "value": 0.25,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_cursed_blade",
+      "name": "저주받은 검",
+      "nameEn": "Cursed Blade",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_death_ward",
+      "name": "죽음의 가호",
+      "nameEn": "Death Ward",
+      "description": "자신의 방어력을 25% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.25,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_wail_of_death",
+      "name": "죽음의 통곡",
+      "nameEn": "Wail of Death",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_soul_drain",
+      "name": "영혼 흡수",
+      "nameEn": "Soul Drain",
+      "description": "적 1명에게 공격력의 120%의 데미지를 입히고 피해량의 30%를 회복한다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.2,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "lifesteal",
+          "value": 0.3
+        }
+      ]
+    },
+    {
+      "id": "skill_spectral_touch",
+      "name": "망령의 손길",
+      "nameEn": "Spectral Touch",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_ethereal_form",
+      "name": "실체 없는 몸",
+      "nameEn": "Ethereal Form",
+      "description": "자신의 방어력을 30% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.3,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_death_ray",
+      "name": "죽음의 광선",
+      "nameEn": "Death Ray",
+      "description": "적 1명에게 공격력의 160%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.6,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_phylactery_shield",
+      "name": "성물함 보호막",
+      "nameEn": "Phylactery Shield",
+      "description": "자신의 방어력을 35% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.35,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_necrotic_breath",
+      "name": "사령의 숨결",
+      "nameEn": "Necrotic Breath",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_wing_barrage",
+      "name": "날개 폭풍",
+      "nameEn": "Wing Barrage",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_yomi_gate",
+      "name": "황천의 문",
+      "nameEn": "Gate of Yomi",
+      "description": "적 전체에게 공격력의 150%의 데미지를 입힌다",
+      "type": "ultimate",
+      "target": "enemy_all",
+      "multiplier": 1.5,
+      "chargeRequired": 100,
+      "effects": []
+    },
+    {
+      "id": "skill_death_embrace",
+      "name": "죽음의 포옹",
+      "nameEn": "Death Embrace",
+      "description": "적 1명에게 공격력의 120%의 데미지를 입히고 피해량의 30%를 회복한다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.2,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "lifesteal",
+          "value": 0.3
+        }
+      ]
+    },
+    {
+      "id": "skill_soul_harvest",
+      "name": "영혼 수확",
+      "nameEn": "Soul Harvest",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_guardian_strike",
+      "name": "수호자의 일격",
+      "nameEn": "Guardian Strike",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_barrier",
+      "name": "장벽",
+      "nameEn": "Barrier",
+      "description": "자신의 방어력을 30% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.3,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_guardian_slash",
+      "name": "수호자의 참격",
+      "nameEn": "Guardian Slash",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_tower_shield",
+      "name": "탑의 방패",
+      "nameEn": "Tower Shield",
+      "description": "자신의 방어력을 35% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.35,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_power_surge",
+      "name": "힘의 파동",
+      "nameEn": "Power Surge",
+      "description": "자신의 공격력을 30% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "atk",
+          "value": 0.3,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_guardian_fury",
+      "name": "수호자의 격노",
+      "nameEn": "Guardian Fury",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_impenetrable_wall",
+      "name": "불가침의 벽",
+      "nameEn": "Impenetrable Wall",
+      "description": "자신의 방어력을 40% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.4,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_devastating_sweep",
+      "name": "파멸의 휩쓸기",
+      "nameEn": "Devastating Sweep",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_mystic_blast",
+      "name": "신비의 폭발",
+      "nameEn": "Mystic Blast",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_arcane_shield",
+      "name": "비술의 방패",
+      "nameEn": "Arcane Shield",
+      "description": "자신의 방어력을 35% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.35,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_tower_judgment",
+      "name": "탑의 심판",
+      "nameEn": "Tower's Judgment",
+      "description": "적 전체에게 공격력의 150%의 데미지를 입힌다",
+      "type": "ultimate",
+      "target": "enemy_all",
+      "multiplier": 1.5,
+      "chargeRequired": 100,
+      "effects": []
+    },
+    {
+      "id": "skill_divine_strike",
+      "name": "신성한 일격",
+      "nameEn": "Divine Strike",
+      "description": "적 1명에게 공격력의 160%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.6,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_holy_barrier",
+      "name": "신성 결계",
+      "nameEn": "Holy Barrier",
+      "description": "자신의 방어력을 40% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.4,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_ultimate_judgment",
+      "name": "최후의 심판",
+      "nameEn": "Ultimate Judgment",
+      "description": "적 전체에게 공격력의 150%의 데미지를 입힌다",
+      "type": "ultimate",
+      "target": "enemy_all",
+      "multiplier": 1.5,
+      "chargeRequired": 100,
+      "effects": []
+    },
+    {
+      "id": "skill_death_gaze",
+      "name": "죽음의 응시",
+      "nameEn": "Death Gaze",
+      "description": "적 1명에게 공격력의 110%의 데미지를 입히고 속도을 25% 감소시킨다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.1,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "debuff",
+          "stat": "spd",
+          "value": -0.25,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "id": "skill_heaven_judgment",
+      "name": "천상의 심판",
+      "nameEn": "Heaven's Judgment",
+      "description": "적 전체에게 공격력의 150%의 데미지를 입힌다",
+      "type": "ultimate",
+      "target": "enemy_all",
+      "multiplier": 1.5,
+      "chargeRequired": 100,
+      "effects": []
+    },
+    {
+      "id": "skill_nature_touch",
+      "name": "자연의 손길",
+      "nameEn": "Nature's Touch",
+      "description": "아군 전체의 HP를 공격력의 70%만큼 회복시킨다",
+      "type": "active",
+      "target": "ally_all",
+      "cooldown": 4,
+      "effects": [
+        {
+          "type": "heal",
+          "value": 0.7
+        }
+      ]
+    },
+    {
+      "id": "skill_fairy_dust",
+      "name": "요정 가루",
+      "nameEn": "Fairy Dust",
+      "description": "적 1명에게 공격력의 110%의 데미지를 입히고 속도을 20% 감소시킨다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.1,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "debuff",
+          "stat": "spd",
+          "value": -0.2,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "id": "skill_illusion",
+      "name": "환영",
+      "nameEn": "Illusion",
+      "description": "자신의 방어력을 20% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.2,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_vine_slash",
+      "name": "덩굴 베기",
+      "nameEn": "Vine Slash",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_nature_shield",
+      "name": "자연의 방패",
+      "nameEn": "Nature's Shield",
+      "description": "자신의 방어력을 30% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.3,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_dark_charge",
+      "name": "암흑 돌진",
+      "nameEn": "Dark Charge",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_thorn_burst",
+      "name": "가시 폭발",
+      "nameEn": "Thorn Burst",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_root_bind",
+      "name": "뿌리 결박",
+      "nameEn": "Root Bind",
+      "description": "적 1명에게 공격력의 110%의 데미지를 입히고 속도을 30% 감소시킨다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.1,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "debuff",
+          "stat": "spd",
+          "value": -0.3,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "id": "skill_antler_charge",
+      "name": "뿔 돌진",
+      "nameEn": "Antler Charge",
+      "description": "적 1명에게 공격력의 160%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.6,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_forest_wrath",
+      "name": "숲의 분노",
+      "nameEn": "Wrath of the Forest",
+      "description": "적 전체에게 공격력의 150%의 데미지를 입힌다",
+      "type": "ultimate",
+      "target": "enemy_all",
+      "multiplier": 1.5,
+      "chargeRequired": 100,
+      "effects": []
+    },
+    {
+      "id": "skill_nature_rebirth",
+      "name": "자연의 재생",
+      "nameEn": "Nature's Rebirth",
+      "description": "자신의 HP를 20% 회복한다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 4,
+      "effects": [
+        {
+          "type": "self_heal",
+          "value": 0.2
+        }
+      ]
+    },
+    {
+      "id": "skill_giant_slam",
+      "name": "거인의 내리침",
+      "nameEn": "Giant Slam",
+      "description": "적 1명에게 공격력의 160%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.6,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_stone_skin",
+      "name": "바위 피부",
+      "nameEn": "Stone Skin",
+      "description": "자신의 방어력을 35% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.35,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_hop_attack",
+      "name": "도약 공격",
+      "nameEn": "Hop Attack",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_drain_bite",
+      "name": "흡혈 물기",
+      "nameEn": "Drain Bite",
+      "description": "적 1명에게 공격력의 120%의 데미지를 입히고 피해량의 30%를 회복한다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.2,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "lifesteal",
+          "value": 0.3
+        }
+      ]
+    },
+    {
+      "id": "skill_spirit_wail",
+      "name": "원귀의 곡소리",
+      "nameEn": "Spirit Wail",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_golden_bite",
+      "name": "황금 이빨",
+      "nameEn": "Golden Bite",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_fortune_aura",
+      "name": "복의 기운",
+      "nameEn": "Fortune Aura",
+      "description": "아군 전체의 방어력을 20% 증가시킨다",
+      "type": "active",
+      "target": "ally_all",
+      "cooldown": 4,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.2,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_demon_claw",
+      "name": "요괴의 발톱",
+      "nameEn": "Demon Claw",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_chaos_howl",
+      "name": "혼돈의 포효",
+      "nameEn": "Chaos Howl",
+      "description": "적 1명에게 공격력의 110%의 데미지를 입히고 공격력을 20% 감소시킨다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.1,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "debuff",
+          "stat": "atk",
+          "value": -0.2,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "id": "skill_devour",
+      "name": "집어삼키기",
+      "nameEn": "Devour",
+      "description": "적 1명에게 공격력의 120%의 데미지를 입히고 피해량의 30%를 회복한다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.2,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "lifesteal",
+          "value": 0.3
+        }
+      ]
+    },
+    {
+      "id": "skill_glutton_rage",
+      "name": "탐식의 광기",
+      "nameEn": "Glutton's Rage",
+      "description": "자신의 공격력을 35% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "atk",
+          "value": 0.35,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_holy_flame",
+      "name": "신성한 불꽃",
+      "nameEn": "Holy Flame",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_divine_blessing",
+      "name": "신의 축복",
+      "nameEn": "Divine Blessing",
+      "description": "아군 전체의 공격력을 25% 증가시킨다",
+      "type": "active",
+      "target": "ally_all",
+      "cooldown": 4,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "atk",
+          "value": 0.25,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_surprise_bite",
+      "name": "기습 물기",
+      "nameEn": "Surprise Bite",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_gold_toss",
+      "name": "금화 뿌리기",
+      "nameEn": "Gold Toss",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_elemental_burst",
+      "name": "정령 폭발",
+      "nameEn": "Elemental Burst",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_mana_drain",
+      "name": "마나 흡수",
+      "nameEn": "Mana Drain",
+      "description": "적 1명에게 공격력의 120%의 데미지를 입히고 피해량의 30%를 회복한다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.2,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "lifesteal",
+          "value": 0.3
+        }
+      ]
+    },
+    {
+      "id": "skill_dark_nova",
+      "name": "암흑 신성",
+      "nameEn": "Dark Nova",
+      "description": "적 전체에게 공격력의 150%의 데미지를 입힌다",
+      "type": "ultimate",
+      "target": "enemy_all",
+      "multiplier": 1.5,
+      "chargeRequired": 100,
+      "effects": []
+    },
+    {
+      "id": "skill_shadow_army",
+      "name": "그림자 군세",
+      "nameEn": "Shadow Army",
+      "description": "자신의 공격력을 40% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "atk",
+          "value": 0.4,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_absolute_zero",
+      "name": "절대영도",
+      "nameEn": "Absolute Zero",
+      "description": "적 전체에게 공격력의 150%의 데미지를 입힌다",
+      "type": "ultimate",
+      "target": "enemy_all",
+      "multiplier": 1.5,
+      "chargeRequired": 100,
+      "effects": []
+    },
+    {
+      "id": "skill_prism_barrier",
+      "name": "무지개 결계",
+      "nameEn": "Prism Barrier",
+      "description": "자신의 방어력을 35% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.35,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_void_claw",
+      "name": "공허의 발톱",
+      "nameEn": "Void Claw",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_dimension_shift",
+      "name": "차원 도약",
+      "nameEn": "Dimension Shift",
+      "description": "자신의 속도을 30% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "spd",
+          "value": 0.3,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_reality_tear",
+      "name": "현실 찢기",
+      "nameEn": "Reality Tear",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_horror_wail",
+      "name": "공포의 절규",
+      "nameEn": "Horror Wail",
+      "description": "적 1명에게 공격력의 110%의 데미지를 입히고 공격력을 25% 감소시킨다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.1,
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "debuff",
+          "stat": "atk",
+          "value": -0.25,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "id": "skill_rift_slam",
+      "name": "균열 강타",
+      "nameEn": "Rift Slam",
+      "description": "적 1명에게 공격력의 160%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.6,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_void_barrier",
+      "name": "공허의 장벽",
+      "nameEn": "Void Barrier",
+      "description": "자신의 방어력을 40% 증가시킨다",
+      "type": "active",
+      "target": "self",
+      "cooldown": 3,
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 0.4,
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "id": "skill_dimensional_collapse",
+      "name": "차원 붕괴",
+      "nameEn": "Dimensional Collapse",
+      "description": "적 전체에게 공격력의 150%의 데미지를 입힌다",
+      "type": "ultimate",
+      "target": "enemy_all",
+      "multiplier": 1.5,
+      "chargeRequired": 100,
+      "effects": []
+    },
+    {
+      "id": "skill_river_surge",
+      "name": "강물 범람",
+      "nameEn": "River Surge",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_thunder_judgment",
+      "name": "뇌명의 심판",
+      "nameEn": "Thunder Judgment",
+      "description": "적 전체에게 공격력의 150%의 데미지를 입힌다",
+      "type": "ultimate",
+      "target": "enemy_all",
+      "multiplier": 1.5,
+      "chargeRequired": 100,
+      "effects": []
+    },
+    {
+      "id": "skill_gungnir_strike",
+      "name": "궁니르의 일격",
+      "nameEn": "Gungnir Strike",
+      "description": "적 1명에게 공격력의 160%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.6,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_ravens_judgment",
+      "name": "까마귀의 심판",
+      "nameEn": "Ravens' Judgment",
+      "description": "적 전체에게 공격력의 110%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_all",
+      "multiplier": 1.1,
+      "cooldown": 4,
+      "effects": []
+    },
+    {
+      "id": "skill_allfather_wrath",
+      "name": "만물의 아버지의 분노",
+      "nameEn": "Allfather's Wrath",
+      "description": "적 전체에게 공격력의 150%의 데미지를 입힌다",
+      "type": "ultimate",
+      "target": "enemy_all",
+      "multiplier": 1.5,
+      "chargeRequired": 100,
+      "effects": []
+    },
+    {
+      "id": "skill_iris_flash_strike",
+      "name": "섬광 베기",
+      "nameEn": "Flash Strike",
+      "description": "적 1명에게 공격력의 140%의 번개 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.4,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_sera_healing_touch",
+      "name": "치유의 손길",
+      "nameEn": "Healing Touch",
+      "description": "HP가 가장 낮은 아군 1명의 HP를 공격력의 130%만큼 회복한다",
+      "type": "active",
+      "target": "ally_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_luca_arcane_bolt",
+      "name": "비전탄",
+      "nameEn": "Arcane Bolt",
+      "description": "적 1명에게 공격력의 140%의 마법 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.4,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_kai_execute",
+      "name": "급소 일격",
+      "nameEn": "Vital Strike",
+      "description": "적 1명에게 공격력의 140%의 데미지를 입힌다. 빈사 상태의 적에게 더욱 치명적이다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.4,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_lin_oracle_blessing",
+      "name": "신탁의 가호",
+      "nameEn": "Oracle's Blessing",
+      "description": "HP가 가장 낮은 아군 1명의 HP를 공격력의 130%만큼 회복한다",
+      "type": "active",
+      "target": "ally_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_omar_shield_bash",
+      "name": "방패 강타",
+      "nameEn": "Shield Bash",
+      "description": "적 1명에게 공격력의 130%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.3,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_sol_piercing_shot",
+      "name": "관통 사격",
+      "nameEn": "Piercing Shot",
+      "description": "적 1명에게 공격력의 135%의 관통 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.35,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_hana_curse_touch",
+      "name": "저주의 손길",
+      "nameEn": "Curse Touch",
+      "description": "적 1명에게 공격력의 140%의 저주 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.4,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_leon_rune_strike",
+      "name": "룬 강타",
+      "nameEn": "Rune Strike",
+      "description": "적 1명에게 공격력의 135%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.35,
+      "cooldown": 3,
+      "effects": []
+    },
+    {
+      "id": "skill_paolo_disintegrate",
+      "name": "분해의 마법",
+      "nameEn": "Disintegrate",
+      "description": "적 1명에게 공격력의 135%의 데미지를 입힌다",
+      "type": "active",
+      "target": "enemy_single",
+      "multiplier": 1.35,
       "cooldown": 3,
       "effects": []
     }

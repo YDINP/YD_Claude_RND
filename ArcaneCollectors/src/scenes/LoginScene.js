@@ -19,9 +19,10 @@ import { isSupabaseConfigured, supabase } from '../api/supabaseClient.js';
 import { guestLogin } from '../services/AuthService.js';
 import { normalizeHeroes } from '../data/index.js';
 import { TutorialManager } from '../systems/TutorialManager.js';
+import { soundManager } from '../systems/SoundManager.js';
 import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { GlassPanel, GLASS_VARIANT } from '../components/GlassPanel.js';
-import { NineSliceFrame } from '../components/NineSliceFrame.js';
+import { UIButton } from '../components/UIButton.js';
 import { LOGIN_LAYOUT, LOGO_SCRIM, resolveLogoDisplaySize } from '../utils/loginLayout.js';
 
 /** 배경 텍스처 키 — 부팅 화면과 공유한다 */
@@ -49,6 +50,10 @@ export class LoginScene extends Phaser.Scene {
     this.cameras.main.fadeIn(400);
 
     try {
+      // SND-01: 로비 테마
+      soundManager.init(this);
+      soundManager.playBGM('main_theme');
+
       this.createBackground();
       this.createTitle();
       this.createButtons();
@@ -200,32 +205,17 @@ export class LoginScene extends Phaser.Scene {
    * @returns {Phaser.GameObjects.Container}
    */
   _createButton(x, y, label, frameKey, width, height, callback) {
-    const container = this.add.container(x, y).setDepth(DEPTH.CONTENT);
-
-    const frame = NineSliceFrame.create(this, {
-      x: 0, y: 0, w: width, h: height, key: frameKey,
-      tint: frameKey === 'btn_ghost' ? DESIGN.colors.brand.primary : null
+    // 배경이 밝은 로그인 화면이라 라벨 캡슐 없이는 버튼 문구가 아트에 묻힌다
+    return UIButton.create(this, {
+      x, y, w: width, h: height,
+      label,
+      variant: frameKey,
+      tint: frameKey === 'btn_ghost' ? DESIGN.colors.brand.primary : null,
+      token: 'body',
+      bold: true,
+      depth: DEPTH.CONTENT,
+      onClick: callback
     });
-
-    const hitArea = this.add.rectangle(0, 0, width, Math.max(height, s(DESIGN.touch.minTarget)), 0x000000, 0)
-      .setInteractive({ useHandCursor: true });
-
-    const text = this.add.text(0, 0, label, ts('body', {
-      color: DESIGN.colors.text.primary,
-      fontStyle: 'bold'
-    })).setOrigin(0.5);
-
-    container.add([frame, hitArea, text]);
-
-    hitArea.on('pointerover', () => container.setAlpha(0.85));
-    hitArea.on('pointerout', () => { container.setAlpha(1); container.setScale(1); });
-    hitArea.on('pointerdown', () => {
-      container.setScale(0.96);
-      callback();
-    });
-    hitArea.on('pointerup', () => container.setScale(1));
-
-    return container;
   }
 
   /**

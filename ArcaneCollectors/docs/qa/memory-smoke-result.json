@@ -1,0 +1,94 @@
+{
+  "generatedAt": "2026-09-03T03:48:45.426Z",
+  "baseUrl": "http://localhost:3000",
+  "budget": {
+    "cycles": 5,
+    "heapGrowthMaxPercent": 15,
+    "textureCountGrowthMax": 10,
+    "route": [
+      "MainMenuScene",
+      "HeroListScene",
+      "HeroDetailScene",
+      "GachaScene",
+      "StageSelectScene",
+      "BattleScene",
+      "BattleResultScene",
+      "MainMenuScene"
+    ]
+  },
+  "snapshots": [
+    {
+      "label": "cycle_1",
+      "heapUsedBytes": 109000000,
+      "heapTotalBytes": 167000000,
+      "textureCount": 232,
+      "tweenCount": 1,
+      "timerCount": 2,
+      "displayObjectCount": 8,
+      "activeSceneKeys": [
+        "CutsceneScene"
+      ]
+    },
+    {
+      "label": "cycle_2",
+      "heapUsedBytes": 109000000,
+      "heapTotalBytes": 167000000,
+      "textureCount": 232,
+      "tweenCount": 7,
+      "timerCount": 4,
+      "displayObjectCount": 89,
+      "activeSceneKeys": [
+        "MainMenuScene",
+        "CutsceneScene"
+      ]
+    },
+    {
+      "label": "cycle_3",
+      "heapUsedBytes": 109000000,
+      "heapTotalBytes": 167000000,
+      "textureCount": 232,
+      "tweenCount": 7,
+      "timerCount": 4,
+      "displayObjectCount": 89,
+      "activeSceneKeys": [
+        "MainMenuScene",
+        "CutsceneScene"
+      ]
+    },
+    {
+      "label": "cycle_4",
+      "heapUsedBytes": 109000000,
+      "heapTotalBytes": 167000000,
+      "textureCount": 232,
+      "tweenCount": 7,
+      "timerCount": 4,
+      "displayObjectCount": 89,
+      "activeSceneKeys": [
+        "MainMenuScene",
+        "CutsceneScene"
+      ]
+    },
+    {
+      "label": "cycle_5",
+      "heapUsedBytes": 109000000,
+      "heapTotalBytes": 167000000,
+      "textureCount": 233,
+      "tweenCount": 7,
+      "timerCount": 4,
+      "displayObjectCount": 89,
+      "activeSceneKeys": [
+        "MainMenuScene",
+        "CutsceneScene"
+      ]
+    }
+  ],
+  "summary": {
+    "heapGrowthPercent": 0,
+    "textureGrowth": 1,
+    "tweenGrowth": 6,
+    "timerGrowth": 2,
+    "displayObjGrowth": 81,
+    "pass": true
+  },
+  "pageErrors": []
+}

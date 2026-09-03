@@ -13,7 +13,7 @@
         "spd": 80
       },
       "growthStats": {
-        "hp": 40,
+        "hp": 15,
         "atk": 8,
         "def": 3,
         "spd": 2
@@ -132,7 +132,7 @@
       "mood": "cunning",
       "type": "normal",
       "stats": {
-        "hp": 180,
+        "hp": 120,
         "atk": 35,
         "def": 8,
         "spd": 100
@@ -231,13 +231,13 @@
       "mood": "cunning",
       "type": "normal",
       "stats": {
-        "hp": 150,
+        "hp": 130,
         "atk": 25,
         "def": 12,
         "spd": 60
       },
       "growthStats": {
-        "hp": 30,
+        "hp": 45,
         "atk": 6,
         "def": 3,
         "spd": 1
@@ -281,14 +281,14 @@
       "mood": "stoic",
       "type": "elite",
       "stats": {
-        "hp": 800,
-        "atk": 35,
+        "hp": 300,
+        "atk": 25,
         "def": 50,
         "spd": 20
       },
       "growthStats": {
-        "hp": 160,
-        "atk": 8,
+        "hp": 60,
+        "atk": 5,
         "def": 12,
         "spd": 1
       },
@@ -380,13 +380,13 @@
       "mood": "wild",
       "type": "normal",
       "stats": {
-        "hp": 220,
+        "hp": 130,
         "atk": 38,
         "def": 10,
         "spd": 110
       },
       "growthStats": {
-        "hp": 44,
+        "hp": 26,
         "atk": 10,
         "def": 2,
         "spd": 5
@@ -430,13 +430,13 @@
       "mood": "fierce",
       "type": "normal",
       "stats": {
-        "hp": 350,
+        "hp": 160,
         "atk": 55,
         "def": 22,
         "spd": 55
       },
       "growthStats": {
-        "hp": 70,
+        "hp": 29,
         "atk": 14,
         "def": 5,
         "spd": 3
@@ -480,13 +480,13 @@
       "mood": "fierce",
       "type": "elite",
       "stats": {
-        "hp": 700,
+        "hp": 400,
         "atk": 65,
         "def": 30,
         "spd": 60
       },
       "growthStats": {
-        "hp": 140,
+        "hp": 78,
         "atk": 16,
         "def": 8,
         "spd": 3
@@ -807,15 +807,15 @@
       "mood": "brave",
       "type": "normal",
       "stats": {
-        "hp": 500,
+        "hp": 300,
         "atk": 55,
         "def": 30,
         "spd": 45
       },
       "growthStats": {
-        "hp": 100,
+        "hp": 55,
         "atk": 14,
-        "def": 8,
+        "def": 3,
         "spd": 2
       },
       "skills": [
@@ -832,15 +832,15 @@
       "mood": "stoic",
       "type": "elite",
       "stats": {
-        "hp": 1000,
+        "hp": 350,
         "atk": 60,
         "def": 50,
         "spd": 40
       },
       "growthStats": {
-        "hp": 200,
+        "hp": 70,
         "atk": 15,
-        "def": 12,
+        "def": 3,
         "spd": 2
       },
       "skills": [
@@ -857,15 +857,15 @@
       "mood": "wild",
       "type": "elite",
       "stats": {
-        "hp": 700,
+        "hp": 250,
         "atk": 80,
         "def": 25,
         "spd": 100
       },
       "growthStats": {
-        "hp": 140,
+        "hp": 50,
         "atk": 20,
-        "def": 6,
+        "def": 2,
         "spd": 5
       },
       "skills": [
@@ -882,15 +882,15 @@
       "mood": "mystic",
       "type": "boss",
       "stats": {
-        "hp": 3000,
+        "hp": 700,
         "atk": 110,
         "def": 55,
         "spd": 50
       },
       "growthStats": {
-        "hp": 390,
-        "atk": 25,
-        "def": 14,
+        "hp": 100,
+        "atk": 12,
+        "def": 3,
         "spd": 2
       },
       "skills": [
@@ -1058,15 +1058,15 @@
       "mood": "devoted",
       "type": "boss",
       "stats": {
-        "hp": 4000,
-        "atk": 120,
-        "def": 60,
+        "hp": 1200,
+        "atk": 85,
+        "def": 50,
         "spd": 65
       },
       "growthStats": {
-        "hp": 520,
-        "atk": 28,
-        "def": 15,
+        "hp": 156,
+        "atk": 20,
+        "def": 12,
         "spd": 3
       },
       "skills": [
@@ -1894,13 +1894,13 @@
       "mood": "stoic",
       "type": "boss",
       "stats": {
-        "hp": 3200,
+        "hp": 1120,
         "atk": 95,
         "def": 55,
         "spd": 65
       },
       "growthStats": {
-        "hp": 410,
+        "hp": 144,
         "atk": 22,
         "def": 13,
         "spd": 3
@@ -2095,13 +2095,13 @@
       "mood": "fierce",
       "type": "elite",
       "stats": {
-        "hp": 900,
+        "hp": 380,
         "atk": 75,
         "def": 45,
         "spd": 50
       },
       "growthStats": {
-        "hp": 150,
+        "hp": 62,
         "atk": 17,
         "def": 9,
         "spd": 2
@@ -2120,13 +2120,13 @@
       "mood": "noble",
       "type": "elite",
       "stats": {
-        "hp": 800,
+        "hp": 400,
         "atk": 65,
         "def": 50,
         "spd": 60
       },
       "growthStats": {
-        "hp": 135,
+        "hp": 68,
         "atk": 15,
         "def": 10,
         "spd": 2
@@ -2145,15 +2145,15 @@
       "mood": "brave",
       "type": "boss",
       "stats": {
-        "hp": 4200,
+        "hp": 900,
         "atk": 110,
         "def": 70,
         "spd": 85
       },
       "growthStats": {
-        "hp": 540,
+        "hp": 150,
         "atk": 25,
-        "def": 16,
+        "def": 5,
         "spd": 3
       },
       "skills": [
@@ -2171,15 +2171,15 @@
       "mood": "fierce",
       "type": "elite",
       "stats": {
-        "hp": 750,
+        "hp": 350,
         "atk": 80,
         "def": 40,
         "spd": 55
       },
       "growthStats": {
-        "hp": 125,
+        "hp": 65,
         "atk": 18,
-        "def": 8,
+        "def": 3,
         "spd": 2
       },
       "skills": [
@@ -2196,15 +2196,15 @@
       "mood": "brave",
       "type": "elite",
       "stats": {
-        "hp": 850,
+        "hp": 380,
         "atk": 78,
         "def": 48,
         "spd": 50
       },
       "growthStats": {
-        "hp": 140,
+        "hp": 68,
         "atk": 17,
-        "def": 9,
+        "def": 3,
         "spd": 2
       },
       "skills": [
@@ -2221,15 +2221,15 @@
       "mood": "fierce",
       "type": "elite",
       "stats": {
-        "hp": 1100,
+        "hp": 400,
         "atk": 95,
         "def": 50,
         "spd": 60
       },
       "growthStats": {
-        "hp": 180,
+        "hp": 75,
         "atk": 20,
-        "def": 10,
+        "def": 3,
         "spd": 3
       },
       "skills": [
@@ -2246,15 +2246,15 @@
       "mood": "devoted",
       "type": "elite",
       "stats": {
-        "hp": 700,
+        "hp": 280,
         "atk": 68,
         "def": 35,
         "spd": 75
       },
       "growthStats": {
-        "hp": 115,
+        "hp": 48,
         "atk": 15,
-        "def": 7,
+        "def": 3,
         "spd": 3
       },
       "skills": [
@@ -2271,15 +2271,15 @@
       "mood": "wild",
       "type": "elite",
       "stats": {
-        "hp": 1300,
+        "hp": 450,
         "atk": 100,
         "def": 55,
         "spd": 65
       },
       "growthStats": {
-        "hp": 210,
-        "atk": 22,
-        "def": 11,
+        "hp": 78,
+        "atk": 10,
+        "def": 3,
         "spd": 3
       },
       "skills": [
@@ -2296,15 +2296,15 @@
       "mood": "noble",
       "type": "boss",
       "stats": {
-        "hp": 9500,
+        "hp": 3000,
         "atk": 150,
         "def": 80,
         "spd": 85
       },
       "growthStats": {
-        "hp": 1200,
-        "atk": 32,
-        "def": 18,
+        "hp": 177,
+        "atk": 15,
+        "def": 4,
         "spd": 3
       },
       "skills": [

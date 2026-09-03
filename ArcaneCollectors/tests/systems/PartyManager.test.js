@@ -344,4 +344,57 @@ describe('PartyManager', () => {
       expect(partyIds.length).toBeLessThanOrEqual(PartyManager.PARTY_SIZE);
     });
   });
+
+  // QA P1-1: 스테이지 파티 선택 모달이 저장된 편성을 버리던 결함의 판정부
+  describe('resolvePartyHeroes / resolveDisplayParty', () => {
+    const owned = [
+      { id: 'asc_iris_olympus', name: '올림푸스의 아이리스', stats: { hp: 2000, atk: 200, def: 90, spd: 120 } },
+      { id: 'asc_sera_avalon', name: '아발론의 세라', stats: { hp: 1800, atk: 180, def: 80, spd: 110 } },
+      { id: 'base_luca', name: '루카', stats: { hp: 900, atk: 90, def: 40, spd: 80 } },
+      { id: 'base_kai', name: '카이', stats: { hp: 800, atk: 80, def: 35, spd: 75 } },
+      { id: 'base_leon', name: '레온', stats: { hp: 700, atk: 70, def: 30, spd: 70 } }
+    ];
+
+    it('저장된 슬롯 순서 그대로 영웅 객체를 되돌린다', () => {
+      const slots = ['base_kai', 'asc_iris_olympus', null, 'base_luca'];
+      const result = PartyManager.resolvePartyHeroes(slots, owned);
+
+      expect(result).toHaveLength(PartyManager.PARTY_SIZE);
+      expect(result.map(h => (h ? h.id : null))).toEqual(['base_kai', 'asc_iris_olympus', null, 'base_luca']);
+    });
+
+    it('보유 목록에 없는 id(마이그레이션으로 사라진 영웅)는 빈 칸으로 남긴다', () => {
+      const result = PartyManager.resolvePartyHeroes(['char_1', 'base_kai'], owned);
+
+      expect(result[0]).toBeNull();
+      expect(result[1]?.id).toBe('base_kai');
+    });
+
+    it('같은 영웅이 두 슬롯에 있으면 첫 슬롯만 채운다', () => {
+      const result = PartyManager.resolvePartyHeroes(['base_kai', 'base_kai'], owned);
+
+      expect(result[0]?.id).toBe('base_kai');
+      expect(result[1]).toBeNull();
+    });
+
+    it('resolveDisplayParty: 저장된 편성이 있으면 자동 편성으로 덮어쓰지 않는다', () => {
+      const result = PartyManager.resolveDisplayParty(['base_leon', null, null, null], owned);
+
+      expect(result[0]?.id).toBe('base_leon');
+      expect(result.filter(Boolean)).toHaveLength(1);
+    });
+
+    it('resolveDisplayParty: 저장된 편성이 비면 보유 상위 4인으로 채운다', () => {
+      const result = PartyManager.resolveDisplayParty([null, null, null, null], owned);
+
+      expect(result.filter(Boolean)).toHaveLength(PartyManager.PARTY_SIZE);
+      expect(result[0]?.id).toBe('asc_iris_olympus');
+    });
+
+    it('resolveDisplayParty: 보유 영웅이 없으면 전부 빈 칸이다', () => {
+      const result = PartyManager.resolveDisplayParty(['base_kai'], []);
+
+      expect(result.filter(Boolean)).toHaveLength(0);
+    });
+  });
 });

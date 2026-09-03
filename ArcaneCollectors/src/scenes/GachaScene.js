@@ -22,14 +22,15 @@ import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
 import GameLogger from '../utils/GameLogger.js';
 import { SaveManager } from '../systems/SaveManager.js';
 import { GachaSystem } from '../systems/GachaSystem.js';
-import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
 import { getCharacterOrHero, normalizeHeroes } from '../data/index.js';
 import navigationManager from '../systems/NavigationManager.js';
+import { soundManager } from '../systems/SoundManager.js';
 import { Z_INDEX } from '../config/layoutConfig.js';
 import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { GlassPanel, GLASS_VARIANT } from '../components/GlassPanel.js';
 import { NineSliceFrame } from '../components/NineSliceFrame.js';
+import { UIButton } from '../components/UIButton.js';
 import { GachaBannerPanel } from '../components/GachaBannerPanel.js';
 import { GachaResultOverlay } from '../components/GachaResultOverlay.js';
 import { computeGachaLayout, computeButtonRow } from '../utils/gachaBannerLayout.js';
@@ -52,6 +53,11 @@ export class GachaScene extends Phaser.Scene {
   create() {
     try {
     this.cameras.main.fadeIn(300);
+
+    // SND-01: 소환 화면 BGM
+    soundManager.init(this);
+    soundManager.playBGM('gacha');
+
 
     // H-3: ParticleManager 초기화
     this.particles = new ParticleManager(this);
@@ -365,43 +371,29 @@ export class GachaScene extends Phaser.Scene {
     const w = s(slot.w);
     const h = s(band.h);
 
-    const frame = NineSliceFrame.create(this, { x: cx, y: cy, w, h, key: variant, tint });
-    frame.setDepth(Z_INDEX.PANELS);
-
-    const main = this.add.text(cx, cy - s(14), label, ts('subtitle', {
-      color: DESIGN.colors.text.primary
-    })).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
-
-    // 밝은 btn_primary 위에서 text.secondary 는 뭉개진다. 보조 라벨도 본문색을 쓰고 알파로만 낮춘다
-    const subText = this.add.text(cx, cy + s(16), sub, ts('caption', {
-      color: DESIGN.colors.text.primary
-    })).setOrigin(0.5).setAlpha(0.85).setDepth(Z_INDEX.PANEL_CONTENT);
-
-    const hit = this.add.rectangle(
-      cx, cy, Math.max(w, s(DESIGN.touch.minTarget)), Math.max(h, s(DESIGN.touch.minTarget)), 0xffffff, 0
-    ).setInteractive({ useHandCursor: true }).setDepth(Z_INDEX.PANEL_BUTTONS);
-
-    hit.on('pointerover', () => { if (frame.setAlpha) frame.setAlpha(0.85); });
-    hit.on('pointerout', () => { if (frame.setAlpha) frame.setAlpha(1); });
-    hit.on('pointerdown', () => {
-      if (this.isAnimating) return;
-      this.tweens.add({ targets: [frame, main, subText], scale: 0.97, duration: 90, yoyo: true });
-      onClick();
+    // 밝은 btn_primary 판 위라 라벨 캡슐 없이는 두 줄 다 묻힌다. UIButton 이 캡슐을 건다
+    const button = UIButton.createParts(this, {
+      x: cx, y: cy, w, h,
+      label,
+      sub,
+      variant,
+      tint,
+      token: 'subtitle',
+      subToken: 'caption',
+      depth: Z_INDEX.PANELS,
+      onClick: () => {
+        if (this.isAnimating) return;
+        onClick();
+      }
     });
 
-    return subText;
+    return button.sub;
   }
 
-  /** 젬 소환 버튼 — 비용 검사는 GachaSystem SSOT 로 한다 */
+  /** 젬 소환 버튼 — 비용 검사는 GachaSystem/장비는 GachaSystem.pullEquipment SSOT 로 한다 */
   onGemButton(count) {
-    const cost = count === 10 ? GachaSystem.MULTI_COST : GachaSystem.SINGLE_COST * count;
     if (this.currentTab === 'equipment') {
-      const resources = SaveManager.getResources();
-      if (resources.gems < cost) {
-        this.showMessage('보석이 부족합니다!', COLORS.danger);
-        return;
-      }
-      this.performEquipmentPull(count, cost);
+      this.performEquipmentPull(count);
       return;
     }
 
@@ -414,17 +406,18 @@ export class GachaScene extends Phaser.Scene {
 
   /** 티켓 소환 버튼 */
   onTicketButton(count) {
+    if (this.currentTab === 'equipment') {
+      this.performEquipmentPullWithTickets(count);
+      return;
+    }
+
     const needed = count === 10 ? GachaSystem.TICKET_MULTI : GachaSystem.TICKET_SINGLE * count;
     const resources = SaveManager.getResources();
     if ((resources.summonTickets || 0) < needed) {
       this.showMessage('소환권이 부족합니다! (' + needed + '장 필요)', COLORS.danger);
       return;
     }
-    if (this.currentTab === 'equipment') {
-      this.performEquipmentPullWithTickets(count);
-    } else {
-      this.performTicketPull(count);
-    }
+    this.performTicketPull(count);
   }
 
   /** 확률 정보 진입점 (GA-4 법적 요구) — 상시 노출. RateDisclosurePanel 을 중첩 팝업으로 연다 */
@@ -451,6 +444,7 @@ export class GachaScene extends Phaser.Scene {
   openRateDisclosure() {
     if (this._ratePanel) return;
     this._ratePanel = new RateDisclosurePanel(this, {
+      bannerId: this.bannerPanel ? this.bannerPanel.selectedId : null,
       onClose: () => { this._ratePanel = null; }
     });
     this._ratePanel.show();
@@ -471,8 +465,9 @@ export class GachaScene extends Phaser.Scene {
     this.isAnimating = true;
     GameLogger.log('GACHA', `소환 ${count}회 (gems)`, { pityBefore: GachaSystem.getPityInfo().current });
 
-    // GachaSystem.pull()로 실제 소환
-    const pullResult = GachaSystem.pull(count, 'gems');
+    // GachaSystem.pull()로 실제 소환 — 선택된 배너 id를 넘겨 픽업 라우팅을 태운다
+    const bannerId = this.bannerPanel ? this.bannerPanel.selectedId : null;
+    const pullResult = GachaSystem.pull(count, 'gems', { bannerId });
 
     if (!pullResult.success) {
       this.showMessage(pullResult.error, COLORS.danger);
@@ -521,7 +516,8 @@ export class GachaScene extends Phaser.Scene {
   performTicketPull(count) {
     this.isAnimating = true;
 
-    const result = GachaSystem.pull(count, 'tickets');
+    const bannerId = this.bannerPanel ? this.bannerPanel.selectedId : null;
+    const result = GachaSystem.pull(count, 'tickets', { bannerId });
     if (!result.success) {
       this.showMessage(result.error || '소환 실패', COLORS.danger);
       this.isAnimating = false;
@@ -561,37 +557,17 @@ export class GachaScene extends Phaser.Scene {
   }
 
   performEquipmentPullWithTickets(count) {
-    const res = SaveManager.getResources();
-    const ticketCost = count === 10 ? 10 : 1;
-    if (res.summonTickets < ticketCost) {
-      this.showMessage('소환권이 부족합니다!', COLORS.danger);
+    this.isAnimating = true;
+
+    const result = GachaSystem.pullEquipment(count, 'tickets');
+    if (!result.success) {
+      this.showMessage(result.error, COLORS.danger);
+      this.isAnimating = false;
       return;
     }
 
-    this.isAnimating = true;
-    SaveManager.spendSummonTickets(ticketCost);
-
-    const results = [];
-    for (let i = 0; i < count; i++) {
-      const rarityRoll = Math.random();
-      let rarity, color;
-      if (rarityRoll < 0.03) { rarity = 'SSR'; color = 0xFFD700; }
-      else if (rarityRoll < 0.15) { rarity = 'SR'; color = 0xAA44FF; }
-      else { rarity = 'R'; color = 0x4488FF; }
-
-      const slots = ['weapon', 'armor', 'accessory', 'boots'];
-      const slot = slots[Math.floor(Math.random() * slots.length)];
-      results.push({
-        id: `equip_${Date.now()}_${i}`,
-        name: `${rarity} ${slot === 'weapon' ? '무기' : slot === 'armor' ? '방어구' : slot === 'accessory' ? '장신구' : '신발'}`,
-        rarity, slot, color,
-        stats: { atk: Math.floor(Math.random() * 50) + 10, def: Math.floor(Math.random() * 30) + 5 }
-      });
-    }
-
     this.refreshResourceUI();
-
-    this.showEquipmentResults(results);
+    this.showSummonAnimation(this._mapEquipmentResults(result.results));
   }
 
   /**
@@ -606,262 +582,36 @@ export class GachaScene extends Phaser.Scene {
   }
 
   /**
-   * 장비 가챠 소환 실행
+   * 장비 소환 실행 (젬). 지급은 GachaSystem.pullEquipment() SSOT — equipment.json 풀에서
+   * 등급 확률로 뽑아 EquipmentSystem.createEquipment()를 통해 인벤토리에 추가한다.
+   * 결과 연출은 캐릭터 가챠와 동일한 GachaResultOverlay(T-14)를 공유한다(아이콘 폴백).
    */
-  performEquipmentPull(count, cost) {
+  performEquipmentPull(count) {
     this.isAnimating = true;
 
-    // SaveManager API로 보석 차감
-    SaveManager.spendGems(cost);
-
-    // 젬 UI 업데이트 (SaveManager에서 최신값 조회)
-    const resources = SaveManager.getResources();
-    this.registry.set('gems', resources.gems);
-    if (this.gemText) {
-      this.gemText.setText(resources.gems.toLocaleString());
-    }
-
-    // 장비 등급 결정 및 생성
-    const EQUIP_RATES = { SSR: 0.015, SR: 0.085, R: 0.30, N: 0.60 };
-    const SLOT_TYPES = ['weapon', 'armor', 'accessory', 'relic'];
-    const SLOT_NAMES = { weapon: '무기', armor: '방어구', accessory: '악세서리', relic: '유물' };
-    const SLOT_ICONS = { weapon: '⚔️', armor: '🛡️', accessory: '💍', relic: '🔮' };
-
-    const results = [];
-    let guaranteeSR = count >= 10; // 10연차 SR 이상 1회 보장
-
-    for (let i = 0; i < count; i++) {
-      const roll = Math.random();
-      let rarity;
-      if (roll < EQUIP_RATES.SSR) {
-        rarity = 'SSR';
-        guaranteeSR = false;
-      } else if (roll < EQUIP_RATES.SSR + EQUIP_RATES.SR) {
-        rarity = 'SR';
-        guaranteeSR = false;
-      } else if (roll < EQUIP_RATES.SSR + EQUIP_RATES.SR + EQUIP_RATES.R) {
-        rarity = 'R';
-      } else {
-        rarity = 'N';
-      }
-
-      // 10연차 마지막인데 SR 이상이 없으면 보장
-      if (i === count - 1 && guaranteeSR) {
-        rarity = 'SR';
-      }
-
-      const slotType = Phaser.Math.RND.pick(SLOT_TYPES);
-      const equipment = EquipmentSystem.createEquipment(slotType, rarity);
-
-      results.push({
-        ...equipment,
-        slotName: SLOT_NAMES[slotType],
-        slotIcon: SLOT_ICONS[slotType]
-      });
-    }
-
-    // 소환 연출
-    this.showEquipmentAnimation(results);
-  }
-
-  showEquipmentAnimation(results) {
-    const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0);
-    overlay.setDepth(50);
-
-    this.tweens.add({
-      targets: overlay,
-      alpha: 0.9,
-      duration: 400,
-      ease: 'Power2'
-    });
-
-    const hasSSR = results.some(e => e.rarity === 'SSR');
-    const hasSR = results.some(e => e.rarity === 'SR');
-
-    // 장비 소환 이펙트 (기어/톱니 모양)
-    const circleGraphics = this.add.graphics().setDepth(51);
-    const effectColor = hasSSR ? COLORS.raritySSR : (hasSR ? COLORS.raritySR : COLORS.accent);
-    circleGraphics.lineStyle(s(3), effectColor, 1);
-
-    // 육각형 마법진 효과
-    for (let ring = 0; ring < 3; ring++) {
-      const radius = s(80) + ring * s(35);
-      const sides = 6;
-      circleGraphics.beginPath();
-      for (let i = 0; i <= sides; i++) {
-        const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-        const px = GAME_WIDTH / 2 + Math.cos(angle) * radius;
-        const py = GAME_HEIGHT / 2 + Math.sin(angle) * radius;
-        if (i === 0) circleGraphics.moveTo(px, py);
-        else circleGraphics.lineTo(px, py);
-      }
-      circleGraphics.strokePath();
-    }
-
-    circleGraphics.setAlpha(0).setScale(0);
-
-    this.tweens.add({
-      targets: circleGraphics,
-      scale: 1.3,
-      alpha: 1,
-      rotation: Math.PI / 3,
-      duration: 1200,
-      ease: 'Cubic.easeOut'
-    });
-
-    // 파티클 버스트
-    const particleCount = hasSSR ? 35 : 20;
-    const particles = [];
-    for (let i = 0; i < particleCount; i++) {
-      const angle = (i / particleCount) * Math.PI * 2;
-      const particle = this.add.circle(GAME_WIDTH / 2, GAME_HEIGHT / 2, hasSSR ? s(5) : s(3), effectColor)
-        .setDepth(52).setAlpha(0);
-      particles.push(particle);
-
-      this.tweens.add({
-        targets: particle,
-        x: GAME_WIDTH / 2 + Math.cos(angle) * s(180),
-        y: GAME_HEIGHT / 2 + Math.sin(angle) * s(180),
-        alpha: { from: 1, to: 0 },
-        duration: 1200,
-        delay: 300 + i * 25,
-        ease: 'Cubic.easeOut'
-      });
-    }
-
-    if (hasSSR) {
-      const flash = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xFFD700, 0);
-      flash.setDepth(55);
-      this.tweens.add({
-        targets: flash,
-        alpha: { from: 0, to: 0.5 },
-        duration: 400,
-        delay: 600,
-        yoyo: true,
-        onComplete: () => flash.destroy()
-      });
-      this.cameras.main.shake(250, 0.008);
-    }
-
-    const animDuration = hasSSR ? 2200 : 1600;
-    this.time.delayedCall(animDuration, () => {
-      circleGraphics.destroy();
-      particles.forEach(p => p.destroy());
-      this.showEquipmentResults(results, overlay);
-    });
-  }
-
-  showEquipmentResults(results, overlay) {
-    const container = this.add.container(0, 0).setDepth(60);
-
-    const resultBg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - s(40), GAME_HEIGHT - s(200), COLORS.backgroundLight, 0.95);
-    resultBg.setStrokeStyle(s(2), COLORS.accent);
-    container.add(resultBg);
-
-    const title = this.add.text(GAME_WIDTH / 2, s(150), '⚔️ 장비 소환 결과', {
-      fontSize: sf(24),
-      fontFamily: 'Georgia, serif',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    container.add(title);
-
-    const cols = Math.min(5, results.length);
-    const startX = GAME_WIDTH / 2 - ((cols - 1) * s(85)) / 2;
-    const startY = s(250);
-
-    results.forEach((equip, index) => {
-      const col = index % cols;
-      const row = Math.floor(index / cols);
-      const x = startX + col * s(85);
-      const y = startY + row * s(140);
-
-      this.time.delayedCall(index * 80, () => {
-        this.createEquipmentCard(container, x, y, equip);
-      });
-    });
-
-    const closeBtn = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT - s(120));
-    const closeBg = this.add.rectangle(0, 0, s(150), s(50), COLORS.accent, 1)
-      .setInteractive({ useHandCursor: true });
-    const closeText = this.add.text(0, 0, '확인', {
-      fontSize: sf(18),
-      fontFamily: 'Arial',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-
-    closeBtn.add([closeBg, closeText]);
-    container.add(closeBtn);
-
-    closeBg.on('pointerdown', () => {
-      container.destroy();
-      overlay.destroy();
+    const result = GachaSystem.pullEquipment(count, 'gems');
+    if (!result.success) {
+      this.showMessage(result.error, COLORS.danger);
       this.isAnimating = false;
-    });
+      return;
+    }
+
+    this.refreshResourceUI();
+    this.showSummonAnimation(this._mapEquipmentResults(result.results));
   }
 
-  createEquipmentCard(container, x, y, equip) {
-    const card = this.add.container(x, y);
-    const rarityColor = COLORS.rarity[equip.rarity] || COLORS.rarityN;
-
-    const cardBg = this.add.rectangle(0, 0, s(75), s(120), COLORS.backgroundLight, 1);
-    cardBg.setStrokeStyle(s(2), rarityColor);
-
-    // 슬롯 아이콘
-    const icon = this.add.text(0, s(-25), equip.slotIcon || '⚔️', {
-      fontSize: sf(32)
-    }).setOrigin(0.5);
-
-    // 등급 배지
-    const rarityBadge = this.add.rectangle(0, s(-55), s(30), s(18), rarityColor, 1);
-    const rarityText = this.add.text(0, s(-55), equip.rarity, {
-      fontSize: sf(10), fontFamily: 'Arial', color: '#ffffff', fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // 슬롯 타입
-    const slotText = this.add.text(0, s(15), equip.slotName || equip.slotType, {
-      fontSize: sf(11), fontFamily: 'Arial',
-      color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-
-    // 장비 이름 (축약)
-    const displayName = equip.name && equip.name.length > 6 ? `${equip.name.substring(0, 6)  }..` : (equip.name || '장비');
-    const nameText = this.add.text(0, s(35), displayName, {
-      fontSize: sf(9), fontFamily: 'Arial',
-      color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-
-    // 주요 스탯 표시
-    const mainStat = equip.stats ? Object.entries(equip.stats)[0] : null;
-    const statLabel = mainStat ? `${mainStat[0]} +${Math.floor(mainStat[1])}` : '';
-    const statText = this.add.text(0, s(50), statLabel, {
-      fontSize: sf(9), fontFamily: 'Arial',
-      color: `#${  COLORS.accent.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5);
-
-    card.add([cardBg, icon, rarityBadge, rarityText, slotText, nameText, statText]);
-    container.add(card);
-
-    card.setScale(0);
-    this.tweens.add({
-      targets: card,
-      scale: 1,
-      duration: 200,
-      ease: 'Back.easeOut'
-    });
-
-    if (equip.rarity === 'SSR') {
-      const glow = this.add.circle(x, y, s(50), COLORS.raritySSR, 0.3);
-      container.add(glow);
-      container.sendToBack(glow);
-      this.tweens.add({
-        targets: glow,
-        scale: { from: 0.8, to: 1.2 },
-        alpha: { from: 0.5, to: 0 },
-        duration: 1000,
-        repeat: -1
-      });
-    }
+  /** @private GachaSystem.pullEquipment() 결과 → GachaResultOverlay 카드 데이터로 변환 */
+  _mapEquipmentResults(results) {
+    return results.map((r) => ({
+      id: r.equipmentId,
+      type: 'equipment',
+      name: r.name,
+      rarity: r.rarity,
+      slotType: r.slotType,
+      slotIcon: r.slotIcon,
+      stats: r.stats,
+      isNew: true
+    }));
   }
 
   /**

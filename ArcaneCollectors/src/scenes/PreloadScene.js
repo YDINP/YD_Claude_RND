@@ -6,9 +6,26 @@ import characterRenderer from '../renderers/CharacterRenderer.js';
 import uiRenderer from '../renderers/UIRenderer.js';
 import { TextureGenerator } from '../utils/TextureGenerator.js';
 import ASSET_MANIFEST from '../../tools/art/asset-manifest.json';
+import { eagerAudioKeys, audioUrlsFor } from '../config/audioAssets.js';
 
 /** 실제 아트 텍스처를 임시 키로 로드한 뒤 최종 키로 승격할 때 붙이는 접두어 */
 const REAL_ASSET_TEMP_PREFIX = '__real__';
+
+/** 마이그레이션으로 획득 불가능한 레거시 스타터 id (portrait-mapping.json: char_N → hero_00N) */
+const UNREACHABLE_LEGACY_IDS = new Set(['char_1', 'char_2', 'char_3', 'char_4']);
+
+/**
+ * 부팅 시 프리로드할 포트레이트 로스터.
+ *
+ * getAllPortraitHeroes()가 반환하는 38명 중 char_1~4는 SaveManager._migrateLegacyStarters()가
+ * 로드 시점에 항상 통합해버려 실사용자가 다시 보유할 수 없는 죽은 에셋이다(QA P2-4).
+ * portrait-mapping.json 매핑 자체는 하위 호환을 위해 그대로 두고, 여기서만 제외한다.
+ *
+ * @returns {Array} 로드 대상 34명
+ */
+function getBootPortraitRoster() {
+  return getAllPortraitHeroes().filter(hero => !UNREACHABLE_LEGACY_IDS.has(hero?.id));
+}
 
 /**
  * PreloadScene - 에셋 프리로드 씬
@@ -43,6 +60,9 @@ export class PreloadScene extends Phaser.Scene {
 
     // Phase 5: 렌더러 에셋 (비동기 이미지 로드, 에셋 모드 시)
     this.loadPhase5_RendererAssets();
+
+    // Phase 5b: 오디오 (SFX 전량 + 로비 BGM)
+    this.loadPhase5b_Audio();
   }
 
   // ============================================
@@ -334,8 +354,13 @@ export class PreloadScene extends Phaser.Scene {
     // ascended-heroes 24명의 포트레이트가 로더 큐에 들어가지 못했다. 그 결과
     // hero_005~038의 실제 아트가 존재함에도 전부 캔버스 플레이스홀더로 표시됐다.
     // getAllPortraitHeroes()가 세 소스를 합쳐 38명을 반환한다.
+    //
+    // P2-4: char_1~4(레거시 스타터)는 SaveManager._migrateLegacyStarters()가 통합해버려
+    // 실사용자가 다시 획득할 수 없는 죽은 에셋이다(QA_SCREEN_AUDIT_2026-09-03 P2-4).
+    // portrait-mapping.json의 매핑은 하위 호환을 위해 보존하되, 부팅 로스터에서는
+    // 제외해 매 부팅마다 4장을 더 내려받지 않게 한다.
     try {
-      const roster = getAllPortraitHeroes();
+      const roster = getBootPortraitRoster();
       const { queued, skipped } = HeroAssetLoader.loadImages(this, roster);
       this._portraitLoadStats = { roster: roster.length, queued: queued.length, skipped: skipped.length };
       // 큐가 비면 로스터 병합이 다시 깨진 것이다. 조용히 넘어가면 이 버그가 재발한다.
@@ -347,7 +372,7 @@ export class PreloadScene extends Phaser.Scene {
     } catch (e) {
       console.warn('HeroAssetLoader: Failed to load hero images, using placeholders', e);
       try {
-        HeroAssetLoader.generatePlaceholders(this, getAllPortraitHeroes());
+        HeroAssetLoader.generatePlaceholders(this, getBootPortraitRoster());
       } catch (e2) {
         console.warn('HeroAssetLoader: Failed to generate placeholders', e2);
       }
@@ -514,6 +539,36 @@ export class PreloadScene extends Phaser.Scene {
     }
 
     this._loadPhase = 5;
+  }
+
+  // ============================================
+  // Phase 5b: 오디오 에셋 (SND-01 / SND-02)
+  // ============================================
+  /**
+   * SFX 는 전부(합계 ~160KB), BGM 은 로비 곡만 선로드한다.
+   * BGM 한 트랙이 ~900KB 라 전부 받으면 첫 진입이 느려진다. 나머지 트랙은
+   * SoundManager.playBGM() 이 필요한 순간에 지연 로드한다(config/audioAssets.js 참고).
+   *
+   * 로드 실패는 조용히 흡수한다 — SoundManager 가 cache 존재 여부를 확인하고
+   * 없으면 아무 것도 재생하지 않으므로 콘솔 에러 없이 무음으로 동작한다.
+   */
+  loadPhase5b_Audio() {
+    this._updatePhaseText('사운드 준비 중...');
+
+    /** 로드에 실패해 무음 폴백으로 남은 오디오 키 (audio-smoke 검증용) */
+    this.audioFallbackKeys = [];
+
+    const keys = eagerAudioKeys();
+    keys.forEach((key) => {
+      if (this.cache.audio.exists(key)) return;
+      this.load.audio(key, audioUrlsFor(key));
+    });
+
+    this.load.on('loaderror', (file) => {
+      if (!keys.includes(file.key)) return;
+      this.audioFallbackKeys.push(file.key);
+      console.warn(`[PreloadScene] 오디오 로드 실패, 무음 폴백: ${file.key}`);
+    });
   }
 
   // ============================================

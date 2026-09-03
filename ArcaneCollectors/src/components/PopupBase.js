@@ -22,8 +22,10 @@ import { COLORS, GAME_WIDTH, GAME_HEIGHT, s, sf } from '../config/gameConfig.js'
 import { DESIGN } from '../config/designSystem.js';
 import { ts } from '../utils/textStyles.ts';
 import navigationManager from '../systems/NavigationManager.js';
+import { soundManager } from '../systems/SoundManager.js';
 import { GlassPanel, GLASS_VARIANT } from './GlassPanel.js';
 import { NineSliceFrame } from './NineSliceFrame.js';
+import { UIButton } from './UIButton.js';
 import {
   POPUP_SLOT,
   LEGACY_SLOT,
@@ -37,6 +39,9 @@ import {
 
 /** 팝업 컨테이너 depth. 씬 UI 위, 토스트 아래 */
 const POPUP_DEPTH = 2000;
+
+/** 스크림 기본 불투명도. 중첩 팝업은 options.overlayAlpha 로 더 올린다 */
+const OVERLAY_ALPHA = 0.85;
 
 /** 패널 프레임 9-slice 텍스처 키. 없으면 Graphics 폴백 */
 const PANEL_FRAME_KEY = 'frame_popup';
@@ -74,6 +79,11 @@ export class PopupBase {
    * @param {string|Array} [options.summary] - 요약 슬롯 내용. 있으면 슬롯이 생긴다
    * @param {Array} [options.actions] - 액션 바 버튼 목록 [{label,onClick,variant,disabled}]
    * @param {boolean} [options.closeOnOverlay] - 오버레이 탭으로 닫기. 기본 true
+   * @param {number} [options.depth] - 컨테이너 depth. 기본 POPUP_DEPTH(2000).
+   *   중첩 팝업은 Z_INDEX.POPUP_NESTED(2100)를 넘긴다
+   * @param {number} [options.overlayAlpha] - 스크림 불투명도. 기본 OVERLAY_ALPHA(0.85).
+   *   중첩 팝업은 하위 팝업 헤더가 비쳐 읽히지 않도록 더 올린다 (QA P1-4)
+   * @param {number} [options.offsetY] - 패널을 화면 중앙에서 아래로 미는 양 (렌더 px)
    */
   constructor(scene, options = {}) {
     this.scene = scene;
@@ -90,6 +100,9 @@ export class PopupBase {
     this.layoutSpec = options.layoutSpec === 'redesign' ? 'redesign' : 'legacy';
     this.accentColor = typeof options.accentColor === 'number' ? options.accentColor : null;
     this.closeOnOverlay = options.closeOnOverlay !== false;
+    this.depth = Number.isFinite(options.depth) ? options.depth : POPUP_DEPTH;
+    this.overlayAlpha = Number.isFinite(options.overlayAlpha) ? options.overlayAlpha : OVERLAY_ALPHA;
+    this.panelOffsetY = Number.isFinite(options.offsetY) ? options.offsetY : 0;
     this.summaryItems = normalizeSummary(options.summary);
     this.actions = normalizeActions(options.actions);
 
@@ -143,7 +156,8 @@ export class PopupBase {
       closeHit: s(spec.closeHit),
       titleAlign: spec.titleAlign,
       titlePadX: s(spec.titlePadX),
-      titleOffsetY: spec.titleOffsetY === undefined ? undefined : s(spec.titleOffsetY)
+      titleOffsetY: spec.titleOffsetY === undefined ? undefined : s(spec.titleOffsetY),
+      offsetY: this.panelOffsetY
     });
 
     this.contentBounds = { ...this.slots.content };
@@ -169,14 +183,17 @@ export class PopupBase {
     if (this.isOpen) return;
     this.isOpen = true;
 
-    this.container = this.scene.add.container(0, 0).setDepth(POPUP_DEPTH);
+    // SND-02: 팝업 열림 효과음 (모든 팝업 공통 지점)
+    soundManager.playSFX('ui_open');
+
+    this.container = this.scene.add.container(0, 0).setDepth(this.depth);
 
     this.recomputeLayout();
     const { panel } = this.slots;
 
     // 1. 오버레이 (scrim)
     const overlay = this.scene.add.rectangle(
-      GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT * 2, 0x000000, 0.85
+      GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 2, GAME_HEIGHT * 2, 0x000000, this.overlayAlpha
     );
     overlay.setInteractive();
     overlay.on('pointerdown', () => {
@@ -237,6 +254,10 @@ export class PopupBase {
 
   hide() {
     if (!this.isOpen) return;
+
+    // SND-02: 팝업 닫힘 효과음 (모든 팝업 공통 지점)
+    soundManager.playSFX('ui_close');
+
     navigationManager.popPopup();
     this.isOpen = false; // 즉시 플래그 해제 → 중복 호출 방지
 
@@ -477,34 +498,21 @@ export class PopupBase {
       const style = resolveActionStyle(action.variant);
       const tint = actionTint(style.emphasis);
 
-      const frame = NineSliceFrame.create(this.scene, {
+      // UIButton 이 라벨 캡슐·외곽선·터치 하한을 함께 처리한다.
+      // 자식은 반드시 [frame, label, hit] 3개여야 한다 — popupLayout 의
+      // ACTION_CHILDREN_PER_SLOT 계약을 튜토리얼 타깃 조회가 그대로 쓴다.
+      const button = UIButton.createParts(this.scene, {
         x: slot.centerX, y: slot.centerY, w: slot.w, h: slot.h,
-        key: style.textureKey,
+        label: action.label,
+        variant: style.variant,
+        token: 'label',
         tint,
-        alpha: action.disabled ? 0.45 : 1
+        disabled: action.disabled,
+        sound: true,
+        onClick: () => { if (action.onClick) action.onClick(this); }
       });
 
-      const label = this.scene.add.text(slot.centerX, slot.centerY, action.label, ts('label', {
-        color: action.disabled ? DESIGN.colors.text.secondary : DESIGN.colors.text.primary
-      })).setOrigin(0.5).setAlpha(action.disabled ? 0.6 : 1);
-
-      const minTarget = s(DESIGN.touch.minTarget);
-      const hit = this.scene.add.rectangle(
-        slot.centerX, slot.centerY,
-        Math.max(slot.w, minTarget), Math.max(slot.h, minTarget),
-        0xffffff, 0
-      );
-
-      if (!action.disabled) {
-        hit.setInteractive({ useHandCursor: true });
-        hit.on('pointerover', () => { frame.setAlpha?.(0.85); });
-        hit.on('pointerout', () => { frame.setAlpha?.(1); });
-        hit.on('pointerdown', () => {
-          if (action.onClick) action.onClick(this);
-        });
-      }
-
-      this.actionContainer.add([frame, label, hit]);
+      this.actionContainer.add([button.frame, button.label, button.hit]);
     });
   }
 
@@ -535,7 +543,11 @@ export class PopupBase {
       fontStyle: 'bold', color: '#FFFFFF'
     }).setOrigin(0.5);
 
-    bg.on('pointerdown', callback);
+    bg.on('pointerdown', (...args) => {
+      // SND-02: 팝업 내부 버튼 공통 클릭음
+      soundManager.playSFX('button_click');
+      if (callback) callback(...args);
+    });
     bg.on('pointerover', () => bg.setAlpha(0.8));
     bg.on('pointerout', () => bg.setAlpha(1));
 

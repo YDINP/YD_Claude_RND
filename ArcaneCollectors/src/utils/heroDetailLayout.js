@@ -31,14 +31,22 @@ export const HERO_DETAIL_LAYOUT = Object.freeze({
   margin: 20,
   gap: 8,
   header: { y: 0, h: 80 },
-  stage: { y: 80, h: 580 },
+  /**
+   * 전신 시트가 서는 자리. 바닥(y+h)이 리본 위쪽 끝보다 높다 —
+   * 리본이 인물의 발을 자르지 않게 두 구획을 완전히 분리한다.
+   */
+  stage: { y: 80, h: 504 },
   /** 전신 시트 하단을 배경으로 녹이는 페이드 띠 (스테이지 위에 겹쳐 그린다) */
-  fade: { y: 496, h: 108 },
-  /** 성급·전투력 리본 — 전신 시트의 발치를 덮어 오버스캔을 매듭짓는다 */
-  ribbon: { y: 604, h: 56 },
+  fade: { y: 492, h: 92 },
+  /** 등급·교단·성급·전투력 리본. 전투력을 크게 넣기 위해 두 줄 높이를 쓴다 */
+  ribbon: { y: 588, h: 72 },
   tabBar: { y: 664, h: 56 },
-  content: { y: 728, h: 420 },
-  actionBar: { y: 1160, h: 72 }
+  content: { y: 728, h: 404 },
+  /**
+   * 액션 바. 9-slice 버튼 아트는 위아래 장식 띠가 두꺼워서 안쪽에 두 줄(라벨+부제)을
+   * 넣으려면 72 로는 모자란다. 88 이어야 부제가 장식에 물리지 않는다.
+   */
+  actionBar: { y: 1144, h: 88 }
 });
 
 /** 탭 4종. 순서가 곧 화면 순서다 */
@@ -263,6 +271,48 @@ export function computeFullbodyAnchor(options = {}) {
 }
 
 // ------------------------------------------------------------------
+// 리본 (등급 · 교단 · 성급 · 전투력)
+// ------------------------------------------------------------------
+
+/**
+ * 리본 내부 칸을 배치한다. 좌측 두 줄과 우측 전투력이다.
+ * 좌우 칸은 서로 겹치지 않으며 전투력은 오른쪽 끝에 붙는다.
+ *
+ * @param {Object} [rect] - 기본 HERO_DETAIL_LAYOUT.ribbon
+ * @param {Object} [options]
+ * @param {number} [options.padX] - 좌우 내부 여백. 기본 24
+ * @param {number} [options.powerWidth] - 전투력 칸 너비. 기본 폭의 34%
+ * @returns {{badge:Object,cult:Object,stars:Object,evolution:Object,power:Object}}
+ */
+export function computeRibbonSlots(rect = HERO_DETAIL_LAYOUT.ribbon, options = {}) {
+  const padX = options.padX ?? 24;
+  const width = BASE_WIDTH - HERO_DETAIL_LAYOUT.margin * 2;
+  const left = HERO_DETAIL_LAYOUT.margin + padX;
+  const right = BASE_WIDTH - HERO_DETAIL_LAYOUT.margin - padX;
+  const powerW = options.powerWidth ?? width * 0.34;
+  const rowH = rect.h / 2;
+  const leftW = Math.max(0, right - left - powerW);
+  const badgeW = Math.min(72, leftW * 0.28);
+
+  return {
+    badge: { x: left, y: rect.y + rowH * 0.16, w: badgeW, h: rowH * 0.68 },
+    cult: { x: left + badgeW + 12, y: rect.y, w: Math.max(0, leftW - badgeW - 12), h: rowH },
+    stars: { x: left, y: rect.y + rowH, w: leftW * 0.62, h: rowH },
+    evolution: { x: left + leftW * 0.62, y: rect.y + rowH, w: leftW * 0.38, h: rowH },
+    power: { x: right - powerW, y: rect.y, w: powerW, h: rect.h, right }
+  };
+}
+
+/**
+ * 전신 시트가 리본을 침범하지 않는지 본다 (회귀 가드).
+ * @param {Object} [layout] - 기본 HERO_DETAIL_LAYOUT
+ * @returns {boolean} 발끝이 리본 위쪽 끝보다 높으면 true
+ */
+export function fullbodyClearsRibbon(layout = HERO_DETAIL_LAYOUT) {
+  return layout.stage.y + layout.stage.h <= layout.ribbon.y;
+}
+
+// ------------------------------------------------------------------
 // 능력치 탭
 // ------------------------------------------------------------------
 
@@ -331,11 +381,57 @@ export function computeStatRows(stats, options = {}) {
       value,
       ratio,
       y: area.y + index * rowGap,
+      /** 아이콘 중심 x */
+      iconX: area.x + 12,
+      /** 라벨 좌측 정렬 x */
+      labelX: area.x + 36,
+      /** 값 우측 정렬 x — 고정폭 숫자 열이 바 앞에서 딱 끊긴다 */
+      valueRight: barX - 12,
       barX,
       barW,
       fillW: barW * ratio
     };
   });
+}
+
+/**
+ * 스킬 카드 내부 칸을 배치한다. 아이콘 · 텍스트 · 강화 버튼이 세 열로 나뉜다.
+ *
+ * @param {Object} card - computeCardStack() 항목
+ * @param {Object} [options]
+ * @param {number} [options.iconWidth] - 좌측 아이콘 열 너비. 기본 92
+ * @param {number} [options.buttonWidth] - 우측 버튼 열 너비. 기본 128
+ * @param {number} [options.padX] - 카드 내부 좌우 여백. 기본 12
+ * @returns {{icon:Object,text:Object,button:Object}}
+ *          text.w 는 두 열을 뺀 나머지다 (설명 wordWrap 폭)
+ */
+export function computeSkillCardParts(card, options = {}) {
+  const iconW = options.iconWidth ?? 92;
+  const buttonW = options.buttonWidth ?? 128;
+  const padX = options.padX ?? 12;
+
+  if (!card || !card.w) {
+    const zero = { x: 0, y: 0, w: 0, h: 0, centerX: 0, centerY: 0 };
+    return { icon: zero, text: zero, button: zero };
+  }
+
+  const textX = card.x + iconW;
+  const textW = Math.max(0, card.w - iconW - buttonW - padX);
+
+  return {
+    icon: {
+      x: card.x, y: card.y, w: iconW, h: card.h,
+      centerX: card.x + iconW / 2, centerY: card.centerY
+    },
+    text: {
+      x: textX, y: card.y, w: textW, h: card.h,
+      centerX: textX + textW / 2, centerY: card.centerY
+    },
+    button: {
+      x: card.x + card.w - buttonW - padX, y: card.y, w: buttonW, h: card.h,
+      centerX: card.x + card.w - buttonW / 2 - padX, centerY: card.centerY
+    }
+  };
 }
 
 /**

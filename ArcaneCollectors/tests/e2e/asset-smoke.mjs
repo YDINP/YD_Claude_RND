@@ -183,9 +183,9 @@ async function run() {
     );
 
     // fullbody 34장은 Phase0 에서 일괄 로드하지 않는다.
-    // 다만 T-10 이후 MainMenuScene 이 유휴전투 관측창 장식으로 **파티 1번 영웅 1장만**
-    // 지연 로드한다(REDESIGN_PLAN §3-1). 그래서 "0장"이 아니라 "PreloadScene 이 굽지
-    // 않았고 1장을 넘지 않는다"를 검사한다.
+    // 다만 방치 전투 무대(IdleBattleView)가 **편성된 파티 인원수만큼(최대 4장)** 을
+    // 스탠딩 스프라이트로 지연 로드한다. 그래서 "0장"이 아니라 "PreloadScene 이 굽지
+    // 않았고 파티 정원을 넘지 않는다"를 검사한다.
     const fbKeys = Object.keys(manifest.fullbody || {});
     const fbLoaded = await page.evaluate((keys) => {
       const tm = window.game.textures;
@@ -193,8 +193,8 @@ async function run() {
     }, fbKeys);
     const fbFromPreload = fbLoaded.filter((k) => (textureReport.assetLoadedKeys || []).includes(k));
     assert(
-      fbFromPreload.length === 0 && fbLoaded.length <= 1,
-      'fullbody 웹은 Phase0에서 일괄 로드하지 않음 (메인 메뉴 장식 1장만 지연 로드 허용)',
+      fbFromPreload.length === 0 && fbLoaded.length <= 4,
+      'fullbody 웹은 Phase0에서 일괄 로드하지 않음 (방치 전투 파티 최대 4장만 지연 로드 허용)',
       `preload=${fbFromPreload.join(', ') || '없음'} / 지연로드=${fbLoaded.join(', ') || '없음'}`
     );
 

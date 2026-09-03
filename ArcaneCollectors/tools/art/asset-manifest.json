@@ -1,7 +1,7 @@
 {
   "$schema": "internal://arcanecollectors/asset-manifest/v1",
   "generatedBy": "tools/art/postprocess-assets.py",
-  "generatedAt": "2026-09-02T10:56:27Z",
+  "generatedAt": "2026-09-03T12:39:24Z",
   "textures": {
     "bg_main": {
       "path": "assets/backgrounds/scenes/bg_main.webp",
@@ -670,6 +670,712 @@
       "width": 683,
       "height": 1024
     }
+  },
+  "enemies": {
+    "enemy_banshee": {
+      "path": "assets/characters/enemies/enemy_banshee.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_berserker": {
+      "path": "assets/characters/enemies/enemy_berserker.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_bifrost_guardian": {
+      "path": "assets/characters/enemies/enemy_bifrost_guardian.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_brownie": {
+      "path": "assets/characters/enemies/enemy_brownie.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_centaur": {
+      "path": "assets/characters/enemies/enemy_centaur.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_cursed_general": {
+      "path": "assets/characters/enemies/enemy_cursed_general.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_cursed_warrior": {
+      "path": "assets/characters/enemies/enemy_cursed_warrior.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_cyclops_minor": {
+      "path": "assets/characters/enemies/enemy_cyclops_minor.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_dark_lord": {
+      "path": "assets/characters/enemies/enemy_dark_lord.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_death_dragon": {
+      "path": "assets/characters/enemies/enemy_death_dragon.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_death_knight": {
+      "path": "assets/characters/enemies/enemy_death_knight.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_dimension_beast": {
+      "path": "assets/characters/enemies/enemy_dimension_beast.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_dimension_horror": {
+      "path": "assets/characters/enemies/enemy_dimension_horror.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_draugr": {
+      "path": "assets/characters/enemies/enemy_draugr.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_dullahan": {
+      "path": "assets/characters/enemies/enemy_dullahan.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_einherjar_warrior": {
+      "path": "assets/characters/enemies/enemy_einherjar_warrior.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_elemental": {
+      "path": "assets/characters/enemies/enemy_elemental.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_fenrir_pup": {
+      "path": "assets/characters/enemies/enemy_fenrir_pup.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_fire_giant": {
+      "path": "assets/characters/enemies/enemy_fire_giant.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_fomorian": {
+      "path": "assets/characters/enemies/enemy_fomorian.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_frost_dwarf": {
+      "path": "assets/characters/enemies/enemy_frost_dwarf.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_frost_giant_minor": {
+      "path": "assets/characters/enemies/enemy_frost_giant_minor.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_garden_guardian": {
+      "path": "assets/characters/enemies/enemy_garden_guardian.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_goblin": {
+      "path": "assets/characters/enemies/enemy_goblin.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_goblin_archer": {
+      "path": "assets/characters/enemies/enemy_goblin_archer.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_goblin_king": {
+      "path": "assets/characters/enemies/enemy_goblin_king.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_goblin_shaman": {
+      "path": "assets/characters/enemies/enemy_goblin_shaman.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_goblin_warrior": {
+      "path": "assets/characters/enemies/enemy_goblin_warrior.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_golem": {
+      "path": "assets/characters/enemies/enemy_golem.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_green_knight": {
+      "path": "assets/characters/enemies/enemy_green_knight.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_gui": {
+      "path": "assets/characters/enemies/enemy_gui.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_harpy": {
+      "path": "assets/characters/enemies/enemy_harpy.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_hel_servant": {
+      "path": "assets/characters/enemies/enemy_hel_servant.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_ice_wolf": {
+      "path": "assets/characters/enemies/enemy_ice_wolf.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_izanami": {
+      "path": "assets/characters/enemies/enemy_izanami.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_jiangshi": {
+      "path": "assets/characters/enemies/enemy_jiangshi.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_jormungandr": {
+      "path": "assets/characters/enemies/enemy_jormungandr.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_jotun": {
+      "path": "assets/characters/enemies/enemy_jotun.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_kappa": {
+      "path": "assets/characters/enemies/enemy_kappa.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_kitsune": {
+      "path": "assets/characters/enemies/enemy_kitsune.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_lich": {
+      "path": "assets/characters/enemies/enemy_lich.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_medusa": {
+      "path": "assets/characters/enemies/enemy_medusa.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_mimic": {
+      "path": "assets/characters/enemies/enemy_mimic.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_minotaur": {
+      "path": "assets/characters/enemies/enemy_minotaur.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_mushroom": {
+      "path": "assets/characters/enemies/enemy_mushroom.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_nidhogg": {
+      "path": "assets/characters/enemies/enemy_nidhogg.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_odin_allfather": {
+      "path": "assets/characters/enemies/enemy_odin_allfather.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_olympus_herald": {
+      "path": "assets/characters/enemies/enemy_olympus_herald.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_oni_minor": {
+      "path": "assets/characters/enemies/enemy_oni_minor.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_oni_warlord": {
+      "path": "assets/characters/enemies/enemy_oni_warlord.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_palace_guard": {
+      "path": "assets/characters/enemies/enemy_palace_guard.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_priestess": {
+      "path": "assets/characters/enemies/enemy_priestess.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_rift_guardian": {
+      "path": "assets/characters/enemies/enemy_rift_guardian.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_river_guardian": {
+      "path": "assets/characters/enemies/enemy_river_guardian.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_shade": {
+      "path": "assets/characters/enemies/enemy_shade.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_sidhe": {
+      "path": "assets/characters/enemies/enemy_sidhe.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_slime": {
+      "path": "assets/characters/enemies/enemy_slime.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_slime_large": {
+      "path": "assets/characters/enemies/enemy_slime_large.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_soul_eater": {
+      "path": "assets/characters/enemies/enemy_soul_eater.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_spriggan": {
+      "path": "assets/characters/enemies/enemy_spriggan.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_surtr": {
+      "path": "assets/characters/enemies/enemy_surtr.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_taotie": {
+      "path": "assets/characters/enemies/enemy_taotie.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_tengu": {
+      "path": "assets/characters/enemies/enemy_tengu.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_tengu_warrior": {
+      "path": "assets/characters/enemies/enemy_tengu_warrior.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_terra_cotta": {
+      "path": "assets/characters/enemies/enemy_terra_cotta.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_titan_minor": {
+      "path": "assets/characters/enemies/enemy_titan_minor.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_tower_guardian_10": {
+      "path": "assets/characters/enemies/enemy_tower_guardian_10.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_tower_guardian_100": {
+      "path": "assets/characters/enemies/enemy_tower_guardian_100.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_tower_guardian_20": {
+      "path": "assets/characters/enemies/enemy_tower_guardian_20.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_tower_guardian_30": {
+      "path": "assets/characters/enemies/enemy_tower_guardian_30.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_tower_guardian_40": {
+      "path": "assets/characters/enemies/enemy_tower_guardian_40.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_tower_guardian_50": {
+      "path": "assets/characters/enemies/enemy_tower_guardian_50.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_tower_guardian_60": {
+      "path": "assets/characters/enemies/enemy_tower_guardian_60.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_tower_guardian_70": {
+      "path": "assets/characters/enemies/enemy_tower_guardian_70.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_tower_guardian_80": {
+      "path": "assets/characters/enemies/enemy_tower_guardian_80.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_tower_guardian_90": {
+      "path": "assets/characters/enemies/enemy_tower_guardian_90.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_treant": {
+      "path": "assets/characters/enemies/enemy_treant.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_valkyrie_fallen": {
+      "path": "assets/characters/enemies/enemy_valkyrie_fallen.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_wolf": {
+      "path": "assets/characters/enemies/enemy_wolf.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_wolf_alpha": {
+      "path": "assets/characters/enemies/enemy_wolf_alpha.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_wraith": {
+      "path": "assets/characters/enemies/enemy_wraith.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_yaoguai": {
+      "path": "assets/characters/enemies/enemy_yaoguai.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_yomi_soldier": {
+      "path": "assets/characters/enemies/enemy_yomi_soldier.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "enemy_zeus": {
+      "path": "assets/characters/enemies/enemy_zeus.webp",
+      "width": 512,
+      "height": 512,
+      "category": "enemy",
+      "priority": "P3",
+      "nineSlice": null
+    }
+  },
+  "chibi": {
+    "chibi_base_iris": {
+      "key": "chibi_base_iris",
+      "path": "assets/characters/chibi/base_iris_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "base_iris"
+    }
+  },
+  "memoryBudget": {
+    "cycles": 5,
+    "heapGrowthMaxPercent": 15,
+    "textureCountGrowthMax": 10,
+    "route": [
+      "MainMenuScene",
+      "HeroListScene",
+      "HeroDetailScene",
+      "GachaScene",
+      "StageSelectScene",
+      "BattleScene",
+      "BattleResultScene",
+      "MainMenuScene"
+    ]
   },
   "missing": [
     "enemy_cerberus",

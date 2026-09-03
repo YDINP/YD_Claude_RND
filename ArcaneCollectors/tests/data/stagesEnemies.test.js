@@ -15,8 +15,16 @@ const enemiesData = JSON.parse(
   readFileSync(new URL('../../src/data/enemies.json', import.meta.url), 'utf-8')
 );
 
+const skillsData = JSON.parse(
+  readFileSync(new URL('../../src/data/skills.json', import.meta.url), 'utf-8')
+);
+
 const enemies = enemiesData.enemies;
 const enemyById = new Map(enemies.map((e) => [e.id, e]));
+const skillById = new Map(skillsData.skills.map((s) => [s.id, s]));
+
+/** `skill_talon_strike` 처럼 표시명이 아니라 식별자로 보이는 문자열 */
+const looksLikeId = (value) => typeof value === 'string' && /^[a-z0-9]+(?:_[a-z0-9]+)+$/.test(value.trim());
 
 // 챕터별 스테이지가 참조하는 적 id 전부(중복 제거) + 챕터의 보스 id(stage.enemies[].isBoss === true)
 function collectChapterRefs() {
@@ -66,6 +74,36 @@ describe('stages.json ↔ enemies.json 무결성 (real files)', () => {
       })
       .map((e) => e.id);
     expect(invalid).toEqual([]);
+  });
+
+  it('모든 적 스킬 id가 skills.json에 정의되어 있다', () => {
+    // 정의가 없으면 전투 로그에 id가 그대로 노출된다 (BattleSceneAdapter.resolveSkillName)
+    const unresolved = [];
+    for (const enemy of enemies) {
+      for (const skillId of enemy.skills || []) {
+        if (!skillById.has(skillId)) unresolved.push(`${enemy.id}:${skillId}`);
+      }
+    }
+    expect(unresolved).toEqual([]);
+  });
+
+  it('모든 적 스킬에 사람이 읽는 name이 있다 (키값 노출 금지)', () => {
+    const badNames = [];
+    for (const enemy of enemies) {
+      for (const skillId of enemy.skills || []) {
+        const skill = skillById.get(skillId);
+        if (!skill) continue;
+        if (typeof skill.name !== 'string' || skill.name.trim() === '' || looksLikeId(skill.name)) {
+          badNames.push(`${enemy.id}:${skillId} -> ${skill.name}`);
+        }
+      }
+    }
+    expect(badNames).toEqual([]);
+  });
+
+  it('모든 적이 스킬을 1개 이상 갖는다', () => {
+    const skillless = enemies.filter((e) => !Array.isArray(e.skills) || e.skills.length === 0);
+    expect(skillless.map((e) => e.id)).toEqual([]);
   });
 
   it('챕터별 보스(stage.enemies[].isBoss === true)의 HP가 같은 챕터 잡몹 평균 HP보다 크다', () => {

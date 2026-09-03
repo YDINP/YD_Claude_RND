@@ -27,6 +27,9 @@ const TRIGGERS = [
 ];
 const SPEAKER_TYPES = ['narrator', 'hero', 'enemy', 'npc', 'player', 'unknown'];
 const EMOTIONS = ['neutral', 'calm', 'tense', 'angry', 'sad', 'joy', 'awe', 'resolute'];
+const SPEAKER_SIDES = ['left', 'right'];
+/** 화자 슬롯(좌/우)을 차지하지 않는 화자 유형 */
+const NON_ACTOR_TYPES = ['narrator', 'player'];
 
 /** 26장면(스토리) 집합: 영웅 전용 트리거를 제외하고, 아이리스 첫 만남 씬만 추가로 포함 */
 const STORY_SCENE_TRIGGERS = [
@@ -164,6 +167,48 @@ describe('story.json 스키마 (real file)', () => {
     expect(problems).toEqual([]);
   });
 
+  it('speakerSide는 있으면 left/right이고, 내레이터·수집가 줄에는 없다', () => {
+    const problems = [];
+    for (const scene of scenes) {
+      scene.lines.forEach((line, i) => {
+        if (!('speakerSide' in line)) return;
+        const at = `${scene.id}[${i}]`;
+        if (!SPEAKER_SIDES.includes(line.speakerSide)) problems.push(`${at}:${line.speakerSide}`);
+        // 슬롯을 차지하지 않는 화자에게 side를 주면 무대 배치가 어긋난다
+        if (NON_ACTOR_TYPES.includes(line.speakerType)) problems.push(`${at}:${line.speakerType}`);
+      });
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it('expression은 있으면 비어 있지 않은 문자열이다 (자산 없으면 무시되는 선택 필드)', () => {
+    const problems = [];
+    for (const scene of scenes) {
+      scene.lines.forEach((line, i) => {
+        if (!('expression' in line)) return;
+        if (typeof line.expression !== 'string' || line.expression.length === 0) {
+          problems.push(`${scene.id}[${i}]:${line.expression}`);
+        }
+      });
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it('같은 화자는 한 씬 안에서 같은 쪽에 선다', () => {
+    const problems = [];
+    for (const scene of scenes) {
+      const assigned = new Map();
+      scene.lines.forEach((line, i) => {
+        if (!line.speakerSide) return;
+        const identity = line.portraitId || `${line.speakerType}:${line.speaker}`;
+        const prev = assigned.get(identity);
+        if (prev && prev !== line.speakerSide) problems.push(`${scene.id}[${i}]:${identity}`);
+        assigned.set(identity, line.speakerSide);
+      });
+    }
+    expect(problems).toEqual([]);
+  });
+
   it('portraitId는 null이거나 portrait-mapping.json에 존재한다', () => {
     const unknown = [];
     for (const scene of scenes) {
@@ -246,6 +291,36 @@ describe('story.json 물량 (내러티브 산출 요약)', () => {
       expect(scenes.some((s) => s.trigger === 'boss_before' && s.stageId === `${i}-5`)).toBe(true);
       expect(scenes.some((s) => s.trigger === 'boss_after' && s.stageId === `${i}-5`)).toBe(true);
     }
+  });
+
+  it('챕터 1 13씬은 화자 줄마다 speakerSide가 명시되어 있다', () => {
+    const CH1_IDS = [
+      'cs_ch1_enter', 'cs_1_1_enter', 'cs_1_1_clear', 'cs_1_2_enter', 'cs_1_2_clear',
+      'cs_first_hero_iris', 'cs_1_3_enter', 'cs_1_3_clear', 'cs_evolve_gate_first',
+      'cs_1_4_enter', 'cs_1_4_clear', 'cs_1_5_boss_before', 'cs_1_5_boss_after'
+    ];
+    const missing = [];
+    for (const id of CH1_IDS) {
+      const scene = scenes.find((s) => s.id === id);
+      expect(scene, id).toBeTruthy();
+      scene.lines.forEach((line, i) => {
+        if (NON_ACTOR_TYPES.includes(line.speakerType)) return;
+        if (!SPEAKER_SIDES.includes(line.speakerSide)) missing.push(`${id}[${i}]`);
+      });
+    }
+    expect(missing).toEqual([]);
+  });
+
+  it('영웅은 오른쪽, 조력자·적·미공개 화자는 왼쪽에 선다 (챕터 1 규약)', () => {
+    const wrong = [];
+    for (const scene of scenes) {
+      scene.lines.forEach((line, i) => {
+        if (!line.speakerSide) return;
+        const expected = line.speakerType === 'hero' ? 'right' : 'left';
+        if (line.speakerSide !== expected) wrong.push(`${scene.id}[${i}]:${line.speakerType}=${line.speakerSide}`);
+      });
+    }
+    expect(wrong).toEqual([]);
   });
 
   it('전직 씬 24종이 서로 다른 (heroId, cultId) 조합을 덮는다', () => {

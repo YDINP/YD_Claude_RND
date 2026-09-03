@@ -19,10 +19,12 @@
  *   depth 3010 전면 레이어다. 팝업만 닫고 남기면 전체 화면 입력을 삼킨다.
  *   destroy() 가 반드시 정리한다.
  *
- * ## 알려진 제약 (이 트랙에서 고치지 않음)
- * 팝업의 '장비 소환' 탭은 표시만 전환하고 실제 뽑기는 영웅 풀로 나간다. 배너 스트립도
- * 마찬가지로 표시 전용이다 — `GachaSystem.pull()` 이 배너·장비 인자를 받지 않기 때문이다.
- * 시스템 SSOT 를 건드리는 수정이라 UI 트랙 범위 밖이다.
+ * ## 배너·장비 라우팅 (해소됨)
+ * '장비 소환' 탭은 `GachaSystem.pullEquipment()`(equipment.json 카탈로그 SSOT)로,
+ * '영웅 소환' 탭은 `GachaSystem.pull(count, paymentType, { bannerId })`로 각각 라우팅된다.
+ * 배너 스트립에서 고른 `bannerPanel.selectedId`가 그대로 pull에 전달되어 픽업 배너의
+ * `determinePickupCharacter()` 판정을 태운다. 결과 연출(GachaResultOverlay)은 캐릭터/장비를
+ * 구분해 카드를 그린다 — 장비는 실제 아트가 없어 아이콘(이모지) 폴백을 쓴다.
  */
 import { PopupBase } from '../PopupBase.js';
 import { COLORS, GAME_WIDTH, RARITY, SCALE_FACTOR, s, sf } from '../../config/gameConfig.js';
@@ -38,6 +40,7 @@ import { collectLiveRateRows } from '../../utils/gachaRateDisclosure.js';
 import { TutorialTargetRegistry } from '../../systems/TutorialTargetRegistry.js';
 import { GlassPanel, GLASS_VARIANT } from '../GlassPanel.js';
 import { NineSliceFrame } from '../NineSliceFrame.js';
+import { UIButton } from '../UIButton.js';
 import { GachaBannerPanel } from '../GachaBannerPanel.js';
 import { GachaResultOverlay } from '../GachaResultOverlay.js';
 import { computeGachaLayout, computeButtonRow } from '../../utils/gachaBannerLayout.js';
@@ -506,24 +509,20 @@ export class GachaPopup extends PopupBase {
     const w = s(slot.w);
     const h = s(band.h);
 
-    const frame = NineSliceFrame.create(this.scene, { x: cx, y: cy, w, h, key: variant, tint });
-    const main = this.scene.add.text(cx, cy - s(12), label, ts('subtitle', {
-      color: DESIGN.colors.text.primary
-    })).setOrigin(0.5);
-    // 밝은 btn_primary 위에서 text.secondary 는 뭉개진다. 보조 라벨도 본문색을 쓰고 알파로만 낮춘다
-    const subText = this.scene.add.text(cx, cy + s(14), sub, ts('caption', {
-      color: DESIGN.colors.text.primary
-    })).setOrigin(0.5).setAlpha(0.85);
+    // 밝은 btn_primary 판 위라 라벨 캡슐 없이는 두 줄 다 묻힌다. UIButton 이 캡슐을 건다
+    const button = UIButton.createParts(this.scene, {
+      x: cx, y: cy, w, h,
+      label,
+      sub,
+      variant,
+      tint,
+      token: 'subtitle',
+      subToken: 'caption',
+      onClick
+    });
 
-    const hit = this.scene.add.rectangle(
-      cx, cy, Math.max(w, s(DESIGN.touch.minTarget)), Math.max(h, s(DESIGN.touch.minTarget)), 0xffffff, 0
-    ).setInteractive({ useHandCursor: true });
-    hit.on('pointerover', () => frame.setAlpha?.(0.85));
-    hit.on('pointerout', () => frame.setAlpha?.(1));
-    hit.on('pointerdown', onClick);
-
-    this.contentContainer.add([frame, main, subText, hit]);
-    return subText;
+    this.contentContainer.add(button.objects);
+    return button.sub;
   }
 
   /**
@@ -543,6 +542,7 @@ export class GachaPopup extends PopupBase {
   openRateDisclosure() {
     if (this._ratePanel) return;
     this._ratePanel = new RateDisclosurePanel(this.scene, {
+      bannerId: this.bannerPanel ? this.bannerPanel.selectedId : null,
       onClose: () => { this._ratePanel = null; }
     });
     this._ratePanel.show();
@@ -558,6 +558,13 @@ export class GachaPopup extends PopupBase {
   performSummon(count, useTickets) {
     if (this.isAnimating) return;
 
+    // 장비 탭은 별개 SSOT(GachaSystem.pullEquipment)로 라우팅한다 —
+    // 과거엔 탭과 무관하게 항상 영웅 풀로 나갔다(파일 상단 "알려진 제약" 참고, 이번에 해소됨).
+    if (this.currentTab === 'equipment') {
+      this.performEquipmentSummon(count, useTickets);
+      return;
+    }
+
     const paymentType = useTickets ? 'tickets' : 'gems';
 
     if (!GachaSystem.canPull(count, paymentType)) {
@@ -567,8 +574,35 @@ export class GachaPopup extends PopupBase {
     }
 
     this.isAnimating = true;
-    const result = GachaSystem.pull(count, paymentType);
+    const bannerId = this.bannerPanel ? this.bannerPanel.selectedId : null;
+    const result = GachaSystem.pull(count, paymentType, { bannerId });
     this._handlePullResult(result, () => this.performSummon(count, useTickets));
+  }
+
+  /** 장비 소환 — GachaSystem.pullEquipment() SSOT. 천장 UI 갱신은 필요 없다(장비엔 천장 없음) */
+  performEquipmentSummon(count, useTickets) {
+    this.isAnimating = true;
+    const paymentType = useTickets ? 'tickets' : 'gems';
+    const result = GachaSystem.pullEquipment(count, paymentType);
+
+    if (!result.success) {
+      this.showToast(result.error, COLORS.danger);
+      this.isAnimating = false;
+      return;
+    }
+
+    this.refreshResourceUI();
+    const results = result.results.map((r) => ({
+      id: r.equipmentId,
+      type: 'equipment',
+      name: r.name,
+      rarity: r.rarity,
+      slotType: r.slotType,
+      slotIcon: r.slotIcon,
+      stats: r.stats,
+      isNew: true
+    }));
+    this.showSummonAnimation(results, () => this.performEquipmentSummon(count, useTickets));
   }
 
   /**
@@ -585,8 +619,11 @@ export class GachaPopup extends PopupBase {
       return;
     }
 
+    // 온보딩엔 배너 선택 UI가 없다(showStrip:false) — 유저가 배너를 고른 적이 없으므로
+    // 표준 배너(픽업 없음)로 고정한다. bannerPanel.selectedId를 그대로 넘기면 온보딩
+    // 배너 패널이 기본 선택한 활성 픽업 배너로 라우팅돼 T-05 무료 10연 결과가 달라진다.
     this.isAnimating = true;
-    const result = GachaSystem.pull(10, 'gems', { skipEnergyCheck: true });
+    const result = GachaSystem.pull(10, 'gems', { skipEnergyCheck: true, bannerId: 'standard' });
     this._handlePullResult(result, null);
   }
 
@@ -685,6 +722,9 @@ export class GachaPopup extends PopupBase {
     this.isAnimating = false;
     if (!overlay || overlay.destroyed) return;
     overlay.onClose = null;   // 파괴된 팝업의 콜백을 다시 부르지 않는다
+    // 소유권을 놓는 순간부터 씬만이 이 오버레이를 회수할 수 있다.
+    // 고리가 끊겨 있으면(이미 한 번 소비된 경우 등) 여기서 다시 건다 (QA P1-3).
+    overlay.ensureSceneCleanup?.();
   }
 
   destroy() {

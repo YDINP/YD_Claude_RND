@@ -43,6 +43,27 @@
  *
  * 실행: node tools/simulate/combat-turns.mjs [--trials 60]
  * 종료 코드: 중앙값 턴수가 [3,8] 밖인 스테이지가 1개라도 있으면 1
+ *
+ * ── 온보딩 실파티 모드 (--onboarding, BALANCE_DESIGN_v1.md §9-9) ──────────────
+ * 위 4인 마일스톤 파티는 "그 시점 진짜 신규 유저가 들고 있는 파티"가 아니다.
+ * docs/story/SYSTEM_ONBOARDING_ECONOMY.md §1-1/§1-5 실측: 1-1~1-3은 base_iris
+ * **1인**(레벨은 스테이지 클리어마다 +1), 1-4~1-5는 T-05 무료 10연으로 획득한
+ * base_omar 각성 후 **2인**(아이리스+오마르, 10연으로 늘어날 수 있는 R/SR 1~2명은
+ * 보수적으로 제외 — 실제로 몇 명이 파티에 편성될지는 유저 선택이라 확정할 수 없다)이다.
+ * `--onboarding` 플래그는 1-1~1-5만 이 실파티로 재시뮬레이션한다(4인 모드는 그대로 유지).
+ *
+ * 아군 스탯은 `src/systems/ProgressionSystem.js`(calculatePower와 동일 SSOT)를
+ * SSR로 그대로 불러 계산한다 — 하드코딩 근사가 아니라 실제 게임 공식이다.
+ * 아군 스킬킷도 실전과 동일하게 맞춘다: `src/data/base-heroes.json`에는 `skills` 필드가
+ * 전혀 없어(grep 확인) `HeroFactory.normalize()` → `toBattleUnit()` 체인을 타면 항상
+ * `DEFAULT_BASIC_SKILL`(기본 공격만) 폴백으로 떨어진다 — **기본영웅은 실전에서
+ * 스킬1을 쓰지 못한다**(BattleScene.js:403-422, BattleSceneAdapter.js:139-141로 확인한
+ * 현재 동작. 별도 버그 소지가 있으나 이 스크립트의 수정 범위 밖이라 코드는 건드리지
+ * 않고, 시뮬레이션이 실제 동작을 그대로 반영하도록 스킬킷을 기본 공격 1개로 맞춘다).
+ *
+ * 실행: node tools/simulate/combat-turns.mjs --onboarding [--trials 300]
+ * 종료 코드: 1-1~1-3 승률<95% 또는 중앙값 턴수 [3,6] 밖, 1-4~1-5 승률<90%인
+ *            스테이지가 1개라도 있으면 1
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -54,7 +75,8 @@ const ROOT = path.resolve(__dirname, '..', '..');
 
 const args = process.argv.slice(2);
 const trialsIdx = args.indexOf('--trials');
-const TRIALS = trialsIdx >= 0 ? Number(args[trialsIdx + 1]) : 60;
+const ONBOARDING_MODE = args.includes('--onboarding');
+const TRIALS = trialsIdx >= 0 ? Number(args[trialsIdx + 1]) : (ONBOARDING_MODE ? 300 : 60);
 
 const stagesData = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/data/stages.json'), 'utf-8'));
 const enemiesData = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/data/enemies.json'), 'utf-8')).enemies;
@@ -76,8 +98,11 @@ const {
   createSceneBattleSystem,
   decideSceneAction,
   expandActionTargets,
-  applyGaugeAfterAction
+  applyGaugeAfterAction,
+  resolveSkillName,
+  DEFAULT_BASIC_SKILL
 } = await viteServer.ssrLoadModule('/src/systems/BattleSceneAdapter.js');
+const { ProgressionSystem } = await viteServer.ssrLoadModule('/src/systems/ProgressionSystem.js');
 
 /** BattleSystem은 진행 상황을 console.log로 쏟아 낸다. 시뮬레이션 동안만 막는다 */
 const realLog = console.log;
@@ -223,7 +248,9 @@ function makeEnemies(stage) {
       skills: [
         { id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 30 },
         ...(enemyData.skills || []).map(sId => ({
-          id: sId, name: sId, multiplier: 1.3, gaugeCost: 40, target: 'single', gaugeGain: 0
+          id: sId,
+          name: resolveSkillName(null, sId),
+          multiplier: 1.3, gaugeCost: 40, target: 'single', gaugeGain: 0
         }))
       ],
       isBoss: def.isBoss || enemyData.type === 'boss',
@@ -278,7 +305,142 @@ function median(arr) {
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
-// ---------- 메인 ----------
+// ============================================================
+// 온보딩 실파티 모드 (--onboarding)
+// ============================================================
+
+const baseHeroById = new Map(baseHeroes.map(h => [h.id, h]));
+
+/**
+ * 스테이지별 실제 온보딩 파티 구성.
+ *
+ * docs/story/SYSTEM_ONBOARDING_ECONOMY.md §1-5는 "1-1 Lv1 / 1-2 Lv2 / 1-3 Lv3"로
+ * 스테이지 클리어마다 +1레벨을 가정하지만, 이는 문서 작성 시점의 근사치다.
+ * 실제 레벨업은 `ProgressionSystem.addExp`(레벨업 루프)가 `BattleScene.js:2654-2676`에서
+ * 스테이지 클리어 시 `stage.rewards.exp`를 `Math.floor(exp / 파티인원)`로 나눠 지급하고,
+ * 필요 경험치는 `getExpForLevel(level) = level² × 100`이다(라이브 코드 SSOT — 문서보다
+ * 코드를 신뢰). stages.json의 1-1~1-4 rewards.exp(50/60/75/150)로 직접 계산하면:
+ *   1-1 클리어: 아이리스(1인) 0+50=50exp < 100(Lv1 필요치) → 레벨업 없음
+ *   1-2 클리어: 50+60=110 ≥ 100 → **Lv2**(잔여10exp)
+ *   1-3 클리어: 10+75=85 < 400(Lv2 필요치) → 레벨업 없음, **Lv2 유지**
+ *   1-4 클리어: 아이리스 160(85+75)<400 유지, 오마르(1-3 직후 합류, Lv1) 0+75=75<100 유지
+ * 즉 실제로는 **1-1/1-2 둘 다 아이리스 Lv1**이고 **1-3에서 처음 Lv2**가 되며,
+ * **1-4~1-5는 아이리스 Lv2 + 오마르 Lv1**로 동일하다(1-4 클리어 경험치로는 어느 쪽도
+ * 다음 레벨에 못 미친다). 문서의 "Lv3/Lv4~6" 가정보다 실제 파티가 상당히 약하다 —
+ * 이번 라운드 사용자 피드백("1-3인데 지는 게 이해가 안 간다")의 근본 원인이 바로
+ * 이 레벨 과대추정이었다.
+ */
+const ONBOARDING_PARTY_SPEC = {
+  '1-1': [{ heroId: 'base_iris', level: 1 }],
+  '1-2': [{ heroId: 'base_iris', level: 1 }],
+  '1-3': [{ heroId: 'base_iris', level: 2 }],
+  '1-4': [{ heroId: 'base_iris', level: 2 }, { heroId: 'base_omar', level: 1 }],
+  '1-5': [{ heroId: 'base_iris', level: 2 }, { heroId: 'base_omar', level: 1 }]
+};
+
+/** ProgressionSystem(실제 게임 SSOT)으로 기본영웅 레벨별 실스탯 계산 → BattleUnit 생성 */
+function makeOnboardingAllies(specs) {
+  return specs.map((spec, i) => {
+    const heroData = baseHeroById.get(spec.heroId);
+    if (!heroData) throw new Error(`base-heroes.json에 ${spec.heroId}가 없습니다`);
+    // T-C2 스타터/T-05 온보딩 봉투 지급 캐릭터는 stars=getRarityStars('R')=3으로 생성된다
+    // (SaveManager._createStarterHeroRecord, SaveManager.getBaseStars 폴백 경로 확인).
+    const progressionChar = { id: spec.heroId, characterId: spec.heroId, level: spec.level, stars: 3, skillLevels: [1, 1, 1] };
+    const stats = ProgressionSystem.getFinalStats(progressionChar);
+    return toBattleUnit({
+      id: `onb_${spec.heroId}`,
+      name: heroData.name || spec.heroId,
+      isAlly: true,
+      position: i,
+      level: spec.level,
+      mood: heroData.baseMood || 'brave',
+      stats,
+      // 기본영웅은 base-heroes.json에 skills 필드가 없어 실전에서 기본 공격만 쓴다
+      // (BattleSceneAdapter.toBattleUnit의 DEFAULT_BASIC_SKILL 폴백과 동일 — 위 헤더 설명 참조)
+      skills: [{ ...DEFAULT_BASIC_SKILL }],
+      source: { id: spec.heroId }
+    });
+  });
+}
+
+async function runOnboardingMode() {
+  const stageById = new Map();
+  for (const chapter of stagesData.chapters) {
+    for (const stage of chapter.stages) stageById.set(stage.id, stage);
+  }
+
+  const targets = [
+    { id: '1-1', minWinRate: 0.95, turnBand: [3, 6] },
+    { id: '1-2', minWinRate: 0.95, turnBand: [3, 6] },
+    { id: '1-3', minWinRate: 0.95, turnBand: [3, 6] },
+    { id: '1-4', minWinRate: 0.90, turnBand: null },
+    { id: '1-5', minWinRate: 0.90, turnBand: null }
+  ];
+
+  console.log(`[온보딩 실파티 모드] 시행 횟수: 스테이지당 ${TRIALS}회`);
+  console.log('구성: 1-1~1-3 아이리스 1인(레벨은 스테이지별 실측) / 1-4~1-5 아이리스+오마르 2인');
+  console.log('아군 스킬: 기본 공격만(실전과 동일 — 기본영웅은 스킬1 없음)\n');
+
+  const results = [];
+  silence();
+  for (const t of targets) {
+    const stage = stageById.get(t.id);
+    if (!stage) throw new Error(`stages.json에 ${t.id}가 없습니다`);
+    const specs = ONBOARDING_PARTY_SPEC[t.id];
+
+    const turnsList = [];
+    let victories = 0, defeats = 0, timeouts = 0;
+    for (let i = 0; i < TRIALS; i++) {
+      const allies = makeOnboardingAllies(specs);
+      const enemies = makeEnemies(stage);
+      const { outcome, turns } = simulateBattle(allies, enemies);
+      if (outcome === 'victory') { victories++; turnsList.push(turns); }
+      else if (outcome === 'defeat') defeats++;
+      else timeouts++;
+    }
+    const winRate = victories / TRIALS;
+    const med = median(turnsList);
+    results.push({ id: t.id, target: t, partySpecs: specs, winRate, medianTurns: med, victories, defeats, timeouts });
+  }
+  unsilence();
+  await viteServer.close();
+
+  console.log('스테이지  파티                        승률    중앙값턴  최소-최대  승/패/시간초과  판정');
+  const failures = [];
+  results.forEach(r => {
+    const partyLabel = r.partySpecs.map(s => `${s.heroId.replace('base_', '')}Lv${s.level}`).join('+');
+    const winOk = r.winRate >= r.target.minWinRate;
+    const turnOk = !r.target.turnBand || (r.medianTurns !== null && r.medianTurns >= r.target.turnBand[0] && r.medianTurns <= r.target.turnBand[1]);
+    const pass = winOk && turnOk;
+    if (!pass) failures.push({ ...r, winOk, turnOk });
+    console.log(
+      `${r.id.padEnd(8)} ${partyLabel.padEnd(26)} ${(r.winRate * 100).toFixed(1).padStart(5)}%  ` +
+      `${r.medianTurns === null ? ' N/A ' : String(r.medianTurns).padStart(5)}   ` +
+      `${r.victories}/${r.defeats}/${r.timeouts}          ${pass ? 'PASS' : 'FAIL'}`
+    );
+  });
+
+  console.log('\n' + '='.repeat(70));
+  if (failures.length === 0) {
+    console.log(`전체 통과 (combat-turns --onboarding) — 5/5 스테이지 목표 승률/턴수 충족`);
+    process.exit(0);
+  } else {
+    console.log(`목표 미달 ${failures.length}건:`);
+    failures.forEach(r => {
+      const reasons = [];
+      if (!r.winOk) reasons.push(`승률 ${(r.winRate * 100).toFixed(1)}% < 목표 ${(r.target.minWinRate * 100).toFixed(0)}%`);
+      if (!r.turnOk) reasons.push(`중앙값 ${r.medianTurns ?? 'N/A'}턴 (목표 ${r.target.turnBand[0]}~${r.target.turnBand[1]}턴 밖)`);
+      console.log(`  - ${r.id}: ${reasons.join(', ')}`);
+    });
+    process.exit(1);
+  }
+}
+
+if (ONBOARDING_MODE) {
+  await runOnboardingMode();
+}
+
+// ---------- 메인 (4인 마일스톤 파티, 25스테이지) ----------
 console.log(`대표 스탯 비율(STAT_SHARE, 34명 만렙 평균): hp=${STAT_SHARE.hp.toFixed(3)} atk=${STAT_SHARE.atk.toFixed(3)} def=${STAT_SHARE.def.toFixed(3)} spd=${STAT_SHARE.spd.toFixed(3)}`);
 console.log(`아군 대표 스킬킷: basic(gaugeGain=${ALLY_SKILLS.basic.gaugeGain}) / skill1(mult=${ALLY_SKILLS.skill1.multiplier}, gaugeCost=${ALLY_SKILLS.skill1.gaugeCost})`);
 console.log(`시행 횟수: 스테이지당 ${TRIALS}회\n`);

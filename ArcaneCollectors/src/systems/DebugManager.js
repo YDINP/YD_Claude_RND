@@ -4,7 +4,7 @@
  * G-1~G-10: 전체 시스템 치트 API + 치트코드 25종 + window.debug
  */
 import { SaveManager } from './SaveManager.js';
-import { getAllCharacters, getAllChapters, getChapterStages } from '../data/index.js';
+import { getAllCharacters, getAllChapters, getChapterStages, getAllBaseHeroes, getAllAscendedHeroes } from '../data/index.js';
 import { DebugFAB, isDebugUiAllowed } from '../components/debug/DebugFAB.js';
 import { DebugPanel } from '../components/debug/DebugPanel.js';
 import energySystem from './EnergySystem.js';
@@ -88,7 +88,9 @@ export class DebugManager {
 
   static unlockAllCharacters() {
     if (!this.isDebugMode) return false;
-    const allCharacters = getAllCharacters();
+    // characters.json은 폐지된 레거시 스타터 char_1~4만 담고 있고, SaveManager가
+    // 로드 시 이를 제거하므로 여기서 지급하면 곧바로 사라진다. 현역 영웅을 지급한다.
+    const allCharacters = [...getAllBaseHeroes(), ...getAllAscendedHeroes()];
     allCharacters.forEach(char => {
       SaveManager.addCharacter(char.id, 1);
     });

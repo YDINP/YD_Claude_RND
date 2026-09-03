@@ -1,17 +1,35 @@
 {
   "_meta": {
     "version": "1.0",
-    "lastUpdated": "2026-09-02",
+    "lastUpdated": "2026-09-03",
     "owner": "game-ux-designer",
     "coordinateBase": "720x1280",
-    "forcedStepIds": ["T-03", "T-05", "T-07", "T-09"],
+    "forcedStepIds": [
+      "T-03",
+      "T-05",
+      "T-07",
+      "T-09"
+    ],
     "forcedStepLimit": 4,
-    "note": "cutsceneIds의 SSOT는 src/data/story.json 이다. 본 파일은 참조만 한다."
+    "note": "cutsceneIds의 SSOT는 src/data/story.json 이다. 본 파일은 참조만 한다.",
+    "tracks": {
+      "main": "T-01~T-12 — 계정 진행 트랙. nextStepId 체인으로 이어진다.",
+      "battle": "B-1~B-5 — 첫 전투(1-1) 안에서만 1회 재생되는 전투 조작 안내. 메인 트랙 진행을 막지 않는다."
+    },
+    "battleStepIds": [
+      "B-1",
+      "B-2",
+      "B-3",
+      "B-4",
+      "B-5"
+    ]
   },
   "steps": [
     {
       "id": "T-01",
-      "trigger": { "type": "account_created" },
+      "trigger": {
+        "type": "account_created"
+      },
       "targetScene": "CutsceneScene",
       "targetPopup": null,
       "targetElement": null,
@@ -21,17 +39,29 @@
       "forceRule": null,
       "skipGroup": "S-1",
       "highlightType": "cutscene_only",
-      "cutsceneIds": ["cs_ch1_enter"],
-      "completionCondition": { "type": "cutscene_end", "sceneId": "cs_ch1_enter" },
+      "cutsceneIds": [
+        "cs_ch1_enter"
+      ],
+      "completionCondition": {
+        "type": "cutscene_end",
+        "sceneId": "cs_ch1_enter"
+      },
       "rewardId": null,
       "unlockMenus": [],
-      "resumeAt": { "scene": "CutsceneScene", "restartCutscene": true },
+      "resumeAt": {
+        "scene": "CutsceneScene",
+        "restartCutscene": true
+      },
       "estimatedSec": 45,
-      "nextStepId": "T-02"
+      "nextStepId": "T-02",
+      "track": "main"
     },
     {
       "id": "T-02",
-      "trigger": { "type": "step_complete", "after": "T-01" },
+      "trigger": {
+        "type": "step_complete",
+        "after": "T-01"
+      },
       "targetScene": "CutsceneScene",
       "targetPopup": null,
       "targetElement": null,
@@ -41,71 +71,139 @@
       "forceRule": null,
       "skipGroup": "S-1",
       "highlightType": "cutscene_only",
-      "cutsceneIds": ["cs_first_hero_iris"],
-      "completionCondition": { "type": "cutscene_end", "sceneId": "cs_first_hero_iris" },
+      "cutsceneIds": [
+        "cs_first_hero_iris"
+      ],
+      "completionCondition": {
+        "type": "cutscene_end",
+        "sceneId": "cs_first_hero_iris"
+      },
       "rewardId": "grant_starter_iris",
       "unlockMenus": [],
-      "resumeAt": { "scene": "CutsceneScene", "restartCutscene": true },
+      "resumeAt": {
+        "scene": "CutsceneScene",
+        "restartCutscene": true
+      },
       "estimatedSec": 40,
-      "nextStepId": "T-03"
+      "nextStepId": "T-03",
+      "track": "main"
     },
     {
       "id": "T-03",
-      "trigger": { "type": "step_complete", "after": "T-02" },
+      "trigger": {
+        "type": "step_complete",
+        "after": "T-02"
+      },
       "targetScene": "MainMenuScene",
       "targetPopup": null,
       "targetElement": "mainmenu.adventure.battle_start",
-      "fallbackAnchor": { "x": 40, "y": 390, "w": 640, "h": 50 },
+      "fallbackAnchor": {
+        "x": 40,
+        "y": 390,
+        "w": 640,
+        "h": 50
+      },
       "instructionText": "첫 전투를 시작하세요",
       "forced": true,
       "forceRule": "F-1",
       "skipGroup": null,
       "highlightType": "mask_pulse",
-      "cutsceneIds": ["cs_1_1_enter", "cs_1_1_clear"],
-      "completionCondition": { "type": "stage_clear", "stageId": "1-1" },
+      "cutsceneIds": [
+        "cs_1_1_enter",
+        "cs_1_1_clear"
+      ],
+      "completionCondition": {
+        "type": "stage_clear",
+        "stageId": "1-1"
+      },
       "rewardId": null,
       "unlockMenus": [],
-      "resumeAt": { "scene": "MainMenuScene", "reattachHighlight": true },
+      "resumeAt": {
+        "scene": "MainMenuScene",
+        "reattachHighlight": true
+      },
       "estimatedSec": 75,
-      "nextStepId": "T-04"
+      "nextStepId": "T-04",
+      "track": "main"
     },
     {
       "id": "T-04",
-      "trigger": { "type": "step_complete", "after": "T-03" },
+      "trigger": {
+        "type": "step_complete",
+        "after": "T-03"
+      },
       "targetScene": "MainMenuScene",
       "targetPopup": null,
       "targetElement": "mainmenu.adventure.battle_start",
-      "fallbackAnchor": { "x": 40, "y": 390, "w": 640, "h": 50 },
+      "fallbackAnchor": {
+        "x": 40,
+        "y": 390,
+        "w": 640,
+        "h": 50
+      },
       "instructionText": "숲 안쪽으로 계속 나아가세요",
       "forced": false,
       "forceRule": null,
       "skipGroup": "S-2",
       "highlightType": "coach_arrow",
-      "cutsceneIds": ["cs_1_2_enter", "cs_1_2_clear", "cs_1_3_enter", "cs_1_3_clear"],
-      "completionCondition": { "type": "stage_clear_all", "stageIds": ["1-2", "1-3"] },
+      "cutsceneIds": [
+        "cs_1_2_enter",
+        "cs_1_2_clear",
+        "cs_1_3_enter",
+        "cs_1_3_clear"
+      ],
+      "completionCondition": {
+        "type": "stage_clear_all",
+        "stageIds": [
+          "1-2",
+          "1-3"
+        ]
+      },
       "rewardId": null,
       "unlockMenus": [],
-      "resumeAt": { "scene": "MainMenuScene", "reattachHighlight": true },
+      "resumeAt": {
+        "scene": "MainMenuScene",
+        "reattachHighlight": true
+      },
       "estimatedSec": 165,
-      "nextStepId": "T-05"
+      "nextStepId": "T-05",
+      "track": "main"
     },
     {
       "id": "T-05",
-      "trigger": { "type": "step_complete", "after": "T-04" },
+      "trigger": {
+        "type": "step_complete",
+        "after": "T-04"
+      },
       "targetScene": "MainMenuScene",
       "targetPopup": "gacha",
       "targetElement": "gacha.button.multi_ticket",
-      "fallbackAnchor": { "x": 380, "y": 900, "w": 180, "h": 50 },
+      "fallbackAnchor": {
+        "x": 380,
+        "y": 900,
+        "w": 180,
+        "h": 50
+      },
       "instructionText": "동료를 불러오세요",
       "forced": true,
       "forceRule": "F-1",
       "skipGroup": null,
       "highlightType": "mask_pulse",
       "cutsceneIds": [],
-      "completionCondition": { "type": "gacha_result_confirmed" },
+      "completionCondition": {
+        "type": "gacha_result_confirmed"
+      },
       "rewardId": "grant_awakening_guide",
-      "unlockMenus": ["herolist", "partyedit", "ascension"],
-      "resumeAt": { "scene": "MainMenuScene", "reopenPopup": "gacha", "reattachHighlight": true },
+      "unlockMenus": [
+        "herolist",
+        "partyedit",
+        "ascension"
+      ],
+      "resumeAt": {
+        "scene": "MainMenuScene",
+        "reopenPopup": "gacha",
+        "reattachHighlight": true
+      },
       "estimatedSec": 75,
       "nextStepId": "T-06",
       "popupOptions": {
@@ -116,173 +214,493 @@
         "lockCloseButton": true,
         "showRateDisclosure": "always",
         "showSkipAllEntry": true
-      }
+      },
+      "track": "main"
     },
     {
       "id": "T-06",
-      "trigger": { "type": "step_complete", "after": "T-05" },
+      "trigger": {
+        "type": "step_complete",
+        "after": "T-05"
+      },
       "targetScene": "MainMenuScene",
       "targetPopup": null,
       "targetElement": "mainmenu.menu.ascension",
-      "fallbackAnchor": { "x": 300, "y": 880, "w": 80, "h": 90 },
+      "fallbackAnchor": {
+        "x": 300,
+        "y": 880,
+        "w": 80,
+        "h": 90
+      },
       "instructionText": "각인 메뉴가 열렸습니다",
       "forced": false,
       "forceRule": null,
       "skipGroup": "S-1",
       "highlightType": "coach_tooltip",
       "cutsceneIds": [],
-      "completionCondition": { "type": "popup_open", "popupKey": "ascension" },
+      "completionCondition": {
+        "type": "popup_open",
+        "popupKey": "ascension"
+      },
       "rewardId": null,
       "unlockMenus": [],
-      "resumeAt": { "scene": "MainMenuScene", "reattachHighlight": true },
+      "resumeAt": {
+        "scene": "MainMenuScene",
+        "reattachHighlight": true
+      },
       "estimatedSec": 15,
       "note": "각인 아이콘 해금은 T-05 커밋에서 이뤄진다. T-06의 완료 조건이 '각인 팝업 진입'이라 아이콘이 먼저 존재해야 하며, 해금을 T-06 커밋에 두면 스텝을 끝낼 방법이 없다(2026-09-02 정정).",
-
       "nextStepId": "T-07",
       "fallbackPolicy": {
         "autoCommitAfterSec": 60,
         "autoOpenPopupOnNextStep": true,
         "persistentBadge": "NEW"
-      }
+      },
+      "track": "main"
     },
     {
       "id": "T-07",
-      "trigger": { "type": "step_complete", "after": "T-06" },
+      "trigger": {
+        "type": "step_complete",
+        "after": "T-06"
+      },
       "targetScene": "MainMenuScene",
       "targetPopup": "ascension",
       "targetElement": "ascension.card.base_omar",
-      "fallbackAnchor": { "x": 40, "y": 400, "w": 640, "h": 90 },
+      "fallbackAnchor": {
+        "x": 40,
+        "y": 400,
+        "w": 640,
+        "h": 90
+      },
       "instructionText": "오마르를 각인시키세요",
       "forced": true,
       "forceRule": "F-1",
       "skipGroup": null,
       "highlightType": "mask_pulse",
       "cutsceneIds": [],
-      "completionCondition": { "type": "ascension_complete", "heroId": "base_omar" },
+      "completionCondition": {
+        "type": "ascension_complete",
+        "heroId": "base_omar"
+      },
       "rewardId": null,
       "unlockMenus": [],
-      "resumeAt": { "scene": "MainMenuScene", "reopenPopup": "ascension", "reattachHighlight": true },
+      "resumeAt": {
+        "scene": "MainMenuScene",
+        "reopenPopup": "ascension",
+        "reattachHighlight": true
+      },
       "estimatedSec": 45,
       "nextStepId": "T-08",
-      "highlightSequence": ["ascension.card.base_omar", "ascension.route.list", "ascension.button.confirm"],
-      "note": "실제 AscensionPopup은 1(영웅 선택)→2(루트 선택)→3(확정) 3단계다. 문서의 '카드→각성 버튼 2탭'은 구현과 어긋나 2026-09-02 정정(UX_ONBOARDING_FLOW §2-2 각주 3)."
+      "highlightSequence": [
+        "ascension.card.base_omar",
+        "ascension.route.list",
+        "ascension.button.confirm"
+      ],
+      "note": "실제 AscensionPopup은 1(영웅 선택)→2(루트 선택)→3(확정) 3단계다. 문서의 '카드→각성 버튼 2탭'은 구현과 어긋나 2026-09-02 정정(UX_ONBOARDING_FLOW §2-2 각주 3).",
+      "track": "main"
     },
     {
       "id": "T-08",
-      "trigger": { "type": "step_complete", "after": "T-07" },
+      "trigger": {
+        "type": "step_complete",
+        "after": "T-07"
+      },
       "targetScene": "MainMenuScene",
       "targetPopup": "partyedit",
       "targetElement": "partyedit.button.auto",
-      "fallbackAnchor": { "x": 210, "y": 1080, "w": 300, "h": 56 },
+      "fallbackAnchor": {
+        "x": 210,
+        "y": 1080,
+        "w": 300,
+        "h": 56
+      },
       "instructionText": "파티를 편성하세요 (자동 편성 가능)",
       "forced": false,
       "forceRule": null,
       "skipGroup": "S-3",
       "highlightType": "coach_arrow",
       "cutsceneIds": [],
-      "completionCondition": { "type": "party_saved" },
+      "completionCondition": {
+        "type": "party_saved"
+      },
       "rewardId": "grant_party_bonus",
       "unlockMenus": [],
-      "resumeAt": { "scene": "MainMenuScene", "reopenPopup": "partyedit", "reattachHighlight": true },
+      "resumeAt": {
+        "scene": "MainMenuScene",
+        "reopenPopup": "partyedit",
+        "reattachHighlight": true
+      },
       "estimatedSec": 40,
       "nextStepId": "T-09",
       "fallbackPolicy": {
         "autoFillPartyOnBattleEnter": true,
         "toastOnAutoFill": "파티를 자동으로 편성했습니다"
-      }
+      },
+      "track": "main"
     },
     {
       "id": "T-09",
-      "trigger": { "type": "step_complete", "after": "T-08" },
+      "trigger": {
+        "type": "step_complete",
+        "after": "T-08"
+      },
       "targetScene": "MainMenuScene",
       "targetPopup": "ascension",
       "targetElement": "ascension.route.list",
-      "fallbackAnchor": { "x": 40, "y": 400, "w": 640, "h": 560 },
+      "fallbackAnchor": {
+        "x": 40,
+        "y": 400,
+        "w": 640,
+        "h": 560
+      },
       "instructionText": "아이리스가 걸어갈 문을 정하세요",
       "forced": true,
       "forceRule": "F-2",
       "skipGroup": null,
       "highlightType": "mask_choice",
-      "cutsceneIds": ["cs_evolve_gate_first"],
+      "cutsceneIds": [
+        "cs_evolve_gate_first"
+      ],
       "cutsceneTiming": "before_route_list",
-      "completionCondition": { "type": "ascension_complete", "heroId": "base_iris" },
+      "completionCondition": {
+        "type": "ascension_complete",
+        "heroId": "base_iris"
+      },
       "rewardId": "grant_first_ascension",
       "unlockMenus": [],
-      "resumeAt": { "scene": "MainMenuScene", "reopenPopup": "ascension", "skipCutsceneIfViewed": true },
+      "resumeAt": {
+        "scene": "MainMenuScene",
+        "reopenPopup": "ascension",
+        "skipCutsceneIfViewed": true
+      },
       "estimatedSec": 80,
       "nextStepId": "T-10",
-      "highlightSequence": ["ascension.card.base_iris", "ascension.route.list", "ascension.button.confirm"],
+      "highlightSequence": [
+        "ascension.card.base_iris",
+        "ascension.route.list",
+        "ascension.button.confirm"
+      ],
       "confirmDialog": {
         "title": "이 문으로 보냅니다",
         "body": "각인은 되돌릴 수 없습니다.",
         "confirmLabel": "확정",
         "cancelLabel": "다시 고르기"
-      }
+      },
+      "track": "main"
     },
     {
       "id": "T-10",
-      "trigger": { "type": "step_complete", "after": "T-09" },
+      "trigger": {
+        "type": "step_complete",
+        "after": "T-09"
+      },
       "targetScene": "MainMenuScene",
       "targetPopup": null,
       "targetElement": "mainmenu.adventure.battle_start",
-      "fallbackAnchor": { "x": 40, "y": 390, "w": 640, "h": 50 },
+      "fallbackAnchor": {
+        "x": 40,
+        "y": 390,
+        "w": 640,
+        "h": 50
+      },
       "instructionText": "이제 1-4에 다시 도전하세요",
       "forced": false,
       "forceRule": null,
       "skipGroup": "S-2",
       "highlightType": "coach_arrow",
-      "cutsceneIds": ["cs_1_4_enter", "cs_1_4_clear"],
-      "completionCondition": { "type": "stage_clear", "stageId": "1-4" },
+      "cutsceneIds": [
+        "cs_1_4_enter",
+        "cs_1_4_clear"
+      ],
+      "completionCondition": {
+        "type": "stage_clear",
+        "stageId": "1-4"
+      },
       "rewardId": null,
-      "unlockMenus": ["quest"],
-      "resumeAt": { "scene": "MainMenuScene", "reattachHighlight": true },
+      "unlockMenus": [
+        "quest"
+      ],
+      "resumeAt": {
+        "scene": "MainMenuScene",
+        "reattachHighlight": true
+      },
       "estimatedSec": 100,
       "nextStepId": "T-11",
       "powerComparisonBanner": true,
-      "failurePolicy": { "hintAfterFails": 3, "autoPartyAfterFails": 5, "idleSuggestAfterFails": 7 }
+      "failurePolicy": {
+        "hintAfterFails": 3,
+        "autoPartyAfterFails": 5,
+        "idleSuggestAfterFails": 7
+      },
+      "track": "main"
     },
     {
       "id": "T-11",
-      "trigger": { "type": "step_complete", "after": "T-10" },
+      "trigger": {
+        "type": "step_complete",
+        "after": "T-10"
+      },
       "targetScene": "MainMenuScene",
       "targetPopup": null,
       "targetElement": "mainmenu.adventure.battle_start",
-      "fallbackAnchor": { "x": 40, "y": 390, "w": 640, "h": 50 },
+      "fallbackAnchor": {
+        "x": 40,
+        "y": 390,
+        "w": 640,
+        "h": 50
+      },
       "instructionText": "숲의 지배자가 기다립니다",
       "forced": false,
       "forceRule": null,
       "skipGroup": "S-4",
       "highlightType": "coach_arrow",
-      "cutsceneIds": ["cs_1_5_boss_before", "cs_1_5_boss_after"],
-      "completionCondition": { "type": "stage_clear", "stageId": "1-5" },
+      "cutsceneIds": [
+        "cs_1_5_boss_before",
+        "cs_1_5_boss_after"
+      ],
+      "completionCondition": {
+        "type": "stage_clear",
+        "stageId": "1-5"
+      },
       "rewardId": null,
-      "unlockMenus": ["inventory", "gacha", "collection"],
-      "resumeAt": { "scene": "MainMenuScene", "reattachHighlight": true },
+      "unlockMenus": [
+        "inventory",
+        "gacha",
+        "collection"
+      ],
+      "resumeAt": {
+        "scene": "MainMenuScene",
+        "reattachHighlight": true
+      },
       "estimatedSec": 140,
       "nextStepId": "T-12",
-      "note": "S-4 — 전투는 필수, 안내 오버레이만 스킵 가능. 컷씬은 항상 스킵 가능."
+      "note": "S-4 — 전투는 필수, 안내 오버레이만 스킵 가능. 컷씬은 항상 스킵 가능.",
+      "track": "main"
     },
     {
       "id": "T-12",
-      "trigger": { "type": "step_complete", "after": "T-11" },
+      "trigger": {
+        "type": "step_complete",
+        "after": "T-11"
+      },
       "targetScene": "MainMenuScene",
       "targetPopup": null,
       "targetElement": "mainmenu.idle.view",
-      "fallbackAnchor": { "x": 20, "y": 510, "w": 680, "h": 370 },
+      "fallbackAnchor": {
+        "x": 20,
+        "y": 510,
+        "w": 680,
+        "h": 370
+      },
       "instructionText": "게임을 꺼도 동료들이 계속 싸웁니다",
       "forced": false,
       "forceRule": null,
       "skipGroup": "S-1",
       "highlightType": "spotlight_sequence",
       "cutsceneIds": [],
-      "completionCondition": { "type": "overlay_dismissed" },
+      "completionCondition": {
+        "type": "overlay_dismissed"
+      },
       "rewardId": "grant_tutorial_complete",
       "unlockMenus": [],
-      "resumeAt": { "scene": "MainMenuScene", "retryLimit": 1 },
+      "resumeAt": {
+        "scene": "MainMenuScene",
+        "retryLimit": 1
+      },
       "estimatedSec": 40,
       "nextStepId": null,
-      "highlightSequence": ["mainmenu.idle.view", "mainmenu.adventure.offline_notice"],
-      "offlineCapHours": 24
+      "highlightSequence": [
+        "mainmenu.idle.view",
+        "mainmenu.adventure.offline_notice"
+      ],
+      "offlineCapHours": 24,
+      "track": "main"
+    },
+    {
+      "id": "B-1",
+      "track": "battle",
+      "trigger": {
+        "type": "battle_start",
+        "stageId": "1-1"
+      },
+      "targetScene": "BattleScene",
+      "targetPopup": null,
+      "targetElement": "battle.turn.badge",
+      "fallbackAnchor": {
+        "x": 24,
+        "y": 150,
+        "w": 672,
+        "h": 70
+      },
+      "instructionText": "위 배지 순서대로 행동합니다",
+      "forced": false,
+      "forceRule": null,
+      "skipGroup": "S-1",
+      "highlightType": "coach_tooltip",
+      "cutsceneIds": [],
+      "completionCondition": {
+        "type": "overlay_dismissed"
+      },
+      "rewardId": null,
+      "unlockMenus": [],
+      "resumeAt": {
+        "scene": "BattleScene",
+        "reattachHighlight": true
+      },
+      "estimatedSec": 8,
+      "nextStepId": "B-2"
+    },
+    {
+      "id": "B-2",
+      "track": "battle",
+      "trigger": {
+        "type": "step_complete",
+        "after": "B-1"
+      },
+      "targetScene": "BattleScene",
+      "targetPopup": null,
+      "targetElement": "battle.skill.slot1",
+      "fallbackAnchor": {
+        "x": 40,
+        "y": 1020,
+        "w": 150,
+        "h": 150
+      },
+      "instructionText": "스킬이 차면 눌러 쓸 수 있습니다",
+      "forced": false,
+      "forceRule": null,
+      "skipGroup": "S-1",
+      "highlightType": "coach_arrow",
+      "cutsceneIds": [],
+      "completionCondition": {
+        "type": "skill_used"
+      },
+      "rewardId": null,
+      "unlockMenus": [],
+      "resumeAt": {
+        "scene": "BattleScene",
+        "reattachHighlight": true
+      },
+      "estimatedSec": 12,
+      "nextStepId": "B-3",
+      "waitForInput": true,
+      "highlightSequence": [
+        "battle.skill.slot1",
+        "battle.skill.slot2",
+        "battle.skill.slot3",
+        "battle.skill.slot4"
+      ],
+      "fallbackPolicy": {
+        "autoCommitAfterSec": 25,
+        "note": "게이지가 차기 전이거나 자동전투가 먼저 쓰면 탭 없이도 넘어간다. 전투를 막지 않는다."
+      }
+    },
+    {
+      "id": "B-3",
+      "track": "battle",
+      "trigger": {
+        "type": "step_complete",
+        "after": "B-2"
+      },
+      "targetScene": "BattleScene",
+      "targetPopup": null,
+      "targetElement": "battle.button.auto",
+      "fallbackAnchor": {
+        "x": 20,
+        "y": 1216,
+        "w": 300,
+        "h": 56
+      },
+      "instructionText": "자동전투와 배속을 켤 수 있습니다",
+      "forced": false,
+      "forceRule": null,
+      "skipGroup": "S-1",
+      "highlightType": "coach_tooltip",
+      "cutsceneIds": [],
+      "completionCondition": {
+        "type": "overlay_dismissed"
+      },
+      "rewardId": null,
+      "unlockMenus": [],
+      "resumeAt": {
+        "scene": "BattleScene",
+        "reattachHighlight": true
+      },
+      "estimatedSec": 8,
+      "nextStepId": "B-4",
+      "highlightSequence": [
+        "battle.button.auto",
+        "battle.button.speed"
+      ]
+    },
+    {
+      "id": "B-4",
+      "track": "battle",
+      "trigger": {
+        "type": "step_complete",
+        "after": "B-3"
+      },
+      "targetScene": "BattleScene",
+      "targetPopup": null,
+      "targetElement": "battle.enemy.moodBadge",
+      "fallbackAnchor": {
+        "x": 180,
+        "y": 300,
+        "w": 360,
+        "h": 220
+      },
+      "instructionText": "분위기 상성에 따라 피해가 달라집니다",
+      "forced": false,
+      "forceRule": null,
+      "skipGroup": "S-1",
+      "highlightType": "coach_arrow",
+      "cutsceneIds": [],
+      "completionCondition": {
+        "type": "overlay_dismissed"
+      },
+      "rewardId": null,
+      "unlockMenus": [],
+      "resumeAt": {
+        "scene": "BattleScene",
+        "reattachHighlight": true
+      },
+      "estimatedSec": 10,
+      "nextStepId": "B-5"
+    },
+    {
+      "id": "B-5",
+      "track": "battle",
+      "trigger": {
+        "type": "step_complete",
+        "after": "B-4"
+      },
+      "targetScene": "BattleScene",
+      "targetPopup": null,
+      "targetElement": "battle.unit.hp",
+      "fallbackAnchor": {
+        "x": 180,
+        "y": 700,
+        "w": 360,
+        "h": 160
+      },
+      "instructionText": "체력 수치와 교단 배지를 확인하세요",
+      "forced": false,
+      "forceRule": null,
+      "skipGroup": "S-1",
+      "highlightType": "coach_tooltip",
+      "cutsceneIds": [],
+      "completionCondition": {
+        "type": "overlay_dismissed"
+      },
+      "rewardId": null,
+      "unlockMenus": [],
+      "resumeAt": {
+        "scene": "BattleScene",
+        "reattachHighlight": true
+      },
+      "estimatedSec": 10,
+      "nextStepId": null
     }
   ]
 }

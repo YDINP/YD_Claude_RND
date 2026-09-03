@@ -9,6 +9,7 @@ import { CouponSystem } from '../../systems/CouponSystem.js';
 import { DebugManager } from '../../systems/DebugManager.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT } from '../../utils/popupLayout.js';
+import { soundManager } from '../../systems/SoundManager.js';
 
 /** 헤더 타이틀 */
 const TITLE = '설정';
@@ -16,6 +17,14 @@ const TITLE = '설정';
 /** 설정 행 높이 · 간격 (기획 px) */
 const ROW_HEIGHT = 45;
 const ROW_GAP = 10;
+
+/** 음량 슬라이더 트랙 기하 (기획 px) */
+const SLIDER = {
+  labelWidth: 78,
+  trailingGap: 66,
+  trackHeight: 6,
+  knobRadius: 9
+};
 
 export class SettingsPopup extends PopupBase {
   constructor(scene, options = {}) {
@@ -73,23 +82,118 @@ export class SettingsPopup extends PopupBase {
   }
 
   createSettingsSection() {
-    const { left, top, width } = this.contentBounds;
-    const sectionY = top;
-
-    const settings = [
-      { label: '사운드', key: 'sound', type: 'toggle' },
-      { label: 'BGM', key: 'bgm', type: 'toggle' },
-      { label: '진동', key: 'vibration', type: 'toggle' },
-      { label: '알림', key: 'notification', type: 'toggle' }
-    ];
+    const { top } = this.contentBounds;
+    const rowY = (i) => top + i * s(ROW_HEIGHT + ROW_GAP);
 
     const data = SaveManager.load();
     const settingsData = data.settings || {};
 
-    settings.forEach((setting, i) => {
-      const y = sectionY + i * s(ROW_HEIGHT + ROW_GAP);
-      this.createSettingRow(setting, y, settingsData);
+    // SND-01: 음량 슬라이더 2행 — 값은 soundManager 가 SaveManager settings.audio 에 저장한다
+    this.createVolumeRow({
+      label: 'BGM',
+      getVolume: () => soundManager.getSettings().bgm,
+      setVolume: (v) => soundManager.setBGMVolume(v),
+      isMuted: () => soundManager.getSettings().bgmMuted,
+      toggleMute: () => soundManager.toggleBGMMute()
+    }, rowY(0));
+
+    this.createVolumeRow({
+      label: '효과음',
+      getVolume: () => soundManager.getSettings().sfx,
+      setVolume: (v) => soundManager.setSFXVolume(v),
+      isMuted: () => soundManager.getSettings().sfxMuted,
+      toggleMute: () => soundManager.toggleSFXMute()
+    }, rowY(1));
+
+    // 기존 온오프 설정 2행 (행 수는 4로 유지 — 아래 섹션 좌표가 이 값에 묶여 있다)
+    [
+      { label: '진동', key: 'vibration', type: 'toggle' },
+      { label: '알림', key: 'notification', type: 'toggle' }
+    ].forEach((setting, i) => {
+      this.createSettingRow(setting, rowY(2 + i), settingsData);
     });
+  }
+
+  /**
+   * SND-01: 음량 행 — 라벨 + 드래그 슬라이더 + 음소거 토글.
+   * 값 변경은 soundManager 를 통해 즉시 반영·저장되고, 이 행은 그래픽만 다시 그린다
+   * (팝업 전체 refresh 를 하면 드래그 중 히트영역이 사라진다).
+   * @param {{label:string,getVolume:Function,setVolume:Function,isMuted:Function,toggleMute:Function}} cfg
+   * @param {number} y 행 상단 y
+   */
+  createVolumeRow(cfg, y) {
+    const { left, width } = this.contentBounds;
+
+    const rowBg = this.scene.add.graphics();
+    rowBg.fillStyle(DESIGN.colors.bg.secondary, 0.8);
+    rowBg.fillRoundedRect(left, y, width, s(ROW_HEIGHT), s(DESIGN.radius.md));
+    this.contentContainer.add(rowBg);
+
+    this.addText(left + s(20), y + s(12), cfg.label, {
+      fontSize: sf(15),
+      color: DESIGN.colors.text.primary
+    });
+
+    const trackX = left + s(SLIDER.labelWidth);
+    const trackW = Math.max(s(40), width - s(SLIDER.labelWidth) - s(SLIDER.trailingGap));
+    const trackY = y + s(ROW_HEIGHT / 2) - s(SLIDER.trackHeight / 2);
+    const centerY = y + s(ROW_HEIGHT / 2);
+
+    const track = this.scene.add.graphics();
+    this.contentContainer.add(track);
+    const knob = this.scene.add.circle(trackX, centerY, s(SLIDER.knobRadius), 0xffffff);
+    this.contentContainer.add(knob);
+    const percent = this.scene.add.text(0, 0, '', {
+      fontFamily: '"Noto Sans KR", sans-serif',
+      fontSize: sf(12),
+      color: DESIGN.colors.text.secondary
+    }).setOrigin(0.5);
+    this.contentContainer.add(percent);
+
+    const muteX = left + width - s(38);
+    const muteIcon = this.scene.add.text(muteX, centerY, '', { fontSize: sf(18) }).setOrigin(0.5);
+    this.contentContainer.add(muteIcon);
+
+    const redraw = () => {
+      const value = cfg.getVolume();
+      const muted = cfg.isMuted();
+      const knobX = trackX + trackW * value;
+
+      track.clear();
+      track.fillStyle(DESIGN.colors.bg.surface, 1);
+      track.fillRoundedRect(trackX, trackY, trackW, s(SLIDER.trackHeight), s(SLIDER.trackHeight / 2));
+      track.fillStyle(muted ? DESIGN.colors.bg.surface : DESIGN.colors.brand.primary, 1);
+      track.fillRoundedRect(trackX, trackY, Math.max(1, trackW * value), s(SLIDER.trackHeight), s(SLIDER.trackHeight / 2));
+
+      knob.setPosition(knobX, centerY);
+      knob.setFillStyle(muted ? 0x64748B : 0xffffff);
+      percent.setPosition(knobX, centerY - s(16));
+      percent.setText(`${Math.round(value * 100)}`);
+      muteIcon.setText(muted ? '🔇' : '🔊');
+    };
+
+    const applyFromPointer = (pointer) => {
+      const ratio = (pointer.x - trackX) / trackW;
+      cfg.setVolume(Math.max(0, Math.min(1, ratio)));
+      redraw();
+    };
+
+    const hit = this.scene.add.rectangle(
+      trackX + trackW / 2, centerY, trackW + s(2 * SLIDER.knobRadius), s(DESIGN.touch.minTarget)
+    ).setAlpha(0.001).setInteractive({ useHandCursor: true });
+    this.contentContainer.add(hit);
+    hit.on('pointerdown', applyFromPointer);
+    hit.on('pointermove', (pointer) => { if (pointer.isDown) applyFromPointer(pointer); });
+
+    const muteHit = this.scene.add.rectangle(muteX, centerY, s(DESIGN.touch.minTarget), s(DESIGN.touch.minTarget))
+      .setAlpha(0.001).setInteractive({ useHandCursor: true });
+    this.contentContainer.add(muteHit);
+    muteHit.on('pointerdown', () => {
+      cfg.toggleMute();
+      redraw();
+    });
+
+    redraw();
   }
 
   /**

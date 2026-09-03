@@ -62,6 +62,7 @@ export function buildRateRows(rates = {}, pityConfig = {}, counters = {}) {
     }
   ];
 
+  const pickupRate = Number.isFinite(safeCounters.pickupRate) ? safeCounters.pickupRate : 0.5;
   const pickupRows = hasPickup
     ? [{
         type: 'pickup',
@@ -69,7 +70,9 @@ export function buildRateRows(rates = {}, pityConfig = {}, counters = {}) {
         current: pickupPityCounter,
         threshold: pickupPity,
         remaining: Math.max(0, pickupPity - pickupPityCounter),
-        active: pickupPity > 0 && pickupPityCounter >= pickupPity
+        active: pickupPity > 0 && pickupPityCounter >= pickupPity,
+        rate: pickupRate,
+        ratePercent: Math.round(pickupRate * 10000) / 100
       }]
     : [];
 
@@ -88,6 +91,7 @@ export function collectLiveRateRows(bannerId = null) {
   return buildRateRows(GachaSystem.RATES, GachaSystem.PITY_CONFIG, {
     pityCounter: gachaInfo.pityCounter || 0,
     pickupPityCounter: pickupInfo.pickupPityCount || 0,
-    hasPickup: pickupInfo.hasPickup
+    hasPickup: pickupInfo.hasPickup,
+    pickupRate: pickupInfo.pickupRate
   });
 }

@@ -53,7 +53,7 @@ vi.mock('../../src/systems/BattleSystem.js', () => {
       this.battleLog = [];
       this._turn = 0;
     }
-    initialize() { return []; }
+    initBattle() { return []; }
     processTurn() {
       this._turn++;
       // 5턴 후 공격자 승리 시뮬레이션

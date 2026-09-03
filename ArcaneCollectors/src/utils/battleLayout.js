@@ -403,13 +403,51 @@ export function getLogLineY(index, total) {
 
 /** 배지 정의. order 가 작을수록 먼저 보여 준다 */
 const CULT_BADGE_DEFS = Object.freeze([
-  { key: 'divinity',   label: 'DIV',   cult: 'olympus', order: 0, valued: true },
-  { key: 'doom',       label: 'DOOM',  cult: 'yomi',    order: 1, valued: true },
-  { key: 'barrier',    label: 'WARD',  cult: 'avalon',  order: 2, valued: true },
-  { key: 'runes',      label: 'RUNE',  cult: 'asgard',  order: 3, valued: true },
-  { key: 'runeShield', label: 'SHLD',  cult: 'asgard',  order: 4, valued: true },
-  { key: 'runeburst',  label: 'BURST', cult: 'asgard',  order: 5, valued: false }
+  { key: 'divinity',     label: 'DIV',   cult: 'olympus',      order: 0, valued: true },
+  { key: 'doom',         label: 'DOOM',  cult: 'yomi',         order: 1, valued: true },
+  { key: 'barrier',      label: 'WARD',  cult: 'avalon',       order: 2, valued: true },
+  { key: 'runes',        label: 'RUNE',  cult: 'asgard',       order: 3, valued: true },
+  { key: 'runeShield',   label: 'SHLD',  cult: 'asgard',       order: 4, valued: true },
+  { key: 'runeburst',    label: 'BURST', cult: 'asgard',       order: 5, valued: false },
+  // MECH-03 — 나머지 8기관 누적 상태
+  { key: 'rage',         label: 'RAGE',  cult: 'valhalla',     order: 6, valued: true },
+  { key: 'cold',         label: 'COLD',  cult: 'helheim',      order: 7, valued: true },
+  { key: 'growth',       label: 'GROW',  cult: 'nature',       order: 8, valued: true },
+  { key: 'extraActions', label: 'ACT',   cult: 'takamagahara', order: 9, valued: true }
 ]);
+
+/**
+ * 상태이상 배지 약어. 없으면 타입 앞 4글자를 대문자로 쓴다(기존 규약).
+ * 화면 폭이 좁아 4~5글자를 넘기지 않는다.
+ */
+const STATUS_BADGE_LABELS = Object.freeze({
+  thunderstruck: 'THUN',
+  curse: 'CURS',
+  glory_aura: 'GLRY',
+  bifrost: 'BIFR',
+  frenzy_mark: 'FRNZ',
+  last_stand: 'LAST',
+  invulnerable: 'INVL',
+  kami_no_ma: 'KAMI',
+  haste: 'HAST',
+  dazzle: 'DAZL',
+  freeze: 'FRZ',
+  stun: 'STUN',
+  terror: 'TRR',
+  numbing: 'NUMB',
+  armor_pierce: 'PRC',
+  armor_shred: 'SHRD',
+  titanfall: 'TFAL',
+  poison: 'PSN',
+  weaken: 'WEAK',
+  withering: 'WTHR',
+  overgrowth: 'OGRW',
+  chaos_brand: 'BRND',
+  madness: 'MAD',
+  slow: 'SLOW',
+  neutral_field: 'NTRL',
+  imbalance: 'IMBL'
+});
 
 /**
  * cultState 를 HP바 옆 배지 목록으로 바꾼다 (MECH-02 표기).
@@ -444,7 +482,7 @@ export function buildCultBadges(cultState, options = {}) {
     if (!status || typeof status.type !== 'string') continue;
     badges.push({
       key: `status:${status.type}`,
-      label: status.type.slice(0, 4).toUpperCase(),
+      label: STATUS_BADGE_LABELS[status.type] || status.type.slice(0, 4).toUpperCase(),
       value: Number(status.duration) > 0 ? Number(status.duration) : null,
       color: DESIGN.colors.status.warning,
       order: 10

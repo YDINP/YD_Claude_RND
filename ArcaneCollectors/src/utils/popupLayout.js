@@ -149,6 +149,9 @@ export function makeBounds(left, top, width, height) {
  * @param {string} [options.titleAlign] - 'center' | 'left'
  * @param {number} [options.titlePadX] - left 정렬일 때 좌측 여백
  * @param {number} [options.titleOffsetY] - center 정렬일 때 패널 상단 기준 y. 없으면 헤더 세로 중앙
+ * @param {number} [options.offsetY] - 패널 전체를 화면 세로 중앙에서 아래로 밀어내는 양.
+ *   중첩 팝업이 하위 팝업과 헤더를 같은 좌표에 겹쳐 그리는 것을 막는다 (QA P1-4).
+ *   패널이 화면 밖으로 나가지 않도록 상하 여백 안에서 잘린다.
  * @returns {{panel:Object, header:Object, summary:Object|null, content:Object,
  *            actions:Object|null, divider:Object, close:Object}}
  */
@@ -165,7 +168,11 @@ export function computePopupSlots(options = {}) {
   const padBottom = Math.max(0, num(options.padBottom));
 
   const panelLeft = screenWidth / 2 - panelW / 2;
-  const panelTop = screenHeight / 2 - panelH / 2;
+  const centeredTop = screenHeight / 2 - panelH / 2;
+  // 화면 밖으로 나가지 않는 범위에서만 민다. 중앙 정렬 여백보다 큰 오프셋은 잘린다.
+  const slack = Math.max(0, Math.min(centeredTop, screenHeight - panelH - centeredTop));
+  const offsetY = Math.max(-slack, Math.min(slack, num(options.offsetY)));
+  const panelTop = centeredTop + offsetY;
   const panel = makeBounds(panelLeft, panelTop, panelW, panelH);
 
   const header = makeBounds(panelLeft, panelTop, panelW, Math.min(headerHeight, panelH));

@@ -33,12 +33,17 @@ export class SkillCommand extends BaseCommand {
     console.log(`[Command] SkillCommand: ${this.unit.name} uses ${this.skill.name || this.skill.id}`);
     const results = [];
 
+    // MECH-03: 시전 훅 (아군 방어막/룬/버프 계열) — 전략 경로와 동일 규약
+    const castEffects = this.battleSystem.applyCultSkillUse(this.unit, this.targets, this.skill);
+
     this.targets.forEach(target => {
       if (!target.isAlive) return;
 
       if (this.skill.isHeal) {
-        // 힐 스킬
-        const healAmount = Math.floor(this.unit.atk * this.skill.multiplier);
+        // 힐 스킬 (Round Table Bond 보정)
+        const healAmount = Math.floor(
+          this.unit.atk * this.skill.multiplier * this.battleSystem.getCultHealMultiplier(this.unit)
+        );
         const healResult = target.heal(healAmount);
 
         results.push({
@@ -57,9 +62,12 @@ export class SkillCommand extends BaseCommand {
           amount: healResult.actualHeal
         });
       } else {
-        // 공격 스킬
-        const damage = this.battleSystem.calculateDamage(this.unit, target, this.skill);
-        const damageResult = target.takeDamage(damage.finalDamage);
+        // MECH-03: 피해는 BattleSystem.resolveDamage 단일 경로를 지난다
+        const { damage, damageResult, cultEffects } = this.battleSystem.resolveDamage(
+          this.unit,
+          target,
+          this.skill
+        );
 
         results.push({
           target: target.id,
@@ -68,7 +76,8 @@ export class SkillCommand extends BaseCommand {
           isCrit: damage.isCrit,
           moodBonus: damage.moodBonus,
           isDead: damageResult.isDead,
-          isSkill: true
+          isSkill: true,
+          cultEffects
         });
 
         const critText = damage.isCrit ? '크리티컬! ' : '';
@@ -83,14 +92,6 @@ export class SkillCommand extends BaseCommand {
           isCrit: damage.isCrit,
           moodBonus: damage.moodBonus
         });
-
-        if (damageResult.isDead) {
-          this.battleSystem.log(`${target.name} 쓰러짐!`);
-          this.battleSystem.emit('unitDeath', {
-            unit: target.id,
-            killedBy: this.unit.id
-          });
-        }
       }
     });
 
@@ -99,6 +100,8 @@ export class SkillCommand extends BaseCommand {
       this.unit.skillGauge = Math.max(0, this.unit.skillGauge - this.skill.gaugeCost);
       console.log(`[Command] Skill gauge consumed: ${this.unit.name} now has ${this.unit.skillGauge}`);
     }
+
+    if (castEffects.length > 0) results.push({ type: 'cultEffects', effects: castEffects });
 
     return results;
   }

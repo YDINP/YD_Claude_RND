@@ -22,6 +22,8 @@ import {
   interactiveTopBarSlots,
   computeEnergyFill,
   computePartySlots,
+  fitPartySlotName,
+  PARTY_SLOT,
   computePartyHeader,
   computePowerRow,
   computeAdventureButtons,
@@ -150,6 +152,43 @@ describe('mainMenuLayout — 메뉴 그리드', () => {
     const mid = (row0[0].x + row0[row0.length - 1].x) / 2;
     expect(mid).toBeCloseTo(BASE_W / 2, 5);
   });
+
+  it('마지막 행이 덜 찼어도 그 행만 따로 가운데 정렬된다', () => {
+    // 13개 5열 → 5/5/3. 마지막 3개가 왼쪽으로 쏠리면 그리드가 기울어 보인다
+    const grid = computeMenuGrid(13, 5);
+    [0, 1, 2].forEach((row) => {
+      const cells = grid.cells.filter((c) => c.row === row);
+      const mid = (cells[0].x + cells[cells.length - 1].x) / 2;
+      expect(mid, `row ${row}`).toBeCloseTo(BASE_W / 2, 5);
+    });
+    // 마지막 행은 3칸이므로 첫 칸이 위쪽 행보다 오른쪽에서 시작한다
+    const row0First = grid.cells.find((c) => c.row === 0).x;
+    const row2First = grid.cells.find((c) => c.row === 2).x;
+    expect(row2First).toBeGreaterThan(row0First);
+  });
+
+  it('타일·아이콘·라벨·배지가 타일 안에 들어간다', () => {
+    const grid = computeMenuGrid(13, 5);
+    grid.cells.forEach((cell) => {
+      const top = cell.tile.y - cell.tile.h / 2;
+      const bottom = cell.tile.y + cell.tile.h / 2;
+      // 아이콘은 타일 위쪽 절반, 라벨은 아래쪽. 서로 겹치지 않는다
+      expect(cell.iconY - cell.iconSize / 2, `icon ${cell.index}`).toBeGreaterThanOrEqual(top);
+      expect(cell.iconY + cell.iconSize / 2).toBeLessThan(cell.labelY);
+      expect(cell.labelY).toBeLessThan(bottom);
+      // 배지는 타일 우상단 모서리 근처
+      expect(cell.badge.x).toBeGreaterThan(cell.tile.x);
+      expect(cell.badge.y).toBeLessThan(cell.tile.y);
+    });
+  });
+
+  it('타일이 요구 터치 하한(120x100)을 만족한다', () => {
+    const grid = computeMenuGrid(13, 5);
+    grid.cells.forEach((cell) => {
+      expect(cell.hit.w).toBeGreaterThanOrEqual(120);
+      expect(cell.hit.h).toBeGreaterThanOrEqual(100);
+    });
+  });
 });
 
 describe('mainMenuLayout — 터치 타깃 (§2-5)', () => {
@@ -205,6 +244,37 @@ describe('mainMenuLayout — 터치 타깃 (§2-5)', () => {
   it('파티 아바타 히트 박스가 하한을 넘는다', () => {
     computePartySlots().forEach((slot) => {
       expect(meetsTouchTarget(slot.hit, DESIGN.touch.minTarget)).toBe(true);
+    });
+  });
+
+  // QA P2-6 — `번개의 아`처럼 음절 중간에서 잘리던 회귀
+  it('현재 로스터 최장 이름(9자)이 상한 안에 온전히 들어간다', () => {
+    expect(fitPartySlotName('번개의 아이리스')).toBe('번개의 아이리스');
+    expect(fitPartySlotName('혼돈연금사 파올로')).toBe('혼돈연금사 파올로');
+    expect(fitPartySlotName('사신의 카이')).toBe('사신의 카이');
+  });
+
+  it('상한을 넘으면 어절 경계에서 자르고 말줄임을 붙인다', () => {
+    expect(fitPartySlotName('번개의 아이리스', 5)).toBe('번개의…');
+    expect(fitPartySlotName('심연의 대마도사 루카', 9)).toBe('심연의 대마도사…');
+    expect(fitPartySlotName('심연의 대마도사 루카', 6)).toBe('심연의…');
+  });
+
+  it('첫 어절조차 못 담으면 그때만 글자 단위로 자른다', () => {
+    expect(fitPartySlotName('혼돈연금사파올로', 5)).toBe('혼돈연금…');
+  });
+
+  it('빈 값·비문자열은 빈 문자열이다', () => {
+    expect(fitPartySlotName('')).toBe('');
+    expect(fitPartySlotName('   ')).toBe('');
+    expect(fitPartySlotName(null)).toBe('');
+  });
+
+  it('이름 라벨 최대 폭이 슬롯 폭보다 좁다 (양옆 여백 확보)', () => {
+    computePartySlots().forEach((slot) => {
+      expect(slot.nameMaxWidth).toBe(slot.w - PARTY_SLOT.nameInset * 2);
+      expect(slot.nameMaxWidth).toBeLessThan(slot.w);
+      expect(slot.nameMaxWidth).toBeGreaterThan(0);
     });
   });
 });

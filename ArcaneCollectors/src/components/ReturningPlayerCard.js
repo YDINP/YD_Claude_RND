@@ -4,6 +4,7 @@ import {
   buildCardLines,
   formatGift,
 } from '../systems/ReturningPlayerRules.js';
+import { ensureMinTouchTarget } from '../utils/touchTarget.js';
 
 /**
  * ReturningPlayerCard — 복귀 유저 진행도 요약 카드 (T-Q5 / T-25)
@@ -98,9 +99,11 @@ export class ReturningPlayerCard {
         }));
       }
       if (line.ctaLabel) {
+        // 링크형 텍스트라 글리프는 99×19 지만 히트는 터치 하한까지 넓힌다 (QA P2-1)
         const cta = this.scene.add.text(left + width - s(28), y + s(4), `[${line.ctaLabel}]`, {
           fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif', color: '#38BDF8',
-        }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+        }).setOrigin(1, 0);
+        ensureMinTouchTarget(cta);
         cta.on('pointerup', () => {
           this.hide();
           this.handlers.onCta?.(line.ctaKey);
@@ -143,9 +146,12 @@ export class ReturningPlayerCard {
     this.container.add([btnBg, btnText]);
 
     // 확인 팝업 없는 텍스트 버튼 (다크패턴 방지 · UX §6-6)
-    const later = this.scene.add.text(centerX, btnY + s(52), '나중에', {
+    // 52 → 62: 히트를 48 로 넓히면 위쪽 최우선 버튼(h 64, 아래끝 btnY+32)과 4px 겹쳐
+    // '받고 시작하기'의 하단 띠가 '나중에'로 먹힌다. 10px 더 내려 6px 여백을 만든다.
+    const later = this.scene.add.text(centerX, btnY + s(62), '나중에', {
       fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif', color: '#64748B',
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5);
+    ensureMinTouchTarget(later);
     later.on('pointerup', () => {
       this.hide();
       this.handlers.onLater?.();

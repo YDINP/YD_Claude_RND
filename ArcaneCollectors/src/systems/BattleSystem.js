@@ -806,8 +806,18 @@ export class BattleSystem {
 
     this.setState(BattleState.TURN_END);
 
-    // 턴 종료 처리
-    this.currentTurnIndex++;
+    // 턴 종료 처리 — MECH-03: takamagahara 추가 행동이 남아 있으면 같은 유닛이 한 번 더 행동한다
+    // (라운드당 1회로 제한해 무한 행동을 막는다)
+    const canActAgain = unit.isAlive
+      && unit.cultState?.extraActionTurn !== this.turnCount
+      && CultMechanicsSystem.consumeExtraAction(unit);
+
+    if (canActAgain) {
+      unit.cultState.extraActionTurn = this.turnCount;
+      this.log(`${unit.name}이(가) 추가 행동을 얻었다!`);
+    } else {
+      this.currentTurnIndex++;
+    }
 
     // Observer Pattern: 턴 종료 이벤트
     this.emit('turnEnd', {
@@ -963,7 +973,10 @@ export class BattleSystem {
       if (dotResult.isDead) this.handleUnitDeath(unit, null);
     }
 
-    return { ...turn, blocked: turn.blocked || !unit.isAlive };
+    // MECH-03: 턴 시작 효과에도 실제 피해가 섞인다 (chaos Wild Card)
+    const effects = this.applyCultEffectDamage(turn.effects, unit);
+
+    return { ...turn, effects, blocked: turn.blocked || !unit.isAlive };
   }
 
   /**
@@ -1028,12 +1041,23 @@ export class BattleSystem {
       enemies: side.enemies
     });
 
-    return effects.map(effect => {
+    return this.applyCultEffectDamage(effects, attacker);
+  }
+
+  /**
+   * 교단 효과 서술자 중 실제 HP 변동이 필요한 항목만 적용한다.
+   * onHit(적중)과 onTurnStart(chaos Wild Card)가 공유하는 단일 경로.
+   * @param {Array<Object>} effects 효과 서술자
+   * @param {BattleUnit} source 효과 주체 (로그/처치자 판정)
+   * @returns {Array<Object>} 적용 결과가 반영된 서술자
+   */
+  applyCultEffectDamage(effects, source) {
+    return (effects || []).map(effect => {
       if (effect.kind !== 'extraDamage' || !effect.target?.isAlive) return effect;
 
-      const extra = effect.target.takeDamage(effect.amount, { attacker, isCultEffect: true });
-      this.log(`${attacker.name}의 ${effect.label}! ${effect.target.name}에게 ${extra.actualDamage} 추가 피해!`);
-      if (extra.isDead) this.handleUnitDeath(effect.target, attacker);
+      const extra = effect.target.takeDamage(effect.amount, { attacker: source, isCultEffect: true });
+      this.log(`${source?.name}의 ${effect.label}! ${effect.target.name}에게 ${extra.actualDamage} 추가 피해!`);
+      if (extra.isDead) this.handleUnitDeath(effect.target, source);
 
       return { ...effect, applied: extra.actualDamage };
     });
@@ -1075,29 +1099,35 @@ export class BattleSystem {
 
     console.log(`[Battle] Damage calc start: ATK=${effectiveAtk}, multiplier=${multiplier}, base=${baseDamage}`);
 
-    // 방어력 적용 (1 - DEF/1000, 최소 10%) — 룬 방어 보정 반영
+    // 방어력 적용 (1 - DEF/1000, 최소 10%) — 룬 방어 보정 + MECH-03 방어 관통 반영
     const effectiveDef = CultMechanicsSystem.getEffectiveDef(defender);
-    const defReduction = Math.min(0.9, effectiveDef / 1000);
+    const pierce = CultMechanicsSystem.getDefPierceRatio(attacker, defender);
+    const defReduction = Math.min(0.9, effectiveDef / 1000) * (1 - pierce);
     baseDamage *= (1 - defReduction);
 
-    console.log(`[Battle] After DEF reduction (${effectiveDef}): ${baseDamage.toFixed(0)}`);
+    console.log(`[Battle] After DEF reduction (${effectiveDef}, pierce ${(pierce * 100).toFixed(0)}%): ${baseDamage.toFixed(0)}`);
 
-    // 분위기 상성
-    const moodBonus = this.getMoodBonus(attacker.mood, defender.mood);
+    // 분위기 상성 (MECH-03: balance Neutrality / Neutral Field는 상성 효과를 감쇠)
+    const matchupScale = CultMechanicsSystem.getMatchupScale(attacker, defender);
+    const moodBonus = this.getMoodBonus(attacker.mood, defender.mood) * matchupScale;
     baseDamage *= (1 + moodBonus);
 
     if (moodBonus !== 0) {
       console.log(`[Battle] Mood bonus (${attacker.mood} vs ${defender.mood}): ${moodBonus > 0 ? '+' : ''}${(moodBonus * 100).toFixed(0)}%`);
     }
 
-    // MECH-02: 교단 메커니즘 배율 (룬/Runeburst/Glory Aura/Underworld Link × Thunderstruck 증폭)
+    // MECH-02/03: 교단 메커니즘 배율 × 교단 상성(기본 OFF)
     const cultMultiplier =
       CultMechanicsSystem.getOutgoingDamageMultiplier(attacker, { allies: this.getSideOf(attacker).allies }) *
-      CultMechanicsSystem.getIncomingDamageMultiplier(defender);
+      CultMechanicsSystem.getIncomingDamageMultiplier(defender, attacker) *
+      CultMechanicsSystem.getCultMatchupMultiplier(attacker, defender);
     baseDamage *= cultMultiplier;
 
-    // 크리티컬
-    const isCrit = Math.random() < attacker.critRate;
+    // 크리티컬 (MECH-03: Sunlit Grace / Equilibrium 가산)
+    const critRate = attacker.critRate + CultMechanicsSystem.getCritBonus(attacker, {
+      enemies: this.getSideOf(attacker).enemies
+    });
+    const isCrit = Math.random() < critRate;
     if (isCrit) {
       baseDamage *= attacker.critDmg;
       console.log(`[Battle] CRITICAL! x${attacker.critDmg}`);

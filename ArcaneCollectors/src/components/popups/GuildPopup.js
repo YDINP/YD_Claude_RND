@@ -9,6 +9,7 @@ import { COLORS, s, sf } from '../../config/gameConfig.js';
 import { GuildSystem } from '../../systems/GuildSystem.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT } from '../../utils/popupLayout.js';
+import { ensureMinTouchTarget } from '../../utils/touchTarget.js';
 
 const TAB = { INFO: 0, MEMBERS: 1, DONATE: 2 };
 
@@ -90,11 +91,15 @@ export class GuildPopup extends PopupBase {
       const isActive = idx === this._activeTab;
       const bg = this.scene.add.rectangle(tx, ty, tabW - s(4), s(TAB_STRIP_HEIGHT - 8),
         isActive ? DESIGN.colors.status.info : DESIGN.colors.bg.surface, isActive ? 0.9 : 0.6);
-      bg.setInteractive({ useHandCursor: true });
+      // 탭 스트립 시각 높이는 36 이지만 손가락이 닿는 영역은 48 이어야 한다 (QA P2-1)
+      ensureMinTouchTarget(bg);
       bg.on('pointerdown', function() {
         if (!this._isLoading) this._loadAndRenderTab(idx);
       }.bind(this));
       this.contentContainer.add(bg);
+      // 탭 스트립도 _tabObjects 에 넣어야 _clearTabContent() 가 회수한다.
+      // 빠뜨리면 탭을 바꿀 때마다 스트립이 한 벌씩 쌓인다 (QA P1-2, RaidPopup 패턴).
+      this._tabObjects.push(bg);
       const txt = this.scene.add.text(tx, ty, label, {
         fontSize: sf(15),
         fontFamily: '"Noto Sans KR", sans-serif',
@@ -102,6 +107,7 @@ export class GuildPopup extends PopupBase {
         color: isActive ? DESIGN.colors.text.primary : DESIGN.colors.text.secondary
       }).setOrigin(0.5);
       this.contentContainer.add(txt);
+      this._tabObjects.push(txt);
     }.bind(this));
   }
 

@@ -474,3 +474,151 @@ dry-run 101건(스테이지 1 + 탑 100) 전부 from값 일치(경고 0) 확인 
 ### 9-7. v1.2 — 5-5 최종 인하 (2026-09-02)
 
 `balance-changes-v1.2.json` 적용: 5-5 `recommendedPower` 12,900 → **12,700**(파티 상한 13,347 ÷ 12,700 = 1.0509× ≥ 1.05× 마진 기준 충족, 5-4 12,500 < 5-5 12,700 단조 유지). `stage-clearable.mjs` 재실행 결과 **25/25 전체 PASS**. 이로써 (b)/(c) 검증이 모두 해소되었다 — 최종 확정치: 5-4 12,500 / 5-5 12,700 / 탑 100층 13,072.
+
+### 9-8. v1.3 — `enemies.json` 성장률 조정 (2026-09-03, team-lead 지시)
+
+> 적용: `docs/balance/balance-changes-v1.3.json` + `tools/balance/apply-changes.mjs --file balance-changes-v1.3.json` (해당 스크립트에 `enemies[id=X].fieldPath` 패턴을 새로 추가 — v1.3부터 `enemies.json`도 손편집 없이 델타로만 적용). 대상은 `enemies.json`뿐이며 `stages.json`/`tower.json`/`ascended-heroes.json`/`src/systems/**`는 미변경.
+
+#### 9-8-1. 문제 재확인
+
+9-4에서 참고용으로만 남겨뒀던 `combat-turns.mjs` 12/25 이탈을 이번 라운드에서 실제로 해소했다. 재확인 결과(적용 전, 60회 시행)는 9-4의 표와 사실상 동일했다 — 1-3(2턴, 하한 이탈), 2-5/4-2/4-3/4-4/5-2/5-3(과다), 3-5/4-5/5-1/5-4/5-5(전패 또는 전무승부).
+
+#### 9-8-2. 근본 원인 — DEF 성장이 데미지감소 90% 캡을 넘기는 설계 결함
+
+`BattleSystem.calculateDamage`(`src/systems/BattleSystem.js:1078-1081`)의 방어력 공식은 `defReduction = min(0.9, DEF/1000)`이다. 챕터4 후반~5의 다수 엘리트/보스(`enemy_zeus`, `enemy_draugr`, `enemy_fenrir_pup`, `enemy_frost_giant_minor`/`enemy_fire_giant`/`enemy_jotun`, `enemy_surtr`/`enemy_hel_servant`, `enemy_nidhogg`, `enemy_jormungandr`, `enemy_odin_allfather`)는 만렙 환산 DEF가 **500~1,502**까지 치솟아 90% 캡 근처이거나 캡을 초과했다. 캡에 걸리면 파티 유효 데미지가 원래 ATK의 10%까지 짓눌려 "전투가 끝나지 않는" 시간초과나, 반대로 파티가 먼저 죽는 전패가 발생했다(4-5/5-4/5-5는 캡 근접으로 인한 장기 교착, 5-1/3-5는 파티 대비 적 ATK도 동시에 과다해 전패). 특히 `enemy_jormungandr`(5-4 보조 적)는 원래 챕터4 최종보스급 스탯(base HP 3,000/growth 390)이 재사용된 것 자체가 과도했다.
+
+#### 9-8-3. 조정 내용 (19개 적, 56개 필드)
+
+| 적 | 등장 스테이지 | 조정 필드 | 비고 |
+|---|---|---|---|
+| `enemy_mushroom` | 1-3 | HP↑(150→400/30→60) | 2턴 하한 이탈 해소 |
+| `enemy_rift_guardian` | 2-5 | HP↓(3200→1120/410→144) | 단일 보스 HP 과다 |
+| `enemy_izanami` | 3-5 | HP·ATK·DEF↓ | 전패 해소 |
+| `enemy_minotaur`, `enemy_harpy` | 4-2 | HP↓ | 다수 엘리트 누적 과다 |
+| `enemy_titan_minor`, `enemy_cyclops_minor` | 4-3 | HP↓ | 〃 |
+| `enemy_garden_guardian` | 4-4 | HP↓(마진 좁아 완만하게) | 비율 1.15×라 신중히 하향 |
+| `enemy_zeus` | 4-5 | DEF growth 16→5, HP↓ | DEF 캡 근접이 근본원인 |
+| `enemy_frost_giant_minor`, `enemy_fire_giant`, `enemy_jotun` | 5-2 | DEF growth→3, HP↓ | DEF 캡 근접 |
+| `enemy_draugr`, `enemy_fenrir_pup` | 5-1 | DEF growth↓, HP↓ | DEF 캡 근접 + 전패 해소 |
+| `enemy_surtr`, `enemy_hel_servant` | 5-3 | DEF growth→3, HP↓ | 파티 자체가 요구BP 미달(0.94×)인 마일스톤에서도 클리어 가능하도록 |
+| `enemy_nidhogg`, `enemy_jormungandr` | 5-4 | HP·ATK·DEF↓ | jormungandr는 챕터4 최종보스급 스탯 재사용이 과도했음 |
+| `enemy_odin_allfather` | 5-5 | HP·ATK·DEF↓ (챕터 내 최고 스탯은 유지) | DEF 90% 캡 초과가 근본원인 |
+
+전체 델타는 `docs/balance/balance-changes-v1.3.json` 참조. `--dry-run` 검증에서 56건 전부 `from` 값이 실제 파일과 100% 일치(경고 0건) 확인 후 실적용.
+
+#### 9-8-4. 전후 턴수 비교 (`combat-turns.mjs`, 스테이지당 60회 시행)
+
+| 스테이지 | 적용 전 중앙값 | 판정(전) | 적용 후 중앙값 | 판정(후) |
+|---|---:|:---:|---:|:---:|
+| 1-1 | 4 | PASS | 4 | PASS |
+| 1-2 | 3 | PASS | 3 | PASS |
+| 1-3 | 2 | **FAIL(하한)** | 4 | PASS |
+| 1-4 | 6 | PASS | 6 | PASS |
+| 1-5 | 3 | PASS | 3 | PASS |
+| 2-1 | 3 | PASS | 3 | PASS |
+| 2-2 | 3 | PASS | 3 | PASS |
+| 2-3 | 5 | PASS | 5 | PASS |
+| 2-4 | 4 | PASS | 4 | PASS |
+| 2-5 | 18~19 | **FAIL(과다)** | 5 | PASS |
+| 3-1 | 5 | PASS | 5 | PASS |
+| 3-2 | 5 | PASS | 5 | PASS |
+| 3-3 | 8 | PASS | 8 | PASS |
+| 3-4 | 7 | PASS | 7 | PASS |
+| 3-5 | N/A(0승/60패) | **FAIL(전패)** | 6 | PASS |
+| 4-1 | 5 | PASS | 5 | PASS |
+| 4-2 | 10~11 | **FAIL(과다)** | 6 | PASS |
+| 4-3 | 15~17 | **FAIL(과다)** | 6 | PASS |
+| 4-4 | 13 | **FAIL(과다)** | 6 | PASS |
+| 4-5 | N/A(1패/59초과) | **FAIL(전무승부)** | 5 | PASS |
+| 5-1 | N/A(0승/60패) | **FAIL(전패)** | 5 | PASS |
+| 5-2 | 20 | **FAIL(과다)** | 5 | PASS |
+| 5-3 | 26~30 | **FAIL(과다)** | 5 | PASS |
+| 5-4 | N/A(60초과) | **FAIL(전무승부)** | 5 | PASS |
+| 5-5 | N/A(60초과) | **FAIL(전무승부)** | 6 | PASS |
+
+적용 전 12/25 이탈 → 적용 후 **25/25 전체 PASS**, 전 스테이지 60/60 승리(전패·시간초과 0건). 참고: `combat-turns.mjs`는 크리티컬/데미지 분산에 시드 없는 `Math.random()`을 쓰는 근사 시뮬레이션이라 경계값(예: 1-5는 이번에 미변경이지만 2턴/3턴 사이에서 근소하게 흔들림)에서 실행마다 ±1턴 편차가 있을 수 있다. 200회 시행 재확인 시 25/25 안정적으로 PASS.
+
+#### 9-8-5. 재검산 결과
+
+| 검증 | 결과 |
+|---|---|
+| `grade-order.mjs` | ✅ PASS (변동 없음 — 영웅 데이터 미변경) |
+| `stage-clearable.mjs` | ✅ PASS 25/25 (변동 없음 — 스테이지 요구치 미변경, enemies.json은 파티 상한 계산에 관여하지 않음) |
+| `tower-ceiling.mjs` | ✅ PASS 100/100 (변동 없음) |
+| `combat-turns.mjs` | ✅ **PASS 25/25** (9-8-4 표) |
+| `economy-flow.mjs` | ✅ PASS (변동 없음) |
+| `tests/data/stagesEnemies.test.js` | ✅ 4/4 통과 |
+| vitest 전체 | 1560개 중 1558~1560개 통과 — 나머지 0~2건은 `src/systems/CultMechanicsSystem.js` 등을 동시에 수정 중인 다른 병렬 작업자(mech-02 등)로 인한 일시적 충돌이며 `enemies.json`/전투 턴수와 무관 (재실행 시 통과) |
+| `npx tsc --noEmit` | 0 errors |
+
+#### 9-8-6. 결론
+
+`enemies.json`의 DEF 성장률이 90% 데미지감소 캡을 넘기던 설계 결함(챕터4 후반~5 다수 적)과, 1-3/2-5/4-2~4-4의 HP 과다를 동시에 해소해 `combat-turns.mjs` 25/25 전체 PASS를 달성했다. 조정은 문제가 확인된 19개 적(56개 필드)에 한정했고, `stages.json`/`tower.json`/`ascended-heroes.json`/`src/systems/**`는 손대지 않아 9-2~9-7의 기존 검증(등급 역전 해소, 파티 상한, 탑 100층, 온보딩 경제) 결과에 회귀가 없음을 확인했다.
+
+### 9-9. v1.4 — 온보딩 실파티 모드 신설 + 챕터1 재조정 (2026-09-03, team-lead 지시)
+
+> 적용: `docs/balance/balance-changes-v1.4.json` + `tools/balance/apply-changes.mjs --file balance-changes-v1.4.json`. `tools/simulate/combat-turns.mjs`에 `--onboarding` 플래그를 새로 추가(스크립트 수정, 데이터 아님). 대상은 `enemies.json`뿐이며 `stages.json`/`tower.json`/`ascended-heroes.json`/`src/systems/**`는 미변경.
+
+#### 9-9-1. 배경 — "1-3인데 지는 게 이해가 안 간다"
+
+9-8의 4인 마일스톤 시뮬레이션은 Day1~Day30 마일스톤 파티 전투력을 로그선형 보간한 **가상 파티**를 쓴다. 실제 신규 유저가 1-1~1-5에서 들고 있는 파티는 이것과 전혀 다르다 — `docs/story/SYSTEM_ONBOARDING_ECONOMY.md` §1-1/§1-5 실측: **1-1~1-3은 `base_iris` 1인**, **1-4~1-5는 `base_omar` 각성 후 2인**이다. 사용자가 "1-3에서 지는 게 이해가 안 간다"고 피드백한 근본 원인은 9-8(v1.3)에서 4인 마일스톤의 1-3 "2턴 하한 이탈"을 막으려 `enemy_mushroom` HP를 150→400(+167%)까지 올린 것이, 실제로 1-3을 치르는 **1인 파티에는 지나치게 과했던 것**이다.
+
+#### 9-9-2. 온보딩 실파티 모드 (`--onboarding`) — 방법론
+
+`combat-turns.mjs`에 새 플래그를 추가해 1-1~1-5만 실제 온보딩 파티로 재시뮬레이션한다(4인 마일스톤 모드는 그대로 유지, 상호 배타적 실행 경로).
+
+- **아군 스탯**: `src/systems/ProgressionSystem.js`(calculatePower와 동일 SSOT)를 SSR로 그대로 불러 계산 — 하드코딩 근사가 아니라 실제 게임 공식.
+- **아군 스킬킷 — 중요한 발견**: `src/data/base-heroes.json`에는 **`skills` 필드가 전혀 없다**(파일 전체 grep 확인). `HeroFactory.normalize()` → `BattleScene.js:403-422` → `BattleSceneAdapter.toBattleUnit()`(L139-141) 체인을 그대로 추적한 결과, 기본영웅은 실전에서 **`DEFAULT_BASIC_SKILL`(기본 공격만)로 폴백되어 스킬1을 전혀 쓰지 못한다**. 이는 이 스크립트의 수정 범위 밖인 실제 코드 동작(잠재적 버그 소지가 있으나 `enemies.json` 외 수정 금지 지시 범위 밖)이라 코드는 건드리지 않고, 시뮬레이션이 이 동작을 그대로 반영하도록 아군 스킬킷을 기본 공격 1개로 맞췄다.
+- **파티 레벨 — 두 번째 중요한 발견**: `SYSTEM_ONBOARDING_ECONOMY.md` §1-5는 "1-1 Lv1 / 1-2 Lv2 / 1-3 Lv3"로 스테이지 클리어마다 +1레벨을 가정하지만, 이는 문서 작성 시점의 근사치였다. 실제 레벨업은 `ProgressionSystem.addExp`(`getExpForLevel(level) = level² × 100`)가 `BattleScene.js:2654-2676`에서 스테이지 클리어 시 `stage.rewards.exp`를 파티 인원수로 나눠 지급하는 방식이다. `stages.json`의 실제 rewards.exp(1-1:50, 1-2:60, 1-3:75, 1-4:150)로 직접 계산하면:
+
+  | 스테이지 클리어 | 계산 | 결과 |
+  |---|---|---|
+  | 1-1 | 아이리스(1인) 0+50=50exp < 100(Lv1 필요치) | 레벨업 없음 |
+  | 1-2 | 50+60=110 ≥ 100 | **Lv2**(잔여10exp) |
+  | 1-3 | 10+75=85 < 400(Lv2 필요치) | 레벨업 없음, **Lv2 유지** |
+  | 1-4 | 아이리스 160(85+75)<400 유지 / 오마르(1-3 직후 합류) 0+75=75<100 유지 | 둘 다 레벨업 없음 |
+
+  즉 실제로는 **1-1/1-2 둘 다 아이리스 Lv1**이고 **1-3에서 처음 Lv2**가 되며, **1-4~1-5는 아이리스 Lv2 + 오마르 Lv1**로 동일하다. 문서의 "Lv3/Lv4~6" 가정보다 실제 파티가 상당히 약했다 — 이번 사용자 피드백의 진짜 근본 원인은 "v1.3의 mushroom HP 상향"과 "설계 문서보다 느린 실제 레벨업 곡선"이 겹친 것이다.
+- **목표**: 1-1~1-3(1인) 승률 ≥95% · 중앙값 턴수 3~6, 1-4~1-5(2인) 승률 ≥90%(턴수 제약 없음). 시행 횟수 기본 300회(`--trials`로 조정 가능).
+
+#### 9-9-3. 조정 내용과 4인 마일스톤 사이의 구조적 트레이드오프
+
+| 적 | 등장 스테이지 | 조정 필드 | 비고 |
+|---|---|---|---|
+| `enemy_goblin` | 1-2(lv2) | growthStats.hp 40→15 | lv1(1-1)은 growth가 적용 안 돼 영향 없음 |
+| `enemy_wolf` | 1-2 전용 | stats.hp 180→120 | |
+| `enemy_mushroom` | 1-3 전용 | stats.hp 400→130, growthStats.hp 60→45 | v1.3 이전 원본(150/30)보다는 높지만 v1.3(400/60)보다 훨씬 낮음 |
+| `enemy_golem` | 1-4 전용 | stats.hp 800→300, growthStats.hp 160→60, stats.atk 35→25, growthStats.atk 8→5 | 1-4 승률 40.5%→100% |
+
+`enemy_mushroom`은 **4인 마일스톤과 온보딩 1인 파티를 동시에 만족시킬 수 없는 구조적 충돌**이 있다. 1-3의 4인 마일스톤 파티 전투력(1,600)은 권장 전투력(200)의 8배에 달하는 극단적 오버킬 구간이라, `selectSmartTarget`의 "빈사 대상 확정타 우선"(BattleSceneAdapter.js:299-330) 로직상 4인이 몰아치면 mushroom HP를 웬만큼 올려도(테스트: 130→4인 2턴, 220→4인 3턴이지만 그때 온보딩은 9턴으로 초과) 2~3턴 경계에서 벗어나지 않는 반면, 온보딩 1인 파티는 같은 HP에서 이미 6턴을 넘겨버린다(3개체를 1인이 순차 처치해야 하는 구조적 하한 때문에 반응 폭이 좁다). 여러 HP 값으로 실측한 결과(130/45→4인2턴·온보딩6턴, 170/40→4인2턴·온보딩7턴, 220/48→4인3턴·온보딩9턴, 230/50→4인3턴·온보딩9턴) 두 목표를 동시에 만족하는 값이 존재하지 않음을 확인했다. **이번 라운드는 실제 사용자 피드백(온보딩 승률)을 우선**해 130/45를 채택했고, 그 결과 4인 마일스톤 1-3만 다시 2턴(<3)으로 돌아간다. 원래 `BALANCE_DESIGN_v1.md` §9-4(v1.3 이전)도 이 결과를 "튜토리얼 구간 의도된 압승 — 실패 아님"으로 명시했던 사례라, 되돌아간 것이 새로운 문제라기보다는 v1.3에서 임시로 덮었던 원래 상태로 복귀한 것에 가깝다. `enemy_golem`은 1-4 전용(다른 스테이지 재사용 없음)이라 이런 충돌 없이 순수 개선이었다.
+
+#### 9-9-4. 결과 (온보딩 모드, 300회 시행)
+
+| 스테이지 | 파티 | 조정 전 승률/중앙값 | 조정 후 승률/중앙값 | 판정 |
+|---|---|---|---|---|
+| 1-1 | 아이리스 Lv1 | 100%/4턴 | 100%/4턴(변경 없음) | PASS |
+| 1-2 | 아이리스 Lv1 | 100%/6턴 | 100%/6턴(변경 없음) | PASS |
+| 1-3 | 아이리스 Lv2 | 100%/13턴 | **100%/6턴** | PASS(조정 전 FAIL) |
+| 1-4 | 아이리스Lv2+오마르Lv1 | **27.5%**/29턴 | **100%/7턴** | PASS(조정 전 FAIL — 실질 패배) |
+| 1-5 | 아이리스Lv2+오마르Lv1 | 100%/9턴 | 100%/9턴(변경 없음) | PASS |
+
+5/5 전체 PASS. 조정 전 1-4의 27.5% 승률이 이번 피드백에서 실제로 체감됐을 "지는" 경험의 핵심 원인으로 보인다(1-3은 조정 전에도 승률 100%였으나 13턴으로 지나치게 길어 체감상 "막힌다"는 인상을 줬을 가능성이 크다).
+
+#### 9-9-5. 4인 마일스톤 재검증 (`combat-turns.mjs`, 기본 60회 시행)
+
+24/25 PASS(1-3만 FAIL, 9-9-3의 트레이드오프). 200회 시행으로 재확인 시 1-5(goblin_king, 이번에 미변경)는 시드 없는 RNG로 인한 경계값 흔들림(중앙값 2~3턴)일 뿐 안정적으로 PASS이며, 1-3만 안정적으로 FAIL(2턴)임을 확인했다.
+
+#### 9-9-6. 나머지 검증
+
+| 검증 | 결과 |
+|---|---|
+| `grade-order.mjs` | ✅ PASS (변동 없음) |
+| `stage-clearable.mjs` | ✅ PASS 25/25 (변동 없음) |
+| `tower-ceiling.mjs` | ✅ PASS 100/100 (변동 없음) |
+| `economy-flow.mjs` | ✅ PASS (변동 없음) |
+| `tests/data/stagesEnemies.test.js` | ✅ 7/7 통과 |
+| `npx tsc --noEmit` | 0 errors |
+
+#### 9-9-7. 결론과 team-lead 확인 필요 사항
+
+온보딩 실파티 관점에서 챕터1의 진짜 문제(1-4 승률 27.5%, 1-3 v1.3발 13턴 장기전)를 해소했다. 다만 **`enemy_mushroom`은 4인 마일스톤(1-3 2턴 하한)과 온보딩 1인 파티(1-3 승률/턴수)를 동시에 만족시킬 수 없는 구조적 충돌**이 있었고, 이번 라운드는 사용자 피드백을 우선해 4인 마일스톤 1-3의 재실패를 감수했다. 원 설계 문서(§9-4)가 이 결과를 "실패 아님"으로 이미 명시했던 전례가 있어 회귀로 보진 않지만, team-lead가 이 트레이드오프에 동의하지 않는다면 (a) 4인 마일스톤 1-3의 3턴 하한 요건을 공식적으로 면제하거나 (b) 온보딩 1-3의 턴수 목표를 6턴보다 완화하는 두 옵션 중 하나를 재승인해야 한다.

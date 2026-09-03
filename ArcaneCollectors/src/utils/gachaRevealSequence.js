@@ -40,14 +40,27 @@ export const STAGE_ORDER = Object.freeze([
   REVEAL_STAGE.GRID
 ]);
 
-/** 단계별 기본 지속시간(ms). flip 은 첫 카드 1장 기준이며 stagger 가 더해진다 */
+/**
+ * 단계별 기본 지속시간(ms).
+ * flip 은 첫 카드 1장 기준이며 stagger 가 더해진다.
+ * cutin 은 **대상 1명당** 시간이다. 여러 명이면 순차 재생으로 그만큼 늘어난다.
+ */
 export const STAGE_DURATION = Object.freeze({
   [REVEAL_STAGE.CIRCLE]: 800,
   [REVEAL_STAGE.PILLAR]: 500,
   [REVEAL_STAGE.FLIP]: 480,
-  [REVEAL_STAGE.CUTIN]: 1300,
+  [REVEAL_STAGE.CUTIN]: 2200,
   [REVEAL_STAGE.GRID]: 0
 });
+
+/** 등급별 컷인 1회 길이(ms). SR 은 문장·대사를 뺀 간소판이라 짧다 */
+export const CUTIN_DURATION = Object.freeze({
+  SSR: 2200,
+  SR: 1400
+});
+
+/** 한 번의 소환에서 연달아 재생할 컷인 상한 */
+export const MAX_CUTIN_TARGETS = 3;
 
 /** 10연 순차 공개 간격(ms) */
 export const FLIP_STAGGER = 70;
@@ -55,7 +68,13 @@ export const FLIP_STAGGER = 70;
 /** 등급 서열 (낮은 것부터) */
 export const RARITY_ORDER = Object.freeze(['N', 'R', 'SR', 'SSR']);
 
-/** 컷인이 붙는 등급 */
+/**
+ * 컷인이 붙는 등급.
+ * SSR 은 전체 연출, SR 은 간소판이다. R/N 은 컷인 없이 그리드로 간다.
+ */
+export const CUTIN_RARITIES = Object.freeze(['SSR', 'SR']);
+
+/** @deprecated CUTIN_RARITIES 를 쓸 것. 하위 호환용 별칭 */
 export const CUTIN_RARITY = 'SSR';
 
 /** 저사양 대비 품질 티어 */
@@ -109,22 +128,50 @@ export function bestRarity(results) {
 }
 
 /**
- * 컷인을 재생해야 하는가.
+ * 컷인을 재생해야 하는가. 최고 등급이 SSR 이거나 SR 이면 재생한다.
  * @param {Array<{rarity:string}>} results
  * @returns {boolean}
  */
 export function hasCutin(results) {
-  return bestRarity(results) === CUTIN_RARITY;
+  return CUTIN_RARITIES.includes(bestRarity(results));
 }
 
 /**
- * 컷인 대상 (SSR 결과) 목록. 등장 순서를 보존한다.
+ * 컷인 대상 목록. 등장 순서를 보존한다.
+ *
+ * SSR 이 있으면 **SSR 전부**를 순차 재생한다(§10연에서 SSR 2장 이상이면 순차).
+ * SSR 이 없고 SR 만 있으면 **첫 SR 한 명**만 간소판으로 재생한다 —
+ * 10연은 SR 이상 1장이 보장돼 있어 전부 재생하면 매번 길어진다.
+ * 상한은 MAX_CUTIN_TARGETS 다.
+ *
  * @param {Array<{rarity:string}>} results
  * @returns {Array<Object>}
  */
 export function cutinTargets(results) {
   if (!Array.isArray(results)) return [];
-  return results.filter((entry) => entry && entry.rarity === CUTIN_RARITY);
+  const best = bestRarity(results);
+  if (!CUTIN_RARITIES.includes(best)) return [];
+
+  const matches = results.filter((entry) => entry && entry.rarity === best);
+  if (best === 'SR') return matches.slice(0, 1);
+  return matches.slice(0, MAX_CUTIN_TARGETS);
+}
+
+/**
+ * 컷인 단계 전체 길이. 대상 1명당 등급별 시간을 곱한다.
+ *
+ * @param {Array<Object>} results
+ * @param {number} [perTarget] - 1명당 길이 강제 지정 (캡처·테스트용)
+ * @returns {number} ms. 대상이 없으면 0
+ */
+export function cutinDuration(results, perTarget) {
+  const targets = cutinTargets(results);
+  if (targets.length === 0) return 0;
+  const best = bestRarity(results);
+  const unit = Number.isFinite(perTarget)
+    ? perTarget
+    : (CUTIN_DURATION[best] ?? STAGE_DURATION[REVEAL_STAGE.CUTIN]);
+  return unit * targets.length;
 }
 
 // ------------------------------------------------------------------
@@ -194,7 +241,8 @@ export function flipDuration(count, base = STAGE_DURATION[REVEAL_STAGE.FLIP], st
  * @param {number} [options.stagger] - 카드 간 간격. 기본 FLIP_STAGGER
  * @param {string} [options.quality] - QUALITY_TIER 값. 기본 high
  * @param {Object} [options.durations] - 단계별 지속시간 덮어쓰기
- * @returns {{best:string, count:number, hasCutin:boolean, stagger:number, quality:string,
+ * @returns {{best:string, count:number, hasCutin:boolean, cutinTargets:Array, cutinUnit:number,
+ *            stagger:number, quality:string,
  *            particleCount:number, stages:Array<{id:string,start:number,duration:number,end:number}>,
  *            cardReveals:Array<{index:number,at:number}>, totalDuration:number}}
  */
@@ -206,14 +254,25 @@ export function buildRevealPlan(results, options = {}) {
   const durations = { ...STAGE_DURATION, ...(options.durations || {}) };
 
   const best = bestRarity(list);
-  const withCutin = best === CUTIN_RARITY;
+  const withCutin = hasCutin(list);
+  const targets = cutinTargets(list);
   const ids = stageSequence(withCutin);
+
+  // 컷인 1명당 길이 — durations 로 덮어쓰지 않았으면 등급별 기본값을 쓴다
+  const cutinUnit = (options.durations && Number.isFinite(options.durations[REVEAL_STAGE.CUTIN]))
+    ? options.durations[REVEAL_STAGE.CUTIN]
+    : (CUTIN_DURATION[best] ?? durations[REVEAL_STAGE.CUTIN]);
 
   let cursor = 0;
   const stages = ids.map((id) => {
-    const duration = id === REVEAL_STAGE.FLIP
-      ? flipDuration(count, durations[REVEAL_STAGE.FLIP], stagger)
-      : (durations[id] ?? 0);
+    let duration;
+    if (id === REVEAL_STAGE.FLIP) {
+      duration = flipDuration(count, durations[REVEAL_STAGE.FLIP], stagger);
+    } else if (id === REVEAL_STAGE.CUTIN) {
+      duration = cutinUnit * targets.length;
+    } else {
+      duration = durations[id] ?? 0;
+    }
     const stage = { id, start: cursor, duration, end: cursor + duration };
     cursor += duration;
     return stage;
@@ -227,6 +286,8 @@ export function buildRevealPlan(results, options = {}) {
     best,
     count,
     hasCutin: withCutin,
+    cutinTargets: targets,
+    cutinUnit: withCutin ? cutinUnit : 0,
     stagger,
     quality,
     particleCount: resolveParticleBudget(quality, best),
@@ -438,12 +499,16 @@ export default {
   REVEAL_STAGE,
   STAGE_ORDER,
   STAGE_DURATION,
+  CUTIN_DURATION,
+  CUTIN_RARITIES,
+  MAX_CUTIN_TARGETS,
   FLIP_STAGGER,
   QUALITY_TIER,
   PARTICLE_BUDGET,
   bestRarity,
   hasCutin,
   cutinTargets,
+  cutinDuration,
   resolveQualityTier,
   resolveParticleBudget,
   stageSequence,

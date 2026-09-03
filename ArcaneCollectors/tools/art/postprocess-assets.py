@@ -34,6 +34,20 @@ postprocess-assets.py — 생성 원본 → public/assets 후처리 파이프라
   asset-spec.json 의 fullbody_hero_001~004 항목은 실제 소스가 없는 구버전 스텁이라
   건너뛴다(경고 없이 무시. 별도 트랙 산출물이 이 스크립트의 대상이 아님).
 
+적 유닛(별도 트랙, 스펙 밖. asset-spec.json 의 enemy_* 10종은 소스가 없는 구버전
+크로마키 스텁이라 이 트랙과 무관하게 계속 skipped_missing_source 로 잡힌다)
+  art/gen/enemies/<id>.png(1024 RGBA, 알파 있음) 를 글롭으로 찾아 긴 변 512 WebP q85 로
+  public/assets/characters/enemies/<id>.webp 에 굽는다(업스케일 없음). manifest.enemies 에
+  등록한다 — idleBattleLayout.resolveEnemyArt() 와 BattleScene 이 이 버킷을 최우선으로 찾는다.
+  src/data/enemies.json 의 전체 id 중 소스가 없는 항목은 regen-list.json 에 사유와 함께
+  기록한다(실루엣 폴백 유지, 재생성되면 다음 실행에서 자동 편입).
+
+치비 시트(별도 트랙, 스펙 밖)
+  art/gen/chibi_sheet/<hero>_sheet.png(cell 256 x 4프레임, RGBA) 를 chibi-manifest.json 의
+  규격으로 검증한 뒤 무손실 WebP 로 public/assets/characters/chibi/<hero>_sheet.webp 에
+  굽고 manifest.chibi 에 등록한다(지연 로드 버킷. cell/frames/footY 동봉).
+  손실 압축을 쓰지 않는 이유는 프레임 경계에서 이웃 프레임 색이 번지기 때문이다.
+
 멱등성
   대상 파일이 이미 존재하고 소스보다 최신이면 재처리하지 않는다(--force 로 무시).
   존재하는 원본만 처리한다. 없는 원본은 조용히 건너뛰고 manifest.missing 에 기록한다.
@@ -64,6 +78,16 @@ BG_SOURCE_DIR = ROOT / "art" / "gen" / "assets_bg2"
 UI_SOURCE_DIR = ROOT / "art" / "gen" / "assets"
 FULLBODY_SOURCE_DIR = ROOT / "art" / "gen" / "fullbody"
 FULLBODY_TARGET_DIR = PUBLIC_DIR / "assets" / "characters" / "fullbody"
+
+ENEMY_UNIT_SOURCE_DIR = ROOT / "art" / "gen" / "enemies"
+ENEMY_UNIT_TARGET_DIR = PUBLIC_DIR / "assets" / "characters" / "enemies"
+ENEMY_DATA_PATH = ROOT / "src" / "data" / "enemies.json"
+
+CHIBI_SOURCE_DIR = ROOT / "art" / "gen" / "chibi_sheet"
+CHIBI_TARGET_DIR = PUBLIC_DIR / "assets" / "characters" / "chibi"
+CHIBI_SPEC_PATH = CHIBI_SOURCE_DIR / "chibi-manifest.json"
+# 텍스처 키 접두사. 영웅 id 가 그대로 붙는다(chibi_base_iris). MeditationView 가 이 규칙으로 조회한다.
+CHIBI_KEY_PREFIX = "chibi_"
 
 # 배경 중 v2(2차 생성본)를 채택한 항목. 나머지는 전부 v1.
 # bg_chapter_2: v1은 도리이 문에 문자 흔적이 남아 있어 v2를 채택.
@@ -490,6 +514,168 @@ def process_fullbody_heroes(report: Report, force: bool, dry_run: bool, manifest
         log(f"  [fullbody] {hero_id}: {w}x{h} -> {size[0]}x{size[1]} webp q85  src={src.name}")
 
 
+def process_enemy_units(report: Report, force: bool, dry_run: bool, manifest: dict) -> None:
+    """art/gen/enemies/<id>.png(1024 RGBA) -> public/assets/characters/enemies/<id>.webp.
+
+    긴 변 512 로 다운스케일(업스케일 없음), 알파 유지 WebP q85. manifest.enemies 에 등록해
+    idleBattleLayout.resolveEnemyArt() / BattleScene 이 최우선으로 조회하게 한다.
+    소스가 없는 나머지 id는 regen-list.json 에 기록만 하고 실루엣 폴백을 유지한다.
+    """
+    manifest.setdefault("enemies", {})
+    sources = sorted(ENEMY_UNIT_SOURCE_DIR.glob("enemy_*.png"))
+    generated_ids = set()
+
+    for src in sources:
+        enemy_id = src.stem
+        generated_ids.add(enemy_id)
+        target = ENEMY_UNIT_TARGET_DIR / f"{enemy_id}.webp"
+
+        if not is_stale(target, src, force):
+            report.up_to_date.append(enemy_id)
+            if target.exists():
+                with Image.open(target) as t:
+                    w, h = t.size
+            else:
+                w, h = 0, 0
+            manifest["enemies"][enemy_id] = {
+                "path": to_public_rel(str(target.relative_to(PUBLIC_DIR).as_posix())),
+                "width": w, "height": h, "category": "enemy", "priority": "P3", "nineSlice": None,
+            }
+            continue
+
+        if dry_run:
+            report.processed.append(f"{enemy_id} (dry-run)")
+            continue
+
+        with Image.open(src) as im:
+            im = im.convert("RGBA")
+            if not has_real_alpha(im):
+                report.skipped_no_alpha.append(enemy_id)
+                note_regen(enemy_id, "소스에 유효 알파 채널 없음. 재생성 필요.",
+                           f"public/{ENEMY_UNIT_TARGET_DIR.relative_to(PUBLIC_DIR).as_posix()}/{enemy_id}.webp")
+                continue
+
+            w, h = im.size
+            longest = max(w, h)
+            if longest > 512:
+                scale = 512 / longest
+                size = (max(1, round(w * scale)), max(1, round(h * scale)))
+                resized = im.resize(size, Image.LANCZOS)
+            else:
+                resized = im.copy()
+                size = (w, h)
+
+            target.parent.mkdir(parents=True, exist_ok=True)
+            resized.save(target, "WEBP", quality=85, method=6)
+
+        manifest["enemies"][enemy_id] = {
+            "path": to_public_rel(str(target.relative_to(PUBLIC_DIR).as_posix())),
+            "width": size[0], "height": size[1], "category": "enemy", "priority": "P3", "nineSlice": None,
+        }
+        report.processed.append(enemy_id)
+        log(f"  [enemy-unit] {enemy_id}: {w}x{h} -> {size[0]}x{size[1]} webp q85  src={src.name}")
+
+    # 데이터에는 있지만 아직 생성되지 않은 적 — 실루엣 폴백 유지, regen-list 에만 기록.
+    if not dry_run and ENEMY_DATA_PATH.exists():
+        try:
+            enemy_data = json.loads(ENEMY_DATA_PATH.read_text(encoding="utf-8"))
+            all_enemy_ids = sorted({e["id"] for e in enemy_data.get("enemies", [])})
+        except Exception as e:  # pragma: no cover
+            log(f"  경고: {ENEMY_DATA_PATH.name} 파싱 실패({e}), 미생성 목록 계산 스킵")
+            all_enemy_ids = []
+
+        pending = sorted(set(all_enemy_ids) - generated_ids)
+        for enemy_id in pending:
+            note_regen(enemy_id, "미생성 — art/gen/enemies/ 에 소스가 없다. 실루엣 폴백 유지.",
+                       f"public/{ENEMY_UNIT_TARGET_DIR.relative_to(PUBLIC_DIR).as_posix()}/{enemy_id}.webp")
+        log(f"  미생성(폴백 유지): {len(pending)}종")
+
+
+def process_chibi_sheets(report: Report, force: bool, dry_run: bool, manifest: dict) -> None:
+    """art/gen/chibi_sheet/<hero>_sheet.png -> public/assets/characters/chibi/<hero>_sheet.webp.
+
+    치비 시트는 프레임 경계가 픽셀 단위로 정확해야 한다(Phaser 가 cell 크기로 잘라 쓴다).
+    그래서 **무손실 WebP** 로 굽는다 — q90 손실 압축은 프레임 경계에서 이웃 프레임 색이
+    번져 들어와 가장자리에 유령이 생긴다. 크기 이득보다 정확성이 우선이고, 어차피
+    manifest.chibi 는 지연 로드 버킷이라 초기 전송량 예산에 들어가지 않는다.
+
+    규격(cell/frames/footY)은 art/gen/chibi_sheet/chibi-manifest.json 이 SSOT 다.
+    여기서는 그 값을 검증(시트 크기 = cell x 프레임수)한 뒤 그대로 런타임 매니페스트로 옮긴다.
+    시트가 규격과 어긋나면 등록하지 않고 regen-list.json 에 남긴다 — 잘못된 cell 로 로드하면
+    프레임이 어긋난 채 화면에 서기 때문이다.
+    """
+    manifest.setdefault("chibi", {})
+    if not CHIBI_SPEC_PATH.exists():
+        log("  치비 규격 파일 없음 — 스킵 (art/gen/chibi_sheet/chibi-manifest.json)")
+        return
+
+    try:
+        spec = json.loads(CHIBI_SPEC_PATH.read_text(encoding="utf-8"))
+    except Exception as e:  # pragma: no cover
+        log(f"  경고: chibi-manifest.json 파싱 실패({e}), 치비 스킵")
+        return
+
+    default_cell = int(spec.get("cell", 256))
+    default_foot = int(spec.get("footY", 240))
+    default_frames = list(spec.get("frameOrder", []))
+    heroes = spec.get("heroes", {})
+
+    for hero_id, hero_spec in sorted(heroes.items()):
+        cell = int(hero_spec.get("cell", default_cell))
+        frames = list(hero_spec.get("frames") or default_frames)
+        foot_y = int(hero_spec.get("footY", default_foot))
+        sheet_name = hero_spec.get("sheet") or f"{hero_id}_sheet.png"
+        src = CHIBI_SOURCE_DIR / sheet_name
+        key = f"{CHIBI_KEY_PREFIX}{hero_id}"
+        target = CHIBI_TARGET_DIR / f"{hero_id}_sheet.webp"
+        rel_target = f"public/{CHIBI_TARGET_DIR.relative_to(PUBLIC_DIR).as_posix()}/{hero_id}_sheet.webp"
+
+        if not src.exists():
+            report.skipped_missing_source.append(key)
+            note_regen(key, "치비 시트 소스 없음 — tools/art/build-chibi-sheet.py 로 생성 필요.", rel_target)
+            continue
+
+        with Image.open(src) as probe:
+            sw, sh = probe.size
+        if sh != cell or sw != cell * len(frames):
+            note_regen(key, f"시트 크기 {sw}x{sh} 가 규격(cell {cell} x {len(frames)}프레임)과 불일치. 재생성 필요.", rel_target)
+            log(f"  [chibi] {hero_id}: 규격 불일치 {sw}x{sh} — 등록 스킵")
+            continue
+
+        entry = {
+            "key": key,
+            "path": to_public_rel(str(target.relative_to(PUBLIC_DIR).as_posix())),
+            "width": sw, "height": sh,
+            "cell": cell,
+            "frames": frames,
+            "footY": foot_y,
+            "heroId": hero_id,
+        }
+
+        if not is_stale(target, src, force):
+            report.up_to_date.append(key)
+            manifest["chibi"][key] = entry
+            continue
+
+        if dry_run:
+            report.processed.append(f"{key} (dry-run)")
+            continue
+
+        with Image.open(src) as im:
+            im = im.convert("RGBA")
+            if not has_real_alpha(im):
+                report.skipped_no_alpha.append(key)
+                note_regen(key, "치비 시트에 유효 알파 채널 없음(크로마키 제거 실패). 재생성 필요.", rel_target)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            im.save(target, "WEBP", lossless=True, method=6)
+
+        manifest["chibi"][key] = entry
+        report.processed.append(key)
+        log(f"  [chibi] {hero_id}: {sw}x{sh} cell={cell} frames={','.join(frames)} -> webp lossless "
+            f"({human(target.stat().st_size)})")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="최신이어도 강제 재처리")
@@ -511,6 +697,22 @@ def main() -> int:
         "lazyTextures": {},
         # fullbody: 전신 히어로 웹, HeroDetailScene 이 조회 시점에 지연 로드(W2).
         "fullbody": {},
+        # enemies: 적 유닛 아트(512 WebP, 알파 유지). resolveEnemyArt() 최우선 조회 버킷.
+        # PreloadScene 은 이 버킷을 읽지 않는다 — BattleScene/MeditationView 가 전투 진입 시 지연 로드.
+        "enemies": {},
+        # chibi: 명상 로비용 치비 스프라이트 시트(무손실 WebP, 알파 유지).
+        # PreloadScene 은 이 버킷을 읽지 않는다 — MeditationView 가 파티 슬롯 조회 시점에 지연 로드한다.
+        # 값에 cell/frames/footY 가 함께 들어 있어 씬이 규격을 하드코딩하지 않는다.
+        "chibi": {},
+        # memoryBudget: tests/e2e/memory-smoke.mjs 의 통과 기준(팀 리드 결정, 2026-09-03).
+        # 5회 순환(main→herolist→herodetail→gacha→stageselect→battle→result→main) 중
+        # 1회차 대비 5회차 힙/텍스처 증가율을 이 값과 비교한다.
+        "memoryBudget": {
+            "cycles": 5,
+            "heapGrowthMaxPercent": 15,
+            "textureCountGrowthMax": 10,
+            "route": ["MainMenuScene", "HeroListScene", "HeroDetailScene", "GachaScene", "StageSelectScene", "BattleScene", "BattleResultScene", "MainMenuScene"],
+        },
     }
 
     log("=== 배경 (background) ===")
@@ -545,6 +747,12 @@ def main() -> int:
 
     log("=== 전신 히어로 (art/gen/fullbody/hero_XXX.png, 스펙 밖 별도 트랙) ===")
     process_fullbody_heroes(report, args.force, args.dry_run, manifest)
+
+    log("=== 적 유닛 아트 (art/gen/enemies/enemy_*.png, 스펙 밖 별도 트랙) ===")
+    process_enemy_units(report, args.force, args.dry_run, manifest)
+
+    log("=== 치비 시트 (art/gen/chibi_sheet/<hero>_sheet.png, 스펙 밖 별도 트랙) ===")
+    process_chibi_sheets(report, args.force, args.dry_run, manifest)
 
     from datetime import datetime, timezone
     manifest["generatedAt"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -584,6 +792,8 @@ def main() -> int:
     log(f"manifest 텍스처 키 수(eager) : {len(manifest['textures'])}")
     log(f"manifest 텍스처 키 수(lazy)  : {len(manifest['lazyTextures'])}")
     log(f"manifest 전신 키 수          : {len(manifest['fullbody'])}")
+    log(f"manifest 적 유닛 키 수       : {len(manifest['enemies'])}")
+    log(f"manifest 치비 시트 키 수     : {len(manifest['chibi'])}")
     if not args.dry_run:
         log(f"manifest 저장: {MANIFEST_PATH.relative_to(ROOT)}")
         log(f"regen-list 저장: {REGEN_LIST_PATH.relative_to(ROOT)} ({len(_REGEN_ENTRIES)}건)")

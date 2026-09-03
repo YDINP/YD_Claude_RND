@@ -1,5 +1,5 @@
 /**
- * CutscenePlayer — 컷씬 대사 재생기 (타이프라이터 · 탭 진행 · 스킵)
+ * CutscenePlayer — 컷씬 재생기 (배경 · 전신 화자 · 글래스 대화 UI · 타이프라이터)
  *
  * SSOT: docs/story/UX_ONBOARDING_FLOW.md §3-2 ~ §3-6
  *  - 레이아웃 수치는 base 720×1280 기준이며 전부 `s()` / `sf()`를 통과시킨다
@@ -7,65 +7,33 @@
  *  - 스킵은 확인 다이얼로그 없이 1회 탭으로 즉시 종료(Pillar ②)
  *  - 씬 1개가 끝나거나 스킵될 때마다 즉시 커밋한다(LEVEL_STORY_PLACEMENT.md R6)
  *
+ * 화면 층위 (아래 → 위)
+ *   0 배경판(불투명)  1 챕터 배경 + 딤  2 배경 딤  10 이 컴포넌트의 root
+ * 배경판이 있어야 일시정지된 부모 씬(pause 여도 렌더는 유지된다)이 비치지 않는다.
+ *
  * 주의: gameConfig.js에서 값을 import하지 않는다(순환 import TDZ 회귀 방지).
  */
-import { s, sf, GAME_WIDTH, GAME_HEIGHT } from '../../config/scaleConfig.js';
-import { SpeakerSilhouette, getSpeakerStyle } from './SpeakerSilhouette.js';
+import { s, GAME_WIDTH, GAME_HEIGHT } from '../../config/scaleConfig.js';
+import { DESIGN, getCultColor } from '../../config/designSystem.js';
+import { ts } from '../../utils/textStyles.js';
+import { BackgroundFactory } from '../../utils/BackgroundFactory.js';
+import { GlassPanel, GLASS_VARIANT } from '../GlassPanel.js';
+import { NineSliceFrame } from '../NineSliceFrame.js';
+import { getCharacterOrHero } from '../../data/index.js';
+import {
+  CUTSCENE_LAYOUT as L,
+  CUTSCENE_DIM_ALPHA,
+  LOG_LINE_LIMIT,
+  assignSpeakerSides,
+  autoAdvanceDelay,
+  recentLogLines,
+  resolveCutsceneBgKey
+} from '../../utils/cutsceneLayout.js';
+import { CharacterStage } from './CharacterStage.js';
+import { getSpeakerStyle } from './SpeakerSilhouette.js';
 
-/** UX §3-2 요소별 수치 (base 720×1280) */
-const L = {
-  letterboxTop: 150,
-  letterboxBottom: 130,
-  boxX: 24,
-  boxY: 890,
-  boxW: 672,
-  boxH: 260,
-  textX: 56,
-  textY: 950,
-  textWrap: 600,
-  nameX: 48,
-  nameY: 868,
-  narratorX: 360,
-  narratorY: 640,
-  narratorWrap: 560,
-  skipX: 596,
-  skipY: 24,
-  skipW: 100,
-  skipH: 52,
-  skipAllX: 24,
-  skipAllY: 1196,
-  skipAllW: 220,
-  skipAllH: 48,
-  indicatorX: 660,
-  indicatorY: 1120,
-  counterRight: 696,
-  counterY: 1215
-};
-
-const C = {
-  letterbox: 0x000000,
-  dim: 0x0f172a,
-  box: 0x0f172a,
-  text: '#F8FAFC',
-  narratorText: '#CBD5E1',
-  muted: '#94A3B8',
-  buttonBg: 0x1e293b
-};
-
-/**
- * 연출 영역 딤 불투명도 (UX §3-3 — 내레이터 줄에서 강화).
- * 딤은 **배경 일러스트 위에** 얹는 값이지 부모 화면을 가리는 수단이 아니다.
- * 부모 차폐는 아래 `BACKDROP_ALPHA`(불투명 배경판)가 전담한다.
- */
-const DIM_ALPHA = { line: 0.65, narrator: 0.8 };
-
-/**
- * 배경판 불투명도.
- * 컷씬은 일시정지된 부모 씬 위에 렌더된다(pause여도 렌더는 유지된다).
- * 반투명 딤만 깔면 각인 팝업의 영웅 목록 같은 부모 UI가 대사 뒤로 비쳐 가독성이 무너지므로,
- * 딤 아래에 불투명 배경판을 먼저 깐다. 씬에 `background` 텍스처가 있으면 그 위에 그린다.
- */
-const BACKDROP_ALPHA = 1;
+/** 화면 층위 depth */
+const DEPTH = Object.freeze({ backdrop: 0, background: 1, root: 10 });
 
 /** UX §3-5 타이핑 속도 — 보통 30자/초 */
 const TYPING_CPS = 30;
@@ -73,6 +41,12 @@ const TYPING_CPS = 30;
 const PLAYER_TYPING_DIVISOR = 2;
 /** 스킵 직후 입력 잠금 (오조작 방지) */
 const SKIP_INPUT_LOCK_MS = 300;
+/** 최소 탭 타겟 (base px) */
+const MIN_TOUCH = 44;
+/** 대화박스 뒤판 불투명도 — 글래스만으로는 밝은 배경에서 본문이 묻힌다 */
+const BOX_PLATE_ALPHA = 0.78;
+/** 내레이션 줄에 추가로 얹는 딤 (배경 딤 0.35 위에 겹친다) */
+const NARRATOR_DIM_ALPHA = 0.55;
 
 export class CutscenePlayer {
   /**
@@ -83,6 +57,7 @@ export class CutscenePlayer {
    * @param {(scene: object, info: {skipped: boolean}) => void} [options.onSceneEnd] - 씬 1개 종료/스킵 시 즉시 호출 (커밋 지점)
    * @param {(info: {skippedAll: boolean}) => void} [options.onComplete] - 전체 종료
    * @param {boolean} [options.allowSkipAll] - "전체 건너뛰기" 노출 여부
+   * @param {(text: string, vars: object) => string} [options.resolveText] - 변수 치환기
    */
   constructor(scene, options = {}) {
     this.scene = scene;
@@ -97,13 +72,29 @@ export class CutscenePlayer {
     this.lineIndex = 0;
     this.typing = false;
     this.finished = false;
+    this.autoEnabled = false;
+    this.logOpen = false;
     this.inputLockedUntil = 0;
     this.typeEvent = null;
+    this.autoEvent = null;
+    this.history = [];
+    this.sides = [];
+    this._activeSide = null;
+    this._bgKey = null;
   }
 
-  // ============================================
+  /**
+   * e2e·디버그 호환용. 현재 발화 화자의 무대 오브젝트를 `{ current }` 형태로 노출한다.
+   * (화자 슬롯은 `CharacterStage` 가 관리하지만 외부 계약은 유지한다)
+   */
+  get silhouette() {
+    const actor = this._activeSide ? this.characterStage?.actors?.[this._activeSide] : null;
+    return { current: actor ? actor.object : null };
+  }
+
+  // ================================================================
   // 생명주기
-  // ============================================
+  // ================================================================
 
   start() {
     this._buildUI();
@@ -116,167 +107,154 @@ export class CutscenePlayer {
 
   destroy() {
     this._stopTyping();
-    this.silhouette?.destroy();
-    this.silhouette = null;
+    this._cancelAuto();
+    this.characterStage?.destroy();
+    this.characterStage = null;
     this.root?.destroy(true);
     this.root = null;
+    this.backdrop?.destroy();
+    this.backdrop = null;
   }
 
-  // ============================================
+  // ================================================================
   // UI 구성
-  // ============================================
+  // ================================================================
 
   _buildUI() {
     const scene = this.scene;
-    this.root = scene.add.container(0, 0);
 
-    // 배경판: 부모 씬을 완전히 가린다 (딤보다 아래)
+    // 배경판 — 일시정지된 부모 씬을 완전히 가린다 (배경보다 아래)
     this.backdrop = scene.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, C.dim, BACKDROP_ALPHA)
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, DESIGN.colors.bg.primary, 1)
+      .setOrigin(0.5)
+      .setDepth(DEPTH.backdrop);
+
+    this.root = scene.add.container(0, 0).setDepth(DEPTH.root);
+
+    // 화자 무대 (대화박스보다 아래)
+    this.characterStage = new CharacterStage(scene, this.root);
+
+    // 내레이션 전용 딤 — 대화박스가 없는 줄은 본문이 배경 위에 직접 놓인다.
+    // UX §3-3 "내레이터 줄에서는 화면이 더 어두워진다"를 이 레이어로 구현한다.
+    this.lineDim = scene.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, DESIGN.colors.bg.primary, 0)
       .setOrigin(0.5);
-    this.root.add(this.backdrop);
+    this.root.add(this.lineDim);
 
-    // 배경 일러스트 슬롯 (자산이 없으면 비어 있다)
-    this.background = scene.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, '__DEFAULT').setVisible(false);
-    this.root.add(this.background);
+    // 대화박스 뒤판 — 배경 일러스트가 밝아도 본문이 읽히도록 먼저 눌러둔다
+    // (딤 0.35 만으로는 챕터 배경 위에서 대비가 무너진다)
+    this.boxPlate = scene.add.graphics();
+    this.boxPlate.fillStyle(DESIGN.colors.bg.primary, BOX_PLATE_ALPHA);
+    this.boxPlate.fillRoundedRect(s(L.box.x), s(L.box.y), s(L.box.w), s(L.box.h), s(L.box.radius));
+    this.root.add(this.boxPlate);
 
-    // 연출 영역 딤 (배경 위 — 내레이터 줄에서 한 단계 강화)
-    this.dim = scene.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, C.dim, DIM_ALPHA.line)
-      .setOrigin(0.5);
-    this.root.add(this.dim);
-
-    // 화자 슬롯
-    this.silhouette = new SpeakerSilhouette(scene, this.root);
-
-    // 대화박스 + 이름표
-    this.box = scene.add.graphics();
+    // 대화박스 — 글래스 표면
+    this.box = GlassPanel.create(scene, {
+      x: s(L.box.x + L.box.w / 2),
+      y: s(L.box.y + L.box.h / 2),
+      w: s(L.box.w),
+      h: s(L.box.h),
+      variant: GLASS_VARIANT.POPUP,
+      radius: s(L.box.radius)
+    });
     this.root.add(this.box);
 
+    // 화자색 액센트 테두리 (교단색) — 줄마다 다시 그린다
+    this.boxAccent = scene.add.graphics();
+    this.root.add(this.boxAccent);
+
+    // 이름표
     this.nameBg = scene.add.graphics();
     this.root.add(this.nameBg);
-
     this.nameText = scene.add
-      .text(s(L.nameX + 16), s(L.nameY - 22), '', {
-        fontFamily: '"Noto Sans KR", sans-serif',
-        fontSize: sf(17),
-        color: C.text
-      })
+      .text(s(L.name.x + L.name.padX), s(L.name.y - L.name.h / 2), '', ts('label'))
       .setOrigin(0, 0.5);
     this.root.add(this.nameText);
 
+    // 본문 / 내레이션
     this.bodyText = scene.add
-      .text(s(L.textX), s(L.textY), '', {
-        fontFamily: '"Noto Sans KR", sans-serif',
-        fontSize: sf(22),
-        color: C.text,
-        wordWrap: { width: s(L.textWrap) },
+      .text(s(L.text.x), s(L.text.y), '', ts('body', {
+        wordWrap: { width: s(L.text.wrap) },
         lineSpacing: s(10)
-      })
+      }))
       .setOrigin(0, 0);
     this.root.add(this.bodyText);
 
     this.narratorText = scene.add
-      .text(s(L.narratorX), s(L.narratorY), '', {
-        fontFamily: '"Noto Sans KR", sans-serif',
-        fontSize: sf(20),
-        color: C.narratorText,
+      .text(s(L.narrator.x), s(L.narrator.y), '', ts('body', {
+        color: DESIGN.colors.text.primary,
         fontStyle: 'italic',
         align: 'center',
-        wordWrap: { width: s(L.narratorWrap) },
+        wordWrap: { width: s(L.narrator.wrap) },
         lineSpacing: s(10)
-      })
+      }))
       .setOrigin(0.5, 0.5);
     this.root.add(this.narratorText);
 
-    // 레터박스 (탭-진행 영역 밖 — 스킵 버튼을 물리적으로 분리한다)
+    // 레터박스 (탭-진행 영역 밖 — 버튼을 물리적으로 분리한다)
     this.root.add(
-      scene.add.rectangle(0, 0, GAME_WIDTH, s(L.letterboxTop), C.letterbox, 0.92).setOrigin(0, 0)
+      scene.add.rectangle(0, 0, GAME_WIDTH, s(L.letterboxTop), 0x000000, 0.92).setOrigin(0, 0)
     );
     this.root.add(
-      scene.add
-        .rectangle(0, GAME_HEIGHT, GAME_WIDTH, s(L.letterboxBottom), C.letterbox, 0.92)
-        .setOrigin(0, 1)
+      scene.add.rectangle(0, GAME_HEIGHT, GAME_WIDTH, s(L.letterboxBottom), 0x000000, 0.92).setOrigin(0, 1)
     );
 
-    // 진행 카운터 (도트 대신 텍스트 카운터 — base 720 폭 가독성)
+    // 진행 카운터
     this.counterText = scene.add
-      .text(s(L.counterRight), s(L.counterY), '', {
-        fontFamily: '"Noto Sans KR", sans-serif',
-        fontSize: sf(15),
-        color: C.muted
-      })
+      .text(s(L.counter.right), s(L.counter.y), '', ts('caption', { color: DESIGN.colors.text.muted }))
       .setOrigin(1, 0.5);
     this.root.add(this.counterText);
 
     // 다음 인디케이터
     this.indicator = scene.add
-      .text(s(L.indicatorX), s(L.indicatorY), '▼', {
-        fontFamily: '"Noto Sans KR", sans-serif',
-        fontSize: sf(18),
-        color: C.text
-      })
+      .text(s(L.indicator.x), s(L.indicator.y), '▶', ts('label'))
       .setOrigin(0.5)
       .setVisible(false);
     this.root.add(this.indicator);
     scene.tweens.add({
       targets: this.indicator,
-      y: s(L.indicatorY + 4),
-      duration: 400,
+      x: s(L.indicator.x + 6),
+      duration: 420,
       yoyo: true,
       repeat: -1
     });
 
-    // 탭-진행 영역 (버튼 히트영역 제외 → 버튼이 위에 올라간다)
+    // 탭-진행 영역 (버튼은 이 뒤에 추가되어 위로 올라간다)
     this.tapZone = scene.add.zone(0, 0, GAME_WIDTH, GAME_HEIGHT).setOrigin(0, 0).setInteractive();
     this.tapZone.on('pointerdown', () => this.handleTap());
     this.root.add(this.tapZone);
 
-    // 스킵 버튼 (상시 노출)
-    this.skipButton = this._createButton(
-      L.skipX,
-      L.skipY,
-      L.skipW,
-      L.skipH,
-      '건너뛰기 ⏭',
-      16,
-      () => this.skipScene()
-    );
-
+    // 버튼 — '건너뛰기'가 '전체 건너뛰기'보다 먼저 만들어져야 라벨 탐색이 어긋나지 않는다
+    this.skipButton = this._createButton(L.skip, '건너뛰기 ⏭', 'btn_ghost', () => this.skipScene());
     if (this.allowSkipAll) {
-      this.skipAllButton = this._createButton(
-        L.skipAllX,
-        L.skipAllY,
-        L.skipAllW,
-        L.skipAllH,
-        '전체 건너뛰기',
-        15,
-        () => this.skipAll()
-      );
+      this.skipAllButton = this._createButton(L.skipAll, '전체 건너뛰기', 'btn_ghost', () => this.skipAll());
     }
+    this.autoButton = this._createButton(L.auto, 'AUTO', 'btn_secondary', () => this.toggleAuto());
+    this.logButton = this._createButton(L.log, '기록', 'btn_ghost', () => this.toggleLog());
+
+    this._buildLogPanel();
   }
 
-  _createButton(bx, by, bw, bh, label, fontBase, handler) {
+  /** @private NineSlice 버튼 */
+  _createButton(rect, label, frameKey, handler) {
     const scene = this.scene;
-    const container = scene.add.container(s(bx), s(by));
+    const cx = s(rect.x + rect.w / 2);
+    const cy = s(rect.y + rect.h / 2);
 
-    const bg = scene.add.graphics();
-    bg.fillStyle(C.buttonBg, 0.85);
-    bg.fillRoundedRect(0, 0, s(bw), s(bh), s(8));
-    bg.lineStyle(s(2), 0x94a3b8, 1);
-    bg.strokeRoundedRect(0, 0, s(bw), s(bh), s(8));
-    container.add(bg);
+    const container = scene.add.container(0, 0);
 
-    const text = scene.add
-      .text(s(bw) / 2, s(bh) / 2, label, {
-        fontFamily: '"Noto Sans KR", sans-serif',
-        fontSize: sf(fontBase),
-        color: C.text
-      })
-      .setOrigin(0.5);
+    const frame = NineSliceFrame.create(scene, {
+      x: cx, y: cy, w: s(rect.w), h: s(rect.h), key: frameKey
+    });
+    container.add(frame);
+
+    const text = scene.add.text(cx, cy, label, ts('caption')).setOrigin(0.5);
     container.add(text);
 
-    const zone = scene.add.zone(0, 0, s(bw), s(bh)).setOrigin(0, 0).setInteractive();
+    const zone = scene.add
+      .zone(cx, cy, Math.max(s(rect.w), s(MIN_TOUCH)), Math.max(s(rect.h), s(MIN_TOUCH)))
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
     zone.on('pointerdown', (_pointer, _x, _y, event) => {
       event?.stopPropagation?.();
       handler();
@@ -284,38 +262,82 @@ export class CutscenePlayer {
     container.add(zone);
 
     this.root.add(container);
+    container.frame = frame;
+    container.label = text;
     return container;
   }
 
-  // ============================================
+  /** @private 로그 패널 (직전 5줄) */
+  _buildLogPanel() {
+    const scene = this.scene;
+    this.logPanel = scene.add.container(0, 0).setVisible(false);
+
+    const scrim = scene.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6)
+      .setOrigin(0.5)
+      .setInteractive();
+    scrim.on('pointerdown', (_pointer, _x, _y, event) => {
+      event?.stopPropagation?.();
+      this.toggleLog();
+    });
+    this.logPanel.add(scrim);
+
+    const panel = GlassPanel.create(scene, {
+      x: s(L.logPanel.x),
+      y: s(L.logPanel.y),
+      w: s(L.logPanel.w),
+      h: s(L.logPanel.h),
+      variant: GLASS_VARIANT.POPUP
+    });
+    this.logPanel.add(panel);
+
+    const title = scene.add
+      .text(s(L.logPanel.x), s(L.logPanel.y - L.logPanel.h / 2 + 44), `기록 (최근 ${LOG_LINE_LIMIT}줄)`, ts('subtitle'))
+      .setOrigin(0.5);
+    this.logPanel.add(title);
+
+    this.logText = scene.add
+      .text(s(L.logPanel.x - L.logPanel.w / 2 + 36), s(L.logPanel.y - L.logPanel.h / 2 + 96), '', ts('caption', {
+        wordWrap: { width: s(L.logPanel.w - 72) },
+        lineSpacing: s(8)
+      }))
+      .setOrigin(0, 0);
+    this.logPanel.add(this.logText);
+
+    this.root.add(this.logPanel);
+  }
+
+  // ================================================================
   // 재생
-  // ============================================
+  // ================================================================
 
   _playScene(index) {
     this.sceneIndex = index;
     this.lineIndex = 0;
-    const scene = this.queue[index];
-    if (!scene) {
+    const cutscene = this.queue[index];
+    if (!cutscene) {
       this._finish(false);
       return;
     }
-    this._applyBackground(scene.background);
+
+    this._applyBackground(cutscene);
+    this.sides = assignSpeakerSides(cutscene.lines);
+    this.characterStage.clearAll();
     this._showLine(0);
   }
 
   /**
-   * 씬의 배경 텍스처를 적용한다. 자산이 없으면 배경판(불투명)만 남는다.
-   * @param {string|null} key
+   * @private 씬 배경을 적용한다. 챕터 배경은 lazyTextures 라
+   * `BackgroundFactory` 가 폴백을 먼저 그린 뒤 로드되면 실제 이미지로 갈아 끼운다.
    */
-  _applyBackground(key) {
-    if (!key || !this.scene.textures.exists(key)) {
-      this.background.setVisible(false);
-      return;
-    }
-    this.background.setTexture(key).setVisible(true);
-    const source = this.scene.textures.get(key).getSourceImage();
-    // cover: 화면을 가득 채우도록 긴 축 기준으로 확대한다
-    this.background.setScale(Math.max(GAME_WIDTH / source.width, GAME_HEIGHT / source.height));
+  _applyBackground(cutscene) {
+    const key = resolveCutsceneBgKey(cutscene, (k) => this.scene.textures.exists(k));
+    if (key === this._bgKey) return;
+    this._bgKey = key;
+    BackgroundFactory.createSceneBg(this.scene, key, {
+      depth: DEPTH.background,
+      dimAlpha: CUTSCENE_DIM_ALPHA
+    });
   }
 
   _currentScene() {
@@ -332,60 +354,92 @@ export class CutscenePlayer {
     }
 
     this.lineIndex = index;
-    const style = getSpeakerStyle(line.speakerType);
-    const isNarrator = line.speakerType === 'narrator';
+    this._cancelAuto();
 
-    this.silhouette.show(line);
-    this.dim.setFillStyle(C.dim, isNarrator ? DIM_ALPHA.narrator : DIM_ALPHA.line);
+    const isNarrator = line.speakerType === 'narrator';
+    const style = getSpeakerStyle(line.speakerType);
+    const accent = this._accentFor(line);
+    const side = this.sides[index] ?? null;
+    this._activeSide = side;
+
+    this.characterStage.show(line, side);
     this.indicator.setVisible(false);
     this.counterText.setText(`${index + 1} / ${cutscene.lines.length}`);
 
-    this._drawBox(style, isNarrator);
-    this._drawNameTag(line, style);
+    const showBox = !isNarrator && style.showBox;
+    this.box.setVisible(showBox);
+    this.boxPlate.setVisible(showBox);
+    this.lineDim.setAlpha(isNarrator ? NARRATOR_DIM_ALPHA : 0);
+    this._drawAccent(showBox ? accent : null);
+    this._drawNameTag(line, style, accent);
 
     const fullText = this.resolveText(line.text, this.vars);
+    this.history.push({ speaker: line.speaker, text: fullText });
+
     const target = isNarrator ? this.narratorText : this.bodyText;
     const other = isNarrator ? this.bodyText : this.narratorText;
-    other.setText('');
-    other.setVisible(false);
+    other.setText('').setVisible(false);
     target.setVisible(true);
 
-    if (line.speakerType === 'player' && !style.showName) {
-      // 수집가 대사: 박스 전체 폭 중앙 정렬
-      this.bodyText.setAlign('center');
-      this.bodyText.setWordWrapWidth(s(L.boxW - 64));
-      this.bodyText.setPosition(s(L.boxX + L.boxW / 2), s(L.textY));
-      this.bodyText.setOrigin(0.5, 0);
-    } else if (!isNarrator) {
-      this.bodyText.setAlign('left');
-      this.bodyText.setWordWrapWidth(s(L.textWrap));
-      this.bodyText.setPosition(s(L.textX), s(L.textY));
-      this.bodyText.setOrigin(0, 0);
-    }
+    if (!isNarrator) this._layoutBodyText(line, style);
 
     this._type(target, fullText, line);
   }
 
-  _drawBox(style, isNarrator) {
-    this.box.clear();
-    if (isNarrator || !style.showBox) return;
-    this.box.fillStyle(C.box, 0.94);
-    this.box.fillRoundedRect(s(L.boxX), s(L.boxY), s(L.boxW), s(L.boxH), s(16));
-    this.box.lineStyle(s(2), style.accent, 1);
-    this.box.strokeRoundedRect(s(L.boxX), s(L.boxY), s(L.boxW), s(L.boxH), s(16));
+  /** @private 수집가 대사만 박스 전체 폭 중앙 정렬 */
+  _layoutBodyText(line, style) {
+    const centered = line.speakerType === 'player' || !style.showName;
+    if (centered) {
+      this.bodyText.setAlign('center');
+      this.bodyText.setWordWrapWidth(s(L.box.w - 88));
+      this.bodyText.setOrigin(0.5, 0);
+      this.bodyText.setPosition(s(L.box.x + L.box.w / 2), s(L.text.y));
+    } else {
+      this.bodyText.setAlign('left');
+      this.bodyText.setWordWrapWidth(s(L.text.wrap));
+      this.bodyText.setOrigin(0, 0);
+      this.bodyText.setPosition(s(L.text.x), s(L.text.y));
+    }
   }
 
-  _drawNameTag(line, style) {
+  /** @private 화자색 — 전직영웅은 교단색, 그 외는 화자 유형색 */
+  _accentFor(line) {
+    if (line.speakerType === 'hero' && line.portraitId) {
+      try {
+        const data = getCharacterOrHero(line.portraitId);
+        const cult = data?.cultId || data?.cult;
+        if (cult) return getCultColor(cult);
+      } catch {
+        // 데이터 조회 실패는 화자 유형색으로 폴백한다
+      }
+    }
+    return getSpeakerStyle(line.speakerType).accent;
+  }
+
+  /** @private 대화박스 액센트 테두리 */
+  _drawAccent(accent) {
+    this.boxAccent.clear();
+    if (accent === null) return;
+    this.boxAccent.lineStyle(s(2), accent, 0.9);
+    this.boxAccent.strokeRoundedRect(s(L.box.x), s(L.box.y), s(L.box.w), s(L.box.h), s(L.box.radius));
+  }
+
+  /** @private 이름표 */
+  _drawNameTag(line, style, accent) {
     this.nameBg.clear();
     if (!style.showName || !line.speaker) {
-      this.nameText.setText('');
+      this.nameText.setText('').setVisible(false);
       return;
     }
-    this.nameText.setText(line.speaker);
-    const width = this.nameText.width + s(32);
-    this.nameBg.fillStyle(style.accent, 0.9);
-    this.nameBg.fillRoundedRect(s(L.nameX), s(L.nameY - 44), width, s(44), s(8));
+    this.nameText.setText(line.speaker).setVisible(true);
+    const width = this.nameText.width + s(L.name.padX * 2);
+    this.nameBg.fillStyle(accent, 0.92);
+    this.nameBg.fillRoundedRect(s(L.name.x), s(L.name.y - L.name.h), width, s(L.name.h), s(10));
   }
+
+  // ================================================================
+  // 타이핑 · 자동 진행
+  // ================================================================
 
   _type(target, fullText, line) {
     this._stopTyping();
@@ -423,15 +477,61 @@ export class CutscenePlayer {
     this._stopTyping();
     if (this.activeTarget && typeof this.fullText === 'string') this.activeTarget.setText(this.fullText);
     this.indicator.setVisible(true);
+    if (this.autoEnabled) this._scheduleAuto();
   }
 
-  // ============================================
+  /** @private 자동 진행 예약 */
+  _scheduleAuto() {
+    this._cancelAuto();
+    this.autoEvent = this.scene.time.delayedCall(autoAdvanceDelay(this.fullText), () => {
+      this.autoEvent = null;
+      if (!this.finished && !this.logOpen) this._advance();
+    });
+  }
+
+  _cancelAuto() {
+    if (this.autoEvent) {
+      this.autoEvent.remove(false);
+      this.autoEvent = null;
+    }
+  }
+
+  /** 자동 재생 토글 */
+  toggleAuto() {
+    this.autoEnabled = !this.autoEnabled;
+    const activeColor = `#${DESIGN.colors.brand.accent.toString(16).padStart(6, '0')}`;
+    this.autoButton?.label?.setColor(this.autoEnabled ? activeColor : DESIGN.colors.text.primary);
+    if (this.autoEnabled && !this.typing) this._scheduleAuto();
+    else this._cancelAuto();
+  }
+
+  /** 기록(직전 5줄) 토글 */
+  toggleLog() {
+    this.logOpen = !this.logOpen;
+    if (this.logOpen) {
+      const lines = recentLogLines(this.history)
+        .map((entry) => (entry.speaker ? `${entry.speaker}\n${entry.text}` : entry.text))
+        .join('\n\n');
+      this.logText.setText(lines);
+      this._cancelAuto();
+    }
+    this.logPanel.setVisible(this.logOpen);
+  }
+
+  // ================================================================
   // 입력
-  // ============================================
+  // ================================================================
 
   handleTap() {
     if (this.finished) return;
+    if (this.logOpen) return;
     if (this.scene.time.now < this.inputLockedUntil) return;
+
+    // 자동재생 중의 탭은 자동재생만 해제한다 (오조작으로 대사를 넘기지 않는다)
+    if (this.autoEnabled) {
+      this.toggleAuto();
+      return;
+    }
 
     if (this.typing) {
       // `player` 화자 2줄만 즉시 완성 불가 (UX §3-5 예외)
@@ -440,14 +540,15 @@ export class CutscenePlayer {
       return;
     }
 
+    this._advance();
+  }
+
+  /** @private 다음 줄 또는 다음 씬 */
+  _advance() {
     const cutscene = this._currentScene();
     if (!cutscene) return;
-
-    if (this.lineIndex + 1 < cutscene.lines.length) {
-      this._showLine(this.lineIndex + 1);
-    } else {
-      this._endScene(false);
-    }
+    if (this.lineIndex + 1 < cutscene.lines.length) this._showLine(this.lineIndex + 1);
+    else this._endScene(false);
   }
 
   /** 현재 씬 1개만 건너뛴다 (확인 없음) */
@@ -461,6 +562,7 @@ export class CutscenePlayer {
   skipAll() {
     if (this.finished) return;
     this._stopTyping();
+    this._cancelAuto();
     for (let i = this.sceneIndex; i < this.queue.length; i += 1) {
       this.onSceneEnd(this.queue[i], { skipped: true });
     }
@@ -469,21 +571,21 @@ export class CutscenePlayer {
 
   _endScene(skipped) {
     this._stopTyping();
+    this._cancelAuto();
     const cutscene = this._currentScene();
     if (cutscene) this.onSceneEnd(cutscene, { skipped });
 
     const next = this.sceneIndex + 1;
-    if (next < this.queue.length) {
-      this._playScene(next);
-    } else {
-      this._finish(false);
-    }
+    if (next < this.queue.length) this._playScene(next);
+    else this._finish(false);
   }
 
   _finish(skippedAll) {
     if (this.finished) return;
     this.finished = true;
     this._stopTyping();
+    this._cancelAuto();
+    this.characterStage?.clearAll();
     this.onComplete({ skippedAll });
   }
 }

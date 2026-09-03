@@ -105,8 +105,21 @@ async function hideTutorialUi(page) {
   await page.waitForTimeout(400);
 }
 
+// HMR 차단 — 다른 트랙이 파일을 저장하면 vite 가 페이지를 리로드해 캡처가 깨진다
+const VITE_CLIENT_STUB = [
+  'export const createHotContext = () => ({ accept(){}, acceptExports(){}, dispose(){}, prune(){},',
+  'decline(){}, invalidate(){}, on(){}, off(){}, send(){}, data: {} });',
+  'export const updateStyle = () => {};',
+  'export const removeStyle = () => {};',
+  'export const injectQuery = (url) => url;',
+  'export const ErrorOverlay = class {};'
+].join(String.fromCharCode(10));
+await page.route('**/@vite/client', (route) => route.fulfill({
+  status: 200, contentType: 'application/javascript', body: VITE_CLIENT_STUB
+}));
+
 try {
-  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'domcontentloaded' });
   await waitFor(page, 'document.querySelector("canvas") !== null');

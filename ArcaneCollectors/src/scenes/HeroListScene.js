@@ -10,6 +10,30 @@ import { normalizeHeroes, getCharacterOrHero } from '../data/index.js';
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import navigationManager from '../systems/NavigationManager.js';
+import { ensureMinTouchTarget } from '../utils/touchTarget.js';
+import { computeRowPositions, computeRowCenterY, computeGridScroll } from '../utils/touchLayout.js';
+
+/**
+ * 필터 바 두 줄의 세로 중심 (기획 px). 피치 54 = 히트 48 + 여백 6.
+ * 1행: 정렬 칩 5 + 등급 필터 4 + 초기화 / 2행: 교단 원형 9 + 정렬 방향
+ */
+const FILTER_ROW_Y = Object.freeze({ sort: 128, cult: 182 });
+
+/** 등급 필터 첫 칸 x 와 간격 (기획 px). 정렬 칩 오른쪽 끝(392) 뒤에서 시작한다 */
+const RARITY_ROW_X = 440;
+const RARITY_SPACING = 52;
+
+/** 초기화 버튼 x (기획 px). 등급 필터 마지막 칸(596) 히트와 24px 떨어진다 */
+const CLEAR_BTN_X = 668;
+
+/** 교단 원형 간격 (기획 px). 히트 48 + 여백 4 */
+const CULT_SPACING = 52;
+
+/** 카드 그리드 뷰포트 (기획 px). 마스크·스크롤 계산이 같은 값을 쓴다 */
+const GRID_TOP = 210;
+const GRID_VIEWPORT_H = 950;
+const GRID_PAD_TOP = 8;
+const GRID_PAD_BOTTOM = 16;
 
 export class HeroListScene extends Phaser.Scene {
   constructor() {
@@ -91,8 +115,8 @@ export class HeroListScene extends Phaser.Scene {
 
     // Back button (좌상단 30, 50 위치, 50×40 터치 영역)
     const backBtn = this.add.container(s(30), s(50)).setDepth(21);
-    const backBg = this.add.rectangle(0, 0, s(50), s(40), COLORS.backgroundLight, 0.8)
-      .setInteractive({ useHandCursor: true });
+    const backBg = this.add.rectangle(0, 0, s(50), s(40), COLORS.backgroundLight, 0.8);
+    ensureMinTouchTarget(backBg); // 시각 50×40 유지, 히트 50×48 (QA P2-1)
     const backText = this.add.text(0, 0, '← 뒤로', {
       fontSize: sf(14),
       fontFamily: 'Arial',
@@ -125,11 +149,14 @@ export class HeroListScene extends Phaser.Scene {
   }
 
   createFilterBar() {
-    const filterY = s(130);
-    const filterY2 = s(175);
+    // QA P2-1: 히트 영역을 48 로 넓히면 예전 두 줄(130 / 175, 45px 피치)이 3px 겹친다.
+    // 줄 간격을 54(=48+6)로 벌리고, 등급 필터·초기화는 정렬 줄 오른쪽으로 옮겨
+    // 교단 원형 9개가 아래 줄을 통째로 쓰도록 재배치했다.
+    const filterY = s(FILTER_ROW_Y.sort);
+    const filterY2 = s(FILTER_ROW_Y.cult);
 
     // Filter background (extended for two rows)
-    const filterBg = this.add.rectangle(GAME_WIDTH / 2, s(152), GAME_WIDTH, s(105), COLORS.backgroundLight, 0.8);
+    const filterBg = this.add.rectangle(GAME_WIDTH / 2, s(155), GAME_WIDTH, s(110), COLORS.backgroundLight, 0.8);
     filterBg.setDepth(19);
 
     // Sort buttons - expanded options
@@ -150,7 +177,8 @@ export class HeroListScene extends Phaser.Scene {
       const isActive = this.sortBy === opt.key;
       const bg = this.add.rectangle(0, 0, s(70), s(28), isActive ? COLORS.primary : COLORS.bgPanel, isActive ? 1 : 0.6);
       bg.setStrokeStyle(isActive ? s(1) : 0, COLORS.primary, 0.5);
-      bg.setInteractive({ useHandCursor: true });
+      // 시각 70×28 유지, 히트만 70×48 (QA P2-1)
+      ensureMinTouchTarget(bg);
       const text = this.add.text(0, 0, opt.label, {
         fontSize: sf(11),
         fontFamily: 'Arial',
@@ -176,21 +204,25 @@ export class HeroListScene extends Phaser.Scene {
     });
 
     // Sort direction indicator
-    this.sortDirText = this.add.text(GAME_WIDTH - s(25), filterY, this.sortAscending ? '▲' : '▼', {
+    this.sortDirText = this.add.text(GAME_WIDTH - s(20), filterY2, this.sortAscending ? '▲' : '▼', {
       fontSize: sf(14),
       fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5).setDepth(20);
 
     // Second row - Cult filter buttons (분위기/교단 필터)
+    // 원형 시각 크기(20)는 그대로. 간격만 22 → 52 로 벌려 히트 48 이 서로 안 겹치게 한다.
     const cults = ['olympus', 'takamagahara', 'yomi', 'asgard', 'valhalla', 'tartarus', 'avalon', 'helheim', 'kunlun'];
     this.cultButtons = [];
+    const cultX = computeRowPositions({
+      count: cults.length, spacing: s(CULT_SPACING), centerX: GAME_WIDTH / 2
+    });
 
     cults.forEach((cult, index) => {
-      const x = s(20) + index * s(22);
+      const x = cultX[index];
       const btn = this.add.circle(x, filterY2, s(10), CULT_COLORS[cult] || COLORS.textDark, 0.8)
-        .setInteractive({ useHandCursor: true })
         .setDepth(20);
+      ensureMinTouchTarget(btn);
 
       this.cultButtons.push({ btn, cult });
 
@@ -212,12 +244,12 @@ export class HeroListScene extends Phaser.Scene {
     this.rarityButtons = [];
 
     rarities.forEach((rarity, index) => {
-      const x = s(200) + index * s(45);
-      const btn = this.add.container(x, filterY2).setDepth(20);
+      const x = s(RARITY_ROW_X) + index * s(RARITY_SPACING);
+      const btn = this.add.container(x, filterY).setDepth(20);
 
       const isActive = this.filterRarity === rarity;
-      const bg = this.add.rectangle(0, 0, s(38), s(24), isActive ? RARITY[rarity].color : COLORS.backgroundLight, 0.9)
-        .setInteractive({ useHandCursor: true });
+      const bg = this.add.rectangle(0, 0, s(38), s(24), isActive ? RARITY[rarity].color : COLORS.backgroundLight, 0.9);
+      ensureMinTouchTarget(bg);
       const text = this.add.text(0, 0, rarity, {
         fontSize: sf(10),
         fontFamily: 'Arial',
@@ -241,12 +273,13 @@ export class HeroListScene extends Phaser.Scene {
       });
     });
 
-    // Clear filters button
-    const clearBtn = this.add.text(GAME_WIDTH - s(50), filterY2, '초기화', {
+    // Clear filters button — 글리프 34×13, 히트 48×48 (QA P2-1)
+    const clearBtn = this.add.text(s(CLEAR_BTN_X), filterY, '초기화', {
       fontSize: sf(11),
       fontFamily: 'Arial',
       color: `#${  COLORS.danger.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setDepth(20);
+    ensureMinTouchTarget(clearBtn);
 
     clearBtn.on('pointerdown', () => {
       this.filterRarity = null;
@@ -275,9 +308,9 @@ export class HeroListScene extends Phaser.Scene {
     // Scrollable container
     this.gridContainer = this.add.container(0, 0);
 
-    // UIX-3.4: Mask for scrolling (콘텐츠 영역 y=80~1160)
+    // UIX-3.4: Mask for scrolling (콘텐츠 영역 y=210~1160 기획 px)
     const maskShape = this.make.graphics();
-    maskShape.fillRect(0, s(210), GAME_WIDTH, GAME_HEIGHT - s(330));
+    maskShape.fillRect(0, s(GRID_TOP), GAME_WIDTH, s(GRID_VIEWPORT_H));
     const mask = maskShape.createGeometryMask();
     this.gridContainer.setMask(mask);
 
@@ -371,7 +404,10 @@ export class HeroListScene extends Phaser.Scene {
     const spacing = s(10);
     const gridWidth = cols * cardWidth + (cols - 1) * spacing;
     const startX = (GAME_WIDTH - gridWidth) / 2 + cardWidth / 2;
-    const startY = s(240);
+    // QA P2-5: 카드는 원점이 중앙이라 240 에서 시작하면 첫 행 위쪽 45px 가 마스크(210)에 잘렸다.
+    const startY = s(GRID_TOP) + computeRowCenterY(0, {
+      itemHeight: cardHeight, gap: spacing, padTop: s(GRID_PAD_TOP)
+    });
 
     if (heroes.length === 0) {
       // Empty state
@@ -403,9 +439,18 @@ export class HeroListScene extends Phaser.Scene {
       }
     });
 
-    // UIX-2.2.1: Update max scroll with new spacing
-    const rows = Math.ceil(heroes.length / cols);
-    this.maxScroll = Math.max(0, rows * (cardHeight + spacing) - (GAME_HEIGHT - s(250)));
+    // QA P2-5: 뷰포트는 마스크와 같은 210~1160(기획 px)이다. 예전 식은 뷰포트를
+    // GAME_HEIGHT-250 으로 잡고 콘텐츠도 행 피치 합으로 세어 바닥에 빈 칸을 남겼다.
+    const { maxScroll } = computeGridScroll({
+      itemCount: heroes.length,
+      cols,
+      itemHeight: cardHeight,
+      gap: spacing,
+      viewportHeight: s(GRID_VIEWPORT_H),
+      padTop: s(GRID_PAD_TOP),
+      padBottom: s(GRID_PAD_BOTTOM)
+    });
+    this.maxScroll = maxScroll;
     this.scrollY = Math.min(this.scrollY, this.maxScroll);
 
     // Update count

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { COLORS, GAME_WIDTH, s, sf } from '../config/gameConfig.js';
+import { Z_INDEX } from '../config/layoutConfig.js';
 
 /**
  * Toast notification system
@@ -110,7 +111,9 @@ class ToastInstance extends Phaser.GameObjects.Container {
     this.createText();
     this.animate();
 
-    this.setDepth(2000);
+    // 팝업(POPUP_BASE 2000)보다 낮다. 2000 으로 두면 팝업과 같은 층에 놓여
+    // 영웅 상세 같은 팝업 위로 토스트가 뚫고 나온다.
+    this.setDepth(Z_INDEX.TOAST);
     scene.add.existing(this);
   }
 

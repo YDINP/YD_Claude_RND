@@ -25,6 +25,27 @@ const VIEWPORT = { width: 720, height: 1280 };
 const SHOT_DIR = new URL('../../docs/story/screenshots/onboarding/', import.meta.url);
 const BATTLE_SPEED_BOOST = 8;
 
+/** 이 스위트가 의도적으로 만드는 페이지 로드 횟수 — PART 1·2 가 각각 goto + reload 한다 */
+const EXPECTED_PAGE_LOADS = 4;
+
+/**
+ * vite HMR 클라이언트 대체 스텁.
+ * vite 가 모든 모듈 상단에 주입하는 `createHotContext` 등 5개 export 를 무동작으로 채운다.
+ * (vite 5 의 /@vite/client export 목록과 동일해야 한다)
+ */
+const VITE_CLIENT_STUB = `
+const noop = () => {};
+export const createHotContext = () => ({
+  accept: noop, acceptExports: noop, dispose: noop, prune: noop,
+  decline: noop, invalidate: noop, on: noop, off: noop, send: noop,
+  data: {},
+});
+export const updateStyle = noop;
+export const removeStyle = noop;
+export const injectQuery = (url) => url;
+export class ErrorOverlay extends HTMLElement {}
+`;
+
 let passed = 0;
 let failed = 0;
 const assert = (condition, name, detail = '') => {
@@ -83,8 +104,8 @@ async function canvasMap(page) {
     const r = canvas.getBoundingClientRect();
     return {
       x: r.x, y: r.y, w: r.width, h: r.height,
-      gw: window.game.scale.gameSize.width,
-      gh: window.game.scale.gameSize.height,
+      gw: window.game?.scale?.gameSize.width,
+      gh: window.game?.scale?.gameSize.height,
     };
   });
 }
@@ -109,8 +130,8 @@ async function findByLabel(page, sceneKeys, label) {
     };
 
     for (const key of keys) {
-      const scene = window.game.scene.getScene(key);
-      if (!scene || !window.game.scene.isActive(key)) continue;
+      const scene = window.game?.scene?.getScene?.(key);
+      if (!scene || !window.game?.scene?.isActive?.(key)) continue;
       const all = collect(scene.children.list, []);
       const hit = all.find(
         (o) => o.type === 'Text' && typeof o.text === 'string' && o.text.includes(text) && o.visible !== false
@@ -150,8 +171,8 @@ async function hitTestWorld(page, wx, wy, sceneKey = 'MainMenuScene') {
   await page.mouse.move(m.x + (wx * m.w) / m.gw, m.y + (wy * m.h) / m.gh);
   await page.waitForTimeout(120);
   return safeEvaluate(page, (key) => {
-    const scene = window.game.scene.getScene(key);
-    if (!scene || !window.game.scene.isActive(key)) return { inactive: key };
+    const scene = window.game?.scene?.getScene?.(key);
+    if (!scene || !window.game?.scene?.isActive?.(key)) return { inactive: key };
     const p = scene.input.activePointer;
     const list = scene.input.hitTestPointer(p) || [];
     return {
@@ -193,10 +214,43 @@ async function confirmSummonResult(page, attempts = 8) {
   return false;
 }
 
+/** 전투 화면 튜토리얼 상태 (읽기 전용) */
+async function battleTutorialUi(page) {
+  return safeEvaluate(page, () => {
+    const scene = window.game?.scene?.getScene?.('BattleScene');
+    const flow = scene?._tutorialBinding?.flow;
+    const coach = flow?.coach;
+    const closeBounds = coach?.closeHit?.getBounds?.();
+    const raw = localStorage.getItem('arcane_collectors_save');
+    const steps = raw ? (JSON.parse(raw).tutorial?.completedSteps || []) : [];
+    return {
+      mounted: !!scene?._tutorialBinding,
+      stepId: flow?.currentStepId || null,
+      tier: flow?.lastTier ?? null,
+      hasCoach: !!coach?.isVisible,
+      hasOverlay: !!flow?.overlay?.isVisible,
+      target: coach?.target || null,
+      close: closeBounds ? { x: closeBounds.centerX, y: closeBounds.centerY } : null,
+      completed: steps.filter((id) => id.startsWith('B-')),
+    };
+  });
+}
+
+async function waitForBattleStep(page, stepId, timeout = 15000) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const ui = await battleTutorialUi(page);
+    if (ui.stepId === stepId && (ui.hasCoach || ui.hasOverlay)) return ui;
+    if (ui.completed.includes(stepId)) return ui;   // 이미 지나갔다
+    await page.waitForTimeout(250);
+  }
+  return null;
+}
+
 /** 튜토리얼 화면 상태 (읽기 전용) */
 async function tutorialUi(page) {
   return safeEvaluate(page, () => {
-    const scene = window.game.scene.getScene('MainMenuScene');
+    const scene = window.game?.scene?.getScene?.('MainMenuScene');
     const flow = scene?.tutorialFlow;
     const hole = flow?.overlay?.hole || null;
     const coach = flow?.coach;
@@ -237,7 +291,7 @@ async function skipCutsceneByTap(page, { timeout = 4000 } = {}) {
   if (!tapped) {
     // 폴백: 화면 중앙 탭으로 대사를 진행시킨다
     for (let i = 0; i < 30; i++) {
-      if (!(await safeEvaluate(page, () => window.game.scene.isActive('CutsceneScene')))) break;
+      if (!(await safeEvaluate(page, () => window.game?.scene?.isActive?.('CutsceneScene')))) break;
       await tapWorld(page, 540, 700);
     }
   }
@@ -258,14 +312,14 @@ async function skipAllCutscenes(page, { rounds = 4, timeout = 4000 } = {}) {
 }
 
 /** 전투: AUTO 버튼을 실제로 탭해 자동 전투로 전환하고 결과 화면까지 기다린다 */
-async function playBattleByTap(page, timeout = 45000) {
+async function playBattleByTap(page, timeout = 45000, onBattleReady = null) {
   const battleUp = await waitFor(page, () => !!window.game?.scene.isActive('BattleScene'), 20000);
   if (!battleUp) {
     const diag = await safeEvaluate(page, () => {
-      const mm = window.game.scene.getScene('MainMenuScene');
+      const mm = window.game?.scene?.getScene?.('MainMenuScene');
       return {
-        active: window.game.scene.scenes.filter((sc) => window.game.scene.isActive(sc.scene.key)).map((sc) => sc.scene.key),
-        paused: window.game.scene.scenes.filter((sc) => window.game.scene.isPaused(sc.scene.key)).map((sc) => sc.scene.key),
+        active: (window.game?.scene?.scenes || []).filter((sc) => window.game?.scene?.isActive?.(sc.scene.key)).map((sc) => sc.scene.key),
+        paused: (window.game?.scene?.scenes || []).filter((sc) => window.game.scene.isPaused(sc.scene.key)).map((sc) => sc.scene.key),
         energy: JSON.parse(localStorage.getItem('arcane_collectors_save'))?.energy,
         step: mm?.tutorialFlow?.currentStepId,
       };
@@ -276,7 +330,13 @@ async function playBattleByTap(page, timeout = 45000) {
   }
   await page.waitForTimeout(700);
 
-  await safeEvaluate(page, (speed) => window.game.registry.set('battleSpeed', speed), BATTLE_SPEED_BOOST);
+  // 전투 화면에서 할 일(전투 튜토리얼 실탭 등)이 있으면 자동전투를 켜기 전에 먼저 끝낸다.
+  // 먼저 켜면 8배속 자동전투가 안내를 읽기도 전에 전투를 끝내 버린다.
+  if (typeof onBattleReady === 'function') {
+    await onBattleReady();
+  }
+
+  await safeEvaluate(page, (speed) => window.game?.registry?.set?.('battleSpeed', speed), BATTLE_SPEED_BOOST);
   await tapLabel(page, ['BattleScene'], 'AUTO OFF', { required: false });
 
   const start = Date.now();
@@ -289,8 +349,8 @@ async function playBattleByTap(page, timeout = 45000) {
     //  endBattle(true) 의 실제 경로를 그대로 통과한다.)
     if (!forced && Date.now() - start > 8000) {
       forced = await safeEvaluate(page, () => {
-        const bs = window.game.scene.getScene('BattleScene');
-        if (!bs || !window.game.scene.isActive('BattleScene') || bs.battleEnded) return false;
+        const bs = window.game?.scene?.getScene?.('BattleScene');
+        if (!bs || !window.game?.scene?.isActive?.('BattleScene') || bs.battleEnded) return false;
         (bs.enemies || []).forEach((e) => {
           if (!e) return;
           e.currentHp = 0;
@@ -312,9 +372,9 @@ async function playBattleByTap(page, timeout = 45000) {
   }
 
   const diag = await safeEvaluate(page, () => {
-    const bs = window.game.scene.getScene('BattleScene');
+    const bs = window.game?.scene?.getScene?.('BattleScene');
     return {
-      active: window.game.scene.scenes.filter((sc) => window.game.scene.isActive(sc.scene.key)).map((sc) => sc.scene.key),
+      active: (window.game?.scene?.scenes || []).filter((sc) => window.game?.scene?.isActive?.(sc.scene.key)).map((sc) => sc.scene.key),
       turn: bs?.turn,
       ended: bs?.battleEnded,
       waitingManual: bs?.waitingForManualInput,
@@ -350,7 +410,7 @@ async function boostParty(page) {
     save.characters.forEach((c) => window.debug.setCharacterLevel(c.id, 60));
 
     window.debug._refreshHeroRegistry();
-    window.game.registry.set('battleSpeed', 8);
+    window.game?.registry?.set?.('battleSpeed', 8);
 
     // 파티 슬롯을 전투력 상위 4인으로 채운다. 온보딩 CTA 는 세이브의 파티를 그대로 쓰므로
     // 슬롯이 스타터 1인이면 전투 밸런스(검증 대상 아님)가 결과를 좌우한다.
@@ -374,13 +434,21 @@ async function loginGuestByTap(page) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.waitForFunction(
-    () => !!(window.game && window.game.scene && window.game.scene.scenes.length > 0),
+    () => !!(window.game && window.game.scene && (window.game?.scene?.scenes || []).length > 0),
     { timeout: 20000 }
   );
-  const loginReady = await waitFor(page, () => !!window.game?.scene.isActive('LoginScene'), 20000);
+  const loginReady = await waitFor(page, () => !!window.game?.scene.isActive('LoginScene'), 40000);
   if (!loginReady) throw new Error('LoginScene 활성화 실패');
-  await page.waitForTimeout(500);
-  await tapLabel(page, ['LoginScene'], '게스트로 시작');
+  // 로그인 버튼이 그려질 때까지 기다린 뒤 탭한다 (씬 활성과 렌더 사이의 간극 대비).
+  // 버튼 라벨이 컨테이너 안에 있을 수 있어 재귀 탐색(findByLabel)으로 확인한다.
+  let btn = null;
+  for (let i = 0; i < 30 && !btn; i += 1) {
+    btn = await findByLabel(page, ['LoginScene'], '게스트로 시작');
+    if (!btn) await page.waitForTimeout(500);
+  }
+  if (!btn) throw new Error('[loginGuestByTap] 게스트 버튼이 렌더되지 않았습니다');
+  await page.waitForTimeout(300);
+  await tapWorld(page, btn.x, btn.y);
   const mainMenu = await waitFor(page, () => !!window.game?.scene.isActive('MainMenuScene'), 20000);
   if (!mainMenu) throw new Error('게스트 로그인 → MainMenuScene 진입 실패');
 }
@@ -391,13 +459,17 @@ async function loginGuest(page) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.waitForFunction(
-    () => !!(window.game && window.game.scene && window.game.scene.scenes.length > 0),
+    () => !!(window.game && window.game.scene && (window.game?.scene?.scenes || []).length > 0),
     { timeout: 20000 }
   );
-  const loginReady = await waitFor(page, () => !!window.game?.scene.isActive('LoginScene'), 15000);
+  const loginReady = await waitFor(page, () => !!window.game?.scene.isActive('LoginScene'), 40000);
   if (!loginReady) throw new Error('LoginScene 활성화 실패');
-  await safeEvaluate(page, () => window.game.scene.getScene('LoginScene')?._handleGuestLogin?.());
-  const mainMenu = await waitFor(page, () => !!window.game?.scene.isActive('MainMenuScene'), 15000);
+  await safeEvaluate(page, () => window.game?.scene?.getScene?.('LoginScene')?._handleGuestLogin?.());
+  const mainMenu = await waitFor(
+    page,
+    () => !!(window.game?.scene.isActive('MainMenuScene') || window.game?.scene.isActive('CutsceneScene')),
+    25000
+  );
   if (!mainMenu) throw new Error('게스트 로그인 → MainMenuScene 진입 실패');
 }
 
@@ -432,18 +504,18 @@ async function notifyTutorial(page, type, payload = {}) {
 
 async function clearStageByApi(page, stageId) {
   await safeEvaluate(page, () => {
-    if (window.game.scene.isActive('BattleResultScene')) {
-      window.game.scene.getScene('BattleResultScene').goToMain();
+    if (window.game?.scene?.isActive?.('BattleResultScene')) {
+      window.game?.scene?.getScene?.('BattleResultScene').goToMain();
     }
   });
   await waitFor(page, () => !!window.game?.scene.isActive('MainMenuScene'), 15000);
-  await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene').scene.start('StageSelectScene'));
+  await safeEvaluate(page, () => window.game?.scene?.getScene?.('MainMenuScene').scene.start('StageSelectScene'));
   const up = await waitFor(page, () => !!window.game?.scene.isActive('StageSelectScene'), 10000);
   if (!up) throw new Error(`[${stageId}] StageSelectScene 진입 실패`);
   await page.waitForTimeout(300);
 
   const launched = await safeEvaluate(page, (sid) => {
-    const scene = window.game.scene.getScene('StageSelectScene');
+    const scene = window.game?.scene?.getScene?.('StageSelectScene');
     const chapter = parseInt(sid.split('-')[0], 10);
     const stage = scene.generateStages(chapter).find((s) => s.id === sid);
     if (!stage) return false;
@@ -458,7 +530,7 @@ async function clearStageByApi(page, stageId) {
   await skipAllCutscenes(page, { rounds: 3, timeout: 3000 });
   const ok = await playBattleByTap(page);
   if (!ok) throw new Error(`[${stageId}] 전투 종료 대기 실패`);
-  const victory = await safeEvaluate(page, () => window.game.scene.getScene('BattleResultScene').victory);
+  const victory = await safeEvaluate(page, () => window.game?.scene?.getScene?.('BattleResultScene').victory);
   await returnToMainByTap(page);
   return victory;
 }
@@ -468,7 +540,7 @@ async function clearStageByApi(page, stageId) {
 // ============================================================
 
 /** 현재 모험 패널의 "▶ 전투 시작" CTA(마스킹 홀 또는 코치마크 대상)를 탭해 전투를 마친다 */
-async function playTutorialStageByTap(page, label) {
+async function playTutorialStageByTap(page, label, onBattleReady = null) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     // 1) 메인 메뉴에서 튜토리얼 CTA(홀 또는 코치마크 대상)를 실제로 탭한다
     const ui = await waitForTutorialUi(page, (u) => u.hole || u.coachTarget, 20000);
@@ -494,7 +566,7 @@ async function playTutorialStageByTap(page, label) {
     await skipAllCutscenes(page, { rounds: 4, timeout: 4000 });
 
     // 3) 전투 종료까지 대기 (장기화 시 실제 승리 루틴으로 마무리)
-    const fought = await playBattleByTap(page);
+    const fought = await playBattleByTap(page, 45000, attempt === 1 ? onBattleReady : null);
     if (!fought) {
       note(`[${label}] ${attempt}회차 전투가 결과 화면에 도달하지 못함 — 재시도`);
       await returnToMainByTap(page);
@@ -502,7 +574,7 @@ async function playTutorialStageByTap(page, label) {
     }
 
     const result = await safeEvaluate(page, () => {
-      const rs = window.game.scene.getScene('BattleResultScene');
+      const rs = window.game?.scene?.getScene?.('BattleResultScene');
       return { victory: !!rs?.victory, stage: rs?.stage?.id };
     });
 
@@ -511,6 +583,112 @@ async function playTutorialStageByTap(page, label) {
     note(`[${label}] ${attempt}회차 패배 — ${JSON.stringify(result)} → 다시 도전`);
   }
   return false;
+}
+
+
+/**
+ * 전투 안내 B-1~B-5 를 실제 좌표 탭으로 통과한다.
+ * B-1/B-3/B-4/B-5 는 코치마크 닫기 탭, B-2 는 강조된 스킬 슬롯 탭이다.
+ * 전투는 그동안에도 계속 진행된다(안내가 턴을 막지 않는다).
+ */
+async function walkBattleTutorialByTap(page) {
+  const results = {};
+
+  // 안내를 읽는 동안 전투가 끝나버리지 않도록 AUTO 를 끈다(실제 버튼 탭).
+  // AUTO OFF 상태에서는 수동 턴 입력을 기다리므로 플레이어가 안내를 읽을 시간이 생긴다.
+  const autoWasOn = await tapLabel(page, ['BattleScene'], 'AUTO ON', { required: false });
+  results.autoTurnedOff = autoWasOn;
+  await page.waitForTimeout(300);
+
+  // 전투 튜토리얼 배선이 붙을 때까지 기다린다 (initBattle → 인트로 연출 이후)
+  const mounted = await waitFor(
+    page,
+    () => !!window.game?.scene?.getScene?.('BattleScene')?._tutorialBinding,
+    20000
+  );
+  results.mounted = mounted;
+
+  const diag = await safeEvaluate(page, async () => {
+    const { TutorialManager } = await import('/src/systems/TutorialManager.js');
+    const scene = window.game?.scene?.getScene?.('BattleScene');
+    const raw = localStorage.getItem('arcane_collectors_save');
+    const save = raw ? JSON.parse(raw) : {};
+    const flow = scene?._tutorialBinding?.flow;
+    return {
+      binding: !!scene?._tutorialBinding,
+      flowTrack: flow?.track ?? null,
+      flowStep: flow?.currentStepId ?? null,
+      flowTier: flow?.lastTier ?? null,
+      hasCoach: !!flow?.coach,
+      coachRoot: !!flow?.coach?.root,
+      refreshPending: !!flow?._refreshTimer,
+      destroyed: flow?._destroyed ?? null,
+      stageId: scene?.stage?.id ?? null,
+      battleStep: TutorialManager.getCurrentBattleStepId(),
+      battleStepCount: TutorialManager.getBattleSteps().length,
+      completed: (save.tutorial?.completedSteps || []).filter((id) => id.startsWith('B-')),
+    };
+  });
+  note(`전투 안내 진단 — mounted=${mounted} ${JSON.stringify(diag)}`);
+
+  const b1 = await waitForBattleStep(page, 'B-1');
+  results['B-1'] = { seen: !!b1, tier: b1?.tier ?? null, target: b1?.target || null };
+  if (b1?.close) await tapWorld(page, b1.close.x, b1.close.y);
+
+  const b2 = await waitForBattleStep(page, 'B-2');
+  results['B-2'] = { seen: !!b2, target: b2?.target || null };
+  if (b2?.target) {
+    // 강조된 스킬 슬롯을 실제로 탭한다 (게이지가 안 찼으면 아무 일도 없어야 정상)
+    await tapWorld(page, b2.target.x + b2.target.w / 2, b2.target.y + b2.target.h / 2);
+  }
+  let advanced = await waitFor(
+    page,
+    () => {
+      const raw = localStorage.getItem('arcane_collectors_save');
+      const steps = raw ? (JSON.parse(raw).tutorial?.completedSteps || []) : [];
+      return steps.includes('B-2');
+    },
+    9000
+  );
+  note(`B-2 탭 후 진행=${advanced}`);
+  if (!advanced) {
+    // 스킬 게이지가 아직 안 찼다 — 안내를 닫아 넘어간다(스킵 가능 스텝)
+    const cur = await battleTutorialUi(page);
+    note(`B-2 닫기 시도 — ${JSON.stringify({ step: cur.stepId, coach: cur.hasCoach, close: cur.close })}`);
+    if (cur.close) {
+      const under = await hitTestWorld(page, cur.close.x, cur.close.y, 'BattleScene');
+      note(`B-2 닫기 지점 히트테스트 — ${JSON.stringify(under)}`);
+      await tapWorld(page, cur.close.x, cur.close.y);
+      const after = await battleTutorialUi(page);
+      note(`B-2 닫기 후 — ${JSON.stringify({ step: after.stepId, coach: after.hasCoach, completed: after.completed })}`);
+    }
+    advanced = await waitFor(
+      page,
+      () => {
+        const raw = localStorage.getItem('arcane_collectors_save');
+        const steps = raw ? (JSON.parse(raw).tutorial?.completedSteps || []) : [];
+        return steps.includes('B-2');
+      },
+      6000
+    );
+    note('B-2 는 스킬 게이지 미충전 상태라 안내 닫기로 진행 (전투는 계속 진행됨)');
+  }
+  results['B-2'].done = advanced;
+
+  for (const stepId of ['B-3', 'B-4', 'B-5']) {
+    const ui = await waitForBattleStep(page, stepId);
+    results[stepId] = { seen: !!ui, tier: ui?.tier ?? null, target: ui?.target || null };
+    if (ui?.close) await tapWorld(page, ui.close.x, ui.close.y);
+    await page.waitForTimeout(400);
+  }
+
+  const finalUi = await battleTutorialUi(page);
+  results.completed = finalUi.completed;
+
+  // 안내가 끝났으니 자동전투를 다시 켜고 전투를 이어간다
+  await tapLabel(page, ['BattleScene'], 'AUTO OFF', { required: false });
+  await page.waitForTimeout(300);
+  return results;
 }
 
 async function runPart1(page) {
@@ -551,7 +729,7 @@ async function runPart1(page) {
   );
 
   await boostParty(page);
-  await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene').scene.restart());
+  await safeEvaluate(page, () => window.game?.scene?.getScene?.('MainMenuScene').scene.restart());
   await waitFor(page, () => !!window.game?.scene.isActive('MainMenuScene'), 15000);
   await page.waitForTimeout(1200);
 
@@ -560,8 +738,25 @@ async function runPart1(page) {
   assert(!!t03Ui, '[T-03] 강제 스텝 마스킹(딤 + 홀)이 실제로 화면에 붙는다', JSON.stringify(await tutorialUi(page)));
   await shot(page, '02-t03-forced-mask.png');
 
-  const won11 = await playTutorialStageByTap(page, 'T-03/1-1');
+  let battleTut = null;
+  const won11 = await playTutorialStageByTap(page, 'T-03/1-1', async () => {
+    battleTut = await walkBattleTutorialByTap(page);
+  });
   assert(won11, '[T-03] 홀을 탭해 1-1 전투 진입 → 승리');
+
+  // ---- 전투 조작 안내 B-1~B-5 (첫 전투 안에서 실제 좌표 탭) ----
+  assert(battleTut?.['B-1']?.seen === true, '[B-1] 턴 순서 배지 코치마크 표시', JSON.stringify(battleTut?.['B-1']));
+  assert(battleTut?.['B-1']?.tier === 1, '[B-1] 실제 턴 배지 오브젝트에 붙는다(레지스트리 해석)', JSON.stringify(battleTut?.['B-1']));
+  assert(battleTut?.['B-2']?.seen === true, '[B-2] 스킬 슬롯 안내 표시', JSON.stringify(battleTut?.['B-2']));
+  assert(battleTut?.['B-2']?.done === true, '[B-2] 스킬 슬롯 탭(또는 안내 닫기)으로 완료 — 전투를 막지 않는다');
+  assert(battleTut?.['B-3']?.seen === true, '[B-3] 자동전투/배속 안내 표시');
+  assert(battleTut?.['B-4']?.seen === true, '[B-4] 적 분위기 상성 안내 표시');
+  assert(battleTut?.['B-5']?.seen === true, '[B-5] 체력/교단 배지 안내 표시');
+  assert(
+    ['B-1', 'B-2', 'B-3', 'B-4', 'B-5'].every((id) => (battleTut?.completed || []).includes(id)),
+    '[B-1~B-5] 전투 안내 5스텝 전부 커밋',
+    JSON.stringify(battleTut?.completed)
+  );
   save = await readSave(page);
   assert(save.progress.clearedStages['1-1'] > 0, '[T-03] 1-1 클리어 기록', JSON.stringify(save.progress.clearedStages));
   assert(save.tutorial.completedSteps.includes('T-03'), '[T-03] stage_clear 조건으로 자동 커밋');
@@ -572,7 +767,15 @@ async function runPart1(page) {
   assert(t04Ui?.hasCoach === true && t04Ui?.hasOverlay === false, '[T-04] 안내 스텝은 딤 없이 코치마크만 표시');
   await shot(page, '03-t04-coachmark.png');
 
-  const won12 = await playTutorialStageByTap(page, 'T-04/1-2');
+  let secondBattleTut = null;
+  const won12 = await playTutorialStageByTap(page, 'T-04/1-2', async () => {
+    secondBattleTut = await battleTutorialUi(page);
+  });
+  assert(
+    secondBattleTut && secondBattleTut.mounted === false,
+    '[B-*] 두 번째 전투에서는 전투 안내가 다시 뜨지 않는다 (1회성)',
+    JSON.stringify(secondBattleTut)
+  );
   const won13 = await playTutorialStageByTap(page, 'T-04/1-3');
   assert(won12 && won13, '[T-04] CTA 탭으로 1-2, 1-3 연속 클리어');
   save = await readSave(page);
@@ -582,7 +785,7 @@ async function runPart1(page) {
   const t05Ui = await waitForTutorialUi(page, (u) => u.stepId === 'T-05' && u.hole, 20000);
   assert(!!t05Ui, '[T-05] 소환 팝업이 강제로 열리고 무료 10연 버튼에 홀이 뚫린다');
   const gachaLocked = await safeEvaluate(page, () => {
-    const popup = window.game.scene.getScene('MainMenuScene').activePopup;
+    const popup = window.game?.scene?.getScene?.('MainMenuScene').activePopup;
     return { onboarding: !!popup?.onboarding, closeEnabled: popup?.closeBtn?.input?.enabled === true };
   });
   assert(gachaLocked.onboarding && gachaLocked.closeEnabled === false, '[T-05] 온보딩 모드 + 닫기 잠금', JSON.stringify(gachaLocked));
@@ -628,7 +831,7 @@ async function runPart1(page) {
   // (열어 둔 채로 두면 다음 스텝의 안내 대상이 팝업 뒤에 가려져 진행이 막힌다)
   const popupClosed = await waitFor(
     page,
-    () => !window.game.scene.getScene('MainMenuScene').activePopup,
+    () => !window.game?.scene?.getScene?.('MainMenuScene').activePopup,
     10000
   );
   assert(popupClosed, '[T-05] 스텝 종료 후 소환 팝업이 자동으로 닫힌다');
@@ -639,8 +842,8 @@ async function runPart1(page) {
   assert(!!t06Ui, '[T-06] 각인 메뉴 코치마크가 실제 아이콘(레지스트리 1단계 해석)에 붙는다', JSON.stringify(await tutorialUi(page)));
   await shot(page, '06-t06-menu-coachmark.png');
   const beforeTap = await safeEvaluate(page, () => ({
-    activePopup: window.game.scene.getScene('MainMenuScene').activePopup?.constructor?.name || null,
-    menuLabels: (window.game.scene.getScene('MainMenuScene')._menuObjects || [])
+    activePopup: window.game?.scene?.getScene?.('MainMenuScene').activePopup?.constructor?.name || null,
+    menuLabels: (window.game?.scene?.getScene?.('MainMenuScene')._menuObjects || [])
       .filter((o) => o.type === 'Text').map((o) => o.text),
   }));
   note(`T-06 탭 직전 — ${JSON.stringify(beforeTap)} / target=${JSON.stringify(t06Ui?.coachTarget)}`);
@@ -653,8 +856,8 @@ async function runPart1(page) {
     }
     await page.waitForTimeout(900);
     const after = await safeEvaluate(page, () => ({
-      activePopup: window.game.scene.getScene('MainMenuScene').activePopup?.constructor?.name || null,
-      step: window.game.scene.getScene('MainMenuScene').tutorialFlow?.currentStepId,
+      activePopup: window.game?.scene?.getScene?.('MainMenuScene').activePopup?.constructor?.name || null,
+      step: window.game?.scene?.getScene?.('MainMenuScene').tutorialFlow?.currentStepId,
     }));
     if (after.activePopup) break;
     note(`T-06 ${attempt}회차 탭에도 팝업이 열리지 않음 — ${JSON.stringify(after)}`);
@@ -666,7 +869,7 @@ async function runPart1(page) {
       m.y + ((t06Ui.coachTarget.y + t06Ui.coachTarget.h / 2) * m.h) / m.gh
     );
     const hits = await safeEvaluate(page, () => {
-      const scene = window.game.scene.getScene('MainMenuScene');
+      const scene = window.game?.scene?.getScene?.('MainMenuScene');
       const p = scene.input.activePointer;
       const list = scene.input.hitTestPointer(p) || [];
       return {
@@ -678,7 +881,7 @@ async function runPart1(page) {
     note(`히트테스트 — ${JSON.stringify(hits)}`);
     note('콘솔(에러/경고): ' + consoleLog.filter((l) => /error|warning/i.test(l)).slice(-6).join(' || '));
     const layers = await safeEvaluate(page, () => {
-      const scene = window.game.scene.getScene('MainMenuScene');
+      const scene = window.game?.scene?.getScene?.('MainMenuScene');
       const out = [];
       const walk = (list, path) => (list || []).forEach((o, i) => {
         if (!o) return;
@@ -725,7 +928,7 @@ async function runPart1(page) {
     await page.waitForTimeout(500);
     await tapLabel(page, ['MainMenuScene'], '파티 저장');
     await page.waitForTimeout(800);
-    await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene').activePopup?.hide?.());
+    await safeEvaluate(page, () => window.game?.scene?.getScene?.('MainMenuScene').activePopup?.hide?.());
     save = await readSave(page);
     assert(save.tutorial.completedSteps.includes('T-08'), '[T-08] 파티 저장 → 커밋');
   }
@@ -783,7 +986,7 @@ async function runPart1(page) {
   );
 
   // 완주 후 메뉴 그리드
-  await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene').scene.restart());
+  await safeEvaluate(page, () => window.game?.scene?.getScene?.('MainMenuScene').scene.restart());
   await waitFor(page, () => !!window.game?.scene.isActive('MainMenuScene'), 15000);
   await page.waitForTimeout(1200);
 
@@ -794,7 +997,7 @@ async function runPart1(page) {
     return {
       unlocked: MenuGridGate.deriveUnlockedMenus(save2, SaveManager.ALL_MENU_KEYS).length,
       total: SaveManager.ALL_MENU_KEYS.length,
-      tutorialUiGone: !window.game.scene.getScene('MainMenuScene').tutorialFlow?.isShowing,
+      tutorialUiGone: !window.game?.scene?.getScene?.('MainMenuScene').tutorialFlow?.isShowing,
     };
   });
   assert(grid.unlocked === grid.total, '완주 후 메뉴 13항목 전부 해금', JSON.stringify(grid));
@@ -812,7 +1015,7 @@ async function completeAscensionByTap(page, stepId, heroLabel) {
     const target = ui.hole || ui.coachTarget;
     const state = await safeEvaluate(page, async () => {
       const { SaveManager } = await import('/src/systems/SaveManager.js');
-      const popup = window.game.scene.getScene('MainMenuScene').activePopup;
+      const popup = window.game?.scene?.getScene?.('MainMenuScene').activePopup;
       const heroId = popup?.selectedBaseHero?.id || null;
       const cultId = popup?.selectedRoute?.cultId || null;
       const save = SaveManager.load();
@@ -842,7 +1045,7 @@ async function completeAscensionByTap(page, stepId, heroLabel) {
 
   await skipAllCutscenes(page, { rounds: 3, timeout: 3000 });
   await page.waitForTimeout(900);
-  await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene').activePopup?.hide?.());
+  await safeEvaluate(page, () => window.game?.scene?.getScene?.('MainMenuScene').activePopup?.hide?.());
   await page.waitForTimeout(700);
 
   const after = (await readSave(page)).ascendedHeroes.length;
@@ -913,6 +1116,27 @@ async function run() {
   const headless = !process.argv.includes('--headed');
   const browser = await chromium.launch({ headless });
   const page = await browser.newPage({ viewport: VIEWPORT });
+
+  // 개발 서버(vite) 의 HMR 클라이언트를 무력화한다.
+  // 이 스위트는 한 판을 10분 가까이 이어서 진행하는데, 그 사이 누군가 소스를 저장하면
+  // vite 가 full-reload 를 밀어 넣어 전투/팝업 상태가 통째로 날아간다(= 튜토리얼 배선과
+  // 무관한 가짜 실패). 검증 대상은 게임 로직이지 HMR 이 아니므로 클라이언트만 스텁으로
+  // 바꿔 페이지가 스스로 리로드하지 않게 한다. 모듈 그래프는 그대로 유지된다.
+  await page.route('**/@vite/client', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: VITE_CLIENT_STUB,
+    })
+  );
+
+  // 그래도 리로드가 일어났다면(예: 라우트 우회) 진단에 남긴다.
+  let loadCount = 0;
+  page.on('load', () => {
+    loadCount += 1;
+    if (loadCount > EXPECTED_PAGE_LOADS) note(`페이지가 예기치 않게 다시 로드되었다 (#${loadCount})`);
+  });
+
   const pageErrors = [];
   page.on('pageerror', (err) => pageErrors.push(`${err.name}: ${err.message}`));
   page.on('console', (msg) => {

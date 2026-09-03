@@ -21,6 +21,7 @@ export class TowerScene extends Phaser.Scene {
     this.createTopBar();
     this.loadTowerData();
     this.createFloorDisplay();
+    this.createSeasonStrip();
     this.createFloorInfo();
     this.createActionButtons();
     this.createProgressBar();
@@ -157,6 +158,58 @@ export class TowerScene extends Phaser.Scene {
     this.add.text(centerX, y + s(145), `총 클리어: ${this.progress.totalClears}회`, {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(14), color: '#64748B'
     }).setOrigin(0.5);
+  }
+
+
+  /**
+   * TOWER-03: 시즌 스트립 — 시즌 ID · 남은 일수 · 시즌 최고층 · 내 순위
+   * 순위는 Supabase(오프라인 시 로컬 캐시) 조회라 비동기로 채운다.
+   */
+  createSeasonStrip() {
+    const status = TowerSystem.getSeasonStatus();
+    this.seasonStatus = status;
+
+    const panelX = s(30);
+    const panelY = s(306);
+    const panelW = GAME_WIDTH - s(60);
+    const panelH = s(56);
+
+    const panel = this.add.graphics();
+    panel.fillStyle(0x1E293B, 0.85);
+    panel.fillRoundedRect(panelX, panelY, panelW, panelH, s(12));
+    panel.lineStyle(s(2), COLORS.primary, 0.25);
+    panel.strokeRoundedRect(panelX, panelY, panelW, panelH, s(12));
+
+    this.add.text(panelX + s(18), panelY + s(10),
+      `${status.seasonId} 시즌`, {
+        fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(15),
+        fontStyle: 'bold', color: '#F8FAFC'
+      });
+
+    this.add.text(panelX + s(18), panelY + s(32),
+      `시즌 최고 ${status.bestFloor}층 · 종료까지 ${status.daysRemaining}일`, {
+        fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(13), color: '#94A3B8'
+      });
+
+    this.seasonRankText = this.add.text(panelX + panelW - s(18), panelY + panelH / 2,
+      '내 순위 조회 중...', {
+        fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(14), color: '#F59E0B'
+      }).setOrigin(1, 0.5);
+
+    this.loadSeasonRank(status.seasonId);
+  }
+
+  /** 내 시즌 순위 비동기 갱신 */
+  async loadSeasonRank(seasonId) {
+    const result = await TowerSystem.getMyRank(seasonId);
+
+    // 씬이 이미 종료됐으면 무시
+    if (!this.seasonRankText || !this.seasonRankText.scene || !this.scene.isActive()) return;
+
+    const suffix = result.offline || result.fallback ? ' (오프라인)' : '';
+    this.seasonRankText.setText(
+      result.rank ? `내 순위 ${result.rank}위${suffix}` : `순위 없음${suffix}`
+    );
   }
 
   createFloorInfo() {

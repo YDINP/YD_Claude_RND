@@ -101,6 +101,25 @@ export class HeroAssetLoader {
     const key = HeroAssetLoader.getHiresTextureKey(heroData);
     if (scene.textures.exists(key)) return key;
 
+    // P2-2: textures.exists 만 보면 로드가 끝나기 전(아직 텍스처로 등록되기 전)
+    // 같은 프레임/근접 호출에서 다시 queueHiresTexture 가 불려도 걸러지지 않아
+    // Phaser 로더에 같은 키가 두 번 올라가고 'Texture key already in use' 경고가 뜬다.
+    // 씬에 큐잉된 키를 기억해 로드 완료(성공/실패) 전까지는 재요청을 막는다.
+    scene._hiresQueuedKeys = scene._hiresQueuedKeys || new Set();
+    if (scene._hiresQueuedKeys.has(key)) return key;
+    scene._hiresQueuedKeys.add(key);
+
+    const onError = (file) => {
+      if (file.key !== key) return;
+      scene._hiresQueuedKeys?.delete(key);
+      scene.load.off('loaderror', onError);
+    };
+    scene.load.on('loaderror', onError);
+    scene.load.once(`filecomplete-image-${key}`, () => {
+      scene._hiresQueuedKeys?.delete(key);
+      scene.load.off('loaderror', onError);
+    });
+
     scene.load.image(key, `${HeroAssetLoader.HIRES_PATH}${fileName}.png`);
     return key;
   }
@@ -247,6 +266,9 @@ export class HeroAssetLoader {
     const result = { queued: [], skipped: [] };
     if (!characters || !Array.isArray(characters)) return result;
 
+    // key -> { url, attempts, hero } — loaderror 핸들러가 재시도·경고 로그·플레이스홀더 대상을 찾는 데 쓴다 (P2-3)
+    scene._heroLoadEntries = scene._heroLoadEntries || new Map();
+
     characters.forEach(hero => {
       if (!hero || !hero.id) return;
       const key = HeroAssetLoader.getTextureKey(hero);
@@ -265,7 +287,9 @@ export class HeroAssetLoader {
         return;
       }
 
-      scene.load.image(key, `${basePath}${fileName}${HeroAssetLoader.RUNTIME_EXT}`);
+      const url = `${basePath}${fileName}${HeroAssetLoader.RUNTIME_EXT}`;
+      scene._heroLoadEntries.set(key, { url, attempts: 0, hero });
+      scene.load.image(key, url);
       result.queued.push(key);
     });
 
@@ -273,11 +297,37 @@ export class HeroAssetLoader {
     if (!scene._heroErrorHandlerBound) {
       scene._heroErrorHandlerBound = true;
       scene.load.on('loaderror', (file) => {
-        if (file.key.startsWith('hero_')) {
-          const hero = characters.find(c => HeroAssetLoader.getTextureKey(c) === file.key);
-          if (hero) {
+        if (!file.key.startsWith('hero_')) return;
+
+        const entry = scene._heroLoadEntries?.get(file.key);
+        const url = entry?.url || file.src || file.url || '(url 불명)';
+
+        // P2-3: 실패해도 무로그로 넘어가면 원인 추적이 불가능해 재발한다. 실패 키·URL을 남긴다.
+        console.warn(`[HeroAssetLoader] 포트레이트 로드 실패 (${file.key}): ${url}`);
+
+        if (entry && entry.attempts < 1) {
+          // 일시적 네트워크 오류를 흡수하는 1회 재시도
+          entry.attempts += 1;
+          scene.load.image(file.key, entry.url);
+          if (!scene.load.isLoading()) scene.load.start();
+          return;
+        }
+
+        const hero = entry?.hero || characters.find(c => HeroAssetLoader.getTextureKey(c) === file.key);
+        if (!hero) return;
+
+        // 재시도까지 실패하면 플레이스홀더로 확정한다. 다만 실제 키에 영구히 캐시하면
+        // 세션 내내 실아트 복구가 불가능해진다(P2-3). 플레이스홀더는 별도 키(`${key}__ph`)에도
+        // 남겨 "이 키는 대역이다"라는 표식으로 쓸 수 있게 하고, 화면 표시용으로 실제 키에도
+        // 같은 대역을 채운다 — 실제 키를 참조하는 기존 호출부(11곳)를 건드리지 않기 위해서다.
+        const placeholderKey = `${file.key}__ph`;
+        try {
+          HeroAssetLoader._createEnhancedPlaceholder(scene, hero, placeholderKey);
+          if (!scene.textures.exists(file.key)) {
             HeroAssetLoader._createEnhancedPlaceholder(scene, hero, file.key);
           }
+        } catch (e) {
+          console.warn(`[HeroAssetLoader] 폴백 플레이스홀더 생성 실패 (${file.key}):`, e);
         }
       });
     }

@@ -16,6 +16,7 @@ import { COLORS, s, sf } from '../../config/gameConfig.js';
 import { FriendSystem } from '../../systems/FriendSystem.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT } from '../../utils/popupLayout.js';
+import { ensureMinTouchTarget } from '../../utils/touchTarget.js';
 
 const TAB = { LIST: 0, ADD: 1, SHOP: 2 };
 
@@ -101,7 +102,8 @@ export class FriendsPopup extends PopupBase {
 
       const bg = this.scene.add.rectangle(tx, ty, tabW - s(4), s(TAB_STRIP_HEIGHT - 8),
         isActive ? DESIGN.colors.status.success : DESIGN.colors.bg.surface, isActive ? 0.9 : 0.6);
-      bg.setInteractive({ useHandCursor: true });
+      // 탭 스트립 시각 높이는 36 이지만 손가락이 닿는 영역은 48 이어야 한다 (QA P2-1)
+      ensureMinTouchTarget(bg);
       bg.on('pointerdown', () => {
         if (!this._isLoading) this._loadAndRenderTab(idx);
       });
@@ -149,7 +151,7 @@ export class FriendsPopup extends PopupBase {
 
   _addButton(x, y, w, h, label, color, callback) {
     const bg = this.scene.add.rectangle(x, y, w, h, color, 1);
-    bg.setInteractive({ useHandCursor: true });
+    ensureMinTouchTarget(bg);
     bg.on('pointerover', () => bg.setAlpha(0.85));
     bg.on('pointerout', () => bg.setAlpha(1));
     bg.on('pointerdown', callback);

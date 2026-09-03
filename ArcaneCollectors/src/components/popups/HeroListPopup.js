@@ -14,12 +14,38 @@ import { getRarityKey, getRarityNum } from '../../utils/rarityUtils.js';
 import { ProgressionSystem } from '../../systems/ProgressionSystem.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT } from '../../utils/popupLayout.js';
+import { ensureMinTouchTarget } from '../../utils/touchTarget.js';
+import { computeRowPositions, computeRowCenterY, computeGridScroll } from '../../utils/touchLayout.js';
 
 /** 헤더 타이틀 */
 const TITLE = '영웅 목록';
 
-/** 필터 바 높이 — 그리드가 시작되는 오프셋 (기획 px) */
-const FILTER_BAR_HEIGHT = 108;
+/**
+ * 필터 바 3행의 세로 중심 (콘텐츠 top 기준 기획 px).
+ *
+ * QA P2-1: 세 줄 모두 히트 영역을 48 로 넓히면 예전 간격(14/52/88 → 38·36px 피치)에서는
+ * 위아래 줄이 10px 씩 겹쳐 오탭이 난다. 히트 48 + 여백 6 = 54 피치로 벌린다.
+ */
+const FILTER_ROW_Y = Object.freeze({ sort: 26, rarity: 80, cult: 134 });
+
+/** 필터 바 높이 — 그리드가 시작되는 오프셋 (기획 px). 마지막 행 히트(134±24) 아래 8px */
+const FILTER_BAR_HEIGHT = 166;
+
+/** 등급 필터 4칸 간격 (기획 px). 히트 48 + 여백 4 */
+const RARITY_SPACING = 52;
+
+/** 교단 필터 9칸 간격 (기획 px). 히트 48 + 여백 4 — 예전 22px 는 히트가 26px 겹쳤다 */
+const CULT_SPACING = 52;
+
+/** 그리드 위/아래 안쪽 여백 (기획 px) */
+const GRID_PAD_TOP = 8;
+const GRID_PAD_BOTTOM = 16;
+
+/** 그리드 카드 규격 (기획 px) */
+const CARD_W = 120;
+const CARD_H = 150;
+const CARD_GAP = 10;
+const GRID_COLS = 3;
 
 export class HeroListPopup extends PopupBase {
   constructor(scene, options = {}) {
@@ -102,10 +128,10 @@ export class HeroListPopup extends PopupBase {
   }
 
   createFilterBar() {
-    const { left, top, width, centerX } = this.contentBounds;
+    const { top, centerX } = this.contentBounds;
 
     // Sort buttons
-    const sortY = top + s(14);
+    const sortY = top + s(FILTER_ROW_Y.sort);
     const sortOptions = [
       { key: 'rarity', label: '등급' },
       { key: 'level', label: '레벨' },
@@ -126,7 +152,8 @@ export class HeroListPopup extends PopupBase {
 
       const bg = this.scene.add.rectangle(x + btnW / 2, sortY, btnW, s(28),
         isActive ? COLORS.primary : DESIGN.colors.bg.surface, 1);
-      bg.setInteractive({ useHandCursor: true });
+      // 시각은 60×28 그대로, 히트만 60×48 (QA P2-1)
+      ensureMinTouchTarget(bg);
 
       const label = this.scene.add.text(x + btnW / 2, sortY, opt.label, {
         fontSize: sf(12), fontFamily: '"Noto Sans KR", sans-serif',
@@ -156,21 +183,24 @@ export class HeroListPopup extends PopupBase {
     this.contentContainer.add(this.sortDirText);
 
     // Filter row - Rarity
-    const filterY = top + s(52);
+    const filterY = top + s(FILTER_ROW_Y.rarity);
     const rarities = ['N', 'R', 'SR', 'SSR'];
     this.rarityButtons = [];
-    const rarityStartX = centerX - (rarities.length * s(45)) / 2;
+    const rarityX = computeRowPositions({
+      count: rarities.length, spacing: s(RARITY_SPACING), centerX
+    });
 
     rarities.forEach((rarity, i) => {
-      const x = rarityStartX + i * s(45);
+      const x = rarityX[i];
       const isActive = this.filterRarity === rarity;
       const rarityColor = RARITY[rarity]?.color || 0x9CA3AF;
 
-      const bg = this.scene.add.rectangle(x + s(20), filterY, s(38), s(24),
+      const bg = this.scene.add.rectangle(x, filterY, s(38), s(24),
         isActive ? rarityColor : DESIGN.colors.bg.surface, 0.9);
-      bg.setInteractive({ useHandCursor: true });
+      // 시각은 38×24 그대로, 히트만 48×48 — 간격 52 라 인접 히트와 4px 떨어진다
+      ensureMinTouchTarget(bg);
 
-      const label = this.scene.add.text(x + s(20), filterY, rarity, {
+      const label = this.scene.add.text(x, filterY, rarity, {
         fontSize: sf(11), fontFamily: 'Arial', fontStyle: 'bold', color: DESIGN.colors.text.primary
       }).setOrigin(0.5);
 
@@ -189,17 +219,19 @@ export class HeroListPopup extends PopupBase {
     });
 
     // Filter row - Cult dots
-    const cultY = top + s(88);
+    // QA P2-1 최우선 항목: 20×20 원형을 간격 22 로 늘어놓아 인접 여백이 2px 였다.
+    // 원형 크기는 그대로 두고 간격을 52 로 벌린 뒤 히트만 48 로 넓힌다 → 히트 여백 4px.
+    const cultY = top + s(FILTER_ROW_Y.cult);
     const cults = ['olympus', 'takamagahara', 'yomi', 'asgard', 'valhalla',
                    'tartarus', 'avalon', 'helheim', 'kunlun'];
     this.cultButtons = [];
-    const cultStartX = left + s(20);
+    const cultX = computeRowPositions({ count: cults.length, spacing: s(CULT_SPACING), centerX });
 
     cults.forEach((cult, i) => {
-      const x = cultStartX + i * s(22);
+      const x = cultX[i];
       const cultColor = CULT_COLORS[cult] || 0x9CA3AF;
       const circle = this.scene.add.circle(x, cultY, s(10), cultColor, 0.8);
-      circle.setInteractive({ useHandCursor: true });
+      ensureMinTouchTarget(circle);
 
       circle.on('pointerdown', () => {
         if (this.filterCult === cult) {
@@ -309,34 +341,45 @@ export class HeroListPopup extends PopupBase {
     this.applySummary(filtered.length);
 
     // Render grid (3 columns)
-    const cols = 3;
-    const cardW = s(120);
-    const cardH = s(150);
-    const spacing = s(10);
-    const gridW = cols * cardW + (cols - 1) * spacing;
+    const cardW = s(CARD_W);
+    const cardH = s(CARD_H);
+    const spacing = s(CARD_GAP);
+    const gridW = GRID_COLS * cardW + (GRID_COLS - 1) * spacing;
     const startX = this.contentBounds.centerX - gridW / 2 + cardW / 2;
 
     filtered.forEach((hero, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
+      const col = i % GRID_COLS;
+      const row = Math.floor(i / GRID_COLS);
       const x = startX + col * (cardW + spacing);
-      const y = row * (cardH + spacing);
+      // QA P2-5: 카드는 원점이 중앙이라 첫 행 중심을 뷰포트 top 에 두면 위 절반이 잘렸다.
+      // 행 중심을 padTop + cardH/2 에서 시작한다.
+      const y = computeRowCenterY(row, { itemHeight: cardH, gap: spacing, padTop: s(GRID_PAD_TOP) });
 
       const card = this.createHeroCard(hero, x, y);
       this.gridContainer.add(card);
     });
 
-    // Update max scroll
-    const rows = Math.ceil(filtered.length / cols);
-    this.maxScroll = Math.max(0, rows * (cardH + spacing) - this.contentBounds.height + s(FILTER_BAR_HEIGHT));
+    // QA P2-5: 콘텐츠 높이는 행 피치 합이 아니라 실제 점유 span 이다.
+    // 예전 식(rows × 피치)은 마지막 행 뒤 gap 과 카드 절반을 더 세어 바닥에 빈 칸을 남겼다.
+    const { maxScroll } = computeGridScroll({
+      itemCount: filtered.length,
+      cols: GRID_COLS,
+      itemHeight: cardH,
+      gap: spacing,
+      viewportHeight: this.contentBounds.height - s(FILTER_BAR_HEIGHT),
+      padTop: s(GRID_PAD_TOP),
+      padBottom: s(GRID_PAD_BOTTOM)
+    });
+    this.maxScroll = maxScroll;
     this.scrollY = Math.min(this.scrollY, this.maxScroll);
+    this.updateGridPosition();
   }
 
   createHeroCard(hero, x, y) {
     const card = this.scene.add.container(x, y);
 
-    const cardW = s(120);
-    const cardH = s(150);
+    const cardW = s(CARD_W);
+    const cardH = s(CARD_H);
 
     const rKey = getRarityKey(hero.rarity);
     const rarityData = RARITY[rKey] || RARITY.N;

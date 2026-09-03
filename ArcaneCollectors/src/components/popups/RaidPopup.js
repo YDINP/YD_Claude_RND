@@ -9,6 +9,7 @@ import { COLORS, s, sf, MOODS } from '../../config/gameConfig.js';
 import { RaidSystem } from '../../systems/RaidSystem.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT } from '../../utils/popupLayout.js';
+import { ensureMinTouchTarget } from '../../utils/touchTarget.js';
 
 const TAB = { STATUS: 0, REWARDS: 1 };
 
@@ -109,7 +110,8 @@ export class RaidPopup extends PopupBase {
       const isActive = idx === this._activeTab;
       const bg = this.scene.add.rectangle(tx, ty, tabW - s(4), s(TAB_STRIP_HEIGHT - 8),
         isActive ? DESIGN.colors.cult.olympus : DESIGN.colors.bg.surface, isActive ? 0.9 : 0.6);
-      bg.setInteractive({ useHandCursor: true });
+      // 탭 스트립 시각 높이는 36 이지만 손가락이 닿는 영역은 48 이어야 한다 (QA P2-1)
+      ensureMinTouchTarget(bg);
       bg.on('pointerdown', () => {
         if (!this._isLoading) this._loadAndRenderTab(idx);
       });

@@ -79,7 +79,11 @@ export class TutorialTargetRegistry {
    * @param {string} tid 예: 'mainmenu.menu.ascension'
    * @param {object} gameObject Phaser GameObject (hitArea Rectangle 우선)
    * @param {string|null} sceneKey 소속 씬 키 (clearScene 용)
-   * @param {{padding?: number}} options padding = 홀 여백 보정(월드 px, UXI-11)
+   * @param {{padding?: number, ensureVisible?: Function}} options
+   *   padding = 홀 여백 보정(월드 px, UXI-11).
+   *   ensureVisible = 선택 훅. `resolve()` 가 이 타깃을 찾을 때마다 bounds 계산 전에 먼저 호출한다.
+   *   `ScrollContainer` 안의 타깃처럼 마스크 밖(스크롤 아웃)일 수 있는 오브젝트를
+   *   `ScrollContainer.scrollTo(target)` 로 미리 보이게 하는 용도(TutorialFlow.js 는 수정하지 않는다).
    * @returns {boolean} 등록 성공 여부
    */
   static register(tid, gameObject, sceneKey = null, options = {}) {
@@ -89,6 +93,7 @@ export class TutorialTargetRegistry {
       object: gameObject,
       sceneKey: sceneKey || gameObject.scene?.scene?.key || null,
       padding: options.padding || 0,
+      ensureVisible: typeof options.ensureVisible === 'function' ? options.ensureVisible : null,
     });
 
     // 2단계 해석 폴백 — Phaser 내장 조회로도 찾을 수 있게 이름을 붙인다
@@ -196,6 +201,13 @@ export class TutorialTargetRegistry {
     // 1단계 — 레지스트리
     const entry = this._entries.get(tid);
     if (entry && isAlive(entry.object)) {
+      if (entry.ensureVisible) {
+        try {
+          entry.ensureVisible(entry.object);
+        } catch {
+          // 스크롤 이동 실패는 해석 자체를 막지 않는다 — bounds 계산은 계속 진행
+        }
+      }
       const bounds = boundsOf(entry.object, entry.padding);
       if (bounds) {
         return { tier: RESOLUTION_TIER.REGISTRY, bounds, object: entry.object };

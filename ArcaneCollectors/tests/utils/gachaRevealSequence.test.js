@@ -9,12 +9,16 @@ import {
   STAGE_DURATION,
   FLIP_STAGGER,
   RARITY_ORDER,
+  CUTIN_RARITIES,
+  CUTIN_DURATION,
+  MAX_CUTIN_TARGETS,
   QUALITY_TIER,
   PARTICLE_BUDGET,
   rarityRank,
   bestRarity,
   hasCutin,
   cutinTargets,
+  cutinDuration,
   resolveQualityTier,
   resolveParticleBudget,
   stageSequence,
@@ -37,6 +41,8 @@ const r = (rarity, extra = {}) => ({ id: `c_${rarity}_${Math.random()}`, rarity,
 const tenPull = (best = 'SR') => [
   r('R'), r('R'), r('N'), r('R'), r('R'), r('R'), r('N'), r('R'), r('R'), r(best)
 ];
+/** 컷인이 붙지 않는 10연 (최고 등급 R) */
+const tenPullPlain = () => tenPull('R');
 
 describe('등급 판정', () => {
   it('결과 중 최고 등급을 고른다', () => {
@@ -57,12 +63,36 @@ describe('등급 판정', () => {
     expect(rarityRank('R')).toBeGreaterThan(rarityRank('N'));
   });
 
-  it('컷인은 SSR 에서만 붙고 대상은 등장 순서를 지킨다', () => {
+  it('컷인은 SSR·SR 에만 붙고 R/N 은 붙지 않는다', () => {
+    expect(CUTIN_RARITIES).toEqual(['SSR', 'SR']);
+    expect(hasCutin([r('R'), r('N')])).toBe(false);
+    expect(hasCutin([r('SR'), r('R')])).toBe(true);
+    expect(hasCutin([r('R'), r('SSR')])).toBe(true);
+    expect(cutinTargets([r('R'), r('N')])).toEqual([]);
+  });
+
+  it('SSR 이 여럿이면 전부 순차 대상이 되고 SR 은 등장 순서를 지킨다', () => {
     const a = r('SSR', { name: '첫째' });
     const b = r('SSR', { name: '둘째' });
-    expect(hasCutin([r('SR'), r('R')])).toBe(false);
-    expect(hasCutin([r('R'), a])).toBe(true);
     expect(cutinTargets([r('R'), a, r('SR'), b]).map((x) => x.name)).toEqual(['첫째', '둘째']);
+  });
+
+  it('SSR 이 없으면 SR 은 첫 한 명만 간소판으로 재생한다', () => {
+    const first = r('SR', { name: '앞' });
+    const second = r('SR', { name: '뒤' });
+    expect(cutinTargets([r('R'), first, second, r('N')]).map((x) => x.name)).toEqual(['앞']);
+  });
+
+  it('컷인 대상은 상한을 넘지 않는다', () => {
+    const many = Array.from({ length: 6 }, () => r('SSR'));
+    expect(cutinTargets(many)).toHaveLength(MAX_CUTIN_TARGETS);
+  });
+
+  it('컷인 길이는 대상 수 × 등급별 1회 길이다', () => {
+    expect(cutinDuration([r('R')])).toBe(0);
+    expect(cutinDuration([r('SR'), r('SR')])).toBe(CUTIN_DURATION.SR);
+    expect(cutinDuration([r('SSR'), r('SSR')])).toBe(CUTIN_DURATION.SSR * 2);
+    expect(cutinDuration([r('SSR')], 500)).toBe(500);
   });
 });
 
@@ -91,14 +121,33 @@ describe('단계 시퀀스', () => {
     expect(plan.totalDuration).toBe(cursor);
   });
 
-  it('SSR 10연 총 길이가 온보딩 e2e 예산(6초)을 넉넉히 밑돈다', () => {
+  it('SSR 1장 10연 총 길이가 5초를 넘지 않는다 (기획 상한)', () => {
     const plan = buildRevealPlan(tenPull('SSR'));
     expect(plan.hasCutin).toBe(true);
-    expect(plan.totalDuration).toBeLessThan(5000);
+    expect(plan.cutinTargets).toHaveLength(1);
+    expect(plan.totalDuration).toBeLessThanOrEqual(5000);
+  });
+
+  it('SSR 이 늘면 컷인 단계만 그만큼 길어진다 (순차 재생)', () => {
+    const one = buildRevealPlan(tenPull('SSR'));
+    const two = buildRevealPlan([...tenPull('SSR').slice(0, 9), r('SSR')].concat(r('SSR')));
+    const oneCutin = findStage(one, REVEAL_STAGE.CUTIN).duration;
+    const twoCutin = findStage(two, REVEAL_STAGE.CUTIN).duration;
+    expect(twoCutin).toBe(oneCutin * 2);
+    expect(findStage(two, REVEAL_STAGE.FLIP).duration)
+      .toBeGreaterThan(findStage(one, REVEAL_STAGE.FLIP).duration);
+  });
+
+  it('SR 10연은 간소판이라 SSR 보다 짧다', () => {
+    const sr = buildRevealPlan(tenPull('SR'));
+    const ssr = buildRevealPlan(tenPull('SSR'));
+    expect(sr.hasCutin).toBe(true);
+    expect(findStage(sr, REVEAL_STAGE.CUTIN).duration).toBe(CUTIN_DURATION.SR);
+    expect(sr.totalDuration).toBeLessThan(ssr.totalDuration);
   });
 
   it('카드 공개 시각은 flip 시작에서 stagger 간격으로 늘어선다', () => {
-    const plan = buildRevealPlan(tenPull());
+    const plan = buildRevealPlan(tenPullPlain());
     const flip = findStage(plan, REVEAL_STAGE.FLIP);
     expect(plan.cardReveals).toHaveLength(10);
     expect(plan.cardReveals[0].at).toBe(flip.start);
@@ -106,7 +155,7 @@ describe('단계 시퀀스', () => {
   });
 
   it('경과 시간으로 현재 단계와 공개된 카드 수를 되찾는다', () => {
-    const plan = buildRevealPlan(tenPull());
+    const plan = buildRevealPlan(tenPullPlain());
     const flip = findStage(plan, REVEAL_STAGE.FLIP);
     expect(stageAt(plan, 0)).toBe(REVEAL_STAGE.CIRCLE);
     expect(stageAt(plan, flip.start + 10)).toBe(REVEAL_STAGE.FLIP);
@@ -116,7 +165,7 @@ describe('단계 시퀀스', () => {
     expect(revealedCount(plan, plan.totalDuration)).toBe(10);
   });
 
-  it('단발 소환은 cutin 이 없으면 4단계로 끝난다', () => {
+  it('단발 R 소환은 cutin 이 없어 4단계로 끝난다', () => {
     const plan = buildRevealPlan([r('R')]);
     expect(plan.count).toBe(1);
     expect(plan.stages.map((x) => x.id)).not.toContain(REVEAL_STAGE.CUTIN);
@@ -149,7 +198,7 @@ describe('저사양 파티클 상한', () => {
 
 describe('상태 머신', () => {
   it('초기 상태는 첫 단계이고 공개된 카드가 없다', () => {
-    const plan = buildRevealPlan(tenPull());
+    const plan = buildRevealPlan(tenPullPlain());
     const state = createRevealState(plan);
     expect(state.stageId).toBe(REVEAL_STAGE.CIRCLE);
     expect(state.revealed).toBe(0);
@@ -159,7 +208,7 @@ describe('상태 머신', () => {
   });
 
   it('advance 는 입력 상태를 바꾸지 않고 새 상태를 돌려준다', () => {
-    const plan = buildRevealPlan(tenPull());
+    const plan = buildRevealPlan(tenPullPlain());
     const first = createRevealState(plan);
     const second = advance(first, plan);
     expect(first.stageId).toBe(REVEAL_STAGE.CIRCLE);
@@ -188,7 +237,7 @@ describe('상태 머신', () => {
   });
 
   it('카드 1장 공개는 flip 단계에서만 카운트가 오른다', () => {
-    const plan = buildRevealPlan(tenPull());
+    const plan = buildRevealPlan(tenPullPlain());
     let state = createRevealState(plan);
     expect(revealNextCard(state, plan).revealed).toBe(0); // circle 단계
     state = advance(advance(state, plan), plan);          // flip
@@ -197,7 +246,7 @@ describe('상태 머신', () => {
   });
 
   it('일괄 공개는 카드만 전부 열고 단계는 그대로 둔다', () => {
-    const plan = buildRevealPlan(tenPull());
+    const plan = buildRevealPlan(tenPullPlain());
     let state = advance(advance(createRevealState(plan), plan), plan); // flip
     state = revealAllCards(state, plan);
     expect(state.revealed).toBe(10);

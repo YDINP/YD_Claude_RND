@@ -7,10 +7,11 @@
  * docs/balance/balance-changes-v1.json 을 읽어 실제 데이터 파일에
  * "값만" 적용한다. 스키마 변경 없음, 값 외 필드는 절대 건드리지 않는다.
  *
- * 대상 파일 3종:
+ * 대상 파일 4종:
  *   - src/data/stages.json          (chapters[].stages[].recommendedPower)
  *   - src/data/tower.json           (floors[].recommendedPower)
  *   - src/data/ascended-heroes.json (ascendedHeroes[].stats / growthStats)
+ *   - src/data/enemies.json         (enemies[].stats / growthStats, v1.3부터)
  *
  * ── path 표기 관례 (balance-changes-v1.json) ──────────────────────────
  * balance-changes-v1.json의 path 문자열은 "requirePower"로 표기하지만
@@ -25,6 +26,10 @@
  * floors[*].recommendedPower 는 change.to.floorRecommendedPower (100개 배열,
  * 인덱스 0 = 층1)을 floors[i].recommendedPower = floorRecommendedPower[i]로
  * 전부 대입하는 벌크 변경으로 처리한다.
+ *
+ * enemies[id=X].fieldPath 표기는 src/data/enemies.json의 enemies 배열에서
+ * id===X인 객체를 찾아 fieldPath(점 표기, 예: stats.hp, growthStats.def)를
+ * 그 객체에 적용한다 (v1.3, ascendedHeroes와 동일한 규칙).
  *
  * 사용법:
  *   node tools/balance/apply-changes.mjs                          # v1 적용 + 저장
@@ -52,9 +57,11 @@ const CHANGES_PATH = path.isAbsolute(CHANGES_FILE_NAME)
 const STAGES_PATH = path.join(ROOT, 'src', 'data', 'stages.json');
 const TOWER_PATH = path.join(ROOT, 'src', 'data', 'tower.json');
 const HEROES_PATH = path.join(ROOT, 'src', 'data', 'ascended-heroes.json');
+const ENEMIES_PATH = path.join(ROOT, 'src', 'data', 'enemies.json');
 
 const STAGE_RE = /^stages\[(\d+)\]\.requirePower$/;
 const HERO_RE = /^ascendedHeroes\[id=([^\]]+)\]\.(.+)$/;
+const ENEMY_RE = /^enemies\[id=([^\]]+)\]\.(.+)$/;
 
 function loadJson(p) {
   return JSON.parse(fs.readFileSync(p, 'utf-8'));
@@ -158,6 +165,42 @@ function applyHeroChange(heroesData, change, results, warnings) {
   cursor[lastKey] = change.to;
 }
 
+function applyEnemyChange(enemiesData, change, results, warnings) {
+  const m = ENEMY_RE.exec(change.path);
+  const enemyId = m[1];
+  const fieldKeys = m[2].split('.');
+
+  const enemy = enemiesData.enemies.find(e => e.id === enemyId);
+  if (!enemy) {
+    throw new Error(`[enemies] id=${enemyId} 를 찾을 수 없습니다 (path=${change.path})`);
+  }
+
+  let cursor = enemy;
+  for (let i = 0; i < fieldKeys.length - 1; i++) {
+    cursor = cursor[fieldKeys[i]];
+    if (cursor == null) {
+      throw new Error(`[enemies] ${enemyId}.${fieldKeys.slice(0, i + 1).join('.')} 경로가 존재하지 않습니다`);
+    }
+  }
+  const lastKey = fieldKeys[fieldKeys.length - 1];
+  const before = cursor[lastKey];
+
+  if (before !== change.from) {
+    warnings.push(
+      `[WARN] ${change.path}: 문서 from=${change.from}, 실제 현재값=${before} — 값 불일치, from 검증 실패`
+    );
+  }
+
+  results.push({
+    file: 'src/data/enemies.json',
+    fieldPath: change.path,
+    from: before,
+    to: change.to
+  });
+
+  cursor[lastKey] = change.to;
+}
+
 function main() {
   const rawChanges = loadJson(CHANGES_PATH);
   const changes = rawChanges.filter(c => c.path && c.to !== undefined);
@@ -165,6 +208,7 @@ function main() {
   const stagesData = loadJson(STAGES_PATH);
   const towerData = loadJson(TOWER_PATH);
   const heroesData = loadJson(HEROES_PATH);
+  const enemiesData = loadJson(ENEMIES_PATH);
 
   const results = [];
   const warnings = [];
@@ -177,6 +221,8 @@ function main() {
       applyTowerChange(towerData, change, results, warnings);
     } else if (HERO_RE.test(change.path)) {
       applyHeroChange(heroesData, change, results, warnings);
+    } else if (ENEMY_RE.test(change.path)) {
+      applyEnemyChange(enemiesData, change, results, warnings);
     } else {
       skipped.push(change.path);
     }
@@ -227,7 +273,8 @@ function main() {
     writeJson(STAGES_PATH, stagesData);
     writeJson(TOWER_PATH, towerData);
     writeJson(HEROES_PATH, heroesData);
-    console.log('파일 저장 완료: stages.json, tower.json, ascended-heroes.json');
+    writeJson(ENEMIES_PATH, enemiesData);
+    console.log('파일 저장 완료: stages.json, tower.json, ascended-heroes.json, enemies.json');
   } else {
     console.log('(dry-run — 파일 미저장. 저장하려면 --dry-run 옵션 없이 재실행)');
   }

@@ -94,22 +94,54 @@ try {
   await page.waitForTimeout(3200); // 배너 일러스트/전신 지연 로드 대기
   await shot(page, 'gacha-summon');
 
-  // --- 2. SSR 컷인 ---
+  // --- 2. 캐릭터별 SSR 컷인 (교단 3종) ---
+  // 확률에 기대지 않고 GachaResultOverlay 를 SSR 결과로 직접 구동한다.
+  // 연출 코드 경로는 실제 소환과 동일하며, 프리셋(gacha-cutins.json)만 캐릭터마다 다르다.
+  const CUTIN_SHOTS = [
+    { file: 'gacha-cutin-olympus', id: 'asc_iris_olympus', name: '올림푸스의 아이리스', cult: 'olympus', mood: 'brave' },
+    { file: 'gacha-cutin-yomi', id: 'asc_hana_yomi', name: '황천의 하나', cult: 'yomi', mood: 'mystic' },
+    { file: 'gacha-cutin-nature', id: 'asc_sol_nature', name: '나투레의 솔', cult: 'nature', mood: 'calm' }
+  ];
+
+  for (const spec of CUTIN_SHOTS) {
+    await page.evaluate(async (target) => {
+      const mod = await import('/src/components/GachaResultOverlay.js');
+      const scene = window.game.scene.getScene('GachaScene');
+      // 컷인 순간을 확실히 잡기 위해 그 단계만 길게 잡는다 (그리는 코드는 동일)
+      window.__capOverlay = new mod.GachaResultOverlay(scene, { durations: { cutin: 8000 } });
+      window.__capOverlay.show([{
+        id: target.id, name: target.name, rarity: 'SSR',
+        stars: 5, isNew: true, cult: target.cult, mood: target.mood
+      }]);
+    }, spec);
+
+    // Phaser 시간은 프레임 델타 누적이라 헤드리스에서 실제 시간보다 느리게 흐른다.
+    // 벽시계로 기다리지 말고 연출 상태를 직접 본다 — 대사가 절반 이상 찍힌 순간을 잡는다.
+    const reached = await waitFor(page, () => {
+      const o = window.__capOverlay;
+      if (!o || o.state?.stageId !== 'cutin') return false;
+      const text = o.quoteText?.text || '';
+      return text.length >= 6;
+    }, 30000);
+    if (!reached) log(`  [warn] ${spec.file}: 컷인 대사 단계에 도달하지 못했다`);
+    checks.push([`SSR 컷인 재생 — ${spec.cult}`, reached]);
+
+    await shot(page, spec.file);
+    await page.evaluate(() => { if (window.__capOverlay) window.__capOverlay.destroy(); });
+    await page.waitForTimeout(600);
+  }
+
+  // 대표 1장을 기존 이름으로도 남긴다 (문서 링크 호환)
   await page.evaluate(async () => {
     const mod = await import('/src/components/GachaResultOverlay.js');
     const scene = window.game.scene.getScene('GachaScene');
-    const results = [
-      { id: 'asc_iris_olympus', name: '올림푸스의 아이리스', rarity: 'SSR', stars: 5, isNew: true, cult: 'olympus' }
-    ];
-    // 컷인 순간을 확실히 잡기 위해 그 단계만 길게 잡는다 (연출 코드 경로는 동일)
-    window.__capOverlay = new mod.GachaResultOverlay(scene, { durations: { cutin: 4000 } });
-    window.__capOverlay.show(results);
+    window.__capOverlay = new mod.GachaResultOverlay(scene, { durations: { cutin: 8000 } });
+    window.__capOverlay.show([{
+      id: 'asc_iris_olympus', name: '올림푸스의 아이리스', rarity: 'SSR',
+      stars: 5, isNew: true, cult: 'olympus', mood: 'brave'
+    }]);
   });
-  // Phaser 시간은 프레임 델타 누적이라 헤드리스에서 실제 시간보다 느리게 흐른다.
-  // 벽시계로 기다리지 말고 단계 상태를 직접 본다.
-  const reachedCutin = await waitFor(page, () => window.__capOverlay?.state?.stageId === 'cutin', 20000);
-  if (!reachedCutin) log('  [warn] 컷인 단계에 도달하지 못했다');
-  await page.waitForTimeout(700); // 컷인 등장 트윈이 자리를 잡을 때까지
+  await waitFor(page, () => (window.__capOverlay?.quoteText?.text || '').length >= 6, 30000);
   await shot(page, 'gacha-ssr-cutin');
   await page.evaluate(() => { if (window.__capOverlay) window.__capOverlay.destroy(); });
   await page.waitForTimeout(600);
@@ -236,7 +268,7 @@ try {
   const failed = checks.filter(([, ok]) => !ok).length;
   log(`\n캡처 ${saved.length}장: ${saved.join(', ')}`);
   log(`검증 ${checks.length - failed} passed, ${failed} failed · 페이지 예외 ${errors.length}건`);
-  process.exitCode = errors.length === 0 && failed === 0 && saved.length >= 5 ? 0 : 1;
+  process.exitCode = errors.length === 0 && failed === 0 && saved.length >= 9 ? 0 : 1;
 } catch (e) {
   log(`실패: ${e.message}`);
   process.exitCode = 1;

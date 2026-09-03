@@ -38,8 +38,19 @@
  *   참고: src/systems/PitySystem.js 는 별개의 "기본영웅 조각 피티"(soft 30/hard 50/base 3%)로
  *         본 시뮬 대상(캐릭터 가챠 천장)과 무관. 미반영.
  *
- * 실행: node tools/simulate/gacha-sim.mjs [--accounts 100] [--pulls 10000]
+ * 실행: node tools/simulate/gacha-sim.mjs [--accounts 100] [--pulls 10000] [--banner <id>]
+ *
+ * --banner <id>: src/data/banners.json 에서 배너를 골라 그 배너의 실제 pickupRate로
+ *   픽업 시뮬레이션을 돌린다. 미지정 시 활성 픽업 배너(type != 'standard') 중 첫 번째를
+ *   고르고, 없으면 'standard'(픽업 없음)로 내려간다. GachaSystem.pull(count, paymentType,
+ *   { bannerId })의 배너별 픽업 라우팅(2026-09 추가)을 그대로 반영한다.
  */
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const BANNERS_PATH = path.resolve(__dirname, '../../src/data/banners.json');
 
 // ---------- SSOT 상수 (위 주석 출처 그대로) ----------
 const RATES = { SSR: 0.015, SR: 0.085, R: 0.90, N: 0 }; // [G] L14-19 (T-S2: N풀 공백 대응, N을 R로 흡수)
@@ -48,7 +59,48 @@ const PITY_THRESHOLD = 90; // [G] L30
 const SOFT_PITY_START = 75; // [G] L31
 
 const GACHA = { SINGLE_COST: 300, MULTI_COST: 2700, ENERGY_COST_PER_PULL: 10 }; // [G] L34-48
-const PICKUP_RATE = 0.5; // [G] determinePickupCharacter 의 banner.pickupRate 기본값
+const PICKUP_RATE_DEFAULT = 0.5; // [G] determinePickupCharacter 의 banner.pickupRate 기본값
+
+// ---------- 배너 모드: src/data/banners.json 로드 + 해석 ----------
+function loadBanners() {
+  try {
+    return JSON.parse(readFileSync(BANNERS_PATH, 'utf-8')).banners || [];
+  } catch (e) {
+    console.warn(`[gacha-sim] banners.json 로드 실패 (${BANNERS_PATH}): ${e.message} — standard로 폴백`);
+    return [];
+  }
+}
+
+/**
+ * 시뮬레이션에 쓸 배너를 고른다.
+ * @param {Array} banners banners.json의 banners 배열
+ * @param {string|null} requestedId --banner 로 지정한 id (없으면 자동 선택)
+ * @returns {{ id: string, name: string, hasPickup: boolean, pickupRate: number, pickupCount: number }}
+ */
+function resolveBanner(banners, requestedId) {
+  const standard = { id: 'standard', name: '표준 소환', hasPickup: false, pickupRate: PICKUP_RATE_DEFAULT, pickupCount: 0 };
+
+  let banner = null;
+  if (requestedId) {
+    banner = banners.find((b) => b.id === requestedId);
+    if (!banner) {
+      console.warn(`[gacha-sim] --banner ${requestedId} 를 찾을 수 없습니다 — standard로 폴백`);
+    }
+  } else {
+    // 활성 픽업 배너(type !== 'standard') 중 첫 번째를 자동 선택
+    banner = banners.find((b) => b.type !== 'standard' && b.isActive);
+  }
+  if (!banner) return standard;
+
+  const pickupCharacters = Array.isArray(banner.pickupCharacters) ? banner.pickupCharacters : [];
+  return {
+    id: banner.id,
+    name: banner.name || banner.id,
+    hasPickup: banner.type !== 'standard' && pickupCharacters.length > 0,
+    pickupRate: Number.isFinite(banner.pickupRate) ? banner.pickupRate : PICKUP_RATE_DEFAULT,
+    pickupCount: pickupCharacters.length
+  };
+}
 
 const ENERGY_CONFIG = {
   BASE_MAX_ENERGY: 100,
@@ -113,13 +165,13 @@ function determineRarity(currentPity, rng) {
  * 본 시뮬은 "_meta 주석 및 isPickupGuaranteed의 remaining 계산(180-counter)"이 의도한
  * **누적 뽑기 횟수 기반** 해석을 채택한다: 픽업 획득 시 0으로 리셋, 픽업 없이 180 도달 시 다음 SSR 픽업 확정.
  */
-function rollPickup(pickupState, rng) {
+function rollPickup(pickupState, rng, pickupRate) {
   const { lost5050, pickupPityCount } = pickupState;
 
   if (lost5050 || pickupPityCount >= PITY_CONFIG.pickupPity) {
     return { isPickup: true, guaranteed: true };
   }
-  if (rng() < PICKUP_RATE) return { isPickup: true, guaranteed: false };
+  if (rng() < pickupRate) return { isPickup: true, guaranteed: false };
   return { isPickup: false, guaranteed: false };
 }
 
@@ -128,8 +180,9 @@ function rollPickup(pickupState, rng) {
  * @param {Function} rng 시드 RNG
  * @param {number} totalPulls 총 뽑기 수
  * @param {'multi'|'single'} mode 10연차 배치(=SR 보장 적용) 여부
+ * @param {number} pickupRate 배너의 실제 50/50 확률 (banners.json banner.pickupRate)
  */
-function simulateAccount(rng, totalPulls, mode) {
+function simulateAccount(rng, totalPulls, mode, pickupRate = PICKUP_RATE_DEFAULT) {
   const counts = { SSR: 0, SR: 0, R: 0, N: 0 };
   let pity = 0;
   let pullIndex = 0;
@@ -163,7 +216,7 @@ function simulateAccount(rng, totalPulls, mode) {
         if (pity >= PITY_THRESHOLD) hardPityHits++;
         pity = 0; // [G] SSR 시 천장 초기화
 
-        const pk = rollPickup(pickupState, rng);
+        const pk = rollPickup(pickupState, rng, pickupRate);
         if (pk.isPickup) {
           pickupCount++;
           if (pk.guaranteed) guaranteedPickups++;
@@ -252,11 +305,22 @@ function analyticExpectations() {
 }
 
 // ---------- 메인: 가챠 몬테카를로 ----------
-function runGachaSim(accounts, pullsPerAccount) {
+/**
+ * @param {number} accounts
+ * @param {number} pullsPerAccount
+ * @param {{id:string,name:string,hasPickup:boolean,pickupRate:number,pickupCount:number}} banner
+ *   resolveBanner()의 결과 — --banner 로 고른 실제 배너 (기본: 표준/픽업 없음)
+ */
+function runGachaSim(accounts, pullsPerAccount, banner) {
   console.log('='.repeat(72));
   console.log(`BAL-01 가챠 시뮬레이션 — ${accounts}계정 × ${pullsPerAccount.toLocaleString()}회`);
   console.log(
     `설정: RATES SSR ${(RATES.SSR * 100).toFixed(1)}% / SR ${(RATES.SR * 100).toFixed(1)}% / R ${(RATES.R * 100).toFixed(0)}% / N ${(RATES.N * 100).toFixed(0)}%, softPity ${SOFT_PITY_START}(+${PITY_CONFIG.softPityBonus * 100}%/회), hardPity ${PITY_THRESHOLD}, pickupPity ${PITY_CONFIG.pickupPity}`
+  );
+  console.log(
+    banner.hasPickup
+      ? `배너: ${banner.name} (${banner.id}) — 픽업 캐릭터 ${banner.pickupCount}명, 50/50 확률 ${pct(banner.pickupRate)}`
+      : `배너: ${banner.name} (${banner.id}) — 픽업 없음 (표준 배너, --banner 로 픽업 배너 지정 가능)`
   );
   console.log('='.repeat(72));
 
@@ -282,7 +346,7 @@ function runGachaSim(accounts, pullsPerAccount) {
 
     for (let acc = 0; acc < accounts; acc++) {
       const rng = mulberry32(0xacce ^ (acc * 2654435761) ^ (key === 'multi' ? 1 : 0));
-      const r = simulateAccount(rng, pullsPerAccount, key);
+      const r = simulateAccount(rng, pullsPerAccount, key, banner.pickupRate);
       for (const k of Object.keys(totals)) totals[k] += r.counts[k];
       if (r.firstSSRAt !== null) firstSSRs.push(r.firstSSRAt);
       hardPityTotal += r.hardPityHits;
@@ -317,12 +381,14 @@ function runGachaSim(accounts, pullsPerAccount) {
       `  천장 검증: SSR 없이 연속 ${PITY_THRESHOLD}회 초과 뽑기 위반 = ${overHardPityViolations}건 (기대값 0), 관측 최장 무SSR 간격 = ${maxGapGlobal}연차`
     );
 
+    if (!banner.hasPickup) continue; // 표준 배너는 픽업이 없다 — 아래 픽업 통계는 의미 없으므로 생략
+
     const pickupPerAcc = pickupTotal / accounts;
     console.log(
-      `  픽업: 계정당 평균 ${pickupPerAcc.toFixed(1)}회 획득 (그중 확정 판정 ${guarPickupTotal}건) | 첫 픽업 도달 평균 ${mean(firstPickups).toFixed(1)} / P95 ${percentile(firstPickups, 95)} / 최대 ${Math.max(...firstPickups)}회`
+      `  픽업(${banner.name}): 계정당 평균 ${pickupPerAcc.toFixed(1)}회 획득 (그중 확정 판정 ${guarPickupTotal}건) | 첫 픽업 도달 평균 ${mean(firstPickups).toFixed(1)} / P95 ${percentile(firstPickups, 95)} / 최대 ${Math.max(...firstPickups)}회`
     );
     console.log(
-      `  180픽업피티 검증: 첫 픽업이 ${PITY_CONFIG.pickupPity}회 내 획득한 계정 ${pct(firstPickups.filter((p) => p <= PITY_CONFIG.pickupPity).length / accounts)}`
+      `  180픽업피티(누적 뽑기 횟수 기준) 검증: 첫 픽업이 ${PITY_CONFIG.pickupPity}회 내 획득한 계정 ${pct(firstPickups.filter((p) => p <= PITY_CONFIG.pickupPity).length / accounts)}`
     );
   }
 }
@@ -411,11 +477,18 @@ function argValue(name, def) {
   const i = args.indexOf(name);
   return i >= 0 && args[i + 1] ? parseInt(args[i + 1], 10) : def;
 }
+function argString(name, def) {
+  const i = args.indexOf(name);
+  return i >= 0 && args[i + 1] ? args[i + 1] : def;
+}
 
 const ACCOUNTS = argValue('--accounts', 100);
 const PULLS = argValue('--pulls', 10000);
 const PLAYER_LEVEL = argValue('--level', 30);
+const BANNER_ID = argString('--banner', null);
 
-runGachaSim(ACCOUNTS, PULLS);
+const banner = resolveBanner(loadBanners(), BANNER_ID);
+
+runGachaSim(ACCOUNTS, PULLS, banner);
 runDailyEconomy(PLAYER_LEVEL);
 console.log('\n완료.');

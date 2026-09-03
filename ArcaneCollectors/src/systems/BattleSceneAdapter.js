@@ -21,6 +21,7 @@
  */
 import { BattleUnit, BattleSystem } from './BattleSystem.js';
 import { CultMechanicsSystem } from './CultMechanicsSystem.js';
+import { getSkill } from '../data/index.js';
 
 /** 스탯이 전혀 없는 배틀러의 최후 방어값 */
 export const FALLBACK_STATS = Object.freeze({ hp: 100, atk: 10, def: 10, spd: 10 });
@@ -207,6 +208,72 @@ export function createSceneBattleSystem(allies, enemies, options = {}) {
   return battleSystem;
 }
 
+/** 이름을 끝내 못 찾은 스킬의 표시명 (데이터 구멍이 로그에 키값으로 새지 않게) */
+export const UNNAMED_SKILL_LABEL = '특수 공격';
+
+/** `skill_talon_strike` 처럼 사람 이름이 아니라 식별자로 보이는 문자열 */
+const SKILL_ID_SHAPE = /^[a-z0-9]+(?:_[a-z0-9]+)+$/;
+
+/**
+ * 표시용 이름이 아니라 식별자인지 판정.
+ * @param {string} value
+ * @returns {boolean}
+ */
+export function looksLikeSkillId(value) {
+  return typeof value === 'string' && SKILL_ID_SHAPE.test(value.trim());
+}
+
+/**
+ * 스킬의 사람이 읽는 이름을 해석한다.
+ *
+ * enemies.json은 스킬을 id 문자열로만 들고 있어서, 정의를 못 찾으면 씬이 id를 그대로
+ * 이름 자리에 넣었다. 그 결과 전투 로그에 `skill_talon_strike` 같은 키값이 노출됐다.
+ * 조회 순서: 스킬 객체의 이름 → 유닛의 스킬 목록 → 원본 데이터의 스킬 정의 → skills.json.
+ *
+ * @param {object|null} unit 배틀러 (유닛 스킬 목록·원본 데이터 조회용)
+ * @param {object|string} skillOrId 스킬 객체 또는 스킬 id
+ * @returns {string} 표시명
+ */
+export function resolveSkillName(unit, skillOrId) {
+  const skill = typeof skillOrId === 'string' ? null : skillOrId;
+  const id = typeof skillOrId === 'string' ? skillOrId : skillOrId?.id;
+
+  // 1) 스킬 객체가 이미 쓸 만한 이름을 갖고 있다
+  if (skill?.name && !looksLikeSkillId(skill.name)) return skill.name;
+  if (!id) return skill?.name || UNNAMED_SKILL_LABEL;
+
+  // 2) 유닛의 스킬 목록 (전직영웅처럼 인라인 정의를 가진 경우)
+  const fromUnit = (unit?.skills || []).find(s => s?.id === id);
+  if (fromUnit?.name && !looksLikeSkillId(fromUnit.name)) return fromUnit.name;
+
+  // 3) 유닛 원본 데이터의 스킬 정의
+  const fromSource = (unit?.data?.skills || []).find(s => s?.id === id);
+  if (fromSource?.name && !looksLikeSkillId(fromSource.name)) return fromSource.name;
+
+  // 4) skills.json (적 스킬의 SSOT — id만 들고 있는 enemies.json이 여기로 연결된다)
+  try {
+    const defined = getSkill(id);
+    if (defined?.name && !looksLikeSkillId(defined.name)) return defined.name;
+  } catch {
+    // 데이터 모듈을 못 읽는 환경이면 아래 폴백으로 내려간다
+  }
+
+  return UNNAMED_SKILL_LABEL;
+}
+
+/**
+ * 스킬 정의에 표시명을 채워 넣은 사본을 돌려준다 (원본 불변).
+ * 씬이 적 스킬 킷을 만들 때 id가 이름 자리에 들어가는 것을 막는다.
+ *
+ * @param {object|null} unit
+ * @param {object} skill
+ * @returns {object}
+ */
+export function withResolvedSkillName(unit, skill) {
+  if (!skill) return skill;
+  return { ...skill, name: resolveSkillName(unit, skill) };
+}
+
 /**
  * 힐 스킬 판정 (씬·시스템 공통 규칙)
  * @param {object} skill
@@ -386,8 +453,22 @@ export function affectedUnitsOf(effects) {
  * 판정 코드를 건드리지 않고 화면에 올릴 때만 사람이 읽는 이름으로 바꾼다.
  */
 export const CULT_EFFECT_LABELS = Object.freeze({
+  // MECH-02
   lightning_strike: '뇌격 심판',
-  death_sentence: '사형 선고'
+  death_sentence: '사형 선고',
+  // MECH-03 — 나머지 8기관
+  berserker_rage: '광전사의 분노',
+  shield_break: '방패 파쇄',
+  growth_ring: '나이테 성장',
+  equilibrium: '평형의 일격',
+  chaos_wildcard: '와일드 카드',
+  chaos_roll: '혼돈의 주사위',
+  chaos_burst: '혼돈 연타',
+  chaos_storm: '혼돈 폭풍',
+  chaos_collapse: '원소 붕괴',
+  chaos_element: '무작위 원소',
+  chaos_explosion: '불안정 폭발',
+  chaos_misfire: '오발사'
 });
 
 /**

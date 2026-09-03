@@ -15,6 +15,10 @@ import {
   affectedUnitsOf,
   drainBattleLog,
   isHealSkill,
+  resolveSkillName,
+  withResolvedSkillName,
+  looksLikeSkillId,
+  UNNAMED_SKILL_LABEL,
   normalizeMood,
   hasMoodMatchup,
   resolveMoodMatchup,
@@ -115,6 +119,49 @@ describe('BattleSceneAdapter — 배틀러 → 전투 유닛 변환', () => {
     expect(unit.maxHp).toBe(FALLBACK_STATS.hp);
     expect(unit.atk).toBe(FALLBACK_STATS.atk);
     expect(unit.skills.length).toBeGreaterThan(0);
+  });
+});
+
+describe('BattleSceneAdapter — 스킬 표시명 해석 (키값 노출 방지)', () => {
+  it('식별자꼴 문자열을 가려낸다', () => {
+    expect(looksLikeSkillId('skill_talon_strike')).toBe(true);
+    expect(looksLikeSkillId('slash_01')).toBe(true);
+    expect(looksLikeSkillId('발톱 가르기')).toBe(false);
+    expect(looksLikeSkillId('Basic Attack')).toBe(false);
+    expect(looksLikeSkillId(null)).toBe(false);
+  });
+
+  it('id만 주어져도 skills.json에서 한국어 이름을 찾는다 (적 스킬 경로)', () => {
+    expect(resolveSkillName(null, 'skill_talon_strike')).toBe('발톱 가르기');
+    expect(resolveSkillName(null, 'skill_allfather_wrath')).toBe('만물의 아버지의 분노');
+  });
+
+  it('name 자리에 id가 들어와 있으면 무시하고 다시 해석한다', () => {
+    const leaked = { id: 'skill_talon_strike', name: 'skill_talon_strike', multiplier: 1.3 };
+    expect(resolveSkillName(null, leaked)).toBe('발톱 가르기');
+  });
+
+  it('스킬 객체가 제대로 된 이름을 가지면 그대로 쓴다 (아군 인라인 스킬)', () => {
+    expect(resolveSkillName(null, { id: 'skill1', name: '뇌신의 일격' })).toBe('뇌신의 일격');
+  });
+
+  it('유닛의 스킬 목록에서도 이름을 찾는다', () => {
+    const unit = ally({ skills: [BASIC, { id: 'skill1', name: '강타', multiplier: 2 }] });
+    expect(resolveSkillName(unit, 'skill1')).toBe('강타');
+  });
+
+  it('어디서도 못 찾으면 키값 대신 일반 표시명으로 내려간다', () => {
+    expect(resolveSkillName(null, 'skill_does_not_exist')).toBe(UNNAMED_SKILL_LABEL);
+    expect(UNNAMED_SKILL_LABEL).not.toMatch(/_/);
+  });
+
+  it('withResolvedSkillName은 원본을 건드리지 않고 이름만 채운다', () => {
+    const raw = { id: 'skill_screech', name: 'skill_screech', multiplier: 1.1 };
+    const fixed = withResolvedSkillName(null, raw);
+
+    expect(fixed.name).toBe('째지는 울음');
+    expect(fixed.multiplier).toBe(1.1);
+    expect(raw.name).toBe('skill_screech');
   });
 });
 

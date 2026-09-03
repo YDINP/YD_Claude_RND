@@ -10,6 +10,7 @@ import { SynergySystem } from '../../systems/SynergySystem.js';
 import { getCharacter, getAllCharacters } from '../../data/index.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT, pickActionChild } from '../../utils/popupLayout.js';
+import { ensureMinTouchTarget } from '../../utils/touchTarget.js';
 
 /** 헤더 타이틀 */
 const TITLE = '파티 편성';
@@ -117,19 +118,18 @@ export class PartyEditPopup extends PopupBase {
     const savedChars = saveData?.characters || [];
     this.ownedHeroes = registryHeroes.length > 0 ? registryHeroes : savedChars;
 
-    // 빈 경우 기본 스타터 영웅 제공
+    // 보유 영웅이 하나도 없으면 확정 지급 기본영웅(base_iris)을 편성한다.
+    // 폐지된 레거시 스타터 char_1~4를 여기서 지급하면 구버전 카툰 포트레이트가 되살아난다.
     if (this.ownedHeroes.length === 0) {
-      const allChars = getAllCharacters();
-      if (allChars && allChars.length > 0) {
-        this.ownedHeroes = allChars.slice(0, 4).map(c => ({
-          id: c.id,
-          characterId: c.id,
-          level: 1,
-          exp: 0,
-          skillLevels: [1, 1, 1],
-          ...c
-        }));
-      }
+      SaveManager._grantStarterHero(saveData);
+      SaveManager.save(saveData);
+      this.ownedHeroes = saveData.characters || [];
+    }
+
+    // 현재 파티가 비어 있으면 보유 영웅 상위 4명으로 즉시 채워 보여준다
+    if (SaveManager.ensureActiveParty(saveData, this.activeSlot - 1)) {
+      SaveManager.save(saveData);
+      this.parties = PartyManager.ensurePartySlots(saveData.parties || []);
     }
   }
 
@@ -147,7 +147,8 @@ export class PartyEditPopup extends PopupBase {
 
       const bg = this.scene.add.rectangle(x, tabY, tabW, s(PARTY_TAB_HEIGHT),
         isActive ? DESIGN.colors.brand.primary : DESIGN.colors.bg.surface, isActive ? 1 : 0.6);
-      bg.setInteractive({ useHandCursor: true });
+      // 탭 시각 높이 40 유지, 히트 48 (QA P2-1)
+      ensureMinTouchTarget(bg);
 
       const label = this.scene.add.text(x, tabY, `파티 ${slot}`, {
         fontSize: sf(14),
@@ -190,7 +191,7 @@ export class PartyEditPopup extends PopupBase {
       // 슬롯 배경
       const bg = this.scene.add.rectangle(x, y, slotSize, slotSize + s(30), COLORS.bgLight, 0.7);
       bg.setStrokeStyle(s(2), COLORS.bgPanel);
-      bg.setInteractive({ useHandCursor: true });
+      bg.setInteractive({ useHandCursor: true }); // 136×166 — 이미 터치 하한을 넘는다
 
       // 슬롯 번호
       const slotLabel = this.scene.add.text(x, y - slotSize / 2 + s(12), `슬롯 ${i + 1}`, {
@@ -223,10 +224,12 @@ export class PartyEditPopup extends PopupBase {
       }).setOrigin(0.5);
 
       // 제거 버튼
-      const removeBtn = this.scene.add.text(x + slotSize / 2 - s(8), y - slotSize / 2 - s(5), '✕', {
+      // 제거 ✕ — 글리프 13×15 → 히트 48×48. 슬롯 안쪽으로 당겨 옆 슬롯(간격 14)을 침범하지 않게 한다
+      const removeBtn = this.scene.add.text(x + slotSize / 2 - s(18), y - slotSize / 2 + s(4), '✕', {
         fontSize: sf(16),
         color: hexToCSS(DESIGN.colors.status.error)
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false);
+      }).setOrigin(0.5).setVisible(false);
+      ensureMinTouchTarget(removeBtn);
 
       removeBtn.on('pointerdown', () => this.removeHeroFromSlot(i));
       bg.on('pointerdown', () => this.openHeroSelect(i));
@@ -444,7 +447,8 @@ export class PartyEditPopup extends PopupBase {
         fontSize: sf(24),
         color: DESIGN.colors.text.primary
       }
-    ).setOrigin(0.5).setDepth(2102).setInteractive({ useHandCursor: true });
+    ).setOrigin(0.5).setDepth(2102);
+    ensureMinTouchTarget(closeBtn);
     closeBtn.on('pointerdown', () => this.closeHeroSelect());
 
     if (allHeroes.length === 0) {

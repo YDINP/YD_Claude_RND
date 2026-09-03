@@ -6,6 +6,8 @@ import energySystem from '../../systems/EnergySystem.js';
 import transitionManager from '../../utils/TransitionManager.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT } from '../../utils/popupLayout.js';
+import { ScrollContainer } from '../ScrollContainer.js';
+import { ensureMinTouchTarget } from '../../utils/touchTarget.js';
 
 /** 헤더 타이틀 */
 const TITLE = '이벤트 던전';
@@ -31,12 +33,68 @@ export class EventDungeonPopup extends PopupBase {
     this.selectedEventId = null;
     this.selectedStageId = null;
     this.viewMode = 'list'; // 'list' or 'detail' or 'shop'
+    this._scroll = null; // 현재 화면(목록/상세/교환소)의 카드 목록을 담는 ScrollContainer
+  }
+
+  /**
+   * 팝업 자체가 닫힐 때도 ScrollContainer 의 scene.input 리스너를 반드시 해제한다.
+   * PopupBase.js 는 수정하지 않으므로 서브클래스에서 훅을 잡아 처리한다.
+   */
+  destroy() {
+    if (this._scroll) {
+      this._scroll.destroy();
+      this._scroll = null;
+    }
+    super.destroy();
   }
 
   buildContent() {
     this.setTitle(TITLE);
     this.loadEventData();
     this.showEventList();
+  }
+
+  /**
+   * 화면 전체를 스크롤 뷰포트로 감싼다. 세 화면(목록/상세/교환소) 모두 이 헬퍼로 시작해
+   * `this._scroll` 을 만든 뒤, 기존 코드와 동일한 절대 화면 좌표로 카드를 채운다.
+   */
+  _openScroll() {
+    if (this._scroll) {
+      this._scroll.destroy();
+      this._scroll = null;
+    }
+    const b = this.contentBounds;
+    this._scroll = new ScrollContainer(this.scene, {
+      x: b.left, y: b.top, width: b.width, height: b.bottom - b.top,
+      fadeColor: 0x0F172A,
+      parent: this.contentContainer
+    });
+    return this._scroll;
+  }
+
+  /**
+   * PopupBase.addButton 과 동일한 시각/동작이지만 스크롤 콘텐츠에 그리고
+   * `attachTap` 으로 드래그 중 탭 오인(threshold 8px)을 막는다.
+   */
+  _scrollButton(x, y, width, height, label, color, callback) {
+    const bg = this.scene.add.rectangle(x, y, width, height, color, 1);
+    bg.setStrokeStyle(s(1), 0xFFFFFF, 0.2);
+    // 시각은 그대로(도전 80×35 / 구매 70×30) 두고 히트만 터치 하한까지 넓힌다 (QA P2-1).
+    // `attachTap` 은 이미 input 이 있으면 건드리지 않으므로 반드시 먼저 호출한다.
+    ensureMinTouchTarget(bg);
+    this._scroll.add(bg);
+
+    const text = this.scene.add.text(x, y, label, {
+      fontSize: sf(16), fontFamily: '"Noto Sans KR", sans-serif',
+      fontStyle: 'bold', color: '#FFFFFF'
+    }).setOrigin(0.5);
+    this._scroll.add(text);
+
+    bg.on('pointerover', () => bg.setAlpha(0.8));
+    bg.on('pointerout', () => bg.setAlpha(1));
+    this._scroll.attachTap(bg, callback);
+
+    return { bg, text };
   }
 
   /** 슬롯 2 — 진행/예정 이벤트 수 (+ 상세 화면에서는 해당 이벤트 진행도) */
@@ -91,6 +149,7 @@ export class EventDungeonPopup extends PopupBase {
     this.clearContent();
     this.applySummary(null);
     this.applyActions('list');
+    this._openScroll();
 
     const cx = this.contentBounds.centerX;
     const left = this.contentBounds.left;
@@ -98,7 +157,7 @@ export class EventDungeonPopup extends PopupBase {
 
     // 활성 이벤트가 없는 경우
     if (this.eventsSummary.totalActive === 0) {
-      this.addText(cx, currentY + s(100), '현재 진행 중인 이벤트가 없습니다.', {
+      this._scroll.addText(cx, currentY + s(100), '현재 진행 중인 이벤트가 없습니다.', {
         fontSize: sf(18),
         color: DESIGN.colors.text.secondary
       }).setOrigin(0.5);
@@ -106,7 +165,7 @@ export class EventDungeonPopup extends PopupBase {
       // 예정 이벤트 표시
       if (this.eventsSummary.totalUpcoming > 0) {
         currentY += s(180);
-        this.addText(left + s(20), currentY, '예정된 이벤트', {
+        this._scroll.addText(left + s(20), currentY, '예정된 이벤트', {
           fontSize: sf(16),
           fontStyle: 'bold',
           color: DESIGN.colors.text.primary
@@ -119,11 +178,12 @@ export class EventDungeonPopup extends PopupBase {
         });
       }
 
+      this._scroll.setContentHeight(currentY - this.contentBounds.top + s(20));
       return;
     }
 
     // 활성 이벤트 헤더
-    this.addText(left + s(20), currentY, '진행 중인 이벤트', {
+    this._scroll.addText(left + s(20), currentY, '진행 중인 이벤트', {
       fontSize: sf(18),
       fontStyle: 'bold',
       color: DESIGN.colors.text.primary
@@ -137,10 +197,10 @@ export class EventDungeonPopup extends PopupBase {
       currentY += s(160);
     });
 
-    // 예정 이벤트 (있는 경우)
-    if (this.eventsSummary.totalUpcoming > 0 && currentY < this.contentBounds.bottom - s(200)) {
+    // 예정 이벤트 (있는 경우) — 스크롤이 넘치는 만큼 받아주므로 남은 세로 공간 유무와 무관하게 항상 이어 붙인다
+    if (this.eventsSummary.totalUpcoming > 0) {
       currentY += s(30);
-      this.addText(left + s(20), currentY, '예정된 이벤트', {
+      this._scroll.addText(left + s(20), currentY, '예정된 이벤트', {
         fontSize: sf(16),
         fontStyle: 'bold',
         color: DESIGN.colors.text.primary
@@ -152,6 +212,8 @@ export class EventDungeonPopup extends PopupBase {
         currentY += s(90);
       });
     }
+
+    this._scroll.setContentHeight(currentY - this.contentBounds.top + s(20));
   }
 
   createEventCard(x, y, eventSummary) {
@@ -172,7 +234,7 @@ export class EventDungeonPopup extends PopupBase {
     card.fillRoundedRect(x, y, cardW, cardH, s(12));
     card.lineStyle(s(2), borderColor, 0.6);
     card.strokeRoundedRect(x, y, cardW, cardH, s(12));
-    this.contentContainer.add(card);
+    this._scroll.add(card);
 
     // 이벤트 타입 배지
     const badgeX = x + s(15);
@@ -180,24 +242,24 @@ export class EventDungeonPopup extends PopupBase {
     const badge = this.scene.add.graphics();
     badge.fillStyle(borderColor, 0.9);
     badge.fillRoundedRect(badgeX, badgeY, s(70), s(24), s(8));
-    this.contentContainer.add(badge);
+    this._scroll.add(badge);
 
     const typeLabels = { raid: '레이드', tower: '타워', collection: '수집' };
-    this.addText(badgeX + s(35), badgeY + s(12), typeLabels[event.type] || '이벤트', {
+    this._scroll.addText(badgeX + s(35), badgeY + s(12), typeLabels[event.type] || '이벤트', {
       fontSize: sf(12),
       fontStyle: 'bold',
       color: DESIGN.colors.text.primary
     }).setOrigin(0.5);
 
     // 이벤트 이름
-    this.addText(x + s(15), y + s(50), event.name, {
+    this._scroll.addText(x + s(15), y + s(50), event.name, {
       fontSize: sf(20),
       fontStyle: 'bold',
       color: DESIGN.colors.text.primary
     });
 
     // 설명
-    this.addText(x + s(15), y + s(78), event.description, {
+    this._scroll.addText(x + s(15), y + s(78), event.description, {
       fontSize: sf(12),
       color: DESIGN.colors.text.secondary,
       wordWrap: { width: cardW - s(150) }
@@ -214,7 +276,7 @@ export class EventDungeonPopup extends PopupBase {
       timeText = `${timeRemaining.hours}시간 ${timeRemaining.minutes}분`;
     }
 
-    this.addText(x + cardW - s(15), y + s(15), timeText, {
+    this._scroll.addText(x + cardW - s(15), y + s(15), timeText, {
       fontSize: sf(12),
       color: timeRemaining.days > 7 ? hexToCSS(DESIGN.colors.status.success) : timeRemaining.days > 1 ? hexToCSS(DESIGN.colors.status.warning) : hexToCSS(DESIGN.colors.status.error),
       fontStyle: 'bold'
@@ -222,17 +284,17 @@ export class EventDungeonPopup extends PopupBase {
 
     // 진행도 정보
     const progress = eventSummary.progress;
-    this.addText(x + s(15), y + s(105), `일일: ${progress.dailyEntries}/${progress.dailyLimit}`, {
+    this._scroll.addText(x + s(15), y + s(105), `일일: ${progress.dailyEntries}/${progress.dailyLimit}`, {
       fontSize: sf(13),
       color: DESIGN.colors.text.muted
     });
 
-    this.addText(x + s(120), y + s(105), `클리어: ${progress.clearedStages}/${event.stages.length}`, {
+    this._scroll.addText(x + s(120), y + s(105), `클리어: ${progress.clearedStages}/${event.stages.length}`, {
       fontSize: sf(13),
       color: DESIGN.colors.text.muted
     });
 
-    this.addText(x + s(250), y + s(105), `${event.eventCurrency}: ${progress.eventCurrency}`, {
+    this._scroll.addText(x + s(250), y + s(105), `${event.eventCurrency}: ${progress.eventCurrency}`, {
       fontSize: sf(13),
       color: hexToCSS(DESIGN.colors.status.warning)
     });
@@ -242,13 +304,13 @@ export class EventDungeonPopup extends PopupBase {
     const btnY = y + s(95);
     const canEnter = eventSummary.canEnter;
 
-    this.addButton(btnX, btnY, s(80), s(35), '도전', canEnter ? COLORS.primary : DESIGN.colors.bg.surface, () => {
+    this._scrollButton(btnX, btnY, s(80), s(35), '도전', canEnter ? COLORS.primary : DESIGN.colors.bg.surface, () => {
       if (canEnter) {
         this.showEventDetail(event.id);
       } else {
         this.showToast(eventSummary.reason || '입장할 수 없습니다.');
       }
-    }, canEnter ? DESIGN.colors.text.primary : DESIGN.colors.text.muted);
+    });
   }
 
   createUpcomingEventCard(x, y, event) {
@@ -261,23 +323,23 @@ export class EventDungeonPopup extends PopupBase {
     card.fillRoundedRect(x, y, cardW, cardH, s(10));
     card.lineStyle(s(1), DESIGN.colors.bg.surface, 0.4);
     card.strokeRoundedRect(x, y, cardW, cardH, s(10));
-    this.contentContainer.add(card);
+    this._scroll.add(card);
 
     // 이벤트 이름
-    this.addText(x + s(15), y + s(15), event.name, {
+    this._scroll.addText(x + s(15), y + s(15), event.name, {
       fontSize: sf(16),
       fontStyle: 'bold',
       color: DESIGN.colors.text.secondary
     });
 
     // 설명
-    this.addText(x + s(15), y + s(40), event.description.substring(0, 50) + '...', {
+    this._scroll.addText(x + s(15), y + s(40), event.description.substring(0, 50) + '...', {
       fontSize: sf(11),
       color: DESIGN.colors.text.muted
     });
 
     // 시작일
-    this.addText(x + cardW - s(15), y + s(25), `시작: ${event.startDate}`, {
+    this._scroll.addText(x + cardW - s(15), y + s(25), `시작: ${event.startDate}`, {
       fontSize: sf(11),
       color: DESIGN.colors.text.muted
     }).setOrigin(1, 0);
@@ -302,9 +364,10 @@ export class EventDungeonPopup extends PopupBase {
     // 목록/교환소 이동은 액션 바(슬롯 4)가 맡는다
     this.applySummary(eventSummary);
     this.applyActions('detail', eventId, !!(event.shop && event.shop.length > 0));
+    this._openScroll();
 
     // 이벤트 타이틀
-    this.addText(cx, currentY, event.name, {
+    this._scroll.addText(cx, currentY, event.name, {
       fontSize: sf(24),
       fontStyle: 'bold',
       color: DESIGN.colors.text.primary
@@ -313,7 +376,7 @@ export class EventDungeonPopup extends PopupBase {
     currentY += s(35);
 
     // 설명
-    this.addText(cx, currentY, event.description, {
+    this._scroll.addText(cx, currentY, event.description, {
       fontSize: sf(14),
       color: DESIGN.colors.text.secondary,
       align: 'center',
@@ -323,7 +386,7 @@ export class EventDungeonPopup extends PopupBase {
     currentY += s(50);
 
     // 스테이지 목록
-    this.addText(left + s(20), currentY, '던전 목록', {
+    this._scroll.addText(left + s(20), currentY, '던전 목록', {
       fontSize: sf(18),
       fontStyle: 'bold',
       color: DESIGN.colors.text.primary
@@ -335,6 +398,8 @@ export class EventDungeonPopup extends PopupBase {
       this.createStageCard(left + s(20), currentY, eventId, stage, eventSummary.progress);
       currentY += s(110);
     });
+
+    this._scroll.setContentHeight(currentY - this.contentBounds.top + s(20));
   }
 
   createStageCard(x, y, eventId, stage, progress) {
@@ -354,30 +419,30 @@ export class EventDungeonPopup extends PopupBase {
     card.fillRoundedRect(x, y, cardW, cardH, s(10));
     card.lineStyle(s(2), borderColor, 0.5);
     card.strokeRoundedRect(x, y, cardW, cardH, s(10));
-    this.contentContainer.add(card);
+    this._scroll.add(card);
 
     // 난이도 배지
     const diffLabels = { easy: '쉬움', normal: '보통', hard: '어려움' };
     const badge = this.scene.add.graphics();
     badge.fillStyle(borderColor, 0.9);
     badge.fillRoundedRect(x + s(10), y + s(10), s(60), s(22), s(8));
-    this.contentContainer.add(badge);
+    this._scroll.add(badge);
 
-    this.addText(x + s(40), y + s(21), diffLabels[stage.difficulty] || stage.difficulty, {
+    this._scroll.addText(x + s(40), y + s(21), diffLabels[stage.difficulty] || stage.difficulty, {
       fontSize: sf(11),
       fontStyle: 'bold',
       color: DESIGN.colors.text.primary
     }).setOrigin(0.5);
 
     // 스테이지 이름
-    this.addText(x + s(80), y + s(15), stage.name, {
+    this._scroll.addText(x + s(80), y + s(15), stage.name, {
       fontSize: sf(16),
       fontStyle: 'bold',
       color: DESIGN.colors.text.primary
     });
 
     // 권장 전투력
-    this.addText(x + s(15), y + s(45), `권장 전투력 ${stage.recommendedPower}`, {
+    this._scroll.addText(x + s(15), y + s(45), `권장 전투력 ${stage.recommendedPower}`, {
       fontSize: sf(12),
       color: DESIGN.colors.text.secondary
     });
@@ -389,7 +454,7 @@ export class EventDungeonPopup extends PopupBase {
     if (rewards.exp) rewardParts.push(`경험치 ${rewards.exp}`);
     if (rewards.gems) rewardParts.push(`젬 ${rewards.gems}`);
 
-    this.addText(x + s(15), y + s(67), `보상: ${rewardParts.join(' ')}`, {
+    this._scroll.addText(x + s(15), y + s(67), `보상: ${rewardParts.join(' ')}`, {
       fontSize: sf(11),
       color: hexToCSS(DESIGN.colors.status.warning)
     });
@@ -397,7 +462,7 @@ export class EventDungeonPopup extends PopupBase {
     // 클리어 횟수
     const stageProgress = progress.clearedStages[stage.id];
     if (stageProgress) {
-      this.addText(x + cardW - s(150), y + s(67), `클리어: ${stageProgress.clearCount}회`, {
+      this._scroll.addText(x + cardW - s(150), y + s(67), `클리어: ${stageProgress.clearCount}회`, {
         fontSize: sf(11),
         color: hexToCSS(DESIGN.colors.status.success)
       });
@@ -405,14 +470,14 @@ export class EventDungeonPopup extends PopupBase {
 
     // 도전 버튼
     const canEnter = EventDungeonSystem.canEnterEvent(eventId).canEnter;
-    this.addButton(x + cardW - s(90), y + s(55), s(80), s(30), '도전', canEnter ? borderColor : DESIGN.colors.bg.surface, () => {
+    this._scrollButton(x + cardW - s(90), y + s(55), s(80), s(30), '도전', canEnter ? borderColor : DESIGN.colors.bg.surface, () => {
       if (canEnter) {
         this.startEventBattle(eventId, stage);
       } else {
         const result = EventDungeonSystem.canEnterEvent(eventId);
         this.showToast(result.reason || '입장할 수 없습니다.');
       }
-    }, canEnter ? DESIGN.colors.text.primary : DESIGN.colors.text.muted);
+    });
   }
 
   showEventShop(eventId) {
@@ -433,9 +498,10 @@ export class EventDungeonPopup extends PopupBase {
 
     // '던전으로' 이동은 액션 바(슬롯 4)가 맡는다
     this.applyActions('shop', eventId);
+    this._openScroll();
 
     // 상점 타이틀
-    this.addText(cx, currentY, `${event.name} 교환소`, {
+    this._scroll.addText(cx, currentY, `${event.name} 교환소`, {
       fontSize: sf(22),
       fontStyle: 'bold',
       color: DESIGN.colors.text.primary
@@ -444,7 +510,7 @@ export class EventDungeonPopup extends PopupBase {
     currentY += s(40);
 
     // 보유 화폐 표시
-    this.addText(cx, currentY, `보유 ${event.eventCurrency} ${progress.eventCurrency}`, {
+    this._scroll.addText(cx, currentY, `보유 ${event.eventCurrency} ${progress.eventCurrency}`, {
       fontSize: sf(16),
       color: hexToCSS(DESIGN.colors.status.warning),
       fontStyle: 'bold'
@@ -457,6 +523,8 @@ export class EventDungeonPopup extends PopupBase {
       this.createShopItemCard(left + s(20), currentY, eventId, item, progress);
       currentY += s(90);
     });
+
+    this._scroll.setContentHeight(currentY - this.contentBounds.top + s(20));
   }
 
   createShopItemCard(x, y, eventId, item, progress) {
@@ -469,10 +537,10 @@ export class EventDungeonPopup extends PopupBase {
     card.fillRoundedRect(x, y, cardW, cardH, s(10));
     card.lineStyle(s(1), COLORS.primary, 0.3);
     card.strokeRoundedRect(x, y, cardW, cardH, s(10));
-    this.contentContainer.add(card);
+    this._scroll.add(card);
 
     // 상품 이름
-    this.addText(x + s(15), y + s(15), item.name, {
+    this._scroll.addText(x + s(15), y + s(15), item.name, {
       fontSize: sf(16),
       fontStyle: 'bold',
       color: DESIGN.colors.text.primary
@@ -485,13 +553,13 @@ export class EventDungeonPopup extends PopupBase {
     if (reward.gems) rewardParts.push(`젬 ${reward.gems}`);
     if (reward.summonTickets) rewardParts.push(`소환권 x${reward.summonTickets}`);
 
-    this.addText(x + s(15), y + s(42), rewardParts.join(' '), {
+    this._scroll.addText(x + s(15), y + s(42), rewardParts.join(' '), {
       fontSize: sf(13),
       color: hexToCSS(DESIGN.colors.status.success)
     });
 
     // 가격
-    this.addText(x + cardW - s(180), y + s(30), `${item.cost}`, {
+    this._scroll.addText(x + cardW - s(180), y + s(30), `${item.cost}`, {
       fontSize: sf(18),
       fontStyle: 'bold',
       color: hexToCSS(DESIGN.colors.status.warning)
@@ -500,7 +568,7 @@ export class EventDungeonPopup extends PopupBase {
     // 구매 제한
     if (item.limit) {
       const purchased = progress.shopPurchases[item.id] || 0;
-      this.addText(x + cardW - s(180), y + s(52), `(${purchased}/${item.limit})`, {
+      this._scroll.addText(x + cardW - s(180), y + s(52), `(${purchased}/${item.limit})`, {
         fontSize: sf(11),
         color: DESIGN.colors.text.muted
       }).setOrigin(1, 0.5);
@@ -510,7 +578,7 @@ export class EventDungeonPopup extends PopupBase {
     const purchased = progress.shopPurchases[item.id] || 0;
     const canPurchase = (!item.limit || purchased < item.limit) && progress.eventCurrency >= item.cost;
 
-    this.addButton(x + cardW - s(80), y + s(35), s(70), s(30), '구매', canPurchase ? 0x10B981 : DESIGN.colors.bg.surface, () => {
+    this._scrollButton(x + cardW - s(80), y + s(35), s(70), s(30), '구매', canPurchase ? 0x10B981 : DESIGN.colors.bg.surface, () => {
       if (canPurchase) {
         this.purchaseShopItem(eventId, item.id);
       } else {
@@ -520,7 +588,7 @@ export class EventDungeonPopup extends PopupBase {
           this.showToast('화폐가 부족합니다.');
         }
       }
-    }, canPurchase ? DESIGN.colors.text.primary : DESIGN.colors.text.muted);
+    });
   }
 
   purchaseShopItem(eventId, itemId) {
@@ -561,6 +629,12 @@ export class EventDungeonPopup extends PopupBase {
   }
 
   clearContent() {
+    // ScrollContainer 는 scene.input 전역 리스너를 갖고 있어 먼저 명시적으로 정리한다.
+    // contentContainer.removeAll(true) 만으로는 그 리스너가 해제되지 않는다.
+    if (this._scroll) {
+      this._scroll.destroy();
+      this._scroll = null;
+    }
     // 기존 콘텐츠 제거
     this.contentContainer.removeAll(true);
   }

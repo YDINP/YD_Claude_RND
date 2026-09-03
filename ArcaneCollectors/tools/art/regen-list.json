@@ -1,13 +1,53 @@
 {
   "$schema": "internal://arcanecollectors/regen-list/v1",
   "generatedBy": "tools/art/postprocess-assets.py",
-  "generatedAt": "2026-09-02T10:56:27Z",
+  "generatedAt": "2026-09-03T12:39:24Z",
   "note": "manifest 에서 제외된 항목. 원인을 해결해 art/gen/assets/ 에 재생성하면 다음 실행에서 자동 포함된다.",
   "items": [
     {
       "id": "panel_header_ornament",
       "reason": "소스 종횡비 3:1(2172x724)이 목표 8:1(512x64)과 맞지 않아 심하게 눌림. 1024x128(8:1)로 재생성 필요.",
       "targetPath": "assets/ui/panels/panel_header_ornament.webp"
+    },
+    {
+      "id": "enemy_cerberus",
+      "reason": "미생성 — art/gen/enemies/ 에 소스가 없다. 실루엣 폴백 유지.",
+      "targetPath": "assets/characters/enemies/enemy_cerberus.webp"
+    },
+    {
+      "id": "enemy_cernunnos",
+      "reason": "미생성 — art/gen/enemies/ 에 소스가 없다. 실루엣 폴백 유지.",
+      "targetPath": "assets/characters/enemies/enemy_cernunnos.webp"
+    },
+    {
+      "id": "enemy_fairy",
+      "reason": "미생성 — art/gen/enemies/ 에 소스가 없다. 실루엣 폴백 유지.",
+      "targetPath": "assets/characters/enemies/enemy_fairy.webp"
+    },
+    {
+      "id": "enemy_kodama",
+      "reason": "미생성 — art/gen/enemies/ 에 소스가 없다. 실루엣 폴백 유지.",
+      "targetPath": "assets/characters/enemies/enemy_kodama.webp"
+    },
+    {
+      "id": "enemy_pixiu",
+      "reason": "미생성 — art/gen/enemies/ 에 소스가 없다. 실루엣 폴백 유지.",
+      "targetPath": "assets/characters/enemies/enemy_pixiu.webp"
+    },
+    {
+      "id": "enemy_qilin",
+      "reason": "미생성 — art/gen/enemies/ 에 소스가 없다. 실루엣 폴백 유지.",
+      "targetPath": "assets/characters/enemies/enemy_qilin.webp"
+    },
+    {
+      "id": "enemy_satyr",
+      "reason": "미생성 — art/gen/enemies/ 에 소스가 없다. 실루엣 폴백 유지.",
+      "targetPath": "assets/characters/enemies/enemy_satyr.webp"
+    },
+    {
+      "id": "enemy_yamata",
+      "reason": "미생성 — art/gen/enemies/ 에 소스가 없다. 실루엣 폴백 유지.",
+      "targetPath": "assets/characters/enemies/enemy_yamata.webp"
     }
   ]
 }

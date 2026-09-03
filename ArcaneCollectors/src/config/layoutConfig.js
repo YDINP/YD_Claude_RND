@@ -165,6 +165,12 @@ export const Z_INDEX = {
     BOTTOM_NAV: 300,
     MODAL: 400,
     TOOLTIP: 500,
+
+    // 씬 안내 표시. 팝업(2000)보다 반드시 낮다 — 토스트가 팝업을 뚫고 나오면
+    // 팝업 내용과 겹쳐 둘 다 못 읽는다. 팝업이 스스로 알리는 것은 팝업 안에서 한다.
+    IDLE_FX: 900,        // 유휴전투 무대 위 연출 (BOSS READY 배너 등)
+    TOAST: 1900,         // 토스트 — 씬 UI 중 가장 위, 팝업 아래
+
     POPUP_BASE: 2000,    // PopupBase 기본 depth
     POPUP_NESTED: 2100,  // 중첩 팝업 (HeroInfoPopup 등)
 

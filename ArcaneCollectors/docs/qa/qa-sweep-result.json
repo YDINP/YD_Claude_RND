@@ -1,0 +1,3670 @@
+{
+  "generatedAt": "2026-09-03T12:18:14.773Z",
+  "baseUrl": "http://localhost:3000",
+  "viewport": {
+    "width": 720,
+    "height": 1280
+  },
+  "summary": {
+    "steps": 102,
+    "stepsFailed": 0,
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "oldImageHits": 0,
+    "overlapHits": 6,
+    "offscreenHits": 0,
+    "smallTargetHits": 0
+  },
+  "scenarios": [
+    {
+      "id": "B",
+      "label": "풍부한 유저 (전 영웅 보유·튜토리얼 완주·챕터 3)",
+      "steps": [
+        {
+          "n": "01",
+          "scenario": "B",
+          "name": "mainmenu-idle-1",
+          "shot": "docs/qa/screens/01-B-mainmenu-idle-1.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 243,
+          "visibleCount": 200,
+          "onScreenCount": 200,
+          "clippedInScroll": 9,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "02",
+          "scenario": "B",
+          "name": "mainmenu-idle-2",
+          "shot": "docs/qa/screens/02-B-mainmenu-idle-2.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 243,
+          "visibleCount": 201,
+          "onScreenCount": 201,
+          "clippedInScroll": 10,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "03",
+          "scenario": "B",
+          "name": "popup-gacha",
+          "shot": "docs/qa/screens/03-B-popup-gacha.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 355,
+          "visibleCount": 311,
+          "onScreenCount": 307,
+          "clippedInScroll": 9,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "04",
+          "scenario": "B",
+          "name": "popup-herolist",
+          "shot": "docs/qa/screens/04-B-popup-herolist.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 576,
+          "visibleCount": 528,
+          "onScreenCount": 389,
+          "clippedInScroll": 178,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [
+            {
+              "scene": "MainMenuScene",
+              "layerDepth": 2000,
+              "a": {
+                "path": "MainMenuScene/Container2[170]/Container2[4]/Container2[28]/Container2[12]/Text2[4]",
+                "text": "★★★★★",
+                "bounds": {
+                  "x": 303,
+                  "y": 1758,
+                  "w": 85,
+                  "h": 16
+                }
+              },
+              "b": {
+                "path": "MainMenuScene/Container2[170]/Container2[7]/Text2[1]",
+                "text": "필터 초기화",
+                "bounds": {
+                  "x": 254,
+                  "y": 1756,
+                  "w": 105,
+                  "h": 29
+                }
+              },
+              "overlapRatio": 0.66
+            },
+            {
+              "scene": "MainMenuScene",
+              "layerDepth": 2000,
+              "a": {
+                "path": "MainMenuScene/Container2[170]/Container2[4]/Container2[28]/Container2[14]/Text2[4]",
+                "text": "★★★★★",
+                "bounds": {
+                  "x": 693,
+                  "y": 1758,
+                  "w": 85,
+                  "h": 16
+                }
+              },
+              "b": {
+                "path": "MainMenuScene/Container2[170]/Container2[7]/Text2[4]",
+                "text": "닫기",
+                "bounds": {
+                  "x": 753,
+                  "y": 1756,
+                  "w": 42,
+                  "h": 29
+                }
+              },
+              "overlapRatio": 0.33
+            }
+          ],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "05",
+          "scenario": "B",
+          "name": "popup-partyedit",
+          "shot": "docs/qa/screens/05-B-popup-partyedit.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 323,
+          "visibleCount": 278,
+          "onScreenCount": 276,
+          "clippedInScroll": 8,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "06",
+          "scenario": "B",
+          "name": "popup-quest",
+          "shot": "docs/qa/screens/06-B-popup-quest.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 343,
+          "visibleCount": 297,
+          "onScreenCount": 295,
+          "clippedInScroll": 45,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "07",
+          "scenario": "B",
+          "name": "popup-tower",
+          "shot": "docs/qa/screens/07-B-popup-tower.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 301,
+          "visibleCount": 256,
+          "onScreenCount": 254,
+          "clippedInScroll": 9,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "08",
+          "scenario": "B",
+          "name": "popup-ascension",
+          "shot": "docs/qa/screens/08-B-popup-ascension.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 327,
+          "visibleCount": 279,
+          "onScreenCount": 277,
+          "clippedInScroll": 58,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "09",
+          "scenario": "B",
+          "name": "popup-eventdungeon",
+          "shot": "docs/qa/screens/09-B-popup-eventdungeon.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 309,
+          "visibleCount": 264,
+          "onScreenCount": 262,
+          "clippedInScroll": 37,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "10",
+          "scenario": "B",
+          "name": "popup-inventory",
+          "shot": "docs/qa/screens/10-B-popup-inventory.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 308,
+          "visibleCount": 263,
+          "onScreenCount": 261,
+          "clippedInScroll": 33,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "11",
+          "scenario": "B",
+          "name": "popup-settings",
+          "shot": "docs/qa/screens/11-B-popup-settings.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 321,
+          "visibleCount": 269,
+          "onScreenCount": 267,
+          "clippedInScroll": 9,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "12",
+          "scenario": "B",
+          "name": "popup-pvp",
+          "shot": "docs/qa/screens/12-B-popup-pvp.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 283,
+          "visibleCount": 238,
+          "onScreenCount": 236,
+          "clippedInScroll": 8,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "13",
+          "scenario": "B",
+          "name": "popup-guild",
+          "shot": "docs/qa/screens/13-B-popup-guild.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 283,
+          "visibleCount": 237,
+          "onScreenCount": 235,
+          "clippedInScroll": 8,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "14",
+          "scenario": "B",
+          "name": "popup-raid",
+          "shot": "docs/qa/screens/14-B-popup-raid.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 290,
+          "visibleCount": 245,
+          "onScreenCount": 243,
+          "clippedInScroll": 8,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "15",
+          "scenario": "B",
+          "name": "popup-friends",
+          "shot": "docs/qa/screens/15-B-popup-friends.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 282,
+          "visibleCount": 237,
+          "onScreenCount": 235,
+          "clippedInScroll": 8,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "16",
+          "scenario": "B",
+          "name": "popup-collection",
+          "shot": "docs/qa/screens/16-B-popup-collection.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 404,
+          "visibleCount": 358,
+          "onScreenCount": 338,
+          "clippedInScroll": 96,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "17",
+          "scenario": "B",
+          "name": "popup-storylog",
+          "shot": "docs/qa/screens/17-B-popup-storylog.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 291,
+          "visibleCount": 245,
+          "onScreenCount": 243,
+          "clippedInScroll": 20,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "18",
+          "scenario": "B",
+          "name": "gacha-tab-switch",
+          "shot": "docs/qa/screens/18-B-gacha-tab-switch.png",
+          "ok": true,
+          "notes": [
+            "배너 탭 hero → pickup"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 353,
+          "visibleCount": 304,
+          "onScreenCount": 300,
+          "clippedInScroll": 8,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "19",
+          "scenario": "B",
+          "name": "gacha-rate-disclosure",
+          "shot": "docs/qa/screens/19-B-gacha-rate-disclosure.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 394,
+          "visibleCount": 344,
+          "onScreenCount": 338,
+          "clippedInScroll": 9,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "20",
+          "scenario": "B",
+          "name": "gacha-single-result",
+          "shot": "docs/qa/screens/20-B-gacha-single-result.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 406,
+          "visibleCount": 339,
+          "onScreenCount": 333,
+          "clippedInScroll": 8,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "21",
+          "scenario": "B",
+          "name": "gacha-ten-result",
+          "shot": "docs/qa/screens/21-B-gacha-ten-result.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 354,
+          "visibleCount": 307,
+          "onScreenCount": 303,
+          "clippedInScroll": 8,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "22",
+          "scenario": "B",
+          "name": "herolist-filter-sort",
+          "shot": "docs/qa/screens/22-B-herolist-filter-sort.png",
+          "ok": true,
+          "notes": [
+            "필터/정렬 결과: {\"sort\":\"power\",\"shown\":null,\"total\":34}"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 575,
+          "visibleCount": 527,
+          "onScreenCount": 388,
+          "clippedInScroll": 179,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [
+            {
+              "scene": "MainMenuScene",
+              "layerDepth": 2000,
+              "a": {
+                "path": "MainMenuScene/Container2[168]/Container2[4]/Container2[28]/Container2[12]/Text2[4]",
+                "text": "★★★★★",
+                "bounds": {
+                  "x": 303,
+                  "y": 1758,
+                  "w": 85,
+                  "h": 16
+                }
+              },
+              "b": {
+                "path": "MainMenuScene/Container2[168]/Container2[7]/Text2[1]",
+                "text": "필터 초기화",
+                "bounds": {
+                  "x": 254,
+                  "y": 1756,
+                  "w": 105,
+                  "h": 29
+                }
+              },
+              "overlapRatio": 0.66
+            },
+            {
+              "scene": "MainMenuScene",
+              "layerDepth": 2000,
+              "a": {
+                "path": "MainMenuScene/Container2[168]/Container2[4]/Container2[28]/Container2[14]/Text2[4]",
+                "text": "★★★★★",
+                "bounds": {
+                  "x": 693,
+                  "y": 1758,
+                  "w": 85,
+                  "h": 16
+                }
+              },
+              "b": {
+                "path": "MainMenuScene/Container2[168]/Container2[7]/Text2[4]",
+                "text": "닫기",
+                "bounds": {
+                  "x": 753,
+                  "y": 1756,
+                  "w": 42,
+                  "h": 29
+                }
+              },
+              "overlapRatio": 0.33
+            }
+          ],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "23",
+          "scenario": "B",
+          "name": "heroinfo-popup",
+          "shot": "docs/qa/screens/23-B-heroinfo-popup.png",
+          "ok": true,
+          "notes": [
+            "HeroInfoPopup 표시: base_iris"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 648,
+          "visibleCount": 599,
+          "onScreenCount": 457,
+          "clippedInScroll": 178,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [
+            {
+              "scene": "MainMenuScene",
+              "layerDepth": 2000,
+              "a": {
+                "path": "MainMenuScene/Container2[168]/Container2[4]/Container2[28]/Container2[12]/Text2[4]",
+                "text": "★★★★★",
+                "bounds": {
+                  "x": 303,
+                  "y": 1758,
+                  "w": 85,
+                  "h": 16
+                }
+              },
+              "b": {
+                "path": "MainMenuScene/Container2[168]/Container2[7]/Text2[1]",
+                "text": "필터 초기화",
+                "bounds": {
+                  "x": 254,
+                  "y": 1756,
+                  "w": 105,
+                  "h": 29
+                }
+              },
+              "overlapRatio": 0.66
+            },
+            {
+              "scene": "MainMenuScene",
+              "layerDepth": 2000,
+              "a": {
+                "path": "MainMenuScene/Container2[168]/Container2[4]/Container2[28]/Container2[14]/Text2[4]",
+                "text": "★★★★★",
+                "bounds": {
+                  "x": 693,
+                  "y": 1758,
+                  "w": 85,
+                  "h": 16
+                }
+              },
+              "b": {
+                "path": "MainMenuScene/Container2[168]/Container2[7]/Text2[4]",
+                "text": "닫기",
+                "bounds": {
+                  "x": 753,
+                  "y": 1756,
+                  "w": 42,
+                  "h": 29
+                }
+              },
+              "overlapRatio": 0.33
+            }
+          ],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "24",
+          "scenario": "B",
+          "name": "scene-herolist",
+          "shot": "docs/qa/screens/24-B-scene-herolist.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "HeroListScene"
+          ],
+          "objectCount": 347,
+          "visibleCount": 343,
+          "onScreenCount": 277,
+          "clippedInScroll": 170,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "25",
+          "scenario": "B",
+          "name": "herodetail-stats",
+          "shot": "docs/qa/screens/25-B-herodetail-stats.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "HeroDetailScene"
+          ],
+          "objectCount": 103,
+          "visibleCount": 99,
+          "onScreenCount": 99,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "26",
+          "scenario": "B",
+          "name": "herodetail-skills",
+          "shot": "docs/qa/screens/26-B-herodetail-skills.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "HeroDetailScene"
+          ],
+          "objectCount": 92,
+          "visibleCount": 88,
+          "onScreenCount": 88,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "27",
+          "scenario": "B",
+          "name": "herodetail-equip",
+          "shot": "docs/qa/screens/27-B-herodetail-equip.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "HeroDetailScene"
+          ],
+          "objectCount": 93,
+          "visibleCount": 89,
+          "onScreenCount": 89,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "28",
+          "scenario": "B",
+          "name": "herodetail-story",
+          "shot": "docs/qa/screens/28-B-herodetail-story.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "HeroDetailScene"
+          ],
+          "objectCount": 75,
+          "visibleCount": 71,
+          "onScreenCount": 71,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "29",
+          "scenario": "B",
+          "name": "scene-partyedit",
+          "shot": "docs/qa/screens/29-B-scene-partyedit.png",
+          "ok": true,
+          "notes": [
+            "자동 편성: autoFormParty()"
+          ],
+          "scenes": [
+            "PartyEditScene"
+          ],
+          "objectCount": 59,
+          "visibleCount": 55,
+          "onScreenCount": 55,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "30",
+          "scenario": "B",
+          "name": "stageselect-ch1",
+          "shot": "docs/qa/screens/30-B-stageselect-ch1.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "StageSelectScene"
+          ],
+          "objectCount": 226,
+          "visibleCount": 170,
+          "onScreenCount": 162,
+          "clippedInScroll": 52,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "31",
+          "scenario": "B",
+          "name": "stageselect-ch2",
+          "shot": "docs/qa/screens/31-B-stageselect-ch2.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "StageSelectScene"
+          ],
+          "objectCount": 226,
+          "visibleCount": 170,
+          "onScreenCount": 162,
+          "clippedInScroll": 52,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "32",
+          "scenario": "B",
+          "name": "stageselect-ch3",
+          "shot": "docs/qa/screens/32-B-stageselect-ch3.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "StageSelectScene"
+          ],
+          "objectCount": 221,
+          "visibleCount": 165,
+          "onScreenCount": 157,
+          "clippedInScroll": 50,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "33",
+          "scenario": "B",
+          "name": "stageselect-ch4",
+          "shot": "docs/qa/screens/33-B-stageselect-ch4.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "StageSelectScene"
+          ],
+          "objectCount": 181,
+          "visibleCount": 125,
+          "onScreenCount": 117,
+          "clippedInScroll": 30,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "34",
+          "scenario": "B",
+          "name": "stageselect-ch5",
+          "shot": "docs/qa/screens/34-B-stageselect-ch5.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "StageSelectScene"
+          ],
+          "objectCount": 181,
+          "visibleCount": 125,
+          "onScreenCount": 117,
+          "clippedInScroll": 30,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "35",
+          "scenario": "B",
+          "name": "stageselect-wall-warning",
+          "shot": "docs/qa/screens/35-B-stageselect-wall-warning.png",
+          "ok": true,
+          "notes": [
+            "스테이지=5-5 벽경고=true \"내 파티 4,270 / 권장 12,700 · 매우 어려움 (0.34×)\" 총 전투력: 4,270"
+          ],
+          "partyRestore": {
+            "stage": "5-5",
+            "wall": "내 파티 4,270 / 권장 12,700 · 매우 어려움 (0.34×)",
+            "wallVisible": true,
+            "power": "총 전투력: 4,270",
+            "slots": [
+              "asc_iris_olympus",
+              "asc_sera_avalon",
+              "asc_luca_asgard",
+              "asc_kai_yomi"
+            ],
+            "savedParty": [
+              "asc_iris_olympus",
+              "asc_sera_avalon",
+              "asc_luca_asgard",
+              "asc_kai_yomi"
+            ],
+            "ownedHeroes": 34
+          },
+          "scenes": [
+            "StageSelectScene"
+          ],
+          "objectCount": 181,
+          "visibleCount": 156,
+          "onScreenCount": 148,
+          "clippedInScroll": 30,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "36",
+          "scenario": "B",
+          "name": "battle-auto",
+          "shot": "docs/qa/screens/36-B-battle-auto.png",
+          "ok": true,
+          "notes": [
+            "파티 슬롯: 모달 직후 4인 → 자동편성 후 4인",
+            "전투 진입 전 컷씬 1개 건너뜀",
+            "전투 상태: {\"turn\":1,\"autoBattle\":false,\"allies\":4,\"aliveAllies\":2,\"enemies\":3,\"skillCards\":4,\"ended\":false}"
+          ],
+          "scenes": [
+            "BattleScene"
+          ],
+          "objectCount": 258,
+          "visibleCount": 186,
+          "onScreenCount": 180,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "37",
+          "scenario": "B",
+          "name": "battle-manual-skills",
+          "shot": "docs/qa/screens/37-B-battle-manual-skills.png",
+          "ok": true,
+          "notes": [
+            "AUTO false → true · 스킬 카드 4개 · {\"skillCards\":4,\"waitingManual\":false,\"autoBattle\":true,\"turn\":2}"
+          ],
+          "scenes": [
+            "BattleScene"
+          ],
+          "objectCount": 300,
+          "visibleCount": 167,
+          "onScreenCount": 160,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "38",
+          "scenario": "B",
+          "name": "battleresult-win",
+          "shot": "docs/qa/screens/38-B-battleresult-win.png",
+          "ok": true,
+          "notes": [
+            "승리 처리: already-ended"
+          ],
+          "scenes": [
+            "BattleResultScene"
+          ],
+          "objectCount": 66,
+          "visibleCount": 62,
+          "onScreenCount": 57,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "39",
+          "scenario": "B",
+          "name": "battleresult-lose",
+          "shot": "docs/qa/screens/39-B-battleresult-lose.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "BattleResultScene"
+          ],
+          "objectCount": 71,
+          "visibleCount": 67,
+          "onScreenCount": 67,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "40",
+          "scenario": "B",
+          "name": "ascension-step1",
+          "shot": "docs/qa/screens/40-B-ascension-step1.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 328,
+          "visibleCount": 285,
+          "onScreenCount": 283,
+          "clippedInScroll": 60,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "41",
+          "scenario": "B",
+          "name": "ascension-step2-route",
+          "shot": "docs/qa/screens/41-B-ascension-step2-route.png",
+          "ok": true,
+          "notes": [
+            "각인 영웅 선택: tapped(10 rows)"
+          ],
+          "scenes": [
+            "CutsceneScene"
+          ],
+          "objectCount": 45,
+          "visibleCount": 25,
+          "onScreenCount": 24,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "42",
+          "scenario": "B",
+          "name": "ascension-step3-confirm",
+          "shot": "docs/qa/screens/42-B-ascension-step3-confirm.png",
+          "ok": true,
+          "notes": [
+            "각인 루트 선택: tapped(10 routes)"
+          ],
+          "scenes": [
+            "CutsceneScene"
+          ],
+          "objectCount": 45,
+          "visibleCount": 25,
+          "onScreenCount": 24,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "43",
+          "scenario": "B",
+          "name": "collection-tab-collect",
+          "shot": "docs/qa/screens/43-B-collection-tab-collect.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 404,
+          "visibleCount": 355,
+          "onScreenCount": 335,
+          "clippedInScroll": 96,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "44",
+          "scenario": "B",
+          "name": "collection-tab-story",
+          "shot": "docs/qa/screens/44-B-collection-tab-story.png",
+          "ok": true,
+          "notes": [
+            "이야기 탭 결과 팝업: StoryLogPopup"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 295,
+          "visibleCount": 248,
+          "onScreenCount": 246,
+          "clippedInScroll": 22,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "45",
+          "scenario": "B",
+          "name": "settings-detail",
+          "shot": "docs/qa/screens/45-B-settings-detail.png",
+          "ok": true,
+          "notes": [
+            "설정 팝업: {\"hasVolumeApi\":false,\"props\":[\"scene\",\"title\",\"panelWidth\",\"panelHeight\",\"container\",\"contentContainer\",\"isOpen\",\"onCloseCallback\",\"options\",\"layoutSpec\",\"accentColor\",\"closeOnOverlay\",\"depth\",\"overl"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 320,
+          "visibleCount": 268,
+          "onScreenCount": 266,
+          "clippedInScroll": 8,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "46",
+          "scenario": "B",
+          "name": "returning-card",
+          "shot": "docs/qa/screens/46-B-returning-card.png",
+          "ok": true,
+          "notes": [
+            "복귀 카드(30일 미접속): 판정=queued 표시=true"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 259,
+          "visibleCount": 215,
+          "onScreenCount": 215,
+          "clippedInScroll": 8,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "47",
+          "scenario": "B",
+          "name": "debug-fab",
+          "shot": "docs/qa/screens/47-B-debug-fab.png",
+          "ok": true,
+          "notes": [
+            "디버그 모드: on"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 259,
+          "visibleCount": 215,
+          "onScreenCount": 215,
+          "clippedInScroll": 8,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        }
+      ],
+      "textures": [
+        {
+          "key": "hero_warrior",
+          "isCanvas": true,
+          "w": 128,
+          "h": 128,
+          "file": null
+        },
+        {
+          "key": "hero_mage",
+          "isCanvas": true,
+          "w": 128,
+          "h": 128,
+          "file": null
+        },
+        {
+          "key": "hero_healer",
+          "isCanvas": true,
+          "w": 128,
+          "h": 128,
+          "file": null
+        },
+        {
+          "key": "hero_archer",
+          "isCanvas": true,
+          "w": 128,
+          "h": 128,
+          "file": null
+        },
+        {
+          "key": "hero_placeholder",
+          "isCanvas": true,
+          "w": 64,
+          "h": 64,
+          "file": null
+        },
+        {
+          "key": "char_full_arcana",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_leonhart",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_selene",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_rose",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_kai",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_luna",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_noir",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_aria",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_finn",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_mira",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_theo",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_eva",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_rex",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_ivy",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_max",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "hero_asc_iris_valhalla",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "68c9c095-48f4-405e-a251-0e63c1626b80"
+        },
+        {
+          "key": "hero_asc_iris_olympus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "cf5f2b7b-ad53-476b-a044-bba833bc9b85"
+        },
+        {
+          "key": "hero_asc_iris_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "b214bf66-f9b7-4c90-bb79-bda5992caa40"
+        },
+        {
+          "key": "hero_asc_sera_avalon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "dabfcc03-fb76-4d87-9bda-38de681525b6"
+        },
+        {
+          "key": "hero_asc_sera_kunlun",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "99ba20a4-b0dc-447f-aba4-577417be97c7"
+        },
+        {
+          "key": "hero_asc_sera_nature",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "133075c8-1cb6-4aad-8d97-d8cea54db1ae"
+        },
+        {
+          "key": "hero_asc_luca_asgard",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "b856f5b5-c59d-4b55-8190-4861a2777288"
+        },
+        {
+          "key": "hero_asc_luca_tartarus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "47f88dbd-1bf9-4319-b1a1-0ebf4091e0c5"
+        },
+        {
+          "key": "hero_asc_kai_yomi",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "16ba2b95-4d1b-426b-b213-64495940ab02"
+        },
+        {
+          "key": "hero_asc_kai_helheim",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "1dfcff87-7dce-4e57-8cbd-3b398c2a4ae0"
+        },
+        {
+          "key": "hero_asc_lin_takamagahara",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "b9f55f4e-58ed-461e-8e7d-e61183be24dc"
+        },
+        {
+          "key": "hero_asc_lin_balance",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "135732a9-dd46-4ab5-9409-03e4f1c3e853"
+        },
+        {
+          "key": "hero_asc_omar_avalon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "d761c4d4-9060-4ee4-a9c3-89d8d69eaefb"
+        },
+        {
+          "key": "hero_asc_sol_nature",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "2db8e120-c117-4247-9115-c8f620f4d64a"
+        },
+        {
+          "key": "hero_asc_omar_valhalla",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "460d21bc-7d69-4de5-9e3d-7c917eea4008"
+        },
+        {
+          "key": "hero_asc_sol_kunlun",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "3ed8093d-cdfe-41c0-92f8-b8f85942afc5"
+        },
+        {
+          "key": "hero_asc_hana_yomi",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "c0620620-b27c-4db8-a394-f0d2d7e4b882"
+        },
+        {
+          "key": "hero_asc_paolo_tartarus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "eff824fa-d95e-461e-bcdd-ed7152522fe5"
+        },
+        {
+          "key": "hero_asc_leon_olympus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "3c5f6c3d-6c71-41af-ab9e-f5b18bb7906f"
+        },
+        {
+          "key": "hero_asc_leon_asgard",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "879d4d40-dd60-4dfc-9d19-c3771355cdeb"
+        },
+        {
+          "key": "hero_asc_hana_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "18b2548b-9fa5-4927-bc30-be756c83daaa"
+        },
+        {
+          "key": "hero_asc_hana_helheim",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "726f2990-51d7-4307-b430-cb6395dd2aed"
+        },
+        {
+          "key": "hero_asc_paolo_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "219e1061-4f91-4ff5-b022-22535e49bff9"
+        },
+        {
+          "key": "hero_base_iris",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "f8a4165c-3f94-4b03-b63f-ff0fb475b7e9"
+        },
+        {
+          "key": "hero_asc_paolo_balance",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "94c59110-1920-4967-b025-b87c8c51081d"
+        },
+        {
+          "key": "hero_base_sera",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "09446d2b-dc53-480d-a9b1-f6766c34d62f"
+        },
+        {
+          "key": "hero_base_luca",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "abad76cc-f42f-4ba6-9d6d-2b8ec7090c09"
+        },
+        {
+          "key": "hero_base_kai",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "68a2f187-56ba-4852-82e0-0fba5e3f2cdb"
+        },
+        {
+          "key": "hero_base_sol",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "eaba07f6-9f0b-4dc2-88e6-749a78fbe3b0"
+        },
+        {
+          "key": "hero_base_hana",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "ddeef0c2-5fd0-41ed-a941-710d9b3a45bb"
+        },
+        {
+          "key": "hero_base_leon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "3cddeefb-72e2-41eb-9c09-868e5a10f818"
+        },
+        {
+          "key": "hero_base_paolo",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "4ef7bf6e-90eb-433d-8a24-a282d0600362"
+        },
+        {
+          "key": "hero_base_omar",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "5050f5c3-51ca-4890-8236-b622eb774fab"
+        },
+        {
+          "key": "hero_base_lin",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "6de33e8b-7f63-4d8b-a854-6b6cf209b604"
+        },
+        {
+          "key": "fb_hero_018",
+          "isCanvas": false,
+          "w": 683,
+          "h": 1024,
+          "file": "2444bb90-5c55-48f2-a08b-5ac526b390c4"
+        },
+        {
+          "key": "fb_hero_015",
+          "isCanvas": false,
+          "w": 683,
+          "h": 1024,
+          "file": "cb00695d-a297-4b07-82b0-acf8ce3f7ed5"
+        },
+        {
+          "key": "fb_hero_021",
+          "isCanvas": false,
+          "w": 683,
+          "h": 1024,
+          "file": "ca8a4465-26b7-4ff2-bb8e-de10bf7a58ad"
+        },
+        {
+          "key": "fb_hero_023",
+          "isCanvas": false,
+          "w": 683,
+          "h": 1024,
+          "file": "7d60ab53-fb87-40c0-bb96-086b609729e4"
+        },
+        {
+          "key": "fb_hero_005",
+          "isCanvas": false,
+          "w": 683,
+          "h": 1024,
+          "file": "352fb5bb-d2d8-4c91-bb9d-78f7d0bf61c4"
+        },
+        {
+          "key": "fb_hero_038",
+          "isCanvas": false,
+          "w": 683,
+          "h": 1024,
+          "file": "346f708d-76c1-4370-880e-220e55adcc68"
+        },
+        {
+          "key": "hero_asc_paolo_balance@2x",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "46162e15-6d99-4262-9d7a-6ec538f8196a"
+        }
+      ]
+    },
+    {
+      "id": "A",
+      "label": "레거시 기존 유저 (version 1 · char_1~4 파티)",
+      "steps": [
+        {
+          "n": "48",
+          "scenario": "A",
+          "name": "migration-result",
+          "shot": "docs/qa/screens/48-A-migration-result.png",
+          "ok": true,
+          "notes": [
+            "마이그레이션: {\"version\":2,\"characters\":[\"base_iris\"],\"party\":[\"base_iris\",null,null,null],\"tutorialCompleted\":true,\"unlockedMenus\":[\"herolist\",\"partyedit\",\"ascension\",\"quest\",\"inventory\",\"gacha\",\"collection\",\"tower\",\"eventdungeon\",\"pvp\",\"guild\",\"friends\",\"raid\"],\"grantVersion\":2,\"spiritStones\":6}"
+          ],
+          "migration": {
+            "version": 2,
+            "characters": [
+              "base_iris"
+            ],
+            "party": [
+              "base_iris",
+              null,
+              null,
+              null
+            ],
+            "tutorialCompleted": true,
+            "unlockedMenus": [
+              "herolist",
+              "partyedit",
+              "ascension",
+              "quest",
+              "inventory",
+              "gacha",
+              "collection",
+              "tower",
+              "eventdungeon",
+              "pvp",
+              "guild",
+              "friends",
+              "raid"
+            ],
+            "grantVersion": 2,
+            "spiritStones": 6
+          },
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 237,
+          "visibleCount": 198,
+          "onScreenCount": 198,
+          "clippedInScroll": 7,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "49",
+          "scenario": "A",
+          "name": "mainmenu-idle-1",
+          "shot": "docs/qa/screens/49-A-mainmenu-idle-1.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 236,
+          "visibleCount": 198,
+          "onScreenCount": 198,
+          "clippedInScroll": 7,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "50",
+          "scenario": "A",
+          "name": "mainmenu-idle-2",
+          "shot": "docs/qa/screens/50-A-mainmenu-idle-2.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 237,
+          "visibleCount": 198,
+          "onScreenCount": 198,
+          "clippedInScroll": 7,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "51",
+          "scenario": "A",
+          "name": "popup-gacha",
+          "shot": "docs/qa/screens/51-A-popup-gacha.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 337,
+          "visibleCount": 309,
+          "onScreenCount": 305,
+          "clippedInScroll": 7,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "52",
+          "scenario": "A",
+          "name": "popup-herolist",
+          "shot": "docs/qa/screens/52-A-popup-herolist.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 295,
+          "visibleCount": 265,
+          "onScreenCount": 263,
+          "clippedInScroll": 11,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "53",
+          "scenario": "A",
+          "name": "popup-partyedit",
+          "shot": "docs/qa/screens/53-A-popup-partyedit.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 306,
+          "visibleCount": 273,
+          "onScreenCount": 271,
+          "clippedInScroll": 6,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "54",
+          "scenario": "A",
+          "name": "popup-quest",
+          "shot": "docs/qa/screens/54-A-popup-quest.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 325,
+          "visibleCount": 295,
+          "onScreenCount": 293,
+          "clippedInScroll": 43,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "55",
+          "scenario": "A",
+          "name": "popup-tower",
+          "shot": "docs/qa/screens/55-A-popup-tower.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 282,
+          "visibleCount": 253,
+          "onScreenCount": 251,
+          "clippedInScroll": 6,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "56",
+          "scenario": "A",
+          "name": "popup-ascension",
+          "shot": "docs/qa/screens/56-A-popup-ascension.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 310,
+          "visibleCount": 277,
+          "onScreenCount": 275,
+          "clippedInScroll": 56,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "57",
+          "scenario": "A",
+          "name": "popup-eventdungeon",
+          "shot": "docs/qa/screens/57-A-popup-eventdungeon.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 291,
+          "visibleCount": 262,
+          "onScreenCount": 260,
+          "clippedInScroll": 35,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "58",
+          "scenario": "A",
+          "name": "popup-inventory",
+          "shot": "docs/qa/screens/58-A-popup-inventory.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 291,
+          "visibleCount": 259,
+          "onScreenCount": 257,
+          "clippedInScroll": 32,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "59",
+          "scenario": "A",
+          "name": "popup-settings",
+          "shot": "docs/qa/screens/59-A-popup-settings.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 302,
+          "visibleCount": 263,
+          "onScreenCount": 261,
+          "clippedInScroll": 6,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "60",
+          "scenario": "A",
+          "name": "popup-pvp",
+          "shot": "docs/qa/screens/60-A-popup-pvp.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 265,
+          "visibleCount": 236,
+          "onScreenCount": 234,
+          "clippedInScroll": 6,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "61",
+          "scenario": "A",
+          "name": "popup-guild",
+          "shot": "docs/qa/screens/61-A-popup-guild.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 265,
+          "visibleCount": 236,
+          "onScreenCount": 234,
+          "clippedInScroll": 7,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "62",
+          "scenario": "A",
+          "name": "popup-raid",
+          "shot": "docs/qa/screens/62-A-popup-raid.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 272,
+          "visibleCount": 240,
+          "onScreenCount": 238,
+          "clippedInScroll": 6,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "63",
+          "scenario": "A",
+          "name": "popup-friends",
+          "shot": "docs/qa/screens/63-A-popup-friends.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 265,
+          "visibleCount": 235,
+          "onScreenCount": 233,
+          "clippedInScroll": 6,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "64",
+          "scenario": "A",
+          "name": "popup-collection",
+          "shot": "docs/qa/screens/64-A-popup-collection.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 376,
+          "visibleCount": 346,
+          "onScreenCount": 328,
+          "clippedInScroll": 84,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "65",
+          "scenario": "A",
+          "name": "popup-storylog",
+          "shot": "docs/qa/screens/65-A-popup-storylog.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 274,
+          "visibleCount": 244,
+          "onScreenCount": 242,
+          "clippedInScroll": 19,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "66",
+          "scenario": "A",
+          "name": "gacha-tab-switch",
+          "shot": "docs/qa/screens/66-A-gacha-tab-switch.png",
+          "ok": true,
+          "notes": [
+            "배너 탭 hero → pickup"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 336,
+          "visibleCount": 302,
+          "onScreenCount": 298,
+          "clippedInScroll": 6,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "67",
+          "scenario": "A",
+          "name": "gacha-rate-disclosure",
+          "shot": "docs/qa/screens/67-A-gacha-rate-disclosure.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 375,
+          "visibleCount": 341,
+          "onScreenCount": 335,
+          "clippedInScroll": 6,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "68",
+          "scenario": "A",
+          "name": "gacha-single-result",
+          "shot": "docs/qa/screens/68-A-gacha-single-result.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 412,
+          "visibleCount": 342,
+          "onScreenCount": 337,
+          "clippedInScroll": 7,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "69",
+          "scenario": "A",
+          "name": "gacha-ten-result",
+          "shot": "docs/qa/screens/69-A-gacha-ten-result.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 398,
+          "visibleCount": 329,
+          "onScreenCount": 323,
+          "clippedInScroll": 7,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "70",
+          "scenario": "A",
+          "name": "herolist-filter-sort",
+          "shot": "docs/qa/screens/70-A-herolist-filter-sort.png",
+          "ok": true,
+          "notes": [
+            "필터/정렬 결과: {\"sort\":\"power\",\"shown\":null,\"total\":1}"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 292,
+          "visibleCount": 263,
+          "onScreenCount": 261,
+          "clippedInScroll": 11,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "71",
+          "scenario": "A",
+          "name": "heroinfo-popup",
+          "shot": "docs/qa/screens/71-A-heroinfo-popup.png",
+          "ok": true,
+          "notes": [
+            "HeroInfoPopup 표시: base_iris"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 366,
+          "visibleCount": 336,
+          "onScreenCount": 331,
+          "clippedInScroll": 11,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "72",
+          "scenario": "A",
+          "name": "scene-herolist",
+          "shot": "docs/qa/screens/72-A-scene-herolist.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "HeroListScene"
+          ],
+          "objectCount": 59,
+          "visibleCount": 55,
+          "onScreenCount": 55,
+          "clippedInScroll": 5,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "73",
+          "scenario": "A",
+          "name": "herodetail-stats",
+          "shot": "docs/qa/screens/73-A-herodetail-stats.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "HeroDetailScene"
+          ],
+          "objectCount": 103,
+          "visibleCount": 99,
+          "onScreenCount": 99,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "74",
+          "scenario": "A",
+          "name": "herodetail-skills",
+          "shot": "docs/qa/screens/74-A-herodetail-skills.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "HeroDetailScene"
+          ],
+          "objectCount": 92,
+          "visibleCount": 88,
+          "onScreenCount": 88,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "75",
+          "scenario": "A",
+          "name": "herodetail-equip",
+          "shot": "docs/qa/screens/75-A-herodetail-equip.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "HeroDetailScene"
+          ],
+          "objectCount": 93,
+          "visibleCount": 89,
+          "onScreenCount": 89,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "76",
+          "scenario": "A",
+          "name": "herodetail-story",
+          "shot": "docs/qa/screens/76-A-herodetail-story.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "HeroDetailScene"
+          ],
+          "objectCount": 77,
+          "visibleCount": 73,
+          "onScreenCount": 73,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "77",
+          "scenario": "A",
+          "name": "scene-partyedit",
+          "shot": "docs/qa/screens/77-A-scene-partyedit.png",
+          "ok": true,
+          "notes": [
+            "자동 편성: autoFormParty()"
+          ],
+          "scenes": [
+            "PartyEditScene"
+          ],
+          "objectCount": 59,
+          "visibleCount": 52,
+          "onScreenCount": 52,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "78",
+          "scenario": "A",
+          "name": "stageselect-ch1",
+          "shot": "docs/qa/screens/78-A-stageselect-ch1.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "StageSelectScene"
+          ],
+          "objectCount": 208,
+          "visibleCount": 152,
+          "onScreenCount": 144,
+          "clippedInScroll": 46,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "79",
+          "scenario": "A",
+          "name": "stageselect-ch2",
+          "shot": "docs/qa/screens/79-A-stageselect-ch2.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "StageSelectScene"
+          ],
+          "objectCount": 189,
+          "visibleCount": 133,
+          "onScreenCount": 125,
+          "clippedInScroll": 36,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "80",
+          "scenario": "A",
+          "name": "stageselect-ch3",
+          "shot": "docs/qa/screens/80-A-stageselect-ch3.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "StageSelectScene"
+          ],
+          "objectCount": 181,
+          "visibleCount": 125,
+          "onScreenCount": 117,
+          "clippedInScroll": 30,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "81",
+          "scenario": "A",
+          "name": "stageselect-ch4",
+          "shot": "docs/qa/screens/81-A-stageselect-ch4.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "StageSelectScene"
+          ],
+          "objectCount": 181,
+          "visibleCount": 125,
+          "onScreenCount": 117,
+          "clippedInScroll": 30,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "82",
+          "scenario": "A",
+          "name": "stageselect-ch5",
+          "shot": "docs/qa/screens/82-A-stageselect-ch5.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "StageSelectScene"
+          ],
+          "objectCount": 181,
+          "visibleCount": 125,
+          "onScreenCount": 117,
+          "clippedInScroll": 30,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "83",
+          "scenario": "A",
+          "name": "stageselect-wall-warning",
+          "shot": "docs/qa/screens/83-A-stageselect-wall-warning.png",
+          "ok": true,
+          "notes": [
+            "스테이지=5-5 벽경고=true \"내 파티 1,735 / 권장 12,700 · 매우 어려움 (0.14×)\" 총 전투력: 1,735"
+          ],
+          "partyRestore": {
+            "stage": "5-5",
+            "wall": "내 파티 1,735 / 권장 12,700 · 매우 어려움 (0.14×)",
+            "wallVisible": true,
+            "power": "총 전투력: 1,735",
+            "slots": [
+              "base_iris",
+              null,
+              null,
+              null
+            ],
+            "savedParty": [
+              "base_iris"
+            ],
+            "ownedHeroes": 1
+          },
+          "scenes": [
+            "StageSelectScene"
+          ],
+          "objectCount": 181,
+          "visibleCount": 156,
+          "onScreenCount": 148,
+          "clippedInScroll": 30,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "84",
+          "scenario": "A",
+          "name": "battle-auto",
+          "shot": "docs/qa/screens/84-A-battle-auto.png",
+          "ok": true,
+          "notes": [
+            "파티 슬롯: 모달 직후 1인 → 자동편성 후 1인",
+            "전투 진입 전 컷씬 1개 건너뜀",
+            "전투 상태: {\"turn\":1,\"autoBattle\":false,\"allies\":1,\"aliveAllies\":0,\"enemies\":3,\"skillCards\":1,\"ended\":false}"
+          ],
+          "scenes": [
+            "BattleScene"
+          ],
+          "objectCount": 148,
+          "visibleCount": 96,
+          "onScreenCount": 93,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "85",
+          "scenario": "A",
+          "name": "battle-manual-skills",
+          "shot": "docs/qa/screens/85-A-battle-manual-skills.png",
+          "ok": true,
+          "notes": [
+            "AUTO false → true · 스킬 카드 1개 · {\"skillCards\":1,\"waitingManual\":false,\"autoBattle\":true,\"turn\":1}"
+          ],
+          "scenes": [
+            "BattleResultScene"
+          ],
+          "objectCount": 51,
+          "visibleCount": 45,
+          "onScreenCount": 43,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "86",
+          "scenario": "A",
+          "name": "battleresult-win",
+          "shot": "docs/qa/screens/86-A-battleresult-win.png",
+          "ok": true,
+          "notes": [
+            "승리 처리: already-result"
+          ],
+          "scenes": [
+            "BattleResultScene"
+          ],
+          "objectCount": 51,
+          "visibleCount": 47,
+          "onScreenCount": 45,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "87",
+          "scenario": "A",
+          "name": "battleresult-lose",
+          "shot": "docs/qa/screens/87-A-battleresult-lose.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "BattleResultScene"
+          ],
+          "objectCount": 51,
+          "visibleCount": 47,
+          "onScreenCount": 45,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "88",
+          "scenario": "A",
+          "name": "ascension-step1",
+          "shot": "docs/qa/screens/88-A-ascension-step1.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 310,
+          "visibleCount": 282,
+          "onScreenCount": 280,
+          "clippedInScroll": 56,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "89",
+          "scenario": "A",
+          "name": "ascension-step2-route",
+          "shot": "docs/qa/screens/89-A-ascension-step2-route.png",
+          "ok": true,
+          "notes": [
+            "각인 영웅 선택: tapped(10 rows)"
+          ],
+          "scenes": [
+            "CutsceneScene"
+          ],
+          "objectCount": 45,
+          "visibleCount": 25,
+          "onScreenCount": 24,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "90",
+          "scenario": "A",
+          "name": "ascension-step3-confirm",
+          "shot": "docs/qa/screens/90-A-ascension-step3-confirm.png",
+          "ok": true,
+          "notes": [
+            "각인 루트 선택: tapped(10 routes)"
+          ],
+          "scenes": [
+            "CutsceneScene"
+          ],
+          "objectCount": 45,
+          "visibleCount": 25,
+          "onScreenCount": 24,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "91",
+          "scenario": "A",
+          "name": "collection-tab-collect",
+          "shot": "docs/qa/screens/91-A-collection-tab-collect.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 377,
+          "visibleCount": 346,
+          "onScreenCount": 328,
+          "clippedInScroll": 83,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "92",
+          "scenario": "A",
+          "name": "collection-tab-story",
+          "shot": "docs/qa/screens/92-A-collection-tab-story.png",
+          "ok": true,
+          "notes": [
+            "이야기 탭 결과 팝업: StoryLogPopup"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 282,
+          "visibleCount": 249,
+          "onScreenCount": 247,
+          "clippedInScroll": 21,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "93",
+          "scenario": "A",
+          "name": "settings-detail",
+          "shot": "docs/qa/screens/93-A-settings-detail.png",
+          "ok": true,
+          "notes": [
+            "설정 팝업: {\"hasVolumeApi\":false,\"props\":[\"scene\",\"title\",\"panelWidth\",\"panelHeight\",\"container\",\"contentContainer\",\"isOpen\",\"onCloseCallback\",\"options\",\"layoutSpec\",\"accentColor\",\"closeOnOverlay\",\"depth\",\"overl"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 303,
+          "visibleCount": 266,
+          "onScreenCount": 264,
+          "clippedInScroll": 5,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "94",
+          "scenario": "A",
+          "name": "returning-card",
+          "shot": "docs/qa/screens/94-A-returning-card.png",
+          "ok": true,
+          "notes": [
+            "복귀 카드(30일 미접속): 판정=queued 표시=true"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 242,
+          "visibleCount": 213,
+          "onScreenCount": 213,
+          "clippedInScroll": 6,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "95",
+          "scenario": "A",
+          "name": "debug-fab",
+          "shot": "docs/qa/screens/95-A-debug-fab.png",
+          "ok": true,
+          "notes": [
+            "디버그 모드: on"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 242,
+          "visibleCount": 213,
+          "onScreenCount": 213,
+          "clippedInScroll": 6,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        }
+      ],
+      "textures": [
+        {
+          "key": "hero_warrior",
+          "isCanvas": true,
+          "w": 128,
+          "h": 128,
+          "file": null
+        },
+        {
+          "key": "hero_mage",
+          "isCanvas": true,
+          "w": 128,
+          "h": 128,
+          "file": null
+        },
+        {
+          "key": "hero_healer",
+          "isCanvas": true,
+          "w": 128,
+          "h": 128,
+          "file": null
+        },
+        {
+          "key": "hero_archer",
+          "isCanvas": true,
+          "w": 128,
+          "h": 128,
+          "file": null
+        },
+        {
+          "key": "hero_placeholder",
+          "isCanvas": true,
+          "w": 64,
+          "h": 64,
+          "file": null
+        },
+        {
+          "key": "char_full_arcana",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_leonhart",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_selene",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_rose",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_kai",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_luna",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_noir",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_aria",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_finn",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_mira",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_theo",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_eva",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_rex",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_ivy",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_max",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "hero_asc_iris_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "d28eb21e-ef34-4491-b663-704fb83eeb45"
+        },
+        {
+          "key": "hero_asc_iris_valhalla",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "aa44cf58-9d60-488f-b8cb-af06928a06c0"
+        },
+        {
+          "key": "hero_asc_iris_olympus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "cb379e79-e104-4621-94b6-530dfdbeec4e"
+        },
+        {
+          "key": "hero_asc_sera_avalon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "d6c3a7af-f57d-4ff7-b987-fa74448d027d"
+        },
+        {
+          "key": "hero_asc_sera_kunlun",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "faf31a4b-d26a-4e45-be0f-588825b7b74e"
+        },
+        {
+          "key": "hero_asc_luca_asgard",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "3825c188-2cb8-4768-bf61-3735a337c114"
+        },
+        {
+          "key": "hero_asc_sera_nature",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "2e63a59a-29f6-4865-88ba-0468c09687ec"
+        },
+        {
+          "key": "hero_asc_luca_tartarus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "fbb773af-9251-4df7-82e9-e396a8951406"
+        },
+        {
+          "key": "hero_asc_kai_helheim",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "09e17d79-86b4-461c-9385-5eaf5c3fed4d"
+        },
+        {
+          "key": "hero_asc_kai_yomi",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "3e86a3e1-9455-495a-a422-4de656b9255c"
+        },
+        {
+          "key": "hero_asc_lin_takamagahara",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "4c4bcce2-35a2-4499-8fea-9e162b2162f5"
+        },
+        {
+          "key": "hero_asc_lin_balance",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "942475a9-3ca2-46b5-afcb-ae789b04d5dd"
+        },
+        {
+          "key": "hero_asc_omar_valhalla",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "19e06ead-5fb7-4a9c-851c-54161e067a8f"
+        },
+        {
+          "key": "hero_asc_omar_avalon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "44668ee8-c56e-4482-9258-4d07eaedf3f7"
+        },
+        {
+          "key": "hero_asc_sol_nature",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "613f1047-c5c5-487d-aa46-a93c8ddf5567"
+        },
+        {
+          "key": "hero_asc_sol_kunlun",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "972eb77b-9029-4ff8-946a-ebee71c6852f"
+        },
+        {
+          "key": "hero_asc_hana_yomi",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "b61ef482-ae1f-4865-bd70-49ee5abe9530"
+        },
+        {
+          "key": "hero_asc_hana_helheim",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "f55ec92a-99a0-47ca-b07c-f8b15d0a7991"
+        },
+        {
+          "key": "hero_asc_hana_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "ba96df5f-cea3-43ca-a4b1-57fdd45c5624"
+        },
+        {
+          "key": "hero_asc_leon_asgard",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "fa2b1d6c-774b-4113-97f6-cbb1c63e0aa9"
+        },
+        {
+          "key": "hero_asc_leon_olympus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "42420aca-e44a-4a24-ad19-c8f672c9318d"
+        },
+        {
+          "key": "hero_asc_paolo_tartarus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "6444d229-f262-4312-991d-6fe108b72470"
+        },
+        {
+          "key": "hero_asc_paolo_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "87f2c1a8-97ed-4e85-a2eb-41b6fac2add2"
+        },
+        {
+          "key": "hero_asc_paolo_balance",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "e9c78cb0-5209-4def-a463-35cb946faa0b"
+        },
+        {
+          "key": "hero_base_iris",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "8661d6ac-39c4-4731-b23f-0ae36b2672aa"
+        },
+        {
+          "key": "hero_base_sera",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "bb41766f-4509-48ab-8515-e4c0a1684e8e"
+        },
+        {
+          "key": "hero_base_luca",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "7fb3cd9b-8e41-4460-846f-ee2df1294190"
+        },
+        {
+          "key": "hero_base_kai",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "ffd1b8cf-5555-4e45-bde4-2d52df14199c"
+        },
+        {
+          "key": "hero_base_omar",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "faa30b73-a0ef-4ce5-b019-26f5f3cf96fb"
+        },
+        {
+          "key": "hero_base_lin",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "e5e46222-ae3a-4d9c-b312-8cfc8152bfd2"
+        },
+        {
+          "key": "hero_base_sol",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "5b054aba-c81e-44d7-b4c1-10ebf782d15f"
+        },
+        {
+          "key": "hero_base_hana",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "477bad8f-9567-40e0-8c73-39a817388566"
+        },
+        {
+          "key": "hero_base_paolo",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "77f826de-8c0d-43a2-bf5d-17d46196d792"
+        },
+        {
+          "key": "hero_base_leon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "b630680c-e17c-4e2f-bc5c-59c443c7272e"
+        },
+        {
+          "key": "fb_hero_005",
+          "isCanvas": false,
+          "w": 683,
+          "h": 1024,
+          "file": "2f5ece5d-b364-4c54-bfce-47a5900113f6"
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "label": "신규 게스트 (프롤로그 → T-01~T-03)",
+      "steps": [
+        {
+          "n": "96",
+          "scenario": "C",
+          "name": "boot-login",
+          "shot": "docs/qa/screens/96-C-boot-login.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "LoginScene"
+          ],
+          "objectCount": 22,
+          "visibleCount": 18,
+          "onScreenCount": 18,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "97",
+          "scenario": "C",
+          "name": "guest-login-tap",
+          "shot": "docs/qa/screens/97-C-guest-login-tap.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "CutsceneScene"
+          ],
+          "objectCount": 45,
+          "visibleCount": 25,
+          "onScreenCount": 24,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "98",
+          "scenario": "C",
+          "name": "prologue-cutscene",
+          "shot": "docs/qa/screens/98-C-prologue-cutscene.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "CutsceneScene"
+          ],
+          "objectCount": 45,
+          "visibleCount": 26,
+          "onScreenCount": 25,
+          "clippedInScroll": 0,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "99",
+          "scenario": "C",
+          "name": "tutorial-T01",
+          "shot": "docs/qa/screens/99-C-tutorial-T01.png",
+          "ok": true,
+          "notes": [
+            "컷씬 2개 건너뜀",
+            "튜토리얼 상태: {\"step\":\"T-03\",\"overlay\":true,\"coach\":false}"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 140,
+          "visibleCount": 133,
+          "onScreenCount": 133,
+          "clippedInScroll": 7,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "100",
+          "scenario": "C",
+          "name": "tutorial-T02",
+          "shot": "docs/qa/screens/100-C-tutorial-T02.png",
+          "ok": true,
+          "notes": [
+            "진행: T-03 → T-03"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 140,
+          "visibleCount": 133,
+          "onScreenCount": 133,
+          "clippedInScroll": 7,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "101",
+          "scenario": "C",
+          "name": "tutorial-T03",
+          "shot": "docs/qa/screens/101-C-tutorial-T03.png",
+          "ok": true,
+          "notes": [
+            "진행: T-03 → T-03"
+          ],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 140,
+          "visibleCount": 133,
+          "onScreenCount": 133,
+          "clippedInScroll": 7,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        },
+        {
+          "n": "102",
+          "scenario": "C",
+          "name": "mainmenu-new-guest",
+          "shot": "docs/qa/screens/102-C-mainmenu-new-guest.png",
+          "ok": true,
+          "notes": [],
+          "scenes": [
+            "MainMenuScene"
+          ],
+          "objectCount": 140,
+          "visibleCount": 133,
+          "onScreenCount": 133,
+          "clippedInScroll": 7,
+          "oldImages": [],
+          "offscreen": [],
+          "overlaps": [],
+          "smallTargets": [],
+          "consoleErrors": [],
+          "pageErrors": []
+        }
+      ],
+      "textures": [
+        {
+          "key": "hero_warrior",
+          "isCanvas": true,
+          "w": 128,
+          "h": 128,
+          "file": null
+        },
+        {
+          "key": "hero_mage",
+          "isCanvas": true,
+          "w": 128,
+          "h": 128,
+          "file": null
+        },
+        {
+          "key": "hero_healer",
+          "isCanvas": true,
+          "w": 128,
+          "h": 128,
+          "file": null
+        },
+        {
+          "key": "hero_archer",
+          "isCanvas": true,
+          "w": 128,
+          "h": 128,
+          "file": null
+        },
+        {
+          "key": "hero_placeholder",
+          "isCanvas": true,
+          "w": 64,
+          "h": 64,
+          "file": null
+        },
+        {
+          "key": "char_full_arcana",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_leonhart",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_selene",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_rose",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_kai",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_luna",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_noir",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_aria",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_finn",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_mira",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_theo",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_eva",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_rex",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_ivy",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "char_full_max",
+          "isCanvas": true,
+          "w": 200,
+          "h": 300,
+          "file": null
+        },
+        {
+          "key": "hero_asc_iris_olympus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "2d828edf-babf-4e22-aa28-5a3166328b49"
+        },
+        {
+          "key": "hero_asc_iris_valhalla",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "7f06ac24-1a7d-40e8-be90-905f1555be2e"
+        },
+        {
+          "key": "hero_asc_iris_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "57fdda97-6e8c-4eea-9ed5-a5a4cf9544a5"
+        },
+        {
+          "key": "hero_asc_sera_avalon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "778a58c5-51d9-4854-975c-33c66bc6a6e3"
+        },
+        {
+          "key": "hero_asc_kai_yomi",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "8ec1b4e6-268e-486f-b8bb-dec884dce682"
+        },
+        {
+          "key": "hero_asc_luca_asgard",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "871a6b18-6583-47cb-b4b9-6c6666944254"
+        },
+        {
+          "key": "hero_asc_sera_nature",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "dce4f411-1113-4415-82bd-1f32b2bb0663"
+        },
+        {
+          "key": "hero_asc_kai_helheim",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "01235506-09ee-4d2f-99c3-942048348910"
+        },
+        {
+          "key": "hero_asc_sera_kunlun",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "18dd472f-0b80-4f90-8f41-573de0ff75ea"
+        },
+        {
+          "key": "hero_asc_luca_tartarus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "f47b4d50-57a8-48d9-9972-b0ded67513f6"
+        },
+        {
+          "key": "hero_asc_lin_takamagahara",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "cc879e19-d8af-45ac-ba8d-8c6beb4ba7f0"
+        },
+        {
+          "key": "hero_asc_lin_balance",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "d427f9f0-fd17-4df1-a916-2626204e8b9a"
+        },
+        {
+          "key": "hero_asc_omar_valhalla",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "39812c3b-7319-4b3c-816b-43757ddf11b0"
+        },
+        {
+          "key": "hero_asc_sol_nature",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "56f7b638-9d88-476a-92da-ae3d4b13260f"
+        },
+        {
+          "key": "hero_asc_omar_avalon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "56a031ff-d44d-4759-9a59-6728bef11719"
+        },
+        {
+          "key": "hero_asc_sol_kunlun",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "f7f1e5d1-4619-423b-8904-50c88e001a84"
+        },
+        {
+          "key": "hero_asc_hana_yomi",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "62dbca85-2da8-4720-8709-2b67d371c867"
+        },
+        {
+          "key": "hero_asc_hana_helheim",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "3f281b21-b0ee-4dfb-b7a8-6654abd6ee53"
+        },
+        {
+          "key": "hero_asc_leon_asgard",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "08115bee-e1aa-4455-9274-48e807f34e6f"
+        },
+        {
+          "key": "hero_asc_hana_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "4b42e558-fa65-42a7-932e-df42108ed2ec"
+        },
+        {
+          "key": "hero_asc_paolo_tartarus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "cf59faf8-bee2-4ac4-86f7-e8b61c1db918"
+        },
+        {
+          "key": "hero_asc_leon_olympus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "97a9b469-1c32-4c31-a73c-68db6b821eb1"
+        },
+        {
+          "key": "hero_asc_paolo_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "5dca7d02-c75d-4f1f-876b-bc942108f648"
+        },
+        {
+          "key": "hero_asc_paolo_balance",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "df3be8a8-4122-4682-94de-6ee7598eb13a"
+        },
+        {
+          "key": "hero_base_iris",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "2eb4eb56-3e1e-421e-89f1-9185166ecca9"
+        },
+        {
+          "key": "hero_base_sera",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "a3d719a7-3f20-4f3c-ac46-b8f531287d5a"
+        },
+        {
+          "key": "hero_base_luca",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "96f6d2e8-0662-4779-8a2d-daa859d088b1"
+        },
+        {
+          "key": "hero_base_kai",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "55722785-2536-4e7b-808e-3616176db521"
+        },
+        {
+          "key": "hero_base_lin",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "672bf013-337c-4252-91e6-a9f8a240e0c5"
+        },
+        {
+          "key": "hero_base_sol",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "e0876c2f-aa63-4b4a-b469-e42802006f68"
+        },
+        {
+          "key": "hero_base_hana",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "943befd4-31d7-497d-97f9-7422cf98855b"
+        },
+        {
+          "key": "hero_base_paolo",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "9069276e-93d3-4279-969c-c9dea9ef2e8d"
+        },
+        {
+          "key": "hero_base_omar",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "72c8d295-01c2-4da0-b065-13b75e64ab91"
+        },
+        {
+          "key": "hero_base_leon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "0aaf6712-42e6-4441-9b17-49e225a7b210"
+        },
+        {
+          "key": "fb_hero_005",
+          "isCanvas": false,
+          "w": 683,
+          "h": 1024,
+          "file": "1ac3cad8-151a-4b4b-b3ec-ad7743333da6"
+        }
+      ]
+    }
+  ]
+}

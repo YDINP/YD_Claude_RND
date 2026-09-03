@@ -40,6 +40,7 @@ import { getCharacterOrHero } from '../data/index.js';
 import navigationManager from '../systems/NavigationManager.js';
 import PORTRAIT_MAP from '../data/portrait-mapping.json';
 import CULTS_DATA from '../data/cults.json';
+import { soundManager } from '../systems/SoundManager.js';
 import ASSET_MANIFEST from '../../tools/art/asset-manifest.json';
 import {
   HERO_DETAIL_LAYOUT as L,
@@ -53,6 +54,8 @@ import {
   computeRadarPlacement,
   computeEquipSlots,
   computeCardStack,
+  computeSkillCardParts,
+  computeRibbonSlots,
   splitStatArea,
   resolveTabId,
   resolveFullbodyKey,
@@ -62,6 +65,19 @@ import {
   truncate,
   buildSubtitle
 } from '../utils/heroDetailLayout.js';
+
+/** 클래스 표시 이름 */
+const CLASS_LABELS = { warrior: '전사', mage: '마법사', archer: '궁수', healer: '힐러' };
+
+/**
+ * 액션 바의 최대 레벨 판정 폴백.
+ * 세이브에 없는 영웅이라 ProgressionSystem.getCharacterDetails() 가 null 일 때 쓴다.
+ * 레벨업 로직 자체가 쓰는 값과 같다.
+ */
+const ACTION_MAX_LEVEL = { N: 30, R: 40, SR: 50, SSR: 60 };
+
+/** 탭 전환·이탈 전환 시간 (ms) */
+const TAB_FADE_MS = 120;
 
 /**
  * 장비 슬롯 → 벡터 아이콘 키.
@@ -100,6 +116,8 @@ export class HeroDetailScene extends Phaser.Scene {
     this._hiresKey = null;        // 이 씬이 로드한 @2x 포트레이트 키
     this._fullbodyKey = null;     // 이 씬이 로드한 전신 시트 키
     this._keepFullbody = false;   // 같은 영웅으로 restart 할 때 전신을 유지
+    this._tabSwitching = false;   // 탭 전환 페이드 진행 중 중복 입력 차단
+    this._leaving = false;        // 이탈 페이드 진행 중 중복 입력 차단
   }
 
   init(data) {
@@ -107,11 +125,13 @@ export class HeroDetailScene extends Phaser.Scene {
     this.activeTab = resolveTabId(data?.tab);
     this.isLevelingUp = false;
     this.tabObjects = [];
+    this._tabSwitching = false;
+    this._leaving = false;
   }
 
   create() {
     try {
-      this.cameras.main.fadeIn(300);
+      this.cameras.main.fadeIn(TAB_FADE_MS * 2);
 
       const heroes = this.registry.get('ownedHeroes') || [];
       this.hero = heroes.find(h => h.id === this.heroId);
@@ -131,6 +151,10 @@ export class HeroDetailScene extends Phaser.Scene {
       // T-29: 큰 표시용 원본(@2x, 최대 1024 PNG)을 이 씬에서만 지연 로드한다.
       // 전신 시트가 없는 영웅(char_1~4, 039~)의 폴백 확대 표시에 쓰인다.
       this._hiresKey = HeroAssetLoader.queueHiresTexture(this, this.heroData);
+
+      // 전신 시트도 같은 배치에 올린다. 따로 올리면 @2x 가 끝난 뒤에야 시작해
+      // 첫 화면이 폴백(정사각 포트레이트)으로 뜬 뒤 뒤늦게 바뀐다.
+      this.prepareFullbody();
 
       if (characterRenderer.useAssets) {
         characterRenderer.preloadAssets(this, [this.hero], { ids: [this.hero.id], types: ['card'] });
@@ -288,6 +312,26 @@ export class HeroDetailScene extends Phaser.Scene {
   }
 
   /**
+   * 전신 시트를 create() 의 로드 배치에 올린다.
+   * 매니페스트에 있는 키만 요청한다 — dev 서버의 404 가드가 콘솔 에러를 남기기 때문이다.
+   *
+   * @returns {string|null} 큐에 올렸거나 이미 있는 텍스처 키. 대상이 없으면 null
+   */
+  prepareFullbody() {
+    const key = resolveFullbodyKey(this.hero.id, PORTRAIT_MAP);
+    if (!key) return null;
+    if (this.textures.exists(key)) return key;
+    if (!hasFullbodyAsset(key, ASSET_MANIFEST.fullbody)) return null;
+
+    const path = fullbodyPath(key);
+    if (!path) return null;
+
+    this.load.image(key, path);
+    this._fullbodyKey = key;   // 이 씬이 로드했다 → shutdown 에서 해제 대상
+    return key;
+  }
+
+  /**
    * 전신 시트를 스테이지에 배치한다.
    * @param {string} key - 전신 텍스처 키
    * @param {{animate:boolean}} [options] - animate 면 페이드인으로 폴백을 대체한다
@@ -426,13 +470,7 @@ export class HeroDetailScene extends Phaser.Scene {
     line.fillRect(0, s(L.header.h) - s(2), GAME_WIDTH, s(2));
 
     // 뒤로 — 터치 타겟 88x56 (기획), 렌더 132x84
-    this.createHitArea(s(58), s(L.header.h / 2), s(96), s(60), () => {
-      // 내비게이션 스택이 비어 있으면(씬을 직접 열었을 때) 영웅 목록으로 돌린다.
-      // 뒤로가 아무 일도 하지 않는 막다른 화면이 되지 않게 한다.
-      if (!navigationManager.goBack(this)) {
-        this.scene.start('HeroListScene');
-      }
-    }, DEPTH.HEADER + 2);
+    this.createHitArea(s(58), s(L.header.h / 2), s(96), s(60), () => this.goBack(), DEPTH.HEADER + 2);
 
     this.add.text(s(58), s(L.header.h / 2), '←', ts('title', {
       color: DESIGN.colors.text.primary
@@ -482,11 +520,11 @@ export class HeroDetailScene extends Phaser.Scene {
   // ================================================================
 
   createRibbon() {
-    const cy = s(L.ribbon.y + L.ribbon.h / 2);
+    const slots = computeRibbonSlots();
 
     GlassPanel.create(this, {
       x: GAME_WIDTH / 2,
-      y: cy,
+      y: s(L.ribbon.y + L.ribbon.h / 2),
       w: GAME_WIDTH - s(L.margin * 2),
       h: s(L.ribbon.h),
       variant: GLASS_VARIANT.CARD,
@@ -495,24 +533,45 @@ export class HeroDetailScene extends Phaser.Scene {
       depth: DEPTH.RIBBON
     });
 
-    // 좌 — 성급과 진화 진행
+    const D = DEPTH.RIBBON + 1;
+
+    // 윗줄 좌 — 등급 배지 + 교단·클래스
+    const rarityColor = (RARITY[this.rarityKey] || RARITY.N).color;
+    const badge = this.add.graphics().setDepth(D);
+    badge.fillStyle(rarityColor, 1);
+    badge.fillRoundedRect(s(slots.badge.x), s(slots.badge.y), s(slots.badge.w), s(slots.badge.h), s(6));
+
+    this.add.text(s(slots.badge.x + slots.badge.w / 2), s(slots.badge.y + slots.badge.h / 2),
+      this.rarityKey, ts('caption', { color: '#FFFFFF' })).setOrigin(0.5).setDepth(D);
+
+    const cultName = this.resolveCultInfo(this.cultId)?.name;
+    const className = CLASS_LABELS[this.heroData.class || this.heroData.baseClass] || null;
+    this.add.text(s(slots.cult.x), s(slots.cult.y + slots.cult.h / 2),
+      [cultName, className].filter(Boolean).join(' · ') || '무소속',
+      ts('label', { color: this.cultCss })).setOrigin(0, 0.5).setDepth(D);
+
+    // 아랫줄 좌 — 성급과 진화 진행
     const stars = Math.max(0, Math.min(this.maxStars, Math.floor(this.stars)));
-    this.add.text(s(L.margin + 24), cy, '★'.repeat(stars) + '☆'.repeat(Math.max(0, this.maxStars - stars)),
-      ts('subtitle', { color: hexToCSS(DESIGN.colors.brand.accent) }))
-      .setOrigin(0, 0.5).setDepth(DEPTH.RIBBON + 1);
+    this.add.text(s(slots.stars.x), s(slots.stars.y + slots.stars.h / 2),
+      '★'.repeat(stars) + '☆'.repeat(Math.max(0, this.maxStars - stars)),
+      ts('label', { color: hexToCSS(DESIGN.colors.brand.accent) }))
+      .setOrigin(0, 0.5).setDepth(D);
 
-    this.add.text(s(L.width * 0.46), cy, `진화 ${stars}/${this.maxStars}`, ts('caption', {
-      color: DESIGN.colors.text.secondary
-    })).setOrigin(0, 0.5).setDepth(DEPTH.RIBBON + 1);
+    this.add.text(s(slots.evolution.x + slots.evolution.w), s(slots.evolution.y + slots.evolution.h / 2),
+      `진화 ${stars}/${this.maxStars}`,
+      ts('num.sm', { color: DESIGN.colors.text.secondary })).setOrigin(1, 0.5).setDepth(D);
 
-    // 우 — 전투력. 화면에서 가장 큰 수치 하나만 골드로 둔다
-    const powerText = this.add.text(GAME_WIDTH - s(L.margin + 24), cy, formatNumber(this.power),
-      ts('num.lg', { color: hexToCSS(DESIGN.colors.brand.accent) }))
-      .setOrigin(1, 0.5).setDepth(DEPTH.RIBBON + 1);
+    // 우 — 전투력. 화면에서 가장 큰 숫자 하나다
+    this.add.text(s(slots.power.right), s(slots.power.y + 22), '전투력',
+      ts('caption', { color: DESIGN.colors.text.secondary })).setOrigin(1, 0.5).setDepth(D);
 
-    IconFactory.createImage(this, powerText.x - powerText.width - s(18), cy, 'atk', 'sm', {
-      tint: DESIGN.colors.brand.accent
-    })?.setDepth(DEPTH.RIBBON + 1);
+    const powerText = this.add.text(s(slots.power.right), s(slots.power.y + 50),
+      formatNumber(this.power),
+      ts('display.lg', { color: hexToCSS(DESIGN.colors.brand.accent) }))
+      .setOrigin(1, 0.5).setDepth(D);
+
+    IconFactory.createImage(this, powerText.x - powerText.width - s(14), s(slots.power.y + 50),
+      'atk', 'sm', { tint: DESIGN.colors.brand.accent })?.setDepth(D);
   }
 
   // ================================================================
@@ -570,7 +629,7 @@ export class HeroDetailScene extends Phaser.Scene {
    */
   switchTab(id) {
     const next = resolveTabId(id);
-    if (next === this.activeTab) return;
+    if (next === this.activeTab || this._tabSwitching) return;
     this.activeTab = next;
 
     this.tabButtons.forEach((tab) => {
@@ -586,7 +645,25 @@ export class HeroDetailScene extends Phaser.Scene {
       }
     });
 
-    this.renderTab(next);
+    // 이전 탭 내용을 120ms 동안 지우고 새 내용을 올린다.
+    // 즉시 교체하면 내용이 넘어가는 방향을 읽을 수 없다.
+    const leaving = this.tabObjects.filter((obj) => obj && typeof obj.setAlpha === 'function');
+    if (leaving.length === 0) {
+      this.renderTab(next);
+      return;
+    }
+
+    this._tabSwitching = true;
+    this.tweens.add({
+      targets: leaving,
+      alpha: 0,
+      duration: TAB_FADE_MS,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        this._tabSwitching = false;
+        if (this.sys && this.sys.isActive()) this.renderTab(this.activeTab);
+      }
+    });
   }
 
   createContentPanel() {
@@ -624,8 +701,8 @@ export class HeroDetailScene extends Phaser.Scene {
       this.tweens.add({
         targets: obj,
         alpha: obj.__targetAlpha ?? 1,
-        duration: 220,
-        delay: Math.min(index, 8) * 14,
+        duration: TAB_FADE_MS,
+        delay: Math.min(index, 8) * 10,
         ease: 'Quad.easeOut'
       });
     });
@@ -675,17 +752,18 @@ export class HeroDetailScene extends Phaser.Scene {
     rows.forEach((row) => {
       const cy = s(row.y);
 
-      const icon = IconFactory.createImage(this, s(left.x + 12), cy, row.key, 'sm', {
+      const icon = IconFactory.createImage(this, s(row.iconX), cy, row.key, 'sm', {
         tint: this.cultColor
       });
       icon?.setDepth(DEPTH.CONTENT);
       this.track(icon);
 
-      this.track(this.add.text(s(left.x + 36), cy, row.label, ts('caption', {
+      // 라벨은 왼쪽 고정, 값은 오른쪽 고정. 네 행의 숫자 끝자리가 한 줄로 설다
+      this.track(this.add.text(s(row.labelX), cy, row.label, ts('caption', {
         color: DESIGN.colors.text.secondary
       })).setOrigin(0, 0.5).setDepth(DEPTH.CONTENT));
 
-      this.track(this.add.text(s(row.barX - 12), cy, formatNumber(row.value), ts('num.md', {
+      this.track(this.add.text(s(row.valueRight), cy, formatNumber(row.value), ts('num.md', {
         color: DESIGN.colors.text.primary
       })).setOrigin(1, 0.5).setDepth(DEPTH.CONTENT));
 
@@ -768,26 +846,42 @@ export class HeroDetailScene extends Phaser.Scene {
       console.warn('[HeroDetail] 보너스 조회 실패:', e.message);
     }
 
+    // 출처별로 색을 나눈다. 어느 경로가 지금 이 수치를 올리고 있는지 한눈에 보이게 한다
     const lines = [
-      { label: '성급 보너스', value: `+${starPercent}%`, on: starPercent > 0 },
-      { label: '장비 합계', value: `+${formatNumber(equipTotal)}`, on: equipTotal > 0 },
-      { label: '컬렉션 보너스', value: `+${collectionPercent}%`, on: collectionPercent > 0 }
+      {
+        label: '성급 보너스',
+        value: `+${starPercent}%`,
+        on: starPercent > 0,
+        color: DESIGN.colors.brand.accent
+      },
+      {
+        label: '장비 합계',
+        value: `+${formatNumber(equipTotal)}`,
+        on: equipTotal > 0,
+        color: DESIGN.colors.status.info
+      },
+      {
+        label: '컬렉션 보너스',
+        value: `+${collectionPercent}%`,
+        on: collectionPercent > 0,
+        color: DESIGN.colors.status.success
+      }
     ];
 
     lines.forEach((line, index) => {
       const y = s(top + index * 34);
-      const color = line.on ? hexToCSS(DESIGN.colors.brand.accent) : DESIGN.colors.text.muted;
+      const dotColor = line.on ? line.color : DESIGN.colors.bg.surface;
+      const valueColor = line.on ? hexToCSS(line.color) : DESIGN.colors.text.muted;
 
-      const dot = this.add.circle(s(area.x + 12), y, s(4), line.on ? this.cultColor : DESIGN.colors.bg.surface, 1)
-        .setDepth(DEPTH.CONTENT);
+      const dot = this.add.circle(s(area.x + 12), y, s(5), dotColor, 1).setDepth(DEPTH.CONTENT);
       this.track(dot);
 
       this.track(this.add.text(s(area.x + 30), y, line.label, ts('caption', {
-        color: DESIGN.colors.text.secondary
+        color: line.on ? DESIGN.colors.text.secondary : DESIGN.colors.text.muted
       })).setOrigin(0, 0.5).setDepth(DEPTH.CONTENT));
 
-      this.track(this.add.text(s(area.x + area.w - 10), y, line.value, ts('num.sm', { color }))
-        .setOrigin(1, 0.5).setDepth(DEPTH.CONTENT));
+      this.track(this.add.text(s(area.x + area.w - 10), y, line.value,
+        ts('num.sm', { color: valueColor })).setOrigin(1, 0.5).setDepth(DEPTH.CONTENT));
     });
   }
 
@@ -852,43 +946,52 @@ export class HeroDetailScene extends Phaser.Scene {
       bg.strokeRoundedRect(s(card.x), s(card.y), s(card.w), s(card.h), s(DESIGN.radius.md));
       this.track(bg);
 
-      // 아이콘 배지
-      const badgeX = s(card.x + 46);
-      const badge = this.add.circle(badgeX, cy, s(30), this.cultColor, 0.18).setDepth(DEPTH.CONTENT);
+      // 카드를 아이콘 · 텍스트 · 버튼 세 열로 나눈다. 세 열의 세로 중심이 모두 카드 중심이다
+      const parts = computeSkillCardParts(card);
+
+      // 1열 — 아이콘 배지 + 레벨
+      const badgeX = s(parts.icon.centerX);
+      const badge = this.add.circle(badgeX, cy - s(8), s(28), this.cultColor, 0.18).setDepth(DEPTH.CONTENT);
       badge.setStrokeStyle(s(2), this.cultColor, 0.7);
       this.track(badge);
 
-      const icon = IconFactory.createImage(this, badgeX, cy - s(4), 'atk', 'sm', { tint: this.cultColor });
+      const icon = IconFactory.createImage(this, badgeX, cy - s(8), 'atk', 'sm', { tint: this.cultColor });
       icon?.setDepth(DEPTH.CONTENT + 1);
       this.track(icon);
 
-      this.track(this.add.text(badgeX, cy + s(18), `${level}/${maxSkillLevel}`, ts('num.sm', {
-        color: DESIGN.colors.text.secondary
+      this.track(this.add.text(badgeX, cy + s(26), `Lv.${level}/${maxSkillLevel}`, ts('num.sm', {
+        color: level >= maxSkillLevel
+          ? hexToCSS(DESIGN.colors.brand.accent)
+          : DESIGN.colors.text.secondary
       })).setOrigin(0.5).setDepth(DEPTH.CONTENT + 1));
 
-      // 이름 · 설명
-      const textX = s(card.x + 92);
+      // 2열 — 이름 · 설명
+      const textX = s(parts.text.x);
       this.track(this.add.text(textX, cy - s(18), skill.name || `스킬 ${index + 1}`, ts('body', {
         color: DESIGN.colors.text.primary
       })).setOrigin(0, 0.5).setDepth(DEPTH.CONTENT + 1));
 
-      this.track(this.add.text(textX, cy + s(14), truncate(skill.description || '스킬 설명', 34), ts('caption', {
+      this.track(this.add.text(textX, cy + s(16), truncate(skill.description || '스킬 설명', 30), ts('caption', {
         color: DESIGN.colors.text.secondary,
-        wordWrap: { width: s(card.w - 220) }
+        wordWrap: { width: s(parts.text.w) }
       })).setOrigin(0, 0.5).setDepth(DEPTH.CONTENT + 1));
 
-      // 강화 버튼 — 터치 타겟 112x52 (기획)
+      // 3열 — 강화 버튼. 터치 타겟 112x56 (기획)
+      const btnX = s(parts.button.centerX);
       if (level < maxSkillLevel) {
         const cost = level * level * 1000;
-        const btnX = s(card.x + card.w - 76);
         const enabled = gold >= cost;
 
         const btn = this.add.graphics().setDepth(DEPTH.CONTENT + 1);
-        btn.fillStyle(enabled ? DESIGN.colors.status.success : DESIGN.colors.bg.surface, enabled ? 0.9 : 0.8);
-        btn.fillRoundedRect(btnX - s(56), cy - s(26), s(112), s(52), s(DESIGN.radius.md));
+        btn.fillStyle(enabled ? DESIGN.colors.status.success : DESIGN.colors.bg.surface, enabled ? 0.92 : 0.7);
+        btn.fillRoundedRect(btnX - s(56), cy - s(28), s(112), s(56), s(DESIGN.radius.md));
+        if (!enabled) {
+          btn.lineStyle(s(1), DESIGN.colors.bg.surface, 1);
+          btn.strokeRoundedRect(btnX - s(56), cy - s(28), s(112), s(56), s(DESIGN.radius.md));
+        }
         this.track(btn);
 
-        this.track(this.add.text(btnX, cy - s(6), '강화', ts('label', {
+        this.track(this.add.text(btnX, cy - s(8), '강화', ts('label', {
           color: enabled ? '#FFFFFF' : DESIGN.colors.text.muted
         })).setOrigin(0.5).setDepth(DEPTH.CONTENT + 2));
 
@@ -896,11 +999,16 @@ export class HeroDetailScene extends Phaser.Scene {
           color: enabled ? '#FFFFFF' : DESIGN.colors.text.muted
         })).setOrigin(0.5).setDepth(DEPTH.CONTENT + 2));
 
-        this.track(this.createHitArea(btnX, cy, s(112), s(52), () => this.enhanceSkill(index), DEPTH.CONTENT + 3));
+        this.track(this.createHitArea(btnX, cy, s(112), s(56), () => this.enhanceSkill(index), DEPTH.CONTENT + 3));
       } else {
-        this.track(this.add.text(s(card.x + card.w - 76), cy, 'MAX', ts('label', {
+        const maxBg = this.add.graphics().setDepth(DEPTH.CONTENT + 1);
+        maxBg.lineStyle(s(2), DESIGN.colors.brand.accent, 0.6);
+        maxBg.strokeRoundedRect(btnX - s(56), cy - s(28), s(112), s(56), s(DESIGN.radius.md));
+        this.track(maxBg);
+
+        this.track(this.add.text(btnX, cy, 'MAX', ts('label', {
           color: hexToCSS(DESIGN.colors.brand.accent)
-        })).setOrigin(0.5).setDepth(DEPTH.CONTENT + 1));
+        })).setOrigin(0.5).setDepth(DEPTH.CONTENT + 2));
       }
     });
 
@@ -931,9 +1039,11 @@ export class HeroDetailScene extends Phaser.Scene {
   // ================================================================
 
   renderEquipTab() {
-    this.addTabTitle('장비', '비어 있는 칸을 눌러 장착');
-
     const equipped = this.hero.equipment || {};
+    const equippedCount = EQUIP_SLOT_ORDER.filter(key => equipped[key]).length;
+
+    this.addTabTitle('장비', `${equippedCount} / ${EQUIP_SLOT_ORDER.length} 장착`);
+
     const slots = computeEquipSlots(EQUIP_SLOT_ORDER.length, { top: L.content.y + 74 });
     const bonus = { hp: 0, atk: 0, def: 0, spd: 0 };
 
@@ -1011,6 +1121,18 @@ export class HeroDetailScene extends Phaser.Scene {
         hit.on('pointerout', () => this.hideTooltip());
       }
     });
+
+    // 빈 슬롯 안내 — 무엇을 눌러야 하는지 말해준다. 전부 채웠으면 다른 문장을 쓴다.
+    // 위치는 슬롯 라벨(+20)에서 파생해 라벨과 붙지 않게 한다.
+    const lastCell = slots[slots.length - 1];
+    const guideY = s(lastCell.y + lastCell.h + 56);
+    const allFilled = equippedCount === EQUIP_SLOT_ORDER.length;
+    this.track(this.add.text(GAME_WIDTH / 2, guideY,
+      allFilled ? '슬롯을 눌러 장비를 교체하거나 해제할 수 있습니다' : '비어 있는 칸을 눌러 장비를 장착하세요',
+      ts('caption', {
+        color: allFilled ? DESIGN.colors.text.muted : this.cultCss,
+        align: 'center'
+      })).setOrigin(0.5).setDepth(DEPTH.CONTENT + 1));
 
     // 장비 합계 — 슬롯 아래 여백을 채우는 요약 줄
     const summaryY = s(L.content.y + L.content.h - 74);
@@ -1155,15 +1277,42 @@ export class HeroDetailScene extends Phaser.Scene {
   // 액션 바
   // ================================================================
 
+  /**
+   * 액션 바. 버튼은 지금 누를 수 있는지를 스스로 말한다 —
+   * 재화가 모자라거나 최대 레벨·최고 등급이면 흐려지고 부제에 이유가 붙는다.
+   * 눌러도 되지만 기존 안내 메시지가 그대로 뜬다(로직 불변, 표시만 추가).
+   */
   createActionBar() {
+    const gold = this.registry.get('gold') || 0;
+    const levelCost = this.hero.level * 100;
+    const maxLevel = this.details?.maxLevel ?? ACTION_MAX_LEVEL[this.rarityKey] ?? 60;
+    const isMaxLevel = this.hero.level >= maxLevel;
+    const canLevelUp = !isMaxLevel && gold >= levelCost;
     const canEvolve = !EvolutionSystem.isMaxRarity(this.hero.rarity);
+
     const actions = [
-      { label: '레벨업', key: 'btn_primary', tint: null, onPress: () => this.levelUpHero() },
-      { label: '자동 레벨업', key: 'btn_secondary', tint: null, onPress: () => this.autoLevelUp() },
+      {
+        label: '레벨업',
+        sub: isMaxLevel ? '최대 레벨' : formatNumber(levelCost),
+        key: 'btn_primary',
+        tint: null,
+        enabled: canLevelUp,
+        onPress: () => this.levelUpHero()
+      },
+      {
+        label: '자동 레벨업',
+        sub: isMaxLevel ? '최대 레벨' : '가능한 만큼',
+        key: 'btn_secondary',
+        tint: null,
+        enabled: canLevelUp,
+        onPress: () => this.autoLevelUp()
+      },
       {
         label: '진화',
+        sub: canEvolve ? '조각 필요' : '최고 등급',
         key: canEvolve ? 'btn_secondary' : 'btn_ghost',
         tint: canEvolve ? DESIGN.colors.brand.secondary : DESIGN.colors.rarityNamed.N.hex,
+        enabled: canEvolve,
         onPress: () => this.evolveHero()
       }
     ];
@@ -1178,18 +1327,26 @@ export class HeroDetailScene extends Phaser.Scene {
       const frame = NineSliceFrame.create(this, {
         x: cx, y: cy, w, h,
         key: action.key,
-        tint: action.tint,
+        tint: action.enabled ? action.tint : DESIGN.colors.rarityNamed.N.hex,
+        alpha: action.enabled ? 1 : 0.42,
         depth: DEPTH.ACTION
       });
 
       const label = this.add.text(cx, cy, action.label, ts('label', {
-        color: DESIGN.colors.text.primary
+        color: action.enabled ? DESIGN.colors.text.primary : DESIGN.colors.text.muted
       })).setOrigin(0.5).setDepth(DEPTH.ACTION + 1);
+
+      // 부제는 버튼 밖 아래에 둔다. 9-slice 장식 띠가 두꺼워 안에 넣으면 글자가 물린다
+      const sub = this.add.text(cx, s(L.actionBar.y + L.actionBar.h + 14), action.sub, ts('num.sm', {
+        color: action.enabled ? DESIGN.colors.text.secondary : DESIGN.colors.text.muted
+      })).setOrigin(0.5).setDepth(DEPTH.ACTION + 1).setAlpha(action.enabled ? 1 : 0.7);
 
       const hit = this.createHitArea(cx, cy, w, h, action.onPress, DEPTH.ACTION + 2);
 
-      hit.on('pointerover', () => { frame.setScale?.(1.03); label.setScale(1.03); });
-      hit.on('pointerout', () => { frame.setScale?.(1); label.setScale(1); });
+      if (action.enabled) {
+        hit.on('pointerover', () => { frame.setScale?.(1.03); label.setScale(1.03); sub.setScale(1.03); });
+        hit.on('pointerout', () => { frame.setScale?.(1); label.setScale(1); sub.setScale(1); });
+      }
     });
   }
 
@@ -1215,6 +1372,24 @@ export class HeroDetailScene extends Phaser.Scene {
       onPress();
     });
     return rect;
+  }
+
+  /**
+   * 화면을 떠난다. 120ms 페이드로 끊기지 않게 넘긴다.
+   * 내비게이션 스택이 비어 있으면(씬을 직접 열었을 때) 영웅 목록으로 돌린다 —
+   * 뒤로가 아무 일도 하지 않는 막다른 화면이 되지 않게 한다.
+   */
+  goBack() {
+    if (this._leaving) return;
+    this._leaving = true;
+
+    this.cameras.main.fadeOut(TAB_FADE_MS, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this._leaving = false;
+      if (!navigationManager.goBack(this)) {
+        this.scene.start('HeroListScene');
+      }
+    });
   }
 
   /**
@@ -1523,6 +1698,9 @@ export class HeroDetailScene extends Phaser.Scene {
   }
 
   showLevelUpEffect() {
+    // SND-02: 레벨업 효과음 (수동/자동 레벨업 공통 지점)
+    soundManager.playSFX('levelup');
+
     this.stopAllActiveTweens();
 
     const flash = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT,

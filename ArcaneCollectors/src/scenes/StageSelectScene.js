@@ -22,10 +22,12 @@ import transitionManager from '../utils/TransitionManager.js';
 import navigationManager from '../systems/NavigationManager.js';
 import { StoryManager } from '../systems/StoryManager.js';
 import { buildWallWarning, isBossStage, getDifficultyBand, getPowerRatio } from '../systems/StageWallRules.js';
+import { ensureMinTouchTarget } from '../utils/touchTarget.js';
 import { countAscendableHeroes } from '../systems/ReturningPlayerRules.js';
 import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { GlassPanel, GLASS_VARIANT } from '../components/GlassPanel.js';
 import { NineSliceFrame } from '../components/NineSliceFrame.js';
+import { UIButton } from '../components/UIButton.js';
 import { IconFactory } from '../utils/IconFactory.js';
 import {
   STAGE_SELECT_LAYOUT as L,
@@ -731,33 +733,20 @@ export class StageSelectScene extends Phaser.Scene {
     const x = s(slot.x);
     const y = s(slot.y);
 
-    const frame = NineSliceFrame.create(this, {
+    // 라벨 캡슐·터치 하한·눌림 연출은 UIButton 이 공통으로 처리한다
+    const button = UIButton.createParts(this, {
       x, y, w, h,
-      key: state.isBoss ? 'btn_secondary' : 'btn_primary',
-      tint: state.isCleared ? accent : null
+      label: state.isBoss ? '결전' : '진입',
+      variant: state.isBoss ? 'secondary' : 'primary',
+      tint: state.isCleared ? accent : null,
+      token: 'body',
+      onClick: () => {
+        this.selectedStage = stage;
+        this.showPartySelect();
+      }
     });
 
-    // btn_* 원본은 장식이 많은 판이다. 라벨 자리만 어둡게 눌러 글자를 읽히게 한다
-    const plate = this.add.graphics();
-    plate.fillStyle(DESIGN.colors.bg.primary, 0.55);
-    plate.fillRoundedRect(x - w / 2 + s(16), y - s(15), w - s(32), s(30), s(DESIGN.radius.sm));
-
-    const label = this.add.text(x, y, state.isBoss ? '결전' : '진입', ts('body', {
-      color: DESIGN.colors.text.primary
-    })).setOrigin(0.5);
-
-    const hit = this.add.rectangle(x, y, Math.max(w, s(MIN_TOUCH)), Math.max(h, s(MIN_TOUCH)), 0x000000, 0)
-      .setInteractive({ useHandCursor: true });
-
-    hit.on('pointerover', () => frame.setAlpha(0.82));
-    hit.on('pointerout', () => frame.setAlpha(1));
-    hit.on('pointerdown', (pointer, lx, ly, event) => {
-      event?.stopPropagation?.();
-      this.selectedStage = stage;
-      this.showPartySelect();
-    });
-
-    return [frame, plate, label, hit];
+    return button.objects;
   }
 
   /** 소탕 버튼 — 3성 클리어 스테이지에만 나온다 */
@@ -768,22 +757,20 @@ export class StageSelectScene extends Phaser.Scene {
     const x = s(slot.x);
     const y = s(slot.y);
 
-    const frame = NineSliceFrame.create(this, {
-      x, y, w, h, key: 'btn_ghost', tint: DESIGN.colors.status.success
+    const button = UIButton.createParts(this, {
+      x, y, w, h,
+      label: '소탕',
+      variant: 'ghost',
+      tint: DESIGN.colors.status.success,
+      token: 'label',
+      // 어두운 캡슐 위에서 status.success(초록)는 대비 3:1 아래로 떨어진다.
+      // 초록은 프레임 틴트와 번개 아이콘이 이미 말하고 있으므로 라벨은 본문색을 쓴다
+      labelOffsetX: s(8),
+      onClick: () => this.showSweepModal(stage)
     });
-    const label = this.add.text(x + s(8), y, '소탕', ts('label', {
-      color: hexToCSS(DESIGN.colors.status.success)
-    })).setOrigin(0.5);
     const bolt = this.drawBolt(x - s(24), y, s(7), DESIGN.colors.status.success);
 
-    const hit = this.add.rectangle(x, y, w, Math.max(h, s(MIN_TOUCH)), 0x000000, 0)
-      .setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', (pointer, lx, ly, event) => {
-      event?.stopPropagation?.();
-      this.showSweepModal(stage);
-    });
-
-    return [frame, bolt, label, hit];
+    return [button.frame, bolt, button.label, button.hit];
   }
 
   /** 잠금 자물쇠 — 텍스트 '잠김'은 없앤다. 카드 전체 알파가 이미 상태를 말한다 */
@@ -1106,8 +1093,8 @@ export class StageSelectScene extends Phaser.Scene {
 
     // Auto-fill button
     const autoBtn = this.add.container(GAME_WIDTH / 2 - s(80), GAME_HEIGHT / 2 + s(80));
-    const autoBg = this.add.rectangle(0, 0, s(140), s(40), COLORS.primary, 1)
-      .setInteractive({ useHandCursor: true });
+    const autoBg = this.add.rectangle(0, 0, s(140), s(40), COLORS.primary, 1);
+    ensureMinTouchTarget(autoBg); // 시각 140×40 유지, 히트 140×48 (QA P2-1)
     const autoText = this.add.text(0, 0, '자동 편성', {
       fontSize: sf(14),
       fontFamily: 'Arial',
@@ -1121,8 +1108,8 @@ export class StageSelectScene extends Phaser.Scene {
 
     // Start battle button
     const startBtn = this.add.container(GAME_WIDTH / 2 + s(80), GAME_HEIGHT / 2 + s(80));
-    const startBg = this.add.rectangle(0, 0, s(140), s(40), COLORS.success, 1)
-      .setInteractive({ useHandCursor: true });
+    const startBg = this.add.rectangle(0, 0, s(140), s(40), COLORS.success, 1);
+    ensureMinTouchTarget(startBg); // 시각 140×40 유지, 히트 140×48 (QA P2-1)
     const startText = this.add.text(0, 0, '전투 시작', {
       fontSize: sf(14),
       fontFamily: 'Arial',
@@ -1135,11 +1122,12 @@ export class StageSelectScene extends Phaser.Scene {
       this.startBattle();
     });
 
-    // Close button
+    // Close button — 글리프는 20×22 지만 히트는 터치 하한까지 넓힌다 (QA P2-1)
     const closeBtn = this.add.text(GAME_WIDTH / 2 + s(180), GAME_HEIGHT / 2 - s(200), '✕', {
       fontSize: sf(24),
       color: `#${  COLORS.text.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5);
+    ensureMinTouchTarget(closeBtn);
 
     closeBtn.on('pointerdown', () => {
       this.hidePartySelect();
@@ -1162,11 +1150,14 @@ export class StageSelectScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5).setVisible(false);
 
+    // CTA 는 라벨이 바뀔 때마다(`updateWallWarning`) 히트 영역을 다시 잡는다 —
+    // 빈 문자열 상태의 폭(0)으로 굳으면 QA P2-1 의 106×17 이 그대로 남는다.
     this.wallCtaText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - s(118), '', {
       fontSize: sf(13),
       fontFamily: '"Noto Sans KR", Arial',
       color: '#38BDF8'
-    }).setOrigin(0.5).setVisible(false).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setVisible(false);
+    ensureMinTouchTarget(this.wallCtaText);
 
     this.wallCtaText.on('pointerup', () => {
       if (!this._wallCtaKey) return;
@@ -1222,15 +1213,44 @@ export class StageSelectScene extends Phaser.Scene {
     const recommended = Number(this.selectedStage.recommendedPower) || 0;
     this.stageInfoText.setText(`${this.selectedStage.name} | 추천 전투력: ${recommended.toLocaleString()}`);
 
-    // Clear party slots
-    this.partySlots.forEach(slot => {
-      slot.hero = null;
-      slot.slotText.setText('+');
-      slot.slotBg.setStrokeStyle(2, COLORS.primary, 0.5);
-    });
+    // 저장된 편성을 복원한다. 모달을 열 때마다 비우면 파티 편성 화면의 결과가 버려지고
+    // 벽 경고가 항상 0.00×가 되어 난이도 안내가 무의미해진다 (QA P1-1).
+    this.applyPartySlots(this.resolveSavedParty());
 
     this.updateTotalPower();
+    this.updateSynergyPreview();
     this.partyModal.setVisible(true);
+  }
+
+  /**
+   * 모달에 세울 파티를 정한다 — 세이브 `parties[0]` 우선, 비어 있으면 보유 상위 4인.
+   * 판정은 `PartyManager.resolveDisplayParty`(순수)가 하고 여기서는 세이브만 읽는다.
+   * @returns {Array<Object|null>} 슬롯 수만큼의 영웅 객체 배열
+   */
+  resolveSavedParty() {
+    const heroes = this.registry.get('ownedHeroes') || [];
+    let slotIds = [];
+    try {
+      const save = SaveManager.load();
+      slotIds = SaveManager._readPartySlots(save?.parties?.[0]);
+    } catch (error) {
+      GameLogger.log('SCENE', '저장된 파티 읽기 실패', { error: error?.message });
+    }
+    return PartyManager.resolveDisplayParty(slotIds, heroes, this.partySlots.length);
+  }
+
+  /**
+   * 슬롯 표시를 주어진 편성으로 덮어쓴다. null 슬롯은 빈 칸(`+`)이 된다.
+   * @param {Array<Object|null>} heroes
+   */
+  applyPartySlots(heroes) {
+    const list = Array.isArray(heroes) ? heroes : [];
+    this.partySlots.forEach((slot, i) => {
+      const hero = list[i] || null;
+      slot.hero = hero;
+      slot.slotText.setText(hero ? String(hero.name || '???').substring(0, 4) : '+');
+      slot.slotBg.setStrokeStyle(2, hero ? COLORS.success : COLORS.primary, hero ? 1 : 0.5);
+    });
   }
 
   hidePartySelect() {
@@ -1287,23 +1307,9 @@ export class StageSelectScene extends Phaser.Scene {
 
     // PartyManager로 자동 편성
     const recommendedIds = PartyManager.autoFormParty(heroes);
-
-    // 슬롯 초기화 후 배치
-    this.partySlots.forEach(slot => {
-      slot.hero = null;
-      slot.slotText.setText('+');
-      slot.slotBg.setStrokeStyle(2, COLORS.primary, 0.5);
-    });
-
-    const sortedHeroes = recommendedIds
-      .map(id => heroes.find(h => h.id === id))
-      .filter(Boolean);
-
-    for (let i = 0; i < 4 && i < sortedHeroes.length; i++) {
-      this.partySlots[i].hero = sortedHeroes[i];
-      this.partySlots[i].slotText.setText(sortedHeroes[i].name.substring(0, 4));
-      this.partySlots[i].slotBg.setStrokeStyle(2, COLORS.success, 1);
-    }
+    this.applyPartySlots(
+      PartyManager.resolvePartyHeroes(recommendedIds, heroes, this.partySlots.length)
+    );
 
     this.updateTotalPower();
     this.updateSynergyPreview();
@@ -1366,6 +1372,8 @@ export class StageSelectScene extends Phaser.Scene {
     this.wallCtaText
       .setText(warning.ctaLabel ? `▸ ${warning.ctaLabel}` : '')
       .setVisible(warning.visible && Boolean(warning.ctaLabel));
+    // 라벨 폭이 바뀌었으니 히트 영역을 새 글리프 중앙에 다시 건다 (QA P2-1)
+    ensureMinTouchTarget(this.wallCtaText);
   }
 
   /**
@@ -1564,11 +1572,12 @@ export class StageSelectScene extends Phaser.Scene {
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
     }).setOrigin(0.5);
 
-    // Close button
+    // Close button — 글리프는 20×22 지만 히트는 터치 하한까지 넓힌다 (QA P2-1)
     const closeBtn = this.add.text(GAME_WIDTH / 2 + s(155), GAME_HEIGHT / 2 - s(145), '✕', {
       fontSize: sf(20), fontFamily: 'Arial',
       color: `#${  COLORS.textDark.toString(16).padStart(6, '0')}`
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5);
+    ensureMinTouchTarget(closeBtn);
     closeBtn.on('pointerdown', () => this.hideSweepModal());
 
     this.sweepModal.add([overlay, sweepModalBg, this.sweepTitle, this.sweepStageInfo,

@@ -1,0 +1,523 @@
+{
+  "_meta": {
+    "purpose": "SSR/SR 소환 컷인 프리셋 (GachaResultOverlay 4단계)",
+    "generatedBy": "tools/art/gen-gacha-cutins.py",
+    "sources": [
+      "src/data/ascended-heroes.json",
+      "src/data/cults.json",
+      "src/data/story.json"
+    ],
+    "rules": [
+      "교단 → bg / emblem / accent",
+      "분위기 → particles (MOOD_PARTICLE_COLORS 키) / enter",
+      "항목에 값이 있으면 그 값이 기본 규칙을 이긴다",
+      "bg_<cult> 전용 아트가 생기면 cultDefaults.bg 만 바꾸면 된다"
+    ],
+    "fallback": [
+      "bg 텍스처가 없으면 교단색 방사 그라디언트로 내려간다",
+      "emblem 텍스처가 없으면 벡터 룬 문장으로 내려간다 (balance/chaos/nature 는 아직 아트 없음)",
+      "목록에 없는 영웅은 cultDefaults + moodDefaults 로 즉석 조립된다"
+    ]
+  },
+  "cultDefaults": {
+    "asgard": {
+      "bg": "bg_chapter_2",
+      "accent": "#5DADE2",
+      "emblem": "icon_cult_asgard"
+    },
+    "avalon": {
+      "bg": "bg_chapter_1",
+      "accent": "#4ECDC4",
+      "emblem": "icon_cult_avalon"
+    },
+    "balance": {
+      "bg": "bg_gacha",
+      "accent": "#95A5A6",
+      "emblem": "icon_cult_balance"
+    },
+    "chaos": {
+      "bg": "bg_chapter_5",
+      "accent": "#E74C3C",
+      "emblem": "icon_cult_chaos"
+    },
+    "helheim": {
+      "bg": "bg_chapter_3",
+      "accent": "#B0C4DE",
+      "emblem": "icon_cult_helheim"
+    },
+    "heliopolis": {
+      "bg": "bg_chapter_2",
+      "accent": "#D4A017",
+      "emblem": "icon_cult_heliopolis"
+    },
+    "kunlun": {
+      "bg": "bg_chapter_1",
+      "accent": "#50C878",
+      "emblem": "icon_cult_kunlun"
+    },
+    "nature": {
+      "bg": "bg_chapter_1",
+      "accent": "#27AE60",
+      "emblem": "icon_cult_nature"
+    },
+    "olympus": {
+      "bg": "bg_chapter_4",
+      "accent": "#FF6B35",
+      "emblem": "icon_cult_olympus"
+    },
+    "svarga": {
+      "bg": "bg_chapter_2",
+      "accent": "#E6E6FA",
+      "emblem": "icon_cult_svarga"
+    },
+    "takamagahara": {
+      "bg": "bg_chapter_2",
+      "accent": "#FFD700",
+      "emblem": "icon_cult_takamagahara"
+    },
+    "tartarus": {
+      "bg": "bg_chapter_3",
+      "accent": "#506888",
+      "emblem": "icon_cult_tartarus"
+    },
+    "tir_na_nog": {
+      "bg": "bg_chapter_1",
+      "accent": "#7CFC00",
+      "emblem": "icon_cult_tir_na_nog"
+    },
+    "valhalla": {
+      "bg": "bg_chapter_5",
+      "accent": "#4A90D9",
+      "emblem": "icon_cult_valhalla"
+    },
+    "yomi": {
+      "bg": "bg_chapter_3",
+      "accent": "#B060D0",
+      "emblem": "icon_cult_yomi"
+    }
+  },
+  "moodDefaults": {
+    "brave": {
+      "particles": "brave",
+      "enter": "burst"
+    },
+    "calm": {
+      "particles": "calm",
+      "enter": "rise"
+    },
+    "cunning": {
+      "particles": "cunning",
+      "enter": "slide"
+    },
+    "devoted": {
+      "particles": "devoted",
+      "enter": "rise"
+    },
+    "fierce": {
+      "particles": "fierce",
+      "enter": "burst"
+    },
+    "mystic": {
+      "particles": "mystic",
+      "enter": "slide"
+    },
+    "noble": {
+      "particles": "noble",
+      "enter": "slide"
+    },
+    "stoic": {
+      "particles": "stoic",
+      "enter": "rise"
+    },
+    "wild": {
+      "particles": "wild",
+      "enter": "burst"
+    }
+  },
+  "cutins": [
+    {
+      "heroId": "asc_iris_olympus",
+      "cultId": "olympus",
+      "rarity": "SSR",
+      "bg": "bg_chapter_4",
+      "accent": "#FF6B35",
+      "emblem": "icon_cult_olympus",
+      "particles": "brave",
+      "fullbodyPose": "right",
+      "enter": "burst",
+      "quote": {
+        "sceneId": "cs_evolve_iris_olympus",
+        "line": 1,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_iris_valhalla",
+      "cultId": "valhalla",
+      "rarity": "SSR",
+      "bg": "bg_chapter_5",
+      "accent": "#4A90D9",
+      "emblem": "icon_cult_valhalla",
+      "particles": "brave",
+      "fullbodyPose": "left",
+      "enter": "burst",
+      "quote": {
+        "sceneId": "cs_evolve_iris_valhalla",
+        "line": 1,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_iris_chaos",
+      "cultId": "chaos",
+      "rarity": "SSR",
+      "bg": "bg_chapter_5",
+      "accent": "#E74C3C",
+      "emblem": "icon_cult_chaos",
+      "particles": "wild",
+      "fullbodyPose": "right",
+      "enter": "burst",
+      "quote": {
+        "sceneId": "cs_evolve_iris_chaos",
+        "line": 1,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_sera_avalon",
+      "cultId": "avalon",
+      "rarity": "SSR",
+      "bg": "bg_chapter_1",
+      "accent": "#4ECDC4",
+      "emblem": "icon_cult_avalon",
+      "particles": "devoted",
+      "fullbodyPose": "left",
+      "enter": "rise",
+      "quote": {
+        "sceneId": "cs_evolve_sera_avalon",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_sera_kunlun",
+      "cultId": "kunlun",
+      "rarity": "SR",
+      "bg": "bg_chapter_1",
+      "accent": "#50C878",
+      "emblem": "icon_cult_kunlun",
+      "particles": "devoted",
+      "fullbodyPose": "right",
+      "enter": "rise",
+      "quote": {
+        "sceneId": "cs_evolve_sera_kunlun",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_sera_nature",
+      "cultId": "nature",
+      "rarity": "SR",
+      "bg": "bg_chapter_1",
+      "accent": "#27AE60",
+      "emblem": "icon_cult_nature",
+      "particles": "devoted",
+      "fullbodyPose": "left",
+      "enter": "rise",
+      "quote": {
+        "sceneId": "cs_evolve_sera_nature",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_luca_asgard",
+      "cultId": "asgard",
+      "rarity": "SSR",
+      "bg": "bg_chapter_2",
+      "accent": "#5DADE2",
+      "emblem": "icon_cult_asgard",
+      "particles": "cunning",
+      "fullbodyPose": "right",
+      "enter": "slide",
+      "quote": {
+        "sceneId": "cs_evolve_luca_asgard",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_luca_tartarus",
+      "cultId": "tartarus",
+      "rarity": "SR",
+      "bg": "bg_chapter_3",
+      "accent": "#506888",
+      "emblem": "icon_cult_tartarus",
+      "particles": "cunning",
+      "fullbodyPose": "left",
+      "enter": "slide",
+      "quote": {
+        "sceneId": "cs_evolve_luca_tartarus",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_kai_yomi",
+      "cultId": "yomi",
+      "rarity": "SSR",
+      "bg": "bg_chapter_3",
+      "accent": "#B060D0",
+      "emblem": "icon_cult_yomi",
+      "particles": "stoic",
+      "fullbodyPose": "right",
+      "enter": "rise",
+      "quote": {
+        "sceneId": "cs_evolve_kai_yomi",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_kai_helheim",
+      "cultId": "helheim",
+      "rarity": "SR",
+      "bg": "bg_chapter_3",
+      "accent": "#B0C4DE",
+      "emblem": "icon_cult_helheim",
+      "particles": "stoic",
+      "fullbodyPose": "left",
+      "enter": "rise",
+      "quote": {
+        "sceneId": "cs_evolve_kai_helheim",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_lin_takamagahara",
+      "cultId": "takamagahara",
+      "rarity": "SSR",
+      "bg": "bg_chapter_2",
+      "accent": "#FFD700",
+      "emblem": "icon_cult_takamagahara",
+      "particles": "mystic",
+      "fullbodyPose": "right",
+      "enter": "slide",
+      "quote": {
+        "sceneId": "cs_evolve_lin_takamagahara",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_lin_balance",
+      "cultId": "balance",
+      "rarity": "R",
+      "bg": "bg_gacha",
+      "accent": "#95A5A6",
+      "emblem": "icon_cult_balance",
+      "particles": "mystic",
+      "fullbodyPose": "left",
+      "enter": "slide",
+      "quote": {
+        "sceneId": "cs_evolve_lin_balance",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_omar_valhalla",
+      "cultId": "valhalla",
+      "rarity": "SR",
+      "bg": "bg_chapter_5",
+      "accent": "#4A90D9",
+      "emblem": "icon_cult_valhalla",
+      "particles": "stoic",
+      "fullbodyPose": "right",
+      "enter": "rise",
+      "quote": {
+        "sceneId": "cs_evolve_omar_valhalla",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_omar_avalon",
+      "cultId": "avalon",
+      "rarity": "SR",
+      "bg": "bg_chapter_1",
+      "accent": "#4ECDC4",
+      "emblem": "icon_cult_avalon",
+      "particles": "stoic",
+      "fullbodyPose": "left",
+      "enter": "rise",
+      "quote": {
+        "sceneId": "cs_evolve_omar_avalon",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_sol_nature",
+      "cultId": "nature",
+      "rarity": "SSR",
+      "bg": "bg_chapter_1",
+      "accent": "#27AE60",
+      "emblem": "icon_cult_nature",
+      "particles": "calm",
+      "fullbodyPose": "right",
+      "enter": "rise",
+      "quote": {
+        "sceneId": "cs_evolve_sol_nature",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_sol_kunlun",
+      "cultId": "kunlun",
+      "rarity": "SR",
+      "bg": "bg_chapter_1",
+      "accent": "#50C878",
+      "emblem": "icon_cult_kunlun",
+      "particles": "calm",
+      "fullbodyPose": "left",
+      "enter": "rise",
+      "quote": {
+        "sceneId": "cs_evolve_sol_kunlun",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_hana_yomi",
+      "cultId": "yomi",
+      "rarity": "SSR",
+      "bg": "bg_chapter_3",
+      "accent": "#B060D0",
+      "emblem": "icon_cult_yomi",
+      "particles": "mystic",
+      "fullbodyPose": "right",
+      "enter": "slide",
+      "quote": {
+        "sceneId": "cs_evolve_hana_yomi",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_hana_helheim",
+      "cultId": "helheim",
+      "rarity": "R",
+      "bg": "bg_chapter_3",
+      "accent": "#B0C4DE",
+      "emblem": "icon_cult_helheim",
+      "particles": "mystic",
+      "fullbodyPose": "left",
+      "enter": "slide",
+      "quote": {
+        "sceneId": "cs_evolve_hana_helheim",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_hana_chaos",
+      "cultId": "chaos",
+      "rarity": "SSR",
+      "bg": "bg_chapter_5",
+      "accent": "#E74C3C",
+      "emblem": "icon_cult_chaos",
+      "particles": "wild",
+      "fullbodyPose": "right",
+      "enter": "burst",
+      "quote": {
+        "sceneId": "cs_evolve_hana_chaos",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_leon_asgard",
+      "cultId": "asgard",
+      "rarity": "SR",
+      "bg": "bg_chapter_2",
+      "accent": "#5DADE2",
+      "emblem": "icon_cult_asgard",
+      "particles": "brave",
+      "fullbodyPose": "left",
+      "enter": "burst",
+      "quote": {
+        "sceneId": "cs_evolve_leon_asgard",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_leon_olympus",
+      "cultId": "olympus",
+      "rarity": "SSR",
+      "bg": "bg_chapter_4",
+      "accent": "#FF6B35",
+      "emblem": "icon_cult_olympus",
+      "particles": "brave",
+      "fullbodyPose": "right",
+      "enter": "burst",
+      "quote": {
+        "sceneId": "cs_evolve_leon_olympus",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_paolo_tartarus",
+      "cultId": "tartarus",
+      "rarity": "SSR",
+      "bg": "bg_chapter_3",
+      "accent": "#506888",
+      "emblem": "icon_cult_tartarus",
+      "particles": "cunning",
+      "fullbodyPose": "left",
+      "enter": "slide",
+      "quote": {
+        "sceneId": "cs_evolve_paolo_tartarus",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_paolo_chaos",
+      "cultId": "chaos",
+      "rarity": "SSR",
+      "bg": "bg_chapter_5",
+      "accent": "#E74C3C",
+      "emblem": "icon_cult_chaos",
+      "particles": "cunning",
+      "fullbodyPose": "right",
+      "enter": "slide",
+      "quote": {
+        "sceneId": "cs_evolve_paolo_chaos",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    },
+    {
+      "heroId": "asc_paolo_balance",
+      "cultId": "balance",
+      "rarity": "R",
+      "bg": "bg_gacha",
+      "accent": "#95A5A6",
+      "emblem": "icon_cult_balance",
+      "particles": "cunning",
+      "fullbodyPose": "left",
+      "enter": "slide",
+      "quote": {
+        "sceneId": "cs_evolve_paolo_balance",
+        "line": 0,
+        "source": "hero_evolve"
+      }
+    }
+  ]
+}

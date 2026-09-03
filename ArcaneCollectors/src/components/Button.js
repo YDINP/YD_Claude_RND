@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { COLORS, s, sf } from '../config/gameConfig.js';
 import { DESIGN } from '../config/designSystem.js';
+import { soundManager } from '../systems/SoundManager.js';
 
 export class Button extends Phaser.GameObjects.Container {
   /**
@@ -208,6 +209,8 @@ export class Button extends Phaser.GameObjects.Container {
     }
 
     if (this.isPressed && this.options.onClick) {
+      // SND-02: 공용 버튼 클릭음
+      soundManager.playSFX('button_click');
       this.options.onClick();
     }
 

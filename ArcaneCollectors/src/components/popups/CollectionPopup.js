@@ -6,6 +6,7 @@ import { CollectionSystem } from '../../systems/CollectionSystem.js';
 import cultsData from '../../data/cults.json';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT } from '../../utils/popupLayout.js';
+import { ensureMinTouchTarget } from '../../utils/touchTarget.js';
 
 /**
  * CollectionPopup - 컬렉션 도감 (COLL-01)
@@ -154,8 +155,9 @@ export class CollectionPopup extends PopupBase {
 
       if (active) return;
 
-      const hit = this.scene.add.rectangle(cx, top + tabH / 2, tabW - s(8), tabH)
-        .setAlpha(0.001).setInteractive({ useHandCursor: true });
+      // 탭 스트립 시각 높이는 36 이지만 손가락이 닿는 영역은 48 이어야 한다 (QA P2-1)
+      const hit = this.scene.add.rectangle(cx, top + tabH / 2, tabW - s(8), tabH).setAlpha(0.001);
+      ensureMinTouchTarget(hit);
       hit.on('pointerup', () => this.openTab(tab.key));
       this.contentContainer.add(hit);
     });

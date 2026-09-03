@@ -8,6 +8,7 @@ import { getCharacter, getAllCharacters, normalizeHeroes } from '../data/index.j
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import transitionManager from '../utils/TransitionManager.js';
 import navigationManager from '../systems/NavigationManager.js';
+import { ensureMinTouchTarget } from '../utils/touchTarget.js';
 
 /**
  * PartyEditScene - 파티 편성 전용 씬
@@ -72,22 +73,21 @@ export class PartyEditScene extends Phaser.Scene {
     const savedChars = saveData?.characters || [];
     this.ownedHeroes = registryHeroes.length > 0 ? registryHeroes : normalizeHeroes(savedChars);
 
-    // If still empty, give default starter heroes for testing
+    // 보유 영웅이 하나도 없으면 확정 지급 기본영웅(base_iris)을 편성한다.
+    // 폐지된 레거시 스타터 char_1~4를 여기서 지급하면 구버전 카툰 포트레이트가 되살아난다.
     if (this.ownedHeroes.length === 0) {
-      const allChars = getAllCharacters();
-      if (allChars && allChars.length > 0) {
-        this.ownedHeroes = normalizeHeroes(allChars.slice(0, 4).map(c => ({
-          id: c.id,
-          level: 1,
-          exp: 0,
-          skillLevels: [1, 1, 1]
-        })));
-        // 세이브 데이터에도 저장
-        saveData.characters = this.ownedHeroes;
-        SaveManager.save(saveData);
-        console.log('[PartyEditScene] 기본 스타터 영웅 4명 지급:', this.ownedHeroes.map(h => h.id));
-      }
+      SaveManager._grantStarterHero(saveData);
+      SaveManager.save(saveData);
+      this.ownedHeroes = normalizeHeroes(saveData.characters || []);
+      console.log('[PartyEditScene] 기본영웅 지급:', this.ownedHeroes.map(h => h.id));
     }
+
+    // 현재 파티가 비어 있으면 보유 영웅 상위 4명으로 즉시 채워 보여준다
+    if (SaveManager.ensureActiveParty(saveData, this.activeSlot - 1)) {
+      SaveManager.save(saveData);
+      this.parties = PartyManager.ensurePartySlots(saveData.parties || []);
+    }
+
     this.registry.set('ownedHeroes', this.ownedHeroes);
   }
 
@@ -108,9 +108,11 @@ export class PartyEditScene extends Phaser.Scene {
     this.add.rectangle(GAME_WIDTH / 2, s(50), GAME_WIDTH, s(100), COLORS.bgDark, 0.9);
 
     // 뒤로가기 버튼
+    // 글리프 32×29 → 히트 48×48 (QA P2-1)
     const backBtn = this.add.text(s(30), s(50), '◁', {
       fontSize: sf(32), color: '#FFFFFF'
-    }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
+    }).setOrigin(0, 0.5);
+    ensureMinTouchTarget(backBtn);
 
     backBtn.on('pointerdown', () => this.goBack());
 
@@ -144,8 +146,9 @@ export class PartyEditScene extends Phaser.Scene {
       const isActive = slot === this.activeSlot;
 
       const bg = this.add.rectangle(x, tabY, tabW, s(40),
-        isActive ? COLORS.primary : COLORS.bgPanel, isActive ? 1 : 0.6)
-        .setInteractive({ useHandCursor: true });
+        isActive ? COLORS.primary : COLORS.bgPanel, isActive ? 1 : 0.6);
+      // 탭 시각 높이 40 유지, 히트 48 (QA P2-1). 위 헤더(≤100)·아래 그리드(220)와 겹치지 않는다
+      ensureMinTouchTarget(bg);
 
       const label = this.add.text(x, tabY, `파티 ${slot}`, {
         fontSize: sf(14),
@@ -219,9 +222,11 @@ export class PartyEditScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       // 제거 버튼
-      const removeBtn = this.add.text(x + slotSize / 2 - s(8), y - slotSize / 2 - s(5), '✕', {
+      // 제거 ✕ — 글리프 13×15 → 히트 48×48. 슬롯 안쪽으로 살짝 당겨 옆 슬롯 히트를 침범하지 않게 한다
+      const removeBtn = this.add.text(x + slotSize / 2 - s(18), y - slotSize / 2 + s(4), '✕', {
         fontSize: sf(16), color: '#FF5555'
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false);
+      }).setOrigin(0.5).setVisible(false);
+      ensureMinTouchTarget(removeBtn);
 
       removeBtn.on('pointerdown', () => this.removeHeroFromSlot(i));
 
@@ -308,7 +313,9 @@ export class PartyEditScene extends Phaser.Scene {
   // === 파티 표시 갱신 ===
   refreshPartyDisplay() {
     const party = this.parties[this.activeSlot - 1];
-    const heroIds = party?.heroIds || [];
+    // 세이브의 파티는 배열(['base_iris', null, ...])과 { heroIds: [...] } 두 형식이 공존한다.
+    // heroIds만 읽으면 배열 형식이 통째로 무시되어 편성이 비어 보인다.
+    const heroIds = SaveManager._readPartySlots(party);
 
     this.heroSlots.forEach((slot, i) => {
       const heroId = heroIds[i] || null;
@@ -475,7 +482,8 @@ export class PartyEditScene extends Phaser.Scene {
     // 닫기 버튼
     const closeBtn = this.add.text(GAME_WIDTH - s(50), GAME_HEIGHT / 2 - panelH / 2 + s(25), '✕', {
       fontSize: sf(24), color: '#FFFFFF'
-    }).setOrigin(0.5).setDepth(82).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setDepth(82);
+    ensureMinTouchTarget(closeBtn);
     closeBtn.on('pointerdown', () => this.closeHeroSelect());
 
     // 영웅 리스트 (스크롤 가능 영역)
@@ -501,7 +509,8 @@ export class PartyEditScene extends Phaser.Scene {
       if (y > GAME_HEIGHT / 2 + panelH / 2 - s(40)) return; // 패널 밖은 표시 안 함
 
       const itemBg = this.add.rectangle(GAME_WIDTH / 2, y, GAME_WIDTH - s(80), itemH - s(5), COLORS.bgPanel, 0.5)
-        .setDepth(82).setInteractive({ useHandCursor: true });
+        .setDepth(82);
+      ensureMinTouchTarget(itemBg); // 행 높이 55 → 히트 48 이상 보장
 
       // 등급 색상 원 (RARITY_COLORS 통일)
       const heroRColorSet = RARITY_COLORS[hero.rarity] || RARITY_COLORS.N;

@@ -72,7 +72,27 @@ vi.mock('../../src/data/index.js', () => ({
   getCharacterOrHero: vi.fn((id) => null)
 }));
 
+// Mock EquipmentSystem (장비 가챠 테스트용 — 실제 인벤토리 push/SaveManager.load 경로는
+// EquipmentSystem.test.js가 전담하므로, 여기서는 GachaSystem.pullEquipment()가 올바른
+// 인자로 호출하는지만 검증한다)
+vi.mock('../../src/systems/EquipmentSystem.js', () => ({
+  EquipmentSystem: {
+    createEquipment: vi.fn((slotType, rarity, options = {}) => ({
+      id: `equip_test_${Math.random().toString(36).slice(2, 8)}`,
+      slotType,
+      rarity,
+      name: options.name || `${rarity} ${slotType}`,
+      definitionId: options.definitionId || null,
+      stats: options.stats || {},
+      enhanceLevel: 0,
+      enhancedStats: {},
+      equippedBy: null
+    }))
+  }
+}));
+
 import { GachaSystem } from '../../src/systems/GachaSystem.js';
+import { EquipmentSystem } from '../../src/systems/EquipmentSystem.js';
 import { SaveManager } from '../../src/systems/SaveManager.js';
 import { EventBus } from '../../src/systems/EventBus.js';
 
@@ -456,6 +476,181 @@ describe('GachaSystem', () => {
       GachaSystem.pull(1, 'gems');
 
       expect(SaveManager.spendGems).toHaveBeenCalledWith(GachaSystem.SINGLE_COST);
+    });
+  });
+
+  // 배너별 픽업 라우팅 (팀리드 지시: pull()에 bannerId 확장 + determinePickupCharacter 라우팅)
+  describe('배너별 픽업 라우팅', () => {
+    const PICKUP_BANNER = 'pickup_iris_olympus'; // banners.json 실 데이터 — pickupRate 0.5, pickupCharacters 1명
+    const DUAL_PICKUP_BANNER = 'pickup_dual_sera_paolo'; // banners.json 실 데이터 — pickupCharacters 2명
+
+    it('픽업 배너에서 SSR을 획득하면 determinePickupCharacter()가 호출된다', () => {
+      const rarityStub = vi.spyOn(GachaSystem, 'determineRarity').mockReturnValue('SSR');
+      const pickupSpy = vi.spyOn(GachaSystem, 'determinePickupCharacter');
+
+      const result = GachaSystem.pull(1, 'gems', { bannerId: PICKUP_BANNER });
+
+      expect(result.success).toBe(true);
+      expect(pickupSpy).toHaveBeenCalledTimes(1);
+      expect(pickupSpy.mock.calls[0][0].id).toBe(PICKUP_BANNER);
+
+      rarityStub.mockRestore();
+      pickupSpy.mockRestore();
+    });
+
+    it('standard 배너(bannerId 미지정)는 SSR을 획득해도 determinePickupCharacter()가 호출되지 않는다', () => {
+      const rarityStub = vi.spyOn(GachaSystem, 'determineRarity').mockReturnValue('SSR');
+      const pickupSpy = vi.spyOn(GachaSystem, 'determinePickupCharacter');
+
+      const result = GachaSystem.pull(1, 'gems');
+
+      expect(result.success).toBe(true);
+      expect(pickupSpy).not.toHaveBeenCalled();
+
+      rarityStub.mockRestore();
+      pickupSpy.mockRestore();
+    });
+
+    it('픽업 확률 시뮬레이션: 대량 시행에서 당첨률이 banner.pickupRate ±2%p 이내', () => {
+      function mulberry32(seed) {
+        let a = seed;
+        return function () {
+          a |= 0;
+          a = (a + 0x6d2b79f5) | 0;
+          let t = Math.imul(a ^ (a >>> 15), 1 | a);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      const banner = GachaSystem.getBannerById(PICKUP_BANNER);
+      const seededRandom = mulberry32(1234);
+      const randomSpy = vi.spyOn(Math, 'random').mockImplementation(seededRandom);
+
+      const TRIALS = 10000;
+      let pickupWins = 0;
+      try {
+        for (let i = 0; i < TRIALS; i++) {
+          // pickupPityCount를 천장(180)과 무관한 낮은 고정값으로 둬 50/50 확률만 격리 관찰한다
+          const pick = GachaSystem.determinePickupCharacter(banner, false, 1);
+          if (pick.isPickup) pickupWins++;
+        }
+      } finally {
+        randomSpy.mockRestore();
+      }
+
+      const winRate = pickupWins / TRIALS;
+      expect(Math.abs(winRate - banner.pickupRate)).toBeLessThanOrEqual(0.02);
+    });
+
+    it('픽업 피티 180 도달 시 다음 SSR은 픽업이 확정된다', () => {
+      const banner = GachaSystem.getBannerById(PICKUP_BANNER);
+      // Math.random을 0.99(픽업 미당첨 방향)로 고정해도 180 도달 시엔 확정되어야 한다
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99);
+
+      const pick = GachaSystem.determinePickupCharacter(banner, false, GachaSystem.PITY_CONFIG.pickupPity);
+
+      expect(pick.isPickup).toBe(true);
+      randomSpy.mockRestore();
+    });
+
+    it('직전에 50/50을 패배했으면(lost5050) 다음 SSR은 픽업이 확정된다', () => {
+      const banner = GachaSystem.getBannerById(PICKUP_BANNER);
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99);
+
+      const pick = GachaSystem.determinePickupCharacter(banner, true, 1);
+
+      expect(pick.isPickup).toBe(true);
+      randomSpy.mockRestore();
+    });
+
+    it('배너별 pickupPityCounter가 분리 저장된다 (다른 배너의 카운터에 영향 없음)', () => {
+      SaveManager.getGachaInfo.mockImplementation(() => ({
+        pityCounter: 0, totalPulls: 0, totalSSR: 0, banners: {}, freeTenPullUsed: true
+      }));
+      const rarityStub = vi.spyOn(GachaSystem, 'determineRarity').mockReturnValue('SSR');
+
+      GachaSystem.pull(1, 'gems', { bannerId: PICKUP_BANNER });
+      const callsA = SaveManager.saveGachaInfo.mock.calls;
+      const savedA = callsA[callsA.length - 1][0];
+      expect(savedA.banners[PICKUP_BANNER]).toBeDefined();
+      expect(typeof savedA.banners[PICKUP_BANNER].pickupPityCounter).toBe('number');
+
+      SaveManager.saveGachaInfo.mockClear();
+      GachaSystem.pull(1, 'gems', { bannerId: DUAL_PICKUP_BANNER });
+      const callsB = SaveManager.saveGachaInfo.mock.calls;
+      const savedB = callsB[callsB.length - 1][0];
+      expect(savedB.banners[DUAL_PICKUP_BANNER]).toBeDefined();
+      expect(savedB.banners[PICKUP_BANNER]).toBeUndefined(); // 서로 다른 배너 카운터가 섞이지 않는다
+
+      rarityStub.mockRestore();
+    });
+
+    it('픽업 배너 pull() 결과 항목에 isPickup 플래그가 포함된다', () => {
+      const rarityStub = vi.spyOn(GachaSystem, 'determineRarity').mockReturnValue('SSR');
+
+      const result = GachaSystem.pull(1, 'gems', { bannerId: PICKUP_BANNER });
+
+      expect(typeof result.results[0].isPickup).toBe('boolean');
+      rarityStub.mockRestore();
+    });
+
+    it('bannerId 없이 호출하면 기존 동작과 동일하다 (isPickup 필드 없음, 회귀 없음)', () => {
+      const result = GachaSystem.pull(1, 'gems');
+
+      expect(result.success).toBe(true);
+      expect(result.results[0].isPickup).toBeUndefined();
+    });
+  });
+
+  // 장비 가챠 (팀리드 지시: equipment.json 풀에서 등급 확률로 장비 지급)
+  describe('GachaSystem.pullEquipment() — 장비 가챠', () => {
+    it('장비 1회 소환은 EquipmentSystem.createEquipment()를 통해 결과 1건을 반환한다', () => {
+      const result = GachaSystem.pullEquipment(1, 'gems');
+
+      expect(result.success).toBe(true);
+      expect(result.results).toHaveLength(1);
+      expect(EquipmentSystem.createEquipment).toHaveBeenCalledTimes(1);
+      const [slotType, rarity, options] = EquipmentSystem.createEquipment.mock.calls[0];
+      expect(['weapon', 'armor', 'accessory', 'relic']).toContain(slotType);
+      expect(['SSR', 'SR', 'R', 'N']).toContain(rarity);
+      expect(options.definitionId).toBeTruthy();
+      expect(result.results[0]).toHaveProperty('equipmentId');
+      expect(result.results[0]).toHaveProperty('slotIcon');
+    });
+
+    it('장비 소환은 젬을 차감한다', () => {
+      GachaSystem.pullEquipment(1, 'gems');
+      expect(SaveManager.spendGems).toHaveBeenCalled();
+
+      SaveManager.spendGems.mockClear();
+      GachaSystem.pullEquipment(10, 'gems');
+      expect(SaveManager.spendGems).toHaveBeenCalledWith(expect.any(Number));
+      const cost = SaveManager.spendGems.mock.calls[0][0];
+      expect(cost).toBeLessThan(GachaSystem.SINGLE_COST * 10 + 1); // 10연 할인 검증(단발×10 이하)
+    });
+
+    it('장비 10연차는 SR 이상 1개를 보장한다', () => {
+      const rarityStub = vi.spyOn(GachaSystem, 'determineEquipmentRarity').mockReturnValue('N');
+
+      const result = GachaSystem.pullEquipment(10, 'gems');
+
+      expect(result.results).toHaveLength(10);
+      const hasSRPlus = result.results.some(r => r.rarity === 'SR' || r.rarity === 'SSR');
+      expect(hasSRPlus).toBe(true);
+
+      rarityStub.mockRestore();
+    });
+
+    it('젬이 부족하면 장비 소환이 실패하고 인벤토리에 추가하지 않는다', () => {
+      SaveManager.getResources.mockReturnValue({ gems: 0, summonTickets: 0 });
+      EquipmentSystem.createEquipment.mockClear();
+
+      const result = GachaSystem.pullEquipment(1, 'gems');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('젬');
+      expect(EquipmentSystem.createEquipment).not.toHaveBeenCalled();
     });
   });
 });

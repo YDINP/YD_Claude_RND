@@ -14,6 +14,7 @@ import { COLORS, s, sf } from '../../config/gameConfig.js';
 import { PvPSystem } from '../../systems/PvPSystem.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT } from '../../utils/popupLayout.js';
+import { ensureMinTouchTarget } from '../../utils/touchTarget.js';
 
 // 탭 인덱스 상수
 const TAB = { BATTLE: 0, RESULT: 1, RANKING: 2 };
@@ -124,11 +125,15 @@ export class PvPPopup extends PopupBase {
       const isActive = idx === this._activeTab;
       const bg = this.scene.add.rectangle(tx, ty, tabW - s(4), s(TAB_STRIP_HEIGHT - 8),
         isActive ? DESIGN.colors.status.error : DESIGN.colors.bg.surface, isActive ? 0.9 : 0.6);
-      bg.setInteractive({ useHandCursor: true });
+      // 탭 스트립 시각 높이는 36 이지만 손가락이 닿는 영역은 48 이어야 한다 (QA P2-1)
+      ensureMinTouchTarget(bg);
       bg.on('pointerdown', () => {
         if (!this._isLoading) this._loadAndRenderTab(idx);
       });
       this.contentContainer.add(bg);
+      // 탭 스트립도 _tabObjects 에 넣어야 _clearTabContent() 가 회수한다.
+      // 빠뜨리면 탭을 바꿀 때마다 스트립이 한 벌씩 쌓인다 (QA P1-2, RaidPopup 패턴).
+      this._tabObjects.push(bg);
 
       const txt = this.scene.add.text(tx, ty, label, {
         fontSize: sf(15),
@@ -137,6 +142,7 @@ export class PvPPopup extends PopupBase {
         color: isActive ? DESIGN.colors.text.primary : DESIGN.colors.text.secondary
       }).setOrigin(0.5);
       this.contentContainer.add(txt);
+      this._tabObjects.push(txt);
     });
   }
 

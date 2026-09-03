@@ -15,6 +15,8 @@ import SkillAnimationManager from '../systems/SkillAnimationManager.js';
 import { EnhancedHPBar } from '../components/EnhancedHPBar.js';
 import { TowerSystem } from '../systems/TowerSystem.js';
 import { sweepSystem } from '../systems/SweepSystem.js';
+import { soundManager } from '../systems/SoundManager.js';
+import { mountBattleTutorial, unmountBattleTutorial } from '../components/tutorial/BattleTutorialBinding.js';
 import {
   toBattleUnit,
   createSceneBattleSystem,
@@ -25,6 +27,7 @@ import {
   affectedUnitsOf,
   drainBattleLog,
   isHealSkill,
+  resolveSkillName,
   applyGaugeAfterAction,
   resolveMoodMatchup,
   AOE_DAMAGE_MULTIPLIER
@@ -52,6 +55,11 @@ import {
   getLogLineY,
   buildCultBadges
 } from '../utils/battleLayout.js';
+import { resolveEnemyArt, computeSpriteFit } from '../utils/idleBattleLayout.js';
+import ASSET_MANIFEST from '../../tools/art/asset-manifest.json';
+
+/** 포트레이트 보수 로드용 임시 텍스처 키 접두사 (기존 캔버스 키와 충돌 회피) */
+const PORTRAIT_FIX_PREFIX = '__portraitfix__';
 
 /** 렌더 레이어. 궁극기 컷인(30~32)과 인트로(50)는 기존 값을 그대로 둔다 */
 const BATTLE_DEPTH = Object.freeze({
@@ -107,6 +115,11 @@ export class BattleScene extends Phaser.Scene {
     try {
       console.log('[Battle] Scene created');
 
+      // SND-01: 보스전이면 보스 테마, 아니면 일반 전투 테마
+      soundManager.init(this);
+      soundManager.playBGM(this.mode === 'boss' ? 'boss' : 'battle');
+
+
       // 파티 데이터 방어
       if (!this.party || this.party.length === 0) {
         // SaveManager에서 파티 자동 로드 시도
@@ -148,10 +161,17 @@ export class BattleScene extends Phaser.Scene {
       const partyIds = this.party.map(h => h.id);
       this._loadedHeroIds = partyIds;
 
-      if (characterRenderer.useAssets && partyIds.length > 0) {
-        characterRenderer.preloadAssets(this, this.party, { ids: partyIds, types: ['battle'] });
+      // 아군 포트레이트 보수 — PreloadScene 을 거치지 않았거나 플레이스홀더가
+      // 이미 구워진 세이브(레거시 char_1~4 등)에서도 실제 512 WebP 로 올라오게 한다
+      const portraitQueued = this.queuePartyPortraits();
+
+      if ((characterRenderer.useAssets && partyIds.length > 0) || portraitQueued > 0) {
+        if (characterRenderer.useAssets && partyIds.length > 0) {
+          characterRenderer.preloadAssets(this, this.party, { ids: partyIds, types: ['battle'] });
+        }
         this.load.start();
         this.load.once('complete', () => {
+          this.promotePartyPortraits();
           this.initBattle();
         });
       } else {
@@ -160,6 +180,8 @@ export class BattleScene extends Phaser.Scene {
 
       // Scene 종료 시 정리
       this.events.once('shutdown', () => {
+        unmountBattleTutorial(this._tutorialBinding);
+        this._tutorialBinding = null;
         if (this.particles) {
           this.particles.destroy();
           this.particles = null;
@@ -181,6 +203,72 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /**
+   * 아군 포트레이트 텍스처를 실제 이미지로 보수할 목록을 로더에 올린다.
+   *
+   * `HeroAssetLoader.ensureTexture()` 는 텍스처가 없으면 캔버스 플레이스홀더를 굽기만 하고
+   * 파일을 불러오지 않는다. 그래서 PreloadScene 을 거치지 않은 진입(전투 직접 시작,
+   * 마이그레이션 전 레거시 세이브)에서는 아군이 영원히 플레이스홀더로 남는다.
+   * 여기서 매핑이 있는 영웅만 골라 실제 파일을 임시 키로 큐에 올린다.
+   *
+   * 임시 키를 쓰는 이유는 BackgroundFactory 의 지연 배경과 같다 — 같은 키로 캔버스가
+   * 이미 존재하면 Phaser TextureManager 가 새 이미지를 조용히 버린다.
+   *
+   * @returns {number} 큐에 올린 개수
+   */
+  queuePartyPortraits() {
+    this._portraitFixes = [];
+    if (!Array.isArray(this.party) || this.party.length === 0) return 0;
+
+    this.party.forEach(hero => {
+      if (!hero || !hero.id) return;
+
+      // portrait-mapping.json 이 char_1~4(레거시) · base_* · asc_* 를 모두 hero_XXX 로 잇는다.
+      // 매핑이 없으면 파일 자체가 없으므로 요청하지 않는다.
+      const fileName = HeroAssetLoader.getFileName(hero);
+      if (!fileName) return;
+
+      const key = HeroAssetLoader.getTextureKey(hero);
+      if (this.textures.exists(key) && !this._isCanvasTexture(key)) return;  // 이미 실이미지
+
+      const tempKey = `${PORTRAIT_FIX_PREFIX}${key}`;
+      if (this.textures.exists(tempKey)) return;
+
+      this.load.image(tempKey, `${HeroAssetLoader.RUNTIME_PATH}${fileName}${HeroAssetLoader.RUNTIME_EXT}`);
+      this._portraitFixes.push({ key, tempKey });
+    });
+
+    if (this._portraitFixes.length > 0) {
+      console.log(`[Battle] 포트레이트 보수 큐 ${this._portraitFixes.length}건`,
+        this._portraitFixes.map(f => f.key).join(', '));
+    }
+    return this._portraitFixes.length;
+  }
+
+  /**
+   * 보수 로드가 끝난 임시 키를 정식 키로 승격한다. 실패한 항목은 기존 폴백을 그대로 둔다.
+   */
+  promotePartyPortraits() {
+    const fixes = this._portraitFixes || [];
+    fixes.forEach(({ key, tempKey }) => {
+      if (!this.textures.exists(tempKey)) return;   // 로드 실패 → 폴백 유지
+      if (this.textures.exists(key)) this.textures.remove(key);
+      this.textures.renameTexture(tempKey, key);
+    });
+    this._portraitFixes = [];
+  }
+
+  /**
+   * 텍스처가 캔버스 플레이스홀더인지 확인한다 (실제 이미지와 구분).
+   * @param {string} textureKey
+   * @returns {boolean}
+   */
+  _isCanvasTexture(textureKey) {
+    const tex = this.textures.get(textureKey);
+    const src = tex && tex.source && tex.source[0];
+    return !!(src && src.image && src.image.tagName === 'CANVAS');
+  }
+
+  /**
    * RES-ABS-4: 전투 초기화 (에셋 로드 후 호출)
    */
   initBattle() {
@@ -195,6 +283,9 @@ export class BattleScene extends Phaser.Scene {
     this.createSkillCards();
     this.createSynergyDisplay();
     this.createManualTurnButton();
+
+    // 전투 조작 안내(B-1~B-5) 배선. 타깃 등록과 코치마크는 전부 바인딩 모듈이 담당한다.
+    this._tutorialBinding = mountBattleTutorial(this);
 
     // T-Q1: 보스 스테이지 진입 컷씬(boss_before) → 전투 시작 트랜지션
     // 컷씬이 없으면 onComplete가 즉시 호출되므로 일반 스테이지 흐름은 그대로다.
@@ -360,8 +451,12 @@ export class BattleScene extends Phaser.Scene {
           mood: enemyData.mood || 'brave',
           skills: [
             { id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 30 },
+            // 적 스킬은 enemies.json에 id만 있다 — 표시명은 skills.json에서 해석한다.
+            // (예전에는 name 자리에 id를 그대로 넣어 로그에 `skill_talon_strike`가 노출됐다)
             ...(enemyData.skills || []).map(sId => ({
-              id: sId, name: sId, multiplier: 1.3, gaugeCost: 40, target: 'single', gaugeGain: 0
+              id: sId,
+              name: resolveSkillName(null, sId),
+              multiplier: 1.3, gaugeCost: 40, target: 'single', gaugeGain: 0
             }))
           ],
           isBoss: enemyDef.isBoss || enemyData.type === 'boss',
@@ -763,10 +858,17 @@ export class BattleScene extends Phaser.Scene {
       cardHit.on('pointerdown', () => this.onSkillCardClick(ally, index));
     }
 
-    // 클래스 아이콘 (이모지 대체, IconFactory 벡터)
-    const classIcon = IconFactory.createImage(this, 0, ringY, ally.class || 'warrior', 'lg', {
-      tint: isReady ? accent : DESIGN.colors.brand.primary
-    });
+    // 영웅 포트레이트 — 링 안쪽에 원형으로 넣는다.
+    // 예전에는 여기에 클래스 벡터 아이콘을 그려서 하단 액션바가 캐릭터가 아니라
+    // 도형 4개로 읽혔다. 사람이 먼저 보이고 클래스는 보조 배지로 내린다.
+    const portrait = this.createSkillCardPortrait(ally, x, y, ringY, ringRadius);
+    if (portrait) portrait.setAlpha(isReady ? 1 : 0.62);
+
+    // 클래스 배지 (IconFactory 벡터) — 카드 좌상단 모서리
+    const classIcon = IconFactory.createImage(
+      this, -cardW / 2 + s(18), -cardH / 2 + s(18), ally.class || 'warrior', 'sm',
+      { tint: isReady ? accent : DESIGN.colors.brand.primary }
+    );
     if (classIcon) classIcon.setAlpha(isReady ? 1 : 0.55);
 
     // 쿨다운 링 — 게이지가 링을 시계 방향으로 채운다
@@ -788,6 +890,7 @@ export class BattleScene extends Phaser.Scene {
 
     const parts = [cardBg, cardHit, ring, nameText, skillText];
     if (classIcon) parts.splice(2, 0, classIcon);
+    if (portrait) parts.splice(2, 0, portrait);
     card.add(parts);
 
     if (isReady) this.startSkillCardPulse(card);
@@ -800,11 +903,46 @@ export class BattleScene extends Phaser.Scene {
     card.setData('ringRadius', ringRadius);
     card.setData('ringY', ringY);
     card.setData('classIcon', classIcon);
+    card.setData('portrait', portrait);
     card.setData('skillText', skillText);
 
     this.skillCardContainer.add(card);
 
     return card;
+  }
+
+  /**
+   * 스킬 카드용 원형 포트레이트를 만든다.
+   *
+   * 마스크는 월드 좌표계로 동작하므로 컨테이너에 넣지 않고 카드의 화면 위치로 그린다.
+   * 포트레이트는 정사각형(512)이라 그대로 넣으면 얼굴이 위쪽에 치우친다. 링 지름보다
+   * 조금 크게 키우고 위로 당겨 얼굴이 원 중앙에 오게 한다.
+   *
+   * @param {object} ally
+   * @param {number} cardX - 카드 중심 x (렌더 px)
+   * @param {number} cardY - 카드 중심 y (렌더 px)
+   * @param {number} ringY - 카드 기준 링 중심 y (렌더 px)
+   * @param {number} ringRadius - 렌더 px
+   * @returns {Phaser.GameObjects.Image|null} 텍스처를 못 구하면 null
+   */
+  createSkillCardPortrait(ally, cardX, cardY, ringY, ringRadius) {
+    const fullData = getCharacterOrHero(ally.id || ally.characterId) || ally;
+    const texKey = HeroAssetLoader.ensureTexture(this, fullData);
+    if (!texKey || !this.textures.exists(texKey)) return null;
+
+    // 얼굴이 원 중앙에 오도록 조금 키우고 아래로 내린다.
+    // 포트레이트는 정사각형이고 얼굴이 위쪽 3분의 1에 있어 그대로 넣으면 상체만 남는다.
+    const size = ringRadius * 2 * 1.34;
+    const image = this.add.image(0, ringY + size * 0.06, texKey);
+    image.setDisplaySize(size, size);
+
+    const mask = this.add.graphics().setVisible(false);
+    mask.fillStyle(0xffffff, 1);
+    mask.fillCircle(cardX, cardY + ringY, ringRadius - s(3));
+    image.setMask(mask.createGeometryMask());
+    image.setData('maskGraphics', mask);
+
+    return image;
   }
 
   /**
@@ -956,7 +1094,7 @@ export class BattleScene extends Phaser.Scene {
     // AoE 스킬: 전체 적 공격
     if (skill.target === 'all') {
       const aliveEnemies = this.enemies.filter(e => e.isAlive);
-      this.addBattleLog(`${attacker.name}의 ${skill.name}! 전체 공격!`);
+      this.addBattleLog(`${attacker.name}의 ${resolveSkillName(attacker, skill)}! 전체 공격!`);
       aliveEnemies.forEach((enemy, i) => {
         this.time.delayedCall(i * 100 / this.battleSpeed, () => {
           this._applyManualDamage(attacker, enemy, skill);
@@ -1028,6 +1166,8 @@ export class BattleScene extends Phaser.Scene {
     if (cardBg) this.paintSkillCardBg(cardBg, s(SKILL_SLOT.w), s(SKILL_SLOT.h), isReady, accent);
     if (ring) this.paintCooldownRing(ring, ally, card.getData('ringRadius'), card.getData('ringY'), accent);
     if (classIcon) classIcon.setAlpha(isReady ? 1 : 0.55);
+    const portrait = card.getData('portrait');
+    if (portrait) portrait.setAlpha(isReady ? 1 : 0.62);
 
     const skillTextObj = card.getData('skillText');
     if (skillTextObj) {
@@ -1151,6 +1291,9 @@ export class BattleScene extends Phaser.Scene {
     const sprites = target.isAlly ? this.allySprites : this.enemySprites;
     const sprite = sprites[target.position];
     if (!sprite) return;
+
+    // SND-02: 회복 효과음
+    soundManager.playSFX('heal');
 
     // ParticleManager의 showDamageNumber를 사용 (heal 타입)
     if (this.particles) {
@@ -1400,6 +1543,50 @@ export class BattleScene extends Phaser.Scene {
       }
       return sprite;
     });
+
+    // 적 아트 지연 로드 — 매니페스트에 있으면 실루엣을 실제 그림으로 교체한다(§2 적 유닛 아트).
+    // 보스 1.3배 확대가 이미 반영된 최종 표시 높이를 기준으로 맞춘다.
+    this.enemySprites.forEach((container, index) => {
+      const enemy = this.enemies[index];
+      const enemySprite = container.getData('sprite');
+      if (enemySprite) this.queueEnemyArt(enemySprite, enemy, enemySprite.displayHeight);
+    });
+  }
+
+  /**
+   * 적 아트가 매니페스트(manifest.enemies)에 있으면 지연 로드해 실루엣을 교체한다.
+   * 없는 키는 요청하지 않는다(vite 404 가드가 콘솔 에러를 남겨 스모크가 깨진다).
+   *
+   * @param {Phaser.GameObjects.Image} sprite - createBattlerSprite 가 만든 실루엣 이미지
+   * @param {object} battler
+   * @param {number} desiredH - 실루엣이 표시되던 최종 높이(px). 보스 확대분까지 반영된 값
+   */
+  queueEnemyArt(sprite, battler, desiredH) {
+    const art = resolveEnemyArt(battler?.id, ASSET_MANIFEST);
+    if (!art) return;
+
+    const key = `enemy_art_${art.key}`;
+    const swap = () => {
+      if (!sprite || !sprite.active || !this.textures.exists(key)) return;
+      const source = this.textures.get(key).getSourceImage();
+      const fit = computeSpriteFit(source?.width, source?.height, desiredH);
+      if (!fit) return;
+      sprite.setTexture(key);
+      sprite.setDisplaySize(fit.w, fit.h);
+    };
+
+    if (this.textures.exists(key)) {
+      swap();
+      return;
+    }
+
+    this._enemyArtQueued = this._enemyArtQueued || new Set();
+    if (!this._enemyArtQueued.has(key)) {
+      this._enemyArtQueued.add(key);
+      this.load.image(key, art.path);
+    }
+    this.load.once(`filecomplete-image-${key}`, swap);
+    if (!this.load.isLoading()) this.load.start();
   }
 
   createBattlerSprite(x, y, battler, isAlly) {
@@ -1895,6 +2082,8 @@ export class BattleScene extends Phaser.Scene {
 
     const target = action.targets[0];
     const { skill, isUltimate } = action;
+    // 로그·컷인·데미지 문구가 모두 같은 표시명을 쓰게 한 곳에서 해석한다
+    const skillName = resolveSkillName(battler, skill);
 
     // 궁극기 컷인 연출.
     // _executeAttack은 async라 예외가 미처리 거부로 새어 나간다 — 여기서 붙잡아 로그만 남긴다.
@@ -1902,10 +2091,10 @@ export class BattleScene extends Phaser.Scene {
 
     if (isUltimate) {
       this.playUltimateCutIn(battler, () => {
-        this._executeAttack(battler, target, skill.multiplier, skill.name, true, skill).catch(onActionError);
+        this._executeAttack(battler, target, skill.multiplier, skillName, true, skill).catch(onActionError);
       });
     } else {
-      this._executeAttack(battler, target, skill.multiplier, skill.name, false, skill).catch(onActionError);
+      this._executeAttack(battler, target, skill.multiplier, skillName, false, skill).catch(onActionError);
     }
   }
 
@@ -2162,6 +2351,9 @@ export class BattleScene extends Phaser.Scene {
     const sprites = target.isAlly ? this.allySprites : this.enemySprites;
     const sprite = sprites[target.position];
     if (!sprite) return;
+
+    // SND-02: 피격/치명타 효과음
+    soundManager.playSFX(isCrit ? 'hit_critical' : 'hit_normal');
 
     // A-8.2: 데미지 크기별 폰트 세분화
     let fontSize;

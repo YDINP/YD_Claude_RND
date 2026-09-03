@@ -403,3 +403,71 @@ describe('actionChildIndices / pickActionChild — 액션 버튼 재조회 (T-22
     expect(pickActionChild(['f0', 'l0', 'h0'], 0, 'nope')).toBeNull();
   });
 });
+
+// QA P1-4: 중첩 팝업(HeroInfoPopup)이 하위 팝업과 헤더를 같은 좌표에 겹쳐 그리던 결함
+describe('computePopupSlots — offsetY (중첩 팝업 헤더 분리)', () => {
+  /** HeroInfoPopup 이 넘기는 것과 같은 인자 */
+  function nestedArgs(overrides = {}) {
+    const spec = POPUP_SLOT;
+    return {
+      screenWidth: SCREEN_W,
+      screenHeight: SCREEN_H,
+      width: s(spec.panelWidth),
+      height: s(spec.panelHeight),
+      headerHeight: s(spec.headerHeight),
+      summaryHeight: 0,
+      actionBarHeight: s(spec.actionBarHeight),
+      padX: s(spec.padX),
+      padBottom: s(spec.padBottom),
+      dividerLift: s(spec.dividerLift),
+      dividerInset: s(spec.dividerInset),
+      underline: s(spec.underline),
+      closeInsetX: s(spec.closeInsetX),
+      closeInsetY: s(spec.closeInsetY),
+      closeHit: s(spec.closeHit),
+      titleAlign: spec.titleAlign,
+      titlePadX: s(spec.titlePadX),
+      ...overrides
+    };
+  }
+
+  const OFFSET = s(32);
+  const base = computePopupSlots(nestedArgs());
+  const shifted = computePopupSlots(nestedArgs({ offsetY: OFFSET }));
+
+  it('offsetY 를 주지 않으면 이전과 같이 화면 중앙에 선다', () => {
+    expect(base.panel.top).toBe(SCREEN_H / 2 - s(POPUP_SLOT.panelHeight) / 2);
+  });
+
+  it('패널·헤더·타이틀·닫기가 같은 양만큼 함께 내려간다', () => {
+    expect(shifted.panel.top - base.panel.top).toBe(OFFSET);
+    expect(shifted.header.top - base.header.top).toBe(OFFSET);
+    expect(shifted.header.title.y - base.header.title.y).toBe(OFFSET);
+    expect(shifted.close.y - base.close.y).toBe(OFFSET);
+  });
+
+  it('타이틀·닫기가 하위 팝업(중앙 정렬)의 글리프 높이 밖으로 나간다', () => {
+    // 타이틀 글리프는 약 30px(base). 두 헤더가 겹치지 않으려면 그보다 크게 벌어져야 한다
+    expect(shifted.header.title.y - base.header.title.y).toBeGreaterThan(s(30));
+    expect(shifted.close.y - base.close.y).toBeGreaterThan(s(30));
+  });
+
+  it('콘텐츠 슬롯 크기는 변하지 않고 위치만 이동한다', () => {
+    expect(shifted.content.width).toBe(base.content.width);
+    expect(shifted.content.height).toBe(base.content.height);
+    expect(shifted.content.left).toBe(base.content.left);
+  });
+
+  it('화면 밖으로 나갈 만큼 큰 오프셋은 여백까지만 적용된다', () => {
+    const huge = computePopupSlots(nestedArgs({ offsetY: s(9999) }));
+
+    expect(huge.panel.top).toBeGreaterThanOrEqual(0);
+    expect(huge.panel.bottom).toBeLessThanOrEqual(SCREEN_H);
+  });
+
+  it('음수 오프셋도 화면 위로 넘치지 않는다', () => {
+    const up = computePopupSlots(nestedArgs({ offsetY: s(-9999) }));
+
+    expect(up.panel.top).toBeGreaterThanOrEqual(0);
+  });
+});

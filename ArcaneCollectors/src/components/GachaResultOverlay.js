@@ -30,12 +30,25 @@ import { ts } from '../utils/textStyles.ts';
 import { getRarityKey, getRarityNum } from '../utils/rarityUtils.js';
 import { getCharacterOrHero } from '../data/index.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
+import { soundManager } from '../systems/SoundManager.js';
 import { GlassPanel, GLASS_VARIANT } from './GlassPanel.js';
 import { NineSliceFrame, CARD_FRAME_BY_RARITY } from './NineSliceFrame.js';
 import { resolveFullbodyKey, fullbodyPath, hasFullbodyAsset } from '../utils/heroDetailLayout.js';
 import PORTRAIT_MAP from '../data/portrait-mapping.json';
+import CULTS_DATA from '../data/cults.json';
 import ASSET_MANIFEST from '../../tools/art/asset-manifest.json';
 import { SUMMON_CIRCLE_TEXTURE } from '../utils/gachaBannerLayout.js';
+import { MOOD_PARTICLE_COLORS } from '../config/particleConfig.js';
+import {
+  CUTIN_ENTER,
+  CUTIN_POSE,
+  CUTIN_FORMAT,
+  resolveCutin,
+  resolveAssetKey,
+  resolveQuoteText,
+  typewriterSlice,
+  cssToHex
+} from '../utils/gachaCutinPresets.js';
 import { ensureTextureFromPath } from '../utils/lazyTexture.js';
 import {
   REVEAL_STAGE,
@@ -56,6 +69,12 @@ import {
  * 나중에 추가되므로 그 위에 그려진다. 리디자인 이전 결과 컨테이너와 동일한 층이다.
  */
 export const OVERLAY_DEPTH = 3010;
+
+/**
+ * 루트 컨테이너 이름. 씬 정리 경로(MainMenuScene.destroyOrphanPopups)가
+ * 같은 depth 층의 튜토리얼 코치마크와 이 오버레이를 구분하는 유일한 표식이다.
+ */
+export const OVERLAY_ROOT_NAME = 'gacha-result-overlay';
 
 /** base 좌표계 그리드 규격 */
 const GRID = Object.freeze({
@@ -84,10 +103,17 @@ const CUTIN = Object.freeze({
   gradeY: 176,
   nameY: 244,
   bandY: 280,
+  quoteY: 322,
+  quoteWidth: 600,
+  emblemY: 560,
+  emblemSize: 340,
   burstY: 640,
   figureBaseY: 1020,
   figureH: 700,
-  figureMaxW: 540
+  figureMaxW: 540,
+  /** pose 별 인물 가로 오프셋. 타이포는 반대쪽으로 밀린다 */
+  poseOffsetX: 74,
+  textShiftX: 46
 });
 
 export class GachaResultOverlay {
@@ -120,6 +146,13 @@ export class GachaResultOverlay {
     this._fullbodyKey = null;
     this._cutinTextureKey = null;
     this._sceneCleanup = null;
+    /** heroId → 전신 시트 텍스처 키 (컷인 대상별) */
+    this._cutinTextures = new Map();
+    /** 이 오버레이가 직접 등록한 텍스처 키. 연출이 끝나면 되돌린다(메모리 규칙) */
+    this._ownedTextures = new Set();
+    /** 컷인 타이프라이터 타이머 */
+    this._quoteTimer = null;
+    this.quoteText = null;
     this.skipButton = null;
     this.revealAllButton = null;
     this.actionButtons = [];
@@ -150,11 +183,13 @@ export class GachaResultOverlay {
 
     // 어떤 경로로 끝나든 고아가 남지 않게 씬 종료에 스스로를 건다.
     // 이 오버레이는 팝업이 닫힌 뒤에도 살아남을 수 있으므로(아래 detach 설명) 이 안전장치가 유일한 하한이다.
-    this._sceneCleanup = () => this.destroy();
-    this.scene.events.once('shutdown', this._sceneCleanup);
-    this.scene.events.once('destroy', this._sceneCleanup);
+    this.ensureSceneCleanup();
 
     this.root = this.scene.add.container(0, 0).setDepth(this.depth);
+    // 이름과 역참조는 씬의 고아 회수 경로가 쓴다. 같은 depth 에 튜토리얼 코치마크가 있으므로
+    // 이름 없이 depth 만으로 판정하면 코치마크까지 부순다 (QA P1-3).
+    this.root.setName(OVERLAY_ROOT_NAME);
+    this.root.__gachaResultOverlay = this;
 
     this.scrim = this._buildScrim();
     this.panelLayer = this.scene.add.container(0, 0).setAlpha(0);
@@ -177,10 +212,26 @@ export class GachaResultOverlay {
     this._setActionBarEnabled(false);
 
     // 컷인이 있으면 전신 시트를 지금 예약한다. 4단계까지 약 2.4초가 남아 대개 늦지 않는다.
-    if (this.plan.hasCutin) this._queueCutinFullbody();
+    if (this.plan.hasCutin) this._queueCutinAssets();
 
     this._enterStage(REVEAL_STAGE.CIRCLE);
     return this;
+  }
+
+  /**
+   * 씬 shutdown/destroy 에 자기 파괴를 건다 (멱등).
+   *
+   * 팝업이 소유권을 놓고 사라지는 경로(GachaPopup._detachSummonOverlay)에서도
+   * 이 고리가 반드시 살아 있어야 씬 전환 때 오버레이가 회수된다.
+   * @returns {boolean} 고리가 걸려 있는가
+   */
+  ensureSceneCleanup() {
+    if (this.destroyed || !this.scene?.events) return false;
+    if (this._sceneCleanup) return true;
+    this._sceneCleanup = () => this.destroy();
+    this.scene.events.once('shutdown', this._sceneCleanup);
+    this.scene.events.once('destroy', this._sceneCleanup);
+    return true;
   }
 
   /** 연출을 건너뛰고 결과 그리드로 직행한다 */
@@ -188,6 +239,7 @@ export class GachaResultOverlay {
     if (this.destroyed || !this.state || isTerminal(this.state)) return;
     this._clearTimers();
     this.state = skipToGrid(this.state, this.plan);
+    this._stopQuote();
     this.fxLayer.removeAll(true);
     this.cutinLayer.removeAll(true);
     this._revealAllCards(true);
@@ -227,6 +279,9 @@ export class GachaResultOverlay {
       this.root = null;
     }
     this.cards = [];
+    this._stopQuote();
+    this.quoteText = null;
+    this._releaseOwnedTextures();
     this._fullbodyKey = null;
 
     if (this.onClose) {
@@ -251,6 +306,8 @@ export class GachaResultOverlay {
     const stage = findStage(this.plan, stageId);
     if (!stage) return;
 
+    this._playStageSFX(stageId);
+
     if (stageId === REVEAL_STAGE.CIRCLE) this._playCircle(stage);
     else if (stageId === REVEAL_STAGE.PILLAR) this._playPillar(stage);
     else if (stageId === REVEAL_STAGE.FLIP) this._playFlip(stage);
@@ -264,12 +321,23 @@ export class GachaResultOverlay {
     });
   }
 
+  /**
+   * @private SND-02: 소환 연출 단계별 효과음.
+   * 마법진·기둥은 기대감 스윕, SSR 컷인은 전용 임팩트를 낸다.
+   */
+  _playStageSFX(stageId) {
+    if (stageId === REVEAL_STAGE.CIRCLE) soundManager.playSFX('gacha_pull');
+    else if (stageId === REVEAL_STAGE.PILLAR) soundManager.playSFX('skill_cast');
+    else if (stageId === REVEAL_STAGE.CUTIN) soundManager.playSFX('gacha_ssr');
+  }
+
   /** @private 종착 — 글래스 패널을 띄우고 카드를 정착시킨다 */
   _enterGrid() {
     if (this.destroyed) return;
     // skipToGrid 는 skipped 플래그를 세우므로 자연 종료에는 쓰지 않는다
     this.state = { ...this.state, stageId: REVEAL_STAGE.GRID, revealed: this.plan.count, done: true };
 
+    this._stopQuote();
     this.fxLayer.removeAll(true);
     this.cutinLayer.removeAll(true);
     this._destroyRevealAllButton();
@@ -492,6 +560,9 @@ export class GachaResultOverlay {
     if (this.destroyed || !entry || entry.revealed || !entry.card.scene) return;
     entry.revealed = true;
 
+    // SND-02: 카드 뒤집기 — SSR 은 전용 효과음으로 승격
+    soundManager.playSFX(entry.hero.rarity === 'SSR' ? 'gacha_ssr' : 'card_flip');
+
     this._tween({
       targets: entry.card,
       scaleX: 1,
@@ -561,6 +632,8 @@ export class GachaResultOverlay {
    * @returns {Phaser.GameObjects.Container}
    */
   _createCard(hero, x, y, w, h) {
+    if (hero && hero.type === 'equipment') return this._createEquipmentCard(hero, x, y, w, h);
+
     const card = this.scene.add.container(x, y);
     const rKey = getRarityKey(hero.rarity);
     const rarityColor = this._rarityColor(hero.rarity);
@@ -638,163 +711,527 @@ export class GachaResultOverlay {
     return card;
   }
 
+  /**
+   * 장비 결과 카드 — 실 포트레이트 아트가 없으므로 슬롯 아이콘(이모지) 폴백을 쓴다.
+   * `_createCard()`와 같은 프레임/배지/이름 플레이트 구조를 공유해 캐릭터 카드와
+   * 한 그리드에서 시각적으로 통일감을 유지한다.
+   * @private
+   */
+  _createEquipmentCard(item, x, y, w, h) {
+    const card = this.scene.add.container(x, y);
+    const rKey = getRarityKey(item.rarity);
+    const rarityColor = this._rarityColor(item.rarity);
+    const frameKey = CARD_FRAME_BY_RARITY[rKey] || CARD_FRAME_BY_RARITY.N;
+
+    const surface = this.scene.add.graphics();
+    surface.fillStyle(DESIGN.colors.bg.secondary, 0.92);
+    surface.fillRoundedRect(-w / 2, -h / 2, w, h, s(DESIGN.radius.md));
+    card.add(surface);
+
+    // 아이콘 폴백 — 장비는 개별 아트가 없다 (GA-XX)
+    card.add(this.scene.add.text(0, -h * 0.1, item.slotIcon || '⚔️', {
+      fontSize: `${Math.round(h * 0.34)}px`
+    }).setOrigin(0.5));
+
+    const frame = NineSliceFrame.create(this.scene, {
+      x: 0, y: 0, w, h, key: frameKey, tint: rarityColor
+    });
+    card.add(frame);
+
+    const plateH = h * 0.26;
+    const plate = this.scene.add.graphics();
+    for (let i = 0; i < 3; i++) {
+      plate.fillStyle(DESIGN.colors.bg.primary, 0.26 + i * 0.22);
+      plate.fillRect(-w / 2 + s(4), h / 2 - plateH + (plateH / 3) * i - s(4), w - s(8), plateH / 3 + 1);
+    }
+    card.add(plate);
+
+    const badgeW = Math.max(s(30), w * 0.26);
+    const badge = this.scene.add.graphics();
+    badge.fillStyle(rarityColor, 1);
+    badge.fillRoundedRect(-w / 2 + s(6), -h / 2 + s(6), badgeW, s(22), s(DESIGN.radius.sm));
+    card.add(badge);
+    card.add(this.scene.add.text(
+      -w / 2 + s(6) + badgeW / 2, -h / 2 + s(17), rKey,
+      ts('num.sm', { color: DESIGN.colors.text.inverse, fontStyle: 'bold' })
+    ).setOrigin(0.5));
+
+    const stars = getRarityNum(item.rarity) || RARITY[rKey]?.stars || 1;
+    card.add(this.scene.add.text(
+      0, h / 2 - s(40), '★'.repeat(stars),
+      ts('caption', { color: `#${DESIGN.colors.brand.accent.toString(16).padStart(6, '0')}` })
+    ).setOrigin(0.5));
+
+    const name = item.name || '장비';
+    card.add(this.scene.add.text(
+      0, h / 2 - s(18), name.length > 7 ? `${name.slice(0, 6)}…` : name,
+      ts('caption', { color: DESIGN.colors.text.primary })
+    ).setOrigin(0.5));
+
+    return card;
+  }
+
   // ================================================================
   // 4단계 — SSR 컷인
   // ================================================================
 
-  /** @private 컷인에 쓸 전신 시트를 미리 예약한다 */
-  _queueCutinFullbody() {
-    const hero = cutinTargets(this.results)[0];
-    if (!hero) return;
+  /**
+   * @private 컷인에 쓸 에셋을 미리 예약한다.
+   * 대상이 여럿이면(SSR 2장 이상) 전원분을 건다. 4단계까지 약 2.4초가 남아 대개 늦지 않고,
+   * 늦더라도 각 컷인이 포트레이트/벡터 폴백으로 성립한다.
+   */
+  _queueCutinAssets() {
+    this._cutinTextures = this._cutinTextures || new Map();
 
-    const key = resolveFullbodyKey(hero.id, PORTRAIT_MAP);
-    if (!key || !hasFullbodyAsset(key, ASSET_MANIFEST.fullbody)) return;
-    if (this.scene.textures.exists(key)) { this._cutinTextureKey = key; return; }
+    (this.plan.cutinTargets || []).forEach((hero) => {
+      const preset = resolveCutin(hero);
 
-    const path = fullbodyPath(key);
-    if (!path) return;
+      // 교단 배경 (lazyTextures)
+      const bg = resolveAssetKey(preset.bg, ASSET_MANIFEST);
+      if (bg.available && bg.bucket === 'lazyTextures') {
+        this._queueTexture(bg.key, (ASSET_MANIFEST.lazyTextures[bg.key] || {}).path);
+      }
 
-    // 씬 로더가 이미 돌고 있으면 load.image() 로 넣은 파일이 받아지고도
-    // TextureManager 에 등록되지 않는다. lazyTexture 헬퍼는 그 상태를 타지 않는다.
-    ensureTextureFromPath(this.scene, key, path, () => {
-      if (this.destroyed) return;
-      this._cutinTextureKey = key;
-      this._fullbodyKey = key; // 이 오버레이가 로드했으므로 destroy 에서 해제한다
+      // 교단 문장 (textures — 대개 이미 로드돼 있다)
+      const emblem = resolveAssetKey(preset.emblem, ASSET_MANIFEST);
+      if (emblem.available && emblem.bucket === 'textures') {
+        this._queueTexture(emblem.key, (ASSET_MANIFEST.textures[emblem.key] || {}).path);
+      }
+
+      // 전신 시트
+      if (hero.type === 'equipment') return; // 장비는 전신 시트가 없다 — 아이콘 폴백
+      const key = resolveFullbodyKey(hero.id, PORTRAIT_MAP);
+      if (!key || !hasFullbodyAsset(key, ASSET_MANIFEST.fullbody)) return;
+      if (this.scene.textures.exists(key)) {
+        this._cutinTextures.set(hero.id, key);
+        return;
+      }
+      const path = fullbodyPath(key);
+      if (!path) return;
+
+      // 씬 로더가 이미 돌고 있으면 load.image() 로 넣은 파일이 받아지고도
+      // TextureManager 에 등록되지 않는다. lazyTexture 헬퍼는 그 상태를 타지 않는다.
+      ensureTextureFromPath(this.scene, key, path, (loadedKey, added) => {
+        if (this.destroyed) return;
+        this._cutinTextures.set(hero.id, loadedKey);
+        this._cutinTextureKey = loadedKey;
+        if (added) this._fullbodyKey = loadedKey;
+      });
     });
   }
 
-  /** @private */
+  /** @private 소유권을 기록하며 텍스처를 예약한다 */
+  _queueTexture(key, path) {
+    if (!key || !path || this.scene.textures.exists(key)) return;
+    ensureTextureFromPath(this.scene, key, path, (loadedKey, added) => {
+      if (added) this._ownedTextures.add(loadedKey);
+    });
+  }
+
+  /**
+   * @private 연출이 끝나면 이 오버레이가 올린 텍스처를 되돌린다.
+   *
+   * **직접 등록한 것만** 지운다(`ensureTextureFromPath` 의 added 플래그).
+   * 다른 화면이 먼저 올린 키를 지우면 그쪽 Image 가 사라진 텍스처를 참조해
+   * 렌더러가 glTexture null 로 터진다.
+   * 전신 시트(fb_hero_XXX)는 예외다 — GachaBannerPanel 이 같은 키로 픽업 인물을
+   * 세워 두는 경우가 있어 소유권만으로는 안전을 보장할 수 없다.
+   */
+  _releaseOwnedTextures() {
+    if (!this.scene?.textures) return;
+    this._ownedTextures.forEach((key) => {
+      if (key === this._fullbodyKey) return;
+      if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
+    });
+    this._ownedTextures.clear();
+  }
+
+  /**
+   * @private 4단계 — 캐릭터별 SSR/SR 컷인.
+   *
+   * 프리셋(`src/data/gacha-cutins.json`)이 배경·문장·액센트·파티클·등장 방식·대사를 정한다.
+   * 대상이 여럿이면 1명분씩 순차 재생한다(§10연에서 SSR 2장 이상).
+   *
+   * 진행:
+   *   교단 배경 페이드인 → 교단 문장 회전 등장 → 전신 슬라이드 + 림라이트 플래시
+   *   → 이름·등급·교단 리본 → 전용 대사 타이프라이터
+   *
+   * 트윈 예산은 1명당 6개다. 파티클은 개별 트윈 대신 컨테이너 1개를 확대해
+   * 저사양에서도 트윈 수가 파티클 수에 비례하지 않게 한다.
+   */
   _playCutin(stage) {
-    const hero = cutinTargets(this.results)[0];
-    if (!hero) return;
+    const targets = (this.plan.cutinTargets || []).length > 0
+      ? this.plan.cutinTargets
+      : cutinTargets(this.results);
+    if (targets.length === 0) return;
 
-    const cult = this._cultColorOf(hero);
+    const unit = this.plan.cutinUnit || stage.duration;
+
+    targets.forEach((hero, index) => {
+      if (index === 0) {
+        this._playCutinFor(hero, unit);
+      } else {
+        this._delay(unit * index, () => this._playCutinFor(hero, unit));
+      }
+    });
+  }
+
+  /**
+   * @private 컷인 1명분.
+   * @param {Object} hero - 소환 결과 항목
+   * @param {number} unit - 이 컷인에 배정된 시간(ms)
+   */
+  _playCutinFor(hero, unit) {
+    if (this.destroyed || !hero) return;
+
+    // 앞 사람의 컷인을 걷어낸다. 순차 재생이라 겹치면 안 된다
+    this._stopQuote();
+    this.quoteText = null;
+    this.cutinLayer.removeAll(true);
+
+    const preset = resolveCutin(hero);
+    const accent = cssToHex(preset.accent, this._cultColorOf(hero));
+    const brief = preset.format === CUTIN_FORMAT.BRIEF;
     const cx = GAME_WIDTH / 2;
+    const poseSign = preset.fullbodyPose === CUTIN_POSE.LEFT ? -1 : 1;
 
-    // 컷인 전용 딤 — 카드를 가리되 스킵/액션 바는 위에 남는다
-    const dim = this.scene.add.rectangle(cx, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1)
-      .setAlpha(0);
-    this.cutinLayer.add(dim);
-    this._tween({ targets: dim, alpha: 0.9, duration: 200 });
-
-    // 교단색 폭발 — 방사 광선 + 원형 파동
-    const rays = this.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-    const rayCount = Math.min(18, Math.max(6, Math.round(this.plan.particleCount / 3)));
-    for (let i = 0; i < rayCount; i++) {
-      const a = (i / rayCount) * Math.PI * 2;
-      rays.fillStyle(cult, 0.30);
-      rays.beginPath();
-      rays.moveTo(0, 0);
-      rays.lineTo(Math.cos(a - 0.035) * s(900), Math.sin(a - 0.035) * s(900));
-      rays.lineTo(Math.cos(a + 0.035) * s(900), Math.sin(a + 0.035) * s(900));
-      rays.closePath();
-      rays.fillPath();
-    }
-    rays.setPosition(cx, s(CUTIN.burstY)).setScale(0.2).setAlpha(0);
-    this.cutinLayer.add(rays);
+    // ── 1. 교단 배경 (딤 + 배경 이미지를 한 컨테이너로 묶어 트윈 1개로 처리)
+    const stageGroup = this._buildCutinBackdrop(preset, accent);
+    this.cutinLayer.add(stageGroup);
     this._tween({
-      targets: rays,
-      scale: 1,
-      alpha: { from: 0.9, to: 0.25 },
-      rotation: 0.35,
-      duration: stage.duration,
-      ease: 'Cubic.easeOut'
+      targets: stageGroup,
+      alpha: { from: 0, to: 1 },
+      duration: preset.timing.bgFade,
+      ease: 'Quad.easeOut'
     });
 
-    const wave = this.scene.add.circle(cx, s(CUTIN.burstY), s(120), cult, 0.35);
-    this.cutinLayer.add(wave);
-    this._tween({
-      targets: wave,
-      scale: { from: 0.3, to: 3.2 },
-      alpha: 0,
-      duration: stage.duration * 0.8,
-      ease: 'Cubic.easeOut'
-    });
-
-    // 인물 — 전신 시트 우선, 없으면 포트레이트 확대
-    const portrait = this._createCutinFigure(hero, cult);
-    if (portrait) {
-      this.cutinLayer.add(portrait);
-      portrait.setAlpha(0);
+    // ── 2. 교단 문장 회전 등장 (SSR 전용)
+    if (!brief) {
+      const emblem = this._buildCultEmblem(preset, accent);
+      this.cutinLayer.add(emblem);
       this._tween({
-        targets: portrait,
-        alpha: 1,
-        x: { from: portrait.x + s(70), to: portrait.x },
-        duration: 420,
-        ease: 'Quad.easeOut'
-      });
-    }
-
-    // 타이포는 화면 위쪽에 둔다. 인물이 화면 아래 3분의 2를 차지하고
-    // 액션 바가 y=1092 에 있어, 아래에 놓으면 둘 다와 겹친다.
-    const grade = this.scene.add.text(cx, s(CUTIN.gradeY), 'SSR', ts('display.xl', {
-      color: `#${DESIGN.colors.brand.accent.toString(16).padStart(6, '0')}`
-    })).setOrigin(0.5).setAlpha(0);
-    this.cutinLayer.add(grade);
-    this._tween({
-      targets: grade,
-      alpha: 1,
-      scale: { from: 1.5, to: 1 },
-      duration: 360,
-      delay: 120,
-      ease: 'Back.easeOut'
-    });
-
-    const name = this.scene.add.text(cx, s(CUTIN.nameY + 10), hero.name || '???', ts('title', {
-      color: DESIGN.colors.text.primary
-    })).setOrigin(0.5).setAlpha(0);
-    this.cutinLayer.add(name);
-    this._tween({
-      targets: name, alpha: 1, y: s(CUTIN.nameY), duration: 340, delay: 220, ease: 'Quad.easeOut'
-    });
-
-    // 교단색 밴드 — 이름 아래 밑줄
-    const band = this.scene.add.rectangle(cx, s(CUTIN.bandY), s(420), s(4), cult, 1).setScale(0, 1);
-    this.cutinLayer.add(band);
-    this._tween({ targets: band, scaleX: 1, duration: 320, delay: 260, ease: 'Cubic.easeOut' });
-
-    this.scene.cameras.main.shake(260, 0.008);
-
-    // 교단색 불티
-    const sparks = Math.round(this.plan.particleCount * 0.6);
-    for (let i = 0; i < sparks; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const dot = this.scene.add.circle(cx, s(CUTIN.burstY), s(2 + Math.random() * 3), cult, 0.95);
-      this.cutinLayer.add(dot);
-      this._tween({
-        targets: dot,
-        x: cx + Math.cos(a) * s(200 + Math.random() * 320),
-        y: s(CUTIN.burstY) + Math.sin(a) * s(200 + Math.random() * 320),
-        alpha: 0,
-        duration: 800 + Math.random() * 500,
-        delay: i * 10,
+        targets: emblem,
+        alpha: { from: 0, to: 0.55 },
+        scale: { from: 0.55, to: 1 },
+        rotation: { from: -Math.PI * 0.35, to: 0 },
+        // 인물 뒤 문장(紋章)이라 진하게 깔면 실루엣을 먹는다. 0.55 가 상한이다
+        duration: preset.timing.emblem,
+        delay: preset.timing.bgFade * 0.5,
         ease: 'Cubic.easeOut'
       });
     }
+
+    // ── 3. 전신 시트 등장 + 림라이트 플래시
+    const figure = this._createCutinFigure(hero, accent, poseSign);
+    if (figure) {
+      this.cutinLayer.add(figure);
+      this._applyEnterTween(figure, preset, poseSign);
+    }
+
+    const rim = this.scene.add.rectangle(cx, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, accent, 1)
+      .setAlpha(0)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.cutinLayer.add(rim);
+    this._tween({
+      targets: rim,
+      alpha: { from: 0.42, to: 0 },
+      duration: 420,
+      delay: preset.timing.bgFade,
+      ease: 'Quad.easeOut'
+    });
+
+    // ── 4. 이름 · 등급 · 교단 리본 (한 컨테이너 = 트윈 1개)
+    const plate = this._buildCutinPlate(hero, preset, accent, poseSign);
+    this.cutinLayer.add(plate);
+    this._tween({
+      targets: plate,
+      alpha: { from: 0, to: 1 },
+      y: { from: s(24), to: 0 },
+      duration: preset.timing.ribbon,
+      delay: preset.timing.bgFade + preset.timing.figure * 0.4,
+      ease: 'Back.easeOut'
+    });
+
+    // ── 5. 파티클 — 분위기 색. 컨테이너 하나를 부풀려 트윈 1개로 끝낸다
+    const sparks = this._buildMoodSparks(preset);
+    if (sparks) {
+      this.cutinLayer.add(sparks);
+      this._tween({
+        targets: sparks,
+        scale: { from: 0.15, to: 1 },
+        alpha: { from: 1, to: 0 },
+        duration: Math.min(unit, 1400),
+        delay: preset.timing.bgFade,
+        ease: 'Cubic.easeOut'
+      });
+    }
+
+    // ── 6. 전용 대사 타이프라이터 (SSR 전용, 트윈이 아니라 타이머)
+    if (!brief && preset.timing.quote > 0) {
+      this._startQuote(plate, preset, unit);
+    }
+
+    this.scene.cameras.main.shake(brief ? 160 : 260, brief ? 0.005 : 0.008);
   }
 
-  /** @private 컷인 인물. 전신 시트가 없으면 포트레이트를 확대해 쓴다 */
-  _createCutinFigure(hero, cult) {
-    const key = this._cutinTextureKey && this.scene.textures.exists(this._cutinTextureKey)
-      ? this._cutinTextureKey
+  /** @private 교단 배경 — 텍스처가 있으면 cover-fit, 없으면 교단색 방사 그라디언트 */
+  _buildCutinBackdrop(preset, accent) {
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const group = this.scene.add.container(0, 0).setAlpha(0);
+
+    group.add(this.scene.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.92));
+
+    const key = preset.bg;
+    if (key && this.scene.textures.exists(key)) {
+      const source = this.scene.textures.get(key).getSourceImage();
+      if (source && source.width) {
+        const scale = Math.max(GAME_WIDTH / source.width, GAME_HEIGHT / source.height);
+        const image = this.scene.add.image(cx, cy, key)
+          .setDisplaySize(source.width * scale, source.height * scale)
+          .setAlpha(0.45)
+          .setTint(accent);
+        group.add(image);
+      }
+    } else {
+      // 폴백 — 교단색이 중심에서 퍼지는 원 6겹. 아트가 없어도 "그 교단의 자리" 로 읽힌다
+      const g = this.scene.add.graphics();
+      for (let i = 6; i >= 1; i--) {
+        g.fillStyle(accent, 0.05 * i);
+        g.fillCircle(cx, s(CUTIN.burstY), (s(700) * i) / 6);
+      }
+      group.add(g);
+    }
+
+    // 상하 레터박스 — 컷인이라는 신호
+    const bars = this.scene.add.graphics();
+    bars.fillStyle(0x000000, 0.92);
+    bars.fillRect(0, 0, GAME_WIDTH, s(96));
+    bars.fillRect(0, GAME_HEIGHT - s(96), GAME_WIDTH, s(96));
+    group.add(bars);
+
+    return group;
+  }
+
+  /** @private 교단 문장 — icon_cult_* 텍스처, 없으면 벡터 룬 문장 */
+  _buildCultEmblem(preset, accent) {
+    const cx = GAME_WIDTH / 2;
+    const cy = s(CUTIN.emblemY);
+    const size = s(CUTIN.emblemSize);
+
+    if (preset.emblem && this.scene.textures.exists(preset.emblem)) {
+      return this.scene.add.image(cx, cy, preset.emblem)
+        .setDisplaySize(size, size)
+        .setTint(accent)
+        .setAlpha(0);
+    }
+
+    // 폴백 — 교단 아트가 없는 교단(balance/chaos/nature 등)용 룬 문장.
+    // 소환진과 같은 어휘를 써서 이질감이 없게 한다.
+    const g = this.scene.add.graphics({ x: cx, y: cy }).setAlpha(0);
+    const r = size / 2;
+    g.lineStyle(s(4), accent, 0.9);
+    g.strokeCircle(0, 0, r);
+    g.lineStyle(s(2), accent, 0.6);
+    g.strokeCircle(0, 0, r * 0.72);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      g.lineBetween(
+        Math.cos(a) * r * 0.72, Math.sin(a) * r * 0.72,
+        Math.cos(a) * r, Math.sin(a) * r
+      );
+    }
+    g.lineStyle(s(3), accent, 0.75);
+    [0, Math.PI / 3, -Math.PI / 3].forEach((rot) => {
+      const pts = [0, 1, 2].map((k) => {
+        const a = rot + (k / 3) * Math.PI * 2 - Math.PI / 2;
+        return { x: Math.cos(a) * r * 0.52, y: Math.sin(a) * r * 0.52 };
+      });
+      g.beginPath();
+      g.moveTo(pts[0].x, pts[0].y);
+      pts.slice(1).forEach((p) => g.lineTo(p.x, p.y));
+      g.closePath();
+      g.strokePath();
+    });
+    return g;
+  }
+
+  /** @private 등장 방식별 전신 트윈 */
+  _applyEnterTween(figure, preset, poseSign) {
+    const base = {
+      targets: figure,
+      duration: preset.timing.figure,
+      delay: preset.timing.bgFade * 0.6,
+      ease: 'Cubic.easeOut'
+    };
+
+    if (preset.enter === CUTIN_ENTER.BURST) {
+      this._tween({ ...base, alpha: { from: 0, to: 1 }, scale: { from: 1.22, to: 1 }, ease: 'Back.easeOut' });
+      return;
+    }
+    if (preset.enter === CUTIN_ENTER.RISE) {
+      this._tween({ ...base, alpha: { from: 0, to: 1 }, y: { from: s(150), to: 0 } });
+      return;
+    }
+    // slide — 서는 쪽 바깥에서 안으로 들어온다
+    this._tween({ ...base, alpha: { from: 0, to: 1 }, x: { from: poseSign * s(190), to: 0 } });
+  }
+
+  /** @private 이름 · 등급 · 교단 리본 · 대사 자리를 한 컨테이너에 담는다 */
+  _buildCutinPlate(hero, preset, accent, poseSign) {
+    const cx = GAME_WIDTH / 2 - poseSign * s(CUTIN.textShiftX);
+    const group = this.scene.add.container(0, 0).setAlpha(0);
+
+    // 타이포 뒤 어두운 판 — 교단 배경이 밝으면(올림푸스·타카마가하라) 글자가 묻힌다.
+    // 위에서 아래로 옅어지는 밴드 5겹으로 경계 없이 녹인다.
+    const plate = this.scene.add.graphics();
+    const plateTop = s(CUTIN.gradeY - 66);
+    const plateH = s(CUTIN.quoteY + 96) - plateTop;
+    for (let i = 0; i < 5; i++) {
+      plate.fillStyle(DESIGN.colors.bg.primary, 0.62 - i * 0.11);
+      plate.fillRect(0, plateTop + (plateH / 5) * i, GAME_WIDTH, plateH / 5 + 1);
+    }
+    group.add(plate);
+
+    const gradeColor = preset.rarity === 'SR'
+      ? `#${DESIGN.colors.rarity[3].toString(16).padStart(6, '0')}`
+      : `#${DESIGN.colors.brand.accent.toString(16).padStart(6, '0')}`;
+
+    group.add(this.scene.add.text(cx, s(CUTIN.gradeY), preset.rarity, ts('display.xl', {
+      color: gradeColor
+    })).setOrigin(0.5));
+
+    group.add(this.scene.add.text(cx, s(CUTIN.nameY), hero.name || '???', ts('title', {
+      color: DESIGN.colors.text.primary
+    })).setOrigin(0.5));
+
+    // 교단 리본 — 교단색 밴드 + 교단 이름
+    const ribbonW = s(460);
+    const ribbon = this.scene.add.graphics();
+    ribbon.fillStyle(accent, 0.9);
+    ribbon.fillRect(cx - ribbonW / 2, s(CUTIN.bandY), ribbonW, s(4));
+    group.add(ribbon);
+
+    const cultName = this._cultLabel(preset.cultId);
+    if (cultName) {
+      group.add(this.scene.add.text(cx, s(CUTIN.bandY + 22), cultName, ts('label', {
+        color: DESIGN.colors.text.secondary
+      })).setOrigin(0.5));
+    }
+
+    // 대사 자리 — 타이프라이터가 채운다
+    this.quoteText = this.scene.add.text(cx, s(CUTIN.quoteY + 20), '', ts('body', {
+      color: DESIGN.colors.text.primary,
+      align: 'center',
+      wordWrap: { width: s(CUTIN.quoteWidth) }
+    })).setOrigin(0.5, 0);
+    group.add(this.quoteText);
+
+    return group;
+  }
+
+  /** @private 교단 표시명 */
+  _cultLabel(cultId) {
+    if (!cultId) return null;
+    const cult = (CULTS_DATA.cults || {})[cultId];
+    return (cult && (cult.nameKr || cult.name)) || null;
+  }
+
+  /**
+   * @private 분위기 색 파티클.
+   * 점을 최종 위치에 미리 놓고 컨테이너만 부풀린다 — 트윈 1개로 방사 폭발이 나온다.
+   */
+  _buildMoodSparks(preset) {
+    const colors = MOOD_PARTICLE_COLORS[preset.particles] || MOOD_PARTICLE_COLORS.mystic;
+    const count = Math.min(this.plan.particleCount, 36);
+    if (count <= 0) return null;
+
+    const group = this.scene.add.container(GAME_WIDTH / 2, s(CUTIN.burstY));
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.4;
+      const radius = s(220 + Math.random() * 380);
+      group.add(this.scene.add.circle(
+        Math.cos(angle) * radius,
+        Math.sin(angle) * radius,
+        s(2 + Math.random() * 3),
+        colors[i % colors.length],
+        0.95
+      ));
+    }
+    return group;
+  }
+
+  /** @private 전용 대사 타이프라이터. 트윈이 아니라 타이머로 돌린다 */
+  _startQuote(plate, preset, unit) {
+    const text = resolveQuoteText(preset.quote);
+    if (!text || !this.quoteText) return;
+
+    const target = this.quoteText;
+    const typeMs = Math.min(preset.timing.quote, Math.max(400, unit - preset.timing.bgFade));
+    const steps = Math.max(1, Math.min(text.length, 60));
+    const interval = typeMs / steps;
+    let step = 0;
+
+    this._stopQuote();
+    this._quoteTimer = this.scene.time.addEvent({
+      delay: interval,
+      repeat: steps - 1,
+      callback: () => {
+        if (this.destroyed || !target.scene) return;
+        step += 1;
+        target.setText(typewriterSlice(text, step / steps));
+      }
+    });
+    this.timers.push(this._quoteTimer);
+  }
+
+  /**
+   * @private 타이프라이터 타이머만 멈춘다.
+   * `quoteText` 는 건드리지 않는다 — _startQuote 가 자기 참조를 스스로 지우게 되기 때문이다.
+   * 표시물 자체는 cutinLayer.removeAll() 이 정리한다.
+   */
+  _stopQuote() {
+    if (this._quoteTimer) {
+      if (this._quoteTimer.remove) this._quoteTimer.remove(false);
+      this._quoteTimer = null;
+    }
+  }
+
+  /**
+   * @private 컷인 인물. 전신 시트가 없으면 포트레이트를 확대해 쓴다. 장비는 아이콘 폴백.
+   * 반환 컨테이너의 원점은 (0,0) 이라 등장 트윈이 x/y 를 그대로 밀 수 있다.
+   */
+  _createCutinFigure(hero, accent, poseSign = 1) {
+    const anchorX = GAME_WIDTH / 2 + poseSign * s(CUTIN.poseOffsetX);
+
+    if (hero.type === 'equipment') {
+      const halo = this.scene.add.circle(anchorX, s(CUTIN.burstY), s(240), accent, 0.22);
+      const icon = this.scene.add.text(anchorX, s(CUTIN.burstY), hero.slotIcon || '⚔️', {
+        fontSize: `${Math.round(s(CUTIN.figureH * 0.42))}px`
+      }).setOrigin(0.5);
+      return this.scene.add.container(0, 0, [halo, icon]);
+    }
+
+    const owned = this._cutinTextures && this._cutinTextures.get(hero.id);
+    const key = owned && this.scene.textures.exists(owned)
+      ? owned
       : HeroAssetLoader.ensureTexture(this.scene, getCharacterOrHero(hero.id) || hero);
     if (!key) return null;
 
     const source = this.scene.textures.get(key).getSourceImage();
     if (!source || !source.width || !source.height) return null;
 
-    const isFullbody = key === this._cutinTextureKey;
+    const isFullbody = key === owned;
     const targetH = isFullbody ? s(CUTIN.figureH) : s(CUTIN.figureH * 0.72);
     const scale = Math.min(targetH / source.height, s(CUTIN.figureMaxW) / source.width);
 
-    const image = this.scene.add.image(GAME_WIDTH / 2, s(CUTIN.figureBaseY), key)
+    const image = this.scene.add.image(anchorX, s(CUTIN.figureBaseY), key)
       .setOrigin(0.5, 1)
       .setDisplaySize(source.width * scale, source.height * scale);
 
     // 인물 뒤 교단색 후광
-    const halo = this.scene.add.circle(GAME_WIDTH / 2, s(CUTIN.burstY), s(240), cult, 0.22);
-    const group = this.scene.add.container(0, 0, [halo, image]);
-    return group;
+    const halo = this.scene.add.circle(anchorX, s(CUTIN.burstY), s(240), accent, 0.22);
+    return this.scene.add.container(0, 0, [halo, image]);
   }
 
   // ================================================================
@@ -984,7 +1421,7 @@ export class GachaResultOverlay {
 
   /** @private 교단 색. 미상이면 등급 색으로 대신한다 */
   _cultColorOf(hero) {
-    if (!hero) return this.accent;
+    if (!hero || hero.type === 'equipment') return this.accent; // 장비는 교단이 없다
     const full = getCharacterOrHero(hero.id) || hero;
     const cult = full.cult || full.cultId || hero.cult || null;
     return cult ? getCultColor(cult) : this.accent;

@@ -332,19 +332,24 @@ export class EquipmentSystem {
    * @param {string} slotType - 슬롯 타입
    * @param {string} rarity - 등급
    * @param {Object} options - 추가 옵션
+   * @param {string} [options.name] - 이름 강제 지정
+   * @param {Object} [options.stats] - 스탯 강제 지정 (없으면 절차적 생성). 가챠 카탈로그
+   *   (equipment.json) 항목을 그대로 지급할 때 사용 — GachaSystem.pullEquipment() 참고.
+   * @param {string} [options.definitionId] - equipment.json 원본 항목 id (카탈로그 지급 시 참조용)
    * @returns {Object} 생성된 장비
    */
   static createEquipment(slotType, rarity, options = {}) {
     const id = `equip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // 기본 스탯 생성
-    const baseStats = this.generateBaseStats(slotType, rarity);
+    // 기본 스탯 생성 — options.stats 가 있으면 카탈로그 값을 그대로 쓴다 (절차적 생성 생략)
+    const baseStats = options.stats || this.generateBaseStats(slotType, rarity);
 
     const equipment = {
       id,
       slotType,
       rarity,
       name: options.name || this.generateEquipmentName(slotType, rarity),
+      definitionId: options.definitionId || null,
       stats: baseStats,
       enhanceLevel: 0,
       enhancedStats: {},

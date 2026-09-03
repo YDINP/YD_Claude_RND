@@ -12,11 +12,13 @@
  * ①②는 asset-manifest 의 lazyTextures / fullbody 버킷이라 **없을 수 있다**.
  * 없으면 교단색 방사 그라디언트와 포트레이트 확대로 내려가고, 레이아웃은 그대로 성립한다.
  *
- * ## 배너 스트립이 표시 전용인 이유
- * `GachaSystem.pull()` 은 배너 인자를 받지 않는다. 뽑기는 전역 풀 하나에서 나오고
- * `determinePickupCharacter()` 는 pull 경로에서 호출되지 않는다. 그래서 스트립 선택은
- * **보여주는 배너만 바꾼다**. 다만 선택 시 `GachaSystem.setCurrentBanner()` 를 불러
- * 시스템이 배너 라우팅을 지원하게 되는 날 UI 는 이미 배선돼 있게 해 둔다.
+ * ## 배너 스트립 선택이 실제 뽑기에 반영되는 경로
+ * 스트립 선택은 `this.selectedId`(및 표시용 `GachaSystem.setCurrentBanner()`)를 바꾼다.
+ * 호출부(GachaScene/GachaPopup)가 `bannerPanel.selectedId`를 읽어
+ * `GachaSystem.pull(count, paymentType, { bannerId })`에 넘기면, 픽업 배너의 SSR 판정이
+ * `determinePickupCharacter()`로 라우팅되고 픽업 천장 카운터가 배너별로 분리 저장된다
+ * (`gacha.banners[bannerId].pickupPityCounter`). `pull()`이 `bannerId`를 받지 않으면
+ * 'standard'로 취급해 기존 동작(픽업 없음)을 그대로 유지한다.
  *
  * 주의: gameConfig/designSystem 값을 모듈 스코프에서 평가하지 않는다(순환 import TDZ 방지).
  */

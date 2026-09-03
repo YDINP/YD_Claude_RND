@@ -26,6 +26,12 @@ export const TutorialEvents = {
   COMPLETED: 'tutorial:completed',
 };
 
+/** 스텝 트랙 — main 은 계정 진행, battle 은 첫 전투 안에서만 도는 조작 안내 */
+export const TUTORIAL_TRACK = {
+  MAIN: 'main',
+  BATTLE: 'battle',
+};
+
 /** 커밋 모드 (시스템 문서 §6-1) */
 export const COMPLETION_MODE = {
   PLAYED: 'played',
@@ -58,9 +64,24 @@ export class TutorialManager {
 
   // ==================== 데이터 접근 ====================
 
-  /** tutorial.json 의 steps 배열 */
-  static getSteps() {
-    return tutorialData.steps || [];
+  /**
+   * 스텝 배열. 기본은 메인 트랙(T-01~T-12)이며, 완주 판정·체인 계산은 항상 메인 기준이다.
+   * @param {'main'|'battle'|'all'} track
+   */
+  static getSteps(track = TUTORIAL_TRACK.MAIN) {
+    const all = tutorialData.steps || [];
+    if (track === 'all') return all;
+    return all.filter((step) => (step.track || TUTORIAL_TRACK.MAIN) === track);
+  }
+
+  /** 모든 트랙의 스텝 (세이브 마이그레이션·정합성 검사용) */
+  static getAllSteps() {
+    return this.getSteps('all');
+  }
+
+  /** 전투 트랙 스텝 (B-1~B-5) */
+  static getBattleSteps() {
+    return this.getSteps(TUTORIAL_TRACK.BATTLE);
   }
 
   /**
@@ -68,13 +89,23 @@ export class TutorialManager {
    * 목록을 새로 하드코딩하지 않고 tutorial.json 에서 읽는다.
    * `SaveManager.TUTORIAL_STEP_IDS` 와 일치해야 하며, 이 불변식은 tests/data/tutorial.test.js 가 지킨다.
    */
-  static getStepIds() {
-    return this.getSteps().map((step) => step.id);
+  static getStepIds(track = TUTORIAL_TRACK.MAIN) {
+    return this.getSteps(track).map((step) => step.id);
   }
 
-  /** 스텝 정의 조회 */
+  /** 모든 트랙의 스텝 ID (SaveManager.TUTORIAL_STEP_IDS 와 동일해야 한다) */
+  static getAllStepIds() {
+    return this.getStepIds('all');
+  }
+
+  /** 스텝 정의 조회 (트랙 무관) */
   static getStep(stepId) {
-    return this.getSteps().find((step) => step.id === stepId) || null;
+    return this.getAllSteps().find((step) => step.id === stepId) || null;
+  }
+
+  /** 스텝의 트랙 */
+  static getTrack(stepId) {
+    return this.getStep(stepId)?.track || TUTORIAL_TRACK.MAIN;
   }
 
   /** 강제 스텝 여부 (T-03/T-05/T-07/T-09 4개뿐) */
@@ -185,6 +216,28 @@ export class TutorialManager {
   static getCurrentStep(save = null) {
     const id = this.getCurrentStepId(save);
     return id ? this.getStep(id) : null;
+  }
+
+  /**
+   * 전투 트랙의 현재 스텝 ID.
+   * 메인 트랙의 currentStep 과 독립적이며, 완료되지 않은 첫 B 스텝을 돌려준다.
+   * 전부 완료됐으면 null (첫 전투 1회만 재생된다).
+   */
+  static getCurrentBattleStepId(save = null) {
+    const state = this.getState(save);
+    return this.getStepIds(TUTORIAL_TRACK.BATTLE)
+      .find((id) => !state.completedSteps.includes(id)) || null;
+  }
+
+  /** 전투 트랙 현재 스텝 정의 */
+  static getCurrentBattleStep(save = null) {
+    const id = this.getCurrentBattleStepId(save);
+    return id ? this.getStep(id) : null;
+  }
+
+  /** 전투 트랙 전체 완료 여부 */
+  static isBattleTutorialDone(save = null) {
+    return this.getCurrentBattleStepId(save) === null;
   }
 
   // ==================== 진행 제어 ====================
@@ -327,19 +380,23 @@ export class TutorialManager {
       }
     });
 
-    // 7. 다음 스텝 — nextStepId 우선, 이미 완료됐으면 미완료 첫 스텝으로 보정
-    const allIds = this.getStepIds();
-    const allDone = allIds.every((id) => tutorial.completedSteps.includes(id));
-    if (allDone) {
-      tutorial.completed = true;
-      tutorial.completedAt = tutorial.completedAt || Date.now();
-      tutorial.currentStep = null;
-    } else {
-      const next = step.nextStepId;
-      tutorial.currentStep =
-        next && !tutorial.completedSteps.includes(next)
-          ? next
-          : allIds.find((id) => !tutorial.completedSteps.includes(id)) || null;
+    // 7. 다음 스텝 — 메인 트랙만 currentStep/completed 를 움직인다.
+    //    전투 트랙(B-*)은 첫 전투 안에서만 도는 별도 안내라 계정 진행도를 건드리지 않는다.
+    const isMainTrack = (step.track || TUTORIAL_TRACK.MAIN) === TUTORIAL_TRACK.MAIN;
+    if (isMainTrack) {
+      const allIds = this.getStepIds();
+      const allDone = allIds.every((id) => tutorial.completedSteps.includes(id));
+      if (allDone) {
+        tutorial.completed = true;
+        tutorial.completedAt = tutorial.completedAt || Date.now();
+        tutorial.currentStep = null;
+      } else {
+        const next = step.nextStepId;
+        tutorial.currentStep =
+          next && !tutorial.completedSteps.includes(next)
+            ? next
+            : allIds.find((id) => !tutorial.completedSteps.includes(id)) || null;
+      }
     }
     if (tutorial.skippedSteps.length > 0) tutorial.skipped = true;
     tutorial.startedAt = tutorial.startedAt || Date.now();
@@ -473,6 +530,7 @@ export class TutorialManager {
    * @returns {string[]} 자동 커밋된 스텝 ID 목록
    */
   static evaluate() {
+    // 메인 트랙 전용. 전투 트랙은 화면 이벤트(notify)로만 진행한다.
     const committed = [];
     const limit = this.getSteps().length;
 
@@ -497,19 +555,27 @@ export class TutorialManager {
    * @param {'popup_open'|'overlay_dismissed'|'cutscene_end'|'party_saved'} type
    * @param {object} payload
    */
-  static notify(type, payload = {}) {
+  static notify(type, payload = {}, track = null) {
     const save = SaveManager.load();
-    const step = this.getCurrentStep(save);
-    if (!step) return null;
 
-    const cond = step.completionCondition || {};
-    if (cond.type !== type) return null;
+    // 전투 트랙이 먼저다. 전투 중 통지는 그 화면의 안내를 끝내야 한다.
+    const candidates = track === TUTORIAL_TRACK.MAIN
+      ? [this.getCurrentStep(save)]
+      : track === TUTORIAL_TRACK.BATTLE
+        ? [this.getCurrentBattleStep(save)]
+        : [this.getCurrentBattleStep(save), this.getCurrentStep(save)];
 
-    if (type === 'popup_open' && cond.popupKey && cond.popupKey !== payload.popupKey) return null;
-    if (type === 'cutscene_end' && cond.sceneId && cond.sceneId !== payload.sceneId) return null;
+    for (const step of candidates) {
+      if (!step) continue;
+      const cond = step.completionCondition || {};
+      if (cond.type !== type) continue;
+      if (type === 'popup_open' && cond.popupKey && cond.popupKey !== payload.popupKey) continue;
+      if (type === 'cutscene_end' && cond.sceneId && cond.sceneId !== payload.sceneId) continue;
 
-    const mode = payload.skipped ? COMPLETION_MODE.SKIPPED : COMPLETION_MODE.PLAYED;
-    return this.commitStep(step.id, mode);
+      const mode = payload.skipped ? COMPLETION_MODE.SKIPPED : COMPLETION_MODE.PLAYED;
+      return this.commitStep(step.id, mode);
+    }
+    return null;
   }
 
   // ==================== 이벤트 구독 ====================

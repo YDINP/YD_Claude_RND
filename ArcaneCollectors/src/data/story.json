@@ -1,7 +1,7 @@
 {
   "_meta": {
     "version": "1.0",
-    "lastUpdated": "2026-09-02",
+    "lastUpdated": "2026-09-03",
     "schema": "NARRATIVE_STORY_MODE.md v1.0",
     "note": "컷씬 대본 SSOT (NARRATIVE_STORY_MODE.md §2/§3/§5). stages.json의 story_intro/story_clear는 스테이지 카드용 요약 캡션으로 별도 유지.",
     "speakerTypes": [
@@ -59,7 +59,11 @@
       "first_hero",
       "hero_ascend",
       "hero_evolve"
-    ]
+    ],
+    "lineFields": {
+      "speakerSide": "'left' | 'right' (선택). 생략 시 등장 순 교대로 자동 배정",
+      "expression": "표정 키 (선택). 자산이 준비되기 전에는 무시된다"
+    }
   },
   "scenes": [
     {
@@ -93,6 +97,7 @@
           "speakerType": "unknown",
           "portraitId": null,
           "text": "\"거기 있는 사람. 그 빛에 손대지 마.\"",
+          "speakerSide": "left",
           "emotion": "tense",
           "revealAs": "npc_registrar"
         },
@@ -101,6 +106,7 @@
           "speakerType": "unknown",
           "portraitId": null,
           "text": "\"그건 미정령이야. 이름도, 형태도, 갈 곳도 없는 것. 균열이 흘린 조각이지.\"",
+          "speakerSide": "left",
           "revealAs": "npc_registrar"
         },
         {
@@ -108,6 +114,7 @@
           "speakerType": "unknown",
           "portraitId": null,
           "text": "\"…그런데 지금, 그게 네 손을 잡았군.\"",
+          "speakerSide": "left",
           "revealAs": "npc_registrar"
         },
         {
@@ -121,13 +128,15 @@
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"길드에 온 걸 환영해. 나는 등록관이야. 네가 뭘 주워오든 장부에 적는 게 내 일이지.\"",
+          "speakerSide": "left",
           "emotion": "calm"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"가라. 숲이 이상하다는 신고가 들어와 있어. 하나만 기억해 — 네가 그걸 어디로 데려가느냐가, 그게 무엇이 될지를 정한다.\""
+          "text": "\"가라. 숲이 이상하다는 신고가 들어와 있어. 하나만 기억해 — 네가 그걸 어디로 데려가느냐가, 그게 무엇이 될지를 정한다.\"",
+          "speakerSide": "left"
         }
       ]
     },
@@ -155,26 +164,30 @@
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"고블린 정도야 흔해. 문제는 그것들이 왜 여기까지 내려왔느냐지.\""
+          "text": "\"고블린 정도야 흔해. 문제는 그것들이 왜 여기까지 내려왔느냐지.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "고블린",
           "speakerType": "enemy",
           "portraitId": null,
           "text": "\"…빛나. 저 빛… 우리 거.\"",
+          "speakerSide": "left",
           "emotion": "tense"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"봤지? 저것들도 미정령을 쫓고 있어. 배가 고파서가 아니야.\""
+          "text": "\"봤지? 저것들도 미정령을 쫓고 있어. 배가 고파서가 아니야.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"균열 근처의 것들은 전부 굶주려 있어. 신성이 빠져나간 자리는 허기부터 채우려 들거든.\""
+          "text": "\"균열 근처의 것들은 전부 굶주려 있어. 신성이 빠져나간 자리는 허기부터 채우려 들거든.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "",
@@ -208,19 +221,22 @@
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"…조각이군. 미정령의 파편이야. 하나로는 아무것도 안 돼.\""
+          "text": "\"…조각이군. 미정령의 파편이야. 하나로는 아무것도 안 돼.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"서른 개. 서른 개를 모으면 그건 이름을 가질 수 있어.\""
+          "text": "\"서른 개. 서른 개를 모으면 그건 이름을 가질 수 있어.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"이름이 생기면 그건 더 이상 '그것'이 아니야. '누군가'가 되지.\"",
+          "speakerSide": "left",
           "emotion": "calm"
         },
         {
@@ -233,7 +249,8 @@
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"장부에 적어둘게. 첫 조각, 확인.\""
+          "text": "\"장부에 적어둘게. 첫 조각, 확인.\"",
+          "speakerSide": "left"
         }
       ]
     },
@@ -261,26 +278,30 @@
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"그림자 수를 세지 마. 세다 보면 하나가 늘어.\""
+          "text": "\"그림자 수를 세지 마. 세다 보면 하나가 늘어.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "야생 늑대",
           "speakerType": "enemy",
           "portraitId": null,
-          "text": "\"……\""
+          "text": "\"……\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"늑대가 무리를 흩뜨렸어. 우두머리를 잃었거나 — 더 큰 걸 피해 도망친 거야.\"",
+          "speakerSide": "left",
           "emotion": "tense"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"숲 안쪽에 뭔가 앉아 있어. 그게 뭐든, 오늘은 아직 만나지 마.\""
+          "text": "\"숲 안쪽에 뭔가 앉아 있어. 그게 뭐든, 오늘은 아직 만나지 마.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "",
@@ -314,26 +335,30 @@
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"조각이 또 늘었군. …이 속도면 곧 서른이야. 아까부터 네 옆에서 검을 휘두르는 그 빛도, 슬슬 제 이름을 갖겠어.\""
+          "text": "\"조각이 또 늘었군. …이 속도면 곧 서른이야. 아까부터 네 옆에서 검을 휘두르는 그 빛도, 슬슬 제 이름을 갖겠어.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"미리 말해두는데, 각성은 되돌릴 수 없어.\"",
+          "speakerSide": "left",
           "emotion": "calm"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"이름 없는 빛으로 남는 게 편했을지도 몰라. 이름이 붙는 순간 잃을 게 생기니까.\""
+          "text": "\"이름 없는 빛으로 남는 게 편했을지도 몰라. 이름이 붙는 순간 잃을 게 생기니까.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"…그래도 할 거지? 그래. 나도 그랬어.\""
+          "text": "\"…그래도 할 거지? 그래. 나도 그랬어.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "",
@@ -374,6 +399,7 @@
           "speakerType": "hero",
           "portraitId": "base_iris",
           "text": "\"…아. 손이 있네. 손이 있으면 검을 쥘 수 있잖아.\"",
+          "speakerSide": "right",
           "emotion": "awe"
         },
         {
@@ -381,32 +407,37 @@
           "speakerType": "hero",
           "portraitId": "base_iris",
           "text": "\"이름? 아이리스. 방금 정했어. 네가 준 게 아니라 내가 고른 거야.\"",
+          "speakerSide": "right",
           "emotion": "resolute"
         },
         {
           "speaker": "아이리스",
           "speakerType": "hero",
           "portraitId": "base_iris",
-          "text": "\"말해두는데, 나는 네 것이 아니야. 내 힘은 내 것이다. 그건 안 바뀌어.\""
+          "text": "\"말해두는데, 나는 네 것이 아니야. 내 힘은 내 것이다. 그건 안 바뀌어.\"",
+          "speakerSide": "right"
         },
         {
           "speaker": "아이리스",
           "speakerType": "hero",
           "portraitId": "base_iris",
           "text": "\"그래도 — 잡아줘서 고마워. 그건 인정할게.\"",
+          "speakerSide": "right",
           "emotion": "calm"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"…성격 있는 애가 나왔군. 장부에 뭐라고 적지.\""
+          "text": "\"…성격 있는 애가 나왔군. 장부에 뭐라고 적지.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"'기본영웅 제1호, 아이리스.' 축하해. 이제 넌 진짜 수집가야.\"",
+          "speakerSide": "left",
           "emotion": "calm"
         }
       ]
@@ -435,19 +466,22 @@
           "speaker": "아이리스",
           "speakerType": "hero",
           "portraitId": "base_iris",
-          "text": "\"이거 버섯 맞아? 숨 쉬는 소리가 나는데.\""
+          "text": "\"이거 버섯 맞아? 숨 쉬는 소리가 나는데.\"",
+          "speakerSide": "right"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"균열이 흘린 신성이 아무 데나 고이면 저렇게 돼. 나무든 돌이든 상관없어.\""
+          "text": "\"균열이 흘린 신성이 아무 데나 고이면 저렇게 돼. 나무든 돌이든 상관없어.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"미정령이 될 수도 있었던 것들이야. 다만 아무도 손을 잡아주지 않았을 뿐이지.\"",
+          "speakerSide": "left",
           "emotion": "sad"
         },
         {
@@ -455,13 +489,15 @@
           "speakerType": "hero",
           "portraitId": "base_iris",
           "text": "\"…그럼 얘들은 뭐가 되고 싶었던 건데.\"",
+          "speakerSide": "right",
           "emotion": "sad"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"몰라. 그래서 슬픈 거야.\""
+          "text": "\"몰라. 그래서 슬픈 거야.\"",
+          "speakerSide": "left"
         }
       ]
     },
@@ -489,19 +525,22 @@
           "speaker": "아이리스",
           "speakerType": "hero",
           "portraitId": "base_iris",
-          "text": "\"…빛이었어. 우리랑 같은.\""
+          "text": "\"…빛이었어. 우리랑 같은.\"",
+          "speakerSide": "right"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"그래. 방향이 없었을 뿐이야.\""
+          "text": "\"그래. 방향이 없었을 뿐이야.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"그게 기관이 존재하는 이유야, 수집가. 힘을 주는 곳이 아니라 — 방향을 주는 곳이지.\"",
+          "speakerSide": "left",
           "emotion": "calm"
         },
         {
@@ -509,13 +548,15 @@
           "speakerType": "hero",
           "portraitId": "base_iris",
           "text": "\"방향이라. 난 이미 정했는데.\"",
+          "speakerSide": "right",
           "emotion": "resolute"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"…그럴까. 문 앞에 서면 다들 그렇게 말하더라.\""
+          "text": "\"…그럴까. 문 앞에 서면 다들 그렇게 말하더라.\"",
+          "speakerSide": "left"
         }
       ]
     },
@@ -544,6 +585,7 @@
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"들었지. 등록이 없으면 저 안쪽은 못 지나가. 그리고 등록은 저기서 하는 게 아니라 — 여기서 해.\"",
+          "speakerSide": "left",
           "emotion": "tense"
         },
         {
@@ -556,45 +598,52 @@
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"여기부터는 내 일이 아니야. 나는 적기만 해.\""
+          "text": "\"여기부터는 내 일이 아니야. 나는 적기만 해.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"고를 사람은 둘이지. 문 앞에 설 자와, 그 손을 잡고 온 자.\"",
+          "speakerSide": "left",
           "emotion": "calm"
         },
         {
           "speaker": "아이리스",
           "speakerType": "hero",
           "portraitId": "base_iris",
-          "text": "\"…열두 개 전부 나한테 열려 있는 건 아니지?\""
+          "text": "\"…열두 개 전부 나한테 열려 있는 건 아니지?\"",
+          "speakerSide": "right"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"그래. 세 개야. 나머지 아홉은 너를 받지 않아. 억지로 넣으면 부서지고.\""
+          "text": "\"그래. 세 개야. 나머지 아홉은 너를 받지 않아. 억지로 넣으면 부서지고.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "아이리스",
           "speakerType": "hero",
           "portraitId": "base_iris",
-          "text": "\"잔인하네. 근데 차라리 나아. 전부 열려 있었으면 못 골랐을 거야.\""
+          "text": "\"잔인하네. 근데 차라리 나아. 전부 열려 있었으면 못 골랐을 거야.\"",
+          "speakerSide": "right"
         },
         {
           "speaker": "아이리스",
           "speakerType": "hero",
           "portraitId": "base_iris",
           "text": "\"…수집가. 네가 정해. 나는 네가 정한 문으로 걸어들어갈 거야.\"",
+          "speakerSide": "right",
           "emotion": "resolute"
         },
         {
           "speaker": "아이리스",
           "speakerType": "hero",
           "portraitId": "base_iris",
-          "text": "\"대신 그다음부터는 내 방식대로 할 거야. 그건 각오해.\""
+          "text": "\"대신 그다음부터는 내 방식대로 할 거야. 그건 각오해.\"",
+          "speakerSide": "right"
         }
       ]
     },
@@ -623,32 +672,37 @@
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"…이건 보고에 없던 건데.\"",
+          "speakerSide": "left",
           "emotion": "tense"
         },
         {
           "speaker": "아이리스",
           "speakerType": "hero",
           "portraitId": "base_iris",
-          "text": "\"벽에 글자가 있어. 읽을 수는 없는데… 읽고 싶어져.\""
+          "text": "\"벽에 글자가 있어. 읽을 수는 없는데… 읽고 싶어져.\"",
+          "speakerSide": "right"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"손대지 마. 골렘이 움직인다.\"",
+          "speakerSide": "left",
           "emotion": "tense"
         },
         {
           "speaker": "석상 골렘",
           "speakerType": "enemy",
           "portraitId": null,
-          "text": "\"…등록되지 않은 자. …통과 불가.\""
+          "text": "\"…등록되지 않은 자. …통과 불가.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"'등록'? …저게 지금 뭐라고 했지.\"",
+          "speakerSide": "left",
           "emotion": "awe"
         }
       ]
@@ -677,26 +731,30 @@
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"…길드 문장이야. 그것도 아주 오래된 판본.\""
+          "text": "\"…길드 문장이야. 그것도 아주 오래된 판본.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "아이리스",
           "speakerType": "hero",
           "portraitId": "base_iris",
-          "text": "\"당신네 건물이었어?\""
+          "text": "\"당신네 건물이었어?\"",
+          "speakerSide": "right"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"우리 건물이었던 적이 있었지. 수집가가 지금보다 훨씬 많던 시절에.\"",
+          "speakerSide": "left",
           "emotion": "sad"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"저 골렘은 문지기였어. 등록증 없는 자를 막는 게 일이었고 — 그 일을 아직 하고 있었던 거야.\""
+          "text": "\"저 골렘은 문지기였어. 등록증 없는 자를 막는 게 일이었고 — 그 일을 아직 하고 있었던 거야.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "",
@@ -709,6 +767,7 @@
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"숲 안쪽으로 가. 신고의 진짜 원인이 거기 있어.\"",
+          "speakerSide": "left",
           "emotion": "tense"
         }
       ]
@@ -738,38 +797,44 @@
           "speakerType": "enemy",
           "portraitId": null,
           "text": "\"인간이냐. 이 숲에서 나가라.\"",
+          "speakerSide": "left",
           "emotion": "angry"
         },
         {
           "speaker": "고블린 왕",
           "speakerType": "enemy",
           "portraitId": null,
-          "text": "\"여기는 이제 우리 것이다. 신이 버린 땅은, 주운 자의 것이니까.\""
+          "text": "\"여기는 이제 우리 것이다. 신이 버린 땅은, 주운 자의 것이니까.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "아이리스",
           "speakerType": "hero",
           "portraitId": "base_iris",
           "text": "\"…말이 통하잖아. 고블린 왕이.\"",
+          "speakerSide": "right",
           "emotion": "awe"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"균열 근처에서 오래 있으면 저렇게 돼. 신성을 주워 먹으면서 말을 배우는 거야.\""
+          "text": "\"균열 근처에서 오래 있으면 저렇게 돼. 신성을 주워 먹으면서 말을 배우는 거야.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "고블린 왕",
           "speakerType": "enemy",
           "portraitId": null,
-          "text": "\"너도 주우러 온 거지. 냄새가 난다. 손안의 그 빛.\""
+          "text": "\"너도 주우러 온 거지. 냄새가 난다. 손안의 그 빛.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "고블린 왕",
           "speakerType": "enemy",
           "portraitId": null,
           "text": "\"우리는 굶주려서 줍는다. 너는 왜 줍지?\"",
+          "speakerSide": "left",
           "emotion": "tense"
         },
         {
@@ -777,6 +842,7 @@
           "speakerType": "hero",
           "portraitId": "base_iris",
           "text": "\"…대답해줄 필요 없어. 검으로 하면 돼.\"",
+          "speakerSide": "right",
           "emotion": "resolute"
         }
       ]
@@ -805,19 +871,22 @@
           "speaker": "고블린 왕",
           "speakerType": "enemy",
           "portraitId": null,
-          "text": "\"…끝났다고 생각하나.\""
+          "text": "\"…끝났다고 생각하나.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "고블린 왕",
           "speakerType": "enemy",
           "portraitId": null,
-          "text": "\"균열은 이제 시작일 뿐이다. 더 강한 자들이 온다. 우리보다 훨씬… 배고픈 것들이.\""
+          "text": "\"균열은 이제 시작일 뿐이다. 더 강한 자들이 온다. 우리보다 훨씬… 배고픈 것들이.\"",
+          "speakerSide": "left"
         },
         {
           "speaker": "고블린 왕",
           "speakerType": "enemy",
           "portraitId": null,
           "text": "\"너는 아직 대답 안 했다. 왜 줍는지.\"",
+          "speakerSide": "left",
           "emotion": "tense"
         },
         {
@@ -830,20 +899,23 @@
           "speaker": "아이리스",
           "speakerType": "hero",
           "portraitId": "base_iris",
-          "text": "\"…뭐야. 마지막까지 기분 나쁘게.\""
+          "text": "\"…뭐야. 마지막까지 기분 나쁘게.\"",
+          "speakerSide": "right"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
           "text": "\"수집가. 안쪽에 균열이 하나 더 열려 있어. 이건 신고 건이 아니야.\"",
+          "speakerSide": "left",
           "emotion": "tense"
         },
         {
           "speaker": "등록관",
           "speakerType": "npc",
           "portraitId": null,
-          "text": "\"장부를 새로 펴야겠군. …이번엔 첫 장부터야. 네가 문 하나를 고른 뒤의 장부니까.\""
+          "text": "\"장부를 새로 펴야겠군. …이번엔 첫 장부터야. 네가 문 하나를 고른 뒤의 장부니까.\"",
+          "speakerSide": "left"
         }
       ]
     },

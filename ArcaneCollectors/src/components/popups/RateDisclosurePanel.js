@@ -58,8 +58,9 @@ function describeRow(row) {
     };
   }
   if (row.type === 'pickup') {
+    const ratePercent = Number.isFinite(row.ratePercent) ? row.ratePercent : Math.round((row.rate ?? 0.5) * 10000) / 100;
     return {
-      label: `픽업 확정 천장 · ${row.threshold}회`,
+      label: `픽업 확률 ${ratePercent}% · 확정 천장 ${row.threshold}회`,
       value: row.active ? '확정' : `${row.current}/${row.threshold} · 남은 ${row.remaining}회`,
       color: COLORS.raritySR
     };

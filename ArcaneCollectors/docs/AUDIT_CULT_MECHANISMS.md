@@ -267,9 +267,193 @@ export const CultEffectRegistry = {
   `getEffectiveDef/Spd` = 원본 스탯, `getFlatAtkBonus` = `0`, 흡수량 `0` → **기존 전투 수치가 그대로 유지**된다.
 - 검증(2026-09-02): `vitest 884 passed (29 files)` · `tsc --noEmit` 0 errors · `vite build` 성공.
 
-### 5-5. 남은 작업 (MECH-03 후보)
+### 5-5. 남은 작업 (MECH-03 후보) — §6에서 처리 완료
 
-1. 미구현 8기관(36 토큰) — 특히 상태이상 매니저를 공유하는 helheim/kunlun은 본 모듈의 `statuses` 규약을 그대로 확장하면 된다.
-2. 교단 상성 테이블(`×1.25/×0.80`, 감사 §3-3) — 본 작업 범위 밖. 전 기관 수치에 영향을 주므로 별도 밸런스 검증 필요.
-3. `PersonalitySystem.getCultPersonalityBonus()` 데이터-동작 불일치(감사 §1-3 결함 1) 미해소.
-4. `PvPSystem`/`commands/*`는 `resolveDamage()`를 거치지 않아 반사(Holy Thorns)가 적용되지 않는다. 흡수는 `takeDamage` 내부라 정상 동작.
+1. ~~미구현 8기관(36 토큰)~~ → **§6-1 완료** (12/12, 56/56 토큰).
+2. ~~교단 상성 테이블(`×1.25/×0.80`)~~ → **§6-3 완료** (기본 OFF, 토글 제공).
+3. `PersonalitySystem.getCultPersonalityBonus()` 데이터-동작 불일치(감사 §1-3 결함 1) — 여전히 미해소.
+4. ~~`PvPSystem`/`commands/*`가 `resolveDamage()`를 거치지 않는 문제~~ → **§6-4 M8/M9 완료**.
+
+---
+
+## 6. MECH-03 구현 내역 (2026-09-03)
+
+> **범위**: `docs/PLAN_COMPLETION_STAGE.md` MECH-03 — 나머지 8기관(valhalla / takamagahara / helheim /
+> tartarus / kunlun / nature / chaos / balance) + 교단 간 상성 테이블 + 피해 경로 통일.
+> **모듈**: `src/systems/CultMechanicsSystem.js` (MECH-02 규약 그대로 확장 — 훅 7종 / `cultState` / `CULT_MECHANICS_CONFIG`)
+> **판정 기준**: `getUnimplementedEffects()` 가 빈 배열.
+
+### 6-1. 12기관 × 구현여부 매트릭스 (12/12)
+
+| # | 기관 | 계열(INSTITUTION_REDESIGN) | 시그니처 메커니즘 | 상태 | 토큰 |
+|---|------|--------------------------|------------------|------|------|
+| 1 | olympus | 공세 | Divine Charge → Lightning Strike / Thunderstruck / Glory Aura | ✅ 구현 (MECH-02) | 5 |
+| 2 | valhalla | 공세 | Berserker Rage / Last Stand / Warrior's Pride / Frenzy Mark | ✅ **구현 (MECH-03)** | 4 |
+| 3 | asgard | 균형 | Rune Inscription → Runeburst / Rune Shield / Bifrost Link | ✅ 구현 (MECH-02) | 5 |
+| 4 | avalon | 지속 | Holy Ward / Holy Thorns / Round Table Bond | ✅ 구현 (MECH-02) | 4 |
+| 5 | takamagahara | 균형 | Kami no Ma 선제 / Extra Action / Sunlit Grace / Dazzle | ✅ **구현 (MECH-03)** | 3 |
+| 6 | kunlun | 지속 | Five Poisons → Chaos Bloom / Immortal Herb / Withering | ✅ **구현 (MECH-03)** | 3 |
+| 7 | yomi | 제어 | Death Gaze(Doom) → Death Sentence / 전이 / Underworld Link | ✅ 구현 (MECH-02) | 6 |
+| 8 | helheim | 제어 | Frost Cage(Cold Stack) → Permafrost / Numbing Aura | ✅ **구현 (MECH-03)** | 4 |
+| 9 | tartarus | 제어 | Titan Force 방어 관통 / Abyss Gaze / Titanfall | ✅ **구현 (MECH-03)** | 5 |
+| 10 | chaos | 공세 | Wild Card 10종 / 무작위 폭발 / Chaos Brand | ✅ **구현 (MECH-03)** | 9 |
+| 11 | nature | 지속 | Growth Ring / Root of Life / Overgrowth | ✅ **구현 (MECH-03)** | 4 |
+| 12 | balance | 균형 | Equilibrium / Neutrality / Imbalance | ✅ **구현 (MECH-03)** | 4 |
+
+- **구현 12/12**, 토큰 기준 **56/56** (`getUnimplementedEffects() === []`).
+- 4계열(공세/제어/지속/균형) 철학은 `docs/INSTITUTION_REDESIGN.md`의 계열 배치를 그대로 따랐다.
+  공세=버스트·자기강화, 제어=CC·관통, 지속=도트·방어막·성장, 균형=상성 왜곡·추가 행동.
+
+### 6-2. MECH-03 기관별 수치 공식
+
+모든 상수는 `CULT_MECHANICS_CONFIG`(`src/systems/CultMechanicsSystem.js:36`)에 노출된다.
+
+**Valhalla (공세)**
+
+| 항목 | 공식 |
+|------|------|
+| Berserker Rage(패시브) | HP ≤ 50% → ATK `×1.25`, HP ≤ 30% → ATK `×1.50` |
+| Berserker 스택 | 공격 1회당 `+1`, 스택당 ATK `+5%`, 상한 5스택(=`×1.25`) |
+| `berserker_stack` / `berserk_overdrive` | 스택 `+1` / 즉시 최대(5) 충전 |
+| `low_hp_bonus` | 대상에 Frenzy Mark(2턴). 자신 HP ≤ 50%면 추가 피해 `floor(ATK × 0.25)` |
+| Frenzy Mark | **발할라 공격자에게만** 받는 피해 `×1.20` |
+| Warrior's Pride(패시브) | 한 방 피해가 최대 HP `40%` 이상이면 최대 HP `15%`로 환산, 1턴 쿨다운 |
+| Last Stand | 전투당 1회, 치명 피해를 HP `1`로 생존 + 1턴 무적. `last_stand` 토큰이 재무장 |
+
+**Takamagahara (균형)**
+
+| 항목 | 공식 |
+|------|------|
+| Kami no Ma(전투 시작) | SPD 최고 아군의 유효 SPD `+9999` 1턴 → 선제 확정 |
+| Sunlit Grace(패시브) | 자신 유효 SPD > 적 평균 유효 SPD → 크리 확률 `+15%` |
+| `spd_up_10` | 아군 전체 SPD `+10%` 2턴 |
+| `extra_action` | 추가 행동 `+1`(상한 1). 라운드당 1회만 소비 |
+| `speed_dominance` | 적 전체 Dazzle 2턴 + 자신 가속 |
+| Dazzle | 명중률 -30%를 **기대 피해 `×0.70`** 으로 환산 |
+| Heaven's Gift(처치 시) | 처치자에게 추가 행동 `+1` |
+
+**Helheim (제어)**
+
+| 항목 | 공식 |
+|------|------|
+| Frost Cage | CC(빙결/기절/공포) 부여 1회당 Cold Stack `+1`, 턴마다 `-1` |
+| Permafrost | Cold ≥ 3 → 유효 SPD `0` + 받는 피해 `×1.25` + 행동 불가 |
+| `freeze_20` / `freeze_30` | 확률 `N%`로 빙결 1턴 + Cold `+1` |
+| `stun_2turns` | 기절 2턴 확정 + Cold `+1` |
+| `terror_all` | 적 전체 공포 2턴(ATK `×0.80`) + Cold `+1` |
+| Numbing Aura(전투 시작) | 적 파티 SPD `×0.90` (전투 내내) |
+
+**Tartarus (제어)**
+
+| 항목 | 공식 |
+|------|------|
+| Titan Force(패시브) | 적 DEF ≥ 자신 ATK×0.3 → 방어 관통 `50%`, ≥ ATK×0.6 → 관통 `80%` |
+| Titan's Wrath | 관통 80% 조건에서 피해 `×1.30` |
+| `armor_pierce_20` / `full_armor_pierce` | 자신에게 관통 `20%` / `100%` 1턴 (Titan Force와 곱 합성) |
+| `armor_shred` / `mass_armor_shred` | 대상(전체) DEF `-10%`/스택, 최대 3스택, 2턴 |
+| `shield_break` | 방어막·룬 실드 즉시 파괴 + 파괴량 `50%`를 추가 피해 + Titanfall(스킬 배율 `-20%`, 2턴) |
+| Abyss Gaze(패시브) | 방어막 보유 대상 공격 시 방어막 `50%`만 소모하고 나머지는 HP로 관통 |
+
+**Kunlun (지속)**
+
+| 항목 | 공식 |
+|------|------|
+| `poison_2turns` | 독 2턴, 턴당 `floor(시전자 ATK × 0.12)` |
+| `multi_poison` | 독 + 허약(ATK `-20%`) + 시들음(DEF `-5%`/스택) 동시 부여 |
+| Chaos Bloom | 디버프 3종 이상 보유 시 턴 시작에 최대 HP `5%` 고정 피해 + 모든 디버프 지속 `+1턴` |
+| `cleanse_all` | 아군 디버프 전량 해제 + 해제 1건당 `floor(ATK × 0.2)` 회복 |
+| Immortal Herb(패시브) | 턴 시작 시 아군 디버프 총합 1건당 `floor(ATK × 0.2)` 자가 회복 |
+
+**Nature (지속)**
+
+| 항목 | 공식 |
+|------|------|
+| Growth Ring(패시브) | 매 턴 스택 `+1`(최대 10), 스택당 ATK/DEF `+2%` (최대 `+20%`) |
+| Root of Life(전투 시작) | 성장 스택 `2` 이월 |
+| `growth_buff` / `growth_atk` | 아군 전체 `+2` / 자신 `+3` 스택 |
+| `late_game_bonus` | 추가 피해 `floor(ATK × 0.05 × 성장 스택)` |
+| `earth_liberation` | 적 전체 과성장 3턴 — 턴당 최대 HP `3%` 도트 + SPD `×0.5`, 자신 성장 `+1` |
+
+**Chaos (공세)**
+
+| 항목 | 공식 |
+|------|------|
+| Wild Card(패시브) | 매 턴 시작 10종 중 1종 발동 (설계 §2-11 목록 그대로: 버프 2 / 디버프 2 / 적 피해 3 / 회복 2 / 게이지 리셋 1) |
+| `random_multiplier` | 추가 피해 `floor(ATK × U(0.5, 2.0))` |
+| `chaos_burst` | `1~3`회 연타, 회당 `floor(ATK × 0.4)` |
+| `chaos_liberation` | Wild Card 즉시 2회 발동 |
+| `random_debuff` | 허약/둔화/독/혼돈 낙인 중 1종 |
+| `chaos_storm` / `elemental_collapse` | 적 전체 `floor(ATK × 0.5)` / `floor(ATK × 0.8)` + 무작위 디버프 |
+| `random_element` | 추가 피해 `floor(ATK × 0.7 × [0.8 / 1.0 / 1.25])` |
+| `unstable_explosion` | 적 전체 `floor(ATK × 0.6)`, `10%` 확률로 자신도 `floor(ATK × 0.3)` (Misfire) |
+| `madness_liberation` | 자신 광기 2턴(ATK `+50%`), `10%` 확률로 아군 1명에게 혼돈 낙인 |
+| Chaos Brand | ATK `×0.9` + SPD `×0.9` |
+
+**Balance (균형)**
+
+| 항목 | 공식 |
+|------|------|
+| Equilibrium(패시브) | 턴 시작에 아군 HP 비율 편차 산출 — 편차 ≥ 30% → ATK/DEF `+15%`, 편차 ≤ 10% → 크리 `+20%` |
+| Neutrality(패시브) | 공·수 어느 쪽이든 balance가 끼면 **분위기·교단 상성 효과 `×0.5`** |
+| `neutral_buff` | 아군 전체 중립장 1턴 — 상성 효과 `×0` |
+| `mood_neutral_all` | 적 전체 Imbalance 3턴 — 그 유닛의 교단 배율을 `1`로 무효화 + 상성 `×0` |
+| `neutral_damage` | 상성·방어와 무관한 고정 추가 피해 `floor(ATK × 0.5)` |
+| `balance_field` | 아군 HP 비율을 파티 평균까지 끌어올리는 회복 |
+
+### 6-3. 교단 간 상성 (기본 OFF)
+
+- 테이블: `CULT_MATCHUP`(`src/systems/CultMechanicsSystem.js:280`) — 설계 §3-3의 12행 그대로.
+- 배율: 강세 `×1.25` / 중립 `×1.00` / 약세 `×0.80` (설계 §3-4), 분위기 상성과 **곱연산**.
+- **기본값은 꺼짐** — `CULT_MECHANICS_CONFIG.matchup.enabled = false`. 전 기관 수치에 영향을 주므로
+  밸런스 검산(`tools/simulate/combat-turns.mjs`, `stage-clearable.mjs`) 이후에 켠다.
+- 토글: `setCultMatchupEnabled(true)` / 상태 조회 `isCultMatchupEnabled()` / 판정만 조회 `getCultAdvantage(a, b)`.
+- Neutrality·중립장·Imbalance는 상성 폭에 스케일로 곱해진다 (`getMatchupScale`).
+
+### 6-4. 훅 / 통합 지점 (file:line)
+
+훅 종류는 MECH-02와 동일한 7종이며 **새 훅을 추가하지 않았다**. 통합 지점만 늘었다.
+
+| # | 지점 | 위치 | 내용 |
+|---|------|------|------|
+| M1 | 방어 관통 | `src/systems/BattleSystem.js:1104` `calculateDamage()` | `defReduction × (1 − getDefPierceRatio())` — Titan Force / armor_pierce |
+| M2 | 상성 감쇠 | `src/systems/BattleSystem.js:1112` | 분위기 보너스에 `getMatchupScale()` 곱 (Neutrality / 중립장 / Imbalance) |
+| M3 | 교단 상성 | `src/systems/BattleSystem.js:1123` | `getCultMatchupMultiplier()` (기본 1 — OFF) |
+| M4 | 크리 가산 | `src/systems/BattleSystem.js:1127` | `getCritBonus()` — Sunlit Grace / Equilibrium |
+| M5 | 턴 시작 피해 | `src/systems/BattleSystem.js:977` `applyCultTurnStart()` | Wild Card 등 턴 시작 효과의 `extraDamage`도 실제 HP에 적용 |
+| M6 | 효과 피해 단일화 | `src/systems/BattleSystem.js:1054` `applyCultEffectDamage()` | `onHit`/`onTurnStart`가 공유하는 추가 피해 적용 경로 |
+| M7 | 추가 행동 | `src/systems/BattleSystem.js:811` `processTurn()` | `consumeExtraAction()` 성공 시 턴 인덱스를 넘기지 않는다 (라운드당 1회) |
+| M8 | 커맨드 경로 | `src/systems/commands/AttackCommand.js:31`, `SkillCommand.js:66` | `calculateDamage + takeDamage` → `resolveDamage()` 로 통일 (반사·적중 훅·사망 처리 포함) |
+| M9 | PvP 경로 | `src/systems/PvPSystem.js:262` | 존재하지 않던 `battle.initialize()` → `initBattle()`. 교단 상태 초기화 후 `processTurn()`이 `resolveDamage()`를 지난다 |
+| M10 | 배지 표기 | `src/utils/battleLayout.js:412`, `:423` | 누적 상태 배지 `RAGE/COLD/GROW/ACT` + 상태이상 약어표 26종 |
+| M11 | 로그 한국어화 | `src/systems/BattleSceneAdapter.js:392` | `CULT_EFFECT_LABELS`에 MECH-03 라벨 12종 추가 (와일드 카드 / 방패 파쇄 등) |
+
+`cultState` 확장 필드: `rage`, `lastStandUsed`, `prideCooldown`, `cold`, `growth`, `extraActions`,
+`extraActionTurn`, `equilibrium`. 기존 필드(`divinity/doom/barrier/runes/runeburst/runeShield/statuses`)는 그대로다.
+
+### 6-5. 회귀 안전성
+
+- 교단이 없거나(`cult === null`) 상태가 비어 있는 유닛은 모든 배율 함수가 항등원을 반환한다
+  (`getDefPierceRatio` = 0, `getCritBonus` = 0, `getMatchupScale` = 1, `getCultMatchupMultiplier` = 1).
+- 교단 상성은 기본 OFF라 **이번 변경만으로 기존 전투 수치는 바뀌지 않는다**. 바뀌는 것은
+  교단 소속 유닛이 실제로 메커니즘을 발동했을 때뿐이다.
+- 추가 행동은 라운드당 1회로 제한해 턴 루프가 무한히 돌지 않는다.
+
+### 6-6. 검증 (2026-09-03)
+
+| 항목 | 결과 |
+|------|------|
+| `npx vitest run` | 1696 passed / 62 files (CultMechanicsSystem 107, 신규 62) |
+| `npx tsc --noEmit` | 0 errors |
+| `npm run build` | 성공 (1m 17s) |
+| `node tests/e2e/boot-smoke.mjs` | 6 passed |
+| `node tests/e2e/battle-cult-live.mjs` | 25 passed (네이처 `GROW` 배지 실표시 어서션 포함) |
+| `node tools/simulate/combat-turns.mjs` | 25/25 PASS |
+| `node tools/simulate/stage-clearable.mjs` | 25/25 PASS |
+
+### 6-7. 남은 작업
+
+1. 교단 상성 ON 전환 — 밸런스 검산 후 `CULT_MECHANICS_CONFIG.matchup.enabled` 또는 부팅 시
+   `setCultMatchupEnabled(true)`. 켠 상태의 승률 편차(±5%p) 확인 필요.
+2. `PersonalitySystem.getCultPersonalityBonus()` 데이터-동작 불일치(§1-3 결함 1) 미해소.
+3. `MoodSystem.CULT_MOOD_BONUSES`의 3기관(chaos/nature/balance) 누락(§1-3 결함 2) 미해소.
+4. BattleScene 자체 턴 루프는 추가 행동(M7)을 소비하지 않는다 — 씬 루프까지 넓히려면 별도 작업.

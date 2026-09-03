@@ -37,10 +37,10 @@ export const MAIN_LAYOUT = Object.freeze({
   party:     { x: GUTTER, y: 88,   w: 680, h: 148 },
   power:     { x: GUTTER, y: 244,  w: 680, h: 60 },
   adventure: { x: GUTTER, y: 312,  w: 680, h: 188 },
-  idle:      { x: GUTTER, y: 508,  w: 680, h: 388 },
-  summary:   { x: GUTTER, y: 904,  w: 680, h: 52 },
-  claim:     { x: 208,    y: 964,  w: 304, h: 60 },
-  grid:      { x: 0,      y: 1040, w: 720, h: 234 }
+  idle:      { x: GUTTER, y: 508,  w: 680, h: 312 },
+  summary:   { x: GUTTER, y: 828,  w: 680, h: 52 },
+  claim:     { x: 208,    y: 888,  w: 304, h: 60 },
+  grid:      { x: 0,      y: 960,  w: 720, h: 315 }
 });
 
 /** 대역 순서 — 겹침 검사와 화면 순회에 쓴다 */
@@ -48,16 +48,29 @@ export const BAND_ORDER = Object.freeze([
   'topBar', 'party', 'power', 'adventure', 'idle', 'summary', 'claim', 'grid'
 ]);
 
-/** 메뉴 그리드 규격 (5열 대응). cellW/cellH 가 곧 터치 박스다 */
+/**
+ * 메뉴 그리드 규격 — 원형 아이콘 나열에서 **타일**로 바꿨다.
+ *
+ * 사용자 신고: "메뉴 버튼 이미지/텍스트가 눈에 안 들어온다". 원인은 세 가지였다.
+ * 배경 일러스트 위에 아이콘이 떠 있어 실루엣이 분리되지 않았고, 아이콘이 40px 로 작았고,
+ * 라벨이 text.secondary 12px 이라 배경과 대비가 모자랐다. 타일 플레이트로 바닥을 깔고,
+ * 아이콘을 icon.xl(64) 로 키우고, 라벨을 body(16) bold + 스트로크로 올린다.
+ *
+ * cellW/cellH 가 곧 터치 박스다 (120x100 — 요구 하한 120x100).
+ */
 export const MENU_GRID = Object.freeze({
-  top: 1040,
-  cellW: 96,
-  cellH: 72,
+  top: 960,
+  cellW: 120,
+  cellH: 100,
   gapX: 20,
-  rowPitch: 78,
-  iconDy: 30,   // 행 상단 → 아이콘 원 중심
-  iconR: 28,    // 아이콘 원 반지름
-  labelDy: 64   // 행 상단 → 라벨 중심
+  rowPitch: 105,
+  radius: 16,    // 타일 라운드
+  iconDy: 38,    // 타일 상단 → 아이콘 중심
+  iconSize: 64,  // icon.xl
+  labelDy: 80,   // 타일 상단 → 라벨 중심
+  badgeDx: 44,   // 타일 중심 → 배지 중심 (오른쪽)
+  badgeDy: -36,  // 타일 중심 → 배지 중심 (위)
+  badgeR: 13
 });
 
 /** 파티 슬롯 규격 */
@@ -67,7 +80,15 @@ export const PARTY_SLOT = Object.freeze({
   avatarDy: 82,  // 패널 상단 → 아바타 중심
   avatarR: 28,
   nameDy: 118,
-  levelDy: 134
+  levelDy: 134,
+  /** 이름 라벨 좌우 여백 (슬롯 폭에서 뺀다) */
+  nameInset: 8,
+  /**
+   * 이름 최대 글자수. caption(12px) 한글 기준 슬롯 폭 162 - 여백 8 = 154 에
+   * 12글자가 들어가지만 서체 폴백 여유를 두고 10 으로 잡는다.
+   * 현재 로스터 최장 이름은 `혼돈연금사 파올로`(9자)라 전부 온전히 들어간다.
+   */
+  nameMaxChars: 10
 });
 
 /** 현재 모험 패널 내부 규격 */
@@ -219,11 +240,47 @@ export function computePartySlots(count = PARTY_SLOT.count) {
       x,
       y,
       r: PARTY_SLOT.avatarR,
+      w: slotW,
+      /** 이름 라벨이 쓸 수 있는 최대 폭 — 넘치면 씬이 폰트를 줄인다 */
+      nameMaxWidth: Math.max(0, slotW - PARTY_SLOT.nameInset * 2),
       nameY: panel.y + PARTY_SLOT.nameDy,
       levelY: panel.y + PARTY_SLOT.levelDy,
       hit: { x, y, w: Math.max(MIN_TOUCH, PARTY_SLOT.avatarR * 2), h: Math.max(MIN_TOUCH, PARTY_SLOT.avatarR * 2) }
     };
   });
+}
+
+/**
+ * 파티 슬롯 이름을 **어절 단위**로 잘라 말줄임한다 (QA P2-6).
+ *
+ * 예전에는 `name.substring(0, 5)` 였다. `번개의 아이리스` → `번개의 아`처럼
+ * 음절 중간에서 잘리고 말줄임 기호도 없어 이름이 잘렸다는 사실조차 안 보였다.
+ *
+ * 규칙
+ *  1. 상한 안에 들어가면 그대로 둔다 (현재 로스터는 전부 여기에 해당한다).
+ *  2. 넘치면 공백 기준 어절을 앞에서부터 담고 `…`를 붙인다 — 음절을 쪼개지 않는다.
+ *  3. 첫 어절 하나도 못 담으면 그때만 글자 단위로 자르고 `…`를 붙인다.
+ *
+ * @param {string} name 원본 이름
+ * @param {number} [maxChars] 상한 글자수 (말줄임 기호 포함)
+ * @returns {string}
+ */
+export function fitPartySlotName(name, maxChars = PARTY_SLOT.nameMaxChars) {
+  const raw = typeof name === 'string' ? name.trim() : '';
+  const limit = Math.max(1, Math.floor(Number.isFinite(maxChars) ? maxChars : PARTY_SLOT.nameMaxChars));
+  if (raw === '') return '';
+  if (raw.length <= limit) return raw;
+
+  const words = raw.split(/\s+/).filter(Boolean);
+  const budget = limit - 1; // '…' 한 칸
+  let kept = '';
+  for (const word of words) {
+    const next = kept === '' ? word : `${kept} ${word}`;
+    if (next.length > budget) break;
+    kept = next;
+  }
+  if (kept === '') kept = raw.slice(0, budget);
+  return `${kept}…`;
 }
 
 /**
@@ -418,23 +475,32 @@ export function computeMenuGrid(itemCount, cols) {
   }
 
   const rows = Math.ceil(count / columns);
-  const totalW = columns * MENU_GRID.cellW + (columns - 1) * MENU_GRID.gapX;
-  const startX = (BASE_W - totalW) / 2 + MENU_GRID.cellW / 2;
+
+  /** 그 행에 실제로 놓이는 개수로 시작 x 를 잡는다 — 마지막 행이 왼쪽으로 쏠리지 않는다 */
+  const rowStartX = (itemsInRow) => {
+    const totalW = itemsInRow * MENU_GRID.cellW + (itemsInRow - 1) * MENU_GRID.gapX;
+    return (BASE_W - totalW) / 2 + MENU_GRID.cellW / 2;
+  };
 
   const cells = Array.from({ length: count }, (_, index) => {
     const col = index % columns;
     const row = Math.floor(index / columns);
-    const x = startX + col * (MENU_GRID.cellW + MENU_GRID.gapX);
+    const itemsInRow = Math.min(columns, count - row * columns);
+    const x = rowStartX(itemsInRow) + col * (MENU_GRID.cellW + MENU_GRID.gapX);
     const rowTop = MENU_GRID.top + row * MENU_GRID.rowPitch;
+    const centerY = rowTop + MENU_GRID.cellH / 2;
     return {
       index,
       col,
       row,
       x,
+      y: centerY,
+      tile: { x, y: centerY, w: MENU_GRID.cellW, h: MENU_GRID.cellH, radius: MENU_GRID.radius },
       iconY: rowTop + MENU_GRID.iconDy,
-      iconR: MENU_GRID.iconR,
+      iconSize: MENU_GRID.iconSize,
       labelY: rowTop + MENU_GRID.labelDy,
-      hit: { x, y: rowTop + MENU_GRID.cellH / 2, w: MENU_GRID.cellW, h: MENU_GRID.cellH }
+      badge: { x: x + MENU_GRID.badgeDx, y: centerY + MENU_GRID.badgeDy, r: MENU_GRID.badgeR },
+      hit: { x, y: centerY, w: MENU_GRID.cellW, h: MENU_GRID.cellH }
     };
   });
 
@@ -502,6 +568,7 @@ export default {
   interactiveTopBarSlots,
   computeEnergyFill,
   computePartySlots,
+  fitPartySlotName,
   computePartyHeader,
   computePowerRow,
   computeAdventureButtons,

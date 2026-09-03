@@ -6,8 +6,11 @@
 import { SaveManager } from './SaveManager.js';
 import { EventBus, GameEvents } from './EventBus.js';
 import bannersData from '../data/banners.json';
+import equipmentData from '../data/equipment.json';
 import { getAllAscendedHeroes, getAllBaseHeroes } from '../data/index.js';
 import energySystem from './EnergySystem.js';
+import { EquipmentSystem } from './EquipmentSystem.js';
+import { EQUIPMENT_GACHA } from '../config/equipmentConfig.js';
 
 export class GachaSystem {
   // 등급별 기본 확률 (T-S2: N등급 캐릭터 풀 공백으로 인한 크래시(GA-1/BLK-02) 대응 — N 확률을 R로 흡수)
@@ -191,6 +194,11 @@ export class GachaSystem {
    * 소환 실행
    * @param {number} count 소환 횟수 (1 또는 10)
    * @param {string} paymentType 'gems' 또는 'tickets'
+   * @param {Object} [options]
+   * @param {boolean} [options.skipEnergyCheck]
+   * @param {string} [options.bannerId] 배너 ID. 미지정 시 'standard'(픽업 없음, 기존 동작)로
+   *   취급한다 — `_currentBannerId`(배너 UI 선택 상태)에 암묵적으로 의존하면 bannerId를
+   *   넘기지 않는 기존 호출부(테스트/무료 10연 등)가 예기치 않게 픽업 라우팅을 타게 된다.
    * @returns {Object} { success, results, pityInfo }
    */
   static pull(count = 1, paymentType = 'gems', options = {}) {
@@ -205,6 +213,10 @@ export class GachaSystem {
       return { success: false, error: '소환 가능한 캐릭터가 없습니다.', results: [] };
     }
 
+    // 배너별 픽업 라우팅. bannerId 미지정 시 'standard'로 취급(픽업 없음, 기존 동작 유지)
+    const bannerId = options.bannerId || 'standard';
+    const banner = this.getBannerById(bannerId) || this.getBannerById('standard');
+    const hasPickup = !!(banner && Array.isArray(banner.pickupCharacters) && banner.pickupCharacters.length > 0);
 
     // T-S2/BLK-05: 첫 무료 10연은 재화/에너지 모두 면제
     const gachaInfo = SaveManager.getGachaInfo();
@@ -238,6 +250,12 @@ export class GachaSystem {
       }
     }
 
+    // 픽업 배너 카운터 로드 (배너별 분리 저장 — standard/픽업 없는 배너는 건드리지 않는다)
+    const bannerInfo = hasPickup ? this.getBannerGachaInfo(bannerId) : null;
+    let pickupPityCount = bannerInfo ? (bannerInfo.pickupPityCounter || 0) : 0;
+    let lost5050 = bannerInfo ? !!bannerInfo.lost5050 : false;
+    let bannerSSRCount = 0;
+
     const results = [];
     let gotSSR = false;
     let currentPity = gachaInfo.pityCounter;
@@ -248,23 +266,45 @@ export class GachaSystem {
       // 등급 결정
       const rarity = this.determineRarity(currentPity);
 
-      // 캐릭터 선택
-      const characterId = this.getRandomCharacterByRarity(rarity);
+      // 픽업 확정 천장은 누적 뽑기 횟수 기준이다(등급 무관 — tools/simulate/gacha-sim.mjs
+      // rollPickup()과 동일 해석. isPickupGuaranteed()의 remaining = pickupPity - counter 도
+      // 이 해석을 전제로 한다).
+      if (hasPickup) pickupPityCount++;
+
+      // 캐릭터 선택 — 픽업 배너의 SSR은 determinePickupCharacter()로 라우팅한다
+      let characterId;
+      let isPickup;
+      if (rarity === 'SSR' && hasPickup) {
+        const pick = this.determinePickupCharacter(banner, lost5050, pickupPityCount);
+        characterId = pick.characterId;
+        isPickup = pick.isPickup;
+        if (pick.isPickup) {
+          pickupPityCount = 0;
+          lost5050 = false;
+        } else {
+          lost5050 = true; // 50/50 패배 — 다음 SSR은 픽업 확정
+        }
+      } else {
+        characterId = this.getRandomCharacterByRarity(rarity);
+      }
 
       // 캐릭터 추가 (SaveManager 통해)
       const addResult = SaveManager.addCharacter(characterId);
 
-      results.push({
+      const entry = {
         characterId,
         rarity,
         isNew: !addResult.duplicate,
         shardsGained: addResult.duplicate ? addResult.shardsGained : 0,
         pullNumber: gachaInfo.totalPulls + i + 1
-      });
+      };
+      if (isPickup !== undefined) entry.isPickup = isPickup;
+      results.push(entry);
 
       // SSR 획득 시 천장 초기화
       if (rarity === 'SSR') {
         gotSSR = true;
+        bannerSSRCount++;
         currentPity = 0;
       }
 
@@ -291,6 +331,16 @@ export class GachaSystem {
       }
     }
 
+    // 픽업 배너 카운터 저장 (배너별 분리 — standard 배너는 기존 동작대로 건드리지 않는다)
+    if (hasPickup) {
+      this.updateBannerGachaInfo(bannerId, {
+        pickupPityCounter: pickupPityCount,
+        lost5050,
+        totalPulls: (bannerInfo.totalPulls || 0) + count,
+        totalSSR: (bannerInfo.totalSSR || 0) + bannerSSRCount
+      });
+    }
+
     // 가챠 카운터 업데이트 (뽑기 횟수, SSR 획득 여부)
     SaveManager.updateGachaCounter(count, gotSSR);
 
@@ -309,10 +359,21 @@ export class GachaSystem {
       }
     });
 
+    const pityInfo = this.getPityInfo();
+
+    // 소환이 끝났다는 사실 자체를 알린다.
+    // CHARACTER_ADDED 는 **신규 영웅이 나왔을 때만** 발행되므로, 10연이 전부 중복이면
+    // 아무 이벤트도 뜨지 않는다. 그 상태에 걸리면 메뉴 배지가 갱신되지 않고,
+    // 무료 10연으로 완료되는 튜토리얼 T-05 가 커밋되지 않아 온보딩이 잠긴 팝업 안에
+    // 갇힌다(소환 팝업은 T-05 커밋 전까지 닫기가 잠겨 있다).
+    // 구독자(MainMenuScene 배지, TutorialManager.attachEvents)는 이미 이 이벤트를
+    // 기다리고 있었고 발행부만 없었다.
+    EventBus.emit(GameEvents.GACHA_COMPLETE, { results, pityInfo });
+
     return {
       success: true,
       results,
-      pityInfo: this.getPityInfo()
+      pityInfo
     };
   }
 
@@ -555,6 +616,132 @@ export class GachaSystem {
 
     this.CHARACTER_POOL = pool;
     return pool;
+  }
+
+  // ========== 장비 가챠 (T-XX: 소환 화면 '장비 소환' 탭 SSOT) ==========
+  // 카테고리(weapons/armors/accessories/relics) → 슬롯 타입 매핑
+  static _EQUIPMENT_CATEGORY_TO_SLOT = {
+    weapons: 'weapon', armors: 'armor', accessories: 'accessory', relics: 'relic'
+  };
+
+  static _equipmentPool = null;
+
+  /**
+   * equipment.json 을 등급별로 묶어 캐싱한다. 실제 카탈로그 항목(이름/스탯 포함)을 그대로
+   * 가챠 지급 대상으로 쓴다 — EquipmentSystem.createEquipment()의 절차적 생성과 달리
+   * 기존에 정의된 장비(Iron Sword 등)가 나온다.
+   * @returns {{SSR:Array,SR:Array,R:Array,N:Array}}
+   */
+  static getEquipmentPool() {
+    if (this._equipmentPool) return this._equipmentPool;
+    const pool = { SSR: [], SR: [], R: [], N: [] };
+    const categories = (equipmentData && equipmentData.equipment) || {};
+    Object.entries(categories).forEach(([category, items]) => {
+      const slotType = this._EQUIPMENT_CATEGORY_TO_SLOT[category] || category;
+      Object.values(items || {}).forEach((item) => {
+        if (pool[item.rarity]) {
+          pool[item.rarity].push({ ...item, slotType });
+        }
+      });
+    });
+    this._equipmentPool = pool;
+    return pool;
+  }
+
+  /** 장비 등급 결정 (EQUIPMENT_GACHA.rates SSOT — src/config/equipmentConfig.js) */
+  static determineEquipmentRarity() {
+    const rates = EQUIPMENT_GACHA.rates;
+    const roll = Math.random();
+    let cumulative = 0;
+    for (const grade of ['SSR', 'SR', 'R', 'N']) {
+      cumulative += rates[grade] || 0;
+      if (roll < cumulative) return grade;
+    }
+    return 'N';
+  }
+
+  /**
+   * 등급에 맞는 장비 카탈로그 항목을 무작위로 선택한다. 풀이 비어있으면 인접 등급으로
+   * 폴백한다 (getRandomCharacterByRarity와 동일한 방어 전략).
+   * @param {string} rarity
+   * @returns {Object|null} equipment.json 항목 + slotType
+   */
+  static getRandomEquipmentByRarity(rarity) {
+    const pool = this.getEquipmentPool();
+    const list = pool[rarity];
+    if (list && list.length > 0) return list[Math.floor(Math.random() * list.length)];
+
+    const order = ['N', 'R', 'SR', 'SSR'];
+    const currentIndex = order.indexOf(rarity);
+    for (let i = currentIndex - 1; i >= 0; i--) {
+      const fallback = pool[order[i]];
+      if (fallback && fallback.length > 0) return fallback[Math.floor(Math.random() * fallback.length)];
+    }
+    for (let i = currentIndex + 1; i < order.length; i++) {
+      const fallback = pool[order[i]];
+      if (fallback && fallback.length > 0) return fallback[Math.floor(Math.random() * fallback.length)];
+    }
+    return null;
+  }
+
+  /**
+   * 장비 소환 실행 (소환 화면 '장비 소환' 탭). 캐릭터 가챠와 별개의 SSOT(EQUIPMENT_GACHA)를
+   * 쓰며 천장/픽업이 없다. 10연차는 SR 이상 1개를 보장한다(캐릭터 가챠와 동일 규칙).
+   * 지급은 EquipmentSystem.createEquipment()를 재사용해 SaveManager 인벤토리 경로를 그대로 탄다.
+   * @param {number} count 소환 횟수 (1 또는 10)
+   * @param {string} paymentType 'gems' 또는 'tickets'
+   * @returns {Object} { success, results, error? }
+   */
+  static pullEquipment(count = 1, paymentType = 'gems') {
+    const cost = count === 10 ? EQUIPMENT_GACHA.cost.multi : EQUIPMENT_GACHA.cost.single * count;
+    const ticketCost = count === 10 ? EQUIPMENT_GACHA.ticketCost.multi : EQUIPMENT_GACHA.ticketCost.single * count;
+    const resources = SaveManager.getResources();
+
+    if (paymentType === 'gems') {
+      if ((resources.gems || 0) < cost) {
+        return { success: false, error: '젬이 부족합니다', results: [] };
+      }
+      SaveManager.spendGems(cost);
+    } else {
+      if ((resources.summonTickets || 0) < ticketCost) {
+        return { success: false, error: '소환 티켓이 부족합니다', results: [] };
+      }
+      SaveManager.spendSummonTickets(ticketCost);
+    }
+
+    const results = [];
+    let guaranteeSRPlus = count >= 10; // 10연차 SR 이상 1개 보장
+
+    for (let i = 0; i < count; i++) {
+      let rarity = this.determineEquipmentRarity();
+
+      // 10연차 마지막인데 아직 SR 이상이 없으면 SR로 승격 (SSR이면 그대로 둔다)
+      if (i === count - 1 && guaranteeSRPlus && rarity !== 'SSR') {
+        rarity = 'SR';
+      }
+      if (rarity === 'SSR' || rarity === 'SR') guaranteeSRPlus = false;
+
+      const def = this.getRandomEquipmentByRarity(rarity);
+      if (!def) continue; // 극단적으로 모든 등급 풀이 비어있는 경우만 스킵
+
+      const equipment = EquipmentSystem.createEquipment(def.slotType, rarity, {
+        definitionId: def.id,
+        name: def.nameKr || def.name,
+        stats: def.stats
+      });
+
+      results.push({
+        equipmentId: equipment.id,
+        definitionId: def.id,
+        slotType: def.slotType,
+        slotIcon: EQUIPMENT_GACHA.slotIcons[def.slotType] || '⚔️',
+        rarity,
+        name: equipment.name,
+        stats: equipment.stats
+      });
+    }
+
+    return { success: true, results };
   }
 
   /**

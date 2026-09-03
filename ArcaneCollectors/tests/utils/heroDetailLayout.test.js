@@ -28,6 +28,9 @@ import {
   computeGrid,
   computeEquipSlots,
   computeCardStack,
+  computeSkillCardParts,
+  computeRibbonSlots,
+  fullbodyClearsRibbon,
   fitsInContent,
   formatNumber,
   truncate,
@@ -49,11 +52,11 @@ describe('화면 구획 — 겹침 해소', () => {
     expect(bar.y + bar.h).toBeLessThanOrEqual(HERO_DETAIL_LAYOUT.height);
   });
 
-  it('하단 55% 공백 회귀 방지 — 탭 콘텐츠가 화면 하단부를 실제로 채운다', () => {
+  it('하단 55% 공백 회귀 방지 — 전신 아래를 리본·탭·콘텐츠·액션바가 채운다', () => {
     const L = HERO_DETAIL_LAYOUT;
-    const filled = L.content.h + L.tabBar.h + L.actionBar.h;
-    const lowerHalf = L.height - L.stage.y - L.stage.h; // 660 아래 영역
-    expect(filled / lowerHalf).toBeGreaterThan(0.85);
+    const filled = L.ribbon.h + L.tabBar.h + L.content.h + L.actionBar.h;
+    const belowStage = L.height - L.stage.y - L.stage.h;
+    expect(filled / belowStage).toBeGreaterThan(0.85);
   });
 });
 
@@ -188,21 +191,21 @@ describe('computeFullbodyFit — 1024x1536 알파 시트', () => {
 });
 
 describe('computeFullbodyAnchor', () => {
-  it('발끝을 스테이지 바닥에 붙이고 리본이 그 위를 덮는다', () => {
+  it('발끝이 리본 위쪽 끝보다 높다 — 리본이 발을 자르지 않는다', () => {
     const anchor = computeFullbodyAnchor();
     const L = HERO_DETAIL_LAYOUT;
     const stageBottom = L.stage.y + L.stage.h;
     expect(anchor.y).toBe(stageBottom);
     expect(anchor.originY).toBe(1);
-    // 리본이 발치를 덮어 오버스캔이 잘린 것처럼 보이지 않게 한다
-    expect(L.ribbon.y).toBeLessThan(stageBottom);
+    expect(stageBottom).toBeLessThanOrEqual(L.ribbon.y);
+    expect(fullbodyClearsRibbon()).toBe(true);
     expect(L.ribbon.y + L.ribbon.h).toBeLessThanOrEqual(L.tabBar.y);
   });
 
-  it('페이드 띠가 전신 하단과 리본 사이를 잇는다', () => {
+  it('페이드 띠가 스테이지 안에서 끝나 리본을 덮지 않는다', () => {
     const L = HERO_DETAIL_LAYOUT;
     expect(L.fade.y).toBeGreaterThan(L.stage.y);
-    expect(L.fade.y + L.fade.h).toBeGreaterThanOrEqual(L.ribbon.y);
+    expect(L.fade.y + L.fade.h).toBeLessThanOrEqual(L.ribbon.y);
   });
 
   it('가로 중앙보다 오른쪽에 선다 (좌측은 성급·전투력 열)', () => {
@@ -294,6 +297,88 @@ describe('격자·카드 스택', () => {
 
   it('카드 수가 유효하지 않으면 빈 배열이다', () => {
     expect(computeCardStack(0)).toEqual([]);
+  });
+});
+
+describe('리본', () => {
+  const overlaps = (a, b) =>
+    a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+  it('좌측 정보 칸과 우측 전투력 칸이 겹치지 않는다', () => {
+    const r = computeRibbonSlots();
+    expect(overlaps(r.cult, r.power)).toBe(false);
+    expect(overlaps(r.stars, r.power)).toBe(false);
+    expect(overlaps(r.badge, r.cult)).toBe(false);
+    expect(overlaps(r.stars, r.evolution)).toBe(false);
+  });
+
+  it('두 줄이 위아래로 나뉜다', () => {
+    const r = computeRibbonSlots();
+    expect(r.stars.y).toBeGreaterThanOrEqual(r.cult.y + r.cult.h);
+  });
+
+  it('모든 칸이 리본 좌우 여백 안에 들어간다', () => {
+    const r = computeRibbonSlots();
+    const left = HERO_DETAIL_LAYOUT.margin;
+    const right = BASE_WIDTH - HERO_DETAIL_LAYOUT.margin;
+    Object.values(r).forEach((slot) => {
+      expect(slot.x).toBeGreaterThanOrEqual(left);
+      expect(slot.x + slot.w).toBeLessThanOrEqual(right);
+    });
+  });
+
+  it('전투력 칸이 오른쪽 끝에 붙는다', () => {
+    const r = computeRibbonSlots();
+    expect(r.power.x).toBeGreaterThan(r.cult.x);
+    expect(r.power.right).toBe(BASE_WIDTH - HERO_DETAIL_LAYOUT.margin - 24);
+  });
+});
+
+describe('스킬 카드 3열', () => {
+  const card = computeCardStack(1)[0];
+
+  it('아이콘·텍스트·버튼 열이 좌에서 우로 겹치지 않고 늘어선다', () => {
+    const parts = computeSkillCardParts(card);
+    expect(parts.icon.x + parts.icon.w).toBeLessThanOrEqual(parts.text.x);
+    expect(parts.text.x + parts.text.w).toBeLessThanOrEqual(parts.button.x + 0.000001);
+  });
+
+  it('세 열이 카드 안에 들어간다', () => {
+    const parts = computeSkillCardParts(card);
+    Object.values(parts).forEach((part) => {
+      expect(part.x).toBeGreaterThanOrEqual(card.x);
+      expect(part.x + part.w).toBeLessThanOrEqual(card.x + card.w);
+    });
+  });
+
+  it('세 열의 세로 중심이 카드 중심과 같다', () => {
+    const parts = computeSkillCardParts(card);
+    Object.values(parts).forEach((part) => {
+      expect(part.centerY).toBeCloseTo(card.centerY, 6);
+    });
+  });
+
+  it('카드가 없으면 크기 0 으로 안전 복귀한다', () => {
+    expect(computeSkillCardParts(null).icon.w).toBe(0);
+  });
+});
+
+describe('능력치 행 열 정렬', () => {
+  it('값은 바 시작보다 왼쪽에서 우측 정렬로 끝난다', () => {
+    const rows = computeStatRows({ hp: 900, atk: 90, def: 65, spd: 95 });
+    rows.forEach((row) => {
+      expect(row.valueRight).toBeLessThan(row.barX);
+      expect(row.labelX).toBeLessThan(row.valueRight);
+      expect(row.iconX).toBeLessThan(row.labelX);
+    });
+  });
+
+  it('네 행의 값 열과 바 열이 같은 x 로 정렬된다', () => {
+    const rows = computeStatRows({ hp: 900, atk: 90, def: 65, spd: 95 });
+    const valueXs = new Set(rows.map((r) => r.valueRight));
+    const barXs = new Set(rows.map((r) => r.barX));
+    expect(valueXs.size).toBe(1);
+    expect(barXs.size).toBe(1);
   });
 });
 

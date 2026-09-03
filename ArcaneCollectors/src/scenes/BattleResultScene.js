@@ -6,9 +6,11 @@ import navigationManager from '../systems/NavigationManager.js';
 import { StoryManager } from '../systems/StoryManager.js';
 import { energySystem } from '../systems/EnergySystem.js';
 import { buildDefeatGuidance, getDefeatEnergyRefund, isBossStage } from '../systems/StageWallRules.js';
+import { soundManager } from '../systems/SoundManager.js';
 // T-18 리디자인 — 렌더/레이아웃 전용 의존
 import { GlassPanel, GLASS_VARIANT } from '../components/GlassPanel.js';
 import { NineSliceFrame } from '../components/NineSliceFrame.js';
+import { UIButton } from '../components/UIButton.js';
 import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { IconFactory } from '../utils/IconFactory.js';
 import { ts } from '../utils/textStyles.ts';
@@ -24,6 +26,12 @@ import {
  * BattleResultScene - 전투 결과 화면
  * BattleScene에서 전환되며, 별점/보상/레벨업/소탕 버튼을 표시
  */
+/**
+ * 승패 스팅을 다 들려주고 로비 테마로 넘어가기까지의 시간(ms).
+ * 스팅 원본은 승리 11초 · 패배 9초라 9초 뒤 크로스페이드하면 두 곡 모두 끝맺음이 살아 있다.
+ */
+const RESULT_STING_MS = 9000;
+
 export class BattleResultScene extends Phaser.Scene {
   constructor() {
     super({ key: 'BattleResultScene' });
@@ -49,6 +57,10 @@ export class BattleResultScene extends Phaser.Scene {
   create() {
     this.transitioning = false; // 씬 재진입 시 반드시 리셋
     this.cameras.main.fadeIn(400);
+
+    // SND-01: 승패 스팅을 틀고, 끝나면 로비 테마로 돌아온다
+    soundManager.init(this);
+    this.playResultBGM();
 
     try {
       this.createBackground();
@@ -437,6 +449,19 @@ export class BattleResultScene extends Phaser.Scene {
    * T-Q3: 패배 진단 + 보스 에너지 환급.
    * 승리했거나 스토리 스테이지가 아니면 아무것도 하지 않는다.
    */
+  /**
+   * SND-01: 결과 화면 사운드.
+   * 승패 스팅(루프 없음)을 틀고 길이만큼 기다렸다가 로비 테마로 크로스페이드한다.
+   */
+  playResultBGM() {
+    // BGM 스팅 자체가 팡파르/하강 연출이라 같은 이름의 SFX 를 겹쳐 틀지 않는다
+    const sting = this.victory ? 'victory' : 'defeat';
+    soundManager.playBGM(sting, 0);
+    this.time.delayedCall(RESULT_STING_MS, () => {
+      soundManager.playBGM('main_theme');
+    });
+  }
+
   prepareDefeatGuidance() {
     if (this.victory) {
       this.trackFailCount();
@@ -700,53 +725,18 @@ export class BattleResultScene extends Phaser.Scene {
       const w = s(slot.w);
       const h = s(slot.h);
 
-      const frameKey = slot.primary ? 'btn_primary' : 'btn_ghost';
-      const frame = NineSliceFrame.create(this, {
+      // 라벨 캡슐·외곽선·터치 하한은 UIButton 이 공통으로 건다.
+      // 9-slice 아트가 없으면 NineSliceFrame 폴백이 색 면을 대신 그리므로
+      // 별도 fill 레이어는 두지 않는다 — 아트가 있을 때 모서리 투명부로 원색이 샜다
+      UIButton.createParts(this, {
         x, y, w, h,
-        key: frameKey,
-        depth: 12
-      });
-
-      // 9-slice 아트가 없을 때만 색 면을 깐다. 아트가 있는데 깔면
-      // 모서리 투명부로 원색이 새어 나온다
-      const fill = this.add.graphics().setDepth(11);
-      if (frame.isFallback !== false) {
-        fill.fillStyle(slot.primary ? btn.color : DESIGN.colors.bg.surface, slot.primary ? 1 : 0.92);
-        fill.fillRoundedRect(x - w / 2, y - h / 2, w, h, s(DESIGN.radius.md));
-        if (!slot.primary) {
-          fill.lineStyle(s(2), accent, 0.5);
-          fill.strokeRoundedRect(x - w / 2, y - h / 2, w, h, s(DESIGN.radius.md));
-        }
-      }
-
-      const text = this.add.text(x, y, btn.label, ts(slot.primary ? 'subtitle' : 'body', {
-        color: DESIGN.colors.text.primary,
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: s(3)
-      })).setOrigin(0.5).setDepth(13);
-
-      const hit = this.add.rectangle(x, y, w, h, 0x000000, 0)
-        .setDepth(14)
-        .setInteractive({ useHandCursor: true });
-
-      hit.on('pointerover', () => {
-        fill.setAlpha(0.85);
-        text.setAlpha(0.85);
-      });
-      hit.on('pointerout', () => {
-        fill.setAlpha(1);
-        text.setAlpha(1);
-      });
-      hit.on('pointerdown', () => {
-        this.tweens.add({
-          targets: [fill, text, frame],
-          scaleX: 0.96,
-          scaleY: 0.96,
-          duration: 50,
-          yoyo: true,
-          onComplete: btn.action
-        });
+        label: btn.label,
+        variant: slot.primary ? 'primary' : 'ghost',
+        tint: slot.primary ? null : accent,
+        token: slot.primary ? 'subtitle' : 'body',
+        bold: true,
+        depth: 12,
+        onClick: btn.action
       });
     });
   }

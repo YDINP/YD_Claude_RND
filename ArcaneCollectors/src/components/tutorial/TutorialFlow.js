@@ -13,7 +13,7 @@
  *
  * 주의: gameConfig 값을 모듈 스코프에서 평가하지 않는다(순환 import TDZ 방지).
  */
-import { TutorialManager, TutorialEvents, COMPLETION_MODE } from '../../systems/TutorialManager.js';
+import { TutorialManager, TutorialEvents, COMPLETION_MODE, TUTORIAL_TRACK } from '../../systems/TutorialManager.js';
 import { TutorialTargetRegistry, RESOLUTION_TIER } from '../../systems/TutorialTargetRegistry.js';
 import { StoryManager } from '../../systems/StoryManager.js';
 import { SaveManager } from '../../systems/SaveManager.js';
@@ -35,9 +35,14 @@ function menuTid(popupKey) {
 }
 
 export class TutorialFlow {
-  /** @param {Phaser.Scene} scene */
-  constructor(scene) {
+  /**
+   * @param {Phaser.Scene} scene 붙일 씬
+   * @param {{track?: 'main'|'battle'}} options
+   *   track='battle' 이면 전투 트랙(B-1~B-5)만 다룬다. 메인 트랙 진행은 건드리지 않는다.
+   */
+  constructor(scene, options = {}) {
     this.scene = scene;
+    this.track = options.track || TUTORIAL_TRACK.MAIN;
     this.overlay = null;
     this.coach = null;
     this.currentStepId = null;
@@ -47,6 +52,7 @@ export class TutorialFlow {
     this._openingPopup = false;
     this._refreshTimer = null;
     this._watchTimer = null;
+    this._autoCommitTimer = null;
     this._unsubscribe = null;
     this._destroyed = false;
   }
@@ -84,6 +90,7 @@ export class TutorialFlow {
       this._refreshTimer = null;
     }
     this._stopTargetWatch();
+    this._clearAutoCommit();
     this.clearVisuals();
     this.scene = null;
   }
@@ -120,6 +127,7 @@ export class TutorialFlow {
   /** 오버레이/코치마크 제거 */
   clearVisuals() {
     this._stopTargetWatch();
+    this._clearAutoCommit();
     if (this.overlay) {
       this.overlay.destroy();
       this.overlay = null;
@@ -175,12 +183,12 @@ export class TutorialFlow {
 
     this.clearVisuals();
 
-    if (TutorialManager.isCompleted()) {
+    if (this.track === TUTORIAL_TRACK.MAIN && TutorialManager.isCompleted()) {
       this.currentStepId = null;
       return;
     }
 
-    const step = TutorialManager.getCurrentStep();
+    const step = this._resolveCurrentStep();
     if (!step) return;
 
     // 스텝을 끝내기 위해 필요한 재료(T-09 첫 각인 보증)는 진입 시점에 지급한다.
@@ -205,6 +213,14 @@ export class TutorialFlow {
     // 3) 강제 팝업 스텝이 끝났는데 잠긴 팝업이 남아 있으면 닫기를 풀어준다(갇힘 방지)
     this._releaseLockedPopup(step);
 
+    // 3-1) 스텝과 무관한 팝업이 열려 있으면 안내를 잠시 접는다.
+    //
+    // 코치마크·지시문은 팝업(2000)보다 위인 depth 3000 대에 그린다. 강제 스텝이
+    // 화면을 잠그기 위해 그렇게 설계했지만, 그 결과 안내 스텝의 지시문과 강조 링이
+    // 영웅 상세 같은 무관한 팝업 위로 뚫고 나온다(사용자 신고). 강제 스텝은 그대로 두고
+    // 안내 스텝만 접는다. 팝업이 닫히면 notifyPopupClosed() → refresh() 로 되살아난다.
+    if (!step.forced && this._unrelatedPopupOpen(step)) return;
+
     // 4) 팝업 스텝
     if (step.targetPopup) {
       const popupOpen = !!this.scene.activePopup;
@@ -226,6 +242,58 @@ export class TutorialFlow {
   }
 
   // ==================== 내부 ====================
+
+  /**
+   * 지금 열린 팝업이 이 스텝과 무관한가.
+   *
+   * 스텝이 가리키는 팝업이 열린 것이라면 그 안을 강조해야 하므로 무관하지 않다.
+   * 팝업 키를 모르면(구형 호출부) 무관한 것으로 보지 않는다 — 안내가 사라지는 쪽보다
+   * 겹쳐 보이는 쪽이 덜 위험하다(진행이 막히지 않는다).
+   *
+   * @param {object} step 현재 스텝
+   * @returns {boolean}
+   */
+  _unrelatedPopupOpen(step) {
+    if (!this.scene?.activePopup) return false;
+    const openKey = this.scene.activePopupKey;
+    if (!openKey) return false;
+    return openKey !== step.targetPopup;
+  }
+
+  /** 이 flow 가 담당하는 트랙의 현재 스텝 */
+  _resolveCurrentStep() {
+    if (this.track === TUTORIAL_TRACK.BATTLE) {
+      const step = TutorialManager.getCurrentBattleStep();
+      if (!step) return null;
+      // 트리거에 스테이지가 지정돼 있으면 그 전투에서만 재생한다 (첫 전투 1회)
+      const stageId = step.trigger?.stageId;
+      if (stageId && this.scene?.stage?.id && this.scene.stage.id !== stageId) return null;
+      return step;
+    }
+    return TutorialManager.getCurrentStep();
+  }
+
+  /** fallbackPolicy.autoCommitAfterSec — 대기가 길어져도 안내가 진행을 막지 않게 한다 */
+  _armAutoCommit(step) {
+    this._clearAutoCommit();
+    const seconds = step.fallbackPolicy?.autoCommitAfterSec;
+    if (!seconds || !this.scene?.time) return;
+
+    this._autoCommitTimer = this.scene.time.delayedCall(seconds * 1000, () => {
+      this._autoCommitTimer = null;
+      if (this._destroyed) return;
+      if (TutorialManager.isStepCompleted(step.id)) return;
+      TutorialManager.commitStep(step.id, COMPLETION_MODE.PLAYED);
+      this.scheduleRefresh(80);
+    });
+  }
+
+  _clearAutoCommit() {
+    if (this._autoCommitTimer) {
+      this._autoCommitTimer.remove(false);
+      this._autoCommitTimer = null;
+    }
+  }
 
   /**
    * 튜토리얼이 강제로 연 팝업을 스텝이 끝나면 정리한다.
@@ -307,6 +375,9 @@ export class TutorialFlow {
   _mountCoach(step, bounds) {
     const cond = step.completionCondition || {};
     const dismissCompletes = cond.type === 'overlay_dismissed';
+    // 입력 대기 스텝(B-2)은 닫으면 스킵으로 커밋한다. 다시 띄우면 안내가 아니라 강요가 된다.
+    const dismissSkips = step.waitForInput === true && !!step.skipGroup;
+    this._armAutoCommit(step);
 
     // 팝업 진입이 완료 조건인 스텝은 강조 영역을 누르면 바로 그 팝업이 열리게 한다.
     const onTargetTap = cond.type === 'popup_open' && cond.popupKey
@@ -322,7 +393,9 @@ export class TutorialFlow {
       onTargetTap,
       onDismiss: () => {
         if (dismissCompletes) {
-          TutorialManager.notify('overlay_dismissed', {});
+          TutorialManager.notify('overlay_dismissed', {}, this.track);
+        } else if (dismissSkips) {
+          TutorialManager.commitStep(step.id, COMPLETION_MODE.SKIPPED);
         }
         this.scheduleRefresh(80);
       },

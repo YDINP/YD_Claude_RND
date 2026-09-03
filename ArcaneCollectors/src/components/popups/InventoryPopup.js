@@ -10,6 +10,7 @@ import { SaveManager } from '../../systems/SaveManager.js';
 import { getItemsByType } from '../../data/index.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT } from '../../utils/popupLayout.js';
+import { ensureMinTouchTarget } from '../../utils/touchTarget.js';
 import { IconFactory } from '../../utils/IconFactory.js';
 
 /** 헤더 타이틀 */
@@ -89,7 +90,8 @@ export class InventoryPopup extends PopupBase {
 
       const bg = this.scene.add.rectangle(x + tabW / 2, tabY, tabW - s(4), s(TAB_STRIP_HEIGHT - 8),
         isActive ? DESIGN.colors.status.info : DESIGN.colors.bg.surface, isActive ? 0.9 : 0.5);
-      bg.setInteractive({ useHandCursor: true });
+      // 탭 스트립 시각 높이는 36 이지만 손가락이 닿는 영역은 48 이어야 한다 (QA P2-1)
+      ensureMinTouchTarget(bg);
 
       const label = this.scene.add.text(x + tabW / 2 + s(10), tabY, tab.label, {
         fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif',
