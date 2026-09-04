@@ -2,7 +2,7 @@
  * asset-smoke.mjs — 에셋 로드 스모크 (T-27)
  *
  * 목적
- *   1) tools/art/asset-manifest.json 의 eager 텍스처(textures)가 부팅 후 실제
+ *   1) tools/art/asset-manifest.json 의 eager 텍스처(textures + menuIcons)가 부팅 후 실제
  *      Phaser 이미지 텍스처로 승격됐는지 확인한다(캔버스 플레이스홀더로 남아있지 않은지).
  *   2) 등록된 모든 경로가 실제로 200을 반환하고 png/webp 콘텐츠 타입인지 HTTP 로 확인한다.
  *   3) eager 초기 전송량(bg_main/bg_login + 프레임/버튼/아이콘/로고, blur 페어 포함)을
@@ -27,6 +27,13 @@ const BUDGET_BYTES = 6 * 1024 * 1024; // 6MB (팀 리드 결정)
 
 const manifestPath = join(__dirname, '..', '..', 'tools', 'art', 'asset-manifest.json');
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+
+/**
+ * eager 로 굽는 버킷 전부. PreloadScene.loadPhase0_Assets() 가 textures 와 menuIcons 를
+ * 한 큐에 넣으므로 승격 검증도 전송량 예산도 둘을 합쳐서 본다.
+ * (menuIcons = 로비 카테고리 도크/시트 타일 아이콘. 첫 화면에 바로 필요하다)
+ */
+const EAGER_TEXTURES = { ...(manifest.textures || {}), ...(manifest.menuIcons || {}) };
 
 let passed = 0;
 let failed = 0;
@@ -70,7 +77,7 @@ async function run() {
 
   try {
     console.log(`\n=== 에셋 로드 스모크 (${BASE_URL}) ===\n`);
-    console.log(`manifest: eager=${Object.keys(manifest.textures).length}, lazy=${Object.keys(manifest.lazyTextures || {}).length}, fullbody=${Object.keys(manifest.fullbody || {}).length}\n`);
+    console.log(`manifest: eager=${Object.keys(EAGER_TEXTURES).length} (textures ${Object.keys(manifest.textures).length} + menuIcons ${Object.keys(manifest.menuIcons || {}).length}), lazy=${Object.keys(manifest.lazyTextures || {}).length}, fullbody=${Object.keys(manifest.fullbody || {}).length}\n`);
 
     const response = await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
     assert(!!response && response.ok(), 'HTTP 응답 정상', response ? `status ${response.status()}` : 'no response');
@@ -134,7 +141,7 @@ async function run() {
         assetLoadedKeys: preload ? preload.assetLoadedKeys || [] : null,
         assetFallbackKeys: preload ? preload.assetFallbackKeys || [] : null,
       };
-    }, Object.keys(manifest.textures));
+    }, Object.keys(EAGER_TEXTURES));
 
     assert(
       textureReport.assetLoadedKeys !== null,
@@ -216,7 +223,7 @@ async function run() {
     let httpBad = 0;
     const badPaths = [];
 
-    for (const [key, meta] of Object.entries(manifest.textures)) {
+    for (const [key, meta] of Object.entries(EAGER_TEXTURES)) {
       const url = new URL(meta.path, BASE_URL).toString();
       const res = responsesByUrl.get(url);
       if (!res) {

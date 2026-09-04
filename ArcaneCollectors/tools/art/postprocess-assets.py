@@ -83,6 +83,13 @@ ENEMY_UNIT_SOURCE_DIR = ROOT / "art" / "gen" / "enemies"
 ENEMY_UNIT_TARGET_DIR = PUBLIC_DIR / "assets" / "characters" / "enemies"
 ENEMY_DATA_PATH = ROOT / "src" / "data" / "enemies.json"
 
+MENU_ICON_SOURCE_DIR = ROOT / "art" / "gen" / "menu_icons"
+MENU_ICON_TARGET_DIR = PUBLIC_DIR / "assets" / "ui" / "icons"
+# 로비 도크/시트 타일의 시각 크기는 base 44~52px(=렌더 66~78px). 2배 여유를 두고 160 으로 굽는다.
+MENU_ICON_SIZE = 160
+# 텍스처 키 접두사. menuLayout.menuIconTextureKey() 와 같은 규칙이다(menu_<popupKey>).
+MENU_ICON_KEY_PREFIX = "menu_"
+
 CHIBI_SOURCE_DIR = ROOT / "art" / "gen" / "chibi_sheet"
 CHIBI_TARGET_DIR = PUBLIC_DIR / "assets" / "characters" / "chibi"
 CHIBI_SPEC_PATH = CHIBI_SOURCE_DIR / "chibi-manifest.json"
@@ -414,6 +421,98 @@ def process_alpha_ui(
     log(f"  [{asset['category']}] {aid}: {orig_w}x{orig_h} -> {final_w}x{final_h} {fmt}  src={src.name}")
 
 
+def process_menu_icons(report: Report, force: bool, dry_run: bool, manifest: dict) -> None:
+    """로비 메뉴 아이콘(art/gen/menu_icons/menu_<popupKey>.png) → public/assets/ui/icons/menu_<key>.webp.
+
+    manifest.menuIcons 는 **eager** 버킷이다. 로비가 첫 화면이라 지연 로드하면 타일이
+    벡터에서 이미지로 늦게 바뀌며 깜빡인다. 대신 한 장을 160px q90 으로 눌러
+    14장 전부 합쳐도 전송량 예산(6MB) 안에서 무시할 수 있는 크기로 유지한다.
+
+    알파를 반드시 살린다 — 타일 플레이트 위에 얹히므로 불투명 배경이 있으면 사각형이 뜬다.
+    유효 알파가 없는 소스는 굽지 않고 regen-list.json 으로 넘긴다(잘못 구운 아트를
+    manifest 에 넣으면 씬이 벡터 폴백을 잃는다).
+    """
+    manifest.setdefault("menuIcons", {})
+    if not MENU_ICON_SOURCE_DIR.exists():
+        log("  (art/gen/menu_icons 없음 — 메뉴 아이콘 단계 건너뜀)")
+        return
+
+    sources = sorted(MENU_ICON_SOURCE_DIR.glob("menu_*.png"))
+    if not sources:
+        log("  (menu_*.png 없음 — 메뉴 아이콘 단계 건너뜀)")
+        return
+
+    for src in sources:
+        key = src.stem                      # menu_gacha
+        popup_key = key[len(MENU_ICON_KEY_PREFIX):]
+        if not popup_key:
+            continue
+
+        target = MENU_ICON_TARGET_DIR / f"{key}.webp"
+        target_rel = to_public_rel(str(target.relative_to(ROOT)))
+
+        if not is_stale(target, src, force):
+            report.up_to_date.append(key)
+            with Image.open(target) as done:
+                w, h = done.size
+            manifest["menuIcons"][key] = {
+                "path": target_rel, "width": w, "height": h,
+                "category": "menu-icon", "priority": "P1",
+                "popupKey": popup_key, "nineSlice": None,
+            }
+            continue
+
+        with Image.open(src) as probe:
+            probe_mode = probe.mode
+            rgba = probe.convert("RGBA") if probe.mode != "RGBA" else probe
+            if not has_real_alpha(rgba):
+                report.skipped_no_alpha.append(key)
+                note_regen(key, f"메뉴 아이콘 소스에 유효 알파 채널 없음({probe_mode}). 투명 배경으로 재생성 필요.",
+                           str(target.relative_to(ROOT)))
+                log(f"  [skip-no-alpha] {key}: 유효 알파 없음 ({src.name}, mode={probe_mode})")
+                continue
+
+        if dry_run:
+            report.processed.append(f"{key} (dry-run)")
+            continue
+
+        with Image.open(src) as im:
+            im = im.convert("RGBA")
+            orig_w, orig_h = im.size
+
+            # 1) 콘텐츠 바운딩 박스로 트림 — 소스마다 다른 여백을 없애 타일 안에서 크기가 고르게 보인다
+            bbox = im.getchannel("A").getbbox()
+            if bbox:
+                pad = max(2, round(max(orig_w, orig_h) * 0.02))
+                l, t, r, b = bbox
+                im = im.crop((
+                    max(0, l - pad), max(0, t - pad),
+                    min(orig_w, r + pad), min(orig_h, b + pad),
+                ))
+
+            # 2) 정사각 캔버스에 중앙 배치 — 가로/세로 비가 달라도 씬이 한 변만 지정해 그릴 수 있다
+            side = max(im.size)
+            square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+            square.paste(im, ((side - im.width) // 2, (side - im.height) // 2))
+
+            # 3) 다운스케일만 한다(업스케일 금지 — 없는 정보를 만들어 뭉개지 않는다)
+            final = side if side <= MENU_ICON_SIZE else MENU_ICON_SIZE
+            if final != side:
+                square = square.resize((final, final), Image.LANCZOS)
+
+            target.parent.mkdir(parents=True, exist_ok=True)
+            square.save(target, "WEBP", quality=90, method=6)
+            final_w, final_h = square.size
+
+        manifest["menuIcons"][key] = {
+            "path": target_rel, "width": final_w, "height": final_h,
+            "category": "menu-icon", "priority": "P1",
+            "popupKey": popup_key, "nineSlice": None,
+        }
+        report.processed.append(key)
+        log(f"  [menu-icon] {key}: {orig_w}x{orig_h} -> {final_w}x{final_h} webp q90 (alpha)  src={src.name}")
+
+
 def process_enemy(asset: dict, report: Report, force: bool, dry_run: bool, manifest: dict) -> None:
     aid = asset["id"]
     src = UI_SOURCE_DIR / f"{aid}.png"
@@ -703,6 +802,10 @@ def main() -> int:
         # enemies: 적 유닛 아트(512 WebP, 알파 유지). resolveEnemyArt() 최우선 조회 버킷.
         # PreloadScene 은 이 버킷을 읽지 않는다 — BattleScene/MeditationView 가 전투 진입 시 지연 로드.
         "enemies": {},
+        # menuIcons: 로비 카테고리 도크/시트 타일 아이콘(160 WebP, 알파 유지).
+        # eager 버킷 — 로비가 첫 화면이라 PreloadScene 이 textures 와 함께 한 번에 굽는다.
+        # 여기에 없는 키는 씬이 절대 요청하지 않고 IconFactory 벡터로 폴백한다.
+        "menuIcons": {},
         # chibi: 명상 로비용 치비 스프라이트 시트(무손실 WebP, 알파 유지).
         # PreloadScene 은 이 버킷을 읽지 않는다 — MeditationView 가 파티 슬롯 조회 시점에 지연 로드한다.
         # 값에 cell/frames/footY 가 함께 들어 있어 씬이 규격을 하드코딩하지 않는다.
@@ -754,6 +857,9 @@ def main() -> int:
     log("=== 적 유닛 아트 (art/gen/enemies/enemy_*.png, 스펙 밖 별도 트랙) ===")
     process_enemy_units(report, args.force, args.dry_run, manifest)
 
+    log("=== 메뉴 아이콘 (art/gen/menu_icons/menu_<popupKey>.png, 스펙 밖 별도 트랙) ===")
+    process_menu_icons(report, args.force, args.dry_run, manifest)
+
     log("=== 치비 시트 (art/gen/chibi_sheet/<hero>_sheet.png, 스펙 밖 별도 트랙) ===")
     process_chibi_sheets(report, args.force, args.dry_run, manifest)
 
@@ -796,6 +902,7 @@ def main() -> int:
     log(f"manifest 텍스처 키 수(lazy)  : {len(manifest['lazyTextures'])}")
     log(f"manifest 전신 키 수          : {len(manifest['fullbody'])}")
     log(f"manifest 적 유닛 키 수       : {len(manifest['enemies'])}")
+    log(f"manifest 메뉴 아이콘 키 수   : {len(manifest['menuIcons'])}")
     log(f"manifest 치비 시트 키 수     : {len(manifest['chibi'])}")
     if not args.dry_run:
         log(f"manifest 저장: {MANIFEST_PATH.relative_to(ROOT)}")

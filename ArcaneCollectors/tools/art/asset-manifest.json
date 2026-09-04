@@ -1,7 +1,7 @@
 {
   "$schema": "internal://arcanecollectors/asset-manifest/v1",
   "generatedBy": "tools/art/postprocess-assets.py",
-  "generatedAt": "2026-09-04T01:36:39Z",
+  "generatedAt": "2026-09-04T02:34:12Z",
   "textures": {
     "bg_main": {
       "path": "assets/backgrounds/scenes/bg_main.webp",
@@ -1342,6 +1342,134 @@
       "height": 512,
       "category": "enemy",
       "priority": "P3",
+      "nineSlice": null
+    }
+  },
+  "menuIcons": {
+    "menu_ascension": {
+      "path": "public/assets/ui/icons/menu_ascension.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "ascension",
+      "nineSlice": null
+    },
+    "menu_collection": {
+      "path": "public/assets/ui/icons/menu_collection.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "collection",
+      "nineSlice": null
+    },
+    "menu_eventdungeon": {
+      "path": "public/assets/ui/icons/menu_eventdungeon.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "eventdungeon",
+      "nineSlice": null
+    },
+    "menu_friends": {
+      "path": "public/assets/ui/icons/menu_friends.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "friends",
+      "nineSlice": null
+    },
+    "menu_gacha": {
+      "path": "public/assets/ui/icons/menu_gacha.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "gacha",
+      "nineSlice": null
+    },
+    "menu_guild": {
+      "path": "public/assets/ui/icons/menu_guild.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "guild",
+      "nineSlice": null
+    },
+    "menu_herolist": {
+      "path": "public/assets/ui/icons/menu_herolist.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "herolist",
+      "nineSlice": null
+    },
+    "menu_inventory": {
+      "path": "public/assets/ui/icons/menu_inventory.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "inventory",
+      "nineSlice": null
+    },
+    "menu_partyedit": {
+      "path": "public/assets/ui/icons/menu_partyedit.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "partyedit",
+      "nineSlice": null
+    },
+    "menu_pvp": {
+      "path": "public/assets/ui/icons/menu_pvp.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "pvp",
+      "nineSlice": null
+    },
+    "menu_quest": {
+      "path": "public/assets/ui/icons/menu_quest.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "quest",
+      "nineSlice": null
+    },
+    "menu_raid": {
+      "path": "public/assets/ui/icons/menu_raid.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "raid",
+      "nineSlice": null
+    },
+    "menu_settings": {
+      "path": "public/assets/ui/icons/menu_settings.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "settings",
+      "nineSlice": null
+    },
+    "menu_tower": {
+      "path": "public/assets/ui/icons/menu_tower.webp",
+      "width": 160,
+      "height": 160,
+      "category": "menu-icon",
+      "priority": "P1",
+      "popupKey": "tower",
       "nineSlice": null
     }
   },

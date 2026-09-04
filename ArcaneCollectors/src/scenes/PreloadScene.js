@@ -104,8 +104,11 @@ export class PreloadScene extends Phaser.Scene {
       return;
     }
 
+    // menuIcons 는 로비 첫 화면(카테고리 도크/시트)에 바로 필요해 textures 와 같은 eager 버킷이다.
+    // 지연 로드하면 타일이 벡터 → 이미지로 늦게 바뀌며 깜빡인다. 14장 합쳐 ~0.2MB 라 예산에 영향이 없다.
     const textures = (manifest && manifest.textures) || {};
-    const entries = Object.entries(textures);
+    const menuIcons = (manifest && manifest.menuIcons) || {};
+    const entries = [...Object.entries(textures), ...Object.entries(menuIcons)];
 
     if (entries.length === 0) {
       console.warn('[PreloadScene] asset-manifest.json 에 등록된 텍스처가 없습니다. 프로시저럴 폴백만 사용.');

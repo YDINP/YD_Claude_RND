@@ -55,6 +55,7 @@ import { GlassPanel, GLASS_VARIANT } from '../components/GlassPanel.js';
 import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { IconFactory } from '../utils/IconFactory.js';
 import * as ML from '../utils/mainMenuLayout.js';
+import * as MenuL from '../utils/menuLayout.js';
 import {
   computeMenuBadges,
   formatBadgeCount,
@@ -73,6 +74,12 @@ import { GameEvents } from '../systems/EventBus.js';
  * 지연은 씬이 다 그려진 뒤에 뜨게 하는 최소값이다.
  */
 const LEGACY_NOTICE_DEPTH = 2600;
+
+/**
+ * 메뉴 도크 위쪽 스크림의 최대 알파.
+ * 배경 아트가 완전히 죽지 않으면서 도크가 화면 아래에 "앉아 있다"고 읽히는 값이다.
+ */
+const DOCK_SCRIM_ALPHA = 0.82;
 const LEGACY_NOTICE_DELAY = 400;
 
 export class MainMenuScene extends Phaser.Scene {
@@ -224,6 +231,11 @@ export class MainMenuScene extends Phaser.Scene {
       this._badgeRefreshTimer = null;
     }
     this._menuTiles = {};
+    this._menuCatTiles = {};
+    this._menuSheets = {};
+    this._menuCategories = [];
+    this._menuExpandedId = null;
+    this._menuSheetsPlaced = false;
     if (this.tutorialFlow) {
       this.tutorialFlow.destroy();
       this.tutorialFlow = null;
@@ -638,13 +650,14 @@ export class MainMenuScene extends Phaser.Scene {
       .setAlpha(0.001).setDepth(d + 4).setInteractive({ useHandCursor: true });
     chargeHit.on('pointerdown', () => this.chargeEnergyWithGems());
 
-    // 설정 — 벡터 아이콘. 히트 72x72 (base 48)
+    // 설정 — 히트 72x72 (base 48). 설정은 도크에 없고 여기가 유일한 입구라
+    // 메뉴 이미지 아이콘(menu_settings)이 있으면 그것을 쓰고, 없으면 벡터로 떨어진다
     const settingsHit = this.add.rectangle(s(L.settings.x), s(L.settings.y), s(L.settings.w), s(L.settings.h))
       .setAlpha(0.001).setDepth(d + 4).setInteractive({ useHandCursor: true });
-    const settingsIcon = IconFactory.createImage(this, s(L.settings.x), s(L.settings.y), 'settings', s(DESIGN.icon.md), {
-      tint: DESIGN.colors.brand.primary
-    });
-    settingsIcon?.setDepth(d + 2);
+    const settingsIcon = this._createMenuIcon(
+      s(L.settings.x), s(L.settings.y), DESIGN.icon.md, 'settings', d + 2,
+      { vectorTint: DESIGN.colors.brand.primary }
+    ).obj;
     settingsHit.on('pointerover', () => settingsIcon?.setAlpha(0.75));
     settingsHit.on('pointerout', () => settingsIcon?.setAlpha(1));
     settingsHit.on('pointerdown', () => this.openPopup('settings'));
@@ -1721,100 +1734,258 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   /**
-   * 메뉴 그리드 (§3-1 + 사용자 피드백 반영).
+   * 하단 메뉴 — **카테고리 도크 + 펼침 시트** (사용자 피드백: "로비에 메뉴가 너무 많다").
    *
-   * 원형 아이콘 나열에서 **타일**로 바꿨다. 배경 일러스트 위에 아이콘만 떠 있으면
-   * 실루엣이 분리되지 않아 "눈에 안 들어온다". 어두운 플레이트로 바닥을 깔고,
-   * 아이콘을 icon.xl(64) 로 키우고, 라벨을 body bold + 스트로크로 올린다.
-   * 받을 것이 있는 메뉴에는 배지가 붙는다(MenuBadgeRules).
+   * 평면 14칸 5열 그리드는 화면 아래 1/4(315px)를 통째로 먹으면서도 무엇이 중요한지
+   * 말해 주지 않았다. 그래서 두 단으로 나눈다.
+   *   1단 도크  — 성장 · 도전 · 교류 · 수집 4칸. 화면 바닥에 붙어 고정된다(132px).
+   *   2단 시트  — 탭한 카테고리의 하위 항목만 도크 위로 한 줄 뜬다. 한 번에 하나만.
    *
-   * 아이콘은 전부 IconFactory 벡터다. popupKey 는 별칭으로 해석되므로
-   * herolist → heroes, partyedit → party 로 자동 매핑된다.
+   * 시트는 **미리 다 만들어 두고 보이기만 토글**한다. 튜토리얼 타깃(mainmenu.menu.{key})이
+   * 접힌 상태에서도 살아 있어야 코치마크가 1단계(레지스트리)로 해석되기 때문이다.
+   * 접힌 카테고리 안의 타깃은 `ensureVisible` 훅이 그 카테고리를 펼쳐 화면에 올린다.
+   *
+   * 아이콘은 매니페스트 `menuIcons` 에 키가 있으면 이미지, 없으면 IconFactory 벡터다.
+   * 매니페스트에 없는 키는 애초에 로드하지 않으므로 404 요청이 생기지 않는다.
    */
   createBottomMenu() {
-    const allMenuItems = [
-      { label: '소환', popupKey: 'gacha' },
-      { label: '영웅', popupKey: 'herolist' },
-      { label: '파티', popupKey: 'partyedit' },
-      { label: '퀘스트', popupKey: 'quest' },
-      { label: '무한탑', popupKey: 'tower' },
-      { label: '각인', popupKey: 'ascension' },
-      { label: '이벤트', popupKey: 'eventdungeon' },
-      { label: '가방', popupKey: 'inventory' },
-      { label: '설정', popupKey: 'settings' },
-      { label: 'PvP', popupKey: 'pvp' },
-      { label: '길드', popupKey: 'guild' },
-      { label: '레이드', popupKey: 'raid' },
-      { label: '친구', popupKey: 'friends' },
-      { label: '도감', popupKey: 'collection' },
-    ];
+    this._menuObjects = [];
+    this._menuTiles = {};
+    this._menuCatTiles = {};
+    this._menuSheets = {};
+    this._menuExpandedId = null;
 
-    // T-C7 MenuGridGate: 튜토리얼 진행에서 파생한 해금 목록으로 필터링한다.
-    // 잠긴 항목은 자물쇠로 표시하지 않고 아예 그리지 않는다 (UX 문서 §1-2).
     const saveDataForMenu = SaveManager.load();
-    const menuItems = MenuGridGate.filterMenuItems(allMenuItems, saveDataForMenu);
+    const unlocked = MenuGridGate.deriveUnlockedMenus(saveDataForMenu, MenuL.allMenuKeys());
+    const categories = MenuL.buildMenuCategories(unlocked);
+    this._menuCategories = categories;
 
-    // 0개면 그리드 영역 자체를 그리지 않는다 (신규 유저 첫 화면)
-    if (!MenuGridGate.shouldRenderGrid(menuItems.length)) {
-      this._menuTiles = {};
+    // 해금된 메뉴가 하나도 없으면 도크 자체를 그리지 않는다 (신규 유저 첫 화면, UX §2-7)
+    if (categories.length === 0) {
       this.refreshMenuBadges();
       return;
     }
 
-    this._menuObjects = [];
-    this._menuTiles = {};
-    const cols = MenuGridGate.getColumnCount(menuItems.length);
-    const grid = ML.computeMenuGrid(menuItems.length, cols);
     const accent = this._accent.color;
+    this._createMenuDockPlate(accent);
 
-    grid.cells.forEach((cell, i) => {
-      const item = menuItems[i];
-      this._createMenuTile(cell, item, accent);
-    });
+    // 시트를 먼저 만들어야 도크 타일이 그 위에 온다 (배지·갈매기가 시트에 가리지 않는다)
+    categories.forEach((cat) => this._createCategorySheet(cat, accent));
 
+    const dock = MenuL.computeCategoryDock(categories.length);
+    dock.cells.forEach((cell, i) => this._createCategoryTile(cell, categories[i], accent));
+
+    // 카테고리가 하나뿐인 온보딩 초반에는 자동으로 펼친다 — 헛탭을 한 번 줄인다
+    this._setExpanded(MenuL.resolveInitialExpanded(categories), false);
     this.refreshMenuBadges();
   }
 
   /**
-   * 메뉴 타일 하나. 플레이트 → 아이콘 → 라벨 → 배지 순으로 쌓는다.
-   *
-   * @param {object} cell computeMenuGrid() 항목
-   * @param {{label:string, popupKey:string}} item
+   * 도크 바닥판. 화면 아래 끝까지 닿는 어두운 판 + 그 위로 사라지는 그라디언트 스크림이다.
+   * 스크림이 없으면 배경 일러스트와 판 사이에 자를 댄 듯한 직선이 생긴다.
    * @param {number} accent 교단 액센트 색
    */
-  _createMenuTile(cell, item, accent) {
-    const d = Z_INDEX.BOTTOM_MENU;
-    const tile = cell.tile;
-    const x = s(tile.x);
-    const y = s(tile.y);
-    const w = s(tile.w);
-    const h = s(tile.h);
-    const r = s(tile.radius);
+  _createMenuDockPlate(accent) {
+    const d = Z_INDEX.BOTTOM_MENU - 2;
+    const { plate, scrim } = MenuL.MENU_DOCK;
+    const bg = DESIGN.colors.bg.primary;
 
-    // 1) 플레이트 — 배경 일러스트에서 타일을 떼어 내는 바닥
+    const g = this.add.graphics().setDepth(d);
+
+    // 스크림은 얇은 띠를 겹쳐 만든다. Graphics.fillGradientStyle 은 렌더러에 따라
+    // 알파 보간이 무시돼 한 겹 단색으로 떨어지는 일이 있어, 눈에 보이는 결과를 코드가 직접 정한다.
+    const bands = 16;
+    const bandH = s(scrim.h) / bands;
+    for (let i = 0; i < bands; i++) {
+      // 아래로 갈수록 짙어지되 제곱으로 붙는다 — 위쪽 경계에서 선이 보이지 않는다
+      const ratio = (i + 1) / bands;
+      g.fillStyle(bg, DOCK_SCRIM_ALPHA * ratio * ratio);
+      g.fillRect(s(scrim.x), s(scrim.y) + bandH * i, s(scrim.w), bandH + 1);
+    }
+
+    g.fillStyle(bg, 0.94);
+    g.fillRect(s(plate.x), s(plate.y), s(plate.w), s(plate.h));
+    g.lineStyle(s(1), accent, 0.4);
+    g.lineBetween(s(plate.x), s(plate.y), s(plate.x + plate.w), s(plate.y));
+
+    this._menuObjects.push(g);
+  }
+
+  /**
+   * 메뉴 아이콘 하나. 이미지가 있으면 이미지, 없으면 벡터 폴백이다.
+   *
+   * 이미지 아이콘은 자체 발광·색을 가진 아트라 **틴트를 걸지 않는다**. 벡터는 단색
+   * 실루엣이라 틴트와 그림자로 배경에서 떼어 낸다 — 두 경로가 서로를 흉내 내지 않는다.
+   *
+   * 만든 오브젝트를 스스로 어디에도 등록하지 않는다 — 상단바 톱니처럼 메뉴 수명주기와
+   * 무관한 호출부가 있어서, 수거 책임은 `objects` 를 받는 쪽이 진다.
+   *
+   * @param {number} x 렌더 좌표
+   * @param {number} y 렌더 좌표
+   * @param {number} sizeBase base 기준 한 변
+   * @param {string} popupKey
+   * @param {number} depth
+   * @param {{vectorTint?:number}} [options] 벡터 폴백에만 쓰는 실루엣 색
+   * @returns {{obj:object|null, isImage:boolean, scale:number, shadows:Array, objects:Array}}
+   */
+  _createMenuIcon(x, y, sizeBase, popupKey, depth, options = {}) {
+    const px = s(sizeBase);
+    const texKey = MenuL.menuIconTextureKey(popupKey);
+
+    if (this.textures.exists(texKey)) {
+      const img = this.add.image(x, y, texKey).setDepth(depth);
+      const scale = px / (img.width || px);
+      img.setScale(scale);
+      return { obj: img, isImage: true, scale, shadows: [], objects: [img] };
+    }
+
+    const shadows = [];
+    const shadowKey = IconFactory.create(this, popupKey, px, { tint: 0x000000 });
+    if (shadowKey) {
+      shadows.push(this.add.image(x, y + s(3), shadowKey).setAlpha(0.55).setDepth(depth - 1));
+    }
+    const icon = IconFactory.createImage(this, x, y, popupKey, px, {
+      tint: Number.isFinite(options.vectorTint) ? options.vectorTint : DESIGN.colors.text.primary
+    });
+    icon?.setDepth(depth);
+    return {
+      obj: icon || null, isImage: false, scale: 1, shadows,
+      objects: icon ? [...shadows, icon] : [...shadows]
+    };
+  }
+
+  /**
+   * 카테고리 타일 하나. 탭하면 시트가 펼쳐지고, 다시 탭하면 접힌다.
+   * @param {object} cell computeCategoryDock() 항목
+   * @param {{id:string,label:string,icon:string,representative:string}} cat
+   * @param {number} accent
+   */
+  _createCategoryTile(cell, cat, accent) {
+    const d = Z_INDEX.BOTTOM_MENU + 6;
+    const t = cell.tile;
+    const x = s(t.x);
+    const y = s(t.y);
+    const w = s(t.w);
+    const h = s(t.h);
+    const r = s(t.radius);
+
     const plate = this.add.graphics().setDepth(d);
+    /** state: 'idle' | 'hover' | 'open' */
+    const drawPlate = (state) => {
+      const open = state === 'open';
+      plate.clear();
+      plate.fillStyle(open ? accent : DESIGN.colors.bg.surface, open ? 0.24 : 0.8);
+      plate.fillRoundedRect(x - w / 2, y - h / 2, w, h, r);
+      plate.lineStyle(s(open ? 2 : 1), (open || state === 'hover') ? accent : 0xFFFFFF, open ? 0.95 : 0.24);
+      plate.strokeRoundedRect(x - w / 2, y - h / 2, w, h, r);
+    };
+    drawPlate('idle');
+
+    // 펼침 표식 — 타일 위쪽의 작은 갈매기. 지금 무엇이 열려 있는지 한눈에 보인다
+    const caret = this.add.graphics().setDepth(d + 2).setVisible(false);
+    const caretY = s(cell.caretY);
+    const caretW = s(9);
+    caret.fillStyle(accent, 1);
+    caret.fillTriangle(x - caretW, caretY + s(5), x + caretW, caretY + s(5), x, caretY - s(4));
+
+    const icon = this._createMenuIcon(x, s(cell.iconY), cell.iconSize, cat.representative, d + 2);
+
+    const label = this.add.text(x, s(cell.labelY), cat.label, ts('body', {
+      color: DESIGN.colors.text.primary,
+      fontStyle: 'bold',
+      stroke: '#0D0F1A',
+      strokeThickness: s(2)
+    })).setOrigin(0.5).setDepth(d + 2);
+
+    const hitArea = this.add.rectangle(s(cell.hit.x), s(cell.hit.y), s(cell.hit.w), s(cell.hit.h))
+      .setAlpha(0.001).setDepth(d + 4).setInteractive({ useHandCursor: true });
+
+    // 코치마크가 카테고리 자체를 가리킬 수 있게 TID 를 남긴다
+    TutorialTargetRegistry.register(`mainmenu.menucat.${cat.id}`, hitArea, 'MainMenuScene');
+
+    this._menuObjects.push(plate, caret, label, hitArea, ...icon.objects);
+    this._menuCatTiles[cat.id] = {
+      cell, plate, caret, label, badge: null, drawPlate,
+      icon: icon.obj, iconIsImage: icon.isImage, iconScale: icon.scale
+    };
+
+    const isOpen = () => this._menuExpandedId === cat.id;
+    hitArea.on('pointerover', () => {
+      if (!isOpen()) drawPlate('hover');
+      icon.obj?.setScale(icon.scale * 1.06);
+    });
+    hitArea.on('pointerout', () => {
+      drawPlate(isOpen() ? 'open' : 'idle');
+      icon.obj?.setScale(icon.scale);
+    });
+    hitArea.on('pointerdown', () => {
+      icon.obj?.setScale(icon.scale * 0.92);
+      this.time.delayedCall(90, () => {
+        icon.obj?.setScale(icon.scale);
+        this._setExpanded(MenuL.toggleExpanded(this._menuExpandedId, cat.id), true);
+      });
+    });
+  }
+
+  /**
+   * 카테고리 하나의 펼침 시트. 접힌 상태에서도 만들어 두고 보이기만 감춘다.
+   * @param {{id:string, items:Array}} cat
+   * @param {number} accent
+   */
+  _createCategorySheet(cat, accent) {
+    const d = Z_INDEX.BOTTOM_MENU;
+    const { panel, cells } = MenuL.computeCategorySheet(cat.items.length);
+    const container = this.add.container(0, 0).setDepth(d).setVisible(false).setAlpha(0);
+
+    const plate = this.add.graphics();
+    plate.fillStyle(DESIGN.colors.bg.surface, 0.94);
+    plate.fillRoundedRect(s(panel.x), s(panel.y), s(panel.w), s(panel.h), s(panel.radius));
+    plate.lineStyle(s(1), accent, 0.45);
+    plate.strokeRoundedRect(s(panel.x), s(panel.y), s(panel.w), s(panel.h), s(panel.radius));
+    container.add(plate);
+    this._menuObjects.push(plate);
+
+    const hits = [];
+    cells.forEach((cell, i) => {
+      const hit = this._createMenuTile(cell, cat.items[i], cat.id, container, accent);
+      if (hit) hits.push(hit);
+    });
+
+    this._menuSheets[cat.id] = { container, panel, hits };
+    this._menuObjects.push(container);
+  }
+
+  /**
+   * 시트 안 메뉴 타일 하나. 플레이트 → 아이콘 → 라벨 → 배지 순으로 쌓는다.
+   *
+   * @param {object} cell computeCategorySheet() 항목
+   * @param {{label:string, popupKey:string}} item
+   * @param {string} catId 소속 카테고리 (ensureVisible 이 펼칠 대상)
+   * @param {object} container 시트 컨테이너
+   * @param {number} accent 교단 액센트 색
+   * @returns {object} 히트 영역 (시트가 입력을 껐다 켤 때 쓴다)
+   */
+  _createMenuTile(cell, item, catId, container, accent) {
+    const d = Z_INDEX.BOTTOM_MENU;
+    const t = cell.tile;
+    const x = s(t.x);
+    const y = s(t.y);
+    const w = s(t.w);
+    const h = s(t.h);
+    const r = s(t.radius);
+
+    const plate = this.add.graphics();
     const drawPlate = (pressed) => {
       plate.clear();
-      plate.fillStyle(DESIGN.colors.bg.surface, pressed ? 0.95 : 0.85);
+      plate.fillStyle(pressed ? accent : DESIGN.colors.bg.primary, pressed ? 0.3 : 0.55);
       plate.fillRoundedRect(x - w / 2, y - h / 2, w, h, r);
-      plate.lineStyle(s(1), pressed ? accent : 0xFFFFFF, pressed ? 0.9 : 0.22);
+      plate.lineStyle(s(1), pressed ? accent : 0xFFFFFF, pressed ? 0.9 : 0.18);
       plate.strokeRoundedRect(x - w / 2, y - h / 2, w, h, r);
     };
     drawPlate(false);
 
-    // 2) 아이콘 — icon.xl. 아래로 짙은 그림자를 한 겹 깔아 실루엣을 분리한다
-    const iconPx = s(cell.iconSize);
-    const iconY = s(cell.iconY);
-    const shadowKey = IconFactory.create(this, item.popupKey, iconPx, { tint: 0x000000 });
-    if (shadowKey) {
-      this.add.image(x, iconY + s(3), shadowKey).setAlpha(0.55).setDepth(d + 1);
-    }
-    const icon = IconFactory.createImage(this, x, iconY, item.popupKey, iconPx, {
-      tint: DESIGN.colors.text.primary
-    });
-    icon?.setDepth(d + 2);
+    const icon = this._createMenuIcon(x, s(cell.iconY), cell.iconSize, item.popupKey, d + 2);
 
-    // 3) 라벨 — body(16) bold + 스트로크. 배경이 어떤 밝기든 읽힌다
     const label = this.add.text(x, s(cell.labelY), item.label, ts('body', {
       color: DESIGN.colors.text.primary,
       fontStyle: 'bold',
@@ -1822,30 +1993,95 @@ export class MainMenuScene extends Phaser.Scene {
       strokeThickness: s(2)
     })).setOrigin(0.5).setDepth(d + 2);
 
-    // 4) 히트 영역 — 타일 전체 (base 120x100)
     const hitArea = this.add.rectangle(s(cell.hit.x), s(cell.hit.y), s(cell.hit.w), s(cell.hit.h))
       .setAlpha(0.001).setDepth(d + 4).setInteractive({ useHandCursor: true });
 
-    // 튜토리얼 하이라이트 대상 등록 (TID = mainmenu.menu.{popupKey})
+    // 튜토리얼 하이라이트 대상 (TID = mainmenu.menu.{popupKey}).
+    // 접힌 카테고리 안에 있으면 ensureVisible 이 먼저 펼쳐 화면에 올린다 —
+    // ScrollContainer.scrollTo 와 같은 계약이다(TutorialFlow 는 손대지 않는다).
     TutorialTargetRegistry.register(
-      `mainmenu.menu.${item.popupKey}`, hitArea, 'MainMenuScene'
+      `mainmenu.menu.${item.popupKey}`, hitArea, 'MainMenuScene',
+      { ensureVisible: () => this._setExpanded(catId, true) }
     );
 
-    this._menuObjects.push(plate, label, hitArea);
-    if (icon) this._menuObjects.push(icon);
+    // 컨테이너에 담아 시트째 보였다 감췄다 한다. 컨테이너가 (0,0)이라 좌표는 절대값 그대로다.
+    // 컨테이너 안에서는 depth 가 아니라 **넣은 순서**가 그리는 순서다. 그래서
+    // 바닥판 → 아이콘 그림자 → 아이콘 → 라벨 → 히트 순으로 넣는다(그림자가 아이콘을 덮지 않는다).
+    container.add(plate);
+    icon.objects.forEach((obj) => container.add(obj));
+    container.add([label, hitArea]);
+    this._menuObjects.push(plate, label, hitArea, ...icon.objects);
 
-    this._menuTiles[item.popupKey] = { cell, icon, label, plate, badge: null };
+    this._menuTiles[item.popupKey] = {
+      cell, plate, label, badge: null, catId, container,
+      icon: icon.obj, iconIsImage: icon.isImage, iconScale: icon.scale
+    };
 
-    hitArea.on('pointerover', () => { drawPlate(true); icon?.setScale(1.06); });
-    hitArea.on('pointerout', () => { drawPlate(false); icon?.setScale(1); });
+    hitArea.on('pointerover', () => { drawPlate(true); icon.obj?.setScale(icon.scale * 1.06); });
+    hitArea.on('pointerout', () => { drawPlate(false); icon.obj?.setScale(icon.scale); });
     hitArea.on('pointerdown', () => {
       drawPlate(true);
-      icon?.setScale(0.92);
+      icon.obj?.setScale(icon.scale * 0.92);
       this.time.delayedCall(100, () => {
         drawPlate(false);
-        icon?.setScale(1);
+        icon.obj?.setScale(icon.scale);
         this.openPopup(item.popupKey);
       });
+    });
+
+    return hitArea;
+  }
+
+  /**
+   * 펼침 상태를 하나로 맞춘다. 한 번에 하나만 열리고 나머지는 즉시 닫힌다.
+   *
+   * @param {string|null} categoryId 펼칠 카테고리. null 이면 전부 접는다
+   * @param {boolean} [animate] 트윈 사용 여부 (최초 배치는 false)
+   */
+  _setExpanded(categoryId, animate = true) {
+    const next = (categoryId && this._menuSheets?.[categoryId]) ? categoryId : null;
+    if (this._menuSheetsPlaced && this._menuExpandedId === next) return;
+    this._menuExpandedId = next;
+    this._menuSheetsPlaced = true;
+
+    Object.entries(this._menuSheets || {}).forEach(([id, sheet]) => {
+      const container = sheet.container;
+      if (!container?.scene) return;
+      this.tweens.killTweensOf(container);
+
+      // 감춘 시트가 입력을 물고 있으면 도크 위 허공을 눌렀는데 팝업이 열린다
+      const open = id === next;
+      sheet.hits.forEach((hit) => {
+        if (!hit?.scene) return;
+        if (open) hit.setInteractive({ useHandCursor: true });
+        else hit.disableInteractive();
+      });
+
+      if (!open) {
+        container.setVisible(false).setAlpha(0).setY(0);
+        return;
+      }
+
+      container.setVisible(true);
+      if (!animate) {
+        container.setAlpha(1).setY(0);
+        return;
+      }
+      container.setAlpha(0).setY(s(MenuL.MENU_SHEET.riseDy));
+      this.tweens.add({
+        targets: container,
+        alpha: 1,
+        y: 0,
+        duration: MenuL.MENU_SHEET.animMs,
+        ease: 'Cubic.easeOut'
+      });
+    });
+
+    // 도크 타일의 열림 표시(플레이트 강조 + 갈매기)를 상태에 맞춘다
+    Object.entries(this._menuCatTiles || {}).forEach(([id, tile]) => {
+      const open = id === next;
+      tile.drawPlate?.(open ? 'open' : 'idle');
+      tile.caret?.setVisible(open);
     });
   }
 
@@ -1909,6 +2145,14 @@ export class MainMenuScene extends Phaser.Scene {
     Object.entries(this._menuTiles || {}).forEach(([key, tile]) => {
       this._renderMenuBadge(tile, badges[key] || null);
     });
+
+    // 접힌 카테고리에도 "볼 것이 있다"가 보여야 한다 — 하위 항목 배지를 도크 타일에 합산한다.
+    // 펼치면 항목 배지가 그대로 다시 보이므로 여기서 개수를 깎지 않는다.
+    const rollup = MenuL.rollupCategoryBadges(this._menuCategories || [], badges);
+    Object.entries(this._menuCatTiles || {}).forEach(([id, tile]) => {
+      this._renderMenuBadge(tile, rollup[id] || null);
+    });
+
     this._renderTopBarAlertDot(summarizeBadges(badges));
   }
 
@@ -1925,7 +2169,9 @@ export class MainMenuScene extends Phaser.Scene {
     }
     if (!badge) return;
 
-    const d = Z_INDEX.BOTTOM_MENU + 3;
+    // 시트 타일의 배지는 시트 컨테이너 안에 넣어야 시트를 접을 때 같이 사라진다
+    const host = tile.container || null;
+    const d = Z_INDEX.BOTTOM_MENU + (host ? 3 : 9);
     const slot = tile.cell.badge;
     const x = s(slot.x);
     const y = s(slot.y);
@@ -1956,7 +2202,8 @@ export class MainMenuScene extends Phaser.Scene {
       // 받을 것이 있으면 아이콘을 골드로 물들이고 배지를 맥동시킨다.
       // 트윈은 배지마다 1개만 쓴다(무대 트윈 예산과 겹치지 않게).
       if (isReward) {
-        tile.icon?.setTint(DESIGN.colors.brand.accent);
+        // 이미지 아이콘은 자체 색을 가진 아트라 틴트를 걸면 뭉개진다. 벡터만 골드로 물들인다
+        if (!tile.iconIsImage) tile.icon?.setTint(DESIGN.colors.brand.accent);
         const glow = this.tweens.add({
           targets: dot,
           scale: { from: 1, to: 1.25 },
@@ -1966,12 +2213,14 @@ export class MainMenuScene extends Phaser.Scene {
           ease: 'Sine.easeInOut'
         });
         tile.badge = { objects, glow };
+        if (host) host.add(objects);
         this._menuObjects.push(...objects);
         return;
       }
     }
 
     tile.badge = { objects, glow: null };
+    if (host) host.add(objects);
     this._menuObjects.push(...objects);
   }
 
@@ -1992,11 +2241,22 @@ export class MainMenuScene extends Phaser.Scene {
    */
   refreshBottomMenu() {
     if (!this._uiCreated) return;
+    const wasExpanded = this._menuExpandedId;
+    Object.values(this._menuTiles || {}).forEach((tile) => tile.badge?.glow?.stop?.());
+    Object.values(this._menuCatTiles || {}).forEach((tile) => tile.badge?.glow?.stop?.());
+    Object.values(this._menuSheets || {}).forEach((sheet) => {
+      if (sheet.container?.scene) this.tweens.killTweensOf(sheet.container);
+    });
     (this._menuObjects || []).forEach((obj) => obj?.destroy?.());
     this._menuObjects = [];
-    Object.values(this._menuTiles || {}).forEach((tile) => tile.badge?.glow?.stop?.());
     this._menuTiles = {};
+    this._menuCatTiles = {};
+    this._menuSheets = {};
+    this._menuSheetsPlaced = false;
     this.createBottomMenu();
+    // 해금 갱신 전에 펼쳐 두었던 카테고리가 아직 있으면 그대로 되살린다 —
+    // 메뉴가 하나 열렸다고 보고 있던 목록이 접히면 방금 무엇이 바뀌었는지 놓친다
+    if (wasExpanded && this._menuSheets?.[wasExpanded]) this._setExpanded(wasExpanded, false);
     this.tutorialFlow?.scheduleRefresh(150);
   }
 

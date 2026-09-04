@@ -108,13 +108,24 @@ describe('T-07 아이콘 키 21종', () => {
     expect(new Set(REQUIRED_ICON_KEYS).size).toBe(REQUIRED_ICON_KEYS.length);
   });
 
-  it('MainMenuScene 하단 메뉴의 모든 popupKey가 아이콘으로 해석된다 (이모지 완전 대체)', () => {
-    const src = readFileSync(path.join(REPO, 'src/scenes/MainMenuScene.js'), 'utf-8');
+  // 메뉴 항목 정본은 menuLayout.js 의 MENU_CATEGORIES 다 (카테고리 도크 재편, 2026-09-04).
+  // 이미지 아이콘이 매니페스트에 없을 때 벡터로 폴백하므로 여기서 전 키 해석을 계속 강제한다.
+  it('로비 메뉴의 모든 popupKey가 아이콘으로 해석된다 (이모지 완전 대체)', () => {
+    const src = readFileSync(path.join(REPO, 'src/utils/menuLayout.js'), 'utf-8');
     const popupKeys = [...src.matchAll(/popupKey:\s*'([a-z0-9_]+)'/g)].map((m) => m[1]);
 
     expect(popupKeys.length).toBeGreaterThanOrEqual(13);
     popupKeys.forEach((key) => {
       expect(hasIcon(key), `popupKey '${key}'에 대응하는 아이콘이 없다`).toBe(true);
+    });
+  });
+
+  it('카테고리 도크의 대표/폴백 아이콘 키도 전부 해석된다', () => {
+    const src = readFileSync(path.join(REPO, 'src/utils/menuLayout.js'), 'utf-8');
+    const keys = [...src.matchAll(/(?:icon|representative):\s*'([a-z0-9_]+)'/g)].map((m) => m[1]);
+    expect(keys.length).toBeGreaterThanOrEqual(8);
+    keys.forEach((key) => {
+      expect(hasIcon(key), `카테고리 아이콘 '${key}'에 대응하는 아이콘이 없다`).toBe(true);
     });
   });
 
