@@ -3,6 +3,7 @@
  * QAT-T1-1: 게임 데이터 접근 모듈 유닛 테스트
  */
 import { describe, it, expect } from 'vitest';
+import { ProgressionSystem } from '../../src/systems/ProgressionSystem.js';
 import {
   normalizeHero,
   normalizeHeroes,
@@ -65,7 +66,25 @@ describe('normalizeHero', () => {
     expect(result.name).toBe(firstChar.name);
     expect(result.level).toBe(1);
     expect(result.exp).toBe(0);
-    expect(result.stats).toEqual(firstChar.stats);
+    // stats는 원본이 아니라 레벨·성급이 반영된 실전 스탯이다 (SSOT: ProgressionSystem.getFinalStats)
+    expect(result.stats).toEqual(ProgressionSystem.getFinalStats(result));
+  });
+
+  it('레벨이 스탯에 반영된다 (전투가 쓰는 stats = 실전 스탯)', () => {
+    // 성장치(growthStats)를 가진 전직영웅으로 확인한다.
+    // characters.json 레거시 4인은 growthStats가 없어 레벨이 올라도 스탯이 그대로다.
+    const lv1 = normalizeHero({ id: 'asc_iris_olympus', level: 1, stars: 4 });
+    const lv60 = normalizeHero({ id: 'asc_iris_olympus', level: 60, stars: 4 });
+
+    expect(lv60.stats.hp).toBeGreaterThan(lv1.stats.hp);
+    expect(lv60.stats.atk).toBeGreaterThan(lv1.stats.atk);
+  });
+
+  it('정규화된 영웅을 다시 계산해도 성장분이 이중 적용되지 않는다', () => {
+    const hero = normalizeHero({ id: 'asc_iris_olympus', level: 60, stars: 4 });
+    expect(hero.statsResolved).toBe(true);
+    expect(ProgressionSystem.getFinalStats(hero)).toEqual(hero.stats);
+    expect(normalizeHero(hero).stats).toEqual(hero.stats);
   });
 
   it('characterId 필드로도 인식', () => {

@@ -391,6 +391,68 @@ describe('TutorialManager', () => {
     });
   });
 
+  // ==================== 전투 트랙 정산 (settleBattleTrack) ====================
+  // 배경: 짧은 전투(강한 파티)로 1-1 이 1라운드에 끝나면 B-1~B-5 안내가 재생될
+  // 시간이 없어 커밋되지 않은 채 남았고, 다음 전투에서 되살아나 영구 미완료로
+  // 남는 결함이 있었다(2026-09-04). BattleScene.endBattle 이 이 메서드를 호출해 정산한다.
+
+  describe('settleBattleTrack — 전투 종료 시 B-트랙 정산', () => {
+    it('짧은 전투로 미완료 B-스텝이 남으면 전부 스킵 모드로 일괄 커밋한다', () => {
+      putSave();
+      TutorialManager.commitStep('B-1'); // 하나만 재생됐다고 가정
+
+      const settled = TutorialManager.settleBattleTrack();
+
+      expect(settled).toEqual(['B-2', 'B-3', 'B-4', 'B-5']);
+      const state = TutorialManager.getState();
+      expect(state.completedSteps).toEqual(expect.arrayContaining(['B-1', 'B-2', 'B-3', 'B-4', 'B-5']));
+      expect(state.skippedSteps).toEqual(expect.arrayContaining(['B-2', 'B-3', 'B-4', 'B-5']));
+      expect(TutorialManager.isBattleTutorialDone()).toBe(true);
+    });
+
+    it('멱등성 — 이미 정산된 뒤 다시 호출해도 아무것도 커밋하지 않는다 (중복 커밋 없음)', () => {
+      putSave();
+      TutorialManager.settleBattleTrack();
+      const before = TutorialManager.getState().completedSteps.filter((id) => id.startsWith('B-'));
+
+      const secondCall = TutorialManager.settleBattleTrack();
+
+      expect(secondCall).toEqual([]);
+      const after = TutorialManager.getState().completedSteps.filter((id) => id.startsWith('B-'));
+      expect(after).toEqual(before);
+      expect(after).toHaveLength(5); // 중복 없이 5개뿐
+    });
+
+    it('B-트랙 정산은 메인 트랙(T-*) 진행에 영향을 주지 않는다 (이월/오염 없음)', () => {
+      putSave();
+      TutorialManager.commitStep('T-01');
+      expect(TutorialManager.getCurrentStepId()).toBe('T-02');
+
+      TutorialManager.settleBattleTrack();
+
+      // 메인 트랙 currentStep 은 여전히 T-02 — 전투 트랙 정산이 건드리지 않는다
+      expect(TutorialManager.getCurrentStepId()).toBe('T-02');
+      expect(TutorialManager.isCompleted()).toBe(false);
+    });
+
+    it('B-스텝은 rewardId 가 없어 정산으로도 보상 핸들러가 호출되지 않는다 (중복 지급 없음)', () => {
+      putSave();
+      const handler = vi.fn();
+      TutorialManager.rewardHandler = handler;
+
+      TutorialManager.settleBattleTrack();
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('getBattleTriggerStageId — B-1의 trigger.stageId 하나만 앵커로 쓴다', () => {
+      expect(TutorialManager.getBattleTriggerStageId()).toBe('1-1');
+      // B-2~B-5는 자체 stageId가 없어(step_complete 트리거) 이 값과 무관하다
+      const b2 = TutorialManager.getStep('B-2');
+      expect(b2.trigger?.stageId).toBeUndefined();
+    });
+  });
+
   // ==================== 기존 유저 ====================
 
   describe('기존 유저 처리', () => {

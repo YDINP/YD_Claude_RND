@@ -81,7 +81,7 @@ async function skipCutscenes(page, rounds = 6) {
     if (!up) return;
     // player가 아직 붙기 전이면 skipAll이 없다 — 그때는 실제 사용자 동작(화면 탭)으로 넘긴다
     const skipped = await page.evaluate(() => {
-      const player = window.game.scene.getScene('CutsceneScene')?.player;
+      const player = window.game?.scene.getScene('CutsceneScene')?.player;
       if (typeof player?.skipAll !== 'function') return false;
       player.skipAll();
       return true;
@@ -103,7 +103,9 @@ async function skipCutscenes(page, rounds = 6) {
 async function inspectAllyPortraits(page) {
   return page.evaluate(() => {
     const g = window.game;
-    const scene = g.scene.getScene('BattleScene');
+    const scene = g?.scene.getScene('BattleScene');
+    // 재기동/씬 전환 중이면 검사할 대상 자체가 없다 — 빈 결과로 안전 종료한다
+    if (!g || !scene) return { units: [], cards: [] };
     const describe = (image) => {
       const key = image?.texture?.key ?? null;
       if (!key || !g.textures.exists(key)) return { key, ok: false, reason: 'missing' };
@@ -158,7 +160,7 @@ async function run() {
     // 1. 게스트 로그인
     const loginReady = await waitFor(page, () => !!window.game?.scene.isActive('LoginScene'));
     assert(loginReady, 'LoginScene 활성화');
-    await page.evaluate(() => window.game.scene.getScene('LoginScene')?._handleGuestLogin?.());
+    await page.evaluate(() => window.game?.scene.getScene('LoginScene')?._handleGuestLogin?.());
     assert(await waitFor(page, () => !!window.game?.scene.isActive('MainMenuScene'), 30000),
       '게스트 로그인 → MainMenuScene');
 
@@ -192,7 +194,7 @@ async function run() {
       !!window.game?.scene.getScene('MainMenuScene')?.scene.isActive() ||
       !!window.game?.scene.isActive('CutsceneScene'), 30000);
     if (await page.evaluate(() => !!window.game?.scene.isActive('LoginScene')).catch(() => false)) {
-      await page.evaluate(() => window.game.scene.getScene('LoginScene')?._handleGuestLogin?.());
+      await page.evaluate(() => window.game?.scene.getScene('LoginScene')?._handleGuestLogin?.());
     }
     await waitFor(page, () => !!window.game?.scene.isActive('MainMenuScene') ||
       !!window.game?.scene.isActive('CutsceneScene'), 30000);
@@ -202,13 +204,14 @@ async function run() {
 
     // 3. 출격
     await page.evaluate(() => {
-      window.game.scene.getScene('MainMenuScene').scene.start('StageSelectScene');
+      window.game?.scene.getScene('MainMenuScene')?.scene.start('StageSelectScene');
     });
     assert(await waitFor(page, () => !!window.game?.scene.isActive('StageSelectScene')), 'StageSelectScene 진입');
     await page.waitForTimeout(600);
 
     const launched = await page.evaluate(({ chapter, stageId }) => {
-      const scene = window.game.scene.getScene('StageSelectScene');
+      const scene = window.game?.scene.getScene('StageSelectScene');
+      if (!scene) return null;
       const stage = scene.generateStages(chapter).find((s) => s.id === stageId);
       if (!stage) return null;
       scene.selectedStage = stage;
@@ -254,7 +257,8 @@ async function run() {
     // 5. 배틀러가 BattleUnit인가 = 판정이 BattleSystem을 지나는가
     await page.waitForTimeout(1500);
     const wiring = await page.evaluate(() => {
-      const scene = window.game.scene.getScene('BattleScene');
+      const scene = window.game?.scene.getScene('BattleScene');
+      if (!scene) return { gone: true, cults: [], moods: [] };
       const unit = scene.allies?.[0];
       return {
         hasBattleSystem: !!scene.battleSystem,
@@ -286,7 +290,8 @@ async function run() {
 
     // 5-b. 수동 스킬 경로도 같은 판정을 지나는가 (executeManualSkill → resolveDamage)
     const manualStart = await page.evaluate(() => {
-      const scene = window.game.scene.getScene('BattleScene');
+      const scene = window.game?.scene.getScene('BattleScene');
+      if (!scene) return null;
       // 기본영웅은 스킬이 없다 — skill1을 실제로 가진 아군을 고른다
       const hasSkill1 = (u) => !!(u.skills || []).find(sk => sk.id === 'skill1') || (u.skills || []).length > 1;
       const attacker = scene.allies.find(a => a.isAlive && hasSkill1(a)) || scene.allies.find(a => a.isAlive);
@@ -298,7 +303,8 @@ async function run() {
     }).catch(err => ({ error: err.message }));
     await page.waitForTimeout(1200); // AoE 스킬은 대상마다 지연 호출로 퍼진다
     const manual = await page.evaluate(() => {
-      const scene = window.game.scene.getScene('BattleScene');
+      const scene = window.game?.scene.getScene('BattleScene');
+      if (!scene) return { error: 'BattleScene 없음' };
       const after = scene.enemies.reduce((sum, e) => sum + e.currentHp, 0);
       return { before: scene._e2eManualBefore, after, damaged: after < scene._e2eManualBefore };
     }).catch(err => ({ error: err.message }));
@@ -307,7 +313,8 @@ async function run() {
 
     // 6. 전투 관측 — 배속 3배로 올리고 Divine Charge / Lightning Strike 를 지켜본다
     await page.evaluate(() => {
-      const scene = window.game.scene.getScene('BattleScene');
+      const scene = window.game?.scene.getScene('BattleScene');
+      if (!scene) return;
       scene.battleSpeed = 3;
       scene.autoBattle = true;
     });
@@ -328,8 +335,8 @@ async function run() {
       let snapshot;
       try {
         snapshot = await page.evaluate(() => {
-          const scene = window.game.scene.getScene('BattleScene');
-          if (!scene || !window.game.scene.isActive('BattleScene')) return { gone: true };
+          const scene = window.game?.scene.getScene('BattleScene');
+          if (!scene || !window.game?.scene.isActive('BattleScene')) return { gone: true };
           const units = [...(scene.allies || []), ...(scene.enemies || [])];
           return {
             gone: false,
@@ -406,7 +413,7 @@ async function run() {
     const diag = await page.evaluate(() => {
       const scene = window.game?.scene.getScene('BattleScene');
       return {
-        active: window.game.scene.scenes.filter(sc => sc.scene.isActive()).map(sc => sc.scene.key),
+        active: (window.game?.scene.scenes || []).filter(sc => sc.scene.isActive()).map(sc => sc.scene.key),
         turn: scene?.turn ?? null,
         ended: scene?.battleEnded ?? null,
         processing: scene?.isProcessingTurn ?? null,
@@ -460,12 +467,13 @@ async function run() {
     // 아래 evaluate 들이 undefined 접근으로 터지지 않는다.
     await waitFor(page, () => !!window.game, 25000);
     if (await page.evaluate(() => !!window.game?.scene.isActive('LoginScene')).catch(() => false)) {
-      await page.evaluate(() => window.game.scene.getScene('LoginScene')?._handleGuestLogin?.());
+      await page.evaluate(() => window.game?.scene.getScene('LoginScene')?._handleGuestLogin?.());
     }
     await waitFor(page, () => !!window.game?.scene.isActive('MainMenuScene'), 25000);
 
     await page.evaluate(() => {
       const g = window.game;
+      if (!g) return;
       g.scene.getScenes(true).forEach(sc => { if (sc.scene.key !== 'BattleScene') g.scene.stop(sc.scene.key); });
       g.scene.start('BattleScene', {
         stage: { id: '1-2', chapter: 1, name: '울창한 숲길', enemies: [{ id: 'enemy_goblin', level: 2 }] }

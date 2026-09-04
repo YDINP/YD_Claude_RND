@@ -622,3 +622,75 @@ dry-run 101건(스테이지 1 + 탑 100) 전부 from값 일치(경고 0) 확인 
 #### 9-9-7. 결론과 team-lead 확인 필요 사항
 
 온보딩 실파티 관점에서 챕터1의 진짜 문제(1-4 승률 27.5%, 1-3 v1.3발 13턴 장기전)를 해소했다. 다만 **`enemy_mushroom`은 4인 마일스톤(1-3 2턴 하한)과 온보딩 1인 파티(1-3 승률/턴수)를 동시에 만족시킬 수 없는 구조적 충돌**이 있었고, 이번 라운드는 사용자 피드백을 우선해 4인 마일스톤 1-3의 재실패를 감수했다. 원 설계 문서(§9-4)가 이 결과를 "실패 아님"으로 이미 명시했던 전례가 있어 회귀로 보진 않지만, team-lead가 이 트레이드오프에 동의하지 않는다면 (a) 4인 마일스톤 1-3의 3턴 하한 요건을 공식적으로 면제하거나 (b) 온보딩 1-3의 턴수 목표를 6턴보다 완화하는 두 옵션 중 하나를 재승인해야 한다.
+
+### 9-10. 시뮬레이터 ↔ 실전투 괴리 (2026-09-04, `battle-cult-live` 회귀 조사)
+
+> `SMOKE_BASE_URL=http://localhost:3000 node tests/e2e/battle-cult-live.mjs` 가 28/3 로 떨어진 원인을 실측으로 추적한 기록. **결론: 밸런스 데이터 문제가 아니라 아군 스탯 산출 경로의 결함이었다.** `enemies.json`/`stages.json`/`tower.json`/`ascended-heroes.json` 은 이번 라운드에서 한 줄도 바뀌지 않았고, v1.5 델타도 만들지 않았다.
+
+#### 9-10-1. 실측 — 아군은 레벨·성급이 붙지 않은 원본 스탯으로 싸우고 있었다
+
+스모크는 Lv60·4성 전직영웅 3인을 지급하고 2-3에 출격한다. 실제 `BattleScene` 배틀러를 그대로 덤프한 값(수정 전):
+
+| 유닛 | 세이브 레벨 | 실제 전투 스탯 | 있어야 할 값(레벨·성급 반영) |
+|---|---|---|---|
+| `asc_leon_olympus` | 60 | hp **580** / atk 94 / def 74 | hp 4,251 / atk 496 / def 354 |
+| `asc_iris_olympus` | 60 | hp **450** / atk 63 / def 46 | hp 3,774 / atk 368 / def 246 |
+| `asc_sol_nature` | 60 | hp **460** / atk 78 / def 46 | hp 3,549 / atk 420 / def 238 |
+| `base_iris` | 1 | hp 900 / atk 103 | hp 990 / atk 113 |
+
+hp 가 JSON 원본 `stats.hp` 와 정확히 일치한다 — **`growthStats × (level-1)` 도, 성급 보너스도 전혀 적용되지 않았다.** Lv60 SSR 전직영웅이 Lv1 기본영웅보다 약했다. 2-3 의 적 3체 합계 ATK 666 에 아군 총 HP 2,390 이면 4라운드에 전멸하고, 실제로 5턴에 전멸했다(Divine Charge 60/100 에서 중단 → Lightning Strike 미발동 → 실패 2건).
+
+#### 9-10-2. 원인 — `hero.stats` 가 레벨 이전 값이었다
+
+- 전투력·스탯 표시의 SSOT 는 `ProgressionSystem.getFinalStats()`(레벨 → 성급 → 장비 → 컬렉션 순 적용)이고, `combat-turns.mjs` 는 아군을 만들 때 이 함수를 쓴다(`--onboarding` 은 L349, 4인 마일스톤은 `finalStatsAtMax`).
+- 그런데 실제 게임의 아군은 `HeroFactory.createFromCharacterData()` → `registry.ownedHeroes` → `StageSelectScene.startBattle()` → `BattleScene.initializeBattlers()` → `toBattleUnit({ stats: hero.stats })` 경로를 탄다. 이 체인의 출발점이 `stats: options?.stats || { ...charData.stats }` 로 **JSON 원본을 그대로 실어 보냈다.** `toBattleUnit` 은 "씬이 계산한 스탯을 진실로 삼는다"(BattleSceneAdapter.js L155-156)라서 원본이 그대로 전투 스탯이 됐다.
+- 적은 무관했다 — `calculateEnemyStats()` 가 `stats + growth × (level-1)` 을 제대로 적용하고 있어 시뮬레이터와 동일하다. **괴리는 아군 쪽에만 있었다.**
+
+수정: `HeroFactory.createFromCharacterData()` 가 `ProgressionSystem.getFinalStats()` 로 스탯을 산출하도록 바꾸고(`HeroFactory.resolveFinalStats()`), 결과 객체에 `statsResolved: true` 표식을 달았다. `ProgressionSystem.resolveCharacterData()` 는 이 표식을 보면 원본 JSON 을 다시 조회해, 이미 최종치인 스탯에 성장분이 두 번 곱해지는 것을 막는다.
+
+같은 뿌리의 표시 결함도 함께 고쳤다 — `stageSelectLayout.estimateHeroPower()` 가 `HP + ATK×5 + DEF×3 + SPD×2` 라는 별도 눈금을 써서 `stages.json` 의 `recommendedPower` 와 5배 가까이 어긋나 있었다(1인 파티로도 모든 스테이지가 "압승"으로 표시돼 벽 경고가 뜨지 않았다). 전투력 SSOT 와 같은 `HP/10 + ATK + DEF + SPD` 로 맞췄다.
+
+#### 9-10-3. 온보딩 실파티를 실제 BattleScene 에서 돌린 결과
+
+사용자 피드백("1-3인데 지는 게 이해가 안 간다") 확인을 위해 `tests/e2e/onboarding-realbattle.mjs` 를 새로 만들어, `--onboarding` 과 **같은 파티 스펙**으로 진짜 씬을 10회씩 돌렸다.
+
+| 스테이지 | 파티 | 시뮬레이터(중앙값 턴) | 실전투 수정 전 | 실전투 수정 후 |
+|---|---|---|---|---|
+| 1-1 | 아이리스 Lv1 | 4 | 100% / 7턴 | 100% / 7턴 |
+| 1-2 | 아이리스 Lv1 | 6 | 100% / 10턴 | 100% / 9턴 |
+| 1-3 | 아이리스 Lv2 | 6 | 100% / 11턴 | 100% / 10턴 |
+| 1-4 | 아이리스Lv2+오마르Lv1 | 7 | 100% / 9턴 | 100% / 7턴 |
+| 1-5 | 아이리스Lv2+오마르Lv1 | 9 | 100% / 11턴 | 100% / 9턴 |
+
+두 가지가 드러났다.
+
+1. **챕터 1 승률은 수정 전에도 100%** 였다. v1.4 의 조정(§9-9)이 유효하다는 뜻이고, 이번 사용자 피드백의 잔여 불만은 "져서"가 아니라 **"레벨을 올려도 아무것도 달라지지 않아서"** 일 가능성이 크다. 수정 전 로그에서 `base_iris` 는 **Lv1 과 Lv2 의 스탯이 완전히 동일**(hp900/atk90)했다 — 레벨업·성급·장비·컬렉션 보너스가 전투에 전혀 반영되지 않았다.
+2. **턴수는 실전투가 시뮬레이터보다 1.2~1.5배 길다**(예: 1-3 시뮬 6턴 vs 실전투 10턴). 턴 계수 단위는 동일하다(양쪽 모두 "라운드 1바퀴 = 1턴": `BattleScene.processTurn()` L1944 ↔ `combat-turns.mjs simulateBattle()` L271). 남은 후보는 (a) 시뮬의 온보딩 모드가 기본영웅 스킬킷을 아직 `DEFAULT_BASIC_SKILL` 한 개로 고정해 두고 있는 점 — §9-9-2 작성 시점에는 맞았으나 `base-heroes.json` 에 `skills` 가 부여된 뒤로는 낡았다 — 과 (b) 씬 전용 경로(`applySynergyBuffs`, 지연 호출 기반 행동 순서)의 차이다. 둘 다 실전투를 **더 빠르게** 만들 요인이라 부호가 반대이므로, 원인 규명은 후속 과제로 남긴다. **턴수 밴드(3~8턴)를 실제 플레이 기준으로 재확인하려면 이 격차부터 좁혀야 한다.**
+
+#### 9-10-4. 검증
+
+| 검증 | 결과 |
+|---|---|
+| `npx vitest run` | 71 파일 / 1,904 테스트 통과 |
+| `npx tsc --noEmit` | 0 errors |
+| `npm run build` | ✅ built |
+| `boot-smoke` | 6 passed / 0 failed |
+| `battle-cult-live` | **32 passed / 0 failed** (조사 전 28~30/2~3) |
+| `onboarding-realbattle`(신규) | 5/5 스테이지 승률 100% |
+| `npm run test:e2e:story` | boot 6 · cutscene 21 · ascension 21 · skip-parity 17 · onboarding-full 63 — 전부 0 failed |
+| `combat-turns.mjs` | 24/25 (1-3 만 §9-9-3 트레이드오프 — 변동 없음) |
+| `combat-turns.mjs --onboarding` | 5/5 PASS (변동 없음) |
+| `stage-clearable.mjs` | 25/25 PASS (변동 없음) |
+| `tower-ceiling.mjs` | 100/100 PASS (변동 없음) |
+| `grade-order.mjs` | PASS (변동 없음) |
+| `economy-flow.mjs` | PASS (변동 없음) |
+
+검산 5종이 전부 "변동 없음"인 이유는 시뮬레이터가 처음부터 `getFinalStats()` 를 쓰고 있었기 때문이다 — 이번 수정은 **실전투를 시뮬레이터 쪽으로 맞춘 것**이지 그 반대가 아니다.
+
+#### 9-10-5. 부수 영향 — `onboarding-full.mjs` 전투 안내 구간
+
+이 수정으로 `onboarding-full.mjs` 의 `boostParty()`(모든 캐릭터 Lv60 + 상위 4인 편성)가 **비로소 실제로 동작하게 되면서**, 첫 전투 1-1(고블린 2마리, 합계 HP 400)이 1라운드에 끝나 전투 안내 B-1~B-5 가 재생될 시간이 없어졌다(B-2~B-5 실패 5건). 수정 전에는 "Lv60 보강"이 스탯에 반영되지 않아 우연히 전투가 길게 유지되던 것이다.
+
+테스트 쪽을 고쳤다 — 첫 전투는 **스타터 1인(Lv1)** 으로 치르고(라운드마다 한 마리씩 잡으므로 자동전투가 꺼진 동안 안내 5스텝이 다 뜬다), 전투 안내를 마친 직후 `boostPartyFull()` 로 Lv60 4인을 편성해 남은 스테이지를 진행한다. `npm run test:e2e:story` 연속 2회 전부 0 failed.
+
+다만 근본 취약점은 남아 있다: **첫 전투가 짧게 끝나면 B-1~B-5 가 영구히 미완료로 남아 이후 모든 전투에서 다시 뜬다**(테스트의 "두 번째 전투에서는 다시 뜨지 않는다" 항목이 이 상태를 잡는다). `tutorial.json` 의 `fallbackPolicy.autoCommitAfterSec: 25` 가 씬 종료 시에는 발동하지 않기 때문으로, 실제 유저(강한 파티로 1-1 을 즉시 클리어하는 복귀 유저 등)에게도 재현될 수 있다. 전투 종료 시 미완료 전투 스텝을 정리하는 처리는 튜토리얼 담당 후속 과제로 남긴다.

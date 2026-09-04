@@ -17,6 +17,7 @@ import { TowerSystem } from '../systems/TowerSystem.js';
 import { sweepSystem } from '../systems/SweepSystem.js';
 import { soundManager } from '../systems/SoundManager.js';
 import { mountBattleTutorial, unmountBattleTutorial } from '../components/tutorial/BattleTutorialBinding.js';
+import { TutorialManager } from '../systems/TutorialManager.js';
 import {
   toBattleUnit,
   createSceneBattleSystem,
@@ -2603,11 +2604,53 @@ export class BattleScene extends Phaser.Scene {
     this.battleEnded = true;
     this.waitingForManualInput = false;
 
+    // 전투 조작 안내(B-1~B-5) 정산. 짧은 전투(강한 파티 등)로 안내를 다 보여주지
+    // 못했다면 여기서 남은 스텝을 스킵 커밋한다. 정산하지 않으면 다음 전투(스테이지
+    // 무관)에서 되살아나 영구 미완료로 남는다(2026-09-04 발견). 승리/패배/퇴각 모두
+    // endBattle 을 거치므로 이 한 곳이 유일한 정산 지점이다.
+    this._settleBattleTutorial();
+
     // 전투 이벤트 발행
     this.emitBattleEvent('battleEnd', { victory, turn: this.turn });
 
     this.time.delayedCall(500 / this.battleSpeed, () => {
       this.showBattleResult(victory);
+    });
+  }
+
+  /**
+   * 전투 조작 안내(B-1~B-5) 정산.
+   * 한 번이라도 스텝을 스킵 커밋했다면(=안내를 다 못 보여줬다면) 요약 토스트로
+   * 대체 안내한다. 이미 전부 커밋된 계정(정상 완주·2회차 전투)은 아무 일도 하지 않는다.
+   */
+  _settleBattleTutorial() {
+    try {
+      const settled = TutorialManager.settleBattleTrack();
+      if (settled.length > 0) {
+        this.showToast('전투 조작 안내를 요약했습니다');
+      }
+    } catch (error) {
+      console.error('[BattleScene] 전투 튜토리얼 정산 실패', error);
+    }
+  }
+
+  /** 간단한 토스트 안내 (전투 종료 연출 위에 잠깐 떴다 사라진다) */
+  showToast(message) {
+    const toast = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + s(120), message, {
+      fontSize: sf(16),
+      fontFamily: '"Noto Sans KR", Arial, sans-serif',
+      color: '#FFFFFF',
+      backgroundColor: `#${DESIGN.colors.bg.surface.toString(16).padStart(6, '0')}`,
+      padding: { x: s(16), y: s(10) }
+    }).setOrigin(0.5).setDepth(45);
+
+    this.tweens.add({
+      targets: toast,
+      y: toast.y - s(40),
+      alpha: 0,
+      duration: 1200,
+      delay: 700,
+      onComplete: () => toast.destroy()
     });
   }
 

@@ -9,7 +9,7 @@ import { Z_INDEX } from '../config/layoutConfig.js';
 import { Modal } from '../components/Modal.js';
 import { formatTime } from '../utils/colorUtils.js';
 import { IdleProgressSystem } from '../systems/IdleProgressSystem.js';
-import { IdleBattleView } from '../components/IdleBattleView.js';
+import { MeditationView } from '../components/MeditationView.js';
 import { getCharacter, getCharacterOrHero, calculatePower, getStage, getChapterStages, normalizeHeroes } from '../data/index.ts';
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
 import { OVERLAY_ROOT_NAME as GACHA_OVERLAY_NAME } from '../components/GachaResultOverlay.js';
@@ -1450,7 +1450,9 @@ export class MainMenuScene extends Phaser.Scene {
     const mask = maskGfx.createGeometryMask();
     this._idleMask = mask;
 
-    this.idleBattleView = new IdleBattleView(
+    // 명상 성소 뷰. 속성 이름(idleBattleView)은 호출부 계약이라 그대로 둔다 —
+    // 바뀐 것은 표현뿐이고 진행도·보상은 여전히 IdleProgressSystem 이 계산한다.
+    this.idleBattleView = new MeditationView(
       this, s(view.cx), s(view.cy), s(view.w), s(view.h), { chrome: false }
     );
     this.idleBattleView.setDepth(Z_INDEX.IDLE_BATTLE);

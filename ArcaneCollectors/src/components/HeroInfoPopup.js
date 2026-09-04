@@ -217,7 +217,7 @@ export class HeroInfoPopup extends PopupBase {
    * 함께 사라지지 않으므로 직접 지운다.
    *
    * **전신 텍스처(fb_hero_XXX)는 지우지 않는다.** 이 팝업 뒤에 살아 있는
-   * MainMenuScene 의 `IdleBattleView` 가 파티원 스프라이트로 같은 키를 쓴다.
+   * MainMenuScene 의 `MeditationView` 가 파티원 폴백 스프라이트로 같은 키를 쓴다.
    * 팝업이 닫히면서 지우면 뒤 화면의 스프라이트가 텍스처를 잃고
    * `glTexture` null 로 렌더 예외가 난다. 공유 캐시로 두고 씬 종료 때 정리한다.
    *

@@ -219,13 +219,20 @@ export class ProgressionSystem {
 
   /**
    * 전투력 계산에 쓰이는 캐릭터 원천 데이터를 해석한다.
-   * 스탯을 직접 들고 있는 객체(JSON 캐릭터/정규화된 영웅)면 그대로 쓰고,
+   * 스탯을 직접 들고 있는 객체(JSON 캐릭터)면 그대로 쓰고,
    * 세이브 레코드처럼 ID만 있으면 데이터 모듈에서 조회한다.
+   *
+   * `statsResolved` 표식이 붙은 객체(HeroFactory가 정규화한 영웅)는 stats에 이미
+   * 레벨·성급이 반영된 최종치가 들어 있다. 그대로 원천으로 삼으면 성장분이 두 번
+   * 곱해지므로 반드시 원본 JSON을 다시 조회한다.
    * @param {Object} character
    * @returns {Object|null}
    */
   static resolveCharacterData(character) {
     if (!character) return null;
+    if (character.statsResolved) {
+      return this.lookupCharacterData(character.characterId || character.id) || character;
+    }
     if (character.stats) return character;
     return this.lookupCharacterData(character.characterId || character.id);
   }

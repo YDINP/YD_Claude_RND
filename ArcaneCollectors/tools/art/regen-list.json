@@ -1,7 +1,7 @@
 {
   "$schema": "internal://arcanecollectors/regen-list/v1",
   "generatedBy": "tools/art/postprocess-assets.py",
-  "generatedAt": "2026-09-03T12:39:24Z",
+  "generatedAt": "2026-09-04T01:36:39Z",
   "note": "manifest 에서 제외된 항목. 원인을 해결해 art/gen/assets/ 에 재생성하면 다음 실행에서 자동 포함된다.",
   "items": [
     {

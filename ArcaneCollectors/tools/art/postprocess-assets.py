@@ -600,40 +600,43 @@ def process_chibi_sheets(report: Report, force: bool, dry_run: bool, manifest: d
     manifest.chibi 는 지연 로드 버킷이라 초기 전송량 예산에 들어가지 않는다.
 
     규격(cell/frames/footY)은 art/gen/chibi_sheet/chibi-manifest.json 이 SSOT 다.
-    여기서는 그 값을 검증(시트 크기 = cell x 프레임수)한 뒤 그대로 런타임 매니페스트로 옮긴다.
-    시트가 규격과 어긋나면 등록하지 않고 regen-list.json 에 남긴다 — 잘못된 cell 로 로드하면
-    프레임이 어긋난 채 화면에 서기 때문이다.
+    다만 **처리 대상은 디렉터리 글롭**으로 정한다 — 치비 생성이 배치로 계속 돌고 있어
+    규격 파일의 heroes 항목이 실제 시트보다 늦게 갱신될 수 있다. 있는 시트를 있는 만큼
+    처리하고, 규격은 (전역 기본값 → 해당 영웅 override) 순으로 읽는다.
+    시트 크기가 cell x 프레임수와 어긋나면 등록하지 않고 regen-list.json 에 남긴다 —
+    잘못된 cell 로 로드하면 프레임이 어긋난 채 화면에 서기 때문이다.
     """
     manifest.setdefault("chibi", {})
-    if not CHIBI_SPEC_PATH.exists():
-        log("  치비 규격 파일 없음 — 스킵 (art/gen/chibi_sheet/chibi-manifest.json)")
+    if not CHIBI_SOURCE_DIR.exists():
+        log("  치비 시트 디렉터리 없음 — 스킵 (art/gen/chibi_sheet/)")
         return
 
-    try:
-        spec = json.loads(CHIBI_SPEC_PATH.read_text(encoding="utf-8"))
-    except Exception as e:  # pragma: no cover
-        log(f"  경고: chibi-manifest.json 파싱 실패({e}), 치비 스킵")
-        return
+    spec = {}
+    if CHIBI_SPEC_PATH.exists():
+        try:
+            spec = json.loads(CHIBI_SPEC_PATH.read_text(encoding="utf-8"))
+        except Exception as e:  # pragma: no cover
+            log(f"  경고: chibi-manifest.json 파싱 실패({e}), 기본 규격으로 진행")
 
     default_cell = int(spec.get("cell", 256))
     default_foot = int(spec.get("footY", 240))
-    default_frames = list(spec.get("frameOrder", []))
-    heroes = spec.get("heroes", {})
+    default_frames = list(spec.get("frameOrder") or ["idle", "meditate", "channel", "awaken"])
+    heroes = spec.get("heroes", {}) or {}
 
-    for hero_id, hero_spec in sorted(heroes.items()):
+    sheets = sorted(CHIBI_SOURCE_DIR.glob("*_sheet.png"))
+    if not sheets:
+        log("  치비 시트 없음 — 스킵")
+        return
+
+    for src in sheets:
+        hero_id = src.stem[: -len("_sheet")]
+        hero_spec = heroes.get(hero_id, {}) or {}
         cell = int(hero_spec.get("cell", default_cell))
         frames = list(hero_spec.get("frames") or default_frames)
         foot_y = int(hero_spec.get("footY", default_foot))
-        sheet_name = hero_spec.get("sheet") or f"{hero_id}_sheet.png"
-        src = CHIBI_SOURCE_DIR / sheet_name
         key = f"{CHIBI_KEY_PREFIX}{hero_id}"
         target = CHIBI_TARGET_DIR / f"{hero_id}_sheet.webp"
         rel_target = f"public/{CHIBI_TARGET_DIR.relative_to(PUBLIC_DIR).as_posix()}/{hero_id}_sheet.webp"
-
-        if not src.exists():
-            report.skipped_missing_source.append(key)
-            note_regen(key, "치비 시트 소스 없음 — tools/art/build-chibi-sheet.py 로 생성 필요.", rel_target)
-            continue
 
         with Image.open(src) as probe:
             sw, sh = probe.size

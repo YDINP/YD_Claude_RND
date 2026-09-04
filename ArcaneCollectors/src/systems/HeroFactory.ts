@@ -6,6 +6,7 @@
 import type { Character, OwnedHero, NormalizedHero, CharacterStats } from '../types';
 import { getCharacter, getCharacterOrHero } from '../data/index.js';
 import { getRarityKey, getRarityStars } from '../utils/rarityUtils.js';
+import { ProgressionSystem } from './ProgressionSystem.js';
 
 const DEFAULT_STATS: CharacterStats = { hp: 100, atk: 10, def: 10, spd: 10 };
 
@@ -43,6 +44,8 @@ export class HeroFactory {
   ): NormalizedHero {
     const rarity = options?.rarity ?? charData.rarity;
     const rarityKey = getRarityKey(rarity);
+    const level = options?.level || 1;
+    const stars = options?.stars || getRarityStars(rarity);
 
     return {
       // 식별자
@@ -54,19 +57,20 @@ export class HeroFactory {
       name: options?.name || charData.name,
       rarity: rarity,
       rarityKey: rarityKey,
-      stars: options?.stars || getRarityStars(rarity),
+      stars: stars,
       cult: options?.cult || charData.cult,
       class: options?.class || charData.class,
       mood: options?.mood || charData.mood,
       description: options?.description || charData.description,
 
       // 상태
-      level: options?.level || 1,
+      level: level,
       exp: options?.exp || 0,
 
-      // 스탯
-      stats: options?.stats || { ...charData.stats },
+      // 스탯 — 레벨·성급·장비·컬렉션이 반영된 실전 스탯
+      stats: options?.stats || HeroFactory.resolveFinalStats(charData, options, level, stars, rarity),
       growthStats: charData.growthStats || { hp: 0, atk: 0, def: 0, spd: 0 },
+      statsResolved: true,
 
       // 스킬
       skills: options?.skills || charData.skills || [],
@@ -87,6 +91,49 @@ export class HeroFactory {
       // 획득 시각 (COMPAT-1.3)
       acquiredAt: options?.acquiredAt || Date.now()
     };
+  }
+
+  /**
+   * 레벨·성급·장비·컬렉션이 반영된 실전 스탯.
+   *
+   * `ProgressionSystem.getFinalStats()`가 전투력/스탯 표시의 SSOT이며 여기서는 조회 형태만 맞춘다.
+   * 예전에는 `charData.stats`(레벨 1·성급 보정 없는 원본)를 그대로 실어 보내서
+   * StageSelect의 총 전투력도, BattleScene의 아군 배틀러도 레벨을 전혀 반영하지 않았다
+   * (Lv60 4성 전직영웅이 Lv1 스탯으로 싸워 combat-turns 시뮬레이션과 실전투가 어긋났다).
+   *
+   * @param charData - characters/base-heroes/ascended-heroes 원천 데이터 (stats + growthStats)
+   * @param options - 세이브 레코드 (장비/컬렉션 조회용 id 포함)
+   * @param level - 해석된 레벨
+   * @param stars - 해석된 성급
+   * @param rarity - 해석된 등급
+   * @returns 최종 스탯. 계산이 불가능하면 원본 스탯으로 폴백한다.
+   */
+  static resolveFinalStats(
+    charData: Character,
+    options: Partial<OwnedHero> | undefined,
+    level: number,
+    stars: number,
+    rarity: any
+  ): CharacterStats {
+    const fallback: CharacterStats = { ...(charData.stats || DEFAULT_STATS) };
+    try {
+      const owned: any = {
+        ...charData,
+        ...(options || {}),
+        id: charData.id,
+        characterId: (options as any)?.characterId || charData.id,
+        stats: charData.stats,
+        growthStats: (charData as any).growthStats,
+        level,
+        stars,
+        rarity
+      };
+      const final = ProgressionSystem.getFinalStats(owned);
+      // 원천 데이터가 비어 있으면 0 스탯이 나온다 — 그때는 원본을 그대로 쓴다
+      return final && final.hp > 0 ? final : fallback;
+    } catch {
+      return fallback;
+    }
   }
 
   /**

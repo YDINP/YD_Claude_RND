@@ -228,13 +228,13 @@ describe('전투력 추정', () => {
     expect(estimateHeroPower({ stats: {} })).toBe(0);
   });
 
-  it('파티 편성 모달과 같은 가중치를 쓴다', () => {
-    expect(estimateHeroPower(hero(100, 10, 5, 3))).toBe(100 + 50 + 15 + 6);
+  it('전투력 SSOT(HP/10 + ATK + DEF + SPD)와 같은 눈금을 쓴다', () => {
+    expect(estimateHeroPower(hero(1000, 10, 5, 3))).toBe(100 + 10 + 5 + 3);
   });
 
   it('상위 4명만 합산한다', () => {
-    const heroes = [hero(100, 0, 0, 0), hero(200, 0, 0, 0), hero(300, 0, 0, 0),
-      hero(400, 0, 0, 0), hero(500, 0, 0, 0)];
+    const heroes = [hero(1000, 0, 0, 0), hero(2000, 0, 0, 0), hero(3000, 0, 0, 0),
+      hero(4000, 0, 0, 0), hero(5000, 0, 0, 0)];
     expect(estimatePartyPower(heroes)).toBe(500 + 400 + 300 + 200);
     expect(estimatePartyPower(heroes, 2)).toBe(900);
     expect(estimatePartyPower([])).toBe(0);

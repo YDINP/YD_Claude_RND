@@ -165,7 +165,12 @@ async function run() {
     // 2) lazyTextures / fullbody 키는 Phase0 에서 "실제 이미지로" 로드하지 않아야 한다.
     // 단순 존재 여부(tm.exists)로는 부족하다 — bg_gacha/bg_tower 등 일부 키는
     // TextureGenerator 가 절차적 캔버스 플레이스홀더를 이미 그 이름으로 만들어 두므로
-    // "존재"는 하되 실제로는 캔버스다. 캔버스가 아닌 실제 이미지로 존재하는 경우만 위반이다.
+    // "존재"는 하되 실제로는 캔버스다. 캔버스가 아닌 실제 이미지로 존재하는 경우만 후보다.
+    //
+    // **로드 출처 판정**: 후보 중 위반은 `PreloadScene.assetLoadedKeys`(Phase0 이 실제로 구운
+    // 키 목록)에 들어 있는 것뿐이다. 이 목록에 없는데 이미지로 존재한다면 씬이 진입 시점에
+    // 스스로 부른 정상 지연 로드다 — 메인 메뉴의 명상 성소가 챕터 배경(bg_chapter_N)을
+    // 그렇게 가져온다. 아래 fullbody 단정과 같은 근거를 쓴다.
     const lazyKeys = Object.keys(manifest.lazyTextures || {});
     const lazyLoadedAsRealImage = await page.evaluate((keys) => {
       const tm = window.game.textures;
@@ -173,19 +178,26 @@ async function run() {
         if (!tm.exists(k)) return false;
         const src = tm.get(k).source && tm.get(k).source[0];
         const isCanvas = !!(src && src.image && src.image.tagName === 'CANVAS');
-        return !isCanvas; // 캔버스가 아니면 실제 이미지가 이미 로드된 것 — 의도치 않은 eager 로드
+        return !isCanvas; // 캔버스가 아니면 실제 이미지가 이미 로드된 것
       });
     }, lazyKeys);
+    const lazyFromPreload = lazyLoadedAsRealImage.filter(
+      (k) => (textureReport.assetLoadedKeys || []).includes(k)
+    );
+    const lazyAtRuntime = lazyLoadedAsRealImage.filter((k) => !lazyFromPreload.includes(k));
+    if (lazyAtRuntime.length > 0) {
+      console.log(`   씬 진입 시점 지연 로드(정상): ${lazyAtRuntime.join(', ')}`);
+    }
     assert(
-      lazyLoadedAsRealImage.length === 0,
-      'lazyTextures(배너 등)는 Phase0에서 실제 이미지로 로드하지 않음',
-      lazyLoadedAsRealImage.length > 0 ? `의도치 않게 로드됨: ${lazyLoadedAsRealImage.join(', ')}` : ''
+      lazyFromPreload.length === 0,
+      'lazyTextures(배너·챕터 배경 등)는 Phase0에서 굽지 않음',
+      lazyFromPreload.length > 0 ? `Phase0 이 구움: ${lazyFromPreload.join(', ')}` : ''
     );
 
     // fullbody 34장은 Phase0 에서 일괄 로드하지 않는다.
-    // 다만 방치 전투 무대(IdleBattleView)가 **편성된 파티 인원수만큼(최대 4장)** 을
-    // 스탠딩 스프라이트로 지연 로드한다. 그래서 "0장"이 아니라 "PreloadScene 이 굽지
-    // 않았고 파티 정원을 넘지 않는다"를 검사한다.
+    // 다만 명상 성소(MeditationView)가 치비 시트가 없는 영웅에 한해 **편성 인원수만큼
+    // (최대 4장)** 을 폴백 스프라이트로 지연 로드한다. 그래서 "0장"이 아니라
+    // "PreloadScene 이 굽지 않았고 파티 정원을 넘지 않는다"를 검사한다.
     const fbKeys = Object.keys(manifest.fullbody || {});
     const fbLoaded = await page.evaluate((keys) => {
       const tm = window.game.textures;

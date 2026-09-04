@@ -115,10 +115,31 @@ tools/art/build-chibi-sheet.py # 크로마키 제거 → 최대 연결성분만 
 | 단계 | 내용 | 산출물 |
 |---|---|---|
 | C-1 ✅ | 치비 규격 확정 + 생성/후처리 파이프라인 + 아이리스 4프레임 | `gen-chibi.mjs`, `build-chibi-sheet.py`, `base_iris_sheet.png` |
-| C-2 | 시트를 런타임 에셋으로 반영(webp, manifest `chibi` 버킷, 지연 로드) | `public/assets/characters/chibi/` |
-| C-3 | `IdleBattleView` → `MeditationView` 재작성(표현만, 로직 유지) | 명상 성소 렌더 + 트윈 |
-| C-4 | 아이리스 외 슬롯은 기존 실루엣/포트레이트 폴백 | 점진 적용 |
-| C-5 | 기본영웅 9인 치비 확장 | 시트 9종 |
-| C-6 | 전직영웅 틴트 재사용 규칙 | 매핑 표 |
+| C-2 ✅ | 시트를 런타임 에셋으로 반영(무손실 webp, manifest `chibi` 버킷, 지연 로드) | `postprocess-assets.py` 치비 단계, `public/assets/characters/chibi/base_iris_sheet.webp` |
+| C-3 ✅ | `IdleBattleView` → `MeditationView` 교체(표현만, 로직 유지) | `src/components/MeditationView.js`, `src/utils/meditationLayout.js` |
+| C-4 ✅ | 시트 없는 영웅은 전신/실루엣 폴백, 시트가 들어오면 매니페스트 조회로 자동 전환 | `resolveChibiSheet()` |
+| C-5 ✅ | 기본영웅 10인 치비 전원 적용 | `chibi` 버킷 10종 (글롭 자동 편입) |
+| C-6 ◐ | 전직영웅은 원본 시트 + 교단색 틴트로 재사용 | `baseHeroIdFromAscended()` + `inherited` 틴트. 전용 시트 생성은 미착수 |
 
-**C-2·C-3이 이번 라운드 구현 범위**이며, 아이리스만 실아트로 서고 나머지는 폴백으로 둔다.
+### C-2·C-3·C-4 구현 결과 (2026-09-04)
+
+- **에셋**: `tools/art/postprocess-assets.py` 가 `art/gen/chibi_sheet/*_sheet.png` 를 **글롭**해
+  규격(cell x 프레임수)을 검증한 뒤 무손실 WebP 로 굽고 `asset-manifest.json` 의 `chibi` 버킷에
+  `{key, path, cell, frames, footY, heroId}` 로 등록한다. 멱등. 손실 압축을 쓰지 않는 이유는
+  프레임 경계에서 이웃 프레임 색이 번지기 때문이다. 기본영웅 **10인 전원** 등록됨(합계 1.2MB,
+  지연 로드라 초기 전송량 예산 밖). 시트가 늘어나면 스크립트 재실행만으로 편입된다.
+- **전직영웅**: 자기 시트가 없으면 `baseHeroId` → `asc_<이름>_<교단>` id 파싱 순으로 원본
+  기본영웅 시트를 찾아 교단색 틴트를 입혀 세운다. 어떤 조합이든 파티 4칸이 치비로 채워진다.
+- **뷰**: `MeditationView` 가 `IdleBattleView` 를 대체한다. `MainMenuScene` 은 import 와 생성자
+  두 줄만 바뀌었고 속성명(`idleBattleView`)·호출 순서·전달 값은 그대로다. 기존 이름
+  (`showBoss`/`updateBossHp`/`showBossReady`/`startBattleCycle`…)은 별칭으로 남아 있다.
+- **로직 불변**: `IdleProgressSystem` 은 한 줄도 바뀌지 않았다. 집중력은 예전 DPS 추정 코드
+  그대로(누적 증가분 관측 + 지수 평활), 마력 비율은 예전 `hpRatio` 와 같은 식이다.
+- **성소 연출**: 바닥 큰 룬 원과 제단 인장이 **서로 반대로** 돌고(트윈 1개로 두 도형 구동),
+  중앙에는 원통 기둥 대신 **부유하는 결정**이 호흡 위상에 맞춰 뜬다. 좌석마다 교단색 명상 원
+  (원반 + 테두리 + 눈금)이 깔려 4인 배치가 나열이 아니라 진형으로 읽힌다.
+- **연출 예산**: 일회성 트윈 8개 이하, 상시 루프 3개 고정(룬 회전 · 호흡 위상 1개 · 결정 발광),
+  오라 입자 동시 6개 이하. 비활성·비가시·백그라운드 탭에서는 아무 것도 만들지 않는다.
+  텍스처는 이 뷰가 로드한 치비 시트만 해제한다(챕터 배경·전신 시트는 공유라 남긴다).
+- **실증**: `docs/redesign/screenshots/after/meditation-{idle,channel,harvest}.png`
+  (`tests/e2e/capture-meditation.tmp.mjs`).

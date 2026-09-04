@@ -158,8 +158,12 @@ export interface NormalizedHero {
   description: string;
   level: number;
   exp: number;
+  /** 레벨·성급·장비·컬렉션이 반영된 실전 스탯 (원본 base stats 아님) */
   stats: CharacterStats;
+  /** 원천 데이터의 레벨당 성장치. stats에 이미 반영되어 있으므로 재적용 금지 */
   growthStats: CharacterStats;
+  /** stats가 최종치임을 알리는 표식 — ProgressionSystem이 성장분 이중 적용을 피하는 데 쓴다 */
+  statsResolved?: boolean;
   skills: CharacterSkill[];
   skillLevels: number[];
   equipped: string | null;

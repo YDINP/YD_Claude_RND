@@ -14,6 +14,11 @@
  * PART 2 — 상태 머신 API 회귀 (우회 경로 유지)
  *   commitStep/evaluate/notify/skip 규약을 API 로 직접 검증한다.
  *
+ * PART 3 — 회귀 방지: 강한 파티로 1-1 즉시 클리어 시 B-스텝 잔존 없음
+ *   스타터까지 Lv60 으로 올려 1-1 을 안내가 다 뜨기 전에 끝낸다. endBattle 의
+ *   settleBattleTrack() 정산이 B-1~B-5 를 전부 커밋하고, 다음 전투(1-2)에서
+ *   전투 안내 배선이 다시 마운트되지 않는지 확인한다(2026-09-04 발견 결함).
+ *
  * 사전 조건: 개발 서버 실행 중
  * 실행: SMOKE_BASE_URL=http://localhost:3000 node tests/e2e/onboarding-full.mjs [--headed]
  */
@@ -25,8 +30,8 @@ const VIEWPORT = { width: 720, height: 1280 };
 const SHOT_DIR = new URL('../../docs/story/screenshots/onboarding/', import.meta.url);
 const BATTLE_SPEED_BOOST = 8;
 
-/** 이 스위트가 의도적으로 만드는 페이지 로드 횟수 — PART 1·2 가 각각 goto + reload 한다 */
-const EXPECTED_PAGE_LOADS = 4;
+/** 이 스위트가 의도적으로 만드는 페이지 로드 횟수 — PART 1·2·3 이 각각 goto + reload 한다 */
+const EXPECTED_PAGE_LOADS = 6;
 
 /**
  * vite HMR 클라이언트 대체 스텁.
@@ -402,29 +407,49 @@ async function returnToMainByTap(page) {
   return ok;
 }
 
-/** 밸런스 중립화 (튜토리얼 배선이 검증 대상, 전투 승패는 아님) */
+/**
+ * 밸런스 중립화 (튜토리얼 배선이 검증 대상, 전투 승패는 아님).
+ *
+ * 캐릭터는 전부 해금·Lv60 으로 올리되 **파티 슬롯은 스타터 1인만** 채운다.
+ * 첫 전투(1-1)는 고블린 2마리(합계 HP 400)뿐이라 강한 4인이면 1라운드에 끝나 버려서
+ * 전투 안내 B-1~B-5 가 재생될 시간이 없다. 파티를 스타터 1인으로 두면 라운드마다
+ * 한 마리씩 잡게 되고, 자동전투가 꺼져 있는 동안 전투가 수동 입력을 기다려 안내가 다 뜬다.
+ * 전투 안내를 마친 뒤 `boostPartyFull()` 로 4인 파티를 채워 이후 스테이지를 진행한다.
+ */
 async function boostParty(page) {
   await safeEvaluate(page, () => {
     window.debug.unlockAllCharacters();
     const save = JSON.parse(localStorage.getItem('arcane_collectors_save'));
     save.characters.forEach((c) => window.debug.setCharacterLevel(c.id, 60));
+    // 첫 전투를 치를 스타터만 원래 레벨로 되돌린다 (1-1 이 4라운드 이상 지속되도록)
+    window.debug.setCharacterLevel('base_iris', 1);
 
     window.debug._refreshHeroRegistry();
     window.game?.registry?.set?.('battleSpeed', 8);
 
-    // 파티 슬롯을 전투력 상위 4인으로 채운다. 온보딩 CTA 는 세이브의 파티를 그대로 쓰므로
-    // 슬롯이 스타터 1인이면 전투 밸런스(검증 대상 아님)가 결과를 좌우한다.
-    // StageSelectScene.autoFillParty 와 동일하게 registry.ownedHeroes 기준으로 고른다.
+    const boosted = JSON.parse(localStorage.getItem('arcane_collectors_save'));
+    boosted.parties = boosted.parties || [];
+    boosted.parties[0] = ['base_iris', null, null, null];
+    localStorage.setItem('arcane_collectors_save', JSON.stringify(boosted));
+  });
+}
+
+/** 전투 안내(B-1~B-5) 이후 — 파티를 전투력 상위 4인으로 채워 남은 스테이지를 밀어붙인다 */
+async function boostPartyFull(page) {
+  await safeEvaluate(page, () => {
+    window.debug.setCharacterLevel('base_iris', 60);
+    window.debug._refreshHeroRegistry();
+
     const owned = (window.game.registry.get('ownedHeroes') || [])
       .slice()
       .sort((a, b) => (b.power || b.combatPower || 0) - (a.power || a.combatPower || 0));
     const ids = owned.slice(0, 4).map((h) => h.id).filter(Boolean);
-    if (ids.length > 0) {
-      const boosted = JSON.parse(localStorage.getItem('arcane_collectors_save'));
-      boosted.parties = boosted.parties || [];
-      boosted.parties[0] = [...ids, null, null, null].slice(0, 4);
-      localStorage.setItem('arcane_collectors_save', JSON.stringify(boosted));
-    }
+    if (ids.length === 0) return;
+
+    const save = JSON.parse(localStorage.getItem('arcane_collectors_save'));
+    save.parties = save.parties || [];
+    save.parties[0] = [...ids, null, null, null].slice(0, 4);
+    localStorage.setItem('arcane_collectors_save', JSON.stringify(save));
   });
 }
 
@@ -743,6 +768,9 @@ async function runPart1(page) {
     battleTut = await walkBattleTutorialByTap(page);
   });
   assert(won11, '[T-03] 홀을 탭해 1-1 전투 진입 → 승리');
+
+  // 전투 안내가 끝났으니 남은 스테이지는 보강된 4인 파티로 진행한다
+  await boostPartyFull(page);
 
   // ---- 전투 조작 안내 B-1~B-5 (첫 전투 안에서 실제 좌표 탭) ----
   assert(battleTut?.['B-1']?.seen === true, '[B-1] 턴 순서 배지 코치마크 표시', JSON.stringify(battleTut?.['B-1']));
@@ -1111,6 +1139,82 @@ async function runPart2(page) {
   assert(t06Notify === null || t06Notify?.ok === false, '완료된 스텝에는 popup_open 통지가 커밋을 만들지 않는다', JSON.stringify(t06Notify));
 }
 
+// ============================================================
+// PART 3 — 회귀 방지: 강한 파티로 1-1 즉시 클리어 시 B-스텝이 잔존하지 않는다
+// (2026-09-04 발견 — 짧은 전투로 B-1~B-5 안내가 커밋되지 않으면 다음 전투마다 되살아나던 결함)
+// ============================================================
+
+/** 스타터까지 Lv60 으로 올려 1-1(고블린 2마리, 합계 HP 400)을 1~2라운드 안에 끝낸다 */
+async function boostPartyInstantWin(page) {
+  await safeEvaluate(page, () => {
+    window.debug.unlockAllCharacters();
+    const save = JSON.parse(localStorage.getItem('arcane_collectors_save'));
+    save.characters.forEach((c) => window.debug.setCharacterLevel(c.id, 60));
+    window.debug._refreshHeroRegistry();
+    window.game?.registry?.set?.('battleSpeed', 8);
+    // 기본 세이브가 이미 스타터(base_iris) 1인 파티다 — boostParty() 와 달리
+    // 레벨을 되돌리지 않는다. AUTO 도 기본값(ON)을 그대로 둔다: 이 시나리오는
+    // 정확히 "안내를 다 보여줄 시간이 없는" 경로를 재현하는 것이 목적이다.
+  });
+}
+
+async function runPart3(page) {
+  console.log('\n--- PART 3: 강한 파티로 1-1 즉시 클리어 → B-스텝 잔존 없음 (회귀 방지) ---\n');
+
+  await loginGuestByTap(page);
+
+  // T-01/T-02 컷씬을 넘겨 T-03 에 도달한다
+  for (let i = 0; i < 6; i++) {
+    const ui = await tutorialUi(page);
+    if (ui.stepId === 'T-03') break;
+    await skipCutsceneByTap(page, { timeout: 3000 });
+    await page.waitForTimeout(500);
+  }
+  await page.waitForTimeout(400);
+
+  await boostPartyInstantWin(page);
+  await safeEvaluate(page, () => window.game?.scene?.getScene?.('MainMenuScene').scene.restart());
+  await waitFor(page, () => !!window.game?.scene.isActive('MainMenuScene'), 15000);
+  await page.waitForTimeout(1000);
+
+  // T-03 CTA 탭 → 전투 진입 → 승리까지. 이 시나리오는 AUTO 를 끄지 않고 B-스텝을
+  // 실탭으로 통과시키지도 않는다(onBattleReady 생략) — 강한 파티가 곧바로 이겨서
+  // 안내를 다 못 보여주는 경로가 검증 대상이다. playTutorialStageByTap 은 자연 종료가
+  // 늦어져도 8초 뒤 BattleScene.endBattle(true) 로 강제 마무리하는 폴백을 갖고 있어
+  // (playBattleByTap 내부), 어느 쪽이든 endBattle 경로를 통과한다는 점은 동일하다.
+  const won11 = await playTutorialStageByTap(page, 'P3/1-1');
+  assert(won11, '[P3] 강한 파티로 1-1 승리 (전투 안내를 다 보여줄 시간 없이 종료)');
+
+  const save = await readSave(page);
+  const battleStepIds = ['B-1', 'B-2', 'B-3', 'B-4', 'B-5'];
+  const completedB = battleStepIds.filter((id) => (save.tutorial?.completedSteps || []).includes(id));
+  assert(
+    completedB.length === 5,
+    '[P3] 짧은 전투로 안내를 다 못 봤어도 endBattle 정산으로 B-1~B-5 전부 커밋된다 (영구 미완료로 남지 않는다)',
+    JSON.stringify({ completed: completedB, all: save.tutorial?.completedSteps })
+  );
+  assert(
+    save.progress?.clearedStages?.['1-1'] > 0,
+    '[P3] 정산 로직이 전투 종료 자체(스테이지 클리어 기록)를 막지 않는다',
+    JSON.stringify(save.progress?.clearedStages)
+  );
+
+  // playTutorialStageByTap 이 이미 메인 메뉴로 복귀시켰다.
+  // 다음 전투(1-2)에서 B-트랙이 되살아나지 않는지 확인 — 예전 결함은 정확히 여기서 재현됐다
+  // (B-2~B-5 는 자체 stageId 가 없어 1-1 밖에서도 다시 마운트되던 버그).
+  await boostPartyFull(page);
+  let secondBattleTut = null;
+  const won12 = await playTutorialStageByTap(page, 'P3/1-2', async () => {
+    secondBattleTut = await battleTutorialUi(page);
+  });
+  assert(won12, '[P3] 1-2 클리어');
+  assert(
+    secondBattleTut && secondBattleTut.mounted === false,
+    '[P3] 1-2 전투에서 전투 안내 배선이 다시 마운트되지 않는다 (회귀 방지)',
+    JSON.stringify(secondBattleTut)
+  );
+}
+
 async function run() {
   mkdirSync(SHOT_DIR, { recursive: true });
   const headless = !process.argv.includes('--headed');
@@ -1150,6 +1254,7 @@ async function run() {
     console.log(`\n=== 온보딩 T-01~T-12 완주 검증 (${BASE_URL}) ===\n`);
     await runPart1(page);
     await runPart2(page);
+    await runPart3(page);
     assert(pageErrors.length === 0, '처리되지 않은 예외 0건', pageErrors.join(' | '));
   } catch (error) {
     failed += 1;

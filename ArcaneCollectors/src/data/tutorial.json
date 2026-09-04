@@ -22,7 +22,8 @@
       "B-3",
       "B-4",
       "B-5"
-    ]
+    ],
+    "battleSettlePolicy": "전투가 승리/패배/퇴각으로 끝나면 미완료 B-스텝은 그 순간 일괄 스킵 커밋된다(BattleScene.endBattle → TutorialManager.settleBattleTrack). 안내를 다 보여주지 못했어도 전투 종료를 넘어 이월되거나 다음 전투에서 재노출되지 않는다 — 첫 전투(1-1) 밖에서는 애초에 마운트되지 않는다(트리거 앵커는 B-1의 trigger.stageId 하나뿐이다). 짧은 전투로 다수 스텝이 한 번에 스킵되면 요약 토스트 1회로 대체 안내한다."
   },
   "steps": [
     {

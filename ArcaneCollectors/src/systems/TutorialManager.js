@@ -240,6 +240,36 @@ export class TutorialManager {
     return this.getCurrentBattleStepId(save) === null;
   }
 
+  /**
+   * 전투 트랙(B-1~B-5)이 재생되는 유일한 앵커 스테이지.
+   * B-1 의 trigger.stageId 하나만 SSOT 로 쓴다 — B-2~B-5 는 `trigger.after` 체인이라
+   * 자체 stageId 가 없다. 각 스텝의 `trigger?.stageId` 를 개별적으로 검사하면
+   * B-1 이후의 스텝은 이 가드를 우회해 **다른 스테이지의 전투에서도 다시 마운트된다**
+   * (2026-09-04 발견 — 짧은 전투로 B-스텝이 남으면 이후 모든 전투에서 되살아나던 결함의 원인).
+   * @returns {string|null}
+   */
+  static getBattleTriggerStageId() {
+    return this.getBattleSteps()[0]?.trigger?.stageId || null;
+  }
+
+  /**
+   * 전투 종료(승리/패배/퇴각) 시 호출한다. 남은 B-스텝을 전부 스킵 모드로 일괄 커밋해
+   * "다음 전투로 이월 → 영구 미완료"가 되지 않게 한다.
+   *
+   * 이미 완료된 스텝은 commitStep 의 멱등성 검사가 걸러내므로 몇 번을 호출해도 안전하다.
+   * B-* 스텝은 rewardId 가 없어 중복 지급 위험도 없다(TutorialRewards.js 참조).
+   * @returns {string[]} 이번 호출에서 새로 스킵 커밋된 스텝 ID 목록
+   */
+  static settleBattleTrack() {
+    const settled = [];
+    this.getBattleSteps().forEach((step) => {
+      if (this.isStepCompleted(step.id)) return;
+      const result = this.commitStep(step.id, COMPLETION_MODE.SKIPPED);
+      if (result.ok) settled.push(step.id);
+    });
+    return settled;
+  }
+
   // ==================== 진행 제어 ====================
 
   /**

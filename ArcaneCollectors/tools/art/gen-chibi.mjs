@@ -16,10 +16,13 @@ const argOf = (n, d) => { const i = process.argv.indexOf(n); return i >= 0 && pr
 // 공용 규격: 모든 캐릭터가 같은 캔버스·등신·시선을 쓰도록 고정
 const BASE = "solo, 1 character only, chibi super deformed character, 2.5 heads tall, big head small body, cute mascot proportions, "
   + "full body visible with feet, exactly one character centered in frame, front view, symmetrical, "
-  + "clean thick lineart, flat cel shading, bright saturated colors, mobile game sprite asset, "
+  + "clean thick lineart, flat cel shading, bright saturated colors, fully colored, mobile game sprite asset, "
+  + "face clearly visible with both eyes, no helmet or mask covering the face, cute expressive face, "
   + "isolated on a plain flat chroma green screen background, nothing else in frame, even flat lighting";
 const NEG = "multiple views, multiple characters, 2girls, 3girls, duplicate, twins, clones, character sheet, turnaround sheet, reference sheet, side view, back view, "
   + "realistic proportions, tall body, 6 heads tall, adult proportions, cropped, cut off feet, cut off head, "
+  + "helmet covering face, full face mask, visor over eyes, hood hiding face, dark silhouette, unlit face, "
+  + "lineart only, uncolored, sketch, outline only, monochrome, "
   + "text, letters, watermark, signature, logo, frame, border, ui, panel, shadow on background, "
   + "gradient background, scenery, props, furniture, lowres, blurry, worst quality, extra limbs, extra fingers";
 
@@ -30,9 +33,10 @@ const FRAMES = {
   awaken:    "sitting cross-legged, arms raised outward, eyes open glowing, joyful surprised expression, energy burst around body",
 };
 
-const HEROES = {
-  base_iris: "silver-white short messy hair, golden eyes, small scar on left cheek, dark blue traveler jacket with light leather armor, tiny lightning sword on her back",
-};
+// 외모 정보는 포트레이트 생성기의 캐릭터 표를 SSOT로 재사용(중복 정의 방지)
+import { execFileSync } from "node:child_process";
+const ROSTER = JSON.parse(execFileSync("node", [path.join(ROOT, "tools/portraits/generate-portraits.mjs"), "--dump-json"], { encoding: "utf-8" }));
+const HEROES = Object.fromEntries(ROSTER.filter((c) => c.id.startsWith("base_")).map((c) => [c.id, c.looks]));
 
 const hero = argOf("--hero", "base_iris");
 const looks = HEROES[hero];

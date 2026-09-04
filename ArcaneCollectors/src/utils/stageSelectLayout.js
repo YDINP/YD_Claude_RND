@@ -337,12 +337,19 @@ export function getStarOffsets(count = 3) {
 // 전투력 · 난이도
 // ------------------------------------------------------------------
 
+/** 전투력 공식에서 HP에 적용하는 나눗수 (ProgressionSystem.POWER_HP_DIVISOR 와 동일) */
+const POWER_HP_DIVISOR = 10;
+
 /**
  * 영웅 한 명의 표시용 전투력.
  *
  * 이 값은 파티 편성 모달의 총 전투력과 같은 식이어야 한다. 카드에 붙는 난이도 밴드와
  * 모달의 벽 경고가 다른 숫자를 말하면 경고가 신뢰를 잃기 때문이다.
- * (전투 판정용 SSOT 는 ProgressionSystem.calculatePower 이고, 이것은 화면 표시용 근사다)
+ *
+ * 식은 전투력 SSOT(`ProgressionSystem.calculatePower` = HP/10 + ATK + DEF + SPD)와 같은
+ * 눈금을 쓴다. 스킬 레벨 보너스만 뺀 근사다. 예전 식(HP + ATK*5 + DEF*3 + SPD*2)은
+ * 눈금이 약 5배 커서 stages.json 의 `recommendedPower` 와 비교가 되지 않았고,
+ * 1인 파티로도 모든 스테이지가 "압승"으로 표시돼 벽 경고가 전혀 뜨지 않았다.
  *
  * @param {{stats?:{hp?:number,atk?:number,def?:number,spd?:number}}} hero
  * @returns {number}
@@ -354,7 +361,7 @@ export function estimateHeroPower(hero) {
   const atk = Number(stats.atk) || 0;
   const def = Number(stats.def) || 0;
   const spd = Number(stats.spd) || 0;
-  return hp + atk * 5 + def * 3 + spd * 2;
+  return Math.floor(hp / POWER_HP_DIVISOR + atk + def + spd);
 }
 
 /**

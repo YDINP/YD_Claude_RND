@@ -1,7 +1,7 @@
 {
   "$schema": "internal://arcanecollectors/asset-manifest/v1",
   "generatedBy": "tools/art/postprocess-assets.py",
-  "generatedAt": "2026-09-03T12:39:24Z",
+  "generatedAt": "2026-09-04T01:36:39Z",
   "textures": {
     "bg_main": {
       "path": "assets/backgrounds/scenes/bg_main.webp",
@@ -1346,6 +1346,21 @@
     }
   },
   "chibi": {
+    "chibi_base_hana": {
+      "key": "chibi_base_hana",
+      "path": "assets/characters/chibi/base_hana_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "base_hana"
+    },
     "chibi_base_iris": {
       "key": "chibi_base_iris",
       "path": "assets/characters/chibi/base_iris_sheet.webp",
@@ -1360,6 +1375,126 @@
       ],
       "footY": 240,
       "heroId": "base_iris"
+    },
+    "chibi_base_kai": {
+      "key": "chibi_base_kai",
+      "path": "assets/characters/chibi/base_kai_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "base_kai"
+    },
+    "chibi_base_leon": {
+      "key": "chibi_base_leon",
+      "path": "assets/characters/chibi/base_leon_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "base_leon"
+    },
+    "chibi_base_lin": {
+      "key": "chibi_base_lin",
+      "path": "assets/characters/chibi/base_lin_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "base_lin"
+    },
+    "chibi_base_luca": {
+      "key": "chibi_base_luca",
+      "path": "assets/characters/chibi/base_luca_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "base_luca"
+    },
+    "chibi_base_omar": {
+      "key": "chibi_base_omar",
+      "path": "assets/characters/chibi/base_omar_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "base_omar"
+    },
+    "chibi_base_paolo": {
+      "key": "chibi_base_paolo",
+      "path": "assets/characters/chibi/base_paolo_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "base_paolo"
+    },
+    "chibi_base_sera": {
+      "key": "chibi_base_sera",
+      "path": "assets/characters/chibi/base_sera_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "base_sera"
+    },
+    "chibi_base_sol": {
+      "key": "chibi_base_sol",
+      "path": "assets/characters/chibi/base_sol_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "base_sol"
     }
   },
   "memoryBudget": {

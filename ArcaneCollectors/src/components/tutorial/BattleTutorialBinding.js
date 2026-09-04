@@ -108,7 +108,9 @@ export function mountBattleTutorial(scene) {
   }
   if (!pending) return null;
 
-  const stageId = pending.trigger?.stageId;
+  // 앵커는 B-1의 trigger.stageId 하나뿐이다 (pending.trigger?.stageId 로 개별 검사하면
+  // B-2~B-5 는 자체 stageId 가 없어 다른 스테이지의 전투에서도 다시 마운트된다).
+  const stageId = TutorialManager.getBattleTriggerStageId();
   if (stageId && scene.stage?.id && scene.stage.id !== stageId) return null;
 
   TutorialTargetRegistry.clearScope(BATTLE_TUTORIAL_SCOPE);
