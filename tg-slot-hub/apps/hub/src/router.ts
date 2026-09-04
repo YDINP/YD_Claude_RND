@@ -14,7 +14,11 @@ const PLAY_PATH_RE = /^\/play\/([^/]+)\/?$/
 
 /** 순수 함수로 분리 — 테스트하기 쉽고 useRoute()와 currentRoute()가 공유한다. */
 export function parseHash(hash: string): Route {
-  const path = hash.replace(/^#/, '') || '/'
+  const full = hash.replace(/^#/, '') || '/'
+  // 해시에 쿼리스트링이 붙을 수 있다(예: "#/play/shiba-shrine?debug=1" — 디버그 패널 진입).
+  // 경로 매칭은 항상 '?' 앞부분만 본다. 쿼리 자체는 이 라우터의 관심사가 아니다 —
+  // 필요한 화면(GameScreen)이 window.location.hash를 직접 다시 읽어 쓴다.
+  const path = full.split('?')[0] || '/'
   const match = PLAY_PATH_RE.exec(path)
   if (match) {
     const gameId = decodeURIComponent(match[1] ?? '')

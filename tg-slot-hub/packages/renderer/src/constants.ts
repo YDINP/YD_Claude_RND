@@ -37,6 +37,42 @@ export const LANDING_SETTLE_SYMBOLS = 0.04
 export const LANDING_SETTLE_MS = 90
 /** 마무리가 전체 스핀 시간에서 차지할 수 있는 최대 비율. 짧은 스핀에서 마무리가 잡아먹지 않게 한다. */
 export const LANDING_SETTLE_MAX_PORTION = 0.3
+/**
+ * 마지막 릴이 완전히 멈춘 뒤(정착 트윈까지 끝난 뒤) 당첨 강조·심볼 fx·스프라이트 시트 재생·
+ * 피처 배너 같은 승리 연출이 시작되기까지 두는 최소 숨 고르기 시간(ms, `normal` 기준). 사용자
+ * 피드백: "각 연출은 릴스탑이 끝나고 나올 것" — "멈췄다"와 "터진다"가 같은 프레임 근처에서
+ * 겹쳐 보이면 안 된다. 실제 스케일은 `SPIN_SPEED_PROFILES[speed].winStartDelayScale`이 정한다
+ * (터보는 스핀 리듬 자체가 짧으니 이 여백도 비례해 줄인다). 스킵(스탑/탭/스페이스)으로 릴을
+ * 곧장 스냅시킨 경우도 `showWins()`를 거치는 건 같으므로 이 여백이 동일하게 적용된다.
+ */
+export const WIN_START_DELAY_MS = 100
+
+/**
+ * 스핀 속도 프로파일. 프라그마틱 계열의 빠른 스핀/터보 스핀 관행을 따른다
+ * (`docs/REFERENCE_PRAGMATIC.md` §3: 정지는 좌→우 순차, 릴당 0.1~0.2초 간격).
+ *
+ * - `normal`: 기본. 5릴 기준 총 1.65초.
+ * - `quick`: 회전과 간격을 55%로 줄인다. 총 0.9초. 리듬은 그대로 남는다.
+ * - `turbo`: 최소. 총 0.45초. 당김을 생략하고 릴이 거의 동시에 선다.
+ *
+ * `winHoldScale`은 승리 연출 A단계 홀드에 곱한다. 릴이 0.45초에 서는데 배당을 3초 붙들면
+ * 빨라진 것이 하나도 없기 때문이다.
+ */
+export const SPIN_SPEED_PROFILES = {
+  normal: {
+    durationMs: DEFAULT_SPIN_DURATION_MS,
+    staggerMs: DEFAULT_STAGGER_MS,
+    pullUpMs: PULL_UP_MS,
+    settleMs: LANDING_SETTLE_MS,
+    winHoldScale: 1,
+    winStartDelayScale: 1,
+  },
+  quick: { durationMs: 500, staggerMs: 88, pullUpMs: 60, settleMs: 60, winHoldScale: 1, winStartDelayScale: 0.7 },
+  turbo: { durationMs: 380, staggerMs: 18, pullUpMs: 0, settleMs: 40, winHoldScale: 0.55, winStartDelayScale: 0.45 },
+} as const
+
+/** 아무것도 고르지 않았을 때의 스핀 속도. */
+export const DEFAULT_SPIN_SPEED = 'normal'
 
 /** 모션 축소 시 스핀 길이(ms). */
 export const REDUCED_SPIN_DURATION_MS = 240
@@ -119,9 +155,14 @@ export const DEFAULT_FRAME_WINDOW = { x: 0.08, y: 0.22, w: 0.84, h: 0.46 } as co
 
 /**
  * `fit: 'window'`에서 프레임이 컨테이너 폭을 넘어도 되는 비율.
- * 0.40이면 폭의 140%까지 키운다. 좌우 기둥이 통째로 잘려 나가도 릴 창이 컨테이너 폭을 채운다.
+ *
+ * 기본 0 — **프레임은 좌우로 잘리지 않는다.** 예전 기본값 0.4는 릴 창을 컨테이너 폭까지
+ * 키우는 대신 좌우 기둥과 레일을 컨테이너 밖으로 밀어냈고, 실제 화면에서 양옆이 잘려 보였다.
+ * 창이 조금 좁아지더라도 아트가 온전히 보이는 쪽을 기본으로 삼는다.
+ *
+ * 0보다 크게 주면 그 비율만큼 다시 넘칠 수 있다. 잘림을 감수하고 릴을 키우려는 게임만 쓴다.
  */
-export const DEFAULT_OVERFLOW_X = 0.4
+export const DEFAULT_OVERFLOW_X = 0
 
 /** 크로마키 판정: 초록 채널이 이 값보다 커야 후보가 된다. */
 export const CHROMA_GREEN_MIN = 140
@@ -146,16 +187,26 @@ export const SPARKLE_WINDOW_MARGIN = 0.04
 /** 반짝임 자리를 다시 뽑아 보는 최대 횟수. 못 찾으면 그 하나는 버린다. */
 export const SPARKLE_PLACEMENT_ATTEMPTS = 12
 
-/** 승리 연출 A단계(전체 승리 동시 재생) 길이(ms). 등급 없는 보통 승리. */
-export const PHASE_ALL_MS = 900
+/**
+ * 승리 연출 A단계(전체 승리 동시 재생) 길이(ms). 등급 없는 보통 승리.
+ * 실사용에서 순환이 빠르다는 지적을 받아 기존 900ms에서 1.4배로 늘렸다.
+ */
+export const PHASE_ALL_MS = 1260
 /** BIG 등급의 A단계 길이(ms). 카운터가 올라갈 시간을 준다. */
-export const PHASE_ALL_BIGWIN_MS = 1600
+export const PHASE_ALL_BIGWIN_MS = 2240
 /** MEGA 이상의 A단계 길이(ms). 숫자가 클수록 천천히 올라가야 무게감이 산다. */
-export const PHASE_ALL_MEGA_MS = 2200
-/** 승리 연출 B단계(라인 하나씩) 한 스텝 길이(ms). 라벨을 읽을 시간을 준다. */
-export const PHASE_LINE_MS = 1400
+export const PHASE_ALL_MEGA_MS = 3080
+/**
+ * 짧은 연출(`presentation: 'brief'`, 오토스핀용) A단계 홀드에 곱하는 배율.
+ * 기준은 등급별 길이가 아니라 **보통 승리의 A단계 길이**(`PHASE_ALL_MS`)다 — 빅윈/메가에서도
+ * 같은 길이로 스쳐 지나가야 "짧게 1회"라는 약속(총 1.2초 이내, 터보 0.6초 이내)을 지킬 수 있다.
+ * 속도 프로파일의 `winHoldScale`은 그 위에 그대로 곱해진다.
+ */
+export const BRIEF_PHASE_ALL_SCALE = 0.6
+/** 승리 연출 B단계(라인 하나씩) 한 스텝 길이(ms). 허브 문구를 읽을 시간을 준다. */
+export const PHASE_LINE_MS = 1900
 /** 라인이 바뀔 때 겹쳐 넘기는 시간(ms). */
-export const PHASE_CROSSFADE_MS = 150
+export const PHASE_CROSSFADE_MS = 220
 /** 연출 중 참여하지 않는 심볼의 불투명도. */
 export const DIM_ALPHA = 0.5
 
@@ -204,43 +255,49 @@ export const SCATTER_RING_PULSE_MS = 700
 export const FREE_SPINS_EDGE_STROKE_PX = 4
 /** 프리스핀 테두리 불투명도. */
 export const FREE_SPINS_EDGE_ALPHA = 0.55
-/** 프리스핀 명판 글자 크기 = 심볼 한 변 x 이 값. */
-export const FREE_SPINS_PLAQUE_FONT_RATIO = 0.2
 
-/** 프리스핀 진입/이탈 전환 길이(ms). */
-export const MODE_TRANSITION_MS = 700
-/** 모션 축소 시 전환 길이(ms). */
-export const REDUCED_MODE_TRANSITION_MS = 220
-/** 전환에서 금빛 섬광이 차지하는 시간 비율. */
-export const MODE_FLASH_PORTION = 0.25
-/** 전환에서 방사형 와이프가 차지하는 시간 비율. */
-export const MODE_WIPE_PORTION = 0.55
-/** 섬광 최대 불투명도. */
-export const MODE_FLASH_ALPHA = 0.55
-/** 전환 섬광 색. 브라스 팔레트에 맞춘 밝은 금빛. */
-export const MODE_FLASH_COLOR = '#fff3c4'
+/**
+ * 프리스핀 진입/이탈 전환 — 화면 전체를 완전히 가리는 커튼 3단계(ms, normal 속도 기준).
+ * (a) 덮기: 불투명 커튼이 알파 0→1로 캔버스 전체를 완전히 가린다.
+ * (b) 배너: 완전히 가려진 채로 배경/모드를 갈아 끼우고 그 상태를 붙들어 둔다.
+ * (c) 걷기: 커튼이 알파 1→0으로 걷히며 새 모드가 드러난다.
+ * 셋을 더하면 normal 기준 1.5초다. 반투명 와이프로 스치듯 지나가던 예전 연출을 대신한다.
+ */
+export const MODE_COVER_IN_MS = 380
+export const MODE_BANNER_MS = 700
+export const MODE_COVER_OUT_MS = 420
+
+/**
+ * 스핀 속도별 전환 길이 배율. quick/turbo에서도 화면 전환 자체는 체감이 빨라야 스핀 리듬과
+ * 어긋나지 않는다 — 세 구간 모두 같은 배율로 줄인다(비율은 유지).
+ */
+export const MODE_TRANSITION_SPEED_SCALE = { normal: 1, quick: 0.7, turbo: 0.45 } as const
+
+/**
+ * 모션 축소 시 전환 — 애니메이션(덮기/걷기)은 최소로 줄이고 배너만 짧게 유지한다.
+ * 셋을 더해도 400ms를 넘지 않는다.
+ */
+export const REDUCED_MODE_COVER_IN_MS = 60
+export const REDUCED_MODE_BANNER_MS = 280
+export const REDUCED_MODE_COVER_OUT_MS = 60
+
+/** 커튼 색. 게임 테마와 무관하게 항상 읽히도록 어두운 중립색을 쓴다. */
+export const MODE_CURTAIN_COLOR = '#0b0b12'
 /** 프리스핀 배경 이미지가 없을 때 덧씌우는 금빛 틴트의 불투명도. */
 export const MODE_TINT_ALPHA = 0.22
 
-/** 승리 빛이 심볼 하나에서 다음 심볼로 건너가는 시간(ms). */
-export const PULSE_HOP_MS = 120
 /**
- * 등급이 오를수록 빛이 느긋하게 움직인다. 큰 승리일수록 오래 보게 만드는 장치다.
+ * 스킵했을 때 마지막 릴이 자리를 잡기까지의 시간(ms).
+ *
+ * 남은 회전을 **훑지 않는다.** 릴은 곧장 정지 위치 바로 위에 붙고 이 시간 안에 내려앉는다.
+ * 예전에는 남은 거리를 260ms에 몰아 지나갔는데, 스트립이 길면 그동안 심볼이 통째로 흘러
+ * "다시 돌다 멈춘다"로 보였다. 스냅은 거리와 무관하므로 그 착시가 생기지 않는다.
  */
-export const PULSE_HOP_MS_BY_TIER = { none: 120, big: 150, mega: 180, epic: 220, max: 220 } as const
-/** 등급별 잔상 길이. 느린 빛일수록 꼬리가 길어야 균형이 맞는다. */
-export const PULSE_TRAIL_BY_TIER = { none: 6, big: 8, mega: 10, epic: 12, max: 12 } as const
-/** 마지막 심볼에 닿은 뒤 잠시 머무는 시간(ms). */
-export const PULSE_HOLD_MS = 260
-/** 승리 빛 스프라이트 지름 = 심볼 한 변 x 이 값. */
-export const PULSE_SIZE_RATIO = 0.85
-/** 승리 빛 뒤에 남는 잔상 개수. */
-export const PULSE_TRAIL_COUNT = 6
-
-/** 스킵했을 때 모든 릴이 멈추기까지의 총 시간(ms). */
-export const SKIP_TOTAL_MS = 260
-/** 스킵 시 릴 사이 정지 간격(ms). */
+export const SKIP_SETTLE_MS = 120
+/** 스킵 시 릴 사이 착지 간격(ms). 왼쪽부터 순서대로 내려앉게 한다. */
 export const SKIP_STAGGER_MS = 40
+/** 스킵 착지에서 정지 위치 위로 띄웠다가 내려오는 거리(심볼 단위). 재가속 없이 내려앉기만 한다. */
+export const SKIP_SETTLE_SYMBOLS = 0.06
 
 /**
  * 변형(뮤테이션) 연출 길이(ms). 종류마다 다른 이유가 있다.

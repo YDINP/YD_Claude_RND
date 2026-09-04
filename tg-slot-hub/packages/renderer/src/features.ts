@@ -47,17 +47,3 @@ export interface RendererMode {
   /** 프리스핀 중이면 상태, 아니면 null. */
   freeSpins?: FreeSpinsMode | null
 }
-
-/**
- * 창 위에 띄우는 프리스핀 명판 문구.
- * 배수가 1이면 붙이지 않는다. `×1`은 정보가 없고 시야만 어지럽힌다.
- */
-export function formatFreeSpinsPlaque(mode: FreeSpinsMode): string {
-  const base = `FREE SPINS ${mode.left}/${mode.total}`
-  return mode.multiplier > 1 ? `${base} ×${mode.multiplier}` : base
-}
-
-/** 명판과 금빛 테두리를 그릴지 말지. 순수 판정이라 그리기 전에 검사할 수 있다. */
-export function shouldShowFreeSpinsPlaque(mode: RendererMode, enabled: boolean): boolean {
-  return enabled && mode.freeSpins !== null && mode.freeSpins !== undefined
-}

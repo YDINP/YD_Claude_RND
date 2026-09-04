@@ -68,6 +68,10 @@ describe('groupMembers', () => {
 })
 
 describe('winLineLabel', () => {
+  // winLineLabel은 이름만 돌려준다 — count/ways/금액 합성은 호출부(GameScreen) 몫이다
+  // (예전엔 여기서 "심볼 × N ways"까지 만들었는데, 호출부가 그 뒤에 다시 ×count를 이어 붙여
+  // "판다 × 4 ways ×5"처럼 이중으로 겹치는 버그가 있었다). ways 합성 자체의 회귀 테스트는
+  // components/game/GameScreen.test.tsx의 "WinStrip line label" 스위트에 있다.
   it('uses the symbol name for a plain (non-group) win', () => {
     expect(winLineLabel(math, { symbol: 'seven' }, 'en')).toBe('Seven')
   })
@@ -77,15 +81,7 @@ describe('winLineLabel', () => {
     expect(winLineLabel(math, { symbol: 'anybar', group: 'anybar' }, 'en')).toBe('Any BAR')
   })
 
-  it('appends "× N ways" for a ways win (Wave 1)', () => {
-    expect(winLineLabel(math, { symbol: 'seven', ways: 8 }, 'en')).toBe('Seven × 8 ways')
-  })
-
-  it('keeps the "ways" word untranslated even in Korean (genre term, matches renderer example)', () => {
-    expect(winLineLabel(math, { symbol: 'seven', ways: 27 }, 'ko')).toBe('세븐 × 27 ways')
-  })
-
-  it('does not append anything when ways is absent (line games)', () => {
-    expect(winLineLabel(math, { symbol: 'seven', ways: undefined }, 'en')).toBe('Seven')
+  it('ignores any extra fields (e.g. ways) on the win — only symbol/group decide the name', () => {
+    expect(winLineLabel(math, { symbol: 'seven', ways: 8 } as { symbol: string; ways: number }, 'en')).toBe('Seven')
   })
 })

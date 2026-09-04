@@ -15,10 +15,10 @@
   "background": "bg.webp",
   "frameLayout": {
     "window": {
-      "x": 0.05640625,
-      "y": 0.224375,
-      "w": 0.8871875,
-      "h": 0.5434375
+      "x": 0.04422647527910686,
+      "y": 0.23561403508771928,
+      "w": 0.9131419457735247,
+      "h": 0.5399362041467305
     }
   },
   "palette": {
@@ -171,5 +171,16 @@
       ]
     }
   },
-  "backgroundFreeSpins": "bg-freespins.webp"
+  "backgroundFreeSpins": "bg-freespins.webp",
+  "sheets": {
+    "wild": {
+      "win": "sheets/wild-win.json"
+    },
+    "scatter": {
+      "win": "sheets/scatter-win.json"
+    },
+    "seven": {
+      "win": "sheets/seven-win.json"
+    }
+  }
 }

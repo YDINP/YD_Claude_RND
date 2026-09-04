@@ -5,6 +5,7 @@
 import { create } from 'zustand'
 import { parseGameMath, type GameMath } from '@tgslot/slot-engine'
 import type {
+  SpinRequest,
   SpinResponse,
   WinLine,
   FreeSpinsState,
@@ -24,37 +25,64 @@ import {
 } from '../sdk/api'
 import { useSessionStore } from './session'
 import { useHubStore } from './hub'
-import { winLineLabel } from '../game/labels'
-import { getEffectiveLocale } from '../i18n'
+import type { DebugPreset } from '../lib/debugPreset'
+
+/** SpinResponse.debug의 형태 — 어떤 프리셋이 실제로 적용됐고 몇 번 만에 그 결과를 찾았는지. */
+type SpinDebugResponse = NonNullable<SpinResponse['debug']>
 
 export type GamePhase = 'loading' | 'idle' | 'spinning' | 'showingWin' | 'error'
 
 /** 자동 스핀을 다음 스핀이 시작되면(수동이든 자동이든) 취소하기 위한 모듈 스코프 타이머. */
 let autoSpinTimeoutId: ReturnType<typeof setTimeout> | null = null
+/**
+ * 위 타이머를 누가 걸었는지 — 프리스핀 자동진행인지 오토스핀인지. 오토스핀을 중지할 때
+ * (`stopAutoSpin`) 프리스핀 자동진행이 걸어 둔 예약까지 같이 지워버리면 안 되므로 구분한다.
+ */
+let autoSpinTimeoutOwner: 'freeSpins' | 'autoSpin' | null = null
 /** 승리 연출 뒤 다음 프리스핀이 자동으로 돌기까지 대기하는 시간. 탭하면 바로 스핀되므로 이건 상한이다. */
 const AUTO_SPIN_DELAY_MS = 1200
+/**
+ * 오토스핀에서 다음 판까지의 간격. 프리스핀 자동진행(위)보다 짧다 — 오토스핀은 승리 연출도
+ * 한 바퀴만 보여주므로(showWins의 `loop:false`) 결과를 확인할 최소한의 틈만 두고 이어간다.
+ */
+const AUTO_SPIN_INTERVAL_MS = 600
+
+/** 오토스핀이 고를 수 있는 회수 — UI(GameScreen)와 공유한다. 무제한은 제공하지 않는다. */
+export const AUTO_SPIN_COUNTS = [10, 25, 50, 100] as const
+export type AutoSpinCount = (typeof AUTO_SPIN_COUNTS)[number]
 
 /**
  * 프리스핀에 막 진입한 첫 판은, 예약해 둔 자동 스핀을 곧장 타이머로 돌리지 않고 여기 잠깐
  * 담아둔다 — GameScreen이 렌더러의 modeTransition(to:'freeSpins', phase:'end') 이벤트를 받아
  * releaseFreeSpinsEntryGate()를 부르면 그때 실제로 예약된다. 렌더러가 그 이벤트를 아직
  * 못 보내는(또는 지원하지 않는) 경우엔 플레이어가 FREE SPIN 버튼을 직접 눌러 진행할 수 있다.
+ *
+ * `renderer.setMode()`(커튼 전환의 방아쇠)는 이제 spinTo/showWins가 다 끝난 뒤 finally에서만
+ * 불린다 — 그러므로 modeTransition('end')은 항상 finally가 이 값을 세운 **뒤에** 도착한다
+ * (예전처럼 finally보다 먼저 도착하는 경우는 이제 구조적으로 없다).
  */
 let pendingAutoSpinRelease: (() => void) | null = null
-/**
- * 실제 타이밍 문제: modeTransition(to:'freeSpins', phase:'end')은 renderer.setMode() 직후
- * (spinTo/showWins가 끝나기 한참 전에) 도착한다 — 그때는 아직 spin()의 finally가 실행 전이라
- * pendingAutoSpinRelease가 비어 있다. 그 "일찍 도착한 해제 신호"를 놓치지 않도록 래치해 둔다 —
- * finally에서 예약을 걸 시점에 이 래치가 서 있으면 미루지 않고 즉시 예약한다.
- */
-let freeSpinsEntryReleased = false
 
-function cancelAutoSpin(): void {
+/**
+ * 프리스핀이 끝난 뒤 오토스핀을 다시 이어가기 위해 미뤄 둔 예약. 종료 커튼(modeTransition
+ * to:'base')이 화면을 덮고 있는 동안 다음 판이 돌면 안 되므로, GameScreen이 커튼이 다 걷힌
+ * 시점(phase:'end')에 `resumeAutoSpin()`을 불러 실제로 예약을 건다.
+ */
+let pendingAutoSpinResume: (() => void) | null = null
+
+/** 예약돼 있던 다음 자동 스핀 타이머만 거둬들인다(어떤 게이트도 건드리지 않는다). */
+function clearScheduledSpin(): void {
   if (autoSpinTimeoutId !== null) {
     clearTimeout(autoSpinTimeoutId)
     autoSpinTimeoutId = null
   }
+  autoSpinTimeoutOwner = null
+}
+
+function cancelAutoSpin(): void {
+  clearScheduledSpin()
   pendingAutoSpinRelease = null
+  pendingAutoSpinResume = null
 }
 
 /** 지금 진행 중인 spinTo() 손잡이 — 탭/스페이스로 "결과로 건너뛰기"를 할 때 이걸 통해 skip()한다. */
@@ -92,22 +120,32 @@ export interface SpinRenderer {
   ): SpinToHandle
   /**
    * totalBet을 주면 렌더러가 winTotal 이벤트의 등급(tier)을 라인 배수 추정 없이 정확히 계산한다.
-   * formatLineLabel은 라인 명판 문구를 만든다 — 렌더러는 번역/그룹 이름을 모르므로 store가 넣어 준다.
    * features를 주면 프리스핀 진입/재발동 등을 연출 중 알맞은 시점에 featureTriggered 이벤트로 알려준다.
+   * (formatLineLabel은 폐기됐다 — 릴 위 라인 명판이 사라졌고, 문구는 GameScreen이 winLine/winCycle
+   * 이벤트를 받아 WinStrip에 직접 그린다. 더 이상 여기서 넘기지 않는다.)
    */
   showWins(
     wins: WinLine[],
     options?: {
       loop?: boolean
+      /** 'brief'면 라인별 순차(B단계) 없이 전체 표시만 짧게 1회 — 오토스핀용. */
+      presentation?: 'full' | 'brief'
       totalBet?: number
-      formatLineLabel?: (win: WinLine) => string
       features?: FeatureTrigger[]
     },
   ): Promise<void>
   /** 프리스핀 진입/종료 시 배경·프레임 등 시각 모드를 전환한다. `null`로 되돌리면 평소 모드다. */
   setMode?(mode: { freeSpins?: { left: number; total: number; multiplier: number } | null }): void
-  /** 승리 라인 순환 연출을 즉시 멈춘다. 승리 연출 중 탭하면 GameScreen이 이걸 부른다. */
+  /**
+   * 보고 있던 승리 연출 바퀴를 곧장 접는다(showWins의 약속을 그 자리에서 resolve시킨다). 순환
+   * 자체는 멈추지 않는다 — SPIN 버튼/스페이스로 "연출 스킵 + 즉시 다음 스핀"을 할 때 GameScreen이
+   * 이걸 부른다(handleSkipWinsAndAdvance).
+   */
+  skipWins?(): void
+  /** 승리 라인 순환 연출을 완전히 멈추고 화면에서 걷어낸다. store가 reset()/게임 이탈 시 부른다. */
   clearWins?(): void
+  /** 이후 스핀의 릴 속도 프로파일을 바꾼다. 돌고 있는 스핀은 건드리지 않는다. */
+  setSpinSpeed?(speed: 'normal' | 'quick' | 'turbo'): void
 }
 
 /** FreeSpinsState(허브/서버 형태)를 렌더러의 setMode가 받는 최소 형태로 줄인다. GameScreen도 재사용한다. */
@@ -195,6 +233,17 @@ function toGambleSession(gambleState: GambleState | null): GambleSession | null 
   }
 }
 
+/**
+ * 스핀 한 판의 개발용 타이밍 계측(디버그 패널 전용) — 요청 왕복, 릴이 멈춘 뒤 승리 연출이
+ * 시작하기까지, 그리고 첫 순환(showWins의 첫 바퀴) 길이. 렌더러가 없거나 이번 스핀에 승리
+ * 연출이 없었으면 뒤 두 값은 null이다.
+ */
+export interface SpinTiming {
+  requestMs: number
+  reelStopToWinStartMs: number | null
+  firstPassMs: number | null
+}
+
 export interface GameState {
   gameId: string | null
   math: GameMath | null
@@ -210,8 +259,25 @@ export interface GameState {
   freeSpins: FreeSpinsState | null
   /** 진행 중인 더블업. null이면 없음. load() 시 서버에서 이어받고, 스핀 응답의 gambleOffer로 새로 생긴다. */
   gambleSession: GambleSession | null
+  /**
+   * 진행 중인 오토스핀. null이면 꺼져 있다. `remaining`은 아직 돌지 않은 유료 판의 수 —
+   * 지금 돌고 있는 판은 끝날 때 하나 깎이고, 0이 되면 스스로 꺼진다(=null).
+   * 프리스핀 중에 도는 판은 서버가 공짜로 주는 것이므로 이 카운터를 소모하지 않는다.
+   */
+  autoSpin: { remaining: number } | null
   /** 실패한(또는 진행 중인) 더블업 한 판의 idempotencyKey. 재시도 시 재사용한다(spin과 같은 패턴). */
   gambleIdempotencyKey: string | null
+  /**
+   * 디버그 패널에서 고른, 다음 한 판에만 적용할 결과 프리셋. 원샷이다 — spin()이 요청을
+   * 만들자마자(성공/실패와 무관하게) null로 되돌린다.
+   */
+  debugPreset: DebugPreset | null
+  /** 디버그 프리셋 요청이 거절됐을 때(DEBUG_DISABLED/DEBUG_NO_MATCH) 비차단으로 보여줄 메시지. */
+  debugMessage: { code: string; message: string } | null
+  /** 마지막 스핀의 개발용 타이밍(디버그 패널). */
+  lastSpinTiming: SpinTiming | null
+  /** 마지막 스핀 응답의 debug 필드(어떤 프리셋이 적용됐고 몇 번 만에 맞았는지). 계약 미착륙 시 null. */
+  lastSpinDebug: SpinDebugResponse | null
 }
 
 export interface GameActions {
@@ -231,6 +297,21 @@ export interface GameActions {
    */
   releaseFreeSpinsEntryGate: () => void
   /**
+   * 오토스핀을 `count`판만큼 무장하고, 지금 바로 돌 수 있는 상태면(idle, 프리스핀 아님) 첫 판을
+   * 곧장 시작한다. 이미 스핀 중이면 예약만 해두고 그 판이 끝나는 대로 이어진다.
+   */
+  startAutoSpin: (count: number) => void
+  /**
+   * 오토스핀을 멈춘다 — 지금 돌고 있는 판은 그대로 끝나고, 예약돼 있던 다음 판만 거둬들인다
+   * (업계 관행 "이번 스핀만 마치고 중단"). 프리스핀 자동진행이 걸어 둔 예약은 건드리지 않는다.
+   */
+  stopAutoSpin: () => void
+  /**
+   * 프리스핀 종료 커튼이 다 걷힌 뒤(modeTransition to:'base', phase:'end') GameScreen이 불러
+   * 미뤄 둔 오토스핀 재개 예약을 실제로 건다. 미뤄둔 게 없으면 아무 일도 하지 않는다.
+   */
+  resumeAutoSpin: () => void
+  /**
    * 더블업 한 판. pick(heads/tails)이 서버가 실제로 뒤집은 면과 같으면 2배, 다르면 0 — 클라이언트는
    * 절대 스스로 계산하지 않고 서버 응답을 그대로 반영한다. 진행 중인 세션이 없으면 아무 일도 안 한다.
    */
@@ -245,6 +326,10 @@ export interface GameActions {
   syncGambleExpiry: () => Promise<void>
   /** INSUFFICIENT_FUNDS 시트 등 에러 표시를 닫고 idle로 되돌린다 */
   dismissError: () => void
+  /** 디버그 패널의 프리셋 버튼이 부른다. null을 주면 무장 해제(예: 취소 버튼). */
+  setDebugPreset: (preset: DebugPreset | null) => void
+  /** DEBUG_DISABLED/DEBUG_NO_MATCH 비차단 메시지를 닫는다. */
+  dismissDebugMessage: () => void
   reset: () => void
 }
 
@@ -262,6 +347,11 @@ const initialState: GameState = {
   renderer: null,
   freeSpins: null,
   gambleSession: null,
+  autoSpin: null,
+  debugPreset: null,
+  debugMessage: null,
+  lastSpinTiming: null,
+  lastSpinDebug: null,
   gambleIdempotencyKey: null,
 }
 
@@ -324,12 +414,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 자동 스핀 타이머는 취소한다 — 안 그러면 나중에 중복으로 또 스핀이 걸린다.
     cancelAutoSpin()
 
-    const { gameId, math, betIndex, phase, renderer, freeSpins } = get()
+    const { gameId, math, betIndex, phase, renderer, freeSpins, debugPreset } = get()
     if (!gameId || !math) return
     if (phase === 'spinning' || phase === 'showingWin') return
 
     const token = useSessionStore.getState().token
     if (!token) {
+      get().stopAutoSpin()
       set({ phase: 'error', error: '로그인이 필요합니다', errorCode: 'unauthorized' })
       return
     }
@@ -338,10 +429,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const totalBet = freeSpins ? freeSpins.totalBet : math.betLevels[betIndex]
     if (totalBet === undefined) return
 
-    // 여기서부터는 이번 스핀이 실제로 시작된다 — 이전 스핀에서 남은 건너뛰기 손잡이/요청/래치는 무효화한다.
+    // 여기서부터는 이번 스핀이 실제로 시작된다 — 이전 스핀에서 남은 건너뛰기 손잡이/요청은 무효화한다.
     currentSpinHandle = null
     skipRequested = false
-    freeSpinsEntryReleased = false
 
     // 이전 실패에서 남은 키가 있으면 재사용한다 — 서버가 idempotencyKey로 재전송을 판별한다.
     const idempotencyKey = get().idempotencyKey ?? newIdempotencyKey()
@@ -358,13 +448,38 @@ export const useGameStore = create<GameStore>((set, get) => ({
       lastResult: null,
       gambleSession: null,
       gambleIdempotencyKey: null,
+      // 디버그 프리셋은 원샷 — 요청을 만드는 이 시점에 바로 지운다(성공/실패와 무관하게 다음
+      // 스핀에 새어 들어가면 안 된다). 남은 비차단 디버그 메시지도 새 스핀에서는 지운다.
+      debugPreset: null,
+      debugMessage: null,
     })
 
+    const requestBody: SpinRequest = { totalBet, idempotencyKey }
+    // preset이 무장돼 있으면 이번 요청에만 실어 보낸다 — maxTries는 서버 기본값을 그대로 쓴다.
+    if (debugPreset) requestBody.debug = { preset: debugPreset, maxTries: 5000 }
+
+    const requestStartedAt = Date.now()
     let result: SpinResponse
     try {
-      result = await apiSpin(token, gameId, { totalBet, idempotencyKey })
+      result = await apiSpin(token, gameId, requestBody)
     } catch (err) {
+      // 스핀이 어떤 이유로든 실패하면 오토스핀은 그 자리에서 멈춘다 — 잔액 부족(INSUFFICIENT_FUNDS)/
+      // 베팅 잠금(BET_LOCKED)처럼 다음 판도 똑같이 실패할 이유가 대부분이고, 실패를 계속 반복하며
+      // 요청을 쏟아내면 안 된다. 비차단 안내는 아래 각 분기가 평소대로 그대로 띄운다.
+      get().stopAutoSpin()
+
       if (get().gameId !== gameId) return
+
+      // 디버그 프리셋 요청이 거절된 경우 — 비차단 메시지만 남기고 화면은 그대로 idle로 되돌린다.
+      // 재시도는 하지 않는다(프리셋은 이미 원샷으로 소비됐다).
+      if (err instanceof ApiClientError && (err.code === 'DEBUG_DISABLED' || err.code === 'DEBUG_NO_MATCH')) {
+        set({
+          phase: 'idle',
+          idempotencyKey: null,
+          debugMessage: { code: err.code, message: err.message },
+        })
+        return
+      }
 
       if (err instanceof ApiClientError && err.code === 'INSUFFICIENT_FUNDS') {
         set({ phase: 'error', error: err.message, errorCode: 'INSUFFICIENT_FUNDS', idempotencyKey: null })
@@ -439,6 +554,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return
     }
 
+    // 디버그 패널용 타이밍 — 요청 왕복은 응답을 받은 지금 이미 확정됐다. 나머지 두 값(릴 정지→승리
+    // 시작, 첫 순환 길이)은 아래 연출 흐름을 지나며 채운다.
+    const timing: SpinTiming = {
+      requestMs: Date.now() - requestStartedAt,
+      reelStopToWinStartMs: null,
+      firstPassMs: null,
+    }
+
     // 서버 잔액을 가드보다도 먼저 즉시 반영한다 — 이후 렌더러가 실패하거나(throw) 화면을 벗어나도
     // 이미 확정된 권위 있는 잔액이 유실되지 않게 한다.
     useSessionStore.setState({ wallet: result.wallet })
@@ -469,10 +592,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
           expiresAt: result.gambleOffer.expiresAt,
         }
       : null
-    set({ lastResult: result, idempotencyKey: null, freeSpins: result.freeSpins, gambleSession })
-    renderer?.setMode?.({ freeSpins: toRendererFreeSpinsMode(result.freeSpins) })
+    set({
+      lastResult: result,
+      idempotencyKey: null,
+      freeSpins: result.freeSpins,
+      gambleSession,
+      // 이번 스핀이 디버그 프리셋으로 강제됐을 때만 서버가 실어 보낸다(같은 idempotencyKey로
+      // 재전송된 응답에는 안 실린다) — 그 외에는 항상 null이다.
+      lastSpinDebug: result.debug ?? null,
+    })
+    // 시각 모드 전환(커튼)은 여기서 곧장 걸지 않는다 — 릴 회전·뮤테이션·승리 연출이 다 끝난
+    // 뒤에야 건다(아래 finally). 결과가 화면에 다 드러나기도 전에 배경부터 바뀌면 인과가
+    // 뒤집힌다(스캐터가 보이기도 전에 프리스핀 복장이 되는 문제). store 상태(freeSpins)는
+    // 베팅 잠금/FREE SPIN 버튼 표시 등을 위해 여기서 즉시 맞춘다 — 렌더러 쪽 커튼만 미룬다.
 
     try {
+      let reelStopAt: number | null = null
       if (renderer) {
         // spinTo가 돌려주는 손잡이를 모듈 스코프에 잡아둔다 — 탭/스페이스로 건너뛰기를 하면
         // requestSkip()이 이 손잡이의 skip()을 부른다. 결과를 기다리는 동안(=이 handle이 생기기
@@ -487,6 +622,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         await handle
         currentSpinHandle = null
+        reelStopAt = Date.now()
       }
 
       // wins가 없어도 features(예: 스캐터 3개로 프리스핀 진입, 배당은 0)만 있을 수 있으므로
@@ -494,15 +630,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (result.wins.length > 0 || result.features.length > 0) {
         set({ phase: 'showingWin' })
         if (renderer) {
-          // 설정에서 고른 로케일(자동이면 세션 유저 로케일로 폴백)을 쓴다 — user.locale만 쓰면
-          // 설정을 ko로 바꿔도 라인 명판이 서버가 준 영어 로케일 그대로 나온다.
-          const locale = getEffectiveLocale()
+          // formatLineLabel은 폐기됐다(렌더러가 더 이상 릴 위에 라인 명판을 그리지 않는다) —
+          // "어떤 심볼이 얼마를 땄는지"는 이제 렌더러의 winLine/winCycle 이벤트를 받아 GameScreen이
+          // WinStrip에 직접 그린다(winLineLabel은 그쪽에서 쓴다). 여기서는 더 이상 넘기지 않는다.
+          const winStartAt = Date.now()
+          timing.reelStopToWinStartMs = reelStopAt !== null ? winStartAt - reelStopAt : null
           await renderer.showWins(result.wins, {
             totalBet: result.totalBet,
-            // 그룹으로 맞은 라인(win.group 있음)은 그룹 이름을, 아니면 심볼 이름을 라인 명판에 쓴다.
-            formatLineLabel: (win) => `${winLineLabel(math, win, locale)} · ${win.win.toLocaleString('en-US')}`,
             features: result.features,
+            // 오토스핀 중에는 라인별 순차(B단계)를 통째로 건너뛰고 전체 표시만 짧게 1회 보여준다 —
+            // `loop:false`만으로는 첫 바퀴(라인당 1.9초)가 그대로 재생돼 판 간격이 8~14초까지
+            // 벌어졌다. 수동 플레이는 평소처럼 full + 순환이다(옵션 자체를 넘기지 않는다).
+            ...(get().autoSpin ? { presentation: 'brief' as const } : {}),
           })
+          timing.firstPassMs = Date.now() - winStartAt
         }
       }
     } catch (err) {
@@ -511,32 +652,81 @@ export const useGameStore = create<GameStore>((set, get) => ({
     } finally {
       currentSpinHandle = null
       if (get().gameId === gameId) {
-        set({ phase: 'idle' })
-        // 프리스핀이 남아 있으면 승리 연출이 끝난 뒤 잠시 쉬었다 자동으로 다음 판을 돌린다.
-        // 사용자가 그 사이 SPIN을 탭하면 위쪽의 cancelAutoSpin()이 이 타이머를 지우고 즉시 진행된다.
+        set({ phase: 'idle', lastSpinTiming: timing })
+
+        // 시각 모드 전환(커튼) — 스핀/뮤테이션/승리 연출이 다 끝난 지금에서야 건다. 전환 방향은
+        // 스핀 시작 "전"의 모드(위쪽 `freeSpins` 스냅샷)와 이번 응답의 `result.freeSpins` 유무를
+        // 비교해 정해지는데, 그 비교는 renderer.setMode() 안(modeTransitionTarget)에서 렌더러가
+        // 자신의 마지막 모드와 대조해 스스로 판단한다 — 같은 모드면(남은 횟수만 바뀐 재발동 등)
+        // 알아서 건너뛰어 매 프리스핀 스핀마다 커튼이 뜨지 않는다.
+        renderer?.setMode?.({ freeSpins: toRendererFreeSpinsMode(result.freeSpins) })
+
+        // 오토스핀 카운터 — 이번 판이 "유료" 판일 때만 하나 깎는다(프리스핀 중에 도는 판은 서버가
+        // 공짜로 주는 것이라 오토스핀의 몫에서 빼지 않는다). 0이 되면 스스로 꺼진다.
+        const armedBefore = get().autoSpin
+        if (armedBefore && freeSpins === null) {
+          const left = Math.max(0, armedBefore.remaining - 1)
+          set({ autoSpin: left > 0 ? { remaining: left } : null })
+        }
+
+        // 프리스핀이 남아 있으면 승리 연출(과 필요하면 방금 건 커튼)이 끝난 뒤 잠시 쉬었다
+        // 자동으로 다음 판을 돌린다. 사용자가 그 사이 SPIN을 탭하면 위쪽의 cancelAutoSpin()이
+        // 이 타이머를 지우고 즉시 진행된다.
         const remaining = get().freeSpins
         if (remaining && remaining.left > 0) {
           const scheduleAutoSpin = (): void => {
+            autoSpinTimeoutOwner = 'freeSpins'
             autoSpinTimeoutId = setTimeout(() => {
               autoSpinTimeoutId = null
+              autoSpinTimeoutOwner = null
               void get().spin()
             }, AUTO_SPIN_DELAY_MS)
           }
           // freeSpins가 이번 스핀 "전"에는 없다가(=위의 pre-spin 스냅샷) 결과로 새로 생겼다면
-          // 프리스핀 첫 진입이다 — 렌더러의 전환 연출이 끝날 때까지 예약을 미룬다. 이미 진행
-          // 중이던(재발동 포함) 프리스핀이면 지금까지처럼 곧장 예약한다.
+          // 프리스핀 첫 진입이다 — 방금 건 커튼 전환이 끝날 때까지(modeTransition to:'freeSpins',
+          // phase:'end') 예약을 미룬다. releaseFreeSpinsEntryGate()가 그 신호를 받으면 실제로
+          // 예약을 건다. 커튼은 방금(바로 위) 걸었으므로 'end'는 구조적으로 항상 이 지점보다
+          // 나중에 온다 — 예전처럼 먼저 도착하는 경우를 따로 다룰 필요가 없다. 이미 진행 중이던
+          // (재발동 포함) 프리스핀이면 커튼이 없으므로 곧장 예약한다.
           const enteringFreeSpins = freeSpins === null
           if (enteringFreeSpins) {
-            // modeTransition(end)이 spinTo/showWins가 끝나기 전에 이미 도착해 래치가 서 있으면
-            // (실제 렌더러 타이밍 — setMode 직후 ~700ms 뒤) 미루지 않고 바로 예약한다.
-            if (freeSpinsEntryReleased) {
-              freeSpinsEntryReleased = false
-              scheduleAutoSpin()
-            } else {
-              pendingAutoSpinRelease = scheduleAutoSpin
-            }
+            pendingAutoSpinRelease = scheduleAutoSpin
           } else {
             scheduleAutoSpin()
+          }
+          // 프리스핀이 도는 동안 오토스핀은 쉰다 — 그 루프의 주인은 위 자동진행이고, 오토스핀은
+          // 카운터를 그대로 든 채 프리스핀이 끝나면(아래 else 가지) 이어받는다.
+        } else {
+          // 오토스핀 — 프리스핀이 돌고 있지 않을 때만 다음 판을 예약한다.
+          const armed = get().autoSpin
+          const nextBet = math.betLevels[get().betIndex]
+          const coins = useSessionStore.getState().wallet?.coins ?? 0
+
+          if (armed && (nextBet === undefined || coins < nextBet)) {
+            // 다음 판 베팅을 감당할 수 없으면 여기서 멈춘다(정지 조건 3) — 어차피 서버가
+            // INSUFFICIENT_FUNDS로 거절할 판을 굳이 한 번 더 던지지 않는다.
+            get().stopAutoSpin()
+          } else if (armed) {
+            const scheduleNext = (): void => {
+              autoSpinTimeoutOwner = 'autoSpin'
+              autoSpinTimeoutId = setTimeout(() => {
+                autoSpinTimeoutId = null
+                autoSpinTimeoutOwner = null
+                void get().spin()
+              }, AUTO_SPIN_INTERVAL_MS)
+            }
+
+            // 방금 프리스핀이 끝난 판이면 종료 커튼이 다 걷힐 때까지(modeTransition to:'base',
+            // phase:'end' → resumeAutoSpin()) 예약을 미룬다 — 커튼이 화면을 덮은 채로 다음 판이
+            // 돌면 릴과 배경이 어긋나 보인다. 렌더러가 아예 없으면 그 이벤트가 영영 오지 않으므로
+            // 곧장 예약해 폴백한다.
+            const exitingFreeSpins =
+              freeSpins !== null && (result.freeSpins === null || result.freeSpins.left <= 0)
+            if (exitingFreeSpins && renderer) {
+              pendingAutoSpinResume = scheduleNext
+            } else {
+              scheduleNext()
+            }
           }
         }
       }
@@ -544,14 +734,42 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   releaseFreeSpinsEntryGate() {
+    // renderer.setMode()는 이제 spin()의 finally 안에서만 불리므로, 이 이벤트('end')는 항상
+    // finally가 pendingAutoSpinRelease를 세운 뒤에 도착한다 — 예전처럼 더 일찍 도착해 놓칠 걱정이
+    // 구조적으로 없다. 미뤄 둔 게 없으면(재발동/커튼 없음/렌더러 없음 등) 조용히 아무 일도 안 한다.
     if (pendingAutoSpinRelease) {
       const release = pendingAutoSpinRelease
       pendingAutoSpinRelease = null
       release()
-    } else {
-      // spin()의 finally가 아직 예약을 걸기 전(= spinTo/showWins 진행 중)에 이벤트가 먼저
-      // 왔다 — 놓치지 않도록 래치만 세워둔다. finally가 이걸 보고 곧장 예약한다.
-      freeSpinsEntryReleased = true
+    }
+  },
+
+  startAutoSpin(count) {
+    if (!Number.isFinite(count) || count <= 0) return
+    const { phase, freeSpins } = get()
+    if (phase === 'loading' || phase === 'error') return
+
+    set({ autoSpin: { remaining: Math.floor(count) } })
+
+    // 프리스핀이 돌고 있으면 그 루프가 주인이다 — 오토스핀은 카운터만 들고 기다렸다가 끝난 뒤
+    // 이어받는다. 스핀/승리 연출 중이면 그 판의 finally가 다음 판을 알아서 예약한다.
+    if (freeSpins) return
+    if (phase === 'idle') void get().spin()
+  },
+
+  stopAutoSpin() {
+    // 지금 돌고 있는 판은 그대로 마치게 두고, 오토스핀이 걸어 둔 다음 판 예약만 거둬들인다.
+    // 프리스핀 자동진행이 걸어 둔 타이머는 주인이 다르므로 건드리지 않는다.
+    if (autoSpinTimeoutOwner === 'autoSpin') clearScheduledSpin()
+    pendingAutoSpinResume = null
+    if (get().autoSpin !== null) set({ autoSpin: null })
+  },
+
+  resumeAutoSpin() {
+    if (pendingAutoSpinResume) {
+      const resume = pendingAutoSpinResume
+      pendingAutoSpinResume = null
+      resume()
     }
   },
 
@@ -662,12 +880,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ phase: 'idle', error: null, errorCode: null })
   },
 
+  setDebugPreset(preset) {
+    set({ debugPreset: preset })
+  },
+
+  dismissDebugMessage() {
+    set({ debugMessage: null })
+  },
+
   reset() {
     // 게임 화면을 벗어나는데 예약된 자동 프리스핀/건너뛰기 요청이 남아있으면 안 된다.
     cancelAutoSpin()
     currentSpinHandle = null
     skipRequested = false
-    freeSpinsEntryReleased = false
+    // 진행 중이던 승리 연출 순환을 걷어낸다 — 안 그러면 다음에 이 게임에 다시 들어왔을 때(또는
+    // 렌더러가 재사용되는 경우) 이전 라운드의 라인 하이라이트가 화면에 남아있을 수 있다.
+    get().renderer?.clearWins?.()
     set(initialState)
   },
 }))

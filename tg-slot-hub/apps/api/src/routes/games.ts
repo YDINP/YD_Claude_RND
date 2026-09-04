@@ -3,6 +3,7 @@ import { SpinRequestSchema } from '@tgslot/shared'
 import type {
   GameStateResponse,
   GamesResponse,
+  SpinDebugPreset,
   SpinResponse,
   WinLine as SharedWinLine,
 } from '@tgslot/shared'
@@ -12,6 +13,7 @@ import { JACKPOT_ODDS_DENOMINATOR } from '../economy/config.js'
 import { toLevelState } from '../economy/level.js'
 import { toMissionDtos } from '../economy/missions.js'
 import { applyMutationsToGrid, spinWithState, toRoundState, toSharedFeatures } from '../games/engineSpin.js'
+import { DebugNoMatchError, findDebugSeed } from '../games/debugSpin.js'
 import type { ApiConfig } from '../config.js'
 import type { GameRegistry } from '../games/registry.js'
 import type { Repos } from '../repos/types.js'
@@ -29,7 +31,8 @@ export interface GamesRouteDeps {
   registry: GameRegistry
   repos: Repos
   jwt: JwtService
-  config: Pick<ApiConfig, 'spinLockTimeoutMs'>
+  /** `allowDevMock`은 `debug` 강제 프리셋 요청을 허용할지 결정한다 (개발/테스트 환경 전용). */
+  config: Pick<ApiConfig, 'spinLockTimeoutMs' | 'allowDevMock'>
   /** 테스트에서 락을 공유하고 싶을 때 주입. 없으면 config의 타임아웃으로 새로 만든다. */
   lock?: SpinLock
   /**
@@ -99,11 +102,26 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
     if (!parsed.success) {
       return c.json({ error: 'Invalid request body', code: 'BAD_REQUEST' }, 400)
     }
-    const { totalBet, idempotencyKey } = parsed.data
+    const { totalBet, idempotencyKey, debug } = parsed.data
+
+    // 개발 전용 강제 프리셋. `allowDevMock`이 꺼져 있으면 (프로덕션 기본값) 요청 자체를 거부한다.
+    if (debug && !deps.config.allowDevMock) {
+      return c.json({ error: 'Debug spin presets are disabled', code: 'DEBUG_DISABLED' }, 400)
+    }
+    // gamble 프리셋은 그 게임에 더블업 설정이 없으면 애초에 만족될 수 없다. 시드 탐색을
+    // 낭비하지 않고 바로 알려준다.
+    if (debug?.preset === 'gamble' && !pack.math.gamble) {
+      return c.json({ error: 'This game has no gamble feature, so no gamble outcome can be forced', code: 'DEBUG_NO_MATCH' }, 409)
+    }
 
     // 베팅 상한은 레벨로 해금된다. 유저는 미들웨어가 이미 읽어 컨텍스트에 실어 뒀고,
     // 저장된 level 컬럼이 아니라 xp에서 다시 계산한다 (/me가 보여주는 상한과 항상 같아야 한다).
     const maxBet = toLevelState(c.get('user').xp).maxBet
+
+    // compute()가 (재전송이 아닌) 새 라운드를 실제로 계산했을 때만 채워진다. 재전송이면
+    // compute()가 아예 호출되지 않으므로 자연스럽게 undefined로 남아 응답에서 빠진다 —
+    // 그래서 debug 프리셋은 멱등 재전송 시맨틱을 건드리지 않는다 (저장된 결과를 그대로 돌려줄 뿐).
+    let debugUsed: { preset: SpinDebugPreset; triesUsed: number } | undefined
 
     try {
       const applied = await lock.run(auth.sub, idempotencyKey, () =>
@@ -130,19 +148,40 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
               }
             }
 
-            const seed = createRoundSeed()
-            const rng = createRng(seed, ctx.nonce)
-            // 릴을 **먼저** 뽑고 그 다음 잭팟을 뽑는다. 이 순서가 바뀌면 공개된 시드로
-            // 라운드를 재현할 수 없게 되므로 provably fair가 깨진다.
-            // 베팅액과 라운드 상태는 레포가 락을 잡고 읽은 값이다 (프리스핀이면 고정 베팅).
-            // 라운드 상태는 **프리스핀일 때만** 넘긴다. 유료 스핀에 넘기면 엔진이 그 스핀을
-            // 프리스핀으로 취급해 남은 횟수를 깎는다.
-            const result = spinWithState(
-              pack.math,
-              ctx.totalBet,
-              rng,
-              ctx.isFreeSpin ? toRoundState(ctx.freeSpins) : undefined
-            )
+            const state = ctx.isFreeSpin ? toRoundState(ctx.freeSpins) : undefined
+            let seed: string
+            let rng: ReturnType<typeof createRng>
+            let result: ReturnType<typeof spinWithState>
+
+            if (debug) {
+              // 시드 탐색: 실제 스핀과 같은 rng 파생(`${seed}:${nonce}`)과 같은 엔진 경로로
+              // 지갑/원장/라운드를 건드리지 않고 조건을 만족하는 시드가 나올 때까지 반복한다.
+              // 매칭에 쓴 rng를 그대로 이어받아 잭팟 판정을 뽑으므로 소비 순서가 실제 경로와 같다.
+              const found = findDebugSeed({
+                math: pack.math,
+                totalBet: ctx.totalBet,
+                state,
+                nonce: ctx.nonce,
+                preset: debug.preset,
+                maxTries: debug.maxTries,
+                createRng,
+              })
+              if (!found) throw new DebugNoMatchError(debug.preset)
+              seed = found.seed
+              rng = found.rng
+              result = found.result
+              debugUsed = { preset: debug.preset, triesUsed: found.triesUsed }
+            } else {
+              seed = createRoundSeed()
+              rng = createRng(seed, ctx.nonce)
+              // 릴을 **먼저** 뽑고 그 다음 잭팟을 뽑는다. 이 순서가 바뀌면 공개된 시드로
+              // 라운드를 재현할 수 없게 되므로 provably fair가 깨진다.
+              // 베팅액과 라운드 상태는 레포가 락을 잡고 읽은 값이다 (프리스핀이면 고정 베팅).
+              // 라운드 상태는 **프리스핀일 때만** 넘긴다. 유료 스핀에 넘기면 엔진이 그 스핀을
+              // 프리스핀으로 취급해 남은 횟수를 깎는다.
+              result = spinWithState(pack.math, ctx.totalBet, rng, state)
+            }
+
             return {
               result,
               seed,
@@ -198,6 +237,7 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
         freeSpins: applied.freeSpins,
         ...(applied.freeSpinsSummary ? { freeSpinsSummary: applied.freeSpinsSummary } : {}),
         ...(applied.gambleOffer ? { gambleOffer: applied.gambleOffer } : {}),
+        ...(debugUsed ? { debug: debugUsed } : {}),
       }
       return c.json(response, 200)
     } catch (error) {
@@ -207,6 +247,10 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
       // 베팅 규칙 위반은 트랜잭션 안에서 판정하고 여기서 400으로 번역한다.
       if (error instanceof BetRuleError) {
         return c.json({ error: error.message, code: error.code }, 400)
+      }
+      // 시드 탐색이 maxTries 안에 프리셋을 만족하는 결과를 못 찾았을 때. 시드는 로그에 남기지 않는다.
+      if (error instanceof DebugNoMatchError) {
+        return c.json({ error: error.message, code: 'DEBUG_NO_MATCH' }, 409)
       }
       if (error instanceof InsufficientFundsError) {
         return c.json({ error: 'Not enough coins', code: 'INSUFFICIENT_FUNDS' }, 402)

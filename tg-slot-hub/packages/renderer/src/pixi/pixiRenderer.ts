@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js'
+import { Application, Container, Graphics, Sprite, type Texture } from 'pixi.js'
 import { gsap } from 'gsap'
 import type { GridPosition, SymbolId, WinLine } from '@tgslot/slot-engine'
 import {
@@ -8,10 +8,8 @@ import {
   DIM_ALPHA,
   FREE_SPINS_EDGE_ALPHA,
   FREE_SPINS_EDGE_STROKE_PX,
-  FREE_SPINS_PLAQUE_FONT_RATIO,
   IDLE_AMPLITUDE_SYMBOLS,
-  MODE_FLASH_ALPHA,
-  MODE_FLASH_COLOR,
+  MODE_CURTAIN_COLOR,
   MODE_TINT_ALPHA,
   PHASE_CROSSFADE_MS,
   SCATTER_RING_PULSE_MS,
@@ -20,6 +18,7 @@ import {
   IDLE_CYCLE_MS,
   LANDING_SETTLE_SYMBOLS,
   PULL_UP_SYMBOLS,
+  SKIP_SETTLE_SYMBOLS,
   SYMBOL_FILL_RATIO,
   WIN_GLOW_LAYERS,
   WIN_HIGHLIGHT_STROKE_PX,
@@ -49,34 +48,39 @@ import {
 } from '../layout.js'
 import { resolveResolution } from '../motion.js'
 import { resolveFrameWindow } from '../theme.js'
-import { buildSkipPlan, buildSpinPlan, type ReelSpinPlan, type SpinPlan } from '../timing.js'
 import {
-  formatFreeSpinsPlaque,
-  shouldShowFreeSpinsPlaque,
-  type RendererMode,
-} from '../features.js'
+  buildSkipPlan,
+  buildSpinPlan,
+  winStartDelayMs,
+  type ReelSpinPlan,
+  type SpinPlan,
+  type SpinSpeed,
+} from '../timing.js'
+import type { RendererMode } from '../features.js'
 import { buildModeTransition, modeTransitionTarget, type ModeTarget } from '../transition.js'
-import { paylineColor, type WinTier } from '../wins.js'
+import { paylineColor } from '../wins.js'
 import { resolveFxEffect, resolveSymbolFx, BUILTIN_FX } from '../fx.js'
 import { isSheetOnly, planSheetFx } from '../sheet.js'
 import {
   buildPresentation,
-  defaultLineLabel,
   presentationOptionsFor,
+  runPresentation,
+  shouldLoopPresentation,
+  winLineEvent,
   type PresentationStep,
+  type PresentationStepContext,
 } from '../presentation.js'
-import { buildPulsePath, pulseHopMsForTier, pulseTrailForTier } from '../pulse.js'
 import {
   buildMutationPlan,
   mutationReels,
   type MutationPlan,
   type MutationStep,
 } from '../mutations.js'
-import { isWaysGame, waysDirectionOf } from '../ways.js'
 import type { RendererCore, ResolvedRendererOptions } from '../internal.js'
 import type { ResolvedFxEffect } from '../fx.js'
 import { TextureRegistry } from '../textureRegistry.js'
 import type { RendererEvent, ShowWinsOptions, SpinHandle, SpinToOptions } from '../types.js'
+import { DEFAULT_SPIN_SPEED } from '../constants.js'
 import { createSparkleTexture, startSparkles, type AmbientEffect } from './ambient.js'
 import { burstCoins, burstConfetti, coinCountForTier, burstScatters } from './coins.js'
 import {
@@ -88,7 +92,6 @@ import {
   loadSymbolTextures,
 } from './textures.js'
 import { createFxTextures, playSymbolFxSet, type FxTextures, type SymbolFxHandle } from './symbolFx.js'
-import { createPulseTexture, playWinPulse, type WinPulseHandle } from './winPulse.js'
 import { loadSheetFrames, peekSheet, playSheetFx } from './sheetFx.js'
 import {
   playMutationFx,
@@ -123,9 +126,6 @@ interface ReelView {
   /** 유휴 모션이 더하는 미세 오프셋. `position`을 더럽히지 않는다. */
   idleOffset: number
 }
-
-/** 배당 라벨 글자 크기 = 심볼 한 변 x 이 값. */
-const LABEL_FONT_RATIO = 0.24
 
 /**
  * 한 번 계산된 화면 배치.
@@ -169,28 +169,27 @@ class PixiRenderer implements RendererCore {
   private readonly mutationLayer = new Container()
   /** 변형 파티클 재사용 풀. 스핀마다 수백 개를 새로 만들지 않으려고 둔다. */
   private readonly mutationPool = new MutationSpritePool(this.mutationLayer)
-  private readonly winLabel: Text
   /** 스캐터 링. 맥동하느라 alpha가 계속 움직여서 다른 것과 섞으면 안 된다. */
   private readonly featureGraphics = new Graphics()
   /** 프리스핀 창 테두리. 전환이 이 층의 alpha를 0에서 끌어올린다. */
   private readonly modeGraphics = new Graphics()
-  private readonly modeLabel: Text
 
   private readonly reels: ReelView[] = []
   private readonly backgroundSprite: Sprite | null
   /** 프리스핀 배경. 이미지가 없으면 금빛 틴트 스프라이트가 대신 선다. */
   private readonly freeSpinsSprite: Sprite
-  /** 전환 순간의 금빛 섬광. */
-  private readonly flashSprite: Sprite
-  /** 방사형 와이프 마스크. 반지름을 키웠다 줄이며 배경을 교차시킨다. */
-  private readonly wipeMask = new Graphics()
+  /**
+   * 전환 커튼. 화면 전체(프레임·베젤까지)를 완전히 덮는 불투명 레이어다 — 알파가 이 층 위로
+   * 갈 뿐, 마스크로 배경을 교차시키던 예전 와이프와 달리 배경 교체 자체는 커튼이 완전히
+   * 덮인 순간 한 번에 일어난다(그 순간이 커튼에 가려 보이지 않는다).
+   */
+  private readonly curtain: Sprite
   /** 베젤 아트. 릴 창이 알파로 뚫려 있어 릴 **위에** 얹는다. */
   private readonly frameSprite: Sprite | null
   /** 배경 위 반짝임. 프레임보다 아래에 둔다. */
   private readonly sparkleLayer = new Container()
   private readonly sparkleTexture: Texture | null
   private readonly fxTextures: FxTextures
-  private readonly pulseTexture: Texture
   private ambient: AmbientEffect[] = []
   /** 캔버스가 컨테이너를 넘칠 수 있어 overflow를 바꾼다. 해제할 때 원래 값으로 되돌린다. */
   private readonly previousOverflow: string
@@ -199,12 +198,10 @@ class PixiRenderer implements RendererCore {
   private idleTweens: gsap.core.Tween[] = []
   private fxHandles: SymbolFxHandle[] = []
   /**
-   * 셀 하나가 지금 물고 있는 연출. 빛이 한 바퀴 돌 때마다 같은 셀을 다시 터뜨리는데,
+   * 셀 하나가 지금 물고 있는 연출. 순환이 한 바퀴 돌 때마다 같은 셀을 다시 터뜨리는데,
    * 앞엣것을 끄지 않으면 스프라이트가 무한히 쌓인다.
    */
   private cellFx = new Map<string, SymbolFxHandle[]>()
-  /** 이번 승리의 등급. 빛의 속도와 잔상 길이를 여기서 가져온다. */
-  private winTier: WinTier = 'none'
   /** 연출 세대. 늦게 도착한 시트가 이미 지난 연출에 끼어드는 것을 막는다. */
   private fxToken = 0
   private spinTimelines: gsap.core.Timeline[] = []
@@ -224,8 +221,11 @@ class PixiRenderer implements RendererCore {
   /** 화면이 지금 프리스핀 모습인지. 전환이 끝난 시점에 갱신된다. */
   private freeSpinsVisible = false
   private crossfadeTween: gsap.core.Tween | null = null
-  private winPulse: WinPulseHandle | null = null
   private winToken = 0
+  /** 돌고 있는 승리 순환의 스킵 손잡이. 연출이 없으면 null이다. */
+  private winSkip: (() => void) | null = null
+  /** 지금 걸린 스핀 속도. `spinTo(opts.speed)`가 이번 스핀만 덮어쓸 수 있다. */
+  private spinSpeed: SpinSpeed = DEFAULT_SPIN_SPEED
   /**
    * 변형이 끝난 뒤의 화면 그리드(`grid[row][reel]`). null이면 스트립이 보이는 대로다.
    *
@@ -237,7 +237,8 @@ class PixiRenderer implements RendererCore {
   private activeMutation: { finish: () => void } | null = null
   /** 스킵이 눌린 스핀. 변형 단계가 이 값을 보고 남은 단계를 접는다. */
   private skipRequestedToken = -1
-  private readonly timers = new Set<ReturnType<typeof setTimeout>>()
+  /** 대기 중인 타이머와 그 대기자. 취소할 때 깨워서 내보내려고 resolver를 함께 들고 있다. */
+  private readonly timers = new Map<ReturnType<typeof setTimeout>, () => void>()
   private destroyed = false
 
   constructor(
@@ -265,7 +266,6 @@ class PixiRenderer implements RendererCore {
 
     this.sparkleTexture = options.reducedMotion ? null : createSparkleTexture(ownedTextures)
     this.fxTextures = createFxTextures(ownedTextures)
-    this.pulseTexture = createPulseTexture(ownedTextures)
 
     this.backgroundSprite = backgroundTexture === null ? null : new Sprite(backgroundTexture)
     if (this.backgroundSprite !== null) this.backgroundLayer.addChild(this.backgroundSprite)
@@ -277,37 +277,13 @@ class PixiRenderer implements RendererCore {
       this.freeSpinsSprite.alpha = MODE_TINT_ALPHA
     }
     this.freeSpinsSprite.visible = false
-    this.backgroundLayer.addChild(this.freeSpinsSprite, this.wipeMask)
+    this.backgroundLayer.addChild(this.freeSpinsSprite)
 
-    this.flashSprite = new Sprite(this.confettiTexture)
-    this.flashSprite.tint = MODE_FLASH_COLOR
-    this.flashSprite.blendMode = 'add'
-    this.flashSprite.alpha = 0
-    this.flashSprite.visible = false
-
-    this.winLabel = new Text({
-      text: '',
-      style: {
-        fill: options.theme.palette.text,
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: Math.round(this.layout.symbolSize * LABEL_FONT_RATIO),
-        fontWeight: '700',
-      },
-    })
-    this.winLabel.anchor.set(0.5)
-    this.winLabel.visible = false
-
-    this.modeLabel = new Text({
-      text: '',
-      style: {
-        fill: options.theme.palette.frame,
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: Math.round(this.layout.symbolSize * FREE_SPINS_PLAQUE_FONT_RATIO),
-        fontWeight: '700',
-      },
-    })
-    this.modeLabel.anchor.set(0.5, 0)
-    this.modeLabel.visible = false
+    // 전환 커튼. 평소엔 투명하고 안 보인다 — 전환이 시작될 때만 캔버스 전체를 완전히 덮는다.
+    this.curtain = new Sprite(this.confettiTexture)
+    this.curtain.tint = MODE_CURTAIN_COLOR
+    this.curtain.alpha = 0
+    this.curtain.visible = false
 
     this.reelsLayer.mask = this.maskGraphics
     this.contentLayer.addChild(
@@ -317,8 +293,6 @@ class PixiRenderer implements RendererCore {
       this.featureGraphics,
       this.modeGraphics,
       this.winGraphics,
-      this.winLabel,
-      this.modeLabel,
       this.fxLayer,
     )
     this.root.addChild(this.backgroundLayer)
@@ -328,8 +302,8 @@ class PixiRenderer implements RendererCore {
     // 베젤 아트는 릴을 살짝 덮어야 안쪽 하이라이트가 살아난다. 릴 위에 둔다.
     // 베젤이 배경을 거의 다 가리므로 반짝임은 그 위로 올려야 보인다. 브라스가 반짝이는 것처럼 읽힌다.
     if (this.frameSprite !== null) this.root.addChild(this.frameSprite, this.sparkleLayer)
-    // 섬광은 프레임까지 덮어야 전환이 화면 전체에서 일어난 것처럼 보인다.
-    this.root.addChild(this.flashSprite)
+    // 커튼은 프레임·베젤까지 덮어야 전환이 화면 전체를 가리는 것처럼 보인다. 맨 위에 둔다.
+    this.root.addChild(this.curtain)
     this.app.stage.addChild(this.root)
 
     this.buildReels()
@@ -416,12 +390,10 @@ class PixiRenderer implements RendererCore {
       this.backgroundSprite.width = canvasWidth
       this.backgroundSprite.height = canvasHeight
     }
-    for (const cover of [this.freeSpinsSprite, this.flashSprite]) {
+    for (const cover of [this.freeSpinsSprite, this.curtain]) {
       cover.width = canvasWidth
       cover.height = canvasHeight
     }
-    // 전환 중이 아니면 마스크가 남아 있을 이유가 없다.
-    if (this.modeTransition === null) this.drawWipe(this.freeSpinsVisible ? this.wipeRadius() : 0)
     if (this.frameSprite !== null && frameRect !== null) {
       this.frameSprite.position.set(frameRect.x, frameRect.y)
       this.frameSprite.width = frameRect.width
@@ -434,8 +406,6 @@ class PixiRenderer implements RendererCore {
     if (framed) this.frameGraphics.clear()
     else this.drawFrame()
     this.drawMask()
-    this.winLabel.style.fontSize = Math.round(this.layout.symbolSize * LABEL_FONT_RATIO)
-    this.modeLabel.style.fontSize = Math.round(this.layout.symbolSize * FREE_SPINS_PLAQUE_FONT_RATIO)
     this.drawMode()
 
     for (let reel = 0; reel < this.reels.length; reel += 1) {
@@ -551,8 +521,13 @@ class PixiRenderer implements RendererCore {
   }
 
   /**
-   * 남은 회전을 접고 곧장 정지 위치로 붙인다.
-   * 왼쪽부터 짧은 간격을 남겨 한꺼번에 툭 서지 않게 한다.
+   * 남은 회전을 **버리고** 곧장 정지 위치로 스냅한다.
+   *
+   * 예전에는 남은 거리를 260ms에 몰아 지나갔다. 스트립이 길면 그 사이 심볼이 통째로 흘러
+   * "다시 한 바퀴 돌다 멈춘다"로 보였다. 지금은 지금 어디에 있든 정지 위치 바로 위에 붙인 뒤
+   * 아주 짧게 내려앉기만 한다. 다시 속도를 붙이는 구간이 없으므로 되도는 착시가 생기지 않는다.
+   * 시작 당김 중에 눌러도 같다 — 현재 위치를 아예 보지 않기 때문이다.
+   *
    * 착지는 원래 경로와 똑같이 `stops`로 확정되므로 결과가 달라지지 않는다.
    */
   private skipSpin(token: number): void {
@@ -567,16 +542,21 @@ class PixiRenderer implements RendererCore {
 
     for (const [reel, active] of [...this.activeReels]) {
       if (active.skipped) continue
-      const duration = plan.reels[reel]?.durationMs ?? plan.totalMs
+      const settleMs = plan.reels[reel]?.durationMs ?? plan.totalMs
       active.timeline.kill()
 
-      // 0바퀴. 남은 거리만 간다. 한 바퀴를 더 돌리면 260ms 안에 스트립이 다 지나가 번쩍인다.
-      const target = spinTargetPosition(active.view.position, active.stop, active.stripLength, 0)
-      const state = { p: active.view.position }
+      // 정지 위치 바로 위에서 시작한다. 남은 거리는 계산하지도 지나가지도 않는다.
+      const stopPosition = normalizePosition(active.stop, active.stripLength)
+      const state = { p: stopPosition + SKIP_SETTLE_SYMBOLS }
+      active.view.position = state.p
+      active.view.idleOffset = 0
+      this.renderReel(reel)
+
       const timeline = gsap.timeline({ onComplete: active.land })
       timeline.to(state, {
-        p: target,
-        duration: duration / 1000,
+        p: stopPosition,
+        duration: settleMs / 1000,
+        // 감속만 한다. 가속 이징을 쓰면 다시 달리는 것처럼 보인다.
         ease: 'power2.out',
         onUpdate: () => {
           active.view.position = state.p
@@ -606,6 +586,7 @@ class PixiRenderer implements RendererCore {
       ...(opts?.durationMs === undefined ? {} : { durationMs: opts.durationMs }),
       ...(opts?.stagger === undefined ? {} : { stagger: opts.stagger }),
       ...(opts?.fast === undefined ? {} : { fast: opts.fast }),
+      speed: opts?.speed ?? this.spinSpeed,
       reducedMotion: this.options.reducedMotion,
     })
 
@@ -907,8 +888,18 @@ class PixiRenderer implements RendererCore {
   /**
    * 승리 연출. 한 바퀴는 A단계(전체 동시) → B단계(라인 하나씩) 순서다.
    *
-   * 첫 바퀴가 끝나면 resolve한다. `loop`면 그 뒤로도 `clearWins()`나 다음 `spinTo()`까지 계속 돈다.
+   * 첫 바퀴가 끝나면 resolve한다. 기본값 `loop: true`에서는 그 뒤로도 A→B→A로 계속 돌고,
+   * `clearWins()`·다음 `spinTo()`·`destroy()`·모드 전환이 순환을 끊는다.
    * 실제 순서와 길이는 `buildPresentation`이 정한다. 여기서는 그리기와 대기만 한다.
+   *
+   * 코인·색종이는 첫 바퀴에서 한 번만 터진다. 매 바퀴 다시 뿌리면 화면이 금세 지저분해진다.
+   *
+   * `showWins()`는 항상 마지막 릴의 정착 트윈까지 끝난 뒤에만 불린다(`spinTo()`가 돌려주는
+   * 약속이 모든 릴의 착지·뮤테이션까지 기다린 뒤에야 풀리므로 — `runSpin()` 참고). 여기서는 그
+   * 위에 사용자 피드백("각 연출은 릴스탑이 끝나고 나올 것")을 반영해 `winStartDelayMs`만큼 눈에
+   * 보이는 숨 고르기를 하나 더 얹는다 — "멈췄다"와 "터진다"가 같은 프레임 근처에서 겹쳐 보이지
+   * 않게 한다. 스킵(스탑/탭/스페이스)으로 릴을 곧장 스냅시킨 경우도 같은 `showWins()`를 거치므로
+   * 여백이 동일하게 적용된다.
    */
   async showWins(wins: WinLine[], opts?: ShowWinsOptions): Promise<void> {
     this.clearWins()
@@ -920,13 +911,20 @@ class PixiRenderer implements RendererCore {
     const steps = buildPresentation(
       wins,
       this.options.math,
-      presentationOptionsFor(opts, this.options.reducedMotion),
+      presentationOptionsFor(opts, this.options.reducedMotion, this.spinSpeed),
     )
     if (steps.length === 0) return
 
+    const delayMs = winStartDelayMs(this.spinSpeed, this.options.reducedMotion)
+    if (delayMs > 0) {
+      await this.wait(delayMs)
+      // 대기하는 사이 새 스핀이 시작됐거나(clearWins가 winToken을 올린다) 렌더러가 죽었으면
+      // 이제 와서 연출을 새로 시작하지 않는다 — 다음 스핀의 몫이다.
+      if (this.destroyed || token !== this.winToken) return
+    }
+
     const first = steps[0]
     const tier = first !== undefined && first.phase === 'all' ? first.tier : 'none'
-    this.winTier = tier
     if (!this.options.reducedMotion && tier !== 'none') {
       this.stopCoins = burstCoins(this.fxLayer, this.coinTexture, this.layout, coinCountForTier(tier))
       // 색종이는 최고 등급에만. 아래 등급까지 뿌리면 특별함이 사라진다.
@@ -935,41 +933,47 @@ class PixiRenderer implements RendererCore {
       }
     }
 
-    const label = opts?.formatLineLabel ?? defaultLineLabel
+    const handle = runPresentation(steps, {
+      render: (step, context) => this.renderStep(step, context),
+      wait: (ms) => this.wait(ms),
+      cancelled: () => token !== this.winToken || this.destroyed,
+      loop: shouldLoopPresentation(opts),
+    })
+    this.winSkip = handle.skip
+    return handle.firstPass
+  }
 
-    const runCycle = async (): Promise<void> => {
-      for (const step of steps) {
-        if (token !== this.winToken || this.destroyed) return
-        this.renderStep(step, label)
-        await this.wait(step.durationMs)
-      }
-    }
-
-    await runCycle()
-
-    if (opts?.loop === true && token === this.winToken && !this.destroyed) {
-      void (async () => {
-        while (token === this.winToken && !this.destroyed) {
-          await runCycle()
-        }
-      })()
-    }
+  /**
+   * 보고 있던 바퀴를 곧장 접는다. `showWins()`의 약속이 그 자리에서 resolve한다.
+   *
+   * 순환은 멈추지 않는다. 접은 자리에서 다음 바퀴가 A단계부터 다시 시작한다.
+   * 남은 라인 스텝은 그리지도 `winLine`을 내지도 않는다 — 보지 않고 넘긴 것을 알릴 이유가 없다.
+   * 배당 롤업을 접는 것은 허브의 몫이다. 여기서는 릴 위 타임라인만 접는다.
+   */
+  skipWins(): void {
+    this.winSkip?.()
   }
 
   /** 연출 한 스텝을 화면에 올린다. 이전 스텝의 fx와 딤은 먼저 걷어낸다. */
-  private renderStep(step: PresentationStep, label: (win: WinLine) => string): void {
+  private renderStep(step: PresentationStep, context: PresentationStepContext): void {
     this.stopSymbolFx()
     this.winGraphics.clear()
-    this.winLabel.visible = false
 
     if (step.phase === 'all') {
       // ways 게임은 여러 심볼의 승리가 같은 칸을 겹쳐 짚는다. 겹친 채로 두면 한 칸에
       // 연출을 몇 겹씩 걸었다 끄기를 반복하고 stagger 인덱스도 실제 칸 수를 넘는다.
       const positions = dedupePositions(step.wins.flatMap((win) => win.positions))
       this.dimExcept([...positions, ...step.scatters])
+      // A단계에도 B단계와 **같은** 브라스 테두리를 두른다. 이게 빠져 있어서 전체 연출에서만
+      // 테두리가 사라져 보였다. 페이라인 선은 여전히 A단계에서 긋지 않는다 —
+      // 라인이 여러 개면 선이 서로를 덮어 무엇이 이겼는지가 오히려 흐려진다.
+      this.drawWinGlow(positions)
+      this.crossfadeOverlay()
       this.playFxAt(positions)
       this.showScatters(step.scatters)
       // 허브가 배당 카운터를 이 시간에 맞춰 굴릴 수 있도록 시작할 때 알린다.
+      // winCycle은 몇 바퀴째인지를 함께 알려 준다. 허브가 A단계 동안 총배당을 다시 띄우는 신호다.
+      this.emit({ type: 'winCycle', cycle: context.cycle, totalWin: step.totalWin })
       this.emit({
         type: 'winTotal',
         totalWin: step.totalWin,
@@ -997,10 +1001,10 @@ class PixiRenderer implements RendererCore {
     this.showScatters(step.scatters)
     this.drawWinHighlight(win)
     this.crossfadeOverlay()
-    // 라벨은 빛이 마지막 심볼에 닿을 때 뜬다. 미리 띄우면 금액이 근거보다 먼저 나온다.
-    this.winLabel.visible = false
-    this.playWinPath(win, step.durationMs, (arrival) => this.placeWinLabel(win, label, arrival))
-    this.emit({ type: 'winLine', line: win.line, win: win.win })
+    // 움직이는 빛은 없다. 이긴 자리마다 심볼 연출을 한 번 터뜨리고 고정 광채로 둘러싼다.
+    this.playFxAt(win.positions)
+    // 릴 위에는 글자를 찍지 않는다. 문구는 허브가 이 이벤트를 받아 릴 밖에 그린다.
+    this.emit(winLineEvent(win, context))
   }
 
   /**
@@ -1040,12 +1044,11 @@ class PixiRenderer implements RendererCore {
   private crossfadeOverlay(): void {
     this.crossfadeTween?.kill()
     if (this.options.reducedMotion) {
+      // 모션 축소에서는 크로스페이드를 하지 않는다. 순환 자체는 그대로 한 칸씩 넘어간다.
       this.winGraphics.alpha = 1
-      this.winLabel.alpha = 1
       return
     }
     this.winGraphics.alpha = 0
-    this.winLabel.alpha = 0
     const overlay = { value: 0 }
     this.crossfadeTween = gsap.to(overlay, {
       value: 1,
@@ -1053,7 +1056,6 @@ class PixiRenderer implements RendererCore {
       ease: 'sine.out',
       onUpdate: () => {
         this.winGraphics.alpha = overlay.value
-        this.winLabel.alpha = overlay.value
       },
     })
   }
@@ -1107,7 +1109,7 @@ class PixiRenderer implements RendererCore {
       const cell = this.reels[reel]?.cells[row + 1]
       if (cell === undefined || cell.symbol === null) return
       const key = `${reel}:${row}`
-      // 빛이 다시 지나갈 때 앞의 연출을 반드시 걷어낸다.
+      // 순환이 같은 자리를 다시 짚을 때 앞의 연출을 반드시 걷어낸다.
       this.stopCellFx(key)
 
       const effects = resolveSymbolFx(this.options.theme.fx, cell.symbol, this.options.reducedMotion)
@@ -1157,7 +1159,6 @@ class PixiRenderer implements RendererCore {
 
   private stopSymbolFx(): void {
     this.fxToken += 1
-    this.stopWinPulse()
     for (const handle of this.fxHandles) handle.stop()
     this.fxHandles = []
     this.cellFx.clear()
@@ -1176,11 +1177,10 @@ class PixiRenderer implements RendererCore {
 
   /**
    * 승리 심볼 둘레의 브라스 광채. 기본 경로에서는 **선을 긋지 않는다.**
+   * 움직이는 것은 없다. 이 광채는 스텝이 끝날 때까지 그 자리에 그대로 머문다.
    * `paylineStyle: 'line'`일 때만 예전 폴리라인을 덧그린다(좌표 확인용).
    */
   private drawWinHighlight(win: WinLine): void {
-    const brass = this.options.theme.palette.frame
-    const radius = this.layout.radius * 0.5
     // ways 게임에는 페이라인이 없다(`line`은 -1). 선을 그릴 좌표 자체가 없으므로 광채만 남는다.
     const payline = this.options.math.paylines[win.line]
 
@@ -1204,8 +1204,17 @@ class PixiRenderer implements RendererCore {
       }
     }
 
-    // 승리 심볼은 브라스 광채로 감싼다. 굵고 흐린 선부터 겹쳐 블러 없이 번짐을 만든다.
-    const rects = positionRects(this.layout, win.positions)
+    this.drawWinGlow(win.positions)
+  }
+
+  /**
+   * 이긴 자리마다 브라스 광채 테두리를 두른다. 굵고 흐린 선부터 겹쳐 블러 없이 번짐을 만든다.
+   * A단계(전체)와 B단계(라인별)가 같은 함수를 쓴다. 두 화면의 테두리가 달라 보이면 안 된다.
+   */
+  private drawWinGlow(positions: readonly GridPosition[]): void {
+    const brass = this.options.theme.palette.frame
+    const radius = this.layout.radius * 0.5
+    const rects = positionRects(this.layout, positions)
     for (const glow of WIN_GLOW_LAYERS) {
       for (const rect of rects) {
         this.winGraphics.roundRect(rect.x, rect.y, rect.width, rect.height, radius)
@@ -1218,78 +1227,10 @@ class PixiRenderer implements RendererCore {
     this.winGraphics.stroke({ width: WIN_HIGHLIGHT_STROKE_PX, color: brass, alpha: 0.95, join: 'round' })
   }
 
-  /**
-   * 당첨 심볼을 왼쪽부터 훑는 빛. 빛이 닿는 순간 그 심볼이 fx를 한 번 터뜨린다.
-   * 선을 대신하는 연출이라 `paylineStyle: 'line'`에서도 함께 돈다(선은 참고용 덧그림).
-   */
-  private playWinPath(
-    win: WinLine,
-    stepMs: number,
-    onFinalArrive: (arrival: GridPosition) => void,
-  ): void {
-    this.stopWinPulse()
-    // 등급이 높을수록 빛이 느긋하게 간다. 큰 승리를 더 오래 보게 만드는 장치다.
-    // `bothWays`에서 오른쪽으로 읽은 승리는 빛도 오른쪽에서 왼쪽으로 흐른다.
-    const direction = isWaysGame(this.options.math) ? waysDirectionOf(win) : 'ltr'
-    const path = buildPulsePath(
-      this.layout,
-      win.positions,
-      pulseHopMsForTier(this.winTier),
-      direction,
-    )
-    const last = path.waypoints.length - 1
-    if (last < 0) return
-    const finalPosition = path.waypoints[last]?.position
-    if (finalPosition === undefined) return
-
-    if (this.options.reducedMotion) {
-      // 모션 축소에서는 빛을 움직이지 않고 심볼만 한 번에 강조한다.
-      this.playFxAt(win.positions)
-      onFinalArrive(finalPosition)
-      return
-    }
-
-    this.winPulse = playWinPulse(this.fxLayer, this.pulseTexture, path, {
-      symbolSize: this.layout.symbolSize,
-      trailCount: pulseTrailForTier(this.winTier),
-      // 스텝이 한 바퀴보다 길면 남는 시간 동안 다시 훑는다.
-      loop: stepMs > path.totalMs,
-      onArrive: (index) => {
-        const position = path.waypoints[index]?.position
-        if (position === undefined) return
-        this.playFxAt([position])
-        this.emit({ type: 'pulseArrive', line: win.line, reel: position[0], row: position[1] })
-        if (index === last) onFinalArrive(position)
-      },
-    })
-  }
-
-  private stopWinPulse(): void {
-    this.winPulse?.stop()
-    this.winPulse = null
-  }
-
-  /**
-   * 빛이 마지막으로 닿은 심볼 옆에 명판을 띄운다.
-   *
-   * 좌표는 페이라인이 아니라 **실제 승리 자리**에서 온다. ways 게임에는 페이라인이 없고,
-   * 오른쪽으로 읽은 승리는 마지막 자리가 왼쪽 끝이기 때문이다.
-   */
-  private placeWinLabel(win: WinLine, label: (win: WinLine) => string, arrival: GridPosition): void {
-    const center = symbolCenter(this.layout, arrival[0], arrival[1])
-    this.winLabel.text = label(win)
-    this.winLabel.x = Math.min(
-      Math.max(this.winLabel.width / 2, center.x + this.layout.symbolSize * 0.5),
-      this.layout.width - this.winLabel.width / 2,
-    )
-    this.winLabel.y = center.y - this.layout.symbolSize * 0.55
-    this.winLabel.visible = true
-  }
-
   clearWins(): void {
     this.winToken += 1
+    this.winSkip = null
     this.winGraphics.clear()
-    this.winLabel.visible = false
     this.stopSymbolFx()
     this.clearTimers()
     this.scatterTween?.kill()
@@ -1302,26 +1243,36 @@ class PixiRenderer implements RendererCore {
     this.crossfadeTween?.kill()
     this.crossfadeTween = null
     this.winGraphics.alpha = 1
-    this.winLabel.alpha = 1
     this.stopCoins?.()
     this.stopCoins = null
     this.stopConfetti?.()
     this.stopConfetti = null
   }
 
+  /**
+   * `ms`만큼 기다린다. `clearTimers()`가 걷어 가면 **곧바로** resolve한다.
+   *
+   * 그냥 타이머만 지우면 기다리던 약속이 영영 매달린 채 남는다. 승리 순환은 매 스텝 여기서
+   * 기다리므로, 매달린 약속 하나가 그 바퀴의 클로저를 통째로 붙잡는다. 깨워서 내보내면
+   * 다음 줄의 취소 검사가 순환을 정상적으로 끝낸다.
+   */
   private wait(ms: number): Promise<void> {
     return new Promise((resolve) => {
       const id = setTimeout(() => {
         this.timers.delete(id)
         resolve()
       }, ms)
-      this.timers.add(id)
+      this.timers.set(id, resolve)
     })
   }
 
   private clearTimers(): void {
-    for (const id of this.timers) clearTimeout(id)
+    const pending = [...this.timers]
     this.timers.clear()
+    for (const [id, resolve] of pending) {
+      clearTimeout(id)
+      resolve()
+    }
   }
 
   // ------------------------------------------------------------- 진행 상태
@@ -1329,41 +1280,31 @@ class PixiRenderer implements RendererCore {
   setMode(mode: RendererMode): void {
     // 남은 횟수만 바뀐 경우에는 전환하지 않는다. 매 스핀 화면이 번쩍이면 피곤하다.
     const target = modeTransitionTarget(this.mode, mode)
+    if (target !== null) {
+      // 배경이 통째로 바뀌는 전환이다. 돌고 있던 승리 순환을 여기서 끊는다.
+      // 끊지 않으면 전환이 끝난 화면 위에 지난 스핀의 하이라이트와 fx가 계속 되살아난다.
+      // mode를 갈아 끼우기 **전에** 부른다 — clearWins가 다시 그리는 테두리는 아직 화면에
+      // 있는 그대로여야 하고, 프리스핀에서 나올 때는 그 테두리가 흐려지며 사라져야 한다.
+      this.clearWins()
+    }
     this.mode = mode
 
     if (target === null) {
       this.drawMode()
       return
     }
-    // 프리스핀으로 갈 때는 테두리를 미리 그려 두고 alpha 0에서 끌어올린다.
-    // 되돌아올 때는 테두리를 남겨 둔 채 흐려지게 하고, 전환이 끝나면 지운다.
-    if (target === 'freeSpins') this.drawMode()
+    // 테두리/배경 교체는 커튼이 화면을 완전히 덮은 순간(applyModeSwap)에 한 번에 일어난다 —
+    // 여기서 미리 그리거나 알파를 낮춰 둘 필요가 없다.
     this.playModeTransition(target)
   }
 
-  /** 캔버스를 모두 덮는 원의 반지름. 대각선의 절반이면 모서리까지 닿는다. */
-  private wipeRadius(): number {
-    const { canvasWidth, canvasHeight } = this.geometry
-    return Math.hypot(canvasWidth, canvasHeight) / 2
-  }
-
-  private drawWipe(radius: number): void {
-    const { canvasWidth, canvasHeight } = this.geometry
-    this.wipeMask.clear()
-    if (radius <= 0) {
-      this.freeSpinsSprite.visible = false
-      this.freeSpinsSprite.mask = null
-      return
-    }
-    this.wipeMask.circle(canvasWidth / 2, canvasHeight / 2, radius).fill({ color: 0xffffff })
-    this.freeSpinsSprite.visible = true
-    this.freeSpinsSprite.mask = this.wipeMask
-  }
-
   /**
-   * 프리스핀 배경으로 갈아타는 전환.
-   * 금빛 섬광이 시선을 한 번 끊고, 그 틈에 방사형 와이프가 배경을 교차시킨다.
-   * 되돌아올 때는 같은 절차를 반대로 재생한다.
+   * 프리스핀 진입/이탈 전환 — 화면 전체를 완전히 가리는 커튼 3단계.
+   * (a) 덮기: 커튼이 알파 0→1로 캔버스 전체를 완전히 가린다.
+   * (b) 배너: 완전히 가려진 채로 배경/테두리를 갈아 끼우고(applyModeSwap) 그 상태를 붙든다 —
+   *     허브가 이 구간 위에 전체화면 배너(FREE SPINS!/COMPLETE)를 얹는다.
+   * (c) 걷기: 커튼이 알파 1→0으로 걷히며 새 모드가 드러난다.
+   * 되돌아올 때도 같은 3단계를 그대로 반복한다(양방향 동일).
    */
   private playModeTransition(to: ModeTarget): void {
     // 진행 중인 전환이 있으면 그 끝을 먼저 알린다. start 하나에 end 하나를 보장한다.
@@ -1371,55 +1312,42 @@ class PixiRenderer implements RendererCore {
     const plan = buildModeTransition(to, {
       hasFreeSpinsBackground: this.options.theme.backgroundFreeSpins !== undefined,
       reducedMotion: this.options.reducedMotion,
+      speed: this.spinSpeed,
     })
     this.modeTransitionTo = to
     this.emit({ type: 'modeTransition', to, phase: 'start' })
 
-    const maxRadius = this.wipeRadius()
-    const wipe = { radius: to === 'freeSpins' ? 0 : maxRadius }
-    this.drawWipe(wipe.radius)
+    this.curtain.visible = true
+    this.curtain.alpha = 0
 
-    this.flashSprite.visible = true
-    this.flashSprite.alpha = 0
-
-    this.modeGraphics.alpha = to === 'freeSpins' ? 0 : 1
     const timeline = gsap.timeline({ onComplete: () => this.finishModeTransition() })
-
     timeline
-      .to(this.flashSprite, {
-        alpha: MODE_FLASH_ALPHA,
-        duration: plan.flashMs / 2000,
-        ease: 'sine.out',
-      })
-      .to(this.flashSprite, {
-        alpha: 0,
-        duration: plan.flashMs / 2000,
-        ease: 'sine.in',
-      })
+      .to(this.curtain, { alpha: 1, duration: plan.coverInMs / 1000, ease: 'sine.inOut' }, 0)
+      .call(() => this.applyModeSwap(to), undefined, plan.swapAtMs / 1000)
       .to(
-        wipe,
-        {
-          radius: to === 'freeSpins' ? maxRadius : 0,
-          duration: plan.wipeMs / 1000,
-          ease: 'power2.inOut',
-          onUpdate: () => this.drawWipe(wipe.radius),
-        },
-        plan.wipeStartMs / 1000,
-      )
-      .to(
-        this.modeGraphics,
-        { alpha: to === 'freeSpins' ? 1 : 0, duration: plan.glowMs / 1000, ease: 'sine.out' },
-        plan.wipeStartMs / 1000,
+        this.curtain,
+        { alpha: 0, duration: plan.coverOutMs / 1000, ease: 'sine.inOut' },
+        plan.coverOutStartMs / 1000,
       )
 
     this.modeTransition = timeline
+  }
+
+  /** 커튼이 화면을 완전히 덮은 순간 배경/테두리를 갈아 끼운다. 교체 자체는 가려져 보이지 않는다. */
+  private applyModeSwap(to: ModeTarget): void {
+    this.freeSpinsVisible = to === 'freeSpins'
+    this.freeSpinsSprite.visible = this.freeSpinsVisible
+    this.modeGraphics.alpha = 1
+    this.drawMode()
   }
 
   /**
    * 전환을 마무리한다. 정상 종료든 중간에 끊긴 것이든 여기 한 곳을 지난다.
    *
    * gsap는 `kill()` 때 `onComplete`를 부르지 않는다. 그대로 두면 `end`가 영영 안 나가고
-   * 허브의 프리스핀 진입 대기가 풀리지 않는다. 그래서 끊을 때도 이 절차를 직접 탄다.
+   * 허브의 프리스핀 진입 대기가 풀리지 않는다. 그래서 끊을 때도 이 절차를 직접 탄다 — 중간에
+   * 끊겨 `applyModeSwap`(걷기 전 `.call`)이 아직 안 불렸을 수도 있으니 여기서도 한 번 더
+   * 불러 최종 상태를 보장한다(멱등).
    */
   private finishModeTransition(): void {
     const to = this.modeTransitionTo
@@ -1428,32 +1356,24 @@ class PixiRenderer implements RendererCore {
     if (to === null) return
     this.modeTransitionTo = null
 
-    this.freeSpinsVisible = to === 'freeSpins'
-    this.flashSprite.visible = false
-    this.flashSprite.alpha = 0
-    // 전환이 끝나면 마스크를 걷어 낸다. 매 프레임 원을 다시 그릴 이유가 없다.
-    this.freeSpinsSprite.mask = null
-    this.freeSpinsSprite.visible = this.freeSpinsVisible
-    this.wipeMask.clear()
-    this.modeGraphics.alpha = 1
-    // 되돌아온 경우 여기서 테두리를 지운다.
-    this.drawMode()
+    this.applyModeSwap(to)
+    this.curtain.visible = false
+    this.curtain.alpha = 0
     this.emit({ type: 'modeTransition', to, phase: 'end' })
   }
 
   /**
-   * 프리스핀 표시. 릴 창 테두리에 금빛을 두르고 위쪽에 명판을 띄운다.
+   * 프리스핀 표시. 릴 창 테두리에 금빛을 두른다.
    * 스캐터 링과 같은 Graphics를 쓰므로 링을 다시 그릴 때도 함께 불린다.
+   *
+   * 남은 횟수/배수 명판은 더 이상 릴 위에 그리지 않는다 — 심볼과 겹쳐 가독성을 해쳤다.
+   * 그 정보는 허브가 릴 밖(컨트롤 위 스트립)에서 store의 freeSpins 상태로 직접 보여준다.
    */
   private drawMode(): void {
     // 자기 층을 먼저 비운다. 이걸 빼면 스핀마다 테두리가 겹겹이 쌓인다.
     this.modeGraphics.clear()
     const freeSpins = this.mode.freeSpins
-    const show = shouldShowFreeSpinsPlaque(this.mode, this.options.showFreeSpinsPlaque)
-    if (freeSpins === null || freeSpins === undefined) {
-      this.modeLabel.visible = false
-      return
-    }
+    if (freeSpins === null || freeSpins === undefined) return
 
     const { reelArea, radius } = this.layout
     this.modeGraphics
@@ -1463,16 +1383,17 @@ class PixiRenderer implements RendererCore {
         color: this.options.theme.palette.frame,
         alpha: FREE_SPINS_EDGE_ALPHA,
       })
-
-    this.modeLabel.visible = show
-    if (!show) return
-    this.modeLabel.text = formatFreeSpinsPlaque(freeSpins)
-    this.modeLabel.x = reelArea.x + reelArea.width / 2
-    // 창 위쪽 안쪽에 붙인다. 심볼과 겹치지 않도록 살짝 띄운다.
-    this.modeLabel.y = reelArea.y + this.layout.symbolSize * 0.06
   }
 
   // ------------------------------------------------------------------ 유휴
+
+  /**
+   * 이후 모든 스핀의 속도 프로파일을 바꾼다. 돌고 있는 스핀은 건드리지 않는다.
+   * 승리 연출 A단계 홀드도 이 값을 따른다. 모션 축소가 켜져 있으면 그 상한이 언제나 이긴다.
+   */
+  setSpinSpeed(speed: SpinSpeed): void {
+    this.spinSpeed = speed
+  }
 
   setSpinningIdle(on: boolean): void {
     for (const tween of this.idleTweens) tween.kill()
@@ -1553,6 +1474,13 @@ class PixiRenderer implements RendererCore {
     }
     this.geometry = next
     this.applyLayout()
+    // `app.renderer.resize()`(applyLayout 안에서 호출)는 캔버스의 width/height 속성을 바꾼다 —
+    // 브라우저는 이 순간 드로잉 버퍼를 곧장 비운다. Pixi의 자체 티커가 다음 rAF에 다시 그릴
+    // 때까지 기다리면 그 사이에 브라우저가 "방금 비워진" 캔버스를 한 프레임 그대로 페인트할 수
+    // 있다 — 릴 전체가 새까맣게 한 프레임 번쩍이는 원인이었다(실측: ResizeObserver가 WinStrip
+    // 레이아웃 변화로 1px 단위 지터를 감지할 때마다 재현됐다). 리사이즈와 재렌더를 같은 동기
+    // 호출 안에서 묶어 그 틈을 아예 없앤다.
+    this.app.render()
   }
 
   // ------------------------------------------------------------------ 해제

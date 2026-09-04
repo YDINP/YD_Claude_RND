@@ -97,7 +97,7 @@
     {
       "id": "frame",
       "kind": "frame",
-      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed square artwork with no isolated chroma background around the frame itself — a wide-window square art-deco cabinet frame on a deep black velvet body with polished platinum fluting, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-17%: a black velvet plate with a platinum art-deco sunburst border, engraved wordmark 'ROYAL DIAMOND 777' in bold platinum art-deco caps, no other text. The reel window occupies x 4%-96% and y 19%-81% (the dominant element of the frame), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a thin 1% platinum rim running just outside the green (this window will later be replaced with the live reel canvas). Two slim platinum side rails run the height of the window, each at most 3% of the frame width, styled as narrow stepped-chevron art-deco fluting each holding 2-3 small inset diamond-cyan gems for detail without bulk. The bottom y 83%-100% is a plain weighted platinum base molding with soft ambient shadow, no legend strip, no payline icons, no additional text. Overall symmetrical, centered, no characters. The reel window is clearly wider than tall (about 3:2 landscape proportion) so a 5-reel by 3-row grid fills it edge to edge; the frame's overall canvas is square.",
+      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed square artwork with no isolated chroma background around the frame itself — a wide-window square art-deco cabinet frame on a deep black velvet body with polished platinum fluting, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-17%: a black velvet plate with a platinum art-deco sunburst border, engraved wordmark 'ROYAL DIAMOND 777' in bold platinum art-deco caps, no other text. The reel window occupies x 2%-98% and y 19%-81% (the dominant element of the frame), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a hairline 0.5% platinum rim running just outside the green (this window will later be replaced with the live reel canvas). Two slim platinum side rails run the height of the window, each at most 1.5% of the frame width, styled as narrow stepped-chevron art-deco fluting each holding 2-3 small inset diamond-cyan gems for detail without bulk. The bottom y 83%-100% is a plain weighted platinum base molding with soft ambient shadow, no legend strip, no payline icons, no additional text. Overall symmetrical, centered, no characters. The reel window is clearly wider than tall (about 3:2 landscape proportion) so a 5-reel by 3-row grid fills it edge to edge; the frame's overall canvas is square. The window must reach almost to the left and right edges of the canvas so that on a phone the reels span nearly the full screen width; put all decorative bulk in the marquee above and the base below, never at the sides.",
       "size": "1024x1024",
       "transparent": true,
       "out": "theme/frame.webp",
@@ -120,6 +120,51 @@
       "transparent": false,
       "out": "thumb.webp",
       "outSize": 640
+    },
+    {
+      "id": "seven-win",
+      "kind": "sheet",
+      "symbol": "seven",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a single bold velvet-red enamel numeral 7 with a beveled platinum art-deco edge trim, a bright diagonal highlight sheen sweeping across the glossy face, the numeral tilted slightly forward in 3/4 perspective to read as the hero symbol, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background. Win-celebration animation timeline across the sequence: frames 1-3 the symbol scales up slightly larger while a warm glow in the theme's accent color ignites and builds around its edges; frames 4-6 a brilliant diagonal light sweep passes across its surface like a lens flare, with small bright sparkles bursting off the edges; frames 7-9 it settles back to its resting scale as the glow fades smoothly back toward the idle state, matching frame 1 closely enough for a seamless loop back to the start. All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background, changes between cells limited to the described glow, light, sparkle and pose motion.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/seven-win.webp",
+      "outSize": 768
+    },
+    {
+      "id": "wild-win",
+      "kind": "sheet",
+      "symbol": "wild",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a faceted diamond-cyan star gem set into a platinum art-deco sunburst medallion, thin platinum rays fanning symmetrically behind it in a stepped chevron pattern, a small black velvet plaque at the base engraved 'WILD' in bold platinum art-deco caps, cool cyan glow emanating from the center, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background. Win-celebration animation timeline across the sequence: the symbol pulses steadily brighter and dimmer throughout, its outer rays or ornaments extend slightly outward and rotate a total of 20 degrees clockwise across the sequence, individual highlights flash brightly in quick succession as the rotation sweeps past them, small glowing particles in the theme's accent color drift and orbit slowly around it, ending close enough to frame 1's rotation and brightness for a seamless loop back to the start. All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background, changes between cells limited to the described glow, light, sparkle and pose motion.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/wild-win.webp",
+      "outSize": 768
+    },
+    {
+      "id": "diamond-win",
+      "kind": "sheet",
+      "symbol": "diamond",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "Glossy 3D toy-like icon render, 3/4 top-down camera angle, soft studio lighting with a cool platinum rim light, deep black velvet (#0d0c14) and polished platinum (#d7dbe0) color story with diamond-cyan (#8fe3f2) facet accents and deep velvet-red (#8f1f2e) jewel accents, art-deco geometric motifs (sunburst fluting, stepped chevrons), polished glass and brushed platinum metal materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a single large faceted diamond-cyan gemstone in a classic diamond-suit silhouette, cut with sharp geometric facets that catch bright specular highlights, a thin platinum outline tracing its edge, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background. Win-celebration animation timeline across the sequence: frames 1-3 the symbol scales up slightly larger while a warm glow in the theme's accent color ignites and builds around its edges; frames 4-6 a brilliant diagonal light sweep passes across its surface like a lens flare, with small bright sparkles bursting off the edges; frames 7-9 it settles back to its resting scale as the glow fades smoothly back toward the idle state, matching frame 1 closely enough for a seamless loop back to the start. All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background, changes between cells limited to the described glow, light, sparkle and pose motion.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/diamond-win.webp",
+      "outSize": 768
     }
   ]
 }

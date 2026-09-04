@@ -7,9 +7,10 @@
   overflow: hidden;
 }
 
+/* 썸네일 원본이 전부 640×427(3:2)이라 박스도 3:2로 맞춘다 — 1:1이면 위아래가 cover에 잘렸다. */
 .hub-game-card__thumb-wrap {
   position: relative;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 3 / 2;
   background: var(--hub-secondary-bg);
 }
 

@@ -16,10 +16,10 @@
   "backgroundFreeSpins": "bg-freespins.webp",
   "frameLayout": {
     "window": {
-      "x": 0.08375,
-      "y": 0.286875,
-      "w": 0.8403125,
-      "h": 0.4575
+      "x": 0.0446875,
+      "y": 0.28296875,
+      "w": 0.910625,
+      "h": 0.46921875
     }
   },
   "version": "1.0.0",
@@ -170,6 +170,17 @@
           "durationMs": 700
         }
       ]
+    }
+  },
+  "sheets": {
+    "wild": {
+      "win": "sheets/wild-win.json"
+    },
+    "scatter": {
+      "win": "sheets/scatter-win.json"
+    },
+    "sheriff": {
+      "win": "sheets/sheriff-win.json"
     }
   }
 }

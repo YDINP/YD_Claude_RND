@@ -10,12 +10,11 @@ import {
   loadTheme,
   type SlotRenderer,
   type Theme,
-  type WinTier,
   type RendererEvent,
 } from '@tgslot/renderer'
-import { createSeededRng, spin as replaySpin } from '@tgslot/slot-engine'
-import type { GambleSide } from '@tgslot/shared'
-import { useGameStore, toRendererFreeSpinsMode } from '../../store/game'
+import { createSeededRng, spin as replaySpin, type GameMath } from '@tgslot/slot-engine'
+import type { GambleSide, Locale } from '@tgslot/shared'
+import { useGameStore, toRendererFreeSpinsMode, AUTO_SPIN_COUNTS } from '../../store/game'
 import { useSessionStore } from '../../store/session'
 import { useGamesStore } from '../../store/games'
 import { useHubStore } from '../../store/hub'
@@ -24,13 +23,27 @@ import { showBackButton, hideBackButton, haptic } from '../../sdk/tma'
 import { getRoundSeed } from '../../sdk/api'
 import { Odometer } from '../Odometer'
 import { useT, useEffectiveLocale } from '../../i18n'
-import { useSettingsStore } from '../../store/settings'
-import { winTierLabelKey, resolveWinTier, WIN_HOLD_MS } from '../../lib/winTier'
-import { groupLabel, groupMembers, symbolLabel } from '../../game/labels'
+import { useSettingsStore, type SpinSpeed } from '../../store/settings'
+import { groupLabel, groupMembers, symbolLabel, winLineLabel } from '../../game/labels'
 import { useDialog } from '../../hooks/useDialog'
-import { WinStrip } from './WinStrip'
+import { detectDebugFlag, writeStoredDebugFlag } from '../../lib/debugFlag'
+import { evaluateTapGesture } from '../../lib/tapGesture'
+import { Modal } from '../Modal'
+import { WinStrip, type WinStripLineLabel } from './WinStrip'
 import { GambleModal } from './GambleModal'
+import { DebugPanel } from './DebugPanel'
 import './GameScreen.css'
+
+/** 하단 컨트롤의 스핀 속도 세그먼트가 보여주는 순서(느린 → 빠른). */
+const SPIN_SPEEDS: readonly SpinSpeed[] = ['normal', 'quick', 'turbo']
+
+const AUTO_SPIN_SHEET_TITLE_ID = 'hub-autospin-title'
+
+function spinSpeedLabelKey(speed: SpinSpeed): 'spinSpeedNormal' | 'spinSpeedQuick' | 'spinSpeedTurbo' {
+  if (speed === 'turbo') return 'spinSpeedTurbo'
+  if (speed === 'quick') return 'spinSpeedQuick'
+  return 'spinSpeedNormal'
+}
 
 interface GameScreenProps {
   gameId: string
@@ -61,6 +74,42 @@ function formatGambleCountdown(remainingMs: number): string {
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
   return `${minutes}:${String(seconds).padStart(2, '0')}`
+}
+
+/**
+ * WinStrip 라인 문구의 원천 데이터 — 렌더러의 `winLine`/`winCycle` 이벤트를 그대로 옮겨 담는다.
+ * 문구 자체(번역/포맷)는 렌더 시점에 최신 `t`/`locale`/`math`로 계산한다(핸들러 안에서 미리
+ * 문자열로 굳히지 않는다) — 렌더러의 onEvent 콜백은 생성 시점에 한 번만 캡처되므로, 문구를
+ * 그 안에서 만들면 로케일을 바꿔도 계속 옛 언어로 남는다(WinBanner의 tier와 같은 이유).
+ */
+type LineLabelSource =
+  | { kind: 'line'; symbol: string; group?: string; ways?: number; count: number; win: number; key: number }
+  | { kind: 'cycle'; totalWin: number; key: number }
+
+/**
+ * 라인/ways 승리에서 심볼 이름 대신 이미지를 count번 반복해 보여주기 위한 아이콘 목록을
+ * 만든다(사용자 요청). 배당표 시트가 이미 쓰는 것과 같은 해석 경로(`theme.symbols[id]`)를
+ * 그대로 재사용한다 — 별도 URL 조립을 하지 않는다.
+ *
+ * 그룹 승리(anybar 등)는 대표할 단일 이미지가 없으므로 애초에 아이콘을 만들지 않고 undefined를
+ * 돌려준다 — 호출부가 `text`(그룹 이름 문구)로 폴백한다. 테마가 아직 없거나 그 심볼 이미지를
+ * 찾지 못해도(로딩 실패, math/theme 심볼 목록 불일치 등) 마찬가지로 undefined — 빈 줄이 뜨거나
+ * 깨진 이미지가 보이면 안 된다.
+ */
+function buildWinLineIcons(
+  math: GameMath,
+  theme: Theme | null,
+  locale: Locale,
+  source: Extract<LineLabelSource, { kind: 'line' }>,
+): WinStripLineLabel['icons'] | undefined {
+  if (source.group) return undefined
+  const src = theme?.symbols[source.symbol]
+  if (!src) return undefined
+  return {
+    srcs: Array.from({ length: source.count }, () => src),
+    ariaLabel: `${symbolLabel(math, source.symbol, locale)} ×${source.count}`,
+    suffix: [...(source.ways ? [`${source.ways} ways`] : []), source.win.toLocaleString('en-US')].join(' · '),
+  }
 }
 
 type HelpPage = 'paytable' | 'paylines' | 'features' | 'fairness'
@@ -105,20 +154,43 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const errorCode = useGameStore((s) => s.errorCode)
   const freeSpins = useGameStore((s) => s.freeSpins)
   const gambleSession = useGameStore((s) => s.gambleSession)
+  const autoSpin = useGameStore((s) => s.autoSpin)
   const rendererInstance = useGameStore((s) => s.renderer)
   const load = useGameStore((s) => s.load)
   const setBet = useGameStore((s) => s.setBet)
   const setRenderer = useGameStore((s) => s.setRenderer)
   const spinAction = useGameStore((s) => s.spin)
+  const startAutoSpinAction = useGameStore((s) => s.startAutoSpin)
+  const stopAutoSpinAction = useGameStore((s) => s.stopAutoSpin)
   const gambleAction = useGameStore((s) => s.gamble)
   const collectGambleAction = useGameStore((s) => s.collectGamble)
   const syncGambleExpiryAction = useGameStore((s) => s.syncGambleExpiry)
   const dismissError = useGameStore((s) => s.dismissError)
+  // 디버그 패널(개발자 전용, debugEnabled일 때만 마운트) — 프리셋 무장/타이밍/마지막 응답 debug.
+  const debugPreset = useGameStore((s) => s.debugPreset)
+  const debugMessage = useGameStore((s) => s.debugMessage)
+  const lastSpinTiming = useGameStore((s) => s.lastSpinTiming)
+  const lastSpinDebug = useGameStore((s) => s.lastSpinDebug)
+  const setDebugPresetAction = useGameStore((s) => s.setDebugPreset)
+  const dismissDebugMessageAction = useGameStore((s) => s.dismissDebugMessage)
+  const spinSpeed = useSettingsStore((s) => s.spinSpeed)
+  const setSpinSpeedAction = useSettingsStore((s) => s.setSpinSpeed)
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [betSheetOpen, setBetSheetOpen] = useState(false)
+  const [autoSpinSheetOpen, setAutoSpinSheetOpen] = useState(false)
   const [helpSheetOpen, setHelpSheetOpen] = useState(false)
   const [helpPage, setHelpPage] = useState<HelpPage>(() => readStoredHelpPage(gameId) ?? 'paytable')
+  // 디버그 패널 노출 여부 — URL(쿼리/해시쿼리)/localStorage로 마운트 시 한 번 판정하고, 그 뒤로는
+  // 게임 제목 5탭 제스처(handleTitleTap)로도 켤 수 있다(껐다 다시 켜는 건 이 세션에서는 지원하지
+  // 않는다 — 숨은 기능이라 끄는 UI를 따로 안 둔다).
+  const [debugEnabled, setDebugEnabled] = useState(() => detectDebugFlag())
+  const [debugPanelOpen, setDebugPanelOpen] = useState(false)
+  /** 게임 제목 탭 타임스탬프 — evaluateTapGesture()가 순수하게 판정한다(탭 제스처 참고). */
+  const titleTapsRef = useRef<number[]>([])
+  /** WinStrip 라인 문구의 원천. 렌더러의 winLine/winCycle 이벤트가 채우고, 새 스핀/탭-스킵이 지운다. */
+  const [lineLabelSource, setLineLabelSource] = useState<LineLabelSource | null>(null)
+  const lineLabelKeyRef = useRef(0)
   const [verifyState, setVerifyState] = useState<VerifyState>('idle')
   const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null)
   const [rendererError, setRendererError] = useState(false)
@@ -153,22 +225,22 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const betSheetRef = useDialog<HTMLDivElement>(() => setBetSheetOpen(false), betSheetOpen)
   const outOfCoinsSheetRef = useDialog<HTMLDivElement>(dismissError, errorCode === 'INSUFFICIENT_FUNDS')
 
-  // 승리 배너(릴 위 오버레이) — 렌더러의 winTotal 이벤트가 시작 신호. tier는 렌더러가 계산해
-  // 보내주는 값을 우선 신뢰하고(없으면 로컬 폴백), winBannerValue는 durationMs에 걸쳐 롤업한다.
-  // 배너 자체는 등급 단어만 짧게(WIN_HOLD_MS, 1.2~2s) 보여주고 사라진다 — 실제 금액은 항상
-  // WinStrip(컨트롤 위 고정줄)이 보여준다. winBannerValue는 배너가 사라진 뒤에도 다음 스핀이
-  // 시작되기 전까지 그대로 남아 WinStrip에 최종 당첨액을 계속 보여준다.
-  const [winBanner, setWinBanner] = useState<{ tier: WinTier } | null>(null)
-  const [winBannerValue, setWinBannerValue] = useState(0)
+  // 당첨액 롤업 — 릴 위에 등급 단어 배너는 더 이상 띄우지 않는다(사용자 피드백으로 제거). 실제
+  // 금액은 항상 WinStrip(컨트롤 위 고정줄)이 보여주고, winRollupValue는 렌더러의 winTotal 이벤트가
+  // 주는 durationMs에 걸쳐 0→목표값으로 굴러간다. 다음 스핀이 시작되기 전까지 최종값이 그대로 남는다.
+  const [winRollupValue, setWinRollupValue] = useState(0)
   const winRafRef = useRef<number | null>(null)
-  const winHoldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  /** 탭으로 현재 단계(롤업 → 홀드)를 건너뛰는 플래그. 릴 연출 자체는 건드리지 않는다. */
+  /** SPIN 버튼으로 승리 연출을 건너뛸 때(handleSkipWinsAndAdvance) 롤업을 목표값으로 즉시 점프시키는 플래그. */
   const winSkipRef = useRef(false)
-  /** onEvent 콜백은 렌더러 생성 시점에 한 번만 캡처되므로, 폴백 등급 계산에 쓸 최신 베팅액은 ref로 읽는다. */
-  const lastResultRef = useRef(lastResult)
-  useEffect(() => {
-    lastResultRef.current = lastResult
-  }, [lastResult])
+  /**
+   * 지금 연출 중인 바퀴가 몇 번째인지(0부터) — 렌더러의 `winCycle` 이벤트가 `winTotal`보다
+   * 먼저(같은 렌더 스텝 안에서 동기적으로) 오므로, `winTotal` 핸들러가 이 값을 그대로 읽어
+   * "첫 바퀴인지"를 판정한다. 로컬 불리언 플래그 대신 렌더러가 실제로 보내는 사이클 번호를
+   * 신뢰 원본으로 쓴다 — 그래야 순환이 스킵/재시작을 거쳐도 어긋나지 않는다.
+   */
+  const winCycleRef = useRef(0)
+  /** showingWin 중 SPIN을 눌러 skipWins()를 부른 뒤, phase가 idle로 돌아오면 곧장 다음 스핀을 건다. */
+  const autoAdvanceAfterSkipRef = useRef(false)
 
   // 새 라운드가 되면(roundId가 바뀌면) 이전 라운드의 공정성 검증 결과를 들고 있으면 안 된다 —
   // 안 그러면 다음 스핀 뒤 공정성 탭을 다시 열었을 때 예전 라운드의 ✓/✗가 잠깐 그대로 보인다.
@@ -180,43 +252,125 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   /** 스페이스바를 누르고 있는 동안(오토리핏) 반복 발동을 막는 플래그. keyup에서 풀린다. */
   const spaceHeldRef = useRef(false)
 
-  // 프리스핀 진입/재발동 배너 — 렌더러의 featureTriggered 이벤트가 신호. 최초 진입은 전체화면
-  // 인트로(1.6s), 재발동은 짧은 토스트. 둘 다 지나면 스핀 연출은 평소처럼 이어진다.
+  // 프리스핀 최초 진입 배너 — 데이터는 featureTriggered(freeSpins, retrigger:false)가 주지만,
+  // 뜨고 걷히는 시점은 커튼(modeTransition to:'freeSpins' start~end)을 그대로 따른다. 릴 회전·
+  // 승리 연출이 다 끝나고 커튼이 화면을 덮은 뒤에야 뜨는 배너이므로, 고정 타이머로 따로 놀지
+  // 않는다 — 커튼 배너와 겹치거나 중복되지 않도록 이 배너 하나만 남겼다.
+  const freeSpinsIntroDataRef = useRef<{ spins: number; multiplier: number } | null>(null)
   const [freeSpinsIntro, setFreeSpinsIntro] = useState<{ spins: number; multiplier: number } | null>(null)
+  // 재발동은 이미 프리스핀 중이라(같은 모드) 커튼이 안 뜬다 — 그래서 재발동만은 지금처럼
+  // featureTriggered 자체가 신호가 되는 짧은 토스트로 남겨둔다.
   const [freeSpinsRetrigger, setFreeSpinsRetrigger] = useState<{ spins: number } | null>(null)
-  const introTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retriggerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // 프리스핀 종료 배너 — 렌더러의 modeTransition(to:'base', phase:'start')이 신호다(전환 연출
-  // 위에 얹힌다). 렌더러가 아직 그 이벤트를 못 보내면(구버전) 플레이어는 그냥 다음 스핀으로
-  // 넘어간다 — 배너 없이도 게임 진행 자체는 막히지 않는다.
+  // 프리스핀 종료 배너 — 렌더러의 modeTransition(to:'base') start/end 쌍이 신호다. 커튼이 화면을
+  // 완전히 가리는 순간(start) 뜨고, 커튼이 다 걷힌 순간(end) 함께 사라진다 — 더 이상 고정된
+  // 타이머로 따로 놀지 않는다(전환 길이가 스핀 속도/모션 축소에 따라 달라지므로 맞출 수 없다).
+  // 렌더러가 end를 어떤 이유로든 못 보내는 극단적인 경우를 대비해 안전장치로 최대 유지 시간을 둔다.
   const [freeSpinsComplete, setFreeSpinsComplete] = useState(false)
-  const completeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const completeSafetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /**
+   * 배너에 함께 보여줄 누적 획득액. freeSpins가 null로 바뀌기 직전까지의 누적값을 담아둔다 —
+   * 마지막 프리스핀 라운드 자체의 결과는 서버가 freeSpins를 이미 null로 내려보내 accumulatedWin에
+   * 실리지 않으므로, 그 라운드의 totalWin을 별도 effect에서 더해 맞춘다.
+   */
+  const freeSpinsSummaryRef = useRef<{ accumulatedWin: number } | null>(null)
 
   function showFreeSpinsCompleteBanner(): void {
-    if (completeTimeoutRef.current !== null) clearTimeout(completeTimeoutRef.current)
+    if (completeSafetyTimeoutRef.current !== null) clearTimeout(completeSafetyTimeoutRef.current)
     setFreeSpinsComplete(true)
-    completeTimeoutRef.current = setTimeout(() => {
-      completeTimeoutRef.current = null
+    completeSafetyTimeoutRef.current = setTimeout(() => {
+      completeSafetyTimeoutRef.current = null
       setFreeSpinsComplete(false)
-    }, 2500)
+    }, 6000)
+  }
+
+  function hideFreeSpinsCompleteBanner(): void {
+    if (completeSafetyTimeoutRef.current !== null) {
+      clearTimeout(completeSafetyTimeoutRef.current)
+      completeSafetyTimeoutRef.current = null
+    }
+    setFreeSpinsComplete(false)
+  }
+
+  // 프리스핀 진입/이탈 커튼 전환이 도는 동안(렌더러의 modeTransition start~end) 스핀/스킵
+  // 입력을 무시한다 — 화면이 완전히 가려진 채로 배경이 바뀌는 연출인데 그 틈에 다음 스핀이
+  // 끼어들면 커튼과 릴이 어긋나 보인다. 전환이 끝나야 자동 진행(프리스핀 자동 스핀 등)이 이어진다.
+  const [modeTransitioning, setModeTransitioning] = useState(false)
+
+  // 배너용 누적 획득액 스냅샷 — freeSpins가 살아있는 동안은 그 값을 그대로 담아두고, 마지막
+  // 프리스핀 라운드(freeSpins가 막 null이 된, 그 라운드 자체가 isFreeSpin인 결과)의 당첨은
+  // 이 결과의 totalWin을 더해 채운다.
+  useEffect(() => {
+    if (freeSpins) {
+      freeSpinsSummaryRef.current = { accumulatedWin: freeSpins.accumulatedWin }
+    } else if (lastResult?.isFreeSpin && freeSpinsSummaryRef.current) {
+      freeSpinsSummaryRef.current = {
+        accumulatedWin: freeSpinsSummaryRef.current.accumulatedWin + lastResult.totalWin,
+      }
+    }
+  }, [freeSpins, lastResult])
+
+  // WinStrip의 프리스핀 카운터가 참조하는 "표시용" freeSpins. store.freeSpins는 스핀 응답이
+  // 오는 즉시 바뀌지만(베팅 잠금/FREE SPIN 버튼 표시 등에 필요), 커튼은 그보다 한참 뒤(릴 회전·
+  // 승리 연출이 다 끝난 뒤)에야 뜬다 — 그래서 "진입/이탈"처럼 모드 자체가 바뀌는 경계는
+  // store.freeSpins가 바뀐 순간이 아니라 그 전환의 커튼이 다 걷힌 순간(modeTransition end)에야
+  // 반영한다. 남은 횟수만 바뀌는 같은 모드 안의 변화(재발동 포함 — 커튼이 안 뜬다)는 곧장
+  // 반영한다(모드 경계가 아니므로 미룰 이유가 없다).
+  const [displayedFreeSpins, setDisplayedFreeSpins] = useState(freeSpins)
+  /** 마지막으로 살펴본 freeSpins의 "활성 여부(null이 아님)" — 이 값과 달라지는 순간이 모드 경계다. */
+  const freeSpinsActiveRef = useRef(freeSpins !== null)
+  /** 모드 경계를 넘은 새 값 — 커튼이 다 걷힐 때까지 여기 담아두고 표시는 아직 미룬다. */
+  const pendingFreeSpinsRevealRef = useRef<{ value: typeof freeSpins; pending: boolean }>({
+    value: null,
+    pending: false,
+  })
+
+  useEffect(() => {
+    const isActive = freeSpins !== null
+    const crossedBoundary = freeSpinsActiveRef.current !== isActive
+    freeSpinsActiveRef.current = isActive
+
+    // 렌더러가 아예 없으면(그래픽 비활성/에러) 커튼도 modeTransition 이벤트도 영영 오지 않는다 —
+    // 그런 경우까지 표시를 미루면 카운터가 영영 안 바뀐다. 곧장 반영해 폴백한다.
+    if (crossedBoundary && rendererInstance) {
+      pendingFreeSpinsRevealRef.current = { value: freeSpins, pending: true }
+    } else {
+      setDisplayedFreeSpins(freeSpins)
+    }
+  }, [freeSpins, rendererInstance])
+
+  /** modeTransition('end')에서 부른다 — 경계를 넘어 보류돼 있던 값이 있으면 이제서야 반영한다. */
+  function revealPendingFreeSpins(): void {
+    if (!pendingFreeSpinsRevealRef.current.pending) return
+    setDisplayedFreeSpins(pendingFreeSpinsRevealRef.current.value)
+    pendingFreeSpinsRevealRef.current = { value: null, pending: false }
   }
 
   // 언마운트 시 프리스핀 배너/더블업 결과 타이머 정리.
   useEffect(() => {
     return () => {
-      if (introTimeoutRef.current !== null) clearTimeout(introTimeoutRef.current)
       if (retriggerTimeoutRef.current !== null) clearTimeout(retriggerTimeoutRef.current)
-      if (completeTimeoutRef.current !== null) clearTimeout(completeTimeoutRef.current)
+      if (completeSafetyTimeoutRef.current !== null) clearTimeout(completeSafetyTimeoutRef.current)
       if (gambleResultTimeoutRef.current !== null) clearTimeout(gambleResultTimeoutRef.current)
     }
   }, [])
 
-  // 렌더러가 준비되면(또는 프리스핀 상태가 바뀌면) 시각 모드를 서버 권위 상태에 맞춰 둔다 —
-  // 화면을 나갔다 돌아와 프리스핀을 재개한 경우에도 렌더러가 새로 생성되자마자 반영된다.
+  // 렌더러가 새로 생기면(마운트, 또는 renderer 에러 뒤 재생성) 그 시점의 서버 권위 상태로 시각
+  // 모드를 맞춰 둔다 — 화면을 나갔다 돌아와 프리스핀을 재개한 경우에도 렌더러가 새로 생성되자마자
+  // 반영된다. freeSpins를 의존성에 넣지 않는다 — 스핀마다 커튼을 거는 건 store.spin()의 몫이다
+  // (릴 회전·승리 연출이 다 끝난 뒤에야 걸어야 인과가 맞는다). 여기서 매번 반응하면 스핀 응답이
+  // 오자마자(릴이 돌기도 전에) 커튼이 뜨는 예전 버그가 되살아난다 — 그래서 store.getState()로
+  // "지금 이 순간" 값만 한 번 읽고 구독하지 않는다.
   useEffect(() => {
-    rendererInstance?.setMode?.({ freeSpins: toRendererFreeSpinsMode(freeSpins) })
-  }, [rendererInstance, freeSpins])
+    rendererInstance?.setMode?.({ freeSpins: toRendererFreeSpinsMode(useGameStore.getState().freeSpins) })
+  }, [rendererInstance])
+
+  // 렌더러가 준비되거나(마운트) 설정에서 스핀 속도를 바꾸면 그대로 반영한다 — 돌고 있는 스핀은
+  // 건드리지 않고 다음 스핀부터 적용된다(렌더러 계약).
+  useEffect(() => {
+    rendererInstance?.setSpinSpeed?.(spinSpeed)
+  }, [rendererInstance, spinSpeed])
 
   // 게임 진입 시 math.json 로드, 이탈 시 store 초기화.
   useEffect(() => {
@@ -247,26 +401,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     if (helpPage === 'features' && !hasFeaturesPage) setHelpPage('paytable')
   }, [math, helpPage, hasFeaturesPage])
 
-  /** 롤업이 끝나면(자연 종료든 탭 스킵이든) 등급별 시간만큼 배너(단어만)를 붙잡아 둔다. */
-  function startWinHold(tier: WinTier): void {
-    if (winHoldTimeoutRef.current !== null) clearTimeout(winHoldTimeoutRef.current)
-    winHoldTimeoutRef.current = setTimeout(() => {
-      winHoldTimeoutRef.current = null
-      setWinBanner(null)
-    }, WIN_HOLD_MS[tier])
-  }
-
-  /** 프리스핀 최초 진입 — 전체화면 인트로를 1.6초 띄운다. */
-  function showFreeSpinsIntro(spins: number, multiplier: number): void {
-    if (introTimeoutRef.current !== null) clearTimeout(introTimeoutRef.current)
-    setFreeSpinsIntro({ spins, multiplier })
-    introTimeoutRef.current = setTimeout(() => {
-      introTimeoutRef.current = null
-      setFreeSpinsIntro(null)
-    }, 1600)
-  }
-
-  /** 프리스핀 재발동 — 짧은 토스트만 띄운다(전체화면 인트로는 최초 진입 때만). */
+  /** 프리스핀 재발동 — 짧은 토스트만 띄운다(같은 모드라 커튼이 없다 — 전체화면 인트로는 최초 진입 때만). */
   function showFreeSpinsRetrigger(spins: number): void {
     if (retriggerTimeoutRef.current !== null) clearTimeout(retriggerTimeoutRef.current)
     setFreeSpinsRetrigger({ spins })
@@ -277,19 +412,36 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   }
 
   // 렌더러 이벤트:
-  // - modeTransition: 프리스핀 진입 연출이 끝나면(to:freeSpins, phase:end) 첫 자동 스핀을 풀어주고,
-  //   종료 연출이 시작되면(to:base, phase:start) 그 위에 COMPLETE 배너를 띄운다.
+  // - modeTransition: 커튼이 화면을 완전히 가리는 동안(start~end) 스핀/스킵 입력을 무시한다
+  //   (modeTransitioning). 진입 커튼이 뜨면(to:freeSpins, start) featureTriggered가 미리 담아둔
+  //   데이터로 전체화면 인트로 배너를 띄우고, 걷히면(end) 함께 내리며 첫 자동 스핀을 풀어주고
+  //   보류해 둔 카운터 값을 반영한다. 종료 커튼이 뜨면(to:base, start) COMPLETE 배너를 띄웠다가
+  //   걷기까지 끝나면(end) 함께 내리며 카운터를 반영한다 — 배너와 카운터가 커튼보다 먼저
+  //   바뀌지 않는다(스핀→승리 연출→커튼 순서를 그대로 따른다).
   // - winTotal이 승리 배너를 시작시키고 durationMs에 걸쳐 롤업한다. 등급(tier)은 렌더러가
   //   계산해 함께 보내주는 값을 우선 쓰고, 없으면 로컬로 폴백 계산한다.
-  // - featureTriggered는 프리스핀 진입/재발동을 알린다 — 최초 진입이면 전체화면 인트로,
-  //   재발동(retrigger)이면 짧은 토스트.
+  // - featureTriggered는 프리스핀 진입/재발동을 알린다 — 재발동(retrigger)은 그 자체가 토스트의
+  //   신호지만, 최초 진입은 데이터만 담아두고(freeSpinsIntroDataRef) 실제로 뜨는 시점은 위
+  //   modeTransition이 정한다(커튼과 겹치지 않도록 인트로 배너를 하나로 합쳤다).
   // ref/setState만 사용하므로 렌더러 생성 시점에 캡처돼도 값이 오래돼(stale) 문제되지 않는다.
   function handleRendererEvent(event: RendererEvent): void {
     if (event.type === 'modeTransition') {
-      if (event.to === 'freeSpins' && event.phase === 'end') {
+      setModeTransitioning(event.phase === 'start')
+      if (event.to === 'freeSpins' && event.phase === 'start') {
+        setFreeSpinsIntro(freeSpinsIntroDataRef.current)
+      } else if (event.to === 'freeSpins' && event.phase === 'end') {
+        setFreeSpinsIntro(null)
+        freeSpinsIntroDataRef.current = null
+        revealPendingFreeSpins()
         useGameStore.getState().releaseFreeSpinsEntryGate()
       } else if (event.to === 'base' && event.phase === 'start') {
         showFreeSpinsCompleteBanner()
+      } else if (event.to === 'base' && event.phase === 'end') {
+        hideFreeSpinsCompleteBanner()
+        revealPendingFreeSpins()
+        // 프리스핀이 끝나 커튼이 다 걷혔다 — 프리스핀 동안 쉬고 있던 오토스핀이 남은 횟수를
+        // 그대로 들고 여기서 이어진다(커튼이 덮인 채로 다음 판이 돌면 안 되므로 지금까지 미뤘다).
+        useGameStore.getState().resumeAutoSpin()
       }
       return
     }
@@ -300,107 +452,141 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         if (feature.retrigger) {
           showFreeSpinsRetrigger(feature.spins)
         } else {
-          showFreeSpinsIntro(feature.spins, feature.multiplier)
+          // 표시는 커튼(modeTransition to:'freeSpins')이 뜰 때 한다 — 여기서는 데이터만 담아둔다.
+          freeSpinsIntroDataRef.current = { spins: feature.spins, multiplier: feature.multiplier }
         }
       }
       return
     }
 
+    // 승리 연출 B단계(라인/사이클) — WinStrip 아래에 "어떤 심볼이 얼마를 땄는지" 한 줄을 채운다.
+    // 렌더러는 첫 바퀴가 끝난 뒤(showWins가 resolve된 뒤)에도 다음 스핀 전까지 계속 순환하므로
+    // 이 이벤트들은 phase가 'idle'로 돌아간 뒤에도 계속 들어올 수 있다 — 의도된 동작이다.
+    if (event.type === 'winLine') {
+      lineLabelKeyRef.current += 1
+      setLineLabelSource({
+        kind: 'line',
+        symbol: event.symbol,
+        group: event.group,
+        ways: event.ways,
+        count: event.count,
+        win: event.win,
+        key: lineLabelKeyRef.current,
+      })
+      return
+    }
+
+    if (event.type === 'winCycle') {
+      // winTotal이 바로 뒤이어(같은 렌더 스텝 안에서 동기적으로) 오므로, 그 핸들러가 "첫 바퀴인지"
+      // 판정할 수 있도록 사이클 번호를 먼저 적어 둔다.
+      winCycleRef.current = event.cycle
+      lineLabelKeyRef.current += 1
+      setLineLabelSource({ kind: 'cycle', totalWin: event.totalWin, key: lineLabelKeyRef.current })
+      return
+    }
+
     if (event.type !== 'winTotal') return
 
+    // 등급 단어 배너는 더 이상 없다 — 이 이벤트는 이제 WinStrip 금액 롤업만 다룬다.
     const target = event.totalWin
     const duration = event.durationMs > 0 ? event.durationMs : 1
-    const bet = lastResultRef.current?.totalBet ?? 0
-    const multiple = bet > 0 ? target / bet : 0
-    const tier = resolveWinTier(event.tier, multiple)
+
+    if (winRafRef.current !== null) cancelAnimationFrame(winRafRef.current)
+    winRafRef.current = null
+
+    // 이 스핀 결과의 승리 연출은 계속 순환(A→B→A→...)하며 매 바퀴 winTotal을 다시 내보낸다.
+    // 0→목표값 롤업 애니메이션은 그 결과를 "처음 보여주는" 첫 바퀴(cycle 0)에서만 튼다 —
+    // 그 뒤로 도는 바퀴(cycle > 0)는 이미 확정된 금액이므로 다시 세는 척하지 않고 최종값을
+    // 그대로 유지한다(재설정 후 재애니메이션하면 사용자가 본 것처럼 매번 0부터 다시 세는
+    // 버그가 된다).
+    if (winCycleRef.current > 0) {
+      winSkipRef.current = false
+      setWinRollupValue(target)
+      return
+    }
 
     winSkipRef.current = false
-    if (winRafRef.current !== null) cancelAnimationFrame(winRafRef.current)
-    if (winHoldTimeoutRef.current !== null) {
-      clearTimeout(winHoldTimeoutRef.current)
-      winHoldTimeoutRef.current = null
-    }
-    setWinBanner({ tier })
-    setWinBannerValue(0)
+    setWinRollupValue(0)
 
     // 첫 rAF 틱의 timestamp 자체를 기준점으로 삼는다 (Odometer.tsx와 동일한 패턴) —
     // 별도로 `performance.now()`를 부르면 환경에 따라 rAF의 timestamp와 기준이 어긋날 수 있다.
     let startTs: number | null = null
     const step = (ts: number): void => {
       if (winSkipRef.current) {
-        setWinBannerValue(target)
+        setWinRollupValue(target)
         winRafRef.current = null
-        startWinHold(tier)
         return
       }
       if (startTs === null) startTs = ts
       const progress = Math.min(1, (ts - startTs) / duration)
-      setWinBannerValue(Math.round(target * progress))
+      setWinRollupValue(Math.round(target * progress))
       if (progress < 1) {
         winRafRef.current = requestAnimationFrame(step)
       } else {
         winRafRef.current = null
-        startWinHold(tier)
       }
     }
     winRafRef.current = requestAnimationFrame(step)
   }
 
-  // 새 스핀이 시작되면 이전 승리 배너/금액을 지운다.
+  // 새 스핀이 시작되면 이전 당첨 롤업/WinStrip 라인 문구를 지운다.
   useEffect(() => {
     if (phase !== 'spinning') return
-    setWinBanner(null)
-    setWinBannerValue(0)
+    setWinRollupValue(0)
+    setLineLabelSource(null)
     winSkipRef.current = false
+    winCycleRef.current = 0
     if (winRafRef.current !== null) {
       cancelAnimationFrame(winRafRef.current)
       winRafRef.current = null
     }
-    if (winHoldTimeoutRef.current !== null) {
-      clearTimeout(winHoldTimeoutRef.current)
-      winHoldTimeoutRef.current = null
-    }
   }, [phase])
 
-  // 언마운트 시 진행 중인 롤업 애니메이션/홀드 타이머를 정리한다.
+  // 언마운트 시 진행 중인 롤업 애니메이션을 정리한다.
   useEffect(() => {
     return () => {
       if (winRafRef.current !== null) cancelAnimationFrame(winRafRef.current)
-      if (winHoldTimeoutRef.current !== null) clearTimeout(winHoldTimeoutRef.current)
     }
   }, [])
 
   /**
-   * 승리 연출 중 탭하면(스테이지든 WinStrip이든) 현재 단계를 한 번에 하나씩 건너뛴다 — 릴 라인
-   * 순환은 렌더러의 clearWins()로 즉시 멈추고, 카운터/배너는 지금까지처럼 롤업 중이면 목표값으로
-   * 점프(그 뒤 홀드로 넘어간다), 홀드 중이면 배너를 바로 닫는다.
+   * showingWin 중 phase가 idle로 돌아오면(승리 연출의 첫 바퀴가 끝나면) 곧장 다음 스핀을 건다 —
+   * SPIN 버튼/스페이스로 "연출 스킵 + 즉시 다음 스핀"을 눌렀을 때만 세워지는 플래그다
+   * (handleSkipWinsAndAdvance 참고). 프리스핀 자동진행 타이머는 store.spin()이 항상
+   * cancelAutoSpin()으로 먼저 지우므로 여기서 따로 조율할 필요가 없다 — 사용자가 자동 진행을
+   * 기다리지 않고 지금 바로 이어가고 싶다는 뜻이라 기존 "탭하면 즉시 진행" 관행과 같다.
    */
-  const handleWinPresentationTap = (): void => {
-    rendererInstance?.clearWins?.()
-    if (winRafRef.current !== null) {
-      winSkipRef.current = true
-      return
-    }
-    if (winHoldTimeoutRef.current !== null) {
-      clearTimeout(winHoldTimeoutRef.current)
-      winHoldTimeoutRef.current = null
-      setWinBanner(null)
-    }
+  useEffect(() => {
+    if (phase !== 'idle' || !autoAdvanceAfterSkipRef.current) return
+    autoAdvanceAfterSkipRef.current = false
+    void spinAction()
+  }, [phase, spinAction])
+
+  /**
+   * SPIN 버튼(또는 스페이스)을 승리 연출 중(phase 'showingWin')에 누르면 부른다 — 릴 회전 자체를
+   * 건너뛰는 게 아니라(그건 requestSkip 몫) 승리 연출의 첫 바퀴만 즉시 접고(renderer.skipWins,
+   * 순환 자체는 멈추지 않는다) 곧장 다음 스핀으로 넘어간다. 롤업 카운터가 돌고 있었으면 사용자가
+   * 최종 금액을 잠깐이라도 보도록 목표값으로 점프시킨다.
+   */
+  const handleSkipWinsAndAdvance = (): void => {
+    if (winRafRef.current !== null) winSkipRef.current = true
+    rendererInstance?.skipWins?.()
+    autoAdvanceAfterSkipRef.current = true
   }
 
   /**
-   * 스테이지 탭 — 단계에 따라 다르게 동작한다:
-   * - phase === 'spinning'이면 "결과로 건너뛰기"(릴 회전을 접고 곧장 정지 위치로 붙인다). 서버
-   *   결과가 아직 안 왔으면 store가 알아서 spinTo 시작 시점에 즉시 건너뛴다(requestSkip 참고).
-   * - 그 외(승리 연출 중)에는 WinStrip 탭과 동일하게 처리한다(handleWinPresentationTap).
+   * 스테이지(릴 캔버스) 탭 — phase === 'spinning'일 때만 반응한다("결과로 건너뛰기": 릴 회전을
+   * 접고 곧장 정지 위치로 붙인다. 서버 결과가 아직 안 왔으면 store가 spinTo 시작 시점에 즉시
+   * 건너뛴다). 승리 연출 중(showingWin)에는 탭이 아무 것도 하지 않는다 — 사용자 피드백에 따라
+   * "연출을 끝내는" 탭 동작은 없앴다. 연출을 건너뛰고 싶으면 SPIN 버튼(또는 스페이스)을 쓴다.
    */
   const handleStageTap = (): void => {
-    if (phase === 'spinning') {
-      useGameStore.getState().requestSkip()
-      haptic('light')
-      return
-    }
-    handleWinPresentationTap()
+    // 커튼 전환이 도는 동안은 탭을 무시한다 — 화면이 완전히 가려진 채로 배경이 바뀌는 연출인데
+    // 그 틈에 스킵이 끼어들면 커튼이 걷힌 뒤 릴이 결과와 어긋나 보인다.
+    if (modeTransitioning) return
+    if (phase !== 'spinning') return
+    useGameStore.getState().requestSkip()
+    haptic('light')
   }
 
   // math가 준비되면 테마를 읽고 렌더러를 만든다. 실패해도 서버 스핀 자체는 막지 않는다.
@@ -461,6 +647,14 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     if (lastResult && lastResult.wins.length > 0) haptic('success')
   }, [lastResult])
 
+  // 디버그 프리셋 요청이 거절됐을 때(DEBUG_DISABLED/DEBUG_NO_MATCH)의 비차단 토스트 — 잠깐 보여주고
+  // 스스로 사라진다(사용자가 직접 닫을 필요 없이 스핀을 계속 진행할 수 있어야 한다).
+  useEffect(() => {
+    if (!debugMessage) return
+    const id = setTimeout(() => dismissDebugMessageAction(), 3000)
+    return () => clearTimeout(id)
+  }, [debugMessage, dismissDebugMessageAction])
+
   const betLevels = math?.betLevels ?? []
   // 프리스핀 중에는 진입 시 서버가 고정한 베팅액을 보여준다 — 셀렉터로 바꿀 수 없다.
   const currentBet = freeSpins ? freeSpins.totalBet : (betLevels[betIndex] ?? 0)
@@ -474,9 +668,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         ? currentBet / math.paylines.length
         : 0
     : 0
-  const isBusy = phase === 'spinning' || phase === 'showingWin'
+  const isBusy = phase === 'spinning' || phase === 'showingWin' || modeTransitioning
   // 프리스핀이 끝난 직후에도 종료 배너가 떠 있는 동안은 셀렉터를 계속 잠가 둔다(배너와 함께 풀린다).
-  const betLocked = freeSpins !== null || freeSpinsComplete
+  // 오토스핀이 도는 동안도 잠근다(업계 관행) — 판 사이의 짧은 idle 틈에 베팅이 바뀌면 사용자가
+  // 무장할 때 예상한 금액과 실제로 빠져나가는 금액이 어긋난다.
+  const betLocked = freeSpins !== null || freeSpinsComplete || autoSpin !== null
   // 페이테이블에 1개짜리 배당이 하나라도 있으면(단일 심볼이 1번 릴에 있을 때만 인정) 각주를 보여준다.
   const hasSingleCountPay = math ? Object.values(math.paytable).some((rule) => 1 in rule) : false
 
@@ -534,23 +730,71 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
 
   const title = gameSummary ? (locale === 'ko' && gameSummary.name.ko ? gameSummary.name.ko : gameSummary.name.en) : gameId
 
-  // WinStrip 표시값 — 우선순위: (1) 더블업 세션이 있고 승리 배너가 안 떠 있으면(롤업/홀드가
-  // 끝났으면) 걸려 있는 금액 + 받기/더블 버튼, (2) winBannerValue가 0이 아니면(굴러가는 중이거나
-  // 홀드가 끝났지만 다음 스핀 전이라 최종값이 남아 있는 경우) "WIN", (3) 0이고 프리스핀 중이면
-  // 누적 총액을 "FREE SPINS TOTAL", (4) 그 외(진짜 유휴)엔 "WIN 0".
+  // WinStrip 표시값 — 우선순위: (1) 더블업 세션이 있으면 걸려 있는 금액 + 받기/더블 버튼(사용자가
+  // 누르거나 만료될 때까지 고정 — 더 이상 승리 배너에 가려 깜빡이지 않는다, 애초에 배너 자체가
+  // 없어졌다), (2) winRollupValue가 0이 아니면(굴러가는 중이거나 다음 스핀 전이라 최종값이 남아
+  // 있는 경우) "WIN", (3) 0이고 프리스핀 중이면 누적 총액을 "FREE SPINS TOTAL", (4) 그 외
+  // (진짜 유휴)엔 "WIN 0".
   // math.gamble이 없는데(설정이 아예 없는 게임) gambleSession이 있는 건 있을 수 없는 상태지만,
   // 방어적으로 한 번 더 걸어 둔다 — 서버/엔진 쪽 계약이 어긋나도 UI가 조용히 숨는 쪽이 안전하다.
-  const showGambleActions = gambleSession !== null && math?.gamble !== undefined && !winBanner
+  const showGambleActions = gambleSession !== null && math?.gamble !== undefined
   const winStripAmount = showGambleActions
     ? gambleSession.pendingWin
-    : freeSpins && winBannerValue === 0
+    : freeSpins && winRollupValue === 0
       ? freeSpins.accumulatedWin
-      : winBannerValue
+      : winRollupValue
   const winStripLabel = showGambleActions
     ? t('gamblePendingWinLabel')
-    : freeSpins && winBannerValue === 0
+    : freeSpins && winRollupValue === 0
       ? t('freeSpinsTotalLabel')
       : t('winStripLabel')
+
+  // WinStrip 아래 프리스핀 진행 상황("프리스핀 5/8 ×2") — 릴 위에 그리던 명판을 대신한다.
+  // 렌더러 이벤트가 아니라 store의 freeSpins 상태(left/total/multiplier)를 쓰되, 커튼 전환이
+  // 도는 동안은 displayedFreeSpins(전환이 끝나야 갱신되는 스냅샷)를 대신 쓴다 — 릴은 아직 커튼에
+  // 가려 있는데 카운터만 먼저 갈아 끼워지면 어색하다. 배수는 1보다 클 때만 붙인다(×1은 정보가
+  // 없고 시야만 어지럽힌다 — 릴 위 명판이 지키던 규칙을 그대로 옮겼다).
+  const freeSpinsCounter = displayedFreeSpins
+    ? displayedFreeSpins.multiplier > 1
+      ? t('freeSpinsCounterWithMultiplier', {
+          left: displayedFreeSpins.left,
+          total: displayedFreeSpins.total,
+          multiplier: displayedFreeSpins.multiplier,
+        })
+      : t('freeSpinsCounter', { left: displayedFreeSpins.left, total: displayedFreeSpins.total })
+    : null
+
+  // WinStrip 아래 라인 문구 — 항상 최신 t()/locale/math로 지금 계산한다(handleRendererEvent는
+  // 원천 데이터만 담아 두고, 문구 자체는 여기서 만든다 — 렌더러 생성 시점에 캡처된 콜백 안에서
+  // 만들면 그 뒤 로케일을 바꿔도 옛 언어로 굳어버린다). 더블업 받기/더블 버튼이 떠 있는 동안에도
+  // 계속 보여준다 — 사용자가 "루핑 돌 때마다 어떤 심볼이 얼마 당첨됐는지" 반복 표기를 요청했고,
+  // WinStrip은 이 문구와 버튼 줄을 서로 다른 고정 높이 줄에 나눠 그려 자리를 다투지 않는다.
+  //
+  // 지급 종류별 문구 형태(winLineLabel은 이름만 주므로 count/ways/금액은 여기서 합성한다):
+  //   라인/그룹 승리: "위스키 ×3 · 20"        (이름, ×맞은개수, · 금액)
+  //   ways 승리:     "판다 ×5 · 4 ways · 348" (이름, ×맞은개수, · N ways, · 금액)
+  // 예전엔 winLineLabel이 스스로 "심볼 × N ways"를 만들고 여기서 다시 ×count를 이어 붙여
+  // "판다 × 4 ways ×5"처럼 이중으로 겹쳐 보였다 — 이제 이름/count/ways/금액을 한 곳에서만 합성한다.
+  const lineLabel: WinStripLineLabel | null = lineLabelSource
+    ? {
+        key: lineLabelSource.key,
+        text:
+          lineLabelSource.kind === 'cycle'
+            ? t('winStripCycleTotal', { amount: lineLabelSource.totalWin.toLocaleString('en-US') })
+            : math
+              ? [
+                  `${winLineLabel(math, lineLabelSource, locale)} ×${lineLabelSource.count}`,
+                  ...(lineLabelSource.ways ? [`${lineLabelSource.ways} ways`] : []),
+                  lineLabelSource.win.toLocaleString('en-US'),
+                ].join(' · ')
+              : '',
+        // 'text'는 항상 완전한 폴백 문구로 채워 둔다(위) — 아이콘은 그 위에 얹는 표시 방식일
+        // 뿐이다(사용자 요청: 심볼 이름 대신 이미지를 count번). 그룹 승리/이미지 없음이면
+        // buildWinLineIcons가 undefined를 돌려주고 WinStrip이 자동으로 text로 폴백한다.
+        icons:
+          lineLabelSource.kind === 'line' && math ? buildWinLineIcons(math, theme, locale, lineLabelSource) : undefined,
+      }
+    : null
 
   const handleSpin = (): void => {
     if (isBusy || !math) return
@@ -558,12 +802,64 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     void spinAction()
   }
 
-  // 스페이스바 단축키(데스크탑 편의) — phase === 'spinning'이면 탭과 동일하게 "결과로 건너뛰기",
-  // phase === 'idle'이고 시트/모달이 없고 프리스핀 자동 진행 중이 아니면 스핀을 시작한다.
-  // 둘 다 페이지 스크롤을 막고, 키를 누르고 있어도(오토리핏) keyup 전까지 한 번만 반응한다.
-  // 텍스트 입력/모달에 포커스가 가 있으면 아예 가로채지 않는다.
+  /** 오토스핀이 돌고 있는 동안 메인 버튼은 "중지 (남은 수)"로 바뀐다. */
+  const autoSpinning = autoSpin !== null
+
+  /** 오토스핀 시트에서 회수를 고르면 — 시트를 닫고 그 자리에서 무장한다(첫 판은 store가 건다). */
+  const handleAutoSpinPick = (count: number): void => {
+    setAutoSpinSheetOpen(false)
+    haptic('medium')
+    startAutoSpinAction(count)
+  }
+
+  /**
+   * 오토스핀 중지 — 지금 돌고 있는 판은 그대로 끝나고 다음 판만 취소된다(store.stopAutoSpin).
+   * 릴 건너뛰기(requestSkip)로 대신 해석하지 않는다: 오토스핀 중 메인 버튼은 오직 "중지"다.
+   */
+  const handleStopAutoSpin = (): void => {
+    stopAutoSpinAction()
+    haptic('light')
+  }
+
+  /**
+   * SPIN(/STOP) 버튼 클릭 — phase별로 다른 일을 한다:
+   * - 'spinning': STOP으로 바뀐 상태다 — 릴 회전만 건너뛴다(requestSkip). 프리젠테이션은 아직
+   *   시작도 안 했으니 건드릴 게 없다.
+   * - 'showingWin': 버튼은 여전히 SPIN(또는 FREE SPIN)으로 보인다 — 승리 연출을 접고 곧장 다음
+   *   스핀으로 넘어간다(handleSkipWinsAndAdvance).
+   * - 그 외('idle' 등): 평소처럼 새 스핀을 시작한다.
+   */
+  const handleSpinButtonClick = (): void => {
+    // 오토스핀 중이면 이 버튼은 "중지" 하나만 한다 — 커튼이 떠 있어도 눌러서 멈출 수 있어야 하므로
+    // (새 스핀을 거는 게 아니라 예약을 거두는 것뿐이다) 아래 커튼 가드보다 먼저 처리한다.
+    if (autoSpinning) {
+      handleStopAutoSpin()
+      return
+    }
+    // 커튼 전환이 도는 동안은 스핀/스킵 모두 무시한다 — phase가 이미 idle로 돌아와 있어도
+    // (예: 프리스핀 종료 전환처럼 결과가 도착한 직후부터 도는 경우) 커튼이 걷히기 전까진 막는다.
+    if (modeTransitioning) return
+    if (phase === 'spinning') {
+      useGameStore.getState().requestSkip()
+      haptic('light')
+      return
+    }
+    if (phase === 'showingWin') {
+      handleSkipWinsAndAdvance()
+      haptic('light')
+      return
+    }
+    handleSpin()
+  }
+
+  // 스페이스바 단축키(데스크탑 편의) — SPIN/STOP 버튼과 정확히 같은 phase별 동작을 따른다:
+  // 'spinning'이면 릴 스킵만, 'showingWin'이면 연출 스킵 + 즉시 다음 스핀, 'idle'이고 시트/모달이
+  // 없고 프리스핀 자동 진행 중이 아니면 스핀을 시작한다. 다 페이지 스크롤을 막고, 키를 누르고
+  // 있어도(오토리핏) keyup 전까지 한 번만 반응한다. 텍스트 입력/모달에 포커스가 가 있으면 아예
+  // 가로채지 않는다.
   useEffect(() => {
-    const isModalOpen = betSheetOpen || helpSheetOpen || errorCode === 'INSUFFICIENT_FUNDS' || gambleModalOpen
+    const isModalOpen =
+      betSheetOpen || helpSheetOpen || autoSpinSheetOpen || errorCode === 'INSUFFICIENT_FUNDS' || gambleModalOpen
 
     function isEditableTarget(target: EventTarget | null): boolean {
       if (!(target instanceof HTMLElement)) return false
@@ -584,10 +880,30 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       if (isActivatableTarget(event.target)) return
       if (spaceHeldRef.current) return // 오토리핏 — keyup에서 풀릴 때까지 무시한다.
 
+      // 오토스핀 중이면 스페이스도 메인 버튼과 똑같이 "중지"다 — 그렇지 않으면 판 사이의 짧은
+      // idle 틈에 스페이스가 여분의 스핀을 하나 더 끼워 넣는다.
+      if (autoSpinning) {
+        spaceHeldRef.current = true
+        event.preventDefault()
+        handleStopAutoSpin()
+        return
+      }
+
+      // 커튼 전환이 도는 동안은 스페이스도 무시한다(스핀 버튼과 동일 규칙).
+      if (modeTransitioning) return
+
       if (phase === 'spinning') {
         spaceHeldRef.current = true
         event.preventDefault()
         useGameStore.getState().requestSkip()
+        haptic('light')
+        return
+      }
+
+      if (phase === 'showingWin') {
+        spaceHeldRef.current = true
+        event.preventDefault()
+        handleSkipWinsAndAdvance()
         haptic('light')
         return
       }
@@ -610,9 +926,23 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-    // handleSpin은 매 렌더마다 새로 만들어지는 클로저라 deps에 넣어도 사실상 매번 재구독되지만,
-    // 명시해 두는 편이 "이 값들이 바뀌면 다시 걸어야 한다"는 의도를 정확히 드러낸다.
-  }, [phase, betSheetOpen, helpSheetOpen, errorCode, freeSpins, gambleModalOpen, handleSpin])
+    // handleSpin/handleSkipWinsAndAdvance는 매 렌더마다 새로 만들어지는 클로저라 deps에 넣어도
+    // 사실상 매번 재구독되지만, 명시해 두는 편이 "이 값들이 바뀌면 다시 걸어야 한다"는 의도를
+    // 정확히 드러낸다.
+  }, [
+    phase,
+    betSheetOpen,
+    helpSheetOpen,
+    autoSpinSheetOpen,
+    errorCode,
+    freeSpins,
+    gambleModalOpen,
+    modeTransitioning,
+    autoSpinning,
+    handleSpin,
+    handleSkipWinsAndAdvance,
+    handleStopAutoSpin,
+  ])
 
   const handleBetDec = (): void => {
     if (betLevels.length === 0) return
@@ -635,6 +965,27 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const handleRescueClaim = async (): Promise<void> => {
     const result = await claimRescue()
     if (result) dismissError()
+  }
+
+  /** 게임 제목 5탭(빠르게) — 숨은 제스처로 디버그 패널을 켠다(디버그 패널 참고). 껐다 켜는 UI는 없다. */
+  const handleTitleTap = (): void => {
+    const { complete, remaining } = evaluateTapGesture([...titleTapsRef.current, Date.now()])
+    if (complete) {
+      titleTapsRef.current = []
+      writeStoredDebugFlag(true)
+      setDebugEnabled(true)
+      return
+    }
+    titleTapsRef.current = remaining
+  }
+
+  /** 디버그 패널의 "연출 다시 재생" — 마지막 결과로 승리 연출만 다시 튼다(라인 문구도 다시 순환). */
+  const handleReplayWins = (): void => {
+    if (!rendererInstance || !lastResult) return
+    void rendererInstance.showWins(lastResult.wins, {
+      totalBet: lastResult.totalBet,
+      features: lastResult.features,
+    })
   }
 
   const openGambleModal = (): void => {
@@ -663,7 +1014,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     const pendingAtCollect = gambleSession?.pendingWin ?? 0
     setGambleCollecting(true)
     void collectGambleAction()
-      .then(() => setWinBannerValue(pendingAtCollect))
+      .then(() => setWinRollupValue(pendingAtCollect))
       .catch((err: unknown) => {
         // store가 이미 NOT_GAMBLEABLE(서버엔 세션이 없었음)은 로컬 세션 정리 + 잔액 새로고침까지
         // 끝내둔다 — 여기선 예외가 처리되지 않은 채 남지 않게만 한다.
@@ -704,7 +1055,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       // 졌을 땐 이미 0이고, 회수된 경우엔 지갑에 들어간 금액 그대로다. 세션이 계속되면(이겨서
       // 다음 단계로 넘어가면) gambleSession.pendingWin이 표시를 대신 맡으므로 손대지 않는다.
       if (outcome !== 'win' || response.stepsLeft === 0) {
-        setWinBannerValue(response.pendingWin)
+        setWinRollupValue(response.pendingWin)
       }
 
       if (gambleResultTimeoutRef.current !== null) clearTimeout(gambleResultTimeoutRef.current)
@@ -777,7 +1128,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         >
           ←
         </button>
-        <span className="hub-game-screen__title">{title}</span>
+        {/* onClick은 숨은 디버그 제스처(5번 빠르게 탭)다 — 평소 사용자에게는 아무 표시도 안 하고,
+            시각적으로도 버튼처럼 보이지 않게 그대로 둔다(디버그 패널 참고). */}
+        <span className="hub-game-screen__title" onClick={handleTitleTap}>
+          {title}
+        </span>
         <span className="hub-game-screen__jackpot-pill" aria-label={t('jackpot')}>
           <span aria-hidden="true">🎰</span>
           <Odometer value={jackpotPool} />
@@ -826,7 +1181,13 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           )}
           {freeSpinsComplete && (
             <div className="hub-game-screen__win-banner hub-game-screen__win-banner--freespins">
-              <span className="hub-game-screen__win-tier-label">{t('freeSpinsComplete')}</span>
+              <span className="hub-game-screen__win-tier-label">
+                {freeSpinsSummaryRef.current
+                  ? t('freeSpinsCompleteWithWin', {
+                      amount: freeSpinsSummaryRef.current.accumulatedWin.toLocaleString('en-US'),
+                    })
+                  : t('freeSpinsComplete')}
+              </span>
             </div>
           )}
           {lastResult?.jackpotWin !== undefined && (
@@ -847,21 +1208,45 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               )}
             </div>
           )}
-          {winBanner && (
-            <div className={`hub-game-screen__win-banner hub-game-screen__win-banner--${winBanner.tier}`}>
-              {/* 금액은 안 넣는다 — 등급 단어만 크고 짧게(WIN_HOLD_MS) 보여준다. 실제 금액은 WinStrip 몫. */}
-              <span className="hub-game-screen__win-tier-label">{t(winTierLabelKey(winBanner.tier))}</span>
-            </div>
-          )}
         </div>
+
+        {/* debugEnabled일 때만 마운트되는 진입점 — 절대 기본으로 보이면 안 된다(디버그 패널 참고).
+            stage 자체에 onClick(handleStageTap)이 있으므로 버블링을 막아야 스킵/탭-스킵을 대신
+            발동시키지 않는다. */}
+        {debugEnabled && (
+          <button
+            type="button"
+            className="hub-game-screen__debug-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              setDebugPanelOpen(true)
+            }}
+            aria-label={t('debugButtonLabel')}
+          >
+            🐞
+            {debugPreset && (
+              <span className="hub-game-screen__debug-btn-badge" aria-hidden="true">
+                {debugPreset.slice(0, 2).toUpperCase()}
+              </span>
+            )}
+          </button>
+        )}
+
+        {debugMessage && (
+          <div className="hub-game-screen__debug-toast" role="status">
+            {debugMessage.message}
+          </div>
+        )}
       </div>
 
-      {/* 굴러가는 중/홀드 중일 때만 탭 가능하게 한다 — 평소(유휴)엔 WinStrip이 그냥 숫자판이다.
-          더블업 세션이 있으면(그리고 승리 배너가 안 떠 있으면) 탭 대신 받기/더블 버튼을 보여준다. */}
+      {/* 탭으로 승리 연출을 건너뛰는 기능은 없앴다(사용자 피드백) — 연출 스킵은 SPIN 버튼/스페이스
+          몫이다(handleSkipWinsAndAdvance). 더블업 세션이 있으면 받기/더블 버튼을 보여준다 —
+          한 번 뜨면 사용자가 누르거나 만료될 때까지 고정이다(더 이상 승리 배너에 가려 깜빡이지 않는다). */}
       <WinStrip
         label={winStripLabel}
         amount={winStripAmount}
-        onTap={winBanner ? handleWinPresentationTap : undefined}
+        lineLabel={lineLabel}
+        freeSpinsCounter={freeSpinsCounter}
         gambleActions={
           showGambleActions
             ? {
@@ -896,7 +1281,52 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         />
       )}
 
+      {debugPanelOpen && (
+        <DebugPanel
+          onClose={() => setDebugPanelOpen(false)}
+          armedPreset={debugPreset}
+          onSetPreset={setDebugPresetAction}
+          busy={isBusy}
+          onReplay={handleReplayWins}
+          canReplay={Boolean(rendererInstance && lastResult)}
+          timing={lastSpinTiming}
+          lastResult={lastResult}
+          lastSpinDebug={lastSpinDebug}
+          phase={phase}
+          freeSpins={freeSpins}
+          gambleSession={gambleSession}
+        />
+      )}
+
       <div className="hub-game-screen__controls">
+        {/* 스핀 속도 3분할 세그먼트 — 예전엔 스핀 버튼 옆 ⚡ 순환 버튼이었다. 세 칸에 이름을 다
+            적으려면 폭이 필요해 베팅/스핀 줄 위 자체 줄로 올렸다(그 자리는 AUTO 버튼이 이어받았다) —
+            390px에서도 스핀 버튼을 좁히지 않고 세 칸 모두 편히 누를 수 있다. 설정 모달의 같은
+            항목과 값을 공유한다(useSettingsStore.spinSpeed 하나뿐이다). */}
+        <div
+          className="hub-game-screen__speed-seg"
+          role="radiogroup"
+          aria-label={t('spinSpeedTitle')}
+        >
+          {SPIN_SPEEDS.map((speed) => (
+            <button
+              key={speed}
+              type="button"
+              role="radio"
+              aria-checked={spinSpeed === speed}
+              data-active={spinSpeed === speed}
+              className="hub-game-screen__speed-seg-btn"
+              onClick={() => {
+                if (spinSpeed === speed) return
+                setSpinSpeedAction(speed)
+                haptic('light')
+              }}
+            >
+              {t(spinSpeedLabelKey(speed))}
+            </button>
+          ))}
+        </div>
+
         <div className="hub-game-screen__controls-row">
           <div className="hub-game-screen__bet">
             <button
@@ -929,8 +1359,37 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             </button>
           </div>
 
-          <button type="button" className="hub-game-screen__spin" onClick={handleSpin} disabled={isBusy || !math}>
-            {freeSpins ? t('freeSpinButton', { n: freeSpins.left }) : t('spin')}
+          {/* 오토스핀 중에는 이 버튼 하나가 "중지 (남은 수)"가 된다 — 별도의 중지 버튼을 두지
+              않는다(누르면 지금 도는 판만 마치고 멈춘다). */}
+          <button
+            type="button"
+            className={
+              phase === 'spinning' || autoSpinning
+                ? 'hub-game-screen__spin hub-game-screen__spin--stop'
+                : 'hub-game-screen__spin'
+            }
+            onClick={handleSpinButtonClick}
+            disabled={!math}
+          >
+            {autoSpinning
+              ? t('autoSpinStop', { n: autoSpin.remaining })
+              : phase === 'spinning'
+                ? t('stop')
+                : freeSpins
+                  ? t('freeSpinButton', { n: freeSpins.left })
+                  : t('spin')}
+          </button>
+
+          {/* 오토스핀 진입 — 회수(10/25/50/100)를 고르는 작은 중앙 모달을 연다. 프리스핀 중에는
+              그 자동진행이 루프의 주인이므로 무장할 수 없다. */}
+          <button
+            type="button"
+            className="hub-game-screen__auto-btn"
+            onClick={() => setAutoSpinSheetOpen(true)}
+            disabled={!math || autoSpinning || freeSpins !== null}
+            aria-label={t('autoSpinTitle')}
+          >
+            {t('autoSpin')}
           </button>
         </div>
 
@@ -940,6 +1399,32 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           </p>
         )}
       </div>
+
+      {/* 오토스핀 회수 선택 — 설정 모달과 같은 중앙 모달(Modal)을 쓴다(포커스 트랩/Esc/스크롤
+          잠금을 그대로 물려받는다). 무제한은 제공하지 않는다. */}
+      {autoSpinSheetOpen && (
+        <Modal onClose={() => setAutoSpinSheetOpen(false)} titleId={AUTO_SPIN_SHEET_TITLE_ID}>
+          <h2 id={AUTO_SPIN_SHEET_TITLE_ID} className="hub-sheet__title">
+            {t('autoSpinTitle')}
+          </h2>
+          <p className="hub-sheet__message">{t('autoSpinHint')}</p>
+          <div className="hub-autospin__counts">
+            {AUTO_SPIN_COUNTS.map((count) => (
+              <button
+                key={count}
+                type="button"
+                className="hub-autospin__count"
+                onClick={() => handleAutoSpinPick(count)}
+              >
+                {t('autoSpinCount', { n: count })}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="hub-sheet__close" onClick={() => setAutoSpinSheetOpen(false)}>
+            {t('close')}
+          </button>
+        </Modal>
+      )}
 
       {errorCode === 'INSUFFICIENT_FUNDS' && (
         <div className="hub-sheet-backdrop" role="presentation" onClick={dismissError}>

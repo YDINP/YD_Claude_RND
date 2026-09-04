@@ -52,6 +52,8 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
 | 503 | `GAMBLE_TIMEOUT` | 더블업이 락 제한 시간 안에 끝나지 않음. **같은 키로 재시도**하면 된다 |
 | 500 | `INTERNAL` | 라우트가 잡지 못한 예외 |
 | 503 | `SPIN_TIMEOUT` | 스핀이 `SPIN_LOCK_TIMEOUT_MS` 안에 끝나지 않음. **같은 키로 재시도**하면 된다 |
+| 400 | `DEBUG_DISABLED` | `SpinRequest.debug`를 보냈는데 `API_ALLOW_DEV_MOCK`이 꺼져 있음 |
+| 409 | `DEBUG_NO_MATCH` | `debug.maxTries` 안에 프리셋 조건을 만족하는 시드를 못 찾음 (또는 `gamble` 프리셋인데 그 게임에 `gamble` 설정이 없음) |
 
 ### 스핀 요청/응답
 
@@ -82,6 +84,39 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
 
 같은 `idempotencyKey`로 다시 보내면 지갑을 건드리지 않고 **완전히 같은 응답**을 돌려준다
 (네트워크 재전송 대비). 진행 중인 스핀이 있는 상태에서 **다른** 키가 오면 409다.
+
+### 개발 전용: 강제 결과 프리셋 (`debug`)
+
+`API_ALLOW_DEV_MOCK=true`일 때만 동작한다. **꺼져 있으면(프로덕션 기본값) 요청 자체가 400
+`DEBUG_DISABLED`로 거부된다.** 당첨 연출 QA를 위해 다음 스핀이 특정 조건을 만족할 때까지
+서버가 시드를 다시 뽑아 본다.
+
+```jsonc
+// POST /games/sheriff-sixgun/spin
+{ "totalBet": 100, "idempotencyKey": "a-client-generated-key",
+  "debug": { "preset": "freeSpins", "maxTries": 5000 } }   // maxTries 생략 시 기본 5000 (1~20000)
+
+// 200 (성공하면 일반 SpinResponse에 debug 블록이 더 실린다)
+{ "...": "...", "debug": { "preset": "freeSpins", "triesUsed": 42 } }
+```
+
+| `preset` | 조건 |
+|---|---|
+| `win` | 당첨은 있지만 피처(프리스핀/스캐터 등)는 없음 |
+| `bigWin` | 총 베팅의 10배 이상 |
+| `freeSpins` | 프리스핀 진입/재발동 피처 발생 (그 게임에 스캐터/프리스핀 설정이 없으면 영원히 못 찾는다) |
+| `gamble` | 유료 스핀 당첨으로 더블업 제안이 열림 (그 게임에 `math.json`의 `gamble`이 없으면 탐색 없이 바로 409) |
+| `lose` | 무당첨에 피처도 없음 |
+
+**동작 방식.** 실제 스핀 경로와 똑같은 RNG 파생(`${seed}:${nonce}`)과 엔진 함수로, 지갑·원장·
+라운드를 건드리지 않고 조건을 만족하는 시드가 나올 때까지 반복한다(dry-run). `maxTries` 안에
+못 찾으면 409 `DEBUG_NO_MATCH`. 매칭된 시드로 실제 라운드를 그대로 진행하므로 잭팟·미션·레벨업·
+프리스핀·더블업 등 나머지 경로는 일반 스핀과 완전히 같다. **시드는 어떤 경우에도 로그에 남기지
+않는다.**
+
+**멱등성.** `debug`가 있어도 재전송 시맨틱은 바뀌지 않는다 — 같은 `idempotencyKey`로 다시
+보내면 재검색 없이 저장된 결과를 그대로 돌려주고, 그 응답에는 `debug` 블록이 실리지 않는다
+(그 스핀을 다시 계산한 게 아니라는 신호다).
 
 ## 허브 경제 (Phase 3)
 

@@ -57,8 +57,9 @@ pnpm --filter @tgslot/theme-gen gen games/classic-777 --reprocess --only frame
 | `THEME_GEN_QUALITY` | `medium` | gpt-image-1 품질 (`low`/`medium`/`high`) |
 | `COMFY_URL` | `http://127.0.0.1:8188` | ComfyUI 서버 주소 |
 | `COMFY_CHECKPOINT` | `sd_xl_base_1.0.safetensors` | ComfyUI 체크포인트 |
-| `CODEX_TIMEOUT_MS` | `300000` (5분) | codex 이미지 생성 1건 상한 |
+| `CODEX_TIMEOUT_MS` | `300000` (5분, `kind: "sheet"`는 `540000`/9분) | codex 이미지 생성 1건 상한. 주면 kind 기본값보다 우선한다 |
 | `CODEX_AVAILABLE` | - | `1`이면 `codex login status` 실행 없이 codex를 가용한 것으로 취급 (테스트/CI용) |
+| `CODEX_GENERATED_IMAGES_DIR` | 자동 탐색 | codex `generated_images` 2차 salvage 루트 오버라이드. OS 경로 구분자로 여러 폴더 나열 가능 |
 
 ## 프로바이더별 동작
 
@@ -79,8 +80,9 @@ openai/gemini/comfy는 429/5xx 응답을 지수 백오프로 2회 재시도한�
 
 사용자가 이미 `codex login`으로 ChatGPT에 로그인해 둔 Codex CLI(`codex`, PATH에 있어야 함)를
 서브프로세스로 띄워 내장 이미지 생성 도구(`image_gen__imagegen`)를 쓰게 시킨다.
-API 키가 필요 없는 대신, **자산 1개에 1~3분** 걸릴 수 있어 (CODEX_TIMEOUT_MS 기본 5분 상한)
-`gen` 명령은 codex를 쓸 때 자산을 항상 순차 실행한다(병렬 실행 안 함).
+API 키가 필요 없는 대신, **자산 1개에 1~3분** 걸릴 수 있어 (`CODEX_TIMEOUT_MS` 기본 5분 상한,
+`kind: "sheet"`는 기본 9분 — 아래 참고) `gen` 명령은 codex를 쓸 때 자산을 항상 순차 실행한다
+(병렬 실행 안 함).
 
 - 매 자산마다 `os.tmpdir()` 아래 임시 폴더를 만들고
   `spawn('codex', ['exec', '--skip-git-repo-check', '-s', 'workspace-write', '-o', 'last.txt'], { cwd: 임시폴더 })`를
@@ -114,6 +116,54 @@ API 키가 필요 없는 대신, **자산 1개에 1~3분** 걸릴 수 있어 (CO
   `kill()`하면 그 아래 codex.cmd → node.exe(→ codex가 또 띄웠을 수 있는 프로세스)가 고아로
   남으므로, `taskkill /pid <pid> /T /F`로 트리 전체를 죽인다. POSIX는 새 프로세스 그룹으로
   띄운 뒤 음수 pid로 그룹 전체를 죽인다. 둘 다 안 되면 최소한 직계 자식은 정리한다.
+- **타임아웃 시 out.png 회수(salvage)**: `kind: "sheet"`처럼 프롬프트가 길고 3x3 콘택트시트를
+  그려야 하는 자산은, codex가 `out.png`를 다 쓰고 나서도 PowerShell로 이미지를 검사하는 등
+  후속 확인 단계를 몇 분 더 돌리다가 타임아웃에 걸리는 경우가 실측됐다. 그래서 타임아웃이
+  나면 곧바로 실패로 보지 않고 임시 폴더의 `out.png`가 이미 유효한 PNG(0바이트 아님, sharp로
+  디코드됨)인지 먼저 확인한다 — 유효하면 프로세스 트리를 죽이고 **그 파일을 성공 결과로
+  반환한다**(재시도하지 않는다). 유효한 파일이 없을 때만 기존처럼 타임아웃 에러를 던진다.
+- **generated_images 폴더 회수(2차 salvage)**: `out.png` 회수(위 항목)로도 못 건졌을 때 —
+  즉 codex가 이미지 생성 자체는 끝냈지만 임시 작업 폴더로 복사하는 마지막 단계에서 실패한
+  경우 — 마지막으로 한 번 더 시도한다. codex CLI(Orca 계정 매니저 경유 포함)가 생성한 이미지는
+  보통 계정 홈의 `generated_images` 아래 `<uuid>/exec-<uuid>.png` 형태로 그대로 남아 있다.
+  `resolveGeneratedImagesDirs()`가 다음 순서로 후보 루트를 찾는다(계정 id는 하드코딩하지 않고
+  매번 디렉터리를 나열해서 찾는다):
+  1. `createCodexProvider({ generatedImageRoots: [...] })` 옵션 (최우선, 테스트/CI용 강제 지정)
+  2. `CODEX_GENERATED_IMAGES_DIR` 환경변수 — OS 경로 구분자(`;`/`:`)로 여러 폴더를 나열 가능
+  3. 자동 탐색 — `%APPDATA%\orca\codex-accounts\*\home\generated_images`(계정별로 전부) +
+     `~/.codex/generated_images`(있으면)
+
+  찾은 루트들 아래(최대 3단계 재귀) `.png`를 전부 모아 **이 실행이 시작된 시각(spawn 직전
+  ± 5초 스큐) 이후** mtime을 가진 것만 남기고, 최신순으로 하나씩 sharp 디코드를 검증해 유효한
+  첫 파일을 성공 결과로 쓴다(손상/0바이트면 건너뛰고 다음 후보로). 원본 파일은 다른 도구가
+  참조할 수 있어 **절대 지우거나 옮기지 않는다**(읽기 전용). 회수하면
+  `[theme-gen] codex: <id> out.png는 없지만 생성 이미지 폴더에서 회수한다: <path>` 로그를 남긴다.
+
+  **전체 우선순위**: out.png(정상 완료) → out.png(타임아웃 회수) → generated_images 폴더
+  회수 → 에러.
+- **조기 종료(early exit)**: 기본으로 2.5초 간격으로 `out.png` 크기를 두 번 연속(≈5초) 확인해
+  변화가 없으면 — 즉 codex가 이미지 쓰기는 끝냈고 이후 검증 단계만 도는 상태로 보고 —
+  전체 타임아웃을 기다리지 않고 곧바로 프로세스를 죽이고 그 파일로 성공 처리한다. `sheet`
+  자산이 특히 빨라진다. `createCodexProvider({ earlyExitOnOutput: false })`로 끌 수 있다.
+- **kind별 기본 타임아웃**: `kind: "sheet"`는 `DEFAULT_CODEX_SHEET_TIMEOUT_MS`(9분)를 기본으로
+  쓰고, 나머지 kind는 `DEFAULT_CODEX_TIMEOUT_MS`(5분)를 쓴다. `prompts.json`의 asset에
+  `"timeoutMs": <ms>`를 넣으면 그 자산 하나만 오버라이드할 수 있고, `CODEX_TIMEOUT_MS`
+  환경변수(또는 `--provider codex` 실행 시 CLI가 읽는 값)를 주면 kind 기본값보다 우선해
+  전체를 오버라이드한다(우선순위: asset.timeoutMs > `CODEX_TIMEOUT_MS` > kind 기본값).
+- **남은 임시 폴더 정리**: 실패(타임아웃인데 회수도 못 했거나, `out.png` 자체를 못 만든 경우)
+  하면 진단을 위해 임시 폴더를 지우지 않고 남겨둔다. 이름은
+  `<os.tmpdir()>/tgslot-codex-<asset id>-<임의 6글자>` 형태다(`CODEX_TEMP_DIR_PREFIX` 상수).
+  실패 원인을 다 확인했다면 그냥 지워도 안전하다 — 다음 실행이 매번 새 폴더를 만들기 때문에
+  이 폴더들을 재사용하지 않는다. Windows PowerShell 예시:
+
+  ```powershell
+  Remove-Item "$env:TEMP\tgslot-codex-*" -Recurse -Force
+  ```
+
+  성공한 자산도 Windows에서는 방금 죽인 codex 프로세스 트리의 파일 핸들이 잠깐 남아 있어
+  임시 폴더 삭제가 EPERM/EBUSY 등으로 실패할 수 있다. 이 경우 몇 차례 짧게 재시도한 뒤에도
+  안 지워지면 경고만 남기고(생성 자체는 성공으로 처리) 폴더를 남겨둔다 — 위와 같이 수동으로
+  지워도 안전하다.
 
 ## 후처리
 
@@ -321,5 +371,12 @@ pnpm --filter @tgslot/theme-gen test
 - `out` 경로 안전성: 절대경로/`..` 탈출 거부, `kind: "sheet"`는 `.webp` 확장자 강제
 - codex: spawn 실패는 다른 프로바이더처럼 2회 재시도(정확한 시도 횟수 확인), 시간 초과는
   재시도하지 않는지(정확히 1회만 실행)
+- codex: `generated_images` 2차 salvage — out.png 없이(exit 1) 실행 시작 이후 생성된 이미지를
+  회수하는지, 시작 이전 파일만 있으면 여전히 실패하는지, 후보가 여럿이면 최신 mtime을 고르는지,
+  최신 후보가 손상/0바이트면 건너뛰고 다음 후보로 넘어가는지, 유효한 후보가 아예 없으면 기존
+  에러로 실패하는지, 타임아웃 회수(out.png)도 실패했을 때 한 번 더 폴백하는지,
+  `CODEX_GENERATED_IMAGES_DIR` 환경변수로 루트를 지정할 수 있는지 — `resolveGeneratedImagesDirs`의
+  옵션/환경변수/자동 탐색(`%APPDATA%\orca\codex-accounts\*\home\generated_images`,
+  `~/.codex/generated_images`) 우선순위와 중복 제거도 별도로 검증
 - 실행 요약 로그(`formatRunSummary`): 생성/skip 개수, 시간 ms/s 단위 전환, 바이트 B/KB/MB
   단위 전환, skip된 자산은 합계에서 제외되는지, 결과가 비어 있어도 안 던지는지

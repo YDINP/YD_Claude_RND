@@ -256,7 +256,7 @@ export interface WindowFitInput {
   window?: FrameWindow
   reels: number
   rows: number
-  /** 프레임이 컨테이너 폭을 넘어도 되는 비율. 기본 `DEFAULT_OVERFLOW_X`(0.30). */
+  /** 프레임이 컨테이너 폭을 넘어도 되는 비율. 기본 `DEFAULT_OVERFLOW_X`(0 = 잘리지 않음). */
   overflowX?: number
 }
 
@@ -279,10 +279,11 @@ export interface WindowFitLayout {
  * 릴 **창**을 컨테이너에 최대한 채우는 배치.
  *
  * 프레임 전체를 폭에 맞추면(=`fit: 'width'`) 마퀴와 레전드가 자리를 다 먹어 릴이 작아진다.
- * 그래서 **릴 창의 폭이 컨테이너 폭과 같아지는** 배율을 노린다. 좌우 기둥은 잘려 나가도 좋다.
- * `overflowX`는 그 위에 얹는 안전 상한이고,
+ * 그래서 **릴 창의 폭이 컨테이너 폭과 같아지는** 배율을 노린다.
+ * 다만 기본값(`overflowX: 0`)에서는 프레임이 좌우로 잘리지 않는 배율이 그 위의 상한이다 —
+ * 창을 꽉 채우려다 기둥과 레일이 화면 밖으로 나가면 아트가 잘린 것으로 보인다.
  * 세로로는 프레임 전체가 컨테이너에 들어오는 배율을 상한으로 삼는다.
- * 셋 중 가장 빡빡한 것이 이긴다. 보통은 세로가 먼저 걸린다.
+ * 셋 중 가장 빡빡한 것이 이긴다.
  *
  * 캔버스는 **언제나 컨테이너 전체**다. 잘라내는 일은 컨테이너의 overflow만 한다.
  * 프레임이 세로로 들어가면 프레임 전체를 가운데 맞추고, 넘치면 **창**을 가운데 맞춘다.
@@ -297,10 +298,15 @@ export function computeWindowFitLayout(input: WindowFitInput): WindowFitLayout {
   const containerHeight = Math.max(0, input.containerHeight)
   const overflowX = Math.max(0, input.overflowX ?? DEFAULT_OVERFLOW_X)
 
-  // 목표: 릴 창의 폭이 컨테이너 폭과 같아진다. 좌우 기둥은 통째로 잘려도 좋다.
+  // 목표: 릴 창의 폭이 컨테이너 폭과 같아진다.
   const byWindowWidth = containerWidth / (window.w * frameWidth)
-  // 그래도 프레임이 무한정 커지지는 않게 넘침 허용치로 한 번 더 묶는다.
-  const byWidth = (containerWidth * (1 + overflowX)) / frameWidth
+  // 가로 정렬은 프레임이 아니라 **창**을 가운데 둔다(아래 참고). 그래서 창을 가운데 놓았을 때
+  // 프레임이 실제로 요구하는 폭은 "창 + 넓은 쪽 여백 x 2"다. 아트의 창이 정중앙에 있으면
+  // 이 값은 프레임 폭 그대로이고, 한쪽으로 치우쳐 있으면 그만큼 더 넓다.
+  // 이걸 프레임 폭으로 대신 쓰면 치우친 아트가 한쪽만 잘려 나간다.
+  const sideMargin = Math.max(window.x, 1 - window.x - window.w)
+  const footprint = window.w + 2 * sideMargin
+  const byWidth = (containerWidth * (1 + overflowX)) / (frameWidth * Math.max(footprint, window.w))
   // 높이를 못 재는 컨테이너(레이아웃 전)에서는 폭만으로 정한다.
   const byHeight = containerHeight > 0 ? containerHeight / frameHeight : Number.POSITIVE_INFINITY
   const scale = Math.max(Number.MIN_VALUE, Math.min(byWindowWidth, byWidth, byHeight))

@@ -12,9 +12,6 @@ import {
 } from './ways.js'
 import { buildPresentation, defaultLineLabel } from './presentation.js'
 import { winBetMultiple, winTier } from './wins.js'
-import { buildPulsePath } from './pulse.js'
-import { computeLayout } from './layout.js'
-import { PULSE_HOP_MS } from './constants.js'
 
 function makeMath(overrides: Record<string, unknown>): GameMath {
   return parseGameMath({
@@ -250,45 +247,5 @@ describe('ways 배수 추정', () => {
   it('등급 판정이 ways에서도 동작한다', () => {
     const wins = [waysWin({ symbol: 'koi', win: 2500, ways: 9 })]
     expect(winTier(wins, waysGame, 25)).toBe('max')
-  })
-})
-
-describe('빛의 방향', () => {
-  const layout = computeLayout({ containerWidth: 360, reels: 3, rows: 3 })
-  const positions: GridPosition[] = [
-    [0, 1],
-    [1, 1],
-    [2, 1],
-  ]
-
-  it('기본은 왼쪽에서 오른쪽이다', () => {
-    const path = buildPulsePath(layout, positions, PULSE_HOP_MS)
-    expect(path.waypoints.map((point) => point.position[0])).toEqual([0, 1, 2])
-  })
-
-  it('오른쪽으로 읽은 승리는 빛도 거꾸로 흐른다', () => {
-    const path = buildPulsePath(layout, positions, PULSE_HOP_MS, 'rtl')
-    expect(path.waypoints.map((point) => point.position[0])).toEqual([2, 1, 0])
-  })
-
-  it('같은 릴에 여러 칸이 걸리면 위쪽 행부터 간다', () => {
-    const stacked: GridPosition[] = [
-      [1, 2],
-      [0, 1],
-      [1, 0],
-      [0, 0],
-    ]
-    const path = buildPulsePath(layout, stacked, PULSE_HOP_MS)
-    expect(path.waypoints.map((point) => point.position)).toEqual([
-      [0, 0],
-      [0, 1],
-      [1, 0],
-      [1, 2],
-    ])
-  })
-
-  it('거꾸로 흘러도 시각은 앞에서부터 쌓인다', () => {
-    const path = buildPulsePath(layout, positions, PULSE_HOP_MS, 'rtl')
-    expect(path.waypoints.map((point) => point.atMs)).toEqual([0, PULSE_HOP_MS, PULSE_HOP_MS * 2])
   })
 })

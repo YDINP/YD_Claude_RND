@@ -6,13 +6,14 @@ describe('settings store', () => {
     vi.resetModules()
   })
 
-  it('defaults to auto locale, sound/haptics on, and reducedMotion off when nothing is stored', async () => {
+  it('defaults to auto locale, sound/haptics on, reducedMotion off, and normal spin speed when nothing is stored', async () => {
     const { useSettingsStore } = await import('./settings')
     const state = useSettingsStore.getState()
     expect(state.locale).toBe('auto')
     expect(state.sound).toBe(true)
     expect(state.haptics).toBe(true)
     expect(state.reducedMotion).toBe(false)
+    expect(state.spinSpeed).toBe('normal')
   })
 
   it('persists changes to localStorage under tgslot.settings', async () => {
@@ -22,15 +23,22 @@ describe('settings store', () => {
     useSettingsStore.getState().setSound(false)
     useSettingsStore.getState().setHaptics(false)
     useSettingsStore.getState().setReducedMotion(true)
+    useSettingsStore.getState().setSpinSpeed('turbo')
 
     const stored = JSON.parse(localStorage.getItem('tgslot.settings') ?? '{}')
-    expect(stored).toEqual({ locale: 'ko', sound: false, haptics: false, reducedMotion: true })
+    expect(stored).toEqual({
+      locale: 'ko',
+      sound: false,
+      haptics: false,
+      reducedMotion: true,
+      spinSpeed: 'turbo',
+    })
   })
 
   it('restores persisted settings on the next module load', async () => {
     localStorage.setItem(
       'tgslot.settings',
-      JSON.stringify({ locale: 'ko', sound: false, haptics: false, reducedMotion: true }),
+      JSON.stringify({ locale: 'ko', sound: false, haptics: false, reducedMotion: true, spinSpeed: 'quick' }),
     )
 
     const { useSettingsStore } = await import('./settings')
@@ -40,6 +48,19 @@ describe('settings store', () => {
     expect(state.sound).toBe(false)
     expect(state.haptics).toBe(false)
     expect(state.reducedMotion).toBe(true)
+    expect(state.spinSpeed).toBe('quick')
+  })
+
+  it('cycles through spin speeds and ignores a malformed stored spinSpeed value', async () => {
+    localStorage.setItem('tgslot.settings', JSON.stringify({ spinSpeed: 'ludicrous' }))
+    const { useSettingsStore } = await import('./settings')
+
+    expect(useSettingsStore.getState().spinSpeed).toBe('normal')
+
+    useSettingsStore.getState().setSpinSpeed('quick')
+    expect(useSettingsStore.getState().spinSpeed).toBe('quick')
+    useSettingsStore.getState().setSpinSpeed('turbo')
+    expect(useSettingsStore.getState().spinSpeed).toBe('turbo')
   })
 
   it('ignores malformed stored JSON and falls back to defaults', async () => {

@@ -97,7 +97,7 @@
     {
       "id": "frame",
       "kind": "frame",
-      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed square artwork with no isolated chroma background around the frame itself — a wide-window square saloon-sign cabinet frame on a weathered dark wood body with brass rivets, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-17%: a dark wood plank plate with a carved rope-lettering border, engraved wordmark 'SHERIFF'S SIX-GUN' in bold western slab-serif caps burned into the wood, no other text. The reel window occupies x 4%-96% and y 19%-81% (the dominant element of the frame), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a thin 1% brass rim running just outside the green (this window will later be replaced with the live reel canvas). Two slim weathered-wood side rails run the height of the window, each at most 3% of the frame width, studded with small brass rivets for detail without bulk. The bottom y 83%-100% is a plain weighted dark wood base molding shaped like a horseshoe, with soft ambient shadow, no legend strip, no payline icons, no additional text. Overall symmetrical, centered, no characters. The reel window is clearly wider than tall (about 3:2 landscape proportion) so a 5-reel by 3-row grid fills it edge to edge; the frame's overall canvas is square.",
+      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed square artwork with no isolated chroma background around the frame itself — a wide-window square saloon-sign cabinet frame on a weathered dark wood body with brass rivets, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-17%: a dark wood plank plate with a carved rope-lettering border, engraved wordmark 'SHERIFF'S SIX-GUN' in bold western slab-serif caps burned into the wood, no other text. The reel window occupies x 2%-98% and y 19%-81% (the dominant element of the frame), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a hairline 0.5% brass rim running just outside the green (this window will later be replaced with the live reel canvas). Two slim weathered-wood side rails run the height of the window, each at most 1.5% of the frame width, studded with small brass rivets for detail without bulk. The bottom y 83%-100% is a plain weighted dark wood base molding shaped like a horseshoe, with soft ambient shadow, no legend strip, no payline icons, no additional text. Overall symmetrical, centered, no characters. The reel window is clearly wider than tall (about 3:2 landscape proportion) so a 5-reel by 3-row grid fills it edge to edge; the frame's overall canvas is square. The window must reach almost to the left and right edges of the canvas so that on a phone the reels span nearly the full screen width; put all decorative bulk in the marquee above and the base below, never at the sides.",
       "size": "1024x1024",
       "transparent": true,
       "out": "theme/frame.webp",
@@ -129,6 +129,51 @@
       "transparent": false,
       "out": "thumb.webp",
       "outSize": 640
+    },
+    {
+      "id": "sheriff-win",
+      "kind": "sheet",
+      "symbol": "sheriff",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a stylized 3D toy-like bust portrait of a rugged cartoon sheriff character wearing a worn brown leather hat and a brass star badge on his vest, a thick sun-weathered mustache, warm sunset-orange rim light along one side of his face, painted-toy material finish, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background. Win-celebration animation timeline across the sequence: frames 1-3 the symbol scales up slightly larger while a warm glow in the theme's accent color ignites and builds around its edges; frames 4-6 a brilliant diagonal light sweep passes across its surface like a lens flare, with small bright sparkles bursting off the edges; frames 7-9 it settles back to its resting scale as the glow fades smoothly back toward the idle state, matching frame 1 closely enough for a seamless loop back to the start. All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background, changes between cells limited to the described glow, light, sparkle and pose motion.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/sheriff-win.webp",
+      "outSize": 768
+    },
+    {
+      "id": "wild-win",
+      "kind": "sheet",
+      "symbol": "wild",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a glossy brass sheriff star badge with five points, a weathered leather backing strap, engraved 'WILD' in bold brass western slab-serif caps across the center, a subtle dusty patina on the brass surface, warm golden glow emanating from the star's points, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background. Win-celebration animation timeline across the sequence: the symbol pulses steadily brighter and dimmer throughout, its outer rays or ornaments extend slightly outward and rotate a total of 20 degrees clockwise across the sequence, individual highlights flash brightly in quick succession as the rotation sweeps past them, small glowing particles in the theme's accent color drift and orbit slowly around it, ending close enough to frame 1's rotation and brightness for a seamless loop back to the start. All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background, changes between cells limited to the described glow, light, sparkle and pose motion.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/wild-win.webp",
+      "outSize": 768
+    },
+    {
+      "id": "scatter-win",
+      "kind": "sheet",
+      "symbol": "scatter",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "Stylized 3D toy-like icon render, 3/4 top-down camera angle, warm dusty studio lighting with a low sunset rim light, desert ochre (#c9884a) and night-sky navy (#1b2437) color story with sage green (#7e9a72) and sunset orange (#e2683a) accents, worn leather, brushed brass rivets, and weathered wood grain materials, crisp clean silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a round weathered bronze bounty coin embossed with a horseshoe-and-star relief, a frayed rope loop threaded through a small hole at the top, sunset-orange highlight along one edge, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background. Win-celebration animation timeline across the sequence: frames 1-3 the symbol tilts and spins a quarter turn while a burst of sparkles radiates outward from its center; frames 4-6 it flashes to peak brightness with a ring-shaped shockwave of light expanding past its edges and thin light rays fanning out; frames 7-9 the sparkles fall away and it rotates back to its original orientation and brightness, matching frame 1 closely enough for a seamless loop back to the start. All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background, changes between cells limited to the described glow, light, sparkle and pose motion.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/scatter-win.webp",
+      "outSize": 768
     }
   ]
 }

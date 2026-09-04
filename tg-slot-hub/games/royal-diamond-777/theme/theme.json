@@ -15,10 +15,10 @@
   "background": "bg.webp",
   "frameLayout": {
     "window": {
-      "x": 0.08375,
-      "y": 0.29859375,
-      "w": 0.83640625,
-      "h": 0.4809375
+      "x": 0.05640625,
+      "y": 0.29078125,
+      "w": 0.895,
+      "h": 0.473125
     }
   },
   "version": "1.0.0",
@@ -175,6 +175,17 @@
           "durationMs": 700
         }
       ]
+    }
+  },
+  "sheets": {
+    "wild": {
+      "win": "sheets/wild-win.json"
+    },
+    "diamond": {
+      "win": "sheets/diamond-win.json"
+    },
+    "seven": {
+      "win": "sheets/seven-win.json"
     }
   }
 }

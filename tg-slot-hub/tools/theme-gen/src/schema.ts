@@ -41,6 +41,11 @@ export const PromptAssetSchema = z
     grid: SheetGridSchema.optional(),
     /** `kind: "sheet"` 전용: 재생 fps. */
     fps: z.number().int().positive().optional(),
+    /**
+     * codex 프로바이더 전용 타임아웃(ms) 오버라이드. 기본은 kind별 기본값
+     * (`sheet`는 `DEFAULT_CODEX_SHEET_TIMEOUT_MS`, 그 외는 `DEFAULT_CODEX_TIMEOUT_MS`)이다.
+     */
+    timeoutMs: z.number().int().positive().optional(),
   })
   .superRefine((asset, ctx) => {
     if (isUnsafeOutPath(asset.out)) {

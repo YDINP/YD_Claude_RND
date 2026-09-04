@@ -34,16 +34,13 @@ export function groupMembers(math: GameMath, groupId: string): string[] {
 }
 
 /**
- * 승리 라인 하나의 표시 이름. `group`으로 맞았으면 그룹 이름, 아니면 심볼 이름.
- * ways 지급(`win.ways`가 있음)이면 "심볼 × N ways"로 붙인다 — "ways"는 장르 용어라 로케일과
- * 무관하게 영어 그대로 둔다(렌더러 팀 예시 문구도 한국어 라벨에서 "ways"를 그대로 썼다).
- * 라인 게임은 라인 1개당 배당이라 경로 수 개념이 없으므로 `ways`가 없으면 이름만 돌려준다.
+ * 승리 라인 하나의 표시 "이름"만 돌려준다 — `group`으로 맞았으면 그룹 이름, 아니면 심볼 이름.
+ * count/ways/금액은 여기서 붙이지 않는다: 지급 종류(라인/ways/그룹)마다 자연스러운 순서가
+ * 달라서(예: ways는 "심볼 ×count · N ways · 금액"), 그 합성은 실제로 문구를 그리는 호출부
+ * (GameScreen의 WinStrip 라인 문구)가 맡는다. 예전엔 이 함수가 ways를 "심볼 × N ways"로
+ * 스스로 붙였는데, 호출부가 그 뒤에 다시 `×{count}`를 이어 붙이는 바람에 "판다 × 4 ways ×5"처럼
+ * 이중으로 겹쳐 보이는 버그가 있었다 — 이제는 이름만 맡고 합성은 전부 호출부 책임이다.
  */
-export function winLineLabel(
-  math: GameMath,
-  win: { symbol: string; group?: string; ways?: number },
-  locale: Locale,
-): string {
-  const label = win.group ? groupLabel(math, win.group, locale) : symbolLabel(math, win.symbol, locale)
-  return win.ways ? `${label} × ${win.ways} ways` : label
+export function winLineLabel(math: GameMath, win: { symbol: string; group?: string }, locale: Locale): string {
+  return win.group ? groupLabel(math, win.group, locale) : symbolLabel(math, win.symbol, locale)
 }

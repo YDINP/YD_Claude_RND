@@ -107,10 +107,30 @@ export const ApiErrorSchema = z.object({ error: z.string(), code: z.string().opt
 export type ApiError = z.infer<typeof ApiErrorSchema>
 
 // ---- 스핀 (Phase 2) ----
+
+/**
+ * 개발 전용 강제 결과 프리셋. 다음 스핀이 이 조건을 만족할 때까지 서버가 시드를 다시 뽑아 본다.
+ * `win`: 당첨은 있지만 피처(프리스핀/스캐터 등)는 없음. `bigWin`: 총 베팅의 10배 이상.
+ * `freeSpins`: 프리스핀 진입/재발동 피처 발생. `gamble`: 더블업 제안이 열리는 유료 당첨.
+ * `lose`: 무당첨에 피처 없음.
+ */
+export const SpinDebugPresetSchema = z.enum(['win', 'bigWin', 'freeSpins', 'gamble', 'lose'])
+export type SpinDebugPreset = z.infer<typeof SpinDebugPresetSchema>
+
+/** `allowDevMock`이 꺼져 있으면 서버는 이 블록을 통째로 거부한다 (`400 DEBUG_DISABLED`). */
+export const SpinDebugRequestSchema = z.object({
+  preset: SpinDebugPresetSchema,
+  /** 시드 탐색 최대 시도 횟수. 다 써도 못 찾으면 `409 DEBUG_NO_MATCH`. */
+  maxTries: z.number().int().min(1).max(20000).default(5000),
+})
+export type SpinDebugRequest = z.infer<typeof SpinDebugRequestSchema>
+
 export const SpinRequestSchema = z.object({
   totalBet: z.number().int().min(1),
   /** 클라이언트가 스핀마다 새로 만드는 키. 재전송 시 같은 결과를 돌려준다 */
   idempotencyKey: z.string().min(8).max(64),
+  /** 개발 전용: 다음 스핀 결과를 강제하는 프리셋. 프로덕션(`allowDevMock=false`)에서는 항상 거부된다 */
+  debug: SpinDebugRequestSchema.optional(),
 })
 export type SpinRequest = z.infer<typeof SpinRequestSchema>
 
@@ -216,6 +236,18 @@ export const SpinResponseSchema = z.object({
       total: z.number().int().min(0),
       /** 세션에서 실제로 돈 프리스핀 횟수 (리트리거 포함) */
       spins: z.number().int().min(0),
+    })
+    .optional(),
+  /**
+   * 이 스핀이 개발 전용 강제 프리셋(`debug`)으로 만들어졌을 때만 실린다.
+   * 같은 idempotencyKey로 재전송된 응답(멱등 replay)에는 실리지 않는다 — 저장된 결과를 그대로
+   * 돌려줄 뿐 다시 검색하지 않기 때문이다.
+   */
+  debug: z
+    .object({
+      preset: SpinDebugPresetSchema,
+      /** 조건을 만족하는 시드를 찾기까지 실제로 소모한 시도 횟수 */
+      triesUsed: z.number().int().min(1),
     })
     .optional(),
 })

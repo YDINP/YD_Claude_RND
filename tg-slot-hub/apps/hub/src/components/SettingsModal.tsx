@@ -7,7 +7,7 @@
  */
 import type { ReactNode } from 'react'
 import type { PublicUser } from '@tgslot/shared'
-import { useSettingsStore, type SettingsLocale } from '../store/settings'
+import { useSettingsStore, type SettingsLocale, type SpinSpeed } from '../store/settings'
 import { useSessionStore } from '../store/session'
 import { patchMe } from '../sdk/api'
 import { useT } from '../i18n'
@@ -63,6 +63,14 @@ export function SettingsModal({ user, onClose }: SettingsModalProps): ReactNode 
   const setSound = useSettingsStore((s) => s.setSound)
   const setHaptics = useSettingsStore((s) => s.setHaptics)
   const setReducedMotion = useSettingsStore((s) => s.setReducedMotion)
+  const spinSpeed = useSettingsStore((s) => s.spinSpeed)
+  const setSpinSpeed = useSettingsStore((s) => s.setSpinSpeed)
+
+  const spinSpeedOptions: { value: SpinSpeed; label: string }[] = [
+    { value: 'normal', label: t('spinSpeedNormal') },
+    { value: 'quick', label: t('spinSpeedQuick') },
+    { value: 'turbo', label: t('spinSpeedTurbo') },
+  ]
 
   const handleLocaleChange = (next: SettingsLocale): void => {
     setLocale(next)
@@ -115,6 +123,24 @@ export function SettingsModal({ user, onClose }: SettingsModalProps): ReactNode 
           >
             한국어
           </button>
+        </div>
+      </div>
+
+      <div className="hub-settings__section">
+        <span className="hub-settings__label">{t('spinSpeedTitle')}</span>
+        <div className="hub-settings__segmented" role="radiogroup" aria-label={t('spinSpeedTitle')}>
+          {spinSpeedOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={spinSpeed === option.value}
+              data-active={spinSpeed === option.value}
+              onClick={() => setSpinSpeed(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 

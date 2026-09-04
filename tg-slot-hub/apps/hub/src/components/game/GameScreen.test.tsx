@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SpinResponse, GambleResponse } from '@tgslot/shared'
 
@@ -14,7 +14,9 @@ vi.mock('@tgslot/renderer', () => ({
       ready: Promise.resolve(),
       spinTo: vi.fn().mockResolvedValue(undefined),
       showWins: vi.fn().mockResolvedValue(undefined),
+      skipWins: vi.fn(),
       clearWins: vi.fn(),
+      setSpinSpeed: vi.fn(),
       setSpinningIdle: vi.fn(),
       setMode: vi.fn(),
       resize: vi.fn(),
@@ -55,6 +57,8 @@ import { useGameStore } from '../../store/game'
 import { useSessionStore } from '../../store/session'
 import { useGamesStore } from '../../store/games'
 import { useHubStore } from '../../store/hub'
+import { useSettingsStore } from '../../store/settings'
+import { SettingsModal } from '../SettingsModal'
 import { GameScreen } from './GameScreen'
 
 const mockedGetGameMath = vi.mocked(getGameMath)
@@ -201,6 +205,8 @@ describe('GameScreen', () => {
     localStorage.clear()
     mockRenderer.onEvent = null
     useGameStore.getState().reset()
+    // 스핀 속도는 설정 스토어(모듈 스코프 싱글턴)에 남으므로 테스트마다 기본값으로 되돌린다.
+    useSettingsStore.setState({ spinSpeed: 'normal' })
     useGamesStore.setState({ status: 'ready', games: [], errorMessage: null })
     useHubStore.setState({
       status: 'idle',
@@ -238,7 +244,7 @@ describe('GameScreen', () => {
     expect(screen.getByRole('button', { name: 'Spin' })).not.toBeDisabled()
   })
 
-  it('disables the Spin button while a spin is in flight and re-enables it after', async () => {
+  it('turns the Spin button into a Stop button while a spin is in flight — it stays clickable so the reels can be skipped', async () => {
     render(<GameScreen gameId="classic-777" />)
     await screen.findByText('10')
 
@@ -255,13 +261,19 @@ describe('GameScreen', () => {
       spinButton.click()
     })
 
-    expect(spinButton).toBeDisabled()
+    // 릴이 도는 동안엔 "스탑"으로 바뀐다 — 비활성화하지 않는다(눌러서 릴만 건너뛸 수 있어야 한다).
+    const stopButton = screen.getByRole('button', { name: 'Stop' })
+    expect(stopButton).not.toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Spin' })).not.toBeInTheDocument()
+
+    stopButton.click()
+    expect(useGameStore.getState().phase).toBe('spinning') // 서버 응답 대기 중 — requestSkip은 래치만 세운다.
 
     await act(async () => {
       resolveSpin(baseSpinResponse())
     })
 
-    await waitFor(() => expect(spinButton).not.toBeDisabled())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Spin' })).not.toBeDisabled())
   })
 
   it('opens the help sheet with the paytable and payline grids when the help button is clicked', async () => {
@@ -294,7 +306,7 @@ describe('GameScreen', () => {
     expect(await screen.findByText('Wild substitutes for all symbols')).toBeInTheDocument()
   })
 
-  describe('win banner (winTotal renderer event)', () => {
+  describe('win amount rollup (winTotal renderer event) — no more on-stage banner', () => {
     async function spinAndSettle(response: SpinResponse): Promise<void> {
       mockedApiSpin.mockResolvedValueOnce(response)
       await act(async () => {
@@ -303,8 +315,8 @@ describe('GameScreen', () => {
       await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
     }
 
-    it('rolls the counter up to the total and shows the tier label the renderer sent', async () => {
-      render(<GameScreen gameId="classic-777" />)
+    it('rolls the WinStrip amount up to the total — no tier-word banner is rendered on the stage', async () => {
+      const { container } = render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 
       await spinAndSettle(
@@ -317,16 +329,16 @@ describe('GameScreen', () => {
 
       expect(mockRenderer.onEvent).not.toBeNull()
 
-      // tier는 허브가 계산하지 않고 렌더러가 보내주는 값을 그대로 라벨로 옮긴다.
       act(() => {
         mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 250, tier: 'big', durationMs: 30 })
       })
 
-      expect(await screen.findByText('BIG WIN')).toBeInTheDocument()
-      await waitFor(() => expect(screen.getByText('250')).toBeInTheDocument())
+      // 등급 단어 배너는 완전히 없앴다 — 릴 위 배너 영역엔 아무 텍스트도 없어야 한다.
+      expect(container.querySelector('.hub-game-screen__banners')).not.toHaveTextContent('WIN')
+      await waitFor(() => expect(container.querySelector('.hub-win-strip__amount')).toHaveTextContent('250'))
     })
 
-    it('jumps the counter to the final value immediately when the stage is tapped', async () => {
+    it('tapping the stage during the win presentation does nothing (no skip, no banner to dismiss)', async () => {
       const { container } = render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 
@@ -338,67 +350,581 @@ describe('GameScreen', () => {
         }),
       )
 
-      // 아주 긴 durationMs — 탭하지 않으면 짧은 시간 안에 목표값에 도달할 수 없다.
+      // 아주 긴 durationMs — 탭해도 안 건드리면 롤업이 짧은 시간 안에 끝나지 않는다.
       act(() => {
         mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 50, tier: 'none', durationMs: 60_000 })
       })
-      // 배너는 이제 금액 없이 등급 단어(WIN)만 릴 위에 뜬다 — 실제 금액은 WinStrip 몫이다.
-      await waitFor(() => expect(container.querySelector('.hub-game-screen__banners')).toHaveTextContent('WIN'))
       expect(container.querySelector('.hub-win-strip__amount')).not.toHaveTextContent('50')
+
+      const createdRenderer = mockedCreateSlotRenderer.mock.results.at(-1)?.value as {
+        clearWins: ReturnType<typeof vi.fn>
+        skipWins: ReturnType<typeof vi.fn>
+      }
+      const stage = container.querySelector('.hub-game-screen__stage')
+      expect(stage).not.toBeNull()
+      if (stage) fireEvent.click(stage)
+
+      // 정정된 사용자 요구사항: 연출 중 스테이지 탭은 아무 것도 하지 않는다(롤업도 그대로 굴러간다).
+      await act(async () => {
+        await Promise.resolve()
+      })
+      expect(container.querySelector('.hub-win-strip__amount')).not.toHaveTextContent('50')
+      expect(createdRenderer.clearWins).not.toHaveBeenCalled()
+      expect(createdRenderer.skipWins).not.toHaveBeenCalled()
+    })
+
+    it('reaches the final amount naturally once durationMs elapses, and it stays until the next spin', async () => {
+      const { container } = render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 50,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 5, win: 50, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 50, tier: 'none', durationMs: 10 })
+      })
+
+      await waitFor(() => expect(container.querySelector('.hub-win-strip__amount')).toHaveTextContent('50'))
+      // 다음 스핀 전까지는 그대로 남아 있는다(새 설계에서도 유지되는 동작).
+      await act(async () => {
+        await Promise.resolve()
+      })
+      expect(container.querySelector('.hub-win-strip__amount')).toHaveTextContent('50')
+    })
+
+    it('only rolls up on the first pass (winCycle 0) — a later pass (winCycle > 0) jumps straight to the final amount, never restarting from 0', async () => {
+      const { container } = render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 348,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 34.8, win: 348, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+
+      // 첫 바퀴(cycle 0) — 렌더러가 winCycle을 winTotal 바로 앞에 보낸다. durationMs를 짧게
+      // 줘서 롤업이 실제로 0→목표값으로 굴러간 뒤(비동기로) 자연스럽게 최종값에 닿는지 본다.
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winCycle', cycle: 0, totalWin: 348 })
+        mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 348, tier: 'big', durationMs: 10 })
+      })
+      expect(container.querySelector('.hub-win-strip__amount')).not.toHaveTextContent('348')
+
+      await waitFor(() => expect(container.querySelector('.hub-win-strip__amount')).toHaveTextContent('348'))
+
+      // 두 번째 바퀴(cycle 1) — 실사용 버그였다: 렌더러가 순환하며 매 바퀴 winTotal을 다시
+      // 내보내는데, 예전 코드는 조건 없이 0으로 되돌리고 다시 굴렸다("당첨 33 · 합계 348"처럼
+      // 도중 값이 잠깐 보였다 사라짐). cycle > 0에서는 애니메이션 없이 즉시 최종값이어야 하고,
+      // 0으로 잠깐이라도 되돌아가면 안 된다.
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winCycle', cycle: 1, totalWin: 348 })
+        mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 348, tier: 'big', durationMs: 60_000 })
+      })
+      // rAF/타이머가 단 하나도 돌기 전, act() 직후 곧장 확인한다 — 재설정됐다면 여기서 '348'이
+      // 아니게 된다.
+      expect(container.querySelector('.hub-win-strip__amount')).toHaveTextContent('348')
+
+      // 세 번째 바퀴(cycle 2)도 마찬가지로 즉시 최종값을 유지한다.
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winCycle', cycle: 2, totalWin: 348 })
+        mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 348, tier: 'big', durationMs: 60_000 })
+      })
+      expect(container.querySelector('.hub-win-strip__amount')).toHaveTextContent('348')
+    })
+  })
+
+  describe('WinStrip line label (winLine/winCycle events)', () => {
+    async function spinAndSettle(response: SpinResponse): Promise<void> {
+      mockedApiSpin.mockResolvedValueOnce(response)
+      await act(async () => {
+        getSpinButton().click()
+      })
+      await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
+    }
+
+    it('shows "symbol ×count · amount" under the amount when a winLine event arrives', async () => {
+      const { container } = render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 100,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({
+          type: 'winLine',
+          line: 0,
+          win: 100,
+          symbol: 'seven',
+          count: 3,
+          index: 0,
+          total: 1,
+          cycle: 0,
+        })
+      })
+
+      expect(await screen.findByText('Seven ×3 · 100')).toHaveClass('hub-win-strip__line-label')
+      expect(container.querySelector('.hub-win-strip__line-label')).toBeInTheDocument()
+    })
+
+    it('shows the group name (not the raw symbol id) for a group win', async () => {
+      // math.groups는 아직 실제 GameMath 타입/스키마에 없을 수 있으므로(엔진 작업 중) 캐스트로
+      // 주입한다 — labels.test.ts/game.test.ts와 같은 이유다.
+      mockedGetGameMath.mockResolvedValueOnce({
+        ...rawMath,
+        groups: { anybar: { name: { en: 'Any BAR' }, members: ['bar', 'seven'] } },
+      })
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 50,
+          wins: [{ line: 0, symbol: 'anybar', count: 3, multiplier: 5, win: 50, positions: [[0, 1], [1, 1], [2, 1]], group: 'anybar' }],
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({
+          type: 'winLine',
+          line: 0,
+          win: 50,
+          symbol: 'anybar',
+          group: 'anybar',
+          count: 3,
+          index: 0,
+          total: 1,
+          cycle: 0,
+        })
+      })
+
+      expect(await screen.findByText('Any BAR ×3 · 50')).toBeInTheDocument()
+    })
+
+    it('shows "name ×count · N ways · amount" for a ways win — no more doubled "× N ways ×count" (defect fix)', async () => {
+      mockedGetGameMath.mockResolvedValueOnce(waysRawMath)
+      render(<GameScreen gameId="jungle-ways" />)
+      await screen.findByText('25')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 25,
+          totalWin: 348,
+          wins: [{ line: 0, symbol: 'tiger', count: 5, multiplier: 1, win: 348, ways: 4, positions: [] }],
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({
+          type: 'winLine',
+          line: 0,
+          win: 348,
+          symbol: 'tiger',
+          count: 5,
+          ways: 4,
+          index: 0,
+          total: 1,
+          cycle: 0,
+        })
+      })
+
+      expect(await screen.findByText('Tiger ×5 · 4 ways · 348')).toBeInTheDocument()
+    })
+
+    it('renders the line label in Korean (symbol name localized) when locale is ko', async () => {
+      useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } }))
+      mockedGetGameMath.mockResolvedValueOnce({
+        ...rawMath,
+        symbols: [
+          { id: 'seven', name: { en: 'Seven', ko: '세븐' } },
+          { id: 'bar', name: { en: 'Bar' } },
+        ],
+      })
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 100,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winLine', line: 0, win: 100, symbol: 'seven', count: 3, index: 0, total: 1, cycle: 0 })
+      })
+
+      expect(await screen.findByText('세븐 ×3 · 100')).toBeInTheDocument()
+    })
+
+    it('renders the group label in Korean for a group win', async () => {
+      useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } }))
+      mockedGetGameMath.mockResolvedValueOnce({
+        ...rawMath,
+        groups: { anybar: { name: { en: 'Any BAR', ko: '바 아무거나' }, members: ['bar', 'seven'] } },
+      })
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 50,
+          wins: [{ line: 0, symbol: 'anybar', count: 3, multiplier: 5, win: 50, positions: [[0, 1], [1, 1], [2, 1]], group: 'anybar' }],
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({
+          type: 'winLine',
+          line: 0,
+          win: 50,
+          symbol: 'anybar',
+          group: 'anybar',
+          count: 3,
+          index: 0,
+          total: 1,
+          cycle: 0,
+        })
+      })
+
+      expect(await screen.findByText('바 아무거나 ×3 · 50')).toBeInTheDocument()
+    })
+
+    it('renders the ways line label in Korean, keeping the "ways" word untranslated (genre term)', async () => {
+      useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } }))
+      mockedGetGameMath.mockResolvedValueOnce({
+        ...waysRawMath,
+        symbols: [
+          { id: 'tiger', name: { en: 'Tiger', ko: '타이거' } },
+          { id: 'monkey', name: { en: 'Monkey' } },
+        ],
+      })
+      render(<GameScreen gameId="jungle-ways" />)
+      await screen.findByText('25')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 25,
+          totalWin: 348,
+          wins: [{ line: 0, symbol: 'tiger', count: 5, multiplier: 1, win: 348, ways: 4, positions: [] }],
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({
+          type: 'winLine',
+          line: 0,
+          win: 348,
+          symbol: 'tiger',
+          count: 5,
+          ways: 4,
+          index: 0,
+          total: 1,
+          cycle: 0,
+        })
+      })
+
+      expect(await screen.findByText('타이거 ×5 · 4 ways · 348')).toBeInTheDocument()
+    })
+
+    describe('symbol icons instead of the name (theme has the symbol image)', () => {
+      it('renders the symbol image count times for a line win instead of "name ×count"', async () => {
+        mockedLoadTheme.mockResolvedValueOnce({
+          symbols: { seven: '/theme/seven@128.png', bar: '/theme/bar@128.png' },
+          palette: { frame: '#000000', reelBg: '#000000', winLine: ['#ffffff'], text: '#ffffff' },
+        })
+        const { container } = render(<GameScreen gameId="classic-777" />)
+        await screen.findByText('10')
+
+        await spinAndSettle(
+          baseSpinResponse({
+            totalBet: 10,
+            totalWin: 100,
+            wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [[0, 1], [1, 1], [2, 1]] }],
+          }),
+        )
+
+        act(() => {
+          mockRenderer.onEvent?.({
+            type: 'winLine',
+            line: 0,
+            win: 100,
+            symbol: 'seven',
+            count: 3,
+            index: 0,
+            total: 1,
+            cycle: 0,
+          })
+        })
+
+        const lineLabel = await waitFor(() => {
+          const el = container.querySelector('.hub-win-strip__line-label')
+          expect(el).not.toBeNull()
+          return el as HTMLElement
+        })
+        const imgs = lineLabel.querySelectorAll('img')
+        expect(imgs).toHaveLength(3)
+        imgs.forEach((img) => {
+          expect(img).toHaveAttribute('src', '/theme/seven@128.png')
+          expect(img).toHaveAttribute('alt', '')
+        })
+        // 이름 텍스트("Seven ×3")는 화면에 그대로 노출되지 않는다 — 아이콘 그룹의 aria-label이 대신한다.
+        expect(screen.queryByText('Seven ×3 · 100')).not.toBeInTheDocument()
+        expect(lineLabel.querySelector('.hub-win-strip__line-icons')).toHaveAttribute('aria-label', 'Seven ×3')
+        expect(lineLabel.textContent).toContain('100')
+      })
+
+      it('renders 5 icons plus "4 ways · 348" for a ways win', async () => {
+        mockedGetGameMath.mockResolvedValueOnce(waysRawMath)
+        mockedLoadTheme.mockResolvedValueOnce({
+          symbols: { tiger: '/theme/tiger@128.png', monkey: '/theme/monkey@128.png' },
+          palette: { frame: '#000000', reelBg: '#000000', winLine: ['#ffffff'], text: '#ffffff' },
+        })
+        const { container } = render(<GameScreen gameId="jungle-ways" />)
+        await screen.findByText('25')
+
+        await spinAndSettle(
+          baseSpinResponse({
+            totalBet: 25,
+            totalWin: 348,
+            wins: [{ line: 0, symbol: 'tiger', count: 5, multiplier: 1, win: 348, ways: 4, positions: [] }],
+          }),
+        )
+
+        act(() => {
+          mockRenderer.onEvent?.({
+            type: 'winLine',
+            line: 0,
+            win: 348,
+            symbol: 'tiger',
+            count: 5,
+            ways: 4,
+            index: 0,
+            total: 1,
+            cycle: 0,
+          })
+        })
+
+        const lineLabel = await waitFor(() => {
+          const el = container.querySelector('.hub-win-strip__line-label')
+          expect(el).not.toBeNull()
+          return el as HTMLElement
+        })
+        const imgs = lineLabel.querySelectorAll('img')
+        expect(imgs).toHaveLength(5)
+        imgs.forEach((img) => expect(img).toHaveAttribute('src', '/theme/tiger@128.png'))
+        expect(lineLabel.querySelector('.hub-win-strip__line-icons')).toHaveAttribute('aria-label', 'Tiger ×5')
+        expect(lineLabel.textContent).toContain('4 ways')
+        expect(lineLabel.textContent).toContain('348')
+        expect(screen.queryByText('Tiger ×5 · 4 ways · 348')).not.toBeInTheDocument()
+      })
+
+      it('still shows the group name as text (no single icon represents a group) even when the theme has the member images', async () => {
+        mockedGetGameMath.mockResolvedValueOnce({
+          ...rawMath,
+          groups: { anybar: { name: { en: 'Any BAR' }, members: ['bar', 'seven'] } },
+        })
+        mockedLoadTheme.mockResolvedValueOnce({
+          symbols: { seven: '/theme/seven@128.png', bar: '/theme/bar@128.png' },
+          palette: { frame: '#000000', reelBg: '#000000', winLine: ['#ffffff'], text: '#ffffff' },
+        })
+        const { container } = render(<GameScreen gameId="classic-777" />)
+        await screen.findByText('10')
+
+        await spinAndSettle(
+          baseSpinResponse({
+            totalBet: 10,
+            totalWin: 50,
+            wins: [{ line: 0, symbol: 'anybar', count: 3, multiplier: 5, win: 50, positions: [[0, 1], [1, 1], [2, 1]], group: 'anybar' }],
+          }),
+        )
+
+        act(() => {
+          mockRenderer.onEvent?.({
+            type: 'winLine',
+            line: 0,
+            win: 50,
+            symbol: 'anybar',
+            group: 'anybar',
+            count: 3,
+            index: 0,
+            total: 1,
+            cycle: 0,
+          })
+        })
+
+        const lineLabel = await screen.findByText('Any BAR ×3 · 50')
+        expect(lineLabel).toHaveClass('hub-win-strip__line-label')
+        expect(container.querySelector('.hub-win-strip__line-label img')).toBeNull()
+      })
+
+      it('falls back to "name ×count · amount" text when the theme has no image for that symbol', async () => {
+        // 기본 mockedLoadTheme는 symbols: {}를 돌려준다 — seven 이미지가 없다.
+        render(<GameScreen gameId="classic-777" />)
+        await screen.findByText('10')
+
+        await spinAndSettle(
+          baseSpinResponse({
+            totalBet: 10,
+            totalWin: 100,
+            wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [[0, 1], [1, 1], [2, 1]] }],
+          }),
+        )
+
+        act(() => {
+          mockRenderer.onEvent?.({ type: 'winLine', line: 0, win: 100, symbol: 'seven', count: 3, index: 0, total: 1, cycle: 0 })
+        })
+
+        const lineLabel = await screen.findByText('Seven ×3 · 100')
+        expect(lineLabel).toHaveClass('hub-win-strip__line-label')
+        expect(lineLabel.querySelector('img')).toBeNull()
+      })
+
+      // "테마 전체 로딩 실패" 시나리오는 이 컴포넌트에서 별도로 흉내 낼 수 없다 — loadTheme와
+      // createSlotRenderer가 같은 effect의 같은 try 블록에 있어서, loadTheme가 실패하면
+      // 렌더러 자체가 만들어지지 않고(mockRenderer.onEvent가 결코 연결되지 않음) winLine 이벤트를
+      // 재현할 방법이 없다(실제 앱에서도 마찬가지 — 렌더러가 없으면 winLine 이벤트도 없다).
+      // buildWinLineIcons(theme=null)의 안전성은 위 "테마에 그 심볼 이미지가 없을 때" 케이스와
+      // 같은 optional-chaining 경로(`theme?.symbols[id]`)로 이미 커버된다.
+    })
+
+    it('shows the total on a winCycle event', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 250,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 25, win: 250, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winCycle', cycle: 1, totalWin: 250 })
+      })
+
+      expect(await screen.findByText('Total 250')).toHaveClass('hub-win-strip__line-label')
+    })
+
+    it('clears the line label when a new spin starts', async () => {
+      const { container } = render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 100,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winLine', line: 0, win: 100, symbol: 'seven', count: 3, index: 0, total: 1, cycle: 0 })
+      })
+      expect(await screen.findByText('Seven ×3 · 100')).toBeInTheDocument()
+
+      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'r-next' }))
+      await act(async () => {
+        getSpinButton().click()
+      })
+
+      expect(container.querySelector('.hub-win-strip__line-label')).not.toBeInTheDocument()
+      await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
+    })
+
+    it('a stage tap during the win presentation does NOT clear the line label (tap does nothing now)', async () => {
+      const { container } = render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 100,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 100, tier: 'none', durationMs: 60_000 })
+        mockRenderer.onEvent?.({ type: 'winLine', line: 0, win: 100, symbol: 'seven', count: 3, index: 0, total: 1, cycle: 0 })
+      })
+      expect(await screen.findByText('Seven ×3 · 100')).toBeInTheDocument()
 
       const stage = container.querySelector('.hub-game-screen__stage')
       expect(stage).not.toBeNull()
       if (stage) fireEvent.click(stage)
 
-      // 탭하면 WinStrip 금액이 즉시 목표값으로 점프한다(롤업 건너뛰기).
-      await waitFor(() => expect(container.querySelector('.hub-win-strip__amount')).toHaveTextContent('50'))
-
-      // 첫 탭은 롤업을 건너뛰고 홀드로 넘어간다 — 두 번째 탭은 그 홀드(배너)를 즉시 끝낸다.
-      // WinStrip의 금액은 다음 스핀이 시작되기 전까지 그대로 남는다(새 설계).
-      if (stage) fireEvent.click(stage)
-      await waitFor(() => expect(container.querySelector('.hub-game-screen__banners')).not.toHaveTextContent('WIN'))
-      expect(container.querySelector('.hub-win-strip__amount')).toHaveTextContent('50')
+      await act(async () => {
+        await Promise.resolve()
+      })
+      expect(container.querySelector('.hub-win-strip__line-label')).toBeInTheDocument()
     })
 
-    it('auto-dismisses the banner after the tier hold time when not tapped, but WinStrip keeps the amount', async () => {
+    it('clicking SPIN while phase is showingWin calls renderer.skipWins() and then advances straight to the next spin', async () => {
       const { container } = render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 
-      await spinAndSettle(
-        baseSpinResponse({
-          totalBet: 10,
-          totalWin: 50,
-          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 5, win: 50, positions: [[0, 1], [1, 1], [2, 1]] }],
+      const createdRenderer = mockedCreateSlotRenderer.mock.results.at(-1)?.value as {
+        showWins: ReturnType<typeof vi.fn>
+        skipWins: ReturnType<typeof vi.fn>
+      }
+
+      // showWins()가 곧바로 resolve하지 않게 붙잡아 둔다 — phase가 'showingWin'에 머문 상태를
+      // 실제로 재현해야 SPIN 버튼이 그 분기(스킵 후 즉시 다음 스핀)를 타는지 검증할 수 있다.
+      let resolveShowWins: () => void = () => {}
+      createdRenderer.showWins.mockReturnValueOnce(
+        new Promise<void>((resolve) => {
+          resolveShowWins = resolve
         }),
       )
 
-      vi.useFakeTimers()
-      try {
-        // WIN_HOLD_MS.none = 1200ms
-        act(() => {
-          mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 50, tier: 'none', durationMs: 10 })
-        })
+      mockedApiSpin.mockResolvedValueOnce(
+        baseSpinResponse({
+          totalBet: 10,
+          totalWin: 100,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+      await act(async () => {
+        getSpinButton().click()
+      })
+      await waitFor(() => expect(container.querySelector('.hub-game-screen__stage')).toHaveAttribute('data-phase', 'showingWin'))
 
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(50)
-        })
-        expect(container.querySelector('.hub-win-strip__amount')).toHaveTextContent('50')
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winLine', line: 0, win: 100, symbol: 'seven', count: 3, index: 0, total: 1, cycle: 0 })
+      })
+      expect(await screen.findByText('Seven ×3 · 100')).toBeInTheDocument()
 
-        // 홀드 시간 이전에는 배너가 아직 떠 있는다.
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(1_100)
-        })
-        expect(container.querySelector('.hub-game-screen__banners')).toHaveTextContent('WIN')
+      // 다음 스핀 응답을 미리 준비해 둔다 — SPIN을 누르면 스킵 직후 곧장 이 응답으로 넘어가야 한다.
+      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'r-next' }))
 
-        // 홀드 시간을 넘기면 탭 없이도 배너는 사라지지만, WinStrip 금액은 남아 있는다.
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(200)
-        })
-        expect(container.querySelector('.hub-game-screen__banners')).not.toHaveTextContent('WIN')
-        expect(container.querySelector('.hub-win-strip__amount')).toHaveTextContent('50')
-      } finally {
-        vi.useRealTimers()
-      }
+      fireEvent.click(getSpinButton())
+      expect(createdRenderer.skipWins).toHaveBeenCalledTimes(1)
+
+      // 렌더러가 skipWins()로 첫 바퀴를 접었다고 알려준다(실제로는 렌더러 내부가 하는 일) —
+      // store.spin()의 await가 풀리고 phase가 idle로 돌아가는 순간, GameScreen의 자동 진행
+      // effect가 곧장 다음 스핀을 건다.
+      await act(async () => {
+        resolveShowWins()
+        await Promise.resolve()
+      })
+
+      await waitFor(() => expect(mockedApiSpin).toHaveBeenCalledTimes(2))
+      await waitFor(() => expect(container.querySelector('.hub-win-strip__line-label')).not.toBeInTheDocument())
+      await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
     })
   })
 
@@ -411,7 +937,7 @@ describe('GameScreen', () => {
       await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
     }
 
-    it('shows the full-screen intro banner when the renderer reports a freeSpins featureTriggered event', async () => {
+    it('shows the full-screen intro banner once the entry curtain covers the screen (modeTransition to:freeSpins, start) — not right when featureTriggered fires', async () => {
       render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 
@@ -429,14 +955,26 @@ describe('GameScreen', () => {
         }),
       )
 
+      // featureTriggered (승리 연출 도중) 시점에는 아직 배너가 뜨지 않는다 — 데이터만 담아둔다.
       act(() => {
         mockRenderer.onEvent?.({
           type: 'featureTriggered',
           feature: { type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false },
         })
       })
+      expect(screen.queryByText('FREE SPINS! 10 spins ×2')).not.toBeInTheDocument()
 
+      // 승리 연출이 다 끝난 뒤 store가 커튼을 걸면(modeTransition start) 그제서야 뜬다.
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
+      })
       expect(await screen.findByText('FREE SPINS! 10 spins ×2')).toBeInTheDocument()
+
+      // 커튼이 걷히면(end) 함께 내려간다.
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'end' })
+      })
+      expect(screen.queryByText('FREE SPINS! 10 spins ×2')).not.toBeInTheDocument()
     })
 
     it('shows a retrigger toast (not the full intro) when the feature is a retrigger', async () => {
@@ -492,7 +1030,101 @@ describe('GameScreen', () => {
       expect(screen.getByRole('button', { name: '+' })).toBeDisabled()
     })
 
-    it('shows the FREE SPINS COMPLETE banner when the renderer reports modeTransition(to:base, phase:start)', async () => {
+    it('is absent in the base game (row stays mounted with no text — reserved height)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      expect(screen.queryByText(/Free spins \d+\/\d+/)).not.toBeInTheDocument()
+      const row = document.querySelector('.hub-win-strip__free-spins-row')
+      expect(row).not.toBeNull()
+      expect(row?.textContent).toBe('')
+    })
+
+    it('shows the free-spins counter below the reels once the entry curtain finishes, sourced from store.freeSpins (not a renderer event)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          isFreeSpin: true,
+          freeSpins: {
+            gameId: 'classic-777',
+            left: 7,
+            total: 10,
+            multiplier: 2,
+            totalBet: 20,
+            accumulatedWin: 30,
+          },
+        }),
+      )
+
+      // 진입은 모드 경계다 — 커튼이 다 걷히기(end) 전에는 카운터가 아직 안 바뀐다.
+      expect(screen.queryByText('Free spins 7/10 ×2')).not.toBeInTheDocument()
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'end' })
+      })
+
+      expect(await screen.findByText('Free spins 7/10 ×2')).toHaveClass(
+        'hub-win-strip__free-spins-counter',
+      )
+    })
+
+    it('renders the free-spins counter in Korean when locale is ko', async () => {
+      useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } }))
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          isFreeSpin: true,
+          freeSpins: {
+            gameId: 'classic-777',
+            left: 7,
+            total: 10,
+            multiplier: 2,
+            totalBet: 20,
+            accumulatedWin: 30,
+          },
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'end' })
+      })
+
+      expect(await screen.findByText('프리스핀 7/10 ×2')).toBeInTheDocument()
+    })
+
+    it('hides the multiplier when it is ×1', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          isFreeSpin: true,
+          freeSpins: {
+            gameId: 'classic-777',
+            left: 4,
+            total: 10,
+            multiplier: 1,
+            totalBet: 20,
+            accumulatedWin: 0,
+          },
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'end' })
+      })
+
+      expect(await screen.findByText('Free spins 4/10')).toBeInTheDocument()
+      expect(screen.queryByText(/×/)).not.toBeInTheDocument()
+    })
+
+    it('shows the FREE SPINS COMPLETE banner (with accumulated win) on modeTransition(to:base, start) and hides it on (to:base, end) — no fixed timer', async () => {
       render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 
@@ -508,32 +1140,27 @@ describe('GameScreen', () => {
       })
       mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ isFreeSpin: true, freeSpins: null }))
 
-      // 배너 타이머가 페이크 타이머로 예약되게 스핀 자체를 페이크 타이머 아래서 실행한다 —
-      // 실타이머로 예약된 뒤 페이크로 바꾸면 advanceTimersByTimeAsync가 그 타이머를 건드리지 못한다.
-      vi.useFakeTimers()
-      try {
-        await act(async () => {
-          getSpinButton().click()
-        })
+      await act(async () => {
+        getSpinButton().click()
+      })
 
-        // freeSpins가 null이 된 것만으로는(예전 동작) 배너가 안 뜬다 — 렌더러의 전환 이벤트가 신호다.
-        expect(screen.queryByText('FREE SPINS COMPLETE')).not.toBeInTheDocument()
+      // freeSpins가 null이 된 것만으로는(예전 동작) 배너가 안 뜬다 — 렌더러의 전환 이벤트가 신호다.
+      expect(screen.queryByText(/FREE SPINS COMPLETE/)).not.toBeInTheDocument()
 
-        act(() => {
-          mockRenderer.onEvent?.({ type: 'modeTransition', to: 'base', phase: 'start' })
-        })
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'base', phase: 'start' })
+      })
 
-        expect(screen.getByText('FREE SPINS COMPLETE')).toBeInTheDocument()
-        // 배너가 떠 있는 동안은 베팅 셀렉터도 함께 잠겨 있는다.
-        expect(screen.getByRole('button', { name: '-' })).toBeDisabled()
+      // 마지막 프리스핀 라운드 자체의 결과(totalWin: 0, 기본값)까지 더한 누적액을 함께 보여준다.
+      expect(screen.getByText('FREE SPINS COMPLETE · +320')).toBeInTheDocument()
+      // 배너가 떠 있는 동안은 베팅 셀렉터도 함께 잠겨 있는다.
+      expect(screen.getByRole('button', { name: '-' })).toBeDisabled()
 
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(2600)
-        })
-        expect(screen.queryByText('FREE SPINS COMPLETE')).not.toBeInTheDocument()
-      } finally {
-        vi.useRealTimers()
-      }
+      // 고정 타이머가 아니라 커튼이 다 걷힌 신호(end)로 사라진다.
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'base', phase: 'end' })
+      })
+      expect(screen.queryByText(/FREE SPINS COMPLETE/)).not.toBeInTheDocument()
     })
 
     it('releases the first-entry auto-spin gate when the renderer reports modeTransition(to:freeSpins, phase:end)', async () => {
@@ -562,6 +1189,83 @@ describe('GameScreen', () => {
 
       expect(releaseSpy).toHaveBeenCalledTimes(1)
       releaseSpy.mockRestore()
+    })
+
+    it('does not swap the below-reel counter while a mode transition is in flight — only after phase:end', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      // 프리스핀 활성 — store 갱신을 먼저 커밋시켜(별도 act) 경계 감지 effect가 pending 값을
+      // 담아 두게 한 뒤에, 진입 커튼 start~end를 보낸다(실제로도 setState와 modeTransition
+      // 이벤트 사이에는 spinTo/showWins만큼의 시간차가 있다 — 한 틱에 몰아 보내지 않는다).
+      act(() => {
+        useGameStore.setState({
+          freeSpins: {
+            gameId: 'classic-777',
+            left: 3,
+            total: 10,
+            multiplier: 2,
+            totalBet: 10,
+            accumulatedWin: 100,
+          },
+        })
+      })
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'end' })
+      })
+      expect(await screen.findByText('Free spins 3/10 ×2')).toBeInTheDocument()
+
+      // 종료 커튼이 덮이기 시작한다.
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'base', phase: 'start' })
+      })
+
+      // store는 이미 null이 됐지만(실제로는 커튼이 뜨기 전에 이미 그렇다), 커튼이 걷히기
+      // 전까지는 카운터가 예전 값 그대로 남아 있어야 한다 — 릴은 아직 가려 있는데 카운터만
+      // 먼저 사라지면 어색하다.
+      act(() => {
+        useGameStore.setState({ freeSpins: null })
+      })
+      expect(screen.getByText('Free spins 3/10 ×2')).toBeInTheDocument()
+
+      // 커튼이 다 걷힌 뒤에야(end) 최신 상태(프리스핀 없음)로 맞춘다.
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'base', phase: 'end' })
+      })
+      expect(screen.queryByText(/Free spins \d+\/\d+/)).not.toBeInTheDocument()
+    })
+
+    it('ignores Spin/Stop clicks and stage taps while a mode transition is in flight', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
+      })
+
+      const spinButton = getSpinButton()
+      const stage = document.querySelector('.hub-game-screen__stage')
+      expect(stage).not.toBeNull()
+
+      act(() => {
+        spinButton.click()
+        if (stage) fireEvent.click(stage)
+      })
+
+      // 스핀도, 스킵도 걸리지 않는다 — 서버 스핀 API가 호출되지 않았어야 한다.
+      expect(mockedApiSpin).not.toHaveBeenCalled()
+      expect(useGameStore.getState().phase).toBe('idle')
+
+      // 전환이 끝나면 다시 평소대로 반응한다.
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'end' })
+      })
+      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse())
+      await act(async () => {
+        spinButton.click()
+      })
+      expect(mockedApiSpin).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -887,6 +1591,63 @@ describe('GameScreen', () => {
       expect(mockedApiGamble).toHaveBeenCalledWith('test-token', 'r1', 'heads', expect.any(String))
       expect(await screen.findByText('You called it! Double up.')).toBeInTheDocument()
       expect(screen.getByText('40', { selector: '.hub-win-strip__amount' })).toBeInTheDocument()
+    })
+
+    it('keeps showing the "symbol ×count · amount" line label under the amount while Collect/Double are up (defect: label used to be hidden entirely during a gamble offer)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          roundId: 'r1',
+          totalWin: 20,
+          wallet: { coins: 990, gems: 0 },
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 2, win: 20, positions: [[0, 1], [1, 1], [2, 1]] }],
+          gambleOffer: { pendingWin: 20, maxSteps: 3, expiresAt: '2099-01-01T00:00:10.000Z' },
+        }),
+      )
+      expect(await screen.findByRole('button', { name: 'Double (50%)' })).toBeInTheDocument()
+
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winLine', line: 0, win: 20, symbol: 'seven', count: 3, index: 0, total: 1, cycle: 0 })
+      })
+
+      expect(await screen.findByText('Seven ×3 · 20')).toBeInTheDocument()
+      // 라인 문구가 떴어도 받기/더블 버튼은 그대로 함께 보인다 — 자리를 다투지 않는다.
+      expect(screen.getByRole('button', { name: 'Collect' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Double (50%)' })).toBeInTheDocument()
+    })
+
+    it('does not remount the Collect/Double buttons across successive winLine/winCycle events (only the label text should change)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          roundId: 'r1',
+          totalWin: 20,
+          wallet: { coins: 990, gems: 0 },
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 2, win: 20, positions: [[0, 1], [1, 1], [2, 1]] }],
+          gambleOffer: { pendingWin: 20, maxSteps: 3, expiresAt: '2099-01-01T00:00:10.000Z' },
+        }),
+      )
+      const collectButton = await screen.findByRole('button', { name: 'Collect' })
+      const doubleButton = screen.getByRole('button', { name: 'Double (50%)' })
+
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winLine', line: 0, win: 20, symbol: 'seven', count: 3, index: 0, total: 1, cycle: 0 })
+      })
+      expect(await screen.findByText('Seven ×3 · 20')).toBeInTheDocument()
+
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winCycle', cycle: 1, totalWin: 20 })
+      })
+      expect(await screen.findByText('Total 20')).toBeInTheDocument()
+
+      // 같은 노드 참조(리마운트 없음)로 계속 남아 있는지 — Testing Library가 매번 새로 찾아도
+      // 그 DOM 노드 자체가 이전과 동일해야 한다(===).
+      expect(screen.getByRole('button', { name: 'Collect' })).toBe(collectButton)
+      expect(screen.getByRole('button', { name: 'Double (50%)' })).toBe(doubleButton)
     })
 
     it('shows the lose message, clears the gamble session, and resets the WinStrip amount to 0 (was showing the stale wagered amount before the fix)', async () => {
@@ -1373,11 +2134,11 @@ describe('GameScreen', () => {
       expect(mockedApiSpin).not.toHaveBeenCalled()
     })
 
-    it('WinStrip is only tappable while a win is rolling/holding — the stage tap still calls renderer.clearWins()', async () => {
+    it('WinStrip is never tappable anymore (no onTap) — stage tap during the win presentation does not call renderer.clearWins/skipWins', async () => {
       render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 
-      // 유휴 상태 — WinStrip에는 role="button"이 없다(탭할 게 없다).
+      // 유휴 상태 — WinStrip에는 role="button"이 없다.
       expect(document.querySelector('.hub-win-strip')).not.toHaveAttribute('role')
 
       await act(async () => {
@@ -1397,17 +2158,19 @@ describe('GameScreen', () => {
         mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 50, tier: 'none', durationMs: 60_000 })
       })
 
-      // 굴러가는 중 — 이제 WinStrip이 role="button"이 된다.
-      await waitFor(() => expect(document.querySelector('.hub-win-strip')).toHaveAttribute('role', 'button'))
+      // 굴러가는 중에도(showingWin) WinStrip은 탭 가능한 버튼이 되지 않는다 — 탭으로 연출을
+      // 끝내는 기능은 없앴다(사용자 피드백). 연출 스킵은 SPIN 버튼/스페이스 몫이다.
+      expect(document.querySelector('.hub-win-strip')).not.toHaveAttribute('role')
 
-      const createdRenderer = mockedCreateSlotRenderer.mock.results.at(-1)?.value as { clearWins: ReturnType<typeof vi.fn> }
-      expect(createdRenderer.clearWins).not.toHaveBeenCalled()
-
+      const createdRenderer = mockedCreateSlotRenderer.mock.results.at(-1)?.value as {
+        clearWins: ReturnType<typeof vi.fn>
+        skipWins: ReturnType<typeof vi.fn>
+      }
       const stage = document.querySelector('.hub-game-screen__stage')
       if (stage) fireEvent.click(stage)
 
-      // 탭하면 릴 라인 순환도(clearWins) 함께 멈춘다.
-      expect(createdRenderer.clearWins).toHaveBeenCalledTimes(1)
+      expect(createdRenderer.clearWins).not.toHaveBeenCalled()
+      expect(createdRenderer.skipWins).not.toHaveBeenCalled()
     })
 
     it('fairness check fails when the server-revealed stops differ from what was actually shown, even if the local replay matches the revealed stops', async () => {
@@ -1534,6 +2297,471 @@ describe('GameScreen', () => {
       fireEvent.keyDown(document, { key: 'Escape' })
 
       await waitFor(() => expect(screen.queryByText('Paytable')).not.toBeInTheDocument())
+    })
+  })
+
+  describe('debug panel (dev tool, gated by debug flag)', () => {
+    function getDebugButton(): HTMLButtonElement | null {
+      return document.querySelector('.hub-game-screen__debug-btn')
+    }
+
+    it('is not rendered by default (no debug=1, no stored flag)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      expect(getDebugButton()).toBeNull()
+    })
+
+    it('is rendered when localStorage already has the debug flag set before mount', async () => {
+      localStorage.setItem('tgslot.debug', '1')
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      expect(getDebugButton()).not.toBeNull()
+    })
+
+    it('appears after 5 quick taps on the game title, and persists the flag to localStorage', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+      expect(getDebugButton()).toBeNull()
+
+      const title = document.querySelector('.hub-game-screen__title')
+      expect(title).not.toBeNull()
+      act(() => {
+        for (let i = 0; i < 5; i += 1) fireEvent.click(title!)
+      })
+
+      expect(getDebugButton()).not.toBeNull()
+      expect(localStorage.getItem('tgslot.debug')).toBe('1')
+    })
+
+    it('does not arm after slow taps on the title (gesture requires quick taps)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+      const title = document.querySelector('.hub-game-screen__title')
+      expect(title).not.toBeNull()
+
+      vi.useFakeTimers()
+      try {
+        for (let i = 0; i < 5; i += 1) {
+          act(() => {
+            fireEvent.click(title!)
+          })
+          await act(async () => {
+            await vi.advanceTimersByTimeAsync(1000)
+          })
+        }
+
+        expect(getDebugButton()).toBeNull()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('opens the panel on click, arms a preset via the preset buttons, and shows an armed badge', async () => {
+      localStorage.setItem('tgslot.debug', '1')
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      act(() => {
+        getDebugButton()!.click()
+      })
+      expect(await screen.findByText('Force next spin')).toBeInTheDocument()
+
+      act(() => {
+        screen.getByRole('button', { name: 'Big win' }).click()
+      })
+
+      expect(useGameStore.getState().debugPreset).toBe('bigWin')
+      // 배지는 프리셋 값의 앞 두 글자를 그대로 대문자로 보여준다("bigWin" → "BI") — 번역이
+      // 아니라 좁은 배지 자리에 들어가는 짧은 표식일 뿐이다.
+      expect(await screen.findByText('BI')).toBeInTheDocument()
+    })
+
+    it('sends the armed preset in the next spin request and clears the badge afterwards', async () => {
+      localStorage.setItem('tgslot.debug', '1')
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      act(() => {
+        getDebugButton()!.click()
+      })
+      act(() => {
+        screen.getByRole('button', { name: 'Win' }).click()
+      })
+      act(() => {
+        screen.getByText('Close').click()
+      })
+
+      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'preset-spin' }))
+      await act(async () => {
+        getSpinButton().click()
+      })
+      await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
+
+      expect(mockedApiSpin).toHaveBeenCalledWith(
+        expect.any(String),
+        'classic-777',
+        expect.objectContaining({ debug: { preset: 'win', maxTries: 5000 } }),
+      )
+      expect(document.querySelector('.hub-game-screen__debug-btn-badge')).toBeNull()
+    })
+
+    it('shows a non-blocking toast for DEBUG_DISABLED without blocking the next spin', async () => {
+      localStorage.setItem('tgslot.debug', '1')
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      act(() => {
+        getDebugButton()!.click()
+      })
+      act(() => {
+        screen.getByRole('button', { name: 'Win' }).click()
+      })
+      act(() => {
+        screen.getByText('Close').click()
+      })
+
+      mockedApiSpin.mockRejectedValueOnce(
+        new ApiClientError('Debug spin presets are disabled', 400, 'DEBUG_DISABLED'),
+      )
+      await act(async () => {
+        getSpinButton().click()
+      })
+      await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
+
+      expect(await screen.findByText('Debug spin presets are disabled')).toBeInTheDocument()
+
+      // 비차단이므로 곧바로 다음 스핀을 계속 진행할 수 있다.
+      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'after-debug-disabled' }))
+      await act(async () => {
+        getSpinButton().click()
+      })
+      await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
+      expect(useGameStore.getState().lastResult?.roundId).toBe('after-debug-disabled')
+    })
+
+    it('shows the last SpinResponse JSON and current phase/free-spins/gamble state', async () => {
+      localStorage.setItem('tgslot.debug', '1')
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'json-view-1', totalWin: 0 }))
+      await act(async () => {
+        getSpinButton().click()
+      })
+      await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
+
+      act(() => {
+        getDebugButton()!.click()
+      })
+
+      expect(await screen.findByText('Last response')).toBeInTheDocument()
+      expect(screen.getByText(/"roundId": "json-view-1"/)).toBeInTheDocument()
+      expect(screen.getByText('Phase: idle')).toBeInTheDocument()
+      expect(screen.getByText('Free spins: none')).toBeInTheDocument()
+      expect(screen.getByText('Gamble: none')).toBeInTheDocument()
+    })
+  })
+
+  describe('spin speed segmented control (Wave 2 — replaces the ⚡ cycling button)', () => {
+    function getSpeedSegment(): HTMLElement {
+      const seg = document.querySelector('.hub-game-screen__speed-seg')
+      if (!(seg instanceof HTMLElement)) throw new Error('spin speed segment not found')
+      return seg
+    }
+
+    it('renders exactly three options with the stored value selected — and no ⚡ button is left', async () => {
+      useSettingsStore.getState().setSpinSpeed('quick')
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      const options = within(getSpeedSegment()).getAllByRole('radio')
+      expect(options.map((o) => o.textContent)).toEqual(['Normal', 'Quick', 'Turbo'])
+      expect(options.map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false'])
+      expect(getSpeedSegment().getAttribute('role')).toBe('radiogroup')
+      // 순환 버튼은 사라졌다 — 값을 고르는 길은 이 세그먼트(와 설정 모달) 하나뿐이다.
+      expect(document.querySelector('.hub-game-screen__speed-btn')).toBeNull()
+    })
+
+    it('switches the value on click, persists it, and hands it to the renderer', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      const turbo = within(getSpeedSegment()).getByRole('radio', { name: 'Turbo' })
+      await act(async () => {
+        turbo.click()
+      })
+
+      expect(useSettingsStore.getState().spinSpeed).toBe('turbo')
+      expect(turbo.getAttribute('aria-checked')).toBe('true')
+      expect(JSON.parse(localStorage.getItem('tgslot.settings') ?? '{}')).toMatchObject({
+        spinSpeed: 'turbo',
+      })
+
+      const renderer = mockedCreateSlotRenderer.mock.results.at(-1)?.value as {
+        setSpinSpeed: ReturnType<typeof vi.fn>
+      }
+      await waitFor(() => expect(renderer.setSpinSpeed).toHaveBeenCalledWith('turbo'))
+    })
+
+    it('stays in sync with the settings modal in both directions (one shared setting, two surfaces)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      // 설정 모달에서 바꾸면 게임 화면 세그먼트가 곧장 따라온다.
+      const { unmount } = render(
+        <SettingsModal
+          user={{ id: 'u1', telegramId: 1, firstName: 'Dev', locale: 'en', level: 1, xp: 0 }}
+          onClose={() => {}}
+        />,
+      )
+      const modalCard = document.querySelector('.hub-modal')
+      if (!(modalCard instanceof HTMLElement)) throw new Error('settings modal not found')
+      await act(async () => {
+        within(modalCard).getByRole('radio', { name: 'Quick' }).click()
+      })
+      expect(
+        within(getSpeedSegment()).getByRole('radio', { name: 'Quick' }).getAttribute('aria-checked'),
+      ).toBe('true')
+      unmount()
+
+      // 반대 방향 — 게임 화면에서 바꾼 값이 설정 모달을 다시 열었을 때 그대로 선택돼 있다.
+      await act(async () => {
+        within(getSpeedSegment()).getByRole('radio', { name: 'Turbo' }).click()
+      })
+      render(
+        <SettingsModal
+          user={{ id: 'u1', telegramId: 1, firstName: 'Dev', locale: 'en', level: 1, xp: 0 }}
+          onClose={() => {}}
+        />,
+      )
+      const reopened = document.querySelector('.hub-modal')
+      if (!(reopened instanceof HTMLElement)) throw new Error('settings modal not found')
+      expect(within(reopened).getByRole('radio', { name: 'Turbo' }).getAttribute('aria-checked')).toBe(
+        'true',
+      )
+    })
+  })
+
+  describe('autospin (Wave 2)', () => {
+    function getAutoButton(): HTMLButtonElement {
+      const btn = document.querySelector('.hub-game-screen__auto-btn')
+      if (!(btn instanceof HTMLButtonElement)) throw new Error('auto button not found')
+      return btn
+    }
+
+    /** AUTO 버튼 → 회수 시트 → `count`회를 고른다. */
+    async function armAutoSpin(count: number): Promise<void> {
+      await act(async () => {
+        getAutoButton().click()
+      })
+      const pick = await screen.findByRole('button', { name: `${count} spins` })
+      await act(async () => {
+        pick.click()
+      })
+    }
+
+    it('offers exactly 10/25/50/100 (no unlimited) in a centered sheet, and arming it starts spinning right away', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      let resolveSpin: (value: SpinResponse) => void = () => {}
+      mockedApiSpin.mockReturnValue(
+        new Promise((resolve) => {
+          resolveSpin = resolve
+        }),
+      )
+
+      await act(async () => {
+        getAutoButton().click()
+      })
+      const sheet = document.querySelector('.hub-modal')
+      if (!(sheet instanceof HTMLElement)) throw new Error('autospin sheet not found')
+      expect(
+        within(sheet)
+          .getAllByRole('button')
+          .map((b) => b.textContent)
+          .filter((label) => label !== null && /spins$/.test(label)),
+      ).toEqual(['10 spins', '25 spins', '50 spins', '100 spins'])
+
+      await act(async () => {
+        within(sheet).getByRole('button', { name: '25 spins' }).click()
+      })
+
+      expect(useGameStore.getState().autoSpin).toEqual({ remaining: 25 })
+      expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        resolveSpin(baseSpinResponse())
+      })
+      useGameStore.getState().stopAutoSpin()
+    })
+
+    it('turns the main button into STOP with the remaining count, and pressing it finishes the current spin then stops', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      let resolveSpin: (value: SpinResponse) => void = () => {}
+      mockedApiSpin.mockReturnValue(
+        new Promise((resolve) => {
+          resolveSpin = resolve
+        }),
+      )
+
+      await armAutoSpin(10)
+
+      // 별도의 중지 버튼을 만들지 않는다 — 메인 버튼 하나가 "중지 (남은 수)"가 된다.
+      await waitFor(() => expect(getSpinButton()).toHaveTextContent('Stop (10)'))
+      expect(getSpinButton().className).toContain('hub-game-screen__spin--stop')
+      expect(document.querySelectorAll('.hub-game-screen__spin')).toHaveLength(1)
+
+      await act(async () => {
+        getSpinButton().click()
+      })
+      expect(useGameStore.getState().autoSpin).toBeNull()
+      // 지금 도는 판은 그대로 끝난다 — 릴 건너뛰기로 해석하지 않는다.
+      expect(useGameStore.getState().phase).toBe('spinning')
+
+      await act(async () => {
+        resolveSpin(baseSpinResponse())
+      })
+      await waitFor(() => expect(getSpinButton()).toHaveTextContent('Spin'))
+      expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+    })
+
+    it('holds off while the free-spins curtain is up and resumes with the remaining count once modeTransition ends', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      vi.useFakeTimers()
+      try {
+        // 1판(유료) — 프리스핀을 발동시킨다. 오토스핀 카운터는 이 판만큼만 깎인다(3 → 2).
+        mockedApiSpin.mockResolvedValueOnce(
+          baseSpinResponse({
+            roundId: 'auto-fs-1',
+            features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+            freeSpins: {
+              gameId: 'classic-777',
+              left: 1,
+              total: 10,
+              multiplier: 2,
+              totalBet: 10,
+              accumulatedWin: 0,
+            },
+          }),
+        )
+        await act(async () => {
+          useGameStore.getState().startAutoSpin(3)
+          await vi.advanceTimersByTimeAsync(0)
+        })
+        expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+        expect(useGameStore.getState().autoSpin).toEqual({ remaining: 2 })
+
+        // 진입 커튼이 화면을 덮고 있는 동안은 어느 쪽도 다음 판을 걸지 않는다.
+        act(() => {
+          mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
+        })
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(3000)
+        })
+        expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+
+        // 커튼이 걷히면 프리스핀 자동진행이 이어받는다 — 무료 판은 오토스핀 카운터를 소모하지 않는다.
+        mockedApiSpin.mockResolvedValueOnce(
+          baseSpinResponse({ roundId: 'auto-fs-2', isFreeSpin: true, freeSpins: null }),
+        )
+        await act(async () => {
+          mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'end' })
+          await vi.advanceTimersByTimeAsync(1300)
+        })
+        expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+        expect(useGameStore.getState().autoSpin).toEqual({ remaining: 2 })
+
+        // 종료 커튼이 도는 동안(modeTransitioning)에도 스핀이 나가면 안 된다.
+        act(() => {
+          mockRenderer.onEvent?.({ type: 'modeTransition', to: 'base', phase: 'start' })
+        })
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(3000)
+        })
+        expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+
+        // 커튼이 다 걷힌 뒤에야 남은 횟수 그대로 이어진다.
+        mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'auto-resume' }))
+        await act(async () => {
+          mockRenderer.onEvent?.({ type: 'modeTransition', to: 'base', phase: 'end' })
+          await vi.advanceTimersByTimeAsync(700)
+        })
+        expect(mockedApiSpin).toHaveBeenCalledTimes(3)
+        expect(useGameStore.getState().autoSpin).toEqual({ remaining: 1 })
+
+        useGameStore.getState().stopAutoSpin()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('stops on insufficient funds and surfaces the existing out-of-coins sheet', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      mockedApiSpin.mockRejectedValue(
+        new ApiClientError('not enough coins', 402, 'INSUFFICIENT_FUNDS'),
+      )
+
+      await armAutoSpin(10)
+
+      await waitFor(() => expect(useGameStore.getState().autoSpin).toBeNull())
+      expect(await screen.findByText("You're out of coins")).toBeInTheDocument()
+      expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+    })
+
+    it('locks the bet selector while it runs (industry practice — the armed bet must not drift)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      const betPlus = screen.getByRole('button', { name: '+' })
+      expect(betPlus).not.toBeDisabled()
+
+      let resolveSpin: (value: SpinResponse) => void = () => {}
+      mockedApiSpin.mockReturnValue(
+        new Promise((resolve) => {
+          resolveSpin = resolve
+        }),
+      )
+      await armAutoSpin(10)
+
+      await waitFor(() => expect(screen.getByRole('button', { name: '+' })).toBeDisabled())
+      expect(screen.getByRole('button', { name: '-' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Bet' })).toBeDisabled()
+
+      // 중지하면 지금 도는 판이 끝나는 대로 다시 풀린다.
+      await act(async () => {
+        getSpinButton().click()
+      })
+      await act(async () => {
+        resolveSpin(baseSpinResponse())
+      })
+      await waitFor(() => expect(screen.getByRole('button', { name: '+' })).not.toBeDisabled())
+    })
+
+    it('cannot be armed during free spins — that loop owns the reels', async () => {
+      mockedGetGameState.mockResolvedValue({
+        freeSpins: {
+          gameId: 'classic-777',
+          left: 5,
+          total: 10,
+          multiplier: 2,
+          totalBet: 10,
+          accumulatedWin: 0,
+        },
+        state: { freeSpins: null, gamble: null },
+      })
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await waitFor(() => expect(getAutoButton()).toBeDisabled())
     })
   })
 })

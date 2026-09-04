@@ -26,7 +26,7 @@ const baseUser: PublicUser = {
 describe('SettingsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useSettingsStore.setState({ locale: 'auto', sound: true, haptics: true, reducedMotion: false })
+    useSettingsStore.setState({ locale: 'auto', sound: true, haptics: true, reducedMotion: false, spinSpeed: 'normal' })
     useSessionStore.setState({
       status: 'ready',
       token: 'test-token',
@@ -137,6 +137,22 @@ describe('SettingsModal', () => {
       motionSwitch.click()
     })
     expect(useSettingsStore.getState().reducedMotion).toBe(true)
+  })
+
+  it('changes the spin speed in the settings store via the segmented control', async () => {
+    render(<SettingsModal user={baseUser} onClose={() => {}} />)
+
+    const turboButton = screen.getByRole('radio', { name: 'Turbo' })
+    await act(async () => {
+      turboButton.click()
+    })
+    expect(useSettingsStore.getState().spinSpeed).toBe('turbo')
+
+    const quickButton = screen.getByRole('radio', { name: 'Quick' })
+    await act(async () => {
+      quickButton.click()
+    })
+    expect(useSettingsStore.getState().spinSpeed).toBe('quick')
   })
 
   it('calls onClose when the close button is clicked', async () => {

@@ -4,6 +4,7 @@ import type { FxMap, SheetMap } from './theme.js'
 import type { WinTier } from './wins.js'
 import type { FeatureTrigger, RendererMode } from './features.js'
 import type { ModeTarget } from './transition.js'
+import type { SpinSpeed } from './timing.js'
 
 /** 테마가 선택적으로 선언할 수 있는 효과음 키. 파일이 없으면 키를 빼면 된다. */
 export type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
@@ -68,7 +69,7 @@ export type RendererFit = 'width' | 'window'
 
 /**
  * 당첨 라인을 보여주는 방식.
- * - `effect`(기본): 빛 한 점이 당첨 심볼을 왼쪽부터 훑고 지나간다. 선을 그리지 않는다.
+ * - `effect`(기본): 당첨 심볼 둘레에 고정 광채를 두르고 심볼 연출만 터뜨린다. 선을 그리지 않는다.
  * - `line`: 예전의 3px 폴리라인. 좌표를 눈으로 확인할 때만 쓴다.
  */
 export type PaylineStyle = 'effect' | 'line'
@@ -83,8 +84,30 @@ export type RendererEvent =
    * 허브가 배당 카운터를 이 시간에 맞춰 굴리라고 있는 이벤트다.
    */
   | { type: 'winTotal'; totalWin: number; tier: WinTier; durationMs: number }
-  /** 승리 연출 B단계에서 라인 하나를 짚었다. */
-  | { type: 'winLine'; line: number; win: number }
+  /**
+   * 승리 연출 B단계에서 라인(ways면 심볼) 하나를 짚었다. B단계의 매 스텝 **시작**에 온다.
+   *
+   * 허브가 이 값으로 릴 밖 문구를 만든다. 렌더러는 이름도 번역도 모르므로 id를 그대로 싣는다.
+   * `index`/`total`은 이번 바퀴에서 몇 번째인지, `cycle`은 몇 바퀴째인지(0부터)다.
+   */
+  | {
+      type: 'winLine'
+      line: number
+      win: number
+      symbol: string
+      count: number
+      ways?: number
+      group?: string
+      direction?: 'ltr' | 'rtl'
+      index: number
+      total: number
+      cycle: number
+    }
+  /**
+   * 승리 연출 한 바퀴(A단계)가 시작됐다. `cycle`은 0부터 늘어난다.
+   * A단계 동안 총배당을 보여 주라고 있는 이벤트다. 등급과 길이는 `winTotal`이 함께 준다.
+   */
+  | { type: 'winCycle'; cycle: number; totalWin: number }
   /**
    * 프리스핀 같은 피처에 걸렸다. A단계가 끝나고 스캐터 연출이 시작할 때 온다.
    * 인트로 배너는 허브가 띄운다. 렌더러는 릴 위 연출만 맡는다.
@@ -95,11 +118,6 @@ export type RendererEvent =
    * 허브가 프리스핀 인트로/종료 배너를 이 신호에 맞춰 띄우고 내리라고 있는 이벤트다.
    */
   | { type: 'modeTransition'; to: ModeTarget; phase: 'start' | 'end' }
-  /**
-   * 승리 라인을 훑는 빛이 심볼 하나에 닿았다.
-   * 허브가 여기에 짧은 효과음을 붙이라고 있는 이벤트다.
-   */
-  | { type: 'pulseArrive'; line: number; reel: number; row: number }
   /**
    * 변형(미스터리 리빌·확장 와일드·승급·랜덤 와일드) 한 단계가 시작하거나 끝났다.
    * 배너와 효과음은 허브가 띄운다. 렌더러는 릴 위 연출만 맡는다.
@@ -127,21 +145,21 @@ export interface RendererOptions {
   /** 당첨 라인 표시 방식. 기본 `'effect'`. */
   paylineStyle?: PaylineStyle
   /**
-   * 프리스핀 중 릴 창 위에 명판을 띄울지. 기본 true.
-   * 허브가 자체 카운터를 이미 보여준다면 false로 꺼도 된다.
-   */
-  showFreeSpinsPlaque?: boolean
-  /**
-   * `fit: 'window'`에서 프레임이 컨테이너 폭을 넘어도 되는 **상한**. 기본 0.40.
+   * `fit: 'window'`에서 프레임이 컨테이너 폭을 넘어도 되는 **상한**. 기본 0.
    *
-   * 배율은 보통 "창 폭 = 컨테이너 폭"이나 세로 규칙이 먼저 정한다.
-   * 이 값은 그 위에 얹는 안전장치라 창이 아주 좁은 아트가 아니면 실제로 작동하지 않는다.
+   * 기본값에서는 프레임이 좌우로 잘리지 않는다. 창이 조금 좁아지더라도 아트가 온전히 보인다.
+   * 0보다 크게 주면 그 비율만큼 다시 넘칠 수 있다 — 잘림을 감수하고 릴을 키우려는 게임용이다.
    * `fit: 'width'`에서는 무시된다.
    */
   overflowX?: number
 }
 
 export interface SpinToOptions {
+  /**
+   * 이번 스핀만 쓸 속도 프로파일. 없으면 `setSpinSpeed`로 정해 둔 값(기본 `normal`)을 쓴다.
+   * `durationMs`/`stagger`를 직접 주면 그쪽이 이긴다.
+   */
+  speed?: SpinSpeed
   /** 릴 1개가 도는 시간(ms). */
   durationMs?: number
   /** 릴 사이 정지 간격(ms). */
@@ -161,11 +179,27 @@ export interface SpinToOptions {
 }
 
 export interface ShowWinsOptions {
-  /** true면 정지 없이 계속 순환한다. false면 한 바퀴 돌고 끝낸다. */
+  /**
+   * 기본 true. 다음 `spinTo`/`clearWins`/`destroy`나 모드 전환까지 A→B→A로 계속 순환한다.
+   * false면 한 바퀴만 돌고 멈춘다(테스트와 일회성 재생용).
+   *
+   * 어느 쪽이든 `showWins`가 돌려주는 약속은 **첫 바퀴**가 끝나면 resolve한다.
+   */
   loop?: boolean
   /**
-   * 라인 명판 문구를 만드는 함수. 렌더러는 번역을 모르므로 허브가 넣어 준다.
-   * 기본값은 `Line {n} · {배당}`.
+   * 연출 분량. 기본 `'full'`(A단계 전체 표시 → 필요하면 피처 → 라인별 순차 B단계).
+   *
+   * `'brief'`는 **A단계만** 짧게 한 번 보여주고 끝낸다 — 라인별 순차를 아예 만들지 않고,
+   * 홀드도 등급과 무관하게 짧게 고정한다(속도 프로파일 배율은 그대로). 오토스핀처럼 다음 판으로
+   * 곧장 넘어가야 하는 흐름용이다. `loop`는 무시된다(brief는 언제나 한 번만 재생한다).
+   *
+   * 프리스핀에 걸린 스핀에서는 피처 스텝이 그대로 남는다 — `featureTriggered`가 나가야
+   * 허브의 프리스핀 인트로/진입 게이트가 끊기지 않는다.
+   */
+  presentation?: 'full' | 'brief'
+  /**
+   * @deprecated 릴 위 라인 명판은 사라졌다. 문구는 `winLine` 이벤트를 받아 허브가 그린다.
+   * 다음 릴리스에서 제거한다. 지금은 넘겨도 무시된다.
    */
   formatLineLabel?: (win: WinLine) => string
   /**
@@ -210,9 +244,32 @@ export interface SlotRenderer {
    * `spinEnd`를 내보내며 resolve한다. 승리 연출은 변형이 끝난 그리드 위에서 시작해야 한다.
    */
   spinTo(stops: number[], opts?: SpinToOptions): SpinHandle
-  /** 승리 라인 하이라이트. `loop: false`면 한 바퀴를 다 보여준 뒤 resolve. */
+  /**
+   * 승리 라인 하이라이트. 첫 바퀴(A단계 + B단계 한 바퀴)가 끝나면 resolve한다.
+   * 기본값 `loop: true`에서는 resolve한 뒤에도 `clearWins()`나 다음 `spinTo()`까지 계속 돈다.
+   */
   showWins(wins: WinLine[], opts?: ShowWinsOptions): Promise<void>
+  /**
+   * 보고 있던 바퀴를 곧장 접는다. `showWins()`의 약속이 그 자리에서 resolve한다.
+   *
+   * 순환은 멈추지 않는다 — 접은 자리에서 다음 바퀴가 A단계부터 다시 시작한다.
+   * 남은 라인 스텝의 `winLine`은 나오지 않고, 다음 바퀴부터 정상적으로 다시 나온다.
+   * 연출이 돌고 있지 않으면 아무 일도 일어나지 않는다.
+   */
+  skipWins(): void
+  /** 진행 중인 승리 연출을 멈추고 화면에서 걷어낸다. 순환도 여기서 끝난다. */
   clearWins(): void
+  /**
+   * 이후 모든 스핀의 속도 프로파일. 기본 `'normal'`.
+   *
+   * - `normal`: 5릴 기준 총 1.65초.
+   * - `quick`: 총 0.9초. 회전과 정지 간격이 55%로 줄어든다.
+   * - `turbo`: 총 0.45초. 당김을 생략하고 릴이 거의 동시에 서며 승리 A단계 홀드도 짧아진다.
+   *
+   * 돌고 있는 스핀은 건드리지 않는다. `ready` 전에 불러도 잃지 않는다.
+   * 모션 축소가 켜져 있으면 그 상한이 언제나 우선한다.
+   */
+  setSpinSpeed(speed: SpinSpeed): void
   /** 스핀 대기 중 미세한 유휴 모션. */
   setSpinningIdle(on: boolean): void
   /**

@@ -8,6 +8,7 @@ import type {
 } from './types.js'
 import type { WinLine } from '@tgslot/slot-engine'
 import type { RendererMode } from './features.js'
+import type { SpinSpeed } from './timing.js'
 
 /** 옵션 기본값이 모두 채워진 형태. pixi 구현은 이것만 받는다. */
 export interface ResolvedRendererOptions extends RendererOptions {
@@ -15,7 +16,6 @@ export interface ResolvedRendererOptions extends RendererOptions {
   initialStops: number[]
   fit: RendererFit
   overflowX: number
-  showFreeSpinsPlaque: boolean
   paylineStyle: PaylineStyle
 }
 
@@ -23,7 +23,9 @@ export interface ResolvedRendererOptions extends RendererOptions {
 export interface RendererCore {
   spinTo(stops: number[], opts?: SpinToOptions): SpinHandle
   showWins(wins: WinLine[], opts?: ShowWinsOptions): Promise<void>
+  skipWins(): void
   clearWins(): void
+  setSpinSpeed(speed: SpinSpeed): void
   setSpinningIdle(on: boolean): void
   setMode(mode: RendererMode): void
   resize(): void

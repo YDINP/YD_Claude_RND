@@ -16,10 +16,10 @@
   "backgroundFreeSpins": "bg-freespins.webp",
   "frameLayout": {
     "window": {
-      "x": 0.0915625,
-      "y": 0.224375,
-      "w": 0.816875,
-      "h": 0.57078125
+      "x": 0.0603125,
+      "y": 0.25953125,
+      "w": 0.88328125,
+      "h": 0.504375
     }
   },
   "version": "1.0.0",
@@ -165,6 +165,17 @@
           "fromAlpha": 0.45
         }
       ]
+    }
+  },
+  "sheets": {
+    "shiba": {
+      "win": "sheets/shiba-win.json"
+    },
+    "wild": {
+      "win": "sheets/wild-win.json"
+    },
+    "scatter": {
+      "win": "sheets/scatter-win.json"
     }
   }
 }

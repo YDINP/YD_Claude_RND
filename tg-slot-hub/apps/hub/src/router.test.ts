@@ -39,6 +39,16 @@ describe('parseHash', () => {
     expect(parseHash('#/play/')).toEqual({ name: 'lobby' })
   })
 
+  it('strips a trailing query string (e.g. "?debug=1") before matching the path', () => {
+    expect(parseHash('#/play/shiba-shrine?debug=1')).toEqual({ name: 'play', gameId: 'shiba-shrine' })
+  })
+
+  it('strips a query string from the lobby/missions/leaderboard paths too', () => {
+    expect(parseHash('#/?debug=1')).toEqual({ name: 'lobby' })
+    expect(parseHash('#/missions?debug=1')).toEqual({ name: 'missions' })
+    expect(parseHash('#/leaderboard?debug=1')).toEqual({ name: 'leaderboard' })
+  })
+
   it('parses "#/missions" as the missions route', () => {
     expect(parseHash('#/missions')).toEqual({ name: 'missions' })
   })

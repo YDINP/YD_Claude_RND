@@ -1,0 +1,153 @@
+/* 개발자 디버그 패널 — Modal(.hub-modal) 안에 얹히는 섹션들. 운영 화면에 노출되는 일반 UI가
+   아니므로 스타일은 최소한으로만 다듬는다(가독성 우선). */
+.hub-debug-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-xs);
+  padding-top: var(--hub-space-sm);
+  border-top: 1px solid var(--hub-border);
+}
+
+.hub-debug-panel__section:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.hub-debug-panel__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hub-space-xs);
+}
+
+.hub-debug-panel__preset-btn {
+  min-height: 36px;
+  padding: 0 var(--hub-space-sm);
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+  color: var(--hub-text);
+  font-size: var(--hub-font-sub);
+  font-weight: 700;
+}
+
+.hub-debug-panel__preset-btn--armed {
+  background: linear-gradient(135deg, var(--hub-gold-light), var(--hub-gold));
+  border-color: transparent;
+  color: #2a1a04;
+}
+
+.hub-debug-panel__preset-btn:disabled {
+  opacity: 0.5;
+}
+
+.hub-debug-panel__armed-note,
+.hub-debug-panel__hint {
+  margin: 0;
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+}
+
+.hub-debug-panel__timing {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--hub-space-xs) var(--hub-space-md);
+  margin: 0;
+}
+
+.hub-debug-panel__timing dt {
+  color: var(--hub-text-sub);
+  font-size: var(--hub-font-small);
+}
+
+.hub-debug-panel__timing dd {
+  margin: 0;
+  font-family: var(--hub-mono);
+  font-size: var(--hub-font-small);
+  color: var(--hub-text);
+  text-align: right;
+}
+
+.hub-debug-panel__state-line {
+  margin: 0;
+  font-size: var(--hub-font-sub);
+  color: var(--hub-text);
+}
+
+.hub-debug-panel__response-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hub-space-sm);
+}
+
+.hub-debug-panel__copy-btn {
+  min-height: 30px;
+  padding: 0 var(--hub-space-sm);
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+  color: var(--hub-text);
+  font-size: var(--hub-font-small);
+  font-weight: 700;
+}
+
+.hub-debug-panel__json {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: var(--hub-space-sm);
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-bg);
+  border: 1px solid var(--hub-border);
+  font-family: var(--hub-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--hub-text);
+  white-space: pre;
+}
+
+/* 릴 위/스테이지 코너에 뜨는 작은 진입 버튼. debugEnabled일 때만 마운트된다. */
+.hub-game-screen__debug-btn {
+  position: absolute;
+  right: var(--hub-space-md);
+  bottom: var(--hub-space-md);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 18, 32, 0.75);
+  border: 1px solid var(--hub-border);
+  color: var(--hub-text);
+  font-size: 16px;
+  z-index: 60;
+}
+
+.hub-game-screen__debug-btn-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--hub-gold-light);
+  color: #2a1a04;
+}
+
+.hub-game-screen__debug-toast {
+  position: absolute;
+  left: 50%;
+  bottom: var(--hub-space-md);
+  transform: translateX(-50%);
+  max-width: calc(100% - var(--hub-space-lg) * 2);
+  padding: var(--hub-space-sm) var(--hub-space-md);
+  border-radius: var(--hub-radius-sm);
+  background: rgba(11, 18, 32, 0.92);
+  border: 1px solid var(--hub-border);
+  color: var(--hub-text);
+  font-size: var(--hub-font-small);
+  text-align: center;
+  z-index: 61;
+}

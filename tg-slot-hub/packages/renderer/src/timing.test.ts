@@ -7,10 +7,12 @@ import {
   LANDING_SETTLE_MS,
   PULL_UP_MS,
   REDUCED_TOTAL_CAP_MS,
+  SKIP_SETTLE_MS,
   SKIP_STAGGER_MS,
-  SKIP_TOTAL_MS,
+  SPIN_SPEED_PROFILES,
+  WIN_START_DELAY_MS,
 } from './constants.js'
-import { buildSkipPlan, buildSpinPlan } from './timing.js'
+import { buildSkipPlan, buildSpinPlan, spinSpeedProfile, winStartDelayMs } from './timing.js'
 
 describe('buildSpinPlan 기본값', () => {
   const plan = buildSpinPlan({ reels: 5 })
@@ -177,6 +179,64 @@ describe('buildSpinPlan 빠른 스핀', () => {
   })
 })
 
+describe('스핀 속도 프로파일', () => {
+  function totalOf(speed: 'normal' | 'quick' | 'turbo'): number {
+    return buildSpinPlan({ reels: 5, speed }).totalMs
+  }
+
+  it('빠를수록 총 길이가 짧아진다', () => {
+    expect(totalOf('quick')).toBeLessThan(totalOf('normal'))
+    expect(totalOf('turbo')).toBeLessThan(totalOf('quick'))
+  })
+
+  it('문서가 약속한 길이 안에 든다', () => {
+    // normal 약 1.65초 / quick 약 0.9초 / turbo 약 0.45초.
+    expect(totalOf('normal')).toBeCloseTo(1650, -2)
+    expect(totalOf('quick')).toBeCloseTo(900, -2)
+    expect(totalOf('turbo')).toBeCloseTo(450, -2)
+  })
+
+  it('quick은 normal의 55% 언저리다', () => {
+    expect(totalOf('quick') / totalOf('normal')).toBeGreaterThan(0.5)
+    expect(totalOf('quick') / totalOf('normal')).toBeLessThan(0.6)
+  })
+
+  it('터보는 당김을 생략한다', () => {
+    expect(buildSpinPlan({ reels: 5, speed: 'turbo' }).pullUpMs).toBe(0)
+    expect(buildSpinPlan({ reels: 5, speed: 'normal' }).pullUpMs).toBeGreaterThan(0)
+  })
+
+  it('터보는 릴이 거의 동시에 선다', () => {
+    const plan = buildSpinPlan({ reels: 5, speed: 'turbo' })
+    const first = plan.reels[0]?.endMs ?? 0
+    const last = plan.reels[plan.reels.length - 1]?.endMs ?? 0
+    expect(last - first).toBeLessThan(100)
+  })
+
+  it('속도를 안 주면 normal이다', () => {
+    expect(buildSpinPlan({ reels: 5 }).totalMs).toBe(totalOf('normal'))
+    expect(spinSpeedProfile()).toEqual(SPIN_SPEED_PROFILES.normal)
+  })
+
+  it('직접 준 길이가 프로파일보다 우선한다', () => {
+    const plan = buildSpinPlan({ reels: 3, speed: 'turbo', durationMs: 2000, stagger: 300 })
+    expect(plan.reels[0]?.endMs).toBeCloseTo(2000, 9)
+    expect((plan.reels[1]?.endMs ?? 0) - (plan.reels[0]?.endMs ?? 0)).toBeCloseTo(300, 9)
+  })
+
+  it('모션 축소가 어떤 프로파일보다도 우선한다', () => {
+    const plan = buildSpinPlan({ reels: 5, speed: 'normal', reducedMotion: true })
+    expect(plan.totalMs).toBeLessThanOrEqual(REDUCED_TOTAL_CAP_MS + 1e-9)
+    expect(plan.pullUpMs).toBe(0)
+  })
+
+  it('프리스핀 가속은 프로파일 위에 겹쳐 적용된다', () => {
+    const plain = buildSpinPlan({ reels: 5, speed: 'quick' }).totalMs
+    const fast = buildSpinPlan({ reels: 5, speed: 'quick', fast: true }).totalMs
+    expect(fast).toBeLessThan(plain)
+  })
+})
+
 describe('buildSkipPlan', () => {
   const plan = buildSkipPlan(5)
 
@@ -184,10 +244,10 @@ describe('buildSkipPlan', () => {
     expect(plan.reels).toHaveLength(5)
   })
 
-  it('전체가 260ms 안에 끝난다', () => {
-    expect(plan.totalMs).toBe(SKIP_TOTAL_MS)
+  it('전체가 120ms 안에 끝난다', () => {
+    expect(plan.totalMs).toBe(SKIP_SETTLE_MS)
     for (const reel of plan.reels) {
-      expect(reel.durationMs).toBeLessThanOrEqual(SKIP_TOTAL_MS + 1e-9)
+      expect(reel.durationMs).toBeLessThanOrEqual(SKIP_SETTLE_MS + 1e-9)
     }
   })
 
@@ -198,18 +258,24 @@ describe('buildSkipPlan', () => {
   })
 
   it('마지막 릴이 예산을 다 쓴다', () => {
-    expect(plan.reels[plan.reels.length - 1]?.durationMs).toBeCloseTo(SKIP_TOTAL_MS, 9)
+    expect(plan.reels[plan.reels.length - 1]?.durationMs).toBeCloseTo(SKIP_SETTLE_MS, 9)
   })
 
-  it('릴이 3개면 간격이 40ms다', () => {
+  it('릴 사이 간격은 상한을 넘지 않고 0보다는 크다', () => {
     const three = buildSkipPlan(3)
     const gap = (three.reels[1]?.durationMs ?? 0) - (three.reels[0]?.durationMs ?? 0)
-    expect(gap).toBeCloseTo(SKIP_STAGGER_MS, 9)
+    expect(gap).toBeGreaterThan(0)
+    expect(gap).toBeLessThanOrEqual(SKIP_STAGGER_MS)
+  })
+
+  it('첫 릴도 착지에 시간을 쓴다', () => {
+    // 0이면 첫 릴만 순간이동처럼 보인다. 스냅이어도 내려앉는 동작은 남겨야 한다.
+    expect(plan.reels[0]?.durationMs ?? 0).toBeGreaterThan(0)
   })
 
   it('릴이 많으면 간격을 줄여 예산을 지킨다', () => {
     const many = buildSkipPlan(20)
-    expect(many.totalMs).toBe(SKIP_TOTAL_MS)
+    expect(many.totalMs).toBe(SKIP_SETTLE_MS)
     const gap = (many.reels[1]?.durationMs ?? 0) - (many.reels[0]?.durationMs ?? 0)
     expect(gap).toBeLessThan(SKIP_STAGGER_MS)
     expect(many.reels[0]?.durationMs ?? 0).toBeGreaterThan(0)
@@ -218,7 +284,7 @@ describe('buildSkipPlan', () => {
   it('릴이 하나면 간격이 없다', () => {
     const one = buildSkipPlan(1)
     expect(one.reels).toHaveLength(1)
-    expect(one.reels[0]?.durationMs).toBe(SKIP_TOTAL_MS)
+    expect(one.reels[0]?.durationMs).toBe(SKIP_SETTLE_MS)
   })
 
   it('스킵이 정상 스핀보다 훨씬 짧다', () => {
@@ -227,5 +293,41 @@ describe('buildSkipPlan', () => {
 
   it('예산을 직접 줄 수 있다', () => {
     expect(buildSkipPlan(3, 500).totalMs).toBe(500)
+  })
+})
+
+describe('winStartDelayMs — 릴 정지 후 연출 시작까지의 숨 고르기', () => {
+  it('normal 속도는 기본 여백을 그대로 쓴다', () => {
+    expect(winStartDelayMs('normal')).toBe(WIN_START_DELAY_MS)
+    expect(winStartDelayMs()).toBe(WIN_START_DELAY_MS) // 속도를 안 주면 normal과 같다.
+  })
+
+  it('quick/turbo는 스핀 리듬이 짧은 만큼 여백도 비례해 줄어든다', () => {
+    expect(winStartDelayMs('quick')).toBeLessThan(winStartDelayMs('normal'))
+    expect(winStartDelayMs('turbo')).toBeLessThan(winStartDelayMs('quick'))
+  })
+
+  it('터보는 요구사항 그대로 ×0.45로 줄어든다', () => {
+    expect(winStartDelayMs('turbo')).toBe(Math.round(WIN_START_DELAY_MS * 0.45))
+  })
+
+  it('모션 축소에서는 인위적인 대기를 더하지 않는다(속도와 무관하게 0)', () => {
+    expect(winStartDelayMs('normal', true)).toBe(0)
+    expect(winStartDelayMs('quick', true)).toBe(0)
+    expect(winStartDelayMs('turbo', true)).toBe(0)
+  })
+
+  it('타임라인 계획과 비교하면, 연출은 마지막 릴이 정착을 끝낸 시각(spinPlan.totalMs)보다 항상 늦게 시작된다', () => {
+    // showWins()는 "마지막 릴 정착 시각 + winStartDelayMs"가 지나야 연출을 시작한다
+    // (pixiRenderer.ts) — 순수 데이터로 그 합이 정착 시각보다 항상 더 크다는 것만 확인한다.
+    // 스킵 경로(buildSkipPlan)도 showWins()를 그대로 거치므로 같은 여백이 적용된다.
+    for (const speed of ['normal', 'quick', 'turbo'] as const) {
+      const spinPlan = buildSpinPlan({ reels: 5, speed })
+      const skipPlan = buildSkipPlan(5)
+      const delay = winStartDelayMs(speed)
+      expect(delay).toBeGreaterThan(0)
+      expect(spinPlan.totalMs + delay).toBeGreaterThan(spinPlan.totalMs)
+      expect(skipPlan.totalMs + delay).toBeGreaterThan(skipPlan.totalMs)
+    }
   })
 })

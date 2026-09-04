@@ -183,6 +183,8 @@ export async function generateAsset(
     negative: file.negative,
     size: asset.size,
     transparent: asset.transparent,
+    kind: asset.kind,
+    ...(asset.timeoutMs !== undefined ? { timeoutMs: asset.timeoutMs } : {}),
   })
 
   writeBuffer(assetRawPath(gameDir, asset), generated.buffer)

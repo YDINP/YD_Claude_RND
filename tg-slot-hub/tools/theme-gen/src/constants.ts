@@ -48,16 +48,47 @@ export const RAW_DIR_NAME = 'raw'
 
 /** codex CLI 한 번 실행 상한(ms). 이미지 생성 1건에 1~3분 걸릴 수 있다. */
 export const DEFAULT_CODEX_TIMEOUT_MS = 300_000
+/**
+ * `kind: "sheet"` asset(3x3 콘택트시트, 프롬프트가 길다) 전용 codex 기본 타임아웃(ms).
+ * codex가 out.png를 다 쓰고도 이미지 검증용 PowerShell을 몇 분 더 돌리는 걸 실측해서
+ * 기본 타임아웃보다 여유를 더 준다. asset.timeoutMs로 개별 오버라이드도 가능하다.
+ */
+export const DEFAULT_CODEX_SHEET_TIMEOUT_MS = 540_000
 /** `codex login status`로 가용성을 확인할 때 쓰는 상한(ms). */
 export const DEFAULT_CODEX_AVAILABILITY_TIMEOUT_MS = 10_000
+/** out.png 조기 종료 감시 폴링 주기(ms). `earlyExitStableChecks`와 곱하면 대략 안정 판정 소요 시간이 된다. */
+export const CODEX_EARLY_EXIT_POLL_INTERVAL_MS = 2500
+/** out.png 크기가 이 횟수만큼 연속으로 안 변하면(기본 2회 = 약 5초) 조기 종료한다. */
+export const CODEX_EARLY_EXIT_STABLE_CHECKS = 2
 /** codex 작업용 임시 폴더 접두사. `os.tmpdir()` 아래 `<이 값><asset id>-<랜덤6글자>`로 만들어진다. */
 export const CODEX_TEMP_DIR_PREFIX = 'tgslot-codex-'
+/**
+ * 성공한 자산의 임시 폴더 정리(`rmSync`)가 Windows에서 EPERM/EBUSY 등으로 실패할 때 재시도할
+ * 최대 횟수(첫 시도 포함). 프로세스 트리를 막 죽인 직후에는 파일 핸들이 잠깐 남아 있을 수 있어,
+ * 짧게 몇 번 더 시도해 보고 그래도 안 되면 경고만 남기고 넘어간다(자산 성공 여부에는 영향 없음).
+ */
+export const CODEX_TEMP_CLEANUP_RETRIES = 3
+/** 임시 폴더 정리 재시도 사이 지연(ms). */
+export const CODEX_TEMP_CLEANUP_RETRY_DELAY_MS = 150
 /** codex가 결과를 저장하도록 지시하는 파일 이름 (임시 폴더 안). */
 export const CODEX_OUTPUT_FILENAME = 'out.png'
 /** codex 실행 로그를 담는 파일 이름 (`-o` 옵션, 임시 폴더 안). */
 export const CODEX_LOG_FILENAME = 'last.txt'
 /** 실패 메시지에 붙이는 stdout/stderr 꼬리 최대 길이(문자 수). */
 export const CODEX_OUTPUT_TAIL_LENGTH = 2000
+
+/**
+ * out.png 회수(readSalvageableOutput)에도 실패했을 때 codex 계정 홈의 `generated_images` 폴더에서
+ * 마지막으로 회수를 시도한다. 그 회수 대상을 "이 실행이 시작된 시각 이후에 생성된 파일"로
+ * 한정하기 위한 기준 시각 계산에서, 실행 시작 시각(spawn 직전 `Date.now()`)에서 이 값만큼 뺀다 —
+ * 파일시스템 mtime과 프로세스 시각 사이의 미세한 오차를 흡수하기 위한 여유분이다.
+ */
+export const CODEX_GENERATED_IMAGES_START_SKEW_MS = 5000
+/**
+ * codex `generated_images` 루트 아래에서 png를 찾을 때 재귀적으로 내려갈 최대 깊이.
+ * 실측 구조가 `<루트>/<uuid>/exec-<uuid>.png`(깊이 2)라 여유를 두고 3으로 잡는다.
+ */
+export const CODEX_GENERATED_IMAGES_MAX_DEPTH = 3
 
 /**
  * 프레임 아트 안에서 릴 창(placeholder 초록/흰색 사각형)을 찾을 때 쓰는 기본값.

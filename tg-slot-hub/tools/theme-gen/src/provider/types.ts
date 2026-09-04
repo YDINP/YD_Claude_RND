@@ -1,4 +1,4 @@
-import type { AssetSize } from '../schema.js'
+import type { AssetKind, AssetSize } from '../schema.js'
 
 export type ProviderName = 'openai' | 'gemini' | 'comfy' | 'codex'
 
@@ -15,6 +15,10 @@ export interface GenerateOptions {
   negative: string
   size: AssetSize
   transparent: boolean
+  /** asset의 kind. codex만 이걸로 kind별 기본 타임아웃(sheet는 더 길게)을 고른다. */
+  kind?: AssetKind
+  /** asset.timeoutMs 오버라이드. codex만 사용한다. */
+  timeoutMs?: number
 }
 
 export interface GeneratedImage {

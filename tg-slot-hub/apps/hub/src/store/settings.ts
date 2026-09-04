@@ -10,6 +10,13 @@ import { setAudioMuted } from '../lib/audio'
 /** 'auto'면 서버가 정한 user.locale(텔레그램 language_code 기반)을 그대로 따른다 */
 export type SettingsLocale = Locale | 'auto'
 
+/**
+ * 스핀 리듬 프로파일 — `@tgslot/renderer`의 `SpinSpeed`(`SlotRenderer.setSpinSpeed`)와 값이
+ * 정확히 같아야 한다. 여기서 별도로 선언하는 이유는 store/game.ts와 마찬가지로 이 스토어도
+ * 렌더러 패키지를 직접 import하지 않아 테스트에서 가볍게 다루기 위해서다.
+ */
+export type SpinSpeed = 'normal' | 'quick' | 'turbo'
+
 const STORAGE_KEY = 'tgslot.settings'
 
 export interface SettingsState {
@@ -17,6 +24,7 @@ export interface SettingsState {
   sound: boolean
   haptics: boolean
   reducedMotion: boolean
+  spinSpeed: SpinSpeed
 }
 
 export interface SettingsActions {
@@ -24,6 +32,7 @@ export interface SettingsActions {
   setSound: (on: boolean) => void
   setHaptics: (on: boolean) => void
   setReducedMotion: (on: boolean) => void
+  setSpinSpeed: (speed: SpinSpeed) => void
 }
 
 export type SettingsStore = SettingsState & SettingsActions
@@ -44,6 +53,10 @@ function isSettingsLocale(value: unknown): value is SettingsLocale {
   return value === 'en' || value === 'ko' || value === 'auto'
 }
 
+function isSpinSpeed(value: unknown): value is SpinSpeed {
+  return value === 'normal' || value === 'quick' || value === 'turbo'
+}
+
 function readStoredSettings(): Partial<SettingsState> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -56,6 +69,7 @@ function readStoredSettings(): Partial<SettingsState> {
     if (typeof p.sound === 'boolean') result.sound = p.sound
     if (typeof p.haptics === 'boolean') result.haptics = p.haptics
     if (typeof p.reducedMotion === 'boolean') result.reducedMotion = p.reducedMotion
+    if (isSpinSpeed(p.spinSpeed)) result.spinSpeed = p.spinSpeed
     return result
   } catch {
     return {}
@@ -77,6 +91,7 @@ function buildInitialState(): SettingsState {
     sound: stored.sound ?? true,
     haptics: stored.haptics ?? true,
     reducedMotion: stored.reducedMotion ?? prefersReducedMotion(),
+    spinSpeed: stored.spinSpeed ?? 'normal',
   }
 }
 
@@ -105,6 +120,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   setReducedMotion(on) {
     set({ reducedMotion: on })
+    writeStoredSettings(get())
+  },
+
+  setSpinSpeed(speed) {
+    set({ spinSpeed: speed })
     writeStoredSettings(get())
   },
 }))

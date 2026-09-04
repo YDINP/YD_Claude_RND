@@ -79,12 +79,13 @@ export {
 export {
   buildSkipPlan,
   buildSpinPlan,
+  spinSpeedProfile,
   type ReelSpinPlan,
   type SkipPlan,
   type SpinPlan,
   type SpinPlanInput,
+  type SpinSpeed,
 } from './timing.js'
-export { buildPulsePath, pulsePointAt, type PulsePath, type PulseWaypoint } from './pulse.js'
 export { isChromaGreen, keyOutGreen } from './chromaKey.js'
 export {
   atlasUrlFor,
@@ -119,11 +120,9 @@ export {
 } from './transition.js'
 export {
   findFreeSpins,
-  formatFreeSpinsPlaque,
   isFreeSpinsTrigger,
   isScatterWinTrigger,
   scatterPositions,
-  shouldShowFreeSpinsPlaque,
   type FeatureTrigger,
   type FreeSpinsMode,
   type FreeSpinsTrigger,
@@ -133,10 +132,18 @@ export {
 export {
   buildPresentation,
   defaultLineLabel,
+  lineStepCount,
   phaseAllDurationMs,
   presentationCycleMs,
+  runPresentation,
+  shouldLoopPresentation,
+  winLineEvent,
+  type PresentationHandle,
   type PresentationOptions,
+  type PresentationRunnerDeps,
   type PresentationStep,
+  type PresentationStepContext,
+  type WinLineEvent,
 } from './presentation.js'
 export {
   fxAmplitude,

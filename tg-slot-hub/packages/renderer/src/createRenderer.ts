@@ -7,13 +7,14 @@ import type {
   SpinToOptions,
 } from './types.js'
 import type { RendererCore, ResolvedRendererOptions } from './internal.js'
+import type { SpinSpeed } from './timing.js'
 import type { WinLine } from '@tgslot/slot-engine'
 import { DEFAULT_OVERFLOW_X } from './constants.js'
 import { resolveReducedMotion } from './motion.js'
 
 /** 릴을 크게 보여주는 쪽이 기본이다. 프레임 가장자리는 잘려도 된다. */
 const DEFAULT_FIT = 'window'
-/** 선을 긋지 않고 빛으로 훑는 쪽이 기본이다. 선은 심볼을 가린다. */
+/** 선을 긋지 않고 광채로 감싸는 쪽이 기본이다. 선은 심볼을 가린다. */
 const DEFAULT_PAYLINE_STYLE = 'effect'
 
 /** promise를 thenable 손잡이로 감싼다. `await`도 되고 `skip()`도 되게 하려는 것이다. */
@@ -36,7 +37,6 @@ function resolveOptions(options: RendererOptions): ResolvedRendererOptions {
     initialStops,
     fit: options.fit ?? DEFAULT_FIT,
     overflowX: options.overflowX ?? DEFAULT_OVERFLOW_X,
-    showFreeSpinsPlaque: options.showFreeSpinsPlaque ?? true,
     paylineStyle: options.paylineStyle ?? DEFAULT_PAYLINE_STYLE,
   }
 }
@@ -51,6 +51,7 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
   let core: RendererCore | null = null
   let destroyed = false
   let pendingMode: RendererMode | null = null
+  let pendingSpeed: SpinSpeed | null = null
 
   const ready: Promise<void> = (async () => {
     const module = await import('./pixi/pixiRenderer.js')
@@ -60,6 +61,7 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
       return
     }
     core = created
+    if (pendingSpeed !== null) core.setSpinSpeed(pendingSpeed)
     if (pendingMode !== null) core.setMode(pendingMode)
   })()
   // ready를 구독하지 않는 호출자 때문에 unhandled rejection이 뜨지 않도록 한 번 삼킨다.
@@ -93,8 +95,17 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
       })
     },
     showWins: (wins: WinLine[], opts?: ShowWinsOptions) => withCore((c) => c.showWins(wins, opts), undefined),
+    // 초기화 전에는 돌고 있는 연출이 없다. 기억해 둘 것도 없이 흘려보낸다.
+    skipWins: () => {
+      core?.skipWins()
+    },
     clearWins: () => {
       core?.clearWins()
+    },
+    setSpinSpeed: (speed: SpinSpeed) => {
+      // 초기화 전에 불러도 잃지 않도록 기억해 뒀다가 준비되면 적용한다.
+      pendingSpeed = speed
+      core?.setSpinSpeed(speed)
     },
     setSpinningIdle: (on: boolean) => {
       core?.setSpinningIdle(on)

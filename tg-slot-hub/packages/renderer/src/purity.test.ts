@@ -93,8 +93,10 @@ describe('브라우저 전용 코드 격리', () => {
 describe('리뷰에서 잡힌 회귀 방지', () => {
   const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
 
-  it('showWins가 피처 옵션을 계획으로 넘긴다', () => {
-    expect(renderer()).toContain('presentationOptionsFor(opts, this.options.reducedMotion)')
+  it('showWins가 피처 옵션과 속도를 계획으로 넘긴다', () => {
+    expect(renderer()).toContain(
+      'presentationOptionsFor(opts, this.options.reducedMotion, this.spinSpeed)',
+    )
   })
 
   it('라인 승리가 없다고 곧장 돌아서지 않는다', () => {
@@ -102,7 +104,7 @@ describe('리뷰에서 잡힌 회귀 방지', () => {
     expect(renderer()).not.toContain('this.destroyed || wins.length === 0')
   })
 
-  it('빛이 같은 셀을 다시 터뜨리기 전에 앞의 연출을 끈다', () => {
+  it('같은 셀을 다시 터뜨리기 전에 앞의 연출을 끈다', () => {
     expect(renderer()).toContain('this.stopCellFx(key)')
   })
 
@@ -121,8 +123,32 @@ describe('리뷰에서 잡힌 회귀 방지', () => {
     expect(source).toContain("phase: 'end'")
   })
 
-  it('스킵은 한 바퀴를 더 돌지 않는다', () => {
-    expect(renderer()).toContain('active.stripLength, 0)')
+  it('스킵은 남은 거리를 훑지 않고 정지 위치로 스냅한다', () => {
+    // 남은 거리를 시간에 몰아 지나가면 스트립이 긴 게임에서 "다시 돌다 멈춘다"로 보인다.
+    const source = renderer()
+    expect(source).toContain('const stopPosition = normalizePosition(active.stop, active.stripLength)')
+    expect(source).toContain('p: stopPosition + SKIP_SETTLE_SYMBOLS')
+    // 스킵 경로에는 회전 목표를 계산하는 자리가 남아 있으면 안 된다.
+    const skipAt = source.indexOf('private skipSpin(token: number)')
+    const skipEnd = source.indexOf('private async runSpin(', skipAt)
+    expect(source.slice(skipAt, skipEnd)).not.toContain('spinTargetPosition')
+  })
+
+  it('스킵 착지는 감속만 한다', () => {
+    const source = renderer()
+    const skipAt = source.indexOf('private skipSpin(token: number)')
+    const skipEnd = source.indexOf('private async runSpin(', skipAt)
+    const body = source.slice(skipAt, skipEnd)
+    expect(body).toContain("ease: 'power2.out'")
+    expect(body).not.toContain("power2.in'")
+  })
+
+  it('A단계와 B단계가 같은 테두리를 쓴다', () => {
+    // A단계에만 테두리가 빠져 전체 연출에서 광채가 사라져 보였다.
+    const source = renderer()
+    expect(source).toContain('private drawWinGlow(')
+    expect(source).toContain('this.drawWinGlow(positions)')
+    expect(source).toContain('this.drawWinGlow(win.positions)')
   })
 
   it('이미 접은 릴은 다시 접지 않는다', () => {
@@ -219,12 +245,158 @@ describe('ways 배선', () => {
     expect(source).not.toContain('if (payline === undefined) return')
   })
 
-  it('명판 좌표는 빛이 닿은 자리에서 온다', () => {
-    expect(renderer()).toContain('arrival: GridPosition')
+  it('ways 승리의 방향은 이벤트에 실려 허브로 간다', () => {
+    // 릴 위에는 방향을 말해 줄 빛이 없다. 어느 쪽으로 읽었는지는 허브가 문구로 보여준다.
+    const presentation = readFileSync(join(srcDir, 'presentation.ts'), 'utf8')
+    expect(presentation).toContain('event.direction = win.direction')
+  })
+})
+
+describe('승리 연출은 움직이는 빛을 쓰지 않는다', () => {
+  const rootAndPixi = (): string[] => [...listTsFiles(srcDir), ...listTsFiles(join(srcDir, 'pixi'))]
+
+  it('훑고 지나가는 빛 모듈이 남아 있지 않다', () => {
+    expect(existsSync(join(srcDir, 'pulse.ts'))).toBe(false)
+    expect(existsSync(join(srcDir, 'pixi', 'winPulse.ts'))).toBe(false)
   })
 
-  it('빛의 방향이 지급 방향을 따른다', () => {
-    expect(renderer()).toContain('waysDirectionOf(win)')
+  it('아무도 빛 경로를 만들지 않는다', () => {
+    const offenders: string[] = []
+    for (const file of rootAndPixi()) {
+      // 이 검사 자체가 그 이름을 들고 있다. 테스트 파일은 건너뛴다.
+      if (file.endsWith('.test.ts')) continue
+      const source = stripComments(readFileSync(file, 'utf8'))
+      for (const marker of ['buildPulsePath', 'playWinPulse', 'pulseArrive']) {
+        if (source.includes(marker)) offenders.push(`${file} -> ${marker}`)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('이벤트 유니온에 pulseArrive가 없다', () => {
+    expect(readFileSync(join(srcDir, 'types.ts'), 'utf8')).not.toContain('pulseArrive')
+  })
+
+  it('릴 위에 라인 문구를 찍지 않는다', () => {
+    // 문구는 허브가 winLine 이벤트를 받아 릴 밖 스트립에 그린다.
+    const source = stripComments(readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8'))
+    expect(source).not.toContain('winLabel')
+    expect(source).not.toContain('formatLineLabel')
+  })
+
+  it('릴 위에 프리스핀 남은 횟수/배수 명판을 찍지 않는다', () => {
+    // 카운터 텍스트는 허브가 store의 freeSpins 상태로 릴 밖 스트립에 그린다.
+    // Text(pixi.js)를 새로 만드는 자리가 남아 있으면 안 된다 — 심볼과 겹쳐 가독성을 해쳤다.
+    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    expect(source).not.toContain('new Text(')
+    expect(source).not.toContain('modeLabel')
+    expect(source).not.toContain('formatFreeSpinsPlaque')
+  })
+
+  it('다른 프리스핀 연출(배경 전환·테두리)은 그대로 남는다', () => {
+    // 텍스트만 없앴을 뿐, 배경 스와이프/전환/테두리 로직은 건드리지 않는다.
+    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    expect(source).toContain('this.freeSpinsSprite')
+    expect(source).toContain('playModeTransition')
+    expect(source).toContain('FREE_SPINS_EDGE_STROKE_PX')
+    expect(source).toContain(
+      '.roundRect(reelArea.x, reelArea.y, reelArea.width, reelArea.height, radius * 0.5)',
+    )
+  })
+})
+
+describe('모드 전환은 화면 전체를 완전히 가리는 커튼이다', () => {
+  const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+
+  it('반투명 와이프/섬광은 남아 있지 않다 — 완전 차폐 커튼으로 대체됐다', () => {
+    const source = renderer()
+    expect(source).not.toContain('flashSprite')
+    expect(source).not.toContain('wipeMask')
+    expect(source).not.toContain('drawWipe')
+    expect(source).not.toContain('wipeRadius')
+  })
+
+  it('커튼은 프레임·베젤까지 덮도록 root의 맨 위(마지막 자식)에 얹힌다', () => {
+    const source = renderer()
+    const addCurtain = source.indexOf('this.root.addChild(this.curtain)')
+    const addFrameOrSparkle = source.lastIndexOf('this.root.addChild(this.frameSprite')
+    expect(addCurtain).toBeGreaterThan(-1)
+    expect(addCurtain).toBeGreaterThan(addFrameOrSparkle)
+  })
+
+  it('배경/테두리 교체는 커튼이 완전히 덮인 뒤(swapAtMs)에 한 번에 일어난다', () => {
+    const source = renderer()
+    const playAt = source.indexOf('private playModeTransition(')
+    const applyAt = source.indexOf('private applyModeSwap(')
+    const body = source.slice(playAt, applyAt)
+    expect(body).toContain('this.applyModeSwap(to)')
+    expect(body).toContain('plan.swapAtMs / 1000')
+    // 배경 교체 호출이 덮기(alpha: 1) 다음, 걷기(alpha: 0) 앞에 와야 커튼에 완전히 가려진다.
+    const callAt = body.indexOf('this.applyModeSwap(to)')
+    const coverInAt = body.indexOf("{ alpha: 1,")
+    const coverOutAt = body.indexOf('{ alpha: 0,')
+    expect(coverInAt).toBeGreaterThan(-1)
+    expect(coverOutAt).toBeGreaterThan(-1)
+    expect(callAt).toBeGreaterThan(coverInAt)
+    expect(callAt).toBeLessThan(coverOutAt)
+  })
+
+  it('전환 속도는 지금 걸린 스핀 속도를 그대로 따른다', () => {
+    expect(renderer()).toContain('speed: this.spinSpeed')
+  })
+
+  it('modeTransition 이벤트는 start 하나에 end 하나, end는 걷기까지 끝난 뒤에만 나간다', () => {
+    const source = renderer()
+    const startAt = source.indexOf("this.emit({ type: 'modeTransition', to, phase: 'start' })")
+    const endAt = source.indexOf("this.emit({ type: 'modeTransition', to, phase: 'end' })")
+    expect(startAt).toBeGreaterThan(-1)
+    expect(endAt).toBeGreaterThan(-1)
+    // end는 finishModeTransition 안, curtain을 완전히 숨긴 뒤에 나간다.
+    const finishAt = source.indexOf('private finishModeTransition()')
+    const hideCurtainAt = source.indexOf('this.curtain.visible = false', finishAt)
+    expect(hideCurtainAt).toBeGreaterThan(finishAt)
+    expect(endAt).toBeGreaterThan(hideCurtainAt)
+  })
+})
+
+describe('승리 연출 순환·스킵', () => {
+  it('라인 스텝은 그 자리에서 심볼 연출만 터뜨린다', () => {
+    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    expect(source).toContain('this.playFxAt(win.positions)')
+    expect(source).toContain('this.emit(winLineEvent(win, context))')
+  })
+
+  it('순환은 clearWins·다음 스핀·모드 전환이 끊는다', () => {
+    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    // 취소 판정은 winToken 하나로만 한다. clearWins가 그 토큰을 올린다.
+    expect(source).toContain('cancelled: () => token !== this.winToken || this.destroyed')
+    expect(source).toContain('this.winToken += 1')
+    // 전환은 mode를 갈아 끼우기 전에 순환을 끊는다.
+    const setModeAt = source.indexOf('setMode(mode: RendererMode)')
+    const clearAt = source.indexOf('this.clearWins()', setModeAt)
+    const assignAt = source.indexOf('this.mode = mode', setModeAt)
+    expect(setModeAt).toBeGreaterThan(-1)
+    expect(clearAt).toBeGreaterThan(-1)
+    expect(clearAt).toBeLessThan(assignAt)
+  })
+
+  it('스킵은 순환을 멈추지 않는다', () => {
+    // skipWins는 손잡이만 부른다. winToken을 올리면 순환까지 끊겨 화면이 승리 없이 남는다.
+    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    expect(source).toContain('skipWins(): void {')
+    expect(source).toContain('this.winSkip?.()')
+    // skipWins가 취소 토큰을 건드리면 순환이 통째로 죽는다. 그 자리는 clearWins 하나뿐이다.
+    const skipAt = source.indexOf('skipWins(): void {')
+    expect(source.slice(skipAt, skipAt + 200)).not.toContain('this.winToken')
+    // 연출이 끝나면 손잡이를 놓는다. 지난 스핀의 손잡이가 남으면 엉뚱한 바퀴를 접는다.
+    expect(source).toContain('this.winSkip = null')
+  })
+
+  it('타이머를 걷어 갈 때 기다리던 쪽을 깨운다', () => {
+    // 깨우지 않으면 순환 한 바퀴가 매달린 약속에 붙잡혀 그대로 남는다.
+    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    expect(source).toContain('clearTimeout(id)')
+    expect(source).toContain('resolve()')
   })
 })
 
