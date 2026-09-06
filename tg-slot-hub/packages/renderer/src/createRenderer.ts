@@ -10,6 +10,7 @@ import type { RendererCore, ResolvedRendererOptions } from './internal.js'
 import type { SpinSpeed } from './timing.js'
 import type { WinLine } from '@tgslot/slot-engine'
 import { DEFAULT_OVERFLOW_X } from './constants.js'
+import { emptyDiagnostics } from './diagnostics.js'
 import { resolveReducedMotion } from './motion.js'
 
 /** 릴을 크게 보여주는 쪽이 기본이다. 프레임 가장자리는 잘려도 된다. */
@@ -123,5 +124,7 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
       core?.destroy()
       core = null
     },
+    // 아직 없거나 이미 내려간 렌더러에는 셀 것이 없다. null 대신 빈 진단을 준다.
+    diagnostics: () => core?.diagnostics() ?? emptyDiagnostics(),
   }
 }

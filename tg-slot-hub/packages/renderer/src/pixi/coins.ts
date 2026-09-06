@@ -1,4 +1,4 @@
-import { Container, Sprite, type Texture } from 'pixi.js'
+import type { Texture } from 'pixi.js'
 import { gsap } from 'gsap'
 import {
   COIN_COUNT_BY_TIER,
@@ -12,6 +12,7 @@ import {
 } from '../constants.js'
 import type { WinTier } from '../wins.js'
 import type { Layout } from '../layout.js'
+import type { ParticlePool } from './particles.js'
 
 const COIN_MIN_SCALE = 0.28
 const COIN_MAX_SCALE = 0.62
@@ -29,23 +30,25 @@ export function coinCountForTier(tier: WinTier): number {
 }
 
 /**
- * 빅윈 코인 샤워. 스프라이트 개수를 상한으로 묶고, 끝나면 스스로 정리한다.
+ * 빅윈 코인 샤워. 스프라이트는 풀에서 꺼내 쓰고, 끝나면 스스로 돌려준다.
+ * 예산이 모자라면 받은 만큼만 쏟아진다.
  * @returns 중단 함수
  */
-export function burstCoins(layer: Container, texture: Texture, layout: Layout, count = MAX_COIN_PARTICLES): () => void {
+export function burstCoins(
+  pool: ParticlePool,
+  texture: Texture,
+  layout: Layout,
+  count = MAX_COIN_PARTICLES,
+): () => void {
   const total = Math.max(0, Math.min(MAX_COIN_PARTICLES, Math.floor(count)))
   const tweens: gsap.core.Tween[] = []
-  const sprites: Sprite[] = []
+  const sprites = pool.acquire(total, texture)
 
-  for (let i = 0; i < total; i += 1) {
-    const coin = new Sprite(texture)
-    coin.anchor.set(0.5)
+  for (const coin of sprites) {
     const scale = randomBetween(COIN_MIN_SCALE, COIN_MAX_SCALE) * (layout.symbolSize / 64)
     coin.scale.set(scale)
     coin.x = randomBetween(layout.frame.x, layout.frame.x + layout.frame.width)
     coin.y = layout.frame.y - layout.symbolSize * randomBetween(0.2, 1.4)
-    layer.addChild(coin)
-    sprites.push(coin)
 
     tweens.push(
       gsap.to(coin, {
@@ -70,8 +73,8 @@ export function burstCoins(layer: Container, texture: Texture, layout: Layout, c
     if (stopped) return
     stopped = true
     for (const tween of tweens) tween.kill()
-    for (const coin of sprites) coin.destroy()
-    layer.removeChildren()
+    // 파괴하지 않고 풀에 돌려준다. 같은 층의 다른 연출은 건드리지 않는다.
+    pool.release(sprites)
   }
 
   gsap.delayedCall((COIN_FALL_MS + COIN_SPAWN_SPREAD_MS) / 1000, stop)
@@ -83,21 +86,17 @@ export function burstCoins(layer: Container, texture: Texture, layout: Layout, c
  * 텍스처 없이 사각형 스프라이트를 흰 텍스처에 tint만 입혀 쓴다.
  * @returns 중단 함수
  */
-export function burstConfetti(layer: Container, texture: Texture, layout: Layout): () => void {
+export function burstConfetti(pool: ParticlePool, texture: Texture, layout: Layout): () => void {
   const tweens: gsap.core.Tween[] = []
-  const sprites: Sprite[] = []
+  const sprites = pool.acquire(CONFETTI_COUNT, texture)
 
-  for (let i = 0; i < CONFETTI_COUNT; i += 1) {
-    const piece = new Sprite(texture)
-    piece.anchor.set(0.5)
+  sprites.forEach((piece, i) => {
     piece.tint = CONFETTI_COLORS[i % CONFETTI_COLORS.length] ?? '#f4d98a'
     piece.width = layout.symbolSize * randomBetween(0.06, 0.13)
     piece.height = layout.symbolSize * randomBetween(0.14, 0.24)
     piece.x = randomBetween(layout.frame.x, layout.frame.x + layout.frame.width)
     piece.y = layout.frame.y - layout.symbolSize * randomBetween(0.2, 1.6)
     piece.rotation = randomBetween(0, Math.PI)
-    layer.addChild(piece)
-    sprites.push(piece)
 
     const drift = randomBetween(-1, 1) * layout.symbolSize * 0.8
     tweens.push(
@@ -120,14 +119,14 @@ export function burstConfetti(layer: Container, texture: Texture, layout: Layout
         ease: 'sine.inOut',
       }),
     )
-  }
+  })
 
   let stopped = false
   const stop = (): void => {
     if (stopped) return
     stopped = true
     for (const tween of tweens) tween.kill()
-    for (const piece of sprites) piece.destroy()
+    pool.release(sprites)
   }
 
   gsap.delayedCall((CONFETTI_FALL_MS + 600) / 1000, stop)
@@ -140,53 +139,49 @@ export function burstConfetti(layer: Container, texture: Texture, layout: Layout
  * @returns 중단 함수
  */
 export function burstScatters(
-  layer: Container,
+  pool: ParticlePool,
   texture: Texture,
   layout: Layout,
   positions: readonly (readonly [number, number])[],
 ): () => void {
   const tweens: gsap.core.Tween[] = []
-  const sprites: Sprite[] = []
   const target = {
     x: layout.reelArea.x + layout.reelArea.width / 2,
     y: layout.reelArea.y + layout.reelArea.height / 2,
   }
   const pitch = layout.symbolSize + layout.gap
+  const sprites = pool.acquire(positions.length * SCATTER_BURST_PARTICLES, texture)
 
-  for (const [reel, row] of positions) {
+  // 받은 몫을 자리마다 고르게 나눈다. 예산이 깎였으면 뒤쪽 자리가 먼저 얇아진다.
+  sprites.forEach((spark, index) => {
+    const [reel, row] = positions[Math.floor(index / SCATTER_BURST_PARTICLES)] ?? [0, 0]
     const origin = {
       x: layout.reelArea.x + reel * pitch + layout.symbolSize / 2,
       y: layout.reelArea.y + row * pitch + layout.symbolSize / 2,
     }
-    for (let i = 0; i < SCATTER_BURST_PARTICLES; i += 1) {
-      const spark = new Sprite(texture)
-      spark.anchor.set(0.5)
-      spark.blendMode = 'add'
-      spark.scale.set((layout.symbolSize / 64) * randomBetween(0.18, 0.34))
-      spark.x = origin.x + randomBetween(-1, 1) * layout.symbolSize * 0.3
-      spark.y = origin.y + randomBetween(-1, 1) * layout.symbolSize * 0.3
-      layer.addChild(spark)
-      sprites.push(spark)
+    spark.blendMode = 'add'
+    spark.scale.set((layout.symbolSize / 64) * randomBetween(0.18, 0.34))
+    spark.x = origin.x + randomBetween(-1, 1) * layout.symbolSize * 0.3
+    spark.y = origin.y + randomBetween(-1, 1) * layout.symbolSize * 0.3
 
-      tweens.push(
-        gsap.to(spark, {
-          x: target.x,
-          y: target.y,
-          alpha: 0,
-          duration: (PHASE_FEATURE_MS / 1000) * randomBetween(0.7, 1),
-          delay: randomBetween(0, 0.18),
-          ease: 'power2.in',
-        }),
-      )
-    }
-  }
+    tweens.push(
+      gsap.to(spark, {
+        x: target.x,
+        y: target.y,
+        alpha: 0,
+        duration: (PHASE_FEATURE_MS / 1000) * randomBetween(0.7, 1),
+        delay: randomBetween(0, 0.18),
+        ease: 'power2.in',
+      }),
+    )
+  })
 
   let stopped = false
   const stop = (): void => {
     if (stopped) return
     stopped = true
     for (const tween of tweens) tween.kill()
-    for (const spark of sprites) spark.destroy()
+    pool.release(sprites)
   }
 
   gsap.delayedCall((PHASE_FEATURE_MS + 300) / 1000, stop)

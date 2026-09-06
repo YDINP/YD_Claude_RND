@@ -208,6 +208,9 @@ importers:
       '@types/node':
         specifier: ^24.12.3
         version: 24.13.3
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.13
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
@@ -217,6 +220,9 @@ importers:
 
   packages/renderer:
     dependencies:
+      '@tgslot/game-sdk':
+        specifier: workspace:*
+        version: link:../game-sdk
       '@tgslot/shared':
         specifier: workspace:*
         version: link:../shared
@@ -305,6 +311,9 @@ importers:
 
   tools/theme-gen:
     dependencies:
+      '@tgslot/game-sdk':
+        specifier: workspace:*
+        version: link:../../packages/game-sdk
       sharp:
         specifier: ^0.34.5
         version: 0.34.5

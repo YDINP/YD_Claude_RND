@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { THEME_DEFAULT_PALETTE, THEME_DEFAULT_VERSION } from './constants.js'
-import { mergeTheme } from './themeWriter.js'
+import { deepMerge, mergeTheme } from './themeWriter.js'
 
 describe('mergeTheme', () => {
   it('파일이 없으면 허브 기본 palette/version으로 새로 만든다', () => {
@@ -122,5 +122,63 @@ describe('mergeTheme', () => {
     const existing = { sheets: { seven: { win: 'sheets/seven-win.json' } }, palette: {} }
     const merged = mergeTheme(existing, { symbols: {} })
     expect(merged.sheets).toEqual({ seven: { win: 'sheets/seven-win.json' } })
+  })
+})
+
+describe('mergeTheme — 모르는 키 보존 (deep merge)', () => {
+  it('손으로 쓴 transitions 키를 재생성이 지우지 않는다', () => {
+    const existing = {
+      version: '1.0.0',
+      symbols: { wild: 'symbols/wild.webp' },
+      palette: { frame: '#fff', reelBg: '#000', winLine: ['#f00'], text: '#fff' },
+      transitions: { freeSpinsEnter: 'transitions/fs-enter.webm' },
+    }
+    const merged = mergeTheme(existing, {
+      symbols: { wild: 'symbols/wild.webp', seven: 'symbols/seven.webp' },
+      frame: 'frame.webp',
+      frameLayout: { window: { x: 0.02, y: 0.19, w: 0.96, h: 0.62 } },
+    })
+    expect(merged.transitions).toEqual({ freeSpinsEnter: 'transitions/fs-enter.webm' })
+  })
+
+  it('중첩된 모르는 키도 보존한다 (얕은 병합이면 날아가는 자리)', () => {
+    const existing = {
+      palette: { frame: '#fff', reelBg: '#000', winLine: ['#f00'], text: '#fff' },
+      transitions: { freeSpinsEnter: 'a.webm', freeSpinsExit: 'b.webm' },
+      sheets: { wild: { win: 'sheets/wild-win.json', idle: 'sheets/wild-idle.json' } },
+    }
+    const merged = mergeTheme(existing, { sheets: { wild: { win: 'sheets/wild-win.json' } } })
+    expect(merged.sheets).toEqual({ wild: { win: 'sheets/wild-win.json', idle: 'sheets/wild-idle.json' } })
+    expect(merged.transitions).toEqual({ freeSpinsEnter: 'a.webm', freeSpinsExit: 'b.webm' })
+  })
+
+  it('배열은 원소 병합이 아니라 통째로 교체한다', () => {
+    const existing = { palette: { frame: '#fff', reelBg: '#000', winLine: ['#a', '#b', '#c'], text: '#fff' } }
+    const merged = deepMerge(existing as Record<string, unknown>, { palette: { winLine: ['#z'] } })
+    expect((merged.palette as { winLine: string[] }).winLine).toEqual(['#z'])
+  })
+
+  it('원본 객체를 변형하지 않는다', () => {
+    const existing = { palette: {}, transitions: { freeSpinsEnter: 'a.webm' } }
+    mergeTheme(existing, { symbols: { wild: 'w.webp' } })
+    expect(existing).toEqual({ palette: {}, transitions: { freeSpinsEnter: 'a.webm' } })
+  })
+})
+
+describe('mergeTheme — fx', () => {
+  it('art/fx.json에서 온 fx를 theme.json에 채운다', () => {
+    const merged = mergeTheme({ palette: {} }, { fx: { default: { win: [{ type: 'pulse', scale: 1.1 }] } } })
+    expect(merged.fx).toEqual({ default: { win: [{ type: 'pulse', scale: 1.1 }] } })
+  })
+
+  it('fx를 주지 않으면 기존 fx를 그대로 둔다', () => {
+    const existing = { palette: {}, fx: { wild: { win: [{ type: 'shine' }] } } }
+    expect(mergeTheme(existing, { symbols: { wild: 'w.webp' } }).fx).toEqual({ wild: { win: [{ type: 'shine' }] } })
+  })
+
+  it('같은 심볼의 연출은 새 값이 이긴다 (효과 배열은 통째로 교체)', () => {
+    const existing = { palette: {}, fx: { wild: { win: [{ type: 'shine' }, { type: 'glow' }] } } }
+    const merged = mergeTheme(existing, { fx: { wild: { win: [{ type: 'pulse' }] } } })
+    expect(merged.fx).toEqual({ wild: { win: [{ type: 'pulse' }] } })
   })
 })

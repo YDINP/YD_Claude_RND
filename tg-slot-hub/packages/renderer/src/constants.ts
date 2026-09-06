@@ -345,3 +345,73 @@ export const MUTATION_COLUMN_WIDTH_SCALE = 1.35
 
 /** ways 게임에서 `ways.betDivisor`를 읽지 못했을 때의 기본 배당 단위. 엔진 기본값과 같다. */
 export const DEFAULT_WAYS_BET_DIVISOR = 25
+
+/**
+ * 전환 클립(모드 전환 커튼 위에서 재생하는 영상)의 재생 계획 상수.
+ *
+ * 클립은 전환을 **늘리지 않는다.** 이미 있는 차폐 구간(배너)의 *내용*일 뿐이라, 커튼이 완전히
+ * 덮인 순간에 재생을 시작하고 그 구간 안에서 연출의 정점을 맞춘다. 길이가 모자라면 앞을 잘라
+ * 들어가거나(`currentTime`) 배속을 올려(`playbackRate`) 맞추고, 그래도 짧으면 아예 틀지 않는다.
+ */
+/** 클립 안에서 연출이 정점을 찍는 시각(ms). sheriff-sixgun의 fs-enter 기준 실측값이다. */
+export const MODE_VIDEO_PEAK_MS = 2200
+/**
+ * 차폐 구간(배너)이 이보다 짧으면 클립을 아예 틀지 않고 지금까지의 단색 커튼으로 남는다.
+ * normal 700ms·quick 490ms는 통과하고 turbo 315ms·모션 축소 280ms는 걸러진다 —
+ * 그 아래에서는 영상이 한 번 번쩍이고 사라져 오히려 산만하다.
+ */
+export const MODE_VIDEO_MIN_COVERED_MS = 420
+/** 정점이 차폐 구간의 어디쯤 오게 할지(0~1). 뒤쪽에 여운을 남기려고 가운데보다 조금 뒤에 둔다. */
+export const MODE_VIDEO_PEAK_POSITION = 0.6
+/** 정점까지 보여 주고 싶은 클립 앞부분의 길이(ms). 이만큼을 정점 앞에서 잘라 들어간다. */
+export const MODE_VIDEO_LEAD_IN_MS = 900
+/** 배속 상한. 이보다 빠르면 먼지가 튀는 것처럼 보여 연출이 읽히지 않는다. */
+export const MODE_VIDEO_MAX_RATE = 2
+
+/**
+ * 재사용 풀 상한.
+ *
+ * 상한이 하는 일은 두 가지다. 하나는 상주 메모리를 예측 가능하게 만드는 것 —
+ * 최악의 경우가 곧 이 숫자다. 다른 하나는 이상 상황에서 풀이 조용히 부풀지 않게 하는 것이다.
+ * 상한을 넘겨 돌아온 것은 보관하지 않고 그 자리에서 파괴한다.
+ */
+/** 변형 파티클 보관 상한(개). 5x3 격자가 통째로 미스터리로 뒤집히는 최악을 담는다. */
+export const MUTATION_SPRITE_POOL_MAX = 240
+/**
+ * 동시에 화면에 떠 있을 수 있는 승리 파티클 총량(개).
+ * 코인 60 + 색종이 36 + 스캐터 흡입이 한꺼번에 겹치면 상한 없이 140개를 넘던 자리다.
+ * 넘치는 몫은 조용히 깎인다 — 개수만 줄고 연출은 그대로 나온다.
+ */
+export const MAX_LIVE_PARTICLES = 120
+/**
+ * 참조가 끊긴 시트를 몇 벌까지 들고 있을지.
+ * 아틀라스 한 장이 768x768(약 2.25MB)이라 이 숫자가 곧 상주 GPU 메모리의 상한이다.
+ * 게임 하나가 시트 3벌을 쓰므로 두 게임 분량을 남겨 로비-게임 왕복에서 다시 받지 않게 한다.
+ */
+export const SHEET_TEXTURE_CACHE_CAPACITY = 6
+/**
+ * 심볼 연출 덧그림 보관 상한(개).
+ * 이긴 칸마다 광채 1개와 파티클 최대 40개(`FX_MAX_BURST_PARTICLES`)가 붙는다.
+ * 흔한 승리(3~5칸 x 기본 24개)를 담고, 격자 전체가 이기는 극단은 상한을 넘겨 그때만 버린다.
+ */
+export const FX_SPRITE_POOL_MAX = 180
+/**
+ * 띠+마스크 쌍 보관 상한(개).
+ * 칸마다 빛줄기 1쌍 또는 분할 flash 최대 6쌍(`FX_MAX_SEGMENTS`)이 붙는다.
+ */
+export const FX_OVERLAY_POOL_MAX = 48
+
+/**
+ * 릴 창 뒤 패널(스크림)의 기본값.
+ *
+ * 밝은 배경 아트(벚꽃·석양) 위에서 심볼이 묻히는 것을 막는 최소한의 대비다.
+ * 더 어둡게 하면 배경 아트가 죽고, 더 옅게 하면 심볼 테두리가 배경에 섞인다.
+ * 게임별로 다르게 하고 싶으면 theme.json의 `reelBackdrop`으로 덮어쓴다.
+ */
+export const REEL_BACKDROP_COLOR = '#000000'
+/** 기본 불투명도. 0이면 그리지 않는다. */
+export const REEL_BACKDROP_ALPHA = 0.35
+/** 기본 모서리 반경 = 심볼 한 변 x 이 값. */
+export const REEL_BACKDROP_RADIUS_RATIO = 0.08
+/** 기본 안쪽 여백 = 심볼 한 변 x 이 값. 0이면 릴 창과 정확히 같은 사각형이다. */
+export const REEL_BACKDROP_INSET_RATIO = 0

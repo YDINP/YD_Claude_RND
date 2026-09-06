@@ -236,6 +236,57 @@ describe('WinStrip', () => {
     expect(container.querySelectorAll('.hub-win-strip__line-row')).toHaveLength(1)
   })
 
+  it('floats the gamble button row in its own overlay panel instead of stacking it into the strip (regression: opening the panel used to grow the strip by 58px and shrink the reel stage)', () => {
+    const { container } = render(
+      <WinStrip
+        label="PENDING WIN"
+        amount={200}
+        gambleActions={{
+          onCollect: vi.fn(),
+          onDouble: vi.fn(),
+          collectLabel: 'Collect',
+          doubleLabel: 'Double (50%)',
+        }}
+      />,
+    )
+    const strip = container.querySelector('.hub-win-strip--gamble')
+    expect(strip).not.toBeNull()
+
+    // 버튼 줄(.hub-win-strip__gamble-actions)은 strip의 직계 흐름 자식이 아니라, CSS가
+    // position: absolute; bottom: 100%로 띄우는 .hub-win-strip__gamble-panel 안에 있어야
+    // 한다 — 이 래퍼가 없으면(버튼이 strip에 직접 쌓이면) 더블업 진입/이탈마다 strip 높이가
+    // 바뀌고, strip과 flex: 1을 나눠 쓰는 릴 스테이지가 리사이즈된다.
+    const panel = strip!.querySelector('.hub-win-strip__gamble-panel')
+    expect(panel).not.toBeNull()
+    expect(panel!.parentElement).toBe(strip)
+    expect(panel!.querySelector('.hub-win-strip__gamble-actions')).not.toBeNull()
+    expect(panel!.querySelector('.hub-win-strip__gamble-btn--collect')).not.toBeNull()
+  })
+
+  it('adds exactly one child (the overlay panel) to the strip when gambleActions appears — the other four rows (label/free-spins/amount/line) are unchanged, so the strip keeps the same in-flow content whether or not gambling is active', () => {
+    const { container: idle } = render(<WinStrip label="WIN" amount={0} />)
+    const idleStrip = idle.querySelector('.hub-win-strip')
+    expect(idleStrip!.children).toHaveLength(4)
+
+    const { container: gambling } = render(
+      <WinStrip
+        label="PENDING WIN"
+        amount={200}
+        gambleActions={{
+          onCollect: vi.fn(),
+          onDouble: vi.fn(),
+          collectLabel: 'Collect',
+          doubleLabel: 'Double (50%)',
+        }}
+      />,
+    )
+    const gambleStrip = gambling.querySelector('.hub-win-strip--gamble')
+    expect(gambleStrip!.children).toHaveLength(5)
+    // 다섯 번째 자식이 바로 그 오버레이 패널이다 — position: absolute라 flex 레이아웃의 높이
+    // 계산에서 빠지므로, 이 자식이 있고 없고는 strip의 렌더링 높이를 바꾸지 않는다.
+    expect(gambleStrip!.children[4]).toHaveClass('hub-win-strip__gamble-panel')
+  })
+
   it('shows the free-spins counter alongside the gamble Collect/Double buttons too', () => {
     render(
       <WinStrip

@@ -14,7 +14,9 @@ vi.mock('./lib/mcClient.js', () => ({
 const { App } = await import('./App.js')
 const { loadGameCatalog, defaultBet } = await import('./games.js')
 const { isAnalytic } = await import('@tgslot/slot-engine')
-const { analyzeDistribution, auditBetLevels, enumerateAudit, sampleDistribution } = await import('@tgslot/rtp-sim/audit')
+const { analyzeDistribution, auditBetLevels, canEnumerate, enumerateAudit, sampleDistribution } = await import(
+  '@tgslot/rtp-sim/audit'
+)
 
 function pack(id: string) {
   const found = loadGameCatalog().packs.find((candidate) => candidate.id === id)
@@ -26,23 +28,93 @@ function classic777() {
   return pack('classic-777')
 }
 
+/**
+ * "전수조사" 계열 테스트는 전수조사가 가능한 팩이 있어야 의미가 있다.
+ * 특정 id를 박아 넣으면 그 게임이 없어지거나 조합 수가 늘어날 때 조용히 다른 문제로 깨진다 —
+ * 카탈로그에서 조건에 맞는 팩을 직접 찾아 실패 이유를 분명히 한다.
+ */
+function firstEnumerablePack() {
+  const found = loadGameCatalog().packs.find((candidate) => canEnumerate(candidate.math))
+  if (found === undefined) throw new Error('전수조사가 가능한 팩이 카탈로그에 없다 — 이 테스트는 그런 팩을 전제로 한다')
+  return found
+}
+
+function firstPackWithoutFreeSpins() {
+  const found = loadGameCatalog().packs.find((candidate) => candidate.math.scatter?.freeSpins === undefined)
+  if (found === undefined) throw new Error('프리스핀이 없는 팩이 카탈로그에 없다 — 이 테스트는 그런 팩을 전제로 한다')
+  return found
+}
+
+function selectGame(id: string) {
+  fireEvent.change(screen.getByLabelText('게임'), { target: { value: id } })
+}
+
 describe('검수 시뮬레이터', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('games/*를 읽어 classic-777을 목록에 올린다', () => {
+  it('games/*를 읽어 선택기를 채우고 그중 하나를 기본 선택해 둔다', () => {
+    const packs = loadGameCatalog().packs
+    expect(packs.length).toBeGreaterThan(0)
+
     render(<App />)
-    expect(screen.getByLabelText('게임')).toHaveValue('classic-777')
-    expect(screen.getByRole('button', { name: '전수조사 실행' })).toBeEnabled()
+    const select = screen.getByLabelText('게임') as HTMLSelectElement
+    const defaultPack = packs.find((candidate) => candidate.id === select.value)
+    expect(defaultPack).toBeDefined()
+
+    // 실행 버튼 라벨은 전수조사 가능 여부에 따라 게임마다 다르다. 라벨이 아니라
+    // "실행 버튼이 있고 활성화돼 있다"만 본다.
+    const runLabel = defaultPack !== undefined && canEnumerate(defaultPack.math) ? '전수조사 실행' : '해석적 산출 + 표본'
+    expect(screen.getByRole('button', { name: runLabel })).toBeEnabled()
+  })
+
+  it('기본 선택된 게임을 그대로 실행해도 화면이 정상 동작한다 (몬테카를로 전용이어도)', async () => {
+    const { runDistributionInWorker } = await import('./lib/mcClient.js')
+    render(<App />)
+
+    const select = screen.getByLabelText('게임') as HTMLSelectElement
+    const defaultPack = loadGameCatalog().packs.find((candidate) => candidate.id === select.value)
+    if (defaultPack === undefined) throw new Error('기본 선택된 게임을 카탈로그에서 찾지 못했다')
+
+    if (canEnumerate(defaultPack.math)) {
+      // 지금 카탈로그의 기본 팩이 전수조사가 가능한 경우다. 그 경로는 바로 아래 테스트가 이미 덮는다.
+      const bet = defaultBet(defaultPack.math)
+      const expected = enumerateAudit(defaultPack.math, bet)
+      fireEvent.click(screen.getByRole('button', { name: '전수조사 실행' }))
+      await waitFor(() => {
+        expect(screen.getByTestId('kpi-exact-rtp')).toHaveTextContent(`${(expected.rtp * 100).toFixed(4)}%`)
+      })
+      return
+    }
+
+    // 전수조사가 불가능한 모델이 기본으로 뜬 경우다. 지금 카탈로그에서는 astral-clocktower
+    // (625 ways, 정지 조합 1,800만+)가 여기 해당한다 — 회귀가 실제로 이 경로에서 났다.
+    const bet = defaultBet(defaultPack.math)
+    const distribution = analyzeDistribution(defaultPack.math, bet, { sampleSpins: 2_000, sampleSeed: 'default-boot' })
+    vi.mocked(runDistributionInWorker).mockReturnValueOnce({
+      promise: Promise.resolve({ distribution, betLevels: [] }),
+      cancel: vi.fn(),
+    })
+
+    expect(screen.getByLabelText('표본 스핀 수 (분포 추정)')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '해석적 산출 + 표본' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('kpi-exact-rtp')).not.toHaveTextContent('—')
+    })
+    expect(screen.getByTestId('kpi-exact-rtp')).toHaveTextContent(
+      distribution.method === 'monte-carlo' ? 'RTP (몬테카를로)' : 'RTP (해석적)',
+    )
   })
 
   it('전수조사를 실행하면 KPI 타일이 실제 계산값으로 채워진다', async () => {
-    const pack = classic777()
-    const bet = defaultBet(pack.math)
-    const expected = enumerateAudit(pack.math, bet)
+    const target = firstEnumerablePack()
+    const bet = defaultBet(target.math)
+    const expected = enumerateAudit(target.math, bet)
 
     render(<App />)
+    selectGame(target.id)
     expect(screen.getByTestId('kpi-exact-rtp')).toHaveTextContent('—')
 
     fireEvent.click(screen.getByRole('button', { name: '전수조사 실행' }))
@@ -58,6 +130,7 @@ describe('검수 시뮬레이터', () => {
 
   it('전수조사 뒤 기여도 표와 배수 분포가 그려진다', async () => {
     render(<App />)
+    selectGame(firstEnumerablePack().id)
     fireEvent.click(screen.getByRole('button', { name: '전수조사 실행' }))
 
     await waitFor(() => {
@@ -71,14 +144,16 @@ describe('검수 시뮬레이터', () => {
 
   it('시뮬레이션 실행은 워커 클라이언트에 시드와 스핀 수를 그대로 넘긴다', async () => {
     const { runMcInWorker } = await import('./lib/mcClient.js')
+    const target = firstEnumerablePack()
     render(<App />)
+    selectGame(target.id)
     fireEvent.click(screen.getByRole('button', { name: '시뮬레이션 실행' }))
 
     expect(runMcInWorker).toHaveBeenCalledTimes(1)
     const request = vi.mocked(runMcInWorker).mock.calls[0]?.[0]
     expect(request?.seed).toBe('42')
     expect(request?.spins).toBe(1_000_000)
-    expect(request?.totalBet).toBe(defaultBet(classic777().math))
+    expect(request?.totalBet).toBe(defaultBet(target.math))
   })
 
   it('워커가 실패하면 빨간 경고로 이유를 보여 준다', async () => {
@@ -114,6 +189,7 @@ describe('검수 시뮬레이터', () => {
 
   it('전수조사만으로는 리포트를 내보낼 수 없다', async () => {
     render(<App />)
+    selectGame(firstEnumerablePack().id)
     expect(screen.getByRole('button', { name: '검수 결과 내보내기' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: '전수조사 실행' }))
     await waitFor(() => {
@@ -134,6 +210,7 @@ describe('검수 시뮬레이터', () => {
 
   it('전수조사가 가능한 게임은 전수조사 배지를 단다', async () => {
     render(<App />)
+    selectGame(firstEnumerablePack().id)
     fireEvent.click(screen.getByRole('button', { name: '전수조사 실행' }))
     await waitFor(() => {
       expect(screen.getByTestId('kpi-exact-rtp')).toHaveTextContent('RTP (전수조사)')
@@ -225,6 +302,7 @@ describe('검수 시뮬레이터', () => {
 
   it('프리스핀이 없는 게임에는 그 버튼이 없다', () => {
     render(<App />)
+    selectGame(firstPackWithoutFreeSpins().id)
     fireEvent.click(screen.getByRole('tab', { name: '샘플 스핀' }))
     expect(screen.queryByRole('button', { name: '프리스핀 나올 때까지' })).not.toBeInTheDocument()
   })

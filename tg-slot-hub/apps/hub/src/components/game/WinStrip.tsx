@@ -2,9 +2,10 @@
  * 릴 위가 아니라 컨트롤(베팅/스핀) 바로 위에 고정으로 떠 있는 당첨금 표시줄. 모든 내용을
  * 가운데 정렬한 4단 레이아웃으로 고정한다 — (1) 작은 라벨(WIN/FREE SPINS TOTAL/더블업 대기),
  * (2) 금액(중앙 큰 글씨), (3) 라인 텍스트 줄(고정 높이 — 비어 있어도 높이를 유지해 아래 요소가
- * 들썩이지 않는다), (4) 더블업 받기/더블 버튼 줄(있을 때만 나타나되, 한 번 나타나면 고정이다).
- * 등급 배너(BIG/MEGA/EPIC/MAX 등, 릴 위 오버레이)는 없앴다 — 실제 금액은 늘 이 줄에서만
- * 보여준다. GameScreen이 롤업 로직을 소유하고 이 컴포넌트는 순수 표시 + 탭 전달만 한다.
+ * 들썩이지 않는다), (4) 더블업 받기/더블 버튼 — 이건 이 4단 흐름 안에 쌓이지 않고 스테이지
+ * 하단 위로 띄운 별도 오버레이 패널이다(아래 문단 참고). 등급 배너(BIG/MEGA/EPIC/MAX 등,
+ * 릴 위 오버레이)는 없앴다 — 실제 금액은 늘 이 줄에서만 보여준다. GameScreen이 롤업 로직을
+ * 소유하고 이 컴포넌트는 순수 표시 + 탭 전달만 한다.
  *
  * 렌더러가 승리 연출을 순환(loop)하는 동안 `winLine`/`winCycle` 이벤트가 계속 들어오는데,
  * GameScreen은 그걸 받아 `lineLabel`로 "어떤 심볼이 얼마를 땄는지"를 여기 실어 준다 — 같은
@@ -15,8 +16,19 @@
  * store를 통해 서버에 묻고, 이 컴포넌트는 버튼 클릭만 전달한다. gambleActions가 떠 있는
  * 동안에도 lineLabel은 계속 보여준다(사용자 요청 — 루핑 돌 때마다 어떤 심볼이 얼마 당첨됐는지
  * 반복 표기한다) — (3)번 줄에 라인 텍스트와 만료 카운트다운이 함께 있을 수 있으므로 둘 다 같은
- * 줄에 나란히 얹되 사이에 여백을 둔다(CSS gap). (4)번 버튼 줄은 별도라 라인 텍스트가 바뀌어도
- * 리마운트되거나 움직이지 않는다.
+ * 줄에 나란히 얹되 사이에 여백을 둔다(CSS gap).
+ *
+ * 버튼 줄은 흐름(flow) 밖에 띄운다(`.hub-win-strip__gamble-panel`, position: absolute,
+ * bottom: 100%) — 예전엔 (1)~(3)번 줄과 나란히 쌓여 더블업 진입/이탈마다 이 컴포넌트 전체
+ * 높이가 바뀌었고, WinStrip은 `.hub-game-screen__stage`와 flex: 1을 나눠 쓰므로 그만큼 릴
+ * 캔버스가 리사이즈되며 심볼이 전부 다시 그려졌다(390×844 sheriff-sixgun 실측: 평시 스테이지
+ * 583px → 더블업 열림 525px, 58px 리사이즈). 사용자 제보("당첨 순간 더블업 패널이 사라졌다
+ * 생겼다 해서 클릭하기 어려움")도 이 흔들림이 원인이었다. 이제 버튼 줄은 (1)~(3)번 줄의
+ * 레이아웃에 전혀 관여하지 않으므로 idle/승리 표시/프리스핀 카운터/더블업 중 어떤 상태에서도
+ * WinStrip(그리고 위 스테이지)의 높이가 그대로다. 오버레이는 GameScreen의 stage(onClick으로
+ * 탭-스킵을 처리하는 DOM 서브트리)와 형제 관계라 이 패널 위에서 일어나는 클릭은 stage로
+ * 버블링되지 않는다 — 탭-스킵과 충돌하지 않는다. 패널 자신이 불투명한 바탕(ground)을 지녀
+ * 뒤에 겹치는 릴 그림 위에서도 버튼이 또렷하게 읽힌다.
  *
  * 프리스핀 진행 상황("프리스핀 5/8 ×2")은 릴 위에 그리던 명판을 없애면서 이 줄로 옮겨왔다 —
  * (1) 라벨 바로 아래에 `freeSpinsCounter`를 얹어 라벨과 한 블록으로 읽히게 한다. lineRow와
@@ -139,28 +151,32 @@ export function WinStrip({
     </div>
   )
 
+  // 흐름 밖 오버레이(.hub-win-strip__gamble-panel, position: absolute) — 위 docblock 참고.
+  // WinStrip 자신의 높이에는 관여하지 않고 스테이지 하단 위로 떠서 그려진다.
   const gambleActionsRow = gambleActions && (
-    <div className="hub-win-strip__gamble-actions">
-      <button
-        type="button"
-        className="hub-win-strip__gamble-btn hub-win-strip__gamble-btn--collect"
-        onClick={gambleActions.onCollect}
-        disabled={gambleActions.disabled}
-        aria-busy={gambleActions.disabled}
-      >
-        {gambleActions.collectLabel}
-      </button>
-      {!gambleActions.hideDouble && (
+    <div className="hub-win-strip__gamble-panel">
+      <div className="hub-win-strip__gamble-actions">
         <button
           type="button"
-          className="hub-win-strip__gamble-btn hub-win-strip__gamble-btn--double"
-          onClick={gambleActions.onDouble}
+          className="hub-win-strip__gamble-btn hub-win-strip__gamble-btn--collect"
+          onClick={gambleActions.onCollect}
           disabled={gambleActions.disabled}
           aria-busy={gambleActions.disabled}
         >
-          {gambleActions.doubleLabel}
+          {gambleActions.collectLabel}
         </button>
-      )}
+        {!gambleActions.hideDouble && (
+          <button
+            type="button"
+            className="hub-win-strip__gamble-btn hub-win-strip__gamble-btn--double"
+            onClick={gambleActions.onDouble}
+            disabled={gambleActions.disabled}
+            aria-busy={gambleActions.disabled}
+          >
+            {gambleActions.doubleLabel}
+          </button>
+        )}
+      </div>
     </div>
   )
 

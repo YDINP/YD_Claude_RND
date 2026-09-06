@@ -1,74 +1,33 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
-import { basename, dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { existsSync, readFileSync } from 'node:fs'
+import { basename, join } from 'node:path'
 import { GameManifestSchema, toGameSummary } from '@tgslot/game-sdk'
-import type { GameManifest } from '@tgslot/game-sdk'
-import { parseGameMath } from '@tgslot/slot-engine'
-import type { GameMath } from '@tgslot/slot-engine'
+import type { GameManifest, GamePack as SdkGamePack } from '@tgslot/game-sdk'
+import { listGamePackDirs, loadGamePack as loadSdkGamePack, resolveGamesDir } from '@tgslot/game-sdk/node'
 import type { GameSummary } from '@tgslot/shared'
 
-const WORKSPACE_MARKER = 'pnpm-workspace.yaml'
-const GAMES_DIRNAME = 'games'
-const MANIFEST_FILE = 'manifest.json'
-const MATH_FILE = 'math.json'
+export { resolveGamesDir }
 
-/** 디스크에서 읽어 검증까지 끝낸 게임 팩 1개. */
-export interface GamePack {
-  id: string
-  manifest: GameManifest
-  math: GameMath
-  /** 검증을 통과한 math.json 원본. `GET /games/:id/math`가 그대로 돌려준다. */
-  rawMath: unknown
+const MANIFEST_FILE = 'manifest.json'
+
+/**
+ * 디스크에서 읽어 검증까지 끝낸 게임 팩 1개.
+ * 발견·파싱·검증은 전부 `@tgslot/game-sdk/node`가 하는 일이고, 여기서는 로비 요약만 얹는다.
+ */
+export interface GamePack extends SdkGamePack {
   summary: GameSummary
 }
 
-/** 이 모듈이 있는 디렉터리. tsx(src/)로 돌든 tsup 번들(dist/)로 돌든 실제 위치를 가리킨다. */
-function moduleDir(): string {
-  return dirname(fileURLToPath(import.meta.url))
-}
-
 /**
- * games 디렉터리를 찾는다.
+ * 게임 팩 1개를 읽고 **서빙 단계**까지 검증한다 (SDK에 위임).
  *
- * 1. `GAMES_DIR` 환경변수가 있으면 무조건 그것을 쓴다 (배포 환경 탈출구).
- * 2. 없으면 이 모듈 위치에서 위로 올라가며 `pnpm-workspace.yaml`이 있는 폴더의 `games/`를 찾고,
- *    그것도 없으면 `games/` 하위 폴더를 가진 첫 조상을 쓴다.
- *
- * `src/games/packs.ts`(tsx)와 `dist/index.js`(번들) 양쪽 모두에서 같은 경로로 수렴한다.
+ * 스키마, 폴더명=manifest.id=math.id 동일성, manifest↔math 합의, 런타임이 실제로 받아가는 자산의
+ * 존재만 본다. 저작 파이프라인 위생(git 추적 여부·고아 파일·prompts.json 정합성 등)은 보지 않는다 —
+ * 그건 `pnpm pack:check`(game-sdk의 저작 도구, `stage: 'authoring'`)의 몫이지 부팅을 막을 이유가
+ * 아니다. 부팅 시점에 터지는 편이 잘못된 팩으로 스핀을 받는 것보다 낫다는 판단은 그대로 유지한다.
  */
-export function resolveGamesDir(env: NodeJS.ProcessEnv = process.env, startDir: string = moduleDir()): string {
-  const override = env.GAMES_DIR
-  if (override) return resolve(override)
-
-  let current = resolve(startDir)
-  let fallback: string | null = null
-  for (;;) {
-    if (existsSync(join(current, WORKSPACE_MARKER))) return join(current, GAMES_DIRNAME)
-    const candidate = join(current, GAMES_DIRNAME)
-    if (fallback === null && existsSync(candidate) && statSync(candidate).isDirectory()) {
-      fallback = candidate
-    }
-    const parent = dirname(current)
-    if (parent === current) break
-    current = parent
-  }
-
-  if (fallback !== null) return fallback
-  throw new Error(`[games] games 디렉터리를 찾지 못했다. GAMES_DIR로 지정할 것 (시작 위치: ${startDir})`)
-}
-
-function readJson(path: string): unknown {
-  return JSON.parse(readFileSync(path, 'utf8')) as unknown
-}
-
-/** `_`로 시작하는 폴더(_template)는 스캐폴드이므로 제외한다. */
-function listPackDirs(gamesDir: string): string[] {
-  if (!existsSync(gamesDir)) return []
-  return readdirSync(gamesDir)
-    .filter((name) => !name.startsWith('_'))
-    .map((name) => join(gamesDir, name))
-    .filter((dir) => statSync(dir).isDirectory())
-    .sort()
+export function loadGamePack(dir: string): GamePack {
+  const pack = loadSdkGamePack(dir, { stage: 'serving' })
+  return { ...pack, summary: toGameSummary(pack.manifest) }
 }
 
 /**
@@ -81,26 +40,23 @@ function hasManifest(dir: string): boolean {
 }
 
 /**
- * 게임 팩 1개를 읽고 검증한다.
- * manifest.id === math.id === 폴더 이름이 아니면 던진다.
- * 부팅 시점에 터지는 편이 잘못된 팩으로 스핀을 받는 것보다 낫다.
+ * `manifest.json`만 먼저 읽어 `status`를 판정한다. "이 팩이 깨졌을 때 던질지 건너뛸지"를 정하는
+ * 데만 쓴다 — 실제 팩 로딩(스키마 + 서빙 검증)은 `loadGamePack`이 별도로, 온전히 다시 한다.
+ * manifest 자체가 깨져 있으면 status를 알 수 없다는 뜻이므로 undefined를 돌려준다. 이 경우
+ * `live`와 똑같이 "무조건 던진다" 쪽으로 취급하는 것이 안전하다.
  */
-export function loadGamePack(dir: string): GamePack {
-  const id = basename(dir)
-  const manifestPath = join(dir, MANIFEST_FILE)
-  const mathPath = join(dir, MATH_FILE)
+function readManifestStatus(dir: string): GameManifest['status'] | undefined {
+  try {
+    const json = JSON.parse(readFileSync(join(dir, MANIFEST_FILE), 'utf8')) as unknown
+    const parsed = GameManifestSchema.safeParse(json)
+    return parsed.success ? parsed.data.status : undefined
+  } catch {
+    return undefined
+  }
+}
 
-  if (!existsSync(manifestPath)) throw new Error(`[games] ${id}: ${MANIFEST_FILE}이 없다`)
-  if (!existsSync(mathPath)) throw new Error(`[games] ${id}: ${MATH_FILE}이 없다`)
-
-  const manifest = GameManifestSchema.parse(readJson(manifestPath))
-  const rawMath = readJson(mathPath)
-  const math = parseGameMath(rawMath)
-
-  if (manifest.id !== id) throw new Error(`[games] ${id}: manifest.id(${manifest.id})가 폴더 이름과 다르다`)
-  if (math.id !== id) throw new Error(`[games] ${id}: math.id(${math.id})가 폴더 이름과 다르다`)
-
-  return { id, manifest, math, rawMath, summary: toGameSummary(manifest) }
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 /**
@@ -108,17 +64,33 @@ export function loadGamePack(dir: string): GamePack {
  *
  * - `manifest.json`이 **아예 없는** 폴더는 아직 게임이 아니라고 보고 경고만 남기고 건너뛴다
  *   (아트가 먼저 생성된 폴더). 이것 때문에 부팅이나 테스트가 막히면 안 된다.
- * - `manifest.json`은 있는데 `math.json`이 없거나 깨졌으면 **던진다.** 만들다 만 팩을 로비에
- *   올리는 것이 조용히 빠뜨리는 것보다 위험하다.
+ * - `manifest.json`은 있는데 팩이 깨졌으면(math.json 없음/파싱 실패, 런타임 자산 누락 등):
+ *   - `status: "hidden"`이면 **경고 로그만 남기고 건너뛴다.** `createGameRegistry`가 hidden 팩은
+ *     로비 목록에도, 공개 조회(`getVisible`)에도 노출하지 않으니 — 어차피 아무도 서빙받지 않는
+ *     팩이 "아직 다 안 그렸다"는 이유로 부팅 전체를 무너뜨릴 이유가 없다.
+ *   - `live`/`soon`이면(또는 status를 알 수 없으면) **던진다.** 만들다 만 팩을 로비에 올리는 것이
+ *     조용히 빠뜨리는 것보다 위험하다는 기존 판단을 그대로 유지한다.
  */
 export function loadGamePacks(gamesDir: string = resolveGamesDir()): GamePack[] {
   const packs: GamePack[] = []
-  for (const dir of listPackDirs(gamesDir)) {
+  for (const dir of listGamePackDirs(gamesDir)) {
+    const id = basename(dir)
     if (!hasManifest(dir)) {
-      console.warn(`[games] skipping incomplete pack ${basename(dir)}`)
+      console.warn(`[games] skipping incomplete pack ${id}`)
       continue
     }
-    packs.push(loadGamePack(dir))
+
+    // 던질지 건너뛸지를 정하려면 status를 먼저 알아야 한다 — 실제 로딩보다 앞서 판정한다.
+    const status = readManifestStatus(dir)
+    try {
+      packs.push(loadGamePack(dir))
+    } catch (error) {
+      if (status === 'hidden') {
+        console.warn(`[games] skipping hidden pack ${id} (load failed): ${errorMessage(error)}`)
+        continue
+      }
+      throw error
+    }
   }
   return packs
 }

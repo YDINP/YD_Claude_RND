@@ -91,10 +91,33 @@ export const CODEX_GENERATED_IMAGES_START_SKEW_MS = 5000
 export const CODEX_GENERATED_IMAGES_MAX_DEPTH = 3
 
 /**
- * 프레임 아트 안에서 릴 창(placeholder 초록/흰색 사각형)을 찾을 때 쓰는 기본값.
+ * 프레임 아트 안에서 릴 창(placeholder 초록/흰색 사각형)을 찾을 때 쓰는 기본 탐지 영역.
  * 바깥 여백(투명 배경)과 상단 마퀴/하단 몰딩을 피해 중앙 영역만 본다.
+ *
+ * 상수가 캔버스 포맷마다 갈리는 이유: **마퀴·받침에 주는 몫이 아트 규격마다 다르다.**
+ * 정사각 규격(ART_DIRECTION v3/v4)은 마퀴 17%·받침 17%를 캔버스 세로에서 떼어 주고 창을
+ * y 19-81%에 두지만, 세로 규격(v5, 1024x1536)은 같은 장식을 9.5%·9%로 줄이고 그만큼 창을
+ * 세로로 연다(y 9.5-91%). 두 규격이 장식에 주는 비율 자체가 다르므로 종횡비 하나로 두 값을
+ * 잇는 연속 공식은 존재하지 않는다 — 있는 척하면 두 점을 지나는 임의의 곡선이 된다.
+ * 그래서 포맷별로 "그 규격이 선언한 창을 담는 영역"을 따로 적고, 고르는 일만 종횡비가 한다
+ * (`frameWindowRegion`).
+ *
+ * `yMax`가 0.8이 아니라 0.95인 이유: 0.8은 v3/v4 규격이 창 아래를 y 0.81에 두는 것만 보고 잡은
+ * 값인데, 생성기는 선언보다 아래까지 그린다. classic-777의 창은 실제로 y 0.855까지 내려와서
+ * 0.8에 잘렸고, 그 결과 3x3 격자가 의도보다 7.6% 작게 그려지고 있었다. 0.85면 5팩 모두
+ * 탐지값이 포화하지만(그 아래로 초록이 더 없다) 앞으로 나올 정사각 아트의 여유를 두고 0.95로 연다.
+ * 받침 몰딩이 이 범위에 들어와도 초록/흰색이 아니고, 설령 있어도 "가장 큰 연결 성분" 하나만
+ * 고르므로 창을 이길 수 없다.
  */
-export const FRAME_WINDOW_REGION = { xMin: 0.05, xMax: 0.95, yMin: 0.1, yMax: 0.8 } as const
+export const FRAME_WINDOW_REGION_SQUARE = { xMin: 0.05, xMax: 0.95, yMin: 0.1, yMax: 0.95 } as const
+/**
+ * 세로 캔버스(v5) 전용 탐지 영역. 창이 x 2-98% / y 9.5-91%까지 열려 있어 정사각용
+ * 0.05-0.95 / 0.1-0.8을 그대로 쓰면 좌우와 아래가 잘린다(아래만 11%, 셀 −11%).
+ * 생성기가 선언보다 크게 그리는 경우(classic-777 실측: 선언 81% → 실제 85.5%)를 흡수하도록
+ * 선언 창보다 각 변에서 3-4%p 더 연다. 마퀴/받침의 안쪽 절반은 이 영역에 들어오지만,
+ * 탐지는 "가장 큰 연결 성분" 하나만 고르므로 캔버스의 78%를 덮는 창을 이길 장식은 없다.
+ */
+export const FRAME_WINDOW_REGION_PORTRAIT = { xMin: 0.01, xMax: 0.99, yMin: 0.05, yMax: 0.96 } as const
 /** 연결 성분 탐지용 다운샘플 배율. 4면 가로세로 4픽셀당 1개만 본다. */
 export const FRAME_WINDOW_DOWNSCALE = 4
 /** 이 알파값 이하 픽셀은 이미 투명하다고 보고 색상 판정에서 뺀다. */
@@ -113,18 +136,10 @@ export const FRAME_WINDOW_CORNER_RADIUS_RATIO = 0.02
 export const FRAME_WINDOW_FEATHER_PX = 2
 
 /**
- * 허브 공통 기본 팔레트. theme-gen이 `theme.json`을 새로 만들 때 이 값으로 채운다.
- * 렌더러의 `ThemePaletteSchema`(`packages/renderer/src/theme.ts`)는 네 필드가 전부 있어야
- * 통과하므로, 빈 `{}`를 남기면 렌더러 쪽에서 검증 실패로 깨진다.
+ * 허브 공통 기본 팔레트와 기본 버전. `theme.json` 계약의 일부라 `@tgslot/game-sdk`가 갖고 있고
+ * 여기서는 재수출만 한다 — 팔레트 기본값이 두 군데로 갈라지면 렌더러와 생성기가 어긋난다.
  */
-export const THEME_DEFAULT_PALETTE = {
-  frame: '#d8a94a',
-  reelBg: '#0b1220',
-  winLine: ['#f4d98a', '#4fc3d9', '#3fae6a', '#e0605c', '#5b9dff'],
-  text: '#f2f4f8',
-} as const
-/** theme.json을 새로 만들 때 쓰는 기본 버전 문자열. */
-export const THEME_DEFAULT_VERSION = '1.0.0'
+export { THEME_DEFAULT_PALETTE, THEME_DEFAULT_VERSION } from '@tgslot/game-sdk'
 
 /** sprite sheet 셀 콘텐츠 바운딩 박스를 구할 때, 이 알파값 이하 픽셀은 "빈 배경"으로 본다. */
 export const SHEET_CONTENT_ALPHA_THRESHOLD = 10

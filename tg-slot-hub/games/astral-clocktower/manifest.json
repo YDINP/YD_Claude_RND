@@ -1,0 +1,34 @@
+{
+  "id": "astral-clocktower",
+  "name": {
+    "en": "Astral Clocktower",
+    "ko": "별의 시계탑"
+  },
+  "version": "0.1.0",
+  "thumbnail": "/games/astral-clocktower/thumb.webp",
+  "status": "hidden",
+  "reels": 4,
+  "rows": 5,
+  "lines": 625,
+  "betLevels": [
+    100,
+    200,
+    400,
+    1000,
+    2000,
+    4000
+  ],
+  "rtpTarget": 0.945,
+  "rtpTotalTarget": 0.96,
+  "jackpotContribution": 0.015,
+  "volatility": "high",
+  "features": [
+    "ways",
+    "expandWild",
+    "upgrade",
+    "freeSpins",
+    "scatter",
+    "wild"
+  ],
+  "sort": 5
+}

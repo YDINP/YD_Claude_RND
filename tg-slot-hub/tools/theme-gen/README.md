@@ -3,6 +3,29 @@
 `games/<id>/art/prompts.json`을 읽어 심볼/프레임/배경/썸네일 이미지를 생성하고
 `games/<id>/theme/*.webp`와 `theme.json`을 채워 넣는 CLI.
 
+## 게임 팩 계약에서의 위치
+
+게임 팩 계약(파일 5개)의 단일 출처는 `packages/game-sdk`다. 이 도구는 그 스키마를 그대로 쓴다
+(`PromptsFileSchema`·`ArtFxFileSchema`·`THEME_DEFAULT_PALETTE`는 전부 `@tgslot/game-sdk`에서 온다).
+
+| 파일 | 성격 | theme-gen과의 관계 |
+|---|---|---|
+| `art/prompts.json` | 원본 (사람이 씀) | **읽는다** — 무엇을 그릴지 |
+| `art/fx.json` | 원본 (사람이 씀) | **읽는다** — 심볼 승리 연출 |
+| `theme/theme.json` | 생성물 | **쓴다** — 위 둘 + 생성 결과를 병합 |
+| `manifest.json` / `math.json` | 원본 | 건드리지 않는다 |
+
+`theme.json`은 생성물이므로 `symbols`/`frame`/`frameLayout`/`background`/`backgroundFreeSpins`/
+`sheets`/`fx`를 손으로 고치지 마라 — 다음 실행에서 다시 채워진다. 나머지 키(`palette`, `version`,
+`sfx`, `transitions` 등)는 손으로 쓰면 되고, 병합이 중첩 단계까지 보존한다.
+
+관련 명령:
+
+```bash
+pnpm new:game <id>       # games/_template에서 새 팩 생성 (packages/game-sdk)
+pnpm pack:check [id...]  # 팩 계약 검사 — 스키마·끊어진 참조·고아 파일 (packages/game-sdk)
+```
+
 ```bash
 pnpm --filter @tgslot/theme-gen gen games/classic-777 --dry-run
 pnpm --filter @tgslot/theme-gen gen games/classic-777
@@ -290,9 +313,24 @@ API 키가 필요 없는 대신, **자산 1개에 1~3분** 걸릴 수 있어 (`C
 symbol의 시트는 서로 안 건드리고 나란히 쌓인다(중첩 merge — symbol 단위, 애니메이션 단위 둘 다
 겹치는 키만 덮어쓴다).
 
-병합은 항상 **merge, never drop unknown keys**다. `version`, `palette`, `sfx` 등 기존 키는
-그대로 두고 심볼/frame/frameLayout/background(FreeSpins)/sheets만 채워 넣는다(겹치면 새
-값이 이긴다).
+### `art/fx.json` -> `theme.json.fx`
+
+심볼 승리 연출의 원본은 `games/<id>/art/fx.json` **하나뿐**이다. 파일 모양은 `{ "fx": { ... } }`이고
+스키마는 `@tgslot/game-sdk`의 `ArtFxFileSchema`다. 매 실행에서 (`gen`이든 `--reprocess`든,
+자산이 전부 skip돼도) 이 파일을 읽어 `theme.json`의 `fx`에 병합한다. 다섯 게임이 제각각이던 것을
+여기로 통일했으므로 `theme.json`의 `fx`를 직접 고치지 마라 — 다음 실행에 덮어써진다.
+
+- 파일이 없으면 `theme.json`의 기존 `fx`를 건드리지 않는다.
+- 스키마 검증에 실패하면 **경고만 남기고 반영하지 않는다** (나머지 자산 반영은 그대로 진행).
+- 검증은 스키마로 하되 **원본 JSON을 그대로** 옮긴다. 스키마가 모르는 필드도 지우지 않고,
+  그런 필드는 `pnpm pack:check`가 경고로 짚는다.
+
+### 병합 규칙
+
+병합은 항상 **merge, never drop unknown keys**다. `version`, `palette`, `sfx`, `transitions` 등
+생성기가 모르는 키는 **중첩 단계까지** 그대로 둔다(깊은 병합). 배열은 순서가 의미이므로 원소를
+합치지 않고 통째로 교체한다(`palette.winLine` 등). 채워 넣는 것은
+심볼/frame/frameLayout/background(FreeSpins)/sheets/fx뿐이고, 겹치면 새 값이 이긴다.
 
 `theme.json`이 아예 없거나(또는 `palette`/`version` 키 자체가 없으면) 허브 공통 기본값으로
 채운다 — 빈 `palette: {}`를 남기면 렌더러의 `ThemePaletteSchema`가 네 필드를 전부 요구해서
@@ -349,7 +387,11 @@ pnpm --filter @tgslot/theme-gen test
 - 프로바이더 자동 선택 로직 (env 목킹, codex 포함 순서)
 - 크로마키 픽셀 연산 (합성 16×16 버퍼)
 - 후처리 트림/패딩 수학 (합성 PNG, sharp)
-- `theme.json` 병합이 모르는 키를 보존하는지
+- `theme.json` 병합이 모르는 키를 보존하는지 — 중첩 키(`transitions`, `sheets`의 다른 애니메이션)
+  까지 살아남는지, 배열은 통째로 교체하는지, 원본 객체를 변형하지 않는지
+- `art/fx.json` 병합: 다른 갱신이 없어도 반영하는지, 손으로 쓴 `transitions`가 함께 살아남는지,
+  파일이 없으면 기존 `fx`를 건드리지 않는지, 스키마 위반이면 경고만 남기고 넘어가는지,
+  스키마 밖 필드를 그대로 옮기는지
 - `--dry-run` 출력 스냅샷 (`fixtures/prompts.json` 기준)
 - openai/gemini 프로바이더 happy-path (fetch 목킹)
 - codex 지시문 생성기(크기/투명 변형 스냅샷), spawn 래퍼(가짜 프로세스로 happy path/누락 파일/시간

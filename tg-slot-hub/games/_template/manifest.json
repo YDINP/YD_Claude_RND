@@ -5,7 +5,7 @@
     "ko": "템플릿 슬롯"
   },
   "version": "0.0.0",
-  "thumbnail": "/games/_template/thumb.svg",
+  "thumbnail": "/games/_template/thumb.webp",
   "status": "hidden",
   "reels": 3,
   "rows": 3,

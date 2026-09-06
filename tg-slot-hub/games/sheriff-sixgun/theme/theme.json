@@ -120,8 +120,7 @@
       "win": [
         {
           "type": "flash",
-          "durationMs": 500,
-          "fromAlpha": 0.4
+          "durationMs": 500
         },
         {
           "type": "glow",
@@ -134,8 +133,7 @@
       "win": [
         {
           "type": "flash",
-          "durationMs": 500,
-          "fromAlpha": 0.45
+          "durationMs": 500
         }
       ]
     },
@@ -182,5 +180,8 @@
     "sheriff": {
       "win": "sheets/sheriff-win.json"
     }
+  },
+  "transitions": {
+    "freeSpinsEnter": "transitions/fs-enter.webm"
   }
 }

@@ -5,15 +5,20 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check": "tsx src/checkCli.ts",
+    "new": "tsx src/newGameCli.ts"
   },
   "dependencies": {
     "@tgslot/shared": "workspace:*",
     "@tgslot/slot-engine": "workspace:*",
     "zod": "^4.1.13"
   },
-  "devDependencies": { "typescript": "~5.9.3", "vitest": "^4.1.7", "@types/node": "^24.12.3" }
+  "devDependencies": { "typescript": "~5.9.3", "vitest": "^4.1.7", "@types/node": "^24.12.3", "tsx": "^4.19.2" }
 }

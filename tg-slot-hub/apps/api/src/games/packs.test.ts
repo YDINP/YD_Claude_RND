@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it, vi } from 'vitest'
@@ -125,7 +125,7 @@ describe('loadGamePacks: 미완성 폴더 처리', () => {
     cpSync(join(gamesDir, 'classic-777', 'manifest.json'), join(dir, 'manifest.json'))
 
     // 만들다 만 팩을 조용히 빠뜨리면 로비에서 게임이 사라진 이유를 아무도 모른다.
-    expect(() => loadGamePacks(gamesDir)).toThrow(/half-built: math\.json이 없다/)
+    expect(() => loadGamePacks(gamesDir)).toThrow(/half-built[\s\S]*math\.json.*파일이 없다/)
   })
 
   it('manifest.json은 있는데 math.json이 깨졌으면 던진다', () => {
@@ -149,5 +149,47 @@ describe('loadGamePacks: 미완성 폴더 처리', () => {
     } finally {
       warn.mockRestore()
     }
+  })
+
+  /**
+   * classic-777의 manifest.json을 베이스로 id/status만 바꾸고 math.json은 아예 두지 않는다.
+   * 서빙 단계 검증조차 통과 못 하는 팩(스키마 필수 파일 누락)을 재현한다 — astral-clocktower가
+   * 실제로 겪은 사고(hidden 팩 하나가 깨져서 레지스트리 전체가 죽는 것)와 같은 종류다.
+   */
+  function makeBrokenPack(gamesDir: string, id: string, status: 'live' | 'soon' | 'hidden'): void {
+    const manifest = JSON.parse(readFileSync(join(gamesDir, 'classic-777', 'manifest.json'), 'utf8')) as Record<string, unknown>
+    const dir = join(gamesDir, id)
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'manifest.json'), JSON.stringify({ ...manifest, id, status }))
+  }
+
+  it('hidden 팩이 깨져 있어도 나머지 팩은 정상적으로 서빙된다 (211 → 62 사고 재발 방지 회귀 테스트)', () => {
+    const gamesDir = makeGamesDir()
+    makeBrokenPack(gamesDir, 'hidden-broken', 'hidden')
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const packs = loadGamePacks(gamesDir)
+      expect(packs.map((pack) => pack.id)).toEqual(['classic-777'])
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('[games] skipping hidden pack hidden-broken'))
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it('live 팩이 깨지면 여전히 던진다 — hidden만 봐주는 것이지 검증 자체를 느슨하게 만든 것이 아니다', () => {
+    const gamesDir = makeGamesDir()
+    makeBrokenPack(gamesDir, 'live-broken', 'live')
+
+    expect(() => loadGamePacks(gamesDir)).toThrow()
+  })
+
+  it('status를 알 수 없을 만큼 manifest 자체가 깨졌으면 던진다 (안전한 쪽으로 fail)', () => {
+    const gamesDir = makeGamesDir()
+    const dir = join(gamesDir, 'unreadable-manifest')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'manifest.json'), 'not json at all')
+
+    expect(() => loadGamePacks(gamesDir)).toThrow()
   })
 })

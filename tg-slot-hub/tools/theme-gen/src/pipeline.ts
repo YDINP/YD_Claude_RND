@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, relative, sep } from 'node:path'
 import sharp from 'sharp'
+import { ArtFxFileSchema, PACK_FILES } from '@tgslot/game-sdk'
+import type { FxMap } from '@tgslot/game-sdk'
 import { CHROMA_KEY_COLOR, CHROMA_KEY_FEATHER_PX, CHROMA_KEY_TOLERANCE_DEG, RAW_DIR_NAME } from './constants.js'
 import { chromaKey } from './chromaKey.js'
 import { logAsset, logInfo, logWarn } from './log.js'
@@ -232,19 +234,36 @@ export async function reprocessAsset(gameDir: string, asset: PromptAsset, themeU
   return { asset, skipped: false, ms, bytes }
 }
 
-/** 누적된 ThemeUpdate를 실제 `theme.json`에 병합해 쓴다. 반영할 게 없으면 아무것도 안 한다. */
-export function applyThemeUpdate(gameDir: string, update: ThemeUpdate): void {
-  if (
-    update.symbols === undefined &&
-    update.frame === undefined &&
-    update.background === undefined &&
-    update.backgroundFreeSpins === undefined &&
-    update.frameLayout === undefined &&
-    update.sheets === undefined
-  ) {
-    return
+/**
+ * `art/fx.json`(손으로 쓰는 연출 원본)을 읽는다. 없으면 undefined.
+ *
+ * 다섯 게임이 제각각이던 것을 여기로 통일했다 — 연출은 `art/fx.json`에만 쓰고,
+ * `theme.json`의 `fx`는 이 함수가 매 실행마다 다시 채우는 **생성물**이다.
+ */
+export function readArtFx(gameDir: string): FxMap | undefined {
+  const json = readJsonOptional(join(gameDir, PACK_FILES.fx))
+  if (json === undefined) return undefined
+  const parsed = ArtFxFileSchema.safeParse(json)
+  if (!parsed.success) {
+    logWarn(`${PACK_FILES.fx} 검증 실패로 fx를 반영하지 않는다: ${parsed.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('; ')}`)
+    return undefined
   }
-  const themePath = join(gameDir, 'theme', 'theme.json')
-  const merged = mergeTheme(readJsonOptional(themePath), update)
+  // 검증은 스키마로 하되 **원본을 그대로** 옮긴다. zod가 모르는 필드를 버리므로 파싱 결과를 쓰면
+  // 재생성이 손으로 쓴 필드를 조용히 지운다 — 여기도 merge, never drop unknown keys다.
+  // (스키마 밖 필드는 `pnpm pack:check`가 경고로 짚는다.)
+  return (json as { fx: FxMap }).fx
+}
+
+/**
+ * 누적된 ThemeUpdate에 `art/fx.json`을 얹어 실제 `theme.json`에 병합해 쓴다.
+ * 반영할 게 하나도 없으면 파일을 건드리지 않는다.
+ */
+export function applyThemeUpdate(gameDir: string, update: ThemeUpdate): void {
+  const fx = readArtFx(gameDir)
+  const full: ThemeUpdate = fx === undefined ? update : { ...update, fx }
+  if (Object.values(full).every((value) => value === undefined)) return
+
+  const themePath = join(gameDir, PACK_FILES.theme)
+  const merged = mergeTheme(readJsonOptional(themePath), full)
   writeJson(themePath, merged)
 }

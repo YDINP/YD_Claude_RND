@@ -3,8 +3,8 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import sharp from 'sharp'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { applyThemeUpdate, assetRawPath, generateAsset, reprocessAsset } from './pipeline.js'
-import { writeBuffer } from './paths.js'
+import { applyThemeUpdate, assetRawPath, generateAsset, readArtFx, reprocessAsset } from './pipeline.js'
+import { writeBuffer, writeJson } from './paths.js'
 import type { GeneratedImage, GenerateOptions, ImageProvider } from './provider/types.js'
 import type { PromptAsset, PromptsFile } from './schema.js'
 import type { ThemeUpdate } from './themeWriter.js'
@@ -449,5 +449,84 @@ describe('applyThemeUpdate', () => {
     expect(existsSync(themePath)).toBe(true)
     const written = JSON.parse(readFileSync(themePath, 'utf8')) as { backgroundFreeSpins: string }
     expect(written.backgroundFreeSpins).toBe('bg-freespins.webp')
+  })
+})
+
+describe('applyThemeUpdate — art/fx.json 병합', () => {
+  const fx = { default: { win: [{ type: 'pulse', scale: 1.12, durationMs: 600 }] } }
+
+  function writeArtFx(value: unknown): void {
+    writeJson(join(gameDir, 'art', 'fx.json'), value)
+  }
+
+  function readTheme(): Record<string, unknown> {
+    return JSON.parse(readFileSync(join(gameDir, 'theme', 'theme.json'), 'utf8')) as Record<string, unknown>
+  }
+
+  it('art/fx.json이 있으면 다른 갱신이 없어도 theme.json에 반영한다', () => {
+    writeArtFx({ fx })
+    applyThemeUpdate(gameDir, {})
+    expect(readTheme().fx).toEqual(fx)
+  })
+
+  it('자산 갱신과 함께 반영한다', () => {
+    writeArtFx({ fx })
+    applyThemeUpdate(gameDir, { symbols: { seven: 'symbols/seven.webp' } })
+    const written = readTheme()
+    expect(written.fx).toEqual(fx)
+    expect(written.symbols).toEqual({ seven: 'symbols/seven.webp' })
+  })
+
+  it('손으로 쓴 transitions는 fx를 다시 채워도 살아남는다', () => {
+    writeJson(join(gameDir, 'theme', 'theme.json'), {
+      version: '1.0.0',
+      symbols: { seven: 'symbols/seven.webp' },
+      palette: { frame: '#fff', reelBg: '#000', winLine: ['#f00'], text: '#fff' },
+      transitions: { freeSpinsEnter: 'transitions/fs-enter.webm' },
+      fx: { default: { win: [{ type: 'glow' }] } },
+    })
+    writeArtFx({ fx })
+    applyThemeUpdate(gameDir, { frame: 'frame.webp' })
+    const written = readTheme()
+    expect(written.transitions).toEqual({ freeSpinsEnter: 'transitions/fs-enter.webm' })
+    expect(written.fx).toEqual(fx)
+    expect(written.frame).toBe('frame.webp')
+  })
+
+  it('art/fx.json이 없으면 theme.json의 fx를 건드리지 않는다', () => {
+    writeJson(join(gameDir, 'theme', 'theme.json'), {
+      palette: { frame: '#fff', reelBg: '#000', winLine: ['#f00'], text: '#fff' },
+      fx: { wild: { win: [{ type: 'shine' }] } },
+    })
+    applyThemeUpdate(gameDir, { frame: 'frame.webp' })
+    expect(readTheme().fx).toEqual({ wild: { win: [{ type: 'shine' }] } })
+  })
+
+  it('art/fx.json이 스키마를 어기면 경고만 남기고 fx를 반영하지 않는다', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    writeArtFx({ fx: { default: { win: [{ type: '없는효과' }] } } })
+    applyThemeUpdate(gameDir, { frame: 'frame.webp' })
+    expect(readTheme().fx).toBeUndefined()
+    expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('art/fx.json만 깨져 있고 다른 갱신도 없으면 theme.json을 만들지 않는다', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    writeArtFx({ nope: true })
+    applyThemeUpdate(gameDir, {})
+    expect(existsSync(join(gameDir, 'theme', 'theme.json'))).toBe(false)
+    warn.mockRestore()
+  })
+})
+
+describe('readArtFx', () => {
+  it('스키마 밖 필드도 그대로 옮긴다 (재생성이 손으로 쓴 값을 지우지 않는다)', () => {
+    writeJson(join(gameDir, 'art', 'fx.json'), { fx: { default: { win: [{ type: 'flash', fromAlpha: 0.4 }] } } })
+    expect(readArtFx(gameDir)).toEqual({ default: { win: [{ type: 'flash', fromAlpha: 0.4 }] } })
+  })
+
+  it('파일이 없으면 undefined다', () => {
+    expect(readArtFx(gameDir)).toBeUndefined()
   })
 })

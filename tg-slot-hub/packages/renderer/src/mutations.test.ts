@@ -1,12 +1,26 @@
 import { describe, expect, it } from 'vitest'
-import { createSeededRng, parseGameMath, spin, type GameMath, type MutationEvent } from '@tgslot/slot-engine'
+import {
+  createSeededRng,
+  parseGameMath,
+  spin,
+  type GameMath,
+  type MutationEvent,
+  type SymbolId,
+} from '@tgslot/slot-engine'
 import {
   applyMutationEventsToGrid,
   buildMutationPlan,
+  expireMutationOverlay,
+  fadeMutationOverlay,
+  holdMutationOverlay,
   mutationCellDelayMs,
   mutationCommitMs,
   mutationDurationMs,
+  mutationOverlaySymbolAt,
   mutationReels,
+  releaseMutationOverlayReel,
+  NO_MUTATION_OVERLAY,
+  type MutationOverlay,
 } from './mutations.js'
 import {
   MUTATION_DROP_STAGGER_MS,
@@ -310,5 +324,104 @@ describe('mutationReels', () => {
       cells: [cell(2, 0, 'bell', 'wild'), cell(0, 1, 'seven', 'wild'), cell(2, 2, 'cherry', 'wild')],
     }
     expect(mutationReels(event)).toEqual([0, 2])
+  })
+})
+
+describe('변형 층 — 스핀을 시작해도 되돌아가지 않는다', () => {
+  // 5릴 3행, 스트립 길이 10. 릴 0의 행 1에 미스터리가 'seven'으로 변환됐다고 본다.
+  const STRIP_LENGTHS = [10, 10, 10, 10, 10]
+  const POSITIONS = [0, 0, 0, 0, 0]
+  const GRID: SymbolId[][] = [
+    ['a', 'a', 'a', 'a', 'a'],
+    ['seven', 'b', 'b', 'b', 'b'],
+    ['c', 'c', 'c', 'c', 'c'],
+  ]
+
+  function held(): MutationOverlay {
+    return holdMutationOverlay(GRID, POSITIONS, STRIP_LENGTHS)
+  }
+
+  it('빈 그리드는 아무것도 얹지 않는다', () => {
+    expect(holdMutationOverlay([], POSITIONS, STRIP_LENGTHS)).toEqual(NO_MUTATION_OVERLAY)
+  })
+
+  it('화면 행이 아니라 스트립 자리로 못 박는다', () => {
+    // 위치 0에서 행 1은 스트립 자리 1이다.
+    const overlay = holdMutationOverlay(GRID, [0, 0, 0, 0, 0], STRIP_LENGTHS)
+    expect(mutationOverlaySymbolAt(overlay, 0, 1)).toBe('seven')
+
+    // 같은 그리드라도 릴이 다른 자리에 서 있었으면 스트립 자리가 달라진다.
+    const shifted = holdMutationOverlay(GRID, [7, 7, 7, 7, 7], STRIP_LENGTHS)
+    expect(mutationOverlaySymbolAt(shifted, 0, 8)).toBe('seven')
+    expect(mutationOverlaySymbolAt(shifted, 0, 1)).toBeUndefined()
+  })
+
+  it('스트립 끝을 넘어가면 앞으로 돌아온다', () => {
+    const overlay = holdMutationOverlay(GRID, [9, 9, 9, 9, 9], STRIP_LENGTHS)
+    expect(mutationOverlaySymbolAt(overlay, 0, 0)).toBe('seven')
+  })
+
+  it('스핀이 시작돼도 심볼은 그대로 남는다', () => {
+    // 이 시험이 곧 버그다. 시작하자마자 걷히면 물음표가 한 프레임 보인다.
+    const spinning = fadeMutationOverlay(held(), POSITIONS)
+    expect(spinning.kind).toBe('fading')
+    expect(mutationOverlaySymbolAt(spinning, 0, 1)).toBe('seven')
+  })
+
+  it('릴이 조금 움직인 동안에도 남아 있다', () => {
+    const spinning = fadeMutationOverlay(held(), POSITIONS)
+    // 반동으로 살짝 올라갔다가 한 칸 남짓 내려온 상태. 아직 화면 안이다.
+    const afterPullUp = expireMutationOverlay(spinning, 0, 0.3, 5)
+    const afterOneCell = expireMutationOverlay(afterPullUp, 0, -1.2, 5)
+    expect(mutationOverlaySymbolAt(afterOneCell, 0, 1)).toBe('seven')
+  })
+
+  it('화면 밖으로 빠져나가면 그 릴만 놓는다', () => {
+    let overlay = fadeMutationOverlay(held(), POSITIONS)
+    overlay = expireMutationOverlay(overlay, 0, -5.5, 5)
+
+    expect(mutationOverlaySymbolAt(overlay, 0, 1)).toBeUndefined()
+    // 아직 돌고 있는 다른 릴은 그대로다.
+    expect(mutationOverlaySymbolAt(overlay, 1, 1)).toBe('b')
+  })
+
+  it('위로 지나가도 같은 거리에서 놓는다', () => {
+    let overlay = fadeMutationOverlay(held(), POSITIONS)
+    overlay = expireMutationOverlay(overlay, 0, 5.5, 5)
+    expect(mutationOverlaySymbolAt(overlay, 0, 1)).toBeUndefined()
+  })
+
+  it('모든 릴이 놓으면 층 자체가 사라진다', () => {
+    let overlay = fadeMutationOverlay(held(), POSITIONS)
+    for (let reel = 0; reel < STRIP_LENGTHS.length; reel += 1) {
+      overlay = releaseMutationOverlayReel(overlay, reel)
+    }
+    expect(overlay).toEqual(NO_MUTATION_OVERLAY)
+  })
+
+  it('착지와 스킵은 흘러 나갈 구간 없이 곧장 놓는다', () => {
+    // 스냅 착지는 남은 거리를 지나가지 않는다. 거리 조건과 무관하게 놓여야 한다.
+    const spinning = fadeMutationOverlay(held(), POSITIONS)
+    const landed = releaseMutationOverlayReel(spinning, 0)
+    expect(mutationOverlaySymbolAt(landed, 0, 1)).toBeUndefined()
+  })
+
+  it('멈춰 있는 층은 거리와 무관하게 남는다', () => {
+    // 유휴 모션으로 위치가 흔들려도 정지 중인 층은 걷히지 않는다.
+    const resting = held()
+    expect(expireMutationOverlay(resting, 0, 99, 5)).toBe(resting)
+    expect(releaseMutationOverlayReel(resting, 0)).toBe(resting)
+  })
+
+  it('놓은 릴을 다시 놓아도 안전하다', () => {
+    let overlay = fadeMutationOverlay(held(), POSITIONS)
+    overlay = releaseMutationOverlayReel(overlay, 0)
+    const again = releaseMutationOverlayReel(overlay, 0)
+    expect(again).toBe(overlay)
+  })
+
+  it('얹은 것이 없으면 시작해도 없는 그대로다', () => {
+    expect(fadeMutationOverlay(NO_MUTATION_OVERLAY, POSITIONS)).toEqual(NO_MUTATION_OVERLAY)
+    expect(mutationOverlaySymbolAt(NO_MUTATION_OVERLAY, 0, 1)).toBeUndefined()
   })
 })

@@ -1,0 +1,465 @@
+{
+  "id": "astral-clocktower",
+  "reels": 4,
+  "rows": 5,
+  "symbols": [
+    {
+      "id": "wild",
+      "name": {
+        "en": "Star Window Wild",
+        "ko": "별창 와일드"
+      },
+      "wild": true
+    },
+    {
+      "id": "scatter",
+      "name": {
+        "en": "Comet",
+        "ko": "혜성"
+      },
+      "scatter": true
+    },
+    {
+      "id": "astrolabe",
+      "name": {
+        "en": "Astrolabe",
+        "ko": "성반"
+      }
+    },
+    {
+      "id": "owl",
+      "name": {
+        "en": "Tower Owl",
+        "ko": "탑의 부엉이"
+      }
+    },
+    {
+      "id": "moondial",
+      "name": {
+        "en": "Moondial",
+        "ko": "달시계"
+      }
+    },
+    {
+      "id": "gear",
+      "name": {
+        "en": "Gear",
+        "ko": "톱니"
+      }
+    },
+    {
+      "id": "key",
+      "name": {
+        "en": "Brass Key",
+        "ko": "황동 열쇠"
+      }
+    },
+    {
+      "id": "pendulum",
+      "name": {
+        "en": "Pendulum",
+        "ko": "추"
+      }
+    },
+    {
+      "id": "starjar",
+      "name": {
+        "en": "Stardust Jar",
+        "ko": "별가루 병"
+      }
+    },
+    {
+      "id": "quill",
+      "name": {
+        "en": "Quill",
+        "ko": "깃펜"
+      }
+    }
+  ],
+  "strips": [
+    [
+      "gear",
+      "gear",
+      "gear",
+      "key",
+      "key",
+      "key",
+      "pendulum",
+      "pendulum",
+      "pendulum",
+      "quill",
+      "quill",
+      "quill",
+      "starjar",
+      "starjar",
+      "starjar",
+      "astrolabe",
+      "astrolabe",
+      "astrolabe",
+      "gear",
+      "gear",
+      "gear",
+      "key",
+      "key",
+      "key",
+      "moondial",
+      "moondial",
+      "moondial",
+      "owl",
+      "owl",
+      "owl",
+      "pendulum",
+      "pendulum",
+      "pendulum",
+      "quill",
+      "quill",
+      "quill",
+      "starjar",
+      "starjar",
+      "starjar",
+      "astrolabe",
+      "astrolabe",
+      "astrolabe",
+      "gear",
+      "gear",
+      "gear",
+      "key",
+      "key",
+      "key",
+      "moondial",
+      "moondial",
+      "moondial",
+      "owl",
+      "owl",
+      "owl",
+      "pendulum",
+      "pendulum",
+      "pendulum",
+      "quill",
+      "quill",
+      "quill",
+      "scatter",
+      "starjar",
+      "starjar",
+      "starjar"
+    ],
+    [
+      "gear",
+      "gear",
+      "gear",
+      "key",
+      "key",
+      "key",
+      "pendulum",
+      "pendulum",
+      "pendulum",
+      "quill",
+      "quill",
+      "quill",
+      "starjar",
+      "starjar",
+      "starjar",
+      "astrolabe",
+      "astrolabe",
+      "astrolabe",
+      "gear",
+      "gear",
+      "gear",
+      "key",
+      "key",
+      "key",
+      "moondial",
+      "moondial",
+      "moondial",
+      "owl",
+      "owl",
+      "owl",
+      "pendulum",
+      "pendulum",
+      "pendulum",
+      "quill",
+      "quill",
+      "quill",
+      "scatter",
+      "starjar",
+      "starjar",
+      "starjar",
+      "wild",
+      "astrolabe",
+      "astrolabe",
+      "astrolabe",
+      "gear",
+      "gear",
+      "gear",
+      "key",
+      "key",
+      "key",
+      "moondial",
+      "moondial",
+      "moondial",
+      "owl",
+      "owl",
+      "owl",
+      "pendulum",
+      "pendulum",
+      "pendulum",
+      "quill",
+      "quill",
+      "quill",
+      "scatter",
+      "starjar",
+      "starjar",
+      "starjar",
+      "wild"
+    ],
+    [
+      "gear",
+      "gear",
+      "gear",
+      "key",
+      "key",
+      "key",
+      "pendulum",
+      "pendulum",
+      "pendulum",
+      "quill",
+      "quill",
+      "quill",
+      "starjar",
+      "starjar",
+      "starjar",
+      "astrolabe",
+      "astrolabe",
+      "astrolabe",
+      "gear",
+      "gear",
+      "gear",
+      "key",
+      "key",
+      "key",
+      "moondial",
+      "moondial",
+      "moondial",
+      "owl",
+      "owl",
+      "owl",
+      "pendulum",
+      "pendulum",
+      "pendulum",
+      "quill",
+      "quill",
+      "quill",
+      "scatter",
+      "starjar",
+      "starjar",
+      "starjar",
+      "wild",
+      "astrolabe",
+      "astrolabe",
+      "astrolabe",
+      "gear",
+      "gear",
+      "gear",
+      "key",
+      "key",
+      "key",
+      "moondial",
+      "moondial",
+      "moondial",
+      "owl",
+      "owl",
+      "owl",
+      "pendulum",
+      "pendulum",
+      "pendulum",
+      "quill",
+      "quill",
+      "quill",
+      "scatter",
+      "starjar",
+      "starjar",
+      "starjar",
+      "wild"
+    ],
+    [
+      "gear",
+      "gear",
+      "gear",
+      "key",
+      "key",
+      "key",
+      "pendulum",
+      "pendulum",
+      "pendulum",
+      "quill",
+      "quill",
+      "quill",
+      "starjar",
+      "starjar",
+      "starjar",
+      "astrolabe",
+      "astrolabe",
+      "astrolabe",
+      "gear",
+      "gear",
+      "gear",
+      "key",
+      "key",
+      "key",
+      "moondial",
+      "moondial",
+      "moondial",
+      "owl",
+      "owl",
+      "owl",
+      "pendulum",
+      "pendulum",
+      "pendulum",
+      "quill",
+      "quill",
+      "quill",
+      "starjar",
+      "starjar",
+      "starjar",
+      "astrolabe",
+      "astrolabe",
+      "astrolabe",
+      "gear",
+      "gear",
+      "gear",
+      "key",
+      "key",
+      "key",
+      "moondial",
+      "moondial",
+      "moondial",
+      "owl",
+      "owl",
+      "owl",
+      "pendulum",
+      "pendulum",
+      "pendulum",
+      "quill",
+      "quill",
+      "quill",
+      "scatter",
+      "starjar",
+      "starjar",
+      "starjar"
+    ]
+  ],
+  "payModel": "ways",
+  "ways": {
+    "base": 625,
+    "bothWays": false,
+    "betDivisor": 100
+  },
+  "mutations": [
+    {
+      "type": "expandWild",
+      "symbol": "wild",
+      "reels": [
+        1,
+        2
+      ],
+      "minCount": 1,
+      "coverScatter": false,
+      "onlyIfWin": false
+    },
+    {
+      "type": "upgrade",
+      "from": "gear",
+      "to": "moondial",
+      "minCount": 3,
+      "chance": 0.03
+    },
+    {
+      "type": "upgrade",
+      "from": "key",
+      "to": "gear",
+      "minCount": 3,
+      "chance": 0.07
+    },
+    {
+      "type": "upgrade",
+      "from": "pendulum",
+      "to": "key",
+      "minCount": 3,
+      "chance": 0.07
+    },
+    {
+      "type": "upgrade",
+      "from": "starjar",
+      "to": "pendulum",
+      "minCount": 3,
+      "chance": 0.07
+    },
+    {
+      "type": "upgrade",
+      "from": "quill",
+      "to": "starjar",
+      "minCount": 3,
+      "chance": 0.07
+    }
+  ],
+  "paytable": {
+    "astrolabe": {
+      "3": 8,
+      "4": 53
+    },
+    "owl": {
+      "3": 8,
+      "4": 29
+    },
+    "moondial": {
+      "3": 4,
+      "4": 20
+    },
+    "gear": {
+      "3": 4,
+      "4": 10
+    },
+    "key": {
+      "3": 4,
+      "4": 6
+    },
+    "pendulum": {
+      "3": 4,
+      "4": 5
+    },
+    "starjar": {
+      "3": 3,
+      "4": 4
+    },
+    "quill": {
+      "3": 3,
+      "4": 3
+    }
+  },
+  "wild": {
+    "substitutesFor": "all"
+  },
+  "scatter": {
+    "symbol": "scatter",
+    "pays": {
+      "3": 1,
+      "4": 6
+    },
+    "freeSpins": {
+      "trigger": 3,
+      "count": 10,
+      "multiplier": 2,
+      "retrigger": true
+    }
+  },
+  "betLevels": [
+    100,
+    200,
+    400,
+    1000,
+    2000,
+    4000
+  ],
+  "rtpTarget": 0.945,
+  "volatility": "high"
+}

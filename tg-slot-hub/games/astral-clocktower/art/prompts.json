@@ -1,0 +1,149 @@
+{
+  "game": "astral-clocktower",
+  "concept": "Astral Clocktower — the hub's sixth style family: stained glass and brass clockwork, deliberately distinct from the glossy 3D toy renders (classic-777 / fruit-fiesta / royal-diamond-777 / sheriff-sixgun) and from shiba-shrine's cel-shaded chibi. Heavy black lead lines around flat luminous glass fills, lit from behind like a cathedral window at night. Headline mechanic: a pillar of light swallows a whole 5-cell reel on a 4x5 / 625-ways board, so the frame is the hub's first portrait canvas (1024x1536) and the reels fill the phone screen top to bottom.",
+  "stylePrefix": "Stained glass and brass clockwork icon render, flat front-on view, backlit as if a cathedral window at night, midnight indigo (#141c3a) and stained cobalt (#2a5fbf) color story with brass (#c9963f), stained amber (#f2a03d) and stained ruby (#c8354e) accents plus moonlight (#e8eef7) highlights, thick black lead came outlines around every shape, flat luminous glass fills with no gradient shading, bold simple silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality —",
+  "negative": "photorealistic photography, real human face or body, blurry, out of focus, watermark, signature, extra unintended text, random glyphs, gibberish lettering, busy cluttered background, baked-in drop shadow, harsh outer shadow, cropped edges, multiple duplicate objects, low contrast, dull washed-out colors, noisy grain texture, distorted asymmetric proportions, cheap clip-art look, gradient banding, neon cyberpunk styling, glossy 3D plastic toy render, soft airbrushed shading",
+  "assets": [
+    {
+      "id": "wild",
+      "kind": "symbol",
+      "prompt": "Stained glass and brass clockwork icon render, flat front-on view, backlit as if a cathedral window at night, midnight indigo (#141c3a) and stained cobalt (#2a5fbf) color story with brass (#c9963f), stained amber (#f2a03d) and stained ruby (#c8354e) accents plus moonlight (#e8eef7) highlights, thick black lead came outlines around every shape, flat luminous glass fills with no gradient shading, bold simple silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — an octagonal rose window of stained glass with a brass frame, eight radiating cobalt and amber glass petals around a single blazing white-hot star at the very center, the center glowing far brighter than the petals, thick black lead lines separating every pane, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/wild.webp",
+      "outSize": 512
+    },
+    {
+      "id": "scatter",
+      "kind": "symbol",
+      "prompt": "Stained glass and brass clockwork icon render, flat front-on view, backlit as if a cathedral window at night, midnight indigo (#141c3a) and stained cobalt (#2a5fbf) color story with brass (#c9963f), stained amber (#f2a03d) and stained ruby (#c8354e) accents plus moonlight (#e8eef7) highlights, thick black lead came outlines around every shape, flat luminous glass fills with no gradient shading, bold simple silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a comet rendered in stained glass, a round amber glass head at the upper right with a long tapering ruby-and-white glass tail sweeping down to the lower left on a steep diagonal, thick black lead lines dividing the tail into three tapering panes, the strong diagonal silhouette reading as a fall, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/scatter.webp",
+      "outSize": 512
+    },
+    {
+      "id": "astrolabe",
+      "kind": "symbol",
+      "prompt": "Stained glass and brass clockwork icon render, flat front-on view, backlit as if a cathedral window at night, midnight indigo (#141c3a) and stained cobalt (#2a5fbf) color story with brass (#c9963f), stained amber (#f2a03d) and stained ruby (#c8354e) accents plus moonlight (#e8eef7) highlights, thick black lead came outlines around every shape, flat luminous glass fills with no gradient shading, bold simple silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — an astrolabe seen face-on: three concentric brass rings of decreasing size nested inside one another with cobalt glass filling the gaps between them, small engraved brass tick marks around the outermost ring, a single amber glass pointer bar crossing the center, the nested-ring silhouette instantly readable, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/astrolabe.webp",
+      "outSize": 512
+    },
+    {
+      "id": "owl",
+      "kind": "symbol",
+      "prompt": "Stained glass and brass clockwork icon render, flat front-on view, backlit as if a cathedral window at night, midnight indigo (#141c3a) and stained cobalt (#2a5fbf) color story with brass (#c9963f), stained amber (#f2a03d) and stained ruby (#c8354e) accents plus moonlight (#e8eef7) highlights, thick black lead came outlines around every shape, flat luminous glass fills with no gradient shading, bold simple silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a stylised owl facing the viewer, its body built from cobalt and indigo glass panes, two huge round amber glass eyes with black lead rings around them dominating the shape, a small brass beak between them, blunt feather tufts on top of a rounded body, warm and friendly rather than fierce, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/owl.webp",
+      "outSize": 512
+    },
+    {
+      "id": "moondial",
+      "kind": "symbol",
+      "prompt": "Stained glass and brass clockwork icon render, flat front-on view, backlit as if a cathedral window at night, midnight indigo (#141c3a) and stained cobalt (#2a5fbf) color story with brass (#c9963f), stained amber (#f2a03d) and stained ruby (#c8354e) accents plus moonlight (#e8eef7) highlights, thick black lead came outlines around every shape, flat luminous glass fills with no gradient shading, bold simple silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a moon dial: a bold crescent moon of pale moonlight-white glass opening to the right, with a single straight brass gnomon needle standing upright through the crescent's hollow and casting no shadow, three tiny amber glass stars tucked into the crescent's inner curve, the crescent-plus-needle silhouette clearly different from any ring or wheel shape, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/moondial.webp",
+      "outSize": 512
+    },
+    {
+      "id": "gear",
+      "kind": "symbol",
+      "prompt": "Stained glass and brass clockwork icon render, flat front-on view, backlit as if a cathedral window at night, midnight indigo (#141c3a) and stained cobalt (#2a5fbf) color story with brass (#c9963f), stained amber (#f2a03d) and stained ruby (#c8354e) accents plus moonlight (#e8eef7) highlights, thick black lead came outlines around every shape, flat luminous glass fills with no gradient shading, bold simple silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a single clockwork gear seen face-on, a thick brass wheel with eight blunt square teeth around its rim and a round hole at its center filled with cobalt glass, four small spokes of brass crossing the glass, a strictly circular toothed silhouette with nothing sticking out beyond the teeth, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/gear.webp",
+      "outSize": 512
+    },
+    {
+      "id": "key",
+      "kind": "symbol",
+      "prompt": "Stained glass and brass clockwork icon render, flat front-on view, backlit as if a cathedral window at night, midnight indigo (#141c3a) and stained cobalt (#2a5fbf) color story with brass (#c9963f), stained amber (#f2a03d) and stained ruby (#c8354e) accents plus moonlight (#e8eef7) highlights, thick black lead came outlines around every shape, flat luminous glass fills with no gradient shading, bold simple silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — an ornate brass winding key lying horizontally across the frame, a long straight shaft running left to right with a small square bit at the right end and a round bow at the left end whose opening is filled with a single ruby glass pane, the silhouette distinctly long and horizontal rather than round, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/key.webp",
+      "outSize": 512
+    },
+    {
+      "id": "pendulum",
+      "kind": "symbol",
+      "prompt": "Stained glass and brass clockwork icon render, flat front-on view, backlit as if a cathedral window at night, midnight indigo (#141c3a) and stained cobalt (#2a5fbf) color story with brass (#c9963f), stained amber (#f2a03d) and stained ruby (#c8354e) accents plus moonlight (#e8eef7) highlights, thick black lead came outlines around every shape, flat luminous glass fills with no gradient shading, bold simple silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a clock pendulum hanging straight down: a thin vertical brass rod from the top of the frame ending in a wide inverted cone bob of amber glass with a brass rim, the shape strictly vertical and top-heavy-to-bottom-wide, clearly a hanging weight and not a circle, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/pendulum.webp",
+      "outSize": 512
+    },
+    {
+      "id": "starjar",
+      "kind": "symbol",
+      "prompt": "Stained glass and brass clockwork icon render, flat front-on view, backlit as if a cathedral window at night, midnight indigo (#141c3a) and stained cobalt (#2a5fbf) color story with brass (#c9963f), stained amber (#f2a03d) and stained ruby (#c8354e) accents plus moonlight (#e8eef7) highlights, thick black lead came outlines around every shape, flat luminous glass fills with no gradient shading, bold simple silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a rounded apothecary jar of pale cobalt glass with a small brass screw lid, packed with glowing amber stardust and three tiny white four-point stars floating inside it, thick black lead outline around the fat rounded belly of the jar, the silhouette a plump bottle shape, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/starjar.webp",
+      "outSize": 512
+    },
+    {
+      "id": "quill",
+      "kind": "symbol",
+      "prompt": "Stained glass and brass clockwork icon render, flat front-on view, backlit as if a cathedral window at night, midnight indigo (#141c3a) and stained cobalt (#2a5fbf) color story with brass (#c9963f), stained amber (#f2a03d) and stained ruby (#c8354e) accents plus moonlight (#e8eef7) highlights, thick black lead came outlines around every shape, flat luminous glass fills with no gradient shading, bold simple silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — a single writing quill feather set on a steep diagonal from lower left to upper right, the vane made of pale moonlight-white glass panes divided by black lead lines along a brass spine, a small brass nib at the lower end, the silhouette a long slanted leaf shape clearly unlike any circular or bottle symbol, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/quill.webp",
+      "outSize": 512
+    },
+    {
+      "id": "frame",
+      "kind": "frame",
+      "prompt": "Front-on elevation view (not 3/4 top-down), full-bleed TALL PORTRAIT artwork on a 2:3 portrait canvas with no isolated chroma background around the frame itself — a gothic astronomical clocktower cabinet frame seen from below looking up, built from brass machinery and stained glass, built around one enormous centered portrait window so the reels fill the whole height of a phone screen. A very compact marquee spans only y 0%-9.5% of the canvas: a slim brass nameplate band with a small clock face at each end and the engraved wordmark 'ASTRAL CLOCKTOWER' in one line of narrow gothic caps, no other text. The reel window occupies x 2%-98% and y 9.5%-91% — it is by far the dominant element and takes up more than three quarters of the whole canvas — filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient and NO ornament inside it, bordered by only a hairline 0.5% brass rim running just outside the green (this window will later be replaced with the live reel canvas). Two extremely slim brass rails run the full height of the window, each at most 1.5% of the frame width, styled as narrow riveted brass columns with two or three tiny stained-glass lozenges each. The bottom y 91%-100% is a plain weighted stone tower-base molding with soft ambient shadow, no legend strip, no payline icons, no additional text. Overall symmetrical, centered, no characters. CRITICAL PROPORTION: the reel window is clearly TALLER than it is wide (about 4:5 landscape-to-height, a portrait rectangle), NOT a wide landscape window — a 4-column by 5-row grid must fill it edge to edge with no leftover space. The window must reach almost to the left and right edges of the canvas and almost to the top and bottom as well; put all decorative bulk in the thin marquee above and the thin base below, never at the sides.",
+      "size": "1024x1536",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "bg",
+      "kind": "bg",
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — the inside of a gothic clocktower at night seen softly out of focus, blurred tiers of brass gears and rose windows receding upward into darkness, faint cobalt and amber light bleeding through distant stained glass, a deep midnight indigo sky with a scatter of small stars at the top, a soft radial vignette darkening the corners and edges so foreground content stays legible, calm and uncluttered composition with no characters, no readable text, no sharp details competing for attention, subtle and low-contrast overall so reels and UI read clearly in front of it.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background, identical camera framing and horizon line to the base clocktower interior background so the two can crossfade cleanly — the same clocktower interior now at the striking hour: every rose window blazes with warm amber light, shafts of light fall through the gear tiers, drifting motes of gold dust fill the air, richer and more festive lighting than the base scene while keeping the same deep indigo structure, a soft radial vignette still darkens the corners and edges so foreground content stays legible, no characters, no readable text, no sharp details competing for attention.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg-freespins.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "prompt": "Front-on hero composition (not 3/4 top-down), full-bleed landscape artwork with no isolated chroma background — a towering gothic clocktower of brass and stained glass rising against a midnight indigo sky, one brilliant vertical pillar of white-gold light bursting up its full height through a rose window, amber sparks and small stars scattering outward from the beam, dramatic vertical composition, a small brass nameplate wordmark 'ASTRAL CLOCKTOWER' tucked in a bottom corner, eye-catching and readable even as a small lobby list thumbnail, no clutter.",
+      "size": "1536x1024",
+      "transparent": false,
+      "out": "thumb.webp",
+      "outSize": 640
+    },
+    {
+      "id": "wild-win",
+      "kind": "sheet",
+      "symbol": "wild",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "Stained glass and brass clockwork icon render, flat front-on view, backlit as if a cathedral window at night, midnight indigo (#141c3a) and stained cobalt (#2a5fbf) color story with brass (#c9963f), stained amber (#f2a03d) and stained ruby (#c8354e) accents plus moonlight (#e8eef7) highlights, thick black lead came outlines around every shape, flat luminous glass fills with no gradient shading, bold simple silhouette readable at small size, no watermark, no baked-in drop shadow, premium mobile casino game asset quality — an octagonal rose window of stained glass with a brass frame, eight radiating cobalt and amber glass petals around a single blazing white-hot star at the very center, thick black lead lines separating every pane, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background. Win-celebration animation timeline across the sequence: frames 1-3 the central star swells and its light spreads outward pane by pane until every petal is lit from behind; frames 4-6 a vertical shaft of white-gold light bursts straight up and down through the window at peak brightness while the brass frame rings with sparks; frames 7-9 the beam retracts and the panes dim back down in sequence, ending close enough to frame 1's brightness for a seamless loop back to the start. All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background, changes between cells limited to the described glow, light, spark and pose motion.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/wild-win.webp",
+      "outSize": 768
+    }
+  ]
+}

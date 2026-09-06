@@ -41,6 +41,7 @@
 | 10 | `hanbok-night-market` | Hanbok Night Market / 한복 야시장 | 민화 하이브리드 | 5×3 | 25라인 | 중고 | 휠 보너스 + 심볼 승급 | P6·P1 | 3 |
 | 11 | `idol-stage-live` | Idol Stage Live / 아이돌 스테이지 라이브 | 애니 아이돌 | 5×4 | 1024 ways 양방향 | 중고 | 픽미 보너스 + 응원 배수 미터 | P6·P3 | 3 |
 | 12 | `mecha-nova` | Mecha Nova / 메카 노바 | 하드서피스 3D | 5×4 | 243 ways | 고 | 워킹 와일드 리스핀 + 바이 피처 | P5·P1 | 3 |
+| 16 | `astral-clocktower` | Astral Clocktower / 별의 시계탑 | 스테인드글라스 + 황동 | **4×5** | 625 ways | 고 | 확장 와일드 빛기둥 + 층 승급 | (신규 0) | 2.5 |
 
 보류 컨셉(v2 후보): 북유럽 신화, 사이버펑크 야경, 이집트. 10종이 이미 스타일 패밀리 6개를 덮으므로 중복을 피해 뺐다.
 
@@ -325,6 +326,40 @@
 "buyFeature": { "featureId": "walking-wild", "price": 80, "rtpMustNotExceedBase": true }
 ```
 아트: 심볼 11 + frame + bg + bg-battle + thumb + 워킹 트레일 이펙트 + 구매 버튼 아이콘 = 18장.
+
+---
+
+### #16 `astral-clocktower` — Astral Clocktower / 별의 시계탑
+
+> 탑의 층이 하나씩 올라가고, 빛 기둥이 다섯 칸을 통째로 삼킨다. 허브 유일의 **세로 격자**다.
+
+설계 원본은 `docs/PORTRAIT_SLOT_DESIGN.md`. 여기에는 구현된 실측값만 적는다.
+
+| 항목 | 값 |
+|---|---|
+| 그리드 / 페이 | **4×5** / 625 ways (`betDivisor` **100**) · 변동성 고 · 적중률 실측 29.0% |
+| RTP 94.5 구성 | ways 84.6 + 스캐터 0.6 + 프리스핀 8.9 (확장·승급은 ways 안에 녹아 있다) |
+| RTP 산출 | **monte-carlo** (ways + 뮤테이션 결합) · 실측 sigma 4.46 → `n*` 19.1M |
+| 프레임 캔버스 | **1024×1536 세로** (ART_DIRECTION v5). 허브에서 유일 |
+| 공수 (엔진/렌더/허브/아트/수학) | 0 / 0 / 0 / 15장 / 완료 |
+
+**컨셉·아트** — 스타일: 스테인드글라스 + 황동 기계(허브 6번째 패밀리). 굵은 납선 외곽 + 평면 발색이라 64px 실루엣 판독에 구조적으로 유리하다. 팔레트: 심야 인디고 `#141c3a`, 스테인드 코발트 `#2a5fbf`, 황동 `#c9963f`, 스테인드 앰버 `#f2a03d`, 스테인드 루비 `#c8354e`, 문라이트 `#e8eef7`.
+심볼(10): `wild` `scatter` `astrolabe` `owl` `moondial` `gear` `key` `pendulum` `starjar` `quill`
+
+**메커닉** — 확장 와일드가 릴 1·2에서 5칸 기둥을 만든다(릴당 `q ≈ 0.15`, 스핀당 `≈ 0.28`). 5×3에서 확장 릴이 ways를 ×3으로 만드는 데 비해 4×5에서는 **×5**다. 층 승급은 `upgrade` 5개를 **상위 단부터** 선언한 사다리이고(하위부터 선언하면 한 스핀에 연쇄 승급한다) 스핀당 RNG를 정확히 5회 더 쓴다. 엔진 신규 프리미티브는 0개다.
+
+**세로 격자가 강제하는 것** — 스테이지가 높이에 묶이므로 셀 = `0.153 × 스테이지 높이`다. WinStrip·컨트롤에 한 줄을 더 얹는 것이 곧 셀을 깎는 일이고, 갬블 패널이 흐름 안에서 열리면 라운드 중에 심볼이 10% 작아진다(`PORTRAIT_SLOT_DESIGN.md` 부록 A-2).
+
+```json
+"payModel": "ways",
+"ways": { "base": 625, "bothWays": false, "betDivisor": 100 },
+"mutations": [
+  { "type": "expandWild", "symbol": "wild", "reels": [1, 2], "minCount": 1, "coverScatter": false },
+  { "type": "upgrade", "from": "gear", "to": "moondial", "minCount": 3, "chance": 0.03 },
+  { "type": "upgrade", "from": "key", "to": "gear", "minCount": 3, "chance": 0.07 }
+]
+```
+아트: 심볼 10 + frame(v5 세로) + bg + bg-freespins + thumb + wild 승리 시트 = 15장.
 
 ---
 

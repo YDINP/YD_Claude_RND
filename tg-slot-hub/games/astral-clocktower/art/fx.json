@@ -1,0 +1,52 @@
+{
+  "fx": {
+    "default": {
+      "win": [{ "type": "pulse", "scale": 1.12, "durationMs": 600 }]
+    },
+    "wild": {
+      "win": [
+        { "type": "burst", "particles": 18, "durationMs": 900 },
+        { "type": "glow", "color": "#f2a03d", "durationMs": 900 }
+      ]
+    },
+    "scatter": {
+      "win": [
+        { "type": "glow", "color": "#e8eef7", "durationMs": 800 },
+        { "type": "spin", "durationMs": 400, "repeat": 1 }
+      ]
+    },
+    "astrolabe": {
+      "win": [
+        { "type": "spin", "durationMs": 900, "repeat": 1 },
+        { "type": "glow", "color": "#c9963f", "durationMs": 900 }
+      ]
+    },
+    "owl": {
+      "win": [
+        { "type": "bounce", "px": 0.08, "durationMs": 700 },
+        { "type": "glow", "color": "#f2a03d", "durationMs": 700 }
+      ]
+    },
+    "moondial": {
+      "win": [
+        { "type": "shine", "durationMs": 800, "angle": 20 },
+        { "type": "pulse", "scale": 1.13, "durationMs": 800 }
+      ]
+    },
+    "gear": {
+      "win": [{ "type": "spin", "durationMs": 800, "repeat": 1 }]
+    },
+    "key": {
+      "win": [{ "type": "shine", "durationMs": 700, "angle": 0 }]
+    },
+    "pendulum": {
+      "win": [{ "type": "wobble", "degrees": 14, "durationMs": 900 }]
+    },
+    "starjar": {
+      "win": [{ "type": "burst", "particles": 10, "durationMs": 700 }]
+    },
+    "quill": {
+      "win": [{ "type": "bounce", "px": 0.06, "durationMs": 650 }]
+    }
+  }
+}

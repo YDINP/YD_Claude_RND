@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { detectFrameWindow, punchWindowAlpha, type FrameWindowFraction } from './frameWindow.js'
+import { detectFrameWindow, frameWindowRegion, punchWindowAlpha, type FrameWindowFraction } from './frameWindow.js'
+import { FRAME_WINDOW_REGION_PORTRAIT, FRAME_WINDOW_REGION_SQUARE } from './constants.js'
 import type { RawImage } from './chromaKey.js'
 
 const WIDTH = 200
@@ -132,5 +133,81 @@ describe('punchWindowAlpha', () => {
 
     const result = punchWindowAlpha(translucentOutside, window, { cornerRadiusRatio: 0, featherPx: 0 })
     expect(result.data[offset + 3]).toBe(128)
+  })
+})
+
+/**
+ * ART_DIRECTION v5(세로 규격) 프레임을 축소 재현한다. 캔버스 1024x1536, 마퀴 y 0-9.5%,
+ * 창 x 2-98% / y 9.5-91%, 받침 y 91-100%. 창은 플랫 초록, 마퀴에는 흰 워드마크가 있다.
+ */
+function buildPortraitV5Frame(): RawImage {
+  const width = 1024
+  const height = 1536
+  const data = Buffer.alloc(width * height * 4)
+  const brass = { r: 201, g: 150, b: 63 }
+  const green = { r: 0, g: 255, b: 0 }
+  const white = { r: 255, g: 255, b: 255 }
+
+  const winX0 = Math.round(0.02 * width)
+  const winX1 = Math.round(0.98 * width)
+  const winY0 = Math.round(0.095 * height)
+  const winY1 = Math.round(0.91 * height)
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * 4
+      let color = brass
+      if (x >= winX0 && x < winX1 && y >= winY0 && y < winY1) color = green
+      // 마퀴 워드마크: 창보다 훨씬 작은 흰 덩어리. 탐지 영역 안에 들어와도 창을 이기면 안 된다.
+      if (x >= 300 && x < 724 && y >= 50 && y < 110) color = white
+      data[offset] = color.r
+      data[offset + 1] = color.g
+      data[offset + 2] = color.b
+      data[offset + 3] = 255
+    }
+  }
+
+  return { data, width, height, channels: 4 }
+}
+
+describe('frameWindowRegion', () => {
+  it('정사각 캔버스는 기존 영역을 그대로 쓴다 (기존 5팩 탐지값 불변)', () => {
+    expect(frameWindowRegion(1024, 1024)).toBe(FRAME_WINDOW_REGION_SQUARE)
+    expect(frameWindowRegion(1536, 1024)).toBe(FRAME_WINDOW_REGION_SQUARE)
+  })
+
+  it('세로 캔버스는 세로 규격용 영역을 쓴다', () => {
+    expect(frameWindowRegion(1024, 1536)).toBe(FRAME_WINDOW_REGION_PORTRAIT)
+  })
+})
+
+describe('detectFrameWindow — 세로(v5) 프레임', () => {
+  it('창 전체(y 9.5-91%)를 잘리지 않고 잡는다', () => {
+    const window = detectFrameWindow(buildPortraitV5Frame())
+    expect(window).not.toBeNull()
+    const w = window as FrameWindowFraction
+
+    // 선언값 x 0.02-0.98 / y 0.095-0.91에 expandRatio(폭의 1%) 확장이 더해진다.
+    expect(w.x).toBeCloseTo(0.01, 2)
+    expect(w.w).toBeCloseTo(0.98, 2)
+    expect(w.y).toBeCloseTo(0.088, 2)
+    expect(w.h).toBeCloseTo(0.828, 2)
+    // 팩 체크리스트 25번의 하한.
+    expect(w.w).toBeGreaterThanOrEqual(0.88)
+    expect(w.h).toBeGreaterThanOrEqual(0.78)
+  })
+
+  it('정사각용 영역을 쓰면 창 좌우가 잘린다 (이 분기가 막는 회귀)', () => {
+    const portrait = detectFrameWindow(buildPortraitV5Frame()) as FrameWindowFraction
+    const clipped = detectFrameWindow(buildPortraitV5Frame(), { region: FRAME_WINDOW_REGION_SQUARE })
+    expect(clipped).not.toBeNull()
+    const square = clipped as FrameWindowFraction
+
+    // 정사각 영역은 x 0.05-0.95라 v5 창(x 0.02-0.98)의 좌우를 잘라 낸다.
+    // (세로는 정사각 yMax가 0.95로 열려 있어 더 이상 안 잘린다 — classic-777 때문에 열었다.)
+    expect(square.w).toBeLessThan(portrait.w - 0.04)
+    expect(square.w).toBeLessThan(0.94)
+    // 세로 격자에서 폭이 곧 셀 크기이므로 이 차이가 그대로 심볼 크기 손실이다.
+    expect(portrait.w).toBeGreaterThanOrEqual(0.96)
   })
 })

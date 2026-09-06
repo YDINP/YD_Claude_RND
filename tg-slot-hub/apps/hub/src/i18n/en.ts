@@ -85,10 +85,24 @@ const en = {
   autoSpinStop: 'Stop ({n})',
   // free spins
   freeSpinButton: 'FREE SPIN ({n})',
-  freeSpinsIntro: 'FREE SPINS! {spins} spins ×{multiplier}',
   freeSpinsRetrigger: '+{spins} FREE SPINS',
   freeSpinsComplete: 'FREE SPINS COMPLETE',
-  freeSpinsCompleteWithWin: 'FREE SPINS COMPLETE · +{amount}',
+  // 세리머니 팝업(진입/종료) — 커튼 안에 그리던 배너를 대신한다. 탭하면 즉시 닫힌다.
+  freeSpinsPopupTitle: 'FREE SPINS!',
+  freeSpinsPopupSpins: '{spins} free spins',
+  freeSpinsPopupSpinsWithMultiplier: '{spins} free spins ×{multiplier}',
+  freeSpinsPopupTotal: 'Total win {amount}',
+  popupTapToClose: 'Tap to close',
+  popupTapToSkip: 'Tap to reveal',
+  freeSpinsPopupCountUnit: 'SPINS',
+  freeSpinsPopupMultiplierLabel: 'Multiplier ×{multiplier}',
+  // 승리 축하 제목 — 총 획득 ÷ 총 베팅 등급(winTiers.ts). 빅윈 오버레이와 프리스핀 종료 팝업이 함께 쓴다.
+  winTierPlain: 'WIN',
+  // 라틴 대문자 그대로 쓴다(ko도 번역하지 않는다). 게임팩이 theme.json의 winTiers로 덮어쓸 수 있다.
+  winTierSurge: 'SURGE',
+  winTierBlast: 'BLAST',
+  winTierStorm: 'STORM',
+  winTierCataclysm: 'CATACLYSM',
   // win strip (round 3b)
   winStripLabel: 'WIN',
   freeSpinsTotalLabel: 'FREE SPINS TOTAL',
@@ -123,6 +137,10 @@ const en = {
   gambleLose: 'Wrong side — this round is over.',
   gambleCollected: 'Already collected — your win is safe in your wallet.',
   gambleExpiresIn: 'Expires in {time}',
+  gambleStakeLabel: 'At stake',
+  gamblePayoutChip: '×{payout} payout',
+  gambleChanceChip: '{percent}% chance',
+  gambleTossing: 'Tossing…',
   // win strip line/cycle labels (debug + presentation)
   winStripCycleTotal: 'Total {amount}',
   // debug panel (dev-only tool, gated by debug=1 / localStorage / tap gesture)

@@ -9,7 +9,9 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "pack:check": "pnpm --filter @tgslot/game-sdk check",
+    "new:game": "pnpm --filter @tgslot/game-sdk new"
   },
   "devDependencies": {
     "typescript": "~5.9.3",

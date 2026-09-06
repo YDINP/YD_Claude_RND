@@ -1,0 +1,34 @@
+{
+  "fx": {
+    "default": {
+      "win": [{ "type": "pulse", "scale": 1.12, "durationMs": 600 }]
+    },
+    "wild": {
+      "win": [
+        { "type": "shine", "durationMs": 900, "angle": 0 },
+        { "type": "glow", "color": "#d8a94a", "durationMs": 900 }
+      ]
+    },
+    "seven": {
+      "win": [
+        { "type": "pulse", "scale": 1.15, "durationMs": 700 },
+        { "type": "shine", "durationMs": 900, "angle": 25 }
+      ]
+    },
+    "bar3": {
+      "win": [{ "type": "flash", "durationMs": 500, "segments": 3 }]
+    },
+    "bar2": {
+      "win": [{ "type": "flash", "durationMs": 500, "segments": 2 }]
+    },
+    "bar1": {
+      "win": [{ "type": "flash", "durationMs": 500 }]
+    },
+    "bell": {
+      "win": [{ "type": "wobble", "degrees": 8, "durationMs": 700 }]
+    },
+    "cherry": {
+      "win": [{ "type": "bounce", "px": 0.08, "durationMs": 700 }]
+    }
+  }
+}

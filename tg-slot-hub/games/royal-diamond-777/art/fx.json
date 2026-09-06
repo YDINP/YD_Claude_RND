@@ -32,8 +32,7 @@
       "win": [
         {
           "type": "flash",
-          "durationMs": 500,
-          "fromAlpha": 0.3
+          "durationMs": 500
         },
         {
           "type": "glow",

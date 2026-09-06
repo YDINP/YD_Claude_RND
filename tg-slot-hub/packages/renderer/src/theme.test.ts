@@ -11,7 +11,8 @@ import {
   ThemeError,
 } from './theme.js'
 import type { Theme } from './types.js'
-import { loadGameMath, loadThemeJson } from './testSupport.js'
+import { existsSync } from 'node:fs'
+import { gamePackPath, loadGameMath, loadThemeJson } from './testSupport.js'
 
 const validJson = {
   symbols: { a: 'symbols/a.svg', b: './symbols/b.svg' },
@@ -503,5 +504,110 @@ describe('스프라이트 시트 선언', () => {
       '/games/demo',
     )
     expect(theme.fx?.['a']?.win?.[0]?.type).toBe('sheet')
+  })
+})
+
+describe('전환 클립 선언', () => {
+  it('경로를 sheets와 같은 규칙으로 푼다', () => {
+    const theme = parseTheme(
+      { ...validJson, transitions: { freeSpinsEnter: 'transitions/fs-enter.webm' } },
+      '/games/demo',
+    )
+    expect(theme.transitions?.freeSpinsEnter).toBe('/games/demo/theme/transitions/fs-enter.webm')
+  })
+
+  it('두 방향을 따로 걸 수 있다', () => {
+    const theme = parseTheme(
+      { ...validJson, transitions: { freeSpinsEnter: 'a.webm', freeSpinsExit: 'b.webm' } },
+      '/games/demo',
+    )
+    expect(theme.transitions).toEqual({
+      freeSpinsEnter: '/games/demo/theme/a.webm',
+      freeSpinsExit: '/games/demo/theme/b.webm',
+    })
+  })
+
+  it('한쪽만 걸면 반대쪽 키는 아예 없다', () => {
+    const theme = parseTheme({ ...validJson, transitions: { freeSpinsExit: 'b.webm' } }, '/games/demo')
+    expect(theme.transitions?.freeSpinsEnter).toBeUndefined()
+    expect(theme.transitions?.freeSpinsExit).toBe('/games/demo/theme/b.webm')
+  })
+
+  it('transitions가 없으면 만들지 않는다', () => {
+    // 클립이 없는 다른 게임들이 지금까지 그대로 동작하는 자리다.
+    expect(parseTheme(validJson, '/games/demo').transitions).toBeUndefined()
+  })
+
+  it('빈 객체는 키를 만들지 않는다', () => {
+    expect(parseTheme({ ...validJson, transitions: {} }, '/games/demo').transitions).toBeUndefined()
+  })
+
+  it('빈 경로는 거부한다', () => {
+    expect(() =>
+      parseTheme({ ...validJson, transitions: { freeSpinsEnter: '' } }, '/games/demo'),
+    ).toThrow(ThemeError)
+  })
+
+  it('절대 URL은 그대로 둔다', () => {
+    const theme = parseTheme(
+      { ...validJson, transitions: { freeSpinsEnter: 'https://cdn.example/fs.webm' } },
+      '/games/demo',
+    )
+    expect(theme.transitions?.freeSpinsEnter).toBe('https://cdn.example/fs.webm')
+  })
+})
+
+describe('sheriff-sixgun 전환 클립', () => {
+  it('프리스핀 진입 클립을 팩에서 실제로 가리킨다', () => {
+    const theme = parseTheme(loadThemeJson('sheriff-sixgun'), '/games/sheriff-sixgun')
+    expect(theme.transitions?.freeSpinsEnter).toBe(
+      '/games/sheriff-sixgun/theme/transitions/fs-enter.webm',
+    )
+  })
+
+  it('선언한 클립 파일이 팩 안에 있다', () => {
+    expect(existsSync(gamePackPath('sheriff-sixgun', 'theme/transitions/fs-enter.webm'))).toBe(true)
+  })
+
+  it('이탈 클립은 아직 없다 — 되돌아올 때는 단색 커튼이다', () => {
+    const theme = parseTheme(loadThemeJson('sheriff-sixgun'), '/games/sheriff-sixgun')
+    expect(theme.transitions?.freeSpinsExit).toBeUndefined()
+  })
+})
+
+describe('parseTheme — 릴 뒤 패널', () => {
+  it('키가 없으면 테마에도 없다', () => {
+    // 없으면 렌더러 기본값이 깔린다. 여기서 기본값을 채우면 "테마가 정했다"와 구별되지 않는다.
+    expect(parseTheme(validJson, '/games/demo').reelBackdrop).toBeUndefined()
+  })
+
+  it('테마가 준 값을 그대로 실어 보낸다', () => {
+    const theme = parseTheme(
+      { ...validJson, reelBackdrop: { color: '#101820', alpha: 0.5, radius: 0.15 } },
+      '/games/demo',
+    )
+    expect(theme.reelBackdrop).toEqual({ color: '#101820', alpha: 0.5, radius: 0.15 })
+  })
+
+  it('일부만 준 값도 그대로 둔다', () => {
+    const theme = parseTheme({ ...validJson, reelBackdrop: { alpha: 0 } }, '/games/demo')
+    expect(theme.reelBackdrop).toEqual({ alpha: 0 })
+  })
+
+  it('경로가 아니므로 URL을 풀지 않는다', () => {
+    const theme = parseTheme({ ...validJson, reelBackdrop: { color: '#000000' } }, '/games/demo')
+    expect(theme.reelBackdrop?.color).toBe('#000000')
+  })
+
+  it('범위를 벗어난 알파는 검증에서 걸린다', () => {
+    expect(() => parseTheme({ ...validJson, reelBackdrop: { alpha: 2 } }, '/games/demo')).toThrow(
+      ThemeError,
+    )
+  })
+
+  it('색 형식이 아니면 걸린다', () => {
+    expect(() => parseTheme({ ...validJson, reelBackdrop: { color: 'black' } }, '/games/demo')).toThrow(
+      ThemeError,
+    )
   })
 })

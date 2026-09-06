@@ -1,32 +1,64 @@
-# 새 게임 만들기 (5단계)
+# 새 게임 만들기
 
 이 폴더는 **스캐폴드**다. 코드는 한 줄도 없고 데이터만 있다.
 `games/_template`은 `_`로 시작하므로 로비와 RTP 게이트 테스트에서 자동으로 제외된다.
 
-## 1. 복사
+## 게임 팩 계약 (파일 5개)
+
+새 게임은 코드가 아니라 **데이터 팩**이다. 팩 하나는 정확히 이 다섯 파일로 이루어진다.
+계약의 단일 출처는 `packages/game-sdk/src/pack.ts`의 `PACK_FILES`이고, 스키마도 전부 거기서 나온다.
+
+| 파일 | 필수 | 성격 | 스키마 | 누가 쓰는가 |
+|---|---|---|---|---|
+| `manifest.json` | 필수 | 원본 | `GameManifestSchema` (`@tgslot/game-sdk`) | 로비 카드·게임 목록 API |
+| `math.json` | 필수 | 원본 | `GameMathSchema` (`@tgslot/slot-engine`) | 스핀 엔진의 유일한 입력 |
+| `art/prompts.json` | 선택 | 원본 | `PromptsFileSchema` (`@tgslot/game-sdk`) | `theme-gen`이 이미지를 만든다 |
+| `art/fx.json` | 선택 | 원본 | `ArtFxFileSchema` (`@tgslot/game-sdk`) | 심볼 승리 연출 |
+| `theme/theme.json` | 선택 | **생성물** | `ThemeFileSchema` (`@tgslot/game-sdk`) | 렌더러가 아트를 찾는다 |
+
+- **원본은 손으로 쓰고, 생성물은 절대 손으로 고치지 않는다.** `theme.json`의 `symbols`/`frame`/
+  `frameLayout`/`background`/`sheets`/`fx`는 `theme-gen`이 매번 다시 채운다. 특히 `fx`는
+  `art/fx.json`이 유일한 출처다 — `theme.json`에서 직접 고치면 다음 생성 때 덮어써진다.
+- 그 밖의 키(`palette`, `version`, `sfx`, `transitions` 등)는 `theme.json`에 손으로 쓴다.
+  `theme-gen`의 병합은 **모르는 키를 중첩 단계까지 보존**하므로 재생성해도 살아남는다.
+- `theme.json` 안의 경로는 전부 **`theme.json` 파일 기준 상대 경로**다
+  (`symbols/wild.webp` → `games/<id>/theme/symbols/wild.webp`).
+  `manifest.json`의 `thumbnail`만 `/games/<id>/thumb.webp` 형태의 URL이다.
+- 모드 전환 영상은 `transitions.freeSpinsEnter` / `transitions.freeSpinsExit`에 쓴다. 둘 다 선택이고
+  값은 다른 자산과 같은 theme 기준 상대 경로다(예: `transitions/fs-enter.webm`). 없는 방향은 키를
+  빼면 단색 커튼으로 남는다. `theme-gen`이 만들지 않는 손으로 쓰는 필드이므로 **파일을 `git add`
+  하는 것을 잊지 말 것** — `pack:check`가 오류로 막는다.
+
+## 1. 스캐폴드 생성
 
 ```bash
-cp -r games/_template games/<새-게임-id>
+pnpm new:game <새-게임-id>
 ```
 
-게임 id는 kebab-case로 짓는다. 폴더 이름 = `manifest.json`의 `id` = `math.json`의 `id`.
+`games/_template`에서 `games/<새-게임-id>`를 만든다. 게임 id는 kebab-case로 짓는다.
+폴더 이름 = `manifest.json`의 `id` = `math.json`의 `id` = `art/prompts.json`의 `game`.
+만들어지는 파일은 `manifest.json`, `math.json`, `art/prompts.json`, `art/fx.json`,
+`README.md`, `CHECKLIST.md`다. 단계별 할 일은 `CHECKLIST.md`에 있다.
 
-## 2. id와 메타데이터 교체
+## 2. 메타데이터 확인
+
+`pnpm new:game`이 id와 표시 이름은 이미 채웠다. 나머지를 게임에 맞게 고친다.
 
 `manifest.json`:
 
 | 필드 | 바꿀 내용 |
 |---|---|
-| `id` | 폴더 이름과 동일하게 |
-| `name` | `en` 필수, `ko` 선택 |
+| `id` | 폴더 이름과 동일하게 (스캐폴드가 채움) |
+| `name` | `en` 필수, `ko` 선택 — 스캐폴드는 id에서 만든 임시 제목을 넣는다 |
 | `version` | `1.0.0`부터 |
-| `thumbnail` | `/games/<id>/thumb.svg` (실제 파일은 `apps/hub/public/games/<id>/`에 둔다) |
+| `thumbnail` | `/games/<id>/thumb.webp` — 실제 파일은 팩 폴더의 `thumb.webp`다 (`theme-gen`이 만든다) |
 | `status` | 개발 중에는 `hidden`, 출시할 때 `live` |
-| `reels`, `rows`, `lines` | `math.json`과 반드시 일치 |
+| `reels`, `rows`, `lines` | `math.json`과 반드시 일치 (`lines`는 ways 게임이면 `ways.base`) |
 | `betLevels` | `math.json`과 동일한 배열 |
+| `rtpTarget`, `volatility` | `math.json`과 동일 |
 | `sort` | 로비 정렬 순서 |
 
-`math.json`의 `id`도 같이 바꾼다. 두 값이 다르면 게이트 테스트가 막는다.
+`manifest.json`과 `math.json`이 어긋나면 `pnpm pack:check`가 오류로 막는다.
 
 ## 3. 심볼·스트립·페이테이블 교체
 
@@ -212,11 +244,53 @@ RTP를 올리려면 배당을 올리거나 고배당 심볼 개수를 늘린다.
 적중률만 올리고 싶으면 2연속 배당이 있는 저배당 심볼(체리 등) 개수를 늘린다.
 큰 모델은 `--exact` 없이 몬테카를로로 측정한다.
 
-## 5. 게이트 테스트 확인
+## 5. 아트와 연출
 
 ```bash
+pnpm --filter @tgslot/theme-gen gen games/<새-게임-id> --dry-run   # 계획만 확인
+pnpm --filter @tgslot/theme-gen gen games/<새-게임-id>             # 실제 생성
+```
+
+- `art/prompts.json`의 `kind: "symbol"` asset `id`는 `math.json`의 심볼 id와 정확히 일치해야 하고,
+  `kind: "sheet"` asset의 `symbol`도 마찬가지다.
+- 프레임은 **정사각 캔버스 + 와이드 창**이다(`docs/ART_DIRECTION.md` v3/v4). 템플릿의 `frame`
+  프롬프트에 규격이 그대로 적혀 있으니 문장을 지우지 말고 컨셉만 바꾼다.
+- 심볼 승리 연출은 `art/fx.json`에 쓴다. 자산이 이미 다 있어도 `gen`을 다시 돌리면
+  fx만 `theme.json`에 다시 병합된다(이미지 생성은 skip된다).
+- 자세한 옵션은 `tools/theme-gen/README.md` 참고.
+
+## 6. 게이트 확인
+
+```bash
+pnpm pack:check                 # 전체 팩 계약 검사
+pnpm pack:check <새-게임-id>     # 이 팩만
 pnpm --filter @tgslot/rtp-sim test
 ```
+
+`pack:check`는 팩마다 다음을 본다. 오류가 하나라도 있으면 exit 1이라 CI 게이트로 쓸 수 있다
+(경고는 통과시킨다. `--strict`를 주면 경고도 실패로 친다).
+
+**파일이 디스크에 있는 것만으로는 부족하다.** 로비와 렌더러가 받아가는 자산은 전부 git에
+들어가 있어야 한다 — untracked 파일을 가리키는 `theme.json`을 커밋하면 배포본에는 그 파일이 없고,
+렌더러는 에러 없이 폴백해서(전환 클립이면 단색 커튼) 아무도 모르게 연출만 사라진다.
+그래서 추적 여부는 경고가 아니라 **오류**다. `git`을 쓸 수 없는 환경에서는 이 검사만 조용히 건너뛴다.
+`.gitignore`가 일부러 빼는 `art/raw/`는 검사 대상이 아니다.
+
+| 검사 | 등급 |
+|---|---|
+| 스키마 위반 (다섯 파일 전부) | 오류 |
+| 폴더 이름 ≠ `manifest.id` / `math.id` / `prompts.game` | 오류 |
+| `manifest`와 `math`의 `reels`/`rows`/라인 수/`betLevels`/`rtpTarget`/`volatility` 불일치 | 오류 |
+| `theme.json`이 가리키는 파일 없음 (심볼·프레임·배경·시트 아틀라스·전환 클립·효과음) | 오류 |
+| 참조된 자산이 **git에 추적되지 않음** (`git add` 안 함) | 오류 |
+| `math.json`의 심볼인데 `theme.json`에 이미지가 없음 | 오류 |
+| `prompts.json`의 심볼/시트 asset이 `math.json`에 없는 심볼을 가리킴 | 오류 |
+| 썸네일 파일 없음 (`prompts.json`이 만들 예정이면 경고) | 오류 |
+| `art/fx.json`과 `theme.json`의 `fx`가 어긋남 / 원본이 없음 | 경고 |
+| 스키마에 없는 `fx` 필드 (조용히 버려진다) | 경고 |
+| `theme.json`에만 있고 `math.json`에 없는 심볼·시트·fx 키 | 경고 |
+| 아직 생성되지 않은 asset, 128px 썸네일 없음 | 경고 |
+| 아무도 참조하지 않는 고아 파일 (`art/raw/`와 문서는 제외) | 경고 |
 
 `tools/rtp-sim/src/games.test.ts`가 `games/*` 전체를 자동으로 스캔한다.
 새 게임을 등록할 필요 없이 폴더만 있으면 검사 대상이 된다. 검사 항목은 다음과 같다.
@@ -226,3 +300,4 @@ pnpm --filter @tgslot/rtp-sim test
 - `manifest.json`과 `math.json`의 `id`, `reels`, `rows`, 라인 수, `betLevels`가 일치하는가
 
 마지막으로 `README.md`에 페이테이블 표와 실측 수치(RTP·적중률·최대 배수)를 적어 둔다.
+남은 단계는 `CHECKLIST.md`를 따라간다.

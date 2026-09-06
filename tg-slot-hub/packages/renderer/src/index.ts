@@ -24,8 +24,10 @@ export {
   FrameWindowSchema,
   FxEffectSchema,
   FxMapSchema,
+  ReelBackdropSchema,
   SheetMapSchema,
   SheetSymbolSchema,
+  ThemeTransitionsSchema,
   FxSymbolSchema,
   FX_TYPES,
   ThemeError,
@@ -39,8 +41,10 @@ export {
   type FxEffect,
   type FxMap,
   type FxSymbol,
+  type ReelBackdrop,
   type SheetMap,
   type SheetSymbol,
+  type ThemeTransitions,
   type SymbolSourceKind,
   type ThemeFile,
 } from './theme.js'
@@ -119,6 +123,19 @@ export {
   type TransitionPlan,
 } from './transition.js'
 export {
+  coverFit,
+  createTransitionVideoLogger,
+  planTransitionVideo,
+  transitionClipUrl,
+  transitionVideoSkipReason,
+  type CoverRect,
+  type TransitionVideoInputs,
+  type TransitionVideoLogger,
+  type TransitionVideoPlan,
+  type TransitionVideoSink,
+  type TransitionVideoSkip,
+} from './transitionVideo.js'
+export {
   findFreeSpins,
   isFreeSpinsTrigger,
   isScatterWinTrigger,
@@ -174,6 +191,14 @@ export {
 export {
   applyMutationEventsToGrid,
   buildMutationPlan,
+  expireMutationOverlay,
+  fadeMutationOverlay,
+  holdMutationOverlay,
+  mutationOverlaySymbolAt,
+  releaseMutationOverlayReel,
+  NO_MUTATION_OVERLAY,
+  type MutationOverlay,
+  type OverlayCells,
   mutationCellDelayMs,
   mutationCommitMs,
   mutationDurationMs,
@@ -195,4 +220,21 @@ export {
   type WaysDirection,
 } from './ways.js'
 export { resolveReducedMotion, resolveResolution } from './motion.js'
+export {
+  KeyedObjectPool,
+  ObjectPool,
+  ParticleBudget,
+  type KeyedObjectPoolHooks,
+  type ObjectPoolHooks,
+  type ParticleBudgetSnapshot,
+  type PoolStats,
+} from './pool.js'
+export {
+  TextureRegistry,
+  type DestroyableTexture,
+  type TextureRegistryOptions,
+  type TextureRegistrySnapshot,
+} from './textureRegistry.js'
+export { emptyDiagnostics, type RendererDiagnostics } from './diagnostics.js'
+export { planReelBackdrop, NO_REEL_BACKDROP, type ReelBackdropPlan } from './backdrop.js'
 export * from './constants.js'

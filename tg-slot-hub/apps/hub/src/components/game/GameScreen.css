@@ -189,28 +189,6 @@
   box-shadow: 0 0 24px rgba(244, 217, 138, 0.55);
 }
 
-/* 프리스핀 최초 진입 — 전체화면 인트로. 클릭을 막지 않고 잠깐(1.6s) 떠 있다 사라진다. */
-.hub-freespins-intro {
-  position: absolute;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--hub-space-xl);
-  text-align: center;
-  background: radial-gradient(circle, rgba(216, 169, 74, 0.35), rgba(11, 18, 32, 0.85));
-  pointer-events: none;
-}
-
-.hub-freespins-intro__text {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--hub-gold-light);
-  text-shadow: 0 0 18px rgba(244, 217, 138, 0.8);
-  letter-spacing: 0.04em;
-}
-
 .hub-game-screen__level-up-label {
   font-size: var(--hub-font-sub);
   font-weight: 800;
@@ -342,11 +320,13 @@
 }
 
 /* 더블업 세션 중(Wave 1) — 한 번 나타나면 사용자가 받기/더블을 누르거나 만료될 때까지 고정이다
-   (winLine/winCycle 이벤트로 인한 리렌더와 무관하게 유지된다 — 깜빡임 버그 수정). 기본
-   컨테이너(.hub-win-strip)가 이미 세로/가운데 정렬이므로 여기선 버튼 줄만 얹는다. */
+   (winLine/winCycle 이벤트로 인한 리렌더와 무관하게 유지된다 — 깜빡임 버그 수정). 받기/더블
+   버튼 줄(.hub-win-strip__gamble-panel)은 더 이상 이 안에 쌓이지 않는다(아래 주석 참고) —
+   여기 남는 건 label/freeSpinsRow/amount/lineRow뿐이고, 그건 평시 .hub-win-strip과 똑같은
+   내용이므로 padding/gap도 base와 동일하게 둔다(패딩을 다르게 주면 버튼 줄을 빼내도 스테이지
+   높이가 몇 px씩 흔들린다). position: relative만 추가해 gamble-panel의 위치 기준이 된다. */
 .hub-win-strip--gamble {
-  padding: var(--hub-space-sm) var(--hub-space-lg);
-  gap: var(--hub-space-xs);
+  position: relative;
 }
 
 .hub-win-strip__gamble-countdown {
@@ -354,15 +334,43 @@
   color: var(--hub-text-sub);
 }
 
+/* 받기/더블 버튼 줄은 흐름 밖으로 띄운다(position: absolute) — 예전엔 이 줄이 .hub-win-strip
+   안에 쌓여 더블업 진입/이탈마다 WinStrip 전체 높이가 58px씩 바뀌었고, WinStrip은
+   .hub-game-screen__stage와 flex: 1을 나눠 쓰므로 그 58px만큼 릴 캔버스가 리사이즈되며
+   심볼이 전부 다시 그려졌다(390×844 sheriff-sixgun 실측: 평시 스테이지 583px → 더블업 열림
+   525px). bottom: 100%로 이 줄의 기준점(.hub-win-strip--gamble, position: relative)의 바로
+   위에 붙여 스테이지 하단 위로 겹쳐 그린다 — 더블업이 "이번 판 결과 위에 얹힌 선택"이라는
+   맥락과도 맞고, 세로 여유가 없는 포트레이트 슬롯에서도 스테이지가 높이를 내주지 않아도 된다.
+   버튼을 감싸는 이 패널 자체가 불투명한 바탕(ground)을 지녀야 한다 — 뒤에 겹치는 건 늘
+   분주한 릴 그림이라 배경색 없이는 버튼이 묻힌다. */
+.hub-win-strip__gamble-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  padding: var(--hub-space-sm) var(--hub-space-lg);
+  background: rgba(11, 18, 32, 0.92);
+  border-top: 1px solid var(--hub-border);
+  box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.35);
+}
+
 .hub-win-strip__gamble-actions {
   display: flex;
   gap: var(--hub-space-sm);
   justify-content: center;
-  margin-top: 2px;
 }
 
+/* 손가락 타깃 권장치(44px) 확보 — 패널이 흐름 밖으로 뜨면서 세로 공간을 더 빌리지 않아도
+   되므로 이제 키울 수 있다. "받기"는 글자 수가 적어 min-width 없이는 46px 폭으로 두 버튼 중
+   눈에 띄게 작았다(사용자 제보의 "클릭하기 어려움"이 정확히 이 버튼이었다) — min-width도
+   44px로 맞춘다. "더블 (50%)"은 문구 자체가 길어 이미 이 최소치를 넘으므로 "더블이 더 크다"는
+   기존 시각적 위계(기본은 받기, 선택은 더블)는 그대로 유지된다. */
 .hub-win-strip__gamble-btn {
-  min-height: 38px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 0 var(--hub-space-md);
   border-radius: var(--hub-radius-sm);
   font-size: var(--hub-font-small);

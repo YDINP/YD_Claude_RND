@@ -1,4 +1,4 @@
-import { Container, Sprite, type Texture } from 'pixi.js'
+import { Container, Sprite } from 'pixi.js'
 import { gsap } from 'gsap'
 import {
   MUTATION_BURST_PARTICLES,
@@ -7,7 +7,9 @@ import {
   MUTATION_DROP_HEIGHT_SYMBOLS,
   MUTATION_DUST_PARTICLES,
   MUTATION_PARTICLE_DISTANCE_RATIO,
+  MUTATION_SPRITE_POOL_MAX,
 } from '../constants.js'
+import { LayerSpritePool } from './spritePool.js'
 import { mutationCellDelayMs, type MutationStep } from '../mutations.js'
 import type { Point, Rect } from '../layout.js'
 import type { FxTextures } from './symbolFx.js'
@@ -18,40 +20,12 @@ import type { FxTextures } from './symbolFx.js'
  * 리빌 한 번에 칸마다 파티클이 십여 개씩 난다. 매번 만들고 버리면 스핀마다 수백 개가
  * GC로 흘러가 저사양 기기에서 끊긴다. 다 쓴 스프라이트는 감춰 두었다가 다시 꺼내 쓴다.
  *
- * 스프라이트는 계속 `layer`의 자식으로 남는다. 층 자체는 앱이 내려갈 때 함께 해제되고,
- * 텍스처는 `TextureRegistry`가 따로 소유하므로 여기서는 아무것도 파괴하지 않는다.
+ * 재사용 방식은 `LayerSpritePool`이 전부 맡는다. 여기서 정하는 것은 상한 하나뿐이다 —
+ * 5x3 격자가 통째로 뒤집히는 최악의 리빌을 담는 크기다.
  */
-export class MutationSpritePool {
-  private readonly free: Sprite[] = []
-
-  constructor(private readonly layer: Container) {}
-
-  /** 쓸 수 있는 스프라이트 하나. 지난번 상태는 전부 지우고 준다. */
-  acquire(texture: Texture): Sprite {
-    const sprite = this.free.pop() ?? new Sprite()
-    if (sprite.parent === null) this.layer.addChild(sprite)
-    sprite.texture = texture
-    sprite.anchor.set(0.5)
-    // 크기를 width/height로 정하는 쪽이 있어 배율을 반드시 먼저 되돌린다.
-    sprite.scale.set(1)
-    sprite.rotation = 0
-    sprite.alpha = 1
-    sprite.tint = 0xffffff
-    sprite.blendMode = 'normal'
-    sprite.position.set(0, 0)
-    sprite.visible = true
-    return sprite
-  }
-
-  /** 다 쓴 스프라이트를 감춰 두고 다음 차례를 기다린다. */
-  release(sprite: Sprite): void {
-    sprite.visible = false
-    if (!this.free.includes(sprite)) this.free.push(sprite)
-  }
-
-  /** 지금 감춰 둔 스프라이트 수. 풀이 늘기만 하는지 보려고 열어 둔다. */
-  get size(): number {
-    return this.free.length
+export class MutationSpritePool extends LayerSpritePool {
+  constructor(layer: Container) {
+    super(layer, MUTATION_SPRITE_POOL_MAX)
   }
 }
 
@@ -300,8 +274,13 @@ function makeHandle(
   sprites: readonly Sprite[],
   targets: readonly MutationCellTarget[],
 ): MutationFxHandle {
+  // 한 번만 되돌린다. 풀에 돌려준 뒤에 또 부르면 이미 **다른 연출이 꺼내 간** 스프라이트를
+  // 두 번째로 반납하게 된다 — 같은 스프라이트를 두 곳이 동시에 쓰는 길이다.
+  let stopped = false
   return {
     stop: () => {
+      if (stopped) return
+      stopped = true
       timeline.kill()
       for (const tween of tweens) tween.kill()
       // 파괴하지 않고 풀에 돌려준다. 다음 변형이 그대로 다시 꺼내 쓴다.

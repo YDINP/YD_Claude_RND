@@ -91,6 +91,12 @@ describe('mimeTypeFor', () => {
     expect(mimeTypeFor('spin.mp3')).toBe('audio/mpeg')
   })
 
+  it('serves transition clips as video, not as an octet stream', () => {
+    // application/octet-stream으로 내려가면 <video>가 소스를 거부해 전환 클립이 조용히 사라진다.
+    expect(mimeTypeFor('transitions/fs-enter.webm')).toBe('video/webm')
+    expect(mimeTypeFor('transitions/fs-enter.mp4')).toBe('video/mp4')
+  })
+
   it('falls back to application/octet-stream for unknown extensions', () => {
     expect(mimeTypeFor('archive.zip')).toBe('application/octet-stream')
     expect(mimeTypeFor('noext')).toBe('application/octet-stream')

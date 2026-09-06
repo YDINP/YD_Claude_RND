@@ -193,6 +193,37 @@ function baseSpinResponse(overrides: Partial<SpinResponse> = {}): SpinResponse {
  * 스핀 버튼을 role+accessible name으로 찾으면 WinStrip("FREE SPINS TOTAL"도 role="button"이고
  * "spin"을 문자열로 포함한다)과 충돌할 수 있으므로, 안정적인 클래스 선택자로 직접 찾는다.
  */
+/**
+ * 세리머니 팝업을 탭해 닫는다 — 카드 어디를 눌러도 닫히는 실제 동작 그대로다.
+ * 커튼(modeTransition)은 이게 닫힌 뒤에야 시작하므로, 커튼 이벤트를 보내기 전에 부른다.
+ */
+/**
+ * 세리머니 팝업을 한 번 탭한다. 숫자가 굴러가는 중이면 "끝까지 감기"고, 다 굴렀으면 닫힌다
+ * (RoundPopup 참고 — 얼마를 땄는지 못 보고 닫히지 않게 하는 계약이다).
+ */
+function tapCeremonyPopup(): void {
+  const popup = document.querySelector('.hub-round-popup')
+  if (!popup) throw new Error('no ceremony popup on screen')
+  act(() => {
+    fireEvent.click(popup)
+  })
+}
+
+/** 팝업이 사라질 때까지 탭한다 — 롤업이 남아 있으면 한 번은 감기에 쓰인다. */
+function dismissCeremonyPopup(): void {
+  tapCeremonyPopup()
+  if (document.querySelector('.hub-round-popup')) tapCeremonyPopup()
+}
+
+/** 팝업을 닫고 커튼 start/end까지 흘려보내 세리머니를 끝낸다(렌더러가 실제로 보내는 순서). */
+function finishCeremony(to: 'freeSpins' | 'base'): void {
+  dismissCeremonyPopup()
+  act(() => {
+    mockRenderer.onEvent?.({ type: 'modeTransition', to, phase: 'start' })
+    mockRenderer.onEvent?.({ type: 'modeTransition', to, phase: 'end' })
+  })
+}
+
 function getSpinButton(): HTMLButtonElement {
   const btn = document.querySelector('.hub-game-screen__spin')
   if (!(btn instanceof HTMLButtonElement)) throw new Error('spin button not found')
@@ -808,7 +839,9 @@ describe('GameScreen', () => {
 
       await spinAndSettle(
         baseSpinResponse({
-          totalBet: 10,
+          // totalBet을 30으로 올려 250/30(≈8.3×)이 빅윈 오버레이의 10× 문턱을 넘지 않게 한다 —
+          // 이 테스트는 winCycle 표시만 검증하고, 오버레이가 뜨면 뒤이은 스핀이 막혀 버린다.
+          totalBet: 30,
           totalWin: 250,
           wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 25, win: 250, positions: [[0, 1], [1, 1], [2, 1]] }],
         }),
@@ -827,7 +860,10 @@ describe('GameScreen', () => {
 
       await spinAndSettle(
         baseSpinResponse({
-          totalBet: 10,
+          // totalBet을 20으로 올려 100/20(5×)이 빅윈 오버레이의 10× 문턱 아래 있게 한다 — 오버레이가
+          // 뜨면 곧바로 이어지는 두 번째 스핀이 막혀(canStartSpin) 이 테스트의 본 목적(라인 문구 초기화)을
+          // 확인할 수 없다.
+          totalBet: 20,
           totalWin: 100,
           wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [[0, 1], [1, 1], [2, 1]] }],
         }),
@@ -893,7 +929,9 @@ describe('GameScreen', () => {
 
       mockedApiSpin.mockResolvedValueOnce(
         baseSpinResponse({
-          totalBet: 10,
+          // totalBet을 20으로 올려 100/20(5×)이 빅윈 오버레이의 10× 문턱 아래 있게 한다 — 이 테스트는
+          // "스킵 후 즉시 다음 스핀" 자동 진행을 검증하고, 오버레이가 뜨면 그 진행이 막힌다.
+          totalBet: 20,
           totalWin: 100,
           wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [[0, 1], [1, 1], [2, 1]] }],
         }),
@@ -937,9 +975,18 @@ describe('GameScreen', () => {
       await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
     }
 
-    it('shows the full-screen intro banner once the entry curtain covers the screen (modeTransition to:freeSpins, start) — not right when featureTriggered fires', async () => {
+    it('shows the free-spins entry popup once the round settles — not while the win presentation is still running', async () => {
       render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
+
+      // featureTriggered(승리 연출 도중)만으로는 아무 것도 뜨지 않는다 — 팝업의 원천은 서버 응답이다.
+      act(() => {
+        mockRenderer.onEvent?.({
+          type: 'featureTriggered',
+          feature: { type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false },
+        })
+      })
+      expect(screen.queryByText('10 free spins ×2')).not.toBeInTheDocument()
 
       await spinAndSettle(
         baseSpinResponse({
@@ -955,27 +1002,66 @@ describe('GameScreen', () => {
         }),
       )
 
-      // featureTriggered (승리 연출 도중) 시점에는 아직 배너가 뜨지 않는다 — 데이터만 담아둔다.
-      act(() => {
-        mockRenderer.onEvent?.({
-          type: 'featureTriggered',
-          feature: { type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false },
-        })
-      })
-      expect(screen.queryByText('FREE SPINS! 10 spins ×2')).not.toBeInTheDocument()
+      expect(await screen.findByText('FREE SPINS!')).toBeInTheDocument()
+      // 스핀 수는 0부터 굴러 올라간다 — 첫 탭이 그걸 끝까지 감고, 그제서야 배수 배지가 붙는다.
+      tapCeremonyPopup()
+      expect(screen.getByTestId('win-amount').textContent).toBe('10')
+      expect(screen.getByText('×2')).toBeInTheDocument()
+      // 커튼은 아직 시작도 안 했다 — 팝업과 절대 겹치지 않는다.
+      expect(useGameStore.getState().roundFlow.kind).toBe('popup')
 
-      // 승리 연출이 다 끝난 뒤 store가 커튼을 걸면(modeTransition start) 그제서야 뜬다.
-      act(() => {
-        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
+      // 어디를 탭해도 닫힌다.
+      dismissCeremonyPopup()
+      expect(screen.queryByText('FREE SPINS!')).not.toBeInTheDocument()
+      expect(useGameStore.getState().roundFlow).toEqual({
+        kind: 'curtain',
+        to: 'freeSpins',
+        ceremonial: true,
       })
-      expect(await screen.findByText('FREE SPINS! 10 spins ×2')).toBeInTheDocument()
-
-      // 커튼이 걷히면(end) 함께 내려간다.
-      act(() => {
-        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'end' })
-      })
-      expect(screen.queryByText('FREE SPINS! 10 spins ×2')).not.toBeInTheDocument()
     })
+
+    it('auto-closes the entry popup after 10s as a safety net — the curtain only starts then', async () => {
+      vi.useFakeTimers()
+      try {
+        render(<GameScreen gameId="classic-777" />)
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0)
+        })
+
+        mockedApiSpin.mockResolvedValueOnce(
+          baseSpinResponse({
+            features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+            freeSpins: {
+              gameId: 'classic-777',
+              left: 10,
+              total: 10,
+              multiplier: 2,
+              totalBet: 10,
+              accumulatedWin: 0,
+            },
+          }),
+        )
+        await act(async () => {
+          getSpinButton().click()
+          await vi.advanceTimersByTimeAsync(0)
+        })
+        expect(screen.getByText('FREE SPINS!')).toBeInTheDocument()
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(9900)
+        })
+        expect(screen.getByText('FREE SPINS!')).toBeInTheDocument()
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(200)
+        })
+        expect(screen.queryByText('FREE SPINS!')).not.toBeInTheDocument()
+        expect(useGameStore.getState().roundFlow.kind).toBe('curtain')
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
 
     it('shows a retrigger toast (not the full intro) when the feature is a retrigger', async () => {
       render(<GameScreen gameId="classic-777" />)
@@ -1058,12 +1144,9 @@ describe('GameScreen', () => {
         }),
       )
 
-      // 진입은 모드 경계다 — 커튼이 다 걷히기(end) 전에는 카운터가 아직 안 바뀐다.
+      // 진입은 모드 경계다 — 팝업이 닫히고 커튼이 다 걷히기(end) 전에는 카운터가 아직 안 바뀐다.
       expect(screen.queryByText('Free spins 7/10 ×2')).not.toBeInTheDocument()
-      act(() => {
-        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
-        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'end' })
-      })
+      finishCeremony('freeSpins')
 
       expect(await screen.findByText('Free spins 7/10 ×2')).toHaveClass(
         'hub-win-strip__free-spins-counter',
@@ -1089,10 +1172,7 @@ describe('GameScreen', () => {
         }),
       )
 
-      act(() => {
-        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
-        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'end' })
-      })
+      finishCeremony('freeSpins')
 
       expect(await screen.findByText('프리스핀 7/10 ×2')).toBeInTheDocument()
     })
@@ -1115,16 +1195,13 @@ describe('GameScreen', () => {
         }),
       )
 
-      act(() => {
-        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
-        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'end' })
-      })
+      finishCeremony('freeSpins')
 
       expect(await screen.findByText('Free spins 4/10')).toBeInTheDocument()
       expect(screen.queryByText(/×/)).not.toBeInTheDocument()
     })
 
-    it('shows the FREE SPINS COMPLETE banner (with accumulated win) on modeTransition(to:base, start) and hides it on (to:base, end) — no fixed timer', async () => {
+    it('shows the free-spins exit popup with the session total once the last round settles, then the curtain', async () => {
       render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 
@@ -1138,32 +1215,29 @@ describe('GameScreen', () => {
           accumulatedWin: 320,
         },
       })
-      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ isFreeSpin: true, freeSpins: null }))
+      mockedApiSpin.mockResolvedValueOnce(
+        baseSpinResponse({ isFreeSpin: true, totalWin: 80, freeSpins: null }),
+      )
 
       await act(async () => {
         getSpinButton().click()
       })
 
-      // freeSpins가 null이 된 것만으로는(예전 동작) 배너가 안 뜬다 — 렌더러의 전환 이벤트가 신호다.
-      expect(screen.queryByText(/FREE SPINS COMPLETE/)).not.toBeInTheDocument()
-
-      act(() => {
-        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'base', phase: 'start' })
-      })
-
-      // 마지막 프리스핀 라운드 자체의 결과(totalWin: 0, 기본값)까지 더한 누적액을 함께 보여준다.
-      expect(screen.getByText('FREE SPINS COMPLETE · +320')).toBeInTheDocument()
-      // 배너가 떠 있는 동안은 베팅 셀렉터도 함께 잠겨 있는다.
+      expect(screen.getByText('FREE SPINS COMPLETE')).toBeInTheDocument()
+      // 세션 누적(320) + 마지막 판 당첨(80). 첫 탭이 롤업을 끝까지 감는다(닫지 않는다).
+      tapCeremonyPopup()
+      expect(screen.getByTestId('win-amount').textContent).toBe('400')
+      // 팝업이 떠 있는 동안은 베팅 셀렉터도 함께 잠겨 있는다.
       expect(screen.getByRole('button', { name: '-' })).toBeDisabled()
+      // 커튼은 아직 시작하지 않았다.
+      expect(useGameStore.getState().roundFlow.kind).toBe('popup')
 
-      // 고정 타이머가 아니라 커튼이 다 걷힌 신호(end)로 사라진다.
-      act(() => {
-        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'base', phase: 'end' })
-      })
-      expect(screen.queryByText(/FREE SPINS COMPLETE/)).not.toBeInTheDocument()
+      dismissCeremonyPopup()
+      expect(screen.queryByText('FREE SPINS COMPLETE')).not.toBeInTheDocument()
+      expect(useGameStore.getState().roundFlow).toEqual({ kind: 'curtain', to: 'base', ceremonial: true })
     })
 
-    it('releases the first-entry auto-spin gate when the renderer reports modeTransition(to:freeSpins, phase:end)', async () => {
+    it('forwards the renderer modeTransition events to the store so the ceremony can finish', async () => {
       render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 
@@ -1181,14 +1255,20 @@ describe('GameScreen', () => {
         }),
       )
 
-      const releaseSpy = vi.spyOn(useGameStore.getState(), 'releaseFreeSpinsEntryGate')
+      dismissCeremonyPopup()
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
+      })
+      expect(useGameStore.getState().roundFlow).toEqual({
+        kind: 'curtain',
+        to: 'freeSpins',
+        ceremonial: true,
+      })
 
       act(() => {
         mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'end' })
       })
-
-      expect(releaseSpy).toHaveBeenCalledTimes(1)
-      releaseSpy.mockRestore()
+      expect(useGameStore.getState().roundFlow).toEqual({ kind: 'idle' })
     })
 
     it('does not swap the below-reel counter while a mode transition is in flight — only after phase:end', async () => {
@@ -1539,6 +1619,104 @@ describe('GameScreen', () => {
       expect(screen.getByText('Bet per way: 2')).toBeInTheDocument()
       expect(screen.getByText('Bet per way: 4')).toBeInTheDocument()
       expect(screen.queryByText(/Bet per line/)).not.toBeInTheDocument()
+    })
+  })
+
+  describe('빅윈 오버레이 (일반 스핀)', () => {
+    async function spinAndSettle(response: SpinResponse): Promise<void> {
+      mockedApiSpin.mockResolvedValueOnce(response)
+      await act(async () => {
+        getSpinButton().click()
+      })
+      await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
+    }
+
+    /** 오버레이를 한 번 탭한다 — 롤업 중이면 감기고, 다 굴렀으면 닫힌다(세리머니 팝업과 같은 규칙). */
+    function tapWinOverlay(): void {
+      const overlay = document.querySelector('.hub-win-overlay__tap')
+      if (!overlay) throw new Error('no win overlay on screen')
+      act(() => {
+        fireEvent.click(overlay)
+      })
+    }
+
+    /** 오버레이가 사라질 때까지 탭한다 — 롤업이 남아 있으면 한 번은 감기에 쓰인다. */
+    function dismissWinOverlay(): void {
+      tapWinOverlay()
+      if (document.querySelector('.hub-win-overlay')) tapWinOverlay()
+    }
+
+    it('10× 미만이면 오버레이가 뜨지 않는다 — WinStrip 금액만 보여준다', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(baseSpinResponse({ roundId: 'small-win', totalWin: 90, totalBet: 10 }))
+
+      expect(document.querySelector('.hub-win-overlay')).not.toBeInTheDocument()
+    })
+
+    it('10× 이상이면 등급 이름과 함께 오버레이가 뜨고, 닫히기 전까지 스핀이 막힌다 — 닫으면 다시 스핀할 수 있다', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(baseSpinResponse({ roundId: 'big-win', totalWin: 100, totalBet: 10 }))
+
+      expect(await screen.findByText('SURGE')).toBeInTheDocument()
+
+      // 오버레이가 떠 있는 동안은 스핀 버튼도 스테이지 탭도 새 스핀을 걸지 않는다.
+      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'should-not-fire' }))
+      act(() => {
+        fireEvent.click(getSpinButton())
+      })
+      expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+
+      dismissWinOverlay()
+      expect(screen.queryByText('SURGE')).not.toBeInTheDocument()
+
+      // 닫힌 뒤에는 예약해 둔 응답으로 다시 스핀된다.
+      await act(async () => {
+        getSpinButton().click()
+      })
+      expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+    })
+
+    it('세리머니 팝업(프리스핀 진입)이 뜨는 판에서는 오버레이가 동시에 뜨지 않는다 — 팝업이 화면의 주인이다', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          roundId: 'enter-with-big-win',
+          totalWin: 200,
+          totalBet: 10,
+          features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+          freeSpins: { gameId: 'classic-777', left: 10, total: 10, multiplier: 2, totalBet: 10, accumulatedWin: 0 },
+        }),
+      )
+
+      expect(await screen.findByText('FREE SPINS!')).toBeInTheDocument()
+      expect(document.querySelector('.hub-win-overlay')).not.toBeInTheDocument()
+    })
+
+    it('세리머니 팝업(프리스핀 종료)이 뜨는 판에서도 오버레이가 동시에 뜨지 않는다 — 종료 팝업이 같은 등급 연출로 총액을 보여준다', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      useGameStore.setState({
+        freeSpins: {
+          gameId: 'classic-777',
+          left: 1,
+          total: 10,
+          multiplier: 2,
+          totalBet: 10,
+          accumulatedWin: 900,
+        },
+      })
+
+      await spinAndSettle(baseSpinResponse({ roundId: 'exit-with-big-win', isFreeSpin: true, totalWin: 300, freeSpins: null }))
+
+      expect(screen.getByText('FREE SPINS COMPLETE')).toBeInTheDocument()
+      expect(document.querySelector('.hub-win-overlay')).not.toBeInTheDocument()
     })
   })
 
@@ -2630,7 +2808,7 @@ describe('GameScreen', () => {
       expect(mockedApiSpin).toHaveBeenCalledTimes(1)
     })
 
-    it('holds off while the free-spins curtain is up and resumes with the remaining count once modeTransition ends', async () => {
+    it('holds off through the whole ceremony window (popup + curtain) and resumes with the remaining count', async () => {
       render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 
@@ -2658,7 +2836,15 @@ describe('GameScreen', () => {
         expect(mockedApiSpin).toHaveBeenCalledTimes(1)
         expect(useGameStore.getState().autoSpin).toEqual({ remaining: 2 })
 
-        // 진입 커튼이 화면을 덮고 있는 동안은 어느 쪽도 다음 판을 걸지 않는다.
+        // 진입 팝업이 떠 있는 동안은 어느 쪽도 다음 판을 걸지 않는다.
+        expect(screen.getByText('FREE SPINS!')).toBeInTheDocument()
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(3000)
+        })
+        expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+
+        // 팝업을 닫아 커튼이 시작돼도 마찬가지다.
+        dismissCeremonyPopup()
         act(() => {
           mockRenderer.onEvent?.({ type: 'modeTransition', to: 'freeSpins', phase: 'start' })
         })
@@ -2678,7 +2864,14 @@ describe('GameScreen', () => {
         expect(mockedApiSpin).toHaveBeenCalledTimes(2)
         expect(useGameStore.getState().autoSpin).toEqual({ remaining: 2 })
 
-        // 종료 커튼이 도는 동안(modeTransitioning)에도 스핀이 나가면 안 된다.
+        // 종료 팝업 + 종료 커튼이 도는 동안에도 스핀이 나가면 안 된다.
+        expect(screen.getByText('FREE SPINS COMPLETE')).toBeInTheDocument()
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(3000)
+        })
+        expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+
+        dismissCeremonyPopup()
         act(() => {
           mockRenderer.onEvent?.({ type: 'modeTransition', to: 'base', phase: 'start' })
         })

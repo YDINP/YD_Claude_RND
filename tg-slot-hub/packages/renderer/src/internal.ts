@@ -7,6 +7,7 @@ import type {
   SpinToOptions,
 } from './types.js'
 import type { WinLine } from '@tgslot/slot-engine'
+import type { RendererDiagnostics } from './diagnostics.js'
 import type { RendererMode } from './features.js'
 import type { SpinSpeed } from './timing.js'
 
@@ -30,4 +31,5 @@ export interface RendererCore {
   setMode(mode: RendererMode): void
   resize(): void
   destroy(): void
+  diagnostics(): RendererDiagnostics
 }

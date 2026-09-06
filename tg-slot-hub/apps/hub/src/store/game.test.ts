@@ -100,6 +100,19 @@ function makeGambleResponse(overrides: Partial<GambleResponse> = {}): GambleResp
   }
 }
 
+/**
+ * 프리스핀 진입/종료 세리머니를 끝까지 진행시킨다 — 사용자가 팝업을 탭해 닫고, 렌더러가
+ * 커튼 start/end를 보내는 실제 순서를 그대로 흉내낸다(GameScreen이 하는 일과 같다).
+ */
+function finishCeremony(): void {
+  const flow = useGameStore.getState().roundFlow
+  if (flow.kind !== 'popup') throw new Error(`expected a ceremony popup, got ${flow.kind}`)
+  const to = flow.to
+  useGameStore.getState().dismissRoundPopup()
+  useGameStore.getState().notifyCurtain(to, 'start')
+  useGameStore.getState().notifyCurtain(to, 'end')
+}
+
 function makeRenderer() {
   const spinTo = vi.fn().mockResolvedValue(undefined)
   const showWins = vi.fn().mockResolvedValue(undefined)
@@ -333,7 +346,7 @@ describe('game store', () => {
       // formatLineLabel은 더 이상 넘기지 않는다(폐기 — 아래 별도 테스트가 확인한다). "어떤 심볼이
       // 얼마를 땄는지"는 이제 렌더러의 winLine/winCycle 이벤트를 GameScreen이 직접 받아
       // WinStrip에 그린다(components/game/GameScreen.test.tsx, WinStrip.test.tsx 참고).
-      expect(renderer.showWins).toHaveBeenCalledWith(wins, { totalBet: 10, features: [] })
+      expect(renderer.showWins).toHaveBeenCalledWith(wins, { totalBet: 10, features: [], holdMs: 1260 })
     })
 
     it('no longer passes formatLineLabel to showWins (deprecated — the renderer no longer draws an on-canvas line label)', async () => {
@@ -765,7 +778,7 @@ describe('game store', () => {
         expect(renderer.spinTo).toHaveBeenCalledWith(expect.any(Array), { fast: true })
       })
 
-      it('updates freeSpins from the response and calls renderer.setMode', async () => {
+      it('updates freeSpins from the response and calls renderer.setMode once the entry popup closes', async () => {
         await loadGame()
         const renderer = makeRenderer()
         useGameStore.getState().setRenderer(renderer)
@@ -777,12 +790,15 @@ describe('game store', () => {
         await useGameStore.getState().spin()
 
         expect(useGameStore.getState().freeSpins).toEqual(nextFreeSpins)
+        // 모드 경계를 넘은 판이라 커튼은 진입 팝업이 닫힌 뒤에 걸린다.
+        expect(renderer.setMode).not.toHaveBeenCalled()
+        useGameStore.getState().dismissRoundPopup()
         expect(renderer.setMode).toHaveBeenCalledWith({
           freeSpins: { left: 3, total: nextFreeSpins.total, multiplier: nextFreeSpins.multiplier },
         })
       })
 
-      it('calls renderer.setMode with null once free spins end', async () => {
+      it('calls renderer.setMode with null once free spins end and the exit popup closes', async () => {
         await loadGame()
         const renderer = makeRenderer()
         useGameStore.getState().setRenderer(renderer)
@@ -794,6 +810,8 @@ describe('game store', () => {
         await useGameStore.getState().spin()
 
         expect(useGameStore.getState().freeSpins).toBeNull()
+        expect(renderer.setMode).not.toHaveBeenCalled()
+        useGameStore.getState().dismissRoundPopup()
         expect(renderer.setMode).toHaveBeenCalledWith({ freeSpins: null })
       })
 
@@ -856,12 +874,10 @@ describe('game store', () => {
         }
       })
 
-      describe('FS transition gating (round 3b)', () => {
-        it('calls renderer.setMode() only after spinTo/showWins finish (curtain waits for the spin/win presentation), and an early releaseFreeSpinsEntryGate() call is a safe no-op', async () => {
-          // 순서 보증(사용자 피드백 반영) — 스핀 응답 → spinTo(릴 회전) → showWins(승리 연출) →
-          // 그 다음에야 setMode(커튼 전환). 배경이 릴이 돌기도 전에 바뀌면 인과가 뒤집힌다.
-          // modeTransition('end')은 이제 구조적으로 setMode 호출보다 먼저 올 수 없지만, 혹시라도
-          // 일찍 불려도(방어적 보장) 예약이 두 번 걸리거나 하지 않고 조용히 무시돼야 한다.
+      describe('세리머니(팝업 → 커튼) — 진입/종료', () => {
+        it('릴·승리 연출이 끝나면 팝업부터 뜨고, 커튼(setMode)은 팝업이 닫힌 뒤에야 걸린다', async () => {
+          // 순서 보증 — 스핀 응답 → spinTo(릴 회전) → showWins(승리 연출) → 팝업 → (닫힘) → 커튼.
+          // 배경이 릴이 돌기도 전에 바뀌면 인과가 뒤집히고, 커튼이 팝업과 겹치면 안내를 못 읽는다.
           await loadGame()
           const renderer = makeRenderer()
           const { handle, resolve } = makeControllableSpinHandle()
@@ -882,33 +898,40 @@ describe('game store', () => {
             // (페이크 타이머는 setTimeout류만 가짜로 만들 뿐 마이크로태스크 큐는 그대로 동작한다).
             await Promise.resolve()
             expect(renderer.spinTo).toHaveBeenCalled()
-
-            // spinTo가 아직 안 끝났다(handle이 pending) — 이 시점엔 setMode가 불리면 안 된다
-            // (배경이 릴보다 먼저 바뀌면 안 된다는 것이 바로 이 순서 보증이다).
             expect(renderer.setMode).not.toHaveBeenCalled()
 
-            // 비정상적으로 이 시점에 release 신호가 와도 안전하게 무시된다(중복 예약 없음).
-            useGameStore.getState().releaseFreeSpinsEntryGate()
+            // 세리머니가 시작되기도 전에 커튼 종료 신호가 와도 조용히 무시된다(방어적 보장).
+            useGameStore.getState().notifyCurtain('freeSpins', 'end')
 
             resolve()
             await spinPromise
 
-            // spinTo/showWins가 다 끝난 지금에서야 setMode가 이번 응답의 freeSpins로 한 번 불린다.
+            // 팝업이 떴고, 커튼은 아직이다 — 이 둘은 절대 겹치지 않는다.
+            expect(useGameStore.getState().roundFlow).toEqual({
+              kind: 'popup',
+              popup: { kind: 'freeSpinsEntry', spins: 10, multiplier: 2 },
+              to: 'freeSpins',
+              withCurtain: true,
+            })
+            expect(renderer.setMode).not.toHaveBeenCalled()
+
+            // 팝업이 닫히면 그제서야 커튼이 이번 응답의 freeSpins로 한 번 걸린다.
+            useGameStore.getState().dismissRoundPopup()
             expect(renderer.setMode).toHaveBeenCalledTimes(1)
             expect(renderer.setMode).toHaveBeenCalledWith({
               freeSpins: { left: 10, total: 10, multiplier: 2 },
             })
 
-            // 위의 이른 release는 무시됐으므로 진입 게이트가 여전히 걸려 있다 — 아무리 기다려도
-            // 자동 스핀이 안 걸린다.
+            // 커튼이 도는 동안은 아무리 기다려도 다음 판이 안 걸린다.
+            useGameStore.getState().notifyCurtain('freeSpins', 'start')
             await vi.advanceTimersByTimeAsync(5000)
             expect(mockedApiSpin).toHaveBeenCalledTimes(1)
 
-            // 실제 modeTransition('end')에 해당하는 신호가 오면 그제서야 예약된다.
+            // 커튼이 다 걷혀야(end) 첫 프리스핀이 예약된다.
             mockedApiSpin.mockResolvedValueOnce(
               baseSpinResponse({ roundId: 'gate-blocker-2', isFreeSpin: true, freeSpins: makeFreeSpinsState({ left: 9 }) }),
             )
-            useGameStore.getState().releaseFreeSpinsEntryGate()
+            useGameStore.getState().notifyCurtain('freeSpins', 'end')
             await vi.advanceTimersByTimeAsync(1300)
             expect(mockedApiSpin).toHaveBeenCalledTimes(2)
           } finally {
@@ -916,7 +939,53 @@ describe('game store', () => {
           }
         })
 
-        it('does NOT auto-spin the first free spin until releaseFreeSpinsEntryGate() is called', async () => {
+        it('릴은 세리머니 내내 멈춰 있는다 — 팝업/커튼 동안 spinTo 0회, 커튼이 걷힌 뒤 정확히 1회', async () => {
+          // 사용자 입력(수동 스핀)·자동진행·오토스핀 어느 쪽도 이 창을 뚫지 못한다.
+          await loadGame()
+          const renderer = makeRenderer()
+          useGameStore.getState().setRenderer(renderer)
+          mockedApiSpin.mockResolvedValueOnce(
+            baseSpinResponse({
+              roundId: 'locked-window',
+              features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+              freeSpins: makeFreeSpinsState({ left: 10 }),
+            }),
+          )
+
+          vi.useFakeTimers()
+          try {
+            useGameStore.getState().startAutoSpin(5)
+            await vi.advanceTimersByTimeAsync(0)
+            expect(renderer.spinTo).toHaveBeenCalledTimes(1)
+            renderer.spinTo.mockClear()
+
+            // 팝업이 떠 있는 동안 — 수동 스핀을 눌러도, 아무리 기다려도 릴이 돌지 않는다.
+            await useGameStore.getState().spin()
+            await vi.advanceTimersByTimeAsync(5000)
+            expect(renderer.spinTo).not.toHaveBeenCalled()
+
+            // 커튼이 도는 동안도 마찬가지다.
+            useGameStore.getState().dismissRoundPopup()
+            useGameStore.getState().notifyCurtain('freeSpins', 'start')
+            await useGameStore.getState().spin()
+            await vi.advanceTimersByTimeAsync(5000)
+            expect(renderer.spinTo).not.toHaveBeenCalled()
+
+            // 커튼이 걷힌 뒤에야 정확히 한 판이 돈다.
+            mockedApiSpin.mockResolvedValueOnce(
+              baseSpinResponse({ roundId: 'locked-window-2', isFreeSpin: true, freeSpins: makeFreeSpinsState({ left: 9 }) }),
+            )
+            useGameStore.getState().notifyCurtain('freeSpins', 'end')
+            await vi.advanceTimersByTimeAsync(1300)
+            expect(renderer.spinTo).toHaveBeenCalledTimes(1)
+
+            useGameStore.getState().stopAutoSpin()
+          } finally {
+            vi.useRealTimers()
+          }
+        })
+
+        it('세리머니가 끝나기 전에는 첫 프리스핀이 절대 자동으로 돌지 않는다', async () => {
           await loadGame()
           const renderer = makeRenderer()
           useGameStore.getState().setRenderer(renderer)
@@ -934,14 +1003,13 @@ describe('game store', () => {
             await useGameStore.getState().spin()
             expect(mockedApiSpin).toHaveBeenCalledTimes(1)
 
-            // 게이트가 안 풀렸으면 아무리 기다려도 자동 스핀이 안 걸린다.
             await vi.advanceTimersByTimeAsync(5000)
             expect(mockedApiSpin).toHaveBeenCalledTimes(1)
 
             mockedApiSpin.mockResolvedValueOnce(
               baseSpinResponse({ roundId: 'gate2', isFreeSpin: true, freeSpins: makeFreeSpinsState({ left: 9 }) }),
             )
-            useGameStore.getState().releaseFreeSpinsEntryGate()
+            finishCeremony()
             // 이제 평소 자동 스핀 지연(1.2s) 만큼만 기다리면 된다.
             await vi.advanceTimersByTimeAsync(1300)
             expect(mockedApiSpin).toHaveBeenCalledTimes(2)
@@ -950,17 +1018,13 @@ describe('game store', () => {
           }
         })
 
-        it('releaseFreeSpinsEntryGate() does nothing when there is no pending gate', () => {
-          expect(() => useGameStore.getState().releaseFreeSpinsEntryGate()).not.toThrow()
-        })
-
-        it('a manual spin while the entry gate is pending cancels it (no double auto-spin later)', async () => {
+        it('팝업이 10초 동안 안 닫히면 스스로 닫힌다 — 안전장치일 뿐이라 커튼 순서는 그대로다', async () => {
           await loadGame()
           const renderer = makeRenderer()
           useGameStore.getState().setRenderer(renderer)
           mockedApiSpin.mockResolvedValueOnce(
             baseSpinResponse({
-              roundId: 'gate3',
+              roundId: 'auto-close',
               features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
               freeSpins: makeFreeSpinsState({ left: 10 }),
             }),
@@ -969,26 +1033,85 @@ describe('game store', () => {
           vi.useFakeTimers()
           try {
             await useGameStore.getState().spin()
-            expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+            expect(useGameStore.getState().roundFlow.kind).toBe('popup')
 
-            // 유저가 게이트가 풀리기 전에 직접 FREE SPIN 버튼을 눌렀다(수동 스핀) — 이 응답으로 프리스핀이 끝난다.
-            mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'gate4', isFreeSpin: true, freeSpins: null }))
+            await vi.advanceTimersByTimeAsync(9900)
+            expect(useGameStore.getState().roundFlow.kind).toBe('popup')
+            expect(renderer.setMode).not.toHaveBeenCalled()
+
+            await vi.advanceTimersByTimeAsync(200)
+            expect(useGameStore.getState().roundFlow).toEqual({
+              kind: 'curtain',
+              to: 'freeSpins',
+              ceremonial: true,
+            })
+            expect(renderer.setMode).toHaveBeenCalledTimes(1)
+          } finally {
+            vi.useRealTimers()
+          }
+        })
+
+        it('사용자가 직접 닫으면 자동 닫힘 타이머는 거둬진다 — 나중에 커튼이 또 걸리지 않는다', async () => {
+          await loadGame()
+          const renderer = makeRenderer()
+          useGameStore.getState().setRenderer(renderer)
+          mockedApiSpin.mockResolvedValueOnce(
+            baseSpinResponse({
+              roundId: 'tap-close',
+              features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+              freeSpins: makeFreeSpinsState({ left: 10 }),
+            }),
+          )
+
+          vi.useFakeTimers()
+          try {
             await useGameStore.getState().spin()
-            expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+            useGameStore.getState().dismissRoundPopup()
+            expect(renderer.setMode).toHaveBeenCalledTimes(1)
 
-            // 뒤늦게 (이제는 낡은) 게이트 해제 신호가 와도 중복 스핀을 만들지 않는다 — 게이트가 안 지워졌다면
-            // 여기서 스핀이 또 걸려 3번째 호출이 생겼을 것이다.
-            useGameStore.getState().releaseFreeSpinsEntryGate()
-            await vi.advanceTimersByTimeAsync(5000)
-            expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+            await vi.advanceTimersByTimeAsync(15000)
+            expect(renderer.setMode).toHaveBeenCalledTimes(1)
+          } finally {
+            vi.useRealTimers()
+          }
+        })
+
+        it('세리머니가 없을 때 팝업 닫기/커튼 신호는 안전한 무동작이다', () => {
+          expect(() => useGameStore.getState().dismissRoundPopup()).not.toThrow()
+          expect(() => useGameStore.getState().notifyCurtain('base', 'end')).not.toThrow()
+          expect(useGameStore.getState().roundFlow).toEqual({ kind: 'idle' })
+        })
+
+        it('reset()은 떠 있던 팝업까지 걷는다 — 화면을 벗어난 뒤 커튼이 뒤늦게 걸리면 안 된다', async () => {
+          await loadGame()
+          const renderer = makeRenderer()
+          useGameStore.getState().setRenderer(renderer)
+          mockedApiSpin.mockResolvedValueOnce(
+            baseSpinResponse({
+              roundId: 'reset-popup',
+              features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+              freeSpins: makeFreeSpinsState({ left: 10 }),
+            }),
+          )
+
+          vi.useFakeTimers()
+          try {
+            await useGameStore.getState().spin()
+            expect(useGameStore.getState().roundFlow.kind).toBe('popup')
+
+            useGameStore.getState().reset()
+            expect(useGameStore.getState().roundFlow).toEqual({ kind: 'idle' })
+
+            await vi.advanceTimersByTimeAsync(15000)
+            expect(renderer.setMode).not.toHaveBeenCalled()
           } finally {
             vi.useRealTimers()
           }
         })
       })
 
-      describe('전환 순서 — 스핀→승리 연출→커튼 (사용자 피드백: 배경이 릴보다 먼저 바뀌면 안 된다)', () => {
-        it('entering free spins: spinTo → showWins → setMode, in that exact order', async () => {
+      describe('전환 순서 — 스핀→승리 연출→팝업→커튼 (배경이 릴보다 먼저 바뀌면 안 된다)', () => {
+        it('entering free spins: spinTo → showWins → (팝업) → setMode, in that exact order', async () => {
           await loadGame()
           const renderer = makeRenderer()
           useGameStore.getState().setRenderer(renderer)
@@ -1013,15 +1136,17 @@ describe('game store', () => {
           )
 
           await useGameStore.getState().spin()
+          expect(order).toEqual(['spinTo', 'showWins'])
 
+          useGameStore.getState().dismissRoundPopup()
           expect(order).toEqual(['spinTo', 'showWins', 'setMode'])
         })
 
-        it('exiting free spins on the final round: the round\'s own reel spin + win presentation play out fully before the exit setMode call', async () => {
+        it('exiting free spins on the final round: reel spin + win presentation play out fully, then the total-win popup, then the exit setMode call', async () => {
           await loadGame()
           const renderer = makeRenderer()
           useGameStore.getState().setRenderer(renderer)
-          useGameStore.setState({ freeSpins: makeFreeSpinsState({ left: 1 }) })
+          useGameStore.setState({ freeSpins: makeFreeSpinsState({ left: 1, accumulatedWin: 900 }) })
           const order: string[] = []
           renderer.spinTo.mockImplementation(() => {
             order.push('spinTo')
@@ -1037,6 +1162,7 @@ describe('game store', () => {
             baseSpinResponse({
               roundId: 'order-exit',
               isFreeSpin: true,
+              totalWin: 300,
               wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [] }],
               freeSpins: null,
             }),
@@ -1044,15 +1170,45 @@ describe('game store', () => {
 
           await useGameStore.getState().spin()
 
-          // 마지막 판 자체의 릴/당첨 연출을 다 보여준 뒤에야 종료 커튼(setMode(null))이 걸린다.
+          // 마지막 판 자체의 릴/당첨 연출을 다 보여준 뒤 총 획득액 팝업이 뜬다 — 커튼은 아직이다.
+          expect(order).toEqual(['spinTo', 'showWins'])
+          expect(useGameStore.getState().roundFlow).toEqual({
+            kind: 'popup',
+            popup: { kind: 'freeSpinsExit', totalWin: 1200 },
+            to: 'base',
+            withCurtain: true,
+          })
+
+          useGameStore.getState().dismissRoundPopup()
           expect(order).toEqual(['spinTo', 'showWins', 'setMode(null)'])
         })
 
-        it('does not fire a transition (renderer.setMode is still called, but the mode itself is unchanged) for a same-mode continuation, and the next free spin schedules immediately without waiting for releaseFreeSpinsEntryGate()', async () => {
+        it('종료 팝업의 총액은 서버의 freeSpinsSummary가 있으면 그 값을 그대로 쓴다', async () => {
+          await loadGame()
+          const renderer = makeRenderer()
+          useGameStore.getState().setRenderer(renderer)
+          useGameStore.setState({ freeSpins: makeFreeSpinsState({ left: 1, accumulatedWin: 900 }) })
+          mockedApiSpin.mockResolvedValueOnce(
+            baseSpinResponse({
+              roundId: 'order-exit-summary',
+              isFreeSpin: true,
+              totalWin: 300,
+              freeSpins: null,
+              freeSpinsSummary: { total: 4321, spins: 10 },
+            }),
+          )
+
+          await useGameStore.getState().spin()
+
+          expect(useGameStore.getState().roundFlow).toMatchObject({
+            popup: { kind: 'freeSpinsExit', totalWin: 4321 },
+          })
+        })
+
+        it('does not fire a transition (renderer.setMode is still called, but the mode itself is unchanged) for a same-mode continuation, and the next free spin schedules immediately without any ceremony', async () => {
           // 재발동/진행 중인 프리스핀처럼 이미 프리스핀 안이었고 이번 결과도 프리스핀이면(같은
           // 모드) 렌더러가 스스로 커튼을 건너뛴다(modeTransitionTarget) — 매 스핀마다 화면이
-          // 번쩍이면 안 된다. store 쪽은 이 경우 진입 게이트를 걸지 않고 곧장 다음 자동 스핀을
-          // 예약한다(원래도 그랬다 — 이 테스트는 새 순서에서도 그 성질이 유지됨을 확인한다).
+          // 번쩍이면 안 된다. 모드 경계를 넘지 않았으므로 세리머니(팝업)도 없다.
           await loadGame()
           const renderer = makeRenderer()
           useGameStore.getState().setRenderer(renderer)
@@ -1074,9 +1230,8 @@ describe('game store', () => {
             expect(renderer.setMode).toHaveBeenCalledWith({
               freeSpins: { left: 4, total: 10, multiplier: 2 },
             })
+            expect(useGameStore.getState().roundFlow).toEqual({ kind: 'idle' })
 
-            // 진입 게이트가 걸리지 않았으므로 평소 자동 스핀 지연만 기다리면 된다 — release를
-            // 부를 필요가 없다.
             mockedApiSpin.mockResolvedValueOnce(
               baseSpinResponse({ roundId: 'same-mode-2', isFreeSpin: true, freeSpins: makeFreeSpinsState({ left: 3 }) }),
             )
@@ -1086,6 +1241,159 @@ describe('game store', () => {
             vi.useRealTimers()
           }
         })
+      })
+    })
+
+    describe('빅윈 오버레이 (일반 스핀 — winCelebration)', () => {
+      it('10× 미만이면 오버레이가 뜨지 않고 다음 스핀도 곧장 허용된다', async () => {
+        await loadGame()
+        mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'small-win', totalWin: 90, totalBet: 10 }))
+
+        await useGameStore.getState().spin()
+
+        expect(useGameStore.getState().winCelebration).toBeNull()
+
+        mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'next' }))
+        await useGameStore.getState().spin()
+        expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+      })
+
+      it('10× 이상이면 등급 판정에 쓰인 값 그대로 오버레이 상태를 세우고, 닫히기 전까지 다음 스핀을 막는다', async () => {
+        await loadGame()
+        mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'big-win', totalWin: 100, totalBet: 10 }))
+
+        await useGameStore.getState().spin()
+
+        expect(useGameStore.getState().winCelebration).toEqual({ totalWin: 100, totalBet: 10, hurried: false })
+        expect(useGameStore.getState().phase).toBe('idle')
+
+        // 오버레이가 떠 있는 동안은 canStartSpin과 별개로 spin() 자체가 막힌다 — 스핀 버튼/스페이스/
+        // 자동진행 어느 경로로 와도 마찬가지다(store는 경로를 구분하지 않는다).
+        await useGameStore.getState().spin()
+        expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+
+        useGameStore.getState().dismissWinCelebration()
+        expect(useGameStore.getState().winCelebration).toBeNull()
+
+        mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'after-dismiss' }))
+        await useGameStore.getState().spin()
+        expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+      })
+
+      it('세리머니 팝업이 뜨는 판(프리스핀 진입)에서는 오버레이를 세우지 않는다 — 팝업이 이미 화면의 주인이다', async () => {
+        await loadGame()
+        // 진입을 발동시키면서 동시에 그 판 자체도 10× 이상을 터뜨린다 — 그래도 팝업 판에는 오버레이가 없다.
+        mockedApiSpin.mockResolvedValueOnce(
+          baseSpinResponse({
+            roundId: 'enter-with-big-win',
+            totalWin: 200,
+            totalBet: 10,
+            features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+            freeSpins: makeFreeSpinsState({ left: 10 }),
+          }),
+        )
+
+        await useGameStore.getState().spin()
+
+        expect(useGameStore.getState().winCelebration).toBeNull()
+        expect(useGameStore.getState().roundFlow.kind).toBe('popup')
+      })
+
+      it('세리머니 팝업이 뜨는 판(프리스핀 종료)에서는 오버레이를 세우지 않는다 — 종료 팝업이 같은 등급 연출로 총액을 이미 보여준다', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        useGameStore.getState().setRenderer(renderer)
+        useGameStore.setState({ freeSpins: makeFreeSpinsState({ left: 1, accumulatedWin: 900 }) })
+        mockedApiSpin.mockResolvedValueOnce(
+          baseSpinResponse({ roundId: 'exit-with-big-win', isFreeSpin: true, totalWin: 300, freeSpins: null }),
+        )
+
+        await useGameStore.getState().spin()
+
+        expect(useGameStore.getState().winCelebration).toBeNull()
+        expect(useGameStore.getState().roundFlow).toMatchObject({ popup: { kind: 'freeSpinsExit' } })
+      })
+
+      it('오토스핀이 도는 동안 터진 빅윈은 hurried:true로 표시된다', async () => {
+        await loadGame()
+        mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'auto-big-win', totalWin: 200, totalBet: 10 }))
+
+        vi.useFakeTimers()
+        try {
+          useGameStore.getState().startAutoSpin(5)
+          await vi.advanceTimersByTimeAsync(0)
+
+          expect(useGameStore.getState().winCelebration).toEqual({ totalWin: 200, totalBet: 10, hurried: true })
+          // 다음 판은 오버레이가 닫히기 전까지 예약되지 않는다.
+          await vi.advanceTimersByTimeAsync(3000)
+          expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+        } finally {
+          vi.useRealTimers()
+        }
+      })
+
+      it('진행 중인 프리스핀 중 터진 빅윈도 hurried:true다(같은 모드 연속판이라 팝업이 없다)', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        useGameStore.getState().setRenderer(renderer)
+        useGameStore.setState({ freeSpins: makeFreeSpinsState({ left: 5 }) })
+        mockedApiSpin.mockResolvedValueOnce(
+          baseSpinResponse({
+            roundId: 'fs-continue-big-win',
+            isFreeSpin: true,
+            totalWin: 250,
+            totalBet: 10,
+            freeSpins: makeFreeSpinsState({ left: 4 }),
+          }),
+        )
+
+        await useGameStore.getState().spin()
+
+        expect(useGameStore.getState().winCelebration).toEqual({ totalWin: 250, totalBet: 10, hurried: true })
+      })
+
+      it('dismissWinCelebration()은 오토스핀의 다음 판을 그 자리에서 예약한다', async () => {
+        await loadGame()
+        mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'auto1', totalWin: 100, totalBet: 10 }))
+
+        vi.useFakeTimers()
+        try {
+          useGameStore.getState().startAutoSpin(3)
+          await vi.advanceTimersByTimeAsync(0)
+          expect(useGameStore.getState().winCelebration).not.toBeNull()
+
+          mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'auto2' }))
+          useGameStore.getState().dismissWinCelebration()
+          await vi.advanceTimersByTimeAsync(700)
+          expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+        } finally {
+          vi.useRealTimers()
+        }
+      })
+
+      it('닫혀 있을 때 dismissWinCelebration()을 불러도 안전한 무동작이다', () => {
+        expect(() => useGameStore.getState().dismissWinCelebration()).not.toThrow()
+        expect(useGameStore.getState().winCelebration).toBeNull()
+      })
+
+      it('reset()은 떠 있던 오버레이까지 걷는다 — 화면을 벗어난 뒤 뒤늦게 다음 판이 걸리면 안 된다', async () => {
+        await loadGame()
+        mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'reset-celebration', totalWin: 100, totalBet: 10 }))
+
+        vi.useFakeTimers()
+        try {
+          useGameStore.getState().startAutoSpin(3)
+          await vi.advanceTimersByTimeAsync(0)
+          expect(useGameStore.getState().winCelebration).not.toBeNull()
+
+          useGameStore.getState().reset()
+          expect(useGameStore.getState().winCelebration).toBeNull()
+
+          await vi.advanceTimersByTimeAsync(5000)
+          expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+        } finally {
+          vi.useRealTimers()
+        }
       })
     })
   })
@@ -1627,26 +1935,75 @@ describe('game store', () => {
         },
       ]
 
-      // 수동 플레이 — loop/presentation을 아예 넘기지 않아 렌더러 기본값(full + 순환)이 그대로 쓰인다.
-      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ wins, totalWin: 100 }))
+      // 수동 플레이 — presentation을 넘기지 않아 렌더러 기본값(full + 순환)이 그대로 쓰이고,
+      // 대신 라인 수에 따른 A단계 홀드(winHoldMs)를 함께 넘긴다. totalBet을 20으로 둬서
+      // 100/20(5×)이 빅윈 오버레이의 10× 문턱 아래 있게 한다 — 오버레이가 뜨면 뒤이은
+      // startAutoSpin()의 스핀이 canStartSpin에 막혀 이 테스트의 본 목적(presentation 옵션
+      // 분기)을 확인할 수 없다.
+      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ wins, totalWin: 100, totalBet: 20 }))
       await useGameStore.getState().spin()
-      expect(renderer.showWins).toHaveBeenLastCalledWith(wins, { totalBet: 10, features: [] })
+      expect(renderer.showWins).toHaveBeenLastCalledWith(wins, { totalBet: 20, features: [], holdMs: 1260 })
 
       // 오토스핀 — 라인별 순차(B단계)를 통째로 건너뛰는 짧은 연출 1회로 넘어간다.
       // (`loop:false`만으로는 첫 바퀴가 그대로 재생돼 판 간격이 8~14초까지 벌어졌다.)
+      // brief는 자기만의 짧은 홀드를 쓰므로 holdMs를 함께 넘기지 않는다.
       vi.useFakeTimers()
       try {
-        mockedApiSpin.mockResolvedValue(baseSpinResponse({ wins, totalWin: 100 }))
+        mockedApiSpin.mockResolvedValue(baseSpinResponse({ wins, totalWin: 100, totalBet: 20 }))
         useGameStore.getState().startAutoSpin(1)
         await vi.advanceTimersByTimeAsync(0)
         expect(renderer.showWins).toHaveBeenLastCalledWith(wins, {
-          totalBet: 10,
+          totalBet: 20,
           features: [],
           presentation: 'brief',
         })
       } finally {
         vi.useRealTimers()
       }
+    })
+
+    it("uses presentation:'brief' during free spins too — the looping full presentation is what stalled the auto-advance", async () => {
+      // 실측: 수동 플레이용 순환 연출이 프리스핀 사이에 끼면 showingWin 한 번에 21초를 붙들어
+      // "프리스핀이 진행되지 않는다"로 보였다. 프리스핀 중에는 오토스핀과 같은 1회 연출을 쓴다.
+      await loadGame()
+      const renderer = makeRenderer()
+      useGameStore.getState().setRenderer(renderer)
+      useGameStore.setState({ freeSpins: makeFreeSpinsState({ left: 5 }) })
+      const wins = [
+        { line: 0, symbol: 'seven', count: 3, multiplier: 10, win: 100, positions: [] as [number, number][] },
+      ]
+      mockedApiSpin.mockResolvedValueOnce(
+        baseSpinResponse({ wins, totalWin: 100, isFreeSpin: true, freeSpins: makeFreeSpinsState({ left: 4 }) }),
+      )
+
+      await useGameStore.getState().spin()
+
+      expect(renderer.showWins).toHaveBeenLastCalledWith(wins, {
+        totalBet: 10,
+        features: [],
+        presentation: 'brief',
+      })
+      useGameStore.getState().reset()
+    })
+
+    it('passes a longer A-phase hold when more lines win, capped at 2600ms', async () => {
+      await loadGame()
+      const renderer = makeRenderer()
+      useGameStore.getState().setRenderer(renderer)
+      const wins = Array.from({ length: 4 }, (_, line) => ({
+        line,
+        symbol: 'seven',
+        count: 3,
+        multiplier: 10,
+        win: 100,
+        positions: [] as [number, number][],
+      }))
+      mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ wins, totalWin: 400 }))
+
+      await useGameStore.getState().spin()
+
+      // 1260 + (4 - 1) x 220 = 1920
+      expect(renderer.showWins).toHaveBeenLastCalledWith(wins, expect.objectContaining({ holdMs: 1920 }))
     })
 
     it('stops when the spin fails with INSUFFICIENT_FUNDS and still surfaces the error', async () => {
@@ -1747,7 +2104,7 @@ describe('game store', () => {
         mockedApiSpin.mockResolvedValueOnce(
           baseSpinResponse({ roundId: 'auto-fs-last', isFreeSpin: true, freeSpins: null }),
         )
-        useGameStore.getState().releaseFreeSpinsEntryGate()
+        finishCeremony()
         await vi.advanceTimersByTimeAsync(1300)
         expect(mockedApiSpin).toHaveBeenCalledTimes(2)
         expect(useGameStore.getState().autoSpin).toEqual({ remaining: 2 })
@@ -1756,9 +2113,9 @@ describe('game store', () => {
         await vi.advanceTimersByTimeAsync(3000)
         expect(mockedApiSpin).toHaveBeenCalledTimes(2)
 
-        // 커튼이 다 걷히면(GameScreen의 modeTransition to:'base', phase:'end') 남은 횟수로 이어진다.
+        // 종료 팝업을 닫고 커튼이 다 걷히면 남은 횟수 그대로 이어진다.
         mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'auto-resume' }))
-        useGameStore.getState().resumeAutoSpin()
+        finishCeremony()
         await vi.advanceTimersByTimeAsync(700)
         expect(mockedApiSpin).toHaveBeenCalledTimes(3)
         expect(useGameStore.getState().autoSpin).toEqual({ remaining: 1 })
@@ -1767,8 +2124,29 @@ describe('game store', () => {
       }
     })
 
-    it('resumeAutoSpin() does nothing when nothing is pending', () => {
-      expect(() => useGameStore.getState().resumeAutoSpin()).not.toThrow()
+    it('stopAutoSpin() during the exit ceremony cancels the resume — nothing spins after the curtain lifts', async () => {
+      await loadGame()
+      const renderer = makeRenderer()
+      useGameStore.getState().setRenderer(renderer)
+      useGameStore.setState({ freeSpins: makeFreeSpinsState({ left: 1 }) })
+      useGameStore.setState({ autoSpin: { remaining: 3 } })
+      mockedApiSpin.mockResolvedValueOnce(
+        baseSpinResponse({ roundId: 'stop-during-exit', isFreeSpin: true, freeSpins: null }),
+      )
+
+      vi.useFakeTimers()
+      try {
+        await useGameStore.getState().spin()
+        expect(useGameStore.getState().roundFlow.kind).toBe('popup')
+
+        useGameStore.getState().stopAutoSpin()
+        finishCeremony()
+        await vi.advanceTimersByTimeAsync(3000)
+
+        expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it('reset() cancels autospin — leaving the game screen never leaves a spin scheduled behind', async () => {

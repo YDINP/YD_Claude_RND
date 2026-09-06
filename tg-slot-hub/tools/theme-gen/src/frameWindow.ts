@@ -7,7 +7,8 @@ import {
   FRAME_WINDOW_FEATHER_PX,
   FRAME_WINDOW_GREEN_MARGIN,
   FRAME_WINDOW_GREEN_MIN_GREEN,
-  FRAME_WINDOW_REGION,
+  FRAME_WINDOW_REGION_PORTRAIT,
+  FRAME_WINDOW_REGION_SQUARE,
   FRAME_WINDOW_WHITE_MIN_CHANNEL,
 } from './constants.js'
 
@@ -19,9 +20,26 @@ export interface FrameWindowFraction {
   h: number
 }
 
+/** 탐지 대상으로 볼 중앙 영역 (이미지 크기 대비 분수). 바깥 투명 여백과 마퀴/받침을 제외한다. */
+export interface FrameWindowRegion {
+  xMin: number
+  xMax: number
+  yMin: number
+  yMax: number
+}
+
+/**
+ * 캔버스 포맷에 맞는 기본 탐지 영역을 고른다. 세로 캔버스(v5)는 마퀴·받침 예산이 정사각의
+ * 절반이라 창이 위아래로 더 열려 있고, 좌우 레일도 1.5% 이하로 얇다 — 정사각용 영역을
+ * 그대로 쓰면 창의 아래와 좌우가 잘린다. 판정은 종횡비 하나뿐이고, 규격은 상수가 갖는다.
+ */
+export function frameWindowRegion(width: number, height: number): FrameWindowRegion {
+  return height > width ? FRAME_WINDOW_REGION_PORTRAIT : FRAME_WINDOW_REGION_SQUARE
+}
+
 export interface DetectFrameWindowOptions {
-  /** 탐지 대상으로 볼 중앙 영역 (이미지 크기 대비 분수). 바깥 투명 여백을 제외하기 위함. */
-  region?: { xMin: number; xMax: number; yMin: number; yMax: number }
+  /** 명시하면 포맷별 기본값(`frameWindowRegion`) 대신 이 영역만 본다. */
+  region?: FrameWindowRegion
   /** 다운샘플 배율. 4면 가로세로 4픽셀당 1개만 본다. */
   downscale?: number
   /** 이 알파값 이하 픽셀은 이미 투명하다고 보고 색상 판정에서 뺀다. */
@@ -99,7 +117,8 @@ function findLargestBlob(mask: Uint8Array, gridW: number, gridH: number): Blob |
  * 경고만 남겨야 한다.
  */
 export function detectFrameWindow(image: RawImage, options: DetectFrameWindowOptions = {}): FrameWindowFraction | null {
-  const region = options.region ?? FRAME_WINDOW_REGION
+  const { data, width, height, channels } = image
+  const region = options.region ?? frameWindowRegion(width, height)
   const downscale = options.downscale ?? FRAME_WINDOW_DOWNSCALE
   const alphaThreshold = options.alphaThreshold ?? FRAME_WINDOW_ALPHA_THRESHOLD
   const greenMinGreen = options.greenMinGreen ?? FRAME_WINDOW_GREEN_MIN_GREEN
@@ -107,7 +126,6 @@ export function detectFrameWindow(image: RawImage, options: DetectFrameWindowOpt
   const whiteMinChannel = options.whiteMinChannel ?? FRAME_WINDOW_WHITE_MIN_CHANNEL
   const expandRatio = options.expandRatio ?? FRAME_WINDOW_EXPAND_RATIO
 
-  const { data, width, height, channels } = image
   const gridW = Math.max(1, Math.ceil(width / downscale))
   const gridH = Math.max(1, Math.ceil(height / downscale))
   const mask = new Uint8Array(gridW * gridH)

@@ -1,6 +1,7 @@
 import type { GameMath, MutationEvent, SymbolId, WinLine } from '@tgslot/slot-engine'
+import type { RendererDiagnostics } from './diagnostics.js'
 import type { FrameWindow } from './layout.js'
-import type { FxMap, SheetMap } from './theme.js'
+import type { FxMap, ReelBackdrop, SheetMap, ThemeTransitions } from './theme.js'
 import type { WinTier } from './wins.js'
 import type { FeatureTrigger, RendererMode } from './features.js'
 import type { ModeTarget } from './transition.js'
@@ -53,6 +54,16 @@ export interface Theme {
    * 있으면 승리 연출 동안 정지 이미지를 애니메이션으로 갈아 끼운다.
    */
   sheets?: SheetMap
+  /**
+   * 모드 전환 커튼 위에서 재생할 영상 클립 URL. 방향(진입/이탈)마다 따로 건다.
+   * 없으면 전환은 지금까지처럼 단색 커튼만으로 진행한다.
+   */
+  transitions?: ThemeTransitions
+  /**
+   * 릴 창 뒤에 까는 패널. 밝은 배경 아트에서 심볼 대비를 세운다.
+   * 없으면 렌더러 기본값(검정 반투명)이고, `alpha: 0`이면 그리지 않는다.
+   */
+  reelBackdrop?: ReelBackdrop
   palette: ThemePalette
   /** 효과음 URL. 렌더러는 재생하지 않고 허브의 AudioBus가 쓴다. */
   sfx?: Partial<Record<SfxKey, string>>
@@ -279,4 +290,9 @@ export interface SlotRenderer {
   setMode(mode: RendererMode): void
   resize(): void
   destroy(): void
+  /**
+   * 풀과 텍스처 장부의 지금 상태. 디버그 패널이 읽을 순수 데이터다.
+   * 초기화 전이나 해제 뒤에는 전부 0인 빈 진단이 나온다.
+   */
+  diagnostics(): RendererDiagnostics
 }

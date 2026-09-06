@@ -11,6 +11,7 @@ import {
   IDLE_AMPLITUDE_SYMBOLS,
   MODE_CURTAIN_COLOR,
   MODE_TINT_ALPHA,
+  MODE_VIDEO_MIN_COVERED_MS,
   PHASE_CROSSFADE_MS,
   SCATTER_RING_PULSE_MS,
   SCATTER_RING_SCALE,
@@ -57,7 +58,18 @@ import {
   type SpinSpeed,
 } from '../timing.js'
 import type { RendererMode } from '../features.js'
-import { buildModeTransition, modeTransitionTarget, type ModeTarget } from '../transition.js'
+import {
+  buildModeTransition,
+  modeTransitionTarget,
+  type ModeTarget,
+  type TransitionPlan,
+} from '../transition.js'
+import {
+  planTransitionVideo,
+  transitionClipUrl,
+  transitionVideoSkipReason,
+  type TransitionVideoLogger,
+} from '../transitionVideo.js'
 import { paylineColor } from '../wins.js'
 import { resolveFxEffect, resolveSymbolFx, BUILTIN_FX } from '../fx.js'
 import { isSheetOnly, planSheetFx } from '../sheet.js'
@@ -72,7 +84,14 @@ import {
 } from '../presentation.js'
 import {
   buildMutationPlan,
+  expireMutationOverlay,
+  fadeMutationOverlay,
+  holdMutationOverlay,
+  mutationOverlaySymbolAt,
   mutationReels,
+  releaseMutationOverlayReel,
+  NO_MUTATION_OVERLAY,
+  type MutationOverlay,
   type MutationPlan,
   type MutationStep,
 } from '../mutations.js'
@@ -91,8 +110,31 @@ import {
   loadImageTexture,
   loadSymbolTextures,
 } from './textures.js'
-import { createFxTextures, playSymbolFxSet, type FxTextures, type SymbolFxHandle } from './symbolFx.js'
-import { loadSheetFrames, peekSheet, playSheetFx } from './sheetFx.js'
+import {
+  createFxTextures,
+  playSymbolFxSet,
+  SymbolFxPool,
+  type FxTextures,
+  type SymbolFxHandle,
+} from './symbolFx.js'
+import {
+  loadSheetFrames,
+  peekSheet,
+  playSheetFx,
+  releaseSheet,
+  retainSheet,
+  sheetTextureSnapshot,
+  SheetSpritePool,
+  type LoadedSheet,
+} from './sheetFx.js'
+import { ParticlePool } from './particles.js'
+import type { RendererDiagnostics } from '../diagnostics.js'
+import { planReelBackdrop } from '../backdrop.js'
+import {
+  createDevTransitionVideoLogger,
+  createTransitionVideo,
+  type TransitionVideoHandle,
+} from './transitionVideo.js'
 import {
   playMutationFx,
   MutationSpritePool,
@@ -161,6 +203,12 @@ class PixiRenderer implements RendererCore {
   private readonly frameGraphics = new Graphics()
   /** 릴·마스크·승리 오버레이를 함께 옮기는 층. 프레임 창 위치로 통째로 민다. */
   private readonly contentLayer = new Container()
+  /**
+   * 릴 창 뒤 패널. 배경 **위**, 심볼·프레임 **아래**에 놓이도록 콘텐츠 층의 맨 앞에 둔다.
+   * 콘텐츠 층에 넣었으므로 프레임 창 위치가 바뀌어도 좌표가 저절로 따라간다.
+   * 배경이 프리스핀 것으로 갈려도 이 판은 그대로다 — 배경 층과 아예 다른 층이다.
+   */
+  private readonly backdropGraphics = new Graphics()
   private readonly reelsLayer = new Container()
   private readonly maskGraphics = new Graphics()
   private readonly winGraphics = new Graphics()
@@ -169,6 +217,25 @@ class PixiRenderer implements RendererCore {
   private readonly mutationLayer = new Container()
   /** 변형 파티클 재사용 풀. 스핀마다 수백 개를 새로 만들지 않으려고 둔다. */
   private readonly mutationPool = new MutationSpritePool(this.mutationLayer)
+  /** 승리 파티클 재사용 풀 겸 총량 예산. 코인·색종이·스캐터가 이 하나를 나눠 쓴다. */
+  private readonly particlePool = new ParticlePool(this.fxLayer)
+  /**
+   * 시트 애니메이션 스프라이트 풀.
+   * 승리 순환은 다음 스핀까지 계속 돈다 — 한 바퀴마다 새로 만들면 그 수가 초 단위로 쌓인다.
+   */
+  private readonly sheetSprites: SheetSpritePool
+  /**
+   * 절차적 심볼 연출(광채·빛줄기·분할 flash·파티클)의 덧그림 풀.
+   * 시트가 없는 심볼은 순환 한 바퀴마다 이것들을 다시 건다.
+   */
+  private readonly symbolFxPool = new SymbolFxPool()
+  /**
+   * 이 렌더러가 붙잡고 있는 시트 URL.
+   *
+   * 시트당 정확히 한 번만 붙잡고 `destroy()`에서 전부 놓는다. 그래야 아틀라스의 수명이
+   * "이 게임 화면이 살아 있는 동안"과 맞는다 — 만든 쪽이 아니라 쓰는 쪽을 따르는 규칙이다.
+   */
+  private readonly retainedSheets = new Set<string>()
   /** 스캐터 링. 맥동하느라 alpha가 계속 움직여서 다른 것과 섞으면 안 된다. */
   private readonly featureGraphics = new Graphics()
   /** 프리스핀 창 테두리. 전환이 이 층의 alpha를 0에서 끌어올린다. */
@@ -218,6 +285,23 @@ class PixiRenderer implements RendererCore {
   private modeTransition: gsap.core.Timeline | null = null
   /** 진행 중인 전환의 목적지. `end`를 한 번만 내보내기 위한 표식이다. */
   private modeTransitionTo: ModeTarget | null = null
+  /**
+   * 방향별 전환 클립. 생성자에서 **미리 받아 두고** 전환마다 다시 쓴다.
+   *
+   * 전환이 시작될 때 만들면 늦는다 — 실측으로 요소 생성부터 첫 프레임까지 230~280ms,
+   * 목표 지점 탐색에 90ms가 더 들어 덮기 구간(normal 380ms) 안에 못 들어온다.
+   * 실제로 그래서 매번 접히고 단색 커튼만 보였다. 반납은 `destroy()`가 한다.
+   */
+  private readonly transitionVideos = new Map<ModeTarget, TransitionVideoHandle>()
+  /** 이번 전환이 쓰고 있는 클립. 전환이 끝나면 `reset()`으로 화면에서 걷는다. */
+  private transitionVideo: TransitionVideoHandle | null = null
+  /** 아직 준비되지 않은 클립을 기다리는 중이면 그 대기를 취소하는 손잡이. */
+  private cancelTransitionVideoWait: (() => void) | null = null
+  /**
+   * 전환 클립 진단 로거. 이 화면(게임 하나)의 수명 동안 같은 사유는 한 번만 남긴다 —
+   * "이 방향엔 클립이 없다" 같은 예상된 폴백이 전환마다 찍히면 콘솔이 잠긴다.
+   */
+  private readonly clipLog: TransitionVideoLogger = createDevTransitionVideoLogger()
   /** 화면이 지금 프리스핀 모습인지. 전환이 끝난 시점에 갱신된다. */
   private freeSpinsVisible = false
   private crossfadeTween: gsap.core.Tween | null = null
@@ -232,7 +316,11 @@ class PixiRenderer implements RendererCore {
    * 변형은 스트립에 없는 심볼을 칸에 앉힌다(물음표가 체리가 되는 식). 스트립만 읽으면
    * 다시 그릴 때마다 원래 심볼로 되돌아가므로, 화면이 무엇을 보여줄지는 이 층이 정한다.
    */
-  private gridOverride: readonly (readonly SymbolId[])[] | null = null
+  /**
+   * 변형이 앉힌 심볼 층. 스트립 자리로 못 박혀 있어 릴이 돌면 다른 심볼처럼 함께 흘러간다.
+   * 스핀이 시작해도 곧장 걷지 않는다 — 걷는 순간이 화면에 보이면 그것이 곧 "물음표로 되돌아감"이다.
+   */
+  private overlay: MutationOverlay = NO_MUTATION_OVERLAY
   /** 재생 중인 변형 한 단계. 스킵이 이걸 붙잡아 곧장 끝낸다. */
   private activeMutation: { finish: () => void } | null = null
   /** 스킵이 눌린 스핀. 변형 단계가 이 값을 보고 남은 단계를 접는다. */
@@ -252,6 +340,9 @@ class PixiRenderer implements RendererCore {
     ownedTextures: TextureRegistry,
   ) {
     this.options = options
+    // 시트 스프라이트 상한은 격자에서 유도한다. 한 심볼이 동시에 점등될 수 있는 최대가
+    // 곧 격자 칸 수다 — 4x5 팩 실측 최대 20이 정확히 이 값이었다(2백만 스핀).
+    this.sheetSprites = new SheetSpritePool(options.math.reels * options.math.rows)
     this.app = app
     this.textures = textures
     this.coinTexture = coinTexture
@@ -287,6 +378,8 @@ class PixiRenderer implements RendererCore {
 
     this.reelsLayer.mask = this.maskGraphics
     this.contentLayer.addChild(
+      // 패널이 맨 먼저다. 릴보다 뒤에 그려져야 심볼이 그 위에 뜬다.
+      this.backdropGraphics,
       this.reelsLayer,
       this.maskGraphics,
       this.mutationLayer,
@@ -309,6 +402,31 @@ class PixiRenderer implements RendererCore {
     this.buildReels()
     this.applyLayout()
     this.observeResize()
+    this.warmTransitionVideos()
+  }
+
+  /**
+   * 테마가 건 전환 클립을 **미리** 받아 둔다. 전환이 시작된 뒤에 받기 시작하면 덮기 구간
+   * 안에 첫 프레임이 오지 못한다(실측 320ms+ vs 덮기 380ms, 그마저 메인 스레드가 한가할 때).
+   * 모션 축소에서는 어차피 틀지 않으므로 대역폭도 쓰지 않는다.
+   */
+  private warmTransitionVideos(): void {
+    if (this.options.reducedMotion) return
+    for (const to of ['freeSpins', 'base'] as const) {
+      const url = transitionClipUrl(this.options.theme, to)
+      if (url === undefined) continue
+      try {
+        const handle = createTransitionVideo(url, {
+          registry: this.ownedTextures,
+          logger: this.clipLog,
+        })
+        if (handle === null) continue
+        this.transitionVideos.set(to, handle)
+        this.clipLog.once(`warm:${to}`, '클립 미리 받기 시작', { to, url })
+      } catch (error) {
+        this.clipLog.always('클립 미리 받기 실패', { to, url, error })
+      }
+    }
   }
 
   // ---------------------------------------------------------------- 레이아웃
@@ -394,6 +512,8 @@ class PixiRenderer implements RendererCore {
       cover.width = canvasWidth
       cover.height = canvasHeight
     }
+    // 클립은 늘리는 게 아니라 꽉 채우고 잘라낸다(cover). 커튼과 계산이 달라 따로 맞춘다.
+    for (const handle of this.transitionVideos.values()) handle.fit(canvasWidth, canvasHeight)
     if (this.frameSprite !== null && frameRect !== null) {
       this.frameSprite.position.set(frameRect.x, frameRect.y)
       this.frameSprite.width = frameRect.width
@@ -405,6 +525,7 @@ class PixiRenderer implements RendererCore {
     this.frameGraphics.visible = !framed
     if (framed) this.frameGraphics.clear()
     else this.drawFrame()
+    this.drawBackdrop()
     this.drawMask()
     this.drawMode()
 
@@ -432,6 +553,24 @@ class PixiRenderer implements RendererCore {
       .roundRect(frame.x, frame.y, frame.width, frame.height, radius)
       .fill({ color: palette.reelBg })
       .stroke({ width: border, color: palette.frame, alignment: 0.5 })
+  }
+
+  /**
+   * 릴 창 뒤 패널을 **레이아웃이 바뀔 때만** 다시 그린다.
+   * 모양이 매 프레임 같으므로 한 번 그린 그래픽을 그대로 재사용한다.
+   */
+  private drawBackdrop(): void {
+    const plan = planReelBackdrop(
+      this.options.theme.reelBackdrop,
+      this.layout.reelArea,
+      this.layout.symbolSize,
+    )
+    this.backdropGraphics.clear()
+    this.backdropGraphics.visible = plan.kind === 'panel'
+    if (plan.kind !== 'panel') return
+    this.backdropGraphics
+      .roundRect(plan.rect.x, plan.rect.y, plan.rect.width, plan.rect.height, plan.radius)
+      .fill({ color: plan.color, alpha: plan.alpha })
   }
 
   private drawMask(): void {
@@ -488,14 +627,17 @@ class PixiRenderer implements RendererCore {
     const base = Math.floor(position)
     const fraction = position - base
     const pitch = cellPitch(this.layout)
+    // 얹힌 띠가 화면 밖으로 빠져나갔으면 이 릴은 층을 놓는다. 놓지 않으면 한 바퀴 뒤에 다시 스친다.
+    this.overlay = expireMutationOverlay(this.overlay, reel, view.position, this.overlayClearance)
 
     for (let k = 0; k < view.cells.length; k += 1) {
       const cell = view.cells[k]
       if (cell === undefined) continue
       const row = k - 1
-      // 변형이 앉힌 심볼이 스트립보다 우선한다. 오버스캔 칸(row -1, rows)에는 없다.
-      const overridden = this.gridOverride?.[row]?.[reel]
-      const symbol = overridden ?? strip[wrapIndex(base + row, strip.length)]
+      const stripIndex = wrapIndex(base + row, strip.length)
+      // 변형이 앉힌 심볼이 스트립보다 우선한다. 자리는 화면 행이 아니라 스트립 인덱스로 찾는다.
+      const overridden = mutationOverlaySymbolAt(this.overlay, reel, stripIndex)
+      const symbol = overridden ?? strip[stripIndex]
       if (symbol !== undefined) this.setCellSymbol(cell, symbol)
       cell.view.y = rowTop(this.layout, row) + this.layout.symbolSize / 2 - fraction * pitch
     }
@@ -548,6 +690,8 @@ class PixiRenderer implements RendererCore {
       // 정지 위치 바로 위에서 시작한다. 남은 거리는 계산하지도 지나가지도 않는다.
       const stopPosition = normalizePosition(active.stop, active.stripLength)
       const state = { p: stopPosition + SKIP_SETTLE_SYMBOLS }
+      // 스냅 착지는 남은 거리를 지나가지 않는다. 흘러 나갈 구간이 없으니 여기서 곧장 놓는다.
+      this.overlay = releaseMutationOverlayReel(this.overlay, reel)
       active.view.position = state.p
       active.view.idleOffset = 0
       this.renderReel(reel)
@@ -577,8 +721,9 @@ class PixiRenderer implements RendererCore {
     this.clearWins()
     this.setSpinningIdle(false)
     this.killSpinTimelines()
-    // 지난 스핀의 변형은 여기서 사라진다. 릴은 언제나 스트립 그대로 돌기 시작한다.
-    this.clearGridOverride()
+    // 지난 스핀의 변형은 여기서 걷지 않는다. 릴이 돌기 시작하면 그 심볼도 함께 흘러 나가고,
+    // 화면 밖으로 빠져나간 뒤에 릴 단위로 놓인다(`expireMutationOverlay`).
+    this.fadeGridOverride()
     const token = (this.spinToken += 1)
 
     const plan = buildSpinPlan({
@@ -650,6 +795,8 @@ class PixiRenderer implements RendererCore {
       // 정상 종료든 스킵이든 같은 착지 절차를 쓴다. 그래야 결과가 갈리지 않는다.
       const land = (): void => {
         this.activeReels.delete(plan.reel)
+        // 착지한 그리드는 이번 스핀의 결과 그대로여야 한다. 지난 변형은 여기서 확실히 놓는다.
+        this.overlay = releaseMutationOverlayReel(this.overlay, plan.reel)
         view.position = normalizePosition(stop, length)
         view.idleOffset = 0
         this.renderReel(plan.reel)
@@ -728,15 +875,31 @@ class PixiRenderer implements RendererCore {
    * 다시 그릴 때마다 스트립으로 되돌아가는 것을 막는 유일한 장치다.
    */
   private applyGridOverride(grid: readonly (readonly SymbolId[])[]): void {
-    this.gridOverride = grid.map((row) => [...row])
+    this.overlay = holdMutationOverlay(
+      grid,
+      this.reels.map((view) => view.position),
+      this.options.math.strips.map((strip) => strip.length),
+    )
     for (let reel = 0; reel < this.reels.length; reel += 1) this.renderReel(reel)
   }
 
-  /** 변형 층을 걷어 내고 스트립이 보이는 그대로 되돌린다. */
-  private clearGridOverride(): void {
-    if (this.gridOverride === null) return
-    this.gridOverride = null
-    for (let reel = 0; reel < this.reels.length; reel += 1) this.renderReel(reel)
+  /**
+   * 스핀이 시작됐다. 층은 그대로 두고 릴별 시작 자리만 기억해 둔다.
+   * 실제로 걷히는 것은 릴이 그 띠를 화면 밖으로 밀어낸 뒤다.
+   */
+  private fadeGridOverride(): void {
+    this.overlay = fadeMutationOverlay(
+      this.overlay,
+      this.reels.map((view) => view.position),
+    )
+  }
+
+  /**
+   * 얹힌 띠가 화면에서 완전히 빠져나가는 거리(칸).
+   * 보이는 행에 오버스캔 두 줄을 더한 만큼이면 마지막 칸까지 흘러 나간 뒤다.
+   */
+  private get overlayClearance(): number {
+    return this.options.math.rows + 2
   }
 
   /**
@@ -926,10 +1089,10 @@ class PixiRenderer implements RendererCore {
     const first = steps[0]
     const tier = first !== undefined && first.phase === 'all' ? first.tier : 'none'
     if (!this.options.reducedMotion && tier !== 'none') {
-      this.stopCoins = burstCoins(this.fxLayer, this.coinTexture, this.layout, coinCountForTier(tier))
+      this.stopCoins = burstCoins(this.particlePool, this.coinTexture, this.layout, coinCountForTier(tier))
       // 색종이는 최고 등급에만. 아래 등급까지 뿌리면 특별함이 사라진다.
       if (tier === 'max') {
-        this.stopConfetti = burstConfetti(this.fxLayer, this.confettiTexture, this.layout)
+        this.stopConfetti = burstConfetti(this.particlePool, this.confettiTexture, this.layout)
       }
     }
 
@@ -989,7 +1152,7 @@ class PixiRenderer implements RendererCore {
       this.playFxAt(step.scatters)
       this.showScatters(step.scatters)
       if (!this.options.reducedMotion && step.scatters.length > 0) {
-        this.stopScatterBurst = burstScatters(this.fxLayer, this.coinTexture, this.layout, step.scatters)
+        this.stopScatterBurst = burstScatters(this.particlePool, this.coinTexture, this.layout, step.scatters)
       }
       // 인트로 배너는 허브가 띄운다. 여기서는 걸렸다는 사실만 알린다.
       this.emit({ type: 'featureTriggered', feature: step.feature })
@@ -1124,17 +1287,17 @@ class PixiRenderer implements RendererCore {
       const sheetUrl = this.options.reducedMotion
         ? undefined
         : this.options.theme.sheets?.[cell.symbol]?.win
-      const ready = sheetUrl === undefined ? null : peekSheet(sheetUrl)
+      const ready = sheetUrl === undefined ? null : this.useSheet(sheetUrl)
       const plan = planSheetFx(effects, ready !== null, this.fallbackFx())
 
       let procedural: SymbolFxHandle | null = null
       if (plan.procedural.length > 0) {
-        procedural = playSymbolFxSet(target, plan.procedural, this.fxTextures)
+        procedural = playSymbolFxSet(target, plan.procedural, this.fxTextures, this.symbolFxPool)
         this.addCellFx(key, procedural)
       }
 
       if (plan.useSheet && ready !== null) {
-        this.addCellFx(key, playSheetFx(target, ready))
+        this.addCellFx(key, playSheetFx(target, ready, this.sheetSprites))
         return
       }
 
@@ -1145,11 +1308,26 @@ class PixiRenderer implements RendererCore {
       void loadSheetFrames(sheetUrl).then((loaded) => {
         if (loaded === null || token !== this.fxToken || this.destroyed) return
         if (sheetOnly) procedural?.stop()
-        const handle = playSheetFx(target, loaded)
+        this.useSheet(sheetUrl)
+        const handle = playSheetFx(target, loaded, this.sheetSprites)
         if (token === this.fxToken) this.addCellFx(key, handle)
         else handle.stop()
       })
     })
+  }
+
+  /**
+   * 시트를 쓰겠다고 알리고 준비된 것을 돌려준다.
+   *
+   * 붙잡는 것은 시트당 한 번뿐이다. 재생할 때마다 붙잡으면 놓는 짝을 맞추느라
+   * 연출 손잡이가 텍스처 수명까지 알아야 한다. 여기서는 "이 화면이 이 시트를 쓴다"만 세고,
+   * 놓는 일은 `destroy()`가 한꺼번에 한다.
+   */
+  private useSheet(url: string): LoadedSheet | null {
+    if (this.retainedSheets.has(url)) return peekSheet(url)
+    const loaded = retainSheet(url)
+    if (loaded !== null) this.retainedSheets.add(url)
+    return loaded
   }
 
   /** 시트를 못 쓸 때 돌아갈 최소 연출. 심볼이 아무 반응도 없는 상태를 막는다. */
@@ -1320,17 +1498,155 @@ class PixiRenderer implements RendererCore {
     this.curtain.visible = true
     this.curtain.alpha = 0
 
+    // 클립은 전환을 늘리지 않는다 — 차폐 구간의 *내용*일 뿐이라 계획(길이)은 위에서 이미 끝났다.
+    // 여기서 만들어 두면 덮기 구간(normal 380ms) 동안 로딩과 탐색이 끝나 있을 확률이 높아진다.
+    this.prepareTransitionVideo(plan, to)
+
+    // 클립도 커튼과 **같은 알파**로 걷힌다. 따로 두면 불투명한 클립이 남아 새 모드를 가린다.
+    const fadeClip = (): void => {
+      const video = this.transitionVideo
+      if (video !== null) video.sprite.alpha = this.curtain.alpha
+    }
+
     const timeline = gsap.timeline({ onComplete: () => this.finishModeTransition() })
     timeline
       .to(this.curtain, { alpha: 1, duration: plan.coverInMs / 1000, ease: 'sine.inOut' }, 0)
-      .call(() => this.applyModeSwap(to), undefined, plan.swapAtMs / 1000)
+      .call(
+        () => {
+          this.applyModeSwap(to)
+          this.startTransitionVideo(plan, to)
+        },
+        undefined,
+        plan.swapAtMs / 1000,
+      )
       .to(
         this.curtain,
-        { alpha: 0, duration: plan.coverOutMs / 1000, ease: 'sine.inOut' },
+        { alpha: 0, duration: plan.coverOutMs / 1000, ease: 'sine.inOut', onUpdate: fadeClip },
         plan.coverOutStartMs / 1000,
       )
 
     this.modeTransition = timeline
+  }
+
+  /**
+   * 이번 전환에 쓸 클립을 준비한다. 테마에 클립이 없거나, 모션 축소이거나, 차폐 구간이 너무
+   * 짧으면(터보) 아무것도 하지 않고 지금까지의 단색 커튼으로 남는다.
+   *
+   * 요소는 생성자에서 이미 받아 두었다 — 여기서는 시작 지점과 배속만 걸고 커튼 위에 얹는다.
+   */
+  private prepareTransitionVideo(plan: TransitionPlan, to: ModeTarget): void {
+    const inputs = {
+      url: transitionClipUrl(this.options.theme, to),
+      reducedMotion: this.options.reducedMotion,
+    }
+    const clip = planTransitionVideo(plan, inputs)
+    if (clip === null) {
+      // 조용한 폴백이 원인 진단을 가리지 않게, 개발 모드에서만 이유와 입력을 함께 남긴다.
+      // 예상된 상태(클립 없음·터보·모션 축소)라 방향+사유 조합당 한 번만 남긴다.
+      const reason = transitionVideoSkipReason(plan, inputs)
+      this.clipLog.once(`skip:${to}:${reason ?? 'unknown'}`, '클립을 접었다 — 단색 커튼으로 진행한다', {
+        reason,
+        to,
+        url: inputs.url,
+        reducedMotion: inputs.reducedMotion,
+        speed: this.spinSpeed,
+        bannerMs: plan.bannerMs,
+        minCoveredMs: MODE_VIDEO_MIN_COVERED_MS,
+        hasTransitions: this.options.theme.transitions !== undefined,
+      })
+      return
+    }
+
+    const handle = this.transitionVideos.get(to)
+    if (handle === undefined) {
+      this.clipLog.once(`nowarm:${to}`, '미리 받아 둔 클립이 없다', { to, url: clip.url })
+      return
+    }
+
+    // 클립은 연출이지 결과가 아니다. 여기서 무엇이 터지든 전환은 단색 커튼으로 끝나야 한다.
+    try {
+      handle.prepare(clip)
+      this.clipLog.once(`prepare:${to}`, '클립 준비', {
+        to,
+        startAtSec: clip.startAtSec,
+        playbackRate: clip.playbackRate,
+        peakAtMs: clip.peakAtMs,
+        state: handle.describe(),
+      })
+      this.transitionVideo = handle
+      handle.fit(this.geometry.canvasWidth, this.geometry.canvasHeight)
+      // 커튼보다 위에 둔다. 커튼은 그대로 불투명하게 깔려 있어 클립이 늦어도 뒤가 비치지 않는다.
+      this.root.addChild(handle.sprite)
+    } catch (error) {
+      this.clipLog.always('클립 준비 중 예외', { url: clip.url, error })
+      this.releaseTransitionVideo()
+    }
+  }
+
+  /**
+   * 커튼이 완전히 덮인 순간 클립을 튼다.
+   *
+   * 아직 첫 프레임이 오지 않았으면 **그 자리에서 포기하지 않고** 차폐 구간이 끝날 때까지
+   * 기다렸다가 준비되는 즉시 시작한다. 늦게 시작하는 만큼 남은 차폐 구간으로 계획을 다시
+   * 세워(정점이 여전히 가려진 동안 오도록) 걸고, 남은 구간이 너무 짧으면 그냥 접는다.
+   */
+  private startTransitionVideo(plan: TransitionPlan, to: ModeTarget): void {
+    const video = this.transitionVideo
+    if (video === null) return
+
+    const show = (): void => {
+      video.fit(this.geometry.canvasWidth, this.geometry.canvasHeight)
+      video.sprite.visible = true
+      video.sprite.alpha = this.curtain.alpha
+      video.play()
+    }
+
+    if (video.isReady()) {
+      show()
+      this.clipLog.once('play', '클립 재생 시작', video.describe())
+      return
+    }
+
+    this.clipLog.once('late', '덮인 시점에 첫 프레임이 없다 — 차폐 구간 안에서 기다린다', video.describe())
+    const waitStartedAt = Date.now()
+    this.cancelTransitionVideoWait = video.whenReady(() => {
+      this.cancelTransitionVideoWait = null
+      if (this.transitionVideo !== video) return
+      // 커튼이 걷히기 시작한 뒤라면 이제 와서 띄우면 새 모드 위에 겹친다.
+      // 늦게 시작하는 만큼 **남은** 차폐 구간으로 계획을 다시 세운다 — 정점이 여전히 가려진
+      // 동안 오도록. 남은 구간이 최소치보다 짧으면 같은 규칙이 null을 돌려주고 그대로 접는다.
+      const elapsedMs = plan.swapAtMs + (Date.now() - waitStartedAt)
+      const late = planTransitionVideo(
+        { ...plan, swapAtMs: elapsedMs, bannerMs: plan.coverOutStartMs - elapsedMs },
+        { url: transitionClipUrl(this.options.theme, to), reducedMotion: this.options.reducedMotion },
+      )
+      if (late === null) {
+        this.clipLog.once('lategiveup', '기다리는 사이 차폐 구간이 짧아졌다 — 클립을 접는다', { elapsedMs })
+        return
+      }
+      video.prepare(late)
+      show()
+    })
+  }
+
+  /**
+   * 이번 전환에서 클립을 걷는다. 요소·텍스처는 **살려 둔다** — 다음 전환에서 다시 쓴다.
+   * 완전한 반납은 `destroy()`가 한다.
+   */
+  private releaseTransitionVideo(): void {
+    this.cancelTransitionVideoWait?.()
+    this.cancelTransitionVideoWait = null
+    const video = this.transitionVideo
+    if (video === null) return
+    this.transitionVideo = null
+    video.reset()
+  }
+
+  /** 방향별로 받아 둔 클립을 전부 반납한다. 텍스처와 디코더까지 놓는다. */
+  private disposeTransitionVideos(): void {
+    this.releaseTransitionVideo()
+    for (const handle of this.transitionVideos.values()) handle.dispose()
+    this.transitionVideos.clear()
   }
 
   /** 커튼이 화면을 완전히 덮은 순간 배경/테두리를 갈아 끼운다. 교체 자체는 가려져 보이지 않는다. */
@@ -1353,10 +1669,15 @@ class PixiRenderer implements RendererCore {
     const to = this.modeTransitionTo
     this.modeTransition?.kill()
     this.modeTransition = null
-    if (to === null) return
+    if (to === null) {
+      // 전환이 없었더라도 화면에 남아 있는 클립은 반드시 걷는다(멱등).
+      this.releaseTransitionVideo()
+      return
+    }
     this.modeTransitionTo = null
 
     this.applyModeSwap(to)
+    this.releaseTransitionVideo()
     this.curtain.visible = false
     this.curtain.alpha = 0
     this.emit({ type: 'modeTransition', to, phase: 'end' })
@@ -1490,6 +1811,8 @@ class PixiRenderer implements RendererCore {
     this.destroyed = true
     // 대기 중인 쪽이 영영 매달리지 않도록 전환의 끝을 먼저 알린다.
     this.finishModeTransition()
+    // 미리 받아 둔 클립까지 여기서 전부 반납한다 — 텍스처(540x960x4 ≈ 2MB)와 디코더.
+    this.disposeTransitionVideos()
     this.clearWins()
     this.killSpinTimelines()
     this.stopAmbient()
@@ -1503,6 +1826,38 @@ class PixiRenderer implements RendererCore {
     // 캔버스로 만든 폴백·코인 텍스처는 여기서만 해제된다.
     // Assets.load로 받은 것은 전역 캐시 소유라 손대지 않는다.
     this.ownedTextures.destroyAll()
+    // 풀에 감춰 둔 것은 무대 밖이라 앱과 함께 내려가지 않는다. 여기서 직접 버린다.
+    this.mutationPool.clear()
+    this.particlePool.clear()
+    this.sheetSprites.clear()
+    this.symbolFxPool.clear()
+    // 붙잡고 있던 시트를 전부 놓는다. 아직 다른 화면이 쓰고 있으면 그대로 살아 있고,
+    // 마지막 사용자였다면 축출 후보가 되어 상한을 넘는 순간 아틀라스까지 돌아간다.
+    for (const url of this.retainedSheets) releaseSheet(url)
+    this.retainedSheets.clear()
+  }
+
+  // ------------------------------------------------------------------ 진단
+
+  /**
+   * 풀과 텍스처 장부의 지금 상태. 순수 데이터라 그리는 쪽이 마음대로 써도 된다.
+   * 화면에 무엇을 어떻게 보여줄지는 여기서 정하지 않는다.
+   */
+  diagnostics(): RendererDiagnostics {
+    return {
+      pools: {
+        mutation: this.mutationPool.stats,
+        sheetSprites: this.sheetSprites.stats,
+        symbolFx: this.symbolFxPool.stats,
+        particles: this.particlePool.stats,
+      },
+      sheetSpriteKeys: this.sheetSprites.keyCount,
+      particleBudget: this.particlePool.budgetSnapshot,
+      textures: {
+        owned: this.ownedTextures.snapshot,
+        sheets: sheetTextureSnapshot(),
+      },
+    }
   }
 }
 

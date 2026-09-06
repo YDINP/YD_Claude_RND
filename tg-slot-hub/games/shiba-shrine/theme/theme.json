@@ -161,8 +161,7 @@
       "win": [
         {
           "type": "flash",
-          "durationMs": 500,
-          "fromAlpha": 0.45
+          "durationMs": 500
         }
       ]
     }

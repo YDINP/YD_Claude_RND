@@ -26,6 +26,20 @@ import {
 import { useSessionStore } from './session'
 import { useHubStore } from './hub'
 import type { DebugPreset } from '../lib/debugPreset'
+import {
+  ROUND_FLOW_IDLE,
+  canStartSpin,
+  ceremonyFor,
+  roundFlowReducer,
+  winHoldMs,
+  winPresentationMode,
+  type RoundFlowEvent,
+  type RoundFlowState,
+} from '../game/roundFlow'
+// celebrationTier/HURRIED_SCALE는 winTiers.ts(순수 등급 판정)의 것을 그대로 쓴다 — 일반 스핀의
+// 빅윈 오버레이와 프리스핀 종료 팝업이 같은 배수에 같은 등급을 매겨야 하므로 여기서 새로 정하지
+// 않는다. 이 모듈은 React/DOM에 기대지 않아 store에서 import해도 안전하다.
+import { celebrationTier } from '../components/game/winTiers'
 
 /** SpinResponse.debug의 형태 — 어떤 프리셋이 실제로 적용됐고 몇 번 만에 그 결과를 찾았는지. */
 type SpinDebugResponse = NonNullable<SpinResponse['debug']>
@@ -52,25 +66,14 @@ export const AUTO_SPIN_COUNTS = [10, 25, 50, 100] as const
 export type AutoSpinCount = (typeof AUTO_SPIN_COUNTS)[number]
 
 /**
- * 프리스핀에 막 진입한 첫 판은, 예약해 둔 자동 스핀을 곧장 타이머로 돌리지 않고 여기 잠깐
- * 담아둔다 — GameScreen이 렌더러의 modeTransition(to:'freeSpins', phase:'end') 이벤트를 받아
- * releaseFreeSpinsEntryGate()를 부르면 그때 실제로 예약된다. 렌더러가 그 이벤트를 아직
- * 못 보내는(또는 지원하지 않는) 경우엔 플레이어가 FREE SPIN 버튼을 직접 눌러 진행할 수 있다.
- *
- * `renderer.setMode()`(커튼 전환의 방아쇠)는 이제 spinTo/showWins가 다 끝난 뒤 finally에서만
- * 불린다 — 그러므로 modeTransition('end')은 항상 finally가 이 값을 세운 **뒤에** 도착한다
- * (예전처럼 finally보다 먼저 도착하는 경우는 이제 구조적으로 없다).
+ * 세리머니 팝업(프리스핀 진입/종료)이 스스로 닫히기까지의 시간.
+ * 사용자가 탭해서 닫는 것이 기본이고 이건 안전장치일 뿐이라, 스핀 속도로 줄이지 않는다.
  */
-let pendingAutoSpinRelease: (() => void) | null = null
+export const ROUND_POPUP_AUTO_CLOSE_MS = 10_000
+/** 위 자동 닫힘 타이머. 팝업이 떠 있는 동안에만 존재한다. */
+let popupTimeoutId: ReturnType<typeof setTimeout> | null = null
 
-/**
- * 프리스핀이 끝난 뒤 오토스핀을 다시 이어가기 위해 미뤄 둔 예약. 종료 커튼(modeTransition
- * to:'base')이 화면을 덮고 있는 동안 다음 판이 돌면 안 되므로, GameScreen이 커튼이 다 걷힌
- * 시점(phase:'end')에 `resumeAutoSpin()`을 불러 실제로 예약을 건다.
- */
-let pendingAutoSpinResume: (() => void) | null = null
-
-/** 예약돼 있던 다음 자동 스핀 타이머만 거둬들인다(어떤 게이트도 건드리지 않는다). */
+/** 예약돼 있던 다음 자동 스핀 타이머만 거둬들인다(세리머니 상태는 건드리지 않는다). */
 function clearScheduledSpin(): void {
   if (autoSpinTimeoutId !== null) {
     clearTimeout(autoSpinTimeoutId)
@@ -79,10 +82,15 @@ function clearScheduledSpin(): void {
   autoSpinTimeoutOwner = null
 }
 
+function clearPopupTimeout(): void {
+  if (popupTimeoutId !== null) {
+    clearTimeout(popupTimeoutId)
+    popupTimeoutId = null
+  }
+}
+
 function cancelAutoSpin(): void {
   clearScheduledSpin()
-  pendingAutoSpinRelease = null
-  pendingAutoSpinResume = null
 }
 
 /** 지금 진행 중인 spinTo() 손잡이 — 탭/스페이스로 "결과로 건너뛰기"를 할 때 이걸 통해 skip()한다. */
@@ -128,10 +136,15 @@ export interface SpinRenderer {
     wins: WinLine[],
     options?: {
       loop?: boolean
-      /** 'brief'면 라인별 순차(B단계) 없이 전체 표시만 짧게 1회 — 오토스핀용. */
+      /** 'brief'면 라인별 순차(B단계) 없이 전체 표시만 짧게 1회 — 오토스핀/프리스핀용. */
       presentation?: 'full' | 'brief'
       totalBet?: number
       features?: FeatureTrigger[]
+      /**
+       * 전체 표시(A단계)를 붙들 시간(ms) — 당첨 라인이 많을수록 길어진다(winHoldMs).
+       * 렌더러가 아직 이 옵션을 받지 않으면 조용히 무시되고 기본 홀드가 쓰인다(계약 후속 과제).
+       */
+      holdMs?: number
     },
   ): Promise<void>
   /** 프리스핀 진입/종료 시 배경·프레임 등 시각 모드를 전환한다. `null`로 되돌리면 평소 모드다. */
@@ -152,7 +165,9 @@ export interface SpinRenderer {
 export function toRendererFreeSpinsMode(
   freeSpins: FreeSpinsState | null,
 ): { left: number; total: number; multiplier: number } | null {
-  if (!freeSpins) return null
+  // 남은 횟수가 0이면 렌더러에게도 "프리스핀 아님"이다 — 세리머니 판정(ceremonyFor)과 커튼
+  // 판정(renderer의 modeTransitionTarget)이 같은 규칙을 봐야 둘이 어긋나지 않는다.
+  if (!freeSpins || freeSpins.left <= 0) return null
   return { left: freeSpins.left, total: freeSpins.total, multiplier: freeSpins.multiplier }
 }
 
@@ -278,6 +293,22 @@ export interface GameState {
   lastSpinTiming: SpinTiming | null
   /** 마지막 스핀 응답의 debug 필드(어떤 프리셋이 적용됐고 몇 번 만에 맞았는지). 계약 미착륙 시 null. */
   lastSpinDebug: SpinDebugResponse | null
+  /**
+   * 프리스핀 진입/종료 세리머니(팝업 → 커튼)의 현재 단계. `idle`이 아닌 동안에는 어떤 경로로도
+   * 새 스핀이 시작되지 않는다(canStartSpin). 자세한 규칙은 `game/roundFlow.ts` 참고.
+   */
+  roundFlow: RoundFlowState
+  /**
+   * 일반 스핀(또는 진행 중인 프리스핀)의 빅윈(≥10×) 오버레이. null이면 없음.
+   *
+   * `roundFlow`에 합치지 않은 이유 — 그쪽은 소유자가 다르고(프리스핀 진입/종료 팝업↔커튼의
+   * 정확한 순서를 지키는 게 목적), 이 오버레이는 팝업/커튼과 같은 판에 절대 겹치지 않는다
+   * (`ceremonyFor`가 이번 판에 팝업을 만들기로 하면 여기는 애초에 세팅되지 않는다 — 세리머니
+   * 종료 팝업이 이미 같은 등급 연출(`WinCelebration`)로 총액을 보여주므로 두 번 띄울 이유가
+   * 없다). 그래서 별개의 단순한 nullable 값 하나로 충분하고, roundFlow처럼 popup/curtain을
+   * 오가는 상태 기계가 필요 없다 — canStartSpin의 게이트에도 이 값을 별도로 더한다(spin() 참고).
+   */
+  winCelebration: { totalWin: number; totalBet: number; hurried: boolean } | null
 }
 
 export interface GameActions {
@@ -292,10 +323,21 @@ export interface GameActions {
    */
   requestSkip: () => void
   /**
-   * 프리스핀 진입 첫 판의 자동 스핀 예약을 실제로 건다. GameScreen이 렌더러의
-   * modeTransition(to:'freeSpins', phase:'end')을 받으면 부른다. 미뤄둔 게 없으면 아무 일도 안 한다.
+   * 세리머니 팝업을 닫는다 — 사용자가 탭했을 때, 그리고 자동 닫힘 안전장치가 터졌을 때.
+   * 팝업이 떠 있지 않으면 아무 일도 하지 않는다. 닫힌 **뒤에야** 커튼이 시작된다.
    */
-  releaseFreeSpinsEntryGate: () => void
+  dismissRoundPopup: () => void
+  /**
+   * 렌더러의 modeTransition(커튼) 이벤트를 그대로 넘긴다. GameScreen이 유일한 호출자다.
+   * 커튼이 다 걷히면(`end`) 세리머니가 끝나고 다음 판(프리스핀 자동진행/오토스핀 재개)이 예약된다.
+   */
+  notifyCurtain: (to: 'freeSpins' | 'base', phase: 'start' | 'end') => void
+  /**
+   * 빅윈 오버레이를 닫는다 — 등급별 체류 시간이 지났을 때(자동), 그리고 사용자가 탭했을 때.
+   * 세리머니 팝업의 `dismissRoundPopup`과 같은 자리에서 다음 판을 예약한다(scheduleNextRound) —
+   * 오버레이가 화면을 붙들고 있던 동안 걸려 있던 자동진행/오토스핀이 이제야 이어진다.
+   */
+  dismissWinCelebration: () => void
   /**
    * 오토스핀을 `count`판만큼 무장하고, 지금 바로 돌 수 있는 상태면(idle, 프리스핀 아님) 첫 판을
    * 곧장 시작한다. 이미 스핀 중이면 예약만 해두고 그 판이 끝나는 대로 이어진다.
@@ -306,11 +348,6 @@ export interface GameActions {
    * (업계 관행 "이번 스핀만 마치고 중단"). 프리스핀 자동진행이 걸어 둔 예약은 건드리지 않는다.
    */
   stopAutoSpin: () => void
-  /**
-   * 프리스핀 종료 커튼이 다 걷힌 뒤(modeTransition to:'base', phase:'end') GameScreen이 불러
-   * 미뤄 둔 오토스핀 재개 예약을 실제로 건다. 미뤄둔 게 없으면 아무 일도 하지 않는다.
-   */
-  resumeAutoSpin: () => void
   /**
    * 더블업 한 판. pick(heads/tails)이 서버가 실제로 뒤집은 면과 같으면 2배, 다르면 0 — 클라이언트는
    * 절대 스스로 계산하지 않고 서버 응답을 그대로 반영한다. 진행 중인 세션이 없으면 아무 일도 안 한다.
@@ -353,6 +390,80 @@ const initialState: GameState = {
   lastSpinTiming: null,
   lastSpinDebug: null,
   gambleIdempotencyKey: null,
+  roundFlow: ROUND_FLOW_IDLE,
+  winCelebration: null,
+}
+
+type StoreGet = () => GameStore
+type StoreSet = (partial: Partial<GameStore>) => void
+
+/** 다음 자동 스핀 한 판을 예약한다. owner는 "오토스핀 중지"가 프리스핀 자동진행까지 거두지 않도록 구분한다. */
+function scheduleSpinAfter(delayMs: number, owner: 'freeSpins' | 'autoSpin', get: StoreGet): void {
+  autoSpinTimeoutOwner = owner
+  autoSpinTimeoutId = setTimeout(() => {
+    autoSpinTimeoutId = null
+    autoSpinTimeoutOwner = null
+    void get().spin()
+  }, delayMs)
+}
+
+/**
+ * 다음 판을 예약한다 — 프리스핀이 남아 있으면 그 자동진행이 주인이고, 아니면 무장된 오토스핀이
+ * 이어받는다. 예약할 이유가 없으면 아무 일도 하지 않는다.
+ *
+ * 세리머니가 없는 평범한 판의 끝과, 세리머니(팝업→커튼)가 완전히 끝난 시점 둘 다 여기로 온다 —
+ * 예전처럼 "미뤄 둔 예약 클로저"를 두 종류나 들고 있을 필요가 없다. 무엇을 이어갈지는 언제나
+ * 지금 store 상태에서 다시 읽으면 되기 때문이다.
+ */
+function scheduleNextRound(get: StoreGet): void {
+  const freeSpins = get().freeSpins
+  if (freeSpins && freeSpins.left > 0) {
+    scheduleSpinAfter(AUTO_SPIN_DELAY_MS, 'freeSpins', get)
+    return
+  }
+  if (get().autoSpin === null) return
+
+  // 다음 판 베팅을 감당할 수 없으면 여기서 멈춘다(오토스핀 정지 조건 3) — 어차피 서버가
+  // INSUFFICIENT_FUNDS로 거절할 판을 굳이 한 번 더 던지지 않는다.
+  const nextBet = get().math?.betLevels[get().betIndex]
+  const coins = useSessionStore.getState().wallet?.coins ?? 0
+  if (nextBet === undefined || coins < nextBet) {
+    get().stopAutoSpin()
+    return
+  }
+  scheduleSpinAfter(AUTO_SPIN_INTERVAL_MS, 'autoSpin', get)
+}
+
+/**
+ * 세리머니 상태 기계에 이벤트를 넣고, 돌려받은 부수효과를 실제로 실행한다.
+ * 판단은 전부 순수 모듈(roundFlow)에 있고 여기는 그 결정을 집행만 한다.
+ */
+function applyRoundFlow(event: RoundFlowEvent, get: StoreGet, set: StoreSet): void {
+  const { state, effects } = roundFlowReducer(get().roundFlow, event)
+  // 상태부터 반영한다 — 효과(커튼 걸기/다음 판 예약)가 도는 동안 이미 "스핀 금지" 판정이 서 있어야 한다.
+  if (state !== get().roundFlow) set({ roundFlow: state })
+
+  for (const effect of effects) {
+    switch (effect.type) {
+      case 'armPopupTimeout':
+        clearPopupTimeout()
+        popupTimeoutId = setTimeout(() => {
+          popupTimeoutId = null
+          get().dismissRoundPopup()
+        }, ROUND_POPUP_AUTO_CLOSE_MS)
+        break
+      case 'clearPopupTimeout':
+        clearPopupTimeout()
+        break
+      case 'runCurtain':
+        // 커튼의 방아쇠는 여기 한 곳뿐이다 — 팝업이 닫힌 뒤에만 당겨지므로 둘이 겹칠 수 없다.
+        get().renderer?.setMode?.({ freeSpins: toRendererFreeSpinsMode(get().freeSpins) })
+        break
+      case 'ceremonyFinished':
+        scheduleNextRound(get)
+        break
+    }
+  }
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -410,6 +521,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   async spin() {
+    // 세리머니(프리스핀 진입/종료 팝업 + 커튼)나 빅윈 오버레이가 도는 동안에는 어떤 경로로도
+    // 릴이 다시 돌지 않는다 — 자동진행·오토스핀·스핀 버튼·스테이지 탭·스페이스 전부 여기서
+    // 한 번에 막힌다. 예약을 거두기 **전에** 돌아간다: 막힌 입력이 예약된 다음 판까지 지워버리면 안 된다.
+    if (!canStartSpin(get().roundFlow) || get().winCelebration !== null) return
+
     // 이번 스핀이 수동이든(탭해서 속도 올리기) 방금 예약된 자동 프리스핀이든, 대기 중이던 다음
     // 자동 스핀 타이머는 취소한다 — 안 그러면 나중에 중복으로 또 스핀이 걸린다.
     cancelAutoSpin()
@@ -635,13 +751,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
           // WinStrip에 직접 그린다(winLineLabel은 그쪽에서 쓴다). 여기서는 더 이상 넘기지 않는다.
           const winStartAt = Date.now()
           timing.reelStopToWinStartMs = reelStopAt !== null ? winStartAt - reelStopAt : null
+          // 오토스핀 중이거나 프리스핀이 도는 동안에는 라인별 순차(B단계)를 통째로 건너뛰고
+          // 전체 표시만 짧게 1회 보여준다 — 순환하는 전체 연출이 프리스핀 사이에 끼면 판
+          // 간격이 20초를 넘겨 "진행이 멈춘 것"처럼 보인다(실측). 수동 기본 게임만 full +
+          // 순환이다(옵션 자체를 넘기지 않아 기존 호출 형태를 그대로 유지한다).
+          const presentation = winPresentationMode({
+            autoSpinActive: get().autoSpin !== null,
+            freeSpinsActive: freeSpins !== null,
+          })
           await renderer.showWins(result.wins, {
             totalBet: result.totalBet,
             features: result.features,
-            // 오토스핀 중에는 라인별 순차(B단계)를 통째로 건너뛰고 전체 표시만 짧게 1회 보여준다 —
-            // `loop:false`만으로는 첫 바퀴(라인당 1.9초)가 그대로 재생돼 판 간격이 8~14초까지
-            // 벌어졌다. 수동 플레이는 평소처럼 full + 순환이다(옵션 자체를 넘기지 않는다).
-            ...(get().autoSpin ? { presentation: 'brief' as const } : {}),
+            // brief는 자기만의 짧은 홀드를 쓴다 — 여기서 늘리면 짧게 스쳐 지나간다는 약속이 깨진다.
+            ...(presentation === 'brief'
+              ? { presentation: 'brief' as const }
+              : { holdMs: winHoldMs(result.wins.length) }),
           })
           timing.firstPassMs = Date.now() - winStartAt
         }
@@ -654,13 +778,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (get().gameId === gameId) {
         set({ phase: 'idle', lastSpinTiming: timing })
 
-        // 시각 모드 전환(커튼) — 스핀/뮤테이션/승리 연출이 다 끝난 지금에서야 건다. 전환 방향은
-        // 스핀 시작 "전"의 모드(위쪽 `freeSpins` 스냅샷)와 이번 응답의 `result.freeSpins` 유무를
-        // 비교해 정해지는데, 그 비교는 renderer.setMode() 안(modeTransitionTarget)에서 렌더러가
-        // 자신의 마지막 모드와 대조해 스스로 판단한다 — 같은 모드면(남은 횟수만 바뀐 재발동 등)
-        // 알아서 건너뛰어 매 프리스핀 스핀마다 커튼이 뜨지 않는다.
-        renderer?.setMode?.({ freeSpins: toRendererFreeSpinsMode(result.freeSpins) })
-
         // 오토스핀 카운터 — 이번 판이 "유료" 판일 때만 하나 깎는다(프리스핀 중에 도는 판은 서버가
         // 공짜로 주는 것이라 오토스핀의 몫에서 빼지 않는다). 0이 되면 스스로 꺼진다.
         const armedBefore = get().autoSpin
@@ -669,79 +786,60 @@ export const useGameStore = create<GameStore>((set, get) => ({
           set({ autoSpin: left > 0 ? { remaining: left } : null })
         }
 
-        // 프리스핀이 남아 있으면 승리 연출(과 필요하면 방금 건 커튼)이 끝난 뒤 잠시 쉬었다
-        // 자동으로 다음 판을 돌린다. 사용자가 그 사이 SPIN을 탭하면 위쪽의 cancelAutoSpin()이
-        // 이 타이머를 지우고 즉시 진행된다.
-        const remaining = get().freeSpins
-        if (remaining && remaining.left > 0) {
-          const scheduleAutoSpin = (): void => {
-            autoSpinTimeoutOwner = 'freeSpins'
-            autoSpinTimeoutId = setTimeout(() => {
-              autoSpinTimeoutId = null
-              autoSpinTimeoutOwner = null
-              void get().spin()
-            }, AUTO_SPIN_DELAY_MS)
-          }
-          // freeSpins가 이번 스핀 "전"에는 없다가(=위의 pre-spin 스냅샷) 결과로 새로 생겼다면
-          // 프리스핀 첫 진입이다 — 방금 건 커튼 전환이 끝날 때까지(modeTransition to:'freeSpins',
-          // phase:'end') 예약을 미룬다. releaseFreeSpinsEntryGate()가 그 신호를 받으면 실제로
-          // 예약을 건다. 커튼은 방금(바로 위) 걸었으므로 'end'는 구조적으로 항상 이 지점보다
-          // 나중에 온다 — 예전처럼 먼저 도착하는 경우를 따로 다룰 필요가 없다. 이미 진행 중이던
-          // (재발동 포함) 프리스핀이면 커튼이 없으므로 곧장 예약한다.
-          const enteringFreeSpins = freeSpins === null
-          if (enteringFreeSpins) {
-            pendingAutoSpinRelease = scheduleAutoSpin
-          } else {
-            scheduleAutoSpin()
-          }
-          // 프리스핀이 도는 동안 오토스핀은 쉰다 — 그 루프의 주인은 위 자동진행이고, 오토스핀은
-          // 카운터를 그대로 든 채 프리스핀이 끝나면(아래 else 가지) 이어받는다.
+        // 이번 판이 프리스핀 모드 경계를 넘었나(진입 또는 종료). 넘었으면 곧장 커튼을 걸지 않고
+        // 먼저 팝업부터 띄운다 — 커튼은 팝업이 닫힌 뒤에야 시작하고, 그동안 릴은 완전히 멈춰
+        // 있는다. 경계를 넘지 않은 판(평범한 유료 판, 진행 중인 프리스핀, 재발동)은 예전 그대로
+        // 곧바로 setMode를 부르고(렌더러가 같은 모드면 알아서 커튼을 건너뛴다) 다음 판을 예약한다.
+        const ceremony = ceremonyFor(freeSpins, result)
+        if (ceremony) {
+          applyRoundFlow(
+            { type: 'ceremonyStarted', popup: ceremony.popup, to: ceremony.to, withCurtain: renderer !== null },
+            get,
+            set,
+          )
         } else {
-          // 오토스핀 — 프리스핀이 돌고 있지 않을 때만 다음 판을 예약한다.
-          const armed = get().autoSpin
-          const nextBet = math.betLevels[get().betIndex]
-          const coins = useSessionStore.getState().wallet?.coins ?? 0
+          // 시각 모드 전환(커튼) — 스핀/뮤테이션/승리 연출이 다 끝난 지금에서야 건다. 같은 모드면
+          // 렌더러가 스스로 건너뛴다(modeTransitionTarget) — store가 판단하지 않는다.
+          renderer?.setMode?.({ freeSpins: toRendererFreeSpinsMode(result.freeSpins) })
 
-          if (armed && (nextBet === undefined || coins < nextBet)) {
-            // 다음 판 베팅을 감당할 수 없으면 여기서 멈춘다(정지 조건 3) — 어차피 서버가
-            // INSUFFICIENT_FUNDS로 거절할 판을 굳이 한 번 더 던지지 않는다.
-            get().stopAutoSpin()
-          } else if (armed) {
-            const scheduleNext = (): void => {
-              autoSpinTimeoutOwner = 'autoSpin'
-              autoSpinTimeoutId = setTimeout(() => {
-                autoSpinTimeoutId = null
-                autoSpinTimeoutOwner = null
-                void get().spin()
-              }, AUTO_SPIN_INTERVAL_MS)
-            }
-
-            // 방금 프리스핀이 끝난 판이면 종료 커튼이 다 걷힐 때까지(modeTransition to:'base',
-            // phase:'end' → resumeAutoSpin()) 예약을 미룬다 — 커튼이 화면을 덮은 채로 다음 판이
-            // 돌면 릴과 배경이 어긋나 보인다. 렌더러가 아예 없으면 그 이벤트가 영영 오지 않으므로
-            // 곧장 예약해 폴백한다.
-            const exitingFreeSpins =
-              freeSpins !== null && (result.freeSpins === null || result.freeSpins.left <= 0)
-            if (exitingFreeSpins && renderer) {
-              pendingAutoSpinResume = scheduleNext
-            } else {
-              scheduleNext()
-            }
+          // 빅윈 오버레이 — 이번 판이 세리머니 팝업 없이 끝났을 때만 판정한다(위 ceremony 분기가
+          // 이미 있었다면 종료 팝업이 같은 등급 연출로 총액을 보여주므로 겹쳐 띄우지 않는다 —
+          // 진입 팝업이 있었던 판도 마찬가지로 그 판은 팝업이 화면의 주인이다). 등급이 없으면
+          // (10× 미만이거나 totalBet을 모르면) celebrationTier가 'none'을 돌려주고, 그때는
+          // 예전 그대로 곧장 다음 판을 예약한다.
+          const tier = celebrationTier(result.totalWin, result.totalBet)
+          if (tier === 'none') {
+            scheduleNextRound(get)
+          } else {
+            // 오토스핀이 돌고 있었거나 이미 프리스핀 중이었으면(둘 다 winPresentationMode와 같은
+            // 신호) 서두른다 — 체류 시간이 절반이 된다(winTiers.ts의 HURRIED_SCALE). 다음 판
+            // 예약(scheduleNextRound)은 오버레이가 닫힐 때(dismissWinCelebration)로 미룬다 —
+            // 세리머니 팝업과 정확히 같은 이유로, 화면이 붙들려 있는 동안 다음 판이 걸리면 안 된다.
+            set({
+              winCelebration: {
+                totalWin: result.totalWin,
+                totalBet: result.totalBet,
+                hurried: get().autoSpin !== null || freeSpins !== null,
+              },
+            })
           }
         }
       }
     }
   },
 
-  releaseFreeSpinsEntryGate() {
-    // renderer.setMode()는 이제 spin()의 finally 안에서만 불리므로, 이 이벤트('end')는 항상
-    // finally가 pendingAutoSpinRelease를 세운 뒤에 도착한다 — 예전처럼 더 일찍 도착해 놓칠 걱정이
-    // 구조적으로 없다. 미뤄 둔 게 없으면(재발동/커튼 없음/렌더러 없음 등) 조용히 아무 일도 안 한다.
-    if (pendingAutoSpinRelease) {
-      const release = pendingAutoSpinRelease
-      pendingAutoSpinRelease = null
-      release()
-    }
+  dismissRoundPopup() {
+    applyRoundFlow({ type: 'popupDismissed' }, get, set)
+  },
+
+  dismissWinCelebration() {
+    if (get().winCelebration === null) return
+    set({ winCelebration: null })
+    scheduleNextRound(get)
+  },
+
+  notifyCurtain(to, phase) {
+    applyRoundFlow(phase === 'start' ? { type: 'curtainStarted', to } : { type: 'curtainEnded' }, get, set)
   },
 
   startAutoSpin(count) {
@@ -759,18 +857,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   stopAutoSpin() {
     // 지금 돌고 있는 판은 그대로 마치게 두고, 오토스핀이 걸어 둔 다음 판 예약만 거둬들인다.
-    // 프리스핀 자동진행이 걸어 둔 타이머는 주인이 다르므로 건드리지 않는다.
+    // 프리스핀 자동진행이 걸어 둔 타이머는 주인이 다르므로 건드리지 않는다. 세리머니가 끝난 뒤의
+    // 재개도 따로 지울 게 없다 — 무엇을 이어갈지는 그때 store 상태를 다시 읽어 정하므로
+    // (scheduleNextRound), autoSpin을 null로 만드는 것만으로 재개가 사라진다.
     if (autoSpinTimeoutOwner === 'autoSpin') clearScheduledSpin()
-    pendingAutoSpinResume = null
     if (get().autoSpin !== null) set({ autoSpin: null })
-  },
-
-  resumeAutoSpin() {
-    if (pendingAutoSpinResume) {
-      const resume = pendingAutoSpinResume
-      pendingAutoSpinResume = null
-      resume()
-    }
   },
 
   async gamble(pick) {
@@ -889,8 +980,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   reset() {
-    // 게임 화면을 벗어나는데 예약된 자동 프리스핀/건너뛰기 요청이 남아있으면 안 된다.
+    // 게임 화면을 벗어나는데 예약된 자동 프리스핀/건너뛰기 요청이나 떠 있는 세리머니 팝업이
+    // 남아있으면 안 된다.
     cancelAutoSpin()
+    applyRoundFlow({ type: 'aborted' }, get, set)
     currentSpinHandle = null
     skipRequested = false
     // 진행 중이던 승리 연출 순환을 걷어낸다 — 안 그러면 다음에 이 게임에 다시 들어왔을 때(또는

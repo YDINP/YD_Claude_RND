@@ -1,0 +1,480 @@
+/*
+ * 승리 축하 연출 — 일반 스핀의 빅윈 오버레이와 프리스핀 종료 팝업이 함께 쓴다.
+ *
+ * 타임라인의 단일 진실 공급원은 `winCelebration.ts`다. 롤업/체류 길이, 코인 수, 충격파 수,
+ * 파티클 배치는 전부 거기서 계산해 CSS 커스텀 속성으로 넘어오고, 여기서는 "그 값으로 어떻게
+ * 움직이는지"만 정한다.
+ *
+ * 등급마다 **결**이 다르다 — 이름이 곧 움직임이다:
+ *   SURGE      아래에서 밀려 올라온다 (카드가 솟고, 코인도 위로 오른다)
+ *   BLAST      중앙에서 터진다 (충격파 고리 2개 + 카드 펀치 스케일)
+ *   STORM      휘몰아친다 (광선이 빨라지고 코인이 크게 쓸린다 + 카드가 비틀려 들어온다)
+ *   CATACLYSM  뒤흔든다 (고리 3개 + 카드가 세 번 흔들린다)
+ *
+ * 배경 레이어(`.hub-win-fx`)는 카드의 **형제**여야 한다. 카드에는 팝인 transform이 걸리는데
+ * 그 안에 들어가면 fixed의 컨테이닝 블록이 되어 위치가 어긋난다. 그래서 래퍼는 상자를 만들지
+ * 않고(`display: contents`) 세 레이어가 직접 형제로 놓인다. `z-index: -1`(광선)과 `1`(코인)
+ * 사이에 카드 글자가 낀다. 팝인이 도는 동안(≤300ms)에는 fixed 기준이 흔들리므로 레이어는
+ * 320ms 뒤에 켠다(`hub-win-fx-in`).
+ */
+
+/* ---- 등급 팔레트. 인덱스가 곧 온도다: 금 → 호박 → 주홍 → 자전(紫電) → 백열.
+   배경 레이어·금액 카드·프리스핀 팝업 카드가 모두 이 클래스를 함께 달아 같은 값을 본다. ---- */
+.hub-tier--none {
+  --tier-core: #f4d98a;
+  --tier-edge: #d8a94a;
+  --tier-glow: rgba(216, 169, 74, 0.34);
+  --tier-ray-spin: 15s;
+  --tier-ray-opacity: 0.3;
+  --tier-drift: 1;
+}
+
+.hub-tier--surge {
+  --tier-core: #ffd782;
+  --tier-edge: #ffab3d;
+  --tier-glow: rgba(255, 171, 61, 0.42);
+  --tier-ray-spin: 12s;
+  --tier-ray-opacity: 0.38;
+  --tier-drift: 1;
+}
+
+.hub-tier--blast {
+  --tier-core: #ffc06a;
+  --tier-edge: #ff6a2f;
+  --tier-glow: rgba(255, 106, 47, 0.5);
+  --tier-ray-spin: 9s;
+  --tier-ray-opacity: 0.46;
+  --tier-drift: 1.4;
+}
+
+.hub-tier--storm {
+  --tier-core: #d9c7ff;
+  --tier-edge: #7b5cff;
+  --tier-glow: rgba(123, 92, 255, 0.54);
+  --tier-ray-spin: 6.5s;
+  --tier-ray-opacity: 0.54;
+  --tier-drift: 2.4;
+}
+
+.hub-tier--cataclysm {
+  --tier-core: #fff6d6;
+  --tier-edge: #7ce7ff;
+  --tier-glow: rgba(255, 238, 180, 0.62);
+  --tier-ray-spin: 4.5s;
+  --tier-ray-opacity: 0.62;
+  --tier-drift: 3;
+}
+
+/* ---- 배경 레이어 ---- */
+
+.hub-win-fx {
+  display: contents;
+}
+
+.hub-win-fx__rays,
+.hub-win-fx__waves,
+.hub-win-fx__shower {
+  pointer-events: none;
+}
+
+/* visibility는 스태킹 컨텍스트를 만들지 않아 위의 z-index 배치를 흔들지 않는다(opacity면 흔든다). */
+@keyframes hub-win-fx-in {
+  from {
+    visibility: hidden;
+  }
+  to {
+    visibility: visible;
+  }
+}
+
+/* 회전해도 화면 모서리가 비지 않도록 뷰포트보다 크게 잡고, 가운데는 마스크로 뚫어
+   카드 뒤에서 빛이 퍼져 나오는 것처럼 보이게 한다. */
+.hub-win-fx__rays {
+  position: fixed;
+  inset: -25vmax;
+  z-index: -1;
+  opacity: var(--tier-ray-opacity);
+  background:
+    radial-gradient(circle at 50% 50%, var(--tier-glow) 0%, transparent 56%),
+    repeating-conic-gradient(
+      from 0deg at 50% 50%,
+      var(--tier-glow) 0deg 4deg,
+      transparent 4deg 16deg
+    );
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 10%, #000 32% 68%, transparent 92%);
+  mask-image: radial-gradient(circle at 50% 50%, transparent 0 10%, #000 32% 68%, transparent 92%);
+  animation:
+    hub-win-fx-in 1ms linear 320ms backwards,
+    hub-win-rays-spin var(--tier-ray-spin) linear 320ms infinite;
+  will-change: transform;
+}
+
+/* SURGE는 도는 게 아니라 아래에서 밀려 올라오는 결이다 — 빛도 바닥에서 차오른다. */
+.hub-win-fx--surge .hub-win-fx__rays {
+  -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.55) 46%, transparent 78%);
+  mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.55) 46%, transparent 78%);
+  animation:
+    hub-win-fx-in 1ms linear 320ms backwards,
+    hub-win-rays-rise 2600ms cubic-bezier(0.16, 1, 0.3, 1) 320ms infinite;
+}
+
+@keyframes hub-win-rays-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hub-win-rays-rise {
+  0% {
+    transform: translateY(14%) scaleY(0.86);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-6%) scaleY(1.06);
+    opacity: 0;
+  }
+}
+
+/* 중앙에서 터져 나가는 충격파 고리 — BLAST부터 생긴다. */
+.hub-win-fx__waves {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  display: grid;
+  place-items: center;
+  animation: hub-win-fx-in 1ms linear 320ms backwards;
+}
+
+.hub-win-fx__wave {
+  position: absolute;
+  width: 40vmin;
+  height: 40vmin;
+  border-radius: 50%;
+  border: 2px solid var(--tier-core);
+  box-shadow: 0 0 24px var(--tier-glow);
+  animation: hub-win-wave 1400ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--hub-wave-delay) + 320ms) infinite;
+}
+
+@keyframes hub-win-wave {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+.hub-win-fx__shower {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  animation: hub-win-fx-in 1ms linear 320ms backwards;
+}
+
+/* 원반 하나. rotateY로 뒤집으면 원근 없이도 가로로 납작해졌다 펴지며 "도는 동전"으로 읽힌다. */
+.hub-win-fx__coin {
+  position: absolute;
+  top: -8vh;
+  left: var(--hub-coin-left);
+  width: var(--hub-coin-size);
+  height: var(--hub-coin-size);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 34% 30%,
+    #fff8e2 0 12%,
+    var(--tier-core) 40%,
+    var(--tier-edge) 80%,
+    rgba(0, 0, 0, 0.28) 100%
+  );
+  box-shadow: 0 0 10px var(--tier-glow);
+  animation: hub-win-coin-fall var(--hub-coin-duration) linear
+    calc(var(--hub-coin-delay) + 320ms) infinite;
+  will-change: transform, opacity;
+}
+
+/* SURGE만 아래에서 위로. 같은 파티클 데이터를 방향만 뒤집어 쓴다. */
+.hub-win-fx--surge .hub-win-fx__coin {
+  top: auto;
+  bottom: -8vh;
+  animation-name: hub-win-coin-rise;
+}
+
+@keyframes hub-win-coin-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotateY(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(calc(var(--hub-coin-drift) * var(--tier-drift)), 116vh, 0)
+      rotateY(var(--hub-coin-spin));
+    opacity: 0;
+  }
+}
+
+@keyframes hub-win-coin-rise {
+  0% {
+    transform: translate3d(0, 0, 0) rotateY(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  74% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(calc(var(--hub-coin-drift) * var(--tier-drift)), -108vh, 0)
+      rotateY(var(--hub-coin-spin));
+    opacity: 0;
+  }
+}
+
+/* ---- 카드(제목 + 금액) ---- */
+
+.hub-win {
+  --card-from: 0.6;
+  --card-peak: 1.05;
+  --card-lift: 0px;
+  --card-twist: 0deg;
+  --card-in-ms: 260ms;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hub-space-xs);
+  text-align: center;
+  animation: hub-win-card-in var(--card-in-ms) cubic-bezier(0.22, 1.2, 0.36, 1) backwards;
+}
+
+/* 등급 이름이 곧 들어오는 결이다. */
+.hub-win--surge {
+  --card-from: 0.82;
+  --card-peak: 1.03;
+  --card-lift: 28px;
+  --card-in-ms: 300ms;
+}
+
+.hub-win--blast {
+  --card-from: 0.4;
+  --card-peak: 1.12;
+  --card-in-ms: 320ms;
+}
+
+.hub-win--storm {
+  --card-from: 0.5;
+  --card-peak: 1.1;
+  --card-twist: -7deg;
+  --card-in-ms: 360ms;
+}
+
+.hub-win--cataclysm {
+  --card-from: 0.36;
+  --card-peak: 1.16;
+  --card-twist: 3deg;
+  --card-in-ms: 380ms;
+}
+
+@keyframes hub-win-card-in {
+  0% {
+    opacity: 0;
+    transform: translateY(var(--card-lift)) rotate(var(--card-twist)) scale(var(--card-from));
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(0) rotate(calc(var(--card-twist) * -0.25)) scale(var(--card-peak));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+/* 화면이 흔들릴 만큼 — 다만 세 번만. 계속 흔들면 읽을 수가 없다. */
+.hub-win--cataclysm .hub-win__value {
+  animation: hub-win-shake 260ms ease-in-out 380ms 3 backwards;
+}
+
+@keyframes hub-win-shake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(-4px, 2px, 0);
+  }
+  50% {
+    transform: translate3d(4px, -2px, 0);
+  }
+  75% {
+    transform: translate3d(-3px, -1px, 0);
+  }
+}
+
+.hub-win__title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tier-core);
+  text-shadow: 0 0 18px var(--tier-glow);
+}
+
+.hub-win__value {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--hub-space-xs);
+}
+
+.hub-win__number {
+  /* tabular-nums가 없으면 롤업 도중 글자 폭이 흔들려 숫자가 떨리는 것처럼 보인다. */
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(42px, 15vw, 64px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--tier-core);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35), 0 0 26px var(--tier-glow);
+  animation: hub-win-number-pop 120ms ease-out;
+}
+
+/* 위쪽만 흰빛으로 뜨는 금속 질감. 지원하지 않는 환경에서는 위의 단색이 그대로 남는다. */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .hub-win__number {
+    background: linear-gradient(180deg, #ffffff 0%, var(--tier-core) 46%, var(--tier-edge) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* text-shadow는 글자 채움 **아래**가 아니라 클립된 배경 **위**에 얹혀 그라디언트를 덮는다.
+       같은 그림자를 filter로 옮기면 다 그린 뒤에 적용돼 금속 질감이 살아남는다. */
+    text-shadow: none;
+    filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 0 18px var(--tier-glow));
+  }
+}
+
+@keyframes hub-win-number-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.hub-win__unit {
+  font-size: var(--hub-font-sub);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hub-text-sub);
+}
+
+.hub-win__summary {
+  font-size: var(--hub-font-sub);
+  font-weight: 600;
+  color: var(--hub-text-sub);
+}
+
+.hub-win__hint {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  animation: hub-win-hint-in 300ms ease-out 900ms backwards;
+}
+
+@keyframes hub-win-hint-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 스크린리더 전용 — 롤업이 끝난 뒤 최종 문장 한 번만 들어온다. */
+.hub-win__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- 일반 스핀 빅윈 오버레이 ---- */
+
+.hub-win-overlay {
+  position: fixed;
+  inset: 0;
+  /* 모달(250)보다 아래다 — 축하 중에 코인 소진 같은 실제 다이얼로그가 뜨면 그쪽이 위여야 한다. */
+  z-index: 240;
+  background: radial-gradient(circle at 50% 46%, rgba(4, 8, 18, 0.4) 0%, rgba(4, 8, 18, 0.82) 74%);
+  outline: none;
+}
+
+/* 화면 전체가 탭 영역이라 버튼 기본 스타일을 지운다. */
+.hub-win-overlay__tap {
+  appearance: none;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--hub-space-xl);
+}
+
+/* ---- 모션 줄이기 ---- */
+
+/* 설정(settings.reducedMotion)으로 끈 경우 — 배경 레이어는 컴포넌트가 아예 렌더하지 않고,
+   여기서는 카드 안에 남은 움직임을 전부 정지시킨다. 숫자는 300ms만 굴러 값이 바로 보인다. */
+.hub-win--still,
+.hub-win--still .hub-win__value,
+.hub-win--still .hub-win__number,
+.hub-win--still .hub-win__hint {
+  animation: none;
+}
+
+/* OS 설정만 켜져 있고 앱 설정은 꺼져 있는 경우까지 덮는다(Modal.css와 같은 방침). */
+@media (prefers-reduced-motion: reduce) {
+  .hub-win-fx__rays,
+  .hub-win-fx__waves,
+  .hub-win-fx__shower {
+    display: none;
+  }
+
+  .hub-win,
+  .hub-win__value,
+  .hub-win__number,
+  .hub-win__hint {
+    animation: none;
+  }
+}

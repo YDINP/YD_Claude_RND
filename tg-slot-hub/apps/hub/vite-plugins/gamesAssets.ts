@@ -30,6 +30,8 @@ export const MIME_BY_EXT: Record<string, string> = {
   '.jpeg': 'image/jpeg',
   '.ogg': 'audio/ogg',
   '.mp3': 'audio/mpeg',
+  '.webm': 'video/webm',
+  '.mp4': 'video/mp4',
 }
 
 /**
