@@ -38,6 +38,24 @@ export const CHROMA_KEY_MIN_SATURATION = 0.15
 /** 크로마키 경계 페더링 반경(px). */
 export const CHROMA_KEY_FEATHER_PX = 1
 
+/**
+ * 평평한 배경 제거(`flatMatte.ts`) 튜닝값. 크로마키를 못 쓰는 로컬 SDXL 출력을 위한 갈래다.
+ * 배경색을 이미지 테두리에서 추정하므로 "무슨 색인지"를 미리 정하지 않는다.
+ */
+/** 배경색 추정에 쓸 테두리 띠 두께 (이미지 짧은 변 대비). 1024px에서 약 20px. */
+export const FLAT_MATTE_BORDER_BAND_RATIO = 0.02
+/** 배경으로 볼 색상 거리(채널 유클리드, 0-441). SDXL 배경의 완만한 그라데이션을 흡수할 만큼 넉넉하게. */
+export const FLAT_MATTE_TOLERANCE = 42
+/** 알파 경계 페더링 반경(px). */
+export const FLAT_MATTE_FEATHER_PX = 1
+/**
+ * 지운 비율이 이 값보다 작으면 "배경이 평평하지 않았다"고 보고 원본을 그대로 둔다.
+ * 사방 여백이 있는 심볼 이미지는 보통 40~70%가 배경이다.
+ */
+export const FLAT_MATTE_MIN_REMOVED_RATIO = 0.05
+/** 지운 비율이 이 값보다 크면 오브젝트까지 먹은 것으로 보고 원본을 그대로 둔다. */
+export const FLAT_MATTE_MAX_REMOVED_RATIO = 0.97
+
 /** 프로바이더 호출 실패 시 추가 재시도 횟수 (총 시도 = 이 값 + 1). */
 export const RETRY_COUNT = 2
 /** 재시도 백오프 기준 지연(ms). 지수적으로 증가한다. */

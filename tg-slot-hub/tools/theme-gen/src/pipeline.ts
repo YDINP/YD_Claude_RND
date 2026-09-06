@@ -3,8 +3,15 @@ import { dirname, join, relative, sep } from 'node:path'
 import sharp from 'sharp'
 import { ArtFxFileSchema, PACK_FILES } from '@tgslot/game-sdk'
 import type { FxMap } from '@tgslot/game-sdk'
-import { CHROMA_KEY_COLOR, CHROMA_KEY_FEATHER_PX, CHROMA_KEY_TOLERANCE_DEG, RAW_DIR_NAME } from './constants.js'
+import {
+  CHROMA_KEY_COLOR,
+  CHROMA_KEY_FEATHER_PX,
+  CHROMA_KEY_TOLERANCE_DEG,
+  FLAT_MATTE_MIN_REMOVED_RATIO,
+  RAW_DIR_NAME,
+} from './constants.js'
 import { chromaKey } from './chromaKey.js'
+import { removeFlatBackground } from './flatMatte.js'
 import { logAsset, logInfo, logWarn } from './log.js'
 import { readJsonOptional, writeBuffer, writeJson } from './paths.js'
 import { processFlat, processFrame, processSymbol } from './postProcess.js'
@@ -47,13 +54,34 @@ function sheetAnimationName(asset: PromptAsset): string {
 }
 
 /**
- * gpt-image-1은 네이티브 투명 배경을 지원해 크로마키가 필요 없다. gemini/comfy는 필요하다.
+ * 배경을 지우는 방식. **불리언 두 개가 아니라 상태 하나**로 둔다 — "크로마키가 필요한가"와
+ * "평면 매트를 쓰는가"가 따로 있으면 둘 다 참인 불가능한 조합이 표현되기 때문이다.
+ *
+ * - `chroma` — 프롬프트가 약속한 `#00FF00`을 색상(hue)으로 지운다. gpt-image-1/gemini처럼
+ *   지시를 지키는 생성기용이고 기본값이다.
+ * - `flat` — 배경색을 **이미지에서 추정**해 테두리 연결 성분을 지운다(`flatMatte.ts`).
+ *   로컬 SDXL은 "초록 배경" 지시를 안 지키고 초록을 오브젝트에 칠해 버리므로 이쪽을 쓴다.
+ */
+export const MATTE_MODES = ['chroma', 'flat'] as const
+export type MatteMode = (typeof MATTE_MODES)[number]
+
+/** asset 하나에 실제로 적용할 배경 제거. 프로바이더·asset 종류·선택한 모드가 함께 정한다. */
+export type MattePlan = 'none' | MatteMode
+
+/**
+ * gpt-image-1은 네이티브 투명 배경을 지원해 배경 제거가 필요 없다. gemini/comfy는 필요하다.
  * codex는 제외한다 — codex 프로바이더가 내부에서 필요할 때만 스스로 폴백 크로마키를 적용해서 돌려준다.
  * frame도 제외한다 — `processFrame`이 창 탐지 + 전체 크로마키 mop-up을 자체적으로 처리한다
- * (이미지 전체를 무조건 키잉하는 이 함수와 달리, frame은 릴 창 자리만 정확히 뚫어야 하기 때문).
+ * (이미지 전체를 무조건 키잉하는 이 경로와 달리, frame은 릴 창 자리만 정확히 뚫어야 하기 때문).
  */
-function needsChromaKey(providerName: string, transparent: boolean, kind: PromptAsset['kind']): boolean {
-  return transparent && kind !== 'frame' && (providerName === 'gemini' || providerName === 'comfy')
+export function planMatte(
+  providerName: string,
+  transparent: boolean,
+  kind: PromptAsset['kind'],
+  mode: MatteMode,
+): MattePlan {
+  if (!transparent || kind === 'frame') return 'none'
+  return providerName === 'gemini' || providerName === 'comfy' ? mode : 'none'
 }
 
 export interface AssetPlan {
@@ -170,6 +198,7 @@ export async function generateAsset(
   provider: ImageProvider,
   force: boolean,
   themeUpdate: ThemeUpdate,
+  matte: MatteMode = 'chroma',
 ): Promise<GenerateAssetResult> {
   const outPath = assetOutPath(gameDir, asset)
 
@@ -192,12 +221,30 @@ export async function generateAsset(
   writeBuffer(assetRawPath(gameDir, asset), generated.buffer)
 
   let processedInput = generated.buffer
-  if (needsChromaKey(provider.name, asset.transparent, asset.kind)) {
+  const mattePlan = planMatte(provider.name, asset.transparent, asset.kind, matte)
+  if (mattePlan !== 'none') {
     const raw = await sharp(generated.buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
-    const keyed = chromaKey(
-      { data: raw.data, width: raw.info.width, height: raw.info.height, channels: 4 },
-      { keyColor: CHROMA_KEY_COLOR, toleranceDeg: CHROMA_KEY_TOLERANCE_DEG, featherPx: CHROMA_KEY_FEATHER_PX },
-    )
+    const input = { data: raw.data, width: raw.info.width, height: raw.info.height, channels: 4 as const }
+    let keyed
+    if (mattePlan === 'chroma') {
+      keyed = chromaKey(input, {
+        keyColor: CHROMA_KEY_COLOR,
+        toleranceDeg: CHROMA_KEY_TOLERANCE_DEG,
+        featherPx: CHROMA_KEY_FEATHER_PX,
+      })
+    } else {
+      const result = removeFlatBackground(input)
+      keyed = result.image
+      const percent = (result.removedRatio * 100).toFixed(1)
+      const bg = `rgb(${result.background.r},${result.background.g},${result.background.b})`
+      // 지운 비율이 너무 작으면 배경이 평평하지 않았다는 뜻이고, removeFlatBackground는
+      // 그런 경우 원본을 그대로 돌려준다. 조용히 넘어가면 불투명한 심볼이 커밋된다.
+      if (result.removedRatio < FLAT_MATTE_MIN_REMOVED_RATIO) {
+        logWarn(`flat matte: ${asset.id}의 배경이 평평하지 않아 지우지 못했다 (배경 추정 ${bg}, 지움 ${percent}%)`)
+      } else {
+        logInfo(`flat matte: ${asset.id} 배경 ${bg} 제거 ${percent}%`)
+      }
+    }
     processedInput = await sharp(keyed.data, { raw: { width: keyed.width, height: keyed.height, channels: 4 } })
       .png()
       .toBuffer()

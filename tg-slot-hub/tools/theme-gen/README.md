@@ -47,6 +47,7 @@ pnpm --filter @tgslot/theme-gen gen games/classic-777 --reprocess --only frame
 | `--dry-run` | off | 실제 호출 없이 계획(프롬프트·경로)만 출력 |
 | `--force` | off | 기존 출력 파일이 있어도 다시 생성 |
 | `--reprocess` | off | 프로바이더를 아예 호출하지 않고 `art/raw/<id>.png`에서 후처리만 다시 돌린다 |
+| `--matte <chroma\|flat>` | `chroma` | 배경 제거 방식. `gemini`/`comfy`에만 적용된다 (아래 참고) |
 
 `--reprocess`는 이미지 생성 없이 후처리 로직(트림/패딩/릴 창 감지 등)만 고쳤을 때 쓴다.
 프로바이더 선택 로직 자체를 안 타므로 API 키도, codex 로그인도 필요 없다. 대상 asset의
@@ -98,6 +99,37 @@ pnpm --filter @tgslot/theme-gen gen games/classic-777 --reprocess --only frame
 
 openai/gemini/comfy는 429/5xx 응답을 지수 백오프로 2회 재시도한다. 로그에는 API 키를 자동으로
 가린다(`sk-...`, `AIza...`, `?key=...`).
+
+### 배경 제거: `--matte chroma` vs `--matte flat`
+
+`transparent: true`인 symbol/bg/thumb 자산에서 배경을 어떻게 지울지 고르는 값이다.
+`frame`은 어느 쪽이든 해당 없다 — `processFrame`이 릴 창만 정확히 뚫는 자기 경로를 쓴다.
+`openai`/`codex`도 해당 없다 — 네이티브 알파를 주거나 프로바이더가 스스로 폴백을 건다.
+
+| | `chroma` (기본) | `flat` |
+|---|---|---|
+| 배경색 | 프롬프트가 약속한 `#00FF00` **고정** | 이미지 **테두리에서 추정** |
+| 지우는 범위 | 색상(hue)이 맞는 픽셀 전부 | 추정색과 가까운 픽셀 (기본은 안쪽 구멍도 포함) |
+| 쓰는 곳 | 지시를 지키는 생성기 (gpt-image-1, gemini) | 로컬 SDXL |
+
+**`flat`이 왜 필요한가.** 로컬 SDXL 체크포인트는 "isolated on a #00FF00 background"를
+지키지 않는다. 실측하면 초록을 배경이 아니라 **오브젝트 안에** 칠하고 배경은 제멋대로
+중성색이 된다. 그래서 배경색을 프롬프트로 정하는 대신 이미지에서 읽는다.
+색만 보고 지우면 오브젝트의 같은 색까지 사라지므로 **테두리에서 시작하는 연결 성분**으로
+판정한다 — 배경은 정의상 가장자리에 닿아 있다.
+
+`flat`을 쓸 때는 **프롬프트에서 초록 배경 지시를 빼고** 팔레트에 없는 평평한 중성색 배경을
+요구해야 한다. 초록을 요구하면 그 초록이 오브젝트에 들어간다.
+
+지운 비율이 5% 미만이면 "배경이 평평하지 않았다"고 보고 **원본을 그대로 두고 경고를 남긴다.**
+불투명한 심볼이 조용히 커밋되는 것보다 낫기 때문이다. 그 경고가 보이면 프롬프트가 full-bleed
+그림을 만들고 있다는 뜻이다.
+
+```bash
+COMFY_URL=http://127.0.0.1:8189 \
+COMFY_CHECKPOINT=juggernautXL_v8Rundiffusion.safetensors \
+  pnpm --filter @tgslot/theme-gen gen games/<id> --provider comfy --matte flat
+```
 
 ### codex (로컬 CLI, API 키 불필요)
 

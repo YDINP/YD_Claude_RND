@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { basename, resolve } from 'node:path'
 import { logError } from './log.js'
 import { promptsJsonPath, readJson, resolveGameDir } from './paths.js'
-import { applyThemeUpdate, generateAsset, planAssets, reprocessAsset } from './pipeline.js'
+import { applyThemeUpdate, generateAsset, MATTE_MODES, planAssets, reprocessAsset, type MatteMode } from './pipeline.js'
 import { checkCodexAvailable, createCodexProvider } from './provider/codex.js'
 import { createComfyProvider } from './provider/comfy.js'
 import { createGeminiProvider } from './provider/gemini.js'
@@ -17,6 +17,9 @@ const USAGE = `사용법: pnpm --filter @tgslot/theme-gen gen <게임 폴더> [�
 
 옵션
   --provider <openai|gemini|comfy|codex>   프로바이더 강제 지정 (기본: 자동 선택)
+  --matte <chroma|flat>                    배경 제거 방식 (기본 chroma). gemini/comfy에만 적용된다.
+                                           flat = 배경색을 이미지에서 추정해 테두리부터 지운다
+                                           (로컬 SDXL은 초록 배경 지시를 안 지키므로 이쪽을 쓸 것)
   --only <id1,id2,...>                     지정한 asset id만 생성
   --dry-run                                실제 호출 없이 계획만 출력
   --force                                  기존 출력 파일이 있어도 다시 생성
@@ -33,6 +36,7 @@ interface CliOptions {
   dryRun: boolean
   force: boolean
   reprocess: boolean
+  matte: MatteMode
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -42,6 +46,7 @@ function parseArgs(argv: string[]): CliOptions {
   let dryRun = false
   let force = false
   let reprocess = false
+  let matte: MatteMode = 'chroma'
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
@@ -59,6 +64,14 @@ function parseArgs(argv: string[]): CliOptions {
           throw new Error(`알 수 없는 --provider 값: ${value} (openai | gemini | comfy | codex 중 하나)`)
         }
         provider = value
+        break
+      }
+      case '--matte': {
+        const value = takeValue()
+        if (!(MATTE_MODES as readonly string[]).includes(value)) {
+          throw new Error(`알 수 없는 --matte 값: ${value} (${MATTE_MODES.join(' | ')} 중 하나)`)
+        }
+        matte = value as MatteMode
         break
       }
       case '--only':
@@ -88,7 +101,7 @@ function parseArgs(argv: string[]): CliOptions {
   }
 
   if (target === undefined) throw new Error(`대상 게임 폴더를 지정할 것\n\n${USAGE}`)
-  const options: CliOptions = { target, dryRun, force, reprocess }
+  const options: CliOptions = { target, dryRun, force, reprocess, matte }
   if (provider !== undefined) options.provider = provider
   if (only !== undefined) options.only = only
   return options
@@ -185,7 +198,7 @@ async function main(): Promise<void> {
   const results = []
 
   for (const asset of assets) {
-    const result = await generateAsset(gameDir, file, asset, provider, options.force, themeUpdate)
+    const result = await generateAsset(gameDir, file, asset, provider, options.force, themeUpdate, options.matte)
     if (result.skipped) console.log(`  [skip] ${asset.id} (이미 있음, --force로 재생성)`)
     results.push(result)
   }
