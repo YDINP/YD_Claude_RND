@@ -42,7 +42,15 @@ postprocess-assets.py — 생성 원본 → public/assets 후처리 파이프라
   src/data/enemies.json 의 전체 id 중 소스가 없는 항목은 regen-list.json 에 사유와 함께
   기록한다(실루엣 폴백 유지, 재생성되면 다음 실행에서 자동 편입).
 
+명상 성소 배경(별도 트랙, 스펙 밖)
+  art/gen/sanctum/<채택안>.png 를 일반 배경과 같은 규약(1.30배 + WebP q80)으로 굽고
+  manifest.lazyTextures 의 bg_sanctum 으로 등록한다. MeditationView 가 지연 로드한다.
+
 치비 시트(별도 트랙, 스펙 밖)
+  art/gen/npc_final/npc_<id>_<kind>.png 를 public/assets/characters/npc/<id>_<kind>.webp 로
+  굽고 manifest.npc(지연 로드 버킷)에 등록한다. fullbody 는 긴 변 1024, portrait 는 512.
+  fullbody 만 알파를 요구한다 — portrait 는 배경이 있는 흉상이라 알파가 없는 것이 정상이다.
+
   art/gen/chibi_sheet/<hero>_sheet.png(cell 256 x 4프레임, RGBA) 를 chibi-manifest.json 의
   규격으로 검증한 뒤 무손실 WebP 로 public/assets/characters/chibi/<hero>_sheet.webp 에
   굽고 manifest.chibi 에 등록한다(지연 로드 버킷. cell/frames/footY 동봉).
@@ -79,6 +87,11 @@ UI_SOURCE_DIR = ROOT / "art" / "gen" / "assets"
 FULLBODY_SOURCE_DIR = ROOT / "art" / "gen" / "fullbody"
 FULLBODY_TARGET_DIR = PUBLIC_DIR / "assets" / "characters" / "fullbody"
 
+NPC_SOURCE_DIR = ROOT / "art" / "gen" / "npc_final"
+NPC_TARGET_DIR = PUBLIC_DIR / "assets" / "characters" / "npc"
+# NPC 아트 종류별 긴 변 상한. fullbody 만 알파를 요구한다
+NPC_KIND_SPEC = {"fullbody": {"max": 1024, "needsAlpha": True}, "portrait": {"max": 512, "needsAlpha": False}}
+
 ENEMY_UNIT_SOURCE_DIR = ROOT / "art" / "gen" / "enemies"
 ENEMY_UNIT_TARGET_DIR = PUBLIC_DIR / "assets" / "characters" / "enemies"
 ENEMY_DATA_PATH = ROOT / "src" / "data" / "enemies.json"
@@ -89,6 +102,13 @@ MENU_ICON_TARGET_DIR = PUBLIC_DIR / "assets" / "ui" / "icons"
 MENU_ICON_SIZE = 160
 # 텍스처 키 접두사. menuLayout.menuIconTextureKey() 와 같은 규칙이다(menu_<popupKey>).
 MENU_ICON_KEY_PREFIX = "menu_"
+
+SANCTUM_BG_SOURCE_DIR = ROOT / "art" / "gen" / "sanctum"
+# 채택안. 나머지 3종(deep_s111 / s222 / deep_s222)은 소스로만 두고 굽지 않는다 —
+# 쓰지 않는 배경을 public/ 에 넣으면 배포물만 무거워진다. 교체는 이 상수 한 줄이다.
+SANCTUM_BG_VARIANT = "bg_sanctum_s111"
+SANCTUM_BG_KEY = "bg_sanctum"
+SANCTUM_BG_TARGET = PUBLIC_DIR / "assets" / "backgrounds" / "scenes" / "bg_sanctum.webp"
 
 CHIBI_SOURCE_DIR = ROOT / "art" / "gen" / "chibi_sheet"
 CHIBI_TARGET_DIR = PUBLIC_DIR / "assets" / "characters" / "chibi"
@@ -690,6 +710,125 @@ def process_enemy_units(report: Report, force: bool, dry_run: bool, manifest: di
         log(f"  미생성(폴백 유지): {len(pending)}종")
 
 
+def process_npc_art(report: Report, force: bool, dry_run: bool, manifest: dict) -> None:
+    """art/gen/npc_final/npc_<id>_<kind>.png -> public/assets/characters/npc/<id>_<kind>.webp.
+
+    컷씬 화자 중 영웅도 적도 아닌 인물(등록관 등)의 아트다. 등록관은 대본에서 가장 많이
+    말하는 화자(68줄)라 실루엣 폴백만으로는 화면이 비어 보인다.
+    manifest.npc 는 **지연 로드 버킷**이다 — PreloadScene 이 미리 받지 않고
+    CharacterStage 가 화자가 등장하는 순간에만 받는다.
+    """
+    manifest.setdefault("npc", {})
+    if not NPC_SOURCE_DIR.exists():
+        return
+
+    for src in sorted(NPC_SOURCE_DIR.glob("npc_*.png")):
+        stem = src.stem                      # npc_registrar_fullbody
+        kind = stem.rsplit("_", 1)[-1]       # fullbody | portrait
+        spec = NPC_KIND_SPEC.get(kind)
+        if spec is None:
+            report.skipped_missing_source.append(f"{stem} (알 수 없는 종류: {kind})")
+            continue
+
+        # 텍스처 키는 소스 파일명 그대로, 저장 경로만 npc_ 접두사를 뗀다
+        target = NPC_TARGET_DIR / f"{stem[len('npc_'):]}.webp"
+
+        if not is_stale(target, src, force) and target.exists():
+            report.up_to_date.append(stem)
+            with Image.open(target) as t:
+                w, h = t.size
+            manifest["npc"][stem] = {
+                "path": to_public_rel(str(target.relative_to(PUBLIC_DIR).as_posix())),
+                "width": w, "height": h, "category": "npc", "kind": kind,
+                "priority": "P3", "nineSlice": None,
+            }
+            continue
+
+        if dry_run:
+            report.processed.append(f"{stem} (dry-run)")
+            continue
+
+        with Image.open(src) as im:
+            im = im.convert("RGBA")
+            if spec["needsAlpha"] and not has_real_alpha(im):
+                report.skipped_no_alpha.append(stem)
+                note_regen(stem, "전신 소스에 유효 알파 채널 없음. 크로마키 제거 후 재생성 필요.",
+                           f"public/{NPC_TARGET_DIR.relative_to(PUBLIC_DIR).as_posix()}/{target.name}")
+                continue
+
+            w, h = im.size
+            longest = max(w, h)
+            if longest > spec["max"]:
+                scale = spec["max"] / longest
+                size = (max(1, round(w * scale)), max(1, round(h * scale)))
+                resized = im.resize(size, Image.LANCZOS)
+            else:
+                resized = im.copy()
+                size = (w, h)
+
+            target.parent.mkdir(parents=True, exist_ok=True)
+            resized.save(target, "WEBP", quality=85, method=6)
+
+        manifest["npc"][stem] = {
+            "path": to_public_rel(str(target.relative_to(PUBLIC_DIR).as_posix())),
+            "width": size[0], "height": size[1], "category": "npc", "kind": kind,
+            "priority": "P3", "nineSlice": None,
+        }
+        report.processed.append(stem)
+        log(f"  [npc] {stem}: {w}x{h} -> {size[0]}x{size[1]} webp q85  src={src.name}")
+
+
+def process_sanctum_background(report: Report, force: bool, dry_run: bool, manifest: dict) -> None:
+    """art/gen/sanctum/<변형>.png -> public/assets/backgrounds/scenes/bg_sanctum.webp.
+
+    명상 성소 전용 배경. 처리 규약은 일반 배경과 같다(1.30배 Lanczos 업스케일 + WebP q80).
+    **lazyTextures** 에 넣는다 — MeditationView 가 뷰 생성 시점에 지연 로드하므로 부팅
+    전송량 예산(6MB)에 들어가지 않는다.
+
+    블러 페어는 굽지 않는다. 블러본은 GlassPanel 이 씬 배경을 흐릴 때 쓰는데, 성소 배경은
+    관측창 **안쪽**에만 깔리고 유리 패널의 소스가 되지 않는다. 쓰지 않을 파일을 만들지 않는다.
+    """
+    src = SANCTUM_BG_SOURCE_DIR / f"{SANCTUM_BG_VARIANT}.png"
+    if not src.exists():
+        report.skipped_missing_source.append(SANCTUM_BG_KEY)
+        note_regen(SANCTUM_BG_KEY, f"성소 배경 소스 없음({src.name}). art/gen/sanctum/ 에 생성 필요.",
+                   f"public/{SANCTUM_BG_TARGET.relative_to(PUBLIC_DIR).as_posix()}")
+        return
+
+    target = SANCTUM_BG_TARGET
+    rel = to_public_rel(str(target.relative_to(PUBLIC_DIR).as_posix()))
+
+    if not is_stale(target, src, force):
+        report.up_to_date.append(SANCTUM_BG_KEY)
+        with Image.open(target) as im:
+            w, h = im.size
+        manifest["lazyTextures"][SANCTUM_BG_KEY] = {
+            "path": rel, "width": w, "height": h,
+            "category": "background", "priority": "P1", "nineSlice": None,
+        }
+        return
+
+    if dry_run:
+        report.processed.append(f"{SANCTUM_BG_KEY} (dry-run)")
+        return
+
+    with Image.open(src) as im:
+        im = im.convert("RGB")
+        w, h = im.size
+        new_w, new_h = round(w * 1.30), round(h * 1.30)
+        upscaled = im.resize((new_w, new_h), Image.LANCZOS)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        upscaled.save(target, "WEBP", quality=80, method=6)
+
+    manifest["lazyTextures"][SANCTUM_BG_KEY] = {
+        "path": rel, "width": new_w, "height": new_h,
+        "category": "background", "priority": "P1", "nineSlice": None,
+    }
+    report.processed.append(SANCTUM_BG_KEY)
+    log(f"  [sanctum-bg] {SANCTUM_BG_KEY}: {w}x{h} -> {new_w}x{new_h} webp q80  src={src.name} "
+        f"({human(target.stat().st_size)})")
+
+
 def process_chibi_sheets(report: Report, force: bool, dry_run: bool, manifest: dict) -> None:
     """art/gen/chibi_sheet/<hero>_sheet.png -> public/assets/characters/chibi/<hero>_sheet.webp.
 
@@ -810,13 +949,33 @@ def main() -> int:
         # PreloadScene 은 이 버킷을 읽지 않는다 — MeditationView 가 파티 슬롯 조회 시점에 지연 로드한다.
         # 값에 cell/frames/footY 가 함께 들어 있어 씬이 규격을 하드코딩하지 않는다.
         "chibi": {},
-        # memoryBudget: tests/e2e/memory-smoke.mjs 의 통과 기준(팀 리드 결정, 2026-09-03).
-        # 5회 순환(main→herolist→herodetail→gacha→stageselect→battle→result→main) 중
-        # 1회차 대비 5회차 힙/텍스처 증가율을 이 값과 비교한다.
+        # memoryBudget: tests/e2e/memory-smoke.mjs 의 통과 기준(2026-09-04 실측 기준 갱신).
+        # 8회 순환(main→herolist→herodetail→gacha→stageselect→battle→result→main) 중
+        # baselineCycle 회차 대비 마지막 회차의 증가분을 이 값과 비교한다. 1회차는 온보딩
+        # 컷씬·지연 싱글턴 초기화가 섞여 기준선으로 쓰지 않는다.
+        #
+        # 이 블록은 스모크가 읽는 SSOT 다. 값을 바꾸려면 실측(memory-smoke) 후에 바꾸고,
+        # 매니페스트만 손대면 다음 재생성 때 여기 값으로 덮여 사라진다는 점에 주의.
         "memoryBudget": {
-            "cycles": 5,
+            "cycles": 8,
+            "baselineCycle": 2,
             "heapGrowthMaxPercent": 15,
-            "textureCountGrowthMax": 10,
+            # 텍스처 키 순증. 단 "포화하는 캐시" 두 종은 빼고 센다(스모크의 core 계산):
+            #   vicon_*  아이콘 캐시 — 키가 (아이콘×크기×팔레트색)이라 조합 수에서 상한이 걸린다.
+            #            20회 순환 실측: 18→25 로 오르다 10회차부터 11회 연속 25 고정.
+            #   UUID 키  Phaser Text 의 캔버스 텍스처 — 생성·파기가 짝을 이루는 회전이다.
+            # 캐시는 증가분이 아니라 아래 vectorIconMaxKeys 절대 상한으로 감시한다.
+            "coreTextureGrowthMax": 6,
+            "vectorIconMaxKeys": 60,
+            # 상주 텍스처 총량(폭×높이×4 추정) 상한. 2026-09-04 실측 157~193MB.
+            "textureResidentMaxMB": 210,
+            # 리스너는 씬을 아무리 돌아도 늘면 안 된다 — 늘면 off() 를 빠뜨린 것이다.
+            "sceneListenerGrowthMax": 0,
+            "eventBusListenerGrowthMax": 0,
+            # 메인 복귀 시점의 화면당 상한. 실측 트윈 11~14, 타이머 5.
+            "activeTweenMax": 24,
+            "activeTimerMax": 12,
+            "displayObjectGrowthMax": 12,
             "route": ["MainMenuScene", "HeroListScene", "HeroDetailScene", "GachaScene", "StageSelectScene", "BattleScene", "BattleResultScene", "MainMenuScene"],
         },
     }
@@ -857,8 +1016,14 @@ def main() -> int:
     log("=== 적 유닛 아트 (art/gen/enemies/enemy_*.png, 스펙 밖 별도 트랙) ===")
     process_enemy_units(report, args.force, args.dry_run, manifest)
 
+    log("=== NPC 아트 (art/gen/npc_final/npc_*.png, 스펙 밖 별도 트랙) ===")
+    process_npc_art(report, args.force, args.dry_run, manifest)
+
     log("=== 메뉴 아이콘 (art/gen/menu_icons/menu_<popupKey>.png, 스펙 밖 별도 트랙) ===")
     process_menu_icons(report, args.force, args.dry_run, manifest)
+
+    log("=== 명상 성소 배경 (art/gen/sanctum/, 스펙 밖 별도 트랙) ===")
+    process_sanctum_background(report, args.force, args.dry_run, manifest)
 
     log("=== 치비 시트 (art/gen/chibi_sheet/<hero>_sheet.png, 스펙 밖 별도 트랙) ===")
     process_chibi_sheets(report, args.force, args.dry_run, manifest)
@@ -902,6 +1067,7 @@ def main() -> int:
     log(f"manifest 텍스처 키 수(lazy)  : {len(manifest['lazyTextures'])}")
     log(f"manifest 전신 키 수          : {len(manifest['fullbody'])}")
     log(f"manifest 적 유닛 키 수       : {len(manifest['enemies'])}")
+    log(f"manifest NPC 키 수           : {len(manifest.get('npc', {}))}")
     log(f"manifest 메뉴 아이콘 키 수   : {len(manifest['menuIcons'])}")
     log(f"manifest 치비 시트 키 수     : {len(manifest['chibi'])}")
     if not args.dry_run:

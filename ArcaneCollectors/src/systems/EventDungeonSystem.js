@@ -343,15 +343,13 @@ export class EventDungeonSystem {
       });
     }
 
-    // 아이템 드롭 확률 체크
+    // 아이템 드롭 — QA P1 후속: 예전엔 확률만 굴려 id 목록만 만들고 실제로
+    // 인벤토리에 넣지 않았다. SaveManager.grantRewardItems() 가 확률 굴림+실지급을
+    // 함께 하므로 반환값(= 실제 지급된 것)을 그대로 표시/기록에 쓴다.
     if (rewards.items) {
-      rewards.droppedItems = [];
-      rewards.items.forEach(item => {
-        if (Math.random() < item.chance) {
-          rewards.droppedItems.push(item.id);
-          // TODO: 인벤토리에 아이템 추가
-        }
-      });
+      const granted = SaveManager.grantRewardItems(rewards.items);
+      rewards.droppedItems = granted.map(g => g.id);
+      rewards.items = granted;
     }
 
     SaveManager.save(data);

@@ -62,7 +62,8 @@
     ],
     "lineFields": {
       "speakerSide": "'left' | 'right' (선택). 생략 시 등장 순 교대로 자동 배정",
-      "expression": "표정 키 (선택). 자산이 준비되기 전에는 무시된다"
+      "expression": "표정 키 (선택). 자산이 준비되기 전에는 무시된다",
+      "speakerAsset": "화자 아트 강제 지정 (선택). 'enemy_*' 형식만 인식하며 asset-manifest enemies 버킷 키여야 한다. 생략 시 규칙 자동 해석: speakerType 'hero'는 portraitId로 전신/포트레이트, 'enemy'는 화자명을 enemies.json name과 대조해 적 아트, 그 외(등록관·???)는 실루엣 메달. unknown 화자의 revealAs는 정체를 숨기는 연출이므로 아트 해석에 쓰지 않는다"
     }
   },
   "scenes": [

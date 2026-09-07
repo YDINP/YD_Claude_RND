@@ -1,0 +1,36 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "lastUpdated": "2026-09-04",
+    "note": "컷씬 화자명 → 화면에 세울 아트 매핑 SSOT. 규칙으로 자동 해석되지 않는 화자만 여기에 적는다.",
+    "resolveOrder": [
+      "1. speakerType 이 narrator/player 면 슬롯을 쓰지 않는다",
+      "2. line.speakerAsset('enemy_*') 이 있으면 그것",
+      "3. byName 테이블 (이 파일) — 화자명을 정규화해 조회",
+      "4. speakerType 'enemy' + 화자명이 enemies.json 의 name 과 일치 → enemy_art_<id>",
+      "5. line.portraitId → 영웅 전신 시트(없으면 512 포트레이트)",
+      "6. 그 외 → 실루엣 메달"
+    ],
+    "whyNotAllHere": "적 84종은 enemies.json 의 name 이 이미 SSOT다. 여기 복사하면 이름이 바뀔 때 두 곳이 어긋난다. 4번 규칙이 대본의 적 화자 8종을 전부 덮으며, 누락은 tests/utils/cutsceneLayout.test.js 의 화자 전수 검증이 잡는다.",
+    "nameNormalization": "NFC 정규화 → 앞뒤 공백 제거 → 내부 연속 공백 1칸 → 감싼 따옴표 제거 → 후행 존칭(님/씨) 제거. 표기가 흔들려도 같은 화자로 붙는다.",
+    "fields": {
+      "kind": "'npc' | 'enemy' | 'hero'",
+      "textureKey": "매니페스트 키. npc 는 manifest.npc, enemy 는 manifest.enemies 를 본다",
+      "frameKey": "초상 카드 프레임 (frame_card_N|R|SR|SSR). 생략 시 kind 기본값",
+      "note": "사람이 읽는 메모"
+    }
+  },
+
+  "byName": {
+    "등록관": {
+      "kind": "npc",
+      "textureKey": "npc_registrar_portrait",
+      "frameKey": "frame_card_R",
+      "note": "대본 최다 화자(68줄). 전신(npc_registrar_fullbody)은 알파 잔재가 남아 있어 컷아웃으로 못 쓴다 — 배경 포함 512 흉상을 초상 카드로 세운다. 전신 알파가 정리되면 이 항목을 fullbody 로 바꾸면 된다."
+    }
+  },
+
+  "silhouetteOnly": [
+    "???"
+  ]
+}

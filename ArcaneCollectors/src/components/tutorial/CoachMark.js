@@ -138,8 +138,11 @@ export class CoachMark {
     }
 
     if (showClose) {
+      // QA P2 (2026-09-04): closeY 가 버블 상단에서 히트박스 반높이(28)보다 작은 24만 떨어져
+      // 있어 히트박스 위쪽 4px가 버블 밖으로 삐져나갔다(탭 타깃이 헛돈다).
+      // 히트박스가 버블 안에 완전히 들어오도록 최소 반높이만큼 띄운다.
       const closeX = bubbleX + bubbleW - s(CLOSE_HIT_BASE) / 2 - s(4);
-      const closeY = bubbleY + s(CLOSE_HIT_BASE) / 2 - s(4);
+      const closeY = bubbleY + s(CLOSE_HIT_BASE) / 2 + s(2);
       const closeText = this.scene.add.text(closeX, closeY, '✕', {
         fontSize: `${s(18)}px`,
         color: DESIGN.colors.text.secondary,

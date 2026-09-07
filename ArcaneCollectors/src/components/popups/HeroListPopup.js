@@ -42,8 +42,10 @@ const GRID_PAD_TOP = 8;
 const GRID_PAD_BOTTOM = 16;
 
 /** 그리드 카드 규격 (기획 px) */
+// QA P2 (2026-09-04): CARD_H=150 이면 하단 Lv 라벨(y=68)이 배경 프레임(±70) 밖으로
+// 삐져나와 잘려 보였다. 166 으로 늘려 라벨을 완전히 감싼다 (HeroListScene.js 동일 수정).
 const CARD_W = 120;
-const CARD_H = 150;
+const CARD_H = 166;
 const CARD_GAP = 10;
 const GRID_COLS = 3;
 

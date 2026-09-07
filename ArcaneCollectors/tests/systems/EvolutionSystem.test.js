@@ -521,4 +521,110 @@ describe('EvolutionSystem', () => {
       expect(EvolutionSystem.isFirstAscensionGuaranteeAvailable()).toBe(true);
     });
   });
+
+  // ================================================================
+  // 등급 표기 정규화 · 세이브 null 방어 (라이브 P0)
+  //
+  // base-heroes.json 의 기본 영웅에는 rarity 필드가 없고, characters.json 은
+  // 숫자 등급을 쓴다. 정규화하지 않으면 진화 비용이 null 로 떨어져
+  // 호출부의 `cost.gold` 에서 TypeError 로 죽었다.
+  // ================================================================
+  describe('등급 표기 정규화', () => {
+    it('rarity 가 없는 기본 영웅도 N 진화 비용을 받는다', () => {
+      const cost = EvolutionSystem.getEvolutionCost(undefined);
+
+      expect(cost).not.toBeNull();
+      expect(cost.gold).toBe(1000);
+      expect(cost.shards).toBe(10);
+    });
+
+    it('숫자 등급(characters.json 레거시)도 문자열 등급과 같게 다룬다', () => {
+      expect(EvolutionSystem.getEvolutionCost(4)).toEqual(EvolutionSystem.getEvolutionCost('SR'));
+      expect(EvolutionSystem.getEvolutionCost(3)).toEqual(EvolutionSystem.getEvolutionCost('R'));
+    });
+
+    it('rarity 가 없어도 최고 등급으로 오판하지 않는다', () => {
+      expect(EvolutionSystem.isMaxRarity(undefined)).toBe(false);
+      expect(EvolutionSystem.isMaxRarity(null)).toBe(false);
+      expect(EvolutionSystem.isMaxRarity('SSR')).toBe(true);
+      expect(EvolutionSystem.isMaxRarity(5)).toBe(true);
+    });
+
+    it('rarity 없는 캐릭터의 진화 판정이 예외 없이 통과한다', () => {
+      SaveManager.load.mockReturnValue({
+        characters: [{ id: 'base_iris', level: 5 }],
+        resources: { gold: 50000, characterShards: { base_iris: 100 } }
+      });
+
+      const result = EvolutionSystem.canEvolve('base_iris');
+
+      expect(result.canEvolve).toBe(true);
+      expect(result.cost.gold).toBe(1000);
+      expect(result.nextRarity).toBe('R');
+    });
+  });
+
+  describe('세이브 null 방어', () => {
+    it('세이브가 null 이어도 canEvolve 가 예외 없이 실패를 돌려준다', () => {
+      SaveManager.load.mockReturnValue(null);
+
+      const result = EvolutionSystem.canEvolve('hero_001');
+
+      expect(result.canEvolve).toBe(false);
+      expect(result.reason).toBe('캐릭터를 찾을 수 없습니다');
+    });
+
+    it('세이브가 null 이어도 previewEvolution 은 null 만 돌려준다', () => {
+      SaveManager.load.mockReturnValue(null);
+
+      expect(EvolutionSystem.previewEvolution('hero_001')).toBeNull();
+    });
+
+    it('세이브가 null 이어도 조각 조회는 0 이다', () => {
+      SaveManager.load.mockReturnValue(null);
+
+      expect(EvolutionSystem.getShards('hero_001')).toBe(0);
+    });
+
+    it('resources 가 없는 세이브에서도 진화가 골드를 음수로 차감하며 진행된다', () => {
+      const save = { characters: [{ id: 'h', rarity: 'N', stats: { hp: 100, atk: 10, def: 10, spd: 10 } }] };
+      SaveManager.load.mockReturnValue(save);
+
+      // 재화가 없으니 진행 자체가 막혀야 한다 (예외가 아니라 안내)
+      const result = EvolutionSystem.evolve('h');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('골드');
+    });
+  });
+
+  describe('previewEvolution 스탯 폴백', () => {
+    it('세이브에 스탯이 없으면 호출부가 준 baseStats 로 미리보기를 만든다', () => {
+      SaveManager.load.mockReturnValue({
+        characters: [{ id: 'base_iris', level: 5 }],
+        resources: { gold: 50000, characterShards: { base_iris: 100 } }
+      });
+
+      const preview = EvolutionSystem.previewEvolution('base_iris',
+        { hp: 1000, atk: 100, def: 80, spd: 100 });
+
+      expect(preview).not.toBeNull();
+      expect(preview.currentRarity).toBe('N');
+      expect(preview.nextRarity).toBe('R');
+      expect(preview.previewStats.hp).toBe(1100);
+      expect(preview.statGain.atk).toBe(10);
+    });
+
+    it('baseStats 도 없으면 0 으로 채우되 죽지 않는다', () => {
+      SaveManager.load.mockReturnValue({
+        characters: [{ id: 'base_iris' }],
+        resources: {}
+      });
+
+      const preview = EvolutionSystem.previewEvolution('base_iris');
+
+      expect(preview.previewStats).toEqual({ hp: 0, atk: 0, def: 0, spd: 0 });
+    });
+  });
+
 });

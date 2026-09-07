@@ -10,7 +10,7 @@ import { Modal } from '../components/Modal.js';
 import { formatTime } from '../utils/colorUtils.js';
 import { IdleProgressSystem } from '../systems/IdleProgressSystem.js';
 import { MeditationView } from '../components/MeditationView.js';
-import { getCharacter, getCharacterOrHero, calculatePower, getStage, getChapterStages, normalizeHeroes } from '../data/index.ts';
+import { getCharacterOrHero, calculatePower, getStage, getChapterStages, normalizeHeroes, getEnemy } from '../data/index.ts';
 import { HeroInfoPopup } from '../components/HeroInfoPopup.js';
 import { OVERLAY_ROOT_NAME as GACHA_OVERLAY_NAME } from '../components/GachaResultOverlay.js';
 import {
@@ -43,6 +43,7 @@ import { RaidPopup } from '../components/popups/RaidPopup.js';
 import { FriendsPopup } from '../components/popups/FriendsPopup.js';
 import { CollectionPopup } from '../components/popups/CollectionPopup.js';
 import { StoryLogPopup } from '../components/popups/StoryLogPopup.js';
+import { BossInfoPopup } from '../components/popups/BossInfoPopup.js';
 import { ReturningPlayerCard } from '../components/ReturningPlayerCard.js';
 import { buildReturnSummary } from '../systems/ReturningPlayerRules.js';
 import { soundManager } from '../systems/SoundManager.js';
@@ -55,6 +56,9 @@ import { GlassPanel, GLASS_VARIANT } from '../components/GlassPanel.js';
 import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { IconFactory } from '../utils/IconFactory.js';
 import * as ML from '../utils/mainMenuLayout.js';
+import { resolveEnemyArt, chapterBgKey } from '../utils/idleBattleLayout.js';
+import { estimateBossPower, comparePower, verdictForRatio } from '../utils/bossInfoLayout.js';
+import ASSET_MANIFEST from '../../tools/art/asset-manifest.json';
 import * as MenuL from '../utils/menuLayout.js';
 import {
   computeMenuBadges,
@@ -93,6 +97,11 @@ export class MainMenuScene extends Phaser.Scene {
     this.bossDefeat = data?.bossDefeat || false;
     // 다른 씬(스테이지 선택 경고 CTA 등)이 지정한 자동 오픈 팝업
     this.pendingPopupKey = data?.openPopup || null;
+    // 팝업 소유권은 씬 인스턴스에 남는다. 씬은 재시작해도 같은 인스턴스라
+    // 여기서 비우지 않으면 **이미 파괴된** 팝업 참조가 살아남고,
+    // openPopup() 의 `if (this.activePopup) return` 가드가 영영 풀리지 않는다.
+    // (영웅 목록 → 상세 씬 → 뒤로 → 영웅 목록이 다시 안 열리던 라이브 P0)
+    this.activePopup = null;
     this.activePopupKey = null;
     // 빈 화면 방지: shutdown()이 호출되지 않는 비정상 경로 대비
     this._uiCreated = false;
@@ -149,7 +158,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.createBackground();
     this.createTopBar();
-    this.createPartyDisplay();
+    // 상단 "내 파티" 패널은 없앴다 — 성소에 앉은 4인이 곧 파티이고,
+    // 편성 진입은 성소 안 코너 버튼과 좌석 탭이 맡는다.
     this.createCombatPowerDisplay();
     this.createAdventurePanel();
     this.createIdleBattleView();
@@ -164,27 +174,27 @@ export class MainMenuScene extends Phaser.Scene {
     this._menusUnlockedOff = EventBus.on(TutorialEvents.MENUS_UNLOCKED, () => this.refreshBottomMenu());
     this._badgeEventsOff = this._subscribeMenuBadgeEvents();
 
-    // 오프라인 보상: IdleProgressSystem의 DPS 기반으로 재계산
+    // 오프라인 보상: 골드/경험치는 실제 지급 경로(SaveManager.calculateOfflineRewards,
+    // BootScene/LoginScene 이 registry에 채워둔 값)가 정본이다(onboardingConfig.js ISS-01 확정).
+    // P1 수정(2026-09-05): 예전엔 여기서 IdleProgressSystem의 DPS 기반 골드/경험치를
+    // Math.max로 덧씌워 "표시값(수백만 골드) ≠ 실제 지급값(SaveManager 계산)"이 벌어졌다.
+    // IdleProgressSystem은 SaveManager.js의 표현대로 "표시값 병합과 보스 누적 데미지
+    // 계산 전용"이므로, 여기서는 골드/경험치에 관여시키지 않고 아이템/보스 진행도만 받는다.
     if (this.showOfflineRewards && (this.showOfflineRewards?.gold ?? 0) > 0) {
       const lastLogoutTime = fullSaveData?.lastLogoutTime || fullSaveData?.lastOnline || Date.now();
       const dpsRewards = this.idleSystem.calculateOfflineRewards(lastLogoutTime);
 
-      // DPS 기반 보상이 있으면 사용, 없으면 기존 보상 유지
-      if (dpsRewards.gold > 0 || dpsRewards.progressGained > 0) {
-        this.showOfflineRewards = {
-          ...this.showOfflineRewards,
-          gold: Math.max(this.showOfflineRewards.gold, dpsRewards.gold),
-          exp: Math.max(this.showOfflineRewards.exp, dpsRewards.exp),
-          items: dpsRewards.items || [],
-          progressGained: dpsRewards.progressGained || 0,
-          bossReady: dpsRewards.bossReady || false
-        };
-        // 진행도 즉시 저장
-        this.idleSystem.saveProgress();
+      this.showOfflineRewards = {
+        ...this.showOfflineRewards,
+        items: dpsRewards.items || [],
+        progressGained: dpsRewards.progressGained || 0,
+        bossReady: dpsRewards.bossReady || false
+      };
+      // 진행도 즉시 저장
+      this.idleSystem.saveProgress();
 
-        // BUG-12 수정: 오프라인 보상 적용 후 bossReady 상태 재계산
-        // 이미 loadCurrentBoss()가 constructor에서 실행되었으므로, 여기서는 상태만 갱신
-      }
+      // BUG-12 수정: 오프라인 보상 적용 후 bossReady 상태 재계산
+      // 이미 loadCurrentBoss()가 constructor에서 실행되었으므로, 여기서는 상태만 갱신
 
       this.time.delayedCall(500, () => {
         this.showOfflineRewardsPopup(this.showOfflineRewards);
@@ -335,7 +345,9 @@ export class MainMenuScene extends Phaser.Scene {
       const saveData = SaveManager.load();
       const rawParty = (saveData?.parties || [])[0];
       const heroIds = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []) || [];
-      const heroes = heroIds.filter(Boolean).map((id) => getCharacterOrHero(id) || getCharacter(id)).filter(Boolean);
+      // SSOT: getCharacterOrHero()가 characters.json(legacy) → ascended → base 순으로 이미 조회하므로
+      // `|| getCharacter(id)` 폴백은 항상 undefined 재조회에 불과했다(중복 제거).
+      const heroes = heroIds.filter(Boolean).map((id) => getCharacterOrHero(id)).filter(Boolean);
       const cult = ML.resolveAccentCult(heroes);
       const color = ML.resolveAccentColor(cult);
       return { cult, color, css: ML.toCss(color) };
@@ -404,7 +416,7 @@ export class MainMenuScene extends Phaser.Scene {
     try {
       const notice = SaveManager.consumeLegacyMigrationNotice();
       const message = formatLegacyMigrationNotice(notice, {
-        resolveName: (id) => getCharacterOrHero(id)?.name || getCharacter(id)?.name || id
+        resolveName: (id) => getCharacterOrHero(id)?.name || id
       });
       if (!message) return false;
 
@@ -540,7 +552,20 @@ export class MainMenuScene extends Phaser.Scene {
         {
           text: '받기',
           onClick: () => {
-            SaveManager.claimOfflineRewards();
+            // P1 수정(2026-09-05): SaveManager.claimOfflineRewards()는 lastOnline 기준으로
+            // 보상을 다시 계산한다. 그런데 이 화면을 띄우기 전 idleSystem.saveProgress()가
+            // SaveManager.save()를 호출해 lastOnline이 "지금"으로 갱신돼 있어(모든 save()가
+            // lastOnline을 덮어쓴다), 그 시점에 다시 계산하면 경과 시간이 0에 가까워
+            // 화면에 보여준 금액과 무관하게 0골드가 지급됐다. 표시된 safeRewards를
+            // 그대로 지급해 "표시=지급"을 보장한다.
+            SaveManager.addGold(safeRewards.gold);
+            const data = SaveManager.load();
+            data.player.exp = (data.player.exp || 0) + safeRewards.exp;
+            data.lastLogoutTime = Date.now(); // 오프라인 보상 중복 지급 방지
+            SaveManager.save(data);
+            safeRewards.items.forEach((item) => {
+              SaveManager.addToInventory({ itemId: item.id, name: item.name, type: item.type, stackable: true, count: 1 });
+            });
             this.registry.remove('pendingOfflineRewards');
             this.showOfflineRewards = null;
             const newResources = SaveManager.getResources() || {};
@@ -714,7 +739,12 @@ export class MainMenuScene extends Phaser.Scene {
           fill.fillStyle(color, 0.95);
           fill.fillRoundedRect(x + s(2), y + s(2), Math.max(s(4), s(fillW) - s(4)), h - s(4), Math.max(1, r - s(2)));
         }
-        text.setText(`${current}/${max}`);
+        // QA P2 (2026-09-04): `chargeWithGems`/`addEnergy`는 보상·유료 충전을 최대치의
+        // 200%까지 허용한다(EnergySystem.js 설계 의도, 클램프 자체는 있다). 그런데 여기 텍스트는
+        // 원값을 그대로 찍어 "152/102"처럼 최대치를 넘어 보여 유저에게는 클램프 누락 버그로 읽혔다.
+        // 바(fill)는 이미 100%에서 멈추므로, 텍스트도 초과분은 별도 표기로 분리한다.
+        const over = current - max;
+        text.setText(over > 0 ? `${max}/${max} (+${over})` : `${current}/${max}`);
       },
       destroy: () => {
         track.destroy();
@@ -754,102 +784,8 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   /**
-   * 파티 패널 (§3-1: 20,88 - 700,236).
-   *
-   * 빈 슬롯은 `???` 가 아니라 점선 테두리 + "동료 없음" 이다
-   * (UX_ONBOARDING_FLOW §2-7 — 미획득과 미편성을 같은 그림으로 보여주지 않는다).
-   */
-  createPartyDisplay() {
-    const saveData = SaveManager.load();
-    const parties = saveData?.parties || [];
-    const rawParty = parties[0];
-    const partyIds = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
-    const characters = saveData?.characters || [];
-
-    const panel = ML.MAIN_LAYOUT.party;
-    GlassPanel.create(this, {
-      x: s(panel.x + panel.w / 2),
-      y: s(panel.y + panel.h / 2),
-      w: s(panel.w),
-      h: s(panel.h),
-      variant: GLASS_VARIANT.PANEL,
-      tint: this._accent.color,
-      bgKey: this._bgKey,
-      depth: Z_INDEX.PANELS
-    });
-
-    const header = ML.computePartyHeader();
-    this.add.text(s(header.title.x), s(header.title.y), '내 파티',
-      ts('subtitle', { color: DESIGN.colors.text.primary })).setDepth(Z_INDEX.PANEL_CONTENT);
-
-    // 편성 버튼 — §3-1 대로 오른쪽 끝에서 당겨 우상단 UI 와 겹치지 않게 한다
-    const pill = header.editPill;
-    const editGfx = this.add.graphics().setDepth(Z_INDEX.PANEL_BUTTONS);
-    editGfx.fillStyle(this._accent.color, 0.22);
-    editGfx.fillRoundedRect(s(pill.x - pill.w / 2), s(pill.y - pill.h / 2), s(pill.w), s(pill.h), s(pill.h / 2));
-    editGfx.lineStyle(s(1), this._accent.color, 0.8);
-    editGfx.strokeRoundedRect(s(pill.x - pill.w / 2), s(pill.y - pill.h / 2), s(pill.w), s(pill.h), s(pill.h / 2));
-    this.add.text(s(pill.x), s(pill.y), '편성 ▸',
-      ts('label', { color: ML.toCss(this._accent.color) })).setOrigin(0.5).setDepth(Z_INDEX.PANEL_BUTTONS + 1);
-    const editHit = this.add.rectangle(s(header.editHit.x), s(header.editHit.y), s(header.editHit.w), s(header.editHit.h))
-      .setAlpha(0.001).setDepth(Z_INDEX.PANEL_BUTTONS + 2).setInteractive({ useHandCursor: true });
-    editHit.on('pointerdown', () => this.openPopup('partyedit'));
-
-    const slots = ML.computePartySlots();
-    slots.forEach((slot, i) => {
-      const heroId = partyIds[i];
-      const x = s(slot.x);
-      const y = s(slot.y);
-      const r = s(slot.r);
-
-      if (!heroId) {
-        this._drawEmptyPartySlot(x, y, r, slot);
-        return;
-      }
-
-      const charData = characters.find((c) => c.id === heroId || c.characterId === heroId);
-      const staticData = getCharacter(heroId);
-      const fullData = getCharacterOrHero(heroId) || staticData || charData;
-      const ringColor = fullData?.cult ? ML.resolveAccentColor(fullData.cult) : this._accent.color;
-
-      const portraitKey = HeroAssetLoader.ensureTexture(this, fullData) || `hero_${heroId}`;
-      if (this.textures.exists(portraitKey)) {
-        const maskGfx = this.make.graphics({ x: 0, y: 0 });
-        maskGfx.fillCircle(x, y, r);
-        const img = this.add.image(x, y, portraitKey).setDisplaySize(r * 2, r * 2)
-          .setDepth(Z_INDEX.PANEL_CONTENT);
-        img.setMask(maskGfx.createGeometryMask());
-      } else {
-        this.add.circle(x, y, r, ringColor, 0.28).setDepth(Z_INDEX.PANEL_CONTENT);
-        IconFactory.createImage(this, x, y, fullData?.class || 'warrior', s(DESIGN.icon.md), { tint: ringColor })
-          ?.setDepth(Z_INDEX.PANEL_CONTENT + 1);
-      }
-      const hit = this.add.circle(x, y, Math.max(r, s(24)), 0x000000, 0.001)
-        .setDepth(Z_INDEX.PANEL_CONTENT + 2).setInteractive({ useHandCursor: true });
-
-      // 교단색 링 — 슬롯마다 그 영웅의 교단이 드러난다
-      const ring = this.add.graphics().setDepth(Z_INDEX.PANEL_CONTENT + 1);
-      ring.lineStyle(s(2), ringColor, 0.9);
-      ring.strokeCircle(x, y, r + s(2));
-
-      // QA P2-6: `substring(0, 5)` 는 `번개의 아이리스`를 `번개의 아`로 음절 중간에서 잘랐다.
-      // 어절 단위 말줄임으로 바꾸고, 그래도 슬롯 폭을 넘으면 폰트를 한 단계 줄인다.
-      const rawName = staticData?.name || fullData?.name || charData?.name || '???';
-      const nameText = this.add.text(x, s(slot.nameY), ML.fitPartySlotName(rawName),
-        ts('caption', { color: DESIGN.colors.text.primary })).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
-      this._shrinkTextToWidth(nameText, s(slot.nameMaxWidth));
-      this.add.text(x, s(slot.levelY), `Lv.${charData?.level || 1}`,
-        ts('num.sm', { color: DESIGN.colors.text.secondary })).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
-
-      hit.on('pointerdown', () => this.openHeroInfo(heroId));
-      hit.on('pointerover', () => ring.setAlpha(0.6));
-      hit.on('pointerout', () => ring.setAlpha(1));
-    });
-  }
-
-  /**
    * 서체 폴백 등으로 라벨이 예상보다 넓으면 폰트를 한 단계씩 줄여 폭 안에 넣는다.
-   * 말줄임(`fitPartySlotName`)만으로는 글자수만 통제되고 실제 픽셀 폭은 통제되지 않는다.
+   * 말줄임(글자수 제한)만으로는 실제 픽셀 폭이 통제되지 않는다.
    *
    * @param {Phaser.GameObjects.Text} textObj
    * @param {number} maxWidth 렌더 px
@@ -865,35 +801,6 @@ export class MainMenuScene extends Phaser.Scene {
       guard += 1;
     }
     return textObj;
-  }
-
-  /**
-   * 빈 파티 슬롯 — 점선 원 + "동료 없음". 탭하면 편성 팝업으로 간다.
-   * @param {number} x 렌더 x
-   * @param {number} y 렌더 y
-   * @param {number} r 렌더 반지름
-   * @param {Object} slot computePartySlots() 항목
-   */
-  _drawEmptyPartySlot(x, y, r, slot) {
-    const gfx = this.add.graphics().setDepth(Z_INDEX.PANEL_CONTENT);
-    gfx.lineStyle(s(2), 0x64748B, 0.55);
-    const segments = 16;
-    for (let i = 0; i < segments; i += 2) {
-      const a0 = (i / segments) * Math.PI * 2;
-      const a1 = ((i + 1) / segments) * Math.PI * 2;
-      gfx.beginPath();
-      gfx.arc(x, y, r, a0, a1);
-      gfx.strokePath();
-    }
-    this.add.text(x, y, '+', ts('title', { color: DESIGN.colors.text.muted })).setOrigin(0.5)
-      .setDepth(Z_INDEX.PANEL_CONTENT + 1);
-    const emptyLabel = this.add.text(x, s(slot.nameY), '동료 없음',
-      ts('caption', { color: DESIGN.colors.text.muted })).setOrigin(0.5).setDepth(Z_INDEX.PANEL_CONTENT);
-    this._shrinkTextToWidth(emptyLabel, s(slot.nameMaxWidth));
-
-    const hit = this.add.circle(x, y, Math.max(r, s(24)), 0x000000, 0.001)
-      .setDepth(Z_INDEX.PANEL_CONTENT + 2).setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', () => this.openPopup('partyedit'));
   }
 
   /**
@@ -1013,6 +920,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     const currentStage = this.idleSystem.getCurrentStage();
+    this._queueAdventureBackdrop(panel, currentStage.chapter || 1);
     const chapter = currentStage.chapter || 1;
     const stage = currentStage.stage || 1;
 
@@ -1027,6 +935,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.add.text(s(rows.stage.x), s(rows.stage.y), currentStage.name || '슬라임 평원',
       ts('body', { color: DESIGN.colors.text.secondary })).setDepth(Z_INDEX.PANEL_CONTENT);
+
+    this._createAdventureBossRow();
 
     const saveData = SaveManager.load();
     const parties = saveData?.parties || [];
@@ -1060,10 +970,12 @@ export class MainMenuScene extends Phaser.Scene {
         this._sweepBtnText.setAlpha(0.5);
       }
 
-      const bossReady = hasParty && this.idleSystem?.isBossReady?.();
-      this._bossReady = bossReady;
+      // 보스전은 **진행도와 무관하게 언제든** 들어간다 (사용자 지시).
+      // 예전엔 100% 게이트가 있었는데, 보스 스탯은 스테이지 데이터에서 고정으로 나오고
+      // 진행도를 전혀 참조하지 않는다 — 기술적 전제가 아니라 순수한 문지방이었다.
+      // 막는 대신 알린다: 보스 줄의 전투력 판정과 BossInfoPopup 이 그 역할을 한다.
       this._bossSlot = bossSlot;
-      this._bossBtnGfx = this._drawPanelButton(bossSlot, bossReady ? DESIGN.colors.status.error : DESIGN.colors.bg.surface);
+      this._bossBtnGfx = this._drawPanelButton(bossSlot, DESIGN.colors.status.error);
       this._bossBtnText = this._panelButtonLabel(bossSlot, '보스전', '20', 'energy');
       this._bossBtnPanelY = panel.y;
 
@@ -1072,20 +984,153 @@ export class MainMenuScene extends Phaser.Scene {
 
       TutorialTargetRegistry.register('mainmenu.adventure.boss', this._bossHit, 'MainMenuScene');
 
-      // 보스전 버튼은 항상 인터랙티브 등록 (상태는 update에서 동적 관리)
       this._bossHit.setInteractive({ useHandCursor: true });
-      this._bossHit.on('pointerdown', () => {
-        if (this._bossReady) {
-          this.prepareBossBattle();
-        } else {
-          this.showToast('진행도 100%가 되어야 보스전에 도전할 수 있습니다!');
-        }
-      });
-
-      if (!bossReady) this._bossBtnText.setAlpha(0.5);
+      this._bossHit.on('pointerdown', () => this.prepareBossBattle());
     }
 
     this._createAdventureProgress(rows.progress);
+  }
+
+  /**
+   * 현재 모험 패널 배경에 챕터 배경을 깔다.
+   *
+   * "어디를 진행 중인가"를 글자 세 줄이 아니라 그림으로 먼저 알린다. 다만 배경 위에
+   * 텍스트가 올라가므로 **딜을 반드시 함께 깔다** — 대비는 이 딜이 보장한다.
+   * 패널 밖으로 나가지 않게 지오메트리 마스크로 자른다.
+   *
+   * 매니페스트에 등록된 키만 요청한다(없는 경로는 dev 404 가드가 콘솔 에러를 남긴다).
+   *
+   * @param {{x:number,y:number,w:number,h:number}} panel base 좌표
+   * @param {number} chapter
+   */
+  _queueAdventureBackdrop(panel, chapter) {
+    const key = chapterBgKey(chapter);
+    const meta = ASSET_MANIFEST.lazyTextures?.[key] || ASSET_MANIFEST.textures?.[key];
+    if (!meta || !meta.path) return;
+
+    const place = (ready) => {
+      if (!this.sys?.isActive()) return;
+      const source = this.textures.get(ready).getSourceImage();
+      if (!source || !source.width) return;
+
+      const maskGfx = this.make.graphics({ x: 0, y: 0 });
+      maskGfx.fillStyle(0xFFFFFF, 1);
+      maskGfx.fillRoundedRect(s(panel.x), s(panel.y), s(panel.w), s(panel.h), s(DESIGN.radius.lg));
+      this._adventureMaskGfx = maskGfx;
+
+      const scale = Math.max(s(panel.w) / source.width, s(panel.h) / source.height);
+      const image = this.add.image(s(panel.x + panel.w / 2), s(panel.y + panel.h / 2), ready)
+        .setDisplaySize(source.width * scale, source.height * scale)
+        .setAlpha(0)
+        .setDepth(Z_INDEX.PANELS + 1);
+      image.setMask(maskGfx.createGeometryMask());
+
+      // 대비 확보용 딜 — 배경 위 본문 텍스트가 WCAG AA 를 지키게 하는 실제 장치
+      const dim = this.add.graphics().setDepth(Z_INDEX.PANELS + 2);
+      dim.fillStyle(DESIGN.colors.bg.primary, 0.72);
+      dim.fillRoundedRect(s(panel.x), s(panel.y), s(panel.w), s(panel.h), s(DESIGN.radius.lg));
+
+      this._adventureBg = image;
+      this._adventureDim = dim;
+      this.tweens.add({ targets: image, alpha: 0.85, duration: 380, ease: 'Sine.easeOut' });
+    };
+
+    if (this.textures.exists(key)) {
+      place(key);
+      return;
+    }
+    this._loadSceneTexture(key, meta.path, place);
+  }
+
+  /**
+   * 현재 모험 패널의 보스 줄 — 성소에서 뿺 정화 대상이 여기 있다.
+   * 줄 전체를 탭하면 보스 정보 팝업이 열린다.
+   */
+  _createAdventureBossRow() {
+    if (!this.idleSystem.currentBossData) this.idleSystem.loadCurrentBoss?.();
+    const boss = this.idleSystem.currentBossData;
+    if (!boss) return;
+
+    const row = ML.computeAdventureBoss();
+
+    // 썸네일 — 적 아트가 있으면 지연 로드, 없으면 벡터 아이콘 폴백
+    const frame = this.add.graphics().setDepth(Z_INDEX.PANEL_CONTENT);
+    frame.fillStyle(DESIGN.colors.bg.surface, 0.85);
+    frame.fillRoundedRect(s(row.thumb.x - row.thumb.w / 2), s(row.thumb.y - row.thumb.h / 2),
+      s(row.thumb.w), s(row.thumb.h), s(DESIGN.radius.sm));
+    frame.lineStyle(s(1.5), DESIGN.colors.status.error, 0.8);
+    frame.strokeRoundedRect(s(row.thumb.x - row.thumb.w / 2), s(row.thumb.y - row.thumb.h / 2),
+      s(row.thumb.w), s(row.thumb.h), s(DESIGN.radius.sm));
+
+    const fallbackIcon = IconFactory.createImage(this, s(row.thumb.x), s(row.thumb.y), 'raid',
+      s(DESIGN.icon.sm), { tint: DESIGN.colors.status.error })?.setDepth(Z_INDEX.PANEL_CONTENT + 1);
+
+    const art = resolveEnemyArt(boss.id, ASSET_MANIFEST);
+    if (art) {
+      this._loadSceneTexture(art.key, art.path, (ready) => {
+        if (!this.sys?.isActive()) return;
+        const src = this.textures.get(ready).getSourceImage();
+        if (!src || !src.width) return;
+        const size = s(row.thumb.w) - s(6);
+        const scale = Math.min(size / src.width, size / src.height);
+        this.add.image(s(row.thumb.x), s(row.thumb.y), ready)
+          .setDisplaySize(src.width * scale, src.height * scale)
+          .setDepth(Z_INDEX.PANEL_CONTENT + 1);
+        fallbackIcon?.destroy();
+      });
+    }
+
+    this.add.text(s(row.name.x), s(row.name.y), boss.name || '정화 대상',
+      ts('label', { color: DESIGN.colors.text.primary })).setOrigin(0, 0.5)
+      .setDepth(Z_INDEX.PANEL_CONTENT);
+
+    // 보스전에는 진행도 게이트가 없다. 대신 전력이 모자라면 **여기서 미리 말해 준다** —
+    // 막지 않고 알리는 쪽이라, 판단에 필요한 정보가 결정 지점에 있어야 한다.
+    const enemy = getEnemy?.(boss.id) || null;
+    const bossPower = estimateBossPower({
+      hp: boss.hp, atk: boss.atk, def: boss.def, spd: enemy?.stats?.spd || 0
+    });
+    const { ratio } = comparePower(Math.floor(this.idleSystem.getPartyPower?.() || 0), bossPower);
+    const verdict = verdictForRatio(ratio);
+    const outmatched = ratio > 0 && ratio < 1;
+
+    this.add.text(s(row.hint.x), s(row.hint.y),
+      outmatched ? `${verdict.text} · 정보 보기 ▸` : '정보 보기 ▸',
+      ts('caption', {
+        color: outmatched ? ML.toCss(DESIGN.colors.status.warning) : ML.toCss(this._accent.color)
+      })).setOrigin(0, 0.5).setDepth(Z_INDEX.PANEL_CONTENT);
+
+    const hit = this.add.rectangle(s(row.hit.x), s(row.hit.y), s(row.hit.w), s(row.hit.h))
+      .setAlpha(0.001).setDepth(Z_INDEX.PANEL_BUTTONS + 2).setInteractive({ useHandCursor: true });
+    hit.on('pointerdown', () => this.openPopup('bossinfo'));
+    this._bossRowHit = hit;
+    TutorialTargetRegistry.register('mainmenu.adventure.boss_info', hit, 'MainMenuScene');
+  }
+
+  /**
+   * 씬이 직접 쓰는 텍스처 지연 로드 (임시 키 승격 방식).
+   * scene.restart() 가 로드 중에 들어와도 최종 키가 겹치지 않는다.
+   * @param {string} finalKey
+   * @param {string} path
+   * @param {(key:string) => void} onReady
+   */
+  _loadSceneTexture(finalKey, path, onReady) {
+    if (!finalKey || !path) return;
+    if (this.textures.exists(finalKey)) { onReady(finalKey); return; }
+
+    MainMenuScene._texSeq = (MainMenuScene._texSeq || 0) + 1;
+    const tempKey = '__mm__' + finalKey + '__' + MainMenuScene._texSeq;
+    this.load.once('filecomplete-image-' + tempKey, () => {
+      if (!this.sys?.isActive()) return;
+      if (!this.textures.exists(finalKey) && this.textures.exists(tempKey)) {
+        this.textures.renameTexture(tempKey, finalKey);
+      } else if (this.textures.exists(tempKey)) {
+        this.textures.remove(tempKey);
+      }
+      if (this.textures.exists(finalKey)) onReady(finalKey);
+    });
+    this.load.image(tempKey, path);
+    if (!this.load.isLoading()) this.load.start();
   }
 
   /**
@@ -1266,7 +1311,34 @@ export class MainMenuScene extends Phaser.Scene {
       ? registryHeroes
       : (normalizeHeroes(saveData?.characters || []) || []);
 
-    return heroIds.map((id) => {
+    return this._resolvePartyByIds(heroIds, saveData);
+  }
+
+  /**
+   * 파티 ID 배열 → 전투용 영웅 객체 배열(SSOT).
+   *
+   * `registry.ownedHeroes`(HeroFactory → ProgressionSystem.getFinalStats()로 이미 계산된
+   * 정규화본)를 우선 조회하고, 없을 때만 세이브 캐릭터를 `normalizeHeroes()`로 같은 경로에
+   * 태워 재계산한다. 두 경로 모두 결국 `ProgressionSystem.getFinalStats()`를 거치므로
+   * 레벨/성급/장비 보정이 반영된 스탯이 나온다.
+   *
+   * P0: 이전에는 `prepareBossBattle()`이 이 경로를 타지 않고 `{ ...staticData, ...charData, stats:
+   * staticData?.stats }` 식으로 직접 재구성했다. base_/asc_ 접두 ID를 놓치는 `getCharacter()`
+   * 때문에 static 데이터 자체를 못 찾은 것도 문제였지만, 설령 찾더라도 `staticData.stats`는
+   * 레벨 1 원본 템플릿이라 레벨 20 아이리스가 레벨 1 스탯으로 전투에 들어가는 문제가 남는다.
+   * 다른 전투 진입 경로(_buildOnboardingParty/StageSelectScene)와 소스를 통일해 재발을 막는다.
+   *
+   * @param {Array<string>} heroIds
+   * @param {object} saveData SaveManager.load() 결과
+   * @returns {Array<object>} 정규화된 영웅 배열 (null 제외)
+   */
+  _resolvePartyByIds(heroIds, saveData) {
+    const registryHeroes = this.registry.get('ownedHeroes');
+    const normalized = (Array.isArray(registryHeroes) && registryHeroes.length > 0)
+      ? registryHeroes
+      : (normalizeHeroes(saveData?.characters || []) || []);
+
+    return (heroIds || []).filter(Boolean).map((id) => {
       const hero = normalized.find((h) => h.id === id || h.characterId === id);
       if (hero) return hero;
 
@@ -1343,25 +1415,22 @@ export class MainMenuScene extends Phaser.Scene {
     const bossStage = chapterStages.find(s => s.isBoss);
     const stage = bossStage || getStage(chapterId, `${currentStage.chapter || 1}-${currentStage.stage || 1}`);
 
-    // 파티 로드
+    // 파티 로드 — P0: 다른 전투 진입 경로와 동일한 SSOT(_resolvePartyByIds)를 쓴다.
+    // (레벨/성급/장비 보정이 반영된 ProgressionSystem.getFinalStats() 결과를 얻는다)
     const saveData = SaveManager.load();
     const parties = saveData?.parties || [];
     const rawParty = parties[0];
     const heroIds = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
-    const party = heroIds.map(id => {
-      const charData = (saveData?.characters || []).find(c => c.id === id || c.characterId === id);
-      const staticData = getCharacter(id);
-      if (!charData && !staticData) return null;
-      return { ...staticData, ...charData, id, stats: staticData?.stats || charData?.stats };
-    }).filter(Boolean);
+    const party = this._resolvePartyByIds(heroIds, saveData);
 
     if (party.length === 0) {
       this.showToast('파티를 먼저 편성해주세요!');
       return;
     }
 
+    const fallbackStageId = `${currentStage.chapter || 1}-${currentStage.stage || 1}`;
     transitionManager.slideTransition(this, 'BattleScene', {
-      stage: stage || { id: stageId, name: `스테이지 ${stageId}`, enemies: [], rewards: { gold: 200, exp: 100 } },
+      stage: stage || { id: fallbackStageId, name: `스테이지 ${fallbackStageId}`, enemies: [], rewards: { gold: 200, exp: 100 } },
       party,
       mode: 'boss'
     }, 'right');
@@ -1415,18 +1484,27 @@ export class MainMenuScene extends Phaser.Scene {
     }
 
     // 보상 팝업 표시
+    // P1 후속 수정(2026-09-05): 이 팝업은 3중으로 죽어 있었다 — ① Modal은 `content`를
+    // 읽는데 여기는 `message`를 넘겨 본문이 항상 비어 있었고, ② 버튼은 `onClick`을
+    // 읽는데 여기는 `callback`/`style`을 넘겨 확인 버튼이 아무 동작도 안 했고,
+    // ③ 무엇보다 `.show()`를 호출한 적이 없어(Modal 생성자는 alpha 0 + visible false로
+    // 시작한다) 소탕을 쓴 유저 전원이 이 요약 팝업을 **한 번도 보지 못했다**(자원은
+    // 이미 위에서 정상 지급됨 — 안내만 안 뜬 것).
     const currentStage = this.idleSystem.getCurrentStage();
     const stageName = `${currentStage.chapter}-${currentStage.stage}`;
     const modal = new Modal(this, {
       title: '⚡ 소탕 완료!',
-      message: `📍 스테이지 ${stageName}\n⏱ 예상 클리어: ${sweepRewards.estimatedTime}초\n\n💰 골드: +${goldReward.toLocaleString()}\n✨ 경험치: +${expReward.toLocaleString()} EXP\n🔋 에너지: -10`,
+      content: `📍 스테이지 ${stageName}\n⏱ 예상 클리어: ${sweepRewards.estimatedTime}초\n\n💰 골드: +${goldReward.toLocaleString()}\n✨ 경험치: +${expReward.toLocaleString()} EXP\n🔋 에너지: -10`,
+      width: s(380),
+      height: s(320),
       buttons: [
-        { text: '확인', style: 'primary', callback: () => {
-          modal.close();
+        { text: '확인', onClick: () => {
           this.scene.restart();
         }}
       ]
     });
+    modal.once('hide', () => modal.destroy());
+    modal.show();
   }
 
   /**
@@ -1466,7 +1544,15 @@ export class MainMenuScene extends Phaser.Scene {
     // 명상 성소 뷰. 속성 이름(idleBattleView)은 호출부 계약이라 그대로 둔다 —
     // 바뀐 것은 표현뿐이고 진행도·보상은 여전히 IdleProgressSystem 이 계산한다.
     this.idleBattleView = new MeditationView(
-      this, s(view.cx), s(view.cy), s(view.w), s(view.h), { chrome: false }
+      this, s(view.cx), s(view.cy), s(view.w), s(view.h), {
+        chrome: false,
+        // 상단 "내 파티" 패널을 대체하는 진입점. 뷰는 팝업을 모르고 씬이 행동을 넣는다.
+        onPartyEdit: () => this.openPopup('partyedit'),
+        onSeatTap: (hero) => {
+          if (hero?.id) this.openHeroInfo(hero.id);
+          else this.openPopup('partyedit');
+        }
+      }
     );
     this.idleBattleView.setDepth(Z_INDEX.IDLE_BATTLE);
     this.idleBattleView.setMask(mask);
@@ -1496,9 +1582,12 @@ export class MainMenuScene extends Phaser.Scene {
       // 보스 로드 + 표시
       this.idleSystem.loadCurrentBoss();
       if (this.idleSystem.currentBossData) {
-        // 오프라인 복귀 시 0 에서 채우는 연출을 건너뛰고 마지막 상태로 즉시 스냅한다
+        // 오프라인 복귀 시 0 에서 채우는 연출을 건너뛰고 마지막 상태로 즉시 스냅한다.
+        // focusPerSec: 재진입 직후 실측 틱이 돌기 전에도 집중력이 "—"로 비어 보이지
+        // 않도록 지금 파티 DPS로 미리 채운다(QA P2, MeditationView.setHarvestTarget 참고).
         this.idleBattleView.showBoss(this.idleSystem.currentBossData, {
-          accumulatedDamage: this.idleSystem.accumulatedDamage || 0
+          accumulatedDamage: this.idleSystem.accumulatedDamage || 0,
+          focusPerSec: this.idleSystem.calculateDPS()
         });
       }
       this.idleBattleView.startBattleCycle();
@@ -1542,7 +1631,7 @@ export class MainMenuScene extends Phaser.Scene {
     return (heroIds || []).map((id) => {
       const charData = characters.find((c) => c.id === id);
       if (!charData) return null;
-      const staticData = getCharacterOrHero(id) || getCharacter(id) || {};
+      const staticData = getCharacterOrHero(id) || {};
       return {
         ...staticData,
         ...charData,
@@ -2361,6 +2450,8 @@ export class MainMenuScene extends Phaser.Scene {
       collection: CollectionPopup,
       // T-Q4: 도감 '이야기' 탭. 도감에서 진입하지만 다른 경로(복귀 카드 등)에서도 열 수 있다.
       storylog: StoryLogPopup,
+      // 현재 모험 패널의 보스 줄 -> 정화 대상 정보
+      bossinfo: BossInfoPopup,
     };
     const PopupClass = popups[key];
     if (PopupClass) {
@@ -2470,43 +2561,14 @@ export class MainMenuScene extends Phaser.Scene {
         this.idleBattleView.updateProgress(battleResult.progress);
         this._renderProgress(battleResult.progress);
 
-        // 진행도 100% → 보스전 준비 알림 + 버튼 동적 활성화
-        if (battleResult.bossReady) {
-          this.idleBattleView.showBossReady();
-          this.showToast('⚔️ 보스전 준비 완료! 보스전 버튼을 눌러주세요.');
-        }
+        // 마력 만충 — 성소 게이지가 발광하고 제단이 빛기둥을 세운다.
+        // 토스트로 "누르세요"라고 말하지 않는다. 보스전은 원래 언제든 들어갈 수 있고,
+        // 만충은 새 행동을 여는 사건이 아니라 상태일 뿐이다.
+        if (battleResult.bossReady) this.idleBattleView.showBossReady();
       }
 
-      // BUG-12 수정: 보스 버튼 상태를 매 프레임 체크하여 동적 갱신 (재접속 시 즉시 반영)
-      const nowBossReady = this.idleSystem.isBossReady?.() || false;
-      if (nowBossReady !== this._bossReady) {
-        this._bossReady = nowBossReady;
-        if (this._bossBtnGfx && this._bossBtnText && this._bossSlot) {
-          this._drawPanelButton(
-            this._bossSlot,
-            nowBossReady ? DESIGN.colors.status.error : DESIGN.colors.bg.surface,
-            this._bossBtnGfx
-          );
-          this._bossBtnText.setAlpha(nowBossReady ? 1 : 0.5);
-
-          // 활성화 시 펄스 애니메이션
-          if (nowBossReady && !this._bossPulseTween) {
-            this._bossPulseTween = this.tweens.add({
-              targets: this._bossBtnText,
-              scaleX: { from: 1, to: 1.05 },
-              scaleY: { from: 1, to: 1.05 },
-              duration: 800,
-              yoyo: true,
-              repeat: -1,
-              ease: 'Sine.easeInOut'
-            });
-          } else if (!nowBossReady && this._bossPulseTween) {
-            this._bossPulseTween.stop();
-            this._bossPulseTween = null;
-            this._bossBtnText.setScale(1);
-          }
-        }
-      }
+      // 보스 버튼은 상태가 변하지 않는다 — 진행도 게이트가 없어졌으므로 매 프레임
+      // 색을 다시 칠할 이유도 없다. 진행도는 성소 게이지와 진행바가 보여 준다.
     }
   }
 }

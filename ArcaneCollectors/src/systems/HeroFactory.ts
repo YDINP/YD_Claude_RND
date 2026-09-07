@@ -4,7 +4,7 @@
  */
 
 import type { Character, OwnedHero, NormalizedHero, CharacterStats } from '../types';
-import { getCharacter, getCharacterOrHero } from '../data/index.js';
+import { getCharacterOrHero } from '../data/index.js';
 import { getRarityKey, getRarityStars } from '../utils/rarityUtils.js';
 import { ProgressionSystem } from './ProgressionSystem.js';
 
@@ -159,7 +159,8 @@ export class HeroFactory {
    * @returns 정규화된 영웅 객체
    */
   static createStarter(characterId: string): NormalizedHero | null {
-    const charData = getCharacter(characterId);
+    // SSOT: base_/asc_ 접두 ID까지 포괄하는 getCharacterOrHero 사용 (BLK-03과 동일 계열 버그 예방)
+    const charData = getCharacterOrHero(characterId);
     if (!charData) return null;
 
     return HeroFactory.createFromCharacterData(charData, {

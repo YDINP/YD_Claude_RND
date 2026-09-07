@@ -11,11 +11,18 @@
  *
  * 화면 구조 (겹친 4패널 → 2단 + 4탭):
  *   0    ~ 80    헤더 (뒤로 · 이름 · 등급/레벨/교단)
- *   80   ~ 660   영웅 스테이지 (교단 방사광 + 엠블럼 워터마크 + 전신 시트)
+ *   80   ~ 660   영웅 스테이지 (교단 방사광 + 엠블럼 워터마크 + 전신 시트 + 치비 배지)
  *   664  ~ 720   탭 바 4칸
  *   728  ~ 1148  탭 콘텐츠 (글래스 패널 1개를 4탭이 재사용)
  *   1160 ~ 1232  액션 바 (레벨업 · 자동 레벨업 · 진화)
+ *
+ * 치비 시트 조회(매니페스트 조회·전직 영웅 폴백)는 이 파일이 다시 구현하지 않는다.
+ * MeditationView(성소) 와 같은 규칙을 써야 하므로 `chibiSheet.js` 공용 유틸을
+ * 그대로 가져다 쓴다 — 그 모듈도 의존성 0 인 순수 함수라 TDZ 위험이 없다.
  */
+import { resolveChibiSheet, frameIndex } from './chibiSheet.js';
+
+export { resolveChibiSheet, frameIndex };
 
 /** 기획 좌표계 크기 */
 export const BASE_WIDTH = 720;
@@ -310,6 +317,66 @@ export function computeRibbonSlots(rect = HERO_DETAIL_LAYOUT.ribbon, options = {
  */
 export function fullbodyClearsRibbon(layout = HERO_DETAIL_LAYOUT) {
   return layout.stage.y + layout.stage.h <= layout.ribbon.y;
+}
+
+// ------------------------------------------------------------------
+// 치비 배지 (스테이지 좌하단)
+// ------------------------------------------------------------------
+
+/**
+ * 치비 배지 자리 — 전신 일러스트는 xRatio 0.60 로 스테이지 오른쪽에 치우쳐 서므로
+ * (`computeFullbodyAnchor`), 반대편인 스테이지 좌하단에 작게 둔다. 바닥은 리본
+ * 위쪽 끝보다 위라 리본과도 겹치지 않는다.
+ */
+export const CHIBI_BADGE = Object.freeze({
+  size: 104,     // 표시 높이(=폭, 정사각 셀). 최소 터치 타겟(48) 여유 있게 상회
+  padX: 26,      // 스테이지 좌측 여백 안쪽 거리
+  padBottom: 14  // 스테이지 바닥(리본 위)에서 위로 띄우는 양
+});
+
+/**
+ * 치비 배지 위치를 구한다. origin(0.5, 1) 기준 — 발밑 중심이 (x, y) 다.
+ *
+ * @param {Object} [options]
+ * @param {number} [options.size] - 표시 높이/폭. 기본 CHIBI_BADGE.size
+ * @param {number} [options.padX] - 좌측 여백. 기본 CHIBI_BADGE.padX
+ * @param {number} [options.padBottom] - 하단 여백. 기본 CHIBI_BADGE.padBottom
+ * @returns {{x:number,y:number,size:number,left:number,right:number,top:number,bottom:number}}
+ */
+export function computeChibiBadge(options = {}) {
+  const stage = HERO_DETAIL_LAYOUT.stage;
+  const size = options.size ?? CHIBI_BADGE.size;
+  const padX = options.padX ?? CHIBI_BADGE.padX;
+  const padBottom = options.padBottom ?? CHIBI_BADGE.padBottom;
+
+  const x = HERO_DETAIL_LAYOUT.margin + padX + size / 2;
+  const bottom = stage.y + stage.h - padBottom;
+
+  return {
+    x,
+    y: bottom,
+    size,
+    left: x - size / 2,
+    right: x + size / 2,
+    top: bottom - size,
+    bottom
+  };
+}
+
+/**
+ * 치비 배지가 전신 일러스트를 가리지 않는지 본다 (회귀 가드).
+ * 전신은 origin(0.5, 1) 이므로 왼쪽 끝은 anchor.x - fit.width/2 다.
+ *
+ * @param {{right:number}} badge - computeChibiBadge() 결과
+ * @param {{width:number}} fullbodyFit - computeFullbodyFit() 결과
+ * @param {{x:number}} anchor - computeFullbodyAnchor() 결과
+ * @param {number} [gap] - 최소 간격(기획 px). 기본 8
+ * @returns {boolean}
+ */
+export function chibiClearsFullbody(badge, fullbodyFit, anchor, gap = 8) {
+  if (!badge || !fullbodyFit || !anchor) return true;
+  const fullbodyLeft = anchor.x - fullbodyFit.width / 2;
+  return badge.right + gap <= fullbodyLeft;
 }
 
 // ------------------------------------------------------------------
@@ -610,6 +677,114 @@ export function buildSubtitle({ rarity, level, cultName } = {}) {
   if (Number.isFinite(Number(level))) chunks.push(`Lv.${Number(level)}`);
   if (cultName) chunks.push(String(cultName));
   return chunks.join(' · ');
+}
+
+// ================================================================
+// 성장(레벨업·진화) 표시 규칙 — 부분 갱신의 단일 출처
+//
+// 레벨업은 화면을 다시 그리지 않고 **바뀐 숫자만** 갈아끼운다(P1). 그러려면
+// "무엇이 바뀌었는지"를 Phaser 없이 계산할 수 있어야 한다. 아래 순수 함수들이
+// 최초 그리기(createActionBar/createRibbon)와 부분 갱신 양쪽에서 같이 쓰인다 —
+// 두 경로가 서로 다른 문자열을 만들면 갱신 후 화면이 어긋나기 때문이다.
+// ================================================================
+
+/** 등급별 최대 레벨. ProgressionSystem 에 상세가 없을 때의 폴백 */
+export const MAX_LEVEL_BY_RARITY = Object.freeze({ N: 30, R: 40, SR: 50, SSR: 60 });
+
+/** 등급표에 없는 등급(전직 영웅 등)의 최대 레벨 */
+export const FALLBACK_MAX_LEVEL = 60;
+
+/** 레벨 1당 레벨업 골드 = level * 이 값 */
+export const LEVEL_UP_GOLD_PER_LEVEL = 100;
+
+/**
+ * 이 영웅의 최대 레벨.
+ * @param {string} rarityKey - 'N'|'R'|'SR'|'SSR'
+ * @param {number} [override] - ProgressionSystem 이 준 값이 있으면 그것이 우선
+ * @returns {number}
+ */
+export function maxLevelFor(rarityKey, override) {
+  const n = Number(override);
+  if (Number.isFinite(n) && n > 0) return n;
+  return MAX_LEVEL_BY_RARITY[rarityKey] || FALLBACK_MAX_LEVEL;
+}
+
+/**
+ * 다음 1레벨의 골드 비용.
+ * @param {number} level - 현재 레벨
+ * @returns {number} 레벨이 숫자가 아니면 1레벨 기준 비용
+ */
+export function levelUpCost(level) {
+  const n = Number(level);
+  return (Number.isFinite(n) && n > 0 ? Math.floor(n) : 1) * LEVEL_UP_GOLD_PER_LEVEL;
+}
+
+/**
+ * 액션 바 3버튼의 라벨·부제·활성 상태.
+ * 최초 그리기와 레벨업 후 부분 갱신이 같은 함수를 쓴다.
+ *
+ * @param {Object} ctx
+ * @param {number} ctx.level - 현재 레벨
+ * @param {number} ctx.maxLevel - 최대 레벨
+ * @param {number} ctx.gold - 보유 골드
+ * @param {boolean} ctx.canEvolve - 진화 가능 등급인가
+ * @returns {Array<{id:string,label:string,sub:string,enabled:boolean}>}
+ */
+export function buildActionStates({ level, maxLevel, gold, canEvolve } = {}) {
+  const lv = Number(level);
+  const max = Number(maxLevel);
+  const owned = Number(gold);
+  const safeGold = Number.isFinite(owned) ? owned : 0;
+  const isMaxLevel = Number.isFinite(lv) && Number.isFinite(max) && lv >= max;
+  const cost = levelUpCost(lv);
+  const affordable = safeGold >= cost;
+  const canLevelUp = !isMaxLevel && affordable;
+
+  let levelSub;
+  if (isMaxLevel) levelSub = '최대 레벨';
+  else if (!affordable) levelSub = `골드 부족 · ${formatNumber(cost)}`;
+  else levelSub = formatNumber(cost);
+
+  return [
+    { id: 'levelup', label: '레벨업', sub: levelSub, enabled: canLevelUp },
+    {
+      id: 'autolevel',
+      label: '자동 레벨업',
+      sub: isMaxLevel ? '최대 레벨' : (affordable ? '가능한 만큼' : '골드 부족'),
+      enabled: canLevelUp
+    },
+    {
+      id: 'evolve',
+      label: '진화',
+      sub: canEvolve ? '조각 필요' : '최고 등급',
+      enabled: canEvolve === true
+    }
+  ];
+}
+
+/**
+ * 레벨업으로 바뀌는 표시 문자열 묶음.
+ * @param {Object} ctx
+ * @param {string} [ctx.rarityKey]
+ * @param {number} [ctx.level]
+ * @param {number} [ctx.maxLevel]
+ * @param {string} [ctx.cultName]
+ * @param {number} [ctx.power]
+ * @param {{current:number,required:number}} [ctx.exp]
+ * @returns {{subtitle:string,power:string,level:string,exp:string|null,expRatio:number}}
+ */
+export function buildGrowthLabels({ rarityKey, level, maxLevel, cultName, power, exp } = {}) {
+  const current = Number(exp?.current);
+  const required = Number(exp?.required);
+  const hasExp = Number.isFinite(current) && Number.isFinite(required) && required > 0;
+
+  return {
+    subtitle: buildSubtitle({ rarity: rarityKey, level, cultName }),
+    power: formatNumber(power),
+    level: `Lv.${Number.isFinite(Number(level)) ? Number(level) : 1} / ${Number.isFinite(Number(maxLevel)) ? Number(maxLevel) : '-'}`,
+    exp: hasExp ? `EXP  ${formatNumber(current)} / ${formatNumber(required)}` : null,
+    expRatio: hasExp ? Math.max(0, Math.min(1, current / required)) : 0
+  };
 }
 
 export default HERO_DETAIL_LAYOUT;

@@ -15,6 +15,7 @@
 import { chromium } from 'playwright';
 import { BGM_KEYS, SFX_KEYS, audioUrlsFor, eagerAudioKeys } from '../../src/config/audioAssets.js';
 
+import { blockHmr } from './hmr-guard.mjs';
 const BASE_URL = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const BOOT_TIMEOUT_MS = 30000;
 /** 디코드 검증에 쓰는 표본 (전량 디코드하면 느리다) */
@@ -37,6 +38,9 @@ async function run() {
   const browser = await chromium.launch({ headless });
   const page = await browser.newPage({ viewport: { width: 720, height: 1280 } });
 
+  // 공유 dev 서버 격리 — 남이 소스를 저장해도 이 페이지는 리로드되지 않는다.
+  // 실증: node tests/e2e/hmr-guard-verify.mjs
+  await blockHmr(page, BASE_URL);
   const consoleErrors = [];
   page.on('console', (msg) => {
     if (msg.type() !== 'error') return;

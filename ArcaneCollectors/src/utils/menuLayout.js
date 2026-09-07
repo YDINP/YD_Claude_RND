@@ -168,6 +168,12 @@ export function allMenuKeys() {
  * 잠긴 항목만 있는 카테고리는 **카테고리째 사라진다** — 자물쇠 타일을 그리지 않는
  * 기존 규칙(UX_ONBOARDING_FLOW §1-2)을 두 번째 단에도 그대로 적용한 것이다.
  *
+ * QA P2 (2026-09-04): `representative` 를 "해금된 첫 항목"으로 갈아치우던 예전 규칙은
+ * 대표 아이템(예: 도전 카테고리의 무한탑)이 잠겨 있으면 대표 아이콘이 다른 항목
+ * (예: 퀘스트 = 클립보드 모양)으로 바뀌어 "같은 메뉴가 탭마다 다르게 보이는" 학습
+ * 방해를 만들었다. 카테고리 대표 아이콘은 잠금 여부와 무관하게 고정한다 — 잠금
+ * 표시가 필요하면 아이콘이 아니라 별도 표식(자물쇠·딤)으로 한다.
+ *
  * @param {string[]} unlockedKeys 해금된 popupKey 목록 (MenuGridGate.deriveUnlockedMenus 결과)
  * @returns {Array<{id:string,label:string,icon:string,representative:string,items:Array}>}
  */
@@ -176,9 +182,7 @@ export function buildMenuCategories(unlockedKeys = []) {
   return MENU_CATEGORIES
     .map((c) => {
       const items = c.items.filter((i) => unlocked.has(i.popupKey));
-      const representative = items.some((i) => i.popupKey === c.representative)
-        ? c.representative
-        : (items[0]?.popupKey || c.representative);
+      const representative = c.representative;
       return { id: c.id, label: c.label, icon: c.icon, representative, items };
     })
     .filter((c) => c.items.length > 0);

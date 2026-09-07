@@ -34,18 +34,23 @@ export const MIN_TOUCH = 48;
  */
 export const MAIN_LAYOUT = Object.freeze({
   topBar:    { x: 0,      y: 0,    w: 720, h: 80 },
-  party:     { x: GUTTER, y: 88,   w: 680, h: 148 },
-  power:     { x: GUTTER, y: 244,  w: 680, h: 60 },
-  adventure: { x: GUTTER, y: 312,  w: 680, h: 188 },
-  idle:      { x: GUTTER, y: 508,  w: 680, h: 312 },
+  power:     { x: GUTTER, y: 88,   w: 680, h: 60 },
+  adventure: { x: GUTTER, y: 156,  w: 680, h: 232 },
+  idle:      { x: GUTTER, y: 396,  w: 680, h: 424 },
   summary:   { x: GUTTER, y: 828,  w: 680, h: 52 },
   claim:     { x: 208,    y: 888,  w: 304, h: 60 },
   grid:      { x: 0,      y: 960,  w: 720, h: 315 }
 });
 
-/** 대역 순서 — 겹침 검사와 화면 순회에 쓴다 */
+/**
+ * 대역 순서 — 겹침 검사와 화면 순회에 쓴다.
+ *
+ * `party` 대역(88~236)은 사라졌다. 성소에 앉아 있는 4인이 곧 파티라 같은 얼굴을
+ * 화면 위아래에 두 번 그릴 이유가 없다. 편성 진입은 성소 안 코너 버튼이 맡고,
+ * 비워진 156px 은 현재 모험 패널(188->232)과 성소(312->424)가 나눠 가졌다.
+ */
 export const BAND_ORDER = Object.freeze([
-  'topBar', 'party', 'power', 'adventure', 'idle', 'summary', 'claim', 'grid'
+  'topBar', 'power', 'adventure', 'idle', 'summary', 'claim', 'grid'
 ]);
 
 /**
@@ -73,33 +78,22 @@ export const MENU_GRID = Object.freeze({
   badgeR: 13
 });
 
-/** 파티 슬롯 규격 */
-export const PARTY_SLOT = Object.freeze({
-  count: 4,
-  inset: 16,     // 패널 좌우 안쪽 여백
-  avatarDy: 82,  // 패널 상단 → 아바타 중심
-  avatarR: 28,
-  nameDy: 118,
-  levelDy: 134,
-  /** 이름 라벨 좌우 여백 (슬롯 폭에서 뺀다) */
-  nameInset: 8,
-  /**
-   * 이름 최대 글자수. caption(12px) 한글 기준 슬롯 폭 162 - 여백 8 = 154 에
-   * 12글자가 들어가지만 서체 폴백 여유를 두고 10 으로 잡는다.
-   * 현재 로스터 최장 이름은 `혼돈연금사 파올로`(9자)라 전부 온전히 들어간다.
-   */
-  nameMaxChars: 10
-});
-
 /** 현재 모험 패널 내부 규격 */
 export const ADVENTURE = Object.freeze({
   titleDy: 16,
   captionDy: 20,
   stageDy: 52,
-  buttonDy: 84,
+  /**
+   * 보스 줄 — 성소에서 뺀 "지금 정화 중인 대상"이 여기로 왔다.
+   * 88 로 두면 썸네일(44) 윗변이 스테이지 이름 줄(stageDy 52 + 본문 높이)을 먹는다.
+   */
+  bossDy: 102,
+  bossThumb: 44,     // 보스 아트 썸네일 한 변
+  bossHitH: 56,      // 탭 영역 높이 (터치 하한 48 초과)
+  buttonDy: 140,
   buttonH: 64,
   buttonGap: 8,
-  progressDy: 162,
+  progressDy: 212,
   progressH: 10
 });
 
@@ -217,93 +211,6 @@ export function interactiveTopBarSlots() {
 }
 
 // ------------------------------------------------------------------
-// 파티 패널
-// ------------------------------------------------------------------
-
-/**
- * 파티 슬롯 4칸 좌표. 슬롯은 패널 폭을 4등분한 중심에 놓인다.
- * @param {number} [count] - 슬롯 수 (기본 4)
- * @returns {Array<{index:number,x:number,y:number,r:number,nameY:number,levelY:number,hit:Object}>}
- */
-export function computePartySlots(count = PARTY_SLOT.count) {
-  const panel = MAIN_LAYOUT.party;
-  const n = Math.max(1, count);
-  const inner = panel.w - PARTY_SLOT.inset * 2;
-  const slotW = inner / n;
-  const left = panel.x + PARTY_SLOT.inset;
-
-  return Array.from({ length: n }, (_, index) => {
-    const x = left + slotW / 2 + index * slotW;
-    const y = panel.y + PARTY_SLOT.avatarDy;
-    return {
-      index,
-      x,
-      y,
-      r: PARTY_SLOT.avatarR,
-      w: slotW,
-      /** 이름 라벨이 쓸 수 있는 최대 폭 — 넘치면 씬이 폰트를 줄인다 */
-      nameMaxWidth: Math.max(0, slotW - PARTY_SLOT.nameInset * 2),
-      nameY: panel.y + PARTY_SLOT.nameDy,
-      levelY: panel.y + PARTY_SLOT.levelDy,
-      hit: { x, y, w: Math.max(MIN_TOUCH, PARTY_SLOT.avatarR * 2), h: Math.max(MIN_TOUCH, PARTY_SLOT.avatarR * 2) }
-    };
-  });
-}
-
-/**
- * 파티 슬롯 이름을 **어절 단위**로 잘라 말줄임한다 (QA P2-6).
- *
- * 예전에는 `name.substring(0, 5)` 였다. `번개의 아이리스` → `번개의 아`처럼
- * 음절 중간에서 잘리고 말줄임 기호도 없어 이름이 잘렸다는 사실조차 안 보였다.
- *
- * 규칙
- *  1. 상한 안에 들어가면 그대로 둔다 (현재 로스터는 전부 여기에 해당한다).
- *  2. 넘치면 공백 기준 어절을 앞에서부터 담고 `…`를 붙인다 — 음절을 쪼개지 않는다.
- *  3. 첫 어절 하나도 못 담으면 그때만 글자 단위로 자르고 `…`를 붙인다.
- *
- * @param {string} name 원본 이름
- * @param {number} [maxChars] 상한 글자수 (말줄임 기호 포함)
- * @returns {string}
- */
-export function fitPartySlotName(name, maxChars = PARTY_SLOT.nameMaxChars) {
-  const raw = typeof name === 'string' ? name.trim() : '';
-  const limit = Math.max(1, Math.floor(Number.isFinite(maxChars) ? maxChars : PARTY_SLOT.nameMaxChars));
-  if (raw === '') return '';
-  if (raw.length <= limit) return raw;
-
-  const words = raw.split(/\s+/).filter(Boolean);
-  const budget = limit - 1; // '…' 한 칸
-  let kept = '';
-  for (const word of words) {
-    const next = kept === '' ? word : `${kept} ${word}`;
-    if (next.length > budget) break;
-    kept = next;
-  }
-  if (kept === '') kept = raw.slice(0, budget);
-  return `${kept}…`;
-}
-
-/**
- * 파티 패널 헤더(제목 + 편성 버튼).
- * 편성 버튼은 §3-1 대로 x=560 대역으로 당겨 우상단 FAB 와 겹치지 않게 한다.
- * 시각 알약은 낮지만 히트 박스는 터치 하한을 지킨다.
- * @returns {{title:{x:number,y:number}, editPill:Object, editHit:Object}}
- */
-export function computePartyHeader() {
-  const panel = MAIN_LAYOUT.party;
-  const pillW = 108;
-  const pillH = 36;
-  const cx = 600;
-  const cy = panel.y + 20;
-
-  return {
-    title: { x: panel.x + 20, y: panel.y + 8 },
-    editPill: { x: cx, y: cy, w: pillW, h: pillH },
-    editHit: { x: cx, y: cy, w: Math.max(MIN_TOUCH, pillW), h: MIN_TOUCH }
-  };
-}
-
-// ------------------------------------------------------------------
 // 전투력 바
 // ------------------------------------------------------------------
 
@@ -326,6 +233,35 @@ export function computePowerRow() {
 // ------------------------------------------------------------------
 // 현재 모험 패널
 // ------------------------------------------------------------------
+
+/**
+ * 현재 모험 패널의 보스 줄 — 썸네일 + 이름 + "정보 보기" 힌트.
+ *
+ * 성소에서 뺀 정보다. 명상 장면 안에 전투 대상 이름이 있으면 두 이야기가 섞인다.
+ * 여기서는 "지금 어디를 정화하고 있는가"가 챕터·스테이지와 한 덩어리로 읽힌다.
+ * 줄 전체가 탭 영역이라 손가락이 이름을 정확히 맞출 필요가 없다.
+ *
+ * @returns {{thumb:Object, name:Object, hint:Object, hit:Object}}
+ */
+export function computeAdventureBoss() {
+  const panel = MAIN_LAYOUT.adventure;
+  const inset = 20;
+  const cy = panel.y + ADVENTURE.bossDy;
+  const size = ADVENTURE.bossThumb;
+  const left = panel.x + inset;
+
+  return {
+    thumb: { x: left + size / 2, y: cy, w: size, h: size },
+    name: { x: left + size + 12, y: cy - 9 },
+    hint: { x: left + size + 12, y: cy + 9 },
+    hit: {
+      x: panel.x + panel.w / 2,
+      y: cy,
+      w: panel.w - inset * 2,
+      h: Math.max(MIN_TOUCH, ADVENTURE.bossHitH)
+    }
+  };
+}
 
 /**
  * 현재 모험 패널의 CTA 버튼 배치.
@@ -556,7 +492,6 @@ export default {
   BASE_H,
   MAIN_LAYOUT,
   MENU_GRID,
-  PARTY_SLOT,
   ADVENTURE,
   IDLE_WINDOW,
   BAND_ORDER,
@@ -567,10 +502,8 @@ export default {
   computeTopBarSlots,
   interactiveTopBarSlots,
   computeEnergyFill,
-  computePartySlots,
-  fitPartySlotName,
-  computePartyHeader,
   computePowerRow,
+  computeAdventureBoss,
   computeAdventureButtons,
   computeAdventureRows,
   computeIdleBand,

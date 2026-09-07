@@ -2,14 +2,22 @@
  * GachaBannerPanel.js — 소환 배너 (REDESIGN_PLAN §3-2, T-12)
  *
  * 이전 화면에서 배너 자리는 회색 플레이스홀더 상자였고 그 아래로 720px 이 비어 있었다.
- * 이 컴포넌트가 그 자리를 통째로 채운다. 위에서 아래로 4겹이다.
+ * 이 컴포넌트가 그 자리를 통째로 채운다. 뒤에서 앞으로 5겹이다.
  *
  *   ① 키 비주얼   banner_pickup_* 일러스트를 cover-fit 후 라운드 사각형으로 마스킹
- *   ② 픽업 전신   픽업 캐릭터의 fullbody 시트를 배너 위에 세운다 (지연 로드)
- *   ③ 페이드 플레이트  하단 34% 를 bg.primary 로 녹여 글자 대비를 만든다
- *   ④ 정보        배너 탭 스트립 · 재화 칩 · 픽업 이름/등급/기간
+ *   ② 스포트라이트  전신이 설 자리에 어두운 타원을 깔아 배경을 삼킨다
+ *   ③ 픽업 전신   픽업 캐릭터의 fullbody 시트를 배너 위에 세운다 (지연 로드)
+ *   ④ 페이드 플레이트  하단 34% 를 bg.primary 로 녹여 글자 대비를 만든다
+ *   ⑤ 정보        배너 탭 스트립 · 재화 칩 · 픽업 이름/등급/기간
  *
- * ①②는 asset-manifest 의 lazyTextures / fullbody 버킷이라 **없을 수 있다**.
+ * ## 인물이 둘로 읽히던 결함 (플레이 리포트 P1)
+ * `banner_pickup_iris` / `banner_pickup_generic` 은 둘 다 **인물이 그려진 일러스트**다.
+ * 그 위에 픽업 전신 시트를 그대로 세우면 배경 인물과 전경 인물이 겹쳐 실루엣이 묻혔다.
+ * 이제 전신을 세울 때만 키 비주얼을 눌러(알파 0.46 + 냉한 틴트 + 딤 0.44) 장소로 물리고,
+ * 전신 뒤에 스포트라이트 타원과 교단색 백글로우를 넣어 인물만 앞으로 끌어낸다.
+ * 처리값은 `gachaBannerLayout.keyVisualTreatment()` / `computeFigureScrim()` 이 정한다.
+ *
+ * ①③은 asset-manifest 의 lazyTextures / fullbody 버킷이라 **없을 수 있다**.
  * 없으면 교단색 방사 그라디언트와 포트레이트 확대로 내려가고, 레이아웃은 그대로 성립한다.
  *
  * ## 배너 스트립 선택이 실제 뽑기에 반영되는 경로
@@ -22,6 +30,7 @@
  *
  * 주의: gameConfig/designSystem 값을 모듈 스코프에서 평가하지 않는다(순환 import TDZ 방지).
  */
+import Phaser from 'phaser';
 import { s } from '../config/gameConfig.js';
 import { DESIGN, getCultColor } from '../config/designSystem.js';
 import { ts } from '../utils/textStyles.ts';
@@ -42,6 +51,8 @@ import {
   bannerChipLabel,
   bannerBadgeLabel,
   coverFitBanner,
+  keyVisualTreatment,
+  computeFigureScrim,
   computePickupFit,
   computeStripSlots
 } from '../utils/gachaBannerLayout.js';
@@ -51,6 +62,16 @@ const PLATE_RATIO = 0.36;
 
 /** 페이드 밴드 수. 많을수록 부드럽지만 드로우콜이 는다 */
 const FADE_BANDS = 9;
+
+/** 전신 뒤 스포트라이트 타원 겹 수. 겹칠수록 중심이 짙어진다 */
+const SPOT_RINGS = 7;
+
+/**
+ * 백글로우 — 같은 시트를 교단색으로 물들여 한 겹 뒤에 ADD 로 깐다.
+ * 검게 깔면 인물의 반투명 픽셀(머리카락·옷자락)까지 함께 어두워져 전체가 뿌예진다.
+ * 더하기 합성은 그 반대로, 삐져나온 가장자리와 반투명 결만 빛나 실루엣이 살아난다.
+ */
+const BACKGLOW = Object.freeze({ scale: 1.06, alpha: 0.45 });
 
 /**
  * 알약(pill) 모서리 반경.
@@ -200,10 +221,21 @@ export class GachaBannerPanel {
       bg.lineStyle(s(1), active ? color : DESIGN.colors.brand.primary, active ? 1 : 0.35);
       bg.strokeRoundedRect(slot.x, y - chipH / 2, slot.w, chipH, chipR);
 
-      const label = this.scene.add.text(slot.centerX, y, bannerChipLabel(banner, 7), ts('caption', {
+      // QA P2 (2026-09-04): 예전엔 글자 수(7자) 로 무조건 잘랐다. 이 칩(기본 200)은
+      // 웬만한 배너명(예: "번개의 아이리스 픽업")을 실제로는 다 담을 폭이 있는데도
+      // 항상 "번개의 아이…" 로 잘려 정보가 줄었다. 실제 렌더 폭을 재서, 칩에 들어갈
+      // 때까지만 줄인다 — 짧은 배너명은 온전히, 긴 배너명만 필요한 만큼만 잘린다.
+      const fullLabel = bannerChipLabel(banner, Infinity);
+      const label = this.scene.add.text(slot.centerX, y, fullLabel, ts('caption', {
         color: active ? DESIGN.colors.text.inverse : DESIGN.colors.text.secondary,
         fontStyle: active ? 'bold' : 'normal'
       })).setOrigin(0.5);
+      const maxLabelW = slot.w - s(16);
+      let shown = fullLabel;
+      while (label.width > maxLabelW && shown.length > 1) {
+        shown = shown.slice(0, -1);
+        label.setText(`${shown}…`);
+      }
 
       // 히트 영역은 칩보다 크게 잡아 터치 하한(48 base)을 맞춘다
       const hit = this.scene.add.rectangle(
@@ -232,6 +264,11 @@ export class GachaBannerPanel {
 
     this.artLayer.removeAll(true);
     this.infoLayer.removeAll(true);
+    this._figure = null;
+    this._figureRim = null;
+
+    // 키 비주얼 처리(누를지 그대로 둘지)가 전신 유무에 달려 있으므로 먼저 확정한다
+    this._withFigure = !!this.pickupHero;
 
     this._buildKeyVisual();
     this._buildPickupFigure();
@@ -267,23 +304,28 @@ export class GachaBannerPanel {
   /** @private */
   _placeKeyVisual(key, animate = false) {
     const source = this.scene.textures.get(key).getSourceImage();
+    const treat = keyVisualTreatment(this._withFigure);
     const fit = coverFitBanner(source.width, source.height, this.w, this.h);
+
+    // 전신을 세울 때는 살짝 확대해 초점 거리를 벌린다 — 배경이 뒤로 물러나 보인다
     const image = this.scene.add.image(this.x, this.y, key)
-      .setDisplaySize(fit.width, fit.height)
-      .setAlpha(0.9);
+      .setDisplaySize(fit.width * treat.zoom, fit.height * treat.zoom)
+      .setAlpha(treat.alpha);
+    if (treat.tint !== null) image.setTint(treat.tint);
     this.artLayer.add(image);
     this.artLayer.sendToBack(image);
 
     // 키 비주얼 자체에도 인물이 그려져 있다. 전신 시트를 그 위에 세우면 인물이 둘로 읽히므로
-    // 키 비주얼을 한 단 눌러 배경으로 물러나게 한다. 합쳐서 한 장면으로 보이게 하는 장치다.
+    // 키 비주얼을 눌러 배경으로 물러나게 한다. 합쳐서 한 장면으로 보이게 하는 장치다.
     const veil = this.scene.add.graphics();
-    veil.fillStyle(DESIGN.colors.bg.primary, 0.34);
+    veil.fillStyle(DESIGN.colors.bg.primary, treat.veilAlpha);
     veil.fillRect(this.bounds.left, this.bounds.top, this.w, this.h);
     this.artLayer.add(veil);
 
     if (animate) {
+      const target = treat.alpha;
       image.setAlpha(0);
-      this.scene.tweens.add({ targets: image, alpha: 1, duration: 280, ease: 'Quad.easeOut' });
+      this.scene.tweens.add({ targets: image, alpha: target, duration: 280, ease: 'Quad.easeOut' });
     }
   }
 
@@ -320,7 +362,7 @@ export class GachaBannerPanel {
     this.artLayer.sendToBack(g);
   }
 
-  /** @private ② 픽업 캐릭터 전신. 없으면 포트레이트를 확대해 세운다 */
+  /** @private ③ 픽업 캐릭터 전신. 없으면 포트레이트를 확대해 세운다 */
   _buildPickupFigure() {
     const hero = this.pickupHero;
     if (!hero) return;
@@ -339,6 +381,9 @@ export class GachaBannerPanel {
     if (available) {
       this._queueLazyImage(fbKey, fullbodyPath(fbKey), () => {
         if (!this.scene.sys?.isActive()) return;
+        // 포트레이트 폴백과 그 백글로우를 함께 걷어내고 전신으로 갈아 끼운다.
+        // 백글로우만 남으면 새 전신 뒤에 크기가 다른 역광이 겹친다.
+        if (this._figureRim) { this._figureRim.destroy(); this._figureRim = null; }
         if (this._figure) { this._figure.destroy(); this._figure = null; }
         this._placeFigure(fbKey, true, true);
       });
@@ -354,27 +399,45 @@ export class GachaBannerPanel {
       bannerW: this.w,
       bannerH: this.h,
       heightRatio: isFullbody ? 1.02 : 0.78,
-      maxWidthRatio: isFullbody ? 0.78 : 0.56
+      maxWidthRatio: isFullbody ? 0.74 : 0.54
     });
 
-    const image = this.scene.add.image(
-      this.x + this.w * 0.08,
-      this.bounds.bottom - s(4),
-      key
-    ).setOrigin(0.5, 1).setDisplaySize(fit.width, fit.height);
+    // 배경 일러스트의 인물은 대개 정중앙이다. 전신을 오른쪽으로 밀어 겹침을 줄이고
+    // 왼쪽 아래를 정보 플레이트(이름·배너명)에 내준다.
+    const baseX = this.x + this.w * 0.1;
+    const baseY = this.bounds.bottom - s(4);
+
+    this._buildFigureSpotlight(baseX, fit.width);
+
+    // 백글로우 — 교단색 역광. 어두운 스포트라이트 위에서 인물 윤곽을 되살린다
+    const rim = this.scene.add.image(baseX, baseY, key)
+      .setOrigin(0.5, 1)
+      .setDisplaySize(fit.width * BACKGLOW.scale, fit.height * BACKGLOW.scale)
+      .setTint(this.accentColor)
+      .setAlpha(BACKGLOW.alpha)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.artLayer.add(rim);
+    this._figureRim = rim;
+
+    const image = this.scene.add.image(baseX, baseY, key)
+      .setOrigin(0.5, 1)
+      .setDisplaySize(fit.width, fit.height);
 
     this.artLayer.add(image);
     this._figure = image;
 
     if (animate) {
       image.setAlpha(0);
+      rim.setAlpha(0);
       this.scene.tweens.add({ targets: image, alpha: 1, duration: 320, ease: 'Quad.easeOut' });
+      this.scene.tweens.add({ targets: rim, alpha: BACKGLOW.alpha, duration: 320, ease: 'Quad.easeOut' });
     }
 
-    // 아주 느린 호흡. 서 있는 인물이 살아 있다는 최소한의 신호다
+    // 아주 느린 호흡. 서 있는 인물이 살아 있다는 최소한의 신호다.
+    // 백글로우가 따라 움직이지 않으면 역광만 제자리에 남아 어긋난다.
     this.scene.tweens.add({
-      targets: image,
-      y: image.y - s(6),
+      targets: [rim, image],
+      y: baseY - s(6),
       duration: 3000,
       yoyo: true,
       repeat: -1,
@@ -382,7 +445,31 @@ export class GachaBannerPanel {
     });
   }
 
-  /** @private ③ 하단 페이드 플레이트 — 밴드 9겹으로 그라디언트를 흉내낸다 */
+  /**
+   * @private ② 스포트라이트 — 전신이 설 자리에 어두운 타원을 겹쳐 깐다.
+   * 배경 일러스트의 인물을 통째로 삼킬 만큼 넓어야 전경 인물이 앞으로 나온다.
+   * @param {number} centerX - 전신 중심 x
+   * @param {number} figureW - 전신 표시 폭
+   */
+  _buildFigureSpotlight(centerX, figureW) {
+    const { rx, ry, offsetY } = computeFigureScrim({
+      figureW,
+      bannerW: this.w,
+      bannerH: this.h
+    });
+
+    const g = this.scene.add.graphics();
+    const cy = this.bounds.bottom - offsetY;
+    for (let i = SPOT_RINGS; i >= 1; i--) {
+      g.fillStyle(DESIGN.colors.bg.primary, 0.09);
+      g.fillEllipse(centerX, cy, (rx * 2 * i) / SPOT_RINGS, (ry * 2 * i) / SPOT_RINGS);
+    }
+
+    this.artLayer.add(g);
+    return g;
+  }
+
+  /** @private ④ 하단 페이드 플레이트 — 밴드 9겹으로 그라디언트를 흉내낸다 */
   _buildPlate() {
     const b = this.bounds;
     const plateH = this.h * PLATE_RATIO;
@@ -398,7 +485,7 @@ export class GachaBannerPanel {
     this.artLayer.add(g);
   }
 
-  /** @private ④ 픽업 정보 — 등급 배지 · 이름 · 배너명 · 기간 */
+  /** @private ⑤ 픽업 정보 — 등급 배지 · 이름 · 배너명 · 기간 */
   _buildInfo() {
     const b = this.bounds;
     const banner = this.banner;
@@ -419,7 +506,8 @@ export class GachaBannerPanel {
       color: DESIGN.colors.text.inverse, fontStyle: 'bold'
     })).setOrigin(0.5));
 
-    const heroName = hero ? (hero.name || hero.id) : (banner ? banner.name : '소환');
+    // ID 노출 방지: 이름 해석 실패 시 내부 id 대신 일반 표기로 폴백
+    const heroName = hero ? (hero.name || '???') : (banner ? banner.name : '소환');
     this.infoLayer.add(this.scene.add.text(left + badgeW + s(14), nameY, heroName, ts('title', {
       color: DESIGN.colors.text.primary
     })).setOrigin(0, 0.5));
@@ -527,6 +615,7 @@ export class GachaBannerPanel {
     if (this._maskShape) { this._maskShape.destroy(); this._maskShape = null; }
     if (this.container) { this.container.destroy(true); this.container = null; }
     this._figure = null;
+    this._figureRim = null;
     this.gemText = null;
     this.ticketText = null;
   }

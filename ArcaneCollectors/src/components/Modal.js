@@ -195,6 +195,12 @@ export class Modal extends Phaser.GameObjects.Container {
 
     this.isVisible = true;
     this.setVisible(true);
+    // P1 수정(2026-09-05): 컨테이너 자신의 alpha가 생성자에서 0으로 시작한 뒤
+    // 여기서 한 번도 1로 복원되지 않아, 자식(overlay/panel/버튼)이 각자 alpha 1까지
+    // 트윈해도 부모 alpha(0)와 곱해져 화면엔 아무것도 보이지 않았다(오프라인 보상
+    // 모달이 계산은 되는데 뜨지 않는 P1의 근본 원인 — 클릭 차단 오버레이는 존재하되
+    // 완전 투명해 유저 눈엔 안 보이는 상태였다).
+    this.setAlpha(1);
 
     // PRD VFX-4.7: overlay alpha 0→0.6 (200ms) + panel scale 0.85→1.0 + alpha 0→1 (200ms)
     this.overlay.setAlpha(0);

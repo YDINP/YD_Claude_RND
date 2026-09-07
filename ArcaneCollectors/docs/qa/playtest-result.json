@@ -1,0 +1,77 @@
+{
+  "baseUrl": "http://localhost:3000",
+  "source": "local",
+  "at": "2026-09-05T05:12:29.778Z",
+  "report": [
+    {
+      "id": 2,
+      "name": "명상 로비 — 마력 축적·수확·오프라인 복귀",
+      "source": "local",
+      "checks": [
+        {
+          "ok": true,
+          "name": "로비 진입",
+          "detail": ""
+        },
+        {
+          "ok": true,
+          "name": "유휴 시스템 축적 마력 읽기",
+          "detail": "{\"accumulated\":1010,\"required\":528,\"focus\":308.9887640449438,\"dps\":null,\"partyCount\":null,\"manaText\":null,\"focusText\":\"집중력 309/초\",\"etaText\":null,\"readyVisible\":false}"
+        },
+        {
+          "ok": true,
+          "name": "마력이 시간에 따라 실제로 증가",
+          "detail": "1010 → 4887"
+        },
+        {
+          "ok": true,
+          "name": "표시 집중력/초 ↔ 실측 증가율 일치",
+          "detail": "표시 365.6/s, 실측 387.7/s (비 0.94)"
+        },
+        {
+          "ok": true,
+          "name": "수확(보상받기)이 실제 재화를 지급",
+          "detail": "골드 10009999 → 10021661"
+        },
+        {
+          "ok": true,
+          "name": "새로고침 후 로비 복귀",
+          "detail": ""
+        },
+        {
+          "ok": true,
+          "name": "오프라인 보상이 계산되어 registry 에 실린다",
+          "detail": "{\"gold\":3960,\"exp\":1890,\"duration\":360,\"formattedDuration\":\"6시간 0분\"}"
+        },
+        {
+          "ok": true,
+          "name": "오프라인 6시간 후 복귀 보상 팝업 노출",
+          "detail": "전투력 / 2,487 / 현재 모험 / 챕터 1 · 1-2 / 고블린 숲 / 고블린 왕 / 정보 보기 ▸ / 쉬움"
+        },
+        {
+          "ok": true,
+          "name": "debug.setLastOnlineTime(5) 이 오프라인 계산 필드(lastOnline)를 5시간 전으로 되돌린다",
+          "detail": "{\"hoursAgoOnLastOnline\":5,\"hoursAgoOnLastOnlineTime\":6}"
+        },
+        {
+          "ok": null,
+          "manual": true,
+          "name": "치비 4인 렌더·교단색·부유 애니메이션",
+          "detail": "02-meditation-a-lobby.png / 02-meditation-c-offline-return.png"
+        },
+        {
+          "ok": true,
+          "name": "명상 로비 콘솔 에러 없음",
+          "detail": ""
+        }
+      ],
+      "issues": [],
+      "shots": [
+        "docs/qa/playtest/02-meditation-a-lobby.png",
+        "docs/qa/playtest/02-meditation-b-harvest.png",
+        "docs/qa/playtest/02-meditation-c-offline-return.png"
+      ],
+      "consoleErrors": []
+    }
+  ]
+}

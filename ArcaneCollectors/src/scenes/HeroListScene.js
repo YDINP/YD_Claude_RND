@@ -397,10 +397,12 @@ export class HeroListScene extends Phaser.Scene {
         break;
     }
 
-    // UIX-2.2.1: Display heroes in grid (4 columns, 110x150 cards, 10px spacing)
+    // UIX-2.2.1: Display heroes in grid (4 columns, 110x166 cards, 10px spacing)
+    // QA P2 (2026-09-04): 카드 높이가 150 이면 하단 Lv 라벨(y=68)이 배경 프레임(±70) 밖으로
+    // 3~8px 삐져나와 잘려 보였다. 프레임을 166 으로 늘려 라벨을 완전히 감싼다.
     const cols = 4;
     const cardWidth = s(110);
-    const cardHeight = s(150);
+    const cardHeight = s(166);
     const spacing = s(10);
     const gridWidth = cols * cardWidth + (cols - 1) * spacing;
     const startX = (GAME_WIDTH - gridWidth) / 2 + cardWidth / 2;
@@ -462,9 +464,9 @@ export class HeroListScene extends Phaser.Scene {
   createHeroCard(scene, x, y, hero) {
     const card = scene.add.container(x, y);
 
-    // UIX-2.2.1: Updated card size 110x150
+    // UIX-2.2.1: Updated card size 110x166 (QA P2: Lv 라벨 잘림 방지, 위 updateHeroGrid 주석 참고)
     const cardWidth = s(110);
-    const cardHeight = s(150);
+    const cardHeight = s(166);
 
     // Card background with rarity color (RARITY_COLORS: border/bg/glow)
     const rKey = getRarityKey(hero.rarity);
@@ -642,7 +644,7 @@ export class HeroListScene extends Phaser.Scene {
       const cardWorldX = card.x + this.gridContainer.x;
       const cardWorldY = card.y + this.gridContainer.y;
       const halfW = s(50); // (cardWidth - 10) / 2 = 100/2
-      const halfH = s(70); // (cardHeight - 10) / 2 = 140/2
+      const halfH = s(78); // (cardHeight - 10) / 2 = 156/2
 
       if (worldX >= cardWorldX - halfW && worldX <= cardWorldX + halfW &&
           worldY >= cardWorldY - halfH && worldY <= cardWorldY + halfH) {

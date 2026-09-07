@@ -8,7 +8,7 @@ import { EventBus, GameEvents } from './EventBus.js';
 import bannersData from '../data/banners.json';
 import equipmentData from '../data/equipment.json';
 import { getAllAscendedHeroes, getAllBaseHeroes } from '../data/index.js';
-import energySystem from './EnergySystem.js';
+import { getRarityKey } from '../utils/rarityUtils.js';
 import { EquipmentSystem } from './EquipmentSystem.js';
 import { EQUIPMENT_GACHA } from '../config/equipmentConfig.js';
 
@@ -46,9 +46,6 @@ export class GachaSystem {
     R: [],
     N: []
   };
-
-  // PRD-3: 소환 1회당 에너지 소비량
-  static ENERGY_COST_PER_PULL = 10;
 
   // 배너 데이터
   static _banners = bannersData.banners;
@@ -195,7 +192,6 @@ export class GachaSystem {
    * @param {number} count 소환 횟수 (1 또는 10)
    * @param {string} paymentType 'gems' 또는 'tickets'
    * @param {Object} [options]
-   * @param {boolean} [options.skipEnergyCheck]
    * @param {string} [options.bannerId] 배너 ID. 미지정 시 'standard'(픽업 없음, 기존 동작)로
    *   취급한다 — `_currentBannerId`(배너 UI 선택 상태)에 암묵적으로 의존하면 bannerId를
    *   넘기지 않는 기존 호출부(테스트/무료 10연 등)가 예기치 않게 픽업 라우팅을 타게 된다.
@@ -218,18 +214,9 @@ export class GachaSystem {
     const banner = this.getBannerById(bannerId) || this.getBannerById('standard');
     const hasPickup = !!(banner && Array.isArray(banner.pickupCharacters) && banner.pickupCharacters.length > 0);
 
-    // T-S2/BLK-05: 첫 무료 10연은 재화/에너지 모두 면제
+    // T-S2/BLK-05: 첫 무료 10연은 재화 면제 (가챠는 에너지를 소비하지 않는다 — 전투/스테이지 전용 자원)
     const gachaInfo = SaveManager.getGachaInfo();
     const isFreeTenPull = count === 10 && !gachaInfo.freeTenPullUsed;
-
-    // PRD-3: 에너지 소비 (skipEnergyCheck 옵션으로 기존 테스트 보호, 무료 10연은 면제)
-    const energyCost = (count || 1) * this.ENERGY_COST_PER_PULL;
-    if (!isFreeTenPull && !options.skipEnergyCheck) {
-      const energyResult = energySystem.consume(energyCost, 'gacha');
-      if (!energyResult.success) {
-        return { success: false, error: '에너지가 부족합니다.', results: [], energyRequired: energyCost };
-      }
-    }
 
     // 비용 확인 및 차감 (무료 10연은 면제)
     if (!isFreeTenPull) {
@@ -579,7 +566,7 @@ export class GachaSystem {
   /**
    * CHARACTER_POOL을 base-heroes + ascended-heroes 기반으로 초기화 (PRD-1)
    * ascended-heroes의 rarity 필드를 기준으로 분류.
-   * base-heroes는 rarity 없으면 기본값 R 사용.
+   * base-heroes의 등급은 data/index 접근자가 얹어 주는 파생값(BASE_HERO_RARITY = 'R')이다.
    * @param {Object} [options]
    * @param {boolean} [options.ascendedOnly=false] ascended-heroes만 사용
    */
@@ -602,9 +589,11 @@ export class GachaSystem {
     // base-heroes 로드 (ascendedOnly 옵션이 false일 때만)
     if (!options.ascendedOnly) {
       try {
+        // 기본영웅 등급은 data/index 의 접근자가 이미 채워 준다(BASE_HERO_RARITY).
+        // 여기서 다시 폴백을 두면 값이 두 곳에 살게 된다.
         const baseHeroes = getAllBaseHeroes();
         for (const hero of baseHeroes) {
-          const rarity = hero.rarity || 'R';
+          const rarity = getRarityKey(hero.rarity);
           if (pool[rarity]) {
             pool[rarity].push(hero.id);
           }

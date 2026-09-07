@@ -98,6 +98,11 @@ export class TutorialFlow {
   /**
    * 팝업이 스스로 단계를 바꾸면(AscensionPopup 1→2→3) 하이라이트 대상도 바뀐다.
    * 팝업은 튜토리얼에 알리지 않으므로, 강조 중에는 주기적으로 대상을 재해석한다.
+   *
+   * 두 번째 방어선(2026-09-05 P0): 재평가가 늦어져 홀 타깃이 파괴된 채로 남으면
+   * (예: 팝업이 setActions로 버튼을 통째로 재생성) 홀이 "이미 사라진 자리"를
+   * 계속 가리켜 마스크가 화면 전체를 막는다. 살아있던 타깃이 죽거나 폴백 앵커로
+   * 격하되는 순간도 "변경"으로 취급해 refresh() 를 걸어 즉시 코치마크로 강등시킨다.
    */
   _startTargetWatch(step) {
     this._stopTargetWatch();
@@ -111,8 +116,10 @@ export class TutorialFlow {
         const tid = this._activeTargetTid(step);
         if (!tid) return;
         const resolved = TutorialTargetRegistry.resolve(tid, { scene: this.scene });
-        const changed = resolved?.object && resolved.object !== this.overlay.holeTarget;
-        if (changed) this.refresh();
+        const resolvedLive = resolved?.tier === RESOLUTION_TIER.REGISTRY || resolved?.tier === RESOLUTION_TIER.SCENE_NAME;
+        const movedToNewTarget = resolvedLive && resolved.object !== this.overlay.holeTarget;
+        const targetDied = !resolvedLive && !!this.overlay.holeTarget;
+        if (movedToNewTarget || targetDied) this.refresh();
       },
     });
   }

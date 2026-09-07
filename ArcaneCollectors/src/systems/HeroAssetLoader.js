@@ -65,6 +65,9 @@ export class HeroAssetLoader {
   /** 원본(최대 1024 PNG) 포트레이트 경로. 영웅 상세의 큰 표시에만 지연 로드한다 */
   static HIRES_PATH = 'assets/characters/portraits@2x/';
 
+  /** 온디맨드 플레이스홀더/승격 캔버스의 통일 사이즈 (HeroCard 등 호출부가 리사이즈) */
+  static PLACEHOLDER_SIZE = 80;
+
   /**
    * 영웅 ID에 대응하는 원본 파일명을 반환합니다.
    * @param {Object} heroData
@@ -145,6 +148,19 @@ export class HeroAssetLoader {
   /**
    * 텍스처 보장: 없으면 향상된 플레이스홀더를 즉시 생성하고 사용 가능한 키를 반환합니다.
    * 가챠 결과/영웅 목록 등 동적 표시 지점에서 사용 (IMG-3).
+   *
+   * P2-5: 예전에는 플레이스홀더를 굽는 것으로 끝나서, 부팅 프리로드(PreloadScene)가
+   * 아직 그 영웅의 실제 이미지를 못 받아온 시점(레거시 마이그레이션 세이브를 들고
+   * 필터/정렬로 카드가 재생성되는 경우 등)에는 플레이스홀더가 세션 내내 굳어버렸다.
+   * 지금은 플레이스홀더 CanvasTexture 자체에 상태 플래그를 달아 두고, 뒤에서 실제
+   * 이미지를 받아 같은 캔버스 내용만 다시 그린 뒤 refresh() 한다. 키 자체를
+   * remove/재등록하지 않으므로 이미 그 키를 참조 중인 Image 게임 오브젝트도 별도
+   * 처리 없이 갱신된다(공용 텍스처 오해제 회귀를 반복하지 않기 위한 선택 —
+   * RES-ABS 계열 3회 회귀 전례). scene.textures 는 씬마다 별개가 아니라 게임 전체가
+   * 공유하는 매니저이므로, 플래그도 씬이 아니라 텍스처 객체에 붙여야 다른 씬에서
+   * 같은 키를 다시 만졌을 때도(예: 부팅 프리로드가 늦어 HeroListScene 이 먼저
+   * 플레이스홀더를 굽고, 이후 HeroDetailScene 이 같은 키를 조회하는 경우) 승격
+   * 시도가 이어진다.
    * @param {Phaser.Scene} scene
    * @param {Object} heroData - 최소 id 필요 (cult/mood/class/rarity/name 있으면 고품질 플레이스홀더)
    * @returns {string|null} 사용 가능한 텍스처 키 (생성 실패 시 null)
@@ -152,15 +168,75 @@ export class HeroAssetLoader {
   static ensureTexture(scene, heroData) {
     if (!heroData || !heroData.id) return null;
     const key = HeroAssetLoader.getTextureKey(heroData);
-    if (!scene.textures.exists(key)) {
+    let texture = scene.textures.exists(key) ? scene.textures.get(key) : null;
+    if (!texture) {
       try {
-        HeroAssetLoader._createEnhancedPlaceholder(scene, heroData, key);
+        texture = HeroAssetLoader._createEnhancedPlaceholder(scene, heroData, key);
+        if (texture) texture.__heroPlaceholder = true;
       } catch (e) {
         console.warn(`[HeroAssetLoader] ensureTexture 실패 (${key}):`, e);
         return null;
       }
     }
+    if (texture?.__heroPlaceholder && !texture.__heroUpgrading && !texture.__heroUpgradeFailed) {
+      HeroAssetLoader._upgradeToRealPortrait(scene, heroData, key, texture);
+    }
     return key;
+  }
+
+  /**
+   * 플레이스홀더로 채워진 텍스처를 실제 포트레이트로 승격 시도한다 (P2-5, 배경에서 1회).
+   *
+   * scene.load 큐를 타지 않는다 — lazyTexture.js 와 같은 이유로, Phaser 로더가 이미
+   * 돌고 있는 시점에 올린 파일은 받아지고도 TextureManager 에 등록되지 않을 수 있다.
+   * 브라우저 Image 로 직접 받아 같은 캔버스에 그린다.
+   *
+   * @param {Phaser.Scene} scene
+   * @param {Object} heroData
+   * @param {string} key
+   * @param {Phaser.Textures.CanvasTexture} texture - 승격 대상 플레이스홀더 텍스처(중복 요청 가드용으로 직접 들고 있는다)
+   */
+  static _upgradeToRealPortrait(scene, heroData, key, texture) {
+    const fileName = HeroAssetLoader.getFileName(heroData);
+    if (!fileName) return; // portrait-mapping 미등록 — 승격할 실제 자산이 없다
+    if (typeof Image === 'undefined') return;
+
+    texture.__heroUpgrading = true; // 같은 프레임/근접 호출에서 중복 요청 방지
+
+    const path = `${HeroAssetLoader.RUNTIME_PATH}${fileName}${HeroAssetLoader.RUNTIME_EXT}`;
+    const size = HeroAssetLoader.PLACEHOLDER_SIZE;
+
+    const img = new Image();
+    img.onload = () => {
+      texture.__heroUpgrading = false;
+
+      // 로드 도중 씬/게임이 내려갔으면 텍스처 매니저가 없을 수 있다
+      if (!scene.textures || !scene.textures.exists(key)) return;
+      // 그 사이 키가 다른 텍스처로 교체됐거나(제거 후 재등록) 이미 승격됐으면 손대지 않는다
+      if (scene.textures.get(key) !== texture || !texture.__heroPlaceholder) return;
+      if (typeof texture.context?.drawImage !== 'function') return; // CanvasTexture 아님(방어적 체크)
+
+      try {
+        const iw = img.naturalWidth || img.width || size;
+        const ih = img.naturalHeight || img.height || size;
+        const coverScale = Math.max(size / iw, size / ih);
+        const dw = iw * coverScale;
+        const dh = ih * coverScale;
+        texture.context.clearRect(0, 0, size, size);
+        texture.context.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
+        texture.refresh();
+      } catch (e) {
+        console.warn(`[HeroAssetLoader] 실제 포트레이트 승격 실패 (${key}):`, e);
+        return;
+      }
+      texture.__heroPlaceholder = false;
+    };
+    img.onerror = () => {
+      texture.__heroUpgrading = false;
+      texture.__heroUpgradeFailed = true;
+      console.warn(`[HeroAssetLoader] 실제 포트레이트 승격 로드 실패, 플레이스홀더 유지: ${key} (${path})`);
+    };
+    img.src = path;
   }
 
   /**
@@ -186,7 +262,7 @@ export class HeroAssetLoader {
    * @param {string} key
    */
   static _createEnhancedPlaceholder(scene, hero, key) {
-    const size = 80; // 통일 사이즈 (HeroCard 내부에서 리사이즈)
+    const size = HeroAssetLoader.PLACEHOLDER_SIZE; // 통일 사이즈 (HeroCard 내부에서 리사이즈)
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
@@ -245,8 +321,8 @@ export class HeroAssetLoader {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.fillText(initial, size / 2, size / 2 + 16);
 
-    // 텍스처 등록
-    scene.textures.addCanvas(key, canvas);
+    // 텍스처 등록 — CanvasTexture를 반환한다(ensureTexture의 승격 경로가 같은 캔버스를 재사용)
+    return scene.textures.addCanvas(key, canvas);
   }
 
   /**

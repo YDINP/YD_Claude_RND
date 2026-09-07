@@ -1,10 +1,18 @@
 {
-  "generatedAt": "2026-09-03T03:48:45.426Z",
+  "generatedAt": "2026-09-05T06:57:59.784Z",
   "baseUrl": "http://localhost:3000",
   "budget": {
-    "cycles": 5,
+    "cycles": 8,
+    "baselineCycle": 2,
     "heapGrowthMaxPercent": 15,
-    "textureCountGrowthMax": 10,
+    "coreTextureGrowthMax": 6,
+    "vectorIconMaxKeys": 60,
+    "textureResidentMaxMB": 210,
+    "sceneListenerGrowthMax": 0,
+    "eventBusListenerGrowthMax": 0,
+    "activeTweenMax": 24,
+    "activeTimerMax": 12,
+    "displayObjectGrowthMax": 12,
     "route": [
       "MainMenuScene",
       "HeroListScene",
@@ -16,78 +24,1368 @@
       "MainMenuScene"
     ]
   },
+  "textureBuckets": {
+    "heroHires": [
+      "@2x$"
+    ],
+    "fullbody": [
+      "^fb_"
+    ],
+    "chibi": [
+      "^chibi_"
+    ],
+    "enemyArt": [
+      "^enemy_art_"
+    ],
+    "background": [
+      "^bg_",
+      "^battle_bg$",
+      "_blur$"
+    ],
+    "menuIcon": [
+      "^menu_",
+      "^icon_"
+    ],
+    "vectorIcon": [
+      "^vicon_"
+    ],
+    "textCanvas": [
+      "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-"
+    ],
+    "frame": [
+      "^frame_"
+    ],
+    "heroPortrait": [
+      "^hero_",
+      "^char_"
+    ]
+  },
   "snapshots": [
     {
       "label": "cycle_1",
-      "heapUsedBytes": 109000000,
-      "heapTotalBytes": 167000000,
-      "textureCount": 232,
-      "tweenCount": 1,
-      "timerCount": 2,
-      "displayObjectCount": 8,
+      "heroId": "base_iris",
+      "battleOutcome": "victory",
+      "heapUsedBytes": 25928168,
+      "heapTotalBytes": 28348416,
+      "domNodes": 324,
+      "domListeners": 329,
+      "documents": 1,
+      "textureCount": 229,
+      "textureBytes": 166276908,
+      "textureBuckets": {
+        "heroHires": {
+          "count": 0,
+          "bytes": 0
+        },
+        "fullbody": {
+          "count": 2,
+          "bytes": 5595136
+        },
+        "chibi": {
+          "count": 1,
+          "bytes": 1048576
+        },
+        "enemyArt": {
+          "count": 0,
+          "bytes": 0
+        },
+        "background": {
+          "count": 14,
+          "bytes": 94948560
+        },
+        "menuIcon": {
+          "count": 48,
+          "bytes": 5081152
+        },
+        "vectorIcon": {
+          "count": 19,
+          "bytes": 74832
+        },
+        "textCanvas": {
+          "count": 32,
+          "bytes": 128
+        },
+        "frame": {
+          "count": 12,
+          "bytes": 6945600
+        },
+        "heroPortrait": {
+          "count": 69,
+          "bytes": 39914112
+        },
+        "other": {
+          "count": 32,
+          "bytes": 12668812
+        }
+      },
+      "tweenCount": 10,
+      "timerCount": 3,
+      "displayObjectCount": 148,
+      "graphicsCount": 46,
+      "emitterCount": 0,
+      "textCount": 32,
+      "spriteCount": 23,
+      "sceneListeners": 438,
+      "gameListeners": 20,
+      "eventBusListeners": 20,
+      "eventBusTopEvents": [
+        {
+          "event": "stage_cleared",
+          "count": 2
+        },
+        {
+          "event": "gacha_complete",
+          "count": 2
+        },
+        {
+          "event": "character_added",
+          "count": 2
+        },
+        {
+          "event": "evolve",
+          "count": 2
+        },
+        {
+          "event": "heroEvolved",
+          "count": 1
+        },
+        {
+          "event": "level_up",
+          "count": 1
+        },
+        {
+          "event": "chapter_completed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:step_committed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:menus_unlocked",
+          "count": 1
+        },
+        {
+          "event": "quest_complete",
+          "count": 1
+        }
+      ],
       "activeSceneKeys": [
-        "CutsceneScene"
-      ]
+        "MainMenuScene"
+      ],
+      "perScene": {
+        "MainMenuScene": {
+          "tweens": 10,
+          "timers": 3,
+          "displayObjects": 148
+        }
+      }
     },
     {
       "label": "cycle_2",
-      "heapUsedBytes": 109000000,
-      "heapTotalBytes": 167000000,
-      "textureCount": 232,
-      "tweenCount": 7,
-      "timerCount": 4,
-      "displayObjectCount": 89,
+      "heroId": "asc_sol_nature",
+      "battleOutcome": "victory",
+      "heapUsedBytes": 26034276,
+      "heapTotalBytes": 29921280,
+      "domNodes": 337,
+      "domListeners": 329,
+      "documents": 1,
+      "textureCount": 235,
+      "textureBytes": 166292524,
+      "textureBuckets": {
+        "heroHires": {
+          "count": 0,
+          "bytes": 0
+        },
+        "fullbody": {
+          "count": 2,
+          "bytes": 5595136
+        },
+        "chibi": {
+          "count": 1,
+          "bytes": 1048576
+        },
+        "enemyArt": {
+          "count": 0,
+          "bytes": 0
+        },
+        "background": {
+          "count": 14,
+          "bytes": 94948560
+        },
+        "menuIcon": {
+          "count": 48,
+          "bytes": 5081152
+        },
+        "vectorIcon": {
+          "count": 25,
+          "bytes": 90448
+        },
+        "textCanvas": {
+          "count": 32,
+          "bytes": 128
+        },
+        "frame": {
+          "count": 12,
+          "bytes": 6945600
+        },
+        "heroPortrait": {
+          "count": 69,
+          "bytes": 39914112
+        },
+        "other": {
+          "count": 32,
+          "bytes": 12668812
+        }
+      },
+      "tweenCount": 10,
+      "timerCount": 3,
+      "displayObjectCount": 148,
+      "graphicsCount": 46,
+      "emitterCount": 0,
+      "textCount": 32,
+      "spriteCount": 23,
+      "sceneListeners": 438,
+      "gameListeners": 20,
+      "eventBusListeners": 20,
+      "eventBusTopEvents": [
+        {
+          "event": "stage_cleared",
+          "count": 2
+        },
+        {
+          "event": "gacha_complete",
+          "count": 2
+        },
+        {
+          "event": "character_added",
+          "count": 2
+        },
+        {
+          "event": "evolve",
+          "count": 2
+        },
+        {
+          "event": "heroEvolved",
+          "count": 1
+        },
+        {
+          "event": "level_up",
+          "count": 1
+        },
+        {
+          "event": "chapter_completed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:step_committed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:menus_unlocked",
+          "count": 1
+        },
+        {
+          "event": "quest_complete",
+          "count": 1
+        }
+      ],
       "activeSceneKeys": [
-        "MainMenuScene",
-        "CutsceneScene"
-      ]
+        "MainMenuScene"
+      ],
+      "perScene": {
+        "MainMenuScene": {
+          "tweens": 10,
+          "timers": 3,
+          "displayObjects": 148
+        }
+      }
     },
     {
       "label": "cycle_3",
-      "heapUsedBytes": 109000000,
-      "heapTotalBytes": 167000000,
-      "textureCount": 232,
-      "tweenCount": 7,
-      "timerCount": 4,
-      "displayObjectCount": 89,
+      "heroId": "asc_hana_helheim",
+      "battleOutcome": "victory",
+      "heapUsedBytes": 26276060,
+      "heapTotalBytes": 28348416,
+      "domNodes": 343,
+      "domListeners": 331,
+      "documents": 1,
+      "textureCount": 242,
+      "textureBytes": 169124140,
+      "textureBuckets": {
+        "heroHires": {
+          "count": 0,
+          "bytes": 0
+        },
+        "fullbody": {
+          "count": 3,
+          "bytes": 8392704
+        },
+        "chibi": {
+          "count": 1,
+          "bytes": 1048576
+        },
+        "enemyArt": {
+          "count": 0,
+          "bytes": 0
+        },
+        "background": {
+          "count": 14,
+          "bytes": 94948560
+        },
+        "menuIcon": {
+          "count": 49,
+          "bytes": 5101888
+        },
+        "vectorIcon": {
+          "count": 30,
+          "bytes": 103760
+        },
+        "textCanvas": {
+          "count": 32,
+          "bytes": 128
+        },
+        "frame": {
+          "count": 12,
+          "bytes": 6945600
+        },
+        "heroPortrait": {
+          "count": 69,
+          "bytes": 39914112
+        },
+        "other": {
+          "count": 32,
+          "bytes": 12668812
+        }
+      },
+      "tweenCount": 10,
+      "timerCount": 3,
+      "displayObjectCount": 148,
+      "graphicsCount": 46,
+      "emitterCount": 0,
+      "textCount": 32,
+      "spriteCount": 23,
+      "sceneListeners": 438,
+      "gameListeners": 20,
+      "eventBusListeners": 20,
+      "eventBusTopEvents": [
+        {
+          "event": "stage_cleared",
+          "count": 2
+        },
+        {
+          "event": "gacha_complete",
+          "count": 2
+        },
+        {
+          "event": "character_added",
+          "count": 2
+        },
+        {
+          "event": "evolve",
+          "count": 2
+        },
+        {
+          "event": "heroEvolved",
+          "count": 1
+        },
+        {
+          "event": "level_up",
+          "count": 1
+        },
+        {
+          "event": "chapter_completed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:step_committed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:menus_unlocked",
+          "count": 1
+        },
+        {
+          "event": "quest_complete",
+          "count": 1
+        }
+      ],
       "activeSceneKeys": [
-        "MainMenuScene",
-        "CutsceneScene"
-      ]
+        "MainMenuScene"
+      ],
+      "perScene": {
+        "MainMenuScene": {
+          "tweens": 10,
+          "timers": 3,
+          "displayObjects": 148
+        }
+      }
     },
     {
       "label": "cycle_4",
-      "heapUsedBytes": 109000000,
-      "heapTotalBytes": 167000000,
-      "textureCount": 232,
-      "tweenCount": 7,
-      "timerCount": 4,
-      "displayObjectCount": 89,
+      "heroId": "asc_omar_valhalla",
+      "battleOutcome": "victory",
+      "heapUsedBytes": 26237736,
+      "heapTotalBytes": 33329152,
+      "domNodes": 349,
+      "domListeners": 331,
+      "documents": 1,
+      "textureCount": 247,
+      "textureBytes": 169137452,
+      "textureBuckets": {
+        "heroHires": {
+          "count": 0,
+          "bytes": 0
+        },
+        "fullbody": {
+          "count": 3,
+          "bytes": 8392704
+        },
+        "chibi": {
+          "count": 1,
+          "bytes": 1048576
+        },
+        "enemyArt": {
+          "count": 0,
+          "bytes": 0
+        },
+        "background": {
+          "count": 14,
+          "bytes": 94948560
+        },
+        "menuIcon": {
+          "count": 49,
+          "bytes": 5101888
+        },
+        "vectorIcon": {
+          "count": 35,
+          "bytes": 117072
+        },
+        "textCanvas": {
+          "count": 32,
+          "bytes": 128
+        },
+        "frame": {
+          "count": 12,
+          "bytes": 6945600
+        },
+        "heroPortrait": {
+          "count": 69,
+          "bytes": 39914112
+        },
+        "other": {
+          "count": 32,
+          "bytes": 12668812
+        }
+      },
+      "tweenCount": 12,
+      "timerCount": 3,
+      "displayObjectCount": 148,
+      "graphicsCount": 46,
+      "emitterCount": 0,
+      "textCount": 32,
+      "spriteCount": 23,
+      "sceneListeners": 438,
+      "gameListeners": 20,
+      "eventBusListeners": 20,
+      "eventBusTopEvents": [
+        {
+          "event": "stage_cleared",
+          "count": 2
+        },
+        {
+          "event": "gacha_complete",
+          "count": 2
+        },
+        {
+          "event": "character_added",
+          "count": 2
+        },
+        {
+          "event": "evolve",
+          "count": 2
+        },
+        {
+          "event": "heroEvolved",
+          "count": 1
+        },
+        {
+          "event": "level_up",
+          "count": 1
+        },
+        {
+          "event": "chapter_completed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:step_committed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:menus_unlocked",
+          "count": 1
+        },
+        {
+          "event": "quest_complete",
+          "count": 1
+        }
+      ],
       "activeSceneKeys": [
-        "MainMenuScene",
-        "CutsceneScene"
-      ]
+        "MainMenuScene"
+      ],
+      "perScene": {
+        "MainMenuScene": {
+          "tweens": 12,
+          "timers": 3,
+          "displayObjects": 148
+        }
+      }
     },
     {
       "label": "cycle_5",
-      "heapUsedBytes": 109000000,
-      "heapTotalBytes": 167000000,
-      "textureCount": 233,
-      "tweenCount": 7,
-      "timerCount": 4,
-      "displayObjectCount": 89,
+      "heroId": "base_kai",
+      "battleOutcome": "victory",
+      "heapUsedBytes": 26654004,
+      "heapTotalBytes": 28348416,
+      "domNodes": 349,
+      "domListeners": 331,
+      "documents": 1,
+      "textureCount": 247,
+      "textureBytes": 169137452,
+      "textureBuckets": {
+        "heroHires": {
+          "count": 0,
+          "bytes": 0
+        },
+        "fullbody": {
+          "count": 3,
+          "bytes": 8392704
+        },
+        "chibi": {
+          "count": 1,
+          "bytes": 1048576
+        },
+        "enemyArt": {
+          "count": 0,
+          "bytes": 0
+        },
+        "background": {
+          "count": 14,
+          "bytes": 94948560
+        },
+        "menuIcon": {
+          "count": 49,
+          "bytes": 5101888
+        },
+        "vectorIcon": {
+          "count": 35,
+          "bytes": 117072
+        },
+        "textCanvas": {
+          "count": 32,
+          "bytes": 128
+        },
+        "frame": {
+          "count": 12,
+          "bytes": 6945600
+        },
+        "heroPortrait": {
+          "count": 69,
+          "bytes": 39914112
+        },
+        "other": {
+          "count": 32,
+          "bytes": 12668812
+        }
+      },
+      "tweenCount": 10,
+      "timerCount": 3,
+      "displayObjectCount": 148,
+      "graphicsCount": 46,
+      "emitterCount": 0,
+      "textCount": 32,
+      "spriteCount": 23,
+      "sceneListeners": 438,
+      "gameListeners": 20,
+      "eventBusListeners": 20,
+      "eventBusTopEvents": [
+        {
+          "event": "stage_cleared",
+          "count": 2
+        },
+        {
+          "event": "gacha_complete",
+          "count": 2
+        },
+        {
+          "event": "character_added",
+          "count": 2
+        },
+        {
+          "event": "evolve",
+          "count": 2
+        },
+        {
+          "event": "heroEvolved",
+          "count": 1
+        },
+        {
+          "event": "level_up",
+          "count": 1
+        },
+        {
+          "event": "chapter_completed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:step_committed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:menus_unlocked",
+          "count": 1
+        },
+        {
+          "event": "quest_complete",
+          "count": 1
+        }
+      ],
       "activeSceneKeys": [
-        "MainMenuScene",
-        "CutsceneScene"
-      ]
+        "MainMenuScene"
+      ],
+      "perScene": {
+        "MainMenuScene": {
+          "tweens": 10,
+          "timers": 3,
+          "displayObjects": 148
+        }
+      }
+    },
+    {
+      "label": "cycle_6",
+      "heroId": "base_omar",
+      "battleOutcome": "victory",
+      "heapUsedBytes": 26402436,
+      "heapTotalBytes": 29396992,
+      "domNodes": 349,
+      "domListeners": 331,
+      "documents": 1,
+      "textureCount": 247,
+      "textureBytes": 169137452,
+      "textureBuckets": {
+        "heroHires": {
+          "count": 0,
+          "bytes": 0
+        },
+        "fullbody": {
+          "count": 3,
+          "bytes": 8392704
+        },
+        "chibi": {
+          "count": 1,
+          "bytes": 1048576
+        },
+        "enemyArt": {
+          "count": 0,
+          "bytes": 0
+        },
+        "background": {
+          "count": 14,
+          "bytes": 94948560
+        },
+        "menuIcon": {
+          "count": 49,
+          "bytes": 5101888
+        },
+        "vectorIcon": {
+          "count": 35,
+          "bytes": 117072
+        },
+        "textCanvas": {
+          "count": 32,
+          "bytes": 128
+        },
+        "frame": {
+          "count": 12,
+          "bytes": 6945600
+        },
+        "heroPortrait": {
+          "count": 69,
+          "bytes": 39914112
+        },
+        "other": {
+          "count": 32,
+          "bytes": 12668812
+        }
+      },
+      "tweenCount": 11,
+      "timerCount": 3,
+      "displayObjectCount": 148,
+      "graphicsCount": 46,
+      "emitterCount": 0,
+      "textCount": 32,
+      "spriteCount": 23,
+      "sceneListeners": 438,
+      "gameListeners": 20,
+      "eventBusListeners": 20,
+      "eventBusTopEvents": [
+        {
+          "event": "stage_cleared",
+          "count": 2
+        },
+        {
+          "event": "gacha_complete",
+          "count": 2
+        },
+        {
+          "event": "character_added",
+          "count": 2
+        },
+        {
+          "event": "evolve",
+          "count": 2
+        },
+        {
+          "event": "heroEvolved",
+          "count": 1
+        },
+        {
+          "event": "level_up",
+          "count": 1
+        },
+        {
+          "event": "chapter_completed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:step_committed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:menus_unlocked",
+          "count": 1
+        },
+        {
+          "event": "quest_complete",
+          "count": 1
+        }
+      ],
+      "activeSceneKeys": [
+        "MainMenuScene"
+      ],
+      "perScene": {
+        "MainMenuScene": {
+          "tweens": 11,
+          "timers": 3,
+          "displayObjects": 148
+        }
+      }
+    },
+    {
+      "label": "cycle_7",
+      "heroId": "base_iris",
+      "battleOutcome": "victory",
+      "heapUsedBytes": 27236036,
+      "heapTotalBytes": 30183424,
+      "domNodes": 349,
+      "domListeners": 331,
+      "documents": 1,
+      "textureCount": 247,
+      "textureBytes": 169137452,
+      "textureBuckets": {
+        "heroHires": {
+          "count": 0,
+          "bytes": 0
+        },
+        "fullbody": {
+          "count": 3,
+          "bytes": 8392704
+        },
+        "chibi": {
+          "count": 1,
+          "bytes": 1048576
+        },
+        "enemyArt": {
+          "count": 0,
+          "bytes": 0
+        },
+        "background": {
+          "count": 14,
+          "bytes": 94948560
+        },
+        "menuIcon": {
+          "count": 49,
+          "bytes": 5101888
+        },
+        "vectorIcon": {
+          "count": 35,
+          "bytes": 117072
+        },
+        "textCanvas": {
+          "count": 32,
+          "bytes": 128
+        },
+        "frame": {
+          "count": 12,
+          "bytes": 6945600
+        },
+        "heroPortrait": {
+          "count": 69,
+          "bytes": 39914112
+        },
+        "other": {
+          "count": 32,
+          "bytes": 12668812
+        }
+      },
+      "tweenCount": 10,
+      "timerCount": 3,
+      "displayObjectCount": 148,
+      "graphicsCount": 46,
+      "emitterCount": 0,
+      "textCount": 32,
+      "spriteCount": 23,
+      "sceneListeners": 438,
+      "gameListeners": 20,
+      "eventBusListeners": 20,
+      "eventBusTopEvents": [
+        {
+          "event": "stage_cleared",
+          "count": 2
+        },
+        {
+          "event": "gacha_complete",
+          "count": 2
+        },
+        {
+          "event": "character_added",
+          "count": 2
+        },
+        {
+          "event": "evolve",
+          "count": 2
+        },
+        {
+          "event": "heroEvolved",
+          "count": 1
+        },
+        {
+          "event": "level_up",
+          "count": 1
+        },
+        {
+          "event": "chapter_completed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:step_committed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:menus_unlocked",
+          "count": 1
+        },
+        {
+          "event": "quest_complete",
+          "count": 1
+        }
+      ],
+      "activeSceneKeys": [
+        "MainMenuScene"
+      ],
+      "perScene": {
+        "MainMenuScene": {
+          "tweens": 10,
+          "timers": 3,
+          "displayObjects": 148
+        }
+      }
+    },
+    {
+      "label": "cycle_8",
+      "heroId": "asc_sol_nature",
+      "battleOutcome": "victory",
+      "heapUsedBytes": 27066292,
+      "heapTotalBytes": 28610560,
+      "domNodes": 349,
+      "domListeners": 331,
+      "documents": 1,
+      "textureCount": 247,
+      "textureKeys": [
+        "__NORMAL",
+        "__DEFAULT",
+        "__MISSING",
+        "__WHITE",
+        "bg_battle",
+        "bg_stage",
+        "bg_tower",
+        "icon_home",
+        "icon_sword",
+        "icon_bag",
+        "icon_dice",
+        "icon_menu",
+        "icon_gem",
+        "icon_gold",
+        "icon_energy",
+        "icon_warrior",
+        "icon_mage",
+        "icon_healer",
+        "icon_archer",
+        "icon_quest",
+        "icon_tower",
+        "icon_settings",
+        "hero_warrior",
+        "hero_mage",
+        "hero_healer",
+        "hero_archer",
+        "frame_N",
+        "frame_R",
+        "frame_SR",
+        "frame_SSR",
+        "frame_UR",
+        "enemy_slime",
+        "enemy_golem",
+        "enemy_boss",
+        "hero_placeholder",
+        "gem",
+        "gold",
+        "star",
+        "star_empty",
+        "char_arcana",
+        "char_full_arcana",
+        "char_leonhart",
+        "char_full_leonhart",
+        "char_selene",
+        "char_full_selene",
+        "char_rose",
+        "char_full_rose",
+        "char_kai",
+        "char_full_kai",
+        "char_luna",
+        "char_full_luna",
+        "char_noir",
+        "char_full_noir",
+        "char_aria",
+        "char_full_aria",
+        "char_finn",
+        "char_full_finn",
+        "char_mira",
+        "char_full_mira",
+        "char_theo",
+        "char_full_theo",
+        "char_eva",
+        "char_full_eva",
+        "char_rex",
+        "char_full_rex",
+        "char_ivy",
+        "char_full_ivy",
+        "char_max",
+        "char_full_max",
+        "enemy_1",
+        "enemy_2",
+        "enemy_3",
+        "enemy_4",
+        "enemy_5",
+        "enemy_6",
+        "enemy_7",
+        "enemy_8",
+        "enemy_9",
+        "enemy_10",
+        "effect_hit",
+        "battle_bg",
+        "magic_circle",
+        "bg_main",
+        "bg_main_blur",
+        "bg_login",
+        "frame_panel",
+        "bg_login_blur",
+        "frame_popup",
+        "frame_card_N",
+        "frame_card_R",
+        "frame_card_SR",
+        "frame_card_SSR",
+        "frame_hex",
+        "btn_primary",
+        "btn_secondary",
+        "btn_ghost",
+        "icon_currency_gem",
+        "icon_currency_gold",
+        "logo_arcane_collectors",
+        "icon_cult_takamagahara",
+        "icon_cult_valhalla",
+        "icon_currency_spirit_stone",
+        "icon_currency_ticket",
+        "icon_currency_energy",
+        "icon_cult_olympus",
+        "icon_cult_asgard",
+        "icon_cult_yomi",
+        "icon_cult_tartarus",
+        "icon_cult_avalon",
+        "icon_cult_helheim",
+        "icon_cult_kunlun",
+        "menu_ascension",
+        "menu_collection",
+        "menu_eventdungeon",
+        "menu_friends",
+        "menu_gacha",
+        "menu_guild",
+        "menu_herolist",
+        "menu_inventory",
+        "menu_partyedit",
+        "menu_pvp",
+        "menu_quest",
+        "menu_raid",
+        "menu_settings",
+        "menu_tower",
+        "hero_asc_iris_olympus",
+        "hero_asc_iris_valhalla",
+        "hero_asc_iris_chaos",
+        "hero_asc_sera_avalon",
+        "hero_asc_sera_kunlun",
+        "hero_asc_sera_nature",
+        "hero_asc_luca_asgard",
+        "hero_asc_luca_tartarus",
+        "hero_asc_kai_yomi",
+        "hero_asc_kai_helheim",
+        "hero_asc_lin_takamagahara",
+        "hero_asc_lin_balance",
+        "hero_asc_omar_valhalla",
+        "hero_asc_omar_avalon",
+        "hero_asc_sol_nature",
+        "hero_asc_sol_kunlun",
+        "hero_asc_hana_yomi",
+        "hero_asc_hana_helheim",
+        "hero_asc_hana_chaos",
+        "hero_asc_leon_asgard",
+        "hero_asc_leon_olympus",
+        "hero_asc_paolo_tartarus",
+        "hero_asc_paolo_chaos",
+        "hero_asc_paolo_balance",
+        "hero_base_iris",
+        "hero_base_kai",
+        "hero_base_sera",
+        "hero_base_luca",
+        "hero_base_lin",
+        "hero_base_omar",
+        "hero_base_sol",
+        "hero_base_hana",
+        "hero_base_leon",
+        "hero_base_paolo",
+        "vicon_atk_36_ffd60a",
+        "vicon_adventure_36_06bbfa",
+        "vicon_raid_36_ef4444",
+        "vicon_warrior_45_ffffff",
+        "vicon_warrior_53_ffffff",
+        "vicon_ascension_27_10b981",
+        "vicon_adventure_27_06bbfa",
+        "vicon_quest_36_0d0f1a",
+        "__mm__bg_chapter_1__1",
+        "bg_chapter_1",
+        "bg_sanctum",
+        "enemy_goblin_king",
+        "vicon_tap_32_ffd60a",
+        "vicon_warrior_32_06bbfa",
+        "vicon_atk_24_ffd60a",
+        "vicon_atk_24_06bbfa",
+        "vicon_ascension_24_9ca3af",
+        "vicon_inventory_24_9ca3af",
+        "vicon_collection_24_9ca3af",
+        "vicon_hp_24_06bbfa",
+        "vicon_def_24_06bbfa",
+        "vicon_spd_24_06bbfa",
+        "icon_star_24",
+        "icon_gem_24",
+        "fb_hero_015",
+        "fx_summon_circle",
+        "banner_pickup_iris",
+        "bg_gacha",
+        "bg_gacha_blur",
+        "fb_hero_029",
+        "enemy_sil_9b59b6_std",
+        "vicon_warrior_24_06bbfa",
+        "icon_star_84",
+        "icon_coin_72",
+        "icon_star_72",
+        "bg_result_victory",
+        "bg_result_victory_blur",
+        "vicon_archer_32_27ae60",
+        "vicon_atk_24_27ae60",
+        "vicon_hp_24_27ae60",
+        "vicon_def_24_27ae60",
+        "vicon_spd_24_27ae60",
+        "vicon_collection_24_ffd60a",
+        "vicon_mage_32_b0c4de",
+        "vicon_atk_24_b0c4de",
+        "vicon_hp_24_b0c4de",
+        "vicon_def_24_b0c4de",
+        "vicon_spd_24_b0c4de",
+        "fb_hero_027",
+        "icon_gem_72",
+        "vicon_warrior_32_4a90d9",
+        "vicon_atk_24_4a90d9",
+        "vicon_hp_24_4a90d9",
+        "vicon_def_24_4a90d9",
+        "vicon_spd_24_4a90d9",
+        "9af0d806-3598-4afa-b7dd-866105564192",
+        "1a4bf264-f4ed-47a9-b293-67cc9aa24411",
+        "799048d9-a8ec-4366-ae9a-16a777b1069e",
+        "87ca78c1-9187-4cf3-a251-db39f03788e5",
+        "91418e22-878d-423c-908a-90b1866a299c",
+        "31a16999-ff0f-40bf-bafb-205ebebca034",
+        "115e832a-cd04-456f-b5f6-fed49afa645c",
+        "37e1c5d7-5a61-4da9-a977-3ae7e90b2eca",
+        "16e46f61-c524-43c5-a782-8953a54bfa38",
+        "8d57ca34-def9-4001-b9cd-5fe94611d9e7",
+        "f5295a3c-1d51-4948-ae7b-d5b413372ae9",
+        "ebc7c9b6-aa93-473e-86c3-e9cf94b05f40",
+        "80cddf03-996c-4b39-9a7f-5adeb81ac0e4",
+        "f6867012-61da-4fb5-b324-d06afbc38c23",
+        "e1bb890c-1db3-47f1-a50c-cad9d0f5256c",
+        "22339abe-e35e-4cec-ad7d-2f8563dd4919",
+        "74415166-2de3-4eaa-a8b9-136761fc5bc1",
+        "915feccd-b5da-4aa4-a20d-862c48093a22",
+        "f7868129-c6d7-4a2e-b01c-7cd4fd1f1d62",
+        "08c689f3-b9ba-40aa-98c0-de6e9b120def",
+        "40513827-9669-4b42-9d25-0c992aa63940",
+        "c0ad8545-3d5b-4763-994e-3bc5ff08706c",
+        "e7cca968-430a-4b14-9b0c-ff52f6f6fe0e",
+        "e157eabf-dac8-48ab-85ce-537ef10dce27",
+        "9c5b979c-f29e-449b-8497-78ac2a19969b",
+        "220899f2-90dd-46a0-a7b9-34c473d308fb",
+        "0b85b9b2-b021-445d-b067-9cedd6736b48",
+        "15e198c2-222a-4e67-93ac-6b4ac47a2b4c",
+        "e2dc6988-2d30-4889-ab7e-a1f2831f12cd",
+        "5a1710b3-6edb-41ea-bc29-feff459629d7",
+        "cca4e656-ce0c-44cc-9c1a-737627115076",
+        "df505e0d-a676-4fd1-beb6-3c3df1a9f38d",
+        "chibi_base_iris"
+      ],
+      "textureBytes": 169137452,
+      "textureBuckets": {
+        "heroHires": {
+          "count": 0,
+          "bytes": 0
+        },
+        "fullbody": {
+          "count": 3,
+          "bytes": 8392704
+        },
+        "chibi": {
+          "count": 1,
+          "bytes": 1048576
+        },
+        "enemyArt": {
+          "count": 0,
+          "bytes": 0
+        },
+        "background": {
+          "count": 14,
+          "bytes": 94948560
+        },
+        "menuIcon": {
+          "count": 49,
+          "bytes": 5101888
+        },
+        "vectorIcon": {
+          "count": 35,
+          "bytes": 117072
+        },
+        "textCanvas": {
+          "count": 32,
+          "bytes": 128
+        },
+        "frame": {
+          "count": 12,
+          "bytes": 6945600
+        },
+        "heroPortrait": {
+          "count": 69,
+          "bytes": 39914112
+        },
+        "other": {
+          "count": 32,
+          "bytes": 12668812
+        }
+      },
+      "tweenCount": 11,
+      "timerCount": 3,
+      "displayObjectCount": 148,
+      "graphicsCount": 46,
+      "emitterCount": 0,
+      "textCount": 32,
+      "spriteCount": 23,
+      "sceneListeners": 438,
+      "gameListeners": 20,
+      "eventBusListeners": 20,
+      "eventBusTopEvents": [
+        {
+          "event": "stage_cleared",
+          "count": 2
+        },
+        {
+          "event": "gacha_complete",
+          "count": 2
+        },
+        {
+          "event": "character_added",
+          "count": 2
+        },
+        {
+          "event": "evolve",
+          "count": 2
+        },
+        {
+          "event": "heroEvolved",
+          "count": 1
+        },
+        {
+          "event": "level_up",
+          "count": 1
+        },
+        {
+          "event": "chapter_completed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:step_committed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:menus_unlocked",
+          "count": 1
+        },
+        {
+          "event": "quest_complete",
+          "count": 1
+        }
+      ],
+      "activeSceneKeys": [
+        "MainMenuScene"
+      ],
+      "perScene": {
+        "MainMenuScene": {
+          "tweens": 11,
+          "timers": 3,
+          "displayObjects": 148
+        }
+      }
     }
   ],
+  "battleOutcomes": [
+    "victory",
+    "victory",
+    "victory",
+    "victory",
+    "victory",
+    "victory",
+    "victory",
+    "victory"
+  ],
   "summary": {
-    "heapGrowthPercent": 0,
-    "textureGrowth": 1,
-    "tweenGrowth": 6,
-    "timerGrowth": 2,
-    "displayObjGrowth": 81,
+    "baselineLabel": "cycle_2",
+    "coreTextureGrowth": 2,
+    "coreTextureBaseline": 178,
+    "coreTextureFinal": 180,
+    "vectorIconKeys": 35,
+    "addedTextureKeys": [
+      "08c689f3-b9ba-40aa-98c0-de6e9b120def",
+      "0b85b9b2-b021-445d-b067-9cedd6736b48",
+      "115e832a-cd04-456f-b5f6-fed49afa645c",
+      "15e198c2-222a-4e67-93ac-6b4ac47a2b4c",
+      "16e46f61-c524-43c5-a782-8953a54bfa38",
+      "1a4bf264-f4ed-47a9-b293-67cc9aa24411",
+      "220899f2-90dd-46a0-a7b9-34c473d308fb",
+      "22339abe-e35e-4cec-ad7d-2f8563dd4919",
+      "31a16999-ff0f-40bf-bafb-205ebebca034",
+      "37e1c5d7-5a61-4da9-a977-3ae7e90b2eca",
+      "40513827-9669-4b42-9d25-0c992aa63940",
+      "5a1710b3-6edb-41ea-bc29-feff459629d7",
+      "74415166-2de3-4eaa-a8b9-136761fc5bc1",
+      "799048d9-a8ec-4366-ae9a-16a777b1069e",
+      "80cddf03-996c-4b39-9a7f-5adeb81ac0e4",
+      "87ca78c1-9187-4cf3-a251-db39f03788e5",
+      "8d57ca34-def9-4001-b9cd-5fe94611d9e7",
+      "91418e22-878d-423c-908a-90b1866a299c",
+      "915feccd-b5da-4aa4-a20d-862c48093a22",
+      "9af0d806-3598-4afa-b7dd-866105564192",
+      "9c5b979c-f29e-449b-8497-78ac2a19969b",
+      "c0ad8545-3d5b-4763-994e-3bc5ff08706c",
+      "cca4e656-ce0c-44cc-9c1a-737627115076",
+      "df505e0d-a676-4fd1-beb6-3c3df1a9f38d",
+      "e157eabf-dac8-48ab-85ce-537ef10dce27",
+      "e1bb890c-1db3-47f1-a50c-cad9d0f5256c",
+      "e2dc6988-2d30-4889-ab7e-a1f2831f12cd",
+      "e7cca968-430a-4b14-9b0c-ff52f6f6fe0e",
+      "ebc7c9b6-aa93-473e-86c3-e9cf94b05f40",
+      "f5295a3c-1d51-4948-ae7b-d5b413372ae9",
+      "f6867012-61da-4fb5-b324-d06afbc38c23",
+      "f7868129-c6d7-4a2e-b01c-7cd4fd1f1d62",
+      "fb_hero_027",
+      "icon_gem_72",
+      "vicon_atk_24_4a90d9",
+      "vicon_atk_24_b0c4de",
+      "vicon_def_24_4a90d9",
+      "vicon_def_24_b0c4de",
+      "vicon_hp_24_4a90d9",
+      "vicon_hp_24_b0c4de",
+      "vicon_mage_32_b0c4de",
+      "vicon_spd_24_4a90d9",
+      "vicon_spd_24_b0c4de",
+      "vicon_warrior_32_4a90d9"
+    ],
+    "removedTextureKeys": [
+      "0815201d-14c4-4ecb-979b-c39dc76d84ba",
+      "0d6ef8c9-9fbd-4b47-ba66-731fd46fd038",
+      "0efbf177-e543-49ba-b200-487cdb803142",
+      "2d1aad18-e6d1-45d4-aa00-02d7ce997e5d",
+      "3478e957-2f1c-40e5-8160-ccd4d999b1bf",
+      "3518448d-c94e-4263-a976-bf4ac44e4dfc",
+      "3e6f4adc-1cf0-4613-8c8b-c46117cf79ac",
+      "419a64b6-5cc2-41d7-845b-c18f9fbdd4c9",
+      "48bf4af7-a36f-47be-a437-ee966813186e",
+      "4acb0791-6b7d-4f9e-85db-bff54a658463",
+      "4af7e357-2e6b-4b6a-9c47-eb7ab4bfa759",
+      "4e195a46-0586-4c48-b987-3c235ca5e4d9",
+      "4f6beefc-74c3-415d-affa-356aea7c630a",
+      "590f0b89-4753-445d-8f28-1542c6ab0636",
+      "5d84cf5d-033d-4359-82c3-5523e398c7f5",
+      "6008e88d-635d-4017-ad78-a15e83347772",
+      "66fa7b6c-e32b-4230-94bd-8d18c7e19b16",
+      "6b166eea-65e9-4b90-9895-2d7b64bce146",
+      "6f40b8f9-8bf0-46e3-a6bb-7cba4e439131",
+      "70c51a1e-e5ef-4447-88f3-8e854dd9f840",
+      "75e9639e-2f30-44ba-b89a-a42d88483b3c",
+      "8545f5ce-1730-4c42-b3e2-0a62cfc7973e",
+      "8cc08868-5950-4f46-8582-4f696ac4c78f",
+      "970662b6-fe5d-409e-b975-ac7ca55e788a",
+      "97a7580a-d765-4bc8-91fb-fe802afc300c",
+      "9828e813-d759-4d02-9faa-0b824b67e9a6",
+      "9cab8a3b-ca39-4675-b400-4da7b34999a1",
+      "ad279b9b-794b-4a7b-8059-6aca09ed06e6",
+      "b9cf8398-3aba-4267-aed0-9af8574cef47",
+      "bc35ddb5-773f-4687-9029-25671c24dc0c",
+      "c9883e52-f6da-4e07-9025-479e1df6fbfc",
+      "e3780932-4830-4486-a667-64b362c2d678"
+    ],
+    "finalLabel": "cycle_8",
+    "heapBaselineBytes": 26034276,
+    "heapFinalBytes": 27066292,
+    "heapGrowthPercent": 3.9640664484005628,
+    "textureGrowth": 12,
+    "textureBytesGrowth": 2844928,
+    "tweenGrowth": 1,
+    "timerGrowth": 0,
+    "displayObjGrowth": 0,
+    "graphicsGrowth": 0,
+    "emitterGrowth": 0,
+    "sceneListenerGrowth": 0,
+    "gameListenerGrowth": 0,
+    "eventBusListenerGrowth": 0,
+    "domListenerGrowth": 2,
+    "domNodeGrowth": 12,
+    "finalTweenCount": 11,
+    "finalTimerCount": 3,
+    "finalTextureBytes": 169137452,
     "pass": true
   },
   "pageErrors": []

@@ -69,7 +69,17 @@ export class RadarChart extends Phaser.GameObjects.Container {
     });
   }
 
+  /**
+   * 축선과 축 라벨(HP/ATK/DEF/SPD).
+   *
+   * `draw()` 는 스탯이 바뀔 때마다 다시 불린다. 라벨은 Graphics 가 아니라 Text 라
+   * `graphics.clear()` 로 지워지지 않는다 — 먼저 걷어내지 않으면 갱신할 때마다
+   * 같은 자리에 라벨이 겹겹이 쌓인다(레벨업 10회 = 라벨 44개).
+   */
   drawAxes() {
+    (this.axisLabels || []).forEach((label) => label.destroy());
+    this.axisLabels = [];
+
     const axes = [
       { key: 'hp', angle: -Math.PI / 2, label: 'HP' },
       { key: 'atk', angle: 0, label: 'ATK' },
@@ -97,6 +107,7 @@ export class RadarChart extends Phaser.GameObjects.Container {
       }).setOrigin(0.5);
 
       this.add(label);
+      this.axisLabels.push(label);
     });
   }
 

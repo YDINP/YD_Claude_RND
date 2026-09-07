@@ -21,11 +21,8 @@ import {
   computeTopBarSlots,
   interactiveTopBarSlots,
   computeEnergyFill,
-  computePartySlots,
-  fitPartySlotName,
-  PARTY_SLOT,
-  computePartyHeader,
   computePowerRow,
+  computeAdventureBoss,
   computeAdventureButtons,
   computeAdventureRows,
   computeIdleBand,
@@ -60,10 +57,19 @@ describe('mainMenuLayout — 세로 대역', () => {
     });
   });
 
-  it('유휴전투 대역이 모험 패널 아래에서 시작한다 (§3-1 y=508)', () => {
+  it('유휴전투(성소) 대역이 모험 패널 아래에서 시작한다', () => {
     const adventure = MAIN_LAYOUT.adventure;
-    expect(MAIN_LAYOUT.idle.y).toBe(508);
     expect(MAIN_LAYOUT.idle.y).toBeGreaterThanOrEqual(adventure.y + adventure.h);
+  });
+
+  it('상단 파티 대역은 없다 — 성소에 앉은 4인이 곧 파티다', () => {
+    expect(MAIN_LAYOUT.party).toBeUndefined();
+    expect(BAND_ORDER).not.toContain('party');
+  });
+
+  it('파티 패널을 걷어낸 만큼 모험 패널과 성소가 커졌다', () => {
+    expect(MAIN_LAYOUT.adventure.h).toBeGreaterThan(188);
+    expect(MAIN_LAYOUT.idle.h).toBeGreaterThan(312);
   });
 
   it('bandsOverlap 은 겹치는 쌍을 참으로 판정한다', () => {
@@ -226,12 +232,6 @@ describe('mainMenuLayout — 터치 타깃 (§2-5)', () => {
     });
   });
 
-  it('편성 버튼은 시각 알약이 낮아도 히트 박스가 하한을 지킨다', () => {
-    const header = computePartyHeader();
-    expect(header.editPill.h).toBeLessThan(DESIGN.touch.minTarget);
-    expect(meetsTouchTarget(header.editHit, DESIGN.touch.minTarget)).toBe(true);
-  });
-
   it('모험 CTA 와 보상받기 버튼이 하한을 넘는다', () => {
     [true, false].forEach((onboarding) => {
       computeAdventureButtons(onboarding).forEach((btn) => {
@@ -241,42 +241,6 @@ describe('mainMenuLayout — 터치 타깃 (§2-5)', () => {
     expect(meetsTouchTarget(computeClaimButton().rect, DESIGN.touch.minTarget)).toBe(true);
   });
 
-  it('파티 아바타 히트 박스가 하한을 넘는다', () => {
-    computePartySlots().forEach((slot) => {
-      expect(meetsTouchTarget(slot.hit, DESIGN.touch.minTarget)).toBe(true);
-    });
-  });
-
-  // QA P2-6 — `번개의 아`처럼 음절 중간에서 잘리던 회귀
-  it('현재 로스터 최장 이름(9자)이 상한 안에 온전히 들어간다', () => {
-    expect(fitPartySlotName('번개의 아이리스')).toBe('번개의 아이리스');
-    expect(fitPartySlotName('혼돈연금사 파올로')).toBe('혼돈연금사 파올로');
-    expect(fitPartySlotName('사신의 카이')).toBe('사신의 카이');
-  });
-
-  it('상한을 넘으면 어절 경계에서 자르고 말줄임을 붙인다', () => {
-    expect(fitPartySlotName('번개의 아이리스', 5)).toBe('번개의…');
-    expect(fitPartySlotName('심연의 대마도사 루카', 9)).toBe('심연의 대마도사…');
-    expect(fitPartySlotName('심연의 대마도사 루카', 6)).toBe('심연의…');
-  });
-
-  it('첫 어절조차 못 담으면 그때만 글자 단위로 자른다', () => {
-    expect(fitPartySlotName('혼돈연금사파올로', 5)).toBe('혼돈연금…');
-  });
-
-  it('빈 값·비문자열은 빈 문자열이다', () => {
-    expect(fitPartySlotName('')).toBe('');
-    expect(fitPartySlotName('   ')).toBe('');
-    expect(fitPartySlotName(null)).toBe('');
-  });
-
-  it('이름 라벨 최대 폭이 슬롯 폭보다 좁다 (양옆 여백 확보)', () => {
-    computePartySlots().forEach((slot) => {
-      expect(slot.nameMaxWidth).toBe(slot.w - PARTY_SLOT.nameInset * 2);
-      expect(slot.nameMaxWidth).toBeLessThan(slot.w);
-      expect(slot.nameMaxWidth).toBeGreaterThan(0);
-    });
-  });
 });
 
 describe('mainMenuLayout — 현재 모험 패널', () => {
@@ -296,12 +260,26 @@ describe('mainMenuLayout — 현재 모험 패널', () => {
     expect(boss.x + boss.w).toBeLessThanOrEqual(panel.x + panel.w);
   });
 
-  it('내부 요소가 패널 높이를 넘지 않는다 (h=188 고정의 근거)', () => {
+  it('내부 요소가 패널 높이를 넘지 않는다 (고정 높이의 근거)', () => {
     const panel = MAIN_LAYOUT.adventure;
     const rows = computeAdventureRows();
     const [btn] = computeAdventureButtons(true);
     expect(btn.y + btn.h).toBeLessThanOrEqual(panel.y + panel.h);
     expect(rows.progress.y + rows.progress.h).toBeLessThanOrEqual(panel.y + panel.h);
+  });
+
+  it('보스 줄은 패널 안에 있고 줄 전체가 터치 하한을 넘는다', () => {
+    const panel = MAIN_LAYOUT.adventure;
+    const boss = computeAdventureBoss();
+    const [btn] = computeAdventureButtons(true);
+
+    expect(meetsTouchTarget(boss.hit, DESIGN.touch.minTarget)).toBe(true);
+    expect(boss.thumb.y - boss.thumb.h / 2).toBeGreaterThan(panel.y);
+    // 보스 줄과 CTA 버튼이 겹치지 않는다
+    expect(boss.hit.y + boss.hit.h / 2).toBeLessThanOrEqual(btn.y);
+    // 썸네일 오른쪽에 이름·힌트가 선다
+    expect(boss.name.x).toBeGreaterThan(boss.thumb.x + boss.thumb.w / 2);
+    expect(boss.hint.y).toBeGreaterThan(boss.name.y);
   });
 
   it('진행바 채움 폭이 0~1 로 잘린다', () => {

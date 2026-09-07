@@ -153,7 +153,8 @@ export function resolveCutin(hero) {
 
   return {
     heroId,
-    name: source.name || heroId || '???',
+    // ID 노출 방지: 이름 해석 실패 시 내부 id 대신 일반 표기로 폴백
+    name: source.name || '???',
     rarity,
     cultId,
     format: formatForRarity(rarity) || CUTIN_FORMAT.FULL,

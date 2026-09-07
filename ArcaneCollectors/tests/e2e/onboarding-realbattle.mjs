@@ -12,6 +12,7 @@
  */
 import { chromium } from 'playwright';
 
+import { blockHmr } from './hmr-guard.mjs';
 const BASE_URL = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const VIEWPORT = { width: 720, height: 1280 };
 const SAVE_KEY = 'arcane_collectors_save';
@@ -52,6 +53,9 @@ const skipCut = async (page, rounds = 6) => {
 console.log('브라우저 기동...');
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: VIEWPORT });
+// 공유 dev 서버 격리 — 남이 소스를 저장해도 이 페이지는 리로드되지 않는다.
+// 실증: node tests/e2e/hmr-guard-verify.mjs
+await blockHmr(page, BASE_URL);
 await page.goto(BASE_URL);
 await page.evaluate(() => localStorage.clear());
 await page.reload();

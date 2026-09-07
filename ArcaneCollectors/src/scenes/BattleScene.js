@@ -5,7 +5,7 @@ import { moodSystem } from '../systems/MoodSystem.js';
 import { SynergySystem } from '../systems/SynergySystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import { ParticleManager } from '../systems/ParticleManager.js';
-import { getAllCharacters, getCharacter, getCharacterOrHero, getEnemy, calculateEnemyStats } from '../data/index.js';
+import { getAllCharacters, getCharacterOrHero, getEnemy, calculateEnemyStats, normalizeHeroes } from '../data/index.js';
 import { MOOD_COLORS } from '../config/layoutConfig.js';
 import transitionManager from '../utils/TransitionManager.js';
 import { StoryManager } from '../systems/StoryManager.js';
@@ -123,16 +123,27 @@ export class BattleScene extends Phaser.Scene {
 
       // 파티 데이터 방어
       if (!this.party || this.party.length === 0) {
-        // SaveManager에서 파티 자동 로드 시도
+        // SaveManager에서 파티 자동 로드 시도.
+        // SSOT: MainMenuScene._resolvePartyByIds()와 동일한 소스 우선순위 —
+        // registry.ownedHeroes(ProgressionSystem.getFinalStats로 계산된 정규화본)를 우선하고,
+        // 없을 때만 세이브 캐릭터를 normalizeHeroes()로 같은 경로에 태워 재계산한다.
+        // staticData.stats(레벨1 원본 템플릿)를 직접 꽂으면 레벨/성급/장비 보정이 전부 빠진다(P0).
         const saveData = SaveManager.load();
         const parties = saveData?.parties || [];
         const rawParty = parties[0];
         const heroIds = rawParty?.heroIds || (Array.isArray(rawParty) ? rawParty : []);
+        const registryHeroes = this.registry.get('ownedHeroes');
+        const normalized = (Array.isArray(registryHeroes) && registryHeroes.length > 0)
+          ? registryHeroes
+          : (normalizeHeroes(saveData?.characters || []) || []);
         this.party = heroIds.map(id => {
+          const hero = normalized.find(h => h.id === id || h.characterId === id);
+          if (hero) return hero;
+
           const charData = (saveData?.characters || []).find(c => c.id === id || c.characterId === id);
-          const staticData = getCharacter(id);
+          const staticData = getCharacterOrHero(id);
           if (!staticData && !charData) return null;
-          return { ...staticData, ...charData, id, stats: staticData?.stats || charData?.stats };
+          return normalizeHeroes([{ ...staticData, ...charData, id }])[0] || null;
         }).filter(Boolean);
 
         if (this.party.length === 0) {
@@ -411,7 +422,8 @@ export class BattleScene extends Phaser.Scene {
     // 씬 표시 계약(stats/isAlly/position)은 어댑터가 유지하므로 렌더 코드는 그대로다.
     this.allies = this.party.map((hero, index) => toBattleUnit({
       id: hero.id || hero.characterId,
-      name: hero.name || hero.id || '???',
+      // ID 노출 방지: 이름 해석 실패 시 내부 id 대신 일반 표기로 폴백
+      name: hero.name || '???',
       stats: hero.stats,
       level: hero.level,
       isAlly: true,
@@ -421,7 +433,7 @@ export class BattleScene extends Phaser.Scene {
       role: hero.role || hero.class,
       skills: hero.skills && hero.skills.length > 0 ? hero.skills : (() => {
         try {
-          const charData = getCharacter(hero.id || hero.characterId);
+          const charData = getCharacterOrHero(hero.id || hero.characterId);
           return charData?.skills || null;
         } catch {
           return null;
@@ -2731,19 +2743,35 @@ export class BattleScene extends Phaser.Scene {
         sweepSystem.recordStageClear(this.stage.id, newStars);
       }
 
-      // 타워 모드: 층 클리어 처리
+      // 타워 모드: 층 클리어 처리 (반환값에 보스층 보너스 젬/SR티켓 실지급 결과가 들어있다)
+      let towerClearResult = null;
       if (this.mode === 'tower' && this.towerFloor) {
-        TowerSystem.clearFloor(this.towerFloor, {
+        towerClearResult = TowerSystem.clearFloor(this.towerFloor, {
           victory: true,
           stars: newStars,
           rewards
         });
       }
 
-      // 보상 지급
+      // 보상 지급 — gold/exp/items 는 모드와 무관하게 이 한 곳에서만 지급한다.
+      // (타워 모드도 TowerSystem.buildStageForFloor() 가 stage.rewards 를 채워 주므로
+      // 스테이지 전투와 동일 경로를 탄다 — 예전엔 이 필드가 없어 무조건 {gold:100,exp:50}
+      // 고정값으로 새고, TowerSystem._grantRewards() 가 별도로 또 골드를 지급해 중복 지급됐다)
       rewards = this.stage?.rewards || { gold: 100, exp: 50 };
       const newGold = SaveManager.addGold(rewards.gold);
       this.registry.set('gold', newGold);
+
+      // QA P1 후속: 보상 아이템은 화면에만 표시되고 실제로 지급된 적이 없었다.
+      // grantRewardItems() 가 확률을 굴리고 실지급까지 한 뒤 "실제로 받은 것만" 돌려주므로
+      // 화면 표시(rewards.items)와 실제 인벤토리 상태가 항상 일치한다.
+      rewards = { ...rewards, items: SaveManager.grantRewardItems(rewards.items) };
+
+      // 타워 보스층 보너스(젬/SR티켓) — TowerSystem.clearFloor() 가 이미 실지급까지 마쳤다.
+      // 예전엔 이 반환값을 버려서 실제로 받은 보너스가 결과 화면엔 전혀 안 보였다.
+      if (towerClearResult?.rewards) {
+        if (towerClearResult.rewards.gems) rewards.gems = towerClearResult.rewards.gems;
+        if (towerClearResult.rewards.srTicket) rewards.srTicket = towerClearResult.rewards.srTicket;
+      }
 
       // 캐릭터 EXP 지급
       const expPerHero = Math.floor(rewards.exp / totalAllies);
@@ -2816,7 +2844,19 @@ export class BattleScene extends Phaser.Scene {
     // 자원이다. 지우면 전투를 한 번 다녀온 뒤 모든 화면의 영웅이 플레이스홀더
     // 캔버스로 되돌아간다 — T-29 가 HeroDetailScene/HeroListScene 에서 고친 것과
     // 같은 결함이고 BattleScene 만 남아 있었다.
-    // (현재 Phaser 가 이 메서드를 자동 호출하지 않아 표면화되지 않았을 뿐이다.)
+    // (main.js 가 'shutdown' 이벤트에 이 메서드를 배선하기 전까지는 아예 호출되지
+    // 않아 표면화되지 않았다 — 지금은 매 전투 종료마다 실제로 실행된다.)
+
+    // 반면 적 아트(enemy_art_*)는 이 씬 전용 대형 텍스처다. 매니페스트에 84종이 있고
+    // 스테이지마다 다른 적이 나오므로, 해제하지 않으면 플레이할수록 단조 증가한다
+    // (키당 약 1MB). 다른 화면은 이 키를 참조하지 않으므로 해제해도 안전하다.
+    // _enemyArtQueued 는 "이 씬이 직접 로드한 키"만 담는다 — 남의 것을 지우지 않는다.
+    if (this._enemyArtQueued) {
+      this._enemyArtQueued.forEach((key) => {
+        if (this.textures.exists(key)) this.textures.remove(key);
+      });
+      this._enemyArtQueued.clear();
+    }
 
     // 판정 엔진의 이벤트 리스너 해제 (씬 재진입 시 중복 구독 방지)
     if (this.battleSystem) {

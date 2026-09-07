@@ -11,7 +11,8 @@ import charactersData from '../data/characters.json';
 import baseHeroesData from '../data/base-heroes.json';
 import ascendedHeroesData from '../data/ascended-heroes.json';
 import cultsData from '../data/cults.json';
-import { getRarityStars } from '../utils/rarityUtils.js';
+import itemsData from '../data/items.json';
+import { getRarityStars, BASE_HERO_RARITY } from '../utils/rarityUtils.js';
 import { DEFAULT_AUDIO_SETTINGS } from '../config/audioAssets.js';
 
 export class SaveManager {
@@ -86,7 +87,11 @@ export class SaveManager {
       },
       characters: [this._createStarterHeroRecord()],       // T-C2: base_iris 1인
       parties: [[this.STARTER_BASE_HERO_ID, null, null, null]], // 1인 파티로 시작 (§1-1)
-      inventory: [],
+      // QA P1④: 예전에는 배열이었다. EquipmentSystem/DebugManager 는 `inventory.equipment`
+      // 를 배열 프로퍼티로 붙였는데, JSON.stringify 는 배열의 인덱스 외 프로퍼티를 직렬화하지
+      // 않아 저장할 때마다 장비가 조용히 사라졌다(장착 자체가 불가능했던 진짜 원인).
+      // items 는 addToInventory/removeFromInventory 가 다루는 소비/재료 스택형 아이템.
+      inventory: { equipment: [], items: [] },
       progress: {
         currentChapter: 'chapter_1',
         clearedStages: {}, // { stageId: stars }
@@ -186,10 +191,13 @@ export class SaveManager {
       const legacyMigratedBefore = data.onboarding?.legacyMigratedAt ?? null;
       const partiesBefore = JSON.stringify(data.parties ?? null);
       this._migrateOnboardingSchema(data);
+      // QA P1④: inventory 배열→오브젝트 정규화 (장비 소실 버그 근본 수정)
+      const inventoryChanged = this._migrateInventorySchema(data);
       const changed =
         (data.onboarding?.grantVersion ?? -1) !== grantVersionBefore ||
         (data.onboarding?.legacyMigratedAt ?? null) !== legacyMigratedBefore ||
-        JSON.stringify(data.parties ?? null) !== partiesBefore;
+        JSON.stringify(data.parties ?? null) !== partiesBefore ||
+        inventoryChanged;
       if (changed) {
         this.save(data);
       }
@@ -272,6 +280,31 @@ export class SaveManager {
     });
 
     return data;
+  }
+
+  /**
+   * QA P1④ 근본 원인 수정: `data.inventory` 가 배열이면 `.equipment` 처럼 배열에 붙인
+   * 프로퍼티가 JSON.stringify 직렬화에서 통째로 사라진다 — 장비를 지급해도 저장 즉시
+   * 소실되어 장착이 영구히 불가능했다. 배열이던 구세이브는 `.items` 로 보존하고
+   * `{equipment, items}` 오브젝트 형태로 정규화한다. 반환값이 true 면 실제로 값이
+   * 바뀐 것이라 호출부에서 즉시 영속화해야 한다(다음 로드에서 재실행되지 않도록).
+   * @param {Object} data - 저장 데이터 (in-place)
+   * @returns {boolean} 실제로 정규화가 발생했는지
+   */
+  static _migrateInventorySchema(data) {
+    if (!data) return false;
+    if (Array.isArray(data.inventory)) {
+      data.inventory = { equipment: [], items: data.inventory };
+      return true;
+    }
+    if (!data.inventory || typeof data.inventory !== 'object') {
+      data.inventory = { equipment: [], items: [] };
+      return true;
+    }
+    let changed = false;
+    if (!Array.isArray(data.inventory.equipment)) { data.inventory.equipment = []; changed = true; }
+    if (!Array.isArray(data.inventory.items)) { data.inventory.items = []; changed = true; }
+    return changed;
   }
 
   /**
@@ -874,6 +907,8 @@ export class SaveManager {
     this._migrateOnboardingSchema(newData);
     // SND-01: settings.audio 기본값 보강 (구세이브는 얕은 병합으로 settings 를 통째로 덮어쓴다)
     this._migrateAudioSettingsSchema(newData);
+    // QA P1④: inventory 배열→오브젝트 정규화 (장비 소실 버그 근본 수정)
+    this._migrateInventorySchema(newData);
     this.save(newData);
     return newData;
   }
@@ -1041,7 +1076,7 @@ export class SaveManager {
       characterId: heroId,
       level: 1,
       exp: 0,
-      stars: getRarityStars('R'),
+      stars: getRarityStars(BASE_HERO_RARITY),
       skillLevels: [1, 1, 1],
       equipped: null,
       equipment: { weapon: null, armor: null, accessory: null },
@@ -1066,7 +1101,7 @@ export class SaveManager {
     const ascended = SaveManager.getAscendedHeroData(characterId);
     if (ascended && ascended.rarity) return getRarityStars(ascended.rarity);
     const base = SaveManager.getBaseHeroData(characterId);
-    if (base) return getRarityStars(base.rarity || 'R');
+    if (base) return getRarityStars(base.rarity || BASE_HERO_RARITY);
     // fallback: 보유 캐릭터 데이터에서 조회
     const data = this.load();
     const owned = data.characters?.find(c => c.id === characterId);
@@ -1604,28 +1639,90 @@ export class SaveManager {
   static addToInventory(item) {
     const data = this.load();
 
-    if (!data.inventory) {
-      data.inventory = [];
-    }
+    // QA P1④: inventory 는 {equipment, items} 오브젝트다 — 예전에는 여기서 직접
+    // 배열로 초기화해 장비 지급 경로(EquipmentSystem)의 `.equipment` 프로퍼티가
+    // JSON.stringify 에 사라지는 원인이 됐다. this.load() 가 이미 정규화하므로
+    // 여기서는 배열로 되돌리지 않는다.
+    this._migrateInventorySchema(data);
+    const items = data.inventory.items;
 
     // 스택 가능 아이템인 경우 기존 아이템 찾기
     if (item.stackable) {
-      const existing = data.inventory.find(
+      const existing = items.find(
         i => i.itemId === item.itemId && i.stackable
       );
 
       if (existing) {
         existing.count = (existing.count || 1) + (item.count || 1);
       } else {
-        data.inventory.push({ ...item, count: item.count || 1 });
+        items.push({ ...item, count: item.count || 1 });
       }
     } else {
       // 스택 불가능 아이템은 개별 추가
-      data.inventory.push({ ...item, instanceId: Date.now() });
+      items.push({ ...item, instanceId: Date.now() });
     }
 
     this.save(data);
     return true;
+  }
+
+  /**
+   * 보상 아이템 지급 (전투/타워/이벤트던전 등 공용 진입점).
+   *
+   * QA P1 후속 조사: `BattleScene.js`가 전투 승리 결과 화면에 `stage.rewards.items`를
+   * 그대로 보여주면서도 실제로는 확률조차 굴리지 않고 인벤토리에도 넣지 않았다
+   * (`EventDungeonSystem._grantRewards`에도 동일한 `// TODO: 인벤토리에 아이템 추가`가
+   * 있었다). 화면 표시와 실지급이 항상 같은 값이 되도록, **이 함수가 반환하는 값만이
+   * "실제로 지급된 보상"이며 호출부는 반드시 이 반환값을 표시에 사용해야 한다.**
+   *
+   * - `chance` 가 있으면 굴려서 당첨된 것만 지급한다(예전엔 안 굴리고 전부 표시했다).
+   * - `count` 가 없으면 1개.
+   * - items.json 에서 조회되지 않는 id(설계 단계 플레이스홀더 등)는 지급도 표시도
+   *   하지 않는다 — 없는 데이터를 있는 척 지급하는 건 추측이라 하지 않는다.
+   * - `summon_ticket` 처럼 실제로는 `resources` 전용 카운터로 관리되는 화폐성
+   *   아이템은 해당 전용 지급 메서드로 라우팅한다(제네릭 인벤토리에 넣으면 사용처가
+   *   없는 죽은 아이템이 된다).
+   * - items.json 의 `type: 'equipment'` 5종(구 카탈로그, slotType 없음)은 슬롯/스탯이
+   *   없어 일반 지급 경로로 만들 수 없다 — 지급하지 않고 콘솔 경고만 남긴다.
+   *
+   * @param {Array<{id:string, chance?:number, count?:number}>} itemDefs
+   * @returns {Array<{id:string, name:string, count:number}>} 실제로 지급된 항목만
+   */
+  static grantRewardItems(itemDefs) {
+    if (!Array.isArray(itemDefs)) return [];
+    const granted = [];
+
+    itemDefs.forEach((def) => {
+      if (!def || !def.id) return;
+      if (typeof def.chance === 'number' && Math.random() >= def.chance) return; // 미당첨
+
+      const count = Number.isFinite(def.count) && def.count > 0 ? def.count : 1;
+      const itemData = (itemsData.items || []).find((i) => i.id === def.id);
+
+      if (!itemData) {
+        console.warn(`[SaveManager] grantRewardItems: 알 수 없는 아이템 id "${def.id}" — 지급 생략`);
+        return;
+      }
+
+      if (itemData.id === 'summon_ticket') {
+        this.addSummonTickets(count);
+      } else if (itemData.type === 'equipment') {
+        console.warn(`[SaveManager] grantRewardItems: 장비 타입 아이템 "${def.id}" 은 슬롯/스탯 데이터가 없어 일반 지급 경로로 처리할 수 없다 — 지급 생략`);
+        return;
+      } else {
+        this.addToInventory({
+          itemId: itemData.id,
+          name: itemData.name,
+          type: itemData.type,
+          stackable: true,
+          count
+        });
+      }
+
+      granted.push({ id: itemData.id, name: itemData.name, count });
+    });
+
+    return granted;
   }
 
   /**
@@ -1636,12 +1733,10 @@ export class SaveManager {
    */
   static removeFromInventory(itemId, count = 1) {
     const data = this.load();
+    this._migrateInventorySchema(data);
+    const items = data.inventory.items;
 
-    if (!data.inventory) {
-      return false;
-    }
-
-    const item = data.inventory.find(i => i.itemId === itemId);
+    const item = items.find(i => i.itemId === itemId);
     if (!item) {
       return false;
     }
@@ -1650,7 +1745,7 @@ export class SaveManager {
       item.count -= count;
     } else {
       // 아이템 완전 제거
-      data.inventory = data.inventory.filter(i => i.itemId !== itemId);
+      data.inventory.items = items.filter(i => i.itemId !== itemId);
     }
 
     this.save(data);
@@ -1658,12 +1753,12 @@ export class SaveManager {
   }
 
   /**
-   * 인벤토리 조회
+   * 인벤토리 조회 (소비/재료 스택형 아이템만 — 장비는 getEquipmentInventory 참고)
    * @returns {Array} 아이템 배열
    */
   static getInventory() {
     const data = this.load();
-    return data.inventory || [];
+    return data.inventory?.items || [];
   }
 
   // ========== C-4: 하이브리드 저장 시스템 ==========

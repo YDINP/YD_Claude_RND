@@ -21,13 +21,16 @@ const MAX_FRIENDS = 50;
 const DAILY_RENT_LIMIT = 3;
 const DAILY_POINT_LIMIT = 20;
 
-// 포인트 상점 5종 (id, label, cost(친구pt), reward {재화키, 수량})
+// 포인트 상점 (id, label, cost(친구pt), reward {재화키, 수량})
+//
+// P1: srTicket/expPotion/equipmentFragment 3종은 실지급 경로(SR 확정권 리소스,
+// 물약 크기 선택, 장비 조각 인벤토리)가 없어 카탈로그에서 뺐다 — 팀 기준
+// "지급되지 않는 보상은 화면에 표시하지 않는다"에 따라, 표시만 지우고 구매는
+// 열어두면 "포인트만 빼앗기고 아무것도 못 받는" 상태가 되므로 목록에서 제거했다.
+// 실지급 경로가 확정되면 다시 추가한다.
 const POINT_SHOP_ITEMS = [
-  { id: 'shop_gold',          label: '골드 5,000',          cost: 5,  reward: { gold: 5000 } },
-  { id: 'shop_gems',          label: '보석 50',              cost: 10, reward: { gems: 50 } },
-  { id: 'shop_sr_ticket',     label: 'SR 티켓 1장',          cost: 8,  reward: { srTicket: 1 } },
-  { id: 'shop_exp_potion',    label: '경험치 물약 3개',       cost: 6,  reward: { expPotion: 3 } },
-  { id: 'shop_equip_fragment',label: '장비 조각 20개',       cost: 12, reward: { equipmentFragment: 20 } }
+  { id: 'shop_gold', label: '골드 5,000', cost: 5,  reward: { gold: 5000 } },
+  { id: 'shop_gems', label: '보석 50',     cost: 10, reward: { gems: 50 } }
 ];
 
 function _dayKey(date = new Date()) {
@@ -530,18 +533,15 @@ export class FriendSystem {
     state.pointBalance -= item.cost;
     FriendSystem._saveState(state);
 
-    // SaveManager 자원에 반영
+    // SaveManager 자원에 반영 — 실지급 메서드를 쓴다.
+    // (P1 결함: 예전에는 saveData.player.gold/gems 등에 직접 더했다. 실제 골드/젬은
+    //  saveData.resources.gold/gems 에 있고 player 에는 {name,level,exp} 뿐이라,
+    //  포인트는 실제로 차감되고 "구매 완료"도 뜨는데 gold/gems 보상은 잔액에 단 한
+    //  번도 반영된 적이 없었다 — RaidSystem.claimRewards()와 동일 계열 결함.)
     try {
-      const saveData = SaveManager.load();
-      if (saveData.player) {
-        const r = item.reward;
-        saveData.player.gold = (saveData.player.gold || 0) + (r.gold || 0);
-        saveData.player.gems = (saveData.player.gems || 0) + (r.gems || 0);
-        saveData.player.srTicket = (saveData.player.srTicket || 0) + (r.srTicket || 0);
-        saveData.player.expPotion = (saveData.player.expPotion || 0) + (r.expPotion || 0);
-        saveData.player.equipmentFragment = (saveData.player.equipmentFragment || 0) + (r.equipmentFragment || 0);
-        SaveManager.save(saveData);
-      }
+      const r = item.reward;
+      if (r.gold > 0) SaveManager.addGold(r.gold);
+      if (r.gems > 0) SaveManager.addGems(r.gems);
     } catch (e) {
       GameLogger.warn('[FriendSystem] buyPointShopItem apply failed: ' + e.message);
     }

@@ -11,8 +11,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('../../src/systems/SaveManager.js', () => ({
   SaveManager: {
     _userId: 'test-user-001',
-    load: vi.fn(() => ({ player: { name: 'TestHero', gold: 1000, gems: 100 } })),
-    save: vi.fn()
+    // 실제 재화는 resources.gold/gems 에 있다(player 에는 없다) — RaidSystem.claimRewards()는
+    // 이제 이 필드를 직접 만지지 않고 addGold()/addGems() 실지급 메서드를 통해서만 반영한다.
+    load: vi.fn(() => ({ player: { name: 'TestHero' }, resources: { gold: 1000, gems: 100 } })),
+    save: vi.fn(),
+    addGold: vi.fn(),
+    addGems: vi.fn()
   }
 }));
 
@@ -438,18 +442,17 @@ describe('RaidSystem', () => {
       expect(r.rewards).toEqual(expected);
     });
 
-    it('수령 시 SaveManager.save로 재화가 반영된다', async () => {
+    it('수령 시 SaveManager.addGold/addGems로 재화가 반영된다', async () => {
+      // P1 회귀 방지: 예전에는 saveData.player.gold/gems (존재하지 않는 필드)에 직접
+      // 더해 화면엔 지급된 것처럼 보여도 실제 잔액(resources.gold/gems)은 늘지 않았다.
       const weekly = RaidSystem.getWeeklyRaid();
       const boss = weekly.boss;
       seedProgress({ [boss.id]: { damage: thresholdDamage(boss.id, 0.1), claimedTiers: [] } });
 
       const r = await RaidSystem.claimRewards(boss.id);
       expect(r.success).toBe(true);
-      expect(SaveManager.load).toHaveBeenCalled();
-      expect(SaveManager.save).toHaveBeenCalled();
-      const saved = SaveManager.save.mock.calls[0][0];
-      expect(saved.player.gold).toBe(1000 + r.rewards.gold);
-      expect(saved.player.gems).toBe(100 + r.rewards.gems);
+      expect(SaveManager.addGold).toHaveBeenCalledWith(r.rewards.gold);
+      expect(SaveManager.addGems).toHaveBeenCalledWith(r.rewards.gems);
     });
 
     it('이중 수령이 방지된다 (재호출 시 실패)', async () => {

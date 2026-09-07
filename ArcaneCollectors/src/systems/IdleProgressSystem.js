@@ -113,7 +113,12 @@ export class IdleProgressSystem {
     const progressGained = (this.accumulatedDamage - previousDamage) / bossHp;
 
     // 보상: 누적 데미지 비율 기반 (스테이지 클리어 보상 제외)
-    const damageRatio = offlineDamage / bossHp;
+    // P1 수정(2026-09-05): 예전엔 상한 없는 offlineDamage/bossHp 를 그대로 곱해
+    // 장시간 방치·고DPS 파티에서 보상이 수백만 골드로 폭주했다(오프라인 6h 사례에서
+    // 8,697,874 골드 표시 — 라이브 QA 보고). accumulatedDamage 가 이미 bossHp 로
+    // 캡된 progressGained(0~1)를 그대로 배율로 써서 "보스 HP 의 몇 %를 깎았는가"를
+    // 벗어나지 못하게 한다.
+    const damageRatio = progressGained;
     const gold = Math.floor(damageRatio * (boss.goldReward || 600) * 0.8);
     const exp = Math.floor(damageRatio * (boss.expReward || 300) * 0.8);
 

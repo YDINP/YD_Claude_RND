@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "item.schema.json",
+  "title": "Item Schema",
+  "description": "Schema for items.json validation. QA P1③(내부 ID 노출) 재발 방지 — 표시용 name 누락을 빌드 타임에 잡는다.",
+  "type": "object",
+  "required": ["items"],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "type"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["consumable", "material", "currency", "equipment"]
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

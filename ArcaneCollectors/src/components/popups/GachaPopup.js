@@ -27,7 +27,7 @@
  * 구분해 카드를 그린다 — 장비는 실제 아트가 없어 아이콘(이모지) 폴백을 쓴다.
  */
 import { PopupBase } from '../PopupBase.js';
-import { COLORS, GAME_WIDTH, RARITY, SCALE_FACTOR, s, sf } from '../../config/gameConfig.js';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT, RARITY, SCALE_FACTOR, s, sf } from '../../config/gameConfig.js';
 import { DESIGN } from '../../config/designSystem.js';
 import { ts } from '../../utils/textStyles.ts';
 import { Z_INDEX } from '../../config/layoutConfig.js';
@@ -248,7 +248,7 @@ export class GachaPopup extends PopupBase {
 
     // 무료 10연 버튼은 액션 바(슬롯 4)로 옮겼다. 비용 표기만 콘텐츠에 남긴다.
     const noteY = Math.min(endY + s(34), b.bottom - s(20));
-    this.addText(b.centerX, noteY, '에너지 0 · 젬 0 · 티켓 0 소모', ts('caption', {
+    this.addText(b.centerX, noteY, '젬 0 · 티켓 0 소모', ts('caption', {
       color: DESIGN.colors.text.muted
     })).setOrigin(0.5);
   }
@@ -607,7 +607,7 @@ export class GachaPopup extends PopupBase {
 
   /**
    * T-05 첫 무료 10연 — GachaSystem.pull()의 isFreeTenPull(count===10 && !freeTenPullUsed)
-   * 내부 판정이 재화/에너지 체크를 자동으로 면제하므로, 여기서는 canPull() 사전 검사를
+   * 내부 판정이 재화 체크를 자동으로 면제하므로, 여기서는 canPull() 사전 검사를
    * 하지 않는다(초기 재화가 0이어도 무료 10연은 항상 성립해야 함).
    */
   performFreeTenPull() {
@@ -623,7 +623,7 @@ export class GachaPopup extends PopupBase {
     // 표준 배너(픽업 없음)로 고정한다. bannerPanel.selectedId를 그대로 넘기면 온보딩
     // 배너 패널이 기본 선택한 활성 픽업 배너로 라우팅돼 T-05 무료 10연 결과가 달라진다.
     this.isAnimating = true;
-    const result = GachaSystem.pull(10, 'gems', { skipEnergyCheck: true, bannerId: 'standard' });
+    const result = GachaSystem.pull(10, 'gems', { bannerId: 'standard' });
     this._handlePullResult(result, null);
   }
 
@@ -640,12 +640,15 @@ export class GachaPopup extends PopupBase {
 
     const results = result.results.map((r) => {
       const charData = getCharacterOrHero(r.characterId);
+      // 결과 페이로드의 등급은 정규화해서 싣는다. 오버레이가 이 값으로 연출을 가르므로
+      // 원본이 숫자거나 비어 있으면 그대로 최하위 분기로 떨어진다
+      const rarity = getRarityKey(r.rarity ?? charData?.rarity);
       return {
         id: r.characterId,
         name: charData?.name || r.characterId,
-        rarity: r.rarity,
+        rarity,
         level: 1,
-        stars: getRarityNum(r.rarity) || RARITY[getRarityKey(r.rarity)]?.stars || 1,
+        stars: getRarityNum(rarity) || RARITY[rarity]?.stars || 1,
         stats: charData?.stats || { hp: 100, atk: 20, def: 10, spd: 10 },
         isNew: r.isNew,
         shardsGained: r.shardsGained,
@@ -736,8 +739,24 @@ export class GachaPopup extends PopupBase {
     super.destroy();
   }
 
+  /**
+   * 팝업 안내 토스트.
+   *
+   * 이전 y 는 base 1400(렌더 2100)이라 화면 높이(GAME_HEIGHT 1920) **밖**이었다.
+   * '보석이 부족합니다!' 가 한 번도 그려지지 않아, 10연 버튼을 눌러도 아무 일이
+   * 일어나지 않는 것처럼 보였다(플레이 리포트 "10가챠 결과화면 안보임").
+   * 이제 콘텐츠 슬롯 하단 안쪽에 띄우고, 뜨는 애니메이션까지 포함해 화면 안에 가둔다.
+   */
   showToast(text, color = COLORS.text) {
-    const toast = this.scene.add.text(GAME_WIDTH / 2, s(1400), text, {
+    const bounds = this.contentBounds;
+    const rise = s(50);
+    // 아래로는 화면 하한, 위로는 뜬 뒤에도 콘텐츠 안에 남는 높이로 자른다
+    const y = Math.min(
+      bounds ? bounds.bottom - s(40) : GAME_HEIGHT - s(160),
+      GAME_HEIGHT - s(80) - rise
+    );
+
+    const toast = this.scene.add.text(GAME_WIDTH / 2, y, text, {
       fontSize: sf(18),
       fontFamily: '"Noto Sans KR", sans-serif',
       color: `#${color.toString(16).padStart(6, '0')}`,
@@ -748,10 +767,11 @@ export class GachaPopup extends PopupBase {
     this.scene.tweens.add({
       targets: toast,
       alpha: 0,
-      y: toast.y - s(50),
+      y: toast.y - rise,
       duration: 1500,
       delay: 500,
       onComplete: () => toast.destroy()
     });
+    return toast;
   }
 }

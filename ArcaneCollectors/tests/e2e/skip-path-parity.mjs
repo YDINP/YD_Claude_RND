@@ -20,6 +20,7 @@
  */
 import { chromium } from 'playwright';
 
+import { blockHmr } from './hmr-guard.mjs';
 const BASE_URL = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const VIEWPORT = { width: 720, height: 1280 };
 const STAGE_IDS = ['1-1', '1-2', '1-3', '1-4', '1-5'];
@@ -316,6 +317,9 @@ function extractComparableState(save) {
 async function runAccount(browser, mode) {
   const context = await browser.newContext({ viewport: VIEWPORT });
   const page = await context.newPage();
+  // 공유 dev 서버 격리 — 남이 소스를 저장해도 이 페이지는 리로드되지 않는다.
+  // 실증: node tests/e2e/hmr-guard-verify.mjs
+  await blockHmr(page, BASE_URL);
   const pageErrors = [];
   page.on('pageerror', (err) => pageErrors.push(`${err.name}: ${err.message}`));
 

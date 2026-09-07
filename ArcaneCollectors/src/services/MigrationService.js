@@ -43,7 +43,9 @@ class MigrationService {
     const steps = [
       { name: 'player_data', fn: () => this.migratePlayerData(userId, localSave) },
       { name: 'heroes', fn: () => this.migrateHeroes(userId, localSave.characters || []) },
-      { name: 'inventory', fn: () => this.migrateInventory(userId, localSave.inventory || []) },
+      // QA P1④: inventory 는 {equipment, items} 오브젝트다 (예전엔 배열이었다).
+      // migrateInventory()는 스택형 소비/재료(items)를 다루므로 그쪽만 넘긴다.
+      { name: 'inventory', fn: () => this.migrateInventory(userId, localSave.inventory?.items || []) },
       { name: 'stage_progress', fn: () => this.migrateStageProgress(userId, localSave.progress || {}) },
       { name: 'gacha_data', fn: () => this.migrateGachaData(userId, localSave.gacha || {}) },
       { name: 'quest_data', fn: () => this.migrateQuestData(userId, localSave.quests || {}) },

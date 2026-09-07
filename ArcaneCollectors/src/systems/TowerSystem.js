@@ -230,22 +230,23 @@ export class TowerSystem {
   static _grantRewards(floor, floorInfo) {
     const rewards = { ...floorInfo.rewards };
 
-    // 기본 보상 지급
-    if (rewards.gold > 0) {
-      SaveManager.addGold(rewards.gold);
+    // QA P1 후속: gold/exp 는 여기서 지급하지 않는다. `buildStageForFloor()`가
+    // `floorInfo.rewards` 를 `stage.rewards` 로 그대로 넘기므로, 전투 승리 시
+    // BattleScene.js 의 공용 지급 경로(SaveManager.addGold + ProgressionSystem.addExp)가
+    // 처리한다. 예전엔 여기서도 addGold 를 호출해 골드가 두 번 지급됐고(중복 지급),
+    // exp 는 `expGranted` 플래그만 세팅하고 실제로 캐릭터에게 지급된 적이 없었다
+    // (아무도 이 플래그를 읽지 않았다).
+    //
+    // equipmentChance/shardRarity 도 슬롯·등급·대상 캐릭터를 정할 데이터가 없어
+    // 여전히 미구현이다 — 추측으로 만들지 않고 보고로 남긴다.
+    if (rewards.equipmentChance) {
+      console.warn(`[TowerSystem] ${floor}층: equipmentChance(${rewards.equipmentChance}) 보상 미구현 — 장비 지급 없음`);
     }
-    if (rewards.exp > 0) {
-      // 경험치는 파티 캐릭터에게 분배 (SaveManager에 메서드 필요)
-      rewards.expGranted = rewards.exp;
+    if (rewards.shardRarity) {
+      console.warn(`[TowerSystem] ${floor}층: shardRarity(${rewards.shardRarity}) 보상 미구현 — 조각 지급 없음`);
     }
 
-    // 장비 드롭 확률 체크
-    if (rewards.equipmentChance && Math.random() < rewards.equipmentChance) {
-      rewards.equipmentDropped = true;
-      // TODO: 장비 생성 및 지급
-    }
-
-    // 보스 보상 지급
+    // 보스 보상 지급 — 젬/SR티켓은 실지급 메서드가 있어 그대로 지급한다.
     if (floorInfo.bossReward) {
       const bossReward = floorInfo.bossReward;
       if (bossReward.gems > 0) {
@@ -257,8 +258,9 @@ export class TowerSystem {
         rewards.srTicket = bossReward.srTicket;
       }
       if (bossReward.ssrTicket > 0) {
-        // SSR 티켓은 별도 처리 필요
-        rewards.ssrTicket = bossReward.ssrTicket;
+        // SSR 전용 티켓을 담을 resources 필드/소환 로직이 아직 없다 — 지급된 것처럼
+        // 화면에 표시하면 이번 티켓과 같은 종류의 결함이 되므로 표시값에도 넣지 않는다.
+        console.warn(`[TowerSystem] ${floor}층: ssrTicket(${bossReward.ssrTicket}) 보상 미구현 — 지급/표시 생략(별도 설계 필요)`);
       }
     }
 
@@ -418,19 +420,25 @@ export class TowerSystem {
       SaveManager.save(data);
     }
 
-    const season = data.tower.season || this._defaultSeasonRecord(this.getSeasonId());
+    // 방어적 보정: 디버그 치트(setTowerFloor 등) 나 구버전 세이브가 만든
+    // 불완전한 tower 레코드(필드 누락)를 기본값과 병합해 undefined 노출을 막는다.
+    // 근본 원인은 DebugManager의 치트 메서드들이며 그쪽도 함께 고쳤다.
+    const defaults = this._defaultTowerRecord(data.tower.season?.id);
+    const tower = { ...defaults, ...data.tower };
+
+    const season = tower.season || this._defaultSeasonRecord(this.getSeasonId());
 
     return {
-      currentFloor: data.tower.currentFloor,
-      highestFloor: data.tower.highestFloor,
+      currentFloor: tower.currentFloor,
+      highestFloor: tower.highestFloor,
       maxFloor: this.MAX_FLOOR,
-      totalClears: data.tower.totalClears,
-      bossClears: data.tower.bossClears,
-      lastResetDate: data.tower.lastResetDate,
-      nextBossFloor: this._getNextBossFloor(data.tower.currentFloor),
+      totalClears: tower.totalClears,
+      bossClears: tower.bossClears,
+      lastResetDate: tower.lastResetDate,
+      nextBossFloor: this._getNextBossFloor(tower.currentFloor),
       season: { ...season },
-      seasonHistory: Array.isArray(data.tower.seasonHistory) ? data.tower.seasonHistory : [],
-      bestFloorAllTime: data.tower.bestFloorAllTime || data.tower.highestFloor || 0
+      seasonHistory: Array.isArray(tower.seasonHistory) ? tower.seasonHistory : [],
+      bestFloorAllTime: tower.bestFloorAllTime || tower.highestFloor || 0
     };
   }
 
@@ -596,7 +604,11 @@ export class TowerSystem {
     return {
       id: `tower_floor_${floor}`,
       name: `무한의 탑 ${floor}층`,
-      enemies: stageEnemies
+      enemies: stageEnemies,
+      // QA P1 후속: 이 필드가 없어서 BattleScene.js의 `this.stage?.rewards` 조회가
+      // 항상 실패해 하드코딩된 {gold:100, exp:50} 로 대체됐다 — 층수와 무관하게
+      // 고정 보상이 나가고(과다/과소 모두 가능), 화면 표시도 실제 층 보상과 달랐다.
+      rewards: floorInfo?.rewards || null
     };
   }
 

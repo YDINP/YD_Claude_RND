@@ -24,7 +24,7 @@ import itemsData from './items.json';
 import questsData from './quests.json';
 import baseHeroesData from './base-heroes.json';
 import ascendedHeroesData from './ascended-heroes.json';
-import { getRarityKey } from '../utils/rarityUtils.js';
+import { getRarityKey, BASE_HERO_RARITY } from '../utils/rarityUtils.js';
 import { HeroFactory } from '../systems/HeroFactory.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 
@@ -37,6 +37,31 @@ const items = itemsData as { items: any[] };
 const quests = questsData as { dailyQuests: any[]; weeklyQuests: any[]; achievementQuests: any[] };
 const baseHeroes = baseHeroesData as { baseHeroes: any[] };
 const ascendedHeroes = ascendedHeroesData as { ascendedHeroes: any[] };
+
+// ==================== Base Hero Rarity Derivation ====================
+//
+// base-heroes.json 에는 rarity 필드가 없다(의도 — rarityUtils.BASE_HERO_RARITY 주석 참조).
+// 등급을 여기 한 번만 얹어서 내보내면 그 아래 모든 소비자(HeroFactory, 카드, 팝업,
+// 가챠 결과, 상세 씬)가 같은 등급을 본다. 호출부마다 `|| 'R'` 을 늘리면 한 곳을
+// 빠뜨리는 순간 같은 영웅이 화면마다 다른 등급으로 보인다.
+
+/** 등급이 없는 기본영웅 레코드에 파생 등급을 얹는다. 원본은 건드리지 않는다 */
+function withBaseRarity(hero: any): any {
+  if (!hero || hero.rarity !== undefined) return hero;
+  return { ...hero, rarity: BASE_HERO_RARITY };
+}
+
+/**
+ * 등급이 채워진 기본영웅 목록. JSON 은 변하지 않으므로 한 번만 만들어 재사용한다
+ * (매 호출 새 배열을 만들면 참조 비교가 깨지고 GC 부담만 는다).
+ */
+let baseHeroesWithRarity: any[] | null = null;
+function getBaseHeroesWithRarity(): any[] {
+  if (!baseHeroesWithRarity) {
+    baseHeroesWithRarity = baseHeroes.baseHeroes.map(withBaseRarity);
+  }
+  return baseHeroesWithRarity;
+}
 
 // ==================== Hero Data Normalization ====================
 // Migrated to HeroFactory (PAT-4), re-exported for backward compatibility
@@ -90,7 +115,7 @@ export function getAllCharacters(): Character[] {
  * @returns 기본 영웅 데이터
  */
 export function getBaseHero(id: string): any | undefined {
-  return baseHeroes.baseHeroes.find((hero: any) => hero.id === id);
+  return getBaseHeroesWithRarity().find((hero: any) => hero.id === id);
 }
 
 /**
@@ -98,7 +123,7 @@ export function getBaseHero(id: string): any | undefined {
  * @returns 기본 영웅 배열 (10명)
  */
 export function getAllBaseHeroes(): any[] {
-  return baseHeroes.baseHeroes;
+  return getBaseHeroesWithRarity();
 }
 
 /**
@@ -142,8 +167,8 @@ export function getAscendedHeroesByBase(baseHeroId: string): any[] {
  *   - `baseClass` → `class`
  *   - `baseMood` → `mood`
  *
- * base-heroes에는 `rarity` 필드가 없습니다. 값을 지어내지 않고 그대로 두며,
- * `getRarityKey(undefined)`가 'N'으로 폴백해 플레이스홀더 등급 표시에만 영향을 줍니다.
+ * base-heroes에는 `rarity` 필드가 없으므로 `BASE_HERO_RARITY`('R')를 얹어 내보냅니다.
+ * (근거는 rarityUtils.BASE_HERO_RARITY 주석 — 가챠 풀·성급·온보딩 밸런스 표가 쓰는 값과 같습니다)
  *
  * @returns 중복 없는 영웅 배열 (현재 38명)
  */
@@ -168,7 +193,7 @@ export function getAllPortraitHeroes(): any[] {
 
   push(characters.characters, false);
   push(ascendedHeroes.ascendedHeroes, true);
-  push(baseHeroes.baseHeroes, true);
+  push(getBaseHeroesWithRarity(), true);
 
   return merged;
 }
@@ -188,8 +213,8 @@ export function getCharacterOrHero(id: string): any | undefined {
   const ascended = ascendedHeroes.ascendedHeroes.find((hero: any) => hero.id === id);
   if (ascended) return ascended;
 
-  // 3순위: 기본 영웅 (base-heroes.json)
-  return baseHeroes.baseHeroes.find((hero: any) => hero.id === id);
+  // 3순위: 기본 영웅 (base-heroes.json) — 파생 등급이 얹힌 목록에서 찾는다
+  return getBaseHeroesWithRarity().find((hero: any) => hero.id === id);
 }
 
 /**

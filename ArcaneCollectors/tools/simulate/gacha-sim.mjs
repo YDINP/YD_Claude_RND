@@ -13,7 +13,8 @@
  *      - PITY_CONFIG  : L22-L27   { softPity 75, hardPity 90, softPityBonus 0.06, pickupPity 180 }
  *      - PITY_THRESHOLD=90(L30), SOFT_PITY_START=75(L31)
  *      - SINGLE_COST 300 / MULTI_COST 2700 / TICKET (L34-L37)
- *      - ENERGY_COST_PER_PULL 10 (L48)
+ *      - 가챠는 에너지를 소비하지 않는다(2026-09-04 제거 — 젬/티켓으로만 게이팅).
+ *          에너지는 전투/스테이지/탑 전용 자원이며 가챠 경로와 무관.
  *      - determineRarity(currentPity) 로직 그대로 이식: L315-L351
  *          · currentPity >= 90            -> SSR 확정
  *          · pity >= 75                   -> ssrRate += (pity-75)*0.06 (cap 1.0)
@@ -24,8 +25,8 @@
  *      - determinePickupCharacter: L162-L183 (pickupPity>=180 또는 lost5050 이면 픽업 확정,
  *          pickupRate 기본 0.5 = 50/50)
  *
- *   [E] src/systems/EnergySystem.js
- *      - ENERGY_CONFIG L10-L17 : 최대 100 + 2*레벨, 5분당 1회복(=288/일), 젬충전 50젬->50에너지
+ *   [E] src/systems/EnergySystem.js (스테이지 파밍 전용 — 가챠와 무관, runDailyEconomy()에서만 쓰인다)
+ *      - ENERGY_CONFIG L10-L14 : 최대 100 + 2*레벨, 5분당 1회복(=288/일)
  *      - STAGE_COSTS   L20-L24 : NORMAL 6 / ELITE 12 / BOSS 20
  *
  *   [S] src/data/stages.json (파밍 스테이지 보상 기준값)
@@ -58,7 +59,7 @@ const PITY_CONFIG = { softPity: 75, hardPity: 90, softPityBonus: 0.06, pickupPit
 const PITY_THRESHOLD = 90; // [G] L30
 const SOFT_PITY_START = 75; // [G] L31
 
-const GACHA = { SINGLE_COST: 300, MULTI_COST: 2700, ENERGY_COST_PER_PULL: 10 }; // [G] L34-48
+const GACHA = { SINGLE_COST: 300, MULTI_COST: 2700 }; // [G] L34-37 (가챠는 에너지를 소비하지 않는다)
 const PICKUP_RATE_DEFAULT = 0.5; // [G] determinePickupCharacter 의 banner.pickupRate 기본값
 
 // ---------- 배너 모드: src/data/banners.json 로드 + 해석 ----------
@@ -102,14 +103,14 @@ function resolveBanner(banners, requestedId) {
   };
 }
 
+// GEM_CHARGE_COST/AMOUNT는 [E]에 존재하지만 이 스크립트에서 쓰지 않는다(젬→에너지 충전은
+// 가챠와 무관한 스테이지 파밍 경로 — 가챠는 에너지를 소비하지 않으므로 여기서 다루지 않는다).
 const ENERGY_CONFIG = {
   BASE_MAX_ENERGY: 100,
   ENERGY_PER_LEVEL: 2,
   RECOVERY_INTERVAL_MINUTES: 5,
   RECOVERY_AMOUNT: 1,
-  GEM_CHARGE_COST: 50,
-  GEM_CHARGE_AMOUNT: 50,
-}; // [E] L10-17
+}; // [E] L10-14
 const STAGE_COSTS = { NORMAL: 6, ELITE: 12, BOSS: 20 }; // [E] L20-24
 
 const FARM_STAGE = { id: 'ch2-3-normal', energyCost: 6, gold: 1500, exp: 750 }; // [S]
@@ -447,22 +448,7 @@ function runDailyEconomy(playerLevel) {
     `  젬 수입 ${gemsPerDay}/일 (일간 퀘스트 ${DAILY_GEMS} + 주간 퀘스트 일평균 ${WEEKLY_GEMS_PER_DAY}) | 10연 비용 ${GACHA.MULTI_COST}`
   );
   console.log(`  → 10연 1회 충족까지 약 ${daysPerMulti.toFixed(1)}일 (월 약 ${(30 / daysPerMulti).toFixed(1)}회 10연)`);
-
-  const multiEnergy = 10 * GACHA.ENERGY_COST_PER_PULL; // PRD-3: pull당 에너지 10
-  const opportunityStages = multiEnergy / STAGE_COSTS.NORMAL;
-  const opportunityGold = opportunityStages * FARM_STAGE.gold;
-  console.log(
-    `  주의(PR D-3): 가챠는 젬과 별개로 뽑기 1회당 에너지 ${GACHA.ENERGY_COST_PER_PULL} 소모 → 10연 시 에너지 ${multiEnergy} 추가 소모`
-  );
-  console.log(
-    `  → 기회비용: 일반 스테이지 ${opportunityStages.toFixed(1)}회 포기 ≈ 골드 ${opportunityGold.toLocaleString()}/10연`
-  );
-
-  // 젬→에너지→가챠 우회 경로
-  const energyPerGemCharge = ENERGY_CONFIG.GEM_CHARGE_AMOUNT / ENERGY_CONFIG.GEM_CHARGE_COST; // 1/젬
-  console.log(
-    `  보석 에너지 충전: 50젬→50에너지 (${energyPerGemCharge.toFixed(2)}에너지/젬) — 젬을 직접 뽑기에 쓰는 것(${GACHA.SINGLE_COST}/1회=${(1 / GACHA.SINGLE_COST).toFixed(4)}뽑기/젬)보다 에너지 경유가 유리한지는 파밍 가치에 종속`
-  );
+  console.log(`  참고: 가챠는 에너지를 소비하지 않는다(젬/티켓으로만 게이팅) — 에너지는 스테이지 파밍과 완전히 독립적인 자원이다.`);
 
   // 첫 클리어 일괄 수령액(참고, 일회성): stages.json ch1~ch2 firstClearRewards gems 합계
   const firstClearGems = 30 + 30 + 30 + 50 + 100 + 50 + 50 + 80 + 50 + 150; // ch1 10스테이지

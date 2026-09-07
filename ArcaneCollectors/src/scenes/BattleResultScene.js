@@ -15,6 +15,7 @@ import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { IconFactory } from '../utils/IconFactory.js';
 import { ts } from '../utils/textStyles.ts';
 import { DESIGN } from '../config/designSystem.js';
+import { getItem } from '../data/index.js';
 import {
   RESULT_LAYOUT,
   computeStarSlots,
@@ -246,11 +247,26 @@ export class BattleResultScene extends Phaser.Scene {
       { icon: 'star', label: 'EXP', value: `+${(this.rewards.exp || 0).toLocaleString()}`, color: '#06BBFA' }
     ];
 
+    // 무한탑 보스층 보너스(젬/SR티켓) — 예전엔 TowerSystem.clearFloor() 가 실지급까지
+    // 하고도 반환값이 버려져 결과 화면에 전혀 안 보였다(지급은 됐는데 안 보이는 역방향 불일치).
+    if (this.rewards.gems) {
+      entries.push({ icon: 'gem', label: '보너스 젬', value: `+${this.rewards.gems.toLocaleString()}`, color: '#A855F7' });
+    }
+    if (this.rewards.srTicket) {
+      entries.push({ icon: 'gem', label: '보너스 SR 소환권', value: `+${this.rewards.srTicket.toLocaleString()}`, color: '#3B82F6' });
+    }
+
     const items = Array.isArray(this.rewards.items) ? this.rewards.items : [];
     items.slice(0, 4).forEach(item => {
+      const itemId = item.itemId || item.id;
+      // items.json 이 SSOT — 내부 id 를 그대로 보여주지 않고 이름을 조회한다.
+      // 데이터에 이름이 없는 경우(신규 미등록 id 등)에도 id 를 노출하지 않고
+      // 일반화된 라벨로 폴백한다.
+      const itemData = itemId ? getItem(itemId) : null;
+      const label = item.name || itemData?.name || (itemId ? '알 수 없는 아이템' : '아이템');
       entries.push({
         icon: 'gem',
-        label: item.name || item.itemId || item.id || '아이템',
+        label,
         value: item.count ? `x${item.count}` : '획득',
         color: '#10B981'
       });
@@ -403,11 +419,37 @@ export class BattleResultScene extends Phaser.Scene {
     const band = RESULT_LAYOUT.party;
     const y = s(band.y + band.h + 16);
     const line = `${this.turnCount}턴 · 생존 ${this.aliveCount}/${this.totalAllies}`;
-    this.add.text(GAME_WIDTH / 2, y, line, ts('num.sm', {
-      color: DESIGN.colors.text.secondary,
-      stroke: '#000000',
-      strokeThickness: s(3)
-    })).setOrigin(0.5).setDepth(10);
+    this.addScrimText(GAME_WIDTH / 2, y, line);
+  }
+
+  /**
+   * QA P2 (2026-09-04): 결과 화면 배경(구름·석양)은 스테이지마다 밝기가 다른데,
+   * 이 한 줄짜리 통계 텍스트는 배경색 위에 검정 stroke 만 두르고 맨몸으로 얹혀 있었다.
+   * 실측 결과 대비 1.1~2.0:1(WCAG AA 4.5:1 미달) — 밝은 배경에서 거의 안 읽혔다.
+   * 컷씬 트랙이 쓴 방식(진한 알약 배경 + 밝은 텍스트)을 그대로 옮긴다 — 배경 밝기와
+   * 무관하게 대비를 보장한다. `총 전투력`(패배 화면)과 이 메서드가 같은 문제라 공유한다.
+   * @param {number} x 텍스트 x (렌더 px, originX 기준)
+   * @param {number} y 중심 y (렌더 px)
+   * @param {string} text
+   * @param {number} [originX=0.5] 텍스트 origin.x (0=좌기준, 0.5=중앙, 1=우기준) — 알약도 같은 기준으로 맞춘다
+   * @returns {Phaser.GameObjects.Text}
+   */
+  addScrimText(x, y, text, originX = 0.5) {
+    const label = this.add.text(x, y, text, ts('num.sm', {
+      color: DESIGN.colors.text.primary
+    })).setOrigin(originX, 0.5).setDepth(11);
+
+    const padX = s(14);
+    const padY = s(6);
+    const pillW = label.width + padX * 2;
+    const pillH = label.height + padY * 2;
+    // 텍스트의 실제 중심 x — origin 이 0.5 가 아니면 x 는 중심이 아니라 좌/우 기준점이다
+    const centerX = x - (originX - 0.5) * label.width;
+    const pill = this.add.graphics().setDepth(10);
+    pill.fillStyle(DESIGN.colors.bg.primary, 0.72);
+    pill.fillRoundedRect(centerX - pillW / 2, y - pillH / 2, pillW, pillH, pillH / 2);
+
+    return label;
   }
 
   /**
@@ -566,14 +608,10 @@ export class BattleResultScene extends Phaser.Scene {
       })).setOrigin(0.5).setDepth(10);
     }
 
-    // '이번 편성' 라벨과 같은 줄의 오른쪽 끝. 가운데 두면 라벨과 겹친다
-    this.add.text(s(RESULT_LAYOUT.defeatParty.x + RESULT_LAYOUT.defeatParty.w - 24),
-      s(RESULT_LAYOUT.defeatParty.y - 18), `${this.turnCount}턴 · 생존 ${this.aliveCount}/${this.totalAllies}`,
-      ts('num.sm', {
-        color: DESIGN.colors.text.secondary,
-        stroke: '#000000',
-        strokeThickness: s(3)
-      })).setOrigin(1, 0.5).setDepth(10);
+    // '이번 편성' 라벨과 같은 줄의 오른쪽 끝. 가운데 두면 라벨과 겹친다.
+    // 대비 스크림은 addScrimText() 참고 (createBattleStats 와 같은 결함 — QA P2 2026-09-04).
+    this.addScrimText(s(RESULT_LAYOUT.defeatParty.x + RESULT_LAYOUT.defeatParty.w - 24),
+      s(RESULT_LAYOUT.defeatParty.y - 18), `${this.turnCount}턴 · 생존 ${this.aliveCount}/${this.totalAllies}`, 1);
 
     // 진단 패널과 액션 버튼 사이가 비어 있으면 "무엇을 고쳐야 하는가"가 끊긴다.
     // 이번 편성을 그대로 보여 주고 빈 슬롯을 드러내 다음 행동에 연결한다.
@@ -638,13 +676,10 @@ export class BattleResultScene extends Phaser.Scene {
       })).setOrigin(1, 0.5).setDepth(11);
     });
 
-    // 합계 — 진단 문구의 "내 파티" 숫자와 같은 식을 쓴다
-    this.add.text(GAME_WIDTH / 2, s(band.y + band.h + 14),
-      `총 전투력 ${this.getPartyPower().toLocaleString()}`, ts('num.sm', {
-        color: DESIGN.colors.text.secondary,
-        stroke: '#000000',
-        strokeThickness: s(3)
-      })).setOrigin(0.5).setDepth(10);
+    // 합계 — 진단 문구의 "내 파티" 숫자와 같은 식을 쓴다. 대비 배경 위한 스크림은
+    // addScrimText() 참고(createBattleStats 와 같은 결함 — QA P2 2026-09-04).
+    this.addScrimText(GAME_WIDTH / 2, s(band.y + band.h + 14),
+      `총 전투력 ${this.getPartyPower().toLocaleString()}`);
   }
 
   createActionButtons() {

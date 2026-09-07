@@ -100,9 +100,10 @@ export class ProgressionSystem {
       return { success: false, error: '캐릭터를 찾을 수 없습니다' };
     }
 
-    const charData = getCharacter(characterId);
+    const charData = this.lookupCharacterData(characterId);
     const rarity = getRarityKey(character.rarity ?? charData?.rarity ?? 1);
-    const maxLevel = this.MAX_LEVEL[rarity] || 30;
+    // 레벨 상한은 한 규칙이다 — 데이터 선언값 우선, 없으면 등급 표 (getCharacterDetails 와 동일)
+    const maxLevel = this.resolveMaxLevel(charData, rarity);
 
     // 이미 최대 레벨이면 오버플로우
     if (character.level >= maxLevel) {
@@ -215,6 +216,24 @@ export class ProgressionSystem {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * 레벨 상한 해석.
+   *
+   * 데이터가 `maxLevel` 을 직접 선언하면 그것이 우선이다. 기본영웅은 등급 사다리 밖의
+   * 계층이라 표시 등급이 R 이어도 상한은 30 에서 멈춘다(GDD §2-1 · base-heroes.json).
+   * `ascended-heroes.json` 의 maxLevel 은 등급 표(SSR 60 / SR 50 / R 40)와 이미 일치하고
+   * `characters.json` 은 maxLevel 이 없으므로, 등급 기반 동작은 그대로 유지된다.
+   *
+   * @param {Object|null} charData 캐릭터 원천 데이터
+   * @param {string} rarityKey 정규화된 등급 키
+   * @returns {number} 최대 레벨
+   */
+  static resolveMaxLevel(charData, rarityKey) {
+    const declared = Number(charData?.maxLevel);
+    if (Number.isFinite(declared) && declared > 0) return declared;
+    return this.MAX_LEVEL[rarityKey] || this.MAX_LEVEL.N;
   }
 
   /**
@@ -673,9 +692,10 @@ export class ProgressionSystem {
     const character = SaveManager.getCharacter(characterId);
     if (!character) return null;
 
-    const charData = getCharacter(characterId);
+    // base_*/asc_* 는 characters.json 에 없다. 통합 조회를 써야 등급·레벨 상한이 맞는다
+    const charData = this.lookupCharacterData(characterId);
     const rarity = getRarityKey(character.rarity ?? charData?.rarity ?? 1);
-    const maxLevel = this.MAX_LEVEL[rarity];
+    const maxLevel = this.resolveMaxLevel(charData, rarity);
     const stats = this.getStatsAtLevel(characterId, character.level);
     const starBonus = this.getStarBonus(character.stars);
     const power = this.calculatePower(character);

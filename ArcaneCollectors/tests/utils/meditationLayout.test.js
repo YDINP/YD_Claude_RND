@@ -16,13 +16,17 @@ import {
   CHANNEL,
   MAX_CONCURRENT_TWEENS,
   LABELS,
+  SANCTUM_BACKDROP,
+  CORNER_BUTTON,
   computeRuneRing,
   computeMeditationSeats,
   computeAltar,
   computeManaGauge,
   computeSanctumLabels,
-  computeReadyBanner,
+  computePartyEntryButton,
+  computeSeatHit,
   computeLightPillar,
+  computeSanctumBackdrop,
   computeSeatDisc,
   computeChibiFit,
   auraSpawnDelay,
@@ -41,10 +45,13 @@ import {
   frameIndex,
   resolveChibiSheet
 } from '../../src/utils/meditationLayout.js';
+import * as ML from '../../src/utils/mainMenuLayout.js';
 
-// MainMenuScene 의 관측창 실측 크기 (mainMenuLayout.computeIdleBand 의 view)
-const VIEW_W = 668;
-const VIEW_H = 300;
+// 관측창 크기는 mainMenuLayout 이 정한다. 여기서 숫자를 다시 적으면 대역이 바뀔 때
+// 두 곳이 어긋나므로 실제 값을 가져다 쓴다.
+const { view } = ML.computeIdleBand();
+const VIEW_W = view.w;
+const VIEW_H = view.h;
 
 const half = { x: VIEW_W / 2, y: VIEW_H / 2 };
 
@@ -133,15 +140,86 @@ describe('제단 · 게이지 · 헤더', () => {
     expect(labels.title.y).toBe(-half.y + SANCTUM.padding);
   });
 
-  it('수확 준비 배너와 빛기둥은 제단 위 · 창 안에 놓인다', () => {
-    const banner = computeReadyBanner(VIEW_W, VIEW_H);
+  it('성소 편성 버튼은 좌하단 안쪽에 있고 터치 하한을 넘는다', () => {
+    const btn = computePartyEntryButton(VIEW_W, VIEW_H);
+    expect(btn.w).toBeGreaterThanOrEqual(48);
+    expect(btn.h).toBeGreaterThanOrEqual(48);
+    expect(btn.x - btn.w / 2).toBeGreaterThanOrEqual(-half.x);
+    expect(btn.y + btn.h / 2).toBeLessThanOrEqual(half.y);
+    expect(btn.x).toBeLessThan(0);   // 좌하단
+    expect(btn.y).toBeGreaterThan(0);
+  });
+
+  it('편성 버튼이 앞줄 좌석·명상 원과 겹치지 않는다', () => {
+    const btn = computePartyEntryButton(VIEW_W, VIEW_H);
+    const front = computeMeditationSeats(VIEW_W, VIEW_H).filter((s) => s.row === 'front');
+    front.forEach((seat) => {
+      const disc = computeSeatDisc(seat);
+      const seatLeft = seat.x - disc.rx;
+      const seatRight = seat.x + disc.rx;
+      const btnRight = btn.x + btn.w / 2;
+      const btnLeft = btn.x - btn.w / 2;
+      const overlapX = btnRight > seatLeft && btnLeft < seatRight;
+      expect(overlapX).toBe(false);
+    });
+    expect(CORNER_BUTTON.h).toBeGreaterThanOrEqual(48);
+  });
+
+  it('좌석 탭 영역은 앉은 사람을 덮고 터치 하한을 넘는다', () => {
+    computeMeditationSeats(VIEW_W, VIEW_H).forEach((seat) => {
+      const hit = computeSeatHit(seat);
+      expect(hit.w).toBeGreaterThanOrEqual(48);
+      expect(hit.h).toBeGreaterThanOrEqual(48);
+      expect(hit.y).toBeLessThan(seat.y);          // 발밑이 아니라 몸통 위
+      expect(hit.y + hit.h / 2).toBeLessThanOrEqual(seat.y + 1);
+    });
+    expect(computeSeatHit(null)).toBeNull();
+  });
+
+  it('빛기둥은 제단 결정에서 창 위 끝까지 선다', () => {
     const pillar = computeLightPillar(VIEW_W, VIEW_H);
     const altar = computeAltar(VIEW_W, VIEW_H);
-    expect(banner.x).toBe(0);
-    expect(banner.y).toBeGreaterThan(-half.y);
     expect(pillar.x).toBe(altar.orbX);
     expect(pillar.y).toBe(-half.y);
-    expect(pillar.h).toBeGreaterThan(0);           // 창 위쪽 끝에서 구슬까지
+    expect(pillar.h).toBeGreaterThan(0);
+  });
+
+  it('성소 배경은 창을 다 덮고, 그려진 룬 플랫폼을 창 아래로 밀어낸다', () => {
+    // 실제 bg_sanctum 규격 (832x1216 -> 1.30배)
+    const fit = computeSanctumBackdrop(VIEW_W, VIEW_H, 1082, 1581);
+    expect(fit).not.toBeNull();
+
+    // cover — 창을 가로·세로 모두 덮는다
+    expect(fit.w).toBeGreaterThanOrEqual(VIEW_W);
+    expect(fit.h).toBeGreaterThanOrEqual(VIEW_H);
+    expect(fit.w / fit.h).toBeCloseTo(1082 / 1581, 5);   // 비율 유지
+
+    // 밀어도 창 밖으로 빈 곳이 생기지 않는다
+    expect(fit.y - fit.h / 2).toBeLessThanOrEqual(-VIEW_H / 2);
+    expect(fit.y + fit.h / 2).toBeGreaterThanOrEqual(VIEW_H / 2);
+
+    // 그려진 결정(원본 0.633~0.723)과 플랫폼 링(0.715~)은 창 아래로 나가야 한다.
+    // 뷰가 그리는 제단·룬 인장과 겹쳐 두 겹으로 보이면 안 된다.
+    const paintedCrystalTop = fit.y - fit.h / 2 + 0.633 * fit.h;
+    const paintedPlatformY = fit.y - fit.h / 2 + 0.715 * fit.h;
+    expect(paintedCrystalTop).toBeGreaterThanOrEqual(VIEW_H / 2);
+    expect(paintedPlatformY).toBeGreaterThan(VIEW_H / 2);
+  });
+
+  it('anchor 를 올릴수록 원본의 더 아래쪽이 보인다 (플랫폼을 걷어내는 손잡이)', () => {
+    const low = computeSanctumBackdrop(VIEW_W, VIEW_H, 1082, 1581, 0.55);
+    const high = computeSanctumBackdrop(VIEW_W, VIEW_H, 1082, 1581, 0.80);
+    // anchor 가 크면 더 아래 지점을 창 바닥에 맞춰야 하므로 이미지가 위로 밀린다
+    expect(high.y).toBeLessThan(low.y);
+    expect(SANCTUM_BACKDROP.floorAnchor).toBeGreaterThan(0.5);
+    expect(SANCTUM_BACKDROP.key).toBe('bg_sanctum');
+    expect(computeSanctumBackdrop(VIEW_W, VIEW_H, 0, 1581)).toBeNull();
+    expect(computeSanctumBackdrop(VIEW_W, 0, 1082, 1581)).toBeNull();
+  });
+
+  it('가로로 긴 원본이면 밀 여유가 없어 가운데로 잘린다 (빈 곳 방지가 우선)', () => {
+    const fit = computeSanctumBackdrop(VIEW_W, VIEW_H, 1200, 400);
+    expect(fit.y).toBe(0);                                // h == viewH 라 밀 수 없다
   });
 
   it('좌석 명상 원은 좌석 높이에서 파생돼 뒷줄이 자동으로 작아진다', () => {
@@ -252,7 +330,8 @@ describe('라벨 — 전투 어휘 없음 · 수치 병기', () => {
   });
 
   it('수확 예정 시간을 한국어 한 마디로 적는다', () => {
-    expect(formatHarvestEta(0)).toBe(LABELS.harvestReady);
+    // 만충이면 문구를 비운다 — 선언이 아니라 게이지가 상태를 말한다
+    expect(formatHarvestEta(0)).toBe('');
     expect(formatHarvestEta(42)).toBe('다음 수확까지 42초');
     expect(formatHarvestEta(120)).toBe('다음 수확까지 2분');
     expect(formatHarvestEta(192)).toBe('다음 수확까지 3분 12초');
@@ -264,6 +343,12 @@ describe('라벨 — 전투 어휘 없음 · 수치 병기', () => {
     expect(formatSanctumTitle(2, 3)).toBe('챕터 2-3 성소');
     expect(formatSanctumTitle(2, 3, '고블린 왕')).toBe('챕터 2-3 성소 · 고블린 왕');
     expect(formatSanctumTitle(undefined, undefined)).toBe('챕터 1-1 성소');
+  });
+
+  it('"수확 준비 완료" 같은 선언 문구는 어휘 사전에 없다', () => {
+    Object.values(LABELS).forEach((label) => {
+      expect(label).not.toContain('준비 완료');
+    });
   });
 
   it('명상 어휘 사전에 전투 용어가 남아 있지 않다', () => {
@@ -323,6 +408,25 @@ describe('치비 시트 조회 — 없는 키를 요청하지 않는다', () => 
     expect(asc.inherited).toBe(true);              // 물려받은 시트는 교단색 틴트 대상
   });
 
+  it('전직 전용 시트가 있으면 그것을 먼저 쓰고 물려받았다고 표시하지 않는다', () => {
+    // 전용 아트에는 이미 교단 테마가 들어 있다. inherited=false 여야 뷰가 tint 를 입히지 않는다.
+    const withDedicated = {
+      chibi: {
+        ...manifest.chibi,
+        chibi_asc_iris_olympus: {
+          key: 'chibi_asc_iris_olympus',
+          path: 'assets/characters/chibi/asc_iris_olympus_sheet.webp',
+          cell: 256,
+          frames: ['idle', 'meditate', 'channel', 'awaken'],
+          footY: 240
+        }
+      }
+    };
+    const found = resolveChibiSheet({ id: 'asc_iris_olympus', baseHeroId: 'base_iris' }, withDedicated);
+    expect(found.key).toBe('chibi_asc_iris_olympus');
+    expect(found.inherited).toBe(false);
+  });
+
   it('전직 영웅 id 에서 원본 영웅 id 를 뽑는다 (참조 필드가 없을 때의 방어선)', () => {
     expect(baseHeroIdFromAscended('asc_iris_olympus')).toBe('base_iris');
     expect(baseHeroIdFromAscended('asc_sera_kunlun')).toBe('base_sera');
@@ -336,6 +440,14 @@ describe('치비 시트 조회 — 없는 키를 요청하지 않는다', () => 
     expect(asc).not.toBeNull();
     expect(asc.key).toBe('chibi_base_iris');
     expect(asc.inherited).toBe(true);
+  });
+
+  it('성소 배경은 lazyTextures 에만 있다 (초기 전송 예산 밖)', async () => {
+    const real = (await import('../../tools/art/asset-manifest.json')).default;
+    const meta = real.lazyTextures?.[SANCTUM_BACKDROP.key];
+    expect(meta).toBeDefined();
+    expect(meta.path).toMatch(/\.webp$/);
+    expect(real.textures?.[SANCTUM_BACKDROP.key]).toBeUndefined();
   });
 
   it('실제 매니페스트에 기본영웅 10인 시트가 모두 등록돼 있다', async () => {

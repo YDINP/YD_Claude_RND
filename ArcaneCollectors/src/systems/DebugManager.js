@@ -4,6 +4,7 @@
  * G-1~G-10: 전체 시스템 치트 API + 치트코드 25종 + window.debug
  */
 import { SaveManager } from './SaveManager.js';
+import { EventBus } from './EventBus.js';
 import { getAllCharacters, getAllChapters, getChapterStages, getAllBaseHeroes, getAllAscendedHeroes } from '../data/index.js';
 import { DebugFAB, isDebugUiAllowed } from '../components/debug/DebugFAB.js';
 import { DebugPanel } from '../components/debug/DebugPanel.js';
@@ -236,11 +237,15 @@ export class DebugManager {
 
   static setEnergy(amount) {
     if (!this.isDebugMode) return false;
+    const clamped = Math.max(0, amount);
+    // 라이브 싱글톤을 직접 갱신해 즉시 반영한다 — 세이브 파일만 고치면 리로드 전까지
+    // energySystem.currentEnergy(메모리 상태)가 그대로라 치트가 먹통인 것처럼 보인다.
+    energySystem.currentEnergy = clamped;
     const data = SaveManager.load();
     if (!data.energy) data.energy = {};
-    data.energy.current = Math.max(0, amount);
+    Object.assign(data.energy, energySystem.getSaveData());
     SaveManager.save(data);
-    this.log('Cheat', `Energy set to ${amount}`);
+    this.log('Cheat', `Energy set to ${clamped}`);
     return true;
   }
 
@@ -345,15 +350,10 @@ export class DebugManager {
 
   static giveEquipment(slotType = 'weapon', rarity = 'SR') {
     if (!this.isDebugMode) return false;
+    // EquipmentSystem.createEquipment() 가 인벤토리 적재·저장까지 전부 처리한다.
+    // 예전에는 여기서 같은 객체를 다시 push+save 해 인벤토리에 중복으로 쌓였다.
     const equip = EquipmentSystem.createEquipment(slotType, rarity);
-    if (equip) {
-      const data = SaveManager.load();
-      if (!data.inventory) data.inventory = {};
-      if (!data.inventory.equipment) data.inventory.equipment = [];
-      data.inventory.equipment.push(equip);
-      SaveManager.save(data);
-      this.log('Cheat', `Given ${rarity} ${slotType}`, equip);
-    }
+    if (equip) this.log('Cheat', `Given ${rarity} ${slotType}`, equip);
     return true;
   }
 
@@ -362,21 +362,17 @@ export class DebugManager {
     const slots = ['weapon', 'armor', 'accessory', 'relic'];
     const rarities = ['R', 'SR', 'SSR'];
     let count = 0;
-    const data = SaveManager.load();
-    if (!data.inventory) data.inventory = {};
-    if (!data.inventory.equipment) data.inventory.equipment = [];
 
+    // EquipmentSystem.createEquipment() 가 인벤토리 적재·저장까지 전부 처리한다.
+    // 예전에는 이 함수 시작 시점의 낡은 data 스냅샷에 다시 push+save 해
+    // 중복 적재를 유발했다 (이제 createEquipment 호출만으로 충분하다).
     slots.forEach(slot => {
       rarities.forEach(rarity => {
         const equip = EquipmentSystem.createEquipment(slot, rarity);
-        if (equip) {
-          data.inventory.equipment.push(equip);
-          count++;
-        }
+        if (equip) count++;
       });
     });
 
-    SaveManager.save(data);
     this.log('Cheat', `Given ${count} equipment items (all slots × rarities)`);
     return true;
   }
@@ -407,7 +403,9 @@ export class DebugManager {
   static setTowerFloor(floor) {
     if (!this.isDebugMode) return false;
     const data = SaveManager.load();
-    if (!data.tower) data.tower = {};
+    // 필드 누락(highestFloor/totalClears 등) 이 요약 UI 에 "undefined" 로
+    // 노출되던 원인 — 빈 객체 대신 TowerSystem 의 기본 레코드로 초기화한다.
+    if (!data.tower) data.tower = TowerSystem._defaultTowerRecord();
     data.tower.currentFloor = Math.max(1, floor);
     SaveManager.save(data);
     this.log('Cheat', `Tower floor set to ${floor}`);
@@ -417,7 +415,7 @@ export class DebugManager {
   static clearTowerFloors(from, to) {
     if (!this.isDebugMode) return false;
     const data = SaveManager.load();
-    if (!data.tower) data.tower = {};
+    if (!data.tower) data.tower = TowerSystem._defaultTowerRecord();
     if (!data.tower.clearedFloors) data.tower.clearedFloors = {};
 
     let count = 0;
@@ -441,7 +439,7 @@ export class DebugManager {
   static resetTower() {
     if (!this.isDebugMode) return false;
     const data = SaveManager.load();
-    data.tower = { currentFloor: 1, highestFloor: 0, clearedFloors: {} };
+    data.tower = { ...TowerSystem._defaultTowerRecord(), clearedFloors: {} };
     SaveManager.save(data);
     this.log('Cheat', 'Tower progress reset');
     return true;
@@ -593,13 +591,21 @@ export class DebugManager {
     return true;
   }
 
+  // P2 수정(2026-09-05): 아래 두 치트는 아무 데서도 읽지 않는 `lastOnlineTime` 필드에
+  // 써서 실질적으로 아무 효과가 없었다 — 실제 오프라인 계산은 `lastOnline`
+  // (SaveManager.calculateOfflineRewards)과 `lastLogoutTime`(IdleProgressSystem/
+  // ReturningPlayerRules)을 읽는다. 또한 `SaveManager.save()`는 호출될 때마다
+  // `lastOnline`을 "지금"으로 덮어쓰므로(SaveManager.js:764, 수정 금지 파일) 그 경로로는
+  // 되돌린 값이 곧바로 지워진다 — localStorage에 직접 써서 우회한다(e2e 진단 스크립트가
+  // 쓰는 것과 같은 방식).
+
   static fastForwardOffline(hours) {
     if (!this.isDebugMode) return false;
     const data = SaveManager.load();
     const msOffset = hours * 60 * 60 * 1000;
-    if (!data.lastOnlineTime) data.lastOnlineTime = Date.now();
-    data.lastOnlineTime -= msOffset;
-    SaveManager.save(data);
+    data.lastOnline = (data.lastOnline || Date.now()) - msOffset;
+    data.lastLogoutTime = (data.lastLogoutTime || Date.now()) - msOffset;
+    localStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(data));
     this.log('Cheat', `Fast-forwarded offline time by ${hours} hours`);
     return true;
   }
@@ -607,8 +613,10 @@ export class DebugManager {
   static setLastOnlineTime(hoursAgo) {
     if (!this.isDebugMode) return false;
     const data = SaveManager.load();
-    data.lastOnlineTime = Date.now() - (hoursAgo * 60 * 60 * 1000);
-    SaveManager.save(data);
+    const target = Date.now() - (hoursAgo * 60 * 60 * 1000);
+    data.lastOnline = target;
+    data.lastLogoutTime = target;
+    localStorage.setItem(SaveManager.SAVE_KEY, JSON.stringify(data));
     this.log('Cheat', `Last online time set to ${hoursAgo} hours ago`);
     return true;
   }
@@ -1270,6 +1278,11 @@ if (typeof window !== 'undefined') {
       return energySystem.getStatus();
     },
 
+    /** QA 회귀 테스트용 — 보상 아이템 지급 계약(표시==지급) 직접 검증 */
+    grantRewardItems: (itemDefs) => {
+      return SaveManager.grantRewardItems(itemDefs);
+    },
+
     /** 가챠 시스템 상태 */
     getGachaStatus: () => {
       return {
@@ -1281,7 +1294,7 @@ if (typeof window !== 'undefined') {
     /** 장비 시스템 조회 */
     getEquipmentList: () => {
       const data = SaveManager.load();
-      return data.equipment || [];
+      return data.inventory?.equipment || [];
     },
 
     /** 퀘스트 시스템 조회 */
@@ -1385,6 +1398,25 @@ if (typeof window !== 'undefined') {
         interactiveCount: scene.children.list.filter(c => c.input?.enabled).length,
         tweenCount: scene.tweens?.getAllTweens?.()?.length || 0,
         timerCount: scene.time?.getEvents?.()?.length || 0
+      };
+    },
+
+    /**
+     * 전역 EventBus 구독 현황 (메모리 스모크의 리스너 누수 판정용, 읽기 전용).
+     * 씬을 순환해도 총 구독 수가 늘지 않아야 한다 — 늘면 어느 화면이 off() 를 빠뜨린 것이다.
+     * @returns {{total:number, once:number, top:Array<{event:string,count:number}>}}
+     */
+    eventBusStats: () => {
+      const count = (store) =>
+        Object.keys(store || {}).reduce((sum, k) => sum + (store[k]?.length || 0), 0);
+      const perEvent = Object.keys(EventBus.events || {})
+        .map(event => ({ event, count: EventBus.events[event]?.length || 0 }))
+        .filter(e => e.count > 0)
+        .sort((a, b) => b.count - a.count);
+      return {
+        total: count(EventBus.events) + count(EventBus.onceEvents),
+        once: count(EventBus.onceEvents),
+        top: perEvent.slice(0, 10)
       };
     },
 

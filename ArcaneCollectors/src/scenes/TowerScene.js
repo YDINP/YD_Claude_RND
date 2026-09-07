@@ -8,6 +8,7 @@ import { TowerSystem } from '../systems/TowerSystem.js';
 import energySystem from '../systems/EnergySystem.js';
 import transitionManager from '../utils/TransitionManager.js';
 import navigationManager from '../systems/NavigationManager.js';
+import { getEnemy } from '../data/index.js';
 
 export class TowerScene extends Phaser.Scene {
   constructor() {
@@ -254,7 +255,10 @@ export class TowerScene extends Phaser.Scene {
     this.add.text(s(50), panelY + s(80), `적:`, {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(15), color: '#94A3B8'
     });
-    const enemyText = enemies.map(e => `${e.id.replace('enemy_', '')} x${e.count}`).join(', ');
+    // enemies.json 이 SSOT — 내부 id 를 그대로 잘라 보여주지 않고 이름을 조회한다.
+    const enemyText = enemies
+      .map(e => `${getEnemy(e.id)?.name || '알 수 없는 적'} x${e.count}`)
+      .join(', ');
     this.add.text(s(130), panelY + s(80), enemyText || '알 수 없음', {
       fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(15), color: '#F8FAFC'
     });
@@ -279,7 +283,8 @@ export class TowerScene extends Phaser.Scene {
       const bossRewardParts = [];
       if (br.gems) bossRewardParts.push(`💎 ${br.gems}`);
       if (br.srTicket) bossRewardParts.push(`🎫 SR티켓 x${br.srTicket}`);
-      if (br.ssrTicket) bossRewardParts.push(`🎫 SSR티켓 x${br.ssrTicket}`);
+      // 팀 기준: 지급되지 않는 보상은 화면에 표시하지 않는다(예외 없음).
+      // ssrTicket 은 담을 resources 필드·소환 연동이 없어 실지급이 안 된다 — 표시도 하지 않는다.
       this.add.text(s(50), panelY + s(150), '보스 보너스:', {
         fontFamily: '"Noto Sans KR", sans-serif', fontSize: sf(15), color: '#EF4444'
       });

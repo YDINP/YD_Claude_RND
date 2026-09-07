@@ -55,6 +55,7 @@ import {
   buildRevealPlan,
   createRevealState,
   advance,
+  revealNextCard,
   revealAllCards,
   skipToGrid,
   isTerminal,
@@ -234,7 +235,14 @@ export class GachaResultOverlay {
     return true;
   }
 
-  /** 연출을 건너뛰고 결과 그리드로 직행한다 */
+  /**
+   * 연출을 건너뛰고 결과 그리드로 직행한다.
+   *
+   * 카드는 3단계(flip)에 들어가야 만들어진다. 1·2단계(소환진·빛기둥)에서 스킵하면
+   * `_playFlip()` 이 영영 실행되지 않아 **빈 결과 패널**만 떴다
+   * (플레이 리포트 "연출 중에 클릭해서 스킵하면 결과가 안 나온다").
+   * 스킵은 "지금 결과를 보여 달라"는 조작이므로 여기서 카드를 만들어 세운다.
+   */
   skip() {
     if (this.destroyed || !this.state || isTerminal(this.state)) return;
     this._clearTimers();
@@ -242,6 +250,7 @@ export class GachaResultOverlay {
     this._stopQuote();
     this.fxLayer.removeAll(true);
     this.cutinLayer.removeAll(true);
+    this._buildCards();
     this._revealAllCards(true);
     this._setActionBarEnabled(true);
     this._enterGrid();
@@ -251,6 +260,7 @@ export class GachaResultOverlay {
   revealAll() {
     if (this.destroyed || !this.state) return;
     this.state = revealAllCards(this.state, this.plan);
+    this._buildCards();
     this._revealAllCards(false);
   }
 
@@ -531,15 +541,7 @@ export class GachaResultOverlay {
 
   /** @private */
   _playFlip(stage) {
-    const layout = this._cardLayout();
-
-    this.cards = this.results.map((hero, index) => {
-      const pos = layout.positions[index];
-      const card = this._createCard(hero, pos.x, pos.y, layout.cardW, layout.cardH);
-      card.setScale(0, 1);
-      this.cardLayer.add(card);
-      return { card, hero, revealed: false, index };
-    });
+    this._buildCards();
 
     this.cards.forEach((entry, index) => {
       this._delay(index * this.plan.stagger, () => this._revealCard(entry));
@@ -555,13 +557,39 @@ export class GachaResultOverlay {
     });
   }
 
+  /**
+   * @private 결과 카드를 뒤집기 전(scaleX 0) 상태로 만들어 카드 레이어에 올린다.
+   * 멱등이다 — flip 단계와 skip 양쪽에서 부르므로 두 번 만들면 카드가 겹친다.
+   * @returns {Array<Object>} this.cards
+   */
+  _buildCards() {
+    if (this.destroyed || this.cards.length > 0) return this.cards;
+
+    const layout = this._cardLayout();
+    this.cards = this.results.map((hero, index) => {
+      const pos = layout.positions[index];
+      const card = this._createCard(hero, pos.x, pos.y, layout.cardW, layout.cardH);
+      card.setScale(0, 1);
+      this.cardLayer.add(card);
+      return { card, hero, revealed: false, index };
+    });
+    return this.cards;
+  }
+
   /** @private 카드 1장 공개 */
   _revealCard(entry) {
     if (this.destroyed || !entry || entry.revealed || !entry.card.scene) return;
     entry.revealed = true;
+    // 상태 머신의 revealed 도 같이 올린다. 예전에는 flip 내내 0 이었다가 단계가 넘어갈 때
+    // 한 번에 count 로 뛰어, "몇 장까지 열렸는가" 를 상태만 보고는 알 수 없었다.
+    this.state = revealNextCard(this.state, this.plan);
+
+    // 등급 표기는 소스마다 다르다(문자열·숫자·없음). 연출 분기는 정규화된 키로만 한다 —
+    // 원본을 그대로 비교하면 숫자 등급 SSR 이 일반 효과음으로 떨어진다
+    const rarityKey = getRarityKey(entry.hero.rarity);
 
     // SND-02: 카드 뒤집기 — SSR 은 전용 효과음으로 승격
-    soundManager.playSFX(entry.hero.rarity === 'SSR' ? 'gacha_ssr' : 'card_flip');
+    soundManager.playSFX(rarityKey === 'SSR' ? 'gacha_ssr' : 'card_flip');
 
     this._tween({
       targets: entry.card,
@@ -570,7 +598,7 @@ export class GachaResultOverlay {
       ease: 'Back.easeOut'
     });
 
-    if (entry.hero.rarity === 'SSR' || entry.hero.rarity === 'SR') {
+    if (rarityKey === 'SSR' || rarityKey === 'SR') {
       const color = this._rarityColor(entry.hero.rarity);
       const burst = this.scene.add.circle(entry.card.x, entry.card.y, s(52), color, 0.45);
       this.cardLayer.add(burst);
@@ -1114,9 +1142,25 @@ export class GachaResultOverlay {
 
     const cultName = this._cultLabel(preset.cultId);
     if (cultName) {
-      group.add(this.scene.add.text(cx, s(CUTIN.bandY + 22), cultName, ts('label', {
-        color: DESIGN.colors.text.secondary
-      })).setOrigin(0.5));
+      const cultY = s(CUTIN.bandY + 22);
+      const cultText = this.scene.add.text(cx, cultY, cultName, ts('label', {
+        color: DESIGN.colors.text.primary
+      })).setOrigin(0.5);
+
+      // QA P2 (2026-09-04): 교단명이 공유 5단 스크림의 가장 옅은 구간(quoteY 쪽,
+      // alpha ~0.29)에 걸쳐 밝은 교단 배경(올림푸스 등) 위에서 거의 안 보였다.
+      // 공용 스크림은 이름·등급 배치에 맞춘 값이라 그대로 두고, 이 줄 전용의
+      // 진한 알약 배경을 따로 깔아 배경 밝기와 무관하게 대비를 확보한다.
+      const padX = s(14);
+      const padY = s(6);
+      const pillW = cultText.width + padX * 2;
+      const pillH = cultText.height + padY * 2;
+      const pill = this.scene.add.graphics();
+      pill.fillStyle(DESIGN.colors.bg.primary, 0.82);
+      pill.fillRoundedRect(cx - pillW / 2, cultY - pillH / 2, pillW, pillH, pillH / 2);
+
+      group.add(pill);
+      group.add(cultText);
     }
 
     // 대사 자리 — 타이프라이터가 채운다
@@ -1427,9 +1471,11 @@ export class GachaResultOverlay {
     return cult ? getCultColor(cult) : this.accent;
   }
 
-  /** @private 해당 등급의 첫 결과 */
+  /** @private 해당 등급의 첫 결과. 등급 표기가 섞여 있어 정규화 후 비교한다 */
   _heroFor(rarity) {
-    return this.results.find((hero) => hero.rarity === rarity) || this.results[0] || null;
+    const key = getRarityKey(rarity);
+    return this.results.find((hero) => getRarityKey(hero.rarity) === key)
+      || this.results[0] || null;
   }
 
   /** @private 저사양 판정 */

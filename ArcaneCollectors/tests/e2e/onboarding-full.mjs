@@ -25,6 +25,7 @@
 import { chromium } from 'playwright';
 import { mkdirSync } from 'fs';
 
+import { blockHmr } from './hmr-guard.mjs';
 const BASE_URL = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const VIEWPORT = { width: 720, height: 1280 };
 const SHOT_DIR = new URL('../../docs/story/screenshots/onboarding/', import.meta.url);
@@ -1071,14 +1072,36 @@ async function completeAscensionByTap(page, stepId, heroLabel) {
     if (done) break;
   }
 
+  const after = (await readSave(page)).ascendedHeroes.length;
+  if (after <= before) {
+    note(`[${stepId}] ${heroLabel} 각인이 완료되지 않았습니다`);
+    return false;
+  }
+
+  // 회귀 방지(2026-09-05 P0): 각인은 성공했는데 튜토리얼 스텝 커밋이 걸리지 않아,
+  // 성공 화면의 [확인]을 실제로 눌러도(스크립트 주입이 아니라 캔버스 탭) 마스크가
+  // 이미 파괴된 "각인 실행" 버튼 자리를 계속 가리켜 입력을 삼키는 소프트락이
+  // 라이브 QA에서 나왔다(새로고침 전엔 복구 수단 없음). 팝업이 아직 열려 있는
+  // 이 시점에 이미 커밋돼 있어야 한다 — 팝업이 닫히는 시점에 의존하지 않는다.
+  const committedBeforeClose = (await readSave(page)).tutorial?.completedSteps?.includes(stepId);
+  assert(committedBeforeClose, `[${stepId}] 각인 성공 즉시(팝업이 열려 있는 상태에서도) 튜토리얼 스텝이 커밋된다`);
+
+  // 성공 화면 [확인]을 실제 캔버스 탭으로 닫는다(.hide() 스크립트 주입이 아니라 사람처럼).
+  // 다음 스텝의 마스크가 죽은 타깃을 가리켜 탭이 먹히지 않는 회귀라면 여기서 드러난다.
   await skipAllCutscenes(page, { rounds: 3, timeout: 3000 });
-  await page.waitForTimeout(900);
-  await safeEvaluate(page, () => window.game?.scene?.getScene?.('MainMenuScene').activePopup?.hide?.());
+  await page.waitForTimeout(400);
+  const confirmVisible = await waitForLabel(page, ['MainMenuScene'], '확인', 5000);
+  if (confirmVisible) {
+    const tapped = await tapLabel(page, ['MainMenuScene'], '확인', { required: false });
+    assert(tapped, `[${stepId}] 성공 화면 [확인]을 실제 탭으로 닫을 수 있다(마스크에 막히지 않는다)`);
+  }
   await page.waitForTimeout(700);
 
-  const after = (await readSave(page)).ascendedHeroes.length;
-  if (after <= before) note(`[${stepId}] ${heroLabel} 각인이 완료되지 않았습니다`);
-  return after > before;
+  // 안전망: 위 탭이 어떤 이유로든 안 먹었으면 강제로 팝업을 정리해 이후 스텝을 계속 검증한다.
+  await safeEvaluate(page, () => window.game?.scene?.getScene?.('MainMenuScene').activePopup?.hide?.());
+  await page.waitForTimeout(500);
+
+  return true;
 }
 
 // ============================================================
@@ -1221,6 +1244,9 @@ async function run() {
   const browser = await chromium.launch({ headless });
   const page = await browser.newPage({ viewport: VIEWPORT });
 
+  // 공유 dev 서버 격리 — 남이 소스를 저장해도 이 페이지는 리로드되지 않는다.
+  // 실증: node tests/e2e/hmr-guard-verify.mjs
+  await blockHmr(page, BASE_URL);
   // 개발 서버(vite) 의 HMR 클라이언트를 무력화한다.
   // 이 스위트는 한 판을 10분 가까이 이어서 진행하는데, 그 사이 누군가 소스를 저장하면
   // vite 가 full-reload 를 밀어 넣어 전투/팝업 상태가 통째로 날아간다(= 튜토리얼 배선과

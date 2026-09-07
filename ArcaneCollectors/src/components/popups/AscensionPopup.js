@@ -3,6 +3,7 @@ import { COLORS, s, sf } from '../../config/gameConfig.js';
 import { SaveManager } from '../../systems/SaveManager.js';
 import { EvolutionSystem } from '../../systems/EvolutionSystem.js';
 import { StoryManager } from '../../systems/StoryManager.js';
+import { TutorialManager } from '../../systems/TutorialManager.js';
 import { TutorialTargetRegistry } from '../../systems/TutorialTargetRegistry.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT, pickActionChild } from '../../utils/popupLayout.js';
@@ -690,6 +691,17 @@ export class AscensionPopup extends PopupBase {
     const result = SaveManager.performAscension(hero.id, route.cultId);
 
     if (result.success) {
+      // T-07/T-09 P0 수정(2026-09-05): ascension_complete 조건은 세이브만으로 판정되지만
+      // 어떤 GameEvents 도 각인 완료를 통지하지 않아 evaluate() 가 트리거되지 않았다.
+      // 팝업이 닫힐 때까지 기다리지 않고 각인이 실제로 끝난 이 시점에 즉시 재평가한다 —
+      // 성공 화면으로 전환되며 각인 실행 버튼이 파괴돼 마스크 홀이 죽은 타깃을 가리키게
+      // 되어도(TutorialFlow._startTargetWatch 참고) 스텝은 이미 커밋된 뒤라 막히지 않는다.
+      try {
+        TutorialManager.evaluate();
+      } catch (error) {
+        console.error('[AscensionPopup] 각인 완료 후 튜토리얼 재평가 실패', error);
+      }
+
       const cultData = SaveManager.getCultData(route.cultId);
       const cultName = cultData ? cultData.nameKr : route.cultId;
       const ascData = SaveManager.getAscendedHeroData(route.ascendedHeroId);

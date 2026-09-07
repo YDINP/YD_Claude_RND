@@ -1,7 +1,7 @@
 {
   "$schema": "internal://arcanecollectors/asset-manifest/v1",
   "generatedBy": "tools/art/postprocess-assets.py",
-  "generatedAt": "2026-09-04T02:34:12Z",
+  "generatedAt": "2026-09-04T12:32:13Z",
   "textures": {
     "bg_main": {
       "path": "assets/backgrounds/scenes/bg_main.webp",
@@ -495,6 +495,14 @@
       "width": 512,
       "height": 512,
       "category": "banner",
+      "priority": "P1",
+      "nineSlice": null
+    },
+    "bg_sanctum": {
+      "path": "assets/backgrounds/scenes/bg_sanctum.webp",
+      "width": 1082,
+      "height": 1581,
+      "category": "background",
       "priority": "P1",
       "nineSlice": null
     }
@@ -1474,6 +1482,366 @@
     }
   },
   "chibi": {
+    "chibi_asc_hana_chaos": {
+      "key": "chibi_asc_hana_chaos",
+      "path": "assets/characters/chibi/asc_hana_chaos_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_hana_chaos"
+    },
+    "chibi_asc_hana_helheim": {
+      "key": "chibi_asc_hana_helheim",
+      "path": "assets/characters/chibi/asc_hana_helheim_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_hana_helheim"
+    },
+    "chibi_asc_hana_yomi": {
+      "key": "chibi_asc_hana_yomi",
+      "path": "assets/characters/chibi/asc_hana_yomi_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_hana_yomi"
+    },
+    "chibi_asc_iris_chaos": {
+      "key": "chibi_asc_iris_chaos",
+      "path": "assets/characters/chibi/asc_iris_chaos_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_iris_chaos"
+    },
+    "chibi_asc_iris_olympus": {
+      "key": "chibi_asc_iris_olympus",
+      "path": "assets/characters/chibi/asc_iris_olympus_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_iris_olympus"
+    },
+    "chibi_asc_iris_valhalla": {
+      "key": "chibi_asc_iris_valhalla",
+      "path": "assets/characters/chibi/asc_iris_valhalla_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_iris_valhalla"
+    },
+    "chibi_asc_kai_helheim": {
+      "key": "chibi_asc_kai_helheim",
+      "path": "assets/characters/chibi/asc_kai_helheim_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_kai_helheim"
+    },
+    "chibi_asc_kai_yomi": {
+      "key": "chibi_asc_kai_yomi",
+      "path": "assets/characters/chibi/asc_kai_yomi_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_kai_yomi"
+    },
+    "chibi_asc_leon_asgard": {
+      "key": "chibi_asc_leon_asgard",
+      "path": "assets/characters/chibi/asc_leon_asgard_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_leon_asgard"
+    },
+    "chibi_asc_leon_olympus": {
+      "key": "chibi_asc_leon_olympus",
+      "path": "assets/characters/chibi/asc_leon_olympus_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_leon_olympus"
+    },
+    "chibi_asc_lin_balance": {
+      "key": "chibi_asc_lin_balance",
+      "path": "assets/characters/chibi/asc_lin_balance_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_lin_balance"
+    },
+    "chibi_asc_lin_takamagahara": {
+      "key": "chibi_asc_lin_takamagahara",
+      "path": "assets/characters/chibi/asc_lin_takamagahara_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_lin_takamagahara"
+    },
+    "chibi_asc_luca_asgard": {
+      "key": "chibi_asc_luca_asgard",
+      "path": "assets/characters/chibi/asc_luca_asgard_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_luca_asgard"
+    },
+    "chibi_asc_luca_tartarus": {
+      "key": "chibi_asc_luca_tartarus",
+      "path": "assets/characters/chibi/asc_luca_tartarus_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_luca_tartarus"
+    },
+    "chibi_asc_omar_avalon": {
+      "key": "chibi_asc_omar_avalon",
+      "path": "assets/characters/chibi/asc_omar_avalon_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_omar_avalon"
+    },
+    "chibi_asc_omar_valhalla": {
+      "key": "chibi_asc_omar_valhalla",
+      "path": "assets/characters/chibi/asc_omar_valhalla_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_omar_valhalla"
+    },
+    "chibi_asc_paolo_balance": {
+      "key": "chibi_asc_paolo_balance",
+      "path": "assets/characters/chibi/asc_paolo_balance_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_paolo_balance"
+    },
+    "chibi_asc_paolo_chaos": {
+      "key": "chibi_asc_paolo_chaos",
+      "path": "assets/characters/chibi/asc_paolo_chaos_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_paolo_chaos"
+    },
+    "chibi_asc_paolo_tartarus": {
+      "key": "chibi_asc_paolo_tartarus",
+      "path": "assets/characters/chibi/asc_paolo_tartarus_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_paolo_tartarus"
+    },
+    "chibi_asc_sera_avalon": {
+      "key": "chibi_asc_sera_avalon",
+      "path": "assets/characters/chibi/asc_sera_avalon_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_sera_avalon"
+    },
+    "chibi_asc_sera_kunlun": {
+      "key": "chibi_asc_sera_kunlun",
+      "path": "assets/characters/chibi/asc_sera_kunlun_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_sera_kunlun"
+    },
+    "chibi_asc_sera_nature": {
+      "key": "chibi_asc_sera_nature",
+      "path": "assets/characters/chibi/asc_sera_nature_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_sera_nature"
+    },
+    "chibi_asc_sol_kunlun": {
+      "key": "chibi_asc_sol_kunlun",
+      "path": "assets/characters/chibi/asc_sol_kunlun_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_sol_kunlun"
+    },
+    "chibi_asc_sol_nature": {
+      "key": "chibi_asc_sol_nature",
+      "path": "assets/characters/chibi/asc_sol_nature_sheet.webp",
+      "width": 1024,
+      "height": 256,
+      "cell": 256,
+      "frames": [
+        "idle",
+        "meditate",
+        "channel",
+        "awaken"
+      ],
+      "footY": 240,
+      "heroId": "asc_sol_nature"
+    },
     "chibi_base_hana": {
       "key": "chibi_base_hana",
       "path": "assets/characters/chibi/base_hana_sheet.webp",
@@ -1626,9 +1994,17 @@
     }
   },
   "memoryBudget": {
-    "cycles": 5,
+    "cycles": 8,
+    "baselineCycle": 2,
     "heapGrowthMaxPercent": 15,
-    "textureCountGrowthMax": 10,
+    "coreTextureGrowthMax": 6,
+    "vectorIconMaxKeys": 60,
+    "textureResidentMaxMB": 210,
+    "sceneListenerGrowthMax": 0,
+    "eventBusListenerGrowthMax": 0,
+    "activeTweenMax": 24,
+    "activeTimerMax": 12,
+    "displayObjectGrowthMax": 12,
     "route": [
       "MainMenuScene",
       "HeroListScene",
@@ -1639,6 +2015,26 @@
       "BattleResultScene",
       "MainMenuScene"
     ]
+  },
+  "npc": {
+    "npc_registrar_fullbody": {
+      "path": "assets/characters/npc/registrar_fullbody.webp",
+      "width": 683,
+      "height": 1024,
+      "category": "npc",
+      "kind": "fullbody",
+      "priority": "P3",
+      "nineSlice": null
+    },
+    "npc_registrar_portrait": {
+      "path": "assets/characters/npc/registrar_portrait.webp",
+      "width": 512,
+      "height": 512,
+      "category": "npc",
+      "kind": "portrait",
+      "priority": "P3",
+      "nineSlice": null
+    }
   },
   "missing": [
     "enemy_cerberus",

@@ -10,7 +10,10 @@
  *          (전신 시트 축소 / 실루엣)으로 같은 자리에 앉는다.
  *   루프   호흡(y ±4px) · 룬 원 회전 · 각자에게서 제단으로 흐르는 교단색 오라 입자.
  *          마력이 찰수록 오라가 잦아지고 meditate <-> channel 교차가 빨라진다.
- *   수확   100% 에서 빛기둥 + 수확 준비 배너 펄스. 수확 순간 전원 awaken 0.6초.
+ *   수확   마력이 차면 게이지 둘레가 금색으로 번지고 제단이 빛기둥을 세운다.
+ *          "수확 준비 완료" 같은 문구는 없다 — 매 초 쌓이고 언제든 수확할 수 있는
+ *          구조라 그 선언은 정보가 아니다. 수확 순간 전원 awaken 0.6초.
+ *   진입   좌하단 코너 버튼과 좌석 탭이 편성·영웅 정보로 나간다(행동은 호출부가 주입).
  *
  * **로직은 이 컴포넌트에 없다.** 집중력·축적 마력·수확 임계치·보상·오프라인 누적은
  * 전부 IdleProgressSystem 이 계산하고, 여기는 그 결과를 받아 그리기만 한다. 기존
@@ -22,7 +25,7 @@
  *   보스 최대 HP             -> 다음 수확까지 필요한 마력
  *   누적 피해                -> 축적 마력
  *   보스 격파                -> 수확
- *   BOSS READY               -> 수확 준비 완료
+ *   BOSS READY               -> 게이지 만충 발광 + 하단 수확 CTA 강조
  *
  * 배치·주기·라벨 계산은 `utils/meditationLayout.js`(Phaser 비의존)에 있다.
  * 에셋 키 조회(전신 시트·챕터 배경)는 기존 `utils/idleBattleLayout.js` 를 그대로 쓴다.
@@ -54,6 +57,9 @@ import {
 } from '../utils/idleBattleLayout.js';
 import {
   AURA,
+  SANCTUM_BACKDROP,
+  GAUGE_FULL,
+  CORNER_BUTTON,
   BREATH,
   CHANNEL,
   HARVEST,
@@ -64,8 +70,10 @@ import {
   computeAltar,
   computeManaGauge,
   computeSanctumLabels,
-  computeReadyBanner,
+  computePartyEntryButton,
+  computeSeatHit,
   computeLightPillar,
+  computeSanctumBackdrop,
   computeSeatDisc,
   computeChibiFit,
   auraSpawnDelay,
@@ -98,6 +106,9 @@ export class MeditationView extends Phaser.GameObjects.Container {
    * @param {object} [options]
    * @param {boolean} [options.chrome=true] - 자체 배경 패널을 그릴지.
    *        false 면 호출부(MainMenuScene)가 글래스 관측창을 대신 그린다.
+   * @param {() => void} [options.onPartyEdit] - 좌하단 편성 버튼을 눌렀을 때.
+   * @param {(hero:object|null, index:number) => void} [options.onSeatTap] - 좌석을 눌렀을 때.
+   *        뷰는 팝업을 모른다. 무엇을 열지는 호출부가 정한다.
    */
   constructor(scene, x, y, width, height, options = {}) {
     super(scene, x, y);
@@ -234,13 +245,14 @@ export class MeditationView extends Phaser.GameObjects.Container {
     if (this.options.chrome !== false) this.createBackground();
 
     this.stageBgImage = null;
-    this.queueChapterBackdrop(this.chapter);
+    this.usingSanctumBg = false;
+    this.queueBackdrop(this.chapter);
 
-    // 배경 위 딤 — 유닛과 텍스트 대비 확보. 전투보다 어둡게 깔아 성소의 정적을 만든다
+    // 배경 위 딤 — 유닛과 텍스트 대비 확보. 전투보다 어둡게 깔아 성소의 정적을 만든다.
+    // 성소 전용 배경은 원본이 밝아 딤을 더 올린다(SANCTUM_BACKDROP.dimAlpha).
     this.stageDim = this.scene.add.graphics();
-    this.stageDim.fillStyle(DESIGN.colors.bg.primary, 0.58);
-    this.stageDim.fillRect(-this.viewWidth / 2, -this.viewHeight / 2, this.viewWidth, this.viewHeight);
     this.add(this.stageDim);
+    this.drawStageDim(0.58);
 
     // 교단색 워시 — 배경 자체에 틴트를 먹이면 배경 디테일이 색으로 뭉개진다.
     // 얇은 색 막을 한 겹 덮어 "성소가 파티의 색을 띤다"만 전한다.
@@ -364,46 +376,109 @@ export class MeditationView extends Phaser.GameObjects.Container {
   }
 
   /**
-   * 챕터 배경을 지연 로드해 성소 뒤에 깐다.
-   * 매니페스트에 등록된 키만 요청한다(없는 경로는 dev 404 가드가 콘솔 에러를 남긴다).
-   * @param {number} chapter
+   * 교단색 워시 알파. 성소 전용 배경 위에서는 얕게 덮는다(그 아트는 자기 색이 뚜렷하다).
+   * @returns {number}
    */
-  queueChapterBackdrop(chapter) {
+  _washAlpha() {
+    return this.usingSanctumBg ? SANCTUM_BACKDROP.washAlpha : 0.14;
+  }
+
+  /**
+   * 딤 판을 다시 그린다.
+   * @param {number} alpha
+   */
+  drawStageDim(alpha) {
+    if (!this.stageDim) return;
+    this.stageDim.clear();
+    this.stageDim.fillStyle(DESIGN.colors.bg.primary, alpha);
+    this.stageDim.fillRect(-this.viewWidth / 2, -this.viewHeight / 2, this.viewWidth, this.viewHeight);
+  }
+
+  /**
+   * 성소 배경을 지연 로드해 뒤에 깐다.
+   *
+   * 우선순위는 **성소 전용 배경(bg_sanctum) → 챕터 배경 → 없음(프로시저럴 딤만)** 이다.
+   * 전용 배경이 매니페스트에 없거나 로드에 실패해도 화면은 그대로 성립한다.
+   * 매니페스트에 등록된 키만 요청한다(없는 경로는 dev 404 가드가 콘솔 에러를 남긴다).
+   *
+   * @param {number} chapter 전용 배경이 없을 때 쓸 챕터 번호
+   */
+  queueBackdrop(chapter) {
+    const sanctumMeta = ASSET_MANIFEST.lazyTextures?.[SANCTUM_BACKDROP.key]
+      || ASSET_MANIFEST.textures?.[SANCTUM_BACKDROP.key];
+
+    if (sanctumMeta && sanctumMeta.path) {
+      if (this._stageBgKey === SANCTUM_BACKDROP.key) return;
+      this._stageBgKey = SANCTUM_BACKDROP.key;
+      // 성소 배경은 이 뷰만 쓰지만 씬 재진입마다 다시 받지 않도록 공용 캐시에 남긴다.
+      this.loadTexture(SANCTUM_BACKDROP.key, sanctumMeta.path, (ready) => this.placeBackdrop(ready, true));
+      return;
+    }
+
     const key = chapterBgKey(chapter);
     if (this._stageBgKey === key) return;
     this._stageBgKey = key;
 
     if (this.scene.textures.exists(key)) {
-      this.placeChapterBackdrop(key);
+      this.placeBackdrop(key, false);
       return;
     }
 
     const meta = ASSET_MANIFEST.lazyTextures?.[key] || ASSET_MANIFEST.textures?.[key];
     if (!meta || !meta.path) return;
     // 챕터 배경은 다른 씬과 공유하는 공용 텍스처다. 로드만 하고 해제하지 않는다.
-    this.loadTexture(key, meta.path, (ready) => this.placeChapterBackdrop(ready));
+    this.loadTexture(key, meta.path, (ready) => this.placeBackdrop(ready, false));
   }
 
   /**
-   * 챕터 배경을 성소 맨 뒤에 cover-fit 으로 놓는다. 넘치는 부분은 관측창 마스크가 자른다.
+   * 배경을 성소 맨 뒤에 놓는다. 넘치는 부분은 관측창 마스크가 자른다.
    * 색은 배경에 직접 먹이지 않는다 — 위에 덮인 교단색 워시가 그 일을 한다.
+   *
+   * 성소 전용 배경은 단순 cover-fit 이 아니라 **세로 정렬**이 필요하다. 그 아트에는
+   * 룬 플랫폼과 결정이 이미 그려져 있어서, 그대로 가운데 맞추면 뷰가 그리는 룬 인장·
+   * 결정과 겹쳐 두 겹으로 보인다. `computeSanctumBackdrop()` 이 그려진 플랫폼을 관측창
+   * 아래로 밀어내 회랑·기둥·천장 빛줄기만 남긴다.
+   *
    * @param {string} key
+   * @param {boolean} isSanctum 성소 전용 배경인가
    */
-  placeChapterBackdrop(key) {
+  placeBackdrop(key, isSanctum) {
     const source = this.scene.textures.get(key).getSourceImage();
     if (!source || !source.width) return;
 
     if (this.stageBgImage) this.stageBgImage.destroy();
 
-    const scale = Math.max(this.viewWidth / source.width, this.viewHeight / source.height);
-    const image = this.scene.add.image(0, 0, key)
-      .setDisplaySize(source.width * scale, source.height * scale)
-      .setAlpha(0);
+    const fit = isSanctum
+      ? computeSanctumBackdrop(this.viewWidth, this.viewHeight, source.width, source.height)
+      : null;
+
+    let image;
+    if (fit) {
+      image = this.scene.add.image(0, fit.y, key).setDisplaySize(fit.w, fit.h).setAlpha(0);
+    } else {
+      const scale = Math.max(this.viewWidth / source.width, this.viewHeight / source.height);
+      image = this.scene.add.image(0, 0, key)
+        .setDisplaySize(source.width * scale, source.height * scale)
+        .setAlpha(0);
+    }
+
     this.add(image);
     this.sendToBack(image);
     if (this.options.chrome !== false) this.moveUp(image);
 
-    this.scene.tweens.add({ targets: image, alpha: 0.62, duration: 420, ease: 'Sine.easeOut' });
+    this.usingSanctumBg = !!isSanctum;
+    this.drawStageDim(isSanctum ? SANCTUM_BACKDROP.dimAlpha : 0.58);
+    this.cultWash?.setFillStyle(this._accentColor || DESIGN.colors.brand.primary, this._washAlpha());
+    // 배경이 이미 성소의 바닥 문양을 갖고 있으면 뷰의 큰 룬 원은 얇게 남긴다 —
+    // 회전은 보여야 하지만 그려진 문양과 굵기로 경쟁하면 안 된다.
+    this.runeFlat?.setAlpha(isSanctum ? 0.55 : 1);
+
+    this.scene.tweens.add({
+      targets: image,
+      alpha: isSanctum ? SANCTUM_BACKDROP.alpha : 0.62,
+      duration: 420,
+      ease: 'Sine.easeOut'
+    });
     this.stageBgImage = image;
   }
 
@@ -444,6 +519,16 @@ export class MeditationView extends Phaser.GameObjects.Container {
       const root = this.scene.add.container(x, y);
       this.add(root);
 
+      // 좌석 탭 — 앉아 있는 사람을 그대로 누르면 그 영웅 정보로, 빈 자리면 편성으로.
+      // 뷰는 팝업을 모른다. 호출부가 options.onSeatTap 으로 행동을 넣는다.
+      const hitBox = computeSeatHit(seat);
+      let hit = null;
+      if (hitBox) {
+        hit = this.scene.add.rectangle(s(hitBox.x), s(hitBox.y), s(hitBox.w), s(hitBox.h))
+          .setAlpha(0.001).setInteractive({ useHandCursor: true });
+        this.add(hit);
+      }
+
       const slot = {
         ...seat,
         renderX: x,
@@ -453,8 +538,10 @@ export class MeditationView extends Phaser.GameObjects.Container {
         cushion,
         discSize,
         halo,
+        hit,
         sprite: null,       // meditate 프레임 (또는 폴백 이미지)
         channelSprite: null,// channel 프레임 (교차 페이드용)
+        channelTween: null, // 진행 중인 교차 페이드 (수확 때 멈춘다)
         silhouette: null,
         classIcon: null,
         levelText: null,
@@ -463,6 +550,7 @@ export class MeditationView extends Phaser.GameObjects.Container {
       };
       this.drawSeatDisc(slot, NEUTRAL_SILHOUETTE, 0.22);
       this.drawSilhouette(slot, NEUTRAL_SILHOUETTE, 'warrior');
+      hit?.on('pointerdown', () => this.options.onSeatTap?.(slot.hero, slot.index));
       this.seats[seat.index] = slot;
 
       if (seat.row === 'back') this._backSeatTop = root;
@@ -554,6 +642,7 @@ export class MeditationView extends Phaser.GameObjects.Container {
     const fit = computeChibiFit(meta.cell, meta.cell, slot.renderH);
     if (!fit) return;
 
+    if (slot.channelTween) { slot.channelTween.stop(); slot.channelTween = null; }
     if (slot.sprite) { slot.sprite.destroy(); slot.sprite = null; }
     if (slot.channelSprite) { slot.channelSprite.destroy(); slot.channelSprite = null; }
 
@@ -629,11 +718,17 @@ export class MeditationView extends Phaser.GameObjects.Container {
   queueSeatArt(slot, hero) {
     const chibi = resolveChibiSheet(hero, ASSET_MANIFEST);
     if (chibi) {
+      // 소유권은 "내가 실제로 올렸을 때"만 갖는다. 이미 존재하는 키(HeroDetailScene 이
+      // 올려 둔 같은 `chibi_<heroId>`)까지 목록에 넣으면 이 뷰가 파기될 때 남의 텍스처를
+      // 지워, 그 화면이 플레이스홀더로 떨어진다 — 공용 텍스처 해제 금지 규칙 위반이다.
+      const alreadyLoaded = !!this.scene?.textures?.exists(chibi.key);
       this.loadTexture(chibi.key, chibi.path, (ready) => {
         // 로드가 끝나기 전에 편성이 바뀌었으면 그 자리에 다른 영웅을 그리지 않는다
         if (slot.hero && slot.hero.id === hero.id) this.placeChibi(slot, ready, chibi);
       }, { frameWidth: chibi.cell, frameHeight: chibi.cell });
-      if (!this._ownedChibiKeys.includes(chibi.key)) this._ownedChibiKeys.push(chibi.key);
+      if (!alreadyLoaded && !this._ownedChibiKeys.includes(chibi.key)) {
+        this._ownedChibiKeys.push(chibi.key);
+      }
       return;
     }
 
@@ -717,7 +812,8 @@ export class MeditationView extends Phaser.GameObjects.Container {
     this.drawRuneCircle(best);
     this.drawAltar(best);
     this.drawLightPillar(best);
-    this.cultWash?.setFillStyle(best, 0.14);
+    this.cultWash?.setFillStyle(best, this._washAlpha());
+    this.drawPartyEntry(best);
     this.altarGlow?.setFillStyle(best, this.altarGlow.fillAlpha);
 
     // 좌석 광배·명상 원도 각자의 교단색으로 — 어두운 배경에서 유닛을 떼어 놓는다
@@ -926,43 +1022,61 @@ export class MeditationView extends Phaser.GameObjects.Container {
       formatFocusRate(0), ts('num.sm', { color: DESIGN.colors.text.secondary })).setOrigin(1, 0.5);
     this.add(this.focusLabel);
 
-    // 수확 준비 배너 (기본 숨김).
-    // 성소 위에 글자만 띄우면 유닛과 겹쳐 읽히지 않는다. 알약 배경을 깔아
-    // "화면 위의 알림"으로 분리한다 — 배경 대비도 이 알약이 보장한다(A11Y).
-    const banner = computeReadyBanner(this.baseW, this.baseH);
-    this.readyPill = this.scene.add.graphics().setVisible(false);
-    this.add(this.readyPill);
+    // 게이지 만충 발광 (기본 숨김).
+    // "수확 준비 완료" 배너는 없앴다 — 이 구조는 매 초 보상이 쌓이고 언제든 수확할 수
+    // 있어서 "준비됐다"는 선언이 정보가 아니다. 만충은 게이지 자체가 말한다.
+    this.gaugeGlow = this.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
+    this.add(this.gaugeGlow);
+    // 씬 연출이지 팝업이 아니라는 것을 토큰으로 명시해 둔다.
+    this.gaugeGlow.setDepth(Z_INDEX.IDLE_FX);
 
-    this.readyText = this.scene.add.text(s(banner.x), s(banner.y), LABELS.harvestReady,
-      ts('title', { color: `#${DESIGN.colors.brand.accent.toString(16).padStart(6, '0')}` }))
-      .setOrigin(0.5).setVisible(false);
-    // 컨테이너 안이라 실제 렌더 순서는 컨테이너 depth(IDLE_BATTLE)를 따르지만,
-    // 이 배너가 "씬 연출이지 팝업이 아니다"라는 것을 토큰으로 명시해 둔다.
-    this.readyText.setDepth(Z_INDEX.IDLE_FX);
-    this.add(this.readyText);
-    this.drawReadyPill();
+    // 성소 좌하단 편성 진입 — 상단 "내 파티" 패널을 대체한다
+    this.createPartyEntry();
   }
 
   /**
-   * 수확 준비 배너의 알약 배경을 글자 크기에 맞춰 그린다.
+   * 성소 안 편성 버튼. 알약 + 라벨 + 히트 박스(=알약 그대로, 48 이상).
+   * 실제 동작은 호출부가 `options.onPartyEdit` 로 넣는다 — 뷰는 팝업을 모른다.
    */
-  drawReadyPill() {
-    const gfx = this.readyPill;
-    const text = this.readyText;
-    if (!gfx || !text) return;
+  createPartyEntry() {
+    const slot = computePartyEntryButton(this.baseW, this.baseH);
+    const x = s(slot.x);
+    const y = s(slot.y);
+    const w = s(slot.w);
+    const h = s(slot.h);
+    this.partyEntrySlot = { x, y, w, h };
 
-    const padX = s(18);
-    const padY = s(8);
-    const w = text.width + padX * 2;
-    const h = text.height + padY * 2;
-    const x = text.x - w / 2;
-    const y = text.y - h / 2;
+    const gfx = this.scene.add.graphics();
+    this.add(gfx);
+    this.partyEntryGfx = gfx;
 
+    const label = this.scene.add.text(x, y, '편성 ▸',
+      ts('label', { color: DESIGN.colors.text.primary })).setOrigin(0.5);
+    this.add(label);
+    this.partyEntryLabel = label;
+
+    const hit = this.scene.add.rectangle(x, y, w, h).setAlpha(0.001)
+      .setInteractive({ useHandCursor: true });
+    this.add(hit);
+    this.partyEntryHit = hit;
+    hit.on('pointerdown', () => this.options.onPartyEdit?.());
+
+    this.drawPartyEntry(DESIGN.colors.brand.primary);
+  }
+
+  /**
+   * 편성 버튼을 교단색으로 다시 그린다.
+   * @param {number} color
+   */
+  drawPartyEntry(color) {
+    const gfx = this.partyEntryGfx;
+    const slot = this.partyEntrySlot;
+    if (!gfx || !slot) return;
     gfx.clear();
-    gfx.fillStyle(DESIGN.colors.bg.primary, 0.82);
-    gfx.fillRoundedRect(x, y, w, h, h / 2);
-    gfx.lineStyle(s(1.5), DESIGN.colors.brand.accent, 0.85);
-    gfx.strokeRoundedRect(x, y, w, h, h / 2);
+    gfx.fillStyle(DESIGN.colors.bg.primary, 0.78);
+    gfx.fillRoundedRect(slot.x - slot.w / 2, slot.y - slot.h / 2, slot.w, slot.h, slot.h / 2);
+    gfx.lineStyle(s(1.5), color, 0.85);
+    gfx.strokeRoundedRect(slot.x - slot.w / 2, slot.y - slot.h / 2, slot.w, slot.h, slot.h / 2);
   }
 
   /**
@@ -1031,7 +1145,9 @@ export class MeditationView extends Phaser.GameObjects.Container {
    * 헤더 제목 — "챕터 N-M 성소 · 정화 대상".
    */
   updateSanctumTitle() {
-    this.titleText?.setText(formatSanctumTitle(this.chapter, this.stage, this.currentBoss?.name || ''));
+    // 보스명은 여기 없다. 정화 대상은 상단 "현재 모험" 패널이 보여 준다 —
+    // 명상 장면 안에 전투 대상 이름이 있으면 두 이야기가 한 화면에서 섞인다.
+    this.titleText?.setText(formatSanctumTitle(this.chapter, this.stage));
   }
 
   /**
@@ -1068,6 +1184,7 @@ export class MeditationView extends Phaser.GameObjects.Container {
    * @param {object} [options]
    * @param {number} [options.accumulatedDamage] 이미 쌓인 축적 마력.
    *        오프라인 복귀 시 0 에서 채우는 연출을 건너뛰고 마지막 상태로 즉시 스냅한다.
+   * @param {number} [options.focusPerSec] 호출부가 이미 아는 DPS 추정치(있으면 즉시 반영).
    */
   setHarvestTarget(bossData, options = {}) {
     if (!bossData) return;
@@ -1082,6 +1199,20 @@ export class MeditationView extends Phaser.GameObjects.Container {
     this._manaRatio = 0;
     this.renderMana(accumulated, this.requiredMana, { immediate: true });
     this.updateSanctumTitle();
+
+    // QA P2 (2026-09-04): 로비 재진입(씬 재생성)마다 이 메서드가 먼저 불리는데,
+    // 여기서는 updateFocus() 를 타지 않아 _focus 가 생성자 기본값 0 그대로 남는다.
+    // 마력이 이미 100% 근처/도달 상태로 재진입하면 그 순간의 캡처에 "집중력 —"
+    // 가 찍혔다(값이 사라진 게 아니라 아직 한 번도 채워진 적이 없었다). 첫 실측
+    // 틱(updateFocus)이 돌기 전까지 빈 값을 보이지 않도록, 호출부가 아는 DPS로
+    // 미리 채워 둔다 — 다음 실측이 들어오면 그 값 위에서 지수평활이 이어진다.
+    if (Number.isFinite(options.focusPerSec) && options.focusPerSec > 0) {
+      this._focus = options.focusPerSec;
+      this._focusSample = { mana: accumulated, at: Date.now() };
+      const remaining = Math.max(0, this.requiredMana - accumulated);
+      this.etaText?.setText(formatHarvestEta(estimateHarvestSeconds(remaining, this._focus)));
+      this.focusLabel?.setText(formatFocusRate(this._focus));
+    }
   }
 
   /**
@@ -1132,6 +1263,9 @@ export class MeditationView extends Phaser.GameObjects.Container {
       if (!slot.hero) return;
 
       if (slot.chibi && slot.sprite) {
+        // 교차 페이드가 돌고 있으면 **멈춰야** 한다. alpha 만 0 으로 밀면 다음 프레임에
+        // 트윈이 다시 덮어써서 channel 프레임이 awaken 을 가린다(캡처에서 실제로 그랬다).
+        if (slot.channelTween) { slot.channelTween.stop(); slot.channelTween = null; }
         slot.channelSprite?.setAlpha(0);
         slot.sprite.setAlpha(1).setFrame(slot.frames.awaken);
         const back = this.scene.time.delayedCall(HARVEST.awakenMs, () => {
@@ -1339,14 +1473,17 @@ export class MeditationView extends Phaser.GameObjects.Container {
       if (!slot.hero || !slot.chibi || !slot.channelSprite) return;
       if (this._activeTweens >= MAX_CONCURRENT_TWEENS) return;
 
-      this.trackTween({
+      slot.channelTween = this.trackTween({
         targets: slot.channelSprite,
         alpha: { from: 0, to: 1 },
         duration: CHANNEL.fadeMs,
         yoyo: true,
         hold: Math.round(CHANNEL.fadeMs * 0.6),
         ease: 'Sine.easeInOut',
-        onComplete: () => slot.channelSprite?.setAlpha(0)
+        onComplete: () => {
+          slot.channelTween = null;
+          slot.channelSprite?.setAlpha(0);
+        }
       });
     });
   }
@@ -1424,26 +1561,22 @@ export class MeditationView extends Phaser.GameObjects.Container {
    * (구 showBossReady. 보스전 진입 경로는 MainMenuScene 의 보스 버튼 그대로다)
    */
   showHarvestReady() {
-    if (this._readyShown || !this.readyText) return;
+    if (this._readyShown) return;
     this._readyShown = true;
 
-    this.drawReadyPill();
-    this.readyText.setVisible(true).setAlpha(0);
-    this.readyPill?.setVisible(true).setAlpha(0);
-    this.scene.tweens.add({
-      targets: [this.readyText, this.readyPill],
-      alpha: 1,
-      duration: 260,
-      ease: 'Back.easeOut'
-    });
-    this._readyPulse = this.scene.tweens.add({
-      targets: [this.readyText, this.readyPill],
-      alpha: { from: 1, to: 0.55 },
-      duration: 750,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
+    // 게이지 둘레가 금색으로 번지고, 제단이 빛기둥을 세운다. 문구는 없다.
+    if (this.gaugeGlow) {
+      this.drawGaugeGlow();
+      this.gaugeGlow.setVisible(true).setAlpha(GAUGE_FULL.glowAlpha);
+      this._gaugePulse = this.scene.tweens.add({
+        targets: this.gaugeGlow,
+        alpha: { from: GAUGE_FULL.glowAlpha, to: 1 },
+        duration: GAUGE_FULL.pulseMs,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    }
 
     if (this.lightPillar) {
       this.drawLightPillar(this._accentColor || DESIGN.colors.brand.accent);
@@ -1460,14 +1593,30 @@ export class MeditationView extends Phaser.GameObjects.Container {
   }
 
   /**
+   * 만충 발광을 게이지 둘레에 그린다.
+   */
+  drawGaugeGlow() {
+    const gfx = this.gaugeGlow;
+    const slot = this.gaugeSlot;
+    if (!gfx || !slot) return;
+    const pad = s(GAUGE_FULL.glowPadding);
+    gfx.clear();
+    gfx.fillStyle(DESIGN.colors.brand.accent, 0.30);
+    gfx.fillRoundedRect(slot.x - slot.w / 2 - pad, slot.y - pad,
+      slot.w + pad * 2, slot.h + pad * 2, (slot.h + pad * 2) / 2);
+    gfx.lineStyle(s(2), DESIGN.colors.brand.accent, 0.95);
+    gfx.strokeRoundedRect(slot.x - slot.w / 2 - pad / 2, slot.y - pad / 2,
+      slot.w + pad, slot.h + pad, (slot.h + pad) / 2);
+  }
+
+  /**
    * 수확 준비 연출 해제.
    */
   clearHarvestReady() {
     this._readyShown = false;
-    if (this._readyPulse) { this._readyPulse.stop(); this._readyPulse = null; }
+    if (this._gaugePulse) { this._gaugePulse.stop(); this._gaugePulse = null; }
     if (this._pillarTween) { this._pillarTween.stop(); this._pillarTween = null; }
-    this.readyText?.setVisible(false);
-    this.readyPill?.setVisible(false);
+    this.gaugeGlow?.setVisible(false).setAlpha(0);
     this.lightPillar?.setVisible(false).setAlpha(0);
   }
 
@@ -1512,7 +1661,7 @@ export class MeditationView extends Phaser.GameObjects.Container {
     this.chapter = chapter || 1;
     this.stage = stage || 1;
     this.stageName = name || '';
-    this.queueChapterBackdrop(this.chapter);
+    this.queueBackdrop(this.chapter);
     this.updateSanctumTitle();
   }
 

@@ -20,17 +20,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('../../src/systems/SaveManager.js', () => ({
   SaveManager: {
     _userId: 'test-user-001',
-    load: vi.fn(() => ({
-      player: {
-        name: 'TestHero',
-        gold: 10000,
-        gems: 200,
-        srTicket: 0,
-        expPotion: 0,
-        equipmentFragment: 0
-      }
-    })),
-    save: vi.fn()
+    // 실제 재화는 resources.gold/gems 에 있다(player 에는 없다) — FriendSystem.buyPointShopItem()은
+    // 이제 이 필드를 직접 만지지 않고 addGold()/addGems() 실지급 메서드를 통해서만 반영한다.
+    load: vi.fn(() => ({ player: { name: 'TestHero' }, resources: { gold: 10000, gems: 200 } })),
+    save: vi.fn(),
+    addGold: vi.fn(),
+    addGems: vi.fn()
   }
 }));
 
@@ -170,13 +165,15 @@ describe('FriendSystem', () => {
       expect(FriendSystem.DAILY_POINT_LIMIT).toBe(20);
     });
 
-    it('포인트 상점 5종 (골드/보석/SR티켓/경험치물약/장비조각)', () => {
+    // P1: srTicket/expPotion/equipmentFragment 3종은 실지급 경로가 없어 카탈로그에서
+    // 뺐다(팀 기준 "지급되지 않는 보상은 화면에 표시하지 않는다" — 표시만 지우고
+    // 구매를 열어두면 포인트만 빼앗기는 상태가 되므로 목록 자체를 줄였다).
+    it('포인트 상점은 실지급 가능한 2종만 노출한다 (골드/보석)', () => {
       const items = FriendSystem.getPointShopItems();
-      expect(items.length).toBe(5);
+      expect(items.length).toBe(2);
       const ids = items.map(i => i.id);
-      expect(ids).toEqual(expect.arrayContaining([
-        'shop_gold', 'shop_gems', 'shop_sr_ticket', 'shop_exp_potion', 'shop_equip_fragment'
-      ]));
+      expect(ids).toEqual(expect.arrayContaining(['shop_gold', 'shop_gems']));
+      expect(ids).not.toEqual(expect.arrayContaining(['shop_sr_ticket', 'shop_exp_potion', 'shop_equip_fragment']));
     });
 
     it('상점 아이템은 id/label/cost/reward 필드를 가진다', () => {
@@ -529,7 +526,9 @@ describe('FriendSystem', () => {
       expect(r.error).toMatch(/not enough/i);
     });
 
-    it('골드 아이템 구매 성공 시 SaveManager에 골드가 반영된다', () => {
+    it('골드 아이템 구매 성공 시 SaveManager.addGold로 골드가 반영된다', () => {
+      // P1 회귀 방지: 예전에는 saveData.player.gold(존재하지 않는 필드)에 직접 더해
+      // 포인트만 깎이고 실제 골드(resources.gold)는 늘지 않았다.
       // pointBalance를 100으로 만들기 위해 inbox 직접 주입
       seedFriendState({
         friends: [],
@@ -544,13 +543,10 @@ describe('FriendSystem', () => {
       expect(r.cost).toBe(5);
       expect(r.pointBalance).toBe(95);
 
-      expect(SaveManager.load).toHaveBeenCalled();
-      expect(SaveManager.save).toHaveBeenCalled();
-      const saved = SaveManager.save.mock.calls[0][0];
-      expect(saved.player.gold).toBe(10000 + 5000);
+      expect(SaveManager.addGold).toHaveBeenCalledWith(5000);
     });
 
-    it('보석 아이템 구매 시 gems가 증가한다', () => {
+    it('보석 아이템 구매 시 SaveManager.addGems로 gems가 반영된다', () => {
       seedFriendState({
         friends: [],
         daily: { rent: 0, pointsSent: 0, date: '2026-08-25' },
@@ -559,34 +555,26 @@ describe('FriendSystem', () => {
       });
       const r = FriendSystem.buyPointShopItem('shop_gems');
       expect(r.success).toBe(true);
-      const saved = SaveManager.save.mock.calls[0][0];
-      expect(saved.player.gems).toBe(200 + 50);
+      expect(SaveManager.addGems).toHaveBeenCalledWith(50);
     });
 
-    it('SR 티켓 구매 시 srTicket이 증가한다', () => {
+    // srTicket/expPotion/equipmentFragment: 실지급 경로(SR 확정권 리소스, 물약 크기 선택,
+    // 장비 조각 인벤토리)가 없어 카탈로그 자체에서 뺐다(팀 기준 "지급되지 않는 보상은
+    // 화면에 표시하지 않는다" — 구매를 열어두면 포인트만 빼앗기므로 목록에서 제거).
+    // 그래서 이 id들로 구매를 시도하면 "존재하지 않는 아이템"과 동일하게 막힌다.
+    it('SR 티켓/경험치물약/장비조각은 카탈로그에서 빠져 구매 자체가 막힌다', () => {
       seedFriendState({
         friends: [],
         daily: { rent: 0, pointsSent: 0, date: '2026-08-25' },
         inbox: [],
         pointBalance: 100
       });
-      const r = FriendSystem.buyPointShopItem('shop_sr_ticket');
-      expect(r.success).toBe(true);
-      const saved = SaveManager.save.mock.calls[0][0];
-      expect(saved.player.srTicket).toBe(1);
-    });
-
-    it('장비조각 구매 시 equipmentFragment가 증가한다', () => {
-      seedFriendState({
-        friends: [],
-        daily: { rent: 0, pointsSent: 0, date: '2026-08-25' },
-        inbox: [],
-        pointBalance: 100
+      ['shop_sr_ticket', 'shop_exp_potion', 'shop_equip_fragment'].forEach((itemId) => {
+        const r = FriendSystem.buyPointShopItem(itemId);
+        expect(r.success).toBe(false);
+        expect(SaveManager.addGold).not.toHaveBeenCalled();
+        expect(SaveManager.addGems).not.toHaveBeenCalled();
       });
-      const r = FriendSystem.buyPointShopItem('shop_equip_fragment');
-      expect(r.success).toBe(true);
-      const saved = SaveManager.save.mock.calls[0][0];
-      expect(saved.player.equipmentFragment).toBe(20);
     });
 
     it('존재하지 않는 아이템은 실패한다', () => {

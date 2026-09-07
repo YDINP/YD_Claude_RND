@@ -33,7 +33,12 @@ export class HeroCard extends Phaser.GameObjects.Container {
   }
 
   createFrame() {
-    const rarityConfig = RARITY[getRarityKey(this.heroData.rarity)] || RARITY.N;
+    // 등급 표기는 소스마다 다르다 — 문자열('SSR'), 숫자(characters.json 의 4·5),
+    // 그리고 없음(기본영웅). 한 번 정규화해 두고 이 메서드 안에서는 그 값만 본다.
+    // 예전에는 아래 테두리/글로우 분기가 원본 값을 그대로 비교해서
+    // 숫자 등급 SSR 카드에 SSR 연출이 영영 붙지 않았다.
+    const rarityKey = getRarityKey(this.heroData.rarity);
+    const rarityConfig = RARITY[rarityKey] || RARITY.N;
     const frameColor = rarityConfig.color;
 
     this.frame = this.scene.add.graphics();
@@ -80,7 +85,7 @@ export class HeroCard extends Phaser.GameObjects.Container {
     );
 
     // Rarity border with enhanced thickness
-    const borderWidth = this.heroData.rarity === 'SSR' ? s(4) : (this.heroData.rarity === 'SR' ? s(3) : s(2));
+    const borderWidth = rarityKey === 'SSR' ? s(4) : (rarityKey === 'SR' ? s(3) : s(2));
     this.frame.lineStyle(borderWidth, frameColor, 1);
     this.frame.strokeRoundedRect(
       -this.cardWidth / 2,
@@ -91,7 +96,7 @@ export class HeroCard extends Phaser.GameObjects.Container {
     );
 
     // Rarity glow effect (for SR and SSR)
-    if (this.heroData.rarity === 'SR' || this.heroData.rarity === 'SSR') {
+    if (rarityKey === 'SR' || rarityKey === 'SSR') {
       const glowGraphics = this.scene.add.graphics();
       glowGraphics.fillStyle(frameColor, 0.25);
       glowGraphics.fillRoundedRect(
@@ -105,7 +110,7 @@ export class HeroCard extends Phaser.GameObjects.Container {
       this.sendToBack(glowGraphics);
 
       // Animated glow for SSR
-      if (this.heroData.rarity === 'SSR') {
+      if (rarityKey === 'SSR') {
         this.scene.tweens.add({
           targets: glowGraphics,
           alpha: { from: 0.25, to: 0.5 },

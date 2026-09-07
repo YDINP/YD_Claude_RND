@@ -5,6 +5,7 @@
  */
 import { SaveManager } from './SaveManager.js';
 import { EventBus, GameEvents } from './EventBus.js';
+import { getRarityKey } from '../utils/rarityUtils.js';
 
 export class EvolutionSystem {
   // 등급 순서
@@ -37,14 +38,15 @@ export class EvolutionSystem {
    * @returns {Object} { canEvolve, reason, cost, currentShards }
    */
   static canEvolve(heroId) {
-    const data = SaveManager.load();
+    // 세이브가 없는 순간(초기화 전·손상 복구 중)에도 화면이 죽지 않아야 한다
+    const data = SaveManager.load() || {};
     const character = data.characters?.find(c => c.id === heroId || c.characterId === heroId);
 
     if (!character) {
       return { canEvolve: false, reason: '캐릭터를 찾을 수 없습니다' };
     }
 
-    const currentRarity = character.rarity;
+    const currentRarity = this.normalizeRarity(character.rarity);
     const rarityIndex = this.RARITY_ORDER.indexOf(currentRarity);
 
     // 최대 등급 체크
@@ -102,22 +104,26 @@ export class EvolutionSystem {
       return { success: false, error: checkResult.reason };
     }
 
-    const data = SaveManager.load();
+    const data = SaveManager.load() || {};
     const character = data.characters?.find(c => c.id === heroId || c.characterId === heroId);
-    const currentRarity = character.rarity;
+    if (!character) {
+      return { success: false, error: '캐릭터를 찾을 수 없습니다' };
+    }
+    const previousRarity = this.normalizeRarity(character.rarity);
+    const currentRarity = previousRarity;
     const rarityIndex = this.RARITY_ORDER.indexOf(currentRarity);
     const nextRarity = this.RARITY_ORDER[rarityIndex + 1];
 
-    // 비용 차감
+    // 비용 차감. resources 가 없는 세이브(신규·손상 복구)에서도 차감 경로가 살아 있어야 한다
     const cost = checkResult.cost;
-    data.resources.gold -= cost.gold;
+    if (!data.resources) data.resources = {};
+    data.resources.gold = (data.resources.gold || 0) - cost.gold;
     if (!data.resources.characterShards) {
       data.resources.characterShards = {};
     }
     data.resources.characterShards[heroId] = (data.resources.characterShards[heroId] || 0) - cost.shards;
 
     // 등급 업그레이드
-    const previousRarity = character.rarity;
     character.rarity = nextRarity;
 
     // 스탯 보너스 적용
@@ -161,28 +167,49 @@ export class EvolutionSystem {
   }
 
   /**
+   * 등급 값을 표준 키로 정규화한다.
+   *
+   * 저장·정적 데이터의 등급 표기가 세 가지다 — 문자열('SSR'), 숫자(characters.json 의 4·5),
+   * 그리고 **없음**(base-heroes.json 의 기본 영웅에는 rarity 필드 자체가 없다).
+   * 정규화하지 않으면 기본 영웅의 진화 비용 조회가 null 로 떨어져
+   * `cost.gold` 에서 TypeError 가 났다(라이브 P0).
+   *
+   * @param {string|number|undefined} rarity
+   * @returns {string} 'N'|'R'|'SR'|'SSR'|'UR'
+   */
+  static normalizeRarity(rarity) {
+    return getRarityKey(rarity);
+  }
+
+  /**
    * 특정 등급의 진화 비용 조회
-   * @param {string} currentRarity - 현재 등급
-   * @returns {Object|null} { shards, gold } 또는 null
+   * @param {string|number} currentRarity - 현재 등급 (없거나 숫자여도 된다)
+   * @returns {Object|null} { shards, gold } 또는 최고 등급이면 null
    */
   static getEvolutionCost(currentRarity) {
-    return this.EVOLUTION_COSTS[currentRarity] || null;
+    return this.EVOLUTION_COSTS[this.normalizeRarity(currentRarity)] || null;
   }
 
   /**
    * 진화 미리보기 (최종 스탯 확인)
+   *
+   * 세이브의 캐릭터 레코드에는 스탯이 없을 수 있다(기본 영웅은 정적 데이터 + 레벨로
+   * 계산한다). 그때 미리보기가 전부 0 으로 뜨지 않도록 호출부가 표시 중인 스탯을
+   * `baseStats` 로 넘길 수 있다.
+   *
    * @param {string} heroId - 영웅 ID
-   * @returns {Object} 진화 후 예상 스탯
+   * @param {{hp:number,atk:number,def:number,spd:number}} [baseStats] - 세이브에 스탯이 없을 때 쓸 값
+   * @returns {Object|null} 진화 후 예상 스탯. 최고 등급이거나 캐릭터가 없으면 null
    */
-  static previewEvolution(heroId) {
-    const data = SaveManager.load();
+  static previewEvolution(heroId, baseStats = null) {
+    const data = SaveManager.load() || {};
     const character = data.characters?.find(c => c.id === heroId || c.characterId === heroId);
 
     if (!character) {
       return null;
     }
 
-    const currentRarity = character.rarity;
+    const currentRarity = this.normalizeRarity(character.rarity);
     const rarityIndex = this.RARITY_ORDER.indexOf(currentRarity);
 
     if (rarityIndex >= this.RARITY_ORDER.length - 1) {
@@ -193,7 +220,11 @@ export class EvolutionSystem {
     const statBonus = this.EVOLUTION_STAT_BONUS[currentRarity];
     const skillBoost = this.SKILL_BOOST_ON_EVOLUTION[currentRarity] || 0;
 
-    const currentStats = character.stats || { hp: 0, atk: 0, def: 0, spd: 0 };
+    if (!statBonus) {
+      return null;
+    }
+
+    const currentStats = character.stats || baseStats || { hp: 0, atk: 0, def: 0, spd: 0 };
     const previewStats = {
       hp: Math.floor(currentStats.hp * (1 + statBonus.hp / 100)),
       atk: Math.floor(currentStats.atk * (1 + statBonus.atk / 100)),
@@ -232,7 +263,7 @@ export class EvolutionSystem {
       return { success: false, error: '유효하지 않은 조각 수입니다' };
     }
 
-    const data = SaveManager.load();
+    const data = SaveManager.load() || {};
 
     if (!data.resources) {
       data.resources = {};
@@ -261,7 +292,7 @@ export class EvolutionSystem {
    * @returns {number} 조각 수
    */
   static getShards(heroId) {
-    const data = SaveManager.load();
+    const data = SaveManager.load() || {};
     return data.resources?.characterShards?.[heroId] || 0;
   }
 
@@ -301,7 +332,7 @@ export class EvolutionSystem {
    * @returns {boolean}
    */
   static isMaxRarity(rarity) {
-    const index = this.RARITY_ORDER.indexOf(rarity);
+    const index = this.RARITY_ORDER.indexOf(this.normalizeRarity(rarity));
     return index >= this.RARITY_ORDER.length - 1;
   }
 

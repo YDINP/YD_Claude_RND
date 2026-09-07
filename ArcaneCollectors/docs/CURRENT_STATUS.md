@@ -1,16 +1,52 @@
 # ArcaneCollectors 현재 상태
 
-> **최종 업데이트**: 2026-09-03
+> **최종 업데이트**: 2026-09-04
 > **브랜치**: `main`
-> **테스트**: `npx vitest run` 58파일 1476개 전량 통과 (실측) / `npx tsc --noEmit` 0 에러 / `npm run build` 성공 / E2E 스모크 스위트 전량 통과(아래 검증 표 참고)
-> **번들 크기**: 568KB gzip (2026-08-24 기준 최적화 유지, 09-02~03 아트 자산 추가는 lazy-load라 초기 번들 미포함)
-> **최근 작업**: 스토리 모드 GDD 웨이브 1~3 전 구현 + 비주얼 리디자인 계획 28태스크 전 완료(T-26까지, T-29 포함) + 접근성 감사 P0/P1 전 해소 (2026-09-02~03)
+> **테스트**: `npx vitest run` 74파일 2029개 전량 통과 (2026-09-04 실측) / `npx tsc --noEmit` 0 에러 / `npm run build` 성공 / E2E 스모크 스위트 전량 통과(아래 검증 표 참고)
+> **번들 크기**: 568KB gzip (2026-08-24 기준 최적화 유지, 09-02~04 아트 자산 추가는 lazy-load라 초기 번들 미포함)
+> **최근 작업**: 명상 로비 전환 + 치비 스프라이트 + 로비 메뉴 도크 재편 + 전투 스탯 SSOT 수정 + 아트 전면 교체 (2026-09-04)
 
 > ⚠️ **`.gitignore` 주의**: 루트 `.gitignore:38`이 `ArcaneCollectors/` 디렉터리 전체를 무시한다. 이 모노레포에서 신규 파일을 커밋하려면 `git add -f`가 필수이며, 누락 시 워커 산출물이 미추적 상태로 남는다(2026-08-25 산출물이 이 문제로 누락되었다가 2026-09-02에 정식 추적됨).
 
-> ⚠️ **배포 상태 주의**: Vercel 프로덕션(`https://arcane-collectors.vercel.app`)은 2026-03 빌드에 고정되어 있다. `main` 브랜치 푸시는 Vercel Preview만 생성하고 프로덕션을 자동 갱신하지 않는다. 09-02~03 세션의 방대한 변경분(스토리 모드, 리디자인, 아트 34장 등)이 프로덕션에 반영되려면 `vercel --prod` 수동 배포가 필요하다 — 실행 여부는 결정 대기.
+> ⚠️ **배포 절차 주의**: 2026-09-04 `vercel --prod` 수동 배포로 `https://arcane-collectors.vercel.app`이 최신 빌드를 서비스 중이다(과거 2026-03 빌드에 고정되어 있던 문제는 해소됨). 배포 시 발견된 함정 두 가지 — (1) Vercel 프로젝트의 Root Directory 설정이 `ArcaneCollectors`라서, 배포는 **저장소 루트에서** `VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` 환경변수를 지정한 채 실행해야 한다. (2) 루트 `.vercelignore`의 제외 항목은 반드시 선행 슬래시를 붙여야 한다(`/tools`) — 슬래시 없는 `tools`는 중첩 경로 `ArcaneCollectors/tools`까지 잡아 빌드가 `../../tools/art/asset-manifest.json` 해석에 실패한다.
 
 **08-24 세션의 "⚠️ 검증 대기" 경고와 `PLAN_COMPLETION_STAGE.md` §0에 기록된 P0 파손(GuildPopup.js 문자열 리터럴 개행, helpers.js 파스 오류, EventDungeonSystem 이벤트 만료)은 2026-09-02 기준 전부 해소되었다. 이후 09-02~03 세션에서 발견된 스토리 모드 관련 릴리스 차단 결함(BLK-01~07, `PLAN_COMPLETION_STAGE.md` 부록 C)도 전부 해소되었다(커밋 `1a9c27e`).**
+
+---
+
+## 2026-09-04 세션: 명상 로비 전환 + 치비 스프라이트 + 전투 스탯 SSOT 수정 + 로비 메뉴 재편
+
+3개 커밋 (해시/파일 목록은 `git log --oneline -3`, `git show --stat <hash>`로 직접 확인).
+
+| 커밋 | 내용 |
+|------|------|
+| `38e6d8f` | 다음 우선순위 6종(사운드·교단 메커니즘·가챠 라우팅·탑 시즌·팝업 스크롤·밸런스) + QA 전수 감사 반영 + 아트 전면 교체 |
+| `1c97e47` | 전투 스탯 SSOT 수정 + 명상 로비 전환 + 치비 스프라이트 10인 |
+| `a82cd0e` | 로비 메뉴 카테고리 도크 재편 + 메뉴 아이콘 이미지 14종 |
+
+**검증 (2026-09-04, 실측)**
+
+| 항목 | 결과 |
+|------|------|
+| `npx vitest run` | 74파일 2029개 전량 통과 |
+
+**완료 항목**
+- **전투 스탯 SSOT 수정 (이 세션 최대 결함)**: `HeroFactory`가 `ProgressionSystem.getFinalStats()`를 우회해 영웅을 만들고 있었다. 그래서 레벨업·성급·장비 보너스가 실제 전투에 전혀 반영되지 않았다. `resolveFinalStats()`를 두고 `statsResolved: true` 플래그로 이중 적용을 막았다. 시뮬레이터는 `getFinalStats()`를 직접 불러서 이 경로를 타지 않았기 때문에 회귀를 못 잡았고, 그래서 실제 전투 경로를 도는 `tests/e2e/onboarding-realbattle.mjs`를 추가했다.
+- **명상 로비 전환**: 로비가 "보스를 때리는 방치 전투"에서 "파티가 성소에서 명상해 마력을 쌓는" 구조로 바뀌었다. `IdleBattleView` → `MeditationView`. `IdleProgressSystem`은 한 줄도 바뀌지 않았고 표현 계층만 교체했으므로 밸런스 회귀가 없다. 상세는 `docs/redesign/CHIBI_MEDITATION_PLAN.md`.
+- **치비 스프라이트**: 2.5등신 공용 규격(셀 256², 캐릭터 높이 82%, 접지 94%) 시트 생성 파이프라인(`tools/art/gen-chibi.mjs` + `tools/art/build-chibi-sheet.py`), 기본영웅 10인 적용, 무손실 WebP + `chibi` 버킷 지연 로드.
+- **로비 메뉴 도크**: 메뉴를 카테고리로 묶은 도크로 재편(`src/utils/menuLayout.js`), 메뉴 아이콘 이미지 14종 생성.
+- **성소 배경**: 전용 배경 생성 후 `lazyTextures.bg_sanctum`(255KB) 등록, 성소 → 챕터 → 프로시저럴 3단 폴백.
+- **영웅 상세 치비**: 전신 일러스트 옆에 치비 idle 배지 추가, 공용 조회 유틸 `src/utils/chibiSheet.js`로 분리.
+- **적 아트 84종** 생성.
+
+**진행 중 (미완)**
+- **적 아트 화풍 통일 재생성**: 포트레이트/전신은 Codex `image_gen`, 적은 ComfyUI로 만들어져 채도가 갈렸다(캐릭터 채도 38 vs 적 54~63). 색보정으로는 선 굵기·셰이딩 차이를 못 고쳐서 Codex 재생성 중이다(`tools/art/gen-enemies-codex-v2.py`, 재개 가능). 화풍 정책: **캐릭터 계열 아트(포트레이트·전신·적·NPC)는 Codex**, 치비(의도적 플랫)와 배경(환경)은 ComfyUI 유지.
+
+**배포**
+- 2026-09-04 `vercel --prod`로 라이브 배포 완료 — `https://arcane-collectors.vercel.app`이 이 세션의 최신 빌드를 서비스 중이다.
+- 배포 함정 2건:
+  1. Vercel 프로젝트의 Root Directory 설정이 `ArcaneCollectors`라서, 배포는 **저장소 루트에서** `VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` 환경변수를 지정한 채 실행해야 한다.
+  2. 루트 `.vercelignore`의 제외 항목은 반드시 선행 슬래시를 붙여야 한다(`/tools`). 슬래시 없는 `tools`는 중첩 경로 `ArcaneCollectors/tools`까지 잡아 빌드가 `../../tools/art/asset-manifest.json` 해석에 실패한다.
 
 ---
 
@@ -313,7 +349,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 | TOWER-03 (탑 시즌/순위) | ❌ 미구현 (월간 리셋 + 순위표) |
 | SND-01/02 (사운드) | ❌ 미착수 — `public/assets/audio` 오디오 에셋 0개 |
 | 접근성 P2 잔여 1건 | 🔶 소환 화면 천장(피티) 진행바 트랙 대비가 3:1 미만 (`A11Y_AUDIT_2026-09-03.md`) |
-| 프로덕션 배포 | ⚠️ Vercel 프로덕션이 2026-03 빌드에 고정, `main` 푸시는 Preview만 생성 — `vercel --prod` 수동 배포 결정 대기 |
+| 프로덕션 배포 | ✅ 2026-09-04 `vercel --prod`로 라이브 배포 완료 — `https://arcane-collectors.vercel.app`이 최신 빌드 서비스 중 |
 
 ---
 
@@ -346,7 +382,7 @@ baseStats→stats 통일, TS 전환, RadarChart, Mood 파티클, 유닛테스트
 
 ## 테스트 현황
 
-> **2026-09-03 실측**: Vitest 58파일 1476개 전량 통과. 파일별 세부 개수는 09-02 세션 이후 33개 파일이 신규 추가(스토리/튜토리얼/리디자인 컴포넌트/레이아웃 유틸 등)되어 파일당 브레이크다운은 이 문서에서 관리하지 않는다. 전체 파일 목록은 `tests/**/*.test.js`.
+> **2026-09-04 실측**: Vitest 74파일 2029개 전량 통과. 파일별 세부 개수는 09-02 세션 이후 신규 파일이 계속 추가(스토리/튜토리얼/리디자인 컴포넌트/레이아웃 유틸 등)되어 파일당 브레이크다운은 이 문서에서 관리하지 않는다. 전체 파일 목록은 `tests/**/*.test.js`.
 
 ### E2E 테스트 — Playwright 기반 커스텀 스모크 스크립트 (34개 항목 → 스크립트 체계로 전환)
 
@@ -435,10 +471,10 @@ docs/
 | 번들러 | Vite 5 |
 | 모듈 | ES Modules |
 | 해상도 | 720x1280 |
-| 유닛 테스트 | Vitest (1476개, 58파일) |
+| 유닛 테스트 | Vitest (2029개, 74파일) |
 | E2E 테스트 | Playwright 기반 커스텀 스모크 스크립트 (`tests/e2e/*.mjs`, 웨이브당 6~114개) |
 | 타입체크 | TypeScript (tsc --noEmit) |
 | 백엔드 | Supabase (하이브리드 저장) |
 | CI/CD | GitHub Actions (ci + deploy + pr-check) |
-| 배포 | Vercel (https://arcane-collectors.vercel.app — ⚠️ 2026-03 빌드에 고정, `vercel --prod` 수동 배포 필요) |
+| 배포 | Vercel (https://arcane-collectors.vercel.app — 2026-09-04 `vercel --prod`로 최신 빌드 배포 완료) |
 | 빌드 크기 | 568KB gzip (73% 압축, 초기 번들 기준) |

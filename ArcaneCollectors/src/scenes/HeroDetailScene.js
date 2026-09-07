@@ -50,6 +50,10 @@ import {
   computeActionSlots,
   computeFullbodyFit,
   computeFullbodyAnchor,
+  CHIBI_BADGE,
+  computeChibiBadge,
+  resolveChibiSheet,
+  frameIndex,
   computeStatRows,
   computeRadarPlacement,
   computeEquipSlots,
@@ -63,18 +67,15 @@ import {
   hasFullbodyAsset,
   formatNumber,
   truncate,
-  buildSubtitle
+  buildSubtitle,
+  maxLevelFor,
+  levelUpCost,
+  buildActionStates,
+  buildGrowthLabels
 } from '../utils/heroDetailLayout.js';
 
 /** 클래스 표시 이름 */
 const CLASS_LABELS = { warrior: '전사', mage: '마법사', archer: '궁수', healer: '힐러' };
-
-/**
- * 액션 바의 최대 레벨 판정 폴백.
- * 세이브에 없는 영웅이라 ProgressionSystem.getCharacterDetails() 가 null 일 때 쓴다.
- * 레벨업 로직 자체가 쓰는 값과 같다.
- */
-const ACTION_MAX_LEVEL = { N: 30, R: 40, SR: 50, SSR: 60 };
 
 /** 탭 전환·이탈 전환 시간 (ms) */
 const TAB_FADE_MS = 120;
@@ -116,6 +117,11 @@ export class HeroDetailScene extends Phaser.Scene {
     this._hiresKey = null;        // 이 씬이 로드한 @2x 포트레이트 키
     this._fullbodyKey = null;     // 이 씬이 로드한 전신 시트 키
     this._keepFullbody = false;   // 같은 영웅으로 restart 할 때 전신을 유지
+    this._chibiMeta = null;       // resolveChibiSheet() 결과 (없으면 배지 자체를 안 그린다)
+    this._chibiKey = null;        // 이 씬이 로드한 치비 시트 키 (없으면 다른 씬 소유라 해제하지 않는다)
+    this._chibiSprite = null;
+    this._chibiFrames = null;
+    this._chibiAwakenTimer = null;
     this._tabSwitching = false;   // 탭 전환 페이드 진행 중 중복 입력 차단
     this._leaving = false;        // 이탈 페이드 진행 중 중복 입력 차단
   }
@@ -124,9 +130,16 @@ export class HeroDetailScene extends Phaser.Scene {
     this.heroId = data?.heroId;
     this.activeTab = resolveTabId(data?.tab);
     this.isLevelingUp = false;
+    // 이 화면이 몇 번 처음부터 다시 그려졌는가.
+    // 레벨업은 이 값을 올리지 않아야 한다(부분 갱신) — e2e 가 이 값으로 확인한다.
+    this.createCount = (this.createCount || 0) + 1;
     this.tabObjects = [];
     this._tabSwitching = false;
     this._leaving = false;
+    this._chibiMeta = null;
+    this._chibiSprite = null;
+    this._chibiFrames = null;
+    this._chibiAwakenTimer = null;
   }
 
   create() {
@@ -156,6 +169,9 @@ export class HeroDetailScene extends Phaser.Scene {
       // 첫 화면이 폴백(정사각 포트레이트)으로 뜬 뒤 뒤늦게 바뀐다.
       this.prepareFullbody();
 
+      // 치비 배지 — 매니페스트에 없으면 아예 큐에 올리지 않는다(폴백 시 미배치).
+      this.prepareChibi();
+
       if (characterRenderer.useAssets) {
         characterRenderer.preloadAssets(this, [this.hero], { ids: [this.hero.id], types: ['card'] });
       }
@@ -182,6 +198,7 @@ export class HeroDetailScene extends Phaser.Scene {
     this.refreshDerivedData();
     this.createBackground();
     this.createHeroStage();
+    this.createChibiBadge();
     this.createHeader();
     this.createRibbon();
     this.createTabBar();
@@ -222,6 +239,33 @@ export class HeroDetailScene extends Phaser.Scene {
 
     this.stars = details?.stars ?? this.hero.stars ?? this.hero.rarity ?? 1;
     this.maxStars = details?.evolution?.maxStars ?? ProgressionSystem.MAX_STARS ?? 6;
+
+    // 최대 레벨 판정은 한 곳에서만 한다. 예전에는 액션 바가 `details.maxLevel`(30)을,
+    // levelUpHero() 가 `maxLevels[hero.rarity]`(등급 없는 기본 영웅이면 60)를 봐서
+    // 버튼이 "최대 레벨"인데도 레벨이 더 오르는 어긋남이 있었다.
+    // 데이터가 상한을 선언하면 그것이 우선이다 — 기본영웅은 표시 등급이 R 이어도
+    // 계층 규칙에 따라 30 에서 멈춘다(base-heroes.json `maxLevel`).
+    this.maxLevel = maxLevelFor(this.rarityKey, details?.maxLevel ?? this.heroData?.maxLevel);
+  }
+
+  /**
+   * 이 영웅의 진화 조각 수.
+   *
+   * 조각의 SSOT 는 세이브(`resources.characterShards`)다. registry 의
+   * `shards_<heroId>` 는 이 화면이 차감 결과를 잠시 들고 있는 캐시일 뿐이라,
+   * 값이 없으면 세이브에서 읽어야 한다 — 예전에는 registry 만 봐서
+   * 조각을 충분히 가진 영웅도 항상 "조각이 부족합니다" 로 막혔다.
+   *
+   * @returns {number}
+   */
+  getShardCount() {
+    const cached = this.registry.get(`shards_${this.hero.id}`);
+    if (Number.isFinite(cached)) return cached;
+    try {
+      return EvolutionSystem.getShards(this.hero.id);
+    } catch {
+      return 0;
+    }
   }
 
   /**
@@ -449,6 +493,101 @@ export class HeroDetailScene extends Phaser.Scene {
   }
 
   // ================================================================
+  // 치비 배지 — 스테이지 좌하단, 전신 일러스트와 나란히
+  // ================================================================
+
+  /**
+   * 치비 시트를 create() 의 로드 배치에 올린다.
+   * 매니페스트(`chibi` 버킷)에 없으면 아무것도 큐에 올리지 않는다 — 이 씬은
+   * 빈 자리를 그리지 않고, 배지 자체를 만들지 않는다(폴백 표시 없음).
+   *
+   * MeditationView 와 텍스처 키가 같다(`resolveChibiSheet` 가 만드는 `chibi_<heroId>`).
+   * 이미 로드돼 있으면(메인 화면이 백그라운드에서 살아 있는 경우) 재사용만 하고
+   * 소유권은 갖지 않는다 — shutdown 에서 이 씬이 직접 올린 것만 지운다.
+   */
+  prepareChibi() {
+    const meta = resolveChibiSheet(this.heroData, ASSET_MANIFEST);
+    this._chibiMeta = meta;
+    if (!meta) return;
+
+    if (this.textures.exists(meta.key)) return;
+
+    this.load.spritesheet(meta.key, meta.path, { frameWidth: meta.cell, frameHeight: meta.cell });
+    this._chibiKey = meta.key; // 이 씬이 로드했다 → shutdown 에서 해제 대상
+  }
+
+  /**
+   * 치비 배지를 스테이지 좌하단에 앉힌다. idle 프레임으로 떠 있다가 탭하면
+   * awaken 프레임을 잠깐 보여주고 되돌아간다.
+   *
+   * 전신 일러스트(anchor xRatio 0.60, 스테이지 오른쪽 치우침)와 반대편에 두므로
+   * 어떤 전신 비율에서도 겹치지 않는다(`chibiClearsFullbody` 로 좌표 회귀 가드).
+   */
+  createChibiBadge() {
+    const meta = this._chibiMeta;
+    if (!meta || !this.textures.exists(meta.key)) return; // 매니페스트에 없으면 이 자리를 그리지 않는다
+
+    const badge = computeChibiBadge();
+    const bx = s(badge.x);
+    const by = s(badge.y);
+    const size = s(badge.size);
+
+    // 배지 받침 — 다른 카드·리본과 같은 교단색 언어로 자리를 표시한다
+    const halo = this.add.circle(bx, by - size * 0.5, size * 0.60, this.cultColor, 0.16)
+      .setStrokeStyle(s(2), this.cultColor, 0.55)
+      .setDepth(DEPTH.FULLBODY + 1);
+
+    this._chibiFrames = {
+      idle: frameIndex(meta.frames, 'idle'),
+      awaken: frameIndex(meta.frames, 'awaken')
+    };
+
+    const sprite = this.add.sprite(bx, by, meta.key, this._chibiFrames.idle)
+      .setOrigin(0.5, 1)
+      .setDisplaySize(size, size)
+      .setDepth(DEPTH.FULLBODY + 2);
+
+    // 전직 영웅이 원본 시트를 빌려 쓰면 교단색으로 물들여 원본과 구분한다
+    // (계획서 C-6 의 규칙 — MeditationView.placeChibi() 와 동일)
+    if (meta.inherited) sprite.setTint(this.cultColor);
+
+    this._chibiSprite = sprite;
+    this._chibiHalo = halo;
+
+    // idle 부유(y ±3px) + 미세 호흡(스케일). 상시 루프 1개로 둘 다 표현한다.
+    const floatTween = this.tweens.add({
+      targets: sprite,
+      y: by - s(3),
+      scale: { from: sprite.scale, to: sprite.scale * 1.03 },
+      duration: 2200,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    this.activeTweens.push(floatTween);
+    this._chibiFloatTween = floatTween;
+
+    this._chibiHit = this.createHitArea(bx, by - size / 2, size, size,
+      () => this.playChibiAwaken(), DEPTH.FULLBODY + 3);
+  }
+
+  /**
+   * 배지를 탭하면 awaken 프레임을 0.5초 보여주고 idle 로 되돌린다.
+   * 별도 트윈 없이 프레임 전환 + 타이머만 쓴다 — 부유 트윈과 스케일 속성이
+   * 겹쳐 흔들리지 않게 하기 위해서다.
+   */
+  playChibiAwaken() {
+    if (!this._chibiSprite || !this._chibiFrames) return;
+
+    this._chibiSprite.setFrame(this._chibiFrames.awaken);
+    if (this._chibiAwakenTimer) this._chibiAwakenTimer.remove();
+    this._chibiAwakenTimer = this.time.delayedCall(500, () => {
+      this._chibiAwakenTimer = null;
+      if (this._chibiSprite && this._chibiFrames) this._chibiSprite.setFrame(this._chibiFrames.idle);
+    });
+  }
+
+  // ================================================================
   // 헤더
   // ================================================================
 
@@ -491,7 +630,8 @@ export class HeroDetailScene extends Phaser.Scene {
       cultName
     });
 
-    this.add.text(GAME_WIDTH / 2, s(58), subtitle, ts('label', {
+    // 레벨업 때 이 텍스트만 갈아끼운다 (씬을 다시 그리지 않는다)
+    this.subtitleText = this.add.text(GAME_WIDTH / 2, s(58), subtitle, ts('label', {
       color: hexToCSS(rarityColor),
       align: 'center'
     })).setOrigin(0.5).setDepth(DEPTH.HEADER + 2);
@@ -569,9 +709,13 @@ export class HeroDetailScene extends Phaser.Scene {
       formatNumber(this.power),
       ts('display.lg', { color: hexToCSS(DESIGN.colors.brand.accent) }))
       .setOrigin(1, 0.5).setDepth(D);
+    this.powerText = powerText;   // 레벨업 부분 갱신 대상
 
-    IconFactory.createImage(this, powerText.x - powerText.width - s(14), s(slots.power.y + 50),
-      'atk', 'sm', { tint: DESIGN.colors.brand.accent })?.setDepth(D);
+    // 아이콘은 숫자 왼쪽에 붙는다. 전투력이 바뀌면 폭이 달라지므로 참조를 들고
+    // 갱신 때 같이 옮긴다 — 안 옮기면 자릿수가 늘어난 숫자와 겹친다.
+    this.powerIcon = IconFactory.createImage(this, powerText.x - powerText.width - s(14),
+      s(slots.power.y + 50), 'atk', 'sm', { tint: DESIGN.colors.brand.accent }) || null;
+    this.powerIcon?.setDepth(D);
   }
 
   // ================================================================
@@ -711,6 +855,13 @@ export class HeroDetailScene extends Phaser.Scene {
   /** @private */
   clearTabObjects() {
     this.radarChart = null;
+    // 부분 갱신이 잡고 있던 참조도 같이 놓는다. 남기면 파괴된 텍스트에 setText 를 건다
+    this.statValueTexts = null;
+    this.statBars = null;
+    this.statArea = null;
+    this.expText = null;
+    this.expLevelText = null;
+    this.expBar = null;
     this.tabObjects.forEach((obj) => {
       if (obj && typeof obj.destroy === 'function') obj.destroy();
     });
@@ -749,6 +900,11 @@ export class HeroDetailScene extends Phaser.Scene {
     const left = { ...area.left, y: area.left.y + 44 };
     const rows = computeStatRows(this.finalStats, { area: left, rowGap: 42 });
 
+    // 레벨업 부분 갱신이 다시 찾아야 하는 것들. 탭을 갈아끼울 때 함께 비운다
+    this.statArea = left;
+    this.statValueTexts = {};
+    this.statBars = [];
+
     rows.forEach((row) => {
       const cy = s(row.y);
 
@@ -763,21 +919,15 @@ export class HeroDetailScene extends Phaser.Scene {
         color: DESIGN.colors.text.secondary
       })).setOrigin(0, 0.5).setDepth(DEPTH.CONTENT));
 
-      this.track(this.add.text(s(row.valueRight), cy, formatNumber(row.value), ts('num.md', {
-        color: DESIGN.colors.text.primary
-      })).setOrigin(1, 0.5).setDepth(DEPTH.CONTENT));
+      this.statValueTexts[row.key] = this.track(this.add.text(s(row.valueRight), cy,
+        formatNumber(row.value), ts('num.md', {
+          color: DESIGN.colors.text.primary
+        })).setOrigin(1, 0.5).setDepth(DEPTH.CONTENT));
 
       // 바 — 트랙 + 교단색 채움
       const bar = this.add.graphics().setDepth(DEPTH.CONTENT);
-      const bx = s(row.barX);
-      const bw = s(row.barW);
-      const bh = s(10);
-      bar.fillStyle(DESIGN.colors.bg.surface, 0.9);
-      bar.fillRoundedRect(bx, cy - bh / 2, bw, bh, bh / 2);
-      if (row.fillW > 0) {
-        bar.fillStyle(this.cultColor, 1);
-        bar.fillRoundedRect(bx, cy - bh / 2, Math.max(s(row.fillW), bh), bh, bh / 2);
-      }
+      this.drawStatBar(bar, row);
+      this.statBars.push(bar);
       this.track(bar);
     });
 
@@ -800,28 +950,81 @@ export class HeroDetailScene extends Phaser.Scene {
     // 경험치 진행 — 다음 레벨까지 얼마나 남았는지가 이 탭의 행동 유도다
     const exp = this.details?.expProgress;
     if (exp && exp.required > 0) {
-      const y = s(L.content.y + L.content.h - 46);
-      const barX = s(L.margin + 24);
-      const barW = GAME_WIDTH - s((L.margin + 24) * 2);
+      const labels = buildGrowthLabels({
+        rarityKey: this.rarityKey,
+        level: this.hero.level,
+        maxLevel: this.maxLevel,
+        power: this.power,
+        exp
+      });
+      const geom = this.expBarGeometry();
 
-      this.track(this.add.text(barX, y - s(22), `EXP  ${formatNumber(exp.current)} / ${formatNumber(exp.required)}`,
+      this.expText = this.track(this.add.text(geom.x, geom.labelY, labels.exp,
         ts('caption', { color: DESIGN.colors.text.secondary }))
         .setOrigin(0, 0.5).setDepth(DEPTH.CONTENT));
 
-      this.track(this.add.text(barX + barW, y - s(22), `Lv.${this.hero.level} / ${this.details?.maxLevel ?? '-'}`,
+      this.expLevelText = this.track(this.add.text(geom.x + geom.w, geom.labelY, labels.level,
         ts('num.sm', { color: DESIGN.colors.text.muted }))
         .setOrigin(1, 0.5).setDepth(DEPTH.CONTENT));
 
-      const g = this.add.graphics().setDepth(DEPTH.CONTENT);
-      const h = s(8);
-      g.fillStyle(DESIGN.colors.bg.surface, 0.9);
-      g.fillRoundedRect(barX, y, barW, h, h / 2);
-      const ratio = Math.max(0, Math.min(1, exp.current / exp.required));
-      if (ratio > 0) {
-        g.fillStyle(DESIGN.colors.status.success, 1);
-        g.fillRoundedRect(barX, y, Math.max(barW * ratio, h), h, h / 2);
-      }
-      this.track(g);
+      this.expBar = this.add.graphics().setDepth(DEPTH.CONTENT);
+      this.drawExpBar(this.expBar, labels.expRatio);
+      this.track(this.expBar);
+    }
+  }
+
+  /**
+   * EXP 바 좌표. 최초 그리기와 부분 갱신이 같은 값을 써야 바가 어긋나지 않는다.
+   * @returns {{x:number,y:number,w:number,h:number,labelY:number}}
+   * @private
+   */
+  expBarGeometry() {
+    const x = s(L.margin + 24);
+    return {
+      x,
+      y: s(L.content.y + L.content.h - 46),
+      w: GAME_WIDTH - s((L.margin + 24) * 2),
+      h: s(8),
+      labelY: s(L.content.y + L.content.h - 46) - s(22)
+    };
+  }
+
+  /**
+   * 스탯 바 하나를 (다시) 그린다.
+   * @param {Phaser.GameObjects.Graphics} bar
+   * @param {{y:number,barX:number,barW:number,fillW:number}} row - computeStatRows 한 행
+   * @private
+   */
+  drawStatBar(bar, row) {
+    if (!bar) return;
+    const cy = s(row.y);
+    const bx = s(row.barX);
+    const bw = s(row.barW);
+    const bh = s(10);
+    bar.clear();
+    bar.fillStyle(DESIGN.colors.bg.surface, 0.9);
+    bar.fillRoundedRect(bx, cy - bh / 2, bw, bh, bh / 2);
+    if (row.fillW > 0) {
+      bar.fillStyle(this.cultColor, 1);
+      bar.fillRoundedRect(bx, cy - bh / 2, Math.max(s(row.fillW), bh), bh, bh / 2);
+    }
+  }
+
+  /**
+   * EXP 바를 (다시) 그린다.
+   * @param {Phaser.GameObjects.Graphics} bar
+   * @param {number} ratio - 0~1
+   * @private
+   */
+  drawExpBar(bar, ratio) {
+    if (!bar) return;
+    const geom = this.expBarGeometry();
+    bar.clear();
+    bar.fillStyle(DESIGN.colors.bg.surface, 0.9);
+    bar.fillRoundedRect(geom.x, geom.y, geom.w, geom.h, geom.h / 2);
+    if (ratio > 0) {
+      bar.fillStyle(DESIGN.colors.status.success, 1);
+      bar.fillRoundedRect(geom.x, geom.y, Math.max(geom.w * ratio, geom.h), geom.h, geom.h / 2);
     }
   }
 
@@ -1283,70 +1486,92 @@ export class HeroDetailScene extends Phaser.Scene {
    * 눌러도 되지만 기존 안내 메시지가 그대로 뜬다(로직 불변, 표시만 추가).
    */
   createActionBar() {
-    const gold = this.registry.get('gold') || 0;
-    const levelCost = this.hero.level * 100;
-    const maxLevel = this.details?.maxLevel ?? ACTION_MAX_LEVEL[this.rarityKey] ?? 60;
-    const isMaxLevel = this.hero.level >= maxLevel;
-    const canLevelUp = !isMaxLevel && gold >= levelCost;
-    const canEvolve = !EvolutionSystem.isMaxRarity(this.hero.rarity);
+    // 라벨·부제·활성 여부는 순수 함수가 정한다. 최초 그리기와 레벨업 부분 갱신이
+    // 같은 규칙을 쓰게 하려는 것이다(둘이 갈라지면 갱신 후 표시가 어긋난다).
+    const states = this.computeActionStates();
 
-    const actions = [
-      {
-        label: '레벨업',
-        sub: isMaxLevel ? '최대 레벨' : formatNumber(levelCost),
-        key: 'btn_primary',
-        tint: null,
-        enabled: canLevelUp,
-        onPress: () => this.levelUpHero()
-      },
-      {
-        label: '자동 레벨업',
-        sub: isMaxLevel ? '최대 레벨' : '가능한 만큼',
-        key: 'btn_secondary',
-        tint: null,
-        enabled: canLevelUp,
-        onPress: () => this.autoLevelUp()
-      },
-      {
-        label: '진화',
-        sub: canEvolve ? '조각 필요' : '최고 등급',
-        key: canEvolve ? 'btn_secondary' : 'btn_ghost',
-        tint: canEvolve ? DESIGN.colors.brand.secondary : DESIGN.colors.rarityNamed.N.hex,
-        enabled: canEvolve,
-        onPress: () => this.evolveHero()
-      }
-    ];
+    const handlers = {
+      levelup: () => this.levelUpHero(),
+      autolevel: () => this.autoLevelUp(),
+      evolve: () => this.evolveHero()
+    };
+    const frameKeys = { levelup: 'btn_primary', autolevel: 'btn_secondary' };
 
-    computeActionSlots(actions.length).forEach((slot, index) => {
-      const action = actions[index];
+    this.actionRefs = {};
+
+    computeActionSlots(states.length).forEach((slot, index) => {
+      const state = states[index];
       const cx = s(slot.centerX);
       const cy = s(slot.centerY);
       const w = s(slot.w);
       const h = s(slot.h);
 
+      const isEvolve = state.id === 'evolve';
+      const frameKey = frameKeys[state.id] || (state.enabled ? 'btn_secondary' : 'btn_ghost');
+      const tint = isEvolve
+        ? (state.enabled ? DESIGN.colors.brand.secondary : DESIGN.colors.rarityNamed.N.hex)
+        : null;
+
       const frame = NineSliceFrame.create(this, {
         x: cx, y: cy, w, h,
-        key: action.key,
-        tint: action.enabled ? action.tint : DESIGN.colors.rarityNamed.N.hex,
-        alpha: action.enabled ? 1 : 0.42,
+        key: frameKey,
+        tint: state.enabled ? tint : DESIGN.colors.rarityNamed.N.hex,
+        alpha: state.enabled ? 1 : 0.42,
         depth: DEPTH.ACTION
       });
 
-      const label = this.add.text(cx, cy, action.label, ts('label', {
-        color: action.enabled ? DESIGN.colors.text.primary : DESIGN.colors.text.muted
+      const label = this.add.text(cx, cy, state.label, ts('label', {
+        color: state.enabled ? DESIGN.colors.text.primary : DESIGN.colors.text.muted
       })).setOrigin(0.5).setDepth(DEPTH.ACTION + 1);
 
       // 부제는 버튼 밖 아래에 둔다. 9-slice 장식 띠가 두꺼워 안에 넣으면 글자가 물린다
-      const sub = this.add.text(cx, s(L.actionBar.y + L.actionBar.h + 14), action.sub, ts('num.sm', {
-        color: action.enabled ? DESIGN.colors.text.secondary : DESIGN.colors.text.muted
-      })).setOrigin(0.5).setDepth(DEPTH.ACTION + 1).setAlpha(action.enabled ? 1 : 0.7);
+      const sub = this.add.text(cx, s(L.actionBar.y + L.actionBar.h + 14), state.sub, ts('num.sm', {
+        color: state.enabled ? DESIGN.colors.text.secondary : DESIGN.colors.text.muted
+      })).setOrigin(0.5).setDepth(DEPTH.ACTION + 1).setAlpha(state.enabled ? 1 : 0.7);
 
-      const hit = this.createHitArea(cx, cy, w, h, action.onPress, DEPTH.ACTION + 2);
+      // 흐린 버튼도 누를 수 있다 — 왜 안 되는지 기존 안내 메시지가 뜬다
+      const hit = this.createHitArea(cx, cy, w, h, handlers[state.id], DEPTH.ACTION + 2);
+      hit.on('pointerover', () => {
+        if (!this.actionRefs?.[state.id]?.enabled) return;
+        frame.setScale?.(1.03); label.setScale(1.03); sub.setScale(1.03);
+      });
+      hit.on('pointerout', () => { frame.setScale?.(1); label.setScale(1); sub.setScale(1); });
 
-      if (action.enabled) {
-        hit.on('pointerover', () => { frame.setScale?.(1.03); label.setScale(1.03); sub.setScale(1.03); });
-        hit.on('pointerout', () => { frame.setScale?.(1); label.setScale(1); sub.setScale(1); });
-      }
+      this.actionRefs[state.id] = { frame, label, sub, hit, enabled: state.enabled };
+    });
+  }
+
+  /**
+   * 액션 바 3버튼의 현재 상태.
+   * @returns {Array<{id:string,label:string,sub:string,enabled:boolean}>}
+   */
+  computeActionStates() {
+    return buildActionStates({
+      level: this.hero.level,
+      maxLevel: this.maxLevel,
+      gold: this.registry.get('gold') || 0,
+      canEvolve: !EvolutionSystem.isMaxRarity(this.rarityKey)
+    });
+  }
+
+  /**
+   * 액션 바를 다시 만들지 않고 상태만 갈아끼운다.
+   * 버튼을 재생성하면 눌린 순간 히트 영역이 사라져 연타가 씹힌다.
+   * @private
+   */
+  updateActionBar() {
+    if (!this.actionRefs) return;
+
+    this.computeActionStates().forEach((state) => {
+      const ref = this.actionRefs[state.id];
+      if (!ref || !ref.sub?.scene) return;
+
+      ref.enabled = state.enabled;
+      ref.sub.setText(state.sub);
+      ref.sub.setColor(state.enabled ? DESIGN.colors.text.secondary : DESIGN.colors.text.muted);
+      ref.sub.setAlpha(state.enabled ? 1 : 0.7);
+      ref.label.setColor(state.enabled ? DESIGN.colors.text.primary : DESIGN.colors.text.muted);
+      ref.frame?.setAlpha?.(state.enabled ? 1 : 0.42);
     });
   }
 
@@ -1399,6 +1624,80 @@ export class HeroDetailScene extends Phaser.Scene {
   refresh(tab) {
     this._keepFullbody = true;
     this.scene.restart({ heroId: this.heroId, tab: tab || this.activeTab });
+  }
+
+  /**
+   * 성장(레벨업)으로 바뀐 **숫자만** 갈아끼운다.
+   *
+   * 예전에는 레벨업마다 `refresh()` 로 씬을 통째로 재시작했다. 화면 전체가 다시
+   * 그려져 연타할 때마다 깜빡였고, 재시작이 이 씬을 연 팝업 쪽 상태까지 흔들었다.
+   * 여기서는 부제·전투력·스탯 4행·EXP·액션 바 부제만 바꾼다 — 배경·전신 시트·
+   * 탭 구조·히트 영역은 그대로 살아 있으므로 연타해도 입력이 씹히지 않는다.
+   *
+   * 등급이 바뀌는 진화는 화면 색까지 달라지므로 여전히 `refresh()` 를 쓴다.
+   *
+   * @returns {boolean} 갱신을 수행했으면 true (씬이 이미 죽었으면 false)
+   */
+  applyGrowthUpdate() {
+    if (!this.sys || !this.sys.isActive()) return false;
+
+    this.refreshDerivedData();
+
+    const labels = buildGrowthLabels({
+      rarityKey: this.rarityKey,
+      level: this.hero.level,
+      maxLevel: this.maxLevel,
+      cultName: this.resolveCultInfo(this.cultId)?.name || null,
+      power: this.power,
+      exp: this.details?.expProgress
+    });
+
+    if (this.subtitleText?.scene) this.subtitleText.setText(labels.subtitle);
+
+    if (this.powerText?.scene) {
+      this.powerText.setText(labels.power);
+      // 아이콘은 숫자 왼쪽에 붙어 있다. 자릿수가 늘면 같이 밀어야 겹치지 않는다
+      if (this.powerIcon?.scene) {
+        this.powerIcon.x = this.powerText.x - this.powerText.width - s(14);
+      }
+    }
+
+    this.updateStatRows();
+    this.updateExpBar(labels);
+    this.updateActionBar();
+
+    return true;
+  }
+
+  /**
+   * 능력치 탭의 값·바·레이더를 새 스탯으로 갱신한다.
+   * 능력치 탭이 열려 있지 않으면 아무 일도 하지 않는다.
+   * @private
+   */
+  updateStatRows() {
+    if (!this.statValueTexts || !this.statArea) return;
+
+    const rows = computeStatRows(this.finalStats, { area: this.statArea, rowGap: 42 });
+    rows.forEach((row, index) => {
+      const text = this.statValueTexts[row.key];
+      if (text?.scene) text.setText(formatNumber(row.value));
+      this.drawStatBar(this.statBars?.[index], row);
+    });
+
+    if (this.radarChart && typeof this.radarChart.updateStats === 'function') {
+      this.radarChart.updateStats(this.finalStats);
+    }
+  }
+
+  /**
+   * EXP 라벨과 진행 바를 갱신한다.
+   * @param {{exp:string|null,level:string,expRatio:number}} labels - buildGrowthLabels 결과
+   * @private
+   */
+  updateExpBar(labels) {
+    if (this.expText?.scene && labels.exp) this.expText.setText(labels.exp);
+    if (this.expLevelText?.scene) this.expLevelText.setText(labels.level);
+    if (this.expBar?.scene) this.drawExpBar(this.expBar, labels.expRatio);
   }
 
   // ================================================================
@@ -1500,8 +1799,8 @@ export class HeroDetailScene extends Phaser.Scene {
     let totalLevels = 0;
     let totalCost = 0;
 
-    while (true) {
-      const cost = this.hero.level * 100;
+    while (this.hero.level < this.maxLevel) {
+      const cost = levelUpCost(this.hero.level);
       if (gold - totalCost < cost) break;
 
       totalCost += cost;
@@ -1512,9 +1811,6 @@ export class HeroDetailScene extends Phaser.Scene {
       this.hero.stats.atk = Math.floor(this.hero.stats.atk * 1.03);
       this.hero.stats.def = Math.floor(this.hero.stats.def * 1.03);
       this.hero.stats.spd = Math.floor(this.hero.stats.spd * 1.01);
-
-      const maxLevels = { N: 30, R: 40, SR: 50, SSR: 60 };
-      if (this.hero.level >= (maxLevels[this.hero.rarity] || 60)) break;
     }
 
     if (totalLevels === 0) {
@@ -1534,21 +1830,34 @@ export class HeroDetailScene extends Phaser.Scene {
 
     this.showMessage(`+${totalLevels} 레벨! (Lv.${this.hero.level})`, COLORS.success);
 
-    this.time.delayedCall(300, () => this.refresh());
+    this.applyGrowthUpdate();
   }
 
+  /**
+   * 진화 진입.
+   *
+   * 등급 표기가 통일돼 있지 않다 — 세이브·정적 데이터에 문자열('SSR')·숫자(4)·
+   * **없음**(기본 영웅)이 섞여 있다. 그래서 원본 `hero.rarity` 가 아니라 정규화된
+   * `this.rarityKey` 로 판정한다. 예전에는 기본 영웅에서 비용 조회가 null 로 떨어져
+   * `cost.gold` 에서 TypeError 로 죽었다(라이브 P0).
+   */
   evolveHero() {
-    if (EvolutionSystem.isMaxRarity(this.hero.rarity)) {
+    if (EvolutionSystem.isMaxRarity(this.rarityKey)) {
       this.showMessage('이미 최고 등급입니다!');
       return;
     }
 
-    const cost = EvolutionSystem.getEvolutionCost(this.hero.rarity);
+    const cost = EvolutionSystem.getEvolutionCost(this.rarityKey);
+    if (!cost) {
+      this.showMessage('진화할 수 없는 등급입니다!');
+      return;
+    }
+
     const gold = this.registry.get('gold') || 0;
-    const shards = this.registry.get(`shards_${this.hero.id}`) || 0;
+    const shards = this.getShardCount();
 
     if (gold < cost.gold) {
-      this.showMessage(`골드가 부족합니다! (${cost.gold} 필요)`);
+      this.showMessage(`골드가 부족합니다! (${formatNumber(cost.gold)} 필요)`);
       return;
     }
 
@@ -1557,11 +1866,13 @@ export class HeroDetailScene extends Phaser.Scene {
       return;
     }
 
-    this.showEvolutionPreview(cost, shards);
+    this.showEvolutionPreview(cost);
   }
 
   showEvolutionPreview(cost) {
-    const preview = EvolutionSystem.previewEvolution(this.hero.id);
+    // 세이브의 캐릭터 레코드에는 스탯이 없을 수 있다(기본 영웅). 그때 미리보기가
+    // 전부 0 으로 뜨지 않도록 이 화면이 표시 중인 스탯을 넘긴다.
+    const preview = EvolutionSystem.previewEvolution(this.hero.id, this.hero.stats || this.finalStats);
     if (!preview) {
       this.showMessage('진화 정보를 불러올 수 없습니다!');
       return;
@@ -1609,16 +1920,14 @@ export class HeroDetailScene extends Phaser.Scene {
 
   executeEvolution(cost, preview) {
     const gold = this.registry.get('gold') || 0;
-    const shards = this.registry.get(`shards_${this.hero.id}`) || 0;
+    const shards = this.getShardCount();
 
     this.registry.set('gold', gold - cost.gold);
     this.registry.set(`shards_${this.hero.id}`, shards - cost.shards);
 
     this.hero.rarity = preview.nextRarity;
-    this.hero.stats.hp = preview.previewStats.hp;
-    this.hero.stats.atk = preview.previewStats.atk;
-    this.hero.stats.def = preview.previewStats.def;
-    this.hero.stats.spd = preview.previewStats.spd;
+    // 스탯이 없는 영웅(정적 데이터 + 레벨로 계산하는 기본 영웅)도 있다
+    this.hero.stats = { ...(this.hero.stats || {}), ...preview.previewStats };
 
     if (this.hero.skillLevels && preview.skillBoost > 0) {
       this.hero.skillLevels = this.hero.skillLevels.map(lv => Math.min(10, lv + preview.skillBoost));
@@ -1663,16 +1972,15 @@ export class HeroDetailScene extends Phaser.Scene {
     }
 
     const gold = this.registry.get('gold') || 0;
-    const cost = this.hero.level * 100;
+    const cost = levelUpCost(this.hero.level);
 
-    if (gold < cost) {
-      this.showMessage(`골드가 부족합니다! (${cost} 필요)`);
+    if (this.hero.level >= this.maxLevel) {
+      this.showMessage('최대 레벨입니다!');
       return;
     }
 
-    const maxLevels = { N: 30, R: 40, SR: 50, SSR: 60 };
-    if (this.hero.level >= (maxLevels[this.hero.rarity] || 60)) {
-      this.showMessage('최대 레벨입니다!');
+    if (gold < cost) {
+      this.showMessage(`골드가 부족합니다! (${cost} 필요)`);
       return;
     }
 
@@ -1694,14 +2002,28 @@ export class HeroDetailScene extends Phaser.Scene {
     }
     this.persistHeroData();
 
+    // 숫자만 갈아끼우고(P1) 축하 연출은 그 위에 얹는다.
+    // 연출이 끝날 때까지 기다리지 않으므로 연타해도 표시가 즉시 따라온다.
+    this.applyGrowthUpdate();
     this.showLevelUpEffect();
+
+    // 상태 변경은 여기서 끝난다. 축하 연출(0.8초)이 끝날 때까지 잠그면
+    // 연타가 씹혀 "눌러도 안 오른다"로 보인다.
+    this.isLevelingUp = false;
   }
 
+  /**
+   * 레벨업 축하 연출. 화면 갱신과 분리돼 있어 연타해도 겹치지 않는다 —
+   * 새로 부르면 진행 중이던 연출을 먼저 걷어낸다.
+   *
+   * 예전에는 `stopAllActiveTweens()` 로 씬의 모든 트윈을 세웠는데, 그러면 상시
+   * 루프(치비 부유 등)까지 멈추고 연출 오브젝트는 화면에 남았다.
+   */
   showLevelUpEffect() {
     // SND-02: 레벨업 효과음 (수동/자동 레벨업 공통 지점)
     soundManager.playSFX('levelup');
 
-    this.stopAllActiveTweens();
+    this.clearLevelUpEffect();
 
     const flash = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT,
       DESIGN.colors.status.success, 0.3).setDepth(Z_INDEX.MODAL);
@@ -1716,19 +2038,20 @@ export class HeroDetailScene extends Phaser.Scene {
       y: levelText.y - s(30),
       duration: 800,
       ease: 'Power2',
-      onComplete: () => {
-        flash.destroy();
-        levelText.destroy();
-
-        this.cameras.main.fadeOut(150, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-          this.isLevelingUp = false;
-          this.refresh();
-        });
-      }
+      onComplete: () => this.clearLevelUpEffect()
     });
 
-    this.activeTweens.push(tween);
+    this._levelUpFx = { flash, levelText, tween };
+  }
+
+  /** 진행 중인 레벨업 연출을 즉시 걷어낸다 @private */
+  clearLevelUpEffect() {
+    const fx = this._levelUpFx;
+    if (!fx) return;
+    this._levelUpFx = null;
+    fx.tween?.stop?.();
+    fx.flash?.destroy?.();
+    fx.levelText?.destroy?.();
   }
 
   stopAllActiveTweens() {
@@ -1826,7 +2149,25 @@ export class HeroDetailScene extends Phaser.Scene {
       this._fullbodyKey = null;
     }
 
+    // 치비 시트도 이 씬이 직접 올린 것만 지운다. MeditationView 가 이미 올려둔
+    // 것을 재사용했을 뿐이면(_chibiKey 미설정) 그대로 둔다 — 공용 텍스처 해제 금지.
+    if (this._chibiKey && this.textures.exists(this._chibiKey)) {
+      this.textures.remove(this._chibiKey);
+      this._chibiKey = null;
+    }
+    if (this._chibiAwakenTimer) {
+      this._chibiAwakenTimer.remove();
+      this._chibiAwakenTimer = null;
+    }
+    this._chibiSprite = null;
+    this._chibiFrames = null;
+
     this.clearTabObjects();
+    this.clearLevelUpEffect();
+    this.subtitleText = null;
+    this.powerText = null;
+    this.powerIcon = null;
+    this.actionRefs = null;
     this.time.removeAllEvents();
     this.tweens.killAll();
     if (this.input) {

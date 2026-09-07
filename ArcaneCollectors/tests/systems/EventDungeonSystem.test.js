@@ -16,7 +16,8 @@ vi.mock('../../src/systems/SaveManager.js', () => ({
     save: vi.fn(),
     addGold: vi.fn(),
     addGems: vi.fn(),
-    addSummonTickets: vi.fn()
+    addSummonTickets: vi.fn(),
+    grantRewardItems: vi.fn(() => [])
   }
 }));
 

@@ -296,3 +296,79 @@ describe('결과 그리드 배치', () => {
     expect(gridLayout(0).positions).toEqual([]);
   });
 });
+
+describe('스킵 × 단계 매트릭스 (플레이 리포트 — 연출 중 스킵하면 결과가 안 나오던 결함)', () => {
+  /** 계획의 n 번째 단계까지 진행한 상태 */
+  const at = (plan, index) => {
+    let state = createRevealState(plan);
+    for (let i = 0; i < index; i++) state = advance(state, plan);
+    return state;
+  };
+
+  const CASES = [
+    { name: '10연 SSR', results: tenPull('SSR'), count: 10 },
+    { name: '10연 SR', results: tenPull('SR'), count: 10 },
+    { name: '10연 R (컷인 없음)', results: tenPull('R'), count: 10 },
+    { name: '단발 SSR', results: [{ id: 'h', rarity: 'SSR' }], count: 1 },
+    { name: '단발 N (컷인 없음)', results: [{ id: 'h', rarity: 'N' }], count: 1 }
+  ];
+
+  CASES.forEach(({ name, results, count }) => {
+    it(`${name} — 어느 단계에서 스킵해도 전체 공개 + grid 로 수렴한다`, () => {
+      const plan = buildRevealPlan(results);
+      plan.stages.forEach((stage, index) => {
+        const skipped = skipToGrid(at(plan, index), plan);
+        expect(skipped.stageId, `${stage.id} 에서 스킵`).toBe(REVEAL_STAGE.GRID);
+        expect(skipped.revealed, `${stage.id} 에서 스킵`).toBe(count);
+        expect(skipped.done, `${stage.id} 에서 스킵`).toBe(true);
+        expect(skipped.skipped, `${stage.id} 에서 스킵`).toBe(true);
+        expect(isTerminal(skipped), `${stage.id} 에서 스킵`).toBe(true);
+      });
+    });
+  });
+
+  it('카드가 한 장도 공개되지 않은 1단계에서 스킵해도 revealed 가 전체 수가 된다', () => {
+    const plan = buildRevealPlan(tenPull('SSR'));
+    const first = createRevealState(plan);
+    expect(first.stageId).toBe(REVEAL_STAGE.CIRCLE);
+    expect(first.revealed).toBe(0);
+    expect(skipToGrid(first, plan).revealed).toBe(10);
+  });
+
+  it('카드 공개 도중(일부만 열린 상태) 스킵해도 나머지가 전부 열린다', () => {
+    const plan = buildRevealPlan(tenPull('SSR'));
+    let state = at(plan, 2); // flip
+    state = revealNextCard(state, plan);
+    state = revealNextCard(state, plan);
+    state = revealNextCard(state, plan);
+    expect(state.revealed).toBe(3);
+    expect(skipToGrid(state, plan).revealed).toBe(10);
+  });
+
+  it('스킵을 두 번 해도 상태가 흔들리지 않는다 (멱등)', () => {
+    const plan = buildRevealPlan(tenPull('SR'));
+    const once = skipToGrid(createRevealState(plan), plan);
+    expect(skipToGrid(once, plan)).toEqual(once);
+  });
+
+  it('grid 도달 후에는 스킵할 것이 남아 있지 않다', () => {
+    const plan = buildRevealPlan(tenPull('SSR'));
+    const skipped = skipToGrid(createRevealState(plan), plan);
+    expect(canSkip(skipped)).toBe(false);
+  });
+
+  it('컷인이 빠진 계획(R 만 나온 10연)에서도 마지막 단계는 grid 다', () => {
+    const plan = buildRevealPlan(tenPull('R'));
+    expect(plan.hasCutin).toBe(false);
+    expect(plan.stages.map((stage) => stage.id)).not.toContain(REVEAL_STAGE.CUTIN);
+    expect(plan.stages[plan.stages.length - 1].id).toBe(REVEAL_STAGE.GRID);
+  });
+
+  it('스킵 후 advance 를 더 불러도 grid 에 머문다', () => {
+    const plan = buildRevealPlan(tenPull('SSR'));
+    const skipped = skipToGrid(createRevealState(plan), plan);
+    const after = advance(skipped, plan);
+    expect(after.stageId).toBe(REVEAL_STAGE.GRID);
+    expect(after.done).toBe(true);
+  });
+});

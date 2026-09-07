@@ -44,9 +44,10 @@ export class InventoryScene extends Phaser.Scene {
   }
 
   loadInventoryData() {
+    // QA P1④: inventory 는 {equipment, items} 오브젝트다 — items 는 소비/재료 스택형.
     const saved = SaveManager.load();
-    this.inventory = saved?.inventory || [];
-    this.equipment = saved?.equipment || [];
+    this.inventory = saved?.inventory?.items || [];
+    this.equipment = saved?.inventory?.equipment || [];
     this.gold = this.registry.get('gold') || 0;
   }
 
@@ -222,7 +223,8 @@ export class InventoryScene extends Phaser.Scene {
     elements.push(iconText);
 
     // 아이템 이름
-    const name = this.add.text(padX + s(65), y + s(18), item.name || item.nameKo || item.id, {
+    // ID 노출 방지: 이름 해석 실패 시 내부 id 대신 일반 표기로 폴백
+    const name = this.add.text(padX + s(65), y + s(18), item.name || item.nameKo || '알 수 없는 아이템', {
       fontSize: sf(15), fontFamily: '"Noto Sans KR", sans-serif',
       color: '#FFFFFF', fontStyle: 'bold'
     }).setOrigin(0, 0.5);
@@ -263,33 +265,25 @@ export class InventoryScene extends Phaser.Scene {
 
   // === 데이터 헬퍼 ===
   getEquipmentList() {
-    // SaveManager에서 저장된 장비 목록
+    // 실제 보유 장비는 `inventory.equipment` 에 있다 (`data.equipment` 최상위 경로는 존재하지
+    // 않아 항상 빈 배열이었다 — 그 결과 아래에서 items.json 의 플레이스홀더 5종
+    // (`equipment_sword_basic` 등, slotType 없이 type:'equipment' 만 있는 구 카탈로그)이
+    // 전부 "보유 중"인 것처럼 병합돼 슬롯 매칭 실패 · 전부 "기타" 표시로 이어졌다.
+    // 그 항목들은 실제 인벤토리에 없는 id 라 장착 시도 시 EquipmentSystem.equip() 이
+    // '장비를 찾을 수 없습니다' 로 실패한다 — 장착 불가능한 유령 아이템이었다.
     const saved = SaveManager.load();
-    const equipment = saved?.equipment || [];
-
-    // items.json의 equipment 타입도 포함
-    try {
-      const jsonEquip = getItemsByType('equipment') || [];
-      // 중복 제거 후 병합 (saved 우선)
-      const savedIds = new Set(equipment.map(e => e.id));
-      const merged = [...equipment];
-      jsonEquip.forEach(e => {
-        if (!savedIds.has(e.id)) merged.push(e);
-      });
-      return merged;
-    } catch {
-      return equipment;
-    }
+    return Array.isArray(saved?.inventory?.equipment) ? saved.inventory.equipment : [];
   }
 
   getConsumableList() {
     try {
       const items = getItemsByType('consumable') || [];
-      // 인벤토리에서 보유 수량 매칭
+      // 인벤토리에서 보유 수량 매칭. SaveManager.addToInventory() 는 itemId/count
+      // 필드로 적재한다 (id/quantity 아님).
       const inv = this.inventory || [];
       return items.map(item => {
-        const owned = inv.find(i => i.id === item.id);
-        return { ...item, quantity: owned?.quantity || 0 };
+        const owned = inv.find(i => i.itemId === item.id);
+        return { ...item, quantity: owned?.count || 0 };
       }).filter(i => i.quantity > 0);
     } catch {
       return [];
@@ -300,9 +294,10 @@ export class InventoryScene extends Phaser.Scene {
     try {
       const items = getItemsByType('material') || [];
       const inv = this.inventory || [];
+      // SaveManager.addToInventory() 는 itemId/count 필드로 적재한다 (id/quantity 아님).
       return items.map(item => {
-        const owned = inv.find(i => i.id === item.id);
-        return { ...item, quantity: owned?.quantity || 0 };
+        const owned = inv.find(i => i.itemId === item.id);
+        return { ...item, quantity: owned?.count || 0 };
       }).filter(i => i.quantity > 0);
     } catch {
       return [];
@@ -390,8 +385,8 @@ export class InventoryScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(82).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.closeDetail());
 
-    // 아이템 이름 + 등급
-    this.add.text(cx, topY + s(35), `${item.name || item.id}`, {
+    // 아이템 이름 + 등급 (ID 노출 방지: 이름 해석 실패 시 일반 표기로 폴백)
+    this.add.text(cx, topY + s(35), `${item.name || '알 수 없는 아이템'}`, {
       fontSize: sf(22), fontFamily: '"Noto Sans KR", sans-serif',
       color: '#FFFFFF', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(82);

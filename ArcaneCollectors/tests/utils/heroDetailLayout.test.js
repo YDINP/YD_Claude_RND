@@ -21,6 +21,10 @@ import {
   hasFullbodyAsset,
   computeFullbodyFit,
   computeFullbodyAnchor,
+  CHIBI_BADGE,
+  computeChibiBadge,
+  chibiClearsFullbody,
+  resolveChibiSheet,
   barRatio,
   splitStatArea,
   computeStatRows,
@@ -34,7 +38,11 @@ import {
   fitsInContent,
   formatNumber,
   truncate,
-  buildSubtitle
+  buildSubtitle,
+  maxLevelFor,
+  levelUpCost,
+  buildActionStates,
+  buildGrowthLabels
 } from '../../src/utils/heroDetailLayout.js';
 
 describe('화면 구획 — 겹침 해소', () => {
@@ -210,6 +218,77 @@ describe('computeFullbodyAnchor', () => {
 
   it('가로 중앙보다 오른쪽에 선다 (좌측은 성급·전투력 열)', () => {
     expect(computeFullbodyAnchor().x).toBeGreaterThan(BASE_WIDTH / 2);
+  });
+});
+
+describe('치비 배지 — 스테이지 좌하단', () => {
+  it('스테이지 구획 안에 있다', () => {
+    const badge = computeChibiBadge();
+    const L = HERO_DETAIL_LAYOUT;
+    expect(badge.top).toBeGreaterThanOrEqual(L.stage.y);
+    expect(badge.bottom).toBeLessThanOrEqual(L.stage.y + L.stage.h);
+  });
+
+  it('화면 가로 안에 들어간다', () => {
+    const badge = computeChibiBadge();
+    expect(badge.left).toBeGreaterThanOrEqual(0);
+    expect(badge.right).toBeLessThanOrEqual(BASE_WIDTH);
+  });
+
+  it('리본을 침범하지 않는다', () => {
+    const badge = computeChibiBadge();
+    expect(badge.bottom).toBeLessThanOrEqual(HERO_DETAIL_LAYOUT.ribbon.y);
+  });
+
+  it('최소 터치 타겟(48) 이상이다', () => {
+    expect(meetsTouchTarget({ w: CHIBI_BADGE.size, h: CHIBI_BADGE.size })).toBe(true);
+  });
+
+  it('일반적인 세로 비율 전신 일러스트와 겹치지 않는다', () => {
+    const badge = computeChibiBadge();
+    const anchor = computeFullbodyAnchor();
+    const fit = computeFullbodyFit(900, 1600);
+    expect(chibiClearsFullbody(badge, fit, anchor)).toBe(true);
+  });
+
+  it('가로 제한(widthLimited)이 걸리는 최악의 경우에도 겹치지 않는다', () => {
+    const badge = computeChibiBadge();
+    const anchor = computeFullbodyAnchor();
+    // 가로로 아주 넓은 원본 — 스테이지 높이 기준 배율이 허용 폭(maxW)을 넘겨
+    // widthLimited 로 떨어지는 최악의 시나리오다.
+    const fit = computeFullbodyFit(2000, 1000);
+    expect(fit.widthLimited).toBe(true);
+    expect(chibiClearsFullbody(badge, fit, anchor)).toBe(true);
+  });
+
+  it('badge 또는 fit 이 없으면 안전하게 true 를 돌려준다', () => {
+    expect(chibiClearsFullbody(null, computeFullbodyFit(900, 1600), computeFullbodyAnchor())).toBe(true);
+    expect(chibiClearsFullbody(computeChibiBadge(), null, computeFullbodyAnchor())).toBe(true);
+  });
+});
+
+describe('resolveChibiSheet — chibiSheet.js 공용 유틸 재사용', () => {
+  const manifest = {
+    chibi: {
+      chibi_base_iris: { key: 'chibi_base_iris', path: 'assets/characters/chibi/base_iris_sheet.webp', cell: 256 }
+    }
+  };
+
+  it('매니페스트에 있는 영웅은 시트를 돌려준다', () => {
+    const found = resolveChibiSheet({ id: 'base_iris' }, manifest);
+    expect(found).not.toBeNull();
+    expect(found.key).toBe('chibi_base_iris');
+  });
+
+  it('전직 영웅은 원본 영웅 시트로 폴백하고 inherited 를 표시한다', () => {
+    const found = resolveChibiSheet({ id: 'asc_iris_olympus', baseHeroId: 'base_iris' }, manifest);
+    expect(found.key).toBe('chibi_base_iris');
+    expect(found.inherited).toBe(true);
+  });
+
+  it('매니페스트에 없으면 null — 호출부는 이 자리를 아예 그리지 않는다', () => {
+    expect(resolveChibiSheet({ id: 'base_unknown' }, manifest)).toBeNull();
+    expect(resolveChibiSheet({ id: 'base_iris' }, {})).toBeNull();
   });
 });
 
@@ -399,5 +478,110 @@ describe('표시 문자열', () => {
     expect(buildSubtitle({ rarity: 'SSR', level: 12, cultName: '올림푸스' })).toBe('SSR · Lv.12 · 올림푸스');
     expect(buildSubtitle({ rarity: 'N', level: 1 })).toBe('N · Lv.1');
     expect(buildSubtitle({})).toBe('');
+  });
+});
+
+// ================================================================
+// 성장(레벨업) 부분 갱신 규칙 — P1
+// 레벨업이 씬을 다시 그리지 않고 숫자만 갈아끼우려면, "무엇이 어떻게 바뀌는지"를
+// Phaser 없이 계산할 수 있어야 한다. 최초 그리기와 갱신이 이 함수들을 공유한다.
+// ================================================================
+
+describe('maxLevelFor', () => {
+  it('등급별 최대 레벨을 준다', () => {
+    expect(maxLevelFor('N')).toBe(30);
+    expect(maxLevelFor('SSR')).toBe(60);
+  });
+
+  it('ProgressionSystem 이 준 값이 있으면 그것이 우선한다', () => {
+    expect(maxLevelFor('N', 45)).toBe(45);
+  });
+
+  it('등급을 모르면 폴백 60 이다 — 기본 영웅은 rarity 필드가 없다', () => {
+    expect(maxLevelFor(undefined)).toBe(60);
+    expect(maxLevelFor('UR')).toBe(60);
+    expect(maxLevelFor('N', 0)).toBe(30);
+  });
+});
+
+describe('levelUpCost', () => {
+  it('레벨 × 100 골드다', () => {
+    expect(levelUpCost(1)).toBe(100);
+    expect(levelUpCost(27)).toBe(2700);
+  });
+
+  it('레벨이 숫자가 아니면 1레벨 비용으로 떨어진다', () => {
+    expect(levelUpCost(undefined)).toBe(100);
+    expect(levelUpCost('abc')).toBe(100);
+  });
+
+  it('소수 레벨은 내림한다', () => {
+    expect(levelUpCost(5.9)).toBe(500);
+  });
+});
+
+describe('buildActionStates', () => {
+  it('골드가 넉넉하면 레벨업 두 버튼이 켜지고 부제가 비용이다', () => {
+    const states = buildActionStates({ level: 5, maxLevel: 30, gold: 10000, canEvolve: true });
+    expect(states.map(s => s.id)).toEqual(['levelup', 'autolevel', 'evolve']);
+    expect(states[0].enabled).toBe(true);
+    expect(states[0].sub).toBe('500');
+    expect(states[1].sub).toBe('가능한 만큼');
+  });
+
+  it('골드가 모자라면 꺼지고 이유가 부제에 붙는다', () => {
+    const states = buildActionStates({ level: 5, maxLevel: 30, gold: 100, canEvolve: true });
+    expect(states[0].enabled).toBe(false);
+    expect(states[0].sub).toContain('골드 부족');
+    expect(states[1].enabled).toBe(false);
+  });
+
+  it('최대 레벨이면 골드가 있어도 꺼진다', () => {
+    const states = buildActionStates({ level: 30, maxLevel: 30, gold: 999999, canEvolve: true });
+    expect(states[0].enabled).toBe(false);
+    expect(states[0].sub).toBe('최대 레벨');
+    expect(states[1].sub).toBe('최대 레벨');
+  });
+
+  it('최고 등급이면 진화 버튼이 꺼진다', () => {
+    const states = buildActionStates({ level: 5, maxLevel: 30, gold: 10000, canEvolve: false });
+    expect(states[2].enabled).toBe(false);
+    expect(states[2].sub).toBe('최고 등급');
+  });
+
+  it('인자가 없어도 죽지 않는다', () => {
+    const states = buildActionStates();
+    expect(states).toHaveLength(3);
+    expect(states.every(s => typeof s.sub === 'string')).toBe(true);
+  });
+});
+
+describe('buildGrowthLabels', () => {
+  it('부제·전투력·레벨 문자열을 한 번에 만든다', () => {
+    const labels = buildGrowthLabels({
+      rarityKey: 'N', level: 6, maxLevel: 30, cultName: null, power: 1735,
+      exp: { current: 120, required: 2500 }
+    });
+    expect(labels.subtitle).toBe('N · Lv.6');
+    expect(labels.power).toBe('1,735');
+    expect(labels.level).toBe('Lv.6 / 30');
+    expect(labels.exp).toBe('EXP  120 / 2,500');
+    expect(labels.expRatio).toBeCloseTo(0.048, 3);
+  });
+
+  it('EXP 정보가 없으면 exp 는 null, 비율은 0 이다', () => {
+    const labels = buildGrowthLabels({ rarityKey: 'SSR', level: 60, maxLevel: 60, power: 0 });
+    expect(labels.exp).toBeNull();
+    expect(labels.expRatio).toBe(0);
+    expect(labels.level).toBe('Lv.60 / 60');
+  });
+
+  it('EXP 비율은 0~1 로 잘린다', () => {
+    const over = buildGrowthLabels({ level: 1, maxLevel: 30, exp: { current: 9999, required: 100 } });
+    expect(over.expRatio).toBe(1);
+  });
+
+  it('레벨이 없으면 Lv.1 로 떨어진다', () => {
+    expect(buildGrowthLabels({}).level).toBe('Lv.1 / -');
   });
 });

@@ -103,10 +103,12 @@ describe('menuLayout — 해금 필터', () => {
     expect(challenge.items.map((i) => i.popupKey)).toEqual(['quest']);
   });
 
-  it('대표 아이콘이 잠겨 있으면 해금된 첫 항목으로 대체한다', () => {
+  it('대표 아이콘은 그 항목이 잠겨 있어도 카테고리 고유 아이콘으로 고정된다 (QA P2)', () => {
+    // 예전엔 대표 항목(tower)이 잠기면 해금된 첫 항목(quest)의 아이콘으로 바뀌어
+    // "도전 카테고리가 탭마다 다른 아이콘(탑 ↔ 클립보드)으로 보이는" 결함이 있었다.
     const categories = buildMenuCategories(['quest']);
     expect(categories).toHaveLength(1);
-    expect(categories[0].representative).toBe('quest');   // tower 는 아직 잠김
+    expect(categories[0].representative).toBe('tower');   // tower 가 잠겨 있어도 고정
   });
 
   it('MenuGridGate 가 파생한 해금 목록을 그대로 먹는다 (완주 유저 = 4카테고리 13항목)', () => {

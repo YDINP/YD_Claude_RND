@@ -13,8 +13,29 @@
  * 파생되기 때문이다 — 여기서 다시 하드코딩하면 두 곳이 어긋난다.
  *
  * 주의: designSystem·gameConfig 를 import 하지 않는다(순환 import TDZ 방지).
- *       이 모듈은 의존성이 0 이다.
+ *       치비 조회(chibiSheet.js)를 빼면 의존성이 0 이다 — 그 모듈도 의존성 0 인
+ *       순수 함수라 TDZ 위험은 없다.
  */
+
+import {
+  CHIBI_KEY_PREFIX,
+  chibiSheetKey,
+  baseHeroIdFromAscended,
+  frameIndex,
+  computeChibiFit,
+  resolveChibiSheet
+} from './chibiSheet.js';
+
+// 치비 조회 함수들은 chibiSheet.js 로 옮겨졌다(HeroDetailScene 도 같은 로직을 쓴다).
+// 재수출만 해서 이 파일을 가져다 쓰던 기존 호출부(MeditationView.js, 테스트)는 그대로 둔다.
+export {
+  CHIBI_KEY_PREFIX,
+  chibiSheetKey,
+  baseHeroIdFromAscended,
+  frameIndex,
+  computeChibiFit,
+  resolveChibiSheet
+};
 
 /**
  * 성소 배치 비율. 전부 뷰 크기에 대한 비율이라 관측창이 바뀌어도 따라간다.
@@ -24,12 +45,14 @@
  * 뒷줄을 0.86 배로 줄여 원근을 만든다 — 같은 크기로 두면 원이 납작한 띠로 보인다.
  */
 export const SANCTUM = Object.freeze({
-  ringCenterRatio: 0.12,   // 룬 원 중심 y (viewH 대비, 중앙 기준 아래)
+  ringCenterRatio: 0.14,   // 룬 원 중심 y (viewH 대비, 중앙 기준 아래)
   ringRadiusRatio: 0.40,   // 룬 원 rx (viewW 대비)
-  ringFlatten: 0.285,      // ry = rx * flatten (바닥에 누운 원근)
+  // ry = rx * flatten. 상단 파티 패널이 사라지며 관측창이 312 -> 424 로 커졌다.
+  // 납작한 채로 두면 넓어진 무대에 띠 하나만 놓인 꼴이라 0.285 -> 0.42 로 세웠다.
+  ringFlatten: 0.42,
   seatAngles: Object.freeze([58, 122, -32, 212]), // deg. 앞우·앞좌·뒤우·뒤좌
   backRowScale: 0.86,
-  chibiHeight: 100,        // 앞줄 치비 표시 높이 (base px). 뒷줄은 x backRowScale
+  chibiHeight: 132,        // 앞줄 치비 표시 높이 (base px). 뒷줄은 x backRowScale
   altarHeight: 62,         // 바닥 인장에서 결정까지의 높이
   altarBaseRx: 46,         // 바닥 인장 타원 rx
   orbLift: 20,             // 인장 위 높이에서 결정까지 더 띄우는 양
@@ -43,7 +66,10 @@ export const GAUGE = Object.freeze({
   widthMax: 300,
   height: 14,
   yRatio: -0.345,   // viewH 대비 (중앙 기준 위)
-  labelGap: 9
+  // QA P2 (2026-09-04): num.sm(base 12) 라벨은 origin(_,0.5) 라 실제 반높이가
+  // ~7-8px 인데 gap=9 로는 바 하단과 겨우 1~2px 밖에 안 떨어져 라벨이 바 위에
+  // 겹쳐 보였다. 라벨이 바에서 완전히 떨어지도록 넉넉히 띄운다.
+  labelGap: 18
 });
 
 /** 오라 입자 — 각 캐릭터에서 제단으로 흐른다. 집중력이 높을수록 자주 난다 */
@@ -54,6 +80,19 @@ export const AURA = Object.freeze({
   travelMs: 820,
   radius: 8,           // 밝은 성소 배경 위에서도 보이는 최소 크기 (가산 합성이라 작으면 묻힌다)
   maxAlive: 6          // 동시에 살아 있는 입자 상한
+});
+
+/**
+ * 성소 안 코너 버튼 — 파티 편성 진입.
+ *
+ * 상단 "내 파티" 패널이 사라지면서 편성 진입점이 여기로 왔다. 성소에 앉은 4인이 곧
+ * 파티이므로 그 자리에서 바로 들어가는 것이 자연스럽다. 좌하단인 이유는 제단(중앙 위)과
+ * 헤더(상단)를 피하면서 앞줄 좌석 바깥이기 때문이다.
+ */
+export const CORNER_BUTTON = Object.freeze({
+  w: 96,          // 앞줄 좌석의 명상 원과 겹치지 않는 최대 폭 (테스트가 고정한다)
+  h: 48,          // 터치 하한
+  margin: 8
 });
 
 /** 좌석 발밑 명상 원(방석) — 4인 배치를 정돈하고 교단색을 바닥에 심는다 */
@@ -84,13 +123,30 @@ export const LABELS = Object.freeze({
   mana: '축적 마력',
   need: '필요 마력',
   harvest: '수확',
-  harvestReady: '수확 준비 완료',
   emptyParty: '파티를 편성하면 명상을 시작합니다',
   sanctum: '성소'
 });
 
-/** 치비 시트 텍스처 키 접두사 (postprocess-assets.py 와 같은 규칙) */
-export const CHIBI_KEY_PREFIX = 'chibi_';
+/**
+ * 성소 전용 배경(`bg_sanctum`)의 배치 규칙.
+ *
+ * 이 아트에는 **바닥 룬 원과 부유 결정이 이미 그려져 있다**. 뷰도 같은 것을 벡터로
+ * 그리므로 그대로 깔면 원이 두 겹, 결정이 두 개로 겹쳐 지저분해진다. 그래서 배경을
+ * 세로로 밀어 **그려진 룬 플랫폼과 결정이 관측창 아래로 빠지게** 하고, 화면에는
+ * 회랑·기둥·천장 빛줄기만 남긴다. 성소의 제단은 뷰가 그리는 것 하나뿐이다.
+ *
+ * `floorAnchor` 는 "원본의 이 지점이 관측창 **아래 끝**에 온다"는 뜻이다.
+ * 0.62 는 그려진 결정의 **꼭짓점 바로 위**다 — 결정은 원본 0.633~0.723, 플랫폼 링은
+ * 0.715~0.79 에 있다. 0.70 으로 두면 링만 빠지고 결정 끝이 화면 아래에 삐져나온다
+ * (첫 캡처에서 실제로 그렇게 나왔다).
+ */
+export const SANCTUM_BACKDROP = Object.freeze({
+  key: 'bg_sanctum',
+  floorAnchor: 0.62,
+  alpha: 0.72,        // 챕터 배경(0.62)보다 조금 진하게 — 이 배경은 성소 그 자체다
+  dimAlpha: 0.62,     // 대신 딤을 올려 치비와 텍스트 대비를 지킨다
+  washAlpha: 0.08     // 교단색 워시는 얕게. 이 아트는 자기 색이 뚜렷해 짙게 덮으면 탁해진다
+});
 
 // ------------------------------------------------------------------
 // 배치
@@ -195,14 +251,17 @@ export function computeSanctumLabels(viewW, viewH) {
 }
 
 /**
- * 수확 준비 배너 자리 — 제단 위, 헤더 아래. 유닛을 가리지 않는다.
- * @param {number} viewW
- * @param {number} viewH
- * @returns {{x:number,y:number}}
+ * 게이지가 가득 찼을 때의 표시 강도.
+ *
+ * 예전에는 "수확 준비 완료" 배너를 띄웠다. 사용자 지적대로 이 구조는 **매 초 보상이
+ * 쌓이고 언제든 수확할 수 있으므로** 별도의 "준비됐다" 선언이 정보가 아니다. 배너를
+ * 없애고 게이지 자체의 색·발광으로만 만충을 알린다. 수확 행동은 하단 CTA 가 맡는다.
  */
-export function computeReadyBanner(viewW, viewH) {
-  return { x: 0, y: viewH * -0.16 };
-}
+export const GAUGE_FULL = Object.freeze({
+  glowPadding: 6,     // 게이지 바 둘레에 번지는 발광 여유 (base px)
+  glowAlpha: 0.45,
+  pulseMs: 900
+});
 
 /**
  * 100% 에서 제단이 쏘아 올리는 빛기둥. 위쪽은 관측창 마스크가 자른다.
@@ -217,6 +276,60 @@ export function computeLightPillar(viewW, viewH) {
 }
 
 /**
+ * 성소 배경의 표시 크기와 세로 위치. cover-fit 한 뒤 `floorAnchor` 가 관측창 아래 끝에
+ * 오도록 밀고, 관측창을 덮지 못할 만큼 밀리지는 않게 자른다.
+ *
+ * @param {number} viewW
+ * @param {number} viewH
+ * @param {number} texW 원본 텍스처 너비
+ * @param {number} texH 원본 텍스처 높이
+ * @param {number} [floorAnchor] 0~1. 기본값은 SANCTUM_BACKDROP.floorAnchor
+ * @returns {{w:number,h:number,y:number}|null} 입력이 유효하지 않으면 null
+ */
+export function computeSanctumBackdrop(viewW, viewH, texW, texH, floorAnchor) {
+  if (![viewW, viewH, texW, texH].every((v) => Number.isFinite(v) && v > 0)) return null;
+
+  const anchor = Number.isFinite(floorAnchor) ? clamp01(floorAnchor) : SANCTUM_BACKDROP.floorAnchor;
+  const scale = Math.max(viewW / texW, viewH / texH);
+  const w = texW * scale;
+  const h = texH * scale;
+
+  // 원본의 anchor 지점이 관측창 아래 끝(+viewH/2)에 오도록
+  const wanted = viewH / 2 + h * (0.5 - anchor);
+  // 밀어도 관측창은 끝까지 덮어야 한다 — 덮지 못하면 가장자리에 빈 곳이 생긴다
+  const limit = Math.max(0, (h - viewH) / 2);
+  return { w, h, y: Math.max(-limit, Math.min(limit, wanted)) };
+}
+
+/**
+ * 성소 좌하단 편성 버튼. 알약 모양이고 히트 박스가 곧 알약이다(≥48).
+ * @param {number} viewW
+ * @param {number} viewH
+ * @returns {{x:number,y:number,w:number,h:number}}
+ */
+export function computePartyEntryButton(viewW, viewH) {
+  const { w, h, margin } = CORNER_BUTTON;
+  return {
+    x: -viewW / 2 + margin + w / 2,
+    y: viewH / 2 - margin - h / 2,
+    w,
+    h
+  };
+}
+
+/**
+ * 좌석을 탭할 수 있는 영역. 앉은 몸통 + 머리를 덮고 터치 하한을 지킨다.
+ * @param {{x:number,y:number,height:number}} seat
+ * @returns {{x:number,y:number,w:number,h:number}|null}
+ */
+export function computeSeatHit(seat) {
+  if (!seat || !Number.isFinite(seat.height) || seat.height <= 0) return null;
+  const w = Math.max(48, seat.height * 0.7);
+  const h = Math.max(48, seat.height * 0.8);
+  return { x: seat.x, y: seat.y - h / 2, w, h };
+}
+
+/**
  * 좌석 발밑 명상 원. 좌석 높이에서 파생돼 뒷줄은 자동으로 작아진다.
  * @param {{y:number,height:number}} seat computeMeditationSeats() 의 한 항목
  * @returns {{rx:number, ry:number, ticks:number}|null}
@@ -225,18 +338,6 @@ export function computeSeatDisc(seat) {
   if (!seat || !Number.isFinite(seat.height) || seat.height <= 0) return null;
   const rx = seat.height * SEAT_DISC.rxRatio;
   return { rx, ry: rx * SEAT_DISC.flatten, ticks: SEAT_DISC.ticks };
-}
-
-/**
- * 스프라이트를 목표 높이에 맞춘 표시 크기. 비율은 유지한다.
- * @param {number} texW
- * @param {number} texH
- * @param {number} targetH
- * @returns {{w:number,h:number}|null} 입력이 유효하지 않으면 null
- */
-export function computeChibiFit(texW, texH, targetH) {
-  if (![texW, texH, targetH].every((v) => Number.isFinite(v) && v > 0)) return null;
-  return { w: targetH * (texW / texH), h: targetH };
 }
 
 // ------------------------------------------------------------------
@@ -356,7 +457,9 @@ export function estimateHarvestSeconds(remainingMana, focusPerSec) {
  */
 export function formatHarvestEta(seconds) {
   if (!Number.isFinite(seconds)) return '다음 수확까지 —';
-  if (seconds <= 0) return LABELS.harvestReady;
+  // 가득 찼으면 아무 말도 하지 않는다. "수확 준비 완료" 같은 선언은 사용자 지적대로
+  // 새 정보가 아니다(매 초 쌓이고 언제든 수확할 수 있다). 만충은 게이지가 말한다.
+  if (seconds <= 0) return '';
   if (seconds >= 3600) return '다음 수확까지 1시간 이상';
   const total = Math.ceil(seconds);
   const min = Math.floor(total / 60);
@@ -381,87 +484,7 @@ export function formatSanctumTitle(chapter, stage, name) {
 }
 
 // ------------------------------------------------------------------
-// 치비 시트 조회
-// ------------------------------------------------------------------
-
-/**
- * 치비 시트 텍스처 키.
- * @param {string} heroId
- * @returns {string|null}
- */
-export function chibiSheetKey(heroId) {
-  return typeof heroId === 'string' && heroId.length > 0 ? CHIBI_KEY_PREFIX + heroId : null;
-}
-
-/**
- * 전직 영웅 id 에서 원본 기본 영웅 id 를 얻는다. `asc_<이름>_<교단>` -> `base_<이름>`.
- *
- * 정적 데이터의 `baseHeroId` 가 있으면 그쪽이 먼저다. 이 파싱은 세이브가 정적 데이터를
- * 덮어써 참조 필드가 사라진 경우의 마지막 방어선이다(id 규칙은 ascended-heroes.json 전체가 지킨다).
- *
- * @param {string} heroId
- * @returns {string|null}
- */
-export function baseHeroIdFromAscended(heroId) {
-  if (typeof heroId !== 'string' || !heroId.startsWith('asc_')) return null;
-  const parts = heroId.split('_');
-  return parts.length >= 3 ? `base_${parts[1]}` : null;
-}
-
-/**
- * 프레임 이름을 시트 인덱스로. 없는 이름은 0(첫 프레임)으로 떨어진다.
- * @param {Array<string>} frames
- * @param {string} name
- * @returns {number}
- */
-export function frameIndex(frames, name) {
-  if (!Array.isArray(frames)) return 0;
-  const i = frames.indexOf(name);
-  return i >= 0 ? i : 0;
-}
-
-/**
- * 영웅의 치비 시트를 매니페스트에서 찾는다.
- *
- * **매니페스트에 등록된 키만** 돌려준다. 없는 경로를 요청하면 dev 서버의 404 가드가
- * 콘솔 에러를 남겨 부팅 스모크를 깨뜨리기 때문이다. 시트가 아직 없는 영웅은 null 이고,
- * 호출부는 기존 폴백(포트레이트/실루엣)을 그대로 쓴다. 시트가 추가되면 매니페스트만
- * 바뀌고 코드는 그대로다 — 그것이 C-4 의 "자동 전환"이다.
- *
- * 전직 영웅(asc_*)은 자기 시트가 없으면 원본 영웅(baseHeroId) 시트로 떨어진다.
- * 계획서 C-6 의 "기본 시트 + 교단색 틴트 재사용" 규칙이 이 한 줄에서 시작한다.
- *
- * @param {object|string} hero 영웅 데이터 또는 id
- * @param {object} manifest asset-manifest.json
- * @returns {{key:string,path:string,cell:number,frames:Array<string>,footY:number,heroId:string,inherited:boolean}|null}
- */
-export function resolveChibiSheet(hero, manifest) {
-  const bucket = manifest && manifest.chibi;
-  if (!bucket) return null;
-
-  const id = typeof hero === 'string' ? hero : (hero && hero.id);
-  const baseId = typeof hero === 'object' && hero ? (hero.baseHeroId || hero.baseId || null) : null;
-
-  const candidates = [id, baseId, baseHeroIdFromAscended(id)]
-    .filter((v, i, arr) => typeof v === 'string' && v.length > 0 && arr.indexOf(v) === i);
-  for (let i = 0; i < candidates.length; i += 1) {
-    const key = chibiSheetKey(candidates[i]);
-    const meta = key && bucket[key];
-    if (meta && typeof meta.path === 'string' && meta.path.length > 0) {
-      return {
-        key,
-        path: meta.path,
-        cell: Number.isFinite(meta.cell) ? meta.cell : 256,
-        frames: Array.isArray(meta.frames) ? meta.frames : ['idle', 'meditate', 'channel', 'awaken'],
-        footY: Number.isFinite(meta.footY) ? meta.footY : 240,
-        heroId: candidates[i],
-        inherited: i > 0
-      };
-    }
-  }
-  return null;
-}
-
+// 치비 시트 조회 — chibiSheet.js 로 이동 (파일 상단에서 재수출)
 // ------------------------------------------------------------------
 
 /**
@@ -479,6 +502,9 @@ export default {
   GAUGE,
   AURA,
   SEAT_DISC,
+  CORNER_BUTTON,
+  GAUGE_FULL,
+  SANCTUM_BACKDROP,
   BREATH,
   CHANNEL,
   HARVEST,
@@ -490,8 +516,10 @@ export default {
   computeAltar,
   computeManaGauge,
   computeSanctumLabels,
-  computeReadyBanner,
+  computePartyEntryButton,
+  computeSeatHit,
   computeLightPillar,
+  computeSanctumBackdrop,
   computeSeatDisc,
   computeChibiFit,
   auraSpawnDelay,

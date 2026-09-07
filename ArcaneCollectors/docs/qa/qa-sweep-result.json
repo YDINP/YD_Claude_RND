@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-04T02:55:36.476Z",
+  "generatedAt": "2026-09-06T16:36:32.201Z",
   "baseUrl": "http://localhost:3000",
   "viewport": {
     "width": 720,
@@ -11,9 +11,9 @@
     "consoleErrors": 0,
     "pageErrors": 0,
     "oldImageHits": 0,
-    "overlapHits": 6,
+    "overlapHits": 0,
     "offscreenHits": 0,
-    "smallTargetHits": 0
+    "smallTargetHits": 32
   },
   "scenarios": [
     {
@@ -30,14 +30,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 279,
-          "visibleCount": 169,
-          "onScreenCount": 165,
-          "clippedInScroll": 9,
+          "objectCount": 265,
+          "visibleCount": 166,
+          "onScreenCount": 162,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -51,14 +68,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 279,
-          "visibleCount": 169,
-          "onScreenCount": 165,
-          "clippedInScroll": 9,
+          "objectCount": 265,
+          "visibleCount": 164,
+          "onScreenCount": 160,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -72,14 +106,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 393,
+          "objectCount": 381,
           "visibleCount": 281,
           "onScreenCount": 273,
-          "clippedInScroll": 9,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -93,65 +144,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 613,
-          "visibleCount": 500,
-          "onScreenCount": 357,
-          "clippedInScroll": 179,
+          "objectCount": 599,
+          "visibleCount": 497,
+          "onScreenCount": 339,
+          "clippedInScroll": 180,
           "oldImages": [],
           "offscreen": [],
-          "overlaps": [
+          "overlaps": [],
+          "smallTargets": [
             {
               "scene": "MainMenuScene",
-              "layerDepth": 2000,
-              "a": {
-                "path": "MainMenuScene/Container2[123]/Container2[4]/Container2[28]/Container2[12]/Text2[4]",
-                "text": "★★★★★",
-                "bounds": {
-                  "x": 303,
-                  "y": 1758,
-                  "w": 85,
-                  "h": 16
-                }
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
               },
-              "b": {
-                "path": "MainMenuScene/Container2[123]/Container2[7]/Text2[1]",
-                "text": "필터 초기화",
-                "bounds": {
-                  "x": 254,
-                  "y": 1756,
-                  "w": 105,
-                  "h": 29
-                }
-              },
-              "overlapRatio": 0.66
-            },
-            {
-              "scene": "MainMenuScene",
-              "layerDepth": 2000,
-              "a": {
-                "path": "MainMenuScene/Container2[123]/Container2[4]/Container2[28]/Container2[14]/Text2[4]",
-                "text": "★★★★★",
-                "bounds": {
-                  "x": 693,
-                  "y": 1758,
-                  "w": 85,
-                  "h": 16
-                }
-              },
-              "b": {
-                "path": "MainMenuScene/Container2[123]/Container2[7]/Text2[4]",
-                "text": "닫기",
-                "bounds": {
-                  "x": 753,
-                  "y": 1756,
-                  "w": 42,
-                  "h": 29
-                }
-              },
-              "overlapRatio": 0.33
+              "count": 1
             }
           ],
-          "smallTargets": [],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -165,14 +182,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 358,
-          "visibleCount": 248,
-          "onScreenCount": 242,
-          "clippedInScroll": 9,
+          "objectCount": 346,
+          "visibleCount": 246,
+          "onScreenCount": 240,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -186,14 +220,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 379,
-          "visibleCount": 267,
-          "onScreenCount": 261,
-          "clippedInScroll": 46,
+          "objectCount": 366,
+          "visibleCount": 265,
+          "onScreenCount": 259,
+          "clippedInScroll": 47,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -207,14 +258,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 335,
-          "visibleCount": 224,
-          "onScreenCount": 218,
-          "clippedInScroll": 9,
+          "objectCount": 322,
+          "visibleCount": 223,
+          "onScreenCount": 217,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -228,14 +296,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 362,
-          "visibleCount": 251,
-          "onScreenCount": 245,
-          "clippedInScroll": 59,
+          "objectCount": 350,
+          "visibleCount": 250,
+          "onScreenCount": 244,
+          "clippedInScroll": 60,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -249,14 +334,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 343,
-          "visibleCount": 233,
-          "onScreenCount": 227,
-          "clippedInScroll": 37,
+          "objectCount": 330,
+          "visibleCount": 230,
+          "onScreenCount": 224,
+          "clippedInScroll": 38,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -270,14 +372,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 343,
-          "visibleCount": 233,
-          "onScreenCount": 227,
-          "clippedInScroll": 34,
+          "objectCount": 302,
+          "visibleCount": 201,
+          "onScreenCount": 195,
+          "clippedInScroll": 11,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -291,14 +410,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 354,
+          "objectCount": 343,
           "visibleCount": 236,
           "onScreenCount": 230,
-          "clippedInScroll": 9,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -312,14 +448,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 318,
-          "visibleCount": 207,
-          "onScreenCount": 201,
-          "clippedInScroll": 9,
+          "objectCount": 306,
+          "visibleCount": 206,
+          "onScreenCount": 200,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -333,14 +486,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 317,
-          "visibleCount": 206,
-          "onScreenCount": 200,
-          "clippedInScroll": 9,
+          "objectCount": 304,
+          "visibleCount": 207,
+          "onScreenCount": 201,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -354,14 +524,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 325,
-          "visibleCount": 214,
-          "onScreenCount": 208,
-          "clippedInScroll": 9,
+          "objectCount": 313,
+          "visibleCount": 212,
+          "onScreenCount": 206,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -375,14 +562,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 317,
-          "visibleCount": 206,
-          "onScreenCount": 200,
-          "clippedInScroll": 9,
+          "objectCount": 305,
+          "visibleCount": 204,
+          "onScreenCount": 198,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -396,14 +600,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 439,
-          "visibleCount": 327,
-          "onScreenCount": 303,
-          "clippedInScroll": 97,
+          "objectCount": 428,
+          "visibleCount": 326,
+          "onScreenCount": 302,
+          "clippedInScroll": 98,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -417,14 +638,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 326,
+          "objectCount": 315,
           "visibleCount": 214,
           "onScreenCount": 208,
-          "clippedInScroll": 21,
+          "clippedInScroll": 22,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -440,14 +678,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 389,
-          "visibleCount": 274,
-          "onScreenCount": 266,
-          "clippedInScroll": 9,
+          "objectCount": 379,
+          "visibleCount": 278,
+          "onScreenCount": 270,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -461,14 +716,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 428,
-          "visibleCount": 316,
-          "onScreenCount": 306,
-          "clippedInScroll": 9,
+          "objectCount": 418,
+          "visibleCount": 312,
+          "onScreenCount": 302,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -482,14 +754,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 419,
-          "visibleCount": 311,
-          "onScreenCount": 300,
-          "clippedInScroll": 9,
+          "objectCount": 407,
+          "visibleCount": 307,
+          "onScreenCount": 296,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -503,14 +792,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 387,
-          "visibleCount": 279,
-          "onScreenCount": 271,
-          "clippedInScroll": 9,
+          "objectCount": 582,
+          "visibleCount": 437,
+          "onScreenCount": 429,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -526,65 +832,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 609,
-          "visibleCount": 502,
-          "onScreenCount": 359,
-          "clippedInScroll": 179,
+          "objectCount": 598,
+          "visibleCount": 500,
+          "onScreenCount": 342,
+          "clippedInScroll": 180,
           "oldImages": [],
           "offscreen": [],
-          "overlaps": [
+          "overlaps": [],
+          "smallTargets": [
             {
               "scene": "MainMenuScene",
-              "layerDepth": 2000,
-              "a": {
-                "path": "MainMenuScene/Container2[121]/Container2[4]/Container2[28]/Container2[12]/Text2[4]",
-                "text": "★★★★★",
-                "bounds": {
-                  "x": 303,
-                  "y": 1758,
-                  "w": 85,
-                  "h": 16
-                }
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
               },
-              "b": {
-                "path": "MainMenuScene/Container2[121]/Container2[7]/Text2[1]",
-                "text": "필터 초기화",
-                "bounds": {
-                  "x": 254,
-                  "y": 1756,
-                  "w": 105,
-                  "h": 29
-                }
-              },
-              "overlapRatio": 0.66
-            },
-            {
-              "scene": "MainMenuScene",
-              "layerDepth": 2000,
-              "a": {
-                "path": "MainMenuScene/Container2[121]/Container2[4]/Container2[28]/Container2[14]/Text2[4]",
-                "text": "★★★★★",
-                "bounds": {
-                  "x": 693,
-                  "y": 1758,
-                  "w": 85,
-                  "h": 16
-                }
-              },
-              "b": {
-                "path": "MainMenuScene/Container2[121]/Container2[7]/Text2[4]",
-                "text": "닫기",
-                "bounds": {
-                  "x": 753,
-                  "y": 1756,
-                  "w": 42,
-                  "h": 29
-                }
-              },
-              "overlapRatio": 0.33
+              "count": 1
             }
           ],
-          "smallTargets": [],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -600,65 +872,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 682,
-          "visibleCount": 573,
-          "onScreenCount": 427,
-          "clippedInScroll": 179,
+          "objectCount": 670,
+          "visibleCount": 571,
+          "onScreenCount": 410,
+          "clippedInScroll": 180,
           "oldImages": [],
           "offscreen": [],
-          "overlaps": [
+          "overlaps": [],
+          "smallTargets": [
             {
               "scene": "MainMenuScene",
-              "layerDepth": 2000,
-              "a": {
-                "path": "MainMenuScene/Container2[121]/Container2[4]/Container2[28]/Container2[12]/Text2[4]",
-                "text": "★★★★★",
-                "bounds": {
-                  "x": 303,
-                  "y": 1758,
-                  "w": 85,
-                  "h": 16
-                }
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
               },
-              "b": {
-                "path": "MainMenuScene/Container2[121]/Container2[7]/Text2[1]",
-                "text": "필터 초기화",
-                "bounds": {
-                  "x": 254,
-                  "y": 1756,
-                  "w": 105,
-                  "h": 29
-                }
-              },
-              "overlapRatio": 0.66
-            },
-            {
-              "scene": "MainMenuScene",
-              "layerDepth": 2000,
-              "a": {
-                "path": "MainMenuScene/Container2[121]/Container2[4]/Container2[28]/Container2[14]/Text2[4]",
-                "text": "★★★★★",
-                "bounds": {
-                  "x": 693,
-                  "y": 1758,
-                  "w": 85,
-                  "h": 16
-                }
-              },
-              "b": {
-                "path": "MainMenuScene/Container2[121]/Container2[7]/Text2[4]",
-                "text": "닫기",
-                "bounds": {
-                  "x": 753,
-                  "y": 1756,
-                  "w": 42,
-                  "h": 29
-                }
-              },
-              "overlapRatio": 0.33
+              "count": 1
             }
           ],
-          "smallTargets": [],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -672,10 +910,10 @@
           "scenes": [
             "HeroListScene"
           ],
-          "objectCount": 347,
-          "visibleCount": 343,
-          "onScreenCount": 277,
-          "clippedInScroll": 170,
+          "objectCount": 339,
+          "visibleCount": 335,
+          "onScreenCount": 275,
+          "clippedInScroll": 160,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
@@ -693,9 +931,9 @@
           "scenes": [
             "HeroDetailScene"
           ],
-          "objectCount": 103,
-          "visibleCount": 99,
-          "onScreenCount": 99,
+          "objectCount": 106,
+          "visibleCount": 102,
+          "onScreenCount": 102,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -714,9 +952,9 @@
           "scenes": [
             "HeroDetailScene"
           ],
-          "objectCount": 92,
-          "visibleCount": 88,
-          "onScreenCount": 88,
+          "objectCount": 95,
+          "visibleCount": 91,
+          "onScreenCount": 91,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -735,9 +973,9 @@
           "scenes": [
             "HeroDetailScene"
           ],
-          "objectCount": 93,
-          "visibleCount": 89,
-          "onScreenCount": 89,
+          "objectCount": 96,
+          "visibleCount": 92,
+          "onScreenCount": 92,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -756,9 +994,9 @@
           "scenes": [
             "HeroDetailScene"
           ],
-          "objectCount": 75,
-          "visibleCount": 71,
-          "onScreenCount": 71,
+          "objectCount": 78,
+          "visibleCount": 74,
+          "onScreenCount": 74,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -951,9 +1189,9 @@
           "scenes": [
             "BattleScene"
           ],
-          "objectCount": 304,
-          "visibleCount": 213,
-          "onScreenCount": 205,
+          "objectCount": 315,
+          "visibleCount": 221,
+          "onScreenCount": 215,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -974,9 +1212,9 @@
           "scenes": [
             "BattleScene"
           ],
-          "objectCount": 405,
-          "visibleCount": 219,
-          "onScreenCount": 210,
+          "objectCount": 401,
+          "visibleCount": 203,
+          "onScreenCount": 195,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -997,9 +1235,9 @@
           "scenes": [
             "BattleResultScene"
           ],
-          "objectCount": 82,
-          "visibleCount": 78,
-          "onScreenCount": 73,
+          "objectCount": 79,
+          "visibleCount": 75,
+          "onScreenCount": 70,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -1018,9 +1256,9 @@
           "scenes": [
             "BattleResultScene"
           ],
-          "objectCount": 66,
-          "visibleCount": 62,
-          "onScreenCount": 57,
+          "objectCount": 68,
+          "visibleCount": 64,
+          "onScreenCount": 59,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -1039,14 +1277,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 361,
-          "visibleCount": 254,
-          "onScreenCount": 248,
-          "clippedInScroll": 59,
+          "objectCount": 346,
+          "visibleCount": 247,
+          "onScreenCount": 241,
+          "clippedInScroll": 60,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[102]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -1062,9 +1317,9 @@
           "scenes": [
             "CutsceneScene"
           ],
-          "objectCount": 45,
-          "visibleCount": 25,
-          "onScreenCount": 24,
+          "objectCount": 48,
+          "visibleCount": 26,
+          "onScreenCount": 25,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -1085,9 +1340,9 @@
           "scenes": [
             "CutsceneScene"
           ],
-          "objectCount": 45,
-          "visibleCount": 25,
-          "onScreenCount": 24,
+          "objectCount": 48,
+          "visibleCount": 26,
+          "onScreenCount": 25,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -1106,14 +1361,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 437,
-          "visibleCount": 327,
-          "onScreenCount": 303,
-          "clippedInScroll": 97,
+          "objectCount": 421,
+          "visibleCount": 319,
+          "onScreenCount": 295,
+          "clippedInScroll": 98,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[102]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -1129,14 +1401,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 329,
-          "visibleCount": 222,
-          "onScreenCount": 216,
-          "clippedInScroll": 23,
+          "objectCount": 314,
+          "visibleCount": 211,
+          "onScreenCount": 205,
+          "clippedInScroll": 24,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[102]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -1152,14 +1441,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 353,
-          "visibleCount": 237,
-          "onScreenCount": 231,
-          "clippedInScroll": 9,
+          "objectCount": 339,
+          "visibleCount": 235,
+          "onScreenCount": 229,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[102]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -1175,14 +1481,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 292,
-          "visibleCount": 188,
-          "onScreenCount": 184,
-          "clippedInScroll": 9,
+          "objectCount": 277,
+          "visibleCount": 181,
+          "onScreenCount": 177,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[102]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -1198,14 +1521,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 293,
-          "visibleCount": 186,
-          "onScreenCount": 182,
-          "clippedInScroll": 9,
+          "objectCount": 277,
+          "visibleCount": 179,
+          "onScreenCount": 175,
+          "clippedInScroll": 10,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[102]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1099,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         }
@@ -1356,238 +1696,238 @@
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "4341d69d-b2f7-4aeb-af34-95685aaadd26"
+          "file": "bdc0858d-3ecf-4e93-848a-3cd5fadaa979"
         },
         {
           "key": "hero_asc_iris_olympus",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "05c97052-bd65-4e7f-aeee-170b040cc67e"
+          "file": "ff05dd18-d69c-4b2e-87ce-da39e791e623"
         },
         {
           "key": "hero_asc_iris_chaos",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "96e2e4bb-94bf-4def-8415-0a3f4e2b2546"
+          "file": "c0488520-7dbd-4893-a241-667b26db297b"
         },
         {
           "key": "hero_asc_sera_avalon",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "90c20440-2e41-46b8-90fd-244734f8a2d0"
+          "file": "c00f702e-8914-4def-b7f1-d9821f83033d"
         },
         {
           "key": "hero_asc_sera_kunlun",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "4e705cdc-7b78-48da-85d2-e4a1d3d1db21"
-        },
-        {
-          "key": "hero_asc_sera_nature",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "68570f1b-c8f4-4915-9b4a-ef6a23285d9b"
+          "file": "2050cae7-4f37-473b-91de-8039c475cb41"
         },
         {
           "key": "hero_asc_luca_asgard",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "53b8b0c5-eb04-4507-be17-7f2d786498c1"
+          "file": "7ebee4d1-faba-4ed9-b38b-ad0ff36f7dc0"
         },
         {
           "key": "hero_asc_luca_tartarus",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "5b045eb0-20b8-4b44-9d4f-7dc4dedbaa44"
+          "file": "4cad07b1-db23-4dd8-a0c2-8373fc22ff42"
+        },
+        {
+          "key": "hero_asc_sera_nature",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "ebc9348f-eebe-4eb3-9cc3-5336c766a0bb"
         },
         {
           "key": "hero_asc_kai_yomi",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "ca94f8c7-1066-4eec-a3e9-c1bdee81050b"
-        },
-        {
-          "key": "hero_asc_omar_avalon",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "2a980862-0cc9-48ba-b78d-737d837bed93"
-        },
-        {
-          "key": "hero_asc_omar_valhalla",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "3b624c00-b20f-4219-b1d4-19e0a6cb136b"
+          "file": "6c49004b-7717-4382-89f8-2b46dcb20595"
         },
         {
           "key": "hero_asc_lin_balance",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "3e2b13bb-ddb7-4d81-b457-7f2dfa78e635"
+          "file": "ba6c6835-51f5-4671-892a-28d22d822908"
         },
         {
           "key": "hero_asc_lin_takamagahara",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "394ca902-35b7-465c-a440-241bbcb103d8"
+          "file": "03e3fed4-abfd-4243-b5dc-e5f7d8a4f995"
+        },
+        {
+          "key": "hero_asc_omar_valhalla",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "a6b3d3cf-9cf2-4f39-b994-1472ef774f51"
         },
         {
           "key": "hero_asc_kai_helheim",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "92e6893d-42b1-4e1c-bc34-aeae1436d8e7"
+          "file": "691f8703-97b7-4588-ac4e-f62694770da8"
+        },
+        {
+          "key": "hero_asc_omar_avalon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "98aa3844-b8c8-4986-898f-4bcb277593c9"
         },
         {
           "key": "hero_asc_sol_nature",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "cf15cb30-fb43-4c36-a89d-9cd3a2dff0a5"
+          "file": "1cdf35e7-2993-427b-86b6-4ae7f3d431ea"
         },
         {
           "key": "hero_asc_sol_kunlun",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "66ec29ba-625e-4f75-9db6-02b3adf3d8d7"
-        },
-        {
-          "key": "hero_asc_leon_asgard",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "cc44b03f-95bb-46c1-84c1-76ceaa1541e7"
+          "file": "7c0cd5b1-700c-43a1-87b9-a808804c18a0"
         },
         {
           "key": "hero_asc_hana_yomi",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "ba33eed7-db7c-48c8-9270-f78cbbbd5b76"
-        },
-        {
-          "key": "hero_asc_hana_chaos",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "e6eb97d1-fe75-492e-aac3-cd37824dde3a"
+          "file": "791f9492-8c93-4fc6-a1f9-c2822bb22068"
         },
         {
           "key": "hero_asc_hana_helheim",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "cdc1bcf1-2334-4976-a5aa-e6b7cf1258b4"
+          "file": "ddef4295-3006-47c3-a2b3-7bcb60bf61c1"
+        },
+        {
+          "key": "hero_asc_hana_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "21224272-b81d-4631-951f-c16cca6f4935"
+        },
+        {
+          "key": "hero_asc_leon_asgard",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "064faeb0-519c-4f0e-99d3-da050039eb44"
         },
         {
           "key": "hero_asc_leon_olympus",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "7046f670-9bb9-481d-a5be-6875012b38ce"
+          "file": "d3af9289-9452-485c-8b6d-8fba03772638"
         },
         {
           "key": "hero_asc_paolo_tartarus",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "9038282c-77ab-4c81-8ec7-3abaf0bff22e"
-        },
-        {
-          "key": "hero_asc_paolo_chaos",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "3b505677-e8ba-4cd2-ba15-ec16dae56680"
+          "file": "03efa762-91ba-4d9e-abeb-42ad90c04852"
         },
         {
           "key": "hero_asc_paolo_balance",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "39169615-8270-44f6-962c-0df861d05af9"
+          "file": "33ec3580-3aad-441e-a032-9cb44784814a"
+        },
+        {
+          "key": "hero_asc_paolo_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "a656437d-803f-43be-a83b-99a4cfff030b"
         },
         {
           "key": "hero_base_iris",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "baeb0995-5e8c-4e58-bba6-e2037a56384c"
+          "file": "5627bb4a-2a15-46b5-878b-91d9ac36bef6"
         },
         {
           "key": "hero_base_sera",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "bbc46053-6304-4276-a284-97fd3373db7a"
+          "file": "b42f76fd-9d3f-49f7-871b-42796f125d52"
         },
         {
           "key": "hero_base_luca",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "f2af927a-fc25-4a96-95d6-4529e0920670"
+          "file": "58f59966-d97b-4d0c-ac97-c81d8a6d8e20"
         },
         {
           "key": "hero_base_kai",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "2341d2ae-94f7-4b92-9645-66eff420dfd9"
+          "file": "4d790932-3b07-4139-9c11-ff1f9f4029d0"
         },
         {
           "key": "hero_base_paolo",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "efa5cc08-c785-4715-9376-db554ba37f90"
+          "file": "49165adc-74a6-4580-8d4b-e4d967a31ca1"
         },
         {
           "key": "hero_base_leon",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "a1ebeb59-4900-499b-ab20-ed7b44932b0d"
+          "file": "f23aa2b4-2675-4878-b3b7-9fe0ba38ba83"
         },
         {
           "key": "hero_base_hana",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "1fc3cda9-6d14-4d22-bd7c-ced6931eb6eb"
+          "file": "409a69a3-5609-4829-8c56-360548b5a86e"
         },
         {
           "key": "hero_base_sol",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "cc81e365-020f-4ebe-b9cd-6f68bb46408b"
+          "file": "d0475a6c-e10f-4c23-9c3c-1d623c4a03da"
         },
         {
           "key": "hero_base_omar",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "46c40960-5afd-43cf-a68b-abee92e9d836"
+          "file": "db88ca7d-4562-489f-8a25-f73cfb035894"
         },
         {
           "key": "hero_base_lin",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "44a16d88-4eb7-4e3e-94e1-ed8ad76d00d5"
+          "file": "6c3d58a8-f429-43c1-a2f1-b3bbe66929d9"
         },
         {
           "key": "fb_hero_015",
@@ -1597,25 +1937,11 @@
           "file": "hero_015.webp"
         },
         {
-          "key": "fb_hero_005",
+          "key": "fb_hero_024",
           "isCanvas": false,
           "w": 683,
           "h": 1024,
-          "file": "1c738713-e11a-49d3-823c-ffcbc7a3cf78"
-        },
-        {
-          "key": "hero_asc_paolo_balance@2x",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "156a0667-f44a-4c02-842b-4b2b72506c5a"
-        },
-        {
-          "key": "fb_hero_038",
-          "isCanvas": false,
-          "w": 683,
-          "h": 1024,
-          "file": "fab49cc9-a151-4f9a-b9af-34da8e5501fc"
+          "file": "hero_024.webp"
         }
       ]
     },
@@ -1666,13 +1992,30 @@
             "MainMenuScene"
           ],
           "objectCount": 255,
-          "visibleCount": 163,
-          "onScreenCount": 159,
-          "clippedInScroll": 6,
+          "visibleCount": 158,
+          "onScreenCount": 154,
+          "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1114,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -1686,14 +2029,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 258,
-          "visibleCount": 170,
-          "onScreenCount": 166,
+          "objectCount": 254,
+          "visibleCount": 160,
+          "onScreenCount": 156,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1114,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -1707,14 +2067,31 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 256,
-          "visibleCount": 168,
-          "onScreenCount": 164,
+          "objectCount": 255,
+          "visibleCount": 161,
+          "onScreenCount": 157,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
-          "smallTargets": [],
+          "smallTargets": [
+            {
+              "scene": "MainMenuScene",
+              "path": "MainMenuScene/Modal[104]/Button[3]",
+              "cls": "Button",
+              "name": "",
+              "text": null,
+              "basePx": "120x40",
+              "measuredFrom": "hitArea",
+              "bounds": {
+                "x": 514,
+                "y": 1114,
+                "w": 52,
+                "h": 36
+              },
+              "count": 1
+            }
+          ],
           "consoleErrors": [],
           "pageErrors": []
         },
@@ -1728,9 +2105,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 369,
-          "visibleCount": 279,
-          "onScreenCount": 271,
+          "objectCount": 359,
+          "visibleCount": 264,
+          "onScreenCount": 256,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -1749,9 +2126,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 326,
-          "visibleCount": 236,
-          "onScreenCount": 230,
+          "objectCount": 313,
+          "visibleCount": 219,
+          "onScreenCount": 213,
           "clippedInScroll": 12,
           "oldImages": [],
           "offscreen": [],
@@ -1770,9 +2147,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 335,
-          "visibleCount": 244,
-          "onScreenCount": 238,
+          "objectCount": 322,
+          "visibleCount": 226,
+          "onScreenCount": 220,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -1791,9 +2168,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 355,
-          "visibleCount": 267,
-          "onScreenCount": 261,
+          "objectCount": 342,
+          "visibleCount": 248,
+          "onScreenCount": 242,
           "clippedInScroll": 44,
           "oldImages": [],
           "offscreen": [],
@@ -1812,9 +2189,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 312,
-          "visibleCount": 224,
-          "onScreenCount": 218,
+          "objectCount": 299,
+          "visibleCount": 206,
+          "onScreenCount": 200,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -1833,9 +2210,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 339,
-          "visibleCount": 251,
-          "onScreenCount": 245,
+          "objectCount": 326,
+          "visibleCount": 234,
+          "onScreenCount": 228,
           "clippedInScroll": 57,
           "oldImages": [],
           "offscreen": [],
@@ -1854,9 +2231,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 320,
-          "visibleCount": 232,
-          "onScreenCount": 226,
+          "objectCount": 307,
+          "visibleCount": 215,
+          "onScreenCount": 209,
           "clippedInScroll": 35,
           "oldImages": [],
           "offscreen": [],
@@ -1875,10 +2252,10 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 320,
-          "visibleCount": 233,
-          "onScreenCount": 227,
-          "clippedInScroll": 32,
+          "objectCount": 278,
+          "visibleCount": 185,
+          "onScreenCount": 179,
+          "clippedInScroll": 8,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
@@ -1896,9 +2273,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 332,
-          "visibleCount": 238,
-          "onScreenCount": 232,
+          "objectCount": 319,
+          "visibleCount": 219,
+          "onScreenCount": 213,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -1917,9 +2294,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 294,
-          "visibleCount": 207,
-          "onScreenCount": 201,
+          "objectCount": 282,
+          "visibleCount": 189,
+          "onScreenCount": 183,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -1938,9 +2315,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 294,
-          "visibleCount": 207,
-          "onScreenCount": 201,
+          "objectCount": 281,
+          "visibleCount": 188,
+          "onScreenCount": 182,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -1959,9 +2336,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 302,
-          "visibleCount": 214,
-          "onScreenCount": 208,
+          "objectCount": 289,
+          "visibleCount": 197,
+          "onScreenCount": 191,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -1980,9 +2357,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 293,
-          "visibleCount": 206,
-          "onScreenCount": 200,
+          "objectCount": 281,
+          "visibleCount": 189,
+          "onScreenCount": 183,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -2001,9 +2378,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 406,
-          "visibleCount": 317,
-          "onScreenCount": 295,
+          "objectCount": 393,
+          "visibleCount": 300,
+          "onScreenCount": 278,
           "clippedInScroll": 85,
           "oldImages": [],
           "offscreen": [],
@@ -2022,9 +2399,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 303,
-          "visibleCount": 214,
-          "onScreenCount": 208,
+          "objectCount": 289,
+          "visibleCount": 195,
+          "onScreenCount": 189,
           "clippedInScroll": 19,
           "oldImages": [],
           "offscreen": [],
@@ -2045,9 +2422,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 365,
-          "visibleCount": 273,
-          "onScreenCount": 265,
+          "objectCount": 354,
+          "visibleCount": 258,
+          "onScreenCount": 250,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -2066,9 +2443,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 404,
-          "visibleCount": 312,
-          "onScreenCount": 302,
+          "objectCount": 394,
+          "visibleCount": 297,
+          "onScreenCount": 287,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -2087,9 +2464,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 400,
-          "visibleCount": 310,
-          "onScreenCount": 299,
+          "objectCount": 495,
+          "visibleCount": 342,
+          "onScreenCount": 334,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -2108,9 +2485,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 578,
-          "visibleCount": 451,
-          "onScreenCount": 443,
+          "objectCount": 576,
+          "visibleCount": 429,
+          "onScreenCount": 412,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -2131,9 +2508,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 322,
-          "visibleCount": 235,
-          "onScreenCount": 229,
+          "objectCount": 311,
+          "visibleCount": 217,
+          "onScreenCount": 211,
           "clippedInScroll": 12,
           "oldImages": [],
           "offscreen": [],
@@ -2154,9 +2531,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 395,
-          "visibleCount": 307,
-          "onScreenCount": 298,
+          "objectCount": 384,
+          "visibleCount": 289,
+          "onScreenCount": 280,
           "clippedInScroll": 12,
           "oldImages": [],
           "offscreen": [],
@@ -2175,9 +2552,9 @@
           "scenes": [
             "HeroListScene"
           ],
-          "objectCount": 59,
-          "visibleCount": 55,
-          "onScreenCount": 55,
+          "objectCount": 60,
+          "visibleCount": 56,
+          "onScreenCount": 56,
           "clippedInScroll": 5,
           "oldImages": [],
           "offscreen": [],
@@ -2196,9 +2573,9 @@
           "scenes": [
             "HeroDetailScene"
           ],
-          "objectCount": 103,
-          "visibleCount": 99,
-          "onScreenCount": 99,
+          "objectCount": 106,
+          "visibleCount": 102,
+          "onScreenCount": 102,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -2217,9 +2594,9 @@
           "scenes": [
             "HeroDetailScene"
           ],
-          "objectCount": 92,
-          "visibleCount": 88,
-          "onScreenCount": 88,
+          "objectCount": 95,
+          "visibleCount": 91,
+          "onScreenCount": 91,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -2238,9 +2615,9 @@
           "scenes": [
             "HeroDetailScene"
           ],
-          "objectCount": 93,
-          "visibleCount": 89,
-          "onScreenCount": 89,
+          "objectCount": 96,
+          "visibleCount": 92,
+          "onScreenCount": 92,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -2259,9 +2636,9 @@
           "scenes": [
             "HeroDetailScene"
           ],
-          "objectCount": 77,
-          "visibleCount": 73,
-          "onScreenCount": 73,
+          "objectCount": 80,
+          "visibleCount": 76,
+          "onScreenCount": 76,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -2451,9 +2828,9 @@
           "scenes": [
             "BattleScene"
           ],
-          "objectCount": 159,
-          "visibleCount": 96,
-          "onScreenCount": 93,
+          "objectCount": 172,
+          "visibleCount": 97,
+          "onScreenCount": 94,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -2474,7 +2851,7 @@
           "scenes": [
             "BattleScene"
           ],
-          "objectCount": 160,
+          "objectCount": 171,
           "visibleCount": 94,
           "onScreenCount": 91,
           "clippedInScroll": 0,
@@ -2497,9 +2874,9 @@
           "scenes": [
             "BattleResultScene"
           ],
-          "objectCount": 51,
-          "visibleCount": 47,
-          "onScreenCount": 45,
+          "objectCount": 53,
+          "visibleCount": 49,
+          "onScreenCount": 47,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -2518,9 +2895,9 @@
           "scenes": [
             "BattleResultScene"
           ],
-          "objectCount": 53,
-          "visibleCount": 49,
-          "onScreenCount": 49,
+          "objectCount": 55,
+          "visibleCount": 51,
+          "onScreenCount": 51,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -2539,10 +2916,10 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 335,
-          "visibleCount": 247,
-          "onScreenCount": 241,
-          "clippedInScroll": 56,
+          "objectCount": 324,
+          "visibleCount": 230,
+          "onScreenCount": 224,
+          "clippedInScroll": 57,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
@@ -2562,9 +2939,9 @@
           "scenes": [
             "CutsceneScene"
           ],
-          "objectCount": 45,
-          "visibleCount": 25,
-          "onScreenCount": 24,
+          "objectCount": 48,
+          "visibleCount": 26,
+          "onScreenCount": 25,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -2585,7 +2962,7 @@
           "scenes": [
             "CutsceneScene"
           ],
-          "objectCount": 45,
+          "objectCount": 48,
           "visibleCount": 26,
           "onScreenCount": 25,
           "clippedInScroll": 0,
@@ -2606,10 +2983,10 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 403,
-          "visibleCount": 313,
-          "onScreenCount": 290,
-          "clippedInScroll": 85,
+          "objectCount": 393,
+          "visibleCount": 297,
+          "onScreenCount": 275,
+          "clippedInScroll": 88,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
@@ -2629,10 +3006,10 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 303,
-          "visibleCount": 213,
-          "onScreenCount": 207,
-          "clippedInScroll": 20,
+          "objectCount": 292,
+          "visibleCount": 196,
+          "onScreenCount": 190,
+          "clippedInScroll": 21,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
@@ -2652,10 +3029,10 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 328,
-          "visibleCount": 233,
-          "onScreenCount": 227,
-          "clippedInScroll": 6,
+          "objectCount": 317,
+          "visibleCount": 216,
+          "onScreenCount": 210,
+          "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
@@ -2675,10 +3052,10 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 266,
-          "visibleCount": 179,
-          "onScreenCount": 175,
-          "clippedInScroll": 6,
+          "objectCount": 255,
+          "visibleCount": 162,
+          "onScreenCount": 158,
+          "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
@@ -2698,10 +3075,10 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 266,
-          "visibleCount": 179,
-          "onScreenCount": 175,
-          "clippedInScroll": 6,
+          "objectCount": 255,
+          "visibleCount": 162,
+          "onScreenCount": 158,
+          "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
           "overlaps": [],
@@ -2852,242 +3229,242 @@
           "file": null
         },
         {
-          "key": "hero_asc_iris_olympus",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "d4d5f167-f00a-45e9-81c3-9a2c34b9589f"
-        },
-        {
-          "key": "hero_asc_iris_valhalla",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "0b3ba870-afb6-4e1a-8629-e4fbc8dd1983"
-        },
-        {
           "key": "hero_asc_iris_chaos",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "c399faec-496d-49c1-8419-76afdd597fdc"
-        },
-        {
-          "key": "hero_asc_sera_avalon",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "79833eb7-ecea-4ddc-bf56-3423f9d1213b"
+          "file": "167e6943-3fd4-41ca-8d2f-d8c370843b56"
         },
         {
           "key": "hero_asc_sera_kunlun",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "b540002f-2ca9-4e43-b309-67d093949992"
-        },
-        {
-          "key": "hero_asc_sera_nature",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "aa55a2c9-3a26-4535-8220-767a2416cea6"
+          "file": "434b44a3-df90-4ef0-a08d-fca5831500a6"
         },
         {
           "key": "hero_asc_luca_asgard",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "a8cf10a0-7c22-409d-a03a-b5b9cec84ba9"
+          "file": "af5e87e8-bae2-4772-a88b-05ce8f97c0aa"
         },
         {
           "key": "hero_asc_luca_tartarus",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "51900757-4b97-4b87-8c8d-20970fa70c5b"
+          "file": "abf710af-a6e3-4d00-b697-c98c8ab27b75"
         },
         {
-          "key": "hero_asc_omar_avalon",
+          "key": "hero_asc_sera_nature",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "94f60dbc-a462-4abe-8a1e-6bbe4efb3799"
+          "file": "0de91d35-a2f0-44e4-953a-3ad2832eea2a"
+        },
+        {
+          "key": "hero_asc_sera_avalon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "c157f1e6-7e60-44dd-b994-ab19a3f1af8b"
         },
         {
           "key": "hero_asc_omar_valhalla",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "3396a22d-91ac-44cc-bc49-2c099c983f1c"
+          "file": "e2080b52-08de-4123-8e43-37b0310ed5f9"
         },
         {
           "key": "hero_asc_lin_balance",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "09cbc553-5b71-4c20-861e-91b7eb425ba5"
+          "file": "2385b100-5107-47ce-930f-1050f10b0a27"
         },
         {
           "key": "hero_asc_lin_takamagahara",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "c2b673aa-03e2-476e-827d-49905cbd19e0"
+          "file": "539449a2-0f45-4be5-84cd-7a3342bc7bb7"
         },
         {
           "key": "hero_asc_kai_helheim",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "6327d517-7b82-43a8-b9b3-033c21d10e5c"
+          "file": "43605d5b-0a53-43d6-acf7-65e3d4db0755"
+        },
+        {
+          "key": "hero_asc_iris_valhalla",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "3509e47c-1714-4796-b48a-6dfb6ea777c7"
+        },
+        {
+          "key": "hero_asc_iris_olympus",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "c56ede4a-f7e1-408e-90e1-849a3ab82d3b"
+        },
+        {
+          "key": "hero_asc_omar_avalon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "f6242cd4-ea86-4707-aadb-0082f1983295"
         },
         {
           "key": "hero_asc_kai_yomi",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "abbfb699-9626-4abd-9e77-9741655bcf93"
-        },
-        {
-          "key": "hero_asc_sol_nature",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "a9646cee-d580-4f87-8a9b-140e0ecce23f"
+          "file": "8b50fee2-0212-40dd-a171-b45b3383099f"
         },
         {
           "key": "hero_asc_sol_kunlun",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "50058752-dafd-41c5-9c26-490a56244f53"
-        },
-        {
-          "key": "hero_asc_hana_chaos",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "97d3ebc7-5fda-4396-a7d3-d843d46391e5"
-        },
-        {
-          "key": "hero_asc_hana_yomi",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "7462ba49-0003-4551-ad80-be3aad3c288b"
+          "file": "8e64a5ae-ff07-44e7-93c0-03c35b5c58c1"
         },
         {
           "key": "hero_asc_hana_helheim",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "9a46b6ec-63c7-4a0e-bb32-48c673ee2aaa"
+          "file": "18ffc208-9cf1-493d-adbe-e9cdd2b43ec3"
+        },
+        {
+          "key": "hero_asc_hana_yomi",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "888f53a4-7767-4604-81f3-2e12a1bdf237"
+        },
+        {
+          "key": "hero_asc_hana_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "f75059c3-d737-40f7-9012-1af34f9ee585"
         },
         {
           "key": "hero_asc_leon_asgard",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "5a2fbca9-ca25-443f-b5b4-55ddaaf8543f"
+          "file": "63f25e72-98cf-49a7-a869-a126136cfd1d"
+        },
+        {
+          "key": "hero_asc_sol_nature",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "0556e5b8-0a75-4187-adad-d2d978680721"
         },
         {
           "key": "hero_asc_leon_olympus",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "2f5340d6-fb66-45ea-b9f8-8cfa4ec9907f"
+          "file": "13936974-657f-417b-9af5-2dff0fccd29d"
         },
         {
           "key": "hero_asc_paolo_tartarus",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "6fe3eff1-c264-4035-86fb-d9c06bc8645c"
-        },
-        {
-          "key": "hero_asc_paolo_chaos",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "8893ee19-5620-4f9a-a109-6ed7f8505658"
-        },
-        {
-          "key": "hero_base_iris",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "5bbbd611-a5fb-4409-8122-5d99bf8c47bf"
+          "file": "dd961dce-c528-4ea2-83a7-85a5f42e7234"
         },
         {
           "key": "hero_asc_paolo_balance",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "7b6131d7-4e35-43f1-8e54-917ff2c48d3e"
+          "file": "28ab01dd-0260-45ad-8fbd-1cadbf972b51"
         },
         {
-          "key": "hero_base_sera",
+          "key": "hero_asc_paolo_chaos",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "f5e75021-b56e-4ab7-9fcf-6eea00289c86"
-        },
-        {
-          "key": "hero_base_luca",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "990fddd2-dd13-4f49-96bc-dcfbc75fc0b6"
+          "file": "bf87743e-08d9-4734-8285-c86c88300455"
         },
         {
           "key": "hero_base_kai",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "3f185a70-9e83-4097-a598-55d562b33438"
+          "file": "fbde223b-e52f-454d-a910-41516a2f1623"
         },
         {
-          "key": "hero_base_sol",
+          "key": "hero_base_luca",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "8f4b7e48-0eb8-4046-b699-8ef798b1dc23"
+          "file": "3c5596ec-7402-4466-b075-1b5bbca94144"
         },
         {
-          "key": "hero_base_omar",
+          "key": "hero_base_sera",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "3e40bd67-8e03-49a0-8850-f740361e0780"
+          "file": "23e38fd2-cbaf-42d5-bb0f-cc0845d7137c"
+        },
+        {
+          "key": "hero_base_iris",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "66793e49-225a-4ed2-be3f-57fc07d88cfe"
         },
         {
           "key": "hero_base_lin",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "4c9fd55c-2bea-4dea-ac23-6e0fb3141334"
+          "file": "8ca0ba3f-64cc-4ac3-9b8d-fd4b5c52f65e"
+        },
+        {
+          "key": "hero_base_omar",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "93290e46-dccc-4158-b556-687aafdbc1b4"
+        },
+        {
+          "key": "hero_base_sol",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "b798ab74-920c-48d4-9cea-ccc06aa2ddf9"
         },
         {
           "key": "hero_base_hana",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "0a4bea1e-aa00-4f01-a5e7-ac18a756193a"
+          "file": "7de608ff-2d9f-4946-8f8b-ed7dda94c64e"
         },
         {
           "key": "hero_base_leon",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "1a5df3db-0a92-4354-bfc8-a53f43b94c64"
+          "file": "516015f6-abb2-437d-bfaa-1e8e0fccd010"
         },
         {
           "key": "hero_base_paolo",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "6d6dad19-4e0c-4f57-b3ce-72e4e1edb3aa"
+          "file": "296ec072-51cf-4a59-96be-821244f5c3ee"
         },
         {
           "key": "fb_hero_015",
@@ -3097,25 +3474,18 @@
           "file": "hero_015.webp"
         },
         {
-          "key": "fb_hero_034",
+          "key": "fb_hero_031",
           "isCanvas": false,
           "w": 683,
           "h": 1024,
-          "file": "hero_034.webp"
+          "file": "hero_031.webp"
         },
         {
-          "key": "fb_hero_005",
+          "key": "fb_hero_022",
           "isCanvas": false,
           "w": 683,
           "h": 1024,
-          "file": "d1d5f41f-c8e3-4a60-ac3f-c016675b3cb9"
-        },
-        {
-          "key": "hero_base_iris@2x",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "4219fa73-3393-4550-9c91-537de5c4e3db"
+          "file": "hero_022.webp"
         }
       ]
     },
@@ -3154,9 +3524,9 @@
           "scenes": [
             "CutsceneScene"
           ],
-          "objectCount": 45,
-          "visibleCount": 26,
-          "onScreenCount": 25,
+          "objectCount": 52,
+          "visibleCount": 32,
+          "onScreenCount": 31,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -3175,9 +3545,9 @@
           "scenes": [
             "CutsceneScene"
           ],
-          "objectCount": 45,
-          "visibleCount": 26,
-          "onScreenCount": 25,
+          "objectCount": 48,
+          "visibleCount": 27,
+          "onScreenCount": 26,
           "clippedInScroll": 0,
           "oldImages": [],
           "offscreen": [],
@@ -3199,9 +3569,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 155,
-          "visibleCount": 148,
-          "onScreenCount": 144,
+          "objectCount": 142,
+          "visibleCount": 130,
+          "onScreenCount": 126,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -3222,9 +3592,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 155,
-          "visibleCount": 147,
-          "onScreenCount": 143,
+          "objectCount": 143,
+          "visibleCount": 131,
+          "onScreenCount": 127,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -3245,9 +3615,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 156,
-          "visibleCount": 149,
-          "onScreenCount": 145,
+          "objectCount": 143,
+          "visibleCount": 131,
+          "onScreenCount": 127,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -3266,9 +3636,9 @@
           "scenes": [
             "MainMenuScene"
           ],
-          "objectCount": 155,
-          "visibleCount": 148,
-          "onScreenCount": 144,
+          "objectCount": 143,
+          "visibleCount": 131,
+          "onScreenCount": 127,
           "clippedInScroll": 7,
           "oldImages": [],
           "offscreen": [],
@@ -3424,238 +3794,238 @@
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "4b784583-7d1b-4b38-99f9-46b4b018ab3c"
+          "file": "cd4b36b5-a613-4be5-a706-2db4fa532f53"
         },
         {
           "key": "hero_asc_iris_olympus",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "eafbd36f-171b-4c1c-841b-318a5500f9ec"
+          "file": "43667d1d-a0d7-444d-a23f-1979cf301fd3"
         },
         {
           "key": "hero_asc_iris_chaos",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "486af815-a494-4c84-943b-e76ccc196056"
-        },
-        {
-          "key": "hero_asc_sera_avalon",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "e5196e49-5a97-4fe1-9fba-3238f2275ce2"
-        },
-        {
-          "key": "hero_asc_sera_kunlun",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "b15b607e-681b-4b03-b83d-a21f706376fb"
-        },
-        {
-          "key": "hero_asc_luca_asgard",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "9fe3f1ff-6a34-4462-a668-63e5010577e7"
+          "file": "983561e2-d79f-4e46-8126-bed3b3f04b5e"
         },
         {
           "key": "hero_asc_sera_nature",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "b9cd1c26-edba-4d76-a6af-6f49cd890557"
+          "file": "f62052cb-efbd-495d-a456-519245af2654"
+        },
+        {
+          "key": "hero_asc_sera_avalon",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "1ac379a3-c83c-4309-94ff-7c836acbef2c"
+        },
+        {
+          "key": "hero_asc_sera_kunlun",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "2a4b6c99-b208-4fec-a3e0-e755841a56f9"
+        },
+        {
+          "key": "hero_asc_luca_asgard",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "404ad5d9-cbf9-4791-aaba-8ee2305fc9e7"
         },
         {
           "key": "hero_asc_luca_tartarus",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "5ada21f7-4044-4f3c-9305-6bbddcbee314"
+          "file": "f49e4173-933f-4b1e-8b94-732439610fed"
         },
         {
           "key": "hero_asc_kai_yomi",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "8a17a2d0-5296-4ba6-85fe-478e4e6c6c72"
+          "file": "9c1ba5a2-54b6-42d5-a2af-b63075812166"
         },
         {
           "key": "hero_asc_kai_helheim",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "2b73d5b7-912a-4e43-8482-2729d2da88a2"
-        },
-        {
-          "key": "hero_asc_lin_balance",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "579ba0a5-2ee7-4eb1-9b51-32188ddefcda"
+          "file": "2a2d8a79-3eaa-4489-b660-be4ed092e171"
         },
         {
           "key": "hero_asc_lin_takamagahara",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "e05c0a34-701c-498d-bb3e-fbd52a202e37"
+          "file": "1437f53d-27a4-48e9-a27f-798c4c3e8e63"
+        },
+        {
+          "key": "hero_asc_lin_balance",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "7fca1178-5d88-4fe7-878e-cc9c18705c75"
         },
         {
           "key": "hero_asc_omar_valhalla",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "0c51256d-1f95-49ea-b8f7-142cd3c9fc2c"
+          "file": "f8ddca5a-de8f-49d5-adc9-54f7fb930d3a"
         },
         {
           "key": "hero_asc_omar_avalon",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "34cca082-08bb-4c2f-a862-0f42b580d9b6"
-        },
-        {
-          "key": "hero_asc_leon_asgard",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "99147ea3-fbc4-4430-bef5-77a05fee5c55"
-        },
-        {
-          "key": "hero_asc_hana_chaos",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "34c01716-1e2f-4a23-9182-008a4210509f"
-        },
-        {
-          "key": "hero_asc_hana_helheim",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "4cdd6a04-3cf1-464a-9823-abab0b0104f0"
-        },
-        {
-          "key": "hero_asc_hana_yomi",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "8f2cf3b3-2976-4364-8b04-c1687bd927b0"
-        },
-        {
-          "key": "hero_asc_sol_kunlun",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "0ea4f16d-326d-4fd3-93c9-281a3937cd78"
+          "file": "a9a6c20e-57b6-40b5-ae0b-cc228005d186"
         },
         {
           "key": "hero_asc_sol_nature",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "14db9f45-141a-4d3b-bb65-c1aaabfe4a5c"
+          "file": "6b24801a-b2f3-4d49-b58e-e3fb14ff8580"
+        },
+        {
+          "key": "hero_asc_sol_kunlun",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "282497a6-e592-4225-9a4f-1e1e8924d535"
+        },
+        {
+          "key": "hero_asc_hana_helheim",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "24c8e6bf-2dc4-413f-9287-fb0b9eecdb3e"
+        },
+        {
+          "key": "hero_asc_hana_yomi",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "3a3199ab-a05b-4d22-98b9-6c7318bc721f"
+        },
+        {
+          "key": "hero_asc_hana_chaos",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "83bfe336-fd87-465d-9fa8-63134112e553"
+        },
+        {
+          "key": "hero_asc_leon_asgard",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "520d4ad7-23a2-4758-96a7-c317ee5616a0"
         },
         {
           "key": "hero_asc_leon_olympus",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "70ac3045-9d9e-4f2d-89e1-5e283cc3e834"
+          "file": "fa205ff6-87da-4dae-9147-dde11f00e1f0"
         },
         {
           "key": "hero_asc_paolo_tartarus",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "4c24769c-e0fe-4a42-9084-8ba1c7655afd"
+          "file": "4293b4d1-704b-4c08-9556-998fdc2e6e9a"
         },
         {
           "key": "hero_asc_paolo_chaos",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "9578b035-13c6-49c5-a452-7c1b6a5defa8"
-        },
-        {
-          "key": "hero_base_iris",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "1cb269b0-82d1-4469-a312-503ac40416e8"
+          "file": "14cba506-a2f9-4ac9-9799-1868c492724a"
         },
         {
           "key": "hero_asc_paolo_balance",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "5acf95cd-1441-40f7-8286-a0e798a2d43c"
+          "file": "82ef7020-4637-4dd5-b9e7-2d0ba387bfc0"
+        },
+        {
+          "key": "hero_base_iris",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "c80cecf2-d7f6-4a69-897c-979a139bc76e"
         },
         {
           "key": "hero_base_sera",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "d6984da4-6f79-4cb5-b934-b05f18b7273c"
+          "file": "ee98bc42-60c4-4236-a004-e5c7d3fa52c2"
         },
         {
           "key": "hero_base_luca",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "8e498f83-cedb-4198-ad77-0f9a6246bf2d"
+          "file": "473e2a9e-7384-4783-bce1-2303f516f58b"
         },
         {
           "key": "hero_base_kai",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "ef315cbb-b500-4a61-944d-fffd5899b9bc"
+          "file": "f026582e-d773-470a-a6fa-f21e9f4e700d"
         },
         {
           "key": "hero_base_lin",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "2d6b1900-b32b-4d0e-ac5e-9f9d989401c2"
-        },
-        {
-          "key": "hero_base_sol",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "a104552f-42c6-44bb-a7b0-cc700879e873"
-        },
-        {
-          "key": "hero_base_hana",
-          "isCanvas": false,
-          "w": 512,
-          "h": 512,
-          "file": "d94d7c88-4f68-4041-a8d0-42d24c79df14"
+          "file": "e6c04d1f-4257-43f2-8601-9085a25253b6"
         },
         {
           "key": "hero_base_omar",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "b042c375-a640-4f58-843e-f3ad819415ee"
+          "file": "915118d5-f0e1-4077-adf9-0ad26792142b"
+        },
+        {
+          "key": "hero_base_hana",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "1ecf03a9-dfee-49c9-b388-7a561825a6bf"
         },
         {
           "key": "hero_base_leon",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "8a9a2039-dec8-4404-8d0f-94744fdcdfd4"
+          "file": "b0a34ff7-b3a4-42bc-a05e-a226a1cdb128"
+        },
+        {
+          "key": "hero_base_sol",
+          "isCanvas": false,
+          "w": 512,
+          "h": 512,
+          "file": "d5ca7146-1d56-4762-9fb0-76236e62dd6e"
         },
         {
           "key": "hero_base_paolo",
           "isCanvas": false,
           "w": 512,
           "h": 512,
-          "file": "d92c9cf8-e0eb-436e-a166-ace594cebaca"
+          "file": "ad21292a-c925-488c-8265-be82c671491f"
         }
       ]
     }

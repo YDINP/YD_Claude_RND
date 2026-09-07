@@ -8,6 +8,7 @@ import transitionManager from '../../utils/TransitionManager.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT } from '../../utils/popupLayout.js';
 import { ensureMinTouchTarget } from '../../utils/touchTarget.js';
+import { getEnemy } from '../../data/index.js';
 
 /** 헤더 타이틀 */
 const TITLE = '무한의 탑';
@@ -65,17 +66,23 @@ export class TowerPopup extends PopupBase {
   renderTab(tabIdx) {
     this._activeTab = tabIdx;
     this.clearTabContent();
-    this.createTabStrip();
 
+    // 요약/액션바를 먼저 확정해야 contentBounds(=탭 스트립 y좌표 기준)가 최종값이 된다.
+    // setSummary()/setActions() 가 recomputeLayout() 을 호출해 contentBounds 를 갱신하는데,
+    // 이전에는 createTabStrip() 을 먼저 불러 요약 슬롯이 아직 반영되지 않은(높이 0) 낡은
+    // contentBounds 로 탭을 그려 요약 박스와 같은 y 에 겹치고, summaryContainer 가 나중에
+    // 추가돼 위에 그려지는 바람에 탭 라벨이 가려졌다 (QA P1 ②).
     if (tabIdx === TAB.SEASON) {
       this.applySeasonSummary();
       this.applySeasonActions();
+      this.createTabStrip();
       this.renderSeasonTab();
       return;
     }
 
     this.applySummary();
     this.applyActions();
+    this.createTabStrip();
     this.createFloorDisplay();
     this.createFloorInfo();
     this.createProgressBar();
@@ -252,7 +259,10 @@ export class TowerPopup extends PopupBase {
       fontSize: sf(15),
       color: DESIGN.colors.text.secondary
     }));
-    const enemyText = enemies.map(e => `${e.id.replace('enemy_', '')} x${e.count}`).join(', ');
+    // enemies.json 이 SSOT — 내부 id 를 그대로 잘라 보여주지 않고 이름을 조회한다.
+    const enemyText = enemies
+      .map(e => `${getEnemy(e.id)?.name || '알 수 없는 적'} x${e.count}`)
+      .join(', ');
     this.track(this.addText(left + s(100), panelY + s(80), enemyText || '알 수 없음', {
       fontSize: sf(15),
       color: DESIGN.colors.text.primary
@@ -280,7 +290,8 @@ export class TowerPopup extends PopupBase {
       const bossRewardParts = [];
       if (br.gems) bossRewardParts.push(`젬 ${br.gems}`);
       if (br.srTicket) bossRewardParts.push(`SR 티켓 x${br.srTicket}`);
-      if (br.ssrTicket) bossRewardParts.push(`SSR 티켓 x${br.ssrTicket}`);
+      // 팀 기준: 지급되지 않는 보상은 화면에 표시하지 않는다(예외 없음).
+      // ssrTicket 은 담을 resources 필드·소환 연동이 없어 실지급이 안 된다 — 표시도 하지 않는다.
 
       this.track(this.addText(left + s(20), panelY + s(150), '보스 보너스:', {
         fontSize: sf(15),

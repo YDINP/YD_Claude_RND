@@ -66,9 +66,10 @@ export class InventoryPopup extends PopupBase {
   }
 
   loadData() {
+    // QA P1④: inventory 는 {equipment, items} 오브젝트다 — items 는 소비/재료 스택형.
     const saved = SaveManager.load();
-    this.inventory = saved?.inventory || [];
-    this.equipment = saved?.equipment || [];
+    this.inventory = saved?.inventory?.items || [];
+    this.equipment = saved?.inventory?.equipment || [];
     this.gold = this.scene.registry?.get('gold') || saved?.resources?.gold || 0;
   }
 
@@ -227,11 +228,11 @@ export class InventoryPopup extends PopupBase {
     ).setOrigin(0.5);
     elements.push(iconText);
 
-    // Item name
+    // Item name (ID 노출 방지: 이름 해석 실패 시 내부 id 대신 일반 표기로 폴백)
     const name = this.scene.add.text(
       this.contentBounds.left + padX + s(65),
       y + s(23),
-      item.name || item.nameKo || item.id,
+      item.name || item.nameKo || '알 수 없는 아이템',
       {
         fontSize: sf(15),
         fontFamily: '"Noto Sans KR", sans-serif',
@@ -295,29 +296,24 @@ export class InventoryPopup extends PopupBase {
   }
 
   getEquipmentList() {
+    // 실제 보유 장비는 `inventory.equipment` 에 있다 (`data.equipment` 최상위 경로는 존재하지
+    // 않아 항상 빈 배열이었다 — 그 결과 아래에서 items.json 의 플레이스홀더 5종
+    // (`equipment_sword_basic` 등, slotType 없이 type:'equipment' 만 있는 구 카탈로그)이
+    // 전부 "보유 중"인 것처럼 병합돼 슬롯 매칭 실패 · 전부 "기타" 표시로 이어졌다.
+    // 그 항목들은 실제 인벤토리에 없는 id 라 장착 시도 시 EquipmentSystem.equip() 이
+    // '장비를 찾을 수 없습니다' 로 실패한다 — 장착 불가능한 유령 아이템이었다.
     const saved = SaveManager.load();
-    const equipment = saved?.equipment || [];
-
-    try {
-      const jsonEquip = getItemsByType('equipment') || [];
-      const savedIds = new Set(equipment.map(e => e.id));
-      const merged = [...equipment];
-      jsonEquip.forEach(e => {
-        if (!savedIds.has(e.id)) merged.push(e);
-      });
-      return merged;
-    } catch {
-      return equipment;
-    }
+    return Array.isArray(saved?.inventory?.equipment) ? saved.inventory.equipment : [];
   }
 
   getConsumableList() {
     try {
       const items = getItemsByType('consumable') || [];
       const inv = this.inventory || [];
+      // SaveManager.addToInventory() 는 itemId/count 필드로 적재한다 (id/quantity 아님).
       return items.map(item => {
-        const owned = inv.find(i => i.id === item.id);
-        return { ...item, quantity: owned?.quantity || 0 };
+        const owned = inv.find(i => i.itemId === item.id);
+        return { ...item, quantity: owned?.count || 0 };
       }).filter(i => i.quantity > 0);
     } catch {
       return [];
@@ -328,9 +324,10 @@ export class InventoryPopup extends PopupBase {
     try {
       const items = getItemsByType('material') || [];
       const inv = this.inventory || [];
+      // SaveManager.addToInventory() 는 itemId/count 필드로 적재한다 (id/quantity 아님).
       return items.map(item => {
-        const owned = inv.find(i => i.id === item.id);
-        return { ...item, quantity: owned?.quantity || 0 };
+        const owned = inv.find(i => i.itemId === item.id);
+        return { ...item, quantity: owned?.count || 0 };
       }).filter(i => i.quantity > 0);
     } catch {
       return [];

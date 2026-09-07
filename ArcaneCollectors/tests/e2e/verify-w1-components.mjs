@@ -18,6 +18,7 @@ import { readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
+import { blockHmr } from './hmr-guard.mjs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const BOOT_TIMEOUT_MS = 20000;
@@ -49,6 +50,9 @@ const ASSET_PATHS = {
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 720, height: 1280 } });
+// 공유 dev 서버 격리 — 남이 소스를 저장해도 이 페이지는 리로드되지 않는다.
+// 실증: node tests/e2e/hmr-guard-verify.mjs
+await blockHmr(page, BASE_URL);
 const pageErrors = [];
 page.on('pageerror', (e) => pageErrors.push(`${e.name}: ${e.message}`));
 

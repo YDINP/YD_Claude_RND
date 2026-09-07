@@ -26,6 +26,7 @@ import { mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { blockHmr } from './hmr-guard.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..', '..');
 const BASE_URL = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
@@ -144,7 +145,10 @@ function richSave() {
     },
     characters,
     parties: [['asc_iris_olympus', 'asc_sera_avalon', 'asc_luca_asgard', 'asc_kai_yomi']],
-    inventory: [],
+    // v2 계정은 신 스키마다. 배열(구 스키마)로 두면 부팅 때 마이그레이션을 타서
+    // B 가 "정상 v2 계정"이 아니라 "구세이브에서 올라온 계정"을 검증하게 된다.
+    // 마이그레이션 경로는 C(레거시 v1)가 담당하므로 여기서 겹칠 이유가 없다.
+    inventory: { equipment: [], items: [] },
     progress: { currentChapter: 'chapter_3', clearedStages: cleared, towerFloor: 24, totalBattles: 980 },
     gacha: { pityCounter: 55, totalPulls: 420, freeTenPullUsed: true },
     pity: {},
@@ -869,14 +873,24 @@ async function sweepCommonScreens(ctx) {
     await p.waitForTimeout(1300);
   });
 
-  const heroForDetail = await safeEval(page, () => {
-    const owned = window.game.registry.get('ownedHeroes') || [];
-    if (owned.length) return owned[owned.length - 1].id;
-    try {
-      const save = JSON.parse(localStorage.getItem('arcane_collectors_save'));
-      return save && save.characters && save.characters.length ? save.characters[0].id : null;
-    } catch (e) { return null; }
-  });
+  // P2-6: 이 블록만 runStep/ensureGame 보호 밖에 있었다. scene-herolist 직후
+  // HMR 리로드가 끼면 window.game 이 잠깐 사라지는데, 여기서 그대로
+  // "Cannot read properties of undefined (reading 'registry')" 로 던지면
+  // runScenario 를 통째로 중단시켜 ctx.steps 가 통째로 유실된다(집계 과소).
+  let heroForDetail = null;
+  try {
+    await ensureGame(page);
+    heroForDetail = await safeEval(page, () => {
+      const owned = (window.game && window.game.registry.get('ownedHeroes')) || [];
+      if (owned.length) return owned[owned.length - 1].id;
+      try {
+        const save = JSON.parse(localStorage.getItem('arcane_collectors_save'));
+        return save && save.characters && save.characters.length ? save.characters[0].id : null;
+      } catch (e) { return null; }
+    });
+  } catch (e) {
+    console.log(`   ! heroForDetail 조회 실패(${e.message}) — 영웅 상세 탭 스윕 건너뜀`);
+  }
 
   for (const tab of ['stats', 'skills', 'equip', 'story']) {
     // eslint-disable-next-line no-await-in-loop
@@ -1381,6 +1395,9 @@ async function sweepScenarioA(ctx) {
 async function runScenario(browser, scenario, counter) {
   console.log(`\n=== 시나리오 ${scenario.id}: ${scenario.label} ===`);
   const page = await browser.newPage({ viewport: VIEWPORT });
+  // 공유 dev 서버 격리 — 남이 소스를 저장해도 이 페이지는 리로드되지 않는다.
+  // 실증: node tests/e2e/hmr-guard-verify.mjs
+  await blockHmr(page, BASE_URL);
   const ctx = makeCtx(page, scenario.id, counter);
 
   page.on('console', (msg) => {

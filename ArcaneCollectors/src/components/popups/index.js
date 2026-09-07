@@ -13,4 +13,5 @@ export { RaidPopup } from './RaidPopup.js';
 export { FriendsPopup } from './FriendsPopup.js';
 export { CollectionPopup, COLLECTION_TABS } from './CollectionPopup.js';
 export { StoryLogPopup, buildStoryLog, buildStoryLogSummary } from './StoryLogPopup.js';
+export { BossInfoPopup } from './BossInfoPopup.js';
 export { RateDisclosurePanel } from './RateDisclosurePanel.js';

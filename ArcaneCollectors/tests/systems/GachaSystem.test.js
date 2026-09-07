@@ -43,7 +43,8 @@ vi.mock('../../src/systems/EventBus.js', () => ({
   }
 }));
 
-// Mock EnergySystem (PRD-3: 기존 테스트 보호 - 항상 성공 반환)
+// Mock EnergySystem (가챠는 에너지를 소비하지 않는다 — GachaSystem이 이 모듈을 import하지
+// 않는지, 우연히라도 EnergySystem.consume()이 호출되지 않는지 회귀 검증용으로만 등록해 둔다)
 vi.mock('../../src/systems/EnergySystem.js', () => {
   const mockConsume = vi.fn(() => ({ success: true, currentEnergy: 100, consumed: 10 }));
   const mockEnergySystem = { consume: mockConsume, consumeEnergy: mockConsume };
@@ -336,35 +337,42 @@ describe('GachaSystem', () => {
     });
   });
 
-  // PRD-3: GachaSystem pull() 에너지 소비 테스트
-  describe('pull() energy consumption - PRD-3', () => {
-    it('consumes energy when pulling (skipEnergyCheck: false)', async () => {
-      const { default: energySystemMock } = await import('../../src/systems/EnergySystem.js');
-
-      GachaSystem.pull(1, 'gems', { skipEnergyCheck: false });
-
-      expect(energySystemMock.consume).toHaveBeenCalledWith(10, 'gacha');
-    });
-
-    it('skips energy check when skipEnergyCheck is true', async () => {
+  // 가챠는 젬/티켓으로만 게이팅한다 — 에너지는 전투/스테이지 전용 자원이며 가챠 경로와 무관하다
+  describe('pull() 에너지 미소비 (가챠는 젬/티켓으로만 게이팅)', () => {
+    it('소환 시 EnergySystem.consume()을 호출하지 않음', async () => {
       const { default: energySystemMock } = await import('../../src/systems/EnergySystem.js');
       energySystemMock.consume.mockClear();
 
-      GachaSystem.pull(1, 'gems', { skipEnergyCheck: true });
+      GachaSystem.pull(1, 'gems');
 
       expect(energySystemMock.consume).not.toHaveBeenCalled();
     });
 
-    it('fails pull when energy is insufficient', async () => {
+    it('EnergySystem.consume()이 실패를 반환하도록 설정해도 소환은 젬만으로 성공함', async () => {
       const { default: energySystemMock } = await import('../../src/systems/EnergySystem.js');
       energySystemMock.consume.mockReturnValueOnce({
-        success: false, error: 'INSUFFICIENT_ENERGY', currentEnergy: 5, consumed: 0
+        success: false, error: 'INSUFFICIENT_ENERGY', currentEnergy: 0, consumed: 0
       });
 
-      const result = GachaSystem.pull(1, 'gems', { skipEnergyCheck: false });
+      const result = GachaSystem.pull(1, 'gems');
 
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('에너지');
+      expect(result.success).toBe(true);
+      expect(energySystemMock.consume).not.toHaveBeenCalled();
+    });
+
+    it('10연을 연속 2회 수행해도 에너지가 전혀 소비되지 않고 둘 다 성공함', async () => {
+      const { default: energySystemMock } = await import('../../src/systems/EnergySystem.js');
+      energySystemMock.consume.mockClear();
+      SaveManager.getGachaInfo.mockReturnValue({
+        pityCounter: 0, totalPulls: 0, totalSSR: 0, banners: {}, freeTenPullUsed: true
+      });
+
+      const first = GachaSystem.pull(10, 'gems');
+      const second = GachaSystem.pull(10, 'gems');
+
+      expect(first.success).toBe(true);
+      expect(second.success).toBe(true);
+      expect(energySystemMock.consume).not.toHaveBeenCalled();
     });
   });
 
@@ -429,10 +437,9 @@ describe('GachaSystem', () => {
     });
   });
 
-  // T-S2/BLK-05: 첫 무료 10연 에너지/재화 면제
+  // T-S2/BLK-05: 첫 무료 10연 재화 면제 (가챠는 애초에 에너지를 소비하지 않는다)
   describe('첫 무료 10연 (T-S2/BLK-05)', () => {
-    it('freeTenPullUsed가 false면 첫 10연은 재화/에너지를 소비하지 않음', async () => {
-      const { default: energySystemMock } = await import('../../src/systems/EnergySystem.js');
+    it('freeTenPullUsed가 false면 첫 10연은 재화를 소비하지 않음', () => {
       SaveManager.getGachaInfo.mockReturnValue({
         pityCounter: 0, totalPulls: 0, totalSSR: 0, banners: {}, freeTenPullUsed: false
       });
@@ -442,7 +449,6 @@ describe('GachaSystem', () => {
       expect(result.success).toBe(true);
       expect(SaveManager.spendGems).not.toHaveBeenCalled();
       expect(SaveManager.spendSummonTickets).not.toHaveBeenCalled();
-      expect(energySystemMock.consume).not.toHaveBeenCalled();
     });
 
     it('첫 무료 10연 완료 후 freeTenPullUsed 플래그를 true로 저장함', () => {
@@ -455,8 +461,7 @@ describe('GachaSystem', () => {
       expect(SaveManager.saveGachaInfo).toHaveBeenCalledWith({ freeTenPullUsed: true });
     });
 
-    it('freeTenPullUsed가 true면 두 번째 10연부터는 정상 과금됨', async () => {
-      const { default: energySystemMock } = await import('../../src/systems/EnergySystem.js');
+    it('freeTenPullUsed가 true면 두 번째 10연부터는 정상 과금됨', () => {
       SaveManager.getGachaInfo.mockReturnValue({
         pityCounter: 0, totalPulls: 10, totalSSR: 0, banners: {}, freeTenPullUsed: true
       });
@@ -465,7 +470,6 @@ describe('GachaSystem', () => {
 
       expect(result.success).toBe(true);
       expect(SaveManager.spendGems).toHaveBeenCalledWith(GachaSystem.MULTI_COST);
-      expect(energySystemMock.consume).toHaveBeenCalledWith(100, 'gacha');
     });
 
     it('1회 소환(count=1)은 freeTenPullUsed와 무관하게 항상 과금됨', () => {

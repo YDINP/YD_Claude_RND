@@ -11,6 +11,8 @@ import {
   bannerChipLabel,
   bannerBadgeLabel,
   coverFitBanner,
+  keyVisualTreatment,
+  computeFigureScrim,
   computePickupFit,
   computeGachaLayout,
   computeButtonRow,
@@ -135,5 +137,48 @@ describe('가로 배치', () => {
   it('칩이 하나뿐이면 최대 폭을 넘지 않는다', () => {
     const [only] = computeStripSlots(1, { width: 600, maxChipW: 180 });
     expect(only.w).toBe(180);
+  });
+});
+
+describe('키 비주얼 처리 (플레이 리포트 P1 — 인물이 둘로 읽히던 결함)', () => {
+  it('전신을 세울 때는 키 비주얼을 눌러 배경으로 물린다', () => {
+    const treat = keyVisualTreatment(true);
+    expect(treat.alpha).toBeLessThanOrEqual(0.5);
+    expect(treat.veilAlpha).toBeGreaterThan(0.3);
+    expect(treat.tint).not.toBeNull();
+    expect(treat.zoom).toBeGreaterThan(1);
+  });
+
+  it('전신이 없으면 일러스트를 거의 그대로 쓴다', () => {
+    const treat = keyVisualTreatment(false);
+    expect(treat.alpha).toBeGreaterThan(0.8);
+    expect(treat.tint).toBeNull();
+    expect(treat.zoom).toBe(1);
+  });
+
+  it('전신 유무에 따라 눌림 정도가 뒤집히지 않는다', () => {
+    expect(keyVisualTreatment(true).alpha).toBeLessThan(keyVisualTreatment(false).alpha);
+    expect(keyVisualTreatment(true).veilAlpha).toBeGreaterThan(keyVisualTreatment(false).veilAlpha);
+  });
+});
+
+describe('전신 스포트라이트', () => {
+  it('전신 폭보다 넓어 배경 인물을 삼킨다', () => {
+    const scrim = computeFigureScrim({ figureW: 300, bannerW: 680, bannerH: 460 });
+    expect(scrim.rx * 2).toBeGreaterThan(300);
+    expect(scrim.ry).toBeGreaterThan(0);
+    expect(scrim.offsetY).toBeGreaterThan(0);
+  });
+
+  it('전신이 아주 좁아도 배너 폭에 비례한 하한을 지킨다', () => {
+    const scrim = computeFigureScrim({ figureW: 10, bannerW: 680, bannerH: 460 });
+    expect(scrim.rx).toBeCloseTo(680 * 0.34, 5);
+  });
+
+  it('인자가 없어도 NaN 을 내지 않는다', () => {
+    const scrim = computeFigureScrim();
+    expect(Number.isFinite(scrim.rx)).toBe(true);
+    expect(Number.isFinite(scrim.ry)).toBe(true);
+    expect(Number.isFinite(scrim.offsetY)).toBe(true);
   });
 });

@@ -12,6 +12,7 @@
  */
 import { chromium } from 'playwright';
 
+import { blockHmr } from './hmr-guard.mjs';
 const BASE_URL = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const BOOT_TIMEOUT_MS = 20000;
 
@@ -33,6 +34,9 @@ async function run() {
   const browser = await chromium.launch({ headless });
   const page = await browser.newPage({ viewport: { width: 720, height: 1280 } });
 
+  // 공유 dev 서버 격리 — 남이 소스를 저장해도 이 페이지는 리로드되지 않는다.
+  // 실증: node tests/e2e/hmr-guard-verify.mjs
+  await blockHmr(page, BASE_URL);
   const consoleErrors = [];
   const pageErrors = [];
 

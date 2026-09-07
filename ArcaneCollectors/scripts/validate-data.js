@@ -93,6 +93,11 @@ const validations = [
     name: 'Equipment'
   },
   {
+    schema: 'src/schemas/item.schema.json',
+    data: 'src/data/items.json',
+    name: 'Items'
+  },
+  {
     schema: 'src/schemas/synergy.schema.json',
     data: 'src/data/synergies.json',
     name: 'Synergies'

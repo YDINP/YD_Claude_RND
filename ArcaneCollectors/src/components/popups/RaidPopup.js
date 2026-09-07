@@ -320,12 +320,12 @@ export class RaidPopup extends PopupBase {
         fontSize: sf(11), fontFamily: '"Noto Sans KR", sans-serif', color: DESIGN.colors.text.muted
       }).setOrigin(0, 0.5));
 
-    // 우측: 보상 요약
+    // 우측: 보상 요약.
+    // equipmentFragment/ssrTicket은 실지급 경로가 없어(RaidSystem.claimRewards() 참조)
+    // 화면에 넣지 않는다 — 지급되지 않는 보상은 표시하지 않는다(팀 기준).
     const parts = [];
     parts.push('골드 ' + reward.gold.toLocaleString());
     parts.push('젬 ' + reward.gems);
-    parts.push('조각 x' + reward.equipmentFragment);
-    if (reward.ssrTicket > 0) parts.push('SSR권 x' + reward.ssrTicket);
     this._add(this.scene.add.text(cx + w / 2 - s(14), cy, parts.join('   '), {
       fontSize: sf(12),
       fontFamily: '"Noto Sans KR", sans-serif',
@@ -341,10 +341,9 @@ export class RaidPopup extends PopupBase {
 
     if (result.success) {
       const r = result.rewards;
+      // equipmentFragment/ssrTicket은 실지급 경로가 없어 표시하지 않는다(팀 기준).
       this._showFeedback(
-        '보상 수령! 골드 ' + r.gold.toLocaleString() + ' / 젬 ' + r.gems
-        + ' / 조각 x' + r.equipmentFragment
-        + (r.ssrTicket > 0 ? ' / SSR권 x' + r.ssrTicket : ''),
+        '보상 수령! 골드 ' + r.gold.toLocaleString() + ' / 젬 ' + r.gems,
         hexToCSS(DESIGN.colors.status.success));
       this._loadAndRenderTab(TAB.REWARDS);
     } else {

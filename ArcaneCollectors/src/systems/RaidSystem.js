@@ -280,15 +280,28 @@ export class RaidSystem {
       return acc;
     }, { gold: 0, gems: 0, equipmentFragment: 0, ssrTicket: 0 });
 
-    // 재화 지급 (SaveManager 읽기/저장 — GuildSystem.donate 패턴)
+    // 재화 지급 — SaveManager의 실지급 메서드를 쓴다.
+    // (P1 결함: 예전에는 saveData.player.gold/gems 에 직접 더했다. 실제 골드/젬은
+    //  saveData.resources.gold/gems 에 있고 player 에는 {name,level,exp} 뿐이라,
+    //  화면엔 "지급 완료"로 뜨고 claimedTiers 에도 커밋됐지만 진짜 잔액은 단 한 번도
+    //  늘지 않았다 — 표시==지급이 아니라 표시뿐이었다.)
     try {
-      const saveData = SaveManager.load();
-      if (saveData.player) {
-        saveData.player.gold = (saveData.player.gold || 0) + totals.gold;
-        saveData.player.gems = (saveData.player.gems || 0) + totals.gems;
-        SaveManager.save(saveData);
-      }
+      if (totals.gold > 0) SaveManager.addGold(totals.gold);
+      if (totals.gems > 0) SaveManager.addGems(totals.gems);
     } catch (e) { GameLogger.warn('[RaidSystem] reward apply failed: ' + e.message); }
+
+    // equipmentFragment/ssrTicket — 이 둘을 실제로 적립할 지급 경로(장비 조각 인벤토리,
+    // SSR 확정권 리소스)가 아직 없다. TowerSystem._grantRewards()의 equipmentChance/
+    // shardRarity/ssrTicket과 같은 계열의 미구현이며, 같은 방침으로 추측 지급하지 않고
+    // 콘솔 경고만 남긴다. RaidPopup.js는 여전히 이 값을 화면에 표시하므로("조각 x{n}",
+    // "SSR권 x{n}") 지급 없이 표시만 되는 상태가 남아있다 — UI 표시 억제 여부는 별도
+    // 설계 판단이 필요해 여기서 임의로 바꾸지 않는다.
+    if (totals.equipmentFragment > 0) {
+      console.warn(`[RaidSystem] ${bossId}: equipmentFragment(${totals.equipmentFragment}) 보상 미구현 — 지급 없음(표시는 계속됨)`);
+    }
+    if (totals.ssrTicket > 0) {
+      console.warn(`[RaidSystem] ${bossId}: ssrTicket(${totals.ssrTicket}) 보상 미구현 — 지급 없음(표시는 계속됨)`);
+    }
 
     // 이중 수령 방지 마킹
     const claimedNow = claimable.map(function(t) { return t.tier; });

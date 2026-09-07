@@ -28,6 +28,23 @@ export type RarityKey = typeof RARITY_ORDER[number];
 export type RarityNum = 1 | 2 | 3 | 4 | 5;
 export type RarityValue = RarityKey | RarityNum;
 
+/**
+ * 기본영웅(base_*)의 표시 등급.
+ *
+ * `base-heroes.json` 에 `rarity` 필드가 **없는 것은 의도다**. EVOLUTION_SYSTEM_GDD §2-1 의
+ * 계층(미정령 → 기본영웅 → 전직영웅)에서 N/R/SR/SSR 등급 사다리는 **전직영웅부터** 적용되고,
+ * 기본영웅은 그 아래 계층이라 등급 대신 계층 속성(`maxLevel: 30`, `statModifier: 0.55`)을 갖는다.
+ *
+ * 그래도 화면에는 등급을 하나 보여줘야 하므로, 이미 코드·기획이 합의한 값을 여기 한 곳에 둔다.
+ *   - `GachaSystem.initializePool()` — 기본영웅을 R 풀에 편입
+ *   - `SaveManager.getBaseStars()` / `_createStarterHeroRecord()` — `getRarityStars('R')` = 3성
+ *   - `docs/story/SYSTEM_ONBOARDING_ECONOMY.md` §0-6·§1-5 — 온보딩 전투력 표 전체가 stars=3(R) 기준
+ *
+ * `getRarityKey(undefined)` 의 'N' 폴백은 "모르는 값"의 폴백이지 기본영웅 규칙이 아니다.
+ * 그 폴백에 기대면 화면마다 등급이 갈린다(카드 N / 가챠 R).
+ */
+export const BASE_HERO_RARITY: RarityKey = 'R';
+
 // ============================================
 // 숫자 ↔ 문자열 변환 매핑
 // ============================================

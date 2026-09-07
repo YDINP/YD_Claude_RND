@@ -9,7 +9,7 @@
  */
 import { EventBus, GameEvents } from './EventBus.js';
 import { SaveManager } from './SaveManager.js';
-import { getCharacter, getCharacterOrHero } from '../data/index.js';
+import { getCharacterOrHero } from '../data/index.js';
 import { AttackCommand, SkillCommand, DefendCommand } from './commands/index.js';
 import { CultMechanicsSystem } from './CultMechanicsSystem.js';
 
@@ -349,7 +349,8 @@ export class BattleUnit {
       : (() => {
           try {
             // v2.0: getCharacterOrHero가 characters.json → ascended-heroes → base-heroes 순서로 탐색
-            const charData = getCharacterOrHero(characterData.id) || getCharacter(characterData.id);
+            // (내부에서 이미 legacy characters.json을 1순위로 보므로 별도 getCharacter 폴백은 불필요)
+            const charData = getCharacterOrHero(characterData.id);
             return charData?.skills || [{ id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 20 }];
           } catch {
             return [{ id: 'basic', name: '기본 공격', multiplier: 1.0, gaugeCost: 0, target: 'single', gaugeGain: 20 }];

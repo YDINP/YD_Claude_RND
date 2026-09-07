@@ -7,7 +7,7 @@ import { SaveManager } from '../../systems/SaveManager.js';
 import { PartyManager } from '../../systems/PartyManager.js';
 import { ProgressionSystem } from '../../systems/ProgressionSystem.js';
 import { SynergySystem } from '../../systems/SynergySystem.js';
-import { getCharacter, getAllCharacters } from '../../data/index.js';
+import { getCharacterOrHero, getAllCharacters } from '../../data/index.js';
 import { DESIGN, hexToCSS } from '../../config/designSystem.js';
 import { POPUP_SLOT, pickActionChild } from '../../utils/popupLayout.js';
 import { ensureMinTouchTarget } from '../../utils/touchTarget.js';
@@ -278,7 +278,8 @@ export class PartyEditPopup extends PopupBase {
         const heroData = this.findHeroData(heroId);
         slot.hero = heroData;
         if (heroData) {
-          slot.nameText.setText(heroData.nameKo || heroData.name || heroId);
+          // ID 노출 방지: 이름 해석 실패 시 내부 id 대신 일반 표기로 폴백
+          slot.nameText.setText(heroData.nameKo || heroData.name || '???');
           const moodInfo = MOODS[heroData.mood];
           slot.infoText.setText(`${moodInfo?.name || heroData.mood || '?'} · ${heroData.role || heroData.class || '?'}`);
           slot.rarityText.setText(this.getRarityStars(heroData.rarity));
@@ -319,9 +320,9 @@ export class PartyEditPopup extends PopupBase {
     );
     if (owned && typeof owned === 'object') return owned;
 
-    // data/index에서 검색
+    // data/index에서 검색 (SSOT: base_/asc_ 접두 ID까지 포괄하는 getCharacterOrHero)
     try {
-      const charData = getCharacter(heroId);
+      const charData = getCharacterOrHero(heroId);
       return charData || null;
     } catch {
       return null;

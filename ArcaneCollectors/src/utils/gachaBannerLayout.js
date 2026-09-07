@@ -120,6 +120,44 @@ export function coverFitBanner(texW, texH, boxW, boxH) {
 }
 
 /**
+ * 키 비주얼(배너 일러스트) 처리값.
+ *
+ * `banner_pickup_*` 는 둘 다 **인물이 그려진 일러스트**다. 그 위에 픽업 전신 시트를
+ * 그대로 세우면 인물이 둘 겹쳐 어느 쪽이 주인공인지 읽히지 않는다(플레이 리포트 P1).
+ * 전신을 세울 때만 배경을 눌러 "장소"로 물리고, 세우지 않을 때는 일러스트를 그대로 쓴다.
+ *
+ * @param {boolean} withFigure - 전신/포트레이트를 배너 위에 세우는가
+ * @returns {{alpha:number, tint:number|null, veilAlpha:number, zoom:number}}
+ *          tint 가 null 이면 틴트를 걸지 않는다
+ */
+export function keyVisualTreatment(withFigure) {
+  return withFigure
+    ? { alpha: 0.46, tint: 0x5b6d95, veilAlpha: 0.44, zoom: 1.1 }
+    : { alpha: 0.92, tint: null, veilAlpha: 0.22, zoom: 1 };
+}
+
+/**
+ * 전신 뒤에 까는 스포트라이트 스크림의 크기.
+ * 배경 일러스트의 인물을 삼킬 만큼 넓어야 실루엣이 분리된다.
+ *
+ * @param {Object} options
+ * @param {number} options.figureW - 전신 표시 폭
+ * @param {number} options.bannerW
+ * @param {number} options.bannerH
+ * @returns {{rx:number, ry:number, offsetY:number}}
+ *          offsetY 는 배너 하단 기준 위쪽 오프셋(중심 y = bottom - offsetY)
+ */
+export function computeFigureScrim(options = {}) {
+  const { figureW = 0, bannerW = BASE_WIDTH, bannerH = 0 } = options;
+  const rx = Math.max(figureW * 0.72, bannerW * 0.34);
+  return {
+    rx,
+    ry: bannerH * 0.78,
+    offsetY: bannerH * 0.34
+  };
+}
+
+/**
  * 배너 위에 세우는 픽업 전신 시트 크기. 배너 높이의 비율로 맞추고
  * 가로가 배너를 넘으면 가로 기준으로 다시 줄인다.
  *
@@ -312,6 +350,8 @@ export default {
   bannerChipLabel,
   bannerBadgeLabel,
   coverFitBanner,
+  keyVisualTreatment,
+  computeFigureScrim,
   computePickupFit,
   computeGachaLayout,
   computeButtonRow,

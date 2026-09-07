@@ -106,6 +106,40 @@ export class HeroInfoPopup extends PopupBase {
     this._fullbodyKey = null;
     /** 전신 시트를 섹션 밖으로 새지 않게 자르는 지오메트리 마스크의 원본 Graphics */
     this._maskShape = null;
+    /**
+     * 이 팝업이 **직접 올린** 전신 텍스처 키. 씬 종료 시 여기 담긴 것만 해제한다.
+     * 이미 존재하던 키(MeditationView·HeroDetailScene 이 올린 것)는 담지 않는다 —
+     * 남의 텍스처를 지우면 그 화면이 플레이스홀더로 떨어진다.
+     */
+    this._ownedFullbodyKeys = new Set();
+    this._bindSceneCleanup();
+  }
+
+  /**
+   * 씬이 내려갈 때 이 팝업이 쌓아 둔 전신 시트를 해제한다.
+   *
+   * 팝업이 닫히는 시점에는 지울 수 없다 — 뒤에 살아 있는 MeditationView 가 같은 키를
+   * 파티원 폴백 스프라이트로 쓰고 있어 렌더 예외가 난다(`_releaseResources` 주석 참고).
+   * 그래서 "씬 종료 때 정리한다"는 원래 계획을 여기서 실제로 건다. 이 시점에는 씬이
+   * 이미 invisible 로 내려가 있고 같은 씬의 표시 객체가 함께 파기되므로 안전하다.
+   *
+   * 전신 시트는 키당 약 2.7MB(683×1024)라 34명을 훑어보면 90MB 가까이 눌러앉는다.
+   * @private
+   */
+  _bindSceneCleanup() {
+    if (!this.scene?.events) return;
+    // `on` 이 아니라 `once` 다. 씬은 create() 마다 팝업을 새로 만들므로 `on` 이면
+    // 씬 순환 1회당 구독이 하나씩 쌓인다(실측 +12/6사이클). 씬 종료와 함께 한 번만
+    // 돌고 스스로 빠지면 되고, 다음 create() 가 새 팝업으로 다시 건다.
+    this.scene.events.once('shutdown', () => {
+      const textures = this.scene?.textures;
+      if (textures) {
+        this._ownedFullbodyKeys.forEach((key) => {
+          if (textures.exists(key)) textures.remove(key);
+        });
+      }
+      this._ownedFullbodyKeys.clear();
+    });
   }
 
   // ================================================================
@@ -598,6 +632,9 @@ export class HeroInfoPopup extends PopupBase {
   _queueFullbody(key, section) {
     const path = fullbodyPath(key);
     if (!path || !this.scene.load) return;
+
+    // 소유권은 "내가 실제로 올릴 때"만 갖는다 — 이미 있는 키는 남의 것이다.
+    if (!this.scene.textures.exists(key)) this._ownedFullbodyKeys.add(key);
 
     this.scene.load.image(key, path);
 
