@@ -26,6 +26,7 @@ export {
   FxMapSchema,
   ReelBackdropSchema,
   SheetMapSchema,
+  TransitionClipSchema,
   SheetSymbolSchema,
   ThemeTransitionsSchema,
   FxSymbolSchema,
@@ -47,6 +48,7 @@ export {
   type ThemeTransitions,
   type SymbolSourceKind,
   type ThemeFile,
+  type TransitionClip,
 } from './theme.js'
 export {
   dedupePositions,
@@ -123,18 +125,16 @@ export {
   type TransitionPlan,
 } from './transition.js'
 export {
-  coverFit,
-  createTransitionVideoLogger,
-  planTransitionVideo,
-  transitionClipUrl,
-  transitionVideoSkipReason,
-  type CoverRect,
-  type TransitionVideoInputs,
-  type TransitionVideoLogger,
-  type TransitionVideoPlan,
-  type TransitionVideoSink,
-  type TransitionVideoSkip,
-} from './transitionVideo.js'
+  createTransitionClipLogger,
+  planTransitionClip,
+  transitionClipFor,
+  transitionClipSkipReason,
+  type TransitionClipInputs,
+  type TransitionClipLogger,
+  type TransitionClipPlan,
+  type TransitionClipSink,
+  type TransitionClipSkip,
+} from './transitionClip.js'
 export {
   findFreeSpins,
   isFreeSpinsTrigger,

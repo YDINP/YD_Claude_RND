@@ -100,13 +100,13 @@ describe('checkGamePack — 끊어진 자산 참조', () => {
   })
 
   it('전환 클립이 없으면 오류다', () => {
-    const theme = { ...fixtureTheme, transitions: { freeSpinsEnter: 'transitions/fs-enter.webm' } }
+    const theme = { ...fixtureTheme, transitions: { freeSpinsEnter: { src: 'transitions/fs-enter.webm' } } }
     const problems = check({ files: { [PACK_FILES.theme]: json(theme) } })
     expect(find(problems, PACK_FILES.theme, 'transitions.freeSpinsEnter')?.message).toContain('transitions/fs-enter.webm')
   })
 
   it('전환 클립이 실제로 있으면 통과하고 고아로도 잡지 않는다', () => {
-    const theme = { ...fixtureTheme, transitions: { freeSpinsEnter: 'transitions/fs-enter.webm' } }
+    const theme = { ...fixtureTheme, transitions: { freeSpinsEnter: { src: 'transitions/fs-enter.webm' } } }
     const problems = check({
       files: { [PACK_FILES.theme]: json(theme) },
       extraBinaries: ['theme/transitions/fs-enter.webm'],
@@ -357,7 +357,7 @@ describe('checkGamePack — git 추적', () => {
   })
 
   it('참조된 전환 클립이 untracked면 오류다 (커밋하면 배포본에서 사라진다)', () => {
-    const theme = { ...fixtureTheme, transitions: { freeSpinsEnter: 'transitions/fs-enter.webm' } }
+    const theme = { ...fixtureTheme, transitions: { freeSpinsEnter: { src: 'transitions/fs-enter.webm' } } }
     const source = createFixtureSource({
       files: { [PACK_FILES.theme]: json(theme) },
       extraBinaries: ['theme/transitions/fs-enter.webm'],

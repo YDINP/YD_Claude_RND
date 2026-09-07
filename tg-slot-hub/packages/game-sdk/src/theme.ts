@@ -163,11 +163,46 @@ export const ReelBackdropSchema = z.object({
 })
 export type ReelBackdrop = z.infer<typeof ReelBackdropSchema>
 
+/**
+ * 모드 전환 커튼 위에서 재생할 클립 하나.
+ *
+ * 포맷은 **애니메이션 WebP**다. 브라우저가 프레임을 넘겨 주는 것은 DOM `<img>`로 문서에
+ * 붙었을 때뿐이라(캔버스에 그리면 첫 프레임에서 멈춘다), 렌더러는 이 클립을 캔버스가 아니라
+ * 캔버스의 형제 엘리먼트로 올린다.
+ *
+ * 경로와 `opaqueMs`는 **한 덩어리여야 한다.** 오프셋은 그 클립의 그림에서 나온 값이라,
+ * 따로 두면 클립을 갈아 끼울 때 옛 오프셋이 남아 화면 교체가 엉뚱한 순간에 일어난다.
+ */
+export const TransitionClipSchema = z.object({
+  /** 클립 경로. theme.json 기준 상대 경로. */
+  src: z.string().min(1),
+  /**
+   * 컷 시작 기준으로 화면이 **완전히 불투명해지는 시각**(ms). 길이가 아니라 시각이다.
+   * 배경·모드 교체가 정확히 이 시각에 일어난다 — 그 순간이 클립에 가려 보이지 않는다.
+   *
+   * **`0`과 «키 없음»은 다른 뜻이다.**
+   * - `0`: 첫 프레임부터 이미 덮여 있다. 복귀 클립이 대개 이렇다. 덮기 구간이 사라지고
+   *   전환이 시작되는 순간 곧바로 갈아 끼운다. **«쓰지 않음»이 아니다.**
+   * - 키 없음: 렌더러의 기본 덮기 길이로 물러난다. 클립이 그때 이미 덮고 있다고 **가정**하는
+   *   것이라, 실제로 더 늦게 덮이는 클립은 그 사이가 단색 커튼으로 묻힌다.
+   */
+  opaqueMs: z.number().min(0).optional(),
+  /**
+   * 클립 전체 길이(ms).
+   *
+   * 주면 **전환이 클립을 끝까지 재생할 만큼 지속된다.** 없으면 전환이 자기 길이대로 끝나고
+   * 남은 프레임은 잘린다 — 복귀 클립처럼 «걷히는 그림»이 뒤쪽에 있는 종류는 그 연출을
+   * 통째로 잃는다(실측: 3.0초 중 1.12초만 재생됐다).
+   */
+  durationMs: z.number().positive().optional(),
+})
+export type TransitionClip = z.infer<typeof TransitionClipSchema>
+
 export const ThemeTransitionsSchema = z.object({
   /** 프리스핀으로 **들어갈 때**. */
-  freeSpinsEnter: z.string().min(1).optional(),
+  freeSpinsEnter: TransitionClipSchema.optional(),
   /** 프리스핀에서 **나올 때**. */
-  freeSpinsExit: z.string().min(1).optional(),
+  freeSpinsExit: TransitionClipSchema.optional(),
 })
 export type ThemeTransitions = z.infer<typeof ThemeTransitionsSchema>
 
@@ -252,8 +287,9 @@ export function themeAssetRefs(theme: ThemeFile): ThemeAssetRef[] {
   for (const [symbol, sheet] of Object.entries(theme.sheets ?? {})) {
     push(`sheets.${symbol}.win`, sheet.win, 'sheet')
   }
-  push('transitions.freeSpinsEnter', theme.transitions?.freeSpinsEnter, 'video')
-  push('transitions.freeSpinsExit', theme.transitions?.freeSpinsExit, 'video')
+  // 클립은 애니메이션 WebP다 — 검사기에게는 다른 이미지와 같은 종류다.
+  push('transitions.freeSpinsEnter', theme.transitions?.freeSpinsEnter?.src)
+  push('transitions.freeSpinsExit', theme.transitions?.freeSpinsExit?.src)
   for (const key of SFX_KEYS) push(`sfx.${key}`, theme.sfx?.[key], 'audio')
 
   return refs

@@ -152,7 +152,7 @@ describe('listTrackedFiles', () => {
     execFileSync('git', ['init', '-q'], { cwd: repo, stdio: 'ignore' })
     const dir = writePack(repo, FIXTURE_ID)
     // 전환 클립을 추가하되 git에는 올리지 않는다 — 실제로 물릴 뻔한 사고와 같은 상태.
-    writeFileSync(join(dir, 'theme', 'theme.json'), JSON.stringify({ ...fixtureTheme, transitions: { freeSpinsEnter: 'transitions/fs-enter.webm' } }), 'utf8')
+    writeFileSync(join(dir, 'theme', 'theme.json'), JSON.stringify({ ...fixtureTheme, transitions: { freeSpinsEnter: { src: 'transitions/fs-enter.webm' } } }), 'utf8')
     mkdirSync(join(dir, 'theme', 'transitions'), { recursive: true })
     writeFileSync(join(dir, 'theme', 'transitions', 'fs-enter.webm'), '', 'utf8')
 

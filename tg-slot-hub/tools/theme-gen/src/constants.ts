@@ -161,3 +161,48 @@ export { THEME_DEFAULT_PALETTE, THEME_DEFAULT_VERSION } from '@tgslot/game-sdk'
 
 /** sprite sheet 셀 콘텐츠 바운딩 박스를 구할 때, 이 알파값 이하 픽셀은 "빈 배경"으로 본다. */
 export const SHEET_CONTENT_ALPHA_THRESHOLD = 10
+
+/**
+ * 전환 클립(애니메이션 WebP) 계약값. 원본은 `docs/TRANSITION_DESIGN.md` 5-1이고
+ * 검사는 `transitionClipCheck.ts`가 한다.
+ */
+/** 전환 클립 캔버스 폭(px). 9:16 세로. */
+export const TRANSITION_CLIP_WIDTH = 360
+/** 전환 클립 캔버스 높이(px). */
+export const TRANSITION_CLIP_HEIGHT = 640
+/** 전환 클립 길이(ms). 커튼이 덮고 걷히는 데 필요한 시간이고, 전 팩이 같다. */
+export const TRANSITION_CLIP_DURATION_MS = 3000
+/**
+ * 길이 허용 오차(ms). 출고 규격 16fps에서 한 프레임이 62.5ms이므로 이 값은 한 프레임보다 작다 —
+ * 즉 **프레임 하나가 통째로 모자란 클립을 잡아낸다.** 실제로 concat + 배속으로 만든 클립이
+ * 프레임 양자화 때문에 2.94초로 나온 적이 있고, 그때 이 검사가 있었으면 바로 걸렸다.
+ */
+export const TRANSITION_CLIP_DURATION_TOLERANCE_MS = 40
+/**
+ * 루프 횟수. **1 = 한 번만 재생하고 마지막 프레임에서 멈춘다.**
+ * 0은 무한 반복이라 커튼이 영영 화면을 가린다.
+ */
+export const TRANSITION_CLIP_LOOP_COUNT = 1
+/**
+ * 프레임 하나가 이보다 길게 머물면 그 프레임을 «정지 구간» 한 칸으로 **센다.**
+ * 이 값 자체는 합격/불합격을 가르지 않는다 — 가르는 것은 아래 `TRANSITION_CLIP_MAX_HOLD_RATIO`다.
+ *
+ * libwebp는 동일한 연속 프레임을 한 장으로 합치고 지속시간만 늘린다. 따라서 긴 프레임은
+ * 곧 «화면이 멈춰 있었다»는 뜻이다. 200ms는 출고 규격 16fps에서 **3프레임 이상 연속으로
+ * 같은 그림**이라는 뜻이고, 그 정도부터 사람이 «느린 움직임»이 아니라 «멈춤»으로 읽는다.
+ */
+export const TRANSITION_CLIP_HOLD_FRAME_MS = 200
+/**
+ * 정지 구간의 **합계**가 클립 길이에서 차지할 수 있는 최대 비율.
+ *
+ * 프레임 하나의 길이로 합격을 가르면 안 된다 — 전환에는 **기능상 반드시 정지해야 하는 자리**가
+ * 있기 때문이다. 복귀 클립의 머리는 스왑 시점을 가려야 하고, 진입 클립의 꼬리는 교체가 끝난
+ * 뒤 커튼이 버티는 구간이다. 둘 다 단색이어도 정상이다. 문제는 «전환의 상당 부분이 멈춰
+ * 있는가»이지 «어딘가에 멈춘 프레임이 있는가»가 아니다.
+ *
+ * 실측으로 고른 값이다. 정지 총량 / 클립 길이:
+ * sheriff·fruit 약 0%, royal 6.2%, **재컷한 shiba 10.4% / 12.5%**,
+ * 단색으로 멈춰 실패했던 재컷 전 shiba **35.0% / 36.7%**.
+ * 0.2는 통과시켜야 할 최댓값(12.5%)과 잡아내야 할 최솟값(35.0%) 사이에 넉넉히 들어간다.
+ */
+export const TRANSITION_CLIP_MAX_HOLD_RATIO = 0.2

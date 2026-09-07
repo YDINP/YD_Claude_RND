@@ -1,4 +1,6 @@
 import {
+  CLIP_FADE_MS,
+  CURTAIN_RETIRE_MS,
   MODE_BANNER_MS,
   MODE_COVER_IN_MS,
   MODE_COVER_OUT_MS,
@@ -58,6 +60,22 @@ export interface TransitionOptions {
   reducedMotion?: boolean
   /** 지금 걸린 스핀 속도. quick/turbo는 전환도 같은 비율로 빨라진다. 기본 `normal`. */
   speed?: SpinSpeed
+  /**
+   * 클립이 화면을 완전히 덮는 시각(ms). 주면 **덮기 구간이 이 길이가 된다.**
+   * `0`이면 덮기 구간 자체가 없다 — 클립이 첫 프레임부터 덮고 있으므로 곧바로 갈아 끼운다.
+   *
+   * 애니메이션 WebP는 탐색도 배속도 없어 언제나 처음부터 자기 속도로 돈다. 그래서 클립에
+   * 전환을 맞추는 수밖에 없다 — 화면이 갈리는 순간(`swapAtMs`)이 클립이 아직 다 덮지
+   * 못한 때에 오면 교체가 그대로 비친다. 배너와 걷기는 손대지 않는다.
+   */
+  clipOpaqueMs?: number
+  /**
+   * 클립 전체 길이(ms). 주면 **전환이 클립을 끝까지 재생할 만큼 늘어난다.**
+   *
+   * 늘어나는 것은 걷기 구간뿐이다 — 덮기는 클립이 화면을 가리는 시각이 정하고, 배너는
+   * 허브가 그 위에 얹는 구간이라 둘 다 손대면 안 된다. 클립이 짧으면 아무것도 늘리지 않는다.
+   */
+  clipDurationMs?: number
 }
 
 /**
@@ -84,13 +102,29 @@ export function buildModeTransition(to: ModeTarget, options: TransitionOptions):
   }
 
   const scale = MODE_TRANSITION_SPEED_SCALE[options.speed ?? 'normal'] ?? 1
-  return buildPlan(
-    to,
-    MODE_COVER_IN_MS * scale,
-    MODE_BANNER_MS * scale,
-    MODE_COVER_OUT_MS * scale,
-    useTint,
-  )
+  // 클립이 있으면 덮기는 클립이 정한다. 속도 배율은 배너와 걷기에만 걸린다 —
+  // 클립을 빨리 돌릴 방법이 없으므로 덮기만 줄이면 교체가 클립 밖으로 새어 나온다.
+  const coverInMs =
+    options.clipOpaqueMs !== undefined && Number.isFinite(options.clipOpaqueMs) && options.clipOpaqueMs >= 0
+      ? options.clipOpaqueMs
+      : MODE_COVER_IN_MS * scale
+  const bannerMs = MODE_BANNER_MS * scale
+  const coverOutMs = clipCoverOutMs(MODE_COVER_OUT_MS * scale, coverInMs, bannerMs, options.clipDurationMs)
+  return buildPlan(to, coverInMs, bannerMs, coverOutMs, useTint)
+}
+
+/**
+ * 걷기 구간의 길이. 클립을 끝까지 보여 줄 만큼만 늘리고, 그보다 짧은 클립에는 손대지 않는다.
+ * 클립이 없거나 길이를 모르면 지금까지의 값 그대로다.
+ */
+function clipCoverOutMs(
+  baseMs: number,
+  coverInMs: number,
+  bannerMs: number,
+  clipDurationMs: number | undefined,
+): number {
+  if (clipDurationMs === undefined || !Number.isFinite(clipDurationMs) || clipDurationMs <= 0) return baseMs
+  return Math.max(baseMs, clipDurationMs - coverInMs - bannerMs)
 }
 
 function buildPlan(
@@ -124,4 +158,45 @@ export function coverAlphaAt(plan: TransitionPlan, tMs: number): number {
   const intoCoverOut = tMs - plan.coverOutStartMs
   if (intoCoverOut >= plan.coverOutMs) return 0
   return plan.coverOutMs === 0 ? 0 : 1 - intoCoverOut / plan.coverOutMs
+}
+
+/** gsap `sine.inOut`을 순수 계산으로 옮긴 것. 곡선이 갈리면 화면이 실제로 달라진다. */
+function easeInOut(progress: number): number {
+  return 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, Math.max(0, progress)))
+}
+
+/**
+ * 단색 커튼의 알파.
+ *
+ * 커튼은 **클립이 화면을 가리기 전까지의 안전망**이다. 클립이 실제로 떠 있으면 교체 시점에
+ * 물러난다 — 그 뒤로 화면을 관장하는 것은 클립이고, 커튼이 남아 있으면 클립이 제 그림으로
+ * 걷혀도 뒤에서 검정만 드러난다(복귀 클립이 통째로 묻히던 자리가 여기다).
+ *
+ * 클립이 없거나 못 떴으면 지금까지의 3단 곡선 그대로다.
+ */
+export function curtainAlphaAt(plan: TransitionPlan, tMs: number, clipShowing: boolean): number {
+  if (!clipShowing) return coverAlphaAt(plan, tMs)
+  if (tMs <= 0) return 0
+  if (tMs < plan.swapAtMs) return plan.coverInMs === 0 ? 1 : easeInOut(tMs / plan.coverInMs)
+  // 교체가 끝나면 짧게 물러난다. 그동안은 클립이 덮고 있어 이 하강 자체는 보이지 않는다.
+  const intoRetire = tMs - plan.swapAtMs
+  if (intoRetire >= CURTAIN_RETIRE_MS) return 0
+  return 1 - easeInOut(intoRetire / CURTAIN_RETIRE_MS)
+}
+
+/**
+ * 클립의 알파. 재생 내내 1이고 **마지막 걷기 구간에서만** 사라진다.
+ *
+ * 클립이 불투명하게 끝나는 종류(진입 — 총구가 화면을 가린 채 끝난다)도 이 페이드 덕분에
+ * 툭 끊기지 않는다. 이미 제 그림으로 걷힌 클립(복귀)에는 이 페이드가 무해하다.
+ */
+export function clipAlphaAt(plan: TransitionPlan, tMs: number): number {
+  // 페이드는 **끝의 짧은 구간**에만 건다. 걷기가 클립 길이만큼 늘어났다고 알파까지 그만큼
+  // 길게 내리면, 제 그림으로 걷히는 클립 위에 반투명이 겹쳐 뒤가 미리 비친다.
+  const fadeMs = Math.min(plan.coverOutMs, CLIP_FADE_MS)
+  const startMs = plan.totalMs - fadeMs
+  if (tMs < startMs) return 1
+  const intoFade = tMs - startMs
+  if (intoFade >= fadeMs) return 0
+  return fadeMs === 0 ? 0 : 1 - easeInOut(intoFade / fadeMs)
 }

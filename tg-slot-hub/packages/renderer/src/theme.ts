@@ -17,6 +17,7 @@ import {
   type SheetMap,
   type SheetSymbol,
   type ThemeTransitions,
+  type TransitionClip,
 } from '@tgslot/game-sdk'
 
 export {
@@ -34,6 +35,7 @@ export {
   ThemeFileSchema,
   ThemePaletteSchema,
   ThemeTransitionsSchema,
+  TransitionClipSchema,
   type FxEffect,
   type FxMap,
   type FxSymbol,
@@ -42,6 +44,7 @@ export {
   type SheetSymbol,
   type ThemeFile,
   type ThemeTransitions,
+  type TransitionClip,
 } from '@tgslot/game-sdk'
 
 /** `theme.json`의 심볼 커버리지를 검사할 때 쓰는 최소 형태. math.json이 그대로 들어맞는다. */
@@ -136,8 +139,14 @@ export function parseTheme(json: unknown, baseUrl: string, options: ParseThemeOp
   if (file.transitions !== undefined) {
     const transitions: ThemeTransitions = {}
     const { freeSpinsEnter, freeSpinsExit } = file.transitions
-    if (freeSpinsEnter !== undefined) transitions.freeSpinsEnter = resolveAssetUrl(baseUrl, freeSpinsEnter)
-    if (freeSpinsExit !== undefined) transitions.freeSpinsExit = resolveAssetUrl(baseUrl, freeSpinsExit)
+    // 경로만 풀고 `opaqueMs`는 그대로 실어 보낸다 — 그 값은 클립의 그림에서 나온 것이라
+    // 렌더러가 손댈 것이 없다. 둘은 언제나 한 덩어리로 움직인다.
+    const resolveClip = (clip: TransitionClip): TransitionClip => ({
+      ...clip,
+      src: resolveAssetUrl(baseUrl, clip.src),
+    })
+    if (freeSpinsEnter !== undefined) transitions.freeSpinsEnter = resolveClip(freeSpinsEnter)
+    if (freeSpinsExit !== undefined) transitions.freeSpinsExit = resolveClip(freeSpinsExit)
     // 두 방향 모두 비어 있으면 키 자체를 만들지 않는다 — "클립 없음"과 같은 상태여야 한다.
     if (Object.keys(transitions).length > 0) theme.transitions = transitions
   }

@@ -182,5 +182,17 @@
     "seven": {
       "win": "sheets/seven-win.json"
     }
+  },
+  "transitions": {
+    "freeSpinsEnter": {
+      "src": "transitions/fs-enter.webp",
+      "opaqueMs": 2250,
+      "durationMs": 2999
+    },
+    "freeSpinsExit": {
+      "src": "transitions/fs-exit.webp",
+      "opaqueMs": 0,
+      "durationMs": 2999
+    }
   }
 }

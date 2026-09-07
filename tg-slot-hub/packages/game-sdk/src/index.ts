@@ -26,6 +26,7 @@ export {
   ThemeFileSchema,
   ThemePaletteSchema,
   ThemeTransitionsSchema,
+  TransitionClipSchema,
   emptyTheme,
   sheetAtlasPath,
   themeAssetRefs,
@@ -44,6 +45,7 @@ export {
   type ThemeFile,
   type ThemePalette,
   type ThemeTransitions,
+  type TransitionClip,
 } from './theme.js'
 
 export {

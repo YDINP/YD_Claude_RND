@@ -182,6 +182,15 @@
     }
   },
   "transitions": {
-    "freeSpinsEnter": "transitions/fs-enter.webm"
+    "freeSpinsEnter": {
+      "src": "transitions/fs-enter.webp",
+      "opaqueMs": 1600,
+      "durationMs": 2999
+    },
+    "freeSpinsExit": {
+      "src": "transitions/fs-exit.webp",
+      "opaqueMs": 0,
+      "durationMs": 3000
+    }
   }
 }

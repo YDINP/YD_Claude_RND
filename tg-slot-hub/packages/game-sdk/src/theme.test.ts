@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ArtFxFileSchema,
+  TransitionClipSchema,
   FX_EFFECT_FIELDS,
   THEME_DEFAULT_PALETTE,
   ThemeFileSchema,
@@ -11,6 +12,21 @@ import {
 import type { ThemeFile } from './theme.js'
 
 const palette = { frame: '#d8a94a', reelBg: '#0b1220', winLine: ['#f4d98a'], text: '#f2f4f8' }
+
+describe('TransitionClipSchema — opaqueMs', () => {
+  it('0을 받는다 — 첫 프레임부터 덮는 클립의 정상값이다', () => {
+    const parsed = TransitionClipSchema.parse({ src: 'a.webp', opaqueMs: 0 })
+    expect(parsed.opaqueMs).toBe(0)
+  })
+
+  it('키를 빼면 undefined다 — 0과 다른 상태다', () => {
+    expect(TransitionClipSchema.parse({ src: 'a.webp' }).opaqueMs).toBeUndefined()
+  })
+
+  it('음수는 거부한다', () => {
+    expect(() => TransitionClipSchema.parse({ src: 'a.webp', opaqueMs: -1 })).toThrow()
+  })
+})
 
 describe('ThemeFileSchema', () => {
   it('심볼과 팔레트만 있으면 통과한다', () => {
@@ -49,10 +65,10 @@ describe('ThemeFileSchema', () => {
     const parsed = ThemeFileSchema.parse({
       symbols: {},
       palette,
-      transitions: { freeSpinsEnter: 'transitions/fs-enter.webm' },
+      transitions: { freeSpinsEnter: { src: 'transitions/fs-enter.webm' } },
       sfx: { spin: 'sfx/spin.ogg' },
     })
-    expect(parsed.transitions?.freeSpinsEnter).toBe('transitions/fs-enter.webm')
+    expect(parsed.transitions?.freeSpinsEnter?.src).toBe('transitions/fs-enter.webm')
     expect(parsed.sfx?.spin).toBe('sfx/spin.ogg')
   })
 })
@@ -75,7 +91,7 @@ describe('themeAssetRefs', () => {
     backgroundFreeSpins: 'bg-freespins.webp',
     frame: 'frame.webp',
     sheets: { wild: { win: 'sheets/wild-win.json' } },
-    transitions: { freeSpinsEnter: 'transitions/enter.webm', freeSpinsExit: 'transitions/exit.webm' },
+    transitions: { freeSpinsEnter: { src: 'transitions/enter.webm' }, freeSpinsExit: { src: 'transitions/exit.webm' } },
     sfx: { spin: 'sfx/spin.ogg', win: 'sfx/win.ogg' },
     palette,
   })
@@ -98,7 +114,7 @@ describe('themeAssetRefs', () => {
   it('종류를 구분한다 (시트는 아틀라스가 따로 있고, 전환은 영상이다)', () => {
     const byField = new Map(themeAssetRefs(theme).map((ref) => [ref.field, ref.kind]))
     expect(byField.get('sheets.wild.win')).toBe('sheet')
-    expect(byField.get('transitions.freeSpinsEnter')).toBe('video')
+    expect(byField.get('transitions.freeSpinsEnter')).toBe('image')
     expect(byField.get('sfx.spin')).toBe('audio')
     expect(byField.get('symbols.wild')).toBe('image')
   })

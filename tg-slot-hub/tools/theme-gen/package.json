@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "gen": "tsx src/cli.ts",
+    "check:clips": "tsx src/clipCheckCli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

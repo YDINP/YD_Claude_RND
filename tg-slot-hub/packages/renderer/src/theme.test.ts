@@ -11,7 +11,7 @@ import {
   ThemeError,
 } from './theme.js'
 import type { Theme } from './types.js'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { gamePackPath, loadGameMath, loadThemeJson } from './testSupport.js'
 
 const validJson = {
@@ -510,27 +510,35 @@ describe('스프라이트 시트 선언', () => {
 describe('전환 클립 선언', () => {
   it('경로를 sheets와 같은 규칙으로 푼다', () => {
     const theme = parseTheme(
-      { ...validJson, transitions: { freeSpinsEnter: 'transitions/fs-enter.webm' } },
+      { ...validJson, transitions: { freeSpinsEnter: { src: 'transitions/fs-enter.webp' } } },
       '/games/demo',
     )
-    expect(theme.transitions?.freeSpinsEnter).toBe('/games/demo/theme/transitions/fs-enter.webm')
+    expect(theme.transitions?.freeSpinsEnter?.src).toBe(
+      '/games/demo/theme/transitions/fs-enter.webp',
+    )
   })
 
   it('두 방향을 따로 걸 수 있다', () => {
     const theme = parseTheme(
-      { ...validJson, transitions: { freeSpinsEnter: 'a.webm', freeSpinsExit: 'b.webm' } },
+      {
+        ...validJson,
+        transitions: { freeSpinsEnter: { src: 'a.webp' }, freeSpinsExit: { src: 'b.webp' } },
+      },
       '/games/demo',
     )
     expect(theme.transitions).toEqual({
-      freeSpinsEnter: '/games/demo/theme/a.webm',
-      freeSpinsExit: '/games/demo/theme/b.webm',
+      freeSpinsEnter: { src: '/games/demo/theme/a.webp' },
+      freeSpinsExit: { src: '/games/demo/theme/b.webp' },
     })
   })
 
   it('한쪽만 걸면 반대쪽 키는 아예 없다', () => {
-    const theme = parseTheme({ ...validJson, transitions: { freeSpinsExit: 'b.webm' } }, '/games/demo')
+    const theme = parseTheme(
+      { ...validJson, transitions: { freeSpinsExit: { src: 'b.webp' } } },
+      '/games/demo',
+    )
     expect(theme.transitions?.freeSpinsEnter).toBeUndefined()
-    expect(theme.transitions?.freeSpinsExit).toBe('/games/demo/theme/b.webm')
+    expect(theme.transitions?.freeSpinsExit?.src).toBe('/games/demo/theme/b.webp')
   })
 
   it('transitions가 없으면 만들지 않는다', () => {
@@ -544,34 +552,94 @@ describe('전환 클립 선언', () => {
 
   it('빈 경로는 거부한다', () => {
     expect(() =>
-      parseTheme({ ...validJson, transitions: { freeSpinsEnter: '' } }, '/games/demo'),
+      parseTheme({ ...validJson, transitions: { freeSpinsEnter: { src: '' } } }, '/games/demo'),
     ).toThrow(ThemeError)
   })
 
   it('절대 URL은 그대로 둔다', () => {
     const theme = parseTheme(
-      { ...validJson, transitions: { freeSpinsEnter: 'https://cdn.example/fs.webm' } },
+      { ...validJson, transitions: { freeSpinsEnter: { src: 'https://cdn.example/fs.webp' } } },
       '/games/demo',
     )
-    expect(theme.transitions?.freeSpinsEnter).toBe('https://cdn.example/fs.webm')
+    expect(theme.transitions?.freeSpinsEnter?.src).toBe('https://cdn.example/fs.webp')
   })
 })
 
-describe('sheriff-sixgun 전환 클립', () => {
-  it('프리스핀 진입 클립을 팩에서 실제로 가리킨다', () => {
-    const theme = parseTheme(loadThemeJson('sheriff-sixgun'), '/games/sheriff-sixgun')
-    expect(theme.transitions?.freeSpinsEnter).toBe(
-      '/games/sheriff-sixgun/theme/transitions/fs-enter.webm',
-    )
+/**
+ * 애니메이션 WebP의 총 길이(ms) — ANMF 청크의 지속시간을 더한다.
+ * 테마가 선언한 값이 그림과 어긋나지 않는지 보려고 파일을 직접 읽는다.
+ */
+function webpDurationMs(path: string): number {
+  const data = readFileSync(path)
+  let offset = 12
+  let total = 0
+  while (offset + 8 <= data.length) {
+    const fourcc = data.toString('ascii', offset, offset + 4)
+    const size = data.readUInt32LE(offset + 4)
+    if (fourcc === 'ANMF') total += data.readUIntLE(offset + 8 + 12, 3)
+    offset += 8 + size + (size & 1)
+  }
+  return total
+}
+
+describe('게임팩 전환 클립', () => {
+  // 클립은 애니메이션 WebP다. 포맷이 다시 영상으로 돌아가면 `<img>` 경로가 첫 프레임에서 멈춘다.
+  const PACKS = ['sheriff-sixgun', 'shiba-shrine', 'royal-diamond-777', 'fruit-fiesta'] as const
+
+  it('클립을 선언한 팩은 두 방향 모두 WebP를 가리킨다', () => {
+    for (const pack of PACKS) {
+      const theme = parseTheme(loadThemeJson(pack), `/games/${pack}`)
+      for (const clip of [theme.transitions?.freeSpinsEnter, theme.transitions?.freeSpinsExit]) {
+        expect(clip?.src).toMatch(/\.webp$/)
+      }
+    }
   })
 
-  it('선언한 클립 파일이 팩 안에 있다', () => {
-    expect(existsSync(gamePackPath('sheriff-sixgun', 'theme/transitions/fs-enter.webm'))).toBe(true)
+  it('선언한 클립 파일이 팩 안에 실제로 있다', () => {
+    for (const pack of PACKS) {
+      const theme = parseTheme(loadThemeJson(pack), `/games/${pack}`)
+      for (const clip of [theme.transitions?.freeSpinsEnter, theme.transitions?.freeSpinsExit]) {
+        const relative = clip?.src.replace(`/games/${pack}/`, '')
+        expect(existsSync(gamePackPath(pack, relative ?? ''))).toBe(true)
+      }
+    }
   })
 
-  it('이탈 클립은 아직 없다 — 되돌아올 때는 단색 커튼이다', () => {
-    const theme = parseTheme(loadThemeJson('sheriff-sixgun'), '/games/sheriff-sixgun')
-    expect(theme.transitions?.freeSpinsExit).toBeUndefined()
+  it('두 방향 모두 화면을 덮는 시각을 함께 준다', () => {
+    // 이 값이 없으면 렌더러가 기본 덮기 길이로 물러나, 교체가 클립의 도입부에서 일어난다.
+    // 복귀 클립은 첫 프레임부터 덮으므로 그 값이 정확히 0이다 — «없음»과 구별돼야 한다.
+    for (const pack of PACKS) {
+      const theme = parseTheme(loadThemeJson(pack), `/games/${pack}`)
+      expect(theme.transitions?.freeSpinsEnter?.opaqueMs).toBeGreaterThan(0)
+      expect(theme.transitions?.freeSpinsExit?.opaqueMs).toBe(0)
+    }
+  })
+
+  it('두 방향 모두 클립 길이를 선언한다', () => {
+    // 없으면 전환이 자기 길이대로 끝나고 남은 프레임이 잘린다 — 복귀 클립은 그게 연출의 전부다.
+    for (const pack of PACKS) {
+      const theme = parseTheme(loadThemeJson(pack), `/games/${pack}`)
+      for (const clip of [theme.transitions?.freeSpinsEnter, theme.transitions?.freeSpinsExit]) {
+        expect(clip?.durationMs).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('선언한 길이가 파일의 실제 길이와 맞는다', () => {
+    // 값이 그림보다 짧으면 다시 잘리고, 길면 끝난 클립을 붙들고 있게 된다.
+    for (const pack of PACKS) {
+      const theme = parseTheme(loadThemeJson(pack), `/games/${pack}`)
+      for (const clip of [theme.transitions?.freeSpinsEnter, theme.transitions?.freeSpinsExit]) {
+        const relative = clip?.src.replace(`/games/${pack}/`, '') ?? ''
+        expect(webpDurationMs(gamePackPath(pack, relative))).toBe(clip?.durationMs)
+      }
+    }
+  })
+
+  it('클립을 걸지 않은 팩은 단색 커튼으로 남는다', () => {
+    // classic-777은 프리스핀 자체가 없어 영원히 클립이 없다.
+    const theme = parseTheme(loadThemeJson('classic-777'), '/games/classic-777')
+    expect(theme.transitions).toBeUndefined()
   })
 })
 

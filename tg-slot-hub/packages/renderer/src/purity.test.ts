@@ -358,14 +358,11 @@ describe('모드 전환은 화면 전체를 완전히 가리는 커튼이다', (
     const body = source.slice(playAt, applyAt)
     expect(body).toContain('this.applyModeSwap(to)')
     expect(body).toContain('plan.swapAtMs / 1000')
-    // 배경 교체 호출이 덮기(alpha: 1) 다음, 걷기(alpha: 0) 앞에 와야 커튼에 완전히 가려진다.
-    const callAt = body.indexOf('this.applyModeSwap(to)')
-    const coverInAt = body.indexOf("{ alpha: 1,")
-    const coverOutAt = body.indexOf('{ alpha: 0,')
-    expect(coverInAt).toBeGreaterThan(-1)
-    expect(coverOutAt).toBeGreaterThan(-1)
-    expect(callAt).toBeGreaterThan(coverInAt)
-    expect(callAt).toBeLessThan(coverOutAt)
+    // 불투명도는 이제 타임라인이 아니라 순수 계산이 정한다 — 교체가 가려지는지는
+    // `coverAlphaAt(plan, swapAtMs)`가 1이라는 사실이 보장하고, 그건 transition.test가 본다.
+    // 여기서는 «교체가 그 시각 한 곳에만 걸린다»는 배선만 붙잡는다.
+    expect(body.match(/this\.applyModeSwap\(to\)/g) ?? []).toHaveLength(1)
+    expect(body).toContain('curtainAlphaAt(plan, progress.tMs, this.clipShowing)')
   })
 
   it('전환 속도는 지금 걸린 스핀 속도를 그대로 따른다', () => {
@@ -455,215 +452,182 @@ describe('변형 단계는 반드시 닫힌다', () => {
   })
 })
 
-describe('전환 클립 배선', () => {
+describe('전환 클립 배선 — 애니메이션 WebP', () => {
   const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
-  const video = (): string => readFileSync(join(srcDir, 'pixi', 'transitionVideo.ts'), 'utf8')
+  const clip = (): string => readFileSync(join(srcDir, 'pixi', 'transitionClip.ts'), 'utf8')
+
+  it('클립은 캔버스가 아니라 DOM 엘리먼트로 올린다', () => {
+    // 이 작업 전체의 함정이다. 애니메이션 WebP를 캔버스에 그리면 첫 프레임에서 멈춘다 —
+    // 브라우저가 프레임을 넘겨 주는 것은 img로 문서에 붙었을 때뿐이다.
+    const source = clip()
+    expect(source).toContain("document.createElement('img')")
+    expect(stripComments(source)).not.toContain('drawImage')
+    expect(stripComments(source)).not.toContain('VideoSource')
+  })
+
+  it('pixi를 아예 끌어오지 않는다', () => {
+    // 커튼 위에 얹히는 것은 스프라이트가 아니라 캔버스의 형제 엘리먼트다.
+    // 리터럴로 적으면 이 파일 자신이 위의 «루트 격리» 검사에 걸린다.
+    expect(stripComments(clip())).not.toContain('pixi.js')
+  })
 
   it('재생 판단은 순수 모듈이 하고 pixi는 그 결과만 쓴다', () => {
-    // jsdom에는 WebGL도 비디오 디코더도 없다(위 "브라우저 전용 코드 격리" 참고).
-    // 켤지 말지·어디서부터 몇 배속인지는 전부 src 루트에서 계산해 테스트로 붙잡는다.
-    expect(existsSync(join(srcDir, 'transitionVideo.ts'))).toBe(true)
     const source = renderer()
-    expect(source).toContain('planTransitionVideo(plan, inputs)')
-    expect(source).toContain('transitionClipUrl(this.options.theme, to)')
-    expect(source).toContain('reducedMotion: this.options.reducedMotion')
+    expect(source).toContain('planTransitionClip(inputs)')
+    expect(source).toContain('transitionClipFor(this.options.theme, to)')
+  })
+
+  it('덮기 구간은 클립이 정한다', () => {
+    // WebP는 탐색도 배속도 없어 클립을 전환에 맞출 수 없다. 반대로 전환을 클립에 맞춘다.
+    const source = renderer()
+    expect(source).toContain('const clip = this.planTransitionClipFor(to)')
+    expect(source).toContain('{ clipOpaqueMs: clip.opaqueMs }')
+    expect(readFileSync(join(srcDir, 'transition.ts'), 'utf8')).toContain('options.clipOpaqueMs')
+  })
+
+  it('클립은 전환이 시작되는 순간부터 돈다', () => {
+    // 덮인 뒤에 시작하면 도입부(아직 투명한 대목)가 교체 순간에 나와 순서가 거꾸로 읽힌다.
+    const source = renderer()
+    expect(source).toContain('.call(() => this.startTransitionClip(), undefined, 0)')
+    expect(source).toContain('this.applyModeSwap(to)')
+  })
+
+  it('두 방향 모두 읽는다', () => {
+    const source = readFileSync(join(srcDir, 'transitionClip.ts'), 'utf8')
+    expect(source).toContain('theme.transitions?.freeSpinsEnter')
+    expect(source).toContain('theme.transitions?.freeSpinsExit')
+    expect(renderer()).toContain("for (const to of ['freeSpins', 'base'] as const)")
   })
 
   it('클립은 전환이 시작되기 전에 미리 받아 둔다', () => {
-    // 이 한 줄이 회귀의 핵심이다. 전환 시작 시점에 만들면 요소 생성~첫 프레임 230~280ms +
-    // 탐색 90ms가 덮기 구간(normal 380ms)을 넘겨, 매번 접히고 단색 커튼만 보였다.
+    // 전환이 시작된 뒤에 받으면 덮기 구간 안에 첫 프레임이 오지 못한다.
     const source = renderer()
-    const ctorEnd = source.indexOf('private warmTransitionVideos()')
-    expect(ctorEnd).toBeGreaterThan(-1)
-    expect(source.indexOf('this.warmTransitionVideos()')).toBeLessThan(ctorEnd)
-    expect(source).toContain('createTransitionVideo(url, {')
+    expect(source).toContain('this.warmTransitionClips()')
+    expect(source).toContain('createTransitionClip(url, {')
   })
 
   it('모션 축소에서는 미리 받지도 않는다', () => {
     const source = renderer()
-    const at = source.indexOf('private warmTransitionVideos()')
-    const body = source.slice(at, source.indexOf('// ------', at))
-    expect(body).toContain('if (this.options.reducedMotion) return')
+    const warmAt = source.indexOf('private warmTransitionClips(): void {')
+    expect(source.slice(warmAt, warmAt + 160)).toContain('if (this.options.reducedMotion) return')
   })
 
-  it('클립은 커튼보다 위에, 커튼은 그대로 깔린 채로 얹힌다', () => {
-    // 클립이 늦게 뜨거나 실패해도 뒤가 비치면 안 되므로 커튼을 걷지 않는다.
+  it('클립을 통째로 받아 Blob으로 물린다', () => {
+    // URL을 그대로 물리면 첫 재생이 네트워크를 기다려 덮기 구간을 넘긴다.
+    const source = clip()
+    expect(source).toContain('void fetch(url)')
+    expect(source).toContain('URL.createObjectURL(blob)')
+    expect(source).toContain('URL.revokeObjectURL(objectUrl)')
+  })
+
+  it('디코드가 끝나야 준비된 것으로 본다', () => {
+    const source = clip()
+    expect(source).toContain('await image.decode()')
+    expect(source).toContain('decoded = image.complete && image.naturalWidth > 0')
+  })
+
+  it('두 번째 전환도 처음 프레임부터 돈다', () => {
+    // img에는 currentTime이 없다. src를 다시 걸지 않으면 지난번이 끝난 프레임에서 이어진다.
+    const source = clip()
+    const playAt = source.indexOf('    play() {')
+    const body = source.slice(playAt, source.indexOf('\n    },', playAt))
+    expect(body).toContain("image.removeAttribute('src')")
+    expect(body).toContain('image.src = objectUrl')
+  })
+
+  it('커튼과 클립은 각자의 곡선을 탄다', () => {
+    // 같은 알파를 쓰면 둘 중 하나가 반드시 틀린다 — 커튼은 클립이 가린 뒤 물러나야 하고,
+    // 클립은 마지막 걷기 구간까지 살아 있어야 한다. 계산은 한 곳(transition.ts)에 모아 둔다.
     const source = renderer()
-    expect(source).toContain('this.root.addChild(handle.sprite)')
-    expect(stripComments(source)).not.toContain('this.curtain.alpha = 0.5')
+    expect(source).toContain('this.curtain.alpha = curtainAlphaAt(plan, progress.tMs, this.clipShowing)')
+    expect(source).toContain('this.transitionClip?.setAlpha(clipAlphaAt(plan, progress.tMs))')
   })
 
-  it('재생은 커튼이 완전히 덮인 순간, applyModeSwap과 같은 자리에서 시작한다', () => {
+  it('커튼이 물러나도 되는지는 «실제로 떴는지»가 정한다', () => {
+    // «틀기로 했다»와 «떴다»는 다르다. 늦은 디코드·로딩 실패가 그 사이에 있고,
+    // 못 떴는데 커튼이 물러나면 교체가 그대로 비친다.
     const source = renderer()
-    const swapAt = source.indexOf('this.applyModeSwap(to)')
-    const startAt = source.indexOf('this.startTransitionVideo(plan, to)')
-    expect(swapAt).toBeGreaterThan(-1)
-    // 같은 `.call` 안에서, 배경 교체 바로 뒤에 붙어야 한다.
-    expect(startAt).toBeGreaterThan(swapAt)
-    expect(startAt - swapAt).toBeLessThan(60)
-    // 그 자리는 여전히 swapAtMs다 — 전환 길이를 늘리지 않는다.
-    expect(source).toContain('plan.swapAtMs / 1000')
+    expect(source).toContain('this.clipShowing = true')
+    expect(source).toContain('this.clipShowing = false')
   })
 
-  it('클립은 커튼과 같은 알파로 걷힌다', () => {
-    // 따로 두면 불투명한 클립이 남아 새 모드를 가린다.
-    expect(renderer()).toContain('video.sprite.alpha = this.curtain.alpha')
+  it('전환이 클립을 끝까지 재생할 만큼 지속된다', () => {
+    expect(renderer()).toContain('{ clipDurationMs: clip.durationMs }')
   })
 
-  it('첫 프레임이 늦으면 차폐 구간 안에서 기다렸다 시작한다', () => {
+  it('덮는 동안에는 클립이 스스로 불투명하다', () => {
+    // 커튼을 따라 0에서 올리면 클립의 덮는 그림이 반투명해져 뒤가 비친다.
     const source = renderer()
-    const startAt = source.indexOf('private startTransitionVideo(')
-    const endAt = source.indexOf('private releaseTransitionVideo()', startAt)
-    const body = source.slice(startAt, endAt)
-    expect(body).toContain('video.whenReady(')
-    // 늦게 시작하면 남은 차폐 구간으로 계획을 다시 세운다 — 정점이 가려진 동안 와야 한다.
-    expect(body).toContain('bannerMs: plan.coverOutStartMs - elapsedMs')
-    expect(body).toContain('if (late === null)')
+    const showAt = source.indexOf('    const show = (): void => {')
+    expect(source.slice(showAt, showAt + 260)).toContain('clip.setAlpha(1)')
+  })
+
+  it('첫 프레임이 늦으면 기다렸다 시작한다', () => {
+    const source = renderer()
+    expect(source).toContain('this.cancelTransitionClipWait = clip.whenReady(')
+    expect(source).toContain('if (this.transitionClip !== clip) return')
   })
 
   it('전환이 끝나면 클립을 화면에서 걷는다 (요소는 살려 둔다)', () => {
     const source = renderer()
-    const finishAt = source.indexOf('private finishModeTransition()')
-    const drawAt = source.indexOf('private drawMode()', finishAt)
-    const body = source.slice(finishAt, drawAt)
-    expect(body).toContain('this.releaseTransitionVideo()')
-    // 여기서 dispose하면 다음 전환이 다시 콜드 스타트가 되어 같은 회귀가 되살아난다.
-    expect(body).not.toContain('this.disposeTransitionVideos()')
+    expect(source).toContain('this.releaseTransitionClip()')
+    const releaseAt = source.indexOf('private releaseTransitionClip(): void {')
+    const body = source.slice(releaseAt, source.indexOf('\n  }', releaseAt))
+    expect(body).toContain('clip.reset()')
+    expect(body).not.toContain('dispose()')
   })
 
   it('기다리던 클립은 전환이 끝날 때 대기를 취소한다', () => {
-    // 취소하지 않으면 커튼이 걷힌 뒤에 클립이 뒤늦게 떠서 새 모드를 덮는다.
     const source = renderer()
-    expect(source).toContain('this.cancelTransitionVideoWait?.()')
+    const releaseAt = source.indexOf('private releaseTransitionClip(): void {')
+    expect(source.slice(releaseAt, source.indexOf('\n  }', releaseAt))).toContain(
+      'this.cancelTransitionClipWait?.()',
+    )
   })
 
   it('해제할 때는 미리 받아 둔 것까지 전부 반납한다', () => {
     const source = renderer()
     const destroyAt = source.indexOf('  destroy(): void {')
-    expect(destroyAt).toBeGreaterThan(-1)
-    expect(source.slice(destroyAt)).toContain('this.disposeTransitionVideos()')
-    const disposeAll = source.slice(source.indexOf('private disposeTransitionVideos()'))
-    expect(disposeAll).toContain('handle.dispose()')
-    expect(disposeAll).toContain('this.transitionVideos.clear()')
-  })
-
-  it('리사이즈하면 받아 둔 클립을 전부 다시 맞춘다', () => {
-    expect(renderer()).toContain(
-      'for (const handle of this.transitionVideos.values()) handle.fit(canvasWidth, canvasHeight)',
+    expect(source.slice(destroyAt, source.indexOf('\n  }', destroyAt))).toContain(
+      'this.disposeTransitionClips()',
     )
+    const disposeAt = source.indexOf('private disposeTransitionClips(): void {')
+    const body = source.slice(disposeAt, source.indexOf('\n  }', disposeAt))
+    expect(body).toContain('handle.dispose()')
+    expect(body).toContain('this.transitionClips.clear()')
   })
 
-  it('클립은 자동재생이 허용되는 형태로 만든다', () => {
-    const source = video()
-    expect(source).toContain('video.muted = true')
-    expect(source).toContain('video.playsInline = true')
-    expect(source).toContain("video.preload = 'auto'")
-    expect(source).toContain('video.loop = false')
+  it('오버레이는 캔버스 위에 정확히 겹치고 탭을 가로채지 않는다', () => {
+    const source = clip()
+    expect(source).toContain("position: 'absolute'")
+    expect(source).toContain("objectFit: 'cover'")
+    expect(source).toContain("pointerEvents: 'none'")
+    // 부모가 위치 기준이 아니면 엉뚱한 조상에 붙는다.
+    expect(renderer()).toContain("options.container.style.position = 'relative'")
   })
 
-  it('로딩·자동재생 실패를 밖으로 내보내지 않는다', () => {
-    // 여기서 던지거나 reject하면 전환 약속이 깨지고 커튼이 붙박인다.
-    const source = video()
-    expect(source).toContain('void source.load().catch(')
-    expect(source).toContain('started.catch(')
-    expect(source).toContain("video.addEventListener('error', onError)")
+  it('컨테이너에 남긴 자국은 해제할 때 되돌린다', () => {
+    const source = renderer()
+    const destroyAt = source.indexOf('  destroy(): void {')
+    const body = source.slice(destroyAt, source.indexOf('\n  }', destroyAt))
+    expect(body).toContain('this.previousOverflow')
+    expect(body).toContain('this.previousPosition')
   })
 
-  it('탐색 중에는 준비 안 됨으로 판정하지 않는다', () => {
-    // currentTime을 바꾸면 readyState가 1로 떨어졌다 seeked에서 다시 오른다.
-    // seeked를 안 들으면 그 골짜기에 걸려 매번 접힌다.
-    expect(video()).toContain("video.addEventListener('seeked', onReadyEvent)")
+  it('로딩·디코드 실패를 밖으로 내보내지 않는다', () => {
+    const source = clip()
+    expect(source).toContain('.catch((error: unknown)')
+    expect(source).toContain("log.always('클립 로딩 실패 (네트워크/포맷)'")
   })
 
-  it('클립을 통째로 받아 Blob으로 물린다', () => {
-    // URL을 그대로 물리면 화면에 붙지 않은 <video>가 readyState 1에서 멈춰 서고(suspend),
-    // seekable이 비어 있어 currentTime 지정이 조용히 무시된다 — 실측으로 확인한 증상이다.
-    // 그러면 클립이 0초(도입부)부터 재생돼 정점이 차폐 구간 밖으로 밀린다.
-    const source = video()
-    expect(source).toContain('void fetch(url)')
-    expect(source).toContain('URL.createObjectURL(blob)')
-    expect(source).toContain('attach(objectUrl)')
-    // 못 받으면 URL을 그대로 물려서라도 굴러가야 한다.
-    expect(source).toContain('attach(url)')
-    expect(source).toContain('URL.revokeObjectURL(objectUrl)')
-  })
-
-  it('탐색할 수 없는 동안에는 지점을 걸지 않는다', () => {
-    const source = video()
-    expect(source).toContain('video.seekable.length === 0')
-  })
-
-  it('지점이 맞아야 준비된 것으로 본다', () => {
-    // 그림이 있다는 것만으로 틀면 클립의 엉뚱한 대목이 나온다.
-    const source = video()
-    expect(source).toContain('Math.abs(video.currentTime - plan.startAtSec) <= SEEK_TOLERANCE_SEC')
-    expect(source).toContain('isReady(): boolean {')
-    expect(source).toMatch(/isReady\(\): boolean \{\s+return cued\(\)/)
-  })
-
-  it('한 번의 실패가 세션 전체를 죽이지 않는다', () => {
-    // 예전에는 sticky한 `failed` 플래그가 있어, 마운트 직후 자동재생이 한 번 막히면
-    // 그 세션의 모든 전환에서 클립이 영영 죽었다. 판단은 요소의 지금 상태로만 한다.
-    const source = stripComments(video())
-    expect(source).not.toContain('failed = true')
-    expect(source).toContain('video.error === null')
-  })
-
-  it('반납은 텍스처와 소스와 엘리먼트를 모두 놓는다', () => {
-    const source = video()
-    // 스프라이트는 텍스처를 건드리지 않고 걷는다 — 파괴는 레지스트리 한 문으로만 지난다.
-    expect(source).toContain('sprite.destroy({ texture: false, textureSource: false })')
-    expect(source).toContain('registry.release(texture)')
-    expect(source).toContain("video.removeAttribute('src')")
-    expect(source).toContain('video.load()')
-  })
-
-  it('클립 텍스처도 텍스처 레지스트리가 소유한다', () => {
-    // 소유권 규칙("누가 아직 쓰는가")을 한 곳에 모으기 위해 등록·해제가 모두 레지스트리를 지난다.
-    const source = video()
-    expect(source).toContain('registry?.own(texture)')
-    // `retain`이 아니라 `own`이어야 한다. 캐시 텍스처가 되면 참조가 끊겨도 곧장 파괴되지 않고
-    // LRU 상한을 넘길 때까지 GPU에 남는다 — 클립은 화면을 나가는 즉시 반납돼야 한다.
-    expect(source).not.toContain('registry?.retain(')
-    expect(source).not.toContain('registry.retain(')
-    const renderSource = renderer()
-    expect(renderSource).toContain('registry: this.ownedTextures')
-    // 클립은 렌더러보다 먼저 반납되므로 destroyAll이 다시 파괴하려 들면 안 된다.
-    const destroyAt = renderSource.indexOf('  destroy(): void {')
-    const body = renderSource.slice(destroyAt)
-    expect(body.indexOf('this.disposeTransitionVideos()')).toBeLessThan(
-      body.indexOf('this.ownedTextures.destroyAll()'),
-    )
-  })
-
-  it('레지스트리가 없어도 텍스처를 흘리지 않는다', () => {
-    expect(video()).toContain('if (registry === undefined || !registry.release(texture))')
-  })
-
-  it('진단은 순수 로거가 정하고 pixi는 콘솔만 맡는다', () => {
-    // 무엇을 남길지(억제 규칙)는 src 루트의 순수 모듈에 있어 테스트로 붙잡을 수 있다.
-    const source = video()
-    expect(source).toContain('createTransitionVideoLogger')
-    expect(source).toContain('devTransitionVideoSink')
-    expect(readFileSync(join(srcDir, 'transitionVideo.ts'), 'utf8')).toContain(
-      'export function createTransitionVideoLogger(sink: TransitionVideoSink)',
-    )
-  })
-
-  it('예상된 폴백은 방향+사유별로 한 번만, 실제 실패는 매번 남긴다', () => {
-    const renderSource = renderer()
-    expect(renderSource).toContain("this.clipLog.once(`skip:${to}:${reason ?? 'unknown'}`")
-    const videoSource = video()
-    // 실패 경로는 전부 always다 — 반복 자체가 신호다.
-    expect(videoSource).toContain("log.always('클립 로딩 실패 (네트워크/코덱)'")
-    expect(videoSource).toContain("log.always('자동재생이 막혔다'")
-    expect(videoSource).not.toContain("log.once('자동재생")
+  it('예상된 폴백은 방향+사유별로 한 번만 남긴다', () => {
+    expect(renderer()).toContain("this.clipLog.once(`skip:${to}:${reason ?? 'unknown'}`")
   })
 
   it('개발 플래그는 import.meta.env를 그대로 적는다', () => {
-    // 별칭으로 받으면(`const meta = import.meta`) Vite가 env 객체를 주입하지 않아
+    // 별칭으로 받으면(const meta = import.meta) Vite가 env 객체를 주입하지 않아
     // 언제나 undefined가 된다 — 실제로 그 탓에 진단이 한 줄도 나오지 않았다.
-    const source = video()
+    const source = clip()
     expect(source).toContain('= import.meta.env')
     expect(stripComments(source)).not.toContain('const meta = import.meta')
   })

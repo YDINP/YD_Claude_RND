@@ -11,7 +11,10 @@ import {
   IDLE_AMPLITUDE_SYMBOLS,
   MODE_CURTAIN_COLOR,
   MODE_TINT_ALPHA,
-  MODE_VIDEO_MIN_COVERED_MS,
+  MODE_BANNER_MS,
+  MODE_CLIP_MIN_COVERED_MS,
+  MODE_COVER_IN_MS,
+  MODE_TRANSITION_SPEED_SCALE,
   PHASE_CROSSFADE_MS,
   SCATTER_RING_PULSE_MS,
   SCATTER_RING_SCALE,
@@ -60,16 +63,19 @@ import {
 import type { RendererMode } from '../features.js'
 import {
   buildModeTransition,
+  clipAlphaAt,
+  curtainAlphaAt,
   modeTransitionTarget,
   type ModeTarget,
   type TransitionPlan,
 } from '../transition.js'
 import {
-  planTransitionVideo,
-  transitionClipUrl,
-  transitionVideoSkipReason,
-  type TransitionVideoLogger,
-} from '../transitionVideo.js'
+  planTransitionClip,
+  transitionClipFor,
+  transitionClipSkipReason,
+  type TransitionClipLogger,
+  type TransitionClipPlan,
+} from '../transitionClip.js'
 import { paylineColor } from '../wins.js'
 import { resolveFxEffect, resolveSymbolFx, BUILTIN_FX } from '../fx.js'
 import { isSheetOnly, planSheetFx } from '../sheet.js'
@@ -131,10 +137,11 @@ import { ParticlePool } from './particles.js'
 import type { RendererDiagnostics } from '../diagnostics.js'
 import { planReelBackdrop } from '../backdrop.js'
 import {
-  createDevTransitionVideoLogger,
-  createTransitionVideo,
-  type TransitionVideoHandle,
-} from './transitionVideo.js'
+  createDevTransitionClipLogger,
+  createTransitionClip,
+  warnTransitionClip,
+  type TransitionClipHandle,
+} from './transitionClip.js'
 import {
   playMutationFx,
   MutationSpritePool,
@@ -260,6 +267,11 @@ class PixiRenderer implements RendererCore {
   private ambient: AmbientEffect[] = []
   /** 캔버스가 컨테이너를 넘칠 수 있어 overflow를 바꾼다. 해제할 때 원래 값으로 되돌린다. */
   private readonly previousOverflow: string
+  /**
+   * 컨테이너의 원래 `position`. 클립 오버레이가 캔버스 위에 정확히 겹치려면 부모가
+   * 위치 기준(containing block)이어야 해서 필요하면 `relative`로 바꾼다. 해제할 때 되돌린다.
+   */
+  private readonly previousPosition: string
 
   private resizeObserver: ResizeObserver | null = null
   private idleTweens: gsap.core.Tween[] = []
@@ -292,16 +304,23 @@ class PixiRenderer implements RendererCore {
    * 목표 지점 탐색에 90ms가 더 들어 덮기 구간(normal 380ms) 안에 못 들어온다.
    * 실제로 그래서 매번 접히고 단색 커튼만 보였다. 반납은 `destroy()`가 한다.
    */
-  private readonly transitionVideos = new Map<ModeTarget, TransitionVideoHandle>()
+  private readonly transitionClips = new Map<ModeTarget, TransitionClipHandle>()
   /** 이번 전환이 쓰고 있는 클립. 전환이 끝나면 `reset()`으로 화면에서 걷는다. */
-  private transitionVideo: TransitionVideoHandle | null = null
+  private transitionClip: TransitionClipHandle | null = null
+  /**
+   * 이번 전환에서 클립이 실제로 화면에 떴는지.
+   *
+   * 커튼이 물러나도 되는지를 이 값이 정한다 — 클립이 못 떴는데 물러나면 교체가 그대로 비친다.
+   * «틀기로 했다»(계획)와 «실제로 떴다»는 다르다. 늦은 디코드·로딩 실패가 그 사이에 있다.
+   */
+  private clipShowing = false
   /** 아직 준비되지 않은 클립을 기다리는 중이면 그 대기를 취소하는 손잡이. */
-  private cancelTransitionVideoWait: (() => void) | null = null
+  private cancelTransitionClipWait: (() => void) | null = null
   /**
    * 전환 클립 진단 로거. 이 화면(게임 하나)의 수명 동안 같은 사유는 한 번만 남긴다 —
    * "이 방향엔 클립이 없다" 같은 예상된 폴백이 전환마다 찍히면 콘솔이 잠긴다.
    */
-  private readonly clipLog: TransitionVideoLogger = createDevTransitionVideoLogger()
+  private readonly clipLog: TransitionClipLogger = createDevTransitionClipLogger()
   /** 화면이 지금 프리스핀 모습인지. 전환이 끝난 시점에 갱신된다. */
   private freeSpinsVisible = false
   private crossfadeTween: gsap.core.Tween | null = null
@@ -353,6 +372,9 @@ class PixiRenderer implements RendererCore {
 
     // 창 맞춤에서는 프레임이 컨테이너 밖으로 나가므로 잘라 줘야 한다.
     this.previousOverflow = options.container.style.overflow
+    this.previousPosition = options.container.style.position
+    // static이면 absolute 오버레이가 엉뚱한 조상을 기준으로 잡는다. 이미 자리를 잡고 있으면 건드리지 않는다.
+    if (options.container.style.position === '') options.container.style.position = 'relative'
     options.container.style.overflow = 'hidden'
 
     this.sparkleTexture = options.reducedMotion ? null : createSparkleTexture(ownedTextures)
@@ -402,7 +424,7 @@ class PixiRenderer implements RendererCore {
     this.buildReels()
     this.applyLayout()
     this.observeResize()
-    this.warmTransitionVideos()
+    this.warmTransitionClips()
   }
 
   /**
@@ -410,18 +432,22 @@ class PixiRenderer implements RendererCore {
    * 안에 첫 프레임이 오지 못한다(실측 320ms+ vs 덮기 380ms, 그마저 메인 스레드가 한가할 때).
    * 모션 축소에서는 어차피 틀지 않으므로 대역폭도 쓰지 않는다.
    */
-  private warmTransitionVideos(): void {
+  private warmTransitionClips(): void {
     if (this.options.reducedMotion) return
     for (const to of ['freeSpins', 'base'] as const) {
-      const url = transitionClipUrl(this.options.theme, to)
-      if (url === undefined) continue
+      const clip = transitionClipFor(this.options.theme, to)
+      if (clip === undefined) continue
+      const url = clip.src
       try {
-        const handle = createTransitionVideo(url, {
-          registry: this.ownedTextures,
+        const handle = createTransitionClip(url, {
+          container: this.options.container,
           logger: this.clipLog,
         })
-        if (handle === null) continue
-        this.transitionVideos.set(to, handle)
+        if (handle === null) {
+          warnTransitionClip(this.clipLog, url)
+          continue
+        }
+        this.transitionClips.set(to, handle)
         this.clipLog.once(`warm:${to}`, '클립 미리 받기 시작', { to, url })
       } catch (error) {
         this.clipLog.always('클립 미리 받기 실패', { to, url, error })
@@ -512,8 +538,6 @@ class PixiRenderer implements RendererCore {
       cover.width = canvasWidth
       cover.height = canvasHeight
     }
-    // 클립은 늘리는 게 아니라 꽉 채우고 잘라낸다(cover). 커튼과 계산이 달라 따로 맞춘다.
-    for (const handle of this.transitionVideos.values()) handle.fit(canvasWidth, canvasHeight)
     if (this.frameSprite !== null && frameRect !== null) {
       this.frameSprite.position.set(frameRect.x, frameRect.y)
       this.frameSprite.width = frameRect.width
@@ -1487,10 +1511,15 @@ class PixiRenderer implements RendererCore {
   private playModeTransition(to: ModeTarget): void {
     // 진행 중인 전환이 있으면 그 끝을 먼저 알린다. start 하나에 end 하나를 보장한다.
     this.finishModeTransition()
+    // **클립 판단이 계획보다 먼저다.** 애니메이션 WebP는 탐색도 배속도 없어 클립을 전환에
+    // 맞출 수 없다 — 반대로 덮기 구간을 클립이 완전히 불투명해질 때까지 늘려야 교체가 가려진다.
+    const clip = this.planTransitionClipFor(to)
     const plan = buildModeTransition(to, {
       hasFreeSpinsBackground: this.options.theme.backgroundFreeSpins !== undefined,
       reducedMotion: this.options.reducedMotion,
       speed: this.spinSpeed,
+      ...(clip === null ? {} : { clipOpaqueMs: clip.opaqueMs }),
+      ...(clip?.durationMs === undefined ? {} : { clipDurationMs: clip.durationMs }),
     })
     this.modeTransitionTo = to
     this.emit({ type: 'modeTransition', to, phase: 'start' })
@@ -1498,155 +1527,141 @@ class PixiRenderer implements RendererCore {
     this.curtain.visible = true
     this.curtain.alpha = 0
 
-    // 클립은 전환을 늘리지 않는다 — 차폐 구간의 *내용*일 뿐이라 계획(길이)은 위에서 이미 끝났다.
-    // 여기서 만들어 두면 덮기 구간(normal 380ms) 동안 로딩과 탐색이 끝나 있을 확률이 높아진다.
-    this.prepareTransitionVideo(plan, to)
+    // 요소는 생성자에서 이미 받아 두었다 — 여기서는 이번 전환에 쓸 것을 골라 둘 뿐이다.
+    this.prepareTransitionClip(clip, to)
 
-    // 클립도 커튼과 **같은 알파**로 걷힌다. 따로 두면 불투명한 클립이 남아 새 모드를 가린다.
-    const fadeClip = (): void => {
-      const video = this.transitionVideo
-      if (video !== null) video.sprite.alpha = this.curtain.alpha
+    /**
+     * 커튼과 클립의 불투명도를 **순수 함수가 정한다.**
+     *
+     * 둘은 같은 곡선을 쓰지 않는다 — 커튼은 클립이 화면을 가리면 물러나야 하고(안 그러면
+     * 클립이 걷혀도 뒤에서 검정이 드러난다), 클립은 마지막 걷기 구간에서만 사라져야 한다.
+     * 타이밍을 여기서 손으로 엮지 않고 `transition.ts`의 계산 한 곳에 모아 둔다.
+     */
+    const progress = { tMs: 0 }
+    const applyAlpha = (): void => {
+      this.curtain.alpha = curtainAlphaAt(plan, progress.tMs, this.clipShowing)
+      this.transitionClip?.setAlpha(clipAlphaAt(plan, progress.tMs))
     }
 
     const timeline = gsap.timeline({ onComplete: () => this.finishModeTransition() })
     timeline
-      .to(this.curtain, { alpha: 1, duration: plan.coverInMs / 1000, ease: 'sine.inOut' }, 0)
+      // 클립은 전환이 시작되는 순간부터 돈다. 그래야 `opaqueMs`에 화면을 완전히 덮는다.
+      .call(() => this.startTransitionClip(), undefined, 0)
+      // 시간 하나만 흘리고 불투명도는 계산이 정한다. 이징도 그쪽에 들어 있다.
+      .to(progress, { tMs: plan.totalMs, duration: plan.totalMs / 1000, ease: 'none', onUpdate: applyAlpha }, 0)
       .call(
         () => {
           this.applyModeSwap(to)
-          this.startTransitionVideo(plan, to)
         },
         undefined,
         plan.swapAtMs / 1000,
-      )
-      .to(
-        this.curtain,
-        { alpha: 0, duration: plan.coverOutMs / 1000, ease: 'sine.inOut', onUpdate: fadeClip },
-        plan.coverOutStartMs / 1000,
       )
 
     this.modeTransition = timeline
   }
 
   /**
-   * 이번 전환에 쓸 클립을 준비한다. 테마에 클립이 없거나, 모션 축소이거나, 차폐 구간이 너무
-   * 짧으면(터보) 아무것도 하지 않고 지금까지의 단색 커튼으로 남는다.
+   * 이번 전환에 클립을 쓸지, 쓴다면 언제 화면을 덮는지.
    *
-   * 요소는 생성자에서 이미 받아 두었다 — 여기서는 시작 지점과 배속만 걸고 커튼 위에 얹는다.
+   * **계획(길이)보다 먼저 불린다** — 덮기 구간을 클립의 불투명 시점으로 늘려야 하기 때문이다.
+   * 테마에 클립이 없거나, 모션 축소이거나, 차폐 구간이 너무 짧으면(터보) null이고
+   * 지금까지의 단색 커튼으로 남는다.
    */
-  private prepareTransitionVideo(plan: TransitionPlan, to: ModeTarget): void {
+  private planTransitionClipFor(to: ModeTarget): TransitionClipPlan | null {
     const inputs = {
-      url: transitionClipUrl(this.options.theme, to),
+      clip: transitionClipFor(this.options.theme, to),
       reducedMotion: this.options.reducedMotion,
+      speed: this.spinSpeed,
+      defaultOpaqueMs: MODE_COVER_IN_MS,
+      bannerMs: MODE_BANNER_MS * (MODE_TRANSITION_SPEED_SCALE[this.spinSpeed] ?? 1),
     }
-    const clip = planTransitionVideo(plan, inputs)
-    if (clip === null) {
-      // 조용한 폴백이 원인 진단을 가리지 않게, 개발 모드에서만 이유와 입력을 함께 남긴다.
-      // 예상된 상태(클립 없음·터보·모션 축소)라 방향+사유 조합당 한 번만 남긴다.
-      const reason = transitionVideoSkipReason(plan, inputs)
-      this.clipLog.once(`skip:${to}:${reason ?? 'unknown'}`, '클립을 접었다 — 단색 커튼으로 진행한다', {
-        reason,
-        to,
-        url: inputs.url,
-        reducedMotion: inputs.reducedMotion,
-        speed: this.spinSpeed,
-        bannerMs: plan.bannerMs,
-        minCoveredMs: MODE_VIDEO_MIN_COVERED_MS,
-        hasTransitions: this.options.theme.transitions !== undefined,
-      })
-      return
-    }
+    const plan = planTransitionClip(inputs)
+    if (plan !== null) return plan
 
-    const handle = this.transitionVideos.get(to)
+    // 조용한 폴백이 원인 진단을 가리지 않게, 개발 모드에서만 이유와 입력을 함께 남긴다.
+    // 예상된 상태(클립 없음·터보·모션 축소)라 방향+사유 조합당 한 번만 남긴다.
+    const reason = transitionClipSkipReason(inputs)
+    this.clipLog.once(`skip:${to}:${reason ?? 'unknown'}`, '클립을 접었다 — 단색 커튼으로 진행한다', {
+      reason,
+      to,
+      url: inputs.clip?.src,
+      reducedMotion: inputs.reducedMotion,
+      speed: this.spinSpeed,
+      bannerMs: inputs.bannerMs,
+      minCoveredMs: MODE_CLIP_MIN_COVERED_MS,
+      hasTransitions: this.options.theme.transitions !== undefined,
+    })
+    return null
+  }
+
+  /** 이번 전환에 쓸 클립을 골라 둔다. 미리 받아 둔 것이 없으면 단색 커튼으로 남는다. */
+  private prepareTransitionClip(plan: TransitionClipPlan | null, to: ModeTarget): void {
+    if (plan === null) return
+    const handle = this.transitionClips.get(to)
     if (handle === undefined) {
-      this.clipLog.once(`nowarm:${to}`, '미리 받아 둔 클립이 없다', { to, url: clip.url })
+      this.clipLog.once(`nowarm:${to}`, '미리 받아 둔 클립이 없다', { to, url: plan.url })
       return
     }
-
-    // 클립은 연출이지 결과가 아니다. 여기서 무엇이 터지든 전환은 단색 커튼으로 끝나야 한다.
-    try {
-      handle.prepare(clip)
-      this.clipLog.once(`prepare:${to}`, '클립 준비', {
-        to,
-        startAtSec: clip.startAtSec,
-        playbackRate: clip.playbackRate,
-        peakAtMs: clip.peakAtMs,
-        state: handle.describe(),
-      })
-      this.transitionVideo = handle
-      handle.fit(this.geometry.canvasWidth, this.geometry.canvasHeight)
-      // 커튼보다 위에 둔다. 커튼은 그대로 불투명하게 깔려 있어 클립이 늦어도 뒤가 비치지 않는다.
-      this.root.addChild(handle.sprite)
-    } catch (error) {
-      this.clipLog.always('클립 준비 중 예외', { url: clip.url, error })
-      this.releaseTransitionVideo()
-    }
+    this.transitionClip = handle
+    this.clipShowing = false
+    this.clipLog.once(`prepare:${to}`, '클립 준비', { to, opaqueMs: plan.opaqueMs, state: handle.describe() })
   }
 
   /**
-   * 커튼이 완전히 덮인 순간 클립을 튼다.
+   * 클립을 튼다 — **전환이 시작되는 순간(0ms)에** 불린다.
    *
-   * 아직 첫 프레임이 오지 않았으면 **그 자리에서 포기하지 않고** 차폐 구간이 끝날 때까지
-   * 기다렸다가 준비되는 즉시 시작한다. 늦게 시작하는 만큼 남은 차폐 구간으로 계획을 다시
-   * 세워(정점이 여전히 가려진 동안 오도록) 걸고, 남은 구간이 너무 짧으면 그냥 접는다.
+   * 클립 자체가 «화면을 덮는» 연출이라 처음부터 돌아야 `opaqueMs`에 완전히 가려진다.
+   * 덮인 뒤에 시작하면 도입부(아직 투명한 대목)가 교체 순간에 나와 순서가 거꾸로 읽힌다.
+   *
+   * 아직 디코드가 끝나지 않았으면 **그 자리에서 포기하지 않고** 준비되는 즉시 시작한다.
+   * 다만 그때 커튼이 이미 걷히기 시작했다면 새 모드 위에 겹치므로 그냥 접는다.
    */
-  private startTransitionVideo(plan: TransitionPlan, to: ModeTarget): void {
-    const video = this.transitionVideo
-    if (video === null) return
+  private startTransitionClip(): void {
+    const clip = this.transitionClip
+    if (clip === null) return
 
     const show = (): void => {
-      video.fit(this.geometry.canvasWidth, this.geometry.canvasHeight)
-      video.sprite.visible = true
-      video.sprite.alpha = this.curtain.alpha
-      video.play()
+      // 클립은 스스로 덮는 그림이다. 커튼과 달리 처음부터 불투명하게 얹는다.
+      clip.setAlpha(1)
+      clip.play()
+      this.clipShowing = true
     }
 
-    if (video.isReady()) {
+    if (clip.isReady()) {
       show()
-      this.clipLog.once('play', '클립 재생 시작', video.describe())
+      this.clipLog.once('play', '클립 재생 시작', clip.describe())
       return
     }
 
-    this.clipLog.once('late', '덮인 시점에 첫 프레임이 없다 — 차폐 구간 안에서 기다린다', video.describe())
-    const waitStartedAt = Date.now()
-    this.cancelTransitionVideoWait = video.whenReady(() => {
-      this.cancelTransitionVideoWait = null
-      if (this.transitionVideo !== video) return
+    this.clipLog.once('late', '시작 시점에 첫 프레임이 없다 — 준비되는 대로 띄운다', clip.describe())
+    this.cancelTransitionClipWait = clip.whenReady(() => {
+      this.cancelTransitionClipWait = null
+      if (this.transitionClip !== clip) return
       // 커튼이 걷히기 시작한 뒤라면 이제 와서 띄우면 새 모드 위에 겹친다.
-      // 늦게 시작하는 만큼 **남은** 차폐 구간으로 계획을 다시 세운다 — 정점이 여전히 가려진
-      // 동안 오도록. 남은 구간이 최소치보다 짧으면 같은 규칙이 null을 돌려주고 그대로 접는다.
-      const elapsedMs = plan.swapAtMs + (Date.now() - waitStartedAt)
-      const late = planTransitionVideo(
-        { ...plan, swapAtMs: elapsedMs, bannerMs: plan.coverOutStartMs - elapsedMs },
-        { url: transitionClipUrl(this.options.theme, to), reducedMotion: this.options.reducedMotion },
-      )
-      if (late === null) {
-        this.clipLog.once('lategiveup', '기다리는 사이 차폐 구간이 짧아졌다 — 클립을 접는다', { elapsedMs })
-        return
-      }
-      video.prepare(late)
+      if (this.modeTransitionTo === null) return
       show()
     })
   }
 
   /**
-   * 이번 전환에서 클립을 걷는다. 요소·텍스처는 **살려 둔다** — 다음 전환에서 다시 쓴다.
+   * 이번 전환에서 클립을 걷는다. 요소는 **살려 둔다** — 다음 전환에서 다시 쓴다.
    * 완전한 반납은 `destroy()`가 한다.
    */
-  private releaseTransitionVideo(): void {
-    this.cancelTransitionVideoWait?.()
-    this.cancelTransitionVideoWait = null
-    const video = this.transitionVideo
-    if (video === null) return
-    this.transitionVideo = null
-    video.reset()
+  private releaseTransitionClip(): void {
+    this.cancelTransitionClipWait?.()
+    this.cancelTransitionClipWait = null
+    const clip = this.transitionClip
+    if (clip === null) return
+    this.transitionClip = null
+    this.clipShowing = false
+    clip.reset()
   }
 
-  /** 방향별로 받아 둔 클립을 전부 반납한다. 텍스처와 디코더까지 놓는다. */
-  private disposeTransitionVideos(): void {
-    this.releaseTransitionVideo()
-    for (const handle of this.transitionVideos.values()) handle.dispose()
-    this.transitionVideos.clear()
+  /** 방향별로 받아 둔 클립을 전부 반납한다. 요소와 Blob까지 놓는다. */
+  private disposeTransitionClips(): void {
+    this.releaseTransitionClip()
+    for (const handle of this.transitionClips.values()) handle.dispose()
+    this.transitionClips.clear()
   }
 
   /** 커튼이 화면을 완전히 덮은 순간 배경/테두리를 갈아 끼운다. 교체 자체는 가려져 보이지 않는다. */
@@ -1671,13 +1686,13 @@ class PixiRenderer implements RendererCore {
     this.modeTransition = null
     if (to === null) {
       // 전환이 없었더라도 화면에 남아 있는 클립은 반드시 걷는다(멱등).
-      this.releaseTransitionVideo()
+      this.releaseTransitionClip()
       return
     }
     this.modeTransitionTo = null
 
     this.applyModeSwap(to)
-    this.releaseTransitionVideo()
+    this.releaseTransitionClip()
     this.curtain.visible = false
     this.curtain.alpha = 0
     this.emit({ type: 'modeTransition', to, phase: 'end' })
@@ -1812,7 +1827,7 @@ class PixiRenderer implements RendererCore {
     // 대기 중인 쪽이 영영 매달리지 않도록 전환의 끝을 먼저 알린다.
     this.finishModeTransition()
     // 미리 받아 둔 클립까지 여기서 전부 반납한다 — 텍스처(540x960x4 ≈ 2MB)와 디코더.
-    this.disposeTransitionVideos()
+    this.disposeTransitionClips()
     this.clearWins()
     this.killSpinTimelines()
     this.stopAmbient()
@@ -1821,6 +1836,8 @@ class PixiRenderer implements RendererCore {
     this.resizeObserver?.disconnect()
     this.resizeObserver = null
     this.options.container.style.overflow = this.previousOverflow
+    // 클립 오버레이를 위해 바꿔 둔 위치 기준도 되돌린다. 남기면 허브 레이아웃이 조용히 어긋난다.
+    this.options.container.style.position = this.previousPosition
     this.app.destroy({ removeView: true }, { children: true })
     // 앱을 내린 뒤에 정리한다. 스프라이트는 기본적으로 텍스처를 파괴하지 않으므로
     // 캔버스로 만든 폴백·코인 텍스처는 여기서만 해제된다.
