@@ -45,6 +45,12 @@ function firstPackWithoutFreeSpins() {
   return found
 }
 
+function firstPackWithFreeSpins() {
+  const found = loadGameCatalog().packs.find((candidate) => candidate.math.scatter?.freeSpins !== undefined)
+  if (found === undefined) throw new Error('프리스핀이 있는 팩이 카탈로그에 없다 — 이 테스트는 그런 팩을 전제로 한다')
+  return found
+}
+
 function selectGame(id: string) {
   fireEvent.change(screen.getByLabelText('게임'), { target: { value: id } })
 }
@@ -288,14 +294,18 @@ describe('검수 시뮬레이터', () => {
     expect(screen.getByTestId('kpi-exact-rtp')).toHaveTextContent('95% CI')
   })
 
-  it('프리스핀이 있는 게임은 세션이 나올 때까지 뽑을 수 있다', async () => {
+  it('프리스핀이 있는 게임은 세션이 나올 때까지 뽑을 수 있고 표시 배수가 설정과 같다', async () => {
+    const target = firstPackWithFreeSpins()
+    const feature = target.math.scatter?.freeSpins
+    if (feature === undefined) throw new Error(`${target.id}: 프리스핀 기능이 없는데 선택됐다`)
+
     render(<App />)
-    fireEvent.change(screen.getByLabelText('게임'), { target: { value: 'fruit-fiesta' } })
+    selectGame(target.id)
     fireEvent.click(screen.getByRole('tab', { name: '샘플 스핀' }))
 
     fireEvent.click(screen.getByRole('button', { name: '프리스핀 나올 때까지' }))
     await waitFor(() => {
-      expect(screen.getAllByText(/프리스핀 2x/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(new RegExp(`프리스핀 ${feature.multiplier}x`)).length).toBeGreaterThan(0)
     })
     expect(screen.getAllByText(/프리스핀 \d+회 획득/).length).toBeGreaterThan(0)
   })

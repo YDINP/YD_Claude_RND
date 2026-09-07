@@ -5,6 +5,14 @@ import { parseGameMath } from './schema.js'
 import { makeMutationMath } from './testFixtures.js'
 
 /**
+ * 몬테카를로가 도는 테스트의 제한 시간. 기본 5000ms는 idle 기준 400ms대 실행에도
+ * 여유가 크지 않아, 동시 실행 에이전트가 많아 머신이 눌리는 상황에서 통계값이
+ * 바뀌지 않았는데도 타임아웃으로 실패했다. 표본 스핀 수는 검정력의 근거이므로
+ * 줄이지 않고, 대신 실행 시간 예산만 넉넉히 잡는다.
+ */
+const MC_TIMEOUT_MS = 30_000
+
+/**
  * 손으로 계산 가능한 모델. 릴 3개 x 심볼 4종, 1행 1라인.
  * P(aaa) = 1/64 -> 8배, P(aa 이후 끊김) = 3/64 -> 2배, P(bbb) = 1/64 -> 4배.
  * 기대값 = (8 + 6 + 4) / 64 = 18/64 = 0.28125
@@ -160,7 +168,7 @@ describe('RTP 경로 선택', () => {
     const mc = simulate(math, 3, spins, createSeededRng('mystery-cross'))
     const standardError = mc.stdDev / Math.sqrt(spins)
     expect(Math.abs(mc.rtp - analytic.rtp)).toBeLessThan(3 * standardError)
-  })
+  }, MC_TIMEOUT_MS)
 
   it('확장 와일드가 있으면 몬테카를로로 넘어간다', () => {
     const math = makeMutationMath({
@@ -210,5 +218,5 @@ describe('RTP 경로 선택', () => {
     const ratio = (small.monteCarlo?.stdErr ?? 0) / (large.monteCarlo?.stdErr ?? 1)
     expect(ratio).toBeGreaterThan(1.6)
     expect(ratio).toBeLessThan(2.4)
-  })
+  }, MC_TIMEOUT_MS)
 })

@@ -15,6 +15,14 @@ import { makeScatterMath, makeTestMath } from './testFixtures.js'
 
 const scatterMath = makeScatterMath()
 
+/**
+ * 몬테카를로가 도는 테스트의 제한 시간. 기본 5000ms는 idle 기준 300ms대 실행에도
+ * 여유가 크지 않아, 동시 실행 에이전트가 많아 머신이 눌리는 상황에서 통계값이
+ * 바뀌지 않았는데도 타임아웃으로 실패했다. 표본 스핀 수는 검정력의 근거이므로
+ * 줄이지 않고, 대신 실행 시간 예산만 넉넉히 잡는다.
+ */
+const MC_TIMEOUT_MS = 30_000
+
 describe('symbolFrequencies', () => {
   it('스트립 빈도를 확률로 바꾼다', () => {
     const frequencies = symbolFrequencies(scatterMath)
@@ -154,14 +162,14 @@ describe('computeAnalyticRtp', () => {
     const mc = simulate(scatterMath, 3, spins, createSeededRng('analytic-cross-check'))
     const standardError = mc.stdDev / Math.sqrt(spins)
     expect(Math.abs(mc.rtp - analytic.rtp)).toBeLessThan(3 * standardError)
-  })
+  }, MC_TIMEOUT_MS)
 
   it('몬테카를로의 트리거 비율이 해석값과 맞는다', () => {
     const spins = 200_000
     const analytic = computeAnalyticRtp(scatterMath, 3)
     const mc = simulate(scatterMath, 3, spins, createSeededRng('trigger-rate'))
     expect(mc.triggerRate).toBeCloseTo(analytic.triggerProbability, 2)
-  })
+  }, MC_TIMEOUT_MS)
 
   it('몬테카를로의 프리스핀 횟수가 해석값과 맞는다', () => {
     const spins = 200_000
@@ -169,7 +177,7 @@ describe('computeAnalyticRtp', () => {
     const mc = simulate(scatterMath, 3, spins, createSeededRng('free-spin-count'))
     const expectedPerPaidSpin = analytic.triggerProbability * analytic.expectedFreeSpinsPerTrigger
     expect(mc.freeSpinsPlayed / spins).toBeCloseTo(expectedPerPaidSpin, 1)
-  })
+  }, MC_TIMEOUT_MS)
 })
 
 describe('프리스핀 닫힌 식 (손계산 픽스처)', () => {

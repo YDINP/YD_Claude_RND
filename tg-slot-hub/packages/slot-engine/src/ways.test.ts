@@ -10,6 +10,14 @@ import { makeGrid, makeWaysMath } from './testFixtures.js'
 const math = makeWaysMath()
 const BET_PER_WAY = 1
 
+/**
+ * 몬테카를로가 도는 테스트의 제한 시간. 기본 5000ms는 idle 기준 900ms대 실행에도
+ * 여유가 크지 않아, 동시 실행 에이전트가 많아 머신이 눌리는 상황에서 통계값이
+ * 바뀌지 않았는데도 타임아웃으로 실패했다. 표본 스핀 수는 검정력의 근거이므로
+ * 줄이지 않고, 대신 실행 시간 예산만 넉넉히 잡는다.
+ */
+const MC_TIMEOUT_MS = 30_000
+
 describe('getBetPerWay', () => {
   it('총 베팅액을 betDivisor로 나눈다', () => {
     expect(getBetPerWay(math, 50)).toBe(10)
@@ -303,7 +311,7 @@ describe('ways 해석적 RTP', () => {
     const mc = simulate(math, 50, spins, createSeededRng('ways-cross'))
     const standardError = mc.stdDev / Math.sqrt(spins)
     expect(Math.abs(mc.rtp - analytic.rtp)).toBeLessThan(3 * standardError)
-  })
+  }, MC_TIMEOUT_MS)
 
   it('bothWays도 몬테카를로와 맞는다', () => {
     const both = makeWaysMath({ ways: { base: 8, betDivisor: 5, bothWays: true } })
@@ -312,7 +320,7 @@ describe('ways 해석적 RTP', () => {
     const mc = simulate(both, 50, spins, createSeededRng('ways-both'))
     const standardError = mc.stdDev / Math.sqrt(spins)
     expect(Math.abs(mc.rtp - analytic.rtp)).toBeLessThan(3 * standardError)
-  })
+  }, MC_TIMEOUT_MS)
 
   it('전수 조사와 해석값이 정확히 일치한다', () => {
     const enumerated = computeExactRtp(math, 50, { sampleSpins: 0 })

@@ -2,7 +2,7 @@ import { basename, join } from 'node:path'
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { afterAll, describe, expect, it } from 'vitest'
-import { computeExactRtp, isAnalytic, parseGameMath } from '@tgslot/slot-engine'
+import { computeExactRtp, expectedFreeSpinsPerTrigger, isAnalytic, parseGameMath } from '@tgslot/slot-engine'
 import type { GameMath } from '@tgslot/slot-engine'
 import { parseGameManifest } from '@tgslot/game-sdk'
 import { listArtOnlyDirs, listGameDirs, listGamePackDirs, readJson } from './paths.js'
@@ -209,21 +209,31 @@ describe('games/* 수학 모델 게이트', () => {
       expect(sum).toBeCloseTo(report.rtp, 10)
     }, MC_TIMEOUT_MS)
 
-    it('프리스핀이 있으면 기대 횟수가 발산하지 않는다', () => {
-      const math = requireMath()
-      const feature = math.scatter?.freeSpins
-      if (feature === undefined || !feature.retrigger) {
-        expect(true).toBe(true)
-        return
-      }
-      const report = computeExactRtp(math, math.betLevels[0] ?? 1, {
-        sampleSpins: 0,
-        mcSpins: 200_000,
-        mcSeed: GATE_MC_SEED,
-      })
-      // count x P(트리거) < 1 이어야 등비급수가 수렴한다.
-      expect(feature.count * report.triggerProbability).toBeLessThan(1)
-    }, MC_TIMEOUT_MS)
+    // 프리스핀 기능 자체가 없는 팩은 발산할 급수가 없다 — 명시적으로 건너뛴다.
+    const hasFreeSpinsFeature = loaded.math !== null && loaded.math.scatter?.freeSpins !== undefined
+
+    it.skipIf(!hasFreeSpinsFeature)(
+      '프리스핀 기대 횟수가 발산하지 않는다 (리트리거 없으면 count와 같다)',
+      () => {
+        const math = requireMath()
+        const feature = math.scatter?.freeSpins
+        if (feature === undefined) throw new Error(`${name}: 프리스핀 기능이 없는데 검사가 실행됐다`)
+        const report = computeExactRtp(math, math.betLevels[0] ?? 1, {
+          sampleSpins: 0,
+          mcSpins: 200_000,
+          mcSeed: GATE_MC_SEED,
+        })
+        const spinsPerTrigger = expectedFreeSpinsPerTrigger(feature.count, report.triggerProbability, feature.retrigger)
+        if (feature.retrigger) {
+          // count x P(트리거) < 1 이어야 등비급수가 수렴한다.
+          expect(feature.count * report.triggerProbability).toBeLessThan(1)
+        } else {
+          // 리트리거가 없으면 복리가 없다 — 기대 횟수는 항상 count 그대로이므로 발산할 수 없다.
+          expect(spinsPerTrigger).toBe(feature.count)
+        }
+      },
+      MC_TIMEOUT_MS,
+    )
 
     it('manifest.json이 있고 math.json과 어긋나지 않는다', () => {
       const math = requireMath()
