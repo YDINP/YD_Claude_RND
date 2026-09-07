@@ -3,6 +3,7 @@ import {
   bigint,
   bigserial,
   boolean,
+  check,
   doublePrecision,
   index,
   integer,
@@ -34,35 +35,69 @@ export const users = pgTable('users', {
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const wallets = pgTable('wallets', {
-  userId: uuid('user_id')
-    .primaryKey()
-    .references(() => users.id),
-  coins: bigint('coins', { mode: 'number' }).notNull().default(0),
-  gems: bigint('gems', { mode: 'number' }).notNull().default(0),
-  /** 유저별 스핀 카운터. provably fair 시드에 섞여 라운드마다 다른 수열을 만든다. */
-  nonce: bigint('nonce', { mode: 'number' }).notNull().default(0),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+/**
+ * 잔액은 **음수가 될 수 없다**는 것을 DB가 직접 강제한다.
+ *
+ * 애플리케이션은 지갑 row lock을 잡고 트랜잭션 안에서 잔액을 확인하므로 지금은 음수를 만들지
+ * 않는다. 다만 그건 코드가 맞다는 전제이고, 논리 버그 하나가 곧장 음수 잔액이 된다.
+ * CHECK는 그런 버그를 조용한 데이터 손상이 아니라 **실패하는 트랜잭션**으로 바꾼다.
+ */
+export const wallets = pgTable(
+  'wallets',
+  {
+    userId: uuid('user_id')
+      .primaryKey()
+      .references(() => users.id),
+    coins: bigint('coins', { mode: 'number' }).notNull().default(0),
+    gems: bigint('gems', { mode: 'number' }).notNull().default(0),
+    /** 유저별 스핀 카운터. provably fair 시드에 섞여 라운드마다 다른 수열을 만든다. */
+    nonce: bigint('nonce', { mode: 'number' }).notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check('wallets_coins_non_negative', sql`${table.coins} >= 0`),
+    check('wallets_gems_non_negative', sql`${table.gems} >= 0`),
+  ]
+)
 
-/** append-only 원장. update/delete 하지 않는다. */
-export const ledger = pgTable('ledger', {
-  id: bigserial('id', { mode: 'number' }).primaryKey(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id),
-  delta: bigint('delta', { mode: 'number' }).notNull(),
-  currency: text('currency', { enum: ['coins', 'gems'] })
-    .notNull()
-    .default('coins'),
-  reason: text('reason').notNull(),
-  refId: text('ref_id'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+/**
+ * append-only 원장. update/delete 하지 않는다.
+ *
+ * `(reason, ref_id)` 유니크가 **같은 사건의 이중 기록**을 DB에서 막는다.
+ * `SUM(delta) == wallet` 검사로는 이 계열을 절대 잡을 수 없다 — 같은 지급이 두 번 일어나면
+ * 지갑과 원장이 함께 늘어나 합은 계속 맞기 때문이다 (`scripts/checkLedger.ts` 참고).
+ *
+ * refId를 붙이는 사유는 전부 "사건 하나 = 행 하나"다: `spin_bet`/`spin_win`/`jackpot_win`/
+ * `level_up`은 roundId, `gamble_escrow`는 `${roundId}:g0:escrow`, `gamble_collect`는
+ * `${roundId}:g${step}`. 전부 roundId(uuid)에서 파생되므로 전역 유일하다.
+ * 반대로 정상적으로 반복되는 사유(보너스·미션 보상)는 ref_id가 NULL이고, Postgres의 UNIQUE는
+ * NULL을 서로 다르게 보므로 이 제약에 걸리지 않는다 — 사유 이름을 예외 목록으로 관리할 필요가 없다.
+ */
+export const ledger = pgTable(
+  'ledger',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    delta: bigint('delta', { mode: 'number' }).notNull(),
+    currency: text('currency', { enum: ['coins', 'gems'] })
+      .notNull()
+      .default('coins'),
+    reason: text('reason').notNull(),
+    refId: text('ref_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique('ledger_reason_ref_id_unique').on(table.reason, table.refId)]
+)
 
 /**
  * 스핀 1회 = 1행. 분쟁 대응, RTP 실측, provably fair 검증의 소스다.
- * `(user_id, idempotency_key)` 유니크가 재전송에 의한 이중 차감을 DB 레벨에서 막는다.
+ * `(user_id, game_id, idempotency_key)` 유니크가 재전송에 의한 이중 차감을 DB 레벨에서 막는다.
+ *
+ * `game_id`가 키에 들어가는 이유: 클라이언트는 게임마다 독립적으로 키를 만들기 때문에 서로 다른
+ * 게임이 같은 키를 쓸 수 있다. 게임을 빼면 그때 재전송으로 오인해 **다른 게임의 라운드**를
+ * 돌려주고, 릴 수가 다르면 응답 조립에서 터져 500이 된다.
  */
 export const rounds = pgTable(
   'rounds',
@@ -114,7 +149,9 @@ export const rounds = pgTable(
     gambleSteps: jsonb('gamble_steps'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [unique('rounds_user_id_idempotency_key_unique').on(table.userId, table.idempotencyKey)]
+  (table) => [
+    unique('rounds_user_id_game_id_idempotency_key_unique').on(table.userId, table.gameId, table.idempotencyKey),
+  ]
 )
 
 // ---- 허브 기능 (Phase 3) ----

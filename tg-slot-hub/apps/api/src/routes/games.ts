@@ -27,12 +27,27 @@ import { createRoundRng, createRoundSeed, hashSeed } from '../spin/provablyFair.
 /** math.json은 게임 버전이 올라갈 때만 바뀌므로 짧게 캐시한다. */
 const MATH_CACHE_MAX_AGE_SEC = 300
 
+/**
+ * 디버그 시드 재추첨을 **이 빌드에 포함할지** 가르는 빌드 타임 조건.
+ *
+ * 아래 세 곳에서 `process.env.NODE_ENV !== 'production'`를 **인라인으로** 쓴다. 상수에 담아
+ * 두면 esbuild가 (minify 없이는) 값을 분기까지 전파하지 않아 죽은 코드가 그대로 남는다.
+ * 인라인이면 `tsup.config.ts`의 `define`이 리터럴로 치환해 `"production" !== "production"`
+ * → `false`로 접히고, `if (false && ...)` 분기가 통째로 제거된다. 그러면
+ * `findDebugSeed`(원하는 결과가 나올 때까지 시드를 다시 뽑는 루프)를 참조하는 곳이 사라져
+ * 모듈째 트리셰이킹된다 — **재추첨 능력이 프로덕션 바이너리에 아예 존재하지 않는다.**
+ *
+ * 런타임 플래그(`config.allowDebugSpin`)는 그대로 두고 **둘 다** 요구한다. 플래그 하나에만
+ * 기대면 설정 실수 한 번으로 능력이 되살아나지만, 코드가 없으면 되살릴 방법이 없다.
+ * 빌드 후 `dist/index.js`에 `findDebugSeed`가 남지 않는지로 검증한다.
+ */
+
 export interface GamesRouteDeps {
   registry: GameRegistry
   repos: Repos
   jwt: JwtService
-  /** `allowDevMock`은 `debug` 강제 프리셋 요청을 허용할지 결정한다 (개발/테스트 환경 전용). */
-  config: Pick<ApiConfig, 'spinLockTimeoutMs' | 'allowDevMock'>
+  /** `allowDebugSpin`은 `debug` 강제 프리셋 요청을 허용할지 결정한다 (개발/테스트 환경 전용). */
+  config: Pick<ApiConfig, 'spinLockTimeoutMs' | 'allowDebugSpin'>
   /** 테스트에서 락을 공유하고 싶을 때 주입. 없으면 config의 타임아웃으로 새로 만든다. */
   lock?: SpinLock
   /**
@@ -104,8 +119,9 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
     }
     const { totalBet, idempotencyKey, debug } = parsed.data
 
-    // 개발 전용 강제 프리셋. `allowDevMock`이 꺼져 있으면 (프로덕션 기본값) 요청 자체를 거부한다.
-    if (debug && !deps.config.allowDevMock) {
+    // 개발 전용 강제 프리셋. 빌드에서 빠졌거나(프로덕션 번들) `allowDebugSpin`이 꺼져 있으면
+    // (기본값) 요청 자체를 거부한다. 둘 중 하나라도 아니면 아래 탐색 경로에 닿지 않는다.
+    if (debug && !(process.env.NODE_ENV !== 'production' && deps.config.allowDebugSpin)) {
       return c.json({ error: 'Debug spin presets are disabled', code: 'DEBUG_DISABLED' }, 400)
     }
     // gamble 프리셋은 그 게임에 더블업 설정이 없으면 애초에 만족될 수 없다. 시드 탐색을
@@ -153,7 +169,7 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
             let rng: ReturnType<typeof createRng>
             let result: ReturnType<typeof spinWithState>
 
-            if (debug) {
+            if (process.env.NODE_ENV !== 'production' && debug) {
               // 시드 탐색: 실제 스핀과 같은 rng 파생(`${seed}:${nonce}`)과 같은 엔진 경로로
               // 지갑/원장/라운드를 건드리지 않고 조건을 만족하는 시드가 나올 때까지 반복한다.
               // 매칭에 쓴 rng를 그대로 이어받아 잭팟 판정을 뽑으므로 소비 순서가 실제 경로와 같다.
@@ -249,7 +265,8 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
         return c.json({ error: error.message, code: error.code }, 400)
       }
       // 시드 탐색이 maxTries 안에 프리셋을 만족하는 결과를 못 찾았을 때. 시드는 로그에 남기지 않는다.
-      if (error instanceof DebugNoMatchError) {
+      // 앞에 상수를 붙여 프로덕션 번들에서는 이 `instanceof`(=모듈 참조)까지 함께 지워지게 한다.
+      if (process.env.NODE_ENV !== 'production' && error instanceof DebugNoMatchError) {
         return c.json({ error: error.message, code: 'DEBUG_NO_MATCH' }, 409)
       }
       if (error instanceof InsufficientFundsError) {

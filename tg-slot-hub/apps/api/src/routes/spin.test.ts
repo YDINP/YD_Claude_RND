@@ -27,7 +27,8 @@ function makeConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
     jwtSecret: 'test-secret-at-least-32-characters-long',
     databaseUrl: undefined,
     port: 8787,
-    allowDevMock: true,
+    allowDevAuth: true,
+    allowDebugSpin: true,
     corsOrigin: '*',
     spinLockTimeoutMs: 15_000,
     ...overrides,
@@ -456,5 +457,103 @@ describe('spin timeout', () => {
 
     // 타임아웃은 회계를 건드리지 않는다.
     expect(harness.repos.getLedgerSum(harness.userId)).toBe(STARTING_COINS)
+  })
+})
+
+/**
+ * M-1 회귀: 멱등키는 **게임별로** 스코프된다.
+ *
+ * 예전에는 조회 키와 DB 유니크가 `(userId, idempotencyKey)`뿐이라 게임이 빠져 있었다.
+ * 클라이언트는 게임마다 독립적으로 키를 만들므로 서로 다른 게임이 같은 키를 쓸 수 있고,
+ * 그때 두 번째 요청이 **첫 번째 게임의 라운드**를 재전송으로 오인해 돌려줬다.
+ *  - 릴 수가 다르면 응답 조립에서 터져 500 (인증된 유저가 반복 가능한 500을 만들 수 있다)
+ *  - 릴 수가 같으면 조용히 다른 게임의 라운드가 응답된다
+ *
+ * 지금 금전 버그가 아닌 이유는 재전송 분기에 부수효과가 하나도 없기 때문뿐이다.
+ * 그 분기에 부수효과가 앞서는 형태가 바로 무한 코인 버그였으므로 여기서 닫는다.
+ */
+describe('멱등키는 게임별로 스코프된다', () => {
+  const MULTI_GAME_IDS = ['classic-777', 'royal-diamond-777', 'fruit-fiesta', 'shiba-shrine'] as const
+
+  function multiGameRegistry(): GameRegistry {
+    return createGameRegistry(
+      MULTI_GAME_IDS.map((id) => {
+        const pack = diskPacks.find((candidate) => candidate.id === id)
+        if (!pack) throw new Error(`${id} 팩이 없다`)
+        return pack
+      })
+    )
+  }
+
+  async function spinOn(harness: Harness, gameId: string, idempotencyKey: string): Promise<Response> {
+    return spinRequest(harness, { gameId, idempotencyKey, totalBet: BET })
+  }
+
+  it('릴 수가 다른 게임에 같은 키를 써도 500이 아니라 새 라운드가 나온다', async () => {
+    // 감사자가 HTTP로 재현한 그대로: 3릴 -> 5릴에 같은 키.
+    // 예전에는 두 번째가 classic-777 라운드(stops 3개)를 5릴 응답으로 조립하려다
+    // `RangeError: stops 개수(3)가 reels(5)와 다르다`로 500이 됐다.
+    const harness = await setup(multiGameRegistry())
+    const key = 'key-crossgame-1'
+
+    const first = await spinOn(harness, 'classic-777', key)
+    expect(first.status).toBe(200)
+    const second = await spinOn(harness, 'royal-diamond-777', key)
+
+    expect(second.status).toBe(200)
+    const firstBody = (await first.json()) as SpinResponse
+    const secondBody = (await second.json()) as SpinResponse
+    // 서로 독립된 라운드다.
+    expect(secondBody.roundId).not.toBe(firstBody.roundId)
+    // 각자 자기 게임의 릴 수만큼 stops를 갖는다 — 이게 어긋나면 예전의 500이 재현된다.
+    expect(firstBody.stops).toHaveLength(3)
+    expect(secondBody.stops).toHaveLength(5)
+    // 두 게임 모두 실제로 베팅이 빠졌다 (한쪽이 재전송으로 삼켜지지 않았다).
+    expect(harness.repos.countLedgerEntries(harness.userId, 'spin_bet')).toBe(2)
+  })
+
+  it('릴 수가 같은 게임에 같은 키를 써도 다른 게임의 라운드가 나오지 않는다', async () => {
+    // 이쪽은 예전에도 200이었지만 **조용히** 앞 게임의 라운드를 돌려줬다. 더 위험한 형태다.
+    const harness = await setup(multiGameRegistry())
+    const key = 'key-crossgame-2'
+
+    const first = (await (await spinOn(harness, 'fruit-fiesta', key)).json()) as SpinResponse
+    const second = (await (await spinOn(harness, 'shiba-shrine', key)).json()) as SpinResponse
+
+    expect(second.roundId).not.toBe(first.roundId)
+    // 라운드 기록의 게임이 각각 맞는지 레포에서 직접 확인한다.
+    expect((await harness.repos.getRoundById(first.roundId))?.gameId).toBe('fruit-fiesta')
+    expect((await harness.repos.getRoundById(second.roundId))?.gameId).toBe('shiba-shrine')
+    expect(harness.repos.countLedgerEntries(harness.userId, 'spin_bet')).toBe(2)
+  })
+
+  it('같은 게임 안에서는 멱등 재전송이 그대로 동작한다', async () => {
+    // 스코프를 좁혔다고 원래 목적(네트워크 재전송 방어)이 약해지면 안 된다.
+    const harness = await setup(multiGameRegistry())
+    const key = 'key-samegame-01'
+
+    const first = (await (await spinOn(harness, 'classic-777', key)).json()) as SpinResponse
+    const replay = (await (await spinOn(harness, 'classic-777', key)).json()) as SpinResponse
+
+    expect(replay.roundId).toBe(first.roundId)
+    expect(replay).toEqual(first)
+    // 재전송은 회계를 다시 건드리지 않는다.
+    expect(harness.repos.countLedgerEntries(harness.userId, 'spin_bet')).toBe(1)
+  })
+
+  it('네 게임에 같은 키를 돌려도 네 개의 독립된 라운드가 된다', async () => {
+    const harness = await setup(multiGameRegistry())
+    const key = 'key-crossgame-4'
+
+    const roundIds: string[] = []
+    for (const gameId of MULTI_GAME_IDS) {
+      const res = await spinOn(harness, gameId, key)
+      expect(res.status).toBe(200)
+      roundIds.push(((await res.json()) as SpinResponse).roundId)
+    }
+
+    expect(new Set(roundIds).size).toBe(MULTI_GAME_IDS.length)
+    expect(harness.repos.countLedgerEntries(harness.userId, 'spin_bet')).toBe(MULTI_GAME_IDS.length)
+    expect(harness.repos.findDuplicateLedgerRefs(harness.userId)).toEqual([])
   })
 })

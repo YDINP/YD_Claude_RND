@@ -39,7 +39,8 @@ function makeConfig(): ApiConfig {
     jwtSecret: 'test-secret-at-least-32-characters-long',
     databaseUrl: undefined,
     port: 8787,
-    allowDevMock: true,
+    allowDevAuth: true,
+    allowDebugSpin: true,
     corsOrigin: '*',
     spinLockTimeoutMs: 15_000,
   }

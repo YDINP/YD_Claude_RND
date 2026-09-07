@@ -16,7 +16,8 @@ function makeConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
     jwtSecret: 'test-secret-at-least-32-characters-long',
     databaseUrl: undefined,
     port: 8787,
-    allowDevMock: false,
+    allowDevAuth: false,
+    allowDebugSpin: false,
     corsOrigin: '*',
     spinLockTimeoutMs: 15_000,
     ...overrides,
@@ -268,8 +269,8 @@ describe('GET /games', () => {
 })
 
 describe('dev mock auth', () => {
-  it('rejects mock: initData when API_ALLOW_DEV_MOCK is false', async () => {
-    const app = createApp({ config: makeConfig({ allowDevMock: false }), repos: new MemoryRepos() })
+  it('rejects mock: initData when API_ALLOW_DEV_AUTH is false', async () => {
+    const app = createApp({ config: makeConfig({ allowDevAuth: false }), repos: new MemoryRepos() })
 
     const res = await app.request('/auth/telegram', {
       method: 'POST',
@@ -280,8 +281,8 @@ describe('dev mock auth', () => {
     expect(res.status).toBe(401)
   })
 
-  it('accepts mock: initData when API_ALLOW_DEV_MOCK is true', async () => {
-    const app = createApp({ config: makeConfig({ allowDevMock: true }), repos: new MemoryRepos() })
+  it('accepts mock: initData when API_ALLOW_DEV_AUTH is true', async () => {
+    const app = createApp({ config: makeConfig({ allowDevAuth: true }), repos: new MemoryRepos() })
 
     const res = await app.request('/auth/telegram', {
       method: 'POST',

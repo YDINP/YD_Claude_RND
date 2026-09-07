@@ -54,8 +54,13 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
  *   `(user_id, idempotency_key)`가 유니크라 유저가 같은 키로 재시도해도 이중 차감은 생기지 않는다.
  *
  * 이 락은 **프로세스 안에서만** 유효하다. API 인스턴스를 여러 개 띄우면 서로의 락을 보지 못하므로
- * 이중 차감 방어는 DB의 `(user_id, idempotency_key)` 유니크와 지갑 row lock이 맡는다.
+ * 이중 차감 방어는 DB의 `(user_id, game_id, idempotency_key)` 유니크와 지갑 row lock이 맡는다.
  * 인스턴스 간 직렬화가 필요해지면 Phase 3에서 Redis 락으로 올린다.
+ *
+ * **in-memory 레포와의 조합은 금지다.** 그 조합에서는 DB 방어가 아예 없으므로 이 인프로세스 락이
+ * 유일한 방어인데, 인스턴스가 둘 이상이면 그것마저 인스턴스 경계를 넘지 못한다 (게다가 지갑 자체가
+ * 인스턴스마다 따로 논다). `config.ts`가 `NODE_ENV=production`에서 `DATABASE_URL` 없이 뜨는 것을
+ * 거부해 이 조합이 성립하지 못하게 막는다. 개발에서는 인스턴스 하나만 띄운다는 전제다.
  */
 export class SpinLock {
   private readonly held = new Map<string, Held>()

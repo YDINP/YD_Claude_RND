@@ -26,7 +26,8 @@ function makeConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
     jwtSecret: 'test-secret-at-least-32-characters-long',
     databaseUrl: undefined,
     port: 8787,
-    allowDevMock: true,
+    allowDevAuth: true,
+    allowDebugSpin: true,
     corsOrigin: '*',
     spinLockTimeoutMs: 15_000,
     ...overrides,
@@ -76,13 +77,13 @@ async function debugSpinRequest(harness: Harness, options: DebugSpinOptions): Pr
 }
 
 describe('POST /games/:id/spin debug presets', () => {
-  it('rejects a debug request with 400 DEBUG_DISABLED when allowDevMock is false', async () => {
+  it('rejects a debug request with 400 DEBUG_DISABLED when allowDebugSpin is false', async () => {
     const registry = createGameRegistry([pack('classic-777')])
-    // mock: initData 로그인 자체가 allowDevMock을 요구하므로, 로그인은 켜진 앱으로 하고
-    // 같은 레포/시크릿을 공유하는 꺼진 앱으로 스핀을 보낸다 (토큰은 발급된 뒤에 정책이 바뀐 상황을 흉내낸다).
-    const harness = await setup(registry, { allowDevMock: true })
+    // 두 플래그가 갈렸으므로 "로그인은 되지만 결과 강제는 막힌다"를 그대로 재현할 수 있다.
+    // 같은 레포/시크릿을 공유하되 allowDebugSpin만 꺼진 앱으로 스핀을 보낸다.
+    const harness = await setup(registry, { allowDevAuth: true, allowDebugSpin: true })
     const disabledApp = createApp({
-      config: makeConfig({ allowDevMock: false }),
+      config: makeConfig({ allowDevAuth: true, allowDebugSpin: false }),
       repos: harness.repos,
       games: registry,
     })

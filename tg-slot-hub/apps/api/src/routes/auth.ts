@@ -8,7 +8,7 @@ import { validateInitData } from '../auth/initData.js'
 import { tryDevMockAuth } from '../auth/devMock.js'
 
 export interface AuthRouteDeps {
-  config: Pick<ApiConfig, 'allowDevMock' | 'telegramBotToken'>
+  config: Pick<ApiConfig, 'allowDevAuth' | 'telegramBotToken'>
   repos: Repos
   jwt: JwtService
 }
@@ -33,7 +33,7 @@ export function createAuthRoute(deps: AuthRouteDeps): Hono {
     const { initData } = parsed.data
 
     // dev mock 경로를 먼저 시도하고, 통과 못 하면(=플래그 꺼짐 또는 mock: 접두사 없음) 실서명 검증으로 폴백한다.
-    const authResult = tryDevMockAuth(initData, deps.config.allowDevMock) ?? validateInitData(initData, deps.config.telegramBotToken)
+    const authResult = tryDevMockAuth(initData, deps.config.allowDevAuth) ?? validateInitData(initData, deps.config.telegramBotToken)
 
     if (!authResult.ok) {
       return c.json({ error: 'Invalid Telegram init data', code: 'INVALID_INIT_DATA' }, 401)

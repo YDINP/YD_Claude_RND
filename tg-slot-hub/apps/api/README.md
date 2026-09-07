@@ -52,7 +52,7 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
 | 503 | `GAMBLE_TIMEOUT` | 더블업이 락 제한 시간 안에 끝나지 않음. **같은 키로 재시도**하면 된다 |
 | 500 | `INTERNAL` | 라우트가 잡지 못한 예외 |
 | 503 | `SPIN_TIMEOUT` | 스핀이 `SPIN_LOCK_TIMEOUT_MS` 안에 끝나지 않음. **같은 키로 재시도**하면 된다 |
-| 400 | `DEBUG_DISABLED` | `SpinRequest.debug`를 보냈는데 `API_ALLOW_DEV_MOCK`이 꺼져 있음 |
+| 400 | `DEBUG_DISABLED` | `SpinRequest.debug`를 보냈는데 `API_ALLOW_DEBUG_SPIN`이 꺼져 있거나, 이 빌드에 디버그 경로가 아예 포함되지 않음 |
 | 409 | `DEBUG_NO_MATCH` | `debug.maxTries` 안에 프리셋 조건을 만족하는 시드를 못 찾음 (또는 `gamble` 프리셋인데 그 게임에 `gamble` 설정이 없음) |
 
 ### 스핀 요청/응답
@@ -85,11 +85,21 @@ Telegram 슬롯 허브의 API 서버. Hono + Node로 인증, 공용 지갑, 게�
 같은 `idempotencyKey`로 다시 보내면 지갑을 건드리지 않고 **완전히 같은 응답**을 돌려준다
 (네트워크 재전송 대비). 진행 중인 스핀이 있는 상태에서 **다른** 키가 오면 409다.
 
+멱등키는 **게임별로 스코프된다** (`(user_id, game_id, idempotency_key)`). 클라이언트는 게임마다
+독립적으로 키를 만들므로 서로 다른 게임이 같은 키를 쓸 수 있는데, 게임이 키에 없으면 그때
+다른 게임의 라운드가 재전송으로 잘못 반환된다 (릴 수가 다르면 500까지 간다).
+
 ### 개발 전용: 강제 결과 프리셋 (`debug`)
 
-`API_ALLOW_DEV_MOCK=true`일 때만 동작한다. **꺼져 있으면(프로덕션 기본값) 요청 자체가 400
-`DEBUG_DISABLED`로 거부된다.** 당첨 연출 QA를 위해 다음 스핀이 특정 조건을 만족할 때까지
-서버가 시드를 다시 뽑아 본다.
+`API_ALLOW_DEBUG_SPIN=true`일 때만, 그리고 **디버그 경로가 포함된 빌드에서만** 동작한다.
+둘 중 하나라도 아니면 요청 자체가 400 `DEBUG_DISABLED`로 거부된다.
+당첨 연출 QA를 위해 다음 스핀이 특정 조건을 만족할 때까지 서버가 시드를 다시 뽑아 본다.
+
+> **프로덕션 번들에는 이 기능이 존재하지 않는다.** `tsup.config.ts`가 빌드 시점의 `NODE_ENV`를
+> 번들에 리터럴로 박고(미지정이면 `production`), 그러면 시드 재추첨 루프(`games/debugSpin.ts`의
+> `findDebugSeed`)가 죽은 코드가 되어 트리셰이킹으로 사라진다. 런타임 플래그를 켜도 되살아나지
+> 않는다. QA용 빌드는 `NODE_ENV=development pnpm --filter @tgslot/api build`로 만든다.
+> 개발 서버(`tsx watch`)는 번들을 거치지 않으므로 항상 포함된다.
 
 ```jsonc
 // POST /games/sheriff-sixgun/spin
@@ -226,9 +236,17 @@ DATABASE_URL=postgres://... node dist/scripts/checkLedger.js         # 배포 (�
 가도록 설정한다. `DATABASE_URL`이 없으면 exit 2다. 출력은 한 줄 JSON이라 로그 수집기가 바로 파싱한다.
 
 ```jsonc
-{"evt":"ledger_check","ok":true,"mismatches":0}
+{"evt":"ledger_check","ok":true,"mismatches":0,"duplicateRefs":0}
 {"evt":"ledger_mismatch","userId":"...","currency":"coins","wallet":9900,"ledger":9800,"diff":100}
+{"evt":"ledger_duplicate_ref","userId":"...","reason":"gamble_collect","refId":"<roundId>:g0","entries":5}
 ```
+
+**중복 지급 검사(`ledger_duplicate_ref`)가 따로 있는 이유.** 같은 지급이 두 번 일어나면 지갑과
+원장이 **함께** 늘어나므로 `SUM(delta) == wallet`은 완벽히 통과한다. 합 검사만으로는 이 계열을
+절대 잡을 수 없어서, `(reason, ref_id)`가 두 번 이상 나온 항목을 따로 본다. refId를 남기는 사유는
+전부 "사건 하나 = 행 하나"이고(roundId 파생), 정상적으로 반복되는 사유(보너스·미션 보상)는 refId가
+NULL이라 검사에서 빠진다 — 사유 이름 예외 목록이 필요 없다. DB에도 같은 뜻의
+`ledger_reason_ref_id_unique` 유니크가 걸려 있다.
 
 ## 프리스핀 (Phase 5)
 
@@ -393,8 +411,10 @@ ways 게임의 당첨 라인은 `ways`(경로 수)와 `direction`(`ltr`/`rtl`)�
 | `JWT_SECRET` | Y | - | JWT 서명 시크릿 (HS256) |
 | `DATABASE_URL` | N | 없음 | 설정 시 Postgres(drizzle), 없으면 in-memory 레포로 동작 |
 | `API_PORT` | N | `8787` | 리슨 포트 |
-| `API_ALLOW_DEV_MOCK` | N | `false` | `true`일 때만 `mock:<telegramId>:<firstName>` initData 허용 |
-| `CORS_ORIGIN` | N | `*` | CORS allow-origin |
+| `API_ALLOW_DEV_AUTH` | N | `false` | `true`일 때만 `mock:<telegramId>:<firstName>` initData 허용 (**임의 유저 사칭**). 프로덕션에서 `true`면 부팅 거부 |
+| `API_ALLOW_DEBUG_SPIN` | N | `false` | `true`일 때만 `SpinRequest.debug` 강제 프리셋 허용 (**스핀 결과 강제**). 프로덕션에서 `true`면 부팅 거부 |
+| `CORS_ORIGIN` | N | `*` (개발만) | CORS allow-origin. **프로덕션에서는 필수** — 미설정 시 부팅 거부 |
+| `NODE_ENV` | N | 없음 | `production`이면 위험한 설정 조합을 부팅 단계에서 거부한다 |
 | `GAMES_DIR` | N | 자동 탐색 | 게임 팩 폴더. 지정하지 않으면 `pnpm-workspace.yaml`을 찾아 올라가 `<repo>/games`를 쓴다 |
 | `SPIN_LOCK_TIMEOUT_MS` | N | `15000` | 유저별 스핀 락 보유 상한. 넘기면 락을 놓고 503 `SPIN_TIMEOUT` |
 
@@ -421,7 +441,7 @@ pnpm --filter @tgslot/api db:push       # 실제 DB에 반영. 이 저장소 안
 |---|---|
 | `0000_burly_zombie.sql` | `users`/`wallets`/`ledger` 초기 테이블 (drizzle-kit generate 자동 생성) |
 | `0001_ledger_append_only_trigger.sql` | `ledger`에 `BEFORE UPDATE OR DELETE` 트리거를 달아 애플리케이션 버그로도 원장을 못 고치게 DB 레벨에서 강제 |
-| `0002_harsh_donald_blake.sql` | `rounds` 테이블 + `wallets.nonce`. `(user_id, idempotency_key)` 유니크가 이중 차감을 DB 레벨에서 차단 |
+| `0002_harsh_donald_blake.sql` | `rounds` 테이블 + `wallets.nonce`. `(user_id, idempotency_key)` 유니크가 이중 차감을 DB 레벨에서 차단 (0011에서 `game_id` 추가) |
 | `0003_parallel_dormammu.sql` | 허브 테이블 5종(`bonus_claims`, `jackpot_pool`, `jackpot_hits`, `leaderboard_weekly`, `mission_progress`) + `users.xp`. 맨 끝의 `INSERT INTO jackpot_pool`은 손으로 덧붙인 시드 행이다 (drizzle-kit은 데이터를 만들지 않는다) |
 | `0004_spicy_living_tribunal.sql` | `rounds.jackpot_win` / `level_up_from` / `level_up_to` / `level_up_bonus`. 멱등 재전송이 처음과 **완전히 같은** 응답을 돌려주도록 라운드의 부수 결과를 함께 남긴다 |
 | `0005_cynical_jane_foster.sql` | `users.locale_explicit`. 유저가 직접 고른 언어를 로그인이 덮어쓰지 못하게 하는 플래그 |
@@ -442,10 +462,15 @@ pnpm --filter @tgslot/api db:push       # 실제 DB에 반영. 이 저장소 안
 - **원장 불변식**: `ledger`는 애플리케이션에서 insert만 하고, DB 트리거(`0001_...sql`)로도
   update/delete를 막아 append-only를 이중으로 강제한다.
 - **레포 선택**: `DATABASE_URL`이 없으면 자동으로 in-memory 레포로 폴백한다 (Phase 0 목적).
-  프로덕션에서는 반드시 `DATABASE_URL`을 설정해야 한다.
-- **dev mock**: `src/auth/devMock.ts`는 `API_ALLOW_DEV_MOCK`이 정확히 `"true"`일 때만 동작하며,
-  그 외에는 항상 `null`을 반환해 실제 initData 서명 검증 경로로 폴백한다. 켜져 있으면 부팅 시
-  `src/config.ts`가 콘솔에 눈에 띄는 경고를 찍는다.
+  in-memory 레포는 프로세스 메모리에만 살아서 **단일 인스턴스 전용**이다 — 인스턴스를 여러 개
+  띄우면 지갑이 갈라지고 `spin/lock.ts`의 인프로세스 락도 경계를 넘지 못해 이중 차감 방어가
+  사라진다. 그래서 `NODE_ENV=production`인데 `DATABASE_URL`이 없으면 부팅을 거부한다.
+- **개발 플래그는 두 개로 갈려 있다**: `API_ALLOW_DEV_AUTH`(서명 검증 없는 mock 로그인)와
+  `API_ALLOW_DEBUG_SPIN`(스핀 결과 강제). 권한의 성격이 다르므로 하나를 켜도 다른 하나는 열리지
+  않는다. 둘이 결합하면 "임의 유저로 로그인해 원하는 결과를 뽑기"가 성립하기 때문이다.
+  각각 정확히 `"true"`일 때만 켜지고, 켜져 있으면 부팅 시 콘솔에 눈에 띄는 경고를 찍는다.
+  `NODE_ENV=production`에서는 경고가 아니라 **부팅 거부**다 (경고는 배포 로그에 묻힌다).
+  합쳐져 있던 옛 이름 `API_ALLOW_DEV_MOCK`이 남아 있으면, 조용히 무시하지 않고 부팅을 막는다.
 - **로케일/프로필 갱신**: `initData.user.language_code`가 `SUPPORTED_LOCALES`(`en`,`ko`)에 없으면
   `DEFAULT_LOCALE`(`en`)로 저장한다. 재로그인마다 `first_name`/`username`을 최신 initData로 갱신한다
   (username이 없는 로그인은 기존 값을 유지).
@@ -472,6 +497,11 @@ pnpm --filter @tgslot/api db:push       # 실제 DB에 반영. 이 저장소 안
   수학 팩보다 며칠 먼저 만들기 때문에, 이것 때문에 서버가 못 뜨면 안 된다. 반대로 `manifest.json`은
   있는데 `math.json`이 없거나 깨졌으면 **부팅이 실패한다** — 만들다 만 팩이 로비에서 조용히 사라지는
   것보다 터지는 편이 낫다.
+- **거부된 요청은 아무것도 남기지 않는다**: 베팅 규칙 위반(`BetRuleError`)·잔액 부족은 정상 동작 중에
+  던지는 예외다. Drizzle 경로는 모든 쓰기가 `db.transaction` 안에 있고 `compute()`보다 앞서는 쓰기가
+  하나도 없어서 안전하고, memory 레포는 같은 성질을 "전부 계산 → 마지막에 일괄 커밋" 구조로 재현한다
+  (`repos/memory.ts`의 스테이징/커밋 구간 주석 참고). 두 경로 모두 회귀 테스트가 있고, Postgres 쪽은
+  `repos/drizzle.integration.test.ts`가 PGlite로 실제 DB를 띄워 롤백까지 실측한다.
 - **스핀 원자성**: `applySpin`이 한 트랜잭션 안에서 지갑 row lock(`FOR UPDATE`) → 멱등키 확인 →
   잔액 확인 → nonce 증가 → 결과 계산 → 원장 2건(`spin_bet`, `spin_win`) → 라운드 저장 → 지갑 갱신을 처리한다.
   실패하면 아무것도 남지 않으므로 `sum(ledger.delta) == wallets.coins` 불변식이 깨지지 않는다.

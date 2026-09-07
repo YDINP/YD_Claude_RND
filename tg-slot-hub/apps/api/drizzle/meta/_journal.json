@@ -78,6 +78,13 @@
       "when": 1788375283949,
       "tag": "0010_polite_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788769676522,
+      "tag": "0011_illegal_wild_child",
+      "breakpoints": true
     }
   ]
 }

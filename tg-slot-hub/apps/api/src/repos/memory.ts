@@ -56,6 +56,16 @@ interface LedgerEntry {
   createdAt: Date
 }
 
+/**
+ * 아직 커밋되지 않은 원장 항목. `applySpin`이 계산 도중 여기에만 쌓아 두고,
+ * 마지막 커밋 구간에서 한꺼번에 `credit()`으로 반영한다. 중간에 예외가 나면 통째로 버려진다.
+ */
+interface PendingLedgerEntry {
+  delta: number
+  reason: string
+  refId?: string
+}
+
 /** 지갑 내부 상태. nonce는 API 응답에 나가지 않으므로 AppWallet에는 없다. */
 interface WalletState extends AppWallet {
   nonce: number
@@ -165,6 +175,23 @@ export class MemoryRepos implements Repos {
   /**
    * Drizzle 구현과 같은 의미론을 단일 스레드에서 재현한다.
    * 이 메서드 안에는 `await`이 없으므로 실행 자체가 원자적이다 (JS 이벤트 루프가 중간에 끼어들 수 없다).
+   *
+   * ## 불변식: 계산이 다 끝나기 전에는 아무것도 저장하지 않는다
+   *
+   * 본문은 **스테이징 구간**과 **커밋 구간**으로 나뉜다.
+   * - 스테이징: 지갑·원장 변경은 `stage()`로 지역 배열에만 쌓고, 저장소 맵은 읽기만 한다.
+   *   잔액 판단은 `wallet.coins + walletDelta`(커밋됐다면 남았을 값)로 한다.
+   * - 커밋: 던질 수 있는 코드가 하나도 없는 구간. 쌓아 둔 변경을 여기서 한 번에 반영한다.
+   *
+   * 어디서 예외가 나든 커밋 구간에 닿지 못하므로 부분 변경이 남을 수 없다.
+   * Drizzle 경로에서 `db.transaction`이 해 주는 롤백을 이 구조로 대신한다.
+   *
+   * 스타일 문제가 아니다. `input.compute()`는 라우트의 베팅 규칙 검증(`BetRuleError` —
+   * INVALID_BET / BET_LOCKED)을 품고 있어 **정상 동작 중에 던지는 함수**다. 예전 구현은
+   * compute 앞에서 더블업 에스크로를 지갑에 바로 돌려줬고, compute가 던지면 그 입금만 남고
+   * gamble 세션은 살아남아 거부된 스핀을 반복할 때마다 같은 판돈이 다시 지급됐다 (무한 코인 생성).
+   *
+   * **새 코드를 넣을 때: 커밋 구간 위쪽에는 `this.credit()`도, 맵의 `set`/`delete`도 두지 말 것.**
    */
   async applySpin(input: ApplySpinInput): Promise<ApplySpinResult> {
     const wallet = this.wallets.get(input.userId)
@@ -174,7 +201,7 @@ export class MemoryRepos implements Repos {
     const now = this.clock()
     const day = utcDayKey(now)
 
-    const key = idempotencyMapKey(input.userId, input.idempotencyKey)
+    const key = idempotencyMapKey(input.userId, input.gameId, input.idempotencyKey)
     const existingRoundId = this.roundIdsByKey.get(key)
     if (existingRoundId !== undefined) {
       const existing = this.rounds.get(existingRoundId)
@@ -202,18 +229,27 @@ export class MemoryRepos implements Repos {
       }
     }
 
+    // ==== 스테이징 구간: 저장소는 읽기만 한다 ====
+
+    /** 커밋 때 원장에 들어갈 항목. 쌓이는 동안에는 지갑에 아무 효과도 없다. */
+    const entries: PendingLedgerEntry[] = []
+    /** `entries`의 코인 합. 잔액 판단은 언제나 `wallet.coins + walletDelta`로 한다. */
+    let walletDelta = 0
+    const stage = (delta: number, reason: string, refId?: string): void => {
+      if (delta === 0) return
+      entries.push({ delta, reason, refId })
+      walletDelta += delta
+    }
+
     // 프리스핀은 차감하지 않고, 베팅액도 진입 시점에 고정된 값을 쓴다.
     const stateKey = gameStateKey(input.userId, input.gameId)
     const stateBefore = this.gameStates.get(stateKey) ?? null
 
-    // 스핀 한 번이면 이전 더블업은 끝난다. 잠겨 있던 판돈을 **베팅을 확인하기 전에** 돌려준다
-    // (그 돈으로 이번 스핀을 돌릴 수 있어야 한다).
+    // 스핀 한 번이면 이전 더블업은 끝난다. 잠겨 있던 판돈을 **베팅을 확인하기 전에** 되돌린다
+    // (그 돈으로 이번 스핀을 돌릴 수 있어야 한다). 예약일 뿐이라 스핀이 거부되면 같이 사라진다.
     const escrowBefore = stateBefore?.gamble ?? null
     if (escrowBefore && escrowBefore.pendingWin > 0) {
-      this.credit(
-        input.userId,
-        wallet,
-        'coins',
+      stage(
         escrowBefore.pendingWin,
         LEDGER_REASONS.gambleCollect,
         gambleRefId(escrowBefore.roundId, escrowBefore.steps.length)
@@ -224,11 +260,13 @@ export class MemoryRepos implements Repos {
     const totalBet = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.totalBet : input.totalBet
     const multiplier = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.multiplier : 1
 
-    if (!isFreeSpin && wallet.coins < totalBet) {
-      throw new InsufficientFundsError(totalBet, wallet.coins)
+    if (!isFreeSpin && wallet.coins + walletDelta < totalBet) {
+      throw new InsufficientFundsError(totalBet, wallet.coins + walletDelta)
     }
 
     const nonce = wallet.nonce + 1
+    // 라우트의 베팅 규칙 검증(INVALID_BET / BET_LOCKED)이 이 안에 있다. 던질 수 있고,
+    // 던지면 위에서 예약한 에스크로 환급도 반영되지 않은 채 함께 버려진다.
     const { result, seed, seedHash, jackpotRoll, features } = input.compute({
       nonce,
       totalBet,
@@ -237,12 +275,11 @@ export class MemoryRepos implements Repos {
     })
     const roundId = randomUUID()
 
-    wallet.nonce = nonce
     if (!isFreeSpin) {
-      this.credit(input.userId, wallet, 'coins', -totalBet, 'spin_bet', roundId)
+      stage(-totalBet, 'spin_bet', roundId)
     }
     if (result.totalWin > 0) {
-      this.credit(input.userId, wallet, 'coins', result.totalWin, 'spin_win', roundId)
+      stage(result.totalWin, 'spin_win', roundId)
     }
 
     // 남은 횟수·배수는 엔진의 nextState가 결정한다. 서버는 고정 베팅과 누적 당첨만 얹는다.
@@ -266,15 +303,8 @@ export class MemoryRepos implements Repos {
     let gambleOffer: ApplySpinResult['gambleOffer']
     if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, config: input.gamble }) && input.gamble) {
       // 방어: 방금 당첨금을 넣었으므로 잔액이 모자랄 수 없다. 그래도 확인하고 못 잠그면 제안을 열지 않는다.
-      if (wallet.coins >= result.totalWin) {
-        this.credit(
-          input.userId,
-          wallet,
-          'coins',
-          -result.totalWin,
-          LEDGER_REASONS.gambleEscrow,
-          gambleEscrowRefId(roundId)
-        )
+      if (wallet.coins + walletDelta >= result.totalWin) {
+        stage(-result.totalWin, LEDGER_REASONS.gambleEscrow, gambleEscrowRefId(roundId))
         const expiresAt = gambleExpiresAt(now)
         gambleAfter = {
           roundId,
@@ -287,51 +317,43 @@ export class MemoryRepos implements Repos {
       }
     }
 
-    // 앞뒤로 아무 상태가 없으면 쓸 이유가 없다 (기본 게임 스핀의 대부분).
-    if (freeSpinsAfter || gambleAfter) this.gameStates.set(stateKey, { freeSpins: freeSpinsAfter, gamble: gambleAfter })
-    else if (stateBefore) this.gameStates.delete(stateKey)
-
     // 잭팟 적립은 하우스 몫에서 나가므로 유저 원장에 남지 않는다. 지급될 때만 원장에 찍힌다.
     // 적립을 먼저 하므로 당첨자는 자기 스핀의 적립분까지 가져간다.
     // 잭팟은 **유료 스핀만** 적립하고 판정한다. 프리스핀은 풀에 넣은 돈이 없다.
     const accrual = isFreeSpin ? 0 : jackpotAccrualHundredths(totalBet)
-    this.jackpotPoolHundredths += accrual
+    const poolAfterAccrual = this.jackpotPoolHundredths + accrual
+    let poolAfterSpin = poolAfterAccrual
     let jackpotWin: number | undefined
     if (isJackpotHit(jackpotRoll, accrual)) {
       // 지급은 코인 단위로 내린다. 1코인 미만 잔돈은 풀에 남기지 않고 버린다.
-      jackpotWin = hundredthsToCoins(this.jackpotPoolHundredths)
-      this.credit(input.userId, wallet, 'coins', jackpotWin, LEDGER_REASONS.jackpotWin, roundId)
-      this.jackpotPoolHundredths = JACKPOT_SEED_HUNDREDTHS
-      this.jackpotLastWin = { amount: jackpotWin, at: now, userId: input.userId }
+      jackpotWin = hundredthsToCoins(poolAfterAccrual)
+      stage(jackpotWin, LEDGER_REASONS.jackpotWin, roundId)
+      poolAfterSpin = JACKPOT_SEED_HUNDREDTHS
     }
 
     // 레벨: xp = 누적 베팅. 여러 레벨을 한 번에 뛸 수 있고 보너스는 도달 레벨 기준 1회다.
     // xp는 **실제로 건 돈**만 센다. 프리스핀은 베팅이 없었으므로 xp도 오르지 않는다.
     const previousLevel = levelFromXp(user.xp)
-    if (!isFreeSpin) user.xp += totalBet
-    const newLevel = levelFromXp(user.xp)
+    const newXp = user.xp + (isFreeSpin ? 0 : totalBet)
+    const newLevel = levelFromXp(newXp)
     let levelUp: ApplySpinResult['levelUp']
     if (newLevel > previousLevel) {
       const bonus = levelUpBonus(newLevel)
-      this.credit(input.userId, wallet, 'coins', bonus, LEDGER_REASONS.levelUp, roundId)
+      stage(bonus, LEDGER_REASONS.levelUp, roundId)
       levelUp = { from: previousLevel, to: newLevel, bonus }
     }
-    user.level = newLevel
 
-    // 주간 리더보드
+    // 주간 리더보드. 저장된 행을 제자리에서 고치면 그 자체가 커밋이므로 새 값을 따로 만든다.
     const week = isoWeekKey(now)
     const boardKey = `${input.userId}:${week}`
-    const board = this.leaderboard.get(boardKey) ?? {
+    const boardBefore = this.leaderboard.get(boardKey)
+    const boardAfter: LeaderboardState = {
       userId: input.userId,
       week,
-      totalWin: 0,
-      bestMultiplier: 0,
-      spins: 0,
+      totalWin: (boardBefore?.totalWin ?? 0) + result.totalWin,
+      bestMultiplier: Math.max(boardBefore?.bestMultiplier ?? 0, result.totalWin / totalBet),
+      spins: (boardBefore?.spins ?? 0) + 1,
     }
-    board.totalWin += result.totalWin
-    board.bestMultiplier = Math.max(board.bestMultiplier, result.totalWin / totalBet)
-    board.spins += 1
-    this.leaderboard.set(boardKey, board)
 
     // 데일리 미션
     const missions = applySpinToMissions(this.readMissions(input.userId, day), {
@@ -339,13 +361,6 @@ export class MemoryRepos implements Repos {
       win: result.totalWin,
       isFreeSpin,
     })
-    for (const mission of missions) {
-      this.missions.set(missionMapKey(input.userId, day, mission.missionId), {
-        ...mission,
-        userId: input.userId,
-        day,
-      })
-    }
 
     const round: RoundRecord = {
       id: roundId,
@@ -370,6 +385,29 @@ export class MemoryRepos implements Repos {
       freeSpinsSummary: summary,
       gambleSteps: [],
       createdAt: now,
+    }
+
+    // ==== 커밋 구간: 여기부터 return까지 던질 수 있는 코드가 없다 ====
+    wallet.nonce = nonce
+    for (const entry of entries) {
+      this.credit(input.userId, wallet, 'coins', entry.delta, entry.reason, entry.refId)
+    }
+    user.xp = newXp
+    user.level = newLevel
+    this.jackpotPoolHundredths = poolAfterSpin
+    if (jackpotWin !== undefined) {
+      this.jackpotLastWin = { amount: jackpotWin, at: now, userId: input.userId }
+    }
+    // 앞뒤로 아무 상태가 없으면 쓸 이유가 없다 (기본 게임 스핀의 대부분).
+    if (freeSpinsAfter || gambleAfter) this.gameStates.set(stateKey, { freeSpins: freeSpinsAfter, gamble: gambleAfter })
+    else if (stateBefore) this.gameStates.delete(stateKey)
+    this.leaderboard.set(boardKey, boardAfter)
+    for (const mission of missions) {
+      this.missions.set(missionMapKey(input.userId, day, mission.missionId), {
+        ...mission,
+        userId: input.userId,
+        day,
+      })
     }
     this.rounds.set(roundId, round)
     this.roundIdsByKey.set(key, roundId)
@@ -621,6 +659,26 @@ export class MemoryRepos implements Repos {
     return this.ledger.filter((entry) => entry.userId === userId && entry.reason === reason).length
   }
 
+  /**
+   * 테스트용 불변식 검사 보조. 같은 `(reason, refId)`로 두 번 이상 찍힌 항목을 돌려준다.
+   *
+   * `scripts/checkLedger.ts`의 `findDuplicateRefs`와 **같은 규칙**이다: refId를 남기는 사유는
+   * 사건 하나에 행 하나이므로 유일해야 하고, 정상적으로 반복되는 사유(보너스·미션 보상 등)는
+   * refId를 남기지 않으므로 검사에서 빠진다. 합 검사(`getLedgerSum`)로는 이중 지급이
+   * 지갑과 원장을 함께 늘려 잡히지 않기 때문에 이 검사가 따로 필요하다.
+   */
+  findDuplicateLedgerRefs(userId: string): { reason: string; refId: string; entries: number }[] {
+    const counts = new Map<string, { reason: string; refId: string; entries: number }>()
+    for (const entry of this.ledger) {
+      if (entry.userId !== userId || entry.refId === undefined) continue
+      const mapKey = `${entry.reason} ${entry.refId}`
+      const seen = counts.get(mapKey)
+      if (seen) seen.entries += 1
+      else counts.set(mapKey, { reason: entry.reason, refId: entry.refId, entries: 1 })
+    }
+    return [...counts.values()].filter((row) => row.entries > 1)
+  }
+
   private readMissions(userId: string, day: string): MissionProgress[] {
     return [...this.missions.values()]
       .filter((row) => row.userId === userId && row.day === day)
@@ -671,8 +729,18 @@ function cloneRound(round: RoundRecord): RoundRecord {
   }
 }
 
-function idempotencyMapKey(userId: string, idempotencyKey: string): string {
-  return `${userId}:${idempotencyKey}`
+/**
+ * 멱등키는 **게임별로** 스코프된다. Postgres의
+ * `(user_id, game_id, idempotency_key)` 유니크와 같은 키다.
+ *
+ * gameId가 빠져 있으면 클라이언트가 다른 게임에 같은 키를 재사용했을 때 이 조회가 걸려
+ * **다른 게임의 라운드**를 돌려준다. 릴 수가 다르면 응답 조립 단계에서 터져 500이 되고
+ * (인증된 유저가 반복 가능한 500을 만들 수 있다), 릴 수가 같으면 조용히 엉뚱한 라운드가 나간다.
+ * 지금은 재전송 분기에 부수효과가 없어서 금전 문제는 아니지만, 그 분기에 부수효과가 하나라도
+ * 생기면 곧장 회계 버그가 된다.
+ */
+function idempotencyMapKey(userId: string, gameId: string, idempotencyKey: string): string {
+  return `${userId}:${gameId}:${idempotencyKey}`
 }
 
 /** 단계 기록 하나를 응답 모양으로 옮긴다. 재전송과 새 판정이 같은 코드를 쓴다. */

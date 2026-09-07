@@ -42,7 +42,8 @@ function makeConfig(): ApiConfig {
     jwtSecret: 'test-secret-at-least-32-characters-long',
     databaseUrl: undefined,
     port: 8787,
-    allowDevMock: true,
+    allowDevAuth: true,
+    allowDebugSpin: true,
     corsOrigin: '*',
     spinLockTimeoutMs: 15_000,
   }
@@ -670,5 +671,109 @@ describe('뮤테이션 왕복', () => {
 
     expect(body.mutations).toEqual([])
     expect(body.gridBefore).toEqual(body.grid)
+  })
+})
+
+/**
+ * 거부된 스핀 회귀 테스트.
+ *
+ * 예전 memory 레포는 잠긴 더블업 판돈을 **베팅 규칙을 확인하기 전에** 지갑으로 돌려줬고,
+ * 확인이 던지면 그 입금만 남긴 채 gamble 세션을 그대로 뒀다. 그래서 betLevels에 없는
+ * 베팅으로 스핀을 반복하면 매번 400을 받으면서도 같은 판돈이 계속 지급됐다 (무한 코인 생성).
+ * 원장 합 검사(`sum(delta) == wallet`)는 지갑과 원장이 함께 늘어나므로 이걸 잡지 못한다.
+ *
+ * 위쪽 "스핀이 잠긴 판돈을 회수한다"는 **성공** 경로만 덮고 있었기 때문에 놓친 버그라,
+ * 여기서는 거부 사유 세 가지를 전부 덮는다. INVALID_BET / BET_LOCKED는 compute 안에서,
+ * INSUFFICIENT_FUNDS는 compute 앞에서 던지므로 서로 다른 지점을 지난다.
+ *
+ * 대상은 memory 레포다 — 깨졌던 것이 이쪽이고, `DATABASE_URL`이 없을 때 실제로 도는 것도
+ * 이쪽이다. Drizzle 경로는 같은 순서를 `db.transaction` 안에서 지키므로 구조적으로 안전하지만,
+ * 확인하려면 살아 있는 Postgres가 필요해서 이 스위트에 넣지 않았다.
+ */
+describe('거부된 스핀은 지갑도 더블업 세션도 건드리지 않는다', () => {
+  /** 잔액 검사는 compute보다 먼저 도므로, 잔액을 넘는 베팅이면 betLevels 여부와 무관하게 402가 된다. */
+  const REJECTIONS = [
+    { label: 'INVALID_BET — betLevels에 없는 베팅', totalBet: 3, status: 400, code: 'INVALID_BET' },
+    { label: 'BET_LOCKED — 레벨이 아직 못 여는 베팅', totalBet: 500, status: 400, code: 'BET_LOCKED' },
+    { label: 'INSUFFICIENT_FUNDS — 잔액보다 큰 베팅', totalBet: 50_000, status: 402, code: 'INSUFFICIENT_FUNDS' },
+  ] as const
+
+  /** 저장된 더블업 세션. 거부된 스핀 전후로 완전히 같아야 한다. */
+  async function gambleState(harness: Harness): Promise<unknown> {
+    const res = await harness.app.request(`/games/${GAME_ID}/state`, {
+      headers: { authorization: `Bearer ${harness.token}` },
+    })
+    expect(res.status).toBe(200)
+    return ((await res.json()) as { state: { gamble: unknown } }).state.gamble
+  }
+
+  async function rejectedSpin(harness: Harness, key: string, totalBet: number): Promise<Response> {
+    return post(harness, `/games/${GAME_ID}/spin`, { totalBet, idempotencyKey: key })
+  }
+
+  for (const rejection of REJECTIONS) {
+    it(`${rejection.label} 으로 거부되면 아무 변화도 남기지 않는다`, async () => {
+      const harness = await setup()
+      const round = await spin(harness, 'rej-open-000001')
+      const coinsBefore = await wallet(harness)
+      const sessionBefore = await gambleState(harness)
+      expect(sessionBefore).not.toBeNull()
+
+      const res = await rejectedSpin(harness, 'rej-bad-0000001', rejection.totalBet)
+
+      expect(res.status).toBe(rejection.status)
+      expect(((await res.json()) as { code: string }).code).toBe(rejection.code)
+      // 핵심: 잠긴 판돈이 지갑으로 새지 않았다.
+      expect(await wallet(harness)).toBe(coinsBefore)
+      expect(await gambleState(harness)).toEqual(sessionBefore)
+      expect(harness.repos.countLedgerEntries(harness.userId, 'gamble_collect')).toBe(0)
+      // 거부된 스핀은 원장 자체를 남기지 않는다 (베팅 차감도, 환급도).
+      expect(harness.repos.countLedgerEntries(harness.userId, 'spin_bet')).toBe(1)
+      expect(harness.repos.findDuplicateLedgerRefs(harness.userId)).toEqual([])
+      await expectLedgerInvariant(harness)
+
+      // 세션이 멀쩡하므로 원래 하려던 더블업은 그대로 이어진다.
+      const body = await gambleBody(harness, round.roundId)
+      expect(body.pendingWin).toBe(WIN * 2)
+    })
+  }
+
+  it('거부된 스핀을 반복해도 지갑은 1코인도 늘지 않는다', async () => {
+    const harness = await setup()
+    await spin(harness, 'rej-loop-000001')
+    const coinsBefore = await wallet(harness)
+    const sessionBefore = await gambleState(harness)
+
+    // 익스플로잇 그대로: 매번 새 멱등키로 유효하지 않은 베팅을 계속 던진다.
+    const attempts = 20
+    for (let i = 0; i < attempts; i += 1) {
+      const res = await rejectedSpin(harness, `rej-loop-x-${String(i).padStart(4, '0')}`, 3)
+      expect(res.status).toBe(400)
+    }
+
+    expect(await wallet(harness)).toBe(coinsBefore)
+    expect(await gambleState(harness)).toEqual(sessionBefore)
+    expect(harness.repos.countLedgerEntries(harness.userId, 'gamble_collect')).toBe(0)
+    await expectLedgerInvariant(harness)
+  })
+
+  it('거부와 성공이 섞여도 (reason, refId) 중복이 생기지 않는다', async () => {
+    const harness = await setup()
+
+    // 당첨 스핀 -> 거부 스핀들 -> 정상 스핀(= 잠긴 판돈 회수)을 세 바퀴 돈다.
+    for (let round = 0; round < 3; round += 1) {
+      await spin(harness, `mix-win-${String(round).padStart(6, '0')}`)
+      for (const rejection of REJECTIONS) {
+        await rejectedSpin(harness, `mix-bad-${String(round)}-${rejection.code.slice(0, 6)}`, rejection.totalBet)
+      }
+      await spin(harness, `mix-ok--${String(round).padStart(6, '0')}`, 0)
+    }
+
+    // 스캔 대상이 실제로 있는지부터 확인한다 (빈 원장에 대고 통과하면 의미가 없다).
+    expect(harness.repos.countLedgerEntries(harness.userId, 'gamble_escrow')).toBe(3)
+    expect(harness.repos.countLedgerEntries(harness.userId, 'gamble_collect')).toBe(3)
+    // 익스플로잇이 남기던 흔적: 같은 `${roundId}:g0`에 gamble_collect가 여러 행.
+    expect(harness.repos.findDuplicateLedgerRefs(harness.userId)).toEqual([])
+    await expectLedgerInvariant(harness)
   })
 })

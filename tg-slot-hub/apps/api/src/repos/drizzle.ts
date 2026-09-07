@@ -254,10 +254,18 @@ export class DrizzleRepos implements Repos {
       const [userRow] = await tx.select().from(users).where(eq(users.id, input.userId)).limit(1).for('update')
       if (!userRow) throw new Error('[drizzle-repo] user not found for spin')
 
+      // 멱등키는 **게임별로** 스코프된다 (`rounds_user_id_game_id_idempotency_key_unique`).
+      // gameId를 빼면 다른 게임에 같은 키를 재사용했을 때 엉뚱한 라운드를 재전송으로 돌려준다.
       const [existingRound] = await tx
         .select()
         .from(rounds)
-        .where(and(eq(rounds.userId, input.userId), eq(rounds.idempotencyKey, input.idempotencyKey)))
+        .where(
+          and(
+            eq(rounds.userId, input.userId),
+            eq(rounds.gameId, input.gameId),
+            eq(rounds.idempotencyKey, input.idempotencyKey)
+          )
+        )
         .limit(1)
 
       // 프리스핀 세션은 유저 단위 행이라 지갑 락이 이미 직렬화한다. 여기서 읽은 값이 곧
