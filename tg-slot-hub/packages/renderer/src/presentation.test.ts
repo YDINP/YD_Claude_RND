@@ -148,6 +148,11 @@ describe('winLineEvent', () => {
       win: 120,
       symbol: 'seven',
       count: 3,
+      positions: [
+        [0, 1],
+        [1, 1],
+        [2, 1],
+      ],
       index: 1,
       total: 3,
       cycle: 2,
@@ -160,6 +165,18 @@ describe('winLineEvent', () => {
     expect('ways' in event).toBe(false)
     expect('group' in event).toBe(false)
     expect('direction' in event).toBe(false)
+    // 좌표도 같은 규칙이다 — 빈 목록이면 짚을 칸이 없다는 뜻이라 키를 넣지 않는다.
+    expect('positions' in winLineEvent({ ...makeWin(0, 10, 5), positions: [] }, context)).toBe(false)
+  })
+
+  it('그룹 지급은 이긴 칸 좌표를 그대로 싣는다 — 허브가 «실제로 이긴 심볼»을 그리드에서 짚는다', () => {
+    // 진짜로 섞인 BAR 라인(bar1·bar1·bar2)이라 그룹 이름 말고는 대표할 그림이 없다.
+    const win = { ...makeWin(0, 50, 5), symbol: 'anybar', group: 'anybar' }
+    expect(winLineEvent(win, context).positions).toEqual([
+      [0, 1],
+      [1, 1],
+      [2, 1],
+    ])
   })
 
   it('ways·그룹·방향은 있으면 그대로 넘긴다', () => {

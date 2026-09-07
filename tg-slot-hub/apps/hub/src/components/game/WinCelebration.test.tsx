@@ -14,18 +14,22 @@ import type { ReactNode } from 'react'
 import { WinCelebration, WinCelebrationFx, useWinRollup } from './WinCelebration'
 import { WinCelebrationOverlay } from './WinCelebrationOverlay'
 import {
+  BIG_WIN_EMPHASIS_MS,
+  BIG_WIN_HURRIED_HOLD_MS,
+  BIG_WIN_ROLLUP_MAX_MS,
+  BIG_WIN_ROLLUP_MIN_MS,
   CELEBRATION_TIER_MULTIPLIERS,
   COUNT_UP_MS,
-  DISPLAY_MS_BY_TIER,
   ENTRY_SPARKLES,
   HURRIED_SCALE,
-  MIN_READ_MS,
   NAMED_TIERS,
   REDUCED_ROLLUP_MS,
   ROLLUP_MS_BY_TIER,
   SHOCKWAVE_COUNT_BY_TIER,
   SHOWER_COUNT_BY_TIER,
   SPARKLE_COUNT,
+  bigWinRollupMs,
+  bigWinTimeline,
   celebrationTier,
   celebrationTiming,
   countUpMs,
@@ -35,6 +39,7 @@ import {
   shockwaveDelays,
   showerCoins,
 } from './winTiers'
+import { ROUND_POPUP_AUTO_CLOSE_MS } from '../../game/roundFlow'
 import { useSettingsStore } from '../../store/settings'
 
 function amountText(): string {
@@ -67,50 +72,85 @@ describe('winTiers (pure)', () => {
     })
   })
 
-  describe('celebrationTiming', () => {
-    it('uses the documented display times (2000/3000/4500/6500 ms)', () => {
-      expect(NAMED_TIERS.map((tier) => celebrationTiming(tier).displayMs)).toEqual([2000, 3000, 4500, 6500])
-      expect(DISPLAY_MS_BY_TIER.none).toBe(0)
-      // 등급이 없으면 스스로 닫히지 않는다 — 프리스핀 팝업은 store가 닫고, 오버레이는 뜨지도 않는다.
-      expect(celebrationTiming('none').displayMs).toBe(0)
-    })
-
+  describe('celebrationTiming (프리스핀 종료 팝업 — 등급이 길이를 정한다)', () => {
     it('climbs the roll-up with the tier — 1.2s → 2.0s', () => {
       const lengths = NAMED_TIERS.map((tier) => ROLLUP_MS_BY_TIER[tier])
       expect(lengths).toEqual([1400, 1600, 1800, 2000])
       expect([...lengths].sort((a, b) => a - b)).toEqual(lengths)
       expect(ROLLUP_MS_BY_TIER.none).toBe(1200)
+      expect(NAMED_TIERS.map((tier) => celebrationTiming(tier).rollupMs)).toEqual(lengths)
     })
 
-    it('always leaves reading time after the roll-up, at every tier', () => {
+    it('halves the roll-up while autospin or free spins are running', () => {
       for (const tier of NAMED_TIERS) {
-        const { rollupMs, displayMs } = celebrationTiming(tier)
-        expect(displayMs - rollupMs).toBeGreaterThanOrEqual(MIN_READ_MS)
-      }
-      // SURGE가 그 하한과 정확히 맞물린다(1400 + 600 = 2000).
-      expect(celebrationTiming('surge')).toEqual({ rollupMs: 1400, displayMs: 2000 })
-    })
-
-    it('halves the whole timeline while autospin or free spins are running', () => {
-      for (const tier of NAMED_TIERS) {
-        const normal = celebrationTiming(tier)
-        const hurried = celebrationTiming(tier, { hurried: true })
-        expect(hurried.rollupMs).toBe(Math.round(normal.rollupMs * HURRIED_SCALE))
-        expect(hurried.displayMs).toBe(Math.round(normal.displayMs * HURRIED_SCALE))
-        // 절반이 되어도 다 굴러가기 전에 닫히지 않는다.
-        expect(hurried.displayMs).toBeGreaterThan(hurried.rollupMs)
+        expect(celebrationTiming(tier, { hurried: true }).rollupMs).toBe(
+          Math.round(celebrationTiming(tier).rollupMs * HURRIED_SCALE),
+        )
       }
     })
 
-    it('shortens the roll-up under reduced motion but keeps the reading time', () => {
-      const { rollupMs, displayMs } = celebrationTiming('cataclysm', { reducedMotion: true })
-      expect(rollupMs).toBe(REDUCED_ROLLUP_MS)
-      expect(displayMs).toBe(DISPLAY_MS_BY_TIER.cataclysm)
+    it('shortens the roll-up under reduced motion', () => {
+      expect(celebrationTiming('cataclysm', { reducedMotion: true }).rollupMs).toBe(REDUCED_ROLLUP_MS)
     })
 
     it('gives the entry count-up a fixed length', () => {
       expect(countUpMs(false)).toBe(COUNT_UP_MS)
       expect(countUpMs(true)).toBe(REDUCED_ROLLUP_MS)
+    })
+  })
+
+  describe('bigWinTimeline (빅윈 오버레이 — 금액이 길이를 정한다)', () => {
+    const bet = 100
+
+    it('makes a 10× and a 200× win take visibly different lengths — the whole point of the change', () => {
+      const small = bigWinTimeline(10 * bet, bet).rollupMs
+      const large = bigWinTimeline(200 * bet, bet).rollupMs
+      expect(small).toBe(BIG_WIN_ROLLUP_MIN_MS)
+      expect(large).toBeGreaterThan(small * 2)
+      // 등급이 아니라 «금액»이 길이를 정한다 — 같은 CATACLYSM(≥100×) 안에서도 갈린다.
+      expect(celebrationTier(200 * bet, bet)).toBe(celebrationTier(400 * bet, bet))
+      expect(bigWinTimeline(400 * bet, bet).rollupMs).toBeGreaterThan(large)
+    })
+
+    it('rises monotonically with the multiple and is bounded at both ends', () => {
+      const multiples = [10, 20, 50, 100, 200, 500, 1000, 5000]
+      const lengths = multiples.map((m) => bigWinTimeline(m * bet, bet).rollupMs)
+      expect([...lengths].sort((a, b) => a - b)).toEqual(lengths)
+      expect(lengths[0]).toBe(BIG_WIN_ROLLUP_MIN_MS)
+      // 500× 이상은 전부 상한을 나눠 갖는다 — 한 판이 오버레이만 1분 붙드는 일은 없다.
+      expect(bigWinTimeline(500 * bet, bet).rollupMs).toBe(BIG_WIN_ROLLUP_MAX_MS)
+      expect(bigWinTimeline(5000 * bet, bet).rollupMs).toBe(BIG_WIN_ROLLUP_MAX_MS)
+    })
+
+    it('never guesses a denominator — an unknown or zero bet falls back to the shortest roll-up', () => {
+      expect(bigWinTimeline(999_999, 0).rollupMs).toBe(BIG_WIN_ROLLUP_MIN_MS)
+      expect(bigWinRollupMs(999_999, -1)).toBe(BIG_WIN_ROLLUP_MIN_MS)
+    })
+
+    it('holds the result for the same 10s the free-spins ceremony popup uses', () => {
+      expect(bigWinTimeline(50 * bet, bet)).toEqual({
+        rollupMs: bigWinRollupMs(50 * bet, bet),
+        emphasisMs: BIG_WIN_EMPHASIS_MS,
+        holdMs: ROUND_POPUP_AUTO_CLOSE_MS,
+      })
+      // 강조는 사용자가 요구한 "2~3초" 안에 있다.
+      expect(BIG_WIN_EMPHASIS_MS).toBeGreaterThanOrEqual(2000)
+      expect(BIG_WIN_EMPHASIS_MS).toBeLessThanOrEqual(3000)
+    })
+
+    it('never stalls an autospin run — hurried shrinks the roll-up/emphasis and swaps the 10s hold for a short one', () => {
+      const normal = bigWinTimeline(500 * bet, bet)
+      const hurried = bigWinTimeline(500 * bet, bet, { hurried: true })
+      expect(hurried.rollupMs).toBe(Math.round(normal.rollupMs * HURRIED_SCALE))
+      expect(hurried.emphasisMs).toBe(Math.round(normal.emphasisMs * HURRIED_SCALE))
+      expect(hurried.holdMs).toBe(BIG_WIN_HURRIED_HOLD_MS)
+      // 최악의 경우(500× + 서두름)에도 한 판이 오버레이에 붙들리는 시간은 6초를 넘지 않는다 —
+      // "판 간격이 20초를 넘겨 멈춘 것처럼 보인다"는 예전 결함으로 되돌아가지 않는다.
+      expect(hurried.rollupMs + hurried.emphasisMs + hurried.holdMs).toBeLessThan(6000)
+    })
+
+    it('collapses the roll-up under reduced motion — length can no longer carry the amount', () => {
+      expect(bigWinTimeline(500 * bet, bet, { reducedMotion: true }).rollupMs).toBe(REDUCED_ROLLUP_MS)
     })
   })
 
@@ -287,29 +327,48 @@ describe('WinCelebrationOverlay', () => {
     await waitFor(() => expect(regions[0]?.textContent).toBe('Total win 4,820'), { timeout: 4000 })
   })
 
-  it('completes the roll-up on the first tap and closes only on the next one', async () => {
+  it('jumps to the result on a tap while rolling — it does not close — and closes on the next tap', async () => {
     const onDismiss = vi.fn()
-    render(<WinCelebrationOverlay {...baseProps} onDismiss={onDismiss} />)
+    const { container } = render(<WinCelebrationOverlay {...baseProps} onDismiss={onDismiss} />)
 
     expect(amountText()).not.toBe('4,820')
+    expect(container.querySelector('.hub-win-overlay')).toHaveAttribute('data-beat', 'rolling')
+
     fireEvent.click(screen.getByRole('button'))
     expect(amountText()).toBe('4,820')
+    // 사용자 요구: "빅윈연출 중 터치 시 팝업 결과로 바로 스킵. 닫기 아님."
     expect(onDismiss).not.toHaveBeenCalled()
+    expect(container.querySelector('.hub-win-overlay')).toHaveAttribute('data-beat', 'emphasis')
 
     fireEvent.click(screen.getByRole('button'))
     expect(onDismiss).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(amountText()).toBe('4,820'))
   })
 
-  it('closes itself once the tier display time is up', () => {
+  it('runs the emphasis beat and only then starts the 10s hold', () => {
     vi.useFakeTimers()
     try {
       const onDismiss = vi.fn()
-      // 12000 / 100 = 120× → CATACLYSM, 6500ms
-      render(<WinCelebrationOverlay totalWin={12_000} totalBet={100} onDismiss={onDismiss} />)
+      // 12000 / 100 = 120× → CATACLYSM. 롤업은 금액이 정하고, 그 뒤가 강조 → 유지다.
+      const timing = bigWinTimeline(12_000, 100)
+      const { container } = render(
+        <WinCelebrationOverlay totalWin={12_000} totalBet={100} onDismiss={onDismiss} />,
+      )
+
+      // rAF가 없는 환경이면 백스톱 타이머가 롤업을 끝낸다 — 어느 쪽이든 목표에 닿는다.
+      act(() => {
+        vi.advanceTimersByTime(timing.rollupMs + 200)
+      })
+      expect(container.querySelector('.hub-win-overlay')).toHaveAttribute('data-beat', 'emphasis')
+      expect(onDismiss).not.toHaveBeenCalled()
 
       act(() => {
-        vi.advanceTimersByTime(DISPLAY_MS_BY_TIER.cataclysm - 1)
+        vi.advanceTimersByTime(timing.emphasisMs)
+      })
+      expect(container.querySelector('.hub-win-overlay')).toHaveAttribute('data-beat', 'hold')
+
+      act(() => {
+        vi.advanceTimersByTime(ROUND_POPUP_AUTO_CLOSE_MS - 1)
       })
       expect(onDismiss).not.toHaveBeenCalled()
 
@@ -322,19 +381,70 @@ describe('WinCelebrationOverlay', () => {
     }
   })
 
-  it('halves the wait while autospin or free spins are running', () => {
+  it('starts the auto-close window from the skip, not from mount — a skipped roll-up still gets the full read', () => {
     vi.useFakeTimers()
     try {
       const onDismiss = vi.fn()
-      render(<WinCelebrationOverlay {...baseProps} hurried onDismiss={onDismiss} />)
+      // 500× — 그냥 두면 6초를 굴러야 하는 판을 곧장 감는다.
+      render(<WinCelebrationOverlay totalWin={50_000} totalBet={100} onDismiss={onDismiss} />)
 
       act(() => {
-        vi.advanceTimersByTime(DISPLAY_MS_BY_TIER.blast * HURRIED_SCALE)
+        fireEvent.click(screen.getByRole('button'))
+      })
+      expect(amountText()).toBe('50,000')
+
+      act(() => {
+        vi.advanceTimersByTime(BIG_WIN_EMPHASIS_MS)
+      })
+      // 마운트에서 한 번 걸어 둔 시계였다면 여기(마운트 + 12.4초)서 이미 닫혔을 것이다(예전 결함).
+      act(() => {
+        vi.advanceTimersByTime(ROUND_POPUP_AUTO_CLOSE_MS - 1)
+      })
+      expect(onDismiss).not.toHaveBeenCalled()
+
+      act(() => {
+        vi.advanceTimersByTime(1)
       })
       expect(onDismiss).toHaveBeenCalledTimes(1)
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('does not stall an autospin run — the whole overlay is done in seconds while hurried', () => {
+    vi.useFakeTimers()
+    try {
+      const onDismiss = vi.fn()
+      render(<WinCelebrationOverlay {...baseProps} hurried onDismiss={onDismiss} />)
+      const timing = bigWinTimeline(baseProps.totalWin, baseProps.totalBet, { hurried: true })
+
+      // 박자마다 한 번씩 — 각 단계의 시계는 앞 단계가 화면에 반영된 뒤에야 걸린다.
+      act(() => {
+        vi.advanceTimersByTime(timing.rollupMs + 200)
+      })
+      act(() => {
+        vi.advanceTimersByTime(timing.emphasisMs)
+      })
+      act(() => {
+        vi.advanceTimersByTime(BIG_WIN_HURRIED_HOLD_MS)
+      })
+      expect(onDismiss).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('puts the tap hint outside the card, at the bottom of the takeover — not under the number on the game art', () => {
+    const { container } = render(<WinCelebrationOverlay {...baseProps} />)
+
+    const hint = container.querySelector('.hub-win-overlay__hint')
+    expect(hint).toHaveTextContent('Tap to reveal')
+    // 카드 안에 남아 있으면(예전 자리) 게임 프레임 아트와 겹쳐 읽히지 않는다.
+    expect(container.querySelector('.hub-win .hub-win__hint')).toBeNull()
+    expect(hint?.parentElement).toHaveClass('hub-win-overlay__tap')
+
+    fireEvent.click(screen.getByRole('button'))
+    expect(container.querySelector('.hub-win-overlay__hint')).toHaveTextContent('Tap to close')
   })
 
   it('is a labelled modal dialog with a keyboard-reachable tap surface', () => {

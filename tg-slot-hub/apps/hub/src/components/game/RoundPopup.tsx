@@ -22,7 +22,6 @@ import type { RoundPopup } from '../../game/roundFlow'
 import { WinCelebration, WinCelebrationFx, useWinRollup } from './WinCelebration'
 import {
   ENTRY_SPARKLES,
-  celebrationTier,
   celebrationTiming,
   countUpMs,
   type CelebrationTier,
@@ -35,11 +34,6 @@ const TITLE_ID = 'hub-round-popup-title'
 interface RoundPopupViewProps {
   popup: RoundPopup
   onDismiss: () => void
-  /**
-   * 등급 판정의 분모가 되는 이번 프리스핀 총 베팅. **없으면 등급을 올리지 않는다**
-   * (`celebrationTier`) — 베팅을 짐작해서 STORM을 띄우지 않는다.
-   */
-  totalBet?: number
   /** 이번 프리스핀에서 실제로 돌린 판 수. 종료 팝업 요약줄에만 쓰고, 없으면 요약줄을 대체한다. */
   freeSpinsPlayed?: number
   /** 진입 팝업에서 제목 위로 떨어지는 트리거(스캐터) 심볼 이미지. 없으면 심볼 없이 그린다. */
@@ -51,7 +45,6 @@ interface RoundPopupViewProps {
 export function RoundPopupView({
   popup,
   onDismiss,
-  totalBet,
   freeSpinsPlayed,
   scatterImageUrl,
   labels,
@@ -64,9 +57,20 @@ export function RoundPopupView({
   const entry = popup.kind === 'freeSpinsEntry'
   /** 굴러 올라갈 목표값 — 진입은 스핀 수, 종료는 총 획득액. */
   const target = popup.kind === 'freeSpinsEntry' ? popup.spins : popup.totalWin
-  /** 진입 팝업은 등급을 매기지 않는다(딴 금액이 아직 없다). */
-  const tier: CelebrationTier =
-    popup.kind === 'freeSpinsEntry' ? 'none' : celebrationTier(popup.totalWin, totalBet)
+  /**
+   * **이 팝업은 등급(SURGE~CATACLYSM)을 매기지 않는다.** 진입은 아직 딴 금액이 없어서고,
+   * 종료는 «세션 총액»으로 등급을 매기는 것 자체가 틀렸기 때문이다(사용자 지시:
+   * "프리스핀 결과값으로 빅윈연출이 뜨는 건 x — 어차피 중간에 빅윈 이상 당첨되면 빅윈연출 나오잖음").
+   *
+   * 프리스핀 **도중**에 10× 이상이 터진 판은 그 자리에서 이미 빅윈 오버레이를 띄웠다. 끝날 때
+   * 그 판들을 합친 총액으로 다시 등급을 매기면 같은 돈을 두 번 축하하는 셈이고, 여러 판이 쌓인
+   * 총액은 거의 언제나 큰 배수라 종료 팝업이 매번 STORM/CATACLYSM으로 떠 등급이 뜻을 잃는다.
+   * 그래서 총액은 그대로 보여 주되 제목은 늘 평범한 «획득»이고, 롤업·코인 같은 자기 연출은 남는다.
+   *
+   * 그래서 이 컴포넌트는 등급 판정의 분모(totalBet)를 **아예 받지 않는다** — 빠뜨린 게 아니라
+   * 매기지 않기로 한 것이다. 다시 넘기려 하기 전에 위 문단을 먼저 읽을 것.
+   */
+  const tier: CelebrationTier = 'none'
   const multiplier = popup.kind === 'freeSpinsEntry' ? popup.multiplier : 1
   // 세리머니는 이미 판을 멈춰 세운 자리라 서두르지 않는다(`hurried` 없음).
   const duration = entry ? countUpMs(reducedMotion) : celebrationTiming(tier, { reducedMotion }).rollupMs

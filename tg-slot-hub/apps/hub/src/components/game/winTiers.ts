@@ -4,8 +4,13 @@
  * 결과를 재생만 한다(부작용은 컴포넌트 쪽 useEffect 하나씩에 몰아둔다 — `gambleToss.ts`와 같은 모양).
  *
  * 이 표 하나가 **일반 스핀의 빅윈 오버레이와 프리스핀 종료 팝업 양쪽**을 먹인다. 같은 배수에
- * 같은 이름·같은 색·같은 길이가 나오지 않으면 사용자는 두 화면을 다른 게임으로 읽는다.
+ * 같은 이름·같은 색이 나오지 않으면 사용자는 두 화면을 다른 게임으로 읽는다.
+ *
+ * 다만 **길이는 화면마다 다르다**: 프리스핀 종료 팝업은 등급이 정하는 롤업 하나로 끝나고
+ * (`celebrationTiming`), 빅윈 오버레이는 금액이 길이를 정하는 세 박자다(`bigWinTimeline`) —
+ * 사용자가 "당첨금액에 비례해서 길게"를 요구한 곳이 후자다.
  */
+import { ROUND_POPUP_AUTO_CLOSE_MS } from '../../game/roundFlow'
 
 /**
  * 축하 등급. 인덱스가 곧 강도이자 결이다 —
@@ -60,18 +65,6 @@ export function overrideLabel(tier: CelebrationTier, labels?: WinTierLabels): st
 
 // ---- 타임라인 ----
 
-/**
- * 등급별 화면 체류 시간(ms) — `docs/REFERENCE_PRAGMATIC.md`의 "배너 표시 시간" 표 그대로다.
- * **롤업을 포함한 총 시간**이라 이 값이 지나면 오버레이가 스스로 닫힌다.
- */
-export const DISPLAY_MS_BY_TIER: Record<CelebrationTier, number> = {
-  none: 0,
-  surge: 2000,
-  blast: 3000,
-  storm: 4500,
-  cataclysm: 6500,
-}
-
 /** 금액이 굴러 올라가는 시간(ms). 등급이 오를수록 더 오래 뜸을 들인다. */
 export const ROLLUP_MS_BY_TIER: Record<CelebrationTier, number> = {
   none: 1200,
@@ -81,13 +74,10 @@ export const ROLLUP_MS_BY_TIER: Record<CelebrationTier, number> = {
   cataclysm: 2000,
 }
 
-/** 다 굴러간 뒤 최소한 이만큼은 최종 금액을 볼 수 있어야 한다(ms). */
-export const MIN_READ_MS = 600
-
 /**
  * 오토스핀·프리스핀이 도는 동안의 배율. 축하는 그대로 뜨되 **판 사이를 막지 않도록**
- * 타임라인 전체(롤업·체류·읽는 시간)를 같은 비율로 줄인다. 롤업만 줄이면 다 굴러가기도 전에
- * 닫히고, 체류만 줄이면 숫자를 읽을 시간이 사라진다.
+ * 타임라인 전체(롤업·강조)를 같은 비율로 줄인다. 롤업만 줄이면 다 굴러가기도 전에
+ * 강조가 시작되고, 강조만 줄이면 숫자를 읽을 시간이 사라진다.
  */
 export const HURRIED_SCALE = 0.5
 
@@ -108,25 +98,98 @@ export interface TimingInput {
 
 export interface CelebrationTiming {
   readonly rollupMs: number
-  /** 마운트부터 자동으로 닫힐 때까지(ms). 0이면 자동으로 닫지 않는다(= 등급 없음). */
-  readonly displayMs: number
 }
 
 /**
- * 이번 축하의 타임라인.
+ * 등급이 정하는 롤업 길이 — **프리스핀 종료 팝업 전용**이다. 그쪽은 세션 총액을 한 번 보여주고
+ * 사용자가 닫는 화면이라 금액에 맞춰 길이를 늘일 이유가 없다.
  *
- * 체류 시간은 표의 값이지만 **롤업 + 읽는 시간**보다 짧아질 수는 없다 — SURGE(2000ms)가
- * 마침 그 하한(1400 + 600)과 정확히 같고, 서두르는 구간에서는 양쪽이 함께 절반이 되어
- * 그 관계가 유지된다.
+ * 일반 스핀의 빅윈 오버레이는 이걸 쓰지 않는다 — 거기서는 **금액이 길이를 정한다**
+ * (`bigWinTimeline`). 등급은 결(팔레트·파티클·고리)만 정한다.
  */
 export function celebrationTiming(tier: CelebrationTier, input: TimingInput = {}): CelebrationTiming {
   const scale = input.hurried === true ? HURRIED_SCALE : 1
   const base = input.reducedMotion === true ? REDUCED_ROLLUP_MS : ROLLUP_MS_BY_TIER[tier]
-  const rollupMs = Math.round(base * scale)
-  if (tier === 'none') return { rollupMs, displayMs: 0 }
+  return { rollupMs: Math.round(base * scale) }
+}
+
+// ---- 빅윈 오버레이 타임라인 (금액이 길이를 정한다) ----
+
+/**
+ * 롤업의 양 끝(ms)과, 위쪽 끝에 닿는 배수.
+ *
+ * 아래 끝은 오버레이가 뜨는 최저 배수(10×)의 길이다 — 여기서도 "뜸을 들인다"가 읽혀야 하므로
+ * 1.4초 밑으로는 내리지 않는다. 위쪽 끝은 500× 이상 전부가 나눠 갖는다 — 상한이 없으면
+ * 1000× 한 판이 오버레이만 1분을 붙든다.
+ */
+export const BIG_WIN_ROLLUP_MIN_MS = 1400
+export const BIG_WIN_ROLLUP_MAX_MS = 6000
+export const BIG_WIN_ROLLUP_MAX_MULTIPLE = 500
+
+/**
+ * 목표 금액에 닿은 뒤의 강조 비트(ms). 한 호흡으로 읽혀야 하는 대목이라 등급으로 쪼개지 않는다 —
+ * 여기가 "얼마를 땄다"가 확정되는 순간이고, 짧으면 롤업의 끝처럼 묻히고 길면 정지 화면이 된다.
+ */
+export const BIG_WIN_EMPHASIS_MS = 2400
+
+/**
+ * 오토스핀·프리스핀이 도는 동안의 결과 화면 유지 시간(ms). 10초 계약(ROUND_POPUP_AUTO_CLOSE_MS)은
+ * **사용자가 지금 화면의 주인일 때**의 약속이다 — 자동으로 도는 중에 10초를 붙들면 판 간격이
+ * 20초를 넘겨 "진행이 멈춘 것처럼 보인다"는 예전 결함이 그대로 되살아난다. 그래서 이 구간에서는
+ * 결과를 확인할 최소한의 틈만 남기고(0.9초) 곧장 다음 판으로 넘어간다. 사용자는 언제든 탭해서
+ * 더 빨리 닫을 수 있고, 반대로 오토스핀을 멈추면 다음 판부터는 다시 10초를 받는다.
+ */
+export const BIG_WIN_HURRIED_HOLD_MS = 900
+
+/** 빅윈 오버레이의 세 박자. 순서대로 굴리고(rollup) → 못 박고(emphasis) → 붙든다(hold). */
+export interface BigWinTimeline {
+  readonly rollupMs: number
+  /** 목표에 닿은 «그 순간»부터 재는 강조 비트. */
+  readonly emphasisMs: number
+  /** 강조가 끝난 뒤 자동으로 닫히기까지. 그 전에 탭하면 바로 닫힌다. */
+  readonly holdMs: number
+}
+
+/**
+ * 롤업 길이(ms) — 배수(당첨 ÷ 베팅)의 **로그**에 비례한다.
+ *
+ * 선형이면 500×가 10×의 50배(1분 넘김)라 쓸 수 없고, 그렇다고 상한만 낮추면 실제로 자주 나오는
+ * 10~50× 구간이 전부 같은 길이로 뭉개져 "10×나 200×나 똑같다"는 지금의 불만이 그대로 남는다.
+ * 로그는 그 사이를 잡는다 — 10× 1.4초 / 50× 2.9초 / 200× 4.9초 / 500× 이상 6초.
+ * 사람이 금액을 "크다"고 느끼는 감각 자체가 자릿수(=로그)에 가깝기도 하다.
+ */
+export function bigWinRollupMs(totalWin: number, totalBet: number): number {
+  if (totalBet <= 0 || totalWin <= 0) return BIG_WIN_ROLLUP_MIN_MS
+  // 오버레이가 뜨는 최저 배수가 곡선의 원점이다 — 그 밑은 애초에 이 화면을 보지 못한다.
+  const floor = CELEBRATION_TIER_MULTIPLIERS.surge
+  const multiple = totalWin / totalBet
+  if (multiple <= floor) return BIG_WIN_ROLLUP_MIN_MS
+  const progress = Math.min(
+    1,
+    Math.log(multiple / floor) / Math.log(BIG_WIN_ROLLUP_MAX_MULTIPLE / floor),
+  )
+  return Math.round(BIG_WIN_ROLLUP_MIN_MS + (BIG_WIN_ROLLUP_MAX_MS - BIG_WIN_ROLLUP_MIN_MS) * progress)
+}
+
+/**
+ * 이번 빅윈 오버레이의 세 박자.
+ *
+ * 모션 줄이기면 롤업은 "올라간다"는 사실만 남기고 고정 길이로 줄인다(금액에 비례시켜 봐야
+ * 움직임이 없으니 길이만 늘어난다). 서두르는 구간에서는 롤업·강조가 함께 줄고, 붙드는 시간은
+ * 아예 다른 값을 쓴다(위 `BIG_WIN_HURRIED_HOLD_MS` 참고).
+ */
+export function bigWinTimeline(
+  totalWin: number,
+  totalBet: number,
+  input: TimingInput = {},
+): BigWinTimeline {
+  const scale = input.hurried === true ? HURRIED_SCALE : 1
+  const rollupBase =
+    input.reducedMotion === true ? REDUCED_ROLLUP_MS : bigWinRollupMs(totalWin, totalBet)
   return {
-    rollupMs,
-    displayMs: Math.round(Math.max(DISPLAY_MS_BY_TIER[tier] * scale, rollupMs + MIN_READ_MS * scale)),
+    rollupMs: Math.round(rollupBase * scale),
+    emphasisMs: Math.round(BIG_WIN_EMPHASIS_MS * scale),
+    holdMs: input.hurried === true ? BIG_WIN_HURRIED_HOLD_MS : ROUND_POPUP_AUTO_CLOSE_MS,
   }
 }
 

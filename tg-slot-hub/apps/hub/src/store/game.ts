@@ -28,6 +28,7 @@ import { useHubStore } from './hub'
 import type { DebugPreset } from '../lib/debugPreset'
 import {
   ROUND_FLOW_IDLE,
+  ROUND_POPUP_AUTO_CLOSE_MS,
   canStartSpin,
   ceremonyFor,
   roundFlowReducer,
@@ -65,11 +66,10 @@ const AUTO_SPIN_INTERVAL_MS = 600
 export const AUTO_SPIN_COUNTS = [10, 25, 50, 100] as const
 export type AutoSpinCount = (typeof AUTO_SPIN_COUNTS)[number]
 
-/**
- * 세리머니 팝업(프리스핀 진입/종료)이 스스로 닫히기까지의 시간.
- * 사용자가 탭해서 닫는 것이 기본이고 이건 안전장치일 뿐이라, 스핀 속도로 줄이지 않는다.
- */
-export const ROUND_POPUP_AUTO_CLOSE_MS = 10_000
+// 세리머니 팝업의 자동 닫힘 시간은 순수 모듈(roundFlow)이 소유한다 — 빅윈 오버레이의 결과
+// 화면도 같은 값을 쓰고(winTiers의 bigWinTimeline), 그쪽이 store를 import할 수는 없기 때문이다.
+// 여기서는 예전 import 경로를 그대로 살려 두기 위해 다시 내보내기만 한다.
+export { ROUND_POPUP_AUTO_CLOSE_MS }
 /** 위 자동 닫힘 타이머. 팝업이 떠 있는 동안에만 존재한다. */
 let popupTimeoutId: ReturnType<typeof setTimeout> | null = null
 
@@ -100,6 +100,23 @@ let currentSpinHandle: SpinToHandle | null = null
  * spinTo가 막 시작되는 순간 이 플래그를 보고 즉시 skip()한다.
  */
 let skipRequested = false
+
+/**
+ * 빅윈 오버레이 앞에 멈춰 서 있는 spin()을 다시 보내는 손잡이. 오버레이가 떠 있는 동안에만 있다.
+ *
+ * 오버레이는 릴이 멈춘 **직후·심볼 연출보다 먼저** 뜨고, 닫혀야 그 뒤가 이어진다(사용자 요구
+ * 순서). 그래서 "한 판"의 서술은 여전히 spin() 하나에 선형으로 남고, 여기서는 사용자의 탭
+ * (또는 오버레이의 자동 닫힘)을 그 자리로 되돌려 보내기만 한다.
+ */
+let winCelebrationGate: (() => void) | null = null
+
+/** 오버레이를 걷고, 그 앞에 멈춰 서 있던 spin()을 이어 보낸다. 떠 있지 않으면 무동작이다. */
+function settleWinCelebration(get: StoreGet, set: StoreSet): void {
+  if (get().winCelebration !== null) set({ winCelebration: null })
+  const resume = winCelebrationGate
+  winCelebrationGate = null
+  resume?.()
+}
 
 /**
  * 게임 화면이 렌더러(@tgslot/renderer)를 만든 뒤 store에 등록하는 최소 인터페이스.
@@ -301,6 +318,10 @@ export interface GameState {
   /**
    * 일반 스핀(또는 진행 중인 프리스핀)의 빅윈(≥10×) 오버레이. null이면 없음.
    *
+   * **한 판 안에서의 자리**: 릴(과 뮤테이션)이 멈춘 직후 여기가 세워지고, 닫힌 뒤에야 심볼
+   * 연출(renderer.showWins)이 시작된다 — 사용자 요구("당첨되면 빅윈연출부터 진행되고 심볼연출이
+   * 진행되어야 함"). 그래서 이 값이 null이 아닌 동안 spin()은 아직 끝나지 않은 상태로 대기한다.
+   *
    * `roundFlow`에 합치지 않은 이유 — 그쪽은 소유자가 다르고(프리스핀 진입/종료 팝업↔커튼의
    * 정확한 순서를 지키는 게 목적), 이 오버레이는 팝업/커튼과 같은 판에 절대 겹치지 않는다
    * (`ceremonyFor`가 이번 판에 팝업을 만들기로 하면 여기는 애초에 세팅되지 않는다 — 세리머니
@@ -333,9 +354,9 @@ export interface GameActions {
    */
   notifyCurtain: (to: 'freeSpins' | 'base', phase: 'start' | 'end') => void
   /**
-   * 빅윈 오버레이를 닫는다 — 등급별 체류 시간이 지났을 때(자동), 그리고 사용자가 탭했을 때.
-   * 세리머니 팝업의 `dismissRoundPopup`과 같은 자리에서 다음 판을 예약한다(scheduleNextRound) —
-   * 오버레이가 화면을 붙들고 있던 동안 걸려 있던 자동진행/오토스핀이 이제야 이어진다.
+   * 빅윈 오버레이를 닫는다 — 결과 화면에서 사용자가 탭했을 때, 그리고 그 자동 닫힘 시간이
+   * 지났을 때. 닫히면 멈춰 서 있던 그 판이 이어진다 — 심볼 연출이 그제서야 시작되고, 다음 판
+   * 예약(scheduleNextRound)은 평범한 판과 똑같이 그 연출까지 끝난 뒤에 걸린다.
    */
   dismissWinCelebration: () => void
   /**
@@ -678,27 +699,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       firstPassMs: null,
     }
 
-    // 서버 잔액을 가드보다도 먼저 즉시 반영한다 — 이후 렌더러가 실패하거나(throw) 화면을 벗어나도
-    // 이미 확정된 권위 있는 잔액이 유실되지 않게 한다.
-    useSessionStore.setState({ wallet: result.wallet })
+    // 응답이 도착했다. 여기서 곧장 세우는 것은 **화면에 결과를 누설하지 않는 것**뿐이다 —
+    // 실패했던 스핀의 idempotencyKey는 이제 쓸모가 없으니 지운다.
+    set({ idempotencyKey: null })
 
-    // 허브 스토어(잭팟 풀/미션 진행도/레벨 xp)도 다음 폴링을 기다리지 않고 즉시 반영한다.
-    useHubStore.getState().setJackpotPool(result.jackpot)
-    if (result.missions && result.missions.length > 0) {
-      useHubStore.getState().setMissions(result.missions)
-    }
-    // xp는 누적 베팅액이므로 매 스핀마다 로컬로 즉시 반영해 레벨 바가 부드럽게 채워지게 한다.
-    // levelUp에는 from/to/bonus만 있고 새 xp/maxBet은 없으므로, 레벨이 오른 스핀은 /me로 확정값을 덮어쓴다.
-    useHubStore.getState().addXp(result.totalBet)
-    if (result.levelUp) {
-      void useHubStore.getState().refreshLevelInfo()
-    }
-
-    if (get().gameId !== gameId) return
-
-    // 프리스핀 상태는 이 스핀이 프리스핀을 새로 시작/재발동했든, 계속 진행 중이든, 방금 끝났든
-    // 서버 응답이 유일한 출처다 — 클라이언트는 카운트다운을 스스로 계산하지 않는다.
-    // 더블업도 마찬가지 — gambleOffer가 있으면 이번 스핀 당첨을 걸 수 있는 새 세션이 시작된다.
+    // 더블업 세션 — gambleOffer가 있으면 이번 스핀 당첨을 걸 수 있는 새 세션이다. 값은 지금
+    // 만들어 두되 **공개는 릴이 멈춘 뒤**다(아래 reveal).
     const gambleSession: GambleSession | null = result.gambleOffer
       ? {
           roundId: result.roundId,
@@ -708,19 +714,73 @@ export const useGameStore = create<GameStore>((set, get) => ({
           expiresAt: result.gambleOffer.expiresAt,
         }
       : null
-    set({
-      lastResult: result,
-      idempotencyKey: null,
-      freeSpins: result.freeSpins,
-      gambleSession,
-      // 이번 스핀이 디버그 프리셋으로 강제됐을 때만 서버가 실어 보낸다(같은 idempotencyKey로
-      // 재전송된 응답에는 안 실린다) — 그 외에는 항상 null이다.
-      lastSpinDebug: result.debug ?? null,
-    })
-    // 시각 모드 전환(커튼)은 여기서 곧장 걸지 않는다 — 릴 회전·뮤테이션·승리 연출이 다 끝난
+
+    /**
+     * 이 판의 결과 중 **플레이어가 보게 되는 것**을 한 번에 공개한다.
+     *
+     * 릴이 도는 동안에는 아무것도 새어 나가면 안 된다. 예전에는 응답이 오자마자 전부 세웠고,
+     * 그래서 더블업 패널과 당첨 금액이 **릴 정지보다 1.6초 먼저** 떴다(390×844 실측) —
+     * 이길지 질지가 릴이 멈추기도 전에 확정돼 보였다. 커튼(시각 모드)만 미뤄 두고 나머지가
+     * 새고 있었던 셈이라, 이제 "보이는 것"은 전부 이 한 곳에서 같은 시각에 공개한다:
+     *  - 지갑(당첨금이 얹힌 잔액)과 잭팟 풀(당첨이면 풀이 비워진다)
+     *  - 프리스핀 상태(재발동으로 늘어난 횟수가 스캐터 착지보다 먼저 보이면 안 된다)
+     *  - 더블업 세션(받기/더블 패널과 대기 금액)
+     *  - lastResult(공정성 탭·디버그 패널·아이콘 해석이 읽는 이번 판의 원본)
+     *
+     * 부르는 자리는 둘뿐이다 — 릴(과 뮤테이션 연출)이 끝난 직후의 정상 경로, 그리고 무슨 일이
+     * 있어도 결과가 유실되지 않도록 마지막에 한 번 더 부르는 finally의 안전망. 멱등이라
+     * 두 번 불려도 xp가 두 번 오르거나 하지 않는다. 스탑으로 릴을 즉시 세운 경우에도 spinTo가
+     * 그 자리에서 resolve되므로 공개는 스냅 착지 직후 — 따로 지연이 붙지 않는다.
+     */
+    let revealed = false
+    const reveal = (): void => {
+      if (revealed) return
+      revealed = true
+
+      // 지갑·허브는 게임 화면을 벗어난 뒤에도 반영한다 — 이미 확정된 서버 권위 값이라
+      // 유실되면 로비 잔액이 스핀 전 값으로 남는다.
+      useSessionStore.setState({ wallet: result.wallet })
+      useHubStore.getState().setJackpotPool(result.jackpot)
+      if (result.missions && result.missions.length > 0) {
+        useHubStore.getState().setMissions(result.missions)
+      }
+      // xp는 누적 베팅액이라 결과를 누설하지 않지만(이 판의 승패와 무관), 레벨 바가 판의 끝에
+      // 한 번에 차오르도록 다른 것들과 같은 시각에 반영한다.
+      // levelUp에는 from/to/bonus만 있고 새 xp/maxBet은 없으므로, 레벨이 오른 스핀은 /me로 확정값을 덮어쓴다.
+      useHubStore.getState().addXp(result.totalBet)
+      if (result.levelUp) {
+        void useHubStore.getState().refreshLevelInfo()
+      }
+
+      // 게임 화면 상태는 여전히 그 게임을 보고 있을 때만 — 다른 게임 화면에 남의 결과가 뜨면 안 된다.
+      if (get().gameId !== gameId) return
+      // 프리스핀 상태는 이 스핀이 프리스핀을 새로 시작/재발동했든, 계속 진행 중이든, 방금 끝났든
+      // 서버 응답이 유일한 출처다 — 클라이언트는 카운트다운을 스스로 계산하지 않는다.
+      set({
+        lastResult: result,
+        freeSpins: result.freeSpins,
+        gambleSession,
+        // 이번 스핀이 디버그 프리셋으로 강제됐을 때만 서버가 실어 보낸다(같은 idempotencyKey로
+        // 재전송된 응답에는 안 실린다) — 그 외에는 항상 null이다.
+        lastSpinDebug: result.debug ?? null,
+      })
+    }
+
+    // 그 사이 다른 게임으로 옮겨 갔으면 이 판의 연출은 남의 화면에 그릴 수 없다. 그래도 지갑·
+    // 허브는 확정된 값이므로 공개는 하고 물러난다(위 reveal의 gameId 가드가 나머지를 거른다).
+    if (get().gameId !== gameId) {
+      reveal()
+      return
+    }
+
+    // 시각 모드 전환(커튼)도 여기서 곧장 걸지 않는다 — 릴 회전·뮤테이션·승리 연출이 다 끝난
     // 뒤에야 건다(아래 finally). 결과가 화면에 다 드러나기도 전에 배경부터 바뀌면 인과가
-    // 뒤집힌다(스캐터가 보이기도 전에 프리스핀 복장이 되는 문제). store 상태(freeSpins)는
-    // 베팅 잠금/FREE SPIN 버튼 표시 등을 위해 여기서 즉시 맞춘다 — 렌더러 쪽 커튼만 미룬다.
+    // 뒤집힌다(스캐터가 보이기도 전에 프리스핀 복장이 되는 문제).
+
+    // 이번 판이 프리스핀 모드 경계를 넘었나(진입 또는 종료). 연출 순서를 정하는 두 자리 —
+    // 빅윈 오버레이를 띄울지(아래 try)와 커튼/팝업을 걸지(finally) — 가 **같은 판정**을 봐야
+    // 하므로 여기서 한 번만 계산한다. 판단의 재료(스핀 전 freeSpins + 응답)는 이미 다 나왔다.
+    const ceremony = ceremonyFor(freeSpins, result)
 
     try {
       let reelStopAt: number | null = null
@@ -739,6 +799,36 @@ export const useGameStore = create<GameStore>((set, get) => ({
         await handle
         currentSpinHandle = null
         reelStopAt = Date.now()
+      }
+
+      // 릴이 멈췄다(뮤테이션 리빌까지 끝났다) — 이제서야 결과를 화면에 공개한다. 렌더러가 아예
+      // 없으면 기다릴 릴도 없으니 이 자리가 곧 응답 직후다.
+      reveal()
+
+      // ---- 빅윈 오버레이 — 릴(과 뮤테이션)이 멈춘 «직후», 심볼 연출보다 먼저 ----
+      //
+      // 사용자 요구: "당첨되면 빅윈연출부터 진행되고 심볼연출이 진행되어야 함". 예전에는 순환하는
+      // 심볼 연출이 한 바퀴 다 돈 뒤에야 오버레이가 떴다 — 정작 "얼마를 땄는지"가 맨 나중에 나왔다.
+      //
+      // 세리머니(프리스핀 진입/종료 팝업)가 있는 판에서는 아예 띄우지 않는다 — 그 팝업이 이미 같은
+      // 등급 연출로 총액을 보여주므로 두 번 띄울 이유가 없다(판정은 위에서 한 번만 한다).
+      if (!ceremony && celebrationTier(result.totalWin, result.totalBet) !== 'none') {
+        // 오토스핀이 돌고 있었거나 이미 프리스핀 중이었으면(둘 다 winPresentationMode와 같은
+        // 신호) 서두른다 — 오버레이가 롤업·강조를 줄이고 붙드는 시간도 짧게 잡는다(winTiers.ts).
+        set({
+          phase: 'showingWin',
+          winCelebration: {
+            totalWin: result.totalWin,
+            totalBet: result.totalBet,
+            hurried: get().autoSpin !== null || freeSpins !== null,
+          },
+        })
+        // 오버레이가 닫힐 때까지 이 판은 여기서 멈춰 선다(dismissWinCelebration / reset이 깨운다).
+        await new Promise<void>((resolve) => {
+          winCelebrationGate = resolve
+        })
+        // 기다리는 동안 화면을 벗어났으면(reset) 남은 연출은 이 게임의 것이 아니다 — finally가 정리한다.
+        if (get().gameId !== gameId) return
       }
 
       // wins가 없어도 features(예: 스캐터 3개로 프리스핀 진입, 배당은 0)만 있을 수 있으므로
@@ -774,6 +864,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // 연출 실패는 서버 권위 결과에 영향을 주지 않는다 — 원인만 남기고 아래 finally가 phase를 회복시킨다.
       console.error('[game] renderer playback failed', err)
     } finally {
+      // 안전망 — 릴 연출이 중간에 터졌든 화면을 벗어났든, 확정된 결과가 유실된 채로 판이 끝나면
+      // 안 된다. 정상 경로에서는 이미 공개됐으므로 여기서는 아무 일도 일어나지 않는다.
+      reveal()
       currentSpinHandle = null
       if (get().gameId === gameId) {
         set({ phase: 'idle', lastSpinTiming: timing })
@@ -786,11 +879,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
           set({ autoSpin: left > 0 ? { remaining: left } : null })
         }
 
-        // 이번 판이 프리스핀 모드 경계를 넘었나(진입 또는 종료). 넘었으면 곧장 커튼을 걸지 않고
+        // 이번 판이 프리스핀 모드 경계를 넘었으면(위에서 판정해 둔 ceremony) 곧장 커튼을 걸지 않고
         // 먼저 팝업부터 띄운다 — 커튼은 팝업이 닫힌 뒤에야 시작하고, 그동안 릴은 완전히 멈춰
         // 있는다. 경계를 넘지 않은 판(평범한 유료 판, 진행 중인 프리스핀, 재발동)은 예전 그대로
         // 곧바로 setMode를 부르고(렌더러가 같은 모드면 알아서 커튼을 건너뛴다) 다음 판을 예약한다.
-        const ceremony = ceremonyFor(freeSpins, result)
         if (ceremony) {
           applyRoundFlow(
             { type: 'ceremonyStarted', popup: ceremony.popup, to: ceremony.to, withCurtain: renderer !== null },
@@ -802,27 +894,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
           // 렌더러가 스스로 건너뛴다(modeTransitionTarget) — store가 판단하지 않는다.
           renderer?.setMode?.({ freeSpins: toRendererFreeSpinsMode(result.freeSpins) })
 
-          // 빅윈 오버레이 — 이번 판이 세리머니 팝업 없이 끝났을 때만 판정한다(위 ceremony 분기가
-          // 이미 있었다면 종료 팝업이 같은 등급 연출로 총액을 보여주므로 겹쳐 띄우지 않는다 —
-          // 진입 팝업이 있었던 판도 마찬가지로 그 판은 팝업이 화면의 주인이다). 등급이 없으면
-          // (10× 미만이거나 totalBet을 모르면) celebrationTier가 'none'을 돌려주고, 그때는
-          // 예전 그대로 곧장 다음 판을 예약한다.
-          const tier = celebrationTier(result.totalWin, result.totalBet)
-          if (tier === 'none') {
-            scheduleNextRound(get)
-          } else {
-            // 오토스핀이 돌고 있었거나 이미 프리스핀 중이었으면(둘 다 winPresentationMode와 같은
-            // 신호) 서두른다 — 체류 시간이 절반이 된다(winTiers.ts의 HURRIED_SCALE). 다음 판
-            // 예약(scheduleNextRound)은 오버레이가 닫힐 때(dismissWinCelebration)로 미룬다 —
-            // 세리머니 팝업과 정확히 같은 이유로, 화면이 붙들려 있는 동안 다음 판이 걸리면 안 된다.
-            set({
-              winCelebration: {
-                totalWin: result.totalWin,
-                totalBet: result.totalBet,
-                hurried: get().autoSpin !== null || freeSpins !== null,
-              },
-            })
-          }
+          // 빅윈 오버레이는 이 판의 **앞쪽**에서 이미 뜨고 닫혔다(위 try 참고) — 여기서는 평범한
+          // 판과 똑같이 다음 판만 예약한다. 오버레이가 화면을 붙들고 있던 동안에는 이 자리에
+          // 도달하지도 않으므로, 그 사이에 다음 판이 걸릴 수 없다.
+          scheduleNextRound(get)
         }
       }
     }
@@ -833,9 +908,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   dismissWinCelebration() {
-    if (get().winCelebration === null) return
-    set({ winCelebration: null })
-    scheduleNextRound(get)
+    settleWinCelebration(get, set)
   },
 
   notifyCurtain(to, phase) {
@@ -984,6 +1057,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 남아있으면 안 된다.
     cancelAutoSpin()
     applyRoundFlow({ type: 'aborted' }, get, set)
+    // 오버레이 앞에 멈춰 서 있던 판이 있으면 깨워 보낸다 — 안 그러면 그 spin()이 영영 대기한다
+    // (깨어난 쪽은 gameId가 달라진 것을 보고 남은 연출 없이 물러난다).
+    settleWinCelebration(get, set)
     currentSpinHandle = null
     skipRequested = false
     // 진행 중이던 승리 연출 순환을 걷어낸다 — 안 그러면 다음에 이 게임에 다시 들어왔을 때(또는

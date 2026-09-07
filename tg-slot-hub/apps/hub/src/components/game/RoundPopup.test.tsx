@@ -48,59 +48,47 @@ describe('RoundPopupView', () => {
     expect(valueText()).toBe('12')
   })
 
-  it('escalates the exit title at each tier boundary and stays plain without a total bet', () => {
-    const cases = [
-      { totalWin: 999, totalBet: 100, title: 'WIN' },
-      { totalWin: 1000, totalBet: 100, title: 'SURGE' },
-      { totalWin: 2000, totalBet: 100, title: 'BLAST' },
-      { totalWin: 5000, totalBet: 100, title: 'STORM' },
-      { totalWin: 10_000, totalBet: 100, title: 'CATACLYSM' },
-      { totalWin: 10_000, totalBet: undefined, title: 'WIN' },
-    ] as const
-
-    for (const { totalWin, totalBet, title } of cases) {
+  it('never escalates the exit title — the session total is not a tier, however big it gets', () => {
+    // 계약이 뒤집혔다. 예전에는 총액이 등급을 올렸다(1000/100 = 10× → SURGE …).
+    // 이제는 «프리스핀 도중 빅윈은 그 판에서 이미 축하했다»는 이유로 등급을 매기지 않는다 —
+    // 총액은 그대로 보여 주되 제목은 늘 평범한 «획득»이다.
+    for (const totalWin of [999, 1000, 5000, 10_000, 1_000_000]) {
       const { unmount } = render(
-        <RoundPopupView popup={{ kind: 'freeSpinsExit', totalWin }} onDismiss={() => {}} totalBet={totalBet} />,
+        <RoundPopupView popup={{ kind: 'freeSpinsExit', totalWin }} onDismiss={() => {}} />,
       )
-      expect(screen.getByText(title)).toBeInTheDocument()
+      expect(screen.getByText('WIN')).toBeInTheDocument()
+      for (const tierName of ['SURGE', 'BLAST', 'STORM', 'CATACLYSM']) {
+        expect(screen.queryByText(tierName)).not.toBeInTheDocument()
+      }
       unmount()
     }
   })
 
-  it('lets a game pack rename the tier, exactly as the base-game overlay does', () => {
+  it('ignores a game pack tier rename too — there is no tier here to rename', () => {
     render(
       <RoundPopupView
         popup={{ kind: 'freeSpinsExit', totalWin: 5000 }}
         onDismiss={() => {}}
-        totalBet={100}
         labels={{ storm: 'STAMPEDE' }}
       />,
     )
-    expect(screen.getByText('STAMPEDE')).toBeInTheDocument()
-    expect(screen.queryByText('STORM')).not.toBeInTheDocument()
+    expect(screen.getByText('WIN')).toBeInTheDocument()
+    expect(screen.queryByText('STAMPEDE')).not.toBeInTheDocument()
   })
 
-  it('rolls the total up to the final amount and thickens the coin shower with the tier', async () => {
-    const { container, unmount } = render(
-      <RoundPopupView popup={EXIT} onDismiss={() => {}} totalBet={100} freeSpinsPlayed={8} />,
+  it('still rolls the total up and still showers coins — only the escalation is gone', async () => {
+    const { container } = render(
+      <RoundPopupView popup={EXIT} onDismiss={() => {}} freeSpinsPlayed={8} />,
     )
 
-    // 4820 / 100 = 48.2× → BLAST
-    expect(container.querySelectorAll('.hub-win-fx__coin')).toHaveLength(SHOWER_COUNT_BY_TIER.blast)
+    // 등급이 없어도 축하는 남는다(사용자: "결과 팝업은 잘해야 함") — 기본 분량의 코인 샤워.
+    expect(container.querySelectorAll('.hub-win-fx__coin')).toHaveLength(SHOWER_COUNT_BY_TIER.none)
     expect(screen.getByText('8 free spins')).toBeInTheDocument()
     await waitFor(() => expect(valueText()).toBe('4,820'), { timeout: 4000 })
-    unmount()
-
-    const max = render(
-      <RoundPopupView popup={{ kind: 'freeSpinsExit', totalWin: 12_000 }} onDismiss={() => {}} totalBet={100} />,
-    )
-    expect(max.container.querySelectorAll('.hub-win-fx__coin')).toHaveLength(
-      SHOWER_COUNT_BY_TIER.cataclysm,
-    )
   })
 
   it('falls back to the generic summary line when the spin count was not supplied', () => {
-    render(<RoundPopupView popup={EXIT} onDismiss={() => {}} totalBet={100} />)
+    render(<RoundPopupView popup={EXIT} onDismiss={() => {}} />)
     expect(screen.getByText('FREE SPINS COMPLETE')).toBeInTheDocument()
   })
 
@@ -123,7 +111,7 @@ describe('RoundPopupView', () => {
 
   it('completes the roll-up on the first tap and closes only on the next one', async () => {
     const onDismiss = vi.fn()
-    render(<RoundPopupView popup={EXIT} onDismiss={onDismiss} totalBet={100} />)
+    render(<RoundPopupView popup={EXIT} onDismiss={onDismiss} />)
 
     // 아직 굴러가는 중 — 첫 탭은 "끝까지 감기"다.
     expect(valueText()).not.toBe('4,820')
@@ -140,16 +128,29 @@ describe('RoundPopupView', () => {
   })
 
   it('says what the next tap will do — reveal while rolling, close once settled', () => {
-    render(<RoundPopupView popup={EXIT} onDismiss={() => {}} totalBet={100} />)
+    const { container } = render(<RoundPopupView popup={EXIT} onDismiss={() => {}} />)
 
     expect(screen.getByText('Tap to reveal')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button'))
     expect(screen.getByText('Tap to close')).toBeInTheDocument()
+    // 힌트는 이 팝업에서는 카드 «안»에 그대로 있다 — 부딪칠 게임 아트가 없다(빅윈 오버레이만
+    // 바닥으로 옮겼다). 두 화면이 같은 컴포넌트를 쓰므로 여기서 한 번 못 박아 둔다.
+    expect(container.querySelector('.hub-win .hub-win__hint')).toBeInTheDocument()
+  })
+
+  it('keeps its own modal weight — the big-win overlay scrim never wraps this popup (no double darkening)', () => {
+    const { container } = render(<RoundPopupView popup={EXIT} onDismiss={() => {}} />)
+
+    // 축하 연출(WinCelebration/Fx)은 공용이지만 «전면을 가리는 층»은 각자의 것이다 —
+    // 이 팝업은 Modal의 backdrop + 불투명 카드로 이미 충분하고, 거기에 오버레이 스크림까지
+    // 겹치면 이중으로 어두워진다.
+    expect(container.querySelector('.hub-win-overlay')).toBeNull()
+    expect(container.querySelector('.hub-modal-backdrop')).toBeInTheDocument()
   })
 
   it('closes on a backdrop tap too, once the roll-up has finished', async () => {
     const onDismiss = vi.fn()
-    const { container } = render(<RoundPopupView popup={EXIT} onDismiss={onDismiss} totalBet={100} />)
+    const { container } = render(<RoundPopupView popup={EXIT} onDismiss={onDismiss} />)
     const backdrop = container.querySelector('.hub-modal-backdrop') as HTMLElement
 
     fireEvent.click(backdrop)
@@ -162,7 +163,7 @@ describe('RoundPopupView', () => {
 
   it('drops every particle and shortens the roll-up under reduced motion', async () => {
     useSettingsStore.setState({ reducedMotion: true })
-    const { container } = render(<RoundPopupView popup={EXIT} onDismiss={() => {}} totalBet={100} />)
+    const { container } = render(<RoundPopupView popup={EXIT} onDismiss={() => {}} />)
 
     expect(container.querySelector('.hub-win-fx__rays')).toBeNull()
     expect(container.querySelector('.hub-win-fx__coin')).toBeNull()
@@ -176,7 +177,7 @@ describe('RoundPopupView', () => {
   })
 
   it('announces the final amount once through a single polite live region', async () => {
-    const { container } = render(<RoundPopupView popup={EXIT} onDismiss={() => {}} totalBet={100} />)
+    const { container } = render(<RoundPopupView popup={EXIT} onDismiss={() => {}} />)
     const regions = container.querySelectorAll('[aria-live]')
     const live = regions[0] as HTMLElement
 

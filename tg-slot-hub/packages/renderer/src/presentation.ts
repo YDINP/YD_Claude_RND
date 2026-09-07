@@ -178,6 +178,9 @@ export function winLineEvent(win: WinLine, context: PresentationStepContext): Wi
   if (win.ways !== undefined) event.ways = win.ways
   if (win.group !== undefined) event.group = win.group
   if (win.direction !== undefined) event.direction = win.direction
+  // 이긴 칸 좌표 — 그룹 지급에서 허브가 "어떤 BAR들이 이겼는지"를 그리드에서 짚는 데 쓴다.
+  // 빈 목록은 짚을 것이 없다는 뜻이므로 다른 값들과 같이 키 자체를 넣지 않는다.
+  if (win.positions.length > 0) event.positions = win.positions
   return event
 }
 

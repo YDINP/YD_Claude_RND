@@ -48,6 +48,35 @@ const AUTO_SPIN_SHEET_TITLE_ID = 'hub-autospin-title'
  */
 const GAMBLE_RESULT_HOLD_MS = 3000
 
+/**
+ * 스페이스바를 이만큼(ms) 누르고 있으면 그동안만 터보로 돈다(사용자 요청 — PC 전용 편의).
+ *
+ * 400ms인 이유: 스핀 한 번을 누르는 보통의 타건은 100ms 안팎이라 그 두 배를 넘겨야 "누르고
+ * 있다"로 읽을 수 있고, 반대로 더 길게 잡으면 **지금 이 판**을 빨리 돌리려고 누른 사용자가
+ * 이미 평소 속도로 도는 릴을 보게 된다(누른 판부터 터보여야 뜻이 통한다). 오토리핏 keydown이
+ * 처음 오는 시각(OS 기본 250~500ms)과도 대체로 겹쳐 체감이 자연스럽다.
+ */
+export const SPACE_TURBO_HOLD_MS = 400
+
+function isSpaceKey(event: KeyboardEvent): boolean {
+  return event.code === 'Space' || event.key === ' '
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  const tag = target.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable
+}
+
+/**
+ * 포커스가 버튼/링크(도움말·뒤로가기·베팅 −/+/표시 등)에 가 있으면 스페이스는 그 요소의
+ * 기본 동작(클릭)이어야 한다 — 우리가 가로채 스핀/스킵을 대신 발동시키면 안 된다.
+ */
+function isActivatableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  return target.closest('button, a, [role="button"], [role="tab"]') !== null
+}
+
 function spinSpeedLabelKey(speed: SpinSpeed): 'spinSpeedNormal' | 'spinSpeedQuick' | 'spinSpeedTurbo' {
   if (speed === 'turbo') return 'spinSpeedTurbo'
   if (speed === 'quick') return 'spinSpeedQuick'
@@ -92,31 +121,105 @@ function formatGambleCountdown(remainingMs: number): string {
  * 그 안에서 만들면 로케일을 바꿔도 계속 옛 언어로 남는다(WinBanner의 tier와 같은 이유).
  */
 type LineLabelSource =
-  | { kind: 'line'; symbol: string; group?: string; ways?: number; count: number; win: number; key: number }
+  | {
+      kind: 'line'
+      symbol: string
+      group?: string
+      ways?: number
+      count: number
+      win: number
+      /** 이긴 칸의 [reel, row] 좌표. 그룹 승리에서 «실제로 이긴 심볼»을 짚는 데 쓴다. */
+      positions?: readonly (readonly [number, number])[]
+      key: number
+    }
   | { kind: 'cycle'; totalWin: number; key: number }
 
 /**
- * 라인/ways 승리에서 심볼 이름 대신 이미지를 count번 반복해 보여주기 위한 아이콘 목록을
- * 만든다(사용자 요청). 배당표 시트가 이미 쓰는 것과 같은 해석 경로(`theme.symbols[id]`)를
- * 그대로 재사용한다 — 별도 URL 조립을 하지 않는다.
+ * 이긴 칸에 **실제로 놓여 있던** 심볼 id들 — 좌표를 이번 판 그리드에 짚어 읽는다.
+ * 짚을 수 없으면 null(호출부가 지급 심볼 반복 또는 텍스트로 물러난다).
  *
- * 그룹 승리(anybar 등)는 대표할 단일 이미지가 없으므로 애초에 아이콘을 만들지 않고 undefined를
- * 돌려준다 — 호출부가 `text`(그룹 이름 문구)로 폴백한다. 테마가 아직 없거나 그 심볼 이미지를
- * 찾지 못해도(로딩 실패, math/theme 심볼 목록 불일치 등) 마찬가지로 undefined — 빈 줄이 뜨거나
- * 깨진 이미지가 보이면 안 된다.
+ * 좌표는 `[reel, row]`이고 그리드는 `grid[row][reel]`이다 — 뒤집으면 조용히 엉뚱한 칸을 읽는다
+ * (렌더러 `mutations.ts`가 지키는 것과 같은 규약이다).
+ *
+ * 그리드는 서버가 준 **평가 격자**(`SpinResponse.grid`)다. 뮤테이션이 이미 적용된 값이라
+ * (API가 `applyMutationsToGrid`로 만들어 보낸다) 미스터리는 공개된 심볼로, 랜덤 와일드는
+ * 와일드로 읽힌다 — 릴에 보이는 것과 같다.
+ *
+ * 좌표 수가 `count`와 다르면 짚지 않는다. ways 지급이나 확장 와일드처럼 한 지급이 count보다
+ * 많은 칸에 걸쳐 있을 수 있고, 그때 좌표를 그대로 그리면 "맞은 개수"가 틀리게 보인다.
+ */
+function winCellSymbols(
+  source: Extract<LineLabelSource, { kind: 'line' }>,
+  grid: readonly (readonly string[])[] | undefined,
+): string[] | null {
+  if (grid === undefined || source.positions === undefined) return null
+  if (source.positions.length !== source.count) return null
+
+  const symbols: string[] = []
+  for (const [reel, row] of source.positions) {
+    const symbol = grid[row]?.[reel]
+    if (symbol === undefined) return null
+    symbols.push(symbol)
+  }
+  return symbols
+}
+
+/**
+ * 아이콘으로 그릴 심볼들. **좌표를 짚는 것이 기본**이고, 지급 심볼을 되풀이하는 것이 폴백이다.
+ *
+ * 이 순서가 뒤집혀 있던 것이 두 결함의 뿌리였다:
+ *  - 와일드가 대체한 칸이 대체당한 심볼로 그려졌다(릴에는 와일드가 보이는데 요약은 «벨 3개»).
+ *  - 그룹 지급(anybar)은 대표할 그림이 아예 없어 이름 텍스트로 물러났다.
+ * 칸에 실제로 놓인 것을 읽으면 둘 다 저절로 풀린다 — 와일드는 와일드로, 섞인 BAR는 그 BAR들로.
+ *
+ * 짚지 못했을 때: 지급 심볼이 곧 그 칸들이라고 볼 수 있는 **일반 승리**만 그 심볼을 count번
+ * 되풀이한다. 그룹 지급은 그렇게 볼 수 없으므로(그룹 id에는 그림이 없다) null로 물러나
+ * 호출부가 이름 문구를 쓰게 한다.
+ */
+function winIconSymbols(
+  source: Extract<LineLabelSource, { kind: 'line' }>,
+  grid: readonly (readonly string[])[] | undefined,
+): string[] | null {
+  const cells = winCellSymbols(source, grid)
+  if (cells !== null) return cells
+  if (source.group !== undefined) return null
+  return Array.from({ length: source.count }, () => source.symbol)
+}
+
+/**
+ * 라인/ways 승리에서 심볼 이름 대신 이미지를 보여주기 위한 아이콘 목록을 만든다(사용자 요청).
+ * 배당표 시트가 이미 쓰는 것과 같은 해석 경로(`theme.symbols[id]`)를 그대로 재사용한다 —
+ * 별도 URL 조립을 하지 않는다.
+ *
+ * 그릴 심볼을 정하지 못했거나(위 `winIconSymbols`), 테마가 아직 없거나, 그 중 하나라도 이미지를
+ * 찾지 못하면(팩마다 와일드 그림이 없을 수 있다) undefined를 돌려준다 — 호출부가 `text`(이름
+ * 문구)로 폴백한다. 빈 줄이 뜨거나 깨진 이미지가 보이면 안 된다.
  */
 function buildWinLineIcons(
   math: GameMath,
   theme: Theme | null,
   locale: Locale,
   source: Extract<LineLabelSource, { kind: 'line' }>,
+  grid: readonly (readonly string[])[] | undefined,
 ): WinStripLineLabel['icons'] | undefined {
-  if (source.group) return undefined
-  const src = theme?.symbols[source.symbol]
-  if (!src) return undefined
+  const symbols = winIconSymbols(source, grid)
+  if (symbols === null) return undefined
+  const srcs: string[] = []
+  for (const id of symbols) {
+    const src = theme?.symbols[id]
+    if (!src) return undefined
+    srcs.push(src)
+  }
   return {
-    srcs: Array.from({ length: source.count }, () => src),
-    ariaLabel: `${symbolLabel(math, source.symbol, locale)} ×${source.count}`,
+    srcs,
+    // 읽어 주는 말은 **지급 근거** 그대로다 — 그림이 벨·와일드·벨이어도 이 판이 지급된 이유는
+    // "벨 3개"이고, 섞인 BAR 라인은 "아무 BAR ×3"이다. 칸을 그대로 읽어 "와일드 ×3"이라 하면
+    // 배당표에 없는 말이 된다.
+    ariaLabel: `${
+      source.group === undefined
+        ? symbolLabel(math, source.symbol, locale)
+        : groupLabel(math, source.group, locale)
+    } ×${source.count}`,
     suffix: [...(source.ways ? [`${source.ways} ways`] : []), source.win.toLocaleString('en-US')].join(' · '),
   }
 }
@@ -268,6 +371,68 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
 
   /** 스페이스바를 누르고 있는 동안(오토리핏) 반복 발동을 막는 플래그. keyup에서 풀린다. */
   const spaceHeldRef = useRef(false)
+  /**
+   * 스페이스바를 문턱(SPACE_TURBO_HOLD_MS)을 넘겨 누르고 있는 동안만 켜지는 **임시** 터보.
+   * 저장된 선호(settings.spinSpeed)는 건드리지 않는다 — 손을 떼면 사용자가 고른 속도로 돌아온다.
+   */
+  const [spaceTurbo, setSpaceTurbo] = useState(false)
+
+  // 스페이스 길게 누르기 = 터보(PC 전용 편의). 스핀/스킵을 맡은 아래 단축키 effect와 **따로**
+  // 둔다 — 저쪽은 phase·시트 상태가 바뀔 때마다 다시 구독되지만, "지금 키를 누르고 있는가"는
+  // 그 재구독을 타면 안 되는(구독이 끊기는 순간 눌림 상태를 잃는) 별개의 사실이기 때문이다.
+  // 그래서 여기는 마운트에 한 번만 걸고, 눌림 여부도 이 클로저 안에서만 산다.
+  useEffect(() => {
+    let holdTimer: ReturnType<typeof setTimeout> | null = null
+    let down = false
+
+    /** 키를 놓았거나 잃었다(포커스 이탈·탭 전환) — 임시 터보를 반드시 되돌린다. */
+    function release(): void {
+      if (holdTimer !== null) {
+        clearTimeout(holdTimer)
+        holdTimer = null
+      }
+      down = false
+      setSpaceTurbo(false)
+    }
+
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (!isSpaceKey(event)) return
+      // 오토리핏 keydown은 "계속 누르고 있다"는 사실을 되풀이할 뿐이라 시계를 다시 걸지 않는다.
+      if (event.repeat || down) return
+      if (isEditableTarget(event.target)) return
+      down = true
+      holdTimer = setTimeout(() => {
+        holdTimer = null
+        setSpaceTurbo(true)
+        haptic('light')
+      }, SPACE_TURBO_HOLD_MS)
+    }
+
+    function handleKeyUp(event: KeyboardEvent): void {
+      if (!isSpaceKey(event)) return
+      release()
+    }
+
+    // 키를 누른 채 창을 벗어나면 keyup이 오지 않는다 — 그대로 두면 임시 터보가 눌러붙는다.
+    function handleVisibility(): void {
+      if (document.hidden) release()
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('blur', release)
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('blur', release)
+      document.removeEventListener('visibilitychange', handleVisibility)
+      if (holdTimer !== null) clearTimeout(holdTimer)
+    }
+  }, [])
+
+  /** 이번 스핀이 실제로 쓸 속도 — 스페이스를 누르고 있는 동안만 터보가 선호를 덮는다. */
+  const effectiveSpinSpeed: SpinSpeed = spaceTurbo ? 'turbo' : spinSpeed
 
   // 프리스핀 재발동은 이미 프리스핀 중이라(같은 모드) 커튼도 세리머니 팝업도 없다 — 그래서
   // 재발동만은 featureTriggered 자체가 신호가 되는 짧은 토스트로 남겨둔다. 최초 진입/종료는
@@ -336,11 +501,12 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     rendererInstance?.setMode?.({ freeSpins: toRendererFreeSpinsMode(useGameStore.getState().freeSpins) })
   }, [rendererInstance])
 
-  // 렌더러가 준비되거나(마운트) 설정에서 스핀 속도를 바꾸면 그대로 반영한다 — 돌고 있는 스핀은
-  // 건드리지 않고 다음 스핀부터 적용된다(렌더러 계약).
+  // 렌더러가 준비되거나(마운트) 속도가 바뀌면 그대로 반영한다 — 돌고 있는 스핀은 건드리지 않고
+  // 다음 스핀부터 적용된다(렌더러 계약). 설정에서 고른 값이든 스페이스 길게 누르기의 임시
+  // 터보든 렌더러에게는 똑같이 "지금의 속도" 하나로 간다.
   useEffect(() => {
-    rendererInstance?.setSpinSpeed?.(spinSpeed)
-  }, [rendererInstance, spinSpeed])
+    rendererInstance?.setSpinSpeed?.(effectiveSpinSpeed)
+  }, [rendererInstance, effectiveSpinSpeed])
 
   // 게임 진입 시 math.json 로드, 이탈 시 store 초기화.
   useEffect(() => {
@@ -417,6 +583,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         ways: event.ways,
         count: event.count,
         win: event.win,
+        // 그룹 승리에서 «실제로 이긴 심볼»을 그리드에 짚기 위한 좌표. 렌더러가 안 실어 주면
+        // (좌표가 빈 지급) undefined 그대로 두고, 그때는 이름 문구로 폴백한다.
+        positions: event.positions,
         key: lineLabelKeyRef.current,
       })
       return
@@ -739,10 +908,14 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 ].join(' · ')
               : '',
         // 'text'는 항상 완전한 폴백 문구로 채워 둔다(위) — 아이콘은 그 위에 얹는 표시 방식일
-        // 뿐이다(사용자 요청: 심볼 이름 대신 이미지를 count번). 그룹 승리/이미지 없음이면
-        // buildWinLineIcons가 undefined를 돌려주고 WinStrip이 자동으로 text로 폴백한다.
+        // 뿐이다(사용자 요청: 심볼 이름 대신 이미지). 아이콘은 이번 판 그리드(lastResult.grid)를
+        // 좌표로 짚어 «칸에 실제로 있던 것»을 보여준다 — 와일드는 와일드로, 섞인 BAR는 그
+        // BAR들로. 짚을 수 없거나 이미지가 없으면 buildWinLineIcons가 undefined를 돌려주고
+        // WinStrip이 자동으로 text로 폴백한다.
         icons:
-          lineLabelSource.kind === 'line' && math ? buildWinLineIcons(math, theme, locale, lineLabelSource) : undefined,
+          lineLabelSource.kind === 'line' && math
+            ? buildWinLineIcons(math, theme, locale, lineLabelSource, lastResult?.grid)
+            : undefined,
       }
     : null
 
@@ -807,25 +980,16 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // 없고 프리스핀 자동 진행 중이 아니면 스핀을 시작한다. 다 페이지 스크롤을 막고, 키를 누르고
   // 있어도(오토리핏) keyup 전까지 한 번만 반응한다. 텍스트 입력/모달에 포커스가 가 있으면 아예
   // 가로채지 않는다.
+  //
+  // "누르고 있으면 터보"는 여기가 아니라 위의 별도 effect(spaceTurbo)가 맡는다 — 이 effect는
+  // "무엇을 할 것인가"(스핀/스킵/중지)를, 저쪽은 "얼마나 빠르게"를 정한다. 계속 누르고 있는
+  // 동안 시작되는 스핀(프리스핀 자동진행 등)이 그 속도로 돈다.
   useEffect(() => {
     const isModalOpen =
       betSheetOpen || helpSheetOpen || autoSpinSheetOpen || errorCode === 'INSUFFICIENT_FUNDS' || gambleModalOpen
 
-    function isEditableTarget(target: EventTarget | null): boolean {
-      if (!(target instanceof HTMLElement)) return false
-      const tag = target.tagName
-      return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable
-    }
-
-    // 포커스가 버튼/링크(도움말·뒤로가기·베팅 −/+/표시 등)에 가 있으면 스페이스는 그 요소의
-    // 기본 동작(클릭)이어야 한다 — 우리가 가로채 스핀/스킵을 대신 발동시키면 안 된다.
-    function isActivatableTarget(target: EventTarget | null): boolean {
-      if (!(target instanceof HTMLElement)) return false
-      return target.closest('button, a, [role="button"], [role="tab"]') !== null
-    }
-
     function handleKeyDown(event: KeyboardEvent): void {
-      if (event.code !== 'Space' && event.key !== ' ') return
+      if (!isSpaceKey(event)) return
       if (isEditableTarget(event.target)) return
       if (isActivatableTarget(event.target)) return
       if (spaceHeldRef.current) return // 오토리핏 — keyup에서 풀릴 때까지 무시한다.
@@ -866,7 +1030,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     }
 
     function handleKeyUp(event: KeyboardEvent): void {
-      if (event.code !== 'Space' && event.key !== ' ') return
+      if (!isSpaceKey(event)) return
       spaceHeldRef.current = false
     }
 
@@ -1201,15 +1365,15 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       />
 
       {/* 프리스핀 진입/종료 세리머니 팝업 — 커튼은 이게 닫힌 뒤에야 시작한다(roundFlow). */}
-      {/* 세리머니 팝업에 필요한 세 값은 전부 «그 판의 서버 응답»에서 온다.
-          - totalBet: 등급(SURGE~) 판정의 분모. 없으면 RoundPopup이 등급을 올리지 않고 평범한 «획득»으로 간다.
+      {/* 세리머니 팝업에 넘기는 값은 «그 판의 서버 응답»에서 온다.
           - freeSpinsPlayed: 서버가 세션 종료 스핀에만 실어 주는 실제 소진 횟수(리트리거 포함).
-          - scatterImageUrl: 진입 팝업 상단에 떨어지는 트리거 심볼. 테마가 아직 없으면 그냥 생략된다. */}
+          - scatterImageUrl: 진입 팝업 상단에 떨어지는 트리거 심볼. 테마가 아직 없으면 그냥 생략된다.
+          총 베팅은 **일부러 넘기지 않는다** — 이 팝업은 세션 총액으로 등급을 매기지 않는다
+          (프리스핀 도중 빅윈은 그 판에서 이미 오버레이로 축하했다. RoundPopup.tsx의 tier 주석 참고). */}
       {roundPopup && (
         <RoundPopupView
           popup={roundPopup}
           onDismiss={dismissRoundPopupAction}
-          {...(lastResult ? { totalBet: lastResult.totalBet } : {})}
           {...(lastResult?.freeSpinsSummary ? { freeSpinsPlayed: lastResult.freeSpinsSummary.spins } : {})}
           {...(scatterImageUrl === undefined ? {} : { scatterImageUrl })}
         />
@@ -1266,6 +1430,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             적으려면 폭이 필요해 베팅/스핀 줄 위 자체 줄로 올렸다(그 자리는 AUTO 버튼이 이어받았다) —
             390px에서도 스핀 버튼을 좁히지 않고 세 칸 모두 편히 누를 수 있다. 설정 모달의 같은
             항목과 값을 공유한다(useSettingsStore.spinSpeed 하나뿐이다). */}
+        {/* 스페이스를 누르고 있는 동안의 임시 터보는 «선택»과 구별해서 보여준다(data-override) —
+            고른 칸은 그대로 켜 둔 채(aria-checked는 저장된 선호 그대로다: 실제로 바뀐 건 없다)
+            터보 칸에 점선 테두리만 덧입힌다. 안 그러면 "보통"이 켜져 있는데 릴은 터보로 도는
+            것처럼 보여 사용자가 고장으로 읽는다. */}
         <div
           className="hub-game-screen__speed-seg"
           role="radiogroup"
@@ -1278,6 +1446,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               role="radio"
               aria-checked={spinSpeed === speed}
               data-active={spinSpeed === speed}
+              data-override={effectiveSpinSpeed === speed && spinSpeed !== speed ? 'true' : undefined}
               className="hub-game-screen__speed-seg-btn"
               onClick={() => {
                 if (spinSpeed === speed) return

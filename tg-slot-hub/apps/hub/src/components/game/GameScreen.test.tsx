@@ -59,7 +59,7 @@ import { useGamesStore } from '../../store/games'
 import { useHubStore } from '../../store/hub'
 import { useSettingsStore } from '../../store/settings'
 import { SettingsModal } from '../SettingsModal'
-import { GameScreen } from './GameScreen'
+import { GameScreen, SPACE_TURBO_HOLD_MS } from './GameScreen'
 
 const mockedGetGameMath = vi.mocked(getGameMath)
 const mockedApiSpin = vi.mocked(apiSpin)
@@ -764,7 +764,141 @@ describe('GameScreen', () => {
         expect(screen.queryByText('Tiger ×5 · 4 ways · 348')).not.toBeInTheDocument()
       })
 
-      it('still shows the group name as text (no single icon represents a group) even when the theme has the member images', async () => {
+      it('draws a wild cell as the wild, not as the symbol it stood in for', async () => {
+        // 실측 응답 그대로: bell ×3로 지급됐지만 가운데 칸에 실제로 놓인 것은 와일드다.
+        // 릴에는 와일드가 떡하니 보이는데 아래 요약만 벨 세 개면 서로 어긋난다(사용자 지적).
+        mockedGetGameMath.mockResolvedValueOnce({
+          ...rawMath,
+          symbols: [
+            { id: 'bell', name: { en: 'Bell' } },
+            { id: 'wild', name: { en: 'Wild' }, wild: true },
+          ],
+          strips: [
+            ['bell', 'wild', 'bell'],
+            ['bell', 'wild', 'bell'],
+            ['bell', 'wild', 'bell'],
+          ],
+          paytable: { bell: { 3: 6 } },
+        })
+        mockedLoadTheme.mockResolvedValueOnce({
+          symbols: { bell: '/theme/bell@128.png', wild: '/theme/wild@128.png' },
+          palette: { frame: '#000000', reelBg: '#000000', winLine: ['#ffffff'], text: '#ffffff' },
+        })
+        const { container } = render(<GameScreen gameId="classic-777" />)
+        await screen.findByText('10')
+
+        const positions: [number, number][] = [
+          [0, 1],
+          [1, 1],
+          [2, 1],
+        ]
+        await spinAndSettle(
+          baseSpinResponse({
+            totalBet: 10,
+            totalWin: 60,
+            // grid[row][reel] — 서버가 주는 «평가 격자»(뮤테이션 적용 후)라 그 칸엔 와일드가 있다.
+            grid: [
+              ['bell', 'bell', 'bell'],
+              ['bell', 'wild', 'bell'],
+              ['bell', 'bell', 'bell'],
+            ],
+            wins: [{ line: 0, symbol: 'bell', count: 3, multiplier: 6, win: 60, positions }],
+          }),
+        )
+
+        act(() => {
+          mockRenderer.onEvent?.({
+            type: 'winLine',
+            line: 0,
+            win: 60,
+            symbol: 'bell',
+            count: 3,
+            positions,
+            index: 0,
+            total: 1,
+            cycle: 0,
+          })
+        })
+
+        const lineLabel = await waitFor(() => {
+          const el = container.querySelector('.hub-win-strip__line-label')
+          expect(el?.querySelector('img')).not.toBeNull()
+          return el as HTMLElement
+        })
+        expect([...lineLabel.querySelectorAll('img')].map((img) => img.getAttribute('src'))).toEqual([
+          '/theme/bell@128.png',
+          '/theme/wild@128.png',
+          '/theme/bell@128.png',
+        ])
+        // 그림은 실제 칸이지만 읽어 주는 말은 지급 근거 그대로다 — 이 판이 지급된 이유는 «벨 3개»다.
+        expect(lineLabel.querySelector('.hub-win-strip__line-icons')).toHaveAttribute('aria-label', 'Bell ×3')
+      })
+
+      it('shows the actual symbols that won a group line (bar/seven/bar), not the "Any BAR" text', async () => {
+        // 사용자 제보: "클래식 777도 심볼이 당첨됐는데 왜 당첨 텍스트에서 아무 BAR로 나오지?"
+        // 엔진은 옳다(진짜로 섞인 BAR 라인이다) — 잘못된 건 표시였다. 이제 그 세 칸을 그대로 보여준다.
+        mockedGetGameMath.mockResolvedValueOnce({
+          ...rawMath,
+          groups: { anybar: { name: { en: 'Any BAR' }, members: ['bar', 'seven'] } },
+        })
+        mockedLoadTheme.mockResolvedValueOnce({
+          symbols: { seven: '/theme/seven@128.png', bar: '/theme/bar@128.png' },
+          palette: { frame: '#000000', reelBg: '#000000', winLine: ['#ffffff'], text: '#ffffff' },
+        })
+        const { container } = render(<GameScreen gameId="classic-777" />)
+        await screen.findByText('10')
+
+        const positions: [number, number][] = [
+          [0, 1],
+          [1, 1],
+          [2, 1],
+        ]
+        await spinAndSettle(
+          baseSpinResponse({
+            totalBet: 10,
+            totalWin: 50,
+            // grid[row][reel] — 가운데 줄(row 1)이 bar·bar·seven인 진짜 «섞인» 그룹 라인이다.
+            grid: [
+              ['seven', 'seven', 'bar'],
+              ['bar', 'bar', 'seven'],
+              ['seven', 'bar', 'seven'],
+            ],
+            wins: [{ line: 0, symbol: 'anybar', count: 3, multiplier: 5, win: 50, positions, group: 'anybar' }],
+          }),
+        )
+
+        act(() => {
+          mockRenderer.onEvent?.({
+            type: 'winLine',
+            line: 0,
+            win: 50,
+            symbol: 'anybar',
+            group: 'anybar',
+            count: 3,
+            positions,
+            index: 0,
+            total: 1,
+            cycle: 0,
+          })
+        })
+
+        const lineLabel = await waitFor(() => {
+          const el = container.querySelector('.hub-win-strip__line-label')
+          expect(el?.querySelector('img')).not.toBeNull()
+          return el as HTMLElement
+        })
+        expect([...lineLabel.querySelectorAll('img')].map((img) => img.getAttribute('src'))).toEqual([
+          '/theme/bar@128.png',
+          '/theme/bar@128.png',
+          '/theme/seven@128.png',
+        ])
+        // 그림은 실제 칸이지만 읽어 주는 말은 그룹 이름이다 — "Bar ×3"은 거짓말이 된다.
+        expect(lineLabel.querySelector('.hub-win-strip__line-icons')).toHaveAttribute('aria-label', 'Any BAR ×3')
+        expect(lineLabel.textContent).toContain('50')
+        expect(screen.queryByText('Any BAR ×3 · 50')).not.toBeInTheDocument()
+      })
+
+      it('falls back to the group name text when the winning cells cannot be resolved (no positions on the event)', async () => {
         mockedGetGameMath.mockResolvedValueOnce({
           ...rawMath,
           groups: { anybar: { name: { en: 'Any BAR' }, members: ['bar', 'seven'] } },
@@ -780,7 +914,7 @@ describe('GameScreen', () => {
           baseSpinResponse({
             totalBet: 10,
             totalWin: 50,
-            wins: [{ line: 0, symbol: 'anybar', count: 3, multiplier: 5, win: 50, positions: [[0, 1], [1, 1], [2, 1]], group: 'anybar' }],
+            wins: [{ line: 0, symbol: 'anybar', count: 3, multiplier: 5, win: 50, positions: [], group: 'anybar' }],
           }),
         )
 
@@ -1439,6 +1573,132 @@ describe('GameScreen', () => {
     })
   })
 
+  describe('스페이스 길게 누르기 = 임시 터보 (PC)', () => {
+    /** 속도 세그먼트의 한 칸. data-active는 «고른 것», data-override는 «지금만» 그렇다는 뜻이다. */
+    function speedSegment(label: string): HTMLElement {
+      return screen.getByRole('radio', { name: label })
+    }
+
+    /** 방금 만들어진 렌더러 목 — setSpinSpeed가 실제로 어떤 값을 받았는지 본다. */
+    function rendererMock(): { setSpinSpeed: ReturnType<typeof vi.fn> } {
+      return mockedCreateSlotRenderer.mock.results.at(-1)?.value as {
+        setSpinSpeed: ReturnType<typeof vi.fn>
+      }
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('turns turbo on past the hold threshold and back off on release, without touching the stored preference', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+      const renderer = rendererMock()
+      renderer.setSpinSpeed.mockClear()
+
+      act(() => {
+        fireEvent.keyDown(window, { code: 'Space', key: ' ' })
+      })
+      // 문턱 전에는 아무 일도 없다 — 한 번 눌렀다 떼는 평범한 스핀과 구별되어야 한다.
+      act(() => {
+        vi.advanceTimersByTime(399)
+      })
+      expect(renderer.setSpinSpeed).not.toHaveBeenCalled()
+      expect(speedSegment('Turbo')).not.toHaveAttribute('data-override')
+
+      act(() => {
+        vi.advanceTimersByTime(1)
+      })
+      expect(renderer.setSpinSpeed).toHaveBeenLastCalledWith('turbo')
+      // 켜졌다는 것은 보이되, 고른 칸("보통")은 그대로다 — 저장된 선호는 건드리지 않는다.
+      expect(speedSegment('Turbo')).toHaveAttribute('data-override', 'true')
+      expect(speedSegment('Turbo')).toHaveAttribute('data-active', 'false')
+      expect(speedSegment('Normal')).toHaveAttribute('data-active', 'true')
+      expect(useSettingsStore.getState().spinSpeed).toBe('normal')
+
+      act(() => {
+        fireEvent.keyUp(window, { code: 'Space', key: ' ' })
+      })
+      expect(renderer.setSpinSpeed).toHaveBeenLastCalledWith('normal')
+      expect(speedSegment('Turbo')).not.toHaveAttribute('data-override')
+      expect(useSettingsStore.getState().spinSpeed).toBe('normal')
+    })
+
+    it('marks nothing as an override when turbo is what the player actually chose', async () => {
+      useSettingsStore.setState({ spinSpeed: 'turbo' })
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      act(() => {
+        fireEvent.keyDown(window, { code: 'Space', key: ' ' })
+        vi.advanceTimersByTime(SPACE_TURBO_HOLD_MS)
+      })
+
+      expect(speedSegment('Turbo')).toHaveAttribute('data-active', 'true')
+      expect(speedSegment('Turbo')).not.toHaveAttribute('data-override')
+    })
+
+    it('ignores auto-repeat keydown — the hold clock is only armed once per real press', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+      const renderer = rendererMock()
+      renderer.setSpinSpeed.mockClear()
+
+      act(() => {
+        fireEvent.keyDown(window, { code: 'Space', key: ' ' })
+        vi.advanceTimersByTime(300)
+        // 오토리핏이 여기서 들어온다 — 시계를 다시 걸면 터보가 영영 켜지지 않는다.
+        fireEvent.keyDown(window, { code: 'Space', key: ' ', repeat: true })
+        vi.advanceTimersByTime(100)
+      })
+
+      expect(renderer.setSpinSpeed).toHaveBeenLastCalledWith('turbo')
+    })
+
+    it('lets go of the override when the window loses the key (blur) — it must not stick on', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      act(() => {
+        fireEvent.keyDown(window, { code: 'Space', key: ' ' })
+        vi.advanceTimersByTime(SPACE_TURBO_HOLD_MS)
+      })
+      expect(speedSegment('Turbo')).toHaveAttribute('data-override', 'true')
+
+      act(() => {
+        fireEvent.blur(window)
+      })
+      expect(speedSegment('Turbo')).not.toHaveAttribute('data-override')
+      expect(useSettingsStore.getState().spinSpeed).toBe('normal')
+    })
+
+    it('still spins on a plain Space press — the hold only adds a speed, it does not replace the shortcut', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      let resolveSpin: (value: SpinResponse) => void = () => {}
+      mockedApiSpin.mockReturnValue(
+        new Promise((resolve) => {
+          resolveSpin = resolve
+        }),
+      )
+
+      await act(async () => {
+        fireEvent.keyDown(window, { code: 'Space', key: ' ' })
+      })
+      expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        fireEvent.keyUp(window, { code: 'Space', key: ' ' })
+        resolveSpin(baseSpinResponse())
+      })
+    })
+  })
+
   describe('bet picker (round 3b)', () => {
     it('opens a bottom sheet listing every bet level with bet-per-line, highlighting the current one', async () => {
       render(<GameScreen gameId="classic-777" />)
@@ -1698,7 +1958,7 @@ describe('GameScreen', () => {
       expect(document.querySelector('.hub-win-overlay')).not.toBeInTheDocument()
     })
 
-    it('세리머니 팝업(프리스핀 종료)이 뜨는 판에서도 오버레이가 동시에 뜨지 않는다 — 종료 팝업이 같은 등급 연출로 총액을 보여준다', async () => {
+    it('세리머니 팝업(프리스핀 종료)이 뜨는 판에서도 오버레이가 동시에 뜨지 않는다 — 종료 팝업이 총액을 보여준다(등급은 매기지 않는다)', async () => {
       render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 
@@ -1717,6 +1977,13 @@ describe('GameScreen', () => {
 
       expect(screen.getByText('FREE SPINS COMPLETE')).toBeInTheDocument()
       expect(document.querySelector('.hub-win-overlay')).not.toBeInTheDocument()
+      // 세션 총액 1,200(누적 900 + 이번 판 300)은 베팅 10의 120×지만 등급을 매기지 않는다 —
+      // 그 큰 판들은 프리스핀 도중에 각자 오버레이로 이미 축하했다(사용자 지시).
+      // ('WIN'은 WinStrip 라벨에도 있어 팝업 카드 안으로 좁혀서 본다.)
+      expect(document.querySelector('.hub-round-popup .hub-win__title')).toHaveTextContent('WIN')
+      for (const tierName of ['SURGE', 'BLAST', 'STORM', 'CATACLYSM']) {
+        expect(screen.queryByText(tierName)).not.toBeInTheDocument()
+      }
     })
   })
 

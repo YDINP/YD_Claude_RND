@@ -431,8 +431,37 @@
   inset: 0;
   /* 모달(250)보다 아래다 — 축하 중에 코인 소진 같은 실제 다이얼로그가 뜨면 그쪽이 위여야 한다. */
   z-index: 240;
-  background: radial-gradient(circle at 50% 46%, rgba(4, 8, 18, 0.4) 0%, rgba(4, 8, 18, 0.82) 74%);
+  /* 게임 화면을 **가린다**. 예전에는 중앙이 0.4라 릴·프레임 아트·WinStrip·하단 컨트롤이 그대로
+     읽혀서 축하가 아니라 화면 위에 얹은 워시로 보였다(390×844 실측). 심볼 연출이 이 뒤가 아니라
+     이 **다음**에 오도록 순서를 바꾼 지금은 뒤를 비춰 줄 이유 자체가 없다.
+     무게는 프리스핀 세리머니 팝업과 같은 급으로 맞춘다 — 그쪽은 backdrop 0.6 위에 불투명한 카드를
+     얹어 글자 밑이 사실상 불투명하다. 여기는 카드가 없으니 스크림 자신이 그 바탕 노릇을 한다
+     (앱 안에 "전면 모달"의 무게가 두 가지면 안 된다).
+     광선·코인은 이 배경 **위**에 그려지므로(음수 z-index도 부모 배경보다는 위다) 어두워지는 건
+     게임 화면뿐이고 연출은 오히려 또렷해진다. */
+  background: radial-gradient(circle at 50% 46%, rgba(6, 10, 22, 0.9) 0%, rgba(2, 4, 10, 0.98) 72%);
   outline: none;
+}
+
+/* 탭 힌트 — 카드 안(숫자 바로 밑)이 아니라 오버레이 바닥에 고정한다. 숫자 밑에 두면 게임
+   프레임 아트(sheriff-sixgun의 말굽 장식 등)와 정면으로 부딪쳐 거의 읽히지 않았다(실측).
+   어떤 게임 위에서도 읽히도록 자기 바탕을 지닌 알약 하나로 둔다. */
+.hub-win-overlay__hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--hub-space-xl) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(8, 12, 24, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--hub-text-sub);
+  font-size: var(--hub-font-small);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  animation: hub-win-hint-in 300ms ease-out 900ms backwards;
 }
 
 /* 화면 전체가 탭 영역이라 버튼 기본 스타일을 지운다. */
@@ -452,6 +481,49 @@
   padding: var(--hub-space-xl);
 }
 
+/* ---- 강조 비트 ----
+
+   롤업이 목표에 닿은 «그 순간»에만 한 번 터진다(data-beat='emphasis', 2~3초). 이 대목이
+   "얼마를 땄다"가 확정되는 자리라 한 호흡으로 읽혀야 한다 — 그래서 여러 요소를 각자 흔들지 않고
+   화면 전체 섬광 한 번 + 숫자가 크게 부풀었다 제자리로 앉는 것 하나로 끝낸다.
+   모션 줄이기(.hub-win--still)면 둘 다 걸지 않는다. */
+.hub-win-overlay[data-beat='emphasis']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 46%, var(--tier-glow, rgba(255, 255, 255, 0.5)) 0%, transparent 62%);
+  animation: hub-win-emphasis-flash 620ms ease-out forwards;
+}
+
+.hub-win-overlay[data-beat='emphasis'] .hub-win:not(.hub-win--still) .hub-win__number {
+  animation: hub-win-emphasis-land 720ms cubic-bezier(0.22, 1.4, 0.36, 1) both;
+}
+
+@keyframes hub-win-emphasis-flash {
+  0% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes hub-win-emphasis-land {
+  0% {
+    transform: scale(1);
+  }
+  38% {
+    transform: scale(1.22);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 /* ---- 모션 줄이기 ---- */
 
 /* 설정(settings.reducedMotion)으로 끈 경우 — 배경 레이어는 컴포넌트가 아예 렌더하지 않고,
@@ -463,18 +535,29 @@
   animation: none;
 }
 
+/* 강조 비트의 섬광과 바닥 힌트도 같이 다룬다 — 둘 다 카드 «밖»이라 위 선택자에 안 걸린다. */
+.hub-win-overlay--still[data-beat='emphasis']::after {
+  display: none;
+}
+
+.hub-win-overlay--still .hub-win-overlay__hint {
+  animation: none;
+}
+
 /* OS 설정만 켜져 있고 앱 설정은 꺼져 있는 경우까지 덮는다(Modal.css와 같은 방침). */
 @media (prefers-reduced-motion: reduce) {
   .hub-win-fx__rays,
   .hub-win-fx__waves,
-  .hub-win-fx__shower {
+  .hub-win-fx__shower,
+  .hub-win-overlay[data-beat='emphasis']::after {
     display: none;
   }
 
   .hub-win,
   .hub-win__value,
   .hub-win__number,
-  .hub-win__hint {
+  .hub-win__hint,
+  .hub-win-overlay__hint {
     animation: none;
   }
 }

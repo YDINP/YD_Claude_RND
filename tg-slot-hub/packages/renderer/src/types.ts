@@ -100,6 +100,10 @@ export type RendererEvent =
    *
    * 허브가 이 값으로 릴 밖 문구를 만든다. 렌더러는 이름도 번역도 모르므로 id를 그대로 싣는다.
    * `index`/`total`은 이번 바퀴에서 몇 번째인지, `cycle`은 몇 바퀴째인지(0부터)다.
+   *
+   * `positions`는 이긴 칸의 [reel, row] 좌표다. 그룹 지급(Any BAR 등)에서 `symbol`은 그룹 id라
+   * 대표할 그림이 없다 — 허브가 이 좌표로 그리드를 짚어 **실제로 이긴 심볼들**(bar1·bar1·bar2)을
+   * 보여준다. 렌더러는 그리드를 실어 보내지 않는다(허브가 서버 응답으로 이미 들고 있다).
    */
   | {
       type: 'winLine'
@@ -110,6 +114,7 @@ export type RendererEvent =
       ways?: number
       group?: string
       direction?: 'ltr' | 'rtl'
+      positions?: readonly (readonly [number, number])[]
       index: number
       total: number
       cycle: number

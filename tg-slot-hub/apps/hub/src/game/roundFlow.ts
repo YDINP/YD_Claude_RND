@@ -47,6 +47,16 @@ export type RoundFlowState =
 
 export const ROUND_FLOW_IDLE: RoundFlowState = { kind: 'idle' }
 
+/**
+ * 세리머니 팝업이 스스로 닫히기까지의 시간(ms). 사용자가 탭해서 닫는 것이 기본이고 이건
+ * 안전장치일 뿐이라, 스핀 속도로 줄이지 않는다.
+ *
+ * 빅윈 오버레이의 결과 화면도 **이 값을 그대로 쓴다**(`winTiers.ts`의 `bigWinTimeline`) —
+ * "터치하면 닫히고, 안 하면 10초 뒤에 닫힌다"는 약속이 화면마다 다르면 사용자는 어느 쪽을
+ * 기다려야 할지 알 수 없다. 그래서 두 번째 10초를 새로 만들지 않고 여기 한 곳에서만 정한다.
+ */
+export const ROUND_POPUP_AUTO_CLOSE_MS = 10_000
+
 export type RoundFlowEvent =
   /** 릴·승리 연출이 다 끝났고 이번 판이 모드 경계를 넘었다 — 팝업부터 띄운다. */
   | { readonly type: 'ceremonyStarted'; readonly popup: RoundPopup; readonly to: CurtainTarget; readonly withCurtain: boolean }

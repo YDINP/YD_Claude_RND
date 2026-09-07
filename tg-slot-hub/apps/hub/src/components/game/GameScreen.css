@@ -522,6 +522,14 @@
   color: #2a1a04;
 }
 
+/* 스페이스를 누르고 있는 동안의 «임시» 터보 — 고른 칸(채워진 금색)과 헷갈리면 안 되므로
+   채우지 않고 점선 테두리와 글자색만 준다. 손을 떼면 그대로 사라진다(저장된 선호는 그대로다). */
+.hub-game-screen__speed-seg-btn[data-override='true'] {
+  color: var(--hub-gold-light);
+  box-shadow: inset 0 0 0 2px var(--hub-gold);
+  border: 1px dashed var(--hub-gold-light);
+}
+
 /* 오토스핀 진입 — 예전 ⚡ 버튼이 있던 스핀 버튼 오른쪽 자리. */
 .hub-game-screen__auto-btn {
   flex-shrink: 0;
