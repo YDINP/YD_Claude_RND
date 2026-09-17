@@ -1501,19 +1501,7 @@ class Crew:
                             at=at))
 
         # 2. 다 녹아서 화로를 막고 있는 것들. 화로마다 따로 걷는다.
-        for group in cluster([e for e in stock
-                              if int(e.get("count") or 0) >= HARVEST_MIN]):
-            head = group[0]
-            total = sum(int(e.get("count") or 0) for e in group)
-            jobs.append(Job(
-                f"화로 {len(group)}대에서 {total}개를 거둬오겠습니다. "
-                f"({head['x']:.0f}, {head['y']:.0f})",
-                key=f"harvest:{head['x']:.0f},{head['y']:.0f}",
-                steps=[("take", {"name": e["name"], "count": e["count"],
-                                 "x": e["x"], "y": e["y"]}) for e in group],
-                at={"x": head["x"], "y": head["y"]}))
-
-        # 3. 가방이 넘치는 사람은 공용 창고에 부린다. 물자가 한 사람의
+        # 2. 가방이 넘치는 사람은 공용 창고에 부린다. 물자가 한 사람의
         #    가방에 갇혀 있으면 없는 것과 같다 - 옆 사람이 철광석 천 개를
         #    안고 다니는 동안 남들은 철광석이 없어서 멈춰 있었다.
         #
@@ -1525,6 +1513,18 @@ class Crew:
             job = self.depot_job(self.workers[mate], mate_snap)
             if job and job.key != "depot:build":
                 jobs.append(job)
+
+        for group in cluster([e for e in stock
+                              if int(e.get("count") or 0) >= HARVEST_MIN]):
+            head = group[0]
+            total = sum(int(e.get("count") or 0) for e in group)
+            jobs.append(Job(
+                f"화로 {len(group)}대에서 {total}개를 거둬오겠습니다. "
+                f"({head['x']:.0f}, {head['y']:.0f})",
+                key=f"harvest:{head['x']:.0f},{head['y']:.0f}",
+                steps=[("take", {"name": e["name"], "count": e["count"],
+                                 "x": e["x"], "y": e["y"]}) for e in group],
+                at={"x": head["x"], "y": head["y"]}))
 
         # 4. 출구가 막혀 선 채굴기.
         for entry in stopped:
