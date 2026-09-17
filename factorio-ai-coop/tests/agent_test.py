@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 import brain  # noqa: E402
 import mission  # noqa: E402
 from agent import (FOCUS_ORDER, STAGE_TARGET, Crew, Job, errand_label,
-                   spread_sites, worth_building,  # noqa: E402
+                   spread_sites, worth_building, chain_job,  # noqa: E402
                    Snapshot, chain_job, cluster, interleave, missing_item,
                    next_goal, plan)
 
@@ -670,6 +670,26 @@ def main() -> int:
           not worth_building({"built": 10, "working": 4, "why": {"no_fuel": 6}})[0])
     check("nothing built yet is never a reason to stop",
           worth_building({})[0])
+
+    print("\n20. what is already mined is not mined again")
+    stocked = chain_job({"fetch": [{"name": "iron-plate", "count": 40,
+                                    "x": 12, "y": -3}],
+                         "steps": [{"name": "iron-plate", "action": "smelt",
+                                    "count": 40}],
+                         "mine": {"iron-ore": 40}},
+                        "automation-science-pack", {"x": 0, "y": 0})
+    check("the chest comes before the ore patch",
+          stocked is not None and stocked.key.startswith("fetch:"),
+          stocked.key if stocked else "None")
+    check("and it walks to the chest, not the patch",
+          stocked.at == {"x": 12, "y": -3})
+    check("it takes what the plan said to take",
+          stocked.steps[0] == ("take", {"name": "iron-plate", "count": 40,
+                                        "x": 12, "y": -3}))
+    empty_shelf = chain_job({"fetch": [], "steps": [], "mine": {"iron-ore": 40}},
+                            "iron-plate", None)
+    check("an empty chest still sends them to the patch",
+          empty_shelf is None or not empty_shelf.key.startswith("fetch:"))
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

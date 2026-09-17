@@ -814,6 +814,25 @@ local function expand(force, pool, item, count, out, depth)
   pool[item] = 0
   local missing = count - have
 
+  -- 가방에 없으면 창고를 본다.
+  --
+  -- 실측(281분째): 상자에 철판 819장, 구리판 165장, 철광석 9,004개가 들어
+  -- 있는데 계획은 「철광석을 캐러 가라」로 끝났다. pool 을 가방 하나로만
+  -- 세고 있었기 때문이다. 캐야 할 것이 없는데 캐러 보내는 것은, 없어서가
+  -- 아니라 보이지 않아서다.
+  if out.stored then
+    local shelf = out.stored[item]
+    if shelf and shelf.count > 0 then
+      local take = math.min(shelf.count, missing)
+      shelf.count = shelf.count - take
+      missing = missing - take
+      out.fetch[#out.fetch + 1] = {
+        name = item, count = take, x = shelf.x, y = shelf.y,
+      }
+      if missing <= 0 then return true end
+    end
+  end
+
   if depth > MAX_PLAN_DEPTH then
     out.blocked[item] = (out.blocked[item] or 0) + missing
     return false
@@ -893,7 +912,33 @@ local function compute_plan(name, item, count)
     end
   end
 
-  local out = { steps = {}, mine = {}, locked = {}, blocked = {} }
+  -- 가까운 상자들 안에 무엇이 있는지. 같은 품목이 여러 상자에 있으면
+  -- 가장 가까운 상자 하나로 몰아둔다 - 한 번 걸어가서 꺼내면 되도록.
+  local stored = {}
+  for _, e in pairs(b.surface.find_entities_filtered {
+    position = b.position, radius = MAX_OBSERVE_RADIUS, type = "container",
+    force = b.force,
+  }) do
+    local inv = e.get_inventory(defines.inventory.chest)
+    if inv then
+      local d = Tasks.dist(b.position, e.position)
+      for _, stack in pairs(inv.get_contents()) do
+        local shelf = stored[stack.name]
+        if not shelf then
+          stored[stack.name] = { count = stack.count, x = e.position.x,
+                                 y = e.position.y, distance = d }
+        else
+          shelf.count = shelf.count + stack.count
+          if d < shelf.distance then
+            shelf.x, shelf.y, shelf.distance = e.position.x, e.position.y, d
+          end
+        end
+      end
+    end
+  end
+
+  local out = { steps = {}, mine = {}, locked = {}, blocked = {},
+                stored = stored, fetch = {} }
   local ok, done = pcall(expand, b.force, pool, item, count or 1, out, 0)
   if not ok then return { error = "plan failed: " .. tostring(done) } end
 
@@ -906,6 +951,8 @@ local function compute_plan(name, item, count)
   return {
     item = item, count = count or 1, ready = done,
     steps = out.steps, mine = out.mine, locked = out.locked, blocked = out.blocked,
+    -- 창고에서 꺼내오면 되는 것들. 캐기 전에 이것부터.
+    fetch = out.fetch,
     furnace = furnace and { x = furnace.position.x, y = furnace.position.y } or nil,
   }
 end

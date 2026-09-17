@@ -619,6 +619,20 @@ def chain_job(answer: dict, target: str, furnace: dict | None) -> Job | None:
     if not isinstance(answer, dict) or answer.get("error"):
         return None
 
+    # 창고에 있는 것부터 꺼낸다. 이미 캔 것을 두고 다시 캐러 가는 것이
+    # 가장 비싼 낭비다 - 상자에 철판 819장이 있는데 계획은 「철광석을 캐라」
+    # 로 끝나고 있었다.
+    errands = _as_rows(answer.get("fetch"))
+    if errands:
+        head = errands[0]
+        listed = ", ".join(f"{e['name']} {int(e['count'])}개" for e in errands[:3])
+        return Job(f"{target}에 필요한 {listed}은(는) 창고에 있습니다. 꺼내오겠습니다.",
+                   key=f"fetch:{target}:{head['x']:.0f},{head['y']:.0f}",
+                   steps=[("take", {"name": e["name"], "count": int(e["count"]),
+                                    "x": e["x"], "y": e["y"]})
+                          for e in errands[:3]],
+                   at={"x": head["x"], "y": head["y"]})
+
     steps = _as_rows(answer.get("steps"))
     for step in steps:
         name = step.get("name")
@@ -1206,6 +1220,23 @@ class Crew:
                 self.say(f"{item}을(를) 어떻게 만드는지 모르겠습니다: "
                          f"{answer['error']}", who=name)
                 return False
+
+            # 창고에 있는 것을 꺼내오는 것이 맨 먼저다. 캐야 할 것이 없는데
+            # 캐러 가는 일이 없도록 - 상자에 철판 819장이 있는데 철광석을
+            # 캐러 보내고 있었다.
+            errands = _as_rows(answer.get("fetch"))
+            if errands:
+                got = False
+                for shelf in errands[:3]:
+                    try:
+                        worker.handle.take(shelf["name"], shelf["x"], shelf["y"],
+                                           count=int(shelf["count"]),
+                                           timeout=300, timeout_ticks=60 * 60 * 3)
+                        got = True
+                    except TaskFailed:
+                        continue
+                if got:
+                    continue
 
             steps = _as_rows(answer.get("steps"))
             step = next((st for st in steps if st.get("hand")), None)
