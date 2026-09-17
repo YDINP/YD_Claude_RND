@@ -1156,6 +1156,17 @@ class Crew:
             anchor = snap.building("lab") or snap.building("stone-furnace") \
                 or {"x": snap.x, "y": snap.y}
 
+            # 배관이 다 맞았는데 전봇대가 없어 노는 기관이 있으면, 새로
+            # 짓는 대신 거기에 전선을 잇는다. 이걸 못 보고 있어서 완성된
+            # 발전소가 두 벌 서 있는데도 계속 새로 짓고 있었다.
+            standing = self.bridge.power_status(name).get("unplugged")
+            if standing:
+                self.say(f"발전기가 이미 서 있는데 전선이 없습니다. "
+                         f"({standing['x']:.0f}, {standing['y']:.0f})에 잇겠습니다.",
+                         who=name)
+                self.connect_power(worker, standing, snap)
+                return
+
             # 랩 옆이 제일 좋지만, 앞선 시도가 남긴 펌프로 해안이 막혀
             # 있을 수 있다. 한 곳에서 못 찾았다고 포기하면 전력이 영영
             # 안 선다 - 실제로 펌프 열한 개가 서 있는 채로 0와트였다.

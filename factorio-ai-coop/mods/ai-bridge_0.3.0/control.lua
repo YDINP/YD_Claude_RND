@@ -1183,12 +1183,25 @@ local function power_status(name)
     end
   end
 
+  -- 배관이 다 맞았는데 전봇대가 없어서 노는 기관. 이걸 못 보고 있어서
+  -- 무리가 발전소를 계속 새로 지었다 - 완성된 발전소가 두 벌 서 있는데도.
+  local unplugged = nil
+  for _, e in pairs(b.surface.find_entities_filtered {
+    type = "generator", force = b.force,
+  }) do
+    if e.status == defines.entity_status.not_plugged_in_electric_network then
+      unplugged = { x = e.position.x, y = e.position.y }
+      break
+    end
+  end
+
   return {
     agent = name,
     generators = engines, running = running,
     watts = math.floor(made * 60),
     labs = labs, working_labs = working_labs,
     powered = running > 0,
+    unplugged = unplugged,
   }
 end
 
