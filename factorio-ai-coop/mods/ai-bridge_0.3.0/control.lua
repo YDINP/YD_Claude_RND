@@ -1926,6 +1926,11 @@ local function init_status_names()
   if defines.entity_status.missing_science_packs then
     FIXABLE[defines.entity_status.missing_science_packs] = "science"
   end
+  -- 레시피는 들어갔는데 재료가 없는 조립기. 무엇이 몇 개 모자란지는
+  -- 레시피와 입력 칸을 견주면 게임이 답해준다 - 짐작할 이유가 없다.
+  if defines.entity_status.item_ingredient_shortage then
+    FIXABLE[defines.entity_status.item_ingredient_shortage] = "supply"
+  end
 end
 
 local TENDED = { "burner-mining-drill", "stone-furnace", "steel-furnace",
@@ -1950,6 +1955,27 @@ local function broken(name, radius)
         x = e.position.x, y = e.position.y,
         distance = math.floor(Tasks.dist(b.position, e.position) * 10) / 10,
       }
+      -- 조립기가 무엇을 기다리는지. 레시피의 재료에서 이미 든 것을 빼면
+      -- 그것이 가져다줄 목록이다.
+      if fix == "supply" then
+        local recipe = e.get_recipe and e.get_recipe()
+        local box = e.get_inventory(defines.inventory.assembling_machine_input)
+        if recipe and box then
+          entry.wants = {}
+          for _, ing in pairs(recipe.ingredients) do
+            if ing.type ~= "fluid" then
+              local have = box.get_item_count(ing.name)
+              local need = (ing.amount or 1) * 10   -- 열 번 돌릴 만큼
+              if have < need then
+                entry.wants[#entry.wants + 1] = {
+                  name = ing.name, count = need - have,
+                }
+              end
+            end
+          end
+        end
+      end
+
       -- 내놓을 데가 없어 멈춘 채굴기: 상자가 아예 없는 것과 꽉 찬 것은
       -- 손보는 방법이 다르다. 무엇이 얼마나 들었는지까지 알려준다.
       if fix == "chest" and e.drop_target and e.drop_target.valid then

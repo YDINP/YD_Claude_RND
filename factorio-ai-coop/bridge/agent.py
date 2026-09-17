@@ -2153,6 +2153,44 @@ class Crew:
                 key=f"science:{lab['x']:.0f},{lab['y']:.0f}",
                 steps=steps, needs={pack: 1}, at=at, owner=holder))
 
+        # 3b2. 재료를 기다리는 조립기. 이게 서면 랩도 곧 선다 — 조립기
+        #      한 대가 랩 한 대를 정확히 채우는 사슬이라, 어느 한 칸이
+        #      비면 그 뒤가 통째로 멈춘다.
+        #
+        #      무엇이 몇 개 모자란지는 게임이 레시피와 입력 칸을 견줘
+        #      답해준다. 짐작할 이유가 없다.
+        for shop in [e for e in stopped if e.get("fix") == "supply"][:2]:
+            at = {"x": shop["x"], "y": shop["y"]}
+            steps: list[Step] = []
+            listed: list[str] = []
+            for want in _as_rows(shop.get("wants"))[:3]:
+                item, need = want.get("name"), int(want.get("count") or 0)
+                if not item or need <= 0:
+                    continue
+                try:
+                    shelves = self.bridge.chest_stock(worker.name, item)
+                except RconError:
+                    shelves = []
+                source = nearest_to(shelves, at, min(need, 20))
+                if source:
+                    load = min(need, int(source["count"]))
+                    steps.append(("take", {"name": item, "count": load,
+                                           "x": source["x"], "y": source["y"]}))
+                else:
+                    # 창고에 없으면 만들어서 간다. 철기어는 아무도 상자에
+                    # 넣어두지 않지만 철판으로 언제든 만들 수 있다.
+                    steps.append(("craft", {"recipe": item, "count": need}))
+                    load = need
+                steps.append(("insert", {"name": item, "count": load, **at}))
+                listed.append(f"{item} {load}개")
+
+            if steps:
+                jobs.append(Job(
+                    f"조립기가 재료를 기다립니다. {', '.join(listed)}를 "
+                    f"대겠습니다. ({shop['x']:.0f}, {shop['y']:.0f})",
+                    key=f"supply:{shop['x']:.0f},{shop['y']:.0f}",
+                    steps=steps, at=at))
+
         # 3c. 굶고 있는 화로. 다섯 회차째 54대가 그대로였고, 그 사이
         #     철광석은 창고에 10,264개까지 쌓였다. 캐는 능력이 모자란 적은
         #     없고, 캔 것이 화로까지 가지 않을 뿐이다.
