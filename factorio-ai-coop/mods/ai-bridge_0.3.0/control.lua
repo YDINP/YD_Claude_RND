@@ -688,6 +688,153 @@ remote.add_interface("ai", {
     return { entities = out }
   end,
 
+  -- The recipe and technology graphs, read straight from the game.
+  --
+  -- A planner aiming at a rocket cannot carry a hand-written ladder: the chain
+  -- from ore to silo is hundreds of steps long, and any step transcribed by
+  -- hand is a step that can be wrong. The game already holds the whole graph,
+  -- including what research has unlocked, so the planner walks that instead.
+  recipe = function(name)
+    local proto = prototypes.recipe[name]
+    if not proto then return { error = "no such recipe: " .. tostring(name) } end
+
+    local ingredients, products = {}, {}
+    for _, item in pairs(proto.ingredients) do
+      ingredients[#ingredients + 1] = { name = item.name, amount = item.amount, type = item.type }
+    end
+    for _, item in pairs(proto.products) do
+      products[#products + 1] = {
+        name = item.name, amount = item.amount or item.amount_max, type = item.type,
+      }
+    end
+
+    local force = game.forces["player"]
+    return {
+      name = proto.name,
+      category = proto.category,
+      energy = proto.energy,
+      ingredients = ingredients,
+      products = products,
+      -- `enabled` is per force: a recipe exists from the start but may be
+      -- locked behind research.
+      enabled = force.recipes[name] and force.recipes[name].enabled or false,
+      hand_craftable = proto.category == "crafting",
+    }
+  end,
+
+  technology = function(name)
+    local force = game.forces["player"]
+    local tech = force.technologies[name]
+    if not tech then return { error = "no such technology: " .. tostring(name) } end
+
+    local prerequisites, packs = {}, {}
+    for key in pairs(tech.prerequisites) do prerequisites[#prerequisites + 1] = key end
+    for _, unit in pairs(tech.research_unit_ingredients) do
+      packs[#packs + 1] = { name = unit.name, amount = unit.amount }
+    end
+    table.sort(prerequisites)
+
+    local unlocks = {}
+    for _, effect in pairs(tech.prototype.effects or {}) do
+      if effect.type == "unlock-recipe" then unlocks[#unlocks + 1] = effect.recipe end
+    end
+
+    -- 2.0 gates the earliest technologies behind an action rather than science
+    -- packs: electronics wants ten copper plates crafted, steam power fifty
+    -- iron ones. An agent that only knows about labs can never start.
+    local trigger = tech.prototype.research_trigger
+    local trigger_info = nil
+    if trigger then
+      trigger_info = { type = trigger.type, count = trigger.count or 1 }
+      if trigger.item then
+        trigger_info.item = type(trigger.item) == "string" and trigger.item or trigger.item.name
+      end
+      if trigger.entity then trigger_info.entity = trigger.entity end
+      if trigger.fluid then trigger_info.fluid = trigger.fluid end
+    end
+
+    return {
+      name = tech.name,
+      researched = tech.researched,
+      enabled = tech.enabled,
+      prerequisites = prerequisites,
+      packs = packs,
+      count = tech.research_unit_count,
+      unlocks = unlocks,
+      trigger = trigger_info,
+    }
+  end,
+
+  -- Everything that could be started right now: prerequisites met, not yet
+  -- researched. The planner picks from here instead of guessing tech names.
+  available_research = function()
+    local force = game.forces["player"]
+    local out = {}
+    for name, tech in pairs(force.technologies) do
+      if tech.enabled and not tech.researched then
+        local ready = true
+        for _, prereq in pairs(tech.prerequisites) do
+          if not prereq.researched then ready = false break end
+        end
+        if ready then
+          local packs = {}
+          for _, unit in pairs(tech.research_unit_ingredients) do
+            packs[#packs + 1] = { name = unit.name, amount = unit.amount }
+          end
+          local trigger = tech.prototype.research_trigger
+          out[#out + 1] = {
+            name = name,
+            count = tech.research_unit_count,
+            packs = packs,
+            trigger_type = trigger and trigger.type or nil,
+            trigger_item = trigger and trigger.item
+              and (type(trigger.item) == "string" and trigger.item or trigger.item.name) or nil,
+            trigger_count = trigger and (trigger.count or 1) or nil,
+          }
+        end
+      end
+    end
+    table.sort(out, function(a, b) return a.name < b.name end)
+    return { available = out }
+  end,
+
+  -- Which technology unlocks a recipe, so the planner can ask "why can I not
+  -- build this yet?" without a lookup table of its own.
+  unlocked_by = function(recipe_name)
+    local force = game.forces["player"]
+    for _, tech in pairs(force.technologies) do
+      for _, effect in pairs(tech.prototype.effects or {}) do
+        if effect.type == "unlock-recipe" and effect.recipe == recipe_name then
+          return { technology = tech.name, researched = tech.researched }
+        end
+      end
+    end
+    return { technology = nil }
+  end,
+
+  research = function(name)
+    local force = game.forces["player"]
+    local tech = force.technologies[name]
+    if not tech then return { error = "no such technology: " .. tostring(name) } end
+    if tech.researched then return { already = true, name = name } end
+    local ok, err = pcall(function() force.add_research(name) end)
+    if not ok then return { error = tostring(err) } end
+    return { queued = name, queue_length = #force.research_queue }
+  end,
+
+  research_status = function()
+    local force = game.forces["player"]
+    local queue = {}
+    for _, tech in pairs(force.research_queue or {}) do queue[#queue + 1] = tech.name end
+    local labs = #game.surfaces[1].find_entities_filtered { name = "lab", force = force }
+    return {
+      current = force.current_research and force.current_research.name or nil,
+      progress = force.research_progress,
+      queue = queue,
+      labs = labs,
+    }
+  end,
+
   chat = function(since_tick)
     local out = {}
     for _, line in ipairs(storage.chat) do
