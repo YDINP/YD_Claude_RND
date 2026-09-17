@@ -1913,6 +1913,12 @@ local function init_status_names()
   if defines.entity_status.no_ingredients then
     FIXABLE[defines.entity_status.no_ingredients] = "feed"
   end
+  -- 밑의 광석이 다 떨어진 채굴기. 이건 「고장」이 아니라 「끝난 것」이라
+  -- 손볼 방법이 없다. 그대로 두면 자리만 차지하고 영원히 안 돈다.
+  -- 걷어내면 채굴기가 통째로 재고로 돌아와 두꺼운 자리에 다시 선다.
+  if defines.entity_status.no_minable_resources then
+    FIXABLE[defines.entity_status.no_minable_resources] = "spent"
+  end
 end
 
 local TENDED = { "burner-mining-drill", "stone-furnace", "steel-furnace",

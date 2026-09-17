@@ -1987,6 +1987,40 @@ class Crew:
                                  "x": e["x"], "y": e["y"]}) for e in group],
                 at={"x": head["x"], "y": head["y"]}))
 
+        # 3. 꽉 찬 상자에 막혀 선 채굴기. 이게 지금 가장 큰 무더기다 —
+        #    123대가 이것으로 서 있고, 그 옆에서 화로 54대가 굶는다.
+        #    상자를 비우면 이십 분 뒤에 똑같이 막히므로, 광석이 든 상자는
+        #    아예 화로로 바꾼다. 채굴기 하나가 살고 화로 하나가 늘고 운반
+        #    일감 하나가 사라진다 — 한 번의 걸음으로 셋이다.
+        #
+        #    개별 경로(tend_job)에만 달아뒀더니 스물아홉 분 동안 한 번도
+        #    안 불렸다. 무더기로 있는 일은 배차에 올려야 한다.
+        for entry in [e for e in stopped if e.get("fix") == "chest"][:4]:
+            outlet = entry.get("outlet")
+            if not outlet or entry.get("holding") not in SMELTED_BY_FURNACE:
+                continue
+            unblock.append(Job(
+                f"{entry.get('name', '채굴기')}의 상자가 "
+                f"{entry['holding']}으로 꽉 찼습니다. 화로로 바꾸면 "
+                f"다시 막히지 않습니다. ({entry['x']:.0f}, {entry['y']:.0f})",
+                key=f"convert:{entry['x']:.0f},{entry['y']:.0f}",
+                routine="convert", at=entry))
+
+        # 3b. 밑의 광석이 다 떨어진 채굴기. 「고장」이 아니라 「끝난 것」이라
+        #     손볼 방법이 없다. 걷어내면 채굴기가 통째로 재고로 돌아와,
+        #     다음 automate 가 두꺼운 자리에 다시 세운다. 5회차에 매장량으로
+        #     자리를 고르게 만든 것이 여기서 쓸모가 있다.
+        for spot in cluster([e for e in stopped if e.get("fix") == "spent"])[:2]:
+            head = spot[0]
+            unblock.append(Job(
+                f"광맥이 말라 선 채굴기 {len(spot)}대를 걷어내겠습니다. "
+                f"두꺼운 자리에 다시 세우겠습니다. "
+                f"({head['x']:.0f}, {head['y']:.0f})",
+                key=f"spent:{head['x']:.0f},{head['y']:.0f}",
+                steps=[("demolish", {"x": e["x"], "y": e["y"],
+                                     "name": e.get("name")}) for e in spot],
+                at={"x": head["x"], "y": head["y"]}))
+
         # 4. 미리 세우는 터렛. 급하지 않지만 미뤄두면 영영 안 하고,
         #    습격이 온 다음에 시작하면 늦는다.
         guard = self.defence_job(worker, self.snaps.get(worker.name)
