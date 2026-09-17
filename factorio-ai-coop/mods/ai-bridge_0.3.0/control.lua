@@ -1486,6 +1486,27 @@ local function blocks_lane(position, half)
   return false
 end
 
+-- 한 대의 채굴기가 얼마나 오래 사는가.
+--
+-- 실측(2026-09-18, 이 맵): 철광석 617칸의 매장량이 최소 1, 최대 1674,
+-- 평균 565였다. 같은 광맥 안에서 1670배 차이가 난다. 지금까지는 게임이
+-- 돌려준 순서대로 «놓을 수 있는 첫 칸»에 세웠고, 그 순서는 광맥의 바깥
+-- 테두리부터다. 매장량 1짜리 칸에 세운 채굴기는 4초 만에 죽는다.
+--
+-- 버너 채굴기는 2x2 를 캔다. 그 네 칸의 합이 이 자리의 «수명»이고,
+-- 0.25/s 로 나누면 몇 초짜리인지 나온다.
+local function richness(surface, spot)
+  local total = 0
+  -- 2x2 짜리 엔티티의 중심은 정수 좌표라, 캐는 네 칸은 중심에서 한 칸씩이다.
+  for _, tile in pairs(surface.find_entities_filtered {
+    area = { { spot.x - 1, spot.y - 1 }, { spot.x + 1, spot.y + 1 } },
+    type = "resource",
+  }) do
+    total = total + tile.amount
+  end
+  return total
+end
+
 local function drill_site(name, x, y, radius, receiver)
   local a = agent(name)
   local b = body(a)
@@ -1520,11 +1541,26 @@ local function drill_site(name, x, y, radius, receiver)
       end
     end
     end
-    if #sites >= 8 then break end
+    if #sites >= 40 then break end
   end
 
-  table.sort(sites, function(p, q) return p.distance < q.distance end)
-  return { agent = name, sites = sites }
+  -- 가까운 곳이 아니라 오래 갈 곳부터. 걸어가는 데 드는 십 초와 채굴기가
+  -- 사는 이십 분을 맞바꾸는 것은 언제나 남는 장사다. 다만 수명이 비슷하면
+  -- 가까운 쪽을 고른다.
+  for _, site in pairs(sites) do
+    site.richness = richness(surface, { x = site.x, y = site.y })
+    site.seconds = math.floor(site.richness / 0.25)
+  end
+  table.sort(sites, function(p, q)
+    if math.abs(p.richness - q.richness) > 200 then
+      return p.richness > q.richness
+    end
+    return p.distance < q.distance
+  end)
+
+  local out = {}
+  for i = 1, math.min(#sites, 8) do out[i] = sites[i] end
+  return { agent = name, sites = out }
 end
 
 -- 석탄 광맥 위에서 서로 마주보는 채굴기 두 대. 각자 캔 석탄이 상대의

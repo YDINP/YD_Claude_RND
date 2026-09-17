@@ -188,6 +188,25 @@ def blocked_by(answer: dict) -> tuple[str, list[tuple[str, int]]]:
     return "이유를 모르겠습니다", []
 
 
+def spread_sites(sites: list[dict], want: int, gap: int = 2) -> list[dict]:
+    """겹치지 않는 자리만 고른다. 목록은 이미 «오래 갈 순서»로 와 있다.
+
+    drill_site 는 광석 칸마다 하나씩 자리를 만들어 돌려주는데, 광석 칸은
+    서로 붙어 있어서 그 자리들도 거의 다 겹친다. 그대로 여덟 개를 세우려
+    들면 첫 대를 놓은 순간 나머지 일곱이 «자리 없음»이 된다.
+
+    버너 채굴기는 2x2 라 중심끼리 두 칸은 떨어져야 한다.
+    """
+    picked: list[dict] = []
+    for site in sites:
+        if len(picked) >= want:
+            break
+        if all(max(abs(site["x"] - p["x"]), abs(site["y"] - p["y"])) >= gap
+               for p in picked):
+            picked.append(site)
+    return picked
+
+
 def errand_label(steps: list) -> str:
     """맡긴 일을 사람이 읽을 수 있는 한 줄로 줄인다."""
     parts: list[str] = []
@@ -297,6 +316,10 @@ DRILLS_PER_FURNACE = 5 / 4
 # 버너 드릴은 석탄을 손으로 넣어줘야 한다. 돌볼 수 있는 것보다 많이 지으면
 # 멈춘 기계만 늘어난다 - 한 사람이 셋까지.
 DRILLS_PER_AGENT = 6
+
+# 한 번 걸어가서 몇 대를 세우는가. 한 대씩 세우러 다니면 걷는 시간이 짓는
+# 시간보다 길다 - 사용자가 «1개만 건설한다»고 지적한 것이 이것이다.
+DRILLS_PER_TRIP = 4
 
 
 def drill_target(snap: Snapshot, crew: int) -> int:
@@ -1595,42 +1618,69 @@ class Crew:
                 self.say(f"{ore} 광맥에 {receiver}를 붙일 자리가 없습니다.", who=name)
                 worker.block(f"automate:{ore}", 300)
                 return
-            site = sites[0]
 
+            # 한 번 걸어가서 여러 대를 세운다. 자리는 이미 «오래 갈 순서»로
+            # 와 있고, 겹치는 것만 걸러내면 그대로 한 줄이 된다.
+            field = spread_sites(sites, DRILLS_PER_TRIP)
             what = "화로" if receiver == "stone-furnace" else "상자"
-            self.say(f"{ore} 광맥에 채굴기와 {what}를 붙여 놓겠습니다. "
-                     f"({site['x']:.0f}, {site['y']:.0f})", who=name)
-            drill = worker.handle.place(DRILL, site["x"], site["y"],
-                                        direction=site["direction"], timeout=420)
+            head = field[0]
+            life = int(head.get("seconds") or 0)
+            self.say(f"{ore} 광맥에 채굴기 {len(field)}대와 {what}를 붙이겠습니다. "
+                     f"가장 두꺼운 자리는 ({head['x']:.0f}, {head['y']:.0f}), "
+                     f"{head.get('richness', 0)}개 묻혀 있어 {life // 60}분짜리입니다.",
+                     who=name)
 
-            aimed = self.bridge.aim_drill(name, drill["x"], drill["y"])
-            if aimed.get("error"):
-                self.say(f"채굴기 출구를 못 찾았습니다: {aimed['error']}", who=name)
-                return
-            if aimed.get("turned"):
-                self.say("출구가 막혀 채굴기를 돌렸습니다.", who=name)
-
-            if site.get("outlet") == "free":
-                worker.handle.place(receiver, aimed["drop_x"], aimed["drop_y"],
-                                    timeout=240)
-
-            # 채굴기는 광석만 떨군다. 연료는 절대 넣어주지 않는다 - 화로도
-            # 채굴기도 석탄은 따로 받아야 한다.
-            for target in ((drill["x"], drill["y"]),
-                           (aimed["drop_x"], aimed["drop_y"])):
-                if receiver != "stone-furnace" and target[0] == aimed["drop_x"]:
-                    continue
-                if worker.handle.items().get("coal", 0) < DRILL_FUEL:
-                    if not self.obtain(worker, "coal", DRILL_FUEL):
-                        break
+            built = 0
+            for site in field:
+                # 두 대째부터는 재료를 다시 구한다. 첫 대 값만 들고 가서
+                # 나머지를 못 세우는 일이 없도록.
+                if built and not (self.obtain(worker, DRILL, 1)
+                                  and self.obtain(worker, receiver, 1)):
+                    self.say(f"자재가 떨어져 {built}대까지만 세웠습니다.", who=name)
+                    break
                 try:
-                    worker.handle.insert("coal", target[0], target[1],
-                                         count=DRILL_FUEL, timeout=180)
+                    drill = worker.handle.place(DRILL, site["x"], site["y"],
+                                                direction=site["direction"],
+                                                timeout=420)
                 except TaskFailed:
-                    pass
+                    # 한 자리가 막혔다고 줄 전체를 포기할 이유는 없다.
+                    continue
 
-            self.say(f"{ore} 자동 채굴 완료. 채굴기 ({drill['x']:.0f}, {drill['y']:.0f}) → "
-                     f"{what} ({aimed['drop_x']:.0f}, {aimed['drop_y']:.0f}).", who=name)
+                aimed = self.bridge.aim_drill(name, drill["x"], drill["y"])
+                if aimed.get("error"):
+                    continue
+                if aimed.get("turned"):
+                    self.say("출구가 막혀 채굴기를 돌렸습니다.", who=name)
+
+                if site.get("outlet") == "free":
+                    try:
+                        worker.handle.place(receiver, aimed["drop_x"],
+                                            aimed["drop_y"], timeout=240)
+                    except TaskFailed:
+                        pass
+
+                # 채굴기는 광석만 떨군다. 연료는 절대 넣어주지 않는다 -
+                # 화로도 채굴기도 석탄은 따로 받아야 한다.
+                for target in ((drill["x"], drill["y"]),
+                               (aimed["drop_x"], aimed["drop_y"])):
+                    if receiver != "stone-furnace" and target[0] == aimed["drop_x"]:
+                        continue
+                    if worker.handle.items().get("coal", 0) < DRILL_FUEL:
+                        if not self.obtain(worker, "coal", DRILL_FUEL):
+                            break
+                    try:
+                        worker.handle.insert("coal", target[0], target[1],
+                                             count=DRILL_FUEL, timeout=180)
+                    except TaskFailed:
+                        pass
+                built += 1
+
+            if built:
+                self.say(f"{ore} 채굴기 {built}대를 세웠습니다. "
+                         f"손으로 캐는 것보다 {built * 4}배 빠릅니다.", who=name)
+            else:
+                self.say(f"{ore} 채굴기를 한 대도 못 세웠습니다.", who=name)
+                worker.block(f"automate:{ore}", 300)
 
         except TaskFailed as exc:
             worker.block("automate")

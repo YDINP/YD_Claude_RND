@@ -9,7 +9,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 import brain  # noqa: E402
 import mission  # noqa: E402
-from agent import (FOCUS_ORDER, STAGE_TARGET, Crew, Job, errand_label,  # noqa: E402
+from agent import (FOCUS_ORDER, STAGE_TARGET, Crew, Job, errand_label,
+                   spread_sites,  # noqa: E402
                    Snapshot, chain_job, cluster, interleave, missing_item,
                    next_goal, plan)
 
@@ -611,6 +612,24 @@ def main() -> int:
           label([("walk", {"x": 1, "y": 2})]) == "이동")
     check("an unknown task keeps its own name",
           label([("teleport", {})]) == "teleport")
+
+    print("\n17. a drill is only as good as the four tiles under it")
+    rich = [{"x": 0, "y": 0, "richness": 1600},
+            {"x": 1, "y": 0, "richness": 1500},   # 첫 자리와 겹친다
+            {"x": 2, "y": 0, "richness": 1400},
+            {"x": 2, "y": 1, "richness": 1300},   # 셋째와 겹친다
+            {"x": 4, "y": 0, "richness": 1200}]
+    check("overlapping sites are dropped",
+          [p["x"] for p in spread_sites(rich, 4)] == [0, 2, 4],
+          str([p["x"] for p in spread_sites(rich, 4)]))
+    check("it stops at what was asked for",
+          len(spread_sites(rich, 1)) == 1)
+    check("nowhere to build is not a crash", spread_sites([], 4) == [])
+    check("order is kept, so the richest is built first",
+          spread_sites(rich, 4)[0]["richness"] == 1600)
+    check("a wider machine needs a wider gap",
+          [p["x"] for p in spread_sites(rich, 4, gap=3)] == [0, 4],
+          str([p["x"] for p in spread_sites(rich, 4, gap=3)]))
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
