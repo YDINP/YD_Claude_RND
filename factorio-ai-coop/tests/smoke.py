@@ -108,6 +108,27 @@ def main() -> int:
     check("server_save wrote a file", os.path.exists(save),
           f"{os.path.getsize(save)} bytes" if os.path.exists(save) else "missing")
 
+    print("\n10. hostile input cannot kill the server")
+    # A Lua error raised inside on_tick makes Factorio quit with "multiplayer
+    # error", kicking every human in the game. Anything the agent can type must
+    # therefore come back as a task failure instead.
+    hostile = (
+        ("bad recipe", lambda: ai.craft("does-not-exist")),
+        ("bad entity", lambda: ai.place("not-a-real-entity", 0, 0)),
+        ("absurd coordinates", lambda: ai.run("walk_to", timeout=40, x=1e9, y=1e9,
+                                              timeout_ticks=120)),
+        ("unknown task type", lambda: ai.submit("teleport_to_the_moon")),
+    )
+    for label, fn in hostile:
+        try:
+            outcome = f"returned {json.dumps(fn())}"
+        except Exception as exc:  # noqa: BLE001 - any clean refusal is fine
+            outcome = f"{type(exc).__name__}: {exc}"
+        print(f"       {label}: {outcome[:110]}")
+
+    alive = ai.status()
+    check("server survived every hostile task", bool(alive.get("tick")), f"tick={alive.get('tick')}")
+
     ai.close()
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

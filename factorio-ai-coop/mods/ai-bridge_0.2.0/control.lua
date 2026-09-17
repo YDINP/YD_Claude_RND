@@ -27,8 +27,11 @@ local function init()
   storage.results = storage.results or {}
   storage.result_order = storage.result_order or {}
   storage.paths = storage.paths or {}
+  storage.chat = storage.chat or {}
   storage.next_id = storage.next_id or 1
 end
+
+local CHAT_HISTORY = 50
 
 script.on_init(init)
 script.on_configuration_changed(init)
@@ -80,12 +83,26 @@ local function drive()
   local handler = Tasks[task.type]
   local ctx = { bot = b, task = task, surface = b.surface, tick = game.tick }
 
-  local status
-  if not task.started then
-    task.started = true
-    status = handler.start(ctx)
-  else
-    status = handler.step(ctx)
+  -- A raw Lua error inside on_tick does not just fail the task: Factorio tears
+  -- the whole server down with "multiplayer error", dropping the humans who are
+  -- playing with the agent. An agent that can pass a bad recipe name must not be
+  -- able to do that, so every handler runs under pcall and errors become
+  -- ordinary task failures.
+  local ok, status = pcall(function()
+    if not task.started then
+      task.started = true
+      return handler.start(ctx)
+    end
+    return handler.step(ctx)
+  end)
+
+  if not ok then
+    pcall(function()
+      Tasks.halt(b)
+      b.mining_state = { mining = false }
+    end)
+    task.error = "lua error: " .. tostring(status)
+    status = "failed"
   end
 
   if status == "running" then
@@ -105,13 +122,33 @@ local function drive()
   storage.current = nil
 end
 
-script.on_event(defines.events.on_tick, drive)
+-- Second belt: even a bug in the queue bookkeeping itself must not take the
+-- server down mid-session.
+script.on_event(defines.events.on_tick, function()
+  local ok, err = pcall(drive)
+  if not ok then
+    log("ai-bridge: dropping task after internal error: " .. tostring(err))
+    storage.current = nil
+  end
+end)
 
 -- The pathfinder answers asynchronously. Park the answer under its request id
 -- and let whichever task asked for it pick it up on its next step; that keeps
 -- nested walks (a mine task walking to its ore) working without extra wiring.
 script.on_event(defines.events.on_script_path_request_finished, function(event)
   storage.paths[event.id] = event.path or false
+end)
+
+-- Chat is the coop channel: the human types, the agent reads it on its next
+-- poll and answers with `say`. Kept as a small ring so the log never grows.
+script.on_event(defines.events.on_console_chat, function(event)
+  if not event.player_index then return end
+  local player = game.get_player(event.player_index)
+  if not player then return end
+  table.insert(storage.chat, { tick = event.tick, player = player.name, message = event.message })
+  while #storage.chat > CHAT_HISTORY do
+    table.remove(storage.chat, 1)
+  end
 end)
 
 --------------------------------------------------------------- observation
@@ -300,6 +337,21 @@ remote.add_interface("ai", {
 
   observe = observe,
   inventory = inventory,
+
+  -- Read what the humans have been saying since a given tick.
+  chat = function(since_tick)
+    local out = {}
+    for _, line in ipairs(storage.chat) do
+      if not since_tick or line.tick > since_tick then out[#out + 1] = line end
+    end
+    return { tick = game.tick, messages = out }
+  end,
+
+  -- Speak into the shared chat so the humans can see what the agent is doing.
+  say = function(text)
+    game.print("[AI] " .. tostring(text))
+    return { said = text, tick = game.tick }
+  end,
 
   -- Testing convenience. Real play should craft or mine instead.
   give = function(items)

@@ -22,6 +22,15 @@ class AuthError(RconError):
     pass
 
 
+class RconTimeout(RconError):
+    """A command produced no reply.
+
+    The connection is closed when this is raised. A late reply would otherwise
+    be read as the answer to the *next* command, silently shifting every result
+    from then on, which is far harder to debug than a dropped connection.
+    """
+
+
 class Rcon:
     def __init__(self, host: str, port: int, password: str, timeout: float = 15.0) -> None:
         self.sock = socket.create_connection((host, port), timeout=timeout)
@@ -65,8 +74,13 @@ class Rcon:
 
     def command(self, cmd: str) -> str:
         sent = self._send(SERVERDATA_EXECCOMMAND, cmd)
-        req_id, _, body = self._recv()
+        try:
+            req_id, _, body = self._recv()
+        except socket.timeout as exc:
+            self.close()
+            raise RconTimeout(f"no reply to: {cmd[:120]}") from exc
         if req_id != sent:
+            self.close()
             raise RconError(f"response id mismatch: {req_id} != {sent}")
         return body
 

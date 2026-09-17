@@ -96,6 +96,18 @@ class AIBridge:
     def give(self, **items: int) -> dict:
         return self.call("give", items)
 
+    # -- talking to the humans you are playing with ------------------------
+
+    def chat(self, since_tick: int | None = None) -> dict:
+        reply = self.call("chat", since_tick) if since_tick is not None else self.call("chat")
+        # Lua serialises an empty list as {}; normalise for callers.
+        messages = reply.get("messages")
+        reply["messages"] = list(messages.values()) if isinstance(messages, dict) else (messages or [])
+        return reply
+
+    def say(self, text: str) -> dict:
+        return self.call("say", text)
+
     # -- tasks ------------------------------------------------------------
 
     def submit(self, task_type: str, **params: Any) -> int:

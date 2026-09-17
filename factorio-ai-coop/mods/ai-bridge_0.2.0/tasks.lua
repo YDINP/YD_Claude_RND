@@ -244,6 +244,10 @@ M.mine = {
 M.build = {
   start = function(ctx)
     local p = ctx.task.params
+    if not p.name or not prototypes.entity[p.name] then
+      ctx.task.error = "no such entity: " .. tostring(p.name)
+      return "failed"
+    end
     if count_item(ctx.bot, p.name) < 1 then
       ctx.task.error = "no " .. tostring(p.name) .. " in inventory"
       return "failed"
@@ -298,6 +302,10 @@ M.build = {
 M.craft = {
   start = function(ctx)
     local p = ctx.task.params
+    if not p.recipe or not prototypes.recipe[p.recipe] then
+      ctx.task.error = "no such recipe: " .. tostring(p.recipe)
+      return "failed"
+    end
     local started = ctx.bot.begin_crafting { count = p.count or 1, recipe = p.recipe, silent = true }
     if started == 0 then
       ctx.task.error = "cannot craft " .. tostring(p.recipe) .. " (missing ingredients or not researched)"
