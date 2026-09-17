@@ -293,14 +293,17 @@ local function build_chat(player)
   -- 옆으로 밀어두고 필요할 때 끌어다 쓸 수 있어야 한다.
   local bar = frame.add { type = "flow", name = "bar", direction = "horizontal" }
   bar.drag_target = frame
+  -- 스타일과 스프라이트 이름은 틀리면 GUI 생성 자체가 죽는다. 실제로
+  -- «default-frame-title» 이라는 폰트는 없어서 창이 안 떴다. 확실한 것만
+  -- 쓰고, 없으면 조용히 기본값으로 둔다.
   local title = bar.add { type = "label", caption = "AI 대화" }
-  title.style.font = "default-frame-title"
-  local grip = bar.add { type = "empty-widget", style = "draggable_space_header" }
+  pcall(function() title.style = "frame_title" end)
+  local grip = bar.add { type = "empty-widget" }
+  pcall(function() grip.style = "draggable_space_header" end)
   grip.style.height = 24
   grip.style.horizontally_stretchable = true
   grip.drag_target = frame
-  bar.add { type = "sprite-button", name = CHAT_CLOSE,
-            sprite = "utility/close", style = "frame_action_button" }
+  bar.add { type = "button", name = CHAT_CLOSE, caption = "닫기" }
 
   local pane = frame.add { type = "scroll-pane", name = "body", direction = "vertical" }
   pane.style.maximal_height = 300
