@@ -111,7 +111,11 @@ FURNACE_FUEL = 5
 SMELT_BATCH = 20
 PLATES_FOR_TOOLS = 12   # enough to hand-craft a drill and a chest
 STOCKPILE = 30
-BACKOFF_SECONDS = 120   # how long a failed kind of work stays off the ladder
+BACKOFF_SECONDS = 120
+
+# 길이 없어 실패한 일감은 그 사람에게 오래 막아둔다. 호수는 다음 배차 때도
+# 그 자리에 있다.
+UNREACHABLE_QUIET = 900.0   # how long a failed kind of work stays off the ladder
 
 # Each agent takes one resource so a crew does not all stand on the same patch.
 FOCUS_ORDER = ["iron-ore", "coal", "copper-ore", "stone"]
@@ -2046,10 +2050,15 @@ class Crew:
                 # 전체를 여기서 끊으면 뒤에 있는 일감이 통째로 사라진다 -
                 # 창고 입고가 목록 중간에 있어서 그 뒤가 전부 날아갔다.
                 continue
-            name = order[0]
-            worker = self.workers[name]
-            if job.key in worker.blocked_now():
+            # 가장 가까운 사람이 이 일을 막아뒀으면 다음 사람에게 준다.
+            # 예전에는 order[0] 하나만 보고, 그 사람이 막아뒀으면 일감
+            # 자체를 버렸다. 호수 건너에 갇힌 한 사람 때문에 급유 상자
+            # 채우기가 통째로 사라지고 있었다 - 다른 셋은 갈 수 있는데도.
+            name = next((n for n in order
+                         if job.key not in self.workers[n].blocked_now()), None)
+            if name is None:
                 continue
+            worker = self.workers[name]
 
             self.claim(worker, job.key)
             self.say(job.narration, who=name)
@@ -2879,6 +2888,18 @@ class Crew:
                     # Remember what failed. Re-proposing it every second is how
                     # one unreachable furnace fills the chat with the same line.
                     worker.block(kind)
+
+                    # 「길이 없다」는 세상에 길이 없다는 뜻이 아니라 이 사람이
+                    # 못 간다는 뜻이다. 실제로 한 명이 호수 건너에 서서 같은
+                    # 실패를 다섯 번 반복했다 - 직선거리로는 73타일이었지만
+                    # 걸어서는 물을 크게 돌아야 했다.
+                    #
+                    # 이 일감을 이 사람에게만 오래 막아두면, 배차가 다음
+                    # 사람에게 넘긴다.
+                    trouble = str(state.get("error") or "")
+                    if worker.job_key and ("no path" in trouble
+                                           or "stuck" in trouble):
+                        worker.block(worker.job_key, UNREACHABLE_QUIET)
                     self.say(f"{kind} 실패: {state.get('error')}", who=worker.name)
                     # 방금 실제로 해보고 없다는 걸 알았다. 짐작이 아니므로
                     # 이걸 근거로 동료에게 부탁해도 된다.
