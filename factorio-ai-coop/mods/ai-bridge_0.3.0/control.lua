@@ -39,7 +39,10 @@ local PLANNING_RECIPES = {
 -- everything, and the autosaves the server settings produce go to separate
 -- `_autosave` files that the next start never loads. So the world saves itself
 -- over the file it came from, on a timer.
-local AUTOSAVE_INTERVAL = 60 * 60 * 5   -- ticks (5 minutes)
+-- 헤드리스 서버는 깨끗하게 종료할 때만 세이브를 되쓴다. 그 사이에 죽으면
+-- 마지막 저장 이후는 전부 사라지므로, 간격이 곧 «잃을 수 있는 시간»이다.
+-- 작은 맵에서 server_save는 수백 밀리초라 1분마다 해도 눈에 띄지 않는다.
+local AUTOSAVE_INTERVAL = 60 * 60       -- ticks (1 minute)
 
 local MARKER_INTERVAL = 30   -- ticks between nametag/map-tag refreshes
 local TAG_MOVE_EPSILON = 6   -- tiles an agent may drift before its map tag moves
@@ -167,6 +170,10 @@ end)
 local PANEL_NAME = "ai_crew_panel"
 
 local function panel_rows(frame)
+  if frame.goal then
+    frame.goal.caption = storage.goal or "목표: 아직 정해지지 않음"
+  end
+
   local grid = frame.grid
   grid.clear()
 
@@ -214,6 +221,17 @@ local function panel_rows(frame)
       and (math.floor((game.tick - storage.last_save_tick) / 60) .. "초")
       or "아직 없음",
     game.tick)
+
+  -- 요청 게시판. 누가 무엇을 기다리는지가 여기 없으면, 멈춰 서 있는
+  -- 에이전트를 보고도 왜 멈췄는지 알 방법이 없다.
+  if frame.board then
+    local lines = storage.board or {}
+    if #lines == 0 then
+      frame.board.caption = "대기 중인 요청 없음"
+    else
+      frame.board.caption = "요청 " .. #lines .. "건\n  " .. table.concat(lines, "\n  ")
+    end
+  end
 end
 
 local function build_panel(player)
@@ -221,8 +239,11 @@ local function build_panel(player)
   local frame = player.gui.left.add {
     type = "frame", name = PANEL_NAME, direction = "vertical", caption = "AI 크루",
   }
+  frame.add { type = "label", name = "goal", caption = "" }
   frame.add { type = "table", name = "grid", column_count = 5 }
   frame.add { type = "label", name = "footer", caption = "" }
+  local board = frame.add { type = "label", name = "board", caption = "" }
+  board.style.single_line = false
   panel_rows(frame)
   return frame
 end
@@ -250,6 +271,9 @@ local function archive(a, task, status)
     agent = a.name,
     type = task.type,
     status = status,
+    -- 실패한 태스크가 «무엇을 하려다»였는지는 params에만 남는다. 마른 광맥에
+    -- 대고 실패한 mine이 어느 광석이었는지 알아야 동료에게 부탁할 수 있다.
+    params = task.params,
     result = task.result,
     error = task.error,
     finished_tick = game.tick,
@@ -1006,6 +1030,18 @@ remote.add_interface("ai", {
     if not a then return { error = "no such agent: " .. tostring(name) } end
     a.focus = focus
     return { name = name, focus = focus }
+  end,
+
+  -- 목표와 요청 게시판은 파이썬 쪽이 안다. 모드는 받아 적어뒀다가 그린다.
+  set_board = function(goal, lines)
+    storage.goal = goal
+    storage.board = {}
+    if type(lines) == "table" then
+      for _, line in ipairs(lines) do
+        storage.board[#storage.board + 1] = tostring(line)
+      end
+    end
+    return { goal = storage.goal, requests = #storage.board }
   end,
 
   save = function()

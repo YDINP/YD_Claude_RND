@@ -103,6 +103,36 @@ def main() -> int:
     bot.wait(ids[-1], timeout=180)
     check("plan completed", True)
 
+    print("\n8b. handing materials to a crewmate")
+    # 상자는 아직 아무도 없는 철판으로 만든다. 초반에 한 에이전트가 다른
+    # 에이전트를 도울 수 있는 방법은 걸어가서 손에 쥐여주는 것뿐이다.
+    try:
+        ai.spawn("bravo")
+    except Exception:  # noqa: BLE001 - already on the roster is fine
+        pass
+    mate = ai.agent("bravo")
+    here = bot.observe(radius=5)["position"]
+    mate.run("walk_to", timeout=180, x=here["x"] + 22, y=here["y"] + 8, tolerance=2)
+    there = mate.observe(radius=5)["position"]
+    gap = ((here["x"] - there["x"]) ** 2 + (here["y"] - there["y"]) ** 2) ** 0.5
+    check("crewmates are apart", gap > 6, f"{gap:.0f} tiles")
+
+    ai.rcon.command(
+        "/silent-command game.surfaces[1].find_entities_filtered"
+        f"{{type='character', position={{{here['x']},{here['y']}}}, radius=1.5}}[1]"
+        ".insert{name='coal', count=30}")
+    handed = bot.run("give", timeout=180, to="bravo", name="coal", count=25)
+    check("handed over", handed.get("given") == 25, json.dumps(handed))
+    check("the recipient has it",
+          mate.inventory()["items"].get("coal", 0) >= 25,
+          str(mate.inventory()["items"].get("coal", 0)))
+
+    try:
+        bot.run("give", timeout=60, to="nobody-at-all", name="coal", count=1)
+        check("a stranger is refused", False, "should have raised")
+    except Exception as exc:  # noqa: BLE001
+        check("a stranger is refused", "no crewmate" in str(exc), str(exc)[:80])
+
     print("\n9. world still saves with the agent attached")
     ai.rcon.command('/silent-command game.server_save("ai-bridge-phase1")')
     time.sleep(4)

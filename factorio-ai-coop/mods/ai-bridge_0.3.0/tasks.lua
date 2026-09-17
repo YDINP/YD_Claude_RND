@@ -559,4 +559,67 @@ M.wait = {
   end,
 }
 
+---------------------------------------------------------------------- give
+
+-- Handing materials to a crewmate. `insert` deliberately skips characters,
+-- because at a position you almost always mean the furnace and not the person
+-- standing next to it, so passing goods between agents needs its own task.
+--
+-- The recipient walks around while the courier is on its way, so the goal is
+-- re-checked every step and the pinned path is thrown away once it has gone
+-- stale. Without that the courier arrives where the other one used to be.
+
+local HANDOFF_DRIFT = 6  -- tiles the recipient may wander before we re-path
+
+local function crewmate(name)
+  local a = storage.agents and storage.agents[name]
+  if a and a.char and a.char.valid then return a.char end
+  return nil
+end
+
+M.give = {
+  start = function(ctx)
+    local p = ctx.task.params
+    if not crewmate(p.to) then
+      ctx.task.error = "no crewmate named " .. tostring(p.to)
+      return "failed"
+    end
+    if count_item(ctx.bot, p.name) < 1 then
+      ctx.task.error = "nothing to give: no " .. tostring(p.name)
+      return "failed"
+    end
+    return "running"
+  end,
+
+  step = function(ctx)
+    local st, bot, p = ctx.task.state, ctx.bot, ctx.task.params
+    local mate = crewmate(p.to)
+    if not mate then
+      halt(bot)
+      ctx.task.error = "crewmate " .. tostring(p.to) .. " is gone"
+      return "failed"
+    end
+
+    local reach = bot.reach_distance - 0.5
+    if dist(bot.position, mate.position) > reach then
+      if st.sub and dist(st.sub.params, mate.position) > HANDOFF_DRIFT then
+        st.sub = nil
+      end
+      local travel = approach(ctx, mate.position, math.max(1.0, reach - 1.0))
+      if travel == "failed" then
+        halt(bot)
+        return "failed"
+      end
+      return "running"
+    end
+    halt(bot)
+
+    local wanted = math.min(p.count or 1, count_item(bot, p.name))
+    local moved = mate.insert { name = p.name, count = wanted }
+    if moved > 0 then bot.remove_item { name = p.name, count = moved } end
+    ctx.task.result = { given = moved, item = p.name, to = p.to }
+    return "done"
+  end,
+}
+
 return M

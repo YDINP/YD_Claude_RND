@@ -8,8 +8,9 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 import brain  # noqa: E402
-from agent import (ALL, FOCUS_ORDER, Job, Snapshot, next_goal, parse,  # noqa: E402
-                   plan, share, split_target)
+import mission  # noqa: E402
+from agent import (ALL, FOCUS_ORDER, Job, Snapshot, missing_item,  # noqa: E402
+                   next_goal, parse, plan, share, split_target)
 
 PASSED: list[str] = []
 FAILED: list[str] = []
@@ -317,6 +318,100 @@ def main() -> int:
           brain._clean_steps([{"type": "mine", "params": {"x": 5, "y": -3, "count": 7}}])
           == [("mine", {"x": 5.0, "y": -3.0, "count": 7})])
     check("non-list steps", brain._clean_steps("drop everything") == [])
+
+
+    print("\n6. the mission ladder")
+    FURNACE_ONLY = {"stone-furnace": {"nearest": {"x": 1, "y": 1},
+                                      "nearest_dist": 2, "count": 1}}
+
+    def world_at(items=None, buildings=None, tech=None):
+        return Snapshot(tick=0, x=0.0, y=0.0, items=items or {},
+                        craftable={}, buildings=buildings or {}, resources={},
+                        researched=set(tech or ()))
+
+    check("nothing done yet -> first rung",
+          mission.stage_of(world_at()).key == "furnace")
+    check("a furnace moves the crew up",
+          mission.stage_of(world_at(buildings=FURNACE_ONLY)).key == "electronics")
+    check("trigger tech is a rung of its own",
+          mission.stage_of(world_at(buildings=FURNACE_ONLY,
+                                    tech={"electronics"})).key == "steam-power")
+    done, total = mission.progress(world_at(buildings=FURNACE_ONLY))
+    check("progress counts rungs, not guesses", (done, total) == (1, len(mission.LADDER)),
+          f"{done}/{total}")
+    check("the goal is stated", mission.GOAL in mission.briefing(world_at()))
+    check("ladder ends at the rocket", mission.LADDER[-1].key == "rocket")
+    check("rungs the crew cannot climb are marked",
+          not mission.LADDER[-1].automated and mission.LADDER[0].automated)
+
+    print("\n7. what the game said was missing")
+    for kind_, error, par, expected in [
+        ("insert", "no coal to insert", None, "coal"),
+        ("build", "no iron-chest in inventory", None, "iron-chest"),
+        ("give", "nothing to give: no stone", None, "stone"),
+        ("mine", "no resource near 30,0", {"name": "iron-ore"}, "iron-ore"),
+        ("mine", "no resource near 30,0", None, None),
+        ("walk_to", "stuck at 1.0,2.0 after 5 routes", None, None),
+        ("craft", "no such recipe: banana", None, None),
+    ]:
+        got = missing_item(kind_, error, par)
+        check(f"{kind_}: {error[:28]}", got == expected, f"-> {got}")
+
+    print("\n8. shortfall picks one thing")
+    check("the biggest gap first",
+          mission.shortfall({"coal": 5, "iron-ore": 25}, {"coal": 1}) == ("iron-ore", 25))
+    check("nothing missing", mission.shortfall({"coal": 5}, {"coal": 9}) is None)
+    check("empty needs", mission.shortfall({}, {}) is None)
+
+    print("\n9. the request board")
+    board = mission.Board()
+    first = board.post("alpha", "coal", 25, "제련하려면", now=0.0)
+    check("a request goes up", first is not None and first.open)
+    check("the same ask twice is one request",
+          board.post("alpha", "coal", 25, "또", now=1.0) is None
+          and len(board.requests) == 1)
+    check("a different item is a different request",
+          board.post("alpha", "stone", 5, "화로", now=1.0) is not None)
+
+    check("whoever has it is offered the job",
+          board.offer("bravo", {"coal": 40}).item == "coal")
+    check("empty-handed gets nothing to deliver",
+          board.offer("bravo", {"coal": 2}) is None)
+    check("not enough is not enough",
+          board.offer("bravo", {"coal": 24}) is None)
+    check("nobody serves their own request",
+          board.offer("alpha", {"coal": 99, "stone": 99}) is None)
+
+    taken = board.offer("bravo", {"coal": 40})
+    board.take(taken, "bravo", now=2.0)
+    check("a claimed request is off the board", board.offer("charlie", {"coal": 99}) is None)
+    check("the asker can see what it waits for",
+          [r.item for r in board.waiting_for("alpha")] == ["coal", "stone"])
+
+    board.fill(taken)
+    check("a delivered request is gone",
+          [r.item for r in board.waiting_for("alpha")] == ["stone"])
+
+    errands = mission.Board()
+    errands.post("delta", "copper-ore", 25, "연구", now=10.0)
+    errands.post("echo", "stone", 5, "화로", now=11.0)
+    check("an errand is offered to the idle even empty-handed",
+          errands.errand("foxtrot").item == "copper-ore")
+    check("the oldest ask is served first",
+          errands.errand("delta").item == "stone")
+
+    board.take(board.errand("echo"), "echo", now=10.0)
+    board.expire(now=10.0 + mission.CLAIM_TTL + 1)
+    check("a courier that never arrives lets go",
+          all(r.helper is None for r in board.requests))
+    board.expire(now=10.0 + mission.CLAIM_TTL + mission.REQUEST_TTL + 2)
+    check("a request nobody takes comes down", board.requests == [])
+
+    board2 = mission.Board()
+    board2.post("alpha", "coal", 5, "x", now=0.0)
+    board2.take(board2.requests[0], "bravo", now=0.0)
+    board2.release("bravo")
+    check("a fired courier releases what it held", board2.requests[0].open)
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

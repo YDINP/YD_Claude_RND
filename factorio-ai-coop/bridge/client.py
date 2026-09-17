@@ -188,6 +188,14 @@ class AIBridge:
     def set_focus(self, name: str, focus: str) -> dict:
         return self.call("set_focus", name, focus)
 
+    def set_board(self, goal: str, lines: list[str]) -> dict:
+        """The goal line and the open requests, for the in-game panel.
+
+        The mod cannot know either: both live in the daemon. It stores what it
+        is given and draws it, so the panel says the same thing the chat does.
+        """
+        return self.call("set_board", goal, lines)
+
     def water_sites(self, x: float, y: float, radius: int = 120,
                     wanted: int = 3) -> list[dict]:
         return _as_list(self.call("water_sites", x, y, radius, wanted).get("sites"))

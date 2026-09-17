@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import brain
+import mission
 from client import Agent, AIBridge, RconError, TaskFailed
 
 Step = tuple[str, dict]
@@ -273,6 +274,8 @@ class Job:
     routine: str | None = None
     ore: str | None = None
     key: str = ""
+    # 이 일이 먹는 재료. 모자라면 동료에게 부탁할 근거가 된다.
+    needs: dict[str, int] = field(default_factory=dict)
 
 
 def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
@@ -337,7 +340,9 @@ def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
             # Keyed by the furnace, not by the agent: two agents stuffing one
             # furnace and both waiting for its output is not teamwork.
             jobs.append(Job("화로에 석탄과 철광석을 넣고 제련합니다.",
-                            key=f"smelt:{furnace['x']:.0f},{furnace['y']:.0f}", steps=[
+                            key=f"smelt:{furnace['x']:.0f},{furnace['y']:.0f}",
+                            needs={"coal": FURNACE_FUEL, "iron-ore": SMELT_BATCH},
+                            steps=[
                                 ("insert", {"name": "coal", "count": FURNACE_FUEL, **furnace}),
                                 ("insert", {"name": "iron-ore", "count": SMELT_BATCH, **furnace}),
                                 ("wait", {"ticks": 60 * 40}),
@@ -353,7 +358,8 @@ def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
         for ore in [focus] + [o for o in FOCUS_ORDER if o != focus]:
             if snap.ore(ore) and drills < len(FOCUS_ORDER):
                 jobs.append(Job(f"{ore} 자동 채굴을 준비하겠습니다.",
-                                key=f"automate:{ore}", routine="automate", ore=ore))
+                                key=f"automate:{ore}", routine="automate", ore=ore,
+                                needs={DRILL: 1, CHEST: 1, "coal": DRILL_FUEL}))
     elif snap.have("iron-plate") >= PLATES_FOR_TOOLS and not snap.can_make("stone-furnace"):
         spot = snap.ore("stone")
         if spot:
@@ -376,7 +382,9 @@ def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
                                                  "timeout_ticks": 60 * 60 * 5})]))
         elif furnace and snap.have("coal") >= FURNACE_FUEL:
             jobs.append(Job(f"{plate}를 제련합니다. ({tech} 연구가 열립니다)",
-                            key=f"smelt:{plate}", steps=[
+                            key=f"smelt:{plate}",
+                            needs={"coal": FURNACE_FUEL, ore: ORE_BATCH},
+                            steps=[
                                 ("insert", {"name": "coal", "count": FURNACE_FUEL, **furnace}),
                                 ("insert", {"name": ore, "count": ORE_BATCH, **furnace}),
                                 ("wait", {"ticks": 60 * 45}),
@@ -402,6 +410,31 @@ def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
         seen.add(job.key)
         unique.append(job)
     return unique
+
+
+def missing_item(kind: str, error: str, params: dict | None = None) -> str | None:
+    """실패 메시지에서 «무엇이 없었는지»를 뽑아낸다.
+
+    부탁은 여기서 시작한다. 짐작으로 «아마 석탄이 없겠지»라고 붙이는 부탁은
+    틀릴 수 있지만, 방금 실제로 시도했다가 실패한 것은 틀릴 수가 없다.
+    """
+    text = (error or "").strip()
+    params = params or {}
+
+    # "no coal to insert" / "no iron-chest in inventory"
+    for tail in (" to insert", " in inventory"):
+        if text.startswith("no ") and text.endswith(tail):
+            return text[3: -len(tail)].strip() or None
+
+    # "nothing to give: no coal"
+    if text.startswith("nothing to give: no "):
+        return text[len("nothing to give: no "):].strip() or None
+
+    # 광맥이 말라버린 경우. 어디에 있었는지는 params가 안다.
+    if kind == "mine" and text.startswith("no resource near"):
+        return params.get("name") or None
+
+    return None
 
 
 def next_goal(snap: Snapshot, focus: str = "iron-ore",
@@ -445,6 +478,8 @@ class Worker:
         # The job key this agent currently holds, so the crew can hand the rest
         # of the list to somebody else.
         self.job_key: str | None = None
+        # 지금 대신 해주고 있는 부탁과, 그걸 실어나르는 태스크 번호.
+        self.errand: tuple[int, object] | None = None
 
     def snapshot(self, radius: int = 200) -> Snapshot:
         world = self.handle.observe(radius=radius)
@@ -489,6 +524,13 @@ class Crew:
         # job key -> agent holding it. This is the whole of the orchestration:
         # nobody may start work someone else has already taken.
         self.claims: dict[str, str] = {}
+        # 부탁이 오가는 곳, 그리고 누가 무엇을 쥐고 있는지에 대한 마지막 기억.
+        # 남의 인벤토리는 스냅샷을 찍을 때만 알 수 있으니, 찍을 때마다 적어둔다.
+        self.board = mission.Board()
+        self.stock: dict[str, dict[str, int]] = {}
+        self.stage: str | None = None
+        self.goal_line = f"목표 {mission.GOAL}"
+        self.shown: tuple[str, tuple[str, ...]] | None = None
 
     # -- roster -----------------------------------------------------------
 
@@ -527,6 +569,8 @@ class Crew:
         return worker
 
     def fire(self, name: str) -> None:
+        self.board.release(name)
+        self.stock.pop(name, None)
         self.bridge.remove(name)
         worker = self.workers.pop(name, None)
         if worker:
@@ -777,6 +821,115 @@ class Crew:
 
     # -- reporting ---------------------------------------------------------
 
+    def announce_stage(self, snap: Snapshot) -> None:
+        """사다리에서 한 단 오르면 알린다.
+
+        무리가 지금 어디쯤인지 사람이 알 방법이 이것뿐이다. 매번 말하면
+        소음이니, 바뀔 때만 말한다.
+        """
+        here = mission.stage_of(snap)
+        self.goal_line = mission.briefing(snap)
+        if here.key == self.stage:
+            return
+        self.stage = here.key
+        self.say(self.goal_line)
+
+    def show_board(self) -> None:
+        """게임 안 패널에 목표와 대기 중인 부탁을 실어보낸다."""
+        lines = tuple(self.board.summary())
+        state = (self.goal_line, lines)
+        if state == self.shown:
+            return
+        try:
+            self.bridge.set_board(self.goal_line, list(lines))
+        except RconError:
+            return
+        self.shown = state
+
+    # -- 부탁 -------------------------------------------------------------
+
+    def ask_for(self, worker: Worker, item: str, count: int, reason: str) -> None:
+        """게시판에 부족분을 붙이고, 채팅으로도 말한다.
+
+        채팅으로 말하는 게 중요하다. 사람이 보고 있는 화면은 게시판이 아니라
+        채팅창이고, 누가 왜 멈춰 있는지는 거기에 나와야 한다.
+        """
+        req = self.board.post(worker.name, item, count, reason, time.monotonic())
+        if req is None:
+            return
+        self.say(f"{reason} — {item} {count}개가 필요합니다. 여유 있는 분 부탁드립니다.",
+                 who=worker.name)
+
+    def serve_board(self, worker: Worker, snap: Snapshot, idle: bool) -> bool:
+        """남이 붙여둔 부탁을 집는다. 집었으면 True.
+
+        이미 손에 쥐고 있으면 하던 일을 잠깐 미루고 갖다준다 — 걸어가기만
+        하면 되니 싸다. 없는 걸 캐다 주는 심부름은 달리 할 일이 없을 때만
+        받는다. 그러지 않으면 온 무리가 심부름꾼이 된다.
+        """
+        if worker.errand:
+            return True
+
+        req = self.board.offer(worker.name, snap.items)
+        fetch = False
+        if req is None and idle:
+            req = self.board.errand(worker.name)
+            # 캐올 데가 안 보이는 부탁은 받아봐야 못 지킨다.
+            if req is not None and not snap.ore(req.item):
+                req = None
+            fetch = req is not None
+        if req is None:
+            return False
+
+        steps: list[Step] = []
+        if fetch:
+            spot = snap.ore(req.item)
+            steps.append(("mine", {**spot, "count": req.count, "search_radius": 10,
+                                   "timeout_ticks": 60 * 60 * 5}))
+        steps.append(("give", {"to": req.asker, "name": req.item, "count": req.count}))
+
+        try:
+            ids = worker.handle.submit_plan(steps)
+        except RconError as exc:
+            self.say(f"심부름을 못 맡겠습니다: {exc}", who=worker.name)
+            return False
+
+        self.board.take(req, worker.name, time.monotonic())
+        worker.watching = ids
+        worker.errand = (ids[-1], req)
+        worker.said_idle = False
+        verb = "캐다 드리겠습니다" if fetch else "갖다 드리겠습니다"
+        self.say(f"{req.asker}님, {req.item} {req.count}개 {verb}.", who=worker.name)
+        return True
+
+    def check_errand(self, worker: Worker) -> None:
+        """실어나르던 부탁이 끝났는지 본다."""
+        if not worker.errand:
+            return
+        task_id, req = worker.errand
+        try:
+            state = self.bridge.poll(task_id)
+        except RconError:
+            return
+        status = state.get("status")
+        if status in ("queued", "running"):
+            return
+
+        worker.errand = None
+        if status == "done":
+            self.board.fill(req)  # type: ignore[arg-type]
+            self.say(f"{req.asker}님께 {req.item} {req.count}개 전달했습니다.",
+                     who=worker.name)
+            # 받은 쪽은 상황이 달라졌다. 아까 막혔던 일을 다시 해보게 한다.
+            asker = self.workers.get(req.asker)
+            if asker:
+                asker.blocked.clear()
+                asker.said_idle = False
+        else:
+            self.board.release(worker.name)
+            self.say(f"{req.asker}님 부탁을 못 지켰습니다: {state.get('error')}",
+                     who=worker.name)
+
     def report_finished(self) -> None:
         for worker in self.workers.values():
             still: list[int] = []
@@ -791,7 +944,24 @@ class Crew:
                     # one unreachable furnace fills the chat with the same line.
                     worker.block(kind)
                     self.say(f"{kind} 실패: {state.get('error')}", who=worker.name)
+                    # 방금 실제로 해보고 없다는 걸 알았다. 짐작이 아니므로
+                    # 이걸 근거로 동료에게 부탁해도 된다.
+                    want = missing_item(kind, state.get("error") or "",
+                                        state.get("params"))
+                    if want:
+                        self.ask_for(worker, want, self.wanted(want),
+                                     f"{kind} 작업이 막혔습니다")
             worker.watching = still
+
+    @staticmethod
+    def wanted(item: str) -> int:
+        """부탁할 때 몇 개나 달라고 할지.
+
+        광석은 한 번 제련할 만큼, 나머지는 하나면 된다. 스무 개짜리 부탁을
+        한 개로 붙이면 받아도 또 막힌다."""
+        if item in ORES.values() or item in ("coal", "stone"):
+            return ORE_BATCH
+        return 1
 
     # -- dispatch ----------------------------------------------------------
 
@@ -968,7 +1138,11 @@ class Crew:
 
     def tick(self) -> None:
         self.collect_thoughts()
+        for worker in self.workers.values():
+            self.check_errand(worker)
         self.report_finished()
+        self.board.expire(time.monotonic())
+        self.show_board()
 
         log = self.bridge.chat(self.since_tick)
         self.since_tick = log.get("tick", self.since_tick)
@@ -1022,12 +1196,31 @@ class Crew:
             except RconError:
                 continue
 
+            # 남이 나에게 부탁하려면 내가 뭘 쥐고 있는지 알아야 한다.
+            self.stock[worker.name] = dict(snap.items)
+            self.announce_stage(snap)
+
             self.release(worker)
             job = next_goal(snap, worker.focus, worker.blocked_now(), self.taken())
+
+            # 부탁이 내 일보다 먼저다. 이미 쥔 걸 건네주는 건 걸어가기만
+            # 하면 되고, 기다리는 쪽은 그동안 아무것도 못 한다.
+            if self.serve_board(worker, snap, idle=job is None):
+                continue
+
             if job is None:
                 if not worker.said_idle:
-                    self.say("당장 할 일이 없습니다. 시키실 게 있으면 말씀해 주세요.", who=worker.name)
+                    self.say(f"당장 할 일이 없습니다. {mission.briefing(snap)}",
+                             who=worker.name)
                     worker.said_idle = True
+                continue
+
+            # 재료가 모자란 일은 시작하기 전에 부탁을 붙이고 물러난다.
+            # 시작해놓고 실패하는 것보다 낫고, 기다리는 동안 다른 일을 한다.
+            short = mission.shortfall(job.needs, snap.items)
+            if short and not snap.ore(short[0]):
+                self.ask_for(worker, short[0], short[1], job.narration)
+                worker.block(job.key)
                 continue
 
             worker.said_idle = False
