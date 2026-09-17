@@ -1872,8 +1872,10 @@ remote.add_interface("ai", {
 
   depot = function()
     if not storage.depot then return { depot = nil } end
+    -- 반경을 넉넉히 잡으면 옆 상자를 잡는다. 실제로 같은 자리에 상자가
+    -- 둘이었고, 넣는 쪽과 세는 쪽이 서로 다른 상자를 보고 있었다.
     local here = game.surfaces[1].find_entities_filtered {
-      position = { storage.depot.x, storage.depot.y }, radius = 1.2,
+      position = { storage.depot.x, storage.depot.y }, radius = 0.3,
       type = "container",
     }[1]
     if not here then

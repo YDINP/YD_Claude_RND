@@ -1649,7 +1649,10 @@ class Crew:
         name, amount = surplus[0]
         return Job(f"{name} {amount}개를 공용 창고에 넣겠습니다.",
                    key=f"depot:{worker.name}",
-                   steps=[("insert", {"name": name, "count": amount, **where})],
+                   # 좁게 겨냥한다. 기본 반경으로는 옆 상자에 넣고, 세는
+                   # 쪽은 창고를 보고 있어서 영원히 0으로 남는다.
+                   steps=[("insert", {"name": name, "count": amount,
+                                      "search_radius": 0.5, **where})],
                    at=where)
 
     def keep_busy(self, worker: Worker, snap: Snapshot) -> Job | None:
