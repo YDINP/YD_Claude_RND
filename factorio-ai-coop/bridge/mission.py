@@ -58,7 +58,9 @@ LADDER: tuple[Stage, ...] = (
     Stage("electronics", "전자공학 개통 (구리판 10)", _knows("electronics")),
     Stage("steam-power", "증기력 개통 (철판 50)", _knows("steam-power")),
     Stage("lab", "랩 설치", _built("lab")),
-    Stage("power", "전력 공급", _built("steam-engine")),
+    # 서 있는 기관이 아니라 흐르는 전기. 물 없는 보일러에 물린 기관을
+    # «전력 공급 완료»로 세면 사다리가 거짓말을 한다.
+    Stage("power", "전력 공급", lambda snap: getattr(snap, "powered", False)),
     Stage("red-science", "빨간 과학팩 생산", _has("automation-science-pack", 10)),
     Stage("automation", "자동화 연구", _knows("automation")),
     Stage("assembler", "조립기 가동", _built("assembling-machine-1")),

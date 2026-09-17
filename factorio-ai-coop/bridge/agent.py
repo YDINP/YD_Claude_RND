@@ -1020,8 +1020,11 @@ class Crew:
         name = worker.name
         try:
             snap = worker.snapshot()
-            if snap.building("steam-engine"):
-                self.say("이미 발전기가 있습니다.", who=name)
+            # «기관이 서 있다»가 아니라 «전기가 흐른다». 계획 쪽만 고치고
+            # 여기를 안 고쳐서, 보일러와 기관을 손에 쥔 채 «이미 발전기가
+            # 있습니다»라며 돌아서고 있었다.
+            if snap.powered:
+                self.say("이미 전기가 들어오고 있습니다.", who=name)
                 return
 
             # 랩 옆에 세운다. 발전소가 랩에서 141타일 떨어져 있으면 전봇대
