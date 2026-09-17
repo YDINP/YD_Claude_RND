@@ -68,9 +68,19 @@ def main() -> int:
         time.sleep(1)
     check("save file written", os.path.exists(SAVE_PATH),
           f"{os.path.getsize(SAVE_PATH)} bytes" if os.path.exists(SAVE_PATH) else "missing")
+
+    # The save the server is *running* is the one the next start loads, and a
+    # headless server only writes that file on a clean shutdown. Closing the
+    # window is not a clean shutdown, so the world has to save over it itself.
+    stamped = ai.save()
+    check("world saves over its own file", stamped.get("saved") is True, json.dumps(stamped))
+    time.sleep(4)
+    status = ai.save_status()
+    check("and remembers when it last did", status.get("last_save_tick") is not None,
+          json.dumps(status))
     ai.close()
 
-    print("\n3. restart the server from that save")
+    print("\n3. kill the server outright and restart it")
     restart_server(SAVE)
     ai = connect()
 

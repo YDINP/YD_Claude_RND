@@ -146,6 +146,19 @@ class AIBridge:
     def say(self, text: str, who: str = "AI") -> dict:
         return self.call("say", text, who)
 
+    # -- keeping the world ------------------------------------------------
+
+    def save(self) -> dict:
+        """Write the world back over the save the server is running.
+
+        A headless server only does this by itself on a clean shutdown, and a
+        closed window is not a clean shutdown.
+        """
+        return self.call("save")
+
+    def save_status(self) -> dict:
+        return self.call("save_status")
+
     # -- the observer seat -------------------------------------------------
 
     def spectate(self, player: str, adopt_as: str | None = None) -> dict:

@@ -31,6 +31,13 @@ local PLANNING_RECIPES = {
   "iron-gear-wheel", "transport-belt", "wooden-chest",
 }
 
+-- A headless server only writes back to the save it was started from when it
+-- shuts down cleanly. Closing the window or killing the process loses
+-- everything, and the autosaves the server settings produce go to separate
+-- `_autosave` files that the next start never loads. So the world saves itself
+-- over the file it came from, on a timer.
+local AUTOSAVE_INTERVAL = 60 * 60 * 5   -- ticks (5 minutes)
+
 local MARKER_INTERVAL = 30   -- ticks between nametag/map-tag refreshes
 local TAG_MOVE_EPSILON = 6   -- tiles an agent may drift before its map tag moves
 
@@ -137,6 +144,16 @@ local function refresh_marker(a)
     a.tag = (ok and tag) or nil
   end
 end
+
+script.on_nth_tick(AUTOSAVE_INTERVAL, function()
+  -- server_save with no name writes over the save the server is running, which
+  -- is the one the next start will load. pcall because this is meaningless
+  -- (and an error) outside a headless server.
+  local ok = pcall(function() game.server_save() end)
+  if ok then
+    storage.last_save_tick = game.tick
+  end
+end)
 
 script.on_nth_tick(MARKER_INTERVAL, function()
   for _, name in ipairs(storage.order) do
@@ -832,6 +849,23 @@ remote.add_interface("ai", {
       progress = force.research_progress,
       queue = queue,
       labs = labs,
+    }
+  end,
+
+  -- Force a save right now, over the file the server is running.
+  save = function()
+    local ok, err = pcall(function() game.server_save() end)
+    if not ok then return { error = tostring(err) } end
+    storage.last_save_tick = game.tick
+    return { saved = true, tick = game.tick }
+  end,
+
+  save_status = function()
+    return {
+      tick = game.tick,
+      last_save_tick = storage.last_save_tick,
+      ticks_since_save = storage.last_save_tick and (game.tick - storage.last_save_tick) or nil,
+      interval = AUTOSAVE_INTERVAL,
     }
   end,
 

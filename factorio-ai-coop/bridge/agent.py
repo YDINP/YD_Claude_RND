@@ -186,6 +186,8 @@ def parse(message: str) -> list[Intent]:
         return [("observer", {})]
     if any(w in text for w in ("복귀", "몸 줘", "몸줘", "내려가", "unspectate")):
         return [("unobserver", {})]
+    if any(w in text for w in ("저장", "세이브", "save")):
+        return [("save", {})]
 
     # "석탄 자동화" is a request for drills and chests, not a request to flip an
     # autopilot flag. It has to be tested before the bare mode keywords, or the
@@ -727,6 +729,14 @@ class Crew:
         """Roster and observer commands, which belong to nobody in particular."""
         kind, params = intent
 
+        if kind == "save":
+            try:
+                self.bridge.save()
+                self.say("저장했습니다.")
+            except RconError as exc:
+                self.say(f"저장 실패: {exc}")
+            return True
+
         if kind == "add_agent":
             for _ in range(min(params.get("count", 1), len(CALL_SIGNS))):
                 if not self.hire():
@@ -915,6 +925,12 @@ def main() -> int:
     except KeyboardInterrupt:
         pass
     finally:
+        # Leaving without saving is how an hour of the crew's work disappears.
+        try:
+            bridge.save()
+            print("saved the world before leaving")
+        except RconError as exc:
+            print(f"[warn] could not save on the way out: {exc}", file=sys.stderr)
         bridge.close()
     return 0
 
