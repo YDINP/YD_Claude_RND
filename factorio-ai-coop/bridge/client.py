@@ -262,6 +262,10 @@ class AIBridge:
         """
         return self.call("set_board", goal, lines)
 
+    def threat(self, agent: str, radius: int = 300) -> dict:
+        """둥지가 얼마나 가까운지, 대비 수단이 열려 있는지."""
+        return self.call("threat", agent, radius)
+
     def power_status(self, agent: str) -> dict:
         """전기가 실제로 흐르는가. 서 있는 기관 수가 아니라."""
         return self.call("power_status", agent)

@@ -548,6 +548,22 @@ SMELTED_BY_FURNACE = ("iron-ore", "copper-ore")
 # 오래 두면 랩이 그만큼 논다.
 RESEARCH_CHECK = 20.0
 
+# 둥지를 살피는 주기와, 이 거리 안이면 알리는 기준. 공해가 퍼지는 속도에
+# 비하면 30초는 충분히 촘촘하다.
+THREAT_CHECK = 30.0
+NEST_ALARM = 200
+
+# 미리 세워둘 터렛 수와 한 대에 넣을 탄약. 습격이 온 다음에 짓기 시작하면
+# 이미 늦다 - 터렛은 낭비가 아니라 대비다.
+TURRET_TARGET = 4
+TURRET_AMMO = 10
+# 기지 중심에서 터렛까지. 공해가 나가는 쪽이 습격이 들어오는 쪽이다.
+TURRET_RING = 18
+# 연구는 이 순서로 고른다. 방어가 과학팩보다 뒤로 밀리면, 둥지가 가까워진
+# 다음에야 터렛을 만들기 시작한다.
+RESEARCH_ORDER = ("military", "automation", "logistics", "electric-mining-drill",
+                  "steel-processing", "logistic-science-pack")
+
 # 같은 사람이 같은 말을 이 시간 안에 되풀이하면 삼킨다.
 ECHO_QUIET = 60.0
 
@@ -711,6 +727,9 @@ class Crew:
         # 놓으면 굶는 기계만 늘어난다.
         self.starving = False
         self.research_checked = 0.0
+        self.threat_checked = 0.0
+        self.danger: dict = {}
+        self.danger_said: str | None = None
         self.research_said: str | None = None
         # 방금 한 말들. 같은 줄을 되풀이하지 않기 위한 것.
         self.echoes: dict[tuple[str, str], float] = {}
@@ -1122,6 +1141,8 @@ class Crew:
                     self.rescue(worker, at or {})
                 elif routine == "depot":
                     self.build_depot(worker, at or {})
+                elif routine == "defend":
+                    self.build_defence(worker, at or {})
                 else:
                     self.automate(worker, ore)
             except Exception as exc:  # noqa: BLE001
@@ -1553,7 +1574,14 @@ class Crew:
                                  "x": e["x"], "y": e["y"]}) for e in group],
                 at={"x": head["x"], "y": head["y"]}))
 
-        # 4. 출구가 막혀 선 채굴기.
+        # 4. 미리 세우는 터렛. 급하지 않지만 미뤄두면 영영 안 하고,
+        #    습격이 온 다음에 시작하면 늦는다.
+        guard = self.defence_job(worker, self.snaps.get(worker.name)
+                                 or worker.snapshot())
+        if guard:
+            unblock.append(guard)
+
+        # 5. 출구가 막혀 선 채굴기.
         for entry in stopped:
             if entry.get("fix") != "chest":
                 continue
@@ -1892,6 +1920,93 @@ class Crew:
                 wanted.add(step["input"])
         return wanted
 
+    def defence_job(self, worker: Worker, snap: Snapshot) -> Job | None:
+        """터렛을 미리 세운다.
+
+        습격이 온 다음에 짓기 시작하면 이미 늦다. 터렛은 낭비가 아니라
+        대비고, 총알을 넣어두지 않은 터렛은 세우지 않은 것과 같다.
+
+        자리는 기지 둘레다 - 화로가 모인 곳을 기지로 보고, 네 방향으로
+        조금 떨어뜨려 세운다.
+        """
+        if not self.danger.get("can_build_turret"):
+            return None
+        if int(self.danger.get("turrets") or 0) >= TURRET_TARGET:
+            return None
+
+        base = snap.building("stone-furnace") or {"x": snap.x, "y": snap.y}
+        nth = int(self.danger.get("turrets") or 0)
+        corner = ((1, 1), (-1, 1), (-1, -1), (1, -1))[nth % 4]
+        spot = {"x": base["x"] + corner[0] * TURRET_RING,
+                "y": base["y"] + corner[1] * TURRET_RING}
+        return Job(f"터렛을 미리 세웁니다 ({nth + 1}/{TURRET_TARGET}).",
+                   key=f"defend:{nth}", routine="defend", at=spot)
+
+    def build_defence(self, worker: Worker, spot: dict) -> None:
+        """터렛 한 대를 세우고 총알을 채운다."""
+        name = worker.name
+        try:
+            if not self.obtain(worker, "gun-turret", 1):
+                self.say("터렛을 못 만들었습니다.", who=name)
+                worker.block("defend", 300)
+                return
+            placed = worker.handle.place("gun-turret", spot["x"], spot["y"],
+                                         snap=True, timeout=420)
+            if self.obtain(worker, "firearm-magazine", TURRET_AMMO):
+                worker.handle.insert("firearm-magazine", placed["x"], placed["y"],
+                                     count=TURRET_AMMO, timeout=180)
+                self.say(f"터렛을 세우고 총알 {TURRET_AMMO}발을 넣었습니다. "
+                         f"({placed['x']:.0f}, {placed['y']:.0f})", who=name)
+            else:
+                self.say("터렛은 세웠는데 총알이 없습니다. 빈 터렛은 세우지 않은 것과 같습니다.",
+                         who=name)
+        except TaskFailed as exc:
+            worker.block("defend", 300)
+            self.say(f"터렛을 못 세웠습니다: {exc.task.get('error')}", who=name)
+        except RconError as exc:
+            worker.block("defend", 300)
+            self.say(f"방어 구축 중 오류: {exc}", who=name)
+
+    def watch_for_trouble(self) -> None:
+        """둥지가 가까워지는지 지켜보고, 필요하면 방어를 목표에 올린다.
+
+        공해는 퍼져서 둥지에 닿고, 닿으면 그쪽이 찾아온다. 첫 습격이 온
+        다음에 터렛을 만들기 시작하면 이미 늦다. 그런데 터렛은 military
+        연구 뒤에 있고 그 연구는 전력이 있어야 돌아가므로, 전력이 곧
+        방어의 선행 조건이다 - 그 사실을 사람에게 말해두는 것도 대비다.
+        """
+        now = time.monotonic()
+        if now < self.threat_checked or not self.workers:
+            return
+        self.threat_checked = now + THREAT_CHECK
+
+        scout = next(iter(self.workers.values()))
+        try:
+            found = self.bridge.threat(scout.name)
+        except RconError:
+            return
+        if found.get("error"):
+            return
+
+        self.danger = found
+        attackers = int(found.get("attackers") or 0)
+        nest = found.get("nearest_nest")
+        armed = bool(found.get("can_build_turret"))
+
+        if attackers:
+            note = (f"적 {attackers}마리가 {found.get('nearest_attacker')}타일 앞에 "
+                    f"있습니다.")
+        elif nest is not None and nest < NEST_ALARM:
+            note = f"둥지가 {nest}타일까지 왔습니다. 공해가 닿으면 찾아옵니다."
+        else:
+            return
+
+        if not armed:
+            note += " 터렛은 military 연구가 있어야 만들 수 있고, 그 연구는 전력이 필요합니다."
+        if note != self.danger_said:
+            self.danger_said = note
+            self.say(note)
+
     def keep_research_going(self) -> None:
         """연구가 멈춰 있으면 다시 건다.
 
@@ -1920,7 +2035,14 @@ class Crew:
         # 트리거 기술은 랩이 연구하는 것이 아니라 «무엇을 만들면» 열린다.
         # 큐에 넣으려 하면 엔진이 거부하므로, 걸 수 있는 것부터 건다.
         queueable = [t for t in options if not t.get("trigger_type")]
-        queueable.sort(key=lambda t: t.get("name", ""))
+
+        def rank(tech: dict) -> tuple:
+            name = tech.get("name", "")
+            order = (RESEARCH_ORDER.index(name) if name in RESEARCH_ORDER
+                     else len(RESEARCH_ORDER))
+            return (order, name)
+
+        queueable.sort(key=rank)
         for pick in queueable:
             try:
                 reply = self.bridge.research(pick["name"])
@@ -2266,6 +2388,7 @@ class Crew:
             self.check_errand(worker)
         self.report_finished()
         self.keep_research_going()
+        self.watch_for_trouble()
         self.board.expire(time.monotonic())
         self.show_board()
 

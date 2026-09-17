@@ -1158,6 +1158,57 @@ local function try_power_site(surface, force, site, engines)
   return plan
 end
 
+-- 공해는 바람처럼 퍼져서 둥지에 닿고, 닿으면 그쪽이 찾아온다. 그때 가서
+-- 놀라지 않으려면 «얼마나 가까운지»와 «무엇이 잠겨 있는지»를 보고 있어야
+-- 한다. 아직 둥지가 안 보인다는 것과 안전하다는 것은 다르다.
+local function threat(name, radius)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local surface, force = b.surface, b.force
+  local reach = math.min(radius or 300, 500)
+
+  local nests = surface.find_entities_filtered {
+    type = "unit-spawner", force = "enemy", position = b.position, radius = reach,
+  }
+  local nearest, near_d = nil, math.huge
+  for _, nest in pairs(nests) do
+    local d = Tasks.dist(b.position, nest.position)
+    if d < near_d then nearest, near_d = nest, d end
+  end
+
+  local units = surface.find_entities_filtered {
+    type = "unit", force = "enemy", position = b.position, radius = reach,
+  }
+  local closest_unit = math.huge
+  for _, u in pairs(units) do
+    local d = Tasks.dist(b.position, u.position)
+    if d < closest_unit then closest_unit = d end
+  end
+
+  local evo = 0
+  pcall(function()
+    if surface.get_evolution_factor then evo = surface.get_evolution_factor(force) end
+  end)
+
+  return {
+    agent = name,
+    pollution = math.floor(surface.get_pollution(b.position)),
+    nests = #nests,
+    nearest_nest = nearest and math.floor(near_d) or nil,
+    attackers = #units,
+    nearest_attacker = (#units > 0) and math.floor(closest_unit) or nil,
+    evolution = math.floor(evo * 1000) / 1000,
+    turrets = #surface.find_entities_filtered { type = "ammo-turret", force = force },
+    -- 대비 수단이 열려 있는가. 아직 잠겨 있으면 «위협 없음»은 위안이 안 된다.
+    can_build_turret = force.recipes["gun-turret"] ~= nil
+      and force.recipes["gun-turret"].enabled or false,
+    can_make_ammo = force.recipes["firearm-magazine"] ~= nil
+      and force.recipes["firearm-magazine"].enabled or false,
+  }
+end
+
 local function power_status(name)
   local a = agent(name)
   local b = body(a)
@@ -1910,6 +1961,9 @@ remote.add_interface("ai", {
 
   -- 전기가 실제로 흐르는가. 서 있는 기관 수가 아니라.
   power_status = power_status,
+
+  -- 둥지가 얼마나 가까운지, 대비 수단이 열려 있는지.
+  threat = threat,
 
   research_status = function()
     local force = game.forces["player"]
