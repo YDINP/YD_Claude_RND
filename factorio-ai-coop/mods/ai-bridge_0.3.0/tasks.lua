@@ -710,4 +710,74 @@ M.chop = {
   end,
 }
 
+------------------------------------------------------------------ demolish
+
+-- 우리 건물을 걷어낸다. 지금까지 에이전트는 «놓을» 줄만 알고 «치울» 줄을
+-- 몰랐다. 그래서 광맥이 채굴기 오십 대로 덮여 길이 사라져도, 잘못 놓인
+-- 기계가 다음 자리를 막아도 손을 못 댔다. 더하기만 할 수 있으면 실수는
+-- 영원히 남는다.
+--
+-- 부수는 게 아니라 «캐는» 것이라 자재가 가방으로 돌아온다. 자리를 옮기는
+-- 것은 이것과 build 를 이어 붙이면 된다.
+
+M.demolish = {
+  start = function(ctx)
+    local p = ctx.task.params
+    local found = ctx.surface.find_entities_filtered {
+      position = { p.x, p.y }, radius = p.search_radius or 0.6,
+      force = ctx.bot.force,
+    }
+    local target = nil
+    for _, e in pairs(found) do
+      if e.type ~= "character" and e.type ~= "item-entity"
+          and (not p.name or e.name == p.name) then
+        target = e
+        break
+      end
+    end
+    if not target then
+      ctx.task.error = string.format("nothing of ours at %.0f,%.0f", p.x, p.y)
+      return "failed"
+    end
+    if not target.minable then
+      ctx.task.error = target.name .. " cannot be mined"
+      return "failed"
+    end
+    ctx.task.state.target = target
+    ctx.task.state.label = target.name
+    return "running"
+  end,
+
+  step = function(ctx)
+    local st, bot = ctx.task.state, ctx.bot
+    if not st.target.valid then
+      -- 누가 먼저 치웠다. 실패가 아니다.
+      halt(bot)
+      ctx.task.result = { removed = st.label }
+      return "done"
+    end
+
+    if dist(bot.position, st.target.position) > bot.resource_reach_distance - 0.2 then
+      local travel = approach(ctx, st.target.position,
+                              math.max(0.8, bot.resource_reach_distance - 1.0))
+      if travel == "failed" then
+        halt(bot)
+        return "failed"
+      end
+      return "running"
+    end
+    halt(bot)
+
+    if not st.next_swing or ctx.tick >= st.next_swing then
+      st.next_swing = ctx.tick + 12
+      local ok = pcall(function() bot.mine_entity(st.target) end)
+      if not ok then
+        ctx.task.error = "could not mine " .. tostring(st.label)
+        return "failed"
+      end
+    end
+    return "running"
+  end,
+}
+
 return M

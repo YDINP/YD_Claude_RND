@@ -1161,6 +1161,31 @@ end
 -- 공해는 바람처럼 퍼져서 둥지에 닿고, 닿으면 그쪽이 찾아온다. 그때 가서
 -- 놀라지 않으려면 «얼마나 가까운지»와 «무엇이 잠겨 있는지»를 보고 있어야
 -- 한다. 아직 둥지가 안 보인다는 것과 안전하다는 것은 다르다.
+-- 길을 막고 선 우리 건물들. 여덟 칸마다 비워두기로 한 줄 위에 이미
+-- 놓여버린 것들이라, 새로 짓기 전에 이것부터 치워야 한다.
+local function blocking(name, radius)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local reach = math.min(radius or 120, MAX_OBSERVE_RADIUS)
+  local out = {}
+  for _, e in pairs(b.surface.find_entities_filtered {
+    position = b.position, radius = reach, force = b.force,
+    name = { "burner-mining-drill", "iron-chest", "stone-furnace" },
+  }) do
+    if blocks_lane(e.position, 1) and e.minable then
+      out[#out + 1] = {
+        name = e.name, x = e.position.x, y = e.position.y,
+        distance = math.floor(Tasks.dist(b.position, e.position) * 10) / 10,
+      }
+    end
+    if #out >= 20 then break end
+  end
+  table.sort(out, function(p, q) return p.distance < q.distance end)
+  return { agent = name, blocking = out }
+end
+
 local function threat(name, radius)
   local a = agent(name)
   local b = body(a)
@@ -1964,6 +1989,9 @@ remote.add_interface("ai", {
 
   -- 둥지가 얼마나 가까운지, 대비 수단이 열려 있는지.
   threat = threat,
+
+  -- 길 위에 서 있는 우리 건물들.
+  blocking = blocking,
 
   research_status = function()
     local force = game.forces["player"]

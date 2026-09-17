@@ -1581,7 +1581,23 @@ class Crew:
         if guard:
             unblock.append(guard)
 
-        # 5. 출구가 막혀 선 채굴기.
+        # 5. 길을 막고 선 우리 건물. 여덟 칸마다 비워두기로 한 줄 위에
+        #    이미 놓여버린 것들이다. 놓을 줄만 알고 치울 줄을 모르면 실수는
+        #    영원히 남는다 - 자재는 캐면 가방으로 돌아온다.
+        try:
+            for spot in cluster(self.bridge.blocking(worker.name))[:2]:
+                head = spot[0]
+                unblock.append(Job(
+                    f"길을 막은 {head['name']} {len(spot)}개를 걷어냅니다. "
+                    f"({head['x']:.0f}, {head['y']:.0f})",
+                    key=f"clear:{head['x']:.0f},{head['y']:.0f}",
+                    steps=[("demolish", {"x": e["x"], "y": e["y"], "name": e["name"]})
+                           for e in spot],
+                    at={"x": head["x"], "y": head["y"]}))
+        except RconError:
+            pass
+
+        # 6. 출구가 막혀 선 채굴기.
         for entry in stopped:
             if entry.get("fix") != "chest":
                 continue

@@ -262,6 +262,10 @@ class AIBridge:
         """
         return self.call("set_board", goal, lines)
 
+    def blocking(self, agent: str, radius: int = 120) -> list[dict]:
+        """길 위에 서 있는 우리 건물들, 가까운 순."""
+        return _as_list(self.call("blocking", agent, radius).get("blocking"))
+
     def threat(self, agent: str, radius: int = 300) -> dict:
         """둥지가 얼마나 가까운지, 대비 수단이 열려 있는지."""
         return self.call("threat", agent, radius)
@@ -391,6 +395,18 @@ class Agent:
 
     def place(self, name: str, x: float, y: float, direction: int = 0, **kw: Any) -> dict:
         return self.run("build", name=name, x=x, y=y, direction=direction, **kw)
+
+    def demolish(self, x: float, y: float, name: str | None = None,
+                 **kw: Any) -> dict:
+        """우리 건물을 걷어낸다. 자재는 가방으로 돌아온다.
+
+        놓을 줄만 알고 치울 줄을 모르면 실수가 영원히 남는다. 자리를 옮기는
+        것은 이것과 place 를 이어 붙이면 된다.
+        """
+        params = {"x": x, "y": y, **kw}
+        if name:
+            params["name"] = name
+        return self.run("demolish", **params)
 
     def chop(self, x: float, y: float, count: int = 4, **kw: Any) -> dict:
         """Fell trees for wood. Trees are not a resource, so mine cannot see them."""
