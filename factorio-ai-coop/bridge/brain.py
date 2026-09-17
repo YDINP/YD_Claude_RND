@@ -359,6 +359,7 @@ def delegate(message: str, snap: Any, fleet: list[dict], timeout: float = 120.0,
         CHIEF.replace("{max_steps}", str(MAX_STEPS))
         + "\n[캐릭터들]\n" + _fleet_text(fleet)
         + "\n\n[주변 상황]\n" + _snapshot_text(snap)
+        + "\n\n[창고]\n" + _stores_text(stores)
         + f"\n\n[사람이 한 말]\n{message}\n"
     )
 

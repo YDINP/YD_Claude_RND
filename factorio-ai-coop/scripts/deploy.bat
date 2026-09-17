@@ -27,11 +27,14 @@ if errorlevel 1 (
 echo [2/4] stopping server and daemon...
 powershell.exe -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | Where-Object { $_.CommandLine -like '*agent.py*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"
 powershell.exe -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='factorio.exe'\" | Where-Object { $_.CommandLine -like '*rcon-bind*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"
-timeout /t 3 /nobreak >nul
+REM ping, not timeout: when this batch is launched from a POSIX shell the
+REM PATH finds GNU timeout, which rejects /t and returns at once. The wait
+REM then never happens and the new server races the old one off the port.
+ping -n 4 127.0.0.1 >nul
 
 echo [3/4] restarting server on %SAVE% ...
 start "factorio-server" /min cmd /c "%ROOT%\scripts\run-server.bat %SAVE%"
-timeout /t 20 /nobreak >nul
+ping -n 21 127.0.0.1 >nul
 
 echo [4/4] restarting the crew...
 start "factorio-crew" /min cmd /c "%ROOT%\scripts\run-agent.bat --agents 4"

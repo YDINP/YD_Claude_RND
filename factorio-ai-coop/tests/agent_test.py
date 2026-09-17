@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 import brain  # noqa: E402
 import mission  # noqa: E402
 from agent import (FOCUS_ORDER, STAGE_TARGET, Crew, Job, errand_label,
-                   spread_sites,  # noqa: E402
+                   spread_sites, worth_building,  # noqa: E402
                    Snapshot, chain_job, cluster, interleave, missing_item,
                    next_goal, plan)
 
@@ -145,12 +145,18 @@ def main() -> int:
                                               "nearest_dist": 28, "count": 1}},
                        CAN_TOOL), focus="copper-ore") or Job("")).key.startswith("furnace:"))
 
-    ENOUGH = {"stone-furnace": {"nearest": {"x": 5, "y": 5}, "nearest_dist": 7, "count": 4,
+    ENOUGH = {"stone-furnace": {"nearest": {"x": 5, "y": 5}, "nearest_dist": 7, "count": 5,
                                 "spots": [{"x": 5 + 4 * i, "y": 5, "distance": 7}
-                                          for i in range(4)]}}
-    # 드릴 5 : 화로 4 가 두 비율의 고정점이다. 드릴이 모자라면 «채굴기를 더
+                                          for i in range(5)]}}
+    # 드릴 5 : 화로 5 가 두 비율의 고정점이다. 드릴이 모자라면 «채굴기를 더
     # 놓을 수 있는» 세계고, 드릴이 넘치면 «화로를 더 지어야 하는» 세계다.
     # 둘 다 «할 일이 없는» 세계가 아니다.
+    #
+    # 예전에는 5 : 4 였다. 버너 드릴 0.25/s 가 돌 화로 0.3125/s 를 못 채우니
+    # 화로 넷이면 된다고 봤는데, 그건 상자를 사이에 둘 때의 비율이다. 우리는
+    # 드릴을 화로에 «직결»하고, 직결이면 드릴 하나가 화로 하나를 먹인다.
+    # 화로를 덜 두면 남는 광석이 갈 데가 없어 드릴이 선다 - 실제로 101대가
+    # 그렇게 서 있었다.
     PLENTY = {**ALL_DRILLED, "burner-mining-drill": {
         **ALL_DRILLED["burner-mining-drill"], "count": 5}}
     settled = {**PLENTY, **ENOUGH,
@@ -648,6 +654,22 @@ def main() -> int:
           brain._clean_steps([{"type": "teleport", "params": {"x": 0, "y": 0}}]) == [])
     check("every task the prompt offers is a task the filter allows",
           {"demolish", "chop", "give"} <= brain.ALLOWED_TASKS)
+
+    print("\n19. build another, or fix the ones standing?")
+    measured = {"built": 194, "working": 24,
+                "why": {"waiting_for_space_in_destination": 101, "no_fuel": 57}}
+    ok, why = worth_building(measured)
+    check("194 built and 24 running means stop building", not ok)
+    check("and it says which reason dominates",
+          "waiting_for_space_in_destination 101" in why, why)
+    check("early on, a stopped machine is just early",
+          worth_building({"built": 3, "working": 1, "why": {"no_fuel": 2}})[0])
+    check("half running is healthy enough to grow",
+          worth_building({"built": 10, "working": 5, "why": {"no_fuel": 5}})[0])
+    check("just under half is not",
+          not worth_building({"built": 10, "working": 4, "why": {"no_fuel": 6}})[0])
+    check("nothing built yet is never a reason to stop",
+          worth_building({})[0])
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

@@ -920,6 +920,41 @@ end
 -- 상자에 무엇이 들어 있는가. 석탄 드릴의 상자에는 석탄이 쌓이는데,
 -- 정작 굶는 드릴에 그걸 가져다 넣는 작업이 없어서 여섯 중 넷이 «석탄을
 -- 넣겠습니다»만 반복하고 있었다. 가진 곳을 알아야 나를 수 있다.
+-- 상자들 안에 무엇이 얼마나 들어 있는가. 품목을 지정하지 않고 통째로.
+--
+-- 사람이 «상자에 석탄 많이 남았잖아»라고 말했는데 반장이 «석탄이 없습니다»로
+-- 답한 적이 있다. 반장이 본 것은 각자의 가방뿐이었다. 없는 것을 근거로
+-- 판단한 게 아니라, 보이지 않는 것을 없다고 판단한 것이다.
+local function stores(name, radius, limit)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local reach = math.min(radius or MAX_OBSERVE_RADIUS, MAX_OBSERVE_RADIUS)
+  local out, total = {}, {}
+  for _, e in pairs(b.surface.find_entities_filtered {
+    position = b.position, radius = reach, type = "container", force = b.force,
+  }) do
+    local inv = e.get_inventory(defines.inventory.chest)
+    if inv and not inv.is_empty() then
+      local items = {}
+      for _, stack in pairs(inv.get_contents()) do
+        items[stack.name] = (items[stack.name] or 0) + stack.count
+        total[stack.name] = (total[stack.name] or 0) + stack.count
+      end
+      out[#out + 1] = {
+        x = e.position.x, y = e.position.y, items = items,
+        distance = math.floor(Tasks.dist(b.position, e.position) * 10) / 10,
+      }
+    end
+  end
+  table.sort(out, function(p, q) return p.distance < q.distance end)
+
+  local near = {}
+  for i = 1, math.min(#out, limit or 12) do near[i] = out[i] end
+  return { agent = name, chests = near, chest_count = #out, total = total }
+end
+
 local function chest_stock(name, item, radius)
   local a = agent(name)
   local b = body(a)
@@ -1346,6 +1381,85 @@ local function wire_spot(name, x, y, pole)
            distance = math.floor(best_d * 10) / 10 }
 end
 
+-- 발전소가 어디서 끊겼는지 조목조목 돌려준다.
+--
+-- 실측(2026-09-18, 259분째): 보일러 5 + 기관 7 + 펌프 7 을 지어놓고 0W 였다.
+-- 뜯어보니 고칠 것은 네 가지뿐이었다.
+--   기관 3대: 증기는 가득한데 전봇대가 없다        -> 전봇대 하나씩
+--   기관 3대: 보일러와 «한 칸» 떨어져 있다         -> 파이프 하나씩
+--   보일러 2대: 연료 없음                          -> 석탄
+--   보일러 1대: 물 없음                            -> 펌프까지 파이프
+--
+-- 파이프 자리를 찾는 방법이 이 함수의 핵심이다. 안 이어진 연결구 둘이
+-- «같은 칸»을 바라보고 있으면, 그 칸에 파이프 하나를 놓는 것으로 둘이
+-- 이어진다. 기하를 다시 계산할 필요가 없다 - 게임이 이미 서로를 가리키고
+-- 있다고 말해주고 있다.
+local function power_faults(name)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local surface, force = b.surface, b.force
+  local out = { poles = {}, pipes = {}, fuel = {}, water = {} }
+  local open = {}   -- 안 이어진 연결구들. 키는 바라보는 칸.
+
+  for _, e in pairs(surface.find_entities_filtered {
+    force = force, name = { "boiler", "steam-engine", "offshore-pump" },
+  }) do
+    if e.status == defines.entity_status.not_plugged_in_electric_network then
+      out.poles[#out.poles + 1] = {
+        x = e.position.x, y = e.position.y, name = e.name,
+        distance = math.floor(Tasks.dist(b.position, e.position)),
+      }
+    end
+    if e.name == "boiler" then
+      if e.status == defines.entity_status.no_fuel then
+        out.fuel[#out.fuel + 1] = { x = e.position.x, y = e.position.y }
+      elseif e.status == defines.entity_status.no_input_fluid then
+        out.water[#out.water + 1] = { x = e.position.x, y = e.position.y }
+      end
+    end
+
+    for box = 1, 4 do
+      local ok, conns = pcall(function()
+        return e.fluidbox.get_pipe_connections(box)
+      end)
+      if not ok or not conns then break end
+      for _, c in pairs(conns) do
+        if c.target == nil and c.target_position then
+          local key = string.format("%.1f,%.1f", c.target_position.x,
+                                    c.target_position.y)
+          open[key] = open[key] or { x = c.target_position.x,
+                                     y = c.target_position.y, who = {} }
+          open[key].who[#open[key].who + 1] = e.name
+        end
+      end
+    end
+  end
+
+  -- 둘 이상이 같은 칸을 바라보면 그 칸이 파이프 자리다.
+  for _, spot in pairs(open) do
+    if #spot.who >= 2 and surface.can_place_entity {
+      name = "pipe", position = { spot.x, spot.y }, force = force,
+    } then
+      out.pipes[#out.pipes + 1] = {
+        x = spot.x, y = spot.y,
+        joins = table.concat(spot.who, "+"),
+        distance = math.floor(Tasks.dist(b.position, spot)),
+      }
+    end
+  end
+
+  local function nearest(list)
+    table.sort(list, function(p, q)
+      return (p.distance or 0) < (q.distance or 0)
+    end)
+  end
+  nearest(out.poles)
+  nearest(out.pipes)
+  return out
+end
+
 local function power_status(name)
   local a = agent(name)
   local b = body(a)
@@ -1719,6 +1833,41 @@ local function broken(name, radius)
   table.sort(out, function(p, q) return p.distance < q.distance end)
   return { agent = name, stopped = out }
 end
+
+-- 공장이 실제로 «돌고 있는가». 세운 수가 아니라 도는 수를 센다.
+--
+-- 실측(259분째): 버너 채굴기 194대 중 도는 것은 24대(12%)였다. 101대는
+-- 상자가 꽉 차서, 57대는 연료가 없어서, 12대는 밑의 광석이 다 떨어져서
+-- 서 있었다. 그런데 무리는 계속 채굴기를 더 세우고 있었다 - 「세운 수」만
+-- 셌기 때문이다. 스물넷이 도는데 백칠십이 서 있으면, 문제는 부족이 아니라
+-- 막힘이다. 한 대 더 세우는 것은 낭비를 한 대 더 세우는 것이다.
+local function health(name, radius)
+  init_status_names()
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local reach = math.min(radius or 400, 500)
+  local out = {}
+  for _, e in pairs(b.surface.find_entities_filtered {
+    position = b.position, radius = reach, name = TENDED, force = b.force,
+  }) do
+    local row = out[e.name]
+    if not row then
+      row = { built = 0, working = 0, why = {} }
+      out[e.name] = row
+    end
+    row.built = row.built + 1
+    if e.status == defines.entity_status.working then
+      row.working = row.working + 1
+    else
+      local label = STATUS_NAME[e.status] or tostring(e.status)
+      row.why[label] = (row.why[label] or 0) + 1
+    end
+  end
+  return { agent = name, machines = out }
+end
+
 
 local function agent_status(name)
   local a = agent(name)
@@ -2135,6 +2284,12 @@ remote.add_interface("ai", {
   -- 전기가 실제로 흐르는가. 서 있는 기관 수가 아니라.
   power_status = power_status,
 
+  -- 발전소가 어디서 끊겼는지 조목조목.
+  power_faults = power_faults,
+
+  -- 세운 수가 아니라 도는 수.
+  health = health,
+
   -- 전봇대가 이 기계에 실제로 «닿는» 자리.
   wire_spot = wire_spot,
 
@@ -2191,6 +2346,9 @@ remote.add_interface("ai", {
 
   -- 이 아이템이 든 상자들, 가까운 순.
   chest_stock = chest_stock,
+
+  -- 상자들 안을 통째로. 반장이 «없다»고 말하기 전에 보는 곳.
+  stores = stores,
 
   -- 공용 창고. 각자 가방에 광석을 안고 다니면 필요한 사람에게 가지 않는다.
   -- 한 자리를 정해두고 모두가 거기에 넣고 거기서 꺼낸다. 데몬이 재시작해도

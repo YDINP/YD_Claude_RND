@@ -188,6 +188,31 @@ def blocked_by(answer: dict) -> tuple[str, list[tuple[str, int]]]:
     return "이유를 모르겠습니다", []
 
 
+def worth_building(row: dict, floor: int = 6) -> tuple[bool, str]:
+    """이 기계를 한 대 더 세울 때인가, 서 있는 것을 고칠 때인가.
+
+    실측(259분째): 버너 채굴기 194대 중 도는 것은 24대였다. 101대는 상자가
+    꽉 차서, 57대는 연료가 없어서 서 있었는데 무리는 계속 더 세우고 있었다.
+    「세운 수」만 셌기 때문이다.
+
+    스물넷이 도는데 백칠십이 서 있으면 문제는 부족이 아니라 막힘이다.
+    한 대 더 세우는 것은 낭비를 한 대 더 세우는 것이다.
+
+    floor 아래로는 이 판단을 하지 않는다. 세 대 중 한 대가 멈춘 것은
+    막힘이 아니라 그냥 초반이다.
+    """
+    built = int(row.get("built") or 0)
+    working = int(row.get("working") or 0)
+    if built < floor:
+        return True, ""
+    if working >= built // 2:
+        return True, ""
+    why = row.get("why") or {}
+    worst = max(why.items(), key=lambda kv: kv[1], default=("?", 0))
+    return False, (f"{built}대 중 {working}대만 돕니다. "
+                   f"가장 많은 이유는 {worst[0]} {worst[1]}대입니다")
+
+
 def spread_sites(sites: list[dict], want: int, gap: int = 2) -> list[dict]:
     """겹치지 않는 자리만 고른다. 목록은 이미 «오래 갈 순서»로 와 있다.
 
@@ -281,15 +306,17 @@ def orphan_drills(snap: Snapshot) -> list[dict]:
     return orphans
 
 
-# 한 사람당 화로 하나까지. 화로는 돌 5개라 싸고, 하나를 넷이 나눠 쓰면
-# 셋은 줄을 서서 기다린다 - 초반 제련이 느린 진짜 이유가 이것이다.
-MAX_FURNACES = 8
+# 화로는 돌 5개라 싸다. 상한이 8이었던 것이 259분 뒤의 상태를 만들었다 -
+# 채굴기 194대가 화로 21대를 바라보고 있었고(정상 비율의 9.2배), 그래서
+# 채굴기 101대가 «내놓을 데가 없어» 서 있는 옆에서 화로 21대가 굶었다.
+# 캐는 능력이 모자란 적은 한 번도 없었다. 녹이는 능력이 모자랐다.
+MAX_FURNACES = 60
 
-# 버너 채굴기는 0.25 광석/초를 내고 돌 화로는 0.3125 광석/초를 먹는다. 그래서
-# 드릴 5대가 화로 4대를 채운다 - 화로를 드릴보다 많이 두면 남는 화로는 그냥
-# 논다. 손으로 캐서 넣는 동안에는 사람이 곧 드릴이므로, 화로는 최소한
-# 사람 수만큼은 있어야 줄을 안 선다.
-FURNACES_PER_DRILL = 4 / 5
+# 버너 채굴기 0.25 광석/초, 돌 화로는 철광석 하나에 3.2초라 0.3125 광석/초.
+# 화로가 살짝 빠르므로 «직결»이면 1 : 1 이다 - 드릴이 병목이라 화로를 더
+# 붙여봐야 논다. 5:4 는 상자를 사이에 둘 때의 비율이고, 우리는 드릴을 화로에
+# 바로 붙인다.
+FURNACES_PER_DRILL = 1.0
 
 # 화로는 2x2지만 전기 화로는 3x3이다. 3타일 간격으로 붙여 놓으면 나중에
 # 전기 화로로 못 바꾼다. 4타일이면 그 자리에서 교체된다.
@@ -298,6 +325,9 @@ FURNACE_PITCH = 4
 # 보일러 60 증기/초 : 증기기관 30 증기/초. 기관을 하나만 붙이면 보일러가
 # 만든 증기의 절반을 버리면서 석탄은 전부 태운다.
 ENGINES_PER_BOILER = 2
+
+# 보일러는 0.45/s 로 태운다. 20개면 44초다.
+BOILER_FUEL = 20
 
 # small-electric-pole 은 7.5타일까지 배선이 닿는다. 여유를 두고 7로 잡는다.
 POLE_REACH = 7
@@ -311,7 +341,7 @@ MAX_POLE_RUN = 8
 
 
 # 버너 드릴 5대가 돌 화로 4대를 채운다. 뒤집으면 화로 4대에 드릴 5대.
-DRILLS_PER_FURNACE = 5 / 4
+DRILLS_PER_FURNACE = 1.0
 
 # 버너 드릴은 석탄을 손으로 넣어줘야 한다. 돌볼 수 있는 것보다 많이 지으면
 # 멈춘 기계만 늘어난다 - 한 사람이 셋까지.
@@ -342,6 +372,26 @@ def furnace_target(snap: Snapshot, crew: int) -> int:
     drills = snap.buildings.get(DRILL, {}).get("count", 0)
     from_drills = math.ceil(drills * FURNACES_PER_DRILL)
     return max(1, min(MAX_FURNACES, max(crew, from_drills)))
+
+
+def rebalance(health: dict) -> tuple[str, int, str] | None:
+    """채굴기와 화로의 비율이 어긋났으면 무엇을 지어야 하는지 한 줄로.
+
+    실측(259분째): 채굴기 194 : 화로 21 = 9.2 : 1. 바른 비율은 1 : 1 이다.
+    이 상태에서 채굴기를 한 대 더 세우는 것은 아무 의미가 없다 - 캔 광석을
+    받을 데가 없어서 서 있는 채굴기가 이미 101대다.
+
+    싼 쪽을 늘린다. 화로는 돌 5개고 채굴기는 철판 3 + 기어 3 + 돌 1 이다.
+    """
+    drills = int((health.get(DRILL) or {}).get("built") or 0)
+    furnaces = int((health.get("stone-furnace") or {}).get("built") or 0)
+    if drills < 4 or furnaces >= drills:
+        return None
+    if drills < furnaces * 2:
+        return None
+    return ("stone-furnace", drills - furnaces,
+            f"채굴기 {drills}대에 화로 {furnaces}대입니다. "
+            f"바른 비율은 1:1이고, 지금은 캔 광석을 받을 데가 없습니다")
 
 
 def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
@@ -1007,9 +1057,19 @@ class Crew:
             self.chief.release()
             return
 
+        # 반장이 «없습니다»라고 말하기 전에 창고 안을 보여준다. 사람이
+        # «상자에 석탄 많이 남았잖아»라고 했는데 «석탄이 없습니다»로 답한
+        # 적이 있다. 반장이 본 것은 각자의 가방뿐이었다.
+        shelves: list[dict] = []
+        try:
+            answer = self.bridge.stores(next(iter(self.workers)))
+            shelves = _as_rows(answer.get("chests"))
+        except (RconError, StopIteration):
+            pass
+
         def think() -> None:
             try:
-                answer = brain.delegate(message, view, fleet)
+                answer = brain.delegate(message, view, fleet, stores=shelves)
                 if answer is None:
                     self.orders.put(("무슨 말인지 모르겠습니다.", [], [], speaker))
                 else:
@@ -1307,6 +1367,12 @@ class Crew:
                     self.build_depot(worker, at or {})
                 elif routine == "defend":
                     self.build_defence(worker, at or {})
+                elif routine == "pipe":
+                    self.lay_pipe(worker, at or {})
+                elif routine == "plug":
+                    self.plug_in(worker, at or {})
+                elif routine == "stoke":
+                    self.stoke(worker, at or {})
                 else:
                     self.automate(worker, ore)
             except Exception as exc:  # noqa: BLE001
@@ -1600,6 +1666,18 @@ class Crew:
 
         receiver = CHEST if ore not in SMELTED_BY_FURNACE else "stone-furnace"
         try:
+            # 더 세우기 전에, 이미 선 것들이 도는지 본다.
+            row = (self.bridge.health(name) or {}).get(DRILL) or {}
+            ok, why = worth_building(row)
+            if not ok:
+                self.say(f"채굴기를 더 세우지 않겠습니다. {why}. "
+                         f"막힌 것을 먼저 풀어야 합니다.", who=name)
+                worker.block(f"automate:{ore}", BACKOFF_SECONDS)
+                return
+        except RconError:
+            pass
+
+        try:
             snap = worker.snapshot()
             spot = snap.ore(ore)
             if not spot:
@@ -1749,6 +1827,10 @@ class Crew:
         gather: list[Job] = []
         unblock: list[Job] = []
         jobs: list[Job] = []
+
+        # 0. 서 있는 발전소를 고치는 것이 새 발전소보다 언제나 싸다.
+        #    전봇대 둘과 파이프 둘이 2.7MW 였던 적이 있다.
+        jobs.extend(self.power_repair_jobs(worker))
 
         # 0. 모두가 같은 것을 부탁하고 있으면, 나르는 일이 아니라 만드는
         #    일이다. 이걸 먼저 걷어내지 않으면 게시판이 굳는다.
@@ -1902,6 +1984,101 @@ class Crew:
             handed.add(name)
 
         return handed
+
+    def power_repair_jobs(self, worker: Worker) -> list[Job]:
+        """서 있는 발전소를 새로 짓는 대신 고친다.
+
+        실측(259분째): 보일러 5 + 기관 7 + 펌프 7 을 지어놓고 0W 였다. 그런데
+        기관 셋은 증기가 가득한 채 전봇대만 없었고, 셋은 보일러와 «한 칸»
+        떨어져 있었다. 전봇대 둘과 파이프 둘이면 2.7MW 가 들어온다.
+
+        그동안 무리는 «전력 없음»만 보고 발전소를 또 지었다. 고칠 줄 모르면
+        고장난 것이 쌓이기만 한다.
+        """
+        try:
+            faults = self.bridge.power_faults(worker.name)
+        except RconError:
+            return []
+        if faults.get("error"):
+            return []
+
+        out: list[Job] = []
+        # 파이프가 먼저다. 이어지지 않은 기관은 전봇대를 꽂아도 0W 다.
+        for spot in _as_rows(faults.get("pipes"))[:3]:
+            out.append(Job(
+                f"{spot.get('joins', '발전소')} 사이가 한 칸 떠 있습니다. "
+                f"파이프로 잇겠습니다. ({spot['x']:.0f}, {spot['y']:.0f})",
+                key=f"pipe:{spot['x']:.0f},{spot['y']:.0f}",
+                routine="pipe", at=spot))
+        for spot in _as_rows(faults.get("poles"))[:3]:
+            out.append(Job(
+                f"{spot.get('name', '기관')}에 증기는 찼는데 전봇대가 없습니다. "
+                f"({spot['x']:.0f}, {spot['y']:.0f})",
+                key=f"plug:{spot['x']:.0f},{spot['y']:.0f}",
+                routine="plug", at=spot))
+        for spot in _as_rows(faults.get("fuel"))[:2]:
+            out.append(Job(
+                f"보일러에 연료가 없습니다. ({spot['x']:.0f}, {spot['y']:.0f})",
+                key=f"stoke:{spot['x']:.0f},{spot['y']:.0f}",
+                routine="stoke", at=spot))
+        return out
+
+    def lay_pipe(self, worker: Worker, at: dict) -> None:
+        """끊긴 한 칸에 파이프를 놓는다."""
+        name = worker.name
+        if not self.obtain(worker, "pipe", 1):
+            worker.block(f"pipe:{at['x']:.0f},{at['y']:.0f}", 300)
+            return
+        try:
+            worker.handle.place("pipe", at["x"], at["y"], timeout=420)
+            self.say("파이프를 놓았습니다.", who=name)
+        except TaskFailed as exc:
+            worker.block(f"pipe:{at['x']:.0f},{at['y']:.0f}", 300)
+            self.say(f"파이프를 못 놓았습니다: {exc.task.get('error')}", who=name)
+
+    def plug_in(self, worker: Worker, at: dict) -> None:
+        """전기가 안 통하는 기계에 닿는 자리를 물어보고 전봇대를 세운다."""
+        name = worker.name
+        try:
+            spot = self.bridge.wire_spot(name, at["x"], at["y"])
+        except RconError:
+            return
+        if spot.get("already"):
+            return
+        if spot.get("error"):
+            self.say(f"전봇대가 닿는 자리가 없습니다: {spot['error']}", who=name)
+            worker.block(f"plug:{at['x']:.0f},{at['y']:.0f}", 300)
+            return
+        if not self.obtain(worker, "small-electric-pole", 1):
+            worker.block(f"plug:{at['x']:.0f},{at['y']:.0f}", 300)
+            return
+        try:
+            worker.handle.place("small-electric-pole", spot["x"], spot["y"],
+                                snap=True, timeout=420)
+        except TaskFailed as exc:
+            worker.block(f"plug:{at['x']:.0f},{at['y']:.0f}", 300)
+            self.say(f"전봇대를 못 세웠습니다: {exc.task.get('error')}", who=name)
+            return
+        try:
+            watt = int((self.bridge.power_status(name) or {}).get("watts") or 0)
+        except RconError:
+            watt = 0
+        self.say(f"전봇대를 세웠습니다. 전기 {watt}W" if watt
+                 else "전봇대를 세웠는데 아직 0W입니다.", who=name)
+
+    def stoke(self, worker: Worker, at: dict) -> None:
+        """보일러에 석탄을 넣는다. 보일러는 0.45/s 로 태우니 20개면 44초다."""
+        name = worker.name
+        if not self.obtain(worker, "coal", BOILER_FUEL):
+            worker.block(f"stoke:{at['x']:.0f},{at['y']:.0f}", 300)
+            return
+        try:
+            worker.handle.insert("coal", at["x"], at["y"],
+                                 count=BOILER_FUEL, timeout=300)
+            self.say(f"보일러에 석탄 {BOILER_FUEL}개를 넣었습니다.", who=name)
+        except TaskFailed as exc:
+            worker.block(f"stoke:{at['x']:.0f},{at['y']:.0f}", 300)
+            self.say(f"보일러에 못 넣었습니다: {exc.task.get('error')}", who=name)
 
     def shortage_jobs(self) -> list[Job]:
         """여럿이 같은 것을 부탁하면, 나르는 대신 늘린다.

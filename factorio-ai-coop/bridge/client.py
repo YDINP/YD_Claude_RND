@@ -250,6 +250,10 @@ class AIBridge:
         """이 아이템이 든 상자들, 가까운 순."""
         return _as_list(self.call("chest_stock", agent, item, radius).get("chests"))
 
+    def stores(self, agent: str, radius: int = 200, limit: int = 12) -> dict:
+        """상자들 안을 통째로. {chests: [...], total: {...}, chest_count: n}"""
+        return self.call("stores", agent, radius, limit)
+
     def furnace_stock(self, agent: str, radius: int = 200) -> list[dict]:
         """화로 안에 다 녹은 채 남아 있는 것들, 가까운 순."""
         return _as_list(self.call("furnace_stock", agent, radius).get("stock"))
@@ -274,6 +278,15 @@ class AIBridge:
                   pole: str = "small-electric-pole") -> dict:
         """이 기계에 전봇대가 실제로 «닿는» 자리. 이미 붙어 있으면 already."""
         return self.call("wire_spot", agent, x, y, pole)
+
+    def health(self, agent: str, radius: int = 400) -> dict:
+        """세운 수가 아니라 도는 수. {이름: {built, working, why}}"""
+        answer = self.call("health", agent, radius).get("machines")
+        return answer if isinstance(answer, dict) else {}
+
+    def power_faults(self, agent: str) -> dict:
+        """발전소가 어디서 끊겼는지. poles / pipes / fuel / water."""
+        return self.call("power_faults", agent)
 
     def power_status(self, agent: str) -> dict:
         """전기가 실제로 흐르는가. 서 있는 기관 수가 아니라."""
