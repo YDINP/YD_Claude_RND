@@ -463,6 +463,7 @@ def main() -> int:
                    "steps": [{"action": "smelt", "name": "copper-plate",
                               "recipe": "copper-plate", "count": 15,
                               "input": "copper-ore", "input_count": 15,
+                              "seconds": 48.0,
                               "hand": False, "category": "smelting"}],
                    "mine": {}, "locked": {}, "blocked": {}}
     job = chain_job(smelt_first, "lab", FURNACE_AT)
@@ -473,6 +474,15 @@ def main() -> int:
           job.steps[1][1]["name"] == "copper-ore", str(job.steps[1][1]))
     check("and takes the plate back out",
           job.steps[3][1]["name"] == "copper-plate")
+    # 구리 15개는 48초가 걸린다. 30초만 기다리고 꺼내러 가면 광석은 화로에
+    # 남고 손은 빈 채로 돌아온다 - 실제로 구리 35개를 그렇게 잃었다.
+    check("it waits as long as the game said it takes",
+          job.steps[2][1]["ticks"] == int(60 * (48.0 + 8.0)),
+          str(job.steps[2][1]))
+    no_time = {**smelt_first, "steps": [{**smelt_first["steps"][0], "seconds": None}]}
+    check("an old mod that says nothing still gets a sane wait",
+          chain_job(no_time, "lab", FURNACE_AT).steps[2][1]["ticks"]
+          == int(60 * (15 * 3.2 + 8.0)))
     check("the furnace is in the key, so two agents use two furnaces",
           job.key == "chain:smelt:copper-plate@5,5", job.key)
 

@@ -423,7 +423,7 @@ def chain_job(answer: dict, target: str, furnace: dict | None) -> Job | None:
                            ("insert", {"name": step.get("input") or _ore_for(name),
                                        "count": int(step.get("input_count") or count),
                                        **furnace}),
-                           ("wait", {"ticks": 60 * max(20, count * 2)}),
+                           ("wait", {"ticks": _smelt_ticks(step, count)}),
                            ("take", {"name": name, "count": count, **furnace}),
                        ])
         if step.get("hand"):
@@ -433,6 +433,16 @@ def chain_job(answer: dict, target: str, furnace: dict | None) -> Job | None:
                                          "count": count})])
 
     return None
+
+
+# 화로가 다 녹이기 전에 꺼내러 가면 광석은 화로 안에 남고 손은 빈 채로
+# 돌아온다. 게임이 알려준 시간에 여유를 더해서 기다린다.
+SMELT_MARGIN = 8.0
+
+
+def _smelt_ticks(step: dict, count: int) -> int:
+    seconds = float(step.get("seconds") or 0) or (count * 3.2)
+    return int(60 * (seconds + SMELT_MARGIN))
 
 
 def _ore_for(plate: str) -> str:
@@ -1066,6 +1076,12 @@ class Crew:
         if job:
             return job
 
+        # 새로 캐기 전에 이미 녹아 있는 걸 먼저 꺼낸다. 제련을 시켜놓고
+        # 못 돌아오는 일은 계속 생기고, 그때마다 판금은 화로에 남는다.
+        harvest = self.harvest_job(worker, answer)
+        if harvest:
+            return harvest
+
         # 사슬의 맨 밑이 땅이면 캐러 간다. 무엇을 얼마나 캐야 하는지도
         # 게임이 세어줬다.
         for ore, amount in sorted((answer.get("mine") or {}).items()):
@@ -1084,6 +1100,29 @@ class Crew:
         if locked:
             worker.block(f"chain:{item}", 300)
             self.say(f"{item}은(는) {locked[0]} 연구가 없어서 못 만듭니다.", who=worker.name)
+        return None
+
+    def harvest_job(self, worker: Worker, answer: dict) -> Job | None:
+        """사슬이 요구하는 것 중 화로 안에 이미 있는 것을 꺼내온다."""
+        wanted = {name for name in (answer.get("mine") or {})}
+        for step in _as_rows(answer.get("steps")):
+            wanted.add(step.get("name"))
+        for step in _as_rows(answer.get("steps")):
+            if step.get("input"):
+                wanted.add(step["input"])
+
+        try:
+            stock = self.bridge.furnace_stock(worker.name)
+        except RconError:
+            return None
+
+        for entry in stock:
+            if entry.get("name") not in wanted:
+                continue
+            return Job(f"화로에 {entry['name']} {entry['count']}개가 남아 있습니다. 꺼내오겠습니다.",
+                       key=f"harvest:{entry['x']:.0f},{entry['y']:.0f}:{entry['name']}",
+                       steps=[("take", {"name": entry["name"], "count": entry["count"],
+                                        "x": entry["x"], "y": entry["y"]})])
         return None
 
     def announce_stage(self, snap: Snapshot) -> None:

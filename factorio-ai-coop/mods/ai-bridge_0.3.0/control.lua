@@ -657,6 +657,10 @@ local function expand(force, pool, item, count, out, depth)
           break
         end
       end
+      -- 얼마나 기다려야 하는지도 게임이 안다. 돌 화로는 제작속도 1이라
+      -- 레시피 시간이 곧 초다. 짐작해서 짧게 기다리면 광석만 화로에
+      -- 남기고 빈손으로 돌아온다 - 구리 35개를 그렇게 잃었다.
+      step.seconds = (recipe.energy or 3.2) * runs
     end
     out.steps[#out.steps + 1] = step
   end
@@ -694,6 +698,38 @@ local function compute_plan(name, item, count)
     steps = out.steps, mine = out.mine, locked = out.locked, blocked = out.blocked,
     furnace = furnace and { x = furnace.position.x, y = furnace.position.y } or nil,
   }
+end
+
+---------------------------------------------------------- 화로에 남은 것
+
+-- 제련을 시켜놓고 못 돌아오는 일은 계속 생긴다 - 작업이 시간을 넘기거나,
+-- 사람이 캐릭터를 넘겨받거나, 그냥 다른 급한 일이 끼어든다. 그때 판금은
+-- 화로 안에 그대로 남고, 아무도 그걸 세지 않는다. 광석을 새로 캐는 것보다
+-- 이미 녹은 걸 꺼내오는 편이 언제나 싸다.
+
+local function furnace_stock(name, radius)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local reach = math.min(radius or MAX_OBSERVE_RADIUS, MAX_OBSERVE_RADIUS)
+  local out = {}
+  for _, e in pairs(b.surface.find_entities_filtered {
+    position = b.position, radius = reach, type = "furnace", force = b.force,
+  }) do
+    local result = e.get_output_inventory()
+    if result and not result.is_empty() then
+      for _, stack in pairs(result.get_contents()) do
+        out[#out + 1] = {
+          name = stack.name, count = stack.count,
+          x = e.position.x, y = e.position.y,
+          distance = math.floor(Tasks.dist(b.position, e.position) * 10) / 10,
+        }
+      end
+    end
+  end
+  table.sort(out, function(p, q) return p.distance < q.distance end)
+  return { agent = name, stock = out }
 end
 
 local function agent_status(name)
@@ -1167,6 +1203,9 @@ remote.add_interface("ai", {
   -- displays it.
   -- 이 아이템을 만들려면 지금 무엇부터 해야 하는가.
   plan_item = compute_plan,
+
+  -- 화로 안에 다 녹은 채 남아 있는 것들.
+  furnace_stock = furnace_stock,
 
   set_focus = function(name, focus)
     local a = agent(name)

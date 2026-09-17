@@ -196,6 +196,10 @@ class AIBridge:
         """
         return self.call("plan_item", agent, item, count)
 
+    def furnace_stock(self, agent: str, radius: int = 200) -> list[dict]:
+        """화로 안에 다 녹은 채 남아 있는 것들, 가까운 순."""
+        return _as_list(self.call("furnace_stock", agent, radius).get("stock"))
+
     def set_board(self, goal: str, lines: list[str]) -> dict:
         """The goal line and the open requests, for the in-game panel.
 
