@@ -167,6 +167,13 @@ class AIBridge:
     def research(self, name: str) -> dict:
         return self.call("research", name)
 
+    def available_research(self) -> list[dict]:
+        """지금 시작할 수 있는 연구들."""
+        return _as_list(self.call("available_research").get("available"))
+
+    def research_status(self) -> dict:
+        return self.call("research_status")
+
     def research_state(self) -> dict:
         """Which of the technologies the planner reasons about are in already.
 

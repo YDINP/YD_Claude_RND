@@ -445,6 +445,10 @@ SMELT_MARGIN = 8.0
 # 걷는 시간이 녹이는 시간보다 길어진다.
 HARVEST_MIN = 10
 
+# 연구가 걸려 있는지 보는 주기. 매 틱 물어볼 일은 아니지만, 비어 있는 채로
+# 오래 두면 랩이 그만큼 논다.
+RESEARCH_CHECK = 20.0
+
 
 def _smelt_ticks(step: dict, count: int) -> int:
     seconds = float(step.get("seconds") or 0) or (count * 3.2)
@@ -568,6 +572,8 @@ class Crew:
         self.stock: dict[str, dict[str, int]] = {}
         self.stage: str | None = None
         self.goal_line = f"목표 {mission.GOAL}"
+        self.research_checked = 0.0
+        self.research_said: str | None = None
         self.shown: tuple[str, tuple[str, ...]] | None = None
 
     # -- roster -----------------------------------------------------------
@@ -1149,6 +1155,56 @@ class Crew:
                 wanted.add(step["input"])
         return wanted
 
+    def keep_research_going(self) -> None:
+        """연구가 멈춰 있으면 다시 건다.
+
+        숙련자들이 입을 모으는 첫 번째 경보가 «랩이 놀고 있다»다. 우리는
+        랩을 세워놓고 연구를 하나도 걸지 않은 채 광석을 캐고 있었다.
+
+        2.0 의 앞쪽 기술들은 과학팩이 아니라 «무엇을 만들었는가»로 열리는데,
+        그 트리거도 현재 연구로 걸려 있어야 세어진다. 그래서 랩을 만들고도
+        automation-science-pack 이 안 열렸다.
+        """
+        now = time.monotonic()
+        if now < self.research_checked:
+            return
+        self.research_checked = now + RESEARCH_CHECK
+
+        try:
+            status = self.bridge.research_status()
+            if status.get("current"):
+                return
+            options = self.bridge.available_research()
+        except RconError:
+            return
+        if not options:
+            return
+
+        # 트리거 기술은 랩이 연구하는 것이 아니라 «무엇을 만들면» 열린다.
+        # 큐에 넣으려 하면 엔진이 거부하므로, 걸 수 있는 것부터 건다.
+        queueable = [t for t in options if not t.get("trigger_type")]
+        queueable.sort(key=lambda t: t.get("name", ""))
+        for pick in queueable:
+            try:
+                reply = self.bridge.research(pick["name"])
+            except RconError:
+                return
+            if not reply.get("error") and reply.get("queued"):
+                self.say(f"연구를 걸었습니다: {pick['name']}")
+                return
+
+        # 걸 수 있는 게 없으면 열쇠는 제작이다. 사다리가 그걸 목표로 삼고
+        # 있으므로 여기서는 사람에게 알리기만 한다.
+        for pick in options:
+            if pick.get("trigger_type") == "craft-item":
+                # 20초마다 같은 줄을 반복하면 채팅창이 가려진다.
+                if self.research_said == pick["name"]:
+                    return
+                self.research_said = pick["name"]
+                self.say(f"«{pick['name']}»은(는) {pick.get('trigger_item')} "
+                         f"{pick.get('trigger_count', 1)}개를 손으로 만들면 열립니다.")
+                return
+
     def announce_stage(self, snap: Snapshot) -> None:
         """사다리에서 한 단 오르면 알린다.
 
@@ -1470,6 +1526,7 @@ class Crew:
         for worker in self.workers.values():
             self.check_errand(worker)
         self.report_finished()
+        self.keep_research_going()
         self.board.expire(time.monotonic())
         self.show_board()
 
