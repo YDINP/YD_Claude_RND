@@ -1676,7 +1676,12 @@ class Crew:
 
             # 재료가 모자란 일은 시작하기 전에 부탁을 붙이고 물러난다.
             # 시작해놓고 실패하는 것보다 낫고, 기다리는 동안 다른 일을 한다.
+            # 스스로 만들 수 있는 것은 부탁하지 않는다. 상자가 없다고
+            # 부탁을 걸고 일을 접으면, 만들 줄 알면서도 영영 안 만든다 -
+            # 실제로 드릴 여덟 대에 상자 다섯 개인 채로 멈춰 있었다.
             short = mission.shortfall(job.needs, snap.items)
+            if short and snap.can_make(short[0], short[1]):
+                short = None
             if short and not snap.ore(short[0]):
                 self.ask_for(worker, short[0], short[1], job.narration)
                 worker.block(job.key)
