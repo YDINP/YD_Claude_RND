@@ -185,6 +185,11 @@ FURNACE_PITCH = 4
 # 만든 증기의 절반을 버리면서 석탄은 전부 태운다.
 ENGINES_PER_BOILER = 2
 
+# small-electric-pole 은 7.5타일까지 배선이 닿는다. 여유를 두고 7로 잡는다.
+POLE_REACH = 7
+# 이보다 멀면 전선을 잇는 것보다 랩을 옮기는 게 싸다.
+MAX_POLE_RUN = 12
+
 
 # 버너 드릴 5대가 돌 화로 4대를 채운다. 뒤집으면 화로 4대에 드릴 5대.
 DRILLS_PER_FURNACE = 5 / 4
@@ -986,115 +991,76 @@ class Crew:
         return True
 
     def build_power(self, worker: Worker) -> None:
-        """Pump on the shore, boiler behind it, engines behind that, coal in.
+        """발전소를 세운다. 자리는 게임이 계산한 것을 그대로 쓴다.
 
-        The pieces have to line up or the pipes never meet, so instead of
-        trusting an offset table this walks outward along the pump's axis and
-        lets the game say where each piece fits.
+        예전에는 «펌프에서 축을 따라 2~7칸» 같은 어림으로 놓았고, 그 결과
+        펌프 둘·보일러 하나·기관 둘이 흩어진 채 기관이 no_input_fluid 로
+        서 있었다. 어림은 맞을 때만 맞는다.
 
-        보일러 하나는 증기 60/초를 만들고 증기기관 하나는 30/초를 먹는다.
-        기관을 하나만 세우면 보일러가 절반을 버리면서 석탄은 다 태운다.
+        이제 모드가 임시로 세워 보고 «여기에 이 방향으로 놓으면 붙는다»를
+        확인한 좌표만 준다. 파이프 자리까지 함께 온다.
         """
         name = worker.name
-        AXIS = {0: (0, -1), 4: (1, 0), 8: (0, 1), 12: (-1, 0)}   # N, E, S, W
-
         try:
             snap = worker.snapshot()
             if snap.building("steam-engine"):
                 self.say("이미 발전기가 있습니다.", who=name)
                 return
 
-            for part, count in (("offshore-pump", 1), ("boiler", 1),
-                                ("steam-engine", ENGINES_PER_BOILER),
-                                ("small-electric-pole", 1)):
-                # ensure 가 아니라 obtain: 재료가 없으면 구해온다. 전봇대는
-                # 나무 1개를 요구하는데, 그걸 못 구해서 랩을 세워두고 전력을
-                # 영영 못 만들고 있었다.
-                self.say(f"{part}를 준비합니다.", who=name)
+            # 랩 옆에 세운다. 발전소가 랩에서 141타일 떨어져 있으면 전봇대
+            # 스물두 개를 세워야 하고, 그 전봇대에 또 나무가 든다.
+            anchor = snap.building("lab") or snap.building("stone-furnace") \
+                or {"x": snap.x, "y": snap.y}
+
+            plan = self.bridge.power_plan(name, anchor["x"], anchor["y"],
+                                          radius=150, engines=ENGINES_PER_BOILER)
+            if plan.get("error"):
+                self.say(f"발전소 자리를 못 찾았습니다: {plan['error']}", who=name)
+                worker.block("power", 600)
+                return
+
+            pipes = _as_rows(plan.get("pipes"))
+            engines = _as_rows(plan.get("engines"))
+            needed = [("offshore-pump", 1), ("boiler", 1),
+                      ("steam-engine", len(engines))]
+            if pipes:
+                needed.append(("pipe", len(pipes)))
+            for part, count in needed:
+                self.say(f"{part} {count}개를 준비합니다.", who=name)
                 if not self.obtain(worker, part, count):
                     self.say(f"{part}를 못 구했습니다. 전력은 나중에.", who=name)
                     worker.block("power", 300)
                     return
 
-            sites = self.bridge.water_sites(snap.x, snap.y, radius=150, wanted=4)
-            if not sites:
-                self.say("주변 150타일 안에 물이 없습니다. 전력은 나중에.", who=name)
-                worker.block("power", 600)
-                return
+            self.say(f"발전소를 세웁니다. ({plan['pump']['x']:.0f}, "
+                     f"{plan['pump']['y']:.0f})", who=name)
+            worker.handle.place("offshore-pump", plan["pump"]["x"], plan["pump"]["y"],
+                                direction=plan["pump"]["direction"], timeout=420)
+            for spot in pipes:
+                worker.handle.place("pipe", spot["x"], spot["y"], timeout=180)
+            worker.handle.place("boiler", plan["boiler"]["x"], plan["boiler"]["y"],
+                                direction=plan["boiler"]["direction"], timeout=240)
+            for spot in engines:
+                worker.handle.place("steam-engine", spot["x"], spot["y"],
+                                    direction=spot["direction"], timeout=240)
 
-            for site in sites:
-                step = AXIS.get(site.get("direction", 0), (0, -1))
-                try:
-                    pump = worker.handle.place("offshore-pump", site["x"], site["y"],
-                                               direction=site["direction"], timeout=300)
-                except TaskFailed:
-                    continue
+            if not self.obtain(worker, "coal", 20):
+                self.say("보일러에 넣을 석탄이 없습니다.", who=name)
+            else:
+                worker.handle.insert("coal", plan["boiler"]["x"], plan["boiler"]["y"],
+                                     count=20, timeout=180)
 
-                # 펌프가 어느 쪽을 보고 서는지에 대한 규약을 짐작하지 않는다.
-                # 축을 따라 걸어나가되 앞뒤를 다 시도하고, 되는 쪽을 그대로
-                # 기관까지 쓴다. 한쪽만 보면 그쪽이 물일 때 전부 실패한다 -
-                # 실제로 물가 네 곳에서 연달아 실패했다.
-                boiler, sign = None, 1
-                for trial in (1, -1):
-                    for away in range(2, 8):
-                        try:
-                            boiler = worker.handle.place(
-                                "boiler",
-                                pump["x"] + step[0] * away * trial,
-                                pump["y"] + step[1] * away * trial,
-                                direction=site["direction"], timeout=180)
-                            sign = trial
-                            break
-                        except TaskFailed:
-                            continue
-                    if boiler:
-                        break
-                if not boiler:
-                    self.say("보일러를 붙일 자리가 없습니다. 다른 물가를 봅니다.", who=name)
-                    continue
+            # 정말 도는지 본다. 물 없는 보일러와 증기 없는 기관은 밖에서
+            # 보면 멀쩡한 발전소와 똑같이 생겼다.
+            last = engines[-1] if engines else plan["boiler"]
+            running = [e for e in self.bridge.inspect(last["x"], last["y"], 3)
+                       if e.get("name") == "steam-engine"]
+            energy = running[0].get("energy", 0) if running else 0
+            self.say(f"발전소를 세웠습니다. 기관 {len(engines)}대. "
+                     + ("전력 생산 중입니다." if energy and energy > 0
+                        else "아직 증기가 안 올라왔습니다."), who=name)
 
-                # 기관은 앞의 것에 이어 붙인다. 증기기관은 3x5라 축 방향으로
-                # 5타일을 먹으므로, 다음 자리는 앞 기관에서부터 다시 찾는다.
-                engines = []
-                anchor = boiler
-                for _ in range(ENGINES_PER_BOILER):
-                    placed = None
-                    for away in range(3, 10):
-                        try:
-                            placed = worker.handle.place(
-                                "steam-engine",
-                                anchor["x"] + step[0] * away * sign,
-                                anchor["y"] + step[1] * away * sign,
-                                direction=site["direction"], timeout=180)
-                            break
-                        except TaskFailed:
-                            continue
-                    if not placed:
-                        break
-                    engines.append(placed)
-                    anchor = placed
-                if not engines:
-                    self.say("증기기관 자리가 없습니다.", who=name)
-                    continue
-                engine = engines[0]
-
-                worker.handle.insert("coal", boiler["x"], boiler["y"], count=20, timeout=180)
-
-                # Did it actually start? A boiler with no water and an engine
-                # with no steam look exactly like a working pair from outside.
-                running = [e for e in self.bridge.inspect(engine["x"], engine["y"], 3)
-                           if e.get("name") == "steam-engine"]
-                energy = running[0].get("energy", 0) if running else 0
-                self.say(f"발전기를 세웠습니다. 기관 {len(engines)}대, "
-                         f"({engine['x']:.0f}, {engine['y']:.0f}) "
-                         + ("전력 생산 중입니다." if energy and energy > 0
-                            else "아직 증기가 안 올라왔습니다.")
-                         + ("" if len(engines) >= ENGINES_PER_BOILER
-                            else " 자리가 좁아 기관을 다 못 놨습니다."), who=name)
-                return
-
-            self.say("쓸 만한 물가를 못 찾았습니다.", who=name)
-            worker.block("power", 300)
+            self.connect_power(worker, last, snap)
 
         except TaskFailed as exc:
             worker.block("power")
@@ -1102,6 +1068,44 @@ class Crew:
         except RconError as exc:
             worker.block("power")
             self.say(f"전력 구축 중 오류: {exc}", who=name)
+
+    def connect_power(self, worker: Worker, source: dict, snap: Snapshot) -> None:
+        """발전소에서 랩까지 전봇대를 잇는다.
+
+        전봇대를 세우기 전까지 발전소는 아무것도 돌리지 않는다. 기관이
+        돌아가는데 랩이 멈춰 있는 상태가 제일 헷갈린다 - 둘 다 멀쩡해
+        보이기 때문이다.
+        """
+        name = worker.name
+        target = snap.building("lab")
+        if not target:
+            return
+
+        span = math.hypot(target["x"] - source["x"], target["y"] - source["y"])
+        poles = max(2, math.ceil(span / POLE_REACH) + 1)
+        if poles > MAX_POLE_RUN:
+            self.say(f"랩이 {span:.0f}타일이나 떨어져 있어 전선을 못 잇습니다. "
+                     f"랩을 발전소 옆으로 옮기는 편이 낫습니다.", who=name)
+            return
+
+        self.say(f"발전소에서 랩까지 {span:.0f}타일, 전봇대 {poles}개를 세웁니다.",
+                 who=name)
+        if not self.obtain(worker, "small-electric-pole", poles):
+            self.say("전봇대를 못 구했습니다.", who=name)
+            return
+
+        placed = 0
+        for i in range(1, poles + 1):
+            share = i / poles
+            x = source["x"] + (target["x"] - source["x"]) * share
+            y = source["y"] + (target["y"] - source["y"]) * share
+            try:
+                worker.handle.place("small-electric-pole", x, y, snap=True, timeout=240)
+                placed += 1
+            except TaskFailed:
+                # 한 자리가 막혔다고 전선 전체를 포기할 이유는 없다.
+                continue
+        self.say(f"전봇대 {placed}개를 세웠습니다.", who=name)
 
     def rescue(self, worker: Worker, at: dict) -> None:
         """멈춰 선 채굴기에 출구 상자를 달아주고 연료를 채운다.

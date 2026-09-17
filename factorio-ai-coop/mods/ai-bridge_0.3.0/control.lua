@@ -902,6 +902,197 @@ local function furnace_stock(name, radius)
   return { agent = name, stock = out }
 end
 
+-- 펌프를 세울 수 있는 물가. 「해안의 한 칸」을 주는 API 가 없어서,
+-- 물 타일 둘레의 칸마다 네 방향을 시도하고 게임이 받아주는 것만 남긴다.
+local function water_sites_near(surface, force, x, y, radius, wanted)
+  local tiles = surface.find_tiles_filtered {
+    position = { x, y }, radius = math.min(radius or 120, 200),
+    name = { "water", "deepwater" }, limit = 400,
+  }
+  local sites, seen = {}, {}
+  local directions = { defines.direction.north, defines.direction.east,
+                       defines.direction.south, defines.direction.west }
+  for _, tile in pairs(tiles) do
+    for dx = -1, 1 do
+      for dy = -1, 1 do
+        local spot = { x = tile.position.x + dx + 0.5, y = tile.position.y + dy + 0.5 }
+        local key = spot.x .. ":" .. spot.y
+        if not seen[key] then
+          seen[key] = true
+          for _, direction in ipairs(directions) do
+            if surface.can_place_entity {
+              name = "offshore-pump", position = spot, direction = direction,
+              force = force, build_check_type = defines.build_check_type.manual,
+            } then
+              sites[#sites + 1] = { x = spot.x, y = spot.y, direction = direction }
+              break
+            end
+          end
+        end
+        if #sites >= (wanted or 3) then return sites end
+      end
+    end
+  end
+  return sites
+end
+
+---------------------------------------------------------------- 발전소 자리
+
+-- 눈 감고 좌표를 재다가 이렇게 됐다: 펌프 둘, 보일러 하나, 기관 둘이
+-- 흩어져 놓이고 파이프는 한 개도 없어서 기관이 no_input_fluid 로 서 있었다.
+-- «펌프에서 축을 따라 2~7칸» 같은 어림은 맞을 때만 맞는다.
+--
+-- 게임은 정확히 안다. fluidbox 가 «내 관이 어느 칸으로 나가는지»를 들고
+-- 있으므로, 임시로 세워 물어보고 지운 다음, 확인된 좌표만 에이전트에게
+-- 넘긴다. 실제 설치는 에이전트가 자기 인벤토리로 한다 - 여기서 다 지어
+-- 버리면 그건 플레이가 아니라 치트다.
+
+local function outward(pump)
+  -- 펌프의 물이 나가는 칸. 없으면 nil.
+  local ok, connections = pcall(function()
+    return pump.fluidbox.get_pipe_connections(1)
+  end)
+  if not ok or not connections then return nil end
+  for _, conn in pairs(connections) do
+    if conn.target_position then return conn.target_position end
+  end
+  return nil
+end
+
+local function unit_step(from, to)
+  local dx, dy = to.x - from.x, to.y - from.y
+  if math.abs(dx) >= math.abs(dy) then
+    return { x = (dx >= 0) and 1 or -1, y = 0 }
+  end
+  return { x = 0, y = (dy >= 0) and 1 or -1 }
+end
+
+local function step_direction(step)
+  if step.y < 0 then return defines.direction.north end
+  if step.y > 0 then return defines.direction.south end
+  if step.x > 0 then return defines.direction.east end
+  return defines.direction.west
+end
+
+-- 물가 한 곳에 대해 펌프-보일러-기관 전체가 들어가는지 확인하고, 들어가면
+-- 정확한 좌표를 돌려준다. 하나라도 안 들어가면 통째로 버린다 - 반쯤 지어진
+-- 발전소는 안 지은 것보다 나쁘다.
+local function try_power_site(surface, force, site, engines)
+  local pump = surface.create_entity {
+    name = "offshore-pump", position = { site.x, site.y },
+    direction = site.direction, force = force, raise_built = false,
+  }
+  if not pump then return nil end
+
+  local out = outward(pump)
+  if not out then pump.destroy() return nil end
+
+  local step = unit_step(pump.position, out)
+  local facing = step_direction(step)
+  local plan = {
+    pump = { x = pump.position.x, y = pump.position.y, direction = site.direction },
+    facing = facing, pipes = {}, engines = {},
+  }
+  pump.destroy()
+
+  -- 보일러는 물이 나가는 쪽으로 걸어나가다 처음 들어가는 자리에.
+  local boiler, gap = nil, 0
+  for away = 1, 6 do
+    local at = { x = out.x + step.x * (away - 1), y = out.y + step.y * (away - 1) }
+    if surface.can_place_entity {
+      name = "boiler", position = at, direction = facing, force = force,
+    } then
+      boiler = surface.create_entity {
+        name = "boiler", position = at, direction = facing, force = force,
+        raise_built = false,
+      }
+      gap = away - 1
+      break
+    end
+  end
+  if not boiler then return nil end
+  plan.boiler = { x = boiler.position.x, y = boiler.position.y, direction = facing }
+
+  -- 펌프와 보일러 사이의 빈 칸은 파이프로 잇는다.
+  for i = 0, gap - 1 do
+    plan.pipes[#plan.pipes + 1] = { x = out.x + step.x * i, y = out.y + step.y * i }
+  end
+
+  -- 증기가 나가는 쪽에 기관을 줄줄이. 보일러의 관 연결 중 보일러 뒤쪽 것.
+  local anchor = boiler
+  local ok_all = true
+  for _ = 1, engines do
+    local placed = nil
+    for away = 2, 8 do
+      local at = { x = anchor.position.x + step.x * away,
+                   y = anchor.position.y + step.y * away }
+      if surface.can_place_entity {
+        name = "steam-engine", position = at, direction = facing, force = force,
+      } then
+        placed = surface.create_entity {
+          name = "steam-engine", position = at, direction = facing, force = force,
+          raise_built = false,
+        }
+        break
+      end
+    end
+    if not placed then ok_all = false break end
+    plan.engines[#plan.engines + 1] = {
+      x = placed.position.x, y = placed.position.y, direction = facing,
+    }
+    anchor = placed
+  end
+
+  -- 진짜로 증기가 흐르는지 확인한다. 임시로 세운 상태에서 보일러에 연료를
+  -- 넣고 한 틱 뒤에 보는 건 불가능하므로, 대신 기관이 보일러와 유체망을
+  -- 공유하는지를 본다 - 연결되지 않았으면 같은 망에 있을 수 없다.
+  local connected = false
+  if #plan.engines > 0 and anchor.valid then
+    local ok, same = pcall(function()
+      return anchor.fluidbox.get_fluid_system_id(1) ~= nil
+        and boiler.fluidbox.get_fluid_system_id(2) ~= nil
+        and anchor.fluidbox.get_fluid_system_id(1) == boiler.fluidbox.get_fluid_system_id(2)
+    end)
+    connected = ok and same
+  end
+
+  -- 임시로 세운 것들을 전부 지운다.
+  for _, e in pairs(surface.find_entities_filtered {
+    area = {
+      { math.min(plan.pump.x, anchor.position.x) - 6,
+        math.min(plan.pump.y, anchor.position.y) - 6 },
+      { math.max(plan.pump.x, anchor.position.x) + 6,
+        math.max(plan.pump.y, anchor.position.y) + 6 },
+    },
+    name = { "boiler", "steam-engine" }, force = force,
+  }) do
+    e.destroy()
+  end
+
+  if not ok_all then return nil end
+  plan.connected = connected
+  return plan
+end
+
+local function power_plan(name, x, y, radius, engines)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local surface, force = b.surface, b.force
+  local sites = water_sites_near(surface, force, x, y, radius or 150, 12)
+  if #sites == 0 then return { error = "no water within " .. tostring(radius) .. " tiles" } end
+
+  for _, site in pairs(sites) do
+    local ok, plan = pcall(try_power_site, surface, force, site, engines or 2)
+    if ok and plan then
+      plan.distance = math.floor(Tasks.dist(b.position, { x = plan.pump.x, y = plan.pump.y }))
+      return plan
+    end
+  end
+  return { error = "no shore with room for a whole power block" }
+end
+
 ------------------------------------------------------------- 채굴기 방향
 
 -- 버너 채굴기는 바라보는 방향 바로 앞 칸에 광석을 떨군다. 그 칸이 막혀
@@ -1491,42 +1682,14 @@ remote.add_interface("ai", {
   -- so this brute-forces it: find water, then try the four directions on the
   -- tiles around it and let the game say which placement it accepts.
   water_sites = function(x, y, radius, wanted)
-    local surface = game.surfaces[1]
-    local force = game.forces["player"]
-    local tiles = surface.find_tiles_filtered {
-      position = { x, y }, radius = math.min(radius or 120, 200),
-      name = { "water", "deepwater" }, limit = 400,
-    }
-    if #tiles == 0 then return { sites = {}, water_found = false } end
-
-    local sites, seen = {}, {}
-    local directions = { defines.direction.north, defines.direction.east,
-                         defines.direction.south, defines.direction.west }
-    for _, tile in pairs(tiles) do
-      for dx = -1, 1 do
-        for dy = -1, 1 do
-          local spot = { x = tile.position.x + dx + 0.5, y = tile.position.y + dy + 0.5 }
-          local key = spot.x .. ":" .. spot.y
-          if not seen[key] then
-            seen[key] = true
-            for _, direction in ipairs(directions) do
-              if surface.can_place_entity {
-                name = "offshore-pump", position = spot, direction = direction,
-                force = force, build_check_type = defines.build_check_type.manual,
-              } then
-                sites[#sites + 1] = { x = spot.x, y = spot.y, direction = direction }
-                break
-              end
-            end
-          end
-          if #sites >= (wanted or 3) then
-            return { sites = sites, water_found = true }
-          end
-        end
-      end
-    end
-    return { sites = sites, water_found = true, water_tiles = #tiles }
+    local sites = water_sites_near(game.surfaces[1], game.forces["player"],
+                                   x, y, radius, wanted)
+    return { sites = sites, water_found = #sites > 0 }
   end,
+
+  -- 펌프-보일러-기관이 통째로 들어가는 자리. 눈 감고 좌표를 재는 대신
+  -- 임시로 세워 보고 확인된 좌표만 돌려준다.
+  power_plan = power_plan,
 
   research_status = function()
     local force = game.forces["player"]
