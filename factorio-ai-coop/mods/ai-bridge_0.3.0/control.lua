@@ -1184,6 +1184,19 @@ local function power_plan(name, x, y, radius, engines)
   local sites = water_sites_near(surface, force, x, y, radius or 150, 60)
   if #sites == 0 then return { error = "no water within " .. tostring(radius) .. " tiles" } end
 
+  -- 지난 시도가 남긴 외톨이 펌프들. 보일러도 기관도 없이 해안만 차지하고
+  -- 있어서 다음 시도의 자리를 막는다. 치우면 그 자리가 다시 후보가 된다.
+  for _, pump in pairs(surface.find_entities_filtered {
+    position = { x, y }, radius = math.min(radius or 150, 200),
+    name = "offshore-pump", force = force,
+  }) do
+    local near = surface.find_entities_filtered {
+      position = pump.position, radius = 8, name = { "boiler", "steam-engine" },
+      force = force, limit = 1,
+    }[1]
+    if not near then pump.destroy() end
+  end
+
   for _, site in pairs(sites) do
     local ok, plan = pcall(try_power_site, surface, force, site, engines or 2)
     if ok and plan then

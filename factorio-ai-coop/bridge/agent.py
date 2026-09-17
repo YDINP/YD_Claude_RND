@@ -1156,8 +1156,17 @@ class Crew:
             anchor = snap.building("lab") or snap.building("stone-furnace") \
                 or {"x": snap.x, "y": snap.y}
 
-            plan = self.bridge.power_plan(name, anchor["x"], anchor["y"],
-                                          radius=150, engines=ENGINES_PER_BOILER)
+            # 랩 옆이 제일 좋지만, 앞선 시도가 남긴 펌프로 해안이 막혀
+            # 있을 수 있다. 한 곳에서 못 찾았다고 포기하면 전력이 영영
+            # 안 선다 - 실제로 펌프 열한 개가 서 있는 채로 0와트였다.
+            plan = {}
+            for spot, reach in ((anchor, 150), ({"x": snap.x, "y": snap.y}, 150),
+                                (anchor, 400)):
+                plan = self.bridge.power_plan(name, spot["x"], spot["y"],
+                                              radius=reach,
+                                              engines=ENGINES_PER_BOILER)
+                if not plan.get("error"):
+                    break
             if plan.get("error"):
                 self.say(f"발전소 자리를 못 찾았습니다: {plan['error']}", who=name)
                 worker.block("power", 600)
