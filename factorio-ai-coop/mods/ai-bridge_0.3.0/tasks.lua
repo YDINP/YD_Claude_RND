@@ -538,6 +538,19 @@ M.take = {
     local taken = st.target.remove_item { name = p.name, count = p.count or 1 }
     if taken > 0 then bot.insert { name = p.name, count = taken } end
     ctx.task.result = { taken = taken, item = p.name, from = st.target.name }
+
+    -- 한 개도 못 가져왔으면 실패다. 예전에는 이것도 「done」이었고, 그래서
+    -- 빈 상자까지 걸어가 성공으로 친 다음 뒤따르는 insert 가 하나씩
+    -- 「no coal to insert」로 무너졌다. 열 번씩 그랬다.
+    --
+    -- 여덟이 같은 상자를 노리므로, 계획을 세울 때 들어 있던 것이 도착할
+    -- 때 남아 있으리라는 보장이 없다. 그 사실을 여기서 말해줘야 부르는
+    -- 쪽이 그 상자를 잠시 접어둘 수 있다.
+    if taken == 0 then
+      ctx.task.error = string.format("%s is empty of %s",
+        st.target.name, tostring(p.name))
+      return "failed"
+    end
     return "done"
   end,
 }
