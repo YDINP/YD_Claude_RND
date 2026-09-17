@@ -173,6 +173,7 @@ end)
 local PANEL_NAME = "ai_crew_panel"
 local CHAT_NAME = "ai_crew_chat"
 local CHAT_TOGGLE = "ai_crew_chat_toggle"
+local CHAT_CLOSE = "ai_crew_chat_close"
 
 -- 에이전트 여섯이 동시에 말하면 게임 채팅은 흘러가 버리고, 사람이 쓴 줄은
 -- 그 사이에 묻힌다. 그래서 따로 모아둔다. 링버퍼라 세션이 길어져도 메모리는
@@ -285,12 +286,31 @@ end
 local function build_chat(player)
   if player.gui.screen[CHAT_NAME] then player.gui.screen[CHAT_NAME].destroy() end
   local frame = player.gui.screen.add {
-    type = "frame", name = CHAT_NAME, direction = "vertical", caption = "AI 대화",
+    type = "frame", name = CHAT_NAME, direction = "vertical",
   }
-  frame.auto_center = true
+
+  -- 제목줄 겸 손잡이. 화면 정중앙에 고정해두면 게임 화면을 가리므로,
+  -- 옆으로 밀어두고 필요할 때 끌어다 쓸 수 있어야 한다.
+  local bar = frame.add { type = "flow", name = "bar", direction = "horizontal" }
+  bar.drag_target = frame
+  local title = bar.add { type = "label", caption = "AI 대화" }
+  title.style.font = "default-frame-title"
+  local grip = bar.add { type = "empty-widget", style = "draggable_space_header" }
+  grip.style.height = 24
+  grip.style.horizontally_stretchable = true
+  grip.drag_target = frame
+  bar.add { type = "sprite-button", name = CHAT_CLOSE,
+            sprite = "utility/close", style = "frame_action_button" }
+
   local pane = frame.add { type = "scroll-pane", name = "body", direction = "vertical" }
-  pane.style.maximal_height = 320
-  pane.style.minimal_width = 480
+  pane.style.maximal_height = 300
+  pane.style.minimal_width = 460
+
+  -- 오른쪽 위. 왼쪽은 크루 패널이 쓰고 있고, 가운데는 게임이다.
+  local screen = player.display_resolution
+  local scale = player.display_scale
+  frame.location = { x = math.max(0, screen.width - 520 * scale), y = 60 * scale }
+
   chat_rows(frame)
   return frame
 end
@@ -322,13 +342,20 @@ script.on_event(defines.events.on_player_joined_game, function(event)
 end)
 
 script.on_event(defines.events.on_gui_click, function(event)
-  if event.element and event.element.valid and event.element.name == CHAT_TOGGLE then
-    local player = game.get_player(event.player_index)
-    if not player then return end
+  local element = event.element
+  if not (element and element.valid) then return end
+  local player = game.get_player(event.player_index)
+  if not player then return end
+
+  if element.name == CHAT_TOGGLE then
     if player.gui.screen[CHAT_NAME] then
       player.gui.screen[CHAT_NAME].destroy()
     else
       pcall(build_chat, player)
+    end
+  elseif element.name == CHAT_CLOSE then
+    if player.gui.screen[CHAT_NAME] then
+      player.gui.screen[CHAT_NAME].destroy()
     end
   end
 end)
@@ -406,8 +433,8 @@ local function count_craft(force, item, amount)
           and trigger_item_name(trigger) == item
           and storage.crafted[item] >= (trigger.count or 1) then
         tech.researched = true
-        game.print("[AI] 손으로 " .. item .. "을(를) 만들어 «" .. tech.name
-          .. "» 기술이 열렸습니다.")
+        pcall(remember_line, "AI", "손으로 " .. item .. "을(를) 만들어 «"
+          .. tech.name .. "» 기술이 열렸습니다.")
       end
     end
   end
@@ -1583,8 +1610,10 @@ remote.add_interface("ai", {
     return { tick = game.tick, messages = out }
   end,
 
+  -- 에이전트 말은 게임 채팅으로 내보내지 않는다. 여섯이 동시에 떠들면
+  -- 사람이 쓴 줄이 그 사이에 묻히고, 채팅창이 AI 혼잣말로 가득 찬다.
+  -- 전용 창(crew_log / AI 대화)에만 쌓는다.
   say = function(text, who)
-    game.print("[" .. tostring(who or "AI") .. "] " .. tostring(text))
     pcall(remember_line, who, text)
     return { said = text, tick = game.tick }
   end,
