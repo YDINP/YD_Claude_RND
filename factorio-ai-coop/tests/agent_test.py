@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 import brain  # noqa: E402
 import mission  # noqa: E402
-from agent import (FOCUS_ORDER, STAGE_TARGET, Crew, Job,  # noqa: E402
+from agent import (FOCUS_ORDER, STAGE_TARGET, Crew, Job, errand_label,  # noqa: E402
                    Snapshot, chain_job, cluster, interleave, missing_item,
                    next_goal, plan)
 
@@ -596,6 +596,21 @@ def main() -> int:
           [j for j in interleave([many, ["x"]]) if j.startswith("fuel")] == many)
     check("empty lists are harmless", interleave([[], [], []]) == [])
     check("a single kind passes through", interleave([["a", "b"]]) == ["a", "b"])
+
+    print("\n16. the crew chief says what it handed to whom")
+    label = errand_label
+    check("task names become words",
+          label([("mine", {"name": "coal", "count": 20})]) == "coal 채굴")
+    check("the same thing twice is counted, not repeated",
+          label([("place", {"name": "stone-furnace"})] * 3)
+          == "stone-furnace 건설 x3",
+          label([("place", {"name": "stone-furnace"})] * 3))
+    check("a long errand is cut short",
+          label([("mine", {"name": o}) for o in "abcde"]).endswith("…"))
+    check("a step with nothing to name still reads",
+          label([("walk", {"x": 1, "y": 2})]) == "이동")
+    check("an unknown task keeps its own name",
+          label([("teleport", {})]) == "teleport")
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

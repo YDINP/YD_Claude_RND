@@ -161,6 +161,32 @@ CLUSTER_REACH = 14
 CLUSTER_MAX = 6
 
 
+# 태스크 이름은 사람이 쓰는 말이 아니다. 배정표에 «mine x8»이라고 적으면
+# 읽는 쪽에서 다시 번역해야 한다.
+STEP_WORDS = {
+    "mine": "채굴", "place": "건설", "insert": "넣기", "take": "꺼내기",
+    "craft": "제작", "walk": "이동", "chop": "벌목", "demolish": "철거",
+    "give": "전달", "rotate": "방향 전환", "drop": "내려놓기",
+}
+
+
+def errand_label(steps: list) -> str:
+    """맡긴 일을 사람이 읽을 수 있는 한 줄로 줄인다."""
+    parts: list[str] = []
+    for kind, params in steps:
+        word = STEP_WORDS.get(kind, kind)
+        what = params.get("name") or params.get("item") or params.get("ore")
+        parts.append(f"{what} {word}" if what else word)
+    squashed: list[str] = []
+    for part in parts:
+        if squashed and squashed[-1].startswith(part):
+            count = squashed[-1][len(part):].strip("x ") or "1"
+            squashed[-1] = f"{part} x{int(count) + 1}"
+        else:
+            squashed.append(part)
+    return ", ".join(squashed[:4]) + (" …" if len(squashed) > 4 else "")
+
+
 def interleave(groups: list[list]) -> list:
     """종류별 목록을 돌아가며 하나씩 뽑아 한 줄로 만든다.
 
@@ -989,6 +1015,12 @@ class Crew:
                 self.say(plan)
             for order in commands:
                 self.run_command(order, speaker)
+
+            # 누구에게 무엇을 맡겼는지 한 줄로 되돌려준다. 사람이 시킨
+            # 다음에 알 수 있는 것은 «받았다»뿐이었고, 그래서 여덟 명이
+            # 흩어져도 무엇이 어디로 갔는지 볼 방법이 없었다. 반장이 하겠다고
+            # «말한» 것이 아니라 실제로 «꽂은» 것을 적는다 - 둘은 다르다.
+            handed: list[str] = []
             for name, say, steps in assignments:
                 worker = self.workers.get(name)
                 if not worker:
@@ -1005,11 +1037,24 @@ class Crew:
                 if say:
                     self.say(say, who=name)
                 if not steps:
+                    handed.append(f"{name}: 하던 일 정리")
                     continue
                 try:
                     worker.watching = worker.handle.submit_plan(steps)
+                    handed.append(f"{name}: {errand_label(steps)}")
                 except RconError as exc:
                     self.say(f"그건 못 하겠습니다: {exc}", who=name)
+                    handed.append(f"{name}: 못 받음")
+
+            if handed:
+                spare = [w for w in self.workers
+                         if not any(row.startswith(w + ":") for row in handed)]
+                line = "배정했습니다 — " + " / ".join(handed)
+                if spare:
+                    line += f" / 나머지({', '.join(spare)})는 하던 일 계속합니다."
+                self.say(line)
+            elif not commands:
+                self.say("이번 지시로는 새로 맡길 일이 없었습니다. 하던 일을 계속합니다.")
 
     def collect_thoughts(self) -> None:
         while True:

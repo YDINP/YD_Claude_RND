@@ -174,6 +174,7 @@ local PANEL_NAME = "ai_crew_panel"
 local CHAT_NAME = "ai_crew_chat"
 local CHAT_TOGGLE = "ai_crew_chat_toggle"
 local CHAT_CLOSE = "ai_crew_chat_close"
+local CHAT_FOLLOW = "ai_crew_chat_follow"
 
 -- 에이전트 여섯이 동시에 말하면 게임 채팅은 흘러가 버리고, 사람이 쓴 줄은
 -- 그 사이에 묻힌다. 그래서 따로 모아둔다. 링버퍼라 세션이 길어져도 메모리는
@@ -182,7 +183,11 @@ local CREW_LOG = 200
 
 local function remember_line(who, text)
   storage.crew_log = storage.crew_log or {}
+  -- 줄마다 번호를 붙인다. 링버퍼라 앞이 잘려나가므로 «목록의 몇 번째»는
+  -- 다음 새로고침에 다른 줄을 가리킨다. 번호는 늘기만 하니 안 흔들린다.
+  storage.crew_seq = (storage.crew_seq or 0) + 1
   storage.crew_log[#storage.crew_log + 1] = {
+    seq = storage.crew_seq,
     who = tostring(who or "AI"), text = tostring(text), tick = game.tick,
   }
   while #storage.crew_log > CREW_LOG do table.remove(storage.crew_log, 1) end
@@ -259,27 +264,52 @@ end
 local function chat_rows(frame)
   local list = frame.body
   if not list then return end
-  list.clear()
 
+  -- 예전에는 새로고침마다 목록을 통째로 비우고 다시 그렸다. 그러면 사람이
+  -- 위로 올려 읽던 자리가 매번 사라지고 맨 아래로 끌려 내려간다. 지나간
+  -- 말을 다시 읽을 수가 없었다.
+  --
+  -- 그래서 «새로 생긴 줄만» 아래에 붙인다. 손대지 않은 줄은 그대로 있으니
+  -- 스크롤 위치도 그대로다. 맨 아래로 따라갈지는 사람이 정한다.
+  local seen = tonumber(list.tags and list.tags.seen) or 0
   local log = storage.crew_log or {}
   local seat = {}
   for index, name in ipairs(storage.order or {}) do seat[name] = index end
 
+  local added = 0
+  local newest = seen
   for _, line in ipairs(log) do
-    local label = list.add {
-      type = "label",
-      caption = string.format("[%d:%02d] %s: %s",
-        math.floor(line.tick / 3600), math.floor(line.tick / 60) % 60,
-        line.who, line.text),
-    }
-    label.style.single_line = false
-    label.style.maximal_width = 460
-    local index = seat[line.who]
-    if index then
-      label.style.font_color = COLORS[((index - 1) % #COLORS) + 1]
+    local seq = line.seq or 0
+    if seq > seen then
+      local label = list.add {
+        type = "label",
+        caption = string.format("[%d:%02d] %s: %s",
+          math.floor(line.tick / 3600), math.floor(line.tick / 60) % 60,
+          line.who, line.text),
+      }
+      label.style.single_line = false
+      label.style.maximal_width = 460
+      local index = seat[line.who]
+      if index then
+        label.style.font_color = COLORS[((index - 1) % #COLORS) + 1]
+      end
+      added = added + 1
+      if seq > newest then newest = seq end
     end
   end
-  -- 새 줄은 아래에 쌓이므로 아래를 보여준다.
+
+  if added == 0 then return end
+  list.tags = { seen = newest }
+
+  -- 창은 링버퍼보다 길어질 이유가 없다. 넘치면 위에서 덜어낸다.
+  local kids = list.children
+  for i = 1, #kids - CREW_LOG do
+    if kids[i].valid then kids[i].destroy() end
+  end
+
+  -- 따라가기가 켜져 있을 때만 아래로 민다. 꺼두면 읽던 자리에 머문다.
+  local follow = frame.bar and frame.bar[CHAT_FOLLOW]
+  if follow and follow.valid and not follow.state then return end
   pcall(function() list.scroll_to_bottom() end)
 end
 
@@ -303,9 +333,16 @@ local function build_chat(player)
   grip.style.height = 24
   grip.style.horizontally_stretchable = true
   grip.drag_target = frame
+  -- 체크박스는 상태를 스스로 들고 있어서, 새로고침 때 읽기만 하면 된다.
+  -- 이벤트를 하나 더 등록할 이유가 없다.
+  local follow = bar.add {
+    type = "checkbox", name = CHAT_FOLLOW, state = true, caption = "따라가기",
+  }
+  follow.tooltip = "끄면 스크롤이 그 자리에 머뭅니다. 지나간 말을 읽을 때 끄세요."
   bar.add { type = "button", name = CHAT_CLOSE, caption = "닫기" }
 
   local pane = frame.add { type = "scroll-pane", name = "body", direction = "vertical" }
+  pane.tags = { seen = 0 }
   pane.style.maximal_height = 300
   pane.style.minimal_width = 460
 
@@ -599,6 +636,9 @@ script.on_event(defines.events.on_console_chat, function(event)
   while #storage.chat > CHAT_HISTORY do
     table.remove(storage.chat, 1)
   end
+  -- 사람이 쓴 줄도 대화창에 남긴다. 대답만 모여 있으면 무엇에 대한
+  -- 대답인지 알 수가 없다. 한쪽 말만 적힌 대화는 대화가 아니다.
+  pcall(remember_line, player.name, event.message)
 end)
 
 --------------------------------------------------------------- observation
