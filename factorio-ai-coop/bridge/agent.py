@@ -1030,15 +1030,25 @@ class Crew:
                 except TaskFailed:
                     continue
 
-                boiler = None
-                for away in range(2, 7):
-                    try:
-                        boiler = worker.handle.place(
-                            "boiler", pump["x"] + step[0] * away, pump["y"] + step[1] * away,
-                            direction=site["direction"], timeout=180)
+                # 펌프가 어느 쪽을 보고 서는지에 대한 규약을 짐작하지 않는다.
+                # 축을 따라 걸어나가되 앞뒤를 다 시도하고, 되는 쪽을 그대로
+                # 기관까지 쓴다. 한쪽만 보면 그쪽이 물일 때 전부 실패한다 -
+                # 실제로 물가 네 곳에서 연달아 실패했다.
+                boiler, sign = None, 1
+                for trial in (1, -1):
+                    for away in range(2, 8):
+                        try:
+                            boiler = worker.handle.place(
+                                "boiler",
+                                pump["x"] + step[0] * away * trial,
+                                pump["y"] + step[1] * away * trial,
+                                direction=site["direction"], timeout=180)
+                            sign = trial
+                            break
+                        except TaskFailed:
+                            continue
+                    if boiler:
                         break
-                    except TaskFailed:
-                        continue
                 if not boiler:
                     self.say("보일러를 붙일 자리가 없습니다. 다른 물가를 봅니다.", who=name)
                     continue
@@ -1053,7 +1063,8 @@ class Crew:
                         try:
                             placed = worker.handle.place(
                                 "steam-engine",
-                                anchor["x"] + step[0] * away, anchor["y"] + step[1] * away,
+                                anchor["x"] + step[0] * away * sign,
+                                anchor["y"] + step[1] * away * sign,
                                 direction=site["direction"], timeout=180)
                             break
                         except TaskFailed:
