@@ -863,6 +863,89 @@ class Crew:
 
     # -- automation --------------------------------------------------------
 
+    def obtain(self, worker: Worker, item: str, count: int = 1,
+               rounds: int = 6) -> bool:
+        """이 아이템을 count 개 손에 넣는다. 없으면 만들고, 재료가 없으면 구해온다.
+
+        ensure() 는 «만들 수 있으면 만든다»까지였다. 전봇대는 나무 1개를
+        요구하는데 나무가 없으면 그대로 포기했고, 그래서 랩을 세워두고
+        전력을 영영 못 만들었다. 무엇이 모자란지는 게임이 사슬로 답해주므로,
+        그 사슬을 여기서 한 단씩 밟아 내려간다.
+
+        rounds 는 안전장치다. 사슬이 끝나지 않는 경우(연구가 막혔다든가)
+        영원히 도는 것보다 실패하는 편이 낫다.
+        """
+        name = worker.name
+        for _ in range(rounds):
+            if worker.handle.items().get(item, 0) >= count:
+                return True
+            try:
+                answer = self.bridge.plan_item(name, item, count)
+            except RconError:
+                return False
+            if answer.get("error"):
+                return False
+
+            steps = _as_rows(answer.get("steps"))
+            step = next((st for st in steps if st.get("hand")), None)
+            if step:
+                try:
+                    worker.handle.craft(step.get("recipe") or step["name"],
+                                        count=int(step.get("count") or 1), timeout=240)
+                    continue
+                except TaskFailed as exc:
+                    self.say(f"{step['name']}을(를) 못 만들겠습니다: "
+                             f"{exc.task.get('error')}", who=name)
+                    return False
+
+            snap = worker.snapshot()
+            wanted = answer.get("mine") or {}
+            if "wood" in wanted:
+                try:
+                    worker.handle.chop(snap.x, snap.y,
+                                       count=max(4, min(int(wanted["wood"]) * 2, 40)),
+                                       timeout=300, timeout_ticks=60 * 60 * 3)
+                    continue
+                except TaskFailed:
+                    return False
+
+            smelt = next((st for st in steps if st.get("action") == "smelt"), None)
+            if smelt and answer.get("furnace"):
+                furnace = answer["furnace"]
+                try:
+                    worker.handle.insert("coal", furnace["x"], furnace["y"],
+                                         count=FURNACE_FUEL, timeout=180)
+                    worker.handle.insert(smelt.get("input") or smelt["name"],
+                                         furnace["x"], furnace["y"],
+                                         count=int(smelt.get("input_count") or 1),
+                                         timeout=180)
+                except TaskFailed:
+                    return False
+                # 녹는 동안 기다리는 대신, 다음 바퀴에서 다시 물어본다.
+                time.sleep(float(smelt.get("seconds") or 10) + SMELT_MARGIN)
+                try:
+                    worker.handle.take(smelt["name"], furnace["x"], furnace["y"],
+                                       count=int(smelt.get("count") or 1), timeout=180)
+                except TaskFailed:
+                    pass
+                continue
+
+            for ore, amount in sorted(wanted.items()):
+                spot = snap.ore(ore)
+                if not spot:
+                    continue
+                try:
+                    worker.handle.mine(spot["x"], spot["y"],
+                                       count=max(10, min(int(amount), 60)),
+                                       timeout=420, timeout_ticks=60 * 60 * 5)
+                except TaskFailed:
+                    return False
+                break
+            else:
+                return False
+
+        return worker.handle.items().get(item, 0) >= count
+
     def ensure(self, worker: Worker, item: str, count: int = 1) -> bool:
         """Have `count` of an item, crafting it only if the game says we can."""
         stock = worker.handle.inventory()
@@ -924,8 +1007,13 @@ class Crew:
             for part, count in (("offshore-pump", 1), ("boiler", 1),
                                 ("steam-engine", ENGINES_PER_BOILER),
                                 ("small-electric-pole", 1)):
-                if not self.ensure(worker, part, count):
-                    worker.block("power")
+                # ensure 가 아니라 obtain: 재료가 없으면 구해온다. 전봇대는
+                # 나무 1개를 요구하는데, 그걸 못 구해서 랩을 세워두고 전력을
+                # 영영 못 만들고 있었다.
+                self.say(f"{part}를 준비합니다.", who=name)
+                if not self.obtain(worker, part, count):
+                    self.say(f"{part}를 못 구했습니다. 전력은 나중에.", who=name)
+                    worker.block("power", 300)
                     return
 
             sites = self.bridge.water_sites(snap.x, snap.y, radius=150, wanted=4)
@@ -1196,6 +1284,13 @@ class Crew:
         try:
             stopped = self.bridge.broken(worker.name)
         except RconError:
+            return None
+
+        # 정비는 끝이 없다. 버너 드릴 열여덟 대는 계속 연료가 떨어지고,
+        # 여섯 명이 전부 거기 매달리면 발전소는 영영 안 선다. 손이 모자란
+        # 것과 할 일이 없는 것은 다르다 - 절반만 돌본다.
+        tending = sum(1 for key in self.claims if key.startswith("tend:"))
+        if tending >= max(1, len(self.workers) // 2):
             return None
 
         # 진짜 고장이 먼저고, 노는 화로를 먹이는 일은 그 뒤다. 순서를
