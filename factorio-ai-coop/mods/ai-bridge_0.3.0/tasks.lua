@@ -453,16 +453,33 @@ M.craft = {
 -- Anything with an inventory: a furnace to feed, a chest to stock, a drill to
 -- fuel. Without these two the agent can mine and build but never actually run
 -- a production chain.
-local function target_entity(ctx, p)
-  local candidates = ctx.surface.find_entities_filtered {
+-- 요청한 칸에 있는 것을 고른다. 그리고 꺼낼 때는 그 물건을 실제로 가진
+-- 쪽을 고른다.
+--
+-- 실측(672분째): 「take 실패: burner-inserter is empty of coal」 이 열 번.
+-- 석탄 상자에서 꺼내려는데 한 칸 옆에 붙은 급유 인서터를 집고 있었다.
+-- 반경 1.5 가 둘 다 잡고, 먼저 나오는 쪽이 이겼기 때문이다. 급유 장치가
+-- 상자와 인서터를 한 칸 간격으로 세우므로 이 둘은 언제나 같이 잡힌다.
+--
+-- 인서터도 연료 칸이 있어서 get_inventory 를 통과한다. 「창고인가」로
+-- 거르는 것보다 「요청한 자리인가, 가지고 있는가」로 고르는 편이 옳다 -
+-- 화로에서 꺼내는 일도 같은 함수를 쓰기 때문이다.
+local function target_entity(ctx, p, wants)
+  local best, best_score = nil, -math.huge
+  for _, e in pairs(ctx.surface.find_entities_filtered {
     position = { p.x, p.y }, radius = p.search_radius or 1.5,
-  }
-  for _, e in pairs(candidates) do
+  }) do
     if e.type ~= "character" and e.type ~= "resource" and e.get_inventory ~= nil then
-      return e
+      -- 가까울수록 높게. 요청한 칸에 정확히 선 것이 1순위다.
+      local score = -dist({ x = p.x, y = p.y }, e.position)
+      if wants then
+        local ok, held = pcall(function() return e.get_item_count(wants) end)
+        if ok and held and held > 0 then score = score + 100 end
+      end
+      if score > best_score then best, best_score = e, score end
     end
   end
-  return nil
+  return best
 end
 
 M.insert = {
@@ -509,7 +526,8 @@ M.insert = {
 M.take = {
   start = function(ctx)
     local p = ctx.task.params
-    local target = target_entity(ctx, p)
+    -- 무엇을 꺼낼지 알고 있으니 알려준다. 그러면 그것을 가진 쪽이 뽑힌다.
+    local target = target_entity(ctx, p, p.name)
     if not target then
       ctx.task.error = string.format("nothing with an inventory at %s,%s", p.x, p.y)
       return "failed"
