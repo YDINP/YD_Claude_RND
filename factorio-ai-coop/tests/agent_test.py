@@ -9,9 +9,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 import brain  # noqa: E402
 import mission  # noqa: E402
-from agent import (ALL, FOCUS_ORDER, Job, Snapshot, by_distance,  # noqa: E402
-                   division, missing_item, next_goal, parse, plan, share,
-                   split_target)
+from agent import (FOCUS_ORDER, Crew, Job, Snapshot,  # noqa: E402
+                   missing_item, next_goal, plan)
+
+# 반장이 내릴 수 있다고 적어둔 명령은 전부 실제로 처리되는 것이어야 한다.
+# 표에만 있고 처리기가 없는 명령은 조용히 무시되고, 왜 안 먹는지 아무도
+# 모른다.
+KNOWN_INTENTS = {"stop", "autopilot_on", "autopilot_off", "come", "mine",
+                 "place", "craft", "automate", "report_inventory",
+                 "report_scout", "report_status"}
 
 PASSED: list[str] = []
 FAILED: list[str] = []
@@ -33,89 +39,6 @@ def params(message: str) -> dict:
 
 
 def main() -> int:
-    print("1. chat parsing")
-    for text, expected in [
-        ("철 20개 캐와", "mine"),
-        ("구리 좀 캐줘", "mine"),
-        ("석탄 캐", "mine"),
-        ("이리와", "come"),
-        ("따라와봐", "come"),
-        ("멈춰", "stop"),
-        ("그만해", "stop"),
-        ("알아서 해", "autopilot_on"),
-        ("자율 모드", "autopilot_on"),
-        ("수동으로 바꿔", "autopilot_off"),
-        ("벨트 10칸 깔아", "place"),
-        ("화로 놔줘", "place"),
-        ("가방 뭐있어", "report_inventory"),
-        ("주변 정찰해", "report_scout"),
-        ("상태 어때", "report_status"),
-        ("mine iron", "mine"),
-        ("stop", "stop"),
-        ("오늘 날씨 좋네", None),
-        ("", None),
-        # "자동화" is a job, not a mode switch: the "자동" inside it used to
-        # swallow the sentence before it could ever reach the automation path.
-        ("석탄 자동화좀해봐", "automate"),
-        ("석탄캐는데 건물로 자동화되게 진행해바", "automate"),
-        ("자동화 해줘", "automate"),
-        # "수동" contains "동", which used to resolve to copper ore and made
-        # the line look like work instead of a mode switch.
-        ("수동", "autopilot_off"),
-    ]:
-        got = kind(text)
-        check(f"{text!r} -> {expected}", got == expected, f"got {got}")
-
-    print("\n1b. keyword matching prefers the longest word")
-    check("석탄 자동화 is about coal", params("석탄 자동화").get("ore") == "coal",
-          str(params("석탄 자동화")))
-    check("철광석 resolves past 철", params("철광석 30개 캐와").get("ore") == "iron-ore")
-    check("bare 자동화 has no ore", params("자동화 해줘").get("ore") is None)
-
-    print("\n1c. addressing one agent, or all of them")
-    roster = ["alpha", "bravo", "charlie"]
-    for text, want_target, want_kind in [
-        ("alpha 철 캐와", "alpha", "mine"),
-        ("bravo 이리와", "bravo", "come"),
-        ("2번 멈춰", "bravo", "stop"),
-        ("1번아 석탄 캐와", "alpha", "mine"),
-        ("모두 멈춰", ALL, "stop"),
-        ("전부 이리와", ALL, "come"),
-        ("철 캐와", None, "mine"),            # nobody named: caller picks
-        ("9번 멈춰", None, "stop"),           # out of range: not an address
-    ]:
-        target, rest = split_target(text, roster)
-        got = parse(rest)
-        got_kind = got[0][0] if got else None
-        ok = target == want_target and got_kind == want_kind
-        check(f"{text!r} -> {want_target}/{want_kind}", ok, f"got {target}/{got_kind}")
-
-    print("\n1d. an order given to the crew is divided, not multiplied")
-    order = ("mine", {"ore": "coal", "count": 30})
-    portions = [share(order, 3, i)[1]["count"] for i in range(3)]
-    check("30 across 3 is 10 each", portions == [10, 10, 10], str(portions))
-
-    uneven = [share(("mine", {"ore": "coal", "count": 10}), 3, i)[1]["count"] for i in range(3)]
-    check("remainder goes to the first", uneven == [4, 3, 3], str(uneven))
-    check("total is what was asked", sum(uneven) == 10)
-
-    tiny = [share(("mine", {"ore": "coal", "count": 2}), 3, i)[1]["count"] for i in range(3)]
-    check("nobody is given zero", all(c >= 1 for c in tiny), str(tiny))
-
-    spreads = [share(order, 3, i)[1]["spread"] for i in range(3)]
-    check("miners stand apart", spreads == [0, 1, 2], str(spreads))
-
-    check("a lone agent keeps the whole order",
-          share(order, 1, 0)[1]["count"] == 30)
-    check("countless intents pass through unchanged",
-          share(("come", {}), 3, 1) == ("come", {}))
-
-    print("\n2. counts")
-    check("digits win", params("철 37개 캐와").get("count") == 37)
-    check("korean numeral", params("돌 다섯개 캐").get("count") == 5)
-    check("default applies", params("철 캐와").get("count") == 20)
-    check("count is clamped", params("철 99999개 캐와").get("count") == 1000)
-
     print("\n3. the self-directed ladder climbs from hands to a working mine")
     world = dict(x=0.0, y=0.0, resources={
         "stone": {"nearest": {"x": 10, "y": 0}, "nearest_dist": 10, "tiles": 5},
@@ -124,8 +47,12 @@ def main() -> int:
         "copper-ore": {"nearest": {"x": 40, "y": 0}, "nearest_dist": 40, "tiles": 5},
     })
     FURNACE = {"stone-furnace": {"nearest": {"x": 3, "y": 3}, "nearest_dist": 4, "count": 1}}
-    WITH_DRILL = {**FURNACE, "burner-mining-drill": {"nearest": {"x": 9, "y": 9},
-                                                     "nearest_dist": 12, "count": 1}}
+    PAIRED = {"iron-chest": {"nearest": {"x": 10, "y": 9}, "nearest_dist": 12,
+                             "count": 1, "spots": [{"x": 10, "y": 9, "distance": 12}]}}
+    WITH_DRILL = {**FURNACE, **PAIRED,
+                  "burner-mining-drill": {"nearest": {"x": 9, "y": 9},
+                                          "nearest_dist": 12, "count": 1,
+                                          "spots": [{"x": 9, "y": 9, "distance": 12}]}}
     CAN_TOOL = {"burner-mining-drill": 1, "iron-chest": 2, "stone-furnace": 1}
 
     ALL_TECH = {"electronics", "steam-power", "automation-science-pack", "automation"}
@@ -186,8 +113,10 @@ def main() -> int:
 
     # Once every patch has a drill and the stockpile is full there is genuinely
     # nothing left on the ladder.
-    ALL_DRILLED = {**FURNACE, "burner-mining-drill": {"nearest": {"x": 9, "y": 9},
-                                                      "nearest_dist": 12, "count": 4}}
+    ALL_DRILLED = {**FURNACE, **PAIRED,
+                   "burner-mining-drill": {"nearest": {"x": 9, "y": 9},
+                                           "nearest_dist": 12, "count": 4,
+                                           "spots": [{"x": 9, "y": 9, "distance": 12}]}}
     full = {"coal": 99, "iron-plate": 40, "iron-ore": 99, "copper-ore": 99, "stone": 99,
             "lab": 1}
     settled = {**ALL_DRILLED, "lab": {"nearest": {"x": 4, "y": -4}, "nearest_dist": 6, "count": 1},
@@ -195,6 +124,20 @@ def main() -> int:
     check("and stops when there is nothing left to do",
           next_goal(at(full, settled, CAN_TOOL), focus="copper-ore") is None,
           str(next_goal(at(full, settled, CAN_TOOL), focus="copper-ore")))
+
+    print("\n3h. a drill with no chest is fixed before a new one is built")
+    stranded = at({"coal": 10, "iron-plate": 20},
+                  {**FURNACE, "burner-mining-drill": {
+                      "nearest": {"x": 9, "y": 9}, "nearest_dist": 12, "count": 1,
+                      "spots": [{"x": 9, "y": 9, "distance": 12}]}},
+                  CAN_TOOL)
+    job = next_goal(stranded, focus="copper-ore")
+    check("the stalled drill comes first",
+          job is not None and job.routine == "rescue",
+          str(job.key if job else None))
+    check("and it knows which drill", job.at == {"x": 9, "y": 9}, str(job.at))
+    check("a drill with a chest is left alone",
+          all(j.routine != "rescue" for j in plan(running, focus="copper-ore")))
 
     print("\n3g. with nothing else to do it climbs the tech tree")
     # "할 일이 없다"는 예전엔 광석만 쌓는다는 뜻이었다. 이제는 연구를 연다.
@@ -463,24 +406,31 @@ def main() -> int:
           == [{"x": 2, "y": 2}])
     check("nothing built, nothing to pick", one.spots("lab") == [])
 
-    print("\n11. the nearest agent goes")
-    crew_at = [("alpha", 0.0, 0.0), ("bravo", 50.0, 0.0), ("charlie", 10.0, 0.0)]
-    check("closest first", by_distance(crew_at, 12.0, 0.0)
-          == ["charlie", "alpha", "bravo"])
-    check("a tie is broken by name, so it is repeatable",
-          by_distance([("bravo", 0.0, 0.0), ("alpha", 0.0, 0.0)], 5.0, 0.0)
-          == ["alpha", "bravo"])
-    check("far side of the map goes last",
-          by_distance(crew_at, 0.0, 0.0)[-1] == "bravo")
-
-    print("\n12. the crew chief says how it split the work")
-    line = division("mine", [("alpha", ("mine", {"name": "iron-ore", "count": 15})),
-                             ("bravo", ("mine", {"name": "iron-ore", "count": 15}))])
-    check("names and amounts are in the line",
-          "alpha" in line and "bravo" in line and "15" in line, line)
-    check("it says what the work was", line.startswith("mine"), line)
-    check("no count is not a crash",
-          "alpha" in division("craft", [("alpha", ("craft", {"recipe": "lab"}))]))
+    print("\n11. the crew chief's output is untrusted too")
+    roster = {"alpha", "bravo"}
+    check("an invented command is dropped",
+          brain._clean_commands([{"name": "delete_the_save"}], roster) == [])
+    check("a real command survives",
+          brain._clean_commands([{"name": "save"}], roster) == [{"name": "save"}])
+    check("an agent who does not exist is forgotten, the command is not",
+          brain._clean_commands([{"name": "come", "agent": "zulu"}], roster)
+          == [{"name": "come"}])
+    check("a real agent is kept",
+          brain._clean_commands([{"name": "come", "agent": "alpha"}], roster)
+          == [{"name": "come", "agent": "alpha"}])
+    check("counts are clamped",
+          brain._clean_commands([{"name": "add_agent", "count": 99999}], roster)
+          [0]["count"] == brain.MAX_COUNT)
+    check("nonsense count is ignored, not fatal",
+          brain._clean_commands([{"name": "add_agent", "count": "many"}], roster)
+          == [{"name": "add_agent"}])
+    check("the list is capped",
+          len(brain._clean_commands([{"name": "save"}] * 50, roster))
+          == brain.MAX_COMMANDS)
+    check("not a list at all", brain._clean_commands("stop everything", roster) == [])
+    check("every command is one the crew can actually run",
+          brain.ALLOWED_COMMANDS <= (Crew.CREW_COMMANDS | KNOWN_INTENTS),
+          str(brain.ALLOWED_COMMANDS - (Crew.CREW_COMMANDS | KNOWN_INTENTS)))
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

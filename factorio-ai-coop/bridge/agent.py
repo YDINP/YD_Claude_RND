@@ -1,11 +1,15 @@
 """The crew: several AI characters listening to one human's orders in chat.
 
-Three layers, deliberately separated:
+Layers, deliberately separated:
 
-  split_target()  pure: who is being addressed
-  parse()         pure: what they are being told to do
-  next_goal()     pure: a world snapshot -> (what to say, what to queue)
+  mission.py      pure: the goal ladder and the request board
+  plan/next_goal  pure: a world snapshot -> what is worth doing, best first
+  brain.delegate  the crew chief: reads what the human wrote and splits it
   Crew            the only part that touches the game
+
+Nothing here reads the human's words by matching keywords any more. A table of
+words could not tell "stop" from "the drills have stopped", and a report of a
+problem would halt the whole crew. Sentences go to the part that can read them.
 
 Keeping the pure parts pure means the interesting logic is testable without a
 running Factorio server, which matters because it is exactly the logic that is
@@ -21,7 +25,6 @@ from __future__ import annotations
 
 import argparse
 import queue
-import re
 import sys
 import threading
 import time
@@ -97,186 +100,6 @@ class Snapshot:
         return technology in self.researched
 
 
-# ------------------------------------------------------------------- parsing
-
-# No single ambiguous syllables here. "동" for copper also lives inside "자동화"
-# and "수동", which is how "석탄 자동화" once turned into a request for copper.
-ORES = {
-    "철광석": "iron-ore", "철광": "iron-ore", "철": "iron-ore", "iron": "iron-ore",
-    "구리": "copper-ore", "copper": "copper-ore",
-    "석탄": "coal", "숯": "coal", "coal": "coal",
-    "석재": "stone", "돌": "stone", "stone": "stone",
-}
-
-PLACEABLE = {
-    "벨트": "transport-belt", "컨베이어": "transport-belt", "belt": "transport-belt",
-    "화로": "stone-furnace", "용광로": "stone-furnace", "furnace": "stone-furnace",
-    "상자": "iron-chest", "궤짝": "iron-chest", "chest": "iron-chest",
-    "채굴기": DRILL, "드릴": DRILL, "drill": DRILL,
-}
-
-KOREAN_NUMERALS = {"하나": 1, "둘": 2, "셋": 3, "넷": 4, "다섯": 5, "열": 10, "스물": 20}
-
-ALL = "*"
-
-
-def _lookup(text: str, table: dict[str, str]) -> str | None:
-    """Longest keyword wins, so "철광석" never resolves through "철"."""
-    for word in sorted(table, key=len, reverse=True):
-        if word in text:
-            return table[word]
-    return None
-
-
-def _count(text: str, default: int) -> int:
-    digits = re.search(r"(\d+)", text)
-    if digits:
-        return max(1, min(1000, int(digits.group(1))))
-    for word, value in KOREAN_NUMERALS.items():
-        if word in text:
-            return value
-    return default
-
-
-def split_target(text: str, names: list[str]) -> tuple[str | None, str]:
-    """Pull an addressee off the front of a line.
-
-    "alpha 철 캐와", "2번 이리와", "모두 멈춰". Returns (target, rest), where
-    target is an agent name, ALL, or None when nobody was named.
-    """
-    stripped = text.strip()
-    lowered = stripped.lower()
-
-    for word in ("모두", "전부", "다같이", "everyone", "all"):
-        if lowered.startswith(word):
-            return ALL, stripped[len(word):].strip(" ,:아야!")
-
-    for name in sorted(names, key=len, reverse=True):
-        if lowered.startswith(name.lower()):
-            return name, stripped[len(name):].strip(" ,:아야!")
-
-    ordinal = re.match(r"^(\d+)\s*번?\s*", stripped)
-    if ordinal:
-        index = int(ordinal.group(1)) - 1
-        if 0 <= index < len(names):
-            return names[index], stripped[ordinal.end():].strip(" ,:아야!")
-
-    return None, stripped
-
-
-def division(kind: str, shares: list[tuple[str, Intent]]) -> str:
-    """무엇을 누구에게 얼마나 줬는지 한 줄로.
-
-    나눴다는 사실이 사람에게 보이지 않으면, 넷이 흩어지는 것과 넷이
-    제각각 노는 것을 구별할 수 없다.
-    """
-    parts = []
-    for name, (_, params) in shares:
-        count = params.get("count")
-        what = params.get("name") or params.get("recipe") or ""
-        label = " ".join(bit for bit in (what, f"{count}개" if count else "") if bit)
-        parts.append(f"{name}: {label}" if label else name)
-    return f"{kind} 배분 — " + ", ".join(parts)
-
-
-def by_distance(fleet: list[tuple[str, float, float]],
-                x: float, y: float) -> list[str]:
-    """목표에 가까운 순서. 같은 거리면 이름순이라 결과가 매번 같다.
-
-    순서가 흔들리면 같은 지시에 매번 다른 사람이 가고, 왜 그랬는지 아무도
-    설명할 수 없게 된다.
-    """
-    return [name for name, _ in sorted(
-        (((name, (px - x) ** 2 + (py - y) ** 2)) for name, px, py in fleet),
-        key=lambda pair: (pair[1], pair[0]))]
-
-
-def share(intent: Intent, crew_size: int, index: int) -> Intent:
-    """One agent's share of an order given to several.
-
-    "철 30개 캐와" to three agents means thirty ore in total, not ninety, so the
-    count is divided and the remainder handed to the first few. Mining targets
-    are also nudged apart, or all of them walk onto the same tile and shuffle.
-    """
-    kind, params = intent
-    if crew_size <= 1 or "count" not in params:
-        return intent
-
-    base, extra = divmod(params["count"], crew_size)
-    portion = base + (1 if index < extra else 0)
-    if portion < 1:
-        portion = 1
-
-    shared = {**params, "count": portion}
-    if kind == "mine":
-        shared["spread"] = index
-    return kind, shared
-
-
-def parse(message: str) -> list[Intent]:
-    """Turn one chat line into intents. Unknown lines produce nothing."""
-    text = message.strip().lower()
-    if not text:
-        return []
-
-    if any(w in text for w in ("멈춰", "멈춤", "그만", "스톱", "정지", "취소", "stop", "halt")):
-        return [("stop", {})]
-
-    # Roster management before anything else: these name no resource and would
-    # otherwise fall through to the model.
-    if any(w in text for w in ("추가", "한명 더", "한 명 더", "늘려", "add agent", "새 에이전트")):
-        return [("add_agent", {"count": _count(text, 1)})]
-    if any(w in text for w in ("빼", "제거", "내보내", "remove agent")):
-        return [("remove_agent", {})]
-    if any(w in text for w in ("누구", "목록", "몇명", "몇 명", "roster", "list")):
-        return [("list_agents", {})]
-    if any(w in text for w in ("관찰자", "구경", "observer", "spectate", "관전")):
-        return [("observer", {})]
-    if any(w in text for w in ("복귀", "몸 줘", "몸줘", "내려가", "unspectate")):
-        return [("unobserver", {})]
-    if any(w in text for w in ("저장", "세이브", "save")):
-        return [("save", {})]
-    if any(w in text for w in ("패널", "현황판", "panel", "대시보드")):
-        return [("panel", {})]
-
-    # "석탄 자동화" is a request for drills and chests, not a request to flip an
-    # autopilot flag. It has to be tested before the bare mode keywords, or the
-    # "자동" inside "자동화" swallows the sentence.
-    if any(w in text for w in ("자동화", "automate", "자동으로")):
-        return [("automate", {"ore": _lookup(text, ORES)})]
-
-    # Mode switches are bare instructions. If the line also names a resource or
-    # a building, the human is asking for work, not for a mode.
-    mentions_work = _lookup(text, ORES) or _lookup(text, PLACEABLE)
-    if not mentions_work:
-        if any(w in text for w in ("알아서", "스스로", "자율", "자동", "auto")):
-            return [("autopilot_on", {})]
-        if any(w in text for w in ("수동", "대기", "기다려", "manual", "wait")):
-            return [("autopilot_off", {})]
-
-    if any(w in text for w in ("이리", "따라", "와봐", "이쪽", "come", "follow")):
-        return [("come", {})]
-    if any(w in text for w in ("가방", "인벤", "소지품", "inventory")):
-        return [("report_inventory", {})]
-    if any(w in text for w in ("뭐있", "정찰", "주변", "자원", "스캔", "scout", "scan")):
-        return [("report_scout", {})]
-    if any(w in text for w in ("상태", "뭐해", "status")):
-        return [("report_status", {})]
-
-    entity = _lookup(text, PLACEABLE)
-    if entity and any(v in text for v in ("깔", "놔", "놓", "설치", "지어", "place", "build")):
-        return [("place", {"entity": entity, "count": _count(text, 1)})]
-
-    ore = _lookup(text, ORES)
-    if ore and any(v in text for v in ("캐", "채굴", "mine", "가져")):
-        return [("mine", {"ore": ore, "count": _count(text, 20)})]
-
-    if entity and any(v in text for v in ("만들", "제작", "craft")):
-        return [("craft", {"recipe": entity, "count": _count(text, 1)})]
-
-    return []
-
-
 # ------------------------------------------------------------------ planning
 
 FURNACE_FUEL = 5
@@ -318,6 +141,29 @@ class Job:
     key: str = ""
     # 이 일이 먹는 재료. 모자라면 동료에게 부탁할 근거가 된다.
     needs: dict[str, int] = field(default_factory=dict)
+    # 루틴이 손봐야 할 자리. 어느 채굴기인지 같은 것.
+    at: dict | None = None
+
+
+# 상자가 이 거리 안에 있으면 그 채굴기는 돌보는 사람이 있다고 본다.
+# 2x2 채굴기의 산출 타일은 중심에서 1.5타일 안쪽이라 넉넉하게 잡았다.
+CHEST_REACH = 2.5
+
+
+def orphan_drills(snap: Snapshot) -> list[dict]:
+    """출구에 상자가 없는 채굴기들.
+
+    상자 없는 채굴기는 광석을 땅바닥에 몇 개 떨구고 그대로 멈춘다. 멀쩡한
+    기계가 서 있는 셈이라, 새 채굴기를 놓는 것보다 이쪽을 먼저 고쳐야 한다.
+    """
+    chests = snap.spots(CHEST)
+    orphans = []
+    for drill in snap.spots(DRILL):
+        near = any((drill["x"] - c["x"]) ** 2 + (drill["y"] - c["y"]) ** 2
+                   <= CHEST_REACH ** 2 for c in chests)
+        if not near:
+            orphans.append(drill)
+    return orphans
 
 
 # 한 사람당 화로 하나까지. 화로는 돌 5개라 싸고, 하나를 넷이 나눠 쓰면
@@ -413,6 +259,14 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
                                     ("wait", {"ticks": 60 * 40}),
                                     ("take", {"name": "iron-plate", "count": SMELT_BATCH, **spot}),
                                 ]))
+
+    # 세워놓고 잊은 채굴기부터 되살린다. 상자 하나면 다시 도는 기계를
+    # 두고 새 채굴기를 놓는 것은 철판 낭비다.
+    for drill in orphan_drills(snap):
+        jobs.append(Job(
+            f"({drill['x']:.0f},{drill['y']:.0f}) 채굴기에 출구 상자가 없습니다. 달아주겠습니다.",
+            key=f"rescue:{drill['x']:.0f},{drill['y']:.0f}",
+            routine="rescue", at=drill, needs={CHEST: 1}))
 
     # --- mechanise: a drill beats hands ----------------------------------
     # A drill costs iron *and* stone (through the furnace in its recipe). Asking
@@ -589,7 +443,7 @@ class Crew:
         self.thoughts: queue.Queue[tuple[str, str, list[Step]]] = queue.Queue()
         # 반장이 나눠준 결과가 여기로 온다. LLM 호출은 6초쯤 걸려서 채팅을
         # 읽는 루프를 멈춰 세울 수 없다.
-        self.orders: queue.Queue[tuple[str, list]] = queue.Queue()
+        self.orders: queue.Queue[tuple[str, list, list, str]] = queue.Queue()
         # 반장은 한 번에 한 지시만 나눈다. 두 지시가 겹쳐 들어오면 뒤엣것이
         # 앞엣것의 배정을 지워버린다.
         self.chief = threading.Semaphore(1)
@@ -692,7 +546,7 @@ class Crew:
         agents, watching one of them walk off alone is not what anybody meant;
         naming one is how you ask for that.
         """
-        if target and target != ALL and target in self.workers:
+        if target and target in self.workers:
             return [self.workers[target]]
         return list(self.workers.values())
 
@@ -759,16 +613,42 @@ class Crew:
             try:
                 answer = brain.delegate(message, view, fleet)
                 if answer is None:
-                    self.orders.put(("무슨 말인지 모르겠습니다.", []))
+                    self.orders.put(("무슨 말인지 모르겠습니다.", [], [], speaker))
                 else:
-                    self.orders.put(answer)
+                    self.orders.put((*answer, speaker))
             except Exception as exc:  # noqa: BLE001 - a dead thread must still answer
                 print(f"[warn] delegate failed: {exc!r}", file=sys.stderr)
-                self.orders.put(("지시를 나누다 문제가 생겼습니다.", []))
+                self.orders.put(("지시를 나누다 문제가 생겼습니다.", [], [], speaker))
             finally:
                 self.chief.release()
 
         threading.Thread(target=think, daemon=True).start()
+
+    # 반장이 내릴 수 있는 운영 명령. 앞의 것들은 무리 전체에 대한 것이고,
+    # 뒤의 것들은 캐릭터 한 명에게 간다.
+    CREW_COMMANDS = {"panel", "save", "add_agent", "remove_agent",
+                     "list_agents", "observer", "unobserver"}
+
+    def run_command(self, order: dict, speaker: str) -> None:
+        """반장이 내린 운영 명령을 실행한다.
+
+        steps 로 표현할 수 없는 것들 - 저장, 관찰자 전환, 인원 조절 - 만
+        여기로 온다. 이미 있던 인텐트 처리기를 그대로 쓴다.
+        """
+        name = order.get("name")
+        if not name:
+            return
+        params = {k: v for k, v in order.items() if k in ("count", "ore")}
+        intent: Intent = (name, params)
+
+        if name in self.CREW_COMMANDS:
+            self.handle_crew(intent, speaker, order.get("agent"))
+            return
+
+        who = order.get("agent")
+        crew = [self.workers[who]] if who in self.workers else list(self.workers.values())
+        for worker in crew:
+            self.handle(worker, intent, speaker)
 
     def collect_orders(self) -> None:
         """나눠진 배정을 실제로 꽂는다.
@@ -778,11 +658,13 @@ class Crew:
         """
         while True:
             try:
-                plan, assignments = self.orders.get_nowait()
+                plan, commands, assignments, speaker = self.orders.get_nowait()
             except queue.Empty:
                 return
             if plan:
                 self.say(plan)
+            for order in commands:
+                self.run_command(order, speaker)
             for name, say, steps in assignments:
                 worker = self.workers.get(name)
                 if not worker:
@@ -838,7 +720,8 @@ class Crew:
             self.say(f"{item}을(를) 못 만들겠습니다: {exc.task.get('error')}", who=worker.name)
             return False
 
-    def start_routine(self, worker: Worker, routine: str, ore: str | None = None) -> bool:
+    def start_routine(self, worker: Worker, routine: str, ore: str | None = None,
+                      at: dict | None = None) -> bool:
         """Run a long build-out off the main loop; it walks, crafts and builds."""
         if not worker.slot.acquire(blocking=False):
             return False
@@ -847,6 +730,8 @@ class Crew:
             try:
                 if routine == "power":
                     self.build_power(worker)
+                elif routine == "rescue":
+                    self.rescue(worker, at or {})
                 else:
                     self.automate(worker, ore)
             except Exception as exc:  # noqa: BLE001
@@ -941,6 +826,49 @@ class Crew:
         except RconError as exc:
             worker.block("power")
             self.say(f"전력 구축 중 오류: {exc}", who=name)
+
+    def rescue(self, worker: Worker, at: dict) -> None:
+        """멈춰 선 채굴기에 출구 상자를 달아주고 연료를 채운다.
+
+        어디가 출구인지는 채굴기에게 묻는다. 방향을 짐작해서 놓으면 상자는
+        서 있는데 광석은 여전히 땅에 쌓인다.
+        """
+        name = worker.name
+        if not at:
+            return
+        try:
+            found = [e for e in self.bridge.inspect(at["x"], at["y"], 2.5)
+                     if e.get("name") == DRILL and e.get("drop_x") is not None]
+            if not found:
+                # 누가 먼저 고쳤거나 치웠다. 실패가 아니다.
+                worker.block(f"rescue:{at['x']:.0f},{at['y']:.0f}")
+                return
+            drill = found[0]
+
+            # 그 사이에 누가 상자를 달아줬을 수도 있다.
+            already = [e for e in self.bridge.inspect(drill["drop_x"], drill["drop_y"], 0.8)
+                       if (e.get("name") or "").endswith("-chest")]
+            if already:
+                worker.block(f"rescue:{at['x']:.0f},{at['y']:.0f}")
+                return
+
+            if not self.ensure(worker, CHEST):
+                worker.block("rescue")
+                return
+
+            worker.handle.place(CHEST, drill["drop_x"], drill["drop_y"], timeout=180)
+            self.say(f"({drill['x']:.0f},{drill['y']:.0f}) 채굴기에 상자를 달았습니다.",
+                     who=name)
+
+            if worker.handle.items().get("coal", 0) >= DRILL_FUEL:
+                worker.handle.insert("coal", drill["x"], drill["y"],
+                                     count=DRILL_FUEL, timeout=180)
+        except TaskFailed as exc:
+            worker.block("rescue")
+            self.say(f"상자를 못 달았습니다: {exc.task.get('error')}", who=name)
+        except RconError as exc:
+            worker.block("rescue")
+            self.say(f"채굴기 수리 중 오류: {exc}", who=name)
 
     def automate(self, worker: Worker, ore: str | None) -> None:
         """Drill on the patch, chest where it drops, fuel in the drill."""
@@ -1126,7 +1054,7 @@ class Crew:
 
         광석은 한 번 제련할 만큼, 나머지는 하나면 된다. 스무 개짜리 부탁을
         한 개로 붙이면 받아도 또 막힌다."""
-        if item in ORES.values() or item in ("coal", "stone"):
+        if item in ("iron-ore", "copper-ore", "coal", "stone"):
             return ORE_BATCH
         return 1
 
@@ -1250,7 +1178,7 @@ class Crew:
             return True
 
         if kind == "remove_agent":
-            victim = target if target and target != ALL else (self.names[-1] if self.names else None)
+            victim = target if target in self.workers else (self.names[-1] if self.names else None)
             if not victim:
                 self.say("내보낼 에이전트가 없습니다.")
             else:
@@ -1320,44 +1248,11 @@ class Crew:
             speaker = line.get("player", "")
             text = line.get("message", "")
             print(f"[chat] {speaker}: {text}")
-
-            target, rest = split_target(text, self.names)
-            intents = parse(rest)
-
-            if not intents:
-                # 알아듣지 못한 문장은 반장에게 간다. 지목된 사람이 있으면
-                # 그 사람에게만 묻는다 - 둘이 대화 중인데 넷이 답하면
-                # 사람이 자기가 무엇을 시켰는지 알 수 없다.
-                if target and target != ALL and target in self.workers:
-                    one = self.workers[target]
-                    self.ask_llm(one, rest, one.snapshot())
-                else:
-                    self.delegate(rest, speaker)
-                continue
-
-            for intent in intents:
-                if self.handle_crew(intent, speaker, target):
-                    continue
-                crew = self.targets(target)
-                # 가까운 사람에게 가까운 일을 준다. 목표 좌표가 있는 지시면
-                # 거리순으로 세워놓고 나누므로, 지도 반대편 사람이 바로 옆
-                # 사람을 지나쳐 같은 광맥까지 걸어가는 일이 없어진다.
-                if len(crew) > 1 and "x" in intent[1] and "y" in intent[1]:
-                    order = by_distance(
-                        [(w.name, *self.seat(w)) for w in crew],
-                        intent[1]["x"], intent[1]["y"])
-                    crew.sort(key=lambda w: order.index(w.name))
-                # An explicit order always wins over what an agent chose to do.
-                shares = []
-                for index, worker in enumerate(crew):
-                    worker.handle.cancel()
-                    worker.watching = []
-                    self.release(worker)
-                    piece = share(intent, len(crew), index)
-                    shares.append((worker.name, piece))
-                    self.handle(worker, piece, speaker)
-                if len(shares) > 1:
-                    self.say(division(intent[0], shares))
+            # 반장이 유일한 입구다. 예전에는 문장에서 낱말을 주워 인텐트를
+            # 만들었는데, «작업이 멈춰있음»이라는 보고에서 «멈춰»를 집어
+            # 전원이 정지하는 식으로 계속 틀렸다. 문장은 읽을 줄 아는 쪽이
+            # 읽어야 한다.
+            self.delegate(text, speaker)
 
         if messages:
             return
@@ -1409,7 +1304,7 @@ class Crew:
             self.claim(worker, job.key)
             self.say(job.narration, who=worker.name)
             if job.routine:
-                self.start_routine(worker, job.routine, job.ore)
+                self.start_routine(worker, job.routine, job.ore, job.at)
             else:
                 worker.watching = worker.handle.submit_plan(job.steps)
 

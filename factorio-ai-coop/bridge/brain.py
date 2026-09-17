@@ -210,7 +210,8 @@ CHIEF = """\
 쪼개서** 각 캐릭터에게 나눠줘라.
 
 출력은 JSON 하나만. 설명도, 코드펜스도 붙이지 마라.
-{"plan": "사람에게 한 줄로 보고할 배분 요약 (한국어)",
+{"plan": "사람에게 한 줄로 보고할 대답 (한국어). 무엇을 어떻게 진행할지 말해라.",
+ "commands": [{"name": "명령", "agent": "이름(선택)", "count": 숫자(선택), "ore": "광석(선택)"}],
  "assignments": [{"agent": "이름", "say": "그 캐릭터가 할 말", "steps": [...]}]}
 
 쓸 수 있는 동작은 이것뿐이다:
@@ -223,6 +224,28 @@ CHIEF = """\
   {"type":"take","params":{"name":"아이템","x":숫자,"y":숫자,"count":숫자}}   - 건물에서 꺼내기
   {"type":"wait","params":{"ticks":숫자}}                  - 기다린다 (60틱 = 1초)
 
+commands 는 steps 로는 못 하는 «운영» 명령이다. 필요할 때만 넣어라:
+
+  stop              - 전원 하던 일 중단 (사람이 멈추라고 할 때만)
+  save              - 지금 즉시 서버 저장
+  panel             - 현황판 열기/닫기
+  observer          - 말한 사람을 관찰자로 (몸은 AI가 넘겨받음)
+  unobserver        - 관찰자에서 몸으로 복귀
+  list_agents       - 명단 보고
+  add_agent         - 캐릭터 늘리기 (count)
+  remove_agent      - 캐릭터 줄이기
+  autopilot_on      - 알아서 일하게
+  autopilot_off     - 시킬 때만 일하게
+  automate          - 그 광석에 채굴기+상자+연료까지 설치 (agent, ore)
+  come              - 말한 사람에게 오기 (agent)
+  report_inventory  - 소지품 보고 (agent)
+  report_scout      - 주변 자원 보고 (agent)
+  report_status     - 지금 뭐 하는지 보고 (agent)
+
+중요: 사람이 «상황을 설명»하는 것과 «명령»하는 것을 구별해라.
+"작업이 멈춰있음"은 보고지 정지 명령이 아니다. 보고라면 stop 을 넣지 말고,
+원인을 고치는 작업을 assignments 로 내려라.
+
 배분 원칙:
 - 같은 일을 두 명에게 주지 마라. 두 명이 같은 광맥에 서 있으면 한 명 몫이다.
 - 가까운 사람에게 가까운 일을 줘라. 좌표와 각자 위치가 아래에 있다.
@@ -230,7 +253,8 @@ CHIEF = """\
 - 재료를 쥔 사람이 있으면 그 사람이 쓰게 해라. 없는 사람에게 캐게 하지 말고.
 - 좌표는 아래 상황에 실제로 나온 값만 써라. 지어내지 마라.
 - 한 사람당 최대 {max_steps}단계.
-- 지시가 잡담이면 assignments를 비우고 plan에만 답해라.
+- 지시가 잡담이면 commands와 assignments를 비우고 plan에만 답해라.
+- plan 에는 반드시 «어떻게 진행하겠다»를 담아라. 사람이 읽는 유일한 대답이다.
 """
 
 
@@ -247,11 +271,46 @@ def _fleet_text(fleet: list[dict]) -> str:
     return "\n".join(lines) or "  (아무도 없음)"
 
 
+# steps 로는 표현할 수 없는 운영 명령. 모델이 지어낸 이름은 여기서 걸린다.
+ALLOWED_COMMANDS = {
+    "stop", "save", "panel", "observer", "unobserver", "list_agents",
+    "add_agent", "remove_agent", "autopilot_on", "autopilot_off",
+    "automate", "come", "report_inventory", "report_scout", "report_status",
+}
+MAX_COMMANDS = 6
+
+
+def _clean_commands(raw: Any, roster: set[str]) -> list[dict]:
+    """명단에 없는 이름과 모르는 명령을 버린다."""
+    if not isinstance(raw, list):
+        return []
+    out: list[dict] = []
+    for item in raw[:MAX_COMMANDS]:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if name not in ALLOWED_COMMANDS:
+            continue
+        order: dict[str, Any] = {"name": name}
+        who = item.get("agent")
+        if isinstance(who, str) and who in roster:
+            order["agent"] = who
+        if "count" in item:
+            try:
+                order["count"] = max(1, min(MAX_COUNT, int(item["count"])))
+            except (TypeError, ValueError):
+                pass
+        if isinstance(item.get("ore"), str):
+            order["ore"] = item["ore"][:32]
+        out.append(order)
+    return out
+
+
 def delegate(message: str, snap: Any, fleet: list[dict], timeout: float = 120.0,
-             cli: str = "claude") -> tuple[str, list[tuple[str, str, list]]] | None:
+             cli: str = "claude") -> tuple[str, list[dict], list[tuple[str, str, list]]] | None:
     """지시 하나를 여러 캐릭터의 작업으로 쪼갠다.
 
-    돌려주는 것은 (사람에게 할 보고, [(캐릭터, 할 말, steps), ...]).
+    돌려주는 것은 (사람에게 할 대답, [운영 명령...], [(캐릭터, 할 말, steps), ...]).
     모델이 지어낸 이름과 동작은 여기서 걸러진다 - 명단에 없는 이름으로 온
     배정은 버린다. 한 캐릭터에게 두 번 배정된 것도 첫 번째만 남긴다.
     """
@@ -279,6 +338,7 @@ def delegate(message: str, snap: Any, fleet: list[dict], timeout: float = 120.0,
 
     plan = payload.get("plan")
     plan = plan.strip()[:300] if isinstance(plan, str) else ""
+    commands = _clean_commands(payload.get("commands"), roster)
 
     orders: list[tuple[str, str, list]] = []
     seen: set[str] = set()
@@ -295,4 +355,4 @@ def delegate(message: str, snap: Any, fleet: list[dict], timeout: float = 120.0,
             say = say.strip()[:300] if isinstance(say, str) else ""
             orders.append((who, say, _clean_steps(item.get("steps"))))
 
-    return plan, orders
+    return plan, commands, orders
