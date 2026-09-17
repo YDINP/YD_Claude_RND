@@ -7,6 +7,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
+import brain  # noqa: E402
 from agent import Snapshot, next_goal, parse  # noqa: E402
 
 PASSED: list[str] = []
@@ -50,9 +51,23 @@ def main() -> int:
         ("stop", "stop"),
         ("오늘 날씨 좋네", None),
         ("", None),
+        # "자동화" is a job, not a mode switch: the "자동" inside it used to
+        # swallow the sentence before it could ever reach the automation path.
+        ("석탄 자동화좀해봐", "automate"),
+        ("석탄캐는데 건물로 자동화되게 진행해바", "automate"),
+        ("자동화 해줘", "automate"),
+        # "수동" contains "동", which used to resolve to copper ore and made
+        # the line look like work instead of a mode switch.
+        ("수동", "autopilot_off"),
     ]:
         got = kind(text)
         check(f"{text!r} -> {expected}", got == expected, f"got {got}")
+
+    print("\n1b. keyword matching prefers the longest word")
+    check("석탄 자동화 is about coal", params("석탄 자동화").get("ore") == "coal",
+          str(params("석탄 자동화")))
+    check("철광석 resolves past 철", params("철광석 30개 캐와").get("ore") == "iron-ore")
+    check("bare 자동화 has no ore", params("자동화 해줘").get("ore") is None)
 
     print("\n2. counts")
     check("digits win", params("철 37개 캐와").get("count") == 37)
@@ -102,6 +117,30 @@ def main() -> int:
 
     print("\n4. planning is pure")
     check("same snapshot, same plan", next_goal(loaded) == next_goal(loaded))
+
+    print("\n5. LLM output is treated as untrusted")
+    check("plain json", brain._extract_json('{"say":"hi","steps":[]}') == {"say": "hi", "steps": []})
+    check("fenced json", brain._extract_json('```json\n{"say":"hi"}\n```') == {"say": "hi"})
+    check("json with trailing prose",
+          brain._extract_json('{"say":"hi"}\n설명입니다') == {"say": "hi"})
+    check("garbage", brain._extract_json("전혀 json이 아님") is None)
+
+    check("invented task type is dropped",
+          brain._clean_steps([{"type": "nuke_the_map", "params": {}}]) == [])
+    check("missing required args dropped",
+          brain._clean_steps([{"type": "build", "params": {"x": 1, "y": 2}}]) == [])
+    check("absurd coordinates dropped",
+          brain._clean_steps([{"type": "walk_to", "params": {"x": 1e9, "y": 0}}]) == [])
+    check("counts are clamped",
+          brain._clean_steps([{"type": "mine", "params": {"x": 1, "y": 2, "count": 99999}}])
+          [0][1]["count"] == brain.MAX_COUNT)
+    check("step list is capped",
+          len(brain._clean_steps([{"type": "wait", "params": {"ticks": 10}}] * 50))
+          == brain.MAX_STEPS)
+    check("valid step survives",
+          brain._clean_steps([{"type": "mine", "params": {"x": 5, "y": -3, "count": 7}}])
+          == [("mine", {"x": 5.0, "y": -3.0, "count": 7})])
+    check("non-list steps", brain._clean_steps("drop everything") == [])
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

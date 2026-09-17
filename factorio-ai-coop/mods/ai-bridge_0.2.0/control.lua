@@ -444,6 +444,31 @@ remote.add_interface("ai", {
   observe = observe,
   inventory = inventory,
 
+  -- Look at what is actually standing on a spot. Automation needs this: a
+  -- mining drill decides for itself which tile it drops ore onto, so the chest
+  -- has to go where the drill says, not where we guessed.
+  inspect = function(x, y, radius)
+    local b = bot()
+    local surface = b and b.surface or game.surfaces[1]
+    local out = {}
+    for _, e in pairs(surface.find_entities_filtered {
+      position = { x, y }, radius = radius or 2, limit = 8,
+    }) do
+      if e.type ~= "character" and e.type ~= "resource" then
+        local info = {
+          name = e.name, type = e.type, direction = e.direction,
+          x = e.position.x, y = e.position.y,
+        }
+        local ok, drop = pcall(function() return e.drop_position end)
+        if ok and drop then
+          info.drop_x, info.drop_y = drop.x, drop.y
+        end
+        out[#out + 1] = info
+      end
+    end
+    return { entities = out }
+  end,
+
   -- Read what the humans have been saying since a given tick.
   chat = function(since_tick)
     local out = {}

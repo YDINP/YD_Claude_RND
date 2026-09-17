@@ -15,6 +15,7 @@ Everything an agent does goes through `remote.call("ai", fn, ...)` inside a
 from __future__ import annotations
 
 import json
+import threading
 import time
 from typing import Any
 
@@ -55,6 +56,11 @@ class AIBridge:
     def __init__(self, host: str = "127.0.0.1", port: int = 27015,
                  password: str = "rcontest123") -> None:
         self.rcon = Rcon(host, port, password)
+        # RCON is one socket carrying strictly paired request/response. Two
+        # threads sending at once would each read the other's answer, so every
+        # command goes through here one at a time. A single command is a
+        # millisecond; long tasks poll, so this never blocks the caller for long.
+        self._lock = threading.Lock()
         self._warm_up()
 
     def _warm_up(self) -> None:
@@ -66,9 +72,10 @@ class AIBridge:
 
     def lua(self, expr: str) -> Any:
         """Run `rcon.print(helpers.table_to_json(<expr>))` and parse the reply."""
-        raw = self.rcon.command(
-            f"/silent-command rcon.print(helpers.table_to_json({expr}))"
-        ).strip()
+        with self._lock:
+            raw = self.rcon.command(
+                f"/silent-command rcon.print(helpers.table_to_json({expr}))"
+            ).strip()
         if not raw:
             return None
         try:
@@ -175,6 +182,12 @@ class AIBridge:
 
     def buildings(self, radius: int = 64) -> dict:
         return self.observe(radius=radius).get("buildings") or {}
+
+    def inspect(self, x: float, y: float, radius: float = 2) -> list[dict]:
+        found = self.call("inspect", x, y, radius).get("entities")
+        if isinstance(found, dict):
+            return list(found.values())
+        return found or []
 
     def nearest(self, resource: str, radius: int = 128) -> dict | None:
         found = self.observe(radius=radius).get("resources", {}).get(resource)
