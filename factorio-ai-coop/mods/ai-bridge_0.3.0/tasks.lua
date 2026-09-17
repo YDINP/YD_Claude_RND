@@ -104,57 +104,134 @@ end
 
 --------------------------------------------------------------------- walk_to
 
+local MAX_PATH_TRIES = 5      -- pathfinder attempts before giving up on a goal
+local STRAIGHT_LINE_LIMIT = 12 -- tiles worth walking blind while a path is pending
+local CLEAR_REACH = 2.6       -- how close an obstacle must be to chop it
+local CLEAR_INTERVAL = 12     -- ticks between swings at a tree or rock
+
+-- Ask the game's own pathfinder. The answer arrives later, as an event, and
+-- control.lua parks it under the request id.
+local function request_path(ctx, resolution)
+  local st = ctx.task.state
+  local proto = prototypes.entity["character"]
+  st.path_request = ctx.surface.request_path {
+    bounding_box = proto.collision_box,
+    collision_mask = proto.collision_mask,
+    start = ctx.bot.position,
+    goal = st.goal,
+    force = ctx.bot.force,
+    radius = math.max(st.tolerance, 0.5),
+    path_resolution_modifier = resolution or 0,
+    -- Without this the character's own collision box occupies the start tile
+    -- and the pathfinder reports "no path" before it has taken a step.
+    entity_to_ignore = ctx.bot,
+    pathfind_flags = { cache = false, low_priority = false, allow_paths_through_own_entities = true },
+  }
+  st.requested_tick = ctx.tick
+  st.tries = (st.tries or 0) + 1
+  st.path, st.path_index, st.path_failed = nil, nil, false
+  st.probe_tick = nil
+  return "running"
+end
+
+-- Trees and rocks are not walls; a player chops through them. Without this an
+-- agent stands in a forest shoving a tree until its stuck timer fires.
+local function clear_obstacle(ctx)
+  local st, bot = ctx.task.state, ctx.bot
+
+  if st.chopping and st.chopping.valid then
+    if ctx.tick - (st.last_chop or 0) >= CLEAR_INTERVAL then
+      st.last_chop = ctx.tick
+      bot.mine_entity(st.chopping)
+    end
+    return true
+  end
+  st.chopping = nil
+
+  local ahead = st.path and st.path[st.path_index] and st.path[st.path_index].position or st.goal
+  local dx, dy = ahead.x - bot.position.x, ahead.y - bot.position.y
+  local span = math.sqrt(dx * dx + dy * dy)
+  if span < 0.01 then return false end
+  local probe = {
+    x = bot.position.x + dx / span * 1.5,
+    y = bot.position.y + dy / span * 1.5,
+  }
+
+  for _, candidate in pairs(ctx.surface.find_entities_filtered {
+    position = probe, radius = CLEAR_REACH,
+    type = { "tree", "simple-entity" },
+  }) do
+    if candidate.prototype.mineable_properties.minable then
+      st.chopping, st.last_chop = candidate, ctx.tick
+      bot.mine_entity(candidate)
+      return true
+    end
+  end
+  return false
+end
+
 M.walk_to = {
   start = function(ctx)
-    local goal = { x = ctx.task.params.x, y = ctx.task.params.y }
-    ctx.task.state.goal = goal
+    ctx.task.state.goal = { x = ctx.task.params.x, y = ctx.task.params.y }
     ctx.task.state.tolerance = ctx.task.params.tolerance or 0.5
-
-    -- Ask the game's own pathfinder. The answer arrives later, as an event.
-    local proto = prototypes.entity["character"]
-    ctx.task.state.path_request = ctx.surface.request_path {
-      bounding_box = proto.collision_box,
-      collision_mask = proto.collision_mask,
-      start = ctx.bot.position,
-      goal = goal,
-      force = ctx.bot.force,
-      radius = ctx.task.state.tolerance,
-      pathfind_flags = { cache = false, low_priority = false },
-    }
-    ctx.task.state.requested_tick = ctx.tick
-    return "running"
+    return request_path(ctx)
   end,
 
   step = function(ctx)
     local st, bot = ctx.task.state, ctx.bot
 
-    -- The pathfinder answers asynchronously; control.lua drops the result in
-    -- storage.paths. Until it lands we walk the straight line, so open terrain
-    -- costs us nothing.
+    if dist(bot.position, st.goal) <= st.tolerance then
+      halt(bot)
+      ctx.task.result = { x = bot.position.x, y = bot.position.y, tries = st.tries }
+      return "done"
+    end
+
+    -- Waiting on an answer.
     if st.path_request and not st.path and not st.path_failed then
       local entry = storage.paths[st.path_request]
       if entry ~= nil then
         storage.paths[st.path_request] = nil
         if entry.path then
           st.path, st.path_index = entry.path, 1
-        else
+        elseif entry.try_again_later then
+          st.last_answer = 'try_again_later'
+          -- The pathfinder was busy, not defeated. Long walks hit this often.
+          if st.tries < MAX_PATH_TRIES then return request_path(ctx) end
           st.path_failed = true
+        else
+          -- Genuinely no route at this resolution. A coarser search can find
+          -- one through gaps the fine search rejected.
+          st.last_answer = 'no_path'
+          if st.tries < MAX_PATH_TRIES then return request_path(ctx, -1) end
+          halt(bot)
+          ctx.task.error = string.format(
+            "no path from %.1f,%.1f to %.0f,%.0f (%d tries, last=%s)",
+            bot.position.x, bot.position.y, st.goal.x, st.goal.y,
+            st.tries, tostring(st.last_answer))
+          return "failed"
         end
       elseif ctx.tick - st.requested_tick > PATH_WAIT_TICKS then
+        if st.tries < MAX_PATH_TRIES then return request_path(ctx) end
         st.path_failed = true
       else
-        steer(bot, st.goal)
+        -- Walking blind is fine for a few tiles of open ground and a bad idea
+        -- across a map; a straight line into a lake is how agents got stuck.
+        if dist(bot.position, st.goal) <= STRAIGHT_LINE_LIMIT then
+          steer(bot, st.goal)
+        else
+          halt(bot)
+        end
         return "running"
       end
     end
 
     local target = st.goal
     if st.path then
-      local wp = st.path[st.path_index]
-      if not wp then
+      local waypoint = st.path[st.path_index]
+      if not waypoint then
         st.path = nil
       else
-        target = wp.position
+        target = waypoint.position
         if dist(bot.position, target) < 1.0 then
           st.path_index = st.path_index + 1
           st.probe_tick = nil       -- reaching a waypoint counts as progress
@@ -163,15 +240,20 @@ M.walk_to = {
       end
     end
 
-    if dist(bot.position, st.goal) <= st.tolerance then
-      halt(bot)
-      ctx.task.result = { x = bot.position.x, y = bot.position.y }
-      return "done"
-    end
-
     if stuck(ctx) then
+      -- Something is in the way. Chop it, or ask for a new route from here -
+      -- the old one was computed from a position we are no longer in.
+      if clear_obstacle(ctx) then
+        st.probe_tick = nil
+        return "running"
+      end
+      if st.tries < MAX_PATH_TRIES then
+        halt(bot)
+        return request_path(ctx)
+      end
       halt(bot)
-      ctx.task.error = string.format("stuck at %.1f,%.1f", bot.position.x, bot.position.y)
+      ctx.task.error = string.format("stuck at %.1f,%.1f after %d routes",
+                                     bot.position.x, bot.position.y, st.tries)
       return "failed"
     end
 

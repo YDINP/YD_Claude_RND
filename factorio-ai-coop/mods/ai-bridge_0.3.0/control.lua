@@ -16,7 +16,8 @@
 local Tasks = require("tasks")
 
 local RESULT_HISTORY = 128     -- completed tasks kept for polling, all agents
-local DEFAULT_TIMEOUT = 3600   -- ticks (60s) before a task is abandoned
+-- Long enough for a walk that has to re-route around terrain a few times.
+local DEFAULT_TIMEOUT = 7200   -- ticks (2 minutes) before a task is abandoned
 local MAX_QUEUE = 64           -- per agent; refuse work rather than grow forever
 local MAX_AGENTS = 8
 local MAX_OBSERVE_RADIUS = 200 -- one observe runs inside a single tick
@@ -290,7 +291,14 @@ end)
 -- and let whichever task asked for it pick it up on its next step; that keeps
 -- nested walks (a mine task walking to its ore) working without extra wiring.
 script.on_event(defines.events.on_script_path_request_finished, function(event)
-  storage.paths[event.id] = { path = event.path or false, tick = event.tick }
+  -- `try_again_later` is not a failure: the pathfinder was busy, which happens
+  -- constantly on long walks. Treating it as "unreachable" is how an agent
+  -- gives up on a patch it could have walked to.
+  storage.paths[event.id] = {
+    path = event.path or false,
+    try_again_later = event.try_again_later or false,
+    tick = event.tick,
+  }
 end)
 
 -- There is no API to cancel a path request, so an answer whose task was
