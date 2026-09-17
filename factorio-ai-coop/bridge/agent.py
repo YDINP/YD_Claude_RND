@@ -1473,7 +1473,6 @@ class Crew:
         목록이 사람보다 길면 아무도 놀지 않는다.
         """
         refuel: list[Job] = []
-        unload: list[Job] = []
         gather: list[Job] = []
         unblock: list[Job] = []
         jobs: list[Job] = []
@@ -1520,19 +1519,6 @@ class Crew:
                               at=at))
 
         # 2. 다 녹아서 화로를 막고 있는 것들. 화로마다 따로 걷는다.
-        # 2. 가방이 넘치는 사람은 공용 창고에 부린다. 물자가 한 사람의
-        #    가방에 갇혀 있으면 없는 것과 같다 - 옆 사람이 철광석 천 개를
-        #    안고 다니는 동안 남들은 철광석이 없어서 멈춰 있었다.
-        #
-        #    한 명만 뽑지 않고 넘치는 사람 전부에게 만들어준다. 하나만
-        #    만들면 정비 일감에 밀려 차례가 영영 안 온다.
-        for mate, mate_snap in self.snaps.items():
-            if mate not in self.workers:
-                continue
-            job = self.depot_job(self.workers[mate], mate_snap)
-            if job and job.key != "depot:build":
-                unload.append(job)
-
         for group in cluster([e for e in stock
                               if int(e.get("count") or 0) >= HARVEST_MIN]):
             head = group[0]
@@ -1558,7 +1544,7 @@ class Crew:
         # 한 종류가 목록을 다 차지하면 나머지는 차례가 오지 않는다. 연료
         # 보급만 스물다섯 개 쌓여서 창고 입고와 거두기가 한 번도 배차되지
         # 않았다. 창고 짓기만 맨 앞에 두고, 나머지는 번갈아 나눠준다.
-        return jobs + interleave([refuel, unload, gather, unblock])
+        return jobs + interleave([refuel, gather, unblock])
 
     def dispatch(self, free: list[tuple[Worker, Snapshot]]) -> set[str]:
         """만든 일감을 가까운 사람에게 나눠준다. 배차된 사람 이름을 돌려준다.
@@ -2318,6 +2304,21 @@ class Crew:
             self.announce_stage(snap)
 
             self.release(worker)
+
+            # 가방을 부리는 것은 개인 용무지 공용 일감이 아니다. 공용
+            # 배차에 섞어뒀더니 주인이 마침 손이 빈 그 순간에만 걸려서,
+            # 광석 725개를 안고도 한참을 그냥 다녔다.
+            job = self.depot_job(worker, snap)
+            if job and job.key != "depot:build":
+                self.claim(worker, job.key)
+                self.say(job.narration, who=worker.name)
+                worker.said_idle = False
+                try:
+                    worker.watching = worker.handle.submit_plan(job.steps)
+                    continue
+                except RconError:
+                    self.release(worker)
+
             # 멈춘 기계와 찬 화로는 배차가 맡는다. 여기서 또 물어보면
             # 같은 것을 여덟 번 조회하게 되고, 그 사이 배차가 이미 누구에게
             # 준 일을 두 번 잡으려 든다.
