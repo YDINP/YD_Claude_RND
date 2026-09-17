@@ -240,6 +240,10 @@ class AIBridge:
         """
         return self.call("set_board", goal, lines)
 
+    def power_status(self, agent: str) -> dict:
+        """전기가 실제로 흐르는가. 서 있는 기관 수가 아니라."""
+        return self.call("power_status", agent)
+
     def power_plan(self, agent: str, x: float, y: float, radius: int = 150,
                    engines: int = 2) -> dict:
         """펌프-보일러-기관이 통째로 들어가는 자리. 확인된 좌표만 돌려준다."""

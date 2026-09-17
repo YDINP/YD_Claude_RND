@@ -61,6 +61,9 @@ class Snapshot:
     mates: list[dict] = field(default_factory=list)
     researched: set[str] = field(default_factory=set)
     researching: str | None = None
+    # 기관이 서 있는 것과 전기가 흐르는 것은 다르다. 물 없는 보일러에 물린
+    # 기관은 밖에서 보면 멀쩡한 발전소와 똑같이 생겼다.
+    powered: bool = False
 
     def have(self, item: str) -> int:
         return self.items.get(item, 0)
@@ -264,7 +267,9 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
             jobs.append(Job("랩을 설치합니다.", key="build:lab", steps=[
                 ("build", {"name": "lab", "x": snap.x + 4, "y": snap.y - 4, "snap": True})
             ]))
-        elif snap.building("lab") and not snap.building("steam-engine"):
+        elif snap.building("lab") and not snap.powered:
+            # «기관이 서 있는가»가 아니라 «전기가 흐르는가». 죽은 발전소를
+            # 발전소로 세는 바람에 새로 짓지 않고 그대로 멈춰 있었다.
             jobs.append(Job("랩을 돌리려면 전력이 필요합니다.", key="power", routine="power"))
 
     # --- feed the smelting loop ------------------------------------------
@@ -370,13 +375,20 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
                             steps=[("craft", {"recipe": "stone-furnace", "count": 1})]))
 
     # --- keep patches stocked, starting with this agent's own ------------
+    # 공장은 끊임없이 돌아야 하고, 그러려면 광석이 끊임없이 들어와야 한다.
+    # 예전에는 서른 개를 채우면 멈췄다 - 그래서 여섯 명 중 셋이 가방에
+    # 광석을 안고 서 있었다. 화로가 놀고 있으면 더 캔다.
+    hungry = snap.have("coal") < FURNACE_FUEL * 4
     for ore in [focus] + [o for o in FOCUS_ORDER if o != focus]:
         spot = snap.ore(ore)
-        if spot and snap.have(ore) < STOCKPILE:
-            jobs.append(Job(f"{ore} 비축분을 채우겠습니다.", key=f"stock:{ore}", steps=[
-                ("mine", {**spot, "count": STOCKPILE, "search_radius": 10,
-                          "timeout_ticks": 60 * 60 * 5})
-            ]))
+        if not spot:
+            continue
+        if snap.have(ore) >= STOCKPILE and not (ore == "coal" and hungry):
+            continue
+        jobs.append(Job(f"{ore}를 더 캐 오겠습니다.", key=f"stock:{ore}", steps=[
+            ("mine", {**spot, "count": STOCKPILE, "search_radius": 10,
+                      "timeout_ticks": 60 * 60 * 5})
+        ]))
 
     # Two jobs with the same key would be one job as far as the crew is
     # concerned: claiming the first silently hides the second. Keep the
@@ -556,6 +568,10 @@ class Worker:
         world = self.handle.observe(radius=radius)
         inventory = self.handle.inventory()
         research = self.handle.bridge.research_state()
+        try:
+            power = self.handle.bridge.power_status(self.name)
+        except RconError:
+            power = {}
         humans = world.get("humans") or {}
         mates = world.get("agents") or {}
         return Snapshot(
@@ -570,6 +586,7 @@ class Worker:
             mates=list(mates.values()) if isinstance(mates, dict) else mates,
             researched=research["researched"],
             researching=research.get("current"),
+            powered=bool(power.get("powered")),
         )
 
     def block(self, kind: str, seconds: float = BACKOFF_SECONDS) -> None:
@@ -1229,6 +1246,24 @@ class Crew:
 
     # -- reporting ---------------------------------------------------------
 
+    def keep_busy(self, worker: Worker, snap: Snapshot) -> Job | None:
+        """마지막 수단: 자기 담당 광석을 캐러 간다.
+
+        열쇠에 이름을 넣어 여섯이 여섯 몫을 캔다. 같은 광맥이어도 상관없다 -
+        652타일짜리 광맥에서 둘이 부딪힐 일은 없고, 서 있는 것보다는 캐는
+        것이 언제나 낫다.
+        """
+        for ore in [worker.focus] + [o for o in FOCUS_ORDER if o != worker.focus]:
+            spot = snap.ore(ore)
+            if not spot:
+                continue
+            return Job(f"할 일이 비어 {ore}를 캐 두겠습니다.",
+                       key=f"gather:{worker.name}",
+                       steps=[("mine", {**spot, "count": STOCKPILE,
+                                        "search_radius": 12,
+                                        "timeout_ticks": 60 * 60 * 5})])
+        return None
+
     def chain_toward(self, worker: Worker, snap: Snapshot) -> Job | None:
         """사다리의 다음 단이 요구하는 물건을 향해 한 걸음.
 
@@ -1855,6 +1890,11 @@ class Crew:
             if self.serve_board(worker, snap, idle=job is None):
                 continue
 
+            if job is None:
+                # 일감 종류가 사람 수보다 적으면 나머지는 서 있게 된다.
+                # 광맥은 무한하고 화로는 언제나 배가 고프므로, 정말로 할
+                # 일이 없다는 것은 캘 곳이 없다는 뜻일 때뿐이다.
+                job = self.keep_busy(worker, snap)
             if job is None:
                 if not worker.said_idle:
                     self.say(f"당장 할 일이 없습니다. {mission.briefing(snap)}",

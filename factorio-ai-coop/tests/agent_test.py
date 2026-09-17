@@ -57,12 +57,18 @@ def main() -> int:
 
     ALL_TECH = {"electronics", "steam-power", "automation-science-pack", "automation"}
 
-    def at(items=None, buildings=None, craftable=None, tech=None):
+    def at(items=None, buildings=None, craftable=None, tech=None, powered=None):
         # Default to "the early technologies are in": the ladder below is about
         # gathering and building, and unresearched tech has its own rungs.
+        #
+        # 전력은 기관이 서 있느냐가 아니라 흐르느냐다. 기관을 세워둔 세계는
+        # 기본적으로 «흐르는» 세계로 치고, 죽은 발전소는 powered=False 로
+        # 따로 시험한다.
+        standing = "steam-engine" in (buildings or {})
         return Snapshot(**world, items=items or {}, buildings=buildings or {},
                         craftable=craftable or {},
-                        researched=set(ALL_TECH if tech is None else tech))
+                        researched=set(ALL_TECH if tech is None else tech),
+                        powered=standing if powered is None else powered)
 
     rungs = [
         ("bare hands go for stone", at(), "mine", lambda j: j.steps[0][1]["x"] == 10),
@@ -146,6 +152,14 @@ def main() -> int:
     check("and stops when there is nothing left to do",
           next_goal(at(full, settled, CAN_TOOL), focus="copper-ore") is None,
           str(next_goal(at(full, settled, CAN_TOOL), focus="copper-ore")))
+
+    print("\n3i. a standing engine is not power")
+    dead = at(full, settled, CAN_TOOL, powered=False)
+    check("a dead power plant does not count as power",
+          (next_goal(dead, focus="copper-ore") or Job("")).routine == "power",
+          str((next_goal(dead, focus="copper-ore") or Job("")).key))
+    check("a running one does not ask for power again",
+          all(j.routine != "power" for j in plan(at(full, settled, CAN_TOOL))))
 
     print("\n3h. a drill with no chest is fixed before a new one is built")
     stranded = at({"coal": 10, "iron-plate": 20},
