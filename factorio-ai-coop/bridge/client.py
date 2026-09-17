@@ -181,6 +181,13 @@ class AIBridge:
         return {"researched": done, "current": status.get("current"),
                 "progress": status.get("progress"), "labs": status.get("labs")}
 
+    def panel(self, player: str, show: bool | None = None) -> dict:
+        """Open, close or toggle the crew panel for a player."""
+        return self.call("panel", player, show)
+
+    def set_focus(self, name: str, focus: str) -> dict:
+        return self.call("set_focus", name, focus)
+
     def water_sites(self, x: float, y: float, radius: int = 120,
                     wanted: int = 3) -> list[dict]:
         return _as_list(self.call("water_sites", x, y, radius, wanted).get("sites"))

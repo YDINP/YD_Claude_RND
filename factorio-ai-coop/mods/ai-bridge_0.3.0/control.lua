@@ -158,10 +158,87 @@ script.on_nth_tick(AUTOSAVE_INTERVAL, function()
   end
 end)
 
+--------------------------------------------------------------------- panel
+
+-- A watcher with no body needs somewhere to look. This is that: who is out
+-- there, what each one is doing, how deep its queue is, and whether research is
+-- moving. Rebuilt in place every refresh so it never goes stale.
+
+local PANEL_NAME = "ai_crew_panel"
+
+local function panel_rows(frame)
+  local grid = frame.grid
+  grid.clear()
+
+  for _, heading in ipairs({ "이름", "담당", "지금 하는 일", "대기", "위치" }) do
+    local label = grid.add { type = "label", caption = heading }
+    label.style.font = "default-bold"
+  end
+
+  for index, name in ipairs(storage.order) do
+    local a = storage.agents[name]
+    if a then
+      local b = body(a)
+      local color = COLORS[(((a.index or index) - 1) % #COLORS) + 1]
+
+      local tag = grid.add { type = "label", caption = name }
+      tag.style.font_color = color
+
+      grid.add { type = "label", caption = a.focus or "-" }
+
+      local doing = "유휴"
+      if a.current then
+        doing = a.current.type
+        local elapsed = math.floor((game.tick - a.current.started_tick) / 60)
+        if elapsed > 0 then doing = doing .. " (" .. elapsed .. "초)" end
+      elseif not b then
+        doing = "캐릭터 없음"
+      end
+      grid.add { type = "label", caption = doing }
+
+      grid.add { type = "label", caption = tostring(#a.queue) }
+      grid.add {
+        type = "label",
+        caption = b and string.format("%.0f, %.0f", b.position.x, b.position.y) or "-",
+      }
+    end
+  end
+
+  local force = game.forces["player"]
+  local research = force.current_research
+  frame.footer.caption = string.format(
+    "연구: %s%s   |   저장: %s전   |   틱 %d",
+    research and research.name or "없음",
+    research and string.format(" (%d%%)", math.floor(force.research_progress * 100)) or "",
+    storage.last_save_tick
+      and (math.floor((game.tick - storage.last_save_tick) / 60) .. "초")
+      or "아직 없음",
+    game.tick)
+end
+
+local function build_panel(player)
+  if player.gui.left[PANEL_NAME] then player.gui.left[PANEL_NAME].destroy() end
+  local frame = player.gui.left.add {
+    type = "frame", name = PANEL_NAME, direction = "vertical", caption = "AI 크루",
+  }
+  frame.add { type = "table", name = "grid", column_count = 5 }
+  frame.add { type = "label", name = "footer", caption = "" }
+  panel_rows(frame)
+  return frame
+end
+
+-- One handler for both: registering on_nth_tick twice with the same interval
+-- replaces the first, which would have silently killed the nametags.
 script.on_nth_tick(MARKER_INTERVAL, function()
   for _, name in ipairs(storage.order) do
     local a = storage.agents[name]
     if a then pcall(refresh_marker, a) end
+  end
+  for _, player in pairs(game.connected_players) do
+    local frame = player.gui.left[PANEL_NAME]
+    if frame and frame.valid then
+      pcall(panel_rows, frame)
+    end
   end
 end)
 
@@ -909,6 +986,28 @@ remote.add_interface("ai", {
   end,
 
   -- Force a save right now, over the file the server is running.
+  -- Show or hide the crew panel for one player.
+  panel = function(player_name, show)
+    local player = game.get_player(player_name)
+    if not player then return { error = "no such player: " .. tostring(player_name) } end
+    local existing = player.gui.left[PANEL_NAME]
+    if show == false or (show == nil and existing) then
+      if existing then existing.destroy() end
+      return { player = player_name, open = false }
+    end
+    build_panel(player)
+    return { player = player_name, open = true }
+  end,
+
+  -- The daemon decides which resource an agent looks after; the panel just
+  -- displays it.
+  set_focus = function(name, focus)
+    local a = agent(name)
+    if not a then return { error = "no such agent: " .. tostring(name) } end
+    a.focus = focus
+    return { name = name, focus = focus }
+  end,
+
   save = function()
     local ok, err = pcall(function() game.server_save() end)
     if not ok then return { error = tostring(err) } end

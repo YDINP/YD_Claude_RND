@@ -193,6 +193,8 @@ def parse(message: str) -> list[Intent]:
         return [("unobserver", {})]
     if any(w in text for w in ("저장", "세이브", "save")):
         return [("save", {})]
+    if any(w in text for w in ("패널", "현황판", "panel", "대시보드")):
+        return [("panel", {})]
 
     # "석탄 자동화" is a request for drills and chests, not a request to flip an
     # autopilot flag. It has to be tested before the bare mode keywords, or the
@@ -499,6 +501,11 @@ class Crew:
         worker = Worker(self.bridge.agent(name), focus=focus)
         worker.autopilot = self.autopilot
         self.workers[name] = worker
+        # The panel shows this, so the mod has to be told.
+        try:
+            self.bridge.set_focus(name, focus)
+        except RconError:
+            pass
         return worker
 
     def hire(self, name: str | None = None) -> Worker | None:
@@ -883,6 +890,14 @@ class Crew:
         """Roster and observer commands, which belong to nobody in particular."""
         kind, params = intent
 
+        if kind == "panel":
+            try:
+                state = self.bridge.panel(speaker)
+                self.say("현황판을 " + ("띄웠습니다." if state.get("open") else "닫았습니다."))
+            except RconError as exc:
+                self.say(f"현황판 실패: {exc}")
+            return True
+
         if kind == "save":
             try:
                 self.bridge.save()
@@ -926,6 +941,11 @@ class Crew:
             except RconError as exc:
                 self.say(f"관찰자 전환 실패: {exc}")
                 return True
+            try:
+                # A watcher with no body should not have to ask for the list.
+                self.bridge.panel(speaker, True)
+            except RconError:
+                pass
             adopted = result.get("adopted")
             if adopted:
                 self.adopt(adopted)
