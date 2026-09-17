@@ -21,6 +21,18 @@ if not exist "%FACTORIO_EXE%" (
   exit /b 1
 )
 
+rem A server left running by anything else already holds these ports, and
+rem Factorio's own complaint about it is buried in a wall of startup log.
+netstat -ano -p tcp | findstr /r /c:"127.0.0.1:27015 .*LISTENING" >nul
+if not errorlevel 1 (
+  echo.
+  echo   Port 27015 is already in use - another server is running.
+  echo   Close that window first, or run:  taskkill /F /IM factorio.exe
+  echo.
+  pause
+  exit /b 1
+)
+
 echo Syncing mod to the game client...
 if not exist "%CLIENT_MODS%" mkdir "%CLIENT_MODS%"
 copy /Y "%ROOT%\mods\ai-bridge_0.3.0\*.*" "%CLIENT_MODS%\" >nul
