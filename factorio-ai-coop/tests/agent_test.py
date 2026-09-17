@@ -8,8 +8,8 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 import brain  # noqa: E402
-from agent import (ALL, FOCUS_ORDER, Snapshot, next_goal, parse, share,  # noqa: E402
-                   split_target)
+from agent import (ALL, FOCUS_ORDER, Job, Snapshot, next_goal, parse,  # noqa: E402
+                   plan, share, split_target)
 
 PASSED: list[str] = []
 FAILED: list[str] = []
@@ -124,13 +124,16 @@ def main() -> int:
     FURNACE = {"stone-furnace": {"nearest": {"x": 3, "y": 3}, "nearest_dist": 4, "count": 1}}
     WITH_DRILL = {**FURNACE, "burner-mining-drill": {"nearest": {"x": 9, "y": 9},
                                                      "nearest_dist": 12, "count": 1}}
+    CAN_TOOL = {"burner-mining-drill": 1, "iron-chest": 2, "stone-furnace": 1}
 
-    def at(items=None, buildings=None):
-        return Snapshot(**world, items=items or {}, buildings=buildings or {})
+    def at(items=None, buildings=None, craftable=None):
+        return Snapshot(**world, items=items or {}, buildings=buildings or {},
+                        craftable=craftable or {})
 
     rungs = [
         ("bare hands go for stone", at(), "mine", lambda j: j.steps[0][1]["x"] == 10),
-        ("then a furnace is crafted", at({"stone": 5}), "craft", None),
+        ("crafts once the game says it can", at({"stone": 5}, None, {"stone-furnace": 1}),
+         "craft", None),
         ("then it is placed", at({"stone-furnace": 1}), "build", None),
         ("then fuel", at({}, FURNACE), "mine", lambda j: j.steps[0][1]["x"] == 20),
         ("then iron ore", at({"coal": 10}, FURNACE), "mine",
@@ -145,30 +148,113 @@ def main() -> int:
             ok = extra(job)
         check(label, bool(ok), (job.narration if job else "no job"))
 
-    print("\n3b. with plates in hand it mechanises, then keeps the patch stocked")
-    tooled = at({"coal": 10, "iron-plate": 20}, FURNACE)
-    job = next_goal(tooled, focus="coal")
-    check("builds a drill instead of mining by hand",
+    print("\n3b. it checks the recipe instead of trying and failing")
+    # The bug this pins: plates alone do not buy a drill - its recipe needs a
+    # stone furnace too. Announcing the build and watching the craft fail, over
+    # and over, is what the ladder used to do.
+    plates_only = at({"coal": 10, "iron-plate": 20}, FURNACE, {"burner-mining-drill": 0})
+    job = next_goal(plates_only, focus="coal")
+    check("no drill without the stone for it",
+          job is not None and job.routine is None, str(job.routine if job else None))
+    check("it goes and gets the stone",
+          job is not None and job.steps[0][0] == "mine" and job.steps[0][1]["x"] == 10,
+          job.narration if job else "no job")
+
+    affordable = at({"coal": 10, "iron-plate": 20}, FURNACE, CAN_TOOL)
+    job = next_goal(affordable, focus="coal")
+    check("builds it once affordable",
           job is not None and job.routine == "automate" and job.ore == "coal",
           str(job.routine if job else None))
 
-    running = at({"coal": 10, "iron-plate": 20}, WITH_DRILL)
+    in_hand = at({"coal": 10, "iron-plate": 20, "burner-mining-drill": 1},
+                 FURNACE, {"iron-chest": 1})
+    check("owning one is as good as affording one",
+          (next_goal(in_hand, focus="coal") or Job("")).routine == "automate")
+
+    running = at({"coal": 10, "iron-plate": 20}, WITH_DRILL, CAN_TOOL)
     job = next_goal(running, focus="copper-ore")
-    check("then stockpiles its own resource",
-          job is not None and job.steps and job.steps[0][1]["x"] == 40,
-          str(job.steps[0] if job and job.steps else None)[:70])
+    check("with one drill up it mechanises its own patch next",
+          job is not None and job.key == "automate:copper-ore",
+          str(job.key if job else None))
 
-    stocked = at({"coal": 10, "iron-plate": 20, "copper-ore": 99}, WITH_DRILL)
-    check("and stops when the stockpile is full",
-          next_goal(stocked, focus="copper-ore") is None)
+    # Once every patch has a drill and the stockpile is full there is genuinely
+    # nothing left on the ladder.
+    ALL_DRILLED = {**FURNACE, "burner-mining-drill": {"nearest": {"x": 9, "y": 9},
+                                                      "nearest_dist": 12, "count": 4}}
+    full = {"coal": 99, "iron-plate": 40, "iron-ore": 99, "copper-ore": 99, "stone": 99}
+    check("and stops when there is nothing left to do",
+          next_goal(at(full, ALL_DRILLED, CAN_TOOL), focus="copper-ore") is None,
+          str(next_goal(at(full, ALL_DRILLED, CAN_TOOL), focus="copper-ore")))
 
-    print("\n3c. each agent works a different resource")
+    print("\n3c. work that just failed is not proposed again")
+    # One unreachable furnace used to fill the chat with the same line forever.
+    stuck = at({"coal": 10, "iron-ore": 20}, FURNACE, CAN_TOOL)
+    check("smelting is the plan while it works",
+          (next_goal(stuck) or Job("")).steps[0][0] == "insert")
+    after_failure = next_goal(stuck, blocked=frozenset({"insert"}))
+    still_smelting = bool(after_failure and after_failure.steps
+                          and after_failure.steps[0][0] == "insert")
+    check("after it fails the agent moves on", not still_smelting,
+          after_failure.narration if after_failure else "nothing left to try")
+
+    blocked_automate = next_goal(affordable, focus="coal", blocked=frozenset({"automate"}))
+    check("a failed build-out is not retried",
+          blocked_automate is None or blocked_automate.routine != "automate",
+          str(blocked_automate.narration if blocked_automate else None))
+
+    print("\n3d. the crew divides the work instead of duplicating it")
+    # The complaint this pins: three agents all walking to the same rock.
+    busy = at({}, None, {})
+    first = next_goal(busy, focus="iron-ore")
+    check("the first agent takes the top job", first is not None and first.key == "furnace",
+          str(first.key if first else None))
+
+    second = next_goal(busy, focus="coal", taken=frozenset({first.key}))
+    check("the second takes a different one",
+          second is not None and second.key != first.key,
+          f"{first.key} vs {second.key if second else None}")
+
+    third = next_goal(busy, focus="copper-ore",
+                      taken=frozenset({first.key, second.key}))
+    check("and so does the third",
+          third is not None and third.key not in {first.key, second.key},
+          str(third.key if third else None))
+
+    keys = [j.key for j in plan(busy)]
+    check("job keys are unique", len(keys) == len(set(keys)), str(keys))
+
+    # One furnace, one cook. Two agents stuffing the same furnace and both
+    # waiting on its output is not teamwork.
+    smelting = at({"coal": 10, "iron-ore": 20}, FURNACE, CAN_TOOL)
+    cook = next_goal(smelting)
+    check("smelting is keyed to the furnace", cook is not None and cook.key.startswith("smelt:"),
+          str(cook.key if cook else None))
+    other = next_goal(smelting, focus="coal", taken=frozenset({cook.key}))
+    check("the second cook does something else",
+          other is None or not other.key.startswith("smelt:"),
+          str(other.key if other else None))
+
+    # Drills go on different patches, not four onto one.
+    tooled = at({"coal": 10, "iron-plate": 40}, FURNACE, CAN_TOOL)
+    automations = [j.key for j in plan(tooled) if j.routine == "automate"]
+    check("one automation offered per ore",
+          len(automations) == len(set(automations)) and len(automations) > 1,
+          str(automations))
+
+    print("\n3e. each agent still prefers its own resource")
+    stock_first = [j.key for j in plan(
+        at({"coal": 10, "iron-plate": 40, "iron-ore": 99}, WITH_DRILL, CAN_TOOL),
+        focus="copper-ore") if j.key.startswith("stock:")]
+    check("its own ore is offered first",
+          stock_first and stock_first[0] == "stock:copper-ore", str(stock_first[:2]))
+
+    print("\n3f. each agent works a different resource")
     focuses = [FOCUS_ORDER[i % len(FOCUS_ORDER)] for i in range(4)]
     check("four agents, four resources", len(set(focuses)) == 4, str(focuses))
     check("a fifth wraps around", FOCUS_ORDER[4 % len(FOCUS_ORDER)] == FOCUS_ORDER[0])
 
     print("\n4. planning is pure")
-    twice = at({"coal": 10, "iron-ore": 20}, FURNACE)
+    twice = at({"coal": 10, "iron-ore": 20}, FURNACE, CAN_TOOL)
     check("same snapshot, same plan", next_goal(twice) == next_goal(twice))
 
     print("\n5. LLM output is treated as untrusted")

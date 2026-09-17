@@ -23,6 +23,29 @@ local MAX_OBSERVE_RADIUS = 200 -- one observe runs inside a single tick
 local PATH_ANSWER_TTL = 1800   -- ticks an uncollected path answer may linger
 local CHAT_HISTORY = 50
 
+-- Recipes the self-directed ladder reasons about. Reported with every
+-- inventory so an agent can ask "can I build this yet?" instead of trying and
+-- failing in a loop.
+local PLANNING_RECIPES = {
+  "burner-mining-drill", "iron-chest", "stone-furnace",
+  "iron-gear-wheel", "transport-belt", "wooden-chest",
+}
+
+local MARKER_INTERVAL = 30   -- ticks between nametag/map-tag refreshes
+local TAG_MOVE_EPSILON = 6   -- tiles an agent may drift before its map tag moves
+
+-- Distinct enough to tell apart at a glance on a dark map.
+local COLORS = {
+  { r = 0.35, g = 0.80, b = 1.00 },
+  { r = 1.00, g = 0.75, b = 0.25 },
+  { r = 0.55, g = 1.00, b = 0.45 },
+  { r = 1.00, g = 0.50, b = 0.80 },
+  { r = 0.70, g = 0.60, b = 1.00 },
+  { r = 1.00, g = 0.40, b = 0.35 },
+  { r = 0.45, g = 0.95, b = 0.90 },
+  { r = 0.90, g = 0.90, b = 0.55 },
+}
+
 --------------------------------------------------------------------- storage
 
 local function init()
@@ -35,6 +58,7 @@ local function init()
   storage.paths = storage.paths or {}
   storage.chat = storage.chat or {}
   storage.next_id = storage.next_id or 1
+  storage.next_index = storage.next_index or 0
 end
 
 script.on_init(init)
@@ -48,6 +72,78 @@ local function body(a)
   if a and a.char and a.char.valid then return a.char end
   return nil
 end
+
+--------------------------------------------------------------- visibility
+
+-- An agent's character is not a player, so the game gives it neither a nametag
+-- nor a dot on the minimap. Both have to be drawn by hand, and they are two
+-- different mechanisms: a render object follows the entity in the world, while
+-- only a map tag shows up on the map and minimap.
+
+local function drop_marker(a)
+  if a.label and a.label.valid then a.label.destroy() end
+  if a.tag and a.tag.valid then a.tag.destroy() end
+  a.label, a.tag = nil, nil
+end
+
+local function marker_text(a)
+  if a.current then
+    return a.name .. " · " .. a.current.type
+  end
+  if #a.queue > 0 then
+    return a.name .. " · " .. #a.queue .. " queued"
+  end
+  return a.name
+end
+
+local function refresh_marker(a)
+  local b = body(a)
+  if not b then
+    drop_marker(a)
+    return
+  end
+
+  local color = COLORS[(((a.index or 1) - 1) % #COLORS) + 1]
+
+  if not (a.label and a.label.valid) then
+    a.label = rendering.draw_text {
+      text = marker_text(a),
+      surface = b.surface,
+      target = { entity = b, offset = { 0, -2.2 } },
+      color = color,
+      scale = 0.9,
+      alignment = "center",
+      scale_with_zoom = false,
+      only_in_alt_mode = false,
+    }
+  else
+    a.label.text = marker_text(a)
+  end
+
+  -- Chart tags cannot be moved, only replaced, so only redraw when the agent
+  -- has actually walked somewhere. Otherwise every agent churns a tag twice a
+  -- second for no visible difference.
+  local moved = not (a.tag and a.tag.valid)
+    or Tasks.dist(a.tag.position, b.position) > TAG_MOVE_EPSILON
+  if moved then
+    if a.tag and a.tag.valid then a.tag.destroy() end
+    local ok, tag = pcall(function()
+      return b.force.add_chart_tag(b.surface, {
+        position = b.position,
+        text = a.name,
+      })
+    end)
+    -- add_chart_tag returns nil on an uncharted chunk; try again next time.
+    a.tag = (ok and tag) or nil
+  end
+end
+
+script.on_nth_tick(MARKER_INTERVAL, function()
+  for _, name in ipairs(storage.order) do
+    local a = storage.agents[name]
+    if a then pcall(refresh_marker, a) end
+  end
+end)
 
 --------------------------------------------------------------------- results
 
@@ -315,7 +411,21 @@ local function inventory(name)
       out[stack.name] = (out[stack.name] or 0) + stack.count
     end
   end
-  return { agent = name, items = out, health = b.health, x = b.position.x, y = b.position.y }
+  -- What could be hand-crafted right now, counting intermediates. Guessing this
+  -- from the raw item list means re-deriving every recipe tree in the agent;
+  -- the game already knows, and it knows about research too.
+  local craftable = {}
+  for _, recipe in ipairs(PLANNING_RECIPES) do
+    if prototypes.recipe[recipe] then
+      local ok, count = pcall(function() return b.get_craftable_count(recipe) end)
+      craftable[recipe] = (ok and count) or 0
+    end
+  end
+
+  return {
+    agent = name, items = out, craftable = craftable,
+    health = b.health, x = b.position.x, y = b.position.y,
+  }
 end
 
 local function agent_status(name)
@@ -331,6 +441,8 @@ local function agent_status(name)
     y = b and b.position.y or nil,
     health = b and b.health or nil,
     force = b and b.force.name or nil,
+    labelled = (a.label ~= nil and a.label.valid) or false,
+    on_map = (a.tag ~= nil and a.tag.valid) or false,
     current = a.current and {
       id = a.current.id, type = a.current.type,
       elapsed = game.tick - a.current.started_tick,
@@ -387,11 +499,17 @@ local function spawn_at(name, force_name, position, adopt)
     local old = body(existing)
     if old and old ~= character then old.destroy() end
     drop_queue(existing, "agent respawned")
+    drop_marker(existing)
     existing.char, existing.current = character, nil
   else
-    storage.agents[name] = { name = name, char = character, queue = {}, current = nil }
+    storage.next_index = (storage.next_index or 0) + 1
+    storage.agents[name] = {
+      name = name, char = character, queue = {}, current = nil,
+      index = storage.next_index,
+    }
     table.insert(storage.order, name)
   end
+  pcall(refresh_marker, storage.agents[name])
 
   return {
     name = name,
@@ -434,6 +552,7 @@ remote.add_interface("ai", {
   remove = function(name)
     local a = agent(name)
     if not a then return { error = "no such agent: " .. tostring(name) } end
+    drop_marker(a)
     local b = body(a)
     if b then b.destroy() end
     drop_queue(a, "agent removed")

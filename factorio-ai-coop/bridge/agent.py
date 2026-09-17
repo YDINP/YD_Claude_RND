@@ -49,6 +49,7 @@ class Snapshot:
     x: float = 0.0
     y: float = 0.0
     items: dict[str, int] = field(default_factory=dict)
+    craftable: dict[str, int] = field(default_factory=dict)
     buildings: dict[str, dict] = field(default_factory=dict)
     resources: dict[str, dict] = field(default_factory=dict)
     humans: list[dict] = field(default_factory=list)
@@ -56,6 +57,15 @@ class Snapshot:
 
     def have(self, item: str) -> int:
         return self.items.get(item, 0)
+
+    def can_make(self, recipe: str, count: int = 1) -> bool:
+        """Whether the game says this is hand-craftable right now.
+
+        Asked rather than derived: the recipe tree, the intermediates and the
+        research state all live in the game, and guessing at them is how an
+        agent ends up announcing a build it cannot afford.
+        """
+        return self.craftable.get(recipe, 0) >= count
 
     def ore(self, name: str) -> dict | None:
         found = self.resources.get(name)
@@ -221,6 +231,7 @@ FURNACE_FUEL = 5
 SMELT_BATCH = 20
 PLATES_FOR_TOOLS = 12   # enough to hand-craft a drill and a chest
 STOCKPILE = 30
+BACKOFF_SECONDS = 120   # how long a failed kind of work stays off the ladder
 
 # Each agent takes one resource so a crew does not all stand on the same patch.
 FOCUS_ORDER = ["iron-ore", "coal", "copper-ore", "stone"]
@@ -228,78 +239,122 @@ FOCUS_ORDER = ["iron-ore", "coal", "copper-ore", "stone"]
 
 @dataclass
 class Job:
-    """One step of the ladder: either a queue of tasks, or a named routine.
+    """One piece of work: either a queue of tasks, or a named routine.
 
     Automation cannot be expressed as a fixed step list - where the chest goes
     depends on what the drill says after it is built - so it is named here and
     carried out by the crew.
+
+    `key` is what makes a crew a crew rather than a crowd. Two agents may not
+    hold the same key at once, so the second one moves down the list instead of
+    walking to the same ore tile as the first.
     """
     narration: str
     steps: list[Step] = field(default_factory=list)
     routine: str | None = None
     ore: str | None = None
+    key: str = ""
 
 
-def next_goal(snap: Snapshot, focus: str = "iron-ore") -> Job | None:
-    """What this agent should do next, with nobody telling it.
+def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
+    """Everything worth doing right now, best first.
 
-    The ladder climbs from bare hands to a running mine: gather stone, build a
-    furnace, smelt enough plates to afford tools, then put a drill and a chest
-    on its own patch and keep it stocked. Each agent runs this for its own
-    resource, so a crew spreads out instead of queueing on one ore tile.
-
-    Pure: the same snapshot always proposes the same move, which makes the
-    behaviour reproducible and the ladder unit-testable.
+    Pure, and deliberately a *list*: the crew hands out different entries to
+    different agents. A single "what should I do" answer is how three agents end
+    up shoulder to shoulder on the same rock.
     """
+    jobs: list[Job] = []
     furnace = snap.building("stone-furnace")
     drills = snap.buildings.get(DRILL, {}).get("count", 0)
 
-    # --- bootstrap: hands only ------------------------------------------
-    if not furnace and snap.have("stone-furnace") < 1:
-        if snap.have("stone") < 5:
+    # --- infrastructure the whole crew shares ----------------------------
+    # One furnace serves everybody, so only one agent should be building it.
+    if not furnace:
+        if snap.have("stone-furnace") >= 1:
+            jobs.append(Job("화로를 설치합니다.", key="furnace", steps=[
+                ("build", {"name": "stone-furnace", "x": snap.x + 3, "y": snap.y + 3,
+                           "snap": True})
+            ]))
+        elif snap.can_make("stone-furnace"):
+            jobs.append(Job("화로를 제작합니다.", key="furnace",
+                            steps=[("craft", {"recipe": "stone-furnace", "count": 1})]))
+        else:
             spot = snap.ore("stone")
             if spot:
-                return Job("돌부터 캐서 화로를 만들겠습니다.", [("mine", {**spot, "count": 5})])
-        else:
-            return Job("화로를 제작합니다.", [("craft", {"recipe": "stone-furnace", "count": 1})])
+                jobs.append(Job("돌부터 캐서 화로를 만들겠습니다.", key="furnace",
+                                steps=[("mine", {**spot, "count": 5})]))
 
-    if not furnace and snap.have("stone-furnace") >= 1:
-        return Job("화로를 설치합니다.", [
-            ("build", {"name": "stone-furnace", "x": snap.x + 3, "y": snap.y + 3, "snap": True})
-        ])
-
+    # --- feed the smelting loop ------------------------------------------
     if snap.have("coal") < FURNACE_FUEL:
         spot = snap.ore("coal")
         if spot:
-            return Job("연료가 없습니다. 석탄 캐러 갑니다.", [("mine", {**spot, "count": 10})])
+            jobs.append(Job("연료가 없습니다. 석탄 캐러 갑니다.", key="gather:coal",
+                            steps=[("mine", {**spot, "count": 10})]))
 
-    # --- smelt enough plates to afford tools -----------------------------
     if snap.have("iron-plate") < PLATES_FOR_TOOLS:
         if snap.have("iron-ore") < SMELT_BATCH:
             spot = snap.ore("iron-ore")
             if spot:
-                return Job("철광석 캐러 갑니다.", [("mine", {**spot, "count": SMELT_BATCH})])
+                jobs.append(Job("철광석 캐러 갑니다.", key="gather:iron-ore",
+                                steps=[("mine", {**spot, "count": SMELT_BATCH})]))
         elif furnace:
-            return Job("화로에 석탄과 철광석을 넣고 제련합니다.", [
-                ("insert", {"name": "coal", "count": FURNACE_FUEL, **furnace}),
-                ("insert", {"name": "iron-ore", "count": SMELT_BATCH, **furnace}),
-                ("wait", {"ticks": 60 * 40}),
-                ("take", {"name": "iron-plate", "count": SMELT_BATCH, **furnace}),
-            ])
+            # Keyed by the furnace, not by the agent: two agents stuffing one
+            # furnace and both waiting for its output is not teamwork.
+            jobs.append(Job("화로에 석탄과 철광석을 넣고 제련합니다.",
+                            key=f"smelt:{furnace['x']:.0f},{furnace['y']:.0f}", steps=[
+                                ("insert", {"name": "coal", "count": FURNACE_FUEL, **furnace}),
+                                ("insert", {"name": "iron-ore", "count": SMELT_BATCH, **furnace}),
+                                ("wait", {"ticks": 60 * 40}),
+                                ("take", {"name": "iron-plate", "count": SMELT_BATCH, **furnace}),
+                            ]))
 
     # --- mechanise: a drill beats hands ----------------------------------
-    if drills < 1 and snap.have("iron-plate") >= PLATES_FOR_TOOLS:
-        return Job(f"{focus} 자동 채굴을 준비하겠습니다.", routine="automate", ore=focus)
+    # A drill costs iron *and* stone (through the furnace in its recipe). Asking
+    # the game whether it is affordable is the difference between building one
+    # and announcing it forever while the craft fails.
+    if snap.have(DRILL) >= 1 or (snap.can_make(DRILL) and snap.can_make(CHEST)):
+        # Own patch first, then whatever else still lacks a drill.
+        for ore in [focus] + [o for o in FOCUS_ORDER if o != focus]:
+            if snap.ore(ore) and drills < len(FOCUS_ORDER):
+                jobs.append(Job(f"{ore} 자동 채굴을 준비하겠습니다.",
+                                key=f"automate:{ore}", routine="automate", ore=ore))
+    elif snap.have("iron-plate") >= PLATES_FOR_TOOLS and not snap.can_make("stone-furnace"):
+        spot = snap.ore("stone")
+        if spot:
+            jobs.append(Job("채굴기를 만들려면 돌이 더 필요합니다.", key="gather:stone",
+                            steps=[("mine", {**spot, "count": 10})]))
 
-    # --- keep the patch working ------------------------------------------
-    # For all four focus resources the mined item is named like the resource.
-    spot = snap.ore(focus)
-    if spot and snap.have(focus) < STOCKPILE:
-        return Job(f"{focus} 비축분을 채우겠습니다.", [
-            ("mine", {**spot, "count": STOCKPILE, "search_radius": 10,
-                      "timeout_ticks": 60 * 60 * 5})
-        ])
+    # --- keep patches stocked, starting with this agent's own ------------
+    for ore in [focus] + [o for o in FOCUS_ORDER if o != focus]:
+        spot = snap.ore(ore)
+        if spot and snap.have(ore) < STOCKPILE:
+            jobs.append(Job(f"{ore} 비축분을 채우겠습니다.", key=f"stock:{ore}", steps=[
+                ("mine", {**spot, "count": STOCKPILE, "search_radius": 10,
+                          "timeout_ticks": 60 * 60 * 5})
+            ]))
 
+    return jobs
+
+
+def next_goal(snap: Snapshot, focus: str = "iron-ore",
+              blocked: frozenset[str] = frozenset(),
+              taken: frozenset[str] = frozenset()) -> Job | None:
+    """The best job this agent may take.
+
+    `blocked` is what has just failed for it - re-proposing that is how one
+    unreachable furnace fills the chat with the same line forever. `taken` is
+    what the rest of the crew is already doing.
+    """
+    for job in plan(snap, focus):
+        if job.key in taken:
+            continue
+        # Failures are recorded by task type ("mine", "insert", ...) as well as
+        # by job key, because that is what the game reports back.
+        if job.key in blocked or (job.routine or "") in blocked:
+            continue
+        if job.steps and job.steps[0][0] in blocked:
+            continue
+        return job
     return None
 
 
@@ -317,21 +372,36 @@ class Worker:
         self.said_idle = False
         # One slow job (an LLM call, a build-out) at a time per agent.
         self.slot = threading.Semaphore(1)
+        # What has just failed, and until when it stays off the table.
+        self.blocked: dict[str, float] = {}
+        # The job key this agent currently holds, so the crew can hand the rest
+        # of the list to somebody else.
+        self.job_key: str | None = None
 
     def snapshot(self, radius: int = 200) -> Snapshot:
         world = self.handle.observe(radius=radius)
+        inventory = self.handle.inventory()
         humans = world.get("humans") or {}
         mates = world.get("agents") or {}
         return Snapshot(
             tick=world.get("tick", 0),
             x=world.get("position", {}).get("x", 0.0),
             y=world.get("position", {}).get("y", 0.0),
-            items=self.handle.items(),
+            items=inventory.get("items") or {},
+            craftable=inventory.get("craftable") or {},
             buildings=world.get("buildings") or {},
             resources=world.get("resources") or {},
             humans=list(humans.values()) if isinstance(humans, dict) else humans,
             mates=list(mates.values()) if isinstance(mates, dict) else mates,
         )
+
+    def block(self, kind: str, seconds: float = BACKOFF_SECONDS) -> None:
+        self.blocked[kind] = time.monotonic() + seconds
+
+    def blocked_now(self) -> frozenset[str]:
+        now = time.monotonic()
+        self.blocked = {k: t for k, t in self.blocked.items() if t > now}
+        return frozenset(self.blocked)
 
 
 # ---------------------------------------------------------------------- crew
@@ -345,6 +415,9 @@ class Crew:
         self.since_tick: int | None = None
         self.workers: dict[str, Worker] = {}
         self.thoughts: queue.Queue[tuple[str, str, list[Step]]] = queue.Queue()
+        # job key -> agent holding it. This is the whole of the orchestration:
+        # nobody may start work someone else has already taken.
+        self.claims: dict[str, str] = {}
 
     # -- roster -----------------------------------------------------------
 
@@ -379,7 +452,9 @@ class Crew:
 
     def fire(self, name: str) -> None:
         self.bridge.remove(name)
-        self.workers.pop(name, None)
+        worker = self.workers.pop(name, None)
+        if worker:
+            self.release(worker)
         self.say(f"{name} 내보냈습니다.")
 
     def sync_roster(self) -> None:
@@ -393,6 +468,22 @@ class Crew:
     def say(self, text: str, who: str = "AI") -> None:
         print(f"[{who}] {text}")
         self.bridge.say(text, who=who)
+
+    # -- who is doing what -------------------------------------------------
+
+    def taken(self) -> frozenset[str]:
+        return frozenset(self.claims)
+
+    def claim(self, worker: Worker, key: str) -> None:
+        self.release(worker)
+        if key:
+            self.claims[key] = worker.name
+            worker.job_key = key
+
+    def release(self, worker: Worker) -> None:
+        if worker.job_key:
+            self.claims.pop(worker.job_key, None)
+            worker.job_key = None
 
     def targets(self, target: str | None) -> list[Worker]:
         """Who carries out an order.
@@ -445,8 +536,13 @@ class Crew:
     # -- automation --------------------------------------------------------
 
     def ensure(self, worker: Worker, item: str, count: int = 1) -> bool:
-        if worker.handle.items().get(item, 0) >= count:
+        """Have `count` of an item, crafting it only if the game says we can."""
+        stock = worker.handle.inventory()
+        if (stock.get("items") or {}).get(item, 0) >= count:
             return True
+        if (stock.get("craftable") or {}).get(item, 0) < count:
+            self.say(f"{item} 재료가 모자랍니다.", who=worker.name)
+            return False
         try:
             self.say(f"{item}이(가) 부족해서 제작합니다.", who=worker.name)
             worker.handle.craft(item, count=count)
@@ -484,6 +580,7 @@ class Crew:
                 return
 
             if not self.ensure(worker, DRILL) or not self.ensure(worker, CHEST):
+                worker.block("automate")
                 return
 
             self.say(f"{ore} 광맥에 채굴기를 놓겠습니다. ({spot['x']:.0f}, {spot['y']:.0f})", who=name)
@@ -509,8 +606,10 @@ class Crew:
             self.say(f"{ore} 자동 채굴 완료. 채굴기 ({drill['x']:.0f}, {drill['y']:.0f}), "
                      f"상자 ({drop['drop_x']:.0f}, {drop['drop_y']:.0f}).", who=name)
         except TaskFailed as exc:
+            worker.block("automate")
             self.say(f"자동화 중 막혔습니다: {exc.task.get('error')}", who=name)
         except RconError as exc:
+            worker.block("automate")
             self.say(f"자동화 중 오류: {exc}", who=name)
 
     # -- reporting ---------------------------------------------------------
@@ -524,7 +623,11 @@ class Crew:
                 if status in ("queued", "running"):
                     still.append(task_id)
                 elif status == "failed":
-                    self.say(f"{state.get('type')} 실패: {state.get('error')}", who=worker.name)
+                    kind = state.get("type") or "unknown"
+                    # Remember what failed. Re-proposing it every second is how
+                    # one unreachable furnace fills the chat with the same line.
+                    worker.block(kind)
+                    self.say(f"{kind} 실패: {state.get('error')}", who=worker.name)
             worker.watching = still
 
     # -- dispatch ----------------------------------------------------------
@@ -714,6 +817,7 @@ class Crew:
                 for index, worker in enumerate(crew):
                     worker.handle.cancel()
                     worker.watching = []
+                    self.release(worker)
                     self.handle(worker, share(intent, len(crew), index), speaker)
 
         if messages:
@@ -734,7 +838,8 @@ class Crew:
             except RconError:
                 continue
 
-            job = next_goal(snap, worker.focus)
+            self.release(worker)
+            job = next_goal(snap, worker.focus, worker.blocked_now(), self.taken())
             if job is None:
                 if not worker.said_idle:
                     self.say("당장 할 일이 없습니다. 시키실 게 있으면 말씀해 주세요.", who=worker.name)
@@ -742,6 +847,7 @@ class Crew:
                 continue
 
             worker.said_idle = False
+            self.claim(worker, job.key)
             self.say(job.narration, who=worker.name)
             if job.routine == "automate":
                 self.start_automation(worker, job.ore)
