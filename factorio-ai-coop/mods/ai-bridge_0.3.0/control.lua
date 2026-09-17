@@ -1862,6 +1862,35 @@ remote.add_interface("ai", {
   -- 이 아이템이 든 상자들, 가까운 순.
   chest_stock = chest_stock,
 
+  -- 공용 창고. 각자 가방에 광석을 안고 다니면 필요한 사람에게 가지 않는다.
+  -- 한 자리를 정해두고 모두가 거기에 넣고 거기서 꺼낸다. 데몬이 재시작해도
+  -- 잊지 않도록 게임 쪽에 적어둔다.
+  set_depot = function(x, y)
+    storage.depot = { x = x, y = y }
+    return storage.depot
+  end,
+
+  depot = function()
+    if not storage.depot then return { depot = nil } end
+    local here = game.surfaces[1].find_entities_filtered {
+      position = { storage.depot.x, storage.depot.y }, radius = 1.2,
+      type = "container",
+    }[1]
+    if not here then
+      storage.depot = nil
+      return { depot = nil, lost = true }
+    end
+    local inv = here.get_inventory(defines.inventory.chest)
+    local items = {}
+    if inv then
+      for _, stack in pairs(inv.get_contents()) do
+        items[stack.name] = (items[stack.name] or 0) + stack.count
+      end
+    end
+    return { depot = storage.depot, items = items,
+             free = inv and inv.count_empty_stacks() or 0 }
+  end,
+
   set_focus = function(name, focus)
     local a = agent(name)
     if not a then return { error = "no such agent: " .. tostring(name) } end

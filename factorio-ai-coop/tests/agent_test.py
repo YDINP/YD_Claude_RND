@@ -146,7 +146,12 @@ def main() -> int:
     ENOUGH = {"stone-furnace": {"nearest": {"x": 5, "y": 5}, "nearest_dist": 7, "count": 4,
                                 "spots": [{"x": 5 + 4 * i, "y": 5, "distance": 7}
                                           for i in range(4)]}}
-    settled = {**ALL_DRILLED, **ENOUGH,
+    # 드릴 5 : 화로 4 가 두 비율의 고정점이다. 드릴이 모자라면 «채굴기를 더
+    # 놓을 수 있는» 세계고, 드릴이 넘치면 «화로를 더 지어야 하는» 세계다.
+    # 둘 다 «할 일이 없는» 세계가 아니다.
+    PLENTY = {**ALL_DRILLED, "burner-mining-drill": {
+        **ALL_DRILLED["burner-mining-drill"], "count": 5}}
+    settled = {**PLENTY, **ENOUGH,
                "lab": {"nearest": {"x": 4, "y": -4}, "nearest_dist": 6, "count": 1},
                "steam-engine": {"nearest": {"x": 20, "y": 20}, "nearest_dist": 28, "count": 1}}
     check("and stops when there is nothing left to do",

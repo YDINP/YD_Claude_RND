@@ -199,7 +199,7 @@ DRILLS_PER_FURNACE = 5 / 4
 
 # 버너 드릴은 석탄을 손으로 넣어줘야 한다. 돌볼 수 있는 것보다 많이 지으면
 # 멈춘 기계만 늘어난다 - 한 사람이 셋까지.
-DRILLS_PER_AGENT = 3
+DRILLS_PER_AGENT = 6
 
 
 def drill_target(snap: Snapshot, crew: int) -> int:
@@ -509,6 +509,12 @@ DISPATCH_INTERVAL = 10.0
 # 한 번에 한 사람이 받아 가는 석탄.
 HAUL_BATCH = 40
 
+# 가방에 이만큼 넘게 쌓이면 공용 창고에 넣는다. 각자 안고 다니면 필요한
+# 사람에게 가지 않는다 - 옆 사람이 철광석 150개를 든 채로 «철광석이
+# 필요합니다»라고 말하는 일이 생긴다.
+KEEP_IN_HAND = 50
+DEPOT_MIN = 20
+
 IDLE_ASK_QUIET = 150.0
 # 그럴 때 쓰는 모델. 반장이 지시를 쪼갤 때와는 판단의 무게가 다르고,
 # 자주 일어나는 일이라 싼 쪽이 맞다.
@@ -645,6 +651,8 @@ class Crew:
         self.stage: str | None = None
         self.goal_line = f"목표 {mission.GOAL}"
         self.dispatched_at = 0.0
+        # 이번 틱에 찍은 스냅샷들. 배차가 무리 전체를 볼 때 쓴다.
+        self.snaps: dict[str, Snapshot] = {}
         self.research_checked = 0.0
         self.research_said: str | None = None
         # 방금 한 말들. 같은 줄을 되풀이하지 않기 위한 것.
@@ -1428,7 +1436,15 @@ class Crew:
                                  "x": entry["x"], "y": entry["y"]})],
                 at={"x": entry["x"], "y": entry["y"]}))
 
-        # 3. 출구가 막혀 선 채굴기.
+        # 3. 가방이 넘치는 사람은 공용 창고에 부린다. 물자가 한 사람의
+        #    가방에 갇혀 있으면 없는 것과 같다.
+        for mate, snap in self.snaps.items():
+            job = self.depot_job(self.workers[mate], snap) if mate in self.workers else None
+            if job:
+                jobs.append(job)
+                break
+
+        # 4. 출구가 막혀 선 채굴기.
         for entry in stopped:
             if entry.get("fix") != "chest":
                 continue
@@ -1488,18 +1504,63 @@ class Crew:
 
         return handed
 
-    def keep_busy(self, worker: Worker, snap: Snapshot) -> Job | None:
-        """마지막 수단: 자기 담당 광석을 캐러 간다.
+    def depot_job(self, worker: Worker, snap: Snapshot) -> Job | None:
+        """가방에 넘치는 것을 공용 창고에 넣는다.
 
-        열쇠에 이름을 넣어 여섯이 여섯 몫을 캔다. 같은 광맥이어도 상관없다 -
-        652타일짜리 광맥에서 둘이 부딪힐 일은 없고, 서 있는 것보다는 캐는
-        것이 언제나 낫다.
+        각자 안고 다니면 물자가 필요한 사람에게 가지 않는다. 옆 사람이
+        철광석 150개를 든 채로 «철광석이 필요합니다»라고 말하는 일이
+        실제로 벌어졌다. 한 자리에 모아두면 누구든 꺼내 쓸 수 있다.
         """
+        try:
+            found = self.bridge.depot()
+        except RconError:
+            return None
+
+        where = found.get("depot")
+        if not where:
+            # 창고가 없으면 하나 세운다. 자리는 무리가 모이는 곳 - 화로 옆.
+            base = snap.building("stone-furnace")
+            if not base or snap.have(CHEST) < 1:
+                return None
+            return Job("공용 창고를 세우겠습니다.", key="depot:build", steps=[
+                ("build", {"name": CHEST, "x": base["x"] + 2, "y": base["y"] + 2,
+                           "snap": True})])
+
+        surplus = [(name, count - KEEP_IN_HAND)
+                   for name, count in snap.items.items()
+                   if count - KEEP_IN_HAND >= DEPOT_MIN and name != "coal"]
+        if not surplus:
+            return None
+        surplus.sort(key=lambda pair: -pair[1])
+        name, amount = surplus[0]
+        return Job(f"{name} {amount}개를 공용 창고에 넣겠습니다.",
+                   key=f"depot:{worker.name}",
+                   steps=[("insert", {"name": name, "count": amount, **where})],
+                   at=where)
+
+    def keep_busy(self, worker: Worker, snap: Snapshot) -> Job | None:
+        """마지막 수단. 손으로 캐기 전에 먼저 채굴기를 늘린다.
+
+        사람이 곡괭이를 드는 것은 0.5 광석/초고 버너 채굴기는 0.25지만,
+        채굴기는 자지도 않고 걷지도 않는다. 한 번 세우면 계속 캐는 것과
+        한 사람이 그 자리에 붙어 있는 것은 비교가 안 된다 - 손 채굴은
+        부트스트랩 임시방편이지 일감이 아니다.
+        """
+        # 1. 채굴기를 하나 더. 만들 수 있으면 언제나 이쪽이 낫다.
+        if snap.can_make(DRILL) or snap.have(DRILL) >= 1:
+            for ore in [worker.focus] + [o for o in FOCUS_ORDER if o != worker.focus]:
+                if snap.ore(ore):
+                    return Job(f"할 일이 비어 {ore} 채굴기를 하나 더 놓겠습니다.",
+                               key=f"automate:{ore}:{worker.name}",
+                               routine="automate", ore=ore,
+                               needs={DRILL: 1})
+
+        # 2. 정말 못 만들면 그때 손으로 캔다. 곡괭이질은 여기까지 밀린다.
         for ore in [worker.focus] + [o for o in FOCUS_ORDER if o != worker.focus]:
             spot = snap.ore(ore)
             if not spot:
                 continue
-            return Job(f"할 일이 비어 {ore}를 캐 두겠습니다.",
+            return Job(f"채굴기를 못 만들어 {ore}를 손으로 캐겠습니다.",
                        key=f"gather:{worker.name}",
                        steps=[("mine", {**spot, "count": STOCKPILE,
                                         "search_radius": 12,
@@ -2109,6 +2170,7 @@ class Crew:
 
         if not free:
             return
+        self.snaps = {w.name: snap for w, snap in free}
 
         # 반장이 판을 보고 나눠준다. 여기서 받은 사람은 각자 고르지 않는다.
         handed: set[str] = set()

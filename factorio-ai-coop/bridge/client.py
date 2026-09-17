@@ -238,6 +238,14 @@ class AIBridge:
         """
         return _as_list(self.call("broken", agent, radius).get("stopped"))
 
+    def set_depot(self, x: float, y: float) -> dict:
+        """공용 창고 자리를 정한다."""
+        return self.call("set_depot", x, y)
+
+    def depot(self) -> dict:
+        """공용 창고와 그 안에 든 것. 없어졌으면 depot 이 None."""
+        return self.call("depot")
+
     def chest_stock(self, agent: str, item: str, radius: int = 200) -> list[dict]:
         """이 아이템이 든 상자들, 가까운 순."""
         return _as_list(self.call("chest_stock", agent, item, radius).get("chests"))
