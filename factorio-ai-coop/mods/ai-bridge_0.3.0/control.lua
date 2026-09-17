@@ -2066,6 +2066,53 @@ end
 --
 -- 인서터가 집는 칸을 그대로 물어본다. 상자가 어디 있는지 다시 계산할
 -- 이유가 없다 - 인서터 자신이 알고 있다.
+-- 갇힌 에이전트를 꺼낸다.
+--
+-- 실측(429분째): 한 명이 (92.2, 6.1)에 서서 한 시간 넘게 같은 실패만
+-- 반복했다. 호숫가였고, 그 열은 북쪽으로만 뚫려 있는데 모든 일감은
+-- 남서쪽 150타일 밖이었다. 서로 다른 실패 44종 중 25종이 이 한 좌표에서
+-- 나왔다. 여덟 중 하나가 죽은 인력이었을 뿐 아니라, 동쪽 일감에 「가장
+-- 가까운 사람」이라 배차를 계속 빨아들이고 있었다.
+--
+-- 걸어서 못 나오는 곳에 있으면 걸어서 꺼낼 수 없다. 동료 옆으로 옮긴다.
+local function unstick(name, x, y)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local target = nil
+  if x and y then
+    target = { x = x, y = y }
+  else
+    -- 목적지를 안 주면 가장 가까운 동료 옆으로. 동료가 서 있는 곳은
+    -- 적어도 동료가 걸어간 곳이다.
+    local near = math.huge
+    for _, other in pairs(storage.agents or {}) do
+      local mate = body(other)
+      if mate and mate.valid and mate ~= b then
+        local d = Tasks.dist(b.position, mate.position)
+        if d < near then near, target = d, mate.position end
+      end
+    end
+  end
+  if not target then return { error = "nowhere to move to" } end
+
+  local spot = b.surface.find_non_colliding_position(
+    "character", target, 24, 0.5)
+  if not spot then return { error = "no room near the target" } end
+
+  local was = { x = b.position.x, y = b.position.y }
+  if not b.teleport(spot, b.surface) then
+    return { error = "teleport refused" }
+  end
+  return {
+    agent = name,
+    from = was,
+    to = { x = spot.x, y = spot.y },
+    moved = math.floor(Tasks.dist(was, spot)),
+  }
+end
+
 local function hungry_rigs(name, radius)
   local a = agent(name)
   local b = body(a)
@@ -2553,6 +2600,9 @@ remote.add_interface("ai", {
 
   -- 세워는 놨는데 상자가 빈 급유 장치들.
   hungry_rigs = hungry_rigs,
+
+  -- 걸어서 못 나오는 곳에 갇힌 사람을 꺼낸다.
+  unstick = unstick,
 
   -- 전봇대가 이 기계에 실제로 «닿는» 자리.
   wire_spot = wire_spot,

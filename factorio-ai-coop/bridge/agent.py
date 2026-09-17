@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import math
 import queue
+import re
 import sys
 import threading
 import time
@@ -115,7 +116,11 @@ BACKOFF_SECONDS = 120
 
 # 길이 없어 실패한 일감은 그 사람에게 오래 막아둔다. 호수는 다음 배차 때도
 # 그 자리에 있다.
-UNREACHABLE_QUIET = 900.0   # how long a failed kind of work stays off the ladder
+UNREACHABLE_QUIET = 900.0
+
+# 같은 자리에서 길찾기가 이만큼 연달아 실패하면 갇힌 것으로 본다. 한 번은
+# 운이 나쁜 것이고, 세 번은 지형이다.
+STUCK_STRIKES = 3   # how long a failed kind of work stays off the ladder
 
 # Each agent takes one resource so a crew does not all stand on the same patch.
 FOCUS_ORDER = ["iron-ore", "coal", "copper-ore", "stone"]
@@ -831,6 +836,10 @@ class Worker:
         # The job key this agent currently holds, so the crew can hand the rest
         # of the list to somebody else.
         self.job_key: str | None = None
+        # 갇혔는지 세는 자리. 「어디서」 실패했는지까지 기억해야 한다 -
+        # 움직이면서 한 번씩 실패하는 것과 한자리에 못 박힌 것은 다르다.
+        self.lost_at: tuple[int, int] | None = None
+        self.lost_count = 0
         # 지금 대신 해주고 있는 부탁과, 그걸 실어나르는 태스크 번호.
         self.errand: tuple[int, object] | None = None
         # 막혀서 모델에게 물어본 마지막 시각.
@@ -2062,18 +2071,26 @@ class Crew:
                 continue
             worker = self.workers[name]
 
+            # 먼저 «시작할 수 있는가»를 확인하고, 그 다음에 말한다.
+            # 예전에는 start_routine 의 반환값을 버렸다. 앞의 작업이 아직
+            # 슬롯을 쥐고 있으면 그 함수는 아무것도 안 하고 False 를
+            # 돌려주는데, 배차는 그걸 성공으로 치고 「급유 장치를
+            # 세우겠습니다」라고 말한 뒤 일감을 점유했다. 스물여덟 분 동안
+            # 열두 번 말하고 한 대도 안 세운 이유가 이것이다.
+            if job.routine:
+                if not self.start_routine(worker, job.routine, job.ore, job.at):
+                    continue
+            else:
+                try:
+                    plan = worker.handle.submit_plan(job.steps)
+                except RconError as exc:
+                    self.say(f"그건 못 하겠습니다: {exc}", who=name)
+                    continue
+                worker.watching = plan
+
             self.claim(worker, job.key)
             self.say(job.narration, who=name)
             worker.said_idle = False
-            if job.routine:
-                self.start_routine(worker, job.routine, job.ore, job.at)
-            else:
-                try:
-                    worker.watching = worker.handle.submit_plan(job.steps)
-                except RconError as exc:
-                    self.say(f"그건 못 하겠습니다: {exc}", who=name)
-                    self.release(worker)
-                    continue
             handed.add(name)
 
         return handed
@@ -2945,6 +2962,53 @@ class Crew:
             self.say(f"{req.asker}님 부탁을 못 지켰습니다: {state.get('error')}",
                      who=worker.name)
 
+    @staticmethod
+    def where_lost(trouble: str) -> tuple[int, int] | None:
+        """실패 메시지에서 «어디서» 못 갔는지 읽는다.
+
+        「no path from 92.2,6.1 to -54,-66」에서 앞의 좌표. 뒤의 좌표는
+        목적지라 매번 다르고, 갇힌 것은 앞자리다.
+        """
+        hit = re.search(r"from\s+(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)", trouble)
+        if not hit:
+            hit = re.search(r"stuck at\s+(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)",
+                            trouble)
+        if not hit:
+            return None
+        return (round(float(hit.group(1))), round(float(hit.group(2))))
+
+    def count_lost(self, worker: Worker, trouble: str) -> None:
+        """같은 자리에서 거듭 못 가면 꺼내준다.
+
+        한 명이 호숫가에 한 시간 넘게 서서 같은 실패만 반복했다. 서로 다른
+        실패 44종 중 25종이 그 한 좌표에서 나왔다. 죽은 인력이었을 뿐
+        아니라, 동쪽 일감에 「가장 가까운 사람」이라 배차를 계속 빨아들였다.
+
+        걸어서 못 나오는 곳에 있으면 걸어서 꺼낼 수 없다.
+        """
+        here = self.where_lost(trouble)
+        if here is None:
+            return
+        if worker.lost_at != here:
+            worker.lost_at, worker.lost_count = here, 1
+            return
+
+        worker.lost_count += 1
+        if worker.lost_count < STUCK_STRIKES:
+            return
+        worker.lost_at, worker.lost_count = None, 0
+        try:
+            moved = self.bridge.unstick(worker.name)
+        except RconError:
+            return
+        if moved.get("error"):
+            self.say(f"({here[0]}, {here[1]})에서 못 나가는데 옮길 데도 "
+                     f"없습니다: {moved['error']}", who=worker.name)
+            return
+        worker.blocked.clear()
+        self.say(f"({here[0]}, {here[1]})에 갇혀서 {moved.get('moved', 0)}타일 "
+                 f"떨어진 동료 옆으로 옮겼습니다.", who=worker.name)
+
     def report_finished(self) -> None:
         for worker in self.workers.values():
             still: list[int] = []
@@ -2970,6 +3034,7 @@ class Crew:
                     if worker.job_key and ("no path" in trouble
                                            or "stuck" in trouble):
                         worker.block(worker.job_key, UNREACHABLE_QUIET)
+                        self.count_lost(worker, trouble)
                     self.say(f"{kind} 실패: {state.get('error')}", who=worker.name)
                     # 방금 실제로 해보고 없다는 걸 알았다. 짐작이 아니므로
                     # 이걸 근거로 동료에게 부탁해도 된다.

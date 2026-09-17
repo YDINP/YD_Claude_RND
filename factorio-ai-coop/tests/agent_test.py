@@ -9,7 +9,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 import brain  # noqa: E402
 import mission  # noqa: E402
-from agent import (FOCUS_ORDER, STAGE_TARGET, Crew, Job, errand_label,
+from agent import (FOCUS_ORDER, STAGE_TARGET, STUCK_STRIKES,  # noqa: E402
+                   Crew, Job, errand_label,
                    spread_sites, worth_building, chain_job, nearest_to,  # noqa: E402
                    Snapshot, chain_job, cluster, interleave, missing_item,
                    next_goal, plan)
@@ -707,6 +708,20 @@ def main() -> int:
           nearest_to(shelves, {"x": 92, "y": 6}, 50) == shelves[0])
     check("no chest at all is not a crash",
           nearest_to([], rigs, 50) is None)
+
+    print("\n22. a trapped crewmate is read from where, not where to")
+    where = Crew.where_lost
+    check("the first coordinate is the one that traps you",
+          where("no path from 92.2,6.1 to -54,-66") == (92, 6),
+          str(where("no path from 92.2,6.1 to -54,-66")))
+    check("a different destination is the same trap",
+          where("no path from 92.2,6.1 to -81,4") == (92, 6))
+    check("stuck reads the same way",
+          where("stuck at -58.0,-64.9 after 5 routes") == (-58, -65),
+          str(where("stuck at -58.0,-64.9 after 5 routes")))
+    check("an unrelated failure traps nobody",
+          where("no coal to insert") is None)
+    check("three strikes, not one", STUCK_STRIKES == 3)
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
