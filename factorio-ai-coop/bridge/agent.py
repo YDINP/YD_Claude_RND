@@ -1082,11 +1082,24 @@ class Crew:
             return
 
         span = math.hypot(target["x"] - source["x"], target["y"] - source["y"])
+        if span > POLE_REACH * MAX_POLE_RUN:
+            # 물이 있는 곳과 랩이 있는 곳은 우리가 고른 게 아니다. 115타일을
+            # 전봇대로 잇느니 전기가 있는 자리에 랩을 하나 더 세우는 게 싸다 -
+            # 사람도 그렇게 한다.
+            self.say(f"랩이 {span:.0f}타일 떨어져 있습니다. 발전소 옆에 랩을 "
+                     f"하나 더 세우겠습니다.", who=name)
+            if not self.obtain(worker, "lab", 1):
+                self.say("랩을 못 만들었습니다.", who=name)
+                return
+            try:
+                target = worker.handle.place("lab", source["x"] + 4, source["y"],
+                                             snap=True, timeout=420)
+            except TaskFailed as exc:
+                self.say(f"랩을 못 세웠습니다: {exc.task.get('error')}", who=name)
+                return
+            span = math.hypot(target["x"] - source["x"], target["y"] - source["y"])
+
         poles = max(2, math.ceil(span / POLE_REACH) + 1)
-        if poles > MAX_POLE_RUN:
-            self.say(f"랩이 {span:.0f}타일이나 떨어져 있어 전선을 못 잇습니다. "
-                     f"랩을 발전소 옆으로 옮기는 편이 낫습니다.", who=name)
-            return
 
         self.say(f"발전소에서 랩까지 {span:.0f}타일, 전봇대 {poles}개를 세웁니다.",
                  who=name)
