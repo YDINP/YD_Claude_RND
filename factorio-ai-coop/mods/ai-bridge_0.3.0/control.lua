@@ -1056,15 +1056,35 @@ local function try_power_site(surface, force, site, engines)
   -- 보일러가 바라보는 쪽으로 증기가 나간다. 양옆 중 자리가 나는 쪽을 쓴다.
   for _, perp in pairs(turn(step)) do
     local facing = as_direction(perp)
-    local bat = { x = out.x + step.x * BOILER_FROM_OUT,
-                  y = out.y + step.y * BOILER_FROM_OUT }
-    if surface.can_place_entity {
-      name = "boiler", position = bat, direction = facing, force = force,
-    } then
-      local boiler = surface.create_entity {
-        name = "boiler", position = bat, direction = facing, force = force,
-        raise_built = false,
-      }
+    -- 해안선은 고르지 않다. 딱 한 칸만 허용하면 대부분의 물가에서 자리를
+    -- 못 찾는다. 몇 칸 물러나되 그 사이는 파이프로 잇는다 - 일직선 파이프는
+    -- 펌프와 보일러를 그대로 연결한다.
+    local bat, boiler, gap
+    for back = BOILER_FROM_OUT, BOILER_FROM_OUT + 3 do
+      local try = { x = out.x + step.x * back, y = out.y + step.y * back }
+      if surface.can_place_entity {
+        name = "boiler", position = try, direction = facing, force = force,
+      } then
+        local room = true
+        -- 파이프가 놓일 칸도 비어 있어야 한다.
+        for j = 0, back - 2 do
+          local pipe_at = { x = out.x + step.x * j, y = out.y + step.y * j }
+          if not surface.can_place_entity {
+            name = "pipe", position = pipe_at, force = force,
+          } then room = false break end
+        end
+        if room then
+          bat, gap = try, back
+          boiler = surface.create_entity {
+            name = "boiler", position = try, direction = facing, force = force,
+            raise_built = false,
+          }
+          break
+        end
+      end
+    end
+
+    if true then
       if boiler then
         temporary[#temporary + 1] = boiler
         local plan = {
@@ -1072,6 +1092,9 @@ local function try_power_site(surface, force, site, engines)
           boiler = { x = bat.x, y = bat.y, direction = facing },
           facing = facing, pipes = {}, engines = {},
         }
+        for j = 0, gap - 2 do
+          plan.pipes[#plan.pipes + 1] = { x = out.x + step.x * j, y = out.y + step.y * j }
+        end
 
         local anchor = { x = bat.x + perp.x * ENGINE_FROM_BOILER,
                          y = bat.y + perp.y * ENGINE_FROM_BOILER }
@@ -1121,7 +1144,7 @@ local function power_plan(name, x, y, radius, engines)
   if not b then return { error = "no such agent: " .. tostring(name) } end
 
   local surface, force = b.surface, b.force
-  local sites = water_sites_near(surface, force, x, y, radius or 150, 12)
+  local sites = water_sites_near(surface, force, x, y, radius or 150, 60)
   if #sites == 0 then return { error = "no water within " .. tostring(radius) .. " tiles" } end
 
   for _, site in pairs(sites) do
