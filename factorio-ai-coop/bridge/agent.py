@@ -1158,6 +1158,14 @@ class Crew:
         # 사슬의 맨 밑이 땅이면 캐러 간다. 무엇을 얼마나 캐야 하는지도
         # 게임이 세어줬다.
         for ore, amount in sorted((answer.get("mine") or {}).items()):
+            # 나무는 광맥이 아니다. 전봇대가 나무 1개를 요구하는데 벨 줄을
+            # 몰라서 전력이 통째로 막혀 있었다.
+            if ore == "wood":
+                return Job(f"{item}을(를) 만들려면 나무가 {int(amount)}개 필요합니다. 베러 갑니다.",
+                           key="chain:chop",
+                           steps=[("chop", {"x": snap.x, "y": snap.y,
+                                            "count": max(4, min(int(amount) * 2, 40)),
+                                            "timeout_ticks": 60 * 60 * 3})])
             spot = snap.ore(ore)
             if not spot:
                 continue

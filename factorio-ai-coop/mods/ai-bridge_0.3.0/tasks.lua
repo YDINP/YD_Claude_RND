@@ -622,4 +622,92 @@ M.give = {
   end,
 }
 
+---------------------------------------------------------------------- chop
+
+-- 나무는 광맥이 아니다. mine 은 type="resource" 만 찾으므로 나무는 영영
+-- 걸리지 않았고, 그래서 전봇대(나무 1 + 구리선 2)를 못 만들어 전력이
+-- 막혀 있었다. 사슬은 «wood 1개가 필요하다»고 정확히 말하고 있었는데
+-- 그걸 실행할 손이 없었던 셈이다.
+--
+-- 베는 동작 자체는 광석과 같다: 다가가서 mine_entity 를 반복한다. 다른
+-- 것은 «다음 대상 찾기»뿐이라, 한 그루를 베면 다음 그루를 다시 찾는다.
+
+local CHOP_SEARCH = 48      -- 이 반경 안에서 나무를 찾는다
+
+local function nearest_tree(ctx, origin)
+  local found = ctx.surface.find_entities_filtered {
+    position = origin, radius = CHOP_SEARCH, type = "tree",
+  }
+  local best, best_d = nil, math.huge
+  for _, tree in pairs(found) do
+    if tree.valid then
+      local d = dist(origin, tree.position)
+      if d < best_d then best, best_d = tree, d end
+    end
+  end
+  return best
+end
+
+M.chop = {
+  start = function(ctx)
+    local st, p = ctx.task.state, ctx.task.params
+    st.origin = { x = p.x or ctx.bot.position.x, y = p.y or ctx.bot.position.y }
+    st.wanted = p.count or 4
+    st.start_wood = count_item(ctx.bot, "wood")
+    st.tree = nearest_tree(ctx, st.origin)
+    if not st.tree then
+      ctx.task.error = string.format("no tree within %d tiles of %.0f,%.0f",
+        CHOP_SEARCH, st.origin.x, st.origin.y)
+      return "failed"
+    end
+    return "running"
+  end,
+
+  step = function(ctx)
+    local st, bot = ctx.task.state, ctx.bot
+
+    local gained = count_item(bot, "wood") - st.start_wood
+    if gained >= st.wanted then
+      halt(bot)
+      ctx.task.result = { wood = gained }
+      return "done"
+    end
+
+    if not (st.tree and st.tree.valid) then
+      st.tree = nearest_tree(ctx, bot.position)
+      st.sub = nil
+      if not st.tree then
+        halt(bot)
+        -- 한 그루라도 벴으면 실패가 아니다.
+        if gained > 0 then
+          ctx.task.result = { wood = gained }
+          return "done"
+        end
+        ctx.task.error = "ran out of trees"
+        return "failed"
+      end
+    end
+
+    if dist(bot.position, st.tree.position) > bot.resource_reach_distance - 0.2 then
+      local travel = approach(ctx, st.tree.position,
+                              math.max(0.8, bot.resource_reach_distance - 1.0))
+      if travel == "failed" then
+        halt(bot)
+        return "failed"
+      end
+      return "running"
+    end
+    halt(bot)
+
+    -- 나무는 광석과 달리 한 번에 쓰러진다. 간격은 광석과 같은 이유로
+    -- 둔다 - 매 틱 mine_entity 를 부르면 엔진이 무시한다.
+    if not st.next_swing or ctx.tick >= st.next_swing then
+      st.next_swing = ctx.tick + 20
+      local ok = pcall(function() bot.mine_entity(st.tree) end)
+      if not ok then st.tree = nil end
+    end
+    return "running"
+  end,
+}
+
 return M

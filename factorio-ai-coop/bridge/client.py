@@ -357,6 +357,10 @@ class Agent:
     def place(self, name: str, x: float, y: float, direction: int = 0, **kw: Any) -> dict:
         return self.run("build", name=name, x=x, y=y, direction=direction, **kw)
 
+    def chop(self, x: float, y: float, count: int = 4, **kw: Any) -> dict:
+        """Fell trees for wood. Trees are not a resource, so mine cannot see them."""
+        return self.run("chop", x=x, y=y, count=count, **kw)
+
     def craft(self, recipe: str, count: int = 1, **kw: Any) -> dict:
         return self.run("craft", recipe=recipe, count=count, **kw)
 
