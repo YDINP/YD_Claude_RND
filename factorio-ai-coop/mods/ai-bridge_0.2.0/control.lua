@@ -17,6 +17,9 @@ local Tasks = require("tasks")
 
 local RESULT_HISTORY = 64      -- completed tasks kept for polling
 local DEFAULT_TIMEOUT = 3600   -- ticks (60s) before a task is abandoned
+local MAX_QUEUE = 64           -- refuse work rather than grow storage forever
+local MAX_OBSERVE_RADIUS = 200 -- one observe runs inside a single tick
+local PATH_ANSWER_TTL = 1800   -- ticks an uncollected path answer may linger
 
 --------------------------------------------------------------------- storage
 
@@ -60,6 +63,21 @@ local function archive(task, status)
   end
 end
 
+-- Every task ends here and nowhere else. Scattering "stop walking, stop mining,
+-- record the result" across six call sites is how a cancelled task leaves the
+-- character walking away while the next one tries to craft.
+local function finish(task, status)
+  local b = bot()
+  if b then
+    pcall(function()
+      Tasks.halt(b)
+      b.mining_state = { mining = false }
+    end)
+  end
+  archive(task, status)
+  storage.current = nil
+end
+
 --------------------------------------------------------------------- the loop
 
 local function drive()
@@ -67,9 +85,15 @@ local function drive()
   if not b then
     if storage.current then
       storage.current.error = "character died or was removed"
-      archive(storage.current, "failed")
-      storage.current = nil
+      finish(storage.current, "failed")
     end
+    -- Nothing can run without a character, so do not let the queue sit there
+    -- answering "queued" to an agent that will wait forever.
+    for _, pending in ipairs(storage.queue) do
+      pending.error = "character died or was removed"
+      archive(pending, "failed")
+    end
+    storage.queue = {}
     return
   end
 
@@ -97,18 +121,12 @@ local function drive()
   end)
 
   if not ok then
-    pcall(function()
-      Tasks.halt(b)
-      b.mining_state = { mining = false }
-    end)
     task.error = "lua error: " .. tostring(status)
     status = "failed"
   end
 
   if status == "running" then
     if game.tick - task.started_tick > (task.timeout_ticks or DEFAULT_TIMEOUT) then
-      Tasks.halt(b)
-      b.mining_state = { mining = false }
       task.error = string.format(
         "timeout after %d ticks at %.1f,%.1f", game.tick - task.started_tick,
         b.position.x, b.position.y)
@@ -118,8 +136,7 @@ local function drive()
     end
   end
 
-  archive(task, status)
-  storage.current = nil
+  finish(task, status)
 end
 
 -- Second belt: even a bug in the queue bookkeeping itself must not take the
@@ -128,6 +145,10 @@ script.on_event(defines.events.on_tick, function()
   local ok, err = pcall(drive)
   if not ok then
     log("ai-bridge: dropping task after internal error: " .. tostring(err))
+    if storage.current then
+      storage.current.error = "internal error: " .. tostring(err)
+      pcall(finish, storage.current, "failed")
+    end
     storage.current = nil
   end
 end)
@@ -136,7 +157,19 @@ end)
 -- and let whichever task asked for it pick it up on its next step; that keeps
 -- nested walks (a mine task walking to its ore) working without extra wiring.
 script.on_event(defines.events.on_script_path_request_finished, function(event)
-  storage.paths[event.id] = event.path or false
+  storage.paths[event.id] = { path = event.path or false, tick = event.tick }
+end)
+
+-- There is no API to cancel a path request, so an answer whose task was
+-- cancelled, timed out or died has nobody left to collect it. Waypoint lists
+-- are kilobytes each, and `storage` is not only saved but also shipped to every
+-- player who joins, so an uncollected answer is a slow leak into join times.
+script.on_nth_tick(600, function()
+  for id, entry in pairs(storage.paths) do
+    if game.tick - entry.tick > PATH_ANSWER_TTL then
+      storage.paths[id] = nil
+    end
+  end
 end)
 
 -- Chat is the coop channel: the human types, the agent reads it on its next
@@ -159,7 +192,9 @@ local function observe(opts)
   local b = bot()
   if not b then return { error = "no character" } end
   opts = opts or {}
-  local radius = opts.radius or 64
+  -- An observe runs entirely inside one tick, and a console command is
+  -- replicated to every peer, so an unbounded scan freezes the humans too.
+  local radius = math.min(opts.radius or 64, MAX_OBSERVE_RADIUS)
   local surface = b.surface
   local origin = b.position
 
@@ -182,14 +217,33 @@ local function observe(opts)
     r.nearest_dist = math.floor(r.nearest_dist * 10) / 10
   end
 
-  local buildings, hostiles = {}, 0
-  for _, e in pairs(surface.find_entities_filtered { position = origin, radius = radius }) do
-    if e.force == b.force and e.type ~= "character" and e.type ~= "resource" and e.is_entity_with_owner then
-      buildings[e.name] = (buildings[e.name] or 0) + 1
-    elseif e.force.name == "enemy" then
-      hostiles = hostiles + 1
+  -- Filter by force in the engine rather than walking every tree, rock and
+  -- dropped item in the radius and asking each one what it is.
+  local buildings = {}
+  for _, e in pairs(surface.find_entities_filtered {
+    position = origin, radius = radius, force = b.force,
+  }) do
+    if e.type ~= "character" and e.type ~= "resource" then
+      local entry = buildings[e.name]
+      if not entry then
+        entry = { count = 0, nearest = nil, nearest_dist = math.huge }
+        buildings[e.name] = entry
+      end
+      entry.count = entry.count + 1
+      local d = Tasks.dist(origin, e.position)
+      if d < entry.nearest_dist then
+        entry.nearest_dist = d
+        entry.nearest = { x = e.position.x, y = e.position.y }
+      end
     end
   end
+  for _, entry in pairs(buildings) do
+    entry.nearest_dist = math.floor(entry.nearest_dist * 10) / 10
+  end
+
+  local hostiles = #surface.find_entities_filtered {
+    position = origin, radius = radius, force = "enemy",
+  }
 
   local humans = {}
   for _, p in pairs(game.connected_players) do
@@ -230,10 +284,16 @@ end
 
 ------------------------------------------------------------------- interface
 
-local function submit(task_type, params)
-  if not Tasks[task_type] then
-    return { error = "unknown task type: " .. tostring(task_type) }
-  end
+-- `Tasks` also exports helpers like dist/halt, which are functions, not
+-- handlers. Checking truthiness alone would accept "halt" as a task type and
+-- fail later with "attempt to index a function value".
+local function handler_for(task_type)
+  local handler = Tasks[task_type]
+  if type(handler) == "table" and handler.start and handler.step then return handler end
+  return nil
+end
+
+local function make_task(task_type, params)
   local task = {
     id = storage.next_id,
     type = task_type,
@@ -242,6 +302,17 @@ local function submit(task_type, params)
     timeout_ticks = (params and params.timeout_ticks) or DEFAULT_TIMEOUT,
   }
   storage.next_id = storage.next_id + 1
+  return task
+end
+
+local function submit(task_type, params)
+  if not handler_for(task_type) then
+    return { error = "unknown task type: " .. tostring(task_type) }
+  end
+  if #storage.queue >= MAX_QUEUE then
+    return { error = "queue is full (" .. MAX_QUEUE .. "); cancel or wait" }
+  end
+  local task = make_task(task_type, params)
   table.insert(storage.queue, task)
   return { id = task.id, queued = #storage.queue }
 end
@@ -250,9 +321,12 @@ remote.add_interface("ai", {
   -- Create the agent's character. Same force as the humans by default, so the
   -- two of you share research, map and buildings.
   spawn = function(force_name)
+    force_name = force_name or "player"
+    if not game.forces[force_name] then
+      return { error = "no such force: " .. tostring(force_name) }
+    end
+
     local surface = game.surfaces[1]
-    local previous = bot()
-    if previous then previous.destroy() end   -- never leave orphans behind
     local anchor = { 0, 0 }
     for _, p in pairs(game.connected_players) do
       if p.character then
@@ -261,11 +335,25 @@ remote.add_interface("ai", {
       end
     end
     local pos = surface.find_non_colliding_position("character", anchor, 60, 1)
-    storage.bot = surface.create_entity {
-      name = "character", position = pos, force = force_name or "player",
-    }
+    if not pos then
+      return { error = "no free space to spawn a character" }
+    end
+
+    -- Create before destroying. If this throws, the agent keeps the character
+    -- it already had instead of losing it and its inventory to a typo.
+    local ok, fresh = pcall(function()
+      return surface.create_entity { name = "character", position = pos, force = force_name }
+    end)
+    if not ok or not fresh then
+      return { error = "could not create character: " .. tostring(fresh) }
+    end
+
+    local previous = bot()
+    if previous then previous.destroy() end
+
+    storage.bot = fresh
     storage.queue, storage.current = {}, nil
-    return { unit_number = storage.bot.unit_number, x = pos.x, y = pos.y, force = storage.bot.force.name }
+    return { unit_number = fresh.unit_number, x = pos.x, y = pos.y, force = fresh.force.name }
   end,
 
   despawn = function()
@@ -278,12 +366,24 @@ remote.add_interface("ai", {
   submit = submit,
 
   -- Queue a whole plan in one round trip; the agent polls the last id.
+  -- All or nothing: a plan that is rejected must not leave the character
+  -- already walking the first two steps of it.
   submit_many = function(list)
+    list = list or {}
+    if #storage.queue + #list > MAX_QUEUE then
+      return { error = "queue would overflow (" .. MAX_QUEUE .. " max)" }
+    end
+    for index, item in ipairs(list) do
+      if not handler_for(item.type) then
+        return { error = string.format("step %d: unknown task type: %s", index, tostring(item.type)) }
+      end
+    end
+
     local ids = {}
-    for _, item in ipairs(list or {}) do
-      local r = submit(item.type, item.params)
-      if r.error then return { error = r.error, submitted = ids } end
-      ids[#ids + 1] = r.id
+    for _, item in ipairs(list) do
+      local task = make_task(item.type, item.params)
+      table.insert(storage.queue, task)
+      ids[#ids + 1] = task.id
     end
     return { ids = ids }
   end,
@@ -301,19 +401,25 @@ remote.add_interface("ai", {
   end,
 
   cancel_all = function()
-    local b = bot()
-    if b then
-      Tasks.halt(b)
-      b.mining_state = { mining = false }
-    end
     local dropped = #storage.queue
+    for _, pending in ipairs(storage.queue) do
+      pending.error = "cancelled"
+      archive(pending, "failed")
+    end
     storage.queue = {}
+
     if storage.current then
       storage.current.error = "cancelled"
-      archive(storage.current, "failed")
-      storage.current = nil
+      finish(storage.current, "failed")
+      dropped = dropped + 1
+    else
+      local b = bot()
+      if b then
+        Tasks.halt(b)
+        b.mining_state = { mining = false }
+      end
     end
-    return { cancelled = dropped + 1 }
+    return { cancelled = dropped }
   end,
 
   status = function()

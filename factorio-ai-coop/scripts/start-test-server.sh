@@ -26,6 +26,18 @@ if [ -n "${PID:-}" ]; then
   taskkill //PID "$PID" //F >/dev/null 2>&1 || true
 fi
 
+# Factorio compares mod script checksums, so an edited mod on the server side
+# alone kicks the human with "does not match the server". Keep the client copy
+# in step every time the server starts.
+CLIENT_MODS="${FACTORIO_CLIENT_MODS:-$APPDATA/Factorio/mods}"
+MOD_SRC="$ROOT/mods/ai-bridge_0.2.0"
+if [ -d "$CLIENT_MODS" ]; then
+  mkdir -p "$CLIENT_MODS/ai-bridge_0.2.0"
+  cp "$MOD_SRC"/info.json "$MOD_SRC"/control.lua "$MOD_SRC"/tasks.lua \
+     "$CLIENT_MODS/ai-bridge_0.2.0/"
+  echo "synced ai-bridge to client mods: $CLIENT_MODS/ai-bridge_0.2.0"
+fi
+
 if [ ! -f "$SAVE" ]; then
   echo "creating map $SAVE"
   "$FACTORIO" --config "$ROOT/../factorio-bot-config.ini" --create "$SAVE" >/dev/null

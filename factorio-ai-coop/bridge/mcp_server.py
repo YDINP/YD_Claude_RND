@@ -219,6 +219,17 @@ HANDLERS: dict[str, Callable[[dict], Any]] = {
 }
 
 
+# Retrying is only safe when re-running the tool cannot change the world twice.
+# A dropped reply does not mean the command never reached the server: it usually
+# means it did, and the answer was lost. Replaying factorio_place would build a
+# second chest; replaying factorio_spawn would destroy the character (and its
+# inventory) that the first attempt created.
+IDEMPOTENT = {
+    "factorio_status", "factorio_observe", "factorio_inventory",
+    "factorio_poll", "factorio_chat_read",
+}
+
+
 def call_tool(name: str, args: dict) -> dict:
     handler = HANDLERS.get(name)
     if handler is None:
@@ -228,9 +239,16 @@ def call_tool(name: str, args: dict) -> dict:
         try:
             result = handler(args)
         except (RconError, OSError) as first:
-            # The game may have restarted since the last call; reconnect once.
-            if isinstance(first, (TaskFailed, TaskTimeout)):
-                raise
+            if isinstance(first, (TaskFailed, TaskTimeout)) or name not in IDEMPOTENT:
+                drop_bridge()
+                if isinstance(first, (TaskFailed, TaskTimeout)):
+                    raise
+                raise RconError(
+                    f"{first}; the connection was reset and this tool is not safe to "
+                    f"retry automatically. Call factorio_status to reconnect, check "
+                    f"whether the action took effect, then decide."
+                ) from first
+            # Read-only tool: the game may simply have restarted. Reconnect.
             drop_bridge()
             result = handler(args)
     except TaskFailed as exc:

@@ -22,9 +22,29 @@ local function dist(a, b)
 end
 
 -- Factorio 2.0 uses 16 compass directions; north is 0, values grow clockwise.
+-- Walking direction is game state, so it is covered by the multiplayer
+-- checksum. atan2 would send that through the platform libm, where a Windows
+-- client and a Linux server can differ by an ulp; comparisons and sign tests
+-- cannot. It costs nothing to stay on the safe side of that line.
+local DIAGONAL = 0.4142135623730951   -- tan(22.5 degrees)
+
 local function direction_to(from, to)
   local dx, dy = to.x - from.x, to.y - from.y
-  return math.floor(0.5 + (math.atan2(dx, -dy) / (math.pi / 8))) % 16
+  local ax, ay = math.abs(dx), math.abs(dy)
+  local north, south = dy < 0, dy > 0
+  local east, west = dx > 0, dx < 0
+
+  if ax <= ay * DIAGONAL then
+    return north and defines.direction.north or defines.direction.south
+  end
+  if ay <= ax * DIAGONAL then
+    return east and defines.direction.east or defines.direction.west
+  end
+  if north and east then return defines.direction.northeast end
+  if south and east then return defines.direction.southeast end
+  if south and west then return defines.direction.southwest end
+  if north and west then return defines.direction.northwest end
+  return defines.direction.north
 end
 
 local function steer(bot, goal)
@@ -112,11 +132,11 @@ M.walk_to = {
     -- storage.paths. Until it lands we walk the straight line, so open terrain
     -- costs us nothing.
     if st.path_request and not st.path and not st.path_failed then
-      local answer = storage.paths[st.path_request]
-      if answer ~= nil then
+      local entry = storage.paths[st.path_request]
+      if entry ~= nil then
         storage.paths[st.path_request] = nil
-        if answer then
-          st.path, st.path_index = answer, 1
+        if entry.path then
+          st.path, st.path_index = entry.path, 1
         else
           st.path_failed = true
         end
@@ -173,9 +193,18 @@ M.mine = {
       ctx.task.error = string.format("no resource near %s,%s", p.x, p.y)
       return "failed"
     end
+    local product = found.prototype.mineable_properties.products[1]
+    if product.type == "fluid" then
+      -- crude oil shows up in observe() like any other resource, so the agent
+      -- will try. It needs a pumpjack, not hands.
+      ctx.task.error = found.name .. " cannot be hand-mined; it needs a pumpjack"
+      return "failed"
+    end
+
     local st = ctx.task.state
     st.ore = found
-    st.product = found.prototype.mineable_properties.products[1].name
+    st.ore_name = found.name
+    st.product = product.name
     st.baseline = count_item(ctx.bot, st.product)
     st.want = p.count or 10
     return "running"
@@ -194,15 +223,18 @@ M.mine = {
 
     if not st.ore.valid then
       -- The patch ran out under us; step to the next tile of ore nearby.
+      -- Same ore only. Without the name filter a depleted iron tile at the edge
+      -- of a patch hands us a copper tile, and `gained` never moves again
+      -- because it counts iron.
       local next_ore = ctx.surface.find_entities_filtered {
-        position = bot.position, radius = 8, type = "resource", limit = 1,
+        position = bot.position, radius = 8, name = st.ore_name, limit = 1,
       }[1]
       if not next_ore then
         halt(bot)
         ctx.task.result = { mined = gained, item = st.product, exhausted = true }
         return "done"
       end
-      st.ore, st.sub = next_ore, nil
+      st.ore, st.sub, st.interval = next_ore, nil, nil
     end
 
     if dist(bot.position, st.ore.position) > bot.resource_reach_distance - 0.5 then
@@ -252,8 +284,18 @@ M.build = {
       ctx.task.error = "no " .. tostring(p.name) .. " in inventory"
       return "failed"
     end
-    ctx.task.state.spot = { x = p.x, y = p.y }
     ctx.task.state.direction = p.direction or defines.direction.north
+    if p.snap then
+      -- Caller wants "somewhere around here", not an exact tile.
+      local free = ctx.surface.find_non_colliding_position(p.name, { p.x, p.y }, 16, 1)
+      if not free then
+        ctx.task.error = "no free spot near " .. p.x .. "," .. p.y
+        return "failed"
+      end
+      ctx.task.state.spot = { x = free.x, y = free.y }
+    else
+      ctx.task.state.spot = { x = p.x, y = p.y }
+    end
     return "running"
   end,
 
@@ -321,6 +363,100 @@ M.craft = {
       return "done"
     end
     return "running"
+  end,
+}
+
+------------------------------------------------------------ insert / take
+
+-- Anything with an inventory: a furnace to feed, a chest to stock, a drill to
+-- fuel. Without these two the agent can mine and build but never actually run
+-- a production chain.
+local function target_entity(ctx, p)
+  local candidates = ctx.surface.find_entities_filtered {
+    position = { p.x, p.y }, radius = p.search_radius or 1.5,
+  }
+  for _, e in pairs(candidates) do
+    if e.type ~= "character" and e.type ~= "resource" and e.get_inventory ~= nil then
+      return e
+    end
+  end
+  return nil
+end
+
+M.insert = {
+  start = function(ctx)
+    local p = ctx.task.params
+    local target = target_entity(ctx, p)
+    if not target then
+      ctx.task.error = string.format("nothing with an inventory at %s,%s", p.x, p.y)
+      return "failed"
+    end
+    if count_item(ctx.bot, p.name) < 1 then
+      ctx.task.error = "no " .. tostring(p.name) .. " to insert"
+      return "failed"
+    end
+    ctx.task.state.target = target
+    return "running"
+  end,
+
+  step = function(ctx)
+    local st, bot, p = ctx.task.state, ctx.bot, ctx.task.params
+    if not st.target.valid then
+      ctx.task.error = "target disappeared"
+      return "failed"
+    end
+
+    if dist(bot.position, st.target.position) > bot.reach_distance - 0.5 then
+      local travel = approach(ctx, st.target.position, math.max(1.0, bot.reach_distance - 1.5))
+      if travel == "failed" then
+        halt(bot)
+        return "failed"
+      end
+      return "running"
+    end
+    halt(bot)
+
+    local wanted = math.min(p.count or 1, count_item(bot, p.name))
+    local moved = st.target.insert { name = p.name, count = wanted }
+    if moved > 0 then bot.remove_item { name = p.name, count = moved } end
+    ctx.task.result = { inserted = moved, item = p.name, into = st.target.name }
+    return "done"
+  end,
+}
+
+M.take = {
+  start = function(ctx)
+    local p = ctx.task.params
+    local target = target_entity(ctx, p)
+    if not target then
+      ctx.task.error = string.format("nothing with an inventory at %s,%s", p.x, p.y)
+      return "failed"
+    end
+    ctx.task.state.target = target
+    return "running"
+  end,
+
+  step = function(ctx)
+    local st, bot, p = ctx.task.state, ctx.bot, ctx.task.params
+    if not st.target.valid then
+      ctx.task.error = "target disappeared"
+      return "failed"
+    end
+
+    if dist(bot.position, st.target.position) > bot.reach_distance - 0.5 then
+      local travel = approach(ctx, st.target.position, math.max(1.0, bot.reach_distance - 1.5))
+      if travel == "failed" then
+        halt(bot)
+        return "failed"
+      end
+      return "running"
+    end
+    halt(bot)
+
+    local taken = st.target.remove_item { name = p.name, count = p.count or 1 }
+    if taken > 0 then bot.insert { name = p.name, count = taken } end
+    ctx.task.result = { taken = taken, item = p.name, from = st.target.name }
+    return "done"
   end,
 }
 

@@ -38,7 +38,12 @@ def _lua_literal(value: Any) -> str:
     if isinstance(value, (int, float)):
         return repr(value)
     if isinstance(value, str):
-        return "'" + value.replace("\\", "\\\\").replace("'", "\\'") + "'"
+        escaped = (value.replace("\\", "\\\\")
+                        .replace("'", "\\'")
+                        .replace("\n", "\\n")
+                        .replace("\r", "\\r")
+                        .replace("\t", "\\t"))
+        return "'" + escaped + "'"
     if value is None:
         return "nil"
     # Tables travel as JSON and are rebuilt on the Lua side.
@@ -71,10 +76,15 @@ class AIBridge:
         except json.JSONDecodeError:
             raise RconError(f"unexpected reply from server: {raw[:300]}")
 
-    def call(self, fn: str, *args: Any) -> Any:
+    def call(self, fn: str, *args: Any) -> dict:
         rendered = ", ".join(_lua_literal(a) for a in args)
         sep = ", " if rendered else ""
-        return self.lua(f"remote.call('ai', '{fn}'{sep}{rendered})")
+        reply = self.lua(f"remote.call('ai', '{fn}'{sep}{rendered})")
+        if reply is None:
+            # An empty reply means the command never produced output, which is
+            # a transport problem, not an empty result.
+            raise RconError(f"no reply from remote.call('ai', '{fn}')")
+        return reply
 
     # -- world ------------------------------------------------------------
 
@@ -156,6 +166,15 @@ class AIBridge:
 
     def craft(self, recipe: str, count: int = 1, **kw: Any) -> dict:
         return self.run("craft", recipe=recipe, count=count, **kw)
+
+    def insert(self, name: str, x: float, y: float, count: int = 1, **kw: Any) -> dict:
+        return self.run("insert", name=name, x=x, y=y, count=count, **kw)
+
+    def take(self, name: str, x: float, y: float, count: int = 1, **kw: Any) -> dict:
+        return self.run("take", name=name, x=x, y=y, count=count, **kw)
+
+    def buildings(self, radius: int = 64) -> dict:
+        return self.observe(radius=radius).get("buildings") or {}
 
     def nearest(self, resource: str, radius: int = 128) -> dict | None:
         found = self.observe(radius=radius).get("resources", {}).get(resource)
