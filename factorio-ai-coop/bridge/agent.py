@@ -233,6 +233,23 @@ def worth_building(row: dict, floor: int = 6) -> tuple[bool, str]:
 HAUL_REACH = 120.0
 
 
+def carry_split(group: list, load: int, each: int) -> tuple[list, int]:
+    """실을 수 있는 만큼으로 약속을 줄인다.
+
+    같은 실수를 두 번 했다. 급유 상자 여섯 개를 채우겠다고 나서놓고 60개만
+    싣고 가서 첫 상자에서 다 쓰고 끝났고, 채굴기 여섯 대에 넣겠다고 나서놓고
+    40개만 싣고 가서 두 대 넣고 끝났다. 둘 다 「no coal to insert」로 남았다.
+
+    여섯 대에 넣겠다고 말하고 둘만 넣느니, 처음부터 둘에게 넣겠다고 말하는
+    편이 낫다. 약속과 짐은 같은 저울에 올려야 한다.
+    """
+    if each <= 0:
+        return group, load
+    fits = max(1, load // each)
+    kept = group[:fits]
+    return kept, min(load, each * len(kept))
+
+
 def nearest_to(spots: list[dict], at: dict, least: int = 0,
                reach: float = HAUL_REACH) -> dict | None:
     """그 «일감에서» 가장 가까운 창고. 내가 아니라 일감이 기준이다.
@@ -1964,13 +1981,18 @@ class Crew:
             head = group[0]
             at = {"x": head["x"], "y": head["y"]}
             key = f"tend:{head['x']:.0f},{head['y']:.0f}"
-            wanted = DRILL_FUEL * len(group)
             source = nearest_to(coal_chests, at, DRILL_FUEL)
             steps: list[Step] = []
             if source:
-                steps.append(("take", {"name": "coal",
-                                       "count": min(HAUL_BATCH, source["count"]),
+                # 실을 수 있는 만큼으로 약속을 줄인다. 급유 상자에서 고친
+                # 것과 같은 실수가 여기 남아 있었다 - 여섯 대에 넣겠다고
+                # 나서놓고 40개만 싣고 가서, 두 대 넣고 「no coal to insert」
+                # 로 끝났다. 여덟 번 그랬다.
+                group, load = carry_split(
+                    group, min(HAUL_BATCH, int(source["count"])), DRILL_FUEL)
+                steps.append(("take", {"name": "coal", "count": load,
                                        "x": source["x"], "y": source["y"]}))
+            wanted = DRILL_FUEL * len(group)
             for machine in group:
                 steps.append(("insert", {"name": "coal", "count": DRILL_FUEL,
                                          "x": machine["x"], "y": machine["y"]}))
@@ -2058,6 +2080,38 @@ class Crew:
                 steps=[("demolish", {"x": e["x"], "y": e["y"],
                                      "name": e.get("name")}) for e in spot],
                 at={"x": head["x"], "y": head["y"]}))
+
+        # 3c. 굶고 있는 화로. 다섯 회차째 54대가 그대로였고, 그 사이
+        #     철광석은 창고에 10,264개까지 쌓였다. 캐는 능력이 모자란 적은
+        #     없고, 캔 것이 화로까지 가지 않을 뿐이다.
+        #
+        #     한 구역의 화로를 한 번에 먹인다. 상자는 화로 옆에서 고른다 -
+        #     내가 선 자리가 아니라.
+        for group in cluster([e for e in stopped if e.get("fix") == "feed"])[:2]:
+            head = group[0]
+            at = {"x": head["x"], "y": head["y"]}
+            key = f"feed:{head['x']:.0f},{head['y']:.0f}"
+            for ore in SMELTED_BY_FURNACE:
+                try:
+                    shelves = self.bridge.chest_stock(worker.name, ore)
+                except RconError:
+                    break
+                source = nearest_to(shelves, at, SMELT_BATCH)
+                if not source:
+                    continue
+                fed, load = carry_split(
+                    group, min(HAUL_BATCH, int(source["count"])), SMELT_BATCH)
+                gather.append(Job(
+                    f"화로 {len(fed)}대가 굶고 있습니다. {ore}을(를) "
+                    f"{load}개 실어다 넣겠습니다. "
+                    f"({head['x']:.0f}, {head['y']:.0f})",
+                    key=key,
+                    steps=[("take", {"name": ore, "count": load,
+                                     "x": source["x"], "y": source["y"]})]
+                          + [("insert", {"name": ore, "count": SMELT_BATCH,
+                                         "x": e["x"], "y": e["y"]}) for e in fed],
+                    at=at))
+                break
 
         # 4. 미리 세우는 터렛. 급하지 않지만 미뤄두면 영영 안 하고,
         #    습격이 온 다음에 시작하면 늦는다.
@@ -2315,10 +2369,8 @@ class Crew:
             # 실을 수 있는 만큼만 붓기로 한다. 예전에는 상자 여섯 개를
             # 채우겠다고 나서놓고 60개만 싣고 갔다 - 첫 상자에서 50을 쓰고
             # 나머지 다섯 번이 «no coal to insert» 로 끝났다. 아홉 번 그랬다.
-            load = min(int(source["count"]), wanted)
-            fits = max(1, load // RIG_COAL)
-            group = group[:fits]
-            load = RIG_COAL * len(group)
+            group, load = carry_split(group, min(int(source["count"]), wanted),
+                                      RIG_COAL)
 
             steps: list[Step] = [
                 ("take", {"name": "coal", "count": load,

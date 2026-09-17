@@ -11,7 +11,8 @@ import brain  # noqa: E402
 import mission  # noqa: E402
 from agent import (FOCUS_ORDER, STAGE_TARGET, STUCK_STRIKES,  # noqa: E402
                    Crew, Job, errand_label,
-                   spread_sites, worth_building, chain_job, nearest_to,  # noqa: E402
+                   spread_sites, worth_building, chain_job, nearest_to,
+                   carry_split,  # noqa: E402
                    Snapshot, chain_job, cluster, interleave, missing_item,
                    next_goal, plan)
 
@@ -722,6 +723,24 @@ def main() -> int:
     check("an unrelated failure traps nobody",
           where("no coal to insert") is None)
     check("three strikes, not one", STUCK_STRIKES == 3)
+
+    print("\n23. promise only what you can carry")
+    six = list("abcdef")
+    check("sixty coal feeds one chest of fifty, not six",
+          carry_split(six, 60, 50) == (["a"], 50),
+          str(carry_split(six, 60, 50)))
+    check("forty coal at twenty-five each feeds one",
+          carry_split(six, 40, 25) == (["a"], 25),
+          str(carry_split(six, 40, 25)))
+    check("a full load serves everyone",
+          carry_split(six, 300, 50) == (six, 300))
+    check("the load is trimmed to what is actually placed",
+          carry_split(six, 130, 50) == (["a", "b"], 100),
+          str(carry_split(six, 130, 50)))
+    check("one is always worth the trip",
+          carry_split(six, 5, 50)[0] == ["a"])
+    check("a zero share is not a division by zero",
+          carry_split(six, 10, 0) == (six, 10))
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
