@@ -723,6 +723,13 @@ STARVING = 4
 # 주고받아 봐야 아무것도 안 채워진다 - 늘려야 한다.
 SHORTAGE_VOICES = 3
 
+# 한 번에 세울 급유 장치 수, 그리고 상자에 부어둘 석탄.
+# 버너 인서터는 자기가 나르는 게 연료일 때만 자급한다. 석탄을 나르는
+# 인서터는 영원히 돌고, 광석을 나르는 인서터는 손이 계속 간다 - 그래서
+# 급유만 자동화하고 광석은 아직 손으로 옮긴다.
+RIGS_PER_TRIP = 3
+RIG_COAL = 50
+
 IDLE_ASK_QUIET = 150.0
 # 그럴 때 쓰는 모델. 반장이 지시를 쪼갤 때와는 판단의 무게가 다르고,
 # 자주 일어나는 일이라 싼 쪽이 맞다.
@@ -1404,6 +1411,8 @@ class Crew:
                     self.plug_in(worker, at or {})
                 elif routine == "bridge":
                     self.bridge_networks(worker, at or {})
+                elif routine == "rig":
+                    self.build_rig(worker, at or {})
                 elif routine == "stoke":
                     self.stoke(worker, at or {})
                 else:
@@ -1889,6 +1898,12 @@ class Crew:
         # 한 구역에 모인 기계는 한 번 걸어가서 한꺼번에 채운다. 채굴기
         # 여섯 대가 한 광맥에 모여 있는데 여섯 번 따로 가는 것이 가장 흔한
         # 낭비다. 석탄도 그만큼 한 번에 실어간다.
+        # 급유 장치가 먼저다. 손으로 넣는 것은 그 기계를 한 번 살리지만,
+        # 상자와 인서터를 한 벌 세우면 영원히 산다. 195대를 손으로 먹이는
+        # 것은 불가능하고, 한 번 세우는 것은 가능하다.
+        unblock.extend(self.rig_job(worker, [e for e in stopped
+                                             if e.get("fix") == "fuel"]))
+
         for group in cluster([e for e in stopped if e.get("fix") == "fuel"]):
             head = group[0]
             at = {"x": head["x"], "y": head["y"]}
@@ -2065,6 +2080,70 @@ class Crew:
                 key=f"stoke:{spot['x']:.0f},{spot['y']:.0f}",
                 routine="stoke", at=spot))
         return out
+
+    def rig_job(self, worker: Worker, stopped: list[dict]) -> list[Job]:
+        """연료가 없어 선 기계에 급유 장치를 세운다.
+
+        손으로 195대를 먹이는 것은 불가능하다. 하지만 기계 한 대 옆에
+        «석탄 상자 + 버너 인서터»를 한 번 세워두면 그 기계는 영구히 연료
+        걱정이 없어진다 - 인서터가 나르는 것이 석탄이라 자기 연료를 그중에서
+        떼어 쓰기 때문이다.
+
+        인서터 한 대는 채굴기 스물한 대분 연료를 감당한다. 66대가 굶는 것은
+        처리량 한계가 아니라 인서터가 안 박혀서다.
+        """
+        out: list[Job] = []
+        for machine in stopped[:RIGS_PER_TRIP]:
+            if machine.get("fix") != "fuel":
+                continue
+            key = f"rig:{machine['x']:.0f},{machine['y']:.0f}"
+            if key in worker.blocked_now():
+                continue
+            out.append(Job(
+                f"{machine['name']}에 급유 장치를 세우겠습니다. 한 번 세우면 "
+                f"연료를 다시 넣어줄 일이 없습니다. "
+                f"({machine['x']:.0f}, {machine['y']:.0f})",
+                key=key, routine="rig", at=machine))
+        return out
+
+    def build_rig(self, worker: Worker, at: dict) -> None:
+        """«석탄 상자 + 버너 인서터»를 한 벌 세우고 석탄을 부어둔다."""
+        name = worker.name
+        key = f"rig:{at['x']:.0f},{at['y']:.0f}"
+        try:
+            plan = self.bridge.fuel_rig(name, at["x"], at["y"])
+        except RconError:
+            return
+        if plan.get("error"):
+            worker.block(key, BACKOFF_SECONDS)
+            return
+
+        arm, shelf = plan["inserter"], plan["chest"]
+        wanted = ["burner-inserter"] + ([] if shelf.get("standing") else [CHEST])
+        for part in wanted:
+            if not self.obtain(worker, part, 1):
+                worker.block(key, BACKOFF_SECONDS)
+                return
+
+        try:
+            if not shelf.get("standing"):
+                worker.handle.place(CHEST, shelf["x"], shelf["y"], timeout=420)
+            worker.handle.place("burner-inserter", arm["x"], arm["y"],
+                                direction=arm["direction"], timeout=300)
+        except TaskFailed as exc:
+            worker.block(key, BACKOFF_SECONDS)
+            self.say(f"급유 장치를 못 세웠습니다: {exc.task.get('error')}", who=name)
+            return
+
+        # 상자에 석탄을 부어둔다. 창고에 3,400개가 있으니 아깝지 않다.
+        if self.obtain(worker, "coal", RIG_COAL):
+            try:
+                worker.handle.insert("coal", shelf["x"], shelf["y"],
+                                     count=RIG_COAL, timeout=300)
+            except TaskFailed:
+                pass
+        self.say(f"{plan.get('machine', '기계')}에 급유 장치를 세웠습니다. "
+                 f"이제 알아서 먹습니다.", who=name)
 
     def lay_pipe(self, worker: Worker, at: dict) -> None:
         """끊긴 한 칸에 파이프를 놓는다."""

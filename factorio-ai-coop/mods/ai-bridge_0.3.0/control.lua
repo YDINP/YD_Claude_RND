@@ -1965,6 +1965,98 @@ end
 -- 서 있었다. 그런데 무리는 계속 채굴기를 더 세우고 있었다 - 「세운 수」만
 -- 셌기 때문이다. 스물넷이 도는데 백칠십이 서 있으면, 문제는 부족이 아니라
 -- 막힘이다. 한 대 더 세우는 것은 낭비를 한 대 더 세우는 것이다.
+-- 기계 한 대를 「영구히」 먹이는 장치의 자리를 찾는다.
+--
+--   [석탄 상자] -> [버너 인서터] -> [기계]
+--
+-- 이게 되는 이유: 버너 인서터는 자기가 나르는 물건이 연료일 때만 그중
+-- 일부를 떼어 자기 연료로 쓴다. 석탄을 나르는 인서터는 영원히 자급한다.
+-- (광석을 나르는 인서터는 안 된다 - 그쪽은 손이 계속 가야 한다.)
+--
+-- 규모 계산(리서치): 인서터 처리량 0.79개/s, 채굴기 한 대의 연료 소비
+-- 0.0375개/s. 인서터 한 대가 채굴기 스물한 대분을 감당한다. 채굴기 66대가
+-- 굶는 것은 처리량 한계가 아니라 인서터가 안 박혀서다.
+--
+-- 방향 실측(2026-09-18): 인서터의 direction 은 「집는 쪽」이다. dir=north 면
+-- 북쪽에서 집어 남쪽에 놓는다. 반대로 알았으면 거꾸로 놓을 뻔했다.
+local function fuel_rig(name, x, y)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local surface, force = b.surface, b.force
+  local machine = nil
+  for _, e in pairs(surface.find_entities_filtered {
+    position = { x, y }, radius = 1.6, force = force,
+  }) do
+    if e.type ~= "character" and e.type ~= "item-entity"
+        and e.type ~= "inserter" and e.type ~= "container" then
+      machine = e
+      break
+    end
+  end
+  if not machine then
+    return { error = string.format("nothing to feed at %.0f,%.0f", x, y) }
+  end
+
+  local box = machine.bounding_box
+  local half = math.max((box.right_bottom.x - box.left_top.x) / 2,
+                        (box.right_bottom.y - box.left_top.y) / 2)
+  local at = machine.position
+
+  local sides = {
+    { d = defines.direction.north, ux = 0, uy = -1 },
+    { d = defines.direction.east, ux = 1, uy = 0 },
+    { d = defines.direction.south, ux = 0, uy = 1 },
+    { d = defines.direction.west, ux = -1, uy = 0 },
+  }
+
+  for _, side in ipairs(sides) do
+    -- 인서터는 기계 바로 바깥, 상자는 그 한 칸 더 바깥.
+    local arm = { x = at.x + side.ux * (half + 0.5),
+                  y = at.y + side.uy * (half + 0.5) }
+    local shelf = { x = at.x + side.ux * (half + 1.5),
+                    y = at.y + side.uy * (half + 1.5) }
+
+    -- 이미 상자가 있으면 그것을 쓴다. 옆에 또 놓을 이유가 없다.
+    local standing = surface.find_entities_filtered {
+      position = { shelf.x, shelf.y }, radius = 0.4, type = "container",
+      force = force, limit = 1,
+    }[1]
+
+    local arm_free = surface.can_place_entity {
+      name = "burner-inserter", position = arm, direction = side.d, force = force,
+    }
+    local shelf_free = standing ~= nil or surface.can_place_entity {
+      name = "iron-chest", position = shelf, force = force,
+    }
+
+    if arm_free and shelf_free then
+      -- 세워보고 실제로 기계를 향해 놓는지 확인한다. 기하를 믿지 않는다.
+      local probe = surface.create_entity {
+        name = "burner-inserter", position = arm, direction = side.d,
+        force = force, raise_built = false,
+      }
+      local aims = false
+      if probe then
+        local drop = probe.drop_position
+        aims = drop.x > box.left_top.x and drop.x < box.right_bottom.x
+           and drop.y > box.left_top.y and drop.y < box.right_bottom.y
+        probe.destroy()
+      end
+      if aims then
+        return {
+          machine = machine.name,
+          inserter = { x = arm.x, y = arm.y, direction = side.d },
+          chest = { x = shelf.x, y = shelf.y, standing = standing ~= nil },
+        }
+      end
+    end
+  end
+
+  return { error = "no room beside " .. machine.name }
+end
+
 local function health(name, radius)
   init_status_names()
   local a = agent(name)
@@ -2413,6 +2505,9 @@ remote.add_interface("ai", {
 
   -- 세운 수가 아니라 도는 수.
   health = health,
+
+  -- 기계 한 대를 영구히 먹이는 «상자-인서터» 자리.
+  fuel_rig = fuel_rig,
 
   -- 전봇대가 이 기계에 실제로 «닿는» 자리.
   wire_spot = wire_spot,

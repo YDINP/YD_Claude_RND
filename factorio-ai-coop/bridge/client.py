@@ -279,6 +279,10 @@ class AIBridge:
         """이 기계에 전봇대가 실제로 «닿는» 자리. 이미 붙어 있으면 already."""
         return self.call("wire_spot", agent, x, y, pole)
 
+    def fuel_rig(self, agent: str, x: float, y: float) -> dict:
+        """이 기계를 영구히 먹일 «상자-인서터» 자리. 없으면 error."""
+        return self.call("fuel_rig", agent, x, y)
+
     def health(self, agent: str, radius: int = 400) -> dict:
         """세운 수가 아니라 도는 수. {이름: {built, working, why}}"""
         answer = self.call("health", agent, radius).get("machines")
