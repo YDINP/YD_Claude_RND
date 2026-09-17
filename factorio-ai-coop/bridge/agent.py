@@ -1514,12 +1514,17 @@ class Crew:
                 at={"x": head["x"], "y": head["y"]}))
 
         # 3. 가방이 넘치는 사람은 공용 창고에 부린다. 물자가 한 사람의
-        #    가방에 갇혀 있으면 없는 것과 같다.
-        for mate, snap in self.snaps.items():
-            job = self.depot_job(self.workers[mate], snap) if mate in self.workers else None
-            if job:
+        #    가방에 갇혀 있으면 없는 것과 같다 - 옆 사람이 철광석 천 개를
+        #    안고 다니는 동안 남들은 철광석이 없어서 멈춰 있었다.
+        #
+        #    한 명만 뽑지 않고 넘치는 사람 전부에게 만들어준다. 하나만
+        #    만들면 정비 일감에 밀려 차례가 영영 안 온다.
+        for mate, mate_snap in self.snaps.items():
+            if mate not in self.workers:
+                continue
+            job = self.depot_job(self.workers[mate], mate_snap)
+            if job and job.key != "depot:build":
                 jobs.append(job)
-                break
 
         # 4. 출구가 막혀 선 채굴기.
         for entry in stopped:
@@ -1554,10 +1559,16 @@ class Crew:
             if len(handed) >= len(free):
                 break
             spot = job.at or {}
-            order = sorted(
-                (n for n in seats if n not in handed),
-                key=lambda n: ((seats[n][0] - spot.get("x", seats[n][0])) ** 2
-                               + (seats[n][1] - spot.get("y", seats[n][1])) ** 2, n))
+            # 가방을 부리는 일은 그 가방의 주인만 할 수 있다. 나머지는
+            # 가까운 사람에게.
+            owner = job.key.split(":", 1)[1] if job.key.startswith("depot:") else None
+            if owner:
+                order = [owner] if owner in seats and owner not in handed else []
+            else:
+                order = sorted(
+                    (n for n in seats if n not in handed),
+                    key=lambda n: ((seats[n][0] - spot.get("x", seats[n][0])) ** 2
+                                   + (seats[n][1] - spot.get("y", seats[n][1])) ** 2, n))
             if not order:
                 break
             name = order[0]
