@@ -171,7 +171,8 @@ def _clean_steps(raw: Any) -> list[tuple[str, dict]]:
 
 
 def think(message: str, snap: Any, agent_name: str = "agent", timeout: float = 90.0,
-          cli: str = "claude") -> tuple[str, list[tuple[str, dict]]] | None:
+          cli: str = "claude", model: str | None = None
+          ) -> tuple[str, list[tuple[str, dict]]] | None:
     """Ask the model what to do. Returns (what to say, steps) or None."""
     # Not str.format: the brief is full of JSON braces, which format() would
     # read as replacement fields.
@@ -182,10 +183,15 @@ def think(message: str, snap: Any, agent_name: str = "agent", timeout: float = 9
         + f"\n\n[사람이 한 말]\n{message}\n"
     )
 
+    # 막혀 있는 한 명에게 묻는 일은 자주 일어나므로, 싼 모델을 쓸 수 있게
+    # 열어둔다. 반장이 지시를 쪼갤 때와는 요구되는 판단의 무게가 다르다.
+    argv = [cli, "-p", prompt, "--output-format", "text"]
+    if model:
+        argv[1:1] = ["--model", model]
+
     try:
         done = subprocess.run(
-            [cli, "-p", prompt, "--output-format", "text"],
-            capture_output=True, text=True, encoding="utf-8", timeout=timeout,
+            argv, capture_output=True, text=True, encoding="utf-8", timeout=timeout,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
         return None

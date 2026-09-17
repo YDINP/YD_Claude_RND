@@ -496,6 +496,13 @@ RESEARCH_CHECK = 20.0
 # 같은 사람이 같은 말을 이 시간 안에 되풀이하면 삼킨다.
 ECHO_QUIET = 60.0
 
+# 규칙이 할 일을 못 찾았을 때만 모델에게 묻는다. 이 간격 안에 두 번 묻지
+# 않는다 - 막혀 있는 상태는 몇 초 만에 바뀌지 않는다.
+IDLE_ASK_QUIET = 150.0
+# 그럴 때 쓰는 모델. 반장이 지시를 쪼갤 때와는 판단의 무게가 다르고,
+# 자주 일어나는 일이라 싼 쪽이 맞다.
+IDLE_MODEL = "haiku"
+
 
 def _smelt_ticks(step: dict, count: int) -> int:
     seconds = float(step.get("seconds") or 0) or (count * 3.2)
@@ -563,6 +570,8 @@ class Worker:
         self.job_key: str | None = None
         # 지금 대신 해주고 있는 부탁과, 그걸 실어나르는 태스크 번호.
         self.errand: tuple[int, object] | None = None
+        # 막혀서 모델에게 물어본 마지막 시각.
+        self.asked_at = 0.0
 
     def snapshot(self, radius: int = 200) -> Snapshot:
         world = self.handle.observe(radius=radius)
@@ -732,6 +741,44 @@ class Crew:
         return list(self.workers.values())
 
     # -- the slow brain ---------------------------------------------------
+
+    def ask_when_stuck(self, worker: Worker, snap: Snapshot) -> bool:
+        """규칙이 할 일을 못 찾았을 때만 모델에게 묻는다.
+
+        봇마다 모델을 상시로 붙이는 것과는 다르다. 정비와 보급은 초 단위로
+        판단해야 하는데 한 번 왕복이 6초라, 상시로 붙이면 느려지기만 한다.
+        규칙이 막혔을 때는 사정이 반대다 - 어차피 서 있을 거라면 6초를
+        들여서라도 물어보는 편이 낫다.
+        """
+        if not self.use_llm:
+            return False
+        now = time.monotonic()
+        if now - worker.asked_at < IDLE_ASK_QUIET:
+            return False
+        if not worker.slot.acquire(blocking=False):
+            return False
+        worker.asked_at = now
+
+        here = mission.stage_of(snap)
+        question = (
+            f"규칙으로는 지금 할 일을 못 찾았다. 목표는 «{here.title}»이고, "
+            f"이 공장을 그쪽으로 한 걸음 옮기는 일을 하나만 정해서 해라. "
+            f"할 만한 게 정말 없으면 steps 를 비우고 이유를 말해라."
+        )
+
+        def think() -> None:
+            try:
+                answer = brain.think(question, snap, agent_name=worker.name,
+                                     model=IDLE_MODEL)
+                if answer and (answer[0] or answer[1]):
+                    self.thoughts.put((worker.name, answer[0], answer[1]))
+            except Exception as exc:  # noqa: BLE001 - 죽은 스레드도 답은 해야 한다
+                print(f"[warn] idle brain failed: {exc!r}", file=sys.stderr)
+            finally:
+                worker.slot.release()
+
+        threading.Thread(target=think, daemon=True).start()
+        return True
 
     def ask_llm(self, worker: Worker, message: str, snap: Snapshot) -> None:
         if not worker.slot.acquire(blocking=False):
@@ -1899,6 +1946,9 @@ class Crew:
                 # 일이 없다는 것은 캘 곳이 없다는 뜻일 때뿐이다.
                 job = self.keep_busy(worker, snap)
             if job is None:
+                # 규칙이 막혔다. 서 있느니 물어본다.
+                if self.ask_when_stuck(worker, snap):
+                    continue
                 if not worker.said_idle:
                     self.say(f"당장 할 일이 없습니다. {mission.briefing(snap)}",
                              who=worker.name)
