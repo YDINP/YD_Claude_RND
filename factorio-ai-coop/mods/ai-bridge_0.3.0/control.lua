@@ -1282,6 +1282,22 @@ local function outlet_ok(surface, force, spot, receiver)
 end
 
 -- 광맥 위에서 «채굴기가 들어가고 출구도 비는» 자리와 방향을 찾는다.
+-- 길. 채굴기를 빈틈없이 붙여 놓으면 캐릭터가 지나다닐 데가 없어진다 -
+-- 실제로 광맥 하나가 채굴기 오십 대로 덮여 사람이 갇혔다. 여덟 칸마다
+-- 한 줄을 비워두면 격자 모양 길이 남는다. 광맥은 넓고 길은 싸다.
+local LANE_EVERY = 8
+
+local function blocks_lane(position, half)
+  half = half or 1
+  for tx = math.floor(position.x - half), math.floor(position.x + half) do
+    if tx % LANE_EVERY == 0 then return true end
+  end
+  for ty = math.floor(position.y - half), math.floor(position.y + half) do
+    if ty % LANE_EVERY == 0 then return true end
+  end
+  return false
+end
+
 local function drill_site(name, x, y, radius, receiver)
   local a = agent(name)
   local b = body(a)
@@ -1296,10 +1312,12 @@ local function drill_site(name, x, y, radius, receiver)
   local sites = {}
   for _, patch in pairs(ore) do
     local spot = patch.position
+    -- 길 위에는 짓지 않는다.
+    if not blocks_lane(spot, 1) then
     for _, dir in pairs(DIRECTIONS) do
       if surface.can_place_entity {
         name = "burner-mining-drill", position = spot, direction = dir, force = force,
-      } then
+      } and not blocks_lane(drop_tile(spot, dir), 1) then
         local ok, how = outlet_ok(surface, force, drop_tile(spot, dir), receiver)
         if ok then
           local drop = drop_tile(spot, dir)
@@ -1312,6 +1330,7 @@ local function drill_site(name, x, y, radius, receiver)
           break
         end
       end
+    end
     end
     if #sites >= 8 then break end
   end
