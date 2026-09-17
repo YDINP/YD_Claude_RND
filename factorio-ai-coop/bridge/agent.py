@@ -1444,6 +1444,8 @@ class Crew:
                     self.bridge_networks(worker, at or {})
                 elif routine == "rig":
                     self.build_rig(worker, at or {})
+                elif routine == "convert":
+                    self.convert_chest(worker, at or {})
                 elif routine == "stoke":
                     self.stoke(worker, at or {})
                 else:
@@ -2221,9 +2223,16 @@ class Crew:
             if not source:
                 continue
 
+            # 실을 수 있는 만큼만 붓기로 한다. 예전에는 상자 여섯 개를
+            # 채우겠다고 나서놓고 60개만 싣고 갔다 - 첫 상자에서 50을 쓰고
+            # 나머지 다섯 번이 «no coal to insert» 로 끝났다. 아홉 번 그랬다.
+            load = min(int(source["count"]), wanted)
+            fits = max(1, load // RIG_COAL)
+            group = group[:fits]
+            load = RIG_COAL * len(group)
+
             steps: list[Step] = [
-                ("take", {"name": "coal",
-                          "count": min(int(source["count"]), wanted),
+                ("take", {"name": "coal", "count": load,
                           "x": source["x"], "y": source["y"]})]
             steps += [("insert", {"name": "coal", "count": RIG_COAL,
                                   "x": spot["x"], "y": spot["y"]})
@@ -2234,6 +2243,54 @@ class Crew:
                 key=f"restock:{head['x']:.0f},{head['y']:.0f}", steps=steps,
                 at={"x": head["x"], "y": head["y"]}))
         return out
+
+    def convert_chest(self, worker: Worker, entry: dict) -> None:
+        """꽉 찬 상자를 걷어내고 그 자리에 화로를 세운다.
+
+        비우기는 이 채굴기를 한 번 살리고 이십 분 뒤에 똑같이 막힌다. 화로는
+        영원히 받아준다 - 채굴기가 캔 광석이 바로 화로로 들어가서, 나를 일
+        자체가 없어진다. 401분째에 채굴기 112대가 꽉 찬 상자에 막혀 선 옆에서
+        화로 54대가 굶고 있었다. 둘은 같은 문제의 두 얼굴이다.
+
+        상자를 캐면 안에 든 것이 가방으로 따라온다. 그 광석을 그대로 새
+        화로에 넣으면 버리는 것도 없다.
+        """
+        name = worker.name
+        outlet = entry.get("outlet") or {}
+        key = f"convert:{entry['x']:.0f},{entry['y']:.0f}"
+        if not outlet:
+            worker.block(key, BACKOFF_SECONDS)
+            return
+        if not self.obtain(worker, "stone-furnace", 1):
+            worker.block(key, BACKOFF_SECONDS)
+            return
+
+        ore = entry.get("holding")
+        try:
+            worker.handle.demolish(outlet["x"], outlet["y"], timeout=420,
+                                   timeout_ticks=60 * 60 * 3)
+            spot = worker.handle.place("stone-furnace", outlet["x"], outlet["y"],
+                                       timeout=300)
+        except TaskFailed as exc:
+            worker.block(key, BACKOFF_SECONDS)
+            self.say(f"상자를 화로로 못 바꿨습니다: {exc.task.get('error')}", who=name)
+            return
+
+        # 상자에서 딸려온 광석과 석탄을 새 화로에 넣어준다. 없으면 그냥 둔다 -
+        # 채굴기가 곧 채워준다.
+        for item, amount in (("coal", FURNACE_FUEL), (ore, SMELT_BATCH)):
+            if not item:
+                continue
+            have = worker.handle.items().get(item, 0)
+            if have <= 0:
+                continue
+            try:
+                worker.handle.insert(item, spot["x"], spot["y"],
+                                     count=min(have, amount), timeout=180)
+            except TaskFailed:
+                pass
+        self.say(f"상자를 화로로 바꿨습니다. 이제 이 채굴기는 캐는 대로 "
+                 f"바로 녹습니다. ({spot['x']:.0f}, {spot['y']:.0f})", who=name)
 
     def lay_pipe(self, worker: Worker, at: dict) -> None:
         """끊긴 한 칸에 파이프를 놓는다."""
@@ -2570,6 +2627,19 @@ class Crew:
                 # 내놓을 데가 없어 멈췄다. 상자가 꽉 찼으면 비우면 되고,
                 # 아예 없으면 달아줘야 한다 - 손보는 방법이 다르다.
                 if entry.get("holding") and entry.get("outlet"):
+                    # 녹일 수 있는 광석이 찬 상자라면, 비우는 대신 그 자리를
+                    # 화로로 바꾼다. 비우기는 이 채굴기를 한 번 살리고 20분
+                    # 뒤에 똑같이 막힌다. 화로는 영원히 받아준다 - 채굴기가
+                    # 캔 광석이 바로 화로로 들어가니 나를 일 자체가 없어진다.
+                    #
+                    # 상자를 캐면 안에 든 것이 가방으로 따라온다. 그 광석을
+                    # 그대로 새 화로에 넣으면 버리는 것도 없다.
+                    if entry["holding"] in SMELTED_BY_FURNACE:
+                        return Job(
+                            f"{what}의 상자가 {entry['holding']}으로 꽉 찼습니다. "
+                            f"상자를 화로로 바꾸면 다시 막히지 않습니다.",
+                            key=f"convert:{entry['x']:.0f},{entry['y']:.0f}",
+                            routine="convert", at=entry)
                     return Job(
                         f"{what}의 상자가 꽉 차서 멈췄습니다. 비우겠습니다.",
                         key=key,
