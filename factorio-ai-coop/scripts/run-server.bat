@@ -12,7 +12,7 @@ set "DATA=%~dp0..\..\.factorio-bot"
 set "SAVE_NAME=%~1"
 if "%SAVE_NAME%"=="" set "SAVE_NAME=ai-coop-test"
 set "SAVE=%DATA%\saves\%SAVE_NAME%.zip"
-set "CLIENT_MODS=%APPDATA%\Factorio\mods\ai-bridge_0.2.0"
+set "CLIENT_MODS=%APPDATA%\Factorio\mods\ai-bridge_0.3.0"
 
 if not exist "%FACTORIO_EXE%" (
   echo Factorio not found at: %FACTORIO_EXE%
@@ -23,7 +23,7 @@ if not exist "%FACTORIO_EXE%" (
 
 echo Syncing mod to the game client...
 if not exist "%CLIENT_MODS%" mkdir "%CLIENT_MODS%"
-copy /Y "%ROOT%\mods\ai-bridge_0.2.0\*.*" "%CLIENT_MODS%\" >nul
+copy /Y "%ROOT%\mods\ai-bridge_0.3.0\*.*" "%CLIENT_MODS%\" >nul
 if errorlevel 1 echo WARNING: could not sync the client mod copy.
 
 if not exist "%SAVE%" (

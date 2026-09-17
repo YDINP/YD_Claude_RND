@@ -1,7 +1,8 @@
 # factorio-ai-coop
 
-Claude 또는 Codex가 **사람과 같은 Factorio 멀티플레이 세션에 캐릭터로 참여**하게 만드는 브릿지.
-AI 단독 벤치마크가 아니라 협동 플레이가 목표다.
+**여러 AI가 Factorio를 플레이하고, 사람은 관찰자 시점에서 지시를 내린다.**
+Claude나 Codex가 캐릭터를 직접 조종하며, 사람은 게임 채팅으로 명령한다.
+AI 단독 벤치마크가 아니라 사람이 감독하는 협동 플레이가 목표다.
 
 Factorio 2.0.77 / Space Age 클라이언트로 실측 검증했다.
 
@@ -30,14 +31,18 @@ RCON으로 매 틱 명령을 쏘는 방식은 초당 60왕복이 필요해 성�
 
 | 경로 | 내용 |
 |---|---|
-| `mods/ai-bridge_0.2.0/control.lua` | 태스크 큐, 틱 드라이버, `remote` 인터페이스, 채팅 캡처 |
-| `mods/ai-bridge_0.2.0/tasks.lua` | 태스크 상태머신 (`walk_to`, `mine`, `build`, `craft`, `wait`) |
+| `mods/ai-bridge_0.3.0/control.lua` | 에이전트별 태스크 큐, 틱 드라이버, `remote` 인터페이스, 채팅, 관찰자 전환 |
+| `mods/ai-bridge_0.3.0/tasks.lua` | 태스크 상태머신 (`walk_to`, `mine`, `build`, `craft`, `insert`, `take`, `wait`) |
 | `bridge/rcon.py` | Source RCON 클라이언트 (표준 라이브러리만) |
-| `bridge/client.py` | 고수준 API. 첫 명령 함정과 Lua 인자 마셜링을 흡수 |
-| `bridge/mcp_server.py` | MCP stdio 서버 (의존성 없음) |
-| `scripts/start-test-server.sh` | RCON 켠 헤드리스 서버 실행 |
-| `tests/smoke.py` | 실제 게임 대상 종단 테스트 15종 |
-| `tests/mcp_test.py` | MCP 프로토콜 테스트 13종 |
+| `bridge/client.py` | `AIBridge`(연결) + `Agent`(캐릭터 하나). 첫 명령 함정과 Lua 인자 마셜링을 흡수 |
+| `bridge/agent.py` | 채팅을 듣고 지시를 수행하는 데몬. 여러 에이전트를 동시에 관리 |
+| `bridge/brain.py` | 규칙 파서가 모르는 문장을 `claude -p`에 넘기는 LLM 폴백 |
+| `bridge/mcp_server.py` | MCP stdio 서버 (의존성 없음, 도구 20종) |
+| `scripts/run-server.bat`, `run-agent.bat` | 사용자가 직접 띄우는 런처 |
+| `tests/agent_test.py` | 파싱·계획·LLM 출력 검증 58종 (게임 불필요) |
+| `tests/smoke.py` | 실제 게임 대상 종단 테스트 16종 |
+| `tests/mcp_test.py` | MCP 프로토콜 + 다중 에이전트 23종 |
+| `tests/persistence.py` | 세이브/재시작 내구성 5종 |
 
 ## 시작하기
 
@@ -62,21 +67,50 @@ args = ["D:/park/YD_Claude_RND/factorio-ai-coop/bridge/mcp_server.py"]
 env = { FACTORIO_RCON_PORT = "27015", FACTORIO_RCON_PASSWORD = "rcontest123" }
 ```
 
+## 관찰자 + 여러 AI
+
+사람은 몸을 벗고 자유 카메라로 지켜보며 채팅으로 지시만 한다. 캐릭터는 AI들이 맡는다.
+
+```
+게임 채팅에서:
+  관찰자          → 관찰자 시점으로. 쓰던 캐릭터는 AI가 이어받는다(인벤토리 보존)
+  에이전트 추가    → AI 한 명 더 (최대 8)
+  누구있어        → 현재 로스터와 각자 하는 일
+  alpha 철 캐와   → 이름으로 지목
+  2번 이리와      → 번호로 지목
+  모두 멈춰       → 전원에게
+  철 캐와         → 지목 없으면 노는 에이전트가 맡는다
+  복귀            → 다시 몸을 받아 직접 플레이
+```
+
+관찰자로 전환할 때 **쓰던 캐릭터를 버리지 않는다.** 그 몸을 새 에이전트에게 넘겨서
+들고 있던 물건이 그대로 남고, 대신 일꾼이 하나 늘어난다.
+
+에이전트는 각자 **독립된 큐**를 가진다. bravo가 4초짜리 작업을 하는 동안 alpha는
+자기 일을 끝낸다 (`tests/mcp_test.py` 7번이 이걸 확인한다).
+
 ## 도구 (MCP)
 
 | 도구 | 용도 |
 |---|---|
-| `factorio_status` | 캐릭터 위치, 현재 태스크, 대기열, 접속 인원 |
-| `factorio_observe` | 주변 집계 — 광맥별 타일 수와 최근접 좌표, 자기 건물, 적 수, 사람 위치 |
+| `factorio_agents` | 로스터 — 누가 있고 어디서 뭘 하는지. 보통 여기서 시작한다 |
+| `factorio_add_agent` / `factorio_remove_agent` | AI 추가/제거 (최대 8) |
+| `factorio_observer` / `factorio_unobserver` | 사람을 관찰자 시점으로 / 다시 몸으로 |
+| `factorio_status` | 그 에이전트의 위치, 현재 태스크, 대기열 |
+| `factorio_observe` | 주변 집계 — 광맥·자기 건물·적 수·사람 위치·다른 에이전트 |
 | `factorio_inventory` | 소지품, 체력, 위치 |
-| `factorio_spawn` | 사람 옆에 캐릭터 생성 (같은 force) |
 | `factorio_walk_to` | 경로탐색 보행 |
 | `factorio_mine` | 광맥까지 이동 후 손채굴 |
 | `factorio_place` | 건설 범위까지 이동 후 설치 (인벤토리 차감) |
 | `factorio_craft` | 손 제작 |
+| `factorio_insert` / `factorio_take` | 건물에 넣기 / 꺼내기 (화로 제련, 채굴기 연료) |
+| `factorio_inspect` | 그 자리에 뭐가 있는지. 채굴기의 산출 타일을 알려준다 |
 | `factorio_plan` / `factorio_poll` | 여러 단계를 한 번에 큐잉하고 나중에 확인 |
-| `factorio_cancel` | 현재 태스크 중단 + 대기열 비움 |
+| `factorio_cancel` | 중단. `agent` 없이 부르면 전원 |
 | `factorio_chat_read` / `factorio_say` | 사람과 게임 내 채팅으로 대화 |
+
+에이전트가 둘 이상일 때 `agent`를 빼고 부르면 **거부한다.** 아무거나 골라 움직이면
+사람은 왜 엉뚱한 애가 갔는지 알 수 없다.
 
 관측은 **열거가 아니라 집계**다. LLM에 광석 타일 4천 개 대신
 `iron-ore: 843타일, 최근접 (73.5,-69.5)`를 준다.
@@ -108,8 +142,12 @@ env = { FACTORIO_RCON_PORT = "27015", FACTORIO_RCON_PASSWORD = "rcontest123" }
 
 ## 한계
 
-- 단일 에이전트 캐릭터. 여러 AI를 동시에 굴리려면 `storage.bot`을 컬렉션으로 바꿔야 한다.
+- 에이전트 상한 8. 그 이상은 한 틱 안에서 도는 상태머신 비용이 문제가 된다.
+- **관찰자 전환은 자동 테스트가 없다.** 접속한 사람이 있어야 실행되는 경로라
+  게임 없이 검증할 수 없다. 나머지 102개 테스트가 덮는 범위 밖이다.
 - 물류/회로/기차는 아직 태스크가 없다. `factorio_place`로 개별 설치는 가능하다.
+- 에이전트끼리 협업을 조율하지 않는다. 각자 독립적으로 움직이므로 같은 광맥에
+  둘을 보내면 서로 비켜가지 않는다.
 - 전투 태스크 없음. 적이 오면 `observe`의 `hostiles`로 알 수는 있다.
 - 서버는 루프백 바인딩이다. 외부 공개는 `scripts/start-test-server.sh`의 `--bind`를 바꿔야 하고,
   그 경우 RCON 비밀번호를 반드시 교체할 것.
@@ -131,7 +169,16 @@ Claude 세션이 띄운 서버는 그 세션에 묶여 있어서, 모드를 고�
 | 파일 | 하는 일 |
 |---|---|
 | `scripts/run-server.bat` | 모드를 클라이언트에 동기화하고 헤드리스 서버를 자기 창에서 실행 |
-| `scripts/run-agent.bat` | 채팅을 듣는 에이전트 실행. `--auto`를 붙이면 유휴 시 스스로 진행 |
+| `scripts/run-agent.bat` | 채팅을 듣는 에이전트 실행 |
+
+`run-agent.bat`에 붙일 수 있는 인자:
+
+| 인자 | 뜻 |
+|---|---|
+| `--agents 3` | 세 명으로 시작 (기본 1, 최대 8) |
+| `--auto` | 지시가 없을 때 스스로 진행 (돌→화로→석탄→철→제련) |
+| `--observer 이름` | 시작할 때 그 플레이어를 관찰자로. 몸은 AI가 이어받는다 |
+| `--no-llm` | 규칙 파서만 사용, `claude -p` 호출 안 함 |
 
 창을 닫으면 멈춘다. 서버 창이 살아 있는 동안에는 Claude가 서버를 재시작하지 않는다 —
 모드를 고쳤으면 서버 창과 게임 클라이언트를 다시 시작해야 한다. Factorio는 모드 스크립트를

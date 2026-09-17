@@ -28,7 +28,7 @@ from client import AIBridge, TaskFailed, TaskTimeout  # noqa: E402
 from rcon import RconError  # noqa: E402
 
 PROTOCOL_VERSION = "2025-06-18"
-SERVER_INFO = {"name": "factorio-ai-coop", "version": "0.2.0"}
+SERVER_INFO = {"name": "factorio-ai-coop", "version": "0.3.0"}
 
 _bridge: AIBridge | None = None
 
@@ -53,169 +53,281 @@ def drop_bridge() -> None:
 
 # --------------------------------------------------------------------- tools
 
-def _num(name: str, description: str) -> dict:
-    return {name: {"type": "number", "description": description}}
+AGENT_ARG = {"agent": {"type": "string",
+                       "description": "Which agent to order. Required once more than one exists."}}
 
 
 TOOLS: list[dict] = [
     {
-        "name": "factorio_status",
-        "description": "Where the agent's character is, what it is doing right now, "
-                       "what is queued, and how many humans are online.",
+        "name": "factorio_agents",
+        "description": "The roster: every agent, where it is, and what it is doing. "
+                       "Call this first - most other tools need an agent name.",
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
-        "name": "factorio_observe",
-        "description": "Aggregated view of the surroundings: ore patches with tile counts "
-                       "and nearest coordinates, own buildings by name, hostile count, and "
-                       "where the human players are. Use this before deciding what to do.",
+        "name": "factorio_add_agent",
+        "description": "Add an AI character to the game, next to whoever is already there. "
+                       "Up to 8. They join the same force as the humans, so research, map and "
+                       "buildings are shared.",
         "inputSchema": {
             "type": "object",
-            "properties": {**_num("radius", "Tiles to look around, default 64")},
+            "properties": {
+                "name": {"type": "string", "description": "Call sign, e.g. alpha"},
+                "force": {"type": "string", "description": "Team, default player"},
+            },
+        },
+    },
+    {
+        "name": "factorio_remove_agent",
+        "description": "Remove an agent and its character from the game.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "factorio_observer",
+        "description": "Put a human player into the free-flying observer camera so they can watch "
+                       "and give orders instead of playing. Passing adopt_as hands their character, "
+                       "with everything in its pockets, to a new agent of that name; without it the "
+                       "character is destroyed.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "player": {"type": "string", "description": "In-game player name"},
+                "adopt_as": {"type": "string",
+                             "description": "Call sign for the agent that takes over their body"},
+            },
+            "required": ["player"],
+        },
+    },
+    {
+        "name": "factorio_unobserver",
+        "description": "Give a spectating player a body again.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"player": {"type": "string"}},
+            "required": ["player"],
+        },
+    },
+    {
+        "name": "factorio_status",
+        "description": "Where an agent is, what it is doing right now, and what is queued.",
+        "inputSchema": {"type": "object", "properties": {**AGENT_ARG}},
+    },
+    {
+        "name": "factorio_observe",
+        "description": "Aggregated view around an agent: ore patches with tile counts and nearest "
+                       "coordinates, own buildings, hostile count, where the humans are and where "
+                       "the other agents are. Use this before deciding what to do.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {**AGENT_ARG,
+                           "radius": {"type": "number",
+                                      "description": "Tiles, default 64, capped at 200"}},
         },
     },
     {
         "name": "factorio_inventory",
-        "description": "Items the agent's character is carrying, plus health and position.",
-        "inputSchema": {"type": "object", "properties": {}},
-    },
-    {
-        "name": "factorio_spawn",
-        "description": "Create the agent's character next to a human player (or at origin if "
-                       "nobody is online). Replaces any previous one and clears the queue.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {"force": {"type": "string",
-                                     "description": "Force to join, default 'player' (same team as the humans)"}},
-        },
+        "description": "What an agent is carrying, plus health and position.",
+        "inputSchema": {"type": "object", "properties": {**AGENT_ARG}},
     },
     {
         "name": "factorio_walk_to",
-        "description": "Walk to a coordinate using the game's pathfinder. Blocks until arrival "
-                       "or failure.",
+        "description": "Walk to a coordinate using the pathfinder. Blocks until arrival or failure.",
         "inputSchema": {
             "type": "object",
-            "properties": {**_num("x", "target x"), **_num("y", "target y"),
-                           **_num("tolerance", "how close is close enough, default 0.5")},
+            "properties": {**AGENT_ARG,
+                           "x": {"type": "number"}, "y": {"type": "number"},
+                           "tolerance": {"type": "number", "description": "default 0.5"}},
             "required": ["x", "y"],
         },
     },
     {
         "name": "factorio_mine",
-        "description": "Walk to an ore tile and hand-mine it until the requested number of "
-                       "items is collected. Mining runs at normal hand-mining speed, so this "
-                       "can take a while; raise timeout for large amounts.",
+        "description": "Walk to an ore tile and hand-mine it until the requested number of items is "
+                       "collected. Runs at normal hand-mining speed, so large amounts take a while. "
+                       "Crude oil cannot be hand-mined.",
         "inputSchema": {
             "type": "object",
-            "properties": {**_num("x", "ore x"), **_num("y", "ore y"),
-                           **_num("count", "items to collect, default 10"),
-                           **_num("timeout", "seconds to wait, default 300")},
+            "properties": {**AGENT_ARG,
+                           "x": {"type": "number"}, "y": {"type": "number"},
+                           "count": {"type": "number", "description": "default 10"},
+                           "timeout": {"type": "number", "description": "seconds, default 300"}},
             "required": ["x", "y"],
         },
     },
     {
         "name": "factorio_place",
-        "description": "Walk into build range and place an entity from the character's "
-                       "inventory. Fails if the item is missing or the spot is blocked.",
+        "description": "Walk into build range and place an entity from the inventory. Fails if the "
+                       "item is missing or the spot is blocked; pass snap to let the game pick a "
+                       "free tile nearby instead.",
         "inputSchema": {
             "type": "object",
-            "properties": {
-                "name": {"type": "string", "description": "Entity prototype name, e.g. 'transport-belt'"},
-                **_num("x", "target x"), **_num("y", "target y"),
-                **_num("direction", "0-15, north is 0 and values grow clockwise; default 0"),
-            },
+            "properties": {**AGENT_ARG,
+                           "name": {"type": "string", "description": "e.g. transport-belt"},
+                           "x": {"type": "number"}, "y": {"type": "number"},
+                           "direction": {"type": "number",
+                                         "description": "0-15, north is 0, growing clockwise"},
+                           "snap": {"type": "boolean", "description": "allow a nearby free tile"}},
             "required": ["name", "x", "y"],
         },
     },
     {
         "name": "factorio_craft",
-        "description": "Hand-craft a recipe. Fails if ingredients are missing or the recipe "
-                       "is not researched.",
+        "description": "Hand-craft a recipe. Fails if ingredients are missing or it is not researched.",
         "inputSchema": {
             "type": "object",
-            "properties": {"recipe": {"type": "string", "description": "Recipe name, e.g. 'iron-gear-wheel'"},
-                           **_num("count", "how many, default 1")},
+            "properties": {**AGENT_ARG,
+                           "recipe": {"type": "string"},
+                           "count": {"type": "number", "description": "default 1"}},
             "required": ["recipe"],
         },
     },
     {
-        "name": "factorio_plan",
-        "description": "Queue several steps in one call and return their task ids without "
-                       "waiting. Use factorio_poll to check on them. Steps are objects like "
-                       '{"type": "walk_to", "params": {"x": 10, "y": 4}}.',
+        "name": "factorio_insert",
+        "description": "Put items from the inventory into a building: fuel into a drill, ore into a "
+                       "furnace, anything into a chest.",
         "inputSchema": {
             "type": "object",
-            "properties": {
-                "steps": {
-                    "type": "array",
-                    "description": "Ordered steps; type is one of walk_to, mine, build, craft, wait",
-                    "items": {
-                        "type": "object",
-                        "properties": {"type": {"type": "string"}, "params": {"type": "object"}},
-                        "required": ["type"],
-                    },
-                }
-            },
+            "properties": {**AGENT_ARG,
+                           "name": {"type": "string", "description": "item name"},
+                           "x": {"type": "number"}, "y": {"type": "number"},
+                           "count": {"type": "number", "description": "default 1"}},
+            "required": ["name", "x", "y"],
+        },
+    },
+    {
+        "name": "factorio_take",
+        "description": "Take items out of a building, for example plates out of a furnace.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {**AGENT_ARG,
+                           "name": {"type": "string", "description": "item name"},
+                           "x": {"type": "number"}, "y": {"type": "number"},
+                           "count": {"type": "number", "description": "default 1"}},
+            "required": ["name", "x", "y"],
+        },
+    },
+    {
+        "name": "factorio_inspect",
+        "description": "What is standing on a spot, including where a mining drill drops its ore. "
+                       "Use this to put a chest exactly where a drill outputs.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"x": {"type": "number"}, "y": {"type": "number"},
+                           "radius": {"type": "number", "description": "default 2"}},
+            "required": ["x", "y"],
+        },
+    },
+    {
+        "name": "factorio_plan",
+        "description": "Queue several steps for one agent in a single call and return their task ids "
+                       "without waiting. A step looks like "
+                       "{\"type\": \"walk_to\", \"params\": {\"x\": 10, \"y\": 4}}. "
+                       "Types: walk_to, mine, build, craft, insert, take, wait.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {**AGENT_ARG,
+                           "steps": {"type": "array",
+                                     "items": {"type": "object",
+                                               "properties": {"type": {"type": "string"},
+                                                              "params": {"type": "object"}},
+                                               "required": ["type"]}}},
             "required": ["steps"],
         },
     },
     {
         "name": "factorio_poll",
-        "description": "Check a task id submitted by factorio_plan: queued, running, done or failed.",
+        "description": "Check a task id from factorio_plan: queued, running, done or failed.",
         "inputSchema": {
             "type": "object",
-            "properties": {**_num("task_id", "id returned by factorio_plan")},
+            "properties": {"task_id": {"type": "number"}},
             "required": ["task_id"],
         },
     },
     {
         "name": "factorio_cancel",
-        "description": "Stop the current task and drop everything queued. Use when a human "
-                       "asks the agent to stop or change plans.",
-        "inputSchema": {"type": "object", "properties": {}},
+        "description": "Stop what an agent is doing and drop its queue. Without agent, stops all.",
+        "inputSchema": {"type": "object", "properties": {**AGENT_ARG}},
     },
     {
         "name": "factorio_chat_read",
-        "description": "Read what the human players have typed in chat. Pass since_tick to get "
-                       "only what is new; the reply carries the current tick to pass next time.",
+        "description": "Read what the human players have typed in chat. Pass since_tick for only "
+                       "what is new; the reply carries the current tick to pass next time.",
         "inputSchema": {
             "type": "object",
-            "properties": {**_num("since_tick", "only messages after this tick")},
+            "properties": {"since_tick": {"type": "number"}},
         },
     },
     {
         "name": "factorio_say",
-        "description": "Say something in the shared game chat, prefixed with [AI]. Use it to "
-                       "tell your teammate what you are about to do or what you found.",
+        "description": "Say something in the shared game chat. Pass agent to speak as that one.",
         "inputSchema": {
             "type": "object",
-            "properties": {"text": {"type": "string", "description": "Message to send"}},
+            "properties": {**AGENT_ARG, "text": {"type": "string"}},
             "required": ["text"],
         },
     },
 ]
 
 
+def who(args: dict):
+    """Which character a tool call is about.
+
+    With one agent the caller can leave `agent` out; with several, leaving it
+    out would silently order whichever one happens to be first, so it is
+    required as soon as a second agent exists.
+    """
+    roster = bridge().names()
+    if not roster:
+        raise RconError("no agents yet; call factorio_add_agent first")
+    name = args.get("agent")
+    if name:
+        if name not in roster:
+            raise RconError(f"no such agent: {name}; roster is {', '.join(roster)}")
+        return bridge().agent(name)
+    if len(roster) > 1:
+        raise RconError(f"several agents exist ({', '.join(roster)}); pass `agent`")
+    return bridge().agent(roster[0])
+
+
 HANDLERS: dict[str, Callable[[dict], Any]] = {
-    "factorio_status": lambda a: bridge().status(),
-    "factorio_observe": lambda a: bridge().observe(radius=int(a.get("radius", 64))),
-    "factorio_inventory": lambda a: bridge().inventory(),
-    "factorio_spawn": lambda a: bridge().spawn(force=a.get("force", "player")),
-    "factorio_walk_to": lambda a: bridge().walk_to(
+    "factorio_agents": lambda a: {"agents": bridge().list()},
+    "factorio_add_agent": lambda a: bridge().spawn(
+        a.get("name") or f"agent{len(bridge().names()) + 1}",
+        force=a.get("force", "player")).status(),
+    "factorio_remove_agent": lambda a: bridge().remove(a["name"]),
+    "factorio_status": lambda a: who(a).status(),
+    "factorio_observe": lambda a: who(a).observe(radius=int(a.get("radius", 64))),
+    "factorio_inventory": lambda a: who(a).inventory(),
+    "factorio_walk_to": lambda a: who(a).walk_to(
         a["x"], a["y"], **({"tolerance": a["tolerance"]} if "tolerance" in a else {})),
-    "factorio_mine": lambda a: bridge().mine(
+    "factorio_mine": lambda a: who(a).mine(
         a["x"], a["y"], count=int(a.get("count", 10)),
         timeout=float(a.get("timeout", 300)), timeout_ticks=14400),
-    "factorio_place": lambda a: bridge().place(
-        a["name"], a["x"], a["y"], direction=int(a.get("direction", 0))),
-    "factorio_craft": lambda a: bridge().craft(a["recipe"], count=int(a.get("count", 1))),
-    "factorio_plan": lambda a: {"ids": bridge().submit_plan(
+    "factorio_place": lambda a: who(a).place(
+        a["name"], a["x"], a["y"], direction=int(a.get("direction", 0)),
+        **({"snap": True} if a.get("snap") else {})),
+    "factorio_craft": lambda a: who(a).craft(a["recipe"], count=int(a.get("count", 1))),
+    "factorio_insert": lambda a: who(a).insert(
+        a["name"], a["x"], a["y"], count=int(a.get("count", 1))),
+    "factorio_take": lambda a: who(a).take(
+        a["name"], a["x"], a["y"], count=int(a.get("count", 1))),
+    "factorio_plan": lambda a: {"ids": who(a).submit_plan(
         [(s["type"], s.get("params", {})) for s in a["steps"]])},
     "factorio_poll": lambda a: bridge().poll(int(a["task_id"])),
-    "factorio_cancel": lambda a: bridge().cancel_all(),
+    "factorio_cancel": lambda a: (who(a).cancel() if a.get("agent")
+                                  else bridge().cancel_all()),
+    "factorio_inspect": lambda a: {"entities": bridge().inspect(
+        a["x"], a["y"], float(a.get("radius", 2)))},
     "factorio_chat_read": lambda a: bridge().chat(
         int(a["since_tick"]) if "since_tick" in a else None),
-    "factorio_say": lambda a: bridge().say(a["text"]),
+    "factorio_say": lambda a: bridge().say(a["text"], who=a.get("agent") or "AI"),
+    "factorio_observer": lambda a: bridge().spectate(
+        a["player"], adopt_as=a.get("adopt_as")),
+    "factorio_unobserver": lambda a: bridge().unspectate(a["player"]),
 }
 
 
@@ -225,8 +337,8 @@ HANDLERS: dict[str, Callable[[dict], Any]] = {
 # second chest; replaying factorio_spawn would destroy the character (and its
 # inventory) that the first attempt created.
 IDEMPOTENT = {
-    "factorio_status", "factorio_observe", "factorio_inventory",
-    "factorio_poll", "factorio_chat_read",
+    "factorio_agents", "factorio_status", "factorio_observe",
+    "factorio_inventory", "factorio_poll", "factorio_chat_read", "factorio_inspect",
 }
 
 

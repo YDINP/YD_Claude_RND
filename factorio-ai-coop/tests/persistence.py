@@ -52,11 +52,11 @@ def restart_server(save_name: str) -> subprocess.Popen:
 def main() -> int:
     print("1. set up a recognisable state")
     ai = connect()
-    ai.spawn()
-    ai.walk_to(18, 12, tolerance=1.0)
-    ai.give(**{"iron-plate": 37})
-    before = ai.status()
-    inv_before = ai.inventory()["items"]
+    bot = ai.spawn("alpha")
+    bot.walk_to(18, 12, tolerance=1.0)
+    bot.give(**{"iron-plate": 37})
+    before = bot.status()
+    inv_before = bot.inventory()["items"]
     print(f"     at {before['x']:.1f},{before['y']:.1f} carrying {inv_before}")
 
     print("\n2. save with the agent attached")
@@ -75,17 +75,18 @@ def main() -> int:
     ai = connect()
 
     print("\n4. the agent is still there, mid-world, with its inventory")
-    after = ai.status()
+    bot = ai.agent("alpha")
+    after = bot.status()
     check("character survived the restart", after.get("alive") is True, json.dumps(after)[:120])
     check("position preserved",
           abs(after.get("x", 0) - before["x"]) < 1 and abs(after.get("y", 0) - before["y"]) < 1,
           f"{after.get('x'):.1f},{after.get('y'):.1f} vs {before['x']:.1f},{before['y']:.1f}")
-    inv_after = ai.inventory()["items"]
+    inv_after = bot.inventory()["items"]
     check("inventory preserved", inv_after.get("iron-plate") == inv_before.get("iron-plate"),
           f"{inv_after.get('iron-plate')} iron plates")
 
     print("\n5. and it still takes orders")
-    moved = ai.walk_to(after["x"] + 6, after["y"], tolerance=1.0)
+    moved = bot.walk_to(after["x"] + 6, after["y"], tolerance=1.0)
     check("accepts tasks after reload", abs(moved.get("x", 0) - (after["x"] + 6)) < 2,
           f"walked to {moved.get('x'):.1f},{moved.get('y'):.1f}")
     ai.close()

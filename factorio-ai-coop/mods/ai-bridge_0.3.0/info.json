@@ -1,0 +1,9 @@
+{
+  "name": "ai-bridge",
+  "version": "0.3.0",
+  "title": "AI Bridge",
+  "author": "YD",
+  "factorio_version": "2.0",
+  "dependencies": ["base >= 2.0.0"],
+  "description": "Multiple external agents can drive characters over RCON while a human watches: async task queues, per-tick state machines, aggregated observation, in-game chat."
+}

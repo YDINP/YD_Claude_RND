@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 import brain  # noqa: E402
-from agent import Snapshot, next_goal, parse  # noqa: E402
+from agent import ALL, Snapshot, next_goal, parse, split_target  # noqa: E402
 
 PASSED: list[str] = []
 FAILED: list[str] = []
@@ -68,6 +68,24 @@ def main() -> int:
           str(params("석탄 자동화")))
     check("철광석 resolves past 철", params("철광석 30개 캐와").get("ore") == "iron-ore")
     check("bare 자동화 has no ore", params("자동화 해줘").get("ore") is None)
+
+    print("\n1c. addressing one agent, or all of them")
+    roster = ["alpha", "bravo", "charlie"]
+    for text, want_target, want_kind in [
+        ("alpha 철 캐와", "alpha", "mine"),
+        ("bravo 이리와", "bravo", "come"),
+        ("2번 멈춰", "bravo", "stop"),
+        ("1번아 석탄 캐와", "alpha", "mine"),
+        ("모두 멈춰", ALL, "stop"),
+        ("전부 이리와", ALL, "come"),
+        ("철 캐와", None, "mine"),            # nobody named: caller picks
+        ("9번 멈춰", None, "stop"),           # out of range: not an address
+    ]:
+        target, rest = split_target(text, roster)
+        got = parse(rest)
+        got_kind = got[0][0] if got else None
+        ok = target == want_target and got_kind == want_kind
+        check(f"{text!r} -> {want_target}/{want_kind}", ok, f"got {target}/{got_kind}")
 
     print("\n2. counts")
     check("digits win", params("철 37개 캐와").get("count") == 37)

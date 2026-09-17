@@ -74,8 +74,17 @@ def _snapshot_text(snap: Any) -> str:
         lines.append("주변 우리 건물: 없음")
 
     if snap.humans:
-        who = ", ".join(f"{h['name']} ({h['x']:.0f}, {h['y']:.0f})" for h in snap.humans)
+        who = ", ".join(
+            f"{h['name']} ({h['x']:.0f}, {h['y']:.0f})"
+            + ("[관찰자]" if h.get("spectating") else "")
+            for h in snap.humans)
         lines.append(f"접속한 사람: {who}")
+
+    mates = getattr(snap, "mates", None)
+    if mates:
+        lines.append("같이 일하는 에이전트: " + ", ".join(
+            f"{m['name']} ({m['x']:.0f}, {m['y']:.0f})" + ("[작업중]" if m.get("busy") else "")
+            for m in mates))
 
     return "\n".join(lines)
 
@@ -161,13 +170,14 @@ def _clean_steps(raw: Any) -> list[tuple[str, dict]]:
     return steps
 
 
-def think(message: str, snap: Any, timeout: float = 90.0,
+def think(message: str, snap: Any, agent_name: str = "agent", timeout: float = 90.0,
           cli: str = "claude") -> tuple[str, list[tuple[str, dict]]] | None:
     """Ask the model what to do. Returns (what to say, steps) or None."""
     # Not str.format: the brief is full of JSON braces, which format() would
     # read as replacement fields.
     prompt = (
         BRIEF.replace("{max_steps}", str(MAX_STEPS))
+        + f"\n너의 이름은 {agent_name}이다. 다른 에이전트도 함께 일하고 있을 수 있다.\n"
         + "\n[상황]\n" + _snapshot_text(snap)
         + f"\n\n[사람이 한 말]\n{message}\n"
     )

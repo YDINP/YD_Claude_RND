@@ -40,12 +40,14 @@ def main() -> int:
     print("connected\n")
 
     print("1. spawn")
-    spawned = ai.spawn()
-    check("character spawned", bool(spawned and spawned.get("unit_number")), json.dumps(spawned))
+    bot = ai.spawn("alpha")
+    spawned = bot.status()
+    check("character spawned", spawned.get("alive") is True, json.dumps(spawned))
     check("same force as humans", spawned.get("force") == "player")
+    check("shows up on the roster", "alpha" in ai.names(), str(ai.names()))
 
     print("\n2. observe (aggregated, not enumerated)")
-    world = ai.observe(radius=96)
+    world = bot.observe(radius=96)
     res = world.get("resources", {})
     check("observation returned", bool(world.get("tick")))
     check("resources aggregated", bool(res), ", ".join(f"{k}:{v['tiles']}t" for k, v in res.items()))
@@ -56,49 +58,49 @@ def main() -> int:
 
     print("\n3. walk_to with pathfinding")
     t0 = time.time()
-    landed = ai.walk_to(25, -18, tolerance=1.0)
+    landed = bot.walk_to(25, -18, tolerance=1.0)
     check("walked to goal", abs(landed.get("x", 0) - 25) < 3 and abs(landed.get("y", 0) + 18) < 3,
           f"{landed.get('x'):.1f},{landed.get('y'):.1f} in {time.time() - t0:.1f}s")
 
     print("\n4. mine ore (walks into reach, mines over ticks)")
-    spot = ai.nearest("iron-ore", radius=200)
+    spot = bot.nearest("iron-ore", radius=200)
     if spot:
         t0 = time.time()
-        mined = ai.mine(spot["x"], spot["y"], count=8, timeout=300, timeout_ticks=14400)
+        mined = bot.mine(spot["x"], spot["y"], count=8, timeout=300, timeout_ticks=14400)
         check("mined iron ore", mined.get("mined", 0) >= 8,
               f"{json.dumps(mined)} in {time.time() - t0:.1f}s")
     else:
         check("mined iron ore", False, "no iron ore within 200 tiles")
 
     print("\n5. craft from mined materials")
-    ai.give(**{"iron-plate": 20})
-    crafted = ai.craft("iron-chest", count=2)
+    bot.give(**{"iron-plate": 20})
+    crafted = bot.craft("iron-chest", count=2)
     check("crafted iron-chest", crafted.get("crafted", 0) == 2, json.dumps(crafted))
 
     print("\n6. build (consumes inventory, respects placement rules)")
-    st = ai.status()
-    placed = ai.place("iron-chest", round(st["x"]) + 2, round(st["y"]))
+    st = bot.status()
+    placed = bot.place("iron-chest", round(st["x"]) + 2, round(st["y"]))
     check("placed iron-chest", placed.get("name") == "iron-chest",
           f"at {placed.get('x')},{placed.get('y')}")
-    inv = ai.inventory()
+    inv = bot.inventory()
     check("inventory consumed", inv["items"].get("iron-chest", 0) == 1,
           f"chests left: {inv['items'].get('iron-chest', 0)}")
 
     print("\n7. failure is reported, not hung")
     try:
-        ai.place("nuclear-reactor", 0, 0)
+        bot.place("nuclear-reactor", 0, 0)
         check("missing item rejected", False, "should have raised")
     except TaskFailed as exc:
         check("missing item rejected", "no nuclear-reactor" in str(exc), str(exc))
 
     print("\n8. batched plan in one round trip")
-    ids = ai.submit_plan([
+    ids = bot.submit_plan([
         ("walk_to", {"x": st["x"] - 10, "y": st["y"], "tolerance": 1.5}),
         ("wait", {"ticks": 30}),
         ("walk_to", {"x": st["x"], "y": st["y"], "tolerance": 1.5}),
     ])
     check("plan queued", len(ids) == 3, f"ids={ids}")
-    ai.wait(ids[-1], timeout=180)
+    bot.wait(ids[-1], timeout=180)
     check("plan completed", True)
 
     print("\n9. world still saves with the agent attached")
@@ -113,11 +115,11 @@ def main() -> int:
     # error", kicking every human in the game. Anything the agent can type must
     # therefore come back as a task failure instead.
     hostile = (
-        ("bad recipe", lambda: ai.craft("does-not-exist")),
-        ("bad entity", lambda: ai.place("not-a-real-entity", 0, 0)),
-        ("absurd coordinates", lambda: ai.run("walk_to", timeout=40, x=1e9, y=1e9,
+        ("bad recipe", lambda: bot.craft("does-not-exist")),
+        ("bad entity", lambda: bot.place("not-a-real-entity", 0, 0)),
+        ("absurd coordinates", lambda: bot.run("walk_to", timeout=40, x=1e9, y=1e9,
                                               timeout_ticks=120)),
-        ("unknown task type", lambda: ai.submit("teleport_to_the_moon")),
+        ("unknown task type", lambda: bot.submit("teleport_to_the_moon")),
     )
     for label, fn in hostile:
         try:
@@ -126,7 +128,8 @@ def main() -> int:
             outcome = f"{type(exc).__name__}: {exc}"
         print(f"       {label}: {outcome[:110]}")
 
-    alive = ai.status()
+    # Any successful call proves the server is still there; chat carries the tick.
+    alive = ai.chat()
     check("server survived every hostile task", bool(alive.get("tick")), f"tick={alive.get('tick')}")
 
     ai.close()

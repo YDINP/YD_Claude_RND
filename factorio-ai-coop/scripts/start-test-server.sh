@@ -30,12 +30,12 @@ fi
 # alone kicks the human with "does not match the server". Keep the client copy
 # in step every time the server starts.
 CLIENT_MODS="${FACTORIO_CLIENT_MODS:-$APPDATA/Factorio/mods}"
-MOD_SRC="$ROOT/mods/ai-bridge_0.2.0"
+MOD_SRC="$ROOT/mods/ai-bridge_0.3.0"
 if [ -d "$CLIENT_MODS" ]; then
-  mkdir -p "$CLIENT_MODS/ai-bridge_0.2.0"
+  mkdir -p "$CLIENT_MODS/ai-bridge_0.3.0"
   cp "$MOD_SRC"/info.json "$MOD_SRC"/control.lua "$MOD_SRC"/tasks.lua \
-     "$CLIENT_MODS/ai-bridge_0.2.0/"
-  echo "synced ai-bridge to client mods: $CLIENT_MODS/ai-bridge_0.2.0"
+     "$CLIENT_MODS/ai-bridge_0.3.0/"
+  echo "synced ai-bridge to client mods: $CLIENT_MODS/ai-bridge_0.3.0"
 fi
 
 if [ ! -f "$SAVE" ]; then

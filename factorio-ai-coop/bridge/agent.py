@@ -1,17 +1,20 @@
-"""Autonomous coop agent: listens to game chat, obeys, and plays on its own.
+"""The crew: several AI characters listening to one human's orders in chat.
 
 Three layers, deliberately separated:
 
-  parse()      pure: a chat line -> intents
-  next_goal()  pure: a world snapshot -> (what to say, what to queue)
-  Agent        the only part that touches the game
+  split_target()  pure: who is being addressed
+  parse()         pure: what they are being told to do
+  next_goal()     pure: a world snapshot -> (what to say, what to queue)
+  Crew            the only part that touches the game
 
-Keeping the first two pure means the interesting logic is testable without a
-running Factorio server, which matters because the interesting logic is exactly
-the part that is hard to debug through a game window.
+Keeping the pure parts pure means the interesting logic is testable without a
+running Factorio server, which matters because it is exactly the logic that is
+hard to debug through a game window.
 
-    python bridge/agent.py            # obey chat, stay idle otherwise
-    python bridge/agent.py --auto     # also play by itself when idle
+    python bridge/agent.py                  # one agent, obeys chat
+    python bridge/agent.py --agents 3       # three of them
+    python bridge/agent.py --auto           # they also work while idle
+    python bridge/agent.py --observer NAME  # put that player in the observer seat
 """
 
 from __future__ import annotations
@@ -26,16 +29,18 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import brain
-from client import AIBridge, RconError, TaskFailed
+from client import Agent, AIBridge, RconError, TaskFailed
+
+Step = tuple[str, dict]
+Intent = tuple[str, dict]
+
+# Call signs are ASCII so they survive Lua, JSON and chat without surprises.
+# "1번" addressing exists for anyone who would rather not type them.
+CALL_SIGNS = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel"]
 
 DRILL = "burner-mining-drill"
 CHEST = "iron-chest"
 DRILL_FUEL = 10
-
-# --------------------------------------------------------------------- types
-
-Step = tuple[str, dict]
-Intent = tuple[str, dict]
 
 
 @dataclass
@@ -47,6 +52,7 @@ class Snapshot:
     buildings: dict[str, dict] = field(default_factory=dict)
     resources: dict[str, dict] = field(default_factory=dict)
     humans: list[dict] = field(default_factory=list)
+    mates: list[dict] = field(default_factory=list)
 
     def have(self, item: str) -> int:
         return self.items.get(item, 0)
@@ -62,9 +68,8 @@ class Snapshot:
 
 # ------------------------------------------------------------------- parsing
 
-# No single ambiguous syllables here. "동" for copper also lives inside
-# "자동화" and "수동", which is how "석탄 자동화" once turned into a request to
-# mine copper.
+# No single ambiguous syllables here. "동" for copper also lives inside "자동화"
+# and "수동", which is how "석탄 자동화" once turned into a request for copper.
 ORES = {
     "철광석": "iron-ore", "철광": "iron-ore", "철": "iron-ore", "iron": "iron-ore",
     "구리": "copper-ore", "copper": "copper-ore",
@@ -76,10 +81,12 @@ PLACEABLE = {
     "벨트": "transport-belt", "컨베이어": "transport-belt", "belt": "transport-belt",
     "화로": "stone-furnace", "용광로": "stone-furnace", "furnace": "stone-furnace",
     "상자": "iron-chest", "궤짝": "iron-chest", "chest": "iron-chest",
-    "채굴기": "burner-mining-drill", "드릴": "burner-mining-drill", "drill": "burner-mining-drill",
+    "채굴기": DRILL, "드릴": DRILL, "drill": DRILL,
 }
 
 KOREAN_NUMERALS = {"하나": 1, "둘": 2, "셋": 3, "넷": 4, "다섯": 5, "열": 10, "스물": 20}
+
+ALL = "*"
 
 
 def _lookup(text: str, table: dict[str, str]) -> str | None:
@@ -100,6 +107,32 @@ def _count(text: str, default: int) -> int:
     return default
 
 
+def split_target(text: str, names: list[str]) -> tuple[str | None, str]:
+    """Pull an addressee off the front of a line.
+
+    "alpha 철 캐와", "2번 이리와", "모두 멈춰". Returns (target, rest), where
+    target is an agent name, ALL, or None when nobody was named.
+    """
+    stripped = text.strip()
+    lowered = stripped.lower()
+
+    for word in ("모두", "전부", "다같이", "everyone", "all"):
+        if lowered.startswith(word):
+            return ALL, stripped[len(word):].strip(" ,:아야!")
+
+    for name in sorted(names, key=len, reverse=True):
+        if lowered.startswith(name.lower()):
+            return name, stripped[len(name):].strip(" ,:아야!")
+
+    ordinal = re.match(r"^(\d+)\s*번?\s*", stripped)
+    if ordinal:
+        index = int(ordinal.group(1)) - 1
+        if 0 <= index < len(names):
+            return names[index], stripped[ordinal.end():].strip(" ,:아야!")
+
+    return None, stripped
+
+
 def parse(message: str) -> list[Intent]:
     """Turn one chat line into intents. Unknown lines produce nothing."""
     text = message.strip().lower()
@@ -109,7 +142,20 @@ def parse(message: str) -> list[Intent]:
     if any(w in text for w in ("멈춰", "멈춤", "그만", "스톱", "정지", "취소", "stop", "halt")):
         return [("stop", {})]
 
-    # "석탄 자동화" is a request for drills and chests, not a request to flip my
+    # Roster management before anything else: these name no resource and would
+    # otherwise fall through to the model.
+    if any(w in text for w in ("추가", "한명 더", "한 명 더", "늘려", "add agent", "새 에이전트")):
+        return [("add_agent", {"count": _count(text, 1)})]
+    if any(w in text for w in ("빼", "제거", "내보내", "remove agent")):
+        return [("remove_agent", {})]
+    if any(w in text for w in ("누구", "목록", "몇명", "몇 명", "roster", "list")):
+        return [("list_agents", {})]
+    if any(w in text for w in ("관찰자", "구경", "observer", "spectate", "관전")):
+        return [("observer", {})]
+    if any(w in text for w in ("복귀", "몸 줘", "몸줘", "내려가", "unspectate")):
+        return [("unobserver", {})]
+
+    # "석탄 자동화" is a request for drills and chests, not a request to flip an
     # autopilot flag. It has to be tested before the bare mode keywords, or the
     # "자동" inside "자동화" swallows the sentence.
     if any(w in text for w in ("자동화", "automate", "자동으로")):
@@ -123,6 +169,7 @@ def parse(message: str) -> list[Intent]:
             return [("autopilot_on", {})]
         if any(w in text for w in ("수동", "대기", "기다려", "manual", "wait")):
             return [("autopilot_off", {})]
+
     if any(w in text for w in ("이리", "따라", "와봐", "이쪽", "come", "follow")):
         return [("come", {})]
     if any(w in text for w in ("가방", "인벤", "소지품", "inventory")):
@@ -157,7 +204,7 @@ def next_goal(snap: Snapshot) -> tuple[str, list[Step]] | None:
     """The self-directed ladder: bootstrap a working iron-plate loop.
 
     Pure: given the same snapshot it always proposes the same next move, which
-    makes the agent's behaviour reproducible and the ladder unit-testable.
+    makes behaviour reproducible and the ladder unit-testable.
     """
     # The goal, checked first: without this the ladder below always finds
     # another reason to go mining and the agent never stands still.
@@ -197,251 +244,375 @@ def next_goal(snap: Snapshot) -> tuple[str, list[Step]] | None:
             ("take", {"name": "iron-plate", "count": SMELT_BATCH, **furnace}),
         ]
 
-    if snap.have("iron-plate") >= 10:
-        return None  # the loop has closed; nothing urgent left to bootstrap
     return None
 
 
-# --------------------------------------------------------------------- agent
+# -------------------------------------------------------------------- worker
 
-class Agent:
-    def __init__(self, ai: AIBridge, autopilot: bool = False, use_llm: bool = True) -> None:
-        self.ai = ai
-        self.autopilot = autopilot
-        self.use_llm = use_llm
-        self.since_tick: int | None = None
-        self.pending: list[int] = []
+class Worker:
+    """One agent, plus the bookkeeping that belongs to it alone."""
+
+    def __init__(self, handle: Agent) -> None:
+        self.handle = handle
+        self.name = handle.name
+        self.autopilot = False
         self.watching: list[int] = []
         self.said_idle = False
-
-        # The model takes several seconds to answer. Doing that on the main
-        # loop would stop the agent hearing "멈춰" for the whole call, which is
-        # exactly when a human is most likely to type it.
-        self.thoughts: queue.Queue[tuple[str, list[Step]]] = queue.Queue()
-        self.asking = threading.Semaphore(1)
-
-    # -- world ------------------------------------------------------------
+        # One slow job (an LLM call, a build-out) at a time per agent.
+        self.slot = threading.Semaphore(1)
 
     def snapshot(self, radius: int = 200) -> Snapshot:
-        world = self.ai.observe(radius=radius)
+        world = self.handle.observe(radius=radius)
         humans = world.get("humans") or {}
-        if isinstance(humans, dict):
-            humans = list(humans.values())
+        mates = world.get("agents") or {}
         return Snapshot(
             tick=world.get("tick", 0),
             x=world.get("position", {}).get("x", 0.0),
             y=world.get("position", {}).get("y", 0.0),
-            items=self.ai.inventory().get("items", {}),
+            items=self.handle.items(),
             buildings=world.get("buildings") or {},
             resources=world.get("resources") or {},
-            humans=humans,
+            humans=list(humans.values()) if isinstance(humans, dict) else humans,
+            mates=list(mates.values()) if isinstance(mates, dict) else mates,
         )
 
-    def busy(self) -> bool:
-        status = self.ai.status()
-        return bool(status.get("current")) or bool(status.get("queued"))
 
-    def say(self, text: str) -> None:
-        print(f"[say] {text}")
-        self.ai.say(text)
+# ---------------------------------------------------------------------- crew
 
-    def queue(self, steps: list[Step]) -> None:
-        self.pending = self.ai.submit_plan(steps)
-        self.watching = list(self.pending)
+class Crew:
+    def __init__(self, bridge: AIBridge, autopilot: bool = False,
+                 use_llm: bool = True) -> None:
+        self.bridge = bridge
+        self.autopilot = autopilot
+        self.use_llm = use_llm
+        self.since_tick: int | None = None
+        self.workers: dict[str, Worker] = {}
+        self.thoughts: queue.Queue[tuple[str, str, list[Step]]] = queue.Queue()
+
+    # -- roster -----------------------------------------------------------
+
+    @property
+    def names(self) -> list[str]:
+        return list(self.workers)
+
+    def adopt(self, name: str) -> Worker:
+        worker = Worker(self.bridge.agent(name))
+        worker.autopilot = self.autopilot
+        self.workers[name] = worker
+        return worker
+
+    def hire(self, name: str | None = None) -> Worker | None:
+        if name is None:
+            for sign in CALL_SIGNS:
+                if sign not in self.workers:
+                    name = sign
+                    break
+        if name is None:
+            self.say("자리가 다 찼습니다.")
+            return None
+        try:
+            self.bridge.spawn(name)
+        except RconError as exc:
+            self.say(f"에이전트를 못 만들겠습니다: {exc}")
+            return None
+        worker = self.adopt(name)
+        self.say(f"{name} 합류했습니다.", who=name)
+        return worker
+
+    def fire(self, name: str) -> None:
+        self.bridge.remove(name)
+        self.workers.pop(name, None)
+        self.say(f"{name} 내보냈습니다.")
+
+    def sync_roster(self) -> None:
+        """Take over whatever the server already has, so a restart keeps them."""
+        for state in self.bridge.list():
+            if state["name"] not in self.workers:
+                self.adopt(state["name"])
+
+    # -- speech -----------------------------------------------------------
+
+    def say(self, text: str, who: str = "AI") -> None:
+        print(f"[{who}] {text}")
+        self.bridge.say(text, who=who)
+
+    def targets(self, target: str | None, prefer_idle: bool = True) -> list[Worker]:
+        if target == ALL:
+            return list(self.workers.values())
+        if target and target in self.workers:
+            return [self.workers[target]]
+        if not self.workers:
+            return []
+        if prefer_idle:
+            for worker in self.workers.values():
+                try:
+                    if not worker.handle.busy():
+                        return [worker]
+                except RconError:
+                    continue
+        return [next(iter(self.workers.values()))]
 
     # -- the slow brain ---------------------------------------------------
 
-    def ask_llm(self, message: str, snap: Snapshot) -> None:
-        """Hand an unrecognised line to the model, off the main loop."""
-        if not self.asking.acquire(blocking=False):
-            self.say("아직 앞의 말을 생각하는 중입니다. 잠시만요.")
+    def ask_llm(self, worker: Worker, message: str, snap: Snapshot) -> None:
+        if not worker.slot.acquire(blocking=False):
+            self.say("아직 앞의 말을 생각하는 중입니다.", who=worker.name)
             return
 
-        def worker() -> None:
+        def think() -> None:
             try:
-                answer = brain.think(message, snap)
+                answer = brain.think(message, snap, agent_name=worker.name)
                 if answer is None:
-                    self.thoughts.put(("무슨 말인지 모르겠습니다. 다시 말씀해 주시겠어요?", []))
+                    self.thoughts.put((worker.name, "무슨 말인지 모르겠습니다.", []))
                 else:
-                    self.thoughts.put(answer)
+                    self.thoughts.put((worker.name, answer[0], answer[1]))
             except Exception as exc:  # noqa: BLE001 - a dead thread must still answer
                 print(f"[warn] brain failed: {exc!r}", file=sys.stderr)
-                self.thoughts.put(("생각하다 문제가 생겼습니다. 다시 말씀해 주세요.", []))
+                self.thoughts.put((worker.name, "생각하다 문제가 생겼습니다.", []))
             finally:
-                self.asking.release()
+                worker.slot.release()
 
-        threading.Thread(target=worker, daemon=True).start()
+        threading.Thread(target=think, daemon=True).start()
 
     def collect_thoughts(self) -> None:
         while True:
             try:
-                say, steps = self.thoughts.get_nowait()
+                name, say, steps = self.thoughts.get_nowait()
             except queue.Empty:
                 return
+            worker = self.workers.get(name)
             if say:
-                self.say(say)
-            if steps:
+                self.say(say, who=name)
+            if steps and worker:
                 try:
-                    self.queue(steps)
+                    worker.watching = worker.handle.submit_plan(steps)
                 except RconError as exc:
-                    self.say(f"그건 못 하겠습니다: {exc}")
+                    self.say(f"그건 못 하겠습니다: {exc}", who=name)
 
     # -- automation --------------------------------------------------------
 
-    def ensure(self, item: str, count: int = 1) -> bool:
-        """Have `count` of an item, crafting it if that is possible."""
-        if self.ai.inventory()["items"].get(item, 0) >= count:
+    def ensure(self, worker: Worker, item: str, count: int = 1) -> bool:
+        if worker.handle.items().get(item, 0) >= count:
             return True
         try:
-            self.say(f"{item}이(가) 부족해서 제작합니다.")
-            self.ai.craft(item, count=count)
+            self.say(f"{item}이(가) 부족해서 제작합니다.", who=worker.name)
+            worker.handle.craft(item, count=count)
             return True
         except TaskFailed as exc:
-            self.say(f"{item}을(를) 못 만들겠습니다: {exc.task.get('error')}")
+            self.say(f"{item}을(를) 못 만들겠습니다: {exc.task.get('error')}", who=worker.name)
             return False
 
-    def automate(self, ore: str | None) -> None:
-        """Put a drill on an ore patch, a chest where it drops, and fuel in it.
-
-        Runs off the main loop: it walks, crafts and builds, which takes long
-        enough that the agent would otherwise stop hearing the human.
-        """
+    def automate(self, worker: Worker, ore: str | None) -> None:
+        """Drill on the patch, chest where it drops, fuel in the drill."""
         ore = ore or "coal"
+        name = worker.name
         try:
-            snap = self.snapshot()
+            snap = worker.snapshot()
             spot = snap.ore(ore)
             if not spot:
-                self.say(f"{ore} 광맥이 주변 200타일 안에 안 보입니다.")
+                self.say(f"{ore} 광맥이 주변 200타일 안에 안 보입니다.", who=name)
                 return
 
-            if not self.ensure(DRILL) or not self.ensure(CHEST):
+            if not self.ensure(worker, DRILL) or not self.ensure(worker, CHEST):
                 return
 
-            self.say(f"{ore} 광맥에 채굴기를 놓겠습니다. ({spot['x']:.0f}, {spot['y']:.0f})")
-            drill = self.ai.place(DRILL, spot["x"], spot["y"], snap=True, timeout=300)
+            self.say(f"{ore} 광맥에 채굴기를 놓겠습니다. ({spot['x']:.0f}, {spot['y']:.0f})", who=name)
+            drill = worker.handle.place(DRILL, spot["x"], spot["y"], snap=True, timeout=300)
 
             # The drill picks its own output tile; ask it rather than guessing.
-            found = [e for e in self.ai.inspect(drill["x"], drill["y"], 2)
+            found = [e for e in self.bridge.inspect(drill["x"], drill["y"], 2)
                      if e.get("name") == DRILL and e.get("drop_x") is not None]
             if not found:
-                self.say("채굴기는 놨는데 산출 위치를 못 읽었습니다. 상자는 직접 놔주세요.")
+                self.say("채굴기는 놨는데 산출 위치를 못 읽었습니다.", who=name)
                 return
             drop = found[0]
+            worker.handle.place(CHEST, drop["drop_x"], drop["drop_y"], timeout=180)
 
-            self.ai.place(CHEST, drop["drop_x"], drop["drop_y"], timeout=180)
-
-            if self.ai.inventory()["items"].get("coal", 0) < DRILL_FUEL:
+            if worker.handle.items().get("coal", 0) < DRILL_FUEL:
                 coal = snap.ore("coal")
                 if coal:
-                    self.say("연료가 부족해 석탄을 조금 캐옵니다.")
-                    self.ai.mine(coal["x"], coal["y"], count=DRILL_FUEL,
-                                 timeout=300, timeout_ticks=14400)
-            self.ai.insert("coal", drill["x"], drill["y"], count=DRILL_FUEL, timeout=180)
+                    self.say("연료가 부족해 석탄을 조금 캐옵니다.", who=name)
+                    worker.handle.mine(coal["x"], coal["y"], count=DRILL_FUEL,
+                                       timeout=300, timeout_ticks=14400)
+            worker.handle.insert("coal", drill["x"], drill["y"], count=DRILL_FUEL, timeout=180)
 
-            self.say(f"{ore} 자동 채굴 완료. 채굴기가 ({drill['x']:.0f}, {drill['y']:.0f}), "
-                     f"상자가 ({drop['drop_x']:.0f}, {drop['drop_y']:.0f})에 있습니다.")
+            self.say(f"{ore} 자동 채굴 완료. 채굴기 ({drill['x']:.0f}, {drill['y']:.0f}), "
+                     f"상자 ({drop['drop_x']:.0f}, {drop['drop_y']:.0f}).", who=name)
         except TaskFailed as exc:
-            self.say(f"자동화 중 막혔습니다: {exc.task.get('error')}")
+            self.say(f"자동화 중 막혔습니다: {exc.task.get('error')}", who=name)
         except RconError as exc:
-            self.say(f"자동화 중 오류: {exc}")
+            self.say(f"자동화 중 오류: {exc}", who=name)
 
-    # -- telling the human how it went -------------------------------------
+    # -- reporting ---------------------------------------------------------
 
     def report_finished(self) -> None:
-        still: list[int] = []
-        for task_id in self.watching:
-            state = self.ai.poll(task_id)
-            status = state.get("status")
-            if status in ("queued", "running"):
-                still.append(task_id)
-            elif status == "failed":
-                self.say(f"{state.get('type')} 실패: {state.get('error')}")
-        self.watching = still
+        for worker in self.workers.values():
+            still: list[int] = []
+            for task_id in worker.watching:
+                state = self.bridge.poll(task_id)
+                status = state.get("status")
+                if status in ("queued", "running"):
+                    still.append(task_id)
+                elif status == "failed":
+                    self.say(f"{state.get('type')} 실패: {state.get('error')}", who=worker.name)
+            worker.watching = still
 
-    # -- commands ---------------------------------------------------------
+    # -- dispatch ----------------------------------------------------------
 
-    def handle(self, intent: Intent, snap: Snapshot) -> None:
+    def handle(self, worker: Worker, intent: Intent, speaker: str) -> None:
         kind, params = intent
+        name = worker.name
+        handle = worker.handle
 
         if kind == "stop":
-            self.autopilot = False
-            self.ai.cancel_all()
-            self.say("멈췄습니다.")
+            worker.autopilot = False
+            handle.cancel()
+            worker.watching = []
+            self.say("멈췄습니다.", who=name)
 
         elif kind == "autopilot_on":
-            self.autopilot = True
-            self.said_idle = False
-            self.say("자율 모드로 전환합니다. 알아서 진행하겠습니다.")
+            worker.autopilot = True
+            worker.said_idle = False
+            self.say("자율로 진행하겠습니다.", who=name)
 
         elif kind == "autopilot_off":
-            self.autopilot = False
-            self.say("대기하겠습니다. 시키실 때까지 가만히 있겠습니다.")
+            worker.autopilot = False
+            self.say("대기하겠습니다.", who=name)
 
         elif kind == "come":
-            if not snap.humans:
-                self.say("접속한 분이 안 보입니다.")
+            snap = worker.snapshot()
+            here = next((h for h in snap.humans if h["name"] == speaker), None) \
+                or (snap.humans[0] if snap.humans else None)
+            if not here:
+                self.say("어디로 갈지 모르겠습니다.", who=name)
                 return
-            human = snap.humans[0]
-            self.say(f"{human['name']}님께 가겠습니다.")
-            self.queue([("walk_to", {"x": human["x"] + 2, "y": human["y"], "tolerance": 1.5})])
+            self.say(f"{here['name']}님께 가겠습니다.", who=name)
+            worker.watching = handle.submit_plan(
+                [("walk_to", {"x": here["x"] + 2, "y": here["y"], "tolerance": 1.5})])
 
         elif kind == "mine":
-            ore = params["ore"]
-            spot = snap.ore(ore)
+            snap = worker.snapshot()
+            spot = snap.ore(params["ore"])
             if not spot:
-                self.say(f"{ore} 광맥이 주변 200타일 안에 안 보입니다.")
+                self.say(f"{params['ore']} 광맥이 주변 200타일 안에 안 보입니다.", who=name)
                 return
-            self.say(f"{ore} {params['count']}개 캐러 갑니다. ({spot['x']:.0f}, {spot['y']:.0f})")
-            self.queue([("mine", {**spot, "count": params["count"], "timeout_ticks": 60 * 60 * 5})])
+            self.say(f"{params['ore']} {params['count']}개 캐러 갑니다. "
+                     f"({spot['x']:.0f}, {spot['y']:.0f})", who=name)
+            worker.watching = handle.submit_plan(
+                [("mine", {**spot, "count": params["count"], "timeout_ticks": 60 * 60 * 5})])
 
         elif kind == "place":
             entity, count = params["entity"], params["count"]
+            snap = worker.snapshot()
             have = snap.have(entity)
             if have < 1:
-                self.say(f"{entity}이(가) 없습니다. 제작이 필요합니다.")
+                self.say(f"{entity}이(가) 없습니다.", who=name)
                 return
             count = min(count, have)
-            self.say(f"{entity} {count}개 설치하겠습니다.")
-            self.queue([
+            self.say(f"{entity} {count}개 설치하겠습니다.", who=name)
+            worker.watching = handle.submit_plan([
                 ("build", {"name": entity, "x": snap.x + 3 + i, "y": snap.y + 3, "snap": True})
                 for i in range(count)
             ])
 
+        elif kind == "craft":
+            self.say(f"{params['recipe']} {params['count']}개 제작합니다.", who=name)
+            worker.watching = handle.submit_plan(
+                [("craft", {"recipe": params["recipe"], "count": params["count"]})])
+
         elif kind == "automate":
-            if not self.asking.acquire(blocking=False):
-                self.say("앞의 작업을 아직 하는 중입니다.")
+            if not worker.slot.acquire(blocking=False):
+                self.say("앞의 작업을 아직 하는 중입니다.", who=name)
                 return
-            self.autopilot = False   # a build-out should not race the ladder
+            worker.autopilot = False   # a build-out should not race the ladder
 
             def run_automation() -> None:
                 try:
-                    self.automate(params.get("ore"))
+                    self.automate(worker, params.get("ore"))
                 except Exception as exc:  # noqa: BLE001
                     print(f"[warn] automate failed: {exc!r}", file=sys.stderr)
-                    self.thoughts.put(("자동화 중 문제가 생겼습니다.", []))
+                    self.thoughts.put((name, "자동화 중 문제가 생겼습니다.", []))
                 finally:
-                    self.asking.release()
+                    worker.slot.release()
 
             threading.Thread(target=run_automation, daemon=True).start()
 
-        elif kind == "craft":
-            self.say(f"{params['recipe']} {params['count']}개 제작합니다.")
-            self.queue([("craft", {"recipe": params["recipe"], "count": params["count"]})])
-
         elif kind == "report_inventory":
-            items = ", ".join(f"{k} {v}" for k, v in sorted(snap.items.items())) or "빈손입니다"
-            self.say(items)
+            items = worker.snapshot().items
+            self.say(", ".join(f"{k} {v}" for k, v in sorted(items.items())) or "빈손입니다.",
+                     who=name)
 
         elif kind == "report_scout":
+            snap = worker.snapshot()
             lines = sorted(snap.resources.items(), key=lambda kv: kv[1]["nearest_dist"])[:4]
             self.say(" / ".join(
-                f"{name} {info['nearest_dist']:.0f}타일 ({info['nearest']['x']:.0f},{info['nearest']['y']:.0f})"
-                for name, info in lines) or "주변에 자원이 안 보입니다.")
+                f"{res} {info['nearest_dist']:.0f}타일 "
+                f"({info['nearest']['x']:.0f},{info['nearest']['y']:.0f})"
+                for res, info in lines) or "주변에 자원이 안 보입니다.", who=name)
 
         elif kind == "report_status":
-            mode = "자율" if self.autopilot else "대기"
-            self.say(f"{mode} 모드, 위치 ({snap.x:.0f}, {snap.y:.0f}), "
-                     f"{'작업 중' if self.busy() else '유휴'}")
+            state = handle.status()
+            doing = state.get("current")
+            self.say(f"{'자율' if worker.autopilot else '대기'} 모드, "
+                     f"({state.get('x', 0):.0f}, {state.get('y', 0):.0f}), "
+                     f"{doing['type'] if doing else '유휴'}", who=name)
+
+    def handle_crew(self, intent: Intent, speaker: str, target: str | None) -> bool:
+        """Roster and observer commands, which belong to nobody in particular."""
+        kind, params = intent
+
+        if kind == "add_agent":
+            for _ in range(min(params.get("count", 1), len(CALL_SIGNS))):
+                if not self.hire():
+                    break
+            return True
+
+        if kind == "remove_agent":
+            victim = target if target and target != ALL else (self.names[-1] if self.names else None)
+            if not victim:
+                self.say("내보낼 에이전트가 없습니다.")
+            else:
+                self.fire(victim)
+            return True
+
+        if kind == "list_agents":
+            if not self.workers:
+                self.say("에이전트가 없습니다. '에이전트 추가'라고 하시면 만들겠습니다.")
+                return True
+            parts = []
+            for index, state in enumerate(self.bridge.list(), start=1):
+                doing = state.get("current")
+                parts.append(f"{index}. {state['name']} "
+                             f"({state.get('x', 0):.0f},{state.get('y', 0):.0f}) "
+                             f"{doing['type'] if doing else '유휴'}")
+            self.say(" | ".join(parts))
+            return True
+
+        if kind == "observer":
+            try:
+                # Their body becomes a worker rather than a corpse in a field.
+                free = next((s for s in CALL_SIGNS if s not in self.workers), None)
+                result = self.bridge.spectate(speaker, adopt_as=free)
+            except RconError as exc:
+                self.say(f"관찰자 전환 실패: {exc}")
+                return True
+            adopted = result.get("adopted")
+            if adopted:
+                self.adopt(adopted)
+                self.say(f"{speaker}님은 관찰자입니다. 쓰시던 캐릭터는 {adopted}이(가) 이어받았습니다.")
+            else:
+                self.say(f"{speaker}님은 관찰자입니다.")
+            return True
+
+        if kind == "unobserver":
+            try:
+                self.bridge.unspectate(speaker)
+                self.say(f"{speaker}님 몸으로 돌아왔습니다.")
+            except RconError as exc:
+                self.say(f"복귀 실패: {exc}")
+            return True
+
+        return False
 
     # -- loop -------------------------------------------------------------
 
@@ -449,57 +620,68 @@ class Agent:
         self.collect_thoughts()
         self.report_finished()
 
-        log = self.ai.chat(self.since_tick)
+        log = self.bridge.chat(self.since_tick)
         self.since_tick = log.get("tick", self.since_tick)
         messages = log.get("messages") or []
 
-        if messages:
-            snap = self.snapshot()
-            for line in messages:
-                text = line.get("message", "")
-                print(f"[chat] {line.get('player')}: {text}")
-                intents = parse(text)
-                if not intents:
-                    # Nothing the rules recognise. Rather than ignoring the
-                    # human, let the model read it.
-                    if self.use_llm:
-                        self.ask_llm(text, snap)
+        for line in messages:
+            speaker = line.get("player", "")
+            text = line.get("message", "")
+            print(f"[chat] {speaker}: {text}")
+
+            target, rest = split_target(text, self.names)
+            intents = parse(rest)
+
+            if not intents:
+                if self.use_llm:
+                    for worker in self.targets(target):
+                        self.ask_llm(worker, rest, worker.snapshot())
+                continue
+
+            for intent in intents:
+                if self.handle_crew(intent, speaker, target):
                     continue
-                # A human instruction always wins over whatever the agent
-                # decided to do on its own.
-                self.ai.cancel_all()
-                self.watching = []
-                for intent in intents:
-                    self.handle(intent, snap)
+                # An explicit order always wins over what an agent chose to do.
+                for worker in self.targets(target):
+                    worker.handle.cancel()
+                    worker.watching = []
+                    self.handle(worker, intent, speaker)
+
+        if messages:
             return
 
-        if not self.autopilot or self.busy():
-            return
-
-        snap = self.snapshot()
-        goal = next_goal(snap)
-        if goal is None:
-            if not self.said_idle:
-                self.say("당장 할 일이 없습니다. 시키실 게 있으면 채팅으로 말씀해 주세요.")
-                self.said_idle = True
-            return
-        self.said_idle = False
-        narration, steps = goal
-        self.say(narration)
-        self.queue(steps)
+        for worker in self.workers.values():
+            if not worker.autopilot:
+                continue
+            try:
+                if worker.handle.busy():
+                    continue
+                snap = worker.snapshot()
+            except RconError:
+                continue
+            goal = next_goal(snap)
+            if goal is None:
+                if not worker.said_idle:
+                    self.say("당장 할 일이 없습니다. 시키실 게 있으면 말씀해 주세요.", who=worker.name)
+                    worker.said_idle = True
+                continue
+            worker.said_idle = False
+            narration, steps = goal
+            self.say(narration, who=worker.name)
+            worker.watching = worker.handle.submit_plan(steps)
 
     def prime(self) -> None:
         """Start from now.
 
-        The mod keeps the last 50 chat lines, so a fresh agent that polls with
-        no `since_tick` would read the whole backlog and start obeying orders
-        given twenty minutes ago to a process that no longer exists.
+        The mod keeps the last 50 chat lines, so a fresh crew that polled with no
+        `since_tick` would read the whole backlog and start obeying orders given
+        twenty minutes ago to a process that no longer exists.
         """
-        self.since_tick = self.ai.chat().get("tick")
+        self.since_tick = self.bridge.chat().get("tick")
 
     def run(self, interval: float = 1.0) -> None:
-        print("listening to game chat"
-              + (" (autopilot on)" if self.autopilot else "")
+        print(f"listening to game chat - {len(self.workers)} agent(s)"
+              + (", autopilot on" if self.autopilot else "")
               + " - ctrl-c to stop")
         while True:
             try:
@@ -512,22 +694,41 @@ class Agent:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--auto", action="store_true", help="play on its own when idle")
+    parser.add_argument("--agents", type=int, default=1, help="how many to start with")
+    parser.add_argument("--auto", action="store_true", help="they work on their own when idle")
     parser.add_argument("--no-llm", action="store_true",
                         help="rules only; do not ask the Claude CLI about unknown lines")
+    parser.add_argument("--observer", metavar="PLAYER",
+                        help="put this player in the observer seat on startup")
     parser.add_argument("--interval", type=float, default=1.0)
     args = parser.parse_args()
 
-    ai = AIBridge()
-    agent = Agent(ai, autopilot=args.auto, use_llm=not args.no_llm)
-    agent.prime()
-    agent.say("채팅 듣고 있습니다. 편하게 말씀하세요. '알아서 해' 라고 하시면 자율로 진행합니다.")
+    bridge = AIBridge()
+    crew = Crew(bridge, autopilot=args.auto, use_llm=not args.no_llm)
+    crew.prime()
+    crew.sync_roster()
+
+    if args.observer:
+        try:
+            free = next((s for s in CALL_SIGNS if s not in crew.workers), None)
+            result = bridge.spectate(args.observer, adopt_as=free)
+            if result.get("adopted"):
+                crew.adopt(result["adopted"])
+        except RconError as exc:
+            print(f"[warn] could not switch {args.observer} to observer: {exc}", file=sys.stderr)
+
+    while len(crew.workers) < max(1, args.agents):
+        if not crew.hire():
+            break
+
+    crew.say(f"{len(crew.workers)}명 대기 중입니다. "
+             f"'{'/'.join(crew.names)}' 또는 '1번', '모두'로 부르시면 됩니다.")
     try:
-        agent.run(interval=args.interval)
+        crew.run(interval=args.interval)
     except KeyboardInterrupt:
         pass
     finally:
-        ai.close()
+        bridge.close()
     return 0
 
 

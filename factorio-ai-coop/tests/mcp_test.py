@@ -45,8 +45,9 @@ class McpClient:
         self.proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": method}) + "\n")
         self.proc.stdin.flush()
 
-    def tool(self, name: str, **args: object) -> dict:
-        reply = self.request("tools/call", {"name": name, "arguments": args})
+    def tool(self, tool_name: str, **args: object) -> dict:
+        # Not `name`: several tools take a `name` argument of their own.
+        reply = self.request("tools/call", {"name": tool_name, "arguments": args})
         result = reply.get("result", {})
         text = (result.get("content") or [{}])[0].get("text", "")
         try:
@@ -79,21 +80,27 @@ def main() -> int:
     print("\n2. tools/list")
     tools = mcp.request("tools/list").get("result", {}).get("tools", [])
     names = [t["name"] for t in tools]
-    check("tools advertised", len(tools) >= 13, f"{len(tools)} tools")
+    check("tools advertised", len(tools) >= 20, f"{len(tools)} tools")
     check("every tool has a schema", all("inputSchema" in t and t.get("description") for t in tools))
     check("coop chat tools present",
           "factorio_say" in names and "factorio_chat_read" in names)
+    check("multi-agent tools present",
+          {"factorio_agents", "factorio_add_agent", "factorio_remove_agent",
+           "factorio_observer"} <= set(names))
 
     print("\n3. tools/call against the live game")
-    status = mcp.tool("factorio_status")
-    check("status call", not status["isError"] and "tick" in status["data"],
+    spawned = mcp.tool("factorio_add_agent", name="alpha")
+    check("add agent", not spawned["isError"] and spawned["data"].get("alive") is True,
+          json.dumps(spawned["data"]))
+    roster = mcp.tool("factorio_agents")
+    names = [a["name"] for a in roster["data"].get("agents", [])]
+    check("roster lists it", "alpha" in names, str(names))
+
+    status = mcp.tool("factorio_status", agent="alpha")
+    check("status call", not status["isError"] and status["data"].get("alive") is True,
           json.dumps(status["data"])[:120])
 
-    spawned = mcp.tool("factorio_spawn")
-    check("spawn call", not spawned["isError"] and spawned["data"].get("unit_number") is not None,
-          json.dumps(spawned["data"]))
-
-    observed = mcp.tool("factorio_observe", radius=64)
+    observed = mcp.tool("factorio_observe", agent="alpha", radius=64)
     check("observe call", not observed["isError"] and "resources" in observed["data"],
           ", ".join((observed["data"].get("resources") or {}).keys()))
 
@@ -105,13 +112,13 @@ def main() -> int:
           f"{len(log['data'].get('messages') or [])} human messages so far")
 
     print("\n5. errors come back as errors, not hangs")
-    bad = mcp.tool("factorio_craft", recipe="does-not-exist")
+    bad = mcp.tool("factorio_craft", agent="alpha", recipe="does-not-exist")
     check("bad recipe reported", bad["isError"], json.dumps(bad["data"])[:140])
     unknown = mcp.tool("no_such_tool")
     check("unknown tool reported", unknown["isError"])
 
     print("\n6. async plan via MCP")
-    plan = mcp.tool("factorio_plan", steps=[
+    plan = mcp.tool("factorio_plan", agent="alpha", steps=[
         {"type": "wait", "params": {"ticks": 30}},
         {"type": "wait", "params": {"ticks": 30}},
     ])
@@ -125,6 +132,53 @@ def main() -> int:
             break
         time.sleep(0.5)
     check("plan finished", final.get("status") == "done", json.dumps(final))
+
+    print("\n7. several agents at once")
+    second = mcp.tool("factorio_add_agent", name="bravo")
+    check("second agent added", not second["isError"] and second["data"].get("alive") is True,
+          json.dumps(second["data"]))
+
+    roster = mcp.tool("factorio_agents")["data"].get("agents", [])
+    check("both on the roster", {"alpha", "bravo"} <= {a["name"] for a in roster},
+          str([a["name"] for a in roster]))
+
+    # With two of them, an unaddressed order is ambiguous. Guessing would
+    # silently move whichever came first, so the tool refuses instead.
+    ambiguous = mcp.tool("factorio_status")
+    check("ambiguous order refused", ambiguous["isError"],
+          json.dumps(ambiguous["data"])[:120])
+
+    named = mcp.tool("factorio_status", agent="bravo")
+    check("addressed order works", not named["isError"] and named["data"]["name"] == "bravo")
+
+    apart = mcp.tool("factorio_observe", agent="alpha", radius=64)["data"]
+    mates = apart.get("agents") or {}
+    mates = list(mates.values()) if isinstance(mates, dict) else mates
+    check("agents see each other", any(m["name"] == "bravo" for m in mates), str(mates)[:120])
+
+    # Each one has its own queue: bravo working must not block alpha.
+    bravo_plan = mcp.tool("factorio_plan", agent="bravo",
+                          steps=[{"type": "wait", "params": {"ticks": 240}}])
+    alpha_plan = mcp.tool("factorio_plan", agent="alpha",
+                          steps=[{"type": "wait", "params": {"ticks": 30}}])
+    alpha_id = (alpha_plan["data"].get("ids") or [None])[-1]
+    deadline = time.time() + 25
+    alpha_final = {}
+    while time.time() < deadline:
+        alpha_final = mcp.tool("factorio_poll", task_id=alpha_id)["data"]
+        if alpha_final.get("status") in ("done", "failed"):
+            break
+        time.sleep(0.5)
+    bravo_id = (bravo_plan["data"].get("ids") or [None])[-1]
+    bravo_state = mcp.tool("factorio_poll", task_id=bravo_id)["data"]
+    check("queues are independent",
+          alpha_final.get("status") == "done" and bravo_state.get("status") == "running",
+          f"alpha={alpha_final.get('status')} bravo={bravo_state.get('status')}")
+
+    gone = mcp.tool("factorio_remove_agent", name="bravo")
+    check("agent removed", not gone["isError"], json.dumps(gone["data"]))
+    left = [a["name"] for a in mcp.tool("factorio_agents")["data"].get("agents", [])]
+    check("roster shrank", "bravo" not in left, str(left))
 
     mcp.close()
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
