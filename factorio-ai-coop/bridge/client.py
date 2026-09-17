@@ -192,6 +192,10 @@ class AIBridge:
         """Open, close or toggle the crew panel for a player."""
         return self.call("panel", player, show)
 
+    def crew_log(self, limit: int = 20) -> list[dict]:
+        """The agent chatter the mod has collected, oldest first."""
+        return _as_list(self.call("crew_log", limit).get("lines"))
+
     def chat_window(self, player: str, show: bool | None = None) -> dict:
         """Open, close or toggle the crew's own chat window for a player."""
         return self.call("chat_window", player, show)

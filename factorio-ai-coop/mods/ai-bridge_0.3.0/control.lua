@@ -1580,6 +1580,17 @@ remote.add_interface("ai", {
     return { said = text, tick = game.tick }
   end,
 
+  -- 모아둔 대화. 창을 못 열 때(접속자 없음)도 확인할 수 있어야 한다.
+  crew_log = function(limit)
+    local log = storage.crew_log or {}
+    local want = math.min(limit or 20, #log)
+    local out = {}
+    for i = #log - want + 1, #log do
+      out[#out + 1] = log[i]
+    end
+    return { lines = out, total = #log }
+  end,
+
   -- 대화 창을 열고 닫는다. show 가 nil 이면 토글.
   chat_window = function(player_name, show)
     local player = game.get_player(player_name)
