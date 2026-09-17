@@ -122,3 +122,20 @@ env = { FACTORIO_RCON_PORT = "27015", FACTORIO_RCON_PASSWORD = "rcontest123" }
   [세이브가 깨지는 문제](https://github.com/JackHopkins/factorio-learning-environment/issues/381)가
   있다(`storage`에 Lua 함수를 넣어 직렬화 실패). 이 저장소는 `storage`에 엔티티 참조와 좌표
   테이블만 넣어 그 문제를 피한다 — `tests/smoke.py` 9번이 확인한다.
+
+## 직접 띄우기 (권장)
+
+Claude 세션이 띄운 서버는 그 세션에 묶여 있어서, 모드를 고쳐 재시작할 때마다 끊긴다.
+서버를 직접 소유하려면 배치 파일을 더블클릭한다.
+
+| 파일 | 하는 일 |
+|---|---|
+| `scripts/run-server.bat` | 모드를 클라이언트에 동기화하고 헤드리스 서버를 자기 창에서 실행 |
+| `scripts/run-agent.bat` | 채팅을 듣는 에이전트 실행. `--auto`를 붙이면 유휴 시 스스로 진행 |
+
+창을 닫으면 멈춘다. 서버 창이 살아 있는 동안에는 Claude가 서버를 재시작하지 않는다 —
+모드를 고쳤으면 서버 창과 게임 클라이언트를 다시 시작해야 한다. Factorio는 모드 스크립트를
+시작할 때 한 번만 읽고, 서버와 클라이언트의 체크섬이 다르면 접속이 거부된다.
+
+배치 파일은 ASCII로만 작성돼 있다. 한글이 든 `.bat`/`.ps1`은 CP949로 읽혀 따옴표가
+깨지고, 아무 로그도 없이 실패한다.
