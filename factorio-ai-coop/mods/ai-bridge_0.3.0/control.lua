@@ -863,6 +863,113 @@ local function furnace_stock(name, radius)
   return { agent = name, stock = out }
 end
 
+------------------------------------------------------------- 채굴기 방향
+
+-- 버너 채굴기는 바라보는 방향 바로 앞 칸에 광석을 떨군다. 그 칸이 막혀
+-- 있으면 - 다른 채굴기든 바위든 - 채굴기는 몇 개 떨구다 그대로 선다.
+-- 기본 방향으로 그냥 놓으면 두 대를 나란히 세웠을 때 아래쪽이 위쪽 몸통에
+-- 대고 떨구게 된다. 실제로 그렇게 멈춰 있었다.
+--
+-- 건물은 돌릴 수 있다. 그러니 놓기 전에 «출구가 비는 방향»을 고르고,
+-- 이미 잘못 놓인 것은 돌려서 고친다. 비는지 아닌지는 짐작하지 않고
+-- can_place_entity 로 게임에게 물어본다.
+
+local DIRECTIONS = { defines.direction.north, defines.direction.east,
+                     defines.direction.south, defines.direction.west }
+
+-- 채굴기 중심에서 산출 칸까지의 거리. 2x2 라 중심에서 1.5칸 앞이다.
+local DROP_REACH = 1.5
+
+local function drop_tile(position, direction)
+  local dx, dy = 0, 0
+  if direction == defines.direction.north then dy = -DROP_REACH
+  elseif direction == defines.direction.south then dy = DROP_REACH
+  elseif direction == defines.direction.east then dx = DROP_REACH
+  else dx = -DROP_REACH end
+  return { x = position.x + dx, y = position.y + dy }
+end
+
+-- 출구 칸이 쓸 만한가: 이미 우리 상자가 있거나, 상자를 놓을 수 있거나.
+local function outlet_ok(surface, force, spot)
+  local here = surface.find_entities_filtered { position = { spot.x, spot.y }, radius = 0.4 }
+  for _, e in pairs(here) do
+    if e.type == "container" then return true, "chest" end
+    if e.type ~= "character" and e.type ~= "item-entity" then return false end
+  end
+  if surface.can_place_entity { name = "iron-chest", position = spot, force = force } then
+    return true, "free"
+  end
+  return false
+end
+
+-- 광맥 위에서 «채굴기가 들어가고 출구도 비는» 자리와 방향을 찾는다.
+local function drill_site(name, x, y, radius)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local surface, force = b.surface, b.force
+  local reach = math.min(radius or 12, 40)
+  local ore = surface.find_entities_filtered {
+    position = { x, y }, radius = reach, type = "resource", limit = 200,
+  }
+
+  local sites = {}
+  for _, patch in pairs(ore) do
+    local spot = patch.position
+    for _, dir in pairs(DIRECTIONS) do
+      if surface.can_place_entity {
+        name = "burner-mining-drill", position = spot, direction = dir, force = force,
+      } then
+        local ok, how = outlet_ok(surface, force, drop_tile(spot, dir))
+        if ok then
+          sites[#sites + 1] = {
+            x = spot.x, y = spot.y, direction = dir, outlet = how,
+            resource = patch.name,
+            distance = math.floor(Tasks.dist(b.position, spot) * 10) / 10,
+          }
+          break
+        end
+      end
+    end
+    if #sites >= 8 then break end
+  end
+
+  table.sort(sites, function(p, q) return p.distance < q.distance end)
+  return { agent = name, sites = sites }
+end
+
+-- 이미 놓인 채굴기를 출구가 비는 방향으로 돌린다.
+local function aim_drill(name, x, y)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local drill = b.surface.find_entities_filtered {
+    position = { x, y }, radius = 1.5, type = "mining-drill", force = b.force, limit = 1,
+  }[1]
+  if not drill then return { error = "no drill at " .. x .. "," .. y } end
+
+  local ok = outlet_ok(b.surface, b.force, drop_tile(drill.position, drill.direction))
+  if ok then
+    local drop = drill.drop_position
+    return { turned = false, x = drill.position.x, y = drill.position.y,
+             drop_x = drop.x, drop_y = drop.y }
+  end
+
+  for _, dir in pairs(DIRECTIONS) do
+    if dir ~= drill.direction
+        and outlet_ok(b.surface, b.force, drop_tile(drill.position, dir)) then
+      drill.direction = dir
+      local drop = drill.drop_position
+      return { turned = true, direction = dir,
+               x = drill.position.x, y = drill.position.y,
+               drop_x = drop.x, drop_y = drop.y }
+    end
+  end
+  return { error = "every side of the drill is blocked" }
+end
+
 -------------------------------------------------------- 멈춰 선 기계 찾기
 
 -- 숙련자들이 입을 모으는 첫 번째 원칙이 «병목을 쫓아라»인데, 우리 에이전트는
@@ -1413,6 +1520,10 @@ remote.add_interface("ai", {
   -- displays it.
   -- 이 아이템을 만들려면 지금 무엇부터 해야 하는가.
   plan_item = compute_plan,
+
+  -- 채굴기가 들어가고 출구도 비는 자리, 그리고 이미 막힌 것 돌려세우기.
+  drill_site = drill_site,
+  aim_drill = aim_drill,
 
   -- 지금 멈춰 서 있는 기계들과 «왜».
   broken = broken,

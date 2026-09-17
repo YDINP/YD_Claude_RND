@@ -192,6 +192,10 @@ class AIBridge:
         """Open, close or toggle the crew panel for a player."""
         return self.call("panel", player, show)
 
+    def chat_window(self, player: str, show: bool | None = None) -> dict:
+        """Open, close or toggle the crew's own chat window for a player."""
+        return self.call("chat_window", player, show)
+
     def set_focus(self, name: str, focus: str) -> dict:
         return self.call("set_focus", name, focus)
 
@@ -202,6 +206,15 @@ class AIBridge:
         레시피도 인벤토리도 알고 있으니 한 번만 물어본다.
         """
         return self.call("plan_item", agent, item, count)
+
+    def drill_site(self, agent: str, x: float, y: float,
+                   radius: int = 12) -> list[dict]:
+        """채굴기가 들어가고 출구도 비는 자리들, 가까운 순."""
+        return _as_list(self.call("drill_site", agent, x, y, radius).get("sites"))
+
+    def aim_drill(self, agent: str, x: float, y: float) -> dict:
+        """이미 놓인 채굴기를 출구가 비는 방향으로 돌린다."""
+        return self.call("aim_drill", agent, x, y)
 
     def broken(self, agent: str, radius: int = 200) -> list[dict]:
         """지금 멈춰 서 있는 기계들, 가까운 순.

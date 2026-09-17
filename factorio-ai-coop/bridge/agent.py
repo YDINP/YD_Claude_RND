@@ -469,6 +469,9 @@ SMELT_MARGIN = 8.0
 # 걷는 시간이 녹이는 시간보다 길어진다.
 HARVEST_MIN = 10
 
+# 화로가 받아주는 것들. 노는 화로에 무엇을 넣을지 고를 때 쓴다.
+SMELTABLE = ("iron-ore", "copper-ore", "stone")
+
 # 연구가 걸려 있는지 보는 주기. 매 틱 물어볼 일은 아니지만, 비어 있는 채로
 # 오래 두면 랩이 그만큼 논다.
 RESEARCH_CHECK = 20.0
@@ -997,13 +1000,18 @@ class Crew:
         if not at:
             return
         try:
-            found = [e for e in self.bridge.inspect(at["x"], at["y"], 2.5)
-                     if e.get("name") == DRILL and e.get("drop_x") is not None]
-            if not found:
-                # 누가 먼저 고쳤거나 치웠다. 실패가 아니다.
-                worker.block(f"rescue:{at['x']:.0f},{at['y']:.0f}")
+            # 출구가 막혔으면 상자를 놓을 자리가 아예 없다. 건물은 돌릴 수
+            # 있으니, 상자를 만들기 전에 비는 쪽으로 돌려본다.
+            aimed = self.bridge.aim_drill(worker.name, at["x"], at["y"])
+            if aimed.get("error"):
+                worker.block(f"rescue:{at['x']:.0f},{at['y']:.0f}", 300)
+                self.say(f"채굴기를 어느 쪽으로 돌려도 출구가 막혔습니다. "
+                         f"({at['x']:.0f}, {at['y']:.0f})", who=name)
                 return
-            drill = found[0]
+            if aimed.get("turned"):
+                self.say("출구가 막혀 채굴기를 돌렸습니다.", who=name)
+            drill = {"x": aimed["x"], "y": aimed["y"],
+                     "drop_x": aimed["drop_x"], "drop_y": aimed["drop_y"]}
 
             # 그 사이에 누가 상자를 달아줬을 수도 있다.
             already = [e for e in self.bridge.inspect(drill["drop_x"], drill["drop_y"], 0.8)
@@ -1045,17 +1053,32 @@ class Crew:
                 worker.block("automate")
                 return
 
-            self.say(f"{ore} 광맥에 채굴기를 놓겠습니다. ({spot['x']:.0f}, {spot['y']:.0f})", who=name)
-            drill = worker.handle.place(DRILL, spot["x"], spot["y"], snap=True, timeout=300)
-
-            # The drill picks its own output tile; ask it rather than guessing.
-            found = [e for e in self.bridge.inspect(drill["x"], drill["y"], 2)
-                     if e.get("name") == DRILL and e.get("drop_x") is not None]
-            if not found:
-                self.say("채굴기는 놨는데 산출 위치를 못 읽었습니다.", who=name)
+            # 건물은 돌릴 수 있다. 기본 방향으로 그냥 놓으면 두 대를 나란히
+            # 세웠을 때 아래쪽이 위쪽 몸통에 대고 광석을 떨구다 멈춘다.
+            # 그래서 «들어가고 출구도 비는» 자리와 방향을 먼저 고른다.
+            sites = self.bridge.drill_site(name, spot["x"], spot["y"], radius=12)
+            if not sites:
+                self.say(f"{ore} 광맥에 출구가 비는 자리가 없습니다.", who=name)
+                worker.block(f"automate:{ore}", 300)
                 return
-            drop = found[0]
-            worker.handle.place(CHEST, drop["drop_x"], drop["drop_y"], timeout=180)
+            site = sites[0]
+
+            self.say(f"{ore} 광맥에 채굴기를 놓겠습니다. ({site['x']:.0f}, {site['y']:.0f})",
+                     who=name)
+            drill = worker.handle.place(DRILL, site["x"], site["y"],
+                                        direction=site["direction"], timeout=300)
+
+            # 놓고 나서 출구를 다시 확인한다. 그 사이 누가 무언가를 세웠을 수
+            # 있고, 그러면 돌려서 고친다.
+            aimed = self.bridge.aim_drill(name, drill["x"], drill["y"])
+            if aimed.get("error"):
+                self.say(f"채굴기 출구를 못 찾았습니다: {aimed['error']}", who=name)
+                return
+            if aimed.get("turned"):
+                self.say("출구가 막혀 채굴기를 돌렸습니다.", who=name)
+            drop = {"drop_x": aimed["drop_x"], "drop_y": aimed["drop_y"]}
+            if site.get("outlet") != "chest":
+                worker.handle.place(CHEST, drop["drop_x"], drop["drop_y"], timeout=180)
 
             if worker.handle.items().get("coal", 0) < DRILL_FUEL:
                 coal = snap.ore("coal")
@@ -1153,6 +1176,11 @@ class Crew:
         except RconError:
             return None
 
+        # 진짜 고장이 먼저고, 노는 화로를 먹이는 일은 그 뒤다. 순서를
+        # 거꾸로 하면 빈 화로 스무 대가 연료 떨어진 드릴을 가린다.
+        rank = {"fuel": 0, "chest": 1, "empty": 2, "feed": 3}
+        stopped.sort(key=lambda e: (rank.get(e.get("fix"), 9), e.get("distance", 0)))
+
         taken = self.taken()
         for entry in stopped:
             key = f"tend:{entry['x']:.0f},{entry['y']:.0f}"
@@ -1176,6 +1204,19 @@ class Crew:
                 if harvest:
                     return harvest
                 continue
+
+            if fix == "feed":
+                # 공장은 끊임없이 돌아야 한다. 목표에 필요한 만큼만 녹이면
+                # 화로 절반이 서 있고, 그동안 광석은 가방에서 잠잔다.
+                ore = max(SMELTABLE, key=lambda o: snap.have(o), default=None)
+                if not ore or snap.have(ore) < SMELT_BATCH                         or snap.have("coal") < FURNACE_FUEL:
+                    continue
+                return Job(f"화로가 비어 있습니다. {ore}를 넣어 계속 돌리겠습니다.",
+                           key=key, needs={"coal": FURNACE_FUEL, ore: SMELT_BATCH},
+                           steps=[
+                               ("insert", {"name": "coal", "count": FURNACE_FUEL, **at}),
+                               ("insert", {"name": ore, "count": SMELT_BATCH, **at}),
+                           ])
 
             if fix == "chest":
                 # 내놓을 데가 없어 멈췄다. 상자가 꽉 찼으면 비우면 되고,
@@ -1574,8 +1615,10 @@ class Crew:
                 self.say(f"관찰자 전환 실패: {exc}")
                 return True
             try:
-                # A watcher with no body should not have to ask for the list.
+                # A watcher with no body should not have to ask for the list,
+                # nor for what the crew is saying to each other.
                 self.bridge.panel(speaker, True)
+                self.bridge.chat_window(speaker, True)
             except RconError:
                 pass
             adopted = result.get("adopted")
