@@ -1138,6 +1138,43 @@ local function try_power_site(surface, force, site, engines)
   return nil
 end
 
+-- 전력이 «있다»는 것은 기관이 서 있다는 뜻이 아니라 전기가 흐른다는
+-- 뜻이다. 물 없는 보일러에 물린 기관은 밖에서 보면 멀쩡한 발전소와
+-- 똑같이 생겼고, 그게 서 있다는 이유로 우리는 새 발전소를 짓지 않았다.
+local function power_status(name)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local made, engines, running = 0, 0, 0
+  for _, e in pairs(b.surface.find_entities_filtered {
+    type = "generator", force = b.force,
+  }) do
+    engines = engines + 1
+    local output = e.energy_generated_last_tick or 0
+    made = made + output
+    if output > 0 then running = running + 1 end
+  end
+
+  local labs, working_labs = 0, 0
+  for _, lab in pairs(b.surface.find_entities_filtered {
+    name = "lab", force = b.force,
+  }) do
+    labs = labs + 1
+    if lab.status == defines.entity_status.working then
+      working_labs = working_labs + 1
+    end
+  end
+
+  return {
+    agent = name,
+    generators = engines, running = running,
+    watts = math.floor(made * 60),
+    labs = labs, working_labs = working_labs,
+    powered = running > 0,
+  }
+end
+
 local function power_plan(name, x, y, radius, engines)
   local a = agent(name)
   local b = body(a)
