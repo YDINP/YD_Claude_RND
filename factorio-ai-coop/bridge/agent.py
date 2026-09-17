@@ -415,7 +415,11 @@ def chain_job(answer: dict, target: str, furnace: dict | None) -> Job | None:
         if step.get("action") == "smelt":
             if not furnace:
                 continue
-            return Job(f"{target}을(를) 만들려면 {name}이(가) 필요합니다. 제련하겠습니다.",
+            # 넣고 바로 떠난다. 예전에는 여기에 wait 와 take 가 붙어 있어서,
+            # 여섯 명 중 다섯이 각자 화로 앞에 서서 1분씩 아무것도 안 했다.
+            # 사람은 광석을 넣고 딴 일을 하러 간다. 다 녹은 것은 나중에
+            # 누구든 지나가는 사람이 거둬간다.
+            return Job(f"{target}을(를) 만들려면 {name}이(가) 필요합니다. 화로에 넣겠습니다.",
                        key=f"chain:smelt:{name}@{furnace['x']:.0f},{furnace['y']:.0f}",
                        needs={"coal": FURNACE_FUEL},
                        steps=[
@@ -423,8 +427,6 @@ def chain_job(answer: dict, target: str, furnace: dict | None) -> Job | None:
                            ("insert", {"name": step.get("input") or _ore_for(name),
                                        "count": int(step.get("input_count") or count),
                                        **furnace}),
-                           ("wait", {"ticks": _smelt_ticks(step, count)}),
-                           ("take", {"name": name, "count": count, **furnace}),
                        ])
         if step.get("hand"):
             return Job(f"{target}을(를) 만들려면 {name} {count}개가 필요합니다. 제작하겠습니다.",
@@ -438,6 +440,10 @@ def chain_job(answer: dict, target: str, furnace: dict | None) -> Job | None:
 # 화로가 다 녹이기 전에 꺼내러 가면 광석은 화로 안에 남고 손은 빈 채로
 # 돌아온다. 게임이 알려준 시간에 여유를 더해서 기다린다.
 SMELT_MARGIN = 8.0
+
+# 화로 하나에 이만큼 쌓였으면 거두러 간다. 두세 개씩 집으러 왔다 갔다 하면
+# 걷는 시간이 녹이는 시간보다 길어진다.
+HARVEST_MIN = 10
 
 
 def _smelt_ticks(step: dict, count: int) -> int:
@@ -1076,9 +1082,9 @@ class Crew:
         if job:
             return job
 
-        # 새로 캐기 전에 이미 녹아 있는 걸 먼저 꺼낸다. 제련을 시켜놓고
-        # 못 돌아오는 일은 계속 생기고, 그때마다 판금은 화로에 남는다.
-        harvest = self.harvest_job(worker, answer)
+        # 새로 캐기 전에 이미 녹아 있는 걸 먼저 꺼낸다. 사슬이 원하는
+        # 것이면 한 개라도 가져온다.
+        harvest = self.harvest_job(worker, self.chain_wants(answer))
         if harvest:
             return harvest
 
@@ -1102,28 +1108,46 @@ class Crew:
             self.say(f"{item}은(는) {locked[0]} 연구가 없어서 못 만듭니다.", who=worker.name)
         return None
 
-    def harvest_job(self, worker: Worker, answer: dict) -> Job | None:
-        """사슬이 요구하는 것 중 화로 안에 이미 있는 것을 꺼내온다."""
-        wanted = {name for name in (answer.get("mine") or {})}
-        for step in _as_rows(answer.get("steps")):
-            wanted.add(step.get("name"))
-        for step in _as_rows(answer.get("steps")):
-            if step.get("input"):
-                wanted.add(step["input"])
+    def harvest_job(self, worker: Worker, wanted: set[str] | None = None) -> Job | None:
+        """화로에 다 녹아 있는 것을 거둬온다.
 
+        이건 «여유 있으면 하는 일»이 아니다. 출력 슬롯이 찬 화로는 제련을
+        멈춘다. 즉 거두지 않은 판금은 그 자체로 병목이고, 새 광석을 캐러
+        가는 것보다 언제나 먼저다 - 실제로 화로 안에 철판 100개를 재워둔 채
+        «철광석 25개를 캐야 한다»고 말하고 있었다.
+
+        조금 녹은 걸 계속 집으러 다니면 그것대로 낭비라, 쌓인 것만 거둔다.
+        사슬이 지금 당장 필요로 하는 것은 한 개라도 가져온다.
+        """
         try:
             stock = self.bridge.furnace_stock(worker.name)
         except RconError:
             return None
 
+        taken = self.taken()
         for entry in stock:
-            if entry.get("name") not in wanted:
+            name, count = entry.get("name"), int(entry.get("count") or 0)
+            if count < HARVEST_MIN and not (wanted and name in wanted):
                 continue
-            return Job(f"화로에 {entry['name']} {entry['count']}개가 남아 있습니다. 꺼내오겠습니다.",
-                       key=f"harvest:{entry['x']:.0f},{entry['y']:.0f}:{entry['name']}",
-                       steps=[("take", {"name": entry["name"], "count": entry["count"],
+            key = f"harvest:{entry['x']:.0f},{entry['y']:.0f}"
+            if key in taken:
+                continue
+            return Job(f"화로에 {name} {count}개가 다 녹아 있습니다. 거둬오겠습니다.",
+                       key=key,
+                       steps=[("take", {"name": name, "count": count,
                                         "x": entry["x"], "y": entry["y"]})])
         return None
+
+    @staticmethod
+    def chain_wants(answer: dict) -> set[str]:
+        """사슬이 이름을 부른 모든 물건."""
+        wanted = set(answer.get("mine") or {})
+        for step in _as_rows(answer.get("steps")):
+            if step.get("name"):
+                wanted.add(step["name"])
+            if step.get("input"):
+                wanted.add(step["input"])
+        return wanted
 
     def announce_stage(self, snap: Snapshot) -> None:
         """사다리에서 한 단 오르면 알린다.
@@ -1486,8 +1510,11 @@ class Crew:
             self.announce_stage(snap)
 
             self.release(worker)
-            job = next_goal(snap, worker.focus, worker.blocked_now(), self.taken(),
-                            crew=len(self.workers))
+            # 찬 화로는 제련을 멈춘다. 거두는 일이 캐는 일보다 먼저다.
+            job = self.harvest_job(worker)
+            if job is None:
+                job = next_goal(snap, worker.focus, worker.blocked_now(), self.taken(),
+                                crew=len(self.workers))
 
             # «비축»밖에 안 남았다는 건 할 일이 없다는 뜻이지 광석을 더
             # 쌓으라는 뜻이 아니다. 그럴 때 사다리의 다음 단을 물어본다.

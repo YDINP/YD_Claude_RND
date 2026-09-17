@@ -467,22 +467,15 @@ def main() -> int:
                               "hand": False, "category": "smelting"}],
                    "mine": {}, "locked": {}, "blocked": {}}
     job = chain_job(smelt_first, "lab", FURNACE_AT)
-    check("smelting comes back as a furnace job",
-          job is not None and [st[0] for st in job.steps]
-          == ["insert", "insert", "wait", "take"], str(job.steps if job else None))
+    check("smelting is a load, not a vigil",
+          job is not None and [st[0] for st in job.steps] == ["insert", "insert"],
+          str(job.steps if job else None))
     check("it feeds the ore, not the plate",
           job.steps[1][1]["name"] == "copper-ore", str(job.steps[1][1]))
-    check("and takes the plate back out",
-          job.steps[3][1]["name"] == "copper-plate")
-    # 구리 15개는 48초가 걸린다. 30초만 기다리고 꺼내러 가면 광석은 화로에
-    # 남고 손은 빈 채로 돌아온다 - 실제로 구리 35개를 그렇게 잃었다.
-    check("it waits as long as the game said it takes",
-          job.steps[2][1]["ticks"] == int(60 * (48.0 + 8.0)),
-          str(job.steps[2][1]))
-    no_time = {**smelt_first, "steps": [{**smelt_first["steps"][0], "seconds": None}]}
-    check("an old mod that says nothing still gets a sane wait",
-          chain_job(no_time, "lab", FURNACE_AT).steps[2][1]["ticks"]
-          == int(60 * (15 * 3.2 + 8.0)))
+    # 예전에는 여기에 wait 와 take 가 붙어 있었고, 여섯 중 다섯이 각자
+    # 화로 앞에 서서 1분씩 아무것도 안 했다.
+    check("nobody stands and waits",
+          all(st[0] != "wait" for st in job.steps), str(job.steps))
     check("the furnace is in the key, so two agents use two furnaces",
           job.key == "chain:smelt:copper-plate@5,5", job.key)
 
@@ -499,6 +492,12 @@ def main() -> int:
     check("the game says how much ore goes in, we do not guess",
           brick_job.steps[1][1] == {"name": "stone", "count": 20, "x": 5, "y": 5},
           str(brick_job.steps[1][1]))
+
+    check("what the chain names is what we bother collecting",
+          Crew.chain_wants(smelt_first) == {"copper-plate", "copper-ore"},
+          str(Crew.chain_wants(smelt_first)))
+    check("ores it still has to dig for count too",
+          "iron-ore" in Crew.chain_wants({"steps": [], "mine": {"iron-ore": 25}}))
 
     hand = {"item": "lab", "count": 1, "ready": False,
             "steps": [{"action": "craft", "name": "electronic-circuit",
