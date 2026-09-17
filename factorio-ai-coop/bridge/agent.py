@@ -1570,7 +1570,10 @@ class Crew:
                     key=lambda n: ((seats[n][0] - spot.get("x", seats[n][0])) ** 2
                                    + (seats[n][1] - spot.get("y", seats[n][1])) ** 2, n))
             if not order:
-                break
+                # 이 일감의 주인이 지금 손이 비어 있지 않을 뿐이다. 목록
+                # 전체를 여기서 끊으면 뒤에 있는 일감이 통째로 사라진다 -
+                # 창고 입고가 목록 중간에 있어서 그 뒤가 전부 날아갔다.
+                continue
             name = order[0]
             worker = self.workers[name]
             if job.key in worker.blocked_now():
