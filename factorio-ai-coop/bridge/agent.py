@@ -1177,6 +1177,19 @@ class Crew:
                     return harvest
                 continue
 
+            if fix == "chest":
+                # 내놓을 데가 없어 멈췄다. 상자가 꽉 찼으면 비우면 되고,
+                # 아예 없으면 달아줘야 한다 - 손보는 방법이 다르다.
+                if entry.get("holding") and entry.get("outlet"):
+                    return Job(
+                        f"{what}의 상자가 꽉 차서 멈췄습니다. 비우겠습니다.",
+                        key=key,
+                        steps=[("take", {"name": entry["holding"],
+                                         "count": int(entry.get("held") or 1),
+                                         **entry["outlet"]})])
+                return Job(f"{what}이(가) 내놓을 데가 없어 멈췄습니다. 상자를 달겠습니다.",
+                           key=key, routine="rescue", at=at, needs={CHEST: 1})
+
         return None
 
     def harvest_job(self, worker: Worker, wanted: set[str] | None = None) -> Job | None:

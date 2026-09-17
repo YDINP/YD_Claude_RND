@@ -816,12 +816,8 @@ local function init_status_names()
   if defines.entity_status.waiting_for_space_in_destination then
     FIXABLE[defines.entity_status.waiting_for_space_in_destination] = "chest"
   end
-  if defines.entity_status.item_ingredient_shortage then
-    FIXABLE[defines.entity_status.item_ingredient_shortage] = "feed"
-  end
-  if defines.entity_status.no_ingredients then
-    FIXABLE[defines.entity_status.no_ingredients] = "feed"
-  end
+  -- «재료 없음»은 고장이 아니라 여유 용량이다. 빈 화로를 고장으로 세면
+  -- 목록이 노는 화로로 가득 차서 진짜 병목이 묻힌다.
 end
 
 local TENDED = { "burner-mining-drill", "stone-furnace", "steel-furnace",
@@ -840,12 +836,27 @@ local function broken(name, radius)
   }) do
     local fix = FIXABLE[e.status]
     if fix then
-      out[#out + 1] = {
+      local entry = {
         name = e.name, fix = fix,
         status = STATUS_NAME[e.status] or tostring(e.status),
         x = e.position.x, y = e.position.y,
         distance = math.floor(Tasks.dist(b.position, e.position) * 10) / 10,
       }
+      -- 내놓을 데가 없어 멈춘 채굴기: 상자가 아예 없는 것과 꽉 찬 것은
+      -- 손보는 방법이 다르다. 무엇이 얼마나 들었는지까지 알려준다.
+      if fix == "chest" and e.drop_target and e.drop_target.valid then
+        local inv = e.drop_target.get_output_inventory()
+            or e.drop_target.get_inventory(defines.inventory.chest)
+        if inv then
+          for _, stack in pairs(inv.get_contents()) do
+            entry.holding = stack.name
+            entry.held = stack.count
+            break
+          end
+        end
+        entry.outlet = { x = e.drop_target.position.x, y = e.drop_target.position.y }
+      end
+      out[#out + 1] = entry
     end
   end
   table.sort(out, function(p, q) return p.distance < q.distance end)
