@@ -24,6 +24,7 @@ hard to debug through a game window.
 from __future__ import annotations
 
 import argparse
+import math
 import queue
 import sys
 import threading
@@ -168,7 +169,32 @@ def orphan_drills(snap: Snapshot) -> list[dict]:
 
 # 한 사람당 화로 하나까지. 화로는 돌 5개라 싸고, 하나를 넷이 나눠 쓰면
 # 셋은 줄을 서서 기다린다 - 초반 제련이 느린 진짜 이유가 이것이다.
-MAX_FURNACES = 4
+MAX_FURNACES = 8
+
+# 버너 채굴기는 0.25 광석/초를 내고 돌 화로는 0.3125 광석/초를 먹는다. 그래서
+# 드릴 5대가 화로 4대를 채운다 - 화로를 드릴보다 많이 두면 남는 화로는 그냥
+# 논다. 손으로 캐서 넣는 동안에는 사람이 곧 드릴이므로, 화로는 최소한
+# 사람 수만큼은 있어야 줄을 안 선다.
+FURNACES_PER_DRILL = 4 / 5
+
+# 화로는 2x2지만 전기 화로는 3x3이다. 3타일 간격으로 붙여 놓으면 나중에
+# 전기 화로로 못 바꾼다. 4타일이면 그 자리에서 교체된다.
+FURNACE_PITCH = 4
+
+# 보일러 60 증기/초 : 증기기관 30 증기/초. 기관을 하나만 붙이면 보일러가
+# 만든 증기의 절반을 버리면서 석탄은 전부 태운다.
+ENGINES_PER_BOILER = 2
+
+
+def furnace_target(snap: Snapshot, crew: int) -> int:
+    """화로를 몇 대까지 세울 것인가.
+
+    손으로 나르는 동안에는 사람 수가 공급량이고, 채굴기가 돌기 시작하면
+    채굴기 수가 공급량이다. 둘 중 큰 쪽을 따라간다.
+    """
+    drills = snap.buildings.get(DRILL, {}).get("count", 0)
+    from_drills = math.ceil(drills * FURNACES_PER_DRILL)
+    return max(1, min(MAX_FURNACES, max(crew, from_drills)))
 
 
 def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
@@ -199,25 +225,6 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
             if spot:
                 jobs.append(Job("돌부터 캐서 화로를 만들겠습니다.", key="furnace",
                                 steps=[("mine", {**spot, "count": 5})]))
-
-    # 사람 수만큼 화로를 세운다. 줄을 서는 시간이 곧 손해다.
-    # spots 는 MAX_SPOTS 에서 잘리고, 오래된 모드는 아예 주지 않는다. 몇
-    # 개가 서 있는지는 count 가 안다 - 이걸 안 보면 이미 세운 화로를 못 세고
-    # 영원히 하나씩 더 만든다.
-    standing = snap.buildings.get("stone-furnace", {}).get("count", len(furnaces))
-    want = min(crew, MAX_FURNACES)
-    if furnace and standing < want:
-        nth = standing
-        if snap.have("stone-furnace") >= 1:
-            jobs.append(Job(f"화로를 하나 더 놓겠습니다 ({nth + 1}번째).",
-                            key=f"furnace:{nth}", steps=[
-                                ("build", {"name": "stone-furnace",
-                                           "x": furnace["x"] + 3 * (nth + 1),
-                                           "y": furnace["y"], "snap": True})]))
-        elif snap.can_make("stone-furnace"):
-            jobs.append(Job("화로를 하나 더 만들겠습니다.", key=f"furnace:{nth}",
-                            needs={"stone": 5},
-                            steps=[("craft", {"recipe": "stone-furnace", "count": 1})]))
 
     # A lab is the gate to everything past the trigger technologies, and
     # crafting one is itself what unlocks the red science pack recipe.
@@ -313,6 +320,25 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
                                 ("wait", {"ticks": 60 * 45}),
                                 ("take", {"name": plate, "count": ORE_BATCH, **furnace}),
                             ]))
+
+    # 공급량만큼 화로를 세운다. 줄을 서는 시간도, 노는 화로도 둘 다 손해다.
+    # spots 는 MAX_SPOTS 에서 잘리고, 오래된 모드는 아예 주지 않는다. 몇
+    # 개가 서 있는지는 count 가 안다 - 이걸 안 보면 이미 세운 화로를 못 세고
+    # 영원히 하나씩 더 만든다.
+    standing = snap.buildings.get("stone-furnace", {}).get("count", len(furnaces))
+    want = furnace_target(snap, crew)
+    if furnace and standing < want:
+        nth = standing
+        if snap.have("stone-furnace") >= 1:
+            jobs.append(Job(f"화로를 하나 더 놓겠습니다 ({nth + 1}번째).",
+                            key=f"furnace:{nth}", steps=[
+                                ("build", {"name": "stone-furnace",
+                                           "x": furnace["x"] + FURNACE_PITCH * (nth + 1),
+                                           "y": furnace["y"], "snap": True})]))
+        elif snap.can_make("stone-furnace"):
+            jobs.append(Job("화로를 하나 더 만들겠습니다.", key=f"furnace:{nth}",
+                            needs={"stone": 5},
+                            steps=[("craft", {"recipe": "stone-furnace", "count": 1})]))
 
     # --- keep patches stocked, starting with this agent's own ------------
     for ore in [focus] + [o for o in FOCUS_ORDER if o != focus]:
@@ -748,11 +774,14 @@ class Crew:
         return True
 
     def build_power(self, worker: Worker) -> None:
-        """Pump on the shore, boiler behind it, engine behind that, coal in.
+        """Pump on the shore, boiler behind it, engines behind that, coal in.
 
-        The three have to line up or the pipes never meet, so instead of
+        The pieces have to line up or the pipes never meet, so instead of
         trusting an offset table this walks outward along the pump's axis and
         lets the game say where each piece fits.
+
+        보일러 하나는 증기 60/초를 만들고 증기기관 하나는 30/초를 먹는다.
+        기관을 하나만 세우면 보일러가 절반을 버리면서 석탄은 다 태운다.
         """
         name = worker.name
         AXIS = {0: (0, -1), 4: (1, 0), 8: (0, 1), 12: (-1, 0)}   # N, E, S, W
@@ -763,8 +792,10 @@ class Crew:
                 self.say("이미 발전기가 있습니다.", who=name)
                 return
 
-            for part in ("offshore-pump", "boiler", "steam-engine", "small-electric-pole"):
-                if not self.ensure(worker, part):
+            for part, count in (("offshore-pump", 1), ("boiler", 1),
+                                ("steam-engine", ENGINES_PER_BOILER),
+                                ("small-electric-pole", 1)):
+                if not self.ensure(worker, part, count):
                     worker.block("power")
                     return
 
@@ -795,19 +826,29 @@ class Crew:
                     self.say("보일러를 붙일 자리가 없습니다. 다른 물가를 봅니다.", who=name)
                     continue
 
-                engine = None
-                for away in range(3, 9):
-                    try:
-                        engine = worker.handle.place(
-                            "steam-engine",
-                            boiler["x"] + step[0] * away, boiler["y"] + step[1] * away,
-                            direction=site["direction"], timeout=180)
+                # 기관은 앞의 것에 이어 붙인다. 증기기관은 3x5라 축 방향으로
+                # 5타일을 먹으므로, 다음 자리는 앞 기관에서부터 다시 찾는다.
+                engines = []
+                anchor = boiler
+                for _ in range(ENGINES_PER_BOILER):
+                    placed = None
+                    for away in range(3, 10):
+                        try:
+                            placed = worker.handle.place(
+                                "steam-engine",
+                                anchor["x"] + step[0] * away, anchor["y"] + step[1] * away,
+                                direction=site["direction"], timeout=180)
+                            break
+                        except TaskFailed:
+                            continue
+                    if not placed:
                         break
-                    except TaskFailed:
-                        continue
-                if not engine:
+                    engines.append(placed)
+                    anchor = placed
+                if not engines:
                     self.say("증기기관 자리가 없습니다.", who=name)
                     continue
+                engine = engines[0]
 
                 worker.handle.insert("coal", boiler["x"], boiler["y"], count=20, timeout=180)
 
@@ -816,9 +857,12 @@ class Crew:
                 running = [e for e in self.bridge.inspect(engine["x"], engine["y"], 3)
                            if e.get("name") == "steam-engine"]
                 energy = running[0].get("energy", 0) if running else 0
-                self.say(f"발전기를 세웠습니다. ({engine['x']:.0f}, {engine['y']:.0f}) "
+                self.say(f"발전기를 세웠습니다. 기관 {len(engines)}대, "
+                         f"({engine['x']:.0f}, {engine['y']:.0f}) "
                          + ("전력 생산 중입니다." if energy and energy > 0
-                            else "아직 증기가 안 올라왔습니다."), who=name)
+                            else "아직 증기가 안 올라왔습니다.")
+                         + ("" if len(engines) >= ENGINES_PER_BOILER
+                            else " 자리가 좁아 기관을 다 못 놨습니다."), who=name)
                 return
 
             self.say("쓸 만한 물가를 못 찾았습니다.", who=name)

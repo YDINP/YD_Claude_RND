@@ -119,7 +119,20 @@ def main() -> int:
                                            "spots": [{"x": 9, "y": 9, "distance": 12}]}}
     full = {"coal": 99, "iron-plate": 40, "iron-ore": 99, "copper-ore": 99, "stone": 99,
             "lab": 1}
-    settled = {**ALL_DRILLED, "lab": {"nearest": {"x": 4, "y": -4}, "nearest_dist": 6, "count": 1},
+    # 드릴 4대를 화로 하나가 못 받는다. 광석이 쌓이는 동안 노는 것은
+    # «할 일이 없는» 것이 아니다.
+    check("four drills on one furnace is not idleness",
+          (next_goal(at(full, {**ALL_DRILLED, "lab": {"nearest": {"x": 4, "y": -4},
+                                                      "nearest_dist": 6, "count": 1},
+                             "steam-engine": {"nearest": {"x": 20, "y": 20},
+                                              "nearest_dist": 28, "count": 1}},
+                       CAN_TOOL), focus="copper-ore") or Job("")).key.startswith("furnace:"))
+
+    ENOUGH = {"stone-furnace": {"nearest": {"x": 5, "y": 5}, "nearest_dist": 7, "count": 4,
+                                "spots": [{"x": 5 + 4 * i, "y": 5, "distance": 7}
+                                          for i in range(4)]}}
+    settled = {**ALL_DRILLED, **ENOUGH,
+               "lab": {"nearest": {"x": 4, "y": -4}, "nearest_dist": 6, "count": 1},
                "steam-engine": {"nearest": {"x": 20, "y": 20}, "nearest_dist": 28, "count": 1}}
     check("and stops when there is nothing left to do",
           next_goal(at(full, settled, CAN_TOOL), focus="copper-ore") is None,
