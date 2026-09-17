@@ -171,6 +171,21 @@ end)
 -- moving. Rebuilt in place every refresh so it never goes stale.
 
 local PANEL_NAME = "ai_crew_panel"
+local CHAT_NAME = "ai_crew_chat"
+local CHAT_TOGGLE = "ai_crew_chat_toggle"
+
+-- 에이전트 여섯이 동시에 말하면 게임 채팅은 흘러가 버리고, 사람이 쓴 줄은
+-- 그 사이에 묻힌다. 그래서 따로 모아둔다. 링버퍼라 세션이 길어져도 메모리는
+-- 평평하다.
+local CREW_LOG = 200
+
+local function remember_line(who, text)
+  storage.crew_log = storage.crew_log or {}
+  storage.crew_log[#storage.crew_log + 1] = {
+    who = tostring(who or "AI"), text = tostring(text), tick = game.tick,
+  }
+  while #storage.crew_log > CREW_LOG do table.remove(storage.crew_log, 1) end
+end
 
 local function panel_rows(frame)
   if frame.goal then
@@ -237,6 +252,49 @@ local function panel_rows(frame)
   end
 end
 
+-- 에이전트 대화만 모아 보는 창. 크루 패널이 «누가 무엇을 하는가»라면
+-- 이쪽은 «누가 무슨 말을 했는가»다. 둘을 한 칸에 욱여넣으면 둘 다 읽기
+-- 힘들어진다.
+local function chat_rows(frame)
+  local list = frame.body
+  if not list then return end
+  list.clear()
+
+  local log = storage.crew_log or {}
+  local seat = {}
+  for index, name in ipairs(storage.order or {}) do seat[name] = index end
+
+  for _, line in ipairs(log) do
+    local label = list.add {
+      type = "label",
+      caption = string.format("[%d:%02d] %s: %s",
+        math.floor(line.tick / 3600), math.floor(line.tick / 60) % 60,
+        line.who, line.text),
+    }
+    label.style.single_line = false
+    label.style.maximal_width = 460
+    local index = seat[line.who]
+    if index then
+      label.style.font_color = COLORS[((index - 1) % #COLORS) + 1]
+    end
+  end
+  -- 새 줄은 아래에 쌓이므로 아래를 보여준다.
+  pcall(function() list.scroll_to_bottom() end)
+end
+
+local function build_chat(player)
+  if player.gui.screen[CHAT_NAME] then player.gui.screen[CHAT_NAME].destroy() end
+  local frame = player.gui.screen.add {
+    type = "frame", name = CHAT_NAME, direction = "vertical", caption = "AI 대화",
+  }
+  frame.auto_center = true
+  local pane = frame.add { type = "scroll-pane", name = "body", direction = "vertical" }
+  pane.style.maximal_height = 320
+  pane.style.minimal_width = 480
+  chat_rows(frame)
+  return frame
+end
+
 local function build_panel(player)
   if player.gui.left[PANEL_NAME] then player.gui.left[PANEL_NAME].destroy() end
   local frame = player.gui.left.add {
@@ -247,12 +305,25 @@ local function build_panel(player)
   frame.add { type = "label", name = "footer", caption = "" }
   local board = frame.add { type = "label", name = "board", caption = "" }
   board.style.single_line = false
+  frame.add { type = "button", name = CHAT_TOGGLE, caption = "AI 대화 보기" }
   panel_rows(frame)
   return frame
 end
 
 -- One handler for both: registering on_nth_tick twice with the same interval
 -- replaces the first, which would have silently killed the nametags.
+script.on_event(defines.events.on_gui_click, function(event)
+  if event.element and event.element.valid and event.element.name == CHAT_TOGGLE then
+    local player = game.get_player(event.player_index)
+    if not player then return end
+    if player.gui.screen[CHAT_NAME] then
+      player.gui.screen[CHAT_NAME].destroy()
+    else
+      pcall(build_chat, player)
+    end
+  end
+end)
+
 script.on_nth_tick(MARKER_INTERVAL, function()
   for _, name in ipairs(storage.order) do
     local a = storage.agents[name]
@@ -262,6 +333,10 @@ script.on_nth_tick(MARKER_INTERVAL, function()
     local frame = player.gui.left[PANEL_NAME]
     if frame and frame.valid then
       pcall(panel_rows, frame)
+    end
+    local chat = player.gui.screen[CHAT_NAME]
+    if chat and chat.valid then
+      pcall(chat_rows, chat)
     end
   end
 end)
@@ -816,8 +891,12 @@ local function init_status_names()
   if defines.entity_status.waiting_for_space_in_destination then
     FIXABLE[defines.entity_status.waiting_for_space_in_destination] = "chest"
   end
-  -- «재료 없음»은 고장이 아니라 여유 용량이다. 빈 화로를 고장으로 세면
-  -- 목록이 노는 화로로 가득 차서 진짜 병목이 묻힌다.
+  -- 빈 화로는 고장이 아니지만 놀고 있는 것도 사실이다. 공장은 끊임없이
+  -- 돌아야 하므로 «먹일 것»으로 따로 표시한다. 우선순위는 파이썬이 정한다 -
+  -- 진짜 고장보다 뒤로 밀어야 노는 화로가 병목을 가리지 않는다.
+  if defines.entity_status.no_ingredients then
+    FIXABLE[defines.entity_status.no_ingredients] = "feed"
+  end
 end
 
 local TENDED = { "burner-mining-drill", "stone-furnace", "steel-furnace",
@@ -1386,7 +1465,22 @@ remote.add_interface("ai", {
 
   say = function(text, who)
     game.print("[" .. tostring(who or "AI") .. "] " .. tostring(text))
+    pcall(remember_line, who, text)
     return { said = text, tick = game.tick }
+  end,
+
+  -- 대화 창을 열고 닫는다. show 가 nil 이면 토글.
+  chat_window = function(player_name, show)
+    local player = game.get_player(player_name)
+    if not player then return { error = "no such player: " .. tostring(player_name) } end
+    local open = player.gui.screen[CHAT_NAME] ~= nil
+    if show == nil then show = not open end
+    if show then
+      build_chat(player)
+    elseif open then
+      player.gui.screen[CHAT_NAME].destroy()
+    end
+    return { player = player_name, open = show }
   end,
 
   -- Put a human into the observer seat. Their character does not have to be
