@@ -631,6 +631,24 @@ def main() -> int:
           [p["x"] for p in spread_sites(rich, 4, gap=3)] == [0, 4],
           str([p["x"] for p in spread_sites(rich, 4, gap=3)]))
 
+    print("\n18. the chief can say: take that away")
+    cleaned = brain._clean_steps([
+        {"type": "demolish", "params": {"x": -5, "y": -6}},
+        {"type": "chop", "params": {"x": 10, "y": 3, "count": 8}},
+        {"type": "give", "params": {"to": "bravo", "name": "coal", "count": 20}},
+    ])
+    check("clearing wreckage survives the filter",
+          [kind for kind, _ in cleaned] == ["demolish", "chop", "give"],
+          str([kind for kind, _ in cleaned]))
+    check("the crewmate's name is carried through",
+          cleaned[2][1].get("to") == "bravo")
+    check("a demolish without a place is dropped",
+          brain._clean_steps([{"type": "demolish", "params": {}}]) == [])
+    check("invented task types are still refused",
+          brain._clean_steps([{"type": "teleport", "params": {"x": 0, "y": 0}}]) == [])
+    check("every task the prompt offers is a task the filter allows",
+          {"demolish", "chop", "give"} <= brain.ALLOWED_TASKS)
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))

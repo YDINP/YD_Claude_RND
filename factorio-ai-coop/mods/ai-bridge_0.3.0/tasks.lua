@@ -723,13 +723,18 @@ M.chop = {
 M.demolish = {
   start = function(ctx)
     local p = ctx.task.params
+    -- 우리 힘(force)으로 제한하면 안 된다. 우주선 잔해는 절반이 neutral 이고
+    -- 바위와 나무도 그렇다. 사람이 「저거 치워」라고 할 때 그것들이 전부
+    -- 빠져나가면 「부비기만」 한다.
     local found = ctx.surface.find_entities_filtered {
-      position = { p.x, p.y }, radius = p.search_radius or 0.6,
-      force = ctx.bot.force,
+      position = { p.x, p.y }, radius = p.search_radius or 1.5,
     }
     local target = nil
     for _, e in pairs(found) do
+      -- 광맥은 여기서 다루지 않는다. 캐는 것은 mine 의 일이고, 그쪽은
+      -- 「몇 개」를 셀 줄 안다.
       if e.type ~= "character" and e.type ~= "item-entity"
+          and e.type ~= "resource" and e.minable
           and (not p.name or e.name == p.name) then
         target = e
         break

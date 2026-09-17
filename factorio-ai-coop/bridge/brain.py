@@ -20,7 +20,11 @@ import re
 import subprocess
 from typing import Any
 
-ALLOWED_TASKS = {"walk_to", "mine", "build", "craft", "insert", "take", "wait"}
+# 프롬프트가 아는 것과 여기가 아는 것이 어긋나면, 모델이 옳게 답해도 조용히
+# 버려진다. 잔해를 치우라는 지시가 그렇게 사라졌다 - 프롬프트에 없었고,
+# 있었더라도 여기서 걸렀을 것이다.
+ALLOWED_TASKS = {"walk_to", "mine", "build", "craft", "insert", "take", "wait",
+                 "demolish", "chop", "give"}
 MAX_STEPS = 12
 MAX_COORD = 100_000
 MAX_COUNT = 200
@@ -41,6 +45,14 @@ steps는 비워도 된다(잡담이나 질문이면 비운다). 쓸 수 있는 �
   {"type":"insert","params":{"name":"아이템","x":숫자,"y":숫자,"count":숫자}} - 건물에 넣기
   {"type":"take","params":{"name":"아이템","x":숫자,"y":숫자,"count":숫자}}   - 건물에서 꺼내기
   {"type":"wait","params":{"ticks":숫자}}                  - 기다린다 (60틱 = 1초)
+  {"type":"demolish","params":{"x":숫자,"y":숫자}}          - 그 자리의 건물/잔해/바위를 걷어낸다
+  {"type":"chop","params":{"x":숫자,"y":숫자,"count":숫자}}  - 주변 나무를 벤다
+  {"type":"give","params":{"to":"이름","name":"아이템","count":숫자}} - 동료에게 건네준다
+
+주의: mine 은 «광맥»에만 쓴다. 우주선 잔해, 바위, 잘못 놓인 건물을 치우라는
+지시에는 demolish 를 써라. 잔해에 mine 을 쓰면 «no resource»로 실패하고
+캐릭터는 그 자리에서 부딪히기만 한다 - 실제로 그랬다. 건물을 옮기라는
+지시는 demolish 다음에 build 다. 부수는 게 아니라 캐는 것이라 자재가 돌아온다.
 
 규칙:
 - 좌표는 아래 상황에 실제로 나온 값을 써라. 없는 좌표를 지어내지 마라.
@@ -148,7 +160,7 @@ def _clean_steps(raw: Any) -> list[tuple[str, dict]]:
                 limit = MAX_COUNT if key == "count" else 60 * 120
                 clean[key] = max(1, min(limit, value))
 
-        for key in ("name", "recipe"):
+        for key in ("name", "recipe", "to"):
             if isinstance(params.get(key), str):
                 clean[key] = params[key][:64]
 
@@ -161,6 +173,9 @@ def _clean_steps(raw: Any) -> list[tuple[str, dict]]:
             "walk_to": ("x", "y"), "mine": ("x", "y"), "build": ("name", "x", "y"),
             "craft": ("recipe",), "insert": ("name", "x", "y"), "take": ("name", "x", "y"),
             "wait": (),
+            # 걷어내기는 좌표만 있으면 된다. name 은 있으면 그것만 고른다.
+            "demolish": ("x", "y"), "chop": ("x", "y"),
+            "give": ("to", "name"),
         }[task_type]
         if any(key not in clean for key in needs):
             continue
@@ -229,6 +244,14 @@ CHIEF = """\
   {"type":"insert","params":{"name":"아이템","x":숫자,"y":숫자,"count":숫자}} - 건물에 넣기
   {"type":"take","params":{"name":"아이템","x":숫자,"y":숫자,"count":숫자}}   - 건물에서 꺼내기
   {"type":"wait","params":{"ticks":숫자}}                  - 기다린다 (60틱 = 1초)
+  {"type":"demolish","params":{"x":숫자,"y":숫자}}          - 그 자리의 건물/잔해/바위를 걷어낸다
+  {"type":"chop","params":{"x":숫자,"y":숫자,"count":숫자}}  - 주변 나무를 벤다
+  {"type":"give","params":{"to":"이름","name":"아이템","count":숫자}} - 동료에게 건네준다
+
+주의: mine 은 «광맥»에만 쓴다. 우주선 잔해, 바위, 잘못 놓인 건물을 치우라는
+지시에는 demolish 를 써라. 잔해에 mine 을 쓰면 «no resource»로 실패하고
+캐릭터는 그 자리에서 부딪히기만 한다 - 실제로 그랬다. 건물을 옮기라는
+지시는 demolish 다음에 build 다. 부수는 게 아니라 캐는 것이라 자재가 돌아온다.
 
 commands 는 steps 로는 못 하는 «운영» 명령이다. 필요할 때만 넣어라:
 
