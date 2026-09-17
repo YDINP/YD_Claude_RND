@@ -476,6 +476,9 @@ SMELTABLE = ("iron-ore", "copper-ore", "stone")
 # 오래 두면 랩이 그만큼 논다.
 RESEARCH_CHECK = 20.0
 
+# 같은 사람이 같은 말을 이 시간 안에 되풀이하면 삼킨다.
+ECHO_QUIET = 60.0
+
 
 def _smelt_ticks(step: dict, count: int) -> int:
     seconds = float(step.get("seconds") or 0) or (count * 3.2)
@@ -601,6 +604,8 @@ class Crew:
         self.goal_line = f"목표 {mission.GOAL}"
         self.research_checked = 0.0
         self.research_said: str | None = None
+        # 방금 한 말들. 같은 줄을 되풀이하지 않기 위한 것.
+        self.echoes: dict[tuple[str, str], float] = {}
         self.shown: tuple[str, tuple[str, ...]] | None = None
 
     # -- roster -----------------------------------------------------------
@@ -657,6 +662,15 @@ class Crew:
     # -- speech -----------------------------------------------------------
 
     def say(self, text: str, who: str = "AI") -> None:
+        # 같은 사람이 같은 말을 반복하면 대화창이 그 한 줄로 가득 찬다.
+        # «연료가 떨어져 멈췄습니다»가 다섯 번 연속으로 찍혀 있었다.
+        now = time.monotonic()
+        said = self.echoes.get((who, text))
+        if said and now - said < ECHO_QUIET:
+            print(f"[{who}] {text}  (반복 생략)")
+            return
+        self.echoes = {k: t for k, t in self.echoes.items() if now - t < ECHO_QUIET}
+        self.echoes[(who, text)] = now
         print(f"[{who}] {text}")
         self.bridge.say(text, who=who)
 

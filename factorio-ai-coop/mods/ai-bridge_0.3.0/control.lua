@@ -312,6 +312,15 @@ end
 
 -- One handler for both: registering on_nth_tick twice with the same interval
 -- replaces the first, which would have silently killed the nametags.
+-- 접속하면 바로 보이게 한다. 모드가 바뀌면 클라이언트를 다시 붙여야 하고,
+-- 그때마다 어디서 켜는지 찾게 만들 이유가 없다.
+script.on_event(defines.events.on_player_joined_game, function(event)
+  local player = game.get_player(event.player_index)
+  if not player then return end
+  pcall(build_panel, player)
+  pcall(build_chat, player)
+end)
+
 script.on_event(defines.events.on_gui_click, function(event)
   if event.element and event.element.valid and event.element.name == CHAT_TOGGLE then
     local player = game.get_player(event.player_index)
