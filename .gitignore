@@ -52,3 +52,10 @@ n8n-verify.json
 n8n-*.json
 cookie.txt
 D:park*
+
+# Factorio agent runtime data (saves, logs, per-instance profiles)
+.factorio-agent/
+.factorio-bot/
+
+__pycache__/
+*.pyc
