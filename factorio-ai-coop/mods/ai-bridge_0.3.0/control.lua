@@ -877,6 +877,34 @@ end
 -- 화로 안에 그대로 남고, 아무도 그걸 세지 않는다. 광석을 새로 캐는 것보다
 -- 이미 녹은 걸 꺼내오는 편이 언제나 싸다.
 
+-- 상자에 무엇이 들어 있는가. 석탄 드릴의 상자에는 석탄이 쌓이는데,
+-- 정작 굶는 드릴에 그걸 가져다 넣는 작업이 없어서 여섯 중 넷이 «석탄을
+-- 넣겠습니다»만 반복하고 있었다. 가진 곳을 알아야 나를 수 있다.
+local function chest_stock(name, item, radius)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local reach = math.min(radius or MAX_OBSERVE_RADIUS, MAX_OBSERVE_RADIUS)
+  local out = {}
+  for _, e in pairs(b.surface.find_entities_filtered {
+    position = b.position, radius = reach, type = "container", force = b.force,
+  }) do
+    local inv = e.get_inventory(defines.inventory.chest)
+    if inv then
+      local held = inv.get_item_count(item)
+      if held > 0 then
+        out[#out + 1] = {
+          x = e.position.x, y = e.position.y, count = held,
+          distance = math.floor(Tasks.dist(b.position, e.position) * 10) / 10,
+        }
+      end
+    end
+  end
+  table.sort(out, function(p, q) return p.distance < q.distance end)
+  return { agent = name, item = item, chests = out }
+end
+
 local function furnace_stock(name, radius)
   local a = agent(name)
   local b = body(a)
@@ -1773,6 +1801,9 @@ remote.add_interface("ai", {
 
   -- 화로 안에 다 녹은 채 남아 있는 것들.
   furnace_stock = furnace_stock,
+
+  -- 이 아이템이 든 상자들, 가까운 순.
+  chest_stock = chest_stock,
 
   set_focus = function(name, focus)
     local a = agent(name)

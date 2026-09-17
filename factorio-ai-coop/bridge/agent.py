@@ -498,6 +498,12 @@ ECHO_QUIET = 60.0
 
 # 규칙이 할 일을 못 찾았을 때만 모델에게 묻는다. 이 간격 안에 두 번 묻지
 # 않는다 - 막혀 있는 상태는 몇 초 만에 바뀌지 않는다.
+# 배차 주기. 매 틱 무리 전체를 훑으면 RCON 왕복이 아깝고, 너무 뜸하면
+# 놀고 있는 사람이 생긴다.
+DISPATCH_INTERVAL = 10.0
+# 한 번에 한 사람이 받아 가는 석탄.
+HAUL_BATCH = 40
+
 IDLE_ASK_QUIET = 150.0
 # 그럴 때 쓰는 모델. 반장이 지시를 쪼갤 때와는 판단의 무게가 다르고,
 # 자주 일어나는 일이라 싼 쪽이 맞다.
@@ -633,6 +639,7 @@ class Crew:
         self.stock: dict[str, dict[str, int]] = {}
         self.stage: str | None = None
         self.goal_line = f"목표 {mission.GOAL}"
+        self.dispatched_at = 0.0
         self.research_checked = 0.0
         self.research_said: str | None = None
         # 방금 한 말들. 같은 줄을 되풀이하지 않기 위한 것.
@@ -1296,6 +1303,119 @@ class Crew:
 
     # -- reporting ---------------------------------------------------------
 
+    # -- 배차 -------------------------------------------------------------
+
+    def survey(self, worker: Worker) -> list[Job]:
+        """무리 전체가 나눠 가질 일감을 한 번에 만든다.
+
+        예전에는 각자 자기 스냅샷을 보고 «가장 급한 일 하나»를 골랐다.
+        열쇠는 한 명만 잡을 수 있으니, 급한 일이 셋이면 나머지 다섯은 서
+        있었다. 실제로 여덟 중 넷이 그랬다.
+
+        여기서는 한 번 훑어서 «할 수 있는 일 전부»를 목록으로 만든다.
+        목록이 사람보다 길면 아무도 놀지 않는다.
+        """
+        jobs: list[Job] = []
+        try:
+            stopped = self.bridge.broken(worker.name)
+            stock = self.bridge.furnace_stock(worker.name)
+            coal_chests = self.bridge.chest_stock(worker.name, "coal")
+        except RconError:
+            return jobs
+
+        # 1. 연료가 떨어진 기계. 손에 석탄이 없으면 상자에서 실어다 준다 -
+        #    석탄 드릴의 상자에는 석탄이 쌓이는데 그걸 나르는 일이 없어서
+        #    넷이 «석탄을 넣겠습니다»만 되풀이하고 있었다.
+        for entry in stopped:
+            if entry.get("fix") != "fuel":
+                continue
+            at = {"x": entry["x"], "y": entry["y"]}
+            key = f"tend:{entry['x']:.0f},{entry['y']:.0f}"
+            source = next((c for c in coal_chests if c["count"] >= DRILL_FUEL), None)
+            steps: list[Step] = []
+            if source:
+                steps.append(("take", {"name": "coal",
+                                       "count": min(HAUL_BATCH, source["count"]),
+                                       "x": source["x"], "y": source["y"]}))
+            steps.append(("insert", {"name": "coal", "count": DRILL_FUEL, **at}))
+            jobs.append(Job(
+                f"{entry.get('name', '기계')}에 석탄을 넣겠습니다. "
+                f"({entry['x']:.0f}, {entry['y']:.0f})",
+                key=key, steps=steps,
+                needs={} if source else {"coal": DRILL_FUEL},
+                at=at))
+
+        # 2. 다 녹아서 화로를 막고 있는 것들. 화로마다 따로 걷는다.
+        for entry in stock:
+            if int(entry.get("count") or 0) < HARVEST_MIN:
+                continue
+            jobs.append(Job(
+                f"화로에 {entry['name']} {entry['count']}개가 다 녹아 있습니다. 거둬오겠습니다.",
+                key=f"harvest:{entry['x']:.0f},{entry['y']:.0f}",
+                steps=[("take", {"name": entry["name"], "count": entry["count"],
+                                 "x": entry["x"], "y": entry["y"]})],
+                at={"x": entry["x"], "y": entry["y"]}))
+
+        # 3. 출구가 막혀 선 채굴기.
+        for entry in stopped:
+            if entry.get("fix") != "chest":
+                continue
+            at = {"x": entry["x"], "y": entry["y"]}
+            jobs.append(Job(
+                f"채굴기 출구가 막혔습니다. ({entry['x']:.0f}, {entry['y']:.0f})",
+                key=f"tend:{entry['x']:.0f},{entry['y']:.0f}",
+                routine="rescue", at=at))
+
+        return jobs
+
+    def dispatch(self, free: list[tuple[Worker, Snapshot]]) -> set[str]:
+        """만든 일감을 가까운 사람에게 나눠준다. 배차된 사람 이름을 돌려준다.
+
+        가까운 순으로 주는 이유는 단순하다 - 지도 반대편 사람이 바로 옆
+        사람을 지나쳐 같은 기계까지 걸어가는 것이 가장 흔한 낭비다.
+        """
+        if not free:
+            return set()
+
+        pool = self.survey(free[0][0])
+        taken = self.taken()
+        pool = [j for j in pool if j.key not in taken]
+        if not pool:
+            return set()
+
+        seats = {w.name: (snap.x, snap.y) for w, snap in free}
+        handed: set[str] = set()
+        for job in pool:
+            if len(handed) >= len(free):
+                break
+            spot = job.at or {}
+            order = sorted(
+                (n for n in seats if n not in handed),
+                key=lambda n: ((seats[n][0] - spot.get("x", seats[n][0])) ** 2
+                               + (seats[n][1] - spot.get("y", seats[n][1])) ** 2, n))
+            if not order:
+                break
+            name = order[0]
+            worker = self.workers[name]
+            if job.key in worker.blocked_now():
+                continue
+
+            self.claim(worker, job.key)
+            self.say(job.narration, who=name)
+            worker.said_idle = False
+            if job.routine:
+                self.start_routine(worker, job.routine, job.ore, job.at)
+            else:
+                try:
+                    worker.watching = worker.handle.submit_plan(job.steps)
+                except RconError as exc:
+                    self.say(f"그건 못 하겠습니다: {exc}", who=name)
+                    self.release(worker)
+                    continue
+            handed.add(name)
+
+        return handed
+
     def keep_busy(self, worker: Worker, snap: Snapshot) -> Job | None:
         """마지막 수단: 자기 담당 광석을 캐러 간다.
 
@@ -1898,6 +2018,9 @@ class Crew:
         if messages:
             return
 
+        # 먼저 «누가 손이 비었는가»를 한 번에 본다. 각자 자기 스냅샷만 보고
+        # 가장 급한 일 하나씩 고르면, 급한 일이 셋일 때 나머지는 서 있는다.
+        free: list[tuple[Worker, Snapshot]] = []
         for worker in self.workers.values():
             if not worker.autopilot:
                 continue
@@ -1905,12 +2028,28 @@ class Crew:
             if not worker.slot.acquire(blocking=False):
                 continue
             worker.slot.release()
-
             try:
                 if worker.handle.busy():
                     continue
-                snap = worker.snapshot()
+                free.append((worker, worker.snapshot()))
             except RconError:
+                continue
+
+        if not free:
+            return
+
+        # 반장이 판을 보고 나눠준다. 여기서 받은 사람은 각자 고르지 않는다.
+        handed: set[str] = set()
+        now = time.monotonic()
+        if now >= self.dispatched_at:
+            self.dispatched_at = now + DISPATCH_INTERVAL
+            try:
+                handed = self.dispatch(free)
+            except RconError:
+                handed = set()
+
+        for worker, snap in free:
+            if worker.name in handed:
                 continue
 
             # 남이 나에게 부탁하려면 내가 뭘 쥐고 있는지 알아야 한다.
@@ -1918,11 +2057,10 @@ class Crew:
             self.announce_stage(snap)
 
             self.release(worker)
-            # 멈춘 기계가 제일 먼저다. 그 다음이 찬 화로를 비우는 일이고,
-            # 새로 캐고 짓는 일은 그 뒤다.
-            job = self.tend_job(worker, snap)
-            if job is None:
-                job = self.harvest_job(worker)
+            # 멈춘 기계와 찬 화로는 배차가 맡는다. 여기서 또 물어보면
+            # 같은 것을 여덟 번 조회하게 되고, 그 사이 배차가 이미 누구에게
+            # 준 일을 두 번 잡으려 든다.
+            job = None
             if job is None:
                 job = next_goal(snap, worker.focus, worker.blocked_now(), self.taken(),
                                 crew=len(self.workers))
