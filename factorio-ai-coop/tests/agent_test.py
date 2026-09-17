@@ -8,7 +8,8 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 import brain  # noqa: E402
-from agent import ALL, Snapshot, next_goal, parse, share, split_target  # noqa: E402
+from agent import (ALL, FOCUS_ORDER, Snapshot, next_goal, parse, share,  # noqa: E402
+                   split_target)
 
 PASSED: list[str] = []
 FAILED: list[str] = []
@@ -113,48 +114,62 @@ def main() -> int:
     check("default applies", params("철 캐와").get("count") == 20)
     check("count is clamped", params("철 99999개 캐와").get("count") == 1000)
 
-    print("\n3. the self-directed ladder is ordered and pure")
-    empty = Snapshot(x=0, y=0, resources={
+    print("\n3. the self-directed ladder climbs from hands to a working mine")
+    world = dict(x=0.0, y=0.0, resources={
         "stone": {"nearest": {"x": 10, "y": 0}, "nearest_dist": 10, "tiles": 5},
         "coal": {"nearest": {"x": 20, "y": 0}, "nearest_dist": 20, "tiles": 5},
         "iron-ore": {"nearest": {"x": 30, "y": 0}, "nearest_dist": 30, "tiles": 5},
+        "copper-ore": {"nearest": {"x": 40, "y": 0}, "nearest_dist": 40, "tiles": 5},
     })
-    goal = next_goal(empty)
-    check("starts with stone", goal is not None and goal[1][0][0] == "mine"
-          and goal[1][0][1]["x"] == 10, str(goal[1] if goal else None)[:80])
+    FURNACE = {"stone-furnace": {"nearest": {"x": 3, "y": 3}, "nearest_dist": 4, "count": 1}}
+    WITH_DRILL = {**FURNACE, "burner-mining-drill": {"nearest": {"x": 9, "y": 9},
+                                                     "nearest_dist": 12, "count": 1}}
 
-    with_stone = Snapshot(**{**empty.__dict__, "items": {"stone": 5}})
-    goal = next_goal(with_stone)
-    check("then crafts a furnace", goal is not None and goal[1][0][0] == "craft")
+    def at(items=None, buildings=None):
+        return Snapshot(**world, items=items or {}, buildings=buildings or {})
 
-    with_furnace_item = Snapshot(**{**empty.__dict__, "items": {"stone-furnace": 1}})
-    goal = next_goal(with_furnace_item)
-    check("then places it", goal is not None and goal[1][0][0] == "build")
+    rungs = [
+        ("bare hands go for stone", at(), "mine", lambda j: j.steps[0][1]["x"] == 10),
+        ("then a furnace is crafted", at({"stone": 5}), "craft", None),
+        ("then it is placed", at({"stone-furnace": 1}), "build", None),
+        ("then fuel", at({}, FURNACE), "mine", lambda j: j.steps[0][1]["x"] == 20),
+        ("then iron ore", at({"coal": 10}, FURNACE), "mine",
+         lambda j: j.steps[0][1]["x"] == 30),
+        ("then smelting", at({"coal": 10, "iron-ore": 20}, FURNACE), "insert",
+         lambda j: [s[0] for s in j.steps] == ["insert", "insert", "wait", "take"]),
+    ]
+    for label, snap, first_step, extra in rungs:
+        job = next_goal(snap)
+        ok = job is not None and job.steps and job.steps[0][0] == first_step
+        if ok and extra:
+            ok = extra(job)
+        check(label, bool(ok), (job.narration if job else "no job"))
 
-    placed = Snapshot(**{**empty.__dict__,
-                         "buildings": {"stone-furnace": {"nearest": {"x": 3, "y": 3},
-                                                         "nearest_dist": 4, "count": 1}}})
-    goal = next_goal(placed)
-    check("then fuels up", goal is not None and goal[1][0][1].get("count") == 10
-          and goal[1][0][0] == "mine", str(goal[1][0] if goal else None)[:80])
+    print("\n3b. with plates in hand it mechanises, then keeps the patch stocked")
+    tooled = at({"coal": 10, "iron-plate": 20}, FURNACE)
+    job = next_goal(tooled, focus="coal")
+    check("builds a drill instead of mining by hand",
+          job is not None and job.routine == "automate" and job.ore == "coal",
+          str(job.routine if job else None))
 
-    fuelled = Snapshot(**{**placed.__dict__, "items": {"coal": 10}})
-    goal = next_goal(fuelled)
-    check("then mines iron", goal is not None and goal[1][0][1]["x"] == 30)
+    running = at({"coal": 10, "iron-plate": 20}, WITH_DRILL)
+    job = next_goal(running, focus="copper-ore")
+    check("then stockpiles its own resource",
+          job is not None and job.steps and job.steps[0][1]["x"] == 40,
+          str(job.steps[0] if job and job.steps else None)[:70])
 
-    loaded = Snapshot(**{**placed.__dict__, "items": {"coal": 10, "iron-ore": 20}})
-    goal = next_goal(loaded)
-    steps = [s[0] for s in goal[1]] if goal else []
-    check("then smelts", steps == ["insert", "insert", "wait", "take"], str(steps))
+    stocked = at({"coal": 10, "iron-plate": 20, "copper-ore": 99}, WITH_DRILL)
+    check("and stops when the stockpile is full",
+          next_goal(stocked, focus="copper-ore") is None)
 
-    still_short = Snapshot(**{**placed.__dict__, "items": {"coal": 10, "iron-plate": 20}})
-    check("keeps going while short of target", next_goal(still_short) is not None)
-
-    done = Snapshot(**{**placed.__dict__, "items": {"coal": 10, "iron-plate": 50}})
-    check("and stops once the target is met", next_goal(done) is None)
+    print("\n3c. each agent works a different resource")
+    focuses = [FOCUS_ORDER[i % len(FOCUS_ORDER)] for i in range(4)]
+    check("four agents, four resources", len(set(focuses)) == 4, str(focuses))
+    check("a fifth wraps around", FOCUS_ORDER[4 % len(FOCUS_ORDER)] == FOCUS_ORDER[0])
 
     print("\n4. planning is pure")
-    check("same snapshot, same plan", next_goal(loaded) == next_goal(loaded))
+    twice = at({"coal": 10, "iron-ore": 20}, FURNACE)
+    check("same snapshot, same plan", next_goal(twice) == next_goal(twice))
 
     print("\n5. LLM output is treated as untrusted")
     check("plain json", brain._extract_json('{"say":"hi","steps":[]}') == {"say": "hi", "steps": []})

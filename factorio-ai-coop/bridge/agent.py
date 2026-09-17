@@ -11,9 +11,9 @@ Keeping the pure parts pure means the interesting logic is testable without a
 running Factorio server, which matters because it is exactly the logic that is
 hard to debug through a game window.
 
-    python bridge/agent.py                  # one agent, obeys chat
-    python bridge/agent.py --agents 3       # three of them
-    python bridge/agent.py --auto           # they also work while idle
+    python bridge/agent.py                  # two agents, working on their own
+    python bridge/agent.py --agents 4       # four of them, one per resource
+    python bridge/agent.py --manual         # wait for orders instead
     python bridge/agent.py --observer NAME  # put that player in the observer seat
 """
 
@@ -219,52 +219,86 @@ def parse(message: str) -> list[Intent]:
 
 FURNACE_FUEL = 5
 SMELT_BATCH = 20
-TARGET_PLATES = 50   # stop bootstrapping here instead of mining forever
+PLATES_FOR_TOOLS = 12   # enough to hand-craft a drill and a chest
+STOCKPILE = 30
+
+# Each agent takes one resource so a crew does not all stand on the same patch.
+FOCUS_ORDER = ["iron-ore", "coal", "copper-ore", "stone"]
 
 
-def next_goal(snap: Snapshot) -> tuple[str, list[Step]] | None:
-    """The self-directed ladder: bootstrap a working iron-plate loop.
+@dataclass
+class Job:
+    """One step of the ladder: either a queue of tasks, or a named routine.
 
-    Pure: given the same snapshot it always proposes the same next move, which
-    makes behaviour reproducible and the ladder unit-testable.
+    Automation cannot be expressed as a fixed step list - where the chest goes
+    depends on what the drill says after it is built - so it is named here and
+    carried out by the crew.
     """
-    # The goal, checked first: without this the ladder below always finds
-    # another reason to go mining and the agent never stands still.
-    if snap.have("iron-plate") >= TARGET_PLATES:
-        return None
+    narration: str
+    steps: list[Step] = field(default_factory=list)
+    routine: str | None = None
+    ore: str | None = None
 
+
+def next_goal(snap: Snapshot, focus: str = "iron-ore") -> Job | None:
+    """What this agent should do next, with nobody telling it.
+
+    The ladder climbs from bare hands to a running mine: gather stone, build a
+    furnace, smelt enough plates to afford tools, then put a drill and a chest
+    on its own patch and keep it stocked. Each agent runs this for its own
+    resource, so a crew spreads out instead of queueing on one ore tile.
+
+    Pure: the same snapshot always proposes the same move, which makes the
+    behaviour reproducible and the ladder unit-testable.
+    """
     furnace = snap.building("stone-furnace")
+    drills = snap.buildings.get(DRILL, {}).get("count", 0)
 
-    if snap.have("stone") < 5 and not furnace and snap.have("stone-furnace") < 1:
-        spot = snap.ore("stone")
-        if spot:
-            return "돌부터 캐서 화로를 만들겠습니다.", [("mine", {**spot, "count": 5})]
-
-    if snap.have("stone-furnace") < 1 and not furnace and snap.have("stone") >= 5:
-        return "화로를 제작합니다.", [("craft", {"recipe": "stone-furnace", "count": 1})]
+    # --- bootstrap: hands only ------------------------------------------
+    if not furnace and snap.have("stone-furnace") < 1:
+        if snap.have("stone") < 5:
+            spot = snap.ore("stone")
+            if spot:
+                return Job("돌부터 캐서 화로를 만들겠습니다.", [("mine", {**spot, "count": 5})])
+        else:
+            return Job("화로를 제작합니다.", [("craft", {"recipe": "stone-furnace", "count": 1})])
 
     if not furnace and snap.have("stone-furnace") >= 1:
-        return "화로를 설치합니다.", [
+        return Job("화로를 설치합니다.", [
             ("build", {"name": "stone-furnace", "x": snap.x + 3, "y": snap.y + 3, "snap": True})
-        ]
+        ])
 
     if snap.have("coal") < FURNACE_FUEL:
         spot = snap.ore("coal")
         if spot:
-            return "연료가 없습니다. 석탄 캐러 갑니다.", [("mine", {**spot, "count": 10})]
+            return Job("연료가 없습니다. 석탄 캐러 갑니다.", [("mine", {**spot, "count": 10})])
 
-    if furnace and snap.have("coal") >= FURNACE_FUEL and snap.have("iron-ore") < SMELT_BATCH:
-        spot = snap.ore("iron-ore")
-        if spot:
-            return "철광석 캐러 갑니다.", [("mine", {**spot, "count": SMELT_BATCH})]
+    # --- smelt enough plates to afford tools -----------------------------
+    if snap.have("iron-plate") < PLATES_FOR_TOOLS:
+        if snap.have("iron-ore") < SMELT_BATCH:
+            spot = snap.ore("iron-ore")
+            if spot:
+                return Job("철광석 캐러 갑니다.", [("mine", {**spot, "count": SMELT_BATCH})])
+        elif furnace:
+            return Job("화로에 석탄과 철광석을 넣고 제련합니다.", [
+                ("insert", {"name": "coal", "count": FURNACE_FUEL, **furnace}),
+                ("insert", {"name": "iron-ore", "count": SMELT_BATCH, **furnace}),
+                ("wait", {"ticks": 60 * 40}),
+                ("take", {"name": "iron-plate", "count": SMELT_BATCH, **furnace}),
+            ])
 
-    if furnace and snap.have("iron-ore") >= SMELT_BATCH and snap.have("coal") >= FURNACE_FUEL:
-        return "화로에 석탄과 철광석을 넣고 제련합니다.", [
-            ("insert", {"name": "coal", "count": FURNACE_FUEL, **furnace}),
-            ("insert", {"name": "iron-ore", "count": SMELT_BATCH, **furnace}),
-            ("wait", {"ticks": 60 * 40}),
-            ("take", {"name": "iron-plate", "count": SMELT_BATCH, **furnace}),
-        ]
+    # --- mechanise: a drill beats hands ----------------------------------
+    if drills < 1 and snap.have("iron-plate") >= PLATES_FOR_TOOLS:
+        return Job(f"{focus} 자동 채굴을 준비하겠습니다.", routine="automate", ore=focus)
+
+    # --- keep the patch working ------------------------------------------
+    # For all four focus resources the mined item is named like the resource.
+    spot = snap.ore(focus)
+    if spot and snap.have(focus) < STOCKPILE:
+        return Job(f"{focus} 비축분을 채우겠습니다.", [
+            ("mine", {**spot, "count": STOCKPILE, "search_radius": 10,
+                      "timeout_ticks": 60 * 60 * 5})
+        ])
 
     return None
 
@@ -274,10 +308,11 @@ def next_goal(snap: Snapshot) -> tuple[str, list[Step]] | None:
 class Worker:
     """One agent, plus the bookkeeping that belongs to it alone."""
 
-    def __init__(self, handle: Agent) -> None:
+    def __init__(self, handle: Agent, focus: str = "iron-ore") -> None:
         self.handle = handle
         self.name = handle.name
-        self.autopilot = False
+        self.focus = focus
+        self.autopilot = True
         self.watching: list[int] = []
         self.said_idle = False
         # One slow job (an LLM call, a build-out) at a time per agent.
@@ -302,7 +337,7 @@ class Worker:
 # ---------------------------------------------------------------------- crew
 
 class Crew:
-    def __init__(self, bridge: AIBridge, autopilot: bool = False,
+    def __init__(self, bridge: AIBridge, autopilot: bool = True,
                  use_llm: bool = True) -> None:
         self.bridge = bridge
         self.autopilot = autopilot
@@ -318,7 +353,8 @@ class Crew:
         return list(self.workers)
 
     def adopt(self, name: str) -> Worker:
-        worker = Worker(self.bridge.agent(name))
+        focus = FOCUS_ORDER[len(self.workers) % len(FOCUS_ORDER)]
+        worker = Worker(self.bridge.agent(name), focus=focus)
         worker.autopilot = self.autopilot
         self.workers[name] = worker
         return worker
@@ -418,6 +454,23 @@ class Crew:
         except TaskFailed as exc:
             self.say(f"{item}을(를) 못 만들겠습니다: {exc.task.get('error')}", who=worker.name)
             return False
+
+    def start_automation(self, worker: Worker, ore: str | None) -> bool:
+        """Run the build-out off the main loop; it walks, crafts and builds."""
+        if not worker.slot.acquire(blocking=False):
+            return False
+
+        def run() -> None:
+            try:
+                self.automate(worker, ore)
+            except Exception as exc:  # noqa: BLE001
+                print(f"[warn] automate failed: {exc!r}", file=sys.stderr)
+                self.thoughts.put((worker.name, "자동화 중 문제가 생겼습니다.", []))
+            finally:
+                worker.slot.release()
+
+        threading.Thread(target=run, daemon=True).start()
+        return True
 
     def automate(self, worker: Worker, ore: str | None) -> None:
         """Drill on the patch, chest where it drops, fuel in the drill."""
@@ -544,21 +597,8 @@ class Crew:
                 [("craft", {"recipe": params["recipe"], "count": params["count"]})])
 
         elif kind == "automate":
-            if not worker.slot.acquire(blocking=False):
+            if not self.start_automation(worker, params.get("ore")):
                 self.say("앞의 작업을 아직 하는 중입니다.", who=name)
-                return
-            worker.autopilot = False   # a build-out should not race the ladder
-
-            def run_automation() -> None:
-                try:
-                    self.automate(worker, params.get("ore"))
-                except Exception as exc:  # noqa: BLE001
-                    print(f"[warn] automate failed: {exc!r}", file=sys.stderr)
-                    self.thoughts.put((name, "자동화 중 문제가 생겼습니다.", []))
-                finally:
-                    worker.slot.release()
-
-            threading.Thread(target=run_automation, daemon=True).start()
 
         elif kind == "report_inventory":
             items = worker.snapshot().items
@@ -682,22 +722,31 @@ class Crew:
         for worker in self.workers.values():
             if not worker.autopilot:
                 continue
+            # A long routine holds the slot; do not start a second one on top.
+            if not worker.slot.acquire(blocking=False):
+                continue
+            worker.slot.release()
+
             try:
                 if worker.handle.busy():
                     continue
                 snap = worker.snapshot()
             except RconError:
                 continue
-            goal = next_goal(snap)
-            if goal is None:
+
+            job = next_goal(snap, worker.focus)
+            if job is None:
                 if not worker.said_idle:
                     self.say("당장 할 일이 없습니다. 시키실 게 있으면 말씀해 주세요.", who=worker.name)
                     worker.said_idle = True
                 continue
+
             worker.said_idle = False
-            narration, steps = goal
-            self.say(narration, who=worker.name)
-            worker.watching = worker.handle.submit_plan(steps)
+            self.say(job.narration, who=worker.name)
+            if job.routine == "automate":
+                self.start_automation(worker, job.ore)
+            else:
+                worker.watching = worker.handle.submit_plan(job.steps)
 
     def prime(self) -> None:
         """Start from now.
@@ -710,7 +759,7 @@ class Crew:
 
     def run(self, interval: float = 1.0) -> None:
         print(f"listening to game chat - {len(self.workers)} agent(s)"
-              + (", autopilot on" if self.autopilot else "")
+              + (", working on their own" if self.autopilot else ", waiting for orders")
               + " - ctrl-c to stop")
         while True:
             try:
@@ -723,8 +772,9 @@ class Crew:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--agents", type=int, default=1, help="how many to start with")
-    parser.add_argument("--auto", action="store_true", help="they work on their own when idle")
+    parser.add_argument("--agents", type=int, default=2, help="how many to start with")
+    parser.add_argument("--manual", action="store_true",
+                        help="wait for orders instead of working on their own")
     parser.add_argument("--no-llm", action="store_true",
                         help="rules only; do not ask the Claude CLI about unknown lines")
     parser.add_argument("--observer", metavar="PLAYER",
@@ -733,7 +783,7 @@ def main() -> int:
     args = parser.parse_args()
 
     bridge = AIBridge()
-    crew = Crew(bridge, autopilot=args.auto, use_llm=not args.no_llm)
+    crew = Crew(bridge, autopilot=not args.manual, use_llm=not args.no_llm)
     crew.prime()
     crew.sync_roster()
 
@@ -750,8 +800,10 @@ def main() -> int:
         if not crew.hire():
             break
 
-    crew.say(f"{len(crew.workers)}명 대기 중입니다. "
-             f"'{'/'.join(crew.names)}' 또는 '1번', '모두'로 부르시면 됩니다.")
+    roles = ", ".join(f"{w.name}={w.focus}" for w in crew.workers.values())
+    crew.say(f"{len(crew.workers)}명 나왔습니다 ({roles}). "
+             + ("지시 기다리겠습니다." if args.manual else "알아서 진행하겠습니다.")
+             + f" '{'/'.join(crew.names)}' 또는 '1번', '모두'로 부르시면 됩니다.")
     try:
         crew.run(interval=args.interval)
     except KeyboardInterrupt:
