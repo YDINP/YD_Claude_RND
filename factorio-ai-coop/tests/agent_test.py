@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 import brain  # noqa: E402
 import mission  # noqa: E402
 from agent import (FOCUS_ORDER, STAGE_TARGET, Crew, Job,  # noqa: E402
-                   Snapshot, chain_job, missing_item, next_goal, plan)
+                   Snapshot, chain_job, cluster, missing_item, next_goal, plan)
 
 # 반장이 내릴 수 있다고 적어둔 명령은 전부 실제로 처리되는 것이어야 한다.
 # 표에만 있고 처리기가 없는 명령은 조용히 무시되고, 왜 안 먹는지 아무도
@@ -559,6 +559,29 @@ def main() -> int:
               ("electronics", "steam-power", "automation")),
           str([st.key for st in mission.LADDER
                if st.automated and st.key not in STAGE_TARGET]))
+
+    print("\n14. work in one area is done in one trip")
+    here = [{"x": 0, "y": 0}, {"x": 3, "y": 2}, {"x": -4, "y": 1}]
+    far = [{"x": 80, "y": 80}, {"x": 82, "y": 79}]
+    groups = cluster(here + far)
+    check("two areas, two trips", len(groups) == 2, str([len(g) for g in groups]))
+    check("everything is carried along",
+          sum(len(g) for g in groups) == 5)
+    check("the near ones travel together", len(groups[0]) == 3, str(groups[0]))
+
+    # 사슬처럼 이어 붙이면 묶음이 지도 반대편까지 번진다. 거리는 언제나
+    # 씨앗 기준으로 잰다.
+    chain = [{"x": i * 10, "y": 0} for i in range(6)]
+    spread = cluster(chain, reach=12)
+    check("a chain does not swallow the map",
+          all(max(abs(p["x"] - g[0]["x"]) for p in g) <= 12 for g in spread),
+          str([[p["x"] for p in g] for g in spread]))
+
+    check("a trip is capped so one agent is not stuck forever",
+          all(len(g) <= 3 for g in cluster(
+              [{"x": i, "y": 0} for i in range(10)], reach=50, cap=3)))
+    check("nothing to do, nothing to group", cluster([]) == [])
+    check("one machine is still a trip", len(cluster([{"x": 5, "y": 5}])) == 1)
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

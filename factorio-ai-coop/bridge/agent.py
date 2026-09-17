@@ -154,6 +154,39 @@ class Job:
 CHEST_REACH = 2.5
 
 
+# 한 번 걸어가서 몇 대까지 손볼 것인가. 너무 크게 묶으면 한 사람이 오래
+# 붙들려 있고, 너무 작게 묶으면 같은 구역을 여러 번 왕복한다.
+CLUSTER_REACH = 14
+CLUSTER_MAX = 6
+
+
+def cluster(points: list[dict], reach: float = CLUSTER_REACH,
+            cap: int = CLUSTER_MAX) -> list[list[dict]]:
+    """가까이 모인 것끼리 묶는다. 묶음 안 순서는 가까운 순.
+
+    채굴기 여섯 대가 한 광맥에 모여 있는데 여섯 번 따로 걸어가는 것이
+    가장 흔한 낭비다. 씨앗에서 reach 안에 드는 것들을 한 묶음으로 끌어온다 -
+    사슬처럼 이어 붙이면 묶음이 지도 반대편까지 번지므로, 거리는 언제나
+    씨앗 기준으로 잰다.
+    """
+    left = list(points)
+    groups: list[list[dict]] = []
+    while left:
+        seed = left.pop(0)
+        group = [seed]
+        rest = []
+        for other in left:
+            if len(group) < cap and \
+                    (other["x"] - seed["x"]) ** 2 + (other["y"] - seed["y"]) ** 2 \
+                    <= reach * reach:
+                group.append(other)
+            else:
+                rest.append(other)
+        left = rest
+        groups.append(group)
+    return groups
+
+
 def orphan_drills(snap: Snapshot) -> list[dict]:
     """출구에 상자가 없는 채굴기들.
 
@@ -515,6 +548,10 @@ HAUL_BATCH = 40
 KEEP_IN_HAND = 50
 DEPOT_MIN = 20
 
+# 연료 떨어진 기계가 이만큼이면 «굶고 있다»고 본다. 그럴 때는 광석보다
+# 석탄이 먼저다.
+STARVING = 4
+
 IDLE_ASK_QUIET = 150.0
 # 그럴 때 쓰는 모델. 반장이 지시를 쪼갤 때와는 판단의 무게가 다르고,
 # 자주 일어나는 일이라 싼 쪽이 맞다.
@@ -653,6 +690,9 @@ class Crew:
         self.dispatched_at = 0.0
         # 이번 틱에 찍은 스냅샷들. 배차가 무리 전체를 볼 때 쓴다.
         self.snaps: dict[str, Snapshot] = {}
+        # 연료가 떨어진 기계가 얼마나 되는지. 굶는 판에 광석 채굴기를 더
+        # 놓으면 굶는 기계만 늘어난다.
+        self.starving = False
         self.research_checked = 0.0
         self.research_said: str | None = None
         # 방금 한 말들. 같은 줄을 되풀이하지 않기 위한 것.
@@ -1063,6 +1103,8 @@ class Crew:
                     self.build_power(worker)
                 elif routine == "rescue":
                     self.rescue(worker, at or {})
+                elif routine == "depot":
+                    self.build_depot(worker, at or {})
                 else:
                     self.automate(worker, ore)
             except Exception as exc:  # noqa: BLE001
@@ -1206,6 +1248,26 @@ class Crew:
                 # 한 자리가 막혔다고 전선 전체를 포기할 이유는 없다.
                 continue
         self.say(f"전봇대 {placed}개를 세웠습니다.", who=name)
+
+    def build_depot(self, worker: Worker, base: dict) -> None:
+        """공용 창고를 세우고 그 자리를 무리에게 알린다."""
+        name = worker.name
+        try:
+            if not self.obtain(worker, CHEST, 1):
+                self.say("창고로 쓸 상자를 못 구했습니다.", who=name)
+                worker.block("depot:build", 300)
+                return
+            spot = worker.handle.place(CHEST, base["x"] + 3, base["y"] + 3,
+                                       snap=True, timeout=420)
+            self.bridge.set_depot(spot["x"], spot["y"])
+            self.say(f"공용 창고를 세웠습니다. ({spot['x']:.0f}, {spot['y']:.0f}) "
+                     f"남는 물자는 여기에 모읍니다.", who=name)
+        except TaskFailed as exc:
+            worker.block("depot:build", 300)
+            self.say(f"창고를 못 세웠습니다: {exc.task.get('error')}", who=name)
+        except RconError as exc:
+            worker.block("depot:build", 300)
+            self.say(f"창고 구축 중 오류: {exc}", who=name)
 
     def rescue(self, worker: Worker, at: dict) -> None:
         """멈춰 선 채굴기에 출구 상자를 달아주고 연료를 채운다.
@@ -1396,6 +1458,14 @@ class Crew:
         목록이 사람보다 길면 아무도 놀지 않는다.
         """
         jobs: list[Job] = []
+
+        # 창고가 먼저다. 물자가 각자 가방에 갇혀 있는 한 나머지 일감은
+        # 재료가 없어서 계속 막힌다.
+        opening = self.depot_job(worker, self.snaps.get(worker.name)
+                                 or worker.snapshot())
+        if opening and opening.key == "depot:build":
+            jobs.append(opening)
+
         try:
             stopped = self.bridge.broken(worker.name)
             stock = self.bridge.furnace_stock(worker.name)
@@ -1406,35 +1476,42 @@ class Crew:
         # 1. 연료가 떨어진 기계. 손에 석탄이 없으면 상자에서 실어다 준다 -
         #    석탄 드릴의 상자에는 석탄이 쌓이는데 그걸 나르는 일이 없어서
         #    넷이 «석탄을 넣겠습니다»만 되풀이하고 있었다.
-        for entry in stopped:
-            if entry.get("fix") != "fuel":
-                continue
-            at = {"x": entry["x"], "y": entry["y"]}
-            key = f"tend:{entry['x']:.0f},{entry['y']:.0f}"
+        # 한 구역에 모인 기계는 한 번 걸어가서 한꺼번에 채운다. 채굴기
+        # 여섯 대가 한 광맥에 모여 있는데 여섯 번 따로 가는 것이 가장 흔한
+        # 낭비다. 석탄도 그만큼 한 번에 실어간다.
+        for group in cluster([e for e in stopped if e.get("fix") == "fuel"]):
+            head = group[0]
+            at = {"x": head["x"], "y": head["y"]}
+            key = f"tend:{head['x']:.0f},{head['y']:.0f}"
+            wanted = DRILL_FUEL * len(group)
             source = next((c for c in coal_chests if c["count"] >= DRILL_FUEL), None)
             steps: list[Step] = []
             if source:
                 steps.append(("take", {"name": "coal",
                                        "count": min(HAUL_BATCH, source["count"]),
                                        "x": source["x"], "y": source["y"]}))
-            steps.append(("insert", {"name": "coal", "count": DRILL_FUEL, **at}))
-            jobs.append(Job(
-                f"{entry.get('name', '기계')}에 석탄을 넣겠습니다. "
-                f"({entry['x']:.0f}, {entry['y']:.0f})",
-                key=key, steps=steps,
-                needs={} if source else {"coal": DRILL_FUEL},
-                at=at))
+            for machine in group:
+                steps.append(("insert", {"name": "coal", "count": DRILL_FUEL,
+                                         "x": machine["x"], "y": machine["y"]}))
+            where = (f"({head['x']:.0f}, {head['y']:.0f})" if len(group) == 1
+                     else f"({head['x']:.0f}, {head['y']:.0f}) 일대 {len(group)}대")
+            jobs.append(Job(f"{where}에 석탄을 넣겠습니다.",
+                            key=key, steps=steps,
+                            needs={} if source else {"coal": wanted},
+                            at=at))
 
         # 2. 다 녹아서 화로를 막고 있는 것들. 화로마다 따로 걷는다.
-        for entry in stock:
-            if int(entry.get("count") or 0) < HARVEST_MIN:
-                continue
+        for group in cluster([e for e in stock
+                              if int(e.get("count") or 0) >= HARVEST_MIN]):
+            head = group[0]
+            total = sum(int(e.get("count") or 0) for e in group)
             jobs.append(Job(
-                f"화로에 {entry['name']} {entry['count']}개가 다 녹아 있습니다. 거둬오겠습니다.",
-                key=f"harvest:{entry['x']:.0f},{entry['y']:.0f}",
-                steps=[("take", {"name": entry["name"], "count": entry["count"],
-                                 "x": entry["x"], "y": entry["y"]})],
-                at={"x": entry["x"], "y": entry["y"]}))
+                f"화로 {len(group)}대에서 {total}개를 거둬오겠습니다. "
+                f"({head['x']:.0f}, {head['y']:.0f})",
+                key=f"harvest:{head['x']:.0f},{head['y']:.0f}",
+                steps=[("take", {"name": e["name"], "count": e["count"],
+                                 "x": e["x"], "y": e["y"]}) for e in group],
+                at={"x": head["x"], "y": head["y"]}))
 
         # 3. 가방이 넘치는 사람은 공용 창고에 부린다. 물자가 한 사람의
         #    가방에 갇혀 있으면 없는 것과 같다.
@@ -1519,12 +1596,13 @@ class Crew:
         where = found.get("depot")
         if not where:
             # 창고가 없으면 하나 세운다. 자리는 무리가 모이는 곳 - 화로 옆.
+            # 상자를 손에 든 사람이 없어서 영영 안 섰으므로, 구하는 것까지
+            # 루틴이 맡는다.
             base = snap.building("stone-furnace")
-            if not base or snap.have(CHEST) < 1:
+            if not base:
                 return None
-            return Job("공용 창고를 세우겠습니다.", key="depot:build", steps=[
-                ("build", {"name": CHEST, "x": base["x"] + 2, "y": base["y"] + 2,
-                           "snap": True})])
+            return Job("공용 창고를 세우겠습니다.", key="depot:build",
+                       routine="depot", at=base)
 
         surplus = [(name, count - KEEP_IN_HAND)
                    for name, count in snap.items.items()
@@ -1547,8 +1625,17 @@ class Crew:
         부트스트랩 임시방편이지 일감이 아니다.
         """
         # 1. 채굴기를 하나 더. 만들 수 있으면 언제나 이쪽이 낫다.
+        #    다만 연료가 모자란 판에 광석 채굴기를 더 놓으면 굶는 기계만
+        #    늘어난다 - 그럴 때는 석탄 자급쌍이 먼저다.
+        order = list(FOCUS_ORDER)
+        if self.starving:
+            order = ["coal"] + [o for o in FOCUS_ORDER if o != "coal"]
+            worker_first = order
+        else:
+            worker_first = [worker.focus] + [o for o in order if o != worker.focus]
+
         if snap.can_make(DRILL) or snap.have(DRILL) >= 1:
-            for ore in [worker.focus] + [o for o in FOCUS_ORDER if o != worker.focus]:
+            for ore in worker_first:
                 if snap.ore(ore):
                     return Job(f"할 일이 비어 {ore} 채굴기를 하나 더 놓겠습니다.",
                                key=f"automate:{ore}:{worker.name}",
@@ -1556,7 +1643,7 @@ class Crew:
                                needs={DRILL: 1})
 
         # 2. 정말 못 만들면 그때 손으로 캔다. 곡괭이질은 여기까지 밀린다.
-        for ore in [worker.focus] + [o for o in FOCUS_ORDER if o != worker.focus]:
+        for ore in worker_first:
             spot = snap.ore(ore)
             if not spot:
                 continue
@@ -1661,6 +1748,7 @@ class Crew:
 
         # 진짜 고장이 먼저고, 노는 화로를 먹이는 일은 그 뒤다. 순서를
         # 거꾸로 하면 빈 화로 스무 대가 연료 떨어진 드릴을 가린다.
+        self.starving = sum(1 for e in stopped if e.get("fix") == "fuel") >= STARVING
         rank = {"fuel": 0, "chest": 1, "empty": 2, "feed": 3}
         stopped.sort(key=lambda e: (rank.get(e.get("fix"), 9), e.get("distance", 0)))
 
@@ -1688,7 +1776,7 @@ class Crew:
                     return harvest
                 continue
 
-            if fix == "feed":
+            if fix == "feed":  # noqa: SIM102 - 묶음은 배차 쪽에서 다룬다
                 # 공장은 끊임없이 돌아야 한다. 목표에 필요한 만큼만 녹이면
                 # 화로 절반이 서 있고, 그동안 광석은 가방에서 잠잔다.
                 ore = max(SMELTABLE, key=lambda o: snap.have(o), default=None)
