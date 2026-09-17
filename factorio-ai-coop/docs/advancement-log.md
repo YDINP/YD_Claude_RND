@@ -818,3 +818,46 @@ def carry_split(group, load, each) -> (group, load):
 - 3c단계: 굶는 화로를 구역 단위로 먹인다. 상자는 **화로 옆에서** 고른다.
 
 **결과**: 166 tests.
+
+---
+
+## 21회차 — 과학팩을 주머니에 넣고 아홉 시간
+
+**실측** (539분째)
+
+```
+막힌 채굴기 109 그대로,  마른 채굴기 1 (거의 정리됨)
+화로 먹이기 배차 성공:  「화로 2대가 굶고 있습니다. iron-ore 40개 실어다 넣겠습니다」
+그런데              15  insert 실패: no iron-ore to insert
+```
+
+가방이 꽉 찬 건가 싶어 에이전트 넷의 소지품을 열어봤다. 꽉 차지 않았는데,
+대신 다른 것이 보였다:
+
+```
+alpha    burner-mining-drill 9, iron-plate 300, stone-furnace 2 …
+bravo    steam-engine 2, iron-plate 162, automation-science-pack 10   ←
+charlie  lab 1, iron-plate 309, copper-plate 59, automation-science-pack 10   ←
+delta    boiler 1, steam-engine 2, stone 107 …
+```
+
+**빨간 과학팩 20개를 주머니에 넣고 다니고 있었다.** 그리고 전기가 들어온
+랩은 `missing_science_packs` 상태로 서 있었다.
+
+**아홉 시간 동안 연구가 멈춰 있던 이유가 이것이다 — 만들어 놓고 넣지를
+않았다.** 사다리에는 「빨간 과학팩 10개를 갖는다」까지만 있었고, 그 다음
+한 걸음인 「랩에 넣는다」가 어디에도 없었다. 갖는 것과 쓰는 것은 다르다.
+
+**조치**
+- `missing_science_packs` 를 `FIXABLE` 에 `science` 로 추가. 이건 사람 손으로
+  고칠 수 있는 종류다.
+- 배차 최우선(`jobs`, 인터리브 앞)에 랩 채우기를 넣었다. 사다리 전체의
+  목이라 다른 무엇보다 앞이다 — 연구가 돌면 automation 이 열리고 조립기와
+  롱암 인서터가 열린다.
+- `Job.owner`: **가진 사람이 넣는다.** 배차는 가장 가까운 사람을 고르는데,
+  주머니에 든 것을 넣는 일은 가까운 사람이 아니라 가진 사람의 일이다.
+  가방을 부리는 일(`depot:`)만 쓰던 주인 지정을 일반화했다.
+- 소지자는 이번 틱 스냅샷에서 찾는다. `self.stock` 은 사람이 지시를 내릴
+  때만 채워지므로 자동으로 도는 동안에는 비어 있다.
+
+**결과**: 166 tests.

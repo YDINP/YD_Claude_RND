@@ -1919,6 +1919,13 @@ local function init_status_names()
   if defines.entity_status.no_minable_resources then
     FIXABLE[defines.entity_status.no_minable_resources] = "spent"
   end
+  -- 전기는 들어왔는데 과학팩이 없는 랩. 실측(539분째): 랩이 이 상태로
+  -- 서 있는 동안 에이전트 둘이 빨간 과학팩을 열 개씩 주머니에 넣고
+  -- 다니고 있었다. 만들어 놓고 넣지를 않아서 아홉 시간 동안 연구가
+  -- 멈춰 있었다. 이건 사람 손으로 고칠 수 있는 종류다.
+  if defines.entity_status.missing_science_packs then
+    FIXABLE[defines.entity_status.missing_science_packs] = "science"
+  end
 end
 
 local TENDED = { "burner-mining-drill", "stone-furnace", "steel-furnace",

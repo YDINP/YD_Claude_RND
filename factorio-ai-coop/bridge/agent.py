@@ -162,6 +162,10 @@ class Job:
     needs: dict[str, int] = field(default_factory=dict)
     # 루틴이 손봐야 할 자리. 어느 채굴기인지 같은 것.
     at: dict | None = None
+    # 이 일을 할 수 있는 사람이 정해져 있을 때. 가방을 부리는 일과, 주머니에
+    # 든 것을 넣는 일이 그렇다 - 가장 가까운 사람이 아니라 «가진 사람»이
+    # 해야 한다. 그 사람이 지금 바쁘면 이 일감은 다음 배차를 기다린다.
+    owner: str | None = None
 
 
 # 상자가 이 거리 안에 있으면 그 채굴기는 돌보는 사람이 있다고 본다.
@@ -2081,6 +2085,44 @@ class Crew:
                                      "name": e.get("name")}) for e in spot],
                 at={"x": head["x"], "y": head["y"]}))
 
+        # 3a. 과학팩을 기다리는 랩. 이게 사다리 전체의 목이다 — 연구가
+        #     돌면 automation 이 열리고, 조립기와 롱암 인서터가 열린다.
+        #
+        #     539분째에 랩이 「과학팩 없음」으로 서 있는 동안 에이전트 둘이
+        #     빨간 과학팩을 열 개씩 주머니에 넣고 다니고 있었다. 만들어
+        #     놓고 넣지를 않아서 아홉 시간 동안 연구가 멈춰 있었다.
+        for lab in [e for e in stopped if e.get("fix") == "science"][:2]:
+            at = {"x": lab["x"], "y": lab["y"]}
+            pack = STAGE_TARGET["red-science"][0]
+            # 가진 사람이 넣는다. 가장 가까운 사람을 보내면 빈손으로 간다.
+            # 이번 틱에 찍은 스냅샷을 본다. self.stock 은 사람이 지시를
+            # 내릴 때만 채워지므로, 자동으로 도는 동안에는 비어 있거나
+            # 오래된 값이다.
+            holder, carried = None, 0
+            for mate, snap in self.snaps.items():
+                have = int(snap.items.get(pack, 0))
+                if have > carried:
+                    holder, carried = mate, have
+
+            steps: list[Step] = []
+            if not holder:
+                try:
+                    shelves = self.bridge.chest_stock(worker.name, pack)
+                except RconError:
+                    shelves = []
+                source = nearest_to(shelves, at, 1)
+                if not source:
+                    continue
+                carried = min(20, int(source["count"]))
+                steps.append(("take", {"name": pack, "count": carried,
+                                       "x": source["x"], "y": source["y"]}))
+            steps.append(("insert", {"name": pack, "count": carried, **at}))
+            jobs.append(Job(
+                f"랩이 과학팩을 기다리고 있습니다. {pack} {carried}개를 "
+                f"넣겠습니다. ({lab['x']:.0f}, {lab['y']:.0f})",
+                key=f"science:{lab['x']:.0f},{lab['y']:.0f}",
+                steps=steps, needs={pack: 1}, at=at, owner=holder))
+
         # 3c. 굶고 있는 화로. 다섯 회차째 54대가 그대로였고, 그 사이
         #     철광석은 창고에 10,264개까지 쌓였다. 캐는 능력이 모자란 적은
         #     없고, 캔 것이 화로까지 가지 않을 뿐이다.
@@ -2174,7 +2216,8 @@ class Crew:
             spot = job.at or {}
             # 가방을 부리는 일은 그 가방의 주인만 할 수 있다. 나머지는
             # 가까운 사람에게.
-            owner = job.key.split(":", 1)[1] if job.key.startswith("depot:") else None
+            owner = job.owner or (job.key.split(":", 1)[1]
+                                  if job.key.startswith("depot:") else None)
             if owner:
                 order = [owner] if owner in seats and owner not in handed else []
             else:
