@@ -120,7 +120,12 @@ UNREACHABLE_QUIET = 900.0
 
 # 같은 자리에서 길찾기가 이만큼 연달아 실패하면 갇힌 것으로 본다. 한 번은
 # 운이 나쁜 것이고, 세 번은 지형이다.
-STUCK_STRIKES = 3   # how long a failed kind of work stays off the ladder
+STUCK_STRIKES = 3
+
+# 창고에 이만큼 쌓였으면 그만 캐도 된다. 485분째에 돌이 48,099개 있는데
+# 채굴기 22대가 돌로 꽉 찬 상자 앞에서 여전히 서 있었다. 캐는 것도 일이고
+# 막힌 채로 서 있는 것도 자리다.
+SURPLUS = 6000   # how long a failed kind of work stays off the ladder
 
 # Each agent takes one resource so a crew does not all stand on the same patch.
 FOCUS_ORDER = ["iron-ore", "coal", "copper-ore", "stone"]
@@ -1931,6 +1936,8 @@ class Crew:
             stopped = self.bridge.broken(worker.name)
             stock = self.bridge.furnace_stock(worker.name)
             coal_chests = self.bridge.chest_stock(worker.name, "coal")
+            # 창고에 무엇이 얼마나 있는지. 「그만 캐도 되는가」를 이걸로 정한다.
+            shelved = (self.bridge.stores(worker.name).get("total") or {})
         except RconError:
             return jobs
 
@@ -1987,24 +1994,55 @@ class Crew:
                                  "x": e["x"], "y": e["y"]}) for e in group],
                 at={"x": head["x"], "y": head["y"]}))
 
-        # 3. 꽉 찬 상자에 막혀 선 채굴기. 이게 지금 가장 큰 무더기다 —
-        #    123대가 이것으로 서 있고, 그 옆에서 화로 54대가 굶는다.
-        #    상자를 비우면 이십 분 뒤에 똑같이 막히므로, 광석이 든 상자는
-        #    아예 화로로 바꾼다. 채굴기 하나가 살고 화로 하나가 늘고 운반
-        #    일감 하나가 사라진다 — 한 번의 걸음으로 셋이다.
+        # 3. 내놓을 데가 없어 선 채굴기. 지금 가장 큰 무더기(123대)인데,
+        #    세어보니 한 가지 문제가 아니었다:
         #
-        #    개별 경로(tend_job)에만 달아뒀더니 스물아홉 분 동안 한 번도
-        #    안 불렸다. 무더기로 있는 일은 배차에 올려야 한다.
+        #      83대  받을 곳이 아예 없다 (땅에 떨구다 막힘)
+        #      22대  상자가 돌로 꽉 참    — 창고에 이미 48,099개
+        #       6대  상자가 석탄으로 꽉 참 — 창고에 이미 19,590개
+        #      10대  석탄 드릴끼리 서로 먹임 (정상)
+        #       2대  상자가 철광석으로 꽉 참
+        #
+        #    「상자가 있고 녹일 수 있는 광석」만 보던 앞의 판단은 2대에만
+        #    해당했다. 셋을 갈라서 각각 맞는 손을 쓴다.
+        surplus = {k for k, v in (shelved or {}).items() if int(v) >= SURPLUS}
         for entry in [e for e in stopped if e.get("fix") == "chest"][:4]:
-            outlet = entry.get("outlet")
-            if not outlet or entry.get("holding") not in SMELTED_BY_FURNACE:
+            holding, outlet = entry.get("holding"), entry.get("outlet")
+            at = {"x": entry["x"], "y": entry["y"]}
+
+            # 이미 넘치게 쌓인 것을 계속 캐고 있다. 캐는 것도 일이고 막힌
+            # 채로 서 있는 것도 자리다 — 걷어내서 두꺼운 광맥에 다시 쓴다.
+            if holding in surplus:
+                unblock.append(Job(
+                    f"{holding}은(는) 창고에 {int(shelved[holding]):,}개나 "
+                    f"있습니다. 이 채굴기는 걷어내겠습니다. "
+                    f"({entry['x']:.0f}, {entry['y']:.0f})",
+                    key=f"enough:{entry['x']:.0f},{entry['y']:.0f}",
+                    steps=[("demolish", {"x": entry["x"], "y": entry["y"],
+                                         "name": entry.get("name")})],
+                    at=at))
                 continue
-            unblock.append(Job(
-                f"{entry.get('name', '채굴기')}의 상자가 "
-                f"{entry['holding']}으로 꽉 찼습니다. 화로로 바꾸면 "
-                f"다시 막히지 않습니다. ({entry['x']:.0f}, {entry['y']:.0f})",
-                key=f"convert:{entry['x']:.0f},{entry['y']:.0f}",
-                routine="convert", at=entry))
+
+            # 녹일 수 있는 광석이 찬 상자는 화로로 바꾼다. 비우면 이십 분
+            # 뒤에 똑같이 막히지만, 화로는 영원히 받아준다.
+            if outlet and holding in SMELTED_BY_FURNACE:
+                unblock.append(Job(
+                    f"{entry.get('name', '채굴기')}의 상자가 {holding}으로 "
+                    f"꽉 찼습니다. 화로로 바꾸면 다시 막히지 않습니다. "
+                    f"({entry['x']:.0f}, {entry['y']:.0f})",
+                    key=f"convert:{entry['x']:.0f},{entry['y']:.0f}",
+                    routine="convert", at=entry))
+                continue
+
+            # 받을 곳이 아예 없다. 여든세 대가 이 상태로 땅에 떨구다 막혀
+            # 있었는데, 앞의 판단은 이걸 통째로 건너뛰었다.
+            if not outlet:
+                unblock.append(Job(
+                    f"{entry.get('name', '채굴기')}이(가) 내놓을 데가 없어 "
+                    f"멈췄습니다. 받을 것을 달겠습니다. "
+                    f"({entry['x']:.0f}, {entry['y']:.0f})",
+                    key=f"outlet:{entry['x']:.0f},{entry['y']:.0f}",
+                    routine="rescue", at=at, needs={CHEST: 1}))
 
         # 3b. 밑의 광석이 다 떨어진 채굴기. 「고장」이 아니라 「끝난 것」이라
         #     손볼 방법이 없다. 걷어내면 채굴기가 통째로 재고로 돌아와,
