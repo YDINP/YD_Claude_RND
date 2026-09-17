@@ -1400,7 +1400,7 @@ local function power_faults(name)
   if not b then return { error = "no such agent: " .. tostring(name) } end
 
   local surface, force = b.surface, b.force
-  local out = { poles = {}, pipes = {}, fuel = {}, water = {} }
+  local out = { poles = {}, pipes = {}, fuel = {}, water = {}, bridges = {} }
   local open = {}   -- 안 이어진 연결구들. 키는 바라보는 칸.
 
   for _, e in pairs(surface.find_entities_filtered {
@@ -1437,6 +1437,82 @@ local function power_faults(name)
     end
   end
 
+  -- 전기망이 갈라져 있는가.
+  --
+  -- 실측(275분째): 기관 셋이 «working» 인데 전력은 0W 였다. 전기망이 넷으로
+  -- 갈라져 있었다 - net16 에 기관 둘(1.8MW, 소비자 0), net8 에 기관 하나
+  -- (0.9MW, 소비자 0), net1 과 net2 에는 랩만 있고 발전기가 없었다. 부하가
+  -- 없는 기관은 0W 를 낸다. 만들지 않는 게 아니라 쓸 사람이 그 망에 없다.
+  --
+  -- net8 의 전봇대와 net1 의 전봇대는 10칸 떨어져 있었다. 전선은 7.5칸까지
+  -- 늘어나므로 2.5칸이 모자랐고, 그래서 사이에 전봇대 하나면 이어진다.
+  -- 파이프와 같은 모양의 문제다 - 닿을 뻔한 것을 닿게 만드는 일.
+  local WIRE = 7.5
+  local nets = {}
+  for _, pole in pairs(surface.find_entities_filtered {
+    force = force, type = "electric-pole",
+  }) do
+    local id = pole.electric_network_id
+    if id then
+      nets[id] = nets[id] or { poles = {}, supply = false, demand = false }
+      nets[id].poles[#nets[id].poles + 1] = pole
+    end
+  end
+  for _, e in pairs(surface.find_entities_filtered { force = force }) do
+    local id = e.electric_network_id
+    if id and nets[id] then
+      if e.type == "generator" or e.type == "solar-panel"
+          or e.type == "electric-energy-interface" then
+        nets[id].supply = true
+      elseif e.type ~= "electric-pole" then
+        nets[id].demand = true
+      end
+    end
+  end
+
+  -- 전기를 만드는 망과 쓰는 망을 짝지어, 가장 가까운 전봇대 둘 사이에
+  -- 한 대가 들어갈 자리가 있는지 본다.
+  for from_id, from in pairs(nets) do
+    if from.supply and not from.demand then
+      for to_id, to in pairs(nets) do
+        if to_id ~= from_id and to.demand and not to.supply then
+          local best, best_d = nil, math.huge
+          for _, a in pairs(from.poles) do
+            for _, b in pairs(to.poles) do
+              local d = Tasks.dist(a.position, b.position)
+              if d < best_d then best, best_d = { a, b }, d end
+            end
+          end
+          if best and best_d <= WIRE * 2 then
+            local a, b = best[1].position, best[2].position
+            local spot = nil
+            for step = -2, 2 do
+              for side = -2, 2 do
+                local at = { x = math.floor((a.x + b.x) / 2) + step + 0.5,
+                             y = math.floor((a.y + b.y) / 2) + side + 0.5 }
+                if Tasks.dist(at, a) <= WIRE and Tasks.dist(at, b) <= WIRE
+                    and surface.can_place_entity {
+                      name = "small-electric-pole", position = at, force = force,
+                    } then
+                  spot = at
+                  break
+                end
+              end
+              if spot then break end
+            end
+            if spot then
+              out.bridges[#out.bridges + 1] = {
+                x = spot.x, y = spot.y,
+                gap = math.floor(best_d * 10) / 10,
+                distance = math.floor(Tasks.dist(b, spot)),
+              }
+            end
+          end
+        end
+      end
+    end
+  end
+
   -- 둘 이상이 같은 칸을 바라보면 그 칸이 파이프 자리다.
   for _, spot in pairs(open) do
     if #spot.who >= 2 and surface.can_place_entity {
@@ -1457,6 +1533,7 @@ local function power_faults(name)
   end
   nearest(out.poles)
   nearest(out.pipes)
+  nearest(out.bridges)
   return out
 end
 

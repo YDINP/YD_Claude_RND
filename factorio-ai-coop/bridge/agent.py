@@ -1371,6 +1371,8 @@ class Crew:
                     self.lay_pipe(worker, at or {})
                 elif routine == "plug":
                     self.plug_in(worker, at or {})
+                elif routine == "bridge":
+                    self.bridge_networks(worker, at or {})
                 elif routine == "stoke":
                     self.stoke(worker, at or {})
                 else:
@@ -2003,6 +2005,16 @@ class Crew:
             return []
 
         out: list[Job] = []
+        # 전기를 만드는 망과 쓰는 망이 갈라져 있으면 그것부터. 전봇대 한 대에
+        # 1.8MW 가 걸려 있고, 다른 무엇보다 싸다.
+        for spot in _as_rows(faults.get("bridges"))[:2]:
+            out.append(Job(
+                f"전기는 만들어지는데 랩이 다른 전기망에 있습니다. "
+                f"{spot.get('gap', 0)}타일 사이에 전봇대를 하나 놓아 잇겠습니다. "
+                f"({spot['x']:.0f}, {spot['y']:.0f})",
+                key=f"bridge:{spot['x']:.0f},{spot['y']:.0f}",
+                routine="bridge", at=spot))
+
         # 파이프가 먼저다. 이어지지 않은 기관은 전봇대를 꽂아도 0W 다.
         for spot in _as_rows(faults.get("pipes"))[:3]:
             out.append(Job(
@@ -2065,6 +2077,32 @@ class Crew:
             watt = 0
         self.say(f"전봇대를 세웠습니다. 전기 {watt}W" if watt
                  else "전봇대를 세웠는데 아직 0W입니다.", who=name)
+
+    def bridge_networks(self, worker: Worker, at: dict) -> None:
+        """갈라진 두 전기망 사이에 전봇대 하나를 놓는다.
+
+        부하가 없는 기관은 0W 를 낸다. 만들지 않는 게 아니라 쓸 사람이 그
+        망에 없다. 기관 셋이 «working» 인데 전력이 0W 였던 이유가 이것이다.
+        """
+        name = worker.name
+        key = f"bridge:{at['x']:.0f},{at['y']:.0f}"
+        if not self.obtain(worker, "small-electric-pole", 1):
+            worker.block(key, 300)
+            return
+        try:
+            worker.handle.place("small-electric-pole", at["x"], at["y"],
+                                snap=True, timeout=420)
+        except TaskFailed as exc:
+            worker.block(key, 300)
+            self.say(f"전봇대를 못 세웠습니다: {exc.task.get('error')}", who=name)
+            return
+        try:
+            watt = int((self.bridge.power_status(name) or {}).get("watts") or 0)
+        except RconError:
+            watt = 0
+        self.say(f"전기망을 이었습니다. 전력 {watt}W" if watt
+                 else "전봇대는 놓았는데 아직 0W입니다. 보일러 연료를 봐야겠습니다.",
+                 who=name)
 
     def stoke(self, worker: Worker, at: dict) -> None:
         """보일러에 석탄을 넣는다. 보일러는 0.45/s 로 태우니 20개면 44초다."""
