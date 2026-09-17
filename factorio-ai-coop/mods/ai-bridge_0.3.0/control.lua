@@ -1185,21 +1185,26 @@ local function drop_tile(position, direction)
   return { x = position.x + dx, y = position.y + dy }
 end
 
--- 출구 칸이 쓸 만한가: 이미 우리 상자가 있거나, 상자를 놓을 수 있거나.
-local function outlet_ok(surface, force, spot)
+-- 출구 칸이 쓸 만한가. 무엇을 받게 할지는 부르는 쪽이 정한다 - 상자를
+-- 놓으면 광석이 쌓이기만 하고, 화로를 놓으면 인서터 없이 바로 제련된다.
+-- 채굴기는 캐자마자 바라보는 방향 앞 칸에 떨구고, 그 칸에 연료나 재료를
+-- 받을 수 있는 기계가 있으면 바닥에 흘리지 않고 그 안으로 넣는다.
+local function outlet_ok(surface, force, spot, receiver)
+  receiver = receiver or "iron-chest"
   local here = surface.find_entities_filtered { position = { spot.x, spot.y }, radius = 0.4 }
   for _, e in pairs(here) do
     if e.type == "container" then return true, "chest" end
+    if e.name == receiver then return true, "receiver" end
     if e.type ~= "character" and e.type ~= "item-entity" then return false end
   end
-  if surface.can_place_entity { name = "iron-chest", position = spot, force = force } then
+  if surface.can_place_entity { name = receiver, position = spot, force = force } then
     return true, "free"
   end
   return false
 end
 
 -- 광맥 위에서 «채굴기가 들어가고 출구도 비는» 자리와 방향을 찾는다.
-local function drill_site(name, x, y, radius)
+local function drill_site(name, x, y, radius, receiver)
   local a = agent(name)
   local b = body(a)
   if not b then return { error = "no such agent: " .. tostring(name) } end
@@ -1217,10 +1222,12 @@ local function drill_site(name, x, y, radius)
       if surface.can_place_entity {
         name = "burner-mining-drill", position = spot, direction = dir, force = force,
       } then
-        local ok, how = outlet_ok(surface, force, drop_tile(spot, dir))
+        local ok, how = outlet_ok(surface, force, drop_tile(spot, dir), receiver)
         if ok then
+          local drop = drop_tile(spot, dir)
           sites[#sites + 1] = {
             x = spot.x, y = spot.y, direction = dir, outlet = how,
+            drop_x = drop.x, drop_y = drop.y,
             resource = patch.name,
             distance = math.floor(Tasks.dist(b.position, spot) * 10) / 10,
           }
@@ -1233,6 +1240,53 @@ local function drill_site(name, x, y, radius)
 
   table.sort(sites, function(p, q) return p.distance < q.distance end)
   return { agent = name, sites = sites }
+end
+
+-- 석탄 광맥 위에서 서로 마주보는 채굴기 두 대. 각자 캔 석탄이 상대의
+-- 연료함으로 직행해서 둘이 서로를 영원히 먹인다. 연료함 스택이 50개씩이라
+-- 실질 버퍼가 100개고, 가득 차면 잠시 멈췄다 다시 돈다.
+--
+-- 이게 없으면 사람이 드릴 열여덟 대에 석탄을 손으로 날라야 하고, 실제로
+-- 여덟 중 넷이 그 일만 하고 있었다.
+local function coal_pair_site(name, x, y, radius)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local surface, force = b.surface, b.force
+  local reach = math.min(radius or 16, 40)
+  local coal = surface.find_entities_filtered {
+    position = { x, y }, radius = reach, name = "coal", limit = 200,
+  }
+
+  -- 마주보는 축 두 가지. 두 대가 2타일 간격으로 서로를 본다.
+  local axes = {
+    { step = { x = 2, y = 0 },
+      first = defines.direction.east, second = defines.direction.west },
+    { step = { x = 0, y = 2 },
+      first = defines.direction.south, second = defines.direction.north },
+  }
+
+  for _, patch in pairs(coal) do
+    local one = patch.position
+    for _, axis in pairs(axes) do
+      local two = { x = one.x + axis.step.x, y = one.y + axis.step.y }
+      if surface.can_place_entity {
+            name = "burner-mining-drill", position = one,
+            direction = axis.first, force = force }
+          and surface.can_place_entity {
+            name = "burner-mining-drill", position = two,
+            direction = axis.second, force = force } then
+        return {
+          agent = name,
+          first = { x = one.x, y = one.y, direction = axis.first },
+          second = { x = two.x, y = two.y, direction = axis.second },
+          distance = math.floor(Tasks.dist(b.position, one)),
+        }
+      end
+    end
+  end
+  return { error = "no room for a facing pair on coal" }
 end
 
 -- 이미 놓인 채굴기를 출구가 비는 방향으로 돌린다.
@@ -1795,6 +1849,9 @@ remote.add_interface("ai", {
   -- 채굴기가 들어가고 출구도 비는 자리, 그리고 이미 막힌 것 돌려세우기.
   drill_site = drill_site,
   aim_drill = aim_drill,
+
+  -- 석탄 위에서 서로를 먹이는 채굴기 두 대의 자리.
+  coal_pair_site = coal_pair_site,
 
   -- 지금 멈춰 서 있는 기계들과 «왜».
   broken = broken,

@@ -489,6 +489,11 @@ HARVEST_MIN = 10
 # 화로가 받아주는 것들. 노는 화로에 무엇을 넣을지 고를 때 쓴다.
 SMELTABLE = ("iron-ore", "copper-ore", "stone")
 
+# 채굴기 출구에 화로를 바로 붙일 만한 광석. 채굴기가 앞 칸에 떨구면 그대로
+# 제련이 시작되므로 사람이 퍼 나를 일이 없어진다. 돌은 화로에 넣을 일이
+# 드물어 상자로 받는다.
+SMELTED_BY_FURNACE = ("iron-ore", "copper-ore")
+
 # 연구가 걸려 있는지 보는 주기. 매 틱 물어볼 일은 아니지만, 비어 있는 채로
 # 오래 두면 랩이 그만큼 논다.
 RESEARCH_CHECK = 20.0
@@ -1243,9 +1248,26 @@ class Crew:
             self.say(f"채굴기 수리 중 오류: {exc}", who=name)
 
     def automate(self, worker: Worker, ore: str | None) -> None:
-        """Drill on the patch, chest where it drops, fuel in the drill."""
+        """광맥 하나를 사람 손에서 떼어낸다.
+
+        무엇을 놓느냐가 «손으로 나르는가»를 가른다.
+
+        - 석탄: 마주보는 채굴기 두 대. 각자 캔 석탄이 상대의 연료함으로
+          직행해서 둘이 서로를 영원히 먹인다. 이게 없으면 사람이 드릴
+          열여덟 대에 석탄을 손으로 날라야 하고, 실제로 여덟 중 넷이 그
+          일만 하고 있었다.
+        - 철/구리: 채굴기 출력면에 화로를 바로 붙인다. 채굴기는 캐자마자
+          앞 칸에 떨구고, 그 칸이 화로면 인서터 없이 제련이 시작된다.
+          광석을 상자에 쌓아두고 사람이 퍼 나를 이유가 없다.
+        - 그 밖: 상자. 돌은 화로에 넣을 일이 드물다.
+        """
         ore = ore or "coal"
         name = worker.name
+        if ore == "coal":
+            self.automate_coal(worker)
+            return
+
+        receiver = CHEST if ore not in SMELTED_BY_FURNACE else "stone-furnace"
         try:
             snap = worker.snapshot()
             spot = snap.ore(ore)
@@ -1253,53 +1275,103 @@ class Crew:
                 self.say(f"{ore} 광맥이 주변 200타일 안에 안 보입니다.", who=name)
                 return
 
-            if not self.ensure(worker, DRILL) or not self.ensure(worker, CHEST):
-                worker.block("automate")
-                return
+            for part in (DRILL, receiver):
+                if not self.obtain(worker, part, 1):
+                    self.say(f"{part}를 못 구했습니다.", who=name)
+                    worker.block("automate")
+                    return
 
-            # 건물은 돌릴 수 있다. 기본 방향으로 그냥 놓으면 두 대를 나란히
-            # 세웠을 때 아래쪽이 위쪽 몸통에 대고 광석을 떨구다 멈춘다.
-            # 그래서 «들어가고 출구도 비는» 자리와 방향을 먼저 고른다.
-            sites = self.bridge.drill_site(name, spot["x"], spot["y"], radius=12)
+            sites = self.bridge.drill_site(name, spot["x"], spot["y"],
+                                           radius=12, receiver=receiver)
             if not sites:
-                self.say(f"{ore} 광맥에 출구가 비는 자리가 없습니다.", who=name)
+                self.say(f"{ore} 광맥에 {receiver}를 붙일 자리가 없습니다.", who=name)
                 worker.block(f"automate:{ore}", 300)
                 return
             site = sites[0]
 
-            self.say(f"{ore} 광맥에 채굴기를 놓겠습니다. ({site['x']:.0f}, {site['y']:.0f})",
-                     who=name)
+            what = "화로" if receiver == "stone-furnace" else "상자"
+            self.say(f"{ore} 광맥에 채굴기와 {what}를 붙여 놓겠습니다. "
+                     f"({site['x']:.0f}, {site['y']:.0f})", who=name)
             drill = worker.handle.place(DRILL, site["x"], site["y"],
-                                        direction=site["direction"], timeout=300)
+                                        direction=site["direction"], timeout=420)
 
-            # 놓고 나서 출구를 다시 확인한다. 그 사이 누가 무언가를 세웠을 수
-            # 있고, 그러면 돌려서 고친다.
             aimed = self.bridge.aim_drill(name, drill["x"], drill["y"])
             if aimed.get("error"):
                 self.say(f"채굴기 출구를 못 찾았습니다: {aimed['error']}", who=name)
                 return
             if aimed.get("turned"):
                 self.say("출구가 막혀 채굴기를 돌렸습니다.", who=name)
-            drop = {"drop_x": aimed["drop_x"], "drop_y": aimed["drop_y"]}
-            if site.get("outlet") != "chest":
-                worker.handle.place(CHEST, drop["drop_x"], drop["drop_y"], timeout=180)
 
-            if worker.handle.items().get("coal", 0) < DRILL_FUEL:
-                coal = snap.ore("coal")
-                if coal:
-                    self.say("연료가 부족해 석탄을 조금 캐옵니다.", who=name)
-                    worker.handle.mine(coal["x"], coal["y"], count=DRILL_FUEL,
-                                       timeout=300, timeout_ticks=14400)
-            worker.handle.insert("coal", drill["x"], drill["y"], count=DRILL_FUEL, timeout=180)
+            if site.get("outlet") == "free":
+                worker.handle.place(receiver, aimed["drop_x"], aimed["drop_y"],
+                                    timeout=240)
 
-            self.say(f"{ore} 자동 채굴 완료. 채굴기 ({drill['x']:.0f}, {drill['y']:.0f}), "
-                     f"상자 ({drop['drop_x']:.0f}, {drop['drop_y']:.0f}).", who=name)
+            # 채굴기는 광석만 떨군다. 연료는 절대 넣어주지 않는다 - 화로도
+            # 채굴기도 석탄은 따로 받아야 한다.
+            for target in ((drill["x"], drill["y"]),
+                           (aimed["drop_x"], aimed["drop_y"])):
+                if receiver != "stone-furnace" and target[0] == aimed["drop_x"]:
+                    continue
+                if worker.handle.items().get("coal", 0) < DRILL_FUEL:
+                    if not self.obtain(worker, "coal", DRILL_FUEL):
+                        break
+                try:
+                    worker.handle.insert("coal", target[0], target[1],
+                                         count=DRILL_FUEL, timeout=180)
+                except TaskFailed:
+                    pass
+
+            self.say(f"{ore} 자동 채굴 완료. 채굴기 ({drill['x']:.0f}, {drill['y']:.0f}) → "
+                     f"{what} ({aimed['drop_x']:.0f}, {aimed['drop_y']:.0f}).", who=name)
+
         except TaskFailed as exc:
             worker.block("automate")
             self.say(f"자동화 중 막혔습니다: {exc.task.get('error')}", who=name)
         except RconError as exc:
             worker.block("automate")
             self.say(f"자동화 중 오류: {exc}", who=name)
+
+    def automate_coal(self, worker: Worker) -> None:
+        """석탄 광맥 위에 서로를 먹이는 채굴기 두 대를 세운다."""
+        name = worker.name
+        try:
+            snap = worker.snapshot()
+            spot = snap.ore("coal")
+            if not spot:
+                self.say("석탄 광맥이 주변에 안 보입니다.", who=name)
+                worker.block("automate:coal", 300)
+                return
+
+            pair = self.bridge.coal_pair_site(name, spot["x"], spot["y"], radius=16)
+            if pair.get("error"):
+                self.say(f"석탄 자급쌍 자리가 없습니다: {pair['error']}", who=name)
+                worker.block("automate:coal", 300)
+                return
+
+            if not self.obtain(worker, DRILL, 2):
+                self.say("채굴기 두 대를 못 구했습니다.", who=name)
+                worker.block("automate:coal")
+                return
+
+            self.say(f"석탄 광맥에 서로 먹이는 채굴기 두 대를 놓겠습니다. "
+                     f"({pair['first']['x']:.0f}, {pair['first']['y']:.0f})", who=name)
+            for seat in ("first", "second"):
+                where = pair[seat]
+                worker.handle.place(DRILL, where["x"], where["y"],
+                                    direction=where["direction"], timeout=420)
+
+            # 첫 삽만 사람이 떠준다. 그 뒤로는 둘이 서로 먹인다.
+            if self.obtain(worker, "coal", DRILL_FUEL):
+                worker.handle.insert("coal", pair["first"]["x"], pair["first"]["y"],
+                                     count=DRILL_FUEL, timeout=180)
+            self.say("석탄 자급쌍 완성. 이제 손으로 넣어줄 필요가 없습니다.", who=name)
+
+        except TaskFailed as exc:
+            worker.block("automate:coal")
+            self.say(f"석탄 자급쌍 구축 중 막혔습니다: {exc.task.get('error')}", who=name)
+        except RconError as exc:
+            worker.block("automate:coal")
+            self.say(f"석탄 자급쌍 구축 중 오류: {exc}", who=name)
 
     # -- reporting ---------------------------------------------------------
 

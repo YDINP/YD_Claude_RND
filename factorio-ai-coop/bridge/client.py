@@ -211,10 +211,20 @@ class AIBridge:
         """
         return self.call("plan_item", agent, item, count)
 
-    def drill_site(self, agent: str, x: float, y: float,
-                   radius: int = 12) -> list[dict]:
-        """채굴기가 들어가고 출구도 비는 자리들, 가까운 순."""
-        return _as_list(self.call("drill_site", agent, x, y, radius).get("sites"))
+    def drill_site(self, agent: str, x: float, y: float, radius: int = 12,
+                   receiver: str = "iron-chest") -> list[dict]:
+        """채굴기가 들어가고 출구에 receiver 를 놓을 수 있는 자리들, 가까운 순.
+
+        receiver 가 화로면 광석이 인서터 없이 바로 제련된다. 상자면 쌓이기만
+        한다 - 무엇을 놓을지가 «손으로 나르는가»를 가른다.
+        """
+        return _as_list(
+            self.call("drill_site", agent, x, y, radius, receiver).get("sites"))
+
+    def coal_pair_site(self, agent: str, x: float, y: float,
+                       radius: int = 16) -> dict:
+        """석탄 위에서 서로를 먹이는 채굴기 두 대의 자리."""
+        return self.call("coal_pair_site", agent, x, y, radius)
 
     def aim_drill(self, agent: str, x: float, y: float) -> dict:
         """이미 놓인 채굴기를 출구가 비는 방향으로 돌린다."""
