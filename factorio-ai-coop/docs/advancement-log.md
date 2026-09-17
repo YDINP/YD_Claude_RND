@@ -902,3 +902,45 @@ TECHS 3 → 6
   다른 일이다.
 
 **결과**: 166 tests.
+
+---
+
+## 23회차 — 없을 때 포기하면 영원히 없다
+
+**실측** (591분째)
+
+```
+조립기 0대           ← 한 대도 안 섰다
+RESEARCH electric-mining-drill 0%,  TECHS 6 그대로
+lab missing_science_packs 1        ← 손으로 만든 팩 스무 개를 다 썼다
+10  insert 실패: no coal to insert      (창고에 석탄 22,884개)
+ 9  insert 실패: no iron-ore to insert
+```
+
+22회차에 조립기 짓는 일감을 넣었는데 한 번도 안 나갔다. 코드를 다시 읽었다:
+
+```python
+if not holder:
+    source = nearest_to(shelves, at, 1)
+    if not source:
+        continue        # ← 조립기 짓는 일감까지 같이 건너뛴다
+...
+if not snap_all.get("assembling-machine-1"):
+    jobs.append(조립기 세우기)
+```
+
+**과학팩이 하나도 없으면 `continue` 로 빠져나가는데, 그 밑에 「과학팩을
+만드는 기계를 세운다」가 있었다.** 팩이 없을 때 특히 해야 하는 일이,
+팩이 없다는 이유로 건너뛰어졌다.
+
+없을 때 포기하면 영원히 없다. 조립기를 **먼저** 낸다.
+
+**판단 2 — 창고에 석탄이 22,884개인데 「no coal to insert」가 열 번.**
+`nearest_to` 가 「양이 되는 것 중 가장 가까운 것」을 고르는데, 딱 맞는 양만
+든 상자는 우리가 도착할 때쯤 이미 비어 있다. 여덟이 같은 상자를 노리고
+있어서다.
+
+→ **넉넉한 곳을 먼저 본다.** 필요한 양의 네 배가 든 상자를 우선하고, 없을
+때만 딱 맞는 것으로 내려간다. 조금 더 걷더라도 도착해서 빈손인 것보다 낫다.
+
+**결과**: 168 tests.

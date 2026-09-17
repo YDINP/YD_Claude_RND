@@ -265,14 +265,21 @@ def nearest_to(spots: list[dict], at: dict, least: int = 0,
     싣는 곳과 붓는 곳이 200타일 떨어져 있으면 그건 한 사람의 일이 아니다.
     reach 밖이면 아예 없다고 답한다. 못 할 일을 배차하는 것보다 낫다.
     """
-    best, best_d = None, reach * reach
-    for spot in spots:
-        if int(spot.get("count") or 0) < least:
-            continue
-        d = ((spot["x"] - at["x"]) ** 2 + (spot["y"] - at["y"]) ** 2)
-        if d < best_d:
-            best, best_d = spot, d
-    return best
+    # 넉넉한 곳을 먼저 본다. 딱 맞는 양만 든 상자는 우리가 도착할 때쯤
+    # 동료가 이미 비워두기 쉽다 - 여덟이 같은 상자를 노리고 있어서다.
+    # 실제로 창고에 석탄이 22,884개인데 「no coal to insert」가 열 번
+    # 나왔다. 없어서가 아니라, 고른 상자가 도착했을 때 비어 있어서다.
+    for bar in (least * 4, least):
+        best, best_d = None, reach * reach
+        for spot in spots:
+            if int(spot.get("count") or 0) < bar:
+                continue
+            d = ((spot["x"] - at["x"]) ** 2 + (spot["y"] - at["y"]) ** 2)
+            if d < best_d:
+                best, best_d = spot, d
+        if best is not None:
+            return best
+    return None
 
 
 def spread_sites(sites: list[dict], want: int, gap: int = 2) -> list[dict]:
@@ -2112,6 +2119,20 @@ class Crew:
                 if have > carried:
                     holder, carried = mate, have
 
+            # 조립기가 먼저다. 손으로 만든 팩이 떨어지는 순간 연구가 다시
+            # 멈추고, 실제로 그렇게 멈췄다 - 스무 개로 세 칸 오르고 끝났다.
+            #
+            # 그리고 이건 팩이 하나도 없을 때 «특히» 해야 하는 일이다.
+            # 앞서 여기서 팩을 못 찾으면 continue 로 빠져나갔는데, 그
+            # continue 가 조립기 짓는 일감까지 같이 버렸다. 없을 때
+            # 포기하면 영원히 없다.
+            if not snap_all.get("assembling-machine-1"):
+                jobs.append(Job(
+                    f"랩 옆에 조립기를 세워 과학팩을 스스로 만들게 하겠습니다. "
+                    f"({lab['x']:.0f}, {lab['y']:.0f})",
+                    key=f"science-rig:{lab['x']:.0f},{lab['y']:.0f}",
+                    routine="science", at=at))
+
             steps: list[Step] = []
             if not holder:
                 try:
@@ -2124,14 +2145,6 @@ class Crew:
                 carried = min(20, int(source["count"]))
                 steps.append(("take", {"name": pack, "count": carried,
                                        "x": source["x"], "y": source["y"]}))
-            # 조립기가 없으면 손으로 만든 팩이 떨어지는 순간 연구가 다시
-            # 멈춘다. 넣는 일과 «다시는 안 멈추게 하는 일»을 같이 낸다.
-            if not snap_all.get("assembling-machine-1"):
-                jobs.append(Job(
-                    f"랩 옆에 조립기를 세워 과학팩을 스스로 만들게 하겠습니다. "
-                    f"({lab['x']:.0f}, {lab['y']:.0f})",
-                    key=f"science-rig:{lab['x']:.0f},{lab['y']:.0f}",
-                    routine="science", at=at))
 
             steps.append(("insert", {"name": pack, "count": carried, **at}))
             jobs.append(Job(

@@ -703,6 +703,13 @@ def main() -> int:
           str(nearest_to(shelves, rigs, 50)))
     check("a chest too small to help is skipped",
           nearest_to(shelves, rigs, 200) == shelves[1])
+    # 여덟이 같은 상자를 노린다. 딱 맞는 양만 든 상자는 도착할 때쯤 비어 있다.
+    thin = [{"x": -50, "y": 84, "count": 55}, {"x": -56, "y": 80, "count": 900}]
+    check("a fat chest a little further beats a thin one next door",
+          nearest_to(thin, rigs, 50) == thin[1],
+          str(nearest_to(thin, rigs, 50)))
+    check("but a thin one is still better than nothing",
+          nearest_to([thin[0]], rigs, 50) == thin[0])
     check("a two-hundred-tile haul is nobody's job",
           nearest_to([shelves[0]], rigs, 50) is None)
     check("standing next to it, the near one wins",
