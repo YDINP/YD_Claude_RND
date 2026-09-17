@@ -742,6 +742,10 @@ SMELTED_BY_FURNACE = ("iron-ore", "copper-ore")
 
 # 연구가 걸려 있는지 보는 주기. 매 틱 물어볼 일은 아니지만, 비어 있는 채로
 # 오래 두면 랩이 그만큼 논다.
+# 조립기 1호 한 대가 만드는 과학팩 0.1개/초 = 랩 한 대가 먹는 0.1개/초.
+# 정확히 한 대가 한 대를 채운다. 초반에 이보다 깔끔한 비율은 없다.
+SCIENCE_FEED = 40
+
 RESEARCH_CHECK = 20.0
 
 # 둥지를 살피는 주기와, 이 거리 안이면 알리는 기준. 공해가 퍼지는 속도에
@@ -1481,6 +1485,8 @@ class Crew:
                     self.build_rig(worker, at or {})
                 elif routine == "convert":
                     self.convert_chest(worker, at or {})
+                elif routine == "science":
+                    self.build_science(worker, at or {})
                 elif routine == "stoke":
                     self.stoke(worker, at or {})
                 else:
@@ -2091,6 +2097,8 @@ class Crew:
         #     539분째에 랩이 「과학팩 없음」으로 서 있는 동안 에이전트 둘이
         #     빨간 과학팩을 열 개씩 주머니에 넣고 다니고 있었다. 만들어
         #     놓고 넣지를 않아서 아홉 시간 동안 연구가 멈춰 있었다.
+        here = self.snaps.get(worker.name) or worker.snapshot()
+        snap_all = here.buildings
         for lab in [e for e in stopped if e.get("fix") == "science"][:2]:
             at = {"x": lab["x"], "y": lab["y"]}
             pack = STAGE_TARGET["red-science"][0]
@@ -2116,6 +2124,15 @@ class Crew:
                 carried = min(20, int(source["count"]))
                 steps.append(("take", {"name": pack, "count": carried,
                                        "x": source["x"], "y": source["y"]}))
+            # 조립기가 없으면 손으로 만든 팩이 떨어지는 순간 연구가 다시
+            # 멈춘다. 넣는 일과 «다시는 안 멈추게 하는 일»을 같이 낸다.
+            if not snap_all.get("assembling-machine-1"):
+                jobs.append(Job(
+                    f"랩 옆에 조립기를 세워 과학팩을 스스로 만들게 하겠습니다. "
+                    f"({lab['x']:.0f}, {lab['y']:.0f})",
+                    key=f"science-rig:{lab['x']:.0f},{lab['y']:.0f}",
+                    routine="science", at=at))
+
             steps.append(("insert", {"name": pack, "count": carried, **at}))
             jobs.append(Job(
                 f"랩이 과학팩을 기다리고 있습니다. {pack} {carried}개를 "
@@ -2336,6 +2353,81 @@ class Crew:
                 f"({machine['x']:.0f}, {machine['y']:.0f})",
                 key=key, routine="rig", at=machine))
         return out
+
+    def build_science(self, worker: Worker, at: dict) -> None:
+        """랩 옆에 조립기를 세워 과학팩을 스스로 만들게 한다.
+
+            [조립기] → [인서터] → [랩]
+
+        손으로 만든 과학팩 스무 개가 아홉 시간 막혀 있던 연구를 스무 분 만에
+        세 칸 밀어올렸다. 그런데 그 스무 개는 누가 손으로 만든 것이라, 다
+        쓰면 다시 멈춘다. 조립기 한 대가 랩 한 대를 영원히 채운다.
+        """
+        name = worker.name
+        key = f"science-rig:{at['x']:.0f},{at['y']:.0f}"
+        try:
+            plan = self.bridge.assembler_site(name, at["x"], at["y"])
+        except RconError:
+            return
+        if plan.get("error"):
+            worker.block(key, BACKOFF_SECONDS)
+            self.say(f"랩 옆에 조립기 자리가 없습니다: {plan['error']}", who=name)
+            return
+
+        shop, hand = plan["assembler"], plan["inserter"]
+        for part in ("assembling-machine-1", hand["name"]):
+            if not self.obtain(worker, part, 1):
+                self.say(f"{part}을(를) 못 구했습니다.", who=name)
+                worker.block(key, BACKOFF_SECONDS)
+                return
+
+        pack = STAGE_TARGET["red-science"][0]
+        try:
+            built = worker.handle.place("assembling-machine-1", shop["x"], shop["y"],
+                                        timeout=420)
+            answer = self.bridge.set_recipe(name, built["x"], built["y"], pack)
+            if answer.get("error"):
+                self.say(f"조립기에 레시피를 못 넣었습니다: {answer['error']}",
+                         who=name)
+                worker.block(key, BACKOFF_SECONDS)
+                return
+            worker.handle.place(hand["name"], hand["x"], hand["y"],
+                                direction=hand["direction"], timeout=300)
+        except TaskFailed as exc:
+            worker.block(key, BACKOFF_SECONDS)
+            self.say(f"조립기를 못 세웠습니다: {exc.task.get('error')}", who=name)
+            return
+
+        # 전기. 조립기도 인서터도 전기를 먹는다 - 전봇대가 닿는 자리를
+        # 게임에 물어 세운다.
+        for spot in (built, hand):
+            try:
+                where = self.bridge.wire_spot(name, spot["x"], spot["y"])
+            except RconError:
+                continue
+            if where.get("already") or where.get("error"):
+                continue
+            if self.obtain(worker, "small-electric-pole", 1):
+                try:
+                    worker.handle.place("small-electric-pole", where["x"],
+                                        where["y"], snap=True, timeout=240)
+                except TaskFailed:
+                    pass
+
+        # 첫 재료. 이 뒤로는 화로에서 나오는 판금을 나르는 일감이 채운다.
+        for item, amount in (("copper-plate", SCIENCE_FEED),
+                             ("iron-gear-wheel", SCIENCE_FEED)):
+            if not self.obtain(worker, item, amount):
+                continue
+            try:
+                worker.handle.insert(item, built["x"], built["y"],
+                                     count=amount, timeout=240)
+            except TaskFailed:
+                pass
+
+        self.say(f"랩 옆에 조립기를 세우고 {pack}을(를) 만들게 했습니다. "
+                 f"이제 과학팩은 손으로 안 만들어도 됩니다. "
+                 f"({built['x']:.0f}, {built['y']:.0f})", who=name)
 
     def build_rig(self, worker: Worker, at: dict) -> None:
         """«석탄 상자 + 버너 인서터»를 한 벌 세우고 석탄을 부어둔다."""

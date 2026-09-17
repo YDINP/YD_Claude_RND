@@ -2088,6 +2088,99 @@ end
 -- 가까운 사람」이라 배차를 계속 빨아들이고 있었다.
 --
 -- 걸어서 못 나오는 곳에 있으면 걸어서 꺼낼 수 없다. 동료 옆으로 옮긴다.
+-- 조립기에 무엇을 만들지 정해준다. 레시피 없는 조립기는 전기만 먹는다.
+local function set_recipe(name, x, y, recipe_name)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local machine = b.surface.find_entities_filtered {
+    position = { x, y }, radius = 1.6, type = "assembling-machine",
+    force = b.force, limit = 1,
+  }[1]
+  if not machine then
+    return { error = string.format("no assembler at %.0f,%.0f", x, y) }
+  end
+  local recipe = b.force.recipes[recipe_name]
+  if not recipe then return { error = "no such recipe: " .. tostring(recipe_name) } end
+  if not recipe.enabled then
+    return { error = recipe_name .. " is not researched yet" }
+  end
+
+  local ok, err = pcall(function() machine.set_recipe(recipe) end)
+  if not ok then return { error = tostring(err) } end
+  return { agent = name, recipe = recipe_name,
+           x = machine.position.x, y = machine.position.y }
+end
+
+-- 랩 옆에 조립기를 놓을 자리와, 그 사이 인서터 자리를 찾는다.
+--
+--   [조립기] → [인서터] → [랩]
+--
+-- 조립기 1호 한 대가 만드는 과학팩은 0.1개/초, 랩 한 대가 먹는 것도
+-- 0.1개/초다. 정확히 한 대가 한 대를 채운다 - 리서치에서 나온 수치이고,
+-- 초반에 이보다 깔끔한 비율은 없다.
+--
+-- 자리는 계산하지 않고 세워보고 묻는다. 인서터가 실제로 조립기에서 집어
+-- 랩에 넣는지는 pickup_position 과 drop_position 이 답해준다.
+local function assembler_site(name, x, y, arm)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+  arm = arm or "inserter"
+
+  local surface, force = b.surface, b.force
+  local lab = surface.find_entities_filtered {
+    position = { x, y }, radius = 2, name = "lab", force = force, limit = 1,
+  }[1]
+  if not lab then
+    return { error = string.format("no lab at %.0f,%.0f", x, y) }
+  end
+  local box = lab.bounding_box
+
+  local sides = {
+    { d = defines.direction.north, ux = 0, uy = -1 },
+    { d = defines.direction.east, ux = 1, uy = 0 },
+    { d = defines.direction.south, ux = 0, uy = 1 },
+    { d = defines.direction.west, ux = -1, uy = 0 },
+  }
+
+  for _, side in ipairs(sides) do
+    -- 랩 바깥 한 칸이 인서터, 그 너머가 조립기(3x3 이라 두 칸 더).
+    local at = lab.position
+    local hand = { x = at.x + side.ux * 2, y = at.y + side.uy * 2 }
+    local shop = { x = at.x + side.ux * 4, y = at.y + side.uy * 4 }
+
+    -- 인서터는 조립기 쪽에서 집어 랩에 놓아야 하므로, 조립기를 바라본다.
+    if surface.can_place_entity {
+      name = arm, position = hand, direction = side.d, force = force,
+    } and surface.can_place_entity {
+      name = "assembling-machine-1", position = shop, force = force,
+    } then
+      local probe = surface.create_entity {
+        name = arm, position = hand, direction = side.d, force = force,
+        raise_built = false,
+      }
+      local aims = false
+      if probe then
+        local drop, grab = probe.drop_position, probe.pickup_position
+        aims = drop.x > box.left_top.x and drop.x < box.right_bottom.x
+           and drop.y > box.left_top.y and drop.y < box.right_bottom.y
+           and math.abs(grab.x - shop.x) < 2 and math.abs(grab.y - shop.y) < 2
+        probe.destroy()
+      end
+      if aims then
+        return {
+          lab = { x = at.x, y = at.y },
+          inserter = { x = hand.x, y = hand.y, direction = side.d, name = arm },
+          assembler = { x = shop.x, y = shop.y },
+        }
+      end
+    end
+  end
+  return { error = "no room for an assembler beside the lab" }
+end
+
 local function unstick(name, x, y)
   local a = agent(name)
   local b = body(a)
@@ -2616,6 +2709,10 @@ remote.add_interface("ai", {
 
   -- 걸어서 못 나오는 곳에 갇힌 사람을 꺼낸다.
   unstick = unstick,
+
+  -- 조립기: 무엇을 만들지 정하고, 랩 옆 자리를 찾는다.
+  set_recipe = set_recipe,
+  assembler_site = assembler_site,
 
   -- 전봇대가 이 기계에 실제로 «닿는» 자리.
   wire_spot = wire_spot,

@@ -283,6 +283,15 @@ class AIBridge:
         """이 기계를 영구히 먹일 «상자-인서터» 자리. 없으면 error."""
         return self.call("fuel_rig", agent, x, y)
 
+    def set_recipe(self, agent: str, x: float, y: float, recipe: str) -> dict:
+        """조립기에 무엇을 만들지 정해준다."""
+        return self.call("set_recipe", agent, x, y, recipe)
+
+    def assembler_site(self, agent: str, x: float, y: float,
+                       arm: str = "inserter") -> dict:
+        """랩 옆 조립기 자리와 그 사이 인서터 자리."""
+        return self.call("assembler_site", agent, x, y, arm)
+
     def unstick(self, agent: str, x: float | None = None,
                 y: float | None = None) -> dict:
         """걸어서 못 나오는 곳에 갇힌 사람을 동료 옆으로 옮긴다."""
