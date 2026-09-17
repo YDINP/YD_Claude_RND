@@ -1002,11 +1002,46 @@ local function step_direction(step)
   return defines.direction.west
 end
 
--- 물가 한 곳에 대해 펌프-보일러-기관 전체가 들어가는지 확인하고, 들어가면
+-- 물가 한 곳에 펌프-보일러-기관이 통째로 들어가는지 확인하고, 들어가면
 -- 정확한 좌표를 돌려준다. 하나라도 안 들어가면 통째로 버린다 - 반쯤 지어진
 -- 발전소는 안 지은 것보다 나쁘다.
+--
+-- 좌표는 실측에서 나왔다. 게임에 임시로 세워 fluidbox 의 연결구를 읽어보니:
+--   펌프  : 자기 칸에서 바라보는 반대쪽 한 칸으로 물을 내보낸다.
+--   보일러: 물 연결구가 중심에서 «옆구리» 양쪽 한 칸씩(축은 바라보는 방향에
+--           수직), 증기 출구는 «바라보는 쪽» 두 칸 앞.
+--   기관  : 증기 연결구가 중심에서 긴 축 양끝 두 칸.
+-- 그래서 보일러는 펌프 출구 칸에서 한 칸 더, 기관은 보일러에서 네 칸,
+-- 다음 기관은 그 앞에서 다섯 칸(기관이 5칸 길이)이다.
+
+local BOILER_FROM_OUT = 1   -- 펌프 출구 칸에서 보일러 중심까지
+local ENGINE_FROM_BOILER = 4
+local ENGINE_PITCH = 5
+
+local function turn(step)
+  -- 축에 수직인 두 방향.
+  if step.x ~= 0 then
+    return { { x = 0, y = -1 }, { x = 0, y = 1 } }
+  end
+  return { { x = -1, y = 0 }, { x = 1, y = 0 } }
+end
+
+local function as_direction(v)
+  if v.y < 0 then return defines.direction.north end
+  if v.y > 0 then return defines.direction.south end
+  if v.x > 0 then return defines.direction.east end
+  return defines.direction.west
+end
+
 local function try_power_site(surface, force, site, engines)
   local temporary = {}
+  local function sweep()
+    for i = #temporary, 1, -1 do
+      if temporary[i].valid then temporary[i].destroy() end
+    end
+    temporary = {}
+  end
+
   local pump = surface.create_entity {
     name = "offshore-pump", position = { site.x, site.y },
     direction = site.direction, force = force, raise_built = false,
@@ -1015,129 +1050,69 @@ local function try_power_site(surface, force, site, engines)
   temporary[#temporary + 1] = pump
 
   local out = outward(pump)
-  if not out then pump.destroy() return nil end
-
+  if not out then sweep() return nil end
   local step = unit_step(pump.position, out)
-  local facing = step_direction(step)
-  local plan = {
-    pump = { x = pump.position.x, y = pump.position.y, direction = site.direction },
-    facing = facing, pipes = {}, engines = {},
-  }
-  pump.destroy()
 
-  -- 보일러는 물이 나가는 쪽으로 걸어나가다 처음 들어가는 자리에.
-  local boiler, gap = nil, 0
-  for away = 1, 6 do
-    local at = { x = out.x + step.x * (away - 1), y = out.y + step.y * (away - 1) }
+  -- 보일러가 바라보는 쪽으로 증기가 나간다. 양옆 중 자리가 나는 쪽을 쓴다.
+  for _, perp in pairs(turn(step)) do
+    local facing = as_direction(perp)
+    local bat = { x = out.x + step.x * BOILER_FROM_OUT,
+                  y = out.y + step.y * BOILER_FROM_OUT }
     if surface.can_place_entity {
-      name = "boiler", position = at, direction = facing, force = force,
+      name = "boiler", position = bat, direction = facing, force = force,
     } then
-      boiler = surface.create_entity {
-        name = "boiler", position = at, direction = facing, force = force,
+      local boiler = surface.create_entity {
+        name = "boiler", position = bat, direction = facing, force = force,
         raise_built = false,
       }
-      temporary[#temporary + 1] = boiler
-      gap = away - 1
-      break
-    end
-  end
-  if not boiler then
-    for _, e in pairs(temporary) do if e.valid then e.destroy() end end
-    return nil
-  end
-  plan.boiler = { x = boiler.position.x, y = boiler.position.y, direction = facing }
-
-  -- 펌프와 보일러 사이의 빈 칸은 파이프로 잇는다.
-  for i = 0, gap - 1 do
-    plan.pipes[#plan.pipes + 1] = { x = out.x + step.x * i, y = out.y + step.y * i }
-  end
-
-  -- 증기가 나가는 쪽에 기관을 줄줄이. 보일러의 관 연결 중 보일러 뒤쪽 것.
-  local anchor = boiler
-  local ok_all = true
-  for _ = 1, engines do
-    local placed = nil
-    for away = 2, 8 do
-      local at = { x = anchor.position.x + step.x * away,
-                   y = anchor.position.y + step.y * away }
-      if surface.can_place_entity {
-        name = "steam-engine", position = at, direction = facing, force = force,
-      } then
-        placed = surface.create_entity {
-          name = "steam-engine", position = at, direction = facing, force = force,
-          raise_built = false,
+      if boiler then
+        temporary[#temporary + 1] = boiler
+        local plan = {
+          pump = { x = pump.position.x, y = pump.position.y, direction = site.direction },
+          boiler = { x = bat.x, y = bat.y, direction = facing },
+          facing = facing, pipes = {}, engines = {},
         }
-        temporary[#temporary + 1] = placed
-        break
+
+        local anchor = { x = bat.x + perp.x * ENGINE_FROM_BOILER,
+                         y = bat.y + perp.y * ENGINE_FROM_BOILER }
+        local placed_any = true
+        for n = 1, (engines or 2) do
+          local at = { x = anchor.x + perp.x * ENGINE_PITCH * (n - 1),
+                       y = anchor.y + perp.y * ENGINE_PITCH * (n - 1) }
+          if surface.can_place_entity {
+            name = "steam-engine", position = at, direction = facing, force = force,
+          } then
+            local engine = surface.create_entity {
+              name = "steam-engine", position = at, direction = facing,
+              force = force, raise_built = false,
+            }
+            if engine then
+              temporary[#temporary + 1] = engine
+              plan.engines[#plan.engines + 1] = {
+                x = at.x, y = at.y, direction = facing,
+              }
+            end
+          elseif n == 1 then
+            placed_any = false
+            break
+          end
+        end
+
+        if placed_any and #plan.engines > 0 then
+          sweep()
+          return plan
+        end
+        -- 이 방향은 자리가 없다. 임시로 세운 것만 걷어내고 반대쪽을 본다.
+        for i = #temporary, 2, -1 do
+          if temporary[i].valid then temporary[i].destroy() end
+          temporary[i] = nil
+        end
       end
     end
-    if not placed then ok_all = false break end
-    plan.engines[#plan.engines + 1] = {
-      x = placed.position.x, y = placed.position.y, direction = facing,
-    }
-    anchor = placed
   end
 
-  -- 진짜로 증기가 흐르는지 확인한다. 임시로 세운 상태에서 보일러에 연료를
-  -- 넣고 한 틱 뒤에 보는 건 불가능하므로, 대신 기관이 보일러와 유체망을
-  -- 공유하는지를 본다 - 연결되지 않았으면 같은 망에 있을 수 없다.
-  local connected = false
-  if #plan.engines > 0 and anchor.valid then
-    local ok, same = pcall(function()
-      return anchor.fluidbox.get_fluid_system_id(1) ~= nil
-        and boiler.fluidbox.get_fluid_system_id(2) ~= nil
-        and anchor.fluidbox.get_fluid_system_id(1) == boiler.fluidbox.get_fluid_system_id(2)
-    end)
-    connected = ok and same
-  end
-
-  -- 임시로 세운 것만 지운다. 범위로 쓸어 담으면 «계획을 세우려고 들여다본
-  -- 김에 이미 돌아가던 발전소를 부수는» 일이 벌어진다 - 실제로 기관 두
-  -- 대가 그렇게 사라졌다. 내가 만든 것만 손댄다.
-  for _, e in pairs(temporary) do
-    if e.valid then e.destroy() end
-  end
-
-  if not ok_all then return nil end
-  plan.connected = connected
-  return plan
-end
-
--- 전력이 «있다»는 것은 기관이 서 있다는 뜻이 아니라 전기가 흐른다는
--- 뜻이다. 물 없는 보일러에 물린 기관은 밖에서 보면 멀쩡한 발전소와
--- 똑같이 생겼고, 그게 서 있다는 이유로 우리는 새 발전소를 짓지 않았다.
-local function power_status(name)
-  local a = agent(name)
-  local b = body(a)
-  if not b then return { error = "no such agent: " .. tostring(name) } end
-
-  local made, engines, running = 0, 0, 0
-  for _, e in pairs(b.surface.find_entities_filtered {
-    type = "generator", force = b.force,
-  }) do
-    engines = engines + 1
-    local output = e.energy_generated_last_tick or 0
-    made = made + output
-    if output > 0 then running = running + 1 end
-  end
-
-  local labs, working_labs = 0, 0
-  for _, lab in pairs(b.surface.find_entities_filtered {
-    name = "lab", force = b.force,
-  }) do
-    labs = labs + 1
-    if lab.status == defines.entity_status.working then
-      working_labs = working_labs + 1
-    end
-  end
-
-  return {
-    agent = name,
-    generators = engines, running = running,
-    watts = math.floor(made * 60),
-    labs = labs, working_labs = working_labs,
-    powered = running > 0,
-  }
+  sweep()
+  return nil
 end
 
 local function power_plan(name, x, y, radius, engines)
