@@ -788,6 +788,70 @@ local function furnace_stock(name, radius)
   return { agent = name, stock = out }
 end
 
+-------------------------------------------------------- 멈춰 선 기계 찾기
+
+-- 숙련자들이 입을 모으는 첫 번째 원칙이 «병목을 쫓아라»인데, 우리 에이전트는
+-- 무엇이 멈췄는지 볼 눈이 없었다. 연료가 떨어진 채굴기, 출력이 꽉 찬 화로,
+-- 상자 없이 땅에 광석을 떨구다 멈춘 드릴 - 전부 지어놓고 잊은 것들이다.
+--
+-- 짐작할 필요가 없다. 게임이 기계마다 status 를 갖고 있고, 거기에 «왜 안
+-- 도는지»가 적혀 있다.
+
+local STATUS_NAME = {}
+local FIXABLE = {}
+
+local function init_status_names()
+  if next(STATUS_NAME) then return end
+  for label, value in pairs(defines.entity_status) do
+    STATUS_NAME[value] = label
+  end
+  -- 우리가 손으로 고칠 수 있는 것들. 나머지(전력 없음 등)는 사람 손이 아니라
+  -- 설비가 필요한 문제라 여기서 다루지 않는다.
+  FIXABLE[defines.entity_status.no_fuel] = "fuel"
+  FIXABLE[defines.entity_status.full_output] = "empty"
+  FIXABLE[defines.entity_status.full_burnt_result_output] = "empty"
+  if defines.entity_status.not_enough_space_in_output then
+    FIXABLE[defines.entity_status.not_enough_space_in_output] = "empty"
+  end
+  if defines.entity_status.waiting_for_space_in_destination then
+    FIXABLE[defines.entity_status.waiting_for_space_in_destination] = "chest"
+  end
+  if defines.entity_status.item_ingredient_shortage then
+    FIXABLE[defines.entity_status.item_ingredient_shortage] = "feed"
+  end
+  if defines.entity_status.no_ingredients then
+    FIXABLE[defines.entity_status.no_ingredients] = "feed"
+  end
+end
+
+local TENDED = { "burner-mining-drill", "stone-furnace", "steel-furnace",
+                 "electric-furnace", "assembling-machine-1", "boiler", "lab" }
+
+local function broken(name, radius)
+  init_status_names()
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local reach = math.min(radius or MAX_OBSERVE_RADIUS, MAX_OBSERVE_RADIUS)
+  local out = {}
+  for _, e in pairs(b.surface.find_entities_filtered {
+    position = b.position, radius = reach, name = TENDED, force = b.force,
+  }) do
+    local fix = FIXABLE[e.status]
+    if fix then
+      out[#out + 1] = {
+        name = e.name, fix = fix,
+        status = STATUS_NAME[e.status] or tostring(e.status),
+        x = e.position.x, y = e.position.y,
+        distance = math.floor(Tasks.dist(b.position, e.position) * 10) / 10,
+      }
+    end
+  end
+  table.sort(out, function(p, q) return p.distance < q.distance end)
+  return { agent = name, stopped = out }
+end
+
 local function agent_status(name)
   local a = agent(name)
   if not a then return { error = "no such agent: " .. tostring(name) } end
@@ -1259,6 +1323,9 @@ remote.add_interface("ai", {
   -- displays it.
   -- 이 아이템을 만들려면 지금 무엇부터 해야 하는가.
   plan_item = compute_plan,
+
+  -- 지금 멈춰 서 있는 기계들과 «왜».
+  broken = broken,
 
   -- 화로 안에 다 녹은 채 남아 있는 것들.
   furnace_stock = furnace_stock,

@@ -186,6 +186,25 @@ FURNACE_PITCH = 4
 ENGINES_PER_BOILER = 2
 
 
+# 버너 드릴 5대가 돌 화로 4대를 채운다. 뒤집으면 화로 4대에 드릴 5대.
+DRILLS_PER_FURNACE = 5 / 4
+
+# 버너 드릴은 석탄을 손으로 넣어줘야 한다. 돌볼 수 있는 것보다 많이 지으면
+# 멈춘 기계만 늘어난다 - 한 사람이 셋까지.
+DRILLS_PER_AGENT = 3
+
+
+def drill_target(snap: Snapshot, crew: int) -> int:
+    """채굴기를 몇 대까지 세울 것인가.
+
+    화로가 요구하는 만큼 세우되, 손으로 연료를 넣어줄 수 있는 만큼만.
+    드릴 4대로 화로 23대를 채우려던 것이 지금까지의 상태였다.
+    """
+    furnaces = snap.buildings.get("stone-furnace", {}).get("count", 0)
+    wanted = math.ceil(furnaces * DRILLS_PER_FURNACE)
+    return max(len(FOCUS_ORDER), min(crew * DRILLS_PER_AGENT, wanted))
+
+
 def furnace_target(snap: Snapshot, crew: int) -> int:
     """화로를 몇 대까지 세울 것인가.
 
@@ -284,12 +303,17 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     # the game whether it is affordable is the difference between building one
     # and announcing it forever while the craft fails.
     if snap.have(DRILL) >= 1 or (snap.can_make(DRILL) and snap.can_make(CHEST)):
-        # Own patch first, then whatever else still lacks a drill.
+        # Own patch first, then whatever else still lacks a drill. 한 광맥에
+        # 한 대씩만 놓으면 화로 스물셋을 드릴 넷이 먹여야 한다.
+        room = drill_target(snap, crew) - drills
+        seat = 0
         for ore in [focus] + [o for o in FOCUS_ORDER if o != focus]:
-            if snap.ore(ore) and drills < len(FOCUS_ORDER):
+            if snap.ore(ore) and seat < room:
                 jobs.append(Job(f"{ore} 자동 채굴을 준비하겠습니다.",
-                                key=f"automate:{ore}", routine="automate", ore=ore,
+                                key=f"automate:{ore}:{drills + seat}",
+                                routine="automate", ore=ore,
                                 needs={DRILL: 1, CHEST: 1, "coal": DRILL_FUEL}))
+                seat += 1
     elif snap.have("iron-plate") >= PLATES_FOR_TOOLS and not snap.can_make("stone-furnace"):
         spot = snap.ore("stone")
         if spot:
@@ -1114,6 +1138,47 @@ class Crew:
             self.say(f"{item}은(는) {locked[0]} 연구가 없어서 못 만듭니다.", who=worker.name)
         return None
 
+    def tend_job(self, worker: Worker, snap: Snapshot) -> Job | None:
+        """멈춰 선 기계를 고친다. 새로 짓는 것보다 먼저다.
+
+        연료가 떨어진 채굴기, 출력이 꽉 찬 화로 - 지어놓고 아무도 돌아오지
+        않아서 멈춘 것들이다. 멈춘 기계는 지어지지 않은 기계보다 나쁘다.
+        재료는 이미 들어갔는데 아무것도 내놓지 않기 때문이다.
+
+        무엇이 왜 멈췄는지는 짐작하지 않는다. 게임이 기계마다 status 로
+        들고 있고, 거기에 답이 적혀 있다.
+        """
+        try:
+            stopped = self.bridge.broken(worker.name)
+        except RconError:
+            return None
+
+        taken = self.taken()
+        for entry in stopped:
+            key = f"tend:{entry['x']:.0f},{entry['y']:.0f}"
+            if key in taken or key in worker.blocked_now():
+                continue
+            at = {"x": entry["x"], "y": entry["y"]}
+            what, fix = entry.get("name", "기계"), entry.get("fix")
+
+            if fix == "fuel":
+                if snap.have("coal") < DRILL_FUEL:
+                    # 연료를 넣어주려면 연료가 있어야 한다. 부탁의 근거가 된다.
+                    continue
+                return Job(f"{what}이(가) 연료가 떨어져 멈췄습니다. 석탄을 넣겠습니다.",
+                           key=key, needs={"coal": DRILL_FUEL},
+                           steps=[("insert", {"name": "coal", "count": DRILL_FUEL, **at})])
+
+            if fix == "empty":
+                # 무엇이 찼는지는 화로 재고 쪽이 안다. 이름 없이 꺼낼 수는
+                # 없으므로 거두기에 맡긴다.
+                harvest = self.harvest_job(worker)
+                if harvest:
+                    return harvest
+                continue
+
+        return None
+
     def harvest_job(self, worker: Worker, wanted: set[str] | None = None) -> Job | None:
         """화로에 다 녹아 있는 것을 거둬온다.
 
@@ -1567,8 +1632,11 @@ class Crew:
             self.announce_stage(snap)
 
             self.release(worker)
-            # 찬 화로는 제련을 멈춘다. 거두는 일이 캐는 일보다 먼저다.
-            job = self.harvest_job(worker)
+            # 멈춘 기계가 제일 먼저다. 그 다음이 찬 화로를 비우는 일이고,
+            # 새로 캐고 짓는 일은 그 뒤다.
+            job = self.tend_job(worker, snap)
+            if job is None:
+                job = self.harvest_job(worker)
             if job is None:
                 job = next_goal(snap, worker.focus, worker.blocked_now(), self.taken(),
                                 crew=len(self.workers))

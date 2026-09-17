@@ -108,8 +108,17 @@ def main() -> int:
     running = at({"coal": 10, "iron-plate": 20}, WITH_DRILL, CAN_TOOL)
     job = next_goal(running, focus="copper-ore")
     check("with one drill up it mechanises its own patch next",
-          job is not None and job.key == "automate:copper-ore",
+          job is not None and job.key.startswith("automate:copper-ore"),
           str(job.key if job else None))
+    # 한 광맥에 한 대씩만 놓으면 화로 스물셋을 드릴 넷이 먹여야 한다.
+    many = at({"coal": 10, "iron-plate": 20},
+              {**WITH_DRILL, "stone-furnace": {"nearest": {"x": 1, "y": 1},
+                                               "nearest_dist": 2, "count": 12}},
+              CAN_TOOL)
+    plans = [j.key for j in plan(many, focus="copper-ore", crew=6)
+             if j.key.startswith("automate:")]
+    check("more furnaces means more drills", len(plans) > 1, str(plans))
+    check("and each one is its own job", len(set(plans)) == len(plans))
 
     # Once every patch has a drill and the stockpile is full there is genuinely
     # nothing left on the ladder.

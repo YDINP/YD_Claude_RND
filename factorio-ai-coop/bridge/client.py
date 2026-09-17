@@ -203,6 +203,14 @@ class AIBridge:
         """
         return self.call("plan_item", agent, item, count)
 
+    def broken(self, agent: str, radius: int = 200) -> list[dict]:
+        """지금 멈춰 서 있는 기계들, 가까운 순.
+
+        무엇이 왜 멈췄는지는 게임이 엔티티마다 status 로 들고 있다. 짐작할
+        필요가 없다.
+        """
+        return _as_list(self.call("broken", agent, radius).get("stopped"))
+
     def furnace_stock(self, agent: str, radius: int = 200) -> list[dict]:
         """화로 안에 다 녹은 채 남아 있는 것들, 가까운 순."""
         return _as_list(self.call("furnace_stock", agent, radius).get("stock"))
