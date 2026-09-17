@@ -400,6 +400,14 @@ def main() -> int:
     check("no stone, no promises",
           not any(j.key.startswith("furnace:") for j in plan(one, crew=4)))
 
+    # spots 가 8개에서 잘려도, 오래된 모드가 spots 를 아예 안 줘도, 이미
+    # 세운 화로를 다시 세우면 안 된다.
+    blind = Snapshot(**{**vars(with_stone), "buildings": {
+        "stone-furnace": {"count": 4, "nearest": {"x": 5, "y": 5}, "nearest_dist": 3}}})
+    check("count is what says how many are standing",
+          not any(j.key.startswith("furnace:") for j in plan(blind, crew=4)),
+          str([j.key for j in plan(blind, crew=4)][:3]))
+
     check("older observations still work",
           stocked({"stone-furnace": {"count": 1, "nearest": {"x": 2, "y": 2},
                                      "nearest_dist": 3}}).spots("stone-furnace")

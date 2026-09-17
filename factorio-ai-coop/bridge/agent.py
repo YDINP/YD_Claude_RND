@@ -201,9 +201,13 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
                                 steps=[("mine", {**spot, "count": 5})]))
 
     # 사람 수만큼 화로를 세운다. 줄을 서는 시간이 곧 손해다.
+    # spots 는 MAX_SPOTS 에서 잘리고, 오래된 모드는 아예 주지 않는다. 몇
+    # 개가 서 있는지는 count 가 안다 - 이걸 안 보면 이미 세운 화로를 못 세고
+    # 영원히 하나씩 더 만든다.
+    standing = snap.buildings.get("stone-furnace", {}).get("count", len(furnaces))
     want = min(crew, MAX_FURNACES)
-    if furnace and len(furnaces) < want:
-        nth = len(furnaces)
+    if furnace and standing < want:
+        nth = standing
         if snap.have("stone-furnace") >= 1:
             jobs.append(Job(f"화로를 하나 더 놓겠습니다 ({nth + 1}번째).",
                             key=f"furnace:{nth}", steps=[
