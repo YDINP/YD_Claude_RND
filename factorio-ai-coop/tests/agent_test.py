@@ -126,9 +126,14 @@ def main() -> int:
                                                      "nearest_dist": 12, "count": 1}}
     CAN_TOOL = {"burner-mining-drill": 1, "iron-chest": 2, "stone-furnace": 1}
 
-    def at(items=None, buildings=None, craftable=None):
+    ALL_TECH = {"electronics", "steam-power", "automation-science-pack", "automation"}
+
+    def at(items=None, buildings=None, craftable=None, tech=None):
+        # Default to "the early technologies are in": the ladder below is about
+        # gathering and building, and unresearched tech has its own rungs.
         return Snapshot(**world, items=items or {}, buildings=buildings or {},
-                        craftable=craftable or {})
+                        craftable=craftable or {},
+                        researched=set(ALL_TECH if tech is None else tech))
 
     rungs = [
         ("bare hands go for stone", at(), "mine", lambda j: j.steps[0][1]["x"] == 10),
@@ -181,10 +186,42 @@ def main() -> int:
     # nothing left on the ladder.
     ALL_DRILLED = {**FURNACE, "burner-mining-drill": {"nearest": {"x": 9, "y": 9},
                                                       "nearest_dist": 12, "count": 4}}
-    full = {"coal": 99, "iron-plate": 40, "iron-ore": 99, "copper-ore": 99, "stone": 99}
+    full = {"coal": 99, "iron-plate": 40, "iron-ore": 99, "copper-ore": 99, "stone": 99,
+            "lab": 1}
+    settled = {**ALL_DRILLED, "lab": {"nearest": {"x": 4, "y": -4}, "nearest_dist": 6, "count": 1},
+               "steam-engine": {"nearest": {"x": 20, "y": 20}, "nearest_dist": 28, "count": 1}}
     check("and stops when there is nothing left to do",
-          next_goal(at(full, ALL_DRILLED, CAN_TOOL), focus="copper-ore") is None,
-          str(next_goal(at(full, ALL_DRILLED, CAN_TOOL), focus="copper-ore")))
+          next_goal(at(full, settled, CAN_TOOL), focus="copper-ore") is None,
+          str(next_goal(at(full, settled, CAN_TOOL), focus="copper-ore")))
+
+    print("\n3g. with nothing else to do it climbs the tech tree")
+    # "할 일이 없다"는 예전엔 광석만 쌓는다는 뜻이었다. 이제는 연구를 연다.
+    early = at({"coal": 99, "iron-plate": 40, "iron-ore": 99, "copper-ore": 99,
+                "stone": 99}, ALL_DRILLED, CAN_TOOL, tech=set())
+    job = next_goal(early, focus="copper-ore")
+    check("smelts for the first technology",
+          job is not None and job.key == "smelt:copper-plate",
+          str(job.key if job else None))
+
+    after_copper = at({"coal": 99, "iron-ore": 99, "iron-plate": 20}, ALL_DRILLED, CAN_TOOL,
+                      tech={"electronics"})
+    job = next_goal(after_copper)
+    check("then for the second", job is not None and job.key == "smelt:iron-plate",
+          str(job.key if job else None))
+
+    both = at({"coal": 99, "iron-plate": 20}, ALL_DRILLED, {**CAN_TOOL, "lab": 1},
+              tech={"electronics", "steam-power"})
+    job = next_goal(both)
+    check("then builds a lab", job is not None and job.key == "craft:lab",
+          str(job.key if job else None))
+
+    lab_up = at({"coal": 99, "iron-plate": 20}, {**ALL_DRILLED,
+                               "lab": {"nearest": {"x": 4, "y": -4}, "nearest_dist": 6,
+                                       "count": 1}},
+                CAN_TOOL, tech={"electronics", "steam-power"})
+    job = next_goal(lab_up)
+    check("then goes for power", job is not None and job.routine == "power",
+          str(job.key if job else None))
 
     print("\n3c. work that just failed is not proposed again")
     # One unreachable furnace used to fill the chat with the same line forever.

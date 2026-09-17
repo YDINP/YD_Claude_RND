@@ -28,8 +28,10 @@ local CHAT_HISTORY = 50
 -- inventory so an agent can ask "can I build this yet?" instead of trying and
 -- failing in a loop.
 local PLANNING_RECIPES = {
-  "burner-mining-drill", "iron-chest", "stone-furnace",
-  "iron-gear-wheel", "transport-belt", "wooden-chest",
+  "burner-mining-drill", "iron-chest", "stone-furnace", "wooden-chest",
+  "iron-gear-wheel", "transport-belt", "copper-cable", "electronic-circuit",
+  "lab", "automation-science-pack", "assembling-machine-1", "inserter",
+  "pipe", "boiler", "steam-engine", "offshore-pump", "small-electric-pole",
 }
 
 -- A headless server only writes back to the save it was started from when it
@@ -707,6 +709,11 @@ remote.add_interface("ai", {
         if ok and drop then
           info.drop_x, info.drop_y = drop.x, drop.y
         end
+        -- Enough to answer "is this thing actually running?" without guessing
+        -- from the outside.
+        pcall(function() info.energy = e.energy end)
+        pcall(function() info.network = e.electric_network_id end)
+        pcall(function() info.status = e.status end)
         out[#out + 1] = info
       end
     end
@@ -845,6 +852,47 @@ remote.add_interface("ai", {
     local ok, err = pcall(function() force.add_research(name) end)
     if not ok then return { error = tostring(err) } end
     return { queued = name, queue_length = #force.research_queue }
+  end,
+
+  -- Where an offshore pump could go. There is no API for "a spot on the shore",
+  -- so this brute-forces it: find water, then try the four directions on the
+  -- tiles around it and let the game say which placement it accepts.
+  water_sites = function(x, y, radius, wanted)
+    local surface = game.surfaces[1]
+    local force = game.forces["player"]
+    local tiles = surface.find_tiles_filtered {
+      position = { x, y }, radius = math.min(radius or 120, 200),
+      name = { "water", "deepwater" }, limit = 400,
+    }
+    if #tiles == 0 then return { sites = {}, water_found = false } end
+
+    local sites, seen = {}, {}
+    local directions = { defines.direction.north, defines.direction.east,
+                         defines.direction.south, defines.direction.west }
+    for _, tile in pairs(tiles) do
+      for dx = -1, 1 do
+        for dy = -1, 1 do
+          local spot = { x = tile.position.x + dx + 0.5, y = tile.position.y + dy + 0.5 }
+          local key = spot.x .. ":" .. spot.y
+          if not seen[key] then
+            seen[key] = true
+            for _, direction in ipairs(directions) do
+              if surface.can_place_entity {
+                name = "offshore-pump", position = spot, direction = direction,
+                force = force, build_check_type = defines.build_check_type.manual,
+              } then
+                sites[#sites + 1] = { x = spot.x, y = spot.y, direction = direction }
+                break
+              end
+            end
+          end
+          if #sites >= (wanted or 3) then
+            return { sites = sites, water_found = true }
+          end
+        end
+      end
+    end
+    return { sites = sites, water_found = true, water_tiles = #tiles }
   end,
 
   research_status = function()

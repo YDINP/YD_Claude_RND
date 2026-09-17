@@ -54,6 +54,8 @@ class Snapshot:
     resources: dict[str, dict] = field(default_factory=dict)
     humans: list[dict] = field(default_factory=list)
     mates: list[dict] = field(default_factory=list)
+    researched: set[str] = field(default_factory=set)
+    researching: str | None = None
 
     def have(self, item: str) -> int:
         return self.items.get(item, 0)
@@ -74,6 +76,9 @@ class Snapshot:
     def building(self, name: str) -> dict | None:
         found = self.buildings.get(name)
         return found.get("nearest") if found else None
+
+    def knows(self, technology: str) -> bool:
+        return technology in self.researched
 
 
 # ------------------------------------------------------------------- parsing
@@ -238,6 +243,16 @@ BACKOFF_SECONDS = 120   # how long a failed kind of work stays off the ladder
 # Each agent takes one resource so a crew does not all stand on the same patch.
 FOCUS_ORDER = ["iron-ore", "coal", "copper-ore", "stone"]
 
+# 2.0 opens its first technologies with an action rather than science packs:
+# ten copper plates smelted opens electronics (circuits, lab, inserters), fifty
+# iron plates opens steam power (pipes, boiler, engine, pump). Nothing else can
+# start until those two are in, because the lab itself is behind electronics.
+SMELT_FOR_TECH = [
+    ("electronics", "copper-ore", "copper-plate"),
+    ("steam-power", "iron-ore", "iron-plate"),
+]
+ORE_BATCH = 25
+
 
 @dataclass
 class Job:
@@ -286,6 +301,23 @@ def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
                 jobs.append(Job("돌부터 캐서 화로를 만들겠습니다.", key="furnace",
                                 steps=[("mine", {**spot, "count": 5})]))
 
+    # A lab is the gate to everything past the trigger technologies, and
+    # crafting one is itself what unlocks the red science pack recipe.
+    if snap.knows("electronics") and snap.knows("steam-power"):
+        if snap.have("lab") < 1 and not snap.building("lab"):
+            if snap.can_make("lab"):
+                jobs.append(Job("랩을 제작합니다.", key="craft:lab",
+                                steps=[("craft", {"recipe": "lab", "count": 1})]))
+            elif snap.can_make("electronic-circuit", 10):
+                jobs.append(Job("랩에 쓸 전자회로를 만듭니다.", key="craft:circuit",
+                                steps=[("craft", {"recipe": "electronic-circuit", "count": 10})]))
+        elif snap.have("lab") >= 1 and not snap.building("lab"):
+            jobs.append(Job("랩을 설치합니다.", key="build:lab", steps=[
+                ("build", {"name": "lab", "x": snap.x + 4, "y": snap.y - 4, "snap": True})
+            ]))
+        elif snap.building("lab") and not snap.building("steam-engine"):
+            jobs.append(Job("랩을 돌리려면 전력이 필요합니다.", key="power", routine="power"))
+
     # --- feed the smelting loop ------------------------------------------
     if snap.have("coal") < FURNACE_FUEL:
         spot = snap.ore("coal")
@@ -326,6 +358,29 @@ def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
             jobs.append(Job("채굴기를 만들려면 돌이 더 필요합니다.", key="gather:stone",
                             steps=[("mine", {**spot, "count": 10})]))
 
+    # --- climb the tech tree ---------------------------------------------
+    # This is what "there is nothing to do" used to mean: stockpiling ore
+    # forever while every machine stayed locked behind research nobody started.
+    for tech, ore, plate in SMELT_FOR_TECH:
+        if snap.knows(tech):
+            continue
+        if snap.have(ore) < ORE_BATCH:
+            spot = snap.ore(ore)
+            if spot:
+                jobs.append(Job(f"{tech} 연구를 열려면 {ore}가 필요합니다.",
+                                key=f"gather:{ore}",
+                                steps=[("mine", {**spot, "count": ORE_BATCH,
+                                                 "search_radius": 10,
+                                                 "timeout_ticks": 60 * 60 * 5})]))
+        elif furnace and snap.have("coal") >= FURNACE_FUEL:
+            jobs.append(Job(f"{plate}를 제련합니다. ({tech} 연구가 열립니다)",
+                            key=f"smelt:{plate}", steps=[
+                                ("insert", {"name": "coal", "count": FURNACE_FUEL, **furnace}),
+                                ("insert", {"name": ore, "count": ORE_BATCH, **furnace}),
+                                ("wait", {"ticks": 60 * 45}),
+                                ("take", {"name": plate, "count": ORE_BATCH, **furnace}),
+                            ]))
+
     # --- keep patches stocked, starting with this agent's own ------------
     for ore in [focus] + [o for o in FOCUS_ORDER if o != focus]:
         spot = snap.ore(ore)
@@ -335,7 +390,16 @@ def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
                           "timeout_ticks": 60 * 60 * 5})
             ]))
 
-    return jobs
+    # Two jobs with the same key would be one job as far as the crew is
+    # concerned: claiming the first silently hides the second. Keep the
+    # higher-priority one.
+    unique, seen = [], set()
+    for job in jobs:
+        if job.key in seen:
+            continue
+        seen.add(job.key)
+        unique.append(job)
+    return unique
 
 
 def next_goal(snap: Snapshot, focus: str = "iron-ore",
@@ -383,6 +447,7 @@ class Worker:
     def snapshot(self, radius: int = 200) -> Snapshot:
         world = self.handle.observe(radius=radius)
         inventory = self.handle.inventory()
+        research = self.handle.bridge.research_state()
         humans = world.get("humans") or {}
         mates = world.get("agents") or {}
         return Snapshot(
@@ -395,6 +460,8 @@ class Worker:
             resources=world.get("resources") or {},
             humans=list(humans.values()) if isinstance(humans, dict) else humans,
             mates=list(mates.values()) if isinstance(mates, dict) else mates,
+            researched=research["researched"],
+            researching=research.get("current"),
         )
 
     def block(self, kind: str, seconds: float = BACKOFF_SECONDS) -> None:
@@ -553,22 +620,109 @@ class Crew:
             self.say(f"{item}을(를) 못 만들겠습니다: {exc.task.get('error')}", who=worker.name)
             return False
 
-    def start_automation(self, worker: Worker, ore: str | None) -> bool:
-        """Run the build-out off the main loop; it walks, crafts and builds."""
+    def start_routine(self, worker: Worker, routine: str, ore: str | None = None) -> bool:
+        """Run a long build-out off the main loop; it walks, crafts and builds."""
         if not worker.slot.acquire(blocking=False):
             return False
 
         def run() -> None:
             try:
-                self.automate(worker, ore)
+                if routine == "power":
+                    self.build_power(worker)
+                else:
+                    self.automate(worker, ore)
             except Exception as exc:  # noqa: BLE001
-                print(f"[warn] automate failed: {exc!r}", file=sys.stderr)
-                self.thoughts.put((worker.name, "자동화 중 문제가 생겼습니다.", []))
+                print(f"[warn] {routine} failed: {exc!r}", file=sys.stderr)
+                self.thoughts.put((worker.name, f"{routine} 중 문제가 생겼습니다.", []))
             finally:
                 worker.slot.release()
 
         threading.Thread(target=run, daemon=True).start()
         return True
+
+    def build_power(self, worker: Worker) -> None:
+        """Pump on the shore, boiler behind it, engine behind that, coal in.
+
+        The three have to line up or the pipes never meet, so instead of
+        trusting an offset table this walks outward along the pump's axis and
+        lets the game say where each piece fits.
+        """
+        name = worker.name
+        AXIS = {0: (0, -1), 4: (1, 0), 8: (0, 1), 12: (-1, 0)}   # N, E, S, W
+
+        try:
+            snap = worker.snapshot()
+            if snap.building("steam-engine"):
+                self.say("이미 발전기가 있습니다.", who=name)
+                return
+
+            for part in ("offshore-pump", "boiler", "steam-engine", "small-electric-pole"):
+                if not self.ensure(worker, part):
+                    worker.block("power")
+                    return
+
+            sites = self.bridge.water_sites(snap.x, snap.y, radius=150, wanted=4)
+            if not sites:
+                self.say("주변 150타일 안에 물이 없습니다. 전력은 나중에.", who=name)
+                worker.block("power", 600)
+                return
+
+            for site in sites:
+                step = AXIS.get(site.get("direction", 0), (0, -1))
+                try:
+                    pump = worker.handle.place("offshore-pump", site["x"], site["y"],
+                                               direction=site["direction"], timeout=300)
+                except TaskFailed:
+                    continue
+
+                boiler = None
+                for away in range(2, 7):
+                    try:
+                        boiler = worker.handle.place(
+                            "boiler", pump["x"] + step[0] * away, pump["y"] + step[1] * away,
+                            direction=site["direction"], timeout=180)
+                        break
+                    except TaskFailed:
+                        continue
+                if not boiler:
+                    self.say("보일러를 붙일 자리가 없습니다. 다른 물가를 봅니다.", who=name)
+                    continue
+
+                engine = None
+                for away in range(3, 9):
+                    try:
+                        engine = worker.handle.place(
+                            "steam-engine",
+                            boiler["x"] + step[0] * away, boiler["y"] + step[1] * away,
+                            direction=site["direction"], timeout=180)
+                        break
+                    except TaskFailed:
+                        continue
+                if not engine:
+                    self.say("증기기관 자리가 없습니다.", who=name)
+                    continue
+
+                worker.handle.insert("coal", boiler["x"], boiler["y"], count=20, timeout=180)
+
+                # Did it actually start? A boiler with no water and an engine
+                # with no steam look exactly like a working pair from outside.
+                running = [e for e in self.bridge.inspect(engine["x"], engine["y"], 3)
+                           if e.get("name") == "steam-engine"]
+                energy = running[0].get("energy", 0) if running else 0
+                self.say(f"발전기를 세웠습니다. ({engine['x']:.0f}, {engine['y']:.0f}) "
+                         + ("전력 생산 중입니다." if energy and energy > 0
+                            else "아직 증기가 안 올라왔습니다."), who=name)
+                return
+
+            self.say("쓸 만한 물가를 못 찾았습니다.", who=name)
+            worker.block("power", 300)
+
+        except TaskFailed as exc:
+            worker.block("power")
+            self.say(f"전력 구축 중 막혔습니다: {exc.task.get('error')}", who=name)
+        except RconError as exc:
+            worker.block("power")
+            self.say(f"전력 구축 중 오류: {exc}", who=name)
 
     def automate(self, worker: Worker, ore: str | None) -> None:
         """Drill on the patch, chest where it drops, fuel in the drill."""
@@ -702,7 +856,7 @@ class Crew:
                 [("craft", {"recipe": params["recipe"], "count": params["count"]})])
 
         elif kind == "automate":
-            if not self.start_automation(worker, params.get("ore")):
+            if not self.start_routine(worker, "automate", params.get("ore")):
                 self.say("앞의 작업을 아직 하는 중입니다.", who=name)
 
         elif kind == "report_inventory":
@@ -859,8 +1013,8 @@ class Crew:
             worker.said_idle = False
             self.claim(worker, job.key)
             self.say(job.narration, who=worker.name)
-            if job.routine == "automate":
-                self.start_automation(worker, job.ore)
+            if job.routine:
+                self.start_routine(worker, job.routine, job.ore)
             else:
                 worker.watching = worker.handle.submit_plan(job.steps)
 

@@ -159,6 +159,32 @@ class AIBridge:
     def save_status(self) -> dict:
         return self.call("save_status")
 
+    # -- the tech tree -----------------------------------------------------
+
+    def technology(self, name: str) -> dict:
+        return self.call("technology", name)
+
+    def research(self, name: str) -> dict:
+        return self.call("research", name)
+
+    def research_state(self) -> dict:
+        """Which of the technologies the planner reasons about are in already.
+
+        Only the ones on the path to an assembling machine: asking the game for
+        all 217 every second would be a scan nobody needs.
+        """
+        status = self.call("research_status")
+        done = set()
+        for name in ("electronics", "steam-power", "automation-science-pack", "automation"):
+            if self.call("technology", name).get("researched"):
+                done.add(name)
+        return {"researched": done, "current": status.get("current"),
+                "progress": status.get("progress"), "labs": status.get("labs")}
+
+    def water_sites(self, x: float, y: float, radius: int = 120,
+                    wanted: int = 3) -> list[dict]:
+        return _as_list(self.call("water_sites", x, y, radius, wanted).get("sites"))
+
     # -- the observer seat -------------------------------------------------
 
     def spectate(self, player: str, adopt_as: str | None = None) -> dict:
