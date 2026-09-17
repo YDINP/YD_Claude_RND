@@ -78,6 +78,21 @@ class Snapshot:
         found = self.buildings.get(name)
         return found.get("nearest") if found else None
 
+    def spots(self, name: str) -> list[dict]:
+        """이 종류 건물이 서 있는 자리들, 가까운 순.
+
+        가장 가까운 하나만 알면 화로가 셋이어도 넷이 같은 화로 앞에 줄을
+        선다. 자리가 여럿이면 각자 자기 화로를 집을 수 있다.
+        """
+        found = self.buildings.get(name) or {}
+        spots = found.get("spots")
+        if isinstance(spots, dict):      # Lua 빈 테이블은 {} 로 온다
+            spots = list(spots.values())
+        if spots:
+            return [{"x": p["x"], "y": p["y"]} for p in spots]
+        near = found.get("nearest")
+        return [near] if near else []
+
     def knows(self, technology: str) -> bool:
         return technology in self.researched
 
@@ -147,6 +162,33 @@ def split_target(text: str, names: list[str]) -> tuple[str | None, str]:
             return names[index], stripped[ordinal.end():].strip(" ,:아야!")
 
     return None, stripped
+
+
+def division(kind: str, shares: list[tuple[str, Intent]]) -> str:
+    """무엇을 누구에게 얼마나 줬는지 한 줄로.
+
+    나눴다는 사실이 사람에게 보이지 않으면, 넷이 흩어지는 것과 넷이
+    제각각 노는 것을 구별할 수 없다.
+    """
+    parts = []
+    for name, (_, params) in shares:
+        count = params.get("count")
+        what = params.get("name") or params.get("recipe") or ""
+        label = " ".join(bit for bit in (what, f"{count}개" if count else "") if bit)
+        parts.append(f"{name}: {label}" if label else name)
+    return f"{kind} 배분 — " + ", ".join(parts)
+
+
+def by_distance(fleet: list[tuple[str, float, float]],
+                x: float, y: float) -> list[str]:
+    """목표에 가까운 순서. 같은 거리면 이름순이라 결과가 매번 같다.
+
+    순서가 흔들리면 같은 지시에 매번 다른 사람이 가고, 왜 그랬는지 아무도
+    설명할 수 없게 된다.
+    """
+    return [name for name, _ in sorted(
+        (((name, (px - x) ** 2 + (py - y) ** 2)) for name, px, py in fleet),
+        key=lambda pair: (pair[1], pair[0]))]
 
 
 def share(intent: Intent, crew_size: int, index: int) -> Intent:
@@ -278,7 +320,12 @@ class Job:
     needs: dict[str, int] = field(default_factory=dict)
 
 
-def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
+# 한 사람당 화로 하나까지. 화로는 돌 5개라 싸고, 하나를 넷이 나눠 쓰면
+# 셋은 줄을 서서 기다린다 - 초반 제련이 느린 진짜 이유가 이것이다.
+MAX_FURNACES = 4
+
+
+def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     """Everything worth doing right now, best first.
 
     Pure, and deliberately a *list*: the crew hands out different entries to
@@ -286,7 +333,8 @@ def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
     up shoulder to shoulder on the same rock.
     """
     jobs: list[Job] = []
-    furnace = snap.building("stone-furnace")
+    furnaces = snap.spots("stone-furnace")
+    furnace = furnaces[0] if furnaces else None
     drills = snap.buildings.get(DRILL, {}).get("count", 0)
 
     # --- infrastructure the whole crew shares ----------------------------
@@ -305,6 +353,21 @@ def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
             if spot:
                 jobs.append(Job("돌부터 캐서 화로를 만들겠습니다.", key="furnace",
                                 steps=[("mine", {**spot, "count": 5})]))
+
+    # 사람 수만큼 화로를 세운다. 줄을 서는 시간이 곧 손해다.
+    want = min(crew, MAX_FURNACES)
+    if furnace and len(furnaces) < want:
+        nth = len(furnaces)
+        if snap.have("stone-furnace") >= 1:
+            jobs.append(Job(f"화로를 하나 더 놓겠습니다 ({nth + 1}번째).",
+                            key=f"furnace:{nth}", steps=[
+                                ("build", {"name": "stone-furnace",
+                                           "x": furnace["x"] + 3 * (nth + 1),
+                                           "y": furnace["y"], "snap": True})]))
+        elif snap.can_make("stone-furnace"):
+            jobs.append(Job("화로를 하나 더 만들겠습니다.", key=f"furnace:{nth}",
+                            needs={"stone": 5},
+                            steps=[("craft", {"recipe": "stone-furnace", "count": 1})]))
 
     # A lab is the gate to everything past the trigger technologies, and
     # crafting one is itself what unlocks the red science pack recipe.
@@ -336,18 +399,20 @@ def plan(snap: Snapshot, focus: str = "iron-ore") -> list[Job]:
             if spot:
                 jobs.append(Job("철광석 캐러 갑니다.", key="gather:iron-ore",
                                 steps=[("mine", {**spot, "count": SMELT_BATCH})]))
-        elif furnace:
+        else:
             # Keyed by the furnace, not by the agent: two agents stuffing one
-            # furnace and both waiting for its output is not teamwork.
-            jobs.append(Job("화로에 석탄과 철광석을 넣고 제련합니다.",
-                            key=f"smelt:{furnace['x']:.0f},{furnace['y']:.0f}",
-                            needs={"coal": FURNACE_FUEL, "iron-ore": SMELT_BATCH},
-                            steps=[
-                                ("insert", {"name": "coal", "count": FURNACE_FUEL, **furnace}),
-                                ("insert", {"name": "iron-ore", "count": SMELT_BATCH, **furnace}),
-                                ("wait", {"ticks": 60 * 40}),
-                                ("take", {"name": "iron-plate", "count": SMELT_BATCH, **furnace}),
-                            ]))
+            # furnace and both waiting for its output is not teamwork. 화로가
+            # 여럿이면 일도 여럿이라, 각자 빈 화로를 집어간다.
+            for spot in furnaces:
+                jobs.append(Job("화로에 석탄과 철광석을 넣고 제련합니다.",
+                                key=f"smelt:{spot['x']:.0f},{spot['y']:.0f}",
+                                needs={"coal": FURNACE_FUEL, "iron-ore": SMELT_BATCH},
+                                steps=[
+                                    ("insert", {"name": "coal", "count": FURNACE_FUEL, **spot}),
+                                    ("insert", {"name": "iron-ore", "count": SMELT_BATCH, **spot}),
+                                    ("wait", {"ticks": 60 * 40}),
+                                    ("take", {"name": "iron-plate", "count": SMELT_BATCH, **spot}),
+                                ]))
 
     # --- mechanise: a drill beats hands ----------------------------------
     # A drill costs iron *and* stone (through the furnace in its recipe). Asking
@@ -439,14 +504,15 @@ def missing_item(kind: str, error: str, params: dict | None = None) -> str | Non
 
 def next_goal(snap: Snapshot, focus: str = "iron-ore",
               blocked: frozenset[str] = frozenset(),
-              taken: frozenset[str] = frozenset()) -> Job | None:
+              taken: frozenset[str] = frozenset(),
+              crew: int = 1) -> Job | None:
     """The best job this agent may take.
 
     `blocked` is what has just failed for it - re-proposing that is how one
     unreachable furnace fills the chat with the same line forever. `taken` is
     what the rest of the crew is already doing.
     """
-    for job in plan(snap, focus):
+    for job in plan(snap, focus, crew):
         if job.key in taken:
             continue
         # Failures are recorded by task type ("mine", "insert", ...) as well as
@@ -521,6 +587,12 @@ class Crew:
         self.since_tick: int | None = None
         self.workers: dict[str, Worker] = {}
         self.thoughts: queue.Queue[tuple[str, str, list[Step]]] = queue.Queue()
+        # 반장이 나눠준 결과가 여기로 온다. LLM 호출은 6초쯤 걸려서 채팅을
+        # 읽는 루프를 멈춰 세울 수 없다.
+        self.orders: queue.Queue[tuple[str, list]] = queue.Queue()
+        # 반장은 한 번에 한 지시만 나눈다. 두 지시가 겹쳐 들어오면 뒤엣것이
+        # 앞엣것의 배정을 지워버린다.
+        self.chief = threading.Semaphore(1)
         # job key -> agent holding it. This is the whole of the orchestration:
         # nobody may start work someone else has already taken.
         self.claims: dict[str, str] = {}
@@ -605,6 +677,14 @@ class Crew:
             self.claims.pop(worker.job_key, None)
             worker.job_key = None
 
+    def seat(self, worker: Worker) -> tuple[float, float]:
+        """이 캐릭터가 지금 서 있는 곳. 못 물어보면 원점으로 친다."""
+        try:
+            pos = worker.handle.observe(radius=1).get("position") or {}
+        except RconError:
+            return (0.0, 0.0)
+        return (pos.get("x", 0.0), pos.get("y", 0.0))
+
     def targets(self, target: str | None) -> list[Worker]:
         """Who carries out an order.
 
@@ -637,6 +717,93 @@ class Crew:
                 worker.slot.release()
 
         threading.Thread(target=think, daemon=True).start()
+
+    def delegate(self, message: str, speaker: str) -> None:
+        """지시 하나를 보고 캐릭터들에게 나눠준다.
+
+        예전에는 알아듣지 못한 문장을 한 명에게만 물어봤다. 그 한 명이
+        혼자 걸어가 일하고 나머지 셋은 서 있었다. 이제는 무리 전체를 한 장에
+        적어 보내고, 겹치지 않게 쪼갠 배정을 받는다.
+        """
+        if not self.use_llm or not self.workers:
+            return
+        if not self.chief.acquire(blocking=False):
+            self.say("앞의 지시를 아직 나누는 중입니다. 잠시만요.")
+            return
+
+        # 나누는 데 6초쯤 걸린다. 그동안 아무 말이 없으면 사람은 무시당한
+        # 줄 안다. 받았다는 말이 먼저고, 어떻게 나눴는지는 정해지면 말한다.
+        self.say(f"{speaker}님 말씀 받았습니다. 누가 뭘 할지 정해서 알려드리겠습니다.")
+
+        fleet: list[dict] = []
+        view: Snapshot | None = None
+        for worker in self.workers.values():
+            try:
+                snap = worker.snapshot()
+                busy = worker.handle.busy()
+            except RconError:
+                continue
+            view = view or snap
+            self.stock[worker.name] = dict(snap.items)
+            fleet.append({
+                "name": worker.name, "x": snap.x, "y": snap.y,
+                "focus": worker.focus, "items": snap.items,
+                "doing": (worker.job_key or "작업 중") if busy else "",
+            })
+
+        if not fleet or view is None:
+            self.chief.release()
+            return
+
+        def think() -> None:
+            try:
+                answer = brain.delegate(message, view, fleet)
+                if answer is None:
+                    self.orders.put(("무슨 말인지 모르겠습니다.", []))
+                else:
+                    self.orders.put(answer)
+            except Exception as exc:  # noqa: BLE001 - a dead thread must still answer
+                print(f"[warn] delegate failed: {exc!r}", file=sys.stderr)
+                self.orders.put(("지시를 나누다 문제가 생겼습니다.", []))
+            finally:
+                self.chief.release()
+
+        threading.Thread(target=think, daemon=True).start()
+
+    def collect_orders(self) -> None:
+        """나눠진 배정을 실제로 꽂는다.
+
+        취소가 먼저다. 하던 일을 남겨두고 새 일을 큐에 얹으면, 사람이 방금
+        시킨 것이 앞의 일이 끝난 뒤에야 시작된다.
+        """
+        while True:
+            try:
+                plan, assignments = self.orders.get_nowait()
+            except queue.Empty:
+                return
+            if plan:
+                self.say(plan)
+            for name, say, steps in assignments:
+                worker = self.workers.get(name)
+                if not worker:
+                    continue
+                try:
+                    worker.handle.cancel()
+                except RconError:
+                    pass
+                worker.watching = []
+                worker.errand = None
+                self.board.release(name)
+                self.release(worker)
+                worker.said_idle = False
+                if say:
+                    self.say(say, who=name)
+                if not steps:
+                    continue
+                try:
+                    worker.watching = worker.handle.submit_plan(steps)
+                except RconError as exc:
+                    self.say(f"그건 못 하겠습니다: {exc}", who=name)
 
     def collect_thoughts(self) -> None:
         while True:
@@ -1138,6 +1305,7 @@ class Crew:
 
     def tick(self) -> None:
         self.collect_thoughts()
+        self.collect_orders()
         for worker in self.workers.values():
             self.check_errand(worker)
         self.report_finished()
@@ -1157,26 +1325,39 @@ class Crew:
             intents = parse(rest)
 
             if not intents:
-                # Free-form text goes to one agent, not the whole crew: each
-                # call costs a Claude round trip, and N of them would answer the
-                # same sentence N times.
-                if self.use_llm:
-                    crew = self.targets(target)
-                    if crew:
-                        spokesman = crew[0]
-                        self.ask_llm(spokesman, rest, spokesman.snapshot())
+                # 알아듣지 못한 문장은 반장에게 간다. 지목된 사람이 있으면
+                # 그 사람에게만 묻는다 - 둘이 대화 중인데 넷이 답하면
+                # 사람이 자기가 무엇을 시켰는지 알 수 없다.
+                if target and target != ALL and target in self.workers:
+                    one = self.workers[target]
+                    self.ask_llm(one, rest, one.snapshot())
+                else:
+                    self.delegate(rest, speaker)
                 continue
 
             for intent in intents:
                 if self.handle_crew(intent, speaker, target):
                     continue
                 crew = self.targets(target)
+                # 가까운 사람에게 가까운 일을 준다. 목표 좌표가 있는 지시면
+                # 거리순으로 세워놓고 나누므로, 지도 반대편 사람이 바로 옆
+                # 사람을 지나쳐 같은 광맥까지 걸어가는 일이 없어진다.
+                if len(crew) > 1 and "x" in intent[1] and "y" in intent[1]:
+                    order = by_distance(
+                        [(w.name, *self.seat(w)) for w in crew],
+                        intent[1]["x"], intent[1]["y"])
+                    crew.sort(key=lambda w: order.index(w.name))
                 # An explicit order always wins over what an agent chose to do.
+                shares = []
                 for index, worker in enumerate(crew):
                     worker.handle.cancel()
                     worker.watching = []
                     self.release(worker)
-                    self.handle(worker, share(intent, len(crew), index), speaker)
+                    piece = share(intent, len(crew), index)
+                    shares.append((worker.name, piece))
+                    self.handle(worker, piece, speaker)
+                if len(shares) > 1:
+                    self.say(division(intent[0], shares))
 
         if messages:
             return
@@ -1201,7 +1382,8 @@ class Crew:
             self.announce_stage(snap)
 
             self.release(worker)
-            job = next_goal(snap, worker.focus, worker.blocked_now(), self.taken())
+            job = next_goal(snap, worker.focus, worker.blocked_now(), self.taken(),
+                            crew=len(self.workers))
 
             # 부탁이 내 일보다 먼저다. 이미 쥔 걸 건네주는 건 걸어가기만
             # 하면 되고, 기다리는 쪽은 그동안 아무것도 못 한다.

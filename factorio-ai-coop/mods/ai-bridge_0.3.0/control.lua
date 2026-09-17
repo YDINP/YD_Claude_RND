@@ -20,6 +20,9 @@ local RESULT_HISTORY = 128     -- completed tasks kept for polling, all agents
 local DEFAULT_TIMEOUT = 7200   -- ticks (2 minutes) before a task is abandoned
 local MAX_QUEUE = 64           -- per agent; refuse work rather than grow forever
 local MAX_AGENTS = 8
+-- 건물 하나당 돌려주는 좌표 개수. 한 종류에 수백 개가 되는 벨트까지 전부
+-- 실어보내면 한 번의 observe가 RCON 한 프레임을 통째로 먹는다.
+local MAX_SPOTS = 8
 local MAX_OBSERVE_RADIUS = 200 -- one observe runs inside a single tick
 local PATH_ANSWER_TTL = 1800   -- ticks an uncollected path answer may linger
 local CHAT_HISTORY = 50
@@ -473,7 +476,7 @@ local function observe(name, opts)
     if e.type ~= "character" and e.type ~= "resource" then
       local entry = buildings[e.name]
       if not entry then
-        entry = { count = 0, nearest = nil, nearest_dist = math.huge }
+        entry = { count = 0, nearest = nil, nearest_dist = math.huge, spots = {} }
         buildings[e.name] = entry
       end
       entry.count = entry.count + 1
@@ -482,10 +485,18 @@ local function observe(name, opts)
         entry.nearest_dist = d
         entry.nearest = { x = e.position.x, y = e.position.y }
       end
+      if #entry.spots < MAX_SPOTS then
+        entry.spots[#entry.spots + 1] = {
+          x = e.position.x, y = e.position.y,
+          distance = math.floor(d * 10) / 10,
+        }
+      end
     end
   end
   for _, entry in pairs(buildings) do
     entry.nearest_dist = math.floor(entry.nearest_dist * 10) / 10
+    -- 가까운 순으로. 그래야 «내 몫의 화로»를 거리순 자리로 고를 수 있다.
+    table.sort(entry.spots, function(p, q) return p.distance < q.distance end)
   end
 
   local hostiles = #surface.find_entities_filtered {

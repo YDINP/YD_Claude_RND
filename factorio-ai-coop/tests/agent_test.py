@@ -9,8 +9,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 import brain  # noqa: E402
 import mission  # noqa: E402
-from agent import (ALL, FOCUS_ORDER, Job, Snapshot, missing_item,  # noqa: E402
-                   next_goal, parse, plan, share, split_target)
+from agent import (ALL, FOCUS_ORDER, Job, Snapshot, by_distance,  # noqa: E402
+                   division, missing_item, next_goal, parse, plan, share,
+                   split_target)
 
 PASSED: list[str] = []
 FAILED: list[str] = []
@@ -412,6 +413,74 @@ def main() -> int:
     board2.take(board2.requests[0], "bravo", now=0.0)
     board2.release("bravo")
     check("a fired courier releases what it held", board2.requests[0].open)
+
+
+    print("\n10. the crew does not queue at one furnace")
+
+    def furnaces(*positions):
+        return {"stone-furnace": {
+            "count": len(positions),
+            "nearest": {"x": positions[0][0], "y": positions[0][1]},
+            "nearest_dist": 3,
+            "spots": [{"x": x, "y": y, "distance": 3} for x, y in positions]}}
+
+    def stocked(buildings):
+        return Snapshot(tick=0, x=0.0, y=0.0,
+                        items={"coal": 30, "iron-ore": 40},
+                        craftable={}, buildings=buildings,
+                        resources={"stone": {"nearest": {"x": 10, "y": 0},
+                                             "nearest_dist": 10, "tiles": 50}},
+                        researched={"electronics", "steam-power",
+                                    "automation-science-pack", "automation"})
+
+    two = stocked(furnaces((5, 5), (8, 5)))
+    smelts = [j.key for j in plan(two, crew=2) if j.key.startswith("smelt:")]
+    check("one smelting job per furnace", len(smelts) == 2, str(smelts))
+    check("and they are different jobs", len(set(smelts)) == 2)
+
+    first = next_goal(two, crew=2)
+    second = next_goal(two, "coal", taken=frozenset({first.key}), crew=2)
+    check("two agents get two furnaces",
+          first.key != second.key and second.key.startswith("smelt:"),
+          f"{first.key} / {second.key}")
+
+    one = stocked(furnaces((5, 5)))
+
+    # 돌이 손에 있어야 화로를 더 놓을 수 있다. 없으면 계획은 돌부터 캐라고
+    # 말하지, 못 만들 화로를 약속하지 않는다.
+    with_stone = Snapshot(**{**vars(one), "items": {**one.items, "stone-furnace": 2}})
+    keys = [j.key for j in plan(with_stone, crew=4)]
+    check("a lone furnace for four means building more",
+          any(k.startswith("furnace:") for k in keys), str(keys[:4]))
+    check("a lone furnace for one is enough",
+          not any(j.key.startswith("furnace:") for j in plan(with_stone, crew=1)))
+    check("no stone, no promises",
+          not any(j.key.startswith("furnace:") for j in plan(one, crew=4)))
+
+    check("older observations still work",
+          stocked({"stone-furnace": {"count": 1, "nearest": {"x": 2, "y": 2},
+                                     "nearest_dist": 3}}).spots("stone-furnace")
+          == [{"x": 2, "y": 2}])
+    check("nothing built, nothing to pick", one.spots("lab") == [])
+
+    print("\n11. the nearest agent goes")
+    crew_at = [("alpha", 0.0, 0.0), ("bravo", 50.0, 0.0), ("charlie", 10.0, 0.0)]
+    check("closest first", by_distance(crew_at, 12.0, 0.0)
+          == ["charlie", "alpha", "bravo"])
+    check("a tie is broken by name, so it is repeatable",
+          by_distance([("bravo", 0.0, 0.0), ("alpha", 0.0, 0.0)], 5.0, 0.0)
+          == ["alpha", "bravo"])
+    check("far side of the map goes last",
+          by_distance(crew_at, 0.0, 0.0)[-1] == "bravo")
+
+    print("\n12. the crew chief says how it split the work")
+    line = division("mine", [("alpha", ("mine", {"name": "iron-ore", "count": 15})),
+                             ("bravo", ("mine", {"name": "iron-ore", "count": 15}))])
+    check("names and amounts are in the line",
+          "alpha" in line and "bravo" in line and "15" in line, line)
+    check("it says what the work was", line.startswith("mine"), line)
+    check("no count is not a crash",
+          "alpha" in division("craft", [("alpha", ("craft", {"recipe": "lab"}))]))
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
