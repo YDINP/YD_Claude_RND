@@ -978,11 +978,13 @@ end
 -- 정확한 좌표를 돌려준다. 하나라도 안 들어가면 통째로 버린다 - 반쯤 지어진
 -- 발전소는 안 지은 것보다 나쁘다.
 local function try_power_site(surface, force, site, engines)
+  local temporary = {}
   local pump = surface.create_entity {
     name = "offshore-pump", position = { site.x, site.y },
     direction = site.direction, force = force, raise_built = false,
   }
   if not pump then return nil end
+  temporary[#temporary + 1] = pump
 
   local out = outward(pump)
   if not out then pump.destroy() return nil end
@@ -1006,11 +1008,15 @@ local function try_power_site(surface, force, site, engines)
         name = "boiler", position = at, direction = facing, force = force,
         raise_built = false,
       }
+      temporary[#temporary + 1] = boiler
       gap = away - 1
       break
     end
   end
-  if not boiler then return nil end
+  if not boiler then
+    for _, e in pairs(temporary) do if e.valid then e.destroy() end end
+    return nil
+  end
   plan.boiler = { x = boiler.position.x, y = boiler.position.y, direction = facing }
 
   -- 펌프와 보일러 사이의 빈 칸은 파이프로 잇는다.
@@ -1033,6 +1039,7 @@ local function try_power_site(surface, force, site, engines)
           name = "steam-engine", position = at, direction = facing, force = force,
           raise_built = false,
         }
+        temporary[#temporary + 1] = placed
         break
       end
     end
@@ -1056,17 +1063,11 @@ local function try_power_site(surface, force, site, engines)
     connected = ok and same
   end
 
-  -- 임시로 세운 것들을 전부 지운다.
-  for _, e in pairs(surface.find_entities_filtered {
-    area = {
-      { math.min(plan.pump.x, anchor.position.x) - 6,
-        math.min(plan.pump.y, anchor.position.y) - 6 },
-      { math.max(plan.pump.x, anchor.position.x) + 6,
-        math.max(plan.pump.y, anchor.position.y) + 6 },
-    },
-    name = { "boiler", "steam-engine" }, force = force,
-  }) do
-    e.destroy()
+  -- 임시로 세운 것만 지운다. 범위로 쓸어 담으면 «계획을 세우려고 들여다본
+  -- 김에 이미 돌아가던 발전소를 부수는» 일이 벌어진다 - 실제로 기관 두
+  -- 대가 그렇게 사라졌다. 내가 만든 것만 손댄다.
+  for _, e in pairs(temporary) do
+    if e.valid then e.destroy() end
   end
 
   if not ok_all then return nil end
