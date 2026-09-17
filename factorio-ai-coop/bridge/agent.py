@@ -133,6 +133,28 @@ def split_target(text: str, names: list[str]) -> tuple[str | None, str]:
     return None, stripped
 
 
+def share(intent: Intent, crew_size: int, index: int) -> Intent:
+    """One agent's share of an order given to several.
+
+    "철 30개 캐와" to three agents means thirty ore in total, not ninety, so the
+    count is divided and the remainder handed to the first few. Mining targets
+    are also nudged apart, or all of them walk onto the same tile and shuffle.
+    """
+    kind, params = intent
+    if crew_size <= 1 or "count" not in params:
+        return intent
+
+    base, extra = divmod(params["count"], crew_size)
+    portion = base + (1 if index < extra else 0)
+    if portion < 1:
+        portion = 1
+
+    shared = {**params, "count": portion}
+    if kind == "mine":
+        shared["spread"] = index
+    return kind, shared
+
+
 def parse(message: str) -> list[Intent]:
     """Turn one chat line into intents. Unknown lines produce nothing."""
     text = message.strip().lower()
@@ -336,21 +358,16 @@ class Crew:
         print(f"[{who}] {text}")
         self.bridge.say(text, who=who)
 
-    def targets(self, target: str | None, prefer_idle: bool = True) -> list[Worker]:
-        if target == ALL:
-            return list(self.workers.values())
-        if target and target in self.workers:
+    def targets(self, target: str | None) -> list[Worker]:
+        """Who carries out an order.
+
+        An unaddressed order goes to the whole crew. Having hired several
+        agents, watching one of them walk off alone is not what anybody meant;
+        naming one is how you ask for that.
+        """
+        if target and target != ALL and target in self.workers:
             return [self.workers[target]]
-        if not self.workers:
-            return []
-        if prefer_idle:
-            for worker in self.workers.values():
-                try:
-                    if not worker.handle.busy():
-                        return [worker]
-                except RconError:
-                    continue
-        return [next(iter(self.workers.values()))]
+        return list(self.workers.values())
 
     # -- the slow brain ---------------------------------------------------
 
@@ -496,10 +513,16 @@ class Crew:
             if not spot:
                 self.say(f"{params['ore']} 광맥이 주변 200타일 안에 안 보입니다.", who=name)
                 return
+            # Stand a few tiles apart inside the patch; the task widens its own
+            # search so the offset does not have to land on ore exactly.
+            spread = params.get("spread", 0) * 3
             self.say(f"{params['ore']} {params['count']}개 캐러 갑니다. "
                      f"({spot['x']:.0f}, {spot['y']:.0f})", who=name)
-            worker.watching = handle.submit_plan(
-                [("mine", {**spot, "count": params["count"], "timeout_ticks": 60 * 60 * 5})])
+            worker.watching = handle.submit_plan([("mine", {
+                "x": spot["x"] + spread, "y": spot["y"],
+                "count": params["count"], "search_radius": 10,
+                "timeout_ticks": 60 * 60 * 5,
+            })])
 
         elif kind == "place":
             entity, count = params["entity"], params["count"]
@@ -633,19 +656,25 @@ class Crew:
             intents = parse(rest)
 
             if not intents:
+                # Free-form text goes to one agent, not the whole crew: each
+                # call costs a Claude round trip, and N of them would answer the
+                # same sentence N times.
                 if self.use_llm:
-                    for worker in self.targets(target):
-                        self.ask_llm(worker, rest, worker.snapshot())
+                    crew = self.targets(target)
+                    if crew:
+                        spokesman = crew[0]
+                        self.ask_llm(spokesman, rest, spokesman.snapshot())
                 continue
 
             for intent in intents:
                 if self.handle_crew(intent, speaker, target):
                     continue
+                crew = self.targets(target)
                 # An explicit order always wins over what an agent chose to do.
-                for worker in self.targets(target):
+                for index, worker in enumerate(crew):
                     worker.handle.cancel()
                     worker.watching = []
-                    self.handle(worker, intent, speaker)
+                    self.handle(worker, share(intent, len(crew), index), speaker)
 
         if messages:
             return

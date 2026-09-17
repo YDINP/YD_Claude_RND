@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 import brain  # noqa: E402
-from agent import ALL, Snapshot, next_goal, parse, split_target  # noqa: E402
+from agent import ALL, Snapshot, next_goal, parse, share, split_target  # noqa: E402
 
 PASSED: list[str] = []
 FAILED: list[str] = []
@@ -86,6 +86,26 @@ def main() -> int:
         got_kind = got[0][0] if got else None
         ok = target == want_target and got_kind == want_kind
         check(f"{text!r} -> {want_target}/{want_kind}", ok, f"got {target}/{got_kind}")
+
+    print("\n1d. an order given to the crew is divided, not multiplied")
+    order = ("mine", {"ore": "coal", "count": 30})
+    portions = [share(order, 3, i)[1]["count"] for i in range(3)]
+    check("30 across 3 is 10 each", portions == [10, 10, 10], str(portions))
+
+    uneven = [share(("mine", {"ore": "coal", "count": 10}), 3, i)[1]["count"] for i in range(3)]
+    check("remainder goes to the first", uneven == [4, 3, 3], str(uneven))
+    check("total is what was asked", sum(uneven) == 10)
+
+    tiny = [share(("mine", {"ore": "coal", "count": 2}), 3, i)[1]["count"] for i in range(3)]
+    check("nobody is given zero", all(c >= 1 for c in tiny), str(tiny))
+
+    spreads = [share(order, 3, i)[1]["spread"] for i in range(3)]
+    check("miners stand apart", spreads == [0, 1, 2], str(spreads))
+
+    check("a lone agent keeps the whole order",
+          share(order, 1, 0)[1]["count"] == 30)
+    check("countless intents pass through unchanged",
+          share(("come", {}), 3, 1) == ("come", {}))
 
     print("\n2. counts")
     check("digits win", params("철 37개 캐와").get("count") == 37)
