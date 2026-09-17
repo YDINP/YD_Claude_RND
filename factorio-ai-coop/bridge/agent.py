@@ -29,6 +29,7 @@ import queue
 import sys
 import threading
 import time
+from itertools import zip_longest
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -158,6 +159,20 @@ CHEST_REACH = 2.5
 # 붙들려 있고, 너무 작게 묶으면 같은 구역을 여러 번 왕복한다.
 CLUSTER_REACH = 14
 CLUSTER_MAX = 6
+
+
+def interleave(groups: list[list]) -> list:
+    """종류별 목록을 돌아가며 하나씩 뽑아 한 줄로 만든다.
+
+    한 종류가 목록을 다 차지하면 나머지는 영영 차례가 오지 않는다. 실제로
+    연료 보급 일감이 스물다섯 개 쌓여서, 창고 입고와 화로 거두기가 한 번도
+    배차되지 않았다. 급한 순서는 종류 안에서 지키고, 종류끼리는 번갈아
+    가져간다.
+    """
+    out = []
+    for row in zip_longest(*groups):
+        out.extend(item for item in row if item is not None)
+    return out
 
 
 def cluster(points: list[dict], reach: float = CLUSTER_REACH,
@@ -1457,6 +1472,10 @@ class Crew:
         여기서는 한 번 훑어서 «할 수 있는 일 전부»를 목록으로 만든다.
         목록이 사람보다 길면 아무도 놀지 않는다.
         """
+        refuel: list[Job] = []
+        unload: list[Job] = []
+        gather: list[Job] = []
+        unblock: list[Job] = []
         jobs: list[Job] = []
 
         # 창고가 먼저다. 물자가 각자 가방에 갇혀 있는 한 나머지 일감은
@@ -1495,10 +1514,10 @@ class Crew:
                                          "x": machine["x"], "y": machine["y"]}))
             where = (f"({head['x']:.0f}, {head['y']:.0f})" if len(group) == 1
                      else f"({head['x']:.0f}, {head['y']:.0f}) 일대 {len(group)}대")
-            jobs.append(Job(f"{where}에 석탄을 넣겠습니다.",
-                            key=key, steps=steps,
-                            needs={} if source else {"coal": wanted},
-                            at=at))
+            refuel.append(Job(f"{where}에 석탄을 넣겠습니다.",
+                              key=key, steps=steps,
+                              needs={} if source else {"coal": wanted},
+                              at=at))
 
         # 2. 다 녹아서 화로를 막고 있는 것들. 화로마다 따로 걷는다.
         # 2. 가방이 넘치는 사람은 공용 창고에 부린다. 물자가 한 사람의
@@ -1512,13 +1531,13 @@ class Crew:
                 continue
             job = self.depot_job(self.workers[mate], mate_snap)
             if job and job.key != "depot:build":
-                jobs.append(job)
+                unload.append(job)
 
         for group in cluster([e for e in stock
                               if int(e.get("count") or 0) >= HARVEST_MIN]):
             head = group[0]
             total = sum(int(e.get("count") or 0) for e in group)
-            jobs.append(Job(
+            gather.append(Job(
                 f"화로 {len(group)}대에서 {total}개를 거둬오겠습니다. "
                 f"({head['x']:.0f}, {head['y']:.0f})",
                 key=f"harvest:{head['x']:.0f},{head['y']:.0f}",
@@ -1531,12 +1550,15 @@ class Crew:
             if entry.get("fix") != "chest":
                 continue
             at = {"x": entry["x"], "y": entry["y"]}
-            jobs.append(Job(
+            unblock.append(Job(
                 f"채굴기 출구가 막혔습니다. ({entry['x']:.0f}, {entry['y']:.0f})",
                 key=f"tend:{entry['x']:.0f},{entry['y']:.0f}",
                 routine="rescue", at=at))
 
-        return jobs
+        # 한 종류가 목록을 다 차지하면 나머지는 차례가 오지 않는다. 연료
+        # 보급만 스물다섯 개 쌓여서 창고 입고와 거두기가 한 번도 배차되지
+        # 않았다. 창고 짓기만 맨 앞에 두고, 나머지는 번갈아 나눠준다.
+        return jobs + interleave([refuel, unload, gather, unblock])
 
     def dispatch(self, free: list[tuple[Worker, Snapshot]]) -> set[str]:
         """만든 일감을 가까운 사람에게 나눠준다. 배차된 사람 이름을 돌려준다.

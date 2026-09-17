@@ -10,7 +10,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 import brain  # noqa: E402
 import mission  # noqa: E402
 from agent import (FOCUS_ORDER, STAGE_TARGET, Crew, Job,  # noqa: E402
-                   Snapshot, chain_job, cluster, missing_item, next_goal, plan)
+                   Snapshot, chain_job, cluster, interleave, missing_item,
+                   next_goal, plan)
 
 # 반장이 내릴 수 있다고 적어둔 명령은 전부 실제로 처리되는 것이어야 한다.
 # 표에만 있고 처리기가 없는 명령은 조용히 무시되고, 왜 안 먹는지 아무도
@@ -582,6 +583,19 @@ def main() -> int:
               [{"x": i, "y": 0} for i in range(10)], reach=50, cap=3)))
     check("nothing to do, nothing to group", cluster([]) == [])
     check("one machine is still a trip", len(cluster([{"x": 5, "y": 5}])) == 1)
+
+    print("\n15. one kind of work cannot crowd out the rest")
+    many = ["fuel%d" % i for i in range(25)]
+    check("every kind gets a turn near the front",
+          interleave([many, ["unload"], ["gather"], []])[:4]
+          == ["fuel0", "unload", "gather", "fuel1"],
+          str(interleave([many, ["unload"], ["gather"], []])[:4]))
+    check("nothing is lost",
+          len(interleave([many, ["unload"], ["gather"]])) == 27)
+    check("order inside a kind is kept",
+          [j for j in interleave([many, ["x"]]) if j.startswith("fuel")] == many)
+    check("empty lists are harmless", interleave([[], [], []]) == [])
+    check("a single kind passes through", interleave([["a", "b"]]) == ["a", "b"])
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
