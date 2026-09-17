@@ -215,13 +215,59 @@ class Board:
             if req.helper == helper:
                 req.helper = None
 
+    # -- 한 사람의 부탁인가, 모두의 부족인가 -------------------------------
+
+    def demand(self) -> dict[str, tuple[int, int]]:
+        """품목별로 «몇 개가, 몇 사람에게» 모자란지.
+
+        여섯이 저마다 석탄을 부탁하고 있으면 그건 부탁이 아니다. 아무도 석탄이
+        없다는 뜻이고, 없는 사람끼리 주고받아 봐야 아무것도 안 채워진다.
+        부탁 여섯 줄이 게시판에 걸린 채 굳어 있던 이유가 이것이다.
+        """
+        out: dict[str, tuple[int, int]] = {}
+        for req in self.requests:
+            if req.filled:
+                continue
+            total, voices = out.get(req.item, (0, 0))
+            out[req.item] = (total + req.count, voices + 1)
+        return out
+
+    def drop_item(self, item: str) -> list[str]:
+        """이 품목의 부탁을 전부 내린다. 손으로 나를 일이 아니라고 판단했을 때.
+
+        부른 사람들의 이름을 돌려준다 - 누구에게 «그건 이렇게 해결하겠다»고
+        말해야 하는지가 그 목록이다.
+        """
+        askers = [r.asker for r in self.requests if r.item == item and not r.filled]
+        self.requests = [r for r in self.requests if r.item != item or r.filled]
+        return askers
+
     # -- 보여주기 ---------------------------------------------------------
 
     def summary(self) -> list[str]:
-        lines = []
+        """현황판 한 칸에 들어갈 요약. 같은 품목은 한 줄로 묶는다.
+
+        같은 부탁이 여섯 줄로 늘어서면 현황판이 그 하나로 가득 차서, 정작
+        다른 부족분이 화면 밖으로 밀려난다.
+        """
+        order: list[str] = []
+        rows: dict[str, list[Request]] = {}
         for req in self.requests:
-            who = f"→ {req.helper}" if req.helper else "대기"
-            lines.append(f"{req.asker}: {req.item} x{req.count} ({who})")
+            if req.item not in rows:
+                order.append(req.item)
+                rows[req.item] = []
+            rows[req.item].append(req)
+
+        lines = []
+        for item in order:
+            group = rows[item]
+            total = sum(r.count for r in group)
+            helper = next((r.helper for r in group if r.helper), None)
+            who = f"→ {helper}" if helper else "대기"
+            if len(group) == 1:
+                lines.append(f"{group[0].asker}: {item} x{total} ({who})")
+            else:
+                lines.append(f"{item} x{total} — {len(group)}명이 부탁 ({who})")
         return lines
 
 

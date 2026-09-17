@@ -1274,6 +1274,78 @@ local function threat(name, radius)
   }
 end
 
+-- 전봇대가 기계에 «닿는» 자리를 찾는다.
+--
+-- 실측(2026-09-18): 기관에서 일곱 칸 떨어진 곳에 전봇대를 넷 세워두고도
+-- 전기가 0W 였다. 전선이 7.5칸까지 늘어나는 것은 «전봇대끼리»의 이야기고,
+-- 기계가 전기를 받으려면 기계가 전봇대의 «공급 범위» 안에 들어와야 한다.
+-- 작은 전봇대의 공급 범위는 5x5, 그러니까 중심에서 두 칸 반이다. 기관은
+-- 3x5 라 중심에서 두 칸 반이 더 있다 - 한 걸음이면 이미 늦는다.
+--
+-- 계산으로 맞히는 대신 세워보고 물어본다. 붙었는지 아닌지는 게임이 안다.
+local function wire_spot(name, x, y, pole)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+  pole = pole or "small-electric-pole"
+
+  local surface, force = b.surface, b.force
+  local machine = surface.find_entities_filtered {
+    position = { x, y }, radius = 3, force = force, limit = 8,
+  }
+  local target = nil
+  for _, e in pairs(machine) do
+    if e.type ~= "character" and e.type ~= "item-entity"
+        and e.type ~= "electric-pole" then
+      target = e
+      break
+    end
+  end
+  if not target then
+    return { error = string.format("nothing at %.0f,%.0f", x, y) }
+  end
+
+  -- 이미 붙어 있으면 세울 이유가 없다.
+  if target.electric_network_id ~= nil then
+    return { already = true, x = target.position.x, y = target.position.y }
+  end
+
+  -- 가까운 자리부터 본다. 첫 번째로 붙는 곳이 가장 좋은 곳이고, 그러면
+  -- 임시 전봇대를 백 번 세웠다 지우지 않아도 된다.
+  local order = {}
+  local REACH = 6
+  for dx = -REACH, REACH do
+    for dy = -REACH, REACH do
+      order[#order + 1] = { dx = dx, dy = dy, d = dx * dx + dy * dy }
+    end
+  end
+  table.sort(order, function(p, q) return p.d < q.d end)
+
+  local best, best_d = nil, nil
+  for _, off in ipairs(order) do
+    local at = { x = target.position.x + off.dx, y = target.position.y + off.dy }
+    if surface.can_place_entity { name = pole, position = at, force = force } then
+      local probe = surface.create_entity {
+        name = pole, position = at, force = force, raise_built = false,
+      }
+      if probe then
+        local live = target.electric_network_id ~= nil
+        probe.destroy()
+        if live then
+          best, best_d = at, math.sqrt(off.d)
+          break
+        end
+      end
+    end
+  end
+
+  if not best then
+    return { error = "no spot reaches " .. target.name }
+  end
+  return { x = best.x, y = best.y, machine = target.name,
+           distance = math.floor(best_d * 10) / 10 }
+end
+
 local function power_status(name)
   local a = agent(name)
   local b = body(a)
@@ -2026,6 +2098,9 @@ remote.add_interface("ai", {
 
   -- 전기가 실제로 흐르는가. 서 있는 기관 수가 아니라.
   power_status = power_status,
+
+  -- 전봇대가 이 기계에 실제로 «닿는» 자리.
+  wire_spot = wire_spot,
 
   -- 둥지가 얼마나 가까운지, 대비 수단이 열려 있는지.
   threat = threat,

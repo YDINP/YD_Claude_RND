@@ -270,6 +270,11 @@ class AIBridge:
         """둥지가 얼마나 가까운지, 대비 수단이 열려 있는지."""
         return self.call("threat", agent, radius)
 
+    def wire_spot(self, agent: str, x: float, y: float,
+                  pole: str = "small-electric-pole") -> dict:
+        """이 기계에 전봇대가 실제로 «닿는» 자리. 이미 붙어 있으면 already."""
+        return self.call("wire_spot", agent, x, y, pole)
+
     def power_status(self, agent: str) -> dict:
         """전기가 실제로 흐르는가. 서 있는 기관 수가 아니라."""
         return self.call("power_status", agent)

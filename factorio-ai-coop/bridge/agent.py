@@ -170,6 +170,24 @@ STEP_WORDS = {
 }
 
 
+def blocked_by(answer: dict) -> tuple[str, list[tuple[str, int]]]:
+    """계획이 어디서 막혔는지 «이유 한 마디»와 «모자란 목록»으로 나눈다.
+
+    "못 구했습니다"는 보고가 아니다. 게임은 이미 무엇이 왜 모자란지 세 갈래로
+    나눠서 답해준다 - 땅에서 캐야 하는 것(mine), 연구가 먼저인 것(locked),
+    손으로는 못 만드는 것(blocked). 그 셋을 구분하지 않으면 다음에 무엇을
+    할지도 정할 수 없다. 캘 수 있는 것이면 캐면 되고, 잠긴 것이면 캐봐야
+    소용없다.
+    """
+    for key, why in (("locked", "연구가 먼저입니다"),
+                     ("blocked", "손으로는 못 만듭니다"),
+                     ("mine", "땅에서 캐와야 합니다")):
+        short = {k: int(v) for k, v in (answer.get(key) or {}).items() if v}
+        if short:
+            return why, sorted(short.items())
+    return "이유를 모르겠습니다", []
+
+
 def errand_label(steps: list) -> str:
     """맡긴 일을 사람이 읽을 수 있는 한 줄로 줄인다."""
     parts: list[str] = []
@@ -267,7 +285,10 @@ POLE_REACH = 7
 # 전봇대 한 개는 나무 1 + 구리선 2. 랩 한 대는 전자회로 10 + 기어 10 +
 # 벨트 4 라, 118타일을 잇는 전봇대 열일곱 개가 랩 한 대보다 싸다.
 # 실제로 «랩을 못 만들었습니다»에서 막혀 전력이 서지 못했다.
-MAX_POLE_RUN = 24
+# 이보다 멀면 전선을 끄는 대신 소비하는 쪽을 발전소 옆으로 옮긴다.
+# 118타일에 전봇대 18개는 구리판 18장과 나무 18개다. 랩 하나가 훨씬 싸고,
+# 사람도 그렇게 한다 - 전기는 길게 끌지 않고 공장을 전기 쪽으로 붙인다.
+MAX_POLE_RUN = 8
 
 
 # 버너 드릴 5대가 돌 화로 4대를 채운다. 뒤집으면 화로 4대에 드릴 5대.
@@ -610,6 +631,10 @@ DEPOT_MIN = 20
 # 연료 떨어진 기계가 이만큼이면 «굶고 있다»고 본다. 그럴 때는 광석보다
 # 석탄이 먼저다.
 STARVING = 4
+
+# 같은 것을 이만큼이 부탁하면 그건 부탁이 아니라 부족이다. 없는 사람끼리
+# 주고받아 봐야 아무것도 안 채워진다 - 늘려야 한다.
+SHORTAGE_VOICES = 3
 
 IDLE_ASK_QUIET = 150.0
 # 그럴 때 쓰는 모델. 반장이 지시를 쪼갤 때와는 판단의 무게가 다르고,
@@ -1086,6 +1111,7 @@ class Crew:
         영원히 도는 것보다 실패하는 편이 낫다.
         """
         name = worker.name
+        replanned = False
         for _ in range(rounds):
             if worker.handle.items().get(item, 0) >= count:
                 return True
@@ -1094,6 +1120,8 @@ class Crew:
             except RconError:
                 return False
             if answer.get("error"):
+                self.say(f"{item}을(를) 어떻게 만드는지 모르겠습니다: "
+                         f"{answer['error']}", who=name)
                 return False
 
             steps = _as_rows(answer.get("steps"))
@@ -1104,9 +1132,15 @@ class Crew:
                                         count=int(step.get("count") or 1), timeout=240)
                     continue
                 except TaskFailed as exc:
-                    self.say(f"{step['name']}을(를) 못 만들겠습니다: "
-                             f"{exc.task.get('error')}", who=name)
-                    return False
+                    # 계획은 «된다»고 했는데 실제로는 안 됐다. 그 사이에
+                    # 재료가 창고로 들어갔거나 동료가 가져갔다는 뜻이다.
+                    # 포기하지 않고 지금 상태로 다시 물어본다 - 한 번만.
+                    if replanned:
+                        self.say(f"{step['name']} 제작이 두 번 막혔습니다: "
+                                 f"{exc.task.get('error')}", who=name)
+                        return False
+                    replanned = True
+                    continue
 
             snap = worker.snapshot()
             wanted = answer.get("mine") or {}
@@ -1140,6 +1174,11 @@ class Crew:
                     pass
                 continue
 
+            # 캐러 가기 전에 창고를 먼저 본다. 남이 이미 캐다 넣어둔 것을
+            # 두고 다시 캐는 것만큼 헛된 일이 없다.
+            if self.fetch_from_store(worker, answer):
+                continue
+
             for ore, amount in sorted(wanted.items()):
                 spot = snap.ore(ore)
                 if not spot:
@@ -1152,9 +1191,66 @@ class Crew:
                     return False
                 break
             else:
+                # 캘 자리가 하나도 없다. 여기서 끝내되, 조용히 끝내지 않는다.
+                self.explain_shortfall(worker, item, count, answer)
                 return False
 
-        return worker.handle.items().get(item, 0) >= count
+        got = worker.handle.items().get(item, 0) >= count
+        if not got:
+            self.explain_shortfall(worker, item, count, answer)
+        return got
+
+    def fetch_from_store(self, worker: Worker, answer: dict) -> bool:
+        """계획이 모자라다고 한 것을 공용 상자에서 꺼내 온다.
+
+        창고에 구리판이 쌓여 있는데 광맥까지 걸어가 다시 캐는 일이 있었다.
+        가진 것을 세는 자리가 손 하나뿐이라서다.
+        """
+        name = worker.name
+        for item, amount in sorted((answer.get("mine") or {}).items()):
+            try:
+                chests = self.bridge.chest_stock(name, item)
+            except RconError:
+                return False
+            for chest in chests:
+                if int(chest.get("count") or 0) <= 0:
+                    continue
+                try:
+                    worker.handle.take(item, chest["x"], chest["y"],
+                                       count=min(int(amount), int(chest["count"])),
+                                       timeout=300, timeout_ticks=60 * 60 * 3)
+                except TaskFailed:
+                    continue
+                self.say(f"{item}은(는) 창고에 있어서 꺼내 왔습니다. "
+                         f"({chest['x']:.0f}, {chest['y']:.0f})", who=name)
+                return True
+        return False
+
+    def explain_shortfall(self, worker: Worker, item: str, count: int,
+                          answer: dict) -> None:
+        """못 구한 이유를 말하고, 남이 도울 수 있게 게시판에 올린다.
+
+        «전봇대를 못 구했습니다»로 끝나면 다음에 할 일이 없다. 무엇이 몇 개
+        모자란지 말하면 그것이 곧 다음 할 일이고, 게시판에 올려두면 놀고 있는
+        동료의 다음 할 일이 된다.
+        """
+        why, short = blocked_by(answer)
+        if not short:
+            self.say(f"{item}을(를) 못 구했고 이유도 모르겠습니다. 다른 일을 하겠습니다.",
+                     who=worker.name)
+            return
+        listed = ", ".join(f"{k} {v}개" for k, v in short[:3])
+        self.say(f"{item} {count}개를 못 구했습니다. {listed}이(가) 모자라고, "
+                 f"{why}.", who=worker.name)
+
+        # 연구나 유체로 막힌 것은 부탁해도 소용없다. 캘 수 있는 것만 올린다.
+        if answer.get("mine"):
+            now = time.monotonic()
+            for missing, amount in short[:2]:
+                if self.board.post(worker.name, missing, amount,
+                                   f"{item} 만들기", now):
+                    self.say(f"{missing} {amount}개, 손 비는 분 부탁드립니다.",
+                             who=worker.name)
 
     def ensure(self, worker: Worker, item: str, count: int = 1) -> bool:
         """Have `count` of an item, crafting it only if the game says we can."""
@@ -1331,26 +1427,65 @@ class Crew:
                 return
             span = math.hypot(target["x"] - source["x"], target["y"] - source["y"])
 
-        poles = max(2, math.ceil(span / POLE_REACH) + 1)
-
-        self.say(f"발전소에서 랩까지 {span:.0f}타일, 전봇대 {poles}개를 세웁니다.",
-                 who=name)
-        if not self.obtain(worker, "small-electric-pole", poles):
-            self.say("전봇대를 못 구했습니다.", who=name)
+        # 양 끝이 먼저다. 전선이 7.5칸까지 늘어나는 것은 «전봇대끼리»의
+        # 이야기고, 기계가 전기를 받으려면 기계가 전봇대의 공급 범위(작은
+        # 전봇대는 5x5) 안에 들어와야 한다. 한 걸음 떨어뜨려 세운 전봇대
+        # 넷이 아무것도 못 켜고 서 있었던 이유가 이것이다.
+        #
+        # 어디까지 닿는지는 계산하지 않고 게임에 물어본다. 세워보고 기계가
+        # 전기망에 들어갔는지 확인하는 쪽이 짧고 틀리지 않는다.
+        try:
+            head = self.bridge.wire_spot(name, source["x"], source["y"])
+            foot = self.bridge.wire_spot(name, target["x"], target["y"])
+        except RconError as exc:
+            self.say(f"전봇대 자리를 못 물어봤습니다: {exc}", who=name)
+            return
+        if head.get("error") or foot.get("error"):
+            self.say(f"전봇대가 닿는 자리가 없습니다: "
+                     f"{head.get('error') or foot.get('error')}", who=name)
             return
 
+        ends = [spot for spot in (head, foot) if not spot.get("already")]
+        middle = max(0, math.ceil(span / POLE_REACH) - 1)
+        poles = len(ends) + middle
+        if poles == 0:
+            self.say("이미 전기가 이어져 있습니다.", who=name)
+            return
+
+        self.say(f"발전소에서 랩까지 {span:.0f}타일, 전봇대 {poles}개를 세웁니다. "
+                 f"양 끝은 기계에 닿는 자리에 붙입니다.", who=name)
+        if not self.obtain(worker, "small-electric-pole", poles):
+            return
+
+        # 끝 -> 중간 -> 끝. 중간이 끊겨도 양쪽 기계는 이미 붙어 있어서,
+        # 다음에 가운데만 이으면 된다.
+        spots = list(ends)
+        for i in range(1, middle + 1):
+            share = i / (middle + 1)
+            spots.append({"x": head["x"] + (foot["x"] - head["x"]) * share,
+                          "y": head["y"] + (foot["y"] - head["y"]) * share})
+
         placed = 0
-        for i in range(1, poles + 1):
-            share = i / poles
-            x = source["x"] + (target["x"] - source["x"]) * share
-            y = source["y"] + (target["y"] - source["y"]) * share
+        for spot in spots:
             try:
-                worker.handle.place("small-electric-pole", x, y, snap=True, timeout=240)
+                worker.handle.place("small-electric-pole", spot["x"], spot["y"],
+                                    snap=True, timeout=240)
                 placed += 1
             except TaskFailed:
                 # 한 자리가 막혔다고 전선 전체를 포기할 이유는 없다.
                 continue
-        self.say(f"전봇대 {placed}개를 세웠습니다.", who=name)
+
+        try:
+            live = self.bridge.power_status(name)
+        except RconError:
+            live = {}
+        watt = int(live.get("watts") or 0)
+        if watt > 0:
+            self.say(f"전봇대 {placed}개를 세웠고 전기가 들어왔습니다. {watt}W",
+                     who=name)
+        else:
+            self.say(f"전봇대 {placed}개를 세웠는데 아직 0W입니다. "
+                     f"가운데가 끊겼거나 보일러에 연료가 없습니다.", who=name)
 
     def build_depot(self, worker: Worker, base: dict) -> None:
         """공용 창고를 세우고 그 자리를 무리에게 알린다."""
@@ -1565,6 +1700,10 @@ class Crew:
         unblock: list[Job] = []
         jobs: list[Job] = []
 
+        # 0. 모두가 같은 것을 부탁하고 있으면, 나르는 일이 아니라 만드는
+        #    일이다. 이걸 먼저 걷어내지 않으면 게시판이 굳는다.
+        jobs.extend(self.shortage_jobs())
+
         # 창고가 먼저다. 물자가 각자 가방에 갇혀 있는 한 나머지 일감은
         # 재료가 없어서 계속 막힌다.
         opening = self.depot_job(worker, self.snaps.get(worker.name)
@@ -1713,6 +1852,28 @@ class Crew:
             handed.add(name)
 
         return handed
+
+    def shortage_jobs(self) -> list[Job]:
+        """여럿이 같은 것을 부탁하면, 나르는 대신 늘린다.
+
+        게시판에 «coal x25 (대기)»가 여섯 줄 걸린 채 굳어 있었다. 여섯 모두
+        석탄이 없어서 부탁한 것이라, 서로 갖다줄 사람이 애초에 없었다.
+        부탁을 돌리는 것으로는 풀 수 없는 종류의 문제다.
+
+        이럴 때 할 일은 하나다 - 그 광석에 채굴기를 더 세우는 것. 그러면
+        부탁 여섯 줄은 한 번에 사라진다.
+        """
+        out: list[Job] = []
+        for item, (total, voices) in sorted(self.board.demand().items()):
+            if voices < SHORTAGE_VOICES or item not in SMELTABLE + ("coal",):
+                continue
+            askers = self.board.drop_item(item)
+            self.say(f"{len(askers)}명이 {item}을(를) 찾고 있습니다. "
+                     f"서로 나눠 쓸 양이 아니라 없는 겁니다 — "
+                     f"{item} 채굴기를 늘리겠습니다. (부탁 {total}개는 내립니다)")
+            out.append(Job(f"{item}이 무리 전체에 모자랍니다. 채굴기를 늘립니다.",
+                           key=f"shortage:{item}", routine="automate", ore=item))
+        return out
 
     def depot_job(self, worker: Worker, snap: Snapshot) -> Job | None:
         """가방에 넘치는 것을 공용 창고에 넣는다.
