@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 import brain  # noqa: E402
 import mission  # noqa: E402
 from agent import (FOCUS_ORDER, STAGE_TARGET, Crew, Job, errand_label,
-                   spread_sites, worth_building, chain_job,  # noqa: E402
+                   spread_sites, worth_building, chain_job, nearest_to,  # noqa: E402
                    Snapshot, chain_job, cluster, interleave, missing_item,
                    next_goal, plan)
 
@@ -690,6 +690,23 @@ def main() -> int:
                             "iron-plate", None)
     check("an empty chest still sends them to the patch",
           empty_shelf is None or not empty_shelf.key.startswith("fetch:"))
+
+    print("\n21. the nearest chest is nearest to the work, not to me")
+    shelves = [{"x": 92, "y": 6, "count": 900},
+               {"x": -55, "y": 80, "count": 300},
+               {"x": -50, "y": 84, "count": 20}]
+    rigs = {"x": -51, "y": 85}
+    check("it loads from the chest beside the job",
+          nearest_to(shelves, rigs, 50) == shelves[1],
+          str(nearest_to(shelves, rigs, 50)))
+    check("a chest too small to help is skipped",
+          nearest_to(shelves, rigs, 200) == shelves[1])
+    check("a two-hundred-tile haul is nobody's job",
+          nearest_to([shelves[0]], rigs, 50) is None)
+    check("standing next to it, the near one wins",
+          nearest_to(shelves, {"x": 92, "y": 6}, 50) == shelves[0])
+    check("no chest at all is not a crash",
+          nearest_to([], rigs, 50) is None)
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

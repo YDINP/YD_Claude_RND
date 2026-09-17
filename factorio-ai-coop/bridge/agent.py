@@ -213,6 +213,33 @@ def worth_building(row: dict, floor: int = 6) -> tuple[bool, str]:
                    f"가장 많은 이유는 {worst[0]} {worst[1]}대입니다")
 
 
+# 싣는 곳과 붓는 곳이 이보다 멀면 한 사람의 일이 아니다. 실제로 200타일
+# 떨어진 상자에서 실어 오라는 계획이 나왔고, 길을 못 찾아 다섯 번 헤매다
+# 빈손으로 「no coal to insert」로 끝났다.
+HAUL_REACH = 120.0
+
+
+def nearest_to(spots: list[dict], at: dict, least: int = 0,
+               reach: float = HAUL_REACH) -> dict | None:
+    """그 «일감에서» 가장 가까운 창고. 내가 아니라 일감이 기준이다.
+
+    chest_stock 은 부르는 사람에게 가까운 순으로 돌려준다. 그래서 (92,6)에
+    선 사람이 자기 옆 상자에서 석탄을 싣고 (-51,85)까지 걸어가라는 계획이
+    나왔다 - 실제 로그가 «no path from 92.2,6.1 to -51,85»였다.
+
+    싣는 곳과 붓는 곳이 200타일 떨어져 있으면 그건 한 사람의 일이 아니다.
+    reach 밖이면 아예 없다고 답한다. 못 할 일을 배차하는 것보다 낫다.
+    """
+    best, best_d = None, reach * reach
+    for spot in spots:
+        if int(spot.get("count") or 0) < least:
+            continue
+        d = ((spot["x"] - at["x"]) ** 2 + (spot["y"] - at["y"]) ** 2)
+        if d < best_d:
+            best, best_d = spot, d
+    return best
+
+
 def spread_sites(sites: list[dict], want: int, gap: int = 2) -> list[dict]:
     """겹치지 않는 자리만 고른다. 목록은 이미 «오래 갈 순서»로 와 있다.
 
@@ -1916,7 +1943,7 @@ class Crew:
             at = {"x": head["x"], "y": head["y"]}
             key = f"tend:{head['x']:.0f},{head['y']:.0f}"
             wanted = DRILL_FUEL * len(group)
-            source = next((c for c in coal_chests if c["count"] >= DRILL_FUEL), None)
+            source = nearest_to(coal_chests, at, DRILL_FUEL)
             steps: list[Step] = []
             if source:
                 steps.append(("take", {"name": "coal",
@@ -2180,10 +2207,8 @@ class Crew:
         for group in cluster(empty)[:2]:
             head = group[0]
             wanted = RIG_COAL * len(group)
-            source = next((c for c in coal_chests if c["count"] >= wanted), None)
-            if not source:
-                source = next((c for c in coal_chests
-                               if c["count"] >= RIG_COAL), None)
+            source = (nearest_to(coal_chests, head, wanted)
+                      or nearest_to(coal_chests, head, RIG_COAL))
             if not source:
                 continue
 
@@ -2294,14 +2319,29 @@ class Crew:
         이럴 때 할 일은 하나다 - 그 광석에 채굴기를 더 세우는 것. 그러면
         부탁 여섯 줄은 한 번에 사라진다.
         """
+        # 창고에 얼마나 있는지부터 본다. 손에 없는 것과 없는 것은 다르다 -
+        # 석탄이 상자에 9,958개 들어 있는데 「석탄이 없습니다」라며 석탄
+        # 채굴기를 더 짓고 있었다. 그건 부족이 아니라 운반 문제다.
+        try:
+            shelved = (self.bridge.stores(next(iter(self.workers)))
+                       .get("total") or {})
+        except (RconError, StopIteration):
+            shelved = {}
+
         out: list[Job] = []
         for item, (total, voices) in sorted(self.board.demand().items()):
             if voices < SHORTAGE_VOICES or item not in SMELTABLE + ("coal",):
                 continue
             askers = self.board.drop_item(item)
-            self.say(f"{len(askers)}명이 {item}을(를) 찾고 있습니다. "
-                     f"서로 나눠 쓸 양이 아니라 없는 겁니다 — "
-                     f"{item} 채굴기를 늘리겠습니다. (부탁 {total}개는 내립니다)")
+            stocked = int(shelved.get(item) or 0)
+            if stocked >= total:
+                self.say(f"{len(askers)}명이 {item}을(를) 찾는데, 창고에 "
+                         f"{stocked}개가 있습니다. 더 캘 일이 아니라 나를 일입니다. "
+                         f"(부탁 {total}개는 내립니다)")
+                continue
+            self.say(f"{len(askers)}명이 {item}을(를) 찾고 있습니다. 창고에도 "
+                     f"{stocked}개뿐입니다 — {item} 채굴기를 늘리겠습니다. "
+                     f"(부탁 {total}개는 내립니다)")
             out.append(Job(f"{item}이 무리 전체에 모자랍니다. 채굴기를 늘립니다.",
                            key=f"shortage:{item}", routine="automate", ore=item))
         return out
