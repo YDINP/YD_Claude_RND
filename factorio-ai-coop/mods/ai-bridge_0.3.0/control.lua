@@ -2057,6 +2057,48 @@ local function fuel_rig(name, x, y)
   return { error = "no room beside " .. machine.name }
 end
 
+-- 급유 장치는 세웠는데 상자가 빈 것들.
+--
+-- 실측(315분째): 버너 인서터 30대를 세웠더니 29대가
+-- waiting_for_source_items 였다. 빈 찬장을 서른 개 지어놓은 셈이다.
+-- 장치를 세우는 것과 밥을 넣는 것은 다른 일인데 하나로 묶어두고
+-- 「넣기」쪽이 실패해도 조용히 넘어가고 있었다.
+--
+-- 인서터가 집는 칸을 그대로 물어본다. 상자가 어디 있는지 다시 계산할
+-- 이유가 없다 - 인서터 자신이 알고 있다.
+local function hungry_rigs(name, radius)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local reach = math.min(radius or MAX_OBSERVE_RADIUS, MAX_OBSERVE_RADIUS)
+  local out = {}
+  for _, arm in pairs(b.surface.find_entities_filtered {
+    position = b.position, radius = reach, type = "inserter", force = b.force,
+  }) do
+    if arm.status == defines.entity_status.waiting_for_source_items then
+      local at = arm.pickup_position
+      local shelf = b.surface.find_entities_filtered {
+        position = at, radius = 0.6, type = "container", force = b.force, limit = 1,
+      }[1]
+      if shelf then
+        local inv = shelf.get_inventory(defines.inventory.chest)
+        local held = inv and inv.get_item_count("coal") or 0
+        if held < 10 then
+          out[#out + 1] = {
+            x = shelf.position.x, y = shelf.position.y, coal = held,
+            distance = math.floor(Tasks.dist(b.position, shelf.position) * 10) / 10,
+          }
+        end
+      end
+    end
+  end
+  table.sort(out, function(p, q) return p.distance < q.distance end)
+  local near = {}
+  for i = 1, math.min(#out, 12) do near[i] = out[i] end
+  return { agent = name, empty = near, total = #out }
+end
+
 local function health(name, radius)
   init_status_names()
   local a = agent(name)
@@ -2508,6 +2550,9 @@ remote.add_interface("ai", {
 
   -- 기계 한 대를 영구히 먹이는 «상자-인서터» 자리.
   fuel_rig = fuel_rig,
+
+  -- 세워는 놨는데 상자가 빈 급유 장치들.
+  hungry_rigs = hungry_rigs,
 
   -- 전봇대가 이 기계에 실제로 «닿는» 자리.
   wire_spot = wire_spot,

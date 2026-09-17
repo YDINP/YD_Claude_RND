@@ -1892,18 +1892,25 @@ class Crew:
         except RconError:
             return jobs
 
-        # 1. 연료가 떨어진 기계. 손에 석탄이 없으면 상자에서 실어다 준다 -
-        #    석탄 드릴의 상자에는 석탄이 쌓이는데 그걸 나르는 일이 없어서
-        #    넷이 «석탄을 넣겠습니다»만 되풀이하고 있었다.
-        # 한 구역에 모인 기계는 한 번 걸어가서 한꺼번에 채운다. 채굴기
-        # 여섯 대가 한 광맥에 모여 있는데 여섯 번 따로 가는 것이 가장 흔한
-        # 낭비다. 석탄도 그만큼 한 번에 실어간다.
-        # 급유 장치가 먼저다. 손으로 넣는 것은 그 기계를 한 번 살리지만,
-        # 상자와 인서터를 한 벌 세우면 영원히 산다. 195대를 손으로 먹이는
-        # 것은 불가능하고, 한 번 세우는 것은 가능하다.
+        # 이미 선 장치를 살리는 것이 새 장치를 세우는 것보다 먼저다.
+        # 빈 찬장을 서른 개 지어놓고 서른한 번째를 지으러 가면 안 된다.
+        unblock.extend(self.restock_jobs(worker, coal_chests))
+
+        # 1. 연료가 떨어진 기계. 세 가지를 이 순서로 한다.
+        #
+        #    ① 빈 급유 상자를 채운다  - 이미 선 장치를 살리는 게 가장 싸다
+        #    ② 새 급유 장치를 세운다  - 한 번 세우면 영원히 산다
+        #    ③ 손으로 석탄을 넣는다   - 그 기계를 한 번 살릴 뿐
+        #
+        #    195대를 손으로 먹이는 것은 불가능하고, 장치를 세우는 것은
+        #    가능하다. 그런데 빈 찬장을 서른 개 지어놓고 서른한 번째를
+        #    지으러 가면 그것도 소용없다 - 그래서 ①이 ②보다 앞이다.
         unblock.extend(self.rig_job(worker, [e for e in stopped
                                              if e.get("fix") == "fuel"]))
 
+        # 한 구역에 모인 기계는 한 번 걸어가서 한꺼번에 채운다. 채굴기
+        # 여섯 대가 한 광맥에 모여 있는데 여섯 번 따로 가는 것이 가장 흔한
+        # 낭비다. 석탄도 그만큼 한 번에 실어간다.
         for group in cluster([e for e in stopped if e.get("fix") == "fuel"]):
             head = group[0]
             at = {"x": head["x"], "y": head["y"]}
@@ -2119,6 +2126,16 @@ class Crew:
             return
 
         arm, shelf = plan["inserter"], plan["chest"]
+
+        # 밥이 먼저다. 예전에는 상자와 인서터를 먼저 놓고 석탄은 나중에
+        # 구했는데, 구하기가 실패해도 조용히 넘어갔다. 그래서 315분째에
+        # 빈 찬장이 서른 개 서 있었고 인서터 29대가 «집을 게 없음»으로
+        # 멈춰 있었다. 못 먹일 거면 짓지 않는 편이 낫다.
+        if not self.obtain(worker, "coal", RIG_COAL):
+            self.say("급유 장치에 넣을 석탄을 못 구해서 짓지 않았습니다.", who=name)
+            worker.block(key, BACKOFF_SECONDS)
+            return
+
         wanted = ["burner-inserter"] + ([] if shelf.get("standing") else [CHEST])
         for part in wanted:
             if not self.obtain(worker, part, 1):
@@ -2128,6 +2145,8 @@ class Crew:
         try:
             if not shelf.get("standing"):
                 worker.handle.place(CHEST, shelf["x"], shelf["y"], timeout=420)
+            worker.handle.insert("coal", shelf["x"], shelf["y"],
+                                 count=RIG_COAL, timeout=300)
             worker.handle.place("burner-inserter", arm["x"], arm["y"],
                                 direction=arm["direction"], timeout=300)
         except TaskFailed as exc:
@@ -2135,15 +2154,52 @@ class Crew:
             self.say(f"급유 장치를 못 세웠습니다: {exc.task.get('error')}", who=name)
             return
 
-        # 상자에 석탄을 부어둔다. 창고에 3,400개가 있으니 아깝지 않다.
-        if self.obtain(worker, "coal", RIG_COAL):
-            try:
-                worker.handle.insert("coal", shelf["x"], shelf["y"],
-                                     count=RIG_COAL, timeout=300)
-            except TaskFailed:
-                pass
-        self.say(f"{plan.get('machine', '기계')}에 급유 장치를 세웠습니다. "
-                 f"이제 알아서 먹습니다.", who=name)
+        self.say(f"{plan.get('machine', '기계')}에 급유 장치를 세우고 석탄 "
+                 f"{RIG_COAL}개를 채웠습니다. 이제 알아서 먹습니다.", who=name)
+
+    def restock_jobs(self, worker: Worker,
+                     coal_chests: list[dict]) -> list[Job]:
+        """빈 급유 상자에 석탄을 붓는다.
+
+        상자 하나에 50개를 부으면 그 기계는 한참을 혼자 돈다. 기계에 직접
+        20개를 넣어주는 것보다 같은 걸음으로 훨씬 오래 간다 - 손이 닿는
+        곳을 기계에서 상자로 옮긴 것이 이 장치의 전부다.
+        """
+        try:
+            empty = self.bridge.hungry_rigs(worker.name)
+        except RconError:
+            return []
+        if not empty:
+            return []
+
+        # 배차 경로는 needs 를 보지 않는다. 그러니 실을 곳을 여기서 직접
+        # 첫 단계로 붙인다 - 빈손으로 보내면 insert 가 그냥 실패한다.
+        # 급유 상자 자신은 비어 있으니 출처가 될 수 없고, 다른 급유 상자에서
+        # 퍼오는 것도 곤란하다. 넉넉한 상자만 고른다.
+        out: list[Job] = []
+        for group in cluster(empty)[:2]:
+            head = group[0]
+            wanted = RIG_COAL * len(group)
+            source = next((c for c in coal_chests if c["count"] >= wanted), None)
+            if not source:
+                source = next((c for c in coal_chests
+                               if c["count"] >= RIG_COAL), None)
+            if not source:
+                continue
+
+            steps: list[Step] = [
+                ("take", {"name": "coal",
+                          "count": min(int(source["count"]), wanted),
+                          "x": source["x"], "y": source["y"]})]
+            steps += [("insert", {"name": "coal", "count": RIG_COAL,
+                                  "x": spot["x"], "y": spot["y"]})
+                      for spot in group]
+            out.append(Job(
+                f"급유 상자 {len(group)}개가 비었습니다. 석탄을 실어 붓겠습니다. "
+                f"({head['x']:.0f}, {head['y']:.0f})",
+                key=f"restock:{head['x']:.0f},{head['y']:.0f}", steps=steps,
+                at={"x": head["x"], "y": head["y"]}))
+        return out
 
     def lay_pipe(self, worker: Worker, at: dict) -> None:
         """끊긴 한 칸에 파이프를 놓는다."""
