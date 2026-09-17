@@ -386,6 +386,72 @@ def missing_item(kind: str, error: str, params: dict | None = None) -> str | Non
     return None
 
 
+# 사다리의 단마다 «이걸 손에 넣으면 올라간다»는 물건이 있다. 그 물건 하나만
+# 정해주면 나머지는 게임의 레시피 그래프가 알려준다.
+STAGE_TARGET = {
+    "furnace": ("stone-furnace", 1),
+    "lab": ("lab", 1),
+    "power": ("steam-engine", ENGINES_PER_BOILER),
+    "red-science": ("automation-science-pack", 10),
+    "assembler": ("assembling-machine-1", 1),
+    "belts": ("transport-belt", 20),
+}
+
+
+def chain_job(answer: dict, target: str, furnace: dict | None) -> Job | None:
+    """게임이 «지금 이것부터»라고 답한 것을 실제 작업으로 옮긴다.
+
+    answer 는 mod 의 plan_item 이 돌려준 것이다. steps 는 깊은 것부터 쌓여
+    있으므로 첫 번째가 지금 당장 할 수 있는 일이다. 아무것도 못 하면
+    mine 에 적힌 것을 캐러 간다 - 사슬의 맨 밑이 땅이라는 뜻이다.
+    """
+    if not isinstance(answer, dict) or answer.get("error"):
+        return None
+
+    steps = _as_rows(answer.get("steps"))
+    for step in steps:
+        name = step.get("name")
+        count = int(step.get("count") or 1)
+        if step.get("action") == "smelt":
+            if not furnace:
+                continue
+            return Job(f"{target}을(를) 만들려면 {name}이(가) 필요합니다. 제련하겠습니다.",
+                       key=f"chain:smelt:{name}@{furnace['x']:.0f},{furnace['y']:.0f}",
+                       needs={"coal": FURNACE_FUEL},
+                       steps=[
+                           ("insert", {"name": "coal", "count": FURNACE_FUEL, **furnace}),
+                           ("insert", {"name": step.get("input") or _ore_for(name),
+                                       "count": int(step.get("input_count") or count),
+                                       **furnace}),
+                           ("wait", {"ticks": 60 * max(20, count * 2)}),
+                           ("take", {"name": name, "count": count, **furnace}),
+                       ])
+        if step.get("hand"):
+            return Job(f"{target}을(를) 만들려면 {name} {count}개가 필요합니다. 제작하겠습니다.",
+                       key=f"chain:craft:{name}",
+                       steps=[("craft", {"recipe": step.get("recipe") or name,
+                                         "count": count})])
+
+    return None
+
+
+def _ore_for(plate: str) -> str:
+    """원료 이름이 안 왔을 때의 마지막 수단.
+
+    보통은 게임이 step.input 으로 알려준다. 이 표는 옛 모드가 붙어 있을 때만
+    쓰이고, 돌벽돌처럼 «돌 2개에 벽돌 1개»인 레시피에서는 개수를 못 맞춘다.
+    """
+    return {"iron-plate": "iron-ore", "copper-plate": "copper-ore",
+            "stone-brick": "stone"}.get(plate, plate)
+
+
+def _as_rows(value: Any) -> list[dict]:
+    """Lua 의 빈 테이블은 {} 로 오고, 채워진 배열은 리스트로 온다."""
+    if isinstance(value, dict):
+        return list(value.values())
+    return value or []
+
+
 def next_goal(snap: Snapshot, focus: str = "iron-ore",
               blocked: frozenset[str] = frozenset(),
               taken: frozenset[str] = frozenset(),
@@ -964,6 +1030,62 @@ class Crew:
 
     # -- reporting ---------------------------------------------------------
 
+    def chain_toward(self, worker: Worker, snap: Snapshot) -> Job | None:
+        """사다리의 다음 단이 요구하는 물건을 향해 한 걸음.
+
+        예전에는 랩을 못 만들면 그냥 다른 일을 하러 갔다. 구리 광석과 화로를
+        손에 쥐고도 «구리를 제련하면 회로를 만들 수 있다»는 걸 몰랐다.
+        이제는 게임에게 묻는다 - 레시피 그래프도 인벤토리도 게임이 갖고 있다.
+        """
+        stage = mission.stage_of(snap)
+        target = STAGE_TARGET.get(stage.key)
+        if not target:
+            return None
+        item, count = target
+        if snap.have(item) >= count or snap.building(item):
+            return None
+
+        try:
+            answer = self.bridge.plan_item(worker.name, item, count)
+        except RconError:
+            return None
+        if answer.get("error"):
+            return None
+
+        # 사람마다 다른 화로를 쓰게 한다. 23대가 서 있는데 한 대 앞에
+        # 줄을 서는 일이 다시 생기면 안 된다.
+        spots = snap.spots("stone-furnace")
+        furnace = None
+        if spots:
+            seat = list(self.workers).index(worker.name) if worker.name in self.workers else 0
+            furnace = spots[seat % len(spots)]
+        elif answer.get("furnace"):
+            furnace = answer["furnace"]
+
+        job = chain_job(answer, item, furnace)
+        if job:
+            return job
+
+        # 사슬의 맨 밑이 땅이면 캐러 간다. 무엇을 얼마나 캐야 하는지도
+        # 게임이 세어줬다.
+        for ore, amount in sorted((answer.get("mine") or {}).items()):
+            spot = snap.ore(ore)
+            if not spot:
+                continue
+            wanted = max(10, min(int(amount), 100))
+            return Job(f"{item}을(를) 만들려면 {ore}가 {int(amount)}개 필요합니다. 캐러 갑니다.",
+                       key=f"chain:mine:{ore}",
+                       steps=[("mine", {**spot, "count": wanted, "search_radius": 10,
+                                        "timeout_ticks": 60 * 60 * 5})])
+
+        # 잠긴 레시피가 막고 있으면 말이라도 해준다. 조용히 멈춰 있는 것이
+        # 제일 나쁘다.
+        locked = sorted((answer.get("locked") or {}))
+        if locked:
+            worker.block(f"chain:{item}", 300)
+            self.say(f"{item}은(는) {locked[0]} 연구가 없어서 못 만듭니다.", who=worker.name)
+        return None
+
     def announce_stage(self, snap: Snapshot) -> None:
         """사다리에서 한 단 오르면 알린다.
 
@@ -1327,6 +1449,14 @@ class Crew:
             self.release(worker)
             job = next_goal(snap, worker.focus, worker.blocked_now(), self.taken(),
                             crew=len(self.workers))
+
+            # «비축»밖에 안 남았다는 건 할 일이 없다는 뜻이지 광석을 더
+            # 쌓으라는 뜻이 아니다. 그럴 때 사다리의 다음 단을 물어본다.
+            if job is None or job.key.startswith("stock:"):
+                chained = self.chain_toward(worker, snap)
+                if chained and chained.key not in self.taken() \
+                        and chained.key not in worker.blocked_now():
+                    job = chained
 
             # 부탁이 내 일보다 먼저다. 이미 쥔 걸 건네주는 건 걸어가기만
             # 하면 되고, 기다리는 쪽은 그동안 아무것도 못 한다.

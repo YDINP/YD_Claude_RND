@@ -188,6 +188,14 @@ class AIBridge:
     def set_focus(self, name: str, focus: str) -> dict:
         return self.call("set_focus", name, focus)
 
+    def plan_item(self, agent: str, item: str, count: int = 1) -> dict:
+        """이 아이템을 만들려면 지금 무엇부터 해야 하는가.
+
+        레시피 트리를 파이썬에서 걸어다니면 RCON을 스무 번 왕복한다. 게임은
+        레시피도 인벤토리도 알고 있으니 한 번만 물어본다.
+        """
+        return self.call("plan_item", agent, item, count)
+
     def set_board(self, goal: str, lines: list[str]) -> dict:
         """The goal line and the open requests, for the in-game panel.
 

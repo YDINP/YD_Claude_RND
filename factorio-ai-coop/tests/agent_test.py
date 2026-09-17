@@ -9,8 +9,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 import brain  # noqa: E402
 import mission  # noqa: E402
-from agent import (FOCUS_ORDER, Crew, Job, Snapshot,  # noqa: E402
-                   missing_item, next_goal, plan)
+from agent import (FOCUS_ORDER, STAGE_TARGET, Crew, Job,  # noqa: E402
+                   Snapshot, chain_job, missing_item, next_goal, plan)
 
 # 반장이 내릴 수 있다고 적어둔 명령은 전부 실제로 처리되는 것이어야 한다.
 # 표에만 있고 처리기가 없는 명령은 조용히 무시되고, 왜 안 먹는지 아무도
@@ -452,6 +452,76 @@ def main() -> int:
     check("every command is one the crew can actually run",
           brain.ALLOWED_COMMANDS <= (Crew.CREW_COMMANDS | KNOWN_INTENTS),
           str(brain.ALLOWED_COMMANDS - (Crew.CREW_COMMANDS | KNOWN_INTENTS)))
+
+
+    print("\n13. the game is asked what to do next, and answers a chain")
+    FURNACE_AT = {"x": 5, "y": 5}
+
+    # 랩을 만들려면 구리판이 필요하고, 구리판은 화로에서 나온다. mod 가
+    # 돌려주는 모양 그대로.
+    smelt_first = {"item": "lab", "count": 1, "ready": False,
+                   "steps": [{"action": "smelt", "name": "copper-plate",
+                              "recipe": "copper-plate", "count": 15,
+                              "input": "copper-ore", "input_count": 15,
+                              "hand": False, "category": "smelting"}],
+                   "mine": {}, "locked": {}, "blocked": {}}
+    job = chain_job(smelt_first, "lab", FURNACE_AT)
+    check("smelting comes back as a furnace job",
+          job is not None and [st[0] for st in job.steps]
+          == ["insert", "insert", "wait", "take"], str(job.steps if job else None))
+    check("it feeds the ore, not the plate",
+          job.steps[1][1]["name"] == "copper-ore", str(job.steps[1][1]))
+    check("and takes the plate back out",
+          job.steps[3][1]["name"] == "copper-plate")
+    check("the furnace is in the key, so two agents use two furnaces",
+          job.key == "chain:smelt:copper-plate@5,5", job.key)
+
+    check("no furnace, no smelting job", chain_job(smelt_first, "lab", None) is None)
+
+    # 돌 2개가 벽돌 1개가 된다. 개수를 산출물에서 짐작하면 절반만 넣는다.
+    bricks = {"item": "x", "count": 1, "ready": False,
+              "steps": [{"action": "smelt", "name": "stone-brick",
+                         "recipe": "stone-brick", "count": 10,
+                         "input": "stone", "input_count": 20,
+                         "hand": False, "category": "smelting"}],
+              "mine": {}, "locked": {}, "blocked": {}}
+    brick_job = chain_job(bricks, "x", FURNACE_AT)
+    check("the game says how much ore goes in, we do not guess",
+          brick_job.steps[1][1] == {"name": "stone", "count": 20, "x": 5, "y": 5},
+          str(brick_job.steps[1][1]))
+
+    hand = {"item": "lab", "count": 1, "ready": False,
+            "steps": [{"action": "craft", "name": "electronic-circuit",
+                       "recipe": "electronic-circuit", "count": 10,
+                       "hand": True, "category": "crafting"}],
+            "mine": {}, "locked": {}, "blocked": {}}
+    job = chain_job(hand, "lab", FURNACE_AT)
+    check("hand crafting comes back as a craft job",
+          job is not None and job.steps[0][0] == "craft"
+          and job.steps[0][1]["recipe"] == "electronic-circuit",
+          str(job.steps[0] if job else None))
+
+    not_by_hand = {"item": "x", "count": 1, "ready": False,
+                   "steps": [{"action": "craft", "name": "sulfur", "recipe": "sulfur",
+                              "count": 1, "hand": False,
+                              "category": "chemistry"}],
+                   "mine": {}, "locked": {}, "blocked": {}}
+    check("what hands cannot make is not offered",
+          chain_job(not_by_hand, "x", FURNACE_AT) is None)
+
+    check("an error answer is not a plan",
+          chain_job({"error": "no such item: banana"}, "banana", FURNACE_AT) is None)
+    check("garbage is not a plan", chain_job("nope", "lab", FURNACE_AT) is None)
+    check("lua's empty table is not a step list",
+          chain_job({"steps": {}, "mine": {}}, "lab", FURNACE_AT) is None)
+
+    check("every rung the crew can climb has something to aim at",
+          all(stage.key in STAGE_TARGET
+              for stage in mission.LADDER
+              if stage.automated and stage.key not in
+              ("electronics", "steam-power", "automation")),
+          str([st.key for st in mission.LADDER
+               if st.automated and st.key not in STAGE_TARGET]))
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

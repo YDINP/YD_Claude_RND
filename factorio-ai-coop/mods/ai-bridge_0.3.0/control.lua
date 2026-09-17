@@ -567,6 +567,135 @@ local function inventory(name)
   }
 end
 
+------------------------------------------------------- 무엇부터 해야 하는가
+
+-- 에이전트가 «랩을 만들자»고 정했는데 못 만들 때, 예전에는 그냥 다른 일을
+-- 하러 갔다. 구리 광석 35개와 화로 23대를 손에 쥐고도 구리를 제련하면
+-- 된다는 걸 몰랐다. 랩 <- 전자회로 <- 구리선 <- 구리판 <- 구리광석 이라는
+-- 사슬이 어디에도 적혀 있지 않았기 때문이다.
+--
+-- 적을 필요가 없다. 게임이 레시피 그래프를 갖고 있고 인벤토리도 갖고 있다.
+-- 여기서 한 번에 물어보면, 파이썬이 트리를 걸어다니며 RCON을 스무 번
+-- 왕복할 이유가 사라진다.
+
+local MAX_PLAN_DEPTH = 8
+
+local function product_count(recipe, item)
+  for _, p in pairs(recipe.products) do
+    if p.name == item then
+      if p.amount then return p.amount end
+      if p.amount_min and p.amount_max then
+        return (p.amount_min + p.amount_max) / 2
+      end
+      return 1
+    end
+  end
+  return 1
+end
+
+-- pool 은 «아직 임자가 없는 재고»다. 재귀하면서 깎아 나가야, 철판 10개를
+-- 기어에도 쓰고 회로에도 쓰는 두 번 세기가 생기지 않는다.
+local function expand(force, pool, item, count, out, depth)
+  local have = pool[item] or 0
+  if have >= count then
+    pool[item] = have - count
+    return true
+  end
+  pool[item] = 0
+  local missing = count - have
+
+  if depth > MAX_PLAN_DEPTH then
+    out.blocked[item] = (out.blocked[item] or 0) + missing
+    return false
+  end
+
+  local recipe = force.recipes[item]
+  if not recipe or not recipe.enabled then
+    -- 레시피가 없으면 땅에서 나오는 것이고, 있는데 잠겨 있으면 연구가
+    -- 먼저다. 둘은 다른 문제라 나눠서 돌려준다.
+    if prototypes.recipe[item] == nil then
+      out.mine[item] = (out.mine[item] or 0) + missing
+    else
+      out.locked[item] = (out.locked[item] or 0) + missing
+    end
+    return false
+  end
+
+  local per = product_count(recipe, item)
+  if per <= 0 then per = 1 end
+  local runs = math.ceil(missing / per)
+
+  local ready = true
+  for _, ing in pairs(recipe.ingredients) do
+    if ing.type == "fluid" then
+      -- 유체는 손으로 못 나른다. 여기서 막혔다고 말하는 편이 낫다.
+      out.blocked[ing.name] = (out.blocked[ing.name] or 0) + (ing.amount or 0) * runs
+      ready = false
+    elseif not expand(force, pool, ing.name, (ing.amount or 0) * runs, out, depth + 1) then
+      ready = false
+    end
+  end
+
+  -- 재료가 다 갖춰진 것만 «지금 할 수 있는 일»이다. 깊은 것부터 쌓이므로
+  -- 목록 순서가 곧 작업 순서가 된다.
+  if ready then
+    local step = {
+      action = (recipe.category == "smelting") and "smelt" or "craft",
+      name = item,
+      recipe = recipe.name,
+      count = runs,
+      hand = recipe.category == "crafting",
+      category = recipe.category,
+    }
+    -- 제련은 화로에 «무엇을 몇 개» 넣어야 하는지가 필요하다. 광석 이름을
+    -- 판금 이름에서 짐작하면 돌벽돌(돌 2 -> 벽돌 1)에서 절반만 넣게 된다.
+    if step.action == "smelt" then
+      for _, ing in pairs(recipe.ingredients) do
+        if ing.type ~= "fluid" then
+          step.input = ing.name
+          step.input_count = (ing.amount or 1) * runs
+          break
+        end
+      end
+    end
+    out.steps[#out.steps + 1] = step
+  end
+  return ready
+end
+
+local function compute_plan(name, item, count)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+  if not prototypes.item[item] and not prototypes.recipe[item] then
+    return { error = "no such item: " .. tostring(item) }
+  end
+
+  local pool = {}
+  local inv = b.get_main_inventory()
+  if inv then
+    for _, stack in pairs(inv.get_contents()) do
+      pool[stack.name] = (pool[stack.name] or 0) + stack.count
+    end
+  end
+
+  local out = { steps = {}, mine = {}, locked = {}, blocked = {} }
+  local ok, done = pcall(expand, b.force, pool, item, count or 1, out, 0)
+  if not ok then return { error = "plan failed: " .. tostring(done) } end
+
+  -- 제련은 화로가 있어야 한다. 없으면 «지금 할 수 있는 일»이 아니다.
+  local furnace = b.surface.find_entities_filtered {
+    position = b.position, radius = MAX_OBSERVE_RADIUS,
+    name = "stone-furnace", force = b.force, limit = 1,
+  }[1]
+
+  return {
+    item = item, count = count or 1, ready = done,
+    steps = out.steps, mine = out.mine, locked = out.locked, blocked = out.blocked,
+    furnace = furnace and { x = furnace.position.x, y = furnace.position.y } or nil,
+  }
+end
+
 local function agent_status(name)
   local a = agent(name)
   if not a then return { error = "no such agent: " .. tostring(name) } end
@@ -1036,6 +1165,9 @@ remote.add_interface("ai", {
 
   -- The daemon decides which resource an agent looks after; the panel just
   -- displays it.
+  -- 이 아이템을 만들려면 지금 무엇부터 해야 하는가.
+  plan_item = compute_plan,
+
   set_focus = function(name, focus)
     local a = agent(name)
     if not a then return { error = "no such agent: " .. tostring(name) } end
