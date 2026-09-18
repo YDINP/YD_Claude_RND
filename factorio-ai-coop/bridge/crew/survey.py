@@ -742,6 +742,18 @@ class SurveyMixin:
             if chained and chained.key not in seen:
                 seen.add(chained.key)
                 pool.append(chained)
+            # 「손으로 캐느니 채굴기를 하나 더」도 반장이 쥔다.
+            #
+            # 중앙 배차로 옮기면서 이것을 빠뜨렸다. 그 값이 컸다 - 사십육
+            # 분 동안 채굴기 0대, 화로 0대인 채로 손으로만 캤다. 구리만
+            # 1,894개다. 채굴기는 사람보다 느리지만 자지도 걷지도 않는다.
+            #
+            # 규칙을 옮길 때 빠뜨리면 그 규칙은 없어진 것이다. 이번 옮김에서
+            # 두 번째다 - 앞의 것은 「재료가 모자라면 먼저 캔다」였다.
+            busy = self.keep_busy(worker, snap)
+            if busy and busy.key not in seen:
+                seen.add(busy.key)
+                pool.append(busy)
 
         taken = self.taken()
         made = len(pool)

@@ -25,6 +25,50 @@ local function blocks_lane(position, half)
   return false
 end
 
+-- 구역 «안»은 이 규칙이 안 미친다.
+--
+-- 「여덟 칸마다 한 줄을 비워둔다」는 구역 체계가 생기기 전 규칙이다.
+-- 그때는 건물이 아무 데나 섰으니 통로를 따로 비워둘 이유가 있었다.
+-- 지금은 자리표가 통로를 «품고» 있다 - 제련 블록은 화로 줄 사이에
+-- 벨트와 인서터가 들어갈 다섯 칸을 이미 남겨둔다.
+--
+-- 두 규칙을 같이 두면 서로 싸운다. 실측이 그 싸움을 그대로 보여줬다:
+--
+--     alpha | 제련 구역에 화로를 설치합니다.
+--     echo  | 길을 막은 stone-furnace 1개를 걷어냅니다. (8, 80)
+--     alpha | 돌부터 캐서 화로를 만들겠습니다.
+--     (되풀이)
+--
+-- 제련 구역의 0번 자리가 x=8 이었고 8 % 8 == 0 이라 「길 위」로 잡혔다.
+-- 세우면 걷고, 걷으면 다시 세우기를 «사십육 분» 동안 했다. 그 판에서
+-- 화로도 채굴기도 끝내 한 대도 안 섰다.
+--
+-- 규칙을 새로 넣을 때는 그 판단을 이미 하고 있던 옛 규칙을 찾아야 한다.
+-- 이번 세션에 같은 모양을 두 번째 만난다 - 앞의 것은 `strays` 였다.
+local ZONE_PAD = 4
+
+local function in_a_zone(position)
+  local spots = {}
+  if storage.smelter then
+    spots[#spots + 1] = { x = storage.smelter.x, y = storage.smelter.y,
+                          w = 38, h = 16 }
+  end
+  local z = storage.zones or {}
+  if z.craft then
+    spots[#spots + 1] = { x = z.craft.x, y = z.craft.y, w = 24, h = 14 }
+  end
+  if z.depot then
+    spots[#spots + 1] = { x = z.depot.x, y = z.depot.y, w = 12, h = 5 }
+  end
+  for _, box in pairs(spots) do
+    if position.x >= box.x - ZONE_PAD and position.x <= box.x + box.w + ZONE_PAD
+       and position.y >= box.y - ZONE_PAD and position.y <= box.y + box.h + ZONE_PAD then
+      return true
+    end
+  end
+  return false
+end
+
 -- 길을 막고 선 우리 건물들. 여덟 칸마다 비워두기로 한 줄 위에 이미
 -- 놓여버린 것들이라, 새로 짓기 전에 이것부터 치워야 한다.
 local function blocking(name, radius)
@@ -38,7 +82,8 @@ local function blocking(name, radius)
     position = b.position, radius = reach, force = b.force,
     name = { "burner-mining-drill", "iron-chest", "stone-furnace" },
   }) do
-    if blocks_lane(e.position, 1) and e.minable then
+    if blocks_lane(e.position, 1) and e.minable
+        and not in_a_zone(e.position) then
       out[#out + 1] = {
         name = e.name, x = e.position.x, y = e.position.y,
         distance = math.floor(Tasks.dist(b.position, e.position) * 10) / 10,
