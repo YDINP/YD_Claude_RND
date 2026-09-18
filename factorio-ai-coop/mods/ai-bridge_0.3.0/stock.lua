@@ -371,6 +371,35 @@ local function smelter(x, y)
   local home = base().home
   if not home then return { smelter = nil } end
   local s = game.surfaces[1]
+
+  local function fits(at)
+    local box = { { at.x - 2, at.y - 2 },
+                  { at.x + SMELT_W, at.y + SMELT_H } }
+    return s.count_entities_filtered { area = box, type = BUILT } <= 1
+       and s.count_tiles_filtered { area = box, name = WATER } == 0
+  end
+
+  -- 이미 선 화로가 있으면 «그것이 0번 자리»다.
+  --
+  -- 실측(새 판 1분째): 첫 화로가 (49,75)에 섰는데 제련 구역은 (59,75)로
+  -- 잡혔다. 열 타일 어긋났고, 그래서 첫 건물이 놓이자마자 「제자리가
+  -- 아님」이 되었다. 무리는 그것을 걷어서 열 칸 옆에 다시 놓는다.
+  --
+  -- 빈 땅을 찾는 것은 맞는 일인데, 화로가 이미 서 있을 때는 틀린 일이다.
+  -- 기준점은 «고를» 것이 아니라 이미 정해진 것이다 - 첫 화로가 그것을
+  -- 정했다. 열 타일 옮기자고 첫 건물을 걷는 것은 순서가 거꾸로다.
+  local standing = s.find_entities_filtered {
+    name = "stone-furnace", force = game.forces.player, limit = 2,
+  }
+  if #standing == 1 then
+    local at = { x = math.floor(standing[1].position.x),
+                 y = math.floor(standing[1].position.y) }
+    if fits(at) then
+      storage.smelter = at
+      return { smelter = at, chosen = true, anchored = true }
+    end
+  end
+
   -- 기지에서 가까운 데부터, 블록이 통째로 들어갈 빈 땅을 찾는다.
   for r = 10, 70, 5 do
     for _, step in pairs({ { r, 0 }, { 0, r }, { -r, 0 }, { 0, -r },
