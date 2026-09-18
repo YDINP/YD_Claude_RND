@@ -393,6 +393,45 @@ local function smelter(x, y)
        and s.count_entities_filtered { area = box, name = ORE } == 0
   end
 
+  -- 녹일 것에서 가까워야 한다.
+  --
+  -- 실측(이 맵):
+  --
+  --     제련 구역  (-12,84)     돌 광맥 옆
+  --     철광석     (110,-49)    200타일 밖
+  --     구리광석   (80,67)      95타일 밖
+  --
+  -- 개판의 첫 일이 「돌부터 캐서 화로를 만들겠습니다」이므로 첫 화로는 돌
+  -- 광맥 근처에서 만들어진다. 그런데 «돌은 화로의 재료»이지 녹이는 대상이
+  -- 아니다. 녹이는 것은 철과 구리다.
+  --
+  -- 광맥을 피하라는 규칙(앞 커밋)은 맞는데, 하필 광석에서 «멀어지는» 쪽으로
+  -- 피했다. 피하는 것과 멀어지는 것은 다르다 - 제련은 광맥 위가 아니라
+  -- 광맥 «옆»에 서야 한다.
+  local SMELTED = { "iron-ore", "copper-ore" }
+
+  local function ore_gap(at)
+    local near = math.huge
+    for _, ore in pairs(SMELTED) do
+      local found = s.find_entities_filtered {
+        position = { at.x + SMELT_W / 2, at.y + SMELT_H / 2 },
+        radius = 250, name = ore, limit = 1,
+      }[1]
+      -- limit=1 은 「아무거나 하나」라 거리를 못 준다. 반경을 좁혀가며
+      -- 있는지 물어 가장 가까운 테를 찾는다.
+      if found then
+        for r = 20, 250, 20 do
+          local hit = s.count_entities_filtered {
+            position = { at.x + SMELT_W / 2, at.y + SMELT_H / 2 },
+            radius = r, name = ore, limit = 1,
+          }
+          if hit > 0 then near = math.min(near, r) break end
+        end
+      end
+    end
+    return near
+  end
+
   -- 이미 선 화로가 있으면 «그것이 0번 자리»다.
   --
   -- 실측(새 판 1분째): 첫 화로가 (49,75)에 섰는데 제련 구역은 (59,75)로
@@ -410,6 +449,9 @@ local function smelter(x, y)
                     y = math.floor(standing[1].position.y) }
     -- 첫 화로 자리부터. 안 되면 «그 화로 둘레»로 넓혀간다 - 기지에서
     -- 다시 찾으면 화로가 있는 쪽과 상관없는 데로 가버린다.
+    -- 첫 화로 둘레를 훑되, «되는 자리 중 광석에 가장 가까운» 자리를 고른다.
+    -- 처음 되는 자리를 집으면 그것이 광석 반대쪽일 수 있다.
+    local best, best_gap, best_r = nil, math.huge, nil
     for r = 0, 60, 4 do
       local ring = (r == 0) and { { 0, 0 } }
         or { { r, 0 }, { 0, r }, { -r, 0 }, { 0, -r },
@@ -417,11 +459,17 @@ local function smelter(x, y)
       for _, step in pairs(ring) do
         local at = { x = first.x + step[1], y = first.y + step[2] }
         if fits(at) then
-          storage.smelter = at
-          return { smelter = at, chosen = true, anchored = true,
-                   nudged = (r > 0) and r or nil }
+          local gap = ore_gap(at)
+          if gap < best_gap then best, best_gap, best_r = at, gap, r end
         end
       end
+      -- 광석 옆(스무 타일 안)을 찾았으면 더 볼 것 없다.
+      if best and best_gap <= 20 then break end
+    end
+    if best then
+      storage.smelter = best
+      return { smelter = best, chosen = true, anchored = true,
+               ore_gap = best_gap, nudged = (best_r or 0) > 0 and best_r or nil }
     end
   end
 
