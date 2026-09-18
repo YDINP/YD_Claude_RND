@@ -9,12 +9,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 import brain  # noqa: E402
 import mission  # noqa: E402
-from agent import (FOCUS_ORDER, STAGE_TARGET, STUCK_STRIKES,  # noqa: E402
-                   Crew, Job, errand_label,
-                   spread_sites, worth_building, chain_job, nearest_to,
-                   carry_split, belt_pairs, furnace_seat,  # noqa: E402
-                   Snapshot, chain_job, cluster, interleave, missing_item,
-                   next_goal, plan)
+# 각 이름을 «사는 곳»에서 부른다. agent.py 가 전부 다시 내보내주기는 하지만,
+# 여기서 그렇게 부르면 무엇이 어디로 갔는지 이 파일이 증언하지 못한다.
+from settings import FOCUS_ORDER, STUCK_STRIKES  # noqa: E402
+from world import Snapshot  # noqa: E402
+from jobs import Job, errand_label  # noqa: E402
+from layout import (belt_pairs, carry_split, cluster,  # noqa: E402
+                    furnace_seat, interleave, nearest_to, spread_sites)
+from ladder import (STAGE_TARGET, chain_job, missing_item,  # noqa: E402
+                    next_goal, plan, worth_building)
+from crew import Crew  # noqa: E402
 
 # 반장이 내릴 수 있다고 적어둔 명령은 전부 실제로 처리되는 것이어야 한다.
 # 표에만 있고 처리기가 없는 명령은 조용히 무시되고, 왜 안 먹는지 아무도
