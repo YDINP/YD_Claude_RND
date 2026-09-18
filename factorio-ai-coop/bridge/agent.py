@@ -312,32 +312,51 @@ def nearest_to(spots: list[dict], at: dict, least: int = 0,
     return None
 
 
-# 화로 한 줄에 몇 대까지, 그리고 대 사이 간격.
+# 화로 사이 간격.
 #
-# 간격 4는 전기 화로(3x3)로 바꿀 자리를 남겨둔 값이다. 3으로 붙이면 나중에
-# 그 자리에서 교체가 안 된다.
-#
-# 줄바꿈이 없던 시절에는 n번째 화로가 첫 화로에서 4n 타일 밖에 섰다.
-# 열아홉 대째가 274타일 밖이었고, 거기까지 광석을 나르느니 안 짓느니만
-# 못하다. 여섯 대면 한 줄이 24타일이고, 예순 대를 놓아도 24 x 40 안이다.
+# 4는 전기 화로(3x3)로 바꿀 자리를 남겨둔 값이다. 3으로 붙이면 나중에 그
+# 자리에서 교체가 안 된다.
 FURNACE_PITCH = 4
-FURNACE_ROW = 6
 
 
-def furnace_seat(origin: dict, nth: int, pitch: int = FURNACE_PITCH,
-                 row: int = FURNACE_ROW) -> dict:
-    """n번째 화로가 설 자리. 한 줄이 차면 다음 줄로 내려간다.
+def _rings(cap: int = 400) -> list[tuple[int, int]]:
+    """중심에서 가까운 칸부터. 한 겹을 다 채우면 다음 겹으로.
 
-    예전에는 `x + pitch * n` 한 줄이었다. 줄바꿈이 없으니 열아홉 대째가
-    274타일 밖에 섰고, 사람이 거기까지 광석을 날라야 했다. 게다가 기준점이
-    「나에게 가장 가까운 화로」라 부르는 사람이 움직일 때마다 바뀌어서,
-    줄이 동쪽으로 계속 행진했다.
-
-    기준점은 부르는 쪽에서 «가장 왼쪽 위 화로»로 고정해 넘긴다. 누가
-    묻든 같은 답이 나와야 줄이 흔들리지 않는다.
+    (0,0) → 그 둘레 여덟 칸 → 그 바깥 열여섯 칸 → ...
     """
-    return {"x": origin["x"] + pitch * (nth % row),
-            "y": origin["y"] + pitch * (nth // row)}
+    out = [(0, 0)]
+    r = 1
+    while len(out) < cap:
+        for dx in range(-r, r + 1):
+            out.append((dx, -r))
+        for dy in range(-r + 1, r + 1):
+            out.append((r, dy))
+        for dx in range(r - 1, -r - 1, -1):
+            out.append((dx, r))
+        for dy in range(r - 1, -r, -1):
+            out.append((-r, dy))
+        r += 1
+    return out[:cap]
+
+
+FURNACE_RINGS = _rings()
+
+
+def furnace_seat(origin: dict, nth: int,
+                 pitch: int = FURNACE_PITCH) -> dict:
+    """n번째 화로가 설 자리. 중심에서 사방으로 겹겹이 퍼진다.
+
+    처음에는 `x + pitch * n` 한 줄이었다. 열아홉 대째가 274타일 밖에 섰다.
+    그래서 여섯 대마다 줄을 바꾸게 고쳤는데, 그것도 결국 «오른쪽 아래로만»
+    자란다 — 기준점을 모서리로 쓰기 때문이다. 위도 왼쪽도 비어 있는데
+    한쪽으로만 밀고 나가는 것은 여전히 멀어지는 일이다.
+
+    기준점을 «중심»으로 쓰고 겹겹이 두르면 가장 촘촘하다. 예순 대를 놓아도
+    중심에서 16타일 안에 전부 들어간다. 막힌 칸은 게임이 알아서 튕겨내므로
+    여기서는 자리만 순서대로 내주면 된다.
+    """
+    dx, dy = FURNACE_RINGS[min(nth, len(FURNACE_RINGS) - 1)]
+    return {"x": origin["x"] + pitch * dx, "y": origin["y"] + pitch * dy}
 
 
 def belt_pairs(blocked: list[dict], starving: list[dict],
@@ -688,11 +707,14 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     if furnace and standing < want:
         nth = standing
         if snap.have("stone-furnace") >= 1:
-            # 기준점은 가장 왼쪽 위 화로로 고정한다. 「나에게 가장 가까운
+            # 기준점은 이미 선 화로들의 가운데다. 「나에게 가장 가까운
             # 화로」를 쓰면 부르는 사람이 움직일 때마다 기준이 바뀌어 줄이
             # 한 방향으로 계속 밀려난다 - 실제로 274타일까지 갔다.
-            corner = min(furnaces, key=lambda f: (f["y"], f["x"]))
-            seat = furnace_seat(corner, nth + 1)
+            # 가운데는 누가 묻든 같고, 거기서 겹겹이 두르면 사방으로 고르게
+            # 자란다.
+            middle = {"x": sum(f["x"] for f in furnaces) / len(furnaces),
+                      "y": sum(f["y"] for f in furnaces) / len(furnaces)}
+            seat = furnace_seat(middle, nth + 1)
             jobs.append(Job(f"화로를 하나 더 놓겠습니다 ({nth + 1}번째).",
                             key=f"furnace:{nth}", steps=[
                                 ("build", {"name": "stone-furnace",

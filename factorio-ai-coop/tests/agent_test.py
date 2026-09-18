@@ -818,20 +818,23 @@ def main() -> int:
               [{"x": 5, "y": 0}, {"x": 7, "y": 0}])]))
     check("nothing starving means nothing to lay", belt_pairs(stuck, []) == [])
 
-    print("\n27. furnaces make a block, not a parade")
+    print("\n27. furnaces ring the base, they do not march off it")
     home = {"x": 52, "y": 16}
-    check("the first six fill one row",
-          [furnace_seat(home, n)["y"] for n in range(6)] == [16] * 6)
-    check("the seventh drops to the next row",
-          furnace_seat(home, 6) == {"x": 52, "y": 20},
-          str(furnace_seat(home, 6)))
-    # 예전에는 열아홉 대째가 첫 화로에서 274타일 밖에 섰다.
-    far = furnace_seat(home, 19)
-    check("the twentieth is still within twenty tiles",
-          abs(far["x"] - home["x"]) <= 20 and abs(far["y"] - home["y"]) <= 20,
-          str(far))
-    check("sixty furnaces fit in a block, not a line",
-          max(abs(furnace_seat(home, n)["x"] - home["x"]) for n in range(60)) <= 24)
+    check("the first one sits on the spot itself",
+          furnace_seat(home, 0) == {"x": 52, "y": 16})
+    ring1 = [furnace_seat(home, n) for n in range(1, 9)]
+    check("the next eight surround it on all four sides",
+          {(p["x"] - 52) // 4 for p in ring1} == {-1, 0, 1}
+          and {(p["y"] - 16) // 4 for p in ring1} == {-1, 0, 1},
+          str([(p["x"] - 52, p["y"] - 16) for p in ring1]))
+    check("it grows up and left too, not only right and down",
+          any(p["x"] < 52 for p in ring1) and any(p["y"] < 16 for p in ring1))
+    # 처음에는 열아홉 대째가 274타일 밖에 섰고, 여섯 칸 줄로 고친 뒤에도
+    # 오른쪽 아래로만 자랐다.
+    far = max(max(abs(furnace_seat(home, n)["x"] - 52),
+                  abs(furnace_seat(home, n)["y"] - 16)) for n in range(60))
+    check("sixty furnaces all sit within sixteen tiles of home",
+          far <= 16, str(far))
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
