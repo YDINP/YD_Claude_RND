@@ -89,6 +89,10 @@ local flows       = Belts.flows
 local flow_plan   = Belts.flow_plan
 local claim_work  = Belts.claim_work
 
+local City = require("city")
+local lay_out = City.lay_out
+local read_map = City.read_map
+
 local Zones = require("zones")
 local draw_zones = Zones.draw_zones
 local misplaced  = Zones.misplaced
@@ -628,6 +632,18 @@ remote.add_interface("ai", {
 
   -- 무엇을 어디서 하는가. 채굴 / 제련 / 조립.
   zones = zones,
+
+  -- 반장이 지도를 «먼저» 보고 네 구역을 한꺼번에 정한다.
+  -- 짓는 순서가 자리를 정하면, 자리는 짓는 순서만큼 우연해진다.
+  lay_out = lay_out,
+  read_map = function(name)
+    local a = agent(name)
+    local b = body(a)
+    local home = (base() or {}).home
+      or (b and { x = math.floor(b.position.x), y = math.floor(b.position.y) })
+    if not home then return { error = "no home yet" } end
+    return read_map(b and b.surface or game.surfaces[1], home, 250)
+  end,
 
   -- 제자리가 아닌 건물들, 그리고 제자리에 이미 선 수.
   misplaced = misplaced,

@@ -348,6 +348,14 @@ class AIBridge:
         """한 흐름의 다음 할 일."""
         return self.call("flow_plan", agent, which, limit)
 
+    def lay_out(self, agent: str, redo: bool = False) -> dict:
+        """반장의 설계. 지도를 먼저 보고 네 구역을 한꺼번에 정한다."""
+        return self.call("lay_out", agent, redo)
+
+    def read_map(self, agent: str) -> dict:
+        """광맥·물·둥지가 어디에 얼마나 있는가."""
+        return self.call("read_map", agent)
+
     def alive(self, agent: str) -> dict:
         """이 요원에게 몸이 있는가."""
         return self.call("alive", agent)

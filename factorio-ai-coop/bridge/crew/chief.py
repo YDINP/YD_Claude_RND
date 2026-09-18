@@ -55,6 +55,55 @@ MUSTER_EVERY = 25.0
 class ChiefMixin:
     """반장 - 사슬에서 끊긴 칸을 찾아 그쪽으로 사람을 몰아준다."""
 
+    def lay_out(self) -> None:
+        """설계. 지도를 «먼저» 보고 네 구역을 한꺼번에 정한다.
+
+        사용자 지시: "건설은 전체적으로 맵을보고 반장이 설계위임하고"
+
+        지금까지 구역은 «짓다 보니» 정해졌다. 첫 화로가 선 자리가 제련
+        구역이 되고, 채굴기가 선 자리가 채굴 구역이 되고, 조립 구역은
+        남는 빈 땅에서 찾았다. 그 값이 이랬다:
+
+          * 첫 일이 「돌부터 캐서 화로를 만들겠습니다」라 제련 구역이
+            돌 광맥 위에 앉았다. 광맥의 76%를 깔고 앉은 채로.
+          * 그것을 피하게 했더니 광석에서 «멀어지는» 쪽으로 피해,
+            제련 구역이 철광석 200타일 밖에 섰다.
+          * 유통에서 제련까지 곧은 거리가 49타일인데 길은 154칸이었다.
+
+        짓는 순서가 자리를 정하면, 자리는 짓는 순서만큼 우연해진다.
+
+        한 번 정하면 남는다. 설계가 흔들리면 그 위에 지은 것이 전부
+        흔들린다 - 이 저장소가 세 번 겪은 일이다.
+        """
+        if getattr(self, "_laid_out", False):
+            return
+        who = next(iter(self.workers), None)
+        if not who:
+            return
+        try:
+            plan = self.bridge.lay_out(who)
+        except RconError:
+            return
+        if plan.get("error"):
+            # 아직 광맥이 안 보이면 다음 순찰에 다시 본다. 설계를 못 한
+            # 것과 안 한 것은 다르다.
+            return
+        self._laid_out = True
+
+        def spot(zone):
+            z = plan.get(zone)
+            return f"({z['x']},{z['y']})" if z else "미정"
+
+        fields = ", ".join(
+            f"{f['ore'].replace('-ore','')} {f['gap']}타일"
+            for f in (plan.get("fields") or [])[:4])
+        nest = plan.get("nest")
+        self.say(f"지도를 봤습니다. 제련 {spot('smelt')}, 유통 {spot('depot')}, "
+                 f"조립 {spot('craft')}. 광맥은 {fields or '아직 안 보임'}. "
+                 + (f"둥지는 {nest['gap']}타일 {('북' if nest['y'] < plan['home']['y'] else '남')}쪽입니다. "
+                    if nest else "")
+                 + "이 자리로 짓겠습니다.")
+
     def muster(self) -> None:
         """점호. 죽은 요원을 세되 «되살리지 않는다».
 

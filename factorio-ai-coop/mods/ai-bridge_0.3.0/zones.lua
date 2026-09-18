@@ -274,8 +274,13 @@ local function zones(name)
   local home = base().home
   if not home then return { zones = nil } end
 
+  -- 설계가 있으면 그것을 따른다. 구역은 «정해지는» 것이지 «자라나는»
+  -- 것이 아니다 - 자라나게 뒀더니 제련이 돌 광맥 위에 앉고 철광석에서
+  -- 200타일 밖에 섰다.
+  local plan = storage.city and storage.city.plan
   local out = {
     home = home,
+    plan = plan and true or false,
     mine = nil,    -- 아래에서 밭 목록과 함께 받는다.
     smelt = smelter().smelter,
     craft = nil,   -- 아래에서 채운다. 채굴/제련 구역을 알아야 고를 수 있다.
