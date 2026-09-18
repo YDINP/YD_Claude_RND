@@ -41,10 +41,20 @@ local CLEAR = { "furnace", "mining-drill", "assembling-machine", "lab",
 local WATER = { "water", "deepwater", "water-shallow", "water-mud",
                 "water-green", "deepwater-green" }
 
+-- 광맥 위에는 구역을 놓지 않는다.
+--
+-- 건물이 덮은 광맥은 영영 못 캔다. 그리고 그 자리는 언젠가 채굴 구역이
+-- 되고 싶어하는 땅이다 - 조립기를 거기 세우면 나중에 둘이 싸운다.
+--
+-- 제련 쪽에서 이 조건이 빠져 돌 광맥의 76%를 깔고 앉은 일이 있었다.
+-- 여기도 같은 구멍이 있었다.
+local ORE = { "stone", "iron-ore", "copper-ore", "coal", "uranium-ore" }
+
 local function room(surface, at, w, h)
   local box = { { at.x - 2, at.y - 2 }, { at.x + w, at.y + h } }
   return surface.count_entities_filtered { area = box, type = CLEAR } == 0
      and surface.count_tiles_filtered { area = box, name = WATER } == 0
+     and surface.count_entities_filtered { area = box, name = ORE } == 0
 end
 
 -- 캐는 구역: 우리 채굴기들이 실제로 서 있는 곳. 광맥이 정하지 우리가

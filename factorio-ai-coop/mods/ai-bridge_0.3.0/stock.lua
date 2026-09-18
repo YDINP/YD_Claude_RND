@@ -372,11 +372,25 @@ local function smelter(x, y)
   if not home then return { smelter = nil } end
   local s = game.surfaces[1]
 
+  -- 자리가 되는가. 빈 땅이면 되는 것이 아니라 «광맥이 아니어야» 된다.
+  --
+  -- 사용자가 짚었다: "제련을 왜 돌채광지에서해?"
+  --
+  -- 실측이 그대로였다. 제련 구역 608칸 중 155칸이 돌 광맥이었고, 그 돌
+  -- 광맥은 통째로 203타일이었다. 광맥의 76%를 깔고 앉은 것이다. 건물이
+  -- 덮은 밑은 영영 못 캔다.
+  --
+  -- 그렇게 된 까닭은 첫 화로를 «돌 캐던 자리»에서 만들어 그 자리에 놓았고,
+  -- 기준점이 그것을 따랐기 때문이다. 첫 화로를 따르는 것은 맞다 - 다만
+  -- 광맥 위는 아니다. 광맥은 채굴 구역의 것이고, 제련은 그 옆에 선다.
+  local ORE = { "stone", "iron-ore", "copper-ore", "coal", "uranium-ore" }
+
   local function fits(at)
     local box = { { at.x - 2, at.y - 2 },
                   { at.x + SMELT_W, at.y + SMELT_H } }
     return s.count_entities_filtered { area = box, type = BUILT } <= 1
        and s.count_tiles_filtered { area = box, name = WATER } == 0
+       and s.count_entities_filtered { area = box, name = ORE } == 0
   end
 
   -- 이미 선 화로가 있으면 «그것이 0번 자리»다.
@@ -392,11 +406,22 @@ local function smelter(x, y)
     name = "stone-furnace", force = game.forces.player, limit = 2,
   }
   if #standing == 1 then
-    local at = { x = math.floor(standing[1].position.x),
-                 y = math.floor(standing[1].position.y) }
-    if fits(at) then
-      storage.smelter = at
-      return { smelter = at, chosen = true, anchored = true }
+    local first = { x = math.floor(standing[1].position.x),
+                    y = math.floor(standing[1].position.y) }
+    -- 첫 화로 자리부터. 안 되면 «그 화로 둘레»로 넓혀간다 - 기지에서
+    -- 다시 찾으면 화로가 있는 쪽과 상관없는 데로 가버린다.
+    for r = 0, 60, 4 do
+      local ring = (r == 0) and { { 0, 0 } }
+        or { { r, 0 }, { 0, r }, { -r, 0 }, { 0, -r },
+             { r, r }, { -r, r }, { r, -r }, { -r, -r } }
+      for _, step in pairs(ring) do
+        local at = { x = first.x + step[1], y = first.y + step[2] }
+        if fits(at) then
+          storage.smelter = at
+          return { smelter = at, chosen = true, anchored = true,
+                   nudged = (r > 0) and r or nil }
+        end
+      end
     end
   end
 
@@ -406,10 +431,7 @@ local function smelter(x, y)
                            { r, r }, { -r, r }, { r, -r }, { -r, -r } }) do
       local at = { x = math.floor(home.x + step[1]),
                    y = math.floor(home.y + step[2]) }
-      local box = { { at.x - 2, at.y - 2 },
-                    { at.x + SMELT_W, at.y + SMELT_H } }
-      if s.count_entities_filtered { area = box, type = BUILT } == 0
-         and s.count_tiles_filtered { area = box, name = WATER } == 0 then
+      if fits(at) then
         storage.smelter = at
         return { smelter = at, chosen = true }
       end
