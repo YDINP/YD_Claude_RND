@@ -16,7 +16,7 @@ from settings import (CHEST, DRILL, DRILLS_PER_AGENT, DRILLS_PER_FURNACE, DRILL_
                       SMELT_BATCH, SMELT_FOR_TECH, SMELT_MARGIN, STOCKPILE)
 from world import Snapshot
 from jobs import Job
-from layout import furnace_seat, orphan_drills
+from layout import craft_seat, furnace_seat, orphan_drills
 
 
 def worth_building(row: dict, floor: int = 6) -> tuple[bool, str]:
@@ -102,9 +102,12 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     # One furnace serves everybody, so only one agent should be building it.
     if not furnace:
         if snap.have("stone-furnace") >= 1:
-            jobs.append(Job("화로를 설치합니다.", key="furnace", steps=[
-                ("build", {"name": "stone-furnace", "x": snap.x + 3, "y": snap.y + 3,
-                           "snap": True})
+            # 첫 화로가 제련 구역의 첫 칸이 된다. 여기서 「내가 선 자리」에
+            # 놓으면 그 뒤의 화로 예순 대가 전부 그 자리를 기준으로 선다.
+            first = furnace_seat(snap.smelter, 0) if snap.smelter else {
+                "x": snap.x + 3, "y": snap.y + 3}
+            jobs.append(Job("제련 구역에 화로를 설치합니다.", key="furnace", steps=[
+                ("build", {"name": "stone-furnace", **first, "snap": True})
             ]))
         elif snap.can_make("stone-furnace"):
             jobs.append(Job("화로를 제작합니다.", key="furnace",
@@ -126,8 +129,13 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
                 jobs.append(Job("랩에 쓸 전자회로를 만듭니다.", key="craft:circuit",
                                 steps=[("craft", {"recipe": "electronic-circuit", "count": 10})]))
         elif snap.have("lab") >= 1 and not snap.building("lab"):
-            jobs.append(Job("랩을 설치합니다.", key="build:lab", steps=[
-                ("build", {"name": "lab", "x": snap.x + 4, "y": snap.y - 4, "snap": True})
+            # 랩은 조립 구역에 선다. 「내가 선 자리 옆」에 놓으면 랩이
+            # 사람을 따라다니고, 그러면 조립기도 과학팩도 따라 흩어진다.
+            # 전기가 닿는 곳이어야 하는 것도 랩이 구역을 갖는 이유다.
+            seat = craft_seat(snap.craft, 1) if snap.craft else {
+                "x": snap.x + 4, "y": snap.y - 4}
+            jobs.append(Job("조립 구역에 랩을 설치합니다.", key="build:lab", steps=[
+                ("build", {"name": "lab", **seat, "snap": True})
             ]))
         elif snap.building("lab") and not snap.powered:
             # «기관이 서 있는가»가 아니라 «전기가 흐르는가». 죽은 발전소를

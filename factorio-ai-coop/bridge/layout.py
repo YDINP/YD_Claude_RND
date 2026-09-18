@@ -9,7 +9,7 @@ from __future__ import annotations
 from itertools import zip_longest
 
 from settings import (BELT_REACH, CHEST, CHEST_REACH, CLUSTER_MAX, CLUSTER_REACH,
-                      DRILL, FURNACE_AISLE, FURNACE_GAP,
+                      CRAFT_PITCH, CRAFT_ROW, DRILL, FURNACE_AISLE, FURNACE_GAP,
                       FURNACE_PITCH, FURNACE_ROW, HAUL_REACH)
 from world import Snapshot
 
@@ -83,6 +83,21 @@ def furnace_seat(origin: dict, nth: int,
     return {"x": origin["x"] + pitch * col,
             "y": origin["y"] + row * FURNACE_AISLE
                  + block * (FURNACE_AISLE + FURNACE_GAP)}
+
+
+def craft_seat(origin: dict, nth: int, pitch: int = CRAFT_PITCH,
+               row: int = CRAFT_ROW) -> dict:
+    """조립 구역에서 n번째 기계가 설 자리.
+
+    조립기도 랩도 3x3 이다. 4칸 간격으로 한 줄에 여섯 대씩, 줄 사이는
+    한 칸을 띄운다 - 그 한 칸이 나중에 인서터와 벨트가 지나갈 길이다.
+
+    화로와 달리 여기는 줄이 마주볼 필요가 없다. 과학팩은 한 줄로 흐르고,
+    랩은 그 줄을 따라 늘어선다(reference/red-science-block.png).
+    """
+    band, within = divmod(nth, row)
+    return {"x": origin["x"] + pitch * within,
+            "y": origin["y"] + band * (pitch + 1)}
 
 
 def belt_pairs(blocked: list[dict], starving: list[dict],

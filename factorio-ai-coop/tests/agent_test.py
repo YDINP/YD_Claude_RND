@@ -15,7 +15,8 @@ from settings import FOCUS_ORDER, STUCK_STRIKES  # noqa: E402
 from world import Snapshot  # noqa: E402
 from jobs import Job, errand_label  # noqa: E402
 from layout import (belt_pairs, carry_split, cluster,  # noqa: E402
-                    furnace_seat, interleave, nearest_to, spread_sites)
+                    craft_seat, furnace_seat, interleave, nearest_to,
+                    spread_sites)
 from ladder import (STAGE_TARGET, chain_job, missing_item,  # noqa: E402
                     next_goal, plan, worth_building)
 from crew import Crew  # noqa: E402
@@ -821,6 +822,18 @@ def main() -> int:
               [{"x": 0, "y": 0}, {"x": 1, "y": 0}],
               [{"x": 5, "y": 0}, {"x": 7, "y": 0}])]))
     check("nothing starving means nothing to lay", belt_pairs(stuck, []) == [])
+
+    print("%s26b. every zone has its own grid")
+    shop = {"x": 66, "y": -8}
+    line = [craft_seat(shop, n) for n in range(6)]
+    check("six machines to a row, four tiles apart",
+          all(p["y"] == -8 for p in line)
+          and [p["x"] for p in line] == list(range(66, 66 + 24, 4)))
+    check("the seventh drops to the next band with a lane between",
+          craft_seat(shop, 6) == {"x": 66, "y": -8 + 5})
+    check("a whole craft zone stays inside its 24 by 14 plot",
+          max(craft_seat(shop, n)["x"] for n in range(18)) - 66 <= 24
+          and max(craft_seat(shop, n)["y"] for n in range(18)) + 8 <= 14)
 
     print("\n27. furnaces stand in rows, not in a spray")
     home = {"x": 52, "y": 16}

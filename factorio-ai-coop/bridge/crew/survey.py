@@ -51,8 +51,10 @@ class SurveyMixin:
             home = (self.bridge.base() or {}).get("home")
             # 제련 블록의 모서리는 게임 쪽이 기억한다. 한 번 받아두면 이
             # 사람이 계산하는 화로 자리가 다른 사람의 것과 어긋나지 않는다.
-            if worker.smelter is None:
-                worker.smelter = self.bridge.smelter()
+            if worker.smelter is None or worker.craft is None:
+                spread = self.bridge.zones(worker.name) or {}
+                worker.smelter = spread.get("smelt")
+                worker.craft = spread.get("craft")
                 # 구역을 지도에 표시한다. 관전하는 사람이 「여기가 어디인지」
                 # 보려면 코드만 아는 것으로는 부족하다.
                 self.bridge.draw_zones(worker.name)

@@ -6,7 +6,8 @@ import mission
 from client import RconError
 
 from settings import (CHEST, DEPOT_MIN, DRILL, DRILL_FUEL, FOCUS_ORDER, FURNACE_FUEL,
-                      HARVEST_MIN, KEEP_IN_HAND, SMELTABLE, SMELTED_BY_FURNACE,
+                      HARVEST_MIN, KEEP_IN_HAND, KEEP_ORE, LOOSE_ORE,
+                      SMELTABLE, SMELTED_BY_FURNACE,
                       SMELT_BATCH, STARVING, STOCKPILE)
 from world import Snapshot
 from jobs import Job
@@ -40,9 +41,17 @@ class TendingMixin:
             return Job("공용 창고를 세우겠습니다.", key="depot:build",
                        routine="depot", at=base)
 
-        surplus = [(name, count - KEEP_IN_HAND)
+        # 광석과 판금은 거의 다 내려놓는다. 가방 속 광석은 아무도 못 쓰고,
+        # 가방이 차면 그다음 take 가 통째로 실패한다. 연료는 손에 있어야
+        # 기계에 넣어줄 수 있으므로 예외다.
+        def spare(name: str, count: int) -> int:
+            if name == "coal":
+                return 0
+            return count - (KEEP_ORE if name in LOOSE_ORE else KEEP_IN_HAND)
+
+        surplus = [(name, spare(name, count))
                    for name, count in snap.items.items()
-                   if count - KEEP_IN_HAND >= DEPOT_MIN and name != "coal"]
+                   if spare(name, count) >= DEPOT_MIN]
         if not surplus:
             return None
         surplus.sort(key=lambda pair: -pair[1])

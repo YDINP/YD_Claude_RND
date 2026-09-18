@@ -27,6 +27,8 @@ class Snapshot:
     powered: bool = False
     # 제련 블록의 모서리. 누가 묻든 같은 값이어야 화로가 줄을 선다.
     smelter: dict | None = None
+    # 조립 구역의 모서리. 랩과 조립기는 전부 여기 선다.
+    craft: dict | None = None
 
     def have(self, item: str) -> int:
         return self.items.get(item, 0)

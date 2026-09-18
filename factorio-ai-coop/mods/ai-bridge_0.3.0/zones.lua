@@ -65,18 +65,41 @@ local function mine_zone(surface, force)
   }
 end
 
+-- 두 사각형이 겹치는가. 구역이 서로 겹치면 나눈 것이 아니다.
+local function overlaps(at, w, h, box, margin)
+  margin = margin or 0
+  return not (at.x + w < box.left - margin or at.x > box.right + margin
+           or at.y + h < box.top - margin or at.y > box.bottom + margin)
+end
+
 -- 만드는 구역: 전기가 닿는 곳이어야 한다. 조립기도 랩도 전기를 먹는다.
 -- 그러니 «전기가 있는 전봇대 가까이»에서 빈 땅을 찾는다.
-local function craft_zone(surface, force, home)
-  if storage.zones and storage.zones.craft then return storage.zones.craft end
+--
+-- 다만 «빈 땅»만으로는 모자랐다. 처음 골라준 자리가 채굴 구역 한복판이었다 -
+-- 그 순간 마침 건물이 없었을 뿐, 거기는 곧 채굴기가 설 땅이다. 구역은
+-- «지금 비어 있는가»가 아니라 «누구 땅인가»로 정해야 한다.
+local MINE_MARGIN = 6
+
+local function craft_zone(surface, force, home, mine, smelt)
+  local kept = storage.zones and storage.zones.craft
+  if kept and not (mine and overlaps(kept, CRAFT_W, CRAFT_H, mine, MINE_MARGIN)) then
+    return kept
+  end
+
   local live = power_reach(home.x, home.y)
   local anchor = live.powered or home
-  for r = 6, 60, 4 do
+  for r = 6, 90, 4 do
     for _, step in pairs({ { r, 0 }, { 0, r }, { -r, 0 }, { 0, -r },
                            { r, r }, { -r, r }, { r, -r }, { -r, -r } }) do
       local at = { x = math.floor(anchor.x + step[1]),
                    y = math.floor(anchor.y + step[2]) }
-      if room(surface, at, CRAFT_W, CRAFT_H) then
+      local clash = mine and overlaps(at, CRAFT_W, CRAFT_H, mine, MINE_MARGIN)
+      if not clash and smelt then
+        clash = overlaps(at, CRAFT_W, CRAFT_H, {
+          left = smelt.x, top = smelt.y,
+          right = smelt.x + SMELT_W, bottom = smelt.y + SMELT_H }, 4)
+      end
+      if not clash and room(surface, at, CRAFT_W, CRAFT_H) then
         storage.zones = storage.zones or {}
         storage.zones.craft = at
         return at
@@ -101,8 +124,9 @@ local function zones(name)
     home = home,
     mine = mine_zone(surface, force),
     smelt = smelter().smelter,
-    craft = craft_zone(surface, force, home),
+    craft = nil,   -- 아래에서 채운다. 채굴/제련 구역을 알아야 고를 수 있다.
   }
+  out.craft = craft_zone(surface, force, home, out.mine, out.smelt)
   if out.smelt then
     out.smelt.w, out.smelt.h = SMELT_W, SMELT_H
   end
