@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from client import RconError, TaskFailed
 
-from settings import (BACKOFF_SECONDS, HAUL_BATCH, HAUL_WHEN, LINE_HANDS,
+from settings import (BACKOFF_SECONDS, HAUL_BATCH, HAUL_WHEN, LINE_HANDS, LOOSE_BATCH, LOOSE_LOOK,
                       SMELTED_BY_FURNACE)
 from jobs import Job, Step
 from ladder import _as_rows
@@ -137,12 +137,29 @@ class HaulingMixin:
 
         길을 부를 때마다 새로 찾던 시절에 깔린 것들이다. 걷어내면 벨트가
         손에 돌아오고, 그 손으로 진짜 길을 이어 깔면 된다 - 새로 만들 필요가
-        없으니 철판 예순 개를 아끼는 셈이다.
+        없으니 철판을 그만큼 아끼는 셈이다.
+
+        실측(48분째)이 왜 이 일이 급한지 보여준다:
+
+            세상의 벨트     526칸
+            그중 길 밖      400칸 이상
+            길에 모자란 칸  409칸
+
+        **이미 깔린 것을 걷기만 하면 길이 거의 다 이어진다.** 그런데 무리는
+        새 벨트를 만들고 있었다. 철판 사백 장이 미로로 누워 있는데 옆에서
+        또 사백 장을 녹이는 꼴이다.
+
+        한 번에 걷는 양을 여섯에서 스물로 늘렸다. 한 무더기에 여섯씩
+        걷어서는 사백 칸을 못 치운다 - 벨트 한 스택이 백 개이므로 스물은
+        가방에 넉넉히 들어간다.
         """
         try:
-            loose = self.bridge.loose_belts(worker.name, limit=32)
+            loose = self.bridge.loose_belts(worker.name, limit=LOOSE_LOOK)
         except RconError:
             return None
+        # 몇 칸이 널려 있는지 여기서 기억해둔다. 순서를 정하는 쪽이 그
+        # 숫자를 다시 물으면 같은 조회를 두 번 하는 셈이다.
+        self._loose_seen = len(loose)
         if not loose:
             return None
         taken = self.taken()
@@ -151,6 +168,7 @@ class HaulingMixin:
             key = f"loose:{head['x']:.0f},{head['y']:.0f}"
             if key in taken:
                 continue
+            group = group[:LOOSE_BATCH]
             return Job(
                 f"길 위에 없는 벨트 {len(group)}칸이 버려져 있습니다. "
                 f"걷어와서 진짜 길에 쓰겠습니다.",
@@ -159,6 +177,14 @@ class HaulingMixin:
                                      "name": BELT}) for one in group],
                 at={"x": head["x"], "y": head["y"]})
         return None
+
+    def belt_flood(self, worker: Worker) -> int:
+        """길 밖에 널린 벨트가 몇 칸인가.
+
+        이것이 길에 모자란 칸수와 비슷하면, 새로 만들 이유가 없다.
+        걷어서 깔면 된다.
+        """
+        return int(getattr(self, "_loose_seen", 0))
 
     def resettle_job(self, worker: Worker) -> Job | None:
         """제자리가 아닌 건물을 제 구역으로 옮긴다.

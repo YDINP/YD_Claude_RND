@@ -9,7 +9,7 @@ import math
 
 from client import RconError
 
-from settings import (CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH,
+from settings import (CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH, LOOSE_FLOOD,
                       BAG_ROOM, HOME_REACH, SMELTED_BY_FURNACE, SMELT_BATCH,
                       STRAY_FAR,
                       SURPLUS, THIN_DRILL, WELL_FULL)
@@ -192,16 +192,36 @@ class SurveyMixin:
             unblock.append(smoke)
 
         #     버려진 벨트를 먼저 걷어온다 - 새로 만드는 것보다 언제나 싸다.
+        #
+        #     그리고 널린 것이 많으면 «길 깔기보다도» 먼저다. 실측(48분째):
+        #
+        #         세상의 벨트    526칸
+        #         그중 길 밖     400칸 이상
+        #         길에 모자란 칸 409칸
+        #
+        #     이미 깔린 것을 걷기만 하면 길이 거의 다 이어진다. 그런데
+        #     무리는 옆에서 새 벨트를 만들고 있었다. 철판 사백 장이 미로로
+        #     누워 있는데 또 사백 장을 녹이는 꼴이다.
         stray_belt = self.loose_belt_job(worker)
+        flooded = False
         if stray_belt:
-            unblock.append(stray_belt)
+            flooded = self.belt_flood(worker) >= LOOSE_FLOOD
+            if flooded:
+                jobs.insert(0, stray_belt)
+            else:
+                unblock.append(stray_belt)
         # 광석 길은 «일감 하나»가 아니라 «백 대를 한 번에 푸는 일»이다.
         #     채굴기 161대 중 100대가 내놓을 데가 없어 서 있고
         #     화로 100대 중 94대가 재료가 없어 서 있다
         # 그 둘 사이가 끊긴 것이 전부이므로, 이 일은 나르는 일보다 앞이다.
         line = self.line_job(worker)
         if line:
-            jobs.insert(0, line)
+            # 걷을 것이 널려 있으면 깔기는 그다음이다. 걷어온 벨트로 깔면
+            # 되고, 그동안 새로 만들 철판은 다른 데 쓴다.
+            if flooded:
+                jobs.append(line)
+            else:
+                jobs.insert(0, line)
 
         # 1. 연료가 떨어진 기계. 세 가지를 이 순서로 한다.
         #
