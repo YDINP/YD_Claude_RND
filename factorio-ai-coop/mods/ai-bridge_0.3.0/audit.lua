@@ -85,9 +85,25 @@ local function audit(name)
   -- 쓴 것은 없어져도 만든 것은 없어지지 않는다.
   -- 전체 누적은 버킷이 아니라 카운터로 묻는다. precision 버킷은 굴러가는
   -- 창이라 「여태」를 재는 도구가 아니다.
+  -- 손으로 만든 것은 엔진이 안 센다.
+  --
+  -- 실측: alpha 에게 기어 두 개를 만들라고 시켰더니 만들었는데,
+  -- `get_input_count('iron-gear-wheel')` 은 만들기 전에도 0, 만든 뒤에도
+  -- 0 이었다. 생산 통계는 «기계가» 만든 것만 센다.
+  --
+  -- 그래서 감사가 「기어 제작에서 끊겼다」고 말했다. 기어는 끊긴 적이
+  -- 없었다 - 손으로 만들고 있었을 뿐이다. 반장은 그 거짓말을 믿고 사람을
+  -- 그쪽으로 몰아줬고, 사다리는 팩을 열 개 써도 못 올라갔다.
+  --
+  -- 우리는 이미 손 제작을 세고 있었다(storage.crafted). 트리거 기술을
+  -- 열려고 만들어둔 것인데, 감사가 그것을 안 보고 있었다. 또 그것이다 -
+  -- 기능은 있는데 그것을 가리키는 것이 없다.
+  local by_hand = storage.crafted or {}
+
   local function ever_count(item)
+    local hand = by_hand[item] or 0
     local ok, n = pcall(function() return stats.get_input_count(item) end)
-    if ok and n then return n end
+    if ok and n then return n + hand end
     ok, n = pcall(function()
       return stats.get_flow_count {
         name = item, category = "input",
@@ -95,7 +111,7 @@ local function audit(name)
         count = true,
       }
     end)
-    return (ok and n) or 0
+    return ((ok and n) or 0) + hand
   end
 
   local rungs, broken_at = {}, nil
@@ -104,7 +120,9 @@ local function audit(name)
     local per_minute = made(stats, rung.key, minute) or 0
     local per_hour = made(stats, rung.key, hour) or 0
     local ever = ever_count(rung.key)
-    local flowing = per_minute > 0
+    -- 손으로 만드는 단계는 분당 수치가 0 이어도 끊긴 것이 아니다.
+    -- 기계가 안 만들 뿐, 사람이 만들고 있다.
+    local flowing = per_minute > 0 or (by_hand[rung.key] or 0) > 0
     rungs[#rungs + 1] = {
       item = rung.key, label = rung.label,
       minute = math.floor(per_minute * 10) / 10,
