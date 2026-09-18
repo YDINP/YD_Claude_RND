@@ -346,6 +346,15 @@ class AIBridge:
         answer = self.call("health", agent, radius).get("machines")
         return answer if isinstance(answer, dict) else {}
 
+    def power_reach(self, x: float, y: float) -> dict:
+        """전기가 있는 가장 가까운 전봇대와, 여기까지의 거리."""
+        return self.call("power_reach", x, y)
+
+    def pole_route(self, agent: str, fx: float, fy: float, tx: float, ty: float,
+                   limit: int = 8) -> dict:
+        """두 점 사이에 전봇대를 놓을 자리들. 막히면 거기까지만."""
+        return self.call("pole_route", agent, fx, fy, tx, ty, limit)
+
     def power_faults(self, agent: str) -> dict:
         """발전소가 어디서 끊겼는지. poles / pipes / fuel / water."""
         return self.call("power_faults", agent)

@@ -27,6 +27,8 @@ local init              = Core.init
 local Craft = require("craft")
 local compute_plan = Craft.compute_plan
 local Power = require("power")
+local pole_route     = Power.pole_route
+local power_reach    = Power.power_reach
 local power_faults     = Power.power_faults
 local power_plan       = Power.power_plan
 local power_status     = Power.power_status
@@ -525,6 +527,10 @@ remote.add_interface("ai", {
   power_status = power_status,
 
   -- 발전소가 어디서 끊겼는지 조목조목.
+  -- 전기가 있는 곳에서 필요한 곳까지, 그리고 그 사이 전봇대 자리.
+  power_reach = power_reach,
+  pole_route = pole_route,
+
   power_faults = power_faults,
 
   -- 세운 수가 아니라 도는 수.

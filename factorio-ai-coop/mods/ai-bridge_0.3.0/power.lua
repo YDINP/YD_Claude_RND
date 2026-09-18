@@ -541,8 +541,88 @@ local function power_plan(name, x, y, radius, engines)
   return { error = "no shore with room for a whole power block" }
 end
 
+-- 전기가 있는 곳에서 전기가 필요한 곳까지 얼마나 먼가.
+--
+-- 실측(2026-09-18): 발전소가 (-96,-70), 기지가 (77,24) 였다. 196타일이다.
+-- 물이 기지에서 141타일 밖이라 발전소를 옮길 수도 없다. 그러면 답은 하나다 -
+-- 전봇대를 길게 깐다. 소형 전봇대는 목재 하나와 구리선 둘이니, 196타일이면
+-- 스물일곱 개, 목재 스물일곱 개다. 판금 하나보다 싸다.
+local function power_reach(x, y)
+  local s = game.surfaces[1]
+  local f = game.forces.player
+  local here = { x = x, y = y }
+
+  -- 발전기가 붙어 있는 망만 «전기가 있는 망»이다. 전봇대끼리만 이어진
+  -- 섬은 아무리 커도 전기가 없다.
+  local live = {}
+  for _, g in pairs(s.find_entities_filtered { type = "generator", force = f }) do
+    local net = g.electric_network_id
+    if net then live[net] = (live[net] or 0) + 1 end
+  end
+
+  local best, bd = nil, math.huge
+  local near, nd = nil, math.huge
+  for _, e in pairs(s.find_entities_filtered { type = "electric-pole", force = f }) do
+    local d = Tasks.dist(here, e.position)
+    if live[e.electric_network_id] then
+      if d < bd then best, bd = e, d end
+    elseif d < nd then
+      near, nd = e, d
+    end
+  end
+  if not best then return { powered = nil, generators = 0 } end
+  return {
+    powered = { x = best.position.x, y = best.position.y },
+    net = best.electric_network_id,
+    generators = live[best.electric_network_id],
+    gap = math.floor(bd),
+    island = near and { x = near.position.x, y = near.position.y,
+                        gap = math.floor(nd) } or nil,
+  }
+end
+
+-- 두 점 사이에 전봇대를 놓을 자리들. 전선이 닿는 간격으로.
+--
+-- 막힌 칸은 옆으로 두 칸까지 비켜본다. 비켜도 안 되면 거기서 멈추고
+-- 거기까지의 자리만 돌려준다 - 반쯤 깐 줄도 다음 사람이 이어 깔 수 있다.
+local WIRE_STEP = 7        -- 소형 전봇대 전선 도달 7.5, 안전하게 7
+local function pole_route(name, fx, fy, tx, ty, limit)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+  local s, f = b.surface, b.force
+
+  local dx, dy = tx - fx, ty - fy
+  local span = math.sqrt(dx * dx + dy * dy)
+  if span < WIRE_STEP then return { poles = {}, done = true } end
+  local ux, uy = dx / span, dy / span
+
+  local out = {}
+  local steps = math.floor(span / WIRE_STEP)
+  for i = 1, steps do
+    local want = { x = math.floor(fx + ux * WIRE_STEP * i) + 0.5,
+                   y = math.floor(fy + uy * WIRE_STEP * i) + 0.5 }
+    local seat = nil
+    for _, nudge in pairs({ { 0, 0 }, { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 },
+                            { 2, 0 }, { -2, 0 }, { 0, 2 }, { 0, -2 } }) do
+      local try = { x = want.x + nudge[1], y = want.y + nudge[2] }
+      if s.can_place_entity { name = "small-electric-pole",
+                              position = try, force = f } then
+        seat = try
+        break
+      end
+    end
+    if not seat then break end
+    out[#out + 1] = seat
+    if limit and #out >= limit then break end
+  end
+  return { poles = out, done = #out >= steps, steps = steps }
+end
+
 return {
   DIRS = DIRS,
+  pole_route = pole_route,
+  power_reach = power_reach,
   fit_against = fit_against,
   meets = meets,
   outward = outward,

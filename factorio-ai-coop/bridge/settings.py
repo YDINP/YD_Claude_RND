@@ -150,6 +150,8 @@ BOILER_FUEL = 20
 
 
 # small-electric-pole 은 7.5타일까지 배선이 닿는다. 여유를 두고 7로 잡는다.
+# 소형 전봇대. 목재 하나와 구리선 둘 - 판금 하나보다 싸다.
+POLE = "small-electric-pole"
 POLE_REACH = 7
 
 

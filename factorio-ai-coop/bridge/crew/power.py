@@ -6,7 +6,8 @@ import math
 
 from client import RconError, TaskFailed
 
-from settings import BOILER_FUEL, ENGINES_PER_BOILER, MAX_POLE_RUN, POLE_REACH
+from settings import (BOILER_FUEL, ENGINES_PER_BOILER, MAX_POLE_RUN,
+                      POLE, POLE_REACH)
 from world import Snapshot
 from jobs import Job
 from ladder import _as_rows
@@ -208,6 +209,73 @@ class PowerMixin:
             self.say(f"전봇대 {placed}개를 세웠는데 아직 0W입니다. "
                      f"가운데가 끊겼거나 보일러에 연료가 없습니다.", who=name)
 
+    def run_wire(self, worker: Worker, at: dict) -> None:
+        """전기가 있는 곳에서 필요한 곳까지 전봇대를 깐다.
+
+        실측(2026-09-18): 발전소가 (-96,-70), 기지가 (77,24)였다. 196타일
+        떨어져 있고, 기지에서 가장 가까운 물조차 141타일 밖이라 발전소를
+        옮길 수도 없다. 그러면 답은 하나다 - 전봇대를 길게 깐다.
+
+        소형 전봇대는 목재 하나와 구리선 둘이다. 196타일이면 스물일곱 개,
+        목재 스물일곱 개 - 나무 몇 그루다. 이것 하나에 랩도, 조립기도,
+        나중의 전기 채굴기도 전부 달려 있다.
+
+        한 번에 여덟 개씩 깐다. 한 번에 스물일곱 개를 들고 가려면 그만큼을
+        먼저 만들어야 하고, 그동안 아무도 아무것도 못 한다. 반쯤 깐 줄도
+        다음 사람이 이어 깐다.
+        """
+        name = worker.name
+        key = "wire"
+        try:
+            here = self.seat(worker)
+            reach = self.bridge.power_reach(at.get("x", here[0]),
+                                            at.get("y", here[1]))
+            if not reach.get("powered"):
+                self.say("전기가 붙어 있는 망이 아직 없습니다.", who=name)
+                worker.block(key, 600)
+                return
+
+            live = reach["powered"]
+            route = self.bridge.pole_route(name, live["x"], live["y"],
+                                           at.get("x", here[0]),
+                                           at.get("y", here[1]),
+                                           limit=MAX_POLE_RUN)
+            seats = _as_rows(route.get("poles"))
+            if not seats:
+                self.say(f"전봇대를 놓을 자리가 안 납니다 "
+                         f"({reach.get('gap')}타일 떨어져 있습니다).", who=name)
+                worker.block(key, 600)
+                return
+
+            if not self.obtain(worker, POLE, len(seats)):
+                self.ask_for(worker, POLE, len(seats),
+                             f"발전소까지 {reach.get('gap')}타일 전선 잇기")
+                worker.block(key)
+                return
+
+            laid = 0
+            for seat in seats:
+                try:
+                    worker.handle.place(POLE, seat["x"], seat["y"], timeout=420)
+                    laid += 1
+                except TaskFailed:
+                    continue
+            if not laid:
+                worker.block(key)
+                return
+
+            after = self.bridge.power_reach(at.get("x", here[0]),
+                                            at.get("y", here[1]))
+            self.say(f"발전소 쪽에서 전봇대 {laid}개를 이어 깔았습니다. "
+                     f"남은 거리 {reach.get('gap')} → {after.get('gap')}타일.",
+                     who=name)
+        except TaskFailed as exc:
+            worker.block(key)
+            self.say(f"전선을 잇다 막혔습니다: {exc.task.get('error')}", who=name)
+        except RconError as exc:
+            worker.block(key)
+            self.say(f"전선 작업 중 오류: {exc}", who=name)
+
     def lay_pipe(self, worker: Worker, at: dict) -> None:
         """끊긴 한 칸에 파이프를 놓는다."""
         name = worker.name
@@ -337,4 +405,25 @@ class PowerMixin:
                 f"보일러에 연료가 없습니다. ({spot['x']:.0f}, {spot['y']:.0f})",
                 key=f"stoke:{spot['x']:.0f},{spot['y']:.0f}",
                 routine="stoke", at=spot))
+
+        # 위의 넷은 «가까이 있는 것이 어긋난» 경우다. 그것으로 안 되면
+        # 남은 이유는 하나다 - 발전소가 기지에서 너무 멀다.
+        #
+        # 실측: 발전소 (-96,-70), 기지 (77,24). 196타일. 물조차 141타일
+        # 밖이라 발전소를 옮길 수도 없다. 전봇대를 길게 까는 수밖에 없고,
+        # 소형 전봇대는 목재 하나와 구리선 둘이니 스물일곱 개래야 나무
+        # 몇 그루다. 랩도 조립기도 나중의 전기 채굴기도 전부 여기 달렸다.
+        if not out:
+            try:
+                home = (self.bridge.base() or {}).get("home")
+                reach = self.bridge.power_reach(home["x"], home["y"]) if home else {}
+            except (RconError, KeyError, TypeError):
+                reach = {}
+            gap = int(reach.get("gap") or 0)
+            if reach.get("powered") and gap > POLE_REACH:
+                out.append(Job(
+                    f"발전소가 기지에서 {gap}타일 떨어져 있습니다. 전봇대를 "
+                    f"이어 깔아 기지까지 전기를 끌어오겠습니다.",
+                    key="wire", routine="wire", at=home,
+                    needs={POLE: MAX_POLE_RUN}))
         return out
