@@ -35,6 +35,7 @@ local power_status     = Power.power_status
 local water_sites_near = Power.water_sites_near
 local wire_spot        = Power.wire_spot
 local Sites = require("sites")
+local feed_belts   = Sites.feed_belts
 local aim_drill      = Sites.aim_drill
 local assembler_site = Sites.assembler_site
 local belt_route     = Sites.belt_route
@@ -704,6 +705,9 @@ remote.add_interface("ai", {
   -- 채굴기가 들어가고 출구도 비는 자리, 그리고 이미 막힌 것 돌려세우기.
   drill_site = drill_site,
   aim_drill = aim_drill,
+
+  -- 벨트가 옆에 있으면 상자 말고 벨트를 보게 돌린다.
+  feed_belts = feed_belts,
 
   -- 석탄 위에서 서로를 먹이는 채굴기 두 대의 자리.
   coal_pair_site = coal_pair_site,

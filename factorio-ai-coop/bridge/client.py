@@ -356,6 +356,10 @@ class AIBridge:
         """죽은 요원을 기지에서 다시 세운다. 살아 있으면 아무것도 안 한다."""
         return self.call("revive", agent)
 
+    def feed_belts(self, agent: str, limit: int = 40) -> dict:
+        """벨트가 옆에 있는 채굴기를 벨트 쪽으로 돌린다."""
+        return self.call("feed_belts", agent, limit)
+
     def claim_work(self, agent: str, which: str, count: int = 20) -> dict:
         """설계에서 내 몫을 받아온다. 남이 집어간 칸은 안 온다."""
         return self.call("claim_work", agent, which, count)

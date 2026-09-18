@@ -348,6 +348,55 @@ local function aim_drill(name, x, y)
   return { error = "every side of the drill is blocked" }
 end
 
+-- 벨트가 옆에 있으면 벨트에 떨군다.
+--
+-- 사용자가 사진과 함께 짚었다: "이러면 벨트를 깐 이유가 없는데".
+-- 채굴기가 상자에 떨구고, 그 옆에서 벨트가 비어 있었다.
+--
+-- `aim_drill` 은 「막혔는가」만 본다. 상자가 안 찼으면 막힌 게 아니므로
+-- 그대로 둔다. 그래서 벨트를 아무리 깔아도 채굴기는 여전히 상자를 본다.
+--
+-- 버너 채굴기는 인서터 없이 «벨트에 직접» 떨군다. 그것이 이 시대 물류의
+-- 핵심이고, 상자는 벨트가 없을 때의 임시방편이다. 벨트가 깔린 다음에도
+-- 상자를 보고 있으면 사람이 그 상자를 퍼 나르는 일이 영원히 남는다.
+--
+-- 상자는 걷지 않는다. 안에 든 것이 있고, 벨트가 막힐 때의 완충이기도 하다.
+-- 채굴기가 보는 쪽만 바꾼다.
+local function feed_belts(name, limit)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+  local surface, force = b.surface, b.force
+
+  local turned, seen = {}, 0
+  for _, drill in pairs(surface.find_entities_filtered {
+    type = "mining-drill", force = force,
+  }) do
+    local drop = drill.drop_target
+    local on_belt = drop ~= nil and drop.valid and drop.type == "transport-belt"
+    if not on_belt then
+      -- 네 방향 중 벨트가 있는 쪽을 찾는다.
+      for _, dir in pairs(DIRECTIONS) do
+        local tile = drop_tile(drill.position, dir)
+        local belt = surface.find_entities_filtered {
+          position = { tile.x, tile.y }, radius = 0.4,
+          name = "transport-belt", force = force, limit = 1,
+        }[1]
+        if belt then
+          seen = seen + 1
+          if #turned < (limit or 40) then
+            drill.direction = dir
+            turned[#turned + 1] = { x = drill.position.x, y = drill.position.y,
+                                    dir = dir }
+          end
+          break
+        end
+      end
+    end
+  end
+  return { turned = turned, total = seen }
+end
+
 -- 공장이 실제로 «돌고 있는가». 세운 수가 아니라 도는 수를 센다.
 --
 -- 실측(259분째): 버너 채굴기 194대 중 도는 것은 24대(12%)였다. 101대는
@@ -774,6 +823,7 @@ return {
   DIRECTIONS = DIRECTIONS,
   LANE_EVERY = LANE_EVERY,
   aim_drill = aim_drill,
+  feed_belts = feed_belts,
   assembler_site = assembler_site,
   belt_route = belt_route,
   blocking = blocking,

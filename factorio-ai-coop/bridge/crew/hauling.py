@@ -331,6 +331,26 @@ class HaulingMixin:
             self.say(f"{label}을(를) 못 깔았습니다: {stuck}", who=name)
             return
 
+        # 깔았으면 «싣는다».
+        #
+        # 사용자가 사진과 함께 짚었다: "이러면 벨트를 깐 이유가 없는데".
+        # 채굴기가 상자에 떨구고 그 옆에서 벨트가 비어 있었다.
+        #
+        # 버너 채굴기는 인서터 없이 벨트에 «직접» 떨군다. 그런데 벨트를
+        # 깐다고 채굴기가 저절로 그쪽을 보지는 않는다 - 상자가 안 찼으면
+        # 막힌 것이 아니므로 예전 방향 그대로다. 깔고 나서 돌려줘야 한다.
+        #
+        # 길을 깐 일과 그 길에 싣는 일은 다른 일이다. 앞의 것만 하고 뒤의
+        # 것을 빠뜨리면 벨트는 장식이 된다.
+        try:
+            fed = self.bridge.feed_belts(name)
+            if fed.get("turned"):
+                self.say(f"채굴기 {len(fed['turned'])}대를 벨트 쪽으로 "
+                         f"돌렸습니다. 이제 상자가 아니라 벨트에 떨굽니다.",
+                         who=name)
+        except RconError:
+            pass
+
         after = 0
         try:
             after = int((self.bridge.flow_plan(name, which, limit=1)
