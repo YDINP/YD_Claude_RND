@@ -10,7 +10,7 @@ import math
 
 from typing import Any
 
-from settings import (BURNER_DRILLS, CHEST, DRILL, FIRST_PACKS, DRILLS_PER_AGENT, DRILLS_PER_FURNACE, DRILL_FUEL, GROW_STEP,
+from settings import (BURNER_DRILLS, CHEST, DRILL, FIRST_PACKS, DRILLS_PER_AGENT, COAL_RIGS, DRILLS_PER_FURNACE, DRILL_FUEL, GROW_STEP,
                       ENGINES_PER_BOILER, FOCUS_ORDER, FURNACES_PER_DRILL,
                       FURNACE_FUEL, MAX_FURNACES, ORE_BATCH, PLATES_FOR_TOOLS,
                       SMELT_BATCH, SMELT_FOR_TECH, SMELT_MARGIN, STOCKPILE)
@@ -313,11 +313,30 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
         known = _drill_fields(snap)
         # 모를 때는 밀어붙이지 않는다. 「없다」와 「아직 모른다」는 다르고,
         # 모른다고 상한을 넘기면 상한이 없는 것과 같아진다.
-        digs_coal = (not known) or any(one.get("ore") == "coal"
-                                       for one in known)
+        coal_rigs = sum(int(one.get("count") or 1)
+                        for one in known if one.get("ore") == "coal")
+        # 모르면 「넉넉하다」로 친다. 모른다고 상한을 넘기면 상한이 없는
+        # 것과 같아진다.
+        digs_coal = (not known) or coal_rigs >= COAL_RIGS
+
+        # 석탄은 «한 대로 충분하지 않다».
+        #
+        # 사용자: "석탄도 2개밖에 채굴기가 안굴러가네"
+        #
+        # 맞다. 실측(135분째)에 채굴기 스물여덟 대 중 열일곱이 연료 없이
+        # 서 있었다. 석탄 채굴기는 둘뿐이었고, 그 둘이 캐는 양으로는
+        # 스물여덟 대와 화로 스물일곱 대를 못 먹인다.
+        #
+        # 그리고 버너 시대의 죽음은 언제나 같은 모양이다 - 연료가 끊기면
+        # 석탄 채굴기도 멈추고, 멈추면 연료를 못 캐고, 못 캐니 영영 안 산다.
+        # 다른 광맥은 모자라면 느려지지만 석탄은 모자라면 «되돌아올 수 없다».
+        #
+        # 그러니 석탄은 세어서 채운다. 버너 채굴기 하나가 초당 0.25개를
+        # 캐고 태우는 것은 0.0375개다. 제 몫의 일곱 배를 남기는 셈이라
+        # 넷이면 스물여덟 대를 먹인다.
         if not digs_coal and snap.ore("coal"):
             focus = "coal"
-            room = max(room, 1)
+            room = max(room, COAL_RIGS - coal_rigs)
         order = [o for o in FOCUS_ORDER if o != focus]
         seat = 0
         for ore in [focus] + order:

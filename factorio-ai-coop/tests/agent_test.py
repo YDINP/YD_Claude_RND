@@ -11,7 +11,8 @@ import brain  # noqa: E402
 import mission  # noqa: E402
 # 각 이름을 «사는 곳»에서 부른다. agent.py 가 전부 다시 내보내주기는 하지만,
 # 여기서 그렇게 부르면 무엇이 어디로 갔는지 이 파일이 증언하지 못한다.
-from settings import (BURNER_DRILLS, DRILL, FIRST_PACKS, FOCUS_ORDER,  # noqa: E402
+from settings import (BURNER_DRILLS, COAL_RIGS, DRILL, FIRST_PACKS,  # noqa: E402
+                      FOCUS_ORDER,
                       MAX_FURNACES,
                       STUCK_STRIKES)
 from world import Snapshot  # noqa: E402
@@ -938,11 +939,30 @@ def main() -> int:
     check("with no coal field the next drill goes to coal",
           any(k.startswith("automate:coal") for k in no_coal), str(no_coal[:3]))
 
-    has_coal = [j.key for j in plan(with_fields(
-        ["coal", "copper-ore"], 6), focus="iron-ore", crew=4)]
-    check("with coal already dug it does not jump the queue",
-          not has_coal or not has_coal[0].startswith("automate:coal"),
-          str(has_coal[:3]))
+    # 한 대로는 모자란다. 버너 채굴기 하나가 캐는 0.25/s 중 제가 태우는
+    # 것이 0.0375/s 라 여섯 대치를 남기는데, 우리는 스물여덟 대를 돌린다.
+    thin = [j.key for j in plan(with_fields(["coal", "copper-ore"], 6),
+                                focus="iron-ore", crew=4)
+            if j.key.startswith("automate:")]
+    check("one coal rig is not enough to stop asking",
+          thin and thin[0].startswith("automate:coal"), str(thin[:3]))
+
+    enough_coal = [{"ore": "coal", "count": COAL_RIGS}, {"ore": "copper-ore"}]
+    full_coal = [j.key for j in plan(
+        Snapshot(x=0, y=0, researched=ALL_TECH, powered=True, working_labs=1,
+                 items={"burner-mining-drill": 3, "iron-chest": 3, "coal": 50},
+                 fields=enough_coal,
+                 resources={o: {"nearest": {"x": 3, "y": 3}, "nearest_dist": 4}
+                            for o in ("coal", "iron-ore", "copper-ore", "stone")},
+                 buildings={"stone-furnace": {"count": 6,
+                                              "nearest": {"x": 1, "y": 1},
+                                              "nearest_dist": 2,
+                                              "spots": [{"x": 1, "y": 1}]},
+                            DRILL: {"count": 6}}),
+        focus="iron-ore", crew=4) if j.key.startswith("automate:")]
+    check("with the coal quota met it does not jump the queue",
+          not full_coal or not full_coal[0].startswith("automate:coal"),
+          str(full_coal[:3]))
 
     # 「모른다」와 「없다」는 다르다. 모를 때는 석탄을 앞으로 당기지 않는다 -
     # 모른다고 상한을 넘기면 상한이 없는 것과 같아진다.

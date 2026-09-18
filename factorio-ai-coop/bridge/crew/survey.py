@@ -9,7 +9,7 @@ import math
 
 from client import RconError
 
-from settings import (CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH, LOOSE_FLOOD,
+from settings import (CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH, LOOSE_FLOOD, STARVING,
                       BAG_ROOM, HOME_REACH, SMELTED_BY_FURNACE, SMELT_BATCH,
                       STRAY_FAR,
                       SURPLUS, THIN_DRILL, WELL_FULL)
@@ -150,6 +150,13 @@ class SurveyMixin:
             # 사다리가 창고를 볼 수 있게 실어준다. 손에 없다고 없는 것이
             # 아니다 - 창고까지 걸어가는 것은 일이지 불가능이 아니다.
             worker.shelved = {k: int(v) for k, v in shelved.items()}
+            # 굶주림은 «여기서» 정한다. 예전에는 기계를 돌보는 일감을
+            # 만들 때 정했는데, 그것은 이 아래에서 벌어진다. 벨트를 앞에
+            # 둘지 뒤에 둘지는 그 전에 알아야 한다 - 한 순찰 늦은 판단이
+            # 그 순찰 동안 공장을 굶긴다.
+            self.starving = sum(
+                1 for e in _as_rows(stopped.get("stopped") or stopped)
+                if isinstance(e, dict) and e.get("fix") == "fuel") >= STARVING
         except RconError:
             return jobs
 
@@ -202,12 +209,30 @@ class SurveyMixin:
         #     이미 깔린 것을 걷기만 하면 길이 거의 다 이어진다. 그런데
         #     무리는 옆에서 새 벨트를 만들고 있었다. 철판 사백 장이 미로로
         #     누워 있는데 또 사백 장을 녹이는 꼴이다.
+        #
+        #     다만 «공장이 굶고 있으면» 벨트는 전부 뒤로 간다.
+        #
+        #     실측(135분째)이 그 값을 보여줬다:
+        #
+        #         채굴기 28대   연료없음 17, 출구막힘 10   도는 것 0
+        #         화로 27대     재료없음 20, 출력꽉참 7    도는 것 0
+        #         상자 속 석탄  324개
+        #         무리 넷       벨트를 40~115칸씩 들고 벨트만 깔고 있었다
+        #
+        #     석탄은 있었다. 나를 사람이 없었을 뿐이다. 벨트 일감을 앞으로
+        #     당긴 것이 이 저장소에 이미 적혀 있던 원칙을 덮어버렸다:
+        #     «이미 선 장치를 살리는 것이 새 장치를 세우는 것보다 먼저다».
+        #
+        #     길은 내일 깔아도 되지만 꺼진 화로는 오늘 식는다.
         stray_belt = self.loose_belt_job(worker)
         flooded = False
         if stray_belt:
-            flooded = self.belt_flood(worker) >= LOOSE_FLOOD
+            flooded = (not self.starving
+                       and self.belt_flood(worker) >= LOOSE_FLOOD)
             if flooded:
                 jobs.insert(0, stray_belt)
+            elif self.starving:
+                jobs.append(stray_belt)
             else:
                 unblock.append(stray_belt)
         # 광석 길은 «일감 하나»가 아니라 «백 대를 한 번에 푸는 일»이다.
@@ -216,9 +241,9 @@ class SurveyMixin:
         # 그 둘 사이가 끊긴 것이 전부이므로, 이 일은 나르는 일보다 앞이다.
         line = self.line_job(worker)
         if line:
-            # 걷을 것이 널려 있으면 깔기는 그다음이다. 걷어온 벨트로 깔면
-            # 되고, 그동안 새로 만들 철판은 다른 데 쓴다.
-            if flooded:
+            # 굶고 있으면 맨 뒤. 걷을 것이 널려 있으면 걷기 다음.
+            # 아니면 맨 앞 - 길이 이어지는 것이 백 대를 한 번에 푸는 일이다.
+            if self.starving or flooded:
                 jobs.append(line)
             else:
                 jobs.insert(0, line)
