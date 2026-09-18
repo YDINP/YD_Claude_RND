@@ -184,8 +184,35 @@ local function lay_out(name, redo)
     return { error = "no iron or copper in sight - nothing to lay out yet" }
   end
 
-  -- 녹일 것의 가운데. 하나만 보이면 그것 옆에.
-  local heart = iron and copper and mid(iron, copper) or (iron or copper)
+  -- 화로가 먹는 것의 가운데.
+  --
+  -- 「녹일 것의 가운데」로 뒀더니 석탄이 빠졌다. 실측(run11):
+  --
+  --   제련 구역 중심 (-6,82)
+  --     철   (31,101)  56타일
+  --     구리 (-37,60)  53타일
+  --     석탄 (51,65)   74타일   <- 가장 멀다
+  --
+  -- 버너 시대에 석탄은 «가장 많이 움직이는 것»이다. 화로마다 들어가고
+  -- 채굴기마다 들어간다 - 광석은 제 밭에서 제련까지 한 번 가지만 석탄은
+  -- 모든 기계로 간다. 그것을 빼고 가운데를 잡으면, 가장 굵은 흐름만
+  -- 빼놓고 가운데를 잡은 셈이다.
+  --
+  -- 석탄을 넣으면 같은 지도에서 합계 183 -> 155 타일이 된다.
+  --
+  -- 사람이 지은 68시간 공장이 이 실수의 큰 판이었다(docs/user-base-study.md):
+  -- 제련을 광맥으로 보내 전기화로 150대가 332x343에 흩어졌고, 그 값을
+  -- 벨트 6,829칸으로 치렀다.
+  local burns = {}
+  for _, p in pairs({ iron, copper, map.patches["coal"] }) do
+    if p then burns[#burns + 1] = p end
+  end
+  local heart = burns[1]
+  if #burns > 1 then
+    local hx, hy = 0, 0
+    for _, p in pairs(burns) do hx, hy = hx + p.x, hy + p.y end
+    heart = { x = math.floor(hx / #burns), y = math.floor(hy / #burns) }
+  end
   local smelt = seat_near(surface, heart, SMELT_W, SMELT_H, map.away, 1)
   if not smelt then
     return { error = "no room for a smelting block near the ore" }
