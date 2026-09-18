@@ -119,6 +119,24 @@ class ChiefMixin:
         for worker in self.workers.values():
             worker.made = self.made
 
+        # 공해가 둥지까지 얼마나 남았는가.
+        #
+        # 사용자: "이번맵은 적기지가 가까이있는데 이점 유의해"
+        #
+        # 실측: 가장 가까운 둥지가 130타일. 지난 판은 264타일이었다.
+        # 딱 절반이다. 그리고 지난 판에서 공해는 224타일까지 뻗었다 -
+        # 그 공장을 이 맵에 그대로 지으면 훨씬 일찍 닿는다.
+        #
+        # 재기만 하고 아무도 안 보고 있었다. 이제 이것이 상한을 깎는다.
+        try:
+            wall = self.bridge.defence(who)
+            room = wall.get("slack")
+            self.slack = float(room) if isinstance(room, (int, float)) else None
+        except RconError:
+            self.slack = getattr(self, "slack", None)
+        for worker in self.workers.values():
+            worker.slack = self.slack
+
         broken = chain.get("broken_at")
         if not broken:
             # 사슬이 끝까지 흐른다. 맡은 일을 흔들 이유가 없다.

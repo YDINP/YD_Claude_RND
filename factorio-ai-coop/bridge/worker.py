@@ -35,6 +35,8 @@ class Worker:
         self.next_furnace: dict | None = None
         # 반장이 재어 알려주는 누적 생산량. 사다리가 이것을 본다.
         self.made: dict[str, int] = {}
+        # 반장이 재어 알려주는 공해 여유(타일).
+        self.slack: float | None = None
         # What has just failed, and until when it stays off the table.
         self.blocked: dict[str, float] = {}
         # The job key this agent currently holds, so the crew can hand the rest
@@ -79,6 +81,7 @@ class Worker:
             craft=self.craft,
             next_furnace=self.next_furnace,
             made=dict(self.made),
+            slack=self.slack,
         )
 
     def block(self, kind: str, seconds: float = BACKOFF_SECONDS) -> None:

@@ -44,6 +44,31 @@ def worth_building(row: dict, floor: int = 6) -> tuple[bool, str]:
                    f"가장 많은 이유는 {worst[0]} {worst[1]}대입니다")
 
 
+def pollution_room(snap: Snapshot) -> float:
+    """공해 여유가 짓는 상한을 얼마나 깎는가. 1.0 이면 안 깎는다.
+
+    버너 기계는 하나하나가 굴뚝이다. 그러니 「몇 대까지 세울 것인가」는
+    벨트가 먹일 수 있는 수만으로 정할 일이 아니다 - 둥지가 얼마나 가까운가도
+    정한다. 같은 공장이라도 둥지가 260타일 밖이면 버티고 130타일이면 못 버틴다.
+
+    실측으로 배운 값이다. 지난 판에서 둥지는 264타일이었고 공해는 224타일까지
+    뻗었다. 마흔 타일 차이로 습격이 왔고 화로 8대와 요원 하나를 잃었다.
+    이번 맵의 가장 가까운 둥지는 130타일이다.
+
+    여유를 모르면 깎지 않는다. 모르는 것을 위험으로 치면 아무것도 못 짓는다.
+    """
+    room = snap.slack
+    if room is None:
+        return 1.0
+    if room <= 0:
+        return 0.0      # 이미 닿았다. 더 지을 때가 아니라 줄일 때다.
+    if room < 40:
+        return 0.5
+    if room < 100:
+        return 0.75
+    return 1.0
+
+
 def drill_target(snap: Snapshot, crew: int) -> int:
     """채굴기를 몇 대까지 세울 것인가.
 
@@ -56,6 +81,10 @@ def drill_target(snap: Snapshot, crew: int) -> int:
     # 161대를 세우고도 과학팩이 0개였다. 너비는 사슬을 대신하지 못한다.
     if not snap.knows("electric-mining-drill"):
         wanted = min(wanted, BURNER_DRILLS)
+    # 공해가 둥지에 가까우면 상한을 깎는다. 버너 채굴기는 하나하나가 굴뚝이다.
+    wanted = int(wanted * pollution_room(snap))
+    # 광맥마다 한 대씩은 남긴다. 완전히 0으로 만들면 사슬이 통째로 멈추고,
+    # 멈춘 공장은 스스로 방어를 세울 재료도 못 만든다.
     return max(len(FOCUS_ORDER), min(crew * DRILLS_PER_AGENT, wanted))
 
 
@@ -67,7 +96,9 @@ def furnace_target(snap: Snapshot, crew: int) -> int:
     """
     drills = snap.buildings.get(DRILL, {}).get("count", 0)
     from_drills = math.ceil(drills * FURNACES_PER_DRILL)
-    return max(1, min(MAX_FURNACES, max(crew, from_drills)))
+    # 돌 화로도 석탄을 태운다. 채굴기와 같은 이유로 같이 깎인다.
+    ceiling = int(MAX_FURNACES * pollution_room(snap)) or 1
+    return max(1, min(ceiling, max(crew, from_drills)))
 
 
 def rebalance(health: dict) -> tuple[str, int, str] | None:

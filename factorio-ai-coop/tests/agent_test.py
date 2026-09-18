@@ -896,6 +896,32 @@ def main() -> int:
           not any(j.key.startswith("furnace:") for j in plan(seated, crew=8)),
           str([j.key for j in plan(seated, crew=8)][:4]))
 
+    # 둥지가 가까우면 덜 짓는다.
+    #
+    # 사용자: "이번맵은 적기지가 가까이있는데 이점 유의해". 실측으로
+    # 가장 가까운 둥지가 130타일 - 지난 판(264타일)의 절반이다. 그리고
+    # 지난 판에서 공해는 224타일까지 뻗었다. 같은 공장을 이 맵에 그대로
+    # 지으면 훨씬 일찍 닿는다.
+    #
+    # 버너 기계는 하나하나가 굴뚝이다. 「몇 대까지」는 벨트가 먹일 수 있는
+    # 수만으로 정할 일이 아니다.
+    def with_slack(room):
+        return Snapshot(x=0, y=0, researched=set(), slack=room,
+                        buildings={"stone-furnace": {"count": 300}})
+
+    roomy = drill_target(with_slack(200), crew=8)
+    tight = drill_target(with_slack(30), crew=8)
+    check("a far nest leaves the cap alone",
+          roomy == drill_target(with_slack(None), crew=8), str(roomy))
+    check("a near nest cuts the cap", tight < roomy, f"{tight} < {roomy}")
+    check("pollution already at the nest stops new smokestacks",
+          drill_target(with_slack(0), crew=8) < roomy,
+          str(drill_target(with_slack(0), crew=8)))
+    # 다만 0 으로 만들지는 않는다. 멈춘 공장은 방어를 세울 재료도 못 만든다.
+    check("but never to zero - a stopped factory cannot arm itself",
+          drill_target(with_slack(0), crew=8) >= len(FOCUS_ORDER),
+          str(drill_target(with_slack(0), crew=8)))
+
     # 소모품을 «가지고 있는가»로 물으면 사다리가 굴러떨어진다.
     #
     # 실측: automation 연구가 끝났는데(빨간 과학팩 열 개를 «써야» 끝난다)
