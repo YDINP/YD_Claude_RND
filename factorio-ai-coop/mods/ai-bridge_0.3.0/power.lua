@@ -325,7 +325,8 @@ local function power_faults(name)
   if not b then return { error = "no such agent: " .. tostring(name) } end
 
   local surface, force = b.surface, b.force
-  local out = { poles = {}, pipes = {}, fuel = {}, water = {}, bridges = {} }
+  local out = { poles = {}, pipes = {}, fuel = {}, water = {},
+                bridges = {}, starved = {} }
   local open = {}   -- 안 이어진 연결구들. 키는 바라보는 칸.
 
   for _, e in pairs(surface.find_entities_filtered {
@@ -456,9 +457,35 @@ local function power_faults(name)
       return (p.distance or 0) < (q.distance or 0)
     end)
   end
+  -- 전기를 먹어야 하는데 아예 전기망에 안 붙은 기계들.
+  --
+  -- 실측(2026-09-18): 랩 하나가 (86,18)에 서 있는데 가장 가까운 전봇대가
+  -- 23타일 밖이었다. 전선을 기지 «무게중심»까지 끌어왔을 뿐, 정작 쓰는
+  -- 기계가 그 안에 들어오는지는 아무도 안 봤다.
+  --
+  -- 소형 전봇대의 공급 범위는 5x5 이고 전선 도달은 7.5 다. 둘은 다르다 -
+  -- 전봇대끼리는 7.5타일까지 손을 잡지만, 기계는 전봇대의 5x5 안에 서 있어야
+  -- 먹는다. 이 저장소가 이미 한 번 틀렸던 구분이다.
+  for _, e in pairs(surface.find_entities_filtered {
+    force = force, type = { "lab", "assembling-machine" },
+  }) do
+    if e.electric_network_id == nil then
+      out.starved[#out.starved + 1] = {
+        name = e.name, x = e.position.x, y = e.position.y,
+        distance = math.floor(Tasks.dist(b.position, e.position)),
+      }
+    end
+  end
+
+  local function nearest(list)
+    table.sort(list, function(p, q)
+      return (p.distance or 0) < (q.distance or 0)
+    end)
+  end
   nearest(out.poles)
   nearest(out.pipes)
   nearest(out.bridges)
+  nearest(out.starved)
   return out
 end
 

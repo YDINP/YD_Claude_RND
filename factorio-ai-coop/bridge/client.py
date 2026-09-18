@@ -336,6 +336,10 @@ class AIBridge:
         """무엇을 어디서 하는가 - 채굴 / 제련 / 조립."""
         return self.call("zones", agent)
 
+    def misplaced(self, agent: str, limit: int = 8) -> dict:
+        """제자리가 아닌 건물들. settled 는 이미 제자리에 선 수."""
+        return self.call("misplaced", agent, limit)
+
     def draw_zones(self, agent: str) -> dict:
         """구역을 지도에 표시한다. 관전하는 사람이 보라고."""
         return self.call("draw_zones", agent)

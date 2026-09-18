@@ -20,7 +20,8 @@ from client import RconError, TaskFailed
 from settings import (BACKOFF_SECONDS, HAUL_BATCH, HAUL_WHEN,
                       SMELTED_BY_FURNACE)
 from jobs import Job, Step
-from layout import cluster
+from ladder import _as_rows
+from layout import cluster, craft_seat, furnace_seat
 from worker import Worker
 
 BELT = "transport-belt"
@@ -132,6 +133,57 @@ class HaulingMixin:
                 key=key,
                 steps=[("demolish", {"x": one["x"], "y": one["y"],
                                      "name": BELT}) for one in group],
+                at={"x": head["x"], "y": head["y"]})
+        return None
+
+    def resettle_job(self, worker: Worker) -> Job | None:
+        """제자리가 아닌 건물을 제 구역으로 옮긴다.
+
+        구역을 나누는 일의 절반은 «이미 있는 것을 옮기는 일»이다. 새로 짓는
+        것만 구역으로 보내면 흩어진 것은 영원히 흩어진 채로 남는다.
+
+        걷어내면 건물이 통째로 손에 돌아오므로 옮기는 값은 걸음뿐이다.
+        한 번에 네 채씩 - 가까이 모인 것을 한 번의 걸음으로 옮긴다.
+        """
+        try:
+            found = self.bridge.misplaced(worker.name)
+        except RconError:
+            return None
+        rows = _as_rows(found.get("misplaced"))
+        if not rows:
+            return None
+        settled = found.get("settled") or {}
+        seat_of = {"smelt": (found.get("smelt"), furnace_seat),
+                   "craft": (found.get("craft"), craft_seat)}
+
+        taken = self.taken()
+        for group in cluster(rows)[:1]:
+            group = [one for one in group if seat_of.get(one["zone"], (None,))[0]]
+            if not group:
+                continue
+            head = group[0]
+            key = f"move:{head['x']:.0f},{head['y']:.0f}"
+            if key in taken:
+                continue
+
+            steps: list[Step] = []
+            nth = dict(settled)
+            moved = []
+            for one in group[:4]:
+                origin, seat_fn = seat_of[one["zone"]]
+                seat = seat_fn(origin, nth[one["zone"]])
+                nth[one["zone"]] += 1
+                steps.append(("demolish", {"x": one["x"], "y": one["y"],
+                                           "name": one["name"]}))
+                steps.append(("build", {"name": one["name"], **seat,
+                                        "snap": True}))
+                moved.append(one["name"])
+            where = "제련" if head["zone"] == "smelt" else "조립"
+            return Job(
+                f"{moved[0]} 등 {len(moved)}채가 {where} 구역 밖에 서 있습니다. "
+                f"걷어내서 제자리에 다시 세우겠습니다. "
+                f"({head['x']:.0f}, {head['y']:.0f})",
+                key=key, steps=steps,
                 at={"x": head["x"], "y": head["y"]})
         return None
 

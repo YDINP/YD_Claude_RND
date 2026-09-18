@@ -121,6 +121,14 @@ class SurveyMixin:
 
         # 1c. 광석 길. 사람이 나르는 동안에도 벨트는 깔아둔다 - 다 깔리면
         #     사람 쪽 일감이 저절로 사라진다(상자가 안 쌓이므로).
+        # 1d. 심시티 - 제자리가 아닌 건물을 제 구역으로 옮긴다.
+        #
+        #     구역을 나누는 일의 절반은 이미 있는 것을 옮기는 일이다. 새로
+        #     짓는 것만 구역으로 보내면 흩어진 것은 영원히 흩어진 채 남는다.
+        move = self.resettle_job(worker)
+        if move:
+            gather.append(move)
+
         #     버려진 벨트를 먼저 걷어온다 - 새로 만드는 것보다 언제나 싸다.
         stray_belt = self.loose_belt_job(worker)
         if stray_belt:

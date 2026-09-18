@@ -50,7 +50,10 @@ end
 -- 그러니 돌아가야 한다. 칸 수가 뻔하므로(수십 칸) 너비 우선으로 찾는다.
 -- 이미 벨트가 선 칸은 «지나갈 수 있는 칸»으로 친다 - 그것이 바로 우리가
 -- 깔아둔 길이기 때문이다.
-local MAX_VISIT = 6000
+-- 길 찾는 법이 바뀔 때마다 올린다. 옛 길을 버리는 표시다.
+local PLAN = 2
+
+local MAX_VISIT = 20000
 local STEPS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
 
 local function passable(surface, force, x, y)
@@ -64,62 +67,93 @@ local function passable(surface, force, x, y)
   }
 end
 
--- 트인 쪽에서 파고 들어간다.
+-- 트인 쪽에서 파고 들어간다. 그리고 되도록 곧게.
 --
--- 캐는 구역 쪽에서 출발하면 첫 칸부터 막힌다 - 실측하니 시작점 주변 169칸
--- 중 60칸만 열려 있었고 그나마 서로 끊겨 있었다. 채굴기 밭 한복판은 원래
--- 그렇다. 제련 구역 쪽은 161/169 로 훤하다.
+-- 두 번 고쳤다.
 --
--- 그러니 제련 구역에서 출발해 캐는 구역 쪽으로 파고 들어간다. 닿는 데까지만
--- 깔고, 남은 몇 걸음은 사람이 걷는다. 「줄이 끝까지 안 닿으니 아예 안 깐다」는
--- 것보다 「닿는 데까지 깔아둔다」가 언제나 낫다 - 다음 사람이 이어 깐다.
+-- 처음에는 ㄱ자로 걸었다 - 첫 칸부터 막혔다. 시작점 주변 169칸 중 60칸만
+-- 열려 있었고 그나마 서로 끊겨 있었다. 채굴기 밭 한복판은 원래 그렇다.
+--
+-- 다음에는 너비 우선으로 바꿨다. 돌아갈 줄은 알게 되었는데, 대각선을 한 칸씩
+-- 번갈아 가는 «계단»이 나왔다. 칸 수로는 최단이지만 사람이 까는 모양이 아니고,
+-- 나중에 옆에 무엇을 붙이기도 어렵다.
+--
+-- 사람이 까는 벨트는 길게 곧고 드물게 꺾인다. 그러니 재는 것을 바꾼다 -
+-- 칸 수가 아니라 «꺾이는 횟수»를 줄인다. 곧게 가는 것은 공짜(0), 꺾는 것은
+-- 1. 0/1 뿐이니 우선순위 큐 없이 덱 하나로 된다(0-1 BFS).
+--
+-- 이미 벨트가 선 칸은 지나갈 수 있는 칸으로 친다 - 그것이 바로 우리가 깔아둔
+-- 길이기 때문이다.
 local function walk(surface, force, from, goal)
-  local function key(x, y) return x .. ":" .. y end
-  local seen = { [key(goal.x, goal.y)] = false }
-  local queue = { { x = goal.x, y = goal.y } }
-  local head, visits = 1, 0
+  local function key(x, y, d) return x .. ":" .. y .. ":" .. d end
 
-  local best, best_gap = { x = goal.x, y = goal.y },
-                         math.abs(goal.x - from.x) + math.abs(goal.y - from.y)
+  -- 덱. 앞뒤로 넣고 앞에서 뺀다.
+  local deque, head, tail = {}, 0, -1
+  local function push_front(v) deque[head - 1] = v; head = head - 1 end
+  local function push_back(v) tail = tail + 1; deque[tail] = v end
 
-  while head <= #queue and visits < MAX_VISIT do
-    local at = queue[head]
+  local turns, came = {}, {}
+  for _, step in pairs(STEPS) do
+    local d = dir_of({ x = 0, y = 0 }, { x = step[1], y = step[2] })
+    turns[key(goal.x, goal.y, d)] = 0
+    push_back({ x = goal.x, y = goal.y, d = d })
+  end
+  head = 0
+
+  local best, best_gap, best_turn = nil, math.huge, math.huge
+  local visits = 0
+
+  while head <= tail and visits < MAX_VISIT do
+    local at = deque[head]
+    deque[head] = nil
     head = head + 1
     visits = visits + 1
+    local cost = turns[key(at.x, at.y, at.d)]
 
     local gap = math.abs(at.x - from.x) + math.abs(at.y - from.y)
-    if gap < best_gap then best, best_gap = at, gap end
-    if gap == 0 then break end
+    if gap < best_gap or (gap == best_gap and cost < best_turn) then
+      best, best_gap, best_turn = at, gap, cost
+    end
 
     for _, step in pairs(STEPS) do
+      local nd = dir_of({ x = 0, y = 0 }, { x = step[1], y = step[2] })
       local nx, ny = at.x + step[1], at.y + step[2]
-      local k = key(nx, ny)
-      if seen[k] == nil then
-        if (nx == from.x and ny == from.y)
-           or passable(surface, force, nx, ny) then
-          seen[k] = { x = at.x, y = at.y }
-          queue[#queue + 1] = { x = nx, y = ny }
+      local add = (nd == at.d) and 0 or 1
+      local k = key(nx, ny, nd)
+      if turns[k] == nil or turns[k] > cost + add then
+        local open = (nx == from.x and ny == from.y)
+                     or passable(surface, force, nx, ny)
+        if open then
+          turns[k] = cost + add
+          came[k] = at
+          if add == 0 then
+            push_front({ x = nx, y = ny, d = nd })
+          else
+            push_back({ x = nx, y = ny, d = nd })
+          end
         else
-          seen[k] = false   -- 막힌 칸. 다시 보지 않는다.
+          turns[k] = -1   -- 막힌 칸. 다시 보지 않는다.
         end
       end
     end
   end
 
+  if not best then return nil end
+
   -- best 에서 제련 구역까지 거슬러 올라가면 «캐는 쪽 -> 제련 쪽» 순서가 된다.
   -- 광석이 흐르는 방향과 같다.
   local tiles, at = {}, best
   while at do
-    local nxt = seen[key(at.x, at.y)] or nil
+    local back = came[key(at.x, at.y, at.d)]
     tiles[#tiles + 1] = { x = at.x, y = at.y,
-                          dir = nxt and dir_of(at, nxt)
+                          dir = back and dir_of(at, back)
                                 or defines.direction.east }
-    at = nxt
+    at = back
+    if #tiles > 400 then break end
   end
-  if #tiles == 0 then return nil end
   -- 마지막 칸(제련 구역 줄머리)은 내리는 줄이 맡는다. 두 번 세지 않는다.
   tiles[#tiles] = nil
-  return tiles, best_gap
+  return tiles, best_gap, best_turn
 end
 
 -- 시작점이 막혀 있으면 가장 가까운 빈 칸으로 옮긴다. 채굴기 밭 한복판에서
@@ -211,20 +245,23 @@ local function ore_line(name, fx, fy, limit)
   -- 그래서 부를 때마다 다른 길이 나왔고, 실측하니 벨트 마흔 칸을 깔아놓고도
   -- 「트렁크 0칸」이라고 답했다 - 깐 벨트가 새 길 위에 없었던 것이다.
   -- 그대로 두면 영원히 깔면서 영원히 못 끝낸다.
+  -- 길 찾는 법이 바뀌면 옛 길은 버린다. 계단으로 깔린 것을
+  -- 그대로 들고 가면 고친 보람이 없다.
   local kept = storage.ore_line
-  local trunk, short
+  if kept and kept.plan ~= PLAN then kept = nil end
+  local trunk, short, bends
   if kept and kept.head and kept.head.x == head.x and kept.head.y == head.y
      and kept.tiles and #kept.tiles > 0 then
-    trunk, short = kept.tiles, kept.short
+    trunk, short, bends = kept.tiles, kept.short, kept.bends
   else
     local from_at = open_spot(surface, force,
       { x = math.floor(fx or mine.x), y = math.floor(fy or mine.y) })
-    trunk, short = walk(surface, force, from_at, head)
+    trunk, short, bends = walk(surface, force, from_at, head)
     if not trunk then
       return { error = "no route from the mine to the smelter" }
     end
     storage.ore_line = { head = head, tiles = trunk, short = short,
-                         from = trunk[1] }
+                         bends = bends, from = trunk[1], plan = PLAN }
   end
   local from = trunk[1] or head
 
@@ -250,7 +287,7 @@ local function ore_line(name, fx, fy, limit)
     want = { trunk = #trunk, lane = #lane, arms = #arms },
     head = head, from = from,
     -- 줄이 캐는 구역까지 몇 칸 못 미쳤는가. 그만큼은 사람이 걷는다.
-    short = short,
+    short = short, bends = bends,
   }
 end
 
@@ -272,7 +309,10 @@ local function loose_belts(name, limit)
   local lane = feed_line(here.smelt)
 
   local mine_route = {}
+  -- 길 찾는 법이 바뀌면 옛 길은 버린다. 계단으로 깔린 것을
+  -- 그대로 들고 가면 고친 보람이 없다.
   local kept = storage.ore_line
+  if kept and kept.plan ~= PLAN then kept = nil end
   for _, tile in pairs((kept and kept.tiles) or {}) do
     mine_route[tile.x .. ":" .. tile.y] = true
   end

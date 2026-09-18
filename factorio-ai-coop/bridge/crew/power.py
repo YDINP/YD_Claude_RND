@@ -209,6 +209,37 @@ class PowerMixin:
             self.say(f"전봇대 {placed}개를 세웠는데 아직 0W입니다. "
                      f"가운데가 끊겼거나 보일러에 연료가 없습니다.", who=name)
 
+    def plug_machine(self, worker: Worker, goal: tuple[float, float]) -> bool:
+        """그 기계가 전기를 먹도록 마지막 전봇대 하나를 꽂는다.
+
+        전선 도달 7.5 와 공급 범위 5x5 는 다르다. 전봇대끼리는 7.5타일까지
+        손을 잡지만, 기계는 전봇대의 5x5 안에 서 있어야 먹는다. 줄을 기지
+        무게중심까지 끌어와 놓고 랩이 23타일 밖에 있어 굶던 것이 그래서다.
+
+        어느 칸이 맞는지는 짐작하지 않는다 - 임시 전봇대를 세워보고 그
+        기계가 전기망에 붙는지 게임에 묻는다.
+        """
+        name = worker.name
+        try:
+            spot = self.bridge.call("wire_spot", name, goal[0], goal[1])
+        except RconError:
+            return False
+        if spot.get("already"):
+            return True
+        if spot.get("error") or "x" not in spot:
+            return False
+        if not self.obtain(worker, POLE, 1):
+            self.ask_for(worker, POLE, 1, "굶는 기계에 전기 물리기")
+            return False
+        try:
+            worker.handle.place(POLE, spot["x"], spot["y"], timeout=420)
+        except TaskFailed:
+            return False
+        self.say(f"{spot.get('machine', '기계')}이(가) 전기를 먹도록 "
+                 f"({spot['x']:.0f}, {spot['y']:.0f})에 전봇대를 꽂았습니다.",
+                 who=name)
+        return True
+
     def run_wire(self, worker: Worker, at: dict) -> None:
         """전기가 있는 곳에서 필요한 곳까지 전봇대를 깐다.
 
@@ -236,12 +267,16 @@ class PowerMixin:
                 return
 
             live = reach["powered"]
+            goal = (at.get("x", here[0]), at.get("y", here[1]))
             route = self.bridge.pole_route(name, live["x"], live["y"],
-                                           at.get("x", here[0]),
-                                           at.get("y", here[1]),
-                                           limit=MAX_POLE_RUN)
+                                           goal[0], goal[1], limit=MAX_POLE_RUN)
             seats = _as_rows(route.get("poles"))
             if not seats:
+                # 줄은 다 왔다. 남은 것은 «그 기계가 전봇대의 5x5 안에
+                # 들어오는가»다. 전선 도달(7.5)과 공급 범위(5x5)는 다르고,
+                # 이 저장소가 이미 한 번 틀렸던 구분이다. 게임에 직접 묻는다.
+                if self.plug_machine(worker, goal):
+                    return
                 self.say(f"전봇대를 놓을 자리가 안 납니다 "
                          f"({reach.get('gap')}타일 떨어져 있습니다).", who=name)
                 worker.block(key, 600)
@@ -405,6 +440,17 @@ class PowerMixin:
                 f"보일러에 연료가 없습니다. ({spot['x']:.0f}, {spot['y']:.0f})",
                 key=f"stoke:{spot['x']:.0f},{spot['y']:.0f}",
                 routine="stoke", at=spot))
+
+        # 전기망에 아예 안 붙은 소비처. 전선을 기지 «무게중심»까지 끌어왔을
+        # 뿐, 정작 쓰는 기계가 전봇대의 5x5 안에 들어오는지는 아무도 안 봤다.
+        # 실측: 랩 하나가 (86,18)에 있는데 가장 가까운 전봇대가 23타일 밖.
+        for spot in _as_rows(faults.get("starved"))[:2]:
+            out.append(Job(
+                f"{spot.get('name', '기계')}이(가) 전기망에 안 붙어 있습니다. "
+                f"전봇대를 이어 깔겠습니다. "
+                f"({spot['x']:.0f}, {spot['y']:.0f})",
+                key=f"wire:{spot['x']:.0f},{spot['y']:.0f}",
+                routine="wire", at=spot, needs={POLE: MAX_POLE_RUN}))
 
         # 위의 넷은 «가까이 있는 것이 어긋난» 경우다. 그것으로 안 되면
         # 남은 이유는 하나다 - 발전소가 기지에서 너무 멀다.

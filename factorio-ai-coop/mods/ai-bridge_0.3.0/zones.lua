@@ -16,6 +16,8 @@
 -- 짓는다 - 이 저장소가 세 번 겪은 「기준점이 흔들려 줄이 흩어지는」 문제의
 -- 뿌리가 그것이었다.
 
+local Tasks = require("tasks")
+
 local Core = require("core")
 local agent = Core.agent
 local body = Core.body
@@ -136,6 +138,73 @@ local function zones(name)
   return out
 end
 
+-- 제자리가 아닌 건물들.
+--
+-- 구역을 정해놓고 새로 짓는 것만 그리로 보내면, 이미 흩어져 있는 것은 영원히
+-- 흩어진 채로 남는다. 사용자가 그것을 짚었다 - "구역나눴는데 왜 심시티안함?
+-- 건물들 배치를 새로 조정하고 그런걸 목표로하는건데".
+--
+-- 맞다. 구역을 나누는 일의 절반은 «이미 있는 것을 옮기는 일»이다.
+--
+--   화로        제련 구역 밖에 있으면 옮긴다
+--   랩/조립기   조립 구역 밖에 있으면 옮긴다
+--   채굴기      옮기지 않는다. 광맥이 자리를 정하지 우리가 정하는 것이 아니다.
+--   상자        옮기지 않는다. 채굴기 앞에 있어야 한다.
+--
+-- 걷어내면 건물이 통째로 손에 돌아오므로, 옮기는 값은 걸음뿐이다.
+local HOMES = {
+  ["stone-furnace"] = "smelt",
+  ["steel-furnace"] = "smelt",
+  ["lab"] = "craft",
+  ["assembling-machine-1"] = "craft",
+  ["assembling-machine-2"] = "craft",
+}
+
+local function inside(at, zone, w, h, margin)
+  margin = margin or 2
+  return at.x >= zone.x - margin and at.x <= zone.x + w + margin
+     and at.y >= zone.y - margin and at.y <= zone.y + h + margin
+end
+
+local function misplaced(name, limit)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local here = zones(name)
+  local box = {
+    smelt = here.smelt and { at = here.smelt, w = SMELT_W, h = SMELT_H } or nil,
+    craft = here.craft and { at = here.craft, w = CRAFT_W, h = CRAFT_H } or nil,
+  }
+
+  local out, home = {}, { smelt = 0, craft = 0 }
+  for what, zone in pairs(HOMES) do
+    local plot = box[zone]
+    if plot then
+      for _, e in pairs(b.surface.find_entities_filtered {
+        name = what, force = b.force,
+      }) do
+        if inside(e.position, plot.at, plot.w, plot.h) then
+          home[zone] = home[zone] + 1
+        elseif e.minable then
+          out[#out + 1] = {
+            name = what, zone = zone,
+            x = e.position.x, y = e.position.y,
+            distance = math.floor(Tasks.dist(b.position, e.position)),
+          }
+        end
+      end
+    end
+  end
+
+  -- 가까운 것부터. 먼 것을 먼저 옮기면 한 번에 하나씩만 옮기게 된다.
+  table.sort(out, function(p, q) return p.distance < q.distance end)
+  local near = {}
+  for i = 1, math.min(#out, limit or 8) do near[i] = out[i] end
+  return { misplaced = near, total = #out, settled = home,
+           smelt = here.smelt, craft = here.craft }
+end
+
 -- 지도에 구역을 그린다. 사람이 관전하면서 «어디가 어디인지» 보게 하는 것이
 -- 목적이다. 같은 자리에 두 번 그리지 않도록 기억해 둔다.
 local LABELS = { mine = "채굴", smelt = "제련", craft = "조립" }
@@ -171,5 +240,6 @@ end
 
 return {
   zones = zones,
+  misplaced = misplaced,
   draw_zones = draw_zones,
 }

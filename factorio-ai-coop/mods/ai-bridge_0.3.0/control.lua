@@ -80,6 +80,7 @@ local ore_line    = Belts.ore_line
 
 local Zones = require("zones")
 local draw_zones = Zones.draw_zones
+local misplaced  = Zones.misplaced
 local zones      = Zones.zones
 
 local Runner = require("runner")
@@ -556,6 +557,9 @@ remote.add_interface("ai", {
 
   -- 무엇을 어디서 하는가. 채굴 / 제련 / 조립.
   zones = zones,
+
+  -- 제자리가 아닌 건물들, 그리고 제자리에 이미 선 수.
+  misplaced = misplaced,
   draw_zones = draw_zones,
 
   -- 기지의 무게중심, 그리고 거기서 너무 멀리 떨어진 우리 건물.
