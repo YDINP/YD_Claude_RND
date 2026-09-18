@@ -46,13 +46,19 @@ class TendingMixin:
         # 가방이 차면 그다음 take 가 통째로 실패한다. 연료는 손에 있어야
         # 기계에 넣어줄 수 있으므로 예외다.
         def spare(name: str, count: int) -> int:
-            if name == "coal":
-                return 0
+            # 석탄도 상한이 있다. 손에 들고 있어야 기계에 넣어줄 수 있는 것은
+            # 맞지만, 그것이 «무제한»을 뜻하지는 않는다.
+            #
+            # 실측(2026-09-18): alpha 가 석탄 2,006개를 지고 있었다. 마흔
+            # 스택이다. 가방 여든 칸 중 절반이 석탄이었고 빈 칸은 하나였다.
+            # 그 상태로 「과학팩 106개를 만들 수 있다」는 답을 받아놓고도
+            # 한 개도 못 만들었다 - 만든 것을 넣을 칸이 없었다.
             return count - (KEEP_ORE if name in LOOSE_ORE else KEEP_IN_HAND)
 
         surplus = [(name, spare(name, count))
                    for name, count in snap.items.items()
                    if spare(name, count) >= DEPOT_MIN]
+        # 많이 든 것부터 붓는다. 한 칸이라도 빨리 비워야 한다.
         if not surplus:
             return None
         surplus.sort(key=lambda pair: -pair[1])

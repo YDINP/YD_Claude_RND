@@ -504,13 +504,24 @@ local function power_status(name)
     if output > 0 then running = running + 1 end
   end
 
-  local labs, working_labs = 0, 0
+  -- 발전기가 붙어 있는 망들. 「전기가 있는 망」은 이것뿐이다.
+  local live = {}
+  for _, g in pairs(b.surface.find_entities_filtered {
+    type = "generator", force = b.force,
+  }) do
+    if g.electric_network_id then live[g.electric_network_id] = true end
+  end
+
+  local labs, working_labs, wired_labs = 0, 0, 0
   for _, lab in pairs(b.surface.find_entities_filtered {
     name = "lab", force = b.force,
   }) do
     labs = labs + 1
     if lab.status == defines.entity_status.working then
       working_labs = working_labs + 1
+    end
+    if lab.electric_network_id and live[lab.electric_network_id] then
+      wired_labs = wired_labs + 1
     end
   end
 
@@ -530,8 +541,19 @@ local function power_status(name)
     agent = name,
     generators = engines, running = running,
     watts = math.floor(made * 60),
-    labs = labs, working_labs = working_labs,
-    powered = running > 0,
+    labs = labs, working_labs = working_labs, wired_labs = wired_labs,
+    -- 「전기가 있는가」는 «발전기가 지금 돌고 있는가»가 아니라 «전기를 쓸
+    -- 기계가 발전기 붙은 망에 있는가»다. 둘은 다르다.
+    --
+    -- 증기기관은 «쓰는 사람이 있을 때만» 돈다. 그래서 running > 0 을
+    -- powered 로 쓰면 교착이 생긴다 - 랩은 전기가 있어야 과학팩을 먹고,
+    -- 기관은 랩이 먹어야 돈다. 실제로 그렇게 멈춰 있었다:
+    --
+    --     기관 7대 전부 steam=200 만땅, running 0, 랩 셋은 「과학팩 없음」
+    --
+    -- 아무도 안 쓰니 아무도 안 돌고, 안 도니까 「전기가 없다」고 판단해서
+    -- 과학팩을 안 만들었다.
+    powered = wired_labs > 0 or running > 0,
     unplugged = unplugged,
   }
 end
