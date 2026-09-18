@@ -1213,7 +1213,7 @@ class Crew:
     # 반장이 내릴 수 있는 운영 명령. 앞의 것들은 무리 전체에 대한 것이고,
     # 뒤의 것들은 캐릭터 한 명에게 간다.
     CREW_COMMANDS = {"panel", "save", "add_agent", "remove_agent",
-                     "list_agents", "observer", "unobserver"}
+                     "list_agents", "observer", "unobserver", "depot"}
 
     def run_command(self, order: dict, speaker: str) -> None:
         """반장이 내린 운영 명령을 실행한다.
@@ -3523,6 +3523,13 @@ class Crew:
                      f"({state.get('x', 0):.0f}, {state.get('y', 0):.0f}), "
                      f"{doing['type'] if doing else '유휴'}", who=name)
 
+    def mid_job(self, worker: Worker) -> bool:
+        """긴 작업을 하는 중인가. 슬롯을 쥐고 있으면 그렇다."""
+        if worker.slot.acquire(blocking=False):
+            worker.slot.release()
+            return False
+        return True
+
     def handle_crew(self, intent: Intent, speaker: str, target: str | None) -> bool:
         """Roster and observer commands, which belong to nobody in particular."""
         kind, params = intent
@@ -3533,6 +3540,29 @@ class Crew:
                 self.say("현황판을 " + ("띄웠습니다." if state.get("open") else "닫았습니다."))
             except RconError as exc:
                 self.say(f"현황판 실패: {exc}")
+            return True
+
+        if kind == "depot":
+            # 이미 서 있으면 자리만 알려준다. 두 개를 세우면 물자가 두 곳으로
+            # 갈라져서, 하나였을 때보다 나쁘다.
+            try:
+                found = (self.bridge.depot() or {}).get("depot")
+            except RconError:
+                found = None
+            if found:
+                self.say(f"공용 창고는 이미 ({found['x']:.0f}, "
+                         f"{found['y']:.0f})에 있습니다. 남는 물자는 거기로 "
+                         f"모읍니다.")
+                return True
+
+            free = next((w for w in self.workers.values()
+                         if not self.mid_job(w)), None)
+            if not free:
+                self.say("지금은 다들 손이 차 있습니다. 곧 세우겠습니다.")
+                return True
+            snap = self.snaps.get(free.name) or free.snapshot()
+            self.say(f"{free.name}이(가) 공용 창고를 세우겠습니다.")
+            self.start_routine(free, "depot", at={"x": snap.x, "y": snap.y})
             return True
 
         if kind == "save":

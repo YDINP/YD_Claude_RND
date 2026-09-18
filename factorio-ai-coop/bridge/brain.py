@@ -270,6 +270,10 @@ commands 는 steps 로는 못 하는 «운영» 명령이다. 필요할 때만 �
   report_inventory  - 소지품 보고 (agent)
   report_scout      - 주변 자원 보고 (agent)
   report_status     - 지금 뭐 하는지 보고 (agent)
+  depot             - 공용 창고를 세우고 그 자리를 무리에게 알린다.
+                      「상자 하나 만들어서 같이 쓰자」, 「창고 만들어」,
+                      「물건 한곳에 모아」는 전부 이것이다. build 스텝으로
+                      상자만 놓으면 아무도 그게 공용인 줄 모른다.
 
 사람이 하는 말은 셋 중 하나다. 무엇인지부터 정해라.
 
@@ -316,6 +320,10 @@ ALLOWED_COMMANDS = {
     "stop", "save", "panel", "observer", "unobserver", "list_agents",
     "add_agent", "remove_agent", "autopilot_on", "autopilot_off",
     "automate", "come", "report_inventory", "report_scout", "report_status",
+    # 사람이 「상자 하나 만들어서 공용으로 쓰라」고 했을 때 반장이 쓸 낱말.
+    # 이게 없어서 반장은 build 스텝으로 상자만 놓았고, 그렇게 놓인 상자는
+    # 아무도 공용으로 등록하지 않았다. 기능은 다 있는데 시킬 말이 없었다.
+    "depot",
 }
 MAX_COMMANDS = 6
 
