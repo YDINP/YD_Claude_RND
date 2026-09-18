@@ -74,6 +74,9 @@ local drop_marker    = Panel.drop_marker
 local panel_rows     = Panel.panel_rows
 local refresh_marker = Panel.refresh_marker
 local remember_line  = Panel.remember_line
+local Audit = require("audit")
+local audit = Audit.audit
+
 local Defence = require("defence")
 local defence      = Defence.defence
 local smoking_idle = Defence.smoking_idle
@@ -559,6 +562,9 @@ remote.add_interface("ai", {
 
   -- 캐는 구역에서 제련 구역까지의 광석 길 - 아직 없는 것만.
   ore_line = ore_line,
+
+  -- 사슬이 실제로 흐르는가. 상태 문자열이 아니라 누적 생산량으로.
+  audit = audit,
 
   -- 방어 - 공해가 어디까지 갔고, 방어선은 어디에 서는가.
   defence = defence,

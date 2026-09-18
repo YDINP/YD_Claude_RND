@@ -7,7 +7,8 @@ import threading
 
 from client import RconError, TaskFailed
 
-from settings import (BACKOFF_SECONDS, BELT_REACH, BELT_SPARE, SCIENCE_FEED,
+from settings import (BACKOFF_SECONDS, BELT_REACH, BELT_SPARE, FIRST_PACKS,
+                      SCIENCE_FEED,
                       TURRET_AMMO, TURRET_RING, TURRET_TARGET)
 from world import Snapshot
 from jobs import Job
@@ -32,6 +33,7 @@ class FactoryMixin:
         "convert": lambda crew, worker, at: crew.convert_chest(worker, at),
         "belt":    lambda crew, worker, at: crew.lay_belt(worker, at),
         "science": lambda crew, worker, at: crew.build_science(worker, at),
+        "packs":   lambda crew, worker, at: crew.first_packs(worker, at),
         "stoke":   lambda crew, worker, at: crew.stoke(worker, at),
         "wire":    lambda crew, worker, at: crew.run_wire(worker, at),
         "line":    lambda crew, worker, at: crew.lay_line(worker, at),
@@ -59,6 +61,38 @@ class FactoryMixin:
 
         threading.Thread(target=run, daemon=True).start()
         return True
+
+    def first_packs(self, worker: Worker, at: dict) -> None:
+        """빨간 과학팩 열 개를 만들어 랩에 넣는다. 사슬의 첫 문이다.
+
+        Automation 연구는 팩 열 개면 되고 손으로 만들어도 된다(게임 공식값).
+        그 하나가 로지스틱도 전기 채굴기도 터렛도 전부 연다.
+
+        그런데 우리는 창고에 철판 3,979개와 구리판 7,774개를 쌓아두고 기어를
+        «한 개도» 만든 적이 없었다. 체인 감사가 그것을 말해줬다 - 기어와
+        과학팩만 시간당 생산량이 0 이었다.
+
+        손에 없으면 창고에서 꺼내온다. obtain 이 그 일을 안다. 「만들 수
+        있는가」를 손으로만 묻지 않는 것이 이 루틴의 전부다.
+        """
+        name = worker.name
+        key = "first-packs"
+        pack = "automation-science-pack"
+        try:
+            if not self.obtain(worker, pack, FIRST_PACKS):
+                self.explain_shortfall(worker, pack, FIRST_PACKS, {})
+                worker.block(key, BACKOFF_SECONDS)
+                return
+            worker.handle.insert(pack, at["x"], at["y"],
+                                 count=FIRST_PACKS, timeout=300)
+            self.say(f"빨간 과학팩 {FIRST_PACKS}개를 랩에 넣었습니다. "
+                     f"automation 연구가 이제 돕니다.", who=name)
+        except TaskFailed as exc:
+            worker.block(key, BACKOFF_SECONDS)
+            self.say(f"과학팩을 랩에 못 넣었습니다: {exc.task.get('error')}", who=name)
+        except RconError as exc:
+            worker.block(key, BACKOFF_SECONDS)
+            self.say(f"과학팩 작업 중 오류: {exc}", who=name)
 
     def build_science(self, worker: Worker, at: dict) -> None:
         """랩 옆에 조립기를 세워 과학팩을 스스로 만들게 한다.

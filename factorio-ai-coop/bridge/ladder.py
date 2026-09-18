@@ -130,20 +130,19 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     #
     # 조립기를 세우는 것보다 먼저다. 조립기는 팩을 «계속» 대기 위한 것이지
     # 첫 열 개를 위한 것이 아니다 - 첫 열 개는 손이 더 빠르다.
-    if snap.building("lab") and snap.anywhere("automation-science-pack") < FIRST_PACKS:
-        short = FIRST_PACKS - snap.anywhere("automation-science-pack")
-        if snap.can_make("automation-science-pack", short):
-            lab = snap.building("lab")
-            jobs.append(Job(
-                f"빨간 과학팩 {short}개를 손으로 만들어 랩에 넣겠습니다. "
-                f"이 열 개가 automation 연구를 열고, 그 하나가 벨트도 전기 "
-                f"채굴기도 터렛도 전부 엽니다.",
-                key="first-packs", steps=[
-                    ("craft", {"recipe": "automation-science-pack",
-                               "count": short}),
-                    ("insert", {"name": "automation-science-pack",
-                                "count": short, **lab}),
-                ]))
+    # 전기가 들어온 랩이 있을 때만이다. 전기 없는 랩은 팩을 먹지 않는다 -
+    # 숙련자들이 「전력이 안정되기 전에 과학을 확장하지 마라」고 하는 것도
+    # 같은 말이다.
+    lab = snap.building("lab") if snap.powered else None
+    if lab and snap.anywhere("automation-science-pack") < FIRST_PACKS:
+        # 「만들 수 있는가」를 손으로만 묻지 않는다. 재료가 창고에 있으면
+        # 꺼내오면 된다 - 그것이 루틴인 이유다. 실측(2026-09-18): 창고에
+        # 철판 3,979개를 쌓아두고 기어를 «한 개도» 만든 적이 없었다.
+        jobs.append(Job(
+            f"빨간 과학팩 {FIRST_PACKS}개를 만들어 랩에 넣겠습니다. "
+            f"이 열 개가 automation 연구를 열고, 그 하나가 벨트도 전기 "
+            f"채굴기도 터렛도 전부 엽니다.",
+            key="first-packs", routine="packs", at=lab))
 
     # A lab is the gate to everything past the trigger technologies, and
     # crafting one is itself what unlocks the red science pack recipe.

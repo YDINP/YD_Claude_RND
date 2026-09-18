@@ -11,7 +11,7 @@ import brain  # noqa: E402
 import mission  # noqa: E402
 # 각 이름을 «사는 곳»에서 부른다. agent.py 가 전부 다시 내보내주기는 하지만,
 # 여기서 그렇게 부르면 무엇이 어디로 갔는지 이 파일이 증언하지 못한다.
-from settings import FOCUS_ORDER, STUCK_STRIKES  # noqa: E402
+from settings import FIRST_PACKS, FOCUS_ORDER, STUCK_STRIKES  # noqa: E402
 from world import Snapshot  # noqa: E402
 from jobs import Job, errand_label  # noqa: E402
 from layout import (belt_pairs, carry_split, cluster,  # noqa: E402
@@ -141,8 +141,12 @@ def main() -> int:
                    "burner-mining-drill": {"nearest": {"x": 9, "y": 9},
                                            "nearest_dist": 12, "count": 4,
                                            "spots": [{"x": 9, "y": 9, "distance": 12}]}}
+    # 과학팩 열 개는 이미 만들어둔 세계로 둔다. 안 그러면 아래 시험들이
+    # 전부 「첫 열 개부터 만들어라」를 먼저 받는다 - 그건 그것대로 맞는
+    # 답이지만(26a 에서 따로 시험한다), 여기서 보려는 것은 «할 일이 없는
+    # 세계와 있는 세계의 구분»이다.
     full = {"coal": 99, "iron-plate": 40, "iron-ore": 99, "copper-ore": 99, "stone": 99,
-            "lab": 1}
+            "lab": 1, "automation-science-pack": FIRST_PACKS}
     # 드릴 4대를 화로 하나가 못 받는다. 광석이 쌓이는 동안 노는 것은
     # «할 일이 없는» 것이 아니다.
     check("four drills on one furnace is not idleness",
@@ -837,7 +841,8 @@ def main() -> int:
                                "spots": [{"x": 5, "y": 5}]},
                        "stone-furnace": {"count": 4, "nearest": {"x": 1, "y": 1},
                                          "spots": [{"x": 1, "y": 1}]}},
-            researched={"electronics", "steam-power"})
+            researched={"electronics", "steam-power"},
+            powered=True)
 
     keys = [job.key for job in plan(with_lab(0))]
     check("with a lab standing and no packs, the first packs come first",
