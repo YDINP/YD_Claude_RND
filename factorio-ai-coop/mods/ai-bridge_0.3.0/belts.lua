@@ -31,7 +31,6 @@ local ARM = "burner-inserter"
 -- 화로 블록의 치수. layout.py 의 FURNACE_* 와 같은 값이어야 한다.
 local FURNACE_PITCH = 3
 local FURNACE_ROW = 12
-local FURNACE_AISLE = 5
 
 local function dir_of(from, to)
   if to.x > from.x then return defines.direction.east end
@@ -40,39 +39,102 @@ local function dir_of(from, to)
   return defines.direction.north
 end
 
-local function belt_at(surface, tile)
-  return surface.find_entities_filtered {
-    position = { tile.x, tile.y }, radius = 0.4, name = BELT, limit = 1,
+-- 길 찾기.
+--
+-- 처음에는 ㄱ자로 걸었다 - 한 축을 맞추고 다른 축을 맞춘다. 그런데 첫 칸부터
+-- 막혔다. 시작점이 채굴기 밭 한복판이고, 캐는 구역의 테두리 상자가 제련
+-- 구역을 통째로 감싸고 있어서 직선으로는 빠져나갈 데가 없었다.
+--
+-- 그러니 돌아가야 한다. 칸 수가 뻔하므로(수십 칸) 너비 우선으로 찾는다.
+-- 이미 벨트가 선 칸은 «지나갈 수 있는 칸»으로 친다 - 그것이 바로 우리가
+-- 깔아둔 길이기 때문이다.
+local MAX_VISIT = 6000
+local STEPS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
+
+local function passable(surface, force, x, y)
+  local here = surface.find_entities_filtered {
+    position = { x, y }, radius = 0.4, name = BELT, limit = 1,
   }[1]
+  if here then return true end
+  return surface.can_place_entity {
+    name = BELT, position = { x, y }, direction = defines.direction.east,
+    force = force,
+  }
 end
 
--- 한 칸씩 걷는 ㄱ자 길. 한 축을 맞추고 다른 축을 맞춘다.
-local function walk(from, goal)
-  local tiles, here = {}, { x = from.x, y = from.y }
-  local function run(axis)
-    while (axis == "x" and here.x ~= goal.x)
-       or (axis == "y" and here.y ~= goal.y) do
-      local nxt = { x = here.x, y = here.y }
-      if axis == "x" then
-        nxt.x = here.x + (goal.x > here.x and 1 or -1)
-      else
-        nxt.y = here.y + (goal.y > here.y and 1 or -1)
+-- 트인 쪽에서 파고 들어간다.
+--
+-- 캐는 구역 쪽에서 출발하면 첫 칸부터 막힌다 - 실측하니 시작점 주변 169칸
+-- 중 60칸만 열려 있었고 그나마 서로 끊겨 있었다. 채굴기 밭 한복판은 원래
+-- 그렇다. 제련 구역 쪽은 161/169 로 훤하다.
+--
+-- 그러니 제련 구역에서 출발해 캐는 구역 쪽으로 파고 들어간다. 닿는 데까지만
+-- 깔고, 남은 몇 걸음은 사람이 걷는다. 「줄이 끝까지 안 닿으니 아예 안 깐다」는
+-- 것보다 「닿는 데까지 깔아둔다」가 언제나 낫다 - 다음 사람이 이어 깐다.
+local function walk(surface, force, from, goal)
+  local function key(x, y) return x .. ":" .. y end
+  local seen = { [key(goal.x, goal.y)] = false }
+  local queue = { { x = goal.x, y = goal.y } }
+  local head, visits = 1, 0
+
+  local best, best_gap = { x = goal.x, y = goal.y },
+                         math.abs(goal.x - from.x) + math.abs(goal.y - from.y)
+
+  while head <= #queue and visits < MAX_VISIT do
+    local at = queue[head]
+    head = head + 1
+    visits = visits + 1
+
+    local gap = math.abs(at.x - from.x) + math.abs(at.y - from.y)
+    if gap < best_gap then best, best_gap = at, gap end
+    if gap == 0 then break end
+
+    for _, step in pairs(STEPS) do
+      local nx, ny = at.x + step[1], at.y + step[2]
+      local k = key(nx, ny)
+      if seen[k] == nil then
+        if (nx == from.x and ny == from.y)
+           or passable(surface, force, nx, ny) then
+          seen[k] = { x = at.x, y = at.y }
+          queue[#queue + 1] = { x = nx, y = ny }
+        else
+          seen[k] = false   -- 막힌 칸. 다시 보지 않는다.
+        end
       end
-      tiles[#tiles + 1] = { x = here.x, y = here.y, dir = dir_of(here, nxt) }
-      here = nxt
-      if #tiles > 400 then return end
     end
   end
-  -- 먼 축부터 맞춘다. 꺾이는 데가 목적지 가까이에 있어야 길이 짧다.
-  if math.abs(goal.x - from.x) >= math.abs(goal.y - from.y) then
-    run("x"); run("y")
-  else
-    run("y"); run("x")
+
+  -- best 에서 제련 구역까지 거슬러 올라가면 «캐는 쪽 -> 제련 쪽» 순서가 된다.
+  -- 광석이 흐르는 방향과 같다.
+  local tiles, at = {}, best
+  while at do
+    local nxt = seen[key(at.x, at.y)] or nil
+    tiles[#tiles + 1] = { x = at.x, y = at.y,
+                          dir = nxt and dir_of(at, nxt)
+                                or defines.direction.east }
+    at = nxt
   end
-  tiles[#tiles + 1] = { x = goal.x, y = goal.y,
-                        dir = tiles[#tiles] and tiles[#tiles].dir
-                              or defines.direction.east }
-  return tiles
+  if #tiles == 0 then return nil end
+  -- 마지막 칸(제련 구역 줄머리)은 내리는 줄이 맡는다. 두 번 세지 않는다.
+  tiles[#tiles] = nil
+  return tiles, best_gap
+end
+
+-- 시작점이 막혀 있으면 가장 가까운 빈 칸으로 옮긴다. 채굴기 밭 한복판에서
+-- 줄을 시작할 수는 없다.
+local function open_spot(surface, force, at)
+  for r = 0, 12 do
+    for dx = -r, r do
+      for dy = -r, r do
+        if math.abs(dx) == r or math.abs(dy) == r then
+          if passable(surface, force, at.x + dx, at.y + dy) then
+            return { x = at.x + dx, y = at.y + dy }
+          end
+        end
+      end
+    end
+  end
+  return at
 end
 
 -- 제련 구역에서 광석이 내리는 줄.
@@ -139,8 +201,12 @@ local function ore_line(name, fx, fy, limit)
   if not mine and not fx then return { error = "no mining zone yet" } end
 
   local lane, arms, head = feed_line(smelt)
-  local from = { x = math.floor(fx or mine.x), y = math.floor(fy or mine.y) }
-  local trunk = walk(from, head)
+  local from = open_spot(surface, force,
+    { x = math.floor(fx or mine.x), y = math.floor(fy or mine.y) })
+  local trunk, short = walk(surface, force, from, head)
+  if not trunk then
+    return { error = "no route from the mine to the smelter" }
+  end
 
   local need_trunk, up_trunk = missing(surface, force, trunk, BELT)
   local need_lane, up_lane = missing(surface, force, lane, BELT)
@@ -163,6 +229,8 @@ local function ore_line(name, fx, fy, limit)
     standing = { trunk = up_trunk, lane = up_lane, arms = up_arms },
     want = { trunk = #trunk, lane = #lane, arms = #arms },
     head = head, from = from,
+    -- 줄이 캐는 구역까지 몇 칸 못 미쳤는가. 그만큼은 사람이 걷는다.
+    short = short,
   }
 end
 
