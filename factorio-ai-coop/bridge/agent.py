@@ -148,7 +148,14 @@ SURPLUS = 6000
 #
 # 완전히 마를 때까지 기다리는 것은, 그 자리에서 몇 분 더 캐려고 이십 분을
 # 버리는 일이다.
-THIN_DRILL = 400   # how long a failed kind of work stays off the ladder
+THIN_DRILL = 400
+
+# 벨트 한 줄로 이을 수 있는 최대 거리. 이보다 멀면 벨트값이 손으로 나르는
+# 값을 넘는다 - 노란 벨트 하나가 철판 1 + 기어 1(= 철판 3)에 두 칸이다.
+BELT_REACH = 40
+# 한 줄을 놓기 전에 손에 쥐고 있어야 할 여유분. 중간에 모자라 끊긴 벨트는
+# 안 놓은 것과 같고, 이미 쓴 자재만 사라진다.
+BELT_SPARE = 4   # how long a failed kind of work stays off the ladder
 
 # Each agent takes one resource so a crew does not all stand on the same patch.
 FOCUS_ORDER = ["iron-ore", "coal", "copper-ore", "stone"]
@@ -303,6 +310,34 @@ def nearest_to(spots: list[dict], at: dict, least: int = 0,
         if best is not None:
             return best
     return None
+
+
+def belt_pairs(blocked: list[dict], starving: list[dict],
+               reach: float = BELT_REACH) -> list[tuple[dict, dict]]:
+    """벨트 한 줄로 이을 만한 «막힌 채굴기 ↔ 굶는 화로» 짝.
+
+    두 병목은 내내 같은 숫자였다 — 캔 광석이 갈 데가 없어 선 채굴기와,
+    받을 것이 없어 선 화로. 둘 사이가 벨트로 이을 만큼 가까우면, 한 줄이
+    둘을 동시에 없앤다. 손으로 나르는 일감도 같이 사라진다.
+
+    짝은 한 번씩만 쓴다. 화로 하나에 벨트 다섯 줄을 물리면 넷은 헛일이다.
+    """
+    used_ovens: set[tuple[float, float]] = set()
+    out: list[tuple[dict, dict]] = []
+    for drill in blocked:
+        best, best_d = None, reach * reach
+        for oven in starving:
+            seat = (oven["x"], oven["y"])
+            if seat in used_ovens:
+                continue
+            d = (oven["x"] - drill["x"]) ** 2 + (oven["y"] - drill["y"]) ** 2
+            if d < best_d:
+                best, best_d = oven, d
+        if best is None:
+            continue
+        used_ovens.add((best["x"], best["y"]))
+        out.append((drill, best))
+    return out
 
 
 def spread_sites(sites: list[dict], want: int, gap: int = 2) -> list[dict]:
@@ -1530,6 +1565,8 @@ class Crew:
                     self.build_rig(worker, at or {})
                 elif routine == "convert":
                     self.convert_chest(worker, at or {})
+                elif routine == "belt":
+                    self.lay_belt(worker, at or {})
                 elif routine == "science":
                     self.build_science(worker, at or {})
                 elif routine == "stoke":
@@ -2277,6 +2314,25 @@ class Crew:
                     key=f"supply:{shop['x']:.0f},{shop['y']:.0f}",
                     steps=steps, at=at))
 
+        # 3b3. 벨트. 막힌 채굴기와 굶는 화로가 벨트로 이을 만큼 가까우면
+        #      한 줄이 둘을 동시에 없앤다. 손으로 나르는 일감도 사라진다.
+        #      채굴기는 벨트에 직접 떨구므로 인서터는 화로 쪽 하나면 된다.
+        pairs = belt_pairs(
+            [e for e in stopped if e.get("fix") == "chest" and e.get("outlet")],
+            [e for e in stopped if e.get("fix") == "feed"])
+        for drill, oven in pairs[:1]:
+            outlet = drill["outlet"]
+            unblock.append(Job(
+                f"채굴기({drill['x']:.0f}, {drill['y']:.0f})가 막혀 있고 "
+                f"화로({oven['x']:.0f}, {oven['y']:.0f})가 굶고 있습니다. "
+                f"벨트로 잇겠습니다.",
+                key=f"belt:{drill['x']:.0f},{drill['y']:.0f}",
+                routine="belt",
+                at={"x": drill["x"], "y": drill["y"],
+                    "drill": {**drill, "drop_x": outlet["x"],
+                              "drop_y": outlet["y"]},
+                    "furnace": {"x": oven["x"], "y": oven["y"]}}))
+
         # 3c. 굶고 있는 화로. 다섯 회차째 54대가 그대로였고, 그 사이
         #     철광석은 창고에 10,264개까지 쌓였다. 캐는 능력이 모자란 적은
         #     없고, 캔 것이 화로까지 가지 않을 뿐이다.
@@ -2565,6 +2621,75 @@ class Crew:
         self.say(f"랩 옆에 조립기를 세우고 {pack}을(를) 만들게 했습니다. "
                  f"이제 과학팩은 손으로 안 만들어도 됩니다. "
                  f"({built['x']:.0f}, {built['y']:.0f})", who=name)
+
+    def lay_belt(self, worker: Worker, at: dict) -> None:
+        """채굴기에서 화로까지 벨트를 깔고, 끝에 인서터를 단다.
+
+            [채굴기] → [벨트][벨트][벨트] → [인서터] → [화로]
+
+        채굴기는 벨트에 «직접» 떨군다. 인서터가 필요한 곳은 화로 쪽
+        하나뿐이다. 이 한 줄이 지금까지 측정된 병목 둘을 동시에 없앤다 —
+        꽉 찬 상자에 막힌 채굴기와, 그 옆에서 굶는 화로.
+        """
+        name = worker.name
+        key = f"belt:{at['x']:.0f},{at['y']:.0f}"
+        drill, oven = at.get("drill") or {}, at.get("furnace") or {}
+        if not drill or not oven:
+            worker.block(key, BACKOFF_SECONDS)
+            return
+
+        # 채굴기가 떨구는 칸에서 출발해, 화로 바로 앞에서 끝난다. 화로
+        # 칸까지 가면 벨트를 화로 위에 놓으려 든다.
+        try:
+            route = self.bridge.belt_route(
+                name, drill["drop_x"], drill["drop_y"], oven["x"], oven["y"])
+        except RconError:
+            return
+        if route.get("error"):
+            self.say(f"벨트 길이 안 납니다: {route['error']}", who=name)
+            worker.block(key, BACKOFF_SECONDS)
+            return
+
+        tiles = _as_rows(route.get("tiles"))
+        if not tiles or len(tiles) > BELT_REACH:
+            worker.block(key, BACKOFF_SECONDS)
+            return
+
+        need = len(tiles) + BELT_SPARE
+        if not self.obtain(worker, "transport-belt", need):
+            self.say(f"벨트 {need}개를 못 구했습니다.", who=name)
+            worker.block(key, BACKOFF_SECONDS)
+            return
+
+        self.say(f"채굴기에서 화로까지 벨트 {len(tiles)}칸을 깔겠습니다. "
+                 f"깔고 나면 이 광석은 손으로 나를 일이 없습니다.", who=name)
+        laid = 0
+        for tile in tiles:
+            try:
+                worker.handle.place("transport-belt", tile["x"], tile["y"],
+                                    direction=tile["dir"], timeout=240)
+                laid += 1
+            except TaskFailed:
+                # 한 칸이 막혔다고 줄 전체를 버리지 않는다. 끊긴 자리는
+                # 다음 점검에서 같은 길로 다시 시도한다.
+                continue
+
+        # 화로 쪽 끝. 벨트에서 집어 화로에 넣는다.
+        tail = tiles[-1]
+        try:
+            rig = self.bridge.fuel_rig(name, oven["x"], oven["y"])
+        except RconError:
+            rig = {"error": "no answer"}
+        if not rig.get("error") and self.obtain(worker, "burner-inserter", 1):
+            arm = rig["inserter"]
+            try:
+                worker.handle.place("burner-inserter", arm["x"], arm["y"],
+                                    direction=arm["direction"], timeout=240)
+            except TaskFailed:
+                pass
+
+        self.say(f"벨트 {laid}칸을 깔았습니다. "
+                 f"({tail['x']:.0f}, {tail['y']:.0f})", who=name)
 
     def build_rig(self, worker: Worker, at: dict) -> None:
         """«석탄 상자 + 버너 인서터»를 한 벌 세우고 석탄을 부어둔다."""

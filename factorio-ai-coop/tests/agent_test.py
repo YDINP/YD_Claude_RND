@@ -12,7 +12,7 @@ import mission  # noqa: E402
 from agent import (FOCUS_ORDER, STAGE_TARGET, STUCK_STRIKES,  # noqa: E402
                    Crew, Job, errand_label,
                    spread_sites, worth_building, chain_job, nearest_to,
-                   carry_split,  # noqa: E402
+                   carry_split, belt_pairs,  # noqa: E402
                    Snapshot, chain_job, cluster, interleave, missing_item,
                    next_goal, plan)
 
@@ -797,6 +797,26 @@ def main() -> int:
           overlap.ore("copper-ore")["name"] == "copper-ore")
     check("an ore that is not there is still None",
           overlap.ore("uranium-ore") is None)
+
+    print("\n26. one belt kills two bottlenecks")
+    stuck = [{"x": 0, "y": 0}, {"x": 100, "y": 100}]
+    hungry = [{"x": 6, "y": 0}, {"x": 9, "y": 0}]
+    got = belt_pairs(stuck, hungry)
+    check("the blocked drill is joined to the nearest starving furnace",
+          got and got[0][1] == hungry[0], str(got))
+    check("a furnace across the map is nobody's belt",
+          len(got) == 1, str(len(got)))
+    check("one furnace is not fed by two belts",
+          len({id(o) for _, o in belt_pairs(
+              [{"x": 0, "y": 0}, {"x": 1, "y": 0}], [{"x": 5, "y": 0}])}) == 1)
+    check("the second drill takes the second furnace",
+          [o["x"] for _, o in belt_pairs(
+              [{"x": 0, "y": 0}, {"x": 1, "y": 0}],
+              [{"x": 5, "y": 0}, {"x": 7, "y": 0}])] == [5, 7],
+          str([o["x"] for _, o in belt_pairs(
+              [{"x": 0, "y": 0}, {"x": 1, "y": 0}],
+              [{"x": 5, "y": 0}, {"x": 7, "y": 0}])]))
+    check("nothing starving means nothing to lay", belt_pairs(stuck, []) == [])
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

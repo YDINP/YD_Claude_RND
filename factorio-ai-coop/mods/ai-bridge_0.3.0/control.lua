@@ -2343,6 +2343,92 @@ end
 -- 완전히 마를 때까지(no_minable_resources) 기다릴 이유가 없다. 걷어내서
 -- 두꺼운 자리에 다시 세우면 한 번의 걸음으로 열여섯 배가 된다. 마르기를
 -- 기다리는 것은 그 자리에서 8분을 더 캐려고 20분을 버리는 일이다.
+-- 두 점을 잇는 벨트 길을 놓는다.
+--
+--   [채굴기] → [벨트][벨트][벨트] → [인서터] → [화로]
+--
+-- 채굴기는 벨트에 «직접» 떨군다. 인서터가 필요한 곳은 화로 쪽 하나뿐이다.
+-- 이 한 줄이 지금까지 측정된 병목 둘을 동시에 없앤다 - 꽉 찬 상자에 막힌
+-- 채굴기와, 그 옆에서 굶는 화로.
+--
+-- 길은 ㄱ 자로 꺾는다. 벨트는 직진과 직각 회전만 하므로 그것으로 충분하고,
+-- 꺾는 순서를 둘 다 시험해서 되는 쪽을 쓴다.
+local function belt_route(name, fx, fy, tx, ty, kind)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+  kind = kind or "transport-belt"
+
+  local surface, force = b.surface, b.force
+  local from = { x = math.floor(fx) + 0.5, y = math.floor(fy) + 0.5 }
+  local goal = { x = math.floor(tx) + 0.5, y = math.floor(ty) + 0.5 }
+
+  local function dir_of(from_tile, to_tile)
+    if to_tile.x > from_tile.x then return defines.direction.east end
+    if to_tile.x < from_tile.x then return defines.direction.west end
+    if to_tile.y > from_tile.y then return defines.direction.south end
+    return defines.direction.north
+  end
+
+  -- 한 축을 먼저 맞추고 다른 축을 맞춘다. 두 순서를 다 본다.
+  local function walk(first_axis)
+    local tiles, here = {}, { x = from.x, y = from.y }
+    local function step_to(target, axis)
+      while (axis == "x" and here.x ~= target.x)
+          or (axis == "y" and here.y ~= target.y) do
+        local nxt = { x = here.x, y = here.y }
+        if axis == "x" then
+          nxt.x = here.x + (target.x > here.x and 1 or -1)
+        else
+          nxt.y = here.y + (target.y > here.y and 1 or -1)
+        end
+        tiles[#tiles + 1] = { x = here.x, y = here.y, dir = dir_of(here, nxt) }
+        here = nxt
+        if #tiles > 120 then return false end
+      end
+      return true
+    end
+    if first_axis == "x" then
+      if not step_to(goal, "x") then return nil end
+      if not step_to(goal, "y") then return nil end
+    else
+      if not step_to(goal, "y") then return nil end
+      if not step_to(goal, "x") then return nil end
+    end
+    -- 마지막 칸은 목적지를 향한 채로 끝난다.
+    tiles[#tiles + 1] = { x = here.x, y = here.y,
+                          dir = #tiles > 0 and tiles[#tiles].dir
+                                or dir_of(here, goal) }
+    return tiles
+  end
+
+  for _, order in ipairs({ "x", "y" }) do
+    local tiles = walk(order)
+    if tiles then
+      local blocked = nil
+      for _, t in ipairs(tiles) do
+        if not surface.can_place_entity {
+          name = kind, position = { t.x, t.y }, direction = t.dir, force = force,
+        } then
+          -- 이미 우리 벨트가 같은 방향으로 서 있으면 막힌 게 아니다.
+          local standing = surface.find_entities_filtered {
+            position = { t.x, t.y }, radius = 0.3, name = kind,
+            force = force, limit = 1,
+          }[1]
+          if not (standing and standing.direction == t.dir) then
+            blocked = t
+            break
+          end
+        end
+      end
+      if not blocked then
+        return { agent = name, kind = kind, tiles = tiles, length = #tiles }
+      end
+    end
+  end
+  return { error = "no clear belt route" }
+end
+
 local function poor_drills(name, floor, radius)
   local a = agent(name)
   local b = body(a)
@@ -2821,6 +2907,9 @@ remote.add_interface("ai", {
 
   -- 얇은 자리에 선 채굴기. 마르기를 기다릴 이유가 없다.
   poor_drills = poor_drills,
+
+  -- 두 점을 잇는 벨트 길.
+  belt_route = belt_route,
 
   -- 기계 한 대를 영구히 먹이는 «상자-인서터» 자리.
   fuel_rig = fuel_rig,
