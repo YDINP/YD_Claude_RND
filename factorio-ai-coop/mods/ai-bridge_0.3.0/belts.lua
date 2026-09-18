@@ -51,7 +51,7 @@ end
 -- 이미 벨트가 선 칸은 «지나갈 수 있는 칸»으로 친다 - 그것이 바로 우리가
 -- 깔아둔 길이기 때문이다.
 -- 길 찾는 법이 바뀔 때마다 올린다. 옛 길을 버리는 표시다.
-local PLAN = 3
+local PLAN = 4
 
 local MAX_VISIT = 20000
 local STEPS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
@@ -92,10 +92,21 @@ local function walk(surface, force, from, goal)
   local function push_front(v) deque[head - 1] = v; head = head - 1 end
   local function push_back(v) tail = tail + 1; deque[tail] = v end
 
-  local turns, came = {}, {}
+  -- 꺾임만 세면 길이가 제멋대로 늘어난다.
+  --
+  -- 실측: 유통 구역에서 제련 구역까지 곧은 거리가 49칸인데 길은 154칸이
+  -- 나왔다. 세 배다. 그 사이에 나무는 일곱 그루뿐이었으니 막혀서 돈 것이
+  -- 아니다.
+  --
+  -- 꺾임 값만 재면 「곧게 백 칸 가서 한 번 꺾기」와 「곧게 다섯 칸 가서
+  -- 한 번 꺾기」가 «같은 점수»다. 알고리즘은 둘을 구별할 이유가 없다.
+  --
+  -- 그래서 꺾임이 같으면 «칸 수»로 가른다. 먼저 꺾임, 그다음 길이.
+  local turns, steps, came = {}, {}, {}
   for _, step in pairs(STEPS) do
     local d = dir_of({ x = 0, y = 0 }, { x = step[1], y = step[2] })
     turns[key(goal.x, goal.y, d)] = 0
+    steps[key(goal.x, goal.y, d)] = 0
     push_back({ x = goal.x, y = goal.y, d = d })
   end
   head = 0
@@ -108,7 +119,9 @@ local function walk(surface, force, from, goal)
     deque[head] = nil
     head = head + 1
     visits = visits + 1
-    local cost = turns[key(at.x, at.y, at.d)]
+    local here = key(at.x, at.y, at.d)
+    local cost = turns[here]
+    local walked = steps[here] or 0
 
     local gap = math.abs(at.x - from.x) + math.abs(at.y - from.y)
     if gap < best_gap or (gap == best_gap and cost < best_turn) then
@@ -120,11 +133,16 @@ local function walk(surface, force, from, goal)
       local nx, ny = at.x + step[1], at.y + step[2]
       local add = (nd == at.d) and 0 or 1
       local k = key(nx, ny, nd)
-      if turns[k] == nil or turns[k] > cost + add then
+      -- 꺾임이 적으면 무조건 낫고, 꺾임이 같으면 칸 수가 적은 쪽이 낫다.
+      local better = turns[k] == nil
+        or turns[k] > cost + add
+        or (turns[k] == cost + add and (steps[k] or math.huge) > walked + 1)
+      if better and turns[k] ~= -1 then
         local open = (nx == from.x and ny == from.y)
                      or passable(surface, force, nx, ny)
         if open then
           turns[k] = cost + add
+          steps[k] = walked + 1
           came[k] = at
           if add == 0 then
             push_front({ x = nx, y = ny, d = nd })

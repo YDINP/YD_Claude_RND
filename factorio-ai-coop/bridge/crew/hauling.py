@@ -107,8 +107,34 @@ class HaulingMixin:
         except RconError:
             return None
         taken = self.taken()
-        for flow in flows:
-            if flow.get("error") or int(flow.get("left") or 0) <= 0:
+
+        # 흐름을 사람에게 «나눈다».
+        #
+        # 예전에는 덜 된 첫 흐름만 집었다. 그래서 수집 길이 안 끝나면
+        # 유통·광석·판금은 영원히 차례가 안 왔다. 실측으로 수집이 135칸에서
+        # 116칸으로 줄어드는 동안 뒤의 셋은 42/258/63 그대로였다.
+        #
+        # 게다가 수집 길은 채굴기가 늘 때마다 다시 길어진다. 끝나기를
+        # 기다리는 순서라면 영원히 안 온다.
+        #
+        # 순서는 여전히 뜻이 있다 - 광석이 안 들어오면 판금이 안 나온다.
+        # 그러니 «앞의 것부터 한 명씩» 붙이고, 다 한 명씩 붙은 다음에
+        # 앞에서부터 둘째를 붙인다. 순서는 지키되 뒤를 굶기지는 않는다.
+        live = [f for f in flows
+                if not f.get("error") and int(f.get("left") or 0) > 0]
+        if not live:
+            return None
+        hands = {f["flow"]: sum(1 for k in taken
+                                if k.startswith(f"line:{f['flow']}:"))
+                 for f in live}
+        mine = f"line:%s:{worker.name}"
+        for flow in live:
+            if mine % flow["flow"] in taken:
+                live = [flow]      # 하던 것을 계속한다
+                break
+        fewest = min(hands[f["flow"]] for f in live)
+        for flow in live:
+            if hands[flow["flow"]] > fewest or hands[flow["flow"]] >= LINE_HANDS:
                 continue
             up = flow.get("standing") or {}
             want = flow.get("want") or {}
@@ -120,10 +146,7 @@ class HaulingMixin:
             # 이제 저마다 제 몫을 «받아» 간다. 남이 집어간 칸은 안 오므로
             # 셋이 동시에 깔아도 같은 칸에 둘이 서지 않는다. 셋까지만 -
             # 넷째부터는 벨트 만들 철판이 모자라서 서로 굶긴다.
-            busy = sum(1 for k in taken if k.startswith(f"line:{flow['flow']}:"))
             key = f"line:{flow['flow']}:{worker.name}"
-            if key not in taken and busy >= LINE_HANDS:
-                continue
             return Job(
                 f"{self.FLOW_NAMES.get(flow['flow'], flow['flow'])}이(가) "
                 f"{flow['left']}칸 모자랍니다 ({parts}). 제 몫을 받아 "
