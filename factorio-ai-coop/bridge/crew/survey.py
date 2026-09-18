@@ -249,12 +249,17 @@ class SurveyMixin:
             blind = self.bridge.blind_drills(worker.name)
         except RconError:
             blind = []
-        for spot in blind[:3]:
+        #      한 대에 한 번씩 걸어가면 일흔한 대에 일흔한 번을 걷는다.
+        #      광맥 위의 채굴기는 서로 붙어 있으니 모아서 한 번에 간다.
+        for group in cluster(blind)[:2]:
+            head = group[0]
             unblock.append(Job(
-                f"({spot['x']:.0f}, {spot['y']:.0f}) 채굴기가 캔 것을 둘 데가 "
-                f"없어 멈춰 있습니다. 떨구는 자리에 화로를 놓겠습니다.",
-                key=f"open:{spot['x']:.0f},{spot['y']:.0f}",
-                routine="open", at=spot, needs={"stone-furnace": 1}))
+                f"({head['x']:.0f}, {head['y']:.0f}) 부근 채굴기 {len(group)}대가 "
+                f"캔 것을 둘 데가 없어 멈춰 있습니다. 떨구는 자리마다 화로를 "
+                f"놓겠습니다.",
+                key=f"open:{head['x']:.0f},{head['y']:.0f}",
+                routine="open", at={**head, "group": group},
+                needs={"stone-furnace": len(group)}))
 
         # 3a2. 얇은 자리에 선 채굴기. 마르기를 기다릴 이유가 없다 —
         #      걷어내면 채굴기가 통째로 돌아오고, 다음 automate 가 두꺼운

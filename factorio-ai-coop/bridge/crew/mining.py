@@ -198,7 +198,28 @@ class MiningMixin:
             worker.block("automate:coal")
             self.say(f"석탄 자급쌍 구축 중 오류: {exc}", who=name)
 
-    def open_drill(self, worker: Worker, at: dict) -> None:
+    def open_drills(self, worker: Worker, at: dict) -> None:
+        """가까이 모인 눈먼 채굴기들을 한 번의 걸음으로 전부 연다.
+
+        한 대에 한 번씩 걸어가면 일흔한 대를 여는 데 일흔한 번을 걷는다.
+        광맥 위의 채굴기는 어차피 서로 붙어 있으므로, 한 번 간 김에 손이
+        닿는 것을 전부 연다.
+        """
+        group = at.get("group") or [at]
+        opened = 0
+        for one in group:
+            if self.open_drill(worker, one, quiet=True):
+                opened += 1
+        if opened:
+            head = group[0]
+            self.say(f"({head['x']:.0f}, {head['y']:.0f}) 부근에서 캔 것을 둘 데가 "
+                     f"없어 멈춰 있던 채굴기 {opened}대를 열었습니다. 떨구는 "
+                     f"자리마다 화로를 놓아 바로 녹게 했습니다.", who=worker.name)
+        elif group:
+            self.say(f"({group[0]['x']:.0f}, {group[0]['y']:.0f}) 부근 채굴기 "
+                     f"{len(group)}대를 열지 못했습니다.", who=worker.name)
+
+    def open_drill(self, worker: Worker, at: dict, quiet: bool = False) -> bool:
         """출구가 없는 채굴기 앞에 화로를 놓아, 캔 것이 갈 곳을 만든다.
 
         버너 채굴기는 캔 것을 앞칸에 «떨군다». 거기 아무것도 없으면 땅에
@@ -215,7 +236,7 @@ class MiningMixin:
         seat = at.get("seat") or {}
         if not seat:
             worker.block(key)
-            return
+            return False
         try:
             # 자리를 막고 있는 것이 바닥의 광석뿐이면, 줍는 것이 치우는
             # 일이면서 동시에 거두는 일이다. 실측하니 후보 자리 여든네 곳이
@@ -224,9 +245,10 @@ class MiningMixin:
                 try:
                     got = worker.handle.sweep(seat["x"], seat["y"], radius=3,
                                               timeout=300)
-                    self.say(f"({at['x']:.0f}, {at['y']:.0f}) 앞에 떨어져 있던 "
-                             f"광석 {int(got.get('swept') or 0)}개를 주웠습니다. "
-                             f"이제 화로를 놓을 자리가 납니다.", who=name)
+                    if not quiet:
+                        self.say(f"({at['x']:.0f}, {at['y']:.0f}) 앞에 떨어져 "
+                                 f"있던 광석 {int(got.get('swept') or 0)}개를 "
+                                 f"주웠습니다. 이제 자리가 납니다.", who=name)
                 except TaskFailed:
                     pass
 
@@ -234,17 +256,18 @@ class MiningMixin:
                 self.ask_for(worker, "stone-furnace", 1,
                              "출구가 막힌 채굴기 앞에 놓을 화로")
                 worker.block(key)
-                return
+                return False
             worker.handle.place("stone-furnace", seat["x"], seat["y"], timeout=420)
 
             # 놓았다고 이어진 것이 아니다. 게임에 직접 묻는다.
             joined = self.bridge.feeds(at["x"], at["y"]).get("onto")
             if joined != "stone-furnace":
-                self.say(f"({at['x']:.0f}, {at['y']:.0f}) 채굴기 앞에 화로를 "
-                         f"놓았는데 아직 안 이어집니다(지금 넣는 곳: "
-                         f"{joined or '없음'}).", who=name)
+                if not quiet:
+                    self.say(f"({at['x']:.0f}, {at['y']:.0f}) 채굴기 앞에 화로를 "
+                             f"놓았는데 아직 안 이어집니다(지금 넣는 곳: "
+                             f"{joined or '없음'}).", who=name)
                 worker.block(key)
-                return
+                return False
 
             if self.obtain(worker, "coal", FURNACE_FUEL):
                 try:
@@ -252,16 +275,22 @@ class MiningMixin:
                                          count=FURNACE_FUEL, timeout=180)
                 except TaskFailed:
                     pass
-            ore = at.get("ore") or "광석"
-            self.say(f"({at['x']:.0f}, {at['y']:.0f}) 채굴기가 캔 것을 둘 데가 "
-                     f"없어 멈춰 있었습니다. 떨구는 자리에 화로를 놓아 "
-                     f"{ore}를 바로 녹이게 했습니다.", who=name)
+            if not quiet:
+                ore = at.get("ore") or "광석"
+                self.say(f"({at['x']:.0f}, {at['y']:.0f}) 채굴기가 캔 것을 둘 데가 "
+                         f"없어 멈춰 있었습니다. 떨구는 자리에 화로를 놓아 "
+                         f"{ore}를 바로 녹이게 했습니다.", who=name)
+            return True
         except TaskFailed as exc:
             worker.block(key)
-            self.say(f"채굴기 출구를 못 열었습니다: {exc.task.get('error')}", who=name)
+            if not quiet:
+                self.say(f"채굴기 출구를 못 열었습니다: {exc.task.get('error')}",
+                         who=name)
         except RconError as exc:
             worker.block(key)
-            self.say(f"채굴기 출구 작업 중 오류: {exc}", who=name)
+            if not quiet:
+                self.say(f"채굴기 출구 작업 중 오류: {exc}", who=name)
+        return False
 
     def build_rig(self, worker: Worker, at: dict) -> None:
         """«석탄 상자 + 버너 인서터»를 한 벌 세우고 석탄을 부어둔다."""

@@ -33,7 +33,7 @@ class FactoryMixin:
         "belt":    lambda crew, worker, at: crew.lay_belt(worker, at),
         "science": lambda crew, worker, at: crew.build_science(worker, at),
         "stoke":   lambda crew, worker, at: crew.stoke(worker, at),
-        "open":    lambda crew, worker, at: crew.open_drill(worker, at),
+        "open":    lambda crew, worker, at: crew.open_drills(worker, at),
     }
 
     def start_routine(self, worker: Worker, routine: str, ore: str | None = None,
