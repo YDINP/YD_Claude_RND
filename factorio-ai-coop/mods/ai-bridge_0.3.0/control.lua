@@ -1745,16 +1745,27 @@ local function richness(surface, spot)
   return total
 end
 
-local function drill_site(name, x, y, radius, receiver)
+local function drill_site(name, x, y, radius, receiver, want)
   local a = agent(name)
   local b = body(a)
   if not b then return { error = "no such agent: " .. tostring(name) } end
 
   local surface, force = b.surface, b.force
   local reach = math.min(radius or 12, 40)
-  local ore = surface.find_entities_filtered {
-    position = { x, y }, radius = reach, type = "resource", limit = 600,
-  }
+
+  -- 어느 광석인지 가린다.
+  --
+  -- 실측(새 판): 석탄 광맥 위에 채굴기 여섯 대가 북쪽을 보고 상자에
+  -- 떨구고 있었다. 석탄은 automate_coal 로 가서 «서로 마주보는 쌍»이
+  -- 되어야 하는데, 그 분기를 타지 않은 것들이다.
+  --
+  -- 이름을 안 주니 「그 근처의 자원」을 전부 후보로 봤고, 돌을 자동화하러
+  -- 간 일감이 반경 안의 석탄 칸을 집어 상자를 달았다. 게다가 방금 매장량
+  -- 내림차순 정렬을 넣었으니, 근처에 더 두꺼운 다른 광석이 있으면 언제나
+  -- 그쪽을 고르게 된다 - 고치려던 것이 더 크게 어긋날 뻔했다.
+  local filter = { position = { x, y }, radius = reach, limit = 600 }
+  if want then filter.name = want else filter.type = "resource" end
+  local ore = surface.find_entities_filtered(filter)
 
   -- 두꺼운 칸부터 본다.
   --
@@ -1809,7 +1820,7 @@ local function drill_site(name, x, y, radius, receiver)
   return { agent = name, sites = sites }
 end
 
-local function coal_pair_site(name, x, y, radius)
+local function coal_pair_site(name, x, y, radius, pairs_wanted)
   local a = agent(name)
   local b = body(a)
   if not b then return { error = "no such agent: " .. tostring(name) } end
@@ -1817,10 +1828,15 @@ local function coal_pair_site(name, x, y, radius)
   local surface, force = b.surface, b.force
   local reach = math.min(radius or 16, 40)
   local coal = surface.find_entities_filtered {
-    position = { x, y }, radius = reach, name = "coal", limit = 200,
+    position = { x, y }, radius = reach, name = "coal", limit = 400,
   }
 
-  -- 마주보는 축 두 가지. 두 대가 2타일 간격으로 서로를 본다.
+  -- 두꺼운 칸부터. 채굴기 자리를 고를 때와 같은 이유다 - 엔진이 주는
+  -- 순서는 광맥 테두리부터라, 그대로 쓰면 제일 얇은 곳에 쌍을 세운다.
+  table.sort(coal, function(p, q) return p.amount > q.amount end)
+
+  -- 마주보는 축 두 가지. 두 대가 2타일 간격으로 서로를 본다. 각자 캔
+  -- 석탄이 상대의 연료함으로 직행해서 둘이 서로를 영원히 먹인다.
   local axes = {
     { step = { x = 2, y = 0 },
       first = defines.direction.east, second = defines.direction.west },
@@ -1828,29 +1844,56 @@ local function coal_pair_site(name, x, y, radius)
       first = defines.direction.south, second = defines.direction.north },
   }
 
+  -- 쌍을 여러 벌 돌려준다. 사용자가 말한 「네 개를 서로 마주보게」는
+  -- 이 쌍 두 벌이다. 재료가 되는 만큼 세우면 된다.
+  local want = math.max(1, math.min(pairs_wanted or 2, 4))
+  local found, taken = {}, {}
+
+  local function busy(p)
+    for _, seat in pairs(taken) do
+      if math.abs(seat.x - p.x) < 2 and math.abs(seat.y - p.y) < 2 then
+        return true
+      end
+    end
+    return false
+  end
+
   for _, patch in pairs(coal) do
     local one = patch.position
     for _, axis in pairs(axes) do
       local two = { x = one.x + axis.step.x, y = one.y + axis.step.y }
-      if surface.can_place_entity {
+      if not busy(one) and not busy(two)
+          and surface.can_place_entity {
             name = "burner-mining-drill", position = one,
             direction = axis.first, force = force }
           and surface.can_place_entity {
             name = "burner-mining-drill", position = two,
             direction = axis.second, force = force } then
-        return {
-          agent = name,
+        found[#found + 1] = {
           first = { x = one.x, y = one.y, direction = axis.first },
           second = { x = two.x, y = two.y, direction = axis.second },
+          richness = richness(surface, one) + richness(surface, two),
           distance = math.floor(Tasks.dist(b.position, one)),
         }
+        taken[#taken + 1] = one
+        taken[#taken + 1] = two
+        break
       end
     end
+    if #found >= want then break end
   end
-  return { error = "no room for a facing pair on coal" }
+
+  if #found == 0 then
+    return { error = "no room for a facing pair on coal" }
+  end
+  -- 예전 이름도 남겨둔다. 첫 쌍만 쓰던 호출부가 그대로 돌아간다.
+  return {
+    agent = name, pairs = found,
+    first = found[1].first, second = found[1].second,
+    distance = found[1].distance,
+  }
 end
 
--- 이미 놓인 채굴기를 출구가 비는 방향으로 돌린다.
 local function aim_drill(name, x, y)
   local a = agent(name)
   local b = body(a)

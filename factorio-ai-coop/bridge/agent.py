@@ -816,6 +816,11 @@ STARVING = 4
 # 주고받아 봐야 아무것도 안 채워진다 - 늘려야 한다.
 SHORTAGE_VOICES = 3
 
+# 한 번에 세울 석탄 자급쌍 수. 사용자가 말한 「네 개를 서로 마주보게」가
+# 이 쌍 두 벌이다. 쌍끼리는 서로 먹이지 않으므로 넷이 한 덩어리가 아니라
+# 둘씩 두 덩어리다 - 그래도 손이 갈 일은 똑같이 없다.
+COAL_PAIRS = 2
+
 # 한 번에 세울 급유 장치 수, 그리고 상자에 부어둘 석탄.
 # 버너 인서터는 자기가 나르는 게 연료일 때만 자급한다. 석탄을 나르는
 # 인서터는 영원히 돌고, 광석을 나르는 인서터는 손이 계속 간다 - 그래서
@@ -1839,7 +1844,7 @@ class Crew:
                     return
 
             sites = self.bridge.drill_site(name, spot["x"], spot["y"],
-                                           radius=12, receiver=receiver)
+                                           radius=12, receiver=receiver, ore=ore)
             if not sites:
                 self.say(f"{ore} 광맥에 {receiver}를 붙일 자리가 없습니다.", who=name)
                 worker.block(f"automate:{ore}", 300)
@@ -1926,29 +1931,46 @@ class Crew:
                 worker.block("automate:coal", 300)
                 return
 
-            pair = self.bridge.coal_pair_site(name, spot["x"], spot["y"], radius=16)
-            if pair.get("error"):
-                self.say(f"석탄 자급쌍 자리가 없습니다: {pair['error']}", who=name)
+            plan = self.bridge.coal_pair_site(name, spot["x"], spot["y"],
+                                              radius=16, pairs=COAL_PAIRS)
+            if plan.get("error"):
+                self.say(f"석탄 자급쌍 자리가 없습니다: {plan['error']}", who=name)
                 worker.block("automate:coal", 300)
                 return
 
-            if not self.obtain(worker, DRILL, 2):
-                self.say("채굴기 두 대를 못 구했습니다.", who=name)
+            # 재료가 되는 만큼 세운다. 예전에는 두 대를 한꺼번에 못 구하면
+            # 통째로 포기했고, 초반에는 철판이 늘 모자라 한 쌍도 못 섰다.
+            # 그동안 다른 경로가 석탄 위에 상자 달린 채굴기를 하나씩
+            # 세웠으니, 자급쌍은 영영 안 생겼다.
+            built = 0
+            for pair in _as_rows(plan.get("pairs")) or [plan]:
+                if not self.obtain(worker, DRILL, 2):
+                    break
+                try:
+                    for seat in ("first", "second"):
+                        where = pair[seat]
+                        worker.handle.place(DRILL, where["x"], where["y"],
+                                            direction=where["direction"],
+                                            timeout=420)
+                except TaskFailed:
+                    continue
+                # 첫 삽만 사람이 떠준다. 그 뒤로는 둘이 서로 먹인다.
+                if self.obtain(worker, "coal", DRILL_FUEL):
+                    try:
+                        worker.handle.insert("coal", pair["first"]["x"],
+                                             pair["first"]["y"],
+                                             count=DRILL_FUEL, timeout=180)
+                    except TaskFailed:
+                        pass
+                built += 1
+
+            if not built:
+                self.say("채굴기를 못 구해 석탄 자급쌍을 못 세웠습니다.", who=name)
                 worker.block("automate:coal")
                 return
-
-            self.say(f"석탄 광맥에 서로 먹이는 채굴기 두 대를 놓겠습니다. "
-                     f"({pair['first']['x']:.0f}, {pair['first']['y']:.0f})", who=name)
-            for seat in ("first", "second"):
-                where = pair[seat]
-                worker.handle.place(DRILL, where["x"], where["y"],
-                                    direction=where["direction"], timeout=420)
-
-            # 첫 삽만 사람이 떠준다. 그 뒤로는 둘이 서로 먹인다.
-            if self.obtain(worker, "coal", DRILL_FUEL):
-                worker.handle.insert("coal", pair["first"]["x"], pair["first"]["y"],
-                                     count=DRILL_FUEL, timeout=180)
-            self.say("석탄 자급쌍 완성. 이제 손으로 넣어줄 필요가 없습니다.", who=name)
+            self.say(f"석탄 광맥에 서로 먹이는 채굴기 {built * 2}대를 "
+                     f"({built}쌍) 세웠습니다. 이제 손으로 넣어줄 필요가 "
+                     f"없습니다.", who=name)
 
         except TaskFailed as exc:
             worker.block("automate:coal")
