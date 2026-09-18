@@ -154,8 +154,12 @@ class SurveyMixin:
             # 만들 때 정했는데, 그것은 이 아래에서 벌어진다. 벨트를 앞에
             # 둘지 뒤에 둘지는 그 전에 알아야 한다 - 한 순찰 늦은 판단이
             # 그 순찰 동안 공장을 굶긴다.
+            # `broken` 은 이미 목록을 돌려준다. 한 번 dict 로 착각해서
+            # 무리가 통째로 죽었다 - 'list' object has no attribute 'get'.
+            # 그 뒤로 여섯 순찰 동안 공장이 꺼진 채였는데, 나는 배차 순서를
+            # 고치고 있었다. 죽은 것과 안 하는 것은 다르다.
             self.starving = sum(
-                1 for e in _as_rows(stopped.get("stopped") or stopped)
+                1 for e in _as_rows(stopped)
                 if isinstance(e, dict) and e.get("fix") == "fuel") >= STARVING
             for one in self.workers.values():
                 one.starving = self.starving
