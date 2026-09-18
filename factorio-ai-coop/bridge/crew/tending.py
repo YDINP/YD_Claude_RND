@@ -153,11 +153,10 @@ class TendingMixin:
         #
         # 연구가 끝났는데 터렛이 0대인 것은 그 자체로 고칠 일이다. 한 대는
         # 언제나 옳다.
-        room = snap.slack
-        close = isinstance(room, (int, float)) and room <= DEFEND_WHEN
-        naked = snap.knows("gun-turret") and not snap.building("gun-turret")
+        # 빚이 있으면 사다리보다 총이 먼저다. 여유를 따질 것도 없다 -
+        # 빚 자체가 이미 공해와 둥지 거리를 본 값이다.
         target = None
-        if naked and (close or room is None):
+        if snap.debt > 0 and snap.knows("gun-turret"):
             target = ("gun-turret", 1)
 
         stage = mission.stage_of(snap)

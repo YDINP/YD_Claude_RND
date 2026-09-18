@@ -231,8 +231,17 @@ class ChiefMixin:
             self.slack = float(room) if isinstance(room, (int, float)) else None
         except RconError:
             self.slack = getattr(self, "slack", None)
+        owed = int((wall or {}).get("debt") or 0)
+        self.debt = owed
         for worker in self.workers.values():
             worker.slack = self.slack
+            worker.debt = owed
+        if owed > 0 and owed != getattr(self, "_said_debt", None):
+            self._said_debt = owed
+            self.say(f"공해가 자란 만큼 총이 모자랍니다. "
+                     f"탄약 든 터렛 {int((wall or {}).get('armed') or 0)}대 / "
+                     f"필요 {int((wall or {}).get('want') or 0)}대. "
+                     f"채우기 전까지 굴뚝은 더 세우지 않겠습니다.")
 
         broken = chain.get("broken_at")
         if not broken:

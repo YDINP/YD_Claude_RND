@@ -20,7 +20,7 @@ from jobs import Job, errand_label  # noqa: E402
 from layout import (belt_pairs, carry_split, cluster,  # noqa: E402
                     craft_seat, furnace_seat, interleave, nearest_to,
                     spread_sites)
-from ladder import (STAGE_TARGET, chain_job, drill_target,  # noqa: E402
+from ladder import (STAGE_TARGET, chain_job, drill_target, furnace_target,  # noqa: E402
                     missing_item, next_goal, plan, worth_building)
 from crew import Crew  # noqa: E402
 
@@ -913,6 +913,30 @@ def main() -> int:
     check("a full seat map stops the furnace line",
           not any(j.key.startswith("furnace:") for j in plan(seated, crew=8)),
           str([j.key for j in plan(seated, crew=8)][:4]))
+
+    # 방어 빚이 있으면 굴뚝을 더 세우지 않는다.
+    #
+    # 사용자: "공해도가 올라가면 적이 공격오니까 우린 자원도 자원나름이지만
+    # 방어가 최우선임."
+    #
+    # 버너 채굴기도 돌 화로도 하나하나가 굴뚝이다. 굴뚝을 더 세우는 것은
+    # 빚을 더 지는 일이다. 갚기 전에는 늘리지 않고 이미 선 것으로 버틴다.
+    def owing(debt):
+        return Snapshot(x=0, y=0, researched=set(), debt=debt,
+                        buildings={"stone-furnace": {"count": 8},
+                                   DRILL: {"count": 8}})
+
+    check("with the defence paid up the factory grows",
+          drill_target(owing(0), crew=8) > 8, str(drill_target(owing(0), crew=8)))
+    check("but a defence debt stops new smokestacks",
+          drill_target(owing(3), crew=8) <= 8, str(drill_target(owing(3), crew=8)))
+    check("furnaces stop for the same reason",
+          furnace_target(owing(3), crew=8) <= 8,
+          str(furnace_target(owing(3), crew=8)))
+    # 다만 이미 선 것을 줄이지는 않는다. 멈춘 공장은 총도 못 만든다.
+    check("and it never shrinks what already stands",
+          drill_target(owing(99), crew=8) >= len(FOCUS_ORDER),
+          str(drill_target(owing(99), crew=8)))
 
     # 공해가 둥지에 닿아가면 방어가 급한 일이 된다.
     #

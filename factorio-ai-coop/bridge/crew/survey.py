@@ -633,8 +633,13 @@ class SurveyMixin:
             #     잡히면 nil 이 나오는데, 그것은 「안전하다」가 아니라
             #     「모른다」다. 실측으로 그 값이 None 이 된 순간 방어가
             #     뒤로 밀렸다 - 가장 모를 때 가장 태평해진 셈이다.
-            room = (self.snaps.get(worker.name) or worker.snapshot()).slack
-            near = not isinstance(room, (int, float)) or room <= DEFEND_WHEN
+            #     빚이 있으면 언제나 맨 앞이다. 빚은 이미 공해와 둥지
+            #     거리를 본 값이라, 그 위에 다시 조건을 얹을 이유가 없다.
+            snap = self.snaps.get(worker.name) or worker.snapshot()
+            room = snap.slack
+            near = (snap.debt > 0
+                    or not isinstance(room, (int, float))
+                    or room <= DEFEND_WHEN)
             if near:
                 jobs.insert(0, guard)
             else:

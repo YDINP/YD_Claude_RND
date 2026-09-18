@@ -37,6 +37,9 @@ class Snapshot:
     fields: list[dict] = field(default_factory=list)
     # 연료가 없어 선 기계가 여럿인가. 그러면 새 일보다 되살리는 일이 먼저다.
     starving: bool = False
+    # 공해가 요구하는 총의 수에서 «탄약이 든» 총을 뺀 값. 0 보다 크면
+    # 방어가 자원보다 먼저다.
+    debt: int = 0
     # 가방의 빈 칸. 이것이 0 이면 캐는 일도 걷어내는 일도 전부 실패한다.
     free: int = 99
     # 공용 창고에 무엇이 얼마나 있는가. 손에 없다고 없는 것이 아니다.

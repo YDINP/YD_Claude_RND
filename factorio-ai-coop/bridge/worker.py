@@ -41,6 +41,8 @@ class Worker:
         self.fields: list[dict] = []
         # 무리가 알려주는 굶주림. 사다리가 이것을 본다.
         self.starving = False
+        # 반장이 재어 알려주는 방어 빚.
+        self.debt = 0
         # What has just failed, and until when it stays off the table.
         self.blocked: dict[str, float] = {}
         # The job key this agent currently holds, so the crew can hand the rest
@@ -88,6 +90,7 @@ class Worker:
             slack=self.slack,
             fields=list(self.fields),
             starving=self.starving,
+            debt=self.debt,
         )
 
     def block(self, kind: str, seconds: float = BACKOFF_SECONDS) -> None:

@@ -200,6 +200,31 @@ local function raid(surface, force, box, home)
   }
 end
 
+-- 공해가 자란 만큼 총이 있어야 한다.
+--
+-- 사용자 지시: "공해도가 올라가면 적이 공격오니까 우린 자원도 자원나름이지만
+-- 방어가 최우선임."
+--
+-- 맞다. 그리고 지금까지 방어는 «조건부»였다 - 여유가 예순 타일 아래로
+-- 내려오면 그때 급해졌다. 그런데 공해는 그 전부터 자라고, 자란 만큼
+-- 둥지를 깨운다. 닿고 나서 급한 것은 늦은 것이다.
+--
+-- 그러니 「몇 대가 있어야 하는가」를 공해가 정하게 한다. 그리고 모자란
+-- 만큼이 «빚»이다. 빚이 있으면 굴뚝을 더 세우지 않는다 - 굴뚝을 더
+-- 세우는 것은 빚을 더 지는 것이다.
+--
+--   여유 150타일 넘음   2대   아직 멀다. 최소한만.
+--   여유 60~150         4대   자라는 중. 한 면은 막는다.
+--   여유 20~60          8대   가깝다. 오는 쪽을 덮는다.
+--   여유 20 이하/모름   12대  닿았거나 모른다. 둘 다 최악으로 친다.
+local function turrets_wanted(slack)
+  if slack == nil then return 12 end
+  if slack > 150 then return 2 end
+  if slack > 60 then return 4 end
+  if slack > 20 then return 8 end
+  return 12
+end
+
 local function defence(name)
   local a = agent(name)
   local b = body(a)
@@ -213,6 +238,8 @@ local function defence(name)
   local reach, at_home = pollution_reach(surface, home, nearest)
 
   local turrets = surface.find_entities_filtered { name = TURRET, force = force }
+  local slack_now = nearest and (nearest.gap - reach) or nil
+  local want_turrets = turrets_wanted(slack_now)
 
   -- 빈 총은 없는 총이다.
   --
@@ -222,11 +249,12 @@ local function defence(name)
   --
   -- 세우고 잊는 것 - 채굴기에서도 화로에서도 겪은 그것이다. 이번에는
   -- 값이 더 비쌌다: 화로 8대, 벨트 19칸, 그리고 요원 하나를 잃었다.
-  local starved, rounds = {}, 0
+  local starved, rounds, armed = {}, 0, 0
   for _, t in pairs(turrets) do
     local inv = t.get_inventory(defines.inventory.turret_ammo)
     local have = inv and inv.get_item_count(AMMO) or 0
     rounds = rounds + have
+    if have >= AMMO_FLOOR then armed = armed + 1 end
     if have < AMMO_FLOOR then
       starved[#starved + 1] = { x = math.floor(t.position.x),
                                 y = math.floor(t.position.y), ammo = have }
@@ -254,6 +282,14 @@ local function defence(name)
     -- 공해가 둥지까지 몇 타일 남았는가. 0 이하면 이미 닿았다.
     slack = nearest and (nearest.gap - reach) or nil,
     turrets = #turrets,
+    -- 공해가 요구하는 수와, 모자란 만큼의 «빚».
+    --
+    -- 탄약이 없는 총은 없는 총이다. 그러니 세운 수가 아니라 «먹인 수»를
+    -- 센다 - 지난 판에서 다섯 대 중 둘이 빈 총이었고, 그 둘은 습격에
+    -- 아무것도 못 했다.
+    want = want_turrets,
+    armed = armed,
+    debt = math.max(0, want_turrets - armed),
     -- 굶은 터렛과 그 자리. 총을 더 놓는 것보다 먼저다.
     starved = starved, rounds = rounds,
     fill = AMMO_FILL,

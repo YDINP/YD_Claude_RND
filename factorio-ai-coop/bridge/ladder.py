@@ -97,7 +97,14 @@ def drill_target(snap: Snapshot, crew: int) -> int:
     # 그때가 바로 교착이다 - 서로가 서로의 상한이라 둘 다 못 움직인다.
     # 한쪽이 앞서 있으면(드릴 넷에 화로 하나) 그쪽은 안 키운다. 거기서
     # 드릴을 더 놓는 것은 교착을 푸는 게 아니라 낭비를 늘리는 것이다.
-    if drills == wanted:
+    # 방어 빚이 있으면 자라지 않는다.
+    #
+    # 사용자: "공해도가 올라가면 적이 공격오니까 우린 자원도 자원나름이지만
+    # 방어가 최우선임."
+    #
+    # 맞다. 버너 채굴기는 하나하나가 굴뚝이고, 굴뚝을 더 세우는 것은 빚을
+    # 더 지는 일이다. 갚기 전에는 늘리지 않는다 - 이미 선 것으로 버틴다.
+    if drills == wanted and snap.debt <= 0:
         wanted = drills + GROW_STEP
     # 버너 시대에는 상한이 있다. 숙련자들의 권장치는 마흔 대 안팎인데 우리는
     # 161대를 세우고도 과학팩이 0개였다. 너비는 사슬을 대신하지 못한다.
@@ -121,7 +128,8 @@ def furnace_target(snap: Snapshot, crew: int) -> int:
     # 채굴기만 보면 자라지 못한다. drill_target 과 같은 이유다 - 둘이
     # 서로의 상한이면 공장은 그 비율을 유지한 채 멈춘다.
     from_drills = math.ceil(drills * FURNACES_PER_DRILL)
-    if furnaces == from_drills:
+    # 화로도 석탄을 태운다. 채굴기와 같은 이유로 빚 앞에서 멈춘다.
+    if furnaces == from_drills and snap.debt <= 0:
         from_drills = furnaces + GROW_STEP
     # 돌 화로도 석탄을 태운다. 채굴기와 같은 이유로 같이 깎인다.
     ceiling = int(MAX_FURNACES * pollution_room(snap)) or 1
