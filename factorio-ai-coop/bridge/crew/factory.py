@@ -18,38 +18,35 @@ from worker import Worker
 class FactoryMixin:
     """만드는 일 - 조립기와 과학, 벨트, 그리고 방어."""
 
+    # 무엇을 시키면 무엇이 도는가. 사슬이 아니라 표인 이유는, 새 일거리를
+    # 넣을 때 사슬을 처음부터 읽지 않아도 되게 하기 위해서다.
+    ROUTINES = {
+        "power":   lambda crew, worker, at: crew.build_power(worker),
+        "rescue":  lambda crew, worker, at: crew.rescue(worker, at),
+        "depot":   lambda crew, worker, at: crew.build_depot(worker, at),
+        "defend":  lambda crew, worker, at: crew.build_defence(worker, at),
+        "pipe":    lambda crew, worker, at: crew.lay_pipe(worker, at),
+        "plug":    lambda crew, worker, at: crew.plug_in(worker, at),
+        "bridge":  lambda crew, worker, at: crew.bridge_networks(worker, at),
+        "rig":     lambda crew, worker, at: crew.build_rig(worker, at),
+        "convert": lambda crew, worker, at: crew.convert_chest(worker, at),
+        "belt":    lambda crew, worker, at: crew.lay_belt(worker, at),
+        "science": lambda crew, worker, at: crew.build_science(worker, at),
+        "stoke":   lambda crew, worker, at: crew.stoke(worker, at),
+        "open":    lambda crew, worker, at: crew.open_drill(worker, at),
+    }
+
     def start_routine(self, worker: Worker, routine: str, ore: str | None = None,
                       at: dict | None = None) -> bool:
         """Run a long build-out off the main loop; it walks, crafts and builds."""
         if not worker.slot.acquire(blocking=False):
             return False
+        work = self.ROUTINES.get(routine)
 
         def run() -> None:
             try:
-                if routine == "power":
-                    self.build_power(worker)
-                elif routine == "rescue":
-                    self.rescue(worker, at or {})
-                elif routine == "depot":
-                    self.build_depot(worker, at or {})
-                elif routine == "defend":
-                    self.build_defence(worker, at or {})
-                elif routine == "pipe":
-                    self.lay_pipe(worker, at or {})
-                elif routine == "plug":
-                    self.plug_in(worker, at or {})
-                elif routine == "bridge":
-                    self.bridge_networks(worker, at or {})
-                elif routine == "rig":
-                    self.build_rig(worker, at or {})
-                elif routine == "convert":
-                    self.convert_chest(worker, at or {})
-                elif routine == "belt":
-                    self.lay_belt(worker, at or {})
-                elif routine == "science":
-                    self.build_science(worker, at or {})
-                elif routine == "stoke":
-                    self.stoke(worker, at or {})
+                if work:
+                    work(self, worker, at or {})
                 else:
                     self.automate(worker, ore)
             except Exception as exc:  # noqa: BLE001

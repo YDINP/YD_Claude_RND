@@ -198,6 +198,58 @@ class MiningMixin:
             worker.block("automate:coal")
             self.say(f"석탄 자급쌍 구축 중 오류: {exc}", who=name)
 
+    def open_drill(self, worker: Worker, at: dict) -> None:
+        """출구가 없는 채굴기 앞에 화로를 놓아, 캔 것이 갈 곳을 만든다.
+
+        버너 채굴기는 캔 것을 앞칸에 «떨군다». 거기 아무것도 없으면 땅에
+        쌓이다가 그 칸이 차고, 그러면 채굴기가 선다. 실측 결과 채굴기 81대 중
+        57대가 이 상태였고, 바로 옆에서 화로 63대 중 60대가 광석이 없어 놀고
+        있었다. 캐는 쪽과 녹이는 쪽이 둘 다 멈춰 있었고 둘을 잇는 것이 하나도
+        없었다.
+
+        버너 시대의 정석은 «떨구는 자리에 화로를 놓는 것»이다. 인서터도
+        벨트도 전기도 필요 없다 - 채굴기가 화로 안으로 직접 넣는다.
+        """
+        name = worker.name
+        key = f"open:{at.get('x', 0):.0f},{at.get('y', 0):.0f}"
+        seat = at.get("seat") or {}
+        if not seat:
+            worker.block(key)
+            return
+        try:
+            if not self.obtain(worker, "stone-furnace", 1):
+                self.ask_for(worker, "stone-furnace", 1,
+                             "출구가 막힌 채굴기 앞에 놓을 화로")
+                worker.block(key)
+                return
+            worker.handle.place("stone-furnace", seat["x"], seat["y"], timeout=420)
+
+            # 놓았다고 이어진 것이 아니다. 게임에 직접 묻는다.
+            joined = self.bridge.feeds(at["x"], at["y"]).get("onto")
+            if joined != "stone-furnace":
+                self.say(f"({at['x']:.0f}, {at['y']:.0f}) 채굴기 앞에 화로를 "
+                         f"놓았는데 아직 안 이어집니다(지금 넣는 곳: "
+                         f"{joined or '없음'}).", who=name)
+                worker.block(key)
+                return
+
+            if self.obtain(worker, "coal", FURNACE_FUEL):
+                try:
+                    worker.handle.insert("coal", seat["x"], seat["y"],
+                                         count=FURNACE_FUEL, timeout=180)
+                except TaskFailed:
+                    pass
+            ore = at.get("ore") or "광석"
+            self.say(f"({at['x']:.0f}, {at['y']:.0f}) 채굴기가 캔 것을 둘 데가 "
+                     f"없어 멈춰 있었습니다. 떨구는 자리에 화로를 놓아 "
+                     f"{ore}를 바로 녹이게 했습니다.", who=name)
+        except TaskFailed as exc:
+            worker.block(key)
+            self.say(f"채굴기 출구를 못 열었습니다: {exc.task.get('error')}", who=name)
+        except RconError as exc:
+            worker.block(key)
+            self.say(f"채굴기 출구 작업 중 오류: {exc}", who=name)
+
     def build_rig(self, worker: Worker, at: dict) -> None:
         """«석탄 상자 + 버너 인서터»를 한 벌 세우고 석탄을 부어둔다."""
         name = worker.name

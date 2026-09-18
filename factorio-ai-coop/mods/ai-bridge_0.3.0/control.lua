@@ -1415,6 +1415,22 @@ end
 -- 공해는 바람처럼 퍼져서 둥지에 닿고, 닿으면 그쪽이 찾아온다. 그때 가서
 -- 놀라지 않으려면 «얼마나 가까운지»와 «무엇이 잠겨 있는지»를 보고 있어야
 -- 한다. 아직 둥지가 안 보인다는 것과 안전하다는 것은 다르다.
+-- 길. 채굴기를 빈틈없이 붙여 놓으면 캐릭터가 지나다닐 데가 없어진다 -
+-- 실제로 광맥 하나가 채굴기 오십 대로 덮여 사람이 갇혔다. 여덟 칸마다
+-- 한 줄을 비워두면 격자 모양 길이 남는다. 광맥은 넓고 길은 싸다.
+local LANE_EVERY = 8
+
+local function blocks_lane(position, half)
+  half = half or 1
+  for tx = math.floor(position.x - half), math.floor(position.x + half) do
+    if tx % LANE_EVERY == 0 then return true end
+  end
+  for ty = math.floor(position.y - half), math.floor(position.y + half) do
+    if ty % LANE_EVERY == 0 then return true end
+  end
+  return false
+end
+
 -- 길을 막고 선 우리 건물들. 여덟 칸마다 비워두기로 한 줄 위에 이미
 -- 놓여버린 것들이라, 새로 짓기 전에 이것부터 치워야 한다.
 local function blocking(name, radius)
@@ -1840,22 +1856,6 @@ local function outlet_ok(surface, force, spot, receiver)
 end
 
 -- 광맥 위에서 «채굴기가 들어가고 출구도 비는» 자리와 방향을 찾는다.
--- 길. 채굴기를 빈틈없이 붙여 놓으면 캐릭터가 지나다닐 데가 없어진다 -
--- 실제로 광맥 하나가 채굴기 오십 대로 덮여 사람이 갇혔다. 여덟 칸마다
--- 한 줄을 비워두면 격자 모양 길이 남는다. 광맥은 넓고 길은 싸다.
-local LANE_EVERY = 8
-
-local function blocks_lane(position, half)
-  half = half or 1
-  for tx = math.floor(position.x - half), math.floor(position.x + half) do
-    if tx % LANE_EVERY == 0 then return true end
-  end
-  for ty = math.floor(position.y - half), math.floor(position.y + half) do
-    if ty % LANE_EVERY == 0 then return true end
-  end
-  return false
-end
-
 -- 한 대의 채굴기가 얼마나 오래 사는가.
 --
 -- 실측(2026-09-18, 이 맵): 철광석 617칸의 매장량이 최소 1, 최대 1674,
@@ -2561,6 +2561,88 @@ local function belt_route(name, fx, fy, tx, ty, kind)
   return { error = "no clear belt route" }
 end
 
+-- 출구가 없는 채굴기. 버너 채굴기는 캔 것을 앞칸에 «떨군다» - 거기에 아무것도
+-- 없으면 땅바닥에 쌓이고, 그 칸이 차면 채굴기가 선다.
+--
+-- 실측(이 맵, 2026-09-18): 채굴기 81대 중 57대가 이 상태였다. drop_target 이
+-- 전부 nil 이고, 그 옆에서 화로 63대 중 60대가 광석이 없어 놀고 있었다.
+-- 캐는 쪽과 녹이는 쪽이 둘 다 멈춰 있었고 둘을 잇는 것이 하나도 없었다.
+--
+-- 버너 시대의 정석은 «떨구는 자리에 화로를 놓는 것»이다. 인서터도 벨트도
+-- 전기도 필요 없다 - 채굴기가 화로 안으로 직접 넣는다. 채굴기 0.25/s,
+-- 돌화로 0.3125/s 이므로 한 대에 한 대가 맞다.
+--
+-- 돌화로는 2x2 라 중심이 정수 좌표다. 떨구는 칸을 덮는 중심은 넷 중 하나다.
+local function furnace_over(surface, force, drop)
+  local tx, ty = math.floor(drop.x), math.floor(drop.y)
+  for _, seat in pairs({ { x = tx, y = ty }, { x = tx + 1, y = ty },
+                         { x = tx, y = ty + 1 }, { x = tx + 1, y = ty + 1 } }) do
+    if surface.can_place_entity {
+      name = "stone-furnace", position = seat, force = force,
+    } then
+      -- 정말 그 칸을 덮는지 확인한다. 덮지 않으면 채굴기는 여전히 허공에
+      -- 떨군다 - 「놓기는 놓았는데 안 이어진」 것이 이 저장소의 단골 실수다.
+      local box = { { seat.x - 1, seat.y - 1 }, { seat.x + 1, seat.y + 1 } }
+      if drop.x >= box[1][1] and drop.x <= box[2][1]
+         and drop.y >= box[1][2] and drop.y <= box[2][2] then
+        return seat
+      end
+    end
+  end
+  return nil
+end
+
+-- 이 채굴기가 지금 무엇에게 넣고 있는가. 놓은 뒤에 확인하기 위한 것이다.
+-- 「놓기는 놓았는데 안 이어진」 것이 이 저장소의 단골 실수라, 세우는 쪽마다
+-- 게임에 직접 물어보는 짝을 하나씩 둔다.
+local function feeds(x, y)
+  local d = game.surfaces[1].find_entities_filtered {
+    position = { x, y }, radius = 1.5, type = "mining-drill", limit = 1,
+  }[1]
+  if not d then return { error = string.format("no drill at %s,%s", x, y) } end
+  local t = d.drop_target
+  return { drill = d.name, onto = t and t.name or nil,
+           x = d.position.x, y = d.position.y,
+           status = d.status }
+end
+
+local function blind_drills(name, radius)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local reach = math.min(radius or MAX_OBSERVE_RADIUS, MAX_OBSERVE_RADIUS)
+  local out, total = {}, 0
+  for _, d in pairs(b.surface.find_entities_filtered {
+    position = b.position, radius = reach, type = "mining-drill", force = b.force,
+  }) do
+    if d.drop_target == nil then
+      total = total + 1
+      local ore = d.mining_target
+      local seat = furnace_over(b.surface, b.force, d.drop_position)
+      if seat then
+        out[#out + 1] = {
+          x = d.position.x, y = d.position.y,
+          ore = (ore and ore.valid) and ore.name or nil,
+          seat = seat, stuck = d.status == defines.entity_status
+                                .waiting_for_space_in_destination or nil,
+          distance = math.floor(Tasks.dist(b.position, d.position) * 10) / 10,
+        }
+      end
+    end
+  end
+  -- 멈춘 것부터, 그다음 가까운 것부터.
+  table.sort(out, function(p, q)
+    if (p.stuck or false) ~= (q.stuck or false) then return p.stuck end
+    return p.distance < q.distance
+  end)
+  local near = {}
+  for i = 1, math.min(#out, 12) do near[i] = out[i] end
+  -- total 은 출구가 없는 채굴기 전부, #out 은 그중 화로를 놓을
+  -- 자리가 있는 것. 둘의 차이가 「자리가 없어 못 살리는」 수다.
+  return { agent = name, blind = near, with_seat = #out, total = total }
+end
+
 local function poor_drills(name, floor, radius)
   local a = agent(name)
   local b = body(a)
@@ -3039,6 +3121,12 @@ remote.add_interface("ai", {
 
   -- 얇은 자리에 선 채굴기. 마르기를 기다릴 이유가 없다.
   poor_drills = poor_drills,
+
+  -- 출구가 없어 멈춘 채굴기와, 그 앞에 화로를 놓을 자리.
+  blind_drills = blind_drills,
+
+  -- 이 채굴기가 무엇에게 넣고 있는가 (세운 뒤 확인용).
+  feeds = feeds,
 
   -- 두 점을 잇는 벨트 길.
   belt_route = belt_route,

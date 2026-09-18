@@ -172,15 +172,31 @@ class SurveyMixin:
                     routine="convert", at=entry))
                 continue
 
-            # 받을 곳이 아예 없다. 여든세 대가 이 상태로 땅에 떨구다 막혀
-            # 있었는데, 앞의 판단은 이걸 통째로 건너뛰었다.
-            if not outlet:
-                unblock.append(Job(
-                    f"{entry.get('name', '채굴기')}이(가) 내놓을 데가 없어 "
-                    f"멈췄습니다. 받을 것을 달겠습니다. "
-                    f"({entry['x']:.0f}, {entry['y']:.0f})",
-                    key=f"outlet:{entry['x']:.0f},{entry['y']:.0f}",
-                    routine="rescue", at=at, needs={CHEST: 1}))
+            # 받을 곳이 아예 없는 것은 바로 아래 3a1 이 화로로 연다.
+            # 상자를 다는 것은 스무 분 뒤에 같은 자리에서 다시 막히고,
+            # 그 상자 안의 광석은 누가 날라주기 전까지 사다리에 못 오른다.
+
+        # 3a1. 출구가 «아예» 없는 채굴기 - 떨구는 자리에 화로를 놓는다.
+        #
+        #      실측(2026-09-18): 채굴기 81대 중 57대가 drop_target = nil 이었고,
+        #      그 옆에서 화로 63대 중 60대가 광석이 없어 놀고 있었다. 캐는 쪽과
+        #      녹이는 쪽이 둘 다 멈춰 있었고 둘을 잇는 것이 하나도 없었다.
+        #      벨트는 0개였다.
+        #
+        #      상자가 아니라 화로인 이유: 상자는 차면 다시 막히고 안에 든 것은
+        #      누가 날라야 사다리에 오른다. 화로는 광석을 판금으로 바꿔 놓으니
+        #      한 번 놓으면 그 채굴기가 사다리에 직접 연결된다. 인서터도 벨트도
+        #      전기도 필요 없다 - 채굴기가 화로 안으로 직접 넣는다.
+        try:
+            blind = self.bridge.blind_drills(worker.name)
+        except RconError:
+            blind = []
+        for spot in blind[:3]:
+            unblock.append(Job(
+                f"({spot['x']:.0f}, {spot['y']:.0f}) 채굴기가 캔 것을 둘 데가 "
+                f"없어 멈춰 있습니다. 떨구는 자리에 화로를 놓겠습니다.",
+                key=f"open:{spot['x']:.0f},{spot['y']:.0f}",
+                routine="open", at=spot, needs={"stone-furnace": 1}))
 
         # 3a2. 얇은 자리에 선 채굴기. 마르기를 기다릴 이유가 없다 —
         #      걷어내면 채굴기가 통째로 돌아오고, 다음 automate 가 두꺼운
