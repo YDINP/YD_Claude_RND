@@ -121,6 +121,10 @@ class SurveyMixin:
 
         # 1c. 광석 길. 사람이 나르는 동안에도 벨트는 깔아둔다 - 다 깔리면
         #     사람 쪽 일감이 저절로 사라진다(상자가 안 쌓이므로).
+        #     버려진 벨트를 먼저 걷어온다 - 새로 만드는 것보다 언제나 싸다.
+        stray_belt = self.loose_belt_job(worker)
+        if stray_belt:
+            unblock.append(stray_belt)
         line = self.line_job(worker)
         if line:
             jobs.append(line)

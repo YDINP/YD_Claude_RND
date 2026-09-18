@@ -22,6 +22,8 @@ local Core = require("core")
 local agent = Core.agent
 local body = Core.body
 
+local Tasks = require("tasks")
+
 local Zones = require("zones")
 local zones = Zones.zones
 
@@ -252,6 +254,49 @@ local function ore_line(name, fx, fy, limit)
   }
 end
 
+-- 길 위에 없는 벨트들.
+--
+-- 길을 부를 때마다 새로 찾던 시절에 깔린 것들이다. 실측하니 마흔 칸이
+-- 그렇게 버려져 있었다 - 철판 예순 개어치다. 걷어내면 손에 돌아오고,
+-- 그 손으로 진짜 길을 이어 깔면 된다.
+--
+-- 「길 위에 있는가」는 정해진 길이 있어야 물을 수 있다. 그러니 길을 한 번
+-- 정해두는 것은 낭비를 막는 일이기도 하다.
+local function loose_belts(name, limit)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local here = zones(name)
+  if not here.smelt then return { loose = {} } end
+  local lane = feed_line(here.smelt)
+
+  local mine_route = {}
+  local kept = storage.ore_line
+  for _, tile in pairs((kept and kept.tiles) or {}) do
+    mine_route[tile.x .. ":" .. tile.y] = true
+  end
+  for _, tile in pairs(lane) do
+    mine_route[tile.x .. ":" .. tile.y] = true
+  end
+
+  local out = {}
+  for _, e in pairs(b.surface.find_entities_filtered {
+    name = BELT, force = b.force,
+  }) do
+    local k = math.floor(e.position.x) .. ":" .. math.floor(e.position.y)
+    if not mine_route[k] and e.minable then
+      out[#out + 1] = { x = e.position.x, y = e.position.y,
+                        distance = math.floor(Tasks.dist(b.position, e.position)) }
+    end
+  end
+  table.sort(out, function(p, q) return p.distance < q.distance end)
+  local near = {}
+  for i = 1, math.min(#out, limit or 12) do near[i] = out[i] end
+  return { loose = near, total = #out }
+end
+
 return {
   ore_line = ore_line,
+  loose_belts = loose_belts,
 }

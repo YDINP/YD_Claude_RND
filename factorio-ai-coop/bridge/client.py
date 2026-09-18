@@ -328,6 +328,10 @@ class AIBridge:
         """캐는 구역에서 제련 구역까지의 광석 길. 아직 없는 것만 돌려준다."""
         return self.call("ore_line", agent, fx, fy, limit)
 
+    def loose_belts(self, agent: str, limit: int = 12) -> list[dict]:
+        """정해진 길 위에 없는 벨트들. 걷어내면 손에 돌아온다."""
+        return _as_list(self.call("loose_belts", agent, limit).get("loose"))
+
     def zones(self, agent: str) -> dict:
         """무엇을 어디서 하는가 - 채굴 / 제련 / 조립."""
         return self.call("zones", agent)

@@ -107,6 +107,34 @@ class HaulingMixin:
             f"인서터 {up['arms']}/{want['arms']}). 이어 깔겠습니다.",
             key="oreline", routine="line", at=line.get("from"))
 
+    def loose_belt_job(self, worker: Worker) -> Job | None:
+        """정해진 길 위에 없는 벨트를 걷어온다.
+
+        길을 부를 때마다 새로 찾던 시절에 깔린 것들이다. 걷어내면 벨트가
+        손에 돌아오고, 그 손으로 진짜 길을 이어 깔면 된다 - 새로 만들 필요가
+        없으니 철판 예순 개를 아끼는 셈이다.
+        """
+        try:
+            loose = self.bridge.loose_belts(worker.name)
+        except RconError:
+            return None
+        if not loose:
+            return None
+        taken = self.taken()
+        for group in cluster(loose)[:1]:
+            head = group[0]
+            key = f"loose:{head['x']:.0f},{head['y']:.0f}"
+            if key in taken:
+                continue
+            return Job(
+                f"길 위에 없는 벨트 {len(group)}칸이 버려져 있습니다. "
+                f"걷어와서 진짜 길에 쓰겠습니다.",
+                key=key,
+                steps=[("demolish", {"x": one["x"], "y": one["y"],
+                                     "name": BELT}) for one in group],
+                at={"x": head["x"], "y": head["y"]})
+        return None
+
     def lay_line(self, worker: Worker, at: dict) -> None:
         """광석 길을 이어 깐다. 한 번에 나를 수 있는 만큼씩.
 
