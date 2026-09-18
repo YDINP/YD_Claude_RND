@@ -221,6 +221,48 @@ local function power_zone(surface, force)
   }
 end
 
+-- 유통 구역: 캐는 곳과 녹이는 곳 «사이».
+--
+-- 사용자 지시: "채굴지에서 채굴해서 자원을수집해서 관리하는 유통구역 ->
+-- 제련/조립 구역으로 순차적으로 물류가 유통순환이 되도록"
+--
+-- 자리는 밭과 제련 구역을 잇는 선 위다. 가운데에 두면 어느 밭에서 와도
+-- 비슷하게 걸리고, 거기서 제련까지는 한 줄이면 된다.
+--
+-- 다른 구역과 마찬가지로 광맥 위는 안 된다. 그리고 한 번 정하면 남는다 -
+-- 모으는 곳이 움직이면 그리로 깔아둔 길이 전부 헛것이 된다.
+local DEPOT_W, DEPOT_H = 12, 5
+
+local function depot_zone(surface, force, mine, smelt)
+  local kept = storage.zones and storage.zones.depot
+  if kept then return kept end
+  if not mine or not smelt then return nil end
+
+  -- 밭과 제련 구역의 가운데에서 시작해 밖으로 넓혀간다.
+  local mid = { x = math.floor((mine.x + smelt.x) / 2),
+                y = math.floor((mine.y + smelt.y) / 2) }
+  for r = 0, 60, 4 do
+    local ring = (r == 0) and { { 0, 0 } }
+      or { { r, 0 }, { 0, r }, { -r, 0 }, { 0, -r },
+           { r, r }, { -r, r }, { r, -r }, { -r, -r } }
+    for _, step in pairs(ring) do
+      local at = { x = mid.x + step[1], y = mid.y + step[2] }
+      local clash = overlaps(at, DEPOT_W, DEPOT_H, {
+        left = smelt.x, top = smelt.y,
+        right = smelt.x + SMELT_W, bottom = smelt.y + SMELT_H }, 4)
+      if not clash and mine then
+        clash = overlaps(at, DEPOT_W, DEPOT_H, mine, 4)
+      end
+      if not clash and room(surface, at, DEPOT_W, DEPOT_H) then
+        storage.zones = storage.zones or {}
+        storage.zones.depot = at
+        return at
+      end
+    end
+  end
+  return nil
+end
+
 -- 세 구역을 한 번에 답한다. 부르는 쪽이 「여기는 어느 구역인가」를 묻는
 -- 자리는 여기 하나뿐이어야 한다.
 local function zones(name)
@@ -241,11 +283,15 @@ local function zones(name)
   }
   out.mine, out.fields = mine_zone(surface, force)
   out.craft = craft_zone(surface, force, home, out.mine, out.smelt)
+  out.depot = depot_zone(surface, force, out.mine, out.smelt)
   if out.smelt then
     out.smelt.w, out.smelt.h = SMELT_W, SMELT_H
   end
   if out.craft then
     out.craft.w, out.craft.h = CRAFT_W, CRAFT_H
+  end
+  if out.depot then
+    out.depot.w, out.depot.h = DEPOT_W, DEPOT_H
   end
   return out
 end

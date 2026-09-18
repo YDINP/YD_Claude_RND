@@ -381,6 +381,82 @@ local function cut(todo, limit)
   return out, stuck
 end
 
+-- 유통 구역 - 캐는 곳과 녹이는 곳 사이.
+--
+-- 사용자 지시: "채굴지에서 채굴해서 자원을수집해서 관리하는 유통구역 ->
+-- 제련/조립 구역으로 순차적으로 물류가 유통순환이 되도록"
+--
+-- 지금까지는 밭에서 제련으로 «직결»이었다. 밭이 넷이면 길도 넷이고, 넷이
+-- 각자 제련 구역 줄머리로 들어오려 든다. 한 줄머리에 넷이 붙을 수는 없다.
+--
+-- 그래서 가운데에 모으는 곳을 둔다. 밭에서 온 것이 여기로 들어와 상자에
+-- 쌓이고, 상자에서 한 줄로 나가 제련으로 간다. 모이는 곳이 하나면 나가는
+-- 길도 하나다.
+--
+-- 그리고 상자가 있어야 «버틴다». 벨트만으로 이으면 제련이 잠깐 막힐 때
+-- 그 막힘이 밭까지 거슬러 올라가 채굴기를 세운다. 상자는 그 사이를
+-- 메우는 완충이다.
+--
+--     depot.y      들어오는 벨트   (밭에서 옴, 동쪽으로)
+--     depot.y + 1  인서터 ↑        벨트에서 집어 상자에      집는 쪽 = 북
+--     depot.y + 2  상자 줄
+--     depot.y + 3  인서터 ↑        상자에서 집어 벨트에      집는 쪽 = 북
+--     depot.y + 4  나가는 벨트     (제련으로, 동쪽으로)
+--
+-- 인서터의 direction 은 «집는 쪽»이다. 위 둘 다 북쪽에서 집어 남쪽에 놓는다.
+local DEPOT_WIDE = 12
+local DEPOT_CHEST = "wooden-chest"
+
+local function depot_rows(depot)
+  local into, fill, bank, draw, out = {}, {}, {}, {}, {}
+  for i = 0, DEPOT_WIDE - 1 do
+    into[#into + 1] = { x = depot.x + i, y = depot.y,
+                        dir = defines.direction.east }
+    out[#out + 1] = { x = depot.x + i, y = depot.y + 4,
+                      dir = defines.direction.east }
+  end
+  -- 상자와 인서터는 한 칸 걸러 하나씩. 벨트 한 줄을 다 비우는 데
+  -- 인서터 여섯이면 넉넉하고, 사이를 띄우면 나중에 손이 지나갈 길이 된다.
+  for i = 0, DEPOT_WIDE - 1, 2 do
+    fill[#fill + 1] = { x = depot.x + i, y = depot.y + 1,
+                        dir = defines.direction.north }
+    bank[#bank + 1] = { x = depot.x + i, y = depot.y + 2 }
+    draw[#draw + 1] = { x = depot.x + i, y = depot.y + 3,
+                        dir = defines.direction.north }
+  end
+  return into, fill, bank, draw, out
+end
+
+-- 유통 구역의 «들어오는 줄머리»와 «나가는 줄꼬리».
+local function depot_ends(depot)
+  return { x = depot.x, y = depot.y },                      -- 밭에서 오는 끝
+         { x = depot.x + DEPOT_WIDE - 1, y = depot.y + 4 }  -- 제련으로 가는 끝
+end
+
+local function depot_line(name, limit)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+  local here = zones(name)
+  if not here.depot then return { error = "no depot zone yet" } end
+
+  local into, fill, bank, draw, out = depot_rows(here.depot)
+  local todo, standing, want = gather(b.surface, b.force, {
+    { tag = "bank", what = DEPOT_CHEST, tiles = bank },
+    { tag = "into", what = BELT, tiles = into },
+    { tag = "fill", what = ARM, tiles = fill },
+    { tag = "out", what = BELT, tiles = out },
+    { tag = "draw", what = ARM, tiles = draw },
+  })
+  local mine, stuck = cut(todo, limit)
+  local head, tail = depot_ends(here.depot)
+  return {
+    todo = mine, left = #todo, stuck = stuck,
+    standing = standing, want = want,
+    head = head, from = tail,
+  }
+end
+
 -- 캐는 구역 -> 제련 구역. 광석과 석탄이 같은 줄로 들어오고, 판금이 가운데
 -- 줄로 나간다.
 local function ore_line(name, fx, fy, limit)
@@ -395,7 +471,25 @@ local function ore_line(name, fx, fy, limit)
   if not mine and not fx then return { error = "no mining zone yet" } end
 
   local lane, arms, head, out_lane, out_arms = feed_line(smelt)
-  local start = { x = math.floor(fx or mine.x), y = math.floor(fy or mine.y) }
+
+  -- 출발점은 «유통 구역»이지 밭이 아니다.
+  --
+  -- 밭이 넷이면 길도 넷이고, 넷이 각자 제련 줄머리로 들어오려 든다.
+  -- 한 줄머리에 넷이 붙을 수는 없다. 그래서 밭에서 온 것은 먼저 유통
+  -- 구역에 모이고, 거기서 «한 줄»로 제련에 간다.
+  --
+  -- 유통 구역이 아직 없으면 예전처럼 밭에서 바로 간다. 초반에는 모을
+  -- 것이 한 밭뿐이라 그것으로 충분하고, 모으는 곳을 짓느라 사슬이 멈추면
+  -- 안 된다.
+  local start
+  if fx and fy then
+    start = { x = math.floor(fx), y = math.floor(fy) }
+  elseif here.depot then
+    local _, tail = depot_ends(here.depot)
+    start = tail
+  else
+    start = { x = math.floor(mine.x), y = math.floor(mine.y) }
+  end
   local trunk, short, bends = route_for("ore", surface, force, start, head)
   if not trunk then
     return { error = "no route from the mine to the smelter" }
@@ -490,7 +584,62 @@ local function plate_line(name, limit)
 end
 
 -- 흐름 전체를 한눈에. 부르는 쪽은 «아직 안 끝난 첫 흐름»을 집으면 된다.
+-- 밭에서 유통 구역까지. 밭마다 한 줄씩.
+--
+-- 채굴기는 앞 칸에 떨구고 그 칸에 상자가 있다. 그 상자에서 벨트로 올리는
+-- 데는 인서터가 필요하다 - 상자는 스스로 벨트에 못 얹는다. 들어오는 쪽에서
+-- 이미 한 번 겪은 함정이고, 여기서도 같다.
+--
+-- 가장 큰 밭부터 잇는다. 한 줄로 가장 많이 실어 오는 밭이 그 줄의 값어치를
+-- 가장 빨리 갚는다.
+local function field_lines(name, limit)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+  local here = zones(name)
+  if not here.depot then return { error = "no depot zone yet" } end
+  local fields = here.fields or {}
+  if #fields == 0 then return { error = "no mining field yet" } end
+
+  local head = depot_ends(here.depot)
+  local parts, first_from = {}, nil
+  for n = 1, math.min(#fields, 3) do
+    local field = fields[n]
+    local from = { x = field.right + 2, y = field.y }
+    local tiles = route_for("field" .. n, b.surface, b.force, from, head)
+    if tiles then
+      first_from = first_from or from
+      parts[#parts + 1] = { tag = "f" .. n, what = BELT, tiles = tiles }
+      -- 줄머리에 인서터 하나. 상자에서 집어 벨트에 얹는다.
+      parts[#parts + 1] = { tag = "f" .. n .. "arm", what = ARM,
+                            tiles = { { x = from.x - 1, y = from.y,
+                                        dir = defines.direction.west } } }
+    end
+  end
+  if #parts == 0 then return { error = "no route from any field to the depot" } end
+
+  local todo, standing, want = gather(b.surface, b.force, parts)
+  local mine, stuck = cut(todo, limit)
+  return {
+    todo = mine, left = #todo, stuck = stuck,
+    standing = standing, want = want,
+    head = head, from = first_from or head,
+  }
+end
+
+-- 물류의 순서. 앞의 것이 덜 됐으면 그것부터 한다.
+--
+--     field   밭 -> 유통 구역      캔 것을 모으는 길
+--     depot   유통 구역 자체        상자와 인서터, 들어오고 나가는 줄
+--     ore     유통 구역 -> 제련     모은 것을 녹이러 보내는 길
+--     plate   제련 -> 조립          녹인 것을 쓰러 보내는 길
+--
+-- 순서가 거꾸로면 지은 것이 논다. 유통 구역 없이 제련까지 길을 깔아봐야
+-- 그 길에 실릴 것이 없고, 모으는 곳을 지어봐야 밭에서 오는 길이 없으면
+-- 빈 상자만 서 있다.
 local FLOWS = {
+  { flow = "field", plan = function(name, limit) return field_lines(name, limit) end },
+  { flow = "depot", plan = function(name, limit) return depot_line(name, limit) end },
   { flow = "ore", plan = function(name, limit) return ore_line(name, nil, nil, limit) end },
   { flow = "plate", plan = function(name, limit) return plate_line(name, limit) end },
 }

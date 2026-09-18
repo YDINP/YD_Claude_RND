@@ -90,7 +90,10 @@ class HaulingMixin:
         return out
 
     # 물류의 흐름마다 사람이 읽을 이름.
-    FLOW_NAMES = {"ore": "광석 길 (채굴 → 제련)",
+    # 물류의 순서. 채굴 -> 유통 -> 제련 -> 조립.
+    FLOW_NAMES = {"field": "수집 길 (채굴밭 → 유통)",
+                  "depot": "유통 구역 (상자와 인서터)",
+                  "ore": "광석 길 (유통 → 제련)",
                   "plate": "판금 길 (제련 → 조립)"}
 
     def line_job(self, worker: Worker) -> Job | None:
