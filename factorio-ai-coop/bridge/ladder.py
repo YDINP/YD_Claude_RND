@@ -10,7 +10,7 @@ import math
 
 from typing import Any
 
-from settings import (CHEST, DRILL, DRILLS_PER_AGENT, DRILLS_PER_FURNACE, DRILL_FUEL,
+from settings import (BURNER_DRILLS, CHEST, DRILL, FIRST_PACKS, DRILLS_PER_AGENT, DRILLS_PER_FURNACE, DRILL_FUEL,
                       ENGINES_PER_BOILER, FOCUS_ORDER, FURNACES_PER_DRILL,
                       FURNACE_FUEL, MAX_FURNACES, ORE_BATCH, PLATES_FOR_TOOLS,
                       SMELT_BATCH, SMELT_FOR_TECH, SMELT_MARGIN, STOCKPILE)
@@ -52,6 +52,10 @@ def drill_target(snap: Snapshot, crew: int) -> int:
     """
     furnaces = snap.buildings.get("stone-furnace", {}).get("count", 0)
     wanted = math.ceil(furnaces * DRILLS_PER_FURNACE)
+    # 버너 시대에는 상한이 있다. 숙련자들의 권장치는 마흔 대 안팎인데 우리는
+    # 161대를 세우고도 과학팩이 0개였다. 너비는 사슬을 대신하지 못한다.
+    if not snap.knows("electric-mining-drill"):
+        wanted = min(wanted, BURNER_DRILLS)
     return max(len(FOCUS_ORDER), min(crew * DRILLS_PER_AGENT, wanted))
 
 
@@ -117,6 +121,29 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
             if spot:
                 jobs.append(Job("돌부터 캐서 화로를 만들겠습니다.", key="furnace",
                                 steps=[("mine", {**spot, "count": 5})]))
+
+    # 빨간 과학팩 열 개가 그다음 전부의 문이다.
+    #
+    # Automation 연구는 팩 열 개면 되고, 손으로 만들어도 된다(게임 공식값).
+    # 그 하나가 로지스틱도 전기 채굴기도 터렛도 전부 연다. 그런데 우리는
+    # 채굴기를 161대까지 늘리면서 이 열 개를 한 번도 안 만들었다.
+    #
+    # 조립기를 세우는 것보다 먼저다. 조립기는 팩을 «계속» 대기 위한 것이지
+    # 첫 열 개를 위한 것이 아니다 - 첫 열 개는 손이 더 빠르다.
+    if snap.building("lab") and snap.anywhere("automation-science-pack") < FIRST_PACKS:
+        short = FIRST_PACKS - snap.anywhere("automation-science-pack")
+        if snap.can_make("automation-science-pack", short):
+            lab = snap.building("lab")
+            jobs.append(Job(
+                f"빨간 과학팩 {short}개를 손으로 만들어 랩에 넣겠습니다. "
+                f"이 열 개가 automation 연구를 열고, 그 하나가 벨트도 전기 "
+                f"채굴기도 터렛도 전부 엽니다.",
+                key="first-packs", steps=[
+                    ("craft", {"recipe": "automation-science-pack",
+                               "count": short}),
+                    ("insert", {"name": "automation-science-pack",
+                                "count": short, **lab}),
+                ]))
 
     # A lab is the gate to everything past the trigger technologies, and
     # crafting one is itself what unlocks the red science pack recipe.

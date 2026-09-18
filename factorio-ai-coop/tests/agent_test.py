@@ -17,8 +17,8 @@ from jobs import Job, errand_label  # noqa: E402
 from layout import (belt_pairs, carry_split, cluster,  # noqa: E402
                     craft_seat, furnace_seat, interleave, nearest_to,
                     spread_sites)
-from ladder import (STAGE_TARGET, chain_job, missing_item,  # noqa: E402
-                    next_goal, plan, worth_building)
+from ladder import (STAGE_TARGET, chain_job, drill_target,  # noqa: E402
+                    missing_item, next_goal, plan, worth_building)
 from crew import Crew  # noqa: E402
 
 # 반장이 내릴 수 있다고 적어둔 명령은 전부 실제로 처리되는 것이어야 한다.
@@ -823,7 +823,39 @@ def main() -> int:
               [{"x": 5, "y": 0}, {"x": 7, "y": 0}])]))
     check("nothing starving means nothing to lay", belt_pairs(stuck, []) == [])
 
-    print("%s26b. every zone has its own grid")
+    print("\n26a. ten packs open the door, and hands are faster than a factory")
+    # 리서치(2026-09-18): Automation 연구는 빨간 과학팩 열 개면 되고 손으로
+    # 만들어도 된다. 우리는 채굴기를 161대까지 늘리면서 이 열 개를 한 번도
+    # 안 만들었다.
+    def with_lab(packs):
+        return Snapshot(
+            x=0, y=0,
+            items={"iron-plate": 500, "copper-plate": 500,
+                   "automation-science-pack": packs},
+            craftable={"automation-science-pack": 200},
+            buildings={"lab": {"count": 1, "nearest": {"x": 5, "y": 5},
+                               "spots": [{"x": 5, "y": 5}]},
+                       "stone-furnace": {"count": 4, "nearest": {"x": 1, "y": 1},
+                                         "spots": [{"x": 1, "y": 1}]}},
+            researched={"electronics", "steam-power"})
+
+    keys = [job.key for job in plan(with_lab(0))]
+    check("with a lab standing and no packs, the first packs come first",
+          "first-packs" in keys, str(keys[:4]))
+    check("once the ten are made it stops asking",
+          "first-packs" not in [job.key for job in plan(with_lab(12))])
+
+    # 버너 시대 상한. 숙련자 권장치는 마흔 대 안팎인데 우리는 161대를 세웠다.
+    wide = Snapshot(x=0, y=0, buildings={"stone-furnace": {"count": 300}},
+                    researched=set())
+    electric = Snapshot(x=0, y=0, buildings={"stone-furnace": {"count": 300}},
+                        researched={"electric-mining-drill"})
+    check("burner drills are capped at forty while they are still burners",
+          drill_target(wide, crew=8) <= 40, str(drill_target(wide, crew=8)))
+    check("the cap lifts once electric drills are researched",
+          drill_target(electric, crew=8) > drill_target(wide, crew=8))
+
+    print("\n26b. every zone has its own grid")
     shop = {"x": 66, "y": -8}
     line = [craft_seat(shop, n) for n in range(6)]
     check("six machines to a row, four tiles apart",
