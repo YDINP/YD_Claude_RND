@@ -741,7 +741,20 @@ local function field_lines(name, limit)
       storage.lines = storage.lines or {}
       local kept = storage.lines[key]
       local tiles
-      if kept and kept.plan == PLAN and kept.drills == #drills
+      -- 채굴기가 한 대 늘었다고 길을 버리지 않는다.
+      --
+      -- 열쇠에 채굴기 수를 넣었더니, 한 대 설 때마다 길이 통째로 새로
+      -- 났다. 그러면 이미 깔아둔 벨트가 죄다 「길 밖」이 되고, 무리는
+      -- 그것을 걷어 다시 깐다. 실측으로 수집 길이 116칸까지 줄었다가
+      -- 170칸으로 되돌아갔고 f1 이 0/50 으로 초기화됐다.
+      --
+      -- 벨트 미로를 만드는 방식이 이번으로 «세 번째»다. 매번 모양이
+      -- 조금씩 달랐을 뿐 뿌리는 하나다 - 길을 다시 계산할 이유를 하나
+      -- 더 만들어놓는 것.
+      --
+      -- 길은 한 번 정하면 남는다. 새로 선 채굴기가 그 줄에 안 닿으면
+      -- 상자를 쓰면 된다. 그 한 대 때문에 쉰 칸을 다시 까는 것보다 싸다.
+      if kept and kept.plan == PLAN
          and kept.tiles and #kept.tiles > 0 then
         tiles = kept.tiles
         local mended, patches = repair(surface, force, tiles)
@@ -776,7 +789,7 @@ local function field_lines(name, limit)
           if stem then
             for _, t in ipairs(stem) do tiles[#tiles + 1] = t end
           end
-          storage.lines[key] = { tiles = tiles, plan = PLAN, drills = #drills }
+          storage.lines[key] = { tiles = tiles, plan = PLAN }
         end
       end
       if tiles and #tiles > 0 then
