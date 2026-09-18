@@ -140,6 +140,23 @@ class Crew(ChiefMixin, RosterMixin, TalkMixin, SupplyMixin,
         # 반장이 판을 보고 나눠준다. 여기서 받은 사람은 각자 고르지 않는다.
         handed: set[str] = set()
         now = time.monotonic()
+        # 굶고 있으면 제동을 푼다.
+        #
+        # 배차(멈춘 기계를 돌보고 길을 깔고 자리를 옮기는 쪽)는 주기적으로만
+        # 돌고, 사다리(`next_goal`)는 매 순찰 돈다. 그래서 주기 사이에는
+        # 모두가 사다리를 따라간다.
+        #
+        # 평소에는 그것이 맞다 - 배차는 게임에 열 몇 번을 묻는 무거운 일이라
+        # 매 순찰 돌릴 수 없다. 그런데 공장이 꺼져 있을 때는 이야기가 다르다.
+        #
+        # 실측(181분째): 채굴기 28대 중 도는 것 0, 화로 27대 중 0. 연료
+        # 없이 선 채굴기가 열일곱인데 상자에 석탄이 324개 있었다. 요원 다섯은
+        # 석탄을 손에 들고도 사다리가 시키는 제련만 반복했다 - 연료를 넣는
+        # 일감은 배차 쪽에 있고, 그 배차가 주기를 기다리고 있었기 때문이다.
+        #
+        # 꺼진 공장에서는 무거운 것이 맞는 것이다.
+        if self.starving:
+            self.dispatched_at = 0.0
         if now >= self.dispatched_at:
             self.dispatched_at = now + DISPATCH_INTERVAL
             try:

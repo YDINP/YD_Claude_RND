@@ -35,6 +35,8 @@ class Snapshot:
     # 채굴 밭 목록. 밭마다 «무엇을 캐는가»가 적혀 있다. 비어 있으면
     # 「없다」가 아니라 「아직 모른다」다.
     fields: list[dict] = field(default_factory=list)
+    # 연료가 없어 선 기계가 여럿인가. 그러면 새 일보다 되살리는 일이 먼저다.
+    starving: bool = False
     # 가방의 빈 칸. 이것이 0 이면 캐는 일도 걷어내는 일도 전부 실패한다.
     free: int = 99
     # 공용 창고에 무엇이 얼마나 있는가. 손에 없다고 없는 것이 아니다.

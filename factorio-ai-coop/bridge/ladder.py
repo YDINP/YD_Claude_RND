@@ -265,7 +265,17 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
             if spot:
                 jobs.append(Job("철광석 캐러 갑니다.", key="gather:iron-ore",
                                 steps=[("mine", {**spot, "count": SMELT_BATCH})]))
-        else:
+        elif not snap.starving:
+            # 굶고 있으면 제련을 «접는다».
+            #
+            # 실측(181분째): 채굴기 28대 중 도는 것 0, 화로 27대 중 0.
+            # 연료 없이 선 채굴기가 열일곱인데 상자에 석탄이 324개 있었다.
+            # 요원 다섯은 석탄을 손에 들고도 사다리가 시키는 제련만 반복했다.
+            #
+            # 화로에 한 줌씩 넣는 것은 그 화로 한 대를 잠깐 살릴 뿐이다.
+            # 그 사이 채굴기 열일곱이 계속 서 있으면 다음 줌이 없다.
+            # 되살리는 일이 새로 넣는 일보다 먼저다.
+            #
             # Keyed by the furnace, not by the agent: two agents stuffing one
             # furnace and both waiting for its output is not teamwork. 화로가
             # 여럿이면 일도 여럿이라, 각자 빈 화로를 집어간다.

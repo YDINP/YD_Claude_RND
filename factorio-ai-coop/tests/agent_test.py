@@ -914,6 +914,29 @@ def main() -> int:
           not any(j.key.startswith("furnace:") for j in plan(seated, crew=8)),
           str([j.key for j in plan(seated, crew=8)][:4]))
 
+    # 굶고 있으면 새로 넣는 일보다 되살리는 일이 먼저다.
+    #
+    # 실측(181분째): 채굴기 28대 중 도는 것 0, 화로 27대 중 0. 연료 없이
+    # 선 채굴기가 열일곱인데 상자에 석탄이 324개 있었다. 요원 다섯은 석탄을
+    # 손에 들고도 사다리가 시키는 제련만 반복했다 - 화로에 한 줌씩 넣는
+    # 것은 그 화로 한 대를 잠깐 살릴 뿐인데.
+    def kitchen(starving):
+        return Snapshot(
+            x=0, y=0, researched=ALL_TECH, powered=True, working_labs=1,
+            starving=starving,
+            items={"coal": 99, "iron-ore": 99, "iron-plate": 5},
+            buildings={"stone-furnace": {"count": 4, "nearest": {"x": 1, "y": 1},
+                                         "nearest_dist": 2,
+                                         "spots": [{"x": 1, "y": 1},
+                                                   {"x": 5, "y": 1}]},
+                       DRILL: {"count": 4}})
+
+    check("a fed factory still cooks",
+          any(j.key.startswith("smelt:") for j in plan(kitchen(False), crew=4)))
+    check("a starving one stops cooking and goes to revive",
+          not any(j.key.startswith("smelt:") for j in plan(kitchen(True), crew=4)),
+          str([j.key for j in plan(kitchen(True), crew=4)][:3]))
+
     # 석탄은 광석 하나가 아니라 «모든 것의 연료»다.
     #
     # 실측(41분째): 채굴기 여섯 대가 돌 2, 구리 3, 철 1. 석탄 0대,

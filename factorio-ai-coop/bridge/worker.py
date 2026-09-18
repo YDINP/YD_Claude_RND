@@ -39,6 +39,8 @@ class Worker:
         self.slack: float | None = None
         # 채굴 밭 목록(구역 쪽이 광맥별로 묶어 준다).
         self.fields: list[dict] = []
+        # 무리가 알려주는 굶주림. 사다리가 이것을 본다.
+        self.starving = False
         # What has just failed, and until when it stays off the table.
         self.blocked: dict[str, float] = {}
         # The job key this agent currently holds, so the crew can hand the rest
@@ -85,6 +87,7 @@ class Worker:
             made=dict(self.made),
             slack=self.slack,
             fields=list(self.fields),
+            starving=self.starving,
         )
 
     def block(self, kind: str, seconds: float = BACKOFF_SECONDS) -> None:

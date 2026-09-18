@@ -157,6 +157,8 @@ class SurveyMixin:
             self.starving = sum(
                 1 for e in _as_rows(stopped.get("stopped") or stopped)
                 if isinstance(e, dict) and e.get("fix") == "fuel") >= STARVING
+            for one in self.workers.values():
+                one.starving = self.starving
         except RconError:
             return jobs
 
