@@ -174,11 +174,15 @@ local function raid(surface, force, box, home)
     for _, e in pairs(surface.find_entities_filtered {
       area = area, force = force,
     }) do
-      if e.health and e.prototype.max_health > 0
-          and e.health < e.prototype.max_health then
+      -- 「얼마나 다쳤는가」는 게임에 묻는다. 2.0 의 프로토타입에는
+      -- max_health 가 없고, 체력이 없는 것(아이템·나무)도 섞여 온다.
+      -- get_health_ratio 는 체력이 없으면 nil 을 준다 - 그 한 번의 물음이
+      -- 두 경우를 다 가른다.
+      local ok, ratio = pcall(function() return e.get_health_ratio() end)
+      if ok and ratio and ratio < 1 then
         hurt = hurt + 1
-        if not worst or e.health < worst.hp then
-          worst = { name = e.name, hp = math.floor(e.health),
+        if not worst or ratio < worst.ratio then
+          worst = { name = e.name, ratio = math.floor(ratio * 100) / 100,
                     x = math.floor(e.position.x), y = math.floor(e.position.y) }
         end
       end

@@ -56,20 +56,22 @@ class ChiefMixin:
     """반장 - 사슬에서 끊긴 칸을 찾아 그쪽으로 사람을 몰아준다."""
 
     def muster(self) -> None:
-        """죽은 요원을 되살린다. 일을 나눠주기 «전»에 한다.
+        """점호. 죽은 요원을 세되 «되살리지 않는다».
 
-        사용자 지시: "캐릭터가 사망한 에이전트가 계속 작업을 시도함".
+        사용자 지시: "캐릭터가 사망하면 살리지말것."
 
-        맞다. 게임 쪽은 죽은 요원의 태스크를 실패시키고 대기줄을 비우는
-        데까지만 한다. 몸이 없는 요원에게 무리는 계속 일을 준다. 일은
-        계속 실패하고, 실패했으니 다시 주고 - 그렇게 영원히 돈다. 로그가
-        "take 실패: character died or was removed" 로 가득 찼던 이유다.
+        되살리기를 넣었던 것은 죽은 요원에게 일을 계속 주는 것을 막기
+        위해서였다. 그 문제는 진짜였다 - 로그가 "character died or was
+        removed" 로 가득 찼다.
 
-        태스크를 실패시키는 것과 요원을 되살리는 것은 다른 일이다. 앞의
-        것만 해놓고 뒤의 것이 없으면 「조용히 아무것도 안 되는」 상태가
-        된다 - 이 저장소가 가장 자주 만드는 종류의 버그다.
+        그런데 되살리기는 그 문제를 가리기도 했다. 죽어도 곧 돌아오니
+        죽음의 값이 안 보였고, 지난 판에서 일흔네 번 죽는 동안 아무도
+        그것을 사건으로 취급하지 않았다. 되살아나는 무리는 도망칠 이유가
+        없다.
 
-        점호는 배차보다 먼저다. 시체에게 일을 나눠줄 수는 없다.
+        이제 죽으면 죽은 채로 둔다. 무리에서 빼고, 한 번 말하고, 다시는
+        일을 주지 않는다. 죽음이 되돌릴 수 없어야 죽지 않는 일이 값어치를
+        가진다.
         """
         now = time.monotonic()
         if now - getattr(self, "_mustered_at", 0.0) < MUSTER_EVERY:
@@ -80,22 +82,26 @@ class ChiefMixin:
             try:
                 if (self.bridge.alive(worker.name) or {}).get("alive"):
                     continue
-                back = self.bridge.revive(worker.name)
             except RconError:
                 continue
-            if back.get("error") or not back.get("alive"):
-                continue
-            # 새 몸은 빈손이다. 들고 있던 것은 시체와 함께 땅에 있고,
-            # 옛 판단은 그 몸에 매여 있었다.
-            worker.blocked.clear()
-            worker.job_key = None
-            worker.watching = []
-            worker.lost_at, worker.lost_count = None, 0
+            # 죽은 자리에 세워둔 일감은 아무도 못 한다. 놓아준다.
             self.release(worker)
-            self.say(f"{worker.name}이(가) 쓰러져 있었습니다. 기지에서 "
-                     f"다시 세웠습니다.")
+            worker.autopilot = False
+            self.workers.pop(worker.name, None)
+            self.fallen = getattr(self, "fallen", 0) + 1
+            self.say(f"{worker.name}이(가) 쓰러졌습니다. 남은 사람 "
+                     f"{len(self.workers)}명. (여태 {self.fallen}명 잃음)")
 
-        # 점호 끝에 «적이 왔는지»도 본다.
+        # 다 죽으면 그 사실을 한 번은 말해야 한다. 아무 말 없이 조용한
+        # 것과 전멸한 것은 밖에서 보면 똑같이 생겼다 - 이번 세션에
+        # 무리가 죽은 채 도는 것을 여섯 순찰 동안 못 알아본 적이 있다.
+        if not self.workers and not getattr(self, "_wiped", False):
+            self._wiped = True
+            self.say(f"무리가 전멸했습니다. 여태 {getattr(self, 'fallen', 0)}명을 "
+                     f"잃었습니다. 되살리지 않습니다 - 다시 시작하려면 "
+                     f"서버를 재시작해 주십시오.")
+
+        # 점호 끝에 «적이 왔는지»도 본다.        # 점호 끝에 «적이 왔는지»도 본다.
         #
         # 사슬 감사는 구십 초마다 돈다. 습격에는 너무 느리다 - 구십 초면
         # 화로 몇 대가 사라진다. 점호는 이십오 초마다 도니 여기가 맞다.
@@ -124,7 +130,7 @@ class ChiefMixin:
             if not getattr(self, "_raid", False):
                 self._raid = True
                 where = hit.get("worst")
-                spot = (f" ({where['name']} {where['hp']}, "
+                spot = (f" ({where['name']} 체력 {int(where['ratio'] * 100)}%, "
                         f"{where['x']},{where['y']})" if where else "")
                 self.say(
                     f"습격입니다. 방어선 안에 {int(hit.get('inside') or 0)}마리, "
