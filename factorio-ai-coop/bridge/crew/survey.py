@@ -747,6 +747,7 @@ class SurveyMixin:
         made = len(pool)
         pool = [j for j in pool if j.key not in taken]
         self.last_pool = (made, len(pool), len(free))
+        skipped: dict[str, int] = {}
         if not pool:
             return handed
 
@@ -767,6 +768,7 @@ class SurveyMixin:
                     key=lambda n: ((seats[n][0] - spot.get("x", seats[n][0])) ** 2
                                    + (seats[n][1] - spot.get("y", seats[n][1])) ** 2, n))
             if not order:
+                skipped["주인이 바쁨"] = skipped.get("주인이 바쁨", 0) + 1
                 # 이 일감의 주인이 지금 손이 비어 있지 않을 뿐이다. 목록
                 # 전체를 여기서 끊으면 뒤에 있는 일감이 통째로 사라진다 -
                 # 창고 입고가 목록 중간에 있어서 그 뒤가 전부 날아갔다.
@@ -778,6 +780,7 @@ class SurveyMixin:
             name = next((n for n in order
                          if job.key not in self.workers[n].blocked_now()), None)
             if name is None:
+                skipped["모두 막아둠"] = skipped.get("모두 막아둠", 0) + 1
                 continue
             worker = self.workers[name]
 
@@ -797,6 +800,7 @@ class SurveyMixin:
                 if short:
                     spot = snap.ore(short[0])
                     if not spot:
+                        skipped["재료 없음"] = skipped.get("재료 없음", 0) + 1
                         self.ask_for(worker, short[0], short[1], job.narration)
                         worker.block(job.key)
                         continue
@@ -827,6 +831,7 @@ class SurveyMixin:
             # 열두 번 말하고 한 대도 안 세운 이유가 이것이다.
             if job.routine:
                 if not self.start_routine(worker, job.routine, job.ore, job.at):
+                    skipped["루틴이 안 뜸"] = skipped.get("루틴이 안 뜸", 0) + 1
                     continue
             else:
                 try:
@@ -836,6 +841,7 @@ class SurveyMixin:
                     # "아직 값이 없다"며 터진다.
                     submitted = worker.handle.submit_plan(job.steps)
                 except RconError as exc:
+                    skipped["제출 실패"] = skipped.get("제출 실패", 0) + 1
                     self.say(f"그건 못 하겠습니다: {exc}", who=name)
                     continue
                 worker.watching = submitted
@@ -848,9 +854,11 @@ class SurveyMixin:
         # 몇 개를 만들어 몇 명에게 줬는가. 사람이 남는데 일감이 없으면
         # 그것은 「할 일이 없다」가 아니라 «일감을 못 만들었다»이다.
         made, left, hands = getattr(self, "last_pool", (0, 0, 0))
-        if len(handed) < hands and left <= len(handed):
-            if getattr(self, "_thin", None) != (made, left, hands):
-                self._thin = (made, left, hands)
-                self.say(f"일감이 모자랍니다. 만든 것 {made}개 중 "
-                         f"{left}개가 비어 있고 손은 {hands}개입니다.")
+        if len(handed) < hands:
+            why = ", ".join(f"{k} {v}" for k, v in sorted(skipped.items())) or "없음"
+            said = (made, left, hands, len(handed), why)
+            if getattr(self, "_thin", None) != said:
+                self._thin = said
+                self.say(f"일감 {left}개 / 손 {hands}개 / 준 것 {len(handed)}개. "
+                         f"건너뛴 까닭: {why}")
         return handed

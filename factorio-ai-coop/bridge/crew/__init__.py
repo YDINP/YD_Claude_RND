@@ -16,7 +16,7 @@ import time
 import mission
 from client import AIBridge, RconError
 
-from settings import DISPATCH_INTERVAL, ORE_BATCH
+from settings import DISPATCH_IDLE, DISPATCH_INTERVAL, ORE_BATCH
 from world import Snapshot
 from jobs import Step
 from ladder import next_goal
@@ -157,12 +157,31 @@ class Crew(ChiefMixin, RosterMixin, TalkMixin, SupplyMixin,
         # 꺼진 공장에서는 무거운 것이 맞는 것이다.
         if self.starving:
             self.dispatched_at = 0.0
+
+        # 손이 비어 있으면 «기다리지 않는다».
+        #
+        # 사용자: "명령을 한명한테만 내리나? 델타만 일하는거같은데"
+        #
+        # 배차는 십 초에 한 번 돌았다. 그런데 순찰은 일 초마다 돈다.
+        # 그 아홉 초 동안 `handed` 는 비어 있고, 일을 마친 사람은 전부
+        # 「반장의 지시를 기다립니다」를 말하며 서 있었다.
+        #
+        # 계측해보니 배차는 손이 빈 «모두에게» 주고 있었다. 건너뛰는 일도
+        # 없었다. 그러니 문제는 나눠주는 방식이 아니라 «나눠주는 때»였다.
+        #
+        # 주기를 둔 까닭은 배차가 무거워서다. 그런데 무거운 조회 둘을
+        # 삼 초 기억하게 고친 뒤로는 그만큼 무겁지 않다. 그리고 사람이
+        # 놀고 있는 것보다 비싼 것은 없다.
         if now >= self.dispatched_at:
-            self.dispatched_at = now + DISPATCH_INTERVAL
             try:
                 handed = self.dispatch(free)
             except RconError:
                 handed = set()
+            # 아무도 못 받았으면 다음 순찰에 다시 본다. 다 받았으면
+            # 그들이 일하는 동안은 쉬어도 된다.
+            waiting = [w for w, _ in free if w.name not in handed]
+            self.dispatched_at = now + (DISPATCH_IDLE if waiting
+                                        else DISPATCH_INTERVAL)
 
         for worker, snap in free:
             if worker.name in handed:
@@ -223,6 +242,9 @@ class Crew(ChiefMixin, RosterMixin, TalkMixin, SupplyMixin,
             # 반장이 줄 일이 없으면 «서 있는다». 예전에는 여기서 각자
             # 「할 일이 비어 채굴기를 하나 더」를 골랐고, 그 한 줄이
             # 채굴기를 157대까지 밀어올렸다.
+            # 한 번만 말한다. 이 말이 로그를 채우면 «진짜 일»이 가려진다 -
+            # 실제로 최근 마흔 줄 중 절반이 이 말이었고, 그 사이에 벌어진
+            # 일을 못 봤다.
             if not worker.said_idle:
                 self.say(f"반장의 지시를 기다립니다. {mission.briefing(snap)}",
                          who=worker.name)
