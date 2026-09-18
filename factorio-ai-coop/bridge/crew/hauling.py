@@ -276,6 +276,15 @@ class HaulingMixin:
 
         laid, stuck = 0, None
         for one in todo:
+            # 「치우면 놓을 수 있는」 칸이라고 표시된 것은 먼저 쓸어낸다.
+            # 채굴기가 흘린 광석이 대부분이고, 줍고 나면 자리가 난다.
+            # 이것을 몰라서 줄 맨 앞 칸 하나 때문에 길 전체가 멈춰 있었다.
+            if one.get("sweep"):
+                try:
+                    worker.handle.sweep(one["x"], one["y"], radius=1,
+                                        timeout=300)
+                except TaskFailed:
+                    pass
             try:
                 worker.handle.place(one["what"], one["x"], one["y"],
                                     direction=one.get("dir", 0), timeout=420)

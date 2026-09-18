@@ -237,7 +237,32 @@ local function missing(surface, force, tiles, what)
     } then
       out[#out + 1] = { x = tile.x, y = tile.y, dir = tile.dir }
     else
-      out[#out + 1] = { x = tile.x, y = tile.y, dir = tile.dir, blocked = true }
+      -- 못 놓는다고 다 같은 「못 놓음」이 아니다.
+      --
+      -- can_place_entity 는 «사람이 서 있어도» «광석이 떨어져 있어도» 거짓을
+      -- 준다. 그런데 사람은 걸어가고 광석은 주우면 그만이다. 그것을 바위와
+      -- 같이 「막혔다」로 적었더니, 줄 맨 앞 칸에 누가 서 있는 동안 길
+      -- 전체가 멈췄다 - cut 이 첫 blocked 에서 끊기 때문이다.
+      --
+      -- 실측: todo 0 / left 150. 백오십 칸이 필요한데 할 일이 없다고 했다.
+      --
+      -- 같은 함정을 화로 자리에서 이미 한 번 겪었다. 그때도 범인은 채굴기가
+      -- 흘린 광석이었다. 「못 놓는다」와 「치우면 놓는다」는 다른 말이다.
+      local why, sweepable = nil, true
+      for _, e in pairs(surface.find_entities_filtered {
+        position = { tile.x, tile.y }, radius = 0.4,
+      }) do
+        if e.type ~= "character" and e.type ~= "item-entity" then
+          why, sweepable = e.name, false
+          break
+        end
+      end
+      if sweepable then
+        out[#out + 1] = { x = tile.x, y = tile.y, dir = tile.dir, sweep = true }
+      else
+        out[#out + 1] = { x = tile.x, y = tile.y, dir = tile.dir,
+                          blocked = true, why = why or "terrain" }
+      end
     end
   end
   return out, standing
@@ -341,13 +366,19 @@ local function gather(surface, force, parts)
 end
 
 local function cut(todo, limit)
-  local out = {}
+  local out, stuck = {}, nil
   for i = 1, math.min(#todo, limit or 20) do
     -- 막힌 칸에서 멈춘다. 건너뛰면 길이 끊기고, 끊긴 길은 아무것도 안 나른다.
-    if todo[i].blocked then break end
+    --
+    -- 다만 «치우면 놓을 수 있는» 칸은 막힌 것이 아니다. 사람이 서 있거나
+    -- 광석이 떨어져 있을 뿐이다. 그런 칸에서 멈추면 길은 영영 안 이어진다.
+    if todo[i].blocked then
+      stuck = { x = todo[i].x, y = todo[i].y, why = todo[i].why }
+      break
+    end
     out[#out + 1] = todo[i]
   end
-  return out
+  return out, stuck
 end
 
 -- 캐는 구역 -> 제련 구역. 광석과 석탄이 같은 줄로 들어오고, 판금이 가운데
@@ -386,8 +417,9 @@ local function ore_line(name, fx, fy, limit)
     { tag = "pick", what = ARM, tiles = out_arms },
   })
 
+  local mine, stuck = cut(todo, limit)
   return {
-    todo = cut(todo, limit), left = #todo,
+    todo = mine, left = #todo, stuck = stuck,
     standing = standing, want = want,
     head = head, from = trunk[1] or head,
     short = short, bends = bends,
@@ -448,8 +480,9 @@ local function plate_line(name, limit)
     { tag = "sink", what = SINK, tiles = sink },
   })
 
+  local mine, stuck = cut(todo, limit)
   return {
-    todo = cut(todo, limit), left = #todo,
+    todo = mine, left = #todo, stuck = stuck,
     standing = standing, want = want,
     head = { x = last.x, y = last.y }, from = flow[1] or goal,
     short = short, bends = bends,
