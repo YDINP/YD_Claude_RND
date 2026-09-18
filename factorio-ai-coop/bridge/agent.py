@@ -2009,6 +2009,18 @@ class Crew:
             at = {"x": head["x"], "y": head["y"]}
             key = f"tend:{head['x']:.0f},{head['y']:.0f}"
             source = nearest_to(coal_chests, at, DRILL_FUEL)
+
+            # 세상에 석탄이 없으면 「넣겠습니다」는 헛걸음이다. 배차 경로는
+            # needs 를 보지 않으므로 빈손으로 출발하고, 도착해서 「no coal
+            # to insert」로 끝난다. 새 판 10분째에 그 헛걸음이 열다섯 번
+            # 나왔고, 그동안 사다리 작업(캐서 만들기)이 밀려났다.
+            #
+            # 넣을 것이 없으면 정비를 접고 캐러 가게 둔다. 정비는 가진 것이
+            # 있을 때 하는 일이다.
+            if not source and (self.snaps.get(worker.name)
+                               or worker.snapshot()).have("coal") < DRILL_FUEL:
+                continue
+
             steps: list[Step] = []
             if source:
                 # 실을 수 있는 만큼으로 약속을 줄인다. 급유 상자에서 고친
