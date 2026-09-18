@@ -243,6 +243,11 @@ local function coal_pair_site(name, x, y, radius, pairs_wanted)
   local a = agent(name)
   local b = body(a)
   if not b then return { error = "no such agent: " .. tostring(name) } end
+  -- 좌표가 없으면 엔진 안에서 터진다. 터지는 것과 「못 한다」고 답하는
+  -- 것은 다르다 - 터지면 부르는 쪽은 아무 답도 못 받는다.
+  if type(x) ~= "number" or type(y) ~= "number" then
+    return { error = "coal_pair_site needs x and y" }
+  end
 
   local surface, force = b.surface, b.force
   local reach = math.min(radius or 16, 40)

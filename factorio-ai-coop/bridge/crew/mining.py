@@ -36,8 +36,27 @@ class MiningMixin:
         ore = ore or "coal"
         name = worker.name
         if ore == "coal":
-            self.automate_coal(worker)
-            return
+            # 자급쌍이 안 되면 «보통 채굴기»로 물러선다.
+            #
+            # 사용자: "석탄은 왜 채굴기 안건설함?"
+            #
+            # 자급쌍 경로로 들어가면 돌아오지 않았기 때문이다. 자리를 못
+            # 찾으면 300초 막아놓고 끝냈고, 그동안 석탄은 전부 손으로 캤다.
+            # 로그가 그 증거다:
+            #
+            #     "석탄 자급쌍 자리가 없습니다: no room for a facing pair on coal"
+            #     "연료가 없습니다. 석탄 캐러 갑니다."   (계속 반복)
+            #
+            # 자급쌍은 «더 좋은» 방법이지 «유일한» 방법이 아니다. 두 대가
+            # 마주볼 자리가 안 나오면 한 대에 상자를 달면 된다. 사람이
+            # 석탄을 손으로 나르는 것보다는 네 배 빠르다.
+            #
+            # 더 좋은 것을 못 하면 아무것도 안 하는 것 - 이 저장소가
+            # 여러 번 만든 모양이다. 벨트도 스무 칸을 못 구하면 한 칸도
+            # 안 깔았었다.
+            if self.automate_coal(worker):
+                return
+            self.say("자급쌍 대신 보통 채굴기에 상자를 달겠습니다.", who=name)
 
         receiver = MINE_CHEST
         try:
@@ -142,8 +161,13 @@ class MiningMixin:
             worker.block("automate")
             self.say(f"자동화 중 오류: {exc}", who=name)
 
-    def automate_coal(self, worker: Worker) -> None:
-        """석탄 광맥 위에 서로를 먹이는 채굴기 두 대를 세운다."""
+    def automate_coal(self, worker: Worker) -> bool:
+        """석탄 광맥 위에 서로를 먹이는 채굴기 두 대를 세운다.
+
+        세웠으면 True. 못 세웠으면 False 를 돌려준다 - 부르는 쪽이 보통
+        채굴기로 물러설 수 있게. 「더 좋은 방법이 안 되면 아무것도 안 함」은
+        방법이 아니다.
+        """
         name = worker.name
         try:
             snap = worker.snapshot()
@@ -151,14 +175,13 @@ class MiningMixin:
             if not spot:
                 self.say("석탄 광맥이 주변에 안 보입니다.", who=name)
                 worker.block("automate:coal", 300)
-                return
+                return True   # 광맥이 없으면 보통 채굴기도 못 세운다
 
             plan = self.bridge.coal_pair_site(name, spot["x"], spot["y"],
                                               radius=16, pairs=COAL_PAIRS)
             if plan.get("error"):
                 self.say(f"석탄 자급쌍 자리가 없습니다: {plan['error']}", who=name)
-                worker.block("automate:coal", 300)
-                return
+                return False   # 물러선다. 한 대에 상자를 달면 된다.
 
             # 재료가 되는 만큼 세운다. 예전에는 두 대를 한꺼번에 못 구하면
             # 통째로 포기했고, 초반에는 철판이 늘 모자라 한 쌍도 못 섰다.
@@ -189,17 +212,20 @@ class MiningMixin:
             if not built:
                 self.say("채굴기를 못 구해 석탄 자급쌍을 못 세웠습니다.", who=name)
                 worker.block("automate:coal")
-                return
+                return True   # 채굴기가 없으면 어느 쪽도 못 세운다
             self.say(f"석탄 광맥에 서로 먹이는 채굴기 {built * 2}대를 "
                      f"({built}쌍) 세웠습니다. 이제 손으로 넣어줄 필요가 "
                      f"없습니다.", who=name)
+            return True
 
         except TaskFailed as exc:
             worker.block("automate:coal")
             self.say(f"석탄 자급쌍 구축 중 막혔습니다: {exc.task.get('error')}", who=name)
+            return True
         except RconError as exc:
             worker.block("automate:coal")
             self.say(f"석탄 자급쌍 구축 중 오류: {exc}", who=name)
+            return True
 
     def open_drills(self, worker: Worker, at: dict) -> None:
         """가까이 모인 눈먼 채굴기들을 한 번의 걸음으로 전부 연다.
