@@ -850,6 +850,35 @@ def main() -> int:
     check("once the ten are made it stops asking",
           "first-packs" not in [job.key for job in plan(with_lab(12))])
 
+    # 소모품을 «가지고 있는가»로 물으면 사다리가 굴러떨어진다.
+    #
+    # 실측: automation 연구가 끝났는데(빨간 과학팩 열 개를 «써야» 끝난다)
+    # 조립기가 0대였다. 사다리가 「빨간 과학팩 생산」 단에서 못 올라오고
+    # 있었고, 조립기 단은 그 위에 있었다. 팩은 랩이 먹어서 가방에 안 남는다.
+    from mission import stage_of
+
+    def after_research(made):
+        return Snapshot(
+            x=0, y=0,
+            items={"iron-plate": 500, "copper-plate": 500},   # 팩은 다 썼다
+            made={"automation-science-pack": made},
+            buildings={"lab": {"count": 1, "nearest": {"x": 5, "y": 5},
+                               "spots": [{"x": 5, "y": 5}]},
+                       "stone-furnace": {"count": 4, "nearest": {"x": 1, "y": 1},
+                                         "spots": [{"x": 1, "y": 1}]}},
+            researched={"electronics", "steam-power", "automation"},
+            powered=True)
+
+    check("packs spent on research still count as made",
+          stage_of(after_research(10)).key != "red-science",
+          stage_of(after_research(10)).key)
+    check("and the crew moves up to the assembler",
+          stage_of(after_research(10)).key == "assembler",
+          stage_of(after_research(10)).key)
+    check("never having made one still holds the ladder there",
+          stage_of(after_research(0)).key == "red-science",
+          stage_of(after_research(0)).key)
+
     # 버너 시대 상한. 숙련자 권장치는 마흔 대 안팎인데 우리는 161대를 세웠다.
     wide = Snapshot(x=0, y=0, buildings={"stone-furnace": {"count": 300}},
                     researched=set())

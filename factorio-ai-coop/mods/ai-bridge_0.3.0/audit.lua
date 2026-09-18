@@ -75,17 +75,28 @@ local function audit(name)
 
   local minute = defines.flow_precision_index.one_minute
   local hour = defines.flow_precision_index.one_hour
+  -- 「여태 한 번이라도 만들었는가」. 사다리가 이것을 물어야 한다.
+  --
+  -- 지금까지는 「가방에 열 개 있는가」로 물었다. 그런데 과학팩은 랩이
+  -- 먹는다. 열 개를 만들어 연구를 돌리면 가방이 다시 비고, 사다리는
+  -- 그 단을 «아직 못 올랐다»고 판단한다. automation 연구가 끝났는데도
+  -- 무리가 영원히 빨간 과학팩 단에 서 있던 이유가 이것이다.
+  --
+  -- 쓴 것은 없어져도 만든 것은 없어지지 않는다.
+  local forever = defines.flow_precision_index.one_thousand_hours
 
   local rungs, broken_at = {}, nil
   local flowed_above = true
   for _, rung in ipairs(RUNGS) do
     local per_minute = made(stats, rung.key, minute) or 0
     local per_hour = made(stats, rung.key, hour) or 0
+    local ever = made(stats, rung.key, forever) or 0
     local flowing = per_minute > 0
     rungs[#rungs + 1] = {
       item = rung.key, label = rung.label,
       minute = math.floor(per_minute * 10) / 10,
       hour = math.floor(per_hour),
+      ever = math.floor(ever),
       flowing = flowing,
     }
     -- 첫 번째로 «위는 흐르는데 여기는 안 흐르는» 칸이 끊긴 데다.

@@ -35,6 +35,8 @@ class Snapshot:
     craft: dict | None = None
     # 제련 구역에서 다음에 비어 있는 자리. 세지 않고 물어서 받은 값이다.
     next_furnace: dict | None = None
+    # 여태 만든 누적 개수. «쓴 것은 없어져도 만든 것은 없어지지 않는다».
+    made: dict[str, int] = field(default_factory=dict)
 
     def anywhere(self, item: str) -> int:
         """손에 든 것 + 창고에 있는 것.
@@ -46,6 +48,20 @@ class Snapshot:
         못 만든다」고 판단한 적이 있다.
         """
         return self.have(item) + int(self.shelved.get(item, 0))
+
+    def ever(self, item: str, count: int = 1) -> bool:
+        """여태 이것을 이만큼 만든 적이 있는가.
+
+        소모품을 «가지고 있는가»로 물으면 안 된다. 과학팩은 랩이 먹고,
+        연료는 화로가 태운다. 열 개를 만들어 쓰고 나면 가방이 비는데,
+        그것을 「아직 못 했다」로 읽으면 사다리가 한 단 아래로 굴러떨어지고
+        무리는 이미 끝낸 일을 영원히 다시 한다.
+
+        실측: automation 연구가 끝났는데(빨간 과학팩 열 개를 써야 끝난다)
+        조립기가 0대였다. 사다리가 「빨간 과학팩 생산」 단에서 못 올라오고
+        있었고, 조립기 단은 그 위에 있었다.
+        """
+        return int(self.made.get(item, 0)) >= count
 
     def have(self, item: str) -> int:
         return self.items.get(item, 0)

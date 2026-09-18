@@ -67,6 +67,14 @@ class ChiefMixin:
         if chain.get("error"):
             return
 
+        # 여태 만든 누적 개수를 무리 전체에 나눠준다. 사다리가 소모품을
+        # 「가지고 있는가」가 아니라 「만든 적 있는가」로 묻게 하는 자리다.
+        rungs = chain.get("rungs") or []
+        self.made = {r.get("item"): int(r.get("ever") or 0)
+                     for r in rungs if r.get("item")}
+        for worker in self.workers.values():
+            worker.made = self.made
+
         broken = chain.get("broken_at")
         if not broken:
             # 사슬이 끝까지 흐른다. 맡은 일을 흔들 이유가 없다.

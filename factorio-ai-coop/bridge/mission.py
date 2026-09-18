@@ -46,6 +46,15 @@ def _built(name: str) -> Callable[[Any], bool]:
     return lambda snap: snap.building(name) is not None
 
 
+def _ever(item: str, count: int = 1) -> Callable[[Any], bool]:
+    """여태 이만큼 만든 적이 있는가.
+
+    소모품은 «가지고 있는가»로 물으면 안 된다. 만들어 쓰고 나면 없어지고,
+    그것을 「아직 못 했다」로 읽으면 사다리가 한 단 굴러떨어진다.
+    """
+    return lambda snap: snap.ever(item, count)
+
+
 def _knows(tech: str) -> Callable[[Any], bool]:
     return lambda snap: snap.knows(tech)
 
@@ -61,7 +70,10 @@ LADDER: tuple[Stage, ...] = (
     # 서 있는 기관이 아니라 흐르는 전기. 물 없는 보일러에 물린 기관을
     # «전력 공급 완료»로 세면 사다리가 거짓말을 한다.
     Stage("power", "전력 공급", lambda snap: getattr(snap, "powered", False)),
-    Stage("red-science", "빨간 과학팩 생산", _has("automation-science-pack", 10)),
+    # 과학팩은 랩이 먹는다. 열 개를 «가지고 있는가»로 물었더니, 연구를
+    # 돌려 다 쓰고 나면 이 단이 다시 안 오른 것이 되었다. automation 연구가
+    # 끝났는데도 조립기가 0대였던 이유다 - 조립기 단이 이 위에 있었다.
+    Stage("red-science", "빨간 과학팩 생산", _ever("automation-science-pack", 10)),
     Stage("automation", "자동화 연구", _knows("automation")),
     Stage("assembler", "조립기 가동", _built("assembling-machine-1")),
     # 여기서부터는 아직 무리가 스스로 못 간다. 적어두는 건 목표가 로켓이라는
