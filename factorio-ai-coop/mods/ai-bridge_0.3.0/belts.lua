@@ -675,9 +675,17 @@ local function field_lines(name, limit)
       for _, drill in pairs(drills) do
         local seats = drop_seats(surface, force, drill, head)
         if seats[1] then
-          -- 고른 자리를 «보도록» 바로 돌려둔다. 길을 깔고 나서 따로
-          -- 돌리려면 그 사이에 자리가 달라져 있을 수 있다.
-          drill.direction = seats[1].dir
+          -- 여기서 «돌리지 않는다».
+          --
+          -- 한 번 돌려봤다가 더 나빠졌다. 벨트가 깔리기도 전에 채굴기를
+          -- 그쪽으로 돌려놓으니, 상자를 보던 넷이 빈 땅을 보게 됐다:
+          --
+          --     떨구는 곳: 벨트 2 / 상자 0 / 땅 4
+          --
+          -- 상자에 떨구는 것은 느린 것이고 땅에 떨구는 것은 «잃는» 것이다.
+          -- 계획은 자리를 고를 뿐이고, 돌리는 것은 벨트가 실제로 깔린
+          -- 다음 `feed_belts` 가 한다. 둘 다 게임에 물어 같은 자리를
+          -- 고르므로 답은 어긋나지 않는다.
           stops[#stops + 1] = { x = seats[1].x, y = seats[1].y }
         end
       end
