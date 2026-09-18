@@ -780,6 +780,24 @@ def main() -> int:
           all(hasattr(brain, n) for n in
               ("_stores_text", "_fleet_text", "_snapshot_text", "_clean_commands")))
 
+    print("\n25. an ore spot remembers which ore it is")
+    # (78,46)에서 석탄을 캐라고 시켰더니 copper-ore 를 캐 왔다. 구리 광맥이
+    # 석탄 위에 겹쳐 있었고, mine 이 이름 없이 「그 자리의 자원」을 집었다.
+    # 호출부가 열한 군데라 거기마다 이름을 붙이면 언젠가 하나를 빠뜨린다.
+    overlap = Snapshot(resources={
+        "coal": {"nearest": {"x": 78, "y": 46}, "nearest_dist": 10, "tiles": 309},
+        "copper-ore": {"nearest": {"x": 72, "y": 38}, "nearest_dist": 0,
+                       "tiles": 432}})
+    check("the coal spot says it is coal",
+          overlap.ore("coal") == {"x": 78, "y": 46, "name": "coal"},
+          str(overlap.ore("coal")))
+    check("and spreading it into a step carries the name",
+          dict(**overlap.ore("coal"), count=30)["name"] == "coal")
+    check("copper keeps its own name",
+          overlap.ore("copper-ore")["name"] == "copper-ore")
+    check("an ore that is not there is still None",
+          overlap.ore("uranium-ore") is None)
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))

@@ -80,8 +80,23 @@ class Snapshot:
         return self.craftable.get(recipe, 0) >= count
 
     def ore(self, name: str) -> dict | None:
+        """이 광석의 가장 가까운 자리. **이름을 함께 돌려준다.**
+
+        실측(새 판 20분째): (78,46)에서 석탄 30개를 캐라고 시켰더니
+        copper-ore 30개를 캐 왔다. 구리 광맥 432타일이 석탄 위에 겹쳐 있고,
+        mine 태스크가 이름 없이 「그 자리의 자원」을 집었기 때문이다.
+        그래서 「석탄 캐러 갑니다」가 전부 구리 채굴이 되었고, 넷이 구리만
+        천 개 넘게 캤다.
+
+        호출부가 열한 군데다. 거기마다 이름을 붙이는 것은 언젠가 하나를
+        빠뜨린다. 자리를 돌려주는 이 자리에서 붙이면 `{**spot}` 을 쓰는
+        모든 곳이 자동으로 따라온다.
+        """
         found = self.resources.get(name)
-        return found.get("nearest") if found else None
+        if not found:
+            return None
+        near = found.get("nearest")
+        return {**near, "name": name} if near else None
 
     def building(self, name: str) -> dict | None:
         found = self.buildings.get(name)
@@ -3717,8 +3732,8 @@ class Crew:
                          who=worker.name)
                 worker.said_idle = False
                 worker.watching = worker.handle.submit_plan([
-                    ("mine", {"x": spot["x"], "y": spot["y"],
-                              "count": max(short[1], ORE_BATCH)})])
+                    ("mine", {**spot, "count": max(short[1], ORE_BATCH),
+                              "search_radius": 10})])
                 continue
 
             worker.said_idle = False

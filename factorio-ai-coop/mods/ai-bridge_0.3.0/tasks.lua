@@ -267,10 +267,34 @@ M.walk_to = {
 M.mine = {
   start = function(ctx)
     local p = ctx.task.params
-    local found = ctx.surface.find_entities_filtered {
-      position = { p.x, p.y }, radius = p.search_radius or 3,
-      type = "resource", limit = 1,
-    }[1]
+
+    -- 무엇을 캐라고 했는지 지킨다.
+    --
+    -- 실측(새 판 20분째): (78,46)에서 석탄 30개를 캐라고 시켰더니
+    -- copper-ore 30개를 캐 왔다. 구리 광맥 432타일이 석탄 위에 겹쳐 있고,
+    -- 이름 없이 type="resource" 로 찾으면 엔진이 주는 대로 집기 때문이다.
+    --
+    -- 그래서 「연료가 없습니다, 석탄 캐러 갑니다」가 전부 구리 채굴이
+    -- 되었다. 넷이 구리만 천 개 넘게 캔 이유가 이것이다. 이름을 주면
+    -- 그 광석만 찾고, 그 자리에 없으면 조금 더 넓게 본다.
+    local found
+    if p.name then
+      for _, reach in ipairs({ p.search_radius or 3, 12, 32 }) do
+        found = ctx.surface.find_entities_filtered {
+          position = { p.x, p.y }, radius = reach, name = p.name, limit = 1,
+        }[1]
+        if found then break end
+      end
+      if not found then
+        ctx.task.error = string.format("no %s near %s,%s", p.name, p.x, p.y)
+        return "failed"
+      end
+    else
+      found = ctx.surface.find_entities_filtered {
+        position = { p.x, p.y }, radius = p.search_radius or 3,
+        type = "resource", limit = 1,
+      }[1]
+    end
     if not found then
       ctx.task.error = string.format("no resource near %s,%s", p.x, p.y)
       return "failed"
