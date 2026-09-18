@@ -133,8 +133,23 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     # 전기가 들어온 랩이 있을 때만이다. 전기 없는 랩은 팩을 먹지 않는다 -
     # 숙련자들이 「전력이 안정되기 전에 과학을 확장하지 마라」고 하는 것도
     # 같은 말이다.
+    # 묻는 것은 «팩을 가졌는가»가 아니라 «랩이 도는가»다.
+    #
+    # 실측(2026-09-18): alpha 가 빨간 과학팩 열 개를 손에 쥐고 있었고, 랩
+    # 세 대가 전기망에 물려 있었고, 연구 진척은 0 이었다. working_labs 0.
+    # 만들어놓고 «넣지를» 않은 것이다.
+    #
+    # 조건이 「anywhere(팩) < 10」이었기 때문이다. 열 개를 손에 넣는 순간
+    # 이 일감이 사라진다. 목표가 「열 개를 갖는 것」이 되어버렸다.
+    #
+    # 손에 든 팩은 연구가 아니다. 랩 «안»에 있는 팩만 연구다.
+    #
+    # 「연구가 골라져 있는가」로도 안 된다 - 지금이 바로 그 상태다.
+    # advanced-material-processing 이 골라져 있고 진척은 0 이다. 고른 것과
+    # 도는 것은 다르다. 그래서 도는 랩의 «수»를 묻는다.
     lab = snap.building("lab") if snap.powered else None
-    if lab and snap.anywhere("automation-science-pack") < FIRST_PACKS:
+    if lab and (snap.working_labs == 0
+                or snap.anywhere("automation-science-pack") < FIRST_PACKS):
         # 「만들 수 있는가」를 손으로만 묻지 않는다. 재료가 창고에 있으면
         # 꺼내오면 된다 - 그것이 루틴인 이유다. 실측(2026-09-18): 창고에
         # 철판 3,979개를 쌓아두고 기어를 «한 개도» 만든 적이 없었다.

@@ -6,7 +6,7 @@ from client import RconError, TaskFailed
 
 from settings import (BACKOFF_SECONDS, CHEST, COAL_PAIRS, DRILL, DRILLS_PER_TRIP,
                       DRILL_FUEL, FURNACE_FUEL, HAUL_BATCH, RIGS_PER_TRIP,
-                      MINE_CHEST, RIG_COAL, SMELTED_BY_FURNACE, SMELT_BATCH,
+                      MINE_CHEST, RIG_COAL, SMELTED_BY_FURNACE, SMELT_BATCH, SMOKING_FLOOR,
                       WELL_FULL)
 from jobs import Job, Step
 from layout import carry_split, cluster, nearest_to, spread_sites
@@ -585,3 +585,50 @@ class MiningMixin:
         except RconError as exc:
             worker.block("rescue")
             self.say(f"채굴기 수리 중 오류: {exc}", who=name)
+
+    def smoking_job(self, worker: Worker) -> Job | None:
+        """캐지도 않으면서 공해만 내는 채굴기를 걷는다.
+
+        버너 기계는 멈춰 있어도 연료를 태우는 동안 공해를 낸다. 출구가
+        막혀 선 채굴기는 광석을 한 톨도 안 내놓으면서 둥지를 깨운다.
+
+        실측(2026-09-18): 채굴기 154대 중 도는 것은 25대, 출구가 막혀 선
+        것이 96대였다. 그리고 공해가 가장 가까운 둥지까지 43타일 남았고
+        둥지는 서른여섯 곳이다. 방어의 첫걸음은 총이 아니라 이것들이다 -
+        총을 더 놓아도 깨우는 쪽을 안 끄면 끝이 없다.
+
+        걷으면 채굴기가 손에 돌아온다. 자리표 밖의 건물이 자재인 것과
+        같은 이치로, 아무것도 안 내놓는 기계는 기계가 아니라 자재다.
+
+        마른 광맥 위의 것부터 걷는다. 출구가 막힌 것은 길이 이어지면
+        다시 돌지만, 마른 자리는 영영 안 돈다.
+        """
+        try:
+            found = self.bridge.smoking_idle(worker.name, limit=24)
+        except RconError:
+            return None
+        if found.get("error"):
+            return None
+        rows = _as_rows(found.get("idle"))
+        if len(rows) < SMOKING_FLOOR:
+            return None
+
+        dry = found.get("dry")
+        rows.sort(key=lambda one: 0 if one.get("status") == dry else 1)
+
+        taken = self.taken()
+        for group in cluster(rows)[:2]:
+            head = group[0]
+            key = f"smoke:{head['x']:.0f},{head['y']:.0f}"
+            if key in taken:
+                continue
+            group = group[:6]
+            return Job(
+                f"아무것도 안 캐면서 공해만 내는 채굴기가 {found['total']}대 "
+                f"있습니다. {len(group)}대를 걷어 공해를 줄이겠습니다. "
+                f"({head['x']:.0f}, {head['y']:.0f})",
+                key=key,
+                steps=[("demolish", {"x": one["x"], "y": one["y"],
+                                     "name": one["name"]}) for one in group],
+                at={"x": head["x"], "y": head["y"]})
+        return None

@@ -74,6 +74,7 @@ class Worker:
             researched=research["researched"],
             researching=research.get("current"),
             powered=bool(power.get("powered")),
+            working_labs=int(power.get("working_labs") or 0),
             smelter=self.smelter,
             craft=self.craft,
             next_furnace=self.next_furnace,

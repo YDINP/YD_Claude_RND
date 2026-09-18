@@ -74,10 +74,15 @@ def main() -> int:
         # 기본적으로 «흐르는» 세계로 치고, 죽은 발전소는 powered=False 로
         # 따로 시험한다.
         standing = "steam-engine" in (buildings or {})
+        live = standing if powered is None else powered
+        # 전기가 흐르는 세계는 랩도 «도는» 세계로 친다. 서 있는 랩은
+        # 26a 에서 따로 시험한다 - 거기가 「손에 든 팩은 연구가 아니다」를
+        # 보는 자리다.
         return Snapshot(**world, items=items or {}, buildings=buildings or {},
                         craftable=craftable or {},
                         researched=set(ALL_TECH if tech is None else tech),
-                        powered=standing if powered is None else powered)
+                        powered=live,
+                        working_labs=1 if live else 0)
 
     rungs = [
         ("bare hands go for stone", at(), "mine", lambda j: j.steps[0][1]["x"] == 10),
@@ -831,9 +836,10 @@ def main() -> int:
     # 리서치(2026-09-18): Automation 연구는 빨간 과학팩 열 개면 되고 손으로
     # 만들어도 된다. 우리는 채굴기를 161대까지 늘리면서 이 열 개를 한 번도
     # 안 만들었다.
-    def with_lab(packs):
+    def with_lab(packs, working=0):
         return Snapshot(
             x=0, y=0,
+            working_labs=working,
             items={"iron-plate": 500, "copper-plate": 500,
                    "automation-science-pack": packs},
             craftable={"automation-science-pack": 200},
@@ -847,8 +853,16 @@ def main() -> int:
     keys = [job.key for job in plan(with_lab(0))]
     check("with a lab standing and no packs, the first packs come first",
           "first-packs" in keys, str(keys[:4]))
-    check("once the ten are made it stops asking",
-          "first-packs" not in [job.key for job in plan(with_lab(12))])
+    # 만든 것만으로는 안 끝난다. 랩에 «들어가야» 끝난다.
+    #
+    # 실측(2026-09-18): alpha 가 팩 열 개를 손에 쥐고, 랩 세 대가 전기망에
+    # 물려 있고, 도는 랩은 0, 연구 진척도 0 이었다. 예전 조건은 「열 개를
+    # 가졌는가」였으므로 그 순간 일감이 사라졌다 - 목표가 「열 개를 갖는
+    # 것」이 되어버린 것이다.
+    check("holding ten with idle labs still asks - held packs are not research",
+          "first-packs" in [job.key for job in plan(with_lab(12, working=0))])
+    check("once the packs are in a working lab it stops asking",
+          "first-packs" not in [job.key for job in plan(with_lab(12, working=3))])
 
     # 소모품을 «가지고 있는가»로 물으면 사다리가 굴러떨어진다.
     #

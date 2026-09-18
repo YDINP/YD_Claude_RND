@@ -158,23 +158,43 @@ local IDLE = {
   [defines.entity_status.no_minable_resources] = true,
 }
 
+-- 판정표를 만들어놓고 쓰지를 않았다.
+--
+--   if IDLE[e.status] and e.status == no_minable_resources
+--
+-- 뒤의 조건이 앞의 표를 통째로 무효로 만든다. 그래서 「광맥이 말랐다」만
+-- 잡고 「출구가 막혔다」는 한 대도 안 잡았다. 실측에서 그 차이가 이렇다:
+--
+--   no_minable_resources             몇 대
+--   waiting_for_space_in_destination 96대
+--
+-- 이번 주 여섯 번째다 - 기능은 있는데 그것을 가리키는 조건이 틀렸다.
+--
+-- 그리고 이것은 방어 문제다. 막혀 선 채굴기는 캐지도 않으면서 연료를
+-- 태우고 공해를 낸다. 지금 공해가 둥지까지 43타일 남았다. 총을 더 놓기
+-- 전에 둥지를 깨우는 것을 먼저 끄는 것이 맞다.
 local function smoking_idle(name, limit)
   local a = agent(name)
   local b = body(a)
   if not b then return { error = "no such agent: " .. tostring(name) } end
 
-  local out, total = {}, 0
+  local out, total, why = {}, 0, {}
   for _, e in pairs(b.surface.find_entities_filtered {
     type = "mining-drill", force = b.force,
   }) do
-    if IDLE[e.status] and e.status == defines.entity_status.no_minable_resources then
+    if IDLE[e.status] then
       total = total + 1
+      local tag = tostring(e.status)
+      why[tag] = (why[tag] or 0) + 1
       if #out < (limit or 8) then
-        out[#out + 1] = { name = e.name, x = e.position.x, y = e.position.y }
+        out[#out + 1] = { name = e.name, x = e.position.x, y = e.position.y,
+                          status = e.status }
       end
     end
   end
-  return { idle = out, total = total }
+  return { idle = out, total = total, why = why,
+           dry = defines.entity_status.no_minable_resources,
+           jammed = defines.entity_status.waiting_for_space_in_destination }
 end
 
 return {

@@ -178,6 +178,12 @@ class SurveyMixin:
         if move:
             gather.append(move)
 
+        #     캐지도 않으면서 공해만 내는 채굴기를 걷는다. 방어의 첫걸음은
+        #     총이 아니라 둥지를 깨우는 것을 끄는 일이다.
+        smoke = self.smoking_job(worker)
+        if smoke:
+            unblock.append(smoke)
+
         #     버려진 벨트를 먼저 걷어온다 - 새로 만드는 것보다 언제나 싸다.
         stray_belt = self.loose_belt_job(worker)
         if stray_belt:

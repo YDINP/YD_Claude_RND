@@ -83,14 +83,27 @@ local function audit(name)
   -- 무리가 영원히 빨간 과학팩 단에 서 있던 이유가 이것이다.
   --
   -- 쓴 것은 없어져도 만든 것은 없어지지 않는다.
-  local forever = defines.flow_precision_index.one_thousand_hours
+  -- 전체 누적은 버킷이 아니라 카운터로 묻는다. precision 버킷은 굴러가는
+  -- 창이라 「여태」를 재는 도구가 아니다.
+  local function ever_count(item)
+    local ok, n = pcall(function() return stats.get_input_count(item) end)
+    if ok and n then return n end
+    ok, n = pcall(function()
+      return stats.get_flow_count {
+        name = item, category = "input",
+        precision_index = defines.flow_precision_index.one_thousand_hours,
+        count = true,
+      }
+    end)
+    return (ok and n) or 0
+  end
 
   local rungs, broken_at = {}, nil
   local flowed_above = true
   for _, rung in ipairs(RUNGS) do
     local per_minute = made(stats, rung.key, minute) or 0
     local per_hour = made(stats, rung.key, hour) or 0
-    local ever = made(stats, rung.key, forever) or 0
+    local ever = ever_count(rung.key)
     local flowing = per_minute > 0
     rungs[#rungs + 1] = {
       item = rung.key, label = rung.label,
