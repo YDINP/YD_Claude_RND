@@ -140,8 +140,11 @@ local function inventory(name)
     end
   end
 
+  -- 빈 칸 수. 가방이 차면 캐는 일도 걷어내는 일도 전부 조용히 실패한다.
+  local bag = b.get_main_inventory()
   return {
     agent = name, items = out, craftable = craftable,
+    free = bag and bag.count_empty_stacks() or 0,
     health = b.health, x = b.position.x, y = b.position.y,
   }
 end

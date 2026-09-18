@@ -328,6 +328,14 @@ class AIBridge:
         """캐는 구역에서 제련 구역까지의 광석 길. 아직 없는 것만 돌려준다."""
         return self.call("ore_line", agent, fx, fy, limit)
 
+    def defence(self, agent: str) -> dict:
+        """공해가 어디까지 갔고, 방어선은 어디에 서는가."""
+        return self.call("defence", agent)
+
+    def smoking_idle(self, agent: str, limit: int = 8) -> dict:
+        """아무것도 안 내놓으면서 공해만 뿜는 기계들."""
+        return self.call("smoking_idle", agent, limit)
+
     def flows(self, agent: str, limit: int = 1) -> list[dict]:
         """물류 전체 - 무엇이 어디서 어디로 흐르고, 무엇이 아직 없는가."""
         return _as_list(self.call("flows", agent, limit).get("flows"))

@@ -10,7 +10,8 @@ import math
 from client import RconError
 
 from settings import (CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH,
-                      HOME_REACH, SMELTED_BY_FURNACE, SMELT_BATCH, STRAY_FAR,
+                      BAG_ROOM, HOME_REACH, SMELTED_BY_FURNACE, SMELT_BATCH,
+                      STRAY_FAR,
                       SURPLUS, THIN_DRILL, WELL_FULL)
 from world import Snapshot
 from jobs import Job, Step
@@ -72,6 +73,38 @@ class SurveyMixin:
                                         "tolerance": 8})],
                     at=home))
                 return jobs
+
+        # 0. 가방이 찼으면 그것부터. 찬 가방으로는 아무 일도 못 한다.
+        #
+        #    캐는 일도 걷어내는 일도 줍는 일도 전부 «조용히» 실패한다.
+        #    실측: 여덟 캐릭터 중 여섯이 빈 칸 0 이었고 한 명은 demolish 를
+        #    띄운 채 가만히 서 있었다. 이 줄이 없으면 그 여섯은 무슨 일감을
+        #    받아도 그 자리에 선다.
+        snap = self.snaps.get(worker.name)
+        if snap and snap.free <= BAG_ROOM:
+            dump = self.depot_job(worker, snap)
+            if dump:
+                return [dump]
+            # 공용 창고가 아직 없으면 아무 상자에나 붓는다. 여기서 빈손으로
+            # 돌아가면 이 사람은 다음에도 같은 자리에 선다 - 가방을 비우는
+            # 것 자체가 목적이지, 어디에 붓느냐는 그다음이다.
+            try:
+                shelves = _as_rows(self.bridge.stores(worker.name,
+                                                      200, 6).get("chests"))
+            except RconError:
+                shelves = []
+            heavy = sorted(((n, c) for n, c in snap.items.items() if c >= 20),
+                           key=lambda pair: -pair[1])
+            if shelves and heavy:
+                item, count = heavy[0]
+                return [Job(
+                    f"가방이 꽉 차서 아무것도 못 하고 있습니다. {item} "
+                    f"{count}개를 상자에 붓겠습니다.",
+                    key=f"dump:{worker.name}", owner=worker.name,
+                    steps=[("insert", {"name": item, "count": count,
+                                       "x": shelves[0]["x"],
+                                       "y": shelves[0]["y"]})],
+                    at={"x": shelves[0]["x"], "y": shelves[0]["y"]})]
 
         # 0. 서 있는 발전소를 고치는 것이 새 발전소보다 언제나 싸다.
         #    전봇대 둘과 파이프 둘이 2.7MW 였던 적이 있다.

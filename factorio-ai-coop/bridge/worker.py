@@ -60,6 +60,7 @@ class Worker:
             y=world.get("position", {}).get("y", 0.0),
             items=inventory.get("items") or {},
             craftable=inventory.get("craftable") or {},
+            free=int(inventory.get("free", 99)),
             buildings=world.get("buildings") or {},
             resources=world.get("resources") or {},
             humans=list(humans.values()) if isinstance(humans, dict) else humans,

@@ -170,6 +170,19 @@ local function clear_obstacle(ctx)
   return false
 end
 
+-- 가방에 빈 칸이 있는가.
+--
+-- 캘 때마다 물건이 가방으로 들어온다. 가방이 차면 mine_entity 는 조용히
+-- false 를 돌려주고 아무 일도 안 일어난다. 그 값을 안 보면 같은 자리에서
+-- 영원히 곡괭이질을 한다 - 실측(2026-09-18): 여덟 캐릭터 중 여섯이 빈 칸
+-- 0 이었고, 한 명은 demolish 를 띄운 채 가만히 서 있었다.
+--
+-- 못 하는 일을 못 한다고 말해야 부르는 쪽이 다른 일을 한다.
+local function bag_full(bot)
+  local inv = bot.get_main_inventory()
+  return inv ~= nil and inv.count_empty_stacks() == 0
+end
+
 M.walk_to = {
   start = function(ctx)
     ctx.task.state.goal = { x = ctx.task.params.x, y = ctx.task.params.y }
@@ -317,6 +330,10 @@ M.mine = {
   end,
 
   step = function(ctx)
+    if bag_full(ctx.bot) then
+      ctx.task.error = "bag is full - nothing more fits"
+      return "failed"
+    end
     local st, bot = ctx.task.state, ctx.bot
     local gained = count_item(bot, st.product) - st.baseline
 
@@ -828,12 +845,30 @@ M.demolish = {
     end
     halt(bot)
 
+    if bag_full(bot) then
+      ctx.task.error = string.format("bag is full - cannot pick up %s",
+        tostring(st.label))
+      return "failed"
+    end
+
     if not st.next_swing or ctx.tick >= st.next_swing then
       st.next_swing = ctx.tick + 12
-      local ok = pcall(function() bot.mine_entity(st.target) end)
+      local ok, mined = pcall(function() return bot.mine_entity(st.target) end)
       if not ok then
         ctx.task.error = "could not mine " .. tostring(st.label)
         return "failed"
+      end
+      -- 곡괭이질은 여러 번 걸릴 수 있다. 다만 «몇 번을 해도 아무 일도
+      -- 안 일어나는» 것은 못 하는 것이다.
+      if mined == false then
+        st.misses = (st.misses or 0) + 1
+        if st.misses >= 5 then
+          ctx.task.error = string.format("cannot mine %s (five tries, nothing moved)",
+            tostring(st.label))
+          return "failed"
+        end
+      else
+        st.misses = 0
       end
     end
     return "running"
@@ -876,6 +911,11 @@ M.sweep = {
 
     -- 손이 닿는 것만 줍는다. 한 틱에 몇 개씩 - 채굴기 하나 앞에 수백 개가
     -- 쌓여 있어서, 전부 한 번에 집으면 그 틱이 길어진다.
+    if bag_full(bot) then
+      ctx.task.result = { swept = st.taken, full = true }
+      return "done"     -- 주운 만큼은 주웠다. 나머지는 가방을 비우고 다시.
+    end
+
     local reach = math.min(st.reach, bot.resource_reach_distance)
     local litter = ctx.surface.find_entities_filtered {
       position = bot.position, radius = reach, type = "item-entity",

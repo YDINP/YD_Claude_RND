@@ -74,6 +74,10 @@ local drop_marker    = Panel.drop_marker
 local panel_rows     = Panel.panel_rows
 local refresh_marker = Panel.refresh_marker
 local remember_line  = Panel.remember_line
+local Defence = require("defence")
+local defence      = Defence.defence
+local smoking_idle = Defence.smoking_idle
+
 local Belts = require("belts")
 local loose_belts = Belts.loose_belts
 local ore_line    = Belts.ore_line
@@ -555,6 +559,10 @@ remote.add_interface("ai", {
 
   -- 캐는 구역에서 제련 구역까지의 광석 길 - 아직 없는 것만.
   ore_line = ore_line,
+
+  -- 방어 - 공해가 어디까지 갔고, 방어선은 어디에 서는가.
+  defence = defence,
+  smoking_idle = smoking_idle,
 
   -- 물류 - 무엇이 어디서 어디로 흐르는가, 그리고 아직 없는 것.
   flows = flows,
