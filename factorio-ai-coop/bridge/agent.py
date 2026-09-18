@@ -3695,9 +3695,30 @@ class Crew:
             short = mission.shortfall(job.needs, snap.items)
             if short and snap.can_make(short[0], short[1]):
                 short = None
-            if short and not snap.ore(short[0]):
-                self.ask_for(worker, short[0], short[1], job.narration)
-                worker.block(job.key)
+            if short:
+                spot = snap.ore(short[0])
+                if not spot:
+                    self.ask_for(worker, short[0], short[1], job.narration)
+                    worker.block(job.key)
+                    continue
+
+                # 땅에서 나는 것이 모자란다. 지금까지는 「캘 수 있으니
+                # 괜찮다」며 그냥 일을 시작했고, 도착해서 빈손으로 실패했다.
+                #
+                # 새 판 15분째의 증상이 이것이었다: 가방에 구리광석이
+                # 949개인데 석탄은 0개. 제련에 석탄이 모자란 줄 알면서도
+                # 화로로 가버리니 제련이 안 되고, 사슬이 안 올라가니 다음
+                # 칸(구리판)을 위해 또 구리를 캤다. 넷이서 구리만 캤다.
+                #
+                # 모자란 것이 땅에 있으면, 그것부터 캔다.
+                self.claim(worker, job.key)
+                self.say(f"{job.narration.rstrip('.')} — 그 전에 "
+                         f"{short[0]}이(가) {short[1]}개 모자라 캐 오겠습니다.",
+                         who=worker.name)
+                worker.said_idle = False
+                worker.watching = worker.handle.submit_plan([
+                    ("mine", {"x": spot["x"], "y": spot["y"],
+                              "count": max(short[1], ORE_BATCH)})])
                 continue
 
             worker.said_idle = False
