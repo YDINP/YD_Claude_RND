@@ -1076,6 +1076,44 @@ local function stores(name, radius, limit)
   return { agent = name, chests = near, chest_count = #out, total = total }
 end
 
+-- 서로 마주보는 석탄 채굴기 한 쌍은 캔 석탄을 서로의 연료칸에 넣는다. 그래서
+-- 이 구조물에는 출력 상자가 없고, 캐낸 석탄이 전부 연료칸에 쌓인다.
+--
+-- 즉 이 쌍은 «스스로 채워지는 석탄 창고»다. 사람이 쓸 몫은 연료칸에서 덜어
+-- 오면 된다. 한 대가 태우는 것은 초당 0.0375개인데 캐는 것은 0.25개이니,
+-- 이만큼만 남겨두면 다시 가득 찰 때까지 멈추지 않는다.
+local COAL_KEEP = 25
+
+local function coal_banks(surface, force, near, reach, keep)
+  local out = {}
+  for _, e in pairs(surface.find_entities_filtered {
+    position = near, radius = reach, name = "burner-mining-drill", force = force,
+  }) do
+    -- 석탄을 캐는 채굴기만이다. 철광석 위에 선 채굴기의 연료를 빼 가면
+    -- 그것은 창고에서 꺼내는 게 아니라 그 기계를 세우는 일이다.
+    local digs = e.mining_target
+    local on_coal = digs ~= nil and digs.valid and digs.name == "coal"
+    if not on_coal then
+      on_coal = surface.find_entities_filtered {
+        area = e.bounding_box, name = "coal", limit = 1,
+      }[1] ~= nil
+    end
+    if on_coal then
+      local fuel = e.get_fuel_inventory()
+      local held = fuel and fuel.get_item_count("coal") or 0
+      local spare = held - (keep or COAL_KEEP)
+      if spare > 0 then
+        out[#out + 1] = {
+          x = e.position.x, y = e.position.y, count = spare, held = held,
+          well = true,
+          distance = math.floor(Tasks.dist(near, e.position) * 10) / 10,
+        }
+      end
+    end
+  end
+  return out
+end
+
 local function chest_stock(name, item, radius)
   local a = agent(name)
   local b = body(a)
@@ -1097,6 +1135,13 @@ local function chest_stock(name, item, radius)
       end
     end
   end
+  -- 석탄은 상자에만 있는 것이 아니다. 자급쌍의 연료칸이 곧 석탄 창고다.
+  if item == "coal" then
+    for _, well in pairs(coal_banks(b.surface, b.force, b.position, reach)) do
+      out[#out + 1] = well
+    end
+  end
+
   table.sort(out, function(p, q) return p.distance < q.distance end)
   return { agent = name, item = item, chests = out }
 end
