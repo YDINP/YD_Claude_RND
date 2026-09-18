@@ -5,10 +5,13 @@
 
 from __future__ import annotations
 
+import math
+
 from client import RconError
 
 from settings import (CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH,
-                      SMELTED_BY_FURNACE, SMELT_BATCH, SURPLUS, THIN_DRILL)
+                      HOME_REACH, SMELTED_BY_FURNACE, SMELT_BATCH, STRAY_FAR,
+                      SURPLUS, THIN_DRILL)
 from world import Snapshot
 from jobs import Job, Step
 from layout import belt_pairs, carry_split, cluster, interleave, nearest_to
@@ -33,6 +36,33 @@ class SurveyMixin:
         gather: list[Job] = []
         unblock: list[Job] = []
         jobs: list[Job] = []
+
+        # 0. 기지에서 너무 멀리 나갔으면, 할 일을 찾기 전에 돌아온다.
+        #
+        #    에이전트 중심 조회는 전부 그 사람 반경 200 안만 본다. 그 밖에 서
+        #    있으면 기지가 «안 보이고», 안 보이니 할 일이 없고, 할 일이 없으니
+        #    돌아올 이유도 못 찾는다. 실측: 요원이 (322,13)에 서 있었고 기지는
+        #    (90,27) 이었다 - 그동안 화로 63대와 눈먼 채굴기 22대가 그대로
+        #    멈춰 있었다. 무리 전체가 자기 눈 밖의 기지를 못 본 것이다.
+        #
+        #    「여기가 기지다」를 말해주는 자리는 하나뿐이라(base), 반경에
+        #    매이지 않는 그 눈으로 먼저 자기 위치를 확인한다.
+        try:
+            home = (self.bridge.base() or {}).get("home")
+        except RconError:
+            home = None
+        if home:
+            gap = math.dist(self.seat(worker), (home["x"], home["y"]))
+            if gap > HOME_REACH:
+                jobs.append(Job(
+                    f"기지에서 {gap:.0f}타일이나 나와 있습니다. 여기서는 "
+                    f"기지가 보이지 않아 할 일을 찾을 수 없습니다. "
+                    f"돌아가겠습니다.",
+                    key=f"home:{worker.name}", owner=worker.name,
+                    steps=[("walk_to", {"x": home["x"], "y": home["y"],
+                                        "tolerance": 8})],
+                    at=home))
+                return jobs
 
         # 0. 서 있는 발전소를 고치는 것이 새 발전소보다 언제나 싸다.
         #    전봇대 둘과 파이프 둘이 2.7MW 였던 적이 있다.
@@ -175,6 +205,30 @@ class SurveyMixin:
             # 받을 곳이 아예 없는 것은 바로 아래 3a1 이 화로로 연다.
             # 상자를 다는 것은 스무 분 뒤에 같은 자리에서 다시 막히고,
             # 그 상자 안의 광석은 누가 날라주기 전까지 사다리에 못 오른다.
+
+        # 3a0. 기지에서 도망간 화로를 걷어온다.
+        #
+        #      화로가 한 줄로 동쪽으로 도망가던 시절의 잔해다. 실측 63대 중
+        #      43대가 60타일 밖, 가장 먼 것이 242타일이었다. 그 자리에는 광석이
+        #      닿지 않으니 영원히 놀고, 대신 사람을 그쪽으로 끌고 간다.
+        #
+        #      걷어내면 화로가 통째로 손에 돌아온다. 그 손으로 바로 다음 항목
+        #      (눈먼 채굴기)에 세우면 두 문제가 한 번에 풀린다.
+        try:
+            away = _as_rows(self.bridge.strays("stone-furnace",
+                                               STRAY_FAR).get("strays"))
+        except RconError:
+            away = []
+        for group in cluster(away)[:1]:
+            head = group[0]
+            unblock.append(Job(
+                f"화로 {len(group)}대가 기지에서 {head['distance']:.0f}타일 밖에 "
+                f"홀로 서 있습니다. 광석이 닿지 않는 자리라 영원히 놉니다. "
+                f"걷어와서 멈춘 채굴기 앞에 다시 세우겠습니다.",
+                key=f"stray:{head['x']:.0f},{head['y']:.0f}",
+                steps=[("demolish", {"x": e["x"], "y": e["y"],
+                                     "name": e["name"]}) for e in group],
+                at={"x": head["x"], "y": head["y"]}))
 
         # 3a1. 출구가 «아예» 없는 채굴기 - 떨구는 자리에 화로를 놓는다.
         #

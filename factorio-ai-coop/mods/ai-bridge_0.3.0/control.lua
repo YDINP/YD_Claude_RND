@@ -2592,6 +2592,60 @@ local function furnace_over(surface, force, drop)
   return nil
 end
 
+-- 기지가 어디인가 - 우리 건물 전체의 무게중심. 반경으로 자르지 않는다.
+--
+-- 에이전트 중심의 조회(observe, health, blind_drills ...)는 전부 그 사람
+-- 반경 200 안만 본다. 그래서 한 번 멀리 나가면 기지가 «안 보이고», 안 보이니
+-- 할 일이 없고, 할 일이 없으니 돌아올 이유도 못 찾는다. 실측: 요원이
+-- (322, 13)에 서 있었고 기지는 x 43~72 였다 - 250타일 밖이라 한 사람도
+-- 기지를 보지 못했다. 그때 화로 63대와 눈먼 채굴기 22대가 그대로 멈춰 있었다.
+--
+-- 그러니 「여기가 기지다」를 말해주는 자리가 하나는 있어야 한다.
+local HOME_KINDS = { "burner-mining-drill", "stone-furnace", "boiler",
+                     "steam-engine", "lab", "assembling-machine-1" }
+
+local function base()
+  local s = game.surfaces[1]
+  local sx, sy, n = 0, 0, 0
+  local counts = {}
+  for _, kind in pairs(HOME_KINDS) do
+    local found = s.find_entities_filtered { name = kind, force = game.forces.player }
+    counts[kind] = #found
+    for _, e in pairs(found) do
+      sx, sy, n = sx + e.position.x, sy + e.position.y, n + 1
+    end
+  end
+  if n == 0 then return { home = nil, count = 0 } end
+  return { home = { x = math.floor(sx / n + 0.5), y = math.floor(sy / n + 0.5) },
+           count = n, counts = counts }
+end
+
+-- 기지에서 너무 멀리 떨어져 홀로 선 우리 건물들.
+--
+-- 화로가 한 줄로 동쪽으로 274타일 도망간 자리다. 그 끝의 화로들은 광석이
+-- 닿지 않으니 영원히 놀고, 대신 사람을 그쪽으로 끌고 간다. 걷어내면 화로가
+-- 통째로 손에 돌아오고, 그 손으로 눈먼 채굴기 앞에 다시 세우면 된다.
+local function strays(kind, far)
+  local home = base().home
+  if not home then return { strays = {} } end
+  local s = game.surfaces[1]
+  local out = {}
+  for _, e in pairs(s.find_entities_filtered {
+    name = kind or "stone-furnace", force = game.forces.player,
+  }) do
+    local d = Tasks.dist(home, e.position)
+    if d > (far or 60) and e.minable then
+      out[#out + 1] = { name = e.name, x = e.position.x, y = e.position.y,
+                        distance = math.floor(d * 10) / 10 }
+    end
+  end
+  -- 가장 먼 것부터. 그쪽이 가장 쓸모없는 자리다.
+  table.sort(out, function(p, q) return p.distance > q.distance end)
+  local near = {}
+  for i = 1, math.min(#out, 12) do near[i] = out[i] end
+  return { home = home, strays = near, total = #out }
+end
+
 -- 이 채굴기가 지금 무엇에게 넣고 있는가. 놓은 뒤에 확인하기 위한 것이다.
 -- 「놓기는 놓았는데 안 이어진」 것이 이 저장소의 단골 실수라, 세우는 쪽마다
 -- 게임에 직접 물어보는 짝을 하나씩 둔다.
@@ -3124,6 +3178,10 @@ remote.add_interface("ai", {
 
   -- 출구가 없어 멈춘 채굴기와, 그 앞에 화로를 놓을 자리.
   blind_drills = blind_drills,
+
+  -- 기지의 무게중심, 그리고 거기서 너무 멀리 떨어진 우리 건물.
+  base = base,
+  strays = strays,
 
   -- 이 채굴기가 무엇에게 넣고 있는가 (세운 뒤 확인용).
   feeds = feeds,
