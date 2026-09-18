@@ -5,7 +5,7 @@ from __future__ import annotations
 import mission
 from client import RconError
 
-from settings import (CHEST, DEPOT_MIN, DRILL, DRILL_FUEL, FOCUS_ORDER, FURNACE_FUEL,
+from settings import (CHEST, DEFEND_WHEN, DEPOT_MIN, DRILL, DRILL_FUEL, FOCUS_ORDER, FURNACE_FUEL,
                       HARVEST_MIN, KEEP_IN_HAND, KEEP_ORE, LOOSE_ORE,
                       SMELTABLE, SMELTED_BY_FURNACE,
                       SMELT_BATCH, STARVING, STOCKPILE)
@@ -133,8 +133,25 @@ class TendingMixin:
         손에 쥐고도 «구리를 제련하면 회로를 만들 수 있다»는 걸 몰랐다.
         이제는 게임에게 묻는다 - 레시피 그래프도 인벤토리도 게임이 갖고 있다.
         """
+        # 공해가 둥지에 닿아가면 사다리보다 총이 먼저다.
+        #
+        # 터렛은 철판 20 + 구리판 10 + «기어 10»이 든다. 그런데 우리 제작은
+        # 중간재를 스스로 안 만든다 - 실측으로 charlie 가 철판 39장을 들고도
+        # "cannot craft gun-turret" 이었다. 기어가 없어서다.
+        #
+        # 사슬을 따라 내려가며 필요한 것을 만드는 길은 이미 있다(plan_item).
+        # 사다리의 단에만 쓰고 있었을 뿐이다. 방어도 그 길을 쓴다.
+        #
+        # 지난 판은 이것이 없어 터렛을 한 대도 못 세우고 화로 11대와 요원
+        # 74번을 잃었다.
+        room = snap.slack
+        urgent = isinstance(room, (int, float)) and room <= DEFEND_WHEN
+        target = None
+        if urgent and snap.knows("gun-turret") and not snap.building("gun-turret"):
+            target = ("gun-turret", 1)
+
         stage = mission.stage_of(snap)
-        target = STAGE_TARGET.get(stage.key)
+        target = target or STAGE_TARGET.get(stage.key)
         if not target:
             return None
         item, count = target

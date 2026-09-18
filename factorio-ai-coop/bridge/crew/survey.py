@@ -9,7 +9,7 @@ import math
 
 from client import RconError
 
-from settings import (CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH, LOOSE_FLOOD, STARVING,
+from settings import (CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH, LOOSE_FLOOD, STARVING, DEFEND_WHEN,
                       BAG_ROOM, HOME_REACH, SMELTED_BY_FURNACE, SMELT_BATCH,
                       STRAY_FAR,
                       SURPLUS, THIN_DRILL, WELL_FULL)
@@ -617,7 +617,23 @@ class SurveyMixin:
         guard = self.defence_job(worker, self.snaps.get(worker.name)
                                  or worker.snapshot())
         if guard:
-            unblock.append(guard)
+            # 공해가 둥지에 가까워지면 «급한» 일이 된다.
+            #
+            # 사용자: "슬슬 기지방어도 해야겟는걸". 실측이 그 말을 받친다:
+            #
+            #     터렛 0대, 탄약 8발, 공해 여유 43타일
+            #     적 15마리, 둥지 2곳, 웜 3
+            #
+            # 지난 판이 딱 이 상태에서 당했다. 화로 11대, 채굴기 14대,
+            # 그리고 캐릭터 74번. 그때 방어는 「급하지 않은 일」 칸에 있었다.
+            #
+            # 공해가 둥지에 닿기 전까지는 그 말이 맞다. 닿은 뒤에 세우는
+            # 터렛은 이미 늦다 - 세우는 동안 습격이 온다.
+            room = (self.snaps.get(worker.name) or worker.snapshot()).slack
+            if isinstance(room, (int, float)) and room <= DEFEND_WHEN:
+                jobs.insert(0, guard)
+            else:
+                unblock.append(guard)
 
         # 5. 길을 막고 선 우리 건물. 여덟 칸마다 비워두기로 한 줄 위에
         #    이미 놓여버린 것들이다. 놓을 줄만 알고 치울 줄을 모르면 실수는

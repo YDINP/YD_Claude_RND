@@ -914,6 +914,20 @@ def main() -> int:
           not any(j.key.startswith("furnace:") for j in plan(seated, crew=8)),
           str([j.key for j in plan(seated, crew=8)][:4]))
 
+    # 공해가 둥지에 닿아가면 방어가 급한 일이 된다.
+    #
+    # 실측(지난 판): 여유 13타일에서 터렛 2대, 탄약 0. 화로 11대, 채굴기
+    # 14대, 그리고 캐릭터 74번을 잃었다. 그때 방어는 「급하지 않은 일」
+    # 칸에 있었다.
+    #
+    # 터렛 한 대를 세우고 탄약을 채우는 데 몇 분이 든다. 닿은 뒤에 시작하면
+    # 세우는 동안 습격이 온다.
+    from settings import DEFEND_WHEN
+    check("far from the nests, defence can wait",
+          DEFEND_WHEN < 200)
+    check("and the threshold leaves time to build one",
+          DEFEND_WHEN >= 30, str(DEFEND_WHEN))
+
     # 굶고 있으면 새로 넣는 일보다 되살리는 일이 먼저다.
     #
     # 실측(181분째): 채굴기 28대 중 도는 것 0, 화로 27대 중 0. 연료 없이
