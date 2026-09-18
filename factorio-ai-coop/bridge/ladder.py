@@ -10,7 +10,7 @@ import math
 
 from typing import Any
 
-from settings import (BURNER_DRILLS, CHEST, DRILL, FIRST_PACKS, DRILLS_PER_AGENT, DRILLS_PER_FURNACE, DRILL_FUEL,
+from settings import (BURNER_DRILLS, CHEST, DRILL, FIRST_PACKS, DRILLS_PER_AGENT, DRILLS_PER_FURNACE, DRILL_FUEL, GROW_STEP,
                       ENGINES_PER_BOILER, FOCUS_ORDER, FURNACES_PER_DRILL,
                       FURNACE_FUEL, MAX_FURNACES, ORE_BATCH, PLATES_FOR_TOOLS,
                       SMELT_BATCH, SMELT_FOR_TECH, SMELT_MARGIN, STOCKPILE)
@@ -76,7 +76,29 @@ def drill_target(snap: Snapshot, crew: int) -> int:
     드릴 4대로 화로 23대를 채우려던 것이 지금까지의 상태였다.
     """
     furnaces = snap.buildings.get("stone-furnace", {}).get("count", 0)
+    drills = snap.buildings.get(DRILL, {}).get("count", 0)
+    # 화로만 보면 자라지 못한다.
+    #
+    # 실측(37분째): 채굴기 5대, 화로 6대. 그리고 이랬다:
+    #
+    #     채굴기 목표 = 화로 x 1.0 = 6
+    #     화로 목표   = 채굴기 x 1.0 = 5
+    #
+    # 서로가 서로의 상한이다. 둘 다 영원히 안 늘어난다. 비율은 맞는데
+    # 「비율만」 있으면 공장이 그 비율을 유지한 채 얼어붙는다.
+    #
+    # 그래서 한 걸음씩 앞서갈 여지를 준다. 늘려도 되는지는 다른 셋이
+    # 이미 지킨다 - 선 것이 도는가(worth_building), 공해가 여유 있는가
+    # (pollution_room), 자리가 있는가(자리표). 비율은 «방향»이지 «상한»이
+    # 아니어야 한다.
     wanted = math.ceil(furnaces * DRILLS_PER_FURNACE)
+    # 비율이 «딱 맞아떨어진» 때에만 한 걸음 내딛는다.
+    #
+    # 그때가 바로 교착이다 - 서로가 서로의 상한이라 둘 다 못 움직인다.
+    # 한쪽이 앞서 있으면(드릴 넷에 화로 하나) 그쪽은 안 키운다. 거기서
+    # 드릴을 더 놓는 것은 교착을 푸는 게 아니라 낭비를 늘리는 것이다.
+    if drills == wanted:
+        wanted = drills + GROW_STEP
     # 버너 시대에는 상한이 있다. 숙련자들의 권장치는 마흔 대 안팎인데 우리는
     # 161대를 세우고도 과학팩이 0개였다. 너비는 사슬을 대신하지 못한다.
     if not snap.knows("electric-mining-drill"):
@@ -95,7 +117,12 @@ def furnace_target(snap: Snapshot, crew: int) -> int:
     채굴기 수가 공급량이다. 둘 중 큰 쪽을 따라간다.
     """
     drills = snap.buildings.get(DRILL, {}).get("count", 0)
+    furnaces = snap.buildings.get("stone-furnace", {}).get("count", 0)
+    # 채굴기만 보면 자라지 못한다. drill_target 과 같은 이유다 - 둘이
+    # 서로의 상한이면 공장은 그 비율을 유지한 채 멈춘다.
     from_drills = math.ceil(drills * FURNACES_PER_DRILL)
+    if furnaces == from_drills:
+        from_drills = furnaces + GROW_STEP
     # 돌 화로도 석탄을 태운다. 채굴기와 같은 이유로 같이 깎인다.
     ceiling = int(MAX_FURNACES * pollution_room(snap)) or 1
     return max(1, min(ceiling, max(crew, from_drills)))

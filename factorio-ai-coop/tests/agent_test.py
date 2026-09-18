@@ -12,6 +12,7 @@ import mission  # noqa: E402
 # 각 이름을 «사는 곳»에서 부른다. agent.py 가 전부 다시 내보내주기는 하지만,
 # 여기서 그렇게 부르면 무엇이 어디로 갔는지 이 파일이 증언하지 못한다.
 from settings import (BURNER_DRILLS, DRILL, FIRST_PACKS, FOCUS_ORDER,  # noqa: E402
+                      MAX_FURNACES,
                       STUCK_STRIKES)
 from world import Snapshot  # noqa: E402
 from jobs import Job, errand_label  # noqa: E402
@@ -179,9 +180,25 @@ def main() -> int:
     settled = {**PLENTY, **ENOUGH,
                "lab": {"nearest": {"x": 4, "y": -4}, "nearest_dist": 6, "count": 1},
                "steam-engine": {"nearest": {"x": 20, "y": 20}, "nearest_dist": 28, "count": 1}}
-    check("and stops when there is nothing left to do",
-          next_goal(at(full, settled, CAN_TOOL), focus="copper-ore") is None,
-          str(next_goal(at(full, settled, CAN_TOOL), focus="copper-ore")))
+    # 비율이 맞아떨어진 5:5 는 «다 됐다»가 아니라 «다음 걸음»이다.
+    #
+    # 예전에는 여기서 할 일이 없다고 봤다. 그런데 그것이 교착이었다 -
+    # 채굴기 목표는 화로 수이고 화로 목표는 채굴기 수라, 비율이 맞는
+    # 순간 둘 다 영원히 안 늘어난다. 실측(37분째) 채굴기 5, 화로 6에서
+    # 공장이 얼어붙어 있었다.
+    check("a balanced five-on-five is a next step, not a finish line",
+          next_goal(at(full, settled, CAN_TOOL), focus="copper-ore") is not None)
+
+    # 정말로 할 일이 없는 세계는 «상한에 닿은» 세계다. 버너 한계까지
+    # 채우고 화로도 그만큼이면 그때 멈춘다.
+    capped = {**settled,
+              "burner-mining-drill": {**PLENTY["burner-mining-drill"],
+                                      "count": BURNER_DRILLS},
+              "stone-furnace": {**ENOUGH["stone-furnace"],
+                                "count": MAX_FURNACES}}
+    check("but the burner cap really is a finish line",
+          next_goal(at(full, capped, CAN_TOOL), focus="copper-ore") is None,
+          str(next_goal(at(full, capped, CAN_TOOL), focus="copper-ore")))
 
     print("\n3i. a standing engine is not power")
     dead = at(full, settled, CAN_TOOL, powered=False)
