@@ -12,7 +12,7 @@ from settings import (CHEST, DEPOT_MIN, DRILL, DRILL_FUEL, FOCUS_ORDER, FURNACE_
 from layout import nearest_to
 from world import Snapshot
 from jobs import Job, Step
-from ladder import STAGE_TARGET, _as_rows, chain_job
+from ladder import drill_target, STAGE_TARGET, _as_rows, chain_job
 from worker import Worker
 
 
@@ -89,10 +89,27 @@ class TendingMixin:
         else:
             worker_first = [worker.focus] + [o for o in order if o != worker.focus]
 
-        if snap.can_make(DRILL) or snap.have(DRILL) >= 1:
+        # 상한을 여기서도 본다.
+        #
+        # 이 한 줄이 지난 판을 망쳤다. 사다리(`plan`)는 버너 시대 상한
+        # 마흔 대에서 멈추는데, 「할 일이 비어」는 그 상한을 한 번도 안
+        # 봤다. 그래서 사다리가 그만하라고 한 뒤에도 무리는 계속 놓았다:
+        #
+        #     채굴기 157대 (상한 40)      중 도는 것 25대
+        #     화로 106대 (자리표 48)      중 도는 것  2대
+        #
+        # 그리고 그 남는 백스무 대가 캐지도 않으면서 연료를 태워 공해를
+        # 냈고, 그 공해가 둥지를 깨웠고, 습격에 화로 8대와 요원 하나를
+        # 잃었다. 「할 일이 없을 때 하는 일」이 판을 무너뜨린 것이다.
+        #
+        # 할 일이 없다는 것은 더 지으라는 뜻이 아니다.
+        drills = snap.buildings.get(DRILL, {}).get("count", 0)
+        room = drill_target(snap, len(self.workers) or 1) - drills
+        if room > 0 and (snap.can_make(DRILL) or snap.have(DRILL) >= 1):
             for ore in worker_first:
                 if snap.ore(ore):
-                    return Job(f"할 일이 비어 {ore} 채굴기를 하나 더 놓겠습니다.",
+                    return Job(f"할 일이 비어 {ore} 채굴기를 하나 더 놓겠습니다. "
+                               f"({drills + 1}/{drills + room}대)",
                                key=f"automate:{ore}:{worker.name}",
                                routine="automate", ore=ore,
                                needs={DRILL: 1})

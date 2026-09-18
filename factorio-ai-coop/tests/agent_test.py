@@ -11,7 +11,8 @@ import brain  # noqa: E402
 import mission  # noqa: E402
 # 각 이름을 «사는 곳»에서 부른다. agent.py 가 전부 다시 내보내주기는 하지만,
 # 여기서 그렇게 부르면 무엇이 어디로 갔는지 이 파일이 증언하지 못한다.
-from settings import FIRST_PACKS, FOCUS_ORDER, STUCK_STRIKES  # noqa: E402
+from settings import (BURNER_DRILLS, DRILL, FIRST_PACKS, FOCUS_ORDER,  # noqa: E402
+                      STUCK_STRIKES)
 from world import Snapshot  # noqa: E402
 from jobs import Job, errand_label  # noqa: E402
 from layout import (belt_pairs, carry_split, cluster,  # noqa: E402
@@ -863,6 +864,37 @@ def main() -> int:
           "first-packs" in [job.key for job in plan(with_lab(12, working=0))])
     check("once the packs are in a working lab it stops asking",
           "first-packs" not in [job.key for job in plan(with_lab(12, working=3))])
+
+    # 상한은 «모든 경로»에서 지켜야 한다.
+    #
+    # 지난 판을 망친 것이 이것이다. 사다리는 버너 시대 상한 마흔 대에서
+    # 멈추는데, 「할 일이 비어 하나 더 놓겠습니다」가 그 상한을 안 봤다.
+    # 그래서 채굴기가 157대, 화로가 106대까지 갔고, 남는 백스무 대가
+    # 캐지도 않으면서 연료를 태워 공해를 냈다. 그 공해가 둥지를 깨웠고
+    # 습격에 화로 8대와 요원 하나를 잃었다.
+    #
+    # 규칙을 한 곳에 적고 다른 곳에서 안 보면 규칙이 없는 것과 같다.
+    packed = Snapshot(x=0, y=0, researched=set(),
+                      buildings={"stone-furnace": {"count": 300},
+                                 DRILL: {"count": BURNER_DRILLS}})
+    check("the burner cap leaves no room once it is reached",
+          drill_target(packed, crew=8) - BURNER_DRILLS <= 0,
+          str(drill_target(packed, crew=8)))
+
+    # 자리표가 다 찼으면 화로를 «안» 놓는다. 예전에는 빈 자리가 없으면
+    # 번호로 계산해서 그냥 놓았고, 그것이 마흔여덟 칸짜리 자리표에 화로
+    # 백여섯 대가 선 경로다.
+    seated = Snapshot(
+        x=0, y=0, researched=ALL_TECH, powered=True, working_labs=1,
+        items={"stone-furnace": 5, "coal": 99},
+        smelter={"x": 10, "y": 10}, next_furnace=None,
+        buildings={"stone-furnace": {"count": 48, "nearest": {"x": 10, "y": 10},
+                                     "nearest_dist": 2,
+                                     "spots": [{"x": 10, "y": 10, "distance": 2}]},
+                   DRILL: {"count": 40}})
+    check("a full seat map stops the furnace line",
+          not any(j.key.startswith("furnace:") for j in plan(seated, crew=8)),
+          str([j.key for j in plan(seated, crew=8)][:4]))
 
     # 소모품을 «가지고 있는가»로 물으면 사다리가 굴러떨어진다.
     #

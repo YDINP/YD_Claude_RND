@@ -288,11 +288,24 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
             corner = snap.smelter or {
                 "x": min(f["x"] for f in furnaces),
                 "y": min(f["y"] for f in furnaces)}
-            seat = snap.next_furnace or furnace_seat(corner, nth)
-            jobs.append(Job(f"화로를 하나 더 놓겠습니다 ({nth + 1}번째).",
-                            key=f"furnace:{nth}", steps=[
-                                ("build", {"name": "stone-furnace",
-                                           **seat, "snap": True})]))
+            # 빈 자리가 없으면 «안 놓는다».
+            #
+            # 예전에는 없으면 번호로 계산해서 그냥 놓았다. 자리표가 마흔여덟
+            # 칸인데 화로가 백여섯 대가 된 경로가 바로 이 한 줄이다. 그리고
+            # 남는 쉰여덟 대는 광석을 못 받아 서 있으면서 연료만 태웠다.
+            #
+            # 자리가 없다는 것은 자리를 새로 지어내라는 뜻이 아니라 이미
+            # 충분하다는 뜻이다. 노란 벨트 한 줄이 먹일 수 있는 화로가
+            # 마흔여덟 대다.
+            seat = snap.next_furnace
+            if seat is None and not snap.smelter:
+                # 제련 구역이 아직 없는 초반에만 번호로 자리를 잡는다.
+                seat = furnace_seat(corner, nth)
+            if seat:
+                jobs.append(Job(f"화로를 하나 더 놓겠습니다 ({nth + 1}번째).",
+                                key=f"furnace:{nth}", steps=[
+                                    ("build", {"name": "stone-furnace",
+                                               **seat, "snap": True})]))
         elif snap.can_make("stone-furnace"):
             jobs.append(Job("화로를 하나 더 만들겠습니다.", key=f"furnace:{nth}",
                             needs={"stone": 5},
