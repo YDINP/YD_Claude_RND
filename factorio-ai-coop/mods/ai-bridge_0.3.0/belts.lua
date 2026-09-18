@@ -586,16 +586,50 @@ end
 -- 흐름 전체를 한눈에. 부르는 쪽은 «아직 안 끝난 첫 흐름»을 집으면 된다.
 -- 밭에서 유통 구역까지. 밭마다 한 줄씩.
 --
--- 채굴기는 앞 칸에 떨구고 그 칸에 상자가 있다. 그 상자에서 벨트로 올리는
--- 데는 인서터가 필요하다 - 상자는 스스로 벨트에 못 얹는다. 들어오는 쪽에서
--- 이미 한 번 겪은 함정이고, 여기서도 같다.
+-- 사용자가 사진과 함께 짚었다: "이러면 벨트를 깐 이유가 없는데".
+-- 채굴기가 상자에 떨구고 그 옆에서 벨트가 비어 흘러가고 있었다. 실측:
 --
--- 가장 큰 밭부터 잇는다. 한 줄로 가장 많이 실어 오는 밭이 그 줄의 값어치를
--- 가장 빨리 갚는다.
+--     채굴기 71,6   가장 가까운 벨트 73,5  (3타일)
+--     채굴기 75,5   가장 가까운 벨트 73,4  (2타일)
+--     채굴기 77,4   가장 가까운 벨트 73,3  (4타일)
+--
+-- 길이 밭을 «지나가지» 않고 밭 «옆에서 출발»했기 때문이다. 밭 오른쪽
+-- 두 칸 밖에서 유통 구역으로 곧장 갔다. 그러면 채굴기는 그 길에 못 닿는다.
+--
+-- 버너 채굴기는 인서터 없이 벨트에 직접 떨구는데, 떨구는 칸은 제 몸
+-- 바로 옆 한 칸이다. 그러니 벨트가 «그 칸을 지나야» 한다. 채굴기를
+-- 벨트 쪽으로 옮길 수는 없다 - 채굴기는 광석 위에 서야 하니까.
+--
+-- 그래서 길이 채굴기를 찾아간다. 채굴기마다 떨구는 칸을 하나씩 정하고,
+-- 그 칸들을 차례로 잇고, 마지막을 유통 구역에 붙인다.
+local function drop_tile(at, dir)
+  if dir == defines.direction.north then return { x = at.x, y = at.y - 2 } end
+  if dir == defines.direction.south then return { x = at.x, y = at.y + 2 } end
+  if dir == defines.direction.east then return { x = at.x + 2, y = at.y } end
+  return { x = at.x - 2, y = at.y }
+end
+
+-- 이 채굴기가 벨트를 놓을 수 있는 칸들. 가까운 쪽부터.
+local function drop_seats(surface, force, drill, toward)
+  local seats = {}
+  for _, dir in pairs({ defines.direction.north, defines.direction.south,
+                        defines.direction.east, defines.direction.west }) do
+    local tile = drop_tile(drill.position, dir)
+    tile.x, tile.y = math.floor(tile.x), math.floor(tile.y)
+    if passable(surface, force, tile.x, tile.y) then
+      tile.gap = math.abs(tile.x - toward.x) + math.abs(tile.y - toward.y)
+      seats[#seats + 1] = tile
+    end
+  end
+  table.sort(seats, function(p, q) return p.gap < q.gap end)
+  return seats
+end
+
 local function field_lines(name, limit)
   local a = agent(name)
   local b = body(a)
   if not b then return { error = "no such agent: " .. tostring(name) } end
+  local surface, force = b.surface, b.force
   local here = zones(name)
   if not here.depot then return { error = "no depot zone yet" } end
   local fields = here.fields or {}
@@ -603,22 +637,46 @@ local function field_lines(name, limit)
 
   local head = depot_ends(here.depot)
   local parts, first_from = {}, nil
+
   for n = 1, math.min(#fields, 3) do
     local field = fields[n]
-    local from = { x = field.right + 2, y = field.y }
-    local tiles = route_for("field" .. n, b.surface, b.force, from, head)
-    if tiles then
-      first_from = first_from or from
-      parts[#parts + 1] = { tag = "f" .. n, what = BELT, tiles = tiles }
-      -- 줄머리에 인서터 하나. 상자에서 집어 벨트에 얹는다.
-      parts[#parts + 1] = { tag = "f" .. n .. "arm", what = ARM,
-                            tiles = { { x = from.x - 1, y = from.y,
-                                        dir = defines.direction.west } } }
+    local drills = surface.find_entities_filtered {
+      area = { { field.left - 3, field.top - 3 },
+               { field.right + 3, field.bottom + 3 } },
+      type = "mining-drill", force = force,
+    }
+    if #drills > 0 then
+      -- 유통 구역에서 «먼» 것부터 잇는다. 벨트는 먼 데서 가까운 데로 흐른다.
+      table.sort(drills, function(p, q)
+        local dp = math.abs(p.position.x - head.x) + math.abs(p.position.y - head.y)
+        local dq = math.abs(q.position.x - head.x) + math.abs(q.position.y - head.y)
+        return dp > dq
+      end)
+
+      local stops = {}
+      for _, drill in pairs(drills) do
+        local seats = drop_seats(surface, force, drill, head)
+        if seats[1] then stops[#stops + 1] = seats[1] end
+      end
+      stops[#stops + 1] = head
+
+      -- 정거장들을 차례로 잇는다. 한 구간이라도 못 이으면 거기서 끊고
+      -- 나머지는 다음에 - 반쯤 이어진 길도 광석을 나른다.
+      local tiles = {}
+      for i = 1, #stops - 1 do
+        local leg = walk(surface, force, stops[i], stops[i + 1])
+        if not leg then break end
+        for _, one in ipairs(leg) do tiles[#tiles + 1] = one end
+      end
+      if #tiles > 0 then
+        first_from = first_from or stops[1]
+        parts[#parts + 1] = { tag = "f" .. n, what = BELT, tiles = tiles }
+      end
     end
   end
-  if #parts == 0 then return { error = "no route from any field to the depot" } end
+  if #parts == 0 then return { error = "no drill to collect from yet" } end
 
-  local todo, standing, want = gather(b.surface, b.force, parts)
+  local todo, standing, want = gather(surface, force, parts)
   local mine, stuck = cut(todo, limit)
   return {
     todo = mine, left = #todo, stuck = stuck,
