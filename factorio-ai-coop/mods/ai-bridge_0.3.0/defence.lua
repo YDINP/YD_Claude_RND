@@ -289,7 +289,15 @@ local function defence(name)
     -- 아무것도 못 했다.
     want = want_turrets,
     armed = armed,
-    debt = math.max(0, want_turrets - armed),
+    -- 갚을 수 있을 때만 빚이다.
+    --
+    -- 연구가 안 끝났으면 총을 못 세운다. 그때도 빚으로 세면 성장이
+    -- 영원히 멈추는데, 정작 갚을 방법이 없다. 그것은 빚이 아니라 벌이다.
+    --
+    -- 그때 할 일은 총을 세우는 것이 아니라 «연구를 끝내는 것»이고,
+    -- 연구는 공장이 돌아야 끝난다.
+    debt = force.technologies[TURRET].researched
+           and math.max(0, want_turrets - armed) or 0,
     -- 굶은 터렛과 그 자리. 총을 더 놓는 것보다 먼저다.
     starved = starved, rounds = rounds,
     fill = AMMO_FILL,

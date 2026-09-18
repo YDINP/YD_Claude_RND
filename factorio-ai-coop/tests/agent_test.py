@@ -938,6 +938,24 @@ def main() -> int:
           drill_target(owing(99), crew=8) >= len(FOCUS_ORDER),
           str(drill_target(owing(99), crew=8)))
 
+    # 갚을 수 없는 빚은 빚이 아니라 벌이다.
+    #
+    # 실측(새 판 13분째): gun-turret 연구가 안 끝났는데(can_turret False)
+    # 빚이 2로 잡혀 있었다. 그대로 두면 성장이 영원히 멈추는데, 정작 총을
+    # 세울 방법이 없다. 그때 할 일은 총을 세우는 것이 아니라 연구를 끝내는
+    # 것이고, 연구는 공장이 돌아야 끝난다.
+    #
+    # 이 판단은 게임 쪽(defence.lua)에서 한다 - 연구 상태를 아는 곳이
+    # 거기다. 여기서는 그 규칙이 지켜지는지 «형태»로 본다.
+    _dl = open(os.path.join(os.path.dirname(__file__), "..", "mods",
+                            "ai-bridge_0.3.0", "defence.lua"),
+               encoding="utf-8").read()
+    _at = _dl.find("debt = ")
+    _rule = _dl[_at:_at + 200] if _at >= 0 else ""
+    check("an unpayable defence debt is not charged",
+          "researched" in _rule,
+          _rule.split(",")[0][:70] if _rule else "debt 를 못 찾음")
+
     # 공해가 둥지에 닿아가면 방어가 급한 일이 된다.
     #
     # 실측(지난 판): 여유 13타일에서 터렛 2대, 탄약 0. 화로 11대, 채굴기
