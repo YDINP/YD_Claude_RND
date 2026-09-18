@@ -397,13 +397,15 @@ local function blind_drills(name, radius)
     if d.drop_target == nil then
       total = total + 1
       local ore = d.mining_target
-      local seat = furnace_over(b.surface, b.force, d.drop_position)
+      local seat, litter = furnace_over(b.surface, b.force,
+                                          d.drop_position)
       if seat then
         out[#out + 1] = {
           x = d.position.x, y = d.position.y,
           ore = (ore and ore.valid) and ore.name or nil,
-          seat = seat, stuck = d.status == defines.entity_status
-                                .waiting_for_space_in_destination or nil,
+          seat = seat, litter = litter or nil,
+          stuck = d.status == defines.entity_status
+                              .waiting_for_space_in_destination or nil,
           distance = math.floor(Tasks.dist(b.position, d.position) * 10) / 10,
         }
       end

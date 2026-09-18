@@ -467,6 +467,10 @@ class Agent:
     def mine(self, x: float, y: float, count: int = 10, **kw: Any) -> dict:
         return self.run("mine", x=x, y=y, count=count, **kw)
 
+    def sweep(self, x: float, y: float, radius: int = 3, **kw: Any) -> dict:
+        """바닥에 흩어진 것을 줍는다. 치우는 일이면서 동시에 거두는 일이다."""
+        return self.run("sweep", x=x, y=y, radius=radius, **kw)
+
     def place(self, name: str, x: float, y: float, direction: int = 0, **kw: Any) -> dict:
         return self.run("build", name=name, x=x, y=y, direction=direction, **kw)
 

@@ -840,4 +840,58 @@ M.demolish = {
   end,
 }
 
+
+------------------------------------------------------------------- sweep
+
+-- 바닥에 흩어진 것을 줍는다.
+--
+-- 출구가 없는 채굴기는 캔 것을 땅에 떨군다. 실측하니 채굴기 아흔두 대 중
+-- 예순여덟 대가 그 상태였고, 그 앞에 화로를 놓으려 하자 can_place_entity 가
+-- 전부 거절했다 - 막고 있는 것이 «item-on-ground» 였다. 바닥의 광석이 제
+-- 출구를 스스로 막고 있었던 셈이다.
+--
+-- 그러니 줍는 것은 치우는 일이면서 동시에 거두는 일이다. 광석은 광석이다.
+M.sweep = {
+  start = function(ctx)
+    local p = ctx.task.params
+    ctx.task.state.spot = { x = p.x, y = p.y }
+    ctx.task.state.reach = p.radius or 3
+    ctx.task.state.taken = 0
+    return "running"
+  end,
+
+  step = function(ctx)
+    local st, bot = ctx.task.state, ctx.bot
+
+    if dist(bot.position, st.spot) > bot.resource_reach_distance - 0.5 then
+      local travel = approach(ctx, st.spot,
+                              math.max(0.8, bot.resource_reach_distance - 1.0))
+      if travel == "failed" then
+        halt(bot)
+        return "failed"
+      end
+      return "running"
+    end
+    halt(bot)
+
+    -- 손이 닿는 것만 줍는다. 한 틱에 몇 개씩 - 채굴기 하나 앞에 수백 개가
+    -- 쌓여 있어서, 전부 한 번에 집으면 그 틱이 길어진다.
+    local reach = math.min(st.reach, bot.resource_reach_distance)
+    local litter = ctx.surface.find_entities_filtered {
+      position = bot.position, radius = reach, type = "item-entity",
+    }
+    if #litter == 0 then
+      ctx.task.result = { swept = st.taken, x = st.spot.x, y = st.spot.y }
+      return "done"
+    end
+    for i = 1, math.min(#litter, 16) do
+      local e = litter[i]
+      if e.valid and pcall(function() bot.mine_entity(e) end) then
+        st.taken = st.taken + 1
+      end
+    end
+    return "running"
+  end,
+}
+
 return M

@@ -217,6 +217,19 @@ class MiningMixin:
             worker.block(key)
             return
         try:
+            # 자리를 막고 있는 것이 바닥의 광석뿐이면, 줍는 것이 치우는
+            # 일이면서 동시에 거두는 일이다. 실측하니 후보 자리 여든네 곳이
+            # 전부 item-on-ground 때문에 거절당하고 있었다.
+            if at.get("litter"):
+                try:
+                    got = worker.handle.sweep(seat["x"], seat["y"], radius=3,
+                                              timeout=300)
+                    self.say(f"({at['x']:.0f}, {at['y']:.0f}) 앞에 떨어져 있던 "
+                             f"광석 {int(got.get('swept') or 0)}개를 주웠습니다. "
+                             f"이제 화로를 놓을 자리가 납니다.", who=name)
+                except TaskFailed:
+                    pass
+
             if not self.obtain(worker, "stone-furnace", 1):
                 self.ask_for(worker, "stone-furnace", 1,
                              "출구가 막힌 채굴기 앞에 놓을 화로")

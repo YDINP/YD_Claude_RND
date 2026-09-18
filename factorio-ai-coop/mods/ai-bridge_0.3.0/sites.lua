@@ -709,24 +709,61 @@ end
 -- 돌화로 0.3125/s 이므로 한 대에 한 대가 맞다.
 --
 -- 돌화로는 2x2 라 중심이 정수 좌표다. 떨구는 칸을 덮는 중심은 넷 중 하나다.
-local function furnace_over(surface, force, drop)
-  local tx, ty = math.floor(drop.x), math.floor(drop.y)
-  for _, seat in pairs({ { x = tx, y = ty }, { x = tx + 1, y = ty },
-                         { x = tx, y = ty + 1 }, { x = tx + 1, y = ty + 1 } }) do
-    if surface.can_place_entity {
-      name = "stone-furnace", position = seat, force = force,
-    } then
-      -- 정말 그 칸을 덮는지 확인한다. 덮지 않으면 채굴기는 여전히 허공에
-      -- 떨군다 - 「놓기는 놓았는데 안 이어진」 것이 이 저장소의 단골 실수다.
-      local box = { { seat.x - 1, seat.y - 1 }, { seat.x + 1, seat.y + 1 } }
-      if drop.x >= box[1][1] and drop.x <= box[2][1]
-         and drop.y >= box[1][2] and drop.y <= box[2][2] then
-        return seat
+-- 이 칸에 돌화로를 놓을 수 있는가. 「지금 당장」과 「치우면」을 갈라 답한다.
+--
+-- 실측(2026-09-18): 눈먼 채굴기 스물한 대에 대해 후보 자리 여든네 곳을
+-- 물었더니 can_place_entity 가 전부 거절했다. 막고 있던 것은 다름 아닌
+-- «item-on-ground» - 그 채굴기들이 땅에 떨군 광석이었다. 바닥의 광석이 제
+-- 출구를 스스로 막고 있었던 셈이다.
+--
+-- 줍고 나면 놓을 수 있으니, 그건 「자리가 없다」가 아니라 「치울 일이 있다」다.
+local function seat_ok(surface, force, seat)
+  if surface.can_place_entity {
+    name = "stone-furnace", position = seat, force = force,
+  } then
+    return true, false
+  end
+  -- 물 위라면 치워도 못 놓는다.
+  for tx = seat.x - 1, seat.x do
+    for ty = seat.y - 1, seat.y do
+      local tile = surface.get_tile(tx, ty)
+      if tile and tile.valid and string.find(tile.name, "water") then
+        return false, false
       end
     end
   end
+  -- 바닥에 흩어진 것 말고 다른 것이 막고 있으면 정말 자리가 없는 것이다.
+  for _, e in pairs(surface.find_entities_filtered {
+    area = { { seat.x - 1, seat.y - 1 }, { seat.x + 1, seat.y + 1 } },
+  }) do
+    if e.type ~= "item-entity" and e.type ~= "resource"
+       and e.type ~= "character" then
+      return false, false
+    end
+  end
+  return true, true
+end
+
+local function furnace_over(surface, force, drop)
+  local tx, ty = math.floor(drop.x), math.floor(drop.y)
+  local litter_seat = nil
+  for _, seat in pairs({ { x = tx, y = ty }, { x = tx + 1, y = ty },
+                         { x = tx, y = ty + 1 }, { x = tx + 1, y = ty + 1 } }) do
+    -- 정말 그 칸을 덮는지 먼저 본다. 덮지 않으면 채굴기는 여전히 허공에
+    -- 떨군다 - 「놓기는 놓았는데 안 이어진」 것이 이 저장소의 단골 실수다.
+    local box = { { seat.x - 1, seat.y - 1 }, { seat.x + 1, seat.y + 1 } }
+    if drop.x >= box[1][1] and drop.x <= box[2][1]
+       and drop.y >= box[1][2] and drop.y <= box[2][2] then
+      local ok, litter = seat_ok(surface, force, seat)
+      if ok and not litter then return seat, false end
+      if ok and not litter_seat then litter_seat = seat end
+    end
+  end
+  -- 당장 비어 있는 자리가 없으면, 주우면 되는 자리라도 준다.
+  if litter_seat then return litter_seat, true end
   return nil
 end
+
 
 return {
   DIRECTIONS = DIRECTIONS,
@@ -741,6 +778,7 @@ return {
   drop_tile = drop_tile,
   fuel_rig = fuel_rig,
   furnace_over = furnace_over,
+  seat_ok = seat_ok,
   outlet_ok = outlet_ok,
   richness = richness,
   set_recipe = set_recipe,
