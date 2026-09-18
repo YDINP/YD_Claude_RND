@@ -252,6 +252,51 @@ remote.add_interface("ai", {
     return spawn_at(name, force_name, anchor, nil)
   end,
 
+  -- 죽은 요원은 누가 되살려주는가.
+  --
+  -- 사용자 지시: "캐릭터가 사망한 에이전트가 계속 작업을 시도함"
+  --
+  -- 맞다. 죽으면 `drive_agent` 가 태스크를 실패시키고 대기줄을 비운다.
+  -- 거기까지다. 몸이 없는 요원에게 무리는 계속 일을 준다. 일은 계속
+  -- 실패하고, 실패했으니 다시 주고 - 그렇게 영원히 돈다.
+  --
+  -- 태스크를 실패시키는 것과 요원을 되살리는 것은 다른 일이다. 앞의 것만
+  -- 해놓고 뒤의 것이 없으면 「조용히 아무것도 안 되는」 상태가 된다.
+  --
+  -- 살아 있으면 아무것도 안 한다. 죽었으면 기지에서 다시 세운다 - 죽은
+  -- 자리에서 세우면 죽인 것 옆에서 다시 시작하는 셈이다.
+  alive = function(name)
+    local a = agent(name)
+    if not a then return { error = "no such agent: " .. tostring(name) } end
+    local b = body(a)
+    if b then
+      return { alive = true, x = b.position.x, y = b.position.y }
+    end
+    return { alive = false }
+  end,
+
+  revive = function(name)
+    local a = agent(name)
+    if not a then return { error = "no such agent: " .. tostring(name) } end
+    if body(a) then return { alive = true, revived = false } end
+
+    local home = (base() or {}).home
+    local anchor = home and { home.x, home.y } or { 0, 0 }
+    -- 기지를 모르면 살아 있는 동료 옆에서. 그것도 없으면 원점이다.
+    if not home then
+      for _, other in ipairs(storage.order) do
+        local ob = body(storage.agents[other])
+        if ob then anchor = ob.position break end
+      end
+    end
+
+    local out = spawn_at(name, "player", anchor, nil)
+    if out and out.error then return out end
+    local b = body(agent(name))
+    return { alive = b ~= nil, revived = true,
+             x = b and b.position.x, y = b and b.position.y }
+  end,
+
   remove = function(name)
     local a = agent(name)
     if not a then return { error = "no such agent: " .. tostring(name) } end

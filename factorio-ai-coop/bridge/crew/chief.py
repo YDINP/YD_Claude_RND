@@ -47,9 +47,53 @@ CHIEF_SHARE = 0.5
 # 반장이 사슬을 다시 보는 주기(초). 사슬은 분 단위로 움직인다.
 CHIEF_EVERY = 90.0
 
+# 점호 주기(초). 사슬보다 자주 본다 - 죽은 채로 도는 요원은 그동안
+# 아무것도 안 하는 것이 아니라 «실패를 쌓는다».
+MUSTER_EVERY = 25.0
+
 
 class ChiefMixin:
     """반장 - 사슬에서 끊긴 칸을 찾아 그쪽으로 사람을 몰아준다."""
+
+    def muster(self) -> None:
+        """죽은 요원을 되살린다. 일을 나눠주기 «전»에 한다.
+
+        사용자 지시: "캐릭터가 사망한 에이전트가 계속 작업을 시도함".
+
+        맞다. 게임 쪽은 죽은 요원의 태스크를 실패시키고 대기줄을 비우는
+        데까지만 한다. 몸이 없는 요원에게 무리는 계속 일을 준다. 일은
+        계속 실패하고, 실패했으니 다시 주고 - 그렇게 영원히 돈다. 로그가
+        "take 실패: character died or was removed" 로 가득 찼던 이유다.
+
+        태스크를 실패시키는 것과 요원을 되살리는 것은 다른 일이다. 앞의
+        것만 해놓고 뒤의 것이 없으면 「조용히 아무것도 안 되는」 상태가
+        된다 - 이 저장소가 가장 자주 만드는 종류의 버그다.
+
+        점호는 배차보다 먼저다. 시체에게 일을 나눠줄 수는 없다.
+        """
+        now = time.monotonic()
+        if now - getattr(self, "_mustered_at", 0.0) < MUSTER_EVERY:
+            return
+        self._mustered_at = now
+
+        for worker in list(self.workers.values()):
+            try:
+                if (self.bridge.alive(worker.name) or {}).get("alive"):
+                    continue
+                back = self.bridge.revive(worker.name)
+            except RconError:
+                continue
+            if back.get("error") or not back.get("alive"):
+                continue
+            # 새 몸은 빈손이다. 들고 있던 것은 시체와 함께 땅에 있고,
+            # 옛 판단은 그 몸에 매여 있었다.
+            worker.blocked.clear()
+            worker.job_key = None
+            worker.watching = []
+            worker.lost_at, worker.lost_count = None, 0
+            self.release(worker)
+            self.say(f"{worker.name}이(가) 쓰러져 있었습니다. 기지에서 "
+                     f"다시 세웠습니다.")
 
     def steer(self) -> None:
         now = time.monotonic()

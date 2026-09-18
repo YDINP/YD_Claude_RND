@@ -34,6 +34,7 @@ class FactoryMixin:
         "belt":    lambda crew, worker, at: crew.lay_belt(worker, at),
         "science": lambda crew, worker, at: crew.build_science(worker, at),
         "packs":   lambda crew, worker, at: crew.first_packs(worker, at),
+        "arm":     lambda crew, worker, at: crew.arm_turret(worker, at),
         "stoke":   lambda crew, worker, at: crew.stoke(worker, at),
         "wire":    lambda crew, worker, at: crew.run_wire(worker, at),
         "line":    lambda crew, worker, at: crew.lay_line(worker, at),
@@ -283,6 +284,31 @@ class FactoryMixin:
             return None
         if wall.get("error") or not wall.get("can_turret"):
             return None
+
+        # 굶은 총부터 먹인다. 총을 더 놓는 것보다 먼저다.
+        #
+        # 실측(습격 직후): 터렛 다섯 대 중 둘이 탄약 0, 탄약 누적 생산 0.
+        # 세상에 있는 스물아홉 발은 전부 시작 재고였다. 한 번도 만든 적이
+        # 없다. 그 습격에 화로 8대, 벨트 19칸, 그리고 요원 하나를 잃었다.
+        #
+        # 총알 없는 터렛은 세우지 않은 것과 같다. 여섯 번째 총을 세우는
+        # 것보다 둘째와 다섯째 총을 먹이는 것이 싸고 빠르다.
+        starved = _as_rows(wall.get("starved"))
+        if starved:
+            taken = self.taken()
+            fill = int(wall.get("fill") or TURRET_AMMO)
+            for spot in starved:
+                key = "arm:%.0f,%.0f" % (spot["x"], spot["y"])
+                if key in taken:
+                    continue
+                return Job(
+                    f"터렛에 탄약이 {int(spot.get('ammo') or 0)}발뿐입니다. "
+                    f"{fill}발을 채우겠습니다. "
+                    f"({spot['x']:.0f}, {spot['y']:.0f})",
+                    key=key, routine="arm",
+                    needs={"firearm-magazine": fill},
+                    at={"x": spot["x"], "y": spot["y"]})
+
         if int(wall.get("turrets") or 0) >= TURRET_TARGET:
             return None
         seats = _as_rows(wall.get("seats"))
@@ -304,3 +330,31 @@ class FactoryMixin:
                 key=key, routine="defend", at=seat)
         return None
 
+    def arm_turret(self, worker: Worker, at: dict) -> None:
+        """터렛 하나에 탄약을 채운다. 없으면 만든다.
+
+        탄창 하나가 철판 넉 장이다. 철판은 창고에 이만 장이 있는데 탄약은
+        한 발도 만든 적이 없었다 - 재료가 없어서가 아니라 아무도 그 일을
+        시키지 않아서다.
+        """
+        name = worker.name
+        want = int(at.get("fill") or TURRET_AMMO)
+        if not self.obtain(worker, "firearm-magazine", want):
+            # 다 못 구했어도 있는 만큼은 넣는다. 스무 발을 못 구했다고
+            # 다섯 발도 안 넣으면 그 총은 계속 빈 총이다.
+            try:
+                hand = (self.bridge.call("inventory", name).get("items") or {})
+            except RconError:
+                hand = {}
+            want = int(hand.get("firearm-magazine") or 0)
+        if want <= 0:
+            self.say(f"탄약을 못 구했습니다. 철판 {TURRET_AMMO * 4}장이 필요합니다.",
+                     who=name)
+            worker.block("arm", BACKOFF_SECONDS)
+            return
+        try:
+            worker.handle.insert("firearm-magazine", want, at["x"], at["y"], timeout=600)
+        except TaskFailed as exc:
+            self.say(f"탄약을 못 넣었습니다: {exc.task.get('error')}", who=name)
+            return
+        self.say(f"터렛에 탄약 {want}발을 채웠습니다.", who=name)

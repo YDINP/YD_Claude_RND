@@ -348,6 +348,14 @@ class AIBridge:
         """한 흐름의 다음 할 일."""
         return self.call("flow_plan", agent, which, limit)
 
+    def alive(self, agent: str) -> dict:
+        """이 요원에게 몸이 있는가."""
+        return self.call("alive", agent)
+
+    def revive(self, agent: str) -> dict:
+        """죽은 요원을 기지에서 다시 세운다. 살아 있으면 아무것도 안 한다."""
+        return self.call("revive", agent)
+
     def claim_work(self, agent: str, which: str, count: int = 20) -> dict:
         """설계에서 내 몫을 받아온다. 남이 집어간 칸은 안 온다."""
         return self.call("claim_work", agent, which, count)

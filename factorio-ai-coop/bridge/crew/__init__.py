@@ -152,7 +152,9 @@ class Crew(ChiefMixin, RosterMixin, TalkMixin, SupplyMixin,
                 continue
 
             # 남이 나에게 부탁하려면 내가 뭘 쥐고 있는지 알아야 한다.
-            # 반장이 먼저 사슬을 본다. 끊긴 데가 바뀌었으면 사람을 돌린다.
+            # 점호가 먼저다. 시체에게 일을 나눠줄 수는 없다.
+            self.muster()
+            # 그다음 반장이 사슬을 본다. 끊긴 데가 바뀌었으면 사람을 돌린다.
             self.steer()
             self.stock[worker.name] = dict(snap.items)
             self.announce_stage(snap)

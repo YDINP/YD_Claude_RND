@@ -17,6 +17,11 @@ local zones = Zones.zones
 local TURRET = "gun-turret"
 local WALL = "stone-wall"
 local AMMO = "firearm-magazine"
+-- 이 아래로 떨어진 터렛은 굶은 것으로 친다. 한 탄창이 열 발이고, 작은
+-- 바이터 한 마리에 서너 발이 든다.
+local AMMO_FLOOR = 5
+-- 한 번 채울 때 이만큼. 터렛 탄약칸은 한 칸에 200발까지 들어간다.
+local AMMO_FILL = 20
 
 -- 방어선을 구역 테두리에서 이만큼 밖에 세운다. 터렛 사거리가 18이므로,
 -- 이만큼 띄우면 터렛이 공장에 닿기 전에 적을 잡는다.
@@ -120,6 +125,25 @@ local function defence(name)
   local reach, at_home = pollution_reach(surface, home, nearest)
 
   local turrets = surface.find_entities_filtered { name = TURRET, force = force }
+
+  -- 빈 총은 없는 총이다.
+  --
+  -- 실측(습격 직후): 터렛 다섯 대 중 둘이 탄약 0 이었고, 탄약 누적 생산은
+  -- 0 이었다. 세상에 있는 스물아홉 발은 전부 시작 재고다. 한 번도 만든
+  -- 적이 없다.
+  --
+  -- 세우고 잊는 것 - 채굴기에서도 화로에서도 겪은 그것이다. 이번에는
+  -- 값이 더 비쌌다: 화로 8대, 벨트 19칸, 그리고 요원 하나를 잃었다.
+  local starved, rounds = {}, 0
+  for _, t in pairs(turrets) do
+    local inv = t.get_inventory(defines.inventory.turret_ammo)
+    local have = inv and inv.get_item_count(AMMO) or 0
+    rounds = rounds + have
+    if have < AMMO_FLOOR then
+      starved[#starved + 1] = { x = math.floor(t.position.x),
+                                y = math.floor(t.position.y), ammo = have }
+    end
+  end
   local seats = (box and side) and turret_seats(surface, force, box, side) or {}
 
   -- 이미 터렛이 선 자리는 뺀다.
@@ -140,6 +164,9 @@ local function defence(name)
     -- 공해가 둥지까지 몇 타일 남았는가. 0 이하면 이미 닿았다.
     slack = nearest and (nearest.gap - reach) or nil,
     turrets = #turrets,
+    -- 굶은 터렛과 그 자리. 총을 더 놓는 것보다 먼저다.
+    starved = starved, rounds = rounds,
+    fill = AMMO_FILL,
     walls = #surface.find_entities_filtered { name = WALL, force = force },
     seats = want,
     can_turret = force.technologies[TURRET].researched,
