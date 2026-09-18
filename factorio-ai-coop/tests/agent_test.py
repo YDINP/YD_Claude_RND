@@ -12,7 +12,7 @@ import mission  # noqa: E402
 from agent import (FOCUS_ORDER, STAGE_TARGET, STUCK_STRIKES,  # noqa: E402
                    Crew, Job, errand_label,
                    spread_sites, worth_building, chain_job, nearest_to,
-                   carry_split, belt_pairs,  # noqa: E402
+                   carry_split, belt_pairs, furnace_seat,  # noqa: E402
                    Snapshot, chain_job, cluster, interleave, missing_item,
                    next_goal, plan)
 
@@ -817,6 +817,21 @@ def main() -> int:
               [{"x": 0, "y": 0}, {"x": 1, "y": 0}],
               [{"x": 5, "y": 0}, {"x": 7, "y": 0}])]))
     check("nothing starving means nothing to lay", belt_pairs(stuck, []) == [])
+
+    print("\n27. furnaces make a block, not a parade")
+    home = {"x": 52, "y": 16}
+    check("the first six fill one row",
+          [furnace_seat(home, n)["y"] for n in range(6)] == [16] * 6)
+    check("the seventh drops to the next row",
+          furnace_seat(home, 6) == {"x": 52, "y": 20},
+          str(furnace_seat(home, 6)))
+    # 예전에는 열아홉 대째가 첫 화로에서 274타일 밖에 섰다.
+    far = furnace_seat(home, 19)
+    check("the twentieth is still within twenty tiles",
+          abs(far["x"] - home["x"]) <= 20 and abs(far["y"] - home["y"]) <= 20,
+          str(far))
+    check("sixty furnaces fit in a block, not a line",
+          max(abs(furnace_seat(home, n)["x"] - home["x"]) for n in range(60)) <= 24)
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

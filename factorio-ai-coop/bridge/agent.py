@@ -312,6 +312,34 @@ def nearest_to(spots: list[dict], at: dict, least: int = 0,
     return None
 
 
+# 화로 한 줄에 몇 대까지, 그리고 대 사이 간격.
+#
+# 간격 4는 전기 화로(3x3)로 바꿀 자리를 남겨둔 값이다. 3으로 붙이면 나중에
+# 그 자리에서 교체가 안 된다.
+#
+# 줄바꿈이 없던 시절에는 n번째 화로가 첫 화로에서 4n 타일 밖에 섰다.
+# 열아홉 대째가 274타일 밖이었고, 거기까지 광석을 나르느니 안 짓느니만
+# 못하다. 여섯 대면 한 줄이 24타일이고, 예순 대를 놓아도 24 x 40 안이다.
+FURNACE_PITCH = 4
+FURNACE_ROW = 6
+
+
+def furnace_seat(origin: dict, nth: int, pitch: int = FURNACE_PITCH,
+                 row: int = FURNACE_ROW) -> dict:
+    """n번째 화로가 설 자리. 한 줄이 차면 다음 줄로 내려간다.
+
+    예전에는 `x + pitch * n` 한 줄이었다. 줄바꿈이 없으니 열아홉 대째가
+    274타일 밖에 섰고, 사람이 거기까지 광석을 날라야 했다. 게다가 기준점이
+    「나에게 가장 가까운 화로」라 부르는 사람이 움직일 때마다 바뀌어서,
+    줄이 동쪽으로 계속 행진했다.
+
+    기준점은 부르는 쪽에서 «가장 왼쪽 위 화로»로 고정해 넘긴다. 누가
+    묻든 같은 답이 나와야 줄이 흔들리지 않는다.
+    """
+    return {"x": origin["x"] + pitch * (nth % row),
+            "y": origin["y"] + pitch * (nth // row)}
+
+
 def belt_pairs(blocked: list[dict], starving: list[dict],
                reach: float = BELT_REACH) -> list[tuple[dict, dict]]:
     """벨트 한 줄로 이을 만한 «막힌 채굴기 ↔ 굶는 화로» 짝.
@@ -447,7 +475,6 @@ FURNACES_PER_DRILL = 1.0
 
 # 화로는 2x2지만 전기 화로는 3x3이다. 3타일 간격으로 붙여 놓으면 나중에
 # 전기 화로로 못 바꾼다. 4타일이면 그 자리에서 교체된다.
-FURNACE_PITCH = 4
 
 # 보일러 60 증기/초 : 증기기관 30 증기/초. 기관을 하나만 붙이면 보일러가
 # 만든 증기의 절반을 버리면서 석탄은 전부 태운다.
@@ -661,11 +688,15 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     if furnace and standing < want:
         nth = standing
         if snap.have("stone-furnace") >= 1:
+            # 기준점은 가장 왼쪽 위 화로로 고정한다. 「나에게 가장 가까운
+            # 화로」를 쓰면 부르는 사람이 움직일 때마다 기준이 바뀌어 줄이
+            # 한 방향으로 계속 밀려난다 - 실제로 274타일까지 갔다.
+            corner = min(furnaces, key=lambda f: (f["y"], f["x"]))
+            seat = furnace_seat(corner, nth + 1)
             jobs.append(Job(f"화로를 하나 더 놓겠습니다 ({nth + 1}번째).",
                             key=f"furnace:{nth}", steps=[
                                 ("build", {"name": "stone-furnace",
-                                           "x": furnace["x"] + FURNACE_PITCH * (nth + 1),
-                                           "y": furnace["y"], "snap": True})]))
+                                           **seat, "snap": True})]))
         elif snap.can_make("stone-furnace"):
             jobs.append(Job("화로를 하나 더 만들겠습니다.", key=f"furnace:{nth}",
                             needs={"stone": 5},
@@ -2125,8 +2156,12 @@ class Crew:
                               at=at))
 
         # 2. 다 녹아서 화로를 막고 있는 것들. 화로마다 따로 걷는다.
-        for group in cluster([e for e in stock
-                              if int(e.get("count") or 0) >= HARVEST_MIN]):
+        # 막힌 화로는 양과 상관없이 거둔다. 구리판 한 개가 철광석 쉰네
+        # 개를 막고 있었는데, 「10개 이상」이라는 기준 때문에 그 한 개가
+        # 영영 안 거둬졌다. 양이 적을수록 오래 막는 셈이다.
+        worth = [e for e in stock
+                 if e.get("jammed") or int(e.get("count") or 0) >= HARVEST_MIN]
+        for group in cluster(worth):
             head = group[0]
             total = sum(int(e.get("count") or 0) for e in group)
             gather.append(Job(

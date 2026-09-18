@@ -896,6 +896,78 @@ local function expand(force, pool, item, count, out, depth)
   return ready
 end
 
+-- 이 광석을 받아줄 화로를 고른다.
+--
+-- 실측(새 판): 화로 넷이 이 꼴로 서 있었다 —
+--   (52,16) full_output  in[iron-ore=54]  out[copper-plate=9]
+--   (76,16) full_output  in[iron-ore=54]  out[copper-plate=1]
+-- 철광석 164개가 구리판 22개에 막혀 있고, 그 옆에 빈 화로가 아홉 대
+-- 놀고 있었다.
+--
+-- 돌 화로의 출력 칸은 한 종류만 담는다. 구리판이 남은 채로 철광석을 넣으면
+-- 철판을 만들어도 내놓을 데가 없어 멈춘다. 그런데 화로를 고르는 자리가
+-- limit = 1, 그냥 «첫 번째»였다.
+--
+-- 받아줄 수 있는 화로란: 출력이 비었거나 같은 것을 내고 있고, 입력이
+-- 비었거나 같은 것을 먹고 있는 화로. 그중 빈 화로가 언제나 낫다 - 비어
+-- 있으면 넣는 순간 돈다.
+-- 이 광석을 녹이면 무엇이 나오는가. 이름을 짐작하지 않는다 - 돌은
+-- 「stone-plate」가 아니라 벽돌이 되고, 그런 예외를 외우는 것보다 레시피에
+-- 물어보는 편이 짧고 틀리지 않는다.
+local SMELTS_TO = {}
+
+local function smelted_from(force, ore)
+  if SMELTS_TO[ore] ~= nil then return SMELTS_TO[ore] or nil end
+  local found = false
+  for _, r in pairs(force.recipes) do
+    if r.category == "smelting" then
+      for _, ing in pairs(r.ingredients) do
+        if ing.name == ore then
+          SMELTS_TO[ore] = r.products[1] and r.products[1].name or false
+          found = true
+          break
+        end
+      end
+    end
+    if found then break end
+  end
+  if not found then SMELTS_TO[ore] = false end
+  return SMELTS_TO[ore] or nil
+end
+
+local function pick_furnace(surface, force, near, ore)
+  local best, best_score = nil, -math.huge
+  for _, e in pairs(surface.find_entities_filtered {
+    position = near, radius = MAX_OBSERVE_RADIUS, name = "stone-furnace",
+    force = force,
+  }) do
+    local src = e.get_inventory(defines.inventory.furnace_source)
+    local res = e.get_inventory(defines.inventory.furnace_result)
+    local busy_in, busy_out = nil, nil
+    if src then
+      for _, st in pairs(src.get_contents()) do busy_in = st.name break end
+    end
+    if res then
+      for _, st in pairs(res.get_contents()) do busy_out = st.name break end
+    end
+
+    -- 다른 광석을 먹고 있거나 다른 판금을 물고 있으면 못 받는다.
+    local takes = (busy_in == nil or busy_in == ore)
+    if takes and ore and busy_out then
+      takes = (busy_out == smelted_from(force, ore))
+    end
+
+    if takes then
+      local d = Tasks.dist(near, e.position)
+      -- 빈 화로가 언제나 낫다. 거리보다 앞선다.
+      local score = (busy_in == nil and busy_out == nil) and 1000 or 0
+      score = score - d
+      if score > best_score then best, best_score = e, score end
+    end
+  end
+  return best
+end
+
 local function compute_plan(name, item, count)
   local a = agent(name)
   local b = body(a)
@@ -943,10 +1015,12 @@ local function compute_plan(name, item, count)
   if not ok then return { error = "plan failed: " .. tostring(done) } end
 
   -- 제련은 화로가 있어야 한다. 없으면 «지금 할 수 있는 일»이 아니다.
-  local furnace = b.surface.find_entities_filtered {
-    position = b.position, radius = MAX_OBSERVE_RADIUS,
-    name = "stone-furnace", force = b.force, limit = 1,
-  }[1]
+  -- 아무 화로나가 아니라 «이 광석을 받아줄» 화로여야 한다.
+  local smelting = nil
+  for _, step in pairs(out.steps) do
+    if step.action == "smelt" then smelting = step.input break end
+  end
+  local furnace = pick_furnace(b.surface, b.force, b.position, smelting)
 
   return {
     item = item, count = count or 1, ready = done,
@@ -1039,10 +1113,23 @@ local function furnace_stock(name, radius)
   }) do
     local result = e.get_output_inventory()
     if result and not result.is_empty() then
+      -- 이 판금이 «다른» 광석을 막고 있는가.
+      --
+      -- 실측: 구리판 1개가 철광석 54개를 막고 있었다. 거두는 기준이
+      -- 「10개 이상」이라 그 한 개는 영영 안 거둬졌고, 화로는 영영 멈춰
+      -- 있었다. 양이 적을수록 오래 막는 셈이다.
+      local waiting = nil
+      local src = e.get_inventory(defines.inventory.furnace_source)
+      if src then
+        for _, st in pairs(src.get_contents()) do waiting = st.name break end
+      end
       for _, stack in pairs(result.get_contents()) do
         out[#out + 1] = {
           name = stack.name, count = stack.count,
           x = e.position.x, y = e.position.y,
+          jammed = waiting ~= nil
+            and smelted_from(b.force, waiting) ~= stack.name or nil,
+          waiting = waiting,
           distance = math.floor(Tasks.dist(b.position, e.position) * 10) / 10,
         }
       end
