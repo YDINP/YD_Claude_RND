@@ -264,23 +264,43 @@ class FactoryMixin:
             self.say(f"방어 구축 중 오류: {exc}", who=name)
 
     def defence_job(self, worker: Worker, snap: Snapshot) -> Job | None:
-        """터렛을 미리 세운다.
+        """터렛을 방어선 위에 세운다.
 
         습격이 온 다음에 짓기 시작하면 이미 늦다. 터렛은 낭비가 아니라
-        대비고, 총알을 넣어두지 않은 터렛은 세우지 않은 것과 같다.
+        대비고, 총알을 안 넣은 터렛은 세우지 않은 것과 같다.
 
-        자리는 기지 둘레다 - 화로가 모인 곳을 기지로 보고, 네 방향으로
-        조금 떨어뜨려 세운다.
+        자리는 «사람 둘레»가 아니라 «우리 건물 전체의 테두리»다. 사람은
+        움직이고 공장은 안 움직인다 - 지킬 것은 사람이 아니라 공장이다.
+        예전에는 화로 한 대를 기지로 치고 네 모서리에 하나씩 놓았는데,
+        그 화로가 어디 있느냐에 따라 방어선이 통째로 옮겨 다녔다.
+
+        그리고 적이 오는 쪽부터다. 둥지가 스물여덟 곳이면 사방에 있지만,
+        공해가 먼저 닿는 쪽이 먼저 온다.
         """
-        if not self.danger.get("can_build_turret"):
+        try:
+            wall = self.bridge.defence(worker.name)
+        except RconError:
             return None
-        if int(self.danger.get("turrets") or 0) >= TURRET_TARGET:
+        if wall.get("error") or not wall.get("can_turret"):
+            return None
+        if int(wall.get("turrets") or 0) >= TURRET_TARGET:
+            return None
+        seats = _as_rows(wall.get("seats"))
+        if not seats:
             return None
 
-        base = snap.building("stone-furnace") or {"x": snap.x, "y": snap.y}
-        nth = int(self.danger.get("turrets") or 0)
-        corner = ((1, 1), (-1, 1), (-1, -1), (1, -1))[nth % 4]
-        spot = {"x": base["x"] + corner[0] * TURRET_RING,
-                "y": base["y"] + corner[1] * TURRET_RING}
-        return Job(f"터렛을 미리 세웁니다 ({nth + 1}/{TURRET_TARGET}).",
-                   key=f"defend:{nth}", routine="defend", at=spot)
+        taken = self.taken()
+        for seat in seats:
+            key = "defend:%.0f,%.0f" % (seat["x"], seat["y"])
+            if key in taken:
+                continue
+            gap = wall.get("slack")
+            urgency = ("공해가 둥지까지 %s타일 남았습니다. " % int(gap)
+                       if isinstance(gap, (int, float)) else "")
+            return Job(
+                f"{urgency}{wall.get('side', '적')} 쪽 방어선에 터렛을 "
+                f"세우겠습니다 ({int(wall.get('turrets') or 0) + 1}/{TURRET_TARGET}). "
+                f"({seat['x']:.0f}, {seat['y']:.0f})",
+                key=key, routine="defend", at=seat)
+        return None
+
