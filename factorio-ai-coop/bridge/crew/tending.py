@@ -9,8 +9,9 @@ from settings import (CHEST, DEPOT_MIN, DRILL, DRILL_FUEL, FOCUS_ORDER, FURNACE_
                       HARVEST_MIN, KEEP_IN_HAND, KEEP_ORE, LOOSE_ORE,
                       SMELTABLE, SMELTED_BY_FURNACE,
                       SMELT_BATCH, STARVING, STOCKPILE)
+from layout import nearest_to
 from world import Snapshot
-from jobs import Job
+from jobs import Job, Step
 from ladder import STAGE_TARGET, _as_rows, chain_job
 from worker import Worker
 
@@ -172,6 +173,25 @@ class TendingMixin:
             self.say(f"{item}은(는) {locked[0]} 연구가 없어서 못 만듭니다.", who=worker.name)
         return None
 
+    def ore_within_reach(self, worker: Worker,
+                         near: dict) -> tuple[str | None, dict]:
+        """녹일 수 있는 광석이 어느 상자에 있는가. 그 일감에서 가까운 것부터.
+
+        가방이 아니라 세상을 본다. 「광석을 가방에 두지 말라」는 규칙 아래에서는
+        가방을 보는 조건이 전부 거짓이 된다.
+        """
+        best, where, most = None, {}, 0
+        for ore in SMELTABLE:
+            try:
+                shelves = self.bridge.chest_stock(worker.name, ore)
+            except RconError:
+                continue
+            spot = nearest_to([c for c in shelves if not c.get("well")],
+                              near, SMELT_BATCH)
+            if spot and int(spot.get("count") or 0) > most:
+                best, where, most = ore, spot, int(spot["count"])
+        return best, where
+
     def tend_job(self, worker: Worker, snap: Snapshot) -> Job | None:
         """멈춰 선 기계를 고친다. 새로 짓는 것보다 먼저다.
 
@@ -227,12 +247,30 @@ class TendingMixin:
             if fix == "feed":  # noqa: SIM102 - 묶음은 배차 쪽에서 다룬다
                 # 공장은 끊임없이 돌아야 한다. 목표에 필요한 만큼만 녹이면
                 # 화로 절반이 서 있고, 그동안 광석은 가방에서 잠잔다.
-                ore = max(SMELTABLE, key=lambda o: snap.have(o), default=None)
-                if not ore or snap.have(ore) < SMELT_BATCH                         or snap.have("coal") < FURNACE_FUEL:
+                if snap.have("coal") < FURNACE_FUEL:
                     continue
+
+                # 손에 있으면 그대로 넣고, 없으면 창고에서 꺼내 온다.
+                #
+                # 예전에는 «손에 SMELT_BATCH 만큼 있을 때»만 이 일을 했다.
+                # 그런데 「광석을 가방에 두지 말라」는 규칙이 생기면서 손에는
+                # 늘 열 개뿐이 되었고, 그래서 창고에 철광석 886개가 쌓인 채
+                # 화로 쉰네 대가 「재료 없음」으로 서 있었다.
+                #
+                # 규칙이 틀린 것이 아니라, 규칙이 바뀌었는데 이 조건이 그대로
+                # 있었던 것이다. 가방을 보는 대신 «어디서든 가져올 수 있는가»를
+                # 본다.
+                ore = max(SMELTABLE, key=lambda o: snap.have(o), default=None)
+                fetch: list[Step] = []
+                if not ore or snap.have(ore) < SMELT_BATCH:
+                    ore, where = self.ore_within_reach(worker, at)
+                    if not ore:
+                        continue
+                    fetch = [("take", {"name": ore, "count": SMELT_BATCH,
+                                       "x": where["x"], "y": where["y"]})]
                 return Job(f"화로가 비어 있습니다. {ore}를 넣어 계속 돌리겠습니다.",
-                           key=key, needs={"coal": FURNACE_FUEL, ore: SMELT_BATCH},
-                           steps=[
+                           key=key, needs={"coal": FURNACE_FUEL},
+                           steps=fetch + [
                                ("insert", {"name": "coal", "count": FURNACE_FUEL, **at}),
                                ("insert", {"name": ore, "count": SMELT_BATCH, **at}),
                            ])

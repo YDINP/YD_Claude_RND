@@ -201,12 +201,30 @@ local function ore_line(name, fx, fy, limit)
   if not mine and not fx then return { error = "no mining zone yet" } end
 
   local lane, arms, head = feed_line(smelt)
-  local from = open_spot(surface, force,
-    { x = math.floor(fx or mine.x), y = math.floor(fy or mine.y) })
-  local trunk, short = walk(surface, force, from, head)
-  if not trunk then
-    return { error = "no route from the mine to the smelter" }
+
+  -- 길은 한 번 정하면 남는다.
+  --
+  -- 처음에는 부를 때마다 다시 찾았다. 그런데 너비 우선은 같은 거리의 길이
+  -- 여럿일 때 아무거나 고르고, 그 사이 채굴기와 상자가 늘어나 지형도 바뀐다.
+  -- 그래서 부를 때마다 다른 길이 나왔고, 실측하니 벨트 마흔 칸을 깔아놓고도
+  -- 「트렁크 0칸」이라고 답했다 - 깐 벨트가 새 길 위에 없었던 것이다.
+  -- 그대로 두면 영원히 깔면서 영원히 못 끝낸다.
+  local kept = storage.ore_line
+  local trunk, short
+  if kept and kept.head and kept.head.x == head.x and kept.head.y == head.y
+     and kept.tiles and #kept.tiles > 0 then
+    trunk, short = kept.tiles, kept.short
+  else
+    local from_at = open_spot(surface, force,
+      { x = math.floor(fx or mine.x), y = math.floor(fy or mine.y) })
+    trunk, short = walk(surface, force, from_at, head)
+    if not trunk then
+      return { error = "no route from the mine to the smelter" }
+    end
+    storage.ore_line = { head = head, tiles = trunk, short = short,
+                         from = trunk[1] }
   end
+  local from = trunk[1] or head
 
   local need_trunk, up_trunk = missing(surface, force, trunk, BELT)
   local need_lane, up_lane = missing(surface, force, lane, BELT)
