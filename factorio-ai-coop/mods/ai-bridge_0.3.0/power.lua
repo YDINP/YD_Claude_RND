@@ -583,40 +583,77 @@ end
 
 -- 두 점 사이에 전봇대를 놓을 자리들. 전선이 닿는 간격으로.
 --
--- 막힌 칸은 옆으로 두 칸까지 비켜본다. 비켜도 안 되면 거기서 멈추고
--- 거기까지의 자리만 돌려준다 - 반쯤 깐 줄도 다음 사람이 이어 깔 수 있다.
+-- 이미 전봇대가 선 자리는 can_place_entity 가 거절한다. 예전에는 그것을
+-- 「막혔다」로 읽고 옆으로 비켜서 하나를 더 놓았다. 그래서 전봇대 마흔세
+-- 개 중 스물두 쌍이 3타일 안에 붙어 섰고, 어떤 자리에는 셋이 겹쳤다.
+--
+-- 이미 선 전봇대는 장애물이 아니라 «이미 해둔 일»이다. 그 자리는 건너뛰고,
+-- 거기서부터 다시 재야 한다.
 local WIRE_STEP = 7        -- 소형 전봇대 전선 도달 7.5, 안전하게 7
+local POLE_CLEAR = 4       -- 이보다 가까이에 전봇대가 있으면 놓지 않는다
+
 local function pole_route(name, fx, fy, tx, ty, limit)
   local a = agent(name)
   local b = body(a)
   if not b then return { error = "no such agent: " .. tostring(name) } end
   local s, f = b.surface, b.force
 
-  local dx, dy = tx - fx, ty - fy
-  local span = math.sqrt(dx * dx + dy * dy)
-  if span < WIRE_STEP then return { poles = {}, done = true } end
-  local ux, uy = dx / span, dy / span
+  local goal = { x = tx, y = ty }
+  local here = { x = fx, y = fy }
+  local out, hops = {}, 0
 
-  local out = {}
-  local steps = math.floor(span / WIRE_STEP)
-  for i = 1, steps do
-    local want = { x = math.floor(fx + ux * WIRE_STEP * i) + 0.5,
-                   y = math.floor(fy + uy * WIRE_STEP * i) + 0.5 }
-    local seat = nil
-    for _, nudge in pairs({ { 0, 0 }, { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 },
-                            { 2, 0 }, { -2, 0 }, { 0, 2 }, { 0, -2 } }) do
-      local try = { x = want.x + nudge[1], y = want.y + nudge[2] }
-      if s.can_place_entity { name = "small-electric-pole",
-                              position = try, force = f } then
-        seat = try
-        break
+  while Tasks.dist(here, goal) > WIRE_STEP do
+    hops = hops + 1
+    if hops > 200 then break end
+
+    -- 이 앞에 이미 선 전봇대가 있으면 그리로 건너뛴다. 새로 놓을 일이 아니다.
+    local jumped = nil
+    for _, e in pairs(s.find_entities_filtered {
+      position = here, radius = WIRE_STEP + 0.5, type = "electric-pole",
+      force = f,
+    }) do
+      if Tasks.dist(e.position, goal) < Tasks.dist(here, goal) - 0.5 then
+        if not jumped or Tasks.dist(e.position, goal) < Tasks.dist(jumped, goal) then
+          jumped = e.position
+        end
       end
     end
-    if not seat then break end
-    out[#out + 1] = seat
-    if limit and #out >= limit then break end
+    if jumped then
+      here = { x = jumped.x, y = jumped.y }
+      goto continue
+    end
+
+    do
+      local span = Tasks.dist(here, goal)
+      local ux, uy = (goal.x - here.x) / span, (goal.y - here.y) / span
+      local want = { x = math.floor(here.x + ux * WIRE_STEP) + 0.5,
+                     y = math.floor(here.y + uy * WIRE_STEP) + 0.5 }
+      local seat = nil
+      for _, nudge in pairs({ { 0, 0 }, { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 },
+                              { 2, 0 }, { -2, 0 }, { 0, 2 }, { 0, -2 } }) do
+        local try = { x = want.x + nudge[1], y = want.y + nudge[2] }
+        -- 옆에 이미 전봇대가 있는 자리는 비켜도 소용없다. 그건 겹쳐 놓는 것이다.
+        local crowded = s.count_entities_filtered {
+          position = try, radius = POLE_CLEAR, type = "electric-pole", force = f,
+        } > 0
+        if not crowded and s.can_place_entity {
+          name = "small-electric-pole", position = try, force = f,
+        } then
+          seat = try
+          break
+        end
+      end
+      if not seat then break end
+      out[#out + 1] = seat
+      here = seat
+      if limit and #out >= limit then break end
+    end
+
+    ::continue::
   end
-  return { poles = out, done = #out >= steps, steps = steps }
+
+  return { poles = out, done = Tasks.dist(here, goal) <= WIRE_STEP,
+           left = math.floor(Tasks.dist(here, goal)) }
 end
 
 return {

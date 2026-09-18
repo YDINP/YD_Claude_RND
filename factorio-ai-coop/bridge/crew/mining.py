@@ -5,8 +5,8 @@ from __future__ import annotations
 from client import RconError, TaskFailed
 
 from settings import (BACKOFF_SECONDS, CHEST, COAL_PAIRS, DRILL, DRILLS_PER_TRIP,
-                      DRILL_FUEL, FURNACE_FUEL, RIGS_PER_TRIP, RIG_COAL,
-                      SMELTED_BY_FURNACE, SMELT_BATCH)
+                      DRILL_FUEL, FURNACE_FUEL, HAUL_BATCH, RIGS_PER_TRIP,
+                      RIG_COAL, SMELTED_BY_FURNACE, SMELT_BATCH, WELL_FULL)
 from jobs import Job, Step
 from layout import carry_split, cluster, nearest_to, spread_sites
 from ladder import _as_rows, worth_building
@@ -359,6 +359,51 @@ class MiningMixin:
                 f"연료를 다시 넣어줄 일이 없습니다. "
                 f"({machine['x']:.0f}, {machine['y']:.0f})",
                 key=key, routine="rig", at=machine))
+        return out
+
+    def drain_wells(self, worker: Worker, coal_chests: list[dict]) -> list[Job]:
+        """꽉 찬 석탄 자급쌍을 비운다. 비우는 것이 곧 되살리는 일이다.
+
+        마주보는 두 대는 캔 석탄을 서로의 연료칸에 넣는다. 출력 상자가 없으니
+        캔 것이 갈 곳은 연료칸뿐이고, 그 한 칸(50개)이 차면 채굴기가 선다.
+
+        「석탄이 필요하면 거기서 꺼내 쓴다」만으로는 모자란다. 필요하지 않은
+        동안에는 아무도 안 가고, 그동안 마흔여덟 대가 통째로 서 있다. 차면
+        비우러 가는 것이 이 장치의 사용법이다.
+
+        비운 석탄은 공용 창고에 붓는다. 가방에 안고 다니면 그 사람만 쓴다.
+        """
+        full = [r for r in coal_chests
+                if r.get("well") and int(r.get("held") or 0) >= WELL_FULL]
+        if not full:
+            return []
+        try:
+            store = (self.bridge.depot() or {}).get("depot")
+        except RconError:
+            store = None
+
+        out: list[Job] = []
+        taken = self.taken()
+        for group in cluster(full)[:1]:
+            head = group[0]
+            key = f"well:{head['x']:.0f},{head['y']:.0f}"
+            if key in taken:
+                continue
+            steps: list[Step] = [
+                ("take", {"name": "coal", "count": int(one.get("count") or 0),
+                          "x": one["x"], "y": one["y"]})
+                for one in group]
+            drop = ""
+            if store:
+                steps.append(("insert", {"name": "coal", "count": HAUL_BATCH,
+                                         "x": store["x"], "y": store["y"]}))
+                drop = " 창고에 부어두겠습니다."
+            out.append(Job(
+                f"석탄 채굴기 {len(group)}대가 연료칸이 꽉 차서 멈췄습니다. "
+                f"서로 먹이느라 캔 것이 갈 데가 없습니다. 덜어내겠습니다.{drop} "
+                f"({head['x']:.0f}, {head['y']:.0f})",
+                key=key, steps=steps,
+                at={"x": head["x"], "y": head["y"]}))
         return out
 
     def restock_jobs(self, worker: Worker,

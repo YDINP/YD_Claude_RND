@@ -11,7 +11,7 @@ from client import RconError
 
 from settings import (CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH,
                       HOME_REACH, SMELTED_BY_FURNACE, SMELT_BATCH, STRAY_FAR,
-                      SURPLUS, THIN_DRILL)
+                      SURPLUS, THIN_DRILL, WELL_FULL)
 from world import Snapshot
 from jobs import Job, Step
 from layout import belt_pairs, carry_split, cluster, interleave, nearest_to
@@ -95,6 +95,17 @@ class SurveyMixin:
         # 이미 선 장치를 살리는 것이 새 장치를 세우는 것보다 먼저다.
         # 빈 찬장을 서른 개 지어놓고 서른한 번째를 지으러 가면 안 된다.
         unblock.extend(self.restock_jobs(worker, coal_chests))
+
+        # 1a. 석탄 자급쌍을 비운다.
+        #
+        #     마주보는 두 대는 캔 석탄을 서로의 연료칸에 넣는다. 출력 상자가
+        #     없으니 갈 곳이 연료칸뿐이고, 그 한 칸(50개)이 차면 선다.
+        #     필요할 때만 꺼내 쓰면 필요 없는 동안 계속 멈춰 있다 - 실측하니
+        #     석탄 위 채굴기 48대가 전부 50/50 으로 서 있었다.
+        #
+        #     즉 이건 창고이면서 동시에 «주기적으로 비워줘야 도는» 장치다.
+        #     비우는 것이 거두는 일이면서 되살리는 일이다.
+        unblock.extend(self.drain_wells(worker, coal_chests))
 
         # 1. 연료가 떨어진 기계. 세 가지를 이 순서로 한다.
         #
