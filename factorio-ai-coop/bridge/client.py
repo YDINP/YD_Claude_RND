@@ -323,6 +323,11 @@ class AIBridge:
         """출구가 없어 멈춘 채굴기들. seat 은 그 앞에 화로를 놓을 자리다."""
         return _as_list(self.call("blind_drills", agent, radius).get("blind"))
 
+    def ore_line(self, agent: str, fx: float | None = None,
+                 fy: float | None = None, limit: int = 20) -> dict:
+        """캐는 구역에서 제련 구역까지의 광석 길. 아직 없는 것만 돌려준다."""
+        return self.call("ore_line", agent, fx, fy, limit)
+
     def zones(self, agent: str) -> dict:
         """무엇을 어디서 하는가 - 채굴 / 제련 / 조립."""
         return self.call("zones", agent)

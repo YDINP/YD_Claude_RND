@@ -34,6 +34,7 @@ class FactoryMixin:
         "science": lambda crew, worker, at: crew.build_science(worker, at),
         "stoke":   lambda crew, worker, at: crew.stoke(worker, at),
         "wire":    lambda crew, worker, at: crew.run_wire(worker, at),
+        "line":    lambda crew, worker, at: crew.lay_line(worker, at),
         "open":    lambda crew, worker, at: crew.open_drills(worker, at),
     }
 

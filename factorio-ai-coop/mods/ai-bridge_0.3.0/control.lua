@@ -74,6 +74,9 @@ local drop_marker    = Panel.drop_marker
 local panel_rows     = Panel.panel_rows
 local refresh_marker = Panel.refresh_marker
 local remember_line  = Panel.remember_line
+local Belts = require("belts")
+local ore_line = Belts.ore_line
+
 local Zones = require("zones")
 local draw_zones = Zones.draw_zones
 local zones      = Zones.zones
@@ -545,6 +548,9 @@ remote.add_interface("ai", {
 
   -- 출구가 없어 멈춘 채굴기와, 그 앞에 화로를 놓을 자리.
   blind_drills = blind_drills,
+
+  -- 캐는 구역에서 제련 구역까지의 광석 길 - 아직 없는 것만.
+  ore_line = ore_line,
 
   -- 무엇을 어디서 하는가. 채굴 / 제련 / 조립.
   zones = zones,

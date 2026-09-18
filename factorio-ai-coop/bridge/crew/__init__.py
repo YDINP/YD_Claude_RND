@@ -27,6 +27,7 @@ from .roster import RosterMixin
 from .talk import TalkMixin
 from .supply import SupplyMixin
 from .power import PowerMixin
+from .hauling import HaulingMixin
 from .mining import MiningMixin
 from .factory import FactoryMixin
 from .survey import SurveyMixin
@@ -34,7 +35,9 @@ from .tending import TendingMixin
 from .watch import WatchMixin
 
 
-class Crew(RosterMixin, TalkMixin, SupplyMixin, PowerMixin, MiningMixin, FactoryMixin, SurveyMixin, TendingMixin, WatchMixin):
+class Crew(RosterMixin, TalkMixin, SupplyMixin,
+           PowerMixin, MiningMixin, HaulingMixin, FactoryMixin,
+           SurveyMixin, TendingMixin, WatchMixin):
     """사람 여럿을 데리고 게임 안에서 실제로 일하는 무리."""
 
     def __init__(self, bridge: AIBridge, autopilot: bool = True,

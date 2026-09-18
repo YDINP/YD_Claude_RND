@@ -7,7 +7,7 @@ from client import RconError, TaskFailed
 from settings import (BACKOFF_SECONDS, CHEST, COAL_PAIRS, DRILL, DRILLS_PER_TRIP,
                       DRILL_FUEL, FURNACE_FUEL, HAUL_BATCH, RIGS_PER_TRIP,
                       MINE_CHEST, RIG_COAL, SMELTED_BY_FURNACE, SMELT_BATCH,
-                      WELL_FULL, HAUL_WHEN)
+                      WELL_FULL)
 from jobs import Job, Step
 from layout import carry_split, cluster, nearest_to, spread_sites
 from ladder import _as_rows, worth_building
@@ -362,55 +362,6 @@ class MiningMixin:
                 f"연료를 다시 넣어줄 일이 없습니다. "
                 f"({machine['x']:.0f}, {machine['y']:.0f})",
                 key=key, routine="rig", at=machine))
-        return out
-
-    def haul_ore(self, worker: Worker) -> list[Job]:
-        """캐는 구역에 쌓인 광석을 제련 구역으로 옮긴다.
-
-        구역을 나누면 그 사이를 잇는 일이 생긴다. 그것이 운반이다.
-
-        언젠가는 벨트가 이 일을 한다 - 벨트는 쉬지 않고 밤에도 나른다.
-        그때까지는 사람이 나른다. 어느 쪽이든 «캐는 곳»과 «녹이는 곳»이
-        나뉘어 있어야 벨트를 깔 자리가 생긴다. 붙여 놓으면 이을 것이 없다.
-        """
-        try:
-            here = self.bridge.zones(worker.name)
-        except RconError:
-            return []
-        smelt = here.get("smelt")
-        if not smelt:
-            return []
-        try:
-            store = (self.bridge.depot() or {}).get("depot") or smelt
-        except RconError:
-            store = smelt
-
-        out: list[Job] = []
-        taken = self.taken()
-        for ore in SMELTED_BY_FURNACE:
-            try:
-                shelves = [c for c in self.bridge.chest_stock(worker.name, ore)
-                           if not c.get("well")
-                           and int(c.get("count") or 0) >= HAUL_WHEN]
-            except RconError:
-                continue
-            for group in cluster(shelves)[:1]:
-                head = group[0]
-                key = f"haul:{ore}:{head['x']:.0f},{head['y']:.0f}"
-                if key in taken:
-                    continue
-                load = min(HAUL_BATCH * 4,
-                           sum(int(c.get("count") or 0) for c in group))
-                steps: list[Step] = [
-                    ("take", {"name": ore, "count": int(c.get("count") or 0),
-                              "x": c["x"], "y": c["y"]}) for c in group]
-                steps.append(("insert", {"name": ore, "count": load,
-                                         "x": store["x"], "y": store["y"]}))
-                out.append(Job(
-                    f"캐는 구역 상자 {len(group)}개에 {ore}가 {load}개 쌓였습니다. "
-                    f"제련 구역으로 옮기겠습니다.",
-                    key=key, steps=steps,
-                    at={"x": head["x"], "y": head["y"]}))
         return out
 
     def drain_wells(self, worker: Worker, coal_chests: list[dict]) -> list[Job]:

@@ -119,6 +119,12 @@ class SurveyMixin:
         #     녹이는 곳이 나뉘어 있어야 벨트를 깔 자리가 생긴다.
         gather.extend(self.haul_ore(worker))
 
+        # 1c. 광석 길. 사람이 나르는 동안에도 벨트는 깔아둔다 - 다 깔리면
+        #     사람 쪽 일감이 저절로 사라진다(상자가 안 쌓이므로).
+        line = self.line_job(worker)
+        if line:
+            jobs.append(line)
+
         # 1. 연료가 떨어진 기계. 세 가지를 이 순서로 한다.
         #
         #    ① 빈 급유 상자를 채운다  - 이미 선 장치를 살리는 게 가장 싸다
