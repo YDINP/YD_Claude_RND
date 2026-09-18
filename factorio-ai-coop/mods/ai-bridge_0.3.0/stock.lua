@@ -440,6 +440,41 @@ local function smelter(x, y)
   return { smelter = nil, crowded = true }
 end
 
+-- 제 구역 «안»에 선 것은 길 잃은 것이 아니다.
+--
+-- 사용자: "자꾸 돌용광로를 재배치하는 이유가 뭐임"
+--
+-- 규칙 둘이 같은 화로를 보고 반대로 답하고 있었다:
+--
+--   misplaced  제자리 아님 {} / 정착 smelt 2      "잘 서 있다"
+--   strays     "기지에서 87타일 밖에 홀로 서 있습니다. 걷어오겠습니다"
+--
+-- 그래서 옮기고, 되돌리고, 또 옮긴다.
+--
+-- `strays` 가 구역보다 먼저 있던 규칙이라 그렇다. 그때는 「기지에서 멀다」가
+-- 곧 「잊고 버려둔 것」이었다. 지금은 아니다 - 제련 구역은 광맥을 피해
+-- 일부러 떨어뜨려 놓고, 기지는 채굴기까지 포함한 «움직이는 무게중심»이라
+-- 공장이 커질수록 제련 구역에서 멀어진다.
+--
+-- 거리는 더 이상 길 잃음의 증거가 아니다. 구역이 그 자리를 답한다.
+local ZONE_PAD = 4
+
+local function in_own_zone(e)
+  local z = storage.zones or {}
+  local mine = nil
+  if e.type == "furnace" then
+    mine = storage.smelter and { x = storage.smelter.x, y = storage.smelter.y,
+                                 w = SMELT_W, h = SMELT_H }
+  elseif e.type == "lab" or e.type == "assembling-machine" then
+    mine = z.craft and { x = z.craft.x, y = z.craft.y, w = 24, h = 14 }
+  end
+  if not mine then return false end
+  return e.position.x >= mine.x - ZONE_PAD
+     and e.position.x <= mine.x + mine.w + ZONE_PAD
+     and e.position.y >= mine.y - ZONE_PAD
+     and e.position.y <= mine.y + mine.h + ZONE_PAD
+end
+
 local function strays(kind, far)
   local home = base().home
   if not home then return { strays = {} } end
@@ -449,7 +484,7 @@ local function strays(kind, far)
     name = kind or "stone-furnace", force = game.forces.player,
   }) do
     local d = Tasks.dist(home, e.position)
-    if d > (far or 60) and e.minable then
+    if d > (far or 60) and e.minable and not in_own_zone(e) then
       out[#out + 1] = { name = e.name, x = e.position.x, y = e.position.y,
                         distance = math.floor(d * 10) / 10 }
     end

@@ -57,27 +57,88 @@ local function room(surface, at, w, h)
      and surface.count_entities_filtered { area = box, name = ORE } == 0
 end
 
--- 캐는 구역: 우리 채굴기들이 실제로 서 있는 곳. 광맥이 정하지 우리가
--- 정하는 것이 아니므로, 매번 다시 잰다.
-local function mine_zone(surface, force)
-  local drills = surface.find_entities_filtered {
-    type = "mining-drill", force = force,
-  }
-  if #drills == 0 then return nil end
+-- 캐는 구역: 우리 채굴기들이 실제로 서 있는 곳.
+--
+-- 사용자가 짚었다: "채굴구역이 왜 나무숲쪽에 잡혀있지?"
+--
+-- 채굴기 «전부»를 감싸는 상자 하나를 채굴 구역이라고 불렀기 때문이다.
+-- 실측이 그대로였다:
+--
+--     채굴기 (79,67) 구리, (107,-45) 철, (109,-45) 철
+--     구역   79,-45 ~ 109,67  =  30 x 112 타일
+--     그 안  나무 65그루, 철 98, 구리 108
+--
+-- 광맥이 둘인데 구역이 하나면, 그 하나는 두 광맥 «사이의 빈 숲»까지
+-- 삼킨다. 캐는 구역이 광맥 위가 아니라 나무 위에 잡힌 것이다.
+--
+-- 광맥은 흩어져 있다. 그러니 캐는 구역도 흩어져 있어야 한다. 한 덩어리로
+-- 묶을 수 있는 것은 «모여 있는 것»뿐이다.
+local FIELD_GAP = 24
+
+-- 가까운 것끼리 묶는다. 스물네 타일 안에 있으면 한 밭이다.
+local function fields_of(drills)
+  local seen, out = {}, {}
+  for i = 1, #drills do
+    if not seen[i] then
+      local group = { drills[i] }
+      seen[i] = true
+      local n = 1
+      while n <= #group do
+        local here = group[n]
+        for j = 1, #drills do
+          if not seen[j] then
+            local dx = drills[j].position.x - here.position.x
+            local dy = drills[j].position.y - here.position.y
+            if dx * dx + dy * dy <= FIELD_GAP * FIELD_GAP then
+              seen[j] = true
+              group[#group + 1] = drills[j]
+            end
+          end
+        end
+        n = n + 1
+      end
+      out[#out + 1] = group
+    end
+  end
+  return out
+end
+
+local function box_of(group)
   local sx, sy = 0, 0
   local lo = { x = math.huge, y = math.huge }
   local hi = { x = -math.huge, y = -math.huge }
-  for _, d in pairs(drills) do
+  for _, d in pairs(group) do
     sx, sy = sx + d.position.x, sy + d.position.y
     lo.x, lo.y = math.min(lo.x, d.position.x), math.min(lo.y, d.position.y)
     hi.x, hi.y = math.max(hi.x, d.position.x), math.max(hi.y, d.position.y)
   end
   return {
-    x = math.floor(sx / #drills + 0.5), y = math.floor(sy / #drills + 0.5),
+    x = math.floor(sx / #group + 0.5), y = math.floor(sy / #group + 0.5),
     left = math.floor(lo.x), top = math.floor(lo.y),
     right = math.floor(hi.x), bottom = math.floor(hi.y),
-    count = #drills,
+    count = #group,
   }
+end
+
+local function mine_zone(surface, force)
+  local drills = surface.find_entities_filtered {
+    type = "mining-drill", force = force,
+  }
+  if #drills == 0 then return nil, {} end
+
+  local fields = {}
+  for _, group in ipairs(fields_of(drills)) do
+    local box = box_of(group)
+    -- 무엇을 캐는 밭인가. 그 자리의 자원이 말해준다.
+    local digs = group[1].mining_target
+    box.ore = digs and digs.valid and digs.name or nil
+    fields[#fields + 1] = box
+  end
+  table.sort(fields, function(p, q) return p.count > q.count end)
+
+  -- 가장 큰 밭이 「그 채굴 구역」이다. 나머지는 fields 로 따로 준다.
+  -- 상자 하나로 답해야 하는 자리(겹침 판정)가 아직 여럿이라 그렇다.
+  return fields[1], fields
 end
 
 -- 두 사각형이 겹치는가. 구역이 서로 겹치면 나눈 것이 아니다.
@@ -173,11 +234,12 @@ local function zones(name)
 
   local out = {
     home = home,
-    mine = mine_zone(surface, force),
+    mine = nil,    -- 아래에서 밭 목록과 함께 받는다.
     smelt = smelter().smelter,
     craft = nil,   -- 아래에서 채운다. 채굴/제련 구역을 알아야 고를 수 있다.
     power = power_zone(surface, force),
   }
+  out.mine, out.fields = mine_zone(surface, force)
   out.craft = craft_zone(surface, force, home, out.mine, out.smelt)
   if out.smelt then
     out.smelt.w, out.smelt.h = SMELT_W, SMELT_H
