@@ -7,6 +7,9 @@
 -- 그리고 방어선은 사람 둘레가 아니라 «구역 둘레»에 선다. 사람은 움직이고
 -- 구역은 움직이지 않는다. 지킬 것은 사람이 아니라 공장이다.
 
+local Stock = require("stock")
+local base = Stock.base
+
 local Core = require("core")
 local agent = Core.agent
 local body = Core.body
@@ -33,19 +36,42 @@ local TURRET_GAP = 14
 local MINE = { "furnace", "mining-drill", "assembling-machine", "lab",
                "boiler", "generator", "container", "electric-pole" }
 
+-- 지킬 값어치가 있는 곳만 감싼다.
+--
+-- 사용자: "또 기지 박살낫네". 실측이 왜인지 말해준다:
+--
+--     터렛 2대   (-60,-74), (-60,-60)   탄약 0
+--     기지        (104,-44)
+--
+-- 터렛이 기지에서 164타일 떨어진 곳에 서 있었다. 방어선을 «우리 건물
+-- 전체»의 테두리로 잡았기 때문이다. 옛 발전소 쪽에 남은 전봇대 몇 개가
+-- 테두리를 그리로 끌고 갔고, 터렛은 그 테두리 위에 섰다.
+--
+-- 지킬 것은 「우리 것 전부」가 아니라 「공장」이다. 낙오한 전봇대 하나를
+-- 지키자고 공장을 비워둘 수는 없다. 그러니 «기지에서 멀리 떨어진 것»은
+-- 테두리에서 뺀다. 그것들은 어차피 못 지킨다.
+local STRAY_OUT = 90
+
 local function perimeter(surface, force)
+  local home = base().home
   local lo = { x = math.huge, y = math.huge }
   local hi = { x = -math.huge, y = -math.huge }
-  local seen = 0
+  local seen, left_out = 0, 0
   for _, e in pairs(surface.find_entities_filtered { type = MINE, force = force }) do
-    lo.x, lo.y = math.min(lo.x, e.position.x), math.min(lo.y, e.position.y)
-    hi.x, hi.y = math.max(hi.x, e.position.x), math.max(hi.y, e.position.y)
-    seen = seen + 1
+    local far = home and (math.abs(e.position.x - home.x) > STRAY_OUT
+                       or math.abs(e.position.y - home.y) > STRAY_OUT)
+    if far then
+      left_out = left_out + 1
+    else
+      lo.x, lo.y = math.min(lo.x, e.position.x), math.min(lo.y, e.position.y)
+      hi.x, hi.y = math.max(hi.x, e.position.x), math.max(hi.y, e.position.y)
+      seen = seen + 1
+    end
   end
   if seen == 0 then return nil end
   return { left = math.floor(lo.x) - STANDOFF, top = math.floor(lo.y) - STANDOFF,
            right = math.ceil(hi.x) + STANDOFF, bottom = math.ceil(hi.y) + STANDOFF,
-           count = seen }
+           count = seen, left_out = left_out }
 end
 
 -- 적은 어느 쪽에서 오는가.

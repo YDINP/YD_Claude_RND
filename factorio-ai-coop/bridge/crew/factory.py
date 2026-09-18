@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 import sys
 import threading
 
@@ -9,7 +11,7 @@ from client import RconError, TaskFailed
 
 from settings import (BACKOFF_SECONDS, BELT_REACH, BELT_SPARE, FIRST_PACKS,
                       SCIENCE_FEED,
-                      TURRET_AMMO, TURRET_RING, TURRET_TARGET)
+                      DANGER_NEAR, TURRET_AMMO, TURRET_RING, TURRET_TARGET)
 from world import Snapshot
 from jobs import Job
 from ladder import STAGE_TARGET, _as_rows
@@ -263,6 +265,52 @@ class FactoryMixin:
         except RconError as exc:
             worker.block("defend", 300)
             self.say(f"방어 구축 중 오류: {exc}", who=name)
+
+    def flee_job(self, worker: Worker, snap: Snapshot) -> Job | None:
+        """적이 코앞이면 일을 놓고 물러난다.
+
+        사용자: "또 기지 박살낫네". 전투 통계가 값을 말해준다:
+
+            잃은 것   캐릭터 74, 채굴기 14, 화로 11, 상자 14
+            잡은 것   바이터 0마리
+
+        일흔네 번 죽었다. 그런데 한 마리도 못 잡았다 - 요원은 총이 없고,
+        맨손으로 바이터를 이기지 못한다. 싸운 것이 아니라 그냥 서 있다가
+        물린 것이다.
+
+        그리고 죽으면 들고 있던 것을 «전부» 흘린다. 철판도 벨트도 탄약
+        재료도 시체와 함께 땅에 떨어진다. 아무것도 안 쌓이는 진짜 이유가
+        이것이었다 - 만들어도 죽을 때마다 사라진다.
+
+        이길 수 없는 싸움에서는 물러나는 것이 유일한 수다. 터렛이 대신
+        싸워줄 때까지는.
+        """
+        try:
+            near = self.bridge.call("threat", worker.name, 80)
+        except RconError:
+            return None
+        if near.get("error"):
+            return None
+        gap = near.get("nearest_attacker")
+        if not isinstance(gap, (int, float)) or gap > DANGER_NEAR:
+            return None
+
+        try:
+            home = (self.bridge.base() or {}).get("home")
+        except RconError:
+            home = None
+        if not home:
+            return None
+        # 이미 기지에 있으면 더 물러날 데가 없다. 그럴 때는 차라리 일을 한다.
+        if math.dist(self.seat(worker), (home["x"], home["y"])) < 12:
+            return None
+
+        return Job(
+            f"적 {int(near.get('attackers') or 1)}마리가 {int(gap)}타일 앞에 "
+            f"있습니다. 맨손으로는 못 이깁니다. 기지로 물러나겠습니다.",
+            key=f"flee:{worker.name}",
+            steps=[("walk", {"x": home["x"], "y": home["y"]})],
+            at={"x": home["x"], "y": home["y"]})
 
     def defence_job(self, worker: Worker, snap: Snapshot) -> Job | None:
         """터렛을 방어선 위에 세운다.
