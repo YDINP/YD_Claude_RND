@@ -114,6 +114,42 @@ local function craft_zone(surface, force, home, mine, smelt)
   return nil
 end
 
+-- 발전 구역: 보일러와 기관이 실제로 서 있는 곳.
+--
+-- 이것을 구역으로 안 본 값이 실측에 그대로 나왔다:
+--
+--   offshore-pump  (-79,-55)   기지에서 176타일
+--   전봇대 53개    -94..84     179타일에 걸쳐 흩어짐
+--   랩 4대         -91..82     174타일에 걸쳐 흩어짐
+--
+-- 발전소가 먼 것은 우리 탓이 아니다. 기지 반경 150 안의 가장 가까운 물이
+-- 176타일 밖이고, 해양 펌프는 물가에만 선다. 옮길 수 없다.
+--
+-- 그런데 «먼 것»과 «흩어진 것»은 다르다. 발전소가 구역이 아니면 그 사이를
+-- 잇는 전봇대에 주인이 없고, 주인이 없으니 랩이 그 선을 따라 아무 데나
+-- 섰다. 멀면 멀수록 한 덩어리여야 한다.
+local POWER_PAD = 8
+
+local function power_zone(surface, force)
+  local lo = { x = math.huge, y = math.huge }
+  local hi = { x = -math.huge, y = -math.huge }
+  local seen = 0
+  for _, e in pairs(surface.find_entities_filtered {
+    type = { "boiler", "generator", "offshore-pump" }, force = force,
+  }) do
+    lo.x, lo.y = math.min(lo.x, e.position.x), math.min(lo.y, e.position.y)
+    hi.x, hi.y = math.max(hi.x, e.position.x), math.max(hi.y, e.position.y)
+    seen = seen + 1
+  end
+  if seen == 0 then return nil end
+  return {
+    x = math.floor(lo.x) - POWER_PAD, y = math.floor(lo.y) - POWER_PAD,
+    w = math.ceil(hi.x - lo.x) + POWER_PAD * 2,
+    h = math.ceil(hi.y - lo.y) + POWER_PAD * 2,
+    count = seen,
+  }
+end
+
 -- 세 구역을 한 번에 답한다. 부르는 쪽이 「여기는 어느 구역인가」를 묻는
 -- 자리는 여기 하나뿐이어야 한다.
 local function zones(name)
@@ -130,6 +166,7 @@ local function zones(name)
     mine = mine_zone(surface, force),
     smelt = smelter().smelter,
     craft = nil,   -- 아래에서 채운다. 채굴/제련 구역을 알아야 고를 수 있다.
+    power = power_zone(surface, force),
   }
   out.craft = craft_zone(surface, force, home, out.mine, out.smelt)
   if out.smelt then

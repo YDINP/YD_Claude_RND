@@ -188,6 +188,37 @@ class HaulingMixin:
             free[zone] = spots
 
         taken = self.taken()
+
+        # 자리가 없으면 «걷는다».
+        #
+        # 실측: 화로 106대, 자리표의 자리 48개. 쉰여덟 대는 갈 곳이 없다.
+        # 지금까지는 그 쉰여덟이 영원히 그 자리에 남았다 - 옮길 자리가 없으면
+        # resettle 이 통째로 아무것도 안 했기 때문이다.
+        #
+        # 자리표가 마흔여덟인 것은 모자라서가 아니다. 노란 벨트 한 줄이
+        # 먹일 수 있는 화로가 마흔여덟 대다. 쉰아홉 번째부터는 광석이 안
+        # 와서 서 있기만 하고, 서 있기만 하는 화로도 연료는 태우고 공해는
+        # 낸다. 실측에서 96대가 no_ingredients 였던 것이 그 뜻이다.
+        #
+        # 걷으면 돌로 돌아온다. 자리에 없는 건물은 자재다.
+        if not any(free.values()):
+            for group in cluster(rows)[:2]:
+                head = group[0]
+                key = f"spare:{head['x']:.0f},{head['y']:.0f}"
+                if key in taken:
+                    continue
+                group = group[:6]
+                return Job(
+                    f"{head['name']} {len(group)}대가 자리표 밖에 서 있는데 "
+                    f"빈 자리가 없습니다. 걷어서 자재로 돌리겠습니다. "
+                    f"({head['x']:.0f}, {head['y']:.0f})",
+                    key=key,
+                    steps=[("demolish", {"x": one["x"], "y": one["y"],
+                                         "name": one["name"]})
+                           for one in group],
+                    at={"x": head["x"], "y": head["y"]})
+            return None
+
         for group in cluster(rows)[:1]:
             group = [one for one in group if free.get(one["zone"])]
             if not group:
