@@ -380,10 +380,24 @@ class MiningMixin:
                 if r.get("well") and int(r.get("held") or 0) >= WELL_FULL]
         if not full:
             return []
+        # 석탄도 광석과 같은 줄로 보낸다.
+        #
+        # 벨트 한 줄에는 두 차선이 있고, 인서터는 집히는 대로 집어 화로에
+        # 넣는다. 화로는 석탄을 연료칸에, 광석을 재료칸에 알아서 나눠 담는다.
+        # 덤으로 버너 인서터가 제가 나르는 석탄으로 스스로를 먹인다 - 줄
+        # 하나가 광석과 연료와 인서터 밥을 한꺼번에 해결한다.
+        store = None
         try:
-            store = (self.bridge.depot() or {}).get("depot")
-        except RconError:
-            store = None
+            line = self.bridge.flow_plan(next(iter(self.workers)), "ore", limit=1)
+            if int((line.get("standing") or {}).get("trunk") or 0) > 0:
+                store = line.get("from")
+        except (RconError, StopIteration):
+            pass
+        if store is None:
+            try:
+                store = (self.bridge.depot() or {}).get("depot")
+            except RconError:
+                store = None
 
         out: list[Job] = []
         taken = self.taken()

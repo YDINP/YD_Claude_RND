@@ -77,6 +77,8 @@ local remember_line  = Panel.remember_line
 local Belts = require("belts")
 local loose_belts = Belts.loose_belts
 local ore_line    = Belts.ore_line
+local flows       = Belts.flows
+local flow_plan   = Belts.flow_plan
 
 local Zones = require("zones")
 local draw_zones = Zones.draw_zones
@@ -553,6 +555,10 @@ remote.add_interface("ai", {
 
   -- 캐는 구역에서 제련 구역까지의 광석 길 - 아직 없는 것만.
   ore_line = ore_line,
+
+  -- 물류 - 무엇이 어디서 어디로 흐르는가, 그리고 아직 없는 것.
+  flows = flows,
+  flow_plan = flow_plan,
   loose_belts = loose_belts,
 
   -- 무엇을 어디서 하는가. 채굴 / 제련 / 조립.

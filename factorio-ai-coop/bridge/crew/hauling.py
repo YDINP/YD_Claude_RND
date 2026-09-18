@@ -48,7 +48,7 @@ class HaulingMixin:
         # 벨트 길이 시작되는 곳. 거기 벨트가 실제로 서 있으면 거기 얹는다.
         drop, by_belt = None, False
         try:
-            line = self.bridge.ore_line(worker.name, limit=1)
+            line = self.bridge.flow_plan(worker.name, "ore", limit=1)
             head = line.get("from")
             standing = (line.get("standing") or {}).get("trunk") or 0
             if head and standing > 0:
@@ -89,24 +89,33 @@ class HaulingMixin:
                     at={"x": head_chest["x"], "y": head_chest["y"]}))
         return out
 
+    # 물류의 흐름마다 사람이 읽을 이름.
+    FLOW_NAMES = {"ore": "광석 길 (채굴 → 제련)",
+                  "plate": "판금 길 (제련 → 조립)"}
+
     def line_job(self, worker: Worker) -> Job | None:
-        """광석 길이 아직 안 이어졌으면 잇는 일감을 낸다."""
+        """아직 안 이어진 흐름 하나를 집어 일감으로 낸다.
+
+        흐름은 순서가 있다. 광석이 안 들어오면 판금이 안 나오므로, 앞의
+        흐름이 덜 됐으면 그것부터 한다.
+        """
         try:
-            line = self.bridge.ore_line(worker.name, limit=1)
+            flows = self.bridge.flows(worker.name, limit=1)
         except RconError:
             return None
-        if line.get("error") or not line.get("todo"):
-            return None
-        left = int(line.get("left") or 0)
-        if left <= 0:
-            return None
-        up = line["standing"]
-        want = line["want"]
-        return Job(
-            f"광석 길이 {left}칸 모자랍니다 "
-            f"(길 {up['trunk']}/{want['trunk']}, 내리는 줄 {up['lane']}/{want['lane']}, "
-            f"인서터 {up['arms']}/{want['arms']}). 이어 깔겠습니다.",
-            key="oreline", routine="line", at=line.get("from"))
+        for flow in flows:
+            if flow.get("error") or int(flow.get("left") or 0) <= 0:
+                continue
+            up = flow.get("standing") or {}
+            want = flow.get("want") or {}
+            parts = ", ".join(f"{k} {up.get(k, 0)}/{want.get(k, 0)}"
+                              for k in want)
+            return Job(
+                f"{self.FLOW_NAMES.get(flow['flow'], flow['flow'])}이(가) "
+                f"{flow['left']}칸 모자랍니다 ({parts}). 이어 깔겠습니다.",
+                key=f"line:{flow['flow']}", routine="line",
+                at={**(flow.get("from") or {}), "flow": flow["flow"]})
+        return None
 
     def loose_belt_job(self, worker: Worker) -> Job | None:
         """정해진 길 위에 없는 벨트를 걷어온다.
@@ -188,19 +197,21 @@ class HaulingMixin:
         return None
 
     def lay_line(self, worker: Worker, at: dict) -> None:
-        """광석 길을 이어 깐다. 한 번에 나를 수 있는 만큼씩.
+        """한 흐름의 길을 이어 깐다. 한 번에 나를 수 있는 만큼씩.
 
         스무 칸씩 깐다. 백 칸을 한 번에 깔려면 백 칸어치를 먼저 만들어야 하고,
         그동안 아무도 아무것도 못 한다. 반쯤 깐 길도 다음 사람이 이어 깐다 -
-        이 파일이 「아직 없는 것만」 돌려주는 이유가 그것이다.
+        벨트 쪽이 「아직 없는 것만」 돌려주는 이유가 그것이다.
         """
         name = worker.name
-        key = "oreline"
+        which = at.get("flow", "ore")
+        key = f"line:{which}"
+        label = self.FLOW_NAMES.get(which, which)
         try:
-            line = self.bridge.ore_line(name, limit=20)
+            line = self.bridge.flow_plan(name, which, limit=20)
         except RconError:
             return
-        todo = line.get("todo") or []
+        todo = _as_rows(line.get("todo"))
         if not todo:
             return
 
@@ -211,7 +222,7 @@ class HaulingMixin:
             need[one["what"]] = need.get(one["what"], 0) + 1
         for part, count in need.items():
             if not self.obtain(worker, part, count):
-                self.ask_for(worker, part, count, "광석 길")
+                self.ask_for(worker, part, count, label)
                 worker.block(key, BACKOFF_SECONDS)
                 return
 
@@ -226,12 +237,13 @@ class HaulingMixin:
                 break
         if not laid:
             worker.block(key, BACKOFF_SECONDS)
-            self.say(f"광석 길을 못 깔았습니다: {stuck}", who=name)
+            self.say(f"{label}을(를) 못 깔았습니다: {stuck}", who=name)
             return
 
         after = 0
         try:
-            after = int((self.bridge.ore_line(name, limit=1) or {}).get("left") or 0)
+            after = int((self.bridge.flow_plan(name, which, limit=1)
+                         or {}).get("left") or 0)
         except RconError:
             pass
-        self.say(f"광석 길을 {laid}칸 깔았습니다. 남은 것 {after}칸.", who=name)
+        self.say(f"{label}을(를) {laid}칸 깔았습니다. 남은 것 {after}칸.", who=name)
