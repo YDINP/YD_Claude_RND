@@ -466,6 +466,12 @@ M.build = {
 
 M.craft = {
   start = function(ctx)
+    if bag_full(ctx.bot) then
+      -- 만든 것을 넣을 칸이 없으면 만들 수 없다. 실측(2026-09-18): 여덟
+      -- 캐릭터 전부 빈 칸 0 이었고 둘이 craft 에 걸린 채 서 있었다.
+      ctx.task.error = "bag is full - nowhere to put what I make"
+      return "failed"
+    end
     local p = ctx.task.params
     if not p.recipe or not prototypes.recipe[p.recipe] then
       ctx.task.error = "no such recipe: " .. tostring(p.recipe)

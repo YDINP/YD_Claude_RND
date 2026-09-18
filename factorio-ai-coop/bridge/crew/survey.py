@@ -82,29 +82,34 @@ class SurveyMixin:
         #    받아도 그 자리에 선다.
         snap = self.snaps.get(worker.name)
         if snap and snap.free <= BAG_ROOM:
-            dump = self.depot_job(worker, snap)
-            if dump:
-                return [dump]
-            # 공용 창고가 아직 없으면 아무 상자에나 붓는다. 여기서 빈손으로
-            # 돌아가면 이 사람은 다음에도 같은 자리에 선다 - 가방을 비우는
-            # 것 자체가 목적이지, 어디에 붓느냐는 그다음이다.
+            # 아무 상자에나 붓는다. 공용 창고를 «짓는» 일은 여기서 하면 안 된다 -
+            # 상자를 만들려면 가방에 칸이 있어야 하고, 지금 없는 것이 그 칸이다.
+            # 실측(2026-09-18): 여덟 캐릭터 전부 빈 칸 0, 둘은 craft 에 걸린 채
+            # 정지. 공용 창고는 아직 없었다. 창고를 지으라는 일감이 나왔지만
+            # 그 일감도 가방을 필요로 했다 - 교착이다.
+            #
+            # 비우는 것 자체가 목적이지 어디에 붓느냐는 그다음이다.
             try:
                 shelves = _as_rows(self.bridge.stores(worker.name,
-                                                      200, 6).get("chests"))
+                                                      200, 8).get("chests"))
             except RconError:
                 shelves = []
             heavy = sorted(((n, c) for n, c in snap.items.items() if c >= 20),
                            key=lambda pair: -pair[1])
             if shelves and heavy:
                 item, count = heavy[0]
+                near = min(shelves, key=lambda c: c.get("distance", 0))
                 return [Job(
                     f"가방이 꽉 차서 아무것도 못 하고 있습니다. {item} "
                     f"{count}개를 상자에 붓겠습니다.",
                     key=f"dump:{worker.name}", owner=worker.name,
                     steps=[("insert", {"name": item, "count": count,
-                                       "x": shelves[0]["x"],
-                                       "y": shelves[0]["y"]})],
-                    at={"x": shelves[0]["x"], "y": shelves[0]["y"]})]
+                                       "x": near["x"], "y": near["y"]})],
+                    at={"x": near["x"], "y": near["y"]})]
+            # 상자가 하나도 없으면 그때는 지어야 한다.
+            dump = self.depot_job(worker, snap)
+            if dump:
+                return [dump]
 
         # 0. 서 있는 발전소를 고치는 것이 새 발전소보다 언제나 싸다.
         #    전봇대 둘과 파이프 둘이 2.7MW 였던 적이 있다.
@@ -169,9 +174,13 @@ class SurveyMixin:
         stray_belt = self.loose_belt_job(worker)
         if stray_belt:
             unblock.append(stray_belt)
+        # 광석 길은 «일감 하나»가 아니라 «백 대를 한 번에 푸는 일»이다.
+        #     채굴기 161대 중 100대가 내놓을 데가 없어 서 있고
+        #     화로 100대 중 94대가 재료가 없어 서 있다
+        # 그 둘 사이가 끊긴 것이 전부이므로, 이 일은 나르는 일보다 앞이다.
         line = self.line_job(worker)
         if line:
-            jobs.append(line)
+            jobs.insert(0, line)
 
         # 1. 연료가 떨어진 기계. 세 가지를 이 순서로 한다.
         #
