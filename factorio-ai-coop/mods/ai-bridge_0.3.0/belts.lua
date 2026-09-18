@@ -691,13 +691,42 @@ local function field_lines(name, limit)
       end
       stops[#stops + 1] = head
 
-      -- 정거장들을 차례로 잇는다. 한 구간이라도 못 이으면 거기서 끊고
-      -- 나머지는 다음에 - 반쯤 이어진 길도 광석을 나른다.
-      local tiles = {}
-      for i = 1, #stops - 1 do
-        local leg = walk(surface, force, stops[i], stops[i + 1])
-        if not leg then break end
-        for _, one in ipairs(leg) do tiles[#tiles + 1] = one end
+      -- 길은 «한 번 정하고 얼려둔다».
+      --
+      -- 여기서 `walk` 을 매번 새로 불렀다가 벨트 숲을 만들었다. 사용자
+      -- 사진에 평행선이 열댓 줄 서 있었다. 실측으로 길 밖 벨트가 64칸,
+      -- 그리고 같은 흐름을 두 번 물으니 want 가 42에서 31로 바뀌었다 -
+      -- 부를 때마다 다른 길을 냈다는 뜻이다.
+      --
+      -- 이 저장소가 같은 실수를 두 번째 한다. 첫 번째는 `ore_line` 이었고
+      -- 그때 `route_for` 로 얼려두는 방식을 만들었는데, 여기서 그것을
+      -- 안 쓰고 `walk` 을 직접 불렀다.
+      --
+      -- 만들어둔 것을 안 쓰면 없는 것과 같다.
+      local key = "field:" .. n .. ":" .. math.floor(field.x)
+                  .. "," .. math.floor(field.y)
+      storage.lines = storage.lines or {}
+      local kept = storage.lines[key]
+      local tiles
+      if kept and kept.plan == PLAN and kept.stops == #stops
+         and kept.tiles and #kept.tiles > 0 then
+        tiles = kept.tiles
+        -- 그 위에 무언가 새로 섰으면 그 «자리만» 고친다.
+        local mended, patches = repair(surface, force, tiles)
+        if mended and patches and patches > 0 then
+          tiles = mended
+          storage.lines[key].tiles = tiles
+        end
+      else
+        tiles = {}
+        for i = 1, #stops - 1 do
+          local leg = walk(surface, force, stops[i], stops[i + 1])
+          if not leg then break end
+          for _, one in ipairs(leg) do tiles[#tiles + 1] = one end
+        end
+        if #tiles > 0 then
+          storage.lines[key] = { tiles = tiles, plan = PLAN, stops = #stops }
+        end
       end
       if #tiles > 0 then
         first_from = first_from or stops[1]

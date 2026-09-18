@@ -913,6 +913,45 @@ def main() -> int:
           not any(j.key.startswith("furnace:") for j in plan(seated, crew=8)),
           str([j.key for j in plan(seated, crew=8)][:4]))
 
+    # 석탄은 광석 하나가 아니라 «모든 것의 연료»다.
+    #
+    # 실측(41분째): 채굴기 여섯 대가 돌 2, 구리 3, 철 1. 석탄 0대,
+    # 상자 속 석탄도 0. 그래서 넷이 돌아가며 "연료가 없습니다. 석탄 캐러
+    # 갑니다"만 했다. 먼저 온 광맥이 예산을 다 써버린 것이다.
+    #
+    # 다른 광맥은 없으면 느려질 뿐이지만 석탄은 없으면 «멈춘다».
+    def with_fields(ores, drills):
+        return Snapshot(
+            x=0, y=0, researched=ALL_TECH, powered=True, working_labs=1,
+            items={"burner-mining-drill": 3, "iron-chest": 3, "coal": 50},
+            fields=[{"ore": o} for o in ores],
+            resources={o: {"nearest": {"x": 3, "y": 3}, "nearest_dist": 4}
+                       for o in ("coal", "iron-ore", "copper-ore", "stone")},
+            buildings={"stone-furnace": {"count": drills,
+                                         "nearest": {"x": 1, "y": 1},
+                                         "nearest_dist": 2,
+                                         "spots": [{"x": 1, "y": 1}]},
+                       DRILL: {"count": drills}})
+
+    no_coal = [j.key for j in plan(with_fields(
+        ["stone", "copper-ore", "iron-ore"], 6), focus="iron-ore", crew=4)]
+    check("with no coal field the next drill goes to coal",
+          any(k.startswith("automate:coal") for k in no_coal), str(no_coal[:3]))
+
+    has_coal = [j.key for j in plan(with_fields(
+        ["coal", "copper-ore"], 6), focus="iron-ore", crew=4)]
+    check("with coal already dug it does not jump the queue",
+          not has_coal or not has_coal[0].startswith("automate:coal"),
+          str(has_coal[:3]))
+
+    # 「모른다」와 「없다」는 다르다. 모를 때는 석탄을 앞으로 당기지 않는다 -
+    # 모른다고 상한을 넘기면 상한이 없는 것과 같아진다.
+    unknown = [j.key for j in plan(with_fields([], 6), focus="iron-ore", crew=4)
+               if j.key.startswith("automate:")]
+    check("and an unknown field list does not promote coal",
+          not unknown or not unknown[0].startswith("automate:coal"),
+          str(unknown[:3]))
+
     # 둥지가 가까우면 덜 짓는다.
     #
     # 사용자: "이번맵은 적기지가 가까이있는데 이점 유의해". 실측으로

@@ -37,6 +37,8 @@ class Worker:
         self.made: dict[str, int] = {}
         # 반장이 재어 알려주는 공해 여유(타일).
         self.slack: float | None = None
+        # 채굴 밭 목록(구역 쪽이 광맥별로 묶어 준다).
+        self.fields: list[dict] = []
         # What has just failed, and until when it stays off the table.
         self.blocked: dict[str, float] = {}
         # The job key this agent currently holds, so the crew can hand the rest
@@ -82,6 +84,7 @@ class Worker:
             next_furnace=self.next_furnace,
             made=dict(self.made),
             slack=self.slack,
+            fields=list(self.fields),
         )
 
     def block(self, kind: str, seconds: float = BACKOFF_SECONDS) -> None:

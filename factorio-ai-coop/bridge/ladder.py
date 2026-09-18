@@ -148,6 +148,17 @@ def rebalance(health: dict) -> tuple[str, int, str] | None:
             f"바른 비율은 1:1이고, 지금은 캔 광석을 받을 데가 없습니다")
 
 
+def _drill_fields(snap: Snapshot) -> list[dict]:
+    """채굴 밭 목록. 밭마다 «무엇을 캐는가»가 적혀 있다.
+
+    구역 쪽(zones.lua)이 밭을 광맥별로 묶어 돌려준다. 빈 목록은 「없다」가
+    아니라 「아직 모른다」다. 부르는 쪽은 그 둘을 갈라 봐야 한다 - 모른다고
+    상한을 넘기면 상한이 없는 것과 같아진다.
+    """
+    return [one for one in (getattr(snap, "fields", None) or [])
+            if isinstance(one, dict)]
+
+
 def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     """Everything worth doing right now, best first.
 
@@ -285,8 +296,31 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
         # Own patch first, then whatever else still lacks a drill. 한 광맥에
         # 한 대씩만 놓으면 화로 스물셋을 드릴 넷이 먹여야 한다.
         room = drill_target(snap, crew) - drills
+
+        # 석탄이 먼저다. 그리고 석탄에는 «자리를 따로 떼어둔다».
+        #
+        # 실측(41분째): 채굴기 여섯 대가 돌 2, 구리 3, 철 1 이었다.
+        # 석탄은 한 대도 없었고 상자 속 석탄도 0 이었다. 그래서 넷이
+        # 돌아가며 "연료가 없습니다. 석탄 캐러 갑니다"만 하고 있었다.
+        #
+        # 예산을 먼저 온 광맥이 다 써버렸기 때문이다. 그런데 석탄은
+        # 광석 하나가 아니라 «모든 것의 연료»다. 석탄이 없으면 화로도
+        # 채굴기도 인서터도 전부 선다. 사람이 손으로 캐서 열여덟 대를
+        # 먹이는 것은 일이 아니라 형벌이다.
+        #
+        # 그래서 석탄 채굴기가 한 대도 없으면 상한을 한 대 넘겨서라도
+        # 세운다. 다른 광맥은 없어도 느려질 뿐이지만 석탄은 없으면 멈춘다.
+        known = _drill_fields(snap)
+        # 모를 때는 밀어붙이지 않는다. 「없다」와 「아직 모른다」는 다르고,
+        # 모른다고 상한을 넘기면 상한이 없는 것과 같아진다.
+        digs_coal = (not known) or any(one.get("ore") == "coal"
+                                       for one in known)
+        if not digs_coal and snap.ore("coal"):
+            focus = "coal"
+            room = max(room, 1)
+        order = [o for o in FOCUS_ORDER if o != focus]
         seat = 0
-        for ore in [focus] + [o for o in FOCUS_ORDER if o != focus]:
+        for ore in [focus] + order:
             if snap.ore(ore) and seat < room:
                 jobs.append(Job(f"{ore} 자동 채굴을 준비하겠습니다.",
                                 key=f"automate:{ore}:{drills + seat}",

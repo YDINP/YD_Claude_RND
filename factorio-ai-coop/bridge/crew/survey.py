@@ -56,11 +56,18 @@ class SurveyMixin:
                 spread = self.bridge.zones(worker.name) or {}
                 worker.smelter = spread.get("smelt")
                 worker.craft = spread.get("craft")
+                worker.fields = _as_rows(spread.get("fields"))
                 # 구역을 지도에 표시한다. 관전하는 사람이 「여기가 어디인지」
                 # 보려면 코드만 아는 것으로는 부족하다.
                 self.bridge.draw_zones(worker.name)
             # 다음 화로 자리는 매번 새로 묻는다. 걷어내고 세울 때마다
             # 달라지므로 한 번 받아둔 값은 곧 옛 답이 된다.
+            try:
+                # 밭은 채굴기를 세울 때마다 달라지므로 매번 다시 묻는다.
+                worker.fields = _as_rows(
+                    (self.bridge.zones(worker.name) or {}).get("fields"))
+            except RconError:
+                pass
             try:
                 answer = self.bridge.next_seat(worker.name, "smelt")
                 worker.next_furnace = (answer.get("seat")
