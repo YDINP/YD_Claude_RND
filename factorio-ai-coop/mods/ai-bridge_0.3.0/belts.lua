@@ -271,21 +271,59 @@ local function route_for(key, surface, force, from, goal)
   return tiles, short, bends
 end
 
--- 얼려둔 길 위에 무언가 새로 섰는가.
+-- 얼려둔 길 위에 무언가 새로 섰으면, 그 «자리만» 고친다.
 --
--- 길은 한 번 정하면 남는다. 그런데 그 사이 채굴기와 상자가 늘어나고, 하필
--- 길 위에 선다. 실측(2026-09-18): 길의 «첫 칸»이 막혀 있었다. 우리는 막힌
--- 칸에서 멈추므로(건너뛰면 길이 끊긴다) 한 칸도 못 깔았다 - 「남은 140칸」이
--- 세 시간 동안 한 번도 안 줄었던 이유다.
+-- 처음에는 막히면 길을 통째로 다시 찾게 했다. 그것이 벨트 미로를 만들었다 -
+-- 막힐 때마다 새 길이 나오고, 무리가 거기에 스무 칸을 깔고, 그 위에 또
+-- 채굴기가 서면 또 새 길. 평행선이 열댓 줄 생겼다. 사진으로 보면 빗자루
+-- 같았다.
 --
--- 그러니 막힌 자리가 있으면 그때는 길을 다시 찾는다. 길을 붙들고 있는 것은
--- 낭비를 막기 위해서지 못 가는 길을 고집하기 위해서가 아니다.
-local function blocked_anywhere(surface, force, tiles)
-  local probe = missing(surface, force, tiles, BELT)
-  for _, one in pairs(probe) do
-    if one.blocked then return true, one end
+-- 길을 통째로 버리는 것은 이미 깐 것을 통째로 버리는 것이다. 막힌 칸이
+-- 셋이면 셋만 돌아가면 된다. 앞뒤의 성한 칸을 잡아 그 사이만 다시 잇는다.
+local function repair(surface, force, tiles)
+  local fixed, patched = {}, 0
+  local i = 1
+  while i <= #tiles do
+    local blocked = false
+    local here = surface.find_entities_filtered {
+      position = { tiles[i].x, tiles[i].y }, radius = 0.4, force = force,
+    }
+    for _, e in pairs(here) do
+      if e.name ~= BELT and e.type ~= "character" and e.type ~= "item-entity" then
+        blocked = true
+      end
+    end
+    if not blocked and not passable(surface, force, tiles[i].x, tiles[i].y) then
+      blocked = true
+    end
+
+    if not blocked then
+      fixed[#fixed + 1] = tiles[i]
+      i = i + 1
+    else
+      -- 막힌 구간의 끝을 찾는다.
+      local j = i
+      while j <= #tiles do
+        if passable(surface, force, tiles[j].x, tiles[j].y) then break end
+        j = j + 1
+      end
+      local before = fixed[#fixed]
+      local after = tiles[j]
+      if not before or not after then
+        -- 처음이나 끝이 막혔으면 잘라낸다. 줄이 조금 짧아질 뿐이다.
+        i = j + 1
+      else
+        local detour = walk(surface, force, before, after)
+        if not detour or #detour == 0 then return nil end
+        -- detour 는 before -> after 순서다. 첫 칸(before)은 이미 넣었다.
+        for n = 2, #detour do fixed[#fixed + 1] = detour[n] end
+        patched = patched + 1
+        i = j + 1
+      end
+    end
   end
-  return false
+  if #fixed == 0 then return nil end
+  return fixed, patched
 end
 
 local function gather(surface, force, parts)
@@ -331,12 +369,11 @@ local function ore_line(name, fx, fy, limit)
   if not trunk then
     return { error = "no route from the mine to the smelter" }
   end
-  if blocked_anywhere(surface, force, trunk) then
-    storage.lines["ore"] = nil
-    trunk, short, bends = route_for("ore", surface, force, start, head)
-    if not trunk then
-      return { error = "the ore route is blocked and no other way found" }
-    end
+  -- 길 위에 무언가 새로 섰으면 그 자리만 고쳐서 다시 적어둔다.
+  local mended, patches = repair(surface, force, trunk)
+  if mended and patches and patches > 0 then
+    trunk = mended
+    storage.lines["ore"].tiles = trunk
   end
 
   -- 순서가 있다. 길이 없으면 내리는 곳을 세워도 아무것도 안 온다. 그리고
@@ -383,11 +420,10 @@ local function plate_line(name, limit)
   local trunk, short, bends = route_for("plate", surface, force,
     { x = goal.x, y = goal.y }, aim)
   if not trunk then return { error = "no route from the smelter to the shop" } end
-  if blocked_anywhere(surface, force, trunk) then
-    storage.lines["plate"] = nil
-    trunk, short, bends = route_for("plate", surface, force,
-      { x = goal.x, y = goal.y }, aim)
-    if not trunk then return { error = "the plate route is blocked" } end
+  local mended, patches = repair(surface, force, trunk)
+  if mended and patches and patches > 0 then
+    trunk = mended
+    storage.lines["plate"].tiles = trunk
   end
 
   -- walk 는 «goal 쪽으로 흐르는» 순서를 준다. 여기서는 제련 구역이 goal 이므로
@@ -455,6 +491,49 @@ end
 --
 -- 「길 위에 있는가」는 정해진 길이 있어야 물을 수 있다. 그러니 길을 한 번
 -- 정해두는 것은 낭비를 막는 일이기도 하다.
+-- 설계는 한 번, 건설은 여럿이.
+--
+-- 사용자 지시: "심시티 자체는 반장이 설계해서 각 에이전트들한테 건설을
+-- 위임하는게 좋을듯."
+--
+-- 맞다. 그리고 그것이 벨트 미로의 답이기도 하다. 미로가 생긴 까닭은 여덟이
+-- 각자 「길이 어디냐」를 묻고 각자 다른 답을 받았기 때문이다. 설계가 하나면
+-- 답도 하나다.
+--
+-- 그래서 일감을 «나눠준다». 이미 남이 집어간 칸은 안 준다. 삼 분이 지나면
+-- 놓은 것으로 치고 다시 내준다 - 가다 죽은 사람의 몫을 영원히 비워둘 수는 없다.
+local CLAIM_TICKS = 60 * 60 * 3
+
+local function claim_work(name, which, count)
+  local plan = flow_plan(name, which, 200)
+  if plan.error then return plan end
+  local todo = plan.todo or {}
+
+  storage.build_claims = storage.build_claims or {}
+  local now = game.tick
+  local mine = {}
+  for i = 1, #todo do
+    local one = todo[i]
+    local key = which .. ":" .. one.x .. ":" .. one.y
+    local held = storage.build_claims[key]
+    if held == nil or held.who == name or now - held.tick > CLAIM_TICKS then
+      storage.build_claims[key] = { who = name, tick = now }
+      mine[#mine + 1] = one
+      if #mine >= (count or 20) then break end
+    end
+  end
+
+  -- 오래된 표시는 치운다. 안 그러면 표가 끝없이 자란다.
+  for key, held in pairs(storage.build_claims) do
+    if now - held.tick > CLAIM_TICKS * 4 then
+      storage.build_claims[key] = nil
+    end
+  end
+
+  return { todo = mine, left = plan.left, standing = plan.standing,
+           want = plan.want, from = plan.from, flow = which }
+end
+
 local function loose_belts(name, limit)
   local a = agent(name)
   local b = body(a)
@@ -497,6 +576,7 @@ end
 
 return {
   ore_line = ore_line,
+  claim_work = claim_work,
   flows = flows,
   flow_plan = flow_plan,
   loose_belts = loose_belts,

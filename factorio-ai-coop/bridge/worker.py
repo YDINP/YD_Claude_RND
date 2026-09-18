@@ -32,6 +32,7 @@ class Worker:
         self.craft: dict | None = None
         # 무리가 알려주는 공용 창고 재고. 사다리가 이것을 본다.
         self.shelved: dict[str, int] = {}
+        self.next_furnace: dict | None = None
         # What has just failed, and until when it stays off the table.
         self.blocked: dict[str, float] = {}
         # The job key this agent currently holds, so the crew can hand the rest
@@ -73,6 +74,7 @@ class Worker:
             powered=bool(power.get("powered")),
             smelter=self.smelter,
             craft=self.craft,
+            next_furnace=self.next_furnace,
         )
 
     def block(self, kind: str, seconds: float = BACKOFF_SECONDS) -> None:

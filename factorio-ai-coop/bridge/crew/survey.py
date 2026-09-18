@@ -59,6 +59,14 @@ class SurveyMixin:
                 # 구역을 지도에 표시한다. 관전하는 사람이 「여기가 어디인지」
                 # 보려면 코드만 아는 것으로는 부족하다.
                 self.bridge.draw_zones(worker.name)
+            # 다음 화로 자리는 매번 새로 묻는다. 걷어내고 세울 때마다
+            # 달라지므로 한 번 받아둔 값은 곧 옛 답이 된다.
+            try:
+                answer = self.bridge.next_seat(worker.name, "smelt")
+                worker.next_furnace = (answer.get("seat")
+                                       if not answer.get("error") else None)
+            except RconError:
+                worker.next_furnace = None
         except RconError:
             home = None
         if home:

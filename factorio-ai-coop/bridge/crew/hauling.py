@@ -17,11 +17,11 @@ from __future__ import annotations
 
 from client import RconError, TaskFailed
 
-from settings import (BACKOFF_SECONDS, HAUL_BATCH, HAUL_WHEN,
+from settings import (BACKOFF_SECONDS, HAUL_BATCH, HAUL_WHEN, LINE_HANDS,
                       SMELTED_BY_FURNACE)
 from jobs import Job, Step
 from ladder import _as_rows
-from layout import cluster, craft_seat, furnace_seat
+from layout import cluster
 from worker import Worker
 
 BELT = "transport-belt"
@@ -103,6 +103,7 @@ class HaulingMixin:
             flows = self.bridge.flows(worker.name, limit=1)
         except RconError:
             return None
+        taken = self.taken()
         for flow in flows:
             if flow.get("error") or int(flow.get("left") or 0) <= 0:
                 continue
@@ -110,10 +111,21 @@ class HaulingMixin:
             want = flow.get("want") or {}
             parts = ", ".join(f"{k} {up.get(k, 0)}/{want.get(k, 0)}"
                               for k in want)
+            # 설계는 하나, 건설은 여럿이. 예전에는 열쇠가 흐름마다 하나여서
+            # 한 번에 한 사람만 길을 깔았다 - 백오십 칸을 혼자 깔았다.
+            #
+            # 이제 저마다 제 몫을 «받아» 간다. 남이 집어간 칸은 안 오므로
+            # 셋이 동시에 깔아도 같은 칸에 둘이 서지 않는다. 셋까지만 -
+            # 넷째부터는 벨트 만들 철판이 모자라서 서로 굶긴다.
+            busy = sum(1 for k in taken if k.startswith(f"line:{flow['flow']}:"))
+            key = f"line:{flow['flow']}:{worker.name}"
+            if key not in taken and busy >= LINE_HANDS:
+                continue
             return Job(
                 f"{self.FLOW_NAMES.get(flow['flow'], flow['flow'])}이(가) "
-                f"{flow['left']}칸 모자랍니다 ({parts}). 이어 깔겠습니다.",
-                key=f"line:{flow['flow']}", routine="line",
+                f"{flow['left']}칸 모자랍니다 ({parts}). 제 몫을 받아 "
+                f"이어 깔겠습니다.",
+                key=key, routine="line",
                 at={**(flow.get("from") or {}), "flow": flow["flow"]})
         return None
 
@@ -125,13 +137,13 @@ class HaulingMixin:
         없으니 철판 예순 개를 아끼는 셈이다.
         """
         try:
-            loose = self.bridge.loose_belts(worker.name)
+            loose = self.bridge.loose_belts(worker.name, limit=32)
         except RconError:
             return None
         if not loose:
             return None
         taken = self.taken()
-        for group in cluster(loose)[:1]:
+        for group in cluster(loose)[:4]:
             head = group[0]
             key = f"loose:{head['x']:.0f},{head['y']:.0f}"
             if key in taken:
@@ -161,13 +173,23 @@ class HaulingMixin:
         rows = _as_rows(found.get("misplaced"))
         if not rows:
             return None
-        settled = found.get("settled") or {}
-        seat_of = {"smelt": (found.get("smelt"), furnace_seat),
-                   "craft": (found.get("craft"), craft_seat)}
+        # 빈 자리를 «묻는다». 예전에는 「이미 선 것이 열둘이니 다음은 열셋」로
+        # 셌는데, 그중 하나가 자리표에서 벗어나 있으면 번호가 밀려 이미 찬
+        # 자리에 또 놓으려 든다. 세는 것과 비어 있는가는 다른 질문이다.
+        free: dict[str, list[dict]] = {}
+        for zone in ("smelt", "craft"):
+            try:
+                answer = self.bridge.next_seat(worker.name, zone)
+            except RconError:
+                continue
+            if answer.get("error"):
+                continue
+            spots = _as_rows((answer.get("seat") and [answer["seat"]]) or [])
+            free[zone] = spots
 
         taken = self.taken()
         for group in cluster(rows)[:1]:
-            group = [one for one in group if seat_of.get(one["zone"], (None,))[0]]
+            group = [one for one in group if free.get(one["zone"])]
             if not group:
                 continue
             head = group[0]
@@ -176,22 +198,28 @@ class HaulingMixin:
                 continue
 
             steps: list[Step] = []
-            nth = dict(settled)
             moved = []
             for one in group[:4]:
-                origin, seat_fn = seat_of[one["zone"]]
-                seat = seat_fn(origin, nth[one["zone"]])
-                nth[one["zone"]] += 1
+                spot = (free.get(one["zone"]) or [None])[0]
+                if not spot:
+                    continue
+                # 한 번에 한 채씩 옮긴다. 자리표는 걷어내고 세울 때마다
+                # 달라지므로, 한 번의 답으로 네 채를 배치하면 두 번째부터는
+                # 옛 답이다. 게임에 다시 묻는 것이 싸다.
                 steps.append(("demolish", {"x": one["x"], "y": one["y"],
                                            "name": one["name"]}))
-                steps.append(("build", {"name": one["name"], **seat,
+                steps.append(("build", {"name": one["name"],
+                                        "x": spot["x"], "y": spot["y"],
                                         "snap": True}))
                 moved.append(one["name"])
+                break
+            if not steps:
+                continue
             where = "제련" if head["zone"] == "smelt" else "조립"
+            why = "자리표에서 벗어나" if head.get("askew") else f"{where} 구역 밖에"
             return Job(
-                f"{moved[0]} 등 {len(moved)}채가 {where} 구역 밖에 서 있습니다. "
-                f"걷어내서 제자리에 다시 세우겠습니다. "
-                f"({head['x']:.0f}, {head['y']:.0f})",
+                f"{moved[0]}이(가) {why} 서 있습니다. 걷어내서 제자리에 다시 "
+                f"세우겠습니다. ({head['x']:.0f}, {head['y']:.0f})",
                 key=key, steps=steps,
                 at={"x": head["x"], "y": head["y"]})
         return None
@@ -205,10 +233,11 @@ class HaulingMixin:
         """
         name = worker.name
         which = at.get("flow", "ore")
-        key = f"line:{which}"
+        key = f"line:{which}:{name}"
         label = self.FLOW_NAMES.get(which, which)
         try:
-            line = self.bridge.flow_plan(name, which, limit=20)
+            # 설계에 «내 몫»을 달라고 한다. 남이 집어간 칸은 안 온다.
+            line = self.bridge.claim_work(name, which, 20)
         except RconError:
             return
         todo = _as_rows(line.get("todo"))

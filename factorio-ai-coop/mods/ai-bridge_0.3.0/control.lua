@@ -86,10 +86,12 @@ local loose_belts = Belts.loose_belts
 local ore_line    = Belts.ore_line
 local flows       = Belts.flows
 local flow_plan   = Belts.flow_plan
+local claim_work  = Belts.claim_work
 
 local Zones = require("zones")
 local draw_zones = Zones.draw_zones
 local misplaced  = Zones.misplaced
+local next_seat  = Zones.next_seat
 local zones      = Zones.zones
 
 local Runner = require("runner")
@@ -573,6 +575,9 @@ remote.add_interface("ai", {
   -- 물류 - 무엇이 어디서 어디로 흐르는가, 그리고 아직 없는 것.
   flows = flows,
   flow_plan = flow_plan,
+
+  -- 설계는 한 번, 건설은 여럿이. 남이 집어간 칸은 안 준다.
+  claim_work = claim_work,
   loose_belts = loose_belts,
 
   -- 무엇을 어디서 하는가. 채굴 / 제련 / 조립.
@@ -580,6 +585,9 @@ remote.add_interface("ai", {
 
   -- 제자리가 아닌 건물들, 그리고 제자리에 이미 선 수.
   misplaced = misplaced,
+
+  -- 그 구역에서 다음에 놓을 빈 자리.
+  next_seat = next_seat,
   draw_zones = draw_zones,
 
   -- 기지의 무게중심, 그리고 거기서 너무 멀리 떨어진 우리 건물.

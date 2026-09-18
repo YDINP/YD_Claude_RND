@@ -26,6 +26,9 @@ local Stock = require("stock")
 local base = Stock.base
 local smelter = Stock.smelter
 
+local Plots = require("plots")
+local plot_seats = Plots.plot_seats
+
 local Power = require("power")
 local power_reach = Power.power_reach
 
@@ -138,6 +141,23 @@ local function zones(name)
   return out
 end
 
+-- 다음에 놓을 자리. 세지 않고 «비어 있는 첫 자리»를 묻는다.
+--
+-- 예전에는 「이미 선 화로가 열두 대니 다음은 열세 번째 자리」로 정했다.
+-- 그런데 그 열두 대 중 하나가 자리표에서 벗어나 있으면 번호가 밀리고,
+-- 이미 찬 자리에 또 놓으려 든다. 세는 것과 비어 있는가는 다른 질문이다.
+local function next_seat(name, which)
+  local here = zones(name)
+  local origin = (which == "smelt") and here.smelt or here.craft
+  if not origin then return { error = "no " .. tostring(which) .. " zone yet" } end
+  local map = plot_seats(name, which, origin)
+  if map.error then return map end
+  local first = map.free[1]
+  return { seat = first, plot = which, origin = origin,
+           ours = map.ours, taken = map.taken, blocked = map.blocked,
+           free = #map.free, want = map.want }
+end
+
 -- 제자리가 아닌 건물들.
 --
 -- 구역을 정해놓고 새로 짓는 것만 그리로 보내면, 이미 흩어져 있는 것은 영원히
@@ -166,6 +186,19 @@ local function inside(at, zone, w, h, margin)
      and at.y >= zone.y - margin and at.y <= zone.y + h + margin
 end
 
+-- 그 건물이 자리표 위에 서 있는가.
+local function on_grid(at, origin, zone)
+  local seat = (zone == "smelt") and Plots.furnace_seat or Plots.craft_seat
+  local plan = (zone == "smelt") and 48 or 18
+  for nth = 0, plan - 1 do
+    local spot = seat(origin, nth)
+    if math.abs(spot.x - at.x) < 0.6 and math.abs(spot.y - at.y) < 0.6 then
+      return true
+    end
+  end
+  return false
+end
+
 local function misplaced(name, limit)
   local a = agent(name)
   local b = body(a)
@@ -186,6 +219,15 @@ local function misplaced(name, limit)
       }) do
         if inside(e.position, plot.at, plot.w, plot.h) then
           home[zone] = home[zone] + 1
+          -- 구역 안이라도 자리표에서 벗어나 있으면 옮긴다. 비뚜로 선
+          -- 한 채가 자리 하나를 영영 막고, 자리표의 번호도 밀린다.
+          if not on_grid(e.position, plot.at, zone) then
+            out[#out + 1] = {
+              name = what, zone = zone, askew = true,
+              x = e.position.x, y = e.position.y,
+              distance = math.floor(Tasks.dist(b.position, e.position)),
+            }
+          end
         elseif e.minable then
           out[#out + 1] = {
             name = what, zone = zone,
@@ -240,6 +282,7 @@ end
 
 return {
   zones = zones,
+  next_seat = next_seat,
   misplaced = misplaced,
   draw_zones = draw_zones,
 }

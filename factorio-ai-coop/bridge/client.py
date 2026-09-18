@@ -348,6 +348,10 @@ class AIBridge:
         """한 흐름의 다음 할 일."""
         return self.call("flow_plan", agent, which, limit)
 
+    def claim_work(self, agent: str, which: str, count: int = 20) -> dict:
+        """설계에서 내 몫을 받아온다. 남이 집어간 칸은 안 온다."""
+        return self.call("claim_work", agent, which, count)
+
     def loose_belts(self, agent: str, limit: int = 12) -> list[dict]:
         """정해진 길 위에 없는 벨트들. 걷어내면 손에 돌아온다."""
         return _as_list(self.call("loose_belts", agent, limit).get("loose"))
@@ -355,6 +359,10 @@ class AIBridge:
     def zones(self, agent: str) -> dict:
         """무엇을 어디서 하는가 - 채굴 / 제련 / 조립."""
         return self.call("zones", agent)
+
+    def next_seat(self, agent: str, which: str) -> dict:
+        """그 구역에서 다음에 놓을 «비어 있는» 자리. 세지 않고 묻는다."""
+        return self.call("next_seat", agent, which)
 
     def misplaced(self, agent: str, limit: int = 8) -> dict:
         """제자리가 아닌 건물들. settled 는 이미 제자리에 선 수."""

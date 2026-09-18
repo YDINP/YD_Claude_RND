@@ -33,6 +33,8 @@ class Snapshot:
     smelter: dict | None = None
     # 조립 구역의 모서리. 랩과 조립기는 전부 여기 선다.
     craft: dict | None = None
+    # 제련 구역에서 다음에 비어 있는 자리. 세지 않고 물어서 받은 값이다.
+    next_furnace: dict | None = None
 
     def anywhere(self, item: str) -> int:
         """손에 든 것 + 창고에 있는 것.
