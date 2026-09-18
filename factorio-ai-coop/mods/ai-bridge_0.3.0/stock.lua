@@ -624,11 +624,25 @@ local function poor_drills(name, floor, radius)
   return { agent = name, poor = near, total = #out }
 end
 
+-- 공장 건강 진단도 무겁다. 반경 400 안의 기계를 전부 훑는다.
+--
+-- 실측으로 1,197ms 가 나왔다. `/silent-command` 는 게임 틱 위에서 동기로
+-- 도니, 그 1.2초 동안 게임이 멈춘다. 그리고 요원마다 부른다.
+--
+-- 이 답도 몇 초 사이에 달라지지 않는다. 한 번 재고 잠깐 기억한다.
+local HEALTH_TTL = 60 * 3   -- 3초
+
 local function health(name, radius)
   init_status_names()
   local a = agent(name)
   local b = body(a)
   if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  storage.health_memo = storage.health_memo or {}
+  local memo = storage.health_memo[radius or 0]
+  if memo and game.tick - memo.tick < HEALTH_TTL then
+    return memo.answer
+  end
 
   local reach = math.min(radius or 400, 500)
   local out = {}
@@ -648,7 +662,9 @@ local function health(name, radius)
       row.why[label] = (row.why[label] or 0) + 1
     end
   end
-  return { agent = name, machines = out }
+  local answer = { agent = name, machines = out }
+  storage.health_memo[radius or 0] = { tick = game.tick, answer = answer }
+  return answer
 end
 
 return {

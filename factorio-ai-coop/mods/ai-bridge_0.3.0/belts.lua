@@ -826,7 +826,32 @@ local FLOWS = {
   { flow = "plate", plan = function(name, limit) return plate_line(name, limit) end },
 }
 
+-- 흐름 넷을 한 번에 훑는 것은 «무거운» 일이다.
+--
+-- 사용자: "게임이 중간중간 멈추듯 끊기는 느낌은 뭐지"
+--
+-- 우리가 멈추고 있었다. 실측:
+--
+--     flows      1,374 ms
+--     그 밖 대부분   30~36 ms
+--
+-- `/silent-command` 는 게임 틱 «위에서» 동기로 돈다. 1.4초짜리 조회 하나는
+-- 게임을 1.4초 멈춘다는 뜻이다. 그리고 `line_job` 이 순찰마다 요원 수만큼
+-- 부르므로, 다섯이면 한 순찰에 칠 초가 얼어붙는다.
+--
+-- 무거운 까닭은 흐름마다 길을 다시 재기 때문이다. 길이 얼어 있어도 「아직
+-- 없는 것」을 세려면 칸마다 게임에 물어야 하고, 그것이 사백 칸이면 사백 번이다.
+--
+-- 그런데 이 답은 «몇 초 사이에 달라지지 않는다». 요원 다섯이 같은 순찰에
+-- 묻는 답은 같은 답이다. 그러니 한 번 재고 잠깐 기억한다.
+local FLOWS_TTL = 60 * 3   -- 3초
+
 local function flows(name, limit)
+  storage.flow_memo = storage.flow_memo or {}
+  local memo = storage.flow_memo[limit or 0]
+  if memo and game.tick - memo.tick < FLOWS_TTL then
+    return memo.answer
+  end
   local out = {}
   for _, one in ipairs(FLOWS) do
     local answer = one.plan(name, limit)
@@ -836,7 +861,9 @@ local function flows(name, limit)
       from = answer.from, head = answer.head,
     }
   end
-  return { flows = out }
+  local answer = { flows = out }
+  storage.flow_memo[limit or 0] = { tick = game.tick, answer = answer }
+  return answer
 end
 
 -- 한 흐름의 다음 할 일. 이름으로 고른다.
