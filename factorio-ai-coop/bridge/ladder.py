@@ -101,7 +101,7 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     # --- infrastructure the whole crew shares ----------------------------
     # One furnace serves everybody, so only one agent should be building it.
     if not furnace:
-        if snap.have("stone-furnace") >= 1:
+        if snap.anywhere("stone-furnace") >= 1:
             # 첫 화로가 제련 구역의 첫 칸이 된다. 여기서 「내가 선 자리」에
             # 놓으면 그 뒤의 화로 예순 대가 전부 그 자리를 기준으로 선다.
             first = furnace_seat(snap.smelter, 0) if snap.smelter else {
@@ -121,14 +121,14 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     # A lab is the gate to everything past the trigger technologies, and
     # crafting one is itself what unlocks the red science pack recipe.
     if snap.knows("electronics") and snap.knows("steam-power"):
-        if snap.have("lab") < 1 and not snap.building("lab"):
+        if snap.anywhere("lab") < 1 and not snap.building("lab"):
             if snap.can_make("lab"):
                 jobs.append(Job("랩을 제작합니다.", key="craft:lab",
                                 steps=[("craft", {"recipe": "lab", "count": 1})]))
             elif snap.can_make("electronic-circuit", 10):
                 jobs.append(Job("랩에 쓸 전자회로를 만듭니다.", key="craft:circuit",
                                 steps=[("craft", {"recipe": "electronic-circuit", "count": 10})]))
-        elif snap.have("lab") >= 1 and not snap.building("lab"):
+        elif snap.anywhere("lab") >= 1 and not snap.building("lab"):
             # 랩은 조립 구역에 선다. 「내가 선 자리 옆」에 놓으면 랩이
             # 사람을 따라다니고, 그러면 조립기도 과학팩도 따라 흩어진다.
             # 전기가 닿는 곳이어야 하는 것도 랩이 구역을 갖는 이유다.
@@ -233,7 +233,7 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     want = furnace_target(snap, crew)
     if furnace and standing < want:
         nth = standing
-        if snap.have("stone-furnace") >= 1:
+        if snap.anywhere("stone-furnace") >= 1:
             # 기준점은 게임 쪽에 적어둔 제련 블록의 모서리다. 누가 묻든
             # 같은 값이라야 화로가 줄을 선다.
             #

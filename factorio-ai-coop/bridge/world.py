@@ -27,10 +27,23 @@ class Snapshot:
     powered: bool = False
     # 가방의 빈 칸. 이것이 0 이면 캐는 일도 걷어내는 일도 전부 실패한다.
     free: int = 99
+    # 공용 창고에 무엇이 얼마나 있는가. 손에 없다고 없는 것이 아니다.
+    shelved: dict[str, int] = field(default_factory=dict)
     # 제련 블록의 모서리. 누가 묻든 같은 값이어야 화로가 줄을 선다.
     smelter: dict | None = None
     # 조립 구역의 모서리. 랩과 조립기는 전부 여기 선다.
     craft: dict | None = None
+
+    def anywhere(self, item: str) -> int:
+        """손에 든 것 + 창고에 있는 것.
+
+        「가질 수 있는가」와 「지금 손에 있는가」는 다른 질문이다. 사다리는
+        앞의 것을 물어야 한다 - 창고까지 걸어가는 것은 일이지 불가능이 아니다.
+
+        이 구분을 놓쳐서 창고에 철판 3,979개를 쌓아두고 「철판이 없어 조립기를
+        못 만든다」고 판단한 적이 있다.
+        """
+        return self.have(item) + int(self.shelved.get(item, 0))
 
     def have(self, item: str) -> int:
         return self.items.get(item, 0)

@@ -127,6 +127,9 @@ class SurveyMixin:
             coal_chests = self.bridge.chest_stock(worker.name, "coal")
             # 창고에 무엇이 얼마나 있는지. 「그만 캐도 되는가」를 이걸로 정한다.
             shelved = (self.bridge.stores(worker.name).get("total") or {})
+            # 사다리가 창고를 볼 수 있게 실어준다. 손에 없다고 없는 것이
+            # 아니다 - 창고까지 걸어가는 것은 일이지 불가능이 아니다.
+            worker.shelved = {k: int(v) for k, v in shelved.items()}
         except RconError:
             return jobs
 

@@ -30,6 +30,8 @@ class Worker:
         # 사람마다 다른 기준을 쓰면 화로가 줄을 서지 못한다.
         self.smelter: dict | None = None
         self.craft: dict | None = None
+        # 무리가 알려주는 공용 창고 재고. 사다리가 이것을 본다.
+        self.shelved: dict[str, int] = {}
         # What has just failed, and until when it stays off the table.
         self.blocked: dict[str, float] = {}
         # The job key this agent currently holds, so the crew can hand the rest
@@ -61,6 +63,7 @@ class Worker:
             items=inventory.get("items") or {},
             craftable=inventory.get("craftable") or {},
             free=int(inventory.get("free", 99)),
+            shelved=dict(self.shelved),
             buildings=world.get("buildings") or {},
             resources=world.get("resources") or {},
             humans=list(humans.values()) if isinstance(humans, dict) else humans,
