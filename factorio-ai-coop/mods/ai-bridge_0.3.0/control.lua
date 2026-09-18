@@ -1753,60 +1753,62 @@ local function drill_site(name, x, y, radius, receiver)
   local surface, force = b.surface, b.force
   local reach = math.min(radius or 12, 40)
   local ore = surface.find_entities_filtered {
-    position = { x, y }, radius = reach, type = "resource", limit = 200,
+    position = { x, y }, radius = reach, type = "resource", limit = 600,
   }
 
+  -- 두꺼운 칸부터 본다.
+  --
+  -- 5회차에 매장량으로 자리를 매기게 고쳤는데, 후보를 «엔진이 주는 순서»로
+  -- 마흔 개만 모은 뒤 그 안에서 줄을 세웠다. 그 순서는 광맥 테두리부터라,
+  -- 테두리 마흔 개를 줄 세운 것에 지나지 않았다.
+  --
+  -- 실측(새 판): 석탄 채굴기 넷이 777 / 656 / 502 / 272 위에 섰다. 같은
+  -- 광맥의 가장 두꺼운 칸은 2,117이고 평균은 693이다. 넷 중 셋이 평균
+  -- 이하였고 하나는 평균의 40%였다.
+  --
+  -- 줄 세우기를 «고른 다음»이 아니라 «고르기 전»에 한다. 그러면 처음
+  -- 몇 개만 시험해도 두꺼운 자리가 나온다.
+  table.sort(ore, function(p, q) return p.amount > q.amount end)
+
   local sites = {}
+  local tried = 0
   for _, patch in pairs(ore) do
     local spot = patch.position
-    -- 길 위에는 짓지 않는다.
     if not blocks_lane(spot, 1) then
-    for _, dir in pairs(DIRECTIONS) do
-      if surface.can_place_entity {
-        name = "burner-mining-drill", position = spot, direction = dir, force = force,
-      } and not blocks_lane(drop_tile(spot, dir), 1) then
-        local ok, how = outlet_ok(surface, force, drop_tile(spot, dir), receiver)
-        if ok then
-          local drop = drop_tile(spot, dir)
-          sites[#sites + 1] = {
-            x = spot.x, y = spot.y, direction = dir, outlet = how,
-            drop_x = drop.x, drop_y = drop.y,
-            resource = patch.name,
-            distance = math.floor(Tasks.dist(b.position, spot) * 10) / 10,
-          }
-          break
+      for _, dir in pairs(DIRECTIONS) do
+        if surface.can_place_entity {
+          name = "burner-mining-drill", position = spot, direction = dir,
+          force = force,
+        } and not blocks_lane(drop_tile(spot, dir), 1) then
+          local ok, how = outlet_ok(surface, force, drop_tile(spot, dir), receiver)
+          if ok then
+            local drop = drop_tile(spot, dir)
+            local rich = richness(surface, spot)
+            sites[#sites + 1] = {
+              x = spot.x, y = spot.y, direction = dir, outlet = how,
+              drop_x = drop.x, drop_y = drop.y,
+              resource = patch.name,
+              richness = rich,
+              seconds = math.floor(rich / 0.25),
+              distance = math.floor(Tasks.dist(b.position, spot) * 10) / 10,
+            }
+            break
+          end
         end
       end
+      tried = tried + 1
     end
-    end
-    if #sites >= 40 then break end
+    -- 두꺼운 순으로 보고 있으므로 여덟 자리를 찾으면 그만 본다. 더 봐도
+    -- 더 좋은 자리는 안 나온다.
+    if #sites >= 8 or tried > 200 then break end
   end
 
-  -- 가까운 곳이 아니라 오래 갈 곳부터. 걸어가는 데 드는 십 초와 채굴기가
-  -- 사는 이십 분을 맞바꾸는 것은 언제나 남는 장사다. 다만 수명이 비슷하면
-  -- 가까운 쪽을 고른다.
-  for _, site in pairs(sites) do
-    site.richness = richness(surface, { x = site.x, y = site.y })
-    site.seconds = math.floor(site.richness / 0.25)
-  end
-  table.sort(sites, function(p, q)
-    if math.abs(p.richness - q.richness) > 200 then
-      return p.richness > q.richness
-    end
-    return p.distance < q.distance
-  end)
-
-  local out = {}
-  for i = 1, math.min(#sites, 8) do out[i] = sites[i] end
-  return { agent = name, sites = out }
+  -- 한 번 더 정확히. 정렬 기준은 한 칸의 양이었지만, 채굴기가 먹는 것은
+  -- 2x2 네 칸의 합이다. 둘은 대체로 같이 가지만 같지는 않다.
+  table.sort(sites, function(p, q) return p.richness > q.richness end)
+  return { agent = name, sites = sites }
 end
 
--- 석탄 광맥 위에서 서로 마주보는 채굴기 두 대. 각자 캔 석탄이 상대의
--- 연료함으로 직행해서 둘이 서로를 영원히 먹인다. 연료함 스택이 50개씩이라
--- 실질 버퍼가 100개고, 가득 차면 잠시 멈췄다 다시 돈다.
---
--- 이게 없으면 사람이 드릴 열여덟 대에 석탄을 손으로 날라야 하고, 실제로
--- 여덟 중 넷이 그 일만 하고 있었다.
 local function coal_pair_site(name, x, y, radius)
   local a = agent(name)
   local b = body(a)
