@@ -744,9 +744,11 @@ class SurveyMixin:
                 pool.append(chained)
 
         taken = self.taken()
+        made = len(pool)
         pool = [j for j in pool if j.key not in taken]
+        self.last_pool = (made, len(pool), len(free))
         if not pool:
-            return set()
+            return handed
 
         seats = {w.name: (snap.x, snap.y) for w, snap in free}
         for job in pool:
@@ -843,4 +845,12 @@ class SurveyMixin:
             worker.said_idle = False
             handed.add(name)
 
+        # 몇 개를 만들어 몇 명에게 줬는가. 사람이 남는데 일감이 없으면
+        # 그것은 「할 일이 없다」가 아니라 «일감을 못 만들었다»이다.
+        made, left, hands = getattr(self, "last_pool", (0, 0, 0))
+        if len(handed) < hands and left <= len(handed):
+            if getattr(self, "_thin", None) != (made, left, hands):
+                self._thin = (made, left, hands)
+                self.say(f"일감이 모자랍니다. 만든 것 {made}개 중 "
+                         f"{left}개가 비어 있고 손은 {hands}개입니다.")
         return handed
