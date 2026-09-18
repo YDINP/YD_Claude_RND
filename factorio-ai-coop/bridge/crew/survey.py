@@ -9,14 +9,15 @@ import math
 
 from client import RconError
 
-from settings import (CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH, LOOSE_FLOOD, STARVING, DEFEND_WHEN,
+from settings import (CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH, LOOSE_FLOOD, ORE_BATCH, STARVING, DEFEND_WHEN,
                       BAG_ROOM, HOME_REACH, SMELTED_BY_FURNACE, SMELT_BATCH,
                       STRAY_FAR,
                       SURPLUS, THIN_DRILL, WELL_FULL)
 from world import Snapshot
 from jobs import Job, Step
 from layout import belt_pairs, carry_split, cluster, interleave, nearest_to
-from ladder import STAGE_TARGET, _as_rows
+import mission
+from ladder import STAGE_TARGET, _as_rows, plan
 from worker import Worker
 
 
@@ -48,11 +49,6 @@ class SurveyMixin:
         #     것을 전부 흘린다 - 아무것도 안 쌓이던 진짜 이유다.
         #
         #     죽으면 다른 일감은 의미가 없다. 그러니 맨 앞이다.
-        run = self.flee_job(worker, self.snaps.get(worker.name)
-                            or worker.snapshot())
-        if run:
-            return [run]
-
         # 0. 기지에서 너무 멀리 나갔으면, 할 일을 찾기 전에 돌아온다.
         #
         #    에이전트 중심 조회는 전부 그 사람 반경 200 안만 본다. 그 밖에 서
@@ -685,14 +681,74 @@ class SurveyMixin:
         if not free:
             return set()
 
+        # 도망은 «사람마다» 본다.
+        #
+        # 여기 있던 판정이 survey 안에 있었는데, survey 는 첫 번째 사람
+        # 하나만 받아 돈다. 그래서 나머지 넷은 적이 코앞이어도 아무도
+        # 안 봤다. 게다가 그렇게 나온 도망 일감은 «가장 가까운 사람»에게
+        # 갔다 - 쫓기는 사람이 아니라.
+        #
+        # 실측: 무리 다섯이 전멸했다. 로그의 마지막 줄이 "적 27마리가
+        # 0타일 앞에 있습니다" 였다. 0타일이면 이미 붙은 뒤다.
+        #
+        # 위험은 공용 일감이 아니다. 제 몸의 일이라 제가 봐야 한다.
+        handed: set[str] = set()
+        for worker, snap in free:
+            run = self.flee_job(worker, snap)
+            if not run:
+                continue
+            try:
+                worker.watching = worker.handle.submit_plan(run.steps)
+            except RconError:
+                continue
+            self.release(worker)
+            self.claim(worker, run.key)
+            self.say(run.narration, who=worker.name)
+            worker.said_idle = False
+            handed.add(worker.name)
+        free = [(w, snap) for w, snap in free if w.name not in handed]
+        if not free:
+            return handed
+
         pool = self.survey(free[0][0])
+
+        # 사다리도 «반장이» 나눠준다.
+        #
+        # 사용자 지시: "그냥 개인 에이전트들 위임 빼고 반장이 전체를
+        # 관리하는걸로", "주기적으로 게임흐름을 보고 판단해서 각 캐릭터들한테
+        # 작업을 시키도록".
+        #
+        # 예전에는 반장이 나눠주고 «남은 사람은 각자» 사다리를 봤다. 그래서
+        # 두 가지가 어긋났다:
+        #
+        #   * 반장이 아직 안 본 사이에 각자가 제 판단으로 움직였다. 공장이
+        #     꺼져 있는데 다섯이 제련만 반복한 것이 그 모양이다.
+        #   * 같은 일을 두 사람이 다른 이유로 집었다. 열쇠가 겹치지 않으면
+        #     겹친 줄도 몰랐다.
+        #
+        # 이제 사다리 일감도 한 곳에 모아 놓고 반장이 고른다. 사람마다
+        # 맡은 광맥이 다르므로 각자의 눈으로 한 번씩 훑되, 답은 한 자리에
+        # 모은다.
+        seen = {j.key for j in pool}
+        for worker, snap in free:
+            for job in plan(snap, worker.focus, crew=len(self.workers)):
+                if job.key in seen:
+                    continue
+                seen.add(job.key)
+                pool.append(job)
+            # 사다리가 「비축」밖에 안 내놓으면 할 일이 없다는 뜻이다.
+            # 그때 다음 단이 무엇을 요구하는지 물어본다.
+            chained = self.chain_toward(worker, snap)
+            if chained and chained.key not in seen:
+                seen.add(chained.key)
+                pool.append(chained)
+
         taken = self.taken()
         pool = [j for j in pool if j.key not in taken]
         if not pool:
             return set()
 
         seats = {w.name: (snap.x, snap.y) for w, snap in free}
-        handed: set[str] = set()
         for job in pool:
             if len(handed) >= len(free):
                 break
@@ -723,6 +779,44 @@ class SurveyMixin:
                 continue
             worker = self.workers[name]
 
+            # 재료가 모자란 일은 시작하기 전에 «먼저 구한다».
+            #
+            # 개인 판단 경로에 있던 규칙인데, 그 경로를 걷어내면서 여기로
+            # 옮겨왔다. 규칙을 옮길 때 빠뜨리면 그 규칙은 없어진 것이다 -
+            # 이 저장소가 여러 번 한 실수라 이번에는 옮겨 적는다.
+            #
+            # 스스로 만들 수 있는 것은 부탁하지 않는다. 상자가 없다고
+            # 부탁을 걸고 일을 접으면, 만들 줄 알면서도 영영 안 만든다.
+            snap = self.snaps.get(name)
+            if snap is not None and job.needs:
+                short = mission.shortfall(job.needs, snap.items)
+                if short and snap.can_make(short[0], short[1]):
+                    short = None
+                if short:
+                    spot = snap.ore(short[0])
+                    if not spot:
+                        self.ask_for(worker, short[0], short[1], job.narration)
+                        worker.block(job.key)
+                        continue
+                    # 모자란 것이 땅에 있으면 그것부터 캔다.
+                    #
+                    # 예전에는 「캘 수 있으니 괜찮다」며 그냥 일을 시작했고,
+                    # 도착해서 빈손으로 실패했다. 가방에 구리광석이 949개인데
+                    # 석탄이 0개인 채로 화로에 가던 시절이다.
+                    try:
+                        worker.watching = worker.handle.submit_plan([
+                            ("mine", {**spot, "count": max(short[1], ORE_BATCH),
+                                      "search_radius": 10})])
+                    except RconError:
+                        continue
+                    self.claim(worker, job.key)
+                    self.say(f"{job.narration.rstrip('.')} — 그 전에 "
+                             f"{short[0]}이(가) {short[1]}개 모자라 캐 오겠습니다.",
+                             who=name)
+                    worker.said_idle = False
+                    handed.add(name)
+                    continue
+
             # 먼저 «시작할 수 있는가»를 확인하고, 그 다음에 말한다.
             # 예전에는 start_routine 의 반환값을 버렸다. 앞의 작업이 아직
             # 슬롯을 쥐고 있으면 그 함수는 아무것도 안 하고 False 를
@@ -734,11 +828,15 @@ class SurveyMixin:
                     continue
             else:
                 try:
-                    plan = worker.handle.submit_plan(job.steps)
+                    # 이름을 `plan` 으로 두면 사다리의 `plan` 을 가린다.
+                    # 파이썬은 함수 안 어디서든 대입이 있으면 그 이름을
+                    # 통째로 지역 변수로 보므로, 위에서 부르는 사다리가
+                    # "아직 값이 없다"며 터진다.
+                    submitted = worker.handle.submit_plan(job.steps)
                 except RconError as exc:
                     self.say(f"그건 못 하겠습니다: {exc}", who=name)
                     continue
-                worker.watching = plan
+                worker.watching = submitted
 
             self.claim(worker, job.key)
             self.say(job.narration, who=name)

@@ -11,7 +11,7 @@ from client import RconError, TaskFailed
 
 from settings import (BACKOFF_SECONDS, BELT_REACH, BELT_SPARE, FIRST_PACKS,
                       SCIENCE_FEED,
-                      DANGER_NEAR, TURRET_AMMO, TURRET_RING, TURRET_TARGET)
+                      DANGER_NEAR, DANGER_PER_HEAD, TURRET_AMMO, TURRET_RING, TURRET_TARGET)
 from world import Snapshot
 from jobs import Job
 from ladder import STAGE_TARGET, _as_rows
@@ -292,7 +292,21 @@ class FactoryMixin:
         if near.get("error"):
             return None
         gap = near.get("nearest_attacker")
-        if not isinstance(gap, (int, float)) or gap > DANGER_NEAR:
+        if not isinstance(gap, (int, float)):
+            return None
+
+        # 떼로 오면 더 일찍 물러난다.
+        #
+        # 스물넷으로 못 박아뒀더니 무리 다섯이 전멸했다. 로그의 마지막
+        # 줄이 "적 27마리가 0타일 앞에 있습니다" 였다 - 0타일이면 이미
+        # 붙은 뒤고, 붙은 다음에 걷기 시작하면 못 벗어난다.
+        #
+        # 작은 바이터가 사람보다 빠르다. 그러니 거리는 «싸울 수 있는가»가
+        # 아니라 «달아날 수 있는가»로 정해야 하고, 둘이 쫓을 때와 스물일곱이
+        # 쫓을 때는 달아날 수 있는 거리가 다르다.
+        many = int(near.get("attackers") or 1)
+        edge = DANGER_NEAR + min(many, 20) * DANGER_PER_HEAD
+        if gap > edge:
             return None
 
         try:
@@ -306,8 +320,8 @@ class FactoryMixin:
             return None
 
         return Job(
-            f"적 {int(near.get('attackers') or 1)}마리가 {int(gap)}타일 앞에 "
-            f"있습니다. 맨손으로는 못 이깁니다. 기지로 물러나겠습니다.",
+            f"적 {many}마리가 {int(gap)}타일 앞에 있습니다. 맨손으로는 "
+            f"못 이깁니다. 기지로 물러나겠습니다.",
             key=f"flee:{worker.name}",
             steps=[("walk", {"x": home["x"], "y": home["y"]})],
             at={"x": home["x"], "y": home["y"]})

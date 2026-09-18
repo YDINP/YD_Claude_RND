@@ -195,83 +195,40 @@ class Crew(ChiefMixin, RosterMixin, TalkMixin, SupplyMixin,
                 except RconError:
                     self.release(worker)
 
-            # 멈춘 기계와 찬 화로는 배차가 맡는다. 여기서 또 물어보면
-            # 같은 것을 여덟 번 조회하게 되고, 그 사이 배차가 이미 누구에게
-            # 준 일을 두 번 잡으려 든다.
-            job = None
-            if job is None:
-                job = next_goal(snap, worker.focus, worker.blocked_now(), self.taken(),
-                                crew=len(self.workers))
-
-            # «비축»밖에 안 남았다는 건 할 일이 없다는 뜻이지 광석을 더
-            # 쌓으라는 뜻이 아니다. 그럴 때 사다리의 다음 단을 물어본다.
-            if job is None or job.key.startswith("stock:"):
-                chained = self.chain_toward(worker, snap)
-                if chained and chained.key not in self.taken() \
-                        and chained.key not in worker.blocked_now():
-                    job = chained
-
-            # 부탁이 내 일보다 먼저다. 이미 쥔 걸 건네주는 건 걸어가기만
-            # 하면 되고, 기다리는 쪽은 그동안 아무것도 못 한다.
-            if self.serve_board(worker, snap, idle=job is None):
+            # 여기서부터는 «각자 고르지 않는다».
+            #
+            # 사용자 지시: "개인 에이전트들 위임 빼고 반장이 전체를 관리하는
+            # 걸로", "주기적으로 게임흐름을 보고 판단해서 각 캐릭터들한테
+            # 작업을 시키도록".
+            #
+            # 예전에는 배차를 못 받은 사람이 각자 사다리를 보고 제 일을
+            # 골랐다. 그 길이 여러 번 값을 치렀다:
+            #
+            #   * 공장이 꺼져 있는데 다섯이 제련만 반복했다. 반장은 「굶고
+            #     있으면 제련을 접어라」를 이미 알고 있었는데, 배차를 못
+            #     받은 사람에게는 그 판단이 안 닿았다.
+            #   * 같은 일을 두 사람이 다른 열쇠로 집었다.
+            #   * 반장이 사슬을 고쳐 사람을 돌려도, 각자 고르는 쪽이
+            #     그것을 덮었다.
+            #
+            # 사다리 일감은 이제 배차 풀에 들어간다(survey.dispatch).
+            # 여기 남은 것은 «개인 용무»뿐이다 - 제 가방을 부리는 일과
+            # 남의 부탁을 들어주는 일. 둘 다 그 사람만 할 수 있다.
+            #
+            # 부탁이 먼저다. 이미 쥔 걸 건네주는 건 걸어가기만 하면 되고,
+            # 기다리는 쪽은 그동안 아무것도 못 한다.
+            if self.serve_board(worker, snap, idle=True):
                 continue
 
-            if job is None:
-                # 일감 종류가 사람 수보다 적으면 나머지는 서 있게 된다.
-                # 광맥은 무한하고 화로는 언제나 배가 고프므로, 정말로 할
-                # 일이 없다는 것은 캘 곳이 없다는 뜻일 때뿐이다.
-                job = self.keep_busy(worker, snap)
-            if job is None:
-                # 규칙이 막혔다. 서 있느니 물어본다.
-                if self.ask_when_stuck(worker, snap):
-                    continue
-                if not worker.said_idle:
-                    self.say(f"당장 할 일이 없습니다. {mission.briefing(snap)}",
-                             who=worker.name)
-                    worker.said_idle = True
-                continue
-
-            # 재료가 모자란 일은 시작하기 전에 부탁을 붙이고 물러난다.
-            # 시작해놓고 실패하는 것보다 낫고, 기다리는 동안 다른 일을 한다.
-            # 스스로 만들 수 있는 것은 부탁하지 않는다. 상자가 없다고
-            # 부탁을 걸고 일을 접으면, 만들 줄 알면서도 영영 안 만든다 -
-            # 실제로 드릴 여덟 대에 상자 다섯 개인 채로 멈춰 있었다.
-            short = mission.shortfall(job.needs, snap.items)
-            if short and snap.can_make(short[0], short[1]):
-                short = None
-            if short:
-                spot = snap.ore(short[0])
-                if not spot:
-                    self.ask_for(worker, short[0], short[1], job.narration)
-                    worker.block(job.key)
-                    continue
-
-                # 땅에서 나는 것이 모자란다. 지금까지는 「캘 수 있으니
-                # 괜찮다」며 그냥 일을 시작했고, 도착해서 빈손으로 실패했다.
-                #
-                # 새 판 15분째의 증상이 이것이었다: 가방에 구리광석이
-                # 949개인데 석탄은 0개. 제련에 석탄이 모자란 줄 알면서도
-                # 화로로 가버리니 제련이 안 되고, 사슬이 안 올라가니 다음
-                # 칸(구리판)을 위해 또 구리를 캤다. 넷이서 구리만 캤다.
-                #
-                # 모자란 것이 땅에 있으면, 그것부터 캔다.
-                self.claim(worker, job.key)
-                self.say(f"{job.narration.rstrip('.')} — 그 전에 "
-                         f"{short[0]}이(가) {short[1]}개 모자라 캐 오겠습니다.",
+            # 반장이 줄 일이 없으면 «서 있는다». 예전에는 여기서 각자
+            # 「할 일이 비어 채굴기를 하나 더」를 골랐고, 그 한 줄이
+            # 채굴기를 157대까지 밀어올렸다.
+            if not worker.said_idle:
+                self.say(f"반장의 지시를 기다립니다. {mission.briefing(snap)}",
                          who=worker.name)
-                worker.said_idle = False
-                worker.watching = worker.handle.submit_plan([
-                    ("mine", {**spot, "count": max(short[1], ORE_BATCH),
-                              "search_radius": 10})])
-                continue
+                worker.said_idle = True
+            continue
 
-            worker.said_idle = False
-            self.claim(worker, job.key)
-            self.say(job.narration, who=worker.name)
-            if job.routine:
-                self.start_routine(worker, job.routine, job.ore, job.at)
-            else:
-                worker.watching = worker.handle.submit_plan(job.steps)
 
     def run(self, interval: float = 1.0) -> None:
         print(f"listening to game chat - {len(self.workers)} agent(s)"
