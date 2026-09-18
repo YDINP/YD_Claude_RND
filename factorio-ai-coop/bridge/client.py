@@ -323,6 +323,14 @@ class AIBridge:
         """출구가 없어 멈춘 채굴기들. seat 은 그 앞에 화로를 놓을 자리다."""
         return _as_list(self.call("blind_drills", agent, radius).get("blind"))
 
+    def zones(self, agent: str) -> dict:
+        """무엇을 어디서 하는가 - 채굴 / 제련 / 조립."""
+        return self.call("zones", agent)
+
+    def draw_zones(self, agent: str) -> dict:
+        """구역을 지도에 표시한다. 관전하는 사람이 보라고."""
+        return self.call("draw_zones", agent)
+
     def base(self) -> dict:
         """우리 건물 전체의 무게중심. 사람 반경에 매이지 않는 유일한 시야다."""
         return self.call("base")

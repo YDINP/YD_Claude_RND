@@ -74,6 +74,10 @@ local drop_marker    = Panel.drop_marker
 local panel_rows     = Panel.panel_rows
 local refresh_marker = Panel.refresh_marker
 local remember_line  = Panel.remember_line
+local Zones = require("zones")
+local draw_zones = Zones.draw_zones
+local zones      = Zones.zones
+
 local Runner = require("runner")
 local agent_status = Runner.agent_status
 local drive        = Runner.drive
@@ -541,6 +545,10 @@ remote.add_interface("ai", {
 
   -- 출구가 없어 멈춘 채굴기와, 그 앞에 화로를 놓을 자리.
   blind_drills = blind_drills,
+
+  -- 무엇을 어디서 하는가. 채굴 / 제련 / 조립.
+  zones = zones,
+  draw_zones = draw_zones,
 
   -- 기지의 무게중심, 그리고 거기서 너무 멀리 떨어진 우리 건물.
   base = base,

@@ -6,7 +6,8 @@ from client import RconError, TaskFailed
 
 from settings import (BACKOFF_SECONDS, CHEST, COAL_PAIRS, DRILL, DRILLS_PER_TRIP,
                       DRILL_FUEL, FURNACE_FUEL, HAUL_BATCH, RIGS_PER_TRIP,
-                      RIG_COAL, SMELTED_BY_FURNACE, SMELT_BATCH, WELL_FULL)
+                      MINE_CHEST, RIG_COAL, SMELTED_BY_FURNACE, SMELT_BATCH,
+                      WELL_FULL, HAUL_WHEN)
 from jobs import Job, Step
 from layout import carry_split, cluster, nearest_to, spread_sites
 from ladder import _as_rows, worth_building
@@ -26,9 +27,11 @@ class MiningMixin:
           열여덟 대에 석탄을 손으로 날라야 하고, 실제로 여덟 중 넷이 그
           일만 하고 있었다.
         - 철/구리: 채굴기 출력면에 화로를 바로 붙인다. 채굴기는 캐자마자
-          앞 칸에 떨구고, 그 칸이 화로면 인서터 없이 제련이 시작된다.
-          광석을 상자에 쌓아두고 사람이 퍼 나를 이유가 없다.
-        - 그 밖: 상자. 돌은 화로에 넣을 일이 드물다.
+          앞 칸에 떨군다. 그 칸에 상자를 놓아 받는다.
+
+        한때 여기에 화로를 놓았다. 인서터 없이 바로 녹으니 잘 돌았지만,
+        그러면 광맥 위에 화로가 흩어진다. 캐는 구역은 캐기만 하고, 녹이는
+        일은 제련 구역이 한다 - 그래야 벨트 하나로 먹이고 하나로 거둔다.
         """
         ore = ore or "coal"
         name = worker.name
@@ -36,7 +39,7 @@ class MiningMixin:
             self.automate_coal(worker)
             return
 
-        receiver = CHEST if ore not in SMELTED_BY_FURNACE else "stone-furnace"
+        receiver = MINE_CHEST
         try:
             # 더 세우기 전에, 이미 선 것들이 도는지 본다.
             row = (self.bridge.health(name) or {}).get(DRILL) or {}
@@ -72,7 +75,7 @@ class MiningMixin:
             # 한 번 걸어가서 여러 대를 세운다. 자리는 이미 «오래 갈 순서»로
             # 와 있고, 겹치는 것만 걸러내면 그대로 한 줄이 된다.
             field = spread_sites(sites, DRILLS_PER_TRIP)
-            what = "화로" if receiver == "stone-furnace" else "상자"
+            what = "상자"
             head = field[0]
             life = int(head.get("seconds") or 0)
             self.say(f"{ore} 광맥에 채굴기 {len(field)}대와 {what}를 붙이겠습니다. "
@@ -113,7 +116,7 @@ class MiningMixin:
                 # 화로도 채굴기도 석탄은 따로 받아야 한다.
                 for target in ((drill["x"], drill["y"]),
                                (aimed["drop_x"], aimed["drop_y"])):
-                    if receiver != "stone-furnace" and target[0] == aimed["drop_x"]:
+                    if target[0] == aimed["drop_x"]:
                         continue
                     if worker.handle.items().get("coal", 0) < DRILL_FUEL:
                         if not self.obtain(worker, "coal", DRILL_FUEL):
@@ -214,13 +217,13 @@ class MiningMixin:
             head = group[0]
             self.say(f"({head['x']:.0f}, {head['y']:.0f}) 부근에서 캔 것을 둘 데가 "
                      f"없어 멈춰 있던 채굴기 {opened}대를 열었습니다. 떨구는 "
-                     f"자리마다 화로를 놓아 바로 녹게 했습니다.", who=worker.name)
+                     f"자리마다 상자를 놓았습니다.", who=worker.name)
         elif group:
             self.say(f"({group[0]['x']:.0f}, {group[0]['y']:.0f}) 부근 채굴기 "
                      f"{len(group)}대를 열지 못했습니다.", who=worker.name)
 
     def open_drill(self, worker: Worker, at: dict, quiet: bool = False) -> bool:
-        """출구가 없는 채굴기 앞에 화로를 놓아, 캔 것이 갈 곳을 만든다.
+        """출구가 없는 채굴기 앞에 상자를 놓아, 캔 것이 갈 곳을 만든다.
 
         버너 채굴기는 캔 것을 앞칸에 «떨군다». 거기 아무것도 없으면 땅에
         쌓이다가 그 칸이 차고, 그러면 채굴기가 선다. 실측 결과 채굴기 81대 중
@@ -228,8 +231,14 @@ class MiningMixin:
         있었다. 캐는 쪽과 녹이는 쪽이 둘 다 멈춰 있었고 둘을 잇는 것이 하나도
         없었다.
 
-        버너 시대의 정석은 «떨구는 자리에 화로를 놓는 것»이다. 인서터도
-        벨트도 전기도 필요 없다 - 채굴기가 화로 안으로 직접 넣는다.
+        한때 여기에 화로를 놓았다. 채굴기가 화로 안으로 직접 넣으니 인서터도
+        벨트도 전기도 필요 없어서 잘 돌았다. 그런데 그러면 «광맥 위에서 녹이는»
+        것이 되고, 화로가 채굴기를 따라 온 광맥에 흩어진다. 사용자가 그 화면을
+        보고 말했다 - 구역을 나누라고.
+
+        그래서 캐는 구역에는 상자만 놓는다. 캔 것은 여기 모였다가 제련
+        구역으로 간다. 나무 상자를 쓰는 이유는 목재 둘이면 되기 때문이다 -
+        철판은 사다리의 목이고 나무는 발에 차인다.
         """
         name = worker.name
         key = f"open:{at.get('x', 0):.0f},{at.get('y', 0):.0f}"
@@ -252,34 +261,28 @@ class MiningMixin:
                 except TaskFailed:
                     pass
 
-            if not self.obtain(worker, "stone-furnace", 1):
-                self.ask_for(worker, "stone-furnace", 1,
-                             "출구가 막힌 채굴기 앞에 놓을 화로")
+            if not self.obtain(worker, MINE_CHEST, 1):
+                self.ask_for(worker, MINE_CHEST, 1,
+                             "출구가 막힌 채굴기 앞에 놓을 상자")
                 worker.block(key)
                 return False
-            worker.handle.place("stone-furnace", seat["x"], seat["y"], timeout=420)
+            worker.handle.place(MINE_CHEST, seat["x"], seat["y"], timeout=420)
 
             # 놓았다고 이어진 것이 아니다. 게임에 직접 묻는다.
             joined = self.bridge.feeds(at["x"], at["y"]).get("onto")
-            if joined != "stone-furnace":
+            if joined != MINE_CHEST:
                 if not quiet:
-                    self.say(f"({at['x']:.0f}, {at['y']:.0f}) 채굴기 앞에 화로를 "
+                    self.say(f"({at['x']:.0f}, {at['y']:.0f}) 채굴기 앞에 상자를 "
                              f"놓았는데 아직 안 이어집니다(지금 넣는 곳: "
                              f"{joined or '없음'}).", who=name)
                 worker.block(key)
                 return False
 
-            if self.obtain(worker, "coal", FURNACE_FUEL):
-                try:
-                    worker.handle.insert("coal", seat["x"], seat["y"],
-                                         count=FURNACE_FUEL, timeout=180)
-                except TaskFailed:
-                    pass
             if not quiet:
                 ore = at.get("ore") or "광석"
                 self.say(f"({at['x']:.0f}, {at['y']:.0f}) 채굴기가 캔 것을 둘 데가 "
-                         f"없어 멈춰 있었습니다. 떨구는 자리에 화로를 놓아 "
-                         f"{ore}를 바로 녹이게 했습니다.", who=name)
+                         f"없어 멈춰 있었습니다. 떨구는 자리에 상자를 놓았습니다 "
+                         f"({ore}).", who=name)
             return True
         except TaskFailed as exc:
             worker.block(key)
@@ -359,6 +362,55 @@ class MiningMixin:
                 f"연료를 다시 넣어줄 일이 없습니다. "
                 f"({machine['x']:.0f}, {machine['y']:.0f})",
                 key=key, routine="rig", at=machine))
+        return out
+
+    def haul_ore(self, worker: Worker) -> list[Job]:
+        """캐는 구역에 쌓인 광석을 제련 구역으로 옮긴다.
+
+        구역을 나누면 그 사이를 잇는 일이 생긴다. 그것이 운반이다.
+
+        언젠가는 벨트가 이 일을 한다 - 벨트는 쉬지 않고 밤에도 나른다.
+        그때까지는 사람이 나른다. 어느 쪽이든 «캐는 곳»과 «녹이는 곳»이
+        나뉘어 있어야 벨트를 깔 자리가 생긴다. 붙여 놓으면 이을 것이 없다.
+        """
+        try:
+            here = self.bridge.zones(worker.name)
+        except RconError:
+            return []
+        smelt = here.get("smelt")
+        if not smelt:
+            return []
+        try:
+            store = (self.bridge.depot() or {}).get("depot") or smelt
+        except RconError:
+            store = smelt
+
+        out: list[Job] = []
+        taken = self.taken()
+        for ore in SMELTED_BY_FURNACE:
+            try:
+                shelves = [c for c in self.bridge.chest_stock(worker.name, ore)
+                           if not c.get("well")
+                           and int(c.get("count") or 0) >= HAUL_WHEN]
+            except RconError:
+                continue
+            for group in cluster(shelves)[:1]:
+                head = group[0]
+                key = f"haul:{ore}:{head['x']:.0f},{head['y']:.0f}"
+                if key in taken:
+                    continue
+                load = min(HAUL_BATCH * 4,
+                           sum(int(c.get("count") or 0) for c in group))
+                steps: list[Step] = [
+                    ("take", {"name": ore, "count": int(c.get("count") or 0),
+                              "x": c["x"], "y": c["y"]}) for c in group]
+                steps.append(("insert", {"name": ore, "count": load,
+                                         "x": store["x"], "y": store["y"]}))
+                out.append(Job(
+                    f"캐는 구역 상자 {len(group)}개에 {ore}가 {load}개 쌓였습니다. "
+                    f"제련 구역으로 옮기겠습니다.",
+                    key=key, steps=steps,
+                    at={"x": head["x"], "y": head["y"]}))
         return out
 
     def drain_wells(self, worker: Worker, coal_chests: list[dict]) -> list[Job]:

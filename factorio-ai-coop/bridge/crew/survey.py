@@ -53,6 +53,9 @@ class SurveyMixin:
             # 사람이 계산하는 화로 자리가 다른 사람의 것과 어긋나지 않는다.
             if worker.smelter is None:
                 worker.smelter = self.bridge.smelter()
+                # 구역을 지도에 표시한다. 관전하는 사람이 「여기가 어디인지」
+                # 보려면 코드만 아는 것으로는 부족하다.
+                self.bridge.draw_zones(worker.name)
         except RconError:
             home = None
         if home:
@@ -106,6 +109,13 @@ class SurveyMixin:
         #     즉 이건 창고이면서 동시에 «주기적으로 비워줘야 도는» 장치다.
         #     비우는 것이 거두는 일이면서 되살리는 일이다.
         unblock.extend(self.drain_wells(worker, coal_chests))
+
+        # 1b. 운반 - 캐는 구역에 쌓인 것을 제련 구역으로.
+        #
+        #     구역을 나누면 그 사이를 잇는 일이 생긴다. 언젠가는 벨트가
+        #     이 일을 하고, 그때까지는 사람이 나른다. 어느 쪽이든 캐는 곳과
+        #     녹이는 곳이 나뉘어 있어야 벨트를 깔 자리가 생긴다.
+        gather.extend(self.haul_ore(worker))
 
         # 1. 연료가 떨어진 기계. 세 가지를 이 순서로 한다.
         #
