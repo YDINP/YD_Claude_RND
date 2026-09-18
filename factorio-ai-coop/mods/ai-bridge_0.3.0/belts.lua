@@ -643,6 +643,61 @@ local function drop_seats(surface, force, drill, toward)
   return seats
 end
 
+-- 한 밭의 «등뼈». 곧은 줄 하나.
+--
+-- 처음에는 채굴기마다 하나씩 들르게 했다. 그랬더니 뱀이 됐다 - 실측으로
+-- 한 밭의 수집 길이 424칸이었다. 채굴기 열 대를 잇자고 벨트 사백 칸을
+-- 까는 것은 물류가 아니라 낭비다.
+--
+-- 사람이 까는 수집 줄은 곧다. 채굴기를 줄 옆에 세우지, 줄이 채굴기를
+-- 찾아 헤매지 않는다. 그러니 «가장 많은 채굴기가 닿는 곧은 줄»을 고른다.
+--
+-- 닿지 않는 채굴기는 상자를 그대로 쓴다. 전부를 벨트에 태우는 것보다
+-- 절반을 짧은 줄에 태우는 편이 낫다 - 나머지 절반은 다음 줄을 깔 때
+-- 닿거나, 안 닿으면 사람이 그 상자만 비우면 된다.
+local function spine_of(surface, force, field, drills, toward)
+  local wide = (field.right - field.left) >= (field.bottom - field.top)
+  local best, best_hits = nil, -1
+
+  -- 줄이 놓일 만한 줄/칸을 훑는다. 채굴기 떨구는 자리가 그 위에 몇 개
+  -- 걸리는지로 고른다.
+  local lo = wide and (field.top - 3) or (field.left - 3)
+  local hi = wide and (field.bottom + 3) or (field.right + 3)
+  for at = lo, hi do
+    local hits = 0
+    for _, drill in pairs(drills) do
+      for _, seat in pairs(drop_seats(surface, force, drill, toward)) do
+        local on = wide and math.floor(seat.y) or math.floor(seat.x)
+        if on == at then hits = hits + 1 break end
+      end
+    end
+    if hits > best_hits then best, best_hits = at, hits end
+  end
+  if not best or best_hits <= 0 then return nil end
+
+  -- 그 줄 위에서 «닿는 채굴기들»이 걸친 구간만 깐다. 밭 끝에서 끝까지
+  -- 깔 이유가 없다 - 채굴기가 없는 구간은 빈 벨트다.
+  local from, to = math.huge, -math.huge
+  for _, drill in pairs(drills) do
+    for _, seat in pairs(drop_seats(surface, force, drill, toward)) do
+      local on = wide and math.floor(seat.y) or math.floor(seat.x)
+      if on == best then
+        local along = wide and seat.x or seat.y
+        from, to = math.min(from, along), math.max(to, along)
+        break
+      end
+    end
+  end
+  if from > to then return nil end
+
+  local tiles = {}
+  for along = from, to do
+    tiles[#tiles + 1] = wide and { x = along, y = best + 0.5 }
+                             or { x = best + 0.5, y = along }
+  end
+  return tiles, best_hits
+end
+
 local function field_lines(name, limit)
   local a = agent(name)
   local b = body(a)
@@ -664,72 +719,50 @@ local function field_lines(name, limit)
       type = "mining-drill", force = force,
     }
     if #drills > 0 then
-      -- 유통 구역에서 «먼» 것부터 잇는다. 벨트는 먼 데서 가까운 데로 흐른다.
-      table.sort(drills, function(p, q)
-        local dp = math.abs(p.position.x - head.x) + math.abs(p.position.y - head.y)
-        local dq = math.abs(q.position.x - head.x) + math.abs(q.position.y - head.y)
-        return dp > dq
-      end)
-
-      local stops = {}
-      for _, drill in pairs(drills) do
-        local seats = drop_seats(surface, force, drill, head)
-        if seats[1] then
-          -- 여기서 «돌리지 않는다».
-          --
-          -- 한 번 돌려봤다가 더 나빠졌다. 벨트가 깔리기도 전에 채굴기를
-          -- 그쪽으로 돌려놓으니, 상자를 보던 넷이 빈 땅을 보게 됐다:
-          --
-          --     떨구는 곳: 벨트 2 / 상자 0 / 땅 4
-          --
-          -- 상자에 떨구는 것은 느린 것이고 땅에 떨구는 것은 «잃는» 것이다.
-          -- 계획은 자리를 고를 뿐이고, 돌리는 것은 벨트가 실제로 깔린
-          -- 다음 `feed_belts` 가 한다. 둘 다 게임에 물어 같은 자리를
-          -- 고르므로 답은 어긋나지 않는다.
-          stops[#stops + 1] = { x = seats[1].x, y = seats[1].y }
-        end
-      end
-      stops[#stops + 1] = head
-
-      -- 길은 «한 번 정하고 얼려둔다».
-      --
-      -- 여기서 `walk` 을 매번 새로 불렀다가 벨트 숲을 만들었다. 사용자
-      -- 사진에 평행선이 열댓 줄 서 있었다. 실측으로 길 밖 벨트가 64칸,
-      -- 그리고 같은 흐름을 두 번 물으니 want 가 42에서 31로 바뀌었다 -
-      -- 부를 때마다 다른 길을 냈다는 뜻이다.
-      --
-      -- 이 저장소가 같은 실수를 두 번째 한다. 첫 번째는 `ore_line` 이었고
-      -- 그때 `route_for` 로 얼려두는 방식을 만들었는데, 여기서 그것을
-      -- 안 쓰고 `walk` 을 직접 불렀다.
-      --
-      -- 만들어둔 것을 안 쓰면 없는 것과 같다.
-      local key = "field:" .. n .. ":" .. math.floor(field.x)
-                  .. "," .. math.floor(field.y)
+      local key = "field:" .. math.floor(field.x) .. "," .. math.floor(field.y)
       storage.lines = storage.lines or {}
       local kept = storage.lines[key]
       local tiles
-      if kept and kept.plan == PLAN and kept.stops == #stops
+      if kept and kept.plan == PLAN and kept.drills == #drills
          and kept.tiles and #kept.tiles > 0 then
         tiles = kept.tiles
-        -- 그 위에 무언가 새로 섰으면 그 «자리만» 고친다.
         local mended, patches = repair(surface, force, tiles)
         if mended and patches and patches > 0 then
           tiles = mended
           storage.lines[key].tiles = tiles
         end
       else
-        tiles = {}
-        for i = 1, #stops - 1 do
-          local leg = walk(surface, force, stops[i], stops[i + 1])
-          if not leg then break end
-          for _, one in ipairs(leg) do tiles[#tiles + 1] = one end
-        end
-        if #tiles > 0 then
-          storage.lines[key] = { tiles = tiles, plan = PLAN, stops = #stops }
+        local spine = spine_of(surface, force, field, drills, head)
+        if spine then
+          -- 등뼈 끝에서 유통 구역까지. 유통 구역에 가까운 끝에서 나간다.
+          local one, other = spine[1], spine[#spine]
+          local gap_one = math.abs(one.x - head.x) + math.abs(one.y - head.y)
+          local gap_other = math.abs(other.x - head.x) + math.abs(other.y - head.y)
+          local exit_at = (gap_one < gap_other) and one or other
+          local stem = walk(surface, force, exit_at, head)
+
+          -- 등뼈는 «나가는 끝 쪽»으로 흐른다. 방향이 없는 벨트는 아무
+          -- 데로도 안 흐르고, 반대로 선 벨트는 캔 것을 밭 안쪽으로 밀어
+          -- 넣는다. 나가는 끝이 첫 칸이면 거꾸로 세워 흐름을 뒤집는다.
+          tiles = {}
+          if exit_at == one then
+            for i = #spine, 1, -1 do tiles[#tiles + 1] = spine[i] end
+          else
+            for i = 1, #spine do tiles[#tiles + 1] = spine[i] end
+          end
+          for i = 1, #tiles do
+            local nxt = tiles[i + 1] or (stem and stem[1])
+            tiles[i].dir = nxt and dir_of(tiles[i], nxt)
+                           or defines.direction.east
+          end
+          if stem then
+            for _, t in ipairs(stem) do tiles[#tiles + 1] = t end
+          end
+          storage.lines[key] = { tiles = tiles, plan = PLAN, drills = #drills }
         end
       end
-      if #tiles > 0 then
-        first_from = first_from or stops[1]
+      if tiles and #tiles > 0 then
+        first_from = first_from or tiles[1]
         parts[#parts + 1] = { tag = "f" .. n, what = BELT, tiles = tiles }
       end
     end
@@ -802,7 +835,21 @@ end
 --
 -- 그래서 일감을 «나눠준다». 이미 남이 집어간 칸은 안 준다. 삼 분이 지나면
 -- 놓은 것으로 치고 다시 내준다 - 가다 죽은 사람의 몫을 영원히 비워둘 수는 없다.
-local CLAIM_TICKS = 60 * 60 * 3
+-- 몫을 얼마나 붙들고 있을 것인가.
+--
+-- 삼 분으로 뒀다가 무리가 스스로 발을 걸었다. 실측:
+--
+--     손에 든 벨트   alpha 20, bravo 53, charlie 5, delta 91  (합 169)
+--     한 번에 깐 칸  3
+--     남은 칸        131
+--
+-- 넷이 각자 스무 칸씩 집어가면 여든 칸이 묶인다. 그러고는 재료가 없거나
+-- 걸어가다 다른 일이 끼어들어 못 깐다. 그 몫은 «삼 분 동안» 아무도 못
+-- 건드린다. 그래서 다음 순찰에 받을 수 있는 칸이 서너 개뿐이었다.
+--
+-- 붙들기는 «같은 칸에 둘이 서지 않게» 하려는 것이지 자리를 쟁여두려는
+-- 것이 아니다. 한 번 갔다 오는 시간이면 충분하다.
+local CLAIM_TICKS = 60 * 45
 
 local function claim_work(name, which, count)
   local plan = flow_plan(name, which, 200)

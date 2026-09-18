@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from client import RconError, TaskFailed
 
-from settings import (BACKOFF_SECONDS, HAUL_BATCH, HAUL_WHEN, LINE_HANDS, LOOSE_BATCH, LOOSE_LOOK,
+from settings import (BACKOFF_SECONDS, HAUL_BATCH, HAUL_WHEN, LINE_CHUNK, LINE_CHUNK_MAX, LINE_HANDS, LOOSE_BATCH, LOOSE_LOOK,
                       SMELTED_BY_FURNACE)
 from jobs import Job, Step
 from ladder import _as_rows
@@ -295,9 +295,21 @@ class HaulingMixin:
         which = at.get("flow", "ore")
         key = f"line:{which}:{name}"
         label = self.FLOW_NAMES.get(which, which)
+        # 손에 든 만큼 청구한다.
+        #
+        # 스무 칸으로 못 박아뒀더니, 벨트를 아흔한 칸 들고 다니는 사람이
+        # 스무 칸만 받아 갔다. 나머지 일흔한 칸은 가방에서 자고, 길은
+        # 그만큼 늦게 이어진다.
+        #
+        # 들고 있는 것을 쓰는 것이 만드는 것보다 언제나 싸다.
+        try:
+            hand = (self.bridge.call("inventory", name).get("items") or {})
+        except RconError:
+            hand = {}
+        want = max(LINE_CHUNK, min(int(hand.get(BELT) or 0), LINE_CHUNK_MAX))
         try:
             # 설계에 «내 몫»을 달라고 한다. 남이 집어간 칸은 안 온다.
-            line = self.bridge.claim_work(name, which, 20)
+            line = self.bridge.claim_work(name, which, want)
         except RconError:
             return
         todo = _as_rows(line.get("todo"))
