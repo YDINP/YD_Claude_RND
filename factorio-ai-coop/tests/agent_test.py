@@ -822,23 +822,27 @@ def main() -> int:
               [{"x": 5, "y": 0}, {"x": 7, "y": 0}])]))
     check("nothing starving means nothing to lay", belt_pairs(stuck, []) == [])
 
-    print("\n27. furnaces ring the base, they do not march off it")
+    print("\n27. furnaces stand in rows, not in a spray")
     home = {"x": 52, "y": 16}
-    check("the first one sits on the spot itself",
-          furnace_seat(home, 0) == {"x": 52, "y": 16})
-    ring1 = [furnace_seat(home, n) for n in range(1, 9)]
-    check("the next eight surround it on all four sides",
-          {(p["x"] - 52) // 4 for p in ring1} == {-1, 0, 1}
-          and {(p["y"] - 16) // 4 for p in ring1} == {-1, 0, 1},
-          str([(p["x"] - 52, p["y"] - 16) for p in ring1]))
-    check("it grows up and left too, not only right and down",
-          any(p["x"] < 52 for p in ring1) and any(p["y"] < 16 for p in ring1))
-    # 처음에는 열아홉 대째가 274타일 밖에 섰고, 여섯 칸 줄로 고친 뒤에도
-    # 오른쪽 아래로만 자랐다.
-    far = max(max(abs(furnace_seat(home, n)["x"] - 52),
-                  abs(furnace_seat(home, n)["y"] - 16)) for n in range(60))
-    check("sixty furnaces all sit within sixteen tiles of home",
-          far <= 16, str(far))
+    first = [furnace_seat(home, n) for n in range(12)]
+    check("the first twelve make one row",
+          all(p["y"] == 16 for p in first)
+          and [p["x"] for p in first] == list(range(52, 52 + 36, 3)))
+    second = [furnace_seat(home, n) for n in range(12, 24)]
+    check("the next twelve face them across an aisle",
+          all(p["y"] == 21 for p in second)
+          and [p["x"] for p in second] == list(range(52, 52 + 36, 3)))
+    check("the aisle is wide enough for a belt between them",
+          second[0]["y"] - first[0]["y"] >= 4)
+    check("a new block starts below, not further right",
+          furnace_seat(home, 24) == {"x": 52, "y": 16 + 5 + 9})
+    # 한 줄로 274타일, 여섯 칸 줄로 40타일, 겹겹이로 16타일을 거쳐 여기까지 왔다.
+    reach = [furnace_seat(home, n) for n in range(60)]
+    check("sixty furnaces fit in 36 by 42 tiles",
+          max(p["x"] for p in reach) - 52 <= 36
+          and max(p["y"] for p in reach) - 16 <= 42,
+          "%d x %d" % (max(p["x"] for p in reach) - 52,
+                        max(p["y"] for p in reach) - 16))
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

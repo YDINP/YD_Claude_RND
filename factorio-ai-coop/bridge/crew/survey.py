@@ -49,6 +49,10 @@ class SurveyMixin:
         #    매이지 않는 그 눈으로 먼저 자기 위치를 확인한다.
         try:
             home = (self.bridge.base() or {}).get("home")
+            # 제련 블록의 모서리는 게임 쪽이 기억한다. 한 번 받아두면 이
+            # 사람이 계산하는 화로 자리가 다른 사람의 것과 어긋나지 않는다.
+            if worker.smelter is None:
+                worker.smelter = self.bridge.smelter()
         except RconError:
             home = None
         if home:

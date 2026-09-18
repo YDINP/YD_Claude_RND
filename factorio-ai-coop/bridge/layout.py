@@ -9,7 +9,8 @@ from __future__ import annotations
 from itertools import zip_longest
 
 from settings import (BELT_REACH, CHEST, CHEST_REACH, CLUSTER_MAX, CLUSTER_REACH,
-                      DRILL, FURNACE_PITCH, HAUL_REACH)
+                      DRILL, FURNACE_AISLE, FURNACE_GAP,
+                      FURNACE_PITCH, FURNACE_ROW, HAUL_REACH)
 from world import Snapshot
 
 
@@ -58,44 +59,30 @@ def nearest_to(spots: list[dict], at: dict, least: int = 0,
     return None
 
 
-def _rings(cap: int = 400) -> list[tuple[int, int]]:
-    """중심에서 가까운 칸부터. 한 겹을 다 채우면 다음 겹으로.
-
-    (0,0) → 그 둘레 여덟 칸 → 그 바깥 열여섯 칸 → ...
-    """
-    out = [(0, 0)]
-    r = 1
-    while len(out) < cap:
-        for dx in range(-r, r + 1):
-            out.append((dx, -r))
-        for dy in range(-r + 1, r + 1):
-            out.append((r, dy))
-        for dx in range(r - 1, -r - 1, -1):
-            out.append((dx, r))
-        for dy in range(r - 1, -r, -1):
-            out.append((-r, dy))
-        r += 1
-    return out[:cap]
-
-
-FURNACE_RINGS = _rings()
-
-
 def furnace_seat(origin: dict, nth: int,
                  pitch: int = FURNACE_PITCH) -> dict:
-    """n번째 화로가 설 자리. 중심에서 사방으로 겹겹이 퍼진다.
+    """n번째 화로가 설 자리. 두 줄이 마주보는 블록으로 쌓는다.
 
-    처음에는 `x + pitch * n` 한 줄이었다. 열아홉 대째가 274타일 밖에 섰다.
-    그래서 여섯 대마다 줄을 바꾸게 고쳤는데, 그것도 결국 «오른쪽 아래로만»
-    자란다 — 기준점을 모서리로 쓰기 때문이다. 위도 왼쪽도 비어 있는데
-    한쪽으로만 밀고 나가는 것은 여전히 멀어지는 일이다.
+    세 번 고쳤다. 처음에는 `x + pitch * n` 한 줄이었고, 열아홉 대째가
+    274타일 밖에 섰다. 다음에는 여섯 칸마다 줄을 바꿨는데 그래도 오른쪽
+    아래로만 자랐다. 다음에는 중심에서 겹겹이 둘렀는데 촘촘하기는 해도
+    «줄»이 없어서, 나중에 벨트로 먹이려면 전부 다시 놓아야 한다.
 
-    기준점을 «중심»으로 쓰고 겹겹이 두르면 가장 촘촘하다. 예순 대를 놓아도
-    중심에서 16타일 안에 전부 들어간다. 막힌 칸은 게임이 알아서 튕겨내므로
-    여기서는 자리만 순서대로 내주면 된다.
+    고수들이 쓰는 꼴은 두 줄이 마주보고 가운데로 뽑는 제련 블록이다. 그
+    모양이어야 벨트 한 줄로 전부 먹이고 전부 거둘 수 있다. 보기 좋으라고
+    줄을 세우는 게 아니라, 줄이어야 이을 수 있어서 세우는 것이다.
+
+        블록 0  ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■     <- 줄 0
+                          (판금 벨트 길)
+                ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■     <- 줄 1
+                          (통로)
+        블록 1  ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■
     """
-    dx, dy = FURNACE_RINGS[min(nth, len(FURNACE_RINGS) - 1)]
-    return {"x": origin["x"] + pitch * dx, "y": origin["y"] + pitch * dy}
+    block, within = divmod(nth, FURNACE_ROW * 2)
+    row, col = divmod(within, FURNACE_ROW)
+    return {"x": origin["x"] + pitch * col,
+            "y": origin["y"] + row * FURNACE_AISLE
+                 + block * (FURNACE_AISLE + FURNACE_GAP)}
 
 
 def belt_pairs(blocked: list[dict], starving: list[dict],

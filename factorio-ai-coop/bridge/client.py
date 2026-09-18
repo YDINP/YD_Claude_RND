@@ -327,6 +327,12 @@ class AIBridge:
         """우리 건물 전체의 무게중심. 사람 반경에 매이지 않는 유일한 시야다."""
         return self.call("base")
 
+    def smelter(self, x: float | None = None,
+                y: float | None = None) -> dict | None:
+        """제련 블록의 왼쪽 위 모서리. 한 번 정하면 모두가 같은 곳을 본다."""
+        reply = self.call("smelter", x, y) if x is not None else self.call("smelter")
+        return reply.get("smelter")
+
     def strays(self, kind: str = "stone-furnace", far: int = 60) -> dict:
         """기지에서 너무 멀리 홀로 선 우리 건물들, 먼 것부터."""
         return self.call("strays", kind, far)

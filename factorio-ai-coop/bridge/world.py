@@ -25,6 +25,8 @@ class Snapshot:
     # 기관이 서 있는 것과 전기가 흐르는 것은 다르다. 물 없는 보일러에 물린
     # 기관은 밖에서 보면 멀쩡한 발전소와 똑같이 생겼다.
     powered: bool = False
+    # 제련 블록의 모서리. 누가 묻든 같은 값이어야 화로가 줄을 선다.
+    smelter: dict | None = None
 
     def have(self, item: str) -> int:
         return self.items.get(item, 0)

@@ -226,14 +226,17 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     if furnace and standing < want:
         nth = standing
         if snap.have("stone-furnace") >= 1:
-            # 기준점은 이미 선 화로들의 가운데다. 「나에게 가장 가까운
-            # 화로」를 쓰면 부르는 사람이 움직일 때마다 기준이 바뀌어 줄이
-            # 한 방향으로 계속 밀려난다 - 실제로 274타일까지 갔다.
-            # 가운데는 누가 묻든 같고, 거기서 겹겹이 두르면 사방으로 고르게
-            # 자란다.
-            middle = {"x": sum(f["x"] for f in furnaces) / len(furnaces),
-                      "y": sum(f["y"] for f in furnaces) / len(furnaces)}
-            seat = furnace_seat(middle, nth + 1)
+            # 기준점은 게임 쪽에 적어둔 제련 블록의 모서리다. 누가 묻든
+            # 같은 값이라야 화로가 줄을 선다.
+            #
+            # 예전에는 「내 주변 화로 여덟 대의 평균」이었다. spots 는 부르는
+            # 사람 기준으로 가까운 것 여덟 개만 주므로, 사람이 움직일 때마다
+            # 기준이 흔들렸고 화로가 대각선으로 흩뿌려졌다. 그 전에는 「나에게
+            # 가장 가까운 화로」였고, 그때는 한 줄로 274타일까지 갔다.
+            corner = snap.smelter or {
+                "x": min(f["x"] for f in furnaces),
+                "y": min(f["y"] for f in furnaces)}
+            seat = furnace_seat(corner, nth)
             jobs.append(Job(f"화로를 하나 더 놓겠습니다 ({nth + 1}번째).",
                             key=f"furnace:{nth}", steps=[
                                 ("build", {"name": "stone-furnace",

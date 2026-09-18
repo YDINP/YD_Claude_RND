@@ -53,6 +53,7 @@ local furnace_stock = Stock.furnace_stock
 local health        = Stock.health
 local hungry_rigs   = Stock.hungry_rigs
 local poor_drills   = Stock.poor_drills
+local smelter       = Stock.smelter
 local stores        = Stock.stores
 local strays        = Stock.strays
 local Observe = require("observe")
@@ -537,6 +538,8 @@ remote.add_interface("ai", {
 
   -- 기지의 무게중심, 그리고 거기서 너무 멀리 떨어진 우리 건물.
   base = base,
+  -- 제련 블록의 모서리. 인자를 주면 정하고, 안 주면 알려준다.
+  smelter = smelter,
   strays = strays,
 
   -- 이 채굴기가 무엇에게 넣고 있는가 (세운 뒤 확인용).

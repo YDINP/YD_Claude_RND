@@ -349,6 +349,46 @@ end
 -- 화로가 한 줄로 동쪽으로 274타일 도망간 자리다. 그 끝의 화로들은 광석이
 -- 닿지 않으니 영원히 놀고, 대신 사람을 그쪽으로 끌고 간다. 걷어내면 화로가
 -- 통째로 손에 돌아오고, 그 손으로 눈먼 채굴기 앞에 다시 세우면 된다.
+-- 제련 블록의 왼쪽 위 모서리. 한 번 정하면 바뀌지 않는다.
+--
+-- 지금까지 화로 자리의 기준점은 «묻는 사람 주변 화로 여덟 대의 평균»이었다.
+-- 그래서 사람이 움직일 때마다 기준이 흔들렸고, 화로가 대각선으로 흩뿌려졌다.
+-- 기준은 누가 묻든 같아야 하고, 한 번 정해지면 남아 있어야 한다.
+local SMELT_W, SMELT_H = 38, 16
+local WATER = { "water", "deepwater", "water-shallow", "water-mud",
+                "water-green", "deepwater-green" }
+local BUILT = { "furnace", "mining-drill", "assembling-machine", "lab",
+                "boiler", "generator", "container", "transport-belt",
+                "inserter", "electric-pole", "pipe" }
+
+local function smelter(x, y)
+  if x and y then
+    storage.smelter = { x = math.floor(x), y = math.floor(y) }
+    return { smelter = storage.smelter, chosen = true }
+  end
+  if storage.smelter then return { smelter = storage.smelter } end
+
+  local home = base().home
+  if not home then return { smelter = nil } end
+  local s = game.surfaces[1]
+  -- 기지에서 가까운 데부터, 블록이 통째로 들어갈 빈 땅을 찾는다.
+  for r = 10, 70, 5 do
+    for _, step in pairs({ { r, 0 }, { 0, r }, { -r, 0 }, { 0, -r },
+                           { r, r }, { -r, r }, { r, -r }, { -r, -r } }) do
+      local at = { x = math.floor(home.x + step[1]),
+                   y = math.floor(home.y + step[2]) }
+      local box = { { at.x - 2, at.y - 2 },
+                    { at.x + SMELT_W, at.y + SMELT_H } }
+      if s.count_entities_filtered { area = box, type = BUILT } == 0
+         and s.count_tiles_filtered { area = box, name = WATER } == 0 then
+        storage.smelter = at
+        return { smelter = at, chosen = true }
+      end
+    end
+  end
+  return { smelter = nil, crowded = true }
+end
+
 local function strays(kind, far)
   local home = base().home
   if not home then return { strays = {} } end
@@ -495,5 +535,6 @@ return {
   init_status_names = init_status_names,
   poor_drills = poor_drills,
   stores = stores,
+  smelter = smelter,
   strays = strays,
 }

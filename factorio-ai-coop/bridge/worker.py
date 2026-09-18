@@ -26,6 +26,9 @@ class Worker:
         self.said_idle = False
         # One slow job (an LLM call, a build-out) at a time per agent.
         self.slot = threading.Semaphore(1)
+        # 제련 블록의 모서리. 무리가 한 번 정해 알려주면 그대로 들고 다닌다 -
+        # 사람마다 다른 기준을 쓰면 화로가 줄을 서지 못한다.
+        self.smelter: dict | None = None
         # What has just failed, and until when it stays off the table.
         self.blocked: dict[str, float] = {}
         # The job key this agent currently holds, so the crew can hand the rest
@@ -63,6 +66,7 @@ class Worker:
             researched=research["researched"],
             researching=research.get("current"),
             powered=bool(power.get("powered")),
+            smelter=self.smelter,
         )
 
     def block(self, kind: str, seconds: float = BACKOFF_SECONDS) -> None:
