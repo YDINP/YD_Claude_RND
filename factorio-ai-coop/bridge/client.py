@@ -308,6 +308,11 @@ class AIBridge:
         """세워는 놨는데 상자가 빈 급유 장치들, 가까운 순."""
         return _as_list(self.call("hungry_rigs", agent, radius).get("empty"))
 
+    def poor_drills(self, agent: str, floor: int = 400,
+                    radius: int = 200) -> list[dict]:
+        """얇은 자리에 선 채굴기들, 얇은 순. 마르기를 기다릴 이유가 없다."""
+        return _as_list(self.call("poor_drills", agent, floor, radius).get("poor"))
+
     def health(self, agent: str, radius: int = 400) -> dict:
         """세운 수가 아니라 도는 수. {이름: {built, working, why}}"""
         answer = self.call("health", agent, radius).get("machines")

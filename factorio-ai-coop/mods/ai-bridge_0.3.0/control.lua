@@ -2334,6 +2334,42 @@ local function hungry_rigs(name, radius)
   return { agent = name, empty = near, total = #out }
 end
 
+-- 얇은 자리에 선 채굴기.
+--
+-- 실측(새 판 34분째): 매장량 기준으로 자리를 고치기 전에 세운 석탄 채굴기
+-- 둘이 120과 162 위에 앉아 있었다. 0.25/s 로 8분이면 마른다. 같은 광맥의
+-- 두꺼운 칸은 2,000이 넘는다.
+--
+-- 완전히 마를 때까지(no_minable_resources) 기다릴 이유가 없다. 걷어내서
+-- 두꺼운 자리에 다시 세우면 한 번의 걸음으로 열여섯 배가 된다. 마르기를
+-- 기다리는 것은 그 자리에서 8분을 더 캐려고 20분을 버리는 일이다.
+local function poor_drills(name, floor, radius)
+  local a = agent(name)
+  local b = body(a)
+  if not b then return { error = "no such agent: " .. tostring(name) } end
+
+  local bar = floor or 400
+  local reach = math.min(radius or 200, MAX_OBSERVE_RADIUS)
+  local out = {}
+  for _, d in pairs(b.surface.find_entities_filtered {
+    position = b.position, radius = reach, name = "burner-mining-drill",
+    force = b.force,
+  }) do
+    local left = richness(b.surface, d.position)
+    if left < bar then
+      out[#out + 1] = {
+        x = d.position.x, y = d.position.y, left = left,
+        seconds = math.floor(left / 0.25),
+        distance = math.floor(Tasks.dist(b.position, d.position) * 10) / 10,
+      }
+    end
+  end
+  table.sort(out, function(p, q) return p.left < q.left end)
+  local near = {}
+  for i = 1, math.min(#out, 6) do near[i] = out[i] end
+  return { agent = name, poor = near, total = #out }
+end
+
 local function health(name, radius)
   init_status_names()
   local a = agent(name)
@@ -2782,6 +2818,9 @@ remote.add_interface("ai", {
 
   -- 세운 수가 아니라 도는 수.
   health = health,
+
+  -- 얇은 자리에 선 채굴기. 마르기를 기다릴 이유가 없다.
+  poor_drills = poor_drills,
 
   -- 기계 한 대를 영구히 먹이는 «상자-인서터» 자리.
   fuel_rig = fuel_rig,

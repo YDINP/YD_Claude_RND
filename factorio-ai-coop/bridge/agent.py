@@ -140,7 +140,15 @@ STUCK_STRIKES = 3
 # 창고에 이만큼 쌓였으면 그만 캐도 된다. 485분째에 돌이 48,099개 있는데
 # 채굴기 22대가 돌로 꽉 찬 상자 앞에서 여전히 서 있었다. 캐는 것도 일이고
 # 막힌 채로 서 있는 것도 자리다.
-SURPLUS = 6000   # how long a failed kind of work stays off the ladder
+SURPLUS = 6000
+
+# 채굴기 밑 2x2 에 이만큼도 안 남았으면 걷어내서 두꺼운 자리에 다시 세운다.
+# 400이면 0.25/s 로 27분이고, 옮기는 데 드는 것은 한 번의 걸음이다. 같은
+# 광맥의 두꺼운 칸은 보통 2,000이 넘는다 - 다섯 배 넘게 남는 장사다.
+#
+# 완전히 마를 때까지 기다리는 것은, 그 자리에서 몇 분 더 캐려고 이십 분을
+# 버리는 일이다.
+THIN_DRILL = 400   # how long a failed kind of work stays off the ladder
 
 # Each agent takes one resource so a crew does not all stand on the same patch.
 FOCUS_ORDER = ["iron-ore", "coal", "copper-ore", "stone"]
@@ -2141,6 +2149,25 @@ class Crew:
                     f"({entry['x']:.0f}, {entry['y']:.0f})",
                     key=f"outlet:{entry['x']:.0f},{entry['y']:.0f}",
                     routine="rescue", at=at, needs={CHEST: 1}))
+
+        # 3a2. 얇은 자리에 선 채굴기. 마르기를 기다릴 이유가 없다 —
+        #      걷어내면 채굴기가 통째로 돌아오고, 다음 automate 가 두꺼운
+        #      자리에 다시 세운다. 한 번의 걸음으로 다섯 배가 된다.
+        try:
+            thin = self.bridge.poor_drills(worker.name, THIN_DRILL)
+        except RconError:
+            thin = []
+        for spot in cluster(thin)[:1]:
+            head = spot[0]
+            unblock.append(Job(
+                f"채굴기 {len(spot)}대가 얇은 자리에 서 있습니다 "
+                f"(남은 광석 {int(head.get('left', 0))}개, "
+                f"{int(head.get('seconds', 0)) // 60}분). 걷어내서 두꺼운 "
+                f"자리에 다시 세우겠습니다.",
+                key=f"thin:{head['x']:.0f},{head['y']:.0f}",
+                steps=[("demolish", {"x": e["x"], "y": e["y"],
+                                     "name": DRILL}) for e in spot],
+                at={"x": head["x"], "y": head["y"]}))
 
         # 3b. 밑의 광석이 다 떨어진 채굴기. 「고장」이 아니라 「끝난 것」이라
         #     손볼 방법이 없다. 걷어내면 채굴기가 통째로 재고로 돌아와,
