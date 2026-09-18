@@ -147,6 +147,55 @@ local function pollution_reach(surface, home, toward)
   return far, here
 end
 
+-- 적이 «왔는가».
+--
+-- 사용자 지시: "적이 온걸 인식할것."
+--
+-- 지금까지는 「몇 마리가 몇 타일 앞에 있다」만 말했다. 그런데 이백 타일
+-- 밖의 열 마리와 공장 한복판의 세 마리는 전혀 다른 일이다. 앞의 것은
+-- 소식이고 뒤의 것은 사건이다.
+--
+-- 그리고 우리는 사건을 놓쳐왔다. 지난 판에서 화로 11대와 채굴기 14대와
+-- 요원 74번을 잃는 동안, 무리가 한 번도 「습격이다」라고 말하지 않았다.
+-- 알아볼 눈이 없었기 때문이다.
+--
+-- 두 가지를 본다.
+--
+--   들어왔는가   방어선 «안»에 적이 있는가. 밖은 소식, 안은 사건이다.
+--   맞았는가     우리 것이 피를 흘리고 있는가. 적이 안 보여도 건물이
+--                깎이고 있으면 이미 당하는 중이다.
+local function raid(surface, force, box, home)
+  local inside, hurt, worst = 0, 0, nil
+  if box then
+    local area = { { box.left, box.top }, { box.right, box.bottom } }
+    inside = surface.count_entities_filtered {
+      area = area, force = game.forces.enemy, type = "unit",
+    }
+    for _, e in pairs(surface.find_entities_filtered {
+      area = area, force = force,
+    }) do
+      if e.health and e.prototype.max_health > 0
+          and e.health < e.prototype.max_health then
+        hurt = hurt + 1
+        if not worst or e.health < worst.hp then
+          worst = { name = e.name, hp = math.floor(e.health),
+                    x = math.floor(e.position.x), y = math.floor(e.position.y) }
+        end
+      end
+    end
+  end
+  -- 기지 코앞. 방어선이 아직 없을 때도 이것은 안다.
+  local near_home = home and surface.count_entities_filtered {
+    position = home, radius = 60, force = game.forces.enemy, type = "unit",
+  } or 0
+  return {
+    inside = inside, near_home = near_home,
+    hurt = hurt, worst = worst,
+    -- 「습격 중」이라고 말할 수 있는 때. 둘 중 하나면 충분하다.
+    now = (inside > 0 or near_home > 0 or hurt > 0),
+  }
+end
+
 local function defence(name)
   local a = agent(name)
   local b = body(a)
@@ -193,6 +242,8 @@ local function defence(name)
   end
 
   return {
+    -- 적이 왔는가. 이것이 「몇 타일 앞」보다 먼저 봐야 할 값이다.
+    raid = raid(surface, force, box, home),
     side = side, nests = nests, nearest = nearest,
     perimeter = box, home = home,
     pollution = math.floor(at_home), pollution_reach = reach,

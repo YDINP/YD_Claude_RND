@@ -144,10 +144,20 @@ class TendingMixin:
         #
         # 지난 판은 이것이 없어 터렛을 한 대도 못 세우고 화로 11대와 요원
         # 74번을 잃었다.
+        # 총이 «한 대도» 없으면 여유를 따질 것도 없다.
+        #
+        # 여유(slack)만 보게 했더니 그 값이 None 이 되는 순간 방어가 안
+        # 급한 일이 됐다. 둥지가 조회에 안 잡히면 nil 이 나오는데, 그것은
+        # 「안전하다」가 아니라 「모른다」다. 모르는 것을 안전으로 읽으면
+        # 가장 위험할 때 가장 태평해진다.
+        #
+        # 연구가 끝났는데 터렛이 0대인 것은 그 자체로 고칠 일이다. 한 대는
+        # 언제나 옳다.
         room = snap.slack
-        urgent = isinstance(room, (int, float)) and room <= DEFEND_WHEN
+        close = isinstance(room, (int, float)) and room <= DEFEND_WHEN
+        naked = snap.knows("gun-turret") and not snap.building("gun-turret")
         target = None
-        if urgent and snap.knows("gun-turret") and not snap.building("gun-turret"):
+        if naked and (close or room is None):
             target = ("gun-turret", 1)
 
         stage = mission.stage_of(snap)

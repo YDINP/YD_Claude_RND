@@ -95,6 +95,48 @@ class ChiefMixin:
             self.say(f"{worker.name}이(가) 쓰러져 있었습니다. 기지에서 "
                      f"다시 세웠습니다.")
 
+        # 점호 끝에 «적이 왔는지»도 본다.
+        #
+        # 사슬 감사는 구십 초마다 돈다. 습격에는 너무 느리다 - 구십 초면
+        # 화로 몇 대가 사라진다. 점호는 이십오 초마다 도니 여기가 맞다.
+        self.watch_raid()
+
+    def watch_raid(self) -> None:
+        # 적이 «왔는가». 이것이 사슬보다 먼저다.
+        #
+        # 사용자 지시: "적이 온걸 인식할것."
+        #
+        # 지난 판에서 화로 11대와 채굴기 14대와 요원 74번을 잃는 동안,
+        # 무리는 한 번도 「습격이다」라고 말하지 않았다. 「몇 마리가 몇
+        # 타일 앞에 있다」만 되풀이했다. 이백 타일 밖의 열 마리와 공장
+        # 한복판의 세 마리를 같은 말로 부르고 있었던 것이다.
+        #
+        # 앞의 것은 소식이고 뒤의 것은 사건이다.
+        who = next(iter(self.workers), None)
+        if not who:
+            return
+        try:
+            wall = self.bridge.defence(who)
+        except RconError:
+            return
+        hit = (wall or {}).get("raid") or {}
+        if hit.get("now"):
+            if not getattr(self, "_raid", False):
+                self._raid = True
+                where = hit.get("worst")
+                spot = (f" ({where['name']} {where['hp']}, "
+                        f"{where['x']},{where['y']})" if where else "")
+                self.say(
+                    f"습격입니다. 방어선 안에 {int(hit.get('inside') or 0)}마리, "
+                    f"기지 둘레에 {int(hit.get('near_home') or 0)}마리. "
+                    f"우리 것 {int(hit.get('hurt') or 0)}채가 맞고 "
+                    f"있습니다{spot}.")
+        elif getattr(self, "_raid", False):
+            self._raid = False
+            self.say("습격이 지나갔습니다.")
+
+
+
     def steer(self) -> None:
         now = time.monotonic()
         if now - getattr(self, "_steered_at", 0.0) < CHIEF_EVERY:

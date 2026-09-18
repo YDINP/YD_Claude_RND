@@ -629,8 +629,13 @@ class SurveyMixin:
             #
             # 공해가 둥지에 닿기 전까지는 그 말이 맞다. 닿은 뒤에 세우는
             # 터렛은 이미 늦다 - 세우는 동안 습격이 온다.
+            #     여유를 «모를» 때도 급한 것으로 친다. 둥지가 조회에 안
+            #     잡히면 nil 이 나오는데, 그것은 「안전하다」가 아니라
+            #     「모른다」다. 실측으로 그 값이 None 이 된 순간 방어가
+            #     뒤로 밀렸다 - 가장 모를 때 가장 태평해진 셈이다.
             room = (self.snaps.get(worker.name) or worker.snapshot()).slack
-            if isinstance(room, (int, float)) and room <= DEFEND_WHEN:
+            near = not isinstance(room, (int, float)) or room <= DEFEND_WHEN
+            if near:
                 jobs.insert(0, guard)
             else:
                 unblock.append(guard)
