@@ -376,19 +376,21 @@ local function feed_belts(name, limit)
     local on_belt = drop ~= nil and drop.valid and drop.type == "transport-belt"
     if not on_belt then
       -- 네 방향 중 벨트가 있는 쪽을 찾는다.
+      -- 돌려보고 «어디에 떨구는지» 게임에 묻는다. 위치에서 계산하면
+      -- 반칸 어긋난다 - 벨트 칸의 중심은 x.5 인데 드릴 중심은 정수다.
+      local was = drill.direction
       for _, dir in pairs(DIRECTIONS) do
-        local tile = drop_tile(drill.position, dir)
+        drill.direction = dir
+        local p = drill.drop_position
         local belt = surface.find_entities_filtered {
-          position = { tile.x, tile.y }, radius = 0.4,
+          position = { p.x, p.y }, radius = 0.4,
           name = "transport-belt", force = force, limit = 1,
         }[1]
+        if not belt then drill.direction = was end
         if belt then
           seen = seen + 1
-          if #turned < (limit or 40) then
-            drill.direction = dir
-            turned[#turned + 1] = { x = drill.position.x, y = drill.position.y,
-                                    dir = dir }
-          end
+          turned[#turned + 1] = { x = drill.position.x, y = drill.position.y,
+                                  dir = dir }
           break
         end
       end

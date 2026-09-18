@@ -602,25 +602,43 @@ end
 --
 -- 그래서 길이 채굴기를 찾아간다. 채굴기마다 떨구는 칸을 하나씩 정하고,
 -- 그 칸들을 차례로 잇고, 마지막을 유통 구역에 붙인다.
-local function drop_tile(at, dir)
-  if dir == defines.direction.north then return { x = at.x, y = at.y - 2 } end
-  if dir == defines.direction.south then return { x = at.x, y = at.y + 2 } end
-  if dir == defines.direction.east then return { x = at.x + 2, y = at.y } end
-  return { x = at.x - 2, y = at.y }
+-- 떨구는 칸은 «게임에 묻는다».
+--
+-- 짐작으로 계산했다가 반칸 어긋났다. 실측:
+--
+--     드릴 71.0,6.0  dir=남   ->  drop_position 71.5,7.3
+--     벨트                        71.5,-8.5 처럼 반칸 좌표
+--
+-- 나는 드릴 위치에서 ±2 하고 floor 했다. 그러면 (71,8) 이 나오는데 벨트
+-- 칸의 중심은 (71.5,7.5) 다. 반칸 어긋난 자리에 깔면 채굴기는 그 벨트를
+-- 못 본다 - 벨트 153칸을 깔고도 여섯 대가 전부 상자를 보고 있었다.
+--
+-- 엔진에는 방향마다 떨구는 자리가 이미 정해져 있다(drop_position). 그러니
+-- 돌려보고 «어디에 떨구는지 물어보면» 된다. 물어본 뒤 원래대로 돌려놓는다.
+--
+-- 이 저장소가 여러 번 배운 것이다: 계산할 수 있는 것도 게임이 알고 있으면
+-- 게임에 묻는 편이 맞다. 레시피도, 놓을 수 있는가도, 길도 그랬다.
+local FOUR = { defines.direction.north, defines.direction.south,
+               defines.direction.east, defines.direction.west }
+
+local function tile_of(p)
+  return { x = math.floor(p.x) + 0.5, y = math.floor(p.y) + 0.5 }
 end
 
--- 이 채굴기가 벨트를 놓을 수 있는 칸들. 가까운 쪽부터.
+-- 이 채굴기가 떨굴 수 있는 칸들. 목적지에 가까운 쪽부터.
 local function drop_seats(surface, force, drill, toward)
+  local was = drill.direction
   local seats = {}
-  for _, dir in pairs({ defines.direction.north, defines.direction.south,
-                        defines.direction.east, defines.direction.west }) do
-    local tile = drop_tile(drill.position, dir)
-    tile.x, tile.y = math.floor(tile.x), math.floor(tile.y)
+  for _, dir in pairs(FOUR) do
+    drill.direction = dir
+    local tile = tile_of(drill.drop_position)
     if passable(surface, force, tile.x, tile.y) then
+      tile.dir = dir
       tile.gap = math.abs(tile.x - toward.x) + math.abs(tile.y - toward.y)
       seats[#seats + 1] = tile
     end
   end
+  drill.direction = was
   table.sort(seats, function(p, q) return p.gap < q.gap end)
   return seats
 end
@@ -656,7 +674,12 @@ local function field_lines(name, limit)
       local stops = {}
       for _, drill in pairs(drills) do
         local seats = drop_seats(surface, force, drill, head)
-        if seats[1] then stops[#stops + 1] = seats[1] end
+        if seats[1] then
+          -- 고른 자리를 «보도록» 바로 돌려둔다. 길을 깔고 나서 따로
+          -- 돌리려면 그 사이에 자리가 달라져 있을 수 있다.
+          drill.direction = seats[1].dir
+          stops[#stops + 1] = { x = seats[1].x, y = seats[1].y }
+        end
       end
       stops[#stops + 1] = head
 
