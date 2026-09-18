@@ -271,6 +271,23 @@ local function route_for(key, surface, force, from, goal)
   return tiles, short, bends
 end
 
+-- 얼려둔 길 위에 무언가 새로 섰는가.
+--
+-- 길은 한 번 정하면 남는다. 그런데 그 사이 채굴기와 상자가 늘어나고, 하필
+-- 길 위에 선다. 실측(2026-09-18): 길의 «첫 칸»이 막혀 있었다. 우리는 막힌
+-- 칸에서 멈추므로(건너뛰면 길이 끊긴다) 한 칸도 못 깔았다 - 「남은 140칸」이
+-- 세 시간 동안 한 번도 안 줄었던 이유다.
+--
+-- 그러니 막힌 자리가 있으면 그때는 길을 다시 찾는다. 길을 붙들고 있는 것은
+-- 낭비를 막기 위해서지 못 가는 길을 고집하기 위해서가 아니다.
+local function blocked_anywhere(surface, force, tiles)
+  local probe = missing(surface, force, tiles, BELT)
+  for _, one in pairs(probe) do
+    if one.blocked then return true, one end
+  end
+  return false
+end
+
 local function gather(surface, force, parts)
   local todo, standing, want = {}, {}, {}
   for _, part in ipairs(parts) do
@@ -309,10 +326,17 @@ local function ore_line(name, fx, fy, limit)
   if not mine and not fx then return { error = "no mining zone yet" } end
 
   local lane, arms, head, out_lane, out_arms = feed_line(smelt)
-  local trunk, short, bends = route_for("ore", surface, force,
-    { x = math.floor(fx or mine.x), y = math.floor(fy or mine.y) }, head)
+  local start = { x = math.floor(fx or mine.x), y = math.floor(fy or mine.y) }
+  local trunk, short, bends = route_for("ore", surface, force, start, head)
   if not trunk then
     return { error = "no route from the mine to the smelter" }
+  end
+  if blocked_anywhere(surface, force, trunk) then
+    storage.lines["ore"] = nil
+    trunk, short, bends = route_for("ore", surface, force, start, head)
+    if not trunk then
+      return { error = "the ore route is blocked and no other way found" }
+    end
   end
 
   -- 순서가 있다. 길이 없으면 내리는 곳을 세워도 아무것도 안 온다. 그리고
@@ -355,9 +379,16 @@ local function plate_line(name, limit)
   local tail = out_lane[#out_lane]
   local goal = { x = here.craft.x, y = here.craft.y - 2 }
 
+  local aim = { x = tail.x, y = tail.y }
   local trunk, short, bends = route_for("plate", surface, force,
-    { x = goal.x, y = goal.y }, { x = tail.x, y = tail.y })
+    { x = goal.x, y = goal.y }, aim)
   if not trunk then return { error = "no route from the smelter to the shop" } end
+  if blocked_anywhere(surface, force, trunk) then
+    storage.lines["plate"] = nil
+    trunk, short, bends = route_for("plate", surface, force,
+      { x = goal.x, y = goal.y }, aim)
+    if not trunk then return { error = "the plate route is blocked" } end
+  end
 
   -- walk 는 «goal 쪽으로 흐르는» 순서를 준다. 여기서는 제련 구역이 goal 이므로
   -- 뒤집어야 판금이 조립 구역 쪽으로 흐른다.
