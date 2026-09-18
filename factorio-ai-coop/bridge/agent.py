@@ -1178,8 +1178,13 @@ class Crew:
                 else:
                     self.orders.put((*answer, speaker))
             except Exception as exc:  # noqa: BLE001 - a dead thread must still answer
+                # 무엇이 터졌는지 사람에게도 보여준다. 이 자리에 「문제가
+                # 생겼습니다」만 적혀 있던 동안, 반장은 NameError 로 열여덟
+                # 회차를 죽어 있었고 아무도 그걸 몰랐다. 스레드 안의 예외는
+                # stderr 로만 나가고, 사람이 보는 것은 대화창뿐이다.
                 print(f"[warn] delegate failed: {exc!r}", file=sys.stderr)
-                self.orders.put(("지시를 나누다 문제가 생겼습니다.", [], [], speaker))
+                self.orders.put((f"지시를 나누다 문제가 생겼습니다: "
+                                 f"{type(exc).__name__}: {exc}", [], [], speaker))
             finally:
                 self.chief.release()
 

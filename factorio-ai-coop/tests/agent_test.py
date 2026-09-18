@@ -749,6 +749,37 @@ def main() -> int:
     check("a zero share is not a division by zero",
           carry_split(six, 10, 0) == (six, 10))
 
+    print("\n24. the crew chief can actually be called")
+    # 9회차에 [창고] 절을 프롬프트에 넣으면서 _stores_text 정의가 파일에
+    # 들어가지 않았다. import 는 통과했다 - 그 이름은 호출할 때야 찾는다.
+    # 그래서 반장은 열여덟 회차 동안 NameError 로 죽어 있었고, 예외는
+    # 스레드 안에서 잡혀 stderr 로만 나갔다. 사람이 채팅에 쓴 모든 지시가
+    # 그렇게 사라졌다.
+    #
+    # 프롬프트를 조립하는 데까지는 게임도 모델도 필요 없다. 여기서 막는다.
+    class FakeSnap:
+        x, y = 0.0, 0.0
+        items = {"coal": 3}
+        resources = {}
+        buildings = {}
+        humans = []
+        mates = []
+
+    fleet = [{"name": "alpha", "x": 0, "y": 0, "focus": "", "items": {},
+              "doing": ""}]
+    built = brain.delegate("나 관찰자로 바꿔줘", FakeSnap(), fleet,
+                           cli="definitely-not-a-real-binary-xyz")
+    check("a missing CLI is a clean None, not an exception", built is None)
+    check("the chief can describe what is in the chests",
+          "coal 40" in brain._stores_text([{"x": 1, "y": 2,
+                                            "items": {"coal": 40}}]),
+          brain._stores_text([{"x": 1, "y": 2, "items": {"coal": 40}}]))
+    check("and says so plainly when it cannot see them",
+          "확인 못 함" in brain._stores_text(None))
+    check("every helper the prompt calls exists",
+          all(hasattr(brain, n) for n in
+              ("_stores_text", "_fleet_text", "_snapshot_text", "_clean_commands")))
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))

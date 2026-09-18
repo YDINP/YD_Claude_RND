@@ -346,8 +346,28 @@ def _clean_commands(raw: Any, roster: set[str]) -> list[dict]:
     return out
 
 
+def _stores_text(stores: list[dict] | None) -> str:
+    """상자와 화로에 무엇이 들어 있는지.
+
+    사람이 «상자에 석탄 많이 남았잖아»라고 말했는데 반장이 «석탄이
+    없습니다»라고 답한 적이 있다. 반장이 본 것은 각자의 가방뿐이었고,
+    창고 안은 애초에 보이지 않았다. 없는 것을 근거로 판단한 것이 아니라,
+    보이지 않는 것을 없다고 판단한 것이다.
+    """
+    if not stores:
+        return "공용 상자: 확인 못 함"
+    rows = []
+    for one in stores[:12]:
+        held = ", ".join(f"{k} {v}"
+                         for k, v in sorted((one.get("items") or {}).items()))
+        rows.append(f"  ({one.get('x', 0):.0f}, {one.get('y', 0):.0f}) "
+                    f"{held or '비어있음'}")
+    return "공용 상자 안:\n" + "\n".join(rows)
+
+
 def delegate(message: str, snap: Any, fleet: list[dict], timeout: float = 120.0,
-             cli: str = "claude") -> tuple[str, list[dict], list[tuple[str, str, list]]] | None:
+             cli: str = "claude", stores: list[dict] | None = None
+             ) -> tuple[str, list[dict], list[tuple[str, str, list]]] | None:
     """지시 하나를 여러 캐릭터의 작업으로 쪼갠다.
 
     돌려주는 것은 (사람에게 할 대답, [운영 명령...], [(캐릭터, 할 말, steps), ...]).
