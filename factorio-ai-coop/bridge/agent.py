@@ -768,7 +768,12 @@ TURRET_AMMO = 10
 TURRET_RING = 18
 # 연구는 이 순서로 고른다. 방어가 과학팩보다 뒤로 밀리면, 둥지가 가까워진
 # 다음에야 터렛을 만들기 시작한다.
-RESEARCH_ORDER = ("military", "automation", "logistics", "electric-mining-drill",
+# 실측(699분째): 「military」는 기관단총만 연다. 터렛은 «gun-turret» 이라는
+# 별개의 연구고, 벽도 «stone-wall» 로 따로 있다. 방어를 military 로 알고
+# 있어서, 그 연구가 끝난 뒤에도 터렛 레시피는 잠긴 채였다 - 그리고 바로
+# 그때 바이터 열두 마리가 왔다.
+RESEARCH_ORDER = ("gun-turret", "stone-wall", "military",
+                  "automation", "logistics", "electric-mining-drill",
                   "steel-processing", "logistic-science-pack")
 
 # 같은 사람이 같은 말을 이 시간 안에 되풀이하면 삼킨다.
@@ -3101,7 +3106,13 @@ class Crew:
             return
 
         if not armed:
-            note += " 터렛은 military 연구가 있어야 만들 수 있고, 그 연구는 전력이 필요합니다."
+            # 적이 이미 와 있는데 터렛이 잠겨 있으면, 하던 연구를 끊고
+            # 터렛부터 뚫는다. 다음 연구는 습격을 막아낸 뒤에 해도 된다.
+            note += " 터렛이 아직 잠겨 있어 gun-turret 연구를 먼저 돌리겠습니다."
+            try:
+                self.bridge.research("gun-turret")
+            except RconError:
+                pass
         if note != self.danger_said:
             self.danger_said = note
             self.say(note)

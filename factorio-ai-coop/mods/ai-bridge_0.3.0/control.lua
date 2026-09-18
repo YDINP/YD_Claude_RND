@@ -2162,8 +2162,16 @@ local function assembler_site(name, x, y, arm)
   if not lab then
     return { error = string.format("no lab at %.0f,%.0f", x, y) }
   end
-  local box = lab.bounding_box
 
+  -- 실측(699분째): 조립기를 랩에서 네 칸 떨어뜨리고 그 사이에 인서터를
+  -- 놓았더니, 인서터가 집는 칸이 조립기 충돌 상자에 0.2타일만 걸쳤다.
+  -- 3x3 엔티티의 충돌 상자는 타일 발자국보다 0.3씩 안쪽이라 계산이
+  -- 아슬아슬하게 빗나간다. 과학팩 열 개를 만들어놓고 인서터가 허공을
+  -- 집고 있었다.
+  --
+  -- 그래서 좌표를 믿지 않는다. 임시로 세워보고 «네가 무엇을 집고 무엇에
+  -- 넣느냐»를 인서터에게 직접 묻는다. pickup_target 과 drop_target 이
+  -- 그 답이고, 그보다 확실한 근거는 없다.
   local sides = {
     { d = defines.direction.north, ux = 0, uy = -1 },
     { d = defines.direction.east, ux = 1, uy = 0 },
@@ -2172,35 +2180,38 @@ local function assembler_site(name, x, y, arm)
   }
 
   for _, side in ipairs(sides) do
-    -- 랩 바깥 한 칸이 인서터, 그 너머가 조립기(3x3 이라 두 칸 더).
-    local at = lab.position
-    local hand = { x = at.x + side.ux * 2, y = at.y + side.uy * 2 }
-    local shop = { x = at.x + side.ux * 4, y = at.y + side.uy * 4 }
+    for gap = 3, 5 do
+      local at = lab.position
+      local hand = { x = at.x + side.ux * 2, y = at.y + side.uy * 2 }
+      local shop = { x = at.x + side.ux * gap, y = at.y + side.uy * gap }
 
-    -- 인서터는 조립기 쪽에서 집어 랩에 놓아야 하므로, 조립기를 바라본다.
-    if surface.can_place_entity {
-      name = arm, position = hand, direction = side.d, force = force,
-    } and surface.can_place_entity {
-      name = "assembling-machine-1", position = shop, force = force,
-    } then
-      local probe = surface.create_entity {
+      if surface.can_place_entity {
         name = arm, position = hand, direction = side.d, force = force,
-        raise_built = false,
-      }
-      local aims = false
-      if probe then
-        local drop, grab = probe.drop_position, probe.pickup_position
-        aims = drop.x > box.left_top.x and drop.x < box.right_bottom.x
-           and drop.y > box.left_top.y and drop.y < box.right_bottom.y
-           and math.abs(grab.x - shop.x) < 2 and math.abs(grab.y - shop.y) < 2
-        probe.destroy()
-      end
-      if aims then
-        return {
-          lab = { x = at.x, y = at.y },
-          inserter = { x = hand.x, y = hand.y, direction = side.d, name = arm },
-          assembler = { x = shop.x, y = shop.y },
+      } and surface.can_place_entity {
+        name = "assembling-machine-1", position = shop, force = force,
+      } then
+        local mill = surface.create_entity {
+          name = "assembling-machine-1", position = shop, force = force,
+          raise_built = false,
         }
+        local probe = mill and surface.create_entity {
+          name = arm, position = hand, direction = side.d, force = force,
+          raise_built = false,
+        }
+        local joined = false
+        if probe then
+          joined = probe.pickup_target == mill and probe.drop_target == lab
+        end
+        if probe then probe.destroy() end
+        if mill then mill.destroy() end
+
+        if joined then
+          return {
+            lab = { x = at.x, y = at.y },
+            inserter = { x = hand.x, y = hand.y, direction = side.d, name = arm },
+            assembler = { x = shop.x, y = shop.y },
+          }
+        end
       end
     end
   end

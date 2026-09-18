@@ -1064,3 +1064,72 @@ RESEARCH steel-processing 95%        ← 연구가 끊이지 않는다
 것은 전혀 다른 문제였다.
 
 **결과**: 168 tests.
+
+---
+
+## 27회차 — 허공을 집는 인서터, 그리고 바이터
+
+**실측** (699분째). 연료 문제가 거의 풀렸다:
+
+```
+채굴기 no_fuel 45 → 6,   working 0 → 36
+화로 56 → 94 (working 4)
+TECHS 7 → 9  (steel-processing 완료, advanced-material-processing 시작)
+transport-belt = 3     ← 벨트가 처음 등장
+사다리 9/12단계 — 초록 과학팩
+```
+
+26회차에 고친 「엉뚱한 대상을 집던 문제」가 연료 공급을 통째로 열어줬다.
+
+**문제 1 — 조립기는 꽉 찼는데 인서터가 허공을 집는다.**
+
+```
+assembling-machine-1 full_output
+inserter waiting_for_source_items
+```
+
+좌표를 찍어봤다:
+
+```
+assembler  (46.5, -13.5)  bbox y -14.7 .. -12.3
+inserter   (46.5, -11.5)  pickup (46.5, -12.5)
+what is at the pickup tile: NOTHING
+assembling_machine_output: automation-science-pack = 10
+```
+
+**3×3 엔티티의 충돌 상자는 타일 발자국보다 0.3씩 안쪽이다.** 집는 칸이
+조립기에 0.2타일만 걸쳤고, 게임은 그걸 「닿지 않음」으로 봤다. 과학팩 열
+개를 만들어놓고 인서터가 허공을 집고 있었다.
+
+→ 좌표를 믿지 않는다. 임시로 **조립기와 인서터를 둘 다 세워보고**
+`pickup_target` 과 `drop_target` 을 인서터에게 직접 묻는다. 그보다 확실한
+근거는 없다. 거리도 3~5칸을 훑는다.
+
+**문제 2 — 바이터가 왔다** (사용자 보고, 실측으로 확인)
+
+```
+적 유닛 12 (전부 small-biter)
+가장 가까운 둥지 (-43,-229) 232타일
+파손된 건물 0     터렛 0
+gun-turret 레시피 = false
+```
+
+`military` 는 22회차에 끝났는데 터렛이 잠겨 있었다. 프로토타입을 뒤져보니:
+
+```
+gun-turret  -> gun-turret      done=false  cost=10 (빨간팩)
+military    -> submachine-gun  done=true      ← 이건 기관단총만 연다
+stone-wall  -> stone-wall      done=false  cost=10
+```
+
+**「military」를 방어라고 알고 있었다.** 터렛은 `gun-turret` 이라는 별개의
+연구고 벽도 `stone-wall` 로 따로다. 이름이 그럴듯해서 확인하지 않았고,
+그 연구가 끝난 뒤에도 터렛은 잠긴 채였다 — 그리고 바로 그때 적이 왔다.
+
+→ `RESEARCH_ORDER` 를 `gun-turret`, `stone-wall` 우선으로. 적이 이미 와
+있는데 터렛이 잠겨 있으면 **하던 연구를 끊고** 터렛부터 뚫는다.
+
+두 문제는 한 줄로 이어진다: **조립기 출력에 갇힌 과학팩 열 개가 곧
+gun-turret 연구 비용 열 개다.** 인서터를 고치는 것이 곧 방어를 여는 것이다.
+
+**결과**: 168 tests.
