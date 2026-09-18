@@ -215,16 +215,35 @@ class HaulingMixin:
         if not todo:
             return
 
-        # 무엇이 몇 개 필요한지 세고, 그만큼 먼저 구한다. 빈손으로 가면
-        # 걸음만 버린다.
+        # 무엇이 몇 개 필요한지 세고 구해본다. 다 못 구해도 «구한 만큼»은
+        # 깐다 - 스무 칸을 못 구했다고 한 칸도 안 깔면 길은 영영 안 이어진다.
+        #
+        # 예전에는 하나라도 모자라면 통째로 포기했다. 벨트 스무 개를 만들
+        # 철판이 없으면 열두 개도 안 깔았다.
         need: dict[str, int] = {}
         for one in todo:
             need[one["what"]] = need.get(one["what"], 0) + 1
         for part, count in need.items():
             if not self.obtain(worker, part, count):
                 self.ask_for(worker, part, count, label)
-                worker.block(key, BACKOFF_SECONDS)
-                return
+
+        # 손에 있는 만큼으로 할 일을 줄인다. 게임에 직접 묻는다 - 「구했다고
+        # 생각한 것」과 「손에 있는 것」은 다르다.
+        try:
+            hand = (self.bridge.call("inventory", name).get("items") or {})
+        except RconError:
+            hand = {}
+        left = {part: int(hand.get(part) or 0) for part in need}
+        doable: list[dict] = []
+        for one in todo:
+            if left.get(one["what"], 0) <= 0:
+                break        # 길은 순서다. 건너뛰면 끊긴다.
+            left[one["what"]] -= 1
+            doable.append(one)
+        if not doable:
+            worker.block(key, BACKOFF_SECONDS)
+            return
+        todo = doable
 
         laid, stuck = 0, None
         for one in todo:
