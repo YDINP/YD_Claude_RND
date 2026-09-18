@@ -150,11 +150,27 @@ local function lay_out(name, redo)
   local a = agent(name)
   local b = body(a)
   local surface = b and b.surface or game.surfaces[1]
-  local home = (base() or {}).home
-  if not home then
-    home = b and { x = math.floor(b.position.x), y = math.floor(b.position.y) }
+  -- 어디를 중심으로 지도를 볼 것인가.
+  --
+  -- 실측: 설계가 (0,0) 기준으로 잡혀 제련 구역이 철광석 80타일 밖에 섰다.
+  -- `base()` 는 우리 «건물»의 무게중심인데, 개국 직후에는 건물이 없어서
+  -- 원점을 줬다. 그리고 설계는 한 번 정하면 남으므로 그 엉뚱한 자리가
+  -- 굳었다.
+  --
+  -- 사람이 서 있는 자리가 맞다. 요원은 광맥이 있는 데서 시작한다.
+  -- 건물이 서고 나면 그때는 건물의 무게중심이 더 낫다 - 둘 다 있으면
+  -- 건물 쪽을 쓴다.
+  --
+  -- 그리고 «모르면 미룬다». 원점을 기본값으로 쓰면, 모르는 것을 (0,0)
+  -- 이라고 아는 척하는 것이 된다. 이 저장소가 여러 번 한 실수다.
+  local seen = base() or {}
+  -- 건물이 «한 채도 없으면» 그 무게중심은 무게중심이 아니다. 개수를
+  -- 같이 보지 않으면 빈 합계를 좌표로 믿게 된다.
+  local home = (seen.count or 0) > 0 and seen.home or nil
+  if (not home) and b then
+    home = { x = math.floor(b.position.x), y = math.floor(b.position.y) }
   end
-  if not home then return { error = "no home yet" } end
+  if not home then return { error = "nobody on the map yet" } end
 
   storage.city = storage.city or {}
   if storage.city.plan and not redo then
