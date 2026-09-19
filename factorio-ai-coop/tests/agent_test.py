@@ -1395,6 +1395,59 @@ def main() -> int:
     check("water tiles are sorted by distance before picking",
           "table.sort(tiles" in _head and "- x) ^ 2" in _head)
 
+    # ------------------------------------------------------------------
+    print("\n18. drills line up on a belt lane, they do not scatter")
+
+    # 사용자: "채굴기를 만들어서 매립지들에 채굴기를 심시티하는것부터 해보자"
+    #
+    # 화로에는 자리표가 있는데 채굴기에는 없었다. 한 대씩 「근처에서 제일
+    # 두꺼운 칸」을 탐욕스럽게 골라서, 넷이 네 방향을 보고 서고 나중에
+    # 줄을 깔 자리가 안 남았다.
+    #
+    # 순서가 거꾸로였다. 벨트 줄이 채굴기를 따라가는 것이 아니라 «채굴기가
+    # 줄을 따라야» 한다. 여기서 그 규칙을 plots.lua 와 같은 셈으로 본다.
+    LANE, PITCH, ROW = 5, 2, 8
+
+    def mine_seat(lane, nth, wide=True):
+        pair, side = nth // 2, nth % 2
+        band, step = pair // ROW, (pair % ROW) * PITCH
+        off = lane + band * LANE
+        if wide:
+            return (step, (off - 2) if side == 0 else (off + 1),
+                    "south" if side == 0 else "north")
+        return ((off - 2) if side == 0 else (off + 1), step,
+                "east" if side == 0 else "west")
+
+    # 2x2 채굴기가 (y, y+1) 을 차지하고 바라보는 쪽 한 칸에 떨군다.
+    def drops_at(seat, wide=True):
+        x, y, face = seat
+        if wide:
+            return {"south": y + 2, "north": y - 1}[face]
+        return {"east": x + 2, "west": x - 1}[face]
+
+    first = [mine_seat(2, n) for n in range(16)]
+    check("every drill in a band drops onto the same lane",
+          {drops_at(s) for s in first} == {2},
+          str(sorted({drops_at(s) for s in first})))
+    check("the two rows face each other",
+          {s[2] for s in first} == {"south", "north"})
+    check("drills step by two along the lane - no overlap",
+          sorted({s[0] for s in first}) == [0, 2, 4, 6, 8, 10, 12, 14])
+    check("a full band is sixteen drills", ROW * 2 == 16)
+
+    # 다음 줄은 정확히 lane 만큼 떨어진다. 붙으면 두 줄이 한 벨트를
+    # 나눠 쓰게 되고, 멀면 광맥을 헛되이 넓게 쓴다.
+    second = [mine_seat(2, n) for n in range(16, 32)]
+    check("the next lane is exactly one lane away",
+          {drops_at(s) for s in second} == {2 + LANE},
+          str(sorted({drops_at(s) for s in second})))
+
+    # 세로 밭도 같은 규칙이라야 한다. 밭의 긴 쪽이 어디냐에 따라 배치가
+    # 달라지는 것은 맞지만, «마주보고 가운데로 떨군다»는 안 달라진다.
+    tall = [mine_seat(2, n, wide=False) for n in range(16)]
+    check("a tall patch lays out the same way",
+          {drops_at(s, wide=False) for s in tall} == {2})
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))

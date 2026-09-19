@@ -15,6 +15,8 @@
 
 local Tasks = require("tasks")
 local Core = require("core")
+local Plots = require("plots")
+local mine_seats = Plots.mine_seats
 local AUTOSAVE_INTERVAL = Core.AUTOSAVE_INTERVAL
 local CHAT_HISTORY      = Core.CHAT_HISTORY
 local MARKER_INTERVAL   = Core.MARKER_INTERVAL
@@ -650,6 +652,15 @@ remote.add_interface("ai", {
 
   -- 그 구역에서 다음에 놓을 빈 자리.
   next_seat = next_seat,
+  -- 한 밭의 채굴기 자리표. 「어느 밭」은 부르는 쪽이 고른다 - 밭 목록은
+  -- 이미 `zones` 가 준다.
+  mine_seats = function(name, left, top, right, bottom, wanted)
+    local a = Core.agent(name)
+    local b = a and Core.body(a)
+    if not b then return { error = "no such agent: " .. tostring(name) } end
+    return mine_seats(b.surface, b.force,
+      { left = left, top = top, right = right, bottom = bottom }, wanted)
+  end,
   draw_zones = draw_zones,
 
   -- 기지의 무게중심, 그리고 거기서 너무 멀리 떨어진 우리 건물.
