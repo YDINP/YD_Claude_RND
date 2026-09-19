@@ -511,7 +511,18 @@ M.craft = {
 -- 인서터도 연료 칸이 있어서 get_inventory 를 통과한다. 「창고인가」로
 -- 거르는 것보다 「요청한 자리인가, 가지고 있는가」로 고르는 편이 옳다 -
 -- 화로에서 꺼내는 일도 같은 함수를 쓰기 때문이다.
-local function target_entity(ctx, p, wants)
+--
+-- 「가지고 있는가」로는 모자랐다. 16회차 실측:
+--
+--     부른 칸          (-70,15)
+--     석탄 상자        가운데 (-69.5,15.5)  거리 0.707  석탄 1363
+--     급유 인서터      가운데 (-70.5,14.5)  거리 0.707  석탄 1
+--
+-- 거리가 «같고» 둘 다 가산점 100을 받아 동점이 되었다. 먼저 나온 쪽이
+-- 이겼고, 석탄 600개를 달라 했는데 1개를 받아 왔다. 그러고도 성공이었다.
+--
+-- 고르는 기준은 「가지고 있는가」가 아니라 «달라는 만큼 가지고 있는가»다.
+local function target_entity(ctx, p, wants, how_many)
   local best, best_score = nil, -math.huge
   for _, e in pairs(ctx.surface.find_entities_filtered {
     position = { p.x, p.y }, radius = p.search_radius or 1.5,
@@ -521,7 +532,12 @@ local function target_entity(ctx, p, wants)
       local score = -dist({ x = p.x, y = p.y }, e.position)
       if wants then
         local ok, held = pcall(function() return e.get_item_count(wants) end)
-        if ok and held and held > 0 then score = score + 100 end
+        if ok and held and held > 0 then
+          score = score + 100
+          -- 달라는 만큼 있으면 한 번 더. 한 개짜리 인서터가 천 개짜리
+          -- 상자와 동점이 되는 일을 막는 것이 이 줄의 전부다.
+          if held >= (how_many or 1) then score = score + 100 end
+        end
       end
       if score > best_score then best, best_score = e, score end
     end
@@ -590,8 +606,9 @@ M.insert = {
 M.take = {
   start = function(ctx)
     local p = ctx.task.params
-    -- 무엇을 꺼낼지 알고 있으니 알려준다. 그러면 그것을 가진 쪽이 뽑힌다.
-    local target = target_entity(ctx, p, p.name)
+    -- 무엇을 «몇 개» 꺼낼지 알고 있으니 둘 다 알려준다. 그러면 그만큼
+    -- 가진 쪽이 뽑힌다.
+    local target = target_entity(ctx, p, p.name, p.count)
     if not target then
       ctx.task.error = string.format("nothing with an inventory at %s,%s", p.x, p.y)
       return "failed"

@@ -267,6 +267,38 @@ def rocks_are_clearable() -> list:
     return bad
 
 
+# -- 「가지고 있다」가 아니라 «달라는 만큼 있다» ----------------------------
+#
+# 16회차 실측: 석탄 600개를 달라 했는데 1개를 받아 오고도 성공이었다.
+#
+#     부른 칸          (-70,15)
+#     석탄 상자        가운데 (-69.5,15.5)  거리 0.707  석탄 1363
+#     급유 인서터      가운데 (-70.5,14.5)  거리 0.707  석탄 1
+#
+# 거리가 «같다». 둘 다 「가지고 있다」 가산점 100 을 받아 동점이 되었고,
+# 먼저 나온 쪽이 이겼다. 급유 장치는 상자와 인서터를 한 칸 간격으로 세우니
+# 이 둘은 언제나 같이 잡히고, 언제나 동점이다.
+#
+# 이미 한 번 겪고 주석까지 달아 둔 자리였다(tasks.lua 505행). 그때는
+# 「무엇을」까지만 알려주고 「몇 개」를 안 알려줬다.
+def take_wants_enough() -> list:
+    bad = []
+    lua = io.open(os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "tasks.lua"),
+                  encoding="utf-8").read()
+    head = lua[lua.find("local function target_entity"):]
+    head = head[:head.find(chr(10) + "end")]
+    if "how_many" not in head:
+        bad.append("target_entity 가 「몇 개」를 안 받는다 "
+                   "- 한 개짜리가 천 개짜리와 동점이 된다")
+    if "held >= (how_many or 1)" not in head:
+        bad.append("target_entity 가 달라는 만큼 가진 쪽을 안 올린다")
+    take = lua[lua.find("M.take = {"):]
+    take = take[:take.find(chr(10) + "}")]
+    if "target_entity(ctx, p, p.name, p.count)" not in take:
+        bad.append("take 가 «몇 개»를 target_entity 에 안 건넨다")
+    return bad
+
+
 def main() -> int:
     shape = lua_shape()
     bad = []
@@ -285,6 +317,7 @@ def main() -> int:
     bad.extend(one_ore_per_field())
     bad.extend(thickness_is_this_ore())
     bad.extend(rocks_are_clearable())
+    bad.extend(take_wants_enough())
     for line in bad:
         print("  [FAIL] " + line)
     print(f"\n{len(bad)} problems - plot shape agrees "
