@@ -81,10 +81,13 @@ class SurveyMixin:
                 pass
             try:
                 answer = self.bridge.next_seat(worker.name, "smelt")
-                worker.next_furnace = (answer.get("seat")
-                                       if not answer.get("error") else None)
+                if answer.get("error"):
+                    worker.next_furnace, worker.furnace_seats = None, []
+                else:
+                    worker.next_furnace = answer.get("seat")
+                    worker.furnace_seats = _as_rows(answer.get("seats"))
             except RconError:
-                worker.next_furnace = None
+                worker.next_furnace, worker.furnace_seats = None, []
         except RconError:
             home = None
         if home:

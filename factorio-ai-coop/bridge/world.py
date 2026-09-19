@@ -50,6 +50,7 @@ class Snapshot:
     craft: dict | None = None
     # 제련 구역에서 다음에 비어 있는 자리. 세지 않고 물어서 받은 값이다.
     next_furnace: dict | None = None
+    furnace_seats: list = field(default_factory=list)
     # 여태 만든 누적 개수. «쓴 것은 없어져도 만든 것은 없어지지 않는다».
     made: dict[str, int] = field(default_factory=dict)
 

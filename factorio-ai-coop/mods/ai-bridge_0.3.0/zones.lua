@@ -312,8 +312,18 @@ local function next_seat(name, which)
   if not origin then return { error = "no " .. tostring(which) .. " zone yet" } end
   local map = plot_seats(name, which, origin)
   if map.error then return map end
+  -- 빈 자리를 «목록»으로도 준다.
+  --
+  -- 자리표는 열두 칸까지 비어 있는 자리를 알고 있는데 여기서 첫 칸
+  -- 하나만 꺼내 주고 있었다. 그래서 여럿이 동시에 화로를 세울 때
+  -- 부르는 쪽이 「두 번째부터는 번호로 세어서」 잡았고, 그 번호가
+  -- 자리표와 어긋나 두 사람이 같은 타일을 받거나 구역 밖에 섰다.
+  --
+  -- 아는 것을 다 주면 부르는 쪽이 지어낼 이유가 없다.
+  local seats = {}
+  for i = 1, math.min(#map.free, 12) do seats[i] = map.free[i] end
   local first = map.free[1]
-  return { seat = first, plot = which, origin = origin,
+  return { seat = first, seats = seats, plot = which, origin = origin,
            ours = map.ours, taken = map.taken, blocked = map.blocked,
            free = #map.free, want = map.want }
 end

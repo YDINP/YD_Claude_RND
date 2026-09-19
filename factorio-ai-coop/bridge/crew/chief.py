@@ -258,13 +258,28 @@ class ChiefMixin:
         # 그 공장을 이 맵에 그대로 지으면 훨씬 일찍 닿는다.
         #
         # 재기만 하고 아무도 안 보고 있었다. 이제 이것이 상한을 깎는다.
+        # 못 물어봤을 때의 값을 «먼저» 둔다.
+        #
+        # 검수가 재현까지 해서 잡아냈다. `wall` 이 try 안에서만 대입되는데
+        # 바로 다음 줄이 try 밖이라, RCON 이 한 번 타임아웃 나면:
+        #
+        #     UnboundLocalError: cannot access local variable 'wall'
+        #
+        # 그리고 `run()` 은 RconError 만 잡고 `agent.py` 는 KeyboardInterrupt
+        # 만 잡으므로, 이 예외는 프로세스 밖으로 나가 «브릿지가 통째로»
+        # 멈춘다. 순찰 한 번 건너뛰는 일이 무리를 죽이는 일이 되어 있었다.
+        #
+        # 바로 위 `watch_raid` 는 같은 호출을 try 로 감싸고 있다 - 실패할
+        # 수 있는 호출인 줄 알고 있었는데, 여기로 옮기면서 «복구»만 옮기고
+        # «변수»를 빠뜨렸다.
+        wall = {}
         try:
-            wall = self.bridge.defence(who)
+            wall = self.bridge.defence(who) or {}
             room = wall.get("slack")
             self.slack = float(room) if isinstance(room, (int, float)) else None
         except RconError:
             self.slack = getattr(self, "slack", None)
-        owed = int((wall or {}).get("debt") or 0)
+        owed = int(wall.get("debt") or 0)
         self.debt = owed
         for worker in self.workers.values():
             worker.slack = self.slack

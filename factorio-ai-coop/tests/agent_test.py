@@ -1242,6 +1242,30 @@ def main() -> int:
     check("and every one has its own key",
           len(seats) == len(set(seats)), str(seats))
 
+    # 자리는 «물어서 받은 것»만 쓴다. 번호로 세어 잡으면 자리표가 막힌
+    # 칸을 건너뛴 것을 모르고 두 사람이 같은 타일을 받는다 - 그리고
+    # 자리표를 넘어서도 계속 좌표를 내주어 구역 밖에 화로가 선다.
+    asked = at({"coal": 99, "stone": 99, "stone-furnace": 9},
+               SEATED, {"stone-furnace": 9})
+    asked.smelter = {"x": 0, "y": 0}
+    asked.furnace_seats = [{"x": 9, "y": 0}, {"x": 12, "y": 0}]
+    got = [j.steps[0][1] for j in plan(asked, crew=6)
+           if j.key.startswith("furnace:")]
+    tiles = [(p["x"], p["y"]) for p in got]
+    check("seats come from the plot map, not from counting",
+          tiles == [(9, 0), (12, 0)], str(tiles))
+    check("no two furnace jobs share a tile", len(tiles) == len(set(tiles)))
+
+    # 빈 자리가 떨어지면 «안 놓는다». 자리표는 마흔여덟 칸인데 번호로
+    # 세면 마흔아홉 번째가 구역 밖에 선다 - 화로 106대가 그렇게 섰다.
+    empty = at({"coal": 99, "stone": 99, "stone-furnace": 9},
+               SEATED, {"stone-furnace": 9})
+    empty.smelter = {"x": 0, "y": 0}
+    empty.furnace_seats = []
+    check("with a smelting zone and no free seat, it builds nothing",
+          not [j for j in plan(empty, crew=6) if j.key.startswith("furnace:")
+               and j.steps and j.steps[0][0] == "build"])
+
     # ------------------------------------------------------------------
     print("\n14. the mind decides what, the chief decides where")
 

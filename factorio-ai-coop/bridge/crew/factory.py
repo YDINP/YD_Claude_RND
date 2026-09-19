@@ -446,7 +446,29 @@ class FactoryMixin:
                     needs={"firearm-magazine": fill},
                     at={"x": spot["x"], "y": spot["y"]})
 
-        if int(wall.get("turrets") or 0) >= TURRET_TARGET:
+        # 몇 대가 있어야 하는가는 «게임 쪽이 안다».
+        #
+        # 여기 있던 것은 `settings.TURRET_TARGET`(10) 이었고, 세는 것도
+        # 「세운 수」였다. 그런데 defence.lua 는 공해 여유로 필요한 수를
+        # 재고(여유 20타일 이하면 12대), 빚을 「먹인 수」로 센다:
+        #
+        #     want = turrets_wanted(slack)        12
+        #     debt = max(0, want - armed)
+        #
+        # 그 want 를 브릿지 어디에서도 안 읽고 있었다. 그래서 열 대를
+        # 전부 먹여도 debt 가 2 로 남고, 그 빚이 `snap.debt <= 0` 을 통해
+        # 채굴기·화로의 성장 한 걸음을 막고, `chain_toward` 가 놓을 수
+        # 없는 터렛을 기다리며 기술 사다리를 통째로 세운다.
+        #
+        # 갚을 수 없는 빚은 빚이 아니라 벌이다 - 이 저장소가 이미 한 번
+        # 적어둔 말인데, 그때는 「연구 미완」 경우만 막아두었다.
+        #
+        # 고치는 방향은 TURRET_TARGET 을 12 로 «올리는» 것이 아니다.
+        # 그러면 같은 실수를 한 번 더 만든다 - 두 곳이 같은 것을 따로
+        # 세는 한 언제든 다시 어긋난다. 세는 쪽을 하나로 만든다.
+        want_turrets = int(wall.get("want") or TURRET_TARGET)
+        armed = int(wall.get("armed") or 0)
+        if armed >= want_turrets:
             return None
         seats = _as_rows(wall.get("seats"))
         if not seats:
@@ -462,7 +484,7 @@ class FactoryMixin:
                        if isinstance(gap, (int, float)) else "")
             return Job(
                 f"{urgency}{wall.get('side', '적')} 쪽 방어선에 터렛을 "
-                f"세우겠습니다 ({int(wall.get('turrets') or 0) + 1}/{TURRET_TARGET}). "
+                f"세우겠습니다 (탄약 든 것 {armed}/{want_turrets}대). "
                 f"({seat['x']:.0f}, {seat['y']:.0f})",
                 key=key, routine="defend", at=seat)
         return None
@@ -489,9 +511,25 @@ class FactoryMixin:
                      who=name)
             worker.block("arm", BACKOFF_SECONDS)
             return
+        # 개수는 «키워드»로 준다.
+        #
+        #     insert(name, x, y, count=1)          <- 서명
+        #     insert("firearm-magazine", want, x, y)  <- 여기 있던 것
+        #
+        # 자리가 하나씩 밀려 x=want, y=at["x"], count=at["y"] 가 됐다.
+        # 터렛이 (-60,-74) 이고 want 가 10 이면 탄약이 좌표 (10,-60) 으로
+        # 간다. 게임은 「nothing with an inventory at 10,-60」 이라 답하고,
+        # 터렛은 영원히 빈 총으로 남는다.
+        #
+        # 저장소의 다른 insert 열세 곳은 전부 키워드다. 이 한 줄만 달랐다.
         try:
-            worker.handle.insert("firearm-magazine", want, at["x"], at["y"], timeout=600)
+            worker.handle.insert("firearm-magazine", at["x"], at["y"],
+                                 count=want, timeout=600)
         except TaskFailed as exc:
             self.say(f"탄약을 못 넣었습니다: {exc.task.get('error')}", who=name)
+            # 못 넣었으면 잠시 접는다. 접지 않으면 방어 일감이 매 순찰
+            # 같은 터렛으로 돌아오고, 그 가지가 `return` 으로 끝나므로
+            # 새 터렛을 세우는 데까지 영영 못 간다 - 못 먹이고 못 세운다.
+            worker.block("arm", BACKOFF_SECONDS)
             return
         self.say(f"터렛에 탄약 {want}발을 채웠습니다.", who=name)

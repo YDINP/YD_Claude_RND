@@ -33,6 +33,8 @@ class Worker:
         # 무리가 알려주는 공용 창고 재고. 사다리가 이것을 본다.
         self.shelved: dict[str, int] = {}
         self.next_furnace: dict | None = None
+        # 비어 있는 화로 자리들. 여럿이 동시에 세울 때 쓴다.
+        self.furnace_seats: list[dict] = []
         # 반장이 재어 알려주는 누적 생산량. 사다리가 이것을 본다.
         self.made: dict[str, int] = {}
         # 반장이 재어 알려주는 공해 여유(타일).
@@ -86,6 +88,7 @@ class Worker:
             smelter=self.smelter,
             craft=self.craft,
             next_furnace=self.next_furnace,
+            furnace_seats=list(self.furnace_seats),
             made=dict(self.made),
             slack=self.slack,
             fields=list(self.fields),

@@ -523,19 +523,41 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
             # 상한은 그대로다 - `want` 가 이미 자리표와 공해 여유로 깎여
             # 있다. 여기서 푸는 것은 「몇 대를 지을까」가 아니라 「몇 명이
             # 동시에 지을까」다.
-            hands = min(want - standing, max(1, crew))
+            # 자리는 «물어서 받은 것»만 쓴다.
+            #
+            # 여기 있던 것은 i=0 만 물어보고 i>=1 은 번호로 세어 잡는
+            # 반쪽이었다. 그래서 둘이 틀어졌다:
+            #
+            #   * 자리표의 1, 2번이 나무로 막혀 있으면 물어본 답은 3번인데
+            #     번호로 센 답은 2번이다. 두 일감이 같은 타일을 가리킨다.
+            #     열쇠가 달라 중복 제거에도 안 걸린다.
+            #   * 「빈 자리가 없으면 안 놓는다」가 사라졌다. 자리표는 48칸인데
+            #     `furnace_seat` 은 번호를 주면 «언제나» 좌표를 돌려주므로
+            #     49번째가 구역 밖에 선다. 그러면 제자리가 아니라고 걷고,
+            #     걷으면 또 세운다.
+            #
+            # 화로 백여섯 대가 자리표 마흔여덟 칸에 선 적이 있다. 그때
+            # 고친 규칙이 이 루프를 만들면서 유실됐다.
+            #
+            # 자리표는 이미 빈 자리를 열두 칸까지 알고 있다(zones.lua 의
+            # `next_seat`). 아는 것을 받아 쓰면 지어낼 이유가 없다.
+            seats = list(snap.furnace_seats or [])
+            if not seats and snap.next_furnace:
+                seats = [snap.next_furnace]
+            if not seats and not snap.smelter:
+                # 제련 구역이 아직 없는 초반에만 번호로 자리를 잡는다.
+                seats = [furnace_seat(corner, nth + i)
+                         for i in range(min(want - standing, max(1, crew)))]
+            hands = min(want - standing, max(1, crew), len(seats))
             for i in range(hands):
-                seat = snap.next_furnace if i == 0 else None
-                if seat is None:
-                    # 자리표에서 번호로 잡는다. 번호가 자리표를 넘으면
-                    # `furnace_seat` 이 아니라 `want` 가 막는다.
-                    seat = furnace_seat(corner, nth + i)
+                seat = seats[i]
                 if not seat:
                     break
                 jobs.append(Job(f"화로를 하나 더 놓겠습니다 ({nth + i + 1}번째).",
-                                key=f"furnace:{nth + i}", steps=[
-                                    ("build", {"name": "stone-furnace",
-                                               **seat, "snap": True})]))
+                                key="furnace:%.0f,%.0f" % (seat["x"], seat["y"]),
+                                steps=[("build", {"name": "stone-furnace",
+                                                  "x": seat["x"], "y": seat["y"],
+                                                  "snap": True})]))
         elif snap.can_make("stone-furnace"):
             jobs.append(Job("화로를 하나 더 만들겠습니다.", key=f"furnace:{nth}",
                             needs={"stone": 5},
