@@ -94,10 +94,13 @@ def main() -> int:
     parser.add_argument("--observer", metavar="PLAYER",
                         help="put this player in the observer seat on startup")
     parser.add_argument("--interval", type=float, default=1.0)
-    parser.add_argument("--upkeep", metavar="NAMES", default="",
-                        help="이 둘은 연료/탄약만 나른다 (쉼표로 나눈 이름). "
-                             "손으로 몰 때도 도는 순찰이라, 무리와 «같이» "
-                             "떠야 배포 뒤에 꺼진 채로 남지 않는다")
+    # 여러 번 줄 수 있게 한다. .bat 은 «쉼표를 인자 구분자로» 읽으므로
+    # `--upkeep foxtrot,echo` 를 셋으로 쪼갠다 - 그러면 argparse 가
+    # 죽고 무리가 통째로 안 뜬다. 실제로 한 번 그랬다.
+    parser.add_argument("--upkeep", metavar="NAME", action="append", default=[],
+                        help="이 사람은 연료/탄약만 나른다. 여러 번 주거나 "
+                             "쉼표로 이어 준다. 손으로 몰 때도 도는 순찰이라 "
+                             "무리와 «같이» 떠야 배포 뒤에 꺼진 채로 남지 않는다")
     parser.add_argument("--upkeep-every", type=float, default=120.0)
     args = parser.parse_args()
 
@@ -131,7 +134,8 @@ def main() -> int:
     # 켜야 하는 것은 언젠가 안 켜진다.
     stop_upkeep = None
     if args.upkeep:
-        stop_upkeep = start_upkeep(bridge, args.upkeep, args.upkeep_every)
+        stop_upkeep = start_upkeep(bridge, ",".join(args.upkeep),
+                                   args.upkeep_every)
 
     try:
         crew.run(interval=args.interval)
