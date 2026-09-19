@@ -167,6 +167,47 @@ end
 --
 -- 줄은 밭의 긴 쪽을 따라 긋는다. 짧은 쪽으로 다섯 칸마다 한 줄이다.
 local function mine_seats(surface, force, field, wanted)
+  -- 밭의 테두리를 «광석»에서 다시 잰다.
+  --
+  -- 부르는 쪽이 주는 것은 「이미 선 채굴기들의 테두리」다(zones 의 fields).
+  -- 채굴기가 셋이면 그 상자는 3x1 이고, 그 위에 줄을 그으면 광맥의 한쪽
+  -- 끄트머리에 긋는 셈이 된다. 실측:
+  --
+  --     구리 밭 (28,-4)~(30,-4)      <- 3x1. 광맥이 아니라 채굴기 셋이다.
+  --
+  -- 자리표는 «광맥»을 따라야 한다. 채굴기가 한 대도 없을 때도 자리를
+  -- 내놓을 수 있어야 하고, 그것이 자리표를 만든 이유이기도 하다 -
+  -- 먼저 긋고 나중에 붙인다.
+  local cx = (field.left + field.right) / 2
+  local cy = (field.top + field.bottom) / 2
+  local ore = surface.find_entities_filtered {
+    position = { cx, cy }, radius = 48, type = "resource", limit = 2000,
+  }
+  if #ore > 0 then
+    -- 가운데 칸과 «같은 광석»만 본다. 광맥이 겹쳐 있으면 남의 광맥까지
+    -- 삼켜 테두리가 두 배가 된다.
+    local want_name = nil
+    local best = math.huge
+    for _, e in pairs(ore) do
+      local d = (e.position.x - cx) ^ 2 + (e.position.y - cy) ^ 2
+      if d < best then best, want_name = d, e.name end
+    end
+    local lo = { x = math.huge, y = math.huge }
+    local hi = { x = -math.huge, y = -math.huge }
+    local n = 0
+    for _, e in pairs(ore) do
+      if e.name == want_name then
+        n = n + 1
+        lo.x = math.min(lo.x, e.position.x); hi.x = math.max(hi.x, e.position.x)
+        lo.y = math.min(lo.y, e.position.y); hi.y = math.max(hi.y, e.position.y)
+      end
+    end
+    if n > 0 then
+      field = { left = math.floor(lo.x), top = math.floor(lo.y),
+                right = math.floor(hi.x), bottom = math.floor(hi.y) }
+    end
+  end
+
   local wide = (field.right - field.left) >= (field.bottom - field.top)
   local origin = {
     x = math.floor(field.left), y = math.floor(field.top),
@@ -217,7 +258,7 @@ local function mine_seats(surface, force, field, wanted)
     end
   end
   return { free = free, ours = ours, blocked = blocked, wide = wide,
-           lane = origin.lane, want = top }
+           lane = origin.lane, want = top, patch = field }
 end
 
 return {
