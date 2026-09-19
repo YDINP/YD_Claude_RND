@@ -1294,15 +1294,32 @@ def main() -> int:
     book = lessons.Journal("__test__")
     book.entries.clear()
     book.rules = ""
+    book._since_distil = lessons.DISTIL_AT
     check("an empty distillation is refused", not book.learn("생각해보니 잘 모르겠습니다"))
+    # 거절해도 «세는 것은 되돌린다». 안 되돌리면 ripe 가 영영 참이고,
+    # 그 사람은 매 순찰 압축만 다시 띄우며 다시는 생각하지 못한다.
+    check("a refused distillation still lets the mind think again", not book.ripe)
     check("a rule list is kept", book.learn("- 화로가 굶으면 먼저 먹인다"))
     check("and it shows up in the next brief", "화로가 굶으면" in book.brief())
 
     # 공용 창고: 목록이 아니라 «소식»으로 말한다. 같은 목록을 되풀이하면 안 읽힌다.
     shelf = Pantry()
     shelf.remember({"total": {"iron-ore": 120}, "chest_count": 1,
-                    "chests": [{"x": 4, "y": 4}]})
+                    "chests": [{"x": 4, "y": 4, "items": {"iron-ore": 120}}]})
     check("the pantry remembers what is in it", shelf.has("iron-ore", 100))
+
+    # 합계로 「있다」를 판단하고 «가장 가까운» 상자로 가면 안 된다.
+    # 돌만 든 상자 앞에서 철광석을 꺼내려 한 적이 있다.
+    mixed = Pantry()
+    mixed.remember({"total": {"iron-ore": 120, "stone": 40}, "chest_count": 2,
+                    "chests": [{"x": 1, "y": 1, "items": {"stone": 40}},
+                               {"x": 9, "y": 9, "items": {"iron-ore": 120}}]})
+    spot = mixed.shelf("iron-ore", 30)
+    check("it fetches from the chest that actually holds it",
+          spot is not None and (spot[0]["x"], spot[0]["y"]) == (9, 9), str(spot))
+    check("and says no when no single chest has enough",
+          not mixed.has("iron-ore", 200))
+    check("and no when nothing has it at all", mixed.shelf("coal", 1) is None)
     check("and says what changed", "들어온 것" in (shelf.news() or ""))
     check("but does not repeat itself", shelf.news() is None)
 

@@ -150,6 +150,16 @@ class Journal:
         kept = [ln.rstrip() for ln in text.splitlines()
                 if ln.strip().startswith(("-", "*", "•"))][:MAX_RULES]
         if not kept:
+            # 못 받아들였어도 «세는 것은 되돌린다».
+            #
+            # 되돌리지 않으면 `ripe` 가 영영 참이고, 그 사람은 매 순찰
+            # 압축만 다시 띄우며 «다시는 생각하지 못한다». 모델이 형식을
+            # 한 번 어기거나 CLI 가 한 번 죽는 것으로 요원 하나가 영구히
+            # 벙어리가 된다.
+            #
+            # 다만 0 으로 되돌리지는 않는다. 그러면 다음 스무 번 뒤에
+            # 같은 실패를 또 한다. 절반만 되돌려 다음 시도를 미룬다.
+            self._since_distil = DISTIL_AT // 2
             return False
         self.rules = "\n".join(kept)
         self._since_distil = 0

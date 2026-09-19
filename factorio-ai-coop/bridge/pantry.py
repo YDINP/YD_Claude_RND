@@ -38,7 +38,10 @@ class Pantry:
 
     def __init__(self) -> None:
         self.have: dict[str, int] = {}
-        self.where: dict | None = None
+        # 상자마다 «무엇이 들었는지». 합계만 기억하면 「어딘가에 있다」까지는
+        # 알지만 「어디에 있다」는 모른다. 그 둘을 짝지어 쓰면 엉뚱한 상자로
+        # 꺼내러 간다 - 돌만 든 상자 앞에서 철광석을 꺼내려 한 적이 있다.
+        self.shelves: list[dict] = []
         self.chests = 0
         self.read_at = 0.0
         self.last_told: dict[str, int] = {}
@@ -60,18 +63,38 @@ class Pantry:
         rows = reply.get("chests")
         if isinstance(rows, dict):
             rows = list(rows.values())
-        if rows:
-            first = rows[0]
-            if isinstance(first, dict) and "x" in first:
-                self.where = {"x": int(first["x"]), "y": int(first["y"])}
+        self.shelves = [r for r in (rows or [])
+                        if isinstance(r, dict) and "x" in r]
 
     # -- 묻기 -------------------------------------------------------------
 
     def count(self, item: str) -> int:
         return self.have.get(item, 0)
 
+    def shelf(self, item: str, count: int = 1):
+        """이 물건이 «실제로 든» 상자 중 가장 많이 든 것과, 꺼낼 수 있는 수.
+
+        합계로 「있다」를 판단하고 가장 가까운 상자로 «가면» 안 된다.
+        합계는 반경 200 안 모든 상자를 더한 값이고, 가장 가까운 상자는
+        그것과 아무 상관이 없다. 둘을 짝지으면 돌만 든 상자로 철광석을
+        꺼내러 가고, take 의 검색 반경은 한 칸 반이라 그냥 실패한다.
+        """
+        best, most = None, 0
+        for row in self.shelves:
+            n = int((row.get("items") or {}).get(item) or 0)
+            if n > most:
+                best, most = row, n
+        if not best or most <= 0:
+            return None
+        return {"x": int(best["x"]), "y": int(best["y"])}, min(most, count)
+
     def has(self, item: str, count: int = 1) -> bool:
-        return self.count(item) >= count
+        """한 상자에서 이만큼 꺼낼 수 있는가.
+
+        「세상에 이만큼 있는가」가 아니다. 나눠 담긴 것은 한 번에 못 꺼낸다.
+        """
+        got = self.shelf(item, count)
+        return bool(got) and got[1] >= count
 
     # -- 말하기 -----------------------------------------------------------
 
@@ -112,8 +135,10 @@ class Pantry:
         if not self.have:
             return "공용 창고: 비어 있음 (또는 아직 안 세움)"
         rows = sorted(self.have.items(), key=lambda kv: -kv[1])[:ON_BOARD]
-        seat = (f" @({self.where['x']},{self.where['y']})"
-                if self.where else "")
-        return (f"공용 창고{seat}, 상자 {self.chests}개: "
-                + ", ".join(f"{k} {v}" for k, v in rows)
-                + "\n  — 필요한 것이 여기 있으면 캐거나 만들지 말고 꺼내 써라.")
+        # 좌표를 안 붙인다. 합계는 여러 상자를 더한 값인데 좌표를 하나만
+        # 붙이면 「저기 다 있다」로 읽힌다. 어느 상자에 있는지는 꺼낼 때
+        # shelf() 가 답한다.
+        head = "공용 창고 (상자 %d개): " % self.chests
+        body = ", ".join("%s %d" % (k, v) for k, v in rows)
+        tail = chr(10) + "  - 필요한 것이 여기 있으면 캐거나 만들지 말고 꺼내 써라."
+        return head + body + tail

@@ -35,6 +35,8 @@ class Worker:
         self.next_furnace: dict | None = None
         # 비어 있는 화로 자리들. 여럿이 동시에 세울 때 쓴다.
         self.furnace_seats: list[dict] = []
+        # 머리가 낸 일감의 열쇠. 결과를 수첩에 돌려줄 때 쓴다.
+        self.held_key: str | None = None
         # 반장이 재어 알려주는 누적 생산량. 사다리가 이것을 본다.
         self.made: dict[str, int] = {}
         # 반장이 재어 알려주는 공해 여유(타일).

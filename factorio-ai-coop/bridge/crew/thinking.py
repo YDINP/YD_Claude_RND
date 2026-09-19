@@ -51,6 +51,33 @@ class ThinkingMixin:
             self.journals[name] = lessons.Journal(name)
         return self.journals[name]
 
+    def note_outcome(self, name: str, key: str, ok: bool, why: str = "") -> None:
+        """«실제로» 어떻게 됐는지를 수첩에 되돌린다.
+
+        수첩에 적히던 ○ 는 「게임에서 됐다」가 아니라 「큐에 접수됐다」였다.
+        `submit_plan` 이 RconError 를 안 냈다는 뜻뿐이고, 게임은 그때
+        재료도 대상도 안 본다 - 「no X in inventory」 는 몇 초 뒤에 온다.
+
+        그러면 수첩이 거짓이 되고, 그 위에서 규칙을 압축한다. 그리고 그
+        규칙은 파일로 굳어 판을 넘어 산다. 「수첩의 값어치는 실패한 것에
+        있다」고 적어놓고 실패를 한 줄도 안 적고 있었다.
+
+        결과를 아는 곳은 `report_finished` 다. 거기서 이리로 돌려준다.
+        """
+        book = getattr(self, "journals", {}).get(name)
+        if book is None:
+            return
+        for entry in reversed(book.entries):
+            if entry.why == key and entry.ok:
+                entry.ok = ok
+                entry.why = why or key
+                break
+        else:
+            return
+        # 파일에도 «고친 사실»을 남긴다. 줄을 고치는 대신 덧붙인다 -
+        # 지나간 것을 지우면 무엇이 언제 틀렸는지를 잃는다.
+        book.note(entry.do, entry.args, ok, why or key)
+
     # -- 큰 그림 ----------------------------------------------------------
 
     def big_picture(self, worker, snap: Snapshot) -> str:
@@ -161,12 +188,16 @@ class ThinkingMixin:
             ore = args.get("ore", "")
             want = args.get("count") or ORE_BATCH
             # 창고에 있으면 캐지 않는다. 공용 물류를 쓰라고 세워둔 것이다.
-            if self.pantry.has(ore, want) and self.pantry.where:
-                return Job(f"{ore}은(는) 공용 창고에 있습니다. 꺼내 오겠습니다.",
+            # 다만 «그 물건이 든 상자»로 보낸다 - 합계로 판단하고 가장
+            # 가까운 상자로 보내면 엉뚱한 상자 앞에서 실패한다.
+            got = self.pantry.shelf(ore, want)
+            if got:
+                spot, amount = got
+                return Job(f"{ore} {amount}개는 공용 창고에 있습니다. "
+                           f"꺼내 오겠습니다.",
                            key=f"mind-fetch:{ore}:{worker.name}",
-                           steps=[("take", {"name": ore, "count": want,
-                                            "x": self.pantry.where["x"],
-                                            "y": self.pantry.where["y"]})])
+                           steps=[("take", {"name": ore, "count": amount,
+                                            "x": spot["x"], "y": spot["y"]})])
             spot = snap.ore(ore)
             if not spot:
                 return None
@@ -245,6 +276,9 @@ class ThinkingMixin:
         self.claim(worker, job.key)
         self.say(job.narration, who=worker.name)
         worker.said_idle = False
+        # 결과가 돌아올 때 «어느 생각의 결과인지» 알아야 한다. 태스크
+        # 번호만으로는 수첩의 어느 줄인지 못 찾는다.
+        worker.held_key = job.key
         return True
 
     # -- 순찰마다 한 번 ---------------------------------------------------
@@ -295,9 +329,12 @@ class ThinkingMixin:
         «실패한 것»에 있다 - 성공한 것은 어차피 상황이 다시 가르쳐준다.
         """
         if got.rules:
-            book.learn(got.rules)
-            self.say(f"해본 것을 규칙 {len(book.rules.splitlines())}줄로 "
-                     f"줄였습니다.", who=worker.name)
+            # 받아들였는지 «보고» 말한다. 반환값을 버리고 무조건 말하면
+            # 로그만 성공처럼 보인다 - 게다가 여기서 세던 것은 방금 배운
+            # 규칙이 아니라 «옛» 규칙이었다.
+            if book.learn(got.rules):
+                self.say(f"해본 것을 규칙 {len(book.rules.splitlines())}줄로 "
+                         f"줄였습니다.", who=worker.name)
             return
         job = self.job_from(worker, snap, got) if got.do != "follow" else None
         # 생각한 것을 먼저 말한다. 다만 «일감 이름»은 맡은 뒤에 말한다 -

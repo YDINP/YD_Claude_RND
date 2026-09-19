@@ -294,6 +294,16 @@ class SupplyMixin:
                     # one unreachable furnace fills the chat with the same line.
                     worker.block(kind)
 
+                    # 그리고 «수첩에도» 돌려준다. 여기가 실제 결과를 아는
+                    # 유일한 곳이다 - 지금까지는 채팅에만 말하고 수첩에는
+                    # 한 줄도 안 남겼다. 그래서 수첩의 ○ 가 전부 「접수됨」
+                    # 이었고, 그 거짓 위에서 규칙이 압축되고 있었다.
+                    held = getattr(worker, "held_key", None)
+                    if held:
+                        self.note_outcome(
+                            worker.name, held, False,
+                            f"{kind} 실패: {state.get('error') or '까닭 모름'}"[:120])
+
                     # 「길이 없다」는 세상에 길이 없다는 뜻이 아니라 이 사람이
                     # 못 간다는 뜻이다. 실제로 한 명이 호수 건너에 서서 같은
                     # 실패를 다섯 번 반복했다 - 직선거리로는 73타일이었지만
