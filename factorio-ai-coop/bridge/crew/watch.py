@@ -54,11 +54,40 @@ class WatchMixin:
         if not armed:
             # 적이 이미 와 있는데 터렛이 잠겨 있으면, 하던 연구를 끊고
             # 터렛부터 뚫는다. 다음 연구는 습격을 막아낸 뒤에 해도 된다.
-            note += " 터렛이 아직 잠겨 있어 gun-turret 연구를 먼저 돌리겠습니다."
+            #
+            # 다만 «걸고 나서» 말한다.
+            #
+            # 20분 동안 매 순찰 「gun-turret 연구를 먼저 돌리겠습니다」라고
+            # 말했는데 연구는 내내 «없음»이었다. gun-turret 의 선행인
+            # automation-science-pack 이 안 끝났고, 엔진은 걸 수 없는 연구를
+            # 조용히 거절한다. 그 거절을 아무도 안 봤다.
+            #
+            # 그리고 이 줄은 위험을 알리는 줄이라 사람이 제일 믿는 줄이다.
+            # 거기에 안 되는 일을 적어두면, 방어가 진행 중이라고 읽힌다.
+            # 걸렸는지는 «되읽어서» 확인한다.
+            #
+            # 모드는 부탁을 받아 적고 「queued」라고 답한다. 그런데 엔진이
+            # 선행 미완인 연구를 조용히 버리면 큐는 비어 있다. 실측:
+            #
+            #     research("gun-turret") -> {"queued": "gun-turret",
+            #                                "queue_length": 0}
+            #
+            # 「받아 적었다」와 「걸렸다」는 다르다. 이 저장소가 오늘만
+            # 세 번째로 만나는 모양이다 - 증거는 말이 아니라 흔적이어야 한다.
+            queued = False
             try:
                 self.bridge.research("gun-turret")
+                now_on = (self.bridge.research_status() or {}).get("current")
+                queued = (now_on == "gun-turret")
             except RconError:
                 pass
+            if queued:
+                note += " 터렛이 아직 잠겨 있어 gun-turret 연구를 먼저 돌리겠습니다."
+            else:
+                # 왜 못 거는지를 말한다. 「못 했다」보다 「무엇이 먼저다」가
+                # 쓸모 있다 - 그것이 지금 무리가 해야 할 일이다.
+                note += (" 터렛이 잠겨 있는데 gun-turret 연구를 아직 못 겁니다. "
+                         "선행 연구부터 뚫어야 합니다.")
         if note != self.danger_said:
             self.danger_said = note
             self.say(note)
