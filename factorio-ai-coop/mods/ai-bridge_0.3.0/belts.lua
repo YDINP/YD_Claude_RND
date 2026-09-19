@@ -53,6 +53,11 @@ end
 -- 길 찾는 법이 바뀔 때마다 올린다. 옛 길을 버리는 표시다.
 local PLAN = 4
 
+-- 이만큼 안에 있으면 «같은 밭»이다. 밭을 나누는 간격(zones.lua 의
+-- FIELD_GAP)과 같은 값이라야 한다 - 그보다 크면 두 밭이 한 길을 쓰고,
+-- 작으면 같은 밭이 채굴기 몇 대에 두 길을 갖는다.
+local SAME_FIELD = 24
+
 local MAX_VISIT = 20000
 local STEPS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
 
@@ -784,9 +789,36 @@ local function field_lines(name, limit)
       type = "mining-drill", force = force,
     }
     if #drills > 0 then
-      local key = "field:" .. math.floor(field.x) .. "," .. math.floor(field.y)
       storage.lines = storage.lines or {}
-      local kept = storage.lines[key]
+      -- 밭은 조금씩 움직인다. 그래도 «같은 밭»이다.
+      --
+      -- 벨트 미로가 이번으로 «네 번째»다. 지난번에 열쇠에서 「채굴기 수」를
+      -- 뺐는데, 열쇠에 쓰는 «무게중심»이 채굴기가 늘고 줄 때마다 같이
+      -- 움직인다는 것을 못 봤다. 규칙을 넣어놓고 같은 일이 다른 문으로
+      -- 들어왔다.
+      --
+      -- 실측(69분째). 채굴기가 아홉에서 여섯으로 줄자 이랬다:
+      --
+      --     f1  5/48   ->   f1  0/53
+      --
+      -- 길이가 달라지고, 이미 깔아둔 다섯 칸이 「길 밖」이 됐다. 그러면
+      -- 무리는 그것을 걷어 다시 깐다.
+      --
+      -- 자리로 찾지 말고 «가까움»으로 찾는다. 스물네 타일 안에 저장된
+      -- 밭이 있으면 그것이 이 밭이다 - 밭을 나누는 간격이 그만큼이므로,
+      -- 그 안에 두 밭이 따로 있을 수 없다.
+      local key, kept = nil, nil
+      for k, entry in pairs(storage.lines) do
+        local kx, ky = string.match(k, "^field:(-?%d+),(-?%d+)$")
+        if kx then
+          local dx, dy = tonumber(kx) - field.x, tonumber(ky) - field.y
+          if dx * dx + dy * dy <= SAME_FIELD * SAME_FIELD then
+            key, kept = k, entry
+            break
+          end
+        end
+      end
+      key = key or ("field:" .. math.floor(field.x) .. "," .. math.floor(field.y))
       local tiles
       -- 채굴기가 한 대 늘었다고 길을 버리지 않는다.
       --

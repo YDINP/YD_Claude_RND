@@ -1,0 +1,33 @@
+{
+ "fallen": 2,
+ "minutes": 71,
+ "ours_lost": {
+  "character": 2
+ },
+ "theirs_killed": {},
+ "evolution": 0.018726558882179365,
+ "nests": 10,
+ "biters": 39,
+ "worms": 7,
+ "research": "gun-turret",
+ "techs": [
+  "automation-science-pack",
+  "electronics",
+  "steam-power"
+ ],
+ "machines": {
+  "burner-mining-drill working": 6,
+  "stone-furnace full_output": 1,
+  "stone-furnace no_ingredients": 2,
+  "lab no_power": 1
+ },
+ "ours": {
+  "drills": 6,
+  "furnaces": 3,
+  "belts": 52,
+  "chests": 21,
+  "inserters": 5,
+  "turrets": 0,
+  "labs": 1
+ }
+}
