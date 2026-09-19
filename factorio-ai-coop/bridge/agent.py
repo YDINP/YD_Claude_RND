@@ -56,21 +56,45 @@ from upkeep import plan_round, running_low, stock
 
 
 def start_upkeep(bridge, names: str, every: float):
-    """연료.탄약 순찰을 뒷줄에서 돌린다. 멈추라고 할 손잡이를 돌려준다."""
+    """연료.재료.탄약 순찰을 뒷줄에서 돌린다. 멈추라고 할 손잡이를 돌려준다.
+
+    주기는 «얼마나 자주 보는가»이지 «얼마나 자주 시키는가»가 아니다.
+
+    사용자: "90초 주기는 너무 긴데"
+
+    맞다. 그런데 주기만 줄이면 걷는 중인 사람에게 계획이 겹겹이 쌓인다 -
+    한 바퀴가 이 분이면 이십 초마다 여섯 겹이다. 그러면 나중에 밀린
+    계획이 «이미 채워진 기계»를 다시 채우러 간다.
+
+    그래서 자주 보되, «손이 빈 사람»에게만 얹는다. 놀고 있으면 즉시
+    나가고, 걷는 중이면 건너뛴다. 고정 주기보다 언제나 빠르다.
+    """
     who = [n.strip() for n in names.split(",") if n.strip()]
     if not who:
         return None
     stop = threading.Event()
 
+    def idle(roster: list[dict]) -> list[str]:
+        free = []
+        for row in roster:
+            if row.get("name") in who and row.get("alive"):
+                busy = row.get("current") or row.get("queued")
+                if not busy:
+                    free.append(row["name"])
+        return free
+
     def loop() -> None:
         while not stop.wait(1.0):
             try:
-                low = running_low(bridge)
-                if low:
-                    rounds, _why = plan_round(who, low, stock(bridge),
-                                              {n: bridge.agent(n).items() for n in who})
-                    for name, steps in rounds:
-                        bridge.agent(name).submit_plan(steps)
+                free = idle(bridge.list())
+                if free:
+                    low = running_low(bridge)
+                    if low:
+                        rounds, _why = plan_round(
+                            free, low, stock(bridge),
+                            {n: bridge.agent(n).items() for n in free})
+                        for name, steps in rounds:
+                            bridge.agent(name).submit_plan(steps)
             except RconError:
                 pass
             except Exception as exc:                     # noqa: BLE001
@@ -101,7 +125,8 @@ def main() -> int:
                         help="이 사람은 연료/탄약만 나른다. 여러 번 주거나 "
                              "쉼표로 이어 준다. 손으로 몰 때도 도는 순찰이라 "
                              "무리와 «같이» 떠야 배포 뒤에 꺼진 채로 남지 않는다")
-    parser.add_argument("--upkeep-every", type=float, default=120.0)
+    # 자주 «보는» 주기다. 시키는 것은 손이 빌 때뿐이므로 짧아도 안 쌓인다.
+    parser.add_argument("--upkeep-every", type=float, default=20.0)
     args = parser.parse_args()
 
     bridge = AIBridge()

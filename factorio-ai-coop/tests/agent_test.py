@@ -1867,6 +1867,13 @@ def main() -> int:
     check("and it is stopped when the crew leaves",
           "stop_upkeep.set()" in _agent_src)
 
+    # 주기는 «얼마나 자주 보는가»이지 «얼마나 자주 시키는가»가 아니다.
+    # 주기만 줄이면 걷는 중인 사람에게 계획이 겹겹이 쌓이고, 밀린 계획이
+    # 나중에 «이미 채워진 기계»를 다시 채우러 간다.
+    check("the patrol only loads up whoever is idle",
+          "def idle(" in _agent_src and "bridge.list()" in _agent_src
+          and 'row.get("current") or row.get("queued")' in _agent_src)
+
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
