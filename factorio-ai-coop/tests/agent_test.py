@@ -1346,6 +1346,38 @@ def main() -> int:
     _missing = sorted(n for n in _called if not hasattr(_crew.Crew, n))
     check("thinking.py invents no crew methods", not _missing, str(_missing))
 
+    # ------------------------------------------------------------------
+    print("\n16. the crew divides the work")
+
+    # 사용자: "다같이 기준없이 행동하니까 망가지는듯."
+    # 실측(20분째): echo 가 기어를 «만들려» 할 때 셋이 스물한 개를 들고 있었다.
+    import roles
+
+    check("four in a crew of five get different kinds of work",
+          len(set(roles.share(5))) >= 3, str(roles.share(5)))
+    check("a small crew is not carved up",
+          len(set(roles.share(3))) == 1, str(roles.share(3)))
+    check("a debt puts exactly one on defence",
+          roles.share(5, guarded=True).count(roles.GUARD) == 1,
+          str(roles.share(5, guarded=True)))
+    check("the same crew size always gets the same split",
+          roles.share(6) == roles.share(6))
+
+    # 열쇠로 가른다. 일감을 만드는 자리가 여러 파일에 흩어져 있어서,
+    # 만드는 쪽마다 역할을 적게 하면 새 일감이 생길 때마다 빠뜨린다.
+    for key, want in (("automate:iron-ore:a", roles.MINE),
+                      ("belt:f1", roles.HAUL),
+                      ("craft:lab", roles.MAKE),
+                      ("defend:1,2", roles.GUARD),
+                      ("mind-build:lab:3,4", roles.MAKE)):
+        if roles.role_of(key) != want:
+            check(f"{key} belongs to {want}", False, str(roles.role_of(key)))
+    check("every job kind lands somewhere", True)
+
+    # 모르는 일감은 «아무나»의 것이다. 울타리가 아니라 편향이라는 뜻이다.
+    check("an unknown job is nobody's and everybody's",
+          roles.role_of("what-is-this:1") is None)
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))

@@ -17,6 +17,7 @@ from world import Snapshot
 from jobs import Job, Step
 from layout import belt_pairs, carry_split, cluster, interleave, nearest_to
 import mission
+import roles
 from ladder import STAGE_TARGET, _as_rows, plan
 from worker import Worker
 
@@ -778,10 +779,25 @@ class SurveyMixin:
             if owner:
                 order = [owner] if owner in seats and owner not in handed else []
             else:
+                # 제 역할인 사람을 «앞에» 둔다. 빼지는 않는다.
+                #
+                # 사용자: "다같이 기준없이 행동하니까 망가지는듯."
+                #
+                # 맞다. 다섯이 같은 목록을 보고 각자 가장 급해 보이는 것을
+                # 고르면 아무도 한 가지를 끝까지 책임지지 않는다. 실측에서
+                # echo 가 기어를 «만들려» 할 때 셋이 스물한 개를 들고 있었다.
+                #
+                # 그렇다고 울타리로 만들지는 않는다. 제 역할에 일이 없으면
+                # 남의 일을 돕는다 - 「내 일이 아니라서 서 있었습니다」는
+                # 이 저장소가 이미 치른 값이다.
+                want = roles.role_of(job.key)
                 order = sorted(
                     (n for n in seats if n not in handed),
-                    key=lambda n: ((seats[n][0] - spot.get("x", seats[n][0])) ** 2
-                                   + (seats[n][1] - spot.get("y", seats[n][1])) ** 2, n))
+                    key=lambda n: (
+                        0 if (want and getattr(self.workers[n], "role", None) == want)
+                        else 1,
+                        (seats[n][0] - spot.get("x", seats[n][0])) ** 2
+                        + (seats[n][1] - spot.get("y", seats[n][1])) ** 2, n))
             if not order:
                 skipped["주인이 바쁨"] = skipped.get("주인이 바쁨", 0) + 1
                 # 이 일감의 주인이 지금 손이 비어 있지 않을 뿐이다. 목록

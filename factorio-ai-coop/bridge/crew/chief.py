@@ -27,6 +27,7 @@ import os
 import time
 
 import postmortem
+import roles
 from client import RconError
 from settings import PILED_UP
 
@@ -169,11 +170,36 @@ class ChiefMixin:
                 self.say(f"무슨 일이 있었는지 {os.path.basename(where)}에 "
                          f"적어뒀습니다.")
 
+        self.hand_out_roles()
+
         # 점호 끝에 «적이 왔는지»도 본다.        # 점호 끝에 «적이 왔는지»도 본다.
         #
         # 사슬 감사는 구십 초마다 돈다. 습격에는 너무 느리다 - 구십 초면
         # 화로 몇 대가 사라진다. 점호는 이십오 초마다 도니 여기가 맞다.
         self.watch_raid()
+
+    def hand_out_roles(self) -> None:
+        """누가 무엇을 맡는지 정한다.
+
+        이름 순으로 못 박는다. 사람이 죽고 들어와도 같은 사람이 같은 일을
+        맡게 하려는 것이다 - 매 점호마다 역할이 바뀌면 역할이 없는 것과
+        같다. 바뀌는 것은 사람 수와 「방어가 급한가」뿐이다.
+        """
+        names = sorted(self.workers)
+        if not names:
+            return
+        guarded = bool(getattr(self, "debt", 0) > 0)
+        want = roles.share(len(names), guarded=guarded)
+        said = []
+        for name, role in zip(names, want):
+            worker = self.workers[name]
+            if getattr(worker, "role", None) != role:
+                worker.role = role
+                said.append(f"{name}={role}")
+        if said and said != getattr(self, "_said_roles", None):
+            self._said_roles = said
+            self.say("업무를 나눴습니다 - " + ", ".join(said)
+                     + ". 제 몫이 없으면 남을 돕습니다.")
 
     def watch_raid(self) -> None:
         # 적이 «왔는가». 이것이 사슬보다 먼저다.

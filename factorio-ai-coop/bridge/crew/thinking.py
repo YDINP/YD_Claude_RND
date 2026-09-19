@@ -113,10 +113,14 @@ class ThinkingMixin:
 
         lines.append(self.pantry.brief())
 
-        mates = [f"{w.name}={w.focus}" for w in self.workers.values()
-                 if w.name != worker.name]
+        mates = [f"{w.name}={getattr(w, 'role', None) or w.focus}"
+                 for w in self.workers.values() if w.name != worker.name]
         if mates:
-            lines.append("동료가 맡은 것: " + ", ".join(mates))
+            lines.append("동료의 담당: " + ", ".join(mates)
+                         + "\n  - 내 담당이 아닌 것이 급하면, 직접 하기 전에"
+                           " 그 담당에게 부탁할 것이 없는지 먼저 봐라."
+                           " 남이 들고 있는 것을 내가 다시 만드는 것이"
+                           " 이 무리가 가장 자주 낭비하는 방식이다.")
 
         rows = list(self.board.summary())
         if rows:
@@ -125,8 +129,10 @@ class ThinkingMixin:
 
     def my_situation(self, worker, snap: Snapshot) -> str:
         bag = ", ".join(f"{k} {v}" for k, v in sorted(snap.items.items()))
+        role = getattr(worker, "role", None)
         lines = [f"나는 {worker.name}. 위치 ({snap.x:.0f}, {snap.y:.0f}). "
-                 f"맡은 광석은 {worker.focus}.",
+                 f"맡은 광석은 {worker.focus}."
+                 + (f"\n내 담당은 «{role}»다." if role else ""),
                  "가방: " + (bag or "비어있음")]
         if snap.resources:
             near = sorted(snap.resources.items(),
