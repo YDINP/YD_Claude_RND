@@ -71,6 +71,34 @@ end
 
 -- 길을 막고 선 우리 건물들. 여덟 칸마다 비워두기로 한 줄 위에 이미
 -- 놓여버린 것들이라, 새로 짓기 전에 이것부터 치워야 한다.
+-- 채굴기가 캔 것을 받고 있는 상자인가.
+--
+-- 그런 상자는 «잘못 놓인 것»이 아니다. 일을 하고 있는 것이다. 걷어내면
+-- 그 채굴기가 즉시 선다.
+--
+-- 실측(새 판 42분째). 요원 다섯이 한 칸에 묶여 있었다:
+--
+--     charlie  (3,2) 채굴기에 상자를 달았습니다.
+--     bravo    길을 막은 iron-chest 1개를 걷어냅니다. (4, 2)
+--     alpha    (3,2) 채굴기에 상자를 달았습니다.
+--     echo     (3,2) 채굴기에 출구 상자가 없습니다. 달아주겠습니다.
+--
+-- 달면 걷고 걷으면 단다. 그 사이 가방에는 채굴기가 열한 대 놀고 있었고,
+-- 스물다섯 분 동안 선 채굴기는 세 대에서 한 대도 안 늘었다.
+--
+-- 도로망 규칙이 틀린 것은 아니다. 여덟 칸마다 길을 비워두는 것은 옳다.
+-- 다만 «먼저 온 일»이 있는 칸이면 길을 비키는 쪽이 길이어야 한다 -
+-- 채굴기가 떨구는 자리는 채굴기가 정하지 우리가 고르는 것이 아니다.
+local function feeds_a_drill(surface, force, e)
+  for _, d in pairs(surface.find_entities_filtered {
+    position = e.position, radius = 3, type = "mining-drill", force = force,
+  }) do
+    local t = d.drop_target
+    if t and t.valid and t.unit_number == e.unit_number then return true end
+  end
+  return false
+end
+
 local function blocking(name, radius)
   local a = agent(name)
   local b = body(a)
@@ -83,7 +111,8 @@ local function blocking(name, radius)
     name = { "burner-mining-drill", "iron-chest", "stone-furnace" },
   }) do
     if blocks_lane(e.position, 1) and e.minable
-        and not in_a_zone(e.position) then
+        and not in_a_zone(e.position)
+        and not feeds_a_drill(b.surface, b.force, e) then
       out[#out + 1] = {
         name = e.name, x = e.position.x, y = e.position.y,
         distance = math.floor(Tasks.dist(b.position, e.position) * 10) / 10,

@@ -138,6 +138,31 @@ def seats_cluster() -> list:
         bad.append("아직 밭 전체를 두께로 정렬해 잘라낸다")
     return bad
 
+
+# -- 일하고 있는 상자는 걷지 않는다 -----------------------------------------
+#
+# 실측(새 판 42분째). 요원 다섯이 한 칸에 묶여 있었다:
+#
+#     charlie  (3,2) 채굴기에 상자를 달았습니다.
+#     bravo    길을 막은 iron-chest 1개를 걷어냅니다. (4, 2)
+#     alpha    (3,2) 채굴기에 상자를 달았습니다.
+#     echo     (3,2) 채굴기에 출구 상자가 없습니다. 달아주겠습니다.
+#
+# 달면 걷고 걷으면 단다. 그 사이 가방에는 채굴기가 열한 대 놀고 있었고,
+# 스물다섯 분 동안 선 채굴기는 세 대에서 한 대도 안 늘었다.
+#
+# 채굴기가 떨구는 자리는 채굴기가 정한다. 우리가 고르는 것이 아니다.
+def working_chest() -> list:
+    bad = []
+    lua = io.open(os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "sites.lua"),
+                  encoding="utf-8").read()
+    if "local function feeds_a_drill(" not in lua:
+        bad.append("sites.lua 가 «채굴기를 받는 상자»를 가리지 않는다")
+    elif "not feeds_a_drill(" not in lua:
+        bad.append("가릴 줄은 아는데 blocking 이 그것을 안 본다 - "
+                   "표시만 하고 아무도 안 쓴다")
+    return bad
+
 def main() -> int:
     shape = lua_shape()
     bad = []
@@ -152,6 +177,7 @@ def main() -> int:
     bad.extend(hysteresis())
     bad.extend(defence_anchor())
     bad.extend(seats_cluster())
+    bad.extend(working_chest())
     for line in bad:
         print("  [FAIL] " + line)
     print(f"\n{len(bad)} problems - plot shape agrees "
