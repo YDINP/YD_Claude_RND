@@ -20,7 +20,8 @@ from jobs import Job, errand_label  # noqa: E402
 from layout import (belt_pairs, carry_split, cluster,  # noqa: E402
                     craft_seat, furnace_seat, interleave, nearest_to,
                     spread_sites)
-from ladder import (STAGE_TARGET, chain_job, drill_target, furnace_target,  # noqa: E402
+from ladder import (STAGE_TARGET, chain_job, coal_rigs_needed,  # noqa: E402
+                    drill_target, furnace_target,
                     missing_item, next_goal, plan, worth_building)
 from crew import Crew  # noqa: E402
 
@@ -1062,6 +1063,55 @@ def main() -> int:
     check("and an unknown field list does not promote coal",
           not unknown or not unknown[0].startswith("automate:coal"),
           str(unknown[:3]))
+
+    # 석탄 채굴기는 화로를 요구하지 않는다.
+    #
+    # 1:1 은 「캔 광석을 받을 화로가 있는가」의 규칙인데, 석탄은 화로에
+    # 안 들어간다. 태우는 입으로 간다. 그런데 한 무더기로 세고 있었다.
+    #
+    # 값이 두 번 어긋난다. 석탄 채굴기가 녹이는 쪽의 예산을 먹어서 철이
+    # 안 늘고, 동시에 제 몫만큼 화로를 요구해서 돌이 헛되이 나간다. 돌은
+    # 지금 채굴기를 더 만들지 못하게 막고 있는 바로 그것이다.
+    def rigged(coal, total, furnaces):
+        rest = max(0, total - coal)
+        return Snapshot(
+            x=0, y=0, researched=ALL_TECH, powered=True, working_labs=1,
+            items={"coal": 50},
+            fields=[{"ore": "coal", "count": coal},
+                    {"ore": "iron-ore", "count": rest}],
+            resources={o: {"nearest": {"x": 3, "y": 3}, "nearest_dist": 4}
+                       for o in ("coal", "iron-ore", "copper-ore", "stone")},
+            buildings={"stone-furnace": {"count": furnaces,
+                                         "nearest": {"x": 1, "y": 1},
+                                         "nearest_dist": 2,
+                                         "spots": [{"x": 1, "y": 1}]},
+                       DRILL: {"count": total}})
+
+    mostly_coal = furnace_target(rigged(10, 13, 3), crew=2)
+    all_smelting = furnace_target(rigged(0, 13, 3), crew=2)
+    check("coal drills do not ask for furnaces",
+          mostly_coal < all_smelting,
+          f"석탄 10/13 -> 화로 {mostly_coal}, 전부 제련 -> 화로 {all_smelting}")
+
+    # 그리고 녹이는 쪽의 상한도 석탄이 먹으면 안 된다. 같은 화로 수에
+    # 석탄 채굴기만 늘어난 판은 «철을 더 놓을 수 있는» 판이어야 한다.
+    check("nor do they eat the smelting budget",
+          drill_target(rigged(10, 13, 3), crew=2)
+          - drill_target(rigged(0, 13, 3), crew=2) >= 0,
+          f"{drill_target(rigged(10, 13, 3), crew=2)} vs "
+          f"{drill_target(rigged(0, 13, 3), crew=2)}")
+
+    # 몇 대면 되는지는 세어서 나온다. 넷은 «바닥»이지 답이 아니다.
+    #
+    # 상수 넷이 나온 산수는 주석에 이미 적혀 있었다 - 그런데 화로를 안
+    # 셌다. 화로도 석탄을 태운다. 산수가 있는데 결과만 박아두면 판이
+    # 달라졌을 때 아무도 다시 세지 않는다.
+    check("the coal quota is counted, not a constant",
+          coal_rigs_needed(40, 40) > coal_rigs_needed(6, 6),
+          f"40/40 -> {coal_rigs_needed(40, 40)}, "
+          f"6/6 -> {coal_rigs_needed(6, 6)}")
+    check("and it never drops below the floor",
+          coal_rigs_needed(0, 0) >= COAL_RIGS, str(coal_rigs_needed(0, 0)))
 
     # 둥지가 가까우면 덜 짓는다.
     #

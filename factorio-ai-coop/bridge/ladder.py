@@ -10,7 +10,8 @@ import math
 
 from typing import Any
 
-from settings import (BURNER_DRILLS, CHEST, DRILL, FIRST_PACKS, DRILLS_PER_AGENT, COAL_RIGS, DRILLS_PER_FURNACE, DRILL_FUEL, GROW_STEP,
+from settings import (BURNER_DRILLS, CHEST, COAL_PER_SECOND, DRILL, FIRST_PACKS, DRILLS_PER_AGENT, COAL_RIGS, DRILLS_PER_FURNACE, DRILL_FUEL,
+                      DRILL_BURN_PER_SECOND, FURNACE_BURN_PER_SECOND, GROW_STEP,
                       ENGINES_PER_BOILER, FOCUS_ORDER, FURNACES_PER_DRILL,
                       FURNACE_FUEL, MAX_FURNACES, ORE_BATCH, PLATES_FOR_TOOLS,
                       SMELT_BATCH, SMELT_FOR_TECH, SMELT_MARGIN, STOCKPILE,
@@ -70,6 +71,42 @@ def pollution_room(snap: Snapshot) -> float:
     return 1.0
 
 
+def rigs_by_ore(snap: Snapshot) -> dict:
+    """밭마다 채굴기가 몇 대 서 있는가. zones 가 이미 광맥별로 묶어 준다.
+
+    빈 사전은 「없다」가 아니라 「아직 모른다」다. 부르는 쪽이 그 둘을
+    갈라 봐야 한다.
+    """
+    out: dict = {}
+    for one in _drill_fields(snap):
+        ore = one.get("ore")
+        if ore:
+            out[ore] = out.get(ore, 0) + int(one.get("count") or 1)
+    return out
+
+
+def coal_rigs_needed(burners: int, furnaces: int) -> int:
+    """석탄 채굴기가 몇 대 있어야 하는가. 태우는 입을 세어서 정한다.
+
+    COAL_RIGS 는 넷이라는 «상수»였다. 그 넷이 나온 산수는 주석에 이렇게
+    적혀 있었다 - 「채굴기 하나가 초당 0.25개를 캐고 0.0375개를 태우니
+    제 몫의 일곱 배를 남긴다, 넷이면 스물여덟 대를 먹인다」.
+
+    산수는 맞는데 «화로를 안 셌다». 화로도 석탄을 태운다(0.0225/s). 그리고
+    스물여덟 대라는 것도 그때의 판일 뿐, 공장은 자란다. 산수가 이미 있는데
+    그 결과만 상수로 박아두면, 판이 달라졌을 때 아무도 다시 세지 않는다.
+
+    그래서 상수 대신 식을 쓴다. COAL_RIGS 는 «바닥»으로만 남는다 - 갓
+    시작한 판에서 입이 둘뿐이라고 석탄 채굴기를 한 대만 두면, 연료가
+    끊기는 순간 되돌아올 길이 없다.
+    """
+    eats = (max(0, burners) * DRILL_BURN_PER_SECOND
+            + max(0, furnaces) * FURNACE_BURN_PER_SECOND)
+    # 석탄 채굴기도 제가 태운다. 캔 것 전부가 남는 것이 아니다.
+    spare = COAL_PER_SECOND - DRILL_BURN_PER_SECOND
+    return max(COAL_RIGS, math.ceil(eats / spare))
+
+
 def drill_target(snap: Snapshot, crew: int) -> int:
     """채굴기를 몇 대까지 세울 것인가.
 
@@ -78,6 +115,17 @@ def drill_target(snap: Snapshot, crew: int) -> int:
     """
     furnaces = snap.buildings.get("stone-furnace", {}).get("count", 0)
     drills = snap.buildings.get(DRILL, {}).get("count", 0)
+    # 석탄 채굴기는 이 비율 밖이다.
+    #
+    # 1:1 은 「캔 광석을 받을 화로가 있는가」의 규칙이다. 석탄 채굴기는
+    # 화로에 넣어주는 것이 아니라 «태우는 입»을 먹인다 - 화로 수와 아무
+    # 관계가 없다. 그런데 지금까지 한 무더기로 세고 있었다.
+    #
+    # 값이 두 번 어긋난다. 석탄 채굴기가 녹이는 쪽의 예산을 먹어서 철이
+    # 안 늘고, 동시에 제 몫만큼 화로를 요구해서 돌이 헛되이 나간다. 석탄을
+    # 열세 대까지 늘리면 쓰지도 않을 화로 열세 대를 더 지으라고 한다.
+    fuelling = rigs_by_ore(snap).get("coal", 0)
+    smelting = max(0, drills - fuelling)
     # 화로만 보면 자라지 못한다.
     #
     # 실측(37분째): 채굴기 5대, 화로 6대. 그리고 이랬다:
@@ -105,8 +153,16 @@ def drill_target(snap: Snapshot, crew: int) -> int:
     #
     # 맞다. 버너 채굴기는 하나하나가 굴뚝이고, 굴뚝을 더 세우는 것은 빚을
     # 더 지는 일이다. 갚기 전에는 늘리지 않는다 - 이미 선 것으로 버틴다.
-    if drills == wanted and snap.debt <= 0:
-        wanted = drills + GROW_STEP
+    if smelting == wanted and snap.debt <= 0:
+        wanted = smelting + GROW_STEP
+    # 석탄 몫은 여기서 «더하지 않는다».
+    #
+    # 한 번 더해 봤다가 되돌렸다. 여기서 더하면 그 여유가 총량으로 풀려서
+    # 구리가 가져간다 - 화로 하나에 채굴기 넷인 판에서 「화로를 더 지어라」
+    # 대신 「구리 채굴기를 더 놓아라」가 나왔다. 광석은 이미 쌓여 있었다.
+    #
+    # 석탄 몫은 plan() 이 이미 «따로 떼어» 준다(room = want_coal - coal_rigs).
+    # 그것이 옳은 자리다. 거기서는 석탄이 focus 라 그 여유가 석탄에만 간다.
 
     # 총이 없는 동안에는 화로 비율이 상한이 아니다.
     #
@@ -175,9 +231,13 @@ def furnace_target(snap: Snapshot, crew: int) -> int:
     """
     drills = snap.buildings.get(DRILL, {}).get("count", 0)
     furnaces = snap.buildings.get("stone-furnace", {}).get("count", 0)
+    # 석탄 채굴기가 캔 것은 화로에 안 들어간다. 세면 쓰지도 않을 화로를
+    # 짓느라 돌이 나가고, 돌은 지금 이 판에서 채굴기를 더 만들지 못하게
+    # 막고 있는 바로 그것이다.
+    smelting = max(0, drills - rigs_by_ore(snap).get("coal", 0))
     # 채굴기만 보면 자라지 못한다. drill_target 과 같은 이유다 - 둘이
     # 서로의 상한이면 공장은 그 비율을 유지한 채 멈춘다.
-    from_drills = math.ceil(drills * FURNACES_PER_DRILL)
+    from_drills = math.ceil(smelting * FURNACES_PER_DRILL)
     # 화로도 석탄을 태운다. 채굴기와 같은 이유로 빚 앞에서 멈춘다.
     if furnaces == from_drills and snap.debt <= 0:
         from_drills = furnaces + GROW_STEP
@@ -416,7 +476,25 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
                         for one in known if one.get("ore") == "coal")
         # 모르면 「넉넉하다」로 친다. 모른다고 상한을 넘기면 상한이 없는
         # 것과 같아진다.
-        digs_coal = (not known) or coal_rigs >= COAL_RIGS
+        # 몇 대면 되는지는 «태우는 입»이 정한다. 넷이라는 상수는 스물여덟
+        # 대짜리 판에서 나온 수였고, 그 판에서도 화로를 안 세고 나온 수였다.
+        #
+        # 그리고 «지금» 선 입이 아니라 «세우려는» 입을 센다.
+        #
+        # 사용자: "석탄쪽에 채굴기를 최대한으로 효율적으로 배치해봐."
+        #
+        # 지금 선 것만 세면 연료는 언제나 한 걸음 늦는다 - 화로를 열 대
+        # 더 세운 다음에야 석탄이 모자란 걸 알고, 그 사이 열 대가 굶는다.
+        # 버너 시대의 죽음은 언제나 그 모양이었다: 연료가 끊기면 석탄
+        # 채굴기도 멈추고, 멈추면 연료를 못 캐고, 못 캐면 되돌아올 수 없다.
+        #
+        # 상한이 없어지는 것은 아니다. drill_target 과 furnace_target 이
+        # 이미 공해 여유로 깎인 수를 준다 - 둥지가 가까우면 목표가 작아지고
+        # 석탄도 따라서 작아진다.
+        want_coal = coal_rigs_needed(
+            max(0, drill_target(snap, crew) - coal_rigs),
+            furnace_target(snap, crew))
+        digs_coal = (not known) or coal_rigs >= want_coal
 
         # 석탄은 «한 대로 충분하지 않다».
         #
@@ -435,7 +513,7 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
         # 넷이면 스물여덟 대를 먹인다.
         if not digs_coal and snap.ore("coal"):
             focus = "coal"
-            room = max(room, COAL_RIGS - coal_rigs)
+            room = max(room, want_coal - coal_rigs)
         order = [o for o in FOCUS_ORDER if o != focus]
         seat = 0
         for ore in [focus] + order:
