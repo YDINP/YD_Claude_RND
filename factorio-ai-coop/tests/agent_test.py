@@ -255,7 +255,15 @@ def main() -> int:
 
     print("\n3c. work that just failed is not proposed again")
     # One unreachable furnace used to fill the chat with the same line forever.
-    stuck = at({"coal": 10, "iron-ore": 20}, FURNACE, CAN_TOOL)
+    # 채굴기를 «한 대 세워둔» 세계로 둔다. 안 그러면 이 세계의 답은
+    # 제련이 아니라 「채굴기부터 세워라」다 - 땅에 한 대도 없고 만들 수는
+    # 있는 판에서 손으로 굽는 것은 쳇바퀴이기 때문이다. 여기서 보려는
+    # 것은 그 순서가 아니라 «실패한 일을 다시 제안하지 않는가»다.
+    stuck = at({"coal": 10, "iron-ore": 20},
+               {**FURNACE, DRILL: {"nearest": {"x": 9, "y": 9},
+                                   "nearest_dist": 12, "count": 1,
+                                   "spots": [{"x": 9, "y": 9, "distance": 12}]}},
+               CAN_TOOL)
     check("smelting is the plan while it works",
           (next_goal(stuck) or Job("")).steps[0][0] == "insert")
     after_failure = next_goal(stuck, blocked=frozenset({"insert"}))
@@ -290,9 +298,49 @@ def main() -> int:
     keys = [j.key for j in plan(busy)]
     check("job keys are unique", len(keys) == len(set(keys)), str(keys))
 
+    # 땅에 채굴기가 한 대도 없으면 채굴기가 먼저다.
+    #
+    # 사용자: "반장이 채굴기 심시티부터 한번 진행해봐"
+    #
+    # 실측(새 판 9분째): 사람 다섯, 화로 다섯, 채굴기 0대. 반장이 고른
+    # 아홉 가지 중 앞의 «다섯»이 전부 smelt 였다. 손으로 캐서 손으로
+    # 굽는 것은 쳇바퀴다 - 한 줌 넣으면 한 줌 나오고 그 사이 아무것도
+    # 자라지 않는다. 채굴기는 세워두면 자는 동안에도 캔다.
+    bare = at({"coal": 10, "iron-ore": 20}, FURNACE, CAN_TOOL)
+    bare_keys = [j.key for j in plan(bare, focus="iron-ore", crew=5)]
+    first_smelt = next((i for i, k in enumerate(bare_keys)
+                        if k.startswith("smelt:")), len(bare_keys))
+    first_drill = next((i for i, k in enumerate(bare_keys)
+                        if k.startswith("automate:")), len(bare_keys))
+    check("with no drill standing the drill comes first",
+          first_drill < first_smelt, str(bare_keys[:6]))
+
+    # 그런데 «버리지는» 않는다. 채굴기를 못 세우는 판에서 굽는 일까지
+    # 없애면 사다리가 통째로 멈춘다.
+    check("and the hand smelting is only deferred, not dropped",
+          any(k.startswith("smelt:") for k in bare_keys), str(bare_keys))
+
+    # 한 대라도 서 있으면 그 광맥은 기계가 캐고 있다. 손은 굽는 쪽을 돕는다.
+    running = at({"coal": 10, "iron-ore": 20},
+                 {**FURNACE, DRILL: {"nearest": {"x": 9, "y": 9},
+                                     "nearest_dist": 12, "count": 1,
+                                     "spots": [{"x": 9, "y": 9, "distance": 12}]}},
+                 CAN_TOOL)
+    run_keys = [j.key for j in plan(running, focus="iron-ore", crew=5)]
+    check("but a standing drill puts smelting back in front",
+          next((i for i, k in enumerate(run_keys) if k.startswith("smelt:")), 99)
+          < next((i for i, k in enumerate(run_keys) if k.startswith("automate:")), 99),
+          str(run_keys[:6]))
+
     # One furnace, one cook. Two agents stuffing the same furnace and both
     # waiting on its output is not teamwork.
-    smelting = at({"coal": 10, "iron-ore": 20}, FURNACE, CAN_TOOL)
+    # 여기도 채굴기를 한 대 세워둔다. 보려는 것은 «한 화로에 한 사람»이지
+    # 제련과 채굴기의 순서가 아니다.
+    smelting = at({"coal": 10, "iron-ore": 20},
+                  {**FURNACE, DRILL: {"nearest": {"x": 9, "y": 9},
+                                      "nearest_dist": 12, "count": 1,
+                                      "spots": [{"x": 9, "y": 9, "distance": 12}]}},
+                  CAN_TOOL)
     cook = next_goal(smelting)
     check("smelting is keyed to the furnace", cook is not None and cook.key.startswith("smelt:"),
           str(cook.key if cook else None))

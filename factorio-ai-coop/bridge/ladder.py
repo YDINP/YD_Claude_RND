@@ -320,6 +320,27 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     furnace = furnaces[0] if furnaces else None
     drills = snap.buildings.get(DRILL, {}).get("count", 0)
 
+    # 손으로 굽는 일을 «뒤로 미뤄둘» 자리.
+    #
+    # 사용자: "반장이 채굴기 심시티부터 한번 진행해봐"
+    #
+    # 맞다. 실측(새 판 9분째): 사람 다섯, 화로 다섯, 채굴기 «0대». 반장이
+    # 고른 아홉 가지 중 앞의 다섯이 전부 smelt 였다.
+    #
+    # 손으로 캐서 손으로 굽는 것은 쳇바퀴다. 한 줌 넣으면 한 줌 나오고 그
+    # 사이 아무것도 자라지 않는다. 채굴기는 한 번 세우면 자는 동안에도
+    # 캔다 - 이 저장소가 이미 적어둔 값이다(digs_itself).
+    #
+    # 「땅에 선 채굴기가 하나라도 있는가」로 가른다. 한 대라도 서 있으면
+    # 그 광맥은 기계가 캐고 있으니 손은 굽는 쪽을 도우면 된다. 한 대도
+    # 없는데 세울 수 있으면 세우는 것이 먼저다.
+    #
+    # 버리지 않고 «미루기만» 한다. 채굴기를 못 세우는 판(돌도 철도 없는
+    # 개국 직후)에서 굽는 일까지 없애면 사다리가 통째로 멈춘다.
+    by_hand: list[Job] = []
+    drill_first = drills == 0 and (
+        snap.have(DRILL) >= 1 or (snap.can_make(DRILL) and snap.can_make(CHEST)))
+
     # --- infrastructure the whole crew shares ----------------------------
     # One furnace serves everybody, so only one agent should be building it.
     if not furnace:
@@ -429,15 +450,16 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
             # furnace and both waiting for its output is not teamwork. 화로가
             # 여럿이면 일도 여럿이라, 각자 빈 화로를 집어간다.
             for spot in furnaces:
-                jobs.append(Job("화로에 석탄과 철광석을 넣고 제련합니다.",
-                                key=f"smelt:{spot['x']:.0f},{spot['y']:.0f}",
-                                needs={"coal": FURNACE_FUEL, "iron-ore": SMELT_BATCH},
-                                steps=[
-                                    ("insert", {"name": "coal", "count": FURNACE_FUEL, **spot}),
-                                    ("insert", {"name": "iron-ore", "count": SMELT_BATCH, **spot}),
-                                    ("wait", {"ticks": 60 * 40}),
-                                    ("take", {"name": "iron-plate", "count": SMELT_BATCH, **spot}),
-                                ]))
+                (by_hand if drill_first else jobs).append(
+                    Job("화로에 석탄과 철광석을 넣고 제련합니다.",
+                        key=f"smelt:{spot['x']:.0f},{spot['y']:.0f}",
+                        needs={"coal": FURNACE_FUEL, "iron-ore": SMELT_BATCH},
+                        steps=[
+                            ("insert", {"name": "coal", "count": FURNACE_FUEL, **spot}),
+                            ("insert", {"name": "iron-ore", "count": SMELT_BATCH, **spot}),
+                            ("wait", {"ticks": 60 * 40}),
+                            ("take", {"name": "iron-plate", "count": SMELT_BATCH, **spot}),
+                        ]))
 
     # 세워놓고 잊은 채굴기부터 되살린다. 상자 하나면 다시 도는 기계를
     # 두고 새 채굴기를 놓는 것은 철판 낭비다.
@@ -664,6 +686,9 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     # Two jobs with the same key would be one job as far as the crew is
     # concerned: claiming the first silently hides the second. Keep the
     # higher-priority one.
+    # 미뤄둔 손일은 «맨 뒤»로. 채굴기를 세우고 나서 해도 되는 일이다.
+    jobs.extend(by_hand)
+
     unique, seen = [], set()
     for job in jobs:
         if job.key in seen:
