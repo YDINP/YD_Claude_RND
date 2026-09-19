@@ -593,5 +593,13 @@ class Agent:
     def take(self, name: str, x: float, y: float, count: int = 1, **kw: Any) -> dict:
         return self.run("take", name=name, x=x, y=y, count=count, **kw)
 
+    def tell(self, message: str, speaker: str = "사람") -> dict:
+        """사람이 게임 밖에서 내리는 지시를 명령 채널에 넣는다.
+
+        무리가 지시를 듣는 길은 게임 채팅 하나뿐이다. 접속하지 않고
+        지시할 때도 «같은 길»로 넣어야 해석과 배차가 똑같이 돈다.
+        """
+        return self.bridge.call("tell", speaker, message)
+
     def say(self, text: str) -> dict:
         return self.bridge.say(text, who=self.name)

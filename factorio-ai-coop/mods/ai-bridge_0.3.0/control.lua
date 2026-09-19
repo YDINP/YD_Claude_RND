@@ -819,6 +819,29 @@ remote.add_interface("ai", {
     }
   end,
 
+  -- 사람이 «게임 밖»에서 내리는 지시.
+  --
+  -- 명령 채널은 게임 채팅이다(on_console_chat). 그런데 사람이 접속하지
+  -- 않고 다리 너머에서 지시할 때는 그 사건이 안 일어나므로, 무리는 그
+  -- 말을 영영 못 듣는다.
+  --
+  -- 같은 고리에 같은 모양으로 넣어준다. 그래야 해석하는 쪽도 배차하는
+  -- 쪽도 «사람이 채팅으로 말한 것»과 똑같이 다룬다 - 지시를 받는 길이
+  -- 둘이면 둘 중 하나는 반드시 뒤처진다.
+  tell = function(speaker, message)
+    if not message or message == "" then
+      return { error = "nothing to say" }
+    end
+    local who = speaker or "사람"
+    table.insert(storage.chat,
+      { tick = game.tick, player = who, message = message })
+    while #storage.chat > CHAT_HISTORY do
+      table.remove(storage.chat, 1)
+    end
+    pcall(remember_line, who, message)
+    return { told = message, tick = game.tick }
+  end,
+
   chat = function(since_tick)
     local out = {}
     for _, line in ipairs(storage.chat) do
