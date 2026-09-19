@@ -1224,6 +1224,28 @@ def main() -> int:
     check("nothing moves when nothing is held",
           in_hand_first([make, power], held) == [make, power])
 
+    # 루틴도 «놓는 일»이다. 채굴기를 놓는 일은 걸음 목록이 아니라 루틴이라
+    # 걸음이 없다. 그래서 앞으로 안 당겨졌고, 실측(156분째)이 그 값을
+    # 보여줬다 - 땅에 4대, 가방에 6대, 자리표의 빈 자리 16칸.
+    routine = Job("채굴기를 한 대 더 놓겠습니다", key="automate:iron-ore:a",
+                  routine="automate", ore="iron-ore",
+                  needs={"burner-mining-drill": 1})
+    check("a routine that just places what is held counts too",
+          _just_placing(routine, held))
+    check("and it goes first",
+          in_hand_first([make, power, routine], held)[0] is routine)
+
+    empty_hands = Snapshot(tick=0, x=0.0, y=0.0, items={}, craftable={},
+                           buildings={}, resources={}, researched=set())
+    check("but not when the machine is not in the bag",
+          not _just_placing(routine, empty_hands))
+
+    # 캐고 나르는 루틴은 «놓기만 하는 일»이 아니다.
+    hauling = Job("벨트를 깝니다", key="belt:f1", routine="belt",
+                  needs={"transport-belt": 20})
+    check("a hauling routine is not a placement",
+          not _just_placing(hauling, held))
+
     # ------------------------------------------------------------------
     print("\n13. as many furnace jobs as there are furnaces missing")
 

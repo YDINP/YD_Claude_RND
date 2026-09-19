@@ -606,6 +606,26 @@ def _just_placing(job: Job, snap: Snapshot) -> bool:
     캐거나 만드는 걸음이 하나라도 섞여 있으면 아니다 - 그건 값이 다른
     일이다.
     """
+    # 루틴도 «놓는 일»이다.
+    #
+    # 여기 `if not job.steps: return False` 만 있었다. 그런데 채굴기를
+    # 놓는 일은 걸음 목록이 아니라 루틴(`automate`)이라 걸음이 없다.
+    # 그래서 앞으로 당겨지지 않았고, 실측이 그 값을 보여줬다(156분째):
+    #
+    #     땅에 선 채굴기  4대        가방에 든 채굴기  6대
+    #     목표 9대                   자리표의 빈 자리 16칸
+    #
+    # 「손에 든 기계를 먼저 놓는다」를 넣으면서 걸음이 있는 것만 봤다.
+    # 규칙을 넣을 때 그 규칙이 닿지 않는 자리를 같이 봐야 한다.
+    #
+    # 루틴은 무엇을 놓는지를 `needs` 로 말한다. 그것이 들고 있는
+    # 기계뿐이면 이것도 「놓기만 하는 일」이다.
+    if job.routine:
+        wants = [k for k in (job.needs or {})]
+        if not wants or any(k not in PORTABLE for k in wants):
+            return False
+        return all(snap.have(k) >= n for k, n in job.needs.items())
+
     if not job.steps:
         return False
     placed = None

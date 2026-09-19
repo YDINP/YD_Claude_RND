@@ -424,7 +424,16 @@ class SurveyMixin:
             blind = []
         #      한 대에 한 번씩 걸어가면 일흔한 대에 일흔한 번을 걷는다.
         #      광맥 위의 채굴기는 서로 붙어 있으니 모아서 한 번에 간다.
-        for group in cluster(blind)[:2]:
+        # 화로를 놓을 수 있는 것과 없는 것을 갈라 본다.
+        #
+        # 자리가 안 나오는 것에는 상자를 단다. 화로가 더 좋지만(광석이
+        # 바로 판금이 된다) 더 좋은 것을 못 하면 아무것도 안 하는 것 -
+        # 이 저장소가 여러 번 만든 모양이다. 상자라도 달면 그 채굴기는
+        # 다시 돈다.
+        seated = [d for d in blind if d.get("seat")]
+        bare = [d for d in blind if not d.get("seat") and d.get("drop")]
+
+        for group in cluster(seated)[:2]:
             head = group[0]
             unblock.append(Job(
                 f"({head['x']:.0f}, {head['y']:.0f}) 부근 채굴기 {len(group)}대가 "
@@ -433,6 +442,16 @@ class SurveyMixin:
                 key=f"open:{head['x']:.0f},{head['y']:.0f}",
                 routine="open", at={**head, "group": group},
                 needs={"stone-furnace": len(group)}))
+
+        for drill in bare[:2]:
+            drop = drill["drop"]
+            unblock.append(Job(
+                f"({drill['x']:.0f}, {drill['y']:.0f}) 채굴기가 땅바닥에 "
+                f"떨구고 있습니다. 화로가 안 들어가니 상자를 달겠습니다.",
+                key=f"rescue:{drill['x']:.0f},{drill['y']:.0f}",
+                needs={CHEST: 1},
+                steps=[("build", {"name": CHEST, "x": drop["x"],
+                                  "y": drop["y"], "snap": True})]))
 
         # 3a2. 얇은 자리에 선 채굴기. 마르기를 기다릴 이유가 없다 —
         #      걷어내면 채굴기가 통째로 돌아오고, 다음 automate 가 두꺼운

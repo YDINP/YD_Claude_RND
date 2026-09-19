@@ -573,16 +573,27 @@ local function blind_drills(name, radius)
       local ore = d.mining_target
       local seat, litter = furnace_over(b.surface, b.force,
                                           d.drop_position)
-      if seat then
-        out[#out + 1] = {
-          x = d.position.x, y = d.position.y,
-          ore = (ore and ore.valid) and ore.name or nil,
-          seat = seat, litter = litter or nil,
-          stuck = d.status == defines.entity_status
-                              .waiting_for_space_in_destination or nil,
-          distance = math.floor(Tasks.dist(b.position, d.position) * 10) / 10,
-        }
-      end
+      -- 자리를 못 찾아도 «목록에는 넣는다».
+      --
+      -- 여기 `if seat then` 이 있었다. 그래서 이 함수의 이름은 「눈먼
+      -- 채굴기」인데 실제로 주는 것은 「지금 화로로 고칠 수 있는 눈먼
+      -- 채굴기」였다. 떨구는 자리에 광석이 흩어져 있어 화로가 안 들어가면
+      -- 그 채굴기는 목록에서 «조용히 사라지고», 아무도 고치지 않는다.
+      --
+      -- 실측(156분째): 채굴기 넷 중 둘이 땅바닥에 떨구며 멈춰 있는데
+      -- blind_drills 는 빈 목록을 돌려줬다.
+      --
+      -- 못 고치는 것을 «안 보이게» 하는 것이 가장 나쁘다. 보이게 두면
+      -- 부르는 쪽이 다른 수(상자를 달거나 치우거나)를 낼 수 있다.
+      out[#out + 1] = {
+        x = d.position.x, y = d.position.y,
+        ore = (ore and ore.valid) and ore.name or nil,
+        seat = seat, litter = litter or nil,
+        drop = { x = d.drop_position.x, y = d.drop_position.y },
+        stuck = d.status == defines.entity_status
+                            .waiting_for_space_in_destination or nil,
+        distance = math.floor(Tasks.dist(b.position, d.position) * 10) / 10,
+      }
     end
   end
   -- 멈춘 것부터, 그다음 가까운 것부터.
