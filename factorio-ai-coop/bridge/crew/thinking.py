@@ -26,7 +26,8 @@ import lessons
 import mind as mind_mod
 from client import RconError
 from jobs import Job
-from settings import MIND_EVERY, MIND_MODEL, MIND_TIMEOUT, ORE_BATCH, SMELT_BATCH
+from settings import (MIND_AT_ONCE, MIND_EVERY, MIND_MODEL, MIND_TIMEOUT,
+                      ORE_BATCH, SMELT_BATCH)
 from world import Snapshot
 
 # 머리가 세워도 되는 것. 도시 설계가 자리를 아는 것들이다.
@@ -313,7 +314,9 @@ class ThinkingMixin:
 
             # 2) 수첩이 익었으면 줄인다. 겪은 것을 규칙으로 바꾸는 자리다.
             #    이것이 「고도화」다 - 쌓는 것은 기억이고, 줄이는 것이 배움이다.
-            if book.ripe and not head.thinking:
+            if (book.ripe and not head.thinking
+                    and sum(1 for m in self.minds.values() if m.thinking)
+                    < MIND_AT_ONCE):
                 head.start_distil(book.distil_prompt())
                 continue
 
@@ -321,6 +324,15 @@ class ThinkingMixin:
             if head.thinking:
                 continue
             if now < getattr(worker, "thought_at", 0.0):
+                continue
+            # 동시에 생각하는 수를 막는다.
+            #
+            # 주기만 늘려서는 «같은 순간에 시작하는 것»을 못 막는다.
+            # 손이 비는 때가 서로 비슷하기 때문이다. 실측에서 다섯이
+            # 겹쳐 돌며 34 GB 를 쓰고 있었다 - 한 번에 1~4 GB 다.
+            #
+            # 차례를 못 받은 사람은 서 있지 않는다. 규칙이 고른다.
+            if sum(1 for m in self.minds.values() if m.thinking) >= MIND_AT_ONCE:
                 continue
             worker.thought_at = now + MIND_EVERY
             head.start(self.big_picture(worker, snap),

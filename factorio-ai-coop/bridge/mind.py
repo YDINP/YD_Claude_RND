@@ -24,6 +24,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import threading
@@ -174,6 +175,32 @@ def read(payload: dict | None) -> Thought:
     return Thought(say=say, do=do, args=args)
 
 
+class _Done:
+    """`subprocess.run` 의 결과처럼 생긴 것. 아래 코드를 안 바꾸려는 것뿐이다."""
+
+    def __init__(self, out: str) -> None:
+        self.stdout = out or ""
+        self.returncode = 0
+
+
+def _kill_tree(pid: int) -> None:
+    """이 프로세스와 그 아래를 전부 죽인다.
+
+    윈도에서는 `taskkill /T` 가 자식까지 맡는다. 없거나 실패하면 최소한
+    당사자는 죽인다 - 아무것도 안 하는 것보다 낫다.
+    """
+    try:
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)],
+                       capture_output=True, timeout=10)
+        return
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        pass
+    try:
+        os.kill(pid, 9)
+    except OSError:
+        pass
+
+
 class Mind:
     """한 사람 몫의 머리. 다른 실에서 생각하고, 끝난 것만 내준다."""
 
@@ -236,11 +263,36 @@ class Mind:
     def _run(self, prompt: str, distilling: bool = False) -> None:
         argv = [self.cli, "-p", prompt, "--output-format", "text",
                 "--model", self.model]
+        # 시간이 다 되면 «자식의 자식까지» 죽인다.
+        #
+        # `subprocess.run(timeout=)` 은 바로 아래 자식만 죽인다. 그런데
+        # claude 는 node 를 띄우고 그 node 가 기가바이트를 쥔다. 위만
+        # 죽이면 아래는 부모 없는 채로 살아남는다.
+        #
+        # 실측으로는 아직 그렇게 샌 적이 없지만(고아 0개), 샐 수 있는
+        # 구조를 두고 「아직 안 샜다」에 기대지 않는다 - 한 번 새면
+        # 기가바이트 단위다.
         try:
-            done = subprocess.run(argv, capture_output=True, text=True,
-                                  encoding="utf-8", timeout=self.timeout)
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            proc = subprocess.Popen(argv, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, text=True,
+                                    encoding="utf-8", errors="replace")
+        except (FileNotFoundError, OSError):
             return
+        try:
+            out, _ = proc.communicate(timeout=self.timeout)
+        except subprocess.TimeoutExpired:
+            _kill_tree(proc.pid)
+            try:
+                proc.communicate(timeout=5)
+            except Exception:
+                pass
+            return
+        except (OSError, ValueError):
+            _kill_tree(proc.pid)
+            return
+        if proc.returncode != 0:
+            return
+        done = _Done(out)
         if done.returncode != 0:
             return
         out = done.stdout or ""
