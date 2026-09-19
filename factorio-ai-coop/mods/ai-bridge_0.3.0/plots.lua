@@ -61,15 +61,31 @@ end
 -- 예순 대가 한 줄을 채우지만, 한 밭에 그만큼 있을 일이 드물다.
 local MINE = { lane = 5, pitch = 2, row = 8 }
 
+-- 한 밭에 긋는 줄의 최대 수와 한 줄의 최대 길이.
+--
+-- 예전에는 「긴 쪽을 따라 여덟 쌍짜리 줄 셋」으로 못박혀 있었다. 밭이
+-- 어떻게 생겼든 같은 모양을 찍었다는 뜻이다. 실측:
+--
+--     철 광맥  가로 35 x 세로 32   <- 거의 정사각. 어느 쪽이 긴지가
+--                                     테두리 한 칸 차이로 뒤집힌다
+--     구리     가로 26 x 세로 23
+--
+-- 테두리의 긴 쪽이 «자리가 많이 나오는 쪽»이라는 보장이 없다. 상자는
+-- 상자일 뿐이고, 그 안의 광석은 다른 모양이다. 그래서 두 방향을 다
+-- 재보고 «세울 수 있는 자리가 많은» 쪽을 고른다 - 짐작 대신 재기.
+local MAX_LANES = 6
+local MAX_ROW = 16
+
 -- 자리 번호 -> 줄 위의 어디에, 어느 쪽에서, 어디를 보고.
 --
 -- 짝수는 줄 위쪽(아래를 본다), 홀수는 줄 아래쪽(위를 본다). 마주보게
 -- 두면 둘 다 가운데 벨트에 떨군다 - 그것이 이 배치의 전부다.
-local function mine_seat(origin, nth, wide)
+local function mine_seat(origin, nth, wide, per_lane)
+  per_lane = per_lane or MINE.row
   local pair = math.floor(nth / 2)
   local side = nth % 2
-  local band = math.floor(pair / MINE.row)
-  local step = (pair % MINE.row) * MINE.pitch
+  local band = math.floor(pair / per_lane)
+  local step = (pair % per_lane) * MINE.pitch
   local off = origin.lane + band * MINE.lane
   if wide then
     -- 줄이 가로. 채굴기는 줄의 위/아래에 선다.
@@ -255,13 +271,33 @@ local function mine_seats(surface, force, field, wanted, rich, ore_name)
     end
   end
 
-  local wide = (field.right - field.left) >= (field.bottom - field.top)
-  local origin = {
-    x = math.floor(field.left), y = math.floor(field.top),
-    -- 첫 줄은 밭 안쪽으로 두 칸 들어와 긋는다. 테두리에 그으면 한쪽
-    -- 줄이 통째로 광석 밖이 된다.
-    lane = wide and (math.floor(field.top) + 2) or (math.floor(field.left) + 2),
-  }
+  -- 밭 크기에서 «줄 몇 개, 줄 길이 얼마»가 나온다.
+  --
+  --   한 줄  = 채굴기 2 + 벨트 1 + 채굴기 2 = 가로지르는 쪽으로 5칸
+  --   한 쌍  = 줄을 따라 2칸 (2x2 채굴기 둘이 마주본다)
+  --
+  -- 못박힌 「여덟 쌍짜리 줄 셋」은 밭이 어떻게 생겼든 같은 모양을 찍었다.
+  -- 좁은 밭에서는 없는 자리를 세다 지치고, 넓은 밭에서는 절반을 놀렸다.
+  local function shape_of(box, wide)
+    local w = math.floor(box.right) - math.floor(box.left) + 1
+    local h = math.floor(box.bottom) - math.floor(box.top) + 1
+    local along = wide and w or h
+    local across = wide and h or w
+    return {
+      wide = wide,
+      row = math.max(1, math.min(MAX_ROW, math.floor(along / MINE.pitch))),
+      lanes = math.max(1, math.min(MAX_LANES, math.floor(across / MINE.lane))),
+    }
+  end
+
+  -- 첫 줄은 밭 안쪽으로 두 칸 들어와 긋는다. 테두리에 그으면 한쪽 줄이
+  -- 통째로 광석 밖이 된다.
+  local function origin_of(box, wide)
+    return {
+      x = math.floor(box.left), y = math.floor(box.top),
+      lane = wide and (math.floor(box.top) + 2) or (math.floor(box.left) + 2),
+    }
+  end
 
   -- 「못 놓는다」와 «치우면 놓는다»는 다른 말이다.
   --
@@ -326,40 +362,65 @@ local function mine_seats(surface, force, field, wanted, rich, ore_name)
     return total
   end
 
-  local free, ours, blocked, thin = {}, 0, 0, 0
-  local top = PLAN.mine.count
-  for nth = 0, top - 1 do
-    local seat = mine_seat(origin, nth, wide)
-    local here = { x = seat.x + 1, y = seat.y + 1 }   -- 2x2 의 가운데
-    local standing = surface.find_entities_filtered {
-      position = here, radius = 0.6, type = "mining-drill", limit = 1,
-    }[1]
-    if standing then
-      ours = ours + 1
-    else
-      local under = ore_under(seat.x, seat.y)
-      local seat_clear = under < rich and nil or clearable(here)
-      if under < rich then
-        -- 얇다. 여기서 멈추지 «않고» 다음 줄로 간다 - 광맥 가장자리가
-        -- 얇은 것은 정상이고, 몸통은 두세 줄 안쪽에 있다. 철밭 실측:
-        -- 폭 27칸에 첫 줄은 x=51(가장자리), 몸통은 x=55~70 이었다.
-        thin = thin + 1
-      elseif surface.can_place_entity {
-        name = PLAN.mine.what, position = here,
-        direction = defines.direction[seat.direction], force = force,
-      } or seat_clear then
-        -- 방향은 «숫자»로 내보낸다. 부르는 쪽(place)이 숫자를 받는다.
-        -- 이름으로 내보냈다가 조용히 0(북쪽)으로 읽히면, 열여섯 대가
-        -- 전부 엉뚱한 데로 떨군다 - 자리표를 만든 보람이 통째로 사라진다.
-        free[#free + 1] = { x = here.x, y = here.y, nth = nth,
-                            ore = under, clear = seat_clear,
-                            direction = defines.direction[seat.direction],
-                            facing = seat.direction }
+  -- 한 방향으로 밭 전체를 훑는다.
+  local function sweep(wide)
+    local shape = shape_of(field, wide)
+    local origin = origin_of(field, wide)
+    local free, ours, blocked, thin = {}, 0, 0, 0
+    for nth = 0, shape.lanes * shape.row * 2 - 1 do
+      local seat = mine_seat(origin, nth, wide, shape.row)
+      local here = { x = seat.x + 1, y = seat.y + 1 }   -- 2x2 의 가운데
+      local standing = surface.find_entities_filtered {
+        position = here, radius = 0.6, type = "mining-drill", limit = 1,
+      }[1]
+      if standing then
+        ours = ours + 1
       else
-        blocked = blocked + 1
+        local under = ore_under(seat.x, seat.y)
+        local seat_clear = under < rich and nil or clearable(here)
+        if under < rich then
+          -- 얇다. 여기서 멈추지 «않고» 다음 줄로 간다 - 광맥 가장자리가
+          -- 얇은 것은 정상이고, 몸통은 두세 줄 안쪽에 있다.
+          thin = thin + 1
+        elseif surface.can_place_entity {
+          name = PLAN.mine.what, position = here,
+          direction = defines.direction[seat.direction], force = force,
+        } or seat_clear then
+          -- 방향은 «숫자»로 내보낸다. 부르는 쪽(place)이 숫자를 받는다.
+          -- 이름으로 내보냈다가 조용히 0(북쪽)으로 읽히면, 열여섯 대가
+          -- 전부 엉뚱한 데로 떨군다.
+          free[#free + 1] = { x = here.x, y = here.y, nth = nth,
+                              ore = under, clear = seat_clear,
+                              direction = defines.direction[seat.direction],
+                              facing = seat.direction }
+        else
+          blocked = blocked + 1
+        end
       end
     end
+    return { free = free, ours = ours, blocked = blocked, thin = thin,
+             shape = shape, origin = origin, wide = wide }
   end
+
+  -- 두 방향을 다 재고 «자리가 많이 나오는» 쪽을 고른다.
+  --
+  -- 테두리의 긴 쪽이 자리가 많은 쪽이라는 보장이 없다. 상자는 상자일
+  -- 뿐이고 그 안의 광석은 다른 모양이다. 실측(철 광맥):
+  --
+  --     테두리   가로 35 x 세로 32   <- 한 칸 차이로 가로가 이긴다
+  --     실제     y=11..15 가 x -56..-23 까지 두껍고, 세로로는 끊긴다
+  --
+  -- 이미 선 채굴기(ours)도 점수에 넣는다. 반쯤 지어 놓은 줄을 버리고
+  -- 반대 방향으로 새로 긋기 시작하면 두 배치가 서로를 막는다.
+  local function score(try)
+    local ore = 0
+    for _, seat in ipairs(try.free) do ore = ore + seat.ore end
+    return (#try.free + try.ours * 2) * 1000000 + math.floor(ore / 1000)
+  end
+  local across, along = sweep(true), sweep(false)
+  local picked = score(across) >= score(along) and across or along
+  local free, ours, blocked, thin = picked.free, picked.ours, picked.blocked, picked.thin
+  local wide, origin, shape = picked.wide, picked.origin, picked.shape
 
   -- «줄»을 고르고, 고른 줄은 «순서대로» 채운다.
   --
@@ -383,7 +444,7 @@ local function mine_seats(surface, force, field, wanted, rich, ore_name)
   -- 양옆을 번갈아 본다). 그러니 이 순서로 채우면 어깨를 맞대고 선다.
   local bands, order = {}, {}
   for _, seat in ipairs(free) do
-    local band = math.floor(math.floor(seat.nth / 2) / MINE.row)
+    local band = math.floor(math.floor(seat.nth / 2) / shape.row)
     if not bands[band] then
       bands[band] = { band = band, ore = 0, seats = {} }
       order[#order + 1] = bands[band]
@@ -410,7 +471,10 @@ local function mine_seats(surface, force, field, wanted, rich, ore_name)
 
   return { free = keep, ours = ours, blocked = blocked, thin = thin,
            found = #free, rich = rich, wide = wide, ore = want_name,
-           lane = origin.lane, want = top, patch = field }
+           lanes = shape.lanes, per_lane = shape.row,
+           tried = { across = #across.free, along = #along.free },
+           lane = origin.lane, want = shape.lanes * shape.row * 2,
+           patch = field }
 end
 
 return {

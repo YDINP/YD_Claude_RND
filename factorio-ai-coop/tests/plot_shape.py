@@ -299,6 +299,55 @@ def take_wants_enough() -> list:
     return bad
 
 
+# -- 모양은 밭에서 나온다. 못박지 않는다 ------------------------------------
+#
+# 사용자: "채굴기를 모든채굴지에 똑같이 가로로 위아래1줄구성을 하기보단
+#          세로로하던가 뭐 2중4열 이런식으로 효율적으로 배치할 수 있도록
+#          추론해서 고도화 해야함."
+#
+# 고치기 전에는 「긴 쪽을 따라 여덟 쌍짜리 줄 셋」이 못박혀 있었다. 밭이
+# 어떻게 생겼든 같은 모양을 찍었다는 뜻이다. 좁은 밭에서는 없는 자리를
+# 세다 지치고, 넓은 밭에서는 절반을 놀렸다.
+#
+# 그리고 방향을 «테두리»로 골랐다. 실측(철 광맥) 가로 35 x 세로 32 -
+# 한 칸 차이로 가로가 이긴다. 상자는 상자일 뿐이고 그 안의 광석은 다른
+# 모양이다. 그러니 두 방향을 다 «재보고» 고른다 - 짐작 대신 재기.
+def layout_comes_from_the_patch() -> list:
+    bad = []
+    lua = io.open(os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "plots.lua"),
+                  encoding="utf-8").read()
+    body = lua[lua.find("local function mine_seats"):]
+
+    if "shape_of" not in body:
+        bad.append("줄 수와 줄 길이가 밭 크기에서 안 나온다 (shape_of 없음)")
+    if "sweep(true)" not in body or "sweep(false)" not in body:
+        bad.append("한 방향만 재본다 - 두 방향을 다 재고 골라야 한다")
+    # 「테두리의 긴 쪽」으로 방향을 정하던 줄이 남아 있으면 재보는 보람이 없다.
+    if "local wide = (field.right - field.left) >=" in body:
+        bad.append("아직 테두리 비교로 방향을 정한다")
+    # 고른 결과가 실제로 쓰여야 한다.
+    if "picked.shape" not in body:
+        bad.append("고른 방향의 모양을 안 쓴다")
+    if "MINE.row)" in body.replace("per_lane or MINE.row", ""):
+        bad.append("띠를 나눌 때 아직 못박힌 줄 길이를 쓴다")
+
+    # 반쯤 지어 놓은 줄을 버리고 반대로 새로 긋기 시작하면 두 배치가
+    # 서로를 막는다. 이미 선 것도 점수에 들어가야 한다.
+    scoring = body[body.find("local function score"):]
+    scoring = scoring[:scoring.find(chr(10) + "  end")]
+    if "try.ours" not in scoring:
+        bad.append("이미 선 채굴기를 점수에 안 넣는다 - 방향이 뒤집히면 "
+                   "지어 놓은 줄이 버려진다")
+
+    # 그리고 밖에서 «무엇을 골랐는지» 보여야 한다. 안 보이면 왜 그렇게
+    # 섰는지 물어볼 데가 없다.
+    tail = body[body.find("  return { free = keep"):]
+    for key in ("lanes", "per_lane", "tried"):
+        if key not in tail:
+            bad.append(f"자리표가 고른 모양을 안 알려준다 ({key})")
+    return bad
+
+
 def main() -> int:
     shape = lua_shape()
     bad = []
@@ -318,6 +367,7 @@ def main() -> int:
     bad.extend(thickness_is_this_ore())
     bad.extend(rocks_are_clearable())
     bad.extend(take_wants_enough())
+    bad.extend(layout_comes_from_the_patch())
     for line in bad:
         print("  [FAIL] " + line)
     print(f"\n{len(bad)} problems - plot shape agrees "
