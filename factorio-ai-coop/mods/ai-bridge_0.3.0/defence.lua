@@ -61,7 +61,50 @@ local MINE = { "furnace", "mining-drill", "assembling-machine", "lab",
 -- 다르다.
 local STRAY_OUT = 45
 
-local function perimeter(surface, force)
+-- 지킬 것은 «구역»이다. 모든 기계의 무게중심이 아니다.
+--
+-- 전멸(2026-09-19 18:59)의 실측이 이랬다:
+--
+--     base().home        (23, 33)      <- 발전소와 외곽 채굴기가 끌고 간 자리
+--     제련 구역          (38, 87)
+--     조립 구역          (48, 68)
+--     유통 구역          (62, 82)
+--     터렛 8대가 실제로   x -20~-49, y -16~41,  탄약 10발씩 만재
+--     잡은 적             없음
+--
+-- STRAY_OUT 이 45 라, 무게중심에서 45칸 밖인 제련 구역(y=87)이 테두리에서
+-- 통째로 빠졌다. 남은 것은 발전소와 외곽 채굴기뿐이었고, 그래서 상자가
+-- 서북쪽으로 끌려갔다. 탄약 여든 발을 채운 터렛 여덟 대가 공장에서 60~130
+-- 타일 떨어진 빈 땅을 지켰다.
+--
+-- 구역은 이미 정해져 있다(zones). 우리가 「여기가 제련이다」라고 적어둔
+-- 자리를 안 보고, 기계 위치의 평균을 다시 계산해서 딴 데를 가리켰다.
+-- 적어둔 것이 있으면 그것을 본다.
+local function core_box(here)
+  if not here then return nil end
+  local lo = { x = math.huge, y = math.huge }
+  local hi = { x = -math.huge, y = -math.huge }
+  local seen = 0
+  for _, z in pairs({ here.smelt, here.craft, here.depot }) do
+    if z and z.x and z.w then
+      seen = seen + 1
+      lo.x = math.min(lo.x, z.x)
+      lo.y = math.min(lo.y, z.y)
+      hi.x = math.max(hi.x, z.x + z.w)
+      hi.y = math.max(hi.y, z.y + z.h)
+    end
+  end
+  if seen == 0 then return nil end
+  return { left = math.floor(lo.x) - STANDOFF, top = math.floor(lo.y) - STANDOFF,
+           right = math.ceil(hi.x) + STANDOFF, bottom = math.ceil(hi.y) + STANDOFF,
+           count = seen, from = "zones" }
+end
+
+local function perimeter(surface, force, here)
+  -- 구역이 정해져 있으면 그것이 답이다. 아래 길은 구역을 아직 모를 때 -
+  -- 개국 직후 - 를 위한 것이다.
+  local zoned = core_box(here)
+  if zoned then return zoned end
   local home = base().home
   local lo = { x = math.huge, y = math.huge }
   local hi = { x = -math.huge, y = -math.huge }
@@ -259,9 +302,14 @@ local function defence(name)
 
   local here = zones(name)
   local home = here.home or { x = b.position.x, y = b.position.y }
-  local box = perimeter(surface, force)
-  local side, nests, nearest = threat_side(surface, home)
-  local reach, at_home = pollution_reach(surface, home, nearest)
+  local box = perimeter(surface, force, here)
+  -- 적이 어느 쪽에서 오는가도 «구역» 한가운데서 잰다. 지킬 것이 거기
+  -- 있으므로 거기서 재야 맞는 면이 나온다. 무게중심에서 재면, 무게중심이
+  -- 공장 밖일 때 엉뚱한 면을 고른다 - 그것이 이번 전멸의 값이다.
+  local heart = box and { x = (box.left + box.right) / 2,
+                          y = (box.top + box.bottom) / 2 } or home
+  local side, nests, nearest = threat_side(surface, heart)
+  local reach, at_home = pollution_reach(surface, heart, nearest)
 
   local turrets = surface.find_entities_filtered { name = TURRET, force = force }
   local slack_now = nearest and (nearest.gap - reach) or nil

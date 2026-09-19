@@ -1,0 +1,47 @@
+{
+ "fallen": 5,
+ "minutes": 240,
+ "ours_lost": {
+  "wooden-chest": 17,
+  "iron-chest": 24,
+  "transport-belt": 31,
+  "burner-inserter": 25,
+  "burner-mining-drill": 8,
+  "stone-furnace": 8,
+  "character": 5
+ },
+ "theirs_killed": {},
+ "evolution": 0.06152694458742387,
+ "nests": 37,
+ "biters": 130,
+ "worms": 17,
+ "research": "logistic-science-pack",
+ "techs": [
+  "automation",
+  "automation-science-pack",
+  "electric-mining-drill",
+  "electronics",
+  "gun-turret",
+  "logistics",
+  "military",
+  "steam-power",
+  "steel-processing",
+  "stone-wall"
+ ],
+ "machines": {
+  "burner-mining-drill no_fuel": 4,
+  "burner-mining-drill working": 2,
+  "lab missing_science_packs": 4,
+  "stone-furnace no_ingredients": 7,
+  "burner-mining-drill waiting_for_space_in_destination": 2
+ },
+ "ours": {
+  "drills": 8,
+  "furnaces": 7,
+  "belts": 50,
+  "chests": 44,
+  "inserters": 14,
+  "turrets": 8,
+  "labs": 4
+ }
+}

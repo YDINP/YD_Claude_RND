@@ -270,15 +270,52 @@ local function mine_seats(surface, force, field, wanted, rich)
     end
   end
 
-  -- 두꺼운 자리부터 내놓는다. 끝까지 훑고 나서 고르는 이유: 먼저 나온
-  -- 것에서 끊으면 언제나 «가장자리»를 고르게 된다. 줄은 이미 하나로
-  -- 묶여 있으니(같은 lane) 순서를 바꿔도 벨트 한 줄은 그대로다.
-  table.sort(free, function(a, b)
+  -- «줄»을 고르고, 고른 줄은 «순서대로» 채운다.
+  --
+  -- 한 번 두꺼운 자리부터 내놓게 했다가 되돌렸다. 밭 전체에서 두꺼운
+  -- 순으로 고르면 자리가 흩어진다. 실측(석탄밭):
+  --
+  --     줄 y=76 북쪽   84, 86, ..., 92      <- 88, 90 이 빈다
+  --     줄 y=76 남쪽   ..., 88, 90, 92      <- 84, 86 이 빈다
+  --
+  -- 이 배치의 전부는 「마주보는 둘이 가운데 벨트에 떨군다」인데, 자리가
+  -- 흩어지면 벨트 한 줄로 받으려고 줄을 그은 보람이 없어진다. 띄엄띄엄
+  -- 선 열 대를 이으려면 빈 칸에도 벨트를 깔아야 하고, 그 벨트는 아무도
+  -- 안 먹인다.
+  --
+  -- 그래서 두 단계로 고른다.
+  --
+  --   1  줄(band)마다 그 줄에서 쓸 수 있는 자리의 광석을 합해 점수를 낸다
+  --   2  점수 높은 줄부터, 그 줄 «안에서는 nth 순서대로» 내놓는다
+  --
+  -- nth 순서가 곧 줄을 따라가는 순서다(pair 가 한 칸씩 나아가고 side 가
+  -- 양옆을 번갈아 본다). 그러니 이 순서로 채우면 어깨를 맞대고 선다.
+  local bands, order = {}, {}
+  for _, seat in ipairs(free) do
+    local band = math.floor(math.floor(seat.nth / 2) / MINE.row)
+    if not bands[band] then
+      bands[band] = { band = band, ore = 0, seats = {} }
+      order[#order + 1] = bands[band]
+    end
+    bands[band].ore = bands[band].ore + seat.ore
+    bands[band].seats[#bands[band].seats + 1] = seat
+  end
+  table.sort(order, function(a, b)
     if a.ore ~= b.ore then return a.ore > b.ore end
-    return a.nth < b.nth
+    return a.band < b.band
   end)
+
   local keep = {}
-  for i = 1, math.min(#free, wanted or 12) do keep[i] = free[i] end
+  local cap = wanted or 12
+  for _, row in ipairs(order) do
+    -- 줄 안에서는 자리 번호 순서. 그래야 빈 칸 없이 이어 선다.
+    table.sort(row.seats, function(a, b) return a.nth < b.nth end)
+    for _, seat in ipairs(row.seats) do
+      if #keep >= cap then break end
+      keep[#keep + 1] = seat
+    end
+    if #keep >= cap then break end
+  end
 
   return { free = keep, ours = ours, blocked = blocked, thin = thin,
            found = #free, rich = rich, wide = wide,
