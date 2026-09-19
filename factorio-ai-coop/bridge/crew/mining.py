@@ -155,11 +155,14 @@ class MiningMixin:
                     laid = {}
                 sites = [dict(seat, outlet="free")
                          for seat in (laid.get("free") or [])]
+                rocks = sum(1 for seat in sites if seat.get("clear"))
                 if sites:
                     self.say(f"{ore} 밭에 줄을 긋고 그 옆에 붙이겠습니다 "
                              f"(자리표 {len(sites)}칸, 이미 선 것 "
                              f"{laid.get('ours', 0)}대, 얇아서 거른 자리 "
-                             f"{laid.get('thin', 0)}칸).", who=name)
+                             f"{laid.get('thin', 0)}칸"
+                             + (f", 치우고 쓸 자리 {rocks}칸" if rocks else "")
+                             + ").", who=name)
             if not sites:
                 sites = self.bridge.drill_site(name, spot["x"], spot["y"],
                                                radius=12, receiver=receiver,
@@ -194,6 +197,19 @@ class MiningMixin:
                                   and self.obtain(worker, receiver, 1)):
                     self.say(f"자재가 떨어져 {built}대까지만 세웠습니다.", who=name)
                     break
+                # 바위나 나무가 앉아 있으면 «치우고» 세운다.
+                #
+                # 자리표가 「치우면 놓을 수 있다」까지 알아내 왔는데 여기서
+                # 그냥 세우려 들면 place 가 실패하고, 그 자리는 영영 빈다.
+                # 알아낸 것을 쓰는 데가 없으면 알아낸 보람이 없다.
+                block = site.get("clear")
+                if block:
+                    try:
+                        worker.handle.demolish(block["x"], block["y"],
+                                               name=block["name"],
+                                               search_radius=2, timeout=420)
+                    except TaskFailed:
+                        continue
                 try:
                     drill = worker.handle.place(DRILL, site["x"], site["y"],
                                                 direction=site["direction"],

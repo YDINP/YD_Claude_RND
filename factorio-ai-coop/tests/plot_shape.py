@@ -234,6 +234,39 @@ def thickness_is_this_ore() -> list:
     return bad
 
 
+# -- 치울 수 있는 것은 «막힌 것»이 아니다 -----------------------------------
+#
+# 사용자: "중간에 큰바위가 있는게 파괴할방법잇나?"
+#
+# 실측(16회차): big-rock (-48,14) 이 철 줄 한가운데에 있었다. 큰바위는
+# 2x2 자리 네 칸을 덮는데, 자리표는 can_place_entity 가 거짓이면 그냥
+# 「막힘」으로 세고 지나갔다. 바위는 우리 힘의 것이 아니라서 blocking 도
+# 못 본다. 그래서 그 자리는 영영 빈다.
+#
+# 벨트에서는 이미 한 번 갈라 놓았다 - sweep(줍고 깐다) / lift(걷고 깐다)
+# / blocked(못 깐다). 같은 말이 자리표에는 없었다. 한 곳에서 배운 것을
+# 다른 곳에 안 옮기면 같은 사고를 두 번 겪는다.
+def rocks_are_clearable() -> list:
+    bad = []
+    lua = io.open(os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "plots.lua"),
+                  encoding="utf-8").read()
+    if "clearable" not in lua:
+        bad.append("자리표가 «치우면 놓을 수 있는» 자리를 안 가린다")
+    if "seat_clear" not in lua:
+        bad.append("자리표가 치울 것을 자리에 안 실어 보낸다 (clear)")
+
+    # 그리고 무리가 «실제로» 치워야 한다. 가려만 놓고 안 쓰면 place 가
+    # 실패하고 그 자리는 고치기 전과 똑같이 빈다.
+    src = io.open(os.path.join(ROOT, "bridge", "crew", "mining.py"),
+                  encoding="utf-8").read()
+    build = src[src.find("            built = 0"):]
+    if 'site.get("clear")' not in build:
+        bad.append("mining.py 가 자리표의 clear 를 안 본다")
+    if "demolish(" not in build:
+        bad.append("mining.py 가 세우기 전에 안 치운다")
+    return bad
+
+
 def main() -> int:
     shape = lua_shape()
     bad = []
@@ -251,6 +284,7 @@ def main() -> int:
     bad.extend(working_chest())
     bad.extend(one_ore_per_field())
     bad.extend(thickness_is_this_ore())
+    bad.extend(rocks_are_clearable())
     for line in bad:
         print("  [FAIL] " + line)
     print(f"\n{len(bad)} problems - plot shape agrees "

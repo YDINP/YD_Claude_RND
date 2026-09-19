@@ -263,6 +263,36 @@ local function mine_seats(surface, force, field, wanted, rich, ore_name)
     lane = wide and (math.floor(field.top) + 2) or (math.floor(field.left) + 2),
   }
 
+  -- 「못 놓는다」와 «치우면 놓는다»는 다른 말이다.
+  --
+  -- 벨트에서 이미 한 번 갈랐던 것(belts.lua 의 sweep/lift)을 여기서는
+  -- 안 갈랐다. 큰바위 한 덩이가 2x2 자리 네 칸을 영영 먹는다 - 자리표는
+  -- 「막힘」이라 세고 지나가고, 아무도 그 바위를 치우지 않는다. 바위는
+  -- 우리 힘의 것이 아니므로 blocking 도 못 본다.
+  --
+  -- 실측(16회차): big-rock (-48,14) 하나가 철 줄 한가운데에 있었다.
+  --
+  -- 치울 수 있는 것만 고른다 - 바위와 나무처럼 캐면 없어지고 자재까지
+  -- 돌려주는 것들. 우리 건물은 여기서 다루지 않는다(자리를 옮기는 일은
+  -- 사람이 정한다).
+  local CLEARABLE = { ["simple-entity"] = true, ["tree"] = true }
+  local function clearable(here)
+    local found = nil
+    for _, e in pairs(surface.find_entities_filtered {
+      position = here, radius = 1.6,
+    }) do
+      if e.type == "character" or e.type == "item-entity" then
+        -- 지나간다. 사람과 바닥에 흘린 것은 막는 것이 아니다.
+      elseif CLEARABLE[e.type] and e.minable then
+        found = found or { name = e.name, x = e.position.x, y = e.position.y }
+      else
+        -- 치울 수 없는 것이 하나라도 있으면 이 자리는 그냥 막힌 자리다.
+        return nil
+      end
+    end
+    return found
+  end
+
   -- 2x2 밑에 «몇 개»가 있는가. 닿았는지가 아니라 얼마나 있는지를 센다.
   --
   -- 「하나라도 닿으면 캔다」였던 시절의 값(14회차 실측): 열 자리 중 일곱이
@@ -308,6 +338,7 @@ local function mine_seats(surface, force, field, wanted, rich, ore_name)
       ours = ours + 1
     else
       local under = ore_under(seat.x, seat.y)
+      local seat_clear = under < rich and nil or clearable(here)
       if under < rich then
         -- 얇다. 여기서 멈추지 «않고» 다음 줄로 간다 - 광맥 가장자리가
         -- 얇은 것은 정상이고, 몸통은 두세 줄 안쪽에 있다. 철밭 실측:
@@ -316,12 +347,12 @@ local function mine_seats(surface, force, field, wanted, rich, ore_name)
       elseif surface.can_place_entity {
         name = PLAN.mine.what, position = here,
         direction = defines.direction[seat.direction], force = force,
-      } then
+      } or seat_clear then
         -- 방향은 «숫자»로 내보낸다. 부르는 쪽(place)이 숫자를 받는다.
         -- 이름으로 내보냈다가 조용히 0(북쪽)으로 읽히면, 열여섯 대가
         -- 전부 엉뚱한 데로 떨군다 - 자리표를 만든 보람이 통째로 사라진다.
         free[#free + 1] = { x = here.x, y = here.y, nth = nth,
-                            ore = under,
+                            ore = under, clear = seat_clear,
                             direction = defines.direction[seat.direction],
                             facing = seat.direction }
       else
