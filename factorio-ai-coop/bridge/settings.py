@@ -237,7 +237,10 @@ TURRET_RING = 18
 # 별개의 연구고, 벽도 «stone-wall» 로 따로 있다. 방어를 military 로 알고
 # 있어서, 그 연구가 끝난 뒤에도 터렛 레시피는 잠긴 채였다 - 그리고 바로
 # 그때 바이터 열두 마리가 왔다.
-RESEARCH_ORDER = ("gun-turret", "stone-wall", "military",
+# 총을 여는 연구. 「무장했는가」를 묻는 자리가 여럿이라 이름을 준다.
+TURRET_TECH = "gun-turret"
+
+RESEARCH_ORDER = (TURRET_TECH, "stone-wall", "military",
                   "automation", "logistics", "electric-mining-drill",
                   "steel-processing", "logistic-science-pack")
 
@@ -459,3 +462,13 @@ RETREAT_SPAN = 60
 # 한 대가 여섯 분을 꼬박 일해야 하는 양이고, 그만큼 쌓여 있는데도 판금이
 # 안 나온다면 모자란 것은 광석이 아니다.
 PILED_UP = 100
+
+# 위협을 얼마나 멀리까지 살피는가.
+#
+# 이 값은 도망 기준보다 «커야 한다». 작으면 기준이 반경에 갇힌다 -
+# 여든 타일만 살피면서 백 타일 기준으로 판정하면, 그 사이 스무 타일에
+# 있는 적은 규칙상 도망칠 거리인데 보이지가 않는다. 실제로 그래서 둘이
+# 죽었다.
+#
+# 그리고 총이 없을 때는 이 값이 «곧 도망 기준»이다. 보이면 물러난다.
+DANGER_LOOK = 120

@@ -111,12 +111,31 @@ local function threat_side(surface, home)
 end
 
 -- 그 면의 방어선 위에 터렛이 설 자리들.
-local function turret_seats(surface, force, box, side)
-  local seats = {}
+-- 둥지 쪽부터, 그다음 옆구리, 마지막이 반대쪽.
+--
+-- 사용자: "포탑은 최대한 방어적으로 구성하되, 심시티는 잘 해야함."
+--
+-- 지금까지는 «한 면»만 세웠다. 둥지가 남쪽이면 남쪽에만 선다. 그런데
+-- 바이터는 둥지에서 곧장 오지 않는다 - 공해 구름을 따라오고, 길을 막으면
+-- 돌아온다. 한 면만 막힌 공장은 나머지 세 면이 열려 있는 공장이다.
+--
+-- 그렇다고 네 면을 한꺼번에 세우면 총이 흩어진다. 둘레가 네 배가 되면
+-- 같은 수로 네 배 성기게 서고, 성긴 방어선은 어디서도 못 막는다.
+--
+-- 그래서 «순서»를 준다. 둥지 쪽을 먼저 채우고, 다 차면 옆구리, 그다음
+-- 반대쪽. 자리 목록이 그 순서로 나오므로 세우는 쪽은 앞에서부터 가져간다.
+local FLANK = {
+  north = { "north", "west", "east", "south" },
+  south = { "south", "west", "east", "north" },
+  west  = { "west", "north", "south", "east" },
+  east  = { "east", "north", "south", "west" },
+}
+
+local function seats_on(surface, force, box, side, seats)
   local function try(x, y)
     if surface.can_place_entity { name = TURRET, position = { x, y },
                                   force = force } then
-      seats[#seats + 1] = { x = x, y = y }
+      seats[#seats + 1] = { x = x, y = y, side = side }
     end
   end
   if side == "west" or side == "east" then
@@ -125,6 +144,13 @@ local function turret_seats(surface, force, box, side)
   else
     local y = (side == "north") and box.top or box.bottom
     for x = box.left, box.right, TURRET_GAP do try(x, y) end
+  end
+end
+
+local function turret_seats(surface, force, box, side)
+  local seats = {}
+  for _, face in pairs(FLANK[side] or { side }) do
+    seats_on(surface, force, box, face, seats)
   end
   return seats
 end

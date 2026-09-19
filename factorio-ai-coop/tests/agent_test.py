@@ -307,11 +307,23 @@ def main() -> int:
           len(automations) == len(set(automations)) and len(automations) > 1,
           str(automations))
 
-    print("\n3e. each agent still prefers its own resource")
-    stock_first = [j.key for j in plan(
-        at({"coal": 10, "iron-plate": 40, "iron-ore": 99}, WITH_DRILL, CAN_TOOL),
-        focus="copper-ore") if j.key.startswith("stock:")]
-    check("its own ore is offered first",
+    print("\n3e. hands only dig what no drill can")
+
+    # 사용자: "채굴기건설후 / 채굴기를 만들 수 있는조건이면 직접 광질하지
+    # 않도록 해줘." 기계가 할 수 있는 일을 손으로 하지 않는다.
+    tooled_up = at({"coal": 10, "iron-plate": 40, "iron-ore": 99},
+                   WITH_DRILL, CAN_TOOL)
+    check("no hand-mining once a drill stands",
+          not [j.key for j in plan(tooled_up, focus="copper-ore")
+               if j.key.startswith("stock:")])
+
+    # 개국 직후에는 손이 유일한 시작점이다. 그 문은 닫지 않는다.
+    bare = at({"coal": 10, "iron-plate": 40, "iron-ore": 99})
+    stock_first = [j.key for j in plan(bare, focus="copper-ore")
+                   if j.key.startswith("stock:")]
+    check("bare hands still dig when nothing else can",
+          bool(stock_first), str(stock_first[:2]))
+    check("and its own ore is offered first",
           stock_first and stock_first[0] == "stock:copper-ore", str(stock_first[:2]))
 
     print("\n3f. each agent works a different resource")

@@ -13,7 +13,8 @@ from typing import Any
 from settings import (BURNER_DRILLS, CHEST, DRILL, FIRST_PACKS, DRILLS_PER_AGENT, COAL_RIGS, DRILLS_PER_FURNACE, DRILL_FUEL, GROW_STEP,
                       ENGINES_PER_BOILER, FOCUS_ORDER, FURNACES_PER_DRILL,
                       FURNACE_FUEL, MAX_FURNACES, ORE_BATCH, PLATES_FOR_TOOLS,
-                      SMELT_BATCH, SMELT_FOR_TECH, SMELT_MARGIN, STOCKPILE)
+                      SMELT_BATCH, SMELT_FOR_TECH, SMELT_MARGIN, STOCKPILE,
+                      TURRET_TECH)
 from world import Snapshot
 from jobs import Job
 from layout import craft_seat, furnace_seat, orphan_drills
@@ -106,6 +107,35 @@ def drill_target(snap: Snapshot, crew: int) -> int:
     # 더 지는 일이다. 갚기 전에는 늘리지 않는다 - 이미 선 것으로 버틴다.
     if drills == wanted and snap.debt <= 0:
         wanted = drills + GROW_STEP
+
+    # 총이 없는 동안에는 화로 비율이 상한이 아니다.
+    #
+    # 사용자: "최대한 빨리 채굴기를 최대한으로 늘려서 포탑을 빠르게
+    # 건설해야함."
+    #
+    # 비율은 «정상 운영»의 규칙이다. 화로 셋에 채굴기 셋이면 아무것도
+    # 안 넘치고 아무것도 안 모자란다. 그런데 총이 한 대도 없는 판에서는
+    # 균형이 목표가 아니다 - 살아남는 것이 목표고, 그러려면 연구가 끝나야
+    # 하고, 연구가 끝나려면 광석이 있어야 한다.
+    #
+    # 이 판(60분째)이 그 값이다: 채굴기 9, 화로 3, 터렛 0, gun-turret
+    # 연구 미완. 비율대로면 채굴기 상한이 «셋»이라 더 안 늘린다.
+    #
+    # 그래서 무장할 때까지는 버너 시대 상한까지 연다. 상한을 «없애지는»
+    # 않는다 - 채굴기 161대에 과학팩 0개였던 판이 있었고, 너비는 사슬을
+    # 대신하지 못한다. 그리고 공해 여유는 그대로 깎는다. 둥지를 깨우면서
+    # 총을 만드는 것은 앞뒤가 바뀐 일이다.
+    #
+    # 다만 «광석이 이미 썩고 있으면» 열지 않는다. 캔 것이 안 녹고 쌓여
+    # 있는데 더 캐는 것은 연구를 앞당기지 않는다 - 연구를 앞당기는 것은
+    # 판금이지 광석이 아니다. 이 저장소가 그 값을 두 번 치렀다: 구리광석
+    # 837개에 화로 한 대, 그리고 채굴기 161대에 과학팩 0개.
+    #
+    # 그래서 「총이 없다」와 「광석이 흐른다」가 «둘 다» 참일 때만 연다.
+    piling = snap.have("iron-ore") + snap.have("copper-ore") >= STOCKPILE
+    unarmed = not snap.knows(TURRET_TECH) and snap.debt <= 0 and not piling
+    if unarmed:
+        wanted = max(wanted, BURNER_DRILLS)
     # 버너 시대에는 상한이 있다. 숙련자들의 권장치는 마흔 대 안팎인데 우리는
     # 161대를 세우고도 과학팩이 0개였다. 너비는 사슬을 대신하지 못한다.
     if not snap.knows("electric-mining-drill"):
@@ -114,7 +144,13 @@ def drill_target(snap: Snapshot, crew: int) -> int:
     wanted = int(wanted * pollution_room(snap))
     # 광맥마다 한 대씩은 남긴다. 완전히 0으로 만들면 사슬이 통째로 멈추고,
     # 멈춘 공장은 스스로 방어를 세울 재료도 못 만든다.
-    return max(len(FOCUS_ORDER), min(crew * DRILLS_PER_AGENT, wanted))
+    # 사람 수 상한도 무장 전에는 풀어준다. 위에서 상한을 열어놓고 여기서
+    # 닫으면 연 적이 없는 것과 같다 - 다섯 명 x 여섯 대 = 서른이 실질
+    # 상한이 되어버린다. 채굴기는 세워두면 사람 없이도 캔다.
+    per_head = crew * DRILLS_PER_AGENT
+    if unarmed:
+        per_head = max(per_head, BURNER_DRILLS)
+    return max(len(FOCUS_ORDER), min(per_head, wanted))
 
 
 def furnace_target(snap: Snapshot, crew: int) -> int:
@@ -165,6 +201,37 @@ def _drill_fields(snap: Snapshot) -> list[dict]:
     """
     return [one for one in (getattr(snap, "fields", None) or [])
             if isinstance(one, dict)]
+
+
+def digs_itself(snap: Snapshot) -> bool:
+    """기계가 캘 수 있는 판인가. 그렇다면 손으로 캐지 않는다.
+
+    사용자: "채굴기건설후 / 채굴기를 만들 수 있는조건이면 직접 광질하지
+    않도록 해줘."
+
+    맞다. 버너 채굴기 한 대는 초당 0.25개를 캔다. 사람이 곡괭이로 캐는
+    속도와 비슷한데, 채굴기는 «자는 동안에도» 캔다. 사람이 한 시간
+    캐는 것과 채굴기 한 대를 놓는 십 초가 같은 값이 아니다.
+
+    실측(37분째)이 그 값을 보여줬다 - 다섯이 손으로 캐서 구리광석을
+    837개 모으는 동안 땅에 선 채굴기는 두 대였고, 가방에 든 완성품도
+    두 대였다.
+
+    세 가지 중 하나면 기계가 할 수 있다:
+
+      * 이미 서 있다      그 광맥은 기계가 캐고 있다
+      * 손에 들고 있다    놓기만 하면 된다
+      * 만들 수 있다      만들어 놓으면 된다
+
+    셋 다 아닐 때만 손이 나선다. 개국 직후가 그렇다 - 돌도 철도 없으니
+    채굴기를 만들 수 없고, 그때는 손이 유일한 시작점이다. 그 문은
+    닫지 않는다.
+    """
+    if snap.buildings.get(DRILL, {}).get("count", 0) > 0:
+        return True
+    if snap.have(DRILL) >= 1:
+        return True
+    return bool(snap.can_make(DRILL) and snap.can_make(CHEST))
 
 
 def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
@@ -445,11 +512,15 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     # 예전에는 서른 개를 채우면 멈췄다 - 그래서 여섯 명 중 셋이 가방에
     # 광석을 안고 서 있었다. 화로가 놀고 있으면 더 캔다.
     hungry = snap.have("coal") < FURNACE_FUEL * 4
+    hands_free = digs_itself(snap)
     for ore in [focus] + [o for o in FOCUS_ORDER if o != focus]:
         spot = snap.ore(ore)
         if not spot:
             continue
         if snap.have(ore) >= STOCKPILE and not (ore == "coal" and hungry):
+            continue
+        # 채굴기가 할 수 있는 일을 손으로 하지 않는다.
+        if hands_free:
             continue
         jobs.append(Job(f"{ore}를 더 캐 오겠습니다.", key=f"stock:{ore}", steps=[
             ("mine", {**spot, "count": STOCKPILE, "search_radius": 10,

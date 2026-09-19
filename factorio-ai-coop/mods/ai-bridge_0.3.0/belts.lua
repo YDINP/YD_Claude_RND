@@ -84,6 +84,53 @@ end
 --
 -- 이미 벨트가 선 칸은 지나갈 수 있는 칸으로 친다 - 그것이 바로 우리가 깔아둔
 -- 길이기 때문이다.
+-- 대각선 이음매를 메운다.
+--
+-- 사용자가 사진과 함께 짚었다: "컨베이어 벨트는 왜 설치하다가 중간중간
+-- 끊어먹는거임?" 빨간 원 둘이 «둘 다 꺾이는 자리»였다.
+--
+-- 계획을 재보니 길 자체에 대각선 걸음이 들어 있었다:
+--
+--   (83,56) -> (84,55)   거리 2   x+1, y-1
+--   (84,52) -> (85,51)   거리 2
+--   (85,46) -> (84,45)   거리 2
+--
+-- 벨트는 대각선으로 못 놓는다. 그러니 그 코너 칸은 계획에 없고, 아무도
+-- 그 자리를 안 맡고, 길이 거기서 끊긴다.
+--
+-- 대각선은 길 찾기가 목적지에 «못 닿았을 때» 생긴다. `walk` 은 닿지
+-- 못하면 가장 가까운 칸에서 멈추는데, 그 칸이 대각선이면 이음매가
+-- 대각선이 된다. 등뼈와 줄기를 이어붙이는 자리도 마찬가지다.
+--
+-- 한 칸만 끼우면 이어진다. 두 모서리 중 놓을 수 있는 쪽을 고른다.
+local function stitch(surface, force, tiles)
+  if not tiles or #tiles < 2 then return tiles end
+  local out = {}
+  for i = 1, #tiles do
+    out[#out + 1] = tiles[i]
+    local nxt = tiles[i + 1]
+    if nxt then
+      local dx, dy = nxt.x - tiles[i].x, nxt.y - tiles[i].y
+      if math.abs(dx) == 1 and math.abs(dy) == 1 then
+        local a = { x = nxt.x, y = tiles[i].y }
+        local b = { x = tiles[i].x, y = nxt.y }
+        local pick = a
+        if not passable(surface, force, a.x, a.y)
+           and passable(surface, force, b.x, b.y) then
+          pick = b
+        end
+        out[#out + 1] = { x = pick.x, y = pick.y }
+      end
+    end
+  end
+  -- 방향을 다시 매긴다. 끼워 넣은 칸은 방향이 없고, 그 «앞» 칸의 방향도
+  -- 바뀐다 - 이제 다음 칸이 달라졌기 때문이다. 마지막 칸은 그대로 둔다.
+  for i = 1, #out - 1 do
+    out[i].dir = dir_of(out[i], out[i + 1])
+  end
+  return out
+end
+
 local function walk(surface, force, from, goal)
   local function key(x, y, d) return x .. ":" .. y .. ":" .. d end
 
@@ -171,7 +218,7 @@ local function walk(surface, force, from, goal)
   end
   -- 마지막 칸(제련 구역 줄머리)은 내리는 줄이 맡는다. 두 번 세지 않는다.
   tiles[#tiles] = nil
-  return tiles, best_gap, best_turn
+  return stitch(surface, force, tiles), best_gap, best_turn
 end
 
 -- 시작점이 막혀 있으면 가장 가까운 빈 칸으로 옮긴다. 채굴기 밭 한복판에서
@@ -789,6 +836,9 @@ local function field_lines(name, limit)
           if stem then
             for _, t in ipairs(stem) do tiles[#tiles + 1] = t end
           end
+          -- 등뼈 끝과 줄기 첫 칸이 대각선으로 만날 수 있다. 줄기는 밭
+          -- «근처»까지만 오지 밭 끝 칸에 딱 붙어 오지는 않기 때문이다.
+          tiles = stitch(surface, force, tiles)
           storage.lines[key] = { tiles = tiles, plan = PLAN }
         end
       end

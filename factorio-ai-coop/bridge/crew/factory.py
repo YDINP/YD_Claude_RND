@@ -11,7 +11,7 @@ from client import RconError, TaskFailed
 
 from settings import (BACKOFF_SECONDS, BELT_REACH, BELT_SPARE, FIRST_PACKS,
                       SCIENCE_FEED,
-                      DANGER_NEAR, DANGER_PER_HEAD, RETREAT_SPAN,
+                      DANGER_LOOK, DANGER_NEAR, DANGER_PER_HEAD, RETREAT_SPAN,
                       TURRET_AMMO, TURRET_RING, TURRET_TARGET)
 from world import Snapshot
 from jobs import Job
@@ -287,7 +287,7 @@ class FactoryMixin:
         싸워줄 때까지는.
         """
         try:
-            near = self.bridge.call("threat", worker.name, 80)
+            near = self.bridge.call("threat", worker.name, DANGER_LOOK)
         except RconError:
             return None
         if near.get("error"):
@@ -306,7 +306,32 @@ class FactoryMixin:
         # 아니라 «달아날 수 있는가»로 정해야 하고, 둘이 쫓을 때와 스물일곱이
         # 쫓을 때는 달아날 수 있는 거리가 다르다.
         many = int(near.get("attackers") or 1)
-        edge = DANGER_NEAR + min(many, 20) * DANGER_PER_HEAD
+
+        # 총이 없으면 «보이면» 도망이다.
+        #
+        # 사용자: "캐릭터가 적을보면 도망가게해야함"
+        #
+        # 그리고 그 전에 셈이 어긋나 있었다. 기준은 최대 백 타일까지
+        # 벌어지는데 살피는 반경이 여든 타일로 못 박혀 있었다:
+        #
+        #     기준   40 + 34마리 x 3 = 100타일
+        #     반경                     80타일
+        #     로그   "적 34마리가 92타일 앞에 있습니다"
+        #
+        # 아흔두 타일은 기준 «안»인데 반경 «밖»이다. 자기 규칙을 켤 만큼
+        # 멀리 못 봤다. 그래서 둘이 죽었다.
+        #
+        # 재는 거리와 판정하는 거리가 따로 놀면 판정은 재는 거리에 갇힌다.
+        # 이제 반경이 기준을 덮고(DANGER_LOOK), 기준은 총이 있느냐가 정한다.
+        #
+        #   총 없음   보이는 족족 물러난다. 맨손으로는 한 마리도 못 잡는다 -
+        #             이 저장소의 전투 기록은 「잡은 것 없음」뿐이다.
+        #   총 있음   터렛 사거리 밖까지만. 터렛이 대신 싸우므로 일을 한다.
+        armed = int(near.get("turrets") or 0) > 0
+        if armed:
+            edge = DANGER_NEAR + min(many, 20) * DANGER_PER_HEAD
+        else:
+            edge = DANGER_LOOK
         if gap > edge:
             return None
 

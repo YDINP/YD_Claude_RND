@@ -116,9 +116,18 @@ local function threat(name, radius)
     type = "unit", force = "enemy", position = b.position, radius = reach,
   }
   local closest_unit = math.huge
+  -- 떼의 «무게중심»도 같이 잰다. 거리만 알면 「가깝다」까지는 알지만
+  -- 「어느 쪽으로 물러나야 하는가」는 모른다. 기지가 이미 뚫렸을 때
+  -- 필요한 것은 거리가 아니라 방향이다.
+  local sx, sy = 0, 0
   for _, u in pairs(units) do
     local d = Tasks.dist(b.position, u.position)
     if d < closest_unit then closest_unit = d end
+    sx, sy = sx + u.position.x, sy + u.position.y
+  end
+  local swarm = nil
+  if #units > 0 then
+    swarm = { x = math.floor(sx / #units), y = math.floor(sy / #units) }
   end
 
   local evo = 0
@@ -133,6 +142,7 @@ local function threat(name, radius)
     nearest_nest = nearest and math.floor(near_d) or nil,
     attackers = #units,
     nearest_attacker = (#units > 0) and math.floor(closest_unit) or nil,
+    swarm = swarm,
     evolution = math.floor(evo * 1000) / 1000,
     turrets = #surface.find_entities_filtered { type = "ammo-turret", force = force },
     -- 대비 수단이 열려 있는가. 아직 잠겨 있으면 «위협 없음»은 위안이 안 된다.
