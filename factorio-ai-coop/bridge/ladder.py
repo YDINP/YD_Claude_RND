@@ -14,7 +14,7 @@ from settings import (BURNER_DRILLS, CHEST, DRILL, FIRST_PACKS, DRILLS_PER_AGENT
                       ENGINES_PER_BOILER, FOCUS_ORDER, FURNACES_PER_DRILL,
                       FURNACE_FUEL, MAX_FURNACES, ORE_BATCH, PLATES_FOR_TOOLS,
                       SMELT_BATCH, SMELT_FOR_TECH, SMELT_MARGIN, STOCKPILE,
-                      TURRET_TECH)
+                      TURRET_TECH, NOISE_ROOM)
 from world import Snapshot
 from jobs import Job
 from layout import craft_seat, furnace_seat, orphan_drills
@@ -133,7 +133,21 @@ def drill_target(snap: Snapshot, crew: int) -> int:
     #
     # 그래서 「총이 없다」와 「광석이 흐른다」가 «둘 다» 참일 때만 연다.
     piling = snap.have("iron-ore") + snap.have("copper-ore") >= STOCKPILE
-    unarmed = not snap.knows(TURRET_TECH) and snap.debt <= 0 and not piling
+    # 그리고 «시끄러워도 되는 지도»에서만 연다.
+    #
+    # 사용자: "이번맵은 적군기지가 너무가까이있음. 이점 유의해서 추론하고
+    # 플레이하도록"
+    #
+    # 버너 채굴기는 하나하나가 굴뚝이다. 마흔 대면 분당 사백의 공해고,
+    # 둥지가 50타일인 지도에서 그것은 총이 서기 전에 습격을 부른다.
+    # 「무장 전에는 넓게 캔다」는 «캘 시간이 있을 때»의 규칙이다.
+    #
+    # 여유를 모르면 열지 않는다. 모르는 것을 안전으로 읽지 않는다 -
+    # 이 저장소가 여러 번 한 실수다.
+    room = snap.slack
+    quiet_enough = isinstance(room, (int, float)) and room >= NOISE_ROOM
+    unarmed = (not snap.knows(TURRET_TECH) and snap.debt <= 0
+               and not piling and quiet_enough)
     if unarmed:
         wanted = max(wanted, BURNER_DRILLS)
     # 버너 시대에는 상한이 있다. 숙련자들의 권장치는 마흔 대 안팎인데 우리는

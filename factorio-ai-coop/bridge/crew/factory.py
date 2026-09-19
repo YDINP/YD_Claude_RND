@@ -332,6 +332,25 @@ class FactoryMixin:
             edge = DANGER_NEAR + min(many, 20) * DANGER_PER_HEAD
         else:
             edge = DANGER_LOOK
+
+        # 둥지가 코앞인 지도에서는 「보이면 도망」이 「영원히 도망」이 된다.
+        #
+        # 사용자: "이번맵은 적군기지가 너무가까이있음."
+        #
+        # 실측(1분째): 가장 가까운 둥지 50타일, 적 9마리가 40타일 앞.
+        # 지금까지의 지도는 264 / 204 / 189 / 142 / 130 이었다. 절반이다.
+        #
+        # 백이십 타일을 기준으로 삼으면 둥지 «자체»가 기준 안에 든다.
+        # 둥지 앞을 서성이는 지킴이와, 우리를 향해 오는 떼는 다른 것인데
+        # 그 둘이 구별되지 않는다. 그러면 아무도 일을 못 하고, 일을 못
+        # 하면 총을 못 만들고, 총이 없으면 영원히 도망이다.
+        #
+        # 그래서 기준은 둥지까지의 거리를 넘지 않는다. 둥지 절반쯤에서
+        # 물러나면 「집 앞의 그들」이 아니라 「나온 그들」에게만 반응한다.
+        nest = near.get("nearest_nest")
+        if isinstance(nest, (int, float)) and nest > 0:
+            edge = min(edge, max(DANGER_NEAR, nest * 0.6))
+
         if gap > edge:
             return None
 
