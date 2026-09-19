@@ -27,7 +27,9 @@
 
 from __future__ import annotations
 
+import io
 import os
+import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -68,6 +70,47 @@ def broken(tiles):
     return sum(1 for i in range(1, len(tiles))
                if abs(tiles[i][0] - tiles[i - 1][0])
                + abs(tiles[i][1] - tiles[i - 1][1]) != 1)
+
+
+
+# -- 간선이 제 임시 상자를 걷어낼 수 있는가 --------------------------------
+#
+# 채굴기 떨구는 자리의 상자는 「벨트가 아직 없을 때의 임시 출구」다. 그런데
+# 벨트가 놓일 자리도 바로 그 칸이다. 둘이 같은 칸을 두고 다투는데 아무도
+# 양보하지 않으면 「벨트를 못 깔았습니다」가 영원히 반복된다 - 실제로
+# 석탄줄(y=76) 위에 상자가 여섯 개였고 벨트는 0칸이었다.
+#
+# 그래서 «걷어내면 놓을 수 있다»를 갈라 둔다. 여기서 지키는 것은 그 목록이
+# 좁게 남아 있는가다. 화로나 채굴기나 터렛이 들어가는 순간 무리가 제
+# 공장을 허물기 시작한다.
+def liftable() -> list:
+    bad = []
+    lua = io.open(os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "belts.lua"),
+                  encoding="utf-8").read()
+    hit = re.search(r"local LIFTABLE = \{(.*?)\}", lua, re.S)
+    if not hit:
+        return ["belts.lua 에 LIFTABLE 이 없다"]
+    names = re.findall(r'\["([a-z-]+)"\]', hit.group(1))
+    if not names:
+        bad.append("LIFTABLE 이 비어 있다")
+    for name in names:
+        if not name.endswith("-chest"):
+            bad.append(f"LIFTABLE 에 상자가 아닌 것이 있다: {name} - "
+                       f"간선이 진짜 건물을 허문다")
+    if "lift = e.name" not in lua:
+        bad.append("막힌 칸을 «걷어내면 놓을 수 있다»로 가르지 않는다")
+    if "elseif lift then" not in lua:
+        bad.append("lift 가 blocked 와 갈라지지 않는다 - cut 이 거기서 끊는다")
+
+    # 그리고 그 표시를 «받아서 실제로 걷는» 자리가 있어야 한다. 표시만
+    # 하고 아무도 안 보는 것이 이 저장소의 가장 오래된 실패 부류다.
+    py = io.open(os.path.join(ROOT, "bridge", "crew", "hauling.py"),
+                 encoding="utf-8").read()
+    if 'one.get("lift")' not in py:
+        bad.append("벨트를 까는 쪽이 lift 를 안 본다 - 표시만 하고 끝난다")
+    elif "demolish" not in py.split('one.get("lift")')[1][:400]:
+        bad.append("lift 를 보기는 하는데 걷어내지 않는다")
+    return bad
 
 
 def main() -> int:
@@ -123,6 +166,7 @@ def main() -> int:
         if text.find("local function stitch(") > text.find("local function walk("):
             problems.append("stitch 가 walk 뒤에 있다. 루아는 그것을 못 본다")
 
+    problems.extend(liftable())
     for line in problems:
         print("  [FAIL] " + line)
     print(f"{len(problems)} problems - belt lines have no diagonal steps")

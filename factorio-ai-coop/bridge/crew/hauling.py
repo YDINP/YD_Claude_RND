@@ -380,6 +380,21 @@ class HaulingMixin:
                                         timeout=300)
                 except TaskFailed:
                     pass
+            # 우리 상자가 앉아 있는 칸은 걷어내고 깐다.
+            #
+            # 채굴기 떨구는 자리의 상자는 「벨트가 아직 없을 때의 임시
+            # 출구」다. 벨트가 오면 그 자리는 벨트 것이고, 걷으면 상자도
+            # 안에 든 것도 가방으로 돌아온다.
+            #
+            # 이것이 없어서 석탄줄(y=76)에 상자 여섯 개가 앉아 있는 동안
+            # 「벨트를 못 깔았습니다」만 되풀이했다. 모드 쪽 `blocking` 은
+            # 기지 도로망만 보고 채굴밭 간선은 안 본다.
+            if one.get("lift"):
+                try:
+                    worker.handle.demolish(one["x"], one["y"],
+                                           name=one["lift"], timeout=420)
+                except TaskFailed:
+                    pass
             try:
                 worker.handle.place(one["what"], one["x"], one["y"],
                                     direction=one.get("dir", 0), timeout=420)

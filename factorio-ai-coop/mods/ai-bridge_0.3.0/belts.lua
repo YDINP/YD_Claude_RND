@@ -297,6 +297,19 @@ local function feed_line(smelt)
 end
 
 -- 아직 없는 것만. 이미 선 벨트는 «이미 해둔 일»이다.
+-- 벨트 자리에 앉아 있을 때 «걷어내도 되는» 것.
+--
+-- 상자뿐이다. 채굴기가 떨구는 자리에 놓는 상자는 「벨트가 아직 없을 때의
+-- 임시 출구」고, 벨트가 오면 그 자리는 벨트 것이다. 걷으면 상자도 안에
+-- 든 것도 가방으로 돌아온다.
+--
+-- 좁게 두는 이유: 화로도 채굴기도 전봇대도 터렛도 «진짜 건물»이다. 길을
+-- 깐다고 그것들을 걷어내기 시작하면 무리가 제 공장을 허문다. 이 저장소는
+-- 그 모양을 이미 한 번 봤다 - 세우면 걷고 걷으면 세우기.
+local LIFTABLE = {
+  ["wooden-chest"] = true, ["iron-chest"] = true, ["steel-chest"] = true,
+}
+
 local function missing(surface, force, tiles, what)
   local out, standing = {}, 0
   for _, tile in pairs(tiles) do
@@ -325,17 +338,26 @@ local function missing(surface, force, tiles, what)
       --
       -- 같은 함정을 화로 자리에서 이미 한 번 겪었다. 그때도 범인은 채굴기가
       -- 흘린 광석이었다. 「못 놓는다」와 「치우면 놓는다」는 다른 말이다.
-      local why, sweepable = nil, true
+      local why, sweepable, lift = nil, true, nil
       for _, e in pairs(surface.find_entities_filtered {
         position = { tile.x, tile.y }, radius = 0.4,
       }) do
         if e.type ~= "character" and e.type ~= "item-entity" then
           why, sweepable = e.name, false
+          -- 「못 놓는다」와 「치우면 놓는다」를 가른 것과 같은 이유로,
+          -- 「걷어내면 놓는다」도 갈라야 한다. 우리 상자가 한 칸 앉아
+          -- 있다고 간선 전체가 영원히 안 깔리는 일이 실제로 있었다 -
+          -- 석탄줄 y=76 위에 상자가 여섯 개였고 벨트는 0칸이었다.
+          if LIFTABLE[e.name] and e.minable and e.force == force then
+            lift = e.name
+          end
           break
         end
       end
       if sweepable then
         out[#out + 1] = { x = tile.x, y = tile.y, dir = tile.dir, sweep = true }
+      elseif lift then
+        out[#out + 1] = { x = tile.x, y = tile.y, dir = tile.dir, lift = lift }
       else
         out[#out + 1] = { x = tile.x, y = tile.y, dir = tile.dir,
                           blocked = true, why = why or "terrain" }
