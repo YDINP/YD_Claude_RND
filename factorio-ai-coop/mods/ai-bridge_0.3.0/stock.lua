@@ -283,6 +283,24 @@ local function broken(name, radius)
   return { agent = name, stopped = out }
 end
 
+-- 스스로 굶은 기계는 «상자»가 아니라 그 기계 자신이 목마르다.
+--
+-- 예전에는 「인서터가 집어 갈 상자에 석탄이 있는가」만 보았다. 그런데
+-- 버너 인서터는 저도 석탄을 먹는다. 16회차 실측:
+--
+--     철 인서터   no_fuel 연료=0
+--     구리 인서터 no_fuel 연료=0
+--     철밭        14대 중 10대 waiting_for_space_in_destination
+--     구리밭      16대 전부 waiting_for_space_in_destination
+--     상자        둘 다 비어 있음
+--
+-- 서른 대가 캔 것이 벨트에 꽉 찬 채 멈췄다. 줄 끝의 팔 하나가 굶었기
+-- 때문이다. 그 팔을 보는 눈이 없었다.
+--
+-- 급유 일감은 「이 자리에 석탄을 넣어라」이므로, 자리만 내놓으면 무리가
+-- 이미 할 줄 안다. 새 일감을 만들 필요가 없다 - 눈을 넓히면 된다.
+local BURNS = { "inserter", "mining-drill", "furnace", "boiler" }
+
 local function hungry_rigs(name, radius)
   local a = agent(name)
   local b = body(a)
@@ -290,6 +308,20 @@ local function hungry_rigs(name, radius)
 
   local reach = math.min(radius or MAX_OBSERVE_RADIUS, MAX_OBSERVE_RADIUS)
   local out = {}
+  for _, e in pairs(b.surface.find_entities_filtered {
+    position = b.position, radius = reach, type = BURNS, force = b.force,
+  }) do
+    if e.status == defines.entity_status.no_fuel then
+      local tank = e.get_fuel_inventory()
+      if tank and tank.get_item_count("coal") < 5 then
+        out[#out + 1] = {
+          x = e.position.x, y = e.position.y,
+          coal = tank.get_item_count("coal"), what = e.name,
+          distance = math.floor(Tasks.dist(b.position, e.position) * 10) / 10,
+        }
+      end
+    end
+  end
   for _, arm in pairs(b.surface.find_entities_filtered {
     position = b.position, radius = reach, type = "inserter", force = b.force,
   }) do
@@ -304,6 +336,7 @@ local function hungry_rigs(name, radius)
         if held < 10 then
           out[#out + 1] = {
             x = shelf.position.x, y = shelf.position.y, coal = held,
+            what = shelf.name,
             distance = math.floor(Tasks.dist(b.position, shelf.position) * 10) / 10,
           }
         end
