@@ -1642,6 +1642,25 @@ def main() -> int:
     check("seats hand out numeric directions",
           "direction = defines.direction[seat.direction]" in _plots)
 
+    # 첫 대도 자리표를 쓴다.
+    #
+    # zones 는 «채굴기가 선» 밭만 알려준다. 그래서 첫 대는 영원히 자리표를
+    # 못 쓰고 옛 길(drill_site)로 아무 데나 섰다. 그런데 첫 대가 줄을 정한다 -
+    # 한 번 어긋나면 그 뒤가 전부 어긋나고, 어긋난 것들이 자리표 자리를 막는다.
+    #
+    # 실측(새 판 78분째): 석탄 채굴기 18대가 서 있는데 자리표는 「이미 선 것 0,
+    # 막힘 26, 남은 자리 2」라고 답했다. 떨구는 자리가 여섯 줄로 흩어졌고
+    # 대부분이 서로에게 떨구고 있었다 - 석탄끼리 서로 먹이면 둘 다 멈춘다.
+    #
+    # 게임 없이는 자리를 못 고르므로 «코드의 모양»을 본다.
+    _mining = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                "bridge", "crew", "mining.py"), encoding="utf-8").read()
+    _auto = _mining.split("routine 자동 채굴" if "routine 자동 채굴" in _mining
+                          else "sites = []")[-1][:2000]
+    check("the first drill on a patch still gets a seat map",
+          "if not patch:" in _auto and "spot[\"x\"] - 1" in _auto,
+          "밭이 없을 때 광맥 위의 점으로 자리표를 부르지 않는다")
+
     # 각자 생각하는 머리는 «꺼둘 수 있어야» 한다.
     #
     # 사용자: "에이전트들 자가생각행동 잠시 멈추고 반장이 채굴기 심시티부터
