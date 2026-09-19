@@ -1,0 +1,34 @@
+{
+ "fallen": 6,
+ "minutes": 31,
+ "ours_lost": {
+  "wooden-chest": 3,
+  "iron-chest": 2,
+  "transport-belt": 24,
+  "burner-mining-drill": 5,
+  "stone-furnace": 1,
+  "character": 6
+ },
+ "theirs_killed": {},
+ "evolution": 0.008116372538637241,
+ "nests": 2,
+ "biters": 13,
+ "worms": 0,
+ "techs": [
+  "electronics",
+  "steam-power"
+ ],
+ "machines": {
+  "burner-mining-drill working": 1,
+  "stone-furnace no_ingredients": 5
+ },
+ "ours": {
+  "drills": 1,
+  "furnaces": 5,
+  "belts": 25,
+  "chests": 11,
+  "inserters": 5,
+  "turrets": 0,
+  "labs": 0
+ }
+}
