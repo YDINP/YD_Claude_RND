@@ -19,7 +19,8 @@ from __future__ import annotations
 
 import math
 
-from settings import AMMO_FULL, AMMO_LOW, COAL_FULL, COAL_LOW
+from settings import (AMMO_FULL, AMMO_LOW, COAL_FULL, COAL_LOW,
+                      ORE_FULL, ORE_LOW)
 
 AMMO = "firearm-magazine"
 COAL = "coal"
@@ -34,7 +35,7 @@ MIN_POUR = 10
 # 장식이고, 장식인 것을 모르고 지나가면 그날 전멸한다. 순서를 정하는 것은
 # 이 표 하나다.
 URGENCY = {"ammo-turret": 0, "inserter": 1, "boiler": 2,
-           "furnace": 3, "mining-drill": 4}
+           "furnace": 3, "mining-drill": 4, "furnace-ore": 5}
 
 _LOW = """(function()
   local s = game.surfaces[1]
@@ -47,8 +48,31 @@ _LOW = """(function()
     if tank then
       local held = tank.get_item_count("%s")
       if held < %d then
-        out[#out + 1] = string.format("%%s|%%s|%%.1f|%%.1f|%%d|%%d",
-          e.type, e.name, e.position.x, e.position.y, held, %d - held)
+        out[#out + 1] = string.format("%%s|%%s|%%.1f|%%.1f|%%d|%%d|%%s",
+          e.type, e.name, e.position.x, e.position.y, held, %d - held, "%s")
+      end
+    end
+    -- 그리고 화로는 «원료»도 떨어진다. 연료만 보면 불은 붙어 있는데
+    -- 아무것도 안 구워지는 화로가 줄줄이 선다.
+    --
+    -- 사용자: "연료 / 재료 / 탄약 등등은 주기적으로 채우도록"
+    if e.type == "furnace" then
+      local src = e.get_inventory(defines.inventory.furnace_source)
+      local has = src and src.get_item_count() or 0
+      if has < %d then
+        -- 무엇을 굽던 화로인가. 물어볼 수 있으면 짐작하지 않는다.
+        local want = nil
+        local ok, prev = pcall(function() return e.previous_recipe end)
+        if ok and prev and prev.name then
+          local recipe = prev.name.name or prev.name
+          local proto = prototypes.recipe[recipe]
+          if proto and proto.ingredients and proto.ingredients[1] then
+            want = proto.ingredients[1].name
+          end
+        end
+        out[#out + 1] = string.format("%%s|%%s|%%.1f|%%.1f|%%d|%%d|%%s",
+          "furnace-ore", e.name, e.position.x, e.position.y, has, %d - has,
+          want or "")
       end
     end
   end
@@ -58,12 +82,13 @@ _LOW = """(function()
     local box = t.get_inventory(defines.inventory.turret_ammo)
     local held = box and box.get_item_count("%s") or 0
     if held < %d then
-      out[#out + 1] = string.format("%%s|%%s|%%.1f|%%.1f|%%d|%%d",
-        t.type, t.name, t.position.x, t.position.y, held, %d - held)
+      out[#out + 1] = string.format("%%s|%%s|%%.1f|%%.1f|%%d|%%d|%%s",
+        t.type, t.name, t.position.x, t.position.y, held, %d - held, "%s")
     end
   end
   return out
-end)()""" % (COAL, COAL_LOW, COAL_FULL, AMMO, AMMO_LOW, AMMO_FULL)
+end)()""" % (COAL, COAL_LOW, COAL_FULL, COAL, ORE_LOW, ORE_FULL,
+             AMMO, AMMO_LOW, AMMO_FULL, AMMO)
 
 _STOCK = """(function()
   local s = game.surfaces[1]
@@ -72,16 +97,13 @@ _STOCK = """(function()
     type = "container", force = game.forces.player,
   }) do
     local inv = c.get_inventory(defines.inventory.chest)
-    for _, what in ipairs({ "%s", "%s" }) do
-      local held = inv.get_item_count(what)
-      if held > 0 then
-        out[#out + 1] = string.format("%%s|%%.1f|%%.1f|%%d",
-          what, c.position.x, c.position.y, held)
-      end
+    for _, it in pairs(inv.get_contents()) do
+      out[#out + 1] = string.format("%s|%.1f|%.1f|%d",
+        it.name, c.position.x, c.position.y, it.count)
     end
   end
   return out
-end)()""" % (COAL, AMMO)
+end)()"""
 
 
 def _rows(reply) -> list[str]:
@@ -90,18 +112,28 @@ def _rows(reply) -> list[str]:
     return list(reply or [])
 
 
+# 화로에 넣을 것이 뭔지 못 알아냈을 때의 차례. 앞엣것부터 창고에 있는
+# 것을 쓴다. 돌은 마지막이다 - 석재는 급할 일이 드물다.
+ORES = ("iron-ore", "copper-ore", "stone")
+
+
 def wants(kind: str) -> str:
-    """이 기계가 먹는 것. 포탑은 탄약, 나머지는 석탄."""
-    return AMMO if kind == "ammo-turret" else COAL
+    """이 기계가 먹는 것. 포탑은 탄약, 화로의 원료칸은 광석, 나머지는 석탄."""
+    if kind == "ammo-turret":
+        return AMMO
+    if kind == "furnace-ore":
+        return ORES[0]
+    return COAL
 
 
 def running_low(ai) -> list[dict]:
     """떨어졌거나 «떨어져 가는» 것들. 급한 것부터, 같으면 빈 것부터."""
     out = []
     for row in _rows(ai.lua(_LOW)):
-        kind, name, x, y, held, room = row.split("|")
+        kind, name, x, y, held, room, item = row.split("|")
         out.append({"type": kind, "name": name, "x": float(x), "y": float(y),
-                    "held": int(held), "room": int(room), "item": wants(kind)})
+                    "held": int(held), "room": int(room),
+                    "item": item or wants(kind)})
     out.sort(key=lambda e: (URGENCY.get(e["type"], 9), e["held"]))
     return out
 
@@ -210,6 +242,15 @@ def plan_round(names: list[str], low: list[dict],
     excuses: list[str] = []
     if not names:
         return rounds, ["보급 담당이 한 명도 없다"]
+
+    # 화로가 무엇을 굽던 놈인지 못 알아냈으면, 창고에 «있는» 광석으로
+    # 바꿔 준다. 없는 것을 달라고 하면 그 화로는 영영 빈 채로 남는다.
+    for e in low:
+        if e["type"] == "furnace-ore" and not shelves.get(e["item"]):
+            for ore in ORES:
+                if shelves.get(ore):
+                    e["item"] = ore
+                    break
 
     left = sorted(low, key=lambda e: (URGENCY.get(e["type"], 9), e["held"]))
     for who in names:

@@ -412,6 +412,35 @@ def posts_guard_the_fields() -> list:
     return bad
 
 
+# -- 한 겹만 두면 그 한 겹이 틀린 날 공장이 없어진다 ------------------------
+#
+# 사용자: "방어포탑은 기지 내부에도 군데군데 설치해서 만일의 사태에
+#          대비해두는것이 조음."
+#
+# 19회차에는 만재한 여덟 대가 한 마리도 못 잡았고, 16회차에는 선 자체가
+# 엉뚱한 곳에 있었다. 두 번 다 「테두리 한 겹」이었다.
+#
+# 안쪽 총은 테두리보다 성기게 둔다. 촘촘히 두면 테두리에서 총이 빠지고,
+# 안쪽은 막는 것이 아니라 «뚫렸을 때 시간을 버는 것»이기 때문이다.
+def defence_has_depth() -> list:
+    bad = []
+    lua = io.open(os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "defence.lua"),
+                  encoding="utf-8").read()
+    if "inner_seats" not in lua:
+        bad.append("안쪽 자리를 안 낸다 (inner_seats 없음)")
+    tail = lua[lua.find("    raid = raid("):]
+    if "inner = inner" not in tail:
+        bad.append("안쪽 자리를 계산만 하고 안 알려준다")
+    # 안쪽이 테두리보다 촘촘하면 테두리에서 총이 빠진다.
+    import re
+    gap = re.search(r"local INNER_GAP = (\d+)", lua)
+    edge = re.search(r"local TURRET_GAP = (\d+)", lua)
+    if gap and edge and int(gap.group(1)) <= int(edge.group(1)):
+        bad.append(f"안쪽 간격 {gap.group(1)} 이 테두리 간격 {edge.group(1)} "
+                   "보다 촘촘하다 - 테두리에서 총이 빠진다")
+    return bad
+
+
 def main() -> int:
     shape = lua_shape()
     bad = []
@@ -434,6 +463,7 @@ def main() -> int:
     bad.extend(layout_comes_from_the_patch())
     bad.extend(one_arm_is_two_drills())
     bad.extend(posts_guard_the_fields())
+    bad.extend(defence_has_depth())
     for line in bad:
         print("  [FAIL] " + line)
     print(f"\n{len(bad)} problems - plot shape agrees "

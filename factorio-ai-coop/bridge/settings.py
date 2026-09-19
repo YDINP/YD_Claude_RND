@@ -604,3 +604,8 @@ AMMO_FULL = 100                   # 한 대에 이만큼까지 채운다
 # 것은 「기다리는 채굴기 수」뿐이다. 병목은 «문»이지 «광부»가 아니었다.
 INSERTER_PER_SECOND = 0.6
 DRILLS_PER_ARM = max(1, int(INSERTER_PER_SECOND / DRILL_PER_SECOND))
+
+# 화로 «원료»칸. 연료만 보면 불은 붙어 있는데 아무것도 안 구워지는 화로가
+# 줄줄이 선다. 사용자: "연료 / 재료 / 탄약 등등은 주기적으로 채우도록".
+ORE_LOW = 15
+ORE_FULL = 50

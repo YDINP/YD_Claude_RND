@@ -318,6 +318,35 @@ local WORTH = { "burner-mining-drill", "electric-mining-drill",
 -- 이만큼 떨어지면 다른 덩어리다. 벨트 한 줄 길이쯤.
 local LINK = 24
 
+-- 안쪽에도 군데군데.
+--
+-- 사용자: "방어포탑은 기지 내부에도 군데군데 설치해서 만일의 사태에
+--          대비해두는것이 조음."
+--
+-- 방어선은 «뚫린다». 19회차에는 만재한 여덟 대가 한 마리도 못 잡았고,
+-- 16회차에는 선 자체가 엉뚱한 곳에 있었다. 한 겹만 두면 그 한 겹이 틀린
+-- 날 공장이 통째로 없어진다.
+--
+-- 안쪽 총은 테두리보다 성기게 둔다. 촘촘히 두면 테두리에서 총이 빠진다 -
+-- 안쪽은 「막는 것」이 아니라 「뚫렸을 때 시간을 버는 것」이다.
+local INNER_GAP = 26
+local INNER_CAP = 4
+
+local function inner_seats(surface, force, box)
+  local seats = {}
+  for x = box.left + INNER_GAP, box.right - 1, INNER_GAP do
+    for y = box.top + INNER_GAP, box.bottom - 1, INNER_GAP do
+      if #seats >= INNER_CAP then return seats end
+      if surface.can_place_entity {
+        name = TURRET, position = { x, y }, force = force,
+      } then
+        seats[#seats + 1] = { x = x, y = y, side = "inner" }
+      end
+    end
+  end
+  return seats
+end
+
 local function outposts(surface, force)
   local mine = surface.find_entities_filtered { name = WORTH, force = force }
   local seen, posts = {}, {}
@@ -398,6 +427,17 @@ local function defence(name)
   end
   local seats = (box and side) and turret_seats(surface, force, box, side) or {}
 
+  -- 그리고 안쪽에도 군데군데. 테두리가 뚫린 날 시간을 버는 총이다.
+  local inner = {}
+  for _, seat in pairs(box and inner_seats(surface, force, box) or {}) do
+    local taken = false
+    for _, t in pairs(turrets) do
+      local dx, dy = t.position.x - seat.x, t.position.y - seat.y
+      if dx * dx + dy * dy < TURRET_GAP * TURRET_GAP / 4 then taken = true break end
+    end
+    if not taken then inner[#inner + 1] = seat end
+  end
+
   -- 그리고 «밭마다» 초소를 낸다. 구역 밖에서 일하는 곳이 지켜지지 않아
   -- 전멸한 것이 16회차다.
   local posts = outposts(surface, force)
@@ -444,6 +484,8 @@ local function defence(name)
     perimeter = box, home = home,
     -- 일하는 곳마다 하나씩. 구역만 지키면 밭에서 죽는다.
     posts = posts,
+    -- 테두리가 뚫린 날을 위한 안쪽 자리.
+    inner = inner,
     pollution = math.floor(at_home), pollution_reach = reach,
     -- 공해가 둥지까지 몇 타일 남았는가. 0 이하면 이미 닿았다.
     slack = nearest and (nearest.gap - reach) or nil,
