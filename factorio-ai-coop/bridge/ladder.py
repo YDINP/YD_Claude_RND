@@ -708,6 +708,34 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     return in_hand_first(unique, snap)
 
 
+
+def drills_first(pool: list, holding: int) -> list:
+    """가방에 채굴기가 놀고 있으면 «세우는 일»을 앞으로 당긴다.
+
+    사용자: "반장이 채굴기 심시티부터 한번 진행해봐"
+
+    실측(새 판 51분째):
+
+        땅에 선 채굴기    3대
+        가방 속 채굴기   11대  (charlie 8, delta 2, bravo 1)
+        반장이 연 자리    automate:coal / iron-ore / copper-ore / stone
+        실제로 한 일      다섯 전원 벨트·유통 구역
+
+    사다리 일감은 물류 일감 «뒤»에 붙는다. 그래서 벨트가 한 칸이라도
+    모자라면 채굴기는 영영 차례가 안 온다. 그리고 물류는 언제나 한 칸쯤
+    모자라다.
+
+    가방 속 채굴기는 아무것도 안 캔다. 그리고 캘 것이 없으면 벨트도
+    나를 것이 없다 - 순서가 거꾸로다.
+
+    «당기기만» 한다. 빼지 않으므로 물류는 그 다음 차례에 그대로 있고,
+    가방이 비면(다 세우면) 저절로 평소 순서로 돌아간다.
+    """
+    if holding <= 0:
+        return pool
+    # 파이썬 정렬은 안정적이다. 같은 무리 안의 순서는 그대로 남는다.
+    return sorted(pool, key=lambda j: 0 if j.key.startswith("automate:") else 1)
+
 # 놓기만 하면 되는 기계. 이것들은 만드는 값이 아니라 «걸어가는 값»만 든다.
 PORTABLE = (DRILL, "stone-furnace", CHEST, "lab", "boiler", "steam-engine",
             "offshore-pump", "assembling-machine-1")

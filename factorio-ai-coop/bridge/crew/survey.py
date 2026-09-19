@@ -18,7 +18,7 @@ from jobs import Job, Step
 from layout import belt_pairs, carry_split, cluster, interleave, nearest_to
 import mission
 import roles
-from ladder import STAGE_TARGET, _as_rows, plan
+from ladder import STAGE_TARGET, _as_rows, drills_first, plan
 from worker import Worker
 
 
@@ -777,6 +777,11 @@ class SurveyMixin:
             if busy and busy.key not in seen:
                 seen.add(busy.key)
                 pool.append(busy)
+
+        # 가방에 채굴기가 놀고 있으면 세우는 일이 먼저다. 빼지 않고
+        # 당기기만 하므로, 다 세우면 저절로 평소 순서로 돌아간다.
+        pool = drills_first(
+            pool, sum(int((s.items or {}).get(DRILL) or 0) for _, s in free))
 
         taken = self.taken()
         made = len(pool)

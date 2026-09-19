@@ -21,6 +21,7 @@ from layout import (belt_pairs, carry_split, cluster,  # noqa: E402
                     craft_seat, furnace_seat, interleave, nearest_to,
                     spread_sites)
 from ladder import (STAGE_TARGET, chain_job, coal_rigs_needed,  # noqa: E402
+                    drills_first as _first,
                     drill_target, furnace_target,
                     missing_item, next_goal, plan, worth_building)
 from crew import Crew  # noqa: E402
@@ -353,6 +354,29 @@ def main() -> int:
                  if j.key.startswith("automate:")]
     _all_iron = [j.key for j in plan(_rigs(0, 4, 5), focus="iron-ore", crew=5)
                  if j.key.startswith("automate:")]
+    # 가방에 채굴기가 놀고 있으면 «세우는 일»이 먼저다.
+    #
+    # 사다리 일감(채굴기)은 물류 일감 뒤에 붙는다. 그래서 벨트가 한 칸이라도
+    # 모자라면 채굴기는 영영 차례가 안 온다 - 그리고 물류는 언제나 한 칸쯤
+    # 모자라다. 실측(새 판 51분째): 땅에 3대, 가방에 11대, 다섯 전원 벨트.
+    # main() 뒤쪽에 `from jobs import Job` 가 있어서 Job 은 여기서 «지역»이다.
+    # 열쇠만 보는 함수라 대역이면 충분하다.
+    class _K:
+        def __init__(self, key):
+            self.key = key
+
+    _pool = [_K("belt:1"), _K("depot:2"), _K("automate:iron-ore:0"),
+             _K("belt:3"), _K("automate:coal:1")]
+    _pulled = [j.key for j in _first(_pool, holding=11)]
+    check("drills in the bag jump the queue",
+          _pulled[:2] == ["automate:iron-ore:0", "automate:coal:1"], str(_pulled))
+    # 빼지 않고 «당기기만» 한다. 물류는 그 다음 차례에 그대로 있다.
+    check("and the hauling is only pushed back, not dropped",
+          sorted(_pulled) == sorted(j.key for j in _pool), str(_pulled))
+    # 가방이 비면 평소 순서다.
+    check("an empty bag leaves the order alone",
+          [j.key for j in _first(_pool, holding=0)] == [j.key for j in _pool])
+
     check("coal rigs leave the smelting budget alone",
           len(_all_coal) > len(_all_iron),
           f"석탄 4/4 -> 일감 {len(_all_coal)}개, 전부 제련 4/4 -> {len(_all_iron)}개")
