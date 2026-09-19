@@ -348,6 +348,33 @@ def layout_comes_from_the_patch() -> list:
     return bad
 
 
+# -- 출구가 하나면 채굴기를 늘려도 소용이 없다 ------------------------------
+#
+# 사용자: "연료랑탄약모자란곳이 있는데"
+#
+# 실측(16회차 석탄밭): 채굴기 10대에 출구(버너 인서터) 하나.
+#
+#     벨트      칸마다 8개로 포화
+#     채굴기    10대 중 6대 waiting_for_space_in_destination
+#     실제 산출 0.6개/초   <- 캘 수 있는 2.5개/초의 4분의 1
+#
+# 병목은 «문»이지 «광부»가 아니었다. 그런데 이 수를 아무도 적어두지
+# 않아서, 밭을 넓힐 때마다 출구는 그대로 하나였다.
+def one_arm_is_two_drills() -> list:
+    bad = []
+    arm = getattr(settings, "INSERTER_PER_SECOND", None)
+    per = getattr(settings, "DRILLS_PER_ARM", None)
+    drill = getattr(settings, "DRILL_PER_SECOND", None)
+    if arm is None or per is None:
+        return ["INSERTER_PER_SECOND / DRILLS_PER_ARM 둘 다 있어야 한다"]
+    if drill and per > arm / drill:
+        bad.append(f"출구 하나에 채굴기 {per}대는 과하다 "
+                   f"({arm}/초 나가는데 {per * drill}/초 들어온다)")
+    if per < 1:
+        bad.append("출구 하나에 채굴기 한 대도 못 붙인다는 수가 나왔다")
+    return bad
+
+
 def main() -> int:
     shape = lua_shape()
     bad = []
@@ -368,6 +395,7 @@ def main() -> int:
     bad.extend(rocks_are_clearable())
     bad.extend(take_wants_enough())
     bad.extend(layout_comes_from_the_patch())
+    bad.extend(one_arm_is_two_drills())
     for line in bad:
         print("  [FAIL] " + line)
     print(f"\n{len(bad)} problems - plot shape agrees "

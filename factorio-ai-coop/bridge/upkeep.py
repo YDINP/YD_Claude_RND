@@ -136,8 +136,8 @@ def best_source(shelves: list[dict], spot: dict, wanted: int) -> dict | None:
 
 
 def _leg(who: str, mine: list[dict], shelves: list[dict],
-         held_in_bag: int) -> tuple[list, str]:
-    """한 품목짜리 한 바퀴. 계획과, 못 했으면 그 이유."""
+         held_in_bag: int) -> tuple[list, str, list]:
+    """한 품목짜리 한 바퀴. 계획과, 못 했으면 그 이유와, 실제로 맡은 것들."""
     item = mine[0]["item"]
     want = sum(e["room"] for e in mine)
 
@@ -150,7 +150,7 @@ def _leg(who: str, mine: list[dict], shelves: list[dict],
     else:
         source = best_source(shelves, mine[0], want)
         if not source:
-            return [], f"{who}: 손에도 상자에도 {item} 이 없다"
+            return [], f"{who}: 손에도 상자에도 {item} 이 없다", []
         fetch = [("take", {"name": item, "count": min(int(source["count"]), want),
                            "x": source["x"], "y": source["y"]})]
 
@@ -172,7 +172,7 @@ def _leg(who: str, mine: list[dict], shelves: list[dict],
         if spent >= load:
             break
     if not chosen:
-        return [], f"{who}: {item} 이 한 대 채울 만큼도 안 된다"
+        return [], f"{who}: {item} 이 한 대 채울 만큼도 안 된다", []
 
     plan: list = list(fetch)
     if fetch:
@@ -185,19 +185,23 @@ def _leg(who: str, mine: list[dict], shelves: list[dict],
         plan.append(("insert", {"name": item, "count": nxt[1],
                                 "x": nxt[0]["x"], "y": nxt[0]["y"]}))
         here = nxt[0]
-    return plan, ""
+    return plan, "", [e for e, _p in chosen]
 
 
-def plan_round(names: list[str], low: list[dict], shelves: dict[str, list[dict]],
+def plan_round(names: list[str], low: list[dict],
+               shelves: dict[str, list[dict]],
                carrying: dict[str, dict[str, int]] | None = None
                ) -> tuple[list[tuple[str, list]], list[str]]:
-    """급한 것부터 사람 수만큼 나눠 «걸어갈 차례»로 묶는다.
+    """급한 것부터 «아직 아무도 안 맡은 것»을 한 사람씩 집어 간다.
 
-    한 사람이 한 덩어리를 맡는다. 두 사람이 같은 기계를 채우면 둘째가
-    「넣었는데 0개」로 실패하므로, 나누는 것이 곧 겹치지 않게 하는 것이다.
+    예전에는 목록을 번갈아 쪼갰다(low[i::n]). 그러면 «가장 급한 한 대»가
+    누구에게 가는지가 목록 길이에 달린다. 실측: 포탑 아홉 대가 앞을
+    채우는 바람에, 석탄밭 자기 인서터(연료 1개, 이것이 굶으면 온 맵의
+    석탄이 끊긴다)가 열 번째로 밀려 아무도 안 맡았다.
 
     한 바퀴에 한 품목만 든다. 석탄과 탄창을 같이 실으면 가방이 두 배로
-    필요하고, 어느 쪽도 넉넉히 못 싣는다.
+    필요하고 어느 쪽도 넉넉히 못 싣는다. 그 품목이 없으면 «다음» 품목으로
+    넘어간다 - 못 하는 일 하나가 할 수 있는 일 전부를 막으면 안 된다.
 
     돌려주는 둘째 값은 «못 한 이유»다. 아무 일도 못 하고 조용히 끝나면
     그 침묵이 「이상 없음」으로 읽힌다 - 실제로 한 번 그랬다.
@@ -205,29 +209,25 @@ def plan_round(names: list[str], low: list[dict], shelves: dict[str, list[dict]]
     rounds: list[tuple[str, list]] = []
     excuses: list[str] = []
     if not names:
-        return rounds, ["연료 담당이 한 명도 없다"]
+        return rounds, ["보급 담당이 한 명도 없다"]
 
-    low = sorted(low, key=lambda e: (URGENCY.get(e["type"], 9), e["held"]))
-    share = [low[i::len(names)] for i in range(len(names))]
-    for who, mine in zip(names, share):
-        if not mine:
-            continue
-        # 가장 급한 것이 먹는 품목으로 한 바퀴를 채운다. 그 품목이 없으면
-        # 그 «다음» 품목으로 넘어간다.
-        #
-        # 넘어가지 않으면 한 사람이 통째로 논다 - 포탑이 제일 급한데 탄창이
-        # 없는 날, 석탄은 창고에 쌓여 있고 인서터는 굶은 채로 둘 다 서 있었다.
-        # 못 하는 일 하나가 할 수 있는 일 전부를 막으면 안 된다.
-        seen, tried = [], []
-        for e in mine:
-            if e["item"] not in seen:
-                seen.append(e["item"])
-        for item in seen:
-            group = [e for e in mine if e["item"] == item][:PER_ROUND]
+    left = sorted(low, key=lambda e: (URGENCY.get(e["type"], 9), e["held"]))
+    for who in names:
+        if not left:
+            break
+        # 아직 남은 것 중 가장 급한 것의 품목부터 시도한다.
+        order: list[str] = []
+        for e in left:
+            if e["item"] not in order:
+                order.append(e["item"])
+        tried: list[str] = []
+        for item in order:
+            group = [e for e in left if e["item"] == item][:PER_ROUND]
             bag = int((carrying or {}).get(who, {}).get(item, 0))
-            plan, why = _leg(who, group, shelves.get(item, []), bag)
+            plan, why, took = _leg(who, group, shelves.get(item, []), bag)
             if plan:
                 rounds.append((who, plan))
+                left = [e for e in left if e not in took]
                 break
             tried.append(why)
         else:
