@@ -60,13 +60,16 @@ def main() -> int:
                         help="wait for orders instead of working on their own")
     parser.add_argument("--no-llm", action="store_true",
                         help="rules only; do not ask the Claude CLI about unknown lines")
+    parser.add_argument("--no-minds", action="store_true",
+                        help="turn off each agent's own thinking; the chief decides everything")
     parser.add_argument("--observer", metavar="PLAYER",
                         help="put this player in the observer seat on startup")
     parser.add_argument("--interval", type=float, default=1.0)
     args = parser.parse_args()
 
     bridge = AIBridge()
-    crew = Crew(bridge, autopilot=not args.manual, use_llm=not args.no_llm)
+    crew = Crew(bridge, autopilot=not args.manual, use_llm=not args.no_llm,
+                mind_model="" if args.no_minds else None)
     crew.prime()
     crew.sync_roster()
 

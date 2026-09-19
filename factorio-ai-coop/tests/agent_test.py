@@ -1529,6 +1529,46 @@ def main() -> int:
     check("seats hand out numeric directions",
           "direction = defines.direction[seat.direction]" in _plots)
 
+    # 각자 생각하는 머리는 «꺼둘 수 있어야» 한다.
+    #
+    # 사용자: "에이전트들 자가생각행동 잠시 멈추고 반장이 채굴기 심시티부터
+    # 한번 진행해봐"
+    #
+    # 「잠시」라 코드를 고쳐서 끄면 안 된다. 고쳐서 끄면 다시 켜는 것을
+    # 잊고, 잊은 것은 영영 꺼져 있다.
+    #
+    # 그리고 «손잡이가 있다»와 «손잡이가 먹는다»는 다른 말이다. 설정에는
+    # 「빈 값이면 머리를 안 단다」고 적혀 있었지만, 그것이 모듈 상수를
+    # 읽고 있으면 실행 인자로는 못 끈다. 여기서 보는 것은 뒤엣것이다.
+    from crew.thinking import ThinkingMixin as _Think
+
+    class _Quiet(_Think):
+        pass
+
+    _off = _Quiet()
+    _off.mind_model = ""
+    _off.minds = {}
+
+    class _Body:
+        name = "alpha"
+
+    # 꺼져 있으면 «바로» 돌아와야 한다. 안 꺼지면 그 다음 줄에서 창고를
+    # 찾다가 터지는데, 터지는 것도 「안 꺼졌다」의 한 모양이다.
+    try:
+        _quiet = _off.let_them_think([(_Body(), None)], set()) == set()
+        _why = ""
+    except Exception as _exc:
+        _quiet, _why = False, f"{type(_exc).__name__}: {_exc}"
+    check("minds can be switched off at run time", _quiet, _why)
+    check("and switching them off spawns no mind", not _off.minds)
+
+    # 손잡이가 실제로 «인스턴스»를 읽는지. 모듈 상수를 읽으면 위 시험이
+    # 통과해도 실행 인자로는 못 끈다.
+    _wire = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                              "bridge", "agent.py"), encoding="utf-8").read()
+    check("and the flag reaches the crew",
+          "--no-minds" in _wire and 'mind_model="" if args.no_minds' in _wire)
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))

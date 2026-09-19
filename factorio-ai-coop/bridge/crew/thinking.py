@@ -43,7 +43,9 @@ class ThinkingMixin:
     def mind_of(self, name):
         self.minds = getattr(self, "minds", {})
         if name not in self.minds:
-            self.minds[name] = mind_mod.Mind(name, MIND_MODEL, timeout=MIND_TIMEOUT)
+            self.minds[name] = mind_mod.Mind(
+                name, getattr(self, "mind_model", MIND_MODEL),
+                timeout=MIND_TIMEOUT)
         return self.minds[name]
 
     def journal_of(self, name):
@@ -296,7 +298,9 @@ class ThinkingMixin:
         생각은 오래 걸리므로 «시작»과 «수확»이 다른 순찰에 일어난다.
         그 사이에 그 사람이 노는 일은 없다 - 규칙이 계속 고른다.
         """
-        if not MIND_MODEL or not free:
+        # 손잡이가 빈 값이면 머리를 안 단다. 규칙만으로도 공장은 돌아가고,
+        # 그 사이 반장이 혼자 다 고른다.
+        if not getattr(self, "mind_model", MIND_MODEL) or not free:
             return set()
 
         self.mind_the_pantry(free[0][0].name)

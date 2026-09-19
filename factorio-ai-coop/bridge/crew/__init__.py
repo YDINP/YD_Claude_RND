@@ -17,7 +17,7 @@ import mission
 import pantry
 from client import AIBridge, RconError
 
-from settings import DISPATCH_IDLE, DISPATCH_INTERVAL, ORE_BATCH
+from settings import DISPATCH_IDLE, DISPATCH_INTERVAL, MIND_MODEL, ORE_BATCH
 from world import Snapshot
 from jobs import Step
 from ladder import next_goal
@@ -44,10 +44,18 @@ class Crew(ChiefMixin, ThinkingMixin, RosterMixin, TalkMixin, SupplyMixin,
     """사람 여럿을 데리고 게임 안에서 실제로 일하는 무리."""
 
     def __init__(self, bridge: AIBridge, autopilot: bool = True,
-                 use_llm: bool = True) -> None:
+                 use_llm: bool = True, mind_model: str | None = None) -> None:
         self.bridge = bridge
         self.autopilot = autopilot
         self.use_llm = use_llm
+        # 각자 생각하는 머리를 «끌 수 있게» 손잡이로 둔다.
+        #
+        # 사용자: "에이전트들 자가생각행동 잠시 멈추고 반장이 채굴기
+        # 심시티부터 한번 진행해봐"
+        #
+        # 「잠시」라 코드를 고쳐서 끄면 안 된다. 고쳐서 끄면 다시 켜는 것을
+        # 잊고, 잊은 것은 영영 꺼져 있다. 빈 값이면 규칙만으로 돈다.
+        self.mind_model = MIND_MODEL if mind_model is None else mind_model
         self.since_tick: int | None = None
         self.workers: dict[str, Worker] = {}
         self.thoughts: queue.Queue[tuple[str, str, list[Step]]] = queue.Queue()
