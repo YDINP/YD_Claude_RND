@@ -1664,6 +1664,36 @@ def main() -> int:
     #
     # 실측(새 판 84분째): 넷이 동시에 "wooden-chest를 못 구했습니다" 였고,
     # 그때 가방에는 철 상자가 아홉 개, 채굴기가 스물세 대 있었다.
+    # 가방이 안 찼어도 «넘치는 것»은 창고에 붓는다.
+    #
+    # 사용자: "캐릭터들 인벤토리에 남는 자원들이 많은데 왜 물류창고에 안넣지?"
+    #
+    # 붓는 일감이 「가방이 꽉 찼을 때」(빈 칸 6 이하)만 돌았다. 아무도 그만큼
+    # 안 찬다. 실측(새 판 125분째): 빈 칸 27~60개인데 다섯이 석탄 4,831개,
+    # 구리판 1,255장을 들고 있었고 창고에는 40개와 0개였다.
+    from settings import BAG_KEEP as _KEEP, BAG_SPILL as _SPILL
+    check("the spill threshold sits above what a bag keeps",
+          _SPILL > 1.0,
+          f"두는 양과 붓는 문턱이 같으면 붓고 바로 꺼내 온다 (SPILL={_SPILL})")
+    check("and the ores the crew actually hoards are covered",
+          {"coal", "iron-plate", "copper-plate", "stone"} <= set(_KEEP),
+          str(sorted(_KEEP)))
+    _sv2 = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                             "bridge", "crew", "survey.py"), encoding="utf-8").read()
+    check("and a full bag is no longer the only way to pour",
+          "have >= keep * BAG_SPILL" in _sv2 and 'key=f"spill:' in _sv2,
+          "넘치는 것을 붓는 일감이 없다")
+
+    # 창고 기억은 «생각»이 아니라 살림이다. 머리를 꺼도 돌아야 한다.
+    _init = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                              "bridge", "crew", "__init__.py"), encoding="utf-8").read()
+    _think = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                               "bridge", "crew", "thinking.py"), encoding="utf-8").read()
+    check("minding the pantry does not depend on the minds",
+          "self.mind_the_pantry(free[0][0].name)" in _init
+          and "self.mind_the_pantry(free[0][0].name)" not in _think,
+          "창고 읽기가 아직 생각 경로에 세들어 있다")
+
     # 밭을 모르면 채굴기 일감이 «한 개도» 안 만들어진다.
     #
     # survey 는 첫 번째 사람 하나만 받아 돈다. 그래서 worker.fields 가 한

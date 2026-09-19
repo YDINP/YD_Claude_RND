@@ -9,7 +9,7 @@ import math
 
 from client import RconError
 
-from settings import (CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH, LOOSE_FLOOD, ORE_BATCH, STARVING, DEFEND_WHEN,
+from settings import (BAG_KEEP, BAG_SPILL, CHEST, DRILL, DRILL_FUEL, HARVEST_MIN, HAUL_BATCH, LOOSE_FLOOD, ORE_BATCH, STARVING, DEFEND_WHEN,
                       BAG_ROOM, HOME_REACH, SMELTED_BY_FURNACE, SMELT_BATCH,
                       STRAY_FAR,
                       SURPLUS, THIN_DRILL, WELL_FULL)
@@ -140,6 +140,44 @@ class SurveyMixin:
             dump = self.depot_job(worker, snap)
             if dump:
                 return [dump]
+
+        # 0b. 가방이 안 찼어도 «넘치는 것»은 창고에 붓는다.
+        #
+        #     사용자: "공동작업이니, 공용물류상자에 남는 잉여물들을 넣고
+        #     (광석등) ... 서로 필요한게 생기면 공용물류에서 꺼내 쓰도록"
+        #     사용자: "캐릭터들 인벤토리에 남는 자원들이 많은데 왜 물류창고에
+        #     안넣지?"
+        #
+        #     위의 0번은 «가방이 꽉 찼을 때»만 돈다(빈 칸 6 이하). 그런데
+        #     아무도 그만큼 안 찬다. 실측(새 판 125분째): 빈 칸 27~60개인데
+        #     다섯이 석탄 4,831개, 구리판 1,255장, 철판 1,050장을 들고 있었고
+        #     창고에는 각각 40, 0, 0 이었다. 자원의 99%가 개인 가방에 잠겨
+        #     있었다 - 가방에 있는 것은 그 사람만 쓴다.
+        #
+        #     두는 양(BAG_KEEP)과 붓는 문턱(x BAG_SPILL)을 다르게 둔다.
+        #     같으면 붓고 나서 바로 다시 꺼내 온다.
+        if snap:
+            spill = []
+            for item, keep in BAG_KEEP.items():
+                have = int(snap.items.get(item) or 0)
+                if have >= keep * BAG_SPILL:
+                    spill.append((item, have - keep))
+            if spill:
+                try:
+                    shelves = _as_rows(self.bridge.stores(worker.name,
+                                                          200, 8).get("chests"))
+                except RconError:
+                    shelves = []
+                if shelves:
+                    item, count = max(spill, key=lambda pair: pair[1])
+                    near = min(shelves, key=lambda c: c.get("distance", 0))
+                    jobs.append(Job(
+                        f"{item}을(를) {count}개나 들고 있습니다. 가방에 있는 "
+                        f"것은 저만 씁니다 - 공용 창고에 붓겠습니다.",
+                        key=f"spill:{worker.name}:{item}", owner=worker.name,
+                        steps=[("insert", {"name": item, "count": count,
+                                           "x": near["x"], "y": near["y"]})],
+                        at={"x": near["x"], "y": near["y"]}))
 
         # 0. 서 있는 발전소를 고치는 것이 새 발전소보다 언제나 싸다.
         #    전봇대 둘과 파이프 둘이 2.7MW 였던 적이 있다.

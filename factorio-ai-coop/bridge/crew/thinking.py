@@ -303,7 +303,7 @@ class ThinkingMixin:
         if not getattr(self, "mind_model", MIND_MODEL) or not free:
             return set()
 
-        self.mind_the_pantry(free[0][0].name)
+        # 창고 읽기는 순찰 쪽으로 옮겼다. 머리를 꺼도 살림은 돌아야 한다.
 
         took = set()
         now = time.monotonic()

@@ -196,6 +196,19 @@ class Crew(ChiefMixin, ThinkingMixin, RosterMixin, TalkMixin, SupplyMixin,
             self.dispatched_at = now + (DISPATCH_IDLE if waiting
                                         else DISPATCH_INTERVAL)
 
+        # 공용 창고를 다시 읽는다.
+        #
+        # 이 일이 `let_them_think` 안에 있었다. 그래서 `--no-minds` 로
+        # 머리를 끄면 창고 기억과 게시판이 «같이» 꺼졌다. 창고에 무엇이
+        # 있는지 아는 것은 생각하는 일이 아니라 살림하는 일이다.
+        #
+        # 규칙을 남의 집에 세들여 놓으면 그 집이 비는 날 같이 없어진다.
+        if free:
+            try:
+                self.mind_the_pantry(free[0][0].name)
+            except RconError:
+                pass
+
         # 배차가 끝난 뒤에 «각자 생각»을 얹는다. 순서에 뜻이 있다 -
         # 반장이 이미 일을 준 사람은 건드리지 않고, 남은 사람만 스스로
         # 고른다. 그리고 생각은 다른 실에서 도므로 여기서 기다리지 않는다.
