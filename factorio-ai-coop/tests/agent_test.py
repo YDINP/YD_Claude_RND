@@ -1282,6 +1282,29 @@ def main() -> int:
     check("and says what changed", "들어온 것" in (shelf.news() or ""))
     check("but does not repeat itself", shelf.news() is None)
 
+    # ------------------------------------------------------------------
+    print("\n15. every name the mind calls on the crew actually exists")
+
+    # 「self.give」라고만 써두고 그런 메서드를 안 만들었다. 머리가 생각을
+    # 마칠 때마다 순찰이 터졌는데, 로그에는 머리가 한 «말»만 남아서 잘
+    # 도는 것처럼 보였다 - 말은 일을 맡기기 «전»에 하기 때문이다.
+    #
+    # 게임 없이는 순찰을 못 돌리므로 «이름»만 본다. 부르는 이름이 실제로
+    # 있는지는 게임이 없어도 알 수 있다.
+    import ast as _ast
+    import crew as _crew
+
+    _src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                             "bridge", "crew", "thinking.py"),
+                encoding="utf-8").read()
+    _called = {n.func.attr for n in _ast.walk(_ast.parse(_src))
+               if isinstance(n, _ast.Call)
+               and isinstance(n.func, _ast.Attribute)
+               and isinstance(n.func.value, _ast.Name)
+               and n.func.value.id == "self"}
+    _missing = sorted(n for n in _called if not hasattr(_crew.Crew, n))
+    check("thinking.py invents no crew methods", not _missing, str(_missing))
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))

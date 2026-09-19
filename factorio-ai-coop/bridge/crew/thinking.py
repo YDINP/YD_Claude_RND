@@ -220,6 +220,33 @@ class ThinkingMixin:
         if told:
             self.say(told)
 
+    # -- 일감을 실제로 맡긴다 ---------------------------------------------
+
+    def give(self, worker, job) -> bool:
+        """머리가 고른 일을 그 사람에게 맡긴다. 맡았으면 True.
+
+        배차(`dispatch`)가 하는 절차와 «같아야» 한다. 여기만 따로 줄이면
+        점유도 안 되고 감시도 안 되는 유령 일감이 생긴다 - 그리고 그것은
+        조용히 실패한다.
+
+        실제로 그랬다. 처음에 이 함수를 안 만들고 `self.give` 라고만
+        써뒀는데, 무리에 그런 이름이 없어서 머리가 생각을 마칠 때마다
+        순찰이 터졌다. 로그에는 머리가 한 «말»만 남아서 잘 도는 것처럼
+        보였다 - 말은 일을 맡기기 «전»에 하기 때문이다.
+        """
+        if job.routine:
+            if not self.start_routine(worker, job.routine, job.ore, job.at):
+                return False
+        else:
+            try:
+                worker.watching = worker.handle.submit_plan(job.steps)
+            except RconError:
+                return False
+        self.claim(worker, job.key)
+        self.say(job.narration, who=worker.name)
+        worker.said_idle = False
+        return True
+
     # -- 순찰마다 한 번 ---------------------------------------------------
 
     def let_them_think(self, free, handed):
@@ -272,9 +299,11 @@ class ThinkingMixin:
             self.say(f"해본 것을 규칙 {len(book.rules.splitlines())}줄로 "
                      f"줄였습니다.", who=worker.name)
             return
+        job = self.job_from(worker, snap, got) if got.do != "follow" else None
+        # 생각한 것을 먼저 말한다. 다만 «일감 이름»은 맡은 뒤에 말한다 -
+        # 맡기기 전에 말하면 실패해도 성공처럼 보인다.
         if got.say:
             self.say(got.say, who=worker.name)
-        job = self.job_from(worker, snap, got) if got.do != "follow" else None
         if job is None:
             book.note(got.do, got.args, False,
                       "규칙에 맡김" if got.do == "follow" else "옮길 수 없는 뜻")
