@@ -202,3 +202,40 @@ def orphan_drills(snap: Snapshot) -> list[dict]:
         if not near:
             orphans.append(drill)
     return orphans
+
+
+# -- 인서터는 «집는 쪽»을 보고 선다 -----------------------------------------
+#
+# 방향 숫자가 가리키는 것은 놓는 곳이 아니라 «집는 곳»이다. 이것을 손으로
+# 셀 때마다 틀렸다 - 한 판에서만 네 번.
+#
+#     석탄 출구   팔을 벨트 «위»에 놓으려 함
+#     돌 출구     팔이 상자에서 집게 됨
+#     구리 꺾임   이미 깔린 벨트에 덮어쓰기가 안 되는 것을 잊음
+#
+# 세는 대신 묻는다. 「이 칸에 서서 저 칸에서 집어라」를 주면 방향과 놓는
+# 칸이 나온다.
+#
+#     0 북(-y)   4 동(+x)   8 남(+y)   12 서(-x)
+_COMPASS = {(0, -1): 0, (1, 0): 4, (0, 1): 8, (-1, 0): 12}
+
+
+def arm_dir(at: tuple[int, int], pickup: tuple[int, int]) -> int:
+    """`at` 칸에 선 인서터가 `pickup` 칸에서 집으려면 어느 방향인가."""
+    step = (pickup[0] - at[0], pickup[1] - at[1])
+    if step not in _COMPASS:
+        raise ValueError(f"{at} 에서 {pickup} 은 맞닿은 칸이 아니다")
+    return _COMPASS[step]
+
+
+def arm_drop(at: tuple[int, int], pickup: tuple[int, int]) -> tuple[int, int]:
+    """그 인서터가 «놓는» 칸. 집는 쪽의 반대편 한 칸이다."""
+    arm_dir(at, pickup)                       # 맞닿았는지 먼저 따진다
+    return (2 * at[0] - pickup[0], 2 * at[1] - pickup[1])
+
+
+def arm(at: tuple[int, int], pickup: tuple[int, int],
+        name: str = "burner-inserter") -> tuple[str, dict]:
+    """세우는 한 단계. 방향을 세지 않고 «어디서 집나»만 말한다."""
+    return ("build", {"name": name, "x": at[0], "y": at[1],
+                      "direction": arm_dir(at, pickup)})

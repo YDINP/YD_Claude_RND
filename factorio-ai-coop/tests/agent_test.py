@@ -1870,6 +1870,31 @@ def main() -> int:
     # 주기는 «얼마나 자주 보는가»이지 «얼마나 자주 시키는가»가 아니다.
     # 주기만 줄이면 걷는 중인 사람에게 계획이 겹겹이 쌓이고, 밀린 계획이
     # 나중에 «이미 채워진 기계»를 다시 채우러 간다.
+    # -- 인서터는 «집는 쪽»을 보고 선다 --------------------------------
+    #
+    # 방향 숫자가 가리키는 것은 놓는 곳이 아니라 집는 곳이다. 손으로 셀
+    # 때마다 틀렸다 - 한 판에서만 네 번. 세는 대신 묻게 했다.
+    from layout import arm, arm_dir, arm_drop
+    check("an arm that picks from the north faces north",
+          arm_dir((5, 5), (5, 4)) == 0)
+    check("from the south, south", arm_dir((5, 5), (5, 6)) == 8)
+    check("from the west, west", arm_dir((5, 5), (4, 5)) == 12)
+    check("from the east, east", arm_dir((5, 5), (6, 5)) == 4)
+    # 놓는 칸은 집는 쪽의 «반대편»이다. 벨트에서 집어 화로에 넣는 팔은
+    # 벨트와 화로 사이에 선다.
+    check("and it drops on the far side", arm_drop((5, 5), (5, 6)) == (5, 4))
+    check("a belt tile below, a furnace tile above",
+          arm((80, -80), (80, -81)) ==
+          ("build", {"name": "burner-inserter", "x": 80, "y": -80,
+                     "direction": 0})
+          and arm_drop((80, -80), (80, -81)) == (80, -79))
+    _diag = None
+    try:
+        arm_dir((0, 0), (1, 1))
+    except ValueError as exc:
+        _diag = str(exc)
+    check("and a diagonal is refused, not guessed", bool(_diag), repr(_diag))
+
     check("the patrol only loads up whoever is idle",
           "def idle(" in _agent_src and "bridge.list()" in _agent_src
           and 'row.get("current") or row.get("queued")' in _agent_src)
