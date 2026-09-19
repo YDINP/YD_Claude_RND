@@ -752,6 +752,33 @@ class SurveyMixin:
         # 이제 사다리 일감도 한 곳에 모아 놓고 반장이 고른다. 사람마다
         # 맡은 광맥이 다르므로 각자의 눈으로 한 번씩 훑되, 답은 한 자리에
         # 모은다.
+        # 밭 목록은 «모두»에게 준다.
+        #
+        # survey 는 첫 번째 사람 하나만 받아 돈다. 그래서 worker.fields 가
+        # 그 한 사람에게만 채워졌고, 나머지 넷은 밭을 «모르는» 채로 사다리를
+        # 봤다. 밭을 모르면 rigs_by_ore 가 비고, 석탄 채굴기가 녹이는 쪽
+        # 수에서 안 빠져서 여유가 음수가 된다:
+        #
+        #     room = 채굴기 목표 6 - (선 채굴기 8 - 석탄 0) = -2
+        #
+        # 그러면 채굴기 일감이 «한 개도» 안 만들어진다. 실측(새 판 120분째):
+        # 일감 25개 중 채굴기 일감 0개, 가방 속 채굴기 18대, 자리 2칸.
+        # 300줄의 로그에 채굴기 세우기가 한 줄도 없었다.
+        #
+        # 한 번만 묻고 다섯에게 나눈다. 다섯 번 묻는 것보다 싸고, «한 사람만
+        # 아는 것»은 반장이 나누는 판에서 언제나 사고가 된다.
+        try:
+            rows = _as_rows((self.bridge.zones(free[0][0].name) or {}).get("fields"))
+            for mate, shot in free:
+                mate.fields = rows
+                # 스냅샷은 이미 찍힌 뒤다. 사람에게만 알려주고 스냅샷을
+                # 그대로 두면 «다음 회차»에야 반영된다 - 사다리는 스냅샷을
+                # 보지 사람을 안 본다.
+                if shot is not None:
+                    shot.fields = rows
+        except RconError:
+            pass
+
         seen = {j.key for j in pool}
         for worker, snap in free:
             for job in plan(snap, worker.focus, crew=len(self.workers)):
@@ -780,8 +807,23 @@ class SurveyMixin:
 
         # 가방에 채굴기가 놀고 있으면 세우는 일이 먼저다. 빼지 않고
         # 당기기만 하므로, 다 세우면 저절로 평소 순서로 돌아간다.
-        pool = drills_first(
-            pool, sum(int((s.items or {}).get(DRILL) or 0) for _, s in free))
+        holding = sum(int((s.items or {}).get(DRILL) or 0) for _, s in free)
+        pool = drills_first(pool, holding)
+
+        # 목록의 «앞»이 무엇인지 말한다.
+        #
+        # 채굴기가 가방에 열여덟 대 있고 자리가 두 칸 비어 있는데도 300줄의
+        # 로그에 채굴기 세우기가 한 줄도 없었다. 목록에는 있는데 안 나간
+        # 것인지, 목록에 아예 없는 것인지 읽기로는 못 갈랐다.
+        #
+        # 배차가 무엇을 쥐고 있었는지 남기지 않으면 다음에도 못 가른다.
+        # 바뀔 때만 말하므로 시끄럽지 않다.
+        head = [j.key for j in pool[:3]]
+        autos = [j.key for j in pool if j.key.startswith("automate:")]
+        if getattr(self, "_head", None) != (holding, tuple(head), tuple(autos)):
+            self._head = (holding, tuple(head), tuple(autos))
+            self.say(f"일감 {len(pool)}개, 앞머리 {head}, 채굴기 일감 {autos} "
+                     f"(가방 속 채굴기 {holding}대)")
 
         taken = self.taken()
         made = len(pool)

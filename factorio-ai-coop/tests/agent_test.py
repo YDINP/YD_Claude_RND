@@ -1664,6 +1664,46 @@ def main() -> int:
     #
     # 실측(새 판 84분째): 넷이 동시에 "wooden-chest를 못 구했습니다" 였고,
     # 그때 가방에는 철 상자가 아홉 개, 채굴기가 스물세 대 있었다.
+    # 밭을 모르면 채굴기 일감이 «한 개도» 안 만들어진다.
+    #
+    # survey 는 첫 번째 사람 하나만 받아 돈다. 그래서 worker.fields 가 한
+    # 사람에게만 채워졌고, 나머지 넷은 석탄 채굴기를 녹이는 쪽에서 못 빼서
+    # 여유가 음수가 됐다:
+    #
+    #     room = 채굴기 목표 6 - (선 채굴기 8 - 석탄 0) = -2
+    #
+    # 실측(새 판 120분째): 일감 25개 중 채굴기 일감 0개, 가방 속 채굴기
+    # 18대, 자리 2칸. 로그 300줄에 채굴기 세우기가 한 줄도 없었다.
+    def _known(fields):
+        return Snapshot(
+            x=0, y=0, researched=ALL_TECH, powered=True, working_labs=1,
+            items={"burner-mining-drill": 9, "iron-chest": 9, "coal": 50},
+            fields=fields,
+            resources={o: {"nearest": {"x": 3, "y": 3}, "nearest_dist": 4}
+                       for o in ("coal", "iron-ore", "copper-ore", "stone")},
+            buildings={"stone-furnace": {"count": 6, "nearest": {"x": 1, "y": 1},
+                                         "nearest_dist": 2,
+                                         "spots": [{"x": 1, "y": 1}]},
+                       DRILL: {"count": 8}})
+
+    _blind = [j.key for j in plan(_known([]), focus="iron-ore", crew=5)
+              if j.key.startswith("automate:")]
+    _sees = [j.key for j in plan(
+        _known([{"ore": "coal", "count": 4}, {"ore": "iron-ore", "count": 4}]),
+        focus="iron-ore", crew=5) if j.key.startswith("automate:")]
+    check("knowing the fields is what opens drill seats",
+          not _blind and bool(_sees),
+          f"밭 모를 때 {_blind}, 밭 알 때 {_sees}")
+
+    # 그리고 그 앎이 «모두»에게 가야 한다. 한 사람만 아는 것은 반장이
+    # 나누는 판에서 언제나 사고가 된다.
+    _sv = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "bridge", "crew", "survey.py"), encoding="utf-8").read()
+    check("and every hand is told, not just the first",
+          "for mate, shot in free:" in _sv and "mate.fields = rows" in _sv
+          and "shot.fields = rows" in _sv,
+          "밭 목록을 한 사람에게만 준다(또는 스냅샷을 안 고친다)")
+
     check("a chest is a chest when the cheap one runs out",
           "spare = CHEST if receiver != CHEST else MINE_CHEST" in _mining
           and "receiver = spare" in _mining,
