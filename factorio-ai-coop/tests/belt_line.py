@@ -44,9 +44,71 @@ GATES = (
 )
 
 
+# 루아를 파이썬으로 옮겨 «규칙 자체»를 시험한다. 문자열이 있는지만 보면
+# 부르기는 하는데 아무 일도 안 하는 경우를 못 잡는다 - 실제로 그랬다.
+def stitch(tiles, passable=lambda x, y: True):
+    """belts.lua 의 stitch 와 같은 규칙."""
+    if not tiles or len(tiles) < 2:
+        return tiles
+    out = []
+    for i, here in enumerate(tiles):
+        out.append(here)
+        nxt = tiles[i + 1] if i + 1 < len(tiles) else None
+        if not nxt:
+            continue
+        dx, dy = nxt[0] - here[0], nxt[1] - here[1]
+        if dx != 0 and dy != 0:
+            a, b = (nxt[0], here[1]), (here[0], nxt[1])
+            out.append(a if passable(*a) or not passable(*b) else b)
+    return out
+
+
+def broken(tiles):
+    """이웃이 아닌 이음매의 수."""
+    return sum(1 for i in range(1, len(tiles))
+               if abs(tiles[i][0] - tiles[i - 1][0])
+               + abs(tiles[i][1] - tiles[i - 1][1]) != 1)
+
+
 def main() -> int:
     text = open(BELTS, encoding="utf-8").read()
     problems = []
+
+    # 이 저장소가 실제로 낸 대각선들. 둘 다 정수 좌표라야 메울 수 있다 -
+    # 그래서 등뼈를 칸 번호로 내리는 것이 먼저다.
+    for name, pair in (("정수 대각선", [(83, 56), (84, 55)]),
+                       ("반대 방향", [(85, 46), (84, 45)])):
+        if broken(stitch(pair)):
+            problems.append(f"stitch 가 «{name}»을 못 메운다: {pair}")
+
+    # 반칸과 정수를 섞으면 «한 칸으로는 못 잇는다». stitch 가 고칠 수
+    # 있는 것은 코너뿐이고, 규약이 둘이면 코너가 아니라 «틈»이 된다.
+    # 이것이 등뼈를 칸 번호로 내려야 하는 이유이자, 옛 규칙(|dx|==1)이
+    # 한 번도 성립하지 못한 이유다. 시험은 그 한계를 못박아 둔다.
+    if not broken(stitch([(37.5, 71.5), (39, 70)])):
+        problems.append("반칸과 정수를 섞어도 이어진다고 나온다 - "
+                        "그럴 리가 없다. 규약을 하나로 두는 이유가 사라진다")
+
+    # 이미 이어져 있는 것은 건드리지 않는다.
+    straight = [(0, 0), (1, 0), (2, 0)]
+    if stitch(straight) != straight:
+        problems.append("stitch 가 멀쩡한 줄에 칸을 끼워 넣는다")
+
+    # 등뼈가 칸 번호로 내려오는가. 반칸이면 줄기와 영원히 이웃이 아니다.
+    if "{ x = n, y = best } or { x = best, y = n }" not in text:
+        problems.append("등뼈가 칸 번호가 아니다 - 줄기와 규약이 어긋난다")
+
+    # repair 가 되돌아온 칸을 맡는가.
+    if "fixed[#fixed + 1] = { x = after.x, y = after.y" not in text:
+        problems.append("repair 가 되돌아오는 칸을 안 맡는다 - 이은 자리마다 구멍")
+
+    # 아무도 안 쓰는 이름을 «읽고» 있지 않은가. 주석에 적힌 것은 괜찮다 -
+    # 그것이 왜 사라졌는지를 남겨두는 일이다.
+    for n, line in enumerate(text.splitlines(), 1):
+        code = line.split("--", 1)[0]
+        if "storage.ore_line" in code:
+            problems.append(f"belts.lua:{n}: storage.ore_line 을 아직 읽는다 "
+                            "- 쓰는 곳은 어디에도 없다")
 
     if "local function stitch(" not in text:
         problems.append("stitch 가 아예 없다")

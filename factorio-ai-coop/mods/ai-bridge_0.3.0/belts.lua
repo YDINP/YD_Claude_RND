@@ -51,7 +51,11 @@ end
 -- 이미 벨트가 선 칸은 «지나갈 수 있는 칸»으로 친다 - 그것이 바로 우리가
 -- 깔아둔 길이기 때문이다.
 -- 길 찾는 법이 바뀔 때마다 올린다. 옛 길을 버리는 표시다.
-local PLAN = 4
+--
+-- 5 로 올린다: 등뼈의 좌표 규약이 반칸에서 칸 번호로 바뀌었고, repair 가
+-- 내던 한 칸 구멍이 이미 굳어 있는 길들에 남아 있다. 올리지 않으면
+-- `field_lines` 가 plan 이 같다고 옛 길을 그대로 다시 쓴다.
+local PLAN = 5
 
 -- 이만큼 안에 있으면 «같은 밭»이다. 밭을 나누는 간격(zones.lua 의
 -- FIELD_GAP)과 같은 값이라야 한다 - 그보다 크면 두 밭이 한 길을 쓰고,
@@ -116,7 +120,10 @@ local function stitch(surface, force, tiles)
     local nxt = tiles[i + 1]
     if nxt then
       local dx, dy = nxt.x - tiles[i].x, nxt.y - tiles[i].y
-      if math.abs(dx) == 1 and math.abs(dy) == 1 then
+      -- 「대각선으로 꼭 한 칸」이 아니라 「축 둘 다 어긋났다」로 본다.
+      -- 앞의 것은 좌표 규약이 하나일 때만 맞는 말이었고, 실제로는
+      -- 규약이 둘이라 한 번도 성립하지 않았다.
+      if dx ~= 0 and dy ~= 0 then
         local a = { x = nxt.x, y = tiles[i].y }
         local b = { x = tiles[i].x, y = nxt.y }
         local pick = a
@@ -412,6 +419,20 @@ local function repair(surface, force, tiles)
         if not detour or #detour == 0 then return nil end
         -- detour 는 before -> after 순서다. 첫 칸(before)은 이미 넣었다.
         for n = 2, #detour do fixed[#fixed + 1] = detour[n] end
+        -- 돌아온 «그 칸»(tiles[j] = after)도 넣는다.
+        --
+        -- `walk` 은 마지막 칸을 반드시 지운다 - 「그 칸은 내리는 줄이
+        -- 맡는다」가 그 자리의 규칙이기 때문이다. 그런데 여기서는 내리는
+        -- 줄이 없다. 그냥 길 한가운데다.
+        --
+        -- 그래서 우회로를 붙일 때마다 이은 자리에 정확히 한 칸 구멍이
+        -- 났고, 그 구멍이 `storage.lines` 에 덮어쓰여 «계획의 일부»가
+        -- 됐다. 다음 repair 에서는 목록에 없으니 막힌 칸으로도 안 잡히고,
+        -- 남은 칸 수는 0 으로 보고된다 - 끊긴 벨트가 「완성」으로 집계됐다.
+        if not (fixed[#fixed] and fixed[#fixed].x == after.x
+                and fixed[#fixed].y == after.y) then
+          fixed[#fixed + 1] = { x = after.x, y = after.y, dir = after.dir }
+        end
         patched = patched + 1
         i = j + 1
       end
@@ -760,10 +781,25 @@ local function spine_of(surface, force, field, drills, toward)
   end
   if from > to then return nil end
 
+  -- 좌표 규약을 «줄기와 같게» 맞춘다.
+  --
+  -- 여기 있던 것은 (along, best+0.5) 처럼 반칸 좌표였다. 그것은 벨트
+  -- «엔티티의 자리»고, 길 찾기가 쓰는 것은 «칸 번호»다. 둘은 같은 칸을
+  -- 가리키지만 적는 법이 다르다.
+  --
+  -- 그래서 등뼈 끝과 줄기 첫 칸이 «영원히 이웃이 아니었다». 두 좌표의
+  -- 차가 늘 ±0.5 나 ±1.5 라, 대각선을 메우는 `stitch` 의 |dx|==1 이
+  -- 성립할 수 없다. 부르기는 하는데 아무 일도 안 하고 있었다.
+  --
+  -- 파생이 더 나빴다. `dir_of` 는 x 를 먼저 보는데 dx 가 0 이 될 수
+  -- 없으므로 north/south 를 돌려줄 수 없다 - 줄기 첫 칸이 위나 아래면
+  -- 광석이 밭 «안쪽»으로 거꾸로 밀린다.
+  --
+  -- 칸 번호로 내린다. floor 면 된다 - 반칸 좌표가 가리키던 그 칸이다.
   local tiles = {}
   for along = from, to do
-    tiles[#tiles + 1] = wide and { x = along, y = best + 0.5 }
-                             or { x = best + 0.5, y = along }
+    local n = math.floor(along)
+    tiles[#tiles + 1] = wide and { x = n, y = best } or { x = best, y = n }
   end
   return tiles, best_hits
 end
@@ -1033,10 +1069,21 @@ local function loose_belts(name, limit)
   local mine_route = {}
   -- 길 찾는 법이 바뀌면 옛 길은 버린다. 계단으로 깔린 것을
   -- 그대로 들고 가면 고친 보람이 없다.
-  local kept = storage.ore_line
-  if kept and kept.plan ~= PLAN then kept = nil end
-  for _, tile in pairs((kept and kept.tiles) or {}) do
-    mine_route[tile.x .. ":" .. tile.y] = true
+  -- 얼려둔 길을 «전부» 센다.
+  --
+  -- 여기는 `storage.ore_line` 을 읽고 있었다. 그런데 길을 저장하는 자리가
+  -- `storage.lines[key]` 로 옮겨간 뒤로 그 이름에 쓰는 곳은 하나도 없다.
+  -- 읽기 한 곳, 쓰기 영. 그러니 kept 는 «언제나» nil 이었다.
+  --
+  -- 그 값이 컸다. 간선도 밭 줄도 유통 줄도 전부 「길 밖」으로 분류되어,
+  -- 무리가 방금 깐 벨트를 다음 순찰에 스스로 뜯었다. 로그의 「길 위에
+  -- 없는 벨트 N칸이 버려져 있습니다」가 그것이다.
+  for _, kept in pairs(storage.lines or {}) do
+    if kept.plan == PLAN then
+      for _, tile in pairs(kept.tiles or {}) do
+        mine_route[math.floor(tile.x) .. ":" .. math.floor(tile.y)] = true
+      end
+    end
   end
   for _, tile in pairs(lane) do
     mine_route[tile.x .. ":" .. tile.y] = true
