@@ -1784,59 +1784,79 @@ def main() -> int:
           "--no-minds" in _wire and 'mind_model="" if args.no_minds' in _wire)
 
 
-    # -- 연료 순찰: 줄 끝의 팔이 굶으면 그 뒤가 전부 선다 -----------------
+    # -- 보급 순찰: 줄 끝의 팔이 굶으면 그 뒤가 전부 선다 ---------------
     #
     # 16회차 실측: 철.구리 인서터가 둘 다 no_fuel 이었고, 채굴기 서른 대
     # 중 스물여섯이 waiting_for_space_in_destination 으로 서 있었다. 벨트는
     # 꽉 차 있었다. 아무것도 「실패」하지 않았고 그래서 아무도 몰랐다.
-    import fuel as _fuel
-    _starving = [
-        {"type": "mining-drill", "name": "d1", "x": 0, "y": 0, "coal": 0},
-        {"type": "mining-drill", "name": "d2", "x": 2, "y": 0, "coal": 0},
-        {"type": "inserter", "name": "arm", "x": 40, "y": 0, "coal": 0},
-    ]
-    _coal = [{"x": 1, "y": 0, "count": 5}, {"x": 60, "y": 0, "count": 900}]
-    _round, _why = _fuel.plan_round(["a", "b"], _starving, _coal)
+    #
+    # 사용자: "항상 연료랑 탄약같이 소비성재료들은 넉넉하게 넣어둘 것."
+    import upkeep as _up
+    def _need(kind, x, held, room):
+        return {"type": kind, "name": kind, "x": float(x), "y": 0.0,
+                "held": held, "room": room, "item": _up.wants(kind)}
+    _low = [_need("mining-drill", 0, 0, 50), _need("mining-drill", 2, 5, 45),
+            _need("inserter", 40, 0, 50)]
+    _shelf = {"coal": [{"x": 1, "y": 0, "count": 5},
+                       {"x": 60, "y": 0, "count": 900}]}
+    _round, _why = _up.plan_round(["a", "b"], _low, _shelf)
     _lead = _round[0][1] if _round else []
     check("the arm at the end of a lane is fed first",
-          any(step[1].get("x") == 40 for step in _lead if step[0] == "insert"),
-          repr(_lead))
-    check("a fuel round starts by loading coal",
+          any(v.get("x") == 40 for k, v in _lead if k == "insert"), repr(_lead))
+    check("a supply round starts by loading up",
           bool(_lead) and _lead[0][0] == "take")
     # 「가지고 있는가」가 아니라 «달라는 만큼 가지고 있는가». 석탄 다섯 개
     # 든 상자가 바로 옆에 있어도 그리로 가면 걸어간 보람이 없다.
-    check("coal comes from a chest that actually holds enough",
+    check("supplies come from a chest that actually holds enough",
           bool(_lead) and _lead[0][1]["x"] == 60, repr(_lead[:1]))
-    check("two hands never feed the same machine",
-          len({step[1]["x"] for _who, _plan in _round
-               for step in _plan if step[0] == "insert"})
-          == sum(1 for _who, _plan in _round
-                 for step in _plan if step[0] == "insert"))
-    check("nobody is sent out when nothing is starved",
-          _fuel.plan_round(["a", "b"], [], _coal) == ([], []))
+    check("two hands never top up the same machine",
+          len({v["x"] for _w, _p in _round for k, v in _p if k == "insert"})
+          == sum(1 for _w, _p in _round for k, v in _p if k == "insert"))
+    check("nobody is sent out when everything is topped up",
+          _up.plan_round(["a", "b"], [], _shelf) == ([], []))
+
     # 못 하는 것은 못 한다고 «말하고» 끝나야 한다. 조용히 빈손으로
     # 돌아오면 그 침묵이 「이상 없음」으로 읽힌다 - 실제로 한 번 그랬다.
-    _none, _said = _fuel.plan_round(["a", "b"], _starving, [])
-    check("and nobody is sent out when there is no coal to fetch", _none == [])
+    _none, _said = _up.plan_round(["a", "b"], _low, {})
+    check("and nobody is sent out when there is nothing to fetch", _none == [])
     check("but the patrol says why it did nothing", bool(_said), repr(_said))
-    # 상자에 조금밖에 없어도 급한 팔 하나는 살린다.
-    _thin, _ = _fuel.plan_round(["a"], _starving, [{"x": 9, "y": 0, "count": 20}])
+
+    # 창고에 조금밖에 없어도 급한 것 하나는 살린다.
+    _thin, _ = _up.plan_round(["a"], _low, {"coal": [{"x": 9, "y": 0, "count": 20}]})
     _pours = [v for k, v in _thin[0][1] if k == "insert"] if _thin else []
+    # «누구에게 얼마나»와 «어느 순서로 걷나»는 다른 결정이다. 둘을 한
+    # 고리에서 정했더니 가까운 채굴기가 스무 개를 다 먹고 급한 팔이
+    # 빈손으로 남았다.
     check("a thin chest still saves the most urgent one",
           any(v["x"] == 40 for v in _pours), repr(_thin))
-    # 그리고 «있는 만큼만» 나선다. 스무 개 들고 나가 다섯 대를 먹이겠다고
+    # 그리고 «있는 만큼만» 나선다. 스무 개 들고 나가 다섯 대를 채우겠다고
     # 하면 첫 대에서 다 쓰고 나머지가 「no coal to insert」로 무너진다.
-    check("and never promises more coal than the chest holds",
-          bool(_thin) and sum(v["count"] for v in _pours) <= 20,
-          repr(_pours))
-    # 손에 든 것이 있으면 상자를 보러 가지 않는다. 실측: 둘이 천 개를
+    check("and never promises more than the chest holds",
+          bool(_thin) and sum(v["count"] for v in _pours) <= 20, repr(_pours))
+
+    # 손에 든 것이 있으면 창고를 보러 가지 않는다. 실측: 둘이 천 개를
     # 들고 서서 석탄 26개짜리 상자를 보고 「퍼올 것이 없다」고 했다.
-    _bag, _ = _fuel.plan_round(["a"], _starving, [], {"a": 500})
-    check("coal already in the bag is used before walking to a chest",
+    _bag, _ = _up.plan_round(["a"], _low, {}, {"a": {"coal": 500}})
+    check("what is already in the bag is used before walking to a chest",
           bool(_bag) and all(k == "insert" for k, _v in _bag[0][1]), repr(_bag))
-    check("and an empty-handed round still goes shopping",
-          bool(_fuel.plan_round(["a"], _starving, _coal, {"a": 0})[0][0][1][0][0]
-               == "take"))
+
+    # 떨어지기 «전에» 간다. 다섯 개 남은 채굴기도 부르면 나와야 한다.
+    check("a machine that is merely low still gets a visit",
+          any(v["x"] == 2 for _w, _p in _up.plan_round(["a"], _low, _shelf)[0]
+              for k, v in _p if k == "insert"))
+
+    # 못 하는 일 하나가 «할 수 있는 일 전부»를 막으면 안 된다. 포탑이 제일
+    # 급한데 탄창이 없는 날, 석탄은 창고에 있고 인서터는 굶은 채였다.
+    _mixed = [_need("ammo-turret", 99, 0, 100)] + _low
+    _fall, _ = _up.plan_round(["a"], _mixed, _shelf)
+    check("no ammo does not stop the coal round",
+          bool(_fall) and any(v["name"] == "coal"
+                              for k, v in _fall[0][1] if k == "insert"),
+          repr(_fall))
+    check("and a turret asks for magazines, not coal",
+          _up.wants("ammo-turret") == "firearm-magazine"
+          and _up.wants("mining-drill") == "coal")
+
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
