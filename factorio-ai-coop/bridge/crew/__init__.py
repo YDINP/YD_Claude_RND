@@ -14,6 +14,7 @@ import threading
 import time
 
 import mission
+import pantry
 from client import AIBridge, RconError
 
 from settings import DISPATCH_IDLE, DISPATCH_INTERVAL, ORE_BATCH
@@ -34,9 +35,10 @@ from .survey import SurveyMixin
 from .tending import TendingMixin
 from .watch import WatchMixin
 from .chief import ChiefMixin
+from .thinking import ThinkingMixin
 
 
-class Crew(ChiefMixin, RosterMixin, TalkMixin, SupplyMixin,
+class Crew(ChiefMixin, ThinkingMixin, RosterMixin, TalkMixin, SupplyMixin,
            PowerMixin, MiningMixin, HaulingMixin, FactoryMixin,
            SurveyMixin, TendingMixin, WatchMixin):
     """사람 여럿을 데리고 게임 안에서 실제로 일하는 무리."""
@@ -61,6 +63,9 @@ class Crew(ChiefMixin, RosterMixin, TalkMixin, SupplyMixin,
         # 부탁이 오가는 곳, 그리고 누가 무엇을 쥐고 있는지에 대한 마지막 기억.
         # 남의 인벤토리는 스냅샷을 찍을 때만 알 수 있으니, 찍을 때마다 적어둔다.
         self.board = mission.Board()
+        # 공용 창고에 무엇이 있는지. 넣고 꺼내는 일은 있었는데 «기억»이
+        # 없었다 - 창고가 있어도 그 안이 안 보이면 없는 것과 같다.
+        self.pantry = pantry.Pantry()
         self.stock: dict[str, dict[str, int]] = {}
         self.stage: str | None = None
         self.goal_line = f"목표 {mission.GOAL}"
@@ -182,6 +187,14 @@ class Crew(ChiefMixin, RosterMixin, TalkMixin, SupplyMixin,
             waiting = [w for w, _ in free if w.name not in handed]
             self.dispatched_at = now + (DISPATCH_IDLE if waiting
                                         else DISPATCH_INTERVAL)
+
+        # 배차가 끝난 뒤에 «각자 생각»을 얹는다. 순서에 뜻이 있다 -
+        # 반장이 이미 일을 준 사람은 건드리지 않고, 남은 사람만 스스로
+        # 고른다. 그리고 생각은 다른 실에서 도므로 여기서 기다리지 않는다.
+        try:
+            handed |= self.let_them_think(free, handed)
+        except RconError:
+            pass
 
         for worker, snap in free:
             if worker.name in handed:

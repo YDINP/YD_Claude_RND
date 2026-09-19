@@ -1242,6 +1242,46 @@ def main() -> int:
     check("and every one has its own key",
           len(seats) == len(set(seats)), str(seats))
 
+    # ------------------------------------------------------------------
+    print("\n14. the mind decides what, the chief decides where")
+
+    import mind as mind_mod
+    from pantry import Pantry
+
+    # 사용자: "심시티건설은 메인반장에게 물어보고 진행할 것."
+    # 모델에게 「좌표를 지어내지 마라」고 적어두는 것으로는 여러 번 샜다.
+    # 적어두는 대신 «말할 수 없게» 만든다 - 좌표는 뜻의 일부가 아니다.
+    sneaky = mind_mod.read({"do": "build",
+                            "args": {"what": "stone-furnace", "x": 9, "y": -4}})
+    check("a build intent carries no coordinates",
+          sneaky.do == "build" and set(sneaky.args) == {"what"}, str(sneaky.args))
+
+    check("an unknown doing falls back to follow",
+          mind_mod.read({"do": "launch-rocket"}).do == "follow")
+    check("a build with nothing to build falls back too",
+          mind_mod.read({"do": "build", "args": {}}).do == "follow")
+    check("counts are clamped, not trusted",
+          mind_mod.read({"do": "mine", "args": {"ore": "coal",
+                         "count": 10 ** 9}}).args["count"] == mind_mod.MAX_COUNT)
+    check("junk in is follow out", mind_mod.read(None).do == "follow")
+
+    # 수첩: 겪은 것을 쌓다가 규칙으로 줄인다. 쌓는 것은 기억이고 줄이는 것이 배움이다.
+    import lessons
+    book = lessons.Journal("__test__")
+    book.entries.clear()
+    book.rules = ""
+    check("an empty distillation is refused", not book.learn("생각해보니 잘 모르겠습니다"))
+    check("a rule list is kept", book.learn("- 화로가 굶으면 먼저 먹인다"))
+    check("and it shows up in the next brief", "화로가 굶으면" in book.brief())
+
+    # 공용 창고: 목록이 아니라 «소식»으로 말한다. 같은 목록을 되풀이하면 안 읽힌다.
+    shelf = Pantry()
+    shelf.remember({"total": {"iron-ore": 120}, "chest_count": 1,
+                    "chests": [{"x": 4, "y": 4}]})
+    check("the pantry remembers what is in it", shelf.has("iron-ore", 100))
+    check("and says what changed", "들어온 것" in (shelf.news() or ""))
+    check("but does not repeat itself", shelf.news() is None)
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))
