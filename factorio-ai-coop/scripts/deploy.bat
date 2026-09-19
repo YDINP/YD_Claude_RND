@@ -13,10 +13,22 @@ rem
 rem Skipping step 1 costs whatever happened since the last autosave.
 rem ASCII only: Korean in a .bat is read as CP949 and swallows quotes.
 
+rem Anything after the save name is handed to the crew, so a session that was
+rem being driven by hand comes back by hand. Restarting a manual crew with the
+rem default flags turns every autopilot loose on a half-built factory.
 setlocal
 set ROOT=D:\park\YD_Claude_RND\factorio-ai-coop
 set SAVE=%1
 if "%SAVE%"=="" set SAVE=ai-coop-fresh
+shift
+set CREW=
+:crewarg
+if "%1"=="" goto crewdone
+set CREW=%CREW% %1
+shift
+goto crewarg
+:crewdone
+if "%CREW%"=="" set CREW= --agents 4
 
 echo [1/4] saving the running world...
 python "%ROOT%\scripts\save_now.py"
@@ -37,7 +49,8 @@ start "factorio-server" /min cmd /c "%ROOT%\scripts\run-server.bat %SAVE%"
 ping -n 21 127.0.0.1 >nul
 
 echo [4/4] restarting the crew...
-start "factorio-crew" /min cmd /c "%ROOT%\scripts\run-agent.bat --agents 4"
+echo       crew flags:%CREW%
+start "factorio-crew" /min cmd /c "%ROOT%\scripts\run-agent.bat%CREW%"
 
 echo done. rejoin the server from the game client.
 endlocal
