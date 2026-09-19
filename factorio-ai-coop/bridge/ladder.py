@@ -549,6 +549,19 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
         order = [o for o in FOCUS_ORDER if o != focus]
         seat = 0
         for ore in [focus] + order:
+            # 석탄은 제 몫을 다 채우면 «그만» 판다.
+            #
+            # 석탄을 제련 예산에서 빼면서(77743a0) 석탄의 상한까지 같이
+            # 없앴다. room 이 석탄을 안 세니 아무리 세워도 자리가 남고,
+            # 석탄밭이 제일 가까우면 매번 석탄이 먼저 집힌다.
+            #
+            # 실측(새 판 74분째): 석탄 20대, 철 1대, 구리 1대. 화로는 다섯
+            # 그대로고 랩은 0이었다. 필요한 석탄 채굴기는 «넷»이었다.
+            #
+            # 예산에서 빼는 것과 상한을 없애는 것은 다른 일이다. 빼면서
+            # 제 상한을 같이 줘야 한다 - 안 그러면 그 항목만 무한이 된다.
+            if ore == "coal" and coal_rigs >= want_coal:
+                continue
             if snap.ore(ore) and seat < room:
                 jobs.append(Job(f"{ore} 자동 채굴을 준비하겠습니다.",
                                 key=f"automate:{ore}:{drills + seat}",

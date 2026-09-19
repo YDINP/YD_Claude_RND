@@ -350,10 +350,20 @@ def main() -> int:
                                          "spots": [{"x": 1, "y": 1}]},
                        DRILL: {"count": total}})
 
-    _all_coal = [j.key for j in plan(_rigs(4, 4, 5), focus="iron-ore", crew=5)
-                 if j.key.startswith("automate:")]
-    _all_iron = [j.key for j in plan(_rigs(0, 4, 5), focus="iron-ore", crew=5)
-                 if j.key.startswith("automate:")]
+    # 화로 다섯이 광석을 기다리는 판이다. 선 넷이 전부 석탄이면 «녹이는»
+    # 채굴기는 0대이므로 철·구리·돌 세 자리가 다 열려 있어야 한다.
+    # 깨졌을 때는 room = 5 - 4 = 1 이라 한 자리뿐이었다.
+    _smelters = [j.key for j in plan(_rigs(4, 4, 5), focus="iron-ore", crew=5)
+                 if j.key.startswith("automate:")
+                 and not j.key.startswith("automate:coal")]
+    # 석탄은 제 몫을 채우면 «그만» 판다. 예산에서 빼는 것과 상한을 없애는
+    # 것은 다른 일이라, 빼면서 제 상한을 같이 줘야 한다 - 안 그러면 그
+    # 항목만 무한이 된다. 실측(새 판 74분째): 석탄 20대, 철 1대, 구리 1대.
+    # 필요한 석탄은 «넷»이었다.
+    _plenty = [j.key for j in plan(_rigs(20, 22, 5), focus="iron-ore", crew=5)
+               if j.key.startswith("automate:coal")]
+    _thin_coal = [j.key for j in plan(_rigs(1, 4, 5), focus="iron-ore", crew=5)
+                  if j.key.startswith("automate:coal")]
     # 가방에 채굴기가 놀고 있으면 «세우는 일»이 먼저다.
     #
     # 사다리 일감(채굴기)은 물류 일감 뒤에 붙는다. 그래서 벨트가 한 칸이라도
@@ -378,8 +388,9 @@ def main() -> int:
           [j.key for j in _first(_pool, holding=0)] == [j.key for j in _pool])
 
     check("coal rigs leave the smelting budget alone",
-          len(_all_coal) > len(_all_iron),
-          f"석탄 4/4 -> 일감 {len(_all_coal)}개, 전부 제련 4/4 -> {len(_all_iron)}개")
+          len(_smelters) >= 3, f"녹이는 채굴기 자리 {len(_smelters)}개: {_smelters}")
+    check("and coal stops once its own quota is met", not _plenty, str(_plenty))
+    check("but it still digs coal while short", bool(_thin_coal), str(_thin_coal))
 
     check("but a standing drill puts smelting back in front",
           next((i for i, k in enumerate(run_keys) if k.startswith("smelt:")), 99)
