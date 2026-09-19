@@ -375,6 +375,43 @@ def one_arm_is_two_drills() -> list:
     return bad
 
 
+# -- 지킬 것은 «구역»이 아니라 «일하는 곳»이다 -------------------------------
+#
+# 16회차 전멸(198분). 캐릭터 둘이 죽었다.
+#
+#     포탑 12대   y=-53 줄 다섯, x=5 줄 넷, 철밭 셋
+#     다친 것     (-77,41) 구리밭, (-63,15)(-64,17) 석탄밭, (-57,14) 철밭
+#     시체        (-65,7) 석탄밭, (-56,-4) 돌밭
+#
+# 포탑은 제련.조립.유통 «구역»을 둘러 섰고, 죽은 것은 전부 밭이었다.
+# core_box 가 zones 세 개만 보았기 때문이다. 공장의 값어치가 밭으로
+# 옮겨간 뒤에도 방어선은 처음 그린 자리에 남아 있었다.
+#
+# 19회차에도 같은 모양이었다 - 그때는 무게중심이 틀렸고, 이번에는
+# 무게중심을 고쳤는데 «무게중심이 볼 목록»이 좁았다.
+def posts_guard_the_fields() -> list:
+    bad = []
+    lua = io.open(os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "defence.lua"),
+                  encoding="utf-8").read()
+    if "outposts" not in lua:
+        bad.append("밭마다 초소를 안 낸다 (outposts 없음)")
+    if "WORTH" not in lua:
+        bad.append("지킬 값어치가 있는 것의 목록이 없다")
+    # 채굴기가 목록에 없으면 밭은 여전히 안 보인다.
+    worth = lua[lua.find("local WORTH"):]
+    worth = worth[:worth.find("}")]
+    if "mining-drill" not in worth:
+        bad.append("지킬 목록에 채굴기가 없다 - 밭이 또 안 보인다")
+    # 그리고 밖으로 «나가야» 한다. 계산만 하고 안 알려주면 없는 것과 같다.
+    tail = lua[lua.find("    raid = raid("):]
+    if "posts = posts" not in tail:
+        bad.append("초소를 계산만 하고 안 알려준다")
+    # 한 덩어리에 몰아주면 다른 밭이 빈다.
+    if "#want_here < 3" not in lua:
+        bad.append("한 초소에 세울 수를 안 막는다")
+    return bad
+
+
 def main() -> int:
     shape = lua_shape()
     bad = []
@@ -396,6 +433,7 @@ def main() -> int:
     bad.extend(take_wants_enough())
     bad.extend(layout_comes_from_the_patch())
     bad.extend(one_arm_is_two_drills())
+    bad.extend(posts_guard_the_fields())
     for line in bad:
         print("  [FAIL] " + line)
     print(f"\n{len(bad)} problems - plot shape agrees "

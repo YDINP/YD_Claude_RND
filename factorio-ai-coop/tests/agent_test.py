@@ -1857,6 +1857,16 @@ def main() -> int:
           _up.wants("ammo-turret") == "firearm-magazine"
           and _up.wants("mining-drill") == "coal")
 
+    # 순찰은 «무리와 같이» 떠야 한다. 16회차에서 따로 돌리다가 배포 때
+    # 꺼졌고, 다시 켜는 것을 잊었다. 그 사이에 줄 끝의 팔들이 굶고 포탑이
+    # 비었다. 사람이 손으로 켜야 하는 것은 언젠가 안 켜진다.
+    _agent_src = open(os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "bridge", "agent.py"), encoding="utf-8").read()
+    check("the upkeep patrol starts with the crew",
+          "--upkeep" in _agent_src and "start_upkeep(bridge" in _agent_src)
+    check("and it is stopped when the crew leaves",
+          "stop_upkeep.set()" in _agent_src)
+
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:

@@ -294,6 +294,68 @@ local function turrets_wanted(slack)
   return 12
 end
 
+-- 지킬 것은 «구역»이 아니라 «일하는 곳»이다.
+--
+-- 16회차 전멸 실측(198분):
+--
+--     포탑 12대   y=-53 줄 다섯, x=5 줄 넷, 철밭 셋
+--     다친 것     (-77,41) 구리밭, (-63,15)(-64,17) 석탄밭, (-57,14)(-45,8) 철밭
+--     시체        (-65,7) 석탄밭, (-56,-4) 돌밭
+--
+-- 포탑은 제련·조립·유통 «구역»을 둘러 섰고, 죽은 것은 전부 밭이었다.
+-- core_box 가 zones 세 개만 보았기 때문이다. 공장의 값어치가 밭으로
+-- 옮겨간 뒤에도 방어선은 처음 그린 자리에 남아 있었다.
+--
+-- 그렇다고 기지부터 구리밭까지 한 상자로 두르면 둘레가 130x90 이 된다.
+-- 같은 총으로 네 배 성기게 서는 것이고, 성긴 방어선은 어디서도 못 막는다.
+--
+-- 그래서 «덩어리마다 초소»다. 붙어 있는 것끼리 묶고, 묶음마다 제 위협
+-- 방향에 총을 세운다. 밭 하나에 두세 대면 족하다.
+local WORTH = { "burner-mining-drill", "electric-mining-drill",
+                "stone-furnace", "steel-furnace", "boiler", "steam-engine",
+                "lab", "assembling-machine-1", "iron-chest" }
+
+-- 이만큼 떨어지면 다른 덩어리다. 벨트 한 줄 길이쯤.
+local LINK = 24
+
+local function outposts(surface, force)
+  local mine = surface.find_entities_filtered { name = WORTH, force = force }
+  local seen, posts = {}, {}
+  for i = 1, #mine do
+    if not seen[i] then
+      seen[i] = true
+      local queue = { mine[i] }
+      local lo = { x = mine[i].position.x, y = mine[i].position.y }
+      local hi = { x = mine[i].position.x, y = mine[i].position.y }
+      local n = 0
+      while #queue > 0 do
+        local at = table.remove(queue)
+        n = n + 1
+        lo.x = math.min(lo.x, at.position.x); hi.x = math.max(hi.x, at.position.x)
+        lo.y = math.min(lo.y, at.position.y); hi.y = math.max(hi.y, at.position.y)
+        for j = 1, #mine do
+          if not seen[j] then
+            local dx = mine[j].position.x - at.position.x
+            local dy = mine[j].position.y - at.position.y
+            if dx * dx + dy * dy <= LINK * LINK then
+              seen[j] = true
+              queue[#queue + 1] = mine[j]
+            end
+          end
+        end
+      end
+      posts[#posts + 1] = {
+        left = math.floor(lo.x) - STANDOFF, top = math.floor(lo.y) - STANDOFF,
+        right = math.ceil(hi.x) + STANDOFF, bottom = math.ceil(hi.y) + STANDOFF,
+        count = n,
+      }
+    end
+  end
+  -- 큰 덩어리부터. 잃으면 아픈 순서다.
+  table.sort(posts, function(a, b) return a.count > b.count end)
+  return posts
+end
+
 local function defence(name)
   local a = agent(name)
   local b = body(a)
@@ -336,6 +398,34 @@ local function defence(name)
   end
   local seats = (box and side) and turret_seats(surface, force, box, side) or {}
 
+  -- 그리고 «밭마다» 초소를 낸다. 구역 밖에서 일하는 곳이 지켜지지 않아
+  -- 전멸한 것이 16회차다.
+  local posts = outposts(surface, force)
+  for _, post in ipairs(posts) do
+    local mid = { x = (post.left + post.right) / 2,
+                  y = (post.top + post.bottom) / 2 }
+    local pside = threat_side(surface, mid)
+    post.side = pside
+    post.turrets = 0
+    for _, t in pairs(turrets) do
+      if t.position.x >= post.left and t.position.x <= post.right
+          and t.position.y >= post.top and t.position.y <= post.bottom then
+        post.turrets = post.turrets + 1
+      end
+    end
+    local want_here = {}
+    for _, seat in pairs(pside and turret_seats(surface, force, post, pside) or {}) do
+      local taken = false
+      for _, t in pairs(turrets) do
+        local dx, dy = t.position.x - seat.x, t.position.y - seat.y
+        if dx * dx + dy * dy < TURRET_GAP * TURRET_GAP / 4 then taken = true break end
+      end
+      -- 밭 하나에 셋이면 족하다. 더 세우면 다른 밭이 빈다.
+      if not taken and #want_here < 3 then want_here[#want_here + 1] = seat end
+    end
+    post.seats = want_here
+  end
+
   -- 이미 터렛이 선 자리는 뺀다.
   local want = {}
   for _, seat in pairs(seats) do
@@ -352,6 +442,8 @@ local function defence(name)
     raid = raid(surface, force, box, home),
     side = side, nests = nests, nearest = nearest,
     perimeter = box, home = home,
+    -- 일하는 곳마다 하나씩. 구역만 지키면 밭에서 죽는다.
+    posts = posts,
     pollution = math.floor(at_home), pollution_reach = reach,
     -- 공해가 둥지까지 몇 타일 남았는가. 0 이하면 이미 닿았다.
     slack = nearest and (nearest.gap - reach) or nil,

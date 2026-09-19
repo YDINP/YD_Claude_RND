@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import threading
 
 from client import AIBridge, RconError
 
@@ -51,6 +52,34 @@ from ladder import (STAGE_TARGET, chain_job, drill_target,  # noqa: F401
                     furnace_target, missing_item, next_goal, plan, rebalance,
                     worth_building)
 from settings import FOCUS_ORDER, STUCK_STRIKES  # noqa: F401
+from upkeep import plan_round, running_low, stock
+
+
+def start_upkeep(bridge, names: str, every: float):
+    """연료.탄약 순찰을 뒷줄에서 돌린다. 멈추라고 할 손잡이를 돌려준다."""
+    who = [n.strip() for n in names.split(",") if n.strip()]
+    if not who:
+        return None
+    stop = threading.Event()
+
+    def loop() -> None:
+        while not stop.wait(1.0):
+            try:
+                low = running_low(bridge)
+                if low:
+                    rounds, _why = plan_round(who, low, stock(bridge),
+                                              {n: bridge.agent(n).items() for n in who})
+                    for name, steps in rounds:
+                        bridge.agent(name).submit_plan(steps)
+            except RconError:
+                pass
+            except Exception as exc:                     # noqa: BLE001
+                print(f"[upkeep] {type(exc).__name__}: {exc}", file=sys.stderr)
+            if stop.wait(every):
+                return
+
+    threading.Thread(target=loop, name="upkeep", daemon=True).start()
+    return stop
 
 
 def main() -> int:
@@ -65,6 +94,11 @@ def main() -> int:
     parser.add_argument("--observer", metavar="PLAYER",
                         help="put this player in the observer seat on startup")
     parser.add_argument("--interval", type=float, default=1.0)
+    parser.add_argument("--upkeep", metavar="NAMES", default="",
+                        help="이 둘은 연료/탄약만 나른다 (쉼표로 나눈 이름). "
+                             "손으로 몰 때도 도는 순찰이라, 무리와 «같이» "
+                             "떠야 배포 뒤에 꺼진 채로 남지 않는다")
+    parser.add_argument("--upkeep-every", type=float, default=120.0)
     args = parser.parse_args()
 
     bridge = AIBridge()
@@ -90,11 +124,22 @@ def main() -> int:
     crew.say(f"{len(crew.workers)}명 나왔습니다 ({roles}). "
              + ("지시 기다리겠습니다." if args.manual else "알아서 진행하겠습니다.")
              + f" '{'/'.join(crew.names)}' 또는 '1번', '모두'로 부르시면 됩니다.")
+    # 보급 순찰을 «무리와 같이» 띄운다.
+    #
+    # 16회차에서 이것을 따로 돌리다가 배포 때 꺼졌고, 다시 켜는 것을
+    # 잊었다. 그 사이에 줄 끝의 팔들이 굶고 포탑이 비었다. 사람이 손으로
+    # 켜야 하는 것은 언젠가 안 켜진다.
+    stop_upkeep = None
+    if args.upkeep:
+        stop_upkeep = start_upkeep(bridge, args.upkeep, args.upkeep_every)
+
     try:
         crew.run(interval=args.interval)
     except KeyboardInterrupt:
         pass
     finally:
+        if stop_upkeep:
+            stop_upkeep.set()
         # Leaving without saving is how an hour of the crew's work disappears.
         try:
             bridge.save()

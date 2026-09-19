@@ -1,6 +1,7 @@
 @echo off
 rem Start the chat-listening agent in its own window.
 rem Pass --auto to let it also play by itself while nobody is giving orders.
+rem Pass --upkeep foxtrot,echo to keep two of them on fuel and ammo only.
 rem ASCII only: see run-server.bat.
 setlocal
 
