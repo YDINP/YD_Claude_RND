@@ -78,9 +78,35 @@ class MiningMixin:
                 self.say(f"{ore} 광맥이 주변 200타일 안에 안 보입니다.", who=name)
                 return
 
-            for part in (DRILL, receiver):
-                if not self.obtain(worker, part, 1):
-                    self.say(f"{part}를 못 구했습니다.", who=name)
+            if not self.obtain(worker, DRILL, 1):
+                self.say(f"{DRILL}를 못 구했습니다.", who=name)
+                worker.block("automate")
+                return
+
+            # 상자는 상자다.
+            #
+            # 나무 상자를 먼저 찾는 것은 맞다 - 나무 둘 대 철판 여덟이고,
+            # 초반에 철판은 사슬의 목이다. 그런데 나무가 없는 자리에서
+            # «나무 상자만» 고집하면 채굴기가 한 대도 안 선다.
+            #
+            # 실측(새 판 84분째): 넷이 동시에 이랬다.
+            #
+            #     echo/bravo/charlie/delta | wooden-chest를 못 구했습니다.
+            #
+            # 그때 가방에는 철 상자가 아홉 개 있었고 채굴기 스물세 대가
+            # 놀고 있었다. 철광석은 이미 넘쳐서 반장이 "모자란 것은 광석이
+            # 아니라 그것을 녹일 자리입니다"라고 말하던 참이었다.
+            #
+            # 더 좋은 것을 못 하면 아무것도 안 하는 것 - 이 파일이 서른
+            # 줄 위에서 스스로 경고하는 그 모양이다.
+            if not self.obtain(worker, receiver, 1):
+                spare = CHEST if receiver != CHEST else MINE_CHEST
+                if self.obtain(worker, spare, 1):
+                    self.say(f"{receiver}를 못 구해 {spare}로 대신합니다. "
+                             f"상자는 상자입니다.", who=name)
+                    receiver = spare
+                else:
+                    self.say(f"{receiver}를 못 구했습니다.", who=name)
                     worker.block("automate")
                     return
 

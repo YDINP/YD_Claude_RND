@@ -1657,6 +1657,18 @@ def main() -> int:
                                 "bridge", "crew", "mining.py"), encoding="utf-8").read()
     _auto = _mining.split("routine 자동 채굴" if "routine 자동 채굴" in _mining
                           else "sites = []")[-1][:2000]
+    # 상자는 상자다.
+    #
+    # 나무 상자를 먼저 찾는 것은 맞다(나무 둘 대 철판 여덟). 그런데 나무가
+    # 없는 자리에서 나무 상자«만» 고집하면 채굴기가 한 대도 안 선다.
+    #
+    # 실측(새 판 84분째): 넷이 동시에 "wooden-chest를 못 구했습니다" 였고,
+    # 그때 가방에는 철 상자가 아홉 개, 채굴기가 스물세 대 있었다.
+    check("a chest is a chest when the cheap one runs out",
+          "spare = CHEST if receiver != CHEST else MINE_CHEST" in _mining
+          and "receiver = spare" in _mining,
+          "싼 상자를 못 구했을 때 들고 있는 상자로 바꾸지 않는다")
+
     check("the first drill on a patch still gets a seat map",
           "if not patch:" in _auto and "spot[\"x\"] - 1" in _auto,
           "밭이 없을 때 광맥 위의 점으로 자리표를 부르지 않는다")
