@@ -193,14 +193,54 @@ local function mine_seats(surface, force, field, wanted, rich)
       local d = (e.position.x - cx) ^ 2 + (e.position.y - cy) ^ 2
       if d < best then best, want_name = d, e.name end
     end
+    -- «붙어 있는» 덩어리만 한 밭이다.
+    --
+    -- 같은 이름이면 다 한 밭으로 세고 있었다. 반경 48 안에 같은 광석이
+    -- 두 덩어리 있으면 둘을 합쳐 테두리를 잡는다. 실측(구리밭):
+    --
+    --     실제 광맥      (-96,30)~(-71,52)
+    --     재측정한 것    (-109,30)~(-71,85)
+    --     그래서 줄이    x=-107  <- 광맥에서 11칸 떨어진 허공
+    --     나온 자리      3칸 (칸 412개짜리 밭에서)
+    --
+    -- zones 에서 「같은 광석끼리만」을 고쳤는데 여기는 「붙어 있는 것끼리만」이
+    -- 빠져 있었다. 같은 실패의 다른 얼굴이다.
+    --
+    -- 가운데 칸에서 이웃을 따라간다. 광석 칸은 격자에 놓이므로 이웃은
+    -- 상하좌우 한 칸이다.
+    local grid, start = {}, nil
+    local function key(x, y) return math.floor(x) .. ":" .. math.floor(y) end
+    for _, e in pairs(ore) do
+      if e.name == want_name then
+        grid[key(e.position.x, e.position.y)] = e.position
+        local d = (e.position.x - cx) ^ 2 + (e.position.y - cy) ^ 2
+        if not start or d < start.d then
+          start = { x = e.position.x, y = e.position.y, d = d }
+        end
+      end
+    end
+
     local lo = { x = math.huge, y = math.huge }
     local hi = { x = -math.huge, y = -math.huge }
     local n = 0
-    for _, e in pairs(ore) do
-      if e.name == want_name then
+    if start then
+      local queue, seen = { { x = start.x, y = start.y } }, {}
+      seen[key(start.x, start.y)] = true
+      local head = 1
+      while head <= #queue do
+        local here = queue[head]
+        head = head + 1
         n = n + 1
-        lo.x = math.min(lo.x, e.position.x); hi.x = math.max(hi.x, e.position.x)
-        lo.y = math.min(lo.y, e.position.y); hi.y = math.max(hi.y, e.position.y)
+        lo.x = math.min(lo.x, here.x); hi.x = math.max(hi.x, here.x)
+        lo.y = math.min(lo.y, here.y); hi.y = math.max(hi.y, here.y)
+        for _, step in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+          local nx, ny = here.x + step[1], here.y + step[2]
+          local k = key(nx, ny)
+          if grid[k] and not seen[k] then
+            seen[k] = true
+            queue[#queue + 1] = { x = nx, y = ny }
+          end
+        end
       end
     end
     if n > 0 then

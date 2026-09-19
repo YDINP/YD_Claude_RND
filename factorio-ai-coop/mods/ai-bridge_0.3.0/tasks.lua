@@ -566,6 +566,23 @@ M.insert = {
     local moved = st.target.insert { name = p.name, count = wanted }
     if moved > 0 then bot.remove_item { name = p.name, count = moved } end
     ctx.task.result = { inserted = moved, item = p.name, into = st.target.name }
+
+    -- «넣었다»와 «들어갔다»는 다른 말이다.
+    --
+    -- 0개를 넣고도 «done» 을 돌려주고 있었다. 부르는 쪽은 성공으로 읽고
+    -- 다음 일로 넘어가므로, 안 들어간 줄을 아무도 모른다.
+    --
+    -- 실측(새 판 77분째): 요원 둘이 버너 인서터에 석탄을 넣으러 가서
+    -- 둘 다 «오류 없이» 끝났는데 인서터 연료칸은 0이었다. 그동안 벨트는
+    -- 90개로 꽉 차 있었고 채굴기 열한 대가 전부 서 있었다. 스물다섯 분을
+    -- 그렇게 보냈다 - 로그에 실패가 한 줄도 없었기 때문이다.
+    --
+    -- 왜 0이었는지는 여기서 따지지 않는다. 다만 «0이면 0이라고 말한다».
+    if moved == 0 then
+      ctx.task.error = string.format("%s 0 into %s (wanted %d, had %d)",
+        tostring(p.name), st.target.name, p.count or 1, count_item(bot, p.name))
+      return "failed"
+    end
     return "done"
   end,
 }
