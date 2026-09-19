@@ -76,17 +76,48 @@ end
 local FIELD_GAP = 24
 
 -- 가까운 것끼리 묶는다. 스물네 타일 안에 있으면 한 밭이다.
-local function fields_of(drills)
+-- 이 채굴기가 캐는 것.
+--
+-- `mining_target` 은 «지금 캐고 있는» 광석이라 멈춰 선 채굴기에서는 nil 이
+-- 될 수 있다. 그때는 발밑을 본다 - 멈춘 채굴기도 밭의 일원이다.
+local function ore_of(surface, d)
+  local t = d.mining_target
+  if t and t.valid then return t.name end
+  local near = surface.find_entities_filtered {
+    position = d.position, radius = 1.5, type = "resource", limit = 1,
+  }[1]
+  return near and near.name or nil
+end
+
+-- 밭을 나눈다. «가깝고 같은 광석»이면 한 밭이다.
+--
+-- 거리만 보던 시절의 값(새 판 110분째):
+--
+--     밭이름 copper-ore (-86,-76)~(-69,-68) count=4
+--     실제로는           copper-ore=1  iron-ore=3
+--
+-- 구리 광맥과 철 광맥이 붙어 있었고, 이름은 `group[1].mining_target` -
+-- 즉 무리의 «첫 번째» 채굴기가 정했다. 그래서 무리는 「구리 4대, 철 0대」로
+-- 알고 판단했다. 석탄 상한도 밭별 수를 세어 정하므로 같은 함정이 닿는다.
+--
+-- 이름이 틀린 밭은 자리표에도 번진다. `mine_seats` 는 밭 한가운데 칸의
+-- 광석으로 테두리를 다시 재는데, 그 한가운데가 남의 광맥이면 남의 밭에
+-- 줄을 긋는다.
+local function fields_of(surface, drills)
+  local kind = {}
+  for i = 1, #drills do kind[i] = ore_of(surface, drills[i]) end
+
   local seen, out = {}, {}
   for i = 1, #drills do
     if not seen[i] then
       local group = { drills[i] }
+      local ore = kind[i]
       seen[i] = true
       local n = 1
       while n <= #group do
         local here = group[n]
         for j = 1, #drills do
-          if not seen[j] then
+          if not seen[j] and kind[j] == ore then
             local dx = drills[j].position.x - here.position.x
             local dy = drills[j].position.y - here.position.y
             if dx * dx + dy * dy <= FIELD_GAP * FIELD_GAP then
@@ -97,7 +128,7 @@ local function fields_of(drills)
         end
         n = n + 1
       end
-      out[#out + 1] = group
+      out[#out + 1] = { drills = group, ore = ore }
     end
   end
   return out
@@ -127,11 +158,10 @@ local function mine_zone(surface, force)
   if #drills == 0 then return nil, {} end
 
   local fields = {}
-  for _, group in ipairs(fields_of(drills)) do
-    local box = box_of(group)
-    -- 무엇을 캐는 밭인가. 그 자리의 자원이 말해준다.
-    local digs = group[1].mining_target
-    box.ore = digs and digs.valid and digs.name or nil
+  for _, group in ipairs(fields_of(surface, drills)) do
+    local box = box_of(group.drills)
+    -- 이름은 무리를 나눌 때 이미 정해졌다. 한 밭에는 한 광석뿐이다.
+    box.ore = group.ore
     fields[#fields + 1] = box
   end
   table.sort(fields, function(p, q) return p.count > q.count end)

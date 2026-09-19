@@ -163,6 +163,34 @@ def working_chest() -> list:
                    "표시만 하고 아무도 안 쓴다")
     return bad
 
+
+# -- 한 밭에는 한 광석 ------------------------------------------------------
+#
+# 거리만 보고 묶던 시절의 값(새 판 110분째):
+#
+#     밭이름 copper-ore (-86,-76)~(-69,-68) count=4
+#     실제로는           copper-ore=1  iron-ore=3
+#
+# 구리 광맥과 철 광맥이 붙어 있었고 이름은 무리의 «첫 번째» 채굴기가
+# 정했다. 그래서 무리는 「구리 4대, 철 0대」로 알고 판단했다.
+#
+# 이 표가 닿는 곳이 넓다 - 석탄 상한도 밭별 수로 정하고, 자리표도 밭
+# 한가운데 칸의 광석으로 테두리를 다시 잰다. 한가운데가 남의 광맥이면
+# 남의 밭에 줄을 긋는다.
+def one_ore_per_field() -> list:
+    bad = []
+    lua = io.open(os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "zones.lua"),
+                  encoding="utf-8").read()
+    if "local function ore_of(" not in lua:
+        bad.append("zones.lua 가 채굴기마다 «무엇을 캐는지»를 안 본다")
+    if "kind[j] == ore" not in lua:
+        bad.append("밭을 거리로만 묶는다 - 붙어 있는 두 광맥이 한 밭이 된다")
+    # 주석이 아니라 «코드»를 본다. 앞서 한 번, 찾는 문자열이 주석에도
+    # 걸려서 고쳤는데도 떨어진 적이 있다.
+    if "local digs = group[1].mining_target" in lua:
+        bad.append("밭 이름을 아직 «첫 번째» 채굴기가 정한다")
+    return bad
+
 def main() -> int:
     shape = lua_shape()
     bad = []
@@ -178,6 +206,7 @@ def main() -> int:
     bad.extend(defence_anchor())
     bad.extend(seats_cluster())
     bad.extend(working_chest())
+    bad.extend(one_ore_per_field())
     for line in bad:
         print("  [FAIL] " + line)
     print(f"\n{len(bad)} problems - plot shape agrees "
