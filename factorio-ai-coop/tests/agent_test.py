@@ -1448,6 +1448,15 @@ def main() -> int:
     check("a tall patch lays out the same way",
           {drops_at(s, wide=False) for s in tall} == {2})
 
+    # 방향은 «숫자»로 나가야 한다. 이름으로 내보내면 place 가 조용히
+    # 0(북쪽)으로 읽고, 열여섯 대가 전부 엉뚱한 데로 떨군다 - 자리표를
+    # 만든 보람이 통째로 사라진다.
+    _plots = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                               "mods", "ai-bridge_0.3.0", "plots.lua"),
+                  encoding="utf-8").read()
+    check("seats hand out numeric directions",
+          "direction = defines.direction[seat.direction]" in _plots)
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))

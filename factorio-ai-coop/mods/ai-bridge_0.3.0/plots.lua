@@ -205,8 +205,12 @@ local function mine_seats(surface, force, field, wanted)
       name = PLAN.mine.what, position = here,
       direction = defines.direction[seat.direction], force = force,
     } then
-      free[#free + 1] = { x = here.x, y = here.y, direction = seat.direction,
-                          nth = nth }
+      -- 방향은 «숫자»로 내보낸다. 부르는 쪽(place)이 숫자를 받는다.
+      -- 이름으로 내보냈다가 조용히 0(북쪽)으로 읽히면, 열여섯 대가
+      -- 전부 엉뚱한 데로 떨군다 - 자리표를 만든 보람이 통째로 사라진다.
+      free[#free + 1] = { x = here.x, y = here.y, nth = nth,
+                          direction = defines.direction[seat.direction],
+                          facing = seat.direction }
       if #free >= (wanted or 12) then break end
     else
       blocked = blocked + 1

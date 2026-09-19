@@ -437,6 +437,11 @@ class AIBridge:
         """펌프-보일러-기관이 통째로 들어가는 자리. 확인된 좌표만 돌려준다."""
         return self.call("power_plan", agent, x, y, radius, engines)
 
+    def mine_seats(self, agent: str, field: dict, wanted: int = 12) -> dict:
+        """한 밭의 채굴기 «자리표». 줄을 먼저 긋고 그 옆자리들을 돌려준다."""
+        return self.call("mine_seats", agent, field["left"], field["top"],
+                         field["right"], field["bottom"], wanted)
+
     def water_sites(self, x: float, y: float, radius: int = 120,
                     wanted: int = 3) -> list[dict]:
         return _as_list(self.call("water_sites", x, y, radius, wanted).get("sites"))

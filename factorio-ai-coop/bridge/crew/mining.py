@@ -84,8 +84,39 @@ class MiningMixin:
                     worker.block("automate")
                     return
 
-            sites = self.bridge.drill_site(name, spot["x"], spot["y"],
-                                           radius=12, receiver=receiver, ore=ore)
+            # 자리표를 «먼저» 본다.
+            #
+            # 사용자: "채굴기를 만들어서 매립지들에 채굴기를 심시티하는것부터"
+            #
+            # `drill_site` 는 한 대씩 「근처에서 제일 두꺼운 칸」을 고른다.
+            # 틀린 규칙은 아니지만 그것만 있으면 배치가 안 나온다 - 네 대가
+            # 네 방향을 보고 서고 나중에 줄을 깔 자리가 안 남는다.
+            #
+            # 자리표는 줄을 먼저 긋고 그 양옆에 마주보게 앉힌다. 그러면
+            # 열여섯 대가 «한 줄에» 떨구므로, 나중에 벨트는 그 줄 하나만
+            # 깔면 된다.
+            #
+            # 자리표가 답을 못 주면 옛 길로 간다. 더 좋은 것을 못 하면
+            # 아무것도 안 하는 것 - 이 저장소가 여러 번 만든 모양이다.
+            sites = []
+            patch = next((f for f in (snap.fields or [])
+                          if f.get("ore") == ore), None)
+            if patch:
+                try:
+                    laid = self.bridge.mine_seats(name, patch,
+                                                  wanted=DRILLS_PER_TRIP)
+                except RconError:
+                    laid = {}
+                sites = [dict(seat, outlet="free")
+                         for seat in (laid.get("free") or [])]
+                if sites:
+                    self.say(f"{ore} 밭에 줄을 긋고 그 옆에 붙이겠습니다 "
+                             f"(자리표 {len(sites)}칸, 이미 선 것 "
+                             f"{laid.get('ours', 0)}대).", who=name)
+            if not sites:
+                sites = self.bridge.drill_site(name, spot["x"], spot["y"],
+                                               radius=12, receiver=receiver,
+                                               ore=ore)
             if not sites:
                 self.say(f"{ore} 광맥에 {receiver}를 붙일 자리가 없습니다.", who=name)
                 worker.block(f"automate:{ore}", 300)
@@ -94,13 +125,19 @@ class MiningMixin:
             # 한 번 걸어가서 여러 대를 세운다. 자리는 이미 «오래 갈 순서»로
             # 와 있고, 겹치는 것만 걸러내면 그대로 한 줄이 된다.
             field = spread_sites(sites, DRILLS_PER_TRIP)
-            what = "상자"
             head = field[0]
             life = int(head.get("seconds") or 0)
-            self.say(f"{ore} 광맥에 채굴기 {len(field)}대와 {what}를 붙이겠습니다. "
-                     f"가장 두꺼운 자리는 ({head['x']:.0f}, {head['y']:.0f}), "
-                     f"{head.get('richness', 0)}개 묻혀 있어 {life // 60}분짜리입니다.",
-                     who=name)
+            # 자리표에서 온 자리는 매장량을 안 재고 온다. 없는 값을
+            # 있는 척 말하지 않는다.
+            if head.get("richness"):
+                self.say(f"{ore} 광맥에 채굴기 {len(field)}대와 상자를 "
+                         f"붙이겠습니다. 가장 두꺼운 자리는 "
+                         f"({head['x']:.0f}, {head['y']:.0f}), "
+                         f"{head.get('richness', 0)}개 묻혀 있어 "
+                         f"{life // 60}분짜리입니다.", who=name)
+            else:
+                self.say(f"{ore} 밭 줄에 채굴기 {len(field)}대를 붙이겠습니다. "
+                         f"({head['x']:.0f}, {head['y']:.0f})부터.", who=name)
 
             built = 0
             for site in field:
