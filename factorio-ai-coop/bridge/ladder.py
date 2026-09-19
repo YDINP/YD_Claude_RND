@@ -465,7 +465,64 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
             continue
         seen.add(job.key)
         unique.append(job)
-    return unique
+    return in_hand_first(unique, snap)
+
+
+# 놓기만 하면 되는 기계. 이것들은 만드는 값이 아니라 «걸어가는 값»만 든다.
+PORTABLE = (DRILL, "stone-furnace", CHEST, "lab", "boiler", "steam-engine",
+            "offshore-pump", "assembling-machine-1")
+
+
+def _just_placing(job: Job, snap: Snapshot) -> bool:
+    """이 일감이 「이미 손에 든 기계를 놓기만 하는 것」인가.
+
+    캐거나 만드는 걸음이 하나라도 섞여 있으면 아니다 - 그건 값이 다른
+    일이다.
+    """
+    if not job.steps:
+        return False
+    placed = None
+    for verb, args in job.steps:
+        if verb not in ("build", "place"):
+            return False
+        name = (args or {}).get("name")
+        if name not in PORTABLE:
+            return False
+        placed = name
+    return placed is not None and snap.have(placed) >= 1
+
+
+def in_hand_first(jobs: list[Job], snap: Snapshot) -> list[Job]:
+    """손에 든 기계를 놓는 일을 맨 앞으로 올린다.
+
+    사용자: "얘네 아직도 손으로캐고있네"
+
+    실측(37분째). 땅과 가방을 같이 재보니 이랬다:
+
+        땅     채굴기 2   화로 1   벨트 0
+        가방   채굴기 2   화로 3   벨트 38   상자 23
+               구리광석 837   철광석 177   석탄 256
+
+    **땅에 선 것보다 가방에 든 것이 많았다.** 완성된 채굴기 두 대를 주머니에
+    넣고 다니면서 다섯이 손으로 광석을 캐고 있었다.
+
+    일감 목록의 «순서» 때문이다. 공유 설비 -> 빨간 과학 -> 전력 -> 채굴기
+    순으로 늘어서 있어서, 사다리가 「전력 공급」 칸에 오르자 다섯 명이
+    전부 앞쪽 일감에 배차됐다. 채굴기 일감은 목록에 «있었지만» 차례가
+    안 왔다.
+
+    그런데 손에 든 기계를 놓는 일은 걸어가기만 하면 된다. 만드는 일보다
+    언제나 싸고, 놓는 순간부터 그 기계가 사람 대신 캔다. 사람이 한 시간
+    캐는 것보다 채굴기 한 대를 놓는 십 초가 낫다.
+
+    순서만 바꾼다. 목록에서 빼거나 더하지 않는다 - 무엇을 할지는 여전히
+    위쪽 규칙들이 정하고, 여기는 «같은 일들 중 무엇이 먼저인가»만 본다.
+    """
+    ready = [j for j in jobs if _just_placing(j, snap)]
+    if not ready:
+        return jobs
+    rest = [j for j in jobs if not _just_placing(j, snap)]
+    return ready + rest
 
 
 def missing_item(kind: str, error: str, params: dict | None = None) -> str | None:

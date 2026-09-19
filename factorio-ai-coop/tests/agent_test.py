@@ -1182,6 +1182,36 @@ def main() -> int:
           board.offer("bravo", {"coal": 20}) is not None)
 
 
+    # ------------------------------------------------------------------
+    print("\n12. a machine in the bag is placed before a new one is made")
+
+    # 실측(37분째): 땅에 채굴기 2 화로 1, 가방에 채굴기 2 화로 3 벨트 38.
+    # 완성된 기계를 주머니에 넣고 다니며 다섯이 손으로 캤다. 일감 목록에
+    # «있었지만» 앞쪽 일감이 다섯을 다 먹어서 차례가 안 왔다.
+    from ladder import in_hand_first, _just_placing
+    from jobs import Job
+
+    held = Snapshot(tick=0, x=0.0, y=0.0,
+                    items={"burner-mining-drill": 2}, craftable={},
+                    buildings={}, resources={}, researched=set())
+    make = Job("드릴을 만듭니다", key="craft",
+               steps=[("craft", {"recipe": "burner-mining-drill", "count": 1})])
+    power = Job("보일러를 놓습니다", key="power",
+                steps=[("build", {"name": "boiler", "x": 0, "y": 0})])
+    place = Job("드릴을 놓습니다", key="drill:1,1",
+                steps=[("build", {"name": "burner-mining-drill", "x": 1, "y": 1})])
+
+    check("a held machine is what 'just placing' means",
+          _just_placing(place, held) and not _just_placing(make, held))
+    check("a machine not in the bag does not jump the queue",
+          not _just_placing(power, held))
+    check("placing what is held goes first",
+          in_hand_first([make, power, place], held)[0] is place)
+    check("everything else keeps its order",
+          in_hand_first([make, power, place], held)[1:] == [make, power])
+    check("nothing moves when nothing is held",
+          in_hand_first([make, power], held) == [make, power])
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))

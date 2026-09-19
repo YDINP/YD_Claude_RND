@@ -28,6 +28,7 @@ import time
 
 import postmortem
 from client import RconError
+from settings import PILED_UP
 
 # 끊긴 칸 -> 그 칸을 뚫으려면 무엇을 맡겨야 하는가.
 #
@@ -210,6 +211,20 @@ class ChiefMixin:
 
 
 
+    def crew_stock(self, item: str) -> int:
+        """무리 전체가 들고 있는 이 물건의 합.
+
+        한 사람의 가방만 보면 「나는 없다」가 되고, 그 판단이 다섯 번
+        모이면 이미 넘치는 것을 다섯이 더 캐러 간다.
+        """
+        total = 0
+        for worker in list(self.workers.values()):
+            try:
+                total += int((worker.handle.items() or {}).get(item, 0))
+            except RconError:
+                continue
+        return total
+
     def steer(self) -> None:
         now = time.monotonic()
         if now - getattr(self, "_steered_at", 0.0) < CHIEF_EVERY:
@@ -270,6 +285,32 @@ class ChiefMixin:
         want = UNBLOCK.get(broken)
         if not want:
             return
+
+        # 이미 쌓여 있는 것을 또 캐라고 시키지 않는다.
+        #
+        # 사용자: "얘네 아직도 손으로캐고있네"
+        #
+        # 실측(37분째). 「구리 제련에서 끊겼습니다. 2명을 그쪽으로 돌립니다」
+        # 를 되풀이하는 동안 가방 속은 이랬다:
+        #
+        #     구리광석 837   철광석 177   석탄 256
+        #     땅에 선 화로 1대
+        #
+        # 여기 표(UNBLOCK)는 「구리판이 안 나오면 구리광석을 캐라」고 적혀
+        # 있다. 그 말은 광석이 «없을 때만» 맞다. 팔백 개가 있는데 판금이
+        # 안 나온다면 모자란 것은 광석이 아니라 그것을 녹일 화로다.
+        #
+        # 끊긴 칸의 이름만 보고 한 칸 위로 올라가면, 위 칸이 넘치고 있어도
+        # 그리로 사람을 몬다. 이름 말고 «양»을 같이 봐야 한다.
+        piled = self.crew_stock(want)
+        if piled >= PILED_UP:
+            if getattr(self, "_said_piled", None) != broken:
+                self._said_piled = broken
+                self.say(f"{broken}이(가) 안 나오는데 {want}은(는) 이미 "
+                         f"{piled}개 있습니다. 모자란 것은 광석이 아니라 "
+                         f"그것을 녹일 자리입니다. 캐러 보내지 않겠습니다.")
+            return
+        self._said_piled = None
 
         # 끊긴 데가 바뀌지 않았으면 다시 말하지 않는다. 같은 말을 순찰마다
         # 되풀이하면 사람들이 그 말을 안 듣게 된다.
