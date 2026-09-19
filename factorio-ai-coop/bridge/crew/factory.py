@@ -11,7 +11,8 @@ from client import RconError, TaskFailed
 
 from settings import (BACKOFF_SECONDS, BELT_REACH, BELT_SPARE, FIRST_PACKS,
                       SCIENCE_FEED,
-                      DANGER_NEAR, DANGER_PER_HEAD, TURRET_AMMO, TURRET_RING, TURRET_TARGET)
+                      DANGER_NEAR, DANGER_PER_HEAD, RETREAT_SPAN,
+                      TURRET_AMMO, TURRET_RING, TURRET_TARGET)
 from world import Snapshot
 from jobs import Job
 from ladder import STAGE_TARGET, _as_rows
@@ -313,18 +314,48 @@ class FactoryMixin:
             home = (self.bridge.base() or {}).get("home")
         except RconError:
             home = None
-        if not home:
-            return None
-        # 이미 기지에 있으면 더 물러날 데가 없다. 그럴 때는 차라리 일을 한다.
-        if math.dist(self.seat(worker), (home["x"], home["y"])) < 12:
+
+        here = self.seat(worker)
+        at_home = bool(home) and math.dist(here, (home["x"], home["y"])) < 12
+
+        # 기지가 이미 뚫렸으면 기지는 피난처가 아니다.
+        #
+        # 여기 「기지에 있으면 더 물러날 데가 없으니 차라리 일을 한다」가
+        # 적혀 있었다. 적이 «밖에» 있을 때는 맞는 말이다. 그런데 514분째
+        # 판에서 로그가 이랬다:
+        #
+        #   적 36마리가 28타일 앞에 있습니다. ... 연구를 먼저 돌리겠습니다.
+        #   적 36마리가 18타일 앞에 있습니다. ...
+        #   적 36마리가 13타일 앞에 있습니다. ...
+        #   적 36마리가  0타일 앞에 있습니다. ...
+        #   bravo이(가) 쓰러졌습니다. 남은 사람 0명.
+        #
+        # 서른여섯 마리가 기지 «안으로» 걸어 들어오는 동안 넷이 전부
+        # 제자리에서 일을 했다. 이 한 줄이 그렇게 시켰다.
+        #
+        # 물러날 데가 없는 것이 아니라 «반대쪽»이 있다. 떼가 오는 쪽을
+        # 알면 그 반대로 가면 된다. 그래서 위협에 무게중심을 붙였다.
+        swarm = near.get("swarm")
+        if at_home:
+            if not isinstance(swarm, dict):
+                return None
+            dx, dy = here[0] - swarm["x"], here[1] - swarm["y"]
+            span = math.hypot(dx, dy)
+            if span < 1:
+                return None
+            spot = {"x": int(here[0] + dx / span * RETREAT_SPAN),
+                    "y": int(here[1] + dy / span * RETREAT_SPAN)}
+            told = (f"적 {many}마리가 기지 안까지 들어왔습니다. 여기는 "
+                    f"더 이상 피난처가 아닙니다. 반대쪽으로 물러나겠습니다.")
+        elif home:
+            spot = {"x": home["x"], "y": home["y"]}
+            told = (f"적 {many}마리가 {int(gap)}타일 앞에 있습니다. 맨손으로는 "
+                    f"못 이깁니다. 기지로 물러나겠습니다.")
+        else:
             return None
 
-        return Job(
-            f"적 {many}마리가 {int(gap)}타일 앞에 있습니다. 맨손으로는 "
-            f"못 이깁니다. 기지로 물러나겠습니다.",
-            key=f"flee:{worker.name}",
-            steps=[("walk", {"x": home["x"], "y": home["y"]})],
-            at={"x": home["x"], "y": home["y"]})
+        return Job(told, key=f"flee:{worker.name}",
+                   steps=[("walk", spot)], at=spot)
 
     def defence_job(self, worker: Worker, snap: Snapshot) -> Job | None:
         """터렛을 방어선 위에 세운다.

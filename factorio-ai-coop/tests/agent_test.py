@@ -1150,6 +1150,38 @@ def main() -> int:
           "%d x %d" % (max(p["x"] for p in reach) - 52,
                         max(p["y"] for p in reach) - 16))
 
+    # ------------------------------------------------------------------
+    print("\n11. the board does not hold a request it can never fill")
+
+    # 514분 판에서 죽은 delta 앞으로 붙은 부탁 하나가 여덟 시간을 살아남아
+    # 남은 한 사람의 순찰을 통째로 먹었다. 두 갈래로 막는다.
+
+    board = mission.Board()
+    board.post("delta", "iron-chest", 1, "needs a chest", 0.0)
+    check("a gone crewmate's request comes down at once",
+          len(board.forget({"delta"})) == 1 and not board.requests)
+
+    board = mission.Board()
+    board.post("delta", "iron-chest", 1, "needs a chest", 0.0)
+    # 집고 -> 못 지키고 -> 다시 열리고 를 반복한다. `take` 가 `posted` 를
+    # 매번 지금으로 덮으므로 예전 시효로는 영영 안 내려간다.
+    now = 0.0
+    for _ in range(40):
+        now += 100.0
+        req = board.offer("bravo", {"iron-chest": 1})
+        if req is not None:
+            board.take(req, "bravo", now)
+            req.helper = None          # 못 지켰다
+        board.expire(now)
+    check("it comes down however many times it is re-taken", not board.requests,
+          "%d left after %ds" % (len(board.requests), now))
+
+    board = mission.Board()
+    board.post("alpha", "coal", 20, "fuel", 0.0)
+    check("a living crewmate's request is still picked up",
+          board.offer("bravo", {"coal": 20}) is not None)
+
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))

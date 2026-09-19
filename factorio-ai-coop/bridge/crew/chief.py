@@ -23,8 +23,10 @@
 
 from __future__ import annotations
 
+import os
 import time
 
+import postmortem
 from client import RconError
 
 # 끊긴 칸 -> 그 칸을 뚫으려면 무엇을 맡겨야 하는가.
@@ -140,6 +142,12 @@ class ChiefMixin:
             self.fallen = getattr(self, "fallen", 0) + 1
             self.say(f"{worker.name}이(가) 쓰러졌습니다. 남은 사람 "
                      f"{len(self.workers)}명. (여태 {self.fallen}명 잃음)")
+            # 이 사람이 붙여둔 부탁도 같이 내린다. 받을 사람이 없어진
+            # 부탁은 집는 쪽의 시간만 태운다 - 한 건이 여덟 시간을
+            # 살아남아 남은 한 사람의 순찰을 통째로 먹은 적이 있다.
+            for req in self.board.forget({worker.name}):
+                self.say(f"{worker.name}님이 부탁한 {req.item}은(는) "
+                         f"내리겠습니다. 받을 분이 안 계십니다.")
 
         # 다 죽으면 그 사실을 한 번은 말해야 한다. 아무 말 없이 조용한
         # 것과 전멸한 것은 밖에서 보면 똑같이 생겼다 - 이번 세션에
@@ -149,6 +157,16 @@ class ChiefMixin:
             self.say(f"무리가 전멸했습니다. 여태 {getattr(self, 'fallen', 0)}명을 "
                      f"잃었습니다. 되살리지 않습니다 - 다시 시작하려면 "
                      f"서버를 재시작해 주십시오.")
+            # 죽은 «그 자리»에서 적는다. 서버를 재시작하면 왜 죽었는지는
+            # 지도와 함께 사라진다 - 514분 판이 그럴 뻔했다.
+            try:
+                log = self.bridge.crew_log(postmortem.LAST_WORDS)
+            except RconError:
+                log = []
+            where = postmortem.record(self.bridge, log, getattr(self, "fallen", 0))
+            if where:
+                self.say(f"무슨 일이 있었는지 {os.path.basename(where)}에 "
+                         f"적어뒀습니다.")
 
         # 점호 끝에 «적이 왔는지»도 본다.        # 점호 끝에 «적이 왔는지»도 본다.
         #

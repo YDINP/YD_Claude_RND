@@ -122,6 +122,13 @@ class Request:
     posted: float
     helper: str | None = None
     filled: bool = False
+    # 처음 붙은 때. `posted` 는 집어갈 때마다 지금으로 덮이므로 시효를
+    # 재는 데 못 쓴다 - 덮이는 시계로 시효를 재면 시효가 영영 안 온다.
+    first: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not self.first:
+            self.first = self.posted
 
     @property
     def open(self) -> bool:
@@ -130,6 +137,7 @@ class Request:
 
 REQUEST_TTL = 300.0     # 아무도 안 집으면 5분 뒤 내린다
 CLAIM_TTL = 240.0       # 집어놓고 안 가져오면 4분 뒤 놓아준다
+HARD_TTL = 900.0        # 몇 번을 돌든 15분이면 내린다
 
 
 class Board:
@@ -170,7 +178,20 @@ class Board:
         for req in self.requests:
             if req.filled:
                 continue
-            if req.helper is not None:
+            # 아무리 돌고 돌아도 언젠가는 내린다.
+            #
+            # 죽은 delta 앞으로 붙은 부탁 하나가 여덟 시간을 살아남았다:
+            #
+            #   bravo | delta님, iron-chest 1개 갖다 드리겠습니다.
+            #   bravo | delta님 부탁을 못 지켰습니다: no crewmate named delta
+            #   ... (같은 세 줄이 514분 내내)
+            #
+            # 집으면 `take` 가 `posted` 를 지금으로 덮고, 못 지키면 다시
+            # 열린다. 그 두 줄이 만나면 시효가 영영 안 온다. 못 채우는
+            # 부탁일수록 더 오래 사는 셈이었다.
+            if now - req.first > HARD_TTL:
+                dropped.append(req)
+            elif req.helper is not None:
                 # 집어간 사람이 소식이 없으면 다시 열어둔다. 도중에 죽었거나
                 # 다른 명령을 받았을 수 있고, 그동안 부탁한 쪽은 굶는다.
                 if now - req.posted > CLAIM_TTL:
@@ -220,6 +241,22 @@ class Board:
         req.filled = True
         if req in self.requests:
             self.requests.remove(req)
+
+    def forget(self, gone: set[str]) -> list[Request]:
+        """떠난 사람 앞으로 붙은 부탁을 내린다. 내려간 것들을 돌려준다.
+
+        시효만으로는 늦다. 시효는 「아직 아무도 안 집었다」를 재는 것인데,
+        죽은 사람의 부탁은 계속 «집힌다» - 집고, 걸어가고, 못 주고, 다시
+        열린다. 그 고리는 시효를 건드리지 않는다.
+
+        받을 사람이 없어진 순간 그 부탁은 부탁이 아니다.
+        """
+        if not gone:
+            return []
+        out = [r for r in self.requests if r.asker in gone]
+        if out:
+            self.requests = [r for r in self.requests if r.asker not in gone]
+        return out
 
     def release(self, helper: str) -> None:
         """이 에이전트가 집었던 것들을 도로 열어둔다."""
