@@ -92,9 +92,38 @@ REPORT = """(function()
     end
   end
   out[#out + 1] = "damage|hurt|" .. hurt
+
+  -- 적이 «가까워지는가».
+  --
+  -- 17회차까지 방어의 시계를 공해로만 쟀다. 그런데 그 판은 공해가 0인
+  -- 채로 전멸했다 - 확산 비율 0.02 라 한 청크를 채우기 전에 흩어진다.
+  -- 적은 공해와 무관하게 «확장»으로 온다. 4분마다 무리가 떠나 새 둥지를
+  -- 짓고, 169분이면 스물여덟 번이다. 92칸까지 밀고 들어와 웜을 세웠다.
+  --
+  -- 공해는 «화나게 하는 것»이고 확장은 «가까워지는 것»이다.
+  local heart = { 0, 0 }
+  local n, sx, sy = 0, 0, 0
+  for _, e in pairs(s.find_entities_filtered{type = {"mining-drill", "furnace", "lab"},
+                                             force = force}) do
+    n = n + 1; sx = sx + e.position.x; sy = sy + e.position.y
+  end
+  if n > 0 then heart = { sx / n, sy / n } end
   out[#out + 1] = "enemy|near|" ..
     s.count_entities_filtered{type = "unit", force = "enemy",
-                              position = {0, 0}, radius = 400}
+                              position = heart, radius = 120}
+  out[#out + 1] = "enemy|nests|" ..
+    s.count_entities_filtered{type = "unit-spawner", force = "enemy",
+                              position = heart, radius = 150}
+  out[#out + 1] = "enemy|worms|" ..
+    s.count_entities_filtered{type = "turret", force = "enemy",
+                              position = heart, radius = 150}
+  local near, nd = nil, 1e9
+  for _, sp in pairs(s.find_entities_filtered{type = "unit-spawner", force = "enemy"}) do
+    local dx, dy = sp.position.x - heart[1], sp.position.y - heart[2]
+    local d = dx * dx + dy * dy
+    if d < nd then nd, near = d, sp end
+  end
+  out[#out + 1] = "enemy|gap|" .. (near and math.floor(math.sqrt(nd)) or 999)
   return out
 end)()"""
 
@@ -145,9 +174,11 @@ def once(ai: AIBridge) -> None:
     if chest:
         print("상자 " + " ".join(f"{k}={v}" for k, v in sorted(chest.items())))
     t = r.get("turret", {})
+    e = r.get("enemy", {})
     print(f"포탑 {t.get('count',0)}대 탄약 {t.get('ammo',0)}   "
-          f"다친 것 {r.get('damage',{}).get('hurt',0)}   "
-          f"적 {r.get('enemy',{}).get('near',0)}마리")
+          f"다친 것 {r.get('damage',{}).get('hurt',0)}")
+    print(f"적 120칸 안 {e.get('near',0)}마리   둥지 150칸 안 {e.get('nests',0)}곳"
+          f"   웜 {e.get('worms',0)}기   가장 가까운 둥지 {e.get('gap',0)}칸")
     print(f"무리 노는 사람 {idle} / 일하는 사람 {busy}"
           + (f" / 죽은 사람 {dead}" if dead else ""))
 
@@ -163,6 +194,15 @@ def once(ai: AIBridge) -> None:
         warn.append(f"채굴기 {d['no_fuel']}대가 연료 없음")
     if t.get("count", 0) and t.get("ammo", 0) < t["count"] * 5:
         warn.append("포탑이 비었다 - 빈 총은 없는 총이다")
+    # 17회차는 공해 0으로 전멸했다. 적은 확장으로 «걸어온다».
+    if not t.get("count", 0):
+        warn.append(f"포탑이 한 대도 없다 - 가장 가까운 둥지 {e.get('gap',0)}칸")
+    if e.get("worms", 0):
+        warn.append(f"웜 {e['worms']}기가 150칸 안에 섰다 - 적이 «확장»했다")
+    if e.get("nests", 0):
+        warn.append(f"둥지 {e['nests']}곳이 150칸 안에 있다")
+    if e.get("near", 0) >= 10:
+        warn.append(f"적 {e['near']}마리가 120칸 안에 있다 - 습격이다")
     if dead:
         warn.append(f"죽은 사람: {', '.join(dead)}")
     for line in warn:
