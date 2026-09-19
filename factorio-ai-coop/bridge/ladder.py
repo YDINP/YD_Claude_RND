@@ -507,13 +507,33 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
             # 자리가 없다는 것은 자리를 새로 지어내라는 뜻이 아니라 이미
             # 충분하다는 뜻이다. 노란 벨트 한 줄이 먹일 수 있는 화로가
             # 마흔여덟 대다.
-            seat = snap.next_furnace
-            if seat is None and not snap.smelter:
-                # 제련 구역이 아직 없는 초반에만 번호로 자리를 잡는다.
-                seat = furnace_seat(corner, nth)
-            if seat:
-                jobs.append(Job(f"화로를 하나 더 놓겠습니다 ({nth + 1}번째).",
-                                key=f"furnace:{nth}", steps=[
+            # 모자란 만큼 «한꺼번에» 내놓는다. 한 대씩 내놓으면 여섯 명에
+            # 일감이 하나다.
+            #
+            # 사용자: "인원들 대기가 너무 심해졌는데"
+            #
+            # 실측(새 판 4분째): 여섯 중 다섯이 「반장의 지시를 기다립니다」.
+            # 화로는 두 대, 목표는 여섯. 네 대가 모자란데 일감은 하나였다.
+            # `nth = standing` 으로 «다음 한 대»만 내놓았기 때문이다.
+            #
+            # 그리고 그 하나가 병목이기도 했다. 광석은 쌓여 있고(구리 110개)
+            # 녹일 자리가 둘뿐이라 철판이 안 나오고, 철판이 안 나오니
+            # 기어도 채굴기도 벨트도 못 만든다. 모두가 그 두 대를 기다렸다.
+            #
+            # 상한은 그대로다 - `want` 가 이미 자리표와 공해 여유로 깎여
+            # 있다. 여기서 푸는 것은 「몇 대를 지을까」가 아니라 「몇 명이
+            # 동시에 지을까」다.
+            hands = min(want - standing, max(1, crew))
+            for i in range(hands):
+                seat = snap.next_furnace if i == 0 else None
+                if seat is None:
+                    # 자리표에서 번호로 잡는다. 번호가 자리표를 넘으면
+                    # `furnace_seat` 이 아니라 `want` 가 막는다.
+                    seat = furnace_seat(corner, nth + i)
+                if not seat:
+                    break
+                jobs.append(Job(f"화로를 하나 더 놓겠습니다 ({nth + i + 1}번째).",
+                                key=f"furnace:{nth + i}", steps=[
                                     ("build", {"name": "stone-furnace",
                                                **seat, "snap": True})]))
         elif snap.can_make("stone-furnace"):

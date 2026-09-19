@@ -1224,6 +1224,24 @@ def main() -> int:
     check("nothing moves when nothing is held",
           in_hand_first([make, power], held) == [make, power])
 
+    # ------------------------------------------------------------------
+    print("\n13. as many furnace jobs as there are furnaces missing")
+
+    # 사용자: "인원들 대기가 너무 심해졌는데"
+    # 실측(4분째): 여섯 중 다섯이 대기. 화로 2대, 목표 6대인데 일감은 «하나».
+    # 모자란 것이 넷인데 한 대씩 내놓으면 다섯이 논다.
+    SEATED = {"stone-furnace": {"nearest": {"x": 3, "y": 3}, "nearest_dist": 4,
+                                "count": 2,
+                                "spots": [{"x": 3, "y": 3, "distance": 4},
+                                          {"x": 6, "y": 3, "distance": 7}]}}
+    lonely = at({"coal": 99, "stone": 99, "iron-ore": 99, "copper-ore": 99,
+                 "stone-furnace": 9}, SEATED, {"stone-furnace": 9})
+    seats = [j.key for j in plan(lonely, crew=6) if j.key.startswith("furnace:")]
+    check("one job per missing furnace, not one job total",
+          len(seats) > 1, str(seats))
+    check("and every one has its own key",
+          len(seats) == len(set(seats)), str(seats))
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))
