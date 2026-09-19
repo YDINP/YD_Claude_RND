@@ -65,9 +65,33 @@ local SAME_FIELD = 24
 local MAX_VISIT = 20000
 local STEPS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
 
+-- 칸 번호와 «엔티티가 앉는 자리»는 다르다.
+--
+-- 길은 칸 번호로 적는다 - 정수다. 그런데 1x1 엔티티는 그 칸의 «가운데»에
+-- 앉는다(x+0.5, y+0.5). 두 좌표의 거리는 0.707 이라, 칸 번호에서 반경
+-- 0.4 로 찾으면 그 칸에 서 있는 것을 «영원히 못 찾는다».
+--
+-- 이것 하나가 벨트 이야기의 절반이었다. 실측(206분째):
+--
+--     길이 남았다고 한 칸   130
+--     그 칸에 실제로 선 벨트 (61,86) -> 엔티티는 61.5,86.5 에 있었다
+--     모서리에서 찾기        못찾음
+--     가운데에서 찾기        찾음
+--
+-- 그래서 이미 다 깔린 길을 영원히 「안 깔렸다」고 읽었다. 무리는 매번
+-- 거기까지 걸어가 쓸고, 놓으려 하고, "cannot place transport-belt" 로
+-- 실패하고, 다음 순찰에 또 갔다. `passable` 도 같은 잘못이라 제가 깐
+-- 간선을 «못 지나가는 칸»으로 읽고 돌아가는 길을 냈다 - 사용자가 사진으로
+-- 짚은 그 미로다.
+--
+-- can_place_entity 는 이 잘못이 없다. 그쪽은 좌표를 격자에 맞춰 주므로
+-- 모서리로 물어도 같은 답이 온다. 그래서 「놓을 수 있나」만 맞고 「이미
+-- 있나」만 틀린, 가장 찾기 어려운 모양이 됐다.
+local function centre(x, y) return { x + 0.5, y + 0.5 } end
+
 local function passable(surface, force, x, y)
   local here = surface.find_entities_filtered {
-    position = { x, y }, radius = 0.4, name = BELT, limit = 1,
+    position = centre(x, y), radius = 0.4, name = BELT, limit = 1,
   }[1]
   if here then return true end
   return surface.can_place_entity {
@@ -314,7 +338,7 @@ local function missing(surface, force, tiles, what)
   local out, standing = {}, 0
   for _, tile in pairs(tiles) do
     local here = surface.find_entities_filtered {
-      position = { tile.x, tile.y }, radius = 0.4, name = what, limit = 1,
+      position = centre(tile.x, tile.y), radius = 0.4, name = what, limit = 1,
     }[1]
     if here then
       standing = standing + 1
@@ -340,7 +364,7 @@ local function missing(surface, force, tiles, what)
       -- 흘린 광석이었다. 「못 놓는다」와 「치우면 놓는다」는 다른 말이다.
       local why, sweepable, lift = nil, true, nil
       for _, e in pairs(surface.find_entities_filtered {
-        position = { tile.x, tile.y }, radius = 0.4,
+        position = centre(tile.x, tile.y), radius = 0.4,
       }) do
         if e.type ~= "character" and e.type ~= "item-entity" then
           why, sweepable = e.name, false
@@ -410,7 +434,7 @@ local function repair(surface, force, tiles)
   while i <= #tiles do
     local blocked = false
     local here = surface.find_entities_filtered {
-      position = { tiles[i].x, tiles[i].y }, radius = 0.4, force = force,
+      position = centre(tiles[i].x, tiles[i].y), radius = 0.4, force = force,
     }
     for _, e in pairs(here) do
       if e.name ~= BELT and e.type ~= "character" and e.type ~= "item-entity" then

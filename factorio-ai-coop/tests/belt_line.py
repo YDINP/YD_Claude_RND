@@ -113,6 +113,42 @@ def liftable() -> list:
     return bad
 
 
+
+# -- 칸 번호로 «이미 선 것»을 찾을 때는 가운데를 본다 ----------------------
+#
+# 길은 칸 번호(정수)로 적고 1x1 엔티티는 그 칸의 가운데(+0.5)에 앉는다.
+# 거리가 0.707 이라 칸 번호에서 반경 0.4 로 찾으면 영원히 못 찾는다.
+#
+# 이것이 「이미 다 깔린 길을 130칸 남았다」고 읽게 했다. can_place_entity
+# 는 좌표를 격자에 맞춰 주므로 그쪽만 멀쩡했고, 그래서 「놓을 수 있나」만
+# 맞고 「이미 있나」만 틀린 - 가장 찾기 어려운 모양이 됐다.
+def tile_centre() -> list:
+    bad = []
+    lua = io.open(os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "belts.lua"),
+                  encoding="utf-8").read()
+    if "local function centre(" not in lua:
+        bad.append("belts.lua 에 centre() 가 없다")
+    # 좁은 반경으로 찾는 자리마다, 준 좌표가 가운데인지 본다.
+    at = 0
+    while True:
+        at = lua.find("radius = 0.", at + 1)
+        if at < 0:
+            break
+        window = lua[max(0, at - 220):at]
+        cut = window.rfind("position = ")
+        if cut < 0:
+            continue
+        gave = window[cut:].split("}")[0]
+        if "centre(" in gave or "+ 0.5" in gave or "0.5," in gave:
+            continue
+        # 좌표를 직접 계산해 준 자리(b.position 처럼)는 칸 번호가 아니다.
+        if ".position" in gave or "spot" in gave or "goal" in gave:
+            continue
+        line = lua.count(chr(10), 0, at) + 1
+        bad.append("belts.lua:%d 칸 번호를 좁은 반경으로 찾는다: %s"
+                   % (line, gave.strip()))
+    return bad
+
 def main() -> int:
     text = open(BELTS, encoding="utf-8").read()
     problems = []
@@ -167,6 +203,7 @@ def main() -> int:
             problems.append("stitch 가 walk 뒤에 있다. 루아는 그것을 못 본다")
 
     problems.extend(liftable())
+    problems.extend(tile_centre())
     for line in problems:
         print("  [FAIL] " + line)
     print(f"{len(problems)} problems - belt lines have no diagonal steps")
