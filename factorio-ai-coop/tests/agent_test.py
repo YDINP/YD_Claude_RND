@@ -327,6 +327,36 @@ def main() -> int:
                                      "spots": [{"x": 9, "y": 9, "distance": 12}]}},
                  CAN_TOOL)
     run_keys = [j.key for j in plan(running, focus="iron-ore", crew=5)]
+    # 석탄 채굴기는 «녹이는» 쪽의 여유를 먹지 않는다.
+    #
+    # 실측(새 판 45분째): 화로 5대, 선 채굴기 4대가 전부 석탄, 가방 속
+    # 채굴기 11대. 총량으로 여유를 재니 5-4=1 이라, 화로 다섯이 빈 채로
+    # 기다리는데 철 채굴기를 한 대밖에 못 놓았다.
+    #
+    # 앞서 비율에서 석탄을 뺐는데 정작 여유를 재는 자리가 총량을 쓰고
+    # 있었다. 규칙을 반만 옮긴 것이다.
+    def _rigs(coal, total, furnaces):
+        return Snapshot(
+            x=0, y=0, researched=ALL_TECH, powered=True, working_labs=1,
+            items={"burner-mining-drill": 9, "iron-chest": 9, "coal": 50},
+            fields=[{"ore": "coal", "count": coal},
+                    {"ore": "iron-ore", "count": max(0, total - coal)}],
+            resources={o: {"nearest": {"x": 3, "y": 3}, "nearest_dist": 4}
+                       for o in ("coal", "iron-ore", "copper-ore", "stone")},
+            buildings={"stone-furnace": {"count": furnaces,
+                                         "nearest": {"x": 1, "y": 1},
+                                         "nearest_dist": 2,
+                                         "spots": [{"x": 1, "y": 1}]},
+                       DRILL: {"count": total}})
+
+    _all_coal = [j.key for j in plan(_rigs(4, 4, 5), focus="iron-ore", crew=5)
+                 if j.key.startswith("automate:")]
+    _all_iron = [j.key for j in plan(_rigs(0, 4, 5), focus="iron-ore", crew=5)
+                 if j.key.startswith("automate:")]
+    check("coal rigs leave the smelting budget alone",
+          len(_all_coal) > len(_all_iron),
+          f"석탄 4/4 -> 일감 {len(_all_coal)}개, 전부 제련 4/4 -> {len(_all_iron)}개")
+
     check("but a standing drill puts smelting back in front",
           next((i for i, k in enumerate(run_keys) if k.startswith("smelt:")), 99)
           < next((i for i, k in enumerate(run_keys) if k.startswith("automate:")), 99),

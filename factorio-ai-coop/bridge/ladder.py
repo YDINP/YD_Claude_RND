@@ -476,7 +476,17 @@ def plan(snap: Snapshot, focus: str = "iron-ore", crew: int = 1) -> list[Job]:
     if snap.have(DRILL) >= 1 or (snap.can_make(DRILL) and snap.can_make(CHEST)):
         # Own patch first, then whatever else still lacks a drill. 한 광맥에
         # 한 대씩만 놓으면 화로 스물셋을 드릴 넷이 먹여야 한다.
-        room = drill_target(snap, crew) - drills
+        # 상한은 «녹이는» 채굴기에 건다. 석탄은 제 몫을 따로 받는다.
+        #
+        # 앞서 비율에서 석탄을 뺐는데, 정작 여유를 재는 여기가 총량을
+        # 쓰고 있었다. 규칙을 반만 옮긴 셈이다 - 옮기다 빠뜨린 것은
+        # 없어진 것이고, 이 저장소가 여러 번 치른 값이다.
+        #
+        # 실측(새 판 45분째): 화로 5대, 선 채굴기 4대 «전부 석탄»,
+        # 가방 속 채굴기 11대. 총량으로 재니 여유가 1이라, 화로 다섯이
+        # 빈 채로 기다리는데 철 채굴기를 한 대밖에 못 놓았다.
+        already = rigs_by_ore(snap).get("coal", 0)
+        room = drill_target(snap, crew) - max(0, drills - already)
 
         # 석탄이 먼저다. 그리고 석탄에는 «자리를 따로 떼어둔다».
         #
