@@ -6,7 +6,7 @@ from client import RconError, TaskFailed
 
 from settings import (BACKOFF_SECONDS, CHEST, COAL_PAIRS, DRILL, DRILLS_PER_TRIP,
                       DRILL_FUEL, FURNACE_FUEL, HAUL_BATCH, RIGS_PER_TRIP,
-                      MINE_CHEST, RIG_COAL, SMELTED_BY_FURNACE, SMELT_BATCH, SMOKING_FLOOR,
+                      MINE_CHEST, RICH_DRILL, RIG_COAL, SMELTED_BY_FURNACE, SMELT_BATCH, SMOKING_FLOOR,
                       WELL_FULL)
 from jobs import Job, Step
 from layout import carry_split, cluster, nearest_to, spread_sites
@@ -104,7 +104,8 @@ class MiningMixin:
             if patch:
                 try:
                     laid = self.bridge.mine_seats(name, patch,
-                                                  wanted=DRILLS_PER_TRIP)
+                                                  wanted=DRILLS_PER_TRIP,
+                                                  rich=RICH_DRILL)
                 except RconError:
                     laid = {}
                 sites = [dict(seat, outlet="free")
@@ -112,7 +113,8 @@ class MiningMixin:
                 if sites:
                     self.say(f"{ore} 밭에 줄을 긋고 그 옆에 붙이겠습니다 "
                              f"(자리표 {len(sites)}칸, 이미 선 것 "
-                             f"{laid.get('ours', 0)}대).", who=name)
+                             f"{laid.get('ours', 0)}대, 얇아서 거른 자리 "
+                             f"{laid.get('thin', 0)}칸).", who=name)
             if not sites:
                 sites = self.bridge.drill_site(name, spot["x"], spot["y"],
                                                radius=12, receiver=receiver,

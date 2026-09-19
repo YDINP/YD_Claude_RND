@@ -166,7 +166,7 @@ end
 -- 하고 채굴기 자리는 광석이 «있어야» 한다. 그래서 같은 함수를 못 쓴다.
 --
 -- 줄은 밭의 긴 쪽을 따라 긋는다. 짧은 쪽으로 다섯 칸마다 한 줄이다.
-local function mine_seats(surface, force, field, wanted)
+local function mine_seats(surface, force, field, wanted, rich)
   -- 밭의 테두리를 «광석»에서 다시 잰다.
   --
   -- 부르는 쪽이 주는 것은 「이미 선 채굴기들의 테두리」다(zones 의 fields).
@@ -178,6 +178,7 @@ local function mine_seats(surface, force, field, wanted)
   -- 자리표는 «광맥»을 따라야 한다. 채굴기가 한 대도 없을 때도 자리를
   -- 내놓을 수 있어야 하고, 그것이 자리표를 만든 이유이기도 하다 -
   -- 먼저 긋고 나중에 붙인다.
+  rich = tonumber(rich) or 0
   local cx = (field.left + field.right) / 2
   local cy = (field.top + field.bottom) / 2
   local ore = surface.find_entities_filtered {
@@ -216,21 +217,26 @@ local function mine_seats(surface, force, field, wanted)
     lane = wide and (math.floor(field.top) + 2) or (math.floor(field.left) + 2),
   }
 
-  local function on_ore(x, y)
-    -- 2x2 가 덮는 네 칸 중 «하나라도» 광석이면 캔다. 전부를 요구하면
-    -- 광맥 가장자리가 통째로 버려진다.
+  -- 2x2 밑에 «몇 개»가 있는가. 닿았는지가 아니라 얼마나 있는지를 센다.
+  --
+  -- 「하나라도 닿으면 캔다」였던 시절의 값(14회차 실측): 열 자리 중 일곱이
+  -- 걷어내는 문턱(400) 밑이었고, 두 자리는 광석 26개 - 채굴기가 104초 살고
+  -- 죽는 자리였다. 세우면 다음 순찰이 걷어내고, 그 옆에 깔던 벨트까지 같이
+  -- 뜯겨 나갔다. 세우는 기준과 걷는 기준이 다르면 무리가 저 자신과 싸운다.
+  local function ore_under(x, y)
+    local total = 0
     for dx = 0, 1 do
       for dy = 0, 1 do
-        if surface.count_entities_filtered {
+        for _, e in pairs(surface.find_entities_filtered {
           position = { x + dx + 0.5, y + dy + 0.5 }, radius = 0.4,
           type = "resource", limit = 1,
-        } > 0 then return true end
+        }) do total = total + e.amount end
       end
     end
-    return false
+    return total
   end
 
-  local free, ours, blocked = {}, 0, 0
+  local free, ours, blocked, thin = {}, 0, 0, 0
   local top = PLAN.mine.count
   for nth = 0, top - 1 do
     local seat = mine_seat(origin, nth, wide)
@@ -240,24 +246,42 @@ local function mine_seats(surface, force, field, wanted)
     }[1]
     if standing then
       ours = ours + 1
-    elseif not on_ore(seat.x, seat.y) then
-      blocked = blocked + 1
-    elseif surface.can_place_entity {
-      name = PLAN.mine.what, position = here,
-      direction = defines.direction[seat.direction], force = force,
-    } then
-      -- 방향은 «숫자»로 내보낸다. 부르는 쪽(place)이 숫자를 받는다.
-      -- 이름으로 내보냈다가 조용히 0(북쪽)으로 읽히면, 열여섯 대가
-      -- 전부 엉뚱한 데로 떨군다 - 자리표를 만든 보람이 통째로 사라진다.
-      free[#free + 1] = { x = here.x, y = here.y, nth = nth,
-                          direction = defines.direction[seat.direction],
-                          facing = seat.direction }
-      if #free >= (wanted or 12) then break end
     else
-      blocked = blocked + 1
+      local under = ore_under(seat.x, seat.y)
+      if under < rich then
+        -- 얇다. 여기서 멈추지 «않고» 다음 줄로 간다 - 광맥 가장자리가
+        -- 얇은 것은 정상이고, 몸통은 두세 줄 안쪽에 있다. 철밭 실측:
+        -- 폭 27칸에 첫 줄은 x=51(가장자리), 몸통은 x=55~70 이었다.
+        thin = thin + 1
+      elseif surface.can_place_entity {
+        name = PLAN.mine.what, position = here,
+        direction = defines.direction[seat.direction], force = force,
+      } then
+        -- 방향은 «숫자»로 내보낸다. 부르는 쪽(place)이 숫자를 받는다.
+        -- 이름으로 내보냈다가 조용히 0(북쪽)으로 읽히면, 열여섯 대가
+        -- 전부 엉뚱한 데로 떨군다 - 자리표를 만든 보람이 통째로 사라진다.
+        free[#free + 1] = { x = here.x, y = here.y, nth = nth,
+                            ore = under,
+                            direction = defines.direction[seat.direction],
+                            facing = seat.direction }
+      else
+        blocked = blocked + 1
+      end
     end
   end
-  return { free = free, ours = ours, blocked = blocked, wide = wide,
+
+  -- 두꺼운 자리부터 내놓는다. 끝까지 훑고 나서 고르는 이유: 먼저 나온
+  -- 것에서 끊으면 언제나 «가장자리»를 고르게 된다. 줄은 이미 하나로
+  -- 묶여 있으니(같은 lane) 순서를 바꿔도 벨트 한 줄은 그대로다.
+  table.sort(free, function(a, b)
+    if a.ore ~= b.ore then return a.ore > b.ore end
+    return a.nth < b.nth
+  end)
+  local keep = {}
+  for i = 1, math.min(#free, wanted or 12) do keep[i] = free[i] end
+
+  return { free = keep, ours = ours, blocked = blocked, thin = thin,
+           found = #free, rich = rich, wide = wide,
            lane = origin.lane, want = top, patch = field }
 end
 

@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import io
 import os
 import re
 import sys
@@ -47,6 +48,40 @@ def lua_shape() -> dict[tuple[str, str], int]:
     return out
 
 
+# -- 세우는 문턱 > 걷는 문턱 ------------------------------------------------
+#
+# 14회차에 무리가 세 시간 동안 저 자신과 싸웠다. 자리표는 「광석에 닿으면
+# 세워라」 했고 점검은 「400 미만이면 걷어라」 했다. 두 문장 사이에 아무런
+# 관계가 없었으므로 채굴기는 세워지고 걷히기를 되풀이했고, 그 줄에 깔던
+# 벨트까지 같이 뜯겨 나갔다.
+#
+# 여기서 막는 것은 «같아지는 것»까지다. 문턱이 같으면 세운 채굴기가 첫
+# 광석을 캐는 순간 걷어내는 선 아래로 내려간다.
+def hysteresis() -> list:
+    bad = []
+    thin = getattr(settings, "THIN_DRILL", None)
+    rich = getattr(settings, "RICH_DRILL", None)
+    if thin is None or rich is None:
+        return ["THIN_DRILL / RICH_DRILL 둘 다 있어야 한다"]
+    if rich <= thin:
+        bad.append(f"세우는 문턱 RICH_DRILL={rich} 이 걷는 문턱 "
+                   f"THIN_DRILL={thin} 보다 높지 않다 - 세우자마자 걷는다")
+
+    # 그리고 그 수가 «실제로 건너가야» 한다. 자리표를 부르는 자리에서
+    # rich 를 빠뜨리면 모드 쪽 기본값 0 이 되어, 고치기 전과 똑같아진다.
+    src = io.open(os.path.join(ROOT, "bridge", "crew", "mining.py"),
+                  encoding="utf-8").read()
+    if "rich=RICH_DRILL" not in src:
+        bad.append("mining.py 가 mine_seats 에 rich 를 안 건넨다")
+    lua = io.open(os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "plots.lua"),
+                  encoding="utf-8").read()
+    if "ore_under" not in lua:
+        bad.append("plots.lua 가 아직 광석을 «세지» 않는다 (ore_under 없음)")
+    if "under < rich" not in lua:
+        bad.append("plots.lua 가 문턱으로 거르지 않는다")
+    return bad
+
+
 def main() -> int:
     shape = lua_shape()
     bad = []
@@ -58,6 +93,7 @@ def main() -> int:
         elif mine != theirs:
             bad.append(f"{name}={mine} 인데 plots.lua 의 "
                        f"{key[0]}.{key[1]}={theirs}")
+    bad.extend(hysteresis())
     for line in bad:
         print("  [FAIL] " + line)
     print(f"\n{len(bad)} problems - plot shape agrees "

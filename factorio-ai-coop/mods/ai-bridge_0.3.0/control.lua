@@ -654,12 +654,14 @@ remote.add_interface("ai", {
   next_seat = next_seat,
   -- 한 밭의 채굴기 자리표. 「어느 밭」은 부르는 쪽이 고른다 - 밭 목록은
   -- 이미 `zones` 가 준다.
-  mine_seats = function(name, left, top, right, bottom, wanted)
+  -- `rich` 는 «세우는 문턱»이다. 걷어내는 문턱(poor_drills)보다 높아야
+  -- 한다 - 같으면 세우자마자 걷는다. 두 수는 부르는 쪽 한 곳에서 나온다.
+  mine_seats = function(name, left, top, right, bottom, wanted, rich)
     local a = Core.agent(name)
     local b = a and Core.body(a)
     if not b then return { error = "no such agent: " .. tostring(name) } end
     return mine_seats(b.surface, b.force,
-      { left = left, top = top, right = right, bottom = bottom }, wanted)
+      { left = left, top = top, right = right, bottom = bottom }, wanted, rich)
   end,
   draw_zones = draw_zones,
 
