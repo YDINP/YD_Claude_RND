@@ -656,12 +656,14 @@ remote.add_interface("ai", {
   -- 이미 `zones` 가 준다.
   -- `rich` 는 «세우는 문턱»이다. 걷어내는 문턱(poor_drills)보다 높아야
   -- 한다 - 같으면 세우자마자 걷는다. 두 수는 부르는 쪽 한 곳에서 나온다.
-  mine_seats = function(name, left, top, right, bottom, wanted, rich)
+  -- `ore` 는 «이 밭이 무슨 밭인가»다. 안 주면 가운데 칸에 물어 짐작하는데,
+  -- 남의 광맥이 박힌 밭에서는 그 짐작이 틀린다(plots.ore_under 주석 참고).
+  mine_seats = function(name, left, top, right, bottom, wanted, rich, ore)
     local a = Core.agent(name)
     local b = a and Core.body(a)
     if not b then return { error = "no such agent: " .. tostring(name) } end
     return mine_seats(b.surface, b.force,
-      { left = left, top = top, right = right, bottom = bottom }, wanted, rich)
+      { left = left, top = top, right = right, bottom = bottom }, wanted, rich, ore)
   end,
   draw_zones = draw_zones,
 

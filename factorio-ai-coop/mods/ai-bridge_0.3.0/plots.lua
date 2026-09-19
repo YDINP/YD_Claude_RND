@@ -166,7 +166,7 @@ end
 -- 하고 채굴기 자리는 광석이 «있어야» 한다. 그래서 같은 함수를 못 쓴다.
 --
 -- 줄은 밭의 긴 쪽을 따라 긋는다. 짧은 쪽으로 다섯 칸마다 한 줄이다.
-local function mine_seats(surface, force, field, wanted, rich)
+local function mine_seats(surface, force, field, wanted, rich, ore_name)
   -- 밭의 테두리를 «광석»에서 다시 잰다.
   --
   -- 부르는 쪽이 주는 것은 「이미 선 채굴기들의 테두리」다(zones 의 fields).
@@ -184,14 +184,20 @@ local function mine_seats(surface, force, field, wanted, rich)
   local ore = surface.find_entities_filtered {
     position = { cx, cy }, radius = 48, type = "resource", limit = 2000,
   }
+  -- 이 밭이 «무슨» 광석의 밭인가. 테두리를 다시 재는 데만 쓰고 말았더니
+  -- 두께를 셀 때 남의 광석까지 세었다(아래 ore_under 참고). 밖으로 낸다.
+  -- 부르는 쪽이 이름을 주면 그것을 쓴다. 짐작은 마지막 수단이다.
+  local want_name = ore_name
+  if type(want_name) ~= "string" or want_name == "" then want_name = nil end
   if #ore > 0 then
     -- 가운데 칸과 «같은 광석»만 본다. 광맥이 겹쳐 있으면 남의 광맥까지
     -- 삼켜 테두리가 두 배가 된다.
-    local want_name = nil
-    local best = math.huge
-    for _, e in pairs(ore) do
-      local d = (e.position.x - cx) ^ 2 + (e.position.y - cy) ^ 2
-      if d < best then best, want_name = d, e.name end
+    if not want_name then
+      local best = math.huge
+      for _, e in pairs(ore) do
+        local d = (e.position.x - cx) ^ 2 + (e.position.y - cy) ^ 2
+        if d < best then best, want_name = d, e.name end
+      end
     end
     -- «붙어 있는» 덩어리만 한 밭이다.
     --
@@ -263,13 +269,27 @@ local function mine_seats(surface, force, field, wanted, rich)
   -- 걷어내는 문턱(400) 밑이었고, 두 자리는 광석 26개 - 채굴기가 104초 살고
   -- 죽는 자리였다. 세우면 다음 순찰이 걷어내고, 그 옆에 깔던 벨트까지 같이
   -- 뜯겨 나갔다. 세우는 기준과 걷는 기준이 다르면 무리가 저 자신과 싸운다.
+  --
+  -- 그리고 «이 밭의» 광석만 센다. type="resource" 로 아무거나 세다가
+  -- 16회차에서 돌밭에 철 채굴기 열한 대를 세웠다. 실측:
+  --
+  --     철 광맥(붙어 있는 덩어리)   x[-56..-22] y[ -4..27]
+  --     돌 광맥                     x[-61..-44] y[-14.. 3]
+  --     겹치는 상자                 x[-56..-44] y[ -4.. 3]  <- 여기는 다 돌
+  --
+  --     자리 (-55,-4) 두께 4657     <- 돌 4469 + 옆칸 돌
+  --     실제 그 자리의 철           0
+  --
+  -- 홍수채움은 철만 골라 테두리를 잡았는데 그 테두리는 «상자»다. 상자
+  -- 안에 남의 광맥이 박혀 있으면 상자만 보고는 알 수 없다. 칸마다 이름을
+  -- 물어야 한다.
   local function ore_under(x, y)
     local total = 0
     for dx = 0, 1 do
       for dy = 0, 1 do
         for _, e in pairs(surface.find_entities_filtered {
           position = { x + dx + 0.5, y + dy + 0.5 }, radius = 0.4,
-          type = "resource", limit = 1,
+          name = want_name, type = want_name and nil or "resource", limit = 1,
         }) do total = total + e.amount end
       end
     end
@@ -358,7 +378,7 @@ local function mine_seats(surface, force, field, wanted, rich)
   end
 
   return { free = keep, ours = ours, blocked = blocked, thin = thin,
-           found = #free, rich = rich, wide = wide,
+           found = #free, rich = rich, wide = wide, ore = want_name,
            lane = origin.lane, want = top, patch = field }
 end
 

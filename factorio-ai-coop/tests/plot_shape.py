@@ -191,6 +191,49 @@ def one_ore_per_field() -> list:
         bad.append("밭 이름을 아직 «첫 번째» 채굴기가 정한다")
     return bad
 
+# -- 두께는 «이 밭의» 광석으로 잰다 -----------------------------------------
+#
+# 16회차 실측: 「철밭」이라 부르던 줄의 채굴기 열한 대가 전부 돌을 캤다.
+# 철은 한 톨도 없었다.
+#
+#     철 광맥(붙어 있는 덩어리)   x[-56..-22] y[ -4..27]
+#     돌 광맥                     x[-61..-44] y[-14.. 3]
+#     겹치는 상자                 x[-56..-44] y[ -4.. 3]  <- 여기는 다 돌
+#
+# 홍수채움으로 「붙어 있는 것만 한 밭」까지는 고쳤다. 그런데 그 결과는
+# «상자»이고, 상자 안에 남의 광맥이 박혀 있으면 상자만으로는 알 수 없다.
+# 두께를 세는 ore_under 가 type="resource" 로 아무거나 세었으므로, 돌
+# 4469 를 「철 두께 4657」로 읽고 자리를 열한 칸 내놓았다.
+#
+# 「어느 광맥인가」를 한 번 알아낸 뒤 그것을 두께 세는 데 «안 쓰면», 알아낸
+# 보람이 없다. 이 저장소가 여러 번 만든 모양이다 - 기능은 있는데 그것을
+# 가리키는 것이 없다.
+def thickness_is_this_ore() -> list:
+    bad = []
+    lua = io.open(os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "plots.lua"),
+                  encoding="utf-8").read()
+    body = lua[lua.find("local function ore_under"):]
+    body = body[:body.find(chr(10) + "  end")]
+    if "name = want_name" not in body:
+        bad.append("ore_under 가 밭의 광석 이름으로 안 거른다 "
+                   "- 남의 광맥을 두께로 센다")
+    if 'type = "resource",' in body:
+        bad.append("ore_under 가 아직 아무 광물이나 센다 "
+                   '(type = "resource" 가 조건 없이 남아 있다)')
+
+    # 그리고 그 이름이 «건너와야» 한다. 가운데 칸에 물어 짐작하면, 돌이
+    # 박힌 철밭 한가운데에서 또 돌을 고를 수 있다.
+    if "ore_name" not in lua:
+        bad.append("plots.lua 의 mine_seats 가 밭 이름을 안 받는다")
+    src = io.open(os.path.join(ROOT, "bridge", "client.py"),
+                  encoding="utf-8").read()
+    call = src[src.find("def mine_seats"):]
+    call = call[:call.find(chr(10) + "    def ", 10)]
+    if 'field.get("ore")' not in call:
+        bad.append("client.mine_seats 가 밭 이름을 안 건넨다")
+    return bad
+
+
 def main() -> int:
     shape = lua_shape()
     bad = []
@@ -207,6 +250,7 @@ def main() -> int:
     bad.extend(seats_cluster())
     bad.extend(working_chest())
     bad.extend(one_ore_per_field())
+    bad.extend(thickness_is_this_ore())
     for line in bad:
         print("  [FAIL] " + line)
     print(f"\n{len(bad)} problems - plot shape agrees "
