@@ -12,6 +12,28 @@ local function water_sites_near(surface, force, x, y, radius, wanted)
     position = { x, y }, radius = math.min(radius or 120, 200),
     name = { "water", "deepwater" }, limit = 400,
   }
+  -- 가까운 물부터 본다.
+  --
+  -- 여기 있던 것은 엔진이 주는 «순서 그대로» 훑다가 먼저 되는 것에서
+  -- 멈췄다. 물 타일의 순서는 아무 뜻이 없다. 그래서 이런 일이 났다
+  -- (116분째 실측):
+  --
+  --     설계가 잰 물     기지에서 146타일
+  --     실제로 선 펌프   기지에서 213타일
+  --     발전소 -> 랩     220타일
+  --
+  -- 전봇대 사거리가 7.5타일이니 서른 개가 든다. 무리는 「전봇대를 놓을
+  -- 자리가 안 납니다(153타일 떨어져 있습니다)」만 되풀이하고 랩 두 대는
+  -- no_power 로 서 있었다.
+  --
+  -- 물가는 고를 수 있는 것이 아니지만 «물가의 어디»는 고를 수 있다.
+  -- 그 선택을 안 하고 있었다.
+  table.sort(tiles, function(p, q)
+    local pd = (p.position.x - x) ^ 2 + (p.position.y - y) ^ 2
+    local qd = (q.position.x - x) ^ 2 + (q.position.y - y) ^ 2
+    return pd < qd
+  end)
+
   local sites, seen = {}, {}
   local directions = { defines.direction.north, defines.direction.east,
                        defines.direction.south, defines.direction.west }

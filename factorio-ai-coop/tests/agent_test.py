@@ -1378,6 +1378,23 @@ def main() -> int:
     check("an unknown job is nobody's and everybody's",
           roles.role_of("what-is-this:1") is None)
 
+    # ------------------------------------------------------------------
+    print("\n17. the nearest shore, not the first shore")
+
+    # 실측(116분째): 설계가 잰 물은 기지에서 146타일인데 펌프는 213타일에
+    # 섰고, 발전소에서 랩까지 220타일이 됐다. 전봇대 사거리가 7.5이니
+    # 서른 개가 든다. 랩 두 대가 no_power 로 서 있었다.
+    #
+    # 물가는 고를 수 있는 것이 아니지만 «물가의 어디»는 고를 수 있다.
+    # 게임이 주는 타일 순서에는 아무 뜻이 없으므로 거리로 세워야 한다.
+    _power = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                               "mods", "ai-bridge_0.3.0", "power.lua"),
+                  encoding="utf-8").read()
+    _head = _power.split("local function water_sites_near", 1)[-1]
+    _head = _head.split("local sites, seen", 1)[0]
+    check("water tiles are sorted by distance before picking",
+          "table.sort(tiles" in _head and "- x) ^ 2" in _head)
+
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
         print("failed: " + ", ".join(FAILED))
