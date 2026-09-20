@@ -201,7 +201,8 @@ def queue_tech(ai):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--who", default="echo")
+    ap.add_argument("--who", action="append", default=None,
+                    help="발전 사슬 당번. 여러 번 줄 수 있다. 앞사람이 죽으면 다음 사람")
     ap.add_argument("--depot", default="60,-115")
     ap.add_argument("--water", default="24.5,44.5")
     ap.add_argument("--engines", type=int, default=2)
@@ -212,11 +213,18 @@ def main() -> int:
     shelf = {"iron-plate": (dx + 0.5, dy + 0.5),
              "stone": (dx + 0.5, dy + 2.5),
              "coal": (dx + 0.5, dy + 4.5)}
-    who = args.who
+    crew = args.who or ["echo"]
 
     ai = AIBridge()
     while True:
         try:
+            # 159칸 남쪽은 죽어서 안 돌아오는 걸음이다. 죽은 사람에게 계속
+            # 일을 시키면 사슬이 거기서 조용히 멈춘다 - 18회차가 그랬다.
+            who = next((n for n in crew if busy(ai, n) is not None), None)
+            if not who:
+                print("  발전 사슬을 맡을 사람이 없다")
+                time.sleep(30)
+                continue
             st = survey(ai)
             if int(st["gun"]) and int(st["wall"]):
                 print("포탑과 벽이 열렸다. 불은 켜졌다.")
