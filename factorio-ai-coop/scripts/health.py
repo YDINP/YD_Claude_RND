@@ -197,8 +197,10 @@ def once(ai: AIBridge) -> None:
     # 17회차는 공해 0으로 전멸했다. 적은 확장으로 «걸어온다».
     if not t.get("count", 0):
         warn.append(f"포탑이 한 대도 없다 - 가장 가까운 둥지 {e.get('gap',0)}칸")
+    # 웜은 판이 열릴 때부터 있을 수 있다. 「확장했다」고 단정하지 않는다 -
+    # 틀린 경보는 다음 경보까지 같이 무시하게 만든다.
     if e.get("worms", 0):
-        warn.append(f"웜 {e['worms']}기가 150칸 안에 섰다 - 적이 «확장»했다")
+        warn.append(f"웜 {e['worms']}기가 150칸 안에 있다 - 지나가면 물린다")
     if e.get("nests", 0):
         warn.append(f"둥지 {e['nests']}곳이 150칸 안에 있다")
     if e.get("near", 0) >= 10:

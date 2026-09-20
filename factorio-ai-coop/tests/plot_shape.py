@@ -441,6 +441,54 @@ def defence_has_depth() -> list:
     return bad
 
 
+# -- 막히면 옆으로 비켜 간다 ------------------------------------------------
+#
+# 사용자: "캐릭터가 이동하다 3초동안 이동이 안되면 우회하서 갈 수 있도록
+#          로직개선할 것."
+#
+# 지금까지는 막히면 길찾기를 다시 불렀다. 그런데 «같은 자리»에서 «같은
+# 목적지»를 물으면 대개 같은 답이 온다 - 다섯 번 묻고 실패한다.
+#
+# 그리고 막은 것이 나무.바위면 치우면 되지만(clear_obstacle) 우리 벨트나
+# 화로면 치울 수 없다. 화로 열두 대가 한 줄로 서 있고 그 남쪽에 벨트가
+# 깔리면 그 사이에 든 사람은 어느 쪽으로도 못 나온다.
+def stuck_walks_around() -> list:
+    bad = []
+    lua = io.open(os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "tasks.lua"),
+                  encoding="utf-8").read()
+    if "side_step" not in lua:
+        bad.append("막혔을 때 옆으로 비켜서지 않는다 (side_step 없음)")
+
+    # 순서가 중요하다. 치우기 -> 비켜서기 -> 길찾기 다시.
+    # 길찾기를 먼저 부르면 비켜서는 데까지 가지 못한다.
+    walk = lua[lua.find("M.walk_to = {"):]
+    blocked = walk[walk.find("if stuck(ctx) then"):]
+    blocked = blocked[:blocked.find("steer(bot, target)")]
+    at_clear = blocked.find("clear_obstacle")
+    at_side = blocked.find("side_step")
+    at_path = blocked.find("request_path")
+    if not (0 <= at_clear < at_side < at_path):
+        bad.append("치우기 -> 비켜서기 -> 길찾기 순서가 아니다 "
+                   f"(clear={at_clear} side={at_side} path={at_path})")
+
+    # 좌우를 번갈아야 한다. 한쪽만 보면 그쪽이 벽일 때 영영 못 나온다.
+    step = lua[lua.find("local function side_step"):]
+    step = step[:step.find(chr(10) + "end")]
+    if "% 2" not in step:
+        bad.append("좌우를 번갈아 보지 않는다")
+    if "DETOUR_MAX" not in step:
+        bad.append("우회 횟수에 끝이 없다 - 영원히 옆걸음질할 수 있다")
+
+    # 새 길을 받으면 이력을 지워야 한다. 안 지우면 다음에 막혔을 때
+    # 곧바로 「해볼 만큼 했다」가 되어 비켜설 기회를 잃는다.
+    req = lua[lua.find("local function request_path"):]
+    req = req[:req.find(chr(10) + "end")]
+    if "st.detours = nil" not in req.replace(" ", "").replace(
+            "st.detour,st.detours=nil,nil", "st.detours = nil"):
+        bad.append("새 길을 받아도 우회 이력을 안 지운다")
+    return bad
+
+
 def main() -> int:
     shape = lua_shape()
     bad = []
@@ -464,6 +512,7 @@ def main() -> int:
     bad.extend(one_arm_is_two_drills())
     bad.extend(posts_guard_the_fields())
     bad.extend(defence_has_depth())
+    bad.extend(stuck_walks_around())
     for line in bad:
         print("  [FAIL] " + line)
     print(f"\n{len(bad)} problems - plot shape agrees "

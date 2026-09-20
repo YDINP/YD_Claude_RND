@@ -106,6 +106,25 @@ end
 
 local MAX_PATH_TRIES = 5      -- pathfinder attempts before giving up on a goal
 local STRAIGHT_LINE_LIMIT = 12 -- tiles worth walking blind while a path is pending
+
+-- 막히면 «옆으로» 비켜 간다.
+--
+-- 사용자: "캐릭터가 이동하다 3초동안 이동이 안되면 우회하서 갈 수 있도록
+--          로직개선할 것."
+--
+-- 지금까지는 막히면 길찾기를 다시 불렀다. 그런데 «같은 자리»에서 «같은
+-- 목적지»를 물으면 대개 같은 답이 온다. 다섯 번 묻고 실패한다.
+--
+-- 그리고 막은 것이 나무나 바위면 치우면 되지만(clear_obstacle), 우리
+-- 벨트 줄이나 화로 벽이면 치울 수 없다. 실측: 제련구역 화로 열두 대가
+-- 한 줄로 서 있고 그 남쪽에 벨트가 깔리면, 그 사이로 들어간 사람은
+-- 어느 쪽으로도 못 나온다.
+--
+-- 옆으로 한 점을 찍고 거기부터 다시 간다. 좌우를 번갈아, 걸음을 늘려
+-- 가며 - 한쪽이 막히면 반대쪽이 열린다.
+local DETOUR_STEP = 6         -- 한 번에 비켜서는 거리
+local DETOUR_MAX = 4          -- 이만큼 해보고 안 되면 길찾기에 맡긴다
+local DETOUR_TICKS = 180      -- 우회점 하나에 매달리는 시간 (3초)
 local CLEAR_REACH = 2.6       -- how close an obstacle must be to chop it
 local CLEAR_INTERVAL = 12     -- ticks between swings at a tree or rock
 
@@ -131,7 +150,31 @@ local function request_path(ctx, resolution)
   st.tries = (st.tries or 0) + 1
   st.path, st.path_index, st.path_failed = nil, nil, false
   st.probe_tick = nil
+  -- 새 길을 받았으면 우회 이력은 지운다. 돌아간 자리에서 다시 막히면
+  -- 그때는 다시 처음부터 좌우를 번갈아 본다.
+  st.detour, st.detours = nil, nil
   return "running"
+end
+
+-- 진행 방향의 «직각»으로 한 점. 좌우를 번갈아 보고, 갈수록 멀리 돈다.
+--
+-- 제자리 옆으로만 가면 같은 벽에 다시 붙으므로, 앞으로도 한 걸음 섞는다.
+local function side_step(ctx, target)
+  local st, bot = ctx.task.state, ctx.bot
+  st.detours = (st.detours or 0) + 1
+  if st.detours > DETOUR_MAX then return nil end
+
+  local dx, dy = target.x - bot.position.x, target.y - bot.position.y
+  local span = math.sqrt(dx * dx + dy * dy)
+  if span < 0.1 then return nil end
+  dx, dy = dx / span, dy / span
+
+  local side = (st.detours % 2 == 1) and 1 or -1
+  local reach = DETOUR_STEP * math.ceil(st.detours / 2)
+  return {
+    x = bot.position.x - dy * side * reach + dx * DETOUR_STEP,
+    y = bot.position.y + dx * side * reach + dy * DETOUR_STEP,
+  }
 end
 
 -- Trees and rocks are not walls; a player chops through them. Without this an
@@ -239,6 +282,18 @@ M.walk_to = {
     end
 
     local target = st.goal
+
+    -- 우회 중이면 «우회점»이 목표다. 닿거나 3초가 지나면 푼다.
+    if st.detour then
+      if dist(bot.position, st.detour) < 2.0
+          or ctx.tick - (st.detour_tick or 0) > DETOUR_TICKS then
+        st.detour, st.probe_tick = nil, nil
+      else
+        steer(bot, st.detour)
+        return "running"
+      end
+    end
+
     if st.path then
       local waypoint = st.path[st.path_index]
       if not waypoint then
@@ -260,6 +315,17 @@ M.walk_to = {
         st.probe_tick = nil
         return "running"
       end
+
+      -- 치울 수 없는 것이면 «옆으로» 비켜 간다. 길찾기를 다시 부르기
+      -- 전에 이것을 먼저 하는 이유는, 같은 자리에서 같은 목적지를 물으면
+      -- 같은 답이 오기 때문이다.
+      local aside = side_step(ctx, st.goal)
+      if aside then
+        st.detour, st.detour_tick, st.probe_tick = aside, ctx.tick, nil
+        st.path, st.path_index = nil, nil
+        return "running"
+      end
+
       if st.tries < MAX_PATH_TRIES then
         halt(bot)
         return request_path(ctx)
