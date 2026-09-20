@@ -401,7 +401,9 @@ def tend(ai, who, shelf, sick):
     plan += shopping(shelf, {"iron-plate": len(boxes) * CHEST_COST["iron-plate"] + 2,
                              "coal": len(jobs) * FUEL_EACH})
     if boxes:
-        plan.append(("craft", {"recipe": CHEST, "count": len(boxes), "wait": False}))
+        # 여기는 제작과 세우기 사이에 «걸음조차 없다». 기다리지 않으면
+        # 상자는 늘 가방에 남고 채굴기는 출구를 못 얻는다.
+        plan.append(("craft", {"recipe": CHEST, "count": len(boxes), "wait": True}))
     for job in jobs:
         d = job["drill"]
         if job in boxes:
@@ -651,7 +653,7 @@ def widen(ai, who, shelf, smelt, row, st):
     plan = [("walk_to", {"x": shelf["stone"][0] - 2, "y": shelf["stone"][1] + 1}),
             ("take", {"name": "stone", "x": shelf["stone"][0], "y": shelf["stone"][1],
                       "count": n * FURNACE_COST["stone"] + 5}),
-            ("craft", {"recipe": FURNACE, "count": n, "wait": False}),
+            ("craft", {"recipe": FURNACE, "count": n, "wait": True}),
             ("walk_to", {"x": spots[0][0], "y": spots[0][1] + 2})]
     for x, y in spots:
         plan.append(("build", {"name": FURNACE, "x": x, "y": y}))
@@ -695,8 +697,10 @@ def sow(ai, who, shelf, field, st):
         "stone": n * DRILL_COST["stone"] + 4,
         "coal": n * FUEL_EACH,
     })
+    # 묶음의 «마지막» 제작만 기다린다. 제작 큐는 선입선출이라 마지막이
+    # 끝났으면 앞의 것도 끝나 있다.
     plan += [("craft", {"recipe": DRILL, "count": n, "wait": False}),
-             ("craft", {"recipe": CHEST, "count": n, "wait": False}),
+             ("craft", {"recipe": CHEST, "count": n, "wait": True}),
              ("walk_to", {"x": seats[0]["x"] + 3, "y": seats[0]["y"]})]
     for seat in seats:
         plan.append(("build", {"name": DRILL, "x": seat["x"], "y": seat["y"],

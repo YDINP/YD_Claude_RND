@@ -171,7 +171,9 @@ def raise_plant(ai, who, spot):
             ("craft", {"recipe": "steam-engine", "count": len(engines), "wait": False}),
             ("craft", {"recipe": LAB, "count": 1, "wait": False}),
             ("chop", {"x": pump["x"], "y": pump["y"], "count": 12}),
-            ("craft", {"recipe": POLE, "count": 6, "wait": False}),
+            # 묶음의 마지막 제작. 여기를 기다리면 앞의 펌프.보일러.기관.
+            # 연구소도 다 만들어져 있다 - 제작 큐는 선입선출이다.
+            ("craft", {"recipe": POLE, "count": 6, "wait": True}),
             ("walk_to", {"x": pump["x"], "y": pump["y"] - 4}),
             ("build", {"name": "offshore-pump", "x": pump["x"], "y": pump["y"],
                        "direction": pump.get("direction")}),

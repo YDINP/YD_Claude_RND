@@ -140,8 +140,13 @@ def lay(ai, who, which, shelf):
     plan = [("walk_to", {"x": shelf["iron-plate"][0] - 2,
                          "y": shelf["iron-plate"][1] + 1})]
     plan += shopping(shelf, need)
-    for part, count in want.items():
-        plan.append(("craft", {"recipe": part, "count": count, "wait": False}))
+    # 묶음의 «마지막» 제작만 기다린다. 제작 큐는 선입선출이라 마지막이
+    # 끝났으면 앞의 것도 끝나 있다 - 기다리는 값은 한 번만 치르고,
+    # 「만들라고 시켰다」가 「만들어졌다」로 바뀐다.
+    parts = list(want.items())
+    for i, (part, count) in enumerate(parts):
+        plan.append(("craft", {"recipe": part, "count": count,
+                               "wait": i == len(parts) - 1}))
 
     first = todo[0]
     plan.append(("walk_to", {"x": first["x"] + 2, "y": first["y"] + 2}))

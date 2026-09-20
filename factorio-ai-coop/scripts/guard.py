@@ -518,7 +518,19 @@ def raise_turrets(ai, who, shelf, have, spots):
         plan.append(("take", {"name": AMMO, "x": shelf["iron-plate"][0],
                               "y": shelf["iron-plate"][1],
                               "count": min(ammo_ready, n * AMMO_EACH)}))
-    plan.append(("craft", {"recipe": TURRET, "count": n, "wait": False}))
+    # 포탑도 «기다린다». 탄약만 고치고 여기는 안 고쳤다가 다시 걸렸다.
+    #
+    #     guard: "포탑 1대 (테두리) + 탄약 20발씩"   <- 매 순번 이렇게 찍히고
+    #     서 있는 포탑 7대                           <- 수는 안 늘고
+    #     alpha 가방 {gun-turret: 1}, bravo 가방 {gun-turret: 1}
+    #
+    # 포탑은 8초가 걸리는데 자리가 가까우면 걸어가는 데 그만큼 안 걸린다.
+    # 그러면 세울 차례에 아직 손에 없고, 만들어진 포탑은 가방에 남는다.
+    # 가방에 쌓이는 동안 화면에는 계속 「세웠다」고 찍힌다.
+    #
+    # 한 군데를 고치면 같은 모양을 «전부» 찾아야 한다. 하나만 고치면
+    # 고쳤다는 기억만 남고 고장은 그대로 남는다.
+    plan.append(("craft", {"recipe": TURRET, "count": n, "wait": True}))
     if make_ammo:
         # 탄약만은 «기다린다».
         #
