@@ -80,6 +80,19 @@ GUARD_FROM = 40           # 공해가 이만큼 되기 전에는 방어선을 �
 #
 # 그래서 공해가 둥지에 닿을 만큼 쌓이기 시작할 때부터 따진다.
 FURNACE_FUEL = 20         # 새로 세운 화로에 «그 자리에서» 넣어 주는 석탄
+
+# 석탄밭에 세우는 채굴기의 «첫 한 줌».
+#
+# 다른 밭의 채굴기는 연료를 밖에서 받아야 하지만, 석탄 채굴기는 «자기가
+# 캘 것» 위에 앉는다. 한 줌만 있으면 곧 제 출구 상자를 채우고, 보급
+# 순찰이 거기서 퍼서 되먹인다.
+#
+# 그런데 씨앗값을 다른 밭과 똑같이 25로 잡아 두었더니, 창고 석탄이
+# 0에서 25로 오르기를 기다리다가 그 25를 늘 운반과 보급이 먼저 가져갔다.
+# 석탄이 없어서 석탄밭을 못 넓히고, 못 넓혀서 계속 석탄이 없었다.
+#
+#     씨앗은 열매만큼 클 필요가 없다.
+SEED_FUEL = 10
 HUNGRY_FURNACES = 3       # 화로가 이만큼 굶어야 «채굴기»를 늘린다
 ORE_BACKLOG = 2500        # 광석이 이만큼 쌓여야 «화로»를 늘린다
 
@@ -708,10 +721,12 @@ def sow(ai, who, shelf, field, st):
         return False
 
     plan = [("walk_to", {"x": shelf["iron-plate"][0] - 2, "y": shelf["iron-plate"][1] + 1})]
+    # 석탄밭은 씨앗이 작아도 된다 - 제가 캘 것 위에 앉기 때문이다.
+    seed = SEED_FUEL if field["ore"] == "coal" else FUEL_EACH
     plan += shopping(shelf, {
         "iron-plate": n * (DRILL_COST["iron-plate"] + CHEST_COST["iron-plate"]) + 4,
         "stone": n * DRILL_COST["stone"] + 4,
-        "coal": n * FUEL_EACH,
+        "coal": n * seed,
     })
     # 묶음의 «마지막» 제작만 기다린다. 제작 큐는 선입선출이라 마지막이
     # 끝났으면 앞의 것도 끝나 있다.
@@ -722,7 +737,7 @@ def sow(ai, who, shelf, field, st):
         plan.append(("build", {"name": DRILL, "x": seat["x"], "y": seat["y"],
                                "direction": seat.get("direction")}))
         plan.append(("insert", {"name": "coal", "x": seat["x"], "y": seat["y"],
-                                "count": FUEL_EACH}))
+                                "count": seed}))
     submit(ai, who, plan, strict=False)
     print(f"{who}: {field['ore']} 채굴기 {n}대 "
           f"(창고 판 {st['plate']} 돌 {st['stone']} 석탄 {st['coal']})")
@@ -967,8 +982,11 @@ def main() -> int:
 
                 short_of_ore = (hungry >= HUNGRY_FURNACES
                                 and waiting < ORE_BACKLOG and not starved)
-                if (free and usable >= 17 and int(st["coal"]) >= FUEL_EACH
-                        and short_of_ore and not choked):
+                # 석탄밭을 열 때 드는 씨앗은 SEED_FUEL 뿐이다. 문턱을
+                # FUEL_EACH 로 두면 석탄이 모자랄 때 정작 석탄밭이 막힌다.
+                gate_fuel = SEED_FUEL if only_fuel else FUEL_EACH
+                if (free and usable >= 17 and int(st["coal"]) >= gate_fuel
+                        and (short_of_ore or only_fuel) and not choked):
                     # 돌이 마르면 전부 마른다. 돌밭을 먼저 연다.
                     short = int(st["stone"]) < PER_TRIP * DRILL_COST["stone"]
                     if only_fuel:
