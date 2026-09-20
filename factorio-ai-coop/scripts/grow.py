@@ -545,6 +545,28 @@ def smelt_row(ai, agent, want, smelt_xy=None):
         cand = rows.clear_spots(zones)
     elif smelt_xy:
         sx, sy = smelt_xy
+        # 대체 좌표를 쓰기로 했으면 «모드에게도 알린다».
+        #
+        # 여기 있던 것은 대체 좌표로 화로를 세우고 그걸로 끝냈다. 모드는
+        # 그 사실을 모르니 나중에 제 나름대로 제련 구역을 골랐고, 벨트를
+        # 까는 쪽(flow)은 모드를 따랐다. 그래서 이렇게 됐다.
+        #
+        #     화로 8대   y=10        (--smelt 를 따름)
+        #     벨트 155칸 y=30..38    (모드 구역 (-53,36) 을 따름)
+        #     검수: 화로 8대 전부 「넣어 줄 팔도 꺼내 줄 팔도 없다」
+        #           팔 48대 중 36대가 「집을 것도 놓을 데도 없다」
+        #
+        # 양쪽 다 제 기준에는 맞게 지었고, 그래서 아무도 틀렸다고 말하지
+        # 않았다. 한 줄도 쓸모가 없었을 뿐이다.
+        #
+        #     기준점이 둘이면 줄은 반드시 흩어진다.
+        #
+        # 대체 좌표는 «구역이 아직 없을 때 쓰는 값»이지 «다른 기준»이
+        # 아니다. 쓰는 순간 그것이 구역이 되어야 한다.
+        try:
+            ai.smelter(sx, sy)
+        except Exception as exc:                  # 고리는 여기서 안 죽는다
+            print(f"  제련 구역을 못 박지 못했다: {type(exc).__name__} {exc}")
         cand = [(sx + col * rows.PITCH, sy + r)
                 for r in (rows.ROW_A, rows.ROW_B) for col in range(PER_ROW)]
     else:
