@@ -93,6 +93,9 @@ def lay(ai, who, which, shelf):
 
     want: dict = {}
     for one in todo:
+        # 돌리는 칸은 걷어낸 것이 손에 돌아오므로 새로 만들 필요가 없다.
+        if one.get("turn"):
+            continue
         part = one.get("what")
         want[part] = want.get(part, 0) + 1
     need: dict = {}
@@ -115,6 +118,18 @@ def lay(ai, who, which, shelf):
         if one.get("lift"):
             plan.append(("demolish", {"x": one["x"], "y": one["y"],
                                       "name": one["lift"]}))
+        # 모드는 «돌려라»(turn)와 «세워라»를 구분해서 준다. 그런데 이쪽은
+        # 둘 다 build 로 처리했다. 이미 벨트가 선 칸에 build 는 못 하므로
+        # 그 칸은 «영원히 할 일»로 남고, 순번마다 같은 여섯 칸이 다시
+        # 배당된다.
+        #
+        #     실측: golf 과 alpha 가 (25,11) 과 (39,11) 을 수십 번 받았다.
+        #           그 칸의 벨트는 전부 d12(서쪽), 계획은 d4(동쪽)였다.
+        #
+        # 돌리는 일은 세우는 일이 아니다. 걷고 다시 세워야 방향이 바뀐다.
+        if one.get("turn"):
+            plan.append(("demolish", {"x": one["x"], "y": one["y"],
+                                      "name": one["what"]}))
         plan.append(("build", {"name": one["what"], "x": one["x"],
                                "y": one["y"], "direction": one.get("dir", 0)}))
     submit(ai, who, plan, strict=False)
