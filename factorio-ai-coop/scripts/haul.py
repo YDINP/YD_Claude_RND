@@ -345,9 +345,35 @@ def share(piles):
     끄면 다시 켜는 데 한 바퀴가 든다. 굶기지 않을 만큼은 늘 남긴다.
     """
     waiting = {"iron-ore": 0, "copper-ore": 0}
+    made = {"iron-plate": 0, "copper-plate": 0}
     for pile in piles:
         for ore in waiting:
             waiting[ore] += pile["held"].get(ore, 0)
+        for plate in made:
+            made[plate] += pile["held"].get(plate, 0)
+
+    # 쌓인 «광석»은 무엇을 녹일 수 있나를 말하고,
+    # 쌓인 «판»은 무엇이 필요한가를 말한다. 뒤가 앞을 이긴다.
+    #
+    #     실측(21회차): 구리판 1046 · 철판 7
+    #                   그때 포탑은 열한 대, 덮인 건물은 11%.
+    #
+    # 구리광이 34% 쌓여 있으니 화로의 34%를 구리에 돌리는 것이 밭 기준
+    # 으로는 옳았다. 그런데 구리판 1046 은 포탑 «백 대» 분이고, 우리를
+    # 멈춰 세운 것은 철판이었다. 쓰지도 않을 것을 캔 비율대로 녹이느라
+    # 정작 둘레를 못 닫았다.
+    #
+    #     캔 비율대로 녹이는 것은 «쓸 데가 둘 다 있을 때»만 옳다.
+    #
+    # 한쪽 판이 다른 쪽의 네 배를 넘고 그것이 남아돌 만큼이면, 그 쪽은
+    # 바닥까지 줄인다. 바닥을 두는 것은 여전하다 - 다시 켜는 데 한 바퀴가
+    # 들기 때문이다.
+    glut = 400
+    if made["copper-plate"] > made["iron-plate"] * 4 >= 0             and made["copper-plate"] >= glut:
+        return COPPER_FLOOR
+    if made["iron-plate"] > made["copper-plate"] * 4 >= 0             and made["iron-plate"] >= glut:
+        return COPPER_CEIL
+
     total = waiting["iron-ore"] + waiting["copper-ore"]
     if total <= 0:
         return COPPER_FLOOR
