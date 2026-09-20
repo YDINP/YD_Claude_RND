@@ -261,6 +261,19 @@ def covers(group, have, reach=RANGE):
                       for p in group))
 
 
+def nudged(seat, mid, steps=(0, 4, 8, 12)):
+    """이 자리가 막혔으면 «바깥으로» 비켜 본다.
+
+    동쪽 구멍 네 곳이 전부 광맥 위였다. 광맥에 건물을 안 세우는 규칙은
+    옳지만, 그 규칙이 「그러면 안 지킨다」로 끝나면 초소는 영영 맨몸이다.
+    광맥을 피하는 방향은 정해져 있다 - 구역 «바깥»이다.
+    """
+    dx, dy = seat["x"] - mid[0], seat["y"] - mid[1]
+    span = max(1.0, (dx * dx + dy * dy) ** 0.5)
+    dx, dy = dx / span, dy / span
+    return [dict(seat, x=seat["x"] + dx * k, y=seat["y"] + dy * k) for k in steps]
+
+
 def plan_seats(ai):
     """사방 테두리 + 안쪽. 구역마다 따로 두른다.
 
@@ -291,8 +304,11 @@ def plan_seats(ai):
                min(p[1] for p in group) - STANDOFF,
                max(p[0] for p in group) + STANDOFF,
                max(p[1] for p in group) + STANDOFF)
+        mid = (sum(p[0] for p in group) / len(group),
+               sum(p[1] for p in group) / len(group))
         for at in ring(box):
-            wanted.append({"x": at[0], "y": at[1], "why": "테두리"})
+            wanted.append({"x": at[0], "y": at[1], "why": "테두리",
+                           "mid": mid})
         for at in inside(box, group):
             wanted.append({"x": at[0], "y": at[1], "why": "안쪽"})
 
@@ -343,7 +359,14 @@ def buildable(ai, spots):
 
 
 def seats(ai, who):
-    return buildable(ai, plan_seats(ai))
+    """놓을 수 있는 자리. 막힌 테두리는 바깥으로 한 번 비켜 본다."""
+    wanted = plan_seats(ai)
+    ok = buildable(ai, wanted)
+    if len(ok) >= PER_TRIP:
+        return ok
+    blocked = [s for s in wanted if s not in ok and s.get("mid")]
+    tries = [alt for s in blocked[:12] for alt in nudged(s, s["mid"])[1:]]
+    return ok + buildable(ai, tries)
 
 
 def stockpile(ai, who, shelf, have):

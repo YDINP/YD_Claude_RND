@@ -275,8 +275,12 @@ def drain(ai, who, reply, shelf):
 
     창고에 있어야 쓸 수 있다. 화로 안에 든 판은 아직 아무것도 아니다.
     """
+    # 「막혔다」는 양과 무관하다. 창고 칸이 찼는지도 «먼저» 본다.
+    room = headroom(reply, shelf)
     hot = [f for f in furnaces(reply)
-           if f["plate"] >= 10 and where(f["made"], shelf)]
+           if where(f["made"], shelf, room)
+           and (f["plate"] >= 10
+                or (f["plate"] > 0 and (f["jammed"] or mismatched(f))))]
     # 가장 많이 쌓인 상자부터. 찬 상자는 그 뒤의 채굴기를 세우고 있으므로,
     # 아무 순서로 넷을 고르면 정작 막힌 곳이 계속 밀린다.
     piles = sorted(

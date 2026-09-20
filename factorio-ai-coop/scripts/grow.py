@@ -139,6 +139,54 @@ def stalled(ai):
     return out
 
 
+def spent(ai):
+    """캘 것이 없어진 채굴기. 사용자 요청으로 «알아서» 걷는다.
+
+        "채취가능자원 없는 채굴기 발생하면 알아서 정리해"
+
+    광맥이 마른 자리의 채굴기는 연료만 태우면서 공해를 낸다 - 세워 둔
+    채로 두면 「채굴기 스물일곱 대」라는 숫자만 남고 캐는 것은 줄어든다.
+    걷으면 채굴기가 손으로 돌아오므로, 다음 순번에 «살아 있는 칸»에
+    다시 선다. 버리는 것이 아니라 옮기는 것이다.
+    """
+    reply = ai.lua("""(function()
+      local s = game.surfaces[1]
+      local out = {}
+      for _, d in pairs(s.find_entities_filtered{type = "mining-drill",
+                force = game.forces.player}) do
+        if d.status == defines.entity_status.no_minable_resources then
+          out[#out+1] = string.format("%.1f|%.1f|%s", d.position.x,
+                                      d.position.y, d.name)
+        end
+      end
+      return out
+    end)()""")
+    rows = list(reply.values()) if isinstance(reply, dict) else list(reply or [])
+    out = []
+    for row in rows:
+        x, y, name = row.split("|")
+        out.append({"x": float(x), "y": float(y), "name": name})
+    return out
+
+
+def reclaim(ai, who, dead, shelf):
+    """마른 채굴기를 걷어 창고에 돌려놓는다."""
+    take = dead[:6]
+    plan = [("walk_to", {"x": take[0]["x"] + 2, "y": take[0]["y"] + 2})]
+    for one in take:
+        # 안엣것(연료)을 먼저 꺼낸다. 그냥 걷으면 같이 사라진다.
+        plan.append(("take", {"name": "coal", "x": one["x"], "y": one["y"],
+                              "count": 50}))
+        plan.append(("demolish", {"x": one["x"], "y": one["y"],
+                                  "name": one["name"]}))
+    plan.append(("walk_to", {"x": shelf["coal"][0] - 2, "y": shelf["coal"][1] + 1}))
+    plan.append(("insert", {"name": "coal", "x": shelf["coal"][0],
+                            "y": shelf["coal"][1], "count": 300}))
+    submit(ai, who, plan, strict=False)
+    print(f"{who}: 마른 채굴기 {len(take)}대 걷기 - 다음 순번에 살아 있는 칸으로")
+    return True
+
+
 def fields(ai, anchor):
     """밭은 게임에 묻는다. 적어 두면 판이 바뀔 때마다 틀린다.
 
@@ -508,6 +556,13 @@ def main() -> int:
             if free and smelt:
                 row = smelt_row(ai, smelt, FURNACE_PER_TRIP)
                 if widen(ai, free[0], shelf, smelt, row, stock(ai, (dx, dy))):
+                    free = free[1:]
+
+            # 0.7 캘 것이 없어진 채굴기부터 걷는다. 마른 자리의 채굴기는
+            #     연료만 태우고 공해를 내면서 숫자만 채운다.
+            if free:
+                dead = spent(ai)
+                if dead and reclaim(ai, free[0], dead, shelf):
                     free = free[1:]
 
             # 1. 세워 둔 것부터 돌린다.
