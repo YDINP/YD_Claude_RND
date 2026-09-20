@@ -40,9 +40,24 @@ from orders import submit               # noqa: E402
 #
 # 실측: 후퇴를 지시한 순간 charlie 와 echo 는 40칸 안에 적을 66마리씩
 # 두고 있었다. 둘 다 창고까지 못 왔다. 그러니 «보이기 전에» 물러야 한다.
-WARN = 45                 # 이만큼 안에 적이 있으면 그 자리는 못 간다
-FLEE = 60                 # 이미 나가 있는 사람은 이만큼에서 이미 부른다
+WARN = 45                 # 이만큼 안에 적이 있으면 그 자리는 «보내지» 않는다
+FLEE = 60                 # 이미 나가 있는 사람은 이만큼을 본다
+CLOSE = 16                # 이 안이면 한 마리라도 물러난다
+PACK = 4                  # 먼 데라도 이만큼 모였으면 물러난다
 CHECK = 8                 # 몇 초마다 둘러보나
+
+# 떠돌이 한 마리는 «물결»이 아니다.
+#
+# 처음에는 60칸 안에 적이 하나라도 있으면 불러들였다. 개시하자마자 두
+# 사람이 「적 1」로 일을 끊고 돌아왔다 - 그 한 마리는 예순 칸 밖에서
+# 혼자 어슬렁거리던 것이었다.
+#
+#     실측: foxtrot (-2,-1) 적 1 / golf (-65,-18) 적 1
+#
+# 너무 자주 부르면 일이 안 되고, 일이 안 되면 방어도 안 선다. 그래서
+# 두 가지를 나눠 묻는다 - «가까이 있나»와 «무리로 있나».
+#
+#     한 마리라도 코앞이면 물러난다. 멀면 무리를 이뤘을 때만 물러난다.
 
 
 def _rows(v):
@@ -101,18 +116,26 @@ def crew(ai):
     return out
 
 
-def endangered(ai, reach=FLEE):
-    """지금 위험에 든 사람들. 가까운 적이 많은 순서로."""
+def endangered(ai, reach=FLEE, close=CLOSE, pack=PACK):
+    """지금 위험에 든 사람들. 가까운 적이 많은 순서로.
+
+    두 번 묻는다 - 코앞(close)과 둘레(reach). 코앞은 한 마리로 족하고,
+    둘레는 무리를 이뤄야 한다.
+    """
     who = crew(ai)
     if not who:
         return []
-    count = enemies_at(ai, [(p["x"], p["y"]) for p in who], reach)
+    spots = [(p["x"], p["y"]) for p in who]
+    far = enemies_at(ai, spots, reach)
+    near = enemies_at(ai, spots, close)
     out = []
-    for one, n in zip(who, count):
-        if n > 0:
+    for one, n, tight in zip(who, far, near):
+        if tight > 0 or n >= pack:
             one["near"] = n
+            one["tight"] = tight
+            one["why"] = "코앞" if tight else "무리"
             out.append(one)
-    return sorted(out, key=lambda p: -p["near"])
+    return sorted(out, key=lambda p: (-p["tight"], -p["near"]))
 
 
 def flee(ai, who, home):
@@ -133,6 +156,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--home", required=True, help="돌아올 자리. 예: --home=28,3")
     ap.add_argument("--reach", type=int, default=FLEE)
+    ap.add_argument("--close", type=int, default=CLOSE)
+    ap.add_argument("--pack", type=int, default=PACK)
     ap.add_argument("--every", type=float, default=CHECK)
     ap.add_argument("--rounds", type=int, default=100000)
     args = ap.parse_args()
@@ -143,13 +168,14 @@ def main() -> int:
 
     for _ in range(args.rounds):
         try:
-            hot = endangered(ai, args.reach)
+            hot = endangered(ai, args.reach, args.close, args.pack)
             names = {p["name"] for p in hot}
             for one in hot:
                 if one["name"] in calling:
                     continue
                 print(f"  [!] {one['name']} ({one['x']:.0f},{one['y']:.0f}) "
-                      f"둘레에 적 {one['near']} - 하던 일을 끊고 부른다")
+                      f"{one['why']}에 적 {one['tight']}/{one['near']} "
+                      f"- 하던 일을 끊고 부른다")
                 flee(ai, one["name"], home)
             # 안전해진 사람은 다시 부를 수 있게 풀어 준다.
             calling = names
