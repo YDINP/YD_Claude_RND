@@ -27,7 +27,10 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 
-LEG = 70                  # 한 다리. 이보다 짧으면 왕복 지시가 잦고 길면 둔하다
+# 한 다리를 짧게 잡는다. 420칸을 한 번에 시키면 길찾기가 포기하고,
+# 포기한 것을 이쪽에서 못 보면 «간 줄 알고» 다음 다리로 넘어간다 -
+# 20회차에 정확히 그랬다. 여섯 다리를 찍고 아무도 안 움직였다.
+LEG = 40
 MAX_REACH = 420           # 이보다 멀리 간 둥지는 당장 우리 일이 아니다
 LOOK = 90                 # 발밑에서 이만큼 둘러본다
 
@@ -78,11 +81,31 @@ def near(ai, at, radius=LOOK):
 
 
 
-def busy(ai, who):
-    row = next((w for w in ai.list() if w["name"] == who), None)
-    if not row or not row.get("alive"):
-        return None
-    return bool(row.get("current") or row.get("queued"))
+def crew_state(ai):
+    """이름 -> (살아있나, 바쁜가, 어디). 위치까지 «같은 답»에서 받는다."""
+    out = {}
+    for row in ai.list():
+        out[row["name"]] = {
+            "alive": bool(row.get("alive")),
+            "busy": bool(row.get("current") or row.get("queued")),
+            "x": float(row.get("x") or 0), "y": float(row.get("y") or 0),
+        }
+    return out
+
+
+def reveal(ai, at, radius=LOOK):
+    """이 자리를 지도에 «그린다».
+
+    사용자가 물었다: "에이전트들이 정찰을갔는데 왜 난 맵이 안넓어지지?"
+    - 그때 정찰병은 한 명도 안 갔다. 다만 갔더라도, 걸어서 걷히는 안개는
+    시야 반경뿐이라 지도가 성큼 넓어지지는 않는다. 본 김에 그려 둔다.
+    """
+    x, y = at
+    ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      f.chart(s, {{%d, %d}, {%d, %d}})
+      return { ok = 1 }
+    end)()""" % (x - radius, y - radius, x + radius, y + radius))
 
 
 def main() -> int:
@@ -123,26 +146,50 @@ def main() -> int:
 
     while any(w["found"] is None and w["leg"] < args.legs for w in ways.values()):
         try:
+            crew_now = crew_state(ai)
             for who, way in ways.items():
                 if way["found"] is not None or way["leg"] >= args.legs:
                     continue
-                state = busy(ai, who)
-                if state is None:
+                me = crew_now.get(who)
+                if not me or not me["alive"]:
                     print(f"  {who} 가 돌아오지 못했다 ({way['name']}쪽)")
                     way["found"] = "죽음"
                     continue
-                if state:
+                if me["busy"]:
                     continue
+
+                # 「한가해졌다」는 «도착했다»가 아니다. 길찾기가 포기해도
+                # 한가해진다. 다음 다리로 넘어가기 전에 «발이 어디 있나»를
+                # 본다 - 이 한 줄이 없어서 여섯 다리를 헛찍었다.
+                goal = way.get("goal")
+                if goal:
+                    gap = math.hypot(me["x"] - goal[0], me["y"] - goal[1])
+                    if gap > 12:
+                        way["stalls"] = way.get("stalls", 0) + 1
+                        if way["stalls"] > 2:
+                            print(f"  {who}: {way['name']}쪽 {gap:.0f}칸을 못 좁힌다 "
+                                  f"- 여기서 접는다 ({me['x']:.0f},{me['y']:.0f})")
+                            way["found"] = "막힘"
+                            continue
+                        print(f"  {who}: 아직 {gap:.0f}칸 남았다 - 다시 보낸다")
+                        submit(ai, who, [("walk_to", {"x": goal[0], "y": goal[1]})],
+                               strict=False)
+                        continue
+                    # 여기까지 «실제로» 왔다. 보고 그린다.
+                    way["stalls"] = 0
+                    reveal(ai, goal)
+                    seen = near(ai, goal)
+                    if int(seen["nests"]) or int(seen["worms"]):
+                        way["found"] = goal
+                        print(f"{who}: {way['name']}쪽 {LEG * way['leg']}칸 - "
+                              f"둥지 {seen['nests']} 웜 {seen['worms']} "
+                              f"적 {seen['units']}. 여기서 멈춘다")
+                        continue
 
                 way["leg"] += 1
                 reach = LEG * way["leg"]
                 at = (int(hx + way["dx"] * reach), int(hy + way["dy"] * reach))
-                seen = near(ai, at)
-                if int(seen["nests"]) or int(seen["worms"]):
-                    way["found"] = at
-                    print(f"{who}: {way['name']}쪽 {reach}칸 - 둥지 {seen['nests']} "
-                          f"웜 {seen['worms']} 적 {seen['units']}. 여기서 멈춘다")
-                    continue
+                way["goal"] = at
                 submit(ai, who, [("walk_to", {"x": at[0], "y": at[1]})], strict=False)
                 print(f"{who}: {way['name']}쪽 {reach}칸까지 ({at[0]},{at[1]})")
         except RconError as exc:
@@ -153,8 +200,16 @@ def main() -> int:
 
     print()
     found = sightings(ai, (hx, hy), MAX_REACH)
+    walked = crew_state(ai)
+    for who, way in ways.items():
+        me = walked.get(who)
+        if me:
+            print(f"  {who} 는 {way['name']}쪽 "
+                  f"({me['x']:.0f},{me['y']:.0f}) 까지 갔다 "
+                  f"- 기지에서 {math.hypot(me['x']-hx, me['y']-hy):.0f}칸")
     if not found:
-        print(f"{MAX_REACH}칸 안에 둥지가 안 보인다. 당분간은 확장만 경계하면 된다.")
+        print(f"«실제로 가 본» 데까지는 둥지가 안 보인다. "
+              f"안 가 본 곳은 모르는 것이지 없는 것이 아니다.")
     else:
         print(f"둥지 {len(found)}곳:")
         for n in found[:8]:
