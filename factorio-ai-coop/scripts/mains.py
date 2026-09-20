@@ -176,6 +176,24 @@ def starved(ai):
 SUPPLY = 2                # 소형 전봇대가 덮는 반경. 5x5 의 절반
 
 
+def shaded(ai):
+    """이미 선 전봇대들의 «중심». 덮인 곳을 다시 덮지 않으려고 본다."""
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local out = {}
+      for _, p in pairs(s.find_entities_filtered{
+            type = "electric-pole", force = f}) do
+        out[#out+1] = string.format("%.2f|%.2f", p.position.x, p.position.y)
+      end
+      return out
+    end)()""")
+    out = []
+    for row in _rows(reply):
+        x, y = str(row).split("|")
+        out.append((float(x), float(y)))
+    return out
+
+
 def cover(ai, hungry):
     """굶는 것들을 덮을 전봇대 자리.
 
@@ -184,8 +202,29 @@ def cover(ai, hungry):
     낭비할 이유가 없다.
 
     자리는 굶는 것 «바로 옆»에서 고른다. 그래야 기존 선에서도 멀지 않다.
+
+    그리고 «이미 덮여 있는데 굶는 것»에는 한 대도 더 세우지 않는다.
+
+        사용자: "전선이 불필요하게 과도하게 깔린 부분 발생함"
+
+        실측: 전봇대 39 대, 전기를 먹는 것 17 개.
+              그중 열넷이 없어도 되는 것이었다.
+
+    전력망이 둘로 갈라져 있던 동안 제련줄 쪽이 계속 「굶는다」고 나왔고,
+    고리는 그때마다 덮개를 한 겹씩 더 씌웠다. 선이 안 이어진 것이 원인인데
+    엉뚱한 약을 쓴 것이다.
+
+        덮이지 않아서 굶는 것과, 전기가 안 와서 굶는 것은 다른 말이다.
     """
-    left = list(hungry)
+    already = shaded(ai)
+    skip = [one for one in hungry
+            if any(abs(one[0] + 0.5 - px) <= SUPPLY + 0.5
+                   and abs(one[1] + 0.5 - py) <= SUPPLY + 0.5
+                   for px, py in already)]
+    if skip:
+        print(f"  {len(skip)}개는 «이미 덮여 있는데» 굶는다 "
+              f"- 전봇대를 더 세울 일이 아니다")
+    left = [one for one in hungry if one not in skip]
     spots = []
     while left:
         x, y, _name = left[0]
