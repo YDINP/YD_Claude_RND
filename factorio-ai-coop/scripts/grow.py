@@ -82,6 +82,21 @@ GUARD_FROM = 40           # 공해가 이만큼 되기 전에는 방어선을 �
 HUNGRY_FURNACES = 3       # 화로가 이만큼 굶어야 «채굴기»를 늘린다
 ORE_BACKLOG = 2500        # 광석이 이만큼 쌓여야 «화로»를 늘린다
 
+# 판이 이만큼도 없으면 굳이 2500 을 기다리지 않는다.
+#
+# 실측(21회차): 채굴기 33대에 화로 7대. 버너 채굴기는 초당 0.25 를 캐고
+# 돌화로는 3.2초에 한 장을 굽는다 - 캐는 쪽이 녹이는 쪽보다 «네 배» 빠르다.
+# 그런데 쌓인 광석은 728 이라 2500 에 한참 못 미쳤고, 굶는 화로는 1대뿐이라
+# 「캐는 쪽이 모자라지 않다」로도 안 걸렸다. 그 사이 창고 철판은 0이었고,
+# 포탑은 일곱 대에서 멈춘 채 공장만 자랐다 - 20회차에 여섯을 잃은 모양이다.
+#
+# 쌓인 양은 «느리게» 는다. 캔 것을 운반이 바로 화로에 부어 버리기 때문에,
+# 화로가 모자라도 광석 더미는 안 커지고 그냥 판이 안 나온다.
+#
+#     쌓이지 않는다고 모자라지 않은 것이 아니다. 판이 안 나오면 모자란 것이다.
+PLATE_FLOOR = 60          # 창고 판이 이만큼도 없으면
+SMELT_SHORT = 300         # 광석이 이만큼만 쌓여도 화로를 늘린다
+
 DRILL = "burner-mining-drill"
 CHEST = "iron-chest"
 DRILL_COST = {"iron-plate": 9, "stone": 5}
@@ -763,7 +778,9 @@ def main() -> int:
             standing = int(push["drills"])
             choked = smoke >= POLLUTION_CEIL
 
-            if free and waiting >= ORE_BACKLOG and not choked:
+            starved = (int(st["plate"]) < PLATE_FLOOR
+                       and waiting >= SMELT_SHORT)
+            if free and (waiting >= ORE_BACKLOG or starved) and not choked:
                 row = smelt_row(ai, free[0], FURNACE_PER_TRIP, smelt)
                 if row and widen(ai, free[0], shelf, smelt, row,
                                   stock(ai, (dx, dy))):
@@ -857,7 +874,8 @@ def main() -> int:
                     print(f"    (빈 밭 {ore} 를 먼저 연다 - 남은 빈 밭 "
                           f"{[o for o in virgin if o != ore]})")
 
-                short_of_ore = hungry >= HUNGRY_FURNACES and waiting < ORE_BACKLOG
+                short_of_ore = (hungry >= HUNGRY_FURNACES
+                                and waiting < ORE_BACKLOG and not starved)
                 if (free and usable >= 17 and int(st["coal"]) >= FUEL_EACH
                         and short_of_ore and not choked):
                     # 돌이 마르면 전부 마른다. 돌밭을 먼저 연다.
@@ -869,6 +887,9 @@ def main() -> int:
                 elif not sick:
                     if choked:
                         why = f"공해 {smoke} 가 짙다 - 늘리면 물결이 커진다"
+                    elif starved:
+                        why = (f"판 {st['plate']}에 광석 {waiting} - 모자란 "
+                               f"것은 캐는 쪽이 아니라 녹이는 쪽이다")
                     elif waiting >= ORE_BACKLOG:
                         why = (f"광석 {waiting}이 밭에 쌓여 있다 - 모자란 것은 "
                                f"채굴기가 아니라 나르는 길이다")
