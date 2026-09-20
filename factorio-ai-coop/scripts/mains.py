@@ -138,6 +138,48 @@ def joined(ai, a, b):
     return int(reply["same"]) == 1
 
 
+def gaps(ai):
+    """«실제로» 끊긴 곳. 계획이 아니라 전력망이 답한다.
+
+    자리를 다 채웠는데도 전기가 안 흐르는 일이 되풀이됐다. 계획한 간격과
+    선 간격이 다르고, 전봇대가 열일곱 대 서 있어도 전력망은 여섯 개일
+    수 있다.
+
+    그러니 「어디가 비었나」를 계획에 묻지 말고 «망»에 묻는다. 이웃한 두
+    전봇대의 망이 다르면 그 사이가 구멍이고, 메울 자리는 그 한가운데다.
+    """
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local ps = {}
+      for _, p in pairs(s.find_entities_filtered{type = "electric-pole", force = f}) do
+        ps[#ps+1] = p
+      end
+      table.sort(ps, function(a, b)
+        if a.position.x ~= b.position.x then return a.position.x < b.position.x end
+        return a.position.y < b.position.y
+      end)
+      local out = {}
+      for i = 2, #ps do
+        local a, b = ps[i-1], ps[i]
+        if a.electric_network_id ~= b.electric_network_id then
+          local dx, dy = b.position.x - a.position.x, b.position.y - a.position.y
+          local span = math.sqrt(dx*dx + dy*dy)
+          if span < 24 then
+            out[#out+1] = string.format("%.0f|%.0f|%.0f",
+              (a.position.x + b.position.x) / 2,
+              (a.position.y + b.position.y) / 2, span)
+          end
+        end
+      end
+      return out
+    end)()""")
+    out = []
+    for row in _rows(reply):
+        x, y, span = row.split("|")
+        out.append((int(x), int(y), int(span)))
+    return out
+
+
 def woods(ai, near):
     """가장 가까운 나무. «있는 데»로 가서 베어야 한다.
 
@@ -204,7 +246,12 @@ def main() -> int:
                 time.sleep(args.every)
                 continue
 
-            todo = missing(ai, spots)
+            # 끊긴 곳이 있으면 «그곳부터». 새 자리를 채우는 것보다
+            # 이미 선 것들을 잇는 쪽이 언제나 싸다.
+            holes = gaps(ai)
+            todo = [(x, y) for x, y, _span in holes] or missing(ai, spots)
+            if holes:
+                print(f"  끊긴 곳 {len(holes)}군데 - 한가운데를 메운다")
             if not todo:
                 print("  자리는 다 찼는데 망이 안 이어졌다 - 간격을 의심할 것")
                 time.sleep(args.every)
@@ -227,7 +274,7 @@ def main() -> int:
                     continue
                 plan += [("walk_to", {"x": grove[0], "y": grove[1]}),
                          ("chop", {"x": grove[0], "y": grove[1], "count": need})]
-            plan.append(("craft", {"recipe": POLE, "count": len(batch)}))
+            plan.append(("craft", {"recipe": POLE, "count": len(batch), "wait": False}))
             for at in batch:
                 # snap 은 안 쓴다. 자리가 밀리면 간격이 무너지고, 무너진
                 # 간격은 「세웠다」로 보이면서 전기는 안 흐른다.

@@ -59,10 +59,22 @@ PER_TRIP = 3              # 한 걸음에 세우는 포탑
 # 지키다 밭에서 둘을 잃은 것이 큰 상자의 값이다.
 LINK = 30                 # 이보다 가까운 건물끼리는 «한 구역»
 STANDOFF = 10             # 건물에서 이만큼 밖에 선다
-RING_GAP = 18             # 포탑 사이. 기관포탑 사거리가 18이라 틈이 없다
+# 포탑 사이 간격.
+#
+#     사용자: "포탑방어선은 왠만하면 서로의 공격영역이 겹치면 좋음."
+#
+# 사거리와 «같은» 간격으로 두면 원 둘이 한 점에서 스칠 뿐이다. 그 점을
+# 지나는 적은 한 대에게만 맞고, 대각선 쪽에는 아예 구멍이 남는다. 그리고
+# 한 대가 탄약이 떨어지면 그 구간은 통째로 빈다.
+#
+# 사거리 18에 간격 12면 테두리 어느 점이든 최소 두 대가 닿는다. 값은
+# 포탑 수가 1.5배 - 빈 총 한 대에 구간 하나가 열리는 것보다 싸다.
+RING_GAP = 12
 INNER_GAP = 34            # 안쪽은 성기게. 테두리가 뚫린 날 시간을 번다
 INNER_NEAR = 26           # 지킬 것이 이만큼 안에 없으면 빈 땅이다
-CLOSE = 12                # 이미 선 포탑과 이만큼 겹치면 안 세운다
+# 이미 선 포탑과 이만큼 가까우면 안 세운다. 간격보다 작아야 한다 -
+# 간격과 같으면 «겹치라고 좁힌 자리»를 스스로 걷어낸다.
+CLOSE = 8
 # 성장 몫은 남기되, «남기느라 한 발도 못 만드는» 것은 지난 판의 재현이다.
 # 채굴기+상자 여섯 대 분량(6 x 17)이면 증식은 안 끊긴다.
 KEEP_PLATE = 120
@@ -384,7 +396,7 @@ def stockpile(ai, who, shelf, have):
         ("walk_to", {"x": shelf["iron-plate"][0] - 2, "y": shelf["iron-plate"][1] + 1}),
         ("take", {"name": "iron-plate", "x": shelf["iron-plate"][0],
                   "y": shelf["iron-plate"][1], "count": n * 4}),
-        ("craft", {"recipe": AMMO, "count": n}),
+        ("craft", {"recipe": AMMO, "count": n, "wait": False}),
         ("insert", {"name": AMMO, "x": shelf["iron-plate"][0],
                     "y": shelf["iron-plate"][1], "count": n}),
     ], strict=False)
@@ -422,9 +434,9 @@ def raise_turrets(ai, who, shelf, have, spots):
         plan.append(("take", {"name": AMMO, "x": shelf["iron-plate"][0],
                               "y": shelf["iron-plate"][1],
                               "count": min(ammo_ready, n * AMMO_EACH)}))
-    plan.append(("craft", {"recipe": TURRET, "count": n}))
+    plan.append(("craft", {"recipe": TURRET, "count": n, "wait": False}))
     if make_ammo:
-        plan.append(("craft", {"recipe": AMMO, "count": make_ammo}))
+        plan.append(("craft", {"recipe": AMMO, "count": make_ammo, "wait": False}))
     for spot in spots:
         # snap 을 쓰면 자리가 열여섯 칸까지 밀리는데, 탄약은 «부른 칸»에
         # 넣는다. 넣을 것을 반경 1.5로 찾으므로 밀린 포탑은 빈 총이 된다 -

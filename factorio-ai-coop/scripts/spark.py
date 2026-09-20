@@ -166,12 +166,12 @@ def raise_plant(ai, who, spot):
         return False
     eng = engines[0]
 
-    plan = [("craft", {"recipe": "offshore-pump", "count": 1}),
-            ("craft", {"recipe": "boiler", "count": 1}),
-            ("craft", {"recipe": "steam-engine", "count": len(engines)}),
-            ("craft", {"recipe": LAB, "count": 1}),
+    plan = [("craft", {"recipe": "offshore-pump", "count": 1, "wait": False}),
+            ("craft", {"recipe": "boiler", "count": 1, "wait": False}),
+            ("craft", {"recipe": "steam-engine", "count": len(engines), "wait": False}),
+            ("craft", {"recipe": LAB, "count": 1, "wait": False}),
             ("chop", {"x": pump["x"], "y": pump["y"], "count": 12}),
-            ("craft", {"recipe": POLE, "count": 6}),
+            ("craft", {"recipe": POLE, "count": 6, "wait": False}),
             ("walk_to", {"x": pump["x"], "y": pump["y"] - 4}),
             ("build", {"name": "offshore-pump", "x": pump["x"], "y": pump["y"],
                        "direction": pump.get("direction")}),
@@ -204,7 +204,7 @@ def wire_up(ai, who, at, eng=None):
     그래서 «먼저 벤다».
     """
     plan = [("chop", {"x": at["x"], "y": at["y"], "count": 8}),
-            ("craft", {"recipe": POLE, "count": 4})]
+            ("craft", {"recipe": POLE, "count": 4, "wait": False})]
     # 기관과 연구소 사이를 이어야 전기가 흐른다. 아무 데나 한 대가
     # 아니라 «둘 사이»에 놓는다.
     if eng:
@@ -223,7 +223,7 @@ def wire_up(ai, who, at, eng=None):
 
 
 def feed_science(ai, who, at, count):
-    plan = [("craft", {"recipe": SCIENCE, "count": count}),
+    plan = [("craft", {"recipe": SCIENCE, "count": count, "wait": False}),
             ("walk_to", {"x": at["x"], "y": at["y"] + 2}),
             ("insert", {"name": SCIENCE, "x": at["x"], "y": at["y"], "count": count})]
     submit(ai, who, plan, strict=False)

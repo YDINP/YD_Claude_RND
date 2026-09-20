@@ -104,7 +104,7 @@ def lay(ai, who, which, shelf):
                          "y": shelf["iron-plate"][1] + 1})]
     plan += shopping(shelf, need)
     for part, count in want.items():
-        plan.append(("craft", {"recipe": part, "count": count}))
+        plan.append(("craft", {"recipe": part, "count": count, "wait": False}))
 
     first = todo[0]
     plan.append(("walk_to", {"x": first["x"] + 2, "y": first["y"] + 2}))

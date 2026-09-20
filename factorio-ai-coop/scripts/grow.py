@@ -303,7 +303,7 @@ def tend(ai, who, shelf, sick):
     plan += shopping(shelf, {"iron-plate": len(boxes) * CHEST_COST["iron-plate"] + 2,
                              "coal": len(jobs) * FUEL_EACH})
     if boxes:
-        plan.append(("craft", {"recipe": CHEST, "count": len(boxes)}))
+        plan.append(("craft", {"recipe": CHEST, "count": len(boxes), "wait": False}))
     for job in jobs:
         d = job["drill"]
         if job in boxes:
@@ -452,7 +452,7 @@ def widen(ai, who, shelf, smelt, row, st):
     plan = [("walk_to", {"x": shelf["stone"][0] - 2, "y": shelf["stone"][1] + 1}),
             ("take", {"name": "stone", "x": shelf["stone"][0], "y": shelf["stone"][1],
                       "count": n * FURNACE_COST["stone"] + 5}),
-            ("craft", {"recipe": FURNACE, "count": n}),
+            ("craft", {"recipe": FURNACE, "count": n, "wait": False}),
             ("walk_to", {"x": spots[0][0], "y": spots[0][1] + 2})]
     for x, y in spots:
         plan.append(("build", {"name": FURNACE, "x": x, "y": y}))
@@ -496,8 +496,8 @@ def sow(ai, who, shelf, field, st):
         "stone": n * DRILL_COST["stone"] + 4,
         "coal": n * FUEL_EACH,
     })
-    plan += [("craft", {"recipe": DRILL, "count": n}),
-             ("craft", {"recipe": CHEST, "count": n}),
+    plan += [("craft", {"recipe": DRILL, "count": n, "wait": False}),
+             ("craft", {"recipe": CHEST, "count": n, "wait": False}),
              ("walk_to", {"x": seats[0]["x"] + 3, "y": seats[0]["y"]})]
     for seat in seats:
         plan.append(("build", {"name": DRILL, "x": seat["x"], "y": seat["y"],

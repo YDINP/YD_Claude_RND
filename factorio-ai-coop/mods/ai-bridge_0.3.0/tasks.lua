@@ -470,6 +470,13 @@ M.build = {
       return "failed"
     end
     if count_item(ctx.bot, p.name) < 1 then
+      -- 아직 «만드는 중»일 수 있다. 걸으면서 만들게 한 값이 여기서 나온다:
+      -- 손에 없다고 바로 실패하면 병렬로 만든 보람이 없다. 큐가 돌고
+      -- 있으면 기다린다 - 큐가 비었는데도 없으면 그때가 진짜 실패다.
+      if ctx.bot.crafting_queue_size > 0 then
+        ctx.task.state.awaiting = true
+        return "running"
+      end
       ctx.task.error = "no " .. tostring(p.name) .. " in inventory"
       return "failed"
     end
@@ -491,6 +498,27 @@ M.build = {
   step = function(ctx)
     local st, bot = ctx.task.state, ctx.bot
     local p = ctx.task.params
+
+    -- 만들어지길 기다리던 중이었다면, 손에 들어온 뒤에 자리를 정한다.
+    if st.awaiting then
+      if count_item(bot, p.name) < 1 then
+        if bot.crafting_queue_size > 0 then return "running" end
+        ctx.task.error = "no " .. tostring(p.name) .. " in inventory"
+        return "failed"
+      end
+      st.awaiting = nil
+      st.direction = p.direction or defines.direction.north
+      if p.snap then
+        local free = ctx.surface.find_non_colliding_position(p.name, { p.x, p.y }, 16, 1)
+        if not free then
+          ctx.task.error = "no free spot near " .. p.x .. "," .. p.y
+          return "failed"
+        end
+        st.spot = { x = free.x, y = free.y }
+      else
+        st.spot = { x = p.x, y = p.y }
+      end
+    end
 
     if dist(bot.position, st.spot) > bot.build_distance - 0.5 then
       local travel = approach(ctx, st.spot, math.max(1.0, math.min(bot.build_distance - 1.0, 4.0)))
@@ -549,6 +577,24 @@ M.craft = {
       return "failed"
     end
     ctx.task.state.started = started
+
+    -- 만드는 동안 «서 있을» 이유가 없다.
+    --
+    -- 사용자가 짚었다: "캐릭터 craft는 병렬로 처리해도 되지않나? 어짜피
+    -- 생산하면서 다른거해도 되잖아"
+    --
+    -- 맞다. 팩토리오의 제작은 뒤에서 돌아가는 큐고, 캐릭터는 그동안
+    -- 걷고 캐고 지을 수 있다. 그런데 이 단계는 큐가 빌 때까지 「running」을
+    -- 돌려주며 제자리에 세워 뒀다 - 벨트 서른다섯 칸을 만드는 동안
+    -- 창고 앞에 가만히 서 있었다는 뜻이다.
+    --
+    -- `wait = false` 면 주문만 넣고 바로 넘어간다. 걷는 동안 만들어지고,
+    -- 도착할 즈음이면 손에 있다.
+    if ctx.task.params.wait == false then
+      ctx.task.result = { ordered = started, recipe = ctx.task.params.recipe,
+                          waited = false }
+      return "done"
+    end
     return "running"
   end,
 

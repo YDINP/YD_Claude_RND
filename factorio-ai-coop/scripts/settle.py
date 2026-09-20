@@ -191,7 +191,7 @@ def fetch(ai, who, field, count, drop, at=None):
 def build_row(ai, who, smelt):
     """화로 여덟 대를 한 줄로. 간격 3은 나중에 벨트와 인서터가 들어갈 자리."""
     sx, sy = smelt
-    plan = [("craft", {"recipe": FURNACE, "count": WANT_FURNACE}),
+    plan = [("craft", {"recipe": FURNACE, "count": WANT_FURNACE, "wait": False}),
             ("walk_to", {"x": sx, "y": sy + 2})]
     for i in range(WANT_FURNACE):
         plan.append(("build", {"name": FURNACE, "x": sx + i * PITCH, "y": sy}))
@@ -202,7 +202,7 @@ def build_row(ai, who, smelt):
 def build_depot(ai, who, depot):
     """판.돌.석탄 세 칸. 다른 고리들이 «여기»를 보고 산다."""
     dx, dy = depot
-    plan = [("craft", {"recipe": CHEST, "count": 3}),
+    plan = [("craft", {"recipe": CHEST, "count": 3, "wait": False}),
             ("walk_to", {"x": dx - 2, "y": dy + 2})]
     for i in range(3):
         plan.append(("build", {"name": CHEST, "x": dx, "y": dy + i * 2}))
