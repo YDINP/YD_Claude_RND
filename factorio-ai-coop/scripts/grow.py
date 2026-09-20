@@ -49,6 +49,10 @@ STUCK = ("waiting_for_space_in_destination", "no_fuel")
 # 차례를 거기에 쓰면 고칠 수 있는 것들이 영영 차례를 못 받는다.
 HOPELESS: set = set()
 
+# 매듭은 한 번만 끊으면 된다. 순번마다 다른 사람을 또 보내면 세 명이
+# 같은 돌밭에서 손으로 캐고, 정작 채굴기를 세울 사람이 없어진다.
+PRIMING: dict = {}
+
 
 def stock(ai, depot):
     x, y = depot
@@ -234,8 +238,21 @@ def prime(ai, who, shelf, field):
         ("insert", {"name": field["ore"], "x": shelf["stone"][0],
                     "y": shelf["stone"][1], "count": 150}),
     ], strict=False)
+    PRIMING[field["ore"]] = who
     print(f"{who}: 매듭 끊기 - {field['ore']} 150을 손으로 (채굴기가 설 때까지만)")
     return True
+
+
+def priming(ai, ore, names):
+    """이 밭의 매듭을 «이미 누가» 끊고 있나."""
+    who = PRIMING.get(ore)
+    if not who:
+        return False
+    row = next((w for w in ai.list() if w["name"] == who), None)
+    if row and row.get("alive") and (row.get("current") or row.get("queued")):
+        return True
+    PRIMING.pop(ore, None)
+    return False
 
 
 def drills_on(ai, field):
@@ -341,6 +358,7 @@ def main() -> int:
                 st = stock(ai, (dx, dy))
                 # 돌이 0이면 돌 채굴기도 못 만든다. 매듭은 손으로 한 번.
                 if (int(st["stone"]) < DRILL_COST["stone"] and "stone" in FIELD
+                        and not priming(ai, "stone", builders)
                         and not drills_on(ai, FIELD["stone"])):
                     prime(ai, free[0], shelf, FIELD["stone"])
                     free = free[1:]
