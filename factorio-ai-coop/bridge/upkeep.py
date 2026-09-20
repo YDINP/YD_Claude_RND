@@ -113,8 +113,18 @@ def _rows(reply) -> list[str]:
 
 
 # 화로에 넣을 것이 뭔지 못 알아냈을 때의 차례. 앞엣것부터 창고에 있는
-# 것을 쓴다. 돌은 마지막이다 - 석재는 급할 일이 드물다.
-ORES = ("iron-ore", "copper-ore", "stone")
+# 것을 쓴다.
+#
+# **돌은 여기 없다.** 돌은 철의 «대체재»가 아니라 다른 일이다 - 넣는
+# 순간 그 화로는 벽돌을 굽기 시작하고, 그동안 철은 한 장도 안 나온다.
+#
+# 실측(19회차 26분): 창고에 철광석이 없고 돌 150이 있었다. 순찰이 그
+# 돌을 화로 «일곱 대 전부»에 나눠 넣었고, 창고 철판은 0이 되었으며,
+# 채굴기도 탄약도 발전 사슬도 거기서 같이 멈췄다. 그 사이 밭 상자에는
+# 철광석 395가 쌓여 있었다 - 없어서가 아니라 «안 옮겨서» 없었던 것이다.
+#
+# 없으면 넣지 않는다. 빈 화로는 잘못 채운 화로보다 낫다.
+ORES = ("iron-ore", "copper-ore")
 
 
 def wants(kind: str) -> str:
@@ -245,12 +255,22 @@ def plan_round(names: list[str], low: list[dict],
 
     # 화로가 무엇을 굽던 놈인지 못 알아냈으면, 창고에 «있는» 광석으로
     # 바꿔 준다. 없는 것을 달라고 하면 그 화로는 영영 빈 채로 남는다.
-    for e in low:
+    #
+    # 다만 바꾸는 범위는 «금속 광석끼리»다(ORES). 돌을 넣는 것은 채우는
+    # 것이 아니라 그 화로의 일을 바꾸는 것이다.
+    skipped = 0
+    for e in list(low):
         if e["type"] == "furnace-ore" and not shelves.get(e["item"]):
-            for ore in ORES:
-                if shelves.get(ore):
-                    e["item"] = ore
-                    break
+            swap = next((o for o in ORES if shelves.get(o)), None)
+            if swap:
+                e["item"] = swap
+            else:
+                # 넣을 금속 광석이 없다. 조용히 넘기면 「이상 없음」으로
+                # 읽히므로, 한 줄로 말하고 뺀다.
+                low.remove(e)
+                skipped += 1
+    if skipped:
+        excuses.append(f"화로 {skipped}대가 굶는다 - 창고에 금속 광석이 없다")
 
     left = sorted(low, key=lambda e: (URGENCY.get(e["type"], 9), e["held"]))
     for who in names:
