@@ -321,10 +321,30 @@ def plan_seats(ai):
         return []
     have = standing_turrets(ai)
     groups = clusters(ours)
-    # 맨몸인 구역이 먼저. 그 다음은 «한 채당 포탑이 적은» 구역.
-    # 맨몸인 구역이 먼저. 맨몸끼리는 «대체 불가능한 것»이 있는 쪽부터.
-    groups.sort(key=lambda g: (covers(g, have) > 0, -worth(g),
-                               covers(g, have) / max(1, len(g))))
+    # «덜 덮인 구역»이 먼저. 같으면 대체 불가능한 것이 있는 쪽부터.
+    #
+    # 여기 있던 것은 「맨몸인 구역이 먼저」였고, 맨몸을 covers > 0 으로
+    # 잰 뒤 그다음을 «값어치»로 정했다. 그 규칙은 포탑이 0대인 동안에만
+    # 산다. 구역마다 한 대씩 서고 나면 첫 기준이 전부 True 가 되어
+    # 무력해지고, 남는 것은 값어치뿐인데 값어치는 변하지 않는다.
+    #
+    #     구역   건물   덮임
+    #      1      5채     7     <- 발전소+연구소. 값어치가 가장 높다
+    #      2     86채     2     <- 본진
+    #      3     13채     1
+    #      4      1채     1
+    #
+    # 그래서 다섯 채짜리 구역이 «영원히» 1순위였다. 포탑이 둘에서 아홉이
+    # 되도록 본진 86채 중 덮인 것은 둘뿐이었고, 덮인 비율은 11%에서
+    # 움직이지 않았다.
+    #
+    #     한 번 참이 되면 다시 거짓이 안 되는 값은 «순서»를 못 정한다.
+    #
+    # 순서를 정하는 값은 일이 진행되면 «같이 변해야» 한다. 덮인 비율이
+    # 그렇다 - 채우면 오르고, 오르면 뒤로 물러난다.
+    def urgency(g):
+        return (min(1.0, covers(g, have) / max(1, len(g))), -worth(g))
+    groups.sort(key=urgency)
     wanted = []
     for group in groups:
         box = (min(p[0] for p in group) - STANDOFF,
