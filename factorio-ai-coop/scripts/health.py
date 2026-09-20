@@ -151,6 +151,47 @@ def crew(ai: AIBridge) -> tuple[int, int, list[str]]:
     return idle, busy, dead
 
 
+# 세우라고 만든 것들. 이것이 가방에 «쌓여 있으면» 세우기가 실패한 것이다.
+PLACEABLE = ("burner-mining-drill", "electric-mining-drill", "stone-furnace",
+             "steel-furnace", "gun-turret", "wooden-chest", "iron-chest",
+             "transport-belt", "burner-inserter", "inserter", "small-electric-pole",
+             "lab", "boiler", "steam-engine", "offshore-pump", "stone-wall")
+
+
+def unplaced(ai: AIBridge) -> dict:
+    """무리의 가방에 든 «세울 것»들.
+
+    이 저장소가 한 회차에 «다섯 번» 겪은 고장이 전부 같은 모양이었다.
+
+        탄약을 만들고 넣기 전에 걸어가서 - 포탑이 빈 총으로 섰다
+        포탑을 만들고 자리까지 걷는 새 - 가방에 쌓였다
+        상자를 만들고 그 자리에서 - 걸음이 없어 늘 가방에 남았다
+        연구를 걸고 답을 안 봐서 - 과학팩만 먹였다
+        채굴기 여덟을 만들고 한 자리에서 - 일곱이 사거리 밖이라 가방에 남았다
+
+    다섯 번 다 «명령은 나갔고» 로그는 「했다」고 찍혔다. 공통된 자국은
+    하나뿐이었다 - 만든 것이 가방에 남아 있었다.
+
+        세우라고 만든 것이 가방에 있으면, 그것은 «아직 안 된 일»이다.
+
+    그래서 증상이 아니라 «자국»을 본다. 어느 고리가 무슨 이유로 실패했는지
+    몰라도, 이 한 줄이 실패를 소리나게 만든다.
+    """
+    held: dict = {}
+    for w in ai.list():
+        if not w.get("alive"):
+            continue
+        try:
+            bag = ai.agent(w["name"]).items()
+        except RconError:
+            continue
+        for name in PLACEABLE:
+            n = int(bag.get(name, 0))
+            if n:
+                held[name] = held.get(name, 0) + n
+    return held
+
+
 def once(ai: AIBridge) -> None:
     try:
         r = gather(ai)
@@ -192,6 +233,14 @@ def once(ai: AIBridge) -> None:
         warn.append(f"화로 {f['lit_but_empty']}대가 불만 켜져 있다 - 원료가 없다")
     if d.get("no_fuel", 0):
         warn.append(f"채굴기 {d['no_fuel']}대가 연료 없음")
+    stuck = unplaced(ai)
+    # 벨트와 팔은 늘 조금씩 들고 다닌다(한 걸음 몫). 쌓이는 것만 본다.
+    loud = {k: v for k, v in stuck.items()
+            if v >= (8 if k in ("transport-belt", "burner-inserter",
+                                "inserter", "small-electric-pole") else 2)}
+    if loud:
+        warn.append("세울 것이 가방에 쌓였다 - 세우기가 실패하고 있다: "
+                    + ", ".join(f"{k} {v}" for k, v in sorted(loud.items())))
     if t.get("count", 0) and t.get("ammo", 0) < t["count"] * 5:
         warn.append("포탑이 비었다 - 빈 총은 없는 총이다")
     # 17회차는 공해 0으로 전멸했다. 적은 확장으로 «걸어온다».

@@ -530,9 +530,25 @@ def buildable(ai, spots):
     return out
 
 
-def seats(ai, who):
-    """놓을 수 있는 자리. 막힌 테두리는 바깥으로 한 번 비켜 본다."""
-    wanted = plan_seats(ai)
+def seats(ai, who, promised=()):
+    """놓을 수 있는 자리. 막힌 테두리는 바깥으로 한 번 비켜 본다.
+
+    «이미 누군가 받아 간» 자리는 뺀다.
+
+    한 순번에 한 사람만 보내는데도 겹쳤다. 앞사람이 아직 걸어가는 중이면
+    그 자리에는 아직 포탑이 없고, 다음 순번의 자리표는 그것을 「비었다」고
+    내놓는다. 뒷사람이 먼저 닿아 세우면 앞사람의 세우기는 실패하고, 만든
+    포탑은 가방에 남는다.
+
+        실측(21회차): 선 포탑 73대, «가방에 든 포탑 158대».
+                      alpha 75 · bravo 42 · 나머지 여섯이 41.
+                      철판으로 6,320장이다.
+
+    자리는 서 있는 것뿐 아니라 «오고 있는 것»도 막아야 한다 - 화로
+    이사에서 배운 것과 같은 말인데, 여기에는 안 넣었다.
+    """
+    wanted = [s for s in plan_seats(ai)
+              if (round(s["x"]), round(s["y"])) not in promised]
     ok = buildable(ai, wanted)
     if len(ok) >= PER_TRIP:
         return ok
@@ -662,7 +678,16 @@ def main() -> int:
              "coal": (dx + 0.5, dy + 4.5)}
 
     ai = AIBridge()
+    # 누구에게 어느 자리를 줬나. 「오고 있는 것」도 자리를 막는다.
+    #
+    # 영영 기억하면 실패한 자리가 영영 막히므로, 몇 순번 지나면 잊는다 -
+    # 그때는 정말 섰거나(이미 have 에 들어온다) 정말 못 선 것이다.
+    promised: dict = {}
+    FORGET = 6
+    turn = 0
     for _ in range(args.rounds):
+        turn += 1
+        promised = {k: v for k, v in promised.items() if turn - v < FORGET}
         try:
             free = idle(ai, crew)
             if not free:
@@ -711,8 +736,10 @@ def main() -> int:
             # 목표는 «덮인 비율»이지 대수가 아니다. 대수는 판이 커질수록
             # 뜻을 잃는다 - 쉰다섯 대가 443채 중 169채만 덮고 있었다.
             if pct < args.cover:
-                spots = seats(ai, free[0])
+                spots = seats(ai, free[0], promised)
                 if spots and raise_turrets(ai, free[0], shelf, have, spots):
+                    for spot in spots[:PER_TRIP]:
+                        promised[(round(spot["x"]), round(spot["y"]))] = turn
                     free = free[1:]
                 elif not spots:
                     print("  세울 자리가 안 나온다 - 지킬 것이 아직 없다")
