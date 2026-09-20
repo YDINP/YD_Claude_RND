@@ -137,6 +137,7 @@ def shopping(shelf, need):
 
 
 KEEP = 20          # 손에 남겨 두는 몫. 다 비우면 다음 걸음에 또 창고에 들른다
+WORTH_A_TRIP = 25  # 이만큼도 안 되면 창고까지 다녀올 값을 못 한다
 
 
 def unload(ai, who, shelf):
@@ -148,7 +149,7 @@ def unload(ai, who, shelf):
     """
     held = ai.agent(who).items()
     drop = {k: v - KEEP for k, v in held.items()
-            if k in shelf and v - KEEP > 0}
+            if k in shelf and v - KEEP >= WORTH_A_TRIP}
     if not drop:
         return False
     plan = [("walk_to", {"x": shelf["iron-plate"][0] - 2,
@@ -211,6 +212,41 @@ def tend(ai, who, shelf, sick):
     submit(ai, who, plan, strict=False)
     print(f"{who}: 멈춘 채굴기 {len(jobs)}대 손보기 (상자 {len(boxes)})")
     return True
+
+
+def prime(ai, who, shelf, field):
+    """손으로 한 번만 캔다. 매듭을 끊는 데만 쓴다.
+
+    채굴기 한 대에 돌 5가 든다. 창고에 돌이 0이면 돌밭 채굴기도 못
+    만들고, 돌밭 채굴기가 없으면 돌도 안 들어온다 - 자기 꼬리를 문
+    매듭이라 사람이 한 번 끊어 줘야 열린다.
+
+    사용자의 순서는 「채굴기로 시작한다」이지 「손으로 캔다」가 아니므로,
+    이 걸음은 «그 밭에 채굴기가 설 때까지»만 산다.
+    """
+    x = (field["left"] + field["right"]) // 2
+    y = (field["top"] + field["bottom"]) // 2
+    submit(ai, who, [
+        ("walk_to", {"x": x, "y": y}),
+        ("mine", {"name": field["ore"], "x": x, "y": y, "count": 150,
+                  "search_radius": 14, "timeout_ticks": 60 * 60 * 5}),
+        ("walk_to", {"x": shelf["stone"][0] - 2, "y": shelf["stone"][1] + 1}),
+        ("insert", {"name": field["ore"], "x": shelf["stone"][0],
+                    "y": shelf["stone"][1], "count": 150}),
+    ], strict=False)
+    print(f"{who}: 매듭 끊기 - {field['ore']} 150을 손으로 (채굴기가 설 때까지만)")
+    return True
+
+
+def drills_on(ai, field):
+    """이 밭에 우리 채굴기가 몇 대 서 있나."""
+    reply = ai.lua("""(function()
+      local s = game.surfaces[1]
+      return { n = s.count_entities_filtered{ area = {{%d,%d},{%d,%d}},
+        type = "mining-drill", force = game.forces.player } }
+    end)()""" % (field["left"] - 2, field["top"] - 2,
+                 field["right"] + 2, field["bottom"] + 2))
+    return int(reply["n"])
 
 
 def sow(ai, who, shelf, field, st):
@@ -303,7 +339,12 @@ def main() -> int:
             # 2. 그 다음에 새로 세운다.
             if free:
                 st = stock(ai, (dx, dy))
-                if int(st["plate"]) >= 17 and int(st["coal"]) >= FUEL_EACH:
+                # 돌이 0이면 돌 채굴기도 못 만든다. 매듭은 손으로 한 번.
+                if (int(st["stone"]) < DRILL_COST["stone"] and "stone" in FIELD
+                        and not drills_on(ai, FIELD["stone"])):
+                    prime(ai, free[0], shelf, FIELD["stone"])
+                    free = free[1:]
+                if free and int(st["plate"]) >= 17 and int(st["coal"]) >= FUEL_EACH:
                     # 돌이 마르면 전부 마른다. 돌밭을 먼저 연다.
                     short = int(st["stone"]) < PER_TRIP * DRILL_COST["stone"]
                     ore = "stone" if (short and "stone" in FIELD) else order[turn % len(order)]

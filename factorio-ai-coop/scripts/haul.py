@@ -35,6 +35,14 @@ FURNACE_COAL = 20
 CARRY = 400               # 한 번 걸음에 나르는 최대치
 PILE_FLOOR = 25           # 이만큼도 안 쌓인 상자는 다녀올 값을 못 한다
 
+# 화로 한 대는 한 가지만 녹인다. 여덟 대에 전부 철을 넣으면 구리는
+# 녹일 데가 없어지고, 구리가 없으면 회로도 과학팩도 못 만든다 - 발전
+# 사슬 전체가 「화로가 꽉 찼다」 한 줄에 멈춘다.
+#
+# 그래서 줄의 «끝 두 대»는 구리 몫으로 비워 둔다. 밭마다 줄이 있듯
+# 광석마다 화로가 있어야 한다.
+COPPER_TAIL = 2
+
 # 창고 칸은 셋인데 나르는 것은 그보다 많다. 어느 칸에 넣을지는 «여기»에
 # 한 번만 적는다 - 들고 와서 넣을 데가 없으면 그대로 들고 서 있게 된다.
 SHELF_OF = {
@@ -125,6 +133,13 @@ def idle(ai, names):
             and not (rows[n].get("current") or rows[n].get("queued"))]
 
 
+def lanes(hot, tail=COPPER_TAIL):
+    """어느 화로가 무엇을 녹이나. 줄의 끝 두 대가 구리다."""
+    tail = min(tail, max(0, len(hot) - 1))
+    return ([(f, "iron-ore") for f in hot[:len(hot) - tail]]
+            + [(f, "copper-ore") for f in hot[len(hot) - tail:]])
+
+
 def feed(ai, who, reply, shelf):
     """화로에 광석과 연료를 댄다.
 
@@ -132,24 +147,30 @@ def feed(ai, who, reply, shelf):
     상자도 못 만든다. 그래서 이 걸음이 «가장 먼저»다.
     """
     hot = furnaces(reply)
-    hungry = [f for f in hot if f["ore"] < 10 or f["burn"] < 5]
+    # 남의 광석이 든 화로는 비울 때까지 그냥 둔다. 한 대는 한 가지만 녹는다.
+    hungry = [(f, ore) for f, ore in lanes(hot)
+              if (f["ore"] < 10 and f["what"] in ("", ore)) or f["burn"] < 5]
     if not hungry:
         return False
 
     # 광석은 밭 상자에, 석탄은 석탄밭 상자에 쌓여 있다.
     piles = chests(reply, "piles") + chests(reply, "depot")
-    want_ore = sum(FURNACE_ORE for f in hungry if f["ore"] < 10)
-    want_coal = sum(FURNACE_COAL for f in hungry if f["burn"] < 5)
+    want = {}
+    for f, ore in hungry:
+        if f["ore"] < 10 and f["what"] in ("", ore):
+            want[ore] = want.get(ore, 0) + FURNACE_ORE
+        if f["burn"] < 5:
+            want["coal"] = want.get("coal", 0) + FURNACE_COAL
 
     legs, got = [], {}
-    for item, want in (("iron-ore", want_ore), ("coal", want_coal)):
-        if want <= 0:
+    for item, want_n in want.items():
+        if want_n <= 0:
             continue
         for pile in sorted(piles, key=lambda p: -p["held"].get(item, 0)):
             have = pile["held"].get(item, 0)
-            if have < PILE_FLOOR or got.get(item, 0) >= want:
+            if have < PILE_FLOOR or got.get(item, 0) >= want_n:
                 break
-            take = min(have, want - got.get(item, 0), CARRY)
+            take = min(have, want_n - got.get(item, 0), CARRY)
             legs.append((pile, item, take))
             got[item] = got.get(item, 0) + take
     if not legs:
@@ -160,10 +181,10 @@ def feed(ai, who, reply, shelf):
         plan.append(("walk_to", {"x": pile["x"] - 1, "y": pile["y"] + 1}))
         plan.append(("take", {"name": item, "x": pile["x"], "y": pile["y"],
                               "count": n}))
-    plan.append(("walk_to", {"x": hungry[0]["x"], "y": hungry[0]["y"] + 2}))
-    for f in hungry:
-        if got.get("iron-ore") and f["ore"] < 10:
-            plan.append(("insert", {"name": "iron-ore", "x": f["x"], "y": f["y"],
+    plan.append(("walk_to", {"x": hungry[0][0]["x"], "y": hungry[0][0]["y"] + 2}))
+    for f, ore in hungry:
+        if got.get(ore) and f["ore"] < 10 and f["what"] in ("", ore):
+            plan.append(("insert", {"name": ore, "x": f["x"], "y": f["y"],
                                     "count": FURNACE_ORE}))
         if got.get("coal") and f["burn"] < 5:
             plan.append(("insert", {"name": "coal", "x": f["x"], "y": f["y"],
