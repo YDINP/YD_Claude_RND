@@ -36,6 +36,20 @@ from orders import submit               # noqa: E402
 sys.path.insert(0, HERE)
 from settle import near_patch           # noqa: E402
 import rows                             # noqa: E402
+from guard import covered                # noqa: E402
+
+# 지킬 수 있는 만큼만 넓힌다.
+#
+#     사용자: "이게 너무 포탑을 띄워놓으면 안되는이유야."
+#
+# 20회차에서 여덟 중 여섯이 죽었다. 그때 우리 건물은 443채였고 포탑
+# 사거리 안에 있던 것은 169채(38%)뿐이었다. 기지는 멀쩡했다 - 죽은 것은
+# 그 62% 바깥으로 걸어간 사람들이다.
+#
+# 채굴기를 늘릴수록 밭은 바깥으로 자라고, 무리는 그만큼 멀리 나간다.
+# 방어선이 못 따라오는데 계속 늘리면 그것은 늘리는 것이 아니라 «내주는»
+# 것이다. 덮인 비율이 이보다 낮으면 늘리지 않고 기다린다.
+SAFE_ENOUGH = 80
 
 DRILL = "burner-mining-drill"
 CHEST = "iron-chest"
@@ -642,7 +656,14 @@ def main() -> int:
                     tend(ai, free[0], shelf, sick[TEND_PER_TRIP:])
                     free = free[1:]
 
-            # 2. 그 다음에 새로 세운다.
+            # 2. 그 다음에 새로 세운다 - «지킬 수 있을 때만».
+            safe_n, all_n = covered(ai)
+            pct = safe_n * 100 // max(1, all_n)
+            if pct < SAFE_ENOUGH:
+                if free:
+                    print(f"  덮인 건물 {safe_n}/{all_n} = {pct}% "
+                          f"- {SAFE_ENOUGH}% 를 넘기 전에는 안 늘린다")
+                free = []
             if free:
                 st = stock(ai, (dx, dy))
                 # 돌이 0이면 돌 채굴기를, 석탄이 0이면 석탄 채굴기를 못

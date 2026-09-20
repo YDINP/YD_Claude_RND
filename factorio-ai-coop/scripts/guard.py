@@ -337,6 +337,53 @@ def plan_seats(ai):
     return out
 
 
+def covered(ai, reach=RANGE):
+    """우리 건물 중 «포탑 사거리 안»에 있는 비율.
+
+        사용자: "이게 너무 포탑을 띄워놓으면 안되는이유야."
+
+    20회차에서 여덟 중 여섯이 죽었다. 그때 실측:
+
+        우리 건물     443 채
+        사거리 안     169 채  =  38%
+        포탑           55 대
+
+    포탑끼리의 간격은 오히려 촘촘했다 - 쉰다섯 중 쉰셋이 서로의 사거리
+    안에 있었다. 문제는 그 촘촘한 사슬이 x=-63 에서 106 까지 펼쳐진
+    공장을 감싸기엔 «너무 짧다»는 것이었다. 사슬이 62%를 바깥에 두었고,
+    무리는 매 순번 그 바깥으로 걸어갔다. 기지는 멀쩡했고 죽은 것은
+    밖에 나가 있던 사람뿐이다.
+
+    그래서 목표를 「포탑 몇 대」에서 «덮인 비율»로 바꾼다. 대수는 판이
+    커질수록 뜻을 잃는다 - 이 저장소가 구리 화로에서 이미 배운 것과
+    같은 말이다.
+
+    돌려주는 것: (덮인 수, 전체 수)
+    """
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local seats = {}
+      for _, t in pairs(s.find_entities_filtered{
+            type = "ammo-turret", force = f}) do
+        seats[#seats+1] = t.position
+      end
+      local all, safe = 0, 0
+      for _, e in pairs(s.find_entities_filtered{force = f}) do
+        local ty = e.type
+        if ty == "mining-drill" or ty == "furnace" or ty == "container"
+           or ty == "lab" or ty == "assembling-machine" then
+          all = all + 1
+          for _, p in pairs(seats) do
+            local dx, dy = e.position.x - p.x, e.position.y - p.y
+            if dx * dx + dy * dy <= %d then safe = safe + 1 break end
+          end
+        end
+      end
+      return { all = all, safe = safe }
+    end)()""" % (reach * reach))
+    return int(reply["safe"]), int(reply["all"])
+
+
 def unguarded(ai, reach=18):
     """포탑 사거리 밖에 있는 우리 건물들. 먼 것부터."""
     have = standing_turrets(ai)
@@ -457,7 +504,9 @@ def main() -> int:
     ap.add_argument("--who", action="append", default=None,
                     help="방어 당번. 여러 번 줄 수 있다 (.bat 이 쉼표를 자른다)")
     ap.add_argument("--depot", default="60,-115")
-    ap.add_argument("--want", type=int, default=16, help="목표 포탑 수")
+    ap.add_argument("--want", type=int, default=16, help="포탑 수 상한(보조)")
+    ap.add_argument("--cover", type=int, default=95,
+                    help="목표는 대수가 아니라 «덮인 비율»이다 (기본 95%%)")
     ap.add_argument("--every", type=float, default=20)
     ap.add_argument("--rounds", type=int, default=4000)
     args = ap.parse_args()
@@ -490,7 +539,19 @@ def main() -> int:
                 time.sleep(args.every)
                 continue
 
-            if int(st["turrets"]) < args.want:
+            safe_n, all_n = covered(ai)
+            pct = safe_n * 100 // max(1, all_n)
+            if pct >= args.cover:
+                print(f"건물 {safe_n}/{all_n} = {pct}% 가 사거리 안에 있다 "
+                      f"- 지킬 만큼은 지켜졌다")
+                if free:
+                    stockpile(ai, free[0], shelf, have)
+                time.sleep(args.every)
+                continue
+
+            # 목표는 «덮인 비율»이지 대수가 아니다. 대수는 판이 커질수록
+            # 뜻을 잃는다 - 쉰다섯 대가 443채 중 169채만 덮고 있었다.
+            if pct < args.cover:
                 spots = seats(ai, free[0])
                 if spots and raise_turrets(ai, free[0], shelf, have, spots):
                     free = free[1:]
@@ -508,7 +569,8 @@ def main() -> int:
             bare = unguarded(ai)
             if bare:
                 spot = bare[0]
-                print(f"  아직 무방비 {len(bare)}채 - 가장 먼 것 "
+                print(f"  덮인 건물 {safe_n}/{all_n} = {pct}% "
+                      f"(포탑 {st['turrets']}대) · 가장 먼 무방비 "
                       f"({spot[0]:.0f},{spot[1]:.0f}) 포탑까지 {spot[2]:.0f}칸")
         except RconError as exc:
             print("  게임이 대답하지 않는다:", exc)
