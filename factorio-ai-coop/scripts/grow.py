@@ -53,6 +53,25 @@ FUEL_EACH = 25
 # 채굴기는 «늦어도» 되지만 연구는 늦으면 안 된다. 둥지는 기다려 주지
 # 않는다. 연구소가 서면 이 몫은 사라진다.
 SPARK_RESERVE = 170
+
+# 화로는 «채굴기를 따라간다».
+#
+# 버너 채굴기는 0.25/s 를 캐고 돌화로는 0.3125/s 를 녹인다. 그러니
+# 화로 한 대가 채굴기 1.25대를 감당하고, 뒤집으면 채굴기 한 대에
+# 화로 0.8대가 필요하다.
+#
+# 20회차 32분 실측: 채굴기 14대(3.5/s)에 화로 8대(2.5/s). 캔 것의
+# 30%가 상자에 쌓이기만 했다. 「생산이 느리다」의 정체가 그것이다.
+#
+# 숫자를 손으로 올리면 다음 판에서 또 어긋난다. 비율을 적어 둔다.
+DRILL_PER_SECOND = 0.25
+FURNACE_PER_SECOND = 0.3125
+MELT_RATIO = DRILL_PER_SECOND / FURNACE_PER_SECOND     # 0.8
+FURNACE = "stone-furnace"
+FURNACE_COST = {"stone": 5}
+SMELT_PITCH = 3
+MAX_FURNACE = 24              # 줄이 무한히 길어지면 나르는 걸음도 길어진다
+FURNACE_PER_TRIP = 4
 TEND_PER_TRIP = 3
 
 # 한 대라도 멈춰 있으면 그것부터. 세우는 것보다 «세워 둔 것을 돌리는» 편이
@@ -301,6 +320,53 @@ def priming(ai, ore, names):
     return False
 
 
+def smelt_row(ai, smelt):
+    """화로 줄의 형편. 몇 대가 섰고 다음 칸은 어디인가."""
+    sx, sy = smelt
+    return ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local n, far = 0, %d - %d
+      for _, fu in pairs(s.find_entities_filtered{
+            area = {{%d, %d}, {%d, %d}}, type = "furnace", force = f}) do
+        n = n + 1
+        if fu.position.x > far then far = fu.position.x end
+      end
+      return { n = n, next_x = far + %d,
+        drills = s.count_entities_filtered{type = "mining-drill", force = f} }
+    end)()""" % (sx, SMELT_PITCH,
+                 sx - 3, sy - 3, sx + SMELT_PITCH * MAX_FURNACE + 3, sy + 3,
+                 SMELT_PITCH))
+
+
+def widen(ai, who, shelf, smelt, row, st):
+    """녹이는 쪽이 캐는 쪽을 못 따라가면 화로를 «더» 세운다.
+
+    캔 것이 상자에 쌓이기만 하면 그 채굴기는 없는 것과 같다. 늘릴 대수는
+    사람이 정하지 않는다 - 채굴기 수와 비율이 정한다.
+    """
+    want = min(MAX_FURNACE, max(1, int(-(-int(row["drills"]) * MELT_RATIO // 1))))
+    short = want - int(row["n"])
+    if short <= 0:
+        return False
+    n = min(short, FURNACE_PER_TRIP, int(st["stone"]) // FURNACE_COST["stone"])
+    if n <= 0:
+        return False
+
+    at = int(row["next_x"])
+    plan = [("walk_to", {"x": shelf["stone"][0] - 2, "y": shelf["stone"][1] + 1}),
+            ("take", {"name": "stone", "x": shelf["stone"][0], "y": shelf["stone"][1],
+                      "count": n * FURNACE_COST["stone"] + 5}),
+            ("craft", {"recipe": FURNACE, "count": n}),
+            ("walk_to", {"x": at, "y": smelt[1] + 2})]
+    for i in range(n):
+        plan.append(("build", {"name": FURNACE, "x": at + i * SMELT_PITCH,
+                               "y": smelt[1]}))
+    submit(ai, who, plan, strict=False)
+    print(f"{who}: 화로 {n}대 더 ({row['n']} -> {int(row['n']) + n}, "
+          f"채굴기 {row['drills']}대에 필요한 것 {want})")
+    return True
+
+
 def drills_on(ai, field):
     """이 밭에 우리 채굴기가 몇 대 서 있나."""
     reply = ai.lua("""(function()
@@ -355,6 +421,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--depot", default="60,-115",
                     help="창고 줄의 첫 칸. 판/돌/석탄 상자가 두 칸 간격으로 선다")
+    ap.add_argument("--smelt", default=None,
+                    help="화로 줄의 첫 칸. 주면 채굴기에 맞춰 화로도 늘린다")
     ap.add_argument("--builders", default="alpha,bravo,charlie,delta,golf")
     ap.add_argument("--rounds", type=int, default=2000)
     ap.add_argument("--every", type=float, default=15)
@@ -365,6 +433,7 @@ def main() -> int:
              "stone": (dx + 0.5, dy + 2.5),
              "coal": (dx + 0.5, dy + 4.5)}
     builders = [n.strip() for n in args.builders.split(",") if n.strip()]
+    smelt = tuple(int(v) for v in args.smelt.split(",")) if args.smelt else None
 
     ai = AIBridge()
     FIELD = fields(ai, (dx, dy))
@@ -396,6 +465,13 @@ def main() -> int:
                     if unload(ai, who, shelf):
                         free.remove(who)
                         break
+
+            # 0.5 녹이는 쪽이 캐는 쪽을 못 따라가면 화로부터 늘린다.
+            #     캔 것이 상자에 쌓이기만 하면 그 채굴기는 없는 것과 같다.
+            if free and smelt:
+                row = smelt_row(ai, smelt)
+                if widen(ai, free[0], shelf, smelt, row, stock(ai, (dx, dy))):
+                    free = free[1:]
 
             # 1. 세워 둔 것부터 돌린다.
             sick = stalled(ai)

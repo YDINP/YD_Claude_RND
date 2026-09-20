@@ -29,7 +29,20 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 
-ORE_TO_PLATE = {"iron-ore": "iron-plate", "copper-ore": "copper-plate"}
+ORE_TO_PLATE = {"iron-ore": "iron-plate", "copper-ore": "copper-plate",
+                "stone": "stone-brick"}
+
+
+def mismatched(f):
+    """지금 물고 있는 광석과 결과칸의 물건이 «다른 일»인가.
+
+    구리 화로 둘이 원료칸에 구리광 49를 물고도 멈춰 있었다. 결과칸에
+    이전 철판 다섯 장이 남아 구리판을 뱉을 칸이 없었기 때문이다.
+    status 로도 잡히지만, 상태값 하나에만 기대면 판이 바뀔 때 또 놓친다 -
+    「무엇을 물었나」와 「무엇을 뱉었나」가 어긋나면 그것으로 충분하다.
+    """
+    want = ORE_TO_PLATE.get(f["what"])
+    return bool(f["what"] and f["made"] and want and f["made"] != want)
 FURNACE_ORE = 50          # 화로 하나가 한 번에 받아 두는 광석
 FURNACE_COAL = 20
 CARRY = 400               # 한 번 걸음에 나르는 최대치
@@ -246,7 +259,7 @@ def drain(ai, who, reply, shelf):
         got[f["made"]] = got.get(f["made"], 0) + f["plate"]
         # 막힌 화로는 «원료칸»도 비운다. 결과칸만 비우면 다음 순번에
         # 또 같은 것을 굽다가 또 막힌다.
-        if f["jammed"] and f["what"] and where(f["what"], shelf):
+        if (f["jammed"] or mismatched(f)) and f["what"] and where(f["what"], shelf):
             plan.append(("take", {"name": f["what"], "x": f["x"], "y": f["y"],
                                   "count": f["ore"]}))
             got[f["what"]] = got.get(f["what"], 0) + f["ore"]
