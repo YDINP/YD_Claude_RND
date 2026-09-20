@@ -480,7 +480,7 @@ def stockpile(ai, who, shelf, have):
         ("walk_to", {"x": shelf["iron-plate"][0] - 2, "y": shelf["iron-plate"][1] + 1}),
         ("take", {"name": "iron-plate", "x": shelf["iron-plate"][0],
                   "y": shelf["iron-plate"][1], "count": n * 4}),
-        ("craft", {"recipe": AMMO, "count": n, "wait": False}),
+        ("craft", {"recipe": AMMO, "count": n, "wait": True}),
         ("insert", {"name": AMMO, "x": shelf["iron-plate"][0],
                     "y": shelf["iron-plate"][1], "count": n}),
     ], strict=False)
@@ -520,7 +520,17 @@ def raise_turrets(ai, who, shelf, have, spots):
                               "count": min(ammo_ready, n * AMMO_EACH)}))
     plan.append(("craft", {"recipe": TURRET, "count": n, "wait": False}))
     if make_ammo:
-        plan.append(("craft", {"recipe": AMMO, "count": make_ammo, "wait": False}))
+        # 탄약만은 «기다린다».
+        #
+        # 이 함수의 첫 줄에 「세우고 잊으면 빈 총이 선다」고 적어 두고도
+        # 그 일이 났다. 포탑 두 대가 섰고, 탄약은 0이었다.
+        #
+        #     wait: False 는 「만들라고 시켰다」지 «만들어졌다»가 아니다.
+        #
+        # 포탑은 만들라고 시킨 뒤 자리까지 걸어가는 동안 완성돼서 우연히
+        # 맞았다. 탄약은 그 뒤에 줄을 서므로 넣을 차례에 아직 손에 없다.
+        # 우연히 맞는 것에 기대면 급할 때 틀린다.
+        plan.append(("craft", {"recipe": AMMO, "count": make_ammo, "wait": True}))
     for spot in spots:
         # snap 을 쓰면 자리가 열여섯 칸까지 밀리는데, 탄약은 «부른 칸»에
         # 넣는다. 넣을 것을 반경 1.5로 찾으므로 밀린 포탑은 빈 총이 된다 -
