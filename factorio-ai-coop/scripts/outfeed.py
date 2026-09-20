@@ -84,18 +84,30 @@ def plan(ai, rows, lane, depot, arm):
     if not xs:
         return []
 
-    far, near = max(xs), min(xs)
-    # 벨트는 «창고 쪽»으로 흐른다. 창고가 서쪽이면 서쪽으로.
+    far = max(xs)
     dx, dy = depot
-    head = dx + 2                      # 내려가는 자리
+
+    # 창고에 «어느 쪽에서» 넣나.
+    #
+    # 상자 동쪽(dx+1, dy)에 팔을 세우면 그 팔은 (dx+2, dy) 에서 집는다.
+    # 그런데 거기에는 전봇대가 서 있고, 전봇대를 걷으면 전력망이 끊긴다.
+    # 그래서 «북쪽»에서 넣는다 - 팔은 상자 바로 위, 벨트는 그 위 한 칸.
+    #
+    # 상자 둘레 네 칸 중 어디서 넣든 결과는 같다. 막힌 쪽을 고집하는 것이
+    # 이상한 일이다.
+    tail_y = dy - 2                    # 창고 위를 지나는 마지막 벨트 줄
+    col = dx + 3                       # 간선에서 내려오는 기둥. 전봇대를 비켜 간다
+
     belts = [{"x": x, "y": lane, "what": BELT, "dir": WEST, "why": "간선"}
-             for x in range(far, head - 1, -1)]
-    # 내려가서 창고 높이로.
-    for y in range(lane - 1, dy - 1, -1) if lane > dy else range(lane + 1, dy + 1):
-        belts.append({"x": head, "y": y, "what": BELT,
-                      "dir": NORTH if lane > dy else SOUTH, "why": "내려가는 길"})
-    belts.append({"x": head, "y": dy, "what": BELT, "dir": WEST, "why": "창고 앞"})
-    arm_at = {"x": head - 1, "y": dy, "what": arm, "dir": EAST, "why": "창고에 넣는 팔"}
+             for x in range(far, col, -1)]
+    belts.append({"x": col, "y": lane, "what": BELT, "dir": NORTH, "why": "꺾는 칸"})
+    for y in range(lane - 1, tail_y, -1):
+        belts.append({"x": col, "y": y, "what": BELT, "dir": NORTH, "why": "기둥"})
+    belts.append({"x": col, "y": tail_y, "what": BELT, "dir": WEST, "why": "꺾는 칸"})
+    for x in range(col - 1, dx - 1, -1):
+        belts.append({"x": x, "y": tail_y, "what": BELT, "dir": WEST, "why": "창고 앞"})
+    arm_at = {"x": dx, "y": dy - 1, "what": arm, "dir": NORTH,
+              "why": "창고에 넣는 팔"}
     return belts + seats + [arm_at]
 
 
@@ -167,11 +179,6 @@ def powered(ai):
     """기지에 전기가 «흐르나». 전기 인서터는 그 뒤에 쓴다."""
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
-      local n = 0
-      for _, p in pairs(s.find_entities_filtered{type = "electric-pole", force = f}) do
-        if p.electric_network_statistics and
-           p.energy_source and true then n = n end
-      end
       local nets = {}
       for _, p in pairs(s.find_entities_filtered{type = "electric-pole", force = f}) do
         nets[p.electric_network_id] = (nets[p.electric_network_id] or 0) + 1
@@ -212,16 +219,34 @@ def main() -> int:
 
     ai = AIBridge()
     arm = BURNER if args.burner else ARM
-    if not args.burner and not powered(ai):
-        print("전력망이 아직 하나가 아니다 - 전기 인서터는 서도 안 돈다.")
-        print("  간선을 먼저 잇거나 --burner 로 깔 것.")
-        return 1
 
+    # 벨트는 «전기가 없어도» 깐다.
+    #
+    #     사용자: "벨트설치는 전기없어도 되는거아냐?"
+    #
+    # 맞다. 전기가 드는 것은 인서터뿐이다. 그런데 이 고리는 전력망이
+    # 하나가 아니면 통째로 멈췄다 - 지금 깔 수 있는 서른다섯 칸을 간선이
+    # 이어질 때까지 미룬 셈이다.
+    #
+    # 못 하는 일 하나가 할 수 있는 일 전부를 막으면 안 된다. 예전에
+    # 크루가 남긴 교훈과 같은 말이다: 스무 개를 못 구했다고 열두 개도
+    # 안 깔면 길은 영영 안 이어진다.
     for _ in range(args.rounds):
         try:
+            hot = powered(ai)
             seats = plan(ai, rows, args.lane, (dx, dy), arm)
+            if not hot and not args.burner:
+                held = [s for s in seats if s["what"] != arm]
+                if len(held) < len(seats):
+                    print(f"  전기가 아직이라 팔 {len(seats) - len(held)}개는 "
+                          f"미룬다 - 벨트부터 깐다")
+                seats = held
             todo, blocked = standing(ai, seats)
             if not todo:
+                if not hot and not args.burner:
+                    print(f"  벨트 {len(seats)}칸은 다 깔렸다 - 전기를 기다린다")
+                    time.sleep(args.every)
+                    continue
                 print(f"줄이 다 섰다 - {len(seats)}칸")
                 if blocked:
                     print(f"  (막힌 칸 {len(blocked)}개: "
