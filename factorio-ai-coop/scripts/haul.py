@@ -143,6 +143,31 @@ def lanes(hot, tail=COPPER_TAIL):
             + [(f, "copper-ore") for f in hot[len(hot) - tail:]])
 
 
+KEEP = 20          # 손에 남겨 두는 몫
+
+
+def unload(ai, who, shelf):
+    """손에 든 것을 창고에 내려놓는다.
+
+    나르는 사람이 «들고만» 있으면 그것은 나른 것이 아니다. 20회차에서
+    둘이 돌 150씩을 든 채 한가하게 서 있었고, 그 사이 증식 고리는
+    「창고에 돌이 없다」며 사람을 또 캐러 보냈다.
+    """
+    held = ai.agent(who).items()
+    drop = {k: v - KEEP for k, v in held.items()
+            if where(k, shelf) and v - KEEP >= PILE_FLOOR}
+    if not drop:
+        return False
+    plan = [("walk_to", {"x": shelf["iron-plate"][0] - 2,
+                         "y": shelf["iron-plate"][1] + 1})]
+    for item, n in drop.items():
+        at = where(item, shelf)
+        plan.append(("insert", {"name": item, "x": at[0], "y": at[1], "count": n}))
+    submit(ai, who, plan, strict=False)
+    print(f"{who}: 창고에 내려놓기 {drop}")
+    return True
+
+
 def feed(ai, who, reply, shelf):
     """화로에 광석과 연료를 댄다.
 
@@ -268,6 +293,10 @@ def main() -> int:
     for _ in range(args.rounds):
         try:
             free = idle(ai, carriers)
+            # 0. 손에 든 것부터 푼다. 들고 있는 것은 아직 나른 것이 아니다.
+            for who in list(free):
+                if unload(ai, who, shelf):
+                    free.remove(who)
             if free:
                 reply = look(ai, (dx, dy), (sx, sy))
                 # 화로가 먼저. 선 화로는 판을 안 내고, 판이 없으면 전부 멈춘다.
