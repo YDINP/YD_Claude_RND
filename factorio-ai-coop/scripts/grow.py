@@ -68,6 +68,17 @@ SAFE_ENOUGH = 80
 #
 # 그래서 재료가 있다고 늘리지 않는다. 모자랄 때만 늘린다.
 POLLUTION_CEIL = 220      # 기지 칸 공해가 이보다 짙으면 더 안 늘린다
+GUARD_FROM = 40           # 공해가 이만큼 되기 전에는 방어선을 안 따진다
+
+# 문턱에도 «때»가 있다.
+#
+# 방어선을 요구하는 이유는 공해가 물결을 부르기 때문이다. 그러니 공해가
+# 아직 없고 적도 멀면 그 요구는 뜻이 없다 - 콜드스타트에는 포탑도 건물도
+# 없어서 덮인 비율이 언제나 0%고, 그 0% 때문에 첫 채굴기조차 못 세운다.
+#
+#     지킬 것이 없을 때 「지키고 나서 하라」는 말은 «하지 말라»는 말이다.
+#
+# 그래서 공해가 둥지에 닿을 만큼 쌓이기 시작할 때부터 따진다.
 HUNGRY_FURNACES = 3       # 화로가 이만큼 굶어야 «채굴기»를 늘린다
 ORE_BACKLOG = 2500        # 광석이 이만큼 쌓여야 «화로»를 늘린다
 
@@ -711,13 +722,19 @@ def main() -> int:
                     free = free[1:]
 
             # 2. 그 다음에 새로 세운다 - «지킬 수 있을 때만».
-            safe_n, all_n = covered(ai)
-            pct = safe_n * 100 // max(1, all_n)
-            if pct < SAFE_ENOUGH:
-                if free:
-                    print(f"  덮인 건물 {safe_n}/{all_n} = {pct}% "
-                          f"- {SAFE_ENOUGH}% 를 넘기 전에는 안 늘린다")
-                free = []
+            #
+            # 다만 지킬 것이 없을 때는 안 따진다. 공해가 아직 옅으면
+            # 물결을 부를 일도 없고, 그때 「방어선부터」를 고집하면 첫
+            # 채굴기조차 못 세운다.
+            if smoke >= GUARD_FROM:
+                safe_n, all_n = covered(ai)
+                pct = safe_n * 100 // max(1, all_n)
+                if pct < SAFE_ENOUGH:
+                    if free:
+                        print(f"  공해 {smoke} · 덮인 건물 {safe_n}/{all_n} "
+                              f"= {pct}% - {SAFE_ENOUGH}% 를 넘기 전에는 "
+                              f"안 늘린다")
+                    free = []
             if free:
                 st = stock(ai, (dx, dy))
                 # 돌이 0이면 돌 채굴기를, 석탄이 0이면 석탄 채굴기를 못
