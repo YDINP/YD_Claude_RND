@@ -93,6 +93,7 @@ FURNACE_FUEL = 20         # 새로 세운 화로에 «그 자리에서» 넣어 
 #
 #     씨앗은 열매만큼 클 필요가 없다.
 SEED_FUEL = 10
+JAMMED_ENOUGH = 3         # 내보낼 데 없어 선 채굴기가 이만큼이면 캐는 쪽은 남는다
 HUNGRY_FURNACES = 3       # 화로가 이만큼 굶어야 «채굴기»를 늘린다
 ORE_BACKLOG = 2500        # 광석이 이만큼 쌓여야 «화로»를 늘린다
 
@@ -541,7 +542,12 @@ def pressure(ai, depot):
         waiting = waiting + held.get_item_count("iron-ore")
                           + held.get_item_count("copper-ore")
       end
-      return { hungry = hungry, waiting = waiting,
+      -- 캔 것을 «내보낼 데»가 없어 선 채굴기. 이것이 있으면 모자란 것은
+      -- 캐는 쪽이 아니라 나르는 쪽이다 - 늘려 봐야 산더미만 커진다.
+      local jammed = s.count_entities_filtered{
+        type = "mining-drill", force = f,
+        status = defines.entity_status.waiting_for_space_in_destination}
+      return { hungry = hungry, waiting = waiting, jammed = jammed,
                drills = s.count_entities_filtered{
                  type = "mining-drill", force = f},
                smoke = math.floor(s.get_pollution({%d, %d})) }
@@ -980,8 +986,16 @@ def main() -> int:
                     print(f"    (빈 밭 {ore} 를 먼저 연다 - 남은 빈 밭 "
                           f"{[o for o in virgin if o != ore]})")
 
+                # 내보낼 데가 없어 선 채굴기가 있으면 캐는 쪽은 이미
+                # 남는다. 이 저장소가 주석으로는 알고 있으면서 쓰지 않던
+                # 사실이다 - 「상자가 찬 채굴기 8대」를 찍은 «바로 다음 줄»에
+                # 철 채굴기 여덟 대를 더 세웠다.
+                #
+                #     아는 것을 쓰지 않으면 모르는 것과 같다.
+                jammed = int(push.get("jammed") or 0)
                 short_of_ore = (hungry >= HUNGRY_FURNACES
-                                and waiting < ORE_BACKLOG and not starved)
+                                and waiting < ORE_BACKLOG and not starved
+                                and jammed < JAMMED_ENOUGH)
                 # 석탄밭을 열 때 드는 씨앗은 SEED_FUEL 뿐이다. 문턱을
                 # FUEL_EACH 로 두면 석탄이 모자랄 때 정작 석탄밭이 막힌다.
                 gate_fuel = SEED_FUEL if only_fuel else FUEL_EACH
@@ -1007,6 +1021,9 @@ def main() -> int:
                     elif waiting >= ORE_BACKLOG:
                         why = (f"광석 {waiting}이 밭에 쌓여 있다 - 모자란 것은 "
                                f"채굴기가 아니라 나르는 길이다")
+                    elif jammed >= JAMMED_ENOUGH:
+                        why = (f"내보낼 데가 없어 선 채굴기 {jammed}대 - "
+                               f"모자란 것은 캐는 쪽이 아니라 나르는 길이다")
                     elif hungry < HUNGRY_FURNACES:
                         why = (f"굶는 화로 {hungry}대뿐 - 캐는 쪽은 모자라지 "
                                f"않다")
