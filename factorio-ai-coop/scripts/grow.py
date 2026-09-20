@@ -419,6 +419,17 @@ def tend(ai, who, shelf, sick):
 #     모두가 먹는 것을 아무도 안 챙기면, 굶는 것은 전부다.
 KNOTS = ("stone", "coal", "iron-ore", "copper-ore")
 
+# 「채굴기가 하나라도 있으면 손을 뗀다」는 너무 이르다.
+#
+#     실측(21회차): 철밭에 채굴기 3대. 손 끊기는 «있으니까» 건너뛰었고,
+#                   화로 여섯은 빈 채였고, 노는 사람이 여섯이었다.
+#
+# 버너 채굴기 한 대는 초당 0.25 를 캔다. 세 대면 0.75 - 화로 여섯을
+# 먹이기에는 턱없다. 손이 여섯 개 노는데 그 손을 안 쓸 이유가 없다.
+#
+#     「있다」와 «충분하다»는 다른 말이다.
+PRIME_UNTIL = 6           # 이만큼 서기 전에는 손도 같이 거든다
+
 # 손으로 캔 것을 어느 칸에 내려놓나. 구리광은 전용 칸이 없지만, 유통
 # 고리가 창고 칸들을 모두 훑어 구리 화로로 나르므로 어디든 창고면 된다.
 PRIME_SHELF = {"stone": "stone", "coal": "coal",
@@ -778,7 +789,7 @@ def main() -> int:
                     if (free and ore in FIELD
                             and short_of(st, ore)
                             and not priming(ai, ore, builders)
-                            and not drills_on(ai, FIELD[ore])):
+                            and drills_on(ai, FIELD[ore]) < PRIME_UNTIL):
                         prime(ai, free[0], shelf, FIELD[ore])
                         free = free[1:]
                 # 연구소가 아직 없으면 발전 사슬 몫을 남긴다.
