@@ -216,12 +216,26 @@ def main() -> int:
 
     ai = AIBridge()
     quiet = 0
+    idle_quiet = 0
     for _ in range(args.rounds):
         try:
             free = idle(ai, crew)
             if not free:
+                # 사람이 없어서 못 하는 것과 할 일이 없어서 안 하는 것은
+                # 밖에서 보면 똑같이 «아무 말 없음»이다. 실측: 벨트 고리가
+                # 네 순번을 돌도록 한 줄도 안 찍었다 - 명부 넷이 전부 운반과
+                # 증식에 붙잡혀 있었는데, 고리는 그 사실을 말하지 않았다.
+                #
+                #     조용한 고장은 고칠 수 없다.
+                #
+                # 그래서 손을 못 구한 것도 «일어난 일»로 적는다.
+                idle_quiet += 1
+                if idle_quiet % 8 == 1:
+                    print(f"  손이 비지 않는다 - {crew} 가 모두 다른 일 중"
+                          f" ({idle_quiet}번째)")
                 time.sleep(args.every)
                 continue
+            idle_quiet = 0
 
             rest = {w: left_on(ai, free[0], w) for w in order}
             if not any(rest.values()):
