@@ -93,19 +93,16 @@ def crew_state(ai):
     return out
 
 
-def reveal(ai, at, radius=LOOK):
-    """이 자리를 지도에 «그린다».
-
-    사용자가 물었다: "에이전트들이 정찰을갔는데 왜 난 맵이 안넓어지지?"
-    - 그때 정찰병은 한 명도 안 갔다. 다만 갔더라도, 걸어서 걷히는 안개는
-    시야 반경뿐이라 지도가 성큼 넓어지지는 않는다. 본 김에 그려 둔다.
-    """
-    x, y = at
-    ai.lua("""(function()
-      local s, f = game.surfaces[1], game.forces.player
-      f.chart(s, {{%d, %d}, {%d, %d}})
-      return { ok = 1 }
-    end)()""" % (x - radius, y - radius, x + radius, y + radius))
+# 지도는 «직접 열지 않는다».
+#
+#     사용자: "맵을 직접 열기보단, 캐릭터가 이동해서 안개가 걷히는
+#              부분만 체크가되어야함. 다음부턴 그러지마셈"
+#
+# force.chart 를 부르면 안개가 걷히고 청크가 생성된다. 빠르고 편하지만,
+# 그렇게 얻은 지도는 «아무도 가 보지 않은» 지도다. 정찰이라는 일 자체가
+# 없어지고, 「여기까지는 안전하다」는 말의 근거도 같이 사라진다.
+#
+# 이 고리가 아는 것은 정찰병이 실제로 «발로 밟은» 만큼이다.
 
 
 def main() -> int:
@@ -177,7 +174,6 @@ def main() -> int:
                         continue
                     # 여기까지 «실제로» 왔다. 보고 그린다.
                     way["stalls"] = 0
-                    reveal(ai, goal)
                     seen = near(ai, goal)
                     if int(seen["nests"]) or int(seen["worms"]):
                         way["found"] = goal
