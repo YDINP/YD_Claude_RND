@@ -90,6 +90,8 @@ def main() -> int:
     ap.add_argument("--who", action="append", default=None)
     ap.add_argument("--home", required=True, help="기지. 음수는 --home=-20,-90")
     ap.add_argument("--legs", type=int, default=6, help="한 사람이 나아갈 다리 수")
+    ap.add_argument("--dirs", default=None,
+                    help="갈 방위. 예: 남,북,남동. 안 주면 동.서부터")
     ap.add_argument("--every", type=float, default=15)
     args = ap.parse_args()
 
@@ -104,9 +106,18 @@ def main() -> int:
         for n in known[:5]:
             print(f"  ({n['x']:.0f},{n['y']:.0f}) {n['gap']}칸 {n['name']}")
 
+    wheel = COMPASS
+    if args.dirs:
+        want = [d.strip() for d in args.dirs.split(",") if d.strip()]
+        wheel = [c for name in want for c in COMPASS if c[0] == name]
+        if not wheel:
+            print("모르는 방위다. 쓸 수 있는 것:",
+                  ", ".join(c[0] for c in COMPASS))
+            return 1
+
     ways = {}
     for i, who in enumerate(crew):
-        name, dx, dy = COMPASS[i % len(COMPASS)]
+        name, dx, dy = wheel[i % len(wheel)]
         ways[who] = {"name": name, "dx": dx, "dy": dy, "leg": 0, "found": None}
         print(f"{who}: {name}쪽 정찰")
 

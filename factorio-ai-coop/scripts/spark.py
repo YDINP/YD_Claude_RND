@@ -65,6 +65,12 @@ def survey(ai):
         lab_y = lab and lab.position.y or 0,
         powered = powered, science = science,
         pole = s.count_entities_filtered{name="small-electric-pole", force=f},
+        eng_x = (function()
+          local e = s.find_entities_filtered{name="steam-engine", force=f, limit=1}[1]
+          return e and e.position.x or 0 end)(),
+        eng_y = (function()
+          local e = s.find_entities_filtered{name="steam-engine", force=f, limit=1}[1]
+          return e and e.position.y or 0 end)(),
         gun = f.technologies["gun-turret"].researched and 1 or 0,
         wall = f.technologies["stone-wall"].researched and 1 or 0,
         queued = #f.research_queue,
@@ -147,6 +153,7 @@ def raise_plant(ai, who, spot):
             ("craft", {"recipe": "boiler", "count": 1}),
             ("craft", {"recipe": "steam-engine", "count": len(engines)}),
             ("craft", {"recipe": LAB, "count": 1}),
+            ("chop", {"x": pump["x"], "y": pump["y"], "count": 12}),
             ("craft", {"recipe": POLE, "count": 6}),
             ("walk_to", {"x": pump["x"], "y": pump["y"] - 4}),
             ("build", {"name": "offshore-pump", "x": pump["x"], "y": pump["y"],
@@ -167,17 +174,35 @@ def raise_plant(ai, who, spot):
     return True
 
 
-def wire_up(ai, who, at):
-    """연구소에 전기가 안 들어오면 전봇대를 한 대 더 놓는다.
+def wire_up(ai, who, at, eng=None):
+    """연구소에 전기가 안 들어오면 전봇대로 «잇는다».
 
     「세웠다」와 «돌아간다»는 다른 일이다. 전선이 닿았는지는 연구소에게
     물어야 알 수 있다.
+
+    그리고 전봇대는 나무를 먹는다. 20회차 42분에 이 함수가 「전봇대
+    보강」을 여섯 번 찍었는데 세상에 전봇대는 한 대도 없었다 - 나무가
+    없어 제작이 조용히 실패했기 때문이다. 부하가 없으니 기관은 놀고
+    보일러는 증기가 차서 멈췄고, 연구는 한 칸도 안 나갔다.
+    그래서 «먼저 벤다».
     """
-    plan = [("craft", {"recipe": POLE, "count": 2}),
-            ("walk_to", {"x": at["x"], "y": at["y"] + 3}),
-            ("build", {"name": POLE, "x": at["x"] + 2, "y": at["y"] + 2, "snap": True})]
+    plan = [("chop", {"x": at["x"], "y": at["y"], "count": 8}),
+            ("craft", {"recipe": POLE, "count": 4})]
+    # 기관과 연구소 사이를 이어야 전기가 흐른다. 아무 데나 한 대가
+    # 아니라 «둘 사이»에 놓는다.
+    if eng:
+        steps = 3
+        for i in range(1, steps + 1):
+            plan.append(("build", {
+                "name": POLE,
+                "x": eng["x"] + (at["x"] - eng["x"]) * i / (steps + 1),
+                "y": eng["y"] + (at["y"] - eng["y"]) * i / (steps + 1),
+                "snap": True}))
+    else:
+        plan.append(("build", {"name": POLE, "x": at["x"] + 2,
+                               "y": at["y"] + 2, "snap": True}))
     submit(ai, who, plan, strict=False)
-    print(f"{who}: 전봇대 보강")
+    print(f"{who}: 나무를 베어 전봇대로 기관과 연구소를 잇는다")
 
 
 def feed_science(ai, who, at, count):
@@ -254,7 +279,9 @@ def main() -> int:
             # 2. 연구소가 섰는데 전기가 안 들어온다 -> 전봇대.
             at = {"x": float(st["lab_x"]), "y": float(st["lab_y"])}
             if int(st["lab"]) and not int(st["powered"]):
-                wire_up(ai, who, at)
+                wire_up(ai, who, at,
+                        {"x": float(st["eng_x"]), "y": float(st["eng_y"])}
+                        if int(st["engine"]) else None)
                 wait_for(ai, who, "전봇대", every=10, limit=60)
                 continue
 
