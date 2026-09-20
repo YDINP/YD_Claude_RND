@@ -40,7 +40,14 @@ DRILL = "burner-mining-drill"
 CHEST = "iron-chest"
 DRILL_COST = {"iron-plate": 9, "stone": 5}
 CHEST_COST = {"iron-plate": 8}
-PER_TRIP = 4
+# 한 걸음에 세우는 채굴기.
+#
+#     사용자: "채굴기들은 늘릴 수 있으면 늘려도됨"
+#
+# 넷으로 잡아 둔 것은 판이 귀하던 개국의 값이다. 지금은 화로가 판을
+# 2368장 물고 있고 밭 상자에는 광석이 16289 쌓여 있다 - 아끼는 쪽이
+# 아니라 «푸는 쪽»을 늘려야 한다.
+PER_TRIP = 8
 FUEL_EACH = 25
 
 # 연구소가 설 때까지 «건드리지 않는» 판.
@@ -70,7 +77,10 @@ MELT_RATIO = DRILL_PER_SECOND / FURNACE_PER_SECOND     # 0.8
 FURNACE = "stone-furnace"
 FURNACE_COST = {"stone": 5}
 SMELT_PITCH = 3
-MAX_FURNACE = 24              # 줄이 무한히 길어지면 나르는 걸음도 길어진다
+# 화로 상한. 채굴기를 늘리면 여기도 따라 올려야 한다 - 안 그러면
+# 캔 것이 상자에서 잠기고, 그 채굴기는 없는 것과 같아진다.
+# 줄은 여덟 대마다 아래로 접으므로 마흔이면 다섯 줄이다.
+MAX_FURNACE = 40
 FURNACE_PER_TRIP = 4
 ROW_GAP = 5                   # 줄과 줄 사이. 사람이 지나다닐 폭
 PER_ROW = 8                   # 한 줄에 여덟 대. 그 다음은 «아래 줄»로 접는다

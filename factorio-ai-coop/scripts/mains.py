@@ -66,7 +66,17 @@ def line(start, end, step=REACH):
 
 
 def missing(ai, spots):
-    """아직 전봇대가 없고, 놓을 수 있는 자리만."""
+    """아직 전봇대가 없고, 놓을 수 있는 «실제» 자리.
+
+    처음에는 막힌 칸을 +2,+2 한 군데로만 비켜 봤다. 그 한 군데도 막혀
+    있으면 다음 순번에 또 같은 자리를 내놓고, 같은 실패를 되풀이한다 -
+    20회차에서 세 자리가 그렇게 순번마다 「전봇대 3대」를 찍었다.
+    그 중 하나는 창고 그 자체가 앉아 있는 칸이었다.
+
+    비켜 보는 것은 한 번이 아니라 «여러 군데»여야 하고, 어디로도 못
+    비키면 그 자리는 빼야 한다. 못 놓는 자리를 계획에 남겨 두면 그
+    계획은 영영 안 끝난다.
+    """
     if not spots:
         return []
     body = ", ".join(f"{{{x},{y}}}" for x, y in spots)
@@ -74,28 +84,42 @@ def missing(ai, spots):
       local s, f = game.surfaces[1], game.forces.player
       local out = {}
       local spots = { %s }
+      -- 비켜 볼 곳들. 전선이 닿는 범위 안에서만 움직인다.
+      local away = {{0,0},{2,0},{-2,0},{0,2},{0,-2},{2,2},{-2,-2},{3,-1},{-3,1}}
       for i, p in ipairs(spots) do
         local here = s.count_entities_filtered{position = {p[1], p[2]},
                      radius = 3, type = "electric-pole", force = f}
         if here > 0 then
-          out[i] = 0
+          out[i] = "0|0"
         else
-          out[i] = s.can_place_entity{name = "small-electric-pole",
-                   position = {p[1], p[2]}, force = f} and 1 or 2
+          out[i] = "x"
+          for _, d in ipairs(away) do
+            local x, y = p[1] + d[1], p[2] + d[2]
+            if s.can_place_entity{name = "small-electric-pole",
+                 position = {x, y}, force = f} then
+              out[i] = x .. "|" .. y
+              break
+            end
+          end
         end
       end
       return out
     end)()""" % body)
     ok = _rows(reply)
-    out = []
+    out, lost = [], 0
     for i, at in enumerate(spots):
         if i >= len(ok):
             break
-        if int(ok[i]) == 1:
-            out.append(at)
-        elif int(ok[i]) == 2:
-            # 못 놓는 칸이면 옆으로 한 칸 비켜 본다. 물가와 절벽에서 흔하다.
-            out.append((at[0] + 2, at[1] + 2))
+        cell = str(ok[i])
+        if cell == "0|0":
+            continue
+        if cell == "x":
+            lost += 1
+            continue
+        x, y = cell.split("|")
+        out.append((int(x), int(y)))
+    if lost:
+        print(f"  어디로도 못 비키는 자리 {lost}개 - 계획에서 뺀다")
     return out
 
 
