@@ -261,14 +261,101 @@ def feed_science(ai, who, at, count):
 
 
 def queue_tech(ai, techs=WANT_TECH):
-    ai.lua("""(function()
+    """연구를 «선행부터» 건다. 그리고 걸렸는지 확인해서 돌려준다.
+
+    여기 있던 것은 `f.add_research(t)` 를 부르고 답을 안 봤다. 2.0 에서
+    포탑과 돌벽 앞에는 `automation-science-pack` 이라는 선행 기술이
+    붙는데, 그것이 없으면 add_research 는 조용히 false 를 돌려준다.
+
+        gun-turret  add_research=false  pre=[automation-science-pack(MISSING)]
+        stone-wall  add_research=false  pre=[automation-science-pack(MISSING)]
+        queue len = 0        <- 그런데 화면에는 「연구 대기열: ...」
+
+    그동안 알파는 빨간 과학을 순번마다 연구소에 넣었다. 연구소는 아무
+    것도 연구하지 않고 있었다. 부르고 답을 안 보면, 안 된 일이 된 일로
+    보고된다 - 조용한 고장은 고칠 수 없다.
+
+    그래서 두 가지를 고친다: 선행을 «먼저» 걸고, 무엇이 걸렸는지
+    이름으로 돌려준다.
+    """
+    reply = ai.lua("""(function()
       local f = game.forces.player
-      for _, name in ipairs({%s}) do
-        local t = f.technologies[name]
-        if t and not t.researched then f.add_research(t) end
+      local seen = {}
+      local function want(t)
+        if not t or t.researched or seen[t.name] then return end
+        seen[t.name] = true
+        -- 선행이 먼저다. 대기열은 «넣은 차례»대로 돈다.
+        for _, p in pairs(t.prerequisites) do want(p) end
+        f.add_research(t)
       end
-      return { queued = #f.research_queue }
+      for _, name in ipairs({%s}) do want(f.technologies[name]) end
+      local queued = {}
+      for _, t in pairs(f.research_queue) do queued[#queued+1] = t.name end
+      return { queued = queued,
+               current = f.current_research and f.current_research.name or "" }
     end)()""" % ", ".join('"%s"' % t for t in techs))
+    rows = reply.get("queued")
+    rows = list(rows.values()) if isinstance(rows, dict) else (rows or [])
+    return rows
+
+
+def triggers_for(ai, techs=WANT_TECH):
+    """대기열에 «넣을 수 없는» 선행이 무엇을 요구하는가.
+
+    2.0 에는 과학팩으로 연구하지 않는 기술이 있다. 연구 비용이 1 인데
+    재료 목록이 비어 있고, add_research 는 언제나 false 다 - 대신 무언가를
+    «하면» 저절로 열린다.
+
+        automation-science-pack : craft-item  lab x1
+
+    포탑도 돌벽도 그 기술을 선행으로 달고 있으니, 랩을 한 대 만들기
+    전에는 방어선 연구가 통째로 시작조차 안 된다. 과학팩을 아무리 부어도
+    소용없다 - 연구소는 아무것도 연구하고 있지 않았다.
+
+        묻지 않은 것은 모자라지 않은 것이 된다.
+
+    그래서 «무엇을 해야 열리는가»를 게임에 직접 묻는다. 돌려주는 것은
+    만들어야 할 물건 목록이다.
+    """
+    reply = ai.lua("""(function()
+      local f = game.forces.player
+      local seen, want = {}, {}
+      local function walk(t)
+        if not t or t.researched or seen[t.name] then return end
+        seen[t.name] = true
+        for _, p in pairs(t.prerequisites) do walk(p) end
+        local tr = t.prototype and t.prototype.research_trigger
+        if tr and tr.type == "craft-item" and tr.item then
+          local name = tr.item.name or tr.item
+          want[#want+1] = name .. "|" .. tostring(tr.count or 1)
+        end
+      end
+      for _, name in ipairs({%s}) do walk(f.technologies[name]) end
+      return { want = want }
+    end)()""" % ", ".join('"%s"' % t for t in techs))
+    rows = reply.get("want")
+    rows = list(rows.values()) if isinstance(rows, dict) else (rows or [])
+    out = []
+    for row in rows:
+        name, count = row.rsplit("|", 1)
+        out.append((name, int(count)))
+    return out
+
+
+def pull_trigger(ai, who, shelf, wants):
+    """트리거가 요구하는 것을 «만든다». 세우는 것이 아니라 만드는 것이다."""
+    plan = [("walk_to", {"x": shelf["iron-plate"][0] - 2,
+                         "y": shelf["iron-plate"][1] + 1}),
+            ("take", {"name": "iron-plate", "x": shelf["iron-plate"][0],
+                      "y": shelf["iron-plate"][1], "count": 80}),
+            ("take", {"name": "copper-plate", "x": shelf["iron-plate"][0],
+                      "y": shelf["iron-plate"][1], "count": 60})]
+    for name, count in wants:
+        plan.append(("craft", {"recipe": name, "count": count, "wait": True}))
+    submit(ai, who, plan, strict=False)
+    print(f"{who}: 연구를 여는 열쇠를 만든다 - "
+          + ", ".join(f"{n} x{c}" for n, c in wants))
+    return True
 
 
 def main() -> int:
@@ -348,8 +435,19 @@ def main() -> int:
             # 3. 불이 들어왔다 -> 연구를 걸고 과학을 먹인다.
             if int(st["lab"]) and int(st["powered"]):
                 if not int(st["queued"]):
-                    queue_tech(ai, techs)
-                    print("연구 대기열:", ", ".join(techs))
+                    got = queue_tech(ai, techs)
+                    if got:
+                        print("연구 대기열:", " -> ".join(got))
+                    else:
+                        # 「못 걸었다」는 결론이 아니라 질문이다.
+                        wants = triggers_for(ai, techs)
+                        if wants:
+                            pull_trigger(ai, who, shelf, wants)
+                            wait_for(ai, who, "연구 열쇠 만들기",
+                                     every=10, limit=180)
+                            continue
+                        print("  연구를 «못» 걸었다 - 선행 기술을 확인할 것:",
+                              ", ".join(techs))
                 if int(st["science"]) < 8:
                     feed_science(ai, who, at, SCIENCE_EACH)
                     wait_for(ai, who, "과학 나르기", every=15, limit=200)
