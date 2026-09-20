@@ -78,12 +78,23 @@ def taken(ai):
             for r in _rows(reply.get("at"))}
 
 
-def seats(ai, who):
-    """제련 구역에서 «화로를 세워도 되는» 빈 자리. rows.py 가 유일한 기준."""
+def seats(ai, who, promised=()):
+    """제련 구역에서 «화로를 세워도 되는» 빈 자리. rows.py 가 유일한 기준.
+
+    「비었다」를 게임에만 물으면 부족하다. 앞사람이 그 자리를 받아 가는
+    중이면 게임에는 아직 안 서 있고, 그래서 뒷사람도 같은 자리를 받는다.
+
+        alpha: ... (-36,10)->(-47,36), (-33,10)->(-44,36)
+        bravo: ... (-27,10)->(-47,36), (-24,10)->(-41,36)
+                                 ^^^^^^^ 같은 자리
+
+    한 대는 세워지고 한 대는 가방에 남는다. 그래서 이미 «약속한» 자리도
+    찬 것으로 친다 - 자리는 서 있는 것뿐 아니라 «오고 있는 것»도 막는다.
+    """
     zones = ai.zones(who)
     if not zones.get("smelt"):
         return []
-    here = taken(ai)
+    here = taken(ai) | set(promised)
     return [(x, y) for x, y in rows_mod.clear_spots(zones)
             if (x, y) not in here]
 
@@ -143,6 +154,10 @@ def main() -> int:
     crew = args.who or ["delta"]
 
     ai = AIBridge()
+    # 이미 누군가에게 준 자리. 세워지면 taken() 이 알게 되므로, 그때까지만
+    # 기억하면 된다 - 가끔 실패해 영영 안 서는 자리가 있어도, 구역에는
+    # 자리가 스물여섯 곳 남아 있다.
+    promised: set = set()
     for _ in range(args.rounds):
         try:
             who = (idle(ai, crew) or [None])[0]
@@ -156,7 +171,7 @@ def main() -> int:
             if not wrong:
                 print("  다 제자리에 섰다")
                 return 0
-            free = seats(ai, who)
+            free = seats(ai, who, promised)
             if not free:
                 print(f"  옮길 것은 {len(wrong)}대인데 «빈 자리»가 없다 "
                       f"- 구역이 좁거나 남의 줄이 물고 있다")
@@ -165,6 +180,8 @@ def main() -> int:
                 time.sleep(args.every)
                 continue
             pairs = list(zip(wrong[:PER_TRIP], free[:PER_TRIP]))
+            for _, seat in pairs:
+                promised.add((round(seat[0]), round(seat[1])))
             if args.dry:
                 print(f"  제자리 아님 {len(wrong)}대 · 빈 자리 {len(free)}곳")
                 for (a, b), (c, d) in pairs:
