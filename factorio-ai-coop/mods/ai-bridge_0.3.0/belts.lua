@@ -55,7 +55,12 @@ end
 -- 5 로 올린다: 등뼈의 좌표 규약이 반칸에서 칸 번호로 바뀌었고, repair 가
 -- 내던 한 칸 구멍이 이미 굳어 있는 길들에 남아 있다. 올리지 않으면
 -- `field_lines` 가 plan 이 같다고 옛 길을 그대로 다시 쓴다.
-local PLAN = 5
+-- 설계 판 번호. 올리면 얼려둔 길이 «전부» 다시 짜인다.
+--
+-- 6 으로 올린 까닭: 줄 사이 파수꾼(line_guard)을 넣었는데, 이미 얼려둔
+-- 길은 그 규칙을 모른 채 만들어졌다. 새 규칙을 넣고 옛 길을 그대로 두면
+-- 고친 것이 아무 데도 안 닿는다.
+local PLAN = 6
 
 -- 이만큼 안에 있으면 «같은 밭»이다. 밭을 나누는 간격(zones.lua 의
 -- FIELD_GAP)과 같은 값이라야 한다 - 그보다 크면 두 밭이 한 길을 쓰고,
@@ -377,6 +382,31 @@ local function smelt_guard(smelt)
     end
     return false
   end
+end
+
+-- 이미 «다른 줄»이 잡은 칸도 남의 땅이다.
+--
+-- 실측(21회차): (-57,58) 한 칸을 ore 는 북쪽으로, field 는 동쪽으로
+-- 원했다. 한쪽이 고치면 다른 쪽이 되돌린다. 무리는 매 순번 그 칸을
+-- 걷어내고 다시 세웠고, ore 의 「남은 1칸」은 영영 0이 되지 않았다.
+-- 그동안 화로 열둘이 빈 채로 서 있었다.
+--
+-- 두 줄이 만나는 곳은 «이어지는» 곳이지 «겹치는» 곳이 아니다. 먼저 잡은
+-- 줄이 임자고, 나중 줄은 돌아간다. 제련 기둥에 이미 쓰던 규칙을 줄
+-- 사이에도 쓴다.
+local function line_guard(key)
+  local kept = storage.lines and storage.lines[key]
+  if not kept or not kept.tiles or #kept.tiles == 0 then return nil end
+  local taken = {}
+  for _, t in pairs(kept.tiles) do taken[t.x .. ":" .. t.y] = true end
+  return function(x, y) return taken[x .. ":" .. y] == true end
+end
+
+-- 두 파수꾼을 하나로. 어느 쪽이든 「남의 땅」이라면 남의 땅이다.
+local function both_guards(one, two)
+  if not one then return two end
+  if not two then return one end
+  return function(x, y) return one(x, y) or two(x, y) end
 end
 
 -- 계획에서 그 칸만 뺀다. 이미 거기 선 것은 안 건드린다 - 걷어내는 일은
@@ -988,7 +1018,9 @@ local function field_lines(name, limit)
 
   local head = depot_ends(here.depot)
   -- 밭에서 오는 줄도 제련 기둥의 줄을 밟고 지나가면 안 된다.
-  local guard = smelt_guard(here.smelt)
+  -- 그리고 «제련으로 가는 줄(ore)»이 이미 잡은 칸도 밟으면 안 된다 -
+  -- 밟으면 둘이 서로 방향을 되돌리며 영영 안 끝난다.
+  local guard = both_guards(smelt_guard(here.smelt), line_guard("ore"))
   local parts, first_from = {}, nil
 
   for n = 1, math.min(#fields, 3) do
