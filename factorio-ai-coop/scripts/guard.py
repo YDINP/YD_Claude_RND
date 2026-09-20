@@ -178,11 +178,14 @@ def raise_turrets(ai, who, shelf, have, spots):
     if make_ammo:
         plan.append(("craft", {"recipe": AMMO, "count": make_ammo}))
     for spot in spots:
+        # snap 을 쓰면 자리가 열여섯 칸까지 밀리는데, 탄약은 «부른 칸»에
+        # 넣는다. 넣을 것을 반경 1.5로 찾으므로 밀린 포탑은 빈 총이 된다 -
+        # 지난 판에 진 그 모양이다. 자리표가 이미 빈 칸만 내놓으므로
+        # 그대로 세우고, 모서리 대 가운데 어긋남만큼만 넓게 찾는다.
         plan.append(("walk_to", {"x": spot["x"] + 2, "y": spot["y"] + 2}))
-        plan.append(("build", {"name": TURRET, "x": spot["x"], "y": spot["y"],
-                               "snap": True}))
+        plan.append(("build", {"name": TURRET, "x": spot["x"], "y": spot["y"]}))
         plan.append(("insert", {"name": AMMO, "x": spot["x"], "y": spot["y"],
-                                "count": AMMO_EACH}))
+                                "count": AMMO_EACH, "search_radius": 2.5}))
     submit(ai, who, plan, strict=False)
     why = ",".join(sorted({s["why"] for s in spots}))
     print(f"{who}: 포탑 {n}대 ({why}) + 탄약 {AMMO_EACH}발씩")
