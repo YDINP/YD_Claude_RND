@@ -805,6 +805,36 @@ def main() -> int:
                 # 캔 것이 산더미인데 화로가 굶는다면 모자란 것은 채굴기가
                 # 아니라 «나르는 길»이다. 그때 채굴기를 늘리면 산더미가
                 # 커지고 공해가 짙어질 뿐이다 - 그리고 공해는 물결을 부른다.
+                # 아직 한 대도 안 선 밭은 «늘리는 일»이 아니라 콜드스타트다.
+                #
+                # 밭 고르기가 `order[turn % len(order)]` 라 돌아가며 하나씩
+                # 맡겼다. 그런데 돌아가며 세는 방식은 여덟 대 선 밭과 한
+                # 대도 안 선 밭을 똑같이 센다. 게다가 「채굴기를 늘릴까」를
+                # 오직 «굶는 화로»로만 물었다.
+                #
+                #     석탄은 녹이는 것이 아니라 태우는 것이다.
+                #
+                # 그래서 석탄이 아무리 모자라도 화로는 안 굶고, 안 굶으니
+                # 질문에 안 걸리고, 안 걸리니 석탄밭은 영영 안 열린다.
+                # 실측(21회차): 채굴기 12대 - 철 8, 돌 4, 석탄 0, 구리 0.
+                # 그때까지 쓴 석탄은 «전부» 손으로 캔 것이었다.
+                #
+                # 손이 매 순번 매듭을 끊어 주는데도 기계로 바뀌지 않은
+                # 까닭이다. 손 끊기는 시간을 벌라고 있는 것이지 살라고
+                # 있는 것이 아니다.
+                #
+                #     빈 밭은 「다음 차례」가 아니라 «구멍»이다.
+                virgin = [o for o in order if drills_on(ai, FIELD[o]) == 0]
+                if (free and virgin and usable >= 17 and not choked
+                        and int(st["coal"]) >= FUEL_EACH
+                        and int(st["stone"]) >= 5):
+                    ore = virgin[0]
+                    sow(ai, free[0], shelf, dict(FIELD[ore]),
+                        dict(st, plate=usable))
+                    free = free[1:]
+                    print(f"    (빈 밭 {ore} 를 먼저 연다 - 남은 빈 밭 "
+                          f"{[o for o in virgin if o != ore]})")
+
                 short_of_ore = hungry >= HUNGRY_FURNACES and waiting < ORE_BACKLOG
                 if (free and usable >= 17 and int(st["coal"]) >= FUEL_EACH
                         and short_of_ore and not choked):
