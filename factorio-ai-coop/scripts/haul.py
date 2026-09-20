@@ -82,8 +82,10 @@ def look(ai, depot, smelt):
         end
         local burn = 0
         for _, item in pairs(fuel.get_contents()) do burn = burn + item.count end
-        F[#F+1] = string.format("%%.1f|%%.1f|%%d|%%s|%%d|%%s|%%d",
-          f.position.x, f.position.y, ore, what, plate, made, burn)
+        -- status 27 = full_output. 뱉을 데가 없어 선 것이다.
+        local jam = (f.status == defines.entity_status.full_output) and 1 or 0
+        F[#F+1] = string.format("%%.1f|%%.1f|%%d|%%s|%%d|%%s|%%d|%%d",
+          f.position.x, f.position.y, ore, what, plate, made, burn, jam)
       end
       for _, c in pairs(s.find_entities_filtered{type="container",
                 force=game.forces.player}) do
@@ -107,9 +109,10 @@ def _rows(v):
 def furnaces(reply):
     out = []
     for row in _rows(reply.get("furnaces")):
-        x, y, ore, what, plate, made, burn = row.split("|")
+        x, y, ore, what, plate, made, burn, jam = row.split("|")
         out.append({"x": float(x), "y": float(y), "ore": int(ore), "what": what,
-                    "plate": int(plate), "made": made, "burn": int(burn)})
+                    "plate": int(plate), "made": made, "burn": int(burn),
+                    "jammed": jam == "1"})
     return sorted(out, key=lambda f: (f["x"], f["y"]))
 
 
@@ -213,6 +216,12 @@ def drain(ai, who, reply, shelf):
         plan.append(("take", {"name": f["made"], "x": f["x"], "y": f["y"],
                               "count": f["plate"]}))
         got[f["made"]] = got.get(f["made"], 0) + f["plate"]
+        # 막힌 화로는 «원료칸»도 비운다. 결과칸만 비우면 다음 순번에
+        # 또 같은 것을 굽다가 또 막힌다.
+        if f["jammed"] and f["what"] and where(f["what"], shelf):
+            plan.append(("take", {"name": f["what"], "x": f["x"], "y": f["y"],
+                                  "count": f["ore"]}))
+            got[f["what"]] = got.get(f["what"], 0) + f["ore"]
     for p in piles[:4]:
         for item, n in p["held"].items():
             if n < PILE_FLOOR or not where(item, shelf) or got.get(item, 0) >= CARRY:

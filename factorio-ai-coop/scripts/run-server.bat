@@ -9,6 +9,7 @@ title Factorio AI Coop Server
 if "%FACTORIO_EXE%"=="" set "FACTORIO_EXE=G:\SteamLibrary\steamapps\common\Factorio\bin\x64\factorio.exe"
 set "ROOT=%~dp0.."
 set "DATA=%~dp0..\..\.factorio-bot"
+set "CFG=%ROOT%\..\factorio-bot-config.ini"
 set "SAVE_NAME=%~1"
 if "%SAVE_NAME%"=="" set "SAVE_NAME=ai-coop-test"
 set "SAVE=%DATA%\saves\%SAVE_NAME%.zip"
@@ -38,9 +39,20 @@ if not exist "%CLIENT_MODS%" mkdir "%CLIENT_MODS%"
 copy /Y "%ROOT%\mods\ai-bridge_0.3.0\*.*" "%CLIENT_MODS%\" >nul
 if errorlevel 1 echo WARNING: could not sync the client mod copy.
 
+rem Map generation is not left to the seed. Three runs in a row ended with
+rem nests within walking distance of the base, so config\map-gen-settings.json
+rem widens the starting area and thins the enemy bases. Delete that file to
+rem go back to stock defaults.
+set "MAPGEN=%ROOT%\config\map-gen-settings.json"
 if not exist "%SAVE%" (
   echo Creating map %SAVE_NAME% ...
-  "%FACTORIO_EXE%" --config "%ROOT%\..\factorio-bot-config.ini" --create "%SAVE%"
+  if exist "%MAPGEN%" (
+    echo   map-gen settings: %MAPGEN%
+    "%FACTORIO_EXE%" --config "%CFG%" --create "%SAVE%" --map-gen-settings "%MAPGEN%"
+  ) else (
+    echo   WARNING: no map-gen settings found, using stock defaults
+    "%FACTORIO_EXE%" --config "%CFG%" --create "%SAVE%"
+  )
 )
 
 echo.
@@ -53,7 +65,7 @@ echo ====================================================
 echo.
 
 "%FACTORIO_EXE%" ^
-  --config "%ROOT%\..\factorio-bot-config.ini" ^
+  --config "%CFG%" ^
   --mod-directory "%ROOT%\mods" ^
   --start-server "%SAVE%" ^
   --server-settings "%ROOT%\..\factorio-server-settings.json" ^
