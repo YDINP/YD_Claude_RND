@@ -106,6 +106,23 @@ FUEL_EACH = 25
 # 채굴기는 «늦어도» 되지만 연구는 늦으면 안 된다. 둥지는 기다려 주지
 # 않는다. 연구소가 서면 이 몫은 사라진다.
 SPARK_RESERVE = 170
+COLD_START = 12           # 이만큼 서기 전에는 «발전 사슬 몫»을 안 뗀다
+
+# 몫을 떼는 데도 «때»가 있다.
+#
+# 사용자 교리: 채굴기(콜드스타트) -> 생산자동화 -> 재련·유통 -> 조립 ->
+#              포탑 방어선 -> 고도화
+#
+# 발전과 연구는 그 줄의 뒤쪽이다. 그런데 판이 생기자마자 백칠십을 떼어
+# 두면 첫 채굴기조차 못 선다.
+#
+#     실측(21회차): 화로 8대 전부 원료 없음, 노는 사람 6명, 판 80.
+#                   그 80이 전부 「발전 사슬 몫」으로 묶여 있었다.
+#
+# 채굴기가 없으면 광석이 없고, 광석이 없으면 판도 안 는다. 떼어 둔 몫은
+# 영영 안 채워지고 채굴기도 영영 안 선다.
+#
+#     맨 앞에 두어야 할 것을 뒤로 미루면, 뒤엣것도 같이 못 온다.
 
 # 화로는 «채굴기를 따라간다».
 #
@@ -468,6 +485,8 @@ def pressure(ai, depot):
                           + held.get_item_count("copper-ore")
       end
       return { hungry = hungry, waiting = waiting,
+               drills = s.count_entities_filtered{
+                 type = "mining-drill", force = f},
                smoke = math.floor(s.get_pollution({%d, %d})) }
     end)()""" % (dx, dy))
 
@@ -693,6 +712,7 @@ def main() -> int:
             smoke = int(push["smoke"])
             hungry = int(push["hungry"])
             waiting = int(push["waiting"])
+            standing = int(push["drills"])
             choked = smoke >= POLLUTION_CEIL
 
             if free and waiting >= ORE_BACKLOG and not choked:
@@ -747,7 +767,10 @@ def main() -> int:
                         prime(ai, free[0], shelf, FIELD[ore])
                         free = free[1:]
                 # 연구소가 아직 없으면 발전 사슬 몫을 남긴다.
-                spare = 0 if int(st["lab"]) else SPARK_RESERVE
+                # 연구소가 섰으면 몫이 필요 없고, 채굴기가 아직 콜드스타트
+                # 만큼도 안 섰으면 몫보다 «캐는 것»이 먼저다.
+                started = standing >= COLD_START
+                spare = 0 if (int(st["lab"]) or not started) else SPARK_RESERVE
                 usable = int(st["plate"]) - spare
                 # 화로가 굶는다고 «캐는 쪽»이 모자란 것은 아니다.
                 #

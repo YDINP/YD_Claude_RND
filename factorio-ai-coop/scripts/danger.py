@@ -109,7 +109,7 @@ def crew(ai):
     for row in ai.list():
         if not row.get("alive"):
             continue
-            cur = row.get("current") or {}
+        cur = row.get("current") or {}
         out.append({"name": row["name"],
                     "x": float(row.get("x") or 0),
                     "y": float(row.get("y") or 0),
