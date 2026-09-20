@@ -215,8 +215,12 @@ def main() -> int:
             if not free:
                 time.sleep(args.every)
                 continue
-            st = watch(ai, free[0])
             have = depot_has(ai, (dx, dy))
+            if not have:
+                print("  창고가 아직 안 섰다 - 발판을 기다린다")
+                time.sleep(args.every)
+                continue
+            st = watch(ai, free[0])
 
             if not int(st["gun"]):
                 # 연구는 남의 일이다. 이 고리는 그 사이에 «탄약»을 쌓는다.

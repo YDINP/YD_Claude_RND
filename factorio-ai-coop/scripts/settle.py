@@ -37,9 +37,22 @@ FURNACE = "stone-furnace"
 CHEST = "iron-chest"
 PITCH = 3                  # 화로 사이 간격. 나중에 인서터와 벨트가 들어갈 자리
 WANT_FURNACE = 8
-STONE_EACH = 150           # 화로 8대에 40, 나머지는 채굴기 몫
-ORE_EACH = 200
-COAL_EACH = 200
+
+# 밭마다 «얼마나 필요한가». 사람 수가 아니라 이 값이 일을 정한다.
+#
+# 사용자가 짚었다: "같은일을 여러캐릭터가 동시에하는거아냐? 돌캐는거랑
+# 철광석캐기처럼 같은개수를 똑같이하는거지?"
+#
+# 그랬다. 돌 150이 필요한데 셋에게 각각 150을 시켜 450을 캤고, 셋 다
+# 같은 칸으로 보냈다. 그것은 병렬이 아니라 «같은 일을 세 번» 하는 것이다.
+# 병렬은 할 일을 나누는 것이지 베끼는 것이 아니다.
+NEED = {
+    "stone": WANT_FURNACE * 5 + 60,   # 화로 여덟 대 + 첫 채굴기 몇 대
+    "iron-ore": 320,                  # 첫 판 -> 창고 상자 셋 + 채굴기
+    "coal": 360,                      # 화로 연료 + 채굴기 점화
+}
+MIN_TRIP = 60              # 이보다 적게 시키면 왕복이 아깝다
+SPREAD = 8                 # 사람 사이를 이만큼 띄운다. 같은 칸에서 겹치지 않게
 
 
 def standing(ai, smelt, depot):
@@ -55,11 +68,19 @@ def standing(ai, smelt, depot):
         stone = stone + inv.get_item_count("stone")
         coal = coal + inv.get_item_count("coal")
       end
-      local ready = 0
+      local ready, in_ore, in_coal = 0, 0, 0
       for _, fu in pairs(s.find_entities_filtered{area={{%d,%d},{%d,%d}},
                 type="furnace", force=f}) do
         ready = ready + fu.get_inventory(defines.inventory.furnace_result)
                           .get_item_count("iron-plate")
+        for _, i in pairs(fu.get_inventory(defines.inventory.furnace_source)
+                            .get_contents()) do
+          in_ore = in_ore + i.count
+        end
+        for _, i in pairs(fu.get_inventory(defines.inventory.fuel)
+                            .get_contents()) do
+          in_coal = in_coal + i.count
+        end
       end
       return {
         furnaces = s.count_entities_filtered{area={{%d,%d},{%d,%d}},
@@ -67,6 +88,7 @@ def standing(ai, smelt, depot):
         chests = s.count_entities_filtered{area={{%d,%d},{%d,%d}},
                  type="container", force=f},
         plate = plate, stone = stone, coal = coal, in_furnace = ready,
+        in_ore = in_ore, in_coal = in_coal,
       }
     end)()""" % (dx - 3, dy - 4, dx + 3, dy + 6,
                  sx - 3, sy - 3, sx + PITCH * WANT_FURNACE + 3, sy + 3,
@@ -126,9 +148,36 @@ def near_patch(ai, ore, anchor, span=60):
             "n": int(reply["n"]), "gap": int(reply["gap"])}
 
 
-def fetch(ai, who, field, count, drop):
+def share(need, movers, gap):
+    """할 일을 «나눈다». 몇 명이 갈지와 한 사람 몫을 함께 정한다.
+
+    먼 밭일수록 한 사람이 많이 든다 - 88칸을 두 번 걷느니 한 번에 지고
+    오는 편이 싸다. 가까운 밭은 조금씩 자주가 낫다.
+    """
+    if need <= 0 or movers <= 0:
+        return 0, 0
+    trip = max(MIN_TRIP, min(200, 40 + gap * 2))
+    hands = max(1, min(movers, -(-need // trip)))     # 올림 나눗셈
+    return hands, -(-need // hands)
+
+
+def spot_for(field, i, hands):
+    """i번째 사람이 설 자리. 한 밭이라도 «같은 칸»에 모으지 않는다."""
+    cx, cy = mid(field)
+    if hands <= 1:
+        return cx, cy
+    wide = (field["right"] - field["left"]) >= (field["bottom"] - field["top"])
+    step = (i - (hands - 1) / 2) * SPREAD
+    if wide:
+        lo, hi = field["left"] + 3, field["right"] - 3
+        return int(min(max(cx + step, lo), hi)), cy
+    lo, hi = field["top"] + 3, field["bottom"] - 3
+    return cx, int(min(max(cy + step, lo), hi))
+
+
+def fetch(ai, who, field, count, drop, at=None):
     """손으로 캐서 정해진 자리에 내려놓는다. 이 판에서 딱 한 번."""
-    x, y = mid(field)
+    x, y = at or mid(field)
     submit(ai, who, [
         ("walk_to", {"x": x, "y": y}),
         ("mine", {"name": field["ore"], "x": x, "y": y, "count": count,
@@ -136,6 +185,7 @@ def fetch(ai, who, field, count, drop):
         ("walk_to", {"x": drop[0], "y": drop[1]}),
     ], strict=False)
     print(f"{who}: {field['ore']} {count} 캐러 ({x},{y}) - {field['gap']}칸")
+    return count
 
 
 def build_row(ai, who, smelt):
@@ -202,7 +252,10 @@ def main() -> int:
         print("돌밭이 안 보인다. 화로를 못 만든다.")
         return 1
 
-    sent = set()
+    # 심부름 나간 사람과 그 몫. 돌아오면(=한가해지면) 지운다 - 그때부터는
+    # 손에 든 것으로 세면 되기 때문이다. 이것을 안 세면 순번마다 또 보내고,
+    # 지우지 않으면 영영 «충분하다»고 착각한다.
+    errand: dict = {}
     for _ in range(args.rounds):
         try:
             st = standing(ai, (sx, sy), (dx, dy))
@@ -222,37 +275,58 @@ def main() -> int:
                 time.sleep(args.every)
                 continue
 
-            # 1. 돌 -> 화로. 돌이 없으면 아무것도 시작이 안 된다.
-            if int(st["furnaces"]) < WANT_FURNACE:
-                who = idle[0]
-                held = ai.agent(who).items()
-                if int(held.get("stone", 0)) >= WANT_FURNACE * 5:
-                    build_row(ai, who, (sx, sy))
-                    sent.discard(("stone", who))
-                elif ("stone", who) not in sent:
-                    fetch(ai, who, patches["stone"], STONE_EACH, (sx, sy + 2))
-                    sent.add(("stone", who))
-                idle = idle[1:]
+            bags = {n: ai.agent(n).items() for n in idle}
+            for name in list(errand):
+                if name in idle:
+                    errand.pop(name)
+            ordered: dict = {}
+            for ore, n in errand.values():
+                ordered[ore] = ordered.get(ore, 0) + n
 
-            # 2. 광석과 석탄 -> 화로. 화로가 서기 «전»에 캐러 보낸다.
-            for ore, count, key in (("coal", COAL_EACH, "coal"),
-                                    ("iron-ore", ORE_EACH, "iron-ore")):
-                if ore not in patches:
-                    continue
+            # 1. 돌이 모이면 화로부터. 돌이 없으면 아무것도 시작이 안 된다.
+            if int(st["furnaces"]) < WANT_FURNACE:
+                ready = next((n for n in idle
+                              if int(bags[n].get("stone", 0)) >= WANT_FURNACE * 5),
+                             None)
+                if ready:
+                    build_row(ai, ready, (sx, sy))
+                    idle.remove(ready)
+
+            # 2. 화로가 섰으면 들고 온 것을 넣는다.
+            if int(st["furnaces"]):
                 for who in list(idle):
-                    held = ai.agent(who).items()
-                    if int(held.get(ore, 0)) >= 100:
-                        if int(st["furnaces"]):
+                    for ore in ("coal", "iron-ore"):
+                        if int(bags[who].get(ore, 0)) >= 60:
                             charge(ai, who, (sx, sy), ore,
                                    25 if ore == "coal" else 0,
                                    0 if ore == "coal" else 25)
                             idle.remove(who)
-                        break
-                    if (key, who) not in sent and len(
-                            [k for k in sent if k[0] == key]) < 2:
-                        fetch(ai, who, patches[ore], count, (sx, sy + 2))
-                        sent.add((key, who))
-                        idle.remove(who)
+                            break
+
+            # 3. 남은 사람을 «모자란 만큼»으로 나눠 보낸다.
+            #    사람 수대로 베끼지 않는다 - 필요한 양을 나눈다.
+            for ore in ("stone", "coal", "iron-ore"):
+                if not idle or ore not in patches:
+                    break
+                got = ordered.get(ore, 0)
+                got += sum(int(b.get(ore, 0)) for b in bags.values())
+                if ore == "stone":
+                    got += int(st["stone"])
+                elif ore == "coal":
+                    got += int(st["coal"]) + int(st["in_coal"])
+                else:
+                    got += int(st["in_ore"]) + int(st["in_furnace"])
+                short = NEED[ore] - got
+                hands, each = share(short, len(idle), patches[ore]["gap"])
+                if not hands:
+                    continue
+                print(f"  {ore}: {short} 모자람 -> {hands}명이 {each}씩")
+                for i in range(hands):
+                    who = idle.pop(0)
+                    at = spot_for(patches[ore], i, hands)
+                    fetch(ai, who, patches[ore], each, (sx, sy + 2), at)
+                    errand[who] = (ore, each)
+                    if not idle:
                         break
 
             # 3. 판이 나오면 창고를 세운다.

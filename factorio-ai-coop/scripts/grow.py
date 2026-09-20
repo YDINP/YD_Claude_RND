@@ -61,10 +61,13 @@ def stock(ai, depot):
     x, y = depot
     return ai.lua("""(function()
       local s = game.surfaces[1]
-      local out = { plate = 0, stone = 0, coal = 0 }
+      -- 「비었다」와 «아직 없다»는 다른 말이다. 창고가 서기도 전에
+      -- 물건을 넣으러 가면 그 걸음은 통째로 버려진다.
+      local out = { plate = 0, stone = 0, coal = 0, chests = 0 }
       for _, c in pairs(s.find_entities_filtered{area={{%d,%d},{%d,%d}},
                 type="container", force=game.forces.player}) do
         local inv = c.get_inventory(defines.inventory.chest)
+        out.chests = out.chests + 1
         out.plate = out.plate + inv.get_item_count("iron-plate")
         out.stone = out.stone + inv.get_item_count("stone")
         out.coal = out.coal + inv.get_item_count("coal")
@@ -342,6 +345,10 @@ def main() -> int:
         try:
             free = idle(ai, builders)
             if not free:
+                time.sleep(args.every)
+                continue
+            if int(stock(ai, (dx, dy))["chests"]) < 3:
+                print("  창고가 아직 안 섰다 - 발판을 기다린다")
                 time.sleep(args.every)
                 continue
 
