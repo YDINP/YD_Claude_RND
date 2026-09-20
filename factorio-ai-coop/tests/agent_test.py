@@ -1895,6 +1895,45 @@ def main() -> int:
         _diag = str(exc)
     check("and a diagonal is refused, not guessed", bool(_diag), repr(_diag))
 
+    # -- 없는 것을 가리키는 계획은 «보내기 전에» 막는다 -----------------
+    #
+    # 한 세션에서 같은 실수를 세 번 했다. 하나가 지어야 할 것을 나머지가
+    # 쓰도록, 여럿에게 «동시에» 일을 던진 것이다.
+    #
+    #     급유를 채굴기가 서기 전에   -> nothing with an inventory  x16
+    #     출구를 벨트가 닿기 전에     -> 팔 열 개가 두 칸 떨어져 섬
+    #     입고를 창고가 서기 전에     -> 돌 100을 든 채, 고리는 돌을 기다림
+    #
+    # 적어두는 것으로는 안 막혔다 - 플레이북에 이미 적혀 있었다.
+    from orders import unmet
+    _nothing = lambda at: False
+    _plan = [("walk_to", {"x": 0, "y": 0}),
+             ("insert", {"name": "coal", "x": 10, "y": 10, "count": 5})]
+    check("a plan that reaches into nothing is caught",
+          len(unmet(_plan, _nothing)) == 1)
+    # 같은 계획이 «먼저 짓는» 것은 있는 것으로 친다. 안 그러면 상자를
+    # 세우고 곧바로 채우는 멀쩡한 계획까지 막힌다.
+    _builds = [("build", {"name": "iron-chest", "x": 10, "y": 10}),
+               ("insert", {"name": "coal", "x": 10, "y": 10, "count": 5})]
+    check("but building it first in the same plan is fine",
+          unmet(_builds, _nothing) == [])
+    # 칸 모서리와 엔티티 가운데는 0.5 어긋난다. 그만큼은 같은 자리다.
+    _half = [("build", {"name": "iron-chest", "x": 10, "y": 10}),
+             ("take", {"name": "coal", "x": 10.5, "y": 10.5, "count": 5})]
+    check("and half a tile is the same place", unmet(_half, _nothing) == [])
+    # 먼저 짓는 것이 «다른» 자리면 못 막는다.
+    _elsewhere = [("build", {"name": "iron-chest", "x": 0, "y": 0}),
+                  ("insert", {"name": "coal", "x": 10, "y": 10, "count": 5})]
+    check("a build somewhere else does not excuse it",
+          len(unmet(_elsewhere, _nothing)) == 1)
+    # 이미 서 있으면 통과한다.
+    check("and what is already standing passes",
+          unmet(_plan, lambda at: True) == [])
+    # 걷기.제작처럼 «아무것도 건드리지 않는» 단계는 보지 않는다.
+    check("steps that touch nothing are not checked",
+          unmet([("walk_to", {"x": 9, "y": 9}),
+                 ("craft", {"recipe": "pipe", "count": 3})], _nothing) == [])
+
     check("the patrol only loads up whoever is idle",
           "def idle(" in _agent_src and "bridge.list()" in _agent_src
           and 'row.get("current") or row.get("queued")' in _agent_src)
