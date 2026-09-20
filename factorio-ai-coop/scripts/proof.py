@@ -62,11 +62,28 @@ def scan(ai, box=None):
       for _, e in pairs(s.find_entities_filtered{%s
             type = "inserter", force = f}) do
         local from, to = e.pickup_target, e.drop_target
-        arms[#arms+1] = string.format("%%d|%%d|%%d|%%s|%%s|%%s|%%s|%%s",
+        -- 인서터라고 다 전기를 먹는 것은 아니다. 버너 인서터는 석탄을
+        -- 태운다. 둘을 같이 「전기가 안 온다」로 세었더니 mains 는
+        -- 「전부 받고 있다」는데 검수는 열일곱이 굶는다고 했다 -
+        -- 둘 다 맞고, 묻는 말이 달랐을 뿐이다.
+        local wants_power = e.prototype.electric_energy_source_prototype ~= nil
+        local fed = "1"
+        if wants_power then
+          fed = e.is_connected_to_electric_network() and "1" or "0"
+        else
+          local burn = e.get_fuel_inventory()
+          local held = 0
+          if burn then
+            for _, it in pairs(burn.get_contents()) do held = held + it.count end
+          end
+          if e.burner and e.burner.remaining_burning_fuel > 0 then held = held + 1 end
+          fed = held > 0 and "1" or "0"
+        end
+        arms[#arms+1] = string.format("%%d|%%d|%%d|%%s|%%s|%%s|%%s|%%s|%%s|%%s",
           math.floor(e.position.x), math.floor(e.position.y), e.direction,
           from and from.type or "", to and to.type or "",
           from and from.name or "", to and to.name or "",
-          e.is_connected_to_electric_network() and "1" or "0")
+          fed, wants_power and "1" or "0", e.name)
       end
       for _, c in pairs(s.find_entities_filtered{%s
             type = {"furnace", "container", "logistic-container",
@@ -91,12 +108,13 @@ def scan(ai, box=None):
     arms = []
     for row in _rows(reply.get("arms")):
         bits = str(row).split("|")
-        while len(bits) < 8:
+        while len(bits) < 10:
             bits.append("")
         arms.append({"x": int(bits[0]), "y": int(bits[1]), "dir": int(bits[2]),
                      "from": bits[3], "to": bits[4],
                      "from_name": bits[5], "to_name": bits[6],
-                     "hot": bits[7] == "1"})
+                     "hot": bits[7] == "1", "wired": bits[8] == "1",
+                     "name": bits[9]})
 
     pots = {}
     for row in _rows(reply.get("pots")):
@@ -114,7 +132,7 @@ def scan(ai, box=None):
 def judge_arm(arm):
     """이 팔이 «일을 하고 있나». 아니면 왜 아닌가."""
     if not arm["hot"]:
-        return "전기가 안 온다"
+        return "전기가 안 온다" if arm["wired"] else "연료가 없다"
     if not arm["from"]:
         return "집을 것이 없다"
     if not arm["to"]:
@@ -123,6 +141,10 @@ def judge_arm(arm):
         # 벨트에서 집어 벨트에 놓는 것은 «옮기는» 일이 아니다. 같은 길
         # 위에서 물건을 한 칸 밀어 줄 뿐이고, 그 일은 벨트가 이미 한다.
         return "벨트에서 집어 벨트에 놓는다 (헛일)"
+    if arm["from"] == "inserter" or arm["to"] == "inserter":
+        # 팔이 팔을 집거나 팔에 놓는 일은 없다. 이런 쌍이 나오면 둘 중
+        # 하나가 한 칸 어긋나 선 것이다.
+        return "팔이 팔을 상대한다 (한 칸 어긋났다)"
     if arm["from"] not in HOLDS and arm["from"] != "transport-belt":
         return f"이상한 데서 집는다 ({arm['from_name']})"
     if arm["to"] not in HOLDS and arm["to"] != "transport-belt":

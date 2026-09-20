@@ -41,6 +41,21 @@ from orders import submit               # noqa: E402
 ORDER = ("plate", "ore", "field", "depot")
 
 PER_TRIP = 14             # 한 걸음에 까는 칸 수
+
+# 걷어낼 때는 «그 칸만» 집는다.
+#
+# demolish 는 기본 반경이 1.5 다. 사람이 「저거 치워」라고 가리킬 때는 그
+# 너그러움이 맞다 - 반 칸 어긋나게 찍어도 알아들어야 한다.
+#
+# 그런데 벨트 한 줄을 돌릴 때는 정반대다. 옆 칸에도 벨트가 있으므로 반경
+# 1.5 는 «이웃»을 집는다. 이웃을 걷고 제자리에 세우면, 세우려던 칸은 여전히
+# 차 있어 build 가 실패하고 걷어낸 이웃 자리에 구멍이 남는다.
+#
+#     실측: 차선 y=11 의 x=38..51 열네 칸이 통째로 사라졌다.
+#           걷기는 열네 번 됐고 세우기는 한 번도 안 됐다.
+#
+# 줄 안에서 한 칸을 고를 때는 너그러움이 곧 오작동이다.
+TIGHT = 0.4
 PARTS = {                 # 한 칸에 드는 재료 (넉넉히)
     "transport-belt": {"iron-plate": 2},
     "inserter": {"iron-plate": 3, "copper-plate": 2},
@@ -117,7 +132,8 @@ def lay(ai, who, which, shelf):
         # 자리는 벨트 것이다.
         if one.get("lift"):
             plan.append(("demolish", {"x": one["x"], "y": one["y"],
-                                      "name": one["lift"]}))
+                                      "name": one["lift"],
+                                      "search_radius": TIGHT}))
         # 모드는 «돌려라»(turn)와 «세워라»를 구분해서 준다. 그런데 이쪽은
         # 둘 다 build 로 처리했다. 이미 벨트가 선 칸에 build 는 못 하므로
         # 그 칸은 «영원히 할 일»로 남고, 순번마다 같은 여섯 칸이 다시
@@ -129,7 +145,8 @@ def lay(ai, who, which, shelf):
         # 돌리는 일은 세우는 일이 아니다. 걷고 다시 세워야 방향이 바뀐다.
         if one.get("turn"):
             plan.append(("demolish", {"x": one["x"], "y": one["y"],
-                                      "name": one["what"]}))
+                                      "name": one["what"],
+                                      "search_radius": TIGHT}))
         plan.append(("build", {"name": one["what"], "x": one["x"],
                                "y": one["y"], "direction": one.get("dir", 0)}))
     submit(ai, who, plan, strict=False)
