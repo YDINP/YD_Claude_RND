@@ -37,7 +37,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 
 PITCH = 3                 # 화로 2칸 + 사이 1칸. belts.lua 의 FURNACE_PITCH
-MARGIN = 1                # 구역 테두리에서 이만큼은 비워 둔다
+
+# 줄의 «첫 칸»은 구역 왼쪽 끝 그 자체다. 한 칸 안으로 들여 시작하면
+# 안전해 보이지만 그 한 칸이 위상을 바꾼다.
+#
+# belts.lua 의 out_arms 는 `smelt.x + FURNACE_PITCH * n` 에 선다. 화로가
+# 그 x 에 없으면 팔은 화로가 아니라 «화로 사이 빈칸»을 집는다. 실제로
+# 이미 선 화로 마흔 대는 x=40,43,... 인데 40 - 25 = 15 로 위상이 맞다 -
+# 여기서 26 부터 세었다면 마흔 대 전부를 «틀린 자리»로 판정했을 것이다.
+#
+# 여백은 안전이 아니다. 맞물려야 하는 곳에서 여백은 어긋남이다.
 
 # smelt.y 기준 상대 줄. belts.lua 의 feed_line() 과 «같은 숫자»여야 한다.
 #
@@ -63,8 +72,7 @@ def furnace_rows(smelt):
     계획해 둔 자리에 그대로 맞는다. 내가 따로 벨트를 깔 이유가 없어진다.
     """
     x0, y, x1, _ = _box(smelt)
-    return [(y + ROW_A, x0 + MARGIN, x1 - MARGIN),
-            (y + ROW_B, x0 + MARGIN, x1 - MARGIN)]
+    return [(y + ROW_A, x0, x1), (y + ROW_B, x0, x1)]
 
 
 def spots(rows, pitch=PITCH):
