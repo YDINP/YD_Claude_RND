@@ -630,8 +630,13 @@ def main() -> int:
                     free = free[1:]
 
             # 1. 세워 둔 것부터 돌린다.
+            #
+            # 앞 단계들이 사람을 다 써 버렸을 수 있다. 일꾼이 한 명이면
+            # 늘 그렇다 - 화로를 세우러 보내고 나면 손이 없다. 「할 일이
+            # 있나」와 「할 사람이 있나」를 따로 묻지 않으면 그 순번은
+            # IndexError 로 통째로 날아간다.
             sick = stalled(ai)
-            if sick and tend(ai, free[0], shelf, sick):
+            if sick and free and tend(ai, free[0], shelf, sick):
                 free = free[1:]
                 if len(sick) > TEND_PER_TRIP and free:
                     tend(ai, free[0], shelf, sick[TEND_PER_TRIP:])
