@@ -269,6 +269,42 @@ def chests(reply, key):
     return out
 
 
+# 창고에 이만큼도 없으면 그 물건은 «굶은 것»이다.
+STARVED = 30
+
+
+def floor_for(item, starving):
+    """이 물건을 집으러 갈 만한 최소 더미.
+
+    PILE_FLOOR 는 「스물다섯도 안 쌓인 상자는 다녀올 값을 못 한다」는
+    규칙이다. 걸음을 아끼려고 둔 것인데, 창고가 그 물건으로 «굶고 있을
+    때»는 정반대로 일한다.
+
+        실측(21회차): 석탄 채굴기 여덟을 새로 세웠다. 석탄이 상자 다섯에
+                      5~6씩 스물일곱 개 들어왔다. 창고 석탄은 2.
+                      팔 서른다섯이 굶어 채굴기 열셋이 서 있었다.
+
+        보급 순찰: "coal 이 한 대 채울 만큼도 안 된다"
+
+    스물다섯을 못 채웠다고 아무도 안 갔다. 그 사이 온 공장이 섰다.
+    다녀올 값어치는 더미 크기가 아니라 «없을 때의 값»으로 정해진다 -
+    창고에 쌓여 있으면 여섯 개를 주우러 갈 일이 아니고, 창고가 비었으면
+    여섯 개도 주우러 갈 일이다.
+
+        아끼는 것이 멈추게 하면, 그 아낌이 가장 비싸다.
+    """
+    return 1 if item in starving else PILE_FLOOR
+
+
+def starving_items(reply, shelf):
+    """창고가 «굶고 있는» 물건들. 그 물건에는 최소 더미를 안 따진다."""
+    held = {}
+    for c in chests(reply, "depot"):
+        for k, n in c["held"].items():
+            held[k] = held.get(k, 0) + n
+    return {k for k in SHELF_OF if held.get(k, 0) < STARVED}
+
+
 def spendable(pile, item):
     """이 상자에서 «꺼내도 되는» 양.
 
@@ -437,9 +473,10 @@ def drain(ai, who, reply, shelf, at=None):
                 or (f["plate"] > 0 and (f["jammed"] or mismatched(f))))]
     # 가장 많이 쌓인 상자부터. 찬 상자는 그 뒤의 채굴기를 세우고 있으므로,
     # 아무 순서로 넷을 고르면 정작 막힌 곳이 계속 밀린다.
+    starving = starving_items(reply, shelf)
     piles = sorted(
         (p for p in chests(reply, "piles")
-         if any(n >= PILE_FLOOR and where(k, shelf, room)
+         if any(n >= floor_for(k, starving) and where(k, shelf, room)
                 for k, n in p["held"].items())),
         key=lambda p: -sum(n for k, n in p["held"].items()
                            if where(k, shelf, room)))
@@ -467,7 +504,7 @@ def drain(ai, who, reply, shelf, at=None):
             got[f["what"]] = got.get(f["what"], 0) + f["ore"]
     for p in route(here, piles[:8]):
         for item, n in p["held"].items():
-            if (n < PILE_FLOOR or not where(item, shelf, room)
+            if (n < floor_for(item, starving) or not where(item, shelf, room)
                     or got.get(item, 0) >= CARRY):
                 continue
             plan.append(("walk_to", {"x": p["x"] - 1, "y": p["y"] + 1}))
