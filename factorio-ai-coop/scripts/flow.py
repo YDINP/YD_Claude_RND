@@ -55,7 +55,26 @@ PER_TRIP = 14             # 한 걸음에 까는 칸 수
 #           걷기는 열네 번 됐고 세우기는 한 번도 안 됐다.
 #
 # 줄 안에서 한 칸을 고를 때는 너그러움이 곧 오작동이다.
+#
+# 다만 좁히기만 해서는 안 된다. 좌표계가 어긋나 있기 때문이다.
+#
+#   계획이 말하는 (28,-2)  = 타일 «모서리»
+#   벨트가 실제로 선 자리   = (28.5, -1.5) = 타일 «중심»
+#
+# 둘은 0.707 떨어져 있다. 반경 0.4 로 모서리를 찍으면 «아무것도» 안 잡힌다.
+# 그렇다고 0.75 로 넓히면 서쪽 이웃(27.5,-1.5)도 정확히 0.707 이라 둘 중
+# 무엇이 잡힐지 모른다 - 모서리는 네 타일이 만나는 자리라 애초에 한 칸을
+# 가리킬 수 없다.
+#
+#   한 칸을 가리키려면 그 칸의 «가운데»를 가리켜야 한다.
+#
+# 중심에서 재면 제 것은 0, 이웃은 1.0 이다. 그제야 0.4 가 뜻을 가진다.
 TIGHT = 0.4
+
+
+def middle(x, y):
+    """타일 번호를 그 칸의 «가운데»로. 한 칸만 집으려면 여기를 찍는다."""
+    return x + 0.5, y + 0.5
 PARTS = {                 # 한 칸에 드는 재료 (넉넉히)
     "transport-belt": {"iron-plate": 2},
     "inserter": {"iron-plate": 3, "copper-plate": 2},
@@ -131,7 +150,8 @@ def lay(ai, who, which, shelf):
         # 상자는 «벨트가 아직 없을 때의 임시 출구»이고, 벨트가 오면 그
         # 자리는 벨트 것이다.
         if one.get("lift"):
-            plan.append(("demolish", {"x": one["x"], "y": one["y"],
+            mx, my = middle(one["x"], one["y"])
+            plan.append(("demolish", {"x": mx, "y": my,
                                       "name": one["lift"],
                                       "search_radius": TIGHT}))
         # 모드는 «돌려라»(turn)와 «세워라»를 구분해서 준다. 그런데 이쪽은
@@ -144,7 +164,8 @@ def lay(ai, who, which, shelf):
         #
         # 돌리는 일은 세우는 일이 아니다. 걷고 다시 세워야 방향이 바뀐다.
         if one.get("turn"):
-            plan.append(("demolish", {"x": one["x"], "y": one["y"],
+            mx, my = middle(one["x"], one["y"])
+            plan.append(("demolish", {"x": mx, "y": my,
                                       "name": one["what"],
                                       "search_radius": TIGHT}))
         plan.append(("build", {"name": one["what"], "x": one["x"],
