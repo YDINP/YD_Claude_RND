@@ -101,9 +101,22 @@ def move(ai, who, pairs, shelf):
                      "iron-ore", "copper-ore", "stone", "coal"):
             plan.append(("take", {"name": item, "x": ox, "y": oy,
                                   "count": 100}))
-        # 한 칸만 집는다. 타일 «가운데»를 가리켜야 그 칸이 잡힌다.
-        plan.append(("demolish", {"x": ox + 0.5, "y": oy + 0.5,
-                                  "search_radius": TIGHT}))
+        # 가리킬 곳은 «그 건물의 중심»이고, 중심이 어디인가는 «크기»가
+        # 정한다.
+        #
+        #   1x1(벨트.팔.나무) : 중심 = 타일 가운데 = 정수 + 0.5
+        #   2x2(화로.포탑)     : 중심 = 타일 «모서리» = 정수 그대로
+        #
+        # 실측: 화로의 position 은 정확히 (-45.0, 10.0) 이고
+        #       바운딩박스는 (-45.7,9.3)-(-44.3,10.7) 이다.
+        #       radius 0.4 로 (-45,10) 을 찍으면 1개, (-44.5,10.5) 는 0개.
+        #
+        # 앞서 벨트에서 「가운데를 찍어라」를 배우고 그것을 규칙으로
+        # 외웠더니, 여기서는 그 규칙이 정확히 틀렸다. 걷기가 매번 헛돌아
+        # 같은 이사 명령을 세 번 되풀이했고, 화로는 한 대도 안 움직였다.
+        #
+        #     외울 것은 「+0.5」가 아니라 «중심을 찍는다»였다.
+        plan.append(("demolish", {"x": ox, "y": oy, "search_radius": TIGHT}))
         plan.append(("walk_to", {"x": nx + 2, "y": ny + 2}))
         plan.append(("build", {"name": "stone-furnace", "x": nx, "y": ny}))
         plan.append(("insert", {"name": "coal", "x": nx, "y": ny,
