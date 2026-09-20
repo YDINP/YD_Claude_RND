@@ -38,6 +38,31 @@ TURRET_COST = {"iron-plate": 40, "copper-plate": 10}   # 기어까지 친 넉넉
 AMMO_EACH = 20            # 포탑 한 대에 채워 두는 탄약
 AMMO_STOCK = 200          # 연구를 기다리는 동안 쌓아 둘 탄약
 PER_TRIP = 3              # 한 걸음에 세우는 포탑
+
+# 방어선은 «우리 건물이 있는 곳»을 따라간다.
+#
+#     사용자: "기관포탑이 아래쪽만 깔렸고, 구리,돌채광지가 방어받지
+#              못할듯. 방어는 사방으로 해야하고, 내부에도 간간히 섞어야함.
+#              우리건물이 있는곳을 기지 내부라고 판단하고 기관포탑
+#              방어선을 구축해야함."
+#
+# 그전까지는 「적이 오는 쪽」 한 면만 골랐다. 실측(20회차): 건물이
+# (-53,-26)~(87,90) 에 퍼져 있는데 포탑 열두 대가 전부 남쪽 세 줄에
+# 몰려 있었고, 동쪽과 북쪽은 비어 있었으며, 돌.구리 초소는 선 밖이었다.
+#
+# 한 면만 지키는 것은 「어디서 오는지 안다」는 전제 위에 선다. 확장은
+# 그 전제를 지키지 않는다 - 17회차가 사방에서 뚫렸다.
+# 묶는 거리. 실측(20회차 건물 65채):
+#   45 -> 구역 1개, 160x136 을 두르는 데 41자리. 대부분이 빈 땅이다
+#   30 -> 구역 5개, 같은 39자리로 59x51 / 22x24 / 29x28 ... 을 두른다
+# 자리 수는 같은데 «지킬 것 옆»에 선다. 16회차가 포탑 열두 대로 빈 땅을
+# 지키다 밭에서 둘을 잃은 것이 큰 상자의 값이다.
+LINK = 30                 # 이보다 가까운 건물끼리는 «한 구역»
+STANDOFF = 10             # 건물에서 이만큼 밖에 선다
+RING_GAP = 18             # 포탑 사이. 기관포탑 사거리가 18이라 틈이 없다
+INNER_GAP = 34            # 안쪽은 성기게. 테두리가 뚫린 날 시간을 번다
+INNER_NEAR = 26           # 지킬 것이 이만큼 안에 없으면 빈 땅이다
+CLOSE = 12                # 이미 선 포탑과 이만큼 겹치면 안 세운다
 # 성장 몫은 남기되, «남기느라 한 발도 못 만드는» 것은 지난 판의 재현이다.
 # 채굴기+상자 여섯 대 분량(6 x 17)이면 증식은 안 끊긴다.
 KEEP_PLATE = 120
@@ -99,26 +124,151 @@ def idle(ai, names):
             and not (rows[n].get("current") or rows[n].get("queued"))]
 
 
-def seats(ai, who):
-    """어디에 세우나. 테두리 -> 밭 초소 -> 안쪽 순.
+GUARDED = ("mining-drill", "furnace", "container", "lab", "boiler",
+           "generator", "offshore-pump", "assembling-machine", "electric-pole")
 
-    16회차는 포탑 열두 대로 «빈 땅»을 지키다 밭에서 둘을 잃었고,
-    17회차는 한 대도 못 세우고 전멸했다. 자리는 구역이 아니라 «지킬
-    것이 있는 곳»을 따라간다.
+
+def _rows(v):
+    return list(v.values()) if isinstance(v, dict) else list(v or [])
+
+
+def holdings(ai):
+    """지켜야 할 것들이 어디 있나. 포탑 자리는 여기서 나온다."""
+    reply = ai.lua("""(function()
+      local s = game.surfaces[1]
+      local out = {}
+      for _, e in pairs(s.find_entities_filtered{
+            type = {"mining-drill", "furnace", "container", "lab", "boiler",
+                    "generator", "offshore-pump", "assembling-machine"},
+            force = game.forces.player}) do
+        out[#out+1] = string.format("%.0f|%.0f", e.position.x, e.position.y)
+      end
+      return out
+    end)()""")
+    return [tuple(float(v) for v in r.split("|")) for r in _rows(reply)]
+
+
+def standing_turrets(ai):
+    reply = ai.lua("""(function()
+      local s = game.surfaces[1]
+      local out = {}
+      for _, t in pairs(s.find_entities_filtered{name = "gun-turret",
+                force = game.forces.player}) do
+        out[#out+1] = string.format("%.0f|%.0f", t.position.x, t.position.y)
+      end
+      return out
+    end)()""")
+    return [tuple(float(v) for v in r.split("|")) for r in _rows(reply)]
+
+
+def clusters(points, link=LINK):
+    """가까운 건물끼리 묶는다. 떨어져 있는 초소는 «자기 울타리»를 받는다.
+
+    돌밭이 기지에서 90칸이면 그것은 기지의 남쪽 변이 아니라 «다른 구역»
+    이다. 하나로 묶어 버리면 그 사이 빈 땅까지 포탑으로 두르게 된다.
     """
-    d = ai.defence(who)
-    if d.get("error"):
-        return []
+    groups: list[list] = []
+    for p in points:
+        hit = [g for g in groups
+               if any(abs(p[0] - q[0]) <= link and abs(p[1] - q[1]) <= link
+                      for q in g)]
+        if not hit:
+            groups.append([p])
+            continue
+        first = hit[0]
+        first.append(p)
+        for other in hit[1:]:
+            first.extend(other)
+            groups.remove(other)
+    return groups
+
+
+def ring(box, gap=RING_GAP):
+    """네 변을 «전부» 돈다. 한 면만 지키는 것은 어디서 오는지 안다는 뜻이다."""
+    left, top, right, bottom = box
     out = []
-    for key in ("seats", "posts", "inner"):
-        rows = d.get(key) or []
-        rows = list(rows.values()) if isinstance(rows, dict) else list(rows)
-        for row in rows:
-            for seat in ((row.get("seats") or []) if key == "posts" else [row]):
-                if isinstance(seat, dict) and seat.get("x") is not None:
-                    out.append({"x": float(seat["x"]), "y": float(seat["y"]),
-                                "why": key})
+    x = left
+    while x <= right:
+        out += [(x, top), (x, bottom)]
+        x += gap
+    if out and out[-2][0] < right - gap / 2:
+        out += [(right, top), (right, bottom)]
+    y = top + gap
+    while y < bottom:
+        out += [(left, y), (right, y)]
+        y += gap
     return out
+
+
+def inside(box, points, gap=INNER_GAP, near=INNER_NEAR):
+    """안쪽에도 «간간히». 다만 지킬 것이 곁에 있는 자리만."""
+    left, top, right, bottom = box
+    out = []
+    y = top + gap
+    while y < bottom:
+        x = left + gap
+        while x < right:
+            if any(abs(x - p[0]) <= near and abs(y - p[1]) <= near
+                   for p in points):
+                out.append((x, y))
+            x += gap
+        y += gap
+    return out
+
+
+def plan_seats(ai):
+    """사방 테두리 + 안쪽. 구역마다 따로 두른다."""
+    ours = holdings(ai)
+    if not ours:
+        return []
+    have = standing_turrets(ai)
+    wanted = []
+    for group in sorted(clusters(ours), key=len, reverse=True):
+        box = (min(p[0] for p in group) - STANDOFF,
+               min(p[1] for p in group) - STANDOFF,
+               max(p[0] for p in group) + STANDOFF,
+               max(p[1] for p in group) + STANDOFF)
+        for at in ring(box):
+            wanted.append({"x": at[0], "y": at[1], "why": "테두리"})
+        for at in inside(box, group):
+            wanted.append({"x": at[0], "y": at[1], "why": "안쪽"})
+
+    # 이미 선 것과 겹치거나, 자기들끼리 겹치는 자리는 뺀다.
+    out = []
+    taken = list(have)
+    for seat in wanted:
+        at = (seat["x"], seat["y"])
+        if any(abs(at[0] - t[0]) < CLOSE and abs(at[1] - t[1]) < CLOSE
+               for t in taken):
+            continue
+        taken.append(at)
+        out.append(seat)
+    return out
+
+
+def buildable(ai, spots):
+    """놓을 수 있는 자리만. 물.절벽.광맥 위는 뺀다."""
+    if not spots:
+        return []
+    body = ", ".join(f"{{{s['x']},{s['y']}}}" for s in spots[:60])
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local out = {}
+      local spots = { %s }
+      for i, p in ipairs(spots) do
+        local ore = s.count_entities_filtered{
+          area = {{p[1] - 1, p[2] - 1}, {p[1] + 1, p[2] + 1}}, type = "resource"}
+        out[i] = (ore == 0 and s.can_place_entity{name = "gun-turret",
+                  position = {p[1], p[2]}, force = f}) and 1 or 0
+      end
+      return out
+    end)()""" % body)
+    ok = _rows(reply)
+    return [s for i, s in enumerate(spots[:60]) if i < len(ok) and int(ok[i])]
+
+
+def seats(ai, who):
+    return buildable(ai, plan_seats(ai))
 
 
 def stockpile(ai, who, shelf, have):
