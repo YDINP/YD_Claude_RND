@@ -439,9 +439,25 @@ local function missing(surface, force, tiles, what)
       -- 광맥 «위에» 깔린다. 그 칸이 막힌 이유는 항상 광맥이 아닌 다른
       -- 무엇이다. `pairs()` 순서가 정해져 있지 않아 광맥이 먼저 걸리면
       -- 엉뚱한 이름이 적혔다. resource 타입은 애초에 후보에서 뺀다.
+      -- «그 칸»을 덮은 것을 찾는다. 한 점과 반경이 아니라 «칸»으로 묻는다.
+      --
+      -- 반경 0.4 로 타일 가운데를 찍고 있었다. 그러면 제 몸으로 그 칸을
+      -- 덮고 있어도 «중심»이 0.4 밖이면 안 잡힌다.
+      --
+      --     실측(21회차): tree-08 한 그루가 (-48.1, 33.2) 에 서서
+      --                   (-49,33) 과 (-48,33) 두 칸을 다 막고 있었다.
+      --                   타일 가운데에서 0.5 떨어져 있어 둘 다 「막힌 것
+      --                   없음(sweep)」으로 보고됐다.
+      --
+      -- 그 두 칸은 밭에서 제련 줄로 오는 마지막 고리였다. 무리는 매 순번
+      -- 「깔 자리가 있다」고 듣고 가서 세우려다 실패했고, 화로 열셋이
+      -- 굶는 동안 아무도 «왜»를 몰랐다 - 설계가 없다고 한 것이 있었으니까.
+      --
+      -- 한 점과 반경으로 묻는 것은 언제나 「그 크기와 자리를 안다」는
+      -- 가정이다. 칸으로 물으면 가정이 필요 없다.
       local why, sweepable, lift = nil, true, nil
       for _, e in pairs(surface.find_entities_filtered {
-        position = centre(tile.x, tile.y), radius = 0.4,
+        area = { { tile.x, tile.y }, { tile.x + 1, tile.y + 1 } },
       }) do
         if e.type ~= "character" and e.type ~= "item-entity"
            and e.type ~= "resource" then
