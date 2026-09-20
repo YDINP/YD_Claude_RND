@@ -383,9 +383,21 @@ def plan_seats(ai):
     # 포탑이 43에서 47로 늘도록 덮인 수는 86 그대로였다.
     #
     #     급한 것을 목록 «뒤»에 두면 급하지 않은 것과 같다.
-    for x, y, _gap in unguarded(ai)[:12]:
-        for dx, dy in ((0, -3), (3, 0), (0, 3), (-3, 0)):
-            wanted.append({"x": int(x + dx), "y": int(y + dy), "why": "구멍"})
+    # 한 칸 건너 네 곳만 짚었더니 빈손이었다 - 빽빽한 밭에서는 건물
+    # 옆 세 칸에도 다른 건물이 있다. 「세울 자리가 안 나온다」가 매 순번
+    # 찍히는 동안 구멍은 그대로였다.
+    #
+    # 사거리가 18 이므로 열 칸쯤 떨어져도 그 건물을 덮는다. 가까운 데부터
+    # 멀리까지, 네 방향과 대각선까지 짚는다 - buildable() 이 어차피 거를
+    # 것이므로 후보는 넉넉해도 값이 안 든다.
+    RINGS = (3, 6, 9, 12)
+    STEPS = ((0, -1), (1, 0), (0, 1), (-1, 0),
+             (1, -1), (1, 1), (-1, 1), (-1, -1))
+    for x, y, _gap in unguarded(ai)[:8]:
+        for r in RINGS:
+            for dx, dy in STEPS:
+                wanted.append({"x": int(x + dx * r), "y": int(y + dy * r),
+                               "why": "구멍"})
 
     for group in groups:
         box = (min(p[0] for p in group) - STANDOFF,
