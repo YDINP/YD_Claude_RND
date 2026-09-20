@@ -51,6 +51,26 @@ from guard import covered                # noqa: E402
 # 것이다. 덮인 비율이 이보다 낮으면 늘리지 않고 기다린다.
 SAFE_ENOUGH = 80
 
+# 늘리는 것 «자체»가 물결을 불러들인다.
+#
+#     사용자: "공습은 공해농도가짙을수록 더 많고 쌘애들이 오니까 이점
+#              유의하고. 채굴기는 너무막 늘리기보단 병목/부족 현상이
+#              없을정도로 천천히 늘려가는게 좋음."
+#
+# 실측(여섯이 죽은 직후): 기지 둘레 공해 합 32731, 가장 짙은 칸 258 이
+# (80,-16) - 사람들이 죽은 «바로 그 동쪽 밭»이다. 진화도 0.2219.
+#
+# 버너 채굴기는 전기 채굴기와 달리 제 몸으로 석탄을 태운다. 181대를
+# 세워 놓으면 181개의 굴뚝이 선 것과 같다. 공해는 퍼져서 둥지에 닿고,
+# 둥지는 «공해가 오는 쪽»으로 물결을 보낸다.
+#
+#     많이 캐려고 늘린 것이 «많이 맞는» 이유가 된다.
+#
+# 그래서 재료가 있다고 늘리지 않는다. 모자랄 때만 늘린다.
+POLLUTION_CEIL = 220      # 기지 칸 공해가 이보다 짙으면 더 안 늘린다
+HUNGRY_FURNACES = 3       # 화로가 이만큼 굶어야 «채굴기»를 늘린다
+ORE_BACKLOG = 2500        # 광석이 이만큼 쌓여야 «화로»를 늘린다
+
 DRILL = "burner-mining-drill"
 CHEST = "iron-chest"
 DRILL_COST = {"iron-plate": 9, "stone": 5}
@@ -415,6 +435,32 @@ def priming(ai, ore, names):
     return False
 
 
+def pressure(ai, depot):
+    """지금 무엇이 모자란가. 늘릴 «이유»가 없으면 늘리지 않는다.
+
+    화로가 굶으면 캐는 쪽이 모자란 것이고, 광석이 쌓이면 녹이는 쪽이
+    모자란 것이다. 둘 다 아니면 지금 판은 균형이 맞은 것이다 - 그때
+    늘리는 것은 공해만 늘리는 일이다.
+    """
+    dx, dy = depot
+    return ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local hungry = 0
+      for _, fu in pairs(s.find_entities_filtered{type = "furnace", force = f}) do
+        local inv = fu.get_inventory(defines.inventory.furnace_source)
+        if inv and inv.is_empty() then hungry = hungry + 1 end
+      end
+      local waiting = 0
+      for _, c in pairs(s.find_entities_filtered{type = "container", force = f}) do
+        local held = c.get_inventory(defines.inventory.chest)
+        waiting = waiting + held.get_item_count("iron-ore")
+                          + held.get_item_count("copper-ore")
+      end
+      return { hungry = hungry, waiting = waiting,
+               smoke = math.floor(s.get_pollution({%d, %d})) }
+    end)()""" % (dx, dy))
+
+
 def smelt_row(ai, agent, want, smelt_xy=None):
     """화로가 몇 대 섰고, 다음 `want` 대를 «어디에» 세울 수 있나.
 
@@ -630,7 +676,15 @@ def main() -> int:
             #     `--smelt` 는 구역이 아직 없을 때만 쓰는 대체 좌표다 -
             #     smelt_row() 가 그 우선순위를 알아서 가른다. 구역도
             #     대체 좌표도 없으면 None 이 와서 이 단계를 건너뛴다.
-            if free:
+            # 무엇이 모자란지 «먼저» 본다. 모자란 것이 없으면 늘리는 일은
+            # 공해만 늘린다 - 그리고 공해는 물결을 부른다.
+            push = pressure(ai, (dx, dy))
+            smoke = int(push["smoke"])
+            hungry = int(push["hungry"])
+            waiting = int(push["waiting"])
+            choked = smoke >= POLLUTION_CEIL
+
+            if free and waiting >= ORE_BACKLOG and not choked:
                 row = smelt_row(ai, free[0], FURNACE_PER_TRIP, smelt)
                 if row and widen(ai, free[0], shelf, smelt, row,
                                   stock(ai, (dx, dy))):
@@ -678,7 +732,16 @@ def main() -> int:
                 # 연구소가 아직 없으면 발전 사슬 몫을 남긴다.
                 spare = 0 if int(st["lab"]) else SPARK_RESERVE
                 usable = int(st["plate"]) - spare
-                if free and usable >= 17 and int(st["coal"]) >= FUEL_EACH:
+                # 화로가 굶는다고 «캐는 쪽»이 모자란 것은 아니다.
+                #
+                #   실측: 굶는 화로 8대, 그런데 밭 상자에 쌓인 광석 88677.
+                #
+                # 캔 것이 산더미인데 화로가 굶는다면 모자란 것은 채굴기가
+                # 아니라 «나르는 길»이다. 그때 채굴기를 늘리면 산더미가
+                # 커지고 공해가 짙어질 뿐이다 - 그리고 공해는 물결을 부른다.
+                short_of_ore = hungry >= HUNGRY_FURNACES and waiting < ORE_BACKLOG
+                if (free and usable >= 17 and int(st["coal"]) >= FUEL_EACH
+                        and short_of_ore and not choked):
                     # 돌이 마르면 전부 마른다. 돌밭을 먼저 연다.
                     short = int(st["stone"]) < PER_TRIP * DRILL_COST["stone"]
                     ore = "stone" if (short and "stone" in FIELD) else order[turn % len(order)]
@@ -686,8 +749,18 @@ def main() -> int:
                     sow(ai, free[0], shelf, dict(FIELD[ore]),
                         dict(st, plate=usable))
                 elif not sick:
-                    why = ("발전 사슬 몫을 남긴다" if spare and int(st["plate"]) > 0
-                           else "제련이 따라오길 기다린다")
+                    if choked:
+                        why = f"공해 {smoke} 가 짙다 - 늘리면 물결이 커진다"
+                    elif waiting >= ORE_BACKLOG:
+                        why = (f"광석 {waiting}이 밭에 쌓여 있다 - 모자란 것은 "
+                               f"채굴기가 아니라 나르는 길이다")
+                    elif hungry < HUNGRY_FURNACES:
+                        why = (f"굶는 화로 {hungry}대뿐 - 캐는 쪽은 모자라지 "
+                               f"않다")
+                    else:
+                        why = ("발전 사슬 몫을 남긴다"
+                               if spare and int(st["plate"]) > 0
+                               else "제련이 따라오길 기다린다")
                     print(f"  판 {st['plate']}(쓸 수 있는 몫 {max(0, usable)}) "
                           f"돌 {st['stone']} 석탄 {st['coal']} - {why}")
         except RconError as exc:
