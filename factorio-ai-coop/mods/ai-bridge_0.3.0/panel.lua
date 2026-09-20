@@ -87,6 +87,11 @@ local CHAT_CLOSE = "ai_crew_chat_close"
 
 local CHAT_FOLLOW = "ai_crew_chat_follow"
 
+-- 이름을 눌러 그 요원을 보러 가는 버튼. 접두사로 등록해 두면 GUI 클릭
+-- 핸들러가 어느 이름인지 문자열만 잘라내면 되고, 이름마다 별도 핸들러를
+-- 두지 않아도 된다.
+local WATCH_PREFIX = "ai_crew_watch_"
+
 -- 에이전트 여섯이 동시에 말하면 게임 채팅은 흘러가 버리고, 사람이 쓴 줄은
 -- 그 사이에 묻힌다. 그래서 따로 모아둔다. 링버퍼라 세션이 길어져도 메모리는
 -- 평평하다.
@@ -123,8 +128,20 @@ local function panel_rows(frame)
       local b = body(a)
       local color = COLORS[(((a.index or index) - 1) % #COLORS) + 1]
 
-      local tag = grid.add { type = "label", caption = name }
+      -- 라벨은 클릭 이벤트가 오지 않는다. 버튼으로 바꾸되, 이 스타일
+      -- 프로토타입은 새로 만든 것이 아니라 베이스 게임 core 스타일에 이미
+      -- 있는 것이다(패딩 0, 그래픽 세트 없음) - 그 위에 크기와 글자색만
+      -- 얹어서 라벨처럼 보이게 한다.
+      local tag = grid.add {
+        type = "button", name = WATCH_PREFIX .. name, caption = name,
+        style = "transparent_button",
+      }
       tag.style.font_color = color
+      tag.style.minimal_width = 0
+      tag.style.minimal_height = 0
+      tag.style.padding = 0
+      tag.style.horizontal_align = "left"
+      tag.tooltip = "눌러서 이 요원 시점으로 이동 (다시 누르면 해제)"
 
       grid.add { type = "label", caption = a.focus or "-" }
 
@@ -266,6 +283,38 @@ local function build_chat(player)
   return frame
 end
 
+-- 크루 패널에서 이름을 누르면 그 요원의 캐릭터로 카메라를 옮긴다.
+--
+-- `LuaPlayer.centered_on` 에 캐릭터를 쓰면 게임이 알아서 원격 시점(remote
+-- view)으로 바꾸고 그 위치를 비춘다. 문제는 원격 시점의 컨트롤러가
+-- `defines.controllers.remote` 라는 것 - 이동도 조작도 안 되는 컨트롤러다.
+-- 그대로 두면 사람은 자기 캐릭터를 다시는 못 움직인다. 그래서 토글이다 -
+-- 지금 보고 있는 바로 그 요원을 다시 누르면 `exit_remote_view` 로 풀어
+-- 원래 컨트롤러로 돌아간다.
+--
+-- 다른 요원을 누르면(이미 원격 시점이더라도) 그냥 카메라만 옮겨 준다 -
+-- 매번 풀었다 다시 거는 것보다 자연스럽다.
+local function watch(player, name)
+  local a = Core.agent(name)
+  local b = a and body(a)
+  if not b then
+    player.print("[AI 크루] " .. name .. " 은(는) 지금 볼 몸이 없습니다.")
+    return
+  end
+
+  if player.controller_type == defines.controllers.remote and player.centered_on == b then
+    pcall(function() player.exit_remote_view() end)
+    return
+  end
+
+  -- API 이름은 확인했지만, 버전이나 상황(사설 서버, 플랫폼 등)에 따라
+  -- 실패할 수도 있는 자리다. 실패해도 크루 패널 자체가 죽으면 안 된다.
+  local ok = pcall(function() player.centered_on = b end)
+  if not ok then
+    player.print("[AI 크루] " .. name .. " 시점으로 이동할 수 없습니다.")
+  end
+end
+
 local function build_panel(player)
   if player.gui.left[PANEL_NAME] then player.gui.left[PANEL_NAME].destroy() end
   local frame = player.gui.left.add {
@@ -288,6 +337,7 @@ return {
   CHAT_TOGGLE = CHAT_TOGGLE,
   CREW_LOG = CREW_LOG,
   PANEL_NAME = PANEL_NAME,
+  WATCH_PREFIX = WATCH_PREFIX,
   build_chat = build_chat,
   build_panel = build_panel,
   chat_rows = chat_rows,
@@ -296,4 +346,5 @@ return {
   panel_rows = panel_rows,
   refresh_marker = refresh_marker,
   remember_line = remember_line,
+  watch = watch,
 }

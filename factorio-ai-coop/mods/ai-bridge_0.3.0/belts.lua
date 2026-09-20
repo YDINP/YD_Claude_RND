@@ -89,7 +89,12 @@ local STEPS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
 -- 있나」만 틀린, 가장 찾기 어려운 모양이 됐다.
 local function centre(x, y) return { x + 0.5, y + 0.5 } end
 
-local function passable(surface, force, x, y)
+-- guard 는 «이 칸이 남의 줄인가»를 묻는 함수다(제련 기둥 예약, smelt_guard
+-- 참고). 예약된 칸은 이미 서 있는 벨트가 있어도 지나갈 수 없는 칸으로
+-- 친다 - 남의 방향(동쪽)을 빌려 쓰면 그 자리는 두 흐름이 서로 다른
+-- 방향을 요구하게 된다.
+local function passable(surface, force, x, y, guard)
+  if guard and guard(x, y) then return false end
   local here = surface.find_entities_filtered {
     position = centre(x, y), radius = 0.4, name = BELT, limit = 1,
   }[1]
@@ -136,7 +141,7 @@ end
 -- 대각선이 된다. 등뼈와 줄기를 이어붙이는 자리도 마찬가지다.
 --
 -- 한 칸만 끼우면 이어진다. 두 모서리 중 놓을 수 있는 쪽을 고른다.
-local function stitch(surface, force, tiles)
+local function stitch(surface, force, tiles, guard)
   if not tiles or #tiles < 2 then return tiles end
   local out = {}
   for i = 1, #tiles do
@@ -151,8 +156,8 @@ local function stitch(surface, force, tiles)
         local a = { x = nxt.x, y = tiles[i].y }
         local b = { x = tiles[i].x, y = nxt.y }
         local pick = a
-        if not passable(surface, force, a.x, a.y)
-           and passable(surface, force, b.x, b.y) then
+        if not passable(surface, force, a.x, a.y, guard)
+           and passable(surface, force, b.x, b.y, guard) then
           pick = b
         end
         out[#out + 1] = { x = pick.x, y = pick.y }
@@ -167,7 +172,7 @@ local function stitch(surface, force, tiles)
   return out
 end
 
-local function walk(surface, force, from, goal)
+local function walk(surface, force, from, goal, guard)
   local function key(x, y, d) return x .. ":" .. y .. ":" .. d end
 
   -- 덱. 앞뒤로 넣고 앞에서 뺀다.
@@ -222,7 +227,7 @@ local function walk(surface, force, from, goal)
         or (turns[k] == cost + add and (steps[k] or math.huge) > walked + 1)
       if better and turns[k] ~= -1 then
         local open = (nx == from.x and ny == from.y)
-                     or passable(surface, force, nx, ny)
+                     or passable(surface, force, nx, ny, guard)
         if open then
           turns[k] = cost + add
           steps[k] = walked + 1
@@ -254,17 +259,17 @@ local function walk(surface, force, from, goal)
   end
   -- 마지막 칸(제련 구역 줄머리)은 내리는 줄이 맡는다. 두 번 세지 않는다.
   tiles[#tiles] = nil
-  return stitch(surface, force, tiles), best_gap, best_turn
+  return stitch(surface, force, tiles, guard), best_gap, best_turn
 end
 
 -- 시작점이 막혀 있으면 가장 가까운 빈 칸으로 옮긴다. 채굴기 밭 한복판에서
 -- 줄을 시작할 수는 없다.
-local function open_spot(surface, force, at)
+local function open_spot(surface, force, at, guard)
   for r = 0, 12 do
     for dx = -r, r do
       for dy = -r, r do
         if math.abs(dx) == r or math.abs(dy) == r then
-          if passable(surface, force, at.x + dx, at.y + dy) then
+          if passable(surface, force, at.x + dx, at.y + dy, guard) then
             return { x = at.x + dx, y = at.y + dy }
           end
         end
@@ -320,6 +325,71 @@ local function feed_line(smelt)
   return into, arms, { x = smelt.x - 1, y = y }, out_lane, out_arms
 end
 
+-- 제련 기둥이 «자기 것»으로 이미 잡아 둔 자리. smelt.y 기준 상대 줄이고,
+-- scripts/rows.py 의 LANES/ARMS 와 같은 숫자를 쓴다 - 숫자가 두 곳에서
+-- 갈라지면 이번 사고가 그대로 되풀이된다.
+--
+-- 실측(게임): smelt={x=25,y=14,w=38,h=16}, depot={x=50,y=15,w=12,h=5}.
+-- 창고 구역이 제련 구역 «안에» 있었다. depot_line 은 이것을 모르고 제
+-- 격자(depot.y..depot.y+4)를 그대로 깔았고, 그 격자가 제련 기둥의 벨트
+-- 줄·팔 줄과 같은 칸에 앉았다. 사용자가 사진을 보고 물었다: "이렇게두면
+-- 인서터설치는 어떻게하게?" - 화로 바로 옆 칸이 남의 벨트면 팔이 설
+-- 자리가 없다.
+--
+-- 창고 구역은 옮기지 않는다(옮기면 이미 깐 길이 전부 헛것이 된다). 대신
+-- 제련 기둥이 쓰는 줄을 다른 흐름이 «계획에 넣지 못하게» 막는다.
+local SMELT_LANES = { -3, 2 }        -- 벨트 두 줄. feed_line 이 전체 폭에
+                                      -- 틈 없이 깐다 - 예외 없이 막는다.
+local SMELT_ARMS  = { -2, 1, 3 }     -- 팔 세 줄. 화로 기둥마다 한 칸뿐이다.
+local SMELT_BODY  = { -1, 0, 4, 5 }  -- 화로 몸통 두 줄. 279행 주석대로
+                                      -- 화로 줄 0 은 y-1,y 를, 줄 1 은
+                                      -- y+4,y+5 를 차지한다(2x2 라 기둥
+                                      -- x 와 그 옆 칸(x-1)을 먹는다).
+
+-- 이 x 가 화로 기둥 자리(= smelt.x + FURNACE_PITCH*n, 밭 폭 안)인가.
+-- 기둥 «사이» 칸은 smelt 가 쓸 일이 없는 자리다 - 실측: x=59 에 선 세로
+-- 벨트가 그런 자리였고, 지나가도 아무 팔도 안 막았다. 그러니 그런
+-- 칸만은 남의 흐름이 지나가도 된다.
+local function on_furnace_column(smelt, x)
+  local wide = FURNACE_PITCH * (FURNACE_ROW - 1)
+  local off = x - smelt.x
+  return off >= 0 and off <= wide and off % FURNACE_PITCH == 0
+end
+
+-- smelt 구역이 아직 없으면(nil) 아무것도 막지 않는다 - 화로를 세우기
+-- 전까지는 막을 줄도 없다.
+local function smelt_guard(smelt)
+  if not smelt then return nil end
+  local wide = FURNACE_PITCH * (FURNACE_ROW - 1)
+  local lane_x0, lane_x1 = smelt.x - 1, smelt.x - 1 + wide
+  return function(x, y)
+    local dy = y - smelt.y
+    for _, d in pairs(SMELT_LANES) do
+      if dy == d then return x >= lane_x0 and x <= lane_x1 end
+    end
+    for _, d in pairs(SMELT_ARMS) do
+      if dy == d then return on_furnace_column(smelt, x) end
+    end
+    for _, d in pairs(SMELT_BODY) do
+      if dy == d then
+        return on_furnace_column(smelt, x) or on_furnace_column(smelt, x + 1)
+      end
+    end
+    return false
+  end
+end
+
+-- 계획에서 그 칸만 뺀다. 이미 거기 선 것은 안 건드린다 - 걷어내는 일은
+-- 이 함수가 할 일이 아니다(그건 따로 시킨다).
+local function drop_guarded(tiles, guard)
+  if not guard then return tiles end
+  local out = {}
+  for _, t in pairs(tiles) do
+    if not guard(t.x, t.y) then out[#out + 1] = t end
+  end
+  return out
+end
+
 -- 아직 없는 것만. 이미 선 벨트는 «이미 해둔 일»이다.
 -- 벨트 자리에 앉아 있을 때 «걷어내도 되는» 것.
 --
@@ -362,11 +432,19 @@ local function missing(surface, force, tiles, what)
       --
       -- 같은 함정을 화로 자리에서 이미 한 번 겪었다. 그때도 범인은 채굴기가
       -- 흘린 광석이었다. 「못 놓는다」와 「치우면 놓는다」는 다른 말이다.
+      --
+      -- 실측: (74,-12) 가 막혔다고 나왔는데 why 에 적힌 것은 "iron-ore"
+      -- 였다. 그런데 진짜 막은 것은 그 위에 선 burner-mining-drill 이었다
+      -- (2x2 라 자기 몸 옆칸까지 먹는다). 광맥은 벨트를 막지 않는다 - 벨트는
+      -- 광맥 «위에» 깔린다. 그 칸이 막힌 이유는 항상 광맥이 아닌 다른
+      -- 무엇이다. `pairs()` 순서가 정해져 있지 않아 광맥이 먼저 걸리면
+      -- 엉뚱한 이름이 적혔다. resource 타입은 애초에 후보에서 뺀다.
       local why, sweepable, lift = nil, true, nil
       for _, e in pairs(surface.find_entities_filtered {
         position = centre(tile.x, tile.y), radius = 0.4,
       }) do
-        if e.type ~= "character" and e.type ~= "item-entity" then
+        if e.type ~= "character" and e.type ~= "item-entity"
+           and e.type ~= "resource" then
           why, sweepable = e.name, false
           -- 「못 놓는다」와 「치우면 놓는다」를 가른 것과 같은 이유로,
           -- 「걷어내면 놓는다」도 갈라야 한다. 우리 상자가 한 칸 앉아
@@ -403,7 +481,7 @@ end
 -- 흐름마다 제 길을 따로 기억한다(storage.lines). 길은 한 번 정하면 남는다 -
 -- 부를 때마다 다시 찾으면 깐 벨트가 늘 «새 길 위에 없는» 벨트가 되고,
 -- 영원히 깔면서 영원히 못 끝낸다. 실제로 마흔 칸을 그렇게 버렸다.
-local function route_for(key, surface, force, from, goal)
+local function route_for(key, surface, force, from, goal, guard)
   storage.lines = storage.lines or {}
   local kept = storage.lines[key]
   if kept and kept.plan == PLAN and kept.goal
@@ -411,8 +489,8 @@ local function route_for(key, surface, force, from, goal)
      and kept.tiles and #kept.tiles > 0 then
     return kept.tiles, kept.short, kept.bends
   end
-  local start = open_spot(surface, force, from)
-  local tiles, short, bends = walk(surface, force, start, goal)
+  local start = open_spot(surface, force, from, guard)
+  local tiles, short, bends = walk(surface, force, start, goal, guard)
   if not tiles then return nil end
   storage.lines[key] = { goal = goal, tiles = tiles, short = short,
                          bends = bends, plan = PLAN }
@@ -428,7 +506,7 @@ end
 --
 -- 길을 통째로 버리는 것은 이미 깐 것을 통째로 버리는 것이다. 막힌 칸이
 -- 셋이면 셋만 돌아가면 된다. 앞뒤의 성한 칸을 잡아 그 사이만 다시 잇는다.
-local function repair(surface, force, tiles)
+local function repair(surface, force, tiles, guard)
   local fixed, patched = {}, 0
   local i = 1
   while i <= #tiles do
@@ -441,7 +519,9 @@ local function repair(surface, force, tiles)
         blocked = true
       end
     end
-    if not blocked and not passable(surface, force, tiles[i].x, tiles[i].y) then
+    -- guard 는 아직 아무것도 안 섰어도 막는다 - 제련 기둥의 줄은 «비어
+    -- 있어도» 남의 것이 아니다.
+    if not blocked and not passable(surface, force, tiles[i].x, tiles[i].y, guard) then
       blocked = true
     end
 
@@ -452,7 +532,7 @@ local function repair(surface, force, tiles)
       -- 막힌 구간의 끝을 찾는다.
       local j = i
       while j <= #tiles do
-        if passable(surface, force, tiles[j].x, tiles[j].y) then break end
+        if passable(surface, force, tiles[j].x, tiles[j].y, guard) then break end
         j = j + 1
       end
       local before = fixed[#fixed]
@@ -461,7 +541,7 @@ local function repair(surface, force, tiles)
         -- 처음이나 끝이 막혔으면 잘라낸다. 줄이 조금 짧아질 뿐이다.
         i = j + 1
       else
-        local detour = walk(surface, force, before, after)
+        local detour = walk(surface, force, before, after, guard)
         if not detour or #detour == 0 then return nil end
         -- detour 는 before -> after 순서다. 첫 칸(before)은 이미 넣었다.
         for n = 2, #detour do fixed[#fixed + 1] = detour[n] end
@@ -578,6 +658,18 @@ local function depot_line(name, limit)
   if not here.depot then return { error = "no depot zone yet" } end
 
   local into, fill, bank, draw, out = depot_rows(here.depot)
+
+  -- 창고 구역은 제련 구역과 겹칠 수 있다(실측: smelt={x=25,y=14,w=38,h=16},
+  -- depot={x=50,y=15,w=12,h=5} - 창고가 제련 구역 «안»이었다). depot_rows 는
+  -- 이것을 모르고 제 격자를 그대로 깐다. 겹친 칸은 제련 기둥이 이미 쓰는
+  -- 자리이니 여기서는 계획에서 뺀다 - 걷어내지는 않는다, 그건 따로 시킨다.
+  local guard = smelt_guard(here.smelt)
+  into = drop_guarded(into, guard)
+  fill = drop_guarded(fill, guard)
+  bank = drop_guarded(bank, guard)
+  draw = drop_guarded(draw, guard)
+  out = drop_guarded(out, guard)
+
   local todo, standing, want = gather(b.surface, b.force, {
     { tag = "bank", what = DEPOT_CHEST, tiles = bank },
     { tag = "into", what = BELT, tiles = into },
@@ -627,12 +719,15 @@ local function ore_line(name, fx, fy, limit)
   else
     start = { x = math.floor(mine.x), y = math.floor(mine.y) }
   end
-  local trunk, short, bends = route_for("ore", surface, force, start, head)
+  -- 제련 기둥의 벨트 줄·팔 줄은 이 길이 밟고 지나가도 되는 땅이 아니다 -
+  -- 그 줄은 feed_line 자신의 것이다. smelt_guard 참고.
+  local guard = smelt_guard(smelt)
+  local trunk, short, bends = route_for("ore", surface, force, start, head, guard)
   if not trunk then
     return { error = "no route from the mine to the smelter" }
   end
   -- 길 위에 무언가 새로 섰으면 그 자리만 고쳐서 다시 적어둔다.
-  local mended, patches = repair(surface, force, trunk)
+  local mended, patches = repair(surface, force, trunk, guard)
   if mended and patches and patches > 0 then
     trunk = mended
     storage.lines["ore"].tiles = trunk
@@ -680,10 +775,12 @@ local function plate_line(name, limit)
   local goal = { x = here.craft.x, y = here.craft.y - 2 }
 
   local aim = { x = tail.x, y = tail.y }
+  -- 여기도 마찬가지로 제련 기둥의 줄을 밟고 지나가면 안 된다.
+  local guard = smelt_guard(here.smelt)
   local trunk, short, bends = route_for("plate", surface, force,
-    { x = goal.x, y = goal.y }, aim)
+    { x = goal.x, y = goal.y }, aim, guard)
   if not trunk then return { error = "no route from the smelter to the shop" } end
-  local mended, patches = repair(surface, force, trunk)
+  local mended, patches = repair(surface, force, trunk, guard)
   if mended and patches and patches > 0 then
     trunk = mended
     storage.lines["plate"].tiles = trunk
@@ -861,6 +958,8 @@ local function field_lines(name, limit)
   if #fields == 0 then return { error = "no mining field yet" } end
 
   local head = depot_ends(here.depot)
+  -- 밭에서 오는 줄도 제련 기둥의 줄을 밟고 지나가면 안 된다.
+  local guard = smelt_guard(here.smelt)
   local parts, first_from = {}, nil
 
   for n = 1, math.min(#fields, 3) do
@@ -918,7 +1017,7 @@ local function field_lines(name, limit)
       if kept and kept.plan == PLAN
          and kept.tiles and #kept.tiles > 0 then
         tiles = kept.tiles
-        local mended, patches = repair(surface, force, tiles)
+        local mended, patches = repair(surface, force, tiles, guard)
         if mended and patches and patches > 0 then
           tiles = mended
           storage.lines[key].tiles = tiles
@@ -931,7 +1030,7 @@ local function field_lines(name, limit)
           local gap_one = math.abs(one.x - head.x) + math.abs(one.y - head.y)
           local gap_other = math.abs(other.x - head.x) + math.abs(other.y - head.y)
           local exit_at = (gap_one < gap_other) and one or other
-          local stem = walk(surface, force, exit_at, head)
+          local stem = walk(surface, force, exit_at, head, guard)
 
           -- 등뼈는 «나가는 끝 쪽»으로 흐른다. 방향이 없는 벨트는 아무
           -- 데로도 안 흐르고, 반대로 선 벨트는 캔 것을 밭 안쪽으로 밀어
@@ -952,7 +1051,24 @@ local function field_lines(name, limit)
           end
           -- 등뼈 끝과 줄기 첫 칸이 대각선으로 만날 수 있다. 줄기는 밭
           -- «근처»까지만 오지 밭 끝 칸에 딱 붙어 오지는 않기 때문이다.
-          tiles = stitch(surface, force, tiles)
+          tiles = stitch(surface, force, tiles, guard)
+
+          -- 등뼈는 채굴기 «떨구는 자리»만 보고 긋는다 - 그 사이 칸까지
+          -- 지나가도 되는지는 안 본다. 그런데 채굴기는 2x2 라 떨구는 자리
+          -- 옆칸까지 제 몸으로 먹는다. 그 옆칸이 등뼈 줄 위에 있으면
+          -- 등뼈가 «갓 놓일 때부터» 막혀 있다.
+          --
+          -- ore/plate 흐름은 route_for 뒤에 늘 repair 를 한 번 돌린다.
+          -- 여기는 kept 가 있을 때만 돌렸다 - 그래서 «처음 긋는» 등뼈는
+          -- repair 를 한 번도 안 거치고 그대로 storage.lines 에 박혔다.
+          -- 실측: (74,-12) 가 stuck 이었는데 그 칸을 먹은 것은
+          -- burner-mining-drill 이었다. repair 는 그 칸만 우회할 수
+          -- 있으니, 처음 긋는 길에도 똑같이 돌린다. guard 를 같이 넘겨
+          -- 제련 기둥의 줄도 같은 김에 피해 간다.
+          local mended, patches = repair(surface, force, tiles, guard)
+          if mended and patches and patches > 0 then
+            tiles = mended
+          end
           storage.lines[key] = { tiles = tiles, plan = PLAN }
         end
       end

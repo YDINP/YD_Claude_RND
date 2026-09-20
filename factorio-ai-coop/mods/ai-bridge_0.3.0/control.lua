@@ -70,6 +70,7 @@ local CHAT_CLOSE     = Panel.CHAT_CLOSE
 local CHAT_NAME      = Panel.CHAT_NAME
 local CHAT_TOGGLE    = Panel.CHAT_TOGGLE
 local PANEL_NAME     = Panel.PANEL_NAME
+local WATCH_PREFIX   = Panel.WATCH_PREFIX
 local build_chat     = Panel.build_chat
 local build_panel    = Panel.build_panel
 local chat_rows      = Panel.chat_rows
@@ -77,6 +78,7 @@ local drop_marker    = Panel.drop_marker
 local panel_rows     = Panel.panel_rows
 local refresh_marker = Panel.refresh_marker
 local remember_line  = Panel.remember_line
+local watch          = Panel.watch
 local Audit = require("audit")
 local audit = Audit.audit
 
@@ -151,6 +153,9 @@ script.on_event(defines.events.on_gui_click, function(event)
     if player.gui.screen[CHAT_NAME] then
       player.gui.screen[CHAT_NAME].destroy()
     end
+  elseif string.sub(element.name, 1, #WATCH_PREFIX) == WATCH_PREFIX then
+    local name = string.sub(element.name, #WATCH_PREFIX + 1)
+    pcall(watch, player, name)
   end
 end)
 
