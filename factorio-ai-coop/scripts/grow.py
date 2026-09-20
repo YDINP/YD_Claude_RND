@@ -407,11 +407,22 @@ def tend(ai, who, shelf, sick):
 #
 # 셋 다 「없어서 못 만들고, 못 만들어서 없는」 같은 모양이다. 손으로
 # 한 번만 끊어 주면 그 뒤로는 기계가 돈다.
-KNOTS = ("stone", "coal", "copper-ore")
+# 철광석이 빠져 있었다.
+#
+#     실측(21회차 콜드스타트): 채굴기 3대, 노는 사람 7명, 철판 0.
+#                             구리판만 56 이 쌓였다.
+#
+# 돌·석탄·구리는 손으로 끊어 주면서 정작 «모든 것이 먹는» 철은 안 끊었다.
+# 채굴기도 벨트도 상자도 포탑도 철판으로 만든다. 철이 0이면 아무것도
+# 안 서고, 아무것도 안 서면 철도 안 들어온다 - 가장 굵은 매듭이었다.
+#
+#     모두가 먹는 것을 아무도 안 챙기면, 굶는 것은 전부다.
+KNOTS = ("stone", "coal", "iron-ore", "copper-ore")
 
 # 손으로 캔 것을 어느 칸에 내려놓나. 구리광은 전용 칸이 없지만, 유통
 # 고리가 창고 칸들을 모두 훑어 구리 화로로 나르므로 어디든 창고면 된다.
-PRIME_SHELF = {"stone": "stone", "coal": "coal", "copper-ore": "stone"}
+PRIME_SHELF = {"stone": "stone", "coal": "coal",
+               "iron-ore": "stone", "copper-ore": "stone"}
 
 
 def prime(ai, who, shelf, field):
@@ -447,6 +458,10 @@ def short_of(st, ore):
         return int(st["stone"]) < DRILL_COST["stone"]
     if ore == "coal":
         return int(st["coal"]) < FUEL_EACH
+    if ore == "iron-ore":
+        # 철은 «판»으로 셈한다. 광석은 화로가 녹여 줘야 쓸모가 있고,
+        # 채굴기 한 대에 판이 아홉 든다.
+        return int(st["plate"]) < DRILL_COST.get("iron-plate", 9) * 2
     # 구리는 «판»이 있어야 쓸모가 있다. 광석이든 판이든 하나도 없을 때만.
     return int(st["copper"]) < 20
 
