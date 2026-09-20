@@ -98,8 +98,21 @@ def strays(ai, box, dry=False):
       local MACHINE = {"furnace","mining-drill","container",
                        "assembling-machine","lab","ammo-turret","boiler"}
 
+      -- «그 칸»에 무엇이 있나. 한 점과 반경이 아니라 «칸»으로 묻는다.
+      --
+      -- 반경 0.4 로 타일 가운데를 찍었더니 2x2 화로가 안 잡혔다. 화로의
+      -- 중심은 타일 «모서리»라 가운데에서 0.707 떨어져 있기 때문이다.
+      -- 그래서 멀쩡히 일하는 팔이 「집을 것도 놓을 데도 없다」로 나왔다.
+      --
+      --     죽은 것으로 나온 것: y=33 벨트 27, y=34.37.39 팔 각 12
+      --     그 줄은 «지금 화로 스물셋을 먹이고 있는» 줄이었다.
+      --
+      -- 한 점과 반경으로 묻는 것은 언제나 「그 크기를 안다」는 가정이다.
+      -- 칸으로 물으면 크기를 몰라도 된다 - 무엇이 몇 칸을 먹든, 그 칸을
+      -- 덮고 있으면 잡힌다.
       local function at(p, types)
-        return s.count_entities_filtered{position=p, radius=0.4,
+        local x, y = math.floor(p.x), math.floor(p.y)
+        return s.count_entities_filtered{area={{x, y},{x+1, y+1}},
                  force=f, type=types} > 0
       end
 
