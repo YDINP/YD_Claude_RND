@@ -54,6 +54,17 @@ FURNACE_COAL = 20
 #
 # 사람 가방은 이보다 훨씬 크다. 아끼던 것은 걸음 수가 아니라 숫자였다.
 CARRY = 2000
+
+# 한 계획에 담을 수 있는 단계 수.
+#
+# 화로가 스물넷이 되자 drain 의 계획이 「걷기+꺼내기」만 마흔여덟 단계가
+# 됐고, 거기에 상자 여덟 곳과 창고 넣기가 붙어 예순넷을 넘었다. 모드는
+# 「queue would overflow (64 max)」로 «통째로» 거절하므로, 한 순번에
+# 한 장도 안 날랐다.
+#
+# 많이 나르려고 늘린 것이 아무것도 못 나르게 만든 셈이다. 담을 수 있는
+# 만큼만 담고, 나머지는 다음 순번에 한다.
+MAX_STEPS = 52
 PILE_FLOOR = 25           # 이만큼도 안 쌓인 상자는 다녀올 값을 못 한다
 
 # 화로 한 대는 한 가지만 녹인다. 여덟 대에 전부 철을 넣으면 구리는
@@ -71,6 +82,20 @@ SHELF_OF = {
     "stone": "stone", "stone-brick": "stone", "wood": "stone",
     "coal": "coal",
 }
+
+
+def trim(plan, limit=None):
+    """계획을 «담을 수 있는 만큼»으로 자른다.
+
+    넘치면 모드가 통째로 거절한다 - 길게 세운 계획이 한 단계도 안 돌게
+    되는 것보다, 앞의 절반이라도 도는 편이 낫다. 자르는 자리는 마지막
+    「창고에 넣기」 앞이 아니라 «끝»이다: 들고 온 것은 다음 순번의
+    내려놓기 당번이 푼다.
+    """
+    cap = limit or MAX_STEPS
+    if len(plan) <= cap:
+        return plan
+    return plan[:cap]
 
 
 def where(item, shelf, room=None):
@@ -265,6 +290,7 @@ def feed(ai, who, reply, shelf):
         if got.get("coal") and f["burn"] < 5:
             plan.append(("insert", {"name": "coal", "x": f["x"], "y": f["y"],
                                     "count": FURNACE_COAL}))
+    plan = trim(plan, MAX_STEPS)
     submit(ai, who, plan, strict=False)
     print(f"{who}: 화로 {len(hungry)}대에 장입 - {got}")
     return True
@@ -325,6 +351,7 @@ def drain(ai, who, reply, shelf):
         if at:
             plan.append(("insert", {"name": item, "x": at[0], "y": at[1],
                                     "count": n}))
+    plan = trim(plan, MAX_STEPS)
     submit(ai, who, plan, strict=False)
     print(f"{who}: 창고로 - {got}")
     return True

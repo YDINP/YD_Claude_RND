@@ -106,6 +106,7 @@ def stock(ai, depot):
       -- 「비었다」와 «아직 없다»는 다른 말이다. 창고가 서기도 전에
       -- 물건을 넣으러 가면 그 걸음은 통째로 버려진다.
       local out = { plate = 0, stone = 0, coal = 0, copper = 0, chests = 0,
+                    stone_room = 0, plate_room = 0, coal_room = 0,
                     lab = s.count_entities_filtered{ name = "lab",
                           force = game.forces.player } }
       for _, c in pairs(s.find_entities_filtered{area={{%d,%d},{%d,%d}},
@@ -117,9 +118,21 @@ def stock(ai, depot):
         out.coal = out.coal + inv.get_item_count("coal")
         out.copper = out.copper + inv.get_item_count("copper-plate")
                                + inv.get_item_count("copper-ore")
+        -- 빈 칸이 몇인가. 찬 상자에 넣으러 가는 걸음은 통째로 버려진다.
+        local free = 0
+        for i = 1, #inv do
+          if not inv[i].valid_for_read then free = free + 1 end
+        end
+        if math.abs(c.position.y - (%d + 2.5)) < 1 then
+          out.stone_room = out.stone_room + free
+        elseif math.abs(c.position.y - (%d + 4.5)) < 1 then
+          out.coal_room = out.coal_room + free
+        else
+          out.plate_room = out.plate_room + free
+        end
       end
       return out
-    end)()""" % (x - 3, y - 4, x + 3, y + 6))
+    end)()""" % (x - 3, y - 4, x + 3, y + 6, y, y))
 
 
 def stalled(ai):
@@ -230,7 +243,11 @@ KEEP = 20          # 손에 남겨 두는 몫. 다 비우면 다음 걸음에 �
 WORTH_A_TRIP = 25  # 이만큼도 안 되면 창고까지 다녀올 값을 못 한다
 
 
-def unload(ai, who, shelf):
+ROOM_OF = {"stone": "stone_room", "coal": "coal_room",
+           "iron-plate": "plate_room"}
+
+
+def unload(ai, who, shelf, st=None):
     """들고만 있는 것을 창고에 내려놓는다.
 
     창고가 비었는데 고리가 「제련이 따라오길 기다린다」만 되풀이한 적이
@@ -239,7 +256,8 @@ def unload(ai, who, shelf):
     """
     held = ai.agent(who).items()
     drop = {k: v - KEEP for k, v in held.items()
-            if k in shelf and v - KEEP >= WORTH_A_TRIP}
+            if k in shelf and v - KEEP >= WORTH_A_TRIP
+            and (st is None or int(st.get(ROOM_OF.get(k, ""), 1)) > 0)}
     if not drop:
         return False
     plan = [("walk_to", {"x": shelf["iron-plate"][0] - 2,
@@ -557,7 +575,7 @@ def main() -> int:
             st = stock(ai, (dx, dy))
             if int(st["coal"]) < FUEL_EACH or int(st["stone"]) < 10:
                 for who in list(free):
-                    if unload(ai, who, shelf):
+                    if unload(ai, who, shelf, st):
                         free.remove(who)
                         break
 
