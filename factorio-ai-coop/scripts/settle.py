@@ -207,6 +207,12 @@ def main() -> int:
         try:
             st = standing(ai, (sx, sy), (dx, dy))
             if int(st["furnaces"]) >= WANT_FURNACE and int(st["chests"]) >= 3:
+                # 「여기가 기지다」를 게임에도 알린다. 방어 자리표는 집이
+                # 어디인지를 알아야 «지킬 것이 있는 쪽»을 고를 수 있다.
+                try:
+                    ai.set_depot(dx + 0.5, dy + 0.5)
+                except RconError:
+                    pass
                 print(f"발판 완성 - 화로 {st['furnaces']} 창고 {st['chests']} "
                       f"판 {st['plate']}. 손을 뗀다.")
                 return 0

@@ -33,6 +33,9 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 
+sys.path.insert(0, HERE)
+from settle import near_patch           # noqa: E402
+
 DRILL = "burner-mining-drill"
 CHEST = "iron-chest"
 DRILL_COST = {"iron-plate": 9, "stone": 5}
@@ -97,32 +100,18 @@ def stalled(ai):
     return out
 
 
-def fields(ai):
-    """밭은 게임에 묻는다. 적어 두면 판이 바뀔 때마다 틀린다."""
-    reply = ai.lua("""(function()
-      local s = game.surfaces[1]
-      local out = {}
-      for _, ore in ipairs({"iron-ore", "coal", "stone", "copper-ore"}) do
-        local L, T, R, B, n = 1e9, 1e9, -1e9, -1e9, 0
-        for _, e in pairs(s.find_entities_filtered{area={{-400,-400},{400,400}}, name=ore}) do
-          n = n + 1
-          if e.position.x < L then L = e.position.x end
-          if e.position.x > R then R = e.position.x end
-          if e.position.y < T then T = e.position.y end
-          if e.position.y > B then B = e.position.y end
-        end
-        if n > 0 then
-          out[#out+1] = string.format("%s|%d|%d|%d|%d", ore, L, T, R, B)
-        end
-      end
-      return out
-    end)()""")
-    rows = list(reply.values()) if isinstance(reply, dict) else list(reply or [])
+def fields(ai, anchor):
+    """밭은 게임에 묻는다. 적어 두면 판이 바뀔 때마다 틀린다.
+
+    그리고 «밭 전체»가 아니라 기지에서 가까운 덩어리를 묻는다. 19회차
+    돌밭은 전체 경계가 (33,-76)..(57,128) 로 200칸짜리 허수 상자였는데,
+    실제로 캘 수 있는 덩어리는 그 중 (42,-76)..(57,-60) 뿐이었다.
+    """
     out = {}
-    for row in rows:
-        ore, L, T, R, B = row.split("|")
-        out[ore] = {"ore": ore, "left": int(L), "top": int(T),
-                    "right": int(R), "bottom": int(B)}
+    for ore in ("iron-ore", "coal", "stone", "copper-ore"):
+        patch = near_patch(ai, ore, anchor)
+        if patch:
+            out[ore] = patch
     return out
 
 
@@ -321,9 +310,9 @@ def main() -> int:
     builders = [n.strip() for n in args.builders.split(",") if n.strip()]
 
     ai = AIBridge()
-    FIELD = fields(ai)
+    FIELD = fields(ai, (dx, dy))
     order = [o for o in ("iron-ore", "coal", "stone") if o in FIELD]
-    print("밭:", ", ".join(f"{k}({v['left']},{v['top']})..({v['right']},{v['bottom']})"
+    print("밭:", ", ".join(f"{k} {v['n']}칸 {v['gap']}칸거리"
                            for k, v in FIELD.items()))
     if not order:
         print("밭이 하나도 없다. 좌표 범위를 의심할 것.")
