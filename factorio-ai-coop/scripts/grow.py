@@ -760,8 +760,22 @@ def sow(ai, who, shelf, field, st):
     # 끝났으면 앞의 것도 끝나 있다.
     plan += [("craft", {"recipe": DRILL, "count": n, "wait": False}),
              ("craft", {"recipe": CHEST, "count": n, "wait": True}),
-             ("walk_to", {"x": seats[0]["x"] + 3, "y": seats[0]["y"]})]
+             ]
+    # 자리마다 «걸어가서» 세운다.
+    #
+    # 여기 있던 것은 첫 자리 옆으로 한 번만 걸어가서 여덟을 다 세우려
+    # 했다. 그런데 자리표가 내주는 자리는 한 줄에 몰려 있지 않다.
+    #
+    #     실측(21회차): (-63,-19) 부터 (-66,-11) 까지 아홉 칸에 퍼져 있었다.
+    #                   첫 자리 옆에서 마지막 자리까지 10타일 - 건설 사거리다.
+    #
+    # 먼 자리는 조용히 실패하고, 만든 채굴기는 가방에 남는다. 한 순번에
+    # 여덟을 만들어 하나를 세우고 일곱을 들고 다녔다 - 무리 다섯이 그렇게
+    # 일곱 대를 들고 있었다.
+    #
+    #     「세워라」는 «거기 서 있을 때만» 뜻이 있다.
     for seat in seats:
+        plan.append(("walk_to", {"x": seat["x"] + 2, "y": seat["y"] + 2}))
         plan.append(("build", {"name": DRILL, "x": seat["x"], "y": seat["y"],
                                "direction": seat.get("direction")}))
         plan.append(("insert", {"name": "coal", "x": seat["x"], "y": seat["y"],
