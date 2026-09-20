@@ -39,7 +39,7 @@ PILE_FLOOR = 25           # 이만큼도 안 쌓인 상자는 다녀올 값을 �
 # 한 번만 적는다 - 들고 와서 넣을 데가 없으면 그대로 들고 서 있게 된다.
 SHELF_OF = {
     "iron-plate": "iron-plate", "copper-plate": "iron-plate",
-    "stone": "stone", "stone-brick": "stone",
+    "stone": "stone", "stone-brick": "stone", "wood": "stone",
     "coal": "coal",
 }
 
