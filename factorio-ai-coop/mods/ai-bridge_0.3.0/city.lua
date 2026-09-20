@@ -28,7 +28,9 @@ local Stock = require("stock")
 local base = Stock.base
 
 -- 구역 크기. 한 자리에 적어두고 여기서만 고친다.
-local SMELT_W, SMELT_H = 38, 16
+-- 제련 블록 치수는 plots.lua 한 곳에서 온다.
+local SMELT_W, SMELT_H = require("plots").FURNACE.w,
+                         require("plots").FURNACE.h
 local CRAFT_W, CRAFT_H = 24, 14
 local DEPOT_W, DEPOT_H = 12, 5
 

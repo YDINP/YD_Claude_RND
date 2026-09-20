@@ -39,7 +39,17 @@ BELTS = os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "belts.lua")
 problems = []
 
 
+# 몇 가지를 봤는지는 «세어서» 말한다.
+#
+# 여기 있던 요약문은 검사 수를 리터럴 6 으로 박아 두었다. 검사를 하나 더
+# 넣어도 6 이라고 찍혔다 - 세는 척하는 숫자였다. 이 저장소가 여러 번 배운
+# 것과 같은 모양이다: 보고가 실제와 따로 놀면 고장을 못 본다.
+checked = 0
+
+
 def check(name, got, want):
+    global checked
+    checked += 1
     if got != want:
         problems.append(f"{name}: {got!r} != {want!r}")
 
@@ -113,9 +123,20 @@ class Stub:
     def __init__(self, zone=None):
         self.zone = zone
         self.lua_calls = []
+        self.pinned = None
 
     def zones(self, _agent):
         return {"smelt": self.zone} if self.zone else {}
+
+    def smelter(self, x=None, y=None):
+        """대체 좌표를 쓰면 grow 가 그것을 «구역으로 못 박는다».
+
+        기준점이 둘이면 줄이 흩어지므로, 그 못 박는 걸음이 빠지지 않았는지
+        여기서도 본다.
+        """
+        if x is not None:
+            self.pinned = (int(x), int(y))
+        return {"smelter": self.pinned}
 
     def lua(self, expr):
         self.lua_calls.append(expr)
@@ -125,6 +146,13 @@ class Stub:
 ai = Stub(zone=None)
 check("구역도 대체 좌표도 없으면 None", grow.smelt_row(ai, "alpha", 4), None)
 check("그때는 게임에 묻지도 않는다", ai.lua_calls, [])
+
+# 대체 좌표를 쓰는 순간 그것이 구역이 되어야 한다. 안 그러면 벨트를 까는
+# 쪽이 모드 구역을 따라 «다른 곳»에 깔고, 화로 여덟 대가 팔도 벨트도 없이
+# 선다 - 21회차에 실제로 그랬다.
+pin = Stub(zone=None)
+grow.smelt_row(pin, "alpha", 4, smelt_xy=(-45, 10))
+check("대체 좌표를 쓰면 구역도 못 박는다", pin.pinned, (-45, 10))
 
 
 def cand_of(lua_src):
@@ -161,4 +189,4 @@ if problems:
     print(f"{len(problems)} problems - 화로가 아직 벨트 줄 위에 설 수 있다")
     sys.exit(1)
 print(f"0 problems - 화로 줄과 벨트 줄의 기준점이 하나로 합쳐졌다 "
-      f"({6} rules checked)")
+      f"({checked} rules checked)")

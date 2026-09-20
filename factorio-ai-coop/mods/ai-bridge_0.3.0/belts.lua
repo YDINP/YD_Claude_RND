@@ -31,8 +31,10 @@ local BELT = "transport-belt"
 local ARM = "burner-inserter"
 
 -- 화로 블록의 치수. layout.py 의 FURNACE_* 와 같은 값이어야 한다.
-local FURNACE_PITCH = 3
-local FURNACE_ROW = 12
+-- 치수는 plots.lua 가 단 하나의 임자다. 여기서 또 적으면 언젠가 달라진다.
+local Plots = require("plots")
+local FURNACE_PITCH = Plots.FURNACE.pitch
+local FURNACE_ROW = Plots.FURNACE.row
 
 local function dir_of(from, to)
   if to.x > from.x then return defines.direction.east end

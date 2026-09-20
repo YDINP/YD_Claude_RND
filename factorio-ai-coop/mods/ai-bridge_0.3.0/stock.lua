@@ -387,7 +387,9 @@ end
 -- 지금까지 화로 자리의 기준점은 «묻는 사람 주변 화로 여덟 대의 평균»이었다.
 -- 그래서 사람이 움직일 때마다 기준이 흔들렸고, 화로가 대각선으로 흩뿌려졌다.
 -- 기준은 누가 묻든 같아야 하고, 한 번 정해지면 남아 있어야 한다.
-local SMELT_W, SMELT_H = 38, 16
+-- 제련 블록 치수는 plots.lua 한 곳에서 온다.
+local SMELT_W, SMELT_H = require("plots").FURNACE.w,
+                         require("plots").FURNACE.h
 local WATER = { "water", "deepwater", "water-shallow", "water-mud",
                 "water-green", "deepwater-green" }
 local BUILT = { "furnace", "mining-drill", "assembling-machine", "lab",

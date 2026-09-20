@@ -25,7 +25,20 @@ local body = Core.body
 --   row 12    한 줄에 열두 대, 두 줄이 한 블록.
 --   aisle 5   마주보는 두 줄 사이 - 인서터, 벨트, 인서터가 들어간다.
 --   gap 9     블록과 블록 사이 통로.
-local FURNACE = { pitch = 3, row = 12, aisle = 5, gap = 9 }
+local FURNACE = { pitch = 3, row = 18, aisle = 5, gap = 9 }
+
+-- 블록이 차지하는 땅. 여기서 «계산해서» 내놓는다.
+--
+-- 이 파일 머리말이 「치수가 두 군데 있으면 언젠가 달라진다」고 적어 두고도
+-- 정작 그렇게 됐다. 실측(21회차): belts.lua 가 제 몫의 FURNACE_PITCH 와
+-- FURNACE_ROW 를 들고 있었고, SMELT_W 는 city.lua 와 stock.lua 에 각각
+-- 38 로 적혀 있었다. 약속한 「한 군데」가 실제로는 네 군데였다.
+--
+-- row 를 12 에서 18 로 올리는데, 네 군데를 손으로 맞추는 한 다음에 또
+-- 어긋난다. 그러니 파생값을 여기서 만들어 내보낸다 - 폭은 자리 사이
+-- 간격과 자리 수가 정하는 것이지 따로 외울 숫자가 아니다.
+FURNACE.w = FURNACE.pitch * (FURNACE.row - 1) + 5
+FURNACE.h = 16
 
 -- 조립 구역. 조립기도 랩도 3x3 이라 4칸 간격이면 한 칸이 남는다.
 local CRAFT = { pitch = 4, row = 6, aisle = 5 }
