@@ -79,6 +79,7 @@ GUARD_FROM = 40           # 공해가 이만큼 되기 전에는 방어선을 �
 #     지킬 것이 없을 때 「지키고 나서 하라」는 말은 «하지 말라»는 말이다.
 #
 # 그래서 공해가 둥지에 닿을 만큼 쌓이기 시작할 때부터 따진다.
+FURNACE_FUEL = 20         # 새로 세운 화로에 «그 자리에서» 넣어 주는 석탄
 HUNGRY_FURNACES = 3       # 화로가 이만큼 굶어야 «채굴기»를 늘린다
 ORE_BACKLOG = 2500        # 광석이 이만큼 쌓여야 «화로»를 늘린다
 
@@ -650,13 +651,28 @@ def widen(ai, who, shelf, smelt, row, st):
         return False
     n = len(spots)
 
+    # 세우는 손이 «불도» 붙인다.
+    #
+    # 채굴기를 세울 때는 그 자리에서 석탄을 넣는데(sow) 화로는 안 넣고
+    # 있었다. 같은 파일 안에서 원칙이 어긋나 있었던 셈이다.
+    #
+    #     실측: 화로 23대 중 «9대»가 꺼진 채 서 있었다.
+    #
+    # 운반과 보급이 언젠가는 채워 준다. 그 「언젠가」 동안 꺼진 화로는
+    # 자리만 차지하고 광석은 계속 쌓인다 - 그리고 그 쌓임을 보고 또
+    # 화로를 늘린다. 세우고 잊으면 빈 총이 서듯, 불 안 붙인 화로가 선다.
+    fuel = n * FURNACE_FUEL
     plan = [("walk_to", {"x": shelf["stone"][0] - 2, "y": shelf["stone"][1] + 1}),
             ("take", {"name": "stone", "x": shelf["stone"][0], "y": shelf["stone"][1],
                       "count": n * FURNACE_COST["stone"] + 5}),
+            ("take", {"name": "coal", "x": shelf["coal"][0], "y": shelf["coal"][1],
+                      "count": fuel}),
             ("craft", {"recipe": FURNACE, "count": n, "wait": True}),
             ("walk_to", {"x": spots[0][0], "y": spots[0][1] + 2})]
     for x, y in spots:
         plan.append(("build", {"name": FURNACE, "x": x, "y": y}))
+        plan.append(("insert", {"name": "coal", "x": x, "y": y,
+                                "count": FURNACE_FUEL}))
     submit(ai, who, plan, strict=False)
     print(f"{who}: 화로 {n}대 더 ({row['n']} -> {int(row['n']) + n}, "
           f"채굴기 {row['drills']}대에 필요한 것 {want})")
