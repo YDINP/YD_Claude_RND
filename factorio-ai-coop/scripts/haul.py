@@ -368,10 +368,22 @@ def share(piles):
     # 한쪽 판이 다른 쪽의 네 배를 넘고 그것이 남아돌 만큼이면, 그 쪽은
     # 바닥까지 줄인다. 바닥을 두는 것은 여전하다 - 다시 켜는 데 한 바퀴가
     # 들기 때문이다.
-    glut = 400
-    if made["copper-plate"] > made["iron-plate"] * 4 >= 0             and made["copper-plate"] >= glut:
-        return COPPER_FLOOR
-    if made["iron-plate"] > made["copper-plate"] * 4 >= 0             and made["iron-plate"] >= glut:
+    # 남아돌 때의 몫은 «바닥»이 아니라 «불씨»다.
+    #
+    # 바닥(0.25)을 두는 까닭은 한쪽 화로를 전부 끄면 다시 켜는 데 한
+    # 바퀴가 들기 때문이다. 그것은 맞다 - 다만 바닥은 「모자라지 않을
+    # 만큼」이지 「남아돌 때도 그만큼」이 아니다.
+    #
+    #     실측: 구리판 1392 = 포탑 139대 분. 그때 철판은 117.
+    #           화로 23대 중 여섯이 계속 구리를 녹이고 있었다.
+    #
+    # 제련 능력의 4분의 1을 쓸 데 없는 것에 쓰는 셈이라, 남아돌 때는
+    # 줄을 꺼뜨리지 않을 «최소»만 남긴다.
+    GLUT = 400
+    EMBER = 0.08              # 화로 스물셋이면 두 대 - 불씨만 남긴다
+    if made["copper-plate"] > made["iron-plate"] * 4 >= 0             and made["copper-plate"] >= GLUT:
+        return EMBER
+    if made["iron-plate"] > made["copper-plate"] * 4 >= 0             and made["iron-plate"] >= GLUT:
         return COPPER_CEIL
 
     total = waiting["iron-ore"] + waiting["copper-ore"]
