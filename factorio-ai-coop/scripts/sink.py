@@ -278,18 +278,36 @@ def connect(tip, head):
     먼저 가로로 붙이고 그 다음 세로로 내린다. 두 번 꺾는 것보다 한 번
     꺾는 쪽이 칸도 적고 막힐 자리도 적다.
     """
-    out = []
     x, y = tip
     hx, hy = head
+    path = []
     while x != hx:
-        step = (1 if hx > x else -1, 0)
-        x += step[0]
-        out.append({"x": x, "y": y, "what": BELT, "dir": COMPASS[step],
-                    "why": "본선에서 기둥으로"})
+        x += 1 if hx > x else -1
+        path.append((x, y))
     while y != hy:
-        step = (0, 1 if hy > y else -1)
-        y += step[1]
-        out.append({"x": x, "y": y, "what": BELT, "dir": COMPASS[step],
+        y += 1 if hy > y else -1
+        path.append((x, y))
+    if not path:
+        return []
+
+    # 방향은 «지나온 쪽»이 아니라 «다음 칸»이 정한다.
+    #
+    # 처음에는 걸어온 방향을 그대로 적었다. 그랬더니 꺾이는 칸이 계속
+    # 서쪽을 보고 있었고, 본선은 기둥으로 안 꺾인 채 빈 땅으로 나갔다.
+    #
+    #     실측: y=-2 줄이 x=28 까지 «전부 서쪽». (27,-2) 에는 아무것도 없다
+    #
+    # 사용자가 바로 봤다: "여기도 재배치하면서 벨트연결제대로안됨"
+    #
+    # 벨트 한 칸이 아는 것은 «자기가 어디로 보내는가»뿐이다. 어디서 왔는지는
+    # 그 칸의 일이 아니다.
+    out = []
+    for i, (cx, cy) in enumerate(path):
+        nxt = path[i + 1] if i + 1 < len(path) else (hx, hy)
+        step = (nxt[0] - cx, nxt[1] - cy)
+        if step not in COMPASS:
+            continue
+        out.append({"x": cx, "y": cy, "what": BELT, "dir": COMPASS[step],
                     "why": "본선에서 기둥으로"})
     # 마지막 칸은 기둥 머리 «그 자체»다. 기둥이 이미 맡았으므로 뺀다.
     return [one for one in out if not (one["x"] == hx and one["y"] == hy)]
@@ -622,30 +640,55 @@ def build(ai, who, todo, depot):
 
 
 def move(ai, who, shoves):
-    """길을 막은 전봇대를 옆으로 옮긴다. 걷고 «바로» 다시 세운다.
+    """길을 막은 것을 치운다. 전봇대는 «세우고 나서» 걷는다.
 
-    걷은 채로 두면 그 사이에 전력망이 갈라지고, 갈라진 동안 인서터가
-    멈춘다. 그래서 한 사람의 «한 계획 안에서» 걷고 세운다 - 둘을 다른
-    걸음으로 나누면 그 틈이 곧 정전이다.
+    처음에는 걷고 나서 세웠다. 그 사이에 같은 계획의 벨트가 새 자리를
+    차지했고, 세우기가 조용히 실패했고, 걷은 자리에는 구멍만 남았다.
+
+        실측: 전봇대 (32,0) 과 (32,2) 가 사라졌다
+              전력망 1 개 -> 2 개, 굶는 것 12
+
+    사용자가 바로 짚었다: "전선 재배치했는데 그때문에 화로쪽 전선
+    전력연결이 끊김"
+
+        비켜 주려다 끊는 것은 비켜 준 것이 아니다.
+
+    순서를 뒤집으면 실패해도 손해가 없다. 새것이 먼저 서면 그 순간부터
+    전기는 두 길로 흐르고, 그 다음에 옛것을 걷는다. 세우기가 실패하면
+    옛것이 그대로 있으니 «아무 일도 일어나지 않은» 상태로 남는다.
+
+        못 하는 일은 «아무것도 안 한 것»으로 끝나야 한다.
     """
+    made = {}
+    for one in shoves:
+        if one["kind"] == "move":
+            made[one["what"]] = made.get(one["what"], 0) + 1
     plan = [("walk_to", {"x": shoves[0]["from"][0] + 2,
                          "y": shoves[0]["from"][1] + 2})]
+    # 걷어서 나올 것을 믿고 세우면, 걷기 전에 세우는 이 순서에서는 손이
+    # 빈다. 먼저 만들어 둔다 - 재료가 없으면 craft 가 실패할 뿐이고,
+    # 그러면 옛 전봇대는 그대로 선 채로 남는다.
+    for what, count in made.items():
+        plan.append(("craft", {"recipe": what, "count": count, "wait": True}))
     for one in shoves:
-        if one["kind"] == "lift":
+        if one["kind"] == "move":
+            plan.append(("build", {"name": one["what"],
+                                   "x": one["to"][0], "y": one["to"][1]}))
+            plan.append(("demolish", {"x": one["from"][0], "y": one["from"][1],
+                                      "name": one["what"]}))
+        else:
             # 안엣것을 먼저 꺼내지 않으면 같이 사라진다.
             for item in ("iron-plate", "copper-plate", "iron-ore",
                          "copper-ore", "coal", "stone"):
                 plan.append(("take", {"name": item, "x": one["from"][0],
                                       "y": one["from"][1], "count": 400}))
-        plan.append(("demolish", {"x": one["from"][0], "y": one["from"][1],
-                                  "name": one["what"]}))
-        if one["kind"] == "move":
-            plan.append(("build", {"name": one["what"],
-                                   "x": one["to"][0], "y": one["to"][1]}))
+            plan.append(("demolish", {"x": one["from"][0], "y": one["from"][1],
+                                      "name": one["what"]}))
     submit(ai, who, plan, strict=False)
     for one in shoves:
         if one["kind"] == "move":
-            print(f"{who}: {one['what']} {one['from']} -> {one['to']} (길을 비킨다)")
+            print(f"{who}: {one['what']} {one['to']} 에 먼저 세우고 "
+                  f"{one['from']} 을 걷는다")
         else:
             print(f"{who}: {one['what']} {one['from']} 걷는다 (벨트가 왔다)")
 
