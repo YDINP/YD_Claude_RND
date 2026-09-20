@@ -397,7 +397,16 @@ def unguarded(ai, reach=18):
 
 
 def buildable(ai, spots):
-    """놓을 수 있는 자리만. 물.절벽.광맥 위는 뺀다."""
+    """놓을 수 있는 자리만. 물·절벽·광맥 위는 뺀다.
+
+    나무와 바위는 «뺄 것»이 아니라 «벨 것»이다.
+
+        사용자: "나무가 진로방해 / 건설방해 가 된다면 벌목도 어느정도 하도록"
+
+    나무에 막힌 자리를 그냥 빼면 그만큼 고리가 벌어진다. 그리고 벌어진
+    고리 사이로 들어온 무리가 밭에서 일하던 사람을 잡는다 - 20회차에
+    여섯을 그렇게 잃었다. 도끼 몇 번이면 될 일에 목숨값을 치를 이유가 없다.
+    """
     if not spots:
         return []
     body = ", ".join(f"{{{s['x']},{s['y']}}}" for s in spots[:60])
@@ -408,13 +417,41 @@ def buildable(ai, spots):
       for i, p in ipairs(spots) do
         local ore = s.count_entities_filtered{
           area = {{p[1] - 1, p[2] - 1}, {p[1] + 1, p[2] + 1}}, type = "resource"}
-        out[i] = (ore == 0 and s.can_place_entity{name = "gun-turret",
-                  position = {p[1], p[2]}, force = f}) and 1 or 0
+        local free = s.can_place_entity{name = "gun-turret",
+                      position = {p[1], p[2]}, force = f}
+        if ore > 0 then
+          out[i] = 0
+        elseif free then
+          out[i] = 1
+        else
+          -- 막혔다면 «무엇이» 막았는지 본다. 나무와 바위뿐이면 베고 세운다.
+          local hard = 0
+          for _, e in pairs(s.find_entities_filtered{
+                area = {{p[1] - 1, p[2] - 1}, {p[1] + 1, p[2] + 1}}}) do
+            local t = e.type
+            if t ~= "character" and t ~= "item-entity" and t ~= "resource"
+               and not (e.minable and (t == "tree" or t == "simple-entity")) then
+              hard = hard + 1
+            end
+          end
+          out[i] = (hard == 0) and 2 or 0
+        end
       end
       return out
     end)()""" % body)
     ok = _rows(reply)
-    return [s for i, s in enumerate(spots[:60]) if i < len(ok) and int(ok[i])]
+    out = []
+    for i, spot in enumerate(spots[:60]):
+        if i >= len(ok):
+            break
+        state = int(ok[i])
+        if state == 0:
+            continue
+        # 2 는 「나무만 막고 있다」는 뜻이다. 세우기 전에 베라고 적어 둔다.
+        if state == 2:
+            spot = dict(spot, chop=True)
+        out.append(spot)
+    return out
 
 
 def seats(ai, who):
@@ -490,6 +527,15 @@ def raise_turrets(ai, who, shelf, have, spots):
         # 지난 판에 진 그 모양이다. 자리표가 이미 빈 칸만 내놓으므로
         # 그대로 세우고, 모서리 대 가운데 어긋남만큼만 넓게 찾는다.
         plan.append(("walk_to", {"x": spot["x"] + 2, "y": spot["y"] + 2}))
+        if spot.get("chop"):
+            # 나무만 막고 있는 자리다. 포탑은 2x2 라 네 칸을 먹으므로 네
+            # 칸을 다 본다. 한 칸을 가리키려면 그 칸의 «가운데»를 가리킨다.
+            for dx in (-1, 0):
+                for dy in (-1, 0):
+                    plan.append(("demolish",
+                                 {"x": spot["x"] + dx + 0.5,
+                                  "y": spot["y"] + dy + 0.5,
+                                  "search_radius": 0.6}))
         plan.append(("build", {"name": TURRET, "x": spot["x"], "y": spot["y"]}))
         plan.append(("insert", {"name": AMMO, "x": spot["x"], "y": spot["y"],
                                 "count": AMMO_EACH, "search_radius": 2.5}))

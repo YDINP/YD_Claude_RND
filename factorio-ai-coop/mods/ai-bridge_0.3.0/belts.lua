@@ -452,6 +452,19 @@ local function missing(surface, force, tiles, what)
           -- 석탄줄 y=76 위에 상자가 여섯 개였고 벨트는 0칸이었다.
           if LIFTABLE[e.name] and e.minable and e.force == force then
             lift = e.name
+          elseif e.minable and (e.type == "tree" or e.type == "simple-entity") then
+            -- 사용자: "나무가 진로방해 / 건설방해 가 된다면 벌목도
+            --          어느정도 하도록"
+            --
+            -- 나무와 바위는 우리 것이 아니라 force 가 neutral 이다. 그래서
+            -- 위의 「우리 상자면 걷는다」에 안 걸리고 바위처럼 «영영 막힌
+            -- 칸»으로 남았다. 그런데 둘 다 도끼 몇 번이면 사라진다.
+            --
+            --     치우면 되는 것을 「못 놓는다」로 적으면 길이 영영 안 난다.
+            --
+            -- 걷는 일은 demolish 가 이미 할 줄 안다 - 그쪽은 force 를
+            -- 안 따지도록 일부러 그렇게 두었다(control 주석 참고).
+            lift = e.name
           end
           break
         end

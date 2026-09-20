@@ -109,9 +109,11 @@ def crew(ai):
     for row in ai.list():
         if not row.get("alive"):
             continue
+            cur = row.get("current") or {}
         out.append({"name": row["name"],
                     "x": float(row.get("x") or 0),
                     "y": float(row.get("y") or 0),
+                    "task": cur.get("id"),
                     "busy": bool(row.get("current") or row.get("queued"))})
     return out
 
@@ -155,7 +157,19 @@ def endangered(ai, reach=FLEE, close=CLOSE, pack=PACK):
 # 그래서 자리를 기억해 두고, 일을 물고 있는데 자리가 안 바뀌면 묶인
 # 것으로 친다.
 STILL = 0.6               # 이만큼도 안 움직였으면 «그대로»다
-PATIENCE = 4              # 몇 순번을 그대로여야 묶인 것으로 보나
+PATIENCE = 30             # 몇 순번을 그대로여야 묶인 것으로 보나
+
+# 자리만 보면 «캐는 사람»을 묶인 사람으로 오해한다.
+#
+# 실측: 넷째 순번에 alpha·echo·hotel 을 전부 「묶였다」고 옮겨 버렸다.
+# 셋 다 광맥 앞에서 멀쩡히 캐고 있었다 - 채굴은 원래 «제자리에서» 하는
+# 일이다.
+#
+#     제자리에 있는 것과 «아무것도 안 하는 것»은 다르다.
+#
+# 그래서 자리와 «붙잡은 일»을 같이 본다. 같은 일을 붙잡은 채로, 자리도
+# 안 바뀐 채로 오래면 그것이 묶인 것이다. 일이 바뀌면 진행된 것이고,
+# 자리가 바뀌어도 진행된 것이다.
 
 
 def unstick(ai, who, at):
@@ -236,9 +250,11 @@ def main() -> int:
             for one in crew(ai):
                 name, here = one["name"], (one["x"], one["y"])
                 before = was.get(name)
-                moved = before is None or (abs(here[0] - before[0]) > STILL
-                                           or abs(here[1] - before[1]) > STILL)
-                was[name] = here
+                moved = (before is None
+                         or abs(here[0] - before[0][0]) > STILL
+                         or abs(here[1] - before[0][1]) > STILL
+                         or one["task"] != before[1])
+                was[name] = (here, one["task"])
                 if moved or not one["busy"]:
                     same[name] = 0
                     continue

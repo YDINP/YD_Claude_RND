@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 
 SHOVE = "비켜세운다"      # 자리가 뜻이 아닌 것. 옆으로 옮기면 그만
 LIFT = "걷어낸다"         # 우리가 임시로 둔 것. 비우고 걷는다
+CHOP = "벤다"             # 나무와 바위. 도끼 몇 번이면 사라진다
 REPLAN = "다시그린다"     # 제 일을 하는 건물이거나 땅. 길을 바꾼다
 FREE = "비었다"
 
@@ -38,6 +39,15 @@ MOVABLE = {"small-electric-pole", "medium-electric-pole",
            "big-electric-pole", "substation"}
 # 우리가 «임시로» 둔 것들. 벨트가 오면 자리를 돌려줘야 한다.
 LIFTABLE = {"wooden-chest", "iron-chest", "steel-chest"}
+# 우리 것이 아니지만 «치우면 되는» 것들.
+#
+#     사용자: "나무가 진로방해 / 건설방해 가 된다면 벌목도 어느정도 하도록"
+#
+# 나무와 바위는 force 가 neutral 이라 「우리 것이면 걷는다」에 안 걸렸고,
+# 그래서 절벽과 같은 대접을 받았다. 절벽은 못 치우지만 나무는 치운다.
+#
+#     치우면 되는 것을 「못 놓는다」로 적으면 길이 영영 안 난다.
+CHOPPABLE = {"tree", "simple-entity"}
 
 
 def _rows(v):
@@ -101,6 +111,10 @@ def look(ai, tiles):
             why = "녹이는 중"
           elseif hit.type == "ammo-turret" or hit.type == "electric-turret" then
             why = "지키는 중"
+          elseif hit.type == "tree" then
+            why = "나무"
+          elseif hit.type == "simple-entity" then
+            why = "바위"
           elseif hit.type == "resource" then
             why = "광맥 " .. (hit.amount or 0)
           else
@@ -137,6 +151,8 @@ def call(name, kind):
         return SHOVE
     if name in LIFTABLE:
         return LIFT
+    if kind in CHOPPABLE:
+        return CHOP
     return REPLAN
 
 
@@ -156,7 +172,29 @@ def verdict(ai, tiles):
         return REPLAN, found
     if any(one["verdict"] == LIFT for one in found):
         return LIFT, found
+    if any(one["verdict"] == CHOP for one in found):
+        return CHOP, found
     return SHOVE, found
+
+
+def clearable(ai, tiles):
+    """치우면 놓을 수 있는 칸과, 치울 걸음.
+
+    나무·바위만 막고 있는 칸은 «막힌 것»이 아니다. 도끼 몇 번이다.
+    자리를 고르는 쪽(grow / guard / flow)이 이것을 물어보고 걸음을
+    앞에 붙이면 된다.
+
+    돌려주는 것: (치울 수 있는 칸들, 그 칸을 치우는 걸음들)
+    """
+    out, steps = [], []
+    for one in look(ai, tiles):
+        if one["verdict"] != CHOP:
+            continue
+        out.append((one["x"], one["y"]))
+        # 한 칸을 가리키려면 그 칸의 «가운데»를 가리켜야 한다.
+        steps.append(("demolish", {"x": one["x"] + 0.5, "y": one["y"] + 0.5,
+                                   "name": one["name"], "search_radius": 0.6}))
+    return out, steps
 
 
 def tell(found, limit=4):
