@@ -178,6 +178,40 @@ def _rows(v):
     return list(v.values()) if isinstance(v, dict) else list(v or [])
 
 
+def route(start, stops, key=lambda s: (s["x"], s["y"])):
+    """지금 선 자리에서 «가까운 것부터» 도는 차례.
+
+    사용자가 보고 짚었다: "델타의 화로채우기를봤는데, 가까운순서대로
+    진행하면되는데 위-아래 순으로 좌측부터 순서대로 이동해서 하니까
+    효율이떨어짐"
+
+    그랬다. 화로를 (x, y) 로 정렬한 «목록 순서»대로 돌았고, 그 순서는
+    지금 어디에 서 있는지와 아무 상관이 없다. 오른쪽 끝에 서서 왼쪽 끝
+    화로부터 채우러 가는 일이 매 순번 벌어졌다.
+
+    최적은 아니다(그건 외판원 문제다). 다만 «가장 가까운 다음»을 고르는
+    것만으로도 목록 순서보다 한참 낫고, 셈이 싸다.
+    """
+    left = list(stops)
+    here = start
+    order = []
+    while left:
+        near = min(left, key=lambda s: (key(s)[0] - here[0]) ** 2
+                                       + (key(s)[1] - here[1]) ** 2)
+        left.remove(near)
+        order.append(near)
+        here = key(near)
+    return order
+
+
+def standing_at(ai, who):
+    """이 사람이 지금 선 자리. 차례를 정하려면 시작점이 있어야 한다."""
+    row = next((w for w in ai.list() if w["name"] == who), None)
+    if not row:
+        return (0.0, 0.0)
+    return (float(row.get("x") or 0), float(row.get("y") or 0))
+
+
 def furnaces(reply):
     out = []
     for row in _rows(reply.get("furnaces")):
@@ -241,7 +275,7 @@ def unload(ai, who, shelf, room=None):
     return True
 
 
-def feed(ai, who, reply, shelf):
+def feed(ai, who, reply, shelf, at=None):
     """화로에 광석과 연료를 댄다.
 
     화로가 비어 서 있는 동안은 판이 안 나오고, 판이 없으면 채굴기도
@@ -277,11 +311,19 @@ def feed(ai, who, reply, shelf):
     if not legs:
         return False
 
+    here = at or (0.0, 0.0)
     plan = []
-    for pile, item, n in legs:
+    # 집으러 가는 길도 가까운 상자부터.
+    for leg in route(here, [{"x": p["x"], "y": p["y"], "leg": (p, i, n)}
+                            for p, i, n in legs]):
+        pile, item, n = leg["leg"]
         plan.append(("walk_to", {"x": pile["x"] - 1, "y": pile["y"] + 1}))
         plan.append(("take", {"name": item, "x": pile["x"], "y": pile["y"],
                               "count": n}))
+        here = (pile["x"], pile["y"])
+    # 넣으러 가는 차례도 «지금 선 자리»에서 가까운 화로부터.
+    hungry = [x["pair"] for x in route(
+        here, [{"x": f["x"], "y": f["y"], "pair": (f, ore)} for f, ore in hungry])]
     plan.append(("walk_to", {"x": hungry[0][0]["x"], "y": hungry[0][0]["y"] + 2}))
     for f, ore in hungry:
         if got.get(ore) and f["ore"] < 10 and f["what"] in ("", ore):
@@ -296,7 +338,7 @@ def feed(ai, who, reply, shelf):
     return True
 
 
-def drain(ai, who, reply, shelf):
+def drain(ai, who, reply, shelf, at=None):
     """화로가 만든 판과 밭 상자의 돌·석탄을 창고로 옮긴다.
 
     창고에 있어야 쓸 수 있다. 화로 안에 든 판은 아직 아무것도 아니다.
@@ -319,9 +361,14 @@ def drain(ai, who, reply, shelf):
         return False
 
     plan, got = [], {}
+    here = at or (0.0, 0.0)
     # 여덟 대만 보던 것도 같은 이유로 늘린다. 막힌 화로를 «남겨 두고»
     # 오면 그 화로는 다음 순번까지 한 장도 안 만든다.
-    for f in hot[:24]:
+    # 도는 차례는 «가까운 것부터»다 - 목록 순서는 발이 어디 있는지 모른다.
+    hot = route(here, hot[:24])
+    if hot:
+        here = (hot[-1]["x"], hot[-1]["y"])
+    for f in hot:
         plan.append(("walk_to", {"x": f["x"], "y": f["y"] + 2}))
         plan.append(("take", {"name": f["made"], "x": f["x"], "y": f["y"],
                               "count": f["plate"]}))
@@ -332,7 +379,7 @@ def drain(ai, who, reply, shelf):
             plan.append(("take", {"name": f["what"], "x": f["x"], "y": f["y"],
                                   "count": f["ore"]}))
             got[f["what"]] = got.get(f["what"], 0) + f["ore"]
-    for p in piles[:8]:
+    for p in route(here, piles[:8]):
         for item, n in p["held"].items():
             if (n < PILE_FLOOR or not where(item, shelf, room)
                     or got.get(item, 0) >= CARRY):
@@ -391,10 +438,10 @@ def main() -> int:
                     free.remove(who)
             if free:
                 # 화로가 먼저. 선 화로는 판을 안 내고, 판이 없으면 전부 멈춘다.
-                if feed(ai, free[0], reply, shelf):
+                if feed(ai, free[0], reply, shelf, standing_at(ai, free[0])):
                     free = free[1:]
                 if free:
-                    drain(ai, free[0], reply, shelf)
+                    drain(ai, free[0], reply, shelf, standing_at(ai, free[0]))
         except RconError as exc:
             print("  게임이 대답하지 않는다:", exc)
         except Exception as exc:
