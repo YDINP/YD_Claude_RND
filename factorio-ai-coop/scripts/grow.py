@@ -831,6 +831,24 @@ def main() -> int:
             # 다만 지킬 것이 없을 때는 안 따진다. 공해가 아직 옅으면
             # 물결을 부를 일도 없고, 그때 「방어선부터」를 고집하면 첫
             # 채굴기조차 못 세운다.
+            # 방어선이 덜 찼으면 «늘리는 일»을 멈춘다. 다만 «꺼지는 일»은
+            # 막지 않는다.
+            #
+            # 게이트가 걸린 순간 석탄 매듭 끊기와 석탄 채굴기까지 같이
+            # 막혔다. 그런데 우리가 태우는 것은 채굴기 33대, 화로 23대,
+            # 팔 49개다 - 전부 버너다.
+            #
+            #     창고 석탄 149 -> 113 -> 89 -> 66 -> 56 -> 47
+            #
+            # 이대로 0이 되면 판이 멈추고, 판이 멈추면 포탑도 못 만든다.
+            # 방어선을 지키려고 건 규칙이 방어선을 못 짓게 만드는 셈이다.
+            # 콜드스타트에서 이미 배운 모양이다.
+            #
+            #     약속을 지키느라 일을 못 하면 약속이 틀린 것이다.
+            #
+            # 연료는 늘리는 일이 아니라 «꺼지지 않는 일»이다. 그러니
+            # 석탄이 바닥일 때는 석탄 한 가지만 게이트를 지나간다.
+            fuel_short = int(st["coal"]) < FUEL_EACH * 3
             if smoke >= GUARD_FROM:
                 safe_n, all_n = covered(ai)
                 pct = safe_n * 100 // max(1, all_n)
@@ -838,13 +856,22 @@ def main() -> int:
                     if free:
                         print(f"  공해 {smoke} · 덮인 건물 {safe_n}/{all_n} "
                               f"= {pct}% - {SAFE_ENOUGH}% 를 넘기 전에는 "
-                              f"안 늘린다")
-                    free = []
+                              f"안 늘린다"
+                              + (f" (석탄 {st['coal']} - 연료만 예외)"
+                                 if fuel_short else ""))
+                    free = free[:1] if fuel_short else []
+                    only_fuel = fuel_short
+                else:
+                    only_fuel = False
+            else:
+                only_fuel = False
             if free:
                 st = stock(ai, (dx, dy))
                 # 돌이 0이면 돌 채굴기를, 석탄이 0이면 석탄 채굴기를 못
                 # 켠다. 매듭은 밭마다 «손으로 한 번»만 끊는다.
                 for ore in KNOTS:
+                    if only_fuel and ore != "coal":
+                        continue
                     if (free and ore in FIELD
                             and short_of(st, ore)
                             and not priming(ai, ore, builders)
@@ -900,7 +927,12 @@ def main() -> int:
                         and short_of_ore and not choked):
                     # 돌이 마르면 전부 마른다. 돌밭을 먼저 연다.
                     short = int(st["stone"]) < PER_TRIP * DRILL_COST["stone"]
-                    ore = "stone" if (short and "stone" in FIELD) else order[turn % len(order)]
+                    if only_fuel:
+                        ore = "coal"
+                    elif short and "stone" in FIELD:
+                        ore = "stone"
+                    else:
+                        ore = order[turn % len(order)]
                     turn += 1
                     sow(ai, free[0], shelf, dict(FIELD[ore]),
                         dict(st, plate=usable))
