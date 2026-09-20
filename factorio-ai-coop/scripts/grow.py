@@ -875,7 +875,20 @@ def main() -> int:
                     if (free and ore in FIELD
                             and short_of(st, ore)
                             and not priming(ai, ore, builders)
-                            and drills_on(ai, FIELD[ore]) < PRIME_UNTIL):
+                            # 채굴기 수는 «할 수 있다»를 말할 뿐이다.
+                            #
+                            # 연료는 다르다. 석탄 채굴기가 여덟 대나
+                            # 섰는데도 상자 전체의 석탄이 2였고, 그 여덟
+                            # 중 넷은 «자기 연료»가 없어 서 있었다.
+                            #
+                            #     석탄이 없어서 석탄을 못 캔다.
+                            #
+                            # 이 매듭은 대수로 안 풀린다. 그래서 석탄만은
+                            # 「몇 대 섰나」가 아니라 «창고에 있나»로
+                            # 끊을지 정한다 - short_of 가 이미 그것을
+                            # 보고 있으므로, 여기서는 대수를 안 따진다.
+                            and (ore == "coal"
+                                 or drills_on(ai, FIELD[ore]) < PRIME_UNTIL)):
                         prime(ai, free[0], shelf, FIELD[ore])
                         free = free[1:]
                 # 연구소가 아직 없으면 발전 사슬 몫을 남긴다.
