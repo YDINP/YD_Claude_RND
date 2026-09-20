@@ -35,6 +35,7 @@ from orders import submit               # noqa: E402
 
 sys.path.insert(0, HERE)
 from settle import near_patch           # noqa: E402
+import rows                             # noqa: E402
 
 DRILL = "burner-mining-drill"
 CHEST = "iron-chest"
@@ -76,14 +77,16 @@ FURNACE_PER_SECOND = 0.3125
 MELT_RATIO = DRILL_PER_SECOND / FURNACE_PER_SECOND     # 0.8
 FURNACE = "stone-furnace"
 FURNACE_COST = {"stone": 5}
-SMELT_PITCH = 3
 # 화로 상한. 채굴기를 늘리면 여기도 따라 올려야 한다 - 안 그러면
 # 캔 것이 상자에서 잠기고, 그 채굴기는 없는 것과 같아진다.
-# 줄은 여덟 대마다 아래로 접으므로 마흔이면 다섯 줄이다.
+#
+# 예전에는 줄을 다섯 줄까지 접어 마흔 대를 채웠다. 지금은 모드 구역이
+# 잡아 둔 두 줄만 쓴다(rows.py) - 나머지 줄은 벨트 줄과 팔 줄이다. 실제
+# 상한은 구역 폭이 정하고, 마흔은 그 위의 목표치일 뿐이다. 자리가
+# 없으면 widen() 이 스스로 멈춘다.
 MAX_FURNACE = 40
 FURNACE_PER_TRIP = 4
-ROW_GAP = 5                   # 줄과 줄 사이. 사람이 지나다닐 폭
-PER_ROW = 8                   # 한 줄에 여덟 대. 그 다음은 «아래 줄»로 접는다
+PER_ROW = 8                   # rows.py 가 구역을 아직 모를 때의 대체 줄 폭
 TEND_PER_TRIP = 3
 
 # 한 대라도 멈춰 있으면 그것부터. 세우는 것보다 «세워 둔 것을 돌리는» 편이
@@ -398,51 +401,76 @@ def priming(ai, ore, names):
     return False
 
 
-def smelt_row(ai, smelt, want):
+def smelt_row(ai, agent, want, smelt_xy=None):
     """화로가 몇 대 섰고, 다음 `want` 대를 «어디에» 세울 수 있나.
 
-    줄을 동쪽으로 무작정 이어 붙이면 언젠가 광맥을 만난다. 20회차에서
-    그랬다 - 화로 다섯 대가 석탄밭 안으로 걸어 들어가 스무 칸을 깔고
-    앉았고, 그 스무 칸에는 이제 채굴기를 못 세운다.
+        사용자: "화로사이에 벨트가 왜있는거임?"
 
-    사용자가 전에도 같은 것을 짚었다: "벨트를 늘려서(이후 채굴기를 늘릴
-    수 있기떄문에) 석탄지를 벗어나서 상자에 모았으면 더 좋을듯."
+    자리는 더 이상 여기서 계산하지 않는다. 예전에는 `for row = 0, 5` 로
+    SY+0,5,10,15,20,25 여섯 줄에 화로를 뿌렸는데, 모드(belts.lua)가 벨트
+    줄과 팔 줄로 이미 잡아 둔 자리가 그 사이에 있었다. 화로가 그 위에
+    서면 모드는 남은 빈칸으로 길을 이으려 하고, 그래서 화로 사이마다
+    아무 데도 안 닿는 벨트 토막이 남았다 - 기준점이 둘이면 줄은 반드시
+    흩어진다.
 
-    그래서 자리는 «게임에 물어» 고른다. 광맥 위나 못 놓는 칸은 건너뛰고,
-    한 줄이 여덟 대를 넘으면 아래 줄로 접는다.
+    이제는 `rows.py` 가 하나뿐인 기준점이다. `ai.zones()` 가 아는 제련
+    구역에서 `rows.clear_spots()` 로 «화로를 세워도 되는 두 줄»만 받고,
+    그 후보 칸 중 광맥 위가 아니고 놓을 수 있는 칸만 게임에 물어 고른다.
+
+    구역을 아직 모르면(초반, 벨트를 하나도 안 깐 때) `smelt_xy` 를
+    두 줄짜리 좌표로만 쓴다 - 그때는 모드도 벨트 줄을 계획하지 않았으니
+    두 줄만 비우면 충분하다. 둘 다 없으면 `None` 을 돌려준다 - 아직
+    「화로를 어디에 세울지」 물을 자리 자체가 없다는 뜻이라, 부르는 쪽은
+    이것을 «빈 땅이 없다»와 구별해야 한다.
     """
-    sx, sy = smelt
+    zones = ai.zones(agent)
+    zone = zones.get("smelt")
+    if zone:
+        cand = rows.clear_spots(zones)
+    elif smelt_xy:
+        sx, sy = smelt_xy
+        cand = [(sx + col * rows.PITCH, sy + r)
+                for r in (rows.ROW_A, rows.ROW_B) for col in range(PER_ROW)]
+    else:
+        return None
+    if not cand:
+        return {"n": 0, "spots": [], "drills": 0}
+
+    # 세는 구역도 후보 칸과 같은 상자를 쓴다 - 딴 자리에 선 화로까지
+    # 세면 「이미 다 찼다」고 잘못 읽는다.
+    xs = [x for x, _ in cand]
+    ys = [y for _, y in cand]
+    x0, x1 = min(xs) - 3, max(xs) + 3
+    y0, y1 = min(ys) - 3, max(ys) + 3
+    body = ", ".join("{%d,%d}" % (x, y) for x, y in cand)
     return ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
-      local SX, SY, PITCH, GAP, PER = %d, %d, %d, %d, %d
-      local n = 0
+      local cand, WANT = { %s }, %d
+      local box = {{%d, %d}, {%d, %d}}
+      local n = s.count_entities_filtered{area = box, type = "furnace", force = f}
       local taken = {}
       for _, fu in pairs(s.find_entities_filtered{
-            area = {{SX - 3, SY - 3}, {SX + PITCH * PER + 3, SY + GAP * 6}},
-            type = "furnace", force = f}) do
-        n = n + 1
+            area = box, type = "furnace", force = f}) do
         taken[math.floor(fu.position.x) .. "," .. math.floor(fu.position.y)] = true
       end
       local spots = {}
-      for row = 0, 5 do
-        for col = 0, PER - 1 do
-          if #spots >= %d then break end
-          local x, y = SX + col * PITCH, SY + row * GAP
-          local key = math.floor(x) .. "," .. math.floor(y)
-          if not taken[key] then
-            -- 광맥 위에는 놓지 않는다. 건물이 덮은 광맥은 영영 못 캔다.
-            local ore = s.count_entities_filtered{
-              area = {{x - 1, y - 1}, {x + 1, y + 1}}, type = "resource"}
-            if ore == 0 and s.can_place_entity{name = "stone-furnace",
-                  position = {x, y}, force = f} then
-              spots[#spots+1] = string.format("%%d|%%d", x, y)
-            end
+      for _, c in ipairs(cand) do
+        if #spots >= WANT then break end
+        local x, y = c[1], c[2]
+        local key = math.floor(x) .. "," .. math.floor(y)
+        if not taken[key] then
+          -- 광맥 위에는 놓지 않는다. 건물이 덮은 광맥은 영영 못 캔다.
+          local ore = s.count_entities_filtered{
+            area = {{x - 1, y - 1}, {x + 1, y + 1}}, type = "resource"}
+          if ore == 0 and s.can_place_entity{name = "stone-furnace",
+                position = {x, y}, force = f} then
+            spots[#spots+1] = string.format("%%d|%%d", x, y)
           end
         end
       end
       return { n = n, spots = spots,
         drills = s.count_entities_filtered{type = "mining-drill", force = f} }
-    end)()""" % (sx, sy, SMELT_PITCH, ROW_GAP, PER_ROW, want))
+    end)()""" % (body, want, x0, y0, x1, y1))
 
 
 def widen(ai, who, shelf, smelt, row, st):
@@ -535,7 +563,9 @@ def main() -> int:
     ap.add_argument("--depot", default="60,-115",
                     help="창고 줄의 첫 칸. 판/돌/석탄 상자가 두 칸 간격으로 선다")
     ap.add_argument("--smelt", default=None,
-                    help="화로 줄의 첫 칸. 주면 채굴기에 맞춰 화로도 늘린다")
+                    help="화로 줄의 첫 칸. 주면 채굴기에 맞춰 화로도 늘린다. "
+                         "모드가 제련 구역을 이미 잡았으면 그쪽이 우선이고, "
+                         "이 값은 구역이 아직 없을 때의 대체 좌표일 뿐이다")
     ap.add_argument("--builders", default="alpha,bravo,charlie,delta,golf")
     ap.add_argument("--rounds", type=int, default=2000)
     ap.add_argument("--every", type=float, default=15)
@@ -581,9 +611,15 @@ def main() -> int:
 
             # 0.5 녹이는 쪽이 캐는 쪽을 못 따라가면 화로부터 늘린다.
             #     캔 것이 상자에 쌓이기만 하면 그 채굴기는 없는 것과 같다.
-            if free and smelt:
-                row = smelt_row(ai, smelt, FURNACE_PER_TRIP)
-                if widen(ai, free[0], shelf, smelt, row, stock(ai, (dx, dy))):
+            #
+            #     자리는 `--smelt` 가 아니라 모드 구역(ai.zones)이 정한다.
+            #     `--smelt` 는 구역이 아직 없을 때만 쓰는 대체 좌표다 -
+            #     smelt_row() 가 그 우선순위를 알아서 가른다. 구역도
+            #     대체 좌표도 없으면 None 이 와서 이 단계를 건너뛴다.
+            if free:
+                row = smelt_row(ai, free[0], FURNACE_PER_TRIP, smelt)
+                if row and widen(ai, free[0], shelf, smelt, row,
+                                  stock(ai, (dx, dy))):
                     free = free[1:]
 
             # 0.7 캘 것이 없어진 채굴기부터 걷는다. 마른 자리의 채굴기는

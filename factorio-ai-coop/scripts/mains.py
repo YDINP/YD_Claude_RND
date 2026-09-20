@@ -324,15 +324,17 @@ def main() -> int:
                 time.sleep(args.every)
                 continue
 
-            # 선은 이어졌는데 누가 굶는다면, 덮이지 않은 띠가 있다는 뜻이다.
-            # 끊긴 곳을 찾는 것보다 이쪽이 먼저다 - 끊긴 곳은 «없기» 때문에
-            # 그대로 두면 아래에서 할 일을 못 찾고 매번 빈손으로 돈다.
+            # 끊긴 곳이 «먼저»다.
+            #
+            # 처음에는 굶는 것을 덮는 일을 앞에 두었다. 그런데 망이 갈라져
+            # 있을 때 굶는 쪽에 전봇대를 더 세우면, 그 전봇대는 발전기가
+            # 없는 쪽 망에 붙는다 - 세울수록 굶는 것이 늘어난다.
+            #
+            #   실측: 전력망 2개(n5=21, n16=7), 굶는 인서터 12.
+            #         n16 쪽에 아홉 대를 더 세우라는 계획이 나왔다.
+            #
+            # 덮는 것은 «전기가 오는 곳»에서만 뜻이 있다. 선이 먼저다.
             todo = []
-            if hungry:
-                todo = cover(ai, hungry)
-                names = sorted({one[2] for one in hungry})
-                print(f"  {len(hungry)}개가 굶는다 "
-                      f"({', '.join(names[:3])}) - 덮을 자리 {len(todo)}")
 
             # 끊긴 곳이 있으면 «그곳부터». 새 자리를 채우는 것보다
             # 이미 선 것들을 잇는 쪽이 언제나 싸다.
@@ -354,6 +356,12 @@ def main() -> int:
                 todo = missing(ai, halves)
             if not todo:
                 todo = missing(ai, spots)
+            # 선이 다 이어진 뒤에야 «덮이지 않은 띠»를 본다.
+            if not todo and not holes and hungry:
+                todo = cover(ai, hungry)
+                names = sorted({one[2] for one in hungry})
+                print(f"  선은 이어졌는데 {len(hungry)}개가 굶는다 "
+                      f"({', '.join(names[:3])}) - 덮을 자리 {len(todo)}")
             if holes:
                 print(f"  끊긴 곳 {len(holes)}군데 - 메울 자리 {len(todo)}개")
             if not todo:
