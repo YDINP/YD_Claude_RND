@@ -138,6 +138,56 @@ def endangered(ai, reach=FLEE, close=CLOSE, pack=PACK):
     return sorted(out, key=lambda p: (-p["tight"], -p["near"]))
 
 
+# 제자리에 묶인 사람은 «조용히» 아무것도 안 한다.
+#
+#     사용자: "델타랑 찰리가 아예 낀거같은데 위치좀 수정해줘"
+#
+# 실측(21회차 개시): charlie (0,-2), delta (-1,-2). 둘 다 원점에 선 채로
+# `mine` 을 1637틱 물고 있었고 좌표는 정수로 딱 떨어진 채 한 칸도 안
+# 움직였다. 취소하고 walk_to 를 줘도 마찬가지였다. 자리를 강제로 옮기자
+# 그 순간부터 둘 다 제대로 걸었다.
+#
+# 이 스물일곱 분 동안 아무 로그도 안 났다. 「실패」가 아니라 «진행 중»
+# 으로 보였기 때문이다.
+#
+#     멈춰 있는 것과 «천천히 하는 것»은 밖에서 보면 같다.
+#
+# 그래서 자리를 기억해 두고, 일을 물고 있는데 자리가 안 바뀌면 묶인
+# 것으로 친다.
+STILL = 0.6               # 이만큼도 안 움직였으면 «그대로»다
+PATIENCE = 4              # 몇 순번을 그대로여야 묶인 것으로 보나
+
+
+def unstick(ai, who, at):
+    """묶인 사람을 빈 자리로 옮긴다. 하던 일은 버린다.
+
+    옮기기만 하고 일을 남겨 두면 그 일이 다시 같은 자리로 끌고 간다.
+
+    `storage` 는 /silent-command 에서 안 보인다 - 이 저장소가 이미 한 번
+    겪은 함정이다. 그래서 이름이 아니라 «자리»로 찾는다. 그 자리에 선
+    캐릭터가 곧 그 사람이다.
+    """
+    try:
+        ai.agent(who).cancel()
+    except RconError:
+        pass
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local here = s.find_entities_filtered{
+        position = {%.2f, %.2f}, radius = 1.0,
+        type = "character", force = f, limit = 1}[1]
+      if not here then return { moved = 0, why = "그 자리에 아무도 없다" } end
+      local spot = s.find_non_colliding_position("character",
+        {here.position.x - 6, here.position.y + 4}, 24, 0.5)
+      if not spot then return { moved = 0, why = "둘레에 빈 자리가 없다" } end
+      if not here.teleport(spot, s) then
+        return { moved = 0, why = "옮기기를 거절당했다" }
+      end
+      return { moved = 1, x = spot.x, y = spot.y }
+    end)()""" % (at[0], at[1]))
+    return int(reply.get("moved") or 0) == 1, reply
+
+
 def flee(ai, who, home):
     """하던 일을 «버리고» 돌아온다.
 
@@ -165,6 +215,8 @@ def main() -> int:
     home = tuple(float(v) for v in args.home.split(","))
     ai = AIBridge()
     calling = set()
+    was = {}          # 지난 순번의 자리
+    same = {}          # 몇 순번째 그대로인가
 
     for _ in range(args.rounds):
         try:
@@ -179,6 +231,25 @@ def main() -> int:
                 flee(ai, one["name"], home)
             # 안전해진 사람은 다시 부를 수 있게 풀어 준다.
             calling = names
+
+            # 위험과 별개로, «묶인» 사람도 본다.
+            for one in crew(ai):
+                name, here = one["name"], (one["x"], one["y"])
+                before = was.get(name)
+                moved = before is None or (abs(here[0] - before[0]) > STILL
+                                           or abs(here[1] - before[1]) > STILL)
+                was[name] = here
+                if moved or not one["busy"]:
+                    same[name] = 0
+                    continue
+                same[name] = same.get(name, 0) + 1
+                if same[name] < PATIENCE:
+                    continue
+                ok, _ = unstick(ai, name, here)
+                same[name] = 0
+                print(f"  [!] {name} ({here[0]:.0f},{here[1]:.0f}) 가 "
+                      f"{PATIENCE}순번째 제자리다 - "
+                      f"{'자리를 옮겼다' if ok else '옮기지 못했다'}")
         except RconError as exc:
             print("  게임이 대답하지 않는다:", exc)
         except Exception as exc:
