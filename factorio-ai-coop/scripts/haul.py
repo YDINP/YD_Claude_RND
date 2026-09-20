@@ -73,9 +73,30 @@ SHELF_OF = {
 }
 
 
-def where(item, shelf):
+def where(item, shelf, room=None):
+    """이 물건이 갈 칸. 그 칸이 «찼으면» 갈 데가 없는 것이다.
+
+    실측(20회차 108분): 돌 칸이 1600(32칸 x 50)으로 꽉 찼는데, 운반
+    당번이 돌 2071을 들고 「창고에 내려놓기」를 순번마다 되풀이했다.
+    그동안 화로 스물두 대는 철판을 물고 막혀 있었고 창고 철판은 0이었다.
+    들어가지도 않는 것을 나르느라 정작 나를 것을 못 날랐다.
+    """
     key = SHELF_OF.get(item)
-    return shelf.get(key) if key else None
+    if not key:
+        return None
+    if room is not None and room.get(key, 1) <= 0:
+        return None
+    return shelf.get(key)
+
+
+def headroom(reply, shelf):
+    """창고 칸마다 빈 자리가 얼마나 남았나."""
+    out = {}
+    for c in chests(reply, "depot"):
+        for key, at in shelf.items():
+            if abs(c["x"] - at[0]) < 1 and abs(c["y"] - at[1]) < 1:
+                out[key] = c["free"]
+    return out
 
 
 def look(ai, depot, smelt):
@@ -115,8 +136,13 @@ def look(ai, depot, smelt):
         for _, item in pairs(inv.get_contents()) do
           rows[#rows+1] = item.name .. "=" .. item.count
         end
-        local line = string.format("%%.1f|%%.1f|%%s", c.position.x, c.position.y,
-                                   table.concat(rows, ","))
+        -- 빈 칸이 몇인가. 「넣을 수 있나」는 내용물이 아니라 «자리»가 답한다.
+        local free = 0
+        for i = 1, #inv do
+          if not inv[i].valid_for_read then free = free + 1 end
+        end
+        local line = string.format("%%.1f|%%.1f|%%d|%%s", c.position.x, c.position.y,
+                                   free, table.concat(rows, ","))
         if inside(c.position) then D[#D+1] = line else P[#P+1] = line end
       end
       return { furnaces = F, piles = P, depot = D }
@@ -140,13 +166,14 @@ def furnaces(reply):
 def chests(reply, key):
     out = []
     for row in _rows(reply.get(key)):
-        x, y, body = row.split("|")
+        x, y, free, body = row.split("|")
         held = {}
         for cell in body.split(","):
             if "=" in cell:
                 name, n = cell.rsplit("=", 1)
                 held[name] = int(n)
-        out.append({"x": float(x), "y": float(y), "held": held})
+        out.append({"x": float(x), "y": float(y), "held": held,
+                    "free": int(free)})
     return out
 
 
@@ -167,7 +194,7 @@ def lanes(hot, tail=COPPER_TAIL):
 KEEP = 20          # 손에 남겨 두는 몫
 
 
-def unload(ai, who, shelf):
+def unload(ai, who, shelf, room=None):
     """손에 든 것을 창고에 내려놓는다.
 
     나르는 사람이 «들고만» 있으면 그것은 나른 것이 아니다. 20회차에서
@@ -176,13 +203,13 @@ def unload(ai, who, shelf):
     """
     held = ai.agent(who).items()
     drop = {k: v - KEEP for k, v in held.items()
-            if where(k, shelf) and v - KEEP >= PILE_FLOOR}
+            if where(k, shelf, room) and v - KEEP >= PILE_FLOOR}
     if not drop:
         return False
     plan = [("walk_to", {"x": shelf["iron-plate"][0] - 2,
                          "y": shelf["iron-plate"][1] + 1})]
     for item, n in drop.items():
-        at = where(item, shelf)
+        at = where(item, shelf, room)
         plan.append(("insert", {"name": item, "x": at[0], "y": at[1], "count": n}))
     submit(ai, who, plan, strict=False)
     print(f"{who}: 창고에 내려놓기 {drop}")
@@ -254,8 +281,10 @@ def drain(ai, who, reply, shelf):
     # 아무 순서로 넷을 고르면 정작 막힌 곳이 계속 밀린다.
     piles = sorted(
         (p for p in chests(reply, "piles")
-         if any(n >= PILE_FLOOR and where(k, shelf) for k, n in p["held"].items())),
-        key=lambda p: -sum(n for k, n in p["held"].items() if where(k, shelf)))
+         if any(n >= PILE_FLOOR and where(k, shelf, room)
+                for k, n in p["held"].items())),
+        key=lambda p: -sum(n for k, n in p["held"].items()
+                           if where(k, shelf, room)))
     if not hot and not piles:
         return False
 
@@ -269,13 +298,14 @@ def drain(ai, who, reply, shelf):
         got[f["made"]] = got.get(f["made"], 0) + f["plate"]
         # 막힌 화로는 «원료칸»도 비운다. 결과칸만 비우면 다음 순번에
         # 또 같은 것을 굽다가 또 막힌다.
-        if (f["jammed"] or mismatched(f)) and f["what"] and where(f["what"], shelf):
+        if (f["jammed"] or mismatched(f)) and f["what"] and where(f["what"], shelf, room):
             plan.append(("take", {"name": f["what"], "x": f["x"], "y": f["y"],
                                   "count": f["ore"]}))
             got[f["what"]] = got.get(f["what"], 0) + f["ore"]
     for p in piles[:8]:
         for item, n in p["held"].items():
-            if n < PILE_FLOOR or not where(item, shelf) or got.get(item, 0) >= CARRY:
+            if (n < PILE_FLOOR or not where(item, shelf, room)
+                    or got.get(item, 0) >= CARRY):
                 continue
             plan.append(("walk_to", {"x": p["x"] - 1, "y": p["y"] + 1}))
             plan.append(("take", {"name": item, "x": p["x"], "y": p["y"],
@@ -287,7 +317,7 @@ def drain(ai, who, reply, shelf):
     plan.append(("walk_to", {"x": shelf["iron-plate"][0] - 2,
                              "y": shelf["iron-plate"][1] + 1}))
     for item, n in got.items():
-        at = where(item, shelf)
+        at = where(item, shelf, room)
         if at:
             plan.append(("insert", {"name": item, "x": at[0], "y": at[1],
                                     "count": n}))
@@ -316,12 +346,19 @@ def main() -> int:
     for _ in range(args.rounds):
         try:
             free = idle(ai, carriers)
+            if not free:
+                time.sleep(args.every)
+                continue
+            reply = look(ai, (dx, dy), (sx, sy))
+            room = headroom(reply, shelf)
+            if any(v <= 0 for v in room.values()):
+                full = [k for k, v in room.items() if v <= 0]
+                print(f"  창고 {','.join(full)} 칸이 찼다 - 그것은 안 나른다")
             # 0. 손에 든 것부터 푼다. 들고 있는 것은 아직 나른 것이 아니다.
             for who in list(free):
-                if unload(ai, who, shelf):
+                if unload(ai, who, shelf, room):
                     free.remove(who)
             if free:
-                reply = look(ai, (dx, dy), (sx, sy))
                 # 화로가 먼저. 선 화로는 판을 안 내고, 판이 없으면 전부 멈춘다.
                 if feed(ai, free[0], reply, shelf):
                     free = free[1:]

@@ -31,6 +31,15 @@ POLE = "small-electric-pole"
 REACH = 7                 # 전선이 닿는 거리. 7.5 지만 반 칸은 남겨 둔다
 PER_TRIP = 10             # 한 걸음에 세우는 전봇대
 WOOD_PER_POLE = 1         # 전봇대 둘에 나무 하나지만, 넉넉히 센다
+COPPER_PER_POLE = 2       # 전봇대 하나에 구리선 둘 = 구리판 하나
+
+# 전봇대는 나무 «와» 구리를 먹는다.
+#
+# 나무만 챙겨 보냈더니 bravo 가 「전봇대 10대」를 네 번 찍는 동안 세상의
+# 전봇대는 한 대 그대로였다. 구리선을 못 만들어 craft 가 조용히 실패한
+# 것이다 - 로그는 «시킨 것»을 찍지 «된 것»을 찍지 않는다.
+#
+# 재료가 둘이면 둘 다 챙겨야 한다. 하나만 챙기는 것은 안 챙긴 것과 같다.
 
 
 def _rows(v):
@@ -135,6 +144,8 @@ def main() -> int:
     ap.add_argument("--from", dest="src", required=True,
                     help="발전소 쪽. 음수는 --from=-52,-9")
     ap.add_argument("--to", dest="dst", required=True, help="기지 쪽")
+    ap.add_argument("--depot", default=None,
+                    help="구리판을 집어 올 창고. 음수는 --depot=-5,-90")
     ap.add_argument("--every", type=float, default=15)
     ap.add_argument("--rounds", type=int, default=200)
     args = ap.parse_args()
@@ -142,6 +153,7 @@ def main() -> int:
     crew = args.who or ["alpha"]
     src = tuple(int(v) for v in args.src.split(","))
     dst = tuple(int(v) for v in args.dst.split(","))
+    depot = tuple(int(v) for v in args.depot.split(",")) if args.depot else None
     ai = AIBridge()
 
     spots = line(src, dst)
@@ -167,7 +179,12 @@ def main() -> int:
             batch = todo[:PER_TRIP]
             held = ai.agent(who).items()
             need = len(batch) * WOOD_PER_POLE + 4
+            copper = len(batch) * COPPER_PER_POLE + 4
             plan = []
+            if depot and int(held.get("copper-plate", 0)) < copper:
+                plan += [("walk_to", {"x": depot[0] - 2, "y": depot[1] + 1}),
+                         ("take", {"name": "copper-plate", "x": depot[0] + 0.5,
+                                   "y": depot[1] + 0.5, "count": copper})]
             if int(held.get("wood", 0)) < need:
                 grove = woods(ai, batch[0])
                 if not grove:

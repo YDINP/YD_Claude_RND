@@ -36,11 +36,28 @@ from orders import submit               # noqa: E402
 LAB = "lab"
 POLE = "small-electric-pole"
 SCIENCE = "automation-science-pack"
+# 열 기술은 밖에서 받는다. 포탑이 열렸다고 발전 사슬의 일이 끝나는 것이
+# 아니다 - 다음은 조립기(automation)고, 그 다음은 벨트(logistics)다.
 WANT_TECH = ("gun-turret", "stone-wall")
 
 # 들고 갈 것. 159칸을 되돌아오는 것보다 넉넉히 드는 편이 싸다.
 LOAD = {"iron-plate": 200, "copper-plate": 55, "stone": 15, "coal": 80, "wood": 10}
 SCIENCE_EACH = 12          # 기술 하나에 10. 두 개면 20, 여유로 24
+
+
+def researched(ai, techs):
+    """이 기술들이 끝났나. 「뭘 열 건가」는 부르는 쪽이 정한다."""
+    body = ", ".join('"%s"' % t for t in techs)
+    reply = ai.lua("""(function()
+      local f = game.forces.player
+      local out = {}
+      for _, name in ipairs({ %s }) do
+        local t = f.technologies[name]
+        out[name] = (t and t.researched) and 1 or 0
+      end
+      return out
+    end)()""" % body)
+    return reply
 
 
 def survey(ai):
@@ -213,15 +230,15 @@ def feed_science(ai, who, at, count):
     print(f"{who}: 빨간 과학 {count}개를 연구소에")
 
 
-def queue_tech(ai):
+def queue_tech(ai, techs=WANT_TECH):
     ai.lua("""(function()
       local f = game.forces.player
-      for _, name in ipairs({"gun-turret", "stone-wall"}) do
+      for _, name in ipairs({%s}) do
         local t = f.technologies[name]
         if t and not t.researched then f.add_research(t) end
       end
       return { queued = #f.research_queue }
-    end)()""")
+    end)()""" % ", ".join('"%s"' % t for t in techs))
 
 
 def main() -> int:
@@ -231,6 +248,8 @@ def main() -> int:
     ap.add_argument("--depot", default="60,-115")
     ap.add_argument("--water", default="24.5,44.5")
     ap.add_argument("--engines", type=int, default=2)
+    ap.add_argument("--tech", action="append", default=None,
+                    help="열 기술. 여러 번 줄 수 있다. 안 주면 포탑.벽")
     args = ap.parse_args()
 
     dx, dy = (int(float(v)) for v in args.depot.split(","))
@@ -239,6 +258,7 @@ def main() -> int:
              "stone": (dx + 0.5, dy + 2.5),
              "coal": (dx + 0.5, dy + 4.5)}
     crew = args.who or ["echo"]
+    techs = tuple(args.tech) if args.tech else WANT_TECH
 
     ai = AIBridge()
     while True:
@@ -251,8 +271,9 @@ def main() -> int:
                 time.sleep(30)
                 continue
             st = survey(ai)
-            if int(st["gun"]) and int(st["wall"]):
-                print("포탑과 벽이 열렸다. 불은 켜졌다.")
+            done = researched(ai, techs)
+            if all(int(done.get(t, 0)) for t in techs):
+                print(f"{', '.join(techs)} 이(가) 열렸다.")
                 return 0
 
             if busy(ai, who):
@@ -288,8 +309,8 @@ def main() -> int:
             # 3. 불이 들어왔다 -> 연구를 걸고 과학을 먹인다.
             if int(st["lab"]) and int(st["powered"]):
                 if not int(st["queued"]):
-                    queue_tech(ai)
-                    print("연구 대기열: gun-turret, stone-wall")
+                    queue_tech(ai, techs)
+                    print("연구 대기열:", ", ".join(techs))
                 if int(st["science"]) < 8:
                     feed_science(ai, who, at, SCIENCE_EACH)
                     wait_for(ai, who, "과학 나르기", every=15, limit=200)
