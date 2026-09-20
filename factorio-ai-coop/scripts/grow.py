@@ -806,6 +806,9 @@ def main() -> int:
                                   stock(ai, (dx, dy))):
                     free = free[1:]
 
+            # 창고가 석탄으로 굶고 있나. 아래 여러 걸음이 이 답을 본다.
+            fuel_short = int(st["coal"]) < FUEL_EACH * 3
+
             # 0.7 캘 것이 없어진 채굴기부터 걷는다. 마른 자리의 채굴기는
             #     연료만 태우고 공해를 내면서 숫자만 채운다.
             if free:
@@ -819,12 +822,30 @@ def main() -> int:
             # 늘 그렇다 - 화로를 세우러 보내고 나면 손이 없다. 「할 일이
             # 있나」와 「할 사람이 있나」를 따로 묻지 않으면 그 순번은
             # IndexError 로 통째로 날아간다.
+            # 다만 «연료가 없어서» 선 것을 손으로 되살리는 것은 쳇바퀴다.
+            #
+            # 실측(21회차): 증식 고리가 순번마다 「멈춘 채굴기 3대
+            # 손보기」만 찍었다. 연료 없이 선 채굴기를 손으로 채우면 곧
+            # 또 서고, 그 되살리기가 손을 다 써서 «석탄 채굴기를 세울
+            # 차례»가 영영 안 왔다.
+            #
+            #     채굴기 38대 중 11대가 연료 없음
+            #     석탄밭 8대 (스무 순번째 그대로)
+            #
+            # 증상을 고치느라 원인을 못 고친다. 연료칸 채우기는 보급
+            # 순찰(upkeep_patrol)이 이미 제 일로 하고 있으므로, 창고가
+            # 석탄으로 굶을 때 증식은 «캐는 쪽»에 손을 쓴다.
+            #
+            #     오늘을 사느라 내일을 못 사면, 내일도 오늘과 같다.
             sick = stalled(ai)
-            if sick and free and tend(ai, free[0], shelf, sick):
+            if sick and free and not fuel_short and tend(ai, free[0], shelf, sick):
                 free = free[1:]
                 if len(sick) > TEND_PER_TRIP and free:
                     tend(ai, free[0], shelf, sick[TEND_PER_TRIP:])
                     free = free[1:]
+            elif sick and fuel_short:
+                print(f"  멈춘 채굴기 {len(sick)}대 - 손보지 않는다 "
+                      f"(창고 석탄 {st['coal']}, 캐는 쪽부터)")
 
             # 2. 그 다음에 새로 세운다 - «지킬 수 있을 때만».
             #
@@ -848,7 +869,6 @@ def main() -> int:
             #
             # 연료는 늘리는 일이 아니라 «꺼지지 않는 일»이다. 그러니
             # 석탄이 바닥일 때는 석탄 한 가지만 게이트를 지나간다.
-            fuel_short = int(st["coal"]) < FUEL_EACH * 3
             if smoke >= GUARD_FROM:
                 safe_n, all_n = covered(ai)
                 pct = safe_n * 100 // max(1, all_n)
