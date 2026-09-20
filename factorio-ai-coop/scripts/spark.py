@@ -191,6 +191,36 @@ def raise_plant(ai, who, spot):
     return True
 
 
+# 물가를 틔우는 데 드는 목재. 나무 한 그루가 대략 넷이니 여남은 그루다.
+CLEARING = 40
+CLEARINGS = 3             # 이만큼 틔워 보고도 안 되면 물가 자체가 틀린 것
+
+
+def clear_shore(ai, who, wx, wy, want=CLEARING):
+    """물가의 나무를 벤다. 「자리가 없다」를 되받는 유일한 방법.
+
+        사용자: "나무가 진로방해 / 건설방해 가 된다면 벌목도 어느정도 하도록"
+
+    설계가 「자리가 없다」고 답했을 때, 그것을 결론으로 받으면 사슬이
+    거기서 끝난다. 그런데 실측해 보니 없던 것은 자리가 아니었다:
+
+        기관이 앉을 수 있는 자리   0
+        나무 다섯 그루를 치우면    160
+
+    다섯 그루가 발전소 하나를, 그러니까 연구소와 포탑과 방어선 전체를
+    막고 서 있었다. 「막혔다」는 결론이 아니라 질문이다 - 무엇이 막았나,
+    그것은 치울 수 있는 것인가.
+
+    치울 수 있는 것이었다.
+    """
+    submit(ai, who, [
+        ("walk_to", {"x": wx, "y": wy - 3}),
+        ("chop", {"x": wx, "y": wy, "count": want}),
+    ], strict=False)
+    print(f"{who}: 물가 틔우기 - 나무를 목재 {want}만큼 벤다 ({wx:.0f},{wy:.0f})")
+    return True
+
+
 def wire_up(ai, who, at, eng=None):
     """연구소에 전기가 안 들어오면 전봇대로 «잇는다».
 
@@ -261,6 +291,7 @@ def main() -> int:
     techs = tuple(args.tech) if args.tech else WANT_TECH
 
     ai = AIBridge()
+    cleared = 0
     while True:
         try:
             # 159칸 남쪽은 죽어서 안 돌아오는 걸음이다. 죽은 사람에게 계속
@@ -288,9 +319,17 @@ def main() -> int:
                 if not wait_for(ai, who, "짐 싣기"):
                     time.sleep(20)
                     continue
-                spot = ai.power_plan(who, wx, wy, radius=40, engines=args.engines)
+                spot = ai.power_plan(who, wx, wy, radius=45, engines=args.engines)
                 if spot.get("error") or not spot.get("pump"):
-                    print("  발전소 자리를 못 찾는다:", spot)
+                    # 「자리가 없다」는 대개 「나무가 있다」였다. 물어보기
+                    # 전에 치워 보고, 치워도 안 되면 그때 물가를 의심한다.
+                    if cleared < CLEARINGS:
+                        cleared += 1
+                        clear_shore(ai, who, wx, wy)
+                        wait_for(ai, who, "물가 틔우기", every=10, limit=120)
+                        continue
+                    print("  발전소 자리를 못 찾는다:", spot,
+                          f"(물가를 {cleared}번 틔워 보고도)")
                     time.sleep(60)
                     continue
                 raise_plant(ai, who, spot)

@@ -44,13 +44,25 @@ local function water_sites_near(surface, force, x, y, radius, wanted)
         local key = spot.x .. ":" .. spot.y
         if not seen[key] then
           seen[key] = true
+          -- 네 방향을 «모두» 후보로 올린다.
+          --
+          -- 여기 있던 것은 놓이는 방향을 하나 찾으면 곧장 break 했다.
+          -- 「놓인다」와 «쓸모 있다»는 다른 말이다 - 펌프는 바라보는 쪽
+          -- 반대 칸으로 물을 내보내는데, 그 칸이 호수면 보일러가 붙을
+          -- 자리가 애초에 없다.
+          --
+          --     실측(21회차): 펌프 (57.5,-33.5) 출구 (56.5,-33.5) = 물
+          --                   그 언저리에 보일러 12자리, 맞물린 것 0
+          --
+          -- 물가에서 «물을 등지는 방향»은 넷 중 하나뿐인데, 먼저 걸린
+          -- 방향에서 멈추면 그 하나를 영영 못 본다. 스물한 물가가 전부
+          -- 같은 이유로 거절당한 까닭이다.
           for _, direction in ipairs(directions) do
             if surface.can_place_entity {
               name = "offshore-pump", position = spot, direction = direction,
               force = force, build_check_type = defines.build_check_type.manual,
             } then
               sites[#sites + 1] = { x = spot.x, y = spot.y, direction = direction }
-              break
             end
           end
         end
@@ -167,12 +179,29 @@ local DIRS = { defines.direction.north, defines.direction.east,
 
 -- 어떤 칸 둘레에서 이 엔티티가 들어가고 연결구도 맞물리는 자리를 찾는다.
 
+-- 반 칸씩 훑는 이유.
+--
+-- 기준이 되는 `near` 는 언제나 타일 «가운데»(x.5, y.5)다. 여기에 정수를
+-- 더하면 나오는 자리도 늘 x.5, y.5 뿐이다. 그런데 3x2 짜리 보일러는
+-- 중심이 한 축은 .5, 다른 축은 .0 이어야 앉는다 - 즉 정수만 더해서는
+-- 보일러가 앉을 수 있는 자리를 «단 한 칸도» 후보로 올리지 못한다.
+--
+--     실측(21회차, 물가 21곳 전부 거절):
+--       반 칸 격자에서 놓을 수 있는 자리    4
+--       온전한 칸 격자에서 놓을 수 있는 자리 12
+--
+-- 앞의 4 는 연결구가 펌프와 맞물리지 않는 자리들이었다. 그래서 스물한
+-- 곳이 똑같이 「자리가 없다」로 돌아왔다. 자리가 없던 것이 아니라
+-- «찾는 곳에 없었다».
+--
+-- 격자가 둘인 판에서 한 격자만 더듬으면, 못 찾는 것이 아니라 안 찾은
+-- 것이다. 그래서 반 칸씩 간다 - 두 격자가 모두 걸린다.
 local function fit_against(surface, force, name, near, anchor_ports, spread)
   spread = spread or 3
-  for dx = -spread, spread do
-    for dy = -spread, spread do
+  for step_x = -spread * 2, spread * 2 do
+    for step_y = -spread * 2, spread * 2 do
       for _, dir in pairs(DIRS) do
-        local at = { x = near.x + dx, y = near.y + dy }
+        local at = { x = near.x + step_x * 0.5, y = near.y + step_y * 0.5 }
         if surface.can_place_entity {
           name = name, position = at, direction = dir, force = force,
         } then
@@ -212,12 +241,25 @@ local function try_power_site(surface, force, site, engines)
   keep(pump)
 
   local pump_ports = ports(pump)
-  local water = nil
-  for _, p in pairs(pump_ports) do water = p.to break end
-  if not water then sweep() return nil end
+  -- 펌프가 «물을 내놓는» 칸. 이름과 달리 이 칸은 물이 아니라 땅이어야
+  -- 한다 - 보일러가 여기에 관을 대기 때문이다.
+  local outlet = nil
+  for _, p in pairs(pump_ports) do outlet = p.to break end
+  if not outlet then sweep() return nil end
+
+  -- 출구가 호수를 향하고 있으면 이 자리는 통째로 버린다.
+  --
+  -- 관 한 칸이 놓이는지로 묻는다. 「여기가 물인가」를 타일 속성으로
+  -- 따지면 판마다 이름이 달라 또 틀리지만, «관이 놓이는가»는 어느 판에서도
+  -- 같은 뜻이다. 답이 아니라 질문을 옮긴 셈이다.
+  if not surface.can_place_entity {
+    name = "pipe", position = outlet, force = force,
+  } then
+    sweep() return nil
+  end
 
   local boiler, boiler_ports = fit_against(surface, force, "boiler",
-                                           water, pump_ports, 2)
+                                           outlet, pump_ports, 2)
   if not boiler then sweep() return nil end
   keep(boiler)
 

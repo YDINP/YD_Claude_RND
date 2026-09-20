@@ -588,8 +588,23 @@ def main() -> int:
             safe_n, all_n = covered(ai)
             pct = safe_n * 100 // max(1, all_n)
             if pct >= args.cover:
-                print(f"건물 {safe_n}/{all_n} = {pct}% 가 사거리 안에 있다 "
-                      f"- 지킬 만큼은 지켜졌다")
+                # 「지킬 만큼은 지켜졌다」라고 적었던 자리다. 틀린 말이었다.
+                #
+                # 위키(Enemies)는 벌레가 목표까지 최단 경로로 가며, 우회할
+                # 길이 있으면 «장애물을 거들떠보지 않고» 돌아간다고 적는다.
+                # 그러니 사거리 밖에 남은 건물은 「아직 못 덮은 몫」이 아니라
+                # 그 건물로 곧장 이어지는 «열린 문»이다.
+                #
+                #     20회차: 38%를 「38% 지켜짐」으로 읽었다.
+                #             실제 뜻은 「62%로 가는 뒷문이 늘 열려 있다」였다.
+                #
+                # 비율은 안심을 주고, 남은 수는 일을 준다. 남은 수를 적는다.
+                left = all_n - safe_n
+                if left:
+                    print(f"건물 {safe_n}/{all_n} = {pct}% - 아직 {left}채가 "
+                          f"사거리 밖이다 (그만큼 문이 열려 있다)")
+                else:
+                    print(f"건물 {all_n}채가 «전부» 사거리 안이다 - 둘레가 닫혔다")
                 if free:
                     stockpile(ai, free[0], shelf, have)
                 time.sleep(args.every)
