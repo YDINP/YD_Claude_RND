@@ -72,6 +72,8 @@ FURNACE_COST = {"stone": 5}
 SMELT_PITCH = 3
 MAX_FURNACE = 24              # 줄이 무한히 길어지면 나르는 걸음도 길어진다
 FURNACE_PER_TRIP = 4
+ROW_GAP = 5                   # 줄과 줄 사이. 사람이 지나다닐 폭
+PER_ROW = 8                   # 한 줄에 여덟 대. 그 다음은 «아래 줄»로 접는다
 TEND_PER_TRIP = 3
 
 # 한 대라도 멈춰 있으면 그것부터. 세우는 것보다 «세워 둔 것을 돌리는» 편이
@@ -320,22 +322,51 @@ def priming(ai, ore, names):
     return False
 
 
-def smelt_row(ai, smelt):
-    """화로 줄의 형편. 몇 대가 섰고 다음 칸은 어디인가."""
+def smelt_row(ai, smelt, want):
+    """화로가 몇 대 섰고, 다음 `want` 대를 «어디에» 세울 수 있나.
+
+    줄을 동쪽으로 무작정 이어 붙이면 언젠가 광맥을 만난다. 20회차에서
+    그랬다 - 화로 다섯 대가 석탄밭 안으로 걸어 들어가 스무 칸을 깔고
+    앉았고, 그 스무 칸에는 이제 채굴기를 못 세운다.
+
+    사용자가 전에도 같은 것을 짚었다: "벨트를 늘려서(이후 채굴기를 늘릴
+    수 있기떄문에) 석탄지를 벗어나서 상자에 모았으면 더 좋을듯."
+
+    그래서 자리는 «게임에 물어» 고른다. 광맥 위나 못 놓는 칸은 건너뛰고,
+    한 줄이 여덟 대를 넘으면 아래 줄로 접는다.
+    """
     sx, sy = smelt
     return ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
-      local n, far = 0, %d - %d
+      local SX, SY, PITCH, GAP, PER = %d, %d, %d, %d, %d
+      local n = 0
+      local taken = {}
       for _, fu in pairs(s.find_entities_filtered{
-            area = {{%d, %d}, {%d, %d}}, type = "furnace", force = f}) do
+            area = {{SX - 3, SY - 3}, {SX + PITCH * PER + 3, SY + GAP * 6}},
+            type = "furnace", force = f}) do
         n = n + 1
-        if fu.position.x > far then far = fu.position.x end
+        taken[math.floor(fu.position.x) .. "," .. math.floor(fu.position.y)] = true
       end
-      return { n = n, next_x = far + %d,
+      local spots = {}
+      for row = 0, 5 do
+        for col = 0, PER - 1 do
+          if #spots >= %d then break end
+          local x, y = SX + col * PITCH, SY + row * GAP
+          local key = math.floor(x) .. "," .. math.floor(y)
+          if not taken[key] then
+            -- 광맥 위에는 놓지 않는다. 건물이 덮은 광맥은 영영 못 캔다.
+            local ore = s.count_entities_filtered{
+              area = {{x - 1, y - 1}, {x + 1, y + 1}}, type = "resource"}
+            if ore == 0 and s.can_place_entity{name = "stone-furnace",
+                  position = {x, y}, force = f} then
+              spots[#spots+1] = string.format("%%d|%%d", x, y)
+            end
+          end
+        end
+      end
+      return { n = n, spots = spots,
         drills = s.count_entities_filtered{type = "mining-drill", force = f} }
-    end)()""" % (sx, SMELT_PITCH,
-                 sx - 3, sy - 3, sx + SMELT_PITCH * MAX_FURNACE + 3, sy + 3,
-                 SMELT_PITCH))
+    end)()""" % (sx, sy, SMELT_PITCH, ROW_GAP, PER_ROW, want))
 
 
 def widen(ai, who, shelf, smelt, row, st):
@@ -352,15 +383,21 @@ def widen(ai, who, shelf, smelt, row, st):
     if n <= 0:
         return False
 
-    at = int(row["next_x"])
+    rows = row.get("spots") or []
+    rows = list(rows.values()) if isinstance(rows, dict) else list(rows)
+    spots = [tuple(int(v) for v in r.split("|")) for r in rows][:n]
+    if not spots:
+        print("  화로를 더 세울 «빈 땅»이 없다 - 광맥을 피할 자리가 안 나온다")
+        return False
+    n = len(spots)
+
     plan = [("walk_to", {"x": shelf["stone"][0] - 2, "y": shelf["stone"][1] + 1}),
             ("take", {"name": "stone", "x": shelf["stone"][0], "y": shelf["stone"][1],
                       "count": n * FURNACE_COST["stone"] + 5}),
             ("craft", {"recipe": FURNACE, "count": n}),
-            ("walk_to", {"x": at, "y": smelt[1] + 2})]
-    for i in range(n):
-        plan.append(("build", {"name": FURNACE, "x": at + i * SMELT_PITCH,
-                               "y": smelt[1]}))
+            ("walk_to", {"x": spots[0][0], "y": spots[0][1] + 2})]
+    for x, y in spots:
+        plan.append(("build", {"name": FURNACE, "x": x, "y": y}))
     submit(ai, who, plan, strict=False)
     print(f"{who}: 화로 {n}대 더 ({row['n']} -> {int(row['n']) + n}, "
           f"채굴기 {row['drills']}대에 필요한 것 {want})")
@@ -469,7 +506,7 @@ def main() -> int:
             # 0.5 녹이는 쪽이 캐는 쪽을 못 따라가면 화로부터 늘린다.
             #     캔 것이 상자에 쌓이기만 하면 그 채굴기는 없는 것과 같다.
             if free and smelt:
-                row = smelt_row(ai, smelt)
+                row = smelt_row(ai, smelt, FURNACE_PER_TRIP)
                 if widen(ai, free[0], shelf, smelt, row, stock(ai, (dx, dy))):
                     free = free[1:]
 
