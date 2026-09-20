@@ -248,10 +248,25 @@ def main() -> int:
 
             # 끊긴 곳이 있으면 «그곳부터». 새 자리를 채우는 것보다
             # 이미 선 것들을 잇는 쪽이 언제나 싸다.
+            # 끊긴 곳의 «한가운데»가 늘 빈 땅인 것은 아니다. 20회차에서는
+            # 남은 두 자리가 추락한 우주선 잔해 위였고, 그 자리를 고집하는
+            # 동안 bravo 는 전봇대를 269개 만들어 들고만 있었다.
+            #
+            # 메울 자리도 「놓을 수 있나」를 거쳐야 한다 - missing() 이
+            # 이미 아홉 방향으로 비켜 보고, 어디로도 못 비키면 뺀다.
             holes = gaps(ai)
-            todo = [(x, y) for x, y, _span in holes] or missing(ai, spots)
+            todo = missing(ai, [(x, y) for x, y, _span in holes]) if holes else []
+            if holes and not todo:
+                print(f"  끊긴 곳 {len(holes)}군데인데 메울 자리가 없다 "
+                      f"- 사이를 «둘로» 나눠 본다")
+                halves = []
+                for x, y, _span in holes:
+                    halves += [(x - 3, y), (x + 3, y), (x, y - 3), (x, y + 3)]
+                todo = missing(ai, halves)
+            if not todo:
+                todo = missing(ai, spots)
             if holes:
-                print(f"  끊긴 곳 {len(holes)}군데 - 한가운데를 메운다")
+                print(f"  끊긴 곳 {len(holes)}군데 - 메울 자리 {len(todo)}개")
             if not todo:
                 print("  자리는 다 찼는데 망이 안 이어졌다 - 간격을 의심할 것")
                 time.sleep(args.every)

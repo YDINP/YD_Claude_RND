@@ -175,17 +175,23 @@ def main() -> int:
                 print(f"  길이 다 이어졌다 - {rest}")
                 return 0
 
+            # 사용자: "벨트깔아서 물류를 구성하는게 최우선으로 진행해줘"
+            #
+            # 한 순번에 한 사람만 보내고 있었다. claim_work 가 «남이 집어간
+            # 칸은 안 준다»고 이미 보장하므로, 여럿이 같은 길에 붙어도
+            # 서로 밟지 않는다 - 한 명씩 보낼 이유가 없었다.
+            #
+            # 길은 남은 칸이 많은 쪽부터 나눠 맡는다.
             did = False
-            for which in order:
-                if not free:
+            live = [w for w in order if rest.get(w)]
+            live.sort(key=lambda w: -rest[w])
+            for i, who in enumerate(list(free)):
+                which = live[i % len(live)] if live else None
+                if not which:
                     break
-                if not rest.get(which):
-                    continue
-                who = free.pop(0)
                 if lay(ai, who, which, shelf):
                     did = True
                     load_belts(ai, who)
-                break            # 한 순번에 한 길씩. 재료를 나눠 쓰면 둘 다 늦다
 
             quiet = 0 if did else quiet + 1
             if quiet and quiet % 8 == 0:
