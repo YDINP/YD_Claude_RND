@@ -28,7 +28,17 @@ from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 
 POLE = "small-electric-pole"
-REACH = 7                 # 전선이 닿는 거리. 7.5 지만 반 칸은 남겨 둔다
+# 전선이 닿는 거리는 7.5다. 그런데 «계획한 간격»과 «실제로 선 간격»은
+# 다르다 - snap 이 자리를 한두 칸 밀면 7칸 계획이 8~9칸이 되고, 그 반 칸
+# 차이로 전력망이 쪼개진다.
+#
+# 실측(20회차): 전봇대 열두 대가 섰는데 전력망이 «일곱 개»였다.
+#   (-45,-8) -> (-37,-7)  8.1칸
+#   (-15,-5) -> (-6,-1)   9.8칸
+#   (24,-1)  -> (33,3)    9.8칸
+#
+# 닿는 거리에 맞춰 계획하지 말고, «밀려도 닿을» 거리로 계획한다.
+REACH = 6
 PER_TRIP = 10             # 한 걸음에 세우는 전봇대
 WOOD_PER_POLE = 1         # 전봇대 둘에 나무 하나지만, 넉넉히 센다
 COPPER_PER_POLE = 2       # 전봇대 하나에 구리선 둘 = 구리판 하나
@@ -195,8 +205,9 @@ def main() -> int:
                          ("chop", {"x": grove[0], "y": grove[1], "count": need})]
             plan.append(("craft", {"recipe": POLE, "count": len(batch)}))
             for at in batch:
-                plan.append(("build", {"name": POLE, "x": at[0], "y": at[1],
-                                       "snap": True}))
+                # snap 은 안 쓴다. 자리가 밀리면 간격이 무너지고, 무너진
+                # 간격은 「세웠다」로 보이면서 전기는 안 흐른다.
+                plan.append(("build", {"name": POLE, "x": at[0], "y": at[1]}))
             submit(ai, who, plan, strict=False)
             print(f"{who}: 전봇대 {len(batch)}대 "
                   f"({batch[0][0]},{batch[0][1]}) 부터 - 남은 {len(todo)}자리")
