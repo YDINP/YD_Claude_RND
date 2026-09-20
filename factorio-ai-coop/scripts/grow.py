@@ -42,6 +42,17 @@ DRILL_COST = {"iron-plate": 9, "stone": 5}
 CHEST_COST = {"iron-plate": 8}
 PER_TRIP = 4
 FUEL_EACH = 25
+
+# 연구소가 설 때까지 «건드리지 않는» 판.
+#
+# 채굴기 한 대는 자기 값을 갚는다. 그래서 판이 생기는 족족 채굴기로
+# 바꾸는 것이 맞는 것처럼 보이는데, 18.19회차가 그렇게 하다 졌다:
+# 창고 판이 0~15에서 못 올라가 발전 사슬이 「짐이 모자란다」에서 한
+# 발짝도 못 나갔고, 연구가 없으니 포탑이 없었고, 그래서 전멸했다.
+#
+# 채굴기는 «늦어도» 되지만 연구는 늦으면 안 된다. 둥지는 기다려 주지
+# 않는다. 연구소가 서면 이 몫은 사라진다.
+SPARK_RESERVE = 170
 TEND_PER_TRIP = 3
 
 # 한 대라도 멈춰 있으면 그것부터. 세우는 것보다 «세워 둔 것을 돌리는» 편이
@@ -63,7 +74,9 @@ def stock(ai, depot):
       local s = game.surfaces[1]
       -- 「비었다」와 «아직 없다»는 다른 말이다. 창고가 서기도 전에
       -- 물건을 넣으러 가면 그 걸음은 통째로 버려진다.
-      local out = { plate = 0, stone = 0, coal = 0, copper = 0, chests = 0 }
+      local out = { plate = 0, stone = 0, coal = 0, copper = 0, chests = 0,
+                    lab = s.count_entities_filtered{ name = "lab",
+                          force = game.forces.player } }
       for _, c in pairs(s.find_entities_filtered{area={{%d,%d},{%d,%d}},
                 type="container", force=game.forces.player}) do
         local inv = c.get_inventory(defines.inventory.chest)
@@ -404,15 +417,21 @@ def main() -> int:
                             and not drills_on(ai, FIELD[ore])):
                         prime(ai, free[0], shelf, FIELD[ore])
                         free = free[1:]
-                if free and int(st["plate"]) >= 17 and int(st["coal"]) >= FUEL_EACH:
+                # 연구소가 아직 없으면 발전 사슬 몫을 남긴다.
+                spare = 0 if int(st["lab"]) else SPARK_RESERVE
+                usable = int(st["plate"]) - spare
+                if free and usable >= 17 and int(st["coal"]) >= FUEL_EACH:
                     # 돌이 마르면 전부 마른다. 돌밭을 먼저 연다.
                     short = int(st["stone"]) < PER_TRIP * DRILL_COST["stone"]
                     ore = "stone" if (short and "stone" in FIELD) else order[turn % len(order)]
                     turn += 1
-                    sow(ai, free[0], shelf, FIELD[ore], st)
+                    sow(ai, free[0], shelf, dict(FIELD[ore]),
+                        dict(st, plate=usable))
                 elif not sick:
-                    print(f"  창고가 비었다 (판 {st['plate']} 돌 {st['stone']} "
-                          f"석탄 {st['coal']}) - 제련이 따라오길 기다린다")
+                    why = ("발전 사슬 몫을 남긴다" if spare and int(st["plate"]) > 0
+                           else "제련이 따라오길 기다린다")
+                    print(f"  판 {st['plate']}(쓸 수 있는 몫 {max(0, usable)}) "
+                          f"돌 {st['stone']} 석탄 {st['coal']} - {why}")
         except RconError as exc:
             print("  게임이 대답하지 않는다:", exc)
         except Exception as exc:                       # 고리는 «안 죽는다»
