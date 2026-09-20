@@ -859,7 +859,18 @@ def main() -> int:
                               f"안 늘린다"
                               + (f" (석탄 {st['coal']} - 연료만 예외)"
                                  if fuel_short else ""))
-                    free = free[:1] if fuel_short else []
+                    # 연료 예외에는 손이 «둘» 든다.
+                    #
+                    # 하나만 남겼더니 그 하나를 손 채굴(매듭 끊기)이
+                    # 가져갔고, 석탄 채굴기를 세울 사람이 안 남았다.
+                    # 그래서 석탄밭은 여덟 대에서 움직이지 않았다.
+                    #
+                    #     실측: 채굴기 38대 중 11대가 연료 없음.
+                    #           석탄밭 8대, 창고 석탄 40.
+                    #
+                    # 손 채굴은 «오늘»을 사고 채굴기는 «내일»을 산다.
+                    # 둘 중 하나만 하면 내일이 안 온다.
+                    free = free[:2] if fuel_short else []
                     only_fuel = fuel_short
                 else:
                     only_fuel = False
