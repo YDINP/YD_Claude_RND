@@ -38,7 +38,9 @@ TURRET_COST = {"iron-plate": 40, "copper-plate": 10}   # 기어까지 친 넉넉
 AMMO_EACH = 20            # 포탑 한 대에 채워 두는 탄약
 AMMO_STOCK = 200          # 연구를 기다리는 동안 쌓아 둘 탄약
 PER_TRIP = 3              # 한 걸음에 세우는 포탑
-KEEP_PLATE = 300          # 이만큼은 채굴.제련 쪽에 남겨 둔다
+# 성장 몫은 남기되, «남기느라 한 발도 못 만드는» 것은 지난 판의 재현이다.
+# 채굴기+상자 여섯 대 분량(6 x 17)이면 증식은 안 끊긴다.
+KEEP_PLATE = 120
 
 
 def watch(ai, who):

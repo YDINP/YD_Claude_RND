@@ -207,6 +207,11 @@ def tend(ai, who, shelf, sick):
     return True
 
 
+# 자기 꼬리를 문 것은 돌만이 아니다. 석탄 채굴기도 석탄을 먹는다 -
+# 창고 석탄이 0이면 석탄밭 채굴기를 못 켜고, 못 켜면 석탄이 안 들어온다.
+KNOTS = ("stone", "coal")
+
+
 def prime(ai, who, shelf, field):
     """손으로 한 번만 캔다. 매듭을 끊는 데만 쓴다.
 
@@ -223,9 +228,10 @@ def prime(ai, who, shelf, field):
         ("walk_to", {"x": x, "y": y}),
         ("mine", {"name": field["ore"], "x": x, "y": y, "count": 150,
                   "search_radius": 14, "timeout_ticks": 60 * 60 * 5}),
-        ("walk_to", {"x": shelf["stone"][0] - 2, "y": shelf["stone"][1] + 1}),
-        ("insert", {"name": field["ore"], "x": shelf["stone"][0],
-                    "y": shelf["stone"][1], "count": 150}),
+        ("walk_to", {"x": shelf[field["ore"]][0] - 2,
+                     "y": shelf[field["ore"]][1] + 1}),
+        ("insert", {"name": field["ore"], "x": shelf[field["ore"]][0],
+                    "y": shelf[field["ore"]][1], "count": 150}),
     ], strict=False)
     PRIMING[field["ore"]] = who
     print(f"{who}: 매듭 끊기 - {field['ore']} 150을 손으로 (채굴기가 설 때까지만)")
@@ -311,7 +317,9 @@ def main() -> int:
 
     ai = AIBridge()
     FIELD = fields(ai, (dx, dy))
-    order = [o for o in ("iron-ore", "coal", "stone") if o in FIELD]
+    # 구리도 밭이다. 구리가 없으면 회로도 과학팩도 없고, 발전 사슬이
+    # 「짐이 모자란다」에서 영영 안 떠난다 - 18.19회차가 그랬다.
+    order = [o for o in ("iron-ore", "coal", "stone", "copper-ore") if o in FIELD]
     print("밭:", ", ".join(f"{k} {v['n']}칸 {v['gap']}칸거리"
                            for k, v in FIELD.items()))
     if not order:
@@ -345,12 +353,17 @@ def main() -> int:
             # 2. 그 다음에 새로 세운다.
             if free:
                 st = stock(ai, (dx, dy))
-                # 돌이 0이면 돌 채굴기도 못 만든다. 매듭은 손으로 한 번.
-                if (int(st["stone"]) < DRILL_COST["stone"] and "stone" in FIELD
-                        and not priming(ai, "stone", builders)
-                        and not drills_on(ai, FIELD["stone"])):
-                    prime(ai, free[0], shelf, FIELD["stone"])
-                    free = free[1:]
+                # 돌이 0이면 돌 채굴기를, 석탄이 0이면 석탄 채굴기를 못
+                # 켠다. 매듭은 밭마다 «손으로 한 번»만 끊는다.
+                floor = {"stone": DRILL_COST["stone"], "coal": FUEL_EACH}
+                for ore in KNOTS:
+                    if (free and ore in FIELD
+                            and int(st[{"stone": "stone", "coal": "coal"}[ore]])
+                                < floor[ore]
+                            and not priming(ai, ore, builders)
+                            and not drills_on(ai, FIELD[ore])):
+                        prime(ai, free[0], shelf, FIELD[ore])
+                        free = free[1:]
                 if free and int(st["plate"]) >= 17 and int(st["coal"]) >= FUEL_EACH:
                     # 돌이 마르면 전부 마른다. 돌밭을 먼저 연다.
                     short = int(st["stone"]) < PER_TRIP * DRILL_COST["stone"]
