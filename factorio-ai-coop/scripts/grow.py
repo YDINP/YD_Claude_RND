@@ -320,11 +320,33 @@ def fields(ai, anchor):
     return out
 
 
-def idle(ai, names):
+def idle(ai, names, near=None):
+    """한가한 사람들. `near` 를 주면 «가까운 사람부터».
+
+    고리들이 「누가 한가한가」만 묻고 「누가 가까운가」는 안 물었다.
+    실측(21회차): 석탄밭(y=-19)에 채굴기를 세우라는 명령이 남쪽
+    y=104 에 있던 사람에게 갔다. 120타일이다 - 걸어가는 데만 순번 여럿이
+    들고, 그동안 그 일은 「시킨 것」으로 남아 다시 시키지도 않는다.
+
+        무리는 y=-19 부터 y=104 까지 150타일에 퍼져 있다.
+
+    한가함은 «할 수 있나»를 말하고 가까움은 «언제 되나»를 말한다. 둘 다
+    물어야 한다 - 명부가 여덟인데 그 중 누구를 보내는지는 공짜로 고를 수
+    있는 것이고, 공짜로 고를 수 있는 것을 안 고르면 그만큼 느려진다.
+    """
     rows = {w["name"]: w for w in ai.list()}
-    return [n for n in names
+    free = [n for n in names
             if rows.get(n) and rows[n].get("alive")
             and not (rows[n].get("current") or rows[n].get("queued"))]
+    if near is None:
+        return free
+    ax, ay = near
+
+    def far(n):
+        w = rows[n]
+        return (float(w.get("x") or 0) - ax) ** 2 + (float(w.get("y") or 0) - ay) ** 2
+
+    return sorted(free, key=far)
 
 
 def shopping(shelf, need):
@@ -786,7 +808,9 @@ def main() -> int:
     turn = 0
     for _ in range(args.rounds):
         try:
-            free = idle(ai, builders)
+            # 거의 모든 계획이 «창고에서» 시작한다 - 재료를 집으러 가기
+            # 때문이다. 그러니 창고에서 가까운 사람부터 부른다.
+            free = idle(ai, builders, near=(dx, dy))
             if not free:
                 time.sleep(args.every)
                 continue
