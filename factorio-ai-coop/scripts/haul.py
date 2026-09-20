@@ -29,6 +29,9 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 
+sys.path.insert(0, HERE)
+import shelf as shelf_mod               # noqa: E402
+
 ORE_TO_PLATE = {"iron-ore": "iron-plate", "copper-ore": "copper-plate",
                 "stone": "stone-brick"}
 
@@ -100,19 +103,37 @@ def trim(plan, limit=None):
 
 
 def where(item, shelf, room=None):
-    """이 물건이 갈 칸. 그 칸이 «찼으면» 갈 데가 없는 것이다.
+    """이 물건이 갈 칸. 정해진 칸이 «찼으면» 빈 상자를 찾는다.
 
     실측(20회차 108분): 돌 칸이 1600(32칸 x 50)으로 꽉 찼는데, 운반
     당번이 돌 2071을 들고 「창고에 내려놓기」를 순번마다 되풀이했다.
     그동안 화로 스물두 대는 철판을 물고 막혀 있었고 창고 철판은 0이었다.
     들어가지도 않는 것을 나르느라 정작 나를 것을 못 날랐다.
+
+    그래서 찬 칸은 「갈 데 없음」으로 돌려주게 했다. 그런데 그것만으로는
+    부족했다.
+
+        실측: 창고 상자 셋이 «전부» 빈칸 0.
+              iron-plate 1016 + copper-plate 2100 / stone 1600 / coal 1600
+              -> "창고 iron-plate,stone 칸이 찼다 - 그것은 안 나른다"
+
+    선반 하나가 찼다고 창고 전체가 찬 것은 아니다. 옆 상자가 비어 있으면
+    거기 넣으면 된다 - 「제자리」는 사람이 찾기 쉬우라고 둔 약속이지,
+    지켜야 할 법이 아니다.
+
+        약속을 지키느라 일을 못 하면 약속이 틀린 것이다.
+
+    그래도 제자리를 «먼저» 본다. 아무 데나 넣기 시작하면 다음에 그것을
+    찾는 걸음이 길어진다. 제자리가 찼을 때만 빈 곳으로 간다.
     """
     key = SHELF_OF.get(item)
-    if not key:
-        return None
-    if room is not None and room.get(key, 1) <= 0:
-        return None
-    return shelf.get(key)
+    if key and not (room is not None and room.get(key, 1) <= 0):
+        at = shelf.get(key)
+        if at:
+            return at
+    # 「아무 데나」는 선반 지도에 한 칸으로 들어 있다. 부르는 쪽 열 군데를
+    # 고치는 대신 지도 한 곳만 채우면 되고, 그러면 빠뜨릴 자리가 없다.
+    return shelf.get(ANYWHERE)
 
 
 def headroom(reply, shelf):
@@ -288,6 +309,7 @@ def lanes(hot, piles=()):
 
 
 KEEP = 20          # 손에 남겨 두는 몫
+ANYWHERE = "*"     # 제자리가 찼을 때 갈 곳. 빈 상자 아무 데나
 
 
 def unload(ai, who, shelf, room=None):
@@ -466,9 +488,17 @@ def main() -> int:
                 continue
             reply = look(ai, (dx, dy), (sx, sy))
             room = headroom(reply, shelf)
+            # 제자리가 찼을 때 갈 곳을 «매 순번» 다시 찾는다. 상자는
+            # 늘어나기도 하고 차기도 하므로 한 번 찾아 두면 금세 낡는다.
+            shelf.pop(ANYWHERE, None)
+            spot = shelf_mod.spare(ai, (dx, dy))
+            if spot:
+                shelf[ANYWHERE] = spot
             if any(v <= 0 for v in room.values()):
                 full = [k for k, v in room.items() if v <= 0]
-                print(f"  창고 {','.join(full)} 칸이 찼다 - 그것은 안 나른다")
+                where_else = (f" - {spot[0]:.0f},{spot[1]:.0f} 로 보낸다"
+                              if spot else " - 빈 상자가 하나도 없다")
+                print(f"  창고 {','.join(full)} 칸이 찼다{where_else}")
             # 0. 손에 든 것부터 푼다. 들고 있는 것은 아직 나른 것이 아니다.
             for who in list(free):
                 if unload(ai, who, shelf, room):
