@@ -76,6 +76,17 @@ PILE_FLOOR = 25           # 이만큼도 안 쌓인 상자는 다녀올 값을 �
 #
 # 그래서 줄의 «끝 두 대»는 구리 몫으로 비워 둔다. 밭마다 줄이 있듯
 # 광석마다 화로가 있어야 한다.
+# 창고의 석탄은 «먹는 것»이면서 동시에 «씨앗»이다.
+#
+# 화로에 넣을 석탄과 새 채굴기에 넣을 석탄이 같은 칸에서 나온다. 운반이
+# 오는 족족 화로에 부어 버리면 창고 석탄은 늘 0이고, 증식은 채굴기 한
+# 대를 앉힐 FUEL_EACH(25)조차 못 구해 «영영» 석탄밭에 손을 못 댄다.
+# 석탄이 없어서 석탄 채굴기를 못 세우는, 스스로 조이는 매듭이다.
+#
+# 그래서 창고 석탄의 맨 아래 한 자락은 운반이 건드리지 않는다. 오늘
+# 화로 몇 대가 잠깐 식더라도, 그 몫으로 채굴기가 서면 내일은 안 식는다.
+SPARE_COAL = 60           # 창고 석탄 중 증식 몫으로 남겨 두는 양
+
 COPPER_FLOOR = 0.25       # 구리를 이보다 적게 돌리지는 않는다
 COPPER_CEIL = 0.55        # 철이 굶으면 아무것도 못 짓는다
 
@@ -258,6 +269,19 @@ def chests(reply, key):
     return out
 
 
+def spendable(pile, item):
+    """이 상자에서 «꺼내도 되는» 양.
+
+    밭 상자는 든 것이 전부 쓸 것이다. 창고의 석탄만은 다르다 - 증식이
+    새 채굴기를 앉힐 씨앗이 거기 섞여 있으므로, 그 몫만큼은 없는 셈
+    친다. 쌓인 양이 아니라 «써도 되는 양»으로 골라야 바닥을 긁지 않는다.
+    """
+    held = pile["held"].get(item, 0)
+    if item == "coal" and pile.get("home"):
+        return max(0, held - SPARE_COAL)
+    return held
+
+
 def idle(ai, names):
     rows = {w["name"]: w for w in ai.list()}
     return [n for n in names
@@ -342,7 +366,10 @@ def feed(ai, who, reply, shelf, at=None):
     """
     hot = furnaces(reply)
     # 광석은 밭 상자에, 석탄은 석탄밭 상자에 쌓여 있다.
-    piles = chests(reply, "piles") + chests(reply, "depot")
+    piles = chests(reply, "piles")
+    for pile in chests(reply, "depot"):
+        pile["home"] = True          # 창고 - 씨앗 몫을 남겨야 하는 곳
+        piles.append(pile)
     # 무엇을 녹일지는 «밭에 쌓인 것»이 정한다. 그러니 밭을 먼저 본다.
     # 남의 광석이 든 화로는 비울 때까지 그냥 둔다. 한 대는 한 가지만 녹는다.
     hungry = [(f, ore) for f, ore in lanes(hot, piles)
@@ -360,8 +387,8 @@ def feed(ai, who, reply, shelf, at=None):
     for item, want_n in want.items():
         if want_n <= 0:
             continue
-        for pile in sorted(piles, key=lambda p: -p["held"].get(item, 0)):
-            have = pile["held"].get(item, 0)
+        for pile in sorted(piles, key=lambda p: -spendable(p, item)):
+            have = spendable(pile, item)
             if have < PILE_FLOOR or got.get(item, 0) >= want_n:
                 break
             take = min(have, want_n - got.get(item, 0), CARRY)
