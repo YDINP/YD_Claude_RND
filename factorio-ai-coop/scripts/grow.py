@@ -63,7 +63,7 @@ def stock(ai, depot):
       local s = game.surfaces[1]
       -- 「비었다」와 «아직 없다»는 다른 말이다. 창고가 서기도 전에
       -- 물건을 넣으러 가면 그 걸음은 통째로 버려진다.
-      local out = { plate = 0, stone = 0, coal = 0, chests = 0 }
+      local out = { plate = 0, stone = 0, coal = 0, copper = 0, chests = 0 }
       for _, c in pairs(s.find_entities_filtered{area={{%d,%d},{%d,%d}},
                 type="container", force=game.forces.player}) do
         local inv = c.get_inventory(defines.inventory.chest)
@@ -71,6 +71,8 @@ def stock(ai, depot):
         out.plate = out.plate + inv.get_item_count("iron-plate")
         out.stone = out.stone + inv.get_item_count("stone")
         out.coal = out.coal + inv.get_item_count("coal")
+        out.copper = out.copper + inv.get_item_count("copper-plate")
+                               + inv.get_item_count("copper-ore")
       end
       return out
     end)()""" % (x - 3, y - 4, x + 3, y + 6))
@@ -221,9 +223,20 @@ def tend(ai, who, shelf, sick):
     return True
 
 
-# 자기 꼬리를 문 것은 돌만이 아니다. 석탄 채굴기도 석탄을 먹는다 -
-# 창고 석탄이 0이면 석탄밭 채굴기를 못 켜고, 못 켜면 석탄이 안 들어온다.
-KNOTS = ("stone", "coal")
+# 자기 꼬리를 문 것은 돌만이 아니다.
+#
+#   돌   - 채굴기에 돌 5가 든다. 창고 돌이 0이면 돌밭 채굴기를 못 만든다
+#   석탄 - 석탄 채굴기도 석탄을 먹는다. 0이면 못 켠다
+#   구리 - 구리가 없으면 회로도 과학팩도 없고, 그러면 연구가 없고,
+#          연구가 없으면 포탑이 없다. 18.19회차가 여기서 죽었다
+#
+# 셋 다 「없어서 못 만들고, 못 만들어서 없는」 같은 모양이다. 손으로
+# 한 번만 끊어 주면 그 뒤로는 기계가 돈다.
+KNOTS = ("stone", "coal", "copper-ore")
+
+# 손으로 캔 것을 어느 칸에 내려놓나. 구리광은 전용 칸이 없지만, 유통
+# 고리가 창고 칸들을 모두 훑어 구리 화로로 나르므로 어디든 창고면 된다.
+PRIME_SHELF = {"stone": "stone", "coal": "coal", "copper-ore": "stone"}
 
 
 def prime(ai, who, shelf, field):
@@ -242,14 +255,25 @@ def prime(ai, who, shelf, field):
         ("walk_to", {"x": x, "y": y}),
         ("mine", {"name": field["ore"], "x": x, "y": y, "count": 150,
                   "search_radius": 14, "timeout_ticks": 60 * 60 * 5}),
-        ("walk_to", {"x": shelf[field["ore"]][0] - 2,
-                     "y": shelf[field["ore"]][1] + 1}),
-        ("insert", {"name": field["ore"], "x": shelf[field["ore"]][0],
-                    "y": shelf[field["ore"]][1], "count": 150}),
+        ("walk_to", {"x": shelf[PRIME_SHELF[field["ore"]]][0] - 2,
+                     "y": shelf[PRIME_SHELF[field["ore"]]][1] + 1}),
+        ("insert", {"name": field["ore"],
+                    "x": shelf[PRIME_SHELF[field["ore"]]][0],
+                    "y": shelf[PRIME_SHELF[field["ore"]]][1], "count": 150}),
     ], strict=False)
     PRIMING[field["ore"]] = who
     print(f"{who}: 매듭 끊기 - {field['ore']} 150을 손으로 (채굴기가 설 때까지만)")
     return True
+
+
+def short_of(st, ore):
+    """이 매듭이 아직 안 풀렸나."""
+    if ore == "stone":
+        return int(st["stone"]) < DRILL_COST["stone"]
+    if ore == "coal":
+        return int(st["coal"]) < FUEL_EACH
+    # 구리는 «판»이 있어야 쓸모가 있다. 광석이든 판이든 하나도 없을 때만.
+    return int(st["copper"]) < 20
 
 
 def priming(ai, ore, names):
@@ -373,11 +397,9 @@ def main() -> int:
                 st = stock(ai, (dx, dy))
                 # 돌이 0이면 돌 채굴기를, 석탄이 0이면 석탄 채굴기를 못
                 # 켠다. 매듭은 밭마다 «손으로 한 번»만 끊는다.
-                floor = {"stone": DRILL_COST["stone"], "coal": FUEL_EACH}
                 for ore in KNOTS:
                     if (free and ore in FIELD
-                            and int(st[{"stone": "stone", "coal": "coal"}[ore]])
-                                < floor[ore]
+                            and short_of(st, ore)
                             and not priming(ai, ore, builders)
                             and not drills_on(ai, FIELD[ore])):
                         prime(ai, free[0], shelf, FIELD[ore])
