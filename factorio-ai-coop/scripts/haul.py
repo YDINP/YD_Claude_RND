@@ -204,9 +204,12 @@ def drain(ai, who, reply, shelf):
     """
     hot = [f for f in furnaces(reply)
            if f["plate"] >= 10 and where(f["made"], shelf)]
-    piles = [p for p in chests(reply, "piles")
-             if any(n >= PILE_FLOOR and where(k, shelf)
-                    for k, n in p["held"].items())]
+    # 가장 많이 쌓인 상자부터. 찬 상자는 그 뒤의 채굴기를 세우고 있으므로,
+    # 아무 순서로 넷을 고르면 정작 막힌 곳이 계속 밀린다.
+    piles = sorted(
+        (p for p in chests(reply, "piles")
+         if any(n >= PILE_FLOOR and where(k, shelf) for k, n in p["held"].items())),
+        key=lambda p: -sum(n for k, n in p["held"].items() if where(k, shelf)))
     if not hot and not piles:
         return False
 

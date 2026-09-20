@@ -172,9 +172,13 @@ def tend(ai, who, shelf, sick):
     상자는 서 있는데 광석은 여전히 땅에 쌓인다. 막혀 있으면 aim_drill 이
     비는 쪽으로 돌려 주므로, 돌린 뒤의 답을 쓴다.
     """
-    jobs = []
+    jobs, full = [], []
     sick = [d for d in sick if (round(d["x"]), round(d["y"])) not in HOPELESS]
-    for one in sick[:TEND_PER_TRIP]:
+    # 몫을 «자르고 나서» 거르면, 앞의 셋이 전부 「상자가 찬」 것일 때
+    # 손볼 수 있는 뒤엣것들이 영영 차례를 못 받는다. 거르고 나서 센다.
+    for one in sick:
+        if len(jobs) >= TEND_PER_TRIP:
+            break
         if one["why"] == "no_fuel":
             jobs.append({"drill": one, "drop": None})
             continue
@@ -183,13 +187,20 @@ def tend(ai, who, shelf, sick):
             print(f"  ({one['x']:.0f},{one['y']:.0f}) 사방이 막혔다 - 이 대는 접는다")
             HOPELESS.add((round(one["x"]), round(one["y"])))
             continue
-        jobs.append({"drill": one, "drop": (aimed["drop_x"], aimed["drop_y"])})
+        drop = (aimed["drop_x"], aimed["drop_y"])
+        # 상자가 «이미» 있는데도 멈춰 있으면 그 상자가 찬 것이다. 그것은
+        # 정비가 아니라 «운반»의 일이다 - 여기서 또 손보러 가면 순번마다
+        # 「상자 0」만 찍고 돌아온다(18.19회차에 계속 그랬다).
+        if has_box(ai, drop):
+            full.append(one)
+            continue
+        jobs.append({"drill": one, "drop": drop})
     if not jobs:
+        if full:
+            print(f"  상자가 찬 채굴기 {len(full)}대 - 정비가 아니라 «운반»이 밀렸다")
         return False
 
-    # 「무엇이든 있나」가 아니라 «상자가 있나»를 묻는다. 떨구는 칸은
-    # 채굴기 바로 앞이라, 있는 것만 세면 채굴기 자신이 잡힌다.
-    boxes = [j for j in jobs if j["drop"] and not has_box(ai, j["drop"])]
+    boxes = [j for j in jobs if j["drop"]]
 
     plan = [("walk_to", {"x": shelf["iron-plate"][0] - 2, "y": shelf["iron-plate"][1] + 1})]
     plan += shopping(shelf, {"iron-plate": len(boxes) * CHEST_COST["iron-plate"] + 2,
