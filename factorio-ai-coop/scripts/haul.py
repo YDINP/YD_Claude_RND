@@ -73,7 +73,8 @@ PILE_FLOOR = 25           # 이만큼도 안 쌓인 상자는 다녀올 값을 �
 #
 # 그래서 줄의 «끝 두 대»는 구리 몫으로 비워 둔다. 밭마다 줄이 있듯
 # 광석마다 화로가 있어야 한다.
-COPPER_TAIL = 2
+COPPER_FLOOR = 0.25       # 구리를 이보다 적게 돌리지는 않는다
+COPPER_CEIL = 0.55        # 철이 굶으면 아무것도 못 짓는다
 
 # 창고 칸은 셋인데 나르는 것은 그보다 많다. 어느 칸에 넣을지는 «여기»에
 # 한 번만 적는다 - 들고 와서 넣을 데가 없으면 그대로 들고 서 있게 된다.
@@ -243,9 +244,45 @@ def idle(ai, names):
             and not (rows[n].get("current") or rows[n].get("queued"))]
 
 
-def lanes(hot, tail=COPPER_TAIL):
-    """어느 화로가 무엇을 녹이나. 줄의 끝 두 대가 구리다."""
-    tail = min(tail, max(0, len(hot) - 1))
+def share(piles):
+    """구리에 돌릴 «몫». 밭에 쌓인 것이 정한다.
+
+        사용자: "화로가 전부 철판으로 구성되어있는데, 구리판도 같이
+                 나눠서 하면 좋을듯. 아니면 구리판용 화로를 늘리던가"
+
+    구리 화로를 「줄 끝 두 대」로 박아 두었다. 화로가 여섯 대일 때는
+    삼분의 일이던 것이 마흔 대가 되자 스무 분의 일이 됐다 - 고정한 수는
+    판이 커질수록 «작아진다».
+
+        실측: 밭 상자 철광석 16289 · 구리광 9213   (구리가 36%)
+              화로 40 대 중 구리 2 대               (구리가 5%)
+
+    캐는 비율과 녹이는 비율이 이만큼 어긋나면 한쪽은 밭에 쌓이고 다른
+    쪽은 굶는다. 그러니 몫은 세지 말고 «재야» 한다.
+
+    바닥과 천장을 두는 이유: 한쪽 밭이 잠깐 비어도 그쪽 화로를 전부
+    끄면 다시 켜는 데 한 바퀴가 든다. 굶기지 않을 만큼은 늘 남긴다.
+    """
+    waiting = {"iron-ore": 0, "copper-ore": 0}
+    for pile in piles:
+        for ore in waiting:
+            waiting[ore] += pile["held"].get(ore, 0)
+    total = waiting["iron-ore"] + waiting["copper-ore"]
+    if total <= 0:
+        return COPPER_FLOOR
+    return min(COPPER_CEIL, max(COPPER_FLOOR, waiting["copper-ore"] / total))
+
+
+def lanes(hot, piles=()):
+    """어느 화로가 무엇을 녹이나. 줄의 «뒤쪽»이 구리다.
+
+    앞뒤로 가르는 것은 그대로 둔다. 한 대가 녹이는 것을 바꾸려면 먼저
+    결과칸을 비워야 하므로, 경계가 이리저리 흔들리면 그 값을 매번 치른다.
+    경계는 «한쪽 끝»에서만 움직여야 싸다.
+    """
+    if len(hot) < 2:
+        return [(f, "iron-ore") for f in hot]
+    tail = min(len(hot) - 1, max(1, round(len(hot) * share(piles))))
     return ([(f, "iron-ore") for f in hot[:len(hot) - tail]]
             + [(f, "copper-ore") for f in hot[len(hot) - tail:]])
 
@@ -282,14 +319,14 @@ def feed(ai, who, reply, shelf, at=None):
     상자도 못 만든다. 그래서 이 걸음이 «가장 먼저»다.
     """
     hot = furnaces(reply)
+    # 광석은 밭 상자에, 석탄은 석탄밭 상자에 쌓여 있다.
+    piles = chests(reply, "piles") + chests(reply, "depot")
+    # 무엇을 녹일지는 «밭에 쌓인 것»이 정한다. 그러니 밭을 먼저 본다.
     # 남의 광석이 든 화로는 비울 때까지 그냥 둔다. 한 대는 한 가지만 녹는다.
-    hungry = [(f, ore) for f, ore in lanes(hot)
+    hungry = [(f, ore) for f, ore in lanes(hot, piles)
               if (f["ore"] < 10 and f["what"] in ("", ore)) or f["burn"] < 5]
     if not hungry:
         return False
-
-    # 광석은 밭 상자에, 석탄은 석탄밭 상자에 쌓여 있다.
-    piles = chests(reply, "piles") + chests(reply, "depot")
     want = {}
     for f, ore in hungry:
         if f["ore"] < 10 and f["what"] in ("", ore):

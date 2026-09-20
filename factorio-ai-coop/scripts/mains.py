@@ -138,6 +138,83 @@ def joined(ai, a, b):
     return int(reply["same"]) == 1
 
 
+def starved(ai):
+    """전기를 먹어야 하는데 «못 받고 있는» 것들.
+
+        사용자: "화로쪽 인서터 하나 전력연결안되어있음"
+
+    전봇대가 전부 한 망에 들어 있으면 「전기가 기지까지 흐른다」고 적고
+    끝냈다. 그런데 흐르는 것과 «닿는 것»은 또 다르다. 소형 전봇대가 덮는
+    넓이는 5x5 다 - 전선은 7.5 를 가므로, 전선만 보고 여섯 칸씩 띄우면
+    가운데에 덮이지 않는 띠가 남는다.
+
+        실측: 전봇대 51,1 은 x 49..53 을 덮고 60,1 은 58..62 를 덮는다
+              인서터 55,1 은 그 사이에서 혼자 멈춰 있었다
+
+    선이 이어졌나를 묻지 말고 «먹는 쪽이 받고 있나»를 물어야 한다. 그래야
+    조립기를 세울 때 같은 일을 또 안 겪는다.
+    """
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local out = {}
+      for _, e in pairs(s.find_entities_filtered{force = f}) do
+        if e.prototype.electric_energy_source_prototype
+           and not e.is_connected_to_electric_network() then
+          out[#out+1] = string.format("%d|%d|%s",
+            math.floor(e.position.x), math.floor(e.position.y), e.name)
+        end
+      end
+      return out
+    end)()""")
+    out = []
+    for row in _rows(reply):
+        x, y, name = str(row).split("|")
+        out.append((int(x), int(y), name))
+    return out
+
+
+SUPPLY = 2                # 소형 전봇대가 덮는 반경. 5x5 의 절반
+
+
+def cover(ai, hungry):
+    """굶는 것들을 덮을 전봇대 자리.
+
+    한 대가 여럿을 덮을 수 있으면 한 대만 세운다. 굶는 것 하나마다 한
+    대씩 세우면 전봇대가 밭을 이룬다 - 덮이기만 하면 되는 일에 자리를
+    낭비할 이유가 없다.
+
+    자리는 굶는 것 «바로 옆»에서 고른다. 그래야 기존 선에서도 멀지 않다.
+    """
+    left = list(hungry)
+    spots = []
+    while left:
+        x, y, _name = left[0]
+        # 후보를 «하나만» 내고 그것이 막히면 끝나는 구조였다. 실제로 첫
+        # 후보가 화로 안이었고, 굶는 인서터는 그대로 굶었다.
+        #
+        # 덮는 것이 많은 자리부터, 같으면 가까운 자리부터 - 그렇게 줄을
+        # 세워 두고 «놓을 수 있는 첫 자리»를 쓴다. 한 자리가 막히는 것과
+        # 덮을 방법이 없는 것은 다른 말이다.
+        seats = []
+        for dx in range(-SUPPLY, SUPPLY + 1):
+            for dy in range(-SUPPLY, SUPPLY + 1):
+                spot = (x + dx, y + dy)
+                mine = [one for one in left
+                        if abs(one[0] - spot[0]) <= SUPPLY
+                        and abs(one[1] - spot[1]) <= SUPPLY]
+                seats.append((-len(mine), abs(dx) + abs(dy), spot, mine))
+        seats.sort(key=lambda s: (s[0], s[1]))
+        here = missing(ai, [s[2] for s in seats])
+        if not here:
+            print(f"  ({x},{y}) 를 덮을 자리가 하나도 없다 - 둘레가 꽉 찼다")
+            left = [one for one in left if one != left[0]]
+            continue
+        spots.append(here[0])
+        took = next((s[3] for s in seats if s[2] == here[0]), [left[0]])
+        left = [one for one in left if one not in took]
+    return spots
+
+
 def gaps(ai):
     """«실제로» 끊긴 곳. 계획이 아니라 전력망이 답한다.
 
@@ -238,13 +315,24 @@ def main() -> int:
 
     for _ in range(args.rounds):
         try:
-            if joined(ai, src, dst):
-                print("전기가 기지까지 흐른다. 조립을 시작할 수 있다.")
+            hungry = starved(ai)
+            if joined(ai, src, dst) and not hungry:
+                print("전기가 기지까지 흐르고, 먹는 것들이 전부 받고 있다.")
                 return 0
             who = next((n for n in crew if busy(ai, n) is False), None)
             if not who:
                 time.sleep(args.every)
                 continue
+
+            # 선은 이어졌는데 누가 굶는다면, 덮이지 않은 띠가 있다는 뜻이다.
+            # 끊긴 곳을 찾는 것보다 이쪽이 먼저다 - 끊긴 곳은 «없기» 때문에
+            # 그대로 두면 아래에서 할 일을 못 찾고 매번 빈손으로 돈다.
+            todo = []
+            if hungry:
+                todo = cover(ai, hungry)
+                names = sorted({one[2] for one in hungry})
+                print(f"  {len(hungry)}개가 굶는다 "
+                      f"({', '.join(names[:3])}) - 덮을 자리 {len(todo)}")
 
             # 끊긴 곳이 있으면 «그곳부터». 새 자리를 채우는 것보다
             # 이미 선 것들을 잇는 쪽이 언제나 싸다.
@@ -254,8 +342,9 @@ def main() -> int:
             #
             # 메울 자리도 「놓을 수 있나」를 거쳐야 한다 - missing() 이
             # 이미 아홉 방향으로 비켜 보고, 어디로도 못 비키면 뺀다.
-            holes = gaps(ai)
-            todo = missing(ai, [(x, y) for x, y, _span in holes]) if holes else []
+            holes = [] if todo else gaps(ai)
+            if holes:
+                todo = missing(ai, [(x, y) for x, y, _span in holes])
             if holes and not todo:
                 print(f"  끊긴 곳 {len(holes)}군데인데 메울 자리가 없다 "
                       f"- 사이를 «둘로» 나눠 본다")
