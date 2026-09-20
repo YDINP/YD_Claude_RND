@@ -34,6 +34,9 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 
+sys.path.insert(0, HERE)
+import shelf as shelf_mod               # noqa: E402
+
 BELT = "transport-belt"
 ARM = "inserter"          # 전기 인서터. 간선이 이어진 뒤에 쓴다
 BURNER = "burner-inserter"
@@ -149,7 +152,7 @@ def standing(ai, seats):
     return todo, blocked
 
 
-def build(ai, who, todo, shelf, arm):
+def build(ai, who, todo, depot, arm):
     want: dict = {}
     for one in todo:
         want[one["what"]] = want.get(one["what"], 0) + 1
@@ -158,13 +161,22 @@ def build(ai, who, todo, shelf, arm):
         for item, each in COST.get(part, {}).items():
             need[item] = need.get(item, 0) + each * count
 
-    steps = [("walk_to", {"x": shelf["iron-plate"][0] - 2,
-                          "y": shelf["iron-plate"][1] + 1})]
+    # 선반 자리는 «규칙»이 아니라 «사실»이다.
+    #
+    # 구리판을 (dx, dy+6) 에서 찾게 두었는데 거기엔 상자가 없었다. 구리판은
+    # 철판과 같은 상자에 있었고, take 가 조용히 실패해 전기 인서터가 한 대도
+    # 안 섰다. 로그에는 「인서터 11개」가 네 번 찍혔다.
+    at = shelf_mod.where(ai, depot, list(need))
+    missing = [item for item in need if item not in at]
+    if missing:
+        print(f"  창고에 {missing} 이 없다 - 그것 없이 되는 만큼만 한다")
+        for item in missing:
+            need.pop(item, None)
+    start = sorted(at.values())[0] if at else (depot[0] + 0.5, depot[1] + 0.5)
+    steps = [("walk_to", {"x": start[0] - 2, "y": start[1] + 1})]
     for item, count in need.items():
-        at = shelf.get(item)
-        if at:
-            steps.append(("take", {"name": item, "x": at[0], "y": at[1],
-                                   "count": count}))
+        steps.append(("take", {"name": item, "x": at[item][0],
+                               "y": at[item][1], "count": count}))
     for part, count in want.items():
         steps.append(("craft", {"recipe": part, "count": count, "wait": False}))
     steps.append(("walk_to", {"x": todo[0]["x"] + 2, "y": todo[0]["y"] + 2}))
@@ -212,10 +224,6 @@ def main() -> int:
     crew = args.who or ["delta"]
     rows = [int(v) for v in args.rows.split(",")]
     dx, dy = (int(v) for v in args.depot.split(","))
-    shelf = {"iron-plate": (dx + 0.5, dy + 0.5),
-             "stone": (dx + 0.5, dy + 2.5),
-             "coal": (dx + 0.5, dy + 4.5),
-             "copper-plate": (dx + 0.5, dy + 6.5)}
 
     ai = AIBridge()
     arm = BURNER if args.burner else ARM
@@ -260,7 +268,7 @@ def main() -> int:
                 print(f"  막힌 칸 {len(blocked)}개 - "
                       f"{blocked[0][0]['x']},{blocked[0][0]['y']} 에 "
                       f"{blocked[0][1]}")
-            build(ai, free[0], todo[:PER_TRIP], shelf, arm)
+            build(ai, free[0], todo[:PER_TRIP], (dx, dy), arm)
         except RconError as exc:
             print("  게임이 대답하지 않는다:", exc)
         except Exception as exc:
