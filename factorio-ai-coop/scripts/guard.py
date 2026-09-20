@@ -141,11 +141,38 @@ def holdings(ai):
             type = {"mining-drill", "furnace", "container", "lab", "boiler",
                     "generator", "offshore-pump", "assembling-machine"},
             force = game.forces.player}) do
-        out[#out+1] = string.format("%.0f|%.0f", e.position.x, e.position.y)
+        out[#out+1] = string.format("%.0f|%.0f|%s", e.position.x, e.position.y,
+                                    e.name)
       end
       return out
     end)()""")
-    return [tuple(float(v) for v in r.split("|")) for r in _rows(reply)]
+    out = []
+    for row in _rows(reply):
+        x, y, name = row.split("|")
+        out.append((float(x), float(y), name))
+    return out
+
+
+# 무엇을 먼저 지키나. 값은 «다시 세우는 데 드는 것»이다.
+#
+# 채굴기는 철판 아홉 장이면 다시 선다. 연구소는 전기가 있어야 하고,
+# 전기는 물가에 발전소가 있어야 하고, 그 사슬은 이 저장소에서 세 판
+# 동안 한 번도 안 끝났다. 둘이 같은 값일 수 없다.
+# 이름으로 «조각»을 맞춘다. 같은 일을 하는 것이 여러 이름으로 오기
+# 때문이다 - burner-mining-drill 과 electric-mining-drill 은 둘 다
+# 채굴기이고, stone-furnace 와 steel-furnace 는 둘 다 화로다.
+WORTH = (("lab", 100), ("steam-engine", 80), ("boiler", 80),
+         ("offshore-pump", 80), ("assembling-machine", 40),
+         ("furnace", 10), ("mining-drill", 5), ("chest", 3))
+
+
+def worth(group):
+    best = 1
+    for _x, _y, name in group:
+        for key, value in WORTH:
+            if key in name and value > best:
+                best = value
+    return best
 
 
 def standing_turrets(ai):
@@ -216,14 +243,50 @@ def inside(box, points, gap=INNER_GAP, near=INNER_NEAR):
     return out
 
 
+RANGE = 18                # 기관포탑 사거리. 「지킨다」의 유일한 기준
+
+
+def covers(group, have, reach=RANGE):
+    """이 구역을 «실제로 덮는» 포탑 수.
+
+    처음에는 구역 상자를 여유 있게 넓혀 그 안의 포탑을 셌다. 그랬더니
+    연구소 구역이 「포탑 1대」로 나왔는데, 실측하니 가장 가까운 포탑이
+    44칸 - 사거리의 두 배가 넘었다. 넓은 상자가 «남의 포탑»을 자기
+    것으로 세어 준 것이다.
+
+    지킨다는 말의 기준은 상자가 아니라 «사거리»다.
+    """
+    return sum(1 for t in have
+               if any(abs(t[0] - p[0]) <= reach and abs(t[1] - p[1]) <= reach
+                      for p in group))
+
+
 def plan_seats(ai):
-    """사방 테두리 + 안쪽. 구역마다 따로 두른다."""
+    """사방 테두리 + 안쪽. 구역마다 따로 두른다.
+
+    순서는 «큰 구역부터»가 아니라 «맨몸인 구역부터»다.
+
+    사용자: "연구소도 방어받지 못함."
+
+    실측(20회차): 본진 57채에 포탑 열다섯 대가 섰는데, 발전소+연구소
+    다섯 채와 돌.구리 초소는 포탑이 0대였다. 큰 구역부터 채우니 작은
+    초소가 영영 차례를 못 받은 것이다.
+
+    포탑 열여섯 번째가 본진에 서는 값보다, 첫 번째가 연구소에 서는 값이
+    크다. 연구소는 우리가 가진 가장 비싼 건물이고, 그것이 죽으면 다음
+    연구가 없다.
+    """
     ours = holdings(ai)
     if not ours:
         return []
     have = standing_turrets(ai)
+    groups = clusters(ours)
+    # 맨몸인 구역이 먼저. 그 다음은 «한 채당 포탑이 적은» 구역.
+    # 맨몸인 구역이 먼저. 맨몸끼리는 «대체 불가능한 것»이 있는 쪽부터.
+    groups.sort(key=lambda g: (covers(g, have) > 0, -worth(g),
+                               covers(g, have) / max(1, len(g))))
     wanted = []
-    for group in sorted(clusters(ours), key=len, reverse=True):
+    for group in groups:
         box = (min(p[0] for p in group) - STANDOFF,
                min(p[1] for p in group) - STANDOFF,
                max(p[0] for p in group) + STANDOFF,
@@ -244,6 +307,18 @@ def plan_seats(ai):
         taken.append(at)
         out.append(seat)
     return out
+
+
+def unguarded(ai, reach=18):
+    """포탑 사거리 밖에 있는 우리 건물들. 먼 것부터."""
+    have = standing_turrets(ai)
+    out = []
+    for p in holdings(ai):
+        gap = min((max(abs(p[0] - t[0]), abs(p[1] - t[1])) for t in have),
+                  default=9999)
+        if gap > reach:
+            out.append((p[0], p[1], gap))
+    return sorted(out, key=lambda z: -z[2])
 
 
 def buildable(ai, spots):
@@ -392,6 +467,14 @@ def main() -> int:
 
             if int(st["starved"]):
                 print(f"  빈 총 {st['starved']}대 - 보급 순찰이 채워야 한다")
+
+            # 조용히 도는 것과 «다 지켜지는 것»은 다르다. 안 지켜지는
+            # 건물이 몇 채인지 매 순번 말한다.
+            bare = unguarded(ai)
+            if bare:
+                spot = bare[0]
+                print(f"  아직 무방비 {len(bare)}채 - 가장 먼 것 "
+                      f"({spot[0]:.0f},{spot[1]:.0f}) 포탑까지 {spot[2]:.0f}칸")
         except RconError as exc:
             print("  게임이 대답하지 않는다:", exc)
         except Exception as exc:
