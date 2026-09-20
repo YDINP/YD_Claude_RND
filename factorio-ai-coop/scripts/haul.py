@@ -45,7 +45,15 @@ def mismatched(f):
     return bool(f["what"] and f["made"] and want and f["made"] != want)
 FURNACE_ORE = 50          # 화로 하나가 한 번에 받아 두는 광석
 FURNACE_COAL = 20
-CARRY = 400               # 한 번 걸음에 나르는 최대치
+# 한 번 걸음에 나르는 최대치.
+#
+# 400으로 잡아 뒀더니 화로 스물두 대 시대에 못 따라갔다. 실측(20회차):
+# 화로 «스물두 대 전부» 결과칸이 철판 100으로 가득 차 막혀 있었고,
+# 밭 상자에는 철광석 3748이 쌓여 있었으며, 창고 철판은 0이었다.
+# 그동안 방어선은 「철이 없어서」 동쪽이 비어 있었다.
+#
+# 사람 가방은 이보다 훨씬 크다. 아끼던 것은 걸음 수가 아니라 숫자였다.
+CARRY = 2000
 PILE_FLOOR = 25           # 이만큼도 안 쌓인 상자는 다녀올 값을 못 한다
 
 # 화로 한 대는 한 가지만 녹인다. 여덟 대에 전부 철을 넣으면 구리는
@@ -252,7 +260,9 @@ def drain(ai, who, reply, shelf):
         return False
 
     plan, got = [], {}
-    for f in hot[:8]:
+    # 여덟 대만 보던 것도 같은 이유로 늘린다. 막힌 화로를 «남겨 두고»
+    # 오면 그 화로는 다음 순번까지 한 장도 안 만든다.
+    for f in hot[:24]:
         plan.append(("walk_to", {"x": f["x"], "y": f["y"] + 2}))
         plan.append(("take", {"name": f["made"], "x": f["x"], "y": f["y"],
                               "count": f["plate"]}))
@@ -263,7 +273,7 @@ def drain(ai, who, reply, shelf):
             plan.append(("take", {"name": f["what"], "x": f["x"], "y": f["y"],
                                   "count": f["ore"]}))
             got[f["what"]] = got.get(f["what"], 0) + f["ore"]
-    for p in piles[:4]:
+    for p in piles[:8]:
         for item, n in p["held"].items():
             if n < PILE_FLOOR or not where(item, shelf) or got.get(item, 0) >= CARRY:
                 continue
