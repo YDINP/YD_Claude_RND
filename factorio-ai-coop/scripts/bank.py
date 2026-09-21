@@ -77,16 +77,23 @@ def choked(belt, drill, pick, put, segs) -> list:
     out = []
     for seg in segs:
         here = set(seg)
-        if len(here & pick) > 0:
-            continue                      # 빼는 팔이 이미 있다
-        if len(here & drill) + len(here & put) == 0:
+        ins = len(here & drill) + len(here & put)
+        outs = len(here & pick)
+        if ins == 0:
             continue                      # 들어오는 것도 없다 - 다른 문제다
+        # 「문이 하나라도 있으면 됐다」로 봤더니 79칸 줄이 팔 둘로
+        # 해결된 것이 됐다. 그 줄은 여전히 86%가 차 있었고 화로에서
+        # 빼는 팔 스물둘이 「놓을 데가 없다」로 서 있었다.
+        #
+        #     싣는 손이 열둘이면 내리는 문도 그만큼 있어야 한다.
+        if outs >= ins:
+            continue
         load = sum(1 for p in seg if belt[p][1] > 0)
         if load < len(seg) * LOADED:
             continue                      # 아직 안 찼다
-        out.append(sorted(seg, key=lambda p: (p[0], p[1])))
-    out.sort(key=len, reverse=True)
-    return out
+        out.append((ins - outs, sorted(seg, key=lambda p: (p[0], p[1]))))
+    out.sort(key=lambda r: (-r[0], -len(r[1])))
+    return [seg for _short, seg in out]
 
 
 def doors(ai, seg) -> list:

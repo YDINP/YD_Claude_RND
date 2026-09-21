@@ -171,41 +171,58 @@ def tears(belt, segs):
     return out
 
 
-def _walk(a, b):
-    """a 에서 b 까지 한 축씩. 끝점은 넣지 않는다."""
+def _walk(a, b, x_first=True):
+    """a 에서 b 까지 한 축씩. 시작점은 빼고 끝점은 넣는다."""
     out = []
     x, y = a
-    while x != b[0]:
-        x += 1 if b[0] > x else -1
-        out.append((x, y))
-    while y != b[1]:
-        y += 1 if b[1] > y else -1
-        out.append((x, y))
+    order = (0, 1) if x_first else (1, 0)
+    for axis in order:
+        if axis == 0:
+            while x != b[0]:
+                x += 1 if b[0] > x else -1
+                out.append((x, y))
+        else:
+            while y != b[1]:
+                y += 1 if b[1] > y else -1
+                out.append((x, y))
     return out
 
 
 def bridge(tear):
-    """틈을 메울 칸들. 흐르는 쪽 축을 «먼저» 간다.
+    """틈을 메울 길. (막다른 끝의 새 방향, [(새 칸, 방향), ...])
 
-    막다른 끝은 이미 한쪽을 가리키고 있다. 그 방향으로 먼저 가면 그 칸은
-    돌릴 필요가 없고, 돌리지 않은 칸은 남의 줄과 싸우지 않는다.
+    처음에는 막다른 끝이 «이미 가리키는 축»으로 먼저 가게 했다. 돌릴
+    필요가 없으니 남의 줄과 안 싸운다는 생각이었는데, 가리키는 쪽이
+    목적지 «반대»인 경우가 태반이었다.
+
+        (-40,56) 서쪽을 봄 -> 목적지는 두 칸 «남쪽»
+        (-56,103) 북쪽을 봄 -> 목적지는 한 칸 «동쪽»
+
+    그래서 아홉 자리가 전부 "이을 수 있는 틈이 없다" 로 나왔다. 둘러
+    가는 길이 대각선이 되거나 남의 건물에 막혔기 때문이다.
+
+        막다른 끝은 «뒤가 없는 칸»이다. 뒤가 없으면 돌려도 아무도 안
+        다친다 - 그 방향을 지키려고 길을 두 배로 돌 이유가 없다.
+
+    그래서 끝 칸부터 목적지를 향해 꺾는다. 먼 축을 먼저 가고, 남은 축은
+    나중에 간다 - 꺾는 자리가 한 번뿐이라 길이 가장 짧다.
     """
     start, goal = tear["from"], tear["to"]
-    dx, dy = STEP.get(tear["dir"], (0, 0))
-    step = (start[0] + dx, start[1] + dy)
-    path = [step] + _walk(step, goal) if step != goal else []
-    path = [p for p in path if p != goal and p != start]
-    if not path:
-        return []
+    far_x = abs(goal[0] - start[0]) >= abs(goal[1] - start[1])
+    path = _walk(start, goal, x_first=far_x)
+    path = [p for p in path if p != goal]
+    seats = [start] + path
     out = []
-    for i, spot in enumerate(path):
-        nxt = path[i + 1] if i + 1 < len(path) else goal
+    for i, spot in enumerate(seats):
+        nxt = seats[i + 1] if i + 1 < len(seats) else goal
         move = (nxt[0] - spot[0], nxt[1] - spot[1])
         face = next((d for d, s in STEP.items() if s == move), None)
         if face is None:
-            return []                       # 대각선이 되면 이 틈은 못 잇는다
+            return None, []                 # 대각선이 되면 이 틈은 못 잇는다
         out.append((spot, face))
-    return out
+    if not out:
+        return None, []
+    return out[0][1], out[1:]               # 첫 칸은 «돌릴» 자리다
 
 
 def free(ai, spots):
@@ -237,6 +254,31 @@ def free(ai, spots):
     return done
 
 
+def turn(ai, spots):
+    """막다른 끝을 돌린다. 뒤가 없는 칸이라 돌려도 아무도 안 다친다."""
+    if not spots:
+        return 0
+    bits = ";".join("%d,%d,%d" % (x, y, d) for (x, y), d in spots)
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local done = 0
+      for bit in string.gmatch("%s", "[^;]+") do
+        local x, y, d = string.match(bit, "(-?%%d+),(-?%%d+),(%%d+)")
+        x, y, d = tonumber(x), tonumber(y), tonumber(d)
+        for _, b in pairs(s.find_entities_filtered{type = "transport-belt",
+              force = f, area = {{x, y}, {x + 1, y + 1}}}) do
+          if math.floor(b.position.x) == x
+             and math.floor(b.position.y) == y then
+            b.direction = d
+            done = done + 1
+          end
+        end
+      end
+      return { done = done }
+    end)()""" % bits)
+    return int(reply["done"])
+
+
 def stitch(ai, who, jobs):
     plan = []
     for spot, face in jobs[:PER_TRIP]:
@@ -248,6 +290,38 @@ def stitch(ai, who, jobs):
     submit(ai, who, plan, strict=False)
     print(f"{who}: 끊긴 자리 {len(jobs[:PER_TRIP])}칸 잇기")
     return True
+
+
+def follows(belt, spot, cap=500):
+    """이 칸에 떨어진 것이 «어디서 멈추나». 흐름을 그대로 따라간다."""
+    at, seen = spot, set()
+    while at in belt and at not in seen and len(seen) < cap:
+        seen.add(at)
+        nxt = ahead(at, belt[at][0])
+        if nxt not in belt:
+            return at
+        at = nxt
+    return at
+
+
+def where_ore_goes(belt, drill, pick):
+    """채굴기마다 광석이 «어디서 끝나나».
+
+    사용자가 짚었다 - "아직 광석들이 상자로들어감. 화로로직행연결해야함"
+
+    벨트가 이어져 있는 것과 «그 벨트가 옳은 데로 간다»는 다른 말이다.
+    스무 덩어리를 여덟으로 줄여 놓고도 광석은 창고를 빙빙 돌기만 했다.
+    끊긴 데가 없으니 lines.py 도 knots.py 도 아무 말이 없었다.
+
+        이어졌나만 물으면 «어디로 이어졌나»를 영영 안 묻게 된다.
+    """
+    out = {}
+    for spot in drill:
+        if spot not in belt:
+            out.setdefault("벨트가 아니다 (상자/땅)", []).append(spot)
+            continue
+        out.setdefault(follows(belt, spot), []).append(spot)
+    return out
 
 
 def audit(belt, drill, pick, put, segs):
@@ -288,6 +362,12 @@ def main() -> int:
             belt, drill, pick, put = look(ai)
             segs = segments(belt)
             audit(belt, drill, pick, put, segs)
+            goes = where_ore_goes(belt, drill, pick)
+            if goes:
+                print("  캔 것이 어디서 끝나나")
+                for end, who in sorted(goes.items(),
+                                       key=lambda kv: -len(kv[1]))[:5]:
+                    print(f"    {str(end):<22} 채굴기 {len(who)}대")
             torn = tears(belt, segs)
             if not torn:
                 print("  끊긴 자리 없음")
@@ -297,22 +377,28 @@ def main() -> int:
                     print(f"    {t['from']} {FACE.get(t['dir'])}"
                           f" 덩어리 {t['seg']}칸 -> {t['gap']}칸 건너 {t['to']}")
             if args.stitch and torn and who:
-                jobs = []
+                jobs, spins = [], []
                 for t in torn:
-                    span = bridge(t)
-                    if not span:
+                    face, span = bridge(t)
+                    if face is None:
                         continue
-                    ok = free(ai, [s for s, _d in span])
-                    if len(ok) != len(span):
-                        continue           # 한 칸이라도 막히면 그 틈은 건너뛴다
+                    if span:
+                        ok = free(ai, [s for s, _d in span])
+                        if len(ok) != len(span):
+                            continue       # 한 칸이라도 막히면 그 틈은 건너뛴다
+                    spins.append((t["from"], face))
                     jobs.extend(span)
                     if len(jobs) >= PER_TRIP:
                         break
+                spun = turn(ai, spins)
                 hands = idle(ai, who)
-                if not jobs:
+                if not jobs and not spun:
                     print("    이을 수 있는 틈이 없다 - 전부 막혔거나 대각선이다")
+                elif not jobs:
+                    print(f"    막다른 끝 {spun}칸을 돌려 이었다")
                 elif not hands:
-                    print(f"    이을 자리 {len(jobs)}칸 - 손이 비지 않는다")
+                    print(f"    끝 {spun}칸 돌림 · 이을 자리 {len(jobs)}칸"
+                          f" - 손이 비지 않는다")
                 else:
                     stitch(ai, hands[0], jobs)
         except RconError as exc:
