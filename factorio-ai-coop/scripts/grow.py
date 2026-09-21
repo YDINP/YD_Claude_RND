@@ -236,7 +236,7 @@ def stock(ai, depot):
                         .get_item_count("coal")
       end
       return out
-    end)()""" % (x - 3, y - 4, x + 3, y + 6, y, y))
+    end)()""" % (x - 6, y - 4, x + 6, y + 6, y, y))
 
 
 def stalled(ai):
