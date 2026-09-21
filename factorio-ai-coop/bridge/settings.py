@@ -135,7 +135,7 @@ HAUL_REACH = 120.0
 #
 # 예순 대를 놓으면 가로 36타일, 세로 42타일 안에 전부 들어간다.
 FURNACE_PITCH = 3
-FURNACE_ROW = 12
+FURNACE_ROW = 18
 FURNACE_AISLE = 5
 FURNACE_GAP = 9
 

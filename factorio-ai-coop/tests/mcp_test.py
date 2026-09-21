@@ -65,6 +65,18 @@ class McpClient:
 
 
 def main() -> int:
+    # 이 시험은 명부에 bravo 를 더했다가 «지운다». 시험장이 아니면 남의
+    # 일꾼을 지우게 된다 - 21회차에 실제로 그렇게 됐다.
+    sys.path.insert(0, os.path.join(ROOT, "bridge"))
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from client import AIBridge
+    from sandbox import NotASandbox, require_sandbox
+    try:
+        require_sandbox(AIBridge())
+    except NotASandbox as why:
+        print(f"  [STOP] {why}")
+        return 1
+
     mcp = McpClient()
 
     print("1. handshake")

@@ -19,6 +19,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 from client import AIBridge  # noqa: E402
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from sandbox import NotASandbox, require_sandbox  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAVE = "persistence-test"
 SAVE_PATH = rf"D:\park\YD_Claude_RND\.factorio-bot\saves\{SAVE}.zip"
@@ -36,7 +39,9 @@ def connect(timeout: float = 120.0) -> AIBridge:
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            return AIBridge()
+            ai = AIBridge()
+            require_sandbox(ai)
+            return ai
         except OSError:
             time.sleep(1)
     raise RuntimeError("server never came up")

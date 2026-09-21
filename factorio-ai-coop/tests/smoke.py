@@ -15,6 +15,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bridge"))
 
 from client import AIBridge, TaskFailed  # noqa: E402
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from sandbox import NotASandbox, require_sandbox  # noqa: E402
+
 PASSED: list[str] = []
 FAILED: list[str] = []
 
@@ -31,6 +34,7 @@ def main() -> int:
     while time.time() < deadline:
         try:
             ai = AIBridge()
+            require_sandbox(ai)
             break
         except OSError:
             time.sleep(1)

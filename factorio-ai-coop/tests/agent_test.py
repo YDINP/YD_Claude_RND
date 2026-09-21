@@ -13,6 +13,8 @@ import mission  # noqa: E402
 # 여기서 그렇게 부르면 무엇이 어디로 갔는지 이 파일이 증언하지 못한다.
 from settings import (BURNER_DRILLS, COAL_RIGS, DRILL, FIRST_PACKS,  # noqa: E402
                       FOCUS_ORDER,
+                      FURNACE_AISLE, FURNACE_GAP,
+                      FURNACE_PITCH, FURNACE_ROW,
                       MAX_FURNACES,
                       STUCK_STRIKES)
 from world import Snapshot  # noqa: E402
@@ -1304,24 +1306,35 @@ def main() -> int:
           and max(craft_seat(shop, n)["y"] for n in range(18)) + 8 <= 14)
 
     print("\n27. furnaces stand in rows, not in a spray")
+    # 줄 길이를 여기 박아 두었더니 제련 구역을 12줄에서 18줄로 늘린 날
+    # 시험 넷이 한꺼번에 빨개졌다. 배치가 틀린 것이 아니라 시험이 어제
+    # 숫자를 붙들고 있었다.
+    #
+    #     지키려는 것이 «모양»이면 숫자는 상수에서 끌어와야 한다.
     home = {"x": 52, "y": 16}
-    first = [furnace_seat(home, n) for n in range(12)]
-    check("the first twelve make one row",
+    span = FURNACE_PITCH * FURNACE_ROW
+    wanted = list(range(52, 52 + span, FURNACE_PITCH))
+    first = [furnace_seat(home, n) for n in range(FURNACE_ROW)]
+    check("one row holds a whole row's worth",
           all(p["y"] == 16 for p in first)
-          and [p["x"] for p in first] == list(range(52, 52 + 36, 3)))
-    second = [furnace_seat(home, n) for n in range(12, 24)]
-    check("the next twelve face them across an aisle",
-          all(p["y"] == 21 for p in second)
-          and [p["x"] for p in second] == list(range(52, 52 + 36, 3)))
+          and [p["x"] for p in first] == wanted)
+    second = [furnace_seat(home, n)
+              for n in range(FURNACE_ROW, FURNACE_ROW * 2)]
+    check("the next row faces them across an aisle",
+          all(p["y"] == 16 + FURNACE_AISLE for p in second)
+          and [p["x"] for p in second] == wanted)
     check("the aisle is wide enough for a belt between them",
           second[0]["y"] - first[0]["y"] >= 4)
     check("a new block starts below, not further right",
-          furnace_seat(home, 24) == {"x": 52, "y": 16 + 5 + 9})
-    # 한 줄로 274타일, 여섯 칸 줄로 40타일, 겹겹이로 16타일을 거쳐 여기까지 왔다.
-    reach = [furnace_seat(home, n) for n in range(60)]
-    check("sixty furnaces fit in 36 by 42 tiles",
-          max(p["x"] for p in reach) - 52 <= 36
-          and max(p["y"] for p in reach) - 16 <= 42,
+          furnace_seat(home, FURNACE_ROW * 2)
+          == {"x": 52, "y": 16 + FURNACE_AISLE + FURNACE_GAP})
+    reach = [furnace_seat(home, n) for n in range(MAX_FURNACES)]
+    blocks = -(-MAX_FURNACES // (FURNACE_ROW * 2))
+    wide = FURNACE_PITCH * (FURNACE_ROW - 1)
+    tall = blocks * (FURNACE_AISLE + FURNACE_GAP)
+    check("%d furnaces fit in %d by %d tiles" % (MAX_FURNACES, wide, tall),
+          max(p["x"] for p in reach) - 52 <= wide
+          and max(p["y"] for p in reach) - 16 <= tall,
           "%d x %d" % (max(p["x"] for p in reach) - 52,
                         max(p["y"] for p in reach) - 16))
 

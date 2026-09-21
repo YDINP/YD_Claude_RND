@@ -201,6 +201,7 @@ def stock(ai, depot):
       -- 「비었다」와 «아직 없다»는 다른 말이다. 창고가 서기도 전에
       -- 물건을 넣으러 가면 그 걸음은 통째로 버려진다.
       local out = { plate = 0, stone = 0, coal = 0, copper = 0, chests = 0,
+                    coal_any = 0,
                     stone_room = 0, plate_room = 0, coal_room = 0,
                     lab = s.count_entities_filtered{ name = "lab",
                           force = game.forces.player } }
@@ -225,6 +226,14 @@ def stock(ai, depot):
         else
           out.plate_room = out.plate_room + free
         end
+      end
+      -- 창고 밖 석탄. 「창고에 없다」와 «세상에 없다»는 다른 말이고,
+      -- 그 둘을 한 값으로 쟀더니 석탄 10,847 을 48 로 읽었다.
+      for _, c in pairs(s.find_entities_filtered{type="container",
+                force=game.forces.player}) do
+        out.coal_any = out.coal_any
+                     + c.get_inventory(defines.inventory.chest)
+                        .get_item_count("coal")
       end
       return out
     end)()""" % (x - 3, y - 4, x + 3, y + 6, y, y))
@@ -866,7 +875,20 @@ def main() -> int:
                     free = free[1:]
 
             # 창고가 석탄으로 굶고 있나. 아래 여러 걸음이 이 답을 본다.
-            fuel_short = int(st["coal"]) < FUEL_EACH * 3
+            #
+            # 「창고에 석탄이 없다」에는 답이 둘이다. 정말 없거나, 창고가
+            # 꽉 차서 못 들어오거나. 21회차에는 뒤쪽이었다 - 상자 셋이
+            # 빈칸 0 이라 석탄 10,847 이 밖에 쌓인 채 창고 안은 48 이었고,
+            # 그 48 을 보고 「연료가 없다」며 멈춘 채굴기 스물여덟 대를
+            # 백 순번 넘게 그냥 두었다. 더 캐도 들어올 데가 없었다.
+            #
+            #     못 들어오는 것을 «없는 것»으로 읽으면 더 캐게 된다.
+            #
+            # 그래서 둘을 갈라 묻는다. 밖에 쌓여 있으면 캘 일이 아니라
+            # 창고를 넓힐 일이다 - 그것은 depot.py 가 한다.
+            jammed = (int(st["coal"]) < FUEL_EACH * 3
+                      <= int(st.get("coal_any", 0)))
+            fuel_short = int(st["coal"]) < FUEL_EACH * 3 and not jammed
 
             # 0.7 캘 것이 없어진 채굴기부터 걷는다. 마른 자리의 채굴기는
             #     연료만 태우고 공해를 내면서 숫자만 채운다.
@@ -905,6 +927,10 @@ def main() -> int:
             elif sick and fuel_short:
                 print(f"  멈춘 채굴기 {len(sick)}대 - 손보지 않는다 "
                       f"(창고 석탄 {st['coal']}, 캐는 쪽부터)")
+            elif sick and jammed:
+                print(f"  멈춘 채굴기 {len(sick)}대 - 창고가 막혔다 "
+                      f"(창고 안 {st['coal']} / 밖 {st['coal_any']}"
+                      f" - 캘 일이 아니라 넓힐 일이다)")
 
             # 2. 그 다음에 새로 세운다 - «지킬 수 있을 때만».
             #

@@ -36,12 +36,18 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BELTS = os.path.join(ROOT, "mods", "ai-bridge_0.3.0", "belts.lua")
 
 # 길을 내놓는 자리와, 그 자리가 반드시 거쳐야 하는 것.
+# 지켜야 할 것은 「이렇게 적혀 있다」가 아니라 «여기를 거친다» 이다.
+# 글자 그대로 찾았더니 stitch 에 인자를 하나 더 붙인 날 두 줄이 한꺼번에
+# 빨개졌다 - 코드는 멀쩡했고 시험이 틀렸다.
+#
+#     모양을 지키려는 시험이 «철자»를 지키면, 고칠 때마다 시험이 운다.
+CALL = (r"stitch\s*\(\s*surface\s*,\s*force\s*,\s*tiles\s*[,)][^)]*\)?")
 GATES = (
     ("walk 의 반환",
-     "return stitch(surface, force, tiles), best_gap, best_turn",
+     r"return\s+" + CALL + r"\s*,\s*best_gap\s*,\s*best_turn",
      "`walk` 이 길을 그대로 돌려주면 못 닿았을 때의 대각선이 그대로 남는다"),
     ("등뼈+줄기 이음매",
-     "tiles = stitch(surface, force, tiles)",
+     r"tiles\s*=\s*" + CALL,
      "등뼈 끝과 줄기 첫 칸이 대각선으로 만날 수 있다"),
 )
 
@@ -193,8 +199,8 @@ def main() -> int:
         problems.append("stitch 가 아예 없다")
 
     for what, needle, why in GATES:
-        if needle not in text:
-            problems.append(f"{what}: {why}\n      찾는 것: {needle}")
+        if not re.search(needle, text):
+            problems.append(f"{what}: {why}\n      찾는 모양: {needle}")
 
     # stitch 는 walk «앞»에 있어야 한다. 뒤에 있으면 walk 안에서 못 부른다 -
     # 루아의 local 은 선언된 다음 줄부터 보인다.
