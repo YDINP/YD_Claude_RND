@@ -27,6 +27,8 @@ from client import AIBridge, RconError  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import knots as knots_mod                             # noqa: E402
+import sortrows as sortrows_mod                       # noqa: E402
+import wire as wire_mod                               # noqa: E402
 
 REPORT = """(function()
   local s = game.surfaces[1]
@@ -266,6 +268,31 @@ def once(ai: AIBridge) -> None:
         if coal < 300:
             warn.append(f"석탄이 바닥이다 ({coal}개) - 석탄 채굴기도 석탄으로 돈다."
                         " 꺼지면 스스로 못 살아난다")
+    except (RconError, KeyError, TypeError, ValueError):
+        pass
+
+    # 석탄이 «왜» 바닥인지는 위의 숫자가 말해 주지 않는다. 세 번을 「채굴기가
+    # 굶는다」로 읽고 연료를 넣었는데, 실은 석탄 선반이 철판으로 가득해서
+    # 석탄이 들어갈 칸이 없었다. 증상 옆에 원인을 같이 잰다.
+    try:
+        depot = sortrows_mod.DEPOT
+        mixed = {}
+        for _box, item, count in sortrows_mod.strangers(
+                sortrows_mod.survey(ai, depot), depot):
+            mixed[item] = mixed.get(item, 0) + count
+        if sum(mixed.values()) >= 500:
+            top = sorted(mixed.items(), key=lambda kv: -kv[1])[:3]
+            warn.append("벨트가 채울 선반에 남의 물건이 들었다 ("
+                        + ", ".join(f"{k} {v}" for k, v in top)
+                        + ") - scripts/sortrows.py")
+    except (RconError, KeyError, TypeError, ValueError):
+        pass
+
+    # 전봇대는 «선 수»가 아니라 «망의 수»를 센다.
+    try:
+        main_net, nets = wire_mod.networks(ai)
+        if main_net >= 0 and len(nets) > 1:
+            warn.append(f"전력망이 {len(nets)}토막이다 - scripts/wire.py")
     except (RconError, KeyError, TypeError, ValueError):
         pass
 

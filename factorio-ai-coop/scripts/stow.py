@@ -38,6 +38,9 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 
+sys.path.insert(0, HERE)
+import shelf as shelf_mod                # noqa: E402
+
 # 들고 있어도 되는 것. 이보다 많으면 넘치는 만큼만 넣는다.
 KEEP = {"coal": 10, "wood": 0}
 
@@ -99,9 +102,14 @@ def home_for(item, boxes, depot):
 
     칸 제한(level.py 의 수위)에 닿은 상자는 빈 칸 0 으로 본다 - 거기
     넣으러 가면 조용히 실패하고 물건은 가방에 그대로 남는다.
+
+    벨트가 채우는 줄에는 제 물건만 넣는다 (shelf.BELT_ROWS). 「이미 든
+    상자 먼저」가 석탄 선반을 철판으로 채운 장본인이었다 - 한 번 잘못
+    들어간 철판이 다음 철판을 불렀다.
     """
     dx, dy = depot
-    open_ = [b for b in boxes if b["room"] > 0]
+    open_ = [b for b in boxes
+             if b["room"] > 0 and shelf_mod.fits(item, b["y"], depot)]
     same = [b for b in open_ if item in b["held"]]
     pool = same or open_
     if not pool:

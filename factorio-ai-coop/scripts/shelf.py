@@ -28,6 +28,25 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 
 SPAN = 9                  # 창고 한가운데에서 이만큼 안이면 «창고 상자»다
 
+# 벨트가 채우는 줄. {창고 한가운데에서 본 y: 그 줄에 들어가도 되는 단 하나}
+#
+# 21회차에 석탄이 세 번 바닥났다. 세 번 다 「채굴기가 굶는다」로 읽고
+# 연료를 손으로 넣었다. 네 번째에 전기 채굴기 넉 대를 세웠더니 세우자마자
+# 「놓을 데 없음」으로 섰다 - 석탄 선반 상자 여덟 개가 «전부 찼고 석탄은
+# 0 개»였다. 철판 17,900 · 구리판 5,700 · 포탑 30.
+#
+#     제자리가 찼을 때 「가장 가까운 빈 상자」로 가게 한 것이 나였다.
+#     그 가장 가까운 상자가 벨트가 채울 상자였다.
+#
+# 벨트는 다른 데로 못 간다. 사람은 간다. 그러니 양보는 사람 쪽이 한다.
+BELT_ROWS = {0: "iron-plate", -5: "copper-plate", 4: "coal"}
+
+
+def fits(item, chest_y, depot) -> bool:
+    """이 물건을 이 줄에 «손으로» 넣어도 되나. 벨트 줄은 제 물건만 받는다."""
+    only = BELT_ROWS.get(int(chest_y) - int(depot[1]))
+    return only is None or only == item
+
 
 def _rows(v):
     return list(v.values()) if isinstance(v, dict) else list(v or [])
@@ -93,14 +112,17 @@ def shelves(ai, depot, span=SPAN):
     return out
 
 
-def spare(ai, depot, span=SPAN):
+def spare(ai, depot, span=SPAN, item=None):
     """빈 칸이 남은 상자 중 창고 한가운데에 가장 가까운 것.
+
+    벨트가 채우는 줄은 뺀다 (item 을 주면 그 물건의 줄만 허락한다).
 
     새 물건을 내려놓을 자리다. 없으면 None - 그러면 «상자를 하나 더
     두어야» 하는 것이지, 나르기를 포기할 일이 아니다.
     """
     dx, dy = depot
-    rest = [c for c in stock(ai, depot, span) if c["room"] > 0]
+    rest = [c for c in stock(ai, depot, span)
+            if c["room"] > 0 and fits(item, c["y"], depot)]
     if not rest:
         return None
     near = min(rest, key=lambda c: (c["x"] - dx) ** 2 + (c["y"] - dy) ** 2)
