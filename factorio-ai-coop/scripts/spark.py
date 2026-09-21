@@ -35,6 +35,10 @@ from orders import submit               # noqa: E402
 
 LAB = "lab"
 POLE = "small-electric-pole"
+def _rows(v):
+    return list(v.values()) if isinstance(v, dict) else list(v or [])
+
+
 SCIENCE = "automation-science-pack"
 # 열 기술은 밖에서 받는다. 포탑이 열렸다고 발전 사슬의 일이 끝나는 것이
 # 아니다 - 다음은 조립기(automation)고, 그 다음은 벨트(logistics)다.
@@ -255,11 +259,52 @@ def wire_up(ai, who, at, eng=None):
 
 
 def feed_science(ai, who, at, count):
-    plan = [("craft", {"recipe": SCIENCE, "count": count, "wait": False}),
+    """빨간 과학을 만들어 연구소에 넣는다. «넣었는지 확인하고» 말한다.
+
+    21회차. 여덟 순번 동안 "빨간 과학 12개를 연구소에" 가 찍혔고 연구는
+    0.0% 였다. 연구소 안의 팩은 «한 개도» 없었다.
+
+    모드는 제대로 말하고 있었다.
+
+        {'status': 'failed',
+         'error': 'bag is full - nowhere to put what I make'}
+
+    알파의 가방에 철광 1442, 탄약 1407, 석탄 816, 철상자 244 가 들어
+    있었다. 만들 자리가 없으니 만들어지지 않았고, 만들어지지 않았으니
+    넣을 것도 없었다. 그런데 이 함수는 «시킨 것»을 찍고 있었다.
+
+        시킨 것과 된 것 사이에 «묻는 일»을 넣지 않으면,
+        고장은 언제나 성공으로 보고된다.
+
+    그래서 만들기를 기다리고(wait), 가방을 열어 보고, 정말 든 만큼만
+    말한다. 가방이 찼으면 그 말을 그대로 옮긴다 - 「연구가 안 된다」가
+    아니라 「가방이 찼다」가 고칠 수 있는 말이다.
+    """
+    plan = [("craft", {"recipe": SCIENCE, "count": count, "wait": True}),
             ("walk_to", {"x": at["x"], "y": at["y"] + 2}),
-            ("insert", {"name": SCIENCE, "x": at["x"], "y": at["y"], "count": count})]
-    submit(ai, who, plan, strict=False)
-    print(f"{who}: 빨간 과학 {count}개를 연구소에")
+            ("insert", {"name": SCIENCE, "x": at["x"], "y": at["y"],
+                        "count": count})]
+    ids = submit(ai, who, plan, strict=False)
+    made = 0
+    try:
+        made = int(ai.agent(who).items().get(SCIENCE, 0))
+    except RconError:
+        pass
+    if made:
+        print(f"{who}: 빨간 과학 {made}개를 연구소로 가져간다")
+        return True
+    why = ""
+    for one in _rows(ids):
+        try:
+            task = ai.call("poll", int(one))
+        except (RconError, ValueError, TypeError):
+            continue
+        if isinstance(task, dict) and task.get("status") == "failed":
+            why = task.get("error") or ""
+            break
+    print(f"{who}: 빨간 과학을 못 만들었다"
+          + (f" - {why}" if why else " (까닭을 모른다)"))
+    return False
 
 
 def queue_tech(ai, techs=WANT_TECH):
