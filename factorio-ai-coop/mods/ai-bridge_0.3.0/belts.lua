@@ -62,7 +62,12 @@ end
 -- 6 으로 올린 까닭: 줄 사이 파수꾼(line_guard)을 넣었는데, 이미 얼려둔
 -- 길은 그 규칙을 모른 채 만들어졌다. 새 규칙을 넣고 옛 길을 그대로 두면
 -- 고친 것이 아무 데도 안 닿는다.
-local PLAN = 6
+--
+-- 7 로 올린 까닭: 그 파수꾼이 "ore" 한 줄만 막고 있었다. 나머지 넷은
+-- 서로를 모른 채 같은 줄을 나눠 가졌고, 나눠 가진 자리마다 두 흐름이
+-- 마주 섰다(y=58 에서 33칸과 30칸이 x=-45 에서 만났다). 이제
+-- route_for 가 모든 줄을 서로에게서 막는다 - 옛 길은 그 규칙을 모른다.
+local PLAN = 7
 
 -- 이만큼 안에 있으면 «같은 밭»이다. 밭을 나누는 간격(zones.lua 의
 -- FIELD_GAP)과 같은 값이라야 한다 - 그보다 크면 두 밭이 한 길을 쓰고,
@@ -411,6 +416,38 @@ local function both_guards(one, two)
   return function(x, y) return one(x, y) or two(x, y) end
 end
 
+
+-- 남의 줄은 통째로 «남의 땅»이다.
+--
+-- line_guard 는 "ore" 한 줄만 막았다. 그래서 같은 «칸»을 두 줄이 뺏는
+-- 일은 사라졌는데, 같은 «줄»을 나눠 가지면서 서로 반대로 깔리는 일이
+-- 남았다. 21회차에 사용자가 짚었다 - "벨트 방향도 막 제각각".
+--
+--   y=58  x -77~-56 동(22칸) | -55 서(1칸) | -54~-45 동 | -44~-15 서
+--
+-- 마지막 이음매에서 물건은 영원히 멈춘다. 살아 있는 뺏기가 죽은 이음매로
+-- 바뀌었을 뿐, 흐르지 않기는 마찬가지였다.
+--
+--     칸을 안 뺏는 것만으로는 모자라다. 줄도 안 뺏어야 한다.
+--
+-- 여기 한 곳에 두는 까닭: 길을 내는 모든 흐름이 route_for 를 지난다.
+-- 부르는 쪽마다 파수꾼을 붙이면 언젠가 하나를 빠뜨리고, 빠뜨린 그 하나가
+-- 이음매를 만든다. 실제로 "ore" 말고는 전부 빠져 있었다.
+local function others_guard(mykey)
+  if not storage.lines then return nil end
+  local taken, any = {}, false
+  for key, entry in pairs(storage.lines) do
+    if key ~= mykey and entry and entry.tiles then
+      for _, t in pairs(entry.tiles) do
+        taken[t.x .. ":" .. t.y] = true
+        any = true
+      end
+    end
+  end
+  if not any then return nil end
+  return function(x, y) return taken[x .. ":" .. y] == true end
+end
+
 -- 계획에서 그 칸만 뺀다. 이미 거기 선 것은 안 건드린다 - 걷어내는 일은
 -- 이 함수가 할 일이 아니다(그건 따로 시킨다).
 local function drop_guarded(tiles, guard)
@@ -550,6 +587,8 @@ local function route_for(key, surface, force, from, goal, guard)
      and kept.tiles and #kept.tiles > 0 then
     return kept.tiles, kept.short, kept.bends
   end
+  -- 부르는 쪽이 무엇을 넘겼든, 남의 줄은 언제나 피한다.
+  guard = both_guards(guard, others_guard(key))
   local start = open_spot(surface, force, from, guard)
   local tiles, short, bends = walk(surface, force, start, goal, guard)
   if not tiles then return nil end

@@ -25,6 +25,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from client import AIBridge, RconError  # noqa: E402
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import knots as knots_mod                             # noqa: E402
+
 REPORT = """(function()
   local s = game.surfaces[1]
   local force = game.forces.player
@@ -233,6 +236,20 @@ def once(ai: AIBridge) -> None:
         warn.append(f"화로 {f['lit_but_empty']}대가 불만 켜져 있다 - 원료가 없다")
     if d.get("no_fuel", 0):
         warn.append(f"채굴기 {d['no_fuel']}대가 연료 없음")
+    # 벨트가 «마주 서 있나». 21회차까지 이것을 재는 것이 하나도 없었고,
+    # 그래서 521칸 중 네 쌍이 마주 선 채로 「꼬임이 풀렸다」고 말했다.
+    # 재지 않는 것은 언제나 괜찮아 보인다.
+    try:
+        world = knots_mod.belts(ai)
+        kinds = knots_mod.sort_knots(world, knots_mod.head_on(world))
+        hurt = sum(len(v) for v in kinds.values())
+        if hurt:
+            bits = ", ".join(f"{k} {len(v)}곳" for k, v in kinds.items() if v)
+            warn.append(f"벨트가 마주 서 있다 ({bits})"
+                        f" - scripts/knots.py --fix")
+    except RconError:
+        pass
+
     stuck = unplaced(ai)
     # 벨트와 팔은 늘 조금씩 들고 다닌다(한 걸음 몫). 쌓이는 것만 본다.
     loud = {k: v for k, v in stuck.items()
