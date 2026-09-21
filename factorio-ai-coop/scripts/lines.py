@@ -350,6 +350,67 @@ def where_ore_goes(belt, drill, pick):
     return out
 
 
+def dead(belt, drill, put, segs):
+    """쓸모없는 덩어리 - «들어오는 것이 영영 없는» 줄.
+
+    사용자가 시켰다 - "쓸모없는 벨트들은 정리해야함"
+
+    벨트 750칸 중 옛 계획의 잔해가 수백 칸이었다. PLAN 을 올릴 때마다
+    새 길이 깔렸고 옛 길은 그대로 남았다. 남은 길은 아무것도 안 나르지만
+    길찾기는 그것을 피해 돌아가고, 돌아간 길이 또 한 줄 깔린다.
+
+    기준은 하나다: 채굴기도 안 떨구고 팔도 안 얹는 덩어리. 그런 줄에는
+    물건이 들어올 방법이 없다. 빼는 팔이 붙어 있어도 마찬가지다 - 빈
+    벨트를 보는 팔은 없는 팔과 같다.
+
+    지금 실려 있는 것이 있으면 건드리지 않는다. 방금 끊긴 줄일 수 있다.
+    """
+    # 처음에는 «덩어리» 단위로 봤다. 그랬더니 가장 큰 잔해들이 빠졌다 -
+    # 산 줄에 옆으로 «붙어 있기만» 해도 같은 덩어리로 세어지기 때문이다.
+    # 붙어 있는 것과 받는 것은 다르다. 그래서 흐름을 따라간다: 채굴기가
+    # 떨구는 칸과 팔이 얹는 칸에서 출발해 닿는 칸만 «받는 칸»이다.
+    fed = set()
+    for src in (drill | put):
+        at = src
+        while at in belt and at not in fed:
+            fed.add(at)
+            at = ahead(at, belt[at][0])
+    idle_tiles = {p for p in belt if p not in fed and belt[p][1] == 0}
+    # 걷기 좋게 이웃끼리 묶는다.
+    out, seen = [], set()
+    for start in sorted(idle_tiles):
+        if start in seen:
+            continue
+        group, stack = [], [start]
+        while stack:
+            cur = stack.pop()
+            if cur in seen or cur not in idle_tiles:
+                continue
+            seen.add(cur)
+            group.append(cur)
+            for dx, dy in SIDES:
+                stack.append((cur[0] + dx, cur[1] + dy))
+        out.append(group)
+    out.sort(key=len, reverse=True)
+    return out
+
+
+def prune(ai, who, seg, keep=()):
+    """걷어낸다. 걷은 벨트는 가방으로 돌아온다 - 버리는 것이 아니다."""
+    todo = [p for p in seg if p not in keep][:PER_TRIP * 2]
+    if not todo:
+        return False
+    todo.sort()
+    plan = []
+    for x, y in todo:
+        plan.append(("walk_to", {"x": x + 1.5, "y": y + 1.5}))
+        plan.append(("demolish", {"x": x + 0.5, "y": y + 0.5,
+                                  "search_radius": 0.4}))
+    submit(ai, who, plan, strict=False)
+    print(f"{who}: 쓸모없는 벨트 {len(todo)}칸 걷기")
+    return True
+
+
 def audit(belt, drill, pick, put, segs):
     carry = sum(1 for v in belt.values() if v[1] > 0)
     print(f"  벨트 {len(belt)}칸 · 물건 실린 칸 {carry}"
@@ -376,6 +437,10 @@ def audit(belt, drill, pick, put, segs):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--stitch", action="store_true")
+    ap.add_argument("--spare", default="",
+                    help="걷지 않을 상자 x1,y1,x2,y2 - 짓고 있는 줄을 지킨다")
+    ap.add_argument("--prune", action="store_true",
+                    help="들어오는 것이 없는 덩어리를 걷는다 (--who 필요)")
     ap.add_argument("--who", default="")
     ap.add_argument("--every", type=float, default=0)
     ap.add_argument("--rounds", type=int, default=4000)
@@ -402,6 +467,26 @@ def main() -> int:
                 for t in torn[:6]:
                     print(f"    {t['from']} {FACE.get(t['dir'])}"
                           f" 덩어리 {t['seg']}칸 -> {t['gap']}칸 건너 {t['to']}")
+            gone = dead(belt, drill, put, segs)
+            for box in [b for b in args.spare.split(";") if b]:
+                x1, y1, x2, y2 = (int(v) for v in box.split(","))
+                gone = [[p for p in g if not (min(x1, x2) <= p[0] <= max(x1, x2)
+                                              and min(y1, y2) <= p[1] <= max(y1, y2))]
+                        for g in gone]
+                gone = [g for g in gone if g]
+            if gone:
+                print(f"  쓸모없는 덩어리 {len(gone)}개"
+                      f" · {sum(len(g) for g in gone)}칸")
+                for g in gone[:6]:
+                    print(f"    {len(g)}칸  x {min(p[0] for p in g)}~"
+                          f"{max(p[0] for p in g)} y {min(p[1] for p in g)}~"
+                          f"{max(p[1] for p in g)}")
+                if args.prune and who:
+                    hands = idle(ai, who)
+                    for n, g in enumerate(gone):
+                        if n >= len(hands):
+                            break
+                        prune(ai, hands[n], g)
             if args.stitch and torn and who:
                 jobs, spins = [], []
                 for t in torn:
