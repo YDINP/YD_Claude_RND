@@ -473,6 +473,32 @@ local LIFTABLE = {
   ["wooden-chest"] = true, ["iron-chest"] = true, ["steel-chest"] = true,
 }
 
+-- 이미 «누가 밀어 넣고 있는» 벨트인가.
+--
+-- 남의 벨트를 제 방향으로 돌리는 것이 뺏기의 실제 동작이었다. 파수꾼은
+-- 길찾기만 막는다 - 길은 피해 갔는데, 계획에 남아 있던 옛 칸이 순번마다
+-- 남의 줄을 한 칸씩 돌려놨다. 그래서 이음매가 걸어 다녔다.
+--
+--     한 줄이 다른 줄을 먹는 데 필요한 것은 «한 칸을 돌릴 권리»뿐이다.
+--
+-- 뒤에서 같은 방향의 벨트가 밀어 넣고 있으면 그것은 돌아가는 줄이다.
+-- 돌아가는 줄은 안 건드린다. 혼자 선 벨트는 옛 부스러기이니 돌려도 된다.
+local RUN_STEP = {
+  [defines.direction.north] = { 0, -1 }, [defines.direction.east] = { 1, 0 },
+  [defines.direction.south] = { 0, 1 },  [defines.direction.west] = { -1, 0 },
+}
+
+local function in_a_run(surface, force, x, y, dir)
+  local d = RUN_STEP[dir]
+  if not d then return false end
+  local bx, by = x - d[1], y - d[2]
+  local back = surface.find_entities_filtered {
+    area = { { bx, by }, { bx + 1, by + 1 } },
+    type = "transport-belt", force = force, limit = 1,
+  }[1]
+  return back ~= nil and back.direction == dir
+end
+
 local function missing(surface, force, tiles, what)
   local out, standing = {}, 0
   for _, tile in pairs(tiles) do
@@ -481,7 +507,8 @@ local function missing(surface, force, tiles, what)
     }[1]
     if here then
       standing = standing + 1
-      if what == BELT and here.direction ~= tile.dir then
+      if what == BELT and here.direction ~= tile.dir
+         and not in_a_run(surface, force, tile.x, tile.y, here.direction) then
         out[#out + 1] = { x = tile.x, y = tile.y, dir = tile.dir, turn = true }
       end
     elseif surface.can_place_entity {
@@ -750,6 +777,23 @@ local function depot_ends(depot)
          { x = depot.x + DEPOT_WIDE - 1, y = depot.y + 4 }  -- 제련으로 가는 끝
 end
 
+-- 고정 좌표로 나는 줄은 길찾기를 안 거치므로 storage.lines 에 안 들어간다.
+-- 그래서 others_guard 가 그 자리를 «남의 땅»으로 못 봤고, 밭에서 오는 길이
+-- 적재소의 급전 벨트 위를 제 길이라 여기며 지나갔다. 21회차 실측 -
+-- 이음매가 순번마다 한 칸씩 서쪽으로 움직였다.
+--
+--     18:42  (-56,58) 동(26칸) <-> (-55,58) 서(41칸)
+--     18:45  (-55,58) 동(27칸) <-> (-54,58) 서(40칸)
+--
+-- 한 줄이 다른 줄을 한 칸씩 먹으면서 둘 다 영원히 깔았다.
+--
+--     길찾기가 피할 수 있으려면 «그 줄이 있다고 적혀 있어야» 한다.
+local function own_lane(key, tiles)
+  if not tiles or #tiles == 0 then return end
+  storage.lines = storage.lines or {}
+  storage.lines[key] = { tiles = tiles, plan = PLAN, fixed = true }
+end
+
 local function depot_line(name, limit)
   local a = agent(name)
   local b = body(a)
@@ -769,6 +813,10 @@ local function depot_line(name, limit)
   bank = drop_guarded(bank, guard)
   draw = drop_guarded(draw, guard)
   out = drop_guarded(out, guard)
+
+  -- 적재소의 두 줄은 이 자리에서만 난다. 남들이 피할 수 있게 적어 둔다.
+  own_lane("depot_in", into)
+  own_lane("depot_out", out)
 
   local todo, standing, want = gather(b.surface, b.force, {
     { tag = "bank", what = DEPOT_CHEST, tiles = bank },
@@ -832,6 +880,10 @@ local function ore_line(name, fx, fy, limit)
     trunk = mended
     storage.lines["ore"].tiles = trunk
   end
+
+  -- 제련 급전/배출 줄도 고정 좌표로 난다. 적어 두지 않으면 남이 지나간다.
+  own_lane("smelt_in", lane)
+  own_lane("smelt_out", out_lane)
 
   -- 순서가 있다. 길이 없으면 내리는 곳을 세워도 아무것도 안 온다. 그리고
   -- 나가는 줄을 빠뜨리면 화로가 판금으로 제 출력칸을 막고 다시 선다.
