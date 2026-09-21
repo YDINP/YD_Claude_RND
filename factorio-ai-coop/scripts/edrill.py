@@ -34,6 +34,9 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 
+sys.path.insert(0, HERE)
+from unbox import going_somewhere       # noqa: E402
+
 DRILL = "electric-mining-drill"
 POLE = "small-electric-pole"
 OLD = "burner-mining-drill"
@@ -123,7 +126,11 @@ def measure(ai, spots, ore) -> list:
         local lit = false
         for _, p in pairs(s.find_entities_filtered{type = "electric-pole", force = f,
               area = {{cx - 3.9, cy - 3.9}, {cx + 3.9, cy + 3.9}}}) do
-          if p.electric_network_id == main then lit = true end
+          -- 영역 검색은 전봇대 «몸통»이 걸치기만 해도 잡는다. 거리로 다시 잰다:
+          -- 공급 반경 2.5 + 채굴기 반 1.5 = 4 «미만».
+          if p.electric_network_id == main
+             and math.abs(p.position.x - cx) < 3.6
+             and math.abs(p.position.y - cy) < 3.6 then lit = true end
         end
         out[#out+1] = cx .. "|" .. cy .. "|" .. face .. "|" .. amount .. "|"
                    .. (ok and 1 or 0) .. "|" .. (lit and 1 or 0) .. "|"
@@ -189,6 +196,40 @@ def pole_for(ai, seat, taken):
     return float(reply["x"]), float(reply["y"])
 
 
+def unlit(ai) -> list:
+    """서 있는데 전기가 없는 전기 채굴기. 세운 것과 도는 것은 다르다."""
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local out = {}
+      for _, d in pairs(s.find_entities_filtered{name = "%s", force = f}) do
+        if d.status == defines.entity_status.no_power then
+          out[#out+1] = d.position.x .. "|" .. d.position.y
+        end
+      end
+      return out
+    end)()""" % DRILL)
+    return [{"x": float(a), "y": float(b)}
+            for a, b in (str(r).split("|") for r in _rows(reply))]
+
+
+def relight(ai, who, dark) -> None:
+    try:
+        held = int(ai.agent(who).items().get(POLE, 0))
+    except RconError:
+        held = 0
+    plan = []
+    if held < len(dark):
+        plan.append(("craft", {"recipe": POLE, "wait": True,
+                               "count": (len(dark) - held + 1) // 2}))
+    for seat in dark:
+        spot = pole_for(ai, seat, dark)
+        if spot:
+            plan.append(("walk_to", {"x": spot[0] + 1.0, "y": spot[1] + 1.0}))
+            plan.append(("build", {"name": POLE, "x": spot[0], "y": spot[1]}))
+    submit(ai, who, plan, strict=False)
+    print(f"{who}: 전기 없는 채굴기 {len(dark)}대 옆에 전봇대")
+
+
 def build(ai, who, seats) -> None:
     seats = seats[:60 // STEPS_PER_SEAT]
     try:
@@ -235,6 +276,13 @@ def main() -> int:
 
     ai = AIBridge()
     lane = belts(ai, box)
+    # 벨트가 «있다»와 «나른다»는 다르다. 빼는 팔이 붙은 덩어리만 줄로 친다 -
+    # 토막 옆에 앉힌 채굴기는 토막을 채우고 선다.
+    alive = going_somewhere(ai)
+    stubs = len(lane) - len([k for k in lane if k in alive])
+    lane = {k: v for k, v in lane.items() if k in alive}
+    if stubs:
+        print(f"  어디로도 안 가는 벨트 {stubs}칸은 뺐다")
     seats = measure(ai, candidates(lane), args.ore)
     picked = choose(seats, args.max, args.min_ore)
     print(f"  벨트 {len(lane)}칸 · 옆자리 {len(seats)}곳 · 세울 만한 곳 {len(picked)}곳")
@@ -242,7 +290,13 @@ def main() -> int:
         print(f"    ({seat['x']},{seat['y']}) {seat['ore']:>6}"
               f"  {'전기 닿음' if seat['lit'] else '전봇대 필요'}"
               + (f"  헌 채굴기 {len(seat['old'])}대 걷음" if seat["old"] else ""))
-    if picked and args.who:
+    dark = unlit(ai)
+    if dark:
+        print(f"  [!] 서 있는데 전기가 없는 채굴기 {len(dark)}대: "
+              + ", ".join(f"({d['x']},{d['y']})" for d in dark))
+    if args.who and dark:
+        relight(ai, args.who, dark)       # 새로 세우기보다 선 것을 돌리는 게 먼저
+    elif picked and args.who:
         build(ai, args.who, picked)
     return 0
 

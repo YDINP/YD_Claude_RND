@@ -105,6 +105,19 @@ def seat(ai, a, b):
     return float(reply["x"]), float(reply["y"])
 
 
+def reach(ai, poles, target, close=3.0, cap=30) -> list:
+    """본망에서 target 까지 놓을 자리들. 한 개씩 «닿는 데까지» 다가간다."""
+    at = min(poles, key=lambda p: (p[0] - target[0]) ** 2 + (p[1] - target[1]) ** 2)
+    spots = []
+    while ((at[0] - target[0]) ** 2 + (at[1] - target[1]) ** 2) ** 0.5 > close:
+        nxt = seat(ai, at, target)
+        if not nxt or nxt == at or len(spots) >= cap:
+            break
+        spots.append(nxt)
+        at = nxt
+    return spots
+
+
 def join(ai, who, spots) -> None:
     try:
         held = int(ai.agent(who).items().get(POLE, 0))
@@ -125,12 +138,24 @@ def join(ai, who, spots) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--who", default="")
+    ap.add_argument("--reach", default="",
+                    help="본망을 이 칸까지 끈다 x,y")
     ap.add_argument("--every", type=float, default=0)
     ap.add_argument("--rounds", type=int, default=100000)
     args = ap.parse_args()
     names = [n.strip() for n in args.who.split(",") if n.strip()]
 
     ai = AIBridge()
+    if args.reach:
+        target = tuple(float(v) for v in args.reach.split(","))
+        main_net, nets = networks(ai)
+        spots = reach(ai, nets.get(main_net, []), target)
+        print(f"  ({target[0]:.0f},{target[1]:.0f}) 까지 전봇대 {len(spots)}개: "
+              + " ".join(f"({x:.0f},{y:.0f})" for x, y in spots))
+        hands = idle(ai, names)
+        if spots and hands:
+            join(ai, hands[0], spots)
+        return 0
     for _ in range(args.rounds if args.every else 1):
         try:
             main_net, nets = networks(ai)
