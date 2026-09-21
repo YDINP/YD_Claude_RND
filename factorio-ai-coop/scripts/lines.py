@@ -456,9 +456,13 @@ def main() -> int:
             goes = where_ore_goes(belt, drill, pick)
             if goes:
                 print("  캔 것이 어디서 끝나나")
-                for end, who in sorted(goes.items(),
-                                       key=lambda kv: -len(kv[1]))[:5]:
-                    print(f"    {str(end):<22} 채굴기 {len(who)}대")
+                # 여기 돌림 변수 이름이 `who` 였다. 바로 아래 --prune 과 --stitch 가
+                # 쓰는 «일꾼 이름 목록»을 좌표 목록으로 덮어썼고, 그 뒤로 빈 손
+                # 찾기는 늘 빈 목록을 돌려줬다. 오류는 없었다 - 고리는 한 시간
+                # 넘게 목록만 찍으며 「돌고」 있었다.
+                for end, drills_here in sorted(goes.items(),
+                                               key=lambda kv: -len(kv[1]))[:5]:
+                    print(f"    {str(end):<22} 채굴기 {len(drills_here)}대")
             torn = tears(belt, segs)
             if not torn:
                 print("  끊긴 자리 없음")
