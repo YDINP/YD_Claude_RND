@@ -369,6 +369,15 @@ def dead(belt, drill, put, segs):
     # 산 줄에 옆으로 «붙어 있기만» 해도 같은 덩어리로 세어지기 때문이다.
     # 붙어 있는 것과 받는 것은 다르다. 그래서 흐름을 따라간다: 채굴기가
     # 떨구는 칸과 팔이 얹는 칸에서 출발해 닿는 칸만 «받는 칸»이다.
+    # 갓 깐 줄은 «아직» 아무것도 안 받는다. 그래서 짓는 중인 줄과 버려진
+    # 줄은 이 기준으로 구별이 안 된다. 21회차에 석탄 벨트 150칸을 다섯이
+    # 나눠 까는 동안 이 고리가 옆에서 「쓸모없는 벨트」라며 도로 걷었다.
+    # 다 깔고 보니 0칸이었고 오류는 어디에도 없었다.
+    #
+    #     정리는 고리로 돌리는 일이 아니다. 짓기가 끝난 것을 «사람이 확인한
+    #     다음» 한 번 부르는 일이다.
+    #
+    # main() 에서 --prune 과 --every 를 같이 주면 거절한다.
     fed = set()
     for src in (drill | put):
         at = src
@@ -446,6 +455,9 @@ def main() -> int:
     ap.add_argument("--rounds", type=int, default=4000)
     args = ap.parse_args()
     who = [n.strip() for n in args.who.split(",") if n.strip()]
+    if args.prune and args.every:
+        ap.error("--prune 은 고리로 못 돌린다 - 짓는 중인 줄을 걷어낸다. "
+                 "짓기가 끝난 뒤 한 번만 부른다")
 
     ai = AIBridge()
     for _ in range(args.rounds if args.every else 1):
