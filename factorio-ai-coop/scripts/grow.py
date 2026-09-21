@@ -406,6 +406,22 @@ def has_box(ai, at):
     return int(reply["n"]) > 0
 
 
+
+def lacking(ai, who, item, need):
+    """가방에 «모자란 만큼만». 이미 든 것을 또 만들지 않는다.
+
+    21회차 검수: 가방에 철상자 683개, 포탑 244대가 쌓여 있었다. 철판으로
+    치면 만오천 장이다. 세우기는 조용히 실패하는데 만들기는 매번 성공하니,
+    순번마다 「필요한 만큼」을 새로 만들어 가방에 더했다.
+
+        만들기 전에 가방부터 본다. 든 것을 쓰는 것이 먼저다.
+    """
+    try:
+        have = int(ai.agent(who).items().get(item, 0))
+    except RconError:
+        have = 0
+    return max(0, int(need) - have)
+
 def tend(ai, who, shelf, sick):
     """멈춘 채굴기에 출구와 연료를 준다.
 
@@ -449,7 +465,9 @@ def tend(ai, who, shelf, sick):
     if boxes:
         # 여기는 제작과 세우기 사이에 «걸음조차 없다». 기다리지 않으면
         # 상자는 늘 가방에 남고 채굴기는 출구를 못 얻는다.
-        plan.append(("craft", {"recipe": CHEST, "count": len(boxes), "wait": True}))
+        short = lacking(ai, who, CHEST, len(boxes))
+        if short:
+            plan.append(("craft", {"recipe": CHEST, "count": short, "wait": True}))
     for job in jobs:
         d = job["drill"]
         if job in boxes:
@@ -767,9 +785,11 @@ def sow(ai, who, shelf, field, st):
     })
     # 묶음의 «마지막» 제작만 기다린다. 제작 큐는 선입선출이라 마지막이
     # 끝났으면 앞의 것도 끝나 있다.
-    plan += [("craft", {"recipe": DRILL, "count": n, "wait": False}),
-             ("craft", {"recipe": CHEST, "count": n, "wait": True}),
-             ]
+    for item in (DRILL, CHEST):
+        short = lacking(ai, who, item, n)
+        if short:
+            plan.append(("craft", {"recipe": item, "count": short,
+                                   "wait": item == CHEST}))
     # 자리마다 «걸어가서» 세운다.
     #
     # 여기 있던 것은 첫 자리 옆으로 한 번만 걸어가서 여덟을 다 세우려

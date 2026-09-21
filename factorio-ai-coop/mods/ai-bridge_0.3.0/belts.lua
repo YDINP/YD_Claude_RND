@@ -499,6 +499,45 @@ local function in_a_run(surface, force, x, y, dir)
   return back ~= nil and back.direction == dir
 end
 
+-- 「일하는 고리」인가 - 누가 먹여 주고, 내보낼 데도 있는 벨트.
+--
+-- in_a_run 은 «곧은 줄 한가운데»만 지켰다. 꺾이는 칸은 뒤에 같은 방향의
+-- 벨트가 없으므로 못 지킨다. 그런데 사람이 손으로 고친 자리는 거의 다
+-- «꺾이는 칸»이다 - 이음매를 우회로로 돌린 (-44,58), 수집줄을 기둥에
+-- 물린 (-50,107). 그 칸들을 순번마다 옛 계획대로 되돌려 놓았고, 그래서
+-- 고친 이음매가 한 시간 뒤에 되살아났다.
+--
+--     흐르고 있는 것은 계획보다 옳다. 계획은 흐르라고 만든 것이다.
+--
+-- 어느 이웃이든 이 칸을 가리키는 벨트가 있고(먹임), 이 칸이 가리키는
+-- 자리에 벨트가 있으면(내보냄) 돌리지 않는다. 혼자 선 칸, 막다른 칸은
+-- 여전히 계획대로 돌린다 - 그것들은 아무것도 나르지 않는다.
+local LINK_SIDES = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } }
+local BELTISH = { "transport-belt", "underground-belt", "splitter" }
+
+local function belt_on(surface, force, x, y)
+  return surface.find_entities_filtered {
+    area = { { x, y }, { x + 1, y + 1 } }, type = BELTISH,
+    force = force, limit = 1,
+  }[1]
+end
+
+local function linked(surface, force, x, y, dir)
+  local d = RUN_STEP[dir]
+  if not d then return false end
+  if not belt_on(surface, force, x + d[1], y + d[2]) then return false end
+  for _, side in pairs(LINK_SIDES) do
+    local nb = belt_on(surface, force, x + side[1], y + side[2])
+    if nb then
+      local nd = RUN_STEP[nb.direction]
+      if nd and side[1] + nd[1] == 0 and side[2] + nd[2] == 0 then
+        return true
+      end
+    end
+  end
+  return false
+end
+
 local function missing(surface, force, tiles, what)
   local out, standing = {}, 0
   for _, tile in pairs(tiles) do
@@ -508,7 +547,8 @@ local function missing(surface, force, tiles, what)
     if here then
       standing = standing + 1
       if what == BELT and here.direction ~= tile.dir
-         and not in_a_run(surface, force, tile.x, tile.y, here.direction) then
+         and not in_a_run(surface, force, tile.x, tile.y, here.direction)
+         and not linked(surface, force, tile.x, tile.y, here.direction) then
         out[#out + 1] = { x = tile.x, y = tile.y, dir = tile.dir, turn = true }
       end
     elseif surface.can_place_entity {
@@ -791,7 +831,7 @@ end
 local function own_lane(key, tiles)
   if not tiles or #tiles == 0 then return end
   storage.lines = storage.lines or {}
-  storage.lines[key] = { tiles = tiles, plan = PLAN, fixed = true }
+  storage.lines[key] = { tiles = tiles, plan = PLAN }
 end
 
 local function depot_line(name, limit)

@@ -73,6 +73,18 @@ LOOK = """(function()
     out[#out+1] = "B|" .. math.floor(b.position.x) .. "|"
                .. math.floor(b.position.y) .. "|" .. b.direction .. "|" .. n
   end
+  -- 지하벨트도 벨트다. 입구는 «짝 출구»로 건너뛴다.
+  for _, u in pairs(s.find_entities_filtered{type = "underground-belt",
+        force = f}) do
+    local mate = u.neighbours
+    local jx, jy = "", ""
+    if u.belt_to_ground_type == "input" and mate then
+      jx, jy = math.floor(mate.position.x), math.floor(mate.position.y)
+    end
+    out[#out+1] = "U|" .. math.floor(u.position.x) .. "|"
+               .. math.floor(u.position.y) .. "|" .. u.direction .. "|"
+               .. jx .. "," .. jy
+  end
   for _, d in pairs(s.find_entities_filtered{type = "mining-drill",
         force = f}) do
     out[#out+1] = "D|" .. math.floor(d.drop_position.x) .. "|"
@@ -92,6 +104,7 @@ end)()"""
 def look(ai):
     """벨트와 «그 벨트를 먹이고 비우는 것»을 한 번에 묻는다."""
     belt, drill, pick, put = {}, set(), set(), set()
+    JUMP.clear()
     for row in _rows(ai.lua(LOOK)):
         bits = str(row).split("|")
         if len(bits) != 5:
@@ -99,6 +112,14 @@ def look(ai):
         kind, x, y = bits[0], int(bits[1]), int(bits[2])
         if kind == "B":
             belt[(x, y)] = (int(bits[3]), int(bits[4]))
+        elif kind == "U":
+            # 21회차: 지하벨트를 몰라서 입구 앞 칸을 「막다른 끝」으로 읽고
+            # 잇기 고리가 그 칸을 돌리려 했다. 막힌 길이라 실패했을 뿐,
+            # 길이 열려 있었으면 구리 간선을 제 손으로 끊을 뻔했다.
+            belt[(x, y)] = (int(bits[3]), 0)
+            jump = bits[4].split(",")
+            if len(jump) == 2 and jump[0] not in ("", "nil"):
+                JUMP[(x, y)] = (int(jump[0]), int(jump[1]))
         elif kind == "D":
             drill.add((x, y))
         elif kind == "P":
@@ -108,7 +129,12 @@ def look(ai):
     return belt, drill, pick, put
 
 
+JUMP = {}                 # 지하벨트 입구 -> 짝 출구
+
+
 def ahead(spot, dir_):
+    if spot in JUMP:
+        return JUMP[spot]
     dx, dy = STEP.get(dir_, (0, 0))
     return (spot[0] + dx, spot[1] + dy)
 

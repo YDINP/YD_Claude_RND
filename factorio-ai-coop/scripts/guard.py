@@ -634,7 +634,15 @@ def raise_turrets(ai, who, shelf, have, spots):
     #
     # 한 군데를 고치면 같은 모양을 «전부» 찾아야 한다. 하나만 고치면
     # 고쳤다는 기억만 남고 고장은 그대로 남는다.
-    plan.append(("craft", {"recipe": TURRET, "count": n, "wait": True}))
+    # 가방에 이미 든 포탑부터 쓴다. 244대가 가방에 쌓인 채로 순번마다
+    # 세 대씩 새로 만들고 있었다 - 한 대에 철판 마흔 장이다.
+    try:
+        held = int(ai.agent(who).items().get(TURRET, 0))
+    except RconError:
+        held = 0
+    if n > held:
+        plan.append(("craft", {"recipe": TURRET, "count": n - held,
+                               "wait": True}))
     if make_ammo:
         # 탄약만은 «기다린다».
         #

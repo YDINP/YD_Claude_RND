@@ -34,6 +34,8 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 
+sys.path.insert(0, HERE)
+
 PER_TRIP = 5              # 한 걸음에 걷는 상자 수 (계획 64단계 제한)
 DEPOT_KEEP = 10           # 창고 한가운데에서 이만큼 안은 손대지 않는다
 TIGHT = 0.4
@@ -48,6 +50,33 @@ def idle(ai, names):
     return [n for n in names
             if live.get(n) and live[n].get("alive")
             and not (live[n].get("current") or live[n].get("queued"))]
+
+
+def going_somewhere(ai) -> set:
+    """«누가 비워 주는» 줄에 속한 벨트 칸들.
+
+    21회차 - 이 스크립트가 석탄을 말렸다.
+
+        석탄   상자 10,878 -> 64
+        석탄 채굴기 6대 중 4대 "둘 곳 없음"
+
+    기준이 「채굴기가 벨트에 떨구면 곁의 상자는 임시 출구다」였다. 그런데
+    석탄 밭의 벨트는 한 칸에서 일곱 칸짜리 «토막»이었다. 어디로도 안
+    간다. 상자를 걷자 그 채굴기들은 토막을 채우고 섰고, 운반 당번은
+    집을 상자가 없어졌다.
+
+        벨트가 «있다»와 벨트가 «나른다»는 다른 말이다.
+
+    그래서 lines.py 에 묻는다. 빼는 팔이 하나라도 붙은 덩어리만 「가는
+    줄」이다. 거기 떨구는 채굴기 곁의 상자만 임시 출구다.
+    """
+    import lines as lines_mod
+    belt, _drill, pick, _put = lines_mod.look(ai)
+    alive = set()
+    for seg in lines_mod.segments(belt):
+        if set(seg) & pick:
+            alive.update(seg)
+    return alive
 
 
 def stale(ai, depot) -> list:
@@ -135,7 +164,10 @@ def main() -> int:
     ai = AIBridge()
     for _ in range(args.rounds if args.every else 1):
         try:
-            boxes = stale(ai, (dx, dy))
+            alive = going_somewhere(ai)
+            boxes = [b for b in stale(ai, (dx, dy))
+                     if any((b["x"] + ox, b["y"] + oy) in alive
+                            for ox in range(-3, 4) for oy in range(-3, 4))]
             if not boxes:
                 print("  벨트로 바뀐 채굴기 곁에 남은 상자 없음")
             elif not who:
