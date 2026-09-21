@@ -93,7 +93,9 @@ COPPER_CEIL = 0.55        # 철이 굶으면 아무것도 못 짓는다
 # 창고 칸은 셋인데 나르는 것은 그보다 많다. 어느 칸에 넣을지는 «여기»에
 # 한 번만 적는다 - 들고 와서 넣을 데가 없으면 그대로 들고 서 있게 된다.
 SHELF_OF = {
-    "iron-plate": "iron-plate", "copper-plate": "iron-plate",
+    # 구리판은 제 선반이 따로 있다. 철판 선반에 같이 넣던 것은 벨트 쪽이
+    # 필터 분배기로 갈라 담기 시작하면서 «손으로 나르는 쪽만» 섞는 꼴이 됐다.
+    "iron-plate": "iron-plate", "copper-plate": "copper-plate",
     "stone": "stone", "stone-brick": "stone", "wood": "stone",
     "coal": "coal",
 }
@@ -577,6 +579,7 @@ def main() -> int:
     dx, dy = (int(v) for v in args.depot.split(","))
     sx, sy = (int(v) for v in args.smelt.split(","))
     shelf = {"iron-plate": (dx + 0.5, dy + 0.5),
+             "copper-plate": (dx + 0.5, dy - 4.5),
              "stone": (dx + 0.5, dy + 2.5),
              "coal": (dx + 0.5, dy + 4.5)}
     carriers = [n.strip() for n in args.carriers.split(",") if n.strip()]
