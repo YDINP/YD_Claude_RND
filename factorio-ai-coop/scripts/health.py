@@ -250,6 +250,25 @@ def once(ai: AIBridge) -> None:
     except RconError:
         pass
 
+    # 석탄은 «수준»이 아니라 «바닥»을 본다. 21회차에 10,878 이 64 가 될
+    # 때까지 아무 경고도 없었다 - 재고 줄에 숫자는 찍혔지만 그 숫자가
+    # 위험한지는 아무도 말하지 않았다. 버너 기지에서 석탄 0 은 전부 0 이다:
+    # 석탄 채굴기도 석탄으로 돈다.
+    try:
+        coal = int(ai.lua("""(function()
+          local n = 0
+          for _, c in pairs(game.surfaces[1].find_entities_filtered{
+                type = "container", force = game.forces.player}) do
+            n = n + c.get_inventory(defines.inventory.chest).get_item_count("coal")
+          end
+          return { coal = n }
+        end)()""")["coal"])
+        if coal < 300:
+            warn.append(f"석탄이 바닥이다 ({coal}개) - 석탄 채굴기도 석탄으로 돈다."
+                        " 꺼지면 스스로 못 살아난다")
+    except (RconError, KeyError, TypeError, ValueError):
+        pass
+
     stuck = unplaced(ai)
     # 벨트와 팔은 늘 조금씩 들고 다닌다(한 걸음 몫). 쌓이는 것만 본다.
     loud = {k: v for k, v in stuck.items()
