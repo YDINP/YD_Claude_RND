@@ -158,3 +158,14 @@ obstacles, the biters will attempt to go around"* 라고 명시한다. 즉 —
 - [Defence design help](https://forums.factorio.com/viewtopic.php?t=69298)
 - [Permanent Biter Defense](https://forums.factorio.com/viewtopic.php?t=32819)
 - [How I defend my base using outposts](https://forums.factorio.com/viewtopic.php?t=14435)
+
+## 할 일 - 외곽 포탑을 돌벽으로 두른다 (사용자 지시, 21회차)
+
+> "외곽쪽 포탑은 돌벽으로 둘러쌓는게 방어력을 올리는거같은데 추후에 진행해줘"
+
+- 대상은 «외곽» 포탑만. 기지 안쪽 포탑은 벽이 길만 막는다.
+- 포탑은 벽 «뒤 한 칸 이상»에 둔다 - 큰 바이터는 사거리 2 라 벽에 붙은
+  포탑을 벽 너머로 문다 (위 조사 참고).
+- 벽 HP 350, 돌벽 1개 = 석재 벽돌 5. 창고 돌 1,900 / 벽돌 85 (21회차 기준).
+- 선행: `stone-wall` 연구 (빨간 팩). 연구 큐에는 걸어 두었다.
+- 새 스크립트로 나눈다 (`scripts/wall.py`) - guard.py 에 얹지 않는다.
