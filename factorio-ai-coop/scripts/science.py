@@ -29,6 +29,9 @@ import shelf as shelf_mod                # noqa: E402
 import assembly                          # noqa: E402
 
 SCIENCE = "automation-science-pack"
+# 팩마다 «어느 조립 모듈이 만드나». 연구가 요구하는 팩만 나른다.
+PACKS = {"automation-science-pack": assembly.MODULE["out"],
+         "logistic-science-pack": assembly.GREEN["out"]}
 LOW = 10                  # 연구소 하나에 이보다 적으면 보낸다
 BATCH = 60                # 연구소 하나당 한 번에 넣는 수
 DEPOT = (-55, 10)
@@ -45,29 +48,41 @@ def idle(ai, names):
             and not (live[n].get("current") or live[n].get("queued"))]
 
 
-def labs(ai) -> list:
-    """[{x, y, packs}] 와 지금 연구."""
+def labs(ai):
+    """[{x, y, packs: {pack: n}}], 지금 연구, 진행, 그 연구가 드는 팩들."""
+    names = ",".join(PACKS)
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local out = {}
       for _, l in pairs(s.find_entities_filtered{name = "lab", force = f}) do
-        out[#out+1] = l.position.x .. "|" .. l.position.y .. "|"
-                   .. l.get_item_count("%s")
+        local bits = {}
+        for name in string.gmatch("%s", "[^,]+") do
+          bits[#bits+1] = name .. "=" .. l.get_item_count(name)
+        end
+        out[#out+1] = l.position.x .. "|" .. l.position.y .. "|" .. table.concat(bits, ",")
       end
       local r = f.current_research
+      local needs = {}
+      if r then for _, u in pairs(r.research_unit_ingredients) do needs[#needs+1] = u.name end end
       return { labs = out, research = r and r.name or "",
-               progress = f.research_progress }
-    end)()""" % SCIENCE)
+               progress = f.research_progress, needs = table.concat(needs, ",") }
+    end)()""" % names)
     rows = []
     for row in _rows(reply.get("labs")):
-        x, y, n = str(row).split("|")
-        rows.append({"x": float(x), "y": float(y), "packs": int(n)})
-    return rows, str(reply.get("research") or ""), float(reply.get("progress") or 0)
+        x, y, bits = str(row).split("|")
+        packs = {}
+        for bit in bits.split(","):
+            if "=" in bit:
+                k, v = bit.split("=")
+                packs[k] = int(v)
+        rows.append({"x": float(x), "y": float(y), "packs": packs})
+    needs = [n for n in str(reply.get("needs") or "").split(",") if n]
+    return rows, str(reply.get("research") or ""), float(reply.get("progress") or 0), needs
 
 
-def made(ai) -> list:
+def made(ai, pack) -> list:
     """조립 모듈의 출구 상자에 든 팩. [(x, y, n)]"""
-    packed = ";".join(f"{x},{y}" for x, y in assembly.MODULE["out"])
+    packed = ";".join(f"{x},{y}" for x, y in PACKS[pack])
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local out = {}
@@ -79,7 +94,7 @@ def made(ai) -> list:
         if c then out[#out+1] = x .. "|" .. y .. "|" .. c.get_item_count("%s") end
       end
       return out
-    end)()""" % (packed, SCIENCE))
+    end)()""" % (packed, pack))
     rows = []
     for row in _rows(reply):
         x, y, n = str(row).split("|")
@@ -88,26 +103,35 @@ def made(ai) -> list:
     return rows
 
 
-def send(ai, who, hungry) -> bool:
+def send(ai, who, pack, hungry) -> bool:
     need = BATCH * len(hungry)
     # 조립기가 만든 것이 있으면 집어 간다. 만드는 걸음이 빠진다.
-    ready = made(ai)
-    if sum(n for _x, _y, n in ready) >= need:
-        plan, left = [], need
-        for x, y, n in ready:
-            take = min(n, left)
-            plan.append(("walk_to", {"x": x + 1.5, "y": y}))
-            plan.append(("take", {"name": SCIENCE, "x": x, "y": y, "count": take}))
-            left -= take
-            if left <= 0:
-                break
-        for lab in hungry:
-            plan.append(("walk_to", {"x": lab["x"], "y": lab["y"] + 2}))
-            plan.append(("insert", {"name": SCIENCE, "x": lab["x"], "y": lab["y"],
-                                    "count": BATCH}))
-        submit(ai, who, plan, strict=False)
-        print(f"{who}: 조립기가 만든 빨간 과학 {need}개 -> 연구소 {len(hungry)}곳")
-        return True
+    ready = made(ai, pack)
+    have_n = sum(n for _x, _y, n in ready)
+    if have_n < BATCH:
+        if pack != SCIENCE:
+            return False                  # 녹색은 손으로 안 만든다 - 조립기 몫
+        return craft_and_send(ai, who, hungry)
+    need = min(need, have_n)
+    plan, left = [], need
+    for x, y, n in ready:
+        take = min(n, left)
+        plan.append(("walk_to", {"x": x + 1.5, "y": y}))
+        plan.append(("take", {"name": pack, "x": x, "y": y, "count": take}))
+        left -= take
+        if left <= 0:
+            break
+    each = need // len(hungry)
+    for lab in hungry:
+        plan.append(("walk_to", {"x": lab["x"], "y": lab["y"] + 2}))
+        plan.append(("insert", {"name": pack, "x": lab["x"], "y": lab["y"], "count": each}))
+    submit(ai, who, plan, strict=False)
+    print(f"{who}: 조립기가 만든 {pack} {need}개 -> 연구소 {len(hungry)}곳")
+    return True
+
+
+def craft_and_send(ai, who, hungry) -> bool:
+    need = BATCH * len(hungry)
     have = shelf_mod.shelves(ai, DEPOT, span=36)
     if "iron-plate" not in have or "copper-plate" not in have:
         print("  창고에 판이 없다")
@@ -139,19 +163,24 @@ def main() -> int:
     last = None
     for _ in range(args.rounds if args.every else 1):
         try:
-            rows, research, progress = labs(ai)
-            hungry = [l for l in rows if l["packs"] < LOW]
-            key = (research, round(progress, 2), len(hungry))
+            rows, research, progress, needs = labs(ai)
+            wants = {pack: [l for l in rows if l["packs"].get(pack, 0) < LOW]
+                     for pack in needs if pack in PACKS}
+            key = (research, round(progress, 2),
+                   tuple(len(v) for v in wants.values()))
             if key != last:
                 last = key
-                print(f"  연구 {research or '없음'} {progress:.0%} · 연구소 {len(rows)}곳"
-                      f" · 빈 곳 {len(hungry)}")
+                print(f"  연구 {research or '없음'} {progress:.0%} · 연구소 {len(rows)}곳 · "
+                      + " · ".join(f"{p.split('-')[0]} 빈 곳 {len(v)}" for p, v in wants.items()))
             if not research:
                 print("  [!] 연구 목표가 없다 - 다음 기술을 골라야 한다")
-            elif hungry and names:
-                hands = idle(ai, names)
-                if hands:
-                    send(ai, hands[0], hungry)
+            elif names:
+                for pack, hungry in wants.items():
+                    if not hungry:
+                        continue
+                    hands = idle(ai, names)
+                    if hands and send(ai, hands[0], pack, hungry):
+                        break
         except RconError as exc:
             print(f"  [!] {exc}")
         if not args.every:

@@ -74,21 +74,93 @@ MODULE = {
     "out": ((-12.5, 14.5), (-12.5, 22.5)),   # science.py 가 집어 갈 상자
 }
 
+
+# 2호: 녹색 과학. 팩 1 = 팔 1 + 벨트 1.  팔 = 회로 + 톱니 + 철판, 벨트 = 톱니 + 철판,
+# 회로 = 철판 + 구리선 3, 구리선 = 구리판.  조립기 여섯 대의 사슬이다.
+#
+# 판은 간선 «고리»로 받는다: 간선에 분배기를 물려 한 갈래를 서쪽으로 돌려
+# 다시 간선에 옆으로 합류시킨다. 막다른 가지면 안 쓰는 판이 차서 막히지만,
+# 고리는 안 쓴 것이 돌아 나간다.
+#
+#     y=14  ====================== 고리 위 (동쪽으로, 간선에 합류)
+#          |  A1 구리선  C1  B1 회로   |
+#     x=-31|  A2 톱니    C2  B2 팔     | x=-19 간선
+#          |  A3 벨트    C3  B3 팩 -> OUT
+#     y=28  ====================== 고리 아래 (분배기에서 서쪽으로)
+#
+# A 열은 고리에서, B 열은 간선에서 판을 받는다. A -> C(상자) -> B 로 건넨다.
+R1, R2, R3 = 16.5, 20.5, 24.5
+G12, G23 = 18.5, 22.5
+XA, XC, XB = -27.5, -24.5, -21.5
+XRING, XTRUNK = -31, -19
+
+
+def _belt(x, y, d):
+    return ("build", {"name": "transport-belt", "x": x + 0.5, "y": y + 0.5, "direction": d})
+
+
+def _ring():
+    out = [("demolish", {"x": -30.0, "y": 26.0, "name": "gun-turret", "search_radius": 0.4}),
+           ("demolish", {"x": -18.5, "y": 29.5, "name": "transport-belt", "search_radius": 0.4}),
+           ("build", {"name": "splitter", "x": -19.0, "y": 29.5, "direction": 0})]
+    out += [_belt(x, 28, 12) for x in range(-20, -31, -1)]      # 서쪽으로
+    out += [_belt(-31, y, 0) for y in range(28, 13, -1)]        # 북쪽으로
+    out += [_belt(x, 14, 4) for x in range(-30, -19)]           # 동쪽으로, (-20,14) 가 간선에 붙는다
+    return out
+
+
+def _machines():
+    out = []
+    for y in (R1, R2, R3):
+        out.append(("build", {"name": AM, "x": XA, "y": y}))
+        out.append(("build", {"name": BOX, "x": XC, "y": y}))
+        out.append(("build", {"name": AM, "x": XB, "y": y}))
+        out.append(("build", {"name": ARM, "x": XRING + 1.5, "y": y, "direction": 12}))   # 고리 -> A
+        out.append(("build", {"name": ARM, "x": XC - 1, "y": y, "direction": 12}))       # A -> C
+        out.append(("build", {"name": ARM, "x": XC + 1, "y": y, "direction": 12}))       # C -> B
+    out += [("build", {"name": ARM, "x": XTRUNK - 0.5, "y": y, "direction": 4})          # 간선 -> B
+            for y in (R1, R2)]
+    out += [("build", {"name": ARM, "x": XB, "y": G12, "direction": 0}),                 # B1 회로 -> B2
+            ("build", {"name": ARM, "x": XB, "y": G23, "direction": 0}),                 # B2 팔 -> B3
+            ("build", {"name": ARM, "x": XA, "y": G23, "direction": 0}),                 # A2 톱니 -> A3
+            ("build", {"name": ARM, "x": XB, "y": 26.5, "direction": 0}),                # B3 팩 -> 상자
+            ("build", {"name": BOX, "x": XB, "y": 27.5})]
+    out += [("build", {"name": POLE, "x": x, "y": y}) for x, y in
+            ((-27.5, 18.5), (-29.5, 22.5), (-25.5, 22.5), (-23.5, 18.5),
+             (-23.5, 22.5), (-19.5, 18.5), (-22.5, 26.5))]
+    return out
+
+
+GREEN = {
+    "name": "녹색 과학 2호",
+    "stand": (-25.0, 12.5),
+    "stages": (
+        ("ring", ("splitter", -19.0, 29.5), {"transport-belt": 42, "splitter": 1}, _ring()),
+        ("machines", (AM, XB, R3), {AM: 6, ARM: 15, BOX: 4, POLE: 7}, _machines()),
+    ),
+    "recipes": (((XA, R1), "copper-cable"), ((XA, R2), "iron-gear-wheel"),
+                ((XA, R3), "transport-belt"), ((XB, R1), "electronic-circuit"),
+                ((XB, R2), "inserter"), ((XB, R3), "logistic-science-pack")),
+    "out": ((XB, 27.5),),
+}
+
 # 재료. 조립기 1 = 회로 3 + 톱니 5 + 철판 9 = 철 22 + 구리 4.5.  팔 = 철 4 + 구리 1.5
-FETCH = {"iron-plate": 200, "copper-plate": 60, "wood": 4}
+FETCH = {"iron-plate": 300, "copper-plate": 80, "wood": 4}
+
+MODULES = (MODULE, GREEN)
 
 
-def built(ai) -> bool:
-    name, x, y = MODULE["probe"]
+def built(ai, probe) -> bool:
+    name, x, y = probe
     return bool(ai.lua("""(function()
       return { n = game.surfaces[1].count_entities_filtered{name = "%s",
                  force = game.forces.player, area = {{%f, %f}, {%f, %f}}} }
     end)()""" % (name, x - 0.5, y - 0.5, x + 0.5, y + 0.5))["n"])
 
 
-def recipes(ai) -> list:
+def recipes(ai, module) -> list:
     """세워진 조립기에 레시피를 준다. 돌려주는 것은 «정해진 것»의 목록."""
-    packed = ";".join(f"{x},{y},{r}" for (x, y), r in MODULE["recipes"])
+    packed = ";".join(f"{x},{y},{r}" for (x, y), r in module["recipes"])
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local out = {}
@@ -107,7 +179,8 @@ def recipes(ai) -> list:
     return list(reply.values()) if isinstance(reply, dict) else list(reply or [])
 
 
-def raise_module(ai, who) -> None:
+def raise_stage(ai, who, module, stage) -> None:
+    name, _probe, kit, steps = stage
     try:
         bag = ai.agent(who).items()
     except RconError:
@@ -119,30 +192,48 @@ def raise_module(ai, who) -> None:
         if at and int(bag.get(item, 0)) < n:
             plan.append(("walk_to", {"x": at[0], "y": at[1] + 1.5}))
             plan.append(("take", {"name": item, "x": at[0], "y": at[1], "count": n}))
-    for item, n in MODULE["kit"].items():
+    for item, n in kit.items():
         short = n - int(bag.get(item, 0))
         if short > 0:
-            count = (short + 1) // 2 if item == POLE else short
+            count = (short + 1) // 2 if item in (POLE, "transport-belt") else short
             plan.append(("craft", {"recipe": item, "count": count, "wait": True}))
-    sx, sy = MODULE["stand"]
+    sx, sy = module["stand"]
     plan.append(("walk_to", {"x": sx, "y": sy}))
-    plan.extend(MODULE["steps"])
+    for n, step in enumerate(steps):
+        if n and n % 10 == 0 and step[0] == "build":
+            plan.append(("walk_to", {"x": step[1]["x"] + 1.5, "y": step[1]["y"] + 1.5}))
+        plan.append(step)
     submit(ai, who, plan, strict=False)
-    print(f"{who}: {MODULE['name']} 조립 모듈 (조립기 3 + 팔 7 + 상자 2 + 전봇대 4)")
+    print(f"{who}: {module['name']} - {name} ({len(steps)}단계)")
+
+
+def stages_of(module):
+    """1호는 단계가 하나다. 같은 모양으로 맞춘다."""
+    if "stages" in module:
+        return module["stages"]
+    return (("all", module["probe"], module["kit"], module["steps"]),)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--who", default="")
+    ap.add_argument("--module", type=int, default=0, help="0 = 다 본다, 1 = 빨강, 2 = 초록")
     args = ap.parse_args()
 
     ai = AIBridge()
-    if built(ai):
-        print(f"  {MODULE['name']}: 서 있다 - 레시피 {recipes(ai)}")
-        return 0
-    print(f"  {MODULE['name']}: 아직 없다")
-    if args.who:
-        raise_module(ai, args.who)
+    for n, module in enumerate(MODULES, 1):
+        if args.module and n != args.module:
+            continue
+        state = [(st[0], built(ai, st[1])) for st in stages_of(module)]
+        if all(ok for _n, ok in state):
+            print(f"  {module['name']}: 서 있다 - 레시피 {recipes(ai, module)}")
+            continue
+        print(f"  {module['name']}: "
+              + " · ".join(f"{sn} {'됨' if ok else '아직'}" for sn, ok in state))
+        if args.who:
+            todo = next(st for st, (_n, ok) in zip(stages_of(module), state) if not ok)
+            raise_stage(ai, args.who, module, todo)
+            return 0
     return 0
 
 
