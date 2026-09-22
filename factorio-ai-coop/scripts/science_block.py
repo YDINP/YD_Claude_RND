@@ -122,12 +122,14 @@ def _row_a():
     out = []
     for i, x in enumerate(XA):
         out.append(am(x, A_Y))
-        out.append(arm(x, BUS_Y + 1.5, N))                    # 버스 -> 조립기
+        # 톱니는 철판 둘, 구리선은 구리판 하나에 «초당 하나» 꼴로 먹는다 - 보통 팔
+        # (0.83/s)로는 그 둘의 입력이 줄 전체의 상한이 된다. 그 둘은 빠른 팔.
+        out.append(arm(x, BUS_Y + 1.5, N, FAST if i in (0, 2) else ARM))   # 버스 -> 조립기
         if i in A_FROM_RING:
             out.append(arm(x - 1, RING_Y - 0.5, S, FAST if i == 1 else ARM))   # 고리 -> 조립기
         # 구리선 출구와 회로 입구는 빠른 팔: 회로 하나에 구리선 셋이라 보통 팔
         # (0.83/s)로는 회로 조립기가 늘 굶는다 - 실측으로 A 줄 전체가 막혔다.
-        out.append(arm(x + 1, RING_Y - 0.5, N, FAST if i == 0 else ARM))   # 조립기 -> 고리
+        out.append(arm(x + 1, RING_Y - 0.5, N, FAST if i in (0, 2) else ARM))   # 조립기 -> 고리
     out += [pole(x, BUS_Y + 1.5) for x in (-34.5, -30.5, -26.5, -22.5, -18.5)]
     out += [pole(x, RING_Y - 0.5) for x in (-38.5, -34.5, -30.5, -26.5, -22.5, -18.5, -14.5)]
     return out
@@ -175,7 +177,7 @@ def _labs():
 STAGES = (
     ("branch", ("transport-belt", -14.5, BUS_Y + 0.5), {"transport-belt": 60, "underground-belt": 8, "splitter": 1}, _branch()),
     ("ring", ("transport-belt", XRING_W + 0.5, RING_Y + 1.5), {"transport-belt": 70}, _ring()),
-    ("rowA", (POLE, -14.5, RING_Y - 0.5), {AM: 6, ARM: 16, POLE: 12}, _row_a()),
+    ("rowA", (POLE, -14.5, RING_Y - 0.5), {AM: 6, ARM: 11, FAST: 5, POLE: 12}, _row_a()),
     ("rowB", (POLE, -15.5, 60.5), {AM: 6, ARM: 13, FAST: 1, BOX: 1, POLE: 6}, _row_b()),
     ("packcol", ("transport-belt", -12.5, 29.5), {"transport-belt": 38, "underground-belt": 2}, _pack_col()),
     ("labs", (POLE, -11.5, 23.5), {LAB: 10, ARM: 10, POLE: 9}, _labs()),
@@ -220,8 +222,23 @@ def settle(ai) -> list:
         e.set_filter(2, "%s")
         out[#out+1] = "exit:filtered"
       end
+      -- SINK 팔은 «팩만 빼고» 걷는다 (블랙리스트). 실측: 필터 없는 팔이 고리
+      -- 모서리에서 팩을 먼저 집어 상자에 넣었고 연구소 열셋이 다 굶었다.
+      -- 보통 팔이라 0.83/s - 넘치는 중간재만 천천히 빠진다. 2.0 은 보통 팔도
+      -- 필터 5칸이 있다.
+      local k = s.find_entities_filtered{name = "%s", force = f,
+                  area = {{%f, %f}, {%f, %f}}}[1]
+      if k then
+        k.use_filters = true
+        k.inserter_filter_mode = "blacklist"
+        k.set_filter(1, "%s")
+        k.set_filter(2, "%s")
+        out[#out+1] = "sink:packs-kept"
+      end
       return out
     end)()""" % (packed, AM, FAST, EXIT[0] - 0.4, EXIT[1] - 0.4, EXIT[0] + 0.4, EXIT[1] + 0.4,
+                 PACKS[0], PACKS[1],
+                 ARM, SINK[0] - 0.4, SINK[1] - 1.4, SINK[0] + 0.4, SINK[1] - 0.6,
                  PACKS[0], PACKS[1]))
     return list(reply.values()) if isinstance(reply, dict) else list(reply or [])
 
