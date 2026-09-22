@@ -53,9 +53,10 @@ CHEST_P, CHEST_G = (-17.5, 68.5), (-14.5, 71.5)
 XCOL = -11.5                   # 팩 기둥. y 63 이 머리 - 뒤(남쪽)에서 이어 붙인다
 
 WANT = {                       # 상자: {품목: 채워 둘 양}
-    SUP2: {"firearm-magazine": 100, "steel-plate": 50, "copper-plate": 200},
-    SUP3: {"iron-plate": 200, "coal": 200},
-    WALLS: {"stone-wall": 100},
+    # 수류탄이 석탄을 초당 하나 먹는다 - 2형 셋이면 60초 순번 사이에 200 은 바닥난다.
+    SUP2: {"firearm-magazine": 150, "steel-plate": 80, "copper-plate": 400},
+    SUP3: {"iron-plate": 300, "coal": 500},
+    WALLS: {"stone-wall": 150},
 }
 
 
@@ -78,8 +79,9 @@ STEPS = [
     _b(ARM, -14.5, 70.5, S), _b(BOX, *CHEST_G), _b(ARM, -14.5, 72.5, S),   # M3 -> [G] -> M5
     _b(AM, *M3), _b(BOX, *SUP3), _b(ARM, -16.5, 74.5, W),             # 공급 -> M3
     _b(POLE, -12.5, 66.5), _b(POLE, -18.5, 66.5), _b(POLE, -12.5, 72.5),
+    _b(POLE, -16.5, 72.5),          # M3 공급 팔(-16.5,74.5)은 -12.5 전봇대 구역(x>=-15) 밖이다
 ]
-KIT = {AM: 3, BOX: 5, ARM: 8, POLE: 3, BELT: 5}
+KIT = {AM: 3, BOX: 5, ARM: 8, POLE: 4, BELT: 5}
 
 
 def _rows(v):

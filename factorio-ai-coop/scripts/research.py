@@ -24,9 +24,13 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 from client import AIBridge, RconError  # noqa: E402
 
 PACKS = ("automation-science-pack", "logistic-science-pack")
+MILITARY = "military-science-pack"     # 군용 팩은 «만들고 있을 때만» 센다 (military.py 의 별)
 # 앞쪽부터. 여기 없는 것은 뒤에 게임 순서대로 붙는다.
 DOCTRINE = (
     "military-science-pack",
+    "physical-projectile-damage-3", "weapon-shooting-speed-3",   # 대형 웜(물리 -10)을 총알로 잡으려면
+    "physical-projectile-damage-4", "weapon-shooting-speed-4",
+    "stronger-explosives-1", "defender",
     "physical-projectile-damage-1", "weapon-shooting-speed-1",
     "physical-projectile-damage-2", "weapon-shooting-speed-2",
     "gate", "railway", "automobilism", "steel-axe", "toolbelt",
@@ -40,9 +44,23 @@ def _rows(v):
     return list(v.values()) if isinstance(v, dict) else list(v or [])
 
 
+def packs_now(ai) -> tuple:
+    """지금 오는 팩. 군용 팩은 군용 조립기가 «하나라도 만들었으면» 넣는다."""
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local n = 0
+      for _, m in pairs(s.find_entities_filtered{type = "assembling-machine", force = f}) do
+        local r = m.get_recipe()
+        if r and r.name == "%s" then n = n + m.products_finished end
+      end
+      return { n = n }
+    end)()""" % MILITARY)
+    return PACKS + ((MILITARY,) if int(reply.get("n", 0)) > 0 else ())
+
+
 def survey(ai) -> dict:
     """큐, 먹을 수 있는 후보, 못 먹는 큐 항목."""
-    packs = ",".join(PACKS)
+    packs = ",".join(packs_now(ai))
     reply = ai.lua("""(function()
       local f = game.forces.player
       local ok = {}
