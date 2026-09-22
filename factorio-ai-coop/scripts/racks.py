@@ -48,7 +48,21 @@ RACKS = (
     ("구리판", 7, 6, 5, 8, -23, -61),
 )
 
+# 둘째 줄. 첫 줄 상자가 차면 그 «뒤»에 팔 하나와 상자 하나를 더 둔다.
+#   상자(첫 줄) -> 팔 -> 상자(둘째 줄).  팔의 direction 은 집는 쪽 = 첫 줄.
+# 실측: 첫 줄 39+39 상자가 전부 찼다 (판금 25만). 자리도 다 썼다. 벨트 앞
+# 자리는 늘릴 수 없지만 뒤로는 늘릴 수 있다 - 앞 상자가 비는 만큼 팔이 받는다.
+#   name, 앞 상자 y, 팔 y, 뒤 상자 y, 팔 방향, x 범위 (동 -> 서)
+BACK = (
+    ("철판", 10, 11, 12, 0, -23, -48),     # x -49 서쪽은 돌 줄이다
+    ("구리판", 5, 4, 3, 8, -23, -61),
+)
+
 FLOOR = 250               # 빈 칸이 이보다 적으면 늘린다 (한 칸 = 판금 100장)
+# 빈 칸 수만 보면 틀린다. 벨트 앞의 팔은 «제 상자»에만 넣으므로 받는 속도는
+# 「빈 상자가 몇 개냐」에 달렸다. 실측: 빈 칸 468 인데 팔 37 중 28 이
+# 「놓을 데 없음」 - 아홉 상자만 받고 있었고 간선은 그 뒤로 꽉 찼다.
+OPEN_FLOOR = 8            # 빈 칸 있는 상자가 이보다 적으면 늘린다
 PER_TRIP = 6              # 한 걸음에 늘리는 자리 수 (한 자리 = 5단계)
 
 
@@ -68,16 +82,19 @@ def survey(ai, rack):
     _name, belt_y, arm_y, box_y, _face, x_east, x_west = rack
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
-      local free, boxes, seats = 0, 0, {}
+      local free, boxes, open_, seats = 0, 0, 0, {}
       for x = %d, %d, -1 do
         local box = s.find_entities_filtered{type = "container", force = f,
                       area = {{x, %d}, {x + 1, %d}}}[1]
         if box then
           boxes = boxes + 1
           local inv = box.get_inventory(defines.inventory.chest)
+          local room = 0
           for i = 1, #inv do
-            if not inv[i].valid_for_read then free = free + 1 end
+            if not inv[i].valid_for_read then room = room + 1 end
           end
+          free = free + room
+          if room > 0 then open_ = open_ + 1 end
         else
           local belt = s.count_entities_filtered{type = "transport-belt",
                          force = f, area = {{x, %d}, {x + 1, %d}}} > 0
@@ -87,11 +104,38 @@ def survey(ai, rack):
           if ok then seats[#seats+1] = x end
         end
       end
-      return { free = free, boxes = boxes, seats = seats }
+      return { free = free, boxes = boxes, open = open_, seats = seats }
     end)()""" % (x_east, x_west, box_y, box_y + 1, belt_y, belt_y + 1,
                  BOX, box_y, ARM, arm_y))
-    return (int(reply["free"]), int(reply["boxes"]),
+    return (int(reply["free"]), int(reply["boxes"]), int(reply["open"]),
             [int(x) for x in _rows(reply.get("seats"))])
+
+
+def survey_back(ai, tier):
+    """뒤 줄이 필요한 자리: 앞 상자가 찼고 뒤 상자가 없는 x."""
+    _name, front_y, arm_y, back_y, _face, x_east, x_west = tier
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local seats, backs = {}, 0
+      for x = %d, %d, -1 do
+        local front = s.find_entities_filtered{type = "container", force = f,
+                        area = {{x, %d}, {x + 1, %d}}}[1]
+        local back = s.find_entities_filtered{type = "container", force = f,
+                        area = {{x, %d}, {x + 1, %d}}}[1]
+        if back then backs = backs + 1 end
+        if front and not back then
+          local inv = front.get_inventory(defines.inventory.chest)
+          if inv.count_empty_stacks() == 0
+             and s.can_place_entity{name = "%s", position = {x + 0.5, %d + 0.5}, force = f}
+             and s.can_place_entity{name = "%s", position = {x + 0.5, %d + 0.5}, force = f} then
+            seats[#seats+1] = x
+          end
+        end
+      end
+      return { seats = seats, backs = backs }
+    end)()""" % (x_east, x_west, front_y, front_y + 1, back_y, back_y + 1,
+                 BOX, back_y, ARM, arm_y))
+    return int(reply["backs"]), [int(x) for x in _rows(reply.get("seats"))]
 
 
 def grow(ai, who, rack, seats):
@@ -128,7 +172,7 @@ def grow(ai, who, rack, seats):
             plan.append(("insert", {"name": "coal", "x": x + 0.5,
                                     "y": arm_y + 0.5, "count": ARM_FUEL}))
     submit(ai, who, plan, strict=False)
-    print(f"{who}: {name} 선반 {len(seats)}자리 더 (x {seats[0]}~{seats[-1]})"
+    print(f"{who}: {name} 선반 {len(seats)}자리 더 (y {box_y}, x {seats[0]}~{seats[-1]})"
           + ("" if fuel else " - 석탄 선반이 비어 팔 연료를 못 챙겼다"))
     return True
 
@@ -147,19 +191,28 @@ def main() -> int:
         try:
             hands = idle(ai, names) if names else []
             for rack in RACKS:
-                free, boxes, seats = survey(ai, rack)
-                if free >= args.floor:
-                    print(f"  {rack[0]} 선반: 상자 {boxes}개 · 빈 칸 {free} - 넉넉하다")
+                free, boxes, open_, seats = survey(ai, rack)
+                if free >= args.floor and open_ >= OPEN_FLOOR:
+                    print(f"  {rack[0]} 선반: 상자 {boxes}개 · 빈 상자 {open_}"
+                          f" · 빈 칸 {free} - 넉넉하다")
                     continue
                 if not seats:
-                    print(f"  {rack[0]} 선반: 빈 칸 {free} - 놓을 자리가 없다."
-                          f" 줄을 더 내야 한다")
+                    print(f"  {rack[0]} 선반: 빈 상자 {open_} · 빈 칸 {free}"
+                          f" - 놓을 자리가 없다. 줄을 더 내야 한다")
                     continue
                 if not hands:
                     print(f"  {rack[0]} 선반: 빈 칸 {free} · 자리 {len(seats)}곳"
                           + (" - 손이 비지 않는다" if names else ""))
                     continue
                 grow(ai, hands.pop(0), rack, seats)
+            for tier in BACK:
+                backs, seats = survey_back(ai, tier)
+                if not seats:
+                    continue
+                if not hands:
+                    print(f"  {tier[0]} 뒤 줄: 찬 앞 상자 {len(seats)}곳 - 손이 비지 않는다")
+                    continue
+                grow(ai, hands.pop(0), tier, seats)
         except RconError as exc:
             print(f"  [!] {exc}")
         if not args.every:

@@ -26,6 +26,7 @@ sys.path.insert(0, HERE)
 from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 import shelf as shelf_mod                # noqa: E402
+import assembly                          # noqa: E402
 
 SCIENCE = "automation-science-pack"
 LOW = 10                  # 연구소 하나에 이보다 적으면 보낸다
@@ -64,8 +65,49 @@ def labs(ai) -> list:
     return rows, str(reply.get("research") or ""), float(reply.get("progress") or 0)
 
 
+def made(ai) -> list:
+    """조립 모듈의 출구 상자에 든 팩. [(x, y, n)]"""
+    packed = ";".join(f"{x},{y}" for x, y in assembly.MODULE["out"])
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local out = {}
+      for bit in string.gmatch("%s", "[^;]+") do
+        local x, y = string.match(bit, "([^,]+),([^,]+)")
+        x, y = tonumber(x), tonumber(y)
+        local c = s.find_entities_filtered{type = "container", force = f,
+                    area = {{x - 0.5, y - 0.5}, {x + 0.5, y + 0.5}}}[1]
+        if c then out[#out+1] = x .. "|" .. y .. "|" .. c.get_item_count("%s") end
+      end
+      return out
+    end)()""" % (packed, SCIENCE))
+    rows = []
+    for row in _rows(reply):
+        x, y, n = str(row).split("|")
+        if int(n) > 0:
+            rows.append((float(x), float(y), int(n)))
+    return rows
+
+
 def send(ai, who, hungry) -> bool:
     need = BATCH * len(hungry)
+    # 조립기가 만든 것이 있으면 집어 간다. 만드는 걸음이 빠진다.
+    ready = made(ai)
+    if sum(n for _x, _y, n in ready) >= need:
+        plan, left = [], need
+        for x, y, n in ready:
+            take = min(n, left)
+            plan.append(("walk_to", {"x": x + 1.5, "y": y}))
+            plan.append(("take", {"name": SCIENCE, "x": x, "y": y, "count": take}))
+            left -= take
+            if left <= 0:
+                break
+        for lab in hungry:
+            plan.append(("walk_to", {"x": lab["x"], "y": lab["y"] + 2}))
+            plan.append(("insert", {"name": SCIENCE, "x": lab["x"], "y": lab["y"],
+                                    "count": BATCH}))
+        submit(ai, who, plan, strict=False)
+        print(f"{who}: 조립기가 만든 빨간 과학 {need}개 -> 연구소 {len(hungry)}곳")
+        return True
     have = shelf_mod.shelves(ai, DEPOT, span=36)
     if "iron-plate" not in have or "copper-plate" not in have:
         print("  창고에 판이 없다")
