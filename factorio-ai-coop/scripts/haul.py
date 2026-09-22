@@ -206,7 +206,11 @@ def look(ai, depot, smelt):
         if inside(c.position) then D[#D+1] = line else P[#P+1] = line end
       end
       return { furnaces = F, piles = P, depot = D }
-    end)()""" % (dx - 3, dx + 3, dy - 4, dy + 6))
+    end)()""" % (dx - 8, dx + 36, dy - 8, dy + 9))
+    # 창고는 «한가운데 상자 셋»이 아니라 선반 줄 전체다 (x -63..-19, y 2..19).
+    # 좁게 잡았더니 선반 상자 78개가 「밭 더미」로 읽혔고, 운반 당번이
+    # 선반의 판을 퍼서 창고 한가운데로 «되가져오는» 헛걸음을 순번마다 했다.
+    # 그 사이 돌밭 상자의 돌 3,202 는 순서에 밀려 한 번도 안 왔다.
 
 
 def _rows(v):
@@ -583,7 +587,7 @@ def main() -> int:
     sx, sy = (int(v) for v in args.smelt.split(","))
     # 돌 칸만 «계산»이다. 벨트가 채우는 줄(철판·구리판·석탄)은 순번마다
     # shelf.slots() 로 «빈 칸이 있는 상자»를 다시 찾는다.
-    fixed = {"stone": (dx + 0.5, dy + 2.5)}
+    fixed = {}
     carriers = [n.strip() for n in args.carriers.split(",") if n.strip()]
 
     ai = AIBridge()
@@ -596,6 +600,13 @@ def main() -> int:
             reply = look(ai, (dx, dy), (sx, sy))
             shelf = dict(fixed)
             shelf.update(shelf_mod.slots(ai, (dx, dy)))
+            # 돌 줄(y = dy+2)도 «빈 칸 있는 상자»로 매번 찾는다. 계산한 한 칸은
+            # 남이 채운다 - sortrows 가 그 상자에 철판을 넣어 두었다.
+            stone_row = [c for c in shelf_mod.stock(ai, (dx, dy), 36)
+                         if c["y"] == dy + 2 and c["room"] > 0]
+            if stone_row:
+                near = min(stone_row, key=lambda c: (c["x"] - dx) ** 2)
+                shelf["stone"] = (near["x"] + 0.5, near["y"] + 0.5)
             room = headroom(reply, shelf)
             # 제자리가 찼을 때 갈 곳을 «매 순번» 다시 찾는다. 상자는
             # 늘어나기도 하고 차기도 하므로 한 번 찾아 두면 금세 낡는다.

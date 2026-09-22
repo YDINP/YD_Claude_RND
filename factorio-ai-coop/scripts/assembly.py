@@ -103,9 +103,12 @@ def _ring():
     out = [("demolish", {"x": -30.0, "y": 26.0, "name": "gun-turret", "search_radius": 0.4}),
            ("demolish", {"x": -18.5, "y": 29.5, "name": "transport-belt", "search_radius": 0.4}),
            ("build", {"name": "splitter", "x": -19.0, "y": 29.5, "direction": 0})]
+    # 모서리 칸은 «다음 변의 방향»을 본다. 북향으로 둔 (-31,14) 는 막다른
+    # 끝이었다 - 고리가 아니라 ㄷ자였고, 안 쓰는 판이 기둥에 차서 톱니
+    # 조립기가 굶었다. 고리는 모서리 넷이 다 돌아야 고리다.
     out += [_belt(x, 28, 12) for x in range(-20, -31, -1)]      # 서쪽으로
-    out += [_belt(-31, y, 0) for y in range(28, 13, -1)]        # 북쪽으로
-    out += [_belt(x, 14, 4) for x in range(-30, -19)]           # 동쪽으로, (-20,14) 가 간선에 붙는다
+    out += [_belt(-31, y, 0) for y in range(28, 14, -1)]        # 북쪽으로
+    out += [_belt(x, 14, 4) for x in range(-31, -19)]           # 동쪽으로, (-20,14) 가 간선에 붙는다
     return out
 
 
@@ -144,6 +147,70 @@ GREEN = {
     "out": ((XB, 27.5),),
 }
 
+# 4호: 녹색 과학 «서쪽 거울». 사용자: "물류과학팩 생산을 좀 더 확장시켜야할듯"
+#
+# 2호의 병목은 팩 조립기 하나(12초에 한 개)였고 앞의 다섯은 다 차 있었다.
+# 사슬은 늘릴 자리가 없다 - 조립기 한 대의 네 변이 다 쓰였다. 그래서 같은
+# 모듈을 하나 더, 2호 고리의 서쪽에 거울로 놓는다.
+#
+#     판: 2호 고리(x=-31 기둥)에 분배기 -> 둘째 고리(y=14 서쪽, x=-43 남쪽,
+#         y=28 동쪽) -> (-31,28) 에 옆으로 합류.  B 열은 2호 고리에서,
+#         A 열은 둘째 고리에서 판을 받는다.
+#     팩: 출구 팔이 y=27 벨트에 떨구고, 그 벨트는 2호 기둥을 지하로 건너
+#         2호의 녹색 벨트 (-22,27) 뒤에 붙는다 -> 연구소 줄.
+XA4, XC4, XB4 = -39.5, -36.5, -33.5
+XRING2 = -43
+
+
+def _ring_w():
+    out = [("demolish", {"x": -30.5, "y": 15.5, "name": "transport-belt", "search_radius": 0.4}),
+           ("build", {"name": "splitter", "x": -31.5, "y": 15.5, "direction": 0})]
+    out += [_belt(x, 14, 12) for x in range(-32, XRING2, -1)]       # 서쪽으로
+    out += [_belt(XRING2, y, 8) for y in range(14, 28)]              # 남쪽으로 (모서리부터)
+    out += [_belt(x, 28, 4) for x in range(XRING2, -31)]            # 동쪽으로, (-31,28) 에 붙는다
+    return out
+
+
+def _machines_w():
+    out = []
+    for y in (R1, R2, R3):
+        out.append(("build", {"name": AM, "x": XA4, "y": y}))
+        out.append(("build", {"name": BOX, "x": XC4, "y": y}))
+        out.append(("build", {"name": AM, "x": XB4, "y": y}))
+        out.append(("build", {"name": ARM, "x": XRING2 + 1.5, "y": y, "direction": 12}))  # 고리2 -> A
+        out.append(("build", {"name": ARM, "x": XC4 - 1, "y": y, "direction": 12}))      # A -> C
+        out.append(("build", {"name": ARM, "x": XC4 + 1, "y": y, "direction": 12}))      # C -> B
+    out += [("build", {"name": ARM, "x": XRING - 0.5, "y": y, "direction": 4})           # 2호 고리 -> B
+            for y in (R1, R2)]
+    out += [("build", {"name": ARM, "x": XB4, "y": G12, "direction": 0}),
+            ("build", {"name": ARM, "x": XB4, "y": G23, "direction": 0}),
+            ("build", {"name": ARM, "x": XA4, "y": G23, "direction": 0}),
+            ("build", {"name": ARM, "x": XB4, "y": 26.5, "direction": 0})]               # 팩 -> y=27 벨트
+    out += [("build", {"name": POLE, "x": x, "y": y}) for x, y in
+            ((-31.5, 18.5), (-31.5, 22.5), (-35.5, 18.5), (-35.5, 22.5),
+             (-41.5, 18.5), (-41.5, 22.5), (-34.5, 26.5))]
+    # 팩 벨트 y=27: (-34,27) 에서 동쪽으로, x=-31 기둥은 지하로, (-23,27) 까지
+    out += [_belt(-34, 27, 4), _belt(-33, 27, 4),
+            ("_ug", {"x": -31.5, "y": 27.5, "direction": 4, "type": "input"}),
+            ("_ug", {"x": -29.5, "y": 27.5, "direction": 4, "type": "output"})]
+    out += [_belt(x, 27, 4) for x in range(-29, -22)]
+    return out
+
+
+GREEN_W = {
+    "name": "녹색 과학 4호 (서)",
+    "stand": (-37.0, 12.5),
+    "stages": (
+        ("ring", ("splitter", -31.5, 15.5), {"transport-belt": 42, "splitter": 1}, _ring_w()),
+        ("machines", (AM, XB4, R3), {AM: 6, ARM: 15, BOX: 3, POLE: 7,
+                                     "transport-belt": 12, "underground-belt": 2}, _machines_w()),
+    ),
+    "recipes": (((XA4, R1), "copper-cable"), ((XA4, R2), "iron-gear-wheel"),
+                ((XA4, R3), "transport-belt"), ((XB4, R1), "electronic-circuit"),
+                ((XB4, R2), "inserter"), ((XB4, R3), "logistic-science-pack")),
+    "out": (),
+}
+
 # 3호: 탄약. 탄창 1 = 철판 4.  간선 머리 옆, 1호 위. 출구 상자는 보급 순찰이
 # «가까운 상자»로 스스로 찾는다(upkeep._STOCK 은 모든 상자를 본다).
 AMMO = {
@@ -165,7 +232,7 @@ AMMO = {
 # 재료. 조립기 1 = 회로 3 + 톱니 5 + 철판 9 = 철 22 + 구리 4.5.  팔 = 철 4 + 구리 1.5
 FETCH = {"iron-plate": 300, "copper-plate": 80, "wood": 4}
 
-MODULES = (MODULE, GREEN, AMMO)
+MODULES = (MODULE, GREEN, AMMO, GREEN_W)
 
 
 def built(ai, probe) -> bool:
@@ -213,11 +280,13 @@ def raise_stage(ai, who, module, stage) -> None:
     for item, n in kit.items():
         short = n - int(bag.get(item, 0))
         if short > 0:
-            count = (short + 1) // 2 if item in (POLE, "transport-belt") else short
+            count = (short + 1) // 2 if item in (POLE, "transport-belt", "underground-belt") else short
             plan.append(("craft", {"recipe": item, "count": count, "wait": True}))
     sx, sy = module["stand"]
     plan.append(("walk_to", {"x": sx, "y": sy}))
     for n, step in enumerate(steps):
+        if step[0] == "_ug":
+            continue                      # fuel.place_ugs 가 계획 뒤에 놓는다
         if n and n % 10 == 0 and step[0] == "build":
             plan.append(("walk_to", {"x": step[1]["x"] + 1.5, "y": step[1]["y"] + 1.5}))
         plan.append(step)
@@ -235,7 +304,7 @@ def stages_of(module):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--who", default="")
-    ap.add_argument("--module", type=int, default=0, help="0 = 다 본다, 1 = 빨강, 2 = 초록, 3 = 탄약")
+    ap.add_argument("--module", type=int, default=0, help="0 = 다 본다, 1 = 빨강, 2 = 초록, 3 = 탄약, 4 = 초록(서)")
     args = ap.parse_args()
 
     ai = AIBridge()
