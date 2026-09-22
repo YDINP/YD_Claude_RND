@@ -37,7 +37,7 @@ sys.path.insert(0, HERE)
 from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 from scout import (crew_state, near, sightings, unstick,   # noqa: E402
-                   FLEE_AT, FLEE_BACK, MAX_REACH)
+                   COMPASS, FLEE_AT, FLEE_BACK, MAX_REACH)
 import danger                                              # noqa: E402  (away_from_foes)
 
 AVOID = 150        # 보인 둥지·웜에서 이만큼 안의 가장자리는 안 간다
@@ -46,7 +46,7 @@ PICK = 8           # 한 번에 받아 두는 후보 수 (막힌 곳은 다음 �
 STALL_GAP = 12     # 목적지에서 이만큼 못 좁히면 «못 갔다»
 
 
-def frontier(ai, at, home, reach, skip=()) -> list:
+def frontier(ai, at, home, reach, skip=(), toward=(0, 0)) -> list:
     """안개 가장자리 후보. [(청크키, x, y, 점수)] 좋은 것부터.
 
     점수 = 지금 자리에서의 거리 + BACKTRACK * (집 쪽으로 되돌아가는 만큼).
@@ -58,6 +58,7 @@ def frontier(ai, at, home, reach, skip=()) -> list:
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local ax, ay, hx, hy, reach, avoid = %f, %f, %f, %f, %f, %f
+      local tx, ty = %f, %f          -- 가고 싶은 방위 (0,0 이면 없음)
       local foes = {}
       for _, e in pairs(s.find_entities_filtered{type = {"unit-spawner", "turret"},
               force = game.forces.enemy, position = {hx, hy}, radius = reach + avoid}) do
@@ -86,7 +87,12 @@ def frontier(ai, at, home, reach, skip=()) -> list:
                 end
                 if ok then
                   local da = math.sqrt((gx - ax) ^ 2 + (gy - ay) ^ 2)
-                  out[#out+1] = {da + %f * math.max(0, dha - dh), key, gx, gy}
+                  -- 방위 벌점: 그 방위로 나아간 만큼(내적)을 빼고 남은 거리
+                  local side = 0
+                  if tx ~= 0 or ty ~= 0 then
+                    side = dh - ((gx - hx) * tx + (gy - hy) * ty)
+                  end
+                  out[#out+1] = {da + %f * math.max(0, dha - dh) + 0.5 * side, key, gx, gy}
                 end
               end
             end
@@ -103,7 +109,7 @@ def frontier(ai, at, home, reach, skip=()) -> list:
         end
       end
       return top
-    end)()""" % (ax, ay, hx, hy, reach, AVOID, ";".join(skip), BACKTRACK, PICK))
+    end)()""" % (ax, ay, hx, hy, reach, AVOID, toward[0], toward[1], ";".join(skip), BACKTRACK, PICK))
     rows = list(reply.values()) if isinstance(reply, dict) else list(reply or [])
     out = []
     for row in rows:
@@ -202,7 +208,15 @@ def main() -> int:
     ap.add_argument("--reach", type=int, default=MAX_REACH, help="집에서 이보다 멀리는 안 간다")
     ap.add_argument("--goals", type=int, default=60, help="가장자리를 이만큼 밟으면 돌아온다")
     ap.add_argument("--minutes", type=float, default=90)
+    ap.add_argument("--toward", default="", help="치우칠 방위: 남, 서, 남서 ... (scout.COMPASS)")
     args = ap.parse_args()
+    toward = (0, 0)
+    if args.toward:
+        hit = [c for c in COMPASS if c[0] == args.toward]
+        if not hit:
+            print("모르는 방위다. 쓸 수 있는 것:", ", ".join(c[0] for c in COMPASS))
+            return 1
+        toward = (hit[0][1], hit[0][2])
 
     who = args.who
     hx, hy = (int(v) for v in args.home.split(","))
@@ -220,7 +234,7 @@ def main() -> int:
                 print(f"  {who} 가 돌아오지 못했다")
                 return 1
             at = (me["x"], me["y"])
-            picks = frontier(ai, at, home, args.reach, skip)
+            picks = frontier(ai, at, home, args.reach, skip, toward)
             if not picks:
                 print(f"  {args.reach}칸 안에 갈 수 있는 안개 가장자리가 없다")
                 break

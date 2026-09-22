@@ -41,6 +41,13 @@ BOX = "iron-chest"
 ARM = "burner-inserter"
 ARM_FUEL = 4
 
+ENOUGH = 100_000          # 이만큼 쌓였으면 선반을 더 안 늘린다 - 남는 것이지 병목이 아니다
+
+
+def rack_item(rack) -> str:
+    return {"철판": "iron-plate", "구리판": "copper-plate"}[rack[0]]
+
+
 # 선반 줄. 팔의 direction 은 «집는 쪽»이다.
 #   name, 벨트 y, 팔 y, 상자 y, 팔 방향, 놓을 수 있는 x 범위(동 -> 서 순으로 찬다)
 RACKS = (
@@ -197,6 +204,14 @@ def main() -> int:
                           f" · 빈 칸 {free} - 넉넉하다")
                     continue
                 if not seats:
+                    # 실측(21회차): 철판 21만 장이 선반에 쌓인 채 「줄을 더 내야 한다」
+                    # 가 순번마다 찍혔다. 선반이 찬 것은 판이 «남는» 것이지 병목이
+                    # 아니다 - 벨트가 차면 분배기가 간선으로 다 보낸다. 쌓인 것이
+                    # 넉넉하면 조용히 넘어간다.
+                    stock = shelf_mod.stock(ai, DEPOT, 36)
+                    piled = sum(c["held"].get(rack_item(rack), 0) for c in stock)
+                    if piled >= ENOUGH:
+                        continue
                     print(f"  {rack[0]} 선반: 빈 상자 {open_} · 빈 칸 {free}"
                           f" - 놓을 자리가 없다. 줄을 더 내야 한다")
                     continue

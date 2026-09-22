@@ -124,8 +124,10 @@ def _row_a():
         out.append(am(x, A_Y))
         out.append(arm(x, BUS_Y + 1.5, N))                    # 버스 -> 조립기
         if i in A_FROM_RING:
-            out.append(arm(x - 1, RING_Y - 0.5, S))            # 고리 -> 조립기
-        out.append(arm(x + 1, RING_Y - 0.5, N))                # 조립기 -> 고리
+            out.append(arm(x - 1, RING_Y - 0.5, S, FAST if i == 1 else ARM))   # 고리 -> 조립기
+        # 구리선 출구와 회로 입구는 빠른 팔: 회로 하나에 구리선 셋이라 보통 팔
+        # (0.83/s)로는 회로 조립기가 늘 굶는다 - 실측으로 A 줄 전체가 막혔다.
+        out.append(arm(x + 1, RING_Y - 0.5, N, FAST if i == 0 else ARM))   # 조립기 -> 고리
     out += [pole(x, BUS_Y + 1.5) for x in (-34.5, -30.5, -26.5, -22.5, -18.5)]
     out += [pole(x, RING_Y - 0.5) for x in (-38.5, -34.5, -30.5, -26.5, -22.5, -18.5, -14.5)]
     return out
