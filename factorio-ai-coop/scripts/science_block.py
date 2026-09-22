@@ -72,7 +72,7 @@ XB = XA
 XRING_W, XRING_E, RING_BOTTOM = -40, -14, 63
 XCOL = -12                # 팩 기둥
 SINK = (-14.5, 57.5)      # 고리 남는 것 받는 상자
-EXIT = (-13.5, 58.5)      # 필터 고속 팔 (고리 -> 팩 기둥)
+EXIT = (-12.5, 58.5)      # 필터 고속 팔 (고리 x=-13.5 -> 팩 기둥 x=-11.5). -13.5 는 고리 자리다
 PACKS = ("automation-science-pack", "logistic-science-pack")
 
 LABS = [(-14.5, 36.5), (-14.5, 40.5), (-14.5, 44.5),          # 기둥 서쪽 (팔 x=-13)
@@ -138,8 +138,10 @@ def _row_b():
         out.append(arm(x, RING_Y + 1.5, N))                    # 고리 -> 조립기 (팔·벨트)
         out.append(arm(x + 1, RING_Y + 1.5, S))                # 조립기 -> 고리 (팩)
     out += [arm(SINK[0], SINK[1] - 1, N), ("build", {"name": BOX, "x": SINK[0], "y": SINK[1]}),
-            arm(EXIT[0], EXIT[1], W, FAST),
-            pole(-15.5, 60.5)]
+            arm(EXIT[0], EXIT[1], W, FAST)]
+    # 전봇대는 B 줄 «남쪽» y=60.5 에. A 줄 전봇대(y=54.5)의 5x5 공급 구역은
+    # y=57 까지라 B 조립기(57..60)에 «닿기만» 하고 안 든다 - 다섯 대가 no_power 였다.
+    out += [pole(x, 60.5) for x in (-34.5, -30.5, -26.5, -22.5, -18.5, -15.5)]
     return out
 
 
@@ -172,7 +174,7 @@ STAGES = (
     ("branch", ("transport-belt", -14.5, BUS_Y + 0.5), {"transport-belt": 60, "underground-belt": 8, "splitter": 1}, _branch()),
     ("ring", ("transport-belt", XRING_W + 0.5, RING_Y + 1.5), {"transport-belt": 70}, _ring()),
     ("rowA", (POLE, -14.5, RING_Y - 0.5), {AM: 6, ARM: 16, POLE: 12}, _row_a()),
-    ("rowB", (POLE, -15.5, 60.5), {AM: 6, ARM: 13, FAST: 1, BOX: 1, POLE: 1}, _row_b()),
+    ("rowB", (POLE, -15.5, 60.5), {AM: 6, ARM: 13, FAST: 1, BOX: 1, POLE: 6}, _row_b()),
     ("packcol", ("transport-belt", -12.5, 29.5), {"transport-belt": 38, "underground-belt": 2}, _pack_col()),
     ("labs", (POLE, -11.5, 23.5), {LAB: 10, ARM: 10, POLE: 9}, _labs()),
 )

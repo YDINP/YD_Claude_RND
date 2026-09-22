@@ -26,6 +26,7 @@
     python scripts/danger.py --home=28,3
 """
 import argparse
+import math
 import os
 import sys
 import time
@@ -202,18 +203,49 @@ def unstick(ai, who, at):
     return int(reply.get("moved") or 0) == 1, reply
 
 
-def flee(ai, who, home):
+FAR = 200          # 집에서 이보다 멀리 있으면 정찰 중이다
+STEP_BACK = 120    # 정찰병은 집까지가 아니라 이만큼만 물러난다 (fogwalk 와 같은 수)
+
+
+def away_from_foes(ai, at, step=STEP_BACK):
+    """가장 가까운 적의 «반대쪽»으로 step 칸. 적이 안 보이면 None.
+
+    hotel 은 (-724,-299) 에서 «집 쪽으로» 물러나다 죽었다 - 집으로 가는 길
+    위에 둥지 (-190,-509) 가 있었다. 물러나는 방향은 집이 아니라 적의 반대다.
+    """
+    reply = ai.lua("""(function()
+      local s = game.surfaces[1]
+      local e = s.find_nearest_enemy{position = {%f, %f}, max_distance = 200, force = game.forces.player}
+      if not e then return { ok = 0 } end
+      local dx, dy = %f - e.position.x, %f - e.position.y
+      local span = math.max(1, math.sqrt(dx * dx + dy * dy))
+      return { ok = 1, x = %f + dx / span * %d, y = %f + dy / span * %d }
+    end)()""" % (at[0], at[1], at[0], at[1], at[0], step, at[1], step))
+    if int(reply.get("ok", 0)):
+        return (float(reply["x"]), float(reply["y"]))
+    return None
+
+
+def flee(ai, who, home, at=None):
     """하던 일을 «버리고» 돌아온다.
 
     취소를 먼저 한다. 대기줄에 남은 걸음이 있으면 그것이 다시 밭 한복판
     으로 끌고 간다 - 실제로 그렇게 넷이 더 죽었다. 부르는 것과 «하던
     일을 끊는 것»은 다른 일이다.
+
+    집에서 FAR 밖에 있는 사람은 정찰병이다. 집까지 부르면 걸어 온 길을
+    다 되밟고 정찰 고리는 집에서 다시 시작한다 (hotel, (516,224) 웜 한
+    마리에 700칸 귀환). 그 사람은 «적의 반대쪽»으로 STEP_BACK 만 물린다 -
+    정찰 고리가 거기서 다음 가장자리를 고른다.
     """
     try:
         ai.agent(who).cancel()
     except RconError:
         pass
-    submit(ai, who, [("walk_to", {"x": home[0], "y": home[1]})], strict=False)
+    goal = home
+    if at and math.hypot(at[0] - home[0], at[1] - home[1]) > FAR:
+        goal = away_from_foes(ai, at) or home
+    submit(ai, who, [("walk_to", {"x": goal[0], "y": goal[1]})], strict=False)
 
 
 def main() -> int:
@@ -242,7 +274,7 @@ def main() -> int:
                 print(f"  [!] {one['name']} ({one['x']:.0f},{one['y']:.0f}) "
                       f"{one['why']}에 적 {one['tight']}/{one['near']} "
                       f"- 하던 일을 끊고 부른다")
-                flee(ai, one["name"], home)
+                flee(ai, one["name"], home, (one["x"], one["y"]))
             # 안전해진 사람은 다시 부를 수 있게 풀어 준다.
             calling = names
 

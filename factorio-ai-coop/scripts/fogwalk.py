@@ -38,6 +38,7 @@ from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 from scout import (crew_state, near, sightings, unstick,   # noqa: E402
                    FLEE_AT, FLEE_BACK, MAX_REACH)
+import danger                                              # noqa: E402  (away_from_foes)
 
 AVOID = 150        # 보인 둥지·웜에서 이만큼 안의 가장자리는 안 간다
 BACKTRACK = 0.5    # 집 쪽으로 되돌아가는 칸수마다 이만큼 벌점
@@ -121,6 +122,79 @@ def charted(ai) -> int:
     end)()""")["n"])
 
 
+def foes_near(ai, at, radius) -> int:
+    seen = near(ai, at, radius)
+    return int(seen["nests"]) + int(seen["worms"]) + int(seen["units"])
+
+
+def walk_watch(ai, who, goal, home, label=""):
+    """한 다리를 «보면서» 걷는다. 돌아오는 값: arrived / fled / stalled / dead.
+
+    걷는 도중 FLEE_AT 안에 적이 보이면 끊고 «적의 반대쪽»으로 물러난다 -
+    집 쪽이 아니다. hotel 은 집 쪽으로 물러나다 집으로 가는 길 위의
+    둥지에 죽었다 (-208,-512).
+    """
+    submit(ai, who, [("walk_to", {"x": goal[0], "y": goal[1]})], strict=False)
+    stalls = 0
+    while True:
+        me = crew_state(ai).get(who)
+        if not me or not me["alive"]:
+            return "dead"
+        at = (me["x"], me["y"])
+        if foes_near(ai, at, FLEE_AT):
+            try:
+                ai.agent(who).cancel()
+            except RconError:
+                pass
+            back = danger.away_from_foes(ai, at, FLEE_BACK)
+            if not back:
+                dx, dy = home[0] - at[0], home[1] - at[1]
+                span = max(1.0, math.hypot(dx, dy))
+                back = (at[0] + dx / span * FLEE_BACK, at[1] + dy / span * FLEE_BACK)
+            submit(ai, who, [("walk_to", {"x": back[0], "y": back[1]})], strict=False)
+            print(f"{who}: ({at[0]:.0f},{at[1]:.0f}) 에서 적을 봤다{label} - "
+                  f"({back[0]:.0f},{back[1]:.0f}) 로 {FLEE_BACK}칸 물러난다")
+            time.sleep(20)
+            return "fled"
+        if me["busy"]:
+            time.sleep(6)
+            continue
+        gap = math.hypot(at[0] - goal[0], at[1] - goal[1])
+        if gap <= STALL_GAP:
+            return "arrived"
+        stalls += 1
+        if stalls == 2:
+            unstick(ai, who)
+        if stalls > 3:
+            return "stalled"
+        submit(ai, who, [("walk_to", {"x": goal[0], "y": goal[1]})], strict=False)
+        time.sleep(6)
+
+
+def safe_spot(ai, at) -> bool:
+    return foes_near(ai, at, AVOID) == 0
+
+
+def go_home(ai, who, trail, home) -> str:
+    """밟았던 가장자리를 거꾸로 되짚어 돌아온다. 위험해진 지점은 건너뛴다.
+
+    한 번에 집으로 걷지 않는다: 길찾기는 밝혀진 회랑을 따라가고, 회랑은
+    나중에 생성된 둥지 옆을 지날 수 있다. 밟았던 지점은 «그때» 안전했던
+    자리다 - 지금도 안전한지 AVOID 로 다시 보고 간다.
+    """
+    for wp in list(reversed(trail)) + [home]:
+        if not safe_spot(ai, wp):
+            print(f"  ({wp[0]:.0f},{wp[1]:.0f}) 는 이제 적 곁이다 - 건너뛴다")
+            continue
+        for _try in range(3):
+            got = walk_watch(ai, who, wp, home, label=" (귀환 중)")
+            if got in ("arrived", "stalled"):
+                break
+            if got == "dead":
+                return "dead"
+    return "home"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--who", required=True)
@@ -132,86 +206,63 @@ def main() -> int:
 
     who = args.who
     hx, hy = (int(v) for v in args.home.split(","))
+    home = (hx, hy)
     ai = AIBridge()
     t0 = time.time()
     was = charted(ai)
     print(f"{who}: 안개 걷기 시작 - 밝혀진 청크 {was}, 집 ({hx},{hy}) 에서 {args.reach}칸까지")
 
-    skip, goal, stalls, walked, fled = [], None, 0, 0, 0
-    while walked < args.goals and time.time() - t0 < args.minutes * 60:
+    skip, trail, fled = [], [], 0
+    while len(trail) < args.goals and time.time() - t0 < args.minutes * 60:
         try:
             me = crew_state(ai).get(who)
             if not me or not me["alive"]:
                 print(f"  {who} 가 돌아오지 못했다")
                 return 1
             at = (me["x"], me["y"])
-
-            # 걷는 «도중»에도 본다 (scout.py 와 같은 규칙).
-            seen = near(ai, at, FLEE_AT)
-            if int(seen["nests"]) or int(seen["worms"]) or int(seen["units"]):
-                try:
-                    ai.agent(who).cancel()
-                except RconError:
-                    pass
-                dx, dy = hx - at[0], hy - at[1]
-                span = max(1.0, math.hypot(dx, dy))
-                back = (at[0] + dx / span * FLEE_BACK, at[1] + dy / span * FLEE_BACK)
-                submit(ai, who, [("walk_to", {"x": back[0], "y": back[1]})], strict=False)
-                fled += 1
-                goal = None
-                print(f"{who}: ({at[0]:.0f},{at[1]:.0f}) 에서 적을 봤다 - 둥지 {seen['nests']} "
-                      f"웜 {seen['worms']} 적 {seen['units']}. 집 쪽으로 {FLEE_BACK}칸 물러난다")
-                if fled >= 3:
-                    print(f"  세 번 물러났다 - 여기서 접는다")
-                    break
-                time.sleep(20)
-                continue
-            if me["busy"]:
-                time.sleep(6)
-                continue
-
-            if goal:
-                gap = math.hypot(at[0] - goal[1], at[1] - goal[2])
-                if gap > STALL_GAP:
-                    stalls += 1
-                    if stalls == 2:
-                        unstick(ai, who)
-                    if stalls > 3:
-                        print(f"  {goal[0]} 가장자리는 {gap:.0f}칸을 못 좁힌다 - 건너뛴다")
-                        skip.append(goal[0])
-                        goal, stalls = None, 0
-                    else:
-                        submit(ai, who, [("walk_to", {"x": goal[1], "y": goal[2]})], strict=False)
-                    continue
-                walked += 1
-                goal, stalls = None, 0
-
-            picks = frontier(ai, at, (hx, hy), args.reach, skip)
+            picks = frontier(ai, at, home, args.reach, skip)
             if not picks:
                 print(f"  {args.reach}칸 안에 갈 수 있는 안개 가장자리가 없다")
                 break
             goal = picks[0]
-            submit(ai, who, [("walk_to", {"x": goal[1], "y": goal[2]})], strict=False)
-            print(f"{who}: 가장자리 {walked + 1} -> ({goal[1]:.0f},{goal[2]:.0f}) "
+            print(f"{who}: 가장자리 {len(trail) + 1} -> ({goal[1]:.0f},{goal[2]:.0f}) "
                   f"[{math.hypot(goal[1] - at[0], goal[2] - at[1]):.0f}칸 앞, "
                   f"집에서 {math.hypot(goal[1] - hx, goal[2] - hy):.0f}칸]")
+            got = walk_watch(ai, who, (goal[1], goal[2]), home)
+            if got == "dead":
+                print(f"  {who} 가 돌아오지 못했다")
+                return 1
+            if got == "arrived":
+                trail.append((goal[1], goal[2]))
+                fled = 0
+            elif got == "stalled":
+                print(f"  {goal[0]} 가장자리는 못 좁힌다 - 건너뛴다")
+                skip.append(goal[0])
+            else:                                   # fled
+                skip.append(goal[0])
+                fled += 1
+                if fled >= 3:
+                    print("  세 번 물러났다 - 여기서 접는다")
+                    break
         except RconError as exc:
             print("  게임이 대답하지 않는다:", exc)
+            time.sleep(6)
         except Exception as exc:
             print("  건너뜀:", type(exc).__name__, exc)
-        time.sleep(6)
+            time.sleep(6)
 
     now = charted(ai)
-    print(f"\n{who}: 가장자리 {walked}곳을 밟아 청크 {was} -> {now} (+{now - was})")
-    found = sightings(ai, (hx, hy), args.reach)
+    print(f"\n{who}: 가장자리 {len(trail)}곳을 밟아 청크 {was} -> {now} (+{now - was})")
+    found = sightings(ai, home, args.reach)
     if found:
         print(f"보이는 둥지 {len(found)}곳, 가장 가까운 것 {found[0]['gap']}칸 "
               f"({found[0]['x']:.0f},{found[0]['y']:.0f})")
     else:
         print("밟은 데까지는 둥지가 안 보인다. 안 가 본 곳은 모르는 것이지 없는 것이 아니다.")
-    submit(ai, who, [("walk_to", {"x": hx, "y": hy})], strict=False)
-    print("정찰병 귀환 지시")
-    return 0
+    print(f"{who}: 밟았던 {len(trail)}곳을 거꾸로 되짚어 돌아온다")
+    got = go_home(ai, who, trail, home)
+    print(f"{who}: {'집에 왔다' if got == 'home' else '돌아오지 못했다'}")
+    return 0 if got == "home" else 1
 
 
 if __name__ == "__main__":

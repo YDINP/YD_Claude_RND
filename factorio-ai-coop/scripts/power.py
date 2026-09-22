@@ -17,12 +17,17 @@
 import argparse
 import os
 import sys
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 
 from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
+sys.path.insert(0, HERE)
+import shelf as shelf_mod                # noqa: E402
+
+DEPOT = (-55, 10)
 
 LOAD = 0.7                # 이 비율을 넘으면 늘린다
 ENGINE_W = 900_000        # 증기기관 한 대, W
@@ -30,6 +35,46 @@ ENGINE_W = 900_000        # 증기기관 한 대, W
 # 모듈 자리. 순서대로 채운다. 각 단계는 (동작, 인자) 그대로 계획이 된다.
 # 2호: 1호 보일러(55.5,-34) 서쪽. 물은 관 세 개로, 석탄은 간선 기둥 x=53 에
 #      분배기를 물려 서쪽 가지 (52..50, -32) 로.
+# 3호·4호: 2호 서쪽으로 같은 꼴을 잇는다. 물은 앞 보일러 서쪽 관에서 관
+# 셋으로, 석탄은 2호 서쪽 가지(y=-31.5)를 그대로 더 늘인다. 과학 블록과
+# 연구소 열둘을 더하니 3.6 MW 가 99% 였다 - 조립기·연구소가 «전부» low_power.
+#
+#     x=43.5 (3호)  x=37.5 (4호)     보일러 3x2 는 x±1.5, 증기기관 3x5 는 북쪽으로 둘
+#
+# 3호 자리에 둘레 포탑 둘 (43,-45)·(43,-33) 이 서 있다 - 서쪽 (35,-45)·(35,-31)
+# 로 옮긴다. guard.py 는 이 자리를 RESERVED 로 안다.
+def _module(name, bx, turrets=()):
+    steps = []
+    for old, new in turrets:
+        steps.append(("demolish", {"x": old[0], "y": old[1], "name": "gun-turret",
+                                   "search_radius": 0.6}))
+        steps.append(("build", {"name": "gun-turret", "x": new[0], "y": new[1]}))
+        steps.append(("insert", {"name": "firearm-magazine", "x": new[0], "y": new[1], "count": 10}))
+    # 증기기관 자리(3x5)에 서서 놓으면 «자기 몸이» 막는다 - 서쪽에 비켜선다.
+    steps += [("build", {"name": "boiler", "x": bx, "y": -34.0, "direction": 0}),
+              ("walk_to", {"x": bx - 3.5, "y": -39.0}),
+              ("build", {"name": "steam-engine", "x": bx, "y": -37.5, "direction": 0}),
+              ("build", {"name": "steam-engine", "x": bx, "y": -42.5, "direction": 0}),
+              ("walk_to", {"x": bx - 2.0, "y": -31.0})]
+    steps += [("build", {"name": "transport-belt", "x": x + 0.5, "y": -31.5, "direction": 12})
+              for x in range(int(bx + 6), int(bx), -1)]            # bx+6.5 .. bx+1.5 -> 서쪽으로 (6칸)
+    steps += [("build", {"name": "burner-inserter", "x": bx + 1, "y": -32.5, "direction": 8}),
+              ("insert", {"name": "coal", "x": bx + 1, "y": -32.5, "count": 5}),
+              ("insert", {"name": "coal", "x": bx, "y": -34.0, "count": 20}),
+              # 관은 맨 뒤다 (2호 참고).
+              ("build", {"name": "pipe", "x": bx + 4, "y": -33.5}),
+              ("build", {"name": "pipe", "x": bx + 3, "y": -33.5}),
+              ("build", {"name": "pipe", "x": bx + 2, "y": -33.5})]
+    return {
+        "name": name,
+        "probe": ("steam-engine", bx, -37.5),
+        "stand": (bx - 2.0, -31.0),
+        "steps": tuple(steps),
+        "kit": {"boiler": 1, "steam-engine": 2, "transport-belt": 6,
+                "burner-inserter": 1, "pipe": 3},
+    }
+
+
 MODULES = (
     {
         "name": "2호",
@@ -60,6 +105,8 @@ MODULES = (
         "kit": {"boiler": 1, "steam-engine": 2, "splitter": 1,
                 "transport-belt": 3, "burner-inserter": 1, "pipe": 3},
     },
+    _module("3호", 43.5, turrets=(((43.0, -45.0), (35.0, -45.0)), ((43.0, -33.0), (35.0, -31.0)))),
+    _module("4호", 37.5),
 )
 
 
@@ -94,6 +141,12 @@ def add(ai, who, module) -> None:
     except RconError:
         bag = {}
     plan = []
+    have = shelf_mod.shelves(ai, DEPOT, span=36)
+    for item, n in (("iron-plate", 200), ("stone", 10), ("coal", 40)):
+        at = have.get(item)
+        if at and int(bag.get(item, 0)) < n:
+            plan.append(("walk_to", {"x": at[0], "y": at[1] + 1.5}))
+            plan.append(("take", {"name": item, "x": at[0], "y": at[1], "count": n}))
     for item, n in module["kit"].items():
         short = n - int(bag.get(item, 0))
         if short > 0:
@@ -109,6 +162,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--who", default="")
     ap.add_argument("--force", action="store_true", help="부하와 상관없이 놓는다")
+    ap.add_argument("--all", action="store_true", help="적어 둔 다음 모듈까지 잇달아")
     args = ap.parse_args()
 
     ai = AIBridge()
@@ -129,6 +183,14 @@ def main() -> int:
         return 0
     if args.who:
         add(ai, args.who, todo[0])
+        if args.all and len(todo) > 1:
+            for _ in range(120):
+                time.sleep(5)
+                live = {w["name"]: w for w in ai.list()}
+                w = live.get(args.who)
+                if w and not (w.get("current") or w.get("queued")):
+                    break
+            add(ai, args.who, todo[1])
     else:
         print(f"  {todo[0]['name']} 모듈을 놓을 차례 (--who 로 시킨다)")
     return 0
