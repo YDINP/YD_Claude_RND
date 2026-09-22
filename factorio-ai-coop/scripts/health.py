@@ -304,6 +304,46 @@ def once(ai: AIBridge) -> None:
     except (RconError, KeyError, TypeError, ValueError, ZeroDivisionError):
         pass
 
+    # 공해가 적을 부른다. 사용자: "공해도가 높아질수록 더 강하고 많은적이
+    # 오는걸 생각할 것." 진화도(evolution)는 공해 누적·시간·둥지 파괴로
+    # 오르고, 0.5 부터 중형, 0.9 부터 대형이 무리에 섞인다. 공습 규모는
+    # «둥지에 닿는 공해량»이다 - 구름이 둥지까지 못 가면 습격도 없다.
+    try:
+        air = ai.lua("""(function()
+          local s, f = game.surfaces[1], game.forces.player
+          local st = f.get_item_production_statistics(s)
+          local ps = game.get_pollution_statistics(s)
+          local made = 0
+          for name, _ in pairs(ps.input_counts) do
+            made = made + ps.get_flow_count{name = name, category = "input",
+                      precision_index = defines.flow_precision_index.one_hour}
+          end
+          local evo = game.forces.enemy.get_evolution_factor(s)
+          local n, far = 0, nil
+          for _, sp in pairs(s.find_entities_filtered{type = "unit-spawner"}) do
+            n = n + 1
+            local d = ((sp.position.x + 40) ^ 2 + (sp.position.y - 30) ^ 2) ^ 0.5
+            if not far or d < far then far = d end
+          end
+          local cloud = 0
+          for c in s.get_chunks() do
+            if s.get_pollution({c.x * 32 + 16, c.y * 32 + 16}) > 1 then cloud = cloud + 1 end
+          end
+          return { evo = evo, made = made, nests = n, nearest = far or -1, cloud = cloud }
+        end)()""")
+        evo = float(air["evo"])
+        tier = "소형" if evo < 0.3 else "소·중형" if evo < 0.5 else "중형" if evo < 0.9 else "대형"
+        line = (f"진화 {evo:.2f} ({tier}) · 시간당 공해 {float(air['made']):,.0f}"
+                f" · 구름 {int(air['cloud'])}청크 · 둥지 {int(air['nests'])}곳"
+                + (f" (가장 가까운 {float(air['nearest']):.0f}칸)" if float(air["nearest"]) > 0 else ""))
+        print("  " + line)
+        if evo >= 0.5 and int(air["nests"]):
+            warn.append("진화도 0.5 이상 - 중형 바이터가 온다. 돌벽 없는 외곽 포탑은 버틸 수 없다")
+        if int(air["cloud"]) > 300:
+            warn.append(f"공해 구름이 {int(air['cloud'])}청크 - 둥지에 닿으면 그 크기만큼 습격이 온다")
+    except (RconError, KeyError, TypeError, ValueError):
+        pass
+
     stuck = unplaced(ai)
     # 벨트와 팔은 늘 조금씩 들고 다닌다(한 걸음 몫). 쌓이는 것만 본다.
     loud = {k: v for k, v in stuck.items()

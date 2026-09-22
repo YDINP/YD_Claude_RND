@@ -20,6 +20,7 @@
     python scripts/guard.py --who golf --who hotel --depot 60,-115
 """
 import argparse
+import math
 import os
 import sys
 import time
@@ -495,6 +496,10 @@ def buildable(ai, spots):
     고리 사이로 들어온 무리가 밭에서 일하던 사람을 잡는다 - 20회차에
     여섯을 그렇게 잃었다. 도끼 몇 번이면 될 일에 목숨값을 치를 이유가 없다.
     """
+    # 짓기로 «약속한» 땅에는 포탑을 안 놓는다. 과학 블록(science_block.py)
+    # 자리를 포탑이 먼저 차지하면 블록이 그만큼 밀린다.
+    spots = [s for s in spots
+             if not any(x1 <= s["x"] <= x2 and y1 <= s["y"] <= y2 for x1, y1, x2, y2 in RESERVED)]
     if not spots:
         return []
     body = ", ".join(f"{{{s['x']},{s['y']}}}" for s in spots[:60])
@@ -679,6 +684,45 @@ def raise_turrets(ai, who, shelf, have, spots):
     return True
 
 
+# 서로 받쳐 주는 포탑. 사거리 안에 다른 포탑이 이만큼은 있어야 한다.
+#
+#     사용자: "포탑 방어는 왠만하면 포탑의 사정거리 내에 다른포탑이 3개이상은 있어야함."
+#
+# 혼자 선 포탑은 무리에게 «한 대씩» 먹힌다. 사거리 18 안에 셋이 더 있으면
+# 한 대가 맞는 동안 넷이 쏜다.
+SUPPORT = 3
+RESERVED = ((-46, 48, -12, 72),)      # 과학 블록 (x1, y1, x2, y2)
+SUPPORT_STEP = 6          # 받쳐 줄 포탑을 놓는 거리 (사거리 18 안, 서로 겹치게)
+
+
+def lonely(ai, need=SUPPORT) -> list:
+    """사거리 안에 다른 포탑이 need 대 안 되는 포탑들. [(x, y, 이웃 수)] 외로운 순."""
+    ts = standing_turrets(ai)
+    out = []
+    for t in ts:
+        n = sum(1 for o in ts if o is not t
+                and math.hypot(o[0] - t[0], o[1] - t[1]) <= RANGE)
+        if n < need:
+            out.append((t[0], t[1], n))
+    out.sort(key=lambda r: r[2])
+    return out
+
+
+def support_seats(ai, alone, promised=()) -> list:
+    """외로운 포탑 곁의 자리들. 동서남북 SUPPORT_STEP 칸, 놓을 수 있는 곳만."""
+    want = []
+    for x, y, n in alone:
+        for dx, dy in ((SUPPORT_STEP, 0), (-SUPPORT_STEP, 0), (0, SUPPORT_STEP), (0, -SUPPORT_STEP),
+                       (SUPPORT_STEP, SUPPORT_STEP), (-SUPPORT_STEP, -SUPPORT_STEP)):
+            spot = {"x": x + dx, "y": y + dy, "why": "받침"}
+            if (round(spot["x"]), round(spot["y"])) in promised:
+                continue
+            want.append((SUPPORT - n, spot))
+    want.sort(key=lambda r: -r[0])
+    spots = buildable(ai, [w[1] for w in want[:40]])
+    return spots[:PER_TRIP]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--who", action="append", default=None,
@@ -748,6 +792,18 @@ def main() -> int:
                           f"사거리 밖이다 (그만큼 문이 열려 있다)")
                 else:
                     print(f"건물 {all_n}채가 «전부» 사거리 안이다 - 둘레가 닫혔다")
+                # 둘레는 닫혔다. 이제 «서로 받치나»를 본다.
+                alone = lonely(ai)
+                if alone and free:
+                    spots = support_seats(ai, alone, promised)
+                    if spots and raise_turrets(ai, free[0], shelf, have, spots):
+                        for spot in spots:
+                            promised[(round(spot["x"]), round(spot["y"]))] = turn
+                        print(f"  외로운 포탑 {len(alone)}대 (이웃 {alone[0][2]}대뿐) - "
+                              f"곁에 {len(spots)}대 더")
+                        free = free[1:]
+                elif alone:
+                    print(f"  외로운 포탑 {len(alone)}대 - 손이 비지 않는다")
                 if free:
                     stockpile(ai, free[0], shelf, have)
                 time.sleep(args.every)

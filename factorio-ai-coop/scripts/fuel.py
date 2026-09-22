@@ -51,9 +51,10 @@ def belt(x, y, d):
 
 
 def ug(x, y, d, kind):
-    """지하벨트. 모드의 build 가 type 을 받는 것은 다음 배포부터다(tasks.lua).
-    그때까지는 사람이 만들어 들고 가면 place_ugs() 가 그 자리에 놓는다."""
-    return ("_ug", {"x": x + 0.5, "y": y + 0.5, "direction": d, "type": kind})
+    """지하벨트. 모드의 build 가 type 을 받으니(tasks.lua) 보통 걸음으로 놓는다.
+    사람이 그 자리까지 걸어가 놓는다 - place_ugs() 처럼 «12칸 안에 든 사람»을
+    찾다가 줄 반대쪽 끝에 서 있는 사람을 못 보는 일이 없다."""
+    return ("build", {"name": UG, "x": x + 0.5, "y": y + 0.5, "direction": d, "type": kind})
 
 
 def gone(x, y, name=BELT):
@@ -181,7 +182,7 @@ def done(ai, stage) -> bool:
 def standing(ai, steps) -> set:
     """이미 선 벨트·분배기 타일. 방향까지 맞아야 선 것이다."""
     want = [(p["name"], p["x"], p["y"], p.get("direction", 0))
-            for kind, p in steps if kind == "build" and p["name"] in (BELT, SPLIT)]
+            for kind, p in steps if kind == "build" and p["name"] in (BELT, SPLIT, UG)]
     if not want:
         return set()
     packed = ";".join(f"{n},{x},{y},{d}" for n, x, y, d in want)
