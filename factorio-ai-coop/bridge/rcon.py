@@ -33,10 +33,26 @@ class RconTimeout(RconError):
 
 class Rcon:
     def __init__(self, host: str, port: int, password: str, timeout: float = 15.0) -> None:
+        self._where = (host, port, password, timeout)
+        self._open()
+
+    def _open(self) -> None:
+        host, port, password, timeout = self._where
         self.sock = socket.create_connection((host, port), timeout=timeout)
         self.sock.settimeout(timeout)
         self._id = 0
         self._auth(password)
+
+    def reconnect(self) -> None:
+        """서버가 재기동되면 옛 소켓은 영영 죽어 있다.
+
+        21회차 배포 뒤 운반·방어선·감시 고리 셋이 한 시간 넘게
+        ConnectionResetError 만 찍었다. 고리는 예외를 삼키고 다음 순번으로
+        넘어가지만 소켓은 스스로 살아나지 않는다 - 그 사이 돌밭 상자에 돌
+        3,202 개가 쌓였다. 끊기면 다시 연다.
+        """
+        self.close()
+        self._open()
 
     # -- wire format ------------------------------------------------------
 
@@ -73,12 +89,18 @@ class Rcon:
     # -- public api -------------------------------------------------------
 
     def command(self, cmd: str) -> str:
-        sent = self._send(SERVERDATA_EXECCOMMAND, cmd)
         try:
+            sent = self._send(SERVERDATA_EXECCOMMAND, cmd)
             req_id, _, body = self._recv()
         except socket.timeout as exc:
             self.close()
             raise RconTimeout(f"no reply to: {cmd[:120]}") from exc
+        except (ConnectionError, OSError) as exc:
+            # 한 번은 다시 열어 본다. 재기동 직후면 이것으로 산다. 아직 안
+            # 떴으면 그 예외가 그대로 올라가고 고리는 다음 순번에 또 온다.
+            self.reconnect()
+            sent = self._send(SERVERDATA_EXECCOMMAND, cmd)
+            req_id, _, body = self._recv()
         if req_id != sent:
             self.close()
             raise RconError(f"response id mismatch: {req_id} != {sent}")

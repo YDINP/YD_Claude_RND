@@ -144,10 +144,28 @@ GREEN = {
     "out": ((XB, 27.5),),
 }
 
+# 3호: 탄약. 탄창 1 = 철판 4.  간선 머리 옆, 1호 위. 출구 상자는 보급 순찰이
+# «가까운 상자»로 스스로 찾는다(upkeep._STOCK 은 모든 상자를 본다).
+AMMO = {
+    "name": "탄약 3호",
+    "stand": (-14.0, 9.0),
+    "stages": (
+        ("all", (AM, -15.5, 10.5), {AM: 1, ARM: 2, BOX: 1, POLE: 1}, (
+            ("build", {"name": AM, "x": -15.5, "y": 10.5}),
+            ("build", {"name": ARM, "x": -17.5, "y": 10.5, "direction": 12}),   # 간선 -> 조립기
+            ("build", {"name": ARM, "x": -15.5, "y": 8.5, "direction": 8}),     # 조립기 -> 상자
+            ("build", {"name": BOX, "x": -15.5, "y": 7.5}),
+            ("build", {"name": POLE, "x": -17.5, "y": 8.5}),
+        )),
+    ),
+    "recipes": (((-15.5, 10.5), "firearm-magazine"),),
+    "out": ((-15.5, 7.5),),
+}
+
 # 재료. 조립기 1 = 회로 3 + 톱니 5 + 철판 9 = 철 22 + 구리 4.5.  팔 = 철 4 + 구리 1.5
 FETCH = {"iron-plate": 300, "copper-plate": 80, "wood": 4}
 
-MODULES = (MODULE, GREEN)
+MODULES = (MODULE, GREEN, AMMO)
 
 
 def built(ai, probe) -> bool:
@@ -217,7 +235,7 @@ def stages_of(module):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--who", default="")
-    ap.add_argument("--module", type=int, default=0, help="0 = 다 본다, 1 = 빨강, 2 = 초록")
+    ap.add_argument("--module", type=int, default=0, help="0 = 다 본다, 1 = 빨강, 2 = 초록, 3 = 탄약")
     args = ap.parse_args()
 
     ai = AIBridge()
