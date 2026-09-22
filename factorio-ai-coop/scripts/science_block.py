@@ -52,7 +52,7 @@ from orders import submit               # noqa: E402
 import shelf as shelf_mod                # noqa: E402
 import fuel                              # noqa: E402  (belt/ug/gone/col/standing/place_ugs)
 
-AM = "assembling-machine-1"
+AM = "assembling-machine-1"      # 세울 때. 구리선·회로·톱니·빨강은 뒤에 2형으로 (강철 2 + 회로 3 + 톱니 5 + 1형)
 ARM = "inserter"
 FAST = "fast-inserter"
 BOX = "iron-chest"
@@ -65,8 +65,13 @@ belt, ug, gone, col = fuel.belt, fuel.ug, fuel.gone, fuel.col
 
 BUS_Y, A_Y, RING_Y, B_Y = 49, 52.5, 55, 58.5
 XA = (-36.5, -32.5, -28.5, -24.5, -20.5, -16.5)
+# 벨트가 팔보다 «앞»이다: 고리는 동쪽으로 흐르고 톱니 출구 바로 다음이 벨트
+# 조립기 입구다. 팔 조립기가 먼저면 톱니를 다 먹어 벨트·빨강이 굶는다
+# (실측: 팔 36개가 고리를 돌고 녹색 0/s). 벨트는 톱니를 0.25/s 만 쓰고 멈춘다.
+# 팔 조립기는 맨 «뒤»다: 빠른 팔로 회로·톱니를 다 먹는 놈이라 남는 것을 먹게 둔다.
+# 순서(동쪽으로): 구리선 · 회로 · 톱니 · 벨트 · 빨강 · 팔
 A_RECIPES = ("copper-cable", "electronic-circuit", "iron-gear-wheel",
-             "inserter", "transport-belt", "automation-science-pack")
+             "transport-belt", "automation-science-pack", "inserter")
 A_FROM_RING = {1: True, 3: True, 4: True, 5: True}   # 고리에서도 집는 것 (회로·팔·벨트·빨강)
 XB = XA
 XRING_W, XRING_E, RING_BOTTOM = -40, -14, 63
@@ -126,7 +131,8 @@ def _row_a():
         # (0.83/s)로는 그 둘의 입력이 줄 전체의 상한이 된다. 그 둘은 빠른 팔.
         out.append(arm(x, BUS_Y + 1.5, N, FAST if i in (0, 2) else ARM))   # 버스 -> 조립기
         if i in A_FROM_RING:
-            out.append(arm(x - 1, RING_Y - 0.5, S, FAST if i == 1 else ARM))   # 고리 -> 조립기
+            # 회로 입구(i=1)·벨트 입구(i=3)·팔 입구(i=5, 회로+톱니 둘을 집는다)는 빠른 팔
+            out.append(arm(x - 1, RING_Y - 0.5, S, FAST if i in (1, 3, 5) else ARM))   # 고리 -> 조립기
         # 구리선 출구와 회로 입구는 빠른 팔: 회로 하나에 구리선 셋이라 보통 팔
         # (0.83/s)로는 회로 조립기가 늘 굶는다 - 실측으로 A 줄 전체가 막혔다.
         out.append(arm(x + 1, RING_Y - 0.5, N, FAST if i in (0, 2) else ARM))   # 조립기 -> 고리
@@ -177,7 +183,7 @@ def _labs():
 STAGES = (
     ("branch", ("transport-belt", -14.5, BUS_Y + 0.5), {"transport-belt": 60, "underground-belt": 8, "splitter": 1}, _branch()),
     ("ring", ("transport-belt", XRING_W + 0.5, RING_Y + 1.5), {"transport-belt": 70}, _ring()),
-    ("rowA", (POLE, -14.5, RING_Y - 0.5), {AM: 6, ARM: 11, FAST: 5, POLE: 12}, _row_a()),
+    ("rowA", (POLE, -14.5, RING_Y - 0.5), {AM: 6, ARM: 9, FAST: 7, POLE: 12}, _row_a()),
     ("rowB", (POLE, -15.5, 60.5), {AM: 6, ARM: 13, FAST: 1, BOX: 1, POLE: 6}, _row_b()),
     ("packcol", ("transport-belt", -12.5, 29.5), {"transport-belt": 38, "underground-belt": 2}, _pack_col()),
     ("labs", (POLE, -11.5, 23.5), {LAB: 10, ARM: 10, POLE: 9}, _labs()),
@@ -207,7 +213,7 @@ def settle(ai) -> list:
       local out = {}
       for bit in string.gmatch("%s", "[^;]+") do
         local x, y, r = string.match(bit, "([^,]+),([^,]+),([^,]+)")
-        local m = s.find_entities_filtered{name = "%s", force = f,
+        local m = s.find_entities_filtered{type = "assembling-machine", force = f,   -- 1형이든 2형이든
                     area = {{tonumber(x) - 0.5, tonumber(y) - 0.5}, {tonumber(x) + 0.5, tonumber(y) + 0.5}}}[1]
         if m then
           if not m.get_recipe() or m.get_recipe().name ~= r then m.set_recipe(r) end
@@ -221,6 +227,19 @@ def settle(ai) -> list:
         e.set_filter(1, "%s")
         e.set_filter(2, "%s")
         out[#out+1] = "exit:filtered"
+      end
+      -- 레시피를 바꾸면 그 조립기로 향하던 팔이 «못 넣는 것»을 든 채 영원히
+      -- 선다 (실측: 벨트를 든 팔이 빨강 조립기 앞에서 waiting_for_space).
+      -- 손에 든 것이 안 들어가는 것이면 비운다.
+      for _, e in pairs(s.find_entities_filtered{type = "inserter", force = f,
+              area = {{%d, %d}, {%d, %d}}}) do
+        local h = e.held_stack
+        local tgt = e.drop_target
+        if h and h.valid_for_read and tgt and tgt.type == "assembling-machine"
+           and not tgt.can_insert(h.name) then
+          h.clear()
+          out[#out+1] = "hand:cleared"
+        end
       end
       -- SINK 팔은 «팩만 빼고» 걷는다 (블랙리스트). 실측: 필터 없는 팔이 고리
       -- 모서리에서 팩을 먼저 집어 상자에 넣었고 연구소 열셋이 다 굶었다.
@@ -236,8 +255,9 @@ def settle(ai) -> list:
         out[#out+1] = "sink:packs-kept"
       end
       return out
-    end)()""" % (packed, AM, FAST, EXIT[0] - 0.4, EXIT[1] - 0.4, EXIT[0] + 0.4, EXIT[1] + 0.4,
+    end)()""" % (packed, FAST, EXIT[0] - 0.4, EXIT[1] - 0.4, EXIT[0] + 0.4, EXIT[1] + 0.4,
                  PACKS[0], PACKS[1],
+                 XRING_W, BUS_Y, XRING_E, RING_BOTTOM,
                  ARM, SINK[0] - 0.4, SINK[1] - 1.4, SINK[0] + 0.4, SINK[1] - 0.6,
                  PACKS[0], PACKS[1]))
     return list(reply.values()) if isinstance(reply, dict) else list(reply or [])

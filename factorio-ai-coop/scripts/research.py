@@ -33,7 +33,7 @@ DOCTRINE = (
     "fluid-handling", "oil-processing", "circuit-network", "electric-energy-distribution-1",
     "advanced-material-processing", "engine", "logistics-2",
 )
-KEEP = 3
+KEEP = 5
 
 
 def _rows(v):
