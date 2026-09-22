@@ -110,19 +110,24 @@ def measure(ai, spots, ore) -> list:
               area = {{cx - 2.5, cy - 2.5}, {cx + 2.5, cy + 2.5}}}) do
           amount = amount + r.amount
         end
-        -- 몸이 앉을 3x3. 광석과 사람은 걸림돌이 아니다.
+        -- 몸이 앉을 3x3. 광석·사람·바닥에 떨어진 물건은 걸림돌이 아니다
+        -- (걷어낸 상자에서 쏟아진 석탄이 자리 스물둘을 전부 막은 적이 있다).
         local old, other = {}, 0
         for _, e in pairs(s.find_entities_filtered{
               area = {{cx - 1.45, cy - 1.45}, {cx + 1.45, cy + 1.45}}}) do
-          if e.type == "resource" or e.type == "character" then
+          if e.type == "resource" or e.type == "character"
+             or e.type == "item-entity" then
           elseif e.name == "%s" and e.status == dead then
             old[#old+1] = e.position.x .. ":" .. e.position.y
           else
             other = other + 1
           end
         end
+        -- build_check_type 을 안 주면 바닥의 물건 하나에도 «못 놓는다»고 한다.
+        -- 사람이 놓는 기준(manual)으로 묻는다 - 실제로 그렇게 놓는다.
         local ok = other == 0 and (#old > 0 or s.can_place_entity{
-                     name = "%s", position = {cx, cy}, direction = face, force = f})
+                     name = "%s", position = {cx, cy}, direction = face, force = f,
+                     build_check_type = defines.build_check_type.manual})
         local lit = false
         for _, p in pairs(s.find_entities_filtered{type = "electric-pole", force = f,
               area = {{cx - 3.9, cy - 3.9}, {cx + 3.9, cy + 3.9}}}) do
