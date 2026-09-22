@@ -412,6 +412,13 @@ KEEP = 20          # 손에 남겨 두는 몫
 ANYWHERE = "*"     # 제자리가 찼을 때 갈 곳. 빈 상자 아무 데나
 
 
+def put_down(item, n, at):
+    """상자 «앞»까지 걸어가서 넣는다. 선반은 동쪽으로 서른 칸을 늘었다 -
+    창고 한가운데에 서서 팔을 뻗으면 안 닿는다."""
+    return [("walk_to", {"x": at[0], "y": at[1] + 1.5}),
+            ("insert", {"name": item, "x": at[0], "y": at[1], "count": n})]
+
+
 def unload(ai, who, shelf, room=None):
     """손에 든 것을 창고에 내려놓는다.
 
@@ -424,11 +431,10 @@ def unload(ai, who, shelf, room=None):
             if where(k, shelf, room) and v - KEEP >= PILE_FLOOR}
     if not drop:
         return False
-    plan = [("walk_to", {"x": shelf["iron-plate"][0] - 2,
-                         "y": shelf["iron-plate"][1] + 1})]
+    plan = []
     for item, n in drop.items():
         at = where(item, shelf, room)
-        plan.append(("insert", {"name": item, "x": at[0], "y": at[1], "count": n}))
+        plan.extend(put_down(item, n, at))
     submit(ai, who, plan, strict=False)
     print(f"{who}: 창고에 내려놓기 {drop}")
     return True
@@ -554,13 +560,10 @@ def drain(ai, who, reply, shelf, at=None):
     if not got:
         return False
 
-    plan.append(("walk_to", {"x": shelf["iron-plate"][0] - 2,
-                             "y": shelf["iron-plate"][1] + 1}))
     for item, n in got.items():
         at = where(item, shelf, room)
         if at:
-            plan.append(("insert", {"name": item, "x": at[0], "y": at[1],
-                                    "count": n}))
+            plan.extend(put_down(item, n, at))
     plan = trim(plan, MAX_STEPS)
     submit(ai, who, plan, strict=False)
     print(f"{who}: 창고로 - {got}")
@@ -578,10 +581,9 @@ def main() -> int:
 
     dx, dy = (int(v) for v in args.depot.split(","))
     sx, sy = (int(v) for v in args.smelt.split(","))
-    shelf = {"iron-plate": (dx + 0.5, dy + 0.5),
-             "copper-plate": (dx + 0.5, dy - 4.5),
-             "stone": (dx + 0.5, dy + 2.5),
-             "coal": (dx + 0.5, dy + 4.5)}
+    # 돌 칸만 «계산»이다. 벨트가 채우는 줄(철판·구리판·석탄)은 순번마다
+    # shelf.slots() 로 «빈 칸이 있는 상자»를 다시 찾는다.
+    fixed = {"stone": (dx + 0.5, dy + 2.5)}
     carriers = [n.strip() for n in args.carriers.split(",") if n.strip()]
 
     ai = AIBridge()
@@ -592,6 +594,8 @@ def main() -> int:
                 time.sleep(args.every)
                 continue
             reply = look(ai, (dx, dy), (sx, sy))
+            shelf = dict(fixed)
+            shelf.update(shelf_mod.slots(ai, (dx, dy)))
             room = headroom(reply, shelf)
             # 제자리가 찼을 때 갈 곳을 «매 순번» 다시 찾는다. 상자는
             # 늘어나기도 하고 차기도 하므로 한 번 찾아 두면 금세 낡는다.

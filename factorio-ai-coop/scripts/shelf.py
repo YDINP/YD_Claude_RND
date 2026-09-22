@@ -137,3 +137,24 @@ def where(ai, depot, items, span=SPAN):
     """
     have = shelves(ai, depot, span)
     return {item: have[item] for item in items if item in have}
+
+
+def slots(ai, depot, span=36):
+    """벨트 줄마다 «지금 빈 칸이 있는» 상자 하나. {물건: (x, y)}
+
+    haul.py 는 구리판 자리를 (dx, dy-4.5) 한 칸으로 «계산»했다. 그 상자가
+    3,200 으로 차자 운반 당번 셋이 구리판 3,758 을 들고 그 앞에 서서
+    「0 개 넣음」을 되풀이했다. 옆으로 상자 서른여섯 개가 비어 있었다.
+
+    줄이 다 찼으면 그 물건은 빠진다 - 부르는 쪽은 «벨트 줄 아닌 데»로
+    보내고, racks.py 가 줄을 늘린다.
+    """
+    dx, dy = depot
+    out = {}
+    for row_dy, item in BELT_ROWS.items():
+        row = [c for c in stock(ai, depot, span)
+               if c["y"] - dy == row_dy and c["room"] > 0]
+        if row:
+            near = min(row, key=lambda c: (c["x"] - dx) ** 2)
+            out[item] = (near["x"] + 0.5, near["y"] + 0.5)
+    return out
