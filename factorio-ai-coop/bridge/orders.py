@@ -119,6 +119,57 @@ def check(ai, steps) -> list[dict]:
     return unmet(steps, lambda at: seen.get(at, False))
 
 
+# 걸음의 목적지가 «설 수 있는 자리»인지 이만큼 안에서 찾는다.
+STAND_SEARCH = 6
+
+
+def footing(ai, steps):
+    """walk_to 마다 목적지를 «설 수 있는 가장 가까운 칸»으로 고쳐 준다.
+
+        사용자: "이동할때 상자랑상자사이는 건너갈 수 없으니까 이동할 때
+                 이동경로를 먼저 짜고나서 이동시키도록"
+
+    선반은 상자 줄·팔 줄·상자 줄이 붙어 y 3..12 가 통째로 벽이다. 「상자
+    앞 한 칸」으로 잡은 목적지가 팔 줄이거나 다른 상자 줄이면 길찾기는
+    목적지에서 막혀 «못 간다»로 끝나고, 그 뒤 단계는 손이 안 닿아 다
+    무너진다. 목적지를 세울 수 있는 칸으로 바꿔 두면 길찾기가 알아서
+    돌아간다 - 팔 뻗는 거리(10칸)가 넉넉해서 줄 바깥에 서도 닿는다.
+
+    아직 안 지어진 것 위를 가리키는 걸음은 그대로 둔다: 그 자리는 지금
+    비어 있으므로 «설 수 있는 칸»으로 통과한다.
+    """
+    spots = [(i, _spot(p or {})) for i, (kind, p) in enumerate(steps)
+             if kind == "walk_to"]
+    spots = [(i, at) for i, at in spots if at]
+    if not spots:
+        return steps
+    packed = ";".join(f"{x},{y}" for _i, (x, y) in spots)
+    reply = ai.lua("""(function()
+      local s = game.surfaces[1]
+      local out = {}
+      for bit in string.gmatch("%s", "[^;]+") do
+        local x, y = string.match(bit, "([^,]+),([^,]+)")
+        x, y = tonumber(x), tonumber(y)
+        local spot = s.find_non_colliding_position("character", {x, y}, %d, 0.5)
+        if spot then out[#out+1] = spot.x .. "|" .. spot.y
+        else out[#out+1] = x .. "|" .. y end
+      end
+      return out
+    end)()""" % (packed, STAND_SEARCH))
+    rows = list(reply.values()) if isinstance(reply, dict) else list(reply or [])
+    fixed = list(steps)
+    moved = 0
+    for (i, (x, y)), row in zip(spots, rows):
+        nx, ny = (float(v) for v in str(row).split("|"))
+        if abs(nx - x) > 0.6 or abs(ny - y) > 0.6:
+            kind, p = fixed[i]
+            fixed[i] = (kind, dict(p, x=nx, y=ny))
+            moved += 1
+    if moved:
+        print(f"  걸음 {moved}개의 목적지를 설 수 있는 칸으로 옮겼다")
+    return fixed
+
+
 def submit(ai, who: str, steps, strict: bool = True):
     """확인하고 보낸다. 없는 것을 가리키면 «보내지 않고» 말한다.
 
@@ -126,6 +177,10 @@ def submit(ai, who: str, steps, strict: bool = True):
     무너지는데, 그것은 오류로 기록될 뿐 아무도 안 본다. 보내기 전에
     막는 편이 싸다.
     """
+    try:
+        steps = footing(ai, steps)
+    except Exception as exc:              # noqa: BLE001 - 걸음 보정은 덤이다
+        print(f"  [주의] 걸음 보정 실패: {exc}")
     bad = check(ai, steps)
     if bad:
         lines = ", ".join(f"[{b['step']}] {b['type']} {b.get('name') or ''}"

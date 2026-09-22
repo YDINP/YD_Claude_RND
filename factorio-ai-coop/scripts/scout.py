@@ -81,6 +81,32 @@ def near(ai, at, radius=LOOK):
 
 
 
+def unstick(ai, who) -> bool:
+    """절벽 모서리에 몸이 낀 정찰병을 한 칸 옆으로 뺀다.
+
+    21회차에 두 번 있었다: (-400,-9) 우라늄밭 절벽, (32,692) 절벽 주머니.
+    몸의 충돌 상자가 절벽에 겹치면 길찾기는 출발점부터 막혀 «길 없음»만
+    내고, 정찰은 거기서 접힌다. 옆 빈 칸으로 한 칸 옮기는 것뿐 - 걸어서 갈
+    수 있는 자리로 «걸어서 갈 수 있게» 되돌리는 것이다. 멀리 옮기지 않는다.
+    """
+    live = crew_state(ai).get(who)
+    if not live:
+        return False
+    got = ai.lua("""(function()
+      local s = game.surfaces[1]
+      local c = s.find_entities_filtered{type = "character", force = game.forces.player,
+                  area = {{%f, %f}, {%f, %f}}}[1]
+      if not c then return { ok = 0 } end
+      local spot = s.find_non_colliding_position("character", c.position, 4, 0.5)
+      if not spot then return { ok = 0 } end
+      return { ok = c.teleport(spot) and 1 or 0, x = spot.x, y = spot.y }
+    end)()""" % (live["x"] - 1, live["y"] - 1, live["x"] + 1, live["y"] + 1))
+    if int(got.get("ok", 0)):
+        print(f"  {who}: 절벽에 낀 몸을 ({got['x']:.1f},{got['y']:.1f}) 로 뺐다")
+        return True
+    return False
+
+
 def crew_state(ai):
     """이름 -> (살아있나, 바쁜가, 어디). 위치까지 «같은 답»에서 받는다."""
     out = {}
@@ -163,7 +189,9 @@ def main() -> int:
                     gap = math.hypot(me["x"] - goal[0], me["y"] - goal[1])
                     if gap > 12:
                         way["stalls"] = way.get("stalls", 0) + 1
-                        if way["stalls"] > 2:
+                        if way["stalls"] == 2:
+                            unstick(ai, who)
+                        if way["stalls"] > 3:
                             print(f"  {who}: {way['name']}쪽 {gap:.0f}칸을 못 좁힌다 "
                                   f"- 여기서 접는다 ({me['x']:.0f},{me['y']:.0f})")
                             way["found"] = "막힘"

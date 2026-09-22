@@ -105,7 +105,6 @@ end
 --------------------------------------------------------------------- walk_to
 
 local MAX_PATH_TRIES = 5      -- pathfinder attempts before giving up on a goal
-local STRAIGHT_LINE_LIMIT = 12 -- tiles worth walking blind while a path is pending
 
 -- 막히면 «옆으로» 비켜 간다.
 --
@@ -270,13 +269,16 @@ M.walk_to = {
         if st.tries < MAX_PATH_TRIES then return request_path(ctx) end
         st.path_failed = true
       else
-        -- Walking blind is fine for a few tiles of open ground and a bad idea
-        -- across a map; a straight line into a lake is how agents got stuck.
-        if dist(bot.position, st.goal) <= STRAIGHT_LINE_LIMIT then
-          steer(bot, st.goal)
-        else
-          halt(bot)
-        end
+        -- 길이 오기 전에는 걷지 않는다.
+        --
+        --   사용자: "이동할때 상자랑상자사이는 건너갈 수 없으니까 이동할 때
+        --            이동경로를 먼저 짜고나서 이동시키도록"
+        --
+        -- 열두 칸 안이면 «눈 감고» 곧장 걸었다. 열린 땅에선 빨랐지만 선반은
+        -- 상자 줄·팔 줄·상자 줄이 붙어 있어, 곧장 걷다 상자 사이에 몸이
+        -- 끼면 그 자리에서 길찾기를 불러도 출발점부터 막힌다. 길이 올 때까지
+        -- 서 있는 몇 틱이 낀 몸을 빼는 3초보다 싸다.
+        halt(bot)
         return "running"
       end
     end
@@ -316,19 +318,21 @@ M.walk_to = {
         return "running"
       end
 
-      -- 치울 수 없는 것이면 «옆으로» 비켜 간다. 길찾기를 다시 부르기
-      -- 전에 이것을 먼저 하는 이유는, 같은 자리에서 같은 목적지를 물으면
-      -- 같은 답이 오기 때문이다.
+      -- 길을 따라가다 막힌 것은 «길이 낡은» 것이다 - 그 길을 잰 뒤에 누가
+      -- 무언가를 세웠다. 먼저 지금 자리에서 길을 다시 잰다. 눈 감고 옆으로
+      -- 비켜서는 것(side_step)은 절벽 주머니와 상자 사이로 몸을 밀어 넣어
+      -- 두 번 정찰병을 가뒀다. 길찾기가 다섯 번 다 실패했을 때만 쓴다.
+      if st.tries < MAX_PATH_TRIES then
+        halt(bot)
+        st.path, st.path_index = nil, nil
+        return request_path(ctx)
+      end
+
       local aside = side_step(ctx, st.goal)
       if aside then
         st.detour, st.detour_tick, st.probe_tick = aside, ctx.tick, nil
         st.path, st.path_index = nil, nil
         return "running"
-      end
-
-      if st.tries < MAX_PATH_TRIES then
-        halt(bot)
-        return request_path(ctx)
       end
       halt(bot)
       ctx.task.error = string.format("stuck at %.1f,%.1f after %d routes",
