@@ -105,11 +105,15 @@ def measure(ai, spots, ore) -> list:
       for bit in string.gmatch("%s", "[^;]+") do
         local cx, cy, face = string.match(bit, "([^,]+),([^,]+),([^,]+)")
         cx, cy, face = tonumber(cx), tonumber(cy), tonumber(face)
-        local amount = 0
-        for _, r in pairs(s.find_entities_filtered{name = "%s",
+        local amount, foreign = 0, 0
+        for _, r in pairs(s.find_entities_filtered{type = "resource",
               area = {{cx - 2.5, cy - 2.5}, {cx + 2.5, cy + 2.5}}}) do
-          amount = amount + r.amount
+          if r.name == "%s" then amount = amount + r.amount
+          else foreign = foreign + 1 end
         end
+        -- 5x5 에 남의 광석이 한 칸이라도 있으면 그 줄이 섞인다. 돌밭은 철밭
+        -- 서쪽에 붙어 있고, 돌이 철 줄에 오르면 화로가 벽돌을 굽는다.
+        if foreign > 0 then amount = 0 end
         -- 몸이 앉을 3x3. 광석·사람·바닥에 떨어진 물건은 걸림돌이 아니다
         -- (걷어낸 상자에서 쏟아진 석탄이 자리 스물둘을 전부 막은 적이 있다).
         local old, other = {}, 0

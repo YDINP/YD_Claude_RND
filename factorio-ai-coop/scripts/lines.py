@@ -85,6 +85,21 @@ LOOK = """(function()
                .. math.floor(u.position.y) .. "|" .. u.direction .. "|"
                .. jx .. "," .. jy
   end
+  -- 분배기는 «두 칸짜리 벨트»다. 앞의 두 칸으로 갈라 보낸다. 몰랐을 때는
+  -- 필터 분배기 뒤의 선반 줄 80칸이 「들어오는 것이 없는 잔해」로 찍혔다.
+  for _, sp in pairs(s.find_entities_filtered{type = "splitter", force = f}) do
+    local d = sp.direction
+    local ax, ay = 0, 0
+    if d == 0 then ay = -1 elseif d == 8 then ay = 1 elseif d == 4 then ax = 1 else ax = -1 end
+    local wx, wy = math.abs(ay), math.abs(ax)      -- 옆으로 벌어진 축
+    for _, side in pairs{-0.5, 0.5} do
+      local tx = math.floor(sp.position.x + wx * side)
+      local ty = math.floor(sp.position.y + wy * side)
+      out[#out+1] = "S|" .. tx .. "|" .. ty .. "|" .. d .. "|"
+                 .. (tx + ax) .. "," .. (ty + ay) .. ";"
+                 .. (tx + ax - wx * side * 2) .. "," .. (ty + ay - wy * side * 2)
+    end
+  end
   for _, d in pairs(s.find_entities_filtered{type = "mining-drill",
         force = f}) do
     out[#out+1] = "D|" .. math.floor(d.drop_position.x) .. "|"
@@ -105,6 +120,7 @@ def look(ai):
     """벨트와 «그 벨트를 먹이고 비우는 것»을 한 번에 묻는다."""
     belt, drill, pick, put = {}, set(), set(), set()
     JUMP.clear()
+    FAN.clear()
     for row in _rows(ai.lua(LOOK)):
         bits = str(row).split("|")
         if len(bits) != 5:
@@ -120,6 +136,10 @@ def look(ai):
             jump = bits[4].split(",")
             if len(jump) == 2 and jump[0] not in ("", "nil"):
                 JUMP[(x, y)] = (int(jump[0]), int(jump[1]))
+        elif kind == "S":
+            belt[(x, y)] = (int(bits[3]), 0)
+            FAN[(x, y)] = [tuple(int(v) for v in pair.split(","))
+                           for pair in bits[4].split(";")]
         elif kind == "D":
             drill.add((x, y))
         elif kind == "P":
@@ -130,6 +150,7 @@ def look(ai):
 
 
 JUMP = {}                 # 지하벨트 입구 -> 짝 출구
+FAN = {}                  # 분배기 칸 -> 앞의 두 칸
 
 
 def ahead(spot, dir_):
@@ -379,12 +400,17 @@ def dead(belt, drill, put, segs):
     #
     # main() 에서 --prune 과 --every 를 같이 주면 거절한다.
     fed = set()
-    for src in (drill | put):
-        at = src
-        while at in belt and at not in fed:
-            fed.add(at)
-            at = ahead(at, belt[at][0])
-    idle_tiles = {p for p in belt if p not in fed and belt[p][1] == 0}
+    stack = list(drill | put)
+    while stack:
+        at = stack.pop()
+        if at not in belt or at in fed:
+            continue
+        fed.add(at)
+        stack.extend(FAN.get(at) or [ahead(at, belt[at][0])])
+    # 분배기 칸은 뺀다 - 한쪽 반칸만 «앞»에 놓이므로 다른 반칸은 늘 굶는
+    # 것으로 찍히고, 걷는 것도 벨트가 아니라 분배기라 다른 일이다.
+    idle_tiles = {p for p in belt
+                  if p not in fed and belt[p][1] == 0 and p not in FAN}
     # 걷기 좋게 이웃끼리 묶는다.
     out, seen = [], set()
     for start in sorted(idle_tiles):

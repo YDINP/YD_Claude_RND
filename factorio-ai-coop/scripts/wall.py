@@ -1,18 +1,26 @@
-"""Put stone in front of the guns that face outward.
+"""Ring each outward gun with stone.
 
     사용자: "외곽쪽 포탑은 돌벽으로 둘러쌓는게 방어력을 올리는거같은데
              추후에 진행해줘"
+    사용자(사진을 보고): "벽은 이렇게가아니라 포탑1개를 벽이 둘러쌓는식으로
+             방어해야함"
 
-벽은 포탑을 «둘러싸는» 것이 아니라 «앞에 서는» 것이다. 둘러싸면 스무 장이
-들고 길도 막힌다. 바깥을 보는 포탑의 바깥쪽에 한 줄이면 첫 이빨은 벽이
-받는다 (돌벽 350, 포탑 400).
+처음엔 바깥 변에 한 줄만 놓았다 - 스무 장 대신 일곱 장이고 길도 안 막힌다고
+생각해서다. 사용자가 사진을 보고 바로 잡았다. 바이터는 정면으로만 오지
+않는다: 벽 한 줄은 옆으로 돌아 들어오는 것을 막지 못하고, 그러면 포탑이
+먼저 맞는다.
 
-    큰 바이터는 사거리 2 - 벽에 붙은 포탑은 벽 너머로 물린다.
-    그래서 포탑 몸 - 빈 칸 하나 - 벽.       (docs/defence.md)
+    포탑 하나 = 벽 고리 하나.  포탑 몸(2x2) - 빈 칸 한 바퀴 - 벽 한 바퀴.
+    6x6 둘레 = 20장 = 벽돌 100 = 돌 200.
+
+빈 칸 한 바퀴는 큰 바이터(사거리 2)가 벽 너머로 포탑을 무는 것을 막는
+간격이다 (docs/defence.md). 고리에 «문»은 없다 - 탄약은 팔이 아니라 사람이
+넣는데, 사람은 벽을 못 넘는다. 그래서 고리 한 장은 비워 둔다: 포탑의
+«안쪽»(무리 중심 쪽) 변 가운데 한 칸. 적은 바깥에서 오고, 그 한 칸은
+바깥에서 가장 먼 칸이다.
 
 어느 포탑이 «외곽»인가: 포탑 무리의 한가운데에서 그 포탑 쪽으로 나가는
-방향에, 그 포탑보다 더 바깥에 선 포탑이 없으면 외곽이다. 그 방향을
-동서남북으로 눌러 벽을 놓을 변을 정한다.
+방향에, 그 포탑보다 더 바깥에 선 포탑이 없으면 외곽이다.
 
 벽돌은 손으로 못 만든다(화로 일이다). 벽돌이 모자라면 창고 옆 가마에
 돌과 석탄을 넣고, 구운 것을 꺼내 창고 돌 줄에 둔다. 같은 사람이 같은
@@ -40,10 +48,10 @@ BRICK = "stone-brick"
 DEPOT = (-55, 10)
 
 GAP = 1                   # 포탑 몸과 벽 사이 빈 칸
-SPAN = 3                  # 벽 줄은 포탑 중심에서 좌우로 이만큼 (= 7장)
+RING = 20                 # 6x6 둘레 한 바퀴의 장 수
 BRICKS_PER_WALL = 5
 CORRIDOR = 6              # 바깥쪽으로 이 폭 안에 더 먼 포탑이 있으면 외곽이 아니다
-PER_TRIP = 3              # 한 걸음에 두르는 포탑 수
+PER_TRIP = 2              # 한 걸음에 두르는 포탑 수 (계획 64단계)
 
 KILNS = ((-66.0, 20.0), (-66.0, 23.0))   # 벽돌 가마 자리 (2x2 중심)
 KILN_STONE = 50
@@ -97,13 +105,22 @@ def facing(t, centre, others) -> str | None:
     return "s" if uy > 0 else "n"
 
 
-def line_for(t, side) -> list:
-    """벽 일곱 장의 «타일» 좌표. 포탑 2x2 의 바깥 변에서 GAP 칸 띄운다."""
-    (nx, ny), (tx, ty) = SIDES[side]
-    cx, cy = t[0] + nx * (1 + GAP + 0.5), t[1] + ny * (1 + GAP + 0.5)
+def ring_for(t, side) -> list:
+    """벽 한 바퀴의 «타일» 좌표. side 는 밖을 보는 변 - 그 반대 변 가운데를 문으로 비운다."""
+    r = 1 + GAP + 1                       # 몸 반 + 빈 칸 + 벽 = 중심에서 벽까지
+    x0, y0 = math.floor(t[0]) - r, math.floor(t[1]) - r      # 왼위 모서리 타일
+    x1, y1 = x0 + 2 * r - 1, y0 + 2 * r - 1
+    (nx, ny), _ = SIDES[side]
+    # 문은 «안쪽 변»(밖을 보는 변의 반대)의 가운데 칸 하나.
+    if nx:
+        door = (math.floor(t[0]) - nx * r, math.floor(t[1]) - 1)
+    else:
+        door = (math.floor(t[0]) - 1, math.floor(t[1]) - ny * r)
     out = []
-    for k in range(-SPAN, SPAN + 1):
-        out.append((math.floor(cx + tx * k), math.floor(cy + ty * k)))
+    for x in range(x0, x1 + 1):
+        for y in range(y0, y1 + 1):
+            if (x in (x0, x1) or y in (y0, y1)) and (x, y) != door:
+                out.append((x, y))
     return out
 
 
@@ -140,7 +157,7 @@ def bare(ai) -> list:
         side = facing(t, (cx, cy), ts)
         if not side:
             continue
-        need = open_tiles(ai, line_for(t, side))
+        need = open_tiles(ai, ring_for(t, side))
         if len(need) >= 3:               # 한두 장은 나무·바위 자리다
             out.append((t, side, need))
     out.sort(key=lambda r: -math.hypot(r[0][0] - cx, r[0][1] - cy))
@@ -220,12 +237,12 @@ def build(ai, who, jobs, have) -> None:
     plan.append(("craft", {"recipe": WALL, "count": walls, "wait": True}))
     for t, side, need in jobs:
         (nx, ny), _ = SIDES[side]
-        # 벽 «안쪽»(포탑 쪽)에 서서 놓는다. 밖에 섰다가 벽에 갇히지 않게.
-        plan.append(("walk_to", {"x": t[0] - nx * 0.5, "y": t[1] - ny * 0.5 + 2.5}))
+        # 고리 «밖», 문이 나는 안쪽 변 앞에 선다. 안에 섰다가 갇히지 않게.
+        plan.append(("walk_to", {"x": t[0] - nx * 5, "y": t[1] - ny * 5}))
         for x, y in need:
             plan.append(("build", {"name": WALL, "x": x + 0.5, "y": y + 0.5}))
     submit(ai, who, plan, strict=False)
-    print(f"{who}: 외곽 포탑 {len(jobs)}대 앞에 돌벽 {walls}장 "
+    print(f"{who}: 외곽 포탑 {len(jobs)}대를 돌벽 {walls}장으로 두른다 "
           + " ".join(f"({t[0]:.0f},{t[1]:.0f}){s}" for t, s, _n in jobs))
 
 
