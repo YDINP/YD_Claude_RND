@@ -55,6 +55,16 @@ LINES = {
     "coal-2": ("coal", [((-67, -16), (-67, -10), 8), ((-78, -16), (-68, -16), 4)]),
     "iron-2": ("iron-ore", [((-79, 68), (-79, 56), 0)]),
     "iron-3": ("iron-ore", [((-86, 68), (-86, 56), 0)]),
+    # copper-1: x=-41 기둥이 y=58 에서 옛 창고 정거장의 닫힌 고리로 꺾여
+    #           들어가 있었다 - 채굴기 일곱 대의 광석이 영원히 돌았다.
+    #           북쪽으로 곧장 y=44 까지 올려 구리 화로 줄(y=43) 남쪽 레인에
+    #           옆으로 붙인다.
+    # copper-2: y=96 줄 (부자 줄 y 93..95 의 남쪽), 서쪽으로 흘러 x=-41
+    #           기둥에 옆으로 붙는다.
+    "copper-1": ("copper-ore", [((-41, 58), (-41, 44), 0)]),
+    #           줄은 기둥 «앞 칸»(x=-40)에서 끝난다 - 기둥 칸까지 깔면 기둥을
+    #           서향으로 갈아엎어 끊는다 (한 번 그랬다).
+    "copper-2": ("copper-ore", [((-29, 96), (-40, 96), 12)]),
 }
 
 
@@ -158,8 +168,9 @@ def tiles_of(start, end) -> list:
     return [(x, y0) for x in range(x0, x1 + step, step)]
 
 
-def laid(ai, tiles) -> set:
-    """이미 벨트가 깔린 타일."""
+def laid(ai, tiles, face=None) -> set:
+    """이미 벨트가 깔린 타일. face 를 주면 그 방향으로 깔린 것만 센다 -
+    모서리를 다시 꺾는 줄은 «있는 벨트»가 아니라 «그 방향의 벨트»가 있어야 한다."""
     if not tiles:
         return set()
     packed = ";".join(f"{x},{y}" for x, y in tiles)
@@ -169,13 +180,14 @@ def laid(ai, tiles) -> set:
       for bit in string.gmatch("%s", "[^;]+") do
         local x, y = string.match(bit, "(-?%%d+),(-?%%d+)")
         x, y = tonumber(x), tonumber(y)
-        if s.count_entities_filtered{type = "transport-belt", force = f,
-              area = {{x, y}, {x + 1, y + 1}}} > 0 then
+        local b = s.find_entities_filtered{type = "transport-belt", force = f,
+              area = {{x, y}, {x + 1, y + 1}}}[1]
+        if b and (%s < 0 or b.direction == %s) then
           out[#out+1] = x .. "|" .. y
         end
       end
       return out
-    end)()""" % packed)
+    end)()""" % (packed, -1 if face is None else face, -1 if face is None else face))
     return {tuple(int(v) for v in str(r).split("|")) for r in _rows(reply)}
 
 
@@ -184,7 +196,7 @@ def lay(ai, who, name) -> bool:
     todo = []
     for start, end, face in runs:
         tiles = tiles_of(start, end)
-        have = laid(ai, tiles)
+        have = laid(ai, tiles, face)
         todo.extend((x, y, face) for x, y in tiles if (x, y) not in have)
     if not todo:
         print(f"  {name}: 다 깔려 있다")
@@ -204,9 +216,13 @@ def lay(ai, who, name) -> bool:
             plan.append(("take", {"name": "iron-plate", "x": fe[0], "y": fe[1],
                                   "count": short * 2}))
         plan.append(("craft", {"recipe": BELT, "count": (short + 1) // 2, "wait": True}))
+    wrong = laid(ai, [(x, y) for x, y, _f in todo])       # 있는데 방향이 다른 것
     for n, (x, y, face) in enumerate(todo):
         if n % 8 == 0:
             plan.append(("walk_to", {"x": x + 2.5, "y": y + 0.5}))
+        if (x, y) in wrong:
+            plan.append(("demolish", {"x": x + 0.5, "y": y + 0.5, "name": BELT,
+                                      "search_radius": 0.4}))
         plan.append(("build", {"name": BELT, "x": x + 0.5, "y": y + 0.5,
                                "direction": face}))
     submit(ai, who, plan, strict=False)

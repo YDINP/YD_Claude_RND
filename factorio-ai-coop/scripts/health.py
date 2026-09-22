@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import knots as knots_mod                             # noqa: E402
 import sortrows as sortrows_mod                       # noqa: E402
 import wire as wire_mod                               # noqa: E402
+import reserves as reserves_mod                       # noqa: E402
 
 REPORT = """(function()
   local s = game.surfaces[1]
@@ -294,6 +295,13 @@ def once(ai: AIBridge) -> None:
         if main_net >= 0 and len(nets) > 1:
             warn.append(f"전력망이 {len(nets)}토막이다 - scripts/wire.py")
     except (RconError, KeyError, TypeError, ValueError):
+        pass
+
+    # 고갈은 갑자기 온다. 채굴기 아래 광석 / 시간당 채굴량이 열두 시간
+    # 아래로 내려오면 여기서 먼저 말한다 (reserves.py).
+    try:
+        warn.extend(reserves_mod.report(ai))
+    except (RconError, KeyError, TypeError, ValueError, ZeroDivisionError):
         pass
 
     stuck = unplaced(ai)
