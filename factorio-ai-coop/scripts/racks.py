@@ -32,6 +32,11 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 from client import AIBridge, RconError  # noqa: E402
 from orders import submit               # noqa: E402
 
+sys.path.insert(0, HERE)
+import shelf as shelf_mod                # noqa: E402
+
+DEPOT = (-55, 10)
+
 BOX = "iron-chest"
 ARM = "burner-inserter"
 ARM_FUEL = 4
@@ -103,6 +108,16 @@ def grow(ai, who, rack, seats):
             plan.append(("craft", {"recipe": item, "count": short,
                                    "wait": item == ARM}))
     fuel = int(bag.get("coal", 0)) >= ARM_FUEL * len(seats)
+    if not fuel:
+        # 「팔 연료는 보급 당번 몫」이라고 미뤘더니 아무 당번도 선반 팔은
+        # 안 봤다. 새 여섯 자리가 연료 없이 서 있는 동안 철판 줄이 찼다.
+        # 짓는 사람이 석탄 선반에서 챙겨 간다.
+        coal_at = shelf_mod.shelves(ai, DEPOT, span=36).get("coal")
+        if coal_at:
+            plan.append(("walk_to", {"x": coal_at[0], "y": coal_at[1] + 1.5}))
+            plan.append(("take", {"name": "coal", "x": coal_at[0], "y": coal_at[1],
+                                  "count": ARM_FUEL * len(seats)}))
+            fuel = True
     away = 2 if box_y > arm_y else -2       # 상자 «바깥쪽»에 서서 짓는다
     for x in seats:
         plan.append(("walk_to", {"x": x + 0.5, "y": box_y + 0.5 + away}))
@@ -114,7 +129,7 @@ def grow(ai, who, rack, seats):
                                     "y": arm_y + 0.5, "count": ARM_FUEL}))
     submit(ai, who, plan, strict=False)
     print(f"{who}: {name} 선반 {len(seats)}자리 더 (x {seats[0]}~{seats[-1]})"
-          + ("" if fuel else " - 팔 연료는 보급 당번 몫"))
+          + ("" if fuel else " - 석탄 선반이 비어 팔 연료를 못 챙겼다"))
     return True
 
 
