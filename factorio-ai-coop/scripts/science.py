@@ -30,8 +30,11 @@ import assembly                          # noqa: E402
 
 SCIENCE = "automation-science-pack"
 # 팩마다 «어느 조립 모듈이 만드나». 연구가 요구하는 팩만 나른다.
-PACKS = {"automation-science-pack": assembly.MODULE["out"],
-         "logistic-science-pack": assembly.GREEN["out"]}
+# 연구소 줄(labline.py)이 선 뒤로 팩은 벨트로 간다. 이 고리는 «벨트가 못
+# 미쳤을 때»의 예비다 - 줄 끝의 넘침 상자에서 집어 간다.
+import labline                           # noqa: E402
+PACKS = {"automation-science-pack": (labline.OVERFLOW,),
+         "logistic-science-pack": (labline.OVERFLOW,)}
 LOW = 10                  # 연구소 하나에 이보다 적으면 보낸다
 BATCH = 60                # 연구소 하나당 한 번에 넣는 수
 DEPOT = (-55, 10)

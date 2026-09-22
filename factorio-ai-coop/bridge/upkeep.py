@@ -40,10 +40,33 @@ URGENCY = {"ammo-turret": 0, "inserter": 1, "boiler": 2,
 _LOW = """(function()
   local s = game.surfaces[1]
   local out = {}
+  -- 팔이 넣어 주는 기계는 사람이 안 채운다.
+  --
+  --   사용자: "석탄이랑 자원들 전부 자동화됬으니까 직접 채우러가는 로직은
+  --            에이전트에서 비활성화 시켜두면 되겠다. 이건 직접 비활성화가
+  --            아니라 해당 조건이 충족되는(자원 투입 자동화) 경우에만"
+  --
+  -- «자동화됐다»의 잣대는 기계 하나하나다: 그 기계 안으로 떨구는 팔이 있으면
+  -- 그 기계는 벨트 몫이고, 없으면 여전히 사람 몫이다. 화로 줄의 원료 팔은
+  -- 광석과 석탄을 같은 벨트에서 집으므로 팔 하나가 둘 다 자동이다.
+  local function fed(e)
+    local bb = e.bounding_box
+    for _, i in pairs(s.find_entities_filtered {
+      type = "inserter", force = e.force, position = e.position, radius = 3,
+    }) do
+      local d = i.drop_position
+      if d.x >= bb.left_top.x and d.x <= bb.right_bottom.x
+         and d.y >= bb.left_top.y and d.y <= bb.right_bottom.y then
+        return true
+      end
+    end
+    return false
+  end
   for _, e in pairs(s.find_entities_filtered {
     type = { "inserter", "mining-drill", "furnace", "boiler" },
     force = game.forces.player,
   }) do
+    if fed(e) then goto continue end
     local tank = e.get_fuel_inventory()
     if tank then
       local held = tank.get_item_count("%s")
@@ -75,6 +98,7 @@ _LOW = """(function()
           want or "")
       end
     end
+    ::continue::
   end
   for _, t in pairs(s.find_entities_filtered {
     type = "ammo-turret", force = game.forces.player,

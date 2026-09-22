@@ -159,10 +159,30 @@ script.on_event(defines.events.on_gui_click, function(event)
   end
 end)
 
+-- A character with no player attached reveals nothing: charting follows
+-- players, not bodies. So the crew walked 280 tiles north and the map stayed
+-- black for the human ("여전히 캐릭터가 탐색한 안개지형이 나한테 공유가안됨").
+-- Chart what a walking player would see - a few chunks around where the body
+-- actually stands - and nothing more. force.chart over the whole map stays
+-- forbidden: fog lifts by walking (docs/playbook.md).
+local WALK_SIGHT = 64   -- tiles each way = 2 chunks, about one map screen
+
+local function chart_underfoot(a)
+  local b = body(a)
+  if not b then return end
+  local p = b.position
+  b.force.chart(b.surface, {
+    { p.x - WALK_SIGHT, p.y - WALK_SIGHT }, { p.x + WALK_SIGHT, p.y + WALK_SIGHT },
+  })
+end
+
 script.on_nth_tick(MARKER_INTERVAL, function()
   for _, name in ipairs(storage.order) do
     local a = storage.agents[name]
-    if a then pcall(refresh_marker, a) end
+    if a then
+      pcall(refresh_marker, a)
+      pcall(chart_underfoot, a)
+    end
   end
   for _, player in pairs(game.connected_players) do
     local frame = player.gui.left[PANEL_NAME]
