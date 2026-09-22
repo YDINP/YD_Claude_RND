@@ -542,6 +542,8 @@ M.build = {
     local built = ctx.surface.create_entity {
       name = p.name, position = st.spot, direction = st.direction,
       force = bot.force, raise_built = true,
+      -- 지하벨트는 입구/출구가 있다 (p.type = "input" | "output").
+      type = p.type,
     }
     if not built then
       ctx.task.error = "create_entity returned nil"
