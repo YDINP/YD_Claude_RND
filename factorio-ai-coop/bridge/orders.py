@@ -146,12 +146,42 @@ def footing(ai, steps):
     packed = ";".join(f"{x},{y}" for _i, (x, y) in spots)
     reply = ai.lua("""(function()
       local s = game.surfaces[1]
+      -- «설 수 있다»만으로는 모자란다. 팔 줄은 팔의 충돌 상자가 작아 설 수는
+      -- 있는데, 양옆이 상자 줄이면 거기서 못 나온다 (사진: foxtrot 과 bravo
+      -- 가 상자 사이 팔 줄에 서서 walk_to 를 되풀이). 큰 것(상자·화로·
+      -- 조립기·연구소)이 «바로 옆»에 없는 칸을 고른다.
+      local BIG = { "container", "furnace", "assembling-machine", "lab", "boiler",
+                    "generator", "electric-pole", "mining-drill", "cliff" }
+      local function roomy(px, py)
+        if not s.can_place_entity{name = "character", position = {px, py},
+                                  build_check_type = defines.build_check_type.manual} then
+          return false
+        end
+        -- 벨트 위도 뺀다. 설 수는 있지만 서 있는 사람을 실어 나른다.
+        if s.count_entities_filtered{type = { "transport-belt", "splitter", "underground-belt" },
+                 area = {{px - 0.4, py - 0.4}, {px + 0.4, py + 0.4}}} > 0 then
+          return false
+        end
+        return s.count_entities_filtered{type = BIG,
+                 area = {{px - 1.2, py - 1.2}, {px + 1.2, py + 1.2}}} == 0
+      end
       local out = {}
       for bit in string.gmatch("%s", "[^;]+") do
         local x, y = string.match(bit, "([^,]+),([^,]+)")
         x, y = tonumber(x), tonumber(y)
-        local spot = s.find_non_colliding_position("character", {x, y}, %d, 0.5)
-        if spot then out[#out+1] = spot.x .. "|" .. spot.y
+        local best
+        for r = 0, %d do
+          for dx = -r, r do
+            for dy = -r, r do
+              if (math.abs(dx) == r or math.abs(dy) == r) and not best then
+                local px, py = math.floor(x + dx) + 0.5, math.floor(y + dy) + 0.5
+                if roomy(px, py) then best = { px, py } end
+              end
+            end
+          end
+          if best then break end
+        end
+        if best then out[#out+1] = best[1] .. "|" .. best[2]
         else out[#out+1] = x .. "|" .. y end
       end
       return out
