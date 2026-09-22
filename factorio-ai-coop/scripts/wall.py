@@ -51,7 +51,7 @@ GAP = 1                   # 포탑 몸과 벽 사이 빈 칸
 RING = 20                 # 6x6 둘레 한 바퀴의 장 수
 BRICKS_PER_WALL = 5
 CORRIDOR = 6              # 바깥쪽으로 이 폭 안에 더 먼 포탑이 있으면 외곽이 아니다
-PER_TRIP = 2              # 한 걸음에 두르는 포탑 수 (계획 64단계)
+PER_TRIP = 1              # 한 걸음에 두르는 포탑 수 (계획 64단계 - 벌목 걸음까지)
 
 KILNS = ((-66.0, 20.0), (-66.0, 23.0))   # 벽돌 가마 자리 (2x2 중심)
 KILN_STONE = 50
@@ -124,9 +124,13 @@ def ring_for(t, side) -> list:
     return out
 
 
-def open_tiles(ai, tiles) -> list:
+def open_tiles(ai, tiles) -> tuple:
+    """(놓을 수 있는 타일, 나무가 선 타일). 나무는 베면 놓을 수 있다.
+
+        사용자: "돌벽세우는데 나무가 가로막고있으면 벌목해"
+    """
     if not tiles:
-        return []
+        return [], []
     packed = ";".join(f"{x},{y}" for x, y in tiles)
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
@@ -134,15 +138,23 @@ def open_tiles(ai, tiles) -> list:
       for bit in string.gmatch("%s", "[^;]+") do
         local x, y = string.match(bit, "(-?%%d+),(-?%%d+)")
         x, y = tonumber(x), tonumber(y)
-        if s.count_entities_filtered{name = "%s", area = {{x, y}, {x + 1, y + 1}}} == 0
-           and s.can_place_entity{name = "%s", position = {x + 0.5, y + 0.5}, force = f,
-                                  build_check_type = defines.build_check_type.manual} then
-          out[#out+1] = x .. "|" .. y
+        if s.count_entities_filtered{name = "%s", area = {{x, y}, {x + 1, y + 1}}} == 0 then
+          if s.can_place_entity{name = "%s", position = {x + 0.5, y + 0.5}, force = f,
+                                build_check_type = defines.build_check_type.manual} then
+            out[#out+1] = x .. "|" .. y .. "|free"
+          elseif s.count_entities_filtered{type = "tree",
+                   area = {{x, y}, {x + 1, y + 1}}} > 0 then
+            out[#out+1] = x .. "|" .. y .. "|tree"
+          end
         end
       end
       return out
     end)()""" % (packed, WALL, WALL))
-    return [tuple(int(v) for v in str(r).split("|")) for r in _rows(reply)]
+    free, trees = [], []
+    for r in _rows(reply):
+        x, y, what = str(r).split("|")
+        (free if what == "free" else trees).append((int(x), int(y)))
+    return free, trees
 
 
 def bare(ai) -> list:
@@ -157,9 +169,9 @@ def bare(ai) -> list:
         side = facing(t, (cx, cy), ts)
         if not side:
             continue
-        need = open_tiles(ai, ring_for(t, side))
-        if len(need) >= 3:               # 한두 장은 나무·바위 자리다
-            out.append((t, side, need))
+        need, trees = open_tiles(ai, ring_for(t, side))
+        if len(need) + len(trees) >= 3:  # 한두 장은 바위 자리다
+            out.append((t, side, need + trees))
     out.sort(key=lambda r: -math.hypot(r[0][0] - cx, r[0][1] - cy))
     return out
 
@@ -239,6 +251,12 @@ def build(ai, who, jobs, have) -> None:
         (nx, ny), _ = SIDES[side]
         # 고리 «밖», 문이 나는 안쪽 변 앞에 선다. 안에 섰다가 갇히지 않게.
         plan.append(("walk_to", {"x": t[0] - nx * 5, "y": t[1] - ny * 5}))
+        _free, trees = open_tiles(ai, need)
+        for x, y in trees:                # 나무가 선 칸은 먼저 벤다
+            plan.append(("walk_to", {"x": x + 1.5, "y": y + 0.5}))
+            plan.append(("chop", {"x": x + 0.5, "y": y + 0.5, "count": 1}))
+        if trees:
+            plan.append(("walk_to", {"x": t[0] - nx * 5, "y": t[1] - ny * 5}))
         for x, y in need:
             plan.append(("build", {"name": WALL, "x": x + 0.5, "y": y + 0.5}))
     submit(ai, who, plan, strict=False)
