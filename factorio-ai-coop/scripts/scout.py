@@ -33,6 +33,8 @@ from orders import submit               # noqa: E402
 LEG = 40
 MAX_REACH = 900           # 이보다 멀리 간 둥지는 당장 우리 일이 아니다 (시작 안전지대 400% 맵이라 넓게)
 LOOK = 90                 # 발밑에서 이만큼 둘러본다
+FLEE_AT = 70              # 걷는 «도중» 이 안에 적이 보이면 돌아선다
+FLEE_BACK = 120           # 집 쪽으로 이만큼 물러난다
 
 # 여덟 방위. 사람이 적으면 «서로 반대쪽»부터 간다 - 같은 쪽을 둘이 보는
 # 것은 정찰이 아니라 동행이다.
@@ -139,6 +141,8 @@ def main() -> int:
     ap.add_argument("--dirs", default=None,
                     help="갈 방위. 예: 남,북,남동. 안 주면 동.서부터")
     ap.add_argument("--every", type=float, default=15)
+    ap.add_argument("--skip", type=int, default=0,
+                    help="이미 간 다리 수. 밖에 나가 있는 정찰병을 집까지 되돌리지 않는다")
     args = ap.parse_args()
 
     crew = args.who or ["charlie"]
@@ -164,7 +168,7 @@ def main() -> int:
     ways = {}
     for i, who in enumerate(crew):
         name, dx, dy = wheel[i % len(wheel)]
-        ways[who] = {"name": name, "dx": dx, "dy": dy, "leg": 0, "found": None}
+        ways[who] = {"name": name, "dx": dx, "dy": dy, "leg": args.skip, "found": None}
         print(f"{who}: {name}쪽 정찰")
 
     while any(w["found"] is None and w["leg"] < args.legs for w in ways.values()):
@@ -177,6 +181,26 @@ def main() -> int:
                 if not me or not me["alive"]:
                     print(f"  {who} 가 돌아오지 못했다 ({way['name']}쪽)")
                     way["found"] = "죽음"
+                    continue
+
+                # 걷는 «도중»에도 본다. 다리 끝에서만 보다가 hotel 이 둥지를
+                # 지나쳐 걸어 들어가 죽었다 (-40,-746 둥지, 시체 -40,-847).
+                # 캐릭터는 스스로 싸우지도 도망치지도 않는다 - 이 고리가
+                # 대신 돌아서게 해야 한다.
+                seen = near(ai, (me["x"], me["y"]), FLEE_AT)
+                if int(seen["nests"]) or int(seen["worms"]) or int(seen["units"]):
+                    try:
+                        ai.agent(who).cancel()
+                    except RconError:
+                        pass
+                    dx, dy = hx - me["x"], hy - me["y"]
+                    span = max(1.0, math.hypot(dx, dy))
+                    back = (me["x"] + dx / span * FLEE_BACK, me["y"] + dy / span * FLEE_BACK)
+                    submit(ai, who, [("walk_to", {"x": back[0], "y": back[1]})], strict=False)
+                    way["found"] = (int(me["x"]), int(me["y"]))
+                    print(f"{who}: {way['name']}쪽 ({me['x']:.0f},{me['y']:.0f}) 에서 적을 봤다 - "
+                          f"둥지 {seen['nests']} 웜 {seen['worms']} 적 {seen['units']}. "
+                          f"집 쪽으로 {FLEE_BACK}칸 물러난다")
                     continue
                 if me["busy"]:
                     continue
@@ -220,7 +244,7 @@ def main() -> int:
             print("  게임이 대답하지 않는다:", exc)
         except Exception as exc:
             print("  건너뜀:", type(exc).__name__, exc)
-        time.sleep(args.every)
+        time.sleep(min(args.every, 6))     # 도중 살피기는 자주
 
     print()
     found = sightings(ai, (hx, hy), MAX_REACH)
