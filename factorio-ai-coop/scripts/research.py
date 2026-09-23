@@ -27,6 +27,7 @@ PACKS = ("automation-science-pack", "logistic-science-pack")
 MILITARY = "military-science-pack"     # 군용 팩은 «만들고 있을 때만» 센다 (military.py 의 별)
 # 앞쪽부터. 여기 없는 것은 뒤에 게임 순서대로 붙는다.
 DOCTRINE = (
+    "oil-processing",          # 석유 단계의 문. 원유 5공이 (255,250) 에 있다
     "military-science-pack",
     "physical-projectile-damage-3", "weapon-shooting-speed-3",   # 대형 웜(물리 -10)을 총알로 잡으려면
     "physical-projectile-damage-4", "weapon-shooting-speed-4",
