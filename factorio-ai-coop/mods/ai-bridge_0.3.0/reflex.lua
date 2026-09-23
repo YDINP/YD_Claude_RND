@@ -149,23 +149,50 @@ function Reflex.on_damaged(event)
       e.position.x, e.position.y, goal and string.format(" to %.0f,%.0f", goal.x, goal.y) or ""))
 end
 
--- 튀는 동안 총이 있으면 쫓아오는 것을 쏜다. 걸으면서도 쏜다.
-local SHOOT_RANGE = 17
+-- 총과 탄이 있으면 «늘» 쏜다 - 도망치면서도, 일하면서도.
+--
+--     사용자: "근처에 적이있으면 캐릭터가 총이랑 총알보유중이면 도망치면서 공격해"
+--
+-- 전에는 맞은 뒤 COOLDOWN(6초) 동안만 쐈다. 쫓아오는 바이터는 6초 뒤에도 쫓아온다.
+-- 이제 SHOOT_RANGE 안에 적이 있으면 무엇을 하든 쏜다 (걷기·짓기는 그대로 한다 -
+-- 사격은 발을 안 묶는다). 겨냥은 «움직이는 것» 먼저: 바이터·스피터가 사람을 죽인다.
+-- 웜·둥지는 유닛이 없을 때만. attack 태스크 중에는 그 태스크가 겨냥한다.
+local SHOOT_RANGE = 17          -- 기관단총 사거리 18 안쪽
+local SCAN = 10                 -- 이 틱마다 적을 다시 찾는다. 사이 틱은 같은 과녁을 쏜다
+
+local function pick_target(b)
+  local s = b.surface
+  local best, bd = nil, SHOOT_RANGE * SHOOT_RANGE + 1
+  local units = s.find_entities_filtered{ type = "unit", force = "enemy", position = b.position, radius = SHOOT_RANGE }
+  for _, u in pairs(units) do
+    local dx, dy = u.position.x - b.position.x, u.position.y - b.position.y
+    local d = dx * dx + dy * dy
+    if d < bd then best, bd = u, d end
+  end
+  if best then return best end
+  return s.find_nearest_enemy{ position = b.position, max_distance = SHOOT_RANGE, force = b.force }
+end
 
 function Reflex.tick()
   local tick = game.tick
   for _, name in ipairs(storage.order) do
     local a = storage.agents[name]
     local b = a and a.char
-    if b and b.valid and a.flee and a.flee.until_tick > tick and Tasks.armed(b) then
-      local foe = b.surface.find_nearest_enemy{ position = b.position, max_distance = SHOOT_RANGE, force = b.force }
-      if foe then
-        b.shooting_state = { state = defines.shooting.shooting_selected, position = foe.position }
-      else
-        Tasks.cease(b)
+    local busy_attacking = a and a.current and a.current.type == "attack"
+    if b and b.valid and not busy_attacking then
+      a.aim = a.aim or {}
+      if tick % SCAN == 0 then
+        a.aim.target = Tasks.armed(b) and pick_target(b) or nil
       end
-    elseif b and b.valid and a.flee and a.flee.until_tick == tick then
-      Tasks.cease(b)
+      local t = a.aim.target
+      if t and t.valid then
+        b.shooting_state = { state = defines.shooting.shooting_selected, position = t.position }
+        a.aim.on = true
+      elseif a.aim.on then
+        Tasks.cease(b)
+        a.aim.on = false
+        a.aim.target = nil
+      end
     end
   end
 end

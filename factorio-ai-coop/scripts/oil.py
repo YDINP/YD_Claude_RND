@@ -365,6 +365,11 @@ def build_stage(ai, crew, steps, label, rounds=8):
                     plan.append(("walk_to", {"x": p["x"] + 1, "y": p["y"] + 2}))
                     last = (p["x"], p["y"])
                 plan.append((k, p))
+            # 고리가 넣어 둔 일로 대기열이 차 있으면 «64 넘침». 공사가 먼저다.
+            try:
+                ai.agent(who).cancel()
+            except RconError:
+                pass
             submit(ai, who, plan[:60], strict=False)
             print(f"{who}: {label} {n_round + 1}순번 ({len(part)}걸음)")
         wait_idle(ai, crew, 900)

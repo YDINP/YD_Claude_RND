@@ -28,8 +28,8 @@ import shelf as shelf_mod                # noqa: E402
 DEPOT = (-55, 10)
 TURRET = "gun-turret"
 KEEP = 50
-# 밀기 열이 선 네모 (x1, y1, x2, y2) - 동쪽 무리, 북쪽 무리(남쪽 반)
-BOXES = ((95, 65, 135, 100), (140, -40, 172, -12))
+# 밀기 열이 선 네모 (x1, y1, x2, y2) - 동쪽 무리, 북쪽 무리(남쪽 반), 모퉁이 무리, 회랑 무리
+BOXES = ((95, 65, 135, 100), (140, -40, 172, -12), (252, -15, 272, 8), (175, 118, 215, 150))
 PER = 18                 # 한 사람이 한 번에 걷는 수 (걸음 + 걷기 + 귀환 = 60 안)
 
 
@@ -82,7 +82,7 @@ def main() -> int:
     if not (crew and spots):
         return 0
     # 가까운 것끼리 묶는다: x 로 정렬해 사람마다 이어진 한 토막
-    spots.sort(key=lambda p: (p[0] > 137, p[0], p[1]))
+    spots.sort(key=lambda p: (p[1] < 60, p[0], p[1]))
     per = min(PER, (len(spots) + len(crew) - 1) // len(crew))
     for i, who in enumerate(crew):
         part = spots[i * per:(i + 1) * per]
