@@ -12,7 +12,7 @@ hotel 을, guard 가 bravo 를 데려간다. 그러니 «비었나»가 아니�
     ... orders.submit 은 AI_OWNER 환경변수가 owner 와 같을 때만 보낸다 ...
     detached.release(["hotel", "bravo"])
 
-파일 하나 (state/detached.json). 기한이 있어 밀기 스크립트가 죽어도 풀린다.
+사람마다 파일 하나 (state/detached/<이름>.json). 기한이 있어 밀기 스크립트가 죽어도 풀린다.
 """
 from __future__ import annotations
 
@@ -21,45 +21,46 @@ import os
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PATH = os.path.join(HERE, "..", "state", "detached.json")
+DIR = os.path.join(HERE, "..", "state", "detached")
 ENV = "AI_OWNER"
 
+# 사람마다 파일 하나. 한 파일에 다 쓰면 두 프로세스가 동시에 «읽고-고치고-쓰기»를 하다
+# 한쪽 등록이 사라진다 (21회차: delta 의 등록이 날아가 다른 고리의 지시가 덮어씀).
 
-def _load() -> dict:
+
+def _path(name: str) -> str:
+    return os.path.join(DIR, f"{name}.json")
+
+
+def _read(name: str):
     try:
-        with open(PATH, encoding="utf-8") as fh:
-            data = json.load(fh)
+        with open(_path(name), encoding="utf-8") as fh:
+            v = json.load(fh)
     except (OSError, ValueError):
-        return {}
-    now = time.time()
-    return {k: v for k, v in data.items() if float(v.get("until", 0)) > now}
-
-
-def _save(data: dict) -> None:
-    os.makedirs(os.path.dirname(PATH), exist_ok=True)
-    tmp = PATH + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(data, fh)
-    os.replace(tmp, PATH)
+        return None
+    return v if float(v.get("until", 0)) > time.time() else None
 
 
 def mark(names, owner: str, minutes: float = 40) -> None:
-    data = _load()
+    os.makedirs(DIR, exist_ok=True)
     for n in names:
-        data[n] = {"owner": owner, "until": time.time() + minutes * 60}
-    _save(data)
+        tmp = _path(n) + f".{os.getpid()}.tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump({"owner": owner, "until": time.time() + minutes * 60}, fh)
+        os.replace(tmp, _path(n))
     os.environ[ENV] = owner
 
 
 def release(names) -> None:
-    data = _load()
     for n in names:
-        data.pop(n, None)
-    _save(data)
+        try:
+            os.remove(_path(n))
+        except OSError:
+            pass
 
 
 def owner(name: str) -> str | None:
-    v = _load().get(name)
+    v = _read(name)
     return v["owner"] if v else None
 
 
@@ -70,4 +71,11 @@ def mine(name: str) -> bool:
 
 
 def active() -> dict:
-    return {k: v["owner"] for k, v in _load().items()}
+    out = {}
+    if os.path.isdir(DIR):
+        for f in os.listdir(DIR):
+            if f.endswith(".json"):
+                v = _read(f[:-5])
+                if v:
+                    out[f[:-5]] = v["owner"]
+    return out

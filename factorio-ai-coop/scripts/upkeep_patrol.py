@@ -24,9 +24,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from client import AIBridge, RconError  # noqa: E402
 from upkeep import plan_round, running_low, stock  # noqa: E402
+import detached                                     # noqa: E402
 
 
 def one_round(ai: AIBridge, names: list[str]) -> None:
+    # 출정·시공에 딸린 사람은 건드리지 않는다 (detached.py). 이 루프만 submit_plan 을
+    # 바로 불러 그 표를 안 봤다 - milbelt 시공 중 delta 의 계획이 급유 순번으로 덮였다.
+    names = [n for n in names if detached.mine(n)]
+    if not names:
+        return
     low = running_low(ai)
     shelves = stock(ai)
     if not low:
