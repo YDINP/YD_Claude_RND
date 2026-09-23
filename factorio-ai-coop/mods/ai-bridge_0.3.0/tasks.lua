@@ -1092,4 +1092,97 @@ M.sweep = {
   end,
 }
 
+---------------------------------------------------------------------- attack
+
+-- 사람은 스스로 쏘지 않는다. 총과 탄이 있어도 shooting_state 를 «누가» 줘야
+-- 한다 - 플레이어가 없는 캐릭터는 아무도 안 준다. 그래서 alpha·hotel 은 총이
+-- 있었어도 맞기만 했을 것이다.
+--
+--     사용자: "직접 무기랑 공격수단을 동원해서 기지를 파괴할 계획도 세워줘."
+--
+-- attack: 기준점 radius 안의 가장 가까운 적을 향해 쏜다. 사거리 밖이면 다가간다.
+-- 적이 없으면 done, 체력이 HURT 아래면 failed 로 끝내고 반사에 맡긴다(포탑 곁으로).
+-- 캡슐(수류탄·디펜더)은 플레이어 API 라 못 던진다 - 총만.
+
+local ATTACK_RANGE = 17         -- 기관단총 18 에서 한 칸 안
+local ATTACK_LOOK = 25
+local HURT = 100                -- 체력 250 의 40%
+
+local function armed(bot)
+  local guns = bot.get_inventory(defines.inventory.character_guns)
+  local ammo = bot.get_inventory(defines.inventory.character_ammo)
+  return guns ~= nil and ammo ~= nil and not guns.is_empty() and not ammo.is_empty()
+end
+
+local function nearest_enemy(ctx, origin, radius)
+  local best, best_d = nil, math.huge
+  local found = ctx.surface.find_entities_filtered {
+    position = origin, radius = radius, force = "enemy",
+    type = { "unit", "unit-spawner", "turret" },
+  }
+  for _, e in pairs(found) do
+    if e.valid then
+      local d = dist(origin, e.position)
+      if d < best_d then best, best_d = e, d end
+    end
+  end
+  return best, best_d
+end
+
+local function cease(bot)
+  bot.shooting_state = { state = defines.shooting.not_shooting, position = bot.position }
+end
+
+M.armed = armed
+M.cease = cease
+
+M.attack = {
+  start = function(ctx)
+    local st, p = ctx.task.state, ctx.task.params
+    if not armed(ctx.bot) then
+      ctx.task.error = "no gun or ammo"
+      return "failed"
+    end
+    st.origin = { x = p.x or ctx.bot.position.x, y = p.y or ctx.bot.position.y }
+    st.radius = p.radius or ATTACK_LOOK
+    st.until_tick = ctx.tick + (p.ticks or 60 * 90)
+    return "running"
+  end,
+
+  step = function(ctx)
+    local st, bot = ctx.task.state, ctx.bot
+    if bot.health < HURT then
+      cease(bot)
+      halt(bot)
+      ctx.task.error = "hurt - pulling back"
+      return "failed"
+    end
+    if ctx.tick > st.until_tick then
+      cease(bot)
+      halt(bot)
+      ctx.task.result = { timeout = true }
+      return "done"
+    end
+    local target, d = nearest_enemy(ctx, st.origin, st.radius)
+    if not target then
+      cease(bot)
+      halt(bot)
+      ctx.task.result = { cleared = true }
+      return "done"
+    end
+    if d > ATTACK_RANGE then
+      local travel = approach(ctx, target.position, ATTACK_RANGE - 1)
+      if travel == "failed" then
+        cease(bot)
+        halt(bot)
+        return "failed"
+      end
+    else
+      halt(bot)
+    end
+    bot.shooting_state = { state = defines.shooting.shooting_selected, position = target.position }
+    return "running"
+  end,
+}
+
 return M

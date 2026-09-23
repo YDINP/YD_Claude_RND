@@ -201,6 +201,7 @@ end)
 -- server down mid-session.
 script.on_event(defines.events.on_tick, function()
   local ok, err = pcall(drive)
+  pcall(Reflex.tick)
   if not ok then
     log("ai-bridge: internal error in the drive loop: " .. tostring(err))
     for _, name in ipairs(storage.order) do

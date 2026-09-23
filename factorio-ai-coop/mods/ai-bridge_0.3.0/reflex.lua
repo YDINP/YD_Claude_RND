@@ -19,11 +19,12 @@
 --   * 무엇을 하다 튀었는지는 태스크 결과("fled: hit by ...")와 status.fled 에 남는다.
 
 local Runner = require("runner")
+local Tasks = require("tasks")
 
 local Reflex = {}
 
 local FLEE = 45                 -- 이만큼 물러난다 (대형 웜 사거리 38 보다 길게)
-local COOLDOWN = 60 * 6         -- 한 번 튀면 이 동안은 다시 안 튄다 (틱)
+local COOLDOWN = 60 * 6         -- 한 번 튀면 이 동안은 다시 안 튄다 (틱). 이 동안 총이 있으면 쏜다
 local LOOK = 60                 -- cause 가 없을 때 적을 찾는 반지름
 local GUNS = 220                -- 이 안의 우리 포탑으로 달린다
 
@@ -98,6 +99,27 @@ function Reflex.on_damaged(event)
                   to_x = goal and goal.x or nil, to_y = goal and goal.y or nil }
   log(string.format("ai-bridge: %s hit by %s at %.0f,%.0f - flees%s", name, by,
       e.position.x, e.position.y, goal and string.format(" to %.0f,%.0f", goal.x, goal.y) or ""))
+end
+
+-- 튀는 동안 총이 있으면 쫓아오는 것을 쏜다. 걸으면서도 쏜다.
+local SHOOT_RANGE = 17
+
+function Reflex.tick()
+  local tick = game.tick
+  for _, name in ipairs(storage.order) do
+    local a = storage.agents[name]
+    local b = a and a.char
+    if b and b.valid and a.flee and a.flee.until_tick > tick and Tasks.armed(b) then
+      local foe = b.surface.find_nearest_enemy{ position = b.position, max_distance = SHOOT_RANGE, force = b.force }
+      if foe then
+        b.shooting_state = { state = defines.shooting.shooting_selected, position = foe.position }
+      else
+        Tasks.cease(b)
+      end
+    elseif b and b.valid and a.flee and a.flee.until_tick == tick then
+      Tasks.cease(b)
+    end
+  end
 end
 
 return Reflex

@@ -117,6 +117,29 @@ def line_steps():
     return steps
 
 
+HOP = 30                             # 포탑 사슬 간격 (사거리 18 이 겹치게)
+
+
+def corridor_steps():
+    """회랑을 따라 HOP 마다 포탑 넷 (2x2 넷이 붙은 4x4). 관 옆에.
+
+    alpha 가 회랑에서 순찰 무리에 쫓겨 죽었다. 사람은 «포탑 사거리 안에서만»
+    일한다 - 사슬을 먼저 잇고, 관과 전봇대는 그 뒤를 따른다. 반사(reflex.lua)도
+    가장 가까운 포탑으로 튀므로 사슬이 곧 도망 길이다.
+    """
+    steps = []
+    legs = ((R_IN, CORNER, (0, 3)), ((CORNER[0], CORNER[1] + 1), FIELD_IN, (3, 0)))
+    for a, b, (ox, oy) in legs:
+        tiles = run(a, b)
+        for i in range(HOP, len(tiles), HOP):
+            x, y = tiles[i]
+            for dx, dy in ((0, 0), (2, 0), (0, 2), (2, 2)):
+                tx, ty = x + ox + dx, y + oy + dy
+                steps.append(("build", {"name": TURRET, "x": tx, "y": ty}))
+                steps.append(("insert", {"name": PIERCING, "x": tx, "y": ty, "count": AMMO}))
+    return steps
+
+
 def field_steps():
     """유전: 포탑 고리 -> 매니폴드 -> 펌프잭 -> 지선 (지선은 세운 뒤 정한다)."""
     steps = []
@@ -336,24 +359,29 @@ def build_stage(ai, crew, steps, label, rounds=8):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--who", default="")
-    ap.add_argument("--stage", default="", choices=("", "scout", "line", "wells", "spurs"))
+    ap.add_argument("--stage", default="", choices=("", "scout", "corridor", "line", "wells", "spurs"))
     args = ap.parse_args()
     ai = AIBridge()
     crew = [n.strip() for n in args.who.split(",") if n.strip()]
 
     line = line_steps()
     field = field_steps()
+    chain = corridor_steps()
+    up_chain = standing(ai, chain)
     up_line = standing(ai, line)
     up_field = standing(ai, field)
     flow = crude_flow(ai)
-    print(f"  관로·전봇대 {len(up_line)}/{sum(1 for k, _ in line if k == 'build')} · "
+    print(f"  포탑 사슬 {len(up_chain)}/{sum(1 for k, _ in chain if k == 'build')} · "
+          f"관로·전봇대 {len(up_line)}/{sum(1 for k, _ in line if k == 'build')} · "
           f"유전 {len(up_field)}/{sum(1 for k, _ in field if k == 'build')} · "
           f"펌프잭 {flow['jacks']} 원유 {float(flow['n']):.0f} · oil-processing {'됨' if int(flow['tech']) else '아직'}")
     if not (crew and args.stage):
         return 0
     if args.stage == "scout":
         return 0 if scout(ai, crew[0]) else 1
-    if args.stage == "line":
+    if args.stage == "corridor":
+        build_stage(ai, crew[:1], chain, "포탑 사슬", rounds=6)   # 한 사람이 차례로 - 앞 사슬의 사거리 안에서 다음을
+    elif args.stage == "line":
         build_stage(ai, crew, line, "관로")
     elif args.stage == "wells":
         build_stage(ai, crew, field, "유전")
