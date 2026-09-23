@@ -44,20 +44,49 @@ AM, ARM, BOX, POLE, BELT = ("assembling-machine-1", "inserter", "iron-chest",
 N, E, S, W = 0, 4, 8, 12
 DEPOT = (-55, 10)
 
-M5, M2, M3 = (-14.5, 68.5), (-20.5, 68.5), (-14.5, 74.5)
-RECIPES = {M5: "military-science-pack", M2: "piercing-rounds-magazine", M3: "grenade"}
-WALLS = (-14.5, 65.5)          # 돌벽 상자 (손으로)
-SUP2 = (-20.5, 65.5)           # M2 공급: 탄창·강철·구리판
-SUP3 = (-17.5, 74.5)           # M3 공급: 철판·석탄
-CHEST_P, CHEST_G = (-17.5, 68.5), (-14.5, 71.5)
+# 별 하나의 자리는 가운데(M5)에서 잰다. 둘째 별은 첫째 남쪽 14칸 - 포탑 (-18,79) 를 피한다.
+#
+#     사용자: "군사연구팩도 빨리 늘려서 연구소에 들어가게해"
+#
+# 별 하나 = 군용 0.15/s (2형). 연구소 열셋은 0.43/s 를 먹는다 - 셋이 맞지만 자리·석탄
+# (수류탄이 석탄 1/s) 때문에 둘부터. 팩 기둥(x=-12)은 남쪽으로 이어 붙인다.
+STARS = ((-14.5, 68.5), (-14.5, 82.5))
 XCOL = -11.5                   # 팩 기둥. y 63 이 머리 - 뒤(남쪽)에서 이어 붙인다
+COL_BOTTOM = 82                # 기둥이 남쪽으로 닿는 y (둘째 별의 출구)
 
-WANT = {                       # 상자: {품목: 채워 둘 양}
-    # 수류탄이 석탄을 초당 하나 먹는다 - 2형 셋이면 60초 순번 사이에 200 은 바닥난다.
-    SUP2: {"firearm-magazine": 150, "steel-plate": 80, "copper-plate": 400},
-    SUP3: {"iron-plate": 300, "coal": 500},
-    WALLS: {"stone-wall": 150},
-}
+
+def star(bx, by) -> dict:
+    """별 하나의 자리들."""
+    return {
+        "M5": (bx, by), "M2": (bx - 6, by), "M3": (bx, by + 6),
+        "WALLS": (bx, by - 3), "SUP2": (bx - 6, by - 3), "SUP3": (bx - 3, by + 6),
+        "P": (bx - 3, by), "G": (bx, by + 3),
+        "arms": (((bx + 2, by), W), ((bx, by - 2), N), ((bx - 2, by), W), ((bx - 4, by), W),
+                 ((bx - 6, by - 2), N), ((bx, by + 2), S), ((bx, by + 4), S), ((bx - 2, by + 6), W)),
+        "poles": ((bx + 2, by - 2), (bx - 4, by - 2), (bx + 2, by + 4), (bx - 2, by + 4)),
+    }
+
+
+def wants() -> dict:
+    """상자: {품목: 채워 둘 양} - 별마다."""
+    out = {}
+    for bx, by in STARS:
+        st = star(bx, by)
+        # 수류탄이 석탄을 초당 하나 먹는다 - 2형이면 60초 순번 사이에 200 은 바닥난다.
+        out[st["SUP2"]] = {"firearm-magazine": 150, "steel-plate": 80, "copper-plate": 400}
+        out[st["SUP3"]] = {"iron-plate": 300, "coal": 500}
+        out[st["WALLS"]] = {"stone-wall": 150}
+    return out
+
+
+WANT = wants()
+RECIPES = {}
+for _bx, _by in STARS:
+    _st = star(_bx, _by)
+    RECIPES[_st["M5"]] = "military-science-pack"
+    RECIPES[_st["M2"]] = "piercing-rounds-magazine"
+    RECIPES[_st["M3"]] = "grenade"
+M5 = STARS[0]
 
 
 def _b(name, x, y, d=None):
@@ -67,21 +96,25 @@ def _b(name, x, y, d=None):
     return ("build", p)
 
 
-STEPS = [
-    ("walk_to", {"x": -9.5, "y": 70.5}),
-    *[_b(BELT, XCOL, y + 0.5, N) for y in range(68, 63, -1)],       # 68.5 .. 64.5 북쪽으로
-    _b(AM, *M5), _b(ARM, -12.5, 68.5, W),                             # M5 -> 기둥
-    _b(BOX, *WALLS), _b(ARM, -14.5, 66.5, N),                         # 돌벽 상자 -> M5
-    _b(ARM, -16.5, 68.5, W), _b(BOX, *CHEST_P), _b(ARM, -18.5, 68.5, W),   # M2 -> [P] -> M5
-    ("walk_to", {"x": -23.5, "y": 66.5}),
-    _b(AM, *M2), _b(BOX, *SUP2), _b(ARM, -20.5, 66.5, N),             # 공급 -> M2
-    ("walk_to", {"x": -18.5, "y": 77.5}),
-    _b(ARM, -14.5, 70.5, S), _b(BOX, *CHEST_G), _b(ARM, -14.5, 72.5, S),   # M3 -> [G] -> M5
-    _b(AM, *M3), _b(BOX, *SUP3), _b(ARM, -16.5, 74.5, W),             # 공급 -> M3
-    _b(POLE, -12.5, 66.5), _b(POLE, -18.5, 66.5), _b(POLE, -12.5, 72.5),
-    _b(POLE, -16.5, 72.5),          # M3 공급 팔(-16.5,74.5)은 -12.5 전봇대 구역(x>=-15) 밖이다
-]
-KIT = {AM: 3, BOX: 5, ARM: 8, POLE: 4, BELT: 5}
+def _steps() -> list:
+    steps = [("walk_to", {"x": -9.5, "y": 70.5})]
+    steps += [_b(BELT, XCOL, y + 0.5, N) for y in range(COL_BOTTOM, 63, -1)]   # 남쪽 끝 .. 64.5 북쪽으로
+    for bx, by in STARS:
+        st = star(bx, by)
+        steps.append(("walk_to", {"x": bx + 4, "y": by + 2}))
+        steps += [_b(AM, *st["M5"]), _b(BOX, *st["WALLS"]), _b(BOX, *st["P"]), _b(BOX, *st["G"])]
+        steps.append(("walk_to", {"x": bx - 9, "y": by - 2}))
+        steps += [_b(AM, *st["M2"]), _b(BOX, *st["SUP2"])]
+        steps.append(("walk_to", {"x": bx - 4, "y": by + 9}))
+        steps += [_b(AM, *st["M3"]), _b(BOX, *st["SUP3"])]
+        steps += [_b(ARM, x, y, d) for (x, y), d in st["arms"]]
+        steps += [_b(POLE, x, y) for x, y in st["poles"]]
+    return steps
+
+
+STEPS = _steps()
+KIT = {AM: 3 * len(STARS), BOX: 5 * len(STARS), ARM: 8 * len(STARS), POLE: 4 * len(STARS),
+       BELT: COL_BOTTOM - 63}
 
 
 def _rows(v):
@@ -162,12 +195,16 @@ def chests(ai) -> dict:
 
 
 def made(ai) -> int:
+    """군용 조립기 전부의 완성 수 (레시피로 찾는다 - 별이 몇이든)."""
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
-      local m = s.find_entities_filtered{type = "assembling-machine", force = f,
-                  area = {{%f, %f}, {%f, %f}}}[1]
-      return { n = m and m.products_finished or -1 }
-    end)()""" % (M5[0] - 0.5, M5[1] - 0.5, M5[0] + 0.5, M5[1] + 0.5))
+      local n = 0
+      for _, m in pairs(s.find_entities_filtered{type = "assembling-machine", force = f}) do
+        local r = m.get_recipe()
+        if r and r.name == "military-science-pack" then n = n + m.products_finished end
+      end
+      return { n = n }
+    end)()""")
     return int(reply["n"])
 
 
@@ -249,10 +286,13 @@ def feed(ai, who) -> list:
                 plan.append(("take", {"name": item, "x": at[0], "y": at[1], "count": lack}))
             elif not at and item == "firearm-magazine":
                 plan.append(("craft", {"recipe": "firearm-magazine", "count": min(lack, 50), "wait": True}))
-    # 넣기
-    plan.append(("walk_to", {"x": -18.5, "y": 71.5}))
+    # 넣기 (상자마다 곁으로 걸어가 넣는다 - 별이 둘이면 14칸 떨어져 있다)
+    last = None
     for item, drops in short.items():
         for (x, y), gap in drops:
+            if last is None or abs(x - last[0]) + abs(y - last[1]) > 8:
+                plan.append(("walk_to", {"x": x + 2, "y": y}))
+                last = (x, y)
             plan.append(("insert", {"name": item, "x": x, "y": y, "count": gap}))
     return plan
 
@@ -274,7 +314,7 @@ def main() -> int:
             print(f"    상자 {at}: {held}")
         return 0
     if args.build:
-        for _round in range(4):
+        for _round in range(6):
             build(ai, args.who)
             for _ in range(120):
                 time.sleep(5)

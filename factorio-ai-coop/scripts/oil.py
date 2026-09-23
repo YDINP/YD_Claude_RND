@@ -47,8 +47,8 @@ PIERCING = "piercing-rounds-magazine"
 N, E, S, W = 0, 4, 8, 12
 
 R_IN = (46, 10)                      # 관로가 정유 자리에 닿는 곳 (동쪽 포탑선 x=50 의 포탑 사이)
-CORNER = (245, 10)
-FIELD_IN = (245, 240)
+CORNER = (235, 10)                   # x=245 는 (284,164) 대형 웜에서 36 - 사거리 38 안이었다
+FIELD_IN = (235, 240)
 MANIFOLD_X = 248                     # 유전 매니폴드 (세로), 펌프잭 서쪽
 WELLS = ((251.5, 240.5), (256.5, 249.5), (252.5, 260.5), (265.5, 245.5))
 FIELD = (257, 250)
@@ -247,19 +247,36 @@ def scout(ai, who):
     return True
 
 
+# 만들 것 하나에 드는 판 (대략, 중간재 포함). 순번마다 «무조건 400장»을 챙기면
+# 가방이 차고, 찬 가방은 관통탄을 못 받는다 - charlie 의 사슬 포탑 19대가 빈 채였다.
+COST = {
+    UG: {"iron-plate": 15},
+    PIPE: {"iron-plate": 1},
+    POLE: {"steel-plate": 2, "copper-plate": 2},
+    JACK: {"iron-plate": 36, "copper-plate": 8, "steel-plate": 5},
+}
+
+
 def fetch(ai, who, need: dict) -> list:
-    """가방에 모자란 것을 창고에서 챙기거나 만든다."""
+    """가방에 모자란 것만 창고에서 챙기거나 만든다. 판은 «이번에 드는 만큼»만."""
     try:
         bag = ai.agent(who).items()
     except RconError:
         bag = {}
     have = shelf_mod.shelves(ai, DEPOT, span=36)
     plan = []
-    for item, n in (("iron-plate", 400), ("copper-plate", 150), ("steel-plate", 120), ("stone", 20)):
-        at = have.get(item) or creep.stock_at(ai, item, n)
-        if at and int(bag.get(item, 0)) < n:
+    plates = {}
+    for item, n in need.items():
+        short = max(0, n - int(bag.get(item, 0)))
+        for plate, k in COST.get(item, {}).items():
+            plates[plate] = plates.get(plate, 0) + k * short
+    for item, n in plates.items():
+        n = int(n * 1.1) + 5
+        lack = n - int(bag.get(item, 0))
+        at = have.get(item) or creep.stock_at(ai, item, lack)
+        if at and lack > 0:
             plan.append(("walk_to", {"x": at[0], "y": at[1] + 1.5}))
-            plan.append(("take", {"name": item, "x": at[0], "y": at[1], "count": n}))
+            plan.append(("take", {"name": item, "x": at[0], "y": at[1], "count": lack}))
     for item, n in need.items():
         short = n - int(bag.get(item, 0))
         if short <= 0:

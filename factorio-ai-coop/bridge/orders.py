@@ -25,6 +25,8 @@ plan counts as satisfied. That is the whole rule.
 """
 from __future__ import annotations
 
+import route
+
 # 이 단계들은 «이미 거기 있는 것»을 건드린다.
 REACHES = {"insert", "take", "demolish", "fuel", "set_recipe", "aim_drill"}
 
@@ -211,6 +213,14 @@ def submit(ai, who: str, steps, strict: bool = True):
         steps = footing(ai, steps)
     except Exception as exc:              # noqa: BLE001 - 걸음 보정은 덤이다
         print(f"  [주의] 걸음 보정 실패: {exc}")
+    # 긴 걸음은 적을 피해 경유한다 (route.py). charlie 는 직선으로 둥지를 가로질러 죽었다.
+    try:
+        steps = route.detour(ai, who, steps)
+        if len(steps) > 64:
+            print(f"  [주의] 경유점을 끼우니 {len(steps)}단계 - 64 뒤는 다음 순번으로")
+            steps = steps[:64]
+    except Exception as exc:              # noqa: BLE001
+        print(f"  [주의] 길 짜기 실패: {exc}")
     bad = check(ai, steps)
     if bad:
         lines = ", ".join(f"[{b['step']}] {b['type']} {b.get('name') or ''}"

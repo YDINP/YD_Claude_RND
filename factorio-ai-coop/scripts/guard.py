@@ -725,7 +725,7 @@ def raise_turrets(ai, who, shelf, have, spots):
 SUPPORT = 3
 RESERVED = ((-46, 48, -12, 72),      # 과학 블록 (x1, y1, x2, y2)
             (34, -47, 47, -29),      # 발전 3호·4호 자리 (power.py)
-            (-24, 64, -9, 80))       # 군용 팩 별 (military.py)
+            (-24, 64, -9, 94))       # 군용 팩 별 둘 (military.py)
 SUPPORT_STEP = 6          # 받쳐 줄 포탑을 놓는 거리 (사거리 18 안, 서로 겹치게)
 
 
