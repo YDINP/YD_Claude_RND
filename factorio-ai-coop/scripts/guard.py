@@ -485,6 +485,34 @@ def unguarded(ai, reach=18):
     return sorted(out, key=lambda z: -z[2])
 
 
+# 웜 사정권에는 사람을 보내지 않는다.
+#
+# alpha 전사 (21회차, -167,32): 서쪽 둥지 포탑 밀기(creep.py)로 x=-184 에 잠깐 선
+# 포탑 열이 «외로운 포탑»으로 잡혔고, guard 가 alpha 를 그 곁에 받침 포탑을
+# 놓으러 보냈다. 대형 웜 사거리 38 안이다. 걸어 들어가다 죽었다 - 가방에
+# 포탑 3대, 탄약 55발. 받칠 자리든 둘레 자리든 적 구조물 곁이면 뺀다.
+ENEMY_KEEP = 45           # 적 구조물(웜·둥지)에서 이만큼 안의 자리는 안 간다
+
+
+def hostile_spots(ai, spots, keep=ENEMY_KEEP) -> set:
+    """적 구조물 곁인 자리들의 (x, y). 한 번에 묻는다."""
+    if not spots:
+        return set()
+    packed = ";".join(f"{s['x']},{s['y']}" for s in spots)
+    reply = ai.lua("""(function()
+      local s = game.surfaces[1]
+      local out = {}
+      for bit in string.gmatch("%s", "[^;]+") do
+        local x, y = string.match(bit, "([^,]+),([^,]+)")
+        if s.count_entities_filtered{type = {"unit-spawner", "turret"}, force = game.forces.enemy,
+             position = {tonumber(x), tonumber(y)}, radius = %d} > 0 then out[#out+1] = bit end
+      end
+      return out
+    end)()""" % (packed, keep))
+    rows = list(reply.values()) if isinstance(reply, dict) else list(reply or [])
+    return {tuple(float(v) for v in str(r).split(",")) for r in rows}
+
+
 def buildable(ai, spots):
     """놓을 수 있는 자리만. 물·절벽·광맥 위는 뺀다.
 
@@ -500,6 +528,10 @@ def buildable(ai, spots):
     # 자리를 포탑이 먼저 차지하면 블록이 그만큼 밀린다.
     spots = [s for s in spots
              if not any(x1 <= s["x"] <= x2 and y1 <= s["y"] <= y2 for x1, y1, x2, y2 in RESERVED)]
+    bad = hostile_spots(ai, spots)
+    if bad:
+        print(f"  적 곁 자리 {len(bad)}곳은 뺀다")
+    spots = [s for s in spots if (float(s["x"]), float(s["y"])) not in bad]
     if not spots:
         return []
     body = ", ".join(f"{{{s['x']},{s['y']}}}" for s in spots[:60])
