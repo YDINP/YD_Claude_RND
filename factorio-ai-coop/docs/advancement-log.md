@@ -1799,3 +1799,4 @@ blocking    우리 힘(force)의 것만 본다. 바위는 neutral 이라 안 보
 - 살리지 않는다. 남은 사람 7 (alpha, bravo, charlie, delta, echo, foxtrot, golf).
 - 고칠 것 (다음 사람에게): 출정 중(detached) 반사는 «후퇴 지점(열에서 45칸 뒤)»으로,
   포탑 곁이 아니라. creep.py 가 retreat 를 모드에 알려 줘야 한다.
+- 2026-09-24 사용자: "hotel 다시 살리고" -> 예외로 살렸다 (hotel 3번째). 같은 죽음을 막으려고 반사가 적 구조물 45칸 안 포탑을 피난처로 안 고르게 고쳐 배포했다 (reflex.lua SAFE).

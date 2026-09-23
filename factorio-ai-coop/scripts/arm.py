@@ -149,6 +149,12 @@ def main() -> int:
     for who in crew:
         plan = outfit(ai, who)
         if plan:
+            # 고리가 넣어 둔 일이 대기열을 채우고 있으면 «64 넘침»으로 안 들어간다.
+            # 무장은 그 일들보다 먼저다 - 비우고 넣는다.
+            try:
+                ai.agent(who).cancel()
+            except RconError:
+                pass
             submit(ai, who, plan, strict=False)
             print(f"{who}: 무장 갖추기 ({len(plan)}단계)")
     for _ in range(80):

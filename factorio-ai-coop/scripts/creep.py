@@ -196,11 +196,13 @@ def main() -> int:
     ap.add_argument("--go", action="store_true")
     ap.add_argument("--waves", type=int, default=3)
     ap.add_argument("--side", type=int, default=1, help="1 = 동쪽에서 접근, -1 = 서쪽")
+    # 두 무리가 60칸 안에 겹치면 열이 «그 사이 허공»에 선다 (북쪽: y -28 과 -76 무리 -> y -57).
+    ap.add_argument("--radius", type=float, default=60, help="--at 둘레 이만큼만 친다")
     args = ap.parse_args()
     ax, ay = (float(v) for v in args.at.split(","))
     ai = AIBridge()
 
-    foes = nest(ai, (ax, ay))
+    foes = nest(ai, (ax, ay), args.radius)
     if not foes:
         print("  둥지가 안 보인다")
         return 0
@@ -235,7 +237,7 @@ def run(ai, args, crew, ax, ay) -> int:
             break
 
     for n_wave in range(1, args.waves + 1):
-        foes = nest(ai, (ax, ay))
+        foes = nest(ai, (ax, ay), args.radius)
         if not foes:
             print("  둥지가 사라졌다")
             break
@@ -253,7 +255,7 @@ def run(ai, args, crew, ax, ay) -> int:
                 print(f"  [!] {dead} 가 쓰러졌다 - 여기서 접는다")
                 return 1
             st = turret_state(ai, spots)
-            left = nest(ai, (ax, ay))
+            left = nest(ai, (ax, ay), args.radius)
             print(f"  포탑 {len(st)}/{len(spots)} 서 있음 (hp {[h for h, _a in st]}) · "
                   f"적 구조물 {len(left)} · "
                   + " ".join(f"{w}({pos[w][1]:.0f},{pos[w][2]:.0f}) hp{pos[w][3]}" for w in crew))
@@ -264,7 +266,7 @@ def run(ai, args, crew, ax, ay) -> int:
             if seen_any and not st:            # 섰다가 «없어진» 것이 다 죽은 것이다
                 print("  포탑 열이 다 죽었다")
                 return 1
-        left = nest(ai, (ax, ay))
+        left = nest(ai, (ax, ay), args.radius)
         if not left:
             break
         # 다음 열을 위해 다시 챙긴다
@@ -274,7 +276,7 @@ def run(ai, args, crew, ax, ay) -> int:
             time.sleep(5)
             if all(not crew_pos(ai)[w][4] for w in crew):
                 break
-    left = nest(ai, (ax, ay))
+    left = nest(ai, (ax, ay), args.radius)
     print(f"끝: 남은 적 구조물 {len(left)}")
     for who in crew:
         submit(ai, who, [("walk_to", {"x": -40, "y": 30})], strict=False)
