@@ -31,6 +31,10 @@ DEPOT = (-55, 10)
 CHESTS = ((-14.5, 57.5),)      # science_block.SINK
 FULL_AT = 10                   # 32칸 중 이만큼 찼으면 비운다
 ROOM = 20                      # 내려놓을 상자는 빈 칸이 이만큼은 있어야
+# 창고가 판으로 만석이면(철 21만·구리 19만) 내려놓을 데가 없다 - 고리 남쪽에 덤프
+# 상자 줄을 둔다. 없으면 세운다 (철 8). 중간재는 «세울 때 쓰는 것»이라 여기 둔다.
+DUMP_Y = 64.5
+DUMP_XS = (-34.5, -32.5, -30.5, -28.5, -26.5, -24.5)
 
 
 def _rows(v):
@@ -79,16 +83,41 @@ def plan_drain(ai, at, items) -> list:
     plan = [("walk_to", {"x": at[0] - 2, "y": at[1] - 0.5})]
     for item, n in items.items():
         plan.append(("take", {"name": item, "x": at[0], "y": at[1], "count": n}))
-    roomy = [c for c in shelf_mod.stock(ai, DEPOT, 36)
-             if c["room"] >= ROOM and shelf_mod.fits(None, c["y"], DEPOT)]
-    roomy.sort(key=lambda c: -c["room"])
+    dumps = dump_chests(ai)
+    roomy = [c for c in dumps if c["room"] >= ROOM]
     if not roomy:
-        return []
+        free = [x for x in DUMP_XS if all(abs(x - c["x"]) > 0.5 for c in dumps)]
+        if not free:
+            return []
+        plan.append(("craft", {"recipe": "iron-chest", "count": 1, "wait": True}))
+        plan.append(("walk_to", {"x": free[0], "y": DUMP_Y + 1.5}))
+        plan.append(("build", {"name": "iron-chest", "x": free[0], "y": DUMP_Y}))
+        roomy = [{"x": free[0], "y": DUMP_Y, "room": 32}]
+    roomy.sort(key=lambda c: -c["room"])
+    plan.append(("walk_to", {"x": roomy[0]["x"], "y": DUMP_Y + 1.5}))
     for i, (item, n) in enumerate(items.items()):
         c = roomy[i % len(roomy)]
-        plan.append(("walk_to", {"x": c["x"] + 0.5, "y": c["y"] + 2.0}))
-        plan.append(("insert", {"name": item, "x": c["x"] + 0.5, "y": c["y"] + 0.5, "count": n}))
+        plan.append(("insert", {"name": item, "x": c["x"], "y": c["y"], "count": n}))
     return plan
+
+
+def dump_chests(ai) -> list:
+    """덤프 줄의 상자들. [{"x","y","room"}]"""
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local out = {}
+      for _, c in pairs(s.find_entities_filtered{name = "iron-chest", force = f,
+              area = {{%f, %f}, {%f, %f}}}) do
+        out[#out+1] = string.format("%%.1f|%%.1f|%%d", c.position.x, c.position.y,
+                                    c.get_inventory(defines.inventory.chest).count_empty_stacks())
+      end
+      return out
+    end)()""" % (min(DUMP_XS) - 1, DUMP_Y - 1, max(DUMP_XS) + 1, DUMP_Y + 1))
+    out = []
+    for row in _rows(reply):
+        x, y, room = str(row).split("|")
+        out.append({"x": float(x), "y": float(y), "room": int(room)})
+    return out
 
 
 def main() -> int:

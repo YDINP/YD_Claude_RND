@@ -1787,3 +1787,4 @@ blocking    우리 힘(force)의 것만 본다. 바위는 neutral 이라 안 보
   적 구조물 60칸 밖으로 경유점을 먼저 짠다 (orders.submit 에서 일괄).
 - 세로 사슬 x=248 은 (284,164) 대형 웜 36칸 - 사거리 38 안. -> x=235.
 - 살리지 않는다. 남은 사람 6 (bravo, delta, echo, foxtrot, golf, hotel).
+- 2026-09-23 사용자: "alpha랑 charlie 부활시키고" -> 둘 다 예외로 살렸다 (alpha 3번째, charlie 1번째).

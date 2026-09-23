@@ -72,7 +72,10 @@ XA = (-36.5, -32.5, -28.5, -24.5, -20.5, -16.5)
 # 순서(동쪽으로): 구리선 · 회로 · 톱니 · 벨트 · 빨강 · 팔
 A_RECIPES = ("copper-cable", "electronic-circuit", "iron-gear-wheel",
              "transport-belt", "automation-science-pack", "inserter")
-A_FROM_RING = {1: True, 3: True, 4: True, 5: True}   # 고리에서도 집는 것 (회로·팔·벨트·빨강)
+# 구리선은 고리에 «안 오른다»: 구리선 조립기 -> 회로 조립기를 팔로 직결한다 (아래 _row_a).
+# 실측: 2형 구리선 3/s 가 회로 소비 2.5/s 를 넘어 남는 0.5/s 가 두 시간마다 싱크를
+# 채우고 고리가 서서 기지 전체가 섰다. 직결은 받는 쪽이 찰 때 저절로 멈춘다(역압).
+A_FROM_RING = {3: True, 4: True, 5: True}   # 고리에서도 집는 것 (벨트·빨강·팔)
 XB = XA
 XRING_W, XRING_E, RING_BOTTOM = -40, -14, 63
 XCOL = -12                # 팩 기둥
@@ -183,7 +186,7 @@ def _labs():
 STAGES = (
     ("branch", ("transport-belt", -14.5, BUS_Y + 0.5), {"transport-belt": 60, "underground-belt": 8, "splitter": 1}, _branch()),
     ("ring", ("transport-belt", XRING_W + 0.5, RING_Y + 1.5), {"transport-belt": 70}, _ring()),
-    ("rowA", (POLE, -14.5, RING_Y - 0.5), {AM: 6, ARM: 9, FAST: 7, POLE: 12}, _row_a()),
+    ("rowA", (POLE, -14.5, RING_Y - 0.5), {AM: 6, ARM: 10, FAST: 4, POLE: 12}, _row_a()),
     ("rowB", (POLE, -15.5, 60.5), {AM: 6, ARM: 13, FAST: 1, BOX: 1, POLE: 6}, _row_b()),
     ("packcol", ("transport-belt", -12.5, 29.5), {"transport-belt": 38, "underground-belt": 2}, _pack_col()),
     ("labs", (POLE, -11.5, 23.5), {LAB: 10, ARM: 10, POLE: 9}, _labs()),
