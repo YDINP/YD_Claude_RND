@@ -65,7 +65,7 @@ def _rows(v):
     return list(v.values()) if isinstance(v, dict) else list(v or [])
 
 
-def enemies_at(ai, spots, reach=WARN):
+def enemies_at(ai, spots, reach=WARN, units_only=False):
     """여러 자리의 적 수를 «한 번에» 센다.
 
     자리마다 따로 물으면 스무 번 묻는 동안 세상이 바뀐다. 그리고 그 스무
@@ -80,10 +80,10 @@ def enemies_at(ai, spots, reach=WARN):
       local out = {}
       for i, w in ipairs(want) do
         out[i] = s.count_entities_filtered{
-          position = {w[1], w[2]}, radius = %d, force = "enemy"}
+          position = {w[1], w[2]}, radius = %d, force = "enemy"%s}
       end
       return out
-    end)()""" % (body, reach))
+    end)()""" % (body, reach, ', type = "unit"' if units_only else ""))
     got = [int(v) for v in _rows(reply)]
     return got + [0] * (len(spots) - len(got))
 
@@ -129,7 +129,10 @@ def endangered(ai, reach=FLEE, close=CLOSE, pack=PACK):
     if not who:
         return []
     spots = [(p["x"], p["y"]) for p in who]
-    far = enemies_at(ai, spots, reach)
+    # 둘레(reach)의 «무리»는 움직이는 것만 센다. 웜·둥지는 안 움직인다 - 60칸
+    # 밖의 웜 열 개는 위협이 아닌데, 그것을 세어 회랑에서 hotel 을 여섯 순번
+    # 내리 불러들였다 (포탑 사슬 24/52 에서 멈춤).
+    far = enemies_at(ai, spots, reach, units_only=True)
     near = enemies_at(ai, spots, close)
     out = []
     for one, n, tight in zip(who, far, near):
