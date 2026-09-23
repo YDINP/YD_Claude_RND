@@ -35,6 +35,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 
 from client import AIBridge, RconError  # noqa: E402
+import detached                          # noqa: E402
 from orders import submit               # noqa: E402
 
 # 거미는 빠르다. 「보이면 도망」으로는 늦다.
@@ -283,6 +284,10 @@ def main() -> int:
     for _ in range(args.rounds):
         try:
             hot = endangered(ai, args.reach, args.close, args.pack)
+            # 출정한 사람(detached.py)은 안 부른다 - 둥지 둘레엔 늘 열 마리가 있다.
+            # 그 사람들은 밀기 스크립트의 감시와 모드의 반사(포탑 곁으로)가 지킨다.
+            away = detached.active()
+            hot = [p for p in hot if p["name"] not in away]
             names = {p["name"] for p in hot}
             for one in hot:
                 if one["name"] in calling:

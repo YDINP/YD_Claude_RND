@@ -109,11 +109,16 @@ def _steps() -> list:
         steps += [_b(AM, *st["M3"]), _b(BOX, *st["SUP3"])]
         steps += [_b(ARM, x, y, d) for (x, y), d in st["arms"]]
         steps += [_b(POLE, x, y) for x, y in st["poles"]]
+        # 별과 별 사이는 14칸 - 위 별의 남쪽 전봇대(by-14+4)와 이 별의 북쪽(by-2)은
+        # 8칸이라 작은 전봇대(7.5)가 안 닿는다. 실측: 둘째 별 59/59 서고도 11개가
+        # no_power. 다리 하나를 사이에 둔다.
+        if (bx, by) != STARS[0]:
+            steps.append(_b(POLE, bx + 2, by - 6))
     return steps
 
 
 STEPS = _steps()
-KIT = {AM: 3 * len(STARS), BOX: 5 * len(STARS), ARM: 8 * len(STARS), POLE: 4 * len(STARS),
+KIT = {AM: 3 * len(STARS), BOX: 5 * len(STARS), ARM: 8 * len(STARS), POLE: 5 * len(STARS) - 1,
        BELT: COL_BOTTOM - 63}
 
 

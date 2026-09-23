@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 sys.path.insert(0, HERE)
 
 from client import AIBridge, RconError  # noqa: E402
+import detached                          # noqa: E402
 from orders import submit               # noqa: E402
 import shelf as shelf_mod                # noqa: E402
 
@@ -213,6 +214,15 @@ def main() -> int:
         return 0
 
     crew = [n.strip() for n in args.who.split(",") if n.strip()]
+    # 이 사람들은 끝날 때까지 «밀기의 것»이다 - danger 도 drain 도 guard 도 못 데려간다.
+    detached.mark(crew, owner="creep", minutes=15 * args.waves + 10)
+    try:
+        return run(ai, args, crew, ax, ay)
+    finally:
+        detached.release(crew)
+
+
+def run(ai, args, crew, ax, ay) -> int:
     # 탄약: 관통탄이 있으면 그것, 없으면 보통 탄창
     have = shelf_mod.shelves(ai, DEPOT, span=36)
     ammo_name = AMMO[0] if (have.get(AMMO[0]) or stock_at(ai, AMMO[0], 60)) else AMMO[1]

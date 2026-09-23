@@ -25,6 +25,7 @@ plan counts as satisfied. That is the whole rule.
 """
 from __future__ import annotations
 
+import detached
 import route
 
 # 이 단계들은 «이미 거기 있는 것»을 건드린다.
@@ -209,6 +210,10 @@ def submit(ai, who: str, steps, strict: bool = True):
     무너지는데, 그것은 오류로 기록될 뿐 아무도 안 본다. 보내기 전에
     막는 편이 싸다.
     """
+    # 출정 중인 사람은 출정 스크립트만 부린다 (detached.py). 다른 루프의 지시는 버린다.
+    if not detached.mine(who):
+        print(f"  {who}: {detached.owner(who)} 에 딸려 있다 - 이 지시는 보내지 않는다")
+        return None
     try:
         steps = footing(ai, steps)
     except Exception as exc:              # noqa: BLE001 - 걸음 보정은 덤이다
