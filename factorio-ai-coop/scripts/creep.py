@@ -37,7 +37,7 @@ DEPOT = (-55, 10)
 TURRET = "gun-turret"
 AMMO = ("piercing-rounds-magazine", "firearm-magazine")
 RANGE = 18
-EACH = 6                 # 한 사람이 세우는 포탑 수
+EACH = 4                 # 한 사람이 세우는 포탑 수 (셋이면 12)
 AMMO_EACH = 10
 STAND_BACK = 9           # 앞 열에서 이만큼 뒤에 서서 놓는다 (팔 닿는 거리 10, 뒤 열은 7)
 RETREAT = 45
@@ -111,12 +111,29 @@ def crew_pos(ai) -> dict:
             for w in ai.list()}
 
 
+def stock_at(ai, item, n):
+    """그 물건이 n 개 이상 든 상자 아무거나. 창고 밖(군용 모듈의 관통탄 상자)도 본다."""
+    reply = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local best, most = nil, 0
+      for _, c in pairs(s.find_entities_filtered{type = "container", force = f}) do
+        local k = c.get_inventory(defines.inventory.chest).get_item_count("%s")
+        if k > most then best, most = c.position, k end
+      end
+      if best and most >= %d then return { x = best.x, y = best.y, n = most } end
+      return { n = most }
+    end)()""" % (item, n))
+    if reply.get("x") is not None:
+        return (float(reply["x"]), float(reply["y"]))
+    return None
+
+
 def outfit(ai, who, n_turrets, ammo_name, n_ammo) -> list:
     """창고에서 포탑·탄약을 챙기는 걸음."""
     have = shelf_mod.shelves(ai, DEPOT, span=36)
     plan = []
     for item, n in ((TURRET, n_turrets), (ammo_name, n_ammo)):
-        at = have.get(item)
+        at = have.get(item) or stock_at(ai, item, n)
         if not at:
             continue
         plan.append(("walk_to", {"x": at[0], "y": at[1] + 1.5}))
@@ -141,8 +158,9 @@ def wave(ai, crew, foes, ammo_name, side=1) -> list:
     if not spots:
         print("  놓을 자리가 없다")
         return []
-    half = (len(spots) + 1) // 2
-    parts = [spots[:half], spots[half:]] if len(crew) > 1 else [spots]
+    k = len(crew)
+    per = (len(spots) + k - 1) // k
+    parts = [spots[i * per:(i + 1) * per] for i in range(k)]      # 사람 수만큼 나눈다 - 빨리 놓을수록 덜 맞는다
     for who, part in zip(crew, parts):
         if not part:
             continue
@@ -197,7 +215,7 @@ def main() -> int:
     crew = [n.strip() for n in args.who.split(",") if n.strip()]
     # 탄약: 관통탄이 있으면 그것, 없으면 보통 탄창
     have = shelf_mod.shelves(ai, DEPOT, span=36)
-    ammo_name = AMMO[0] if have.get(AMMO[0]) else AMMO[1]
+    ammo_name = AMMO[0] if (have.get(AMMO[0]) or stock_at(ai, AMMO[0], 60)) else AMMO[1]
     for who in crew:
         submit(ai, who, outfit(ai, who, EACH + 2, ammo_name, AMMO_EACH * EACH + 20), strict=False)
         print(f"{who}: 포탑 {EACH + 2}대 · {ammo_name} {AMMO_EACH * EACH + 20}발 챙긴다")

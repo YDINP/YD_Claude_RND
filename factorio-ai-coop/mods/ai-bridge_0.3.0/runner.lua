@@ -199,6 +199,8 @@ local function agent_status(name)
       elapsed = game.tick - a.current.started_tick,
     } or nil,
     queued = queued,
+    fled = a.flee and a.flee.count or 0,          -- reflex.lua 가 튄 횟수
+    flee_last = a.flee and a.flee.last or nil,
   }
 end
 

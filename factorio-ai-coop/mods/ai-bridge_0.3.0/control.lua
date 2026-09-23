@@ -104,6 +104,7 @@ local next_seat  = Zones.next_seat
 local zones      = Zones.zones
 
 local Runner = require("runner")
+local Reflex = require("reflex")
 local agent_status = Runner.agent_status
 local drive        = Runner.drive
 local drop_queue   = Runner.drop_queue
@@ -241,6 +242,12 @@ end)
 
 -- Chat is the command channel: the human types, the agents read it on their next
 -- poll and answer with `say`. Kept as a small ring so the log never grows.
+-- 맞으면 튄다. 파이썬 고리보다 먼저, 고리가 없어도. (reflex.lua)
+script.on_event(defines.events.on_entity_damaged, function(event)
+  local ok, err = pcall(Reflex.on_damaged, event)
+  if not ok then log("ai-bridge: reflex error: " .. tostring(err)) end
+end, {{ filter = "type", type = "character" }})
+
 script.on_event(defines.events.on_console_chat, function(event)
   if not event.player_index then return end
   local player = game.get_player(event.player_index)
