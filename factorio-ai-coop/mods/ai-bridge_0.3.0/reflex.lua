@@ -36,23 +36,56 @@ local GUNS = 220                -- 이 안의 우리 포탑으로 달린다
 -- 그래서 적 구조물(웜·둥지)에서 SAFE 칸 안의 포탑은 고르지 않는다.
 local SAFE = 45                 -- 대형 웜 38 + 여유
 
-local function safe(surface, pos)
+local function near_foe(surface, pos, r)
   return surface.count_entities_filtered{ type = { "turret", "unit-spawner" }, force = "enemy",
-                                          position = pos, radius = SAFE, limit = 1 } == 0
+                                          position = pos, radius = r, limit = 1 } > 0
 end
 
-local function nearest_gun(e)
+-- «가장 가까운 안전한 포탑»만으로는 모자랐다.
+--
+-- 실측(21회차 회랑 무리): bravo 가 (183,133) 에서 소형 웜에 맞자 반사가 (248,101)
+-- 포탑을 골랐다 - 적 구조물 45칸 밖이니 «안전»했다. 그러나 그것은 둥지 «건너편»
+-- 이었고 탄약도 없는 옛 사슬 포탑이었다. bravo 는 둥지 한복판을 가로질러 뛰다 죽었다.
+--
+--     피난처는 자리만이 아니라 «가는 길»이다.
+--
+-- 그래서 넷을 다 본다: 탄약이 있나 · 적 구조물 SAFE 밖인가 · 공격자의 «반대쪽»인가 ·
+-- 가는 길(처음 LEAVE 칸 뒤)이 적 구조물 PATH 안을 안 지나나.
+local PATH = 30                 -- 중형 웜 사거리
+local LEAVE = 16                -- 맞은 자리 곁은 어차피 사거리 안이다 - 거기부터 잰다
+
+local function has_ammo(t)
+  local inv = t.get_inventory(defines.inventory.turret_ammo)
+  return inv and not inv.is_empty()
+end
+
+local function clear_path(surface, a, b)
+  local dx, dy = b.x - a.x, b.y - a.y
+  local len = math.sqrt(dx * dx + dy * dy)
+  local d = LEAVE
+  while d < len do
+    if near_foe(surface, { x = a.x + dx / len * d, y = a.y + dy / len * d }, PATH) then return false end
+    d = d + 8
+  end
+  return true
+end
+
+local function nearest_gun(e, from)
   local cands = {}
+  local here = e.position
   local guns = e.surface.find_entities_filtered{ name = "gun-turret", force = e.force,
-                                                 position = e.position, radius = GUNS }
+                                                 position = here, radius = GUNS }
   for _, t in pairs(guns) do
-    local dx, dy = t.position.x - e.position.x, t.position.y - e.position.y
+    local dx, dy = t.position.x - here.x, t.position.y - here.y
     local d = dx * dx + dy * dy
-    if d > 4 then cands[#cands + 1] = { pos = t.position, d = d } end
+    -- 공격자 쪽(내적 < 0)은 뺀다: 포탑으로 가는 길이 공격자를 지난다
+    local away = (not from) or (dx * (here.x - from.x) + dy * (here.y - from.y) >= 0)
+    if d > 4 and away and has_ammo(t) then cands[#cands + 1] = { pos = t.position, d = d } end
   end
   table.sort(cands, function(p, q) return p.d < q.d end)
   for i = 1, math.min(#cands, 40) do
-    if safe(e.surface, cands[i].pos) then return cands[i].pos end
+    local pos = cands[i].pos
+    if not near_foe(e.surface, pos, SAFE) and clear_path(e.surface, here, pos) then return pos end
   end
   return nil
 end
@@ -92,7 +125,7 @@ function Reflex.on_damaged(event)
   end
 
   local goal = nil
-  local gun = nearest_gun(e)
+  local gun = nearest_gun(e, from)
   if gun then
     -- 포탑 «곁» (2칸 앞) 에 선다. 포탑 위에 서려 하면 길찾기가 막힌다.
     local dx, dy = e.position.x - gun.x, e.position.y - gun.y
