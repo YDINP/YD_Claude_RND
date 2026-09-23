@@ -208,19 +208,32 @@ STEP_BACK = 120    # 정찰병은 집까지가 아니라 이만큼만 물러난�
 
 
 def away_from_foes(ai, at, step=STEP_BACK):
-    """가장 가까운 적의 «반대쪽»으로 step 칸. 적이 안 보이면 None.
+    """«가장 가까운 우리 포탑» 곁으로. 포탑이 220칸 안에 없으면 가장 가까운 적의
+    반대쪽으로 step 칸. 적도 안 보이면 None.
 
     hotel 은 (-724,-299) 에서 «집 쪽으로» 물러나다 죽었다 - 집으로 가는 길
-    위에 둥지 (-190,-509) 가 있었다. 물러나는 방향은 집이 아니라 적의 반대다.
+    위에 둥지가 있었다. alpha 는 «적 반대쪽으로» 여덟 번 튀다 적진 깊숙이
+    들어가 죽었다 - 바이터는 사람보다 빠르다. 쫓아온 것을 쏴 줄 데가 안전이다.
     """
     reply = ai.lua("""(function()
-      local s = game.surfaces[1]
-      local e = s.find_nearest_enemy{position = {%f, %f}, max_distance = 200, force = game.forces.player}
+      local s, f = game.surfaces[1], game.forces.player
+      local best, bd
+      for _, t in pairs(s.find_entities_filtered{name = "gun-turret", force = f, position = {%f, %f}, radius = 220}) do
+        local dx, dy = t.position.x - %f, t.position.y - %f
+        local d = dx * dx + dy * dy
+        if (not bd or d < bd) and d > 4 then best, bd = t.position, d end
+      end
+      if best then
+        local dx, dy = %f - best.x, %f - best.y
+        local span = math.max(1, math.sqrt(dx * dx + dy * dy))
+        return { ok = 1, x = best.x + dx / span * 2.5, y = best.y + dy / span * 2.5, gun = 1 }
+      end
+      local e = s.find_nearest_enemy{position = {%f, %f}, max_distance = 200, force = f}
       if not e then return { ok = 0 } end
       local dx, dy = %f - e.position.x, %f - e.position.y
       local span = math.max(1, math.sqrt(dx * dx + dy * dy))
       return { ok = 1, x = %f + dx / span * %d, y = %f + dy / span * %d }
-    end)()""" % (at[0], at[1], at[0], at[1], at[0], step, at[1], step))
+    end)()""" % (at[0], at[1], at[0], at[1], at[0], at[1], at[0], at[1], at[0], at[1], at[0], step, at[1], step))
     if int(reply.get("ok", 0)):
         return (float(reply["x"]), float(reply["y"]))
     return None

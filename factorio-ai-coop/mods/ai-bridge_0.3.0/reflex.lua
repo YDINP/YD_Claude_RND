@@ -11,8 +11,10 @@
 -- 걷는 일을 «맨 앞»에 넣는다. 고리는 그 다음이다 - 두 번째 벨트.
 --
 --   * 적 세력의 피해만. 자기 수류탄·화재 같은 것은 반사가 아니다.
---   * 방향은 공격자(cause) 반대. cause 가 없으면(산성 웅덩이 등) 가장 가까운
---     적 반대. 그것도 없으면 큐만 버리고 선다.
+--   * 방향은 «가장 가까운 우리 포탑». 추격하는 바이터는 사람보다 빨라서
+--     «반대쪽으로»는 못 따돌린다 - alpha 는 그렇게 여덟 번 튀며 적진 깊숙이
+--     밀려 들어가 (263,153) 에서 죽었다. 포탑 곁이 유일한 안전이다: 쫓아온
+--     것을 포탑이 쏜다. 포탑이 GUNS 안에 없을 때만 공격자 반대쪽.
 --   * COOLDOWN 동안은 다시 안 튄다 - 맞을 때마다 목적지를 바꾸면 제자리다.
 --   * 무엇을 하다 튀었는지는 태스크 결과("fled: hit by ...")와 status.fled 에 남는다.
 
@@ -23,6 +25,21 @@ local Reflex = {}
 local FLEE = 45                 -- 이만큼 물러난다 (대형 웜 사거리 38 보다 길게)
 local COOLDOWN = 60 * 6         -- 한 번 튀면 이 동안은 다시 안 튄다 (틱)
 local LOOK = 60                 -- cause 가 없을 때 적을 찾는 반지름
+local GUNS = 220                -- 이 안의 우리 포탑으로 달린다
+
+local function nearest_gun(e)
+  local best, bd = nil, GUNS * GUNS
+  local guns = e.surface.find_entities_filtered{ name = "gun-turret", force = e.force,
+                                                 position = e.position, radius = GUNS }
+  for _, t in pairs(guns) do
+    local dx, dy = t.position.x - e.position.x, t.position.y - e.position.y
+    local d = dx * dx + dy * dy
+    if d < bd and d > 4 then
+      best, bd = t.position, d
+    end
+  end
+  return best
+end
 
 local function agent_of(entity)
   for _, name in ipairs(storage.order) do
@@ -59,10 +76,19 @@ function Reflex.on_damaged(event)
   end
 
   local goal = nil
-  if from then
+  local gun = nearest_gun(e)
+  if gun then
+    -- 포탑 «곁» (2칸 앞) 에 선다. 포탑 위에 서려 하면 길찾기가 막힌다.
+    local dx, dy = e.position.x - gun.x, e.position.y - gun.y
+    local span = math.max(1, math.sqrt(dx * dx + dy * dy))
+    goal = { x = gun.x + dx / span * 2.5, y = gun.y + dy / span * 2.5 }
+    by = by .. " -> gun " .. string.format("%.0f,%.0f", gun.x, gun.y)
+  elseif from then
     local dx, dy = e.position.x - from.x, e.position.y - from.y
     local span = math.max(1, math.sqrt(dx * dx + dy * dy))
     goal = { x = e.position.x + dx / span * FLEE, y = e.position.y + dy / span * FLEE }
+  end
+  if goal then
     table.insert(a.queue, 1, Runner.make_task("walk_to", { x = goal.x, y = goal.y }))
   end
 
