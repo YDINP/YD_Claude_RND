@@ -28,18 +28,33 @@ local COOLDOWN = 60 * 6         -- 한 번 튀면 이 동안은 다시 안 튄�
 local LOOK = 60                 -- cause 가 없을 때 적을 찾는 반지름
 local GUNS = 220                -- 이 안의 우리 포탑으로 달린다
 
+-- 웜 곁의 포탑은 피난처가 아니다.
+--
+-- 실측(21회차 동쪽 밀기): hotel 이 중형 웜(132,77)에 맞자 반사가 «가장 가까운
+-- 포탑» (110,80) 으로 보냈다 - 방금 세운 밀기 열이라 웜에서 22칸, 사거리 30 안.
+-- 도망친 자리에서 죽었다. 밀기 열은 애초에 웜 곁에 세우는 것이다.
+-- 그래서 적 구조물(웜·둥지)에서 SAFE 칸 안의 포탑은 고르지 않는다.
+local SAFE = 45                 -- 대형 웜 38 + 여유
+
+local function safe(surface, pos)
+  return surface.count_entities_filtered{ type = { "turret", "unit-spawner" }, force = "enemy",
+                                          position = pos, radius = SAFE, limit = 1 } == 0
+end
+
 local function nearest_gun(e)
-  local best, bd = nil, GUNS * GUNS
+  local cands = {}
   local guns = e.surface.find_entities_filtered{ name = "gun-turret", force = e.force,
                                                  position = e.position, radius = GUNS }
   for _, t in pairs(guns) do
     local dx, dy = t.position.x - e.position.x, t.position.y - e.position.y
     local d = dx * dx + dy * dy
-    if d < bd and d > 4 then
-      best, bd = t.position, d
-    end
+    if d > 4 then cands[#cands + 1] = { pos = t.position, d = d } end
   end
-  return best
+  table.sort(cands, function(p, q) return p.d < q.d end)
+  for i = 1, math.min(#cands, 40) do
+    if safe(e.surface, cands[i].pos) then return cands[i].pos end
+  end
+  return nil
 end
 
 local function agent_of(entity)
