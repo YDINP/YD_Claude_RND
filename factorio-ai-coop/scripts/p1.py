@@ -36,6 +36,10 @@ COL_TOP = -45                                          # 철 기둥 화로 첫 �
 COL_ROWS = 12
 HUB_Y = -54.5
 LAB_POLE = (17.5, 41.5)
+SIZE = {"electric-mining-drill": 3, "assembling-machine-1": 3, "assembling-machine-2": 3, "lab": 3,
+        "stone-furnace": 2, "steel-furnace": 2, "boiler": 3, "steam-engine": 5, "pumpjack": 3,
+        "oil-refinery": 5, "chemical-plant": 3, "storage-tank": 3, "pump": 2, "offshore-pump": 2,
+        "splitter": 2, "iron-chest": 1}                  # 긴 변 (타일) - 짓는 사람이 설 거리
 PARK = (14.5, -30.5)                                   # 공사가 끝나면 비켜 서는 곳 (빈 땅)
 
 # 판으로 따진 값 (한 개당). 창고가 없으니 허브의 판에서 만든다.
@@ -349,7 +353,9 @@ def build_stage(ai, crew, steps, label, rounds=10) -> bool:
                     plan.append(("demolish", {"x": float(rx), "y": float(ry), "name": rname, "search_radius": 0.8}))
                 if last is None or abs(p["x"] - last[0]) + abs(p["y"] - last[1]) > 7:
                     # 3x3 채굴기 자리 밖에 선다 - 1.5칸 옆은 자기 발이 그 자리를 막았다 (실측)
-                    off = 3.0 if p.get("name") == EMD else 1.5
+                    # 크기에 맞춰 (긴 변 절반 + 1.5): 1.5 고정일 때 엔진(5x3)·보일러·관 모서리에서
+                    # 같은 일이 세 번 더 있었다 (22회차 P5·P6).
+                    off = SIZE.get(p.get("name"), 1) / 2 + 1.5
                     plan.append(("walk_to", {"x": p["x"] + off, "y": p["y"] + off}))
                     last = (p["x"], p["y"])
                 plan.append((k, p))
