@@ -63,7 +63,74 @@ def steel_steps():
     return out
 
 
-STAGES = {"labs2": labs2_steps, "steel": steel_steps}
+def labs_more_steps(first_row=47, rows=3):
+    """연구소 줄을 남쪽으로 이어 붙인다 (3칸 간격, 양쪽). labs2 와 같은 규칙.
+
+    사용자: "과학팩이 남으면 연구소를 더 늘려" - 판단 기준은 health 가 아니라 이것:
+    연구소가 전부 working 인데 과학 조립기가 full_output 이면 팩이 남는 것이다 (lab_surplus()).
+    """
+    out = [b(BELT, -37.5, y + 0.5, S) for y in range(first_row - 2, first_row + 3 * rows - 1)]
+    for k in range(rows):
+        y = first_row + 3 * k
+        out += [b(LAB, -40.5, y + 0.5), b(INS, -38.5, y + 0.5, E),
+                b(LAB, -34.5, y + 0.5), b(INS, -36.5, y + 0.5, W),
+                b(POLE, -38.5, y + 1.5), b(POLE, -32.5, y + 1.5)]
+    return out
+
+
+def lab_surplus(ai) -> dict:
+    """연구소 working 비율과 과학 조립기 full_output 수. 팩이 남는지."""
+    return ai.lua("""(function()
+      local s = game.surfaces[1]
+      local st = {} for k, v in pairs(defines.entity_status) do st[v] = k end
+      local labs, busy, full = 0, 0, 0
+      for _, e in pairs(s.find_entities_filtered{name = "lab"}) do
+        labs = labs + 1
+        if st[e.status] == "working" then busy = busy + 1 end
+      end
+      for _, e in pairs(s.find_entities_filtered{type = "assembling-machine"}) do
+        local r = e.get_recipe()
+        if r and r.name:find("science") and st[e.status] == "full_output" then full = full + 1 end
+      end
+      return {labs = labs, busy = busy, full = full}
+    end)()""")
+
+
+def queue_fill(ai, packs=("automation-science-pack", "logistic-science-pack")) -> list:
+    """연구 대기열을 «만들고 있는 팩만» 쓰는 연구로 채운다 (싼 것부터).
+
+    대기열이 비면 게임이 아무거나 고른다 - 두 번이나 defender(군사팩)를 골랐고, 연구소 전부가
+    missing_science_packs 로 섰다. 대기열에 든 것 중 못 만드는 팩을 쓰는 연구도 뺀다.
+    """
+    reply = ai.lua("""(function()
+      local f, ok = game.forces.player, {}
+      for _, p in pairs({%s}) do ok[p] = true end
+      local function fits(t)
+        if #t.research_unit_ingredients == 0 then return false end
+        for _, i in pairs(t.research_unit_ingredients) do if not ok[i.name] then return false end end
+        return true
+      end
+      local q, seen = {}, {}
+      for _, t in pairs(f.research_queue) do if fits(t) then q[#q+1] = t.name; seen[t.name] = true end end
+      local more = {}
+      for n, t in pairs(f.technologies) do
+        if t.enabled and not t.researched and not seen[n] and fits(t) then
+          local pre = true
+          for _, p in pairs(t.prerequisites) do if not p.researched then pre = false end end
+          if pre then more[#more+1] = t end
+        end
+      end
+      table.sort(more, function(a, b) return a.research_unit_count < b.research_unit_count end)
+      for _, t in pairs(more) do if #q < 7 then q[#q+1] = t.name end end
+      f.research_queue = q
+      local out = {} for _, t in pairs(f.research_queue) do out[#out+1] = t.name end
+      return {q = out}
+    end)()""" % ",".join(f'"{p}"' for p in packs))
+    q = reply.get("q") if isinstance(reply, dict) else None
+    return list(q.values()) if isinstance(q, dict) else list(q or [])
+
+
+STAGES = {"labs2": labs2_steps, "steel": steel_steps, "labs3": labs_more_steps}
 
 
 def main() -> int:

@@ -233,6 +233,8 @@ def hub(ai) -> dict:
       local out = {}
       local cs = s.find_entities_filtered{type = "container", force = f, area = {{-10.5, %f}, {-3, %f}}}
       for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{-6, -20}, {7, -18.5}}}) do cs[#cs+1] = c end
+      -- 강철 줄의 재료 상자 (p4 steel) 도 «짓는 재료» 창고다
+      for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{7, -17}, {8, -9}}}) do cs[#cs+1] = c end
       for _, c in pairs(cs) do
         for _, v in pairs(c.get_inventory(defines.inventory.chest).get_contents()) do
           out[#out+1] = string.format("%%s,%%.1f,%%.1f,%%d", v.name, c.position.x, c.position.y, v.count)

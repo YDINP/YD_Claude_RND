@@ -75,9 +75,14 @@ def poles_steps():
     while y <= CORNER[1]:
         out.append(b(POLE, TOP[0] + 2, y))
         y += 7
+    if y - 7 < CORNER[1] + 2 - 7.5:                   # 7칸 간격이 모서리 직전에서 끝나면 한 대 더 (실측: -46.5 -> -38.5 는 8칸, 안 닿는다)
+        out.append(b(POLE, TOP[0] + 2, CORNER[1] - 2))
     x = CORNER[0] + 2
     while x >= 9.5:
-        out.append(b(POLE, x, CORNER[1] + 2))
+        if abs(x - 25.5) < 0.1:                      # 보일러 가지 벨트 위 - 양옆 둘로 나눈다
+            out += [b(POLE, 22.5, CORNER[1] + 2), b(POLE, 28.5, CORNER[1] + 2)]
+        else:
+            out.append(b(POLE, x, CORNER[1] + 2))
         x -= 7
     return out
 
@@ -86,7 +91,81 @@ def probe_steps():
     return pipeline_steps()[:2] + [b(PIPE, TOP[0], TOP[1] - 1)]
 
 
-STAGES = {"probe": probe_steps, "pipeline": pipeline_steps, "poles": poles_steps}
+JACK = "pumpjack"
+p1.COST.update({JACK: {"steel-plate": 5, "iron-plate": 35, "copper-plate": 7.5}})
+# 유정과 방향 - 서로의 출구를 막지 않게 (3x3, 출구는 한 변에 하나)
+WELLS = ((175.5, -358.5, N), (179.5, -358.5, N), (180.5, -355.5, W),
+         (184.5, -355.5, S), (164.5, -348.5, E), (172.5, -345.5, W))
+MANIFOLD_X = 170.5
+
+
+def wells_steps():
+    out = [b(JACK, x, y, d) for x, y, d in WELLS]
+    y = -361.5
+    while y <= TOP[1] - 1:                                   # 집결관 x=170.5, 관로 입구 (170.5,-340.5) 까지
+        out.append(b(PIPE, MANIFOLD_X, y))
+        y += 1
+    return out
+
+
+def spurs_steps(ai):
+    """펌프잭 출구 칸에서 집결관까지 보통 관 (출구 칸은 게임에 묻는다)."""
+    reply = ai.lua("""(function()
+      local s, out = game.surfaces[1], {}
+      for _, j in pairs(s.find_entities_filtered{name = "pumpjack", area = {{150, -370}, {200, -335}}}) do
+        for _, c in pairs(j.fluidbox.get_pipe_connections(1)) do
+          if c.target_position then out[#out+1] = string.format("%.1f,%.1f", c.target_position.x, c.target_position.y) end
+        end
+      end
+      return out
+    end)()""")
+    rows = list(reply.values()) if isinstance(reply, dict) else list(reply or [])
+    out = []
+    for r in rows:
+        tx, ty = (float(v) for v in str(r).split(","))
+        step = -1 if tx > MANIFOLD_X else 1
+        x = tx
+        while abs(x - MANIFOLD_X) > 0.4:
+            out.append(b(PIPE, x, ty))
+            x += step
+        if ty < -361.5 or ty > TOP[1] - 1:                   # 집결관 범위 밖이면 세로로 이어 준다
+            y = ty
+            while abs(y - (-361.5)) > 0.4 and y < -361.5:
+                out.append(b(PIPE, MANIFOLD_X, y))
+                y += 1
+    return out
+
+
+def fieldpoles_steps():
+    return [b(POLE, x, y) for x, y in ((172.5, -347.5), (177.5, -352.5), (183.5, -352.5), (177.5, -361.5), (167.5, -351.5),
+                                             (177.5, -356.5))]      # -361.5 <-> -352.5 는 9칸 - 사이에 하나
+
+
+PUMP = "pump"
+p1.COST.update({PUMP: {"steel-plate": 2, "iron-plate": 6}})
+# 2.0 유체 구간은 크기 320 이 상한 (utility-constants default_pipeline_extent). 이 관로는 세로만 321 이라
+# 펌프잭이 원유를 502 채운 채 waiting_for_space 로 섰다 - 오류 표시 없이. 펌프는 구간을 끊는다:
+# 집결관 끝과 모서리 직전에 하나씩 -> 20 · 298 · 111.
+SPLITS = ((MANIFOLD_X, TOP[1] - 1.5), (CORNER[0], CORNER[1] - 1.5))
+
+
+def _unsplit(steps):
+    """펌프 자리의 보통 관은 계획에서 뺀다."""
+    taken = {(x, y + d) for x, y in SPLITS for d in (-0.5, 0.5)}
+    return [(k, a) for k, a in steps if not (k == "build" and a["name"] == PIPE and (a["x"], a["y"]) in taken)]
+
+
+def split_steps():
+    out = []
+    for x, y in SPLITS:
+        out += [("demolish", {"x": x, "y": y - 0.5, "name": PIPE, "search_radius": 0.3}),
+                ("demolish", {"x": x, "y": y + 0.5, "name": PIPE, "search_radius": 0.3}),
+                b(PUMP, x, y, S)]                                  # 남쪽으로 민다
+    return out
+
+
+STAGES = {"probe": probe_steps, "pipeline": lambda: _unsplit(pipeline_steps()), "poles": poles_steps,
+          "wells": lambda: _unsplit(wells_steps()), "fieldpoles": fieldpoles_steps, "spurs": None, "split": split_steps}
 
 
 def main() -> int:
@@ -96,7 +175,7 @@ def main() -> int:
     args = ap.parse_args()
     ai = AIBridge()
     for name, fn in STAGES.items():
-        steps = fn()
+        steps = fn() if fn else spurs_steps(ai)
         print(f"  {name}: {len(p1.standing(ai, steps))}/{sum(1 for k, _ in steps if k == 'build')}")
     crew = [n.strip() for n in args.who.split(",") if n.strip()]
     if not (crew and args.stage):
@@ -104,7 +183,8 @@ def main() -> int:
     os.environ[detached.ENV] = "p5"
     detached.mark(crew, "p5", minutes=180)
     try:
-        ok = p1.build_stage(ai, crew, STAGES[args.stage](), args.stage, rounds=20)
+        steps = STAGES[args.stage]() if STAGES[args.stage] else spurs_steps(ai)
+        ok = p1.build_stage(ai, crew, steps, args.stage, rounds=20)
     finally:
         detached.release(crew)
     return 0 if ok else 1
