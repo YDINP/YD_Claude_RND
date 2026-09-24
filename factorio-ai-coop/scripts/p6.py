@@ -52,7 +52,34 @@ def iron3_steps():
     return out
 
 
-STAGES = {"iron3poles": iron3poles_steps, "iron3": iron3_steps}
+# 발전 블록 C 증설: 7.2MW 중 6.44MW (89%). 보일러 B0 (23,44.5 서향, 물 연결 (23.5,42.5)·(23.5,46.5),
+# 증기 (21.5,44.5)) 북쪽에 B1·B2·B3 를 맞붙여 물을 잇는다 (power3 와 같은 방식, 간격 3).
+# 증기 출구에 관 1칸 (x=21.5) - 그 열의 빈칸이 전봇대 자리. 엔진은 18.5 · 13.5. 석탄은 가지 x=25.5 에서.
+# 전봇대 (17.5,41.5) 는 B0 엔진에 전기를 대고 (15.5,40.5) 와 함께 서쪽 (14.5,33.5) 로 가는 중계다 -
+# 새 전봇대 (21.5, 42.5/37.5/33.5) 가 그 둘을 넘겨받은 뒤에 걷는다 (따로 단계).
+BOILER_YS = (41.5, 38.5, 35.5)
+POWER5_POLES = ((21.5, 42.5), (21.5, 37.5), (21.5, 33.5),
+                # x=21.5 덮개(19..24)는 서쪽 엔진(11..15)에 안 닿는다 - (17.5,41.5)을 걷자 B0 엔진 하나가
+                # not_plugged_in 이 되어 연구소 22 가 low_power 였다 (실측). 서쪽 열과 B3 팔 자리를 더한다.
+                (10.5, 43.5), (10.5, 37.5), (24.5, 33.5))
+
+
+def power5poles_steps():
+    return [b(POLE, x, y) for x, y in POWER5_POLES]
+
+
+def power5_steps():
+    out = power5poles_steps()
+    out += [("demolish", {"x": x, "y": y, "name": POLE, "search_radius": 0.3}) for x, y in ((17.5, 41.5), (15.5, 40.5))]
+    for y in BOILER_YS:
+        out += [b("boiler", 23, y, W), b("pipe", 21.5, y),
+                b("steam-engine", 18.5, y, E), b("steam-engine", 13.5, y, E),
+                b(p1.INS, 24.5, y, E)]                                # 가지 벨트 (25.5) 에서 집는다
+    return out
+
+
+STAGES = {"iron3poles": iron3poles_steps, "iron3": iron3_steps,
+          "power5poles": power5poles_steps, "power5": power5_steps}
 
 
 def main() -> int:
