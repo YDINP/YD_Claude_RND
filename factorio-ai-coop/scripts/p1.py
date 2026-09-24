@@ -46,6 +46,10 @@ COST = {
     POLE: {"copper-plate": 0.5, "wood": 0.5},
     "splitter": {"iron-plate": 11.5, "copper-plate": 7.5},
     "iron-chest": {"iron-plate": 8},
+    "boiler": {"iron-plate": 4, "stone": 5},
+    "steam-engine": {"iron-plate": 31},
+    "offshore-pump": {"iron-plate": 7},
+    "pipe": {"iron-plate": 1},
     FURN: {"stone": 5},
 }
 PAIRED = {BELT, POLE}
@@ -478,6 +482,41 @@ def cufix_steps():
     return [("demolish", {"x": CU_X + 2, "y": y, "name": EMD, "search_radius": 0.6}) for y in CU_DRILL_YS]
 
 
+def power3_steps():
+    """보일러 2 급탄 + 보일러 3·4 (보일러 2 북쪽에 차례로 붙여 물을 이어 받는다) + 기관 4 -> 합계 7.2MW.
+
+    실측: 급탄 가지는 보일러 1 에만 닿아 보일러 2 는 석탄 0 - 1.8MW 로 과학 블록이 low_power.
+    가지 y=27.5 에 분배기 -> y=28.5 동쪽 -> x=44.5 남쪽, 보일러 4·3·2 동쪽 팔이 집는다.
+    기관을 보일러에 바로 붙이면 기관끼리 빈틈이 없어 전봇대가 안 닿는다 - 보일러와 첫 기관
+    사이에 파이프 한 칸 (x=40.5) 을 두어 전봇대 자리를 만든다.
+    """
+    out = [("demolish", {"x": BRANCH_X, "y": 27.5, "name": BELT, "search_radius": 0.4}),
+           b(SPLIT, 26.0, 27.5, S)]
+    x = 26.5
+    while x < 44.5:
+        out.append(b(BELT, x, 28.5, E))
+        x += 1
+    out += [b(BELT, 44.5, 28.5 + i, S) for i in range(10)]
+    for by in (34.5, 31.5):
+        out += [b("boiler", 42, by, W), b("pipe", 40.5, by),
+                b("steam-engine", 37.5, by, E), b("steam-engine", 32.5, by, E)]
+    out += [b(INS, 43.5, y, E) for y in (31.5, 34.5, 37.5)]
+    out += [b(POLE, 29.5, 34.5), b(POLE, 34.5, 29.5), b(POLE, 40.5, 33.5),
+            b(POLE, 43.5, 32.5), b(POLE, 44.5, 38.5)]
+    return out
+
+
+def power4_steps():
+    """남쪽 물가 블록 C: 펌프 (19.5,55.5) · 보일러 (19,57.5) · 기관 2. 급탄 가지를 보일러 1 너머로 연장."""
+    out = [b(BELT, BRANCH_X, y, S) for y in [45.5 + i for i in range(12)]]
+    out += [b(BELT, x, 57.5, W) for x in (25.5, 24.5, 23.5, 22.5, 21.5)]
+    out += [b("offshore-pump", 19.5, 55.5, N), b("boiler", 19, 57.5, W),
+            b("steam-engine", 15.5, 57.5, E), b("steam-engine", 10.5, 57.5, E),
+            b(INS, 20.5, 57.5, E),
+            b(POLE, 26.5, 50.5), b(POLE, 22.5, 55.0), b(POLE, 16.5, 55.0), b(POLE, 11.5, 55.0)]
+    return out
+
+
 def colend_steps():
     """기둥 판 줄 끝 (y -21.5) 에 팔+상자 - P2 버스가 설 때까지 판을 받는 임시 끝."""
     out = []
@@ -487,7 +526,7 @@ def colend_steps():
     return out
 
 
-STAGES = {"cufix": cufix_steps, "iron2": iron2_steps, "copper": copper_steps, "fuelstop": fuelstop_steps, "coltop": coltop_steps, "colend": colend_steps, "trunk": trunk_steps, "coal": coal_steps, "boilerfeed": boilerfeed_steps,
+STAGES = {"power3": power3_steps, "power4": power4_steps, "cufix": cufix_steps, "iron2": iron2_steps, "copper": copper_steps, "fuelstop": fuelstop_steps, "coltop": coltop_steps, "colend": colend_steps, "trunk": trunk_steps, "coal": coal_steps, "boilerfeed": boilerfeed_steps,
           "iron": iron_steps, "column": column_steps, "column_low": lambda: column_steps(2)}
 
 
