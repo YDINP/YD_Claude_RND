@@ -102,7 +102,8 @@ def gather(ai, count=50) -> None:
             print(f"{who}: {ore} {count}개 손채굴 ({x:.0f},{y:.0f})")
 
 
-LAYOUT = os.path.join(HERE, "..", "state", "run22_layout.json")
+RUN = os.environ.get("AI_RUN", "run23")                    # 회차마다 줄 좌표 파일이 따로 (22회차 좌표가 23회차에 박히지 않게)
+LAYOUT = os.path.join(HERE, "..", "state", f"{RUN}_layout.json")
 KEY = {"iron-ore": "iron", "copper-ore": "copper"}
 
 
