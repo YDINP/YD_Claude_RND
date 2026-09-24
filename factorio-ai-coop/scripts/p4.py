@@ -96,6 +96,35 @@ def lab_surplus(ai) -> dict:
     end)()""")
 
 
+AM1, AM2 = "assembling-machine-1", "assembling-machine-2"
+p1.COST.update({AM2: {"steel-plate": 2, "iron-plate": 35, "copper-plate": 9}})   # 1형까지 손제작 몫 (뜯은 1형은 다음 제작에 재사용)
+# 연구소 22대에서 빨강이 모자랐다 (뒤 12대 r0 g2, 벨트 빨강 17·초록 201). 1형 빨강 8 = 0.8/s, 초록 9 = 0.75/s.
+# 2형(속도 0.75)으로 둘 다 +50% - 한쪽만 올리면 다른 쪽이 곧 막힌다. 먹이는 조립기(G1·IA·CI)도 같이.
+UPGRADE = [(-23.5 + 3 * k, 22.5, "automation-science-pack") for k in range(8)] + \
+          [(-35.5 + 3 * k, 16.5, "logistic-science-pack") for k in range(9)] + \
+          [(2.5, 3.5, "iron-gear-wheel"), (-12.5, 7.5, "inserter"), (-12.5, 3.5, "electronic-circuit"),
+           (-16.5, 7.5, "iron-gear-wheel")]      # G2 -> IA: 팔 1.5/s 에 톱니 1.5/s (1형 1/s 로는 IA 가 굶었다)
+
+
+def am2_steps():
+    out = []
+    for x, y, _r in UPGRADE:
+        out += [("demolish", {"x": x, "y": y, "name": AM1, "search_radius": 0.4}), b(AM2, x, y)]
+    return out
+
+
+def am2_recipes(ai, who) -> int:
+    """2형이 선 자리마다 레시피 (없는 것만)."""
+    n = 0
+    for x, y, r in UPGRADE:
+        got = ai.lua("""(function() local a = game.surfaces[1].find_entity("%s", {%s, %s})
+          return {has = a ~= nil, rec = a and a.get_recipe() and a.get_recipe().name or ""} end)()""" % (AM2, x, y))
+        if got.get("has") and not got.get("rec"):
+            ai.set_recipe(who, x, y, r)
+            n += 1
+    return n
+
+
 def queue_fill(ai, packs=("automation-science-pack", "logistic-science-pack")) -> list:
     """연구 대기열을 «만들고 있는 팩만» 쓰는 연구로 채운다 (싼 것부터).
 
@@ -130,7 +159,7 @@ def queue_fill(ai, packs=("automation-science-pack", "logistic-science-pack")) -
     return list(q.values()) if isinstance(q, dict) else list(q or [])
 
 
-STAGES = {"labs2": labs2_steps, "steel": steel_steps, "labs3": labs_more_steps}
+STAGES = {"labs2": labs2_steps, "steel": steel_steps, "labs3": labs_more_steps, "am2": am2_steps}
 
 
 def main() -> int:
@@ -150,6 +179,8 @@ def main() -> int:
     detached.mark(crew, "p4", minutes=120)
     try:
         ok = p1.build_stage(ai, crew, STAGES[args.stage](), args.stage)
+        if args.stage == "am2":
+            print(f"  레시피 {am2_recipes(ai, crew[0])}대")
     finally:
         detached.release(crew)
     return 0 if ok else 1

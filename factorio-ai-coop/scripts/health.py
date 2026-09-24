@@ -58,8 +58,17 @@ def snapshot(ai) -> dict:
         if c == 0 then tur.empty = tur.empty + 1 elseif c < 20 then tur.low = tur.low + 1 end
         if c < tur.min then tur.min = c end
       end
+      -- 전기 없는 것 (종류 무관). 팔은 위 분포에 안 잡힌다 - 출력 팔 넷이 전기 없이 서자
+      -- 구리 화로 넷이 «막힘»으로만 보였고 빨강 조립기 다섯이 굶었다 (22회차).
+      local dark = {}
+      for _, x in pairs(s.find_entities_filtered{force = f, type = {"inserter", "mining-drill", "furnace",
+          "assembling-machine", "lab", "pump", "pumpjack", "electric-turret", "radar"}}) do
+        if x.status == defines.entity_status.no_power then
+          dark[#dark+1] = string.format("%%s@%%.1f,%%.1f", x.name, x.position.x, x.position.y)
+        end
+      end
       local e = game.forces.enemy
-      return {by = by, stock = stock, turrets = tur, tick = game.tick,
+      return {by = by, stock = stock, turrets = tur, tick = game.tick, dark = dark,
               evolution = e.get_evolution_factor(s),
               pollution = s.get_total_pollution(),
               research = f.current_research and f.current_research.name or "none"}
@@ -104,6 +113,10 @@ def main() -> int:
     idle = {k: v for k, v in (snap.get("stock") or {}).items() if v}
     if idle:
         print("  상자 재고 (소비자 없는 재고 후보): " + ", ".join(f"{k} {v:,}" for k, v in sorted(idle.items(), key=lambda kv: -kv[1])))
+    dark = snap.get("dark") or []
+    dark = list(dark.values()) if isinstance(dark, dict) else list(dark)
+    if dark:
+        print(f"  ⚠ 전기 없음 {len(dark)}: " + ", ".join(dark[:8]))
     tur = snap["turrets"]
     if tur["n"]:
         print(f"  포탑 {tur['n']}대 · 빈 것 {tur['empty']} · 20발 미만 {tur['low']} · 최소 {tur['min']}발")
