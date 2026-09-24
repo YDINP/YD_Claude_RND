@@ -37,7 +37,7 @@ def survey(ai) -> tuple:
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local chests, low = {}, {}
-      for _, c in pairs(s.find_entities_filtered{name = "wooden-chest", force = f}) do
+      for _, c in pairs(s.find_entities_filtered{type = "container", force = f}) do
         local n = c.get_inventory(defines.inventory.chest).get_item_count("coal")
         if n > 0 then chests[#chests+1] = string.format("%%.1f,%%.1f,%%d", c.position.x, c.position.y, n) end
       end
