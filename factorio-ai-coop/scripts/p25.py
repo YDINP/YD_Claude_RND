@@ -145,7 +145,7 @@ def block():
     out += run(SEG_X, -42, SEG_X, -38, S) + [ent(BELT, SEG_X, -37, W)]          # 강철 토막 -> J1
     out += [ent(AM, -47, -35, recipe="firearm-magazine"), ent(INS, -45, -36, E), ent(LONG, -49, -36, E),
             ent(BELT, SEG_X, -36, N)]                                            # 탄창 토막 -> J1 (남에서)
-    out += [ent(AM, -47, -31, recipe="stone-wall"), ent(INS, -49, -32, W), ent(LONG, -49, -30, E),
+    out += [ent(AM, -47, -31, recipe="stone-wall"), ent(FAST, -49, -32, W), ent(LONG, -49, -30, E),  # 벽돌 입력은 고속 팔: 돌벽 1 = 벽돌 5, 0.25/s 면 1.25/s - 기본 팔 0.83/s 로는 모자랐다 (실측)
             ent(BELT, SEG_X, -30, S), ent(BELT, SEG_X, -29, W)]                  # 돌벽 토막 -> J2 (북에서)
     for gy, iy in ((-27, -27), (-24, -24), (-21, -21)):
         out += [ent(AM, -47, gy, recipe="grenade"), ent(INS, -49, gy - 1, W), ent(INS, -45, iy, E),
