@@ -45,12 +45,12 @@ def survey(ai) -> tuple:
         end
       end
       for _, c in pairs(s.find_entities_filtered{type = "container", force = f,
-              area = {{-10.5, %f}, {-3, %f}}}) do
+              area = {{%f, %f}, {%f, %f}}}) do
         hub[#hub+1] = string.format("%%.1f,%%.1f,%%d", c.position.x, c.position.y,
                                     c.get_inventory(defines.inventory.chest).count_empty_stacks())
       end
       return {full = full, hub = hub}
-    end)()""" % (TAKE_AT, HUB_ROW_Y - 0.6, HUB_ROW_Y + 0.6))
+    end)()""" % (TAKE_AT, _p1.HUB_X0, HUB_ROW_Y - 0.6, _p1.HUB_X1, HUB_ROW_Y + 0.6))
     full = []
     for r in _rows(reply.get("full")):
         x, y, n, c = str(r).split(",")
