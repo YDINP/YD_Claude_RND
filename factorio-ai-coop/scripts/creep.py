@@ -152,6 +152,27 @@ def assault(ai, who, spots, stand, ammo_name, retreat) -> None:
     submit(ai, who, plan, strict=False)
 
 
+def pick_side(ai, foes, n=16) -> int:
+    """동·서 열 가운데 세울 수 있는 자리가 많은 쪽.
+    실측 (23회차 남쪽 둥지): 동쪽 열은 나무 85 그루에 16 자리 중 3 만 났고, 포탑이 한 대씩 서서 차례로 부서졌다.
+    서쪽은 16/16."""
+    got = {sd: len(placeable(ai, seats(*column_for(foes, sd), n, sd))) for sd in (1, -1)}
+    print(f"  놓을 자리 동 {got[1]}/{n} · 서 {got[-1]}/{n}")
+    return 1 if got[1] >= got[-1] else -1
+
+
+def rally(ai, crew, foes, side) -> None:
+    """열 뒤 RETREAT 칸에 모두 모인 다음에 세운다.
+    실측: 따로 출발하면 먼저 온 사람의 포탑이 혼자 서서 혼자 맞았다 (hotel 이 bravo 보다 60 칸 먼저 도착)."""
+    cx, cy = column_for(foes, side)
+    for i, who in enumerate(crew):
+        submit(ai, who, [("walk_to", {"x": cx + side * RETREAT, "y": cy - 3 + 2 * i})], strict=False)
+    for _ in range(90):
+        time.sleep(5)
+        if all(not crew_pos(ai)[w][4] for w in crew):
+            break
+
+
 def wave(ai, crew, foes, ammo_name, side=1) -> list:
     """한 열을 둘이 나눠 세운다. 놓은 자리를 돌려준다."""
     cx, cy = column_for(foes, side)
@@ -195,7 +216,7 @@ def main() -> int:
     ap.add_argument("--who", default="")
     ap.add_argument("--go", action="store_true")
     ap.add_argument("--waves", type=int, default=3)
-    ap.add_argument("--side", type=int, default=1, help="1 = 동쪽에서 접근, -1 = 서쪽")
+    ap.add_argument("--side", type=int, default=0, help="1 = 동쪽에서 접근, -1 = 서쪽, 0 = 놓을 자리가 많은 쪽")
     # 두 무리가 60칸 안에 겹치면 열이 «그 사이 허공»에 선다 (북쪽: y -28 과 -76 무리 -> y -57).
     ap.add_argument("--radius", type=float, default=60, help="--at 둘레 이만큼만 친다")
     args = ap.parse_args()
@@ -209,6 +230,8 @@ def main() -> int:
     print(f"  적 구조물 {len(foes)}:")
     for n, x, y, hp in sorted(foes, key=lambda f: -f[1]):
         print(f"    {n:<22} ({x:.0f},{y:.0f}) hp {hp}")
+    if not args.side:
+        args.side = pick_side(ai, foes)
     cx, cy = column_for(foes, args.side)
     print(f"  포탑 열 x={cx:.0f} y~{cy:.0f} · 사거리 안 구조물 "
           f"{sum(1 for f in foes if math.hypot(f[1] - cx, f[2] - cy) <= RANGE + 4)}")
@@ -242,6 +265,7 @@ def run(ai, args, crew, ax, ay) -> int:
             print("  둥지가 사라졌다")
             break
         print(f"-- {n_wave}파: 남은 구조물 {len(foes)}")
+        rally(ai, crew, foes, args.side)
         spots = wave(ai, crew, foes, ammo_name, args.side)
         if not spots:
             break
