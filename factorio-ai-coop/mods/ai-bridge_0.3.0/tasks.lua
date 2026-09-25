@@ -663,6 +663,30 @@ local function target_entity(ctx, p, wants, how_many)
   return best
 end
 
+-- insert 전용: 가방 + 탄약 칸 (탄약은 만들면 탄약 칸으로 바로 들어간다 - 23회차 실측: 탄창 60 을 만들어
+-- 포탑에 넣으려 했더니 «no firearm-magazine to insert»). 쏠 몫으로 탄약 칸에 AMMO_RESERVE 는 남긴다.
+local AMMO_RESERVE = 10
+local function ammo_spare(bot, name)
+  local inv = bot.get_inventory(defines.inventory.character_ammo)
+  if not inv then return 0, nil end
+  return math.max(0, inv.get_item_count(name) - AMMO_RESERVE), inv
+end
+
+local function insert_have(bot, name)
+  return count_item(bot, name) + (ammo_spare(bot, name))
+end
+
+local function insert_take(bot, name, n)
+  local main = bot.get_main_inventory()
+  local from_main = math.min(n, main and main.get_item_count(name) or 0)
+  if from_main > 0 then main.remove { name = name, count = from_main } end
+  local rest = n - from_main
+  if rest > 0 then
+    local spare, inv = ammo_spare(bot, name)
+    if inv and spare > 0 then inv.remove { name = name, count = math.min(rest, spare) } end
+  end
+end
+
 M.insert = {
   start = function(ctx)
     local p = ctx.task.params
@@ -671,7 +695,7 @@ M.insert = {
       ctx.task.error = string.format("nothing with an inventory at %s,%s", p.x, p.y)
       return "failed"
     end
-    if count_item(ctx.bot, p.name) < 1 then
+    if insert_have(ctx.bot, p.name) < 1 then
       ctx.task.error = "no " .. tostring(p.name) .. " to insert"
       return "failed"
     end
@@ -696,9 +720,9 @@ M.insert = {
     end
     halt(bot)
 
-    local wanted = math.min(p.count or 1, count_item(bot, p.name))
-    local moved = st.target.insert { name = p.name, count = wanted }
-    if moved > 0 then bot.remove_item { name = p.name, count = moved } end
+    local wanted = math.min(p.count or 1, insert_have(bot, p.name))
+    local moved = wanted > 0 and st.target.insert { name = p.name, count = wanted } or 0
+    if moved > 0 then insert_take(bot, p.name, moved) end
     ctx.task.result = { inserted = moved, item = p.name, into = st.target.name }
 
     -- «넣었다»와 «들어갔다»는 다른 말이다.
@@ -714,7 +738,7 @@ M.insert = {
     -- 왜 0이었는지는 여기서 따지지 않는다. 다만 «0이면 0이라고 말한다».
     if moved == 0 then
       ctx.task.error = string.format("%s 0 into %s (wanted %d, had %d)",
-        tostring(p.name), st.target.name, p.count or 1, count_item(bot, p.name))
+        tostring(p.name), st.target.name, p.count or 1, insert_have(bot, p.name))
       return "failed"
     end
     return "done"
