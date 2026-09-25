@@ -336,7 +336,8 @@ def build_stage(ai, crew, steps, label, rounds=10) -> bool:
                 if (st[0] == "build" and (st[1]["name"], st[1]["x"], st[1]["y"]) not in up)
                 or (st[0] in ("take", "demolish") and (st[1]["x"], st[1]["y"]) not in gone_)
                 or st[0] not in ("build", "take", "demolish")]
-        if not any(k == "build" for k, _ in todo):
+        # 철거만 있는 단계도 끝까지 (실측: build 만 세다 retire 가 «다 섰다 (0)» 로 버너 22 를 두고 끝났다)
+        if not any(k in ("build", "take", "demolish") for k, _ in todo):
             print(f"  {label}: 다 섰다 ({len(up)})")
             return True
         bad = {s.split("|")[0]: s.split("|")[1] for s in blocked(ai, todo)}
