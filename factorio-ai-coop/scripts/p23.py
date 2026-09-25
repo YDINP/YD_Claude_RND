@@ -32,7 +32,7 @@ PUMP = (38.5, 33.5)                    # manual can_place 로 호숫가를 다 �
 TURN = (38.5, -58.5)
 INLET = (-35.5, -58.5)                 # B1 남쪽 물 연결 칸
 BOILER_X = -36                         # 석탄 동쪽 끝 실측 (y -80..-92 에서 x -32..-37) 에 맞춰
-BOILER_YS = (-60.5, -63.5)             # P1 첫 두 대 (3.6MW). 넷이면 -66.5, -69.5 를 더한다
+BOILER_YS = (-60.5, -63.5, -66.5, -69.5)   # 둘 (3.6MW) -> 넷 (7.2MW, P2 몫). 맞붙여 물을 잇는다
 COAL_BELT_X = -33.5
 COAL_DRILL_YS = (-81.5, -84.5, -87.5)
 
@@ -82,7 +82,8 @@ def boiler_steps():
                 b(INS, BOILER_X + 1.5, y, E)]
     # 전봇대: 관 열 (x=-27.5) 의 빈칸 + 엔진 서쪽 끝 (22회차: 관 열 덮개는 서쪽 엔진에 안 닿았다)
     out += [b(POLE, BOILER_X - 1.5, -62.0), b(POLE, BOILER_X - 13.5, -62.0), b(POLE, BOILER_X + 1.5, -65.5),
-            b(POLE, BOILER_X + 1.5, -61.5)]                                   # B1 급탄 팔 (-34.5,-60.5) 이 no_power 였다
+            b(POLE, BOILER_X + 1.5, -61.5),                                   # B1 급탄 팔 (-34.5,-60.5) 이 no_power 였다
+            b(POLE, BOILER_X - 1.5, -68.0), b(POLE, BOILER_X - 13.5, -68.0), b(POLE, BOILER_X + 1.5, -68.0)]   # B3·B4 줄
     return out
 
 
