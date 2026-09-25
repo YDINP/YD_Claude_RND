@@ -211,15 +211,19 @@ def turret_state(ai, spots) -> list:
 
 
 def main() -> int:
+    global EACH
     ap = argparse.ArgumentParser()
     ap.add_argument("--at", required=True, help="둥지 근처 좌표. 음수는 --at=-198,35")
     ap.add_argument("--who", default="")
     ap.add_argument("--go", action="store_true")
     ap.add_argument("--waves", type=int, default=3)
+    # 중형 웜 둘에 14 대 열이 다 부서졌다 (23회차 남쪽 새 둥지) - 한 파를 두껍게
+    ap.add_argument("--each", type=int, default=EACH, help="한 사람이 한 파에 세우는 포탑 수")
     ap.add_argument("--side", type=int, default=0, help="1 = 동쪽에서 접근, -1 = 서쪽, 0 = 놓을 자리가 많은 쪽")
     # 두 무리가 60칸 안에 겹치면 열이 «그 사이 허공»에 선다 (북쪽: y -28 과 -76 무리 -> y -57).
     ap.add_argument("--radius", type=float, default=60, help="--at 둘레 이만큼만 친다")
     args = ap.parse_args()
+    EACH = args.each
     ax, ay = (float(v) for v in args.at.split(","))
     ai = AIBridge()
 
