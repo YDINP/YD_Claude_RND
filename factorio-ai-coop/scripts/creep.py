@@ -164,19 +164,30 @@ def pick_side(ai, foes, n=16) -> int:
 def rally(ai, crew, foes, side) -> None:
     """열 뒤 RETREAT 칸에 모두 모인 다음에 세운다.
     실측: 따로 출발하면 먼저 온 사람의 포탑이 혼자 서서 혼자 맞았다 (hotel 이 bravo 보다 60 칸 먼저 도착)."""
-    cx, cy = column_for(foes, side)
+    tf, sd, real = _axis(foes, side)
+    cx, cy = column_for(tf, sd)
     for i, who in enumerate(crew):
-        submit(ai, who, [("walk_to", {"x": cx + side * RETREAT, "y": cy - 3 + 2 * i})], strict=False)
+        x, y = real(cx + sd * RETREAT, cy - 3 + 2 * i)
+        submit(ai, who, [("walk_to", {"x": x, "y": y})], strict=False)
     for _ in range(90):
         time.sleep(5)
         if all(not crew_pos(ai)[w][4] for w in crew):
             break
 
 
+def _axis(foes, side):
+    """side ±1 = 동·서 세로 열, ±2 = 남·북 가로 열 (x·y 를 바꿔 같은 계산을 쓴다).
+    돌려주는 것: (바꾼 foes, ±1, 실좌표로 되돌리는 함수)."""
+    if abs(side) == 2:
+        return [(f[0], f[2], f[1], f[3]) for f in foes], side // 2, (lambda a, b: (b, a))
+    return foes, side, (lambda a, b: (a, b))
+
+
 def wave(ai, crew, foes, ammo_name, side=1) -> list:
-    """한 열을 둘이 나눠 세운다. 놓은 자리를 돌려준다."""
-    cx, cy = column_for(foes, side)
-    spots = placeable(ai, seats(cx, cy, EACH * len(crew), side))
+    """한 열을 사람 수만큼 나눠 세운다. 놓은 자리 (실좌표) 를 돌려준다."""
+    tf, sd, real = _axis(foes, side)
+    cx, cy = column_for(tf, sd)
+    spots = placeable(ai, [real(a, b) for a, b in seats(cx, cy, EACH * len(crew), sd)])
     if not spots:
         print("  놓을 자리가 없다")
         return []
@@ -186,11 +197,11 @@ def wave(ai, crew, foes, ammo_name, side=1) -> list:
     for who, part in zip(crew, parts):
         if not part:
             continue
-        my = sum(p[1] for p in part) / len(part)
-        stand = (cx + side * STAND_BACK, my)
-        retreat = (cx + side * RETREAT, my)
+        my = sum(real(*p)[1] for p in part) / len(part)            # 열을 따라가는 좌표
+        stand = real(cx + sd * STAND_BACK, my)
+        retreat = real(cx + sd * RETREAT, my)
         assault(ai, who, part, stand, ammo_name, retreat)
-        print(f"{who}: 포탑 {len(part)}대를 x={part[0][0]} 열에 (서는 곳 {stand[0]:.0f},{stand[1]:.0f})")
+        print(f"{who}: 포탑 {len(part)}대를 {part[0]} 부터 (서는 곳 {stand[0]:.0f},{stand[1]:.0f})")
     return spots
 
 
@@ -219,7 +230,8 @@ def main() -> int:
     ap.add_argument("--waves", type=int, default=3)
     # 중형 웜 둘에 14 대 열이 다 부서졌다 (23회차 남쪽 새 둥지) - 한 파를 두껍게
     ap.add_argument("--each", type=int, default=EACH, help="한 사람이 한 파에 세우는 포탑 수")
-    ap.add_argument("--side", type=int, default=0, help="1 = 동쪽에서 접근, -1 = 서쪽, 0 = 놓을 자리가 많은 쪽")
+    ap.add_argument("--side", type=int, default=0,
+                    help="1 = 동쪽에서 접근, -1 = 서쪽, 2 = 남쪽, -2 = 북쪽, 0 = 동·서 중 놓을 자리가 많은 쪽")
     # 두 무리가 60칸 안에 겹치면 열이 «그 사이 허공»에 선다 (북쪽: y -28 과 -76 무리 -> y -57).
     ap.add_argument("--radius", type=float, default=60, help="--at 둘레 이만큼만 친다")
     args = ap.parse_args()
@@ -236,7 +248,8 @@ def main() -> int:
         print(f"    {n:<22} ({x:.0f},{y:.0f}) hp {hp}")
     if not args.side:
         args.side = pick_side(ai, foes)
-    cx, cy = column_for(foes, args.side)
+    tf, sd, real = _axis(foes, args.side)
+    cx, cy = real(*column_for(tf, sd))
     print(f"  포탑 열 x={cx:.0f} y~{cy:.0f} · 사거리 안 구조물 "
           f"{sum(1 for f in foes if math.hypot(f[1] - cx, f[2] - cy) <= RANGE + 4)}")
     if not (args.go and args.who):
@@ -287,7 +300,8 @@ def run(ai, args, crew, ax, ay) -> int:
             print(f"  포탑 {len(st)}/{len(spots)} 서 있음 (hp {[h for h, _a in st]}) · "
                   f"적 구조물 {len(left)} · "
                   + " ".join(f"{w}({pos[w][1]:.0f},{pos[w][2]:.0f}) hp{pos[w][3]}" for w in crew))
-            if not left or all(math.hypot(f[1] - spots[0][0], f[2] - sum(s[1] for s in spots) / len(spots)) > RANGE + 2
+            mx, my = sum(p[0] for p in spots) / len(spots), sum(p[1] for p in spots) / len(spots)
+            if not left or all(math.hypot(f[1] - mx, f[2] - my) > RANGE + 2
                                for f in left):
                 break                        # 사거리 안의 것은 다 죽었다
             seen_any = seen_any or bool(st)
