@@ -25,7 +25,8 @@ OWNER = "collect"
 import p1 as _p1                                       # 허브 줄은 회차 설정 파일에서 (p1 이 읽는다)
 HUB_ROW_Y = _p1.HUB_Y
 _H0 = _p1.HUB_X0 + 4                                   # 첫 칸은 P0 의 나무 상자
-HUB_XS = tuple(_H0 + d for d in (0, 1, 2, 3, 4, 5, 6))
+HUB_XS = tuple(_H0 + d for d in (1, 2, 3, 4, 5, 6, 7))   # 첫 칸 (_H0) 은 넣을 곳에서 뺀다: 23회차에 나무 상자와 쇠 상자가
+                                                     # 같은 좌표에 겹쳐 서서, 빈 나무 상자를 골라도 꽉 찬 쇠 상자에 넣으려다 0 개가 됐다
 TAKE_AT = 15          # 이보다 많이 든 화로만 들른다
 PER_ROUND = 25
 
@@ -82,7 +83,7 @@ def main() -> int:
                     for x, y, n, c in full[:PER_ROUND]:
                         plan += [("walk_to", {"x": x + 0.5, "y": y + 2.0}),
                                  ("take", {"name": n, "x": x, "y": y, "count": c})]
-                    room = sum(h[2] for h in hub)
+                    room = sum(h[2] for h in hub if abs(h[0] - _H0) > 0.4)
                     if room < 6:
                         free = [x for x in HUB_XS if all(abs(x - h[0]) > 0.4 for h in hub)]
                         if free:
@@ -91,7 +92,8 @@ def main() -> int:
                                      ("build", {"name": "iron-chest", "x": free[0], "y": HUB_ROW_Y})]
                             hub.append((free[0], HUB_ROW_Y, 32))
                     names = sorted({n for _x, _y, n, _c in full[:PER_ROUND]})
-                    target = max(hub, key=lambda h: h[2])
+                    usable = [h for h in hub if abs(h[0] - _H0) > 0.4] or hub
+                    target = max(usable, key=lambda h: h[2])
                     plan.append(("walk_to", {"x": target[0], "y": HUB_ROW_Y + 1.5}))
                     for n in names:
                         got = sum(c for _x, _y, nn, c in full[:PER_ROUND] if nn == n)
