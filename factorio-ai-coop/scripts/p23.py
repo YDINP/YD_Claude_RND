@@ -81,7 +81,8 @@ def boiler_steps():
                 b("steam-engine", BOILER_X - 4.5, y, E), b("steam-engine", BOILER_X - 9.5, y, E),
                 b(INS, BOILER_X + 1.5, y, E)]
     # 전봇대: 관 열 (x=-27.5) 의 빈칸 + 엔진 서쪽 끝 (22회차: 관 열 덮개는 서쪽 엔진에 안 닿았다)
-    out += [b(POLE, BOILER_X - 1.5, -62.0), b(POLE, BOILER_X - 13.5, -62.0), b(POLE, BOILER_X + 1.5, -65.5)]
+    out += [b(POLE, BOILER_X - 1.5, -62.0), b(POLE, BOILER_X - 13.5, -62.0), b(POLE, BOILER_X + 1.5, -65.5),
+            b(POLE, BOILER_X + 1.5, -61.5)]                                   # B1 급탄 팔 (-34.5,-60.5) 이 no_power 였다
     return out
 
 
@@ -91,11 +92,41 @@ def coal_steps():
     while y <= BOILER_YS[0] + 1:
         out.append(b(BELT, COAL_BELT_X, y, S))
         y += 1
-    out += [b(POLE, COAL_BELT_X - 4.5, -76.0), b(POLE, COAL_BELT_X + 1.5, -70.0)]
+    # 벨트 동쪽 한 열 (x=-32.5) 6칸 간격: 보일러 블록 (-34.5,-65.5) 에서 이어지고 채굴기 (x -37..-34) 동쪽 끝을 덮는다.
+    # (처음 배치 (-38,-76)·(-32,-70) 은 서로 8.5칸이라 끊기고 채굴기도 못 덮었다 - 23회차 실측)
+    out += [b(POLE, COAL_BELT_X + 1, y) for y in (-71.0, -77.0, -83.0, -89.0)]
     return out
 
 
-STAGES = {"water": water_steps, "boilers": boiler_steps, "coal": coal_steps}
+# 방어 관문 D (docs/run22-postmortem.md). 가장 가까운 둥지는 서쪽 (-544,-50) - 포탑은 철 버너 줄보다 서쪽.
+# 탄약: 허브 철판 상자 (-78.5,-52.5) -> 팔 -> 탄창 조립기 (-78.5,-49.5) -> 팔 -> 벨트 y=-46.5 서향 -> 포탑 팔.
+# 벨트 끝은 마지막 포탑 - 차면 역압으로 조립기가 선다 (싱크 없음).
+AMMO_AM = (-78.5, -49.5)
+AMMO_Y = -46.5
+TURRET_XS = (-118, -124)
+p1.COST.update({"gun-turret": {"iron-plate": 40, "copper-plate": 10},
+                "assembling-machine-1": {"iron-plate": 22, "copper-plate": 4.5}})
+
+
+def defense_steps():
+    ax, ay = AMMO_AM
+    out = [b("assembling-machine-1", ax, ay),
+           b(INS, ax, ay - 2, N),                 # 북쪽(허브 상자)에서 집어 조립기로
+           b(INS, ax, ay + 2, N)]                 # 조립기에서 집어 남쪽 벨트로
+    x = ax
+    while x >= -125.5:
+        out.append(b(BELT, x, AMMO_Y, W))
+        x -= 1
+    for tx in TURRET_XS:
+        out += [b("gun-turret", tx, AMMO_Y - 2.5), b(INS, tx - 0.5, AMMO_Y - 1, S),   # 벨트(남)에서 집어 북쪽 포탑으로
+                b("gun-turret", tx, AMMO_Y + 2.5), b(INS, tx - 0.5, AMMO_Y + 1, N)]   # 벨트(북)에서 집어 남쪽 포탑으로
+    poles = [(-56.5, -55.5), (-62.5, -52.5), (-69.5, -50.5), (-76.5, -50.5), (-82.5, -47.5)]
+    poles += [(x, AMMO_Y - 1) for x in (-89.5, -96.5, -103.5, -110.5, -116.5, -121.5, -126.5)]
+    out += [b(POLE, x, y) for x, y in poles]
+    return out
+
+
+STAGES = {"water": water_steps, "boilers": boiler_steps, "coal": coal_steps, "defense": defense_steps}
 
 
 def main() -> int:
