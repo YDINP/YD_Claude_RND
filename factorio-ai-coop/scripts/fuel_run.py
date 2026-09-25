@@ -45,7 +45,11 @@ def survey(ai) -> tuple:
         local inv = e.get_fuel_inventory and e.get_fuel_inventory()
         if inv then
           local n = inv.get_item_count("coal")
-          if n < %d then low[#low+1] = string.format("%%.1f,%%.1f,%%s,%%d", e.position.x, e.position.y, e.type, n) end
+          -- 석탄 캐는 채굴기는 kind=coal-drill (연료를 만드는 쪽이 먼저), 물 없는 보일러는 건너뛴다
+          local kind = e.type
+          if e.type == "mining-drill" and e.mining_target and e.mining_target.name == "coal" then kind = "coal-drill" end
+          local dry = e.type == "boiler" and e.status == defines.entity_status.no_input_fluid
+          if n < %d and not dry then low[#low+1] = string.format("%%.1f,%%.1f,%%s,%%d", e.position.x, e.position.y, kind, n) end
         end
       end
       return {chests = chests, low = low}
@@ -55,7 +59,10 @@ def survey(ai) -> tuple:
     for r in _rows(reply.get("low")):
         x, y, kind, n = str(r).split(",")
         low.append((float(x), float(y), kind, int(n)))
-    low.sort(key=lambda t: (t[2] != "boiler", t[3]))      # 보일러 먼저, 그다음 가장 빈 것
+    # 연료를 만드는 석탄 채굴기 먼저 -> 다른 채굴기 -> 화로 -> 보일러 (23회차: 보일러 먼저였더니 물도 없는
+    # 보일러 둘이 석탄 100 을 먹고 석탄 채굴기가 전부 섰다)
+    rank = {"coal-drill": 0, "mining-drill": 1, "furnace": 2, "boiler": 3}
+    low.sort(key=lambda t: (rank.get(t[2], 4), t[3]))
     return chests, low
 
 

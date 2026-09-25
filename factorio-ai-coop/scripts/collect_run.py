@@ -22,8 +22,10 @@ from orders import submit               # noqa: E402
 import detached                          # noqa: E402
 
 OWNER = "collect"
-HUB_ROW_Y = -54.5
-HUB_XS = (-6.5, -7.5, -5.5, -8.5, -4.5, -9.5, -3.5)   # 첫 칸은 P0 의 나무 상자
+import p1 as _p1                                       # 허브 줄은 회차 설정 파일에서 (p1 이 읽는다)
+HUB_ROW_Y = _p1.HUB_Y
+_H0 = _p1.HUB_X0 + 4                                   # 첫 칸은 P0 의 나무 상자
+HUB_XS = tuple(_H0 + d for d in (0, 1, 2, 3, 4, 5, 6))
 TAKE_AT = 15          # 이보다 많이 든 화로만 들른다
 PER_ROUND = 25
 

@@ -35,6 +35,15 @@ IRON_YS = [-80.5 + 3 * i for i in range(6)]           # 줄 서쪽, 동향
 COL_TOP = -45                                          # 철 기둥 화로 첫 줄 (타일 y)
 COL_ROWS = 12
 HUB_Y = -54.5
+HUB_X0, HUB_X1 = -10.5, -3
+# 23회차부터: 회차 설정 파일이 있으면 허브 줄을 거기서 (22회차 허브 좌표가 새 월드에 새지 않게)
+try:
+    import json as _json
+    _site = _json.load(open(os.path.join(HERE, "..", "state", os.environ.get("AI_RUN", "run23") + "_site.json"), encoding="utf-8"))
+    HUB_Y = _site["hub"][1]
+    HUB_X0, HUB_X1 = _site["hub"][0] - 4, _site["hub"][0] + 7
+except (OSError, ValueError, KeyError):
+    pass
 LAB_POLE = (17.5, 41.5)
 SIZE = {"electric-mining-drill": 3, "assembling-machine-1": 3, "assembling-machine-2": 3, "lab": 3,
         "stone-furnace": 2, "steel-furnace": 2, "boiler": 3, "steam-engine": 5, "pumpjack": 3,
@@ -216,7 +225,9 @@ def blocked(ai, steps) -> list:
            and not s.can_place_entity{name = n, position = {x, y}, direction = d, force = f,
                                       build_check_type = defines.build_check_type.manual} then
           local why = "blocked"
-          local e = s.find_entities_filtered{area = {{x - 1.5, y - 1.5}, {x + 1.5, y + 1.5}}}
+          -- 기계 크기만큼 본다 (±1.5 고정이면 엔진 5x3 끝의 나무를 못 봐 «blocked» 로만 넘겼다 - 23회차)
+          local h = (prototypes.entity[n] and math.max(prototypes.entity[n].tile_width, prototypes.entity[n].tile_height) or 1) / 2 + 0.5
+          local e = s.find_entities_filtered{area = {{x - h, y - h}, {x + h, y + h}}}
           for _, q in pairs(e) do
             if q.type == "tree" then why = "tree" break
             elseif q.type == "simple-entity" then why = string.format("rock:%%s:%%.2f:%%.2f", q.name, q.position.x, q.position.y) break
@@ -235,7 +246,7 @@ def hub(ai) -> dict:
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local out = {}
-      local cs = s.find_entities_filtered{type = "container", force = f, area = {{-10.5, %f}, {-3, %f}}}
+      local cs = s.find_entities_filtered{type = "container", force = f, area = {{%f, %f}, {%f, %f}}}
       for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{-6, -20}, {7, -18.5}}}) do cs[#cs+1] = c end
       -- 강철 줄의 재료 상자 (p4 steel) 도 «짓는 재료» 창고다
       for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{7, -17}, {8, -9}}}) do cs[#cs+1] = c end
@@ -245,7 +256,7 @@ def hub(ai) -> dict:
         end
       end
       return out
-    end)()""" % (HUB_Y - 0.6, HUB_Y + 0.6))
+    end)()""" % (HUB_X0, HUB_Y - 0.6, HUB_X1, HUB_Y + 0.6))
     best = {}
     for r in _rows(reply):
         n, x, y, c = str(r).split(",")
