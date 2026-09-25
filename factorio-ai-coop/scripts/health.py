@@ -117,7 +117,8 @@ def threat(ai) -> dict:
       for _, t in pairs(s.find_entities_filtered{type = "ammo-turret", force = f}) do
         local c = t.get_inventory(defines.inventory.turret_ammo).get_item_count()
         tur.n = tur.n + 1
-        if c == 0 then tur.empty = tur.empty + 1 elseif c < 20 then tur.low = tur.low + 1 end
+        -- 팔은 포탑에 탄창을 10 개까지만 넣는다 (자동 삽입 상한) - 벨트 보급이면 10 이 «가득»이다 (23회차 실측)
+        if c == 0 then tur.empty = tur.empty + 1 elseif c < 10 then tur.low = tur.low + 1 end
         if first or c < tur.min then tur.min = c; first = false end
       end
       return {seen = seen, cloud = cloud, polluted = polluted, nearest = nearest, where = where, near = near, turrets = tur,
@@ -132,7 +133,7 @@ def threat_lines(t) -> list:
     out = [f"  밝혀진 반경 {t['seen']}칸 · 경계 {edge:.0f}칸" + ("" if t["seen"] >= edge else "  ⛔ 경계를 다 못 봤다 - «적 0» 은 «모름» (걸어서 정찰)"),
            f"  위협: 진화 {t['evolution']:.3f} · 공해 구름 반경 {t['cloud']:.0f} ({t['polluted']} 청크) · "
            f"가장 가까운 적 구조물 {near_txt} · 경계 안 {t['near']}개",
-           f"  포탑 {tur['n']}대 · 빈 것 {tur['empty']} · 20발 미만 {tur['low']} · 최소 {tur['min']}발"]
+           f"  포탑 {tur['n']}대 · 빈 것 {tur['empty']} · 탄창 10 미만 {tur['low']} · 최소 {tur['min']}"]
     if t["near"]:
         out.append(f"  ⛔ 경계 안에 적 구조물 {t['near']}개 - 이번 회차 1순위 (지우거나 포탑 줄)")
     if tur["n"] == 0:
