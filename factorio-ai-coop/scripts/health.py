@@ -93,6 +93,17 @@ def threat(ai) -> dict:
           if d > cloud then cloud = d end
         end
       end
+      -- 밝혀진 반경: 스폰 둘레로 모든 방향이 밝혀진 가장 큰 반경 (32칸 단위). 여기 밖의 «적 0» 은 «모름» 이다.
+      local seen = 0
+      for r = 1, 20 do
+        local all = true
+        for i = 0, 15 do
+          local a = i * math.pi / 8
+          local px, py = sp.x + math.cos(a) * r * 32, sp.y + math.sin(a) * r * 32
+          if not f.is_chunk_charted(s, {math.floor(px / 32), math.floor(py / 32)}) then all = false break end
+        end
+        if all then seen = r * 32 else break end
+      end
       local near, nearest, where = 0, 1e9, ""
       for _, e in pairs(s.find_entities_filtered{force = "enemy", type = {"unit-spawner", "turret"}}) do
         if f.is_chunk_charted(s, {math.floor(e.position.x / 32), math.floor(e.position.y / 32)}) then
@@ -109,15 +120,18 @@ def threat(ai) -> dict:
         if c == 0 then tur.empty = tur.empty + 1 elseif c < 20 then tur.low = tur.low + 1 end
         if first or c < tur.min then tur.min = c; first = false end
       end
-      return {cloud = cloud, polluted = polluted, nearest = nearest, where = where, near = near, turrets = tur,
+      return {seen = seen, cloud = cloud, polluted = polluted, nearest = nearest, where = where, near = near, turrets = tur,
               evolution = game.forces.enemy.get_evolution_factor(s)}
     end)()""" % (MARGIN, FLOOR))
 
 
 def threat_lines(t) -> list:
     tur = t["turrets"]
-    out = [f"  위협: 진화 {t['evolution']:.3f} · 공해 구름 반경 {t['cloud']:.0f} ({t['polluted']} 청크) · "
-           f"가장 가까운 적 구조물 {t['nearest']:.0f}칸 ({t['where'] or '-'}) · 경계 {max(t['cloud'] + MARGIN, FLOOR):.0f}칸 안 {t['near']}개",
+    edge = max(t["cloud"] + MARGIN, FLOOR)
+    near_txt = (f"{t['nearest']:.0f}칸 ({t['where']})" if t["nearest"] < 1e8 else "없음(밝혀진 곳 안)")
+    out = [f"  밝혀진 반경 {t['seen']}칸 · 경계 {edge:.0f}칸" + ("" if t["seen"] >= edge else "  ⛔ 경계를 다 못 봤다 - «적 0» 은 «모름» (걸어서 정찰)"),
+           f"  위협: 진화 {t['evolution']:.3f} · 공해 구름 반경 {t['cloud']:.0f} ({t['polluted']} 청크) · "
+           f"가장 가까운 적 구조물 {near_txt} · 경계 안 {t['near']}개",
            f"  포탑 {tur['n']}대 · 빈 것 {tur['empty']} · 20발 미만 {tur['low']} · 최소 {tur['min']}발"]
     if t["near"]:
         out.append(f"  ⛔ 경계 안에 적 구조물 {t['near']}개 - 이번 회차 1순위 (지우거나 포탑 줄)")

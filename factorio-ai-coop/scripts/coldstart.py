@@ -1,4 +1,4 @@
-"""P0 bootstrap for run 22 - empty hands to a burner town, step by step.
+"""P0 bootstrap (run 22 에서 만들고 23 부터 회차 설정 파일로) - empty hands to a burner town, step by step.
 
 설계서 coldstart-plan.md 의 P0. 시작 가방은 비어 있다 (모드가 만든 캐릭터 - 자유 플레이
 지급품이 없다). 그래서 첫 자원은 전부 손이다: 손채굴 0.5/s x 8명 = 4/s. 버너 채굴기
@@ -31,18 +31,14 @@ import detached                          # noqa: E402
 
 OWNER = "coldstart"
 os.environ.setdefault("AI_OWNER", OWNER)   # 이 모듈을 쓰는 스크립트는 이 사람들의 주인이다
-# 앵커 (run22-site.md): 광맥의 «남쪽 가장자리» - 기지(남쪽)에 가까운 쪽부터 쓴다
-EDGE = {
-    "iron-ore": (-4, -50),
-    "copper-ore": (-28, -50),
-    "coal": (14, -100),
-    "stone": (-46, -93),
-}
-ROLES = {
-    "stone": ["alpha", "bravo", "charlie"],
-    "iron-ore": ["delta", "echo", "foxtrot", "golf"],
-    "coal": ["hotel"],
-}
+# 회차마다 다른 좌표는 state/{AI_RUN}_site.json 에서 읽는다 (22회차 좌표가 코드에 박혀 23회차에 새지 않게).
+# 앵커: 광맥에서 기지에 가장 가까운 칸. 방어/정찰 둘(hotel·delta)은 역할에 넣지 않는다 (방어 관문 D, 고정).
+import json as _json
+_RUN = os.environ.get("AI_RUN", "run23")
+_SITE = _json.load(open(os.path.join(HERE, "..", "state", f"{_RUN}_site.json"), encoding="utf-8"))
+EDGE = {k: tuple(v) for k, v in _SITE["edge"].items()}
+ROLES = _SITE["roles"]
+COALMAN = ROLES["coal"][0]
 CREW = [n for names in ROLES.values() for n in names]
 
 
@@ -201,22 +197,22 @@ def smelt(ai) -> None:
                      ("insert", {"name": "iron-ore", "x": fx, "y": fy, "count": each})]
         give(ai, who, plan)
         print(f"{who}: 철광석 {each}개씩 화로 {len(mine_)}대에")
-    coal = int(bag(ai, "hotel").get("coal", 0))
+    coal = int(bag(ai, COALMAN).get("coal", 0))
     if coal and built:
         each = max(1, coal // len(built))
         plan = []
         for fx, fy in built:
             plan += [("walk_to", {"x": fx + 0.5, "y": fy + 2.0}),
                      ("insert", {"name": "coal", "x": fx, "y": fy, "count": each})]
-        give(ai, "hotel", plan)
-        print(f"hotel: 석탄 {each}개씩 화로 {len(built)}대에")
+        give(ai, COALMAN, plan)
+        print(f"{COALMAN}: 석탄 {each}개씩 화로 {len(built)}대에")
     wait_idle(ai, CREW, 300)
 
 
-HUB = (-6.5, -54.5)          # 철 직결 줄 남쪽 교환 상자 - 사람끼리는 물건을 못 건넨다
-TREES = (9, -74)
-COAL_ROW_Y = -102
-COAL_XS = (4, 6, 8, 10)       # 남향 버너 채굴기 -> 상자 (x+0.5, y+1.5)
+HUB = tuple(_SITE["hub"])              # 교환 상자 - 사람끼리는 물건을 못 건넨다
+TREES = tuple(_SITE["trees"])
+COAL_ROW_Y = _SITE["coal_row_y"]
+COAL_XS = tuple(_SITE["coal_xs"])      # 남향 버너 채굴기 -> 상자 (x+0.5, y+1.5)
 DRILL = "burner-mining-drill"
 PER_DRILL = 9                 # 판 3 + 톱니 3 (판 6)
 
@@ -277,7 +273,7 @@ def drills(ai) -> None:
                  ("insert", {"name": "coal", "x": fx, "y": fy, "count": 2})]
     plan += [("walk_to", {"x": 15.5, "y": -98.5}),
              ("mine", {"x": 14, "y": -100, "name": "coal", "count": 60, "search_radius": 6})]
-    give(ai, "hotel", plan)
+    give(ai, COALMAN, plan)
     # 4) 철 조: 자기 화로 셋에서 판을 꺼낸다 (허브는 bravo 가 세운 뒤)
     seats = [(fx, fy) for _x, _y, fx, fy in iron]
     for k, who in enumerate(ROLES["iron-ore"]):
@@ -319,17 +315,17 @@ def drills(ai) -> None:
                  ("insert", {"name": "coal", "x": x, "y": COAL_ROW_Y, "count": 3})]
     give(ai, "alpha", plan)
     print("alpha: 석탄 채굴기 4 (-> 상자)")
-    wait_idle(ai, ["alpha", "hotel"], 400)
+    wait_idle(ai, ["alpha", COALMAN], 400)
     # 7) hotel: 철 채굴기마다 석탄
     fed = [(iron[i][0], iron[i][1]) for k in range(len(ROLES["iron-ore"])) for i in (k * 3, k * 3 + 1) if i < len(iron)]
-    have = int(bag(ai, "hotel").get("coal", 0))
+    have = int(bag(ai, COALMAN).get("coal", 0))
     plan = []
     each = max(1, have // max(1, len(fed)))
     for dx, dy in fed:
         plan += [("walk_to", {"x": dx + 0.5, "y": dy + 3.5}),
                  ("insert", {"name": "coal", "x": dx, "y": dy, "count": each})]
-    give(ai, "hotel", plan)
-    print(f"hotel: 철 채굴기에 석탄 {each}개씩")
+    give(ai, COALMAN, plan)
+    print(f"{COALMAN}: 철 채굴기에 석탄 {each}개씩")
 
 
 def status(ai) -> None:
