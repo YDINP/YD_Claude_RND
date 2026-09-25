@@ -36,7 +36,7 @@ BOILER_YS = (-60.5, -63.5)             # P1 첫 두 대 (3.6MW). 넷이면 -66.5
 COAL_BELT_X = -33.5
 COAL_DRILL_YS = (-81.5, -84.5, -87.5)
 
-p1.COST.update({UGP: {"iron-plate": 7.5}, "offshore-pump": {"iron-plate": 7}})
+p1.COST.update({UGP: {"iron-plate": 7.5}, "offshore-pump": {"iron-plate": 5, "copper-plate": 3}})   # 회로 2 - 구리를 안 챙겨 제작이 조용히 실패했다
 p1.PAIRED.add(UGP)
 
 

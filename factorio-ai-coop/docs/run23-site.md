@@ -42,3 +42,25 @@ stone       중심 (-56,-98)   거리 113 · (-72,-112)~(-40,-88)  · 303,040
 | 철 | echo foxtrot |
 | 석탄 | golf |
 | **방어/정찰 (고정)** | hotel delta — fogwalk 반경 380, 건설에 부르지 않는다 |
+
+## P0 → P1 (2026-09-26)
+
+- P0 해금 셋 (steam-power · electronics · 빨강) 완료. 버너: 철 12 · 구리 6 · 석탄 4.
+- P1 발전 (scripts/p23.py): 호수 펌프 (38.5,33.5) → 지하 관로 → 보일러 x=-36 (2대, 엔진 4 = 3.6MW). **첫 전력 tick 6.92M.**
+- 연구소 2 (-53.5,-55.5)·(-47.5,-55.5), 연구 순서: gun-turret → military → automation → electric-mining-drill → stone-wall → logistics (방어 관문 D 먼저).
+
+### 자동화 부채 (갚을 때까지 루프가 돈다)
+
+| # | 무엇 | 루프 | 갚는 법 |
+|---|---|---|---|
+| 1 | 버너·화로·보일러 연료 | fuel_run (golf, alpha) | 석탄 벨트 + 전기 채굴 (electric-mining-drill 연구 뒤 p23 coal) |
+| 2 | 화로 판 → 허브 | collect_run (charlie) | 제련 기둥 + 벨트 (P1) |
+| 3 | 빨강 팩 손제작 | redsci (echo, foxtrot) | 빨강 조립기 줄 (automation 연구 뒤) |
+
+### 함정
+
+- fuel_run 이 보일러 먼저였다 → 물 없는 보일러가 석탄 100 을 먹고 버너 15 가 섰다. 석탄 채굴기 먼저, 물 없는 보일러 건너뜀.
+- p1.blocked 가 ±1.5 만 봐서 엔진(5x3) 끝의 나무를 못 봤다 → 기계 크기만큼.
+- collect_run: 허브 첫 칸에 나무 상자와 쇠 상자가 겹쳐, 판을 0 개씩 넣으며 가방에 철 5,952 · 구리 1,700 을 들고 돌았다.
+- 22회차 좌표가 coldstart · p1.hub · collect_run 세 곳에 박혀 있었다 → 회차 설정 파일 (state/run23_site.json).
+- 급수 펌프 재료에 구리를 안 적어 제작이 조용히 실패했다 (회로 2). 전기 채굴기는 연구 전이라 못 만든다 - 첫 보일러는 손 연료.
