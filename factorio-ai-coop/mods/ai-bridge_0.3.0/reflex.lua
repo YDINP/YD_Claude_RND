@@ -70,11 +70,25 @@ local function clear_path(surface, a, b)
   return true
 end
 
-local function nearest_gun(e, from)
+-- GUNS 안에 안전한 포탑이 없을 때 «공격자 반대쪽» 은 틀렸다.
+--
+-- 실측(23회차 북서 둥지 밀기): hotel · charlie 가 밀기 열 곁에서 스피터에 맞았다. 밀기 열은
+-- 웜 곁이라 제외, 기지 포탑은 220 밖 → «반대쪽 45칸». 쫓는 스피터가 기지 쪽에 있어
+-- 6초마다 북서로 튀었고, 둘 다 전장에서 300칸 넘게 북서 (-578,-443) (-540,-515) 에서 죽었다.
+-- 반사가 매번 큐를 버려 내가 준 귀환 경유점도 지워졌다.
+--
+-- 그래서 GUNS 밖이라도 «집» 쪽으로: FAR 안의 탄 있는 안전 포탑 (공격자 방향 무시 - 쫓는 것은
+-- 포탑이 쏜다), 그것도 없으면 스폰 지점. «반대쪽» 은 집이 없을 때만.
+local FAR = 1500
+local FAR_CANDS = 12
+
+local function nearest_gun(e, from, radius, max_cands)
+  radius = radius or GUNS
+  max_cands = max_cands or 40
   local cands = {}
   local here = e.position
   local guns = e.surface.find_entities_filtered{ name = "gun-turret", force = e.force,
-                                                 position = here, radius = GUNS }
+                                                 position = here, radius = radius }
   for _, t in pairs(guns) do
     local dx, dy = t.position.x - here.x, t.position.y - here.y
     local d = dx * dx + dy * dy
@@ -83,7 +97,7 @@ local function nearest_gun(e, from)
     if d > 4 and away and has_ammo(t) then cands[#cands + 1] = { pos = t.position, d = d } end
   end
   table.sort(cands, function(p, q) return p.d < q.d end)
-  for i = 1, math.min(#cands, 40) do
+  for i = 1, math.min(#cands, max_cands) do
     local pos = cands[i].pos
     if not near_foe(e.surface, pos, SAFE) and clear_path(e.surface, here, pos) then return pos end
   end
@@ -126,6 +140,14 @@ function Reflex.on_damaged(event)
 
   local goal = nil
   local gun = nearest_gun(e, from)
+  if not gun then
+    gun = nearest_gun(e, nil, FAR, FAR_CANDS)
+    if gun then by = by .. " (far)" end
+  end
+  if not gun then
+    local sp = e.force.get_spawn_position(e.surface)
+    if sp then gun = sp; by = by .. " (spawn)" end
+  end
   if gun then
     -- 포탑 «곁» (2칸 앞) 에 선다. 포탑 위에 서려 하면 길찾기가 막힌다.
     local dx, dy = e.position.x - gun.x, e.position.y - gun.y
