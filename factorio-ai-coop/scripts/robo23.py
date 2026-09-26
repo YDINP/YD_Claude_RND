@@ -22,7 +22,7 @@ import p1  # noqa: E402
 from client import AIBridge  # noqa: E402
 
 PORT = "roboport"
-AREAS = {"sci": (-50.0, 20.0), "west": (-112.0, -40.0)}
+AREAS = {"sci": (-50.0, 20.0), "west": (-112.0, -40.0), "south": (12.0, 46.0)}
 PORT_OUT = (34.5, -41.5)                       # 로보포트 조립기 출력 상자
 NE_PORTS = [(-24, -88), (10, -80), (36, -84), (20, -40)]
 BOTS, PACKS = 10, 40
