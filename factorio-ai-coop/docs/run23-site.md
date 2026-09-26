@@ -196,3 +196,9 @@ stone       중심 (-56,-98)   거리 113 · (-72,-112)~(-40,-88)  · 303,040
 - 단계: boot_line 68 · boot 3 · power_poles 4 · power 15 · l_poles 1 · clear 3 · pipeline 114 · feeds 98 · b_poles 22 · fluid 19 · belts 123 · row1 30 · row2 28 · packs 93 · f_poles 15 · field 556 → `--recipes` (연구 뒤).
 - 짓기 전 확인: 화학 공장 플라스틱은 입구 둘 다 가스로 이었다 (상자 번호 모름), 황은 상자 1 = 물 · 2 = 가스 가정 (레시피 fluidbox_index nil). 정유 원유 = 상자 2 (레시피 idx 2).
   기본 정제 가스 출구는 셋 다 한 관에 이었다. 레시피 지정 뒤 `fluidbox` 로 실제 유체를 확인할 것.
+
+### P4-4 부트스트랩 - oil-processing 열림 (2026-09-26, tick ~8.9M)
+
+- 강철 0 → 임시 돌 화로 4 에 철판 손공급 (일회성) 으로 강철 40, 화로 걷음. 허브 상자가 거의 다 차서 (-80.5,-52.5) 에만 들어갔다.
+- boot_line 전봇대 68 (유전까지) · 펌프잭 (-72.5,373.5) · 탱크 → 펌프잭 working, **oil-processing 연구 트리거 완료**.
+- 이어서 p26 전 단계 (power_poles → power → … → field) echo foxtrot golf 로 공사 중.
