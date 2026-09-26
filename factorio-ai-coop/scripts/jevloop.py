@@ -36,10 +36,11 @@ SNAP = """(function()
   local out = {}
   for _, c in pairs(s.find_entities_filtered{type = "character"}) do
     local p = c.position
-    local u = {w = 0, n = 0, big = 0, near = 999}
+    local u = {w = 0, n = 0, big = 0, near = 999, ex = 0, ey = 0}
     for _, e in pairs(s.find_entities_filtered{type = "unit", force = "enemy", position = p, radius = %d}) do
       local d = math.sqrt((e.position.x - p.x)^2 + (e.position.y - p.y)^2)
       u.n = u.n + 1
+      u.ex, u.ey = u.ex + e.position.x, u.ey + e.position.y
       if d < u.near then u.near = d end
       local w = 1
       if string.find(e.name, "medium") then w = 2 elseif string.find(e.name, "big") then w = 4; u.big = u.big + 1
@@ -63,6 +64,7 @@ SNAP = """(function()
       end
       out[#out + 1] = {x = p.x, y = p.y, hp = c.health, hpmax = c.max_health or 250,
                        n = u.n, w = u.w, big = u.big, near = u.near, worm = worm,
+                       ex = u.n > 0 and u.ex / u.n or nil, ey = u.n > 0 and u.ey / u.n or nil,
                        gx = gun and gun.x, gy = gun and gun.y, gd = gun and math.sqrt(gd)}
     end
   end
@@ -100,7 +102,13 @@ def retreat_goal(r):
     if not r.get("gx"):
         return None
     dx, dy = r["gx"] - r["x"], r["gy"] - r["y"]
-    span = max(1.0, math.hypot(dx, dy))
+    span = math.hypot(dx, dy)
+    if span < 6:
+        # 이미 포탑 곁이다 (21:20 echo: 줄 뒤 (45,-103) 에서 «후퇴 (41,-100)» - 제자리). 적 반대쪽으로 20 칸 더 안으로.
+        ex, ey = r.get("ex", r["gx"]), r.get("ey", r["gy"] - 1)
+        ax, ay = r["x"] - ex, r["y"] - ey
+        a = max(1.0, math.hypot(ax, ay))
+        return (r["x"] + ax / a * 20, r["y"] + ay / a * 20)
     return (r["gx"] + dx / span * 4, r["gy"] + dy / span * 4)       # 포탑 «너머» 4 칸
 
 
