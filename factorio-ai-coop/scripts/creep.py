@@ -161,6 +161,37 @@ def pick_side(ai, foes, n=16) -> int:
     return 1 if got[1] >= got[-1] else -1
 
 
+HOME = (-40, 30)                 # 귀환 목적지 (기지 안쪽, 포탑 줄 안)
+UNIT_CHECK = 40                  # 경유점 둘레 이 안에 적 유닛이 있으면 멈춘다
+
+
+def march(ai, crew, path) -> bool:
+    """경유점마다 «모두» 도착할 때까지 기다리고, 둘레에 적 유닛이 있으면 멈춘다.
+    실측 (23회차): 자동 우회는 구조물만 피해 delta · bravo 가 떠돌이 유닛 무리 속으로 걸어 들어갔다."""
+    for x, y in path:
+        for i, who in enumerate(crew):
+            submit(ai, who, [("walk_to", {"x": x, "y": y + 2 * i})], strict=False)
+        for _ in range(120):
+            time.sleep(4)
+            pos = crew_pos(ai)
+            if any(not pos[w][0] for w in crew) or all(not pos[w][4] for w in crew):
+                break
+        n = ai.lua("""(function() return {n = game.surfaces[1].count_entities_filtered{force = "enemy", type = "unit",
+          position = {%d, %d}, radius = %d}} end)()""" % (x, y, UNIT_CHECK))["n"]
+        print(f"  경유점 ({x},{y}) 유닛 {n}", flush=True)
+        if n:
+            return False
+    return True
+
+
+def go_home(ai, crew, via) -> None:
+    """어떻게 끝나든 온 길을 거꾸로 걸어 집으로. 실측: 파가 접힌 뒤 전장에 남겨진 charlie 가 반사에 밀려 죽었다."""
+    alive = [w for w in crew if crew_pos(ai)[w][0]]
+    path = list(reversed(via or [])) + [HOME]
+    for i, who in enumerate(alive):
+        submit(ai, who, [("walk_to", {"x": x, "y": y + 2 * i}) for x, y in path], strict=False)
+
+
 def rally(ai, crew, foes, side) -> None:
     """열 뒤 RETREAT 칸에 모두 모인 다음에 세운다.
     실측: 따로 출발하면 먼저 온 사람의 포탑이 혼자 서서 혼자 맞았다 (hotel 이 bravo 보다 60 칸 먼저 도착)."""
@@ -234,6 +265,7 @@ def main() -> int:
                     help="1 = 동쪽에서 접근, -1 = 서쪽, 2 = 남쪽, -2 = 북쪽, 0 = 동·서 중 놓을 자리가 많은 쪽")
     # 두 무리가 60칸 안에 겹치면 열이 «그 사이 허공»에 선다 (북쪽: y -28 과 -76 무리 -> y -57).
     ap.add_argument("--radius", type=float, default=60, help="--at 둘레 이만큼만 친다")
+    ap.add_argument("--via", default="", help="가는 길 경유점 'x,y;x,y' - 모두 모여 유닛을 확인하며 간다. 귀환은 거꾸로")
     args = ap.parse_args()
     EACH = args.each
     ax, ay = (float(v) for v in args.at.split(","))
@@ -265,6 +297,14 @@ def main() -> int:
 
 
 def run(ai, args, crew, ax, ay) -> int:
+    via = [tuple(float(v) for v in p.split(",")) for p in args.via.split(";") if p.strip()]
+    try:
+        return _run(ai, args, crew, ax, ay, via)
+    finally:
+        go_home(ai, crew, via)
+
+
+def _run(ai, args, crew, ax, ay, via) -> int:
     # 탄약: 관통탄이 있으면 그것, 없으면 보통 탄창
     have = shelf_mod.shelves(ai, DEPOT, span=36)
     ammo_name = AMMO[0] if (have.get(AMMO[0]) or stock_at(ai, AMMO[0], 60)) else AMMO[1]
@@ -275,6 +315,9 @@ def run(ai, args, crew, ax, ay) -> int:
         time.sleep(5)
         if all(not crew_pos(ai)[w][4] for w in crew):
             break
+    if via and not march(ai, crew, via):
+        print("  가는 길에 적 유닛 - 접고 돌아온다")
+        return 1
 
     for n_wave in range(1, args.waves + 1):
         foes = nest(ai, (ax, ay), args.radius)
@@ -320,8 +363,6 @@ def run(ai, args, crew, ax, ay) -> int:
                 break
     left = nest(ai, (ax, ay), args.radius)
     print(f"끝: 남은 적 구조물 {len(left)}")
-    for who in crew:
-        submit(ai, who, [("walk_to", {"x": -40, "y": 30})], strict=False)
     return 0
 
 
