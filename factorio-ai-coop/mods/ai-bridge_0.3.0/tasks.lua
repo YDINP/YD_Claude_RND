@@ -143,7 +143,15 @@ local function request_path(ctx, resolution)
     -- Without this the character's own collision box occupies the start tile
     -- and the pathfinder reports "no path" before it has taken a step.
     entity_to_ignore = ctx.bot,
-    pathfind_flags = { cache = false, low_priority = false, allow_paths_through_own_entities = true },
+    -- 우리 건물은 «지나갈 수 있다» 고 치면 안 된다.
+    --
+    --   사용자: "갈수없는 길은 건물들을 체크해서 아예 우회해서 돌아가게좀 해"
+    --
+    -- allow_paths_through_own_entities = true 이면 길찾기가 보일러 줄 · 조립기 줄을 «뚫고» 곧은 길을
+    -- 준다 (플레이어라면 뜯고 지나갈 수 있으니까). 캐릭터는 그 벽에 몸을 박고 선다 - 23회차 발전소 북쪽에서
+    -- hotel · echo · foxtrot 가 그렇게 셋이 한 자리에 붙었다. 먼저 건물을 벽으로 보고 돌아가는 길을 묻는다.
+    -- «통과» 는 그 길이 없을 때만 (건물 사이에 낀 출발점 - no_path 뒤 st.through).
+    pathfind_flags = { cache = false, low_priority = false, allow_paths_through_own_entities = st.through or false },
   }
   st.requested_tick = ctx.tick
   st.tries = (st.tries or 0) + 1
@@ -257,6 +265,8 @@ M.walk_to = {
           -- Genuinely no route at this resolution. A coarser search can find
           -- one through gaps the fine search rejected.
           st.last_answer = 'no_path'
+          -- 건물을 벽으로 본 길이 없으면 (낀 출발점), 다음 물음부터 통과를 허용한다
+          if not st.through then st.through = true; return request_path(ctx) end
           if st.tries < MAX_PATH_TRIES then return request_path(ctx, -1) end
           halt(bot)
           ctx.task.error = string.format(

@@ -184,6 +184,67 @@ def march(ai, crew, path) -> bool:
     return True
 
 
+# 둥지 둘레에 모인 무리를 센다.
+#
+#     사용자: "적이 모여있는걸 왜 체크안함"
+#
+# 실측 (23회차 북동 둥지 1파): march 는 경유점 (44,-112) 반경 40 만 보고 «유닛 0» 이라 갔다. 둥지 둘레엔
+# 53~94 마리가 모여 있었고 (채팅 경고가 계속 떴다), 포탑 13 대가 서자마자 무리가 덮쳐 다 부서졌고
+# hotel · delta · echo · foxtrot 넷이 후퇴 길 (y -128..-144) 에서 죽었다.
+# 파마다 둥지 중심 SWARM_R 안의 유닛을 세어 SWARM_MAX 보다 많으면 줄 때까지 기다리고, 안 줄면 접는다.
+SWARM_R = 70
+SWARM_MAX = 15
+SWARM_WAIT = 300          # 초
+
+
+def swarm(ai, foes) -> int:
+    cx = sum(f[1] for f in foes) / len(foes)
+    cy = sum(f[2] for f in foes) / len(foes)
+    return ai.lua("""(function() return {n = game.surfaces[1].count_entities_filtered{force = "enemy", type = "unit",
+      position = {%f, %f}, radius = %d}} end)()""" % (cx, cy, SWARM_R))["n"]
+
+
+def swarm_ok(ai, foes) -> bool:
+    t0 = time.time()
+    while True:
+        n = swarm(ai, foes)
+        print(f"  둥지 둘레 {SWARM_R}칸 유닛 {n} (허용 {SWARM_MAX})", flush=True)
+        if n <= SWARM_MAX:
+            return True
+        if time.time() - t0 > SWARM_WAIT:
+            return False
+        time.sleep(20)
+
+
+# 후퇴는 «우리 포탑 뒤» 로.
+#
+# 실측 (같은 1파): 후퇴점 = 열 뒤 RETREAT 45 칸 (y -121) 은 북쪽 줄 (y -108, 사거리 18 → -126) 바로 밖이었다.
+# 쫓는 바이터는 사람보다 빠르다 - 넷 다 그 몇 칸 앞에서 잡혔다. 가장 가까운 «탄 있는» 우리 포탑 (적 구조물
+# 45 칸 밖) 을 찾아 그 포탑에서 둥지 반대쪽으로 4 칸 뒤에 선다. 못 찾으면 옛 방식.
+def safe_spot(ai, near, away_from):
+    got = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local best, bd = nil, 1e18
+      for _, t in pairs(s.find_entities_filtered{name = "gun-turret", force = f, position = {%f, %f}, radius = 150}) do
+        local inv = t.get_inventory(defines.inventory.turret_ammo)
+        if inv and inv.get_item_count() >= 5 and s.count_entities_filtered{force = "enemy", type = {"turret", "unit-spawner"},
+             position = t.position, radius = 45, limit = 1} == 0 then
+          local dx, dy = t.position.x - %f, t.position.y - %f
+          local d = dx * dx + dy * dy
+          if d < bd then best, bd = t.position, d end
+        end
+      end
+      if best then return {x = best.x, y = best.y} end
+      return {}
+    end)()""" % (near[0], near[1], near[0], near[1]))
+    if got.get("x") is None:
+        return None
+    gx, gy = float(got["x"]), float(got["y"])
+    dx, dy = gx - away_from[0], gy - away_from[1]
+    span = max(1.0, math.hypot(dx, dy))
+    return (gx + dx / span * 4, gy + dy / span * 4)
+
+
 def go_home(ai, crew, via) -> None:
     """어떻게 끝나든 온 길을 거꾸로 걸어 집으로. 실측: 파가 접힌 뒤 전장에 남겨진 charlie 가 반사에 밀려 죽었다."""
     alive = [w for w in crew if crew_pos(ai)[w][0]]
@@ -230,9 +291,18 @@ def wave(ai, crew, foes, ammo_name, side=1) -> list:
             continue
         my = sum(real(*p)[1] for p in part) / len(part)            # 열을 따라가는 좌표
         stand = real(cx + sd * STAND_BACK, my)
-        retreat = real(cx + sd * RETREAT, my)
-        assault(ai, who, part, stand, ammo_name, retreat)
-        print(f"{who}: 포탑 {len(part)}대를 {part[0]} 부터 (서는 곳 {stand[0]:.0f},{stand[1]:.0f})")
+        ncx = sum(f[1] for f in foes) / len(foes)
+        ncy = sum(f[2] for f in foes) / len(foes)
+        retreat = safe_spot(ai, stand, (ncx, ncy)) or real(cx + sd * RETREAT, my)
+        # 사람마다 «가방에 실제로 든» 탄을 넣는다. 23회차 북동 1파: 관통탄을 들었는데 ammo_name 이 일반 탄창으로
+        # 떨어져, 가방에 없는 탄을 넣으려다 포탑이 빈 채 섰다 (일반 탄창은 기관단총 칸에만 있었다) - 13 대가 쏘지도 못하고 부서졌다.
+        bag = ai.agent(who).items()
+        mine = next((n for n in AMMO if bag.get(n, 0) >= AMMO_EACH * len(part)), None)
+        if not mine:
+            print(f"  [!] {who}: 포탑 {len(part)}대에 넣을 탄이 없다 {({n: bag.get(n, 0) for n in AMMO})} - 이 사람은 세우지 않는다", flush=True)
+            continue
+        assault(ai, who, part, stand, mine, retreat)
+        print(f"{who}: 포탑 {len(part)}대를 {part[0]} 부터 · {mine} (서는 곳 {stand[0]:.0f},{stand[1]:.0f} · 후퇴 {retreat[0]:.0f},{retreat[1]:.0f})")
     return spots
 
 
@@ -318,6 +388,10 @@ def _run(ai, args, crew, ax, ay, via) -> int:
         time.sleep(5)
         if all(not crew_pos(ai)[w][4] for w in crew):
             break
+    first = nest(ai, (ax, ay), args.radius)
+    if first and not swarm_ok(ai, first):
+        print("  둥지 둘레에 무리가 모여 있다 - 출발하지 않는다", flush=True)
+        return 1
     if via and not march(ai, crew, via):
         print("  가는 길에 적 유닛 - 접고 돌아온다")
         return 1
@@ -328,6 +402,9 @@ def _run(ai, args, crew, ax, ay, via) -> int:
             print("  둥지가 사라졌다")
             break
         print(f"-- {n_wave}파: 남은 구조물 {len(foes)}")
+        if not swarm_ok(ai, foes):
+            print("  둥지 둘레에 무리가 모여 있다 - 접는다", flush=True)
+            return 1
         rally(ai, crew, foes, args.side)
         spots = wave(ai, crew, foes, ammo_name, args.side)
         if not spots:
