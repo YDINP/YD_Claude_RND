@@ -85,10 +85,12 @@ def threat(ai) -> dict:
       local s, f = game.surfaces[1], game.forces.player
       local sp = f.get_spawn_position(s)
       local cloud, polluted = 0, 0
+      local pc = {}
       for c in s.get_chunks() do
         local cx, cy = c.x * 32 + 16, c.y * 32 + 16
         if s.get_pollution({cx, cy}) > 0 then
           polluted = polluted + 1
+          pc[c.x .. "," .. c.y] = true
           local d = math.sqrt((cx - sp.x)^2 + (cy - sp.y)^2)
           if d > cloud then cloud = d end
         end
@@ -104,12 +106,26 @@ def threat(ai) -> dict:
         end
         if all then seen = r * 32 else break end
       end
-      local near, nearest, where = 0, 1e9, ""
+      -- «구름 곁» : 공해 청크 (중심) 에서 MARGIN 안 - 유전 같은 먼 공해원이 생기면 스폰 기준 반경은 과장된다 (23회차: 33 → ?)
+      local R = %d
+      local K = math.ceil(R / 32) + 1
+      local function by_cloud(x, y)
+        local qx, qy = math.floor(x / 32), math.floor(y / 32)
+        for dx = -K, K do for dy = -K, K do
+          if pc[(qx + dx) .. "," .. (qy + dy)] then
+            local cx, cy = (qx + dx) * 32 + 16, (qy + dy) * 32 + 16
+            if (cx - x)^2 + (cy - y)^2 <= (R + 16)^2 then return true end
+          end
+        end end
+        return false
+      end
+      local near, nearest, where, legacy = 0, 1e9, "", 0
       for _, e in pairs(s.find_entities_filtered{force = "enemy", type = {"unit-spawner", "turret"}}) do
         if f.is_chunk_charted(s, {math.floor(e.position.x / 32), math.floor(e.position.y / 32)}) then
           local d = math.sqrt((e.position.x - sp.x)^2 + (e.position.y - sp.y)^2)
           if d < nearest then nearest = d; where = string.format("%%.0f,%%.0f", e.position.x, e.position.y) end
-          if d < math.max(cloud + %d, %d) then near = near + 1 end
+          if d < math.max(cloud + R, %d) then legacy = legacy + 1 end
+          if d < %d or by_cloud(e.position.x, e.position.y) then near = near + 1 end
         end
       end
       local tur = {n = 0, empty = 0, low = 0, min = 0}
@@ -121,9 +137,9 @@ def threat(ai) -> dict:
         if c == 0 then tur.empty = tur.empty + 1 elseif c < 10 then tur.low = tur.low + 1 end
         if first or c < tur.min then tur.min = c; first = false end
       end
-      return {seen = seen, cloud = cloud, polluted = polluted, nearest = nearest, where = where, near = near, turrets = tur,
+      return {seen = seen, cloud = cloud, polluted = polluted, nearest = nearest, where = where, near = near, legacy = legacy, turrets = tur,
               evolution = game.forces.enemy.get_evolution_factor(s)}
-    end)()""" % (MARGIN, FLOOR))
+    end)()""" % (MARGIN, FLOOR, FLOOR))
 
 
 def threat_lines(t) -> list:
@@ -132,10 +148,10 @@ def threat_lines(t) -> list:
     near_txt = (f"{t['nearest']:.0f}칸 ({t['where']})" if t["nearest"] < 1e8 else "없음(밝혀진 곳 안)")
     out = [f"  밝혀진 반경 {t['seen']}칸 · 경계 {edge:.0f}칸" + ("" if t["seen"] >= edge else "  ⛔ 경계를 다 못 봤다 - «적 0» 은 «모름» (걸어서 정찰)"),
            f"  위협: 진화 {t['evolution']:.3f} · 공해 구름 반경 {t['cloud']:.0f} ({t['polluted']} 청크) · "
-           f"가장 가까운 적 구조물 {near_txt} · 경계 안 {t['near']}개",
+           f"가장 가까운 적 구조물 {near_txt} · 구름 곁 {t['near']}개 (스폰 반경식 {t.get('legacy', 0)})",
            f"  포탑 {tur['n']}대 · 빈 것 {tur['empty']} · 탄창 10 미만 {tur['low']} · 최소 {tur['min']}"]
     if t["near"]:
-        out.append(f"  ⛔ 경계 안에 적 구조물 {t['near']}개 - 이번 회차 1순위 (지우거나 포탑 줄)")
+        out.append(f"  ⛔ 공해 구름 {MARGIN}칸 곁 (또는 스폰 {FLOOR}칸 안) 에 적 구조물 {t['near']}개 - 이번 회차 1순위 (지우거나 포탑 줄)")
     if tur["n"] == 0:
         out.append("  ⛔ 포탑 0 - 방어 관문 미통과")
     elif tur["empty"] or tur["low"]:
