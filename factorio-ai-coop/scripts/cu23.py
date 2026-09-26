@@ -31,6 +31,18 @@ CHESTS = [(-23.5, -8.5), (-22.5, -8.5)]
 HUB_CU = [(-79.5, -52.5), (-76.5, -52.5), (-73.5, -52.5), (-75.5, -52.5), (-77.5, -52.5), (-78.5, -52.5)]
 FILL = 3200
 p1.COST.setdefault(FI, {"iron-plate": 8.5, "copper-plate": 4.5})
+# 철 레인 (북쪽, lane 1) 급송 - 23회차 p33 뒤: ore27 이 p24 광석을 빼 가 X3 철 레인이 비었다 (동쪽 회로 -> 고급 회로 -> 파랑 · 모듈 멈춤).
+# 벨트 바로 남쪽 y=-5.5 에 다른 버스 줄이 있어 보통 팔을 못 둔다 -> 긴팔 (y=-4.5) 이 그 줄을 넘어 y=-2.5 상자에서 집어 X3 의 먼 레인 (북) 에 놓는다.
+LONG = "long-handed-inserter"
+FE_CHESTS = [(-23.5, -2.5), (-22.5, -2.5)]
+HUB_FE = [(-81.5, -52.5), (-83.5, -52.5), (-84.5, -52.5), (-82.5, -52.5)]
+
+
+def fe_steps() -> list:
+    out = [p1.b("iron-chest", x, y) for x, y in FE_CHESTS]
+    out += [p1.b(LONG, x, y - 2, 8) for x, y in FE_CHESTS]           # 남쪽 (상자) 에서 집음
+    out += [p1.b(p1.POLE, -21.5, -4.5)]
+    return out
 
 
 def steps() -> list:
@@ -40,32 +52,34 @@ def steps() -> list:
     return out
 
 
-def stock(ai) -> list:
-    packed = ";".join(f"{x},{y}" for x, y in CHESTS)
+def stock(ai, chests=None, item="copper-plate") -> list:
+    chests = chests or CHESTS
+    packed = ";".join(f"{x},{y}" for x, y in chests)
     r = ai.lua("""(function() local o = {} local s = game.surfaces[1]
       for bit in string.gmatch("%s", "[^;]+") do local x, y = string.match(bit, "([^,]+),([^,]+)")
         local c = s.find_entity("iron-chest", {tonumber(x), tonumber(y)})
-        o[#o + 1] = c and c.get_inventory(defines.inventory.chest).get_item_count("copper-plate") or -1 end
-      return o end)()""" % packed)
+        o[#o + 1] = c and c.get_inventory(defines.inventory.chest).get_item_count("%s") or -1 end
+      return o end)()""" % (packed, item))
     return list(r.values()) if isinstance(r, dict) else list(r or [])
 
 
-def fill(ai, crew) -> None:
-    have = stock(ai)
+def fill(ai, crew, chests=None, hub=None, item="copper-plate") -> None:
+    chests, hub = chests or CHESTS, hub or HUB_CU
+    have = stock(ai, chests, item)
     ids = {}
     for i, who in enumerate(crew):
-        if i >= len(CHESTS):
+        if i >= len(chests):
             break
         need = FILL - max(0, int(have[i]))
         if need <= 100:
             continue
-        hx, hy = HUB_CU[i % len(HUB_CU)]
-        cx, cy = CHESTS[i]
+        hx, hy = hub[i % len(hub)]
+        cx, cy = chests[i]
         ids[who] = ai.agent(who).submit_plan([
             ("walk_to", {"x": hx, "y": hy + 1.5}),
-            ("take", {"name": "copper-plate", "x": hx, "y": hy, "count": need}),
-            ("walk_to", {"x": cx, "y": cy - 1.5}),
-            ("insert", {"name": "copper-plate", "x": cx, "y": cy, "count": need})])
+            ("take", {"name": item, "x": hx, "y": hy, "count": need}),
+            ("walk_to", {"x": cx, "y": cy + 1.5 if item == "iron-plate" else cy - 1.5}),
+            ("insert", {"name": item, "x": cx, "y": cy, "count": need})])
     t0 = time.time()
     while ids and time.time() - t0 < 900:
         time.sleep(6)
@@ -79,6 +93,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--who", default="")
     ap.add_argument("--fill", action="store_true")
+    ap.add_argument("--iron", action="store_true", help="철 레인 급송 (긴팔)")
     a = ap.parse_args()
     ai = AIBridge()
     st = steps()
@@ -91,10 +106,10 @@ def main() -> int:
     detached.mark(crew, "cu23", minutes=40)
     try:
         if a.fill:
-            fill(ai, crew)
+            fill(ai, crew, FE_CHESTS, HUB_FE, "iron-plate") if a.iron else fill(ai, crew)
         else:
             p1.PARK = (-26.5, -11.5)
-            p1.build_stage(ai, crew, st, "cu")
+            p1.build_stage(ai, crew, fe_steps() if a.iron else st, "fe" if a.iron else "cu")
     finally:
         detached.release(crew)
     print(f"  cu {len(p1.standing(ai, st))}/{nb} · 상자 구리 {stock(ai)}")
