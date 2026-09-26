@@ -323,7 +323,7 @@ def turret_state(ai, spots) -> list:
 
 
 def main() -> int:
-    global EACH
+    global EACH, SWARM_MAX, AMMO_EACH
     ap = argparse.ArgumentParser()
     ap.add_argument("--at", required=True, help="둥지 근처 좌표. 음수는 --at=-198,35")
     ap.add_argument("--who", default="")
@@ -336,8 +336,12 @@ def main() -> int:
     # 두 무리가 60칸 안에 겹치면 열이 «그 사이 허공»에 선다 (북쪽: y -28 과 -76 무리 -> y -57).
     ap.add_argument("--radius", type=float, default=60, help="--at 둘레 이만큼만 친다")
     ap.add_argument("--via", default="", help="가는 길 경유점 'x,y;x,y' - 모두 모여 유닛을 확인하며 간다. 귀환은 거꾸로")
+    ap.add_argument("--swarm-max", type=int, default=SWARM_MAX, help="둥지 둘레 이보다 많으면 접는다 (탄 든 포탑 수에 맞춰)")
+    ap.add_argument("--ammo-each", type=int, default=AMMO_EACH, help="포탑마다 넣는 탄")
     args = ap.parse_args()
     EACH = args.each
+    SWARM_MAX = args.swarm_max
+    AMMO_EACH = args.ammo_each
     ax, ay = (float(v) for v in args.at.split(","))
     ai = AIBridge()
 
