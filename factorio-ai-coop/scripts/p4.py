@@ -125,7 +125,12 @@ def am2_recipes(ai, who) -> int:
     return n
 
 
-def queue_fill(ai, packs=("automation-science-pack", "logistic-science-pack")) -> list:
+# 방어 연구를 먼저 (23회차: 싼 것부터 채우니 tank · uranium-mining 이 방어보다 앞섰고, 진화 0.5 공습에 포탑이 밀렸다)
+PREFER = ("physical-projectile-damage", "weapon-shooting-speed", "stone-wall", "gate", "military",
+          "turrets", "mining-productivity", "research-speed", "automation-3", "steel-axe")
+
+
+def queue_fill(ai, packs=("automation-science-pack", "logistic-science-pack"), prefer=PREFER) -> list:
     """연구 대기열을 «만들고 있는 팩만» 쓰는 연구로 채운다 (싼 것부터).
 
     대기열이 비면 게임이 아무거나 고른다 - 두 번이나 defender(군사팩)를 골랐고, 연구소 전부가
@@ -139,22 +144,31 @@ def queue_fill(ai, packs=("automation-science-pack", "logistic-science-pack")) -
         for _, i in pairs(t.research_unit_ingredients) do if not ok[i.name] then return false end end
         return true
       end
-      local q, seen = {}, {}
-      for _, t in pairs(f.research_queue) do if fits(t) then q[#q+1] = t.name; seen[t.name] = true end end
-      local more = {}
+      local pref = {%s}
+      local function rank(t)
+        for i, p in ipairs(pref) do if string.sub(t.name, 1, #p) == p then return i end end
+        return 999
+      end
+      local cand, seen = {}, {}
+      for _, t in pairs(f.research_queue) do if fits(t) then cand[#cand+1] = t; seen[t.name] = true end end
       for n, t in pairs(f.technologies) do
         if t.enabled and not t.researched and not seen[n] and fits(t) then
           local pre = true
           for _, p in pairs(t.prerequisites) do if not p.researched then pre = false end end
-          if pre then more[#more+1] = t end
+          if pre then cand[#cand+1] = t end
         end
       end
-      table.sort(more, function(a, b) return a.research_unit_count < b.research_unit_count end)
-      for _, t in pairs(more) do if #q < 7 then q[#q+1] = t.name end end
+      table.sort(cand, function(a, b)
+        local ra, rb = rank(a), rank(b)
+        if ra ~= rb then return ra < rb end
+        return a.research_unit_count < b.research_unit_count
+      end)
+      local q = {}
+      for _, t in ipairs(cand) do if #q < 7 then q[#q+1] = t.name end end
       f.research_queue = q
       local out = {} for _, t in pairs(f.research_queue) do out[#out+1] = t.name end
       return {q = out}
-    end)()""" % ",".join(f'"{p}"' for p in packs))
+    end)()""" % (",".join(f'"{p}"' for p in packs), ",".join(f'"{p}"' for p in prefer)))
     q = reply.get("q") if isinstance(reply, dict) else None
     return list(q.values()) if isinstance(q, dict) else list(q or [])
 
