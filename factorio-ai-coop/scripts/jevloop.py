@@ -109,7 +109,14 @@ def retreat_goal(r):
         ax, ay = r["x"] - ex, r["y"] - ey
         a = max(1.0, math.hypot(ax, ay))
         return (r["x"] + ax / a * 20, r["y"] + ay / a * 20)
-    return (r["gx"] + dx / span * 4, r["gy"] + dy / span * 4)       # 포탑 «너머» 4 칸
+    # 포탑에서 «적 무리 반대쪽» 6 칸. «캐릭터에서 본 포탑 너머» 로 잡았더니 줄 안쪽의 golf 를 북쪽 줄 «바깥»
+    # (-63,-112) 로 보냈다 (22:51) - 안에서 보면 포탑 너머가 곧 적 쪽이다.
+    ex, ey = r.get("ex"), r.get("ey")
+    if ex is None:
+        ex, ey = r["x"] - dx, r["y"] - dy          # 적 좌표가 없으면 (구조물만) 캐릭터 쪽이 안전하다고 본다
+    ax, ay = r["gx"] - ex, r["gy"] - ey
+    a = max(1.0, math.hypot(ax, ay))
+    return (r["gx"] + ax / a * 6, r["gy"] + ay / a * 6)
 
 
 def who_at(ai):
