@@ -98,7 +98,21 @@ def rules(r) -> dict:
     return {"act": {"retreat": p_ret, "fight": p_fight, "continue": max(0.0, 1 - p_ret - p_fight)}}
 
 
+HOME = (-40.0, -20.0)      # 기지 안쪽 (허브 · 제련 사이)
+
+
 def retreat_goal(r):
+    # 적 유닛이 보이면 «적 반대쪽 + 기지 안쪽» 으로 25 칸.
+    # 실측 (04:24): «가장 가까운 안전 포탑 곁» 으로 보냈더니 서쪽 줄 곁의 alpha bravo 를 매번 그 줄 포탑 (-107,-77) 로 되돌려
+    # (내가 허브 쪽으로 옮긴 지시도 덮어썼다) 같은 자리에서 후퇴만 되풀이했다. 줄 곁은 피난처가 아니라 전선이다.
+    if r.get("ex") is not None:
+        ax, ay = r["x"] - r["ex"], r["y"] - r["ey"]
+        a = max(1.0, math.hypot(ax, ay))
+        hx, hy = HOME[0] - r["x"], HOME[1] - r["y"]
+        h = max(1.0, math.hypot(hx, hy))
+        dx, dy = ax / a + 0.7 * hx / h, ay / a + 0.7 * hy / h
+        d = max(0.01, math.hypot(dx, dy))
+        return (r["x"] + dx / d * 25, r["y"] + dy / d * 25)
     if not r.get("gx"):
         return None
     dx, dy = r["gx"] - r["x"], r["gy"] - r["y"]
