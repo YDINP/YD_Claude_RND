@@ -126,8 +126,13 @@ def am2_recipes(ai, who) -> int:
 
 
 # 방어 연구를 먼저 (23회차: 싼 것부터 채우니 tank · uranium-mining 이 방어보다 앞섰고, 진화 0.5 공습에 포탑이 밀렸다)
-PREFER = ("physical-projectile-damage", "weapon-shooting-speed", "stone-wall", "gate", "military",
-          "turrets", "mining-productivity", "research-speed", "automation-3", "steel-axe")
+# 23회차 사용자: "연구는 로봇쪽으로 돌려서 진짜 자동화를 목표로 진행하자. 수리라던가 생산이 좀 더 수월하게"
+#   건설 로봇 = 부서진 포탑·벽 자동 수리·재건 (공습 뒤 손 재건을 끝낸다), 물류 로봇 = 허브 상자 → 공사 자리 배달.
+#   전기 엔진 → 로봇공학 → 건설 로봇 · 개인 로보포트 (사람 가방의 로봇) → 물류 로봇 → 로봇 속도.
+ROBOTS = ("electric-engine", "robotics", "construction-robotics", "personal-roboport-equipment",
+          "logistic-robotics", "worker-robots-speed", "worker-robots-storage", "modular-armor")
+PREFER = ROBOTS + ("physical-projectile-damage", "weapon-shooting-speed", "stone-wall", "gate", "military",
+                   "turrets", "mining-productivity", "research-speed", "automation-3", "steel-axe")
 
 
 def queue_fill(ai, packs=("automation-science-pack", "logistic-science-pack"), prefer=PREFER) -> list:

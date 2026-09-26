@@ -364,3 +364,15 @@ stone       중심 (-56,-98)   거리 113 · (-72,-112)~(-40,-88)  · 303,040
 안전: 반사 (맞으면 먼 안전 포탑·스폰으로), `rally` (파마다 45 칸 뒤로 모임), `go_home` (finally), 경유점은 동쪽 줄 x=44 바깥 → 북쪽.
 죽으면 살리지 않는다 (사용자 명시 요청 없이는). 한 파 뒤 사망·포탑 손실을 advancement-log 에 적고 다음 파 여부를 정한다.
 다음 목표: 북쪽 둥지 (-62,-275, 중형 웜 4) - 같은 방식.
+
+## 로봇 자동화 방향 (2026-09-26, 사용자: "연구는 로봇쪽으로 돌려서 진짜 자동화를 목표로 진행하자. 수리라던가 생산이 좀 더 수월하게")
+
+- 연구: `p4.PREFER` 머리에 ROBOTS - electric-engine (50) → robotics (75) → construction-robotics (100) · personal-roboport-equipment (50)
+  → logistic-robotics (250) → worker-robots-speed/storage. 방어 연구는 그 뒤. research_guard 재시작 (research23h.log).
+  이미 됨: battery · lubricant · advanced-oil-processing · sulfur-processing · plastics · solar-panel-equipment.
+- 생산 사슬 (연구와 병행해 설계할 것):
+  - 윤활유 ← 중유: 정유소 레시피를 advanced-oil-processing 으로 (p26 정유소) + 화학 공장 1 (lubricant).
+  - 배터리 ← 황산 + 철 + 구리: 화학 공장 (sulfuric-acid ← 황 ← 석유가스, battery).
+  - 전기 엔진 (엔진 + 윤활유 + 회로 2) → 비행 로봇 프레임 (엔진 1 · 배터리 2 · 강철 1 · 회로 3) → 건설 로봇 (프레임 + 회로 2).
+  - 로보포트 (강철 45 · 톱니 45 · 고급 회로 45) - 고급 회로 줄 필요 (플라스틱 · 구리선 · 회로).
+- 목표 모습: 방어선마다 로보포트 + 수리팩 상자 → 공습 뒤 포탑·벽이 스스로 수리·재건 (유령 자동 재배치). 사람은 확장·공격만.

@@ -307,9 +307,12 @@ def run(ai, args, crew, ax, ay) -> int:
 def _run(ai, args, crew, ax, ay, via) -> int:
     # 탄약: 관통탄이 있으면 그것, 없으면 보통 탄창
     have = shelf_mod.shelves(ai, DEPOT, span=36)
-    ammo_name = AMMO[0] if (have.get(AMMO[0]) or stock_at(ai, AMMO[0], 60)) else AMMO[1]
+    # 23회차 북동: 관통탄을 가방에 손제작해 들고 왔다 - 상자만 보면 일반 탄창으로 떨어진다
+    carried = min(ai.agent(w).items().get(AMMO[0], 0) for w in crew)
+    ammo_name = AMMO[0] if (carried >= AMMO_EACH * EACH or have.get(AMMO[0]) or stock_at(ai, AMMO[0], 60)) else AMMO[1]
     for who in crew:
-        submit(ai, who, outfit(ai, who, EACH + 2, ammo_name, AMMO_EACH * EACH + 20), strict=False)
+        n_ammo = 0 if (ammo_name == AMMO[0] and carried >= AMMO_EACH * EACH) else AMMO_EACH * EACH + 20
+        submit(ai, who, outfit(ai, who, EACH + 2, ammo_name, n_ammo), strict=False)
         print(f"{who}: 포탑 {EACH + 2}대 · {ammo_name} {AMMO_EACH * EACH + 20}발 챙긴다")
     for _ in range(60):
         time.sleep(5)
