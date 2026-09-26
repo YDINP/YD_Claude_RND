@@ -64,6 +64,8 @@ COST = {
     "offshore-pump": {"iron-plate": 7},
     "pipe": {"iron-plate": 1},
     FURN: {"stone": 5},
+    # 포탑이 없어 build_stage 가 «만들 재료 없음» 도 «모자람» 도 아닌 채 10순번을 헛돌았다 (23회차 서남 모서리)
+    "gun-turret": {"iron-plate": 40, "copper-plate": 10},
 }
 PAIRED = {BELT, POLE}
 
@@ -250,6 +252,8 @@ def hub(ai) -> dict:
       for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{-6, -20}, {7, -18.5}}}) do cs[#cs+1] = c end
       -- 강철 줄의 재료 상자 (p4 steel) 도 «짓는 재료» 창고다
       for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{7, -17}, {8, -9}}}) do cs[#cs+1] = c end
+      -- 23회차 포탑 창고 (허브 줄 밖 - 판 모으기가 판으로 채우지 않게) 도 «짓는 재료» 창고다
+      for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{-88, -56}, {-86, -55}}}) do cs[#cs+1] = c end
       for _, c in pairs(cs) do
         for _, v in pairs(c.get_inventory(defines.inventory.chest).get_contents()) do
           out[#out+1] = string.format("%%s,%%.1f,%%.1f,%%d", v.name, c.position.x, c.position.y, v.count)
@@ -368,7 +372,10 @@ def build_stage(ai, crew, steps, label, rounds=10) -> bool:
                     # 크기에 맞춰 (긴 변 절반 + 1.5): 1.5 고정일 때 엔진(5x3)·보일러·관 모서리에서
                     # 같은 일이 세 번 더 있었다 (22회차 P5·P6).
                     off = SIZE.get(p.get("name"), 1) / 2 + 1.5
-                    plan.append(("walk_to", {"x": p["x"] + off, "y": p["y"] + off}))
+                    # 순번마다 서는 쪽을 바꾼다 (↘ ↖ ↗ ↙): 늘 ↘ 에만 서면 벨트·팔 틈에 끼어 10순번 내내 못 놓았다
+                    # (23회차 연구소 (-79.5,34.5) - 서쪽에서 서니 한 번에 섰다)
+                    sx, sy = ((1, 1), (-1, -1), (1, -1), (-1, 1))[n_round % 4]
+                    plan.append(("walk_to", {"x": p["x"] + sx * off, "y": p["y"] + sy * off}))
                     last = (p["x"], p["y"])
                 plan.append((k, p))
             # 끝나면 공사 자리에서 비켜 선다 - 일을 마친 자리에 서 있으면 다음 순번의
