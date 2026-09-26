@@ -56,10 +56,25 @@ def steps() -> list:
     return out
 
 
+def reroute_steps() -> list:
+    """2 차: 급송 끝을 y=10.5 가로줄 «상류» 로.
+
+    실측 (tick ~12.0M): 급송 철이 기둥 x=-57.5 (회로 쪽) 로만 들어가, 톱니 조립기 (-55.5,7.5) 와 팔 조립기 (-51.5,7.5) 가
+    집는 y=10.5 가로줄 (x=-33.5 기둥에서 오는, 지금 굶는 줄) 에는 닿지 않았다 - 초록 10분 0, 허브 철 ~2만.
+    y=5.5 줄을 x=-60.5 에서 남쪽으로 꺾어 y=11.5 동향 -> (-50.5,11.5) 북향 -> (-50.5,10.5) 에 옆치기.
+    서향 가로줄을 타고 두 조립기 팔 (-51.5 · -55.5) 을 지나 모서리 -> 기둥 -> 회로까지 한 길."""
+    out = [("demolish", {"x": x, "y": 5.5, "name": BELT, "search_radius": 0.3}) for x in (-60.5, -59.5, -58.5)]
+    out += [p1.b(BELT, -60.5, y + 0.5, S) for y in range(5, 11)]                   # 5.5 .. 10.5
+    out += [p1.b(BELT, x + 0.5, 11.5, E) for x in range(-61, -51)]                 # -60.5 .. -51.5
+    out += [p1.b(BELT, -50.5, 11.5, N)]
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--who", default="")
     ap.add_argument("--fix", action="store_true", help="잘못 선 지하벨트 출구만 다시")
+    ap.add_argument("--reroute", action="store_true", help="급송 끝을 y=10.5 가로줄 상류로")
     a = ap.parse_args()
     ai = AIBridge()
     st = steps()
@@ -72,7 +87,8 @@ def main() -> int:
     os.environ[detached.ENV] = "green23"
     detached.mark(crew, "green23", minutes=60)
     try:
-        p1.build_stage(ai, crew, fix_steps() if a.fix else st, "green-fix" if a.fix else "green")
+        todo = reroute_steps() if a.reroute else (fix_steps() if a.fix else st)
+        p1.build_stage(ai, crew, todo, "green-" + ("reroute" if a.reroute else "fix" if a.fix else "main"))
     finally:
         detached.release(crew)
     print(f"  green {len(p1.standing(ai, st))}/{nb}")
