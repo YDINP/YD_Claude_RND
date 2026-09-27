@@ -16,6 +16,8 @@ sys.path[:0] = [os.path.join(os.path.dirname(__file__), "..", "bridge")]
 from client import AIBridge  # noqa: E402
 
 FRAMES = [(25.5, -8.5), (8.5, 3.5)]
+# 손 먹이 상자 보충 (위치, 아이템, 이 밑이면, 요청 수) - 사용자 (19:14): "철판이 없어서 황산을 못 만듦"
+CHESTS = [((30.5, 3.5), "iron-plate", 20, 60)]
 
 RELEASE = """(function() local s = game.surfaces[1]
   local c = s.find_entities_filtered{name = 'iron-chest', position = {28.5, -3.5}, radius = 0.5}[1]
@@ -39,11 +41,27 @@ FEED = """(function() local s = game.surfaces[1] local o = {req = {}}
   end
   return o end)()"""
 
+CHEST_FEED = """(function() local s = game.surfaces[1] local o = {req = {}}
+  for _, t in pairs({%s}) do
+    local c = s.find_entities_filtered{type = {'container', 'logistic-container'}, position = {t[1], t[2]}, radius = 0.5}[1]
+    if c then
+      local net = s.find_logistic_network_by_position(c.position, 'player')
+      local have = c.get_inventory(defines.inventory.chest).get_item_count(t[3])
+      local busy = s.count_entities_filtered{name = 'item-request-proxy', position = c.position, radius = 0.6} > 0
+      if have < t[4] and not busy and net and net.get_item_count(t[3]) >= t[5] then
+        s.create_entity{name = 'item-request-proxy', position = c.position, force = 'player', target = c,
+          modules = {{id = {name = t[3]}, items = {in_inventory = {{inventory = defines.inventory.chest, stack = 0, count = t[5]}}}}}}
+        o.req[#o.req + 1] = t[3] .. '@' .. c.position.x .. ',' .. c.position.y
+      end
+    end
+  end
+  return o end)()"""
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--release", action="store_true")
-    ap.add_argument("--every", type=float, default=300)
+    ap.add_argument("--every", type=float, default=120)
     a = ap.parse_args()
     ai = AIBridge()
     if a.release:
@@ -53,6 +71,11 @@ def main() -> int:
     while True:
         try:
             r = ai.lua(lua)
+            rc = ai.lua(CHEST_FEED % ", ".join("{%s, %s, '%s', %d, %d}" % (p[0], p[1], it, lo, n) for p, it, lo, n in CHESTS))
+            rq = rc.get("req") or []
+            rq = list(rq.values()) if isinstance(rq, dict) else rq
+            if rq:
+                print(time.strftime("%H:%M:%S"), "상자 보충 ->", rq, flush=True)
             req = r.get("req") or []
             req = list(req.values()) if isinstance(req, dict) else req
             if req:
