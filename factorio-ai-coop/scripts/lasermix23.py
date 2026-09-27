@@ -200,6 +200,19 @@ def save_ring(d):
         json.dump(d, f, ensure_ascii=False, indent=1)
 
 
+# 01:21 배터리 화학공장 (25.5,-4.5) 출력이 9 로 가득 (full_output) - 받아 가는 쪽이 막혀 망엔 7 뿐.
+# 가득 찼을 때만 남는 것을 레이저 조립기 입력으로 바로 옮긴다 (Lua 중계). 하류 (프레임) 몫 5 는 남긴다.
+BATT_LUA = """(function() local s = game.surfaces[1]
+  local p = s.find_entities_filtered{name = 'chemical-plant', position = {25.5, -4.5}, radius = 1}[1]
+  local a = s.find_entities_filtered{type = 'assembling-machine', position = {%s, %s}, radius = 1}[1]
+  if not (p and a) then return {n = 0} end
+  local out = p.get_inventory(defines.inventory.assembling_machine_output) local c = out.get_item_count('battery')
+  local inv = a.get_inventory(defines.inventory.assembling_machine_input) local need = 24 - inv.get_item_count('battery')
+  local k = math.min(c - 5, need) if k <= 0 then return {n = 0} end
+  local got = out.remove{name = 'battery', count = k} if got > 0 then inv.insert{name = 'battery', count = got} end
+  return {n = got} end)()"""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--every", type=float, default=60)
@@ -220,6 +233,9 @@ def main() -> int:
         save_ring(ring)
     while True:
         try:
+            b = ai.lua(BATT_LUA % (asm[0], asm[1]))
+            if b.get("n"):
+                print(time.strftime("%H:%M:%S"), "배터리 중계", b["n"], flush=True)
             f = ai.lua(FEED_LUA % (LUA_COMMON, asm[0], asm[1], STEEL_FLOOR + 20, STORE[0], STORE[1]))
             print(time.strftime("%H:%M:%S"), "레이저 조립기", {k: (vals(v) if k == "req" else v) for k, v in f.items()}, flush=True)
             with open(KIT, encoding="utf-8") as fh:
