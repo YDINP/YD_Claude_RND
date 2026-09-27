@@ -100,6 +100,9 @@ def relocate(ai) -> str:
     # 키트 (state/arty_kit.json) 가 있으면 대포 + 포탑 링 + 로보포트 + 전봇대 + 상자를 함께 옮긴다 (망 밖도 이어 붙여서).
     # 키트로 못 옮기면 (링 < 4, 자리 없음) 아래 옛 방식: 로봇망 안 포탑 8 대 이상 지키는 자리로 대포만.
     try:
+        kit = artykit23.load()
+        if kit and kit.get("move"):  # 키트 이전 중 - 옛 방식으로 대포만 따로 옮기지 않는다 (01:02 겹침)
+            return "키트 이전 중 (%s) - 대기" % kit["move"].get("stage")
         k = artykit23.start_move(ai)
         if k:
             return k
