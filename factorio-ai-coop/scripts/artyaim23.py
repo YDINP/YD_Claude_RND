@@ -15,12 +15,14 @@ import os
 import sys
 import time
 
-sys.path[:0] = [os.path.join(os.path.dirname(__file__), "..", "bridge")]
+sys.path[:0] = [os.path.join(os.path.dirname(__file__), "..", "bridge"), os.path.dirname(os.path.abspath(__file__))]
 from client import AIBridge  # noqa: E402
+import artykit23  # noqa: E402  이동 포대 키트 (사용자 00:44 "대포를 설치한 부분으로 방어선 및 로보포트를 옮겨야 함")
 
 AIM = """(function() local s = game.surfaces[1] local o = {}
   local t = s.find_entities_filtered{name = 'artillery-turret', force = 'player'}[1]
   if not t then return {err = 'no turret'} end
+  if t.to_be_deconstructed() then return {err = 'moving'} end  -- 이전 중 (해체 표시) 은 조준 중지
   o.tx, o.ty = t.position.x, t.position.y
   o.ammo = t.get_inventory(defines.inventory.turret_ammo).get_item_count()
   o.auto = t.artillery_auto_targeting and 1 or 0
@@ -95,6 +97,14 @@ GUARD = """(function() local s = game.surfaces[1] local o = {n = 0}
 
 
 def relocate(ai) -> str:
+    # 키트 (state/arty_kit.json) 가 있으면 대포 + 포탑 링 + 로보포트 + 전봇대 + 상자를 함께 옮긴다 (망 밖도 이어 붙여서).
+    # 키트로 못 옮기면 (링 < 4, 자리 없음) 아래 옛 방식: 로봇망 안 포탑 8 대 이상 지키는 자리로 대포만.
+    try:
+        k = artykit23.start_move(ai)
+        if k:
+            return k
+    except Exception as e:  # noqa: BLE001
+        print(f"artykit start: {type(e).__name__}: {e}"[:200], flush=True)
     r = ai.lua(FIND)
     if not r.get("n"):
         return "옮길 자리 없음 (로봇망 안에서 사거리에 적 구조물이 들어오는 곳이 없음)"
@@ -111,9 +121,17 @@ def main() -> int:
     a = ap.parse_args()
     ai = AIBridge()
     last_group, last_left, idle = None, None, False
+    reloc_retry = 0.0   # 키트 이전이 적 유닛 때문에 보류되면 1 분 뒤 다시
     k = 0
     while True:
         k += 1
+        if k % 2 == 0 and not a.once:  # 10 초마다 키트 이전 한 단계
+            try:
+                m = artykit23.step(ai)
+                if m:
+                    print(time.strftime("%H:%M:%S"), m, flush=True)
+            except Exception as e:  # noqa: BLE001
+                print(f"artykit step: {type(e).__name__}: {e}"[:200], flush=True)
         if k % 12 == 0 and not a.once:  # 1 분마다 대포 둘레 포탑 탄
             try:
                 g = ai.lua(GUARD)
@@ -132,9 +150,11 @@ def main() -> int:
                     print(now, "조준:", r["err"], flush=True)
                 idle = True
             elif r.get("left", 0) == 0:
-                if not idle:
+                if not idle or (reloc_retry and time.time() >= reloc_retry):
                     print(f"{now} 조준: 사거리 안 적 구조물 0 (포대 {r['tx']},{r['ty']}) - 대포 이전", flush=True)
-                    print(f"{now} {relocate(ai)}", flush=True)
+                    msg = relocate(ai)
+                    print(f"{now} {msg}", flush=True)
+                    reloc_retry = time.time() + 60 if msg.startswith("키트 이전 보류") else 0.0
                 idle = True
             else:
                 idle = False

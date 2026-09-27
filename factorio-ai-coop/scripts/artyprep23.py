@@ -92,7 +92,17 @@ SPOT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "stat
 
 
 def arty_spots():
-    """artyaim23 가 사거리 안이 비면 포대를 옮길 자리를 state/arty_spot.json 에 적는다 - 그 자리를 맨 앞에."""
+    """artyaim23 가 사거리 안이 비면 포대를 옮길 자리를 state/arty_spot.json 에 적는다 - 그 자리를 맨 앞에.
+    키트 이전 중 (artykit23) 에는 로보포트 · 포탑 링이 서기 전 (rp · ring) 엔 유령을 놓지 않고, 그 뒤엔 새 자리만."""
+    try:
+        import artykit23
+        st = artykit23.moving_stage()
+        if st in ("rp", "ring"):
+            return []
+        if st:
+            return [tuple(artykit23.load()["move"]["to"])]
+    except Exception:  # noqa: BLE001
+        pass
     try:
         with open(SPOT_FILE, encoding="utf-8") as f:
             x, y = json.load(f)
