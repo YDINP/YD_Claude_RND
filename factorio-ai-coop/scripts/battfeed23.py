@@ -17,7 +17,9 @@ from client import AIBridge  # noqa: E402
 
 FRAMES = [(25.5, -8.5), (8.5, 3.5)]
 # 손 먹이 상자 보충 (위치, 아이템, 이 밑이면, 요청 수) - 사용자 (19:14): "철판이 없어서 황산을 못 만듦"
-CHESTS = [((30.5, 3.5), "iron-plate", 20, 60)]
+CHESTS = [((30.5, 3.5), "iron-plate", 20, 60),
+          # 북서 전진 포트 탄 상자 - 사용자가 포탑을 13대로 늘림 (19:38), 벨트 급탄 없음
+          ((-168.5, -87.5), "firearm-magazine", 120, 100)]
 
 RELEASE = """(function() local s = game.surfaces[1]
   local c = s.find_entities_filtered{name = 'iron-chest', position = {28.5, -3.5}, radius = 0.5}[1]
