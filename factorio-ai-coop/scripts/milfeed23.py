@@ -31,7 +31,7 @@ BELT_LINE = ((-76, 6), (-47, 15))            # 벨트 조립기 -> 초록팩 (-7
 ADV_BELTS = ((30, -40), (48, 10))           # 고급회로 벨트 (로보포트 조립기 근처)
 
 # 망 2 저장으로: (종류, 출처들/구역, 아이템, 출처에 남길 양, 한 번 최대, 망 재고 상한)
-STORE = [("chest", CU_CHESTS, "copper-plate", 150, 200, 4000),
+STORE = [("chest", CU_CHESTS, "copper-plate", 150, 200, 1500),
          ("out", STEEL_FURN, "steel-plate", 20, 200, 400),
          ("belt", BELT_LINE, "transport-belt", 30, 100, 400),
          ("chest", [(34.5, -41.5)], "roboport", 0, 10, 50)]

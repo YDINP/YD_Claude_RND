@@ -110,7 +110,8 @@ FEED = """(function() local s = game.surfaces[1] local o = {furn = 0, work = 0, 
       if need >= 5 then local got = coal(need) if got > 0 then fu.insert{name = 'coal', count = got} o.fuel = o.fuel + got end end
       local out = f.get_inventory(defines.inventory.furnace_result)
       local k = out.get_item_count('copper-plate')
-      if k > 0 then local put = net.insert({name = 'copper-plate', count = k}, 'storage') if put > 0 then out.remove{name = 'copper-plate', count = put} o.plate = o.plate + put end end
+      -- 06:50 망 저장 상자가 구리로 가득 차 건설 로봇 104 대가 구리를 든 채 멈춤 - 망 구리 5000 넘으면 화로에 둔다 (화로가 막히면 벨트가 쉰다)
+      if k > 0 and net.get_item_count('copper-plate') < 5000 then local put = net.insert({name = 'copper-plate', count = k}, 'storage') if put > 0 then out.remove{name = 'copper-plate', count = put} o.plate = o.plate + put end end
     end
     local i = s.find_entities_filtered{name = 'inserter', position = {p[1] - 0.5, p[2] - 1.5}, radius = 0.3}[1]
     if i then o.ins = o.ins + 1 end
