@@ -802,8 +802,10 @@ remote.add_interface("ai", {
     -- 둘이었고, 넣는 쪽과 세는 쪽이 서로 다른 상자를 보고 있었다.
     local here = game.surfaces[1].find_entities_filtered {
       position = { storage.depot.x, storage.depot.y }, radius = 0.3,
-      type = "container",
+      -- 창고 자리의 상자가 공급 상자로 바뀌어도 잃지 않게 (요청 · 버퍼는 창고 아님).
+      type = Core.STORE_TYPES,
     }[1]
+    if here and not Core.is_store(here, "take") then here = nil end
     if not here then
       storage.depot = nil
       return { depot = nil, lost = true }

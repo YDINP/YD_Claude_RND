@@ -189,8 +189,11 @@ def look(ai, depot, smelt):
         F[#F+1] = string.format("%%.1f|%%.1f|%%d|%%s|%%d|%%s|%%d|%%d",
           f.position.x, f.position.y, ore, what, plate, made, burn, jam)
       end
-      for _, c in pairs(s.find_entities_filtered{type="container",
+      -- 공급 상자 (passive-provider) 허브도 더미 · 창고로 본다. 저장 상자 (건설 예비품) ·
+      -- 요청 · 버퍼 상자는 운반 대상이 아니다 - 퍼 나르면 예비 포탑이 빠진다.
+      for _, c in pairs(s.find_entities_filtered{type={"container", "logistic-container"},
                 force=game.forces.player}) do
+        if c.type == "container" or c.name == "passive-provider-chest" then
         local inv = c.get_inventory(defines.inventory.chest)
         local rows = {}
         for _, item in pairs(inv.get_contents()) do
@@ -204,6 +207,7 @@ def look(ai, depot, smelt):
         local line = string.format("%%.1f|%%.1f|%%d|%%s", c.position.x, c.position.y,
                                    free, table.concat(rows, ","))
         if inside(c.position) then D[#D+1] = line else P[#P+1] = line end
+        end
       end
       return { furnaces = F, piles = P, depot = D }
     end)()""" % (dx - 8, dx + 36, dy - 8, dy + 9))

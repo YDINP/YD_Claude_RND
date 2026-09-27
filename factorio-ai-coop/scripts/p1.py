@@ -248,15 +248,18 @@ def hub(ai) -> dict:
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local out = {}
-      local cs = s.find_entities_filtered{type = "container", force = f, area = {{%f, %f}, {%f, %f}}}
-      for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{-6, -20}, {7, -18.5}}}) do cs[#cs+1] = c end
+      -- 허브 상자가 공급 · 저장 상자 (logistic-container) 로 바뀌어도 보이게. 요청 · 버퍼는 뺀다 (꺼낼 곳 아님).
+      local cs = s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, area = {{%f, %f}, {%f, %f}}}
+      for _, c in pairs(s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, area = {{-6, -20}, {7, -18.5}}}) do cs[#cs+1] = c end
       -- 강철 줄의 재료 상자 (p4 steel) 도 «짓는 재료» 창고다
-      for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{7, -17}, {8, -9}}}) do cs[#cs+1] = c end
+      for _, c in pairs(s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, area = {{7, -17}, {8, -9}}}) do cs[#cs+1] = c end
       -- 23회차 포탑 창고 (허브 줄 밖 - 판 모으기가 판으로 채우지 않게) 도 «짓는 재료» 창고다
-      for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{-88, -56}, {-86, -55}}}) do cs[#cs+1] = c end
+      for _, c in pairs(s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, area = {{-88, -56}, {-86, -55}}}) do cs[#cs+1] = c end
       for _, c in pairs(cs) do
+        if c.name ~= "requester-chest" and c.name ~= "buffer-chest" then
         for _, v in pairs(c.get_inventory(defines.inventory.chest).get_contents()) do
           out[#out+1] = string.format("%%s,%%.1f,%%.1f,%%d", v.name, c.position.x, c.position.y, v.count)
+        end
         end
       end
       return out

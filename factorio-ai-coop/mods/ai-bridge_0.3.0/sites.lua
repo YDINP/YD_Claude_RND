@@ -515,7 +515,8 @@ local function fuel_rig(name, x, y)
     position = { x, y }, radius = 1.6, force = force,
   }) do
     if e.type ~= "character" and e.type ~= "item-entity"
-        and e.type ~= "inserter" and e.type ~= "container" then
+        and e.type ~= "inserter" and e.type ~= "container"
+        and e.type ~= "logistic-container" then   -- 공급 · 저장 상자도 «먹일 기계»가 아니다
       machine = e
       break
     end
@@ -545,9 +546,11 @@ local function fuel_rig(name, x, y)
 
     -- 이미 상자가 있으면 그것을 쓴다. 옆에 또 놓을 이유가 없다.
     local standing = surface.find_entities_filtered {
-      position = { shelf.x, shelf.y }, radius = 0.4, type = "container",
+      position = { shelf.x, shelf.y }, radius = 0.4, type = Core.STORE_TYPES,
       force = force, limit = 1,
     }[1]
+    -- 넣을 상자 (put): 공급 상자는 그대로 쓰고, 저장 (예비품) · 요청 · 버퍼 상자는 쓰지 않는다.
+    if standing and not Core.is_store(standing, "put") then standing = nil end
 
     local arm_free = surface.can_place_entity {
       name = "burner-inserter", position = arm, direction = side.d, force = force,

@@ -37,8 +37,10 @@ def survey(ai) -> tuple:
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local chests, low = {}, {}
-      for _, c in pairs(s.find_entities_filtered{type = "container", force = f}) do
-        local n = c.get_inventory(defines.inventory.chest).get_item_count("coal")
+      -- 석탄을 꺼낼 곳: 공급 상자 허브 포함. 저장 (예비품) · 요청 · 버퍼 상자는 제외.
+      for _, c in pairs(s.find_entities_filtered{type = {"container", "logistic-container"}, force = f}) do
+        local n = (c.type == "container" or c.name == "passive-provider-chest")
+                  and c.get_inventory(defines.inventory.chest).get_item_count("coal") or 0
         if n > 0 then chests[#chests+1] = string.format("%%.1f,%%.1f,%%d", c.position.x, c.position.y, n) end
       end
       for _, e in pairs(s.find_entities_filtered{type = {"mining-drill", "furnace", "boiler"}, force = f}) do

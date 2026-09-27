@@ -117,13 +117,16 @@ end)()""" % (COAL, COAL_LOW, COAL_FULL, COAL, ORE_LOW, ORE_FULL,
 _STOCK = """(function()
   local s = game.surfaces[1]
   local out = {}
+  -- 꺼낼 곳 (take): 공급 · 저장 상자 (logistic-container) 도 포함, 요청 · 버퍼 상자는 제외.
   for _, c in pairs(s.find_entities_filtered {
-    type = "container", force = game.forces.player,
+    type = {"container", "logistic-container"}, force = game.forces.player,
   }) do
+    if c.name ~= "requester-chest" and c.name ~= "buffer-chest" then
     local inv = c.get_inventory(defines.inventory.chest)
     for _, it in pairs(inv.get_contents()) do
       out[#out + 1] = string.format("%s|%.1f|%.1f|%d",
         it.name, c.position.x, c.position.y, it.count)
+    end
     end
   end
   return out

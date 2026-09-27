@@ -132,9 +132,10 @@ def enemies_near(ai, x, y, r) -> int:
 def nearest_store(ai, item, x, y, least) -> tuple | None:
     """(x, y, 수) item 이 least 이상 든 가장 가까운 상자 (허브만 보면 서쪽 끝까지 걸어간다)."""
     v = ai.lua("""(function() local best, bd = nil, 1e18
-      for _, c in pairs(game.surfaces[1].find_entities_filtered{type = 'container', force = 'player', position = {%f, %f}, radius = 120}) do
+      for _, c in pairs(game.surfaces[1].find_entities_filtered{type = {'container', 'logistic-container'}, force = 'player', position = {%f, %f}, radius = 120}) do
         local n = c.get_item_count('%s')
-        if n >= %d and c.name ~= 'storage-chest' then local d = (c.position.x - %f)^2 + (c.position.y - %f)^2
+        -- 공급 상자 허브도 본다. 저장 상자 (건설 예비품) · 요청 · 버퍼 상자는 건드리지 않는다.
+        if n >= %d and c.name ~= 'storage-chest' and c.name ~= 'requester-chest' and c.name ~= 'buffer-chest' then local d = (c.position.x - %f)^2 + (c.position.y - %f)^2
           if d < bd then best, bd = {x = c.position.x, y = c.position.y, n = n}, d end end end
       return best or {} end)()""" % (x, y, item, least, x, y))
     return (float(v["x"]), float(v["y"]), int(v["n"])) if v and v.get("x") is not None else None

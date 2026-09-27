@@ -117,8 +117,11 @@ def stock_at(ai, item, n):
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local best, most = nil, 0
-      for _, c in pairs(s.find_entities_filtered{type = "container", force = f}) do
-        local k = c.get_inventory(defines.inventory.chest).get_item_count("%s")
+      -- 공급 상자 허브도 본다. 저장 상자는 제외 - 여기서 포탑 · 탄을 꺼내 전선에 들고 가므로
+      -- 건설 예비품 (포탑) 저장 상자를 비우게 된다. 요청 · 버퍼도 제외.
+      for _, c in pairs(s.find_entities_filtered{type = {"container", "logistic-container"}, force = f}) do
+        local k = (c.type == "container" or c.name == "passive-provider-chest")
+                  and c.get_inventory(defines.inventory.chest).get_item_count("%s") or 0
         if k > most then best, most = c.position, k end
       end
       if best and most >= %d then return { x = best.x, y = best.y, n = most } end
@@ -132,8 +135,17 @@ def stock_at(ai, item, n):
 def outfit(ai, who, n_turrets, ammo_name, n_ammo) -> list:
     """창고에서 포탑·탄약을 챙기는 걸음."""
     have = shelf_mod.shelves(ai, DEPOT, span=36)
+    # 가방에 이미 든 만큼은 안 가지러 간다. 23회차 서쪽: 손제작해 들고 있는데도 먼 로봇망 예비 상자
+    # (포탑 13 @ 12,-80) 까지 걸어가 예비를 비울 뻔했다.
+    try:
+        bag = ai.agent(who).items()
+    except RconError:
+        bag = {}
     plan = []
     for item, n in ((TURRET, n_turrets), (ammo_name, n_ammo)):
+        n = max(0, n - int(bag.get(item, 0)))
+        if not n:
+            continue
         at = have.get(item) or stock_at(ai, item, n)
         if not at:
             continue
@@ -162,6 +174,11 @@ def pick_side(ai, foes, n=16) -> int:
 
 
 HOME = (-40, 30)                 # 귀환 목적지 (기지 안쪽, 포탑 줄 안)
+# 집결 · 후퇴 자리를 손으로 정한다 (--rally / --retreat).
+# 23회차 서쪽: 계산된 집결점 (열 뒤 45 = x -121) 은 서쪽 벽 (x -120.5) 위였고, safe_spot 이 고른 포탑 (-124,-44) 은
+# 벽으로 사방이 막힌 보루 안이었다 - 길이 없어 벽 밖에 붙어 설 뻔했다.
+RALLY = None
+RETREAT_AT = None
 UNIT_CHECK = 40                  # 경유점 둘레 이 안에 적 유닛이 있으면 멈춘다
 
 
@@ -202,6 +219,23 @@ def swarm(ai, foes) -> int:
     cy = sum(f[2] for f in foes) / len(foes)
     return ai.lua("""(function() return {n = game.surfaces[1].count_entities_filtered{force = "enemy", type = "unit",
       position = {%f, %f}, radius = %d}} end)()""" % (cx, cy, SWARM_R))["n"]
+
+
+HP_GO = 200               # 파마다 모두 이 이상이어야 나간다
+HP_ABORT = 150            # 파 중 누구라도 이 밑이면 접는다
+
+
+def hp_ok(ai, crew, wait=120) -> bool:
+    t0 = time.time()
+    while True:
+        pos = crew_pos(ai)
+        low = {w: pos[w][3] for w in crew if not pos[w][0] or pos[w][3] < HP_GO}
+        if not low:
+            return True
+        print(f"  hp 낮음 {low} - 회복 대기", flush=True)
+        if time.time() - t0 >= wait:
+            return False
+        time.sleep(15)
 
 
 def swarm_ok(ai, foes) -> bool:
@@ -259,7 +293,10 @@ def rally(ai, crew, foes, side) -> None:
     tf, sd, real = _axis(foes, side)
     cx, cy = column_for(tf, sd)
     for i, who in enumerate(crew):
-        x, y = real(cx + sd * RETREAT, cy - 3 + 2 * i)
+        if RALLY:
+            x, y = RALLY[0], RALLY[1] - 3 + 2 * i
+        else:
+            x, y = real(cx + sd * RETREAT, cy - 3 + 2 * i)
         submit(ai, who, [("walk_to", {"x": x, "y": y})], strict=False)
     for _ in range(90):
         time.sleep(5)
@@ -293,7 +330,10 @@ def wave(ai, crew, foes, ammo_name, side=1) -> list:
         stand = real(cx + sd * STAND_BACK, my)
         ncx = sum(f[1] for f in foes) / len(foes)
         ncy = sum(f[2] for f in foes) / len(foes)
-        retreat = safe_spot(ai, stand, (ncx, ncy)) or real(cx + sd * RETREAT, my)
+        if RETREAT_AT:
+            retreat = (RETREAT_AT[0], RETREAT_AT[1] + 2 * crew.index(who))
+        else:
+            retreat = safe_spot(ai, stand, (ncx, ncy)) or real(cx + sd * RETREAT, my)
         # 사람마다 «가방에 실제로 든» 탄을 넣는다. 23회차 북동 1파: 관통탄을 들었는데 ammo_name 이 일반 탄창으로
         # 떨어져, 가방에 없는 탄을 넣으려다 포탑이 빈 채 섰다 (일반 탄창은 기관단총 칸에만 있었다) - 13 대가 쏘지도 못하고 부서졌다.
         bag = ai.agent(who).items()
@@ -338,7 +378,12 @@ def main() -> int:
     ap.add_argument("--via", default="", help="가는 길 경유점 'x,y;x,y' - 모두 모여 유닛을 확인하며 간다. 귀환은 거꾸로")
     ap.add_argument("--swarm-max", type=int, default=SWARM_MAX, help="둥지 둘레 이보다 많으면 접는다 (탄 든 포탑 수에 맞춰)")
     ap.add_argument("--ammo-each", type=int, default=AMMO_EACH, help="포탑마다 넣는 탄")
+    ap.add_argument("--rally", default="", help="집결점 x,y (우리 포탑 사거리 안, 벽 밖). 없으면 열 뒤 45칸")
+    ap.add_argument("--retreat", default="", help="후퇴점 x,y. 없으면 safe_spot")
     args = ap.parse_args()
+    global RALLY, RETREAT_AT
+    RALLY = tuple(float(v) for v in args.rally.split(",")) if args.rally else None
+    RETREAT_AT = tuple(float(v) for v in args.retreat.split(",")) if args.retreat else None
     EACH = args.each
     SWARM_MAX = args.swarm_max
     AMMO_EACH = args.ammo_each
@@ -409,7 +454,14 @@ def _run(ai, args, crew, ax, ay, via) -> int:
         if not swarm_ok(ai, foes):
             print("  둥지 둘레에 무리가 모여 있다 - 접는다", flush=True)
             return 1
+        if not hp_ok(ai, crew):
+            print(f"  hp {HP_GO} 미만이 회복되지 않는다 - 접는다", flush=True)
+            return 1
         rally(ai, crew, foes, args.side)
+        # 집결하는 동안 다쳤거나 무리가 불었으면 세우지 않는다
+        if not hp_ok(ai, crew, wait=0) or swarm(ai, foes) > SWARM_MAX:
+            print("  집결 뒤 hp · 무리 재확인 실패 - 접는다", flush=True)
+            return 1
         spots = wave(ai, crew, foes, ammo_name, args.side)
         if not spots:
             break
@@ -421,6 +473,10 @@ def _run(ai, args, crew, ax, ay, via) -> int:
             dead = [w for w in crew if not pos[w][0]]
             if dead:
                 print(f"  [!] {dead} 가 쓰러졌다 - 여기서 접는다")
+                return 1
+            hurt = [w for w in crew if pos[w][3] < HP_ABORT]
+            if hurt:
+                print(f"  [!] {hurt} hp {[pos[w][3] for w in hurt]} < {HP_ABORT} - 여기서 접고 모두 돌아온다", flush=True)
                 return 1
             st = turret_state(ai, spots)
             left = nest(ai, (ax, ay), args.radius)

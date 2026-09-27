@@ -5,6 +5,8 @@ local Core = require("core")
 local MAX_OBSERVE_RADIUS = Core.MAX_OBSERVE_RADIUS
 local agent              = Core.agent
 local body               = Core.body
+local STORE_TYPES        = Core.STORE_TYPES
+local is_store           = Core.is_store
 local Craft = require("craft")
 local smelted_from = Craft.smelted_from
 local Sites = require("sites")
@@ -34,9 +36,11 @@ local function stores(name, radius, limit)
   local reach = math.min(radius or MAX_OBSERVE_RADIUS, MAX_OBSERVE_RADIUS)
   local out, total = {}, {}
   for _, e in pairs(b.surface.find_entities_filtered {
-    position = b.position, radius = reach, type = "container", force = b.force,
+    -- 공급 상자 (logistic-container) 도 창고로 보인다. 저장 상자는 뺀다 ("put" 규칙) - 방어선 예비 포탑 · 벽은
+    -- 로봇 재건용이라 캐릭터가 «창고 재고» 로 알고 퍼 가면 안 된다 (23회차 리드 결정).
+    position = b.position, radius = reach, type = STORE_TYPES, force = b.force,
   }) do
-    local inv = e.get_inventory(defines.inventory.chest)
+    local inv = is_store(e, "put") and e.get_inventory(defines.inventory.chest)
     if inv and not inv.is_empty() then
       local items = {}
       for _, stack in pairs(inv.get_contents()) do
@@ -102,9 +106,10 @@ local function chest_stock(name, item, radius)
   local reach = math.min(radius or MAX_OBSERVE_RADIUS, MAX_OBSERVE_RADIUS)
   local out = {}
   for _, e in pairs(b.surface.find_entities_filtered {
-    position = b.position, radius = reach, type = "container", force = b.force,
+    -- 꺼낼 곳 찾기: 공급 상자까지. 저장 상자 (방어선 예비품) 는 뺀다 ("put" 규칙, 위 stores 와 같은 이유).
+    position = b.position, radius = reach, type = STORE_TYPES, force = b.force,
   }) do
-    local inv = e.get_inventory(defines.inventory.chest)
+    local inv = is_store(e, "put") and e.get_inventory(defines.inventory.chest)
     if inv then
       local held = inv.get_item_count(item)
       if held > 0 then
@@ -327,9 +332,11 @@ local function hungry_rigs(name, radius)
   }) do
     if arm.status == defines.entity_status.waiting_for_source_items then
       local at = arm.pickup_position
+      -- 채울 곳 (put): 공급 상자는 포함, 저장 상자 (예비품) · 요청 · 버퍼는 제외.
       local shelf = b.surface.find_entities_filtered {
-        position = at, radius = 0.6, type = "container", force = b.force, limit = 1,
+        position = at, radius = 0.6, type = STORE_TYPES, force = b.force, limit = 1,
       }[1]
+      if shelf and not is_store(shelf, "put") then shelf = nil end
       if shelf then
         local inv = shelf.get_inventory(defines.inventory.chest)
         local held = inv and inv.get_item_count("coal") or 0

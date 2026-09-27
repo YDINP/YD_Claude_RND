@@ -229,7 +229,8 @@ def stock(ai, depot):
       end
       -- 창고 밖 석탄. 「창고에 없다」와 «세상에 없다»는 다른 말이고,
       -- 그 둘을 한 값으로 쟀더니 석탄 10,847 을 48 로 읽었다.
-      for _, c in pairs(s.find_entities_filtered{type="container",
+      -- 세기만 한다 (lookup): 공급 · 저장 상자 허브의 석탄도 «세상에 있는» 석탄이다.
+      for _, c in pairs(s.find_entities_filtered{type={"container", "logistic-container"},
                 force=game.forces.player}) do
         out.coal_any = out.coal_any
                      + c.get_inventory(defines.inventory.chest)

@@ -79,6 +79,23 @@ local function body(a)
   return nil
 end
 
+-- 창고 상자 찾기. 허브 철상자를 수동 공급(passive-provider) / 저장(storage)
+-- 상자로 바꾸면 type 이 "logistic-container" 가 되어 type = "container" 로만
+-- 찾던 곳에서 안 보이게 된다. 그래서 찾기는 두 type 을 함께 쓰고, 꺼낼 곳
+-- (take) 과 넣을 곳 (put) 을 이름으로 가른다.
+--   take: 요청(requester) · 버퍼(buffer) 상자는 뺀다 - 로봇이 채우러 오는 자리다.
+--   put : 위 + 저장(storage) 상자도 뺀다 - 건설 예비품 (포탑 등) 상자에 광석 · 판이 섞인다.
+local STORE_TYPES = { "container", "logistic-container" }
+local NOT_TAKE = { ["requester-chest"] = true, ["buffer-chest"] = true }
+local NOT_PUT = { ["requester-chest"] = true, ["buffer-chest"] = true, ["storage-chest"] = true }
+
+local function is_store(e, mode)
+  if e.type == "container" then return true end
+  if e.type ~= "logistic-container" then return false end
+  if mode == "put" then return not NOT_PUT[e.name] end
+  return not NOT_TAKE[e.name]
+end
+
 return {
   AUTOSAVE_INTERVAL = AUTOSAVE_INTERVAL,
   CHAT_HISTORY = CHAT_HISTORY,
@@ -91,9 +108,11 @@ return {
   MAX_SPOTS = MAX_SPOTS,
   PATH_ANSWER_TTL = PATH_ANSWER_TTL,
   PLANNING_RECIPES = PLANNING_RECIPES,
+  STORE_TYPES = STORE_TYPES,
   RESULT_HISTORY = RESULT_HISTORY,
   TAG_MOVE_EPSILON = TAG_MOVE_EPSILON,
   agent = agent,
   body = body,
   init = init,
+  is_store = is_store,
 }

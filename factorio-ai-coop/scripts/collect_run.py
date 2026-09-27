@@ -45,10 +45,13 @@ def survey(ai) -> tuple:
           if v.count >= %d then full[#full+1] = string.format("%%.1f,%%.1f,%%s,%%d", u.position.x, u.position.y, v.name, v.count) end
         end
       end
-      for _, c in pairs(s.find_entities_filtered{type = "container", force = f,
+      -- 넣을 곳 (판을 붓는 허브 줄): 철상자 + 공급 상자. 저장 (예비품) · 요청 · 버퍼 상자는 붓지 않는다.
+      for _, c in pairs(s.find_entities_filtered{type = {"container", "logistic-container"}, force = f,
               area = {{%f, %f}, {%f, %f}}}) do
+        if c.type == "container" or c.name == "passive-provider-chest" then
         hub[#hub+1] = string.format("%%.1f,%%.1f,%%d", c.position.x, c.position.y,
                                     c.get_inventory(defines.inventory.chest).count_empty_stacks())
+        end
       end
       return {full = full, hub = hub}
     end)()""" % (TAKE_AT, _p1.HUB_X0, HUB_ROW_Y - 0.6, _p1.HUB_X1, HUB_ROW_Y + 0.6))

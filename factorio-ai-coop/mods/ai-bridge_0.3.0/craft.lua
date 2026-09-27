@@ -5,6 +5,8 @@ local Core = require("core")
 local MAX_OBSERVE_RADIUS = Core.MAX_OBSERVE_RADIUS
 local agent              = Core.agent
 local body               = Core.body
+local STORE_TYPES        = Core.STORE_TYPES
+local is_store           = Core.is_store
 
 ------------------------------------------------------- 무엇부터 해야 하는가
 
@@ -217,10 +219,11 @@ local function compute_plan(name, item, count)
   -- 가장 가까운 상자 하나로 몰아둔다 - 한 번 걸어가서 꺼내면 되도록.
   local stored = {}
   for _, e in pairs(b.surface.find_entities_filtered {
-    position = b.position, radius = MAX_OBSERVE_RADIUS, type = "container",
+    -- 허브가 공급 · 저장 상자 (logistic-container) 여도 재료 창고로 본다 (take).
+    position = b.position, radius = MAX_OBSERVE_RADIUS, type = STORE_TYPES,
     force = b.force,
   }) do
-    local inv = e.get_inventory(defines.inventory.chest)
+    local inv = is_store(e, "take") and e.get_inventory(defines.inventory.chest)
     if inv then
       local d = Tasks.dist(b.position, e.position)
       for _, stack in pairs(inv.get_contents()) do
