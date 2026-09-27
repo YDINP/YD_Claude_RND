@@ -44,6 +44,9 @@ SNAP = """(function() local s = game.surfaces[1] local o = {u = {}, c = {}}
     local inv = t.get_inventory(defines.inventory.turret_ammo)
     if inv.get_item_count() < 5 and s.count_entities_filtered{name = 'item-request-proxy', position = t.position, radius = 0.5} == 0 then
       local nm = inv.is_empty() and 'piercing-rounds-magazine' or inv[1].name
+      -- 빈 포탑은 망에 재고가 있는 탄으로 (관통탄 고갈 15:30 - 요청만 걸리고 안 오던 것)
+      local net = s.find_logistic_network_by_position(t.position, 'player')
+      if inv.is_empty() and net and net.get_item_count('piercing-rounds-magazine') < 20 then nm = 'firearm-magazine' end
       if pcall(function() s.create_entity{name = 'item-request-proxy', position = t.position, force = 'player', target = t,
           modules = {{id = {name = nm}, items = {in_inventory = {{inventory = defines.inventory.turret_ammo, stack = 0, count = 20}}}}}} end) then
         o.req = o.req + 1 end
