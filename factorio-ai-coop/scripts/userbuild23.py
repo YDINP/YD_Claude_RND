@@ -62,17 +62,27 @@ def main() -> int:
     ap.add_argument("--once", action="store_true")
     a = ap.parse_args()
     ai = AIBridge()
-    seen, dseen, first = set(), set(), True
+    seen, dseen, first = {}, set(), True
     while True:
         try:
             r = ai.lua(SCAN % a.who)
             now = time.strftime("%H:%M:%S")
-            for e in rows(r.get("e")):
-                if e["id"] in seen:
+            cur = {e["id"]: e for e in rows(r.get("e"))}
+            for i, e in cur.items():
+                if i in seen:
                     continue
-                seen.add(e["id"])
                 if not first:
                     print(f"{now} 사용자 건설: {json.dumps(e, ensure_ascii=False)}", flush=True)
+            # 사라진 것: 유령이 지어진 것 (같은 자리에 실물) 은 빼고, 나머지는 사용자가 걷어 냈거나 부서진 것
+            built = {(e["name"], e["x"], e["y"]) for e in cur.values()}
+            for i, e in seen.items():
+                if i in cur:
+                    continue
+                if e["name"].startswith("ghost:") and (e["name"][6:], e["x"], e["y"]) in built:
+                    continue
+                if not first:
+                    print(f"{now} 사용자 제거/소멸: {json.dumps({k: e[k] for k in ('name', 'x', 'y')}, ensure_ascii=False)}", flush=True)
+            seen = cur
             d_now = {d["id"]: d for d in rows(r.get("d"))}
             new_d = [d for i, d in d_now.items() if i not in dseen]
             dseen = set(d_now)
@@ -80,7 +90,7 @@ def main() -> int:
                 # 해체 표시는 누가 했는지 API 로 알 수 없다 - 에이전트(drillclean 등)의 것도 섞인다
                 print(f"{now} 해체 표시 (누가 했는지 모름): {json.dumps(new_d[:20], ensure_ascii=False)}", flush=True)
             if first:
-                print(f"{now} userbuild: 시작 - 기존 사용자 흔적 {len(seen)} 개는 건너뜀", flush=True)
+                print(f"{now} userbuild: 시작 - 기존 사용자 흔적 {len(cur)} 개는 건너뜀", flush=True)
             first = False
         except Exception as e:  # noqa: BLE001
             print(f"userbuild: {type(e).__name__}: {e}"[:200], flush=True)
