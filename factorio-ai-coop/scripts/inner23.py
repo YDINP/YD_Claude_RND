@@ -165,8 +165,9 @@ def haul_once(ai, go):
     low = [(xy, n) for xy, n in low if 0 <= n < HAUL_BELOW]
     if not low:
         return "손 운반: 필요 없음"
-    # 동률이면 노랑 병목 (회로 상자 9.5,-5.5) 먼저 - 전엔 늘 X3 상자만 골랐다 (사이클 2)
-    xy, n = min(low, key=lambda t: (t[1], t[0] != (9.5, -5.5)))
+    # 우선순위: 수류탄 (검정팩 - artillery 남은 440 단위에 검정 440 필요) > 노랑 회로 상자 > 나머지. 전엔 늘 X3 상자만 골랐다
+    pri = {(-45.5, -44.5): 0, (9.5, -5.5): 1}
+    xy, n = min(low, key=lambda t: (pri.get(t[0], 2), t[1]))
     live = {w["name"]: w for w in ai.list()}
     makers = ["hotel", "foxtrot", "charlie", "echo", "bravo", "alpha"]
     pos = {w: (live[w]["x"], live[w]["y"]) for w in makers if w in live}
