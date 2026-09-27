@@ -206,6 +206,12 @@ BATT_LUA = """(function() local s = game.surfaces[1]
   local p = s.find_entities_filtered{name = 'chemical-plant', position = {25.5, -4.5}, radius = 1}[1]
   local a = s.find_entities_filtered{type = 'assembling-machine', position = {%s, %s}, radius = 1}[1]
   if not (p and a) then return {n = 0} end
+  -- 01:37 배터리 공장 입력에 철판이 0 (구리 17 · 황산 40 뿐) - 망에서 30 까지 채운다 (망 철 300 이상일 때)
+  local pin = p.get_inventory(defines.inventory.assembling_machine_input)
+  local net = s.find_logistic_network_by_position({-60, -33}, 'player')
+  local fe = pin.get_item_count('iron-plate')
+  if fe < 10 and net and net.get_item_count('iron-plate') >= 300 then
+    local got = net.remove_item{name = 'iron-plate', count = 30 - fe} if got > 0 then pin.insert{name = 'iron-plate', count = got} end end
   local out = p.get_inventory(defines.inventory.assembling_machine_output) local c = out.get_item_count('battery')
   local inv = a.get_inventory(defines.inventory.assembling_machine_input) local need = 24 - inv.get_item_count('battery')
   local k = math.min(c - 5, need) if k <= 0 then return {n = 0} end
