@@ -76,6 +76,7 @@ GRENADE_FEEDS = [((-46.5, -26.5), "iron-plate", 10, 30), ((-46.5, -23.5), "iron-
 ASM = [# 대포 포탄 줄: 폭발 포탄 강철, 레이더 철
        ((-26.5, -66.5), "steel-plate", 6, 20), ((-21.5, -71.5), "steel-plate", 6, 20), ((-18.5, -66.5), "iron-plate", 10, 30),
        # 레이더 전용 줄 (shellline23): 회로·구리선·톱니 AM1
+       ((25.5, -4.5), "copper-plate", 10, 50),  # 배터리 화학공장 구리 (23:57 구리 0 -> 프레임 -> 노랑 정지)
        ((-18.5, -70.5), "iron-plate", 10, 40), ((-14.5, -70.5), "copper-plate", 10, 40), ((-14.5, -66.5), "iron-plate", 10, 40)]
 
 ASM_FEED = """(function() local s = game.surfaces[1] local o = {req = {}}
