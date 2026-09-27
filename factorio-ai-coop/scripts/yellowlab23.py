@@ -64,6 +64,18 @@ CHAIN = """(function() local s = game.surfaces[1] local o = {}
   end
   if EE and F2 then local need = 4 - inp(F2).get_item_count('electric-engine-unit')
     if need > 0 then local got = outp(EE).remove{name = 'electric-engine-unit', count = need} if got > 0 then inp(F2).insert{name = 'electric-engine-unit', count = got} o.ee = got end end end
+  -- 04:05 노란팩 조립기 둘이 서로 다른 것 부족 (29.5: 처리장치 1, 12.5: 프레임 0) - 프레임 출력을 둘로 나누고 처리장치를 맞춘다
+  local Y1, Y2 = ent({29.5, -8.5}), ent({12.5, 3.5})
+  for _, Y in pairs({Y1, Y2}) do if Y then
+    for _, F in pairs({F1, F2}) do if F then local need = 4 - inp(Y).get_item_count('flying-robot-frame')
+      if need > 0 then local got = outp(F).remove{name = 'flying-robot-frame', count = need} if got > 0 then inp(Y).insert{name = 'flying-robot-frame', count = got} o.yframe = (o.yframe or 0) + got end end end end
+  end end
+  if Y1 and Y2 then
+    for _, pair in pairs({{Y2, Y1}, {Y1, Y2}}) do local a, b = pair[1], pair[2]
+      local ha, hb = inp(a).get_item_count('processing-unit'), inp(b).get_item_count('processing-unit')
+      if ha >= 6 and hb < 4 then local k = math.floor((ha - hb) / 2) local got = inp(a).remove{name = 'processing-unit', count = k} if got > 0 then inp(b).insert{name = 'processing-unit', count = got} o.pu = got end end
+    end
+  end
   -- 03:43 윤활유 0 -> 전기엔진 정지 -> 프레임 정지. 정유 (23.5,11.5) 가 basic 으로 바뀌어 중유가 안 나온다 (관은 advanced 그대로 남아 있음).
   -- 윤활유 < 30 이면 advanced 4 분 (그동안 중유 -> 윤활유), 그 뒤 basic 6 분 (가스 우선) 을 반복.
   local R = s.find_entities_filtered{name = 'oil-refinery', position = {23.5, 11.5}, radius = 1}[1]
