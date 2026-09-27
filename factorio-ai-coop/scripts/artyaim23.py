@@ -78,21 +78,26 @@ MOVE = """(function() local s = game.surfaces[1]
 
 # 대포 둘레 40 칸 포탑 탄을 30 까지 (로봇 proxy, 30 칸 미만만, 종류는 슬롯 그대로) - 사용자 00:33 "대포 쪽 방어 보완"
 GUARD = """(function() local s = game.surfaces[1] local o = {n = 0}
+  local centers = {%s}  -- 키트 이전 중이면 새 자리도 (01:25 SE 링이 탄 0 으로 공습을 받음 - 대포가 서기 전부터 채운다)
   local t = s.find_entities_filtered{name = 'artillery-turret', force = 'player'}[1]
-  if not t then return o end
-  local net = s.find_logistic_network_by_position(t.position, 'player') if not net then return o end
+  if t then centers[#centers + 1] = t.position end
+  local net = s.find_logistic_network_by_position({-60, -33}, 'player') if not net then return o end
   local have = {['firearm-magazine'] = net.get_item_count('firearm-magazine'), ['piercing-rounds-magazine'] = net.get_item_count('piercing-rounds-magazine')}
-  for _, g in pairs(s.find_entities_filtered{name = 'gun-turret', force = 'player', position = t.position, radius = 40}) do
+  local seen = {}
+  for _, C in pairs(centers) do for _, g in pairs(s.find_entities_filtered{name = 'gun-turret', force = 'player', position = C, radius = 40}) do
+   if not seen[g.unit_number] then seen[g.unit_number] = true
     local inv = g.get_inventory(defines.inventory.turret_ammo) local c = inv.get_item_count()
     if c < 30 and s.count_entities_filtered{name = 'item-request-proxy', position = g.position, radius = 0.5} == 0 then
       local nm = inv.is_empty() and 'firearm-magazine' or inv[1].name
-      if (have[nm] or 0) >= 100 then
+      if (have[nm] or 0) < 40 then nm = (have['firearm-magazine'] or 0) >= (have['piercing-rounds-magazine'] or 0) and 'firearm-magazine' or 'piercing-rounds-magazine' end
+      if (have[nm] or 0) >= 40 then
         if pcall(function() s.create_entity{name = 'item-request-proxy', position = g.position, force = 'player', target = g,
             modules = {{id = {name = nm}, items = {in_inventory = {{inventory = defines.inventory.turret_ammo, stack = 0, count = 30 - c}}}}}} end) then
           o.n = o.n + 1 have[nm] = have[nm] - (30 - c) end
       end
     end
-  end
+   end
+  end end
   return o end)()"""
 
 
@@ -137,7 +142,10 @@ def main() -> int:
                 print(f"artykit step: {type(e).__name__}: {e}"[:200], flush=True)
         if k % 12 == 0 and not a.once:  # 1 분마다 대포 둘레 포탑 탄
             try:
-                g = ai.lua(GUARD)
+                kit = artykit23.load() or {}
+                mv = kit.get("move") or {}
+                extra = "{x = %s, y = %s}" % tuple(mv["to"]) if mv.get("to") else ""
+                g = ai.lua(GUARD % extra)
                 if g.get("n"):
                     print(time.strftime("%H:%M:%S"), "대포 둘레 포탑 탄 보충", g["n"], flush=True)
             except Exception as e:  # noqa: BLE001
