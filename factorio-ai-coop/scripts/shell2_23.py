@@ -44,7 +44,7 @@ FEED = """(function() local s = game.surfaces[1] local o = {}
   -- 레이더 조립기 재료 (망에서)
   local R = s.find_entities_filtered{type = 'assembling-machine', position = {-18.5, -66.5}, radius = 1}[1]
   if R and net then local rin = R.get_inventory(defines.inventory.assembling_machine_input)
-    for item, cap in pairs({['iron-gear-wheel'] = 10, ['electronic-circuit'] = 10, ['iron-plate'] = 20}) do
+    for item, cap in pairs({['iron-gear-wheel'] = 30, ['electronic-circuit'] = 30, ['iron-plate'] = 60}) do
       local need = cap - rin.get_item_count(item)
       if need > 0 and net.get_item_count(item) >= need + 20 then local got = net.remove_item{name = item, count = need} if got > 0 then rin.insert{name = item, count = got} o['r_' .. item:sub(1, 4)] = got end end
     end end
@@ -54,7 +54,7 @@ FEED = """(function() local s = game.surfaces[1] local o = {}
     local need = 40 - gin.get_item_count('iron-plate')
     if need > 0 and net.get_item_count('iron-plate') >= 300 then local got = net.remove_item{name = 'iron-plate', count = need} if got > 0 then gin.insert{name = 'iron-plate', count = got} o.g_iron = got end end
     if R then local gout = G.get_inventory(defines.inventory.assembling_machine_output) local rin = R.get_inventory(defines.inventory.assembling_machine_input)
-      local k = math.min(gout.get_item_count('iron-gear-wheel'), 10 - rin.get_item_count('iron-gear-wheel'))
+      local k = math.min(gout.get_item_count('iron-gear-wheel'), 30 - rin.get_item_count('iron-gear-wheel'))
       if k > 0 then gout.remove{name = 'iron-gear-wheel', count = k} rin.insert{name = 'iron-gear-wheel', count = k} o.gear = k end end
   end
   -- 완성 포탄 -> 망 저장 상자
