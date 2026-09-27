@@ -10,6 +10,7 @@
     python -u scripts/artyaim23.py --once       # 다음 목표만 보기
 """
 import argparse
+import json
 import os
 import sys
 import time
@@ -47,6 +48,39 @@ AIM = """(function() local s = game.surfaces[1] local o = {}
   return o end)()"""
 
 
+SPOT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "state", "arty_spot.json")
+
+# 사거리 안이 비면 (사용자 00:33 "조준 범위에 적 기지가 없다면 대포 자체를 이동") - 로봇망 안에서 사거리 224 안
+# 적 구조물이 가장 많이 들어오는 자리를 찾는다 (포탄은 로봇이 망으로 대므로 망 안이어야 함). 같으면 기지 중심에 가까운 쪽.
+FIND = """(function() local s = game.surfaces[1] local R = 224
+  local best, bn, bd = nil, 0, 1e9
+  for x = -240, 160, 6 do for y = -260, 160, 6 do
+    local p = {x + 0.5, y + 0.5}
+    local net = s.find_logistic_network_by_position(p, 'player')
+    if net and net.network_id == 2 and s.can_place_entity{name = 'artillery-turret', position = p, force = 'player'} then
+      local n = s.count_entities_filtered{force = 'enemy', type = {'unit-spawner', 'turret'}, position = p, radius = R - 4}
+      local d = (p[1] + 40)^2 + (p[2] + 20)^2
+      if n > bn or (n == bn and n > 0 and d < bd) then best, bn, bd = p, n, d end
+    end end end
+  if not best then return {n = 0} end
+  return {x = best[1], y = best[2], n = bn} end)()"""
+
+MOVE = """(function() local s = game.surfaces[1]
+  local t = s.find_entities_filtered{name = 'artillery-turret', force = 'player'}[1]
+  if not t then return {err = 'no turret'} end
+  return {ok = t.order_deconstruction('player') and 1 or 0, x = t.position.x, y = t.position.y} end)()"""
+
+
+def relocate(ai) -> str:
+    r = ai.lua(FIND)
+    if not r.get("n"):
+        return "옮길 자리 없음 (로봇망 안에서 사거리에 적 구조물이 들어오는 곳이 없음)"
+    with open(SPOT_FILE, "w", encoding="utf-8") as f:
+        json.dump([r["x"], r["y"]], f)
+    m = ai.lua(MOVE)
+    return "대포 이전 (%s,%s) -> (%s,%s) · 새 사거리 안 적 구조물 %s · 해체 %s" % (m.get("x"), m.get("y"), r["x"], r["y"], r["n"], m)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true")
@@ -62,10 +96,13 @@ def main() -> int:
                 print(now, r)
                 return 0
             if r.get("err"):
-                print(now, "조준:", r["err"], flush=True)
+                if not idle:  # 이전 중 (포대가 창고로 가는 동안) 은 한 번만
+                    print(now, "조준:", r["err"], flush=True)
+                idle = True
             elif r.get("left", 0) == 0:
                 if not idle:
-                    print(f"{now} 조준: 사거리 안 적 구조물 0 - 대기 (포대 {r['tx']},{r['ty']})", flush=True)
+                    print(f"{now} 조준: 사거리 안 적 구조물 0 (포대 {r['tx']},{r['ty']}) - 대포 이전", flush=True)
+                    print(f"{now} {relocate(ai)}", flush=True)
                 idle = True
             else:
                 idle = False

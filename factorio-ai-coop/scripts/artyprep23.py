@@ -88,6 +88,19 @@ BUILD = {"chemical-plant": 1, "assembling-machine-1": 4, "assembling-machine-2":
 # 23:40 사용자 "대포는 기존에 있는걸 옮겨서" - NW 둥지 정리 끝, 남서 둥지 4무리 사거리 안 (-85.5,30.5) 로 이전
 # 09-28 남서 사거리 안 산란기 0 · 땅벌레 0 -> 북동 벽 안 (33.5,-100.5, 망 2) 로 이전 (scripts/copperprep23.py).
 #   북 둥지 (55,-200) · (136,-120) · (140,-230) 와 (14,-312) 일부를 친다 - 구리 전초 (52,-401) 경로 청소 1단계
+SPOT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "state", "arty_spot.json")
+
+
+def arty_spots():
+    """artyaim23 가 사거리 안이 비면 포대를 옮길 자리를 state/arty_spot.json 에 적는다 - 그 자리를 맨 앞에."""
+    try:
+        with open(SPOT_FILE, encoding="utf-8") as f:
+            x, y = json.load(f)
+        return [(x, y)] + ARTY_SPOTS
+    except Exception:  # noqa: BLE001
+        return ARTY_SPOTS
+
+
 ARTY_SPOTS = [(33.5, -100.5), (31.5, -99.5), (-85.5, 30.5), (-170.5, -94.5), (-120, -100), (-124, -96), (-116, -96), (-128, -92), (-120, -90), (-110, -92)]
 TARGETS = [(-210, -244), (-217, -129)]
 
@@ -140,7 +153,7 @@ def stock(ai, names):
 
 
 def survey(ai):
-    spots = ", ".join("{%s, %s}" % p for p in ARTY_SPOTS)
+    spots = ", ".join("{%s, %s}" % p for p in arty_spots())
     return ai.lua("""(function() local s = game.surfaces[1] local f = game.forces.player local o = {place = {}, spot = {}}
       for _, t in pairs({%s}) do
         local ok = s.can_place_entity{name = t[1], position = {t[2], t[3]}, direction = t[4], force = 'player',
@@ -364,7 +377,7 @@ def feed(ai, shells, turrets=1):
 
 def deliver(ai):
     """완성품 철상자 -> 사람이 저장 상자로. 망에 포탑이 들어오면 북서 자리에 유령, 포탑이 서면 포탄 proxy (15 까지)."""
-    spots = ", ".join("{%s, %s}" % p for p in ARTY_SPOTS)
+    spots = ", ".join("{%s, %s}" % p for p in arty_spots())
     r = ai.lua("""(function() local s = game.surfaces[1] local o = {}
       local function box(p) local c = s.find_entities_filtered{name = 'iron-chest', position = p, radius = 0.3}[1]
         return c and c.get_item_count('artillery-shell') or 0, c and c.get_item_count('artillery-turret') or 0 end
