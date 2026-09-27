@@ -83,6 +83,9 @@ GUARD = """(function() local s = game.surfaces[1] local o = {n = 0}
   if t then centers[#centers + 1] = t.position end
   local net = s.find_logistic_network_by_position({-60, -33}, 'player') if not net then return o end
   local have = {['firearm-magazine'] = net.get_item_count('firearm-magazine'), ['piercing-rounds-magazine'] = net.get_item_count('piercing-rounds-magazine')}
+  -- 04:13 동쪽 자리에서 포탄 proxy 가 안 채워져 탄 0 (망 131) - 5 이하면 망 저장에서 10 을 바로 옮긴다
+  if t and t.get_item_count('artillery-shell') <= 5 and net.get_item_count('artillery-shell') >= 10 then
+    local got = net.remove_item{name = 'artillery-shell', count = 10} if got > 0 then t.insert{name = 'artillery-shell', count = got} o.shell = got end end
   local seen = {}
   for _, C in pairs(centers) do for _, g in pairs(s.find_entities_filtered{name = 'gun-turret', force = 'player', position = C, radius = 40}) do
    if not seen[g.unit_number] then seen[g.unit_number] = true
@@ -148,8 +151,8 @@ def main() -> int:
                 mv = kit.get("move") or {}
                 extra = "{x = %s, y = %s}" % tuple(mv["to"]) if mv.get("to") else ""
                 g = ai.lua(GUARD % extra)
-                if g.get("n"):
-                    print(time.strftime("%H:%M:%S"), "대포 둘레 포탑 탄 보충", g["n"], flush=True)
+                if g.get("n") or g.get("shell"):
+                    print(time.strftime("%H:%M:%S"), "대포 둘레 포탑 탄 보충", g.get("n"), "· 포탄 직송", g.get("shell", 0), flush=True)
             except Exception as e:  # noqa: BLE001
                 print(f"artyaim guard: {e}"[:200], flush=True)
         try:
