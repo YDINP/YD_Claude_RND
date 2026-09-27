@@ -433,7 +433,7 @@ def start_move(ai, dry=False):
     if dry:
         r["units"] = u
         return r
-    if u.get("new") or u.get("old"):
+    if (u.get("new") or 0) > 2 or (u.get("old") or 0) > 2:  # 05:55 떠돌이 1 마리에 11 분 보류 - 3 마리 이상일 때만
         return "키트 이전 보류: 적 유닛 새 자리 %s · 옛 자리 %s" % (u.get("new"), u.get("old"))
     m = ai.lua(MOVE_ARTY)
     kit["move"] = {"to": r["to"], "rp": r["rp"], "poles": r["poles"], "ring": r["ring"], "chest": r.get("chest"),
