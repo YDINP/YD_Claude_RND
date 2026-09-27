@@ -88,8 +88,12 @@ def rules(r) -> dict:
     """Jev 가 없을 때의 답 - 같은 모양 (선택지별 확률)."""
     hp = r["hp"] / max(1, r["hpmax"])
     danger = 0.0
-    danger += min(1.0, r["w"] / 8)                    # 중형 4 마리 = 1 (5 마리 20칸에 «계속» 이 나와 조였다)
-    danger += 0.5 if r["big"] else 0
+    # 거리로 깎는다: 23회차 서쪽 줄 - 줄 밖 35칸의 대형 스피터 한 마리가 포탑 탄 넣기·예비 포탑 배달을 네 번 연달아 끊었다
+    # (그 포탑이 탄이 없어 쏘지 못했고, 사람은 가까이 가지 못했다). 20칸 안은 그대로, 35칸 밖은 1/4.
+    # 큰 무리 (무게 16+ = 중형 8 · 대형 4) 는 거리와 상관없이 그대로 - 바이터가 사람보다 빠르다.
+    prox = 1.0 if (r["near"] < 20 or r["w"] >= 16) else (0.5 if r["near"] < 35 else 0.25)
+    danger += min(1.0, r["w"] / 8) * prox             # 중형 4 마리 = 1 (5 마리 20칸에 «계속» 이 나와 조였다)
+    danger += (0.5 if r["big"] else 0) * prox
     danger += 0.6 if r["worm"] < 40 else 0
     danger += (1 - hp) * 0.8
     danger += 0.3 if r["near"] < 12 and r["w"] >= 4 else 0
