@@ -84,7 +84,8 @@ GHOSTS = [(m[0], m[1], m[2], m[3]) for m in M.values()] + [
 BUILD = {"chemical-plant": 1, "assembling-machine-1": 4, "assembling-machine-2": 1, "inserter": 7,
          "iron-chest": 2, "small-electric-pole": 5, "pipe": 8, "pipe-to-ground": 2}
 # 벽 안 북서 - 두 표적 모두 사거리 224 안. 앞에서부터 놓을 수 있는 첫 자리.
-ARTY_SPOTS = [(-120, -100), (-124, -96), (-116, -96), (-128, -92), (-120, -90), (-110, -92)]
+# 22:32 사용자가 1호 (-119.5,-99.5, 로봇망 밖) 를 걷고 NW 전진 포트 (-170.5,-94.5) 에 유령을 놓음 - 그 자리 우선
+ARTY_SPOTS = [(-170.5, -94.5), (-120, -100), (-124, -96), (-116, -96), (-128, -92), (-120, -90), (-110, -92)]
 TARGETS = [(-210, -244), (-217, -129)]
 
 # 원료 proxy 목표 (기계 입력 칸, 대상당 100 이하)
@@ -415,6 +416,7 @@ def main() -> int:
     for k in ("survey", "need", "order", "place", "check", "after-research", "feed", "deliver"):
         ap.add_argument("--" + k, action="store_true")
     ap.add_argument("--shells", type=int, default=None)
+    ap.add_argument("--turrets", type=int, default=1)
     ap.add_argument("--loop", type=float, default=0, help="--feed/--deliver 를 이 분 동안 60초마다 반복")
     a = ap.parse_args()
     ai = AIBridge()
@@ -437,7 +439,7 @@ def main() -> int:
             if a.after_research and not armed:      # 함께 주면 연구 완료를 기다렸다가 레시피를 한 번 건다
                 armed = "wait" not in after_research(ai)
             if a.feed:
-                feed(ai, a.shells or 20)
+                feed(ai, a.shells or 20, a.turrets)
             if a.deliver:
                 deliver(ai)
             if time.time() >= t_end:
