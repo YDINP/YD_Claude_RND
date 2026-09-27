@@ -2140,3 +2140,7 @@ blocking    우리 힘(force)의 것만 본다. 바위는 neutral 이라 안 보
   research_guard 에 --skip (laser- · braking-force · refined-flammables · coal-liquefaction · uranium) 과 --prefer 추가, 보라팩 포함.
   큐: worker-robots-storage-2 → inserter-capacity-bonus-4 → research-speed-5 → speed-module-3 → productivity-module-3 → effect-transmission → efficiency-module-3.
   (logistic-system · physical-projectile-damage-6 은 노랑팩 필요 - 물류 L3 에서.)
+- 2026-09-27 레일 돌 영구 해결: stone23 의 새 돌 벨트 (y=-100.5 서향) 끝 (-63.5) 에 벨트 4칸 (-64.5..-67.5, 서향) 을 이어 옛 경로
+  x=-68.5 (남향) → (-68.5,-86.5) → SB 에 옆치기 합류. 벽돌 화로 긴팔 6 이 위에서 먼저 집으니 벽돌 우선, 넘친 돌만 레일로 (SB 돌 85 확인).
+  벽돌은 모자란 게 아니라 막혀 있었다 (벽돌 화로 3 full_output · 돌 채굴기 3 막힘 - 벽돌 벨트가 꽉 참). 손채굴 완충은 이제 불필요.
+- 개인 로보포트: golf · delta · hotel 장착 (모듈 갑옷 + 로보포트 + 배터리 1 + 태양광 6 = 180kW). 고급 회로 조립기 6 이 전자 회로 부족 - 구리판 적자.
