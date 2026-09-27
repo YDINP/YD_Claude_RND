@@ -166,7 +166,7 @@ def main() -> int:
                 if not idle or (reloc_retry and time.time() >= reloc_retry):
                     msg = relocate(ai)
                     print(f"{now} 대포 창고 대기 - {msg}", flush=True)
-                    reloc_retry = time.time() + 60 if msg.startswith(("키트 이전 보류", "키트 이전 중")) else 0.0
+                    reloc_retry = time.time() + 60 if msg.startswith(("키트 이전 보류", "키트 이전 중")) else (time.time() + 300 if msg.startswith("옮길 자리 없음") else 0.0)
                 idle = True
             elif r.get("err"):
                 if not idle:  # 이전 중 (포대가 창고로 가는 동안) 은 한 번만
@@ -177,7 +177,7 @@ def main() -> int:
                     print(f"{now} 조준: 사거리 안 적 구조물 0 (포대 {r['tx']},{r['ty']}) - 대포 이전", flush=True)
                     msg = relocate(ai)
                     print(f"{now} {msg}", flush=True)
-                    reloc_retry = time.time() + 60 if msg.startswith(("키트 이전 보류", "키트 이전 중")) else 0.0
+                    reloc_retry = time.time() + 60 if msg.startswith(("키트 이전 보류", "키트 이전 중")) else (time.time() + 300 if msg.startswith("옮길 자리 없음") else 0.0)
                 idle = True
             else:
                 idle = False
