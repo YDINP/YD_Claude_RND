@@ -51,6 +51,28 @@ RELAY = """(function() local s = game.surfaces[1] local o = {}
   end
   return o end)()"""
 
+# 조립기 입력 로봇 보충 (위치, 아이템, 이 밑이면, 요청 수). 수류탄 벨트 x=-43.5 는 철이 조립기를 지나쳐 새어 나간다
+# (21:00 손 운반 185 -> 수류탄 6 개) - 로봇이 조립기에 바로 넣는다
+ASM = [((-46.5, -26.5), "iron-plate", 10, 30), ((-46.5, -23.5), "iron-plate", 10, 30), ((-46.5, -20.5), "iron-plate", 10, 30)]
+
+ASM_FEED = """(function() local s = game.surfaces[1] local o = {req = {}}
+  for _, t in pairs({%s}) do
+    local a = s.find_entities_filtered{type = 'assembling-machine', position = {t[1], t[2]}, radius = 0.5}[1]
+    if a then
+      local net = s.find_logistic_network_by_position(a.position, 'player')
+      local have = a.get_inventory(defines.inventory.assembling_machine_input).get_item_count(t[3])
+      local busy = s.count_entities_filtered{name = 'item-request-proxy', position = a.position, radius = 0.6} > 0
+      if have < t[4] and not busy and net and net.get_item_count(t[3]) >= t[5] then
+        local stack = 0 local r = a.get_recipe()
+        if r then for i, ing in pairs(r.ingredients) do if ing.name == t[3] then stack = i - 1 end end end
+        s.create_entity{name = 'item-request-proxy', position = a.position, force = 'player', target = a,
+          modules = {{id = {name = t[3]}, items = {in_inventory = {{inventory = defines.inventory.assembling_machine_input, stack = stack, count = t[5]}}}}}}
+        o.req[#o.req + 1] = t[3] .. '@' .. a.position.x .. ',' .. a.position.y
+      end
+    end
+  end
+  return o end)()"""
+
 RELEASE = """(function() local s = game.surfaces[1]
   local c = s.find_entities_filtered{name = 'iron-chest', position = {28.5, -3.5}, radius = 0.5}[1]
   if not c then return {ok = 0} end
@@ -93,7 +115,7 @@ CHEST_FEED = """(function() local s = game.surfaces[1] local o = {req = {}}
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--release", action="store_true")
-    ap.add_argument("--every", type=float, default=120)
+    ap.add_argument("--every", type=float, default=60)
     a = ap.parse_args()
     ai = AIBridge()
     if a.release:
@@ -108,6 +130,11 @@ def main() -> int:
             rl = list(rl.values()) if isinstance(rl, dict) else (rl or [])
             if rl:
                 print(time.strftime("%H:%M:%S"), "직접 옮김 ->", rl, flush=True)
+            ra = ai.lua(ASM_FEED % ", ".join("{%s, %s, '%s', %d, %d}" % (p[0], p[1], it, lo, n) for p, it, lo, n in ASM))
+            ra = ra.get("req") or []
+            ra = list(ra.values()) if isinstance(ra, dict) else ra
+            if ra:
+                print(time.strftime("%H:%M:%S"), "조립기 보충 ->", ra, flush=True)
             rc = ai.lua(CHEST_FEED % ", ".join("{%s, %s, '%s', %d, %d}" % (p[0], p[1], it, lo, n) for p, it, lo, n in CHESTS))
             rq = rc.get("req") or []
             rq = list(rq.values()) if isinstance(rq, dict) else rq
