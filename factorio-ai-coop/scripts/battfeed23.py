@@ -58,7 +58,7 @@ RELAY = """(function() local s = game.surfaces[1] local o = {}
 ASM = [((-46.5, -26.5), "iron-plate", 10, 30), ((-46.5, -23.5), "iron-plate", 10, 30), ((-46.5, -20.5), "iron-plate", 10, 30),
        # 21:36 검정팩 3대가 관통탄·석탄 부족 (수류탄 석탄 2, 관통탄 조립기 구리 4)
        ((-46.5, -26.5), "coal", 10, 40), ((-46.5, -23.5), "coal", 10, 40), ((-46.5, -20.5), "coal", 10, 40),
-       ((-63.5, -33.5), "copper-plate", 10, 50),
+       ((-63.5, -33.5), "copper-plate", 10, 50), ((-63.5, -33.5), "firearm-magazine", 4, 20),  # 관통탄 = 일반탄 2 + 강철 1 + 구리 2
        ((-61.5, -25.5), "piercing-rounds-magazine", 1, 5), ((-57.5, -25.5), "piercing-rounds-magazine", 1, 5),
        ((-53.5, -25.5), "piercing-rounds-magazine", 1, 5)]
 
