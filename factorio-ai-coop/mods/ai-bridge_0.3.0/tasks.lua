@@ -574,6 +574,21 @@ M.build = {
 
 ---------------------------------------------------------------------- craft
 
+-- 이 캐릭터의 제작 큐에 `name` 을 만드는 (또는 결과물로 내는) 항목이 남아 있는가.
+-- craft 가 비차단이 된 뒤 insert / give 가 «그 물건이 나오길» 기다릴지 정하는 데 쓴다 -
+-- 큐에 다른 것만 있을 때까지 세워 두면 병렬로 만든 보람이 없다.
+local function crafting_item(bot, name)
+  if bot.crafting_queue_size == 0 then return false end
+  for _, q in pairs(bot.crafting_queue or {}) do
+    if q.recipe == name then return true end
+    local r = prototypes.recipe[q.recipe]
+    if r then
+      for _, pr in pairs(r.products) do if pr.name == name then return true end end
+    end
+  end
+  return false
+end
+
 M.craft = {
   start = function(ctx)
     if bag_full(ctx.bot) then
@@ -589,6 +604,12 @@ M.craft = {
     end
     local started = ctx.bot.begin_crafting { count = p.count or 1, recipe = p.recipe, silent = true }
     if started == 0 then
+      -- 연쇄 제작: 앞서 주문한 것이 이 레시피의 재료인데 아직 안 나왔으면 (큐가 돈다) 나올 때까지 다시 해 본다.
+      -- (예: 강철 상자 → 저장 상자. craft 가 비차단이 되면서 생긴 경우)
+      if ctx.bot.crafting_queue_size > 0 then
+        ctx.task.state.retry = true
+        return "running"
+      end
       ctx.task.error = "cannot craft " .. tostring(p.recipe) .. " (missing ingredients or not researched)"
       return "failed"
     end
@@ -606,7 +627,12 @@ M.craft = {
     --
     -- `wait = false` 면 주문만 넣고 바로 넘어간다. 걷는 동안 만들어지고,
     -- 도착할 즈음이면 손에 있다.
-    if ctx.task.params.wait == false then
+    --
+    -- 23회차 사용자: "캐릭터의 craft는 캐릭터가 직렬로 수행하지 않고 병렬로 수행할 것."
+    -- 그래서 기본을 «늘 비차단» 으로 뒤집었다 - 스크립트 65 곳이 wait = true 를 넘기지만 그것도 무시한다.
+    -- 주문만 넣고 다음 단계로, 그 물건을 쓰는 insert / build / give 가 큐가 도는 동안 기다려 준다.
+    -- 정말 제자리에서 기다려야 하면 wait = "block".
+    if ctx.task.params.wait ~= "block" then
       ctx.task.result = { ordered = started, recipe = ctx.task.params.recipe,
                           waited = false }
       return "done"
@@ -615,6 +641,23 @@ M.craft = {
   end,
 
   step = function(ctx)
+    local st, p = ctx.task.state, ctx.task.params
+    if st.retry then
+      local started = ctx.bot.begin_crafting { count = p.count or 1, recipe = p.recipe, silent = true }
+      if started > 0 then
+        st.retry, st.started = nil, started
+        if p.wait ~= "block" then
+          ctx.task.result = { ordered = started, recipe = p.recipe, waited = false, chained = true }
+          return "done"
+        end
+        return "running"
+      end
+      if ctx.bot.crafting_queue_size == 0 then
+        ctx.task.error = "cannot craft " .. tostring(p.recipe) .. " (missing ingredients or not researched)"
+        return "failed"
+      end
+      return "running"
+    end
     if ctx.bot.crafting_queue_size == 0 then
       ctx.task.result = { crafted = ctx.task.state.started, recipe = ctx.task.params.recipe }
       return "done"
@@ -705,11 +748,16 @@ M.insert = {
       ctx.task.error = string.format("nothing with an inventory at %s,%s", p.x, p.y)
       return "failed"
     end
+    ctx.task.state.target = target
     if insert_have(ctx.bot, p.name) < 1 then
+      -- build 와 같다: 아직 «만드는 중» 이면 기다린다 (craft 가 기본 비차단이 된 뒤로 흔한 경우).
+      if crafting_item(ctx.bot, p.name) then
+        ctx.task.state.awaiting = true
+        return "running"
+      end
       ctx.task.error = "no " .. tostring(p.name) .. " to insert"
       return "failed"
     end
-    ctx.task.state.target = target
     return "running"
   end,
 
@@ -729,6 +777,16 @@ M.insert = {
       return "running"
     end
     halt(bot)
+
+    -- 걸어오는 동안 만들던 것이 아직 다 안 나왔으면 (큐에 그 물건 제작이 남아 있으면) 채워질 때까지 선다.
+    -- 큐에 없으면 있는 만큼만 넣는다 - 하나도 없으면 실패.
+    if insert_have(bot, p.name) < (p.count or 1) and crafting_item(bot, p.name) then
+      return "running"
+    end
+    if insert_have(bot, p.name) < 1 then
+      ctx.task.error = "no " .. tostring(p.name) .. " to insert"
+      return "failed"
+    end
 
     local wanted = math.min(p.count or 1, insert_have(bot, p.name))
     local moved = wanted > 0 and st.target.insert { name = p.name, count = wanted } or 0
@@ -848,11 +906,11 @@ M.give = {
       ctx.task.error = "no crewmate named " .. tostring(p.to)
       return "failed"
     end
-    if count_item(ctx.bot, p.name) < 1 then
+    if count_item(ctx.bot, p.name) < 1 and not crafting_item(ctx.bot, p.name) then
       ctx.task.error = "nothing to give: no " .. tostring(p.name)
       return "failed"
     end
-    return "running"
+    return "running"   -- 만드는 중이면 건네기 직전에 다시 본다 (아래)
   end,
 
   step = function(ctx)
@@ -878,7 +936,15 @@ M.give = {
     end
     halt(bot)
 
+    if count_item(bot, p.name) < (p.count or 1) and crafting_item(bot, p.name) then
+      return "running"   -- 걸어오는 동안 만들던 것이 아직 덜 나왔다
+    end
     local wanted = math.min(p.count or 1, count_item(bot, p.name))
+    if wanted < 1 then
+      halt(bot)
+      ctx.task.error = "nothing to give: no " .. tostring(p.name)
+      return "failed"
+    end
     local moved = mate.insert { name = p.name, count = wanted }
     if moved > 0 then bot.remove_item { name = p.name, count = moved } end
     ctx.task.result = { given = moved, item = p.name, to = p.to }
