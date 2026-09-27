@@ -24,13 +24,17 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--every", type=float, default=60)
     ap.add_argument("--packs", default="automation-science-pack,logistic-science-pack")
+    ap.add_argument("--skip", default="", help="이 접두사로 시작하는 연구는 고르지 않는다 (쉼표)")
+    ap.add_argument("--prefer", default="", help="이 접두사 순서로 먼저 (쉼표, 없으면 p4.PREFER)")
     args = ap.parse_args()
     packs = tuple(p.strip() for p in args.packs.split(",") if p.strip())
+    skip = tuple(p.strip() for p in args.skip.split(",") if p.strip())
+    prefer = tuple(p.strip() for p in args.prefer.split(",") if p.strip()) or p4.PREFER
     ai = AIBridge()
     last = None
     while True:
         try:
-            q = p4.queue_fill(ai, packs)
+            q = p4.queue_fill(ai, packs, prefer=prefer, skip=skip)
             if q != last:
                 print(time.strftime("%X"), "대기열", q, flush=True)
                 last = q

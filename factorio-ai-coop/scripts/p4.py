@@ -135,7 +135,7 @@ PREFER = ROBOTS + ("physical-projectile-damage", "weapon-shooting-speed", "stone
                    "turrets", "mining-productivity", "research-speed", "automation-3", "steel-axe")
 
 
-def queue_fill(ai, packs=("automation-science-pack", "logistic-science-pack"), prefer=PREFER) -> list:
+def queue_fill(ai, packs=("automation-science-pack", "logistic-science-pack"), prefer=PREFER, skip=()) -> list:
     """연구 대기열을 «만들고 있는 팩만» 쓰는 연구로 채운다 (싼 것부터).
 
     대기열이 비면 게임이 아무거나 고른다 - 두 번이나 defender(군사팩)를 골랐고, 연구소 전부가
@@ -144,8 +144,11 @@ def queue_fill(ai, packs=("automation-science-pack", "logistic-science-pack"), p
     reply = ai.lua("""(function()
       local f, ok = game.forces.player, {}
       for _, p in pairs({%s}) do ok[p] = true end
+      local skip = {%s}
       local function fits(t)
         if #t.research_unit_ingredients == 0 then return false end
+        -- 쓰지 않는 무기 · 장비 연구는 팩 낭비 (23회차 사용자: "에너지무기를 사용안하는데 에너지무기피해를 연구해서 뭐함")
+        for _, pre in ipairs(skip) do if string.sub(t.name, 1, #pre) == pre then return false end end
         for _, i in pairs(t.research_unit_ingredients) do if not ok[i.name] then return false end end
         return true
       end
@@ -173,7 +176,7 @@ def queue_fill(ai, packs=("automation-science-pack", "logistic-science-pack"), p
       f.research_queue = q
       local out = {} for _, t in pairs(f.research_queue) do out[#out+1] = t.name end
       return {q = out}
-    end)()""" % (",".join(f'"{p}"' for p in packs), ",".join(f'"{p}"' for p in prefer)))
+    end)()""" % (",".join(f'"{p}"' for p in packs), ",".join(f'"{p}"' for p in skip), ",".join(f'"{p}"' for p in prefer)))
     q = reply.get("q") if isinstance(reply, dict) else None
     return list(q.values()) if isinstance(q, dict) else list(q or [])
 

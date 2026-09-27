@@ -2136,3 +2136,7 @@ blocking    우리 힘(force)의 것만 본다. 바위는 neutral 이라 안 보
 - 벽 위치 규칙 (사용자: "벽은 너무 멀리 설치하면 포탑 공격범위보다 적의 원거리공격이 벽을 공격"): 벽은 포탑 줄 바깥 가장자리 2~3칸 앞.
   기관총 18 vs 대형 스피터 ~15 - 벽이 멀면 스피터가 사거리 밖에서 벽만 녹인다.
 - IB 동쪽 레인 철 교착 해소: 막대 · 레일 · 강철이 서로를 기다림 → 동쪽 레인 철판 236 을 걷어 (완충 상자 98 · 캐릭터 138) 강철 합류 재개, 레일 · 보라 가동.
+- 2026-09-27 연구 정리 (사용자: "현재 에너지무기를 사용안하는데 에너지무기피해를 연구해서 뭐함"): laser-weapons-damage-4 중단.
+  research_guard 에 --skip (laser- · braking-force · refined-flammables · coal-liquefaction · uranium) 과 --prefer 추가, 보라팩 포함.
+  큐: worker-robots-storage-2 → inserter-capacity-bonus-4 → research-speed-5 → speed-module-3 → productivity-module-3 → effect-transmission → efficiency-module-3.
+  (logistic-system · physical-projectile-damage-6 은 노랑팩 필요 - 물류 L3 에서.)
