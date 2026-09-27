@@ -141,7 +141,8 @@ def st_feed(ai, go):
 #   대량은 사람 운반 (state/yellow23_orders.json, 빈 제작꾼 1명, 한 번에 1건).
 ROBOT_N = 50
 ROBOT_FEED = [(-23.5, -2.5), (-22.5, -2.5)]          # (9.5,-5.5) 는 accel23 이 손으로 1,000 씩 (18:54 까지)
-HAUL = {(-23.5, -2.5): (-23.0, -1.5), (-22.5, -2.5): (-22.0, -1.5), (9.5, -5.5): (10.5, -3.5)}
+HAUL = {(-23.5, -2.5): (-23.0, -1.5), (-22.5, -2.5): (-22.0, -1.5), (9.5, -5.5): (10.5, -3.5),
+        (-31.5, 1.5): (-30.5, 1.5)}  # 톱니 (-36.5,3.5) 공급 상자 (사이클 2)
 HAUL_BELOW, HAUL_N = 300, 800
 
 
@@ -163,7 +164,8 @@ def haul_once(ai, go):
     low = [(xy, n) for xy, n in low if 0 <= n < HAUL_BELOW]
     if not low:
         return "손 운반: 필요 없음"
-    xy, n = min(low, key=lambda t: t[1])
+    # 동률이면 노랑 병목 (회로 상자 9.5,-5.5) 먼저 - 전엔 늘 X3 상자만 골랐다 (사이클 2)
+    xy, n = min(low, key=lambda t: (t[1], t[0] != (9.5, -5.5)))
     live = {w["name"]: w for w in ai.list()}
     makers = ["hotel", "foxtrot", "charlie", "echo", "bravo", "alpha"]
     pos = {w: (live[w]["x"], live[w]["y"]) for w in makers if w in live}

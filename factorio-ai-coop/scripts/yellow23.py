@@ -300,7 +300,7 @@ SNAP_LUA = """(function()
   o.ironsrc = cnt(ch(%f, %f), 'iron-plate')
   o.coppersrc = cnt(ch(%f, %f), 'copper-plate')
   local hub = {}
-  for _, e in pairs(s.find_entities_filtered{type = 'container', area = {{-86, -53}, {-72, -52}}}) do
+  for _, e in pairs(s.find_entities_filtered{type = {'container', 'logistic-container'}, area = {{-86, -53}, {-72, -52}}}) do
     hub[#hub + 1] = {x = e.position.x, y = e.position.y, fe = cnt(e, 'iron-plate'), cu = cnt(e, 'copper-plate')}
   end
   o.hub = hub
