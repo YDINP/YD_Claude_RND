@@ -21,6 +21,36 @@ CHESTS = [((30.5, 3.5), "iron-plate", 20, 60),
           # 북서 전진 포트 탄 상자 - 사용자가 포탑을 13대로 늘림 (19:38), 벨트 급탄 없음
           ((-168.5, -87.5), "firearm-magazine", 120, 100)]
 
+# 로봇망 밖 출력 -> 노랑 조립기 직접 옮김 (Lua). LDS 상자 (7.5,-48.5)(10.5,-46.5) 는 로봇망 틈 (y -55..-27),
+# 노랑 1호 (29.5,-8.5) 는 사람 금지 구역, 로보포트·물류 상자 재고 0 (20:37). 로보포트가 생기면 로봇 배달로 바꿀 것.
+# (출처 상자·조립기 출력들, 아이템, 대상 조립기, 이 밑이면, 한 번에)
+RELAYS = [([(7.5, -48.5), (10.5, -46.5)], "low-density-structure", [(29.5, -8.5), (12.5, 3.5)], 6, 30),
+          ([(33.5, 1.5), (36.5, 1.5)], "processing-unit", [(29.5, -8.5), (12.5, 3.5)], 4, 20)]
+
+RELAY = """(function() local s = game.surfaces[1] local o = {}
+  for _, r in pairs({%s}) do
+    for _, d in pairs(r.dst) do
+      local a = s.find_entities_filtered{type = 'assembling-machine', position = d, radius = 0.5}[1]
+      if a then
+        local inv = a.get_inventory(defines.inventory.assembling_machine_input)
+        if inv.get_item_count(r.item) < r.lo then
+          local want, got = r.n, 0
+          for _, sp in pairs(r.src) do
+            local e = s.find_entities_filtered{position = sp, radius = 0.5, type = {'container', 'assembling-machine'}}[1]
+            if e and want > 0 then
+              local si = e.type == 'container' and e.get_inventory(defines.inventory.chest) or e.get_inventory(defines.inventory.assembling_machine_output)
+              local k = math.min(want, si.get_item_count(r.item))
+              if k > 0 then k = inv.insert{name = r.item, count = k} if k > 0 then si.remove{name = r.item, count = k} end end
+              want, got = want - k, got + k
+            end
+          end
+          if got > 0 then o[#o + 1] = r.item .. ' ' .. got .. ' -> ' .. d[1] .. ',' .. d[2] end
+        end
+      end
+    end
+  end
+  return o end)()"""
+
 RELEASE = """(function() local s = game.surfaces[1]
   local c = s.find_entities_filtered{name = 'iron-chest', position = {28.5, -3.5}, radius = 0.5}[1]
   if not c then return {ok = 0} end
@@ -73,6 +103,11 @@ def main() -> int:
     while True:
         try:
             r = ai.lua(lua)
+            rl = ai.lua(RELAY % ", ".join("{src = {%s}, item = '%s', dst = {%s}, lo = %d, n = %d}" % (
+                ", ".join("{%s, %s}" % q for q in src), it, ", ".join("{%s, %s}" % q for q in dst), lo, n) for src, it, dst, lo, n in RELAYS))
+            rl = list(rl.values()) if isinstance(rl, dict) else (rl or [])
+            if rl:
+                print(time.strftime("%H:%M:%S"), "직접 옮김 ->", rl, flush=True)
             rc = ai.lua(CHEST_FEED % ", ".join("{%s, %s, '%s', %d, %d}" % (p[0], p[1], it, lo, n) for p, it, lo, n in CHESTS))
             rq = rc.get("req") or []
             rq = list(rq.values()) if isinstance(rq, dict) else rq
