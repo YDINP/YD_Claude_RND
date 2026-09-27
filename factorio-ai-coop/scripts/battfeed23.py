@@ -55,7 +55,12 @@ RELAY = """(function() local s = game.surfaces[1] local o = {}
 
 # 조립기 입력 로봇 보충 (위치, 아이템, 이 밑이면, 요청 수). 수류탄 벨트 x=-43.5 는 철이 조립기를 지나쳐 새어 나간다
 # (21:00 손 운반 185 -> 수류탄 6 개) - 로봇이 조립기에 바로 넣는다
-ASM = [((-46.5, -26.5), "iron-plate", 10, 30), ((-46.5, -23.5), "iron-plate", 10, 30), ((-46.5, -20.5), "iron-plate", 10, 30)]
+ASM = [((-46.5, -26.5), "iron-plate", 10, 30), ((-46.5, -23.5), "iron-plate", 10, 30), ((-46.5, -20.5), "iron-plate", 10, 30),
+       # 21:36 검정팩 3대가 관통탄·석탄 부족 (수류탄 석탄 2, 관통탄 조립기 구리 4)
+       ((-46.5, -26.5), "coal", 10, 40), ((-46.5, -23.5), "coal", 10, 40), ((-46.5, -20.5), "coal", 10, 40),
+       ((-63.5, -33.5), "copper-plate", 10, 50),
+       ((-61.5, -25.5), "piercing-rounds-magazine", 1, 5), ((-57.5, -25.5), "piercing-rounds-magazine", 1, 5),
+       ((-53.5, -25.5), "piercing-rounds-magazine", 1, 5)]
 
 ASM_FEED = """(function() local s = game.surfaces[1] local o = {req = {}}
   for _, t in pairs({%s}) do
