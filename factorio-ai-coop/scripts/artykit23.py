@@ -173,7 +173,8 @@ PLAN = """(function() local s = game.surfaces[1] local R = 224
   local kpole = {} for _, q in pairs(KPOLES) do kpole[q[1] .. ',' .. q[2]] = true end
   local B = {}
   for _, r in pairs(s.find_entities_filtered{name = 'roboport', force = 'player'}) do
-    if r.logistic_network and net and r.logistic_network.network_id == net.network_id and not same(KRP, r.position.x, r.position.y) then B[#B + 1] = r end
+    if r.logistic_network and net and r.logistic_network.network_id == net.network_id and not same(KRP, r.position.x, r.position.y)
+        and not r.to_be_deconstructed() then B[#B + 1] = r end  -- 04:27 해체 중인 옛 키트 로보포트를 다리로 잡아 새 자리가 로봇 범위 밖이 됨
   end
   if #B == 0 then o.err = '다리 로보포트 없음' return o end
   local EID = B[1].electric_network_id
