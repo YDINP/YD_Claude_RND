@@ -57,7 +57,10 @@ FIND = """(function() local s = game.surfaces[1] local R = 224
   for x = -240, 160, 6 do for y = -260, 160, 6 do
     local p = {x + 0.5, y + 0.5}
     local net = s.find_logistic_network_by_position(p, 'player')
-    if net and net.network_id == 2 and s.can_place_entity{name = 'artillery-turret', position = p, force = 'player'} then
+    -- 벽 줄에 서도 되지만 지켜지는 자리만: 30 칸 안 포탑 8 대 이상 (00:32 남쪽 포대에 27 마리 반격 - 포탑 줄이 막음)
+    local inner = net and net.network_id == 2
+    if inner and s.count_entities_filtered{name = 'gun-turret', force = 'player', position = p, radius = 30} < 8 then inner = false end
+    if inner and s.can_place_entity{name = 'artillery-turret', position = p, force = 'player'} then
       local n = s.count_entities_filtered{force = 'enemy', type = {'unit-spawner', 'turret'}, position = p, radius = R - 4}
       local d = (p[1] + 40)^2 + (p[2] + 20)^2
       if n > bn or (n == bn and n > 0 and d < bd) then best, bn, bd = p, n, d end
@@ -69,6 +72,26 @@ MOVE = """(function() local s = game.surfaces[1]
   local t = s.find_entities_filtered{name = 'artillery-turret', force = 'player'}[1]
   if not t then return {err = 'no turret'} end
   return {ok = t.order_deconstruction('player') and 1 or 0, x = t.position.x, y = t.position.y} end)()"""
+
+
+# 대포 둘레 40 칸 포탑 탄을 30 까지 (로봇 proxy, 30 칸 미만만, 종류는 슬롯 그대로) - 사용자 00:33 "대포 쪽 방어 보완"
+GUARD = """(function() local s = game.surfaces[1] local o = {n = 0}
+  local t = s.find_entities_filtered{name = 'artillery-turret', force = 'player'}[1]
+  if not t then return o end
+  local net = s.find_logistic_network_by_position(t.position, 'player') if not net then return o end
+  local have = {['firearm-magazine'] = net.get_item_count('firearm-magazine'), ['piercing-rounds-magazine'] = net.get_item_count('piercing-rounds-magazine')}
+  for _, g in pairs(s.find_entities_filtered{name = 'gun-turret', force = 'player', position = t.position, radius = 40}) do
+    local inv = g.get_inventory(defines.inventory.turret_ammo) local c = inv.get_item_count()
+    if c < 30 and s.count_entities_filtered{name = 'item-request-proxy', position = g.position, radius = 0.5} == 0 then
+      local nm = inv.is_empty() and 'firearm-magazine' or inv[1].name
+      if (have[nm] or 0) >= 100 then
+        if pcall(function() s.create_entity{name = 'item-request-proxy', position = g.position, force = 'player', target = g,
+            modules = {{id = {name = nm}, items = {in_inventory = {{inventory = defines.inventory.turret_ammo, stack = 0, count = 30 - c}}}}}} end) then
+          o.n = o.n + 1 have[nm] = have[nm] - (30 - c) end
+      end
+    end
+  end
+  return o end)()"""
 
 
 def relocate(ai) -> str:
@@ -88,7 +111,16 @@ def main() -> int:
     a = ap.parse_args()
     ai = AIBridge()
     last_group, last_left, idle = None, None, False
+    k = 0
     while True:
+        k += 1
+        if k % 12 == 0 and not a.once:  # 1 분마다 대포 둘레 포탑 탄
+            try:
+                g = ai.lua(GUARD)
+                if g.get("n"):
+                    print(time.strftime("%H:%M:%S"), "대포 둘레 포탑 탄 보충", g["n"], flush=True)
+            except Exception as e:  # noqa: BLE001
+                print(f"artyaim guard: {e}"[:200], flush=True)
         try:
             r = ai.lua(AIM % ("false" if a.once else "true"))
             now = time.strftime("%H:%M:%S")
