@@ -62,7 +62,9 @@ ASM = [((-46.5, -26.5), "iron-plate", 10, 30), ((-46.5, -23.5), "iron-plate", 10
        ((-46.5, -26.5), "coal", 10, 40), ((-46.5, -23.5), "coal", 10, 40), ((-46.5, -20.5), "coal", 10, 40),
        ((-63.5, -33.5), "copper-plate", 10, 50), ((-63.5, -33.5), "firearm-magazine", 4, 20),  # 관통탄 = 일반탄 2 + 강철 1 + 구리 2
        ((-61.5, -25.5), "piercing-rounds-magazine", 1, 5), ((-57.5, -25.5), "piercing-rounds-magazine", 1, 5),
-       ((-53.5, -25.5), "piercing-rounds-magazine", 1, 5)]
+       ((-53.5, -25.5), "piercing-rounds-magazine", 1, 5),
+       # 대포 포탄 줄: 폭발 포탄 강철 (22:25 강철 0 으로 포탄 정지)
+       ((-26.5, -66.5), "steel-plate", 6, 20)]
 
 ASM_FEED = """(function() local s = game.surfaces[1] local o = {req = {}}
   for _, t in pairs({%s}) do
