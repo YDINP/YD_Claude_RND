@@ -47,7 +47,9 @@ BATTERY = (25.5, -4.5)
 YELLOW = (29.5, -8.5)            # 옛 로봇 조립기 -> 노랑
 YOUT = (29.5, -5.5)              # 노랑 결과 상자
 EEU = (21.5, -8.5)
-ACID_IRON = (30.5, 3.5)          # 황산 공장 철 상자
+ACID_IRON = (30.5, 3.5)          # 황산 공장 철 상자 (동쪽 띠 (38.5,4.5) 에서 8칸)
+BAT_CU = (22.5, -4.5)            # 배터리 구리 상자 (복도 (22.5,-13.5) 에서 9칸)
+BAT_OUT = (28.5, -3.5)           # 배터리 넘침 상자 (프레임이 배부를 때) - 동쪽 띠 (35.5,-3.5) 에서 7칸
 CORR_Y = -13.5                   # 복도
 # 처리장치 (동쪽 띠)
 PU_PIPES = [(32.5, -0.5), (33.5, -0.5), (34.5, -0.5), (35.5, -0.5), (36.5, -0.5)]
@@ -62,6 +64,7 @@ STEEL_FURN = [(-5, -34), (-5, -32), (-5, -36), (-29, -40), (-47, -42), (-47, -40
 # 고급회로 잉여: p26 AM1 둘 (-21.5,-30.5)(-21.5,-38.5) 은 full_output, 결과 벨트 x=-18.5 (고급회로 | 황) 는 파랑 조립기 앞에서 꽉 찬 채 선다
 AC_AM1 = [(-21.5, -30.5), (-21.5, -38.5)]
 ACTAP_INS, ACTAP_CHEST = (-17.5, -32.5), (-16.5, -32.5)    # 필터 [고급회로], 서쪽 벨트에서 집음
+STAP_INS, STAP_CHEST = (-17.5, -33.5), (-16.5, -33.5)      # 필터 [황], 같은 벨트 - 황산 공장 손 투입용 (정유 가스를 플라스틱이 나눠 먹어 황이 모자람)
 # 저밀도 2형 둘: 플라스틱 상자 (4.5,-44.5) 에서 팔로 (동 · 북), 구리 · 강철은 손으로
 LDS = [(7.5, -45.5), (4.5, -47.5)]
 LDS_INS = [((5.5, -44.5), W), ((4.5, -45.5), S)]           # 집는 쪽: 서 (상자) · 남 (상자)
@@ -79,6 +82,12 @@ PL_COAL = [((15.5, 12.5), (15.5, 13.5)), ((10.5, 12.5), (10.5, 13.5))]   # 팔 (
 PL_OUT = [((16.5, 12.5), (16.5, 13.5)), ((11.5, 12.5), (11.5, 13.5))]    # 팔 (북쪽 공장에서) · 상자
 PL_POLES = [(9.5, 11.5), (20.5, 8.5), (18.5, 10.5)]   # + 중형 (13.5,11.5) (나무가 없어 소형 대신) - (18.5,10.5) 가 (20.5,8.5) 와 잇는다
 PL_STAND = (14.0, 6.0)
+# 둘째 프레임 + 둘째 노랑 (구역 밖 x 7..13, y 2..5): 프레임이 노랑의 병목 (0.0375/s = 노랑 0.11/s)
+ENGINE_SRC = [(10.5, -24.5), (18.5, -24.5), (22.5, -24.5), (30.5, -24.5), (6.5, -24.5), (-1.5, -24.5)]   # 엔진 1형 (대부분 full_output)
+F2, Y2 = (8.5, 3.5), (12.5, 3.5)
+F2_INS = (10.5, 3.5)             # 서 (F2) 에서 집어 Y2 로
+HUB2_POLE = (10.5, 5.5)          # 중형 (나무 없음)
+HUB2_STAND = (10.5, 0.0)
 COPPER_SRC = (-23.5, -8.5)       # 구리 2k
 IRON_SRC = (-49.5, 0.5)          # 철 1.5k
 
@@ -250,6 +259,15 @@ def stage_tap(ai, who):
 #   golf  = 지킴이: 로봇 줄 상자 (구리 · 철 · 강철) · 배터리 철 · 처리장치 걷기 -> 노랑 조립기 · 노랑 걷기 -> 연구소
 #   나머지 = 제작꾼: 모자란 것부터 - 처리장치의 회로 · 고급회로, 노랑 조립기의 저밀도
 HUB_Y, HUB_X = -52.5, [x + 0.5 for x in range(-86, -72)]
+# 1-7 노랑 -> 연구소: 보라 고리 PB x=-83.5 (남행, 긴팔 16 이 집음) 의 서쪽 레인 (보라는 동쪽 레인 1) 에 옆치기.
+#   상자 (-86.5,21.5) -> 팔 (-85.5,21.5) -> 벨트 (-84.5,21.5) 동향 -> (-83.5,21.5) 옆치기. 전봇대 (-85.5,22.5) -> (-81.5,23.5).
+LABFEED_CHEST, LABFEED_INS, LABFEED_BELT, LABFEED_POLE = (-86.5, 21.5), (-85.5, 21.5), (-84.5, 21.5), (-85.5, 22.5)
+LABFEED_STAND = (-87.5, 19.5)
+# 1-5 배터리 철 자동: 상자 (24.5,-1.5) -> 팔 (24.5,-2.5) 북 (배터리 공장). 전봇대 (23.5,-2.5). 구역 안 - 유령 + 개인 로봇,
+#   사람은 (16.5,-2.5) (구역 밖) 에서 상자에 철 (8칸) · 배터리 구리 상자 (22.5,-4.5) 에 구리 (6칸).
+BATFE_CHEST, BATFE_INS, BATFE_POLE = (24.5, -1.5), (24.5, -2.5), (23.5, -2.5)
+WEST_STAND = (16.5, -2.5)
+REPAIR, REPAIR_FE = (33.5, -8.5), (30.5, -4.5)
 TENDER = "golf"
 LABS = [(-79.5, 22.5 + 3 * i) for i in range(8)] + [(-73.5, 22.5 + 3 * i) for i in range(8)]
 PU_CIRC_CAP, PU_AC_CAP, Y_LDS_CAP = 200, 20, 30
@@ -276,6 +294,9 @@ SNAP_LUA = """(function()
   o.fe = cnt(ch(%f, %f), 'iron-plate')
   o.steelchest = cnt(ch(%f, %f), 'steel-plate')
   o.battery_fe = inp(am(%f, %f), 'iron-plate')
+  o.batcu = cnt(ch(%f, %f), 'copper-plate')
+  o.acidfe = cnt(ch(%f, %f), 'iron-plate')
+  o.batout = cnt(ch(%f, %f), 'battery')
   o.ironsrc = cnt(ch(%f, %f), 'iron-plate')
   o.coppersrc = cnt(ch(%f, %f), 'copper-plate')
   local hub = {}
@@ -316,6 +337,30 @@ SNAP_LUA = """(function()
   local pc = {}
   for _, p in pairs({ {%f, %f}, {%f, %f} }) do pc[#pc + 1] = cnt(ch(p[1], p[2]), 'plastic-bar') end
   o.plch = pc
+  local f2 = am(%f, %f)
+  o.f2 = {ok = f2 ~= nil and f2.get_recipe() ~= nil, eeu = inp(f2, 'electric-engine-unit'), bat = inp(f2, 'battery'), circ = inp(f2, 'electronic-circuit'), steel = inp(f2, 'steel-plate')}
+  local y2 = am(%f, %f)
+  o.y2 = {ok = y2 ~= nil and y2.get_recipe() ~= nil, pu = inp(y2, 'processing-unit'), lds = inp(y2, 'low-density-structure'), frame = inp(y2, 'flying-robot-frame'), out = out(y2, 'utility-science-pack')}
+  o.eeuout = out(am(%f, %f), 'electric-engine-unit')
+  o.eeueng = inp(am(%f, %f), 'engine-unit')
+  o.eeucirc = inp(am(%f, %f), 'electronic-circuit')
+  o.repfe = cnt(ch(%f, %f), 'iron-plate')
+  o.acid_s = inp(am(30.5, 6.5), 'sulfur')
+  local fp = {}
+  for _, f in pairs(s.find_entities_filtered{type = 'furnace', force = 'player'}) do
+    local oi = f.get_output_inventory()
+    if oi and f.status == defines.entity_status.full_output then
+      local fe, cu = oi.get_item_count('iron-plate'), oi.get_item_count('copper-plate')
+      if fe >= 40 or cu >= 40 then fp[#fp + 1] = {x = f.position.x, y = f.position.y, fe = fe, cu = cu} end
+    end
+  end
+  o.furn = fp
+  local lf = ch(%f, %f)
+  o.labfeed = lf and cnt(lf, 'utility-science-pack') or nil
+  o.stap = cnt(ch(%f, %f), 'sulfur')
+  local es = {}
+  for _, p in pairs({%s}) do es[#es + 1] = out(am(p[1], p[2]), 'engine-unit') end
+  o.engsrc = es
   return o
 end)()"""
 
@@ -323,8 +368,11 @@ end)()"""
 def snap(ai, crew_pos=None):
     furn = ", ".join("{%s, %s}" % p for p in STEEL_FURN)
     r = ai.lua(SNAP_LUA % (PU[0] + PU[1] + YELLOW + YOUT + TAP_CHEST + COPPER_CHEST + IRON_CHEST + STEEL_CHEST
-                           + BATTERY + IRON_SRC + COPPER_SRC + (furn,) + AC_AM1[0] + AC_AM1[1] + ACTAP_CHEST + LDS[0] + LDS[1]
-                           + PL_OUT[0][1] + PL_OUT[1][1]))
+                           + BATTERY + BAT_CU + ACID_IRON + BAT_OUT + IRON_SRC + COPPER_SRC + (furn,) + AC_AM1[0] + AC_AM1[1] + ACTAP_CHEST + LDS[0] + LDS[1]
+                           + PL_OUT[0][1] + PL_OUT[1][1] + F2 + Y2 + EEU + EEU + EEU + REPAIR_FE + LABFEED_CHEST + STAP_CHEST
+                           + (", ".join("{%s, %s}" % p for p in ENGINE_SRC),)))
+    r["engsrc"] = [int(v) for v in rows(r.get("engsrc"))]
+    r["furn"] = rows(r.get("furn"))
     r["plch"] = [int(v) for v in rows(r.get("plch"))]
     r["acam"] = [int(v) for v in rows(r.get("acam"))]
     r["lds"] = rows(r.get("lds"))
@@ -373,15 +421,38 @@ def copper_from(sn, at, n):
 
 
 def gather(sn, bag, at, item, n):
-    """가방에 item 이 n 개 되게 집는 단계."""
+    """가방에 item 이 n 개 되게 집는 단계. 허브 · 철 상자 · 구리 상자 + full_output 화로 출력 (막혀 있던 판 - 집으면 화로가 다시 돈다).
+    가까운 곳부터 여러 군데를 모아 n 을 채운다. 쓴 만큼 sn 에서 빼서 다음 사람이 같은 곳으로 헛걸음하지 않게 한다."""
     have = int(bag.get(item, 0))
-    if have >= n:
+    need = n - have
+    if need <= 0:
         return [], True
-    src = (iron_from if item == "iron-plate" else copper_from)(sn, at, n - have + 20)
-    if not src:
+    key = "fe" if item == "iron-plate" else "cu"
+    cands = []
+    for h in sn["hub"]:
+        cands.append([h, (h["x"], h["y"]), (h["x"], HUB_Y + 2.0), key])
+    if item == "iron-plate":
+        cands.append([sn, IRON_SRC, (IRON_SRC[0] + 2.0, IRON_SRC[1] + 2.0), "ironsrc"])
+    else:
+        cands.append([sn, COPPER_SRC, (-20.5, -10.5), "coppersrc"])
+    for f in sn.get("furn", []):
+        cands.append([f, (f["x"], f["y"]), (f["x"] + 2.0, f["y"] + 0.5), key])
+    cands = [c for c in cands if int(c[0].get(c[3], 0)) >= 20]
+    total = sum(int(c[0].get(c[3], 0)) for c in cands)
+    if total < need:
         return [], False
-    (cx, cy), (sx, sy) = src
-    return [walk(sx, sy), ("take", {"name": item, "x": cx, "y": cy, "count": n - have + 20})], True
+    steps, pos = [], at
+    while need > 0 and cands:
+        c = min(cands, key=lambda c: d2(c[1], pos))
+        cands.remove(c)
+        k = min(need, int(c[0][c[3]]) - (500 if c[3] == "coppersrc" else 0))
+        if k < 20:
+            continue
+        c[0][c[3]] = int(c[0][c[3]]) - k
+        steps += [walk(*c[2]), ("take", {"name": item, "x": c[1][0], "y": c[1][1], "count": k})]
+        need -= k
+        pos = c[1]
+    return steps, need <= 0
 
 
 def plastic_steps(sn, at, n):
@@ -468,8 +539,12 @@ def job_lds(sn, who, bag, at, n=10):
             return None
         plan += ps
     plan.append(("craft", {"recipe": "low-density-structure", "count": n}))
-    plan += corridor_to(YELLOW[0])
-    plan += [("insert", {"name": "low-density-structure", "x": YELLOW[0], "y": YELLOW[1], "count": n}), walk(12.5, CORR_Y)]
+    y2 = sn.get("y2") or {}
+    if y2.get("ok") and sn["y"]["lds"] >= 30 and y2.get("lds", 0) < 60:
+        plan += [walk(8.5, -2.0), walk(*HUB2_STAND), ("insert", {"name": "low-density-structure", "x": Y2[0], "y": Y2[1], "count": n})]
+    else:
+        plan += corridor_to(YELLOW[0])
+        plan += [("insert", {"name": "low-density-structure", "x": YELLOW[0], "y": YELLOW[1], "count": n}), walk(12.5, CORR_Y)]
     return plan
 
 
@@ -520,9 +595,62 @@ def job_ldsfeed(sn, who, bag, at):
         if m["out"] > 0:
             plan.append(("take", {"name": "low-density-structure", "x": x, "y": y, "count": m["out"]}))
     if outn + int(bag.get("low-density-structure", 0)) > 0:
-        plan += corridor_to(YELLOW[0])
-        plan += [("insert", {"name": "low-density-structure", "x": YELLOW[0], "y": YELLOW[1], "count": outn + int(bag.get("low-density-structure", 0))}),
-                 walk(12.5, CORR_Y)]
+        n = outn + int(bag.get("low-density-structure", 0))
+        y2 = sn.get("y2") or {}
+        if y2.get("ok") and sn["y"]["lds"] >= 30 and y2.get("lds", 0) < 60:
+            plan += [walk(8.5, -2.0), walk(*HUB2_STAND), ("insert", {"name": "low-density-structure", "x": Y2[0], "y": Y2[1], "count": n})]
+        else:
+            plan += corridor_to(YELLOW[0])
+            plan += [("insert", {"name": "low-density-structure", "x": YELLOW[0], "y": YELLOW[1], "count": n}), walk(12.5, CORR_Y)]
+    return plan
+
+
+def job_sulfur(sn, who, bag, at):
+    """황산 공장 (30.5,6.5) 에 황 (황 탭 상자에서) - 동쪽 띠 (38.5,6.5) 에서 8칸."""
+    if sn.get("acid_s", 99) >= 10 or sn.get("stap", 0) + int(bag.get("sulfur", 0)) < 20:
+        return None
+    plan = []
+    if int(bag.get("sulfur", 0)) < 20:
+        plan += [walk(-15.0, -30.0), ("take", {"name": "sulfur", "x": STAP_CHEST[0], "y": STAP_CHEST[1], "count": min(200, sn["stap"])})]
+    plan += east_strip(-4.5) + [walk(39.5, 6.5), ("insert", {"name": "sulfur", "x": 30.5, "y": 6.5, "count": 100}), walk(38.5, -8.0)]
+    return plan
+
+
+def job_f2(sn, who, bag, at):
+    """둘째 프레임 조립기: 전기엔진 (전기엔진 조립기 결과, 복도) · 배터리 (넘침 상자, 동쪽 띠) · 회로 · 강철."""
+    f = sn.get("f2") or {}
+    if not f.get("ok"):
+        return None
+    eng_low = sn.get("eeueng", 99) < 4 and sum(sn.get("engsrc", [])) >= 4
+    if f["eeu"] >= 2 and f["bat"] >= 4 and f["circ"] >= 6 and f["steel"] >= 2 and not eng_low:
+        return None
+    plan = []
+    if eng_low:
+        plan += [("take", {"name": "engine-unit", "x": x, "y": y, "count": n})
+                 for (x, y), n in zip(ENGINE_SRC, sn["engsrc"]) if n > 0]
+        plan += corridor_to(EEU[0]) + [("insert", {"name": "engine-unit", "x": EEU[0], "y": EEU[1], "count": 40})]
+    circ_have = int(bag.get("electronic-circuit", 0))
+    if f["circ"] < 6 and circ_have < 30:
+        for item, k in (("iron-plate", 30), ("copper-plate", 45)):
+            steps, ok = gather(sn, bag, at, item, k)
+            if not ok:
+                return None
+            plan += steps
+        plan.append(("craft", {"recipe": "electronic-circuit", "count": 30}))
+    if f["steel"] < 2 and int(bag.get("steel-plate", 0)) < 10:
+        fu = steel_from(sn, 20)
+        if fu:
+            plan += [walk(fu["x"] + 2.5, fu["y"]), ("take", {"name": "steel-plate", "x": fu["x"], "y": fu["y"], "count": 20})]
+    if f["bat"] < 4 and sn.get("batout", 0) > 0:
+        plan += east_strip(-3.5) + [walk(35.5, -3.5), ("take", {"name": "battery", "x": BAT_OUT[0], "y": BAT_OUT[1], "count": 60}),
+                                    walk(38.5, -8.0)]
+    if f["eeu"] < 2 and sn.get("eeuout", 0) > 0:
+        plan += corridor_to(EEU[0]) + [("take", {"name": "electric-engine-unit", "x": EEU[0], "y": EEU[1], "count": sn["eeuout"]})]
+    if not plan:
+        return None      # 가져올 것이 없다 (전기엔진이 없으면 기다린다 - 10초마다 헛걸음하지 않게)
+    plan += [walk(8.5, CORR_Y), walk(*HUB2_STAND)]
+    for item, k in (("electric-engine-unit", 20), ("battery", 60), ("electronic-circuit", 30), ("steel-plate", 20)):
+        plan.append(("insert", {"name": item, "x": F2[0], "y": F2[1], "count": k}))
     return plan
 
 
@@ -547,20 +675,66 @@ def job_tend(sn, bag, at):
         if f:
             plan += [walk(f["x"] + 2.5, f["y"]), ("take", {"name": "steel-plate", "x": f["x"], "y": f["y"], "count": 50}),
                      walk(10.5, -15.0), ("insert", {"name": "steel-plate", "x": STEEL_CHEST[0], "y": STEEL_CHEST[1], "count": 50})]
+    # 회로 조립기 철 상자 (회로 -> 벨트 -> 전기엔진 · 프레임): 비면 전기엔진이 서고 프레임이 선다
+    if sn["fe"] < 100:
+        steps, ok = gather(sn, bag, at, "iron-plate", 300)
+        if ok:
+            plan += steps + [walk(10.5, -3.5), ("insert", {"name": "iron-plate", "x": IRON_CHEST[0], "y": IRON_CHEST[1], "count": 300})]
+    # 전기엔진 조립기에 회로를 손으로 (벨트 회로가 모자랄 때)
+    if sn.get("eeucirc", 99) < 6:
+        if int(bag.get("electronic-circuit", 0)) < 40:
+            for item, k in (("iron-plate", 40), ("copper-plate", 60)):
+                steps, ok = gather(sn, bag, at, item, k)
+                plan += steps
+            plan.append(("craft", {"recipe": "electronic-circuit", "count": 40}))
+        plan += corridor_to(EEU[0]) + [("insert", {"name": "electronic-circuit", "x": EEU[0], "y": EEU[1], "count": 40})]
+    # 0-10 수리팩: 톱니 조립기 철 상자 (30.5,-4.5) - 동쪽 띠 (35.5,-4.5) 에서 5칸
+    if sn.get("repfe", 999) < 50:
+        steps, ok = gather(sn, bag, at, "iron-plate", 200)
+        if ok:
+            plan += steps + east_strip(-4.5) + [walk(35.5, -4.5), ("insert", {"name": "iron-plate", "x": REPAIR_FE[0], "y": REPAIR_FE[1], "count": 200}),
+                                               walk(38.5, -8.0)]
+    # 배터리 구리 · 황산 철
+    if sn["batcu"] < 60:
+        steps, ok = gather(sn, bag, at, "copper-plate", 300)
+        if ok:
+            plan += steps + corridor_to(BAT_CU[0]) + [("insert", {"name": "copper-plate", "x": BAT_CU[0], "y": BAT_CU[1], "count": 300})]
+    if sn["acidfe"] < 20:
+        steps, ok = gather(sn, bag, at, "iron-plate", 100)
+        if ok:
+            plan += steps + east_strip(4.5) + [("insert", {"name": "iron-plate", "x": ACID_IRON[0], "y": ACID_IRON[1], "count": 100}),
+                                              walk(38.5, -8.0)]
     # 노랑 조립기: 처리장치 · 저밀도 넣고 노랑 걷기, 배터리 철
     plan += corridor_to(YELLOW[0])
-    if pu_have > 0:
+    y2 = sn.get("y2") or {}
+    to_y2 = y2.get("ok") and sn["y"]["pu"] >= 30
+    if pu_have > 0 and not to_y2:
         plan.append(("insert", {"name": "processing-unit", "x": YELLOW[0], "y": YELLOW[1], "count": pu_have}))
     if int(bag.get("low-density-structure", 0)) > 0:
         plan.append(("insert", {"name": "low-density-structure", "x": YELLOW[0], "y": YELLOW[1], "count": 100}))
     if sn["ychest"] > 0:
         plan.append(("take", {"name": "utility-science-pack", "x": YOUT[0], "y": YOUT[1], "count": sn["ychest"]}))
-    if sn["battery_fe"] < 30 and sn["fe"] >= 150:
-        plan += [walk(8.5, CORR_Y), ("take", {"name": "iron-plate", "x": IRON_CHEST[0], "y": IRON_CHEST[1], "count": 100}),
-                 walk(BATTERY[0], CORR_Y), ("insert", {"name": "iron-plate", "x": BATTERY[0], "y": BATTERY[1], "count": 100})]
-    # 노랑 -> 연구소 (30 개 넘으면)
-    ybag = int(bag.get("utility-science-pack", 0)) + sn["ychest"]
-    if ybag >= 30 or (ybag >= 3 and sn.get("labsy", 0) < 16):
+    if sn["battery_fe"] < 30:
+        if sn["fe"] >= 150:
+            plan += [walk(8.5, CORR_Y), ("take", {"name": "iron-plate", "x": IRON_CHEST[0], "y": IRON_CHEST[1], "count": 100})]
+        else:
+            steps, ok = gather(sn, bag, at, "iron-plate", 100)
+            plan += steps + corridor_to(BATTERY[0]) if ok else []
+        plan += [walk(BATTERY[0], CORR_Y), ("insert", {"name": "iron-plate", "x": BATTERY[0], "y": BATTERY[1], "count": 100})]
+    # 둘째 노랑: 처리장치 (첫째가 넉넉하면) 넣고 결과 걷기
+    if y2.get("ok") and (to_y2 and pu_have > 0 or y2.get("out", 0) > 0):
+        plan += [walk(8.5, CORR_Y), walk(*HUB2_STAND)]
+        if to_y2 and pu_have > 0:
+            plan.append(("insert", {"name": "processing-unit", "x": Y2[0], "y": Y2[1], "count": pu_have}))
+        if y2.get("out", 0) > 0:
+            plan.append(("take", {"name": "utility-science-pack", "x": Y2[0], "y": Y2[1], "count": y2["out"]}))
+    # 노랑 -> 연구소 (보라 고리 옆치기 상자가 서 있으면 그 상자로, 없으면 연구소마다)
+    ybag = int(bag.get("utility-science-pack", 0)) + sn["ychest"] + int(y2.get("out", 0) or 0)
+    if sn.get("labfeed") is not None and ybag >= 3:
+        plan += [walk(12.5, CORR_Y), walk(*LABFEED_STAND),
+                 ("insert", {"name": "utility-science-pack", "x": LABFEED_CHEST[0], "y": LABFEED_CHEST[1], "count": ybag}),
+                 walk(8.5, CORR_Y)]
+    elif ybag >= 30 or (ybag >= 3 and sn.get("labsy", 0) < 16):
         per = max(1, ybag // len(LABS))
         plan += [walk(12.5, CORR_Y), walk(-76.5, 20.0)]
         plan += [("insert", {"name": "utility-science-pack", "x": x, "y": y, "count": per}) for x, y in LABS]
@@ -634,12 +808,16 @@ def feed(ai, crew, minutes, measure_every=600):
             else:
                 circ = sum(p["circ"] for p in sn["pu"]) + 200 * inflight.get("circ", 0)
                 ac = sum(p["ac"] for p in sn["pu"]) + 20 * inflight.get("ac", 0)
-                lds = sn["y"]["lds"] + int(sn["bags"].get(tender, {}).get("low-density-structure", 0)) + 10 * inflight.get("lds", 0)
+                lds = min(sn["y"]["lds"], (sn.get("y2") or {}).get("lds", 999) if (sn.get("y2") or {}).get("ok") else 999)                     + 10 * inflight.get("lds", 0)
                 order = []
+                if inflight.get("sulfur", 0) == 0:
+                    order.append("sulfur")
                 if ac < PU_AC_CAP and inflight.get("acgrab", 0) == 0:
                     order.append("acgrab")
                 if inflight.get("ldsfeed", 0) == 0:
                     order.append("ldsfeed")
+                if inflight.get("f2", 0) == 0:
+                    order.append("f2")
                 if ac < PU_AC_CAP:
                     order.append("ac")
                 if lds < Y_LDS_CAP:
@@ -648,7 +826,7 @@ def feed(ai, crew, minutes, measure_every=600):
                     order.append("circ")
                 # 회로가 넉넉해도 고급회로 · 저밀도가 막히면 (플라스틱 없음) 회로를 쌓아 둔다
                 for k in order + (["circ"] if circ < 3 * PU_CIRC_CAP and "circ" not in order else []):
-                    plan = {"circ": job_circ, "ac": job_ac, "lds": job_lds, "acgrab": job_acgrab, "ldsfeed": job_ldsfeed}[k](sn, w, bag, at)
+                    plan = {"circ": job_circ, "ac": job_ac, "lds": job_lds, "acgrab": job_acgrab, "ldsfeed": job_ldsfeed, "f2": job_f2, "sulfur": job_sulfur}[k](sn, w, bag, at)
                     if plan:
                         kind = k
                         break
@@ -695,6 +873,15 @@ def stage_actap(ai, who):
     run_plan(ai, who, plan, label="actap")
     wait_idle(ai, [who], 300)
     say("고급회로 탭 필터: %s" % set_filter(ai, *ACTAP_INS, "advanced-circuit"))
+
+
+def stage_stap(ai, who):
+    plan = [walk(-47.5, 2.5), ("take", {"name": "iron-plate", "x": IRON_SRC[0], "y": IRON_SRC[1], "count": 30}),
+            ("craft", {"recipe": "iron-chest", "count": 1}), ("craft", {"recipe": "inserter", "count": 1}),
+            walk(-15.0, -30.0), b("iron-chest", *STAP_CHEST), b("inserter", STAP_INS[0], STAP_INS[1], W), walk(-14.5, -29.0)]
+    run_plan(ai, who, plan, label="stap")
+    wait_idle(ai, [who], 300)
+    say("황 탭 필터: %s" % set_filter(ai, *STAP_INS, "sulfur"))
 
 
 def stage_lds(ai, who):
@@ -763,6 +950,60 @@ def stage_oil(ai, who):
     run_plan(ai, who, plan, minutes=20, label="oil")
 
 
+def battery_gate(ai):
+    """배터리 넘침 팔 (27.5,-3.5) 은 프레임 조립기 (25.5,-8.5) 에 배터리가 4 이상일 때만 (빨강 선, 조립기 내용 읽기).
+    넘친 배터리 상자는 둘째 프레임 조립기 몫."""
+    return ai.lua("""(function()
+      local s = game.surfaces[1]
+      local ins = s.find_entities_filtered{type = 'inserter', position = {27.5, -3.5}, radius = 0.2}[1]
+      local fr = s.find_entities_filtered{type = 'assembling-machine', position = {%f, %f}, radius = 0.3}[1]
+      if not (ins and fr) then return {err = 'missing'} end
+      local a = ins.get_wire_connector(defines.wire_connector_id.circuit_red, true)
+      local b = fr.get_wire_connector(defines.wire_connector_id.circuit_red, true)
+      local ok = a.connect_to(b, false)
+      local fc = fr.get_or_create_control_behavior()
+      fc.circuit_read_contents = true
+      local cb = ins.get_or_create_control_behavior()
+      cb.circuit_enable_disable = true
+      cb.circuit_condition = {comparator = '>=', first_signal = {type = 'item', name = 'battery'}, constant = 4}
+      return {connected = ok, status = ins.status} end)()""" % FRAME)
+
+
+def stage_labfeed(ai, who):
+    plan = [walk(-47.5, 2.5), ("take", {"name": "iron-plate", "x": IRON_SRC[0], "y": IRON_SRC[1], "count": 30}),
+            ("craft", {"recipe": "iron-chest", "count": 1}), ("craft", {"recipe": "inserter", "count": 1}),
+            ("craft", {"recipe": "transport-belt", "count": 2}), ("craft", {"recipe": "small-electric-pole", "count": 1}),
+            walk(*LABFEED_STAND), b("iron-chest", *LABFEED_CHEST), b("inserter", LABFEED_INS[0], LABFEED_INS[1], W),
+            b("transport-belt", LABFEED_BELT[0], LABFEED_BELT[1], E), b("small-electric-pole", *LABFEED_POLE), walk(*LABFEED_STAND)]
+    return plan
+
+
+def stage_batfe(ai):
+    """배터리 철 상자 유령 + 사람 (개인 로봇) 이 짓고 철 · 구리를 채우는 계획."""
+    say("배터리 철 유령: %s" % place_ghosts(ai, [("iron-chest", BATFE_CHEST[0], BATFE_CHEST[1], N),
+                                             ("inserter", BATFE_INS[0], BATFE_INS[1], S),
+                                             ("small-electric-pole", BATFE_POLE[0], BATFE_POLE[1], N)]))
+    return [("craft", {"recipe": "iron-chest", "count": 1}), ("craft", {"recipe": "inserter", "count": 1}),
+            ("craft", {"recipe": "small-electric-pole", "count": 1}),
+            walk(8.5, -2.0), walk(*WEST_STAND), ("wait", {"ticks": 600}),
+            ("insert", {"name": "iron-plate", "x": BATFE_CHEST[0], "y": BATFE_CHEST[1], "count": 400}),
+            ("insert", {"name": "copper-plate", "x": BAT_CU[0], "y": BAT_CU[1], "count": 400}), walk(8.5, -2.0)]
+
+
+def stage_hub2(ai, who):
+    plan = [walk(15.5, 0.5), ("take", {"name": "iron-plate", "x": PIPE_CHEST[0], "y": PIPE_CHEST[1], "count": 70}),
+            ("craft", {"recipe": "assembling-machine-1", "count": 2}),
+            ("craft", {"recipe": "assembling-machine-2", "count": 2}),
+            ("craft", {"recipe": "inserter", "count": 1}),
+            ("craft", {"recipe": "medium-electric-pole", "count": 1}),
+            walk(*HUB2_STAND), b("assembling-machine-2", *F2), b("assembling-machine-2", *Y2),
+            b("inserter", F2_INS[0], F2_INS[1], W), b("medium-electric-pole", *HUB2_POLE), walk(*HUB2_STAND)]
+    run_plan(ai, who, plan, label="hub2")
+    wait_idle(ai, [who], 600)
+    say("둘째 프레임: %s" % set_recipe_lua(ai, *F2, "flying-robot-frame"))
+    say("둘째 노랑: %s" % set_recipe_lua(ai, *Y2, "utility-science-pack"))
+
+
 def oil_switch(ai):
     """정유 레시피 전환 (플라스틱 공장이 선 뒤)."""
     return set_recipe_lua(ai, *REFINERY, "basic-oil-processing")
@@ -792,8 +1033,14 @@ def main():
         stage_actap(ai, crew[0])
     elif a.stage == "oil":
         stage_oil(ai, crew[0])
+    elif a.stage == "hub2":
+        stage_hub2(ai, crew[0])
+    elif a.stage == "batgate":
+        say("배터리 넘침 팔 조건: %s" % battery_gate(ai))
     elif a.stage == "oilswitch":
         say("정유 레시피: %s" % oil_switch(ai))
+    elif a.stage == "stap":
+        stage_stap(ai, crew[0])
     elif a.stage == "lds":
         stage_lds(ai, crew[0])
     r = status(ai)
