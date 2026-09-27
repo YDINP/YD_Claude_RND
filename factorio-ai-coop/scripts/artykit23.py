@@ -510,6 +510,9 @@ def step(ai):
                     if k not in mv["done_old"]}
             kit["members"] = {"roboport": mv["rp"], "turrets": mv["ring"], "poles": mv["poles"], "chest": mv.get("chest")}
             kit["site"], kit["move"], kit["since"] = mv["to"], None, time.strftime("%H:%M:%S")
+            if mv.get("chest"):  # 06:36 망 중계가 아무 저장 상자에나 구리를 넣어 옛 키트 상자에 466 - 해체 때 로봇 104 대가 그걸 나르느라 20 분 멈춤
+                ai.lua("""(function() local c = game.surfaces[1].find_entities_filtered{name = 'storage-chest', position = %s, radius = 0.6}[1]
+                  if c then pcall(function() c.set_storage_filter(1, {name = 'artillery-shell'}) end) end return {ok = c and 1 or 0} end)()""" % _pt(mv["chest"]))
             save(kit)
             return "키트 이전 끝 -> (%s,%s) · 링 %s · 상자 %s · 옛 키트 나머지 해체 %s · %d분" % (
                 mv["to"][0], mv["to"][1], st.get("ring"), st.get("chest"), left, (time.time() - mv["t0"]) // 60)
