@@ -48,6 +48,15 @@ FEED = """(function() local s = game.surfaces[1] local o = {}
       local need = cap - rin.get_item_count(item)
       if need > 0 and net.get_item_count(item) >= need + 20 then local got = net.remove_item{name = item, count = need} if got > 0 then rin.insert{name = item, count = got} o['r_' .. item:sub(1, 4)] = got end end
     end end
+  -- 02:06 레이더 줄 톱니 조립기 (-14.5,-66.5) 가 철 부족 -> 망에서 철 40 까지, 그 톱니는 레이더 조립기로
+  local G = s.find_entities_filtered{type = 'assembling-machine', position = {-14.5, -66.5}, radius = 1}[1]
+  if G and net then local gin = G.get_inventory(defines.inventory.assembling_machine_input)
+    local need = 40 - gin.get_item_count('iron-plate')
+    if need > 0 and net.get_item_count('iron-plate') >= 300 then local got = net.remove_item{name = 'iron-plate', count = need} if got > 0 then gin.insert{name = 'iron-plate', count = got} o.g_iron = got end end
+    if R then local gout = G.get_inventory(defines.inventory.assembling_machine_output) local rin = R.get_inventory(defines.inventory.assembling_machine_input)
+      local k = math.min(gout.get_item_count('iron-gear-wheel'), 10 - rin.get_item_count('iron-gear-wheel'))
+      if k > 0 then gout.remove{name = 'iron-gear-wheel', count = k} rin.insert{name = 'iron-gear-wheel', count = k} o.gear = k end end
+  end
   -- 완성 포탄 -> 망 저장 상자
   local aout = A.get_inventory(defines.inventory.assembling_machine_output)
   local sh = aout.get_item_count('artillery-shell')
