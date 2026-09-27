@@ -19,6 +19,7 @@ Lua 중계 (30 초): 화로 연료 석탄 (망, 모자라면 석탄 상자 (-1.5
 로그 state/cusmelt23.log
 """
 import argparse
+import json
 import os
 import sys
 import time
@@ -37,7 +38,8 @@ ASM = (-30.5, -94.5)
 TURN = (-43.5, -100.5)
 CUTB = (-43.5, -99.5)
 OPEN = (-42.5, -117.5)
-FURN_TARGET = N + 2          # 화로 재고가 이만큼 (지어진 수 포함) 이면 조립기를 팔로 바꾼다
+FURN_TARGET = 4              # 08:20 전초 기둥 다 섬 - 돌 아끼려고 재고 4 면 팔로 (08:10 에는 30)
+SMELT_STATE = os.path.join(HERE, "..", "state", "smeltcol23.json")   # 구리 전초 제련 전환 뒤 (switched) 기지 줄은 은퇴
 
 ITEMS = ([("transport-belt", x, y, "east") for x, y in BELT] + [("small-electric-pole", x, y, "north") for x, y in POLES]
          + [("stone-furnace", x, y, "north") for x, y in FURN] + [("inserter", x, y, "north") for x, y in INS]
@@ -102,7 +104,7 @@ FEED = """(function() local s = game.surfaces[1] local o = {furn = 0, work = 0, 
     if got == 0 and coalbox and coalbox.get_item_count('coal') > 300 + n then got = coalbox.remove_item{name = 'coal', count = n} end
     return got end
   for _, p in pairs({%s}) do
-    local f = s.find_entities_filtered{name = 'stone-furnace', position = p, radius = 0.3}[1]
+    local f = %s and s.find_entities_filtered{name = 'stone-furnace', position = p, radius = 0.3}[1]
     if f then o.furn = o.furn + 1
       if f.status == defines.entity_status.working then o.work = o.work + 1 end
       local fu = f.get_inventory(defines.inventory.fuel)
@@ -119,7 +121,7 @@ FEED = """(function() local s = game.surfaces[1] local o = {furn = 0, work = 0, 
   -- 조립기: 돌 화로 -> (재고 차면) 팔
   local A = s.find_entities_filtered{name = 'assembling-machine-1', position = {%s, %s}, radius = 0.3}[1]
   if A then
-    local want = (net.get_item_count('stone-furnace') + o.furn >= %d) and 'inserter' or 'stone-furnace'
+    local want = (net.get_item_count('stone-furnace') >= %d) and 'inserter' or 'stone-furnace'
     local r = A.get_recipe()
     if not r or r.name ~= want then
       local ain = A.get_inventory(defines.inventory.assembling_machine_input)
@@ -162,6 +164,18 @@ FEED = """(function() local s = game.surfaces[1] local o = {furn = 0, work = 0, 
   return o end)()"""
 
 
+def retired():
+    """구리 전초 현지 제련 전환 뒤: 기지 돌 화로 줄은 연료 · 유령 복구를 멈춘다 (구리판은 줄 끝에서 smeltcol23 이 망으로)."""
+    try:
+        with open(SMELT_STATE, encoding="utf-8") as f:
+            return bool(json.load(f).get("cu", {}).get("switched"))
+    except (OSError, ValueError):
+        return False
+
+
+BASE_ONLY = [it for it in ITEMS if it[0] in ("transport-belt", "small-electric-pole", "assembling-machine-1")]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
@@ -175,16 +189,17 @@ def main() -> int:
     if r.get("bad"):
         log("막힌 칸 있어 멈춤: %s" % r.get("bad"))
         return 1
-    log("cusmelt23 시작 · 유령 %s" % ai.lua(PLACE % rows(ITEMS)))
+    log("cusmelt23 시작 · 은퇴 %s · 유령 %s" % (retired(), ai.lua(PLACE % rows(BASE_ONLY if retired() else ITEMS))))
     fpts = ", ".join("{%s, %s}" % p for p in FURN)
     last = None
     while True:
         try:
-            g = ai.lua(PLACE % rows(ITEMS))
+            ret = retired()
+            g = ai.lua(PLACE % rows(BASE_ONLY if ret else ITEMS))
             if g.get("made"):
                 log("사라진 유령 다시 %s" % g.get("made"))
             c = ai.lua(CUT % (TURN + CUTB + (BELT[0][0], BELT[0][1]) + OPEN * 3))
-            f = ai.lua(FEED % (fpts, ASM[0], ASM[1], FURN_TARGET))
+            f = ai.lua(FEED % (fpts, "false" if ret else "true", ASM[0], ASM[1], FURN_TARGET))
             key = (c.get("turn"), c.get("cut"), c.get("open"), f.get("furn"), f.get("ins"), f.get("asm"))
             line = ("끊기 %s/%s 입구 %s 아래구리 %s · 화로 %s (가동 %s) 팔 %s · 줄 구리광 %s · 판 -> 망 %s · 석탄 %s · 조립기 %s %s · 구리판 10분 %s · 재고 %s" % (
                 c.get("turn"), c.get("cut"), c.get("open"), c.get("below_cu"), f.get("furn"), f.get("work"), f.get("ins"), f.get("line_ore"),
