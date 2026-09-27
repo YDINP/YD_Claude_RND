@@ -83,6 +83,24 @@ ASM = [# 대포 포탄 줄: 폭발 포탄 강철, 레이더 철
        ((34.5, -38.5), "steel-plate", 45, 45),  # 로보포트 조립기 강철 (구리 전초 전진 로보포트) - 사용자 강철 공급상자 (-52.5,-37.5) 로 망에 강철이 생김  # 배터리 화학공장 구리 (23:57 구리 0 -> 프레임 -> 노랑 정지)
        ((-18.5, -70.5), "iron-plate", 10, 40), ((-14.5, -70.5), "copper-plate", 10, 40), ((-14.5, -66.5), "iron-plate", 10, 40)]
 
+# 강철 화로 x=-76 7 대 철판 로봇 보충 (00:50 강철 10분 생산 101 / 소비 248, 망 철 2,400 인데 화로 벨트 공급 부족)
+STEEL_FURNACES = [(-76, -74), (-76, -72), (-76, -69), (-76, -67), (-76, -64), (-76, -62), (-76, -59)]
+FURN_FEED = """(function() local s = game.surfaces[1] local o = {n = 0}
+  for _, p in pairs({%s}) do
+    local f = s.find_entities_filtered{type = 'furnace', position = p, radius = 0.6}[1]
+    if f then
+      local net = s.find_logistic_network_by_position(f.position, 'player')
+      local have = f.get_inventory(defines.inventory.furnace_source).get_item_count('iron-plate')
+      local busy = s.count_entities_filtered{name = 'item-request-proxy', position = f.position, radius = 1} > 0
+      if have < 10 and not busy and net and net.get_item_count('iron-plate') >= 300 then
+        if pcall(function() s.create_entity{name = 'item-request-proxy', position = f.position, force = 'player', target = f,
+            modules = {{id = {name = 'iron-plate'}, items = {in_inventory = {{inventory = defines.inventory.furnace_source, stack = 0, count = 40}}}}}} end) then
+          o.n = o.n + 1 end
+      end
+    end
+  end
+  return o end)()"""
+
 ASM_FEED = """(function() local s = game.surfaces[1] local o = {req = {}}
   for _, t in pairs({%s}) do
     local a = s.find_entities_filtered{type = 'assembling-machine', position = {t[1], t[2]}, radius = 0.5}[1]
@@ -163,6 +181,9 @@ def main() -> int:
             ra = list(ra.values()) if isinstance(ra, dict) else ra
             if ra:
                 print(time.strftime("%H:%M:%S"), "조립기 보충 ->", ra, flush=True)
+            rf = ai.lua(FURN_FEED % ", ".join("{%s, %s}" % p for p in STEEL_FURNACES))
+            if rf.get("n"):
+                print(time.strftime("%H:%M:%S"), "강철 화로 철 보충", rf["n"], flush=True)
             rc = ai.lua(CHEST_FEED % ", ".join("{%s, %s, '%s', %d, %d}" % (p[0], p[1], it, lo, n) for p, it, lo, n in CHESTS))
             rq = rc.get("req") or []
             rq = list(rq.values()) if isinstance(rq, dict) else rq
