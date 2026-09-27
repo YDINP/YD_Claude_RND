@@ -180,12 +180,14 @@ def haul_once(ai, go):
       for _, x in pairs({-83.5, -82.5, -81.5}) do local c = s.find_entities_filtered{type = 'logistic-container', position = {x, -52.5}, radius = 0.1}[1]
         o[#o+1] = c and c.get_item_count('iron-plate') or 0 end return o end)()""")
     x = [-83.5, -82.5, -81.5][max(range(3), key=lambda i: src[i])]
-    if max(src) < HAUL_N:
+    # 우선 상자 (수류탄·회로) 는 허브가 800 이 안 돼도 있는 만큼 (150 이상) 나른다 - 철 고갈 중 (20:56)
+    n_take = HAUL_N if max(src) >= HAUL_N else (int(max(src)) if pri.get(xy, 2) < 2 and max(src) >= 150 else 0)
+    if not n_take:
         return "손 운반: 허브 공급 상자 철 모자람 %s" % src
-    steps = [Y.walk(x, Y.HUB_Y + 2.0), ("take", {"name": "iron-plate", "x": x, "y": -52.5, "count": HAUL_N})]
+    steps = [Y.walk(x, Y.HUB_Y + 2.0), ("take", {"name": "iron-plate", "x": x, "y": -52.5, "count": n_take})]
     if go:
-        Y.put_order(who, steps + [Y.walk(*HAUL[xy]), ("insert", {"name": "iron-plate", "x": xy[0], "y": xy[1], "count": HAUL_N})])
-    return "손 운반: %s %d -> +%d (%s)%s" % (xy, n, HAUL_N, who, "" if go else " 시험")
+        Y.put_order(who, steps + [Y.walk(*HAUL[xy]), ("insert", {"name": "iron-plate", "x": xy[0], "y": xy[1], "count": n_take})])
+    return "손 운반: %s %d -> +%d (%s)%s" % (xy, n, n_take, who, "" if go else " 시험")
 
 
 def Y_orders(Y):
