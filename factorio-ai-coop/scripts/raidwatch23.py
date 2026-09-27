@@ -4,6 +4,7 @@
   * 우리 포탑 35칸 안의 적 유닛을 방향별 (N · NE · E · SE · S · SW · W · NW, 기지 중심 (-40,-20) 기준) 로 묶어,
     무리 (5마리 이상 또는 대형 포함) 가 «새로» 붙거나 커지면 한 줄.
   * 무리가 빠지면 (그 방향 0) 결과 한 줄: 부서진 것 (유령) · 손상 포탑 · 탄 부족 포탑.
+  * 탄 5 미만 포탑엔 로봇 탄 배달 (item-request-proxy).
   * 캐릭터 체력 200 미만 · 사망 (수가 줄면) 한 줄.
 바뀐 것만 찍는다 (Monitor 알림용). 조용하면 아무것도 안 찍는다.
 
@@ -37,6 +38,17 @@ SNAP = """(function() local s = game.surfaces[1] local o = {u = {}, c = {}}
     if t.get_inventory(defines.inventory.turret_ammo).get_item_count() < 3 then low = low + 1 end
   end
   o.dmg, o.low, o.turrets = dmg, low, s.count_entities_filtered{name = 'gun-turret', force = 'player'}
+  -- 탄 5 미만 포탑엔 로봇 배달 요청 (슬롯에 든 종류로 - 다른 종류는 안 섞인다). 전진 포트 호위가 빈 탄으로 서 있었다 (14:00)
+  o.req = 0
+  for _, t in pairs(s.find_entities_filtered{name = 'gun-turret', force = 'player'}) do
+    local inv = t.get_inventory(defines.inventory.turret_ammo)
+    if inv.get_item_count() < 5 and s.count_entities_filtered{name = 'item-request-proxy', position = t.position, radius = 0.5} == 0 then
+      local nm = inv.is_empty() and 'piercing-rounds-magazine' or inv[1].name
+      if pcall(function() s.create_entity{name = 'item-request-proxy', position = t.position, force = 'player', target = t,
+          modules = {{id = {name = nm}, items = {in_inventory = {{inventory = defines.inventory.turret_ammo, stack = 0, count = 20}}}}}} end) then
+        o.req = o.req + 1 end
+    end
+  end
   o.tick = game.tick
   return o end)()"""
 
@@ -86,6 +98,8 @@ def main() -> int:
                 st = active.pop(d)
                 lost = r["ghosts"] - st["ghosts0"]
                 print(f"{now} 공습 끝 {d}: 최대 {st['peak']} · 새 유령 {max(0, lost)} · 손상 포탑 {r['dmg']} · 탄부족 {r['low']}", flush=True)
+            if r.get("req"):
+                print(f"{now} 탄 배달 요청 {r['req']}", flush=True)
             cs = rows(r.get("c"))
             if chars_n is not None and len(cs) < chars_n:
                 print(f"{now} ⚠ 캐릭터 수 {chars_n} → {len(cs)} (사망?)", flush=True)
