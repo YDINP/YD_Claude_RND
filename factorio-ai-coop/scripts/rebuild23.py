@@ -645,6 +645,249 @@ def st_21(ai, go):
     say("2-1 %s: %s" % ("완료" if not ghost_count(ai, -113, -11, -87, -1) else "유령 남음", st))
 
 
+@stage("2-6")
+def st_26(ai, go):
+    """고갈 채굴기 회수 (로봇 해체) - 모든 채굴기 중 no_minable_resources 이거나 잔량 < 60 인 것. 서벽 · 새 자리에 재사용."""
+    r = ai.lua("""(function() local o = {}
+      for _, d in pairs(game.surfaces[1].find_entities_filtered{name = 'electric-mining-drill', force = 'player', area = {{-125, -115}, {50, 60}}}) do
+        local t = d.mining_target local amt = 0
+        for _, rr in pairs(game.surfaces[1].find_entities_filtered{type = 'resource', area = {{d.position.x - 2.5, d.position.y - 2.5}, {d.position.x + 2.5, d.position.y + 2.5}}}) do amt = amt + rr.amount end
+        if amt < 60 and not d.to_be_deconstructed() then o[#o+1] = {x = d.position.x, y = d.position.y, amt = amt} end end
+      return o end)()""")
+    lst = rows(r)
+    print(lst)
+    if not go:
+        return
+    say("2-6 시작: 고갈 채굴기 %d 회수 %s" % (len(lst), [(d["x"], d["y"], d["amt"]) for d in lst]))
+    print(decon(ai, [("electric-mining-drill", d["x"], d["y"]) for d in lst]))
+    t0 = time.time()
+    while time.time() - t0 < 300 and decon_left(ai, -125, -115, 50, 60):
+        time.sleep(10)
+    say("2-6 %s: 해체 남음 %d" % ("완료" if not decon_left(ai, -125, -115, 50, 60) else "진행 중", decon_left(ai, -125, -115, 50, 60)))
+
+
+@stage("0-2s")
+def st_02s(ai, go):
+    """0-2 마무리 (조정자): 망 17 창고 (4.5,32.5) 에 탄창 200 - 남서 새 포탑 4대 (망 17) 몫. 철은 막대 조립기 상자 (보라 정지로 놂) · 허브."""
+    have = inv(ai)
+    print(have)
+    if not go:
+        return
+    say("0-2s 시작: 망 17 창고 (4.5,32.5) 탄창 200 (손제작)")
+    plan = [walk(-80.5, -76.5), take("iron-plate", -81.5, -78.5, 660),
+            walk(-84.5, -56.5), take("iron-plate", -82.5, -52.5, 150), craft("firearm-magazine", 200),
+            walk(6.5, 30.5), put("firearm-magazine", 4.5, 32.5, 200)]
+    ok = run_plan(ai, plan, "0-2s", timeout=1200)
+    show(ai, 4, 32, 5, 33)
+    say("0-2s %s" % ("완료: 망 17 창고 탄창 200" if ok else "부분"))
+
+
+@stage("3-1")
+def st_31(ai, go):
+    """3-1 (앞당김): 구리 줄은 끝 (회로 조립기 x=-24.5 북향, full_output) 까지 꽉 차 강철 화로 · 채굴기가 선다.
+    노랑 먹이 고리가 구리를 집는 상자 COPPER_SRC (-23.5,-8.5) 바로 옆 막다른 벨트 조각 (-24.5,-8.5) 을 걷고
+    그 자리에 팔 (서쪽 구리 벨트 (-25.5,-8.5) → 상자) + 전봇대 (-24.5,-7.5). 조각이 빠지면 (-25.5,-9.5)→(-24.5,-9.5) 가
+    옆치기에서 꺾임이 되어 x=-24.5 줄도 두 레인을 쓴다."""
+    items = [("inserter", -24.5, -8.5, W), ("small-electric-pole", -24.5, -7.5, 0)]
+    if not go:
+        show(ai, -26, -10, -23, -7)
+        return
+    say("3-1 시작: COPPER_SRC (-23.5,-8.5) 에 구리 벨트 직결 팔 (-24.5,-8.5)")
+    print(decon(ai, [("transport-belt", -24.5, -8.5)]))
+    t0 = time.time()
+    while time.time() - t0 < 180 and decon_left(ai, -25, -9, -24, -8):
+        time.sleep(3)
+    say("  유령: %s" % ghosts(ai, items))
+    t0 = time.time()
+    while time.time() - t0 < 300 and ghost_count(ai, -25, -9, -24, -7):
+        time.sleep(5)
+    time.sleep(5)
+    show(ai, -26, -10, -23, -7)
+    say("3-1 %s" % ("완료" if not ghost_count(ai, -25, -9, -24, -7) else "유령 남음"))
+
+
+# 3-2/3-3: 놀던 구리 화로 8 (x=-75/-70, y -44..-38) 은 가운데 벨트 x=-72.5 레인1(석탄)만 차 있고 광석 레인2 가 비었다.
+# 구리 조각 (x -70..-64, y -85..-77) 에 채굴기 → 지하로 x=-72.5 를 건너 서쪽에서 (-72.5,-81.5) 에 옆치기 = 레인2.
+P32 = [("electric-mining-drill", -67.5, -82.5, W),
+       ("transport-belt", -69.5, -82.5, W), ("transport-belt", -70.5, -82.5, W),
+       ("underground-belt", -71.5, -82.5, W, "input"), ("underground-belt", -73.5, -82.5, W, "output"),
+       ("transport-belt", -74.5, -82.5, S), ("transport-belt", -74.5, -81.5, E), ("transport-belt", -73.5, -81.5, E),
+       ("small-electric-pole", -69.5, -80.5, 0)]
+
+
+@stage("3-2")
+def st_32(ai, go):
+    res = can_place(ai, [t[:4] for t in P32])
+    print(res)
+    if not go:
+        return
+    say("3-2 시작: 구리 채굴기 (-67.5,-82.5) → x=-72.5 레인2 → 놀던 구리 화로 8 (x=-75/-70)")
+    n = ai.lua("""(function() local n = 0 for _, e in pairs(game.surfaces[1].find_entities_filtered{area = {{-75, -83}, {-73, -81}}, type = {'tree', 'simple-entity'}}) do e.order_deconstruction('player') n = n + 1 end return {n = n} end)()""")
+    say("  나무 벌목 %s" % n)
+    t0 = time.time()
+    while time.time() - t0 < 120 and decon_left(ai, -75, -83, -73, -81):
+        time.sleep(3)
+    say("  유령: %s" % ghosts(ai, P32))
+    t0 = time.time()
+    while time.time() - t0 < 300 and ghost_count(ai, -76, -85, -65, -79):
+        time.sleep(5)
+    time.sleep(20)
+    show(ai, -76, -84, -65, -80)
+    fs = [(d["x"], d["y"], d.get("st")) for d in dump(ai, -76, -45, -69, -37) if d["n"] == "stone-furnace"]
+    say("3-2 %s: 화로 %s" % ("완료" if not ghost_count(ai, -76, -85, -65, -79) else "유령 남음", fs))
+
+
+@stage("3-1b")
+def st_31b(ai, go):
+    """3-1 보강: COPPER_SRC 투입 팔을 고속 팔로 (0.83 → 2.31/s)."""
+    if not go:
+        return
+    say("3-1b 시작: (-24.5,-8.5) 팔 → 고속 팔")
+    plan = [craft("inserter", 1), craft("fast-inserter", 1), walk(-25.5, -11.5),
+            dig(-24.5, -8.5, "inserter"), b("fast-inserter", -24.5, -8.5, W)]
+    ok = run_plan(ai, plan, "3-1b", timeout=600)
+    time.sleep(3)
+    show(ai, -25, -9, -24, -8)
+    say("3-1b %s" % ("완료" if ok else "부분"))
+
+
+# 4-1: 포탑 조립기 → 망 2 창고 (-88.5,-41.5) 에 바로. 입력은 상자 (손 보충) 라 철을 무한정 먹지 않는다.
+P41 = [("assembling-machine-1", -87.5, -38.5, 0), ("inserter", -88.5, -40.5, S),
+       ("iron-chest", -87.5, -35.5, 0), ("inserter", -87.5, -36.5, S), ("small-electric-pole", -86.5, -35.5, 0)]
+
+
+@stage("4-1")
+def st_41(ai, go):
+    print(can_place(ai, [t[:4] for t in P41]))
+    if not go:
+        return
+    have = inv(ai)
+    say("4-1 시작: 포탑 조립기 (-87.5,-38.5) → 팔 → 망 2 창고 (-88.5,-41.5), 입력 상자 (-87.5,-35.5) 포탑 5대분")
+    plan = [walk(-84.5, -56.5), take("iron-plate", -83.5, -52.5, 300),
+            craft("electronic-circuit", 4), craft("assembling-machine-1", 1), craft("iron-chest", 1),
+            craft("inserter", 2), craft("small-electric-pole", 1), craft("iron-gear-wheel", 50),
+            walk(-85.5, -37.5)] + [b(*t) for t in P41] + [
+            put("iron-gear-wheel", -87.5, -35.5, 50), put("copper-plate", -87.5, -35.5, 50), put("iron-plate", -87.5, -35.5, 100)]
+    ok = run_plan(ai, plan, "4-1", timeout=900)
+    print(ai.set_recipe(WHO, -87.5, -38.5, "gun-turret"))
+    time.sleep(10)
+    show(ai, -89, -42, -86, -35)
+    say("4-1 %s" % ("완료: 포탑 조립기 가동 (1형, ~3.7대/분, 입력 상자 5대분 - 보충은 손)" if ok else "부분"))
+
+
+@stage("4-1b")
+def st_41b(ai, go):
+    if not go:
+        return
+    say("4-1b: 조립기 다시 (delta 가 자리에 서 있었음) + delta 가방 포탑 8 → 망 2 창고")
+    plan = [walk(-84.5, -44.5), put("gun-turret", -88.5, -41.5, 8), walk(-84.5, -38.5), b("assembling-machine-1", -87.5, -38.5, 0),
+            walk(-84.5, -56.5), take("iron-plate", -82.5, -52.5, 200), craft("iron-gear-wheel", 37),
+            walk(-85.5, -34.0), put("iron-gear-wheel", -87.5, -35.5, 37), put("iron-plate", -87.5, -35.5, 100)]
+    ok = run_plan(ai, plan, "4-1b", timeout=600)
+    print(ai.set_recipe(WHO, -87.5, -38.5, "gun-turret"))
+    time.sleep(15)
+    show(ai, -89, -42, -86, -35)
+    say("4-1b %s" % ("완료" if ok else "부분"))
+
+
+# 1-9 (조정자 지시로 담당): 구리판 → 구리선 조립기 입력 상자 (5.5,-5.5). 꽉 찬 구리 줄 y=-8.5 에 분배기 (-28.5,-8.0),
+# 둘째 출구를 지하로 y=-6.5 · -5.5 · -3.5 벨트를 건너 y=-0.5 동향 (x=-14.5 철 회랑은 지하로) → x=5.5 북향 → 팔 → 상자.
+P19 = ([("splitter", -28.5, -8.0, E),
+        ("underground-belt", -27.5, -7.5, S, "input"), ("underground-belt", -27.5, -2.5, S, "output"),
+        ("transport-belt", -27.5, -1.5, S), ("transport-belt", -27.5, -0.5, E)]
+       + [("transport-belt", x + 0.5, -0.5, E) for x in range(-27, -16)]
+       + [("underground-belt", -15.5, -0.5, E, "input"), ("underground-belt", -11.5, -0.5, E, "output")]
+       + [("transport-belt", x + 0.5, -0.5, E) for x in range(-11, 5)]
+       + [("transport-belt", 5.5, y + 0.5, N) for y in range(-4, 0)]
+       + [("fast-inserter", 5.5, -4.5, S)])
+
+
+def bt(t):
+    p = {"name": t[0], "x": t[1], "y": t[2], "direction": t[3]}
+    if len(t) > 4:
+        p["type"] = t[4]
+    return ("build", p)
+
+
+@stage("1-9")
+def st_19(ai, go):
+    """구리선 조립기 (5.5,-8.5) 입력 상자 (5.5,-5.5) 에 구리 벨트 직결 (delta 손 공사 - y=-0.5 줄은 망 2 범위 밖)."""
+    res = can_place(ai, [t[:4] for t in P19])
+    print([r for r in res if r.endswith("false")])
+    if not go:
+        return
+    say("1-9 시작: 구리 줄 y=-8.5 분배기 → y=-0.5 → 구리선 입력 상자 (5.5,-5.5) (벨트 %d)" % sum(1 for t in P19 if t[0] == "transport-belt"))
+    nb = sum(1 for t in P19 if t[0] == "transport-belt")
+    plan = [walk(-84.5, -56.5), take("iron-plate", -83.5, -52.5, 40),
+            walk(-70.5, -48.5), take("transport-belt", -70.5, -50.5, nb + 6), take("underground-belt", -70.5, -50.5, 4),
+            craft("electronic-circuit", 4), craft("splitter", 1), craft("fast-inserter", 1),
+            walk(-30.5, -10.5), dig(-28.5, -8.5, "transport-belt")]
+    plan += [bt(t) for t in P19[:5]] + [walk(-21.5, 0.5)] + [bt(t) for t in P19[5:18]] + [walk(-4.5, 0.5)] + [bt(t) for t in P19[18:]]
+    ok = run_plan(ai, plan, "1-9", timeout=1200)
+    time.sleep(30)
+    show(ai, 5, -6, 6, -3)
+    say("1-9 %s" % ("완료" if ok else "부분"))
+
+
+# 3-2 둘째: 순수 구리 자리 둘 → y=-88.5 서향 줄 → x=-68.5 벨트 지하 → x=-74.5 남향 (y=-86.5 벨트 지하) → 3-2 먹이 줄 (-74.5,-82.5) 합류
+P32B = ([("electric-mining-drill", -62.5, -91.5, S), ("electric-mining-drill", -53.5, -88.5, W),
+         ("transport-belt", -62.5, -89.5, S)]
+        + [("transport-belt", x + 0.5, -88.5, W) for x in range(-67, -55)]
+        + [("underground-belt", -67.5, -88.5, W, "input"), ("underground-belt", -69.5, -88.5, W, "output")]
+        + [("transport-belt", x + 0.5, -88.5, W) for x in range(-74, -70)]
+        + [("transport-belt", -74.5, -88.5, S),
+           ("underground-belt", -74.5, -87.5, S, "input"), ("underground-belt", -74.5, -85.5, S, "output"),
+           ("transport-belt", -74.5, -84.5, S), ("transport-belt", -74.5, -83.5, S)])
+
+
+@stage("3-2b")
+def st_32b(ai, go):
+    res = can_place(ai, [t[:4] for t in P32B])
+    print([r for r in res if r.endswith("false")])
+    if not go:
+        return
+    say("3-2b 시작: 구리 채굴기 (-62.5,-91.5) 36.8k · (-53.5,-88.5) 18.5k → y=-88.5 → 놀던 구리 화로 먹이 줄")
+    n = ai.lua("""(function() local n = 0 for _, e in pairs(game.surfaces[1].find_entities_filtered{area = {{-75.4, -89}, {-53, -83}}, type = {'tree', 'simple-entity'}}) do e.order_deconstruction('player') n = n + 1 end return {n = n} end)()""")
+    say("  나무/바위 %s" % n)
+    t0 = time.time()
+    while time.time() - t0 < 120 and decon_left(ai, -75.4, -89, -53, -83):
+        time.sleep(3)
+    res = ghosts(ai, P32B)
+    say("  유령: %s %s" % ({k: sum(1 for r in res if r.endswith(k)) for k in ("NEW", "ghost", "standing", "BLOCKED")}, [r for r in res if "BLOCKED" in r]))
+    t0 = time.time()
+    while time.time() - t0 < 400 and ghost_count(ai, -76, -93, -51, -82):
+        time.sleep(5)
+    time.sleep(30)
+    st = [(d["x"], d["y"], d.get("st")) for d in dump(ai, -64, -93, -52, -86) if d["n"] == "electric-mining-drill"]
+    fs = [(d["x"], d["y"], d.get("st")) for d in dump(ai, -76, -45, -69, -37) if d["n"] == "stone-furnace"]
+    say("3-2b %s: 채굴기 %s · 구리 화로 %s" % ("완료" if not ghost_count(ai, -76, -93, -51, -82) else "유령 남음", st, fs))
+
+
+def request_into(ai, xy, item, n, inv_id="chest"):
+    """로봇 배달 요청: 상자 (xy) 에 item n. 망에 재고가 있어야 온다."""
+    return ai.lua("""(function() local s = game.surfaces[1]
+      local t = s.find_entities_filtered{type = {'container', 'logistic-container'}, position = {%s, %s}, radius = 0.1}[1]
+      if not t then return {err = 'no chest'} end
+      if s.find_entities_filtered{name = 'item-request-proxy', position = t.position, radius = 0.3}[1] then return {err = 'already'} end
+      local ok, e = pcall(function() return s.create_entity{name = 'item-request-proxy', position = t.position, force = 'player', target = t,
+        modules = {{id = {name = '%s'}, items = {in_inventory = {{inventory = defines.inventory.%s, stack = 0, count = %d}}}}}} end)
+      return {ok = ok, err = (not ok) and tostring(e) or nil} end)()""" % (xy[0], xy[1], item, inv_id, n))
+
+
+@stage("bat-cu")
+def st_batcu(ai, go):
+    """배터리 구리 상자 BAT_CU (22.5,-4.5) (delta 구역 안, 비었음) - 망 17 로봇 배달. delta 가 망 17 창고에 구리를 넣는다."""
+    if not go:
+        return
+    have = inv(ai).get("copper-plate", 0)
+    say("bat-cu 시작: delta 구리 %d → 망 17 창고 (4.5,32.5), 로봇이 BAT_CU (22.5,-4.5) 로" % have)
+    ok = run_plan(ai, [walk(6.5, 30.5), put("copper-plate", 4.5, 32.5, have)], "bat-cu", timeout=300)
+    say("  요청: %s" % request_into(ai, (22.5, -4.5), "copper-plate", 200))
+    time.sleep(60)
+    show(ai, 22, -5, 23, -4)
+    say("bat-cu %s" % ("완료" if ok else "부분"))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("stage")
