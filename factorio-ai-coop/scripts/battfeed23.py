@@ -31,7 +31,9 @@ RELAYS = [([(7.5, -48.5), (10.5, -46.5)], "low-density-structure", [(29.5, -8.5)
           # 석탄은 망 재고 7 (22:20) - 석탄 상자 (-1.5,-30.5) 1,600 에서 폭약(포탄)·수류탄(검정팩) 으로
           ([(-1.5, -30.5)], "coal", [(-24.5, -70.5)], 10, 40),
           # 대포 포탄 집중 (사용자 22:33 "대포탄 수급 집중"): 폭발 포탄 강철·플라스틱은 망 재고 8 - 상자에서 직접
-          ([(-73.5, -52.5)], "steel-plate", [(-26.5, -66.5), (-21.5, -71.5)], 8, 40),
+          # 23:22 강철 화로 x=-76 7대 출력 100 가득 (벨트 끝 막힘, 허브 강철 상자로는 안 옴) - 화로 출력에서 직접
+          ([(-73.5, -52.5), (-76, -74), (-76, -72), (-76, -69), (-76, -67), (-76, -64), (-76, -62), (-76, -59)], "steel-plate",
+           [(-26.5, -66.5), (-21.5, -71.5)], 8, 40),
           ([(4.5, -44.5)], "plastic-bar", [(-26.5, -66.5), (-21.5, -71.5)], 8, 40),
           # 폭발 포탄 2호 (shellline23) 는 화학 공장과 붙어 팔 자리가 없다 - 화학 공장 출력에서 폭약 직접
           ([(-24.5, -70.5)], "explosives", [(-21.5, -71.5)], 4, 6),
@@ -49,9 +51,9 @@ RELAY = """(function() local s = game.surfaces[1] local o = {}
         if inv.get_item_count(r.item) < r.lo then
           local want, got = r.n, 0
           for _, sp in pairs(r.src) do
-            local e = s.find_entities_filtered{position = sp, radius = 0.5, type = {'container', 'assembling-machine'}}[1]
+            local e = s.find_entities_filtered{position = sp, radius = 0.5, type = {'container', 'assembling-machine', 'furnace'}}[1]
             if e and want > 0 then
-              local si = e.type == 'container' and e.get_inventory(defines.inventory.chest) or e.get_inventory(defines.inventory.assembling_machine_output)
+              local si = e.type == 'container' and e.get_inventory(defines.inventory.chest) or e.get_output_inventory()
               local k = math.min(want, si.get_item_count(r.item))
               if k > 0 then k = inv.insert{name = r.item, count = k} if k > 0 then si.remove{name = r.item, count = k} end end
               want, got = want - k, got + k
