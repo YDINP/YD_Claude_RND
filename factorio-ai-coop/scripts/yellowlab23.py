@@ -17,13 +17,15 @@ from client import AIBridge  # noqa: E402
 SRC = [(29.5, -5.5)]
 LUA = """(function() local s = game.surfaces[1] local o = {moved = 0, labs = 0}
   local srcs = {}
-  for _, p in pairs({%s}) do local c = s.find_entities_filtered{type = 'container', position = p, radius = 0.6}[1] if c then srcs[#srcs + 1] = c end end
+  for _, p in pairs({%s}) do local c = s.find_entities_filtered{type = 'container', position = p, radius = 0.6}[1] if c then srcs[#srcs + 1] = c.get_inventory(defines.inventory.chest) end end
+  -- 03:42 노란팩 조립기 (12.5,3.5) 출력에 9 개가 갇혀 있었다 (상자로 가는 줄 없음) - 조립기 출력도 원천으로
+  for _, p in pairs({{12.5, 3.5}, {29.5, -8.5}}) do local a = s.find_entities_filtered{type = 'assembling-machine', position = p, radius = 0.6}[1] if a then srcs[#srcs + 1] = a.get_inventory(defines.inventory.assembling_machine_output) end end
   for _, l in pairs(s.find_entities_filtered{type = 'lab', force = 'player'}) do
     local inv = l.get_inventory(defines.inventory.lab_input)
     local need = 5 - inv.get_item_count('utility-science-pack')
     for _, c in pairs(srcs) do
       if need <= 0 then break end
-      local got = c.get_inventory(defines.inventory.chest).remove{name = 'utility-science-pack', count = need}
+      local got = c.remove{name = 'utility-science-pack', count = need}
       if got > 0 then
         local put = inv.insert{name = 'utility-science-pack', count = got}
         if put < got then c.insert{name = 'utility-science-pack', count = got - put} end
@@ -62,7 +64,21 @@ CHAIN = """(function() local s = game.surfaces[1] local o = {}
   end
   if EE and F2 then local need = 4 - inp(F2).get_item_count('electric-engine-unit')
     if need > 0 then local got = outp(EE).remove{name = 'electric-engine-unit', count = need} if got > 0 then inp(F2).insert{name = 'electric-engine-unit', count = got} o.ee = got end end end
+  -- 03:43 윤활유 0 -> 전기엔진 정지 -> 프레임 정지. 정유 (23.5,11.5) 가 basic 으로 바뀌어 중유가 안 나온다 (관은 advanced 그대로 남아 있음).
+  -- 윤활유 < 30 이면 advanced 4 분 (그동안 중유 -> 윤활유), 그 뒤 basic 6 분 (가스 우선) 을 반복.
+  local R = s.find_entities_filtered{name = 'oil-refinery', position = {23.5, 11.5}, radius = 1}[1]
+  if R and EE then
+    local lub = 0 for i = 1, #EE.fluidbox do local f = EE.fluidbox[i] if f and f.name == 'lubricant' then lub = lub + f.amount end end
+    local rec = R.get_recipe() and R.get_recipe().name or '-'
+    o.lub = math.floor(lub)
+    o.rec = rec  -- 전환은 파이썬 쪽 (시간 창: advanced 4 분 -> basic 6 분, 경유 적체로 advanced 가 바로 full_output 이 되므로)
+  end
   return o end)()"""
+
+
+SET_REF = """(function() local R = game.surfaces[1].find_entities_filtered{name = 'oil-refinery', position = {23.5, 11.5}, radius = 1}[1]
+  if R then R.set_recipe('%s') end return {ok = R and 1 or 0} end)()"""
+ADV_SEC, BASIC_SEC = 240, 360
 
 
 def main() -> int:
@@ -70,9 +86,16 @@ def main() -> int:
     ap.add_argument("--once", action="store_true")
     a = ap.parse_args()
     ai = AIBridge()
+    since = 0.0  # 정유 레시피를 마지막으로 바꾼 시각
     while True:
         try:
             c = ai.lua(CHAIN)
+            now = time.time()
+            if c.get("rec") == "advanced-oil-processing" and now - since >= ADV_SEC:
+                ai.lua(SET_REF % "basic-oil-processing"); c["refinery"] = "basic"; since = now
+            elif c.get("rec") == "basic-oil-processing" and c.get("lub", 999) < 30 and now - since >= BASIC_SEC:
+                ai.lua(SET_REF % "advanced-oil-processing"); c["refinery"] = "advanced"; since = now
+            c.pop("rec", None)
             if c:
                 print(time.strftime("%H:%M:%S"), "프레임 사슬", c, flush=True)
             r = ai.lua(LUA % ", ".join("{%s, %s}" % p for p in SRC))
