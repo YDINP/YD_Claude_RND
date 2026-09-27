@@ -78,8 +78,9 @@ def _lst(v):
 
 DESIGNATE = """(function() local s = game.surfaces[1] local o = {turrets = {}, poles = {}, skip = {}}
   local t = s.find_entities_filtered{name = 'artillery-turret', force = 'player'}[1]
-  if not t then return {err = 'no artillery'} end
-  local P = t.position o.site = {P.x, P.y}
+  local P = t and t.position or %s  -- 대포가 창고에 가 있으면 키트 자리
+  if not P then return {err = 'no artillery'} end
+  o.site = {P.x, P.y}
   local ADOPT = %s
   local function mine(e) return ADOPT or not (e.last_user and e.last_user.name == '%s') end
   for _, g in pairs(s.find_entities_filtered{name = 'gun-turret', force = 'player', position = P, radius = 14}) do
@@ -127,7 +128,10 @@ DESIGNATE = """(function() local s = game.surfaces[1] local o = {turrets = {}, p
 
 
 def designate(ai, apply=False, adopt_user=False):
-    r = ai.lua(DESIGNATE % ("true" if adopt_user else "false", USER))
+    kit0 = load() or {}
+    site = kit0.get("site")
+    fb = "{x = %s, y = %s}" % (site[0], site[1]) if site else "nil"
+    r = ai.lua(DESIGNATE % (fb, "true" if adopt_user else "false", USER))
     if r.get("err"):
         return r
     members = {"roboport": r.get("roboport"), "turrets": _lst(r.get("turrets")),
@@ -464,6 +468,11 @@ def step(ai):
             mv["stage"], msg = "chest", "키트: 대포 섬 -> 상자 유령 %s%s" % (g.get("made"), extra)
         elif not st.get("arty_any"):
             ghosts(ai, _rows("artillery-turret", [mv["to"]]))
+        elif not mv.get("arty_decon"):
+            # 링이 서는 동안 다른 자리 (벽 안 대체 자리) 에서 쏘던 대포 - 이제 걷어서 새 자리로
+            m = ai.lua(MOVE_ARTY)
+            mv["arty_decon"] = 1
+            msg = "키트: 옛 자리 대포 (%s,%s) 해체 %s -> 새 자리 유령 대기" % (m.get("x"), m.get("y"), m.get("ok"))
     elif stage == "chest":
         if st.get("chest") != 0 or time.time() - mv["ts"] > 300:
             left = {k: decon(ai, kit, _old_rows(kit, k)).get("n") for k in ("turrets", "roboport", "poles", "chest")
