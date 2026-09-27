@@ -37,6 +37,9 @@ from client import AIBridge  # noqa: E402
 
 KIT_FILE = os.path.join(HERE, "..", "state", "arty_kit.json")
 SPOT_FILE = os.path.join(HERE, "..", "state", "arty_spot.json")
+# 목표 방향 (01:30 구리 전초 계획): {"x": 61, "y": -407, "prefer": [58.5, -271.5]} 이 있으면 plan 은
+# 옛 자리보다 목표에 가까운 후보만 고르고, prefer (H2) 가 조건을 채우면 (R2 가 서서 망 54 안) 그것을 먼저 쓴다.
+GOAL_FILE = os.path.join(HERE, "..", "state", "arty_goal.json")
 USER = "Guiltyring"
 STAGE_ORDER = ("rp", "ring", "arty", "chest")
 
@@ -152,6 +155,13 @@ def designate(ai, apply=False, adopt_user=False):
 
 PLAN = """(function() local s = game.surfaces[1] local R = 224
   local KRP = %s  local KPOLES = {%s}  local NT = %d  local SITE = %s
+  local GOAL = %s  local PREFER = %s  local ONLY = %s  -- 목표 방향 (arty_goal.json), 없으면 nil. ONLY: prefer 자리만 (포탄 아끼며 H2 대기)
+  local function gd(x, y) return GOAL and math.sqrt((x - GOAL[1])^2 + (y - GOAL[2])^2) or 0 end
+  local GD0 = (GOAL and SITE) and gd(SITE[1], SITE[2]) or 1e9
+  -- 통로: 기지 중심 (-40,-20) -> 목표 직선에서 80 칸 안 (옛 자리가 남쪽이면 서쪽 (-215,-143) 도 '더 가까움' 이라 걸러야 함 - 01:31 드라이런)
+  local function lane(x, y) if not GOAL then return true end
+    local vx, vy = GOAL[1] + 40, GOAL[2] + 20 local L = math.sqrt(vx * vx + vy * vy)
+    return math.abs((x + 40) * vy - (y + 20) * vx) / L <= 80 end
   local net = s.find_logistic_network_by_position({-24, -88}, 'player')
   local function stock(n) return net and net.get_item_count(n) or 0 end
   local ring_n = math.min(8, NT + stock('gun-turret'))
@@ -173,13 +183,22 @@ PLAN = """(function() local s = game.surfaces[1] local R = 224
     local p = {x = x + 0.5, y = y + 0.5}
     local bb, bd = nil, 1e9
     for _, b in pairs(B) do local d = math.max(math.abs(b.position.x - p.x), math.abs(b.position.y - p.y)) if d < bd then bb, bd = b, d end end
-    if bd <= 54 and not (SITE and (p.x - SITE[1])^2 + (p.y - SITE[2])^2 < 400)
+    if bd <= 54 and not (SITE and (p.x - SITE[1])^2 + (p.y - SITE[2])^2 < 400) and gd(p.x, p.y) < GD0 and lane(p.x, p.y)  -- 목표: 옛 자리보다 가깝고 통로 안
        and s.count_entities_filtered{force = 'enemy', type = ENEMY, position = p, radius = 50} == 0 then
       local n = s.count_entities_filtered{force = 'enemy', type = ENEMY, position = p, radius = R - 4}
       if n > 0 then cands[#cands + 1] = {p = p, b = bb, n = n, d = (p.x + 40)^2 + (p.y + 20)^2} end
     end
   end end
+  if GOAL then for _, c in pairs(cands) do c.d = gd(c.p.x, c.p.y) end end  -- 목표: 같은 표적 수면 목표에 가까운 쪽
   table.sort(cands, function(a, b) if a.n ~= b.n then return a.n > b.n end return a.d < b.d end)
+  if ONLY and PREFER then cands = {} end  -- only_prefer: 중간 자리 (R1 과 겹치는 (60.5,-179.5) 등) 로 가지 않는다
+  if PREFER then  -- prefer (H2) 는 망 54 안 · 적 구조물 50 밖 · 표적 1 이상이면 맨 앞
+    local p = {x = PREFER[1], y = PREFER[2]} local bb, bd = nil, 1e9
+    for _, b in pairs(B) do local d = math.max(math.abs(b.position.x - p.x), math.abs(b.position.y - p.y)) if d < bd then bb, bd = b, d end end
+    local n = s.count_entities_filtered{force = 'enemy', type = ENEMY, position = p, radius = R - 4}
+    if bd <= 54 and n > 0 and gd(p.x, p.y) < GD0 and lane(p.x, p.y) and s.count_entities_filtered{force = 'enemy', type = ENEMY, position = p, radius = 50} == 0 then
+      table.insert(cands, 1, {p = p, b = bb, n = n, d = 0}) o.prefer = 1 end
+  end
   o.cands = #cands
   local function ok(name, pos) return s.can_place_entity{name = name, position = pos, force = 'player', build_check_type = defines.build_check_type.manual_ghost} end
   local rects
@@ -273,10 +292,21 @@ PLAN = """(function() local s = game.surfaces[1] local R = 224
   return o end)()"""
 
 
+def load_goal():
+    """state/arty_goal.json -> (goal [x, y] | None, prefer [x, y] | None, only_prefer)."""
+    try:
+        with open(GOAL_FILE, encoding="utf-8") as f:
+            g = json.load(f)
+        return [g["x"], g["y"]], g.get("prefer"), bool(g.get("only_prefer"))
+    except (OSError, ValueError, KeyError, TypeError):
+        return None, None, False
+
+
 def plan(ai, kit):
     m = kit["members"]
+    goal, prefer, only = load_goal()
     r = ai.lua(PLAN % (_pt(m.get("roboport")), _pts(m.get("poles") or []), len(m.get("turrets") or []),
-                       _pt(kit.get("site"))))
+                       _pt(kit.get("site")), _pt(goal), _pt(prefer), "true" if only else "false"))
     for k in ("to", "rp", "src", "bridge", "chest"):
         if k in r and r[k] is not None:
             r[k] = _lst(r[k])

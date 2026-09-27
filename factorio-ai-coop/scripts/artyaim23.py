@@ -113,6 +113,8 @@ def relocate(ai) -> str:
             return k
     except Exception as e:  # noqa: BLE001
         print(f"artykit start: {type(e).__name__}: {e}"[:200], flush=True)
+    if artykit23.load_goal()[0]:  # 목표 방향 (arty_goal.json) 이 있으면 옛 방식 (망 안 아무 데나) 으로 새지 않고 1 분마다 다시
+        return "키트 이전 보류: 목표 방향 통로에 자리 없음 (copperchain23 고정 로보포트 대기)"
     r = ai.lua(FIND)
     if not r.get("n"):
         return "옮길 자리 없음 (로봇망 안에서 사거리에 적 구조물이 들어오는 곳이 없음)"
@@ -156,7 +158,14 @@ def main() -> int:
             if a.once:
                 print(now, r)
                 return 0
-            if r.get("err"):
+            if r.get("err") == "no turret" and not (artykit23.load() or {}).get("move"):
+                # 대포가 창고에 있고 이전 중도 아님 (01:28 서쪽 이전 취소 뒤) - 목표 방향 자리가 생기면 거기로
+                if not idle or (reloc_retry and time.time() >= reloc_retry):
+                    msg = relocate(ai)
+                    print(f"{now} 대포 창고 대기 - {msg}", flush=True)
+                    reloc_retry = time.time() + 60 if msg.startswith("키트 이전 보류") else 0.0
+                idle = True
+            elif r.get("err"):
                 if not idle:  # 이전 중 (포대가 창고로 가는 동안) 은 한 번만
                     print(now, "조준:", r["err"], flush=True)
                 idle = True
