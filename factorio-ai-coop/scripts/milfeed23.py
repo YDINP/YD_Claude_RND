@@ -40,7 +40,8 @@ STORE = [("chest", CU_CHESTS, "copper-plate", 150, 200, 1500),
 FEED = [((-87.5, -38.5), "iron-gear-wheel", 30, 60, "out", GEAR_ASM, 0),
         ((-87.5, -38.5), "copper-plate", 30, 60, "chest", CU_CHESTS, 100),
         ((-63.5, -33.5), "copper-plate", 20, 50, "chest", CU_CHESTS, 100),
-        ((-63.5, -33.5), "steel-plate", 5, 20, "out", STEEL_FURN, 0),
+        # 09-29 강철은 철 전초 현지 제련 -> 망 2 (기지 강철 화로 정리 대비)
+        ((-63.5, -33.5), "steel-plate", 5, 20, "net", [], 100),
         ((34.5, -38.5), "advanced-circuit", 45, 25, "belt", ADV_BELTS, 0)]
 
 # 로봇 배달: (대상, 아이템, 이 밑이면, 요청 수, 망 재고가 이만큼 넘을 때만)
@@ -70,6 +71,13 @@ local function src_invs(kind, where)
   return r
 end
 local function take(kind, where, item, keep, n, put)
+  if kind == 'net' then  -- 망 2 에서 (keep = 망에 남길 양)
+    local net = n2() local k = math.min(n, net.get_item_count(item) - keep)
+    if k <= 0 then return 0 end
+    k = net.remove_item{name = item, count = k} local g = put(k)
+    if g < k then net.insert{name = item, count = k - g} end
+    return g
+  end
   local invs = src_invs(kind, where)
   local tot = 0 for _, v in pairs(invs) do tot = tot + v.get_item_count(item) end
   local want = kind == 'belt' and math.min(n, tot - keep) or n local got = 0

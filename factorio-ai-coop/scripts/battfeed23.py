@@ -62,6 +62,13 @@ RELAY = """(function() local s = game.surfaces[1] local o = {}
               want, got = want - k, got + k
             end
           end
+          -- 09-29 전초 현지 제련 (강철은 철 전초에서 망 2 로): 출처가 비면 망 2 에서 (망에 100 은 남김)
+          if want > 0 then local net = nil
+            for _, n in pairs(game.forces.player.logistic_networks[s.name]) do if n.network_id == 2 then net = n end end
+            local k = net and math.min(want, net.get_item_count(r.item) - 100) or 0
+            if k > 0 then k = net.remove_item{name = r.item, count = k} local put = inv.insert{name = r.item, count = k}
+              if put < k then net.insert{name = r.item, count = k - put} end got = got + put end
+          end
           if got > 0 then o[#o + 1] = r.item .. ' ' .. got .. ' -> ' .. d[1] .. ',' .. d[2] end
         end
       end
@@ -162,6 +169,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--release", action="store_true")
     ap.add_argument("--every", type=float, default=60)
+    ap.add_argument("--furn-feed", action="store_true")  # 옛 x=-76 강철 화로 철 보충 (기본 끔)
     a = ap.parse_args()
     ai = AIBridge()
     if a.release:
@@ -181,7 +189,8 @@ def main() -> int:
             ra = list(ra.values()) if isinstance(ra, dict) else ra
             if ra:
                 print(time.strftime("%H:%M:%S"), "조립기 보충 ->", ra, flush=True)
-            rf = ai.lua(FURN_FEED % ", ".join("{%s, %s}" % p for p in STEEL_FURNACES))
+            # 09-29 기지는 조립만 (사용자): 강철은 철 전초 현지 제련 -> 망. x=-76 강철 화로 철 보충은 끔
+            rf = ai.lua(FURN_FEED % ", ".join("{%s, %s}" % p for p in STEEL_FURNACES)) if a.furn_feed else {}
             if rf.get("n"):
                 print(time.strftime("%H:%M:%S"), "강철 화로 철 보충", rf["n"], flush=True)
             rc = ai.lua(CHEST_FEED % ", ".join("{%s, %s, '%s', %d, %d}" % (p[0], p[1], it, lo, n) for p, it, lo, n in CHESTS))
