@@ -33,6 +33,8 @@ AIM = """(function() local s = game.surfaces[1] local o = {}
   o.auto = t.artillery_auto_targeting and 1 or 0
   o.units = s.count_entities_filtered{force = 'enemy', type = 'unit', position = t.position, radius = 60}
   o.hp = math.floor(t.health)
+  local nn = s.find_logistic_network_by_position(t.position, 'player')
+  o.net_shell = nn and nn.get_item_count('artillery-shell') or 0
   local R = 224
   local es = s.find_entities_filtered{force = 'enemy', type = {'unit-spawner', 'turret'}, position = t.position, radius = R}
   o.left = #es
@@ -90,9 +92,11 @@ GUARD = """(function() local s = game.surfaces[1] local o = {n = 0}
   if t then centers[#centers + 1] = t.position end
   local net = s.find_logistic_network_by_position({-60, -33}, 'player') if not net then return o end
   local have = {['firearm-magazine'] = net.get_item_count('firearm-magazine'), ['piercing-rounds-magazine'] = net.get_item_count('piercing-rounds-magazine')}
-  -- 04:13 동쪽 자리에서 포탄 proxy 가 안 채워져 탄 0 (망 131) - 5 이하면 망 저장에서 10 을 바로 옮긴다
-  if t and not t.to_be_deconstructed() and t.get_item_count('artillery-shell') <= 5 and net.get_item_count('artillery-shell') >= 10 then
-    local got = net.remove_item{name = 'artillery-shell', count = 10} if got > 0 then t.insert{name = 'artillery-shell', count = got} o.shell = got end end
+  -- 04:13 동쪽 자리에서 포탄 proxy 가 안 채워져 탄 0 (망 131) - 5 이하면 망 저장에서 10 까지 바로 옮긴다
+  -- 14:25 망 포탄 5 (< 10) 라 한 발도 안 옮겨 대포 탄 0 으로 2 시간 침묵 - 있는 만큼 (1 이상) 옮긴다
+  local ns = net.get_item_count('artillery-shell')
+  if t and not t.to_be_deconstructed() and t.get_item_count('artillery-shell') <= 5 and ns >= 1 then
+    local got = net.remove_item{name = 'artillery-shell', count = math.min(10, ns)} if got > 0 then t.insert{name = 'artillery-shell', count = got} o.shell = got end end
   local seen = {}
   for _, C in pairs(centers) do for _, g in pairs(s.find_entities_filtered{name = 'gun-turret', force = 'player', position = C, radius = 40}) do
    if not seen[g.unit_number] then seen[g.unit_number] = true
@@ -173,6 +177,9 @@ def relocate(ai) -> str:
     return "대포 이전 (%s,%s) -> (%s,%s) · 새 사거리 안 적 구조물 %s · 해체 %s" % (m.get("x"), m.get("y"), r["x"], r["y"], r["n"], m)
 
 
+HEARTBEAT = 600  # 10 분 무출력이면 한 줄 (12:10 · 13:57 두 번 - 탄 0 으로 조용히 돌던 것을 멈춤으로 오인)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true")
@@ -185,8 +192,21 @@ def main() -> int:
     last_msg = None
     reloc_retry = 0.0   # 키트 이전이 적 유닛 때문에 보류되면 1 분 뒤 다시
     k = 0
+    last_out = [time.time()]
+    no_ammo = False      # 탄 0 대기 중 (한 번만 알림)
+    import builtins
+    _print = builtins.print
+
+    def print(*args, **kw):  # noqa: A001  마지막 출력 시각을 적어 heartbeat 판단
+        last_out[0] = time.time()
+        _print(*args, **kw)
+
+    r = {}
     while True:
         k += 1
+        if not a.once and time.time() - last_out[0] >= HEARTBEAT:
+            print(time.strftime("%H:%M:%S"), "heartbeat: 살아 있음 · 무리 %s · 사거리 안 %s · 탄 %s (망 %s) · 적 유닛 %s · err %s" % (
+                last_group, (r or {}).get("left"), (r or {}).get("ammo"), (r or {}).get("net_shell"), (r or {}).get("units"), (r or {}).get("err")), flush=True)
         if k % 2 == 0 and not a.once:  # 10 초마다 키트 이전 한 단계
             try:
                 m = artykit23.step(ai)
@@ -251,6 +271,12 @@ def main() -> int:
                 if g != last_group:
                     print(f"{now} 조준: 다음 무리 ({g[0]},{g[1]}) 구조물 {r['gn']} · 거리 {r['dist']} · 사거리 안 남은 {r['left']}", flush=True)
                     last_group = g
+                if not r.get("ammo") and not no_ammo:
+                    print(f"{now} 조준 대기: 대포 포탄 0 (망 {r.get('net_shell')}) - 1 분마다 GUARD 가 망에서 직송", flush=True)
+                    no_ammo = True
+                elif r.get("ammo") and no_ammo:
+                    print(f"{now} 포탄 {r['ammo']} - 사격 재개", flush=True)
+                    no_ammo = False
                 if r.get("fired"):
                     print(f"{now} 발사 -> {r['target']} (탄 {r['ammo']})", flush=True)
                 if last_left is not None and r["left"] < last_left:
