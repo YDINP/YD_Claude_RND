@@ -27,6 +27,10 @@ CHEM = {
     "plastic-bar": [(1, "petroleum-gas", [(-1, -2), (1, -2)])],
     "sulfur": [(1, "water", [(-1, -2)]), (2, "petroleum-gas", [(1, -2)])],
 }
+# assembling machine (d0: input north (0,-2)); pu23 (09-28): processing-unit acid input only (output box has no fluid -> omitted)
+AMT = {
+    "processing-unit": [(1, "sulfuric-acid", [(0, -2)])],
+}
 REF = {
     "advanced-oil-processing": [(1, "water", [(-1, 3)]), (2, "crude-oil", [(1, 3)]), (3, "heavy-oil", [(-2, -3)]),
                                 (4, "light-oil", [(0, -3)]), (5, "petroleum-gas", [(2, -3)])],
@@ -60,10 +64,10 @@ class Net:
 
     def add(self, name, x, y, d=0, rec=None):
         size = {"pipe": 1, "pipe-to-ground": 1, "chemical-plant": 3, "small-electric-pole": 1, "iron-chest": 1, "inserter": 1,
-                "medium-electric-pole": 1, "oil-refinery": 5, "pump": 1}[name]
+                "medium-electric-pole": 1, "oil-refinery": 5, "pump": 1, "assembling-machine-2": 3}[name]
         h = size // 2
         b = [math.floor(x) - h, math.floor(y) - h, math.floor(x) + h, math.floor(y) + h]
-        t = {"pipe": "pipe", "pipe-to-ground": "pipe-to-ground", "chemical-plant": "assembling-machine"}.get(name, name)
+        t = {"pipe": "pipe", "pipe-to-ground": "pipe-to-ground", "chemical-plant": "assembling-machine", "assembling-machine-2": "assembling-machine"}.get(name, name)
         return self.add_raw({"n": name, "t": t, "x": x, "y": y, "d": d, "f": "player", "b": b, "rec": rec, "new": True})
 
     def set_recipe(self, x, y, rec):
@@ -112,6 +116,8 @@ class Net:
                 tmpl = None
                 if e["n"] == "chemical-plant" and (e["new"] or e.get("recipe_changed")):
                     tmpl = CHEM[e["rec"]]
+                elif e["n"].startswith("assembling-machine") and e["new"]:
+                    tmpl = AMT[e["rec"]]
                 elif e["n"] == "oil-refinery" and e.get("recipe_changed"):
                     tmpl = REF[e["rec"]]
                 if tmpl is not None:

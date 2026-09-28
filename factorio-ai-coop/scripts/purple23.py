@@ -20,6 +20,7 @@
            (09-28 19:xx 추가) ST 레일 돌 · 강철, ACB 고급회로 블록 요청 상자 보충, 황산 공장 철 · F1 강철 · 전기엔진 녹색회로,
            노랑 Y 출력 20 초과분 -> 망 (< 1500) · 망 노랑 -> 연구소
   P5     : 고급회로 블록 (x -2..34, y -99..-82) - AC 조립기2 7 · 구리선 조립기1 8 · 녹색 조립기2 2 (AC_DESIGN, DESIGN 에 합침)
+  PU     : (09-28 20:xx) 처리장치 조립기2 +3 (황산 관 연장, delta-trap 구역 로봇 유령) · 저밀도 칸 1 (PU_DESIGN) - 먹이는 pu23.py
   build  : 유령 (멱등) + 다 지어진 뒤 레시피 · 요청 · 상자 칸 제한 설정, 옛 보라 투입 팔 13 물류망 조건 해제 (필터 그대로).
 
 블록 (망 2 로보포트 (-87,-76) 범위, 기지 벽 안)
@@ -125,6 +126,21 @@ for x0 in (0, 11):                          # 2 줄 녹색 칸
     AC_DESIGN += _cell(x0 + 1.5, y0, CC, {"copper-plate": 40}, am="assembling-machine-1")         + _cell(x0 + 5.5, y0, GC, {"iron-plate": 40}, out_bar=1) + _cell(x0 + 9.5, y0, CC, {"copper-plate": 40}, am="assembling-machine-1")         + [["fast-inserter", x0 + 3.5, y0, W_, None, None, None], ["fast-inserter", x0 + 7.5, y0, E_, None, None, None]] + _poles(x0, y0, (3.5, 7.5))
 AC_DESIGN += _cell(23.5, -86.5, AC, REQ_AC, out_bar=2) + _cell(27.5, -86.5, CC, {"copper-plate": 30}, am="assembling-machine-1")     + [["inserter", 25.5, -86.5, E_, None, None, None]] + _poles(22, -86.5, (3.5,))
 DESIGN += AC_DESIGN
+# ---- 처리장치 +3 · 저밀도 +1 (09-28 20:xx, scripts/pu23.py 가 먹이 · 출력 · 황 중계). delta-trap 구역은 사람만 금지 - 로봇 유령은 된다.
+#   황산 관 (y=-0.5 동쪽 끝 36.5) -> (37.5 · 38.5,-0.5) -> x=38.5 세로 -> 지하 (38.5,3.5 <-> 6.5, 벨트 y 4.5 · 5.5 밑) -> x=38.5 세로 ~12.5
+#   PU-B (36.5,8.5) · PU-C (36.5,12.5) 동향 (입구 = 동쪽 38.5), PU-A (29.5,-0.5) 동향 (입구 = 황산 세로 31.5). 오프라인 fluidnet 섞임 0.
+PU_DESIGN = [["pipe", 37.5, -0.5, 0, None, None, None]] + [["pipe", 38.5, y + 0.5, 0, None, None, None] for y in (-1, 0, 1, 2)]
+PU_DESIGN += [["pipe-to-ground", 38.5, 3.5, N_, None, None, None], ["pipe-to-ground", 38.5, 6.5, S_, None, None, None]]
+PU_DESIGN += [["pipe", 38.5, y + 0.5, 0, None, None, None] for y in range(7, 13)]
+PU_DESIGN += [["assembling-machine-2", 36.5, 8.5, E_, "processing-unit", None, None],
+              ["assembling-machine-2", 36.5, 12.5, E_, "processing-unit", None, None],
+              ["small-electric-pole", 34.5, 10.5, 0, None, None, None],
+              ["assembling-machine-2", 29.5, -0.5, E_, "processing-unit", None, None],
+              ["small-electric-pole", 27.5, -1.5, 0, None, None, None]]   # PU-A 전력 (28.5,-4.5 전봇대 공급 범위 밖이었음)
+#   저밀도 칸 1 (P5 블록 동쪽 끝): 요청 (강철 · 구리 · 플라스틱) -> 조립기2 -> 공급 (칸 1) -> pu23 이 망 -> 노랑
+PU_DESIGN += _cell(31.5, -86.5, "low-density-structure", {"steel-plate": 10, "copper-plate": 60, "plastic-bar": 20}, out_bar=1)
+PU_DESIGN += [["small-electric-pole", 29.5, -88.5, 0, None, None, None]]
+DESIGN += PU_DESIGN
 AC_REQS = [(d[1], d[2], d[5]) for d in DESIGN if d[0] == "requester-chest" and (d[1], d[2]) != (-95.5, -77.5)]   # 19:3x 보라 블록 요청 상자도 (물류 로봇 69 전부 바쁨 -> 레일 조립기 막대 0)
 
 OLD_PURPLE_INS = [(-93.5, -84.5), (-92.5, -84.5), (-94.5, -80.5), (-93.5, -80.5), (-91.5, -82.5), (-87.5, -82.5),
@@ -132,7 +148,7 @@ OLD_PURPLE_INS = [(-93.5, -84.5), (-92.5, -84.5), (-94.5, -80.5), (-93.5, -80.5)
                   (-81.5, -80.5)]
 EC_AREAS = [((5, -36), (36, -27)), ((-35, -46), (-24, -14))]
 AC_AREAS = [((-69, -79), (-68, -48)), ((-82, -80), (-68, -79))]
-BLOCK_AREAS = [[[-104, -90], [-88, -70]], [[-72, -78], [-68, -74]], [[-3, -99], [34, -82]]]
+BLOCK_AREAS = [[[-104, -90], [-88, -70]], [[-72, -78], [-68, -74]], [[-3, -99], [34, -82]], [[27, -3], [40, 15]]]
 STONE_AREAS = [[[-73, -81], [-72, -44]], [[-75, -86], [-74, -81]], [[-60, -91], [-54, -88]]]   # 막힌 돌 레인
 BRICK_FURN = [(-63, -97), (-60, -97), (-51, -97), (-48, -97)]
 
