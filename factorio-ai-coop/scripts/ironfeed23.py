@@ -16,6 +16,24 @@ sys.path[:0] = [os.path.join(os.path.dirname(__file__), "..", "bridge")]
 from client import AIBridge  # noqa: E402
 
 AREA = ((-32, -40), (36, 0))
+# 21:2x 사용자 스크린샷 "여기 처리 좀 해라": 초록팩 재료 블록 (x -62..-30, y -2..12 - 인서터 · 벨트 · 톱니 · 구리선 · 녹색회로)
+# 인서터 (-51.5,7.5) · 벨트 (-45.5,7.5) · 톱니 (-41.5,7.5)(-36.5,3.5) 조립기 철 0. 둘레 벨트 고리에 강철 112 · 석탄 30 이 섞여 막힘.
+# -> 이 구역도 철판 채우기 + 고리 벨트의 강철·석탄을 망으로 (망 상한 넘으면 그대로 둠)
+AREA2 = ((-64, -4), (-28, 14))
+PURGE = """(function() local s = game.surfaces[1] local o = {}
+  local net = nil for _, n in pairs(game.forces.player.logistic_networks[s.name]) do if n.network_id == 2 then net = n end end
+  local cap = {['steel-plate'] = 4000, ['coal'] = 3000}
+  for _, b in pairs(s.find_entities_filtered{type = {'transport-belt', 'underground-belt'}, area = {{%d, %d}, {%d, %d}}}) do
+    if not (b.last_user and b.last_user.name == 'Guiltyring') then
+      for li = 1, b.get_max_transport_line_index() do local L = b.get_transport_line(li)
+        for name, c in pairs(cap) do local k = L.get_item_count(name)
+          if k > 0 and net.get_item_count(name) < c then local put = net.insert({name = name, count = k}, 'storage')
+            if put > 0 then L.remove_item{name = name, count = put} o[name] = (o[name] or 0) + put end end
+        end
+      end
+    end
+  end
+  return o end)()"""
 FILL, KEEP = 20, 2000
 
 LUA = """(function() local s = game.surfaces[1] local o = {n = 0, iron = 0}
@@ -45,11 +63,17 @@ def main() -> int:
     a = ap.parse_args()
     ai = AIBridge()
     lua = LUA % (AREA[0][0], AREA[0][1], AREA[1][0], AREA[1][1], KEEP, FILL)
+    lua2 = LUA % (AREA2[0][0], AREA2[0][1], AREA2[1][0], AREA2[1][1], KEEP, FILL)
+    purge = PURGE % (AREA2[0][0], AREA2[0][1], AREA2[1][0], AREA2[1][1])
     while True:
         try:
             r = ai.lua(lua)
             if r.get("iron") or r.get("steel") or a.once:
                 print(time.strftime("%H:%M:%S"), "엔진 구역 철판", r, flush=True)
+            r2 = ai.lua(lua2)
+            p = ai.lua(purge)
+            if r2.get("iron") or r2.get("steel") or p or a.once:
+                print(time.strftime("%H:%M:%S"), "초록 재료 블록 철판", r2, "· 고리 벨트 뺌", p, flush=True)
         except Exception as e:  # noqa: BLE001
             print(f"ironfeed: {type(e).__name__}: {e}"[:200], flush=True)
         if a.once:
