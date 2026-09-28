@@ -12,8 +12,9 @@
 60 초마다 (기존 아이템만 옮김, 품목별 상한 · 망 바닥 남김):
   CU   망 2 구리 -> 사슬 구리선 조립기 입력 (40 미만이면 100 까지), 망 구리 FLOOR 남김
   ST   망 2 강철 -> 저밀도 둘 · F2 (8 미만이면 30 까지) · 구리 -> 저밀도 (40 미만이면 100 까지)
+  FE   망 2 철 -> 녹색회로 넷 (20 미만이면 60 까지, 망 철 3000 남김) · EC 로봇 줄 회로 출력 -> 고급회로 줄 넷
   EE   전기엔진 조립기 (21.5,-8.5) 출력 -> F1 (2 미만이면 4 까지; F2 몫은 yellowlab23)
-  AC   고급회로 벨트 (x=37.5 남행 y -35..-21, 파랑팩 줄로 가는 길) -> 처리장치 둘 (4 미만이면 10 까지)
+  AC   고급회로 벨트 (y=-35.5 동행 x 12..38 + x=37.5 남행 y -35..-21, 파랑팩 줄로 가는 길) -> 처리장치 둘 (4 미만이면 10 까지)
   LDS  덧 저밀도 조립기 (망 안, --lds 로 유령) 에 구리 · 강철 (망) · 플라스틱 (플라스틱 공장 출력 · 상자) -> 결과는 노랑 둘로
 
     python -u scripts/yellowfeed23.py --once
@@ -30,21 +31,26 @@ from client import AIBridge  # noqa: E402
 CABLE = [(2.5, -32.5), (10.5, -32.5), (17.5, -32.5), (29.5, -32.5),   # 고급회로 줄 (y=-32.5)
          (-21.5, -26.5), (-21.5, -42.5),                               # 고급회로 AM1 둘 옆
          (-10.5, -25.5),                                               # 회로 (-10.5,-21.5)
-         (5.5, -8.5)]                                                  # 로봇 줄 회로 (9.5,-8.5) -> 프레임 · 처리장치
+         (5.5, -8.5),                                                  # 로봇 줄 회로 (9.5,-8.5) -> 프레임 · 처리장치
+         (-28.5, -17.5)]                                               # 회로 (-28.5,-13.5) -> 서쪽 고급회로 AM1 벨트
+# 11:02 구리가 풀리자 구리선은 전부 full_output, 다음 병목은 녹색회로: (6.5,-32.5) 철 0 (버스 철 레인 모자람)
+EC_IRON = [(6.5, -32.5), (-10.5, -21.5), (-28.5, -13.5), (9.5, -8.5)]
+EC_SPARE = (9.5, -8.5)           # 로봇 줄 회로 (출력 full, F1 에 140) -> 고급회로 줄 y=-32.5 넷
+AC_ROW = [(13.5, -32.5), (21.5, -32.5), (25.5, -32.5), (33.5, -32.5)]
 LDS = [(4.5, -47.5), (7.5, -45.5)]
 F1, F2, EE = (8.5, 3.5), (25.5, -8.5), (21.5, -8.5)
 PU = [(33.5, 1.5), (36.5, 1.5)]
 YEL = [(29.5, -8.5), (12.5, 3.5)]
-AC_BELT = ((37, -35.5), (38, -20.5))
+AC_BELT = ((12, -36), (38, -21))   # y=-35.5 동행 줄 + x=37.5 남행 (11:01 x=37.5 만으론 0 - 지나가는 순간만 잡힘)
 PLASTIC_SRC = [(16.5, 10.5), (11.5, 10.5)]   # 남쪽 플라스틱 공장 둘 (출력 full) - 저밀도 둘 · 고급회로 몫 (1.5,-44.5)(-21.5,-34.5) 는 안 건드림
 PLASTIC_BOX = [(16.5, 13.5), (11.5, 13.5)]
 EXTRA_LDS = (6.5, 6.5)           # 덧 저밀도 AM1 자리 (망 2 안) - --lds 로 유령
-FLOOR = {"copper-plate": 800, "steel-plate": 300}
+FLOOR = {"copper-plate": 800, "steel-plate": 300, "iron-plate": 3000}
 
 LUA = """(function() local s = game.surfaces[1] local o = {}
   local net = nil for _, n in pairs(game.forces.player.logistic_networks[s.name]) do if n.network_id == 2 then net = n end end
   if not net then return {err = 'no net 2'} end
-  local FLOOR = {['copper-plate'] = %d, ['steel-plate'] = %d}
+  local FLOOR = {['copper-plate'] = %d, ['steel-plate'] = %d, ['iron-plate'] = %d}
   local function asm(p) return s.find_entities_filtered{type = 'assembling-machine', position = p, radius = 0.6}[1] end
   local function inp(e) return e.get_inventory(defines.inventory.assembling_machine_input) end
   local function add(k, v) o[k] = (o[k] or 0) + v end
@@ -60,6 +66,15 @@ LUA = """(function() local s = game.surfaces[1] local o = {}
   for _, p in pairs({%s}) do local a = asm(p) if a and a.get_recipe() and a.get_recipe().name == 'copper-cable' then fromnet(a, 'copper-plate', 40, 100, 'cu') end end
   for _, p in pairs({%s}) do local a = asm(p) if a then fromnet(a, 'steel-plate', 8, 30, 'st') fromnet(a, 'copper-plate', 40, 100, 'ldscu') end end
   fromnet(asm({%s, %s}), 'steel-plate', 8, 30, 'st')
+  for _, p in pairs({%s}) do fromnet(asm(p), 'iron-plate', 20, 60, 'fe') end
+  -- 남는 녹색회로 -> 고급회로 줄 (2 미만이면 8 까지)
+  local sp = asm({%s, %s})
+  if sp then local out = sp.get_output_inventory()
+    for _, p in pairs({%s}) do local a = asm(p) if a then local have = inp(a).get_item_count('electronic-circuit')
+      local n = out.get_item_count('electronic-circuit')
+      if have < 2 and n > 0 then local k = inp(a).insert{name = 'electronic-circuit', count = math.min(n, 8 - have)}
+        if k > 0 then out.remove{name = 'electronic-circuit', count = k} add('ec', k) end end end end
+  end
   -- 전기엔진 -> F1
   local ee, f1 = asm({%s, %s}), asm({%s, %s})
   if ee and f1 then local need = 4 - inp(f1).get_item_count('electric-engine-unit')
@@ -114,7 +129,8 @@ def pts(ps):
 
 
 def build_lua():
-    return LUA % (FLOOR["copper-plate"], FLOOR["steel-plate"], pts(CABLE), pts(LDS), F2[0], F2[1],
+    return LUA % (FLOOR["copper-plate"], FLOOR["steel-plate"], FLOOR["iron-plate"], pts(CABLE), pts(LDS), F2[0], F2[1],
+                  pts(EC_IRON), EC_SPARE[0], EC_SPARE[1], pts(AC_ROW),
                   EE[0], EE[1], F1[0], F1[1], AC_BELT[0][0], AC_BELT[0][1], AC_BELT[1][0], AC_BELT[1][1], pts(PU),
                   EXTRA_LDS[0], EXTRA_LDS[1], pts(PLASTIC_SRC), pts(PLASTIC_BOX), pts(YEL))
 
