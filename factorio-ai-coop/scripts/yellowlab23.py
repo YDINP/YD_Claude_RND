@@ -102,11 +102,30 @@ CHAIN = """(function() local s = game.surfaces[1] local o = {}
   return o end)()"""
 
 
-SET_REF = """(function() local R = game.surfaces[1].find_entities_filtered{name = 'oil-refinery', position = {23.5, 11.5}, radius = 1}[1]
+SET_REF = """(function() local R = game.surfaces[1].find_entities_filtered{name = 'oil-refinery', position = {%s, %s}, radius = 1}[1]
   if R then R.set_recipe('%s') end return {ok = R and 1 or 0} end)()"""
+# 09-28 northadv23: 북쪽 정유 둘도 advanced (관 재배치 + 분해 3 대). 같은 규칙 - full_output 이면 basic 6 분 뒤 다시 advanced.
+# 북쪽은 이 스크립트가 basic 으로 내린 것만 되올린다 (since 에 없으면 손대지 않음 - 전환 전 basic 을 건드리지 않게).
+REFS = [(23.5, 11.5), (-5.5, -50.5), (-13.5, -50.5)]
+REFSTAT = """(function() local s = game.surfaces[1] local o = {}
+  for i, p in pairs({%s}) do local R = s.find_entities_filtered{name = 'oil-refinery', position = p, radius = 1}[1]
+    if R then o[i] = {rec = R.get_recipe() and R.get_recipe().name or '-', full = (R.status == defines.entity_status.full_output) and 1 or 0} end end
+  return {r = o} end)()""" % ", ".join("{%s, %s}" % p for p in REFS)
 # 09-28 로켓 계획 P0 (refadv23): 중유 -> 고체연료 공장 (19.5,12.5) 이 서서 advanced 를 고정한다 (윤활유도 advanced 에서만 나옴).
 # 옛 교대 (advanced 4 분 / basic 6 분) 는 없앴다. 중유 · 경유가 막혀 정유가 full_output 이면 그때만 basic 6 분 뒤 다시 advanced.
 BASIC_SEC = 360
+# 09-28 18:4x northadv23: 가스가 늘자 서쪽 플라스틱 (-21.5,-34.5) 이 출력 100 가득으로 서 있다 (폭발 포탄 조립기 둘만 먹음),
+# 망 플라스틱 0 (보라 · 저밀도 요청이 비어 있음). 출력 20 을 남기고 망으로 - 망 플라스틱 < 800 · 빈 칸 > 100 일 때만 (망 가득 방지).
+PLDRAIN = """(function() local s = game.surfaces[1] local net = nil
+  for _, n in pairs(game.forces.player.logistic_networks[s.name]) do if n.network_id == 2 then net = n end end
+  local P = s.find_entities_filtered{name = 'chemical-plant', position = {-21.5, -34.5}, radius = 0.5}[1]
+  if not (P and net) then return {} end
+  local out = P.get_output_inventory() local k = out.get_item_count('plastic-bar') - 20
+  local free = 0 for _, c in pairs(net.storages) do free = free + c.get_inventory(defines.inventory.chest).count_empty_stacks() end
+  k = math.min(k, 800 - net.get_item_count('plastic-bar'))
+  if k <= 0 or free <= 100 then return {} end
+  k = net.insert{name = 'plastic-bar', count = k} if k > 0 then out.remove{name = 'plastic-bar', count = k} end
+  return {plastic_w = k} end)()"""
 
 
 def main() -> int:
@@ -114,15 +133,26 @@ def main() -> int:
     ap.add_argument("--once", action="store_true")
     a = ap.parse_args()
     ai = AIBridge()
-    since = 0.0  # 정유 레시피를 마지막으로 바꾼 시각
+    since = {REFS[0]: 0.0}  # 정유별 레시피를 basic 으로 내린 시각 (남쪽은 처음부터 관리)
     while True:
         try:
             c = ai.lua(CHAIN)
             now = time.time()
-            if c.get("rec") == "advanced-oil-processing" and c.get("full"):
-                ai.lua(SET_REF % "basic-oil-processing"); c["refinery"] = "basic (full_output)"; since = now
-            elif c.get("rec") != "advanced-oil-processing" and now - since >= BASIC_SEC:
-                ai.lua(SET_REF % "advanced-oil-processing"); c["refinery"] = "advanced"; since = now
+            rs = ai.lua(REFSTAT).get("r") or {}
+            rs = rs if isinstance(rs, dict) else {str(i + 1): v for i, v in enumerate(rs)}
+            for i, pos in enumerate(REFS):
+                st = rs.get(str(i + 1)) or rs.get(i + 1)
+                if not st:
+                    continue
+                if st.get("rec") == "advanced-oil-processing" and st.get("full"):
+                    ai.lua(SET_REF % (pos[0], pos[1], "basic-oil-processing")); c["refinery %s,%s" % pos] = "basic (full_output)"; since[pos] = now
+                elif st.get("rec") != "advanced-oil-processing" and pos in since and now - since[pos] >= BASIC_SEC:
+                    ai.lua(SET_REF % (pos[0], pos[1], "advanced-oil-processing")); c["refinery %s,%s" % pos] = "advanced"
+                    if pos != REFS[0]:
+                        del since[pos]
+                    else:
+                        since[pos] = now
+            c.update(ai.lua(PLDRAIN) or {})
             c.pop("rec", None)
             c.pop("full", None)
             if c:
