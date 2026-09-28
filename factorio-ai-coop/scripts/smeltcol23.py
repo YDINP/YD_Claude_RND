@@ -9,7 +9,7 @@
 짓기는 캐릭터 (outpostcrew23), 재료는 망 2 저장에서 가방으로 옮김.
 구리 화로 16 은 12:11~12:20 cuupgrade23 으로 강철로 (steel-furnace) 로 바뀜 - 연료 · 상태 · 광석 되돌림은 type=furnace 로 찾는다 (layout 의 stone-furnace 는 처음 짓기용).
 전환 (switch): 화로 ≥ MIN_ON 가동 준비 (연료 · 팔 전력) 뒤 머리 벨트만 Lua 로 돌린다 (운전 조작, 건설 아님).
-상주 (run): 화로 연료 (망 석탄 > 100 -> 석탄 상자 (-1.5,-30.5) 300 초과분, 임시 중계), 기지 끝 판 벨트에서 판 · 강철을 망 저장으로 (상한).
+상주 (run): coalnet23 석탄 상자 4 -> 망 (상한 2000) -> 석탄 상자 (-1.5,-30.5) 400 까지 (망 150 남김), 화로 연료 (구리: coalline23 석탄 벨트 500 초과분 -> 망 석탄 > 100 -> 석탄 상자 (-1.5,-30.5) 300 초과분; 철: 망 · 상자), 기지 끝 판 벨트에서 판 · 강철을 망 저장으로 (상한).
     철 기지 끝: 안쪽 구간 끝 지하 (-88.5,-43.5)(-86.5,-43.5) 해체 (로봇, 기지 망 안) -> 판이 col41 돌 화로로 가 강철이 되는 것을 막는다.
 
     python -u scripts/smeltcol23.py check cu|fe      # 칸 검사 (드라이런)
@@ -200,8 +200,27 @@ FUEL = """(function() local s = game.surfaces[1] local o = {put = 0, src_net = 0
     end
     o.src_line = o.src_line + got return got end
   -- 09:10 x=-51.5 줄은 새 호숫가 발전소 보일러 석탄 줄 (ca88c88) - 거기서 빼지 않는다. 망 석탄 / 석탄 상자만.
+  -- 15:1x 구리 전초: coalline23 석탄 벨트 (모음 x=-91.5 + 간선 y=-250.5, 최대 ~728) 가 KEEP 넘게 찼을 때 그 넘는 몫만 먼저 쓴다.
+  --   채굴기 쪽 (모음 줄) 부터 빼서 막힌 채굴기가 다시 돈다. 철 전초로 내려가는 칸 (x=-153.5 이후) 은 건드리지 않는다.
+  local cbelts = {}
+  if %s then
+    cbelts = s.find_entities_filtered{type = 'transport-belt', area = {{-92, -281}, {-91, -251}}}
+    for _, b in pairs(s.find_entities_filtered{type = 'transport-belt', area = {{-153, -251}, {-91, -250}}}) do cbelts[#cbelts + 1] = b end
+  end
+  local cfree = 0
+  for _, b in pairs(cbelts) do for li = 1, 2 do cfree = cfree + b.get_transport_line(li).get_item_count('coal') end end
+  o.cbelt = cfree cfree = math.max(0, cfree - %d) o.src_cbelt = 0
+  local function from_cbelt(n)
+    n = math.min(n, cfree) local got = 0
+    for _, b in pairs(cbelts) do
+      for li = 1, 2 do if got < n then local L = b.get_transport_line(li)
+        local k = math.min(n - got, L.get_item_count('coal')) if k > 0 then got = got + L.remove_item{name = 'coal', count = k} end end end
+      if got >= n then break end
+    end
+    cfree = cfree - got o.src_cbelt = o.src_cbelt + got return got end
   local function coal(n)
-    local got = 0
+    local got = from_cbelt(n)
+    if got > 0 then return got end
     if net and net.get_item_count('coal') > 100 + n then got = net.remove_item{name = 'coal', count = n} o.src_net = o.src_net + got end
     if got == 0 and box and box.get_item_count('coal') > 300 + n then got = box.remove_item{name = 'coal', count = n} o.src_box = o.src_box + got end
     return got end
@@ -220,6 +239,8 @@ FUEL = """(function() local s = game.surfaces[1] local o = {put = 0, src_net = 0
 # 철 전초는 석탄 벨트 (coalline23) 가 들어온 뒤로 비상 보충만 한다: 연료칸 1 이하 -> 4 까지.
 # state/smeltcol23.json 의 fe.belt_coal 이 켜져 있으면 비상 모드. 끄면 예전처럼 6 이하 -> 12.
 BELT_COAL_LOW, BELT_COAL_FILL = 1, 4
+# 구리 전초 연료 첫 출처: coalline23 석탄 벨트 중 이만큼은 남긴다 (철 전초 몫 · 가득 ~728)
+CBELT_KEEP = 500
 
 
 def fuel(ai, key):
@@ -228,7 +249,8 @@ def fuel(ai, key):
     low, fill = 6, 12
     if load().get(key, {}).get("belt_coal"):
         low, fill = BELT_COAL_LOW, BELT_COAL_FILL
-    return ai.lua(FUEL % (COALBOX[0], COALBOX[1], pts, fill, low))
+    use_belt = "true" if key == "cu" else "false"
+    return ai.lua(FUEL % (COALBOX[0], COALBOX[1], use_belt, CBELT_KEEP, pts, fill, low))
 
 
 SWITCH = """(function() local s = game.surfaces[1] local o = {}
@@ -414,6 +436,46 @@ def steel_reg(ai):
     return ai.lua(STEEL_REG % (STEEL_CAP, STEEL_CAP - 500, pts))
 
 
+# coalnet23: 석탄 광맥 (-83,-278) 채굴기 8 -> 철 상자 4 -> 망 저장 (구리 전초 · 기타 연료). 망 석탄 상한 · 저장 빈 칸 하한.
+COALNET_CHESTS = [(-83.5, y) for y in (-287.5, -284.5, -281.5, -278.5)]
+COALNET_CAP, COALNET_FREE_MIN = 2000, 40
+COALNET = """(function() local s = game.surfaces[1] local o = {moved = 0, chest = 0}
+  local net = s.find_logistic_network_by_position({-24, -88}, 'player')
+  local free = 0 for _, c in pairs(net.storages) do free = free + c.get_inventory(defines.inventory.chest).count_empty_stacks() end
+  o.free = free
+  local room = %d - net.get_item_count('coal')
+  for _, p in pairs({%s}) do
+    local c = s.find_entities_filtered{name = 'iron-chest', position = p, radius = 0.3}[1]
+    if c then local k = c.get_item_count('coal')
+      if k > 0 and room > 0 and free > %d then local put = net.insert({name = 'coal', count = math.min(k, room)}, 'storage')
+        if put > 0 then c.remove_item{name = 'coal', count = put} o.moved = o.moved + put room = room - put end end
+      o.chest = o.chest + c.get_item_count('coal') end
+  end
+  o.net = net.get_item_count('coal') return o end)()"""
+
+
+def coalnet(ai):
+    return ai.lua(COALNET % (COALNET_CAP, ", ".join("{%s, %s}" % p for p in COALNET_CHESTS), COALNET_FREE_MIN))
+
+
+# 15:3x 조율: 우선순위 (1) 발전소 줄 불가침 (2) 구리 전초 연료 (FUEL, 먼저 돈다) (3) 플라스틱 공장 석탄 상자 (-1.5,-30.5) 400 까지
+# (battfeed/yellowfeed 가 여기서 공장으로 옮김) (4) 나머지 망 저장 (상한 2000). 망 석탄은 NET_FLOOR 를 남긴다 (구리 연료 몫).
+BOX_FILL, NET_FLOOR = 400, 150
+BOXFILL = """(function() local s = game.surfaces[1] local o = {put = 0}
+  local net = s.find_logistic_network_by_position({-24, -88}, 'player')
+  local box = s.find_entities_filtered{type = 'container', position = {%s, %s}, radius = 0.6}[1]
+  if not box then return {err = 'no box'} end
+  local want = math.min(%d - box.get_item_count('coal'), net.get_item_count('coal') - %d)
+  if want > 0 then local got = net.remove_item{name = 'coal', count = want}
+    if got > 0 then local put = box.insert{name = 'coal', count = got}
+      if put < got then net.insert({name = 'coal', count = got - put}, 'storage') end o.put = put end end
+  o.box = box.get_item_count('coal') o.net = net.get_item_count('coal') return o end)()"""
+
+
+def boxfill(ai):
+    return ai.lua(BOXFILL % (COALBOX[0], COALBOX[1], BOX_FILL, NET_FLOOR))
+
+
 FLOW = """(function() local s = game.surfaces[1]
   local st = game.forces.player.get_item_production_statistics(s) local p1 = defines.flow_precision_index.ten_minutes
   local o = {} for _, n in pairs({'copper-plate', 'iron-plate', 'steel-plate', 'copper-ore', 'iron-ore', 'coal'}) do
@@ -462,6 +524,10 @@ def main() -> int:
                             log("%s 남은 광석 전초 화로로 %s" % (SITES[k]["label"], ob))
                     if n % 5 == 0 or (f.get("short")) or (t and t.get("moved")):
                         log("%s 연료 %s · 기지 끝 %s · 지하 %s · 상태 %s" % (SITES[k]["label"], f, t, cu, status(ai, k)))
+                cn = coalnet(ai)
+                bf = boxfill(ai)
+                if n % 5 == 0 or cn.get("moved") or bf.get("put"):
+                    log("석탄 상자 -> 망 %s · 망 -> 플라스틱 석탄 상자 %s" % (cn, bf))
                 if n % 10 == 0:
                     log("10분 흐름 %s" % ai.lua(FLOW))
             except Exception as e:  # noqa: BLE001
