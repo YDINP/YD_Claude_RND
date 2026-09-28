@@ -479,8 +479,9 @@ def steel_reg(ai):
 
 
 # coalnet23: 석탄 광맥 (-83,-278) 채굴기 8 -> 철 상자 4 -> 망 저장 (구리 전초 · 기타 연료). 망 석탄 상한 · 저장 빈 칸 하한.
-COALNET_CHESTS = [(-83.5, y) for y in (-287.5, -284.5, -281.5, -278.5)]
-COALNET_CAP, COALNET_FREE_MIN = 2000, 40
+# 17:5x 외부 채굴 Phase 1 (docs/outpost-mining-plan-run23.md): S1 서쪽 열 상자 (-96.5, y) 추가 (없으면 건너뜀), 상한 3,000 (+20 칸).
+COALNET_CHESTS = [(-83.5, y) for y in (-287.5, -284.5, -281.5, -278.5)] + [(-96.5, y) for y in (-291.5, -288.5, -285.5, -282.5)]
+COALNET_CAP, COALNET_FREE_MIN = 3000, 40
 COALNET = """(function() local s = game.surfaces[1] local o = {moved = 0, chest = 0}
   local net = s.find_logistic_network_by_position({-24, -88}, 'player')
   local free = 0 for _, c in pairs(net.storages) do free = free + c.get_inventory(defines.inventory.chest).count_empty_stacks() end
