@@ -4,7 +4,7 @@
 (오른 입력만 씀) -> 기존 벨트 + 두 번째 반입 벨트 (platein23). 광석 기둥 x=42.5 는 막다른 끝.
 설계 (빨강 없이):
     채굴기  동쪽 광맥 벨트 x=70.5 (남향) 양옆 9 + 9 (68.5 동향 · 72.5 서향, y -424.5..-400.5), 서쪽 줄은 기존 전봇대 x=66.5 (+2),
-            동쪽 줄은 전봇대 x=74.5 (둘레 (73.5,-432.5) 에서) 5. 18 x 0.6 = 10.8/s.
+            동쪽 줄은 전봇대 x=74.5 (둘레 (73.5,-432.5) 에서) 6 (처음 5 였다 - -404.5 전봇대 공급 칸이 y=-402 에서 끝나 (72.5,-400.5) 채굴기 no_power). 18 x 0.6 = 10.8/s.
     광석    x=70.5 -> y=-391.5 서향 (기존 광석 벨트 x=47.5 는 노란 지하 한 쌍으로 건넘) -> x=36.5 남향 -> 둘째 기둥 광석 줄 (막다른 끝).
     둘째 기둥  첫 기둥과 같은 모양, 6 칸 서쪽: 광석 36.5 · 입력 팔 37.5 · 강철로 39.0 · 출력 팔 40.5 · 판 벨트 41.5, 화로 18 (y -366..-332).
     판      x=41.5 남향 -> y=-328.5 동향 (42.5..45.5) -> (46.5,-328.5) 남향 = 분배기 왼 입력. 분배기가 두 입력 (10 + 11.25/s) 을
@@ -17,6 +17,7 @@
     python -u scripts/cu2x23.py check                  # 칸 검사 (드라이런)
     python -u scripts/cu2x23.py build                  # 두 사람 출정 (돌림 포함)
     python -u scripts/cu2x23.py status                 # 채굴기 · 화로 · 10분 흐름
+    python -u scripts/cu2x23.py lanefix                # 판 벨트 x=41.5 두 줄 쓰기 (위 10 화로 몫 -> 서쪽 줄 고리)
 로그 state/cu2x23.log
 """
 import argparse
@@ -45,7 +46,7 @@ DRILL_Y = [-424.5 + 3 * k for k in range(9)]
 DRILLS = [("electric-mining-drill", 68.5, y, "east") for y in DRILL_Y] + \
          [("electric-mining-drill", 72.5, y, "west") for y in DRILL_Y]
 POLES_E = [("small-electric-pole", 66.5, -422.5, "north"), ("small-electric-pole", 66.5, -416.5, "north")] + \
-          [("small-electric-pole", 74.5, y, "north") for y in (-428.5, -422.5, -416.5, -410.5, -404.5)]
+          [("small-electric-pole", 74.5, y, "north") for y in (-428.5, -422.5, -416.5, -410.5, -404.5, -398.5)]  # -398.5: 마지막 채굴기 (72.5,-400.5) 전력 (09-28 fix)
 ORE = [("transport-belt", 70.5, y + 0.5, "south") for y in range(-426, -392)] + \
       [("transport-belt", 70.5, -391.5, "west")] + \
       [("transport-belt", x + 0.5, -391.5, "west") for x in range(69, 48, -1)] + \
@@ -71,7 +72,7 @@ ROT = (42.5, -329.5)      # 첫 기둥 광석 줄 끝 - 남향 -> 동향
 _UG = next(i for i, b in enumerate(ORE) if len(b) > 4 and b[4] == "output") + 1
 EAST = DRILLS + POLES_E + ORE[:_UG]          # 동쪽: 채굴기 · 전봇대 · 광석 벨트 x=70.5 + 가로줄 (지하까지)
 WEST = ORE[_UG:] + COL + PLATE               # 서쪽: 가로줄 나머지 · x=36.5 · 둘째 기둥 · 판 벨트
-BACK = ("electric-mining-drill", "small-electric-pole", "transport-belt", "underground-belt", "steel-furnace", "inserter",
+BACK = ("electric-mining-drill", "small-electric-pole", "transport-belt", "underground-belt", "fast-underground-belt", "steel-furnace", "inserter",
         "wood", "coal", "copper-ore", "copper-plate", "stone")
 
 
@@ -108,7 +109,14 @@ def watch_once(ai):
     return {"site": T(r.get("site")), "path": T(r.get("path")), "kills": r.get("kills"), "tick": r.get("tick")}
 
 
-def watch(ai, minutes):
+UNITS = """(function() local s = game.surfaces[1] local g = {}
+  for _, u in pairs(s.find_entities_filtered{position = {%d, %d}, radius = 150, force = 'enemy', type = {'unit', 'unit-spawner', 'turret'}}) do
+    local k = math.floor(u.position.x / 32) * 32 .. ',' .. math.floor(u.position.y / 32) * 32 .. (u.type == 'unit' and '' or ' ' .. u.name)
+    g[k] = (g[k] or 0) + 1 end return g end)()"""
+
+
+def watch(ai, minutes, need=None):
+    """need (분) 이 주어지면 조건이 need 분 이어지는 순간 True 로 끝낸다. 불통과면 무리 위치 (32 칸 칸) 도 적는다."""
     t0 = time.time()
     ok_since = None
     k0 = None
@@ -119,8 +127,13 @@ def watch(ai, minutes):
         ok_since = (ok_since or time.time()) if good else None
         log("감시 현장 r150 구조물/유닛 %s · 통로 %s · 전초 포탑 처치 %s (+%d) · %s" % (
             w["site"], w["path"], w["kills"], w["kills"] - k0, "통과 %.0f 분" % ((time.time() - ok_since) / 60) if ok_since else "불통과"))
+        if sum(w["site"]) > 0:
+            log("  무리 (32칸 좌상단: 수) %s" % ai.lua(UNITS % SITE))
+        if need and ok_since and time.time() - ok_since >= need * 60:
+            log("조건 %d 분 유지 - 통과" % need)
+            return True
         time.sleep(60)
-    return ok_since is not None
+    return ok_since is not None and not need
 
 
 # ---------------------------------------------------------------- 검사
@@ -362,6 +375,61 @@ def build(ai, rounds=10):
     return not left
 
 
+# ---------------------------------------------------------------- 고침 (09-28 23:4x) 판 벨트 두 줄
+# 판 벨트 x=41.5 는 출력 팔 18 이 모두 먼 줄 (동쪽) 에만 놓아 한 줄 7.5/s 에 묶였다 (18 x 0.625 = 11.25/s) -> 남쪽 화로 8 full_output.
+# 팔 놓는 자리는 못 바꾼다 (allow_custom_vectors 꺼짐). 첫 기둥 (49.5,-345.5) 줄 바꿈처럼 윗 몫을 서쪽 줄로 옮긴다:
+#   위 10 칸 (41.5, -366.5..-348.5) 북향 -> (41.5,-367.5) 서향 -> 빠른 지하 (37.5 -> 35.5) 로 광석 줄 x=36.5 건넘 ->
+#   x=34.5 남향 -> (34.5,-347.5) 동향 -> 빠른 지하 (35.5 -> 40.5, 광석 줄 · 화로 밑) -> (41.5,-347.5) 서쪽 줄.
+#   위 화로 10 (6.25/s) 서쪽 줄 + 아래 8 (5/s) 동쪽 줄. 재료는 망에 있는 것만 (빠른 지하 4 · 노랑 25).
+SPLIT_Y = -348.5
+LOOP = [("transport-belt", XR, -367.5, "west")] +        [("transport-belt", x + 0.5, -367.5, "west") for x in (40, 39, 38)] +        [("fast-underground-belt", 37.5, -367.5, "west", "input"), ("fast-underground-belt", 35.5, -367.5, "west", "output")] +        [("transport-belt", 34.5, -367.5, "south")] +        [("transport-belt", 34.5, y + 0.5, "south") for y in range(-367, -348)] +        [("transport-belt", 34.5, -347.5, "east")] +        [("fast-underground-belt", 35.5, -347.5, "east", "input"), ("fast-underground-belt", 40.5, -347.5, "east", "output")]
+UP = [(XR, y + 0.5) for y in range(-367, -348)]       # 북향으로 돌릴 판 벨트 10 칸 (-366.5 .. -348.5)
+
+
+def lanefix(ai):
+    if not missing(ai, LOOP):
+        log("줄 바꿈 고리 이미 있음")
+    else:
+        w = watch_once(ai)
+        if w["site"][0] or w["site"][1] > 2 or w["path"][0] or w["path"][1] > 2:
+            log("출정 조건 불통과 %s - 보류" % w)
+            return False
+        live = {c["name"]: c for c in ai.list()}
+        who = next((c for c in CREW if live.get(c, {}).get("alive") and float(live[c].get("health") or 0) >= LIVE_HP), None)
+        if not who:
+            log("나갈 사람 없음")
+            return False
+        os.environ[detached.ENV] = OWNER
+        detached.mark([who], OWNER, minutes=30)
+        todo = missing(ai, LOOP)
+        steps, need = trip(ai, todo, (35.0, -357.5))
+        bag = load_bag(ai, who, need).get("bag") or {}
+        if any(int(bag.get(k, 0)) < v for k, v in need.items()):
+            log("%s 가방 부족 %s / 필요 %s" % (who, bag, need))
+            log("%s 가방 -> 망 %s" % (who, unload(ai, who)))
+            detached.release([who])
+            return False
+        orders.submit(ai, who, steps, strict=False)
+        log("줄 바꿈 %s 출발: 짓기 %d · 단계 %d · 가방 %s" % (who, len(todo), len(steps), need))
+        sent, t0 = [who], time.time()
+        while sent and time.time() - t0 < 1500:
+            time.sleep(10)
+            if not hp_guard(ai, sent):
+                break
+        log("%s 귀환 · 가방 -> 망 %s" % (who, unload(ai, who)))
+        detached.release([who])
+        left = missing(ai, LOOP)
+        if left:
+            log("고리 빠짐 %d %s - 돌리지 않음" % (len(left), left[:4]))
+            return False
+    r = ai.lua("""(function() local s = game.surfaces[1] local o = {n = 0, miss = 0}
+      for _, p in pairs({%s}) do local b = s.find_entities_filtered{type = 'transport-belt', position = p, radius = 0.3}[1]
+        if not b then o.miss = o.miss + 1 elseif b.direction ~= defines.direction.north then b.direction = defines.direction.north o.n = o.n + 1 end end
+      return o end)()""" % ", ".join("{%s, %s}" % p for p in UP))
+    log("판 벨트 위 10 칸 북향 %s" % r)
+    return not r.get("miss")
+
+
 # ---------------------------------------------------------------- 상태
 STATUS = """(function() local s = game.surfaces[1] local o = {drill = {}, furn = {}}
   local st = {} for n, v in pairs(defines.entity_status) do st[v] = n end
@@ -391,18 +459,23 @@ def status(ai):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["watch", "check", "build", "status", "rotate"])
+    ap.add_argument("cmd", choices=["watch", "check", "build", "status", "rotate", "lanefix"])
     ap.add_argument("--minutes", type=float, default=30)
+    ap.add_argument("--need", type=float, default=None, help="watch: 이 분 수만큼 이어지면 끝 (종료 코드 0, 못 채우면 3)")
     a = ap.parse_args()
     ai = AIBridge()
     if a.cmd == "watch":
-        watch(ai, a.minutes)
+        ok = watch(ai, a.minutes, a.need)
+        if a.need:
+            return 0 if ok else 3
     elif a.cmd == "check":
         check(ai)
     elif a.cmd == "build":
         build(ai)
     elif a.cmd == "rotate":
         rotate(ai)
+    elif a.cmd == "lanefix":
+        lanefix(ai)
     else:
         status(ai)
     return 0
