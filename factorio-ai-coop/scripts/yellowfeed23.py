@@ -17,6 +17,7 @@
   AC   고급회로 벨트 (y=-35.5 동행 x 12..38 + x=37.5 남행 y -35..-21, 파랑팩 줄로 가는 길) -> 처리장치 둘 (4 미만이면 10 까지)
   ACPL 플라스틱 상자 (16.5,13.5)(11.5,13.5) -> 고급회로 줄 넷 (6 미만이면 24 까지) (09-29 노랑 0: 줄 넷 플라스틱 0)
   COAL 석탄 상자 (-1.5,-30.5) (150 남김) -> 플라스틱 공장 석탄 상자 둘 (10 미만이면 30 까지). 석탄 줄 x=-1.5 은 비어 있음
+  PLN  망 석탄 (300 남김) -> 북쪽 플라스틱 공장 둘 (-21.5,-34.5)(1.5,-44.5) 입력 (20 미만이면 50 까지, 공장 한 대 최대 60/분). 석탄 줄 둘 다 비어 있음 (09-28 석탄 0)
   ROBO 로보포트 (상자 (34.5,-41.5) + 망) >= 40 이면 로보포트 조립기 고급회로 팔 (34.5,-36.5) active=false (파랑 몫)
   LDS  덧 저밀도 조립기 (망 안, --lds 로 유령) 에 구리 · 강철 (망) · 플라스틱 (플라스틱 공장 출력 · 상자) -> 결과는 노랑 둘로
 
@@ -55,12 +56,14 @@ COAL_BOX, COAL_KEEP = (-1.5, -30.5), 150   # 석탄 상자 (폭약 몫 150 남�
 # 로보포트는 상자 (34.5,-41.5) 30 + 망 50 - 넉넉하면 그 입력 팔 (34.5,-36.5) 을 멈춘다 (필터·팔 삭제 없음, active 만)
 ROBO_INS, ROBO_BOX, ROBO_CAP = (34.5, -36.5), (34.5, -41.5), 40
 EXTRA_LDS = (6.5, 6.5)           # 덧 저밀도 AM1 자리 (망 2 안) - --lds 로 유령
-FLOOR = {"copper-plate": 800, "steel-plate": 300, "iron-plate": 3000}
+FLOOR = {"copper-plate": 800, "steel-plate": 300, "iron-plate": 3000, "coal": 300}
+# 09-28 플라스틱 10분 432 < 소비 ~700: 북쪽 공장 둘 석탄 0 (벨트 (-25.5,-34.5) · x=-1.5 줄 모두 빈 줄), 망 석탄 2,000 (상한) 은 놀고 있음
+PL_NORTH = [(-21.5, -34.5), (1.5, -44.5)]
 
 LUA = """(function() local s = game.surfaces[1] local o = {}
   local net = nil for _, n in pairs(game.forces.player.logistic_networks[s.name]) do if n.network_id == 2 then net = n end end
   if not net then return {err = 'no net 2'} end
-  local FLOOR = {['copper-plate'] = %d, ['steel-plate'] = %d, ['iron-plate'] = %d}
+  local FLOOR = {['copper-plate'] = %d, ['steel-plate'] = %d, ['iron-plate'] = %d, ['coal'] = %d}
   local function asm(p) return s.find_entities_filtered{type = 'assembling-machine', position = p, radius = 0.6}[1] end
   local function inp(e) return e.get_inventory(defines.inventory.assembling_machine_input) end
   local function add(k, v) o[k] = (o[k] or 0) + v end
@@ -77,6 +80,7 @@ LUA = """(function() local s = game.surfaces[1] local o = {}
   for _, p in pairs({%s}) do local a = asm(p) if a then fromnet(a, 'steel-plate', 8, 30, 'st') fromnet(a, 'copper-plate', 40, 100, 'ldscu') end end
   fromnet(asm({%s, %s}), 'steel-plate', 8, 30, 'st')
   for _, p in pairs({%s}) do fromnet(asm(p), 'iron-plate', 20, 60, 'fe') end
+  for _, p in pairs({%s}) do fromnet(asm(p), 'coal', 20, 50, 'plnc') end
   -- 남는 녹색회로 -> 고급회로 줄 (2 미만이면 8 까지)
   local sp = asm({%s, %s})
   if sp then local out = sp.get_output_inventory()
@@ -171,8 +175,8 @@ def pts(ps):
 
 
 def build_lua():
-    return LUA % (FLOOR["copper-plate"], FLOOR["steel-plate"], FLOOR["iron-plate"], pts(CABLE), pts(LDS), F2[0], F2[1],
-                  pts(EC_IRON), EC_SPARE[0], EC_SPARE[1], pts(AC_ROW),
+    return LUA % (FLOOR["copper-plate"], FLOOR["steel-plate"], FLOOR["iron-plate"], FLOOR["coal"], pts(CABLE), pts(LDS), F2[0], F2[1],
+                  pts(EC_IRON), pts(PL_NORTH), EC_SPARE[0], EC_SPARE[1], pts(AC_ROW),
                   EE[0], EE[1], F1[0], F1[1], AC_BELT[0][0], AC_BELT[0][1], AC_BELT[1][0], AC_BELT[1][1], pts(PU),
                   EXTRA_LDS[0], EXTRA_LDS[1], pts(PLASTIC_SRC), pts(PLASTIC_BOX), pts(YEL),
                   pts(AC_ROW), AC_PL[0], AC_PL[1], pts(PLASTIC_BOX), COAL_BOX[0], COAL_BOX[1],
