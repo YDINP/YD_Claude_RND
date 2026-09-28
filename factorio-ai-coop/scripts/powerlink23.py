@@ -18,12 +18,13 @@ import sys
 sys.path[:0] = [os.path.join(os.path.dirname(__file__), "..", "bridge")]
 from client import AIBridge  # noqa: E402
 
-LUA = """(function() local s = game.surfaces[1] local DRY = %s local o = {clusters = 0, poles = 0, skip = {}, done = {}}
+LUA = """(function() local s = game.surfaces[1] local DRY, CREW = %s, %s local o = {clusters = 0, poles = 0, skip = {}, done = {}, crew = {}}
   local R0 = s.find_entities_filtered{name = 'roboport', position = {56, -127}, radius = 3}[1]
   local MAIN = nil
   for _, p in pairs(s.find_entities_filtered{type = 'electric-pole', position = R0.position, radius = 8}) do MAIN = p.electric_network_id break end
   local net = s.find_logistic_network_by_position({-60, -33}, 'player')
   local stock = net.get_item_count('small-electric-pole') - 10
+  local cx0, cy0 = 0, 0
   local ghosts = {}  -- 이번에 놓은 전봇대 자리 (공급/연결 계산용)
   local function covered(pos)
     for _, p in pairs(s.find_entities_filtered{type = 'electric-pole', position = pos, radius = 4}) do
@@ -35,8 +36,9 @@ LUA = """(function() local s = game.surfaces[1] local DRY = %s local o = {cluste
     if stock <= 0 then return nil end
     for _, off in pairs({{0, 0}, {1, 0}, {0, 1}, {-1, 0}, {0, -1}, {1, 1}, {-1, -1}, {1, -1}, {-1, 1}, {2, 0}, {0, 2}, {-2, 0}, {0, -2}}) do
       local p = {math.floor(x + off[1]) + 0.5, math.floor(y + off[2]) + 0.5}
-      if s.can_place_entity{name = 'small-electric-pole', position = p, force = 'player'} and #s.find_logistic_networks_by_construction_area(p, 'player') > 0 then
-        if not DRY then s.create_entity{name = 'entity-ghost', inner_name = 'small-electric-pole', position = p, force = 'player'} end
+      local cn = #s.find_logistic_networks_by_construction_area(p, 'player') > 0
+      if s.can_place_entity{name = 'small-electric-pole', position = p, force = 'player'} and (cn or CREW) then
+        if CREW then o.crew[#o.crew + 1] = {p[1], p[2], cx0, cy0} elseif not DRY then s.create_entity{name = 'entity-ghost', inner_name = 'small-electric-pole', position = p, force = 'player'} end
         ghosts[#ghosts + 1] = p stock = stock - 1 o.poles = o.poles + 1 return p end
     end
     return nil end
@@ -56,10 +58,13 @@ LUA = """(function() local s = game.surfaces[1] local DRY = %s local o = {cluste
     end
     o.clusters = o.clusters + 1
     local cx, cy = 0, 0 for _, g in pairs(grp) do cx = cx + g.position.x cy = cy + g.position.y end cx, cy = cx / #grp, cy / #grp
+    cx0, cy0 = math.floor(cx), math.floor(cy)
     -- 주 전력망에서 가장 가까운 전봇대
     local best, bd = nil, 1e18
-    for _, p in pairs(s.find_entities_filtered{type = 'electric-pole', force = 'player', position = {cx, cy}, radius = 150}) do
-      if p.electric_network_id == MAIN then local d = (p.position.x - cx)^2 + (p.position.y - cy)^2 if d < bd then best, bd = p, d end end end
+    local cand = s.find_entities_filtered{type = 'electric-pole', force = 'player', position = {cx, cy}, radius = 150}
+    if CREW then for _, g in pairs(s.find_entities_filtered{ghost_name = 'small-electric-pole', force = 'player', position = {cx, cy}, radius = 150}) do cand[#cand + 1] = g end end
+    for _, p in pairs(cand) do
+      if (CREW and p.type == 'entity-ghost') or p.electric_network_id == MAIN then local d = (p.position.x - cx)^2 + (p.position.y - cy)^2 if d < bd then best, bd = p, d end end end
     if not best then o.skip[#o.skip + 1] = math.floor(cx) .. ',' .. math.floor(cy) .. ' 주 전력망 전봇대 없음'
     else
       local x, y = best.position.x, best.position.y local n = 0 local ok = true
@@ -68,7 +73,7 @@ LUA = """(function() local s = game.surfaces[1] local DRY = %s local o = {cluste
       local tgt, td = nearest_unc(x, y)
       while tgt and n < 80 do
         local dx, dy = tgt.position.x - x, tgt.position.y - y local L2 = math.sqrt(dx * dx + dy * dy)
-        local step = math.min(6.5, L2)
+        local step = math.min(5, L2)  -- put() 가 자리를 2 칸까지 비켜 놓으므로 전선 7.5 에 여유 (6.5 였을 때 -243,-90 사슬 7.8 끊김)
         local p = put(x + dx / math.max(L2, 0.01) * step, y + dy / math.max(L2, 0.01) * step)
         if not p then ok = false break end
         x, y = p[1], p[2] n = n + 1
@@ -89,12 +94,48 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry", action="store_true")
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--crew", action="store_true", help="로봇 범위 밖 사슬 나머지를 캐릭터가 짓는다 (--dry 면 목록만)")
     a = ap.parse_args()
     ai = AIBridge()
     if a.check:
         print(ai.lua(CHECK))
         return 0
-    print(ai.lua(LUA % ("true" if a.dry else "false")))
+    if a.crew:
+        return crew_run(ai, a.dry)
+    print(ai.lua(LUA % ("true" if a.dry else "false", "false")))
+    return 0
+
+
+def crew_run(ai, dry):
+    """로봇 범위 밖 (cn 0) 무리: 사슬 전봇대 자리를 계산만 하고 (유령 없음) 무리마다 캐릭터 하나가 짓는다."""
+    import time
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import detached
+    import outpostcrew23 as crew
+    r = ai.lua(LUA % ("true", "true"))
+    rows = r.get("crew") or []
+    rows = list(rows.values()) if isinstance(rows, dict) else rows
+    groups = {}
+    for x, y, cx, cy in (list(v.values()) if isinstance(v, dict) else v for v in rows):
+        groups.setdefault((cx, cy), []).append(("small-electric-pole", x, y, "north"))
+    print({"done": r.get("done"), "groups": {"%s,%s" % k: len(v) for k, v in groups.items()}})
+    if dry or not groups:
+        return 0
+    free = crew.free_crew(ai, len(groups))
+    sent = []
+    for who, (c, builds) in zip(free, groups.items()):
+        entry = (builds[0][1], builds[0][2])
+        if crew.dispatch(ai, who, builds, [], entry, "powerlink23", print):
+            sent.append(who)
+    t0 = time.time()
+    while sent and time.time() - t0 < 1200:
+        time.sleep(20)
+        if not crew.busy(ai, sent):
+            break
+    for who in sent:
+        print(who, "돌아옴", crew.unload_bag(ai, who))
+    detached.release(sent)
+    print(ai.lua(CHECK))
     return 0
 
 
