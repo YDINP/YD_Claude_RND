@@ -76,7 +76,8 @@ for _, yi in pairs(ys) do local h = yi.get_item_count('processing-unit')
   if h < 6 then fromout($newpu, yi, 'processing-unit', 12 - h, 0, 'pu_y') end end
 local free = 0 for _, c in pairs(net.storages) do free = free + c.get_inventory(defines.inventory.chest).count_empty_stacks() end
 if free > 150 and net.get_item_count('processing-unit') < 300 then
-  for _, p in pairs($newpu) do local a = asm(p) if a then local out = a.get_output_inventory() local n = out.get_item_count('processing-unit') - 2
+  -- 23:58 노랑 멈춤 (사일로 첫 발사) 뒤 옛 2 대 (33.5,1.5)(36.5,1.5) 는 가져갈 곳 없어 full_output, 2 남김도 멈춤 -> 5 대 전부 · 다 뺀다
+  for _, p in pairs($pus) do local a = asm(p) if a then local out = a.get_output_inventory() local n = out.get_item_count('processing-unit')
     if n > 0 then local k = net.insert{name = 'processing-unit', count = n} if k > 0 then out.remove{name = 'processing-unit', count = k} add('pu_net', k) end end end end
 end
 -- 망 저밀도 -> 노랑
