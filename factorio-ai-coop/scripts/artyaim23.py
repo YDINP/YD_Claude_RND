@@ -113,8 +113,13 @@ GUARD = """(function() local s = game.surfaces[1] local o = {n = 0}
 
 # 대포가 해체 표시 없이 사라짐 -> 파괴. 그 자리 대포 유령 (파괴 유령) 을 지운다 - 링이 무너진 자리로 새 대포가 가지 않게.
 LOST = """(function() local s = game.surfaces[1] local P = %s local o = {ghost = 0, remnants = 0}
-  for _, g in pairs(s.find_entities_filtered{ghost_name = 'artillery-turret', position = P, radius = 2, force = 'player'}) do g.destroy() o.ghost = o.ghost + 1 end
   o.remnants = s.count_entities_filtered{name = 'artillery-turret-remnants', position = P, radius = 2}
+  -- 10:28 키트 이전으로 로봇이 캐 간 대포를 파괴로 오인 (잔해 0, 창고 1) - 잔해가 없고 망/로봇에 대포 아이템이 있으면 이전
+  local item = 0 for _, n in pairs(game.forces.player.logistic_networks[s.name]) do item = item + n.get_item_count('artillery-turret')
+    for _, r in pairs(n.construction_robots) do item = item + r.get_inventory(defines.inventory.robot_cargo).get_item_count('artillery-turret') end end
+  o.item = item
+  if o.remnants == 0 and item > 0 then o.moved = true return o end
+  for _, g in pairs(s.find_entities_filtered{ghost_name = 'artillery-turret', position = P, radius = 2, force = 'player'}) do g.destroy() o.ghost = o.ghost + 1 end
   o.units = s.count_entities_filtered{force = 'enemy', type = 'unit', position = P, radius = 60}
   o.guns = s.count_entities_filtered{name = 'gun-turret', force = 'player', position = P, radius = 16}
   o.gun_ghosts = s.count_entities_filtered{ghost_name = 'gun-turret', force = 'player', position = P, radius = 16}
@@ -130,6 +135,8 @@ def guard_now(ai):
 
 def on_lost(ai, pos) -> str:
     r = ai.lua(LOST % ("{%s, %s}" % (pos[0], pos[1])))
+    if r.get("moved"):
+        return "대포 해체됨 @(%s,%s) - 잔해 0 · 창고/로봇 %s (이전, 파괴 아님)" % (pos[0], pos[1], r.get("item"))
     g = {}
     try:
         g = guard_now(ai)
