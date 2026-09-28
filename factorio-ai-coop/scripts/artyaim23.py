@@ -179,6 +179,25 @@ def relocate(ai) -> str:
 
 HEARTBEAT = 600  # 10 분 무출력이면 한 줄 (12:10 · 13:57 두 번 - 탄 0 으로 조용히 돌던 것을 멈춤으로 오인)
 
+# 사용자 (17:2x): "대포 설치하면 맵에 태그 찍어줘. 옮기면 태그도 같이 옮기고" - 서 있는 대포마다 지도 태그 '대포',
+# 대포가 없는 자리의 '대포' 태그는 지운다 (이전 = 옛 태그 삭제 + 새 자리 태그). force.chart 는 쓰지 않는다 (태그만).
+TAG_TEXT = "대포"
+TAG = """(function() local s = game.surfaces[1] local f = game.forces.player local o = {add = {}, del = 0}
+  local have = {}
+  for _, a in pairs(s.find_entities_filtered{name = 'artillery-turret', force = 'player'}) do
+    if not a.to_be_deconstructed() then have[#have + 1] = a.position end end
+  for _, t in pairs(f.find_chart_tags(s)) do
+    if t.text == '%s' then
+      local keep = false
+      for _, p in pairs(have) do if math.abs(t.position.x - p.x) < 1 and math.abs(t.position.y - p.y) < 1 then keep = true p.tagged = true end end
+      if not keep then t.destroy() o.del = o.del + 1 end
+    end
+  end
+  for _, p in pairs(have) do if not p.tagged then
+    local t = f.add_chart_tag(s, {position = {p.x, p.y}, text = '%s', icon = {type = 'item', name = 'artillery-turret'}})
+    if t then o.add[#o.add + 1] = p.x .. ',' .. p.y end end end
+  return o end)()""" % (TAG_TEXT, TAG_TEXT)
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -214,6 +233,15 @@ def main() -> int:
                     print(time.strftime("%H:%M:%S"), m, flush=True)
             except Exception as e:  # noqa: BLE001
                 print(f"artykit step: {type(e).__name__}: {e}"[:200], flush=True)
+        if k % 6 == 1 and not a.once:  # 30 초마다 대포 지도 태그 맞추기
+            try:
+                t = ai.lua(TAG)
+                adds = t.get("add") or []
+                adds = list(adds.values()) if isinstance(adds, dict) else adds
+                if adds or t.get("del"):
+                    print(time.strftime("%H:%M:%S"), "지도 태그 '대포' - 새로", adds, "· 지움", t.get("del"), flush=True)
+            except Exception as e:  # noqa: BLE001
+                print(f"artyaim tag: {e}"[:200], flush=True)
         if k % 12 == 0 and not a.once:  # 1 분마다 대포 둘레 포탑 탄
             try:
                 kit = artykit23.load() or {}
