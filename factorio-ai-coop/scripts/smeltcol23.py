@@ -253,8 +253,14 @@ def fuel_steelcol(ai):
     return ai.lua(FUEL % (COALBOX[0], COALBOX[1], "true", CBELT_KEEP, pts, 12, 6))
 
 
+# 21:5x cu2x23 (P2 구리 ×2): 둘째 구리 기둥 강철로 18 (39.0, -366..-332) - 연료는 구리 전초와 같은 출처 · 같은 문턱
+CU2_FURN = [(39.0, -366.0 + 2 * i) for i in range(18)]
+
+
 def fuel(ai, key):
     _, furn, _ = layout(key)
+    if key == "cu":
+        furn = furn + CU2_FURN
     pts = ", ".join("{%s, %s}" % p for p in furn)
     low, fill = 6, 12
     if load().get(key, {}).get("belt_coal"):
