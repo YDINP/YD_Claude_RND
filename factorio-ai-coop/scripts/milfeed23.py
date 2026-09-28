@@ -175,11 +175,17 @@ def where(kind, w):
     return area(w) if kind == "belt" else pts(w)
 
 
-def build_main() -> str:
+# 09-29 로보포트 조립기가 고급회로 벨트 첫 손님이라 10분 284 를 먹어 파랑팩 0 (로보포트 망 50 + 상자 30).
+# 망 2 로보포트가 이만큼 이상이면 로보포트 고급회로 투입을 뺀다 (yellowfeed23 이 입력 팔도 멈춤)
+ROBO_ENOUGH = 40
+
+
+def build_main(feed_list=None) -> str:
+    feed_list = FEED if feed_list is None else feed_list
     store = ", ".join("{'%s', %s, '%s', %d, %d, %d}" % (k, where(k, w), it, keep, n, cap)
                       for k, w, it, keep, n, cap in STORE)
     feed = ", ".join("{%s, '%s', %d, %d, '%s', %s, %d}" % (pt(d), it, lo, n, k, where(k, w), keep)
-                     for d, it, lo, n, k, w, keep in FEED)
+                     for d, it, lo, n, k, w, keep in feed_list)
     req = ", ".join("{%s, '%s', %d, %d, %d}" % (pt(d), it, lo, n, need) for d, it, lo, n, need in REQ)
     return "(function() " + MAIN % {
         "store": store, "feed": feed, "req": req,
@@ -204,11 +210,14 @@ def main() -> int:
         print(time.strftime("%H:%M:%S"), "보라 사슬", lst(r), flush=True)
         if a.resume_purple:
             return 0
-    lua = build_main()
+    lua_all = build_main()
+    lua_lean = build_main([f for f in FEED if not (f[0] == (34.5, -38.5) and f[1] == "advanced-circuit")])
+    robo = ROBO_ENOUGH  # 첫 바퀴는 아껴서 시작
     while True:
         try:
-            r = ai.lua(lua)
+            r = ai.lua(lua_lean if robo >= ROBO_ENOUGH else lua_all)
             net = r.get("net") or {}
+            robo = net.get("roboport", 0) or 0
             print(time.strftime("%H:%M:%S"),
                   "저장", lst(r.get("store")), "| 투입", lst(r.get("feed")), "| 요청", lst(r.get("req")),
                   "| 망2", " ".join(f"{k.replace('-plate', '').replace('-magazine', '')}={net.get(k, 0)}" for k in WATCH),
