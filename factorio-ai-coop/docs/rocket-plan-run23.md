@@ -295,3 +295,9 @@ SM3 20 분 + PM3 20 분 + 사일로 67 분 ≈ **107 분** (노랑은 SM3/PM3 �
 ### research_guard --prefer 추천
 - 지금 ~ 연구 끝: `--prefer speed-module-3,productivity-module-3,rocket-silo` + 위 `--skip` (노랑·보라 비축).
 - 사일로 연구 뒤 (로켓 부품 비축 중): `--prefer research-speed-5,effect-transmission` 은 보라를 먹으므로 **넣지 않는다** - 연구소는 쉬게 두고 팩은 비축. 발사 뒤 `--prefer nuclear-power,effect-transmission,mining-productivity`.
+
+## 사용자 결정 (09-29 17:15)
+
+- **군사 연구 중단:** physical-projectile-damage-6 (66%) 중단. research_guard 재시작 - `--prefer speed-module-3,productivity-module-3,rocket-silo`, 군사 연구 접두사 `--skip`, 팩에 보라 포함. 대기열 첫 칸 speed-module-3 (보라 나올 때까지 연구소 대기 = 파랑·노랑 비축).
+- **보라팩 공급 = 요청 상자:** 물류 로봇 (현재 0) 생산부터 필요 → P4 앞에 물류 로봇 줄 (프레임 · 회로) + 공급/요청 상자 단계 추가.
+- **승리 화면 끔:** `remote.call('silo_script','set_no_victory', true)` 적용 확인 (get_no_victory = true). 첫 발사 뒤에도 계속 플레이.
