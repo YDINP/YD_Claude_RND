@@ -20,7 +20,20 @@ LUA = """(function() local s = game.surfaces[1] local o = {moved = 0, labs = 0}
   for _, p in pairs({%s}) do local c = s.find_entities_filtered{type = 'container', position = p, radius = 0.6}[1] if c then srcs[#srcs + 1] = c.get_inventory(defines.inventory.chest) end end
   -- 03:42 노란팩 조립기 (12.5,3.5) 출력에 9 개가 갇혀 있었다 (상자로 가는 줄 없음) - 조립기 출력도 원천으로
   for _, p in pairs({{12.5, 3.5}, {29.5, -8.5}}) do local a = s.find_entities_filtered{type = 'assembling-machine', position = p, radius = 0.6}[1] if a then srcs[#srcs + 1] = a.get_inventory(defines.inventory.assembling_machine_output) end end
-  for _, l in pairs(s.find_entities_filtered{type = 'lab', force = 'player'}) do
+  -- 09-29 09:35 연구소 16 대 전부 missing: x=-80 열은 노랑만 (파랑 0), x=-74 열은 파랑만 (노랑 0) -> 노랑을 파랑 있는 연구소로 모은다
+  local labs = s.find_entities_filtered{type = 'lab', force = 'player'}
+  local has, lacks = {}, {}
+  for _, l in pairs(labs) do local inv = l.get_inventory(defines.inventory.lab_input)
+    if inv.get_item_count('chemical-science-pack') > 0 then has[#has + 1] = inv elseif inv.get_item_count('utility-science-pack') > 0 then lacks[#lacks + 1] = inv end end
+  if #has > 0 then
+    for _, a in pairs(lacks) do for _, b in pairs(has) do
+      local k = math.min(a.get_item_count('utility-science-pack'), 5 - b.get_item_count('utility-science-pack'))
+      if k > 0 then k = b.insert{name = 'utility-science-pack', count = k} a.remove{name = 'utility-science-pack', count = k} o.regroup = (o.regroup or 0) + k end
+    end end
+    labs = {} for _, l in pairs(s.find_entities_filtered{type = 'lab', force = 'player'}) do
+      if l.get_inventory(defines.inventory.lab_input).get_item_count('chemical-science-pack') > 0 then labs[#labs + 1] = l end end
+  end
+  for _, l in pairs(labs) do
     local inv = l.get_inventory(defines.inventory.lab_input)
     local need = 5 - inv.get_item_count('utility-science-pack')
     for _, c in pairs(srcs) do
@@ -111,7 +124,7 @@ def main() -> int:
             if c:
                 print(time.strftime("%H:%M:%S"), "프레임 사슬", c, flush=True)
             r = ai.lua(LUA % ", ".join("{%s, %s}" % p for p in SRC))
-            if r.get("moved") or a.once:
+            if r.get("moved") or r.get("regroup") or a.once:
                 print(time.strftime("%H:%M:%S"), "노란팩 -> 연구소", r, flush=True)
         except Exception as e:  # noqa: BLE001
             print(f"yellowlab: {type(e).__name__}: {e}"[:200], flush=True)
