@@ -15,7 +15,7 @@ P6 설계 (북쪽 분해 공장 동쪽 빈 땅, x 14..27 · y -54..-43, 로봇 �
   남 줄 (북향 d0, 입구 = 간선):  조립기2 RF-C (16.5,-46.5) ← 팔 ← 화학 SF-S (20.5,-46.5) → 팔 → 조립기2 RF-D (24.5,-46.5)
   RF 출력 팔 -> 공급 (passive) 상자 4 (y -53.5 · -43.5), 로보포트 (29,-47) 로 망 2 에 붙임 (지금 이 땅은 물류 범위 밖).
   모듈: 망 생산 모듈 1 -> 화학 3 · 조립기2 2 (연료 1 개당 경유 110 -> ~96).
-  전력: 증기 1 분 평균 >= 34 MW 면 블록 6 대 · 콘크리트 active=false, <= 31 MW 면 다시 (storage.rocket23_pause).
+  전력: 증기 1 분 평균 >= 최대 발전 - 2 MW 면 블록 6 대 · 콘크리트 active=false, <= 최대 - 5 MW 면 다시 (storage.rocket23_pause, 36 MW 때 34/31).
   경유: SF 1 대 8.5/s + RF 4 대 ~1.8/s. 연구 중 (rocket-silo 미완) 에는 SF-S 를 active=false (가스 몫 보존),
         RF-C · D 는 중유 고체연료 상자 (19.5,15.5, 1,277 개) 를 Lua 로 옮겨 먹인다.
 
@@ -264,8 +264,12 @@ local pole = s.find_entities_filtered{type = 'electric-pole', position = {18.5, 
 local mw = pole and pole.electric_network_statistics.get_flow_count{name = 'steam-engine', category = 'output',
              precision_index = defines.flow_precision_index.one_minute, count = false} * 60 / 1e6 or 0
 o.mw = math.floor(mw * 10) / 10
+-- P3 (21:4x): 문턱을 최대 발전 기준으로 (bank3_23) - 주 망 증기기관 수 × 0.9 MW. 36 MW 면 34 / 31 그대로, 54 MW 면 52 / 49
+local cap = 0 if pole then local nid = pole.electric_network_id
+  for _, e in pairs(s.find_entities_filtered{name = 'steam-engine'}) do if e.electric_network_id == nid then cap = cap + 0.9 end end end
+if cap < 1 then cap = 36 end o.cap = math.floor(cap * 10 + 0.5) / 10
 local g = storage.rocket23_pause or false
-if mw >= 34 then g = true elseif mw <= 31 then g = false end
+if mw >= cap - 2 then g = true elseif mw <= cap - 5 then g = false end
 storage.rocket23_pause = g o.pause = g
 for _, p in pairs($blk) do local a = asm(p) if a then a.active = not g end end
 -- 연구 중에는 SF-S 쉼
