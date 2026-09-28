@@ -96,14 +96,17 @@ CHAIN = """(function() local s = game.surfaces[1] local o = {}
     local lub = 0 for i = 1, #EE.fluidbox do local f = EE.fluidbox[i] if f and f.name == 'lubricant' then lub = lub + f.amount end end
     local rec = R.get_recipe() and R.get_recipe().name or '-'
     o.lub = math.floor(lub)
-    o.rec = rec  -- 전환은 파이썬 쪽 (시간 창: advanced 4 분 -> basic 6 분, 경유 적체로 advanced 가 바로 full_output 이 되므로)
+    o.rec = rec  -- 전환은 파이썬 쪽 (09-28 refadv23: advanced 고정, 중유가 막혀 full_output 일 때만 basic 6 분)
+    o.full = (R.status == defines.entity_status.full_output) and 1 or 0
   end
   return o end)()"""
 
 
 SET_REF = """(function() local R = game.surfaces[1].find_entities_filtered{name = 'oil-refinery', position = {23.5, 11.5}, radius = 1}[1]
   if R then R.set_recipe('%s') end return {ok = R and 1 or 0} end)()"""
-ADV_SEC, BASIC_SEC = 240, 360
+# 09-28 로켓 계획 P0 (refadv23): 중유 -> 고체연료 공장 (19.5,12.5) 이 서서 advanced 를 고정한다 (윤활유도 advanced 에서만 나옴).
+# 옛 교대 (advanced 4 분 / basic 6 분) 는 없앴다. 중유 · 경유가 막혀 정유가 full_output 이면 그때만 basic 6 분 뒤 다시 advanced.
+BASIC_SEC = 360
 
 
 def main() -> int:
@@ -116,11 +119,12 @@ def main() -> int:
         try:
             c = ai.lua(CHAIN)
             now = time.time()
-            if c.get("rec") == "advanced-oil-processing" and now - since >= ADV_SEC:
-                ai.lua(SET_REF % "basic-oil-processing"); c["refinery"] = "basic"; since = now
-            elif c.get("rec") == "basic-oil-processing" and c.get("lub", 999) < 30 and now - since >= BASIC_SEC:
+            if c.get("rec") == "advanced-oil-processing" and c.get("full"):
+                ai.lua(SET_REF % "basic-oil-processing"); c["refinery"] = "basic (full_output)"; since = now
+            elif c.get("rec") != "advanced-oil-processing" and now - since >= BASIC_SEC:
                 ai.lua(SET_REF % "advanced-oil-processing"); c["refinery"] = "advanced"; since = now
             c.pop("rec", None)
+            c.pop("full", None)
             if c:
                 print(time.strftime("%H:%M:%S"), "프레임 사슬", c, flush=True)
             r = ai.lua(LUA % ", ".join("{%s, %s}" % p for p in SRC))
