@@ -30,8 +30,20 @@ LUA = """(function() local s = game.surfaces[1] local o = {n = 0, coal = 0, empt
         if put > 0 then o.n = o.n + 1 o.coal = o.coal + put end end
     end
   end
+  -- 21:2x 회색팩 0: 수류탄 조립기 석탄 벨트 (x=-49.5) 가 기지 석탄 채굴기 해체 뒤 비어 석탄 9·6·9 < 10.
+  -- 수류탄 조립기 석탄 20 밑이면 망 석탄 40 까지 (보일러 다음 순위, 망에 KEEP 남김)
+  o.gren = 0
+  for _, a in pairs(s.find_entities_filtered{type = 'assembling-machine', force = 'player'}) do
+    local r = a.get_recipe()
+    if r and r.name == 'grenade' then
+      local inv = a.get_inventory(defines.inventory.assembling_machine_input)
+      local k = math.min(40 - inv.get_item_count('coal'), net.get_item_count('coal') - %d)
+      if inv.get_item_count('coal') < 20 and k > 0 then k = net.remove_item{name = 'coal', count = k} local put = inv.insert{name = 'coal', count = k}
+        if put < k then net.insert{name = 'coal', count = k - put} end o.gren = o.gren + put end
+    end
+  end
   o.net = net.get_item_count('coal')
-  return o end)()""" % (LOW, FILL, KEEP)
+  return o end)()""" % (LOW, FILL, KEEP, KEEP)
 
 
 def main() -> int:
@@ -43,7 +55,7 @@ def main() -> int:
     while True:
         try:
             r = ai.lua(LUA)
-            if r.get("coal") or r.get("empty") or a.once:
+            if r.get("coal") or r.get("empty") or r.get("gren") or a.once:
                 print(time.strftime("%H:%M:%S"), "보일러 석탄", r, flush=True)
         except Exception as e:  # noqa: BLE001
             print(f"boilerguard: {type(e).__name__}: {e}"[:200], flush=True)
