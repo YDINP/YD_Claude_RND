@@ -7,6 +7,7 @@
     강철은 제련 재료가 아니라 아래 강철 화로가 다시 집지 않는다. 전력은 벨트 동쪽 x=Xr+1 전봇대 4칸 간격.
 
 짓기는 캐릭터 (outpostcrew23), 재료는 망 2 저장에서 가방으로 옮김.
+구리 화로 16 은 12:11~12:20 cuupgrade23 으로 강철로 (steel-furnace) 로 바뀜 - 연료 · 상태 · 광석 되돌림은 type=furnace 로 찾는다 (layout 의 stone-furnace 는 처음 짓기용).
 전환 (switch): 화로 ≥ MIN_ON 가동 준비 (연료 · 팔 전력) 뒤 머리 벨트만 Lua 로 돌린다 (운전 조작, 건설 아님).
 상주 (run): 화로 연료 (망 석탄 > 100 -> 석탄 상자 (-1.5,-30.5) 300 초과분, 임시 중계), 기지 끝 판 벨트에서 판 · 강철을 망 저장으로 (상한).
     철 기지 끝: 안쪽 구간 끝 지하 (-88.5,-43.5)(-86.5,-43.5) 해체 (로봇, 기지 망 안) -> 판이 col41 돌 화로로 가 강철이 되는 것을 막는다.
@@ -155,7 +156,7 @@ def build(ai, key):
 STATUS = """(function() local s = game.surfaces[1] local o = {furn = 0, fueled = 0, ins = 0, ins_pow = 0, work = 0, plate_out = 0}
   local st = {} for n, v in pairs(defines.entity_status) do st[v] = n end
   for _, p in pairs({%s}) do
-    local f = s.find_entities_filtered{name = 'stone-furnace', position = p, radius = 0.3}[1]
+    local f = s.find_entities_filtered{type = 'furnace', position = p, radius = 0.3}[1]
     if f then o.furn = o.furn + 1
       if f.get_inventory(defines.inventory.fuel).get_item_count() > 0 then o.fueled = o.fueled + 1 end
       if f.status == defines.entity_status.working then o.work = o.work + 1 end
@@ -205,7 +206,7 @@ FUEL = """(function() local s = game.surfaces[1] local o = {put = 0, src_net = 0
     if got == 0 and box and box.get_item_count('coal') > 300 + n then got = box.remove_item{name = 'coal', count = n} o.src_box = o.src_box + got end
     return got end
   for _, p in pairs({%s}) do
-    local f = s.find_entities_filtered{name = 'stone-furnace', position = p, radius = 0.3}[1]
+    local f = s.find_entities_filtered{type = 'furnace', position = p, radius = 0.3}[1]
     if f then local fu = f.get_inventory(defines.inventory.fuel)
       local have = fu.get_item_count('coal') local need = %d - have
       if have <= %d and need > 0 then local got = coal(need) if got > 0 then fu.insert{name = 'coal', count = got} o.put = o.put + got else o.short = o.short + 1 end end
@@ -321,7 +322,7 @@ ORE_BACK = """(function() local s = game.surfaces[1] local o = {back = 0}
   local have = net.get_item_count('%s') if have <= 0 then return o end
   for _, p in pairs({%s}) do
     if have <= 0 then break end
-    local f = s.find_entities_filtered{name = 'stone-furnace', position = p, radius = 0.3}[1]
+    local f = s.find_entities_filtered{type = 'furnace', position = p, radius = 0.3}[1]
     if f then local src = f.get_inventory(defines.inventory.furnace_source)
       if src.is_empty() or src.get_item_count('%s') > 0 then
         local want = math.min(20 - src.get_item_count('%s'), have)
