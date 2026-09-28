@@ -87,7 +87,7 @@ MOVE = """(function() local s = game.surfaces[1]
 
 # 대포 둘레 40 칸 포탑 탄을 30 까지 (로봇 proxy, 30 칸 미만만, 종류는 슬롯 그대로) - 사용자 00:33 "대포 쪽 방어 보완"
 GUARD = """(function() local s = game.surfaces[1] local o = {n = 0}
-  local centers = {%s}  -- 키트 이전 중이면 새 자리도 (01:25 SE 링이 탄 0 으로 공습을 받음 - 대포가 서기 전부터 채운다)
+  local centers = {%s}  -- 키트 이전 중이면 새 자리도 · 고정 대포 자리 (artyfix23) (01:25 SE 링이 탄 0 으로 공습을 받음 - 대포가 서기 전부터 채운다)
   local t = s.find_entities_filtered{name = 'artillery-turret', force = 'player'}[1]
   if t then centers[#centers + 1] = t.position end
   local net = s.find_logistic_network_by_position({-60, -33}, 'player') if not net then return o end
@@ -130,15 +130,19 @@ LOST = """(function() local s = game.surfaces[1] local P = %s local o = {ghost =
   return o end)()"""
 
 
-def guard_now(ai):
+def guard_extra():
     kit = artykit23.load() or {}
     mv = kit.get("move") or {}
-    extra = "{x = %s, y = %s}" % tuple(mv["to"]) if mv.get("to") else ""
-    return ai.lua(GUARD % extra)
+    pts = ([tuple(mv["to"])] if mv.get("to") else []) + [tuple(q) for q in artykit23.fixed()]
+    return ", ".join("{x = %s, y = %s}" % p for p in pts)
+
+
+def guard_now(ai):
+    return artykit23._lua(ai, GUARD % guard_extra())
 
 
 def on_lost(ai, pos) -> str:
-    r = ai.lua(LOST % ("{%s, %s}" % (pos[0], pos[1])))
+    r = artykit23._lua(ai, LOST % ("{%s, %s}" % (pos[0], pos[1])))
     if r.get("moved"):
         return "대포 해체됨 @(%s,%s) - 잔해 0 · 창고/로봇 %s (이전, 파괴 아님)" % (pos[0], pos[1], r.get("item"))
     g = {}
@@ -168,12 +172,12 @@ def relocate(ai) -> str:
         print(f"artykit start: {type(e).__name__}: {e}"[:200], flush=True)
     if artykit23.load_goal()[0]:  # 목표 방향 (arty_goal.json) 이 있으면 옛 방식 (망 안 아무 데나) 으로 새지 않고 1 분마다 다시
         return "키트 이전 보류: 목표 방향 통로에 자리 없음 (copperchain23 고정 로보포트 대기)"
-    r = ai.lua(FIND)
+    r = artykit23._lua(ai, FIND)
     if not r.get("n"):
         return "옮길 자리 없음 (로봇망 안에서 사거리에 적 구조물이 들어오는 곳이 없음)"
     with open(SPOT_FILE, "w", encoding="utf-8") as f:
         json.dump([r["x"], r["y"]], f)
-    m = ai.lua(MOVE)
+    m = artykit23._lua(ai, MOVE)
     return "대포 이전 (%s,%s) -> (%s,%s) · 새 사거리 안 적 구조물 %s · 해체 %s" % (m.get("x"), m.get("y"), r["x"], r["y"], r["n"], m)
 
 
@@ -181,22 +185,70 @@ HEARTBEAT = 600  # 10 분 무출력이면 한 줄 (12:10 · 13:57 두 번 - 탄 
 
 # 사용자 (17:2x): "대포 설치하면 맵에 태그 찍어줘. 옮기면 태그도 같이 옮기고" - 서 있는 대포마다 지도 태그 '대포',
 # 대포가 없는 자리의 '대포' 태그는 지운다 (이전 = 옛 태그 삭제 + 새 자리 태그). force.chart 는 쓰지 않는다 (태그만).
-TAG_TEXT = "대포"
+TAG_TEXT, TAG_FIXED = "대포", "대포 고정"
+# 09-28 22:4x 고정 대포 (artyfix23, state/arty_fixed.json) 는 '대포 고정' 태그. 두 글자 태그 모두 자리 · 종류가 맞지 않으면 지운다.
 TAG = """(function() local s = game.surfaces[1] local f = game.forces.player local o = {add = {}, del = 0}
+  local FIX = {%s}
   local have = {}
   for _, a in pairs(s.find_entities_filtered{name = 'artillery-turret', force = 'player'}) do
-    if not a.to_be_deconstructed() then have[#have + 1] = a.position end end
+    local fixed = false for _, q in pairs(FIX) do if math.abs(a.position.x - q[1]) < 1 and math.abs(a.position.y - q[2]) < 1 then fixed = true end end
+    if fixed or not a.to_be_deconstructed() then have[#have + 1] = {x = a.position.x, y = a.position.y, text = fixed and '%s' or '%s'} end end
   for _, t in pairs(f.find_chart_tags(s)) do
-    if t.text == '%s' then
+    if t.text == '%s' or t.text == '%s' then
       local keep = false
-      for _, p in pairs(have) do if math.abs(t.position.x - p.x) < 1 and math.abs(t.position.y - p.y) < 1 then keep = true p.tagged = true end end
+      for _, p in pairs(have) do if not p.tagged and p.text == t.text and math.abs(t.position.x - p.x) < 1 and math.abs(t.position.y - p.y) < 1 then keep = true p.tagged = true end end
       if not keep then t.destroy() o.del = o.del + 1 end
     end
   end
   for _, p in pairs(have) do if not p.tagged then
-    local t = f.add_chart_tag(s, {position = {p.x, p.y}, text = '%s', icon = {type = 'item', name = 'artillery-turret'}})
-    if t then o.add[#o.add + 1] = p.x .. ',' .. p.y end end end
-  return o end)()""" % (TAG_TEXT, TAG_TEXT)
+    local t = f.add_chart_tag(s, {position = {p.x, p.y}, text = p.text, icon = {type = 'item', name = 'artillery-turret'}})
+    if t then o.add[#o.add + 1] = p.text .. '@' .. p.x .. ',' .. p.y end end end
+  return o end)()"""
+
+
+def tag_lua():
+    F = ", ".join("{%s, %s}" % (q[0], q[1]) for q in artykit23.fixed())
+    return TAG % (F, TAG_FIXED, TAG_TEXT, TAG_TEXT, TAG_FIXED)
+
+
+# 고정 대포 포탄 (1 분마다): 탄 <= 10 이고 배달 중 아니면 15 까지. 망 포탄 FIX_FLOOR 발은 이동 대포 (GUARD 직송) 몫으로 남긴다.
+# 고정 대포 자리가 물류 범위 밖이면 (로보포트 전) Lua 로 망 저장에서 바로 옮긴다 (기존 아이템만).
+FIX_FLOOR = 20
+FIXFEED = """(function() local s = game.surfaces[1] local o = {fed = {}, lost = {}, ghost = 0}
+  local net = s.find_logistic_network_by_position({-24, -88}, 'player') if not net then return o end
+  local ns = net.get_item_count('artillery-shell') o.net = ns
+  for _, P in pairs({%s}) do
+    local t = s.find_entities_filtered{name = 'artillery-turret', position = P, radius = 1, force = 'player'}[1]
+    if not t then
+      if s.count_entities_filtered{ghost_name = 'artillery-turret', position = P, radius = 1} > 0 then o.ghost = o.ghost + 1
+      else o.lost[#o.lost + 1] = P[1] .. ',' .. P[2] end
+    else
+      local inv = t.get_inventory(defines.inventory.artillery_turret_ammo) local have = inv.get_item_count('artillery-shell')
+      o.ammo = (o.ammo or 0) + have
+      local k = math.min(15 - have, ns - %d)
+      if have <= 10 and k > 0 then
+        local ln = s.find_logistic_network_by_position(t.position, 'player')
+        if ln and ln.network_id == net.network_id then
+          if s.count_entities_filtered{name = 'item-request-proxy', position = t.position, radius = 0.6} == 0 then
+            s.create_entity{name = 'item-request-proxy', position = t.position, force = 'player', target = t,
+              modules = {{id = {name = 'artillery-shell'}, items = {in_inventory = {{inventory = defines.inventory.artillery_turret_ammo, stack = 0, count = k}}}}}}
+            o.fed[#o.fed + 1] = 'proxy ' .. k ns = ns - k end
+        else
+          local got = net.remove_item{name = 'artillery-shell', count = k}
+          if got > 0 then local p = t.insert{name = 'artillery-shell', count = got} if p < got then net.insert{name = 'artillery-shell', count = got - p} end
+            o.fed[#o.fed + 1] = 'lua ' .. p ns = ns - p end
+        end
+      end
+    end
+  end
+  return o end)()"""
+
+
+def fix_feed(ai):
+    fs = artykit23.fixed()
+    if not fs:
+        return None
+    return artykit23._lua(ai, FIXFEED % (", ".join("{%s, %s}" % (q[0], q[1]) for q in fs), FIX_FLOOR))
 
 
 def main() -> int:
@@ -213,6 +265,7 @@ def main() -> int:
     k = 0
     last_out = [time.time()]
     no_ammo = False      # 탄 0 대기 중 (한 번만 알림)
+    fix_state = [None]   # 고정 대포 상태 (바뀔 때만 알림)
     import builtins
     _print = builtins.print
 
@@ -235,25 +288,36 @@ def main() -> int:
                 print(f"artykit step: {type(e).__name__}: {e}"[:200], flush=True)
         if k % 6 == 1 and not a.once:  # 30 초마다 대포 지도 태그 맞추기
             try:
-                t = ai.lua(TAG)
+                t = artykit23._lua(ai, tag_lua())
                 adds = t.get("add") or []
                 adds = list(adds.values()) if isinstance(adds, dict) else adds
                 if adds or t.get("del"):
-                    print(time.strftime("%H:%M:%S"), "지도 태그 '대포' - 새로", adds, "· 지움", t.get("del"), flush=True)
+                    print(time.strftime("%H:%M:%S"), "지도 태그 '대포'/'대포 고정' - 새로", adds, "· 지움", t.get("del"), flush=True)
             except Exception as e:  # noqa: BLE001
                 print(f"artyaim tag: {e}"[:200], flush=True)
         if k % 12 == 0 and not a.once:  # 1 분마다 대포 둘레 포탑 탄
             try:
-                kit = artykit23.load() or {}
-                mv = kit.get("move") or {}
-                extra = "{x = %s, y = %s}" % tuple(mv["to"]) if mv.get("to") else ""
-                g = ai.lua(GUARD % extra)
+                g = artykit23._lua(ai, GUARD % guard_extra())
                 if g.get("n") or g.get("shell"):
                     print(time.strftime("%H:%M:%S"), "대포 둘레 포탑 탄 보충", g.get("n"), "· 포탄 직송", g.get("shell", 0), flush=True)
             except Exception as e:  # noqa: BLE001
                 print(f"artyaim guard: {e}"[:200], flush=True)
+            try:
+                ff = fix_feed(ai)
+                if ff:
+                    fed = artykit23._lst(ff.get("fed"))
+                    lost = artykit23._lst(ff.get("lost"))
+                    key = (tuple(lost), ff.get("ghost"))
+                    if fed:
+                        print(time.strftime("%H:%M:%S"), "고정 대포 포탄", fed, "· 고정 탄 합", ff.get("ammo"), "· 망", ff.get("net"), flush=True)
+                    if key != fix_state[0]:
+                        if lost:
+                            print(time.strftime("%H:%M:%S"), "고정 대포 없음 (파괴?)", lost, "- 유령", ff.get("ghost"), flush=True)
+                        fix_state[0] = key
+            except Exception as e:  # noqa: BLE001
+                print(f"artyaim fixfeed: {e}"[:200], flush=True)
         try:
-            r = ai.lua(AIM % ("false" if a.once else "true"))
+            r = artykit23._lua(ai, AIM % ("false" if a.once else "true"))
             now = time.strftime("%H:%M:%S")
             if a.once:
                 print(now, r)

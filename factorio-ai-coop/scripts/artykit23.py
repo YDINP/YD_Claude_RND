@@ -48,6 +48,58 @@ USER = "Guiltyring"
 STAGE_ORDER = ("rp", "ring", "arty", "chest")
 
 
+# 고정 대포 (09-28 22:4x artyfix23 - 구리 전초 (6.5,-329.5)): 이동 키트 · artyaim 은 이 자리 대포 (와 유령) 를 '대포' 로 보지 않는다.
+# state/arty_fixed.json = {"fixed": [[x, y], ..]}. 모든 Lua 는 _lua() 를 거쳐 '첫 번째 대포' · '대포 수' 식이 고정 대포를 빼도록 바뀐다.
+FIXED_FILE = os.path.join(HERE, "..", "state", "arty_fixed.json")
+
+
+def fixed():
+    try:
+        with open(FIXED_FILE, encoding="utf-8") as f:
+            return [list(p) for p in json.load(f).get("fixed") or []]
+    except (OSError, ValueError, AttributeError):
+        return []
+
+
+def add_fixed(p):
+    fs = fixed()
+    if not any(abs(q[0] - p[0]) < 1 and abs(q[1] - p[1]) < 1 for q in fs):
+        fs.append(list(p))
+    tmp = FIXED_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"fixed": fs, "since": time.strftime("%H:%M:%S")}, f, ensure_ascii=False)
+    os.replace(tmp, FIXED_FILE)
+    return fs
+
+
+_FIRST = "find_entities_filtered{name = 'artillery-turret', force = 'player'}[1]"
+_CNT = "count_entities_filtered{name = 'artillery-turret', force = 'player'}"
+_CNTG = "count_entities_filtered{ghost_name = 'artillery-turret', force = 'player'}"
+
+
+def fx(code):
+    """Lua 안의 '첫 번째 대포' · '대포 수' · '대포 유령 수' 를 고정 대포 뺀 것으로 바꾼다 (고정 없으면 그대로)."""
+    fs = fixed()
+    if not fs:
+        return code
+    F = ", ".join("{%s, %s}" % (q[0], q[1]) for q in fs)
+    notfix = ("local f = false for _, q in pairs({%s}) do if math.abs(a.position.x - q[1]) < 1 and math.abs(a.position.y - q[2]) < 1 "
+              "then f = true end end" % F)
+    for pre in ("game.surfaces[1].", "s."):
+        S = pre[:-1]
+        code = code.replace(pre + _FIRST, "(function() for _, a in pairs(%s.find_entities_filtered{name = 'artillery-turret', force = 'player'}) do "
+                            "%s if not f then return a end end end)()" % (S, notfix))
+        code = code.replace(pre + _CNT, "(function() local c = 0 for _, a in pairs(%s.find_entities_filtered{name = 'artillery-turret', force = 'player'}) do "
+                            "%s if not f then c = c + 1 end end return c end)()" % (S, notfix))
+        code = code.replace(pre + _CNTG, "(function() local c = 0 for _, a in pairs(%s.find_entities_filtered{ghost_name = 'artillery-turret', force = 'player'}) do "
+                            "%s if not f then c = c + 1 end end return c end)()" % (S, notfix))
+    return code
+
+
+def _lua(ai, code):
+    return ai.lua(fx(code))
+
+
 def load():
     try:
         with open(KIT_FILE, encoding="utf-8") as f:
@@ -138,7 +190,7 @@ def designate(ai, apply=False, adopt_user=False):
     kit0 = load() or {}
     site = kit0.get("site")
     fb = "{x = %s, y = %s}" % (site[0], site[1]) if site else "nil"
-    r = ai.lua(DESIGNATE % (fb, "true" if adopt_user else "false", USER))
+    r = _lua(ai, DESIGNATE % (fb, "true" if adopt_user else "false", USER))
     if r.get("err"):
         return r
     members = {"roboport": r.get("roboport"), "turrets": _lst(r.get("turrets")),
@@ -317,7 +369,7 @@ def _lost_at(kit):
 def plan(ai, kit):
     m = kit["members"]
     goal, prefer, only = load_goal()
-    r = ai.lua(PLAN % (_pt(m.get("roboport")), _pts(m.get("poles") or []), len(m.get("turrets") or []),
+    r = _lua(ai, PLAN % (_pt(m.get("roboport")), _pts(m.get("poles") or []), len(m.get("turrets") or []),
                        _pt(kit.get("site")), _pt(goal), _pt(prefer), "true" if only else "false", _pt(_lost_at(kit))))
     for k in ("to", "rp", "src", "bridge", "chest"):
         if k in r and r[k] is not None:
@@ -422,7 +474,7 @@ ARTY_AVAIL = """(function() local s = game.surfaces[1] local o = {}
 
 
 def arty_available(ai):
-    return ai.lua(ARTY_AVAIL)
+    return _lua(ai, ARTY_AVAIL)
 
 
 # 덧댐 (reinforce): 대포 P 둘레 - 전봇대 고리 (반경 3.5, 45도 간격) · 레이저 (반경 6, 적 방향 0 · +-45 · +-90, 같은 각 전봇대가 전기) ·
@@ -482,7 +534,7 @@ EXTRA_STATUS = """(function() local s = game.surfaces[1] local o = {guns = 0, lo
 
 def reinforce_plan(ai, mv):
     """새 자리 mv 에 덧댐 자리 계산 (레이저 · 기관총 수는 망 재고만큼, 2 개씩 남긴다)."""
-    net = ai.lua("""(function() local n = game.surfaces[1].find_logistic_network_by_position({-24, -88}, 'player')
+    net = _lua(ai, """(function() local n = game.surfaces[1].find_logistic_network_by_position({-24, -88}, 'player')
       return {laser = n and n.get_item_count('laser-turret') or 0, gun = n and n.get_item_count('gun-turret') or 0} end)()""")
     nl = max(0, min(5, (net.get("laser") or 0) - 2))
     ng = max(0, min(4, (net.get("gun") or 0) - 2))
@@ -491,14 +543,14 @@ def reinforce_plan(ai, mv):
         rects.append((mv["chest"][0], mv["chest"][1], 0.5))
     rs = ", ".join("{%s, %s, %s}" % r for r in rects)
     kp = _pts(mv["poles"]) if mv["poles"] else _pts([mv.get("src") or mv["rp"]])
-    r = ai.lua(REINFORCE % (_pt(mv["to"]), nl, ng, rs, kp))
+    r = _lua(ai, REINFORCE % (_pt(mv["to"]), nl, ng, rs, kp))
     return {"poles": [_lst(v) for v in _lst(r.get("poles"))], "lasers": [_lst(v) for v in _lst(r.get("lasers"))],
             "guns": [_lst(v) for v in _lst(r.get("guns"))], "bridge": r.get("bridge"), "face": r.get("face")}
 
 
 def extra_status(ai, mv):
     ex = mv.get("extra") or {}
-    return ai.lua(EXTRA_STATUS % (_pts(list(mv["ring"]) + list(ex.get("guns") or [])), _pts(ex.get("lasers") or []),
+    return _lua(ai, EXTRA_STATUS % (_pts(list(mv["ring"]) + list(ex.get("guns") or [])), _pts(ex.get("lasers") or []),
                                   _pts(ex.get("poles") or [])))
 
 
@@ -513,13 +565,13 @@ def _rows(name, pts):
 
 
 def ghosts(ai, rows):
-    return ai.lua(GHOSTS % ", ".join(rows)) if rows else {"made": 0}
+    return _lua(ai, GHOSTS % ", ".join(rows)) if rows else {"made": 0}
 
 
 def decon(ai, kit, rows):
     if not rows:
         return {"n": 0}
-    return ai.lua(DECON % ("true" if kit.get("adopt_user") else "false", _pts(kit["members"].get("poles") or []),
+    return _lua(ai, DECON % ("true" if kit.get("adopt_user") else "false", _pts(kit["members"].get("poles") or []),
                            ", ".join(rows), USER))
 
 
@@ -550,13 +602,13 @@ def start_move(ai, dry=False):
     r = plan(ai, kit)
     if r.get("err"):
         return None if not dry else r
-    u = ai.lua(UNITS % _pt(r["to"]))
+    u = _lua(ai, UNITS % _pt(r["to"]))
     if dry:
         r["units"] = u
         return r
     if (u.get("new") or 0) > 2 or (u.get("old") or 0) > 2:  # 05:55 떠돌이 1 마리에 11 분 보류 - 3 마리 이상일 때만
         return "키트 이전 보류: 적 유닛 새 자리 %s · 옛 자리 %s" % (u.get("new"), u.get("old"))
-    m = ai.lua(MOVE_ARTY)
+    m = _lua(ai, MOVE_ARTY)
     kit["move"] = {"to": r["to"], "rp": r["rp"], "poles": r["poles"], "ring": r["ring"], "chest": r.get("chest"),
                    "n": r["n"], "src": r.get("src"), "bridge": r.get("bridge"), "stage": "rp", "t0": time.time(),
                    "ts": time.time(), "old": kit["members"], "done_old": []}
@@ -584,7 +636,7 @@ def step(ai):
     mv = kit and kit.get("move")
     if not mv:
         return None
-    st = ai.lua(STATUS % (_pt(mv["rp"]), _pt(mv["rp"]), _pts(mv["ring"]), _pt(mv["to"]), _pt(mv.get("chest")),
+    st = _lua(ai, STATUS % (_pt(mv["rp"]), _pt(mv["rp"]), _pts(mv["ring"]), _pt(mv["to"]), _pt(mv.get("chest")),
                           _pts(mv["poles"]), _pt(mv["to"])))
     stage, msg = mv["stage"], None
     need_ring = min(len(mv["ring"]), 6)
@@ -601,7 +653,7 @@ def step(ai):
         if st.get("rp"):
             g = ghosts(ai, _rows("gun-turret", mv["ring"]))
             extra_ghosts(ai, mv)
-            u = ai.lua(UNITS % _pt(mv["to"]))
+            u = _lua(ai, UNITS % _pt(mv["to"]))
             extra = ""
             if u.get("stock_tur", 0) < len(mv["ring"]) and "turrets" not in mv["done_old"]:
                 extra = " · 옛 링 해체 %s" % decon(ai, kit, _old_rows(kit, "turrets")).get("n")
@@ -636,7 +688,7 @@ def step(ai):
             g, extra = {"made": 0}, ""
             if mv.get("chest"):
                 g = ghosts(ai, _rows("storage-chest", [mv["chest"]]))
-                u = ai.lua(UNITS % _pt(mv["to"]))
+                u = _lua(ai, UNITS % _pt(mv["to"]))
                 if u.get("stock_chest", 0) < 1 and "chest" not in mv["done_old"]:
                     extra = " · 옛 상자 해체 %s" % decon(ai, kit, _old_rows(kit, "chest")).get("n")
                     mv["done_old"].append("chest")
@@ -647,7 +699,7 @@ def step(ai):
             mv["arty_decon"] = 1  # 게임에 대포가 없다 (새 자리 유령만) - 해체할 옛 대포 없음
         elif not mv.get("arty_decon"):
             # 링이 서는 동안 다른 자리 (벽 안 대체 자리) 에서 쏘던 대포 - 이제 걷어서 새 자리로
-            m = ai.lua(MOVE_ARTY)
+            m = _lua(ai, MOVE_ARTY)
             mv["arty_decon"] = 1
             msg = "키트: 옛 자리 대포 (%s,%s) 해체 %s -> 새 자리 유령 대기" % (m.get("x"), m.get("y"), m.get("ok"))
     elif stage == "chest":
@@ -660,7 +712,7 @@ def step(ai):
                               "lasers": list(ex.get("lasers") or [])}
             kit["site"], kit["move"], kit["since"] = mv["to"], None, time.strftime("%H:%M:%S")
             if mv.get("chest"):  # 06:36 망 중계가 아무 저장 상자에나 구리를 넣어 옛 키트 상자에 466 - 해체 때 로봇 104 대가 그걸 나르느라 20 분 멈춤
-                ai.lua("""(function() local c = game.surfaces[1].find_entities_filtered{name = 'storage-chest', position = %s, radius = 0.6}[1]
+                _lua(ai, """(function() local c = game.surfaces[1].find_entities_filtered{name = 'storage-chest', position = %s, radius = 0.6}[1]
                   if c then pcall(function() c.set_storage_filter(1, {name = 'artillery-shell'}) end) end return {ok = c and 1 or 0} end)()""" % _pt(mv["chest"]))
             save(kit)
             return "키트 이전 끝 -> (%s,%s) · 링 %s · 상자 %s · 옛 키트 나머지 해체 %s · %d분" % (
