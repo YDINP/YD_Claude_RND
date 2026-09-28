@@ -490,3 +490,9 @@ stone       중심 (-56,-98)   거리 113 · (-72,-112)~(-40,-88)  · 303,040
 - pu23: 처리장치 5 대 출력 전부 망으로 (노랑 멈춤 뒤 옛 2 대 full_output). 다음 병목 녹색회로 (망 60 하한).
 - 대포 목표 남동 (150,80) → 키트 (78.5,6.5) 로 이전, 남동 260 칸 둥지 전멸 (벌레만 (266,130) 부근). 서쪽 (-338,71) 은 `state/arty_goal_west_pending.json` 대기 (통로 없음).
 - 사일로 부품 17/100 (23:58).
+
+## 01:01 첫 로켓 발사 ✅
+- 00:59:58 rocket_ready → 사용자 확인 ("지금 발사") → 01:00 `launch_rocket()` → rockets_launched=1, game.finished=false (승리 화면 끔).
+- 부품은 실제로 1 부품당 PU·LDS·RF 약 1 개 (생산 모듈 +16%) - 앞선 "각 870" 추정은 틀림 (~87).
+- 노란팩 조립기 2 대 utility-science-pack 복구 (`state/yellow_paused_restored_0101.json`). 사일로는 다음 로켓 계속 조립 (자동 발사 끔).
+- 다음: 우라늄 전초 (docs/outpost-mining-plan-run23.md), 서쪽 둥지 (-338,71) 통로.
