@@ -16,6 +16,10 @@
            AC  망 고급회로 < 60 이면 보라 고급회로 벨트 (x=-68.5 · y=-79.5) 에서 60 까지 (탭 상자가 서면 거의 안 움직임)
            PSP 망 보라 -> 연구소 (4 미만이면 6 까지)
            BF  망 석탄 (300 남김) -> 벽돌 화로 연료 (5 미만이면 10 까지)
+           ST  막힌 돌 레인 (+ 망 벽돌 넉넉할 때 화로 돌 벨트) -> 레일 요청 상자 40 · 옛 레일 조립기 12, 망 강철 -> 옛 레일 조립기
+           (09-28 19:xx 추가) ST 레일 돌 · 강철, ACB 고급회로 블록 요청 상자 보충, 황산 공장 철 · F1 강철 · 전기엔진 녹색회로,
+           노랑 Y 출력 20 초과분 -> 망 (< 1500) · 망 노랑 -> 연구소
+  P5     : 고급회로 블록 (x -2..34, y -99..-82) - AC 조립기2 7 · 구리선 조립기1 8 · 녹색 조립기2 2 (AC_DESIGN, DESIGN 에 합침)
   build  : 유령 (멱등) + 다 지어진 뒤 레시피 · 요청 · 상자 칸 제한 설정, 옛 보라 투입 팔 13 물류망 조건 해제 (필터 그대로).
 
 블록 (망 2 로보포트 (-87,-76) 범위, 기지 벽 안)
@@ -92,12 +96,44 @@ DESIGN += [["small-electric-pole", -95.5, -85.5, 0, None, None, None],
            ["passive-provider-chest", -70.5, -75.5, 0, None, None, 6],
            ["inserter", -69.5, -75.5, E_, None, None, None]]
 
+# ---- P5 고급회로 블록 (09-28 19:xx, 빈 땅 x -2..34 · y -99..-82, 로보포트 (10,-80) · 저장 (12.5,-79.5) 옆, 벽 y=-112 안)
+# 고급회로 10 분 ~400 (망 0) -> 조립기2 +7 (계획 P5). 구리선은 옆 조립기1 에서 직접 넣기 (로봇 짐 줄임), 녹색회로는 녹색 칸 2 (조립기2) 가 만들어 망으로.
+#   1 줄 (y0=-94.5) 쌍 칸 3: [AC] <- 구리선(AM1) -> [AC], 위 요청 (AC: 녹색 · 플라스틱 / 구리선: 구리), 아래 공급 (AC, 칸 2)
+#   2 줄 (y0=-86.5) 녹색 칸 2: 구리선(AM1) -> 녹색(AM2) <- 구리선(AM1), 위 요청 (구리 · 철 · 구리), 아래 공급 (녹색, 칸 1) + 홑 칸 1 [AC] <- 구리선
+AC, CC, GC = "advanced-circuit", "copper-cable", "electronic-circuit"
+REQ_AC = {GC: 20, "plastic-bar": 20}
+AC_DESIGN = [["small-electric-pole", -1.5, -97.5, 0, None, None, None]]
+
+
+def _poles(x0, y0, xs):
+    return [["small-electric-pole", x0 + dx, y0 + dy, 0, None, None, None] for dx in xs for dy in (-2, 2)]
+
+
+def _cell(x, y0, rc, req, am="assembling-machine-2", out_bar=None):
+    d = [["requester-chest", x, y0 - 3, 0, None, req, None], ["inserter", x, y0 - 2, N_, None, None, None],
+         [am, x, y0, 0, rc, None, None]]
+    if out_bar:
+        d += [["inserter", x, y0 + 2, N_, None, None, None], ["passive-provider-chest", x, y0 + 3, 0, None, None, out_bar]]
+    return d
+
+
+for x0 in (0, 11, 22):                      # 1 줄 쌍 칸
+    y0 = -94.5
+    AC_DESIGN += _cell(x0 + 1.5, y0, AC, REQ_AC, out_bar=2) + _cell(x0 + 5.5, y0, CC, {"copper-plate": 30}, am="assembling-machine-1")         + _cell(x0 + 9.5, y0, AC, REQ_AC, out_bar=2)         + [["inserter", x0 + 3.5, y0, E_, None, None, None], ["inserter", x0 + 7.5, y0, W_, None, None, None]] + _poles(x0, y0, (3.5, 7.5))
+for x0 in (0, 11):                          # 2 줄 녹색 칸
+    y0 = -86.5
+    AC_DESIGN += _cell(x0 + 1.5, y0, CC, {"copper-plate": 40}, am="assembling-machine-1")         + _cell(x0 + 5.5, y0, GC, {"iron-plate": 40}, out_bar=1) + _cell(x0 + 9.5, y0, CC, {"copper-plate": 40}, am="assembling-machine-1")         + [["fast-inserter", x0 + 3.5, y0, W_, None, None, None], ["fast-inserter", x0 + 7.5, y0, E_, None, None, None]] + _poles(x0, y0, (3.5, 7.5))
+AC_DESIGN += _cell(23.5, -86.5, AC, REQ_AC, out_bar=2) + _cell(27.5, -86.5, CC, {"copper-plate": 30}, am="assembling-machine-1")     + [["inserter", 25.5, -86.5, E_, None, None, None]] + _poles(22, -86.5, (3.5,))
+DESIGN += AC_DESIGN
+AC_REQS = [(d[1], d[2], d[5]) for d in DESIGN if d[0] == "requester-chest" and (d[1], d[2]) != (-95.5, -77.5)]   # 19:3x 보라 블록 요청 상자도 (물류 로봇 69 전부 바쁨 -> 레일 조립기 막대 0)
+
 OLD_PURPLE_INS = [(-93.5, -84.5), (-92.5, -84.5), (-94.5, -80.5), (-93.5, -80.5), (-91.5, -82.5), (-87.5, -82.5),
                   (-89.5, -80.5), (-85.5, -84.5), (-84.5, -84.5), (-83.5, -82.5), (-85.5, -80.5), (-81.5, -84.5),
                   (-81.5, -80.5)]
 EC_AREAS = [((5, -36), (36, -27)), ((-35, -46), (-24, -14))]
 AC_AREAS = [((-69, -79), (-68, -48)), ((-82, -80), (-68, -79))]
-BLOCK_AREAS = [[[-104, -90], [-88, -70]], [[-72, -78], [-68, -74]]]
+BLOCK_AREAS = [[[-104, -90], [-88, -70]], [[-72, -78], [-68, -74]], [[-3, -99], [34, -82]]]
+STONE_AREAS = [[[-73, -81], [-72, -44]], [[-75, -86], [-74, -81]], [[-60, -91], [-54, -88]]]   # 막힌 돌 레인
 BRICK_FURN = [(-63, -97), (-60, -97), (-51, -97), (-48, -97)]
 
 
@@ -220,7 +256,9 @@ for _, k in pairs({'requester-chest', 'passive-provider-chest', 'assembling-mach
 R['construction-robot'] = math.max(0, $contarget - net.all_construction_robots)
 R['logistic-robot'] = math.max(0, $logitarget - net.all_logistic_robots)
 R['steel-chest'] = math.max(0, R['requester-chest'] + R['passive-provider-chest'] - cnt('steel-chest'))
-R['assembling-machine-1'] = math.max(0, R['assembling-machine-2'] - cnt('assembling-machine-1'))
+do local g1 = 0 for _, A in pairs($areas) do g1 = g1 + s.count_entities_filtered{ghost_name = 'assembling-machine-1', area = A} end
+  g1 = math.min(NEED['assembling-machine-1'] or 0, g1) - (fly['assembling-machine-1'] or 0)
+  R['assembling-machine-1'] = math.max(0, math.max(0, g1) + R['assembling-machine-2'] - cnt('assembling-machine-1')) end
 R['iron-gear-wheel'] = math.max(0, 5 * (R['assembling-machine-1'] + R['assembling-machine-2']) - cnt('iron-gear-wheel'))
 local frames_net = cnt('flying-robot-frame')
 local function frame_src() local n = frames_net
@@ -308,6 +346,95 @@ for _, l in pairs(s.find_entities_filtered{type = 'lab', force = 'player'}) do
     if k > 0 then k = net.remove_item{name = 'production-science-pack', count = k}
       if k > 0 then local p = inv.insert{name = 'production-science-pack', count = k} if p < k then net.insert{name = 'production-science-pack', count = k - p} end add('psp', p) end end end
 end
+-- 레일 돌 · 강철 (09-28 19:0x): 망 돌 0 (돌 전초 중단) -> 레일 조립기 둘이 돌 0 / 옛 레일 조립기 (-85.5,-82.5) 는 강철 벨트 레인이 철판에 막혀 강철 0.
+--   돌 출처 1 = 막힌 돌 레인 (채굴기 (-54.5,-92.5) -> y=-88.5 서행 -> x=-74.5 -> x=-72.5 남행 2 레인, waiting_for_space = 남는 몫)
+--   돌 출처 2 = 벽돌 화로 돌 벨트 y=-100.5 - 망 벽돌 >= 50 이고 망 전기로 >= 20 일 때만 (화로 몫과 나눔)
+--   받는 곳: 레일 조립기2 요청 상자 (-101.5,-86.5) 40 까지 -> 옛 레일 조립기1 입력 12 까지. 강철은 망 -> 옛 레일 조립기1 (10 미만이면 30 까지).
+do
+  local RQ = s.find_entities_filtered{name = 'requester-chest', position = {-101.5, -86.5}, radius = 0.3}[1]
+  local R1 = s.find_entities_filtered{type = 'assembling-machine', position = {-85.5, -82.5}, radius = 0.6}[1]
+  local rin = R1 and R1.get_inventory(defines.inventory.assembling_machine_input)
+  local rqi = RQ and RQ.get_inventory(defines.inventory.chest)
+  local w1 = rqi and math.max(0, 40 - rqi.get_item_count('stone')) or 0
+  local w2 = rin and math.max(0, 12 - rin.get_item_count('stone')) or 0
+  local function take(areas, want)
+    local got = 0
+    for _, A in pairs(areas) do
+      for _, b in pairs(s.find_entities_filtered{type = {'transport-belt', 'underground-belt'}, area = A}) do
+        for i = 1, 2 do if got < want then local l = b.get_transport_line(i) local n = l.get_item_count('stone')
+          if n > 0 then got = got + l.remove_item{name = 'stone', count = math.min(want - got, n)} end end end
+      end
+    end
+    return got
+  end
+  -- 채굴기 (-54.5,-92.5) 앞 짧은 돌 벨트에 구리광석이 끼어 (x=-72.5 줄은 돌 · 구리광석 섞인 줄) 채굴기가 waiting_for_space -> 그 몇 칸의 구리광석만 망으로 (30 초 20 까지)
+  do local left = 20
+    for _, b in pairs(s.find_entities_filtered{type = 'transport-belt', area = {{-57, -91}, {-54, -88}}}) do
+      for i = 1, 2 do local l = b.get_transport_line(i) local n = l.get_item_count('copper-ore')
+        if n > 0 and left > 0 then local k = l.remove_item{name = 'copper-ore', count = math.min(n, left)} if k > 0 then local q = net.insert{name = 'copper-ore', count = k} left = left - k add('cuore', q) end end end
+    end
+  end
+  local want = w1 + w2
+  local got = take($stoneareas, want)
+  if got < want and net.get_item_count('stone-brick') >= 50 and net.get_item_count('electric-furnace') >= 20 then
+    local g2 = take({{{-64, -101}, {-47, -100}}}, math.min(want - got, 20)) got = got + g2 add('stbf', g2) end
+  if got > 0 then
+    local a = rqi and math.min(got, w1) or 0
+    if a > 0 then a = rqi.insert{name = 'stone', count = a} add('strq', a) end
+    local b2 = got - a
+    if b2 > 0 and rin then local q = rin.insert{name = 'stone', count = b2} add('str1', q) b2 = b2 - q end
+    if b2 > 0 then net.insert{name = 'stone', count = b2} end
+  end
+  if rin then local h = rin.get_item_count('steel-plate')
+    if h < 10 and net.get_item_count('steel-plate') > 1500 then local k = net.remove_item{name = 'steel-plate', count = 30 - h}
+      if k > 0 then local q = rin.insert{name = 'steel-plate', count = k} if q < k then net.insert{name = 'steel-plate', count = k - q} end add('stl1', q) end end end
+end
+-- P5 고급회로 블록 요청 상자: 물류 로봇 (31 대, 망 끝 저장 (-97.5,-88.5) 까지 ~110 칸) 이 못 따라오면 1/3 밑일 때 망 -> 상자 (구리 800 · 철 3000 · 플라스틱 100 남김)
+do local FL = {['copper-plate'] = 800, ['iron-plate'] = 3000, ['plastic-bar'] = 100, ['steel-plate'] = 1500, ['rail'] = 0, ['iron-stick'] = 0, ['electric-furnace'] = 0, ['productivity-module'] = 0, ['advanced-circuit'] = 0, ['stone-brick'] = 0}
+  for _, r in pairs($acreqs) do local c = s.find_entities_filtered{name = 'requester-chest', position = {r[1], r[2]}, radius = 0.3}[1]
+    if c then local inv = c.get_inventory(defines.inventory.chest)
+      for name, n in pairs(r[3]) do if FL[name] then local h = inv.get_item_count(name)
+        if h < n / 3 then local k = math.min(n - h, net.get_item_count(name) - FL[name])
+          if k > 0 then k = net.remove_item{name = name, count = k} if k > 0 then local q = inv.insert{name = name, count = k} if q < k then net.insert{name = name, count = k - q} end add('acb', q) end end end end end
+    end
+  end
+end
+-- P5 노랑 사슬 (09-28 19:xx):
+--   황산 공장 (30.5,6.5) 철 0 (ironfeed23 구역 y -40..0 밖, 옆 철 상자 (30.5,3.5) 빈 채) -> 황산 관 전부 0 -> 배터리 · 처리장치 굶음. 망 철 -> 입력 (5 미만이면 20 까지)
+--   전기엔진 (21.5,-8.5) 녹색회로: 망 -> 입력 (4 미만이면 10 까지)
+--   F1 프레임 (8.5,3.5) 강철 0 (역시 구역 밖) -> 망 강철 -> 입력 (3 미만이면 10 까지)
+--   노랑 Y2 (12.5,3.5) full_output 78: 연구가 보라를 기다려 연구소가 노랑을 안 먹음 -> 출력 4 넘는 몫을 망으로 (출력 20 이면 full_output 으로 섬) (망 노랑 < 1500 · 저장 빈 칸 > 120).
+--   망 노랑 -> 연구소 (3 미만이면 5 까지, yellowlab23 이 먼저 조립기 출력에서 채움) - 사일로 연구 비축분.
+do
+  local function feed(pos, item, lo, hi, keep, tag)
+    local a = s.find_entities_filtered{type = 'assembling-machine', position = pos, radius = 0.6}[1]
+    if not a then return end
+    local inv = a.get_inventory(defines.inventory.assembling_machine_input) local h = inv.get_item_count(item)
+    if h < lo then local k = math.min(hi - h, net.get_item_count(item) - keep)
+      if k > 0 then k = net.remove_item{name = item, count = k} if k > 0 then local q = inv.insert{name = item, count = k} if q < k then net.insert{name = item, count = k - q} end add(tag, q) end end end
+  end
+  feed({30.5, 6.5}, 'iron-plate', 5, 20, 3000, 'acid')
+  feed({8.5, 3.5}, 'steel-plate', 3, 10, 300, 'f1st')
+  feed({21.5, -8.5}, 'electronic-circuit', 4, 10, 0, 'eeec')   -- 전기엔진 (한 대, 10 분 21 / 상한 45) 녹색회로 1 개로 자주 섬 -> 프레임 병목
+  -- 처리장치 둘 (33.5,1.5)(36.5,1.5) full_output 인데 노랑 Y2 는 처리장치 1 -> 출력 -> 노랑 둘 입력 (4 미만이면 8 까지)
+  for _, yp in pairs({{12.5, 3.5}, {29.5, -8.5}}) do local Y = s.find_entities_filtered{type = 'assembling-machine', position = yp, radius = 0.6}[1]
+    if Y then local yi = Y.get_inventory(defines.inventory.assembling_machine_input) local h = yi.get_item_count('processing-unit')
+      for _, pp in pairs({{33.5, 1.5}, {36.5, 1.5}}) do if h < 4 then local P = s.find_entities_filtered{type = 'assembling-machine', position = pp, radius = 0.6}[1]
+        if P then local po = P.get_output_inventory() local k = math.min(8 - h, po.get_item_count('processing-unit'))
+          if k > 0 then k = yi.insert{name = 'processing-unit', count = k} if k > 0 then po.remove{name = 'processing-unit', count = k} h = h + k add('pu', k) end end end end end
+    end
+  end
+  local USP = 'utility-science-pack'
+  local free = 0 for _, c in pairs(net.storages) do free = free + c.get_inventory(defines.inventory.chest).count_empty_stacks() end
+  for _, p in pairs({{12.5, 3.5}, {29.5, -8.5}}) do local a = s.find_entities_filtered{type = 'assembling-machine', position = p, radius = 0.6}[1]
+    if a and free > 120 and net.get_item_count(USP) < 1500 then local out = a.get_output_inventory() local n = out.get_item_count(USP) - 4
+      if n > 0 then local k = net.insert{name = USP, count = n} if k > 0 then out.remove{name = USP, count = k} add('usp', k) end end end end
+  if net.get_item_count(USP) > 0 then
+    for _, l in pairs(s.find_entities_filtered{type = 'lab', force = 'player'}) do local inv = l.get_inventory(defines.inventory.lab_input) local h = inv.get_item_count(USP)
+      if h < 3 then local k = math.min(5 - h, net.get_item_count(USP)) if k > 0 then k = net.remove_item{name = USP, count = k}
+        if k > 0 then local q = inv.insert{name = USP, count = k} if q < k then net.insert{name = USP, count = k - q} end add('usplab', q) end end end end
+  end
+end
 -- 벽돌 화로 연료
 for _, p in pairs($bf) do local f = s.find_entities_filtered{type = 'furnace', position = p, radius = 1}[1]
   if f then local fu = f.get_fuel_inventory() local h = fu.get_item_count('coal')
@@ -381,18 +508,20 @@ def run(ai, every=6, relay_every=30):
             if now - last_relay >= relay_every:
                 r = ai.lua(RELAY.replace("$ecareas", L([[list(a), list(b)] for a, b in EC_AREAS]))
                            .replace("$acareas", L([[list(a), list(b)] for a, b in AC_AREAS]))
-                           .replace("$bf", L([list(p) for p in BRICK_FURN])))
+                           .replace("$bf", L([list(p) for p in BRICK_FURN]))
+                           .replace("$stoneareas", L(STONE_AREAS))
+                           .replace("$acreqs", L([[x, y, r] for x, y, r in AC_REQS])))
                 made = int(r.get("frames_made", 0))
                 if "frame_base" not in st:
                     st["frame_base"], st["frames_taken"] = made, 0
                 allow = int(FRAME_SHARE * (made - st["frame_base"])) - st.get("frames_taken", 0)
                 st["allow"] = max(0, allow)
                 save(st)
-                moved = {k: v for k, v in r.items() if k in ("ec", "ac", "psp", "bf", "f1ec", "f1ee", "s3", "acblue")}
+                moved = {k: v for k, v in r.items() if k in ("ec", "ac", "psp", "bf", "f1ec", "f1ee", "s3", "acblue", "strq", "str1", "stbf", "stl1", "acb", "acid", "f1st", "usp", "usplab", "eeec", "cuore", "pu")}
                 if moved:
                     log("relay %s · 물류 %s 건설 %s · 저장 빈칸 %s · 프레임 몫 %s" % (moved, r.get("lr"), r.get("cr"), r.get("free"), st["allow"]))
                 last_relay = now
-            mneed = {k: need.get(k, 0) for k in ("requester-chest", "passive-provider-chest", "assembling-machine-2")}
+            mneed = {k: need.get(k, 0) for k in ("requester-chest", "passive-provider-chest", "assembling-machine-2", "assembling-machine-1")}
             m = ai.lua(MAKER_LUA.replace("$mx", str(MAKER[0])).replace("$my", str(MAKER[1])).replace("$need", L(mneed))
                        .replace("$frames", str(st.get("allow", 0))).replace("$fsrc", L([list(p) for p in FRAME_SRC]))
                        .replace("$contarget", str(CON_TARGET)).replace("$areas", L(BLOCK_AREAS)).replace("$logitarget", str(LOGI_TARGET)))
