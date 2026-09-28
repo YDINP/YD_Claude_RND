@@ -198,17 +198,17 @@ FUEL = """(function() local s = game.surfaces[1] local o = {put = 0, src_net = 0
       if got >= n then break end
     end
     o.src_line = o.src_line + got return got end
+  -- 09:10 x=-51.5 줄은 새 호숫가 발전소 보일러 석탄 줄 (ca88c88) - 거기서 빼지 않는다. 망 석탄 / 석탄 상자만.
   local function coal(n)
-    local got = from_line(n)
-    if got > 0 then return got end
+    local got = 0
     if net and net.get_item_count('coal') > 100 + n then got = net.remove_item{name = 'coal', count = n} o.src_net = o.src_net + got end
     if got == 0 and box and box.get_item_count('coal') > 300 + n then got = box.remove_item{name = 'coal', count = n} o.src_box = o.src_box + got end
     return got end
   for _, p in pairs({%s}) do
     local f = s.find_entities_filtered{name = 'stone-furnace', position = p, radius = 0.3}[1]
     if f then local fu = f.get_inventory(defines.inventory.fuel)
-      local need = 12 - fu.get_item_count('coal')
-      if need >= 6 then local got = coal(need) if got > 0 then fu.insert{name = 'coal', count = got} o.put = o.put + got else o.short = o.short + 1 end end
+      local have = fu.get_item_count('coal') local need = %d - have
+      if have <= %d and need > 0 then local got = coal(need) if got > 0 then fu.insert{name = 'coal', count = got} o.put = o.put + got else o.short = o.short + 1 end end
     end
   end
   o.box = box and box.get_item_count('coal') or -1
@@ -216,10 +216,18 @@ FUEL = """(function() local s = game.surfaces[1] local o = {put = 0, src_net = 0
   return o end)()"""
 
 
+# 철 전초는 석탄 벨트 (coalline23) 가 들어온 뒤로 비상 보충만 한다: 연료칸 1 이하 -> 4 까지.
+# state/smeltcol23.json 의 fe.belt_coal 이 켜져 있으면 비상 모드. 끄면 예전처럼 6 이하 -> 12.
+BELT_COAL_LOW, BELT_COAL_FILL = 1, 4
+
+
 def fuel(ai, key):
     _, furn, _ = layout(key)
     pts = ", ".join("{%s, %s}" % p for p in furn)
-    return ai.lua(FUEL % (COALBOX[0], COALBOX[1], pts))
+    low, fill = 6, 12
+    if load().get(key, {}).get("belt_coal"):
+        low, fill = BELT_COAL_LOW, BELT_COAL_FILL
+    return ai.lua(FUEL % (COALBOX[0], COALBOX[1], pts, fill, low))
 
 
 SWITCH = """(function() local s = game.surfaces[1] local o = {}

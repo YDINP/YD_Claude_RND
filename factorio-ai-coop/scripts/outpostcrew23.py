@@ -89,8 +89,12 @@ def order_path(builds, start):
 def make_plan(builds, inserts, entry, home=HOME, pre=()):
     """builds: [(name, x, y, dir_str)], inserts: [(item, x, y, count)] -> 단계 목록 (≤ MAX_STEPS). pre: 짓기 전 단계 (나무 베기)"""
     steps = [("walk_to", {"x": entry[0], "y": entry[1]})] + list(pre)
-    for name, x, y, d in order_path(builds, entry):
-        steps.append(("build", {"name": name, "x": x, "y": y, "direction": DIRS.get(d, 0)}))
+    for b in order_path(builds, entry):
+        name, x, y, d = b[:4]
+        p = {"name": name, "x": x, "y": y, "direction": DIRS.get(d, 0)}
+        if len(b) > 4 and b[4]:
+            p["type"] = b[4]              # 지하벨트 입구/출구 ("input" | "output")
+        steps.append(("build", p))
     for item, x, y, n in inserts:
         steps.append(("insert", {"name": item, "x": x, "y": y, "count": n}))
     steps.append(("walk_to", {"x": home[0], "y": home[1]}))
