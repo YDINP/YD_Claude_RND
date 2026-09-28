@@ -45,6 +45,19 @@ LUA = """(function() local s = game.surfaces[1] local o = {iron = 0, toP = 0, st
     end
   end
   for _, b in pairs(P) do store('piercing-rounds-magazine', b.get_inventory(defines.inventory.assembling_machine_output), %(capP)d) end
+  -- 13:30 로봇 건설 범위 밖 원격 전초 기관총 (SW -128,80 · W -250,-65 · E 121,-22 · NE 208,-130) 은 배달 요청이 안 닿는다
+  -- -> 탄 10 미만이면 망 탄창을 20 까지 직접 (망에 300 남김)
+  o.remote = 0
+  for _, g in pairs(s.find_entities_filtered{name = 'gun-turret', force = 'player'}) do
+    local inv = g.get_inventory(defines.inventory.turret_ammo)
+    if inv.get_item_count() < 10 and #s.find_logistic_networks_by_construction_area(g.position, 'player') == 0 then
+      for _, nm in pairs({'piercing-rounds-magazine', 'firearm-magazine'}) do
+        local k = math.min(20 - inv.get_item_count(), net.get_item_count(nm) - 300)
+        if k > 0 then k = net.remove_item{name = nm, count = k} local put = inv.insert{name = nm, count = k}
+          if put < k then net.insert{name = nm, count = k - put} end o.remote = o.remote + put end
+      end
+    end
+  end
   o.fm = net.get_item_count('firearm-magazine') o.pr = net.get_item_count('piercing-rounds-magazine')
   return o end)()"""
 
@@ -63,7 +76,7 @@ def main() -> int:
     while True:
         try:
             r = ai.lua(lua)
-            if r.get("iron") or r.get("toP") or r.get("store") or a.once:
+            if r.get("iron") or r.get("toP") or r.get("store") or r.get("remote") or a.once:
                 print(time.strftime("%H:%M:%S"), "탄창", r, flush=True)
         except Exception as e:  # noqa: BLE001
             print(f"ammofeed: {type(e).__name__}: {e}"[:200], flush=True)
