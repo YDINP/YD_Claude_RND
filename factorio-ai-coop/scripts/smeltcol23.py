@@ -243,6 +243,16 @@ BELT_COAL_LOW, BELT_COAL_FILL = 1, 4
 CBELT_KEEP = 500
 
 
+def fuel_steelcol(ai):
+    """steelcol23 강철로 18 연료 - 구리 전초처럼 coalline23 석탄 벨트 남는 몫 (CBELT_KEEP 초과) -> 망 석탄 > 100 -> 석탄 상자 300 초과 (옮김). 6 이하 -> 12."""
+    try:
+        import steelcol23
+        pts = ", ".join("{%s, %s}" % (steelcol23.X_F, y) for y in steelcol23.CENTERS)
+    except Exception:  # noqa: BLE001
+        return {}
+    return ai.lua(FUEL % (COALBOX[0], COALBOX[1], "true", CBELT_KEEP, pts, 12, 6))
+
+
 def fuel(ai, key):
     _, furn, _ = layout(key)
     pts = ", ".join("{%s, %s}" % p for p in furn)
@@ -413,15 +423,42 @@ FILTER = """(function() local s = game.surfaces[1] local o = {moved = {}}
   end
   return o end)()"""
 
-STEEL_CAP = 3000
-STEEL_REG = """(function() local s = game.surfaces[1] local o = {on = 0, off = 0}
+# 15:5x steelcol23: 상한 3000 -> 4000 (다시 켬 3500). 망 저장 빈 칸이 STEEL_FREE_MIN 아래면 끈다 (저장 가득 금지).
+# 새 강철로 기둥 (steelcol23) 입력 팔은 망 철판이 IRON_FLOOR 아래로 내려가면 끈다 (판을 기지로 흘림), IRON_ON 위에서 다시 켬.
+STEEL_CAP, STEEL_ON = 4000, 3500
+STEEL_FREE_MIN, STEEL_FREE_ON = 25, 30
+IRON_FLOOR, IRON_ON = 4000, 6000
+STEEL_REG = """(function() local s = game.surfaces[1] local o = {on = 0, off = 0, on2 = 0, off2 = 0}
   local net = s.find_logistic_network_by_position({-24, -88}, 'player')
-  local k = net.get_item_count('steel-plate') o.steel = k
-  local want = nil if k >= %d then want = false elseif k <= %d then want = true end
+  local free = 0 for _, c in pairs(net.storages) do free = free + c.get_inventory(defines.inventory.chest).count_empty_stacks() end
+  local k = net.get_item_count('steel-plate') local fe = net.get_item_count('iron-plate') o.steel = k o.iron = fe o.free = free
+  local want = nil if k >= %d or free < %d then want = false elseif k <= %d and free >= %d then want = true end
+  local want2 = want if want ~= false then if fe < %d then want2 = false elseif fe > %d and want == true then want2 = true else want2 = nil end end
+  local function reg(pts, w, key)
+    for _, p in pairs(pts) do
+      local i = s.find_entities_filtered{name = 'inserter', position = p, radius = 0.3}[1]
+      if i then if w ~= nil and i.active ~= w then i.active = w end if i.active then o['on' .. key] = o['on' .. key] + 1 else o['off' .. key] = o['off' .. key] + 1 end end
+    end end
+  reg({%s}, want, '') reg({%s}, want2, '2')
+  return o end)()"""
+
+# steelcol23: 두 번째 반입 벨트 (platein23 fe) 는 line 1 = 강철 전용. 벽 안 구간에서 강철을 망 저장으로 (fe-x33 머리 전에). 상한 없음 - 머리로 넘기지 않는다.
+NEWBELT_STEEL = """(function() local s = game.surfaces[1] local o = {moved = 0}
+  local net = s.find_logistic_network_by_position({-24, -88}, 'player')
   for _, p in pairs({%s}) do
-    local i = s.find_entities_filtered{name = 'inserter', position = p, radius = 0.3}[1]
-    if i then if want ~= nil and i.active ~= want then i.active = want end if i.active then o.on = o.on + 1 else o.off = o.off + 1 end end
+    local b = s.find_entities_filtered{type = {'transport-belt', 'underground-belt'}, position = p, radius = 0.3}[1]
+    if b then for li = 1, b.get_max_transport_line_index() do local L = b.get_transport_line(li) local k = L.get_item_count('steel-plate')
+      if k > 0 then local put = net.insert({name = 'steel-plate', count = k}, 'storage') if put > 0 then L.remove_item{name = 'steel-plate', count = put} o.moved = o.moved + put end end end end
   end return o end)()"""
+
+
+def newbelt_steel(ai):
+    try:
+        import steelcol23
+        pts = ", ".join("{%s, %s}" % p for p in steelcol23.inside_points())
+    except Exception:  # noqa: BLE001
+        return {}
+    return ai.lua(NEWBELT_STEEL % pts)
 
 
 def fe_filter(ai):
@@ -433,7 +470,12 @@ def steel_reg(ai):
     c = SITES["fe"]
     X, r0, n = c["Xr"], c["steel"]["r0"], c["steel"]["n"]
     pts = ", ".join("{%s, %s}" % (X - 1, r0 + 2 * k) for k in range(n))
-    return ai.lua(STEEL_REG % (STEEL_CAP, STEEL_CAP - 500, pts))
+    try:
+        import steelcol23
+        pts2 = ", ".join("{%s, %s}" % p for p in steelcol23.ins_in_points())
+    except Exception:  # noqa: BLE001
+        pts2 = ""
+    return ai.lua(STEEL_REG % (STEEL_CAP, STEEL_FREE_MIN, STEEL_ON, STEEL_FREE_ON, IRON_FLOOR, IRON_ON, pts, pts2))
 
 
 # coalnet23: 석탄 광맥 (-83,-278) 채굴기 8 -> 철 상자 4 -> 망 저장 (구리 전초 · 기타 연료). 망 석탄 상한 · 저장 빈 칸 하한.
@@ -518,12 +560,16 @@ def main() -> int:
                         t = chest_out(ai, k)
                         t["filter"] = fe_filter(ai)
                         t["steel_reg"] = steel_reg(ai)
+                        t["newbelt_steel"] = newbelt_steel(ai)
                     if sw:
                         ob = ore_back(ai, k)
                         if ob.get("back"):
                             log("%s 남은 광석 전초 화로로 %s" % (SITES[k]["label"], ob))
                     if n % 5 == 0 or (f.get("short")) or (t and t.get("moved")):
                         log("%s 연료 %s · 기지 끝 %s · 지하 %s · 상태 %s" % (SITES[k]["label"], f, t, cu, status(ai, k)))
+                fs = fuel_steelcol(ai)
+                if n % 5 == 0 or fs.get("short"):
+                    log("강철 기둥 연료 %s" % fs)
                 cn = coalnet(ai)
                 bf = boxfill(ai)
                 if n % 5 == 0 or cn.get("moved") or bf.get("put"):
@@ -544,6 +590,7 @@ def main() -> int:
                             tail(ai, k)
                         elif st.get(k, {}).get("tail_off") and k == "fe":
                             fe_filter(ai)
+                            newbelt_steel(ai)
                 except Exception:  # noqa: BLE001
                     pass
             time.sleep(max(0, t_end - time.time()))
