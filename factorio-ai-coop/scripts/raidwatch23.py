@@ -32,11 +32,14 @@ SNAP = """(function() local s = game.surfaces[1] local o = {u = {}, c = {}}
   for _, ch in pairs(s.find_entities_filtered{type = 'character'}) do
     o.c[#o.c + 1] = {x = ch.position.x, y = ch.position.y, hp = ch.health} end
   o.ghosts = s.count_entities_filtered{type = 'entity-ghost', force = 'player', area = {{-250, -200}, {150, 150}}}
-  local dmg, low = 0, 0
+  -- 손상·탄부족은 맵 전체 수. 탄부족 중 로봇 건설 범위 밖 (배달 요청이 영영 안 옴 - 13:30 7 대 전부 원격 전초) 은 far 로 따로
+  local dmg, low, far = 0, 0, 0
   for _, t in pairs(s.find_entities_filtered{name = 'gun-turret', force = 'player'}) do
     if t.health < 300 then dmg = dmg + 1 end
-    if t.get_inventory(defines.inventory.turret_ammo).get_item_count() < 3 then low = low + 1 end
+    if t.get_inventory(defines.inventory.turret_ammo).get_item_count() < 3 then low = low + 1
+      if #s.find_logistic_networks_by_construction_area(t.position, 'player') == 0 then far = far + 1 end end
   end
+  o.far = far
   o.dmg, o.low, o.turrets = dmg, low, s.count_entities_filtered{name = 'gun-turret', force = 'player'}
   -- 탄 5 미만 포탑엔 로봇 배달 요청 (슬롯에 든 종류로 - 다른 종류는 안 섞인다). 전진 포트 호위가 빈 탄으로 서 있었다 (14:00)
   o.req = 0
@@ -103,7 +106,7 @@ def main() -> int:
             for d in [d for d in active if d not in groups]:
                 st = active.pop(d)
                 lost = r["ghosts"] - st["ghosts0"]
-                print(f"{now} 공습 끝 {d}: 최대 {st['peak']} · 새 유령 {max(0, lost)} · 손상 포탑 {r['dmg']} · 탄부족 {r['low']}", flush=True)
+                print(f"{now} 공습 끝 {d}: 최대 {st['peak']} · 새 유령 {max(0, lost)} · 손상 포탑 {r['dmg']} · 탄부족 {r['low']} (로봇 밖 {r.get('far', 0)}, 맵 전체)", flush=True)
             if r.get("req"):
                 print(f"{now} 탄 배달 요청 {r['req']}", flush=True)
             cs = rows(r.get("c"))
