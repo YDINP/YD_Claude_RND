@@ -23,12 +23,14 @@ LUA = """(function() local s = game.surfaces[1] local o = {n = 0, iron = 0}
   for _, a in pairs(s.find_entities_filtered{type = 'assembling-machine', force = 'player', area = {{%d, %d}, {%d, %d}}}) do
     local r = a.get_recipe()
     if r and not (a.last_user and a.last_user.name == 'Guiltyring') then
-      for _, ing in pairs(r.ingredients) do if ing.name == 'iron-plate' then
+      -- 16:15 강철도 (엔진 조립기 강철 0 -> 파랑팩 0; 강철은 철 전초 증산으로 망에 2k+)
+      for _, ing in pairs(r.ingredients) do local keep = ({['iron-plate'] = %d, ['steel-plate'] = 300})[ing.name]
+        if keep then
         local inv = a.get_inventory(defines.inventory.assembling_machine_input)
-        local k = math.min(%d - inv.get_item_count('iron-plate'), net.get_item_count('iron-plate') - %d)
-        if k > 0 then k = net.remove_item{name = 'iron-plate', count = k} local put = inv.insert{name = 'iron-plate', count = k}
-          if put < k then net.insert{name = 'iron-plate', count = k - put} end
-          if put > 0 then o.n = o.n + 1 o.iron = o.iron + put end end
+        local k = math.min(%d - inv.get_item_count(ing.name), net.get_item_count(ing.name) - keep)
+        if k > 0 then k = net.remove_item{name = ing.name, count = k} local put = inv.insert{name = ing.name, count = k}
+          if put < k then net.insert{name = ing.name, count = k - put} end
+          if put > 0 then o.n = o.n + 1 if ing.name == 'iron-plate' then o.iron = o.iron + put else o.steel = (o.steel or 0) + put end end end
       end end
     end
   end
@@ -42,11 +44,11 @@ def main() -> int:
     ap.add_argument("--every", type=float, default=20)
     a = ap.parse_args()
     ai = AIBridge()
-    lua = LUA % (AREA[0][0], AREA[0][1], AREA[1][0], AREA[1][1], FILL, KEEP)
+    lua = LUA % (AREA[0][0], AREA[0][1], AREA[1][0], AREA[1][1], KEEP, FILL)
     while True:
         try:
             r = ai.lua(lua)
-            if r.get("iron") or a.once:
+            if r.get("iron") or r.get("steel") or a.once:
                 print(time.strftime("%H:%M:%S"), "엔진 구역 철판", r, flush=True)
         except Exception as e:  # noqa: BLE001
             print(f"ironfeed: {type(e).__name__}: {e}"[:200], flush=True)
