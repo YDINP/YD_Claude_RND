@@ -5,6 +5,11 @@
   * 한 무리 안에서는 산란기 먼저 (공습 원천), 그다음 땅벌레.
   * 포대에 탄이 있고 떠 있는 조명탄이 없을 때만 조명탄 (artillery-flare) 을 목표 위에 하나 띄운다 - 한 발씩.
   * 무리가 비면 다음 무리. 사거리 안이 다 비면 한 줄 남기고 대기 (포대를 옮기면 새 사거리에서 다시 시작).
+  * 09-28 10:01 서쪽 대포가 둥지 반격 (적 17) 에 파괴된 뒤:
+    - 대포 60 칸 안 적 유닛 3 이상이면 사격 중지 (반격을 더 부르지 않는다) + 즉시 GUARD (둘레 포탑 탄) + "대포 반격 경보" 로그.
+    - 서 있던 대포가 해체 표시 없이 사라지면 "대포 파괴" 로그 · GUARD · 그 자리 대포 유령 제거 (죽은 링으로 새 대포가 가지 않게) ·
+      kit["lost"] 기록 (artykit23 가 2 시간 동안 그 둘레 80 칸을 새 자리에서 뺀다).
+    - 대포가 게임에도 창고에도 없으면 키트 이전을 시작하지 않는다 (artykit23.start_move 가 보류).
 
     python -u scripts/artyaim23.py              # 상주 (5초마다)
     python -u scripts/artyaim23.py --once       # 다음 목표만 보기
@@ -26,6 +31,8 @@ AIM = """(function() local s = game.surfaces[1] local o = {}
   o.tx, o.ty = t.position.x, t.position.y
   o.ammo = t.get_inventory(defines.inventory.turret_ammo).get_item_count()
   o.auto = t.artillery_auto_targeting and 1 or 0
+  o.units = s.count_entities_filtered{force = 'enemy', type = 'unit', position = t.position, radius = 60}
+  o.hp = math.floor(t.health)
   local R = 224
   local es = s.find_entities_filtered{force = 'enemy', type = {'unit-spawner', 'turret'}, position = t.position, radius = R}
   o.left = #es
@@ -42,7 +49,7 @@ AIM = """(function() local s = game.surfaces[1] local o = {}
   o.dist = math.floor(math.sqrt(bd))
   local flares = s.count_entities_filtered{name = 'artillery-flare', position = t.position, radius = R + 10}
   o.flares = flares
-  if %s and o.ammo > 0 and flares == 0 then
+  if %s and o.ammo > 0 and flares == 0 and o.units < 3 then  -- 반격 중에는 쏘지 않는다
     local ok = pcall(function() s.create_entity{name = 'artillery-flare', position = tgt.position, force = 'player',
       movement = {0, 0}, height = 0, vertical_speed = 0, frame_speed = 1} end)
     o.fired = ok and 1 or 0
@@ -104,6 +111,38 @@ GUARD = """(function() local s = game.surfaces[1] local o = {n = 0}
   return o end)()"""
 
 
+# 대포가 해체 표시 없이 사라짐 -> 파괴. 그 자리 대포 유령 (파괴 유령) 을 지운다 - 링이 무너진 자리로 새 대포가 가지 않게.
+LOST = """(function() local s = game.surfaces[1] local P = %s local o = {ghost = 0, remnants = 0}
+  for _, g in pairs(s.find_entities_filtered{ghost_name = 'artillery-turret', position = P, radius = 2, force = 'player'}) do g.destroy() o.ghost = o.ghost + 1 end
+  o.remnants = s.count_entities_filtered{name = 'artillery-turret-remnants', position = P, radius = 2}
+  o.units = s.count_entities_filtered{force = 'enemy', type = 'unit', position = P, radius = 60}
+  o.guns = s.count_entities_filtered{name = 'gun-turret', force = 'player', position = P, radius = 16}
+  o.gun_ghosts = s.count_entities_filtered{ghost_name = 'gun-turret', force = 'player', position = P, radius = 16}
+  return o end)()"""
+
+
+def guard_now(ai):
+    kit = artykit23.load() or {}
+    mv = kit.get("move") or {}
+    extra = "{x = %s, y = %s}" % tuple(mv["to"]) if mv.get("to") else ""
+    return ai.lua(GUARD % extra)
+
+
+def on_lost(ai, pos) -> str:
+    r = ai.lua(LOST % ("{%s, %s}" % (pos[0], pos[1])))
+    g = {}
+    try:
+        g = guard_now(ai)
+    except Exception as e:  # noqa: BLE001
+        g = {"err": str(e)[:80]}
+    kit = artykit23.load()
+    if kit is not None:
+        kit["lost"] = {"at": list(pos), "t": time.time(), "when": time.strftime("%H:%M:%S")}
+        artykit23.save(kit)
+    return "대포 파괴 @(%s,%s) - 잔해 %s · 둘레 적 유닛 %s · 남은 기관총 %s (파괴 유령 %s) · 대포 유령 제거 %s · GUARD 탄 %s" % (
+        pos[0], pos[1], r.get("remnants"), r.get("units"), r.get("guns"), r.get("gun_ghosts"), r.get("ghost"), g.get("n"))
+
+
 def relocate(ai) -> str:
     # 키트 (state/arty_kit.json) 가 있으면 대포 + 포탑 링 + 로보포트 + 전봇대 + 상자를 함께 옮긴다 (망 밖도 이어 붙여서).
     # 키트로 못 옮기면 (링 < 4, 자리 없음) 아래 옛 방식: 로봇망 안 포탑 8 대 이상 지키는 자리로 대포만.
@@ -134,6 +173,9 @@ def main() -> int:
     a = ap.parse_args()
     ai = AIBridge()
     last_group, last_left, idle = None, None, False
+    last_pos = None      # 마지막으로 서 있던 (해체 표시 없는) 대포 자리 - 사라지면 파괴
+    alarm = False        # 반격 경보 중
+    last_msg = None
     reloc_retry = 0.0   # 키트 이전이 적 유닛 때문에 보류되면 1 분 뒤 다시
     k = 0
     while True:
@@ -161,11 +203,28 @@ def main() -> int:
             if a.once:
                 print(now, r)
                 return 0
+            if r.get("err") == "no turret" and last_pos:
+                print(now, on_lost(ai, last_pos), flush=True)
+                last_pos, last_group, last_left = None, None, None
+            if r.get("err") == "moving":
+                last_pos = None  # 해체 표시 (이전) - 사라져도 파괴 아님
+            if r.get("tx") is not None:
+                last_pos = (r["tx"], r["ty"])
+                u = r.get("units") or 0
+                if u >= 3 and not alarm:
+                    g = guard_now(ai)
+                    print(f"{now} 대포 반격 경보: 60 칸 안 적 {u} (대포 hp {r.get('hp')}) - 사격 중지 · GUARD 탄 {g.get('n')} · 포탄 {g.get('shell', 0)}", flush=True)
+                    alarm = True
+                elif u < 3 and alarm:
+                    print(f"{now} 반격 끝 (적 {u}, 대포 hp {r.get('hp')}) - 사격 재개", flush=True)
+                    alarm = False
             if r.get("err") == "no turret" and not (artykit23.load() or {}).get("move"):
                 # 대포가 창고에 있고 이전 중도 아님 (01:28 서쪽 이전 취소 뒤) - 목표 방향 자리가 생기면 거기로
                 if not idle or (reloc_retry and time.time() >= reloc_retry):
                     msg = relocate(ai)
-                    print(f"{now} 대포 창고 대기 - {msg}", flush=True)
+                    if msg != last_msg:  # 대포 없음 보류는 1 분마다 다시 보지만 같은 줄은 한 번만
+                        print(f"{now} 대포 창고 대기 - {msg}", flush=True)
+                        last_msg = msg
                     reloc_retry = time.time() + 60 if msg.startswith(("키트 이전 보류", "키트 이전 중")) else (time.time() + 300 if msg.startswith("옮길 자리 없음") else 0.0)
                 idle = True
             elif r.get("err"):
