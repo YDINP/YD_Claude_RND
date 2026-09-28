@@ -283,9 +283,18 @@ if ch then
         if k > 0 then k = inv.insert{name = 'solid-fuel', count = k} if k > 0 then ch.remove_item{name = 'solid-fuel', count = k} add('sf', k) end end end end end
   o.sfchest = ch.get_item_count('solid-fuel')
 end
--- 4. 사일로 자재 상자
+-- 4. 사일로 자재 상자 (silo23 가 사일로를 만들면 storage.rocket23_silo_made = true -> 비축 끝, 콘크리트 팔 되돌림)
 local st = s.find_entities_filtered{name = 'steel-chest', position = $stash, radius = 0.3}[1]
 local NEED = $need
+if storage.rocket23_silo_made then
+  local cc = asm($conc) if cc then cc.active = true end
+  local ci = s.find_entities_filtered{type = 'inserter', position = $cins, radius = 0.3}[1] if ci then ci.active = true end
+  st = nil o.stash = 'done'
+end
+-- 사일로 (12.5,24.5): 전력 조절에 넣음 (블록과 같은 문턱), 자동 발사 끔 (발사는 사람 확인 뒤)
+local silo = s.find_entities_filtered{name = 'rocket-silo', position = {12.5, 24.5}, radius = 1}[1]
+if silo then silo.active = not g pcall(function() silo.send_to_orbit_automatically = false end)
+  o.silo = {parts = silo.rocket_parts, st = names[silo.status], act = silo.active} end
 if st then
   local function def(n) return math.max(0, NEED[n] - st.get_item_count(n)) end
   local function put(n, k, src) if k <= 0 then return 0 end local p = st.insert{name = n, count = k} add(n, p) return p end
