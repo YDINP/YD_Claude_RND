@@ -38,8 +38,8 @@ HUB_BOX = [HX - 4, HY - 0.6, HX + 7, HY + 0.6]
 AMMO_CHEST = [HX, HY]                     # 허브 줄 맨 서쪽 나무 상자 (66.5,-15.5)
 LAB_BOX = [-60, -7, -33, 12]            # P2: 조립 줄 북쪽 연구소 6 (y -4.5) 까지
 LAB_BOX2 = [2, -7, 19, 2]               # P5: 파랑 블록 동쪽 연구소 8 (p5_24.LABS5)
-# P5 (22:58): 허브 철판 354 - relay 가 300 위를 다 가져가 짓는 사람이 기다렸다 → 공사 동안 철판 예비 1000
-RESERVE = {"iron-plate": 1000, "copper-plate": 100, "stone": 100}
+# P5 (22:58): 허브 철판 354 - relay 가 300 위를 다 가져가 짓는 사람이 기다렸다 → 공사 동안 1000 · 23:17 톱니가 굶어 (빨강 1 · 팔 조립기 item 부족) 500
+RESERVE = {"iron-plate": 500, "copper-plate": 100, "stone": 100}
 
 # p1_24.ASMS 와 같은 표 (그 모듈을 import 하면 p1 이 따라와 무겁다 - 좌표만)
 ASMS = {
@@ -113,7 +113,7 @@ ASMS = {
 
 # (출처, 품목, 받는 조립기, 상한) - 출처 "hub" 또는 조립기 이름 (그 조립기의 결과칸). 위에서부터 차례로.
 FEEDS = [
-    ["hub", "iron-plate", "ammo", 40],
+    ["hub", "iron-plate", "ammo", 40, None, ["firearm-magazine", 400]],
     ["hub", "iron-plate", "gear", 40],
     ["hub", "copper-plate", "red1", 10],
     ["hub", "copper-plate", "red2", 10],
@@ -231,6 +231,11 @@ for _b in ("blue1", "blue2", "blue3", "blue4", "blue5"):
 # P5 피어싱 둘째 + 허브 노랑 탄창 (포탑에서 돌려받은 700) 을 피어싱 재료로
 FEEDS += [["hub", "firearm-magazine", "pierce", 10], ["hub", "firearm-magazine", "pierce2", 10], ["ammo", "firearm-magazine", "pierce2", 10],
           ["hub", "steel-plate", "pierce2", 5], ["hub", "copper-plate", "pierce2", 10]]
+# P5-3 L1 (p5_24.L1): 맞붙은 조립기 사이 팔 직결이 선 줄은 relay 에서 뺀다 - 팔이 «돌고» 받는 쪽이 굶지 않는 것을 확인한 뒤에만
+#   (23:1x 확인: 팔 6 모두 pickup/drop 대상 맞음 · waiting_for_space = 받는 쪽이 이미 참). 되돌리려면 이 목록을 비운다.
+L1_DROP = [["gear", "iron-gear-wheel", "red1"], ["gear", "iron-gear-wheel", "inserter"], ["cable2", "copper-cable", "circuit2"],
+           ["gear3", "iron-gear-wheel", "red5"], ["pipe", "pipe", "eng2"], ["adv4", "advanced-circuit", "blue5"]]
+FEEDS = [fd for fd in FEEDS if fd[:3] not in L1_DROP]
 # (조립기, 품목, 허브 상한) - 결과칸 → 허브. 로봇 · 로보포트는 허브에서 사람이 들고 가 놓는다 (또는 relay 가 로보포트에)
 # P5: 포탑 조립기가 10분 철판 ~1,500 을 먹었다 (허브 · 저장 상자 채우기) - 허브 20 → 10, 저장 상자 10 → 5
 # P5-3: 건설 로봇 허브 100 → 20 (포트 8 × 15 = 120 이 이미 섰다) - 틀이 물류 로봇 조립기로 가게
@@ -326,7 +331,13 @@ LUA = """(function()
           for _, h in pairs(hubs) do t = t + h.get_inventory(defines.inventory.chest).get_item_count(item) end
           floor_ok = t >= fd[5]
         end
-        if src == "hub" and not floor_ok then
+        -- P5: 6 번째 값 = {품목, 허브 상한} - 허브에 그 품목이 상한 이상이면 이 줄은 쉰다 (23:17 허브 노랑 탄창 891 인데 탄창 조립기가 철판 40 씩 먹었다)
+        if fd[6] then
+          local t = 0
+          for _, h in pairs(hubs) do t = t + h.get_inventory(defines.inventory.chest).get_item_count(fd[6][1]) end
+          if t >= fd[6][2] then floor_ok = false end
+        end
+        if not floor_ok then
         elseif src == "hub" then
           local got = hub_take(item, room)
           if got > 0 then

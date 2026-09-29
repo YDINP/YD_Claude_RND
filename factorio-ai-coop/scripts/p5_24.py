@@ -146,7 +146,62 @@ def pierce2_steps():
     return [b(POLE, -66.5, -8.5), b(ASM1, -68.5, -10.5)]
 
 
-STAGES = {"pierce2": pierce2_steps, "power8": power8_steps, "labs5": labs5_steps, "sci5": sci5_steps, "crack": crack_steps, "l1": l1_steps}
+# 강철로 교체 (advanced-material-processing 23:0x 완료): 철 전기 쌍 27 은 채굴기 0.5/s 를 돌 화로 0.3125/s 가 막는다 (10분 5,011 = 상한).
+#   강철로 (속도 2) 면 채굴기 몫 0.5/s → 철판 +60%. 사람 하나가 허브 강철 · 벽돌로 강철로를 만들어 R_H 저장 상자에 넣고,
+#   화로마다 order_upgrade → 로봇이 바꾼다 (돌 화로 · 든 판은 망 저장으로). 먼저 철 (PLATES 구역), 그다음 강철 화로 8.
+SF_BOXES = {"iron": [[68, -68, 103, -41]], "steel": [[72.5, -13.5, 93.5, -7.5]]}
+SF_STORE = (59.5, -14.5)          # R_H (56,-15) 옆 저장 상자
+
+
+def sfurn(ai, who, which) -> dict:
+    boxes = SF_BOXES[which]
+    n = sum(int(ai.lua("""(function() return {n = game.surfaces[1].count_entities_filtered{name = "stone-furnace", force = "player", area = {{%f, %f}, {%f, %f}}}} end)()""" % tuple(bx)).get("n", 0)) for bx in boxes)
+    if n == 0:
+        return {"left": 0}
+    from orders import submit
+    h = p1.hub(ai)
+    plan = []
+    for m, k in (("steel-plate", 6), ("stone-brick", 10)):
+        x, y, c = h[m]
+        plan += [("walk_to", {"x": x, "y": y + 1.5}), ("take", {"name": m, "x": x, "y": y, "count": k * n})]
+    plan += [("craft", {"recipe": "steel-furnace", "count": n, "wait": "block"}),
+             ("walk_to", {"x": SF_STORE[0], "y": SF_STORE[1] + 1.5}),
+             ("insert", {"name": "steel-furnace", "x": SF_STORE[0], "y": SF_STORE[1], "count": n}),
+             ("walk_to", {"x": p1.PARK[0], "y": p1.PARK[1]})]
+    submit(ai, who, plan, strict=False)
+    return {"left": n}
+
+
+def sfurn_order(ai, which) -> dict:
+    out = {}
+    for bx in SF_BOXES[which]:
+        r = ai.lua("""(function()
+          local s, f = game.surfaces[1], game.forces.player
+          local n = 0
+          for _, fu in pairs(s.find_entities_filtered{name = "stone-furnace", force = f, area = {{%f, %f}, {%f, %f}}}) do
+            if not fu.to_be_upgraded() then fu.order_upgrade{force = f, target = "steel-furnace"}; n = n + 1 end
+          end
+          return {ordered = n, steel = s.count_entities_filtered{name = "steel-furnace", force = f, area = {{%f, %f}, {%f, %f}}}}
+        end)()""" % (tuple(bx) * 2))
+        out[str(bx)] = r
+    return out
+
+
+# 석탄 (23:15 실측): 10분 캠 1,802 < 씀 2,452 (보일러 8 · 플라스틱) - 석탄 밭 상자 1,666 은 ~25 분 몫 → 전력 붕괴 전에 (23회차 §3-14).
+#   옛 버너 줄 자리 (y -29..-20) 가 비었고 가장 진하다. 기존 전기 줄 (x, -32) 남향과 마주 보게 (x, -27.5) 북향 6 - 같은 상자 (x, -29.5) 에 붓는다.
+def coal2_steps():
+    return [b("electric-mining-drill", 107.5 + 3 * i, -27.5, N) for i in range(6)]
+
+
+# 아홉째 · 열째 발전 단위 (23:15 실측 14.4 MW 에 10.70 MW = 1.35 배 - 문턱 1.5 밑): power8 동쪽으로 같은 모양 둘 더 (보일러 여섯, 펌프 하나).
+def power9_steps():
+    out = []
+    for bx in (-13.5, -9.5):
+        out += [b("pipe", bx - 2, 46.5), b("boiler", bx, 46, N), b("steam-engine", bx, 42.5, N), b("steam-engine", bx, 37.5, N), b(POLE, bx - 2, 40.5)]
+    return out
+
+
+STAGES = {"coal2": coal2_steps, "power9": power9_steps, "pierce2": pierce2_steps, "power8": power8_steps, "labs5": labs5_steps, "sci5": sci5_steps, "crack": crack_steps, "l1": l1_steps}
 
 
 def main() -> int:
@@ -155,8 +210,16 @@ def main() -> int:
     ap.add_argument("--ghosts", default="", choices=("", *GHOSTS))
     ap.add_argument("--who", default="")
     ap.add_argument("--rounds", type=int, default=12)
+    ap.add_argument("--sfurn", default="", choices=("", *SF_BOXES), help="강철로: --who 한 사람이 만들어 저장 상자에 (그다음 --sfurn-order)")
+    ap.add_argument("--sfurn-order", default="", choices=("", *SF_BOXES))
     a = ap.parse_args()
     ai = AIBridge()
+    if a.sfurn:
+        print(a.sfurn, sfurn(ai, a.who, a.sfurn))
+        return 0
+    if a.sfurn_order:
+        print(a.sfurn_order, sfurn_order(ai, a.sfurn_order))
+        return 0
     if a.ghosts:
         print(a.ghosts, place_ghosts(ai, a.ghosts))
         return 0
