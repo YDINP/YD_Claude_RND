@@ -216,7 +216,9 @@ CHESTS = {"cS": {"iron-plate": 200}, "cR": {"stone": 150, "steel-plate": 150}, "
           "cC1": {"copper-plate": 300}, "cG1": {"iron-plate": 200}, "cC2": {"copper-plate": 300}, "cC3": {"copper-plate": 300},
           "cL": {"copper-plate": 300, "steel-plate": 60}, "cA": {"sulfur": 60, "iron-plate": 30}, "cF": {"flying-robot-frame": 20},
           "cB": {"coal": 200}}
-HUB_KEEP = {"coal": 0, "iron-plate": 300, "copper-plate": 300, "steel-plate": 120, "stone": 200, "stone-brick": 200, "sulfur": 150}
+# P8 (01:05): 철판 300 → 600 · 강철 120 → 250 - 허브 철판이 relay 예비 (500) 밑까지 내려가 강철로 (강철2) 가 굶던 때 hauler 가 300~500 띠 (짓는 재료 몫) 를 가져갔다.
+#   철이 모자란 동안 hauler 는 허브에 600 넘게 있을 때만 철판을 가져간다 (P8 전초 공사 · 강철로가 먼저).
+HUB_KEEP = {"coal": 0, "iron-plate": 600, "copper-plate": 300, "steel-plate": 250, "stone": 200, "stone-brick": 200, "sulfur": 150}
 FRAME_ASMS = [(-80.5, -6.5), (-76.5, -6.5)]              # 로봇 줄 틀 조립기 (relay24.ASMS frame1 · frame2) - 결과칸에서 손으로
 
 
