@@ -511,6 +511,11 @@ def hub_rows(ai) -> list:
       local cs = s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, area = {{62, -16.1}, {76.2, -14.9}}}   -- P9: 74.5 · 75.5 (smelt 강철 · 벽돌) 도 허브
       -- 석탄은 석탄 밭 상자 (채굴기가 붓는 곳, relay24.COAL_BOX) 에서 손으로
       for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{100, -34}, {126, -22}}}) do cs[#cs+1] = c end
+      -- P12 (08:1x): 돌은 허브가 아니라 망 저장 상자에 (돌 채굴기가 smelt 벨트로 바로 가서 허브 돌 ≤ 200) - 레일 cR 돌 0 이라 보라가 묶임
+      for _, p in pairs({{67.5, 34.5}, {103.5, -14.5}}) do
+        local c = s.find_entities_filtered{type = "logistic-container", force = f, position = p, radius = 0.3}[1]
+        if c then cs[#cs+1] = c end
+      end
       for _, c in pairs(cs) do
         for _, v in pairs(c.get_inventory(defines.inventory.chest).get_contents()) do
           out[#out+1] = string.format("%s,%.1f,%.1f,%d", v.name, c.position.x, c.position.y, v.count)

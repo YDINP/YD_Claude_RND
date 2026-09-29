@@ -35,11 +35,12 @@ FEED = [
     (7.5, 11.5, "advanced-circuit", 8, 30, 30), (7.5, 19.5, "advanced-circuit", 8, 30, 30), (1.5, 20.5, "advanced-circuit", 6, 20, 30),
                                                                                   # P12 (07:3x): M · PU 속도 모듈 둘 (1.05) → 고급을 30 개씩 (10 개면 30 초도 못 간다).
                                                                                   #   고급 출처가 망에 늘었다: 회로 블록 zone N A 4 → 공급 상자 (25.5,-9.5)
-    (1.5, 20.5, "electronic-circuit", 40, 100, 100),      # P12: PU 녹색 (1.05 → 2.1/s) - 버스 B 녹색 (G1 · G2 ~2/s, A1 · A2 가 먼저 먹음) 이 모자람 → zone N 녹색 공급 상자 (52.5,-16.5) 에서
+    (1.5, 20.5, "electronic-circuit", 60, 100, 100),      # 08:1x PU 조립기 3 (1.75) → 녹색 3.5/s: 60 밑이면 100      # P12: PU 녹색 (1.05 → 2.1/s) - 버스 B 녹색 (G1 · G2 ~2/s, A1 · A2 가 먼저 먹음) 이 모자람 → zone N 녹색 공급 상자 (52.5,-16.5) 에서
                                                                                   # 보라 M · EF · 노랑 PU 고급회로 (06:4x: 버스 고급 레인이 거의 빔 - A3 결과 팔이 녹색 레인에만 놓여 막힘 →
                                                                                   #   A3 → 팔 (13.5,18.5) → 공급 상자 (13.5,17.5) 로 망에, 망 저장 상자의 고급 ~370 도 씀)
     (13.5, 20.5, "plastic-bar", 6, 20, 100),              # P12 (07:1x): A3 고급 - 상자 cA3 플라스틱 0 (허브에 플라스틱이 없어 hauler 가 못 채움) → A3 서 있음
-    (12.5, 15.5, "stone", 10, 30, 200),                   # P7 레일 R (06:1x: 허브 돌 200 = hauler HUB_KEEP 이라 cR 돌 0 → 보라 0. 돌은 망 저장 상자에 ~4.9k)
+    (12.5, 15.5, "stone", 40, 100, 200),                  # P12 (08:1x): 레일 조립기 2 = 1.5 craft/s → 돌 1.5/s. 30 개씩이면 ~0.8/s 라 레일 · 보라가 돌에 묶임 → 100 개씩
+                                                          #   (cR 돌은 hauler 가 허브에서 못 가져옴 - 허브 돌 ≤ HUB_KEEP 200, 돌은 망 저장 상자 (67.5,34.5) · (103.5,-14.5) 에)                   # P7 레일 R (06:1x: 허브 돌 200 = hauler HUB_KEEP 이라 cR 돌 0 → 보라 0. 돌은 망 저장 상자에 ~4.9k)
     (1.5, 10.5, "plastic-bar", 10, 30, 100), (-2.5, 15.5, "plastic-bar", 10, 30, 100),   # P9 LDS2 · P7 LDS (플라스틱은 허브가 아니라 망 - cL2 플라스틱 0 → 노랑 LDS 묶임)
     (-106.5, 13.5, "coal", 40, 100, 0), (-71.5, 11.5, "coal", 40, 100, 0),        # 플라스틱 화학 (P4 석탄) - P11 (06:0x): 석유가스 10.6 → 46/s 로
                                                                                   #   석탄 20 개씩 (석탄 밭 상자에서 ~235 칸 비행) 이 플라스틱을 묶음 → 100 개씩
@@ -51,6 +52,11 @@ for _x in (-80.5, -76.5):                                 # 틀 1 · 2
 ROBOT_CAP = 404
 YELLOW_ASM = (1.5, 16.5)
 FEED += [(-72.5, -6.5, "flying-robot-frame", 1, 2, 0, "robot"), (-72.5, -6.5, CIRC, 2, 4, 0, "robot")]
+# P12 (08:1x): 흩어진 보일러 넷 (예비, 연료 손 고리 없음) - 회로 블록 · 조립기 3 뒤 소비 22 MW > 증기 17.1 + 태양 4.7 → 한낮에도 축전 0 (계속 전압 모자람).
+#   보일러 줄 (석탄 벨트) 은 10 대 전부 돎. 이 넷은 망 안이라 석탄을 로봇 요청으로 (연료 칸, 50 개 = 한 칸). 모자란 만큼만 태운다 (기관 8 = 7.2 MW 까지).
+#   진짜 처방은 새 발전 (태양 유령 89 · 새 증기 단위) - 발전 담당 몫. 그게 서면 이 네 줄은 뺀다.
+for _x, _y in ((-83.0, 28.5), (-75.0, 16.5), (-57.0, 14.5), (-42.0, 13.5)):
+    FEED.append((_x, _y, "coal", 10, 50, 300, None, "fuel"))
 MAX_REQ = 30
 
 LUA = """(function()
@@ -77,13 +83,15 @@ LUA = """(function()
     out.gate = {yellow_frames = fr, robots = robots, robot = gate.robot}
   end
   for _, q in pairs(A.feed) do
-    local a = (q[7] == nil or gate[q[7]]) and s.find_entities_filtered{type = {'assembling-machine', 'lab'}, force = f, position = {q[1], q[2]}, radius = 0.6}[1]
+    local a = (q[7] == nil or gate[q[7]]) and s.find_entities_filtered{type = {'assembling-machine', 'lab', 'boiler'}, force = f, position = {q[1], q[2]}, radius = 0.6}[1]
     if q[7] ~= nil and not gate[q[7]] then goto next_feed end
     local net = a and cnet_of(a.position)
     local lab = a and a.type == 'lab'
-    local r = a and (lab and {ingredients = {}} or a.get_recipe())
+    local fuel = a and q[8] == 'fuel'
+    local r = a and ((lab or fuel) and {ingredients = {}} or a.get_recipe())
     if lab then for i, n in pairs(a.prototype.lab_inputs) do r.ingredients[#r.ingredients + 1] = {type = 'item', name = n} end end
-    local INV = lab and defines.inventory.lab_input or defines.inventory.assembling_machine_input
+    if fuel then r.ingredients[1] = {type = 'item', name = q[3]} end
+    local INV = lab and defines.inventory.lab_input or (fuel and defines.inventory.fuel) or defines.inventory.assembling_machine_input
     if not (a and net and r) then out.miss[#out.miss + 1] = q[3] .. ' @' .. q[1] .. ',' .. q[2]
     elseif nreq < A.max then
       local stack, k = nil, 0
