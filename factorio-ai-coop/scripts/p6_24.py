@@ -255,7 +255,7 @@ def ammo_requests(ai, below=5, count=20, item="firearm-magazine") -> dict:
 # 로봇 포탑 크립 (offense.md 3-A · 23회차 §3-5 «그 둥지는 로봇으로»): 사람은 안 간다. 둥지 자리는 안전 조회의 방위 · 거리 (raidwatch 와 같은 것).
 #   포탑 넷을 둥지에서 standoff 칸, «우리 포트 쪽» 에 2×2 떨어뜨려 유령으로 - 건설 반경 안이어야 놓인다. 유령에 탄 20 (insert_plan) 을 달아
 #   로봇이 짓자마자 탄을 넣는다 (저장 상자의 피어싱 · 노랑). 벌레가 없는 둥지 (새 확장) 만 - 벌레 사거리 25 > 포탑 18 이면 벌레 먼저 계산할 것.
-def creep_ghosts(ai, bearing, dist, toward, standoff=15, ammo="piercing-rounds-magazine") -> dict:
+def creep_ghosts(ai, bearing, dist, toward, standoff=15, ammo="piercing-rounds-magazine", worms_ok=True) -> dict:
     sx, sy = CX + dist * math.cos(math.radians(bearing)), CY + dist * math.sin(math.radians(bearing))
     ux, uy = toward[0] - sx, toward[1] - sy
     L = math.hypot(ux, uy)
@@ -267,7 +267,7 @@ def creep_ghosts(ai, bearing, dist, toward, standoff=15, ammo="piercing-rounds-m
       local s, f = game.surfaces[1], game.forces.player
       local out = {placed = 0, nonet = 0, blocked = 0, have = 0, plan = 0, worms = 0}
       out.worms = s.count_entities_filtered{force = "enemy", type = "turret", position = {%f, %f}, radius = 40}
-      if out.worms > 0 then return out end
+      if out.worms > 0 and not %s then return out end
       for _, p in pairs(helpers.json_to_table('%s')) do
         if s.count_entities_filtered{name = "gun-turret", force = f, position = p, radius = 1} > 0
            or s.count_entities_filtered{ghost_name = "gun-turret", force = f, position = p, radius = 1} > 0 then out.have = out.have + 1
@@ -282,7 +282,7 @@ def creep_ghosts(ai, bearing, dist, toward, standoff=15, ammo="piercing-rounds-m
       end
       out.at = helpers.table_to_json(helpers.json_to_table('%s'))
       return out
-    end)()""" % (sx, sy, json.dumps(pos), ammo, json.dumps(pos)))
+    end)()""" % (sx, sy, "true" if worms_ok else "false", json.dumps(pos), ammo, json.dumps(pos)))
 
 
 def nest_left(ai, bearing, dist, r=12) -> dict:
@@ -290,6 +290,62 @@ def nest_left(ai, bearing, dist, r=12) -> dict:
     return ai.lua("""(function() local s = game.surfaces[1]
       return {spawners = s.count_entities_filtered{force = "enemy", type = "unit-spawner", position = {%f, %f}, radius = %d},
               units = s.count_entities_filtered{force = "enemy", type = "unit", position = {%f, %f}, radius = 40}} end)()""" % (sx, sy, r, sx, sy))
+
+
+# 무리 A 크립 고리 (P6-3): N5 가 working 이 된 뒤에만 돈다. 순번마다 «유전 반경 R 안 적 구조물 중 N5 에 가장 가까운 것» 에서 standoff 15 칸,
+#   N5 쪽에 포탑 4 유령 (insert_plan 피어싱 20) - 그 앞에 이미 우리 포탑 (18 칸 안) 이 있으면 기다린다. 작은 벌레는 사거리 25 라 포탑이 맞지만 (수리팩 망 439)
+#   4 대 피어싱이 먼저 이긴다 - 중형 이상 벌레가 보이면 멈춘다. 잃은 포탑이 8 을 넘거나 시간이 다 되면 멈춘다. 사람은 안 쓴다.
+CREEP_LUA = """(function()
+  local s, f = game.surfaces[1], game.forces.player
+  local P, C, R = {%f, %f}, {%f, %f}, %f
+  local best, bd = nil, 1e9
+  local big = 0
+  for _, e in pairs(s.find_entities_filtered{force = "enemy", type = {"unit-spawner", "turret"}, position = C, radius = R}) do
+    if e.type == "turret" and not string.find(e.name, "small") then big = big + 1 end
+    local d = math.sqrt((e.position.x - P[1])^2 + (e.position.y - P[2])^2)
+    if d < bd then best, bd = e, d end
+  end
+  if not best then return {left = 0} end
+  local ours = 0
+  for _, t in pairs(s.find_entities_filtered{name = "gun-turret", force = f, position = best.position, radius = 18}) do
+    if t.get_inventory(defines.inventory.turret_ammo).get_item_count() > 0 then ours = ours + 1 end
+  end
+  local left = s.count_entities_filtered{force = "enemy", type = {"unit-spawner", "turret"}, position = C, radius = R}
+  return {left = left, big = big, ours = ours, gx = best.position.x, gy = best.position.y, name = best.name,
+          ghosts = s.count_entities_filtered{ghost_name = "gun-turret", position = best.position, radius = 30}}
+end)()"""
+
+
+def creep_loop(ai, port, field, radius, minutes) -> None:
+    end = time.time() + minutes * 60
+    lost0 = None
+    while time.time() < end:
+        st = ai.lua("""(function() local s = game.surfaces[1]
+          local r = s.find_entities_filtered{name = "roboport", position = {%f, %f}, radius = 1}[1]
+          local ks = game.forces.player.get_kill_count_statistics(s)
+          return {ok = r and r.status == defines.entity_status.working or false, lost = ks.get_output_count("gun-turret")} end)()""" % port)
+        if not st.get("ok"):
+            print(time.strftime("%X"), "포트 아직", flush=True)
+            time.sleep(30)
+            continue
+        lost0 = st["lost"] if lost0 is None else lost0
+        if st["lost"] - lost0 > 8:
+            print(time.strftime("%X"), f"포탑 {st['lost'] - lost0} 잃음 - 멈춤", flush=True)
+            return
+        r = ai.lua(CREEP_LUA % (port[0], port[1], field[0], field[1], radius))
+        if not r.get("left"):
+            print(time.strftime("%X"), "유전 반경 안 적 구조물 0 - 끝", flush=True)
+            return
+        if r.get("big"):
+            print(time.strftime("%X"), f"중형 이상 벌레 {r['big']} - 멈춤", flush=True)
+            return
+        if not r.get("ours") and not r.get("ghosts"):
+            gx, gy = float(r["gx"]), float(r["gy"])
+            dx, dy = gx - CX, gy - CY
+            q = creep_ghosts(ai, math.degrees(math.atan2(dy, dx)), math.hypot(dx, dy), port)
+            print(time.strftime("%X"), f"목표 {r['name']} (남은 {r['left']}) -> 포탑 유령 {q}", flush=True)
+        ammo_requests(ai)
+        time.sleep(20)
 
 
 # 파랑 150 (P6-2) - 23:4x 실측: 파랑 조립기 5 모두 working 에 입력이 다 찼다 (엔진 4 · 고급회로 6 · 황 4) → 파랑은 «조립기 수» 에 묶였다
@@ -362,6 +418,7 @@ def main() -> int:
     ap.add_argument("--ghosts", default="", choices=("", *WFACE))
     ap.add_argument("--chain", type=int, default=0, help="로보포트 사슬 N1..N<k> 유령")
     ap.add_argument("--creep", default="", help="방위,거리,포트x,포트y - 둥지 앞 포탑 4 유령 (탄 20)")
+    ap.add_argument("--creep-loop", default="", help="포트x,포트y,유전x,유전y,반경,분")
     ap.add_argument("--ammo", action="store_true", help="탄 < 5 포탑에 item-request-proxy (탄창 20)")
     ap.add_argument("--chain-feed", type=float, default=0, help="분 - 로보포트를 허브에서 저장 상자로 나르고 사슬을 다시 놓는 고리")
     ap.add_argument("--chain-kit", default="", help="전봇대 수,로보포트 수 - --who 가 만들어 R_W 저장 상자에")
@@ -381,6 +438,10 @@ def main() -> int:
         return 0
     if a.chain:
         print("chain", chain_ghosts(ai, a.chain))
+        return 0
+    if a.creep_loop:
+        v = [float(x) for x in a.creep_loop.split(",")]
+        creep_loop(ai, (v[0], v[1]), (v[2], v[3]), v[4], v[5])
         return 0
     if a.creep:
         b, d, tx, ty = (float(v) for v in a.creep.split(","))
