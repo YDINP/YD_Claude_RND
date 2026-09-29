@@ -34,6 +34,8 @@ def main() -> int:
     prefer = tuple(p.strip() for p in args.prefer.split(",") if p.strip()) or p4.PREFER
     ai = AIBridge()
     last = None
+    forced_off = {}
+    _stall = 0
     gates = {}
     for g in (x for x in args.gate.split(",") if x.strip()):
         name, on, off = g.split(":")
@@ -41,6 +43,27 @@ def main() -> int:
     while True:
         try:
             use = list(packs)
+            # 09-30 06:0x 멈춤 감지: 연구소 절반 이상이 missing_science_packs 가 2 번 연속이면, 연구소들에 실제로 모자란 팩
+            # (연구소 수보다 적게 든 팩) 을 15 분 동안 강제로 끈다 - 재고가 벨트·상자에 있어도 연구소까지 못 오면 소용없다.
+            st = ai.lua('''(function() local s = game.surfaces[1] local labs = s.find_entities_filtered{type = "lab", force = "player"}
+              local miss, cnt = 0, {} local r = game.forces.player.current_research
+              for _, l in pairs(labs) do if l.status == defines.entity_status.missing_science_packs then miss = miss + 1 end end
+              if r then for _, u in pairs(r.research_unit_ingredients) do local n = 0
+                for _, l in pairs(labs) do n = n + l.get_item_count(u.name) end cnt[u.name] = n end end
+              return {labs = #labs, miss = miss, cnt = cnt} end)()''')
+            if st.get("labs") and st.get("miss", 0) * 2 >= st["labs"]:
+                stall = _stall + 1
+            else:
+                stall = 0
+            _stall = stall
+            if stall >= 2:
+                for pk, n in (st.get("cnt") or {}).items():
+                    if n < st["labs"] and pk in gates:
+                        forced_off[pk] = time.time() + 900
+                        print(time.strftime("%X"), f"멈춤: 연구소 {st['miss']}/{st['labs']} 팩 없음 - {pk} 연구소 합 {n} → 15 분 끔", flush=True)
+            for pk, until in list(forced_off.items()):
+                if time.time() < until and pk in use:
+                    use.remove(pk)
             for name, gate in gates.items():
                 # 09-30 03:3x: 10 분 생산 «또는» 재고 (연구소·조립기 결과칸·상자·벨트). 켜기는 둘 중 하나가 켜는수 이상,
                 # 끄기는 둘 다 끄는수 미만. 재고만 보면 공장이 서도 연구소 잔량으로 켜진 채 남고 (보라 0 인데 automation-3),
