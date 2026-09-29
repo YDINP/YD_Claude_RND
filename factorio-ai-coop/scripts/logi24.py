@@ -191,6 +191,28 @@ def rg():
     return out
 
 
+def rgfeed():
+    """01:40 실측: 허브 빠른 팔 4 가 줄기 철을 다 먹어 (relay 가 허브를 늘 비운다) rg 벨트1 에 철 0 → 빨강 · 초록 10분 0.
+    줄기 (x 69.5) 에 빠른 분배기 (69,-27.5) → 서쪽 가지 y -26.5 → x 60.5 남 → (60.5,-17.5) 에 곧게 (허브 넘침은 옆 싣기).
+    rg 가 다 먹지 못하면 가지가 막혀 분배기가 모두 허브로 보낸다."""
+    out = [g("fast-splitter", 69.0, -27.5, S)]
+    out += line(BELT, 68.5, -26.5, 61.5, -26.5, W)
+    out += line(BELT, 60.5, -26.5, 60.5, -18.5, S)
+    out += [g(FINS, x, -16.5, N) for x in (72.5, 73.5, 74.5)]      # 허브 철 팔 4 → 7 (P8 둘째 광맥 대비, ~16/s)
+    return out
+
+
+def trunk2():
+    """P8 둘째 철 광맥 (15/s) 이 줄기 머리 (69.5,-63.5) 로 들어온다 - 쌍 A · B · D 가 모두 동쪽 레인 (11/s) 이라 넘친다.
+    D 를 지하로 줄기 밑을 지나 서쪽에서 옆 싣기 → 서쪽 레인 (동 A+B 7.5 + P8 7.5 · 서 D 3.5 + P8 7.5)."""
+    return [g(UG, 70.5, -40.5, W, ug="input"), g(UG, 68.5, -40.5, W, ug="output"), g(BELT, 67.5, -40.5, S),
+            g(BELT, 67.5, -39.5, E), g(BELT, 68.5, -39.5, E)]
+
+
+def trunk2_clear():
+    return [(BELT, 70.5, -40.5)]
+
+
 def rg_clear():
     return [(BELT, 61.5, 8.5)]
 
@@ -222,8 +244,8 @@ def smelt():
     for c in SM_X:
         out.append(g(INS, c - 0.5, -7.5, S, filter="stone" if c in SM_BRICK else "iron-plate"))
         out.append(g(INS, c - 0.5, -10.5, S))
-    out += [g(POLE, x, -7.5) for x in (72.5, 76.5, 82.5, 84.5, 88.5, 93.5)]
-    out += [g(POLE, x, -10.5) for x in (72.5, 76.5, 82.5, 84.5, 88.5, 93.5)]
+    out += [g(POLE, x, -7.5) for x in (72.5, 76.5, 80.5, 82.5, 84.5, 88.5, 93.5)]
+    out += [g(POLE, x, -10.5) for x in (72.5, 76.5, 80.5, 82.5, 84.5, 88.5, 93.5)]
     out.append(g(POLE, 76.5, -14.5))                         # 허브 동쪽 끝 빠른 팔 둘
     # 결과 벨트 → 허브 동쪽 끝 새 상자 2 (74.5 · 75.5, -15.5) - 01:05 처음엔 구리 허브 벨트에 옆 싣기였는데 구리가 두 레인을 꽉 채워 못 들어갔다 (강철로 full_output)
     out += line(BELT, 92.5, -11.5, 76.5, -11.5, W)
@@ -288,8 +310,75 @@ def boilers():
     return out
 
 
+# ---------------------------------------------------------------------------------------------------------------
+# bl: 새 파랑 블록 (rg 남쪽 x 22..58, y 17..33). 판은 rg 벨트1 을 이어 (x 26.5 남 → A y 18.5 동 → x 58.5 남 → A2 y 31.5 서).
+#   R1 (y 21.5): 파랑 B · B · [관 P → 엔진 E ← 톱니 G → E ← P → E ← G] - 엔진은 옆 조립기 팔 직결, 강철은 긴팔로 북쪽 상자 (y 17.5).
+#   벨트 X (y 24.5): 엔진 (남 레인, R1 이 북에서) | 고급회로 (북 레인, R2 가 남에서 긴팔). 벨트 Y (y 25.5): 파랑 (두 레인).
+#   R2 (y 28.5): B · B · [전선 → 회로 → 고급 ← 전선 → 고급 ← 회로 ← 전선] - 판은 A2 (남), 플라스틱은 긴팔로 남쪽 상자 (y 32.5).
+#   파랑 B 는 X 에서 엔진 · 고급회로, 황은 상자 (긴팔), 결과 → Y. 강철 · 황 · 플라스틱 상자는 사람 손 (허브 → 상자, 허용된 방식) - 나중에 벨트로.
+#   Y 는 x 20.5 북 → (20.5,-7.5 ↔ -9.5 지하로 빨강 줄 밑) → y -10.5 서 → (14.5,-9.5) 남 → 빨강 벨트 (y -8.5) 북 레인에 옆 싣기 → 긴팔 (5.5,-6.5) 이 labs5 로.
+#   속도 (조립기 2 형 0.75): 엔진 3 × 0.075 = 0.225/s · 고급회로 2 × 0.125 = 0.25/s → 파랑 0.167/s (10분 100). 옛 파랑 (~0.33) 과 겹쳐 돌리다 모듈 둘째로 맞춘다.
+AM2 = "assembling-machine-2"
+BL_X = [23.5 + 4 * k for k in range(9)]
+BL_R1 = ["B", "B", "P", "E", "G", "E", "P", "E", "G"]
+BL_R2 = ["B", "B", "C", "I", "A", "C", "A", "I", "C"]
+BL_REC = {"B": ("chemical-science-pack", AM2), "P": ("pipe", AM1), "E": ("engine-unit", AM2), "G": ("iron-gear-wheel", AM1),
+          "C": ("copper-cable", AM1), "I": ("electronic-circuit", AM1), "A": ("advanced-circuit", AM2)}
+BL_Y1, BL_Y2 = 21.5, 28.5
+
+
+def bl():
+    out = []
+    # 판: rg 벨트1 끝 (27.5,8.5) 에서 잇는다
+    out += [g(BELT, 26.5, 8.5, S)] + line(BELT, 26.5, 9.5, 26.5, 13.5, S)
+    out += [g(UG, 26.5, 14.5, S, ug="input"), g(UG, 26.5, 16.5, S, ug="output"), g(BELT, 26.5, 17.5, S)]
+    out += line(BELT, 26.5, 18.5, 57.5, 18.5, E)
+    out += line(BELT, 58.5, 18.5, 58.5, 30.5, S)
+    out += line(BELT, 58.5, 31.5, 30.5, 31.5, W)
+    out += line(BELT, 57.5, 24.5, 22.5, 24.5, W)          # X
+    out += line(BELT, 57.5, 25.5, 21.5, 25.5, W)          # Y
+    for k, x in enumerate(BL_X):
+        for row, yy, kinds in ((1, BL_Y1, BL_R1), (2, BL_Y2, BL_R2)):
+            kind = kinds[k]
+            rec, mach = BL_REC[kind]
+            out.append(g(mach, x, yy, recipe=rec))
+            if row == 1:
+                if kind in "PG":
+                    out.append(g(INS, x, yy - 2, N))                       # A (철) → 조립기
+                elif kind == "E":
+                    out += [g(LINS, x, yy - 2, N), g("iron-chest", x, yy - 4)]    # 강철 상자 → 엔진
+                    out.append(g(INS, x, yy + 2, N))                       # 엔진 → X 남 레인
+                else:  # B
+                    out += [g(LINS, x, yy - 2, N), g("iron-chest", x, yy - 4)]    # 황 상자
+                    out += [g(INS, x - 1, yy + 2, S), g(LINS, x + 1, yy + 2, N)]  # X → B · B → Y
+            else:
+                if kind in "CI":
+                    out.append(g(INS, x, yy + 2, S))                       # A2 → 조립기
+                elif kind == "A":
+                    out += [g(LINS, x, yy + 2, S), g("iron-chest", x, yy + 4)]    # 플라스틱 상자
+                    out.append(g(LINS, x, yy - 2, S))                      # 고급 → X 북 레인
+                else:  # B
+                    out += [g(LINS, x - 1, yy - 2, N), g(INS, x + 1, yy - 2, S)]  # X → B · B → Y
+                    out += [g(LINS, x, yy + 2, S), g("iron-chest", x, yy + 4)]    # 황 상자
+    # 팔 직결 (틈 x = 25.5 + 4k)
+    for gx, d in ((33.5, W), (37.5, E), (41.5, W), (45.5, E), (49.5, W), (53.5, E)):
+        out.append(g(INS, gx, BL_Y1, d))
+    for gx, d in ((33.5, W), (37.5, W), (41.5, E), (45.5, W), (49.5, E), (53.5, E)):
+        out.append(g(INS, gx, BL_Y2, d))
+    for gx in [25.5 + 4 * k for k in range(9)]:
+        out += [g(POLE, gx, BL_Y1 - 1), g(POLE, gx, BL_Y1 + 1), g(POLE, gx, BL_Y2 - 1), g(POLE, gx, BL_Y2 + 1)]
+    # 파랑 → labs5
+    out += [g(BELT, 20.5, 25.5, N)] + line(BELT, 20.5, 24.5, 20.5, 4.5, N)
+    out += [g(UG, 20.5, 3.5, N, ug="input"), g(UG, 20.5, 1.5, N, ug="output")]
+    out += line(BELT, 20.5, 0.5, 20.5, -6.5, N)
+    out += [g(UG, 20.5, -7.5, N, ug="input"), g(UG, 20.5, -9.5, N, ug="output"), g(BELT, 20.5, -10.5, W)]
+    out += line(BELT, 19.5, -10.5, 15.5, -10.5, W)
+    out += [g(BELT, 14.5, -10.5, S), g(BELT, 14.5, -9.5, S)]
+    return out
+
+
 STAGES = {"ironout": (ironout, ironout_clear), "copperout": (copperout, copperout_clear), "rg": (rg, rg_clear), "smelt": (smelt, smelt_clear),
-          "mall": (mall, None), "coal": (coal, None), "boilers": (boilers, None)}
+          "mall": (mall, None), "coal": (coal, None), "boilers": (boilers, None), "bl": (bl, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear)}
 ROTATE = {"copperout": copperout_rotate}
 
 # ---------------------------------------------------------------------------------------------------------------

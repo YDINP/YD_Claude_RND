@@ -261,6 +261,11 @@ PIERCE_ZONES = [[-220, 14, -178, 56],        # 유전 (SW 둥지에서 가장 �
                 [48, 70, 90, 102]]           # 구리 남서
 #   허브 → 로보포트 칸 (포트 하나 상한): 건설 로봇 (포트당 25~50 권고 - 처음엔 15) · 수리팩
 PORT_STOCK = [["construction-robot", 15, "robot"], ["repair-pack", 50, "material"], ["logistic-robot", 5, "robot"]]
+# P7 mall (logi24): 벽 · 포탑 · 수리팩 조립기 결과 → 팔 → 공급 상자 (칸 제한) - 망에 바로 보인다. 허브 → 로보포트 · 저장 상자 중계는 쉰다.
+#   로봇을 포트에 더 넣을 때는 사람이 든다 (P6 chain-kit 처럼). 되돌리려면 아래 셋을 지운다.
+OUTS = [o for o in OUTS if o[0] not in ("turretasm", "repair", "wallasm")]
+NET_STOCK = []
+PORT_STOCK = []
 LAB_CAP = 20
 TURRET_CAP = 20
 CHEST_CAP = 200
