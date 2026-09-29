@@ -37,7 +37,7 @@ def main() -> int:
     gates = {}
     for g in (x for x in args.gate.split(",") if x.strip()):
         name, on, off = g.split(":")
-        gates[name] = [int(on), int(off), False]
+        gates[name] = [int(on), int(off), None]  # None: 첫 측정에서 «끄는수 이상이면 켜진 상태» 로 시작 (재시작 직후 모든 게이트가 닫혀 연구가 서던 문제, run24 02:2x)
     while True:
         try:
             use = list(packs)
@@ -47,7 +47,10 @@ def main() -> int:
                   for _, m in pairs(s.find_entities_filtered{type = "assembling-machine", force = "player"}) do
                     n = n + m.get_inventory(defines.inventory.assembling_machine_output).get_item_count("%s") end
                   return {n = n} end)()""" % (name, name)).get("n", 0)
-                if not gate[2] and have >= gate[0]:
+                if gate[2] is None:
+                    gate[2] = have >= gate[1]
+                    print(time.strftime("%X"), f"{name} {have} - 시작 상태 {'켬' if gate[2] else '끔'}", flush=True)
+                elif not gate[2] and have >= gate[0]:
                     gate[2] = True
                     print(time.strftime("%X"), f"{name} {have} - 켠다", flush=True)
                 elif gate[2] and have < gate[1]:
