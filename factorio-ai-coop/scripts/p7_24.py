@@ -260,12 +260,14 @@ UPGRADE = [(-2.5, 15.5, "low-density-structure"), (7.5, 11.5, "productivity-modu
 STAGES = ("labs", "collector", "purple", "bus", "circuit", "yellow", "water", "plastic", "poles")
 
 # 공급 상자 (사람 손): 이름 → {품목: 상한}. 허브에 «남길 몫» 이상일 때만 가져간다.
-CHESTS = {"cS": {"iron-plate": 200}, "cR": {"stone": 150, "steel-plate": 150}, "cE": {"steel-plate": 150, "stone-brick": 150},
-          "cC1": {"copper-plate": 300}, "cG1": {"iron-plate": 200}, "cC2": {"copper-plate": 300}, "cC3": {"copper-plate": 300},
-          "cL": {"copper-plate": 300, "steel-plate": 60}, "cA": {"sulfur": 60, "iron-plate": 30}, "cF": {"flying-robot-frame": 20},
+CHESTS = {"cS": {"iron-plate": 300}, "cR": {"stone": 300, "steel-plate": 400}, "cE": {"steel-plate": 250, "stone-brick": 250},
+          "cC1": {"copper-plate": 300}, "cG1": {"iron-plate": 200}, "cC2": {"copper-plate": 300}, "cC3": {"copper-plate": 400},
+          "cL": {"copper-plate": 800, "steel-plate": 150}, "cA": {"sulfur": 100, "iron-plate": 50}, "cF": {"flying-robot-frame": 40},
           "cB": {"coal": 200},
-          "cL2": {"copper-plate": 300, "steel-plate": 60, "plastic-bar": 100}, "cC4": {"copper-plate": 400}, "cG2": {"iron-plate": 300},
-          "cC5": {"copper-plate": 400}, "cA3": {"plastic-bar": 100}, "cC7": {"copper-plate": 200}}
+          "cL2": {"copper-plate": 800, "steel-plate": 150, "plastic-bar": 100}, "cC4": {"copper-plate": 400}, "cG2": {"iron-plate": 300},
+          "cC5": {"copper-plate": 400}, "cA3": {"plastic-bar": 100}, "cC7": {"copper-plate": 300}}
+# P12 (07:1x): 보라 · 노랑 세 배 - 레일 R 은 돌 + 강철 3/s, LDS 둘은 구리 3/s 씩 먹는다 → 상자 상한을 올림 (150 이면 100 초 만에 빈다).
+#   cA3 플라스틱은 허브에 없다 (망 (-106.5,10.5)) - hauler 는 못 채움 → blhaul (delta) 이 chemout 상자에서 가져온다.
 # P8 (01:05): 철판 300 → 600 · 강철 120 → 250 - 허브 철판이 relay 예비 (500) 밑까지 내려가 강철로 (강철2) 가 굶던 때 hauler 가 300~500 띠 (짓는 재료 몫) 를 가져갔다.
 #   철이 모자란 동안 hauler 는 허브에 600 넘게 있을 때만 철판을 가져간다 (P8 전초 공사 · 강철로가 먼저).
 HUB_KEEP = {"coal": 0, "iron-plate": 600, "copper-plate": 300, "steel-plate": 250, "stone": 200, "stone-brick": 200, "sulfur": 150}
@@ -339,6 +341,8 @@ def check(ai, plan=None) -> dict:
 
 def place_poles(plan, mine, occ, existing):
     need = [(n, x, y) for st, n, x, y, d, ex in plan if n in POWERED]
+    if not need:                      # 전기 안 쓰는 계획 (분배기만 등) - 전봇대 없음
+        return []
 
     def covers(p, e):
         n, x, y = e
