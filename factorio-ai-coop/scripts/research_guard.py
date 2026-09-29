@@ -42,11 +42,11 @@ def main() -> int:
         try:
             use = list(packs)
             for name, gate in gates.items():
-                have = ai.lua("""(function() local s, n = game.surfaces[1], 0
-                  for _, l in pairs(s.find_entities_filtered{type = "lab", force = "player"}) do n = n + l.get_item_count("%s") end
-                  for _, m in pairs(s.find_entities_filtered{type = "assembling-machine", force = "player"}) do
-                    n = n + m.get_inventory(defines.inventory.assembling_machine_output).get_item_count("%s") end
-                  return {n = n} end)()""" % (name, name)).get("n", 0)
+                # 09-30 03:3x: 재고 (연구소·조립기 결과칸) 가 아니라 «10 분 생산» 으로 잰다. 재고로 재면 공장이 서도
+                # 연구소 잔량으로 켜진 채 남거나 (보라 0 인데 automation-3), 벨트 위 팩을 못 세 영영 안 켜진다 (교착).
+                have = ai.lua("""(function() local st = game.forces.player.get_item_production_statistics(game.surfaces[1])
+                  return {n = math.floor(st.get_flow_count{name = "%s", category = "input",
+                    precision_index = defines.flow_precision_index.ten_minutes, count = true})} end)()""" % name).get("n", 0)
                 if gate[2] is None:
                     gate[2] = have >= gate[1]
                     print(time.strftime("%X"), f"{name} {have} - 시작 상태 {'켬' if gate[2] else '끔'}", flush=True)
