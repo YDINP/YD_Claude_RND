@@ -146,6 +146,11 @@ UPGRADE_INS = [(12.5, 13.5), (-2.5, 13.5), (1.5, 8.5)]                        # 
 # 속도 모듈 (echo 손제작 → STORE) → 건설 로봇 proxy 로 모듈 칸에 (대상마다 ≤ 2 개). 조립기 2 는 칸 2 개 - 속도 1 × 2 = 0.75 → 1.05.
 #   LDS 둘 (노랑 상한 60 → 84) · PU (45 → 63) · Y (64 → 90) · M (30 → 42 = 보라 126). P 는 이미 둘.
 MODULES = [(-2.5, 15.5), (1.5, 10.5), (1.5, 20.5), (1.5, 16.5), (7.5, 11.5), (-4.5, 7.5)]   # + LDS3
+MOD_MAX = 2                              # 조립기마다 속도 모듈 최대 수 - 조립기 3 (칸 4) 도 둘만 (전력: 모듈 하나 +50 %, 08:00 밤 축전 바닥)
+# P12-3 (08:0x): 조립기 2 + 속도 둘 (1.05) 상한 = P 90 · Y 90 · PU 63 (노랑 94) · M 42 (보라 126). 조립기 3 (1.25) + 속도 둘 = 1.75 →
+#   P 150 · Y 150 · PU 105 (노랑 157) · M 70 (보라 210). 조립기 3 = 조립기 2 둘 + 속도 모듈 넷 (재료) - 교체 표시 (order_upgrade) 는 모듈 · 레시피 유지.
+#   남는 상한: LDS 126 (노랑) · 강철 (보라 10분 650 → ~80 몫, 재고로 버팀). 전력 +0.45 MW × 4.
+UPGRADE3 = [(7.5, 15.5), (1.5, 16.5), (1.5, 20.5), (7.5, 11.5)]
 
 
 def modules(ai) -> dict:
@@ -158,14 +163,15 @@ def modules(ai) -> dict:
         local e = s.find_entities_filtered{type = 'assembling-machine', force = f, position = q, radius = 0.3}[1]
         local m = e and e.get_module_inventory()
         if m then
-          local free = 0
-          for i = 1, #m do if not m[i].valid_for_read then free = free + 1 end end
+          local free, used = 0, 0
+          for i = 1, #m do if m[i].valid_for_read then used = used + 1 end end
+          for i = 1, #m do if not m[i].valid_for_read and used + free < %d then free = free + 1 end end
           if free == 0 then out.full = out.full + 1
           elseif s.count_entities_filtered{name = 'item-request-proxy', position = e.position, radius = 0.6} > 0 then out.busy = out.busy + 1
           elseif have < free then out.short = out.short + 1
           else
             local slots = {}
-            for i = 1, #m do if not m[i].valid_for_read then slots[#slots + 1] = {inventory = defines.inventory.assembling_machine_modules, stack = i - 1, count = 1} end end
+            for i = 1, #m do if not m[i].valid_for_read and #slots < free then slots[#slots + 1] = {inventory = defines.inventory.assembling_machine_modules, stack = i - 1, count = 1} end end
             s.create_entity{name = 'item-request-proxy', position = e.position, force = f, target = e,
               modules = {{id = {name = 'speed-module'}, items = {in_inventory = slots}}}}
             have = have - free
@@ -174,7 +180,22 @@ def modules(ai) -> dict:
         end
       end
       return out
-    end)()""" % json.dumps(MODULES))
+    end)()""" % (json.dumps(MODULES), MOD_MAX))
+
+
+def upgrade3(ai) -> dict:
+    """조립기 2 → 3 교체 표시 (로봇이 망의 조립기 3 으로 바꾼다, 레시피 · 모듈 · 든 것 유지)."""
+    return ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local out = {ordered = 0, already = 0, done = 0}
+      for _, q in pairs(helpers.json_to_table('%s')) do
+        local e = s.find_entities_filtered{type = 'assembling-machine', force = f, position = q, radius = 0.3}[1]
+        if e and e.name == 'assembling-machine-3' then out.done = out.done + 1
+        elseif e and e.to_be_upgraded() then out.already = out.already + 1
+        elseif e then e.order_upgrade{force = f, target = 'assembling-machine-3'}; out.ordered = out.ordered + 1 end
+      end
+      return out
+    end)()""" % json.dumps(UPGRADE3))
 
 
 def room(ai) -> dict:
@@ -286,6 +307,7 @@ def main() -> int:
     ap.add_argument("--upgrade", action="store_true")
     ap.add_argument("--status", action="store_true")
     ap.add_argument("--modules", action="store_true")
+    ap.add_argument("--asm3", action="store_true", help="P · Y · PU · M 조립기 2 → 3 교체 표시")
     a = ap.parse_args()
     ai = AIBridge()
     plan = GROUPS[a.group]
@@ -307,6 +329,8 @@ def main() -> int:
         print("upgrade", upgrade(ai))
     if a.modules:
         print("modules", modules(ai))
+    if a.asm3:
+        print("asm3", upgrade3(ai))
     if a.status:
         r = status(ai)
         for k, v in (r.items() if isinstance(r, dict) else enumerate(r)):
