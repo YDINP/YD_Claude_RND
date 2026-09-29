@@ -28,6 +28,8 @@ FEED = [
     (10.5, 8.5, STEEL, 2, 5, 50),                         # 엔진 (eng6 - 관은 eng5, 톱니는 adv6 에서 팔 직결)
     (6.5, 8.5, IRON, 10, 20, 300),                        # 관 (eng5 레시피 바꿈)
     (14.5, 8.5, IRON, 20, 40, 300),                       # 톱니 (adv6 레시피 바꿈)
+    (-37.5, -4.5, "chemical-science-pack", 5, 20, 0), (-35.5, 8.5, "chemical-science-pack", 5, 20, 0),   # 서쪽 연구소 두 줄 동쪽 끝 (06:3x: 윗줄 파랑 0 - 빨강 레인에 섞인 파랑이 빨강 뒤에 막힘).
+                                                                                  #   파랑은 파랑 벨트 x 20.5 → 팔 (19.5,6.5) → 공급 상자 (18.5,6.5, 칸 제한 1) 로 망에. 연구소 사이 팔이 줄 전체로
     (12.5, 15.5, "stone", 10, 30, 200),                   # P7 레일 R (06:1x: 허브 돌 200 = hauler HUB_KEEP 이라 cR 돌 0 → 보라 0. 돌은 망 저장 상자에 ~4.9k)
     (1.5, 10.5, "plastic-bar", 10, 30, 100), (-2.5, 15.5, "plastic-bar", 10, 30, 100),   # P9 LDS2 · P7 LDS (플라스틱은 허브가 아니라 망 - cL2 플라스틱 0 → 노랑 LDS 묶임)
     (-106.5, 13.5, "coal", 40, 100, 0), (-71.5, 11.5, "coal", 40, 100, 0),        # 플라스틱 화학 (P4 석탄) - P11 (06:0x): 석유가스 10.6 → 46/s 로
@@ -66,10 +68,13 @@ LUA = """(function()
     out.gate = {yellow_frames = fr, robots = robots, robot = gate.robot}
   end
   for _, q in pairs(A.feed) do
-    local a = (q[7] == nil or gate[q[7]]) and s.find_entities_filtered{type = 'assembling-machine', force = f, position = {q[1], q[2]}, radius = 0.6}[1]
+    local a = (q[7] == nil or gate[q[7]]) and s.find_entities_filtered{type = {'assembling-machine', 'lab'}, force = f, position = {q[1], q[2]}, radius = 0.6}[1]
     if q[7] ~= nil and not gate[q[7]] then goto next_feed end
     local net = a and cnet_of(a.position)
-    local r = a and a.get_recipe()
+    local lab = a and a.type == 'lab'
+    local r = a and (lab and {ingredients = {}} or a.get_recipe())
+    if lab then for i, n in pairs(a.prototype.lab_inputs) do r.ingredients[#r.ingredients + 1] = {type = 'item', name = n} end end
+    local INV = lab and defines.inventory.lab_input or defines.inventory.assembling_machine_input
     if not (a and net and r) then out.miss[#out.miss + 1] = q[3] .. ' @' .. q[1] .. ',' .. q[2]
     elseif nreq < A.max then
       local stack, k = nil, 0
@@ -79,11 +84,11 @@ LUA = """(function()
           k = k + 1
         end
       end
-      local have = a.get_inventory(defines.inventory.assembling_machine_input).get_item_count(q[3])
+      local have = a.get_inventory(INV).get_item_count(q[3])
       if stack and have < q[4] and not busy(a) then
         if net.get_item_count(q[3]) >= q[5] + q[6] then
           s.create_entity{name = 'item-request-proxy', position = a.position, force = f, target = a,
-            modules = {{id = {name = q[3]}, items = {in_inventory = {{inventory = defines.inventory.assembling_machine_input, stack = stack, count = q[5]}}}}}}
+            modules = {{id = {name = q[3]}, items = {in_inventory = {{inventory = INV, stack = stack, count = q[5]}}}}}}
           nreq = nreq + 1
           out.req[#out.req + 1] = q[3] .. ' ' .. q[5] .. ' @' .. q[1] .. ',' .. q[2]
         else out.short[#out.short + 1] = q[3] .. ' @' .. q[1] .. ',' .. q[2] end
