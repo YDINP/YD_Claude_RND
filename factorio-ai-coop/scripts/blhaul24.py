@@ -21,6 +21,8 @@ CHESTS = [(35.5, 17.5, "steel-plate", 150), (43.5, 17.5, "steel-plate", 150), (5
 CHESTS += [(x, y + 16, it, goal) for x, y, it, goal in CHESTS]          # 모듈 둘째 (logi24 bl2, dy 16)
 KEEP = {"steel-plate": 150, "sulfur": 100, "plastic-bar": 100}   # 03:3x 플라스틱 200 → 100 (bl1 고급회로 플라스틱 0)
 SRC_BOX = [[62.5, -16.1], [76.1, -14.9]]
+# 04:0x relay M3 걷기: 화학 결과 공급 상자 (logi24 chemout) 도 출처 - 플라스틱 (-106.5,10.5) · 황 (-101.5,10.5) · 황 (-75.5,1.5)
+EXTRA_SRC = [[-106.5, 10.5], [-101.5, 10.5], [-75.5, 1.5]]
 
 LUA = """(function()
   local s, f = game.surfaces[1], game.forces.player
@@ -29,7 +31,12 @@ LUA = """(function()
     local e = s.find_entities_filtered{name = "iron-chest", force = f, position = {c[1], c[2]}, radius = 0.3}[1]
     out.have[i] = e and e.get_inventory(defines.inventory.chest).get_item_count(c[3]) or -1
   end
-  for _, e in pairs(s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, area = %s}) do
+  local srcs = s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, area = %s}
+  for _, p in pairs(helpers.json_to_table('%s')) do
+    local c = s.find_entities_filtered{type = "logistic-container", force = f, position = p, radius = 0.3}[1]
+    if c then srcs[#srcs + 1] = c end
+  end
+  for _, e in pairs(srcs) do
     local inv = e.get_inventory(defines.inventory.chest)
     for _, it in pairs({"steel-plate", "sulfur", "plastic-bar"}) do
       local n = inv.get_item_count(it)
@@ -41,7 +48,7 @@ end)()"""
 
 
 def once(ai, who) -> dict:
-    r = ai.lua(LUA % (json.dumps(CHESTS), json.dumps(SRC_BOX).replace("[", "{").replace("]", "}")))
+    r = ai.lua(LUA % (json.dumps(CHESTS), json.dumps(SRC_BOX).replace("[", "{").replace("]", "}"), json.dumps(EXTRA_SRC)))
     have = r.get("have") or {}
     have = [have[str(i + 1)] if isinstance(have, dict) else have[i] for i in range(len(CHESTS))]
     short = {}

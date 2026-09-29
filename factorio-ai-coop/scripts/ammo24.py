@@ -22,12 +22,15 @@ for _x, _y in ((-92.5, -6.5), (-68.5, -10.5)):
 # 공급 상자 (logi24 ammo) - 손 고리가 여기서 꺼낸다
 OUT_CHESTS = [(-92.5, -3.5), (-68.5, -13.5)]
 LOW, FILL = 10, 20
+# 04:1x 코디네이터: 망 가장자리 포탑은 작은 요청 대신 사람 손 한 번에 (로봇 먼 길) - P10 북쪽 전초 (P10 이 손으로 채움)
+NO_PROXY = [[-10, -150, 50, -85]]
 YELLOW_KEEP = 40          # 노랑은 피어싱 재료 몫을 남긴다
 MAX_REQ = 40              # 한 번에 만드는 요청 수 상한
 SW_MAX = 6                # 한 번에 피어싱으로 바꾸는 포탑 수 (빼기 + 넣기 - 망 피어싱을 넘겨 요청하면 빼기만 되어 빈 포탑이 된다)
 PIERCE_KEEP = 60          # 바꿈은 망 피어싱이 이만큼 남을 때만 (빈 포탑 채우기 몫)
 # 바꾸는 순서: 발전 남쪽 호숫가 (01:38 공습, 코디네이터) → relay PIERCE_ZONES 순
-SW_ZONES = [[-40, 30, 12, 56]]
+SW_ZONES = [[-40, 30, 12, 56], [-220, 14, -178, 56], [-130, 0, -84, 50], [115, -50, 140, 14], [-104, -12, -30, 16], [70, -70, 100, -58], [48, 70, 90, 102],
+            [-2000, -2000, 2000, 2000]]      # 04:1x relay TURRET_NET_OFF - 망 안 포탑은 relay 가 안 만진다 → 어디서나 바꿈 (위 순서 먼저)
 # relay S1 · S2 가 살아 있는 곳에서는 바꾸지 않는다 (relay 가 노랑을 다시 넣어 빼기만 된다) - relay SAFE_OFF 와 같게 넓힌다.
 #   다음: [-220, 14, -178, 56], [-130, 0, -84, 50], [115, -50, 140, 14], [-104, -12, -30, 16], [70, -70, 100, -58], [48, 70, 90, 102]
 
@@ -86,7 +89,11 @@ LUA = """(function()
     local inv = t.get_inventory(TI)
     local y, p = inv.get_item_count('firearm-magazine'), inv.get_item_count('piercing-rounds-magazine')
     local net = cnet_of(t.position)
-    if not net or net.all_construction_robots == 0 then
+    local far = false
+    for _, z in pairs(A.noproxy) do
+      if t.position.x >= z[1] and t.position.y >= z[2] and t.position.x <= z[3] and t.position.y <= z[4] then far = true end
+    end
+    if far or not net or net.all_construction_robots == 0 then
       out.outside[#out.outside + 1] = {t.position.x, t.position.y, y + p, (p > 0 or y == 0) and 'piercing-rounds-magazine' or 'firearm-magazine'}
     elseif nreq < A.max and not busy(t) then
       local np, ny = left(net, 'piercing-rounds-magazine'), left(net, 'firearm-magazine')
@@ -119,41 +126,49 @@ end)()"""
 
 def lua_args(switch):
     return json.dumps({"feed": FEED, "low": LOW, "fill": FILL, "ykeep": YELLOW_KEEP, "max": MAX_REQ, "switch": bool(switch),
-                       "swmax": SW_MAX, "pkeep": PIERCE_KEEP, "zones": SW_ZONES})
+                       "swmax": SW_MAX, "pkeep": PIERCE_KEEP, "zones": SW_ZONES, "noproxy": NO_PROXY})
 
 
 def hand_round(ai, who, outside):
-    """망 밖 포탑 - 탄 적은 순 ≤ 8, 공급 상자 피어싱을 들고 가 넣는다 (사람 손, 허용된 방식)."""
+    """망 밖 포탑 - 탄 적은 순 ≤ 8. 든 탄과 같은 종류 (빈 포탑 = 피어싱) 를 망 공급 · 저장 상자에서 꺼내 들고 가 넣는다 (사람 손, 허용된 방식)."""
     from orders import submit
     low = sorted([o for o in outside if o[2] < LOW], key=lambda o: o[2])[:8]
     if not low:
         return {"hand": 0}
-    need = sum(FILL - o[2] for o in low)
-    src = ai.lua("""(function() local s = game.surfaces[1] local r = {}
-      for i, c in pairs(helpers.json_to_table('%s')) do
-        local e = s.find_entities_filtered{type = 'logistic-container', position = c, radius = 0.3}[1]
-        r[i] = e and e.get_inventory(defines.inventory.chest).get_item_count('piercing-rounds-magazine') or 0 end
-      return r end)()""" % json.dumps(OUT_CHESTS))
-    src = [src[str(i + 1)] if isinstance(src, dict) else src[i] for i in range(len(OUT_CHESTS))]
-    plan, carry = [], 0
-    for (x, y), n in zip(OUT_CHESTS, src):
-        k = min(n, need - carry)
-        if k > 0:
-            plan += [("walk_to", {"x": x + 1.5, "y": y}), ("take", {"name": "piercing-rounds-magazine", "x": x, "y": y, "count": k})]
-            carry += k
-    if carry < 10:
-        return {"hand": 0, "src": src}
+    need = {}
     for x, y, have, it in low:
-        k = min(FILL - have, carry)
+        need[it] = need.get(it, 0) + FILL - have
+    src = ai.lua("""(function() local s = game.surfaces[1] local r = {}
+      for _, c in pairs(s.find_entities_filtered{type = 'logistic-container', force = 'player'}) do
+        local inv = c.get_inventory(defines.inventory.chest)
+        for _, it in pairs({'firearm-magazine', 'piercing-rounds-magazine'}) do
+          local n = inv.get_item_count(it)
+          if n > 0 then r[#r + 1] = {c.position.x, c.position.y, it, n} end
+        end
+      end
+      return r end)()""")
+    src = list(src.values()) if isinstance(src, dict) else (src or [])
+    plan, carry = [], {}
+    for it, want in need.items():
+        for x, y, sit, n in sorted([q for q in src if q[2] == it], key=lambda q: -q[3]):
+            k = min(n, want - carry.get(it, 0))
+            if k <= 0:
+                break
+            plan += [("walk_to", {"x": x + 1.5, "y": y}), ("take", {"name": it, "x": x, "y": y, "count": k})]
+            carry[it] = carry.get(it, 0) + k
+    if sum(carry.values()) < 10:
+        return {"hand": 0, "src": "empty"}
+    done = 0
+    for x, y, have, it in low:
+        k = min(FILL - have, carry.get(it, 0))
         if k <= 0:
-            break
-        if have > 0 and it != "piercing-rounds-magazine":
-            continue                       # 노랑이 든 포탑에는 피어싱이 안 들어간다
-        plan += [("walk_to", {"x": x + 2, "y": y + 2}), ("insert", {"name": "piercing-rounds-magazine", "x": x, "y": y, "count": k})]
-        carry -= k
+            continue
+        plan += [("walk_to", {"x": x + 2, "y": y + 2}), ("insert", {"name": it, "x": x, "y": y, "count": k})]
+        carry[it] -= k
+        done += 1
     plan.append(("walk_to", {"x": -60.5, "y": -3.5}))
     submit(ai, who, plan[:40], strict=False)
-    return {"hand": len(low), "carry": carry}
+    return {"hand": done, "left": carry}
 
 
 def main() -> int:

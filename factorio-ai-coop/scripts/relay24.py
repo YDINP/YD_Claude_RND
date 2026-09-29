@@ -278,22 +278,24 @@ LAB_CAP = 20
 TURRET_CAP = 20
 # P7 안전 걷기 (03:2x~): relay 가 포탑 탄 · 화로 연료를 안 넣는 구역 [x0, y0, x1, y1]. 넓혀 가다 모두 덮이면 S1 · S2 · S4 를 뺀다.
 #   동쪽 전초 (P8, 화로 24 · 포탑 16) 10 분 시험 (코디네이터) · 발전 남쪽 호숫가 (ammo24 가 피어싱으로 바꿈 - relay 노랑이 끼면 못 바꾼다)
+# 04:1x 로봇망 안 포탑 (건설 범위) 은 relay S1 · S2 가 쉰다 - ammo24 (탄 < 10 → 20 요청) 가 맡는다. 망 밖 포탑만 relay (손 고리 확인 뒤 뺌)
+TURRET_NET_OFF = True      # 04:13 다시 (바꿈 --switch 없이, 채우기만) · 04:05 되살림 - 망 건설 로봇 354 모두 바빠 (available 0) 바꿈 중 포탑 3 이 탄 0
 SAFE_OFF = [[380, -190, 440, -120]]      # 03:37 동쪽 전초 10 분 시험 (석탄 · 피어싱 손 상자 → 벨트). 03:22 포탑 (2,50) 탄 0 - 되살림. 전: [[-40, 30, 12, 56]]          # + [380, -190, 440, -120] 동쪽 전초 (석탄 상자 채운 뒤)
 CHEST_CAP = 200
 COAL_BOX = [100, -34, 126, -22]
 # (이름, x, y, 레시피, 넣을 품목 ("" = 없음), 상한, 꺼낼 품목, 허브 상한) - p2_24 REFINERY · PLASTIC
 CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
-        ["chemical-plant", -106.5, 13.5, "plastic-bar", "", 0, "plastic-bar", 700],   # 03:5x 석탄 (P4) → robofeed24 (망 석탄 = 석탄 밭 공급 상자 (122.5,-29.5))       # P5: 1000 → 700 - 정유 1 가스를 황 첫째가 먼저 (플라스틱은 둘째 몫)      # P4: 500 → 1000 (로보포트 · 고급회로 5)
-        ["chemical-plant", -102.5, 13.5, "sulfur", "", 0, "sulfur", 600],
-        ["chemical-plant", -71.5, 11.5, "plastic-bar", "", 0, "plastic-bar", 1000],   # 03:5x 석탄 → robofeed24
+        ["chemical-plant", -106.5, 13.5, "plastic-bar", "", 0, "", 0],   # 04:1x M3 뺌 → 팔 → 공급 상자 (-106.5,10.5) (logi24 chemout)   # 03:5x 석탄 (P4) → robofeed24 (망 석탄 = 석탄 밭 공급 상자 (122.5,-29.5))       # P5: 1000 → 700 - 정유 1 가스를 황 첫째가 먼저 (플라스틱은 둘째 몫)      # P4: 500 → 1000 (로보포트 · 고급회로 5)
+        ["chemical-plant", -102.5, 13.5, "sulfur", "", 0, "", 0],   # 04:1x M3 뺌 → 공급 상자 (-101.5,10.5)
+        ["chemical-plant", -71.5, 11.5, "plastic-bar", "", 0, "", 0],   # 04:1x M3 뺌 - 결과는 P7 노랑 (LDS) 벨트 팔만   # 03:5x 석탄 → robofeed24
         # P5 기름 블록 (p5_24.crack_steps): 중유 분해 · 경유 분해 · 황 둘째 - 레시피는 관보다 먼저 선 기계에 걸린다
         ["chemical-plant", -82.5, 4.5, "heavy-oil-cracking", "", 0, "", 0],
         ["chemical-plant", -79.5, 4.5, "light-oil-cracking", "", 0, "", 0],
-        ["chemical-plant", -75.5, 4.5, "sulfur", "", 0, "sulfur", 600]]      # P4 플라스틱 둘째 (석유 탱크 P)                   # P4: 300 → 600 (황산)           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
-BOIL, BURN = 20, 5
+        ["chemical-plant", -75.5, 4.5, "sulfur", "", 0, "", 0]]   # 04:1x M3 뺌 → 공급 상자 (-75.5,1.5)      # P4 플라스틱 둘째 (석유 탱크 P)                   # P4: 300 → 600 (황산)           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
+BOIL, BURN = 20, 0      # 04:00 BURN 0 - 버너 채굴기 0 대 (모두 전기)
 # P7 안전 (마지막): 석탄 벨트 → 보일러 팔 (logi24 coal) 이 10 분 넘게 돈 뒤 BOIL = 0 (relay 보일러 연료 쉼). 화로는 FURN = 0 (사람 손 연료 고리가 대신).
-FURN = BURN
-BOIL = 0            # 03:51 다시 뺌 (새 보일러 팔 전봇대 03:35 - 팔 10 모두 waiting_for_space). 03:17 정전 (보일러 7 석탄 0) 으로 되살림 - 03:01 뺌 - 보일러 줄 10 대 (석탄 벨트 y 48.5) 가 발전 전부. 흩어진 보일러 4 대 (-83/-75/-57/-42) 는 연료 떨어지면 쉼 (예비)
+FURN = 0      # 04:00 뺌 - fuelhaul24 (golf 손 석탄 고리, 03:36~) 가 본진 강철로 45 를 20~50 으로 · 동쪽 전초는 석탄 상자 → 벨트 (03:37 SAFE_OFF 시험 통과)
+# BOIL = 0          # 04:2x 되살림 (전력 17.1/17.1 MW 포화 - 흩어진 보일러 4 (3.6 MW) 가 필요, 발전 늘리기 담당이 늘린 뒤 뺌) · 03:51 다시 뺌 (새 보일러 팔 전봇대 03:35 - 팔 10 모두 waiting_for_space). 03:17 정전 (보일러 7 석탄 0) 으로 되살림 - 03:01 뺌 - 보일러 줄 10 대 (석탄 벨트 y 48.5) 가 발전 전부. 흩어진 보일러 4 대 (-83/-75/-57/-42) 는 연료 떨어지면 쉼 (예비)
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍 (P2: 철 버너 줄 자리의 전기 쌍 C (y -54) 까지). 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
 PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500],
           [[72, -67.5, 96, -64.5], "iron-plate", 2500]]      # P3 철 전기 쌍 E 6 (p3_24.IRONE_XS, 화로 y -66)
@@ -490,7 +492,17 @@ LUA = """(function()
   -- 새 포탑 17 × 20 = 340 이 조립기 한 대 (0.5/s) 보다 빨리 필요했다. 빈 포탑부터 채운다 (탄 적은 순).
   -- P7 안전 걷기: OFF 구역 (포탑 · 화로 연료) 은 relay 가 손대지 않는다 - 대신하는 것 (ammo24 로봇 요청 · 손 고리 · 벨트) 이 맡는다
   local OFF = helpers.json_to_table('__OFF__')
+  local NET_OFF = __NETOFF__
+  -- 포탑이 로봇망 건설 범위 안 (로봇 있음) 이면 ammo24 (건설 로봇 요청) 가 맡는다 - relay S1 · S2 는 손대지 않는다
+  local function net_turret(t)
+    if not NET_OFF or t.type ~= "ammo-turret" then return false end
+    for _, n in pairs(s.find_logistic_networks_by_construction_area(t.position, f) or {}) do
+      if n.all_construction_robots > 0 then return true end
+    end
+    return false
+  end
   local function off(e)
+    if net_turret(e) then return true end
     for _, z in pairs(OFF) do
       if e.position.x >= z[1] and e.position.y >= z[2] and e.position.x <= z[3] and e.position.y <= z[4] then return true end
     end
@@ -716,7 +728,7 @@ def lua_box(b) -> str:
 
 def once(ai) -> dict:
     l2 = dict({k: True for k in LAB2_PACKS}, on=True) if LAB2_PACKS else {"on": False}
-    return ai.lua(LUA.replace("__PZ__", blob(PIERCE_ZONES)).replace("__OFF__", blob(SAFE_OFF)).replace("__L2__", blob(l2)) % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
+    return ai.lua(LUA.replace("__PZ__", blob(PIERCE_ZONES)).replace("__OFF__", blob(SAFE_OFF)).replace("__NETOFF__", "true" if TURRET_NET_OFF else "false").replace("__L2__", blob(l2)) % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
                          AMMO_CHEST[0], AMMO_CHEST[1], blob(OUTS), blob(PORT_STOCK), blob(NET_STOCK), lua_box(LAB_BOX2), LAB_CAP,
                          TURRET_CAP, TURRET_CAP, TURRET_CAP, TURRET_CAP, TURRET_CAP, CHEST_CAP,
                          blob(PLATES), blob(CHESTS), blob(SMELT), lua_box(COAL_BOX), blob(CHEM), BOIL, BURN, FURN, BURN))

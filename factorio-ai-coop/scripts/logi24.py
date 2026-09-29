@@ -336,15 +336,15 @@ def coal2_rotate():
 def westnet():
     """03:1x 탄 줄 전환: 로봇 줄 (y -12..-6, x -94..-63) 이 로봇망 밖 → 로보포트 하나 (-86,-17) 로 (-82,20) 망과 이음 (물류 25).
     피어싱 조립기 둘 · 탄창 조립기 · 군수 상자가 망 안에 들어와 건설 로봇 요청 (proxy) 으로 먹이고 공급 상자로 뺀다."""
-    return [g("roboport", -86, -17)]
+    return [g("roboport", -86, -17), g(POLE, -86.5, -14.5)]      # 04:0x 전봇대 - (-86.5,-12.5) 가 덮지 못해 로보포트 전기 없음 (no_power)
 
 
 def ammo():
     """탄 조립기 결과 → 팔 → 공급 상자 (망에 보임). 피어싱 1 (-92.5,-6.5) 남 · 피어싱 2 (-68.5,-10.5) 북 · 노랑 탄창 (-53.5,3.5) 남.
     먹이 (철 · 강철 · 구리 · 노랑 탄창) 와 포탑 채우기는 ammo24.py (건설 로봇 요청). 칸 제한 1 = 피어싱 100 · 노랑 200."""
     return [g(INS, -92.5, -4.5, N), g("passive-provider-chest", -92.5, -3.5, N, bar=1),
-            g(INS, -68.5, -12.5, S), g("passive-provider-chest", -68.5, -13.5, N, bar=1),
-            g(INS, -53.5, 5.5, N), g("passive-provider-chest", -53.5, 6.5, N, bar=1)]
+            g(INS, -68.5, -12.5, S), g("passive-provider-chest", -68.5, -13.5, N, bar=1), g(POLE, -69.5, -13.5),
+            g(INS, -53.5, 5.5, N), g("passive-provider-chest", -53.5, 6.5, N, bar=1), g(POLE, -54.5, 5.5)]   # 04:2x 노랑 결과 팔 no_power
 
 
 def southnet():
@@ -365,7 +365,35 @@ def robo():
             g(INS, -76.5, -4.5, N), g(ST, -76.5, -3.5, N),
             g(INS, -76.5, -12.5, S), g(ST, -76.5, -13.5, N),
             g(INS, 8.5, 8.5, W), g(INS, 12.5, 8.5, E),
-            g(INS, 10.5, 6.5, S), g(PP, 10.5, 5.5, N, bar=1), g(POLE, 9.5, 5.5)]
+            g(INS, 10.5, 6.5, S), g(PP, 10.5, 5.5, N, bar=1), g(POLE, 9.5, 5.5),
+            g(INS, -71.5, -4.5, N), g("roboport", -71, -2),
+            g(POLE, -80.5, -2.5), g(POLE, -77.5, -4.5), g(POLE, -78.5, -13.5)]   # 04:2x 결과 팔 셋 no_power (전기 엔진 · 틀 2 · 톱니 4)      # 04:1x 건설 로봇 (robot1) 결과 → 로보포트에 바로 (망 로봇 ≤ 404, robofeed 문)
+
+
+def chemout():
+    """relay M3 (화학 결과 → 허브) 걷기 (04:0x): 플라스틱 (-106.5,13.5) · 황 (-102.5,13.5) · 황 (-75.5,4.5) 결과 → 팔 → 공급 상자 (망에).
+    플라스틱 (-71.5,11.5) 은 P7 노랑 (LDS) 벨트 팔 그대로. blhaul24 는 이 상자에서 꺼낸다."""
+    PP = "passive-provider-chest"
+    return [g(INS, -106.5, 11.5, S), g(PP, -106.5, 10.5, N),
+            g(INS, -101.5, 11.5, S), g(PP, -101.5, 10.5, N),
+            g(INS, -75.5, 2.5, S), g(PP, -75.5, 1.5, N)]
+
+
+def cuin():
+    """04:2x P10 북쪽 구리 전초 줄기 (끝 (23.5,0.5) 남향, 12/s) 잇기 (코디네이터 · P10 제안):
+    빠른 분배기 (24,-1.5) - 서쪽 (23.5) 은 지하 (23.5,1.5 → 3.5) 로 초록 팩 벨트 밑 → x 23.5 남 → y 11.5 동 → bl 판 벨트 (26.5,11.5) 서쪽 레인 (구리) 옆 싣기 (≤ 7.5/s).
+    동쪽 (24.5) 넘침 → y -0.5 동 → 지하 (59.5 → 64.5, rgfeed 60.5 · 구리 줄기 61.5 · 석탄 63.5 밑) → 65.5 북 → 허브 구리 벨트 (65.5,-13.5) 남 레인 옆 싣기.
+    분배기 출력 우선 = 서쪽 (bl) - splitter_priority."""
+    out = [g("fast-splitter", 24.0, -1.5, S)]
+    out += [g(UG, 23.5, 1.5, S, ug="input"), g(UG, 23.5, 3.5, S, ug="output")]
+    out += line(BELT, 23.5, 4.5, 23.5, 10.5, S)
+    out += line(BELT, 23.5, 11.5, 25.5, 11.5, E)
+    out += line(BELT, 24.5, -0.5, 58.5, -0.5, E)
+    out += [g(UG, 59.5, -0.5, E, ug="input"), g(UG, 64.5, -0.5, E, ug="output")]
+    out += line(BELT, 65.5, -0.5, 65.5, -12.5, N)
+    # 허브 구리 받기: 빠른 팔 3 (71.5~73.5, 6.9/s) 로는 구리 줄기 ~6 + 넘침 ~6 을 못 받는다 → 빠른 팔 5 더 (66.5~70.5) = 18/s (ceil(12 × 1.3 / 2.3) = 7)
+    out += [g(FINS, x, -14.5, S) for x in (66.5, 67.5, 68.5, 69.5, 70.5)]
+    return out
 
 
 ROBO_FILTERS = [(-81.5, -1.5, "electric-engine-unit"), (-88.5, 1.5, "battery"), (-76.5, -3.5, "flying-robot-frame"), (-76.5, -13.5, "iron-gear-wheel")]
@@ -479,7 +507,7 @@ def bl2():
 
 
 STAGES = {"ironout": (ironout, ironout_clear), "copperout": (copperout, copperout_clear), "rg": (rg, rg_clear), "smelt": (smelt, smelt_clear),
-          "mall": (mall, None), "coal": (coal, coal_clear), "eastwall": (eastwall, None), "boilers": (boilers, None), "bl": (bl, None), "bl2": (bl2, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear), "coal2": (coal2, None), "westnet": (westnet, None), "ammo": (ammo, None), "southnet": (southnet, None), "robo": (robo, None)}
+          "mall": (mall, None), "coal": (coal, coal_clear), "eastwall": (eastwall, None), "boilers": (boilers, None), "bl": (bl, None), "bl2": (bl2, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear), "coal2": (coal2, None), "westnet": (westnet, None), "ammo": (ammo, None), "southnet": (southnet, None), "robo": (robo, None), "chemout": (chemout, None), "cuin": (cuin, None)}
 ROTATE = {"copperout": copperout_rotate, "coal2": coal2_rotate}
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -493,6 +521,8 @@ LUA_CHECK = """(function()
     if e then
       out.built = out.built + 1
       if q.name ~= "small-electric-pole" and e.direction ~= q.d then out.wrong[#out.wrong+1] = q.name .. "@" .. q.x .. "," .. q.y .. " d" .. e.direction end
+      -- 04:2x 지은 팔 · 조립기가 전기 없음 (no_power) 인 채로 «됨» 으로 보이던 일 네 번 (보일러 팔 · 로봇 줄 결과 팔 · 노랑 팔 · 로보포트)
+      if e.status == defines.entity_status.no_power then out.nopower = out.nopower or {}; out.nopower[#out.nopower+1] = q.name .. "@" .. q.x .. "," .. q.y end
     elseif s.count_entities_filtered{ghost_name = q.name, force = f, position = p, radius = 0.3} > 0 then out.ghost = out.ghost + 1
     else
       if #s.find_logistic_networks_by_construction_area(p, f) == 0 then out.nonet = out.nonet + 1 end

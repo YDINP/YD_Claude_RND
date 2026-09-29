@@ -32,6 +32,11 @@ FEED = [
 ]
 for _x in (-80.5, -76.5):                                 # 틀 1 · 2
     FEED += [(_x, -6.5, "electric-engine-unit", 1, 2, 0), (_x, -6.5, "battery", 2, 4, 0), (_x, -6.5, STEEL, 2, 5, 50), (_x, -6.5, CIRC, 3, 6, 0)]
+# 04:1x 코디네이터: 건설 로봇 조립기 (robot1) 다시 - 망 건설 로봇 < ROBOT_CAP 이고 노랑 조립기 (1.5,16.5) 입력 틀 ≥ 2 일 때만 (노랑이 틀 먼저)
+#   결과는 팔 (-71.5,-4.5) → 로보포트 (-71,-2) 로 바로 (logi24 robo).
+ROBOT_CAP = 404
+YELLOW_ASM = (1.5, 16.5)
+FEED += [(-72.5, -6.5, "flying-robot-frame", 1, 2, 0, "robot"), (-72.5, -6.5, CIRC, 2, 4, 0, "robot")]
 MAX_REQ = 30
 
 LUA = """(function()
@@ -47,8 +52,19 @@ LUA = """(function()
     end
     return best
   end
+  -- 문 (gate): robot = 망 건설 로봇 < 상한 · 노랑 조립기 틀 ≥ 2
+  local gate = {}
+  do
+    local y = s.find_entities_filtered{type = 'assembling-machine', force = f, position = A.yellow, radius = 0.6}[1]
+    local fr = y and y.get_inventory(defines.inventory.assembling_machine_input).get_item_count('flying-robot-frame') or 0
+    local n = s.find_logistic_network_by_position({66.5, -15.5}, f)
+    local robots = n and n.all_construction_robots or 0
+    gate.robot = (fr >= 2) and (robots < A.robot_cap)
+    out.gate = {yellow_frames = fr, robots = robots, robot = gate.robot}
+  end
   for _, q in pairs(A.feed) do
-    local a = s.find_entities_filtered{type = 'assembling-machine', force = f, position = {q[1], q[2]}, radius = 0.6}[1]
+    local a = (q[7] == nil or gate[q[7]]) and s.find_entities_filtered{type = 'assembling-machine', force = f, position = {q[1], q[2]}, radius = 0.6}[1]
+    if q[7] ~= nil and not gate[q[7]] then goto next_feed end
     local net = a and cnet_of(a.position)
     local r = a and a.get_recipe()
     if not (a and net and r) then out.miss[#out.miss + 1] = q[3] .. ' @' .. q[1] .. ',' .. q[2]
@@ -70,6 +86,7 @@ LUA = """(function()
         else out.short[#out.short + 1] = q[3] .. ' @' .. q[1] .. ',' .. q[2] end
       end
     end
+    ::next_feed::
   end
   return out
 end)()"""
@@ -81,7 +98,7 @@ def main() -> int:
     ap.add_argument("--once", action="store_true")
     a = ap.parse_args()
     ai = None
-    arg = json.dumps({"feed": FEED, "max": MAX_REQ})
+    arg = json.dumps({"feed": FEED, "max": MAX_REQ, "robot_cap": ROBOT_CAP, "yellow": YELLOW_ASM})
     while True:
         try:
             ai = ai or AIBridge()
