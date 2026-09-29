@@ -216,6 +216,8 @@ FEEDS += [["hub", "stone-brick", "wallasm", 25], ["hub", "iron-plate", "gear4", 
           ["gear4", "iron-gear-wheel", "repair", 4], ["circuit3", "electronic-circuit", "repair", 4],
           ["gear4", "iron-gear-wheel", "roboport1", 50]]
 FEEDS += [["frame1", "flying-robot-frame", "lrobot", 2], ["frame2", "flying-robot-frame", "lrobot", 2], ["adv5", "advanced-circuit", "lrobot", 4]]
+# P5-3 (23:25): 물류 로봇 10분 0 - 틀은 있고 고급회로 5 가 회로 3 (엔진 · 틀 · 로봇 · 수리팩과 나눔) 에 굶는다 → 파랑 블록 고급회로 3 · 6 과 회로 2 도 (상한 그대로)
+FEEDS += [["adv3", "advanced-circuit", "lrobot", 4], ["adv6", "advanced-circuit", "lrobot", 4], ["circuit2", "electronic-circuit", "adv5", 10]]
 # P5: 새 과학 조립기 7 - 같은 상한 규칙
 for _r in ("red6", "red7"):
     FEEDS += [["hub", "copper-plate", _r, 10], ["gear2", "iron-gear-wheel", _r, 10], ["gear3", "iron-gear-wheel", _r, 10]]

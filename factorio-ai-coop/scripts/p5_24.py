@@ -111,7 +111,9 @@ def power8_steps():
 #   유전 W 벽 (x -216.5, y 16..53) 이 북쪽에서 끝난다 → 북벽 y 11.5 (x -216.5..-182.5) + 서벽 잇기 (y 12.5..15.5) + 안쪽 포탑 4.
 #   나무는 발자리만 벌목 표시 (로봇이 벤다) - 유령은 blueprint_ghost 검사 (나무는 통과, 건물 · 물은 막힘).
 GHOSTS = {"oilnw": [("gun-turret", x, y) for x, y in ((-212, 22), (-212, 14), (-202, 15), (-192, 15))]
-          + [("stone-wall", x + 0.5, 11.5) for x in range(-217, -182)] + [("stone-wall", -216.5, y + 0.5) for y in range(12, 16)]}
+          + [("stone-wall", x + 0.5, 11.5) for x in range(-217, -182)] + [("stone-wall", -216.5, y + 0.5) for y in range(12, 16)],
+          # refnw (23:18 W 틈 89 · NW 190): 정유 · 발전 서쪽 줄 (x -124: y 6 · 14 · 24) 과 물가 서 (-100,-4) 사이 북서 모서리가 비었다 - R_W 망
+          "refnw": [("gun-turret", x, y) for x, y in ((-124, -2), (-118, -9), (-110, -12))]}
 
 
 def place_ghosts(ai, name) -> dict:
