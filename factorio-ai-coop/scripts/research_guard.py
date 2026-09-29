@@ -26,15 +26,36 @@ def main() -> int:
     ap.add_argument("--packs", default="automation-science-pack,logistic-science-pack")
     ap.add_argument("--skip", default="", help="이 접두사로 시작하는 연구는 고르지 않는다 (쉼표)")
     ap.add_argument("--prefer", default="", help="이 접두사 순서로 먼저 (쉼표, 없으면 p4.PREFER)")
+    ap.add_argument("--gate", default="", help="팩:켜는수:끄는수 - 연구소 · 조립기 결과칸에 든 그 팩이 켜는수 이상이면 쓰고 끄는수 미만이면 뺀다 "
+                                              "(24회차 20:30: 초록 0 인데 logistics-2 를 골라 연구소 4 중 3 이 missing_science_packs)")
     args = ap.parse_args()
     packs = tuple(p.strip() for p in args.packs.split(",") if p.strip())
     skip = tuple(p.strip() for p in args.skip.split(",") if p.strip())
     prefer = tuple(p.strip() for p in args.prefer.split(",") if p.strip()) or p4.PREFER
     ai = AIBridge()
     last = None
+    gates = {}
+    for g in (x for x in args.gate.split(",") if x.strip()):
+        name, on, off = g.split(":")
+        gates[name] = [int(on), int(off), False]
     while True:
         try:
-            q = p4.queue_fill(ai, packs, prefer=prefer, skip=skip)
+            use = list(packs)
+            for name, gate in gates.items():
+                have = ai.lua("""(function() local s, n = game.surfaces[1], 0
+                  for _, l in pairs(s.find_entities_filtered{type = "lab", force = "player"}) do n = n + l.get_item_count("%s") end
+                  for _, m in pairs(s.find_entities_filtered{type = "assembling-machine", force = "player"}) do
+                    n = n + m.get_inventory(defines.inventory.assembling_machine_output).get_item_count("%s") end
+                  return {n = n} end)()""" % (name, name)).get("n", 0)
+                if not gate[2] and have >= gate[0]:
+                    gate[2] = True
+                    print(time.strftime("%X"), f"{name} {have} - 켠다", flush=True)
+                elif gate[2] and have < gate[1]:
+                    gate[2] = False
+                    print(time.strftime("%X"), f"{name} {have} - 끈다 (그 팩 연구는 대기열에서 뺀다)", flush=True)
+                if not gate[2] and name in use:
+                    use.remove(name)
+            q = p4.queue_fill(ai, tuple(use), prefer=prefer, skip=skip)
             if q != last:
                 print(time.strftime("%X"), "대기열", q, flush=True)
                 last = q

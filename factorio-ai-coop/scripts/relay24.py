@@ -7,7 +7,7 @@
     톱니        -> 빨강 1·2 > 팔 > 벨트 (앞 것부터)
     전선 -> 회로 -> 팔 -> 초록 <- 벨트
     빨강 · 초록 -> 연구소 (연구소마다 팩 ≤ 20)
-    전기 쌍 화로 판 -> 허브 (허브 철판 ≤ 2500)
+    전기 쌍 화로 판 -> 허브 (허브 철판 ≤ 2500 · 구리판 ≤ 1500) · 돌 전기 상자 -> 허브 (≤ 400)
     석탄 밭 상자 -> 보일러 (≤ 20) > 석탄 버너 채굴기 > 돌 화로 > 다른 버너 채굴기 (≤ 5)  - fuel_run (golf) 의 걸음을 대신
     탄창        -> 포탑 (포탑마다 ≤ 20) -> 남는 것은 허브 탄창 상자 (≤ 200) - 사람 무장용
 
@@ -35,7 +35,7 @@ site = runsite.load()
 HX, HY = site["hub"]
 HUB_BOX = [HX - 4, HY - 0.6, HX + 7, HY + 0.6]
 AMMO_CHEST = [HX, HY]                     # 허브 줄 맨 서쪽 나무 상자 (66.5,-15.5)
-LAB_BOX = [-50, 4, -34, 12]
+LAB_BOX = [-54, 4, -33, 12]
 RESERVE = {"iron-plate": 300, "copper-plate": 100}
 
 # p1_24.ASMS 와 같은 표 (그 모듈을 import 하면 p1 이 따라와 무겁다 - 좌표만)
@@ -49,6 +49,9 @@ ASMS = {
     "inserter": [-49.5, -0.5, "inserter"],
     "belt": [-45.5, -0.5, "transport-belt"],
     "green": [-41.5, -0.5, "logistic-science-pack"],
+    "red3": [-37.5, -0.5, "automation-science-pack"],
+    "green2": [-57.5, -0.5, "logistic-science-pack"],
+    "green3": [-57.5, 3.5, "logistic-science-pack"],
 }
 
 # (출처, 품목, 받는 조립기, 상한) - 출처 "hub" 또는 조립기 이름 (그 조립기의 결과칸). 위에서부터 차례로.
@@ -59,16 +62,22 @@ FEEDS = [
     ["hub", "copper-plate", "red2", 10],
     ["gear", "iron-gear-wheel", "red1", 10],
     ["gear", "iron-gear-wheel", "red2", 10],
+    ["hub", "copper-plate", "red3", 10],
+    ["gear", "iron-gear-wheel", "red3", 10],
     ["hub", "copper-plate", "cable", 30],
     ["cable", "copper-cable", "circuit", 30],
     ["hub", "iron-plate", "circuit", 10],
-    ["circuit", "electronic-circuit", "inserter", 6],
-    ["gear", "iron-gear-wheel", "inserter", 6],
-    ["hub", "iron-plate", "inserter", 6],
-    ["gear", "iron-gear-wheel", "belt", 6],
-    ["hub", "iron-plate", "belt", 6],
+    ["circuit", "electronic-circuit", "inserter", 10],
+    ["gear", "iron-gear-wheel", "inserter", 10],
+    ["hub", "iron-plate", "inserter", 10],
+    ["gear", "iron-gear-wheel", "belt", 10],
+    ["hub", "iron-plate", "belt", 10],
     ["inserter", "inserter", "green", 4],
     ["belt", "transport-belt", "green", 4],
+    ["inserter", "inserter", "green2", 4],
+    ["belt", "transport-belt", "green2", 4],
+    ["inserter", "inserter", "green3", 4],
+    ["belt", "transport-belt", "green3", 4],
 ]
 LAB_CAP = 20
 TURRET_CAP = 20
@@ -76,7 +85,9 @@ CHEST_CAP = 200
 COAL_BOX = [100, -34, 126, -22]           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
 BOIL, BURN = 20, 5
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍. 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
-PLATES = [[[78, -53, 103, -41], "iron-plate", 2500]]
+PLATES = [[[78, -53, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500]]
+# (구역, 품목, 허브 상한) - 전기 채굴기가 붓는 상자 -> 허브 (짓는 재료)
+CHESTS = [[[97, -8, 111, -5], "stone", 400]]
 
 LUA = """(function()
   local s, f = game.surfaces[1], game.forces.player
@@ -142,7 +153,7 @@ LUA = """(function()
   end
   -- 팩 -> 연구소
   local labs = s.find_entities_filtered{name = "lab", force = f, area = {{LB[1], LB[2]}, {LB[3], LB[4]}}}
-  for _, src in pairs({"red1", "red2", "green"}) do
+  for _, src in pairs({"red1", "red2", "red3", "green", "green2", "green3"}) do
     local m = M[src]
     if m and m.get_recipe() then
       local sout = m.get_inventory(defines.inventory.assembling_machine_output)
@@ -196,6 +207,25 @@ LUA = """(function()
           if put >= n then break end
         end
         if put > 0 then fo.remove{name = item, count = put}; tally(item .. ">hub", put) end
+      end
+    end
+  end
+  -- 상자 -> 허브 (돌)
+  for _, cb in pairs(helpers.json_to_table('%s')) do
+    local box, item, cap = cb[1], cb[2], cb[3]
+    for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{box[1], box[2]}, {box[3], box[4]}}}) do
+      local ci = c.get_inventory(defines.inventory.chest)
+      local have = ci.get_item_count(item)
+      local total = 0
+      for _, h in pairs(hubs) do total = total + h.get_inventory(defines.inventory.chest).get_item_count(item) end
+      local n = math.min(have, cap - total)
+      if n > 0 then
+        local put = 0
+        for _, h in pairs(hubs) do
+          put = put + h.get_inventory(defines.inventory.chest).insert{name = item, count = n - put}
+          if put >= n then break end
+        end
+        if put > 0 then ci.remove{name = item, count = put}; tally(item .. ">hub", put) end
       end
     end
   end
@@ -259,7 +289,7 @@ def lua_box(b) -> str:
 def once(ai) -> dict:
     return ai.lua(LUA % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
                          AMMO_CHEST[0], AMMO_CHEST[1], LAB_CAP, TURRET_CAP, CHEST_CAP,
-                         blob(PLATES), lua_box(COAL_BOX), BOIL, BURN, BURN, BURN))
+                         blob(PLATES), blob(CHESTS), lua_box(COAL_BOX), BOIL, BURN, BURN, BURN))
 
 
 def main() -> int:
