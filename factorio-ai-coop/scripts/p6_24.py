@@ -100,7 +100,7 @@ def scout(ai, who, bearing, dist, start, legs=40, step=20) -> dict:
     return {"log": log, "new": [(got[k]["name"], got[k]["x"], got[k]["y"]) for k in new]}
 
 
-# 서쪽 면 (P6-1) - 로봇이 짓는 유령 (p5_24.place_ghosts 와 같은 검사: 망 건설 반경 · 이미 선 것 건너뜀 · 나무는 벌목 표시).
+# 서쪽 면 (P6-1) - 로봇이 짓는 유령 (place_list: 망 건설 반경 · 이미 선 것 건너뜀 · manual 검사 · 나무 · 바위는 벌목 표시).
 #   23:18 W 틈 89. 둥지 무리 (안전 조회: 중심에서 방위 -157 · 464~480, 둥지 3 · 작은 벌레 · 작은 바이터 24 가 둥지 4 칸 안) 는
 #   raidwatch 의 W (465) 와 NW (468) 가 **같은 무리** 다 (방위 경계 -157.5 에 걸쳐 있다). 가장 가까운 우리 것은 유전 북벽 (-217,12) 256.
 #   빈 곳: 유전 북동 모서리 (-182,11) 와 정유 서쪽 줄 (-124,-2) 사이 58 칸 (유전 전봇대 줄 y 28 이 그 뒤) · 정유 북서 둘째 겹 · 로봇 줄 (y -6.5 / -10.5) 북쪽.
@@ -109,6 +109,52 @@ WFACE = {"wline": [("gun-turret", x, y) for x, y in ((-176, 4), (-165, 2), (-154
          + [("stone-wall", x + 0.5, -9.5) for x in range(-182, -128)],
          "rnw2": [("gun-turret", x, y) for x, y in ((-130, -12), (-122, -18), (-92, -17), (-80, -17), (-68, -17))]
          + [("stone-wall", x + 0.5, -22.5) for x in range(-136, -62)] + [("stone-wall", -136.5, y + 0.5) for y in range(-22, -9)]}
+
+
+# 유령 놓기 (2026-09-30 사용자 결정: «정상적으로 놓을 수 없는 자리에 짓기 금지» - 난파선 (-5,-6) 위 조립기 · 전봇대 사진).
+#   create_entity 로 유령을 만들기 전에 can_place_entity{build_check_type = manual} (forced 없음) 이 참이어야 한다.
+#   발자리에 나무 · 바위만 있으면 벌목 표시 (로봇이 캔다) 하고 «기다림» - 다음 순번에 다시. 난파선 · 건물 · 물 · 절벽이면 «막힘» (자리를 옮긴다).
+GHOST_LUA = """
+  local function clear(p, r)
+    local k = 0
+    for _, t in pairs(s.find_entities_filtered{type = {"tree", "simple-entity"}, area = {{p[1] - r, p[2] - r}, {p[1] + r, p[2] + r}}}) do
+      if t.type == "tree" or string.find(t.name, "rock") then
+        k = k + 1
+        if not t.to_be_deconstructed() then t.order_deconstruction(f) end
+      end
+    end
+    return k
+  end
+  local function ghost(n, p, r)
+    if s.can_place_entity{name = n, position = p, force = f, build_check_type = defines.build_check_type.manual} then
+      return "ok", s.create_entity{name = "entity-ghost", inner_name = n, position = p, force = f}
+    end
+    if clear(p, r) > 0 then return "wait" end
+    return "blocked"
+  end
+"""
+
+
+def place_list(ai, name) -> dict:
+    packed = ";".join(f"{n},{x},{y}" for n, x, y in WFACE[name])
+    return ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      %s
+      local out = {placed = 0, skip = 0, nonet = 0, blocked = 0, wait = 0}
+      for bit in string.gmatch("%s", "[^;]+") do
+        local n, x, y = string.match(bit, "([^,]+),([^,]+),([^,]+)")
+        local pos = {tonumber(x), tonumber(y)}
+        local r = (n == "gun-turret") and 1 or 0.5
+        if #s.find_logistic_networks_by_construction_area(pos, f) == 0 then out.nonet = out.nonet + 1
+        elseif s.count_entities_filtered{name = n, force = f, position = pos, radius = 0.6} > 0
+            or s.count_entities_filtered{ghost_name = n, force = f, position = pos, radius = 0.6} > 0 then out.skip = out.skip + 1
+        else
+          local st = ghost(n, pos, r)
+          if st == "ok" then out.placed = out.placed + 1 elseif st == "wait" then out.wait = out.wait + 1 else out.blocked = out.blocked + 1 end
+        end
+      end
+      return out
+    end)()""" % (GHOST_LUA, packed))
 
 
 # 둘째 유전 (P6-3) - 걸어서 본 청크 (survey --seen, 반경 800) 의 원유: (-347,-218) 우물 8 · 수율 합 ~1040% (원유 ~104/s, 지금 24/s 의 4 배) 는
@@ -134,14 +180,7 @@ def chain_ghosts(ai, upto) -> dict:
       local R = helpers.json_to_table('%s')
       local out = {pole = 0, port = 0, have = 0, nonet = 0, blocked = 0, trees = 0}
       local function net(p) return #s.find_logistic_networks_by_construction_area(p, f) > 0 end
-      local function ghost(n, p, r)
-        for _, t in pairs(s.find_entities_filtered{type = {"tree", "simple-entity"}, area = {{p[1] - r, p[2] - r}, {p[1] + r, p[2] + r}}}) do
-          if not t.to_be_deconstructed() then t.order_deconstruction(f); out.trees = out.trees + 1 end
-        end
-        if s.can_place_entity{name = n, position = p, force = f, build_check_type = defines.build_check_type.blueprint_ghost, forced = true} then
-          s.create_entity{name = "entity-ghost", inner_name = n, position = p, force = f}; return true end
-        return false
-      end
+      %s
       local prev = {%f, %f}
       local OFF = {{0, 0}, {1, 0}, {0, 1}, {-1, 0}, {0, -1}, {1, 1}, {-1, -1}, {1, -1}, {-1, 1}}
       for _, p in pairs(P) do
@@ -152,7 +191,9 @@ def chain_ghosts(ai, upto) -> dict:
             if s.count_entities_filtered{type = "electric-pole", force = f, position = q, radius = 0.6} > 0
                or s.count_entities_filtered{ghost_name = "small-electric-pole", force = f, position = q, radius = 0.6} > 0 then out.have = out.have + 1; done = q; break end
             if not net(q) then out.nonet = out.nonet + 1; done = "stop"; break end
-            if ghost("small-electric-pole", q, 0.5) then out.pole = out.pole + 1; done = q; break end
+            local st = ghost("small-electric-pole", q, 0.5)
+            if st == "ok" then out.pole = out.pole + 1; done = q; break end
+            if st == "wait" then out.trees = out.trees + 1; done = "stop"; break end
           end
         end
         if done == nil then out.blocked = out.blocked + 1; break end
@@ -163,11 +204,14 @@ def chain_ghosts(ai, upto) -> dict:
         if s.count_entities_filtered{name = "roboport", force = f, position = r, radius = 1} > 0
            or s.count_entities_filtered{ghost_name = "roboport", force = f, position = r, radius = 1} > 0 then out.have = out.have + 1
         elseif not net(r) then out.nonet = out.nonet + 1
-        elseif ghost("roboport", r, 2) then out.port = out.port + 1 else out.blocked = out.blocked + 1 end
+        else
+          local st = ghost("roboport", r, 2)
+          if st == "ok" then out.port = out.port + 1 elseif st == "wait" then out.trees = out.trees + 1 else out.blocked = out.blocked + 1 end
+        end
       end
       out.last = string.format("%%.1f,%%.1f", prev[1], prev[2])
       return out
-    end)()""" % (json.dumps(pts), json.dumps(CHAIN_PORTS[:upto]), CHAIN_POLE0[0], CHAIN_POLE0[1]))
+    end)()""" % (json.dumps(pts), json.dumps(CHAIN_PORTS[:upto]), GHOST_LUA, CHAIN_POLE0[0], CHAIN_POLE0[1]))
 
 
 def chain_kit(ai, who, poles, ports) -> dict:
@@ -217,10 +261,8 @@ def chain_feed(ai, who, minutes) -> None:
         g = chain_ghosts(ai, len(CHAIN_PORTS))
         if g.get("pole") or g.get("port"):
             print(time.strftime("%X"), "사슬", g, flush=True)
-        import p5_24
-        p5_24.GHOSTS.update(WFACE)
         for i in range(1, len(CHAIN_PORTS) + 1):
-            q = p5_24.place_ghosts(ai, f"guard{i}")
+            q = place_list(ai, f"guard{i}")
             if q.get("placed"):
                 print(time.strftime("%X"), f"guard{i}", q, flush=True)
         q = ammo_requests(ai)
@@ -265,6 +307,7 @@ def creep_ghosts(ai, bearing, dist, toward, standoff=15, ammo="piercing-rounds-m
     pos = [(round(cx + px * k * 2.5 + ux * j * 2.5), round(cy + py * k * 2.5 + uy * j * 2.5)) for k, j in ((-1, 0), (1, 0), (0, 1), (0, -1))]
     return ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
+      %s
       local out = {placed = 0, nonet = 0, blocked = 0, have = 0, plan = 0, worms = 0}
       out.worms = s.count_entities_filtered{force = "enemy", type = "turret", position = {%f, %f}, radius = 40}
       if out.worms > 0 and not %s then return out end
@@ -272,17 +315,19 @@ def creep_ghosts(ai, bearing, dist, toward, standoff=15, ammo="piercing-rounds-m
         if s.count_entities_filtered{name = "gun-turret", force = f, position = p, radius = 1} > 0
            or s.count_entities_filtered{ghost_name = "gun-turret", force = f, position = p, radius = 1} > 0 then out.have = out.have + 1
         elseif #s.find_logistic_networks_by_construction_area(p, f) == 0 then out.nonet = out.nonet + 1
-        elseif s.can_place_entity{name = "gun-turret", position = p, force = f, build_check_type = defines.build_check_type.blueprint_ghost, forced = true} then
-          for _, t in pairs(s.find_entities_filtered{type = {"tree", "simple-entity"}, area = {{p[1] - 1, p[2] - 1}, {p[1] + 1, p[2] + 1}}}) do t.order_deconstruction(f) end
-          local g = s.create_entity{name = "entity-ghost", inner_name = "gun-turret", position = p, force = f}
-          out.placed = out.placed + 1
-          local ok = pcall(function() g.insert_plan = {{id = {name = "%s"}, items = {in_inventory = {{inventory = defines.inventory.turret_ammo, stack = 0, count = 20}}}}} end)
-          if ok then out.plan = out.plan + 1 end
-        else out.blocked = out.blocked + 1 end
+        else
+          local st, g = ghost("gun-turret", p, 1)
+          if st == "ok" then
+            out.placed = out.placed + 1
+            local ok = pcall(function() g.insert_plan = {{id = {name = "%s"}, items = {in_inventory = {{inventory = defines.inventory.turret_ammo, stack = 0, count = 20}}}}} end)
+            if ok then out.plan = out.plan + 1 end
+          elseif st == "wait" then out.wait = (out.wait or 0) + 1
+          else out.blocked = out.blocked + 1 end
+        end
       end
       out.at = helpers.table_to_json(helpers.json_to_table('%s'))
       return out
-    end)()""" % (sx, sy, "true" if worms_ok else "false", json.dumps(pos), ammo, json.dumps(pos)))
+    end)()""" % (GHOST_LUA, sx, sy, "true" if worms_ok else "false", json.dumps(pos), ammo, json.dumps(pos)))
 
 
 def nest_left(ai, bearing, dist, r=12) -> dict:
@@ -432,9 +477,7 @@ def main() -> int:
         return 0
     ai = AIBridge()
     if a.ghosts:
-        import p5_24
-        p5_24.GHOSTS.update(WFACE)
-        print(a.ghosts, p5_24.place_ghosts(ai, a.ghosts))
+        print(a.ghosts, place_list(ai, a.ghosts))
         return 0
     if a.chain:
         print("chain", chain_ghosts(ai, a.chain))
