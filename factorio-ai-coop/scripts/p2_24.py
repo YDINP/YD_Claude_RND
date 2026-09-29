@@ -243,13 +243,24 @@ def wpipe_steps(ai=None):
     return out
 
 
+# 파랑 블록 (물가 조립 줄 동쪽, 전봇대 줄 (-27.5,-4.5) 곁): relay24 ASMS 와 같은 표. 팔 · 벨트 없이 relay (품목 상한).
+#   y -4.5: 고급회로 1 · 2 · 엔진 1 · 2 · 관      y 3.5: 파랑 1 · 2 · 전선 2 · 회로 2 · 톱니 2      전봇대 y -0.5
+BLUE = {"adv1": (-29.5, -4.5), "adv2": (-25.5, -4.5), "eng1": (-21.5, -4.5), "eng2": (-17.5, -4.5), "pipe": (-13.5, -4.5),
+        "blue1": (-29.5, 3.5), "blue2": (-25.5, 3.5), "cable2": (-21.5, 3.5), "circuit2": (-17.5, 3.5), "gear2": (-13.5, 3.5)}
+
+
+def blue_steps():
+    out = [b(ASM, x, y) for x, y in BLUE.values()]
+    return out + [b(POLE, x, -0.5) for x in (-27.5, -21.5, -15.5)]
+
+
 def pumpjack_steps():
     p1.COST["pumpjack"] = {"iron-plate": 35, "copper-plate": 7.5, "steel-plate": 5}     # 톱니 10 (20) + 관 10 + 회로 5 (철 5 · 구리 7.5)
     # 전봇대 (-194.5,30.5): 줄 끝 (-188.5,30.5) 의 공급 (±2.5) 은 펌프잭 (x -198..-194) 에 안 닿는다 (실측 no_power)
     return [b("pumpjack", x, y, E) for x, y in OIL_WELLS] + [b(POLE, -194.5, 30.5)]
 
 
-STAGES = {"steel": steel_steps, "oilpipe": oilpipe_steps, "refinery": refinery_steps, "sulfur": sulfur_steps, "wpipe": wpipe_steps, "oilprep": oilprep_steps, "pumpjack": pumpjack_steps, "labs3": labs3_steps, "bricks": bricks_steps, "east": east_steps, "east_wall": east_wall_steps, "sw": sw_steps, "sw_wall": sw_wall_steps,
+STAGES = {"steel": steel_steps, "oilpipe": oilpipe_steps, "refinery": refinery_steps, "sulfur": sulfur_steps, "blue": blue_steps, "wpipe": wpipe_steps, "oilprep": oilprep_steps, "pumpjack": pumpjack_steps, "labs3": labs3_steps, "bricks": bricks_steps, "east": east_steps, "east_wall": east_wall_steps, "sw": sw_steps, "sw_wall": sw_wall_steps,
           "lakew": lakew_steps, "north_wall": north_wall_steps, "ironc": ironc_steps, "ironretire": ironretire_steps, "coalretire": coalretire_steps,
           "power4": power4_steps}
 

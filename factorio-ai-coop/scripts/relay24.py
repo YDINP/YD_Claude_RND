@@ -55,6 +55,17 @@ ASMS = {
     "green3": [-57.5, 3.5, "logistic-science-pack"],
     "green4": [-33.5, 3.5, "logistic-science-pack"],       # P2 (p2_24 labs3)
     "green5": [-33.5, -4.5, "logistic-science-pack"],
+    # 파랑 블록 (p2_24.BLUE) - 레시피는 열리면 자동 (advanced-circuit · chemical-science-pack 연구 뒤)
+    "adv1": [-29.5, -4.5, "advanced-circuit"],
+    "adv2": [-25.5, -4.5, "advanced-circuit"],
+    "eng1": [-21.5, -4.5, "engine-unit"],
+    "eng2": [-17.5, -4.5, "engine-unit"],
+    "pipe": [-13.5, -4.5, "pipe"],
+    "blue1": [-29.5, 3.5, "chemical-science-pack"],
+    "blue2": [-25.5, 3.5, "chemical-science-pack"],
+    "cable2": [-21.5, 3.5, "copper-cable"],
+    "circuit2": [-17.5, 3.5, "electronic-circuit"],
+    "gear2": [-13.5, 3.5, "iron-gear-wheel"],
 }
 
 # (출처, 품목, 받는 조립기, 상한) - 출처 "hub" 또는 조립기 이름 (그 조립기의 결과칸). 위에서부터 차례로.
@@ -85,6 +96,34 @@ FEEDS = [
     ["belt", "transport-belt", "green4", 4],
     ["inserter", "inserter", "green5", 4],
     ["belt", "transport-belt", "green5", 4],
+    # 파랑 사슬
+    ["hub", "copper-plate", "cable2", 30],
+    ["hub", "iron-plate", "circuit2", 10],
+    ["cable2", "copper-cable", "circuit2", 30],
+    ["hub", "iron-plate", "gear2", 40],
+    ["hub", "iron-plate", "pipe", 20],
+    ["hub", "plastic-bar", "adv1", 10],
+    ["hub", "plastic-bar", "adv2", 10],
+    ["cable2", "copper-cable", "adv1", 20],
+    ["cable2", "copper-cable", "adv2", 20],
+    ["circuit2", "electronic-circuit", "adv1", 10],
+    ["circuit2", "electronic-circuit", "adv2", 10],
+    ["hub", "steel-plate", "eng1", 5],
+    ["hub", "steel-plate", "eng2", 5],
+    ["gear2", "iron-gear-wheel", "eng1", 5],
+    ["gear2", "iron-gear-wheel", "eng2", 5],
+    ["pipe", "pipe", "eng1", 10],
+    ["pipe", "pipe", "eng2", 10],
+    ["eng1", "engine-unit", "blue1", 4],
+    ["eng2", "engine-unit", "blue2", 4],
+    ["eng1", "engine-unit", "blue2", 4],
+    ["eng2", "engine-unit", "blue1", 4],
+    ["adv1", "advanced-circuit", "blue1", 6],
+    ["adv2", "advanced-circuit", "blue2", 6],
+    ["adv1", "advanced-circuit", "blue2", 6],
+    ["adv2", "advanced-circuit", "blue1", 6],
+    ["hub", "sulfur", "blue1", 4],
+    ["hub", "sulfur", "blue2", 4],
 ]
 LAB_CAP = 20
 TURRET_CAP = 20
@@ -92,7 +131,8 @@ CHEST_CAP = 200
 COAL_BOX = [100, -34, 126, -22]
 # (이름, x, y, 레시피, 넣을 품목 ("" = 없음), 상한, 꺼낼 품목, 허브 상한) - p2_24 REFINERY · PLASTIC
 CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
-        ["chemical-plant", -106.5, 13.5, "plastic-bar", "coal", 20, "plastic-bar", 500]]           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
+        ["chemical-plant", -106.5, 13.5, "plastic-bar", "coal", 20, "plastic-bar", 500],
+        ["chemical-plant", -102.5, 13.5, "sulfur", "", 0, "sulfur", 300]]           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
 BOIL, BURN = 20, 5
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍 (P2: 철 버너 줄 자리의 전기 쌍 C (y -54) 까지). 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
 PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500]]
@@ -166,7 +206,7 @@ LUA = """(function()
   end
   -- 팩 -> 연구소
   local labs = s.find_entities_filtered{name = "lab", force = f, area = {{LB[1], LB[2]}, {LB[3], LB[4]}}}
-  for _, src in pairs({"red1", "red2", "red3", "green", "green2", "green3", "green4", "green5"}) do
+  for _, src in pairs({"red1", "red2", "red3", "green", "green2", "green3", "green4", "green5", "blue1", "blue2"}) do
     local m = M[src]
     if m and m.get_recipe() then
       local sout = m.get_inventory(defines.inventory.assembling_machine_output)
