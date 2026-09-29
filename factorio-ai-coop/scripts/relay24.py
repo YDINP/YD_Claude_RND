@@ -1,3 +1,10 @@
+"""DEPRECATED (2026-09-30 05:3x) - 쓰지 말 것. Lua 중계 금지 (2026-09-30 사용자 결정, docs/playbook.md).
+relay24 는 05:3x 에 멈추고 state/run24_loops.json 에서 뺐다. 모든 줄은 벨트 · 팔 · 로봇 · 사람 손으로 바뀌었다 -
+대신하는 것은 docs/run24-site.md «P7 Lua 중계 걷기 · 3. 전환 기록» 표 (logi24 · ammo24 · robofeed24 · fuelhaul24 · blhaul24).
+마지막 설정: FEEDS · OUTS · PLATES · CHESTS · SMELT · NET_STOCK · PORT_STOCK 0 줄, SAFE_OFF 온 세상, CHEST_CAP 0, FURN · BURN · BOIL 0.
+HUB_BOX 를 x 75.6 까지 넓힌 것 (임시) 은 relay 와 함께 끝남. 다시 띄우지 말 것 - 되살림이 필요하면 코디네이터 · 사용자 결정.
+
+"""
 """Lua relay for the run 24 lake assembler row: plates in, products out - every move has a per-item cap.
 
 조립 줄 (p1_24.ASMS) 에는 팔 · 상자 · 벨트가 없다. 이 고리가 «있는 물건만» 옮긴다 (만들지 않는다):
@@ -297,7 +304,7 @@ CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
 BOIL, BURN = 20, 0      # 04:00 BURN 0 - 버너 채굴기 0 대 (모두 전기)
 # P7 안전 (마지막): 석탄 벨트 → 보일러 팔 (logi24 coal) 이 10 분 넘게 돈 뒤 BOIL = 0 (relay 보일러 연료 쉼). 화로는 FURN = 0 (사람 손 연료 고리가 대신).
 FURN = 0      # 04:00 뺌 - fuelhaul24 (golf 손 석탄 고리, 03:36~) 가 본진 강철로 45 를 20~50 으로 · 동쪽 전초는 석탄 상자 → 벨트 (03:37 SAFE_OFF 시험 통과)
-# BOIL = 0          # 04:2x 되살림 (전력 17.1/17.1 MW 포화 - 흩어진 보일러 4 (3.6 MW) 가 필요, 발전 늘리기 담당이 늘린 뒤 뺌) · 03:51 다시 뺌 (새 보일러 팔 전봇대 03:35 - 팔 10 모두 waiting_for_space). 03:17 정전 (보일러 7 석탄 0) 으로 되살림 - 03:01 뺌 - 보일러 줄 10 대 (석탄 벨트 y 48.5) 가 발전 전부. 흩어진 보일러 4 대 (-83/-75/-57/-42) 는 연료 떨어지면 쉼 (예비)
+BOIL = 0            # 05:3x 끝 (relay 은퇴 - 발전 담당 태양 74 · 축전 74 로 수요 12.2 / 용량 21.5 MW, 흩어진 보일러 넷은 쉼) · 04:2x 되살림 (전력 17.1/17.1 MW 포화 - 흩어진 보일러 4 (3.6 MW) 가 필요, 발전 늘리기 담당이 늘린 뒤 뺌) · 03:51 다시 뺌 (새 보일러 팔 전봇대 03:35 - 팔 10 모두 waiting_for_space). 03:17 정전 (보일러 7 석탄 0) 으로 되살림 - 03:01 뺌 - 보일러 줄 10 대 (석탄 벨트 y 48.5) 가 발전 전부. 흩어진 보일러 4 대 (-83/-75/-57/-42) 는 연료 떨어지면 쉼 (예비)
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍 (P2: 철 버너 줄 자리의 전기 쌍 C (y -54) 까지). 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
 PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500],
           [[72, -67.5, 96, -64.5], "iron-plate", 2500]]      # P3 철 전기 쌍 E 6 (p3_24.IRONE_XS, 화로 y -66)
