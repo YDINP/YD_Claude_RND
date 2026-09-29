@@ -61,6 +61,15 @@ def refsw_wall_steps():
     return out
 
 
+# 동쪽 면 받침 (21:29 raidwatch: E 틈 370, 둥지 613 ×2 → 604 ×3 - 확장이 하나 더). 옛 줄 x 130 (y -38..2) + 받침 (125,-34/-2) 에
+#   안쪽 받침 3 (x 125) 과 벽 끝 두 모서리 (130,-46) (130,10) - 벽 (x 134.5, y -44..8) 끝을 도는 무리.
+EAST2_T = [(125, -26), (125, -18), (125, -10), (130, -46), (130, 10)]
+
+
+def east2_steps():
+    return [b(TUR, x, y) for x, y in EAST2_T]
+
+
 def oil_ok(ai) -> bool:
     """출정 조건 (23회차 복기 §3-7): 떠나기 직전 물가 → 유전 선분 반경 80 · 유전 반경 250 에 적 유닛 · 구조물 0. 문턱은 올리지 않는다."""
     a = route_foes(ai, (-90, 20), (-196, 32), 80) or {}
@@ -75,16 +84,25 @@ def oil_ok(ai) -> bool:
 #   전선 셋째 (회로 둘 + 고급회로 전선 4) · 빨강 3 → 5 (대당 10분 60 → 300 > 초록 250).
 #   자리: 파랑 블록 동쪽 (x -9.5 · -5.5 · -1.5) 과 그 남쪽 줄 y 8.5 (x -29.5..-13.5) - 21:25 can_place 확인.
 ASM = "assembling-machine-1"
-p1.COST.update({ASM: {"iron-plate": 22, "copper-plate": 4.5}})
+p1.COST.update({ASM: {"iron-plate": 22, "copper-plate": 4.5}, "stone-furnace": {"stone": 5}})
 BLUE2 = {"eng3": (-9.5, -4.5), "eng4": (-5.5, -4.5), "adv3": (-1.5, -4.5),
          "blue3": (-9.5, 3.5), "blue4": (-5.5, 3.5), "cable3": (-1.5, 3.5),
-         "red4": (-29.5, 8.5), "red5": (-25.5, 8.5), "gear3": (-21.5, 8.5)}
+         "red4": (-29.5, 8.5), "red5": (-25.5, 8.5), "gear3": (-21.5, 8.5),
+         # 21:36 실측: 파랑 4 대 (10분 100) 를 고급회로 3 대 (10분 150 = 팩 100 몫) 가 겨우 대서 한 대씩 더 - 여유
+         "adv4": (-17.5, 8.5), "blue5": (-13.5, 8.5)}
 
 
 def blue2_steps():
     out = [b(ASM, x, y) for x, y in BLUE2.values()]
-    out += [b(POLE, x, -0.5) for x in (-9.5, -5.5, -1.5)] + [b(POLE, x, 5.5) for x in (-27.5, -19.5)]
+    out += [b(POLE, x, -0.5) for x in (-9.5, -5.5, -1.5)] + [b(POLE, x, 5.5) for x in (-27.5, -19.5, -15.5)]
     return out
+
+
+# 21:32 실측: 파랑 블록 동쪽 조립기 (P2 의 엔진 2 · 관 · 톱니 2 포함) 가 no_power (P2 뒤 products 0).
+#   전봇대 (x, -0.5) 의 공급 5×5 (y -3..2) 는 위 · 아래 줄 조립기 (충돌 상자 y -5.7..-3.3 · 2.3..4.7) 에 «닿기만» 하고 겹치지 않는다.
+#   옛 줄 (-43.5,-2.5 / 1.5) 처럼 두 줄 사이에 y -2.5 · 1.5 로 둘씩 - 기둥 틈 x -15.5 · -7.5 · -3.5.
+def bluepower_steps():
+    return [b(POLE, x, y) for x in (-15.5, -7.5, -3.5) for y in (-2.5, 1.5)]
 
 
 # 강철 화로 4 더 (허브 동쪽 y -12, 벽돌 · 강철 줄 (y -9) 북쪽) - 엔진 하나에 강철 1, 파랑 10분 100 = 강철 100.
@@ -94,6 +112,20 @@ STEEL2_XS = [74, 76, 78, 80]
 
 def steel2_steps():
     return [b("stone-furnace", x, -12) for x in STEEL2_XS]
+
+
+# 철 전기 쌍 E 6 (철 밭 북쪽, 벽 y -70.5 와 포탑 줄 y -61 사이): 채굴기 (x, -68.5) 남향 → 화로 (x+0.5, -66) (ironfix 규칙).
+#   (89.5 는 화로가 포탑 (89,-66) 과 겹쳐 뺐다.) 21:38 허브 철판 2,500 → 1,427 - 강철 8 · 빨강 5 · 파랑 사슬이 판 줄을 넘는다.
+#   전봇대 (76.5 · 82.5 · 85.5 · 91.5, -66.5) 는 화로 틈, (76.5,-60.5) 가 C 줄 전봇대 (74.5,-54.5) 에 잇는다. relay24 PLATES 에 구역 추가.
+IRONE_XS = [74.5, 77.5, 80.5, 83.5, 86.5, 92.5]
+
+
+def irone_steps():
+    out = []
+    for x in IRONE_XS:
+        out += [b("electric-mining-drill", x, -68.5, S), b("stone-furnace", x + 0.5, -66)]
+    out += [b(POLE, x, -66.5) for x in (76.5, 82.5, 85.5, 91.5)] + [b(POLE, 76.5, -60.5)]
+    return out
 
 
 # P3-5 전력: 다섯째 · 여섯째 단위 (호수 동쪽 기슭, 21:25 water_sites + can_place 확인). 21:15 7.2 MW 에 4.7 MW (1.53 배 - 문턱 1.5 넘음)
@@ -108,7 +140,7 @@ def power5_steps():
 
 
 STAGES = {"oilsw": oilsw_steps, "oilsw_wall": oilsw_wall_steps, "refsw": refsw_steps, "refsw_wall": refsw_wall_steps,
-          "power5": power5_steps, "blue2": blue2_steps, "steel2": steel2_steps}
+          "power5": power5_steps, "blue2": blue2_steps, "bluepower": bluepower_steps, "steel2": steel2_steps, "irone": irone_steps, "east2": east2_steps}
 FAR = {"oilsw", "oilsw_wall"}
 
 

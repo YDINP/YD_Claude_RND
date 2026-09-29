@@ -66,6 +66,18 @@ ASMS = {
     "cable2": [-21.5, 3.5, "copper-cable"],
     "circuit2": [-17.5, 3.5, "electronic-circuit"],
     "gear2": [-13.5, 3.5, "iron-gear-wheel"],
+    # P3 (p3_24.BLUE2): 파랑 ≥ 100 · 빨강 ≥ 초록
+    "eng3": [-9.5, -4.5, "engine-unit"],
+    "eng4": [-5.5, -4.5, "engine-unit"],
+    "adv3": [-1.5, -4.5, "advanced-circuit"],
+    "blue3": [-9.5, 3.5, "chemical-science-pack"],
+    "blue4": [-5.5, 3.5, "chemical-science-pack"],
+    "cable3": [-1.5, 3.5, "copper-cable"],
+    "red4": [-29.5, 8.5, "automation-science-pack"],
+    "red5": [-25.5, 8.5, "automation-science-pack"],
+    "gear3": [-21.5, 8.5, "iron-gear-wheel"],
+    "adv4": [-17.5, 8.5, "advanced-circuit"],
+    "blue5": [-13.5, 8.5, "chemical-science-pack"],
 }
 
 # (출처, 품목, 받는 조립기, 상한) - 출처 "hub" 또는 조립기 이름 (그 조립기의 결과칸). 위에서부터 차례로.
@@ -125,6 +137,31 @@ FEEDS = [
     ["hub", "sulfur", "blue1", 4],
     ["hub", "sulfur", "blue2", 4],
 ]
+# P3: 빨강 4 · 5 (톱니 셋째 gear3) · 파랑 3 · 4 · 엔진 3 · 4 · 고급회로 3 · 전선 셋째 - 같은 상한 규칙
+FEEDS += [
+    ["hub", "iron-plate", "gear3", 40],
+    ["hub", "copper-plate", "red4", 10],
+    ["hub", "copper-plate", "red5", 10],
+    ["gear3", "iron-gear-wheel", "red4", 10],
+    ["gear3", "iron-gear-wheel", "red5", 10],
+    ["hub", "copper-plate", "cable3", 30],
+    ["cable3", "copper-cable", "circuit2", 30],
+    ["hub", "plastic-bar", "adv3", 10],
+    ["cable3", "copper-cable", "adv3", 20],
+    ["cable3", "copper-cable", "adv1", 20],
+    ["cable3", "copper-cable", "adv2", 20],
+    ["circuit2", "electronic-circuit", "adv3", 10],
+    ["hub", "plastic-bar", "adv4", 10],
+    ["cable3", "copper-cable", "adv4", 20],
+    ["cable2", "copper-cable", "adv4", 20],
+    ["circuit2", "electronic-circuit", "adv4", 10],
+]
+for _e in ("eng3", "eng4"):
+    FEEDS += [["hub", "steel-plate", _e, 5], ["gear2", "iron-gear-wheel", _e, 5], ["gear3", "iron-gear-wheel", _e, 5], ["pipe", "pipe", _e, 10]]
+for _b in ("blue1", "blue2", "blue3", "blue4", "blue5"):
+    FEEDS += [[_e, "engine-unit", _b, 4] for _e in ("eng1", "eng2", "eng3", "eng4")]
+    FEEDS += [[_a, "advanced-circuit", _b, 6] for _a in ("adv1", "adv2", "adv3", "adv4")]
+    FEEDS.append(["hub", "sulfur", _b, 4])
 LAB_CAP = 20
 TURRET_CAP = 20
 CHEST_CAP = 200
@@ -135,12 +172,14 @@ CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
         ["chemical-plant", -102.5, 13.5, "sulfur", "", 0, "sulfur", 300]]           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
 BOIL, BURN = 20, 5
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍 (P2: 철 버너 줄 자리의 전기 쌍 C (y -54) 까지). 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
-PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500]]
+PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500],
+          [[72, -67.5, 96, -64.5], "iron-plate", 2500]]      # P3 철 전기 쌍 E 6 (p3_24.IRONE_XS, 화로 y -66)
 # (구역, 품목, 허브 상한) - 전기 채굴기가 붓는 상자 -> 허브 (짓는 재료)
 CHESTS = [[[97, -8, 111, -5], "stone", 1500]]      # P2: 400 -> 1500 (벽돌 화로 6 이 허브 돌을 먹는다)
 # (구역, 넣을 품목, 화로마다 상한, 꺼낼 품목, 허브 상한) - 벽돌 화로 (p2_24.BRICK_XS, y -9). 벽 (5 벽돌) 재료
 SMELT = [[[72.5, -10.5, 85.5, -7.5], "stone", 20, "stone-brick", 1500],
-         [[85.5, -10.5, 93.5, -7.5], "iron-plate", 25, "steel-plate", 400]]      # 강철 화로 4 (p2_24.STEEL_XS)
+         [[85.5, -10.5, 93.5, -7.5], "iron-plate", 25, "steel-plate", 400],      # 강철 화로 4 (p2_24.STEEL_XS)
+         [[72.5, -13.5, 81.5, -10.6], "iron-plate", 25, "steel-plate", 400]]     # P3 강철 화로 4 더 (p3_24.STEEL2_XS, y -12)
 
 LUA = """(function()
   local s, f = game.surfaces[1], game.forces.player
@@ -206,7 +245,7 @@ LUA = """(function()
   end
   -- 팩 -> 연구소
   local labs = s.find_entities_filtered{name = "lab", force = f, area = {{LB[1], LB[2]}, {LB[3], LB[4]}}}
-  for _, src in pairs({"red1", "red2", "red3", "green", "green2", "green3", "green4", "green5", "blue1", "blue2"}) do
+  for _, src in pairs({"red1", "red2", "red3", "red4", "red5", "green", "green2", "green3", "green4", "green5", "blue1", "blue2", "blue3", "blue4", "blue5"}) do
     local m = M[src]
     if m and m.get_recipe() then
       local sout = m.get_inventory(defines.inventory.assembling_machine_output)
