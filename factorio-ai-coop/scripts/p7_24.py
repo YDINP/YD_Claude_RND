@@ -209,13 +209,50 @@ add("power", INS, -5.5, 47.5, S)
 add("power", CHEST, -5.5, 48.5, N, "cB")
 _CUR[0] = PLAN
 
+# --- P9 (03:0x): 보라 · 노랑 0 의 원인 = 허브 강철이 새 상자 (75.5,-15.5) 에 있어 hauler 가 못 봄 (hub_rows 고침) → 강철이 오면 다음 상한:
+#   노랑 = LDS (조립기 1, 15 s / 0.5 = 30 s 에 1 개, 한 판에 3 개 → 10분 20). 보라 = 생산 모듈 M (조립기 1, 30 s = P 28 s 보다 느림).
+#   녹색 = G1 하나 (조립기 1 = 1/s 상한) 인데 노랑 60 은 PU 에만 20 × 0.067 = 1.33/s, 보라 · 고급까지 ~2.4/s.
+#   셈 (10분 60 = 0.1/s 팩 = 0.033 판/s): LDS 3 × 0.033 = 0.1/s → 조립기 2 (20 s) 둘 = 0.1 ✓ · M 0.033/s → 조립기 2 (20 s) ✓ ·
+#   G2 (조립기 1) 1/s ← 전선 C4 · C5 각 2/s (G 는 3/s 먹음, 팔 두 개 × 1.7/s = 3.4 ✓) · 철 1/s (팔 1.7 ✓) → 버스 북 레인 (7.5/s 에 녹 ≤ 2 ✓).
+P9 = []
+GROUPS["p9"] = P9
+_CUR[0] = P9
+add("lds2", ASM2, 1.5, 10.5, N, "low-density-structure")   # LDS2 → 팔 → cF (노랑 Y 가 cF 에서 LDS · 틀을 함께 먹는다)
+add("lds2", INS, 1.5, 12.5, N)
+add("lds2", INS, 1.5, 8.5, N)                             # 상자 cL2 (구리 · 강철 · 플라스틱) → LDS2
+add("lds2", CHEST, 1.5, 7.5, N, "cL2")
+add("g2", ASM1, -2.5, 26.5, N, "copper-cable")            # C4
+add("g2", INS, -0.5, 26.5, W)                             # C4 → G2
+add("g2", ASM1, 1.5, 26.5, N, "electronic-circuit")       # G2
+add("g2", INS, 3.5, 26.5, E)                              # C5 → G2
+add("g2", ASM1, 5.5, 26.5, N, "copper-cable")             # C5
+add("g2", INS, 1.5, 24.5, S)                              # G2 → 버스 (남쪽에서 넣으니 북쪽 레인 = 녹색 레인)
+for _x, _k in ((-2.5, "cC4"), (1.5, "cG2"), (5.5, "cC5")):
+    add("g2", INS, _x, 28.5, S)
+    add("g2", CHEST, _x, 29.5, N, _k)
+# 고급 A3 (버스 x 10.5 북행 동쪽): 고급 A1 · A2 = 0.125 × 2 = 0.25/s < 필요 0.47/s (보라 60: EF 5 + M 5 = 10 × 0.033 = 0.33 · 노랑 60: PU 2 × 2 × 0.033 = 0.13).
+#   A3 (조립기 2, 0.125/s) ← 버스 녹 (팔, 0.25/s) · 전선 C7 (4 × 0.125 = 0.5/s, C7 2/s) · 상자 cA3 플라스틱 (0.25/s, 사람 손) → 버스 서쪽 레인 (EF · M 이 두 레인에서 집는다)
+add("a3", ASM2, 13.5, 20.5, N, "advanced-circuit")
+add("a3", INS, 11.5, 20.5, W)                             # 버스 → A3 (녹)
+add("a3", INS, 11.5, 19.5, E)                             # A3 → 버스
+add("a3", ASM1, 17.5, 20.5, N, "copper-cable")            # C7
+add("a3", INS, 15.5, 20.5, E)                             # C7 → A3
+add("a3", INS, 13.5, 22.5, S)                             # 상자 cA3 (플라스틱) → A3
+add("a3", CHEST, 13.5, 23.5, N, "cA3")
+add("a3", INS, 17.5, 22.5, S)                             # 상자 cC7 (구리) → C7
+add("a3", CHEST, 17.5, 23.5, N, "cC7")
+_CUR[0] = PLAN
+UPGRADE = [(-2.5, 15.5, "low-density-structure"), (7.5, 11.5, "productivity-module")]   # 조립기 1 → 2 (로봇 교체, 레시피 유지)
+
 STAGES = ("labs", "collector", "purple", "bus", "circuit", "yellow", "water", "plastic", "poles")
 
 # 공급 상자 (사람 손): 이름 → {품목: 상한}. 허브에 «남길 몫» 이상일 때만 가져간다.
 CHESTS = {"cS": {"iron-plate": 200}, "cR": {"stone": 150, "steel-plate": 150}, "cE": {"steel-plate": 150, "stone-brick": 150},
           "cC1": {"copper-plate": 300}, "cG1": {"iron-plate": 200}, "cC2": {"copper-plate": 300}, "cC3": {"copper-plate": 300},
           "cL": {"copper-plate": 300, "steel-plate": 60}, "cA": {"sulfur": 60, "iron-plate": 30}, "cF": {"flying-robot-frame": 20},
-          "cB": {"coal": 200}}
+          "cB": {"coal": 200},
+          "cL2": {"copper-plate": 300, "steel-plate": 60, "plastic-bar": 100}, "cC4": {"copper-plate": 400}, "cG2": {"iron-plate": 300},
+          "cC5": {"copper-plate": 400}, "cA3": {"plastic-bar": 100}, "cC7": {"copper-plate": 200}}
 # P8 (01:05): 철판 300 → 600 · 강철 120 → 250 - 허브 철판이 relay 예비 (500) 밑까지 내려가 강철로 (강철2) 가 굶던 때 hauler 가 300~500 띠 (짓는 재료 몫) 를 가져갔다.
 #   철이 모자란 동안 hauler 는 허브에 600 넘게 있을 때만 철판을 가져간다 (P8 전초 공사 · 강철로가 먼저).
 HUB_KEEP = {"coal": 0, "iron-plate": 600, "copper-plate": 300, "steel-plate": 250, "stone": 200, "stone-brick": 200, "sulfur": 150}
@@ -436,7 +473,7 @@ def hub_rows(ai) -> list:
     return p1._rows(ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local out = {}
-      local cs = s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, area = {{62, -16.1}, {74, -14.9}}}
+      local cs = s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, area = {{62, -16.1}, {76.2, -14.9}}}   -- P9: 74.5 · 75.5 (smelt 강철 · 벽돌) 도 허브
       -- 석탄은 석탄 밭 상자 (채굴기가 붓는 곳, relay24.COAL_BOX) 에서 손으로
       for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{100, -34}, {126, -22}}}) do cs[#cs+1] = c end
       for _, c in pairs(cs) do
@@ -517,7 +554,7 @@ def kit(ai, crew: list, only=None, plan=None) -> dict:
 
 
 def recipes(ai) -> dict:
-    rows = [[n, x, y, ex, d] for st, n, x, y, d, ex in PLAN if n in (ASM1, ASM2, CHEM) and ex]
+    rows = [[n, x, y, ex, d] for plan in GROUPS.values() for st, n, x, y, d, ex in plan if n in (ASM1, ASM2, CHEM) and ex]
     return ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local out = {set = 0, ok = 0, missing = 0, err = {}}
@@ -705,6 +742,21 @@ def retire_iron(ai) -> dict:
     end)()""" % json.dumps(IRON_DRILLS_OLD))
 
 
+def upgrade(ai) -> dict:
+    """P9: 조립기 1 → 2 교체 표시 (order_upgrade - 로봇이 망의 조립기 2 로 바꾼다, 레시피 · 든 것 유지). 건설 조작만."""
+    return ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local out = {ordered = 0, already = 0, done = 0}
+      for _, q in pairs(helpers.json_to_table('%s')) do
+        local e = s.find_entities_filtered{type = "assembling-machine", force = f, position = {q[1], q[2]}, radius = 0.3}[1]
+        if e and e.name == "assembling-machine-2" then out.done = out.done + 1
+        elseif e and e.to_be_upgraded() then out.already = out.already + 1
+        elseif e then e.order_upgrade{force = f, target = "assembling-machine-2"}; out.ordered = out.ordered + 1 end
+      end
+      return out
+    end)()""" % json.dumps(UPGRADE))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--group", default="sci", choices=tuple(GROUPS))
@@ -718,6 +770,7 @@ def main() -> int:
     ap.add_argument("--fluids", action="store_true")
     ap.add_argument("--pump", action="store_true")
     ap.add_argument("--status", action="store_true")
+    ap.add_argument("--upgrade", action="store_true", help="P9: LDS · M 조립기 1 → 2 교체 표시")
     ap.add_argument("--haul", default="")
     ap.add_argument("--minutes", type=float, default=60)
     a = ap.parse_args()
@@ -740,6 +793,8 @@ def main() -> int:
         print("recipes", recipes(ai))
     if a.fluids:
         print(json.dumps(fluids(ai), ensure_ascii=False, indent=1))
+    if a.upgrade:
+        print("upgrade", upgrade(ai))
     if a.status:
         r = status(ai)
         for k, v in (r.items() if isinstance(r, dict) else enumerate(r)):
