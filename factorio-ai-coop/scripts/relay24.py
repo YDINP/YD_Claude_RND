@@ -250,7 +250,9 @@ DROP_TARGETS = ["red1", "red2", "red3", "red4", "red5", "red6", "red7", "green",
                 #   로봇 · 로보포트 · 물류 로봇 만들기는 쉼 (망 건설 로봇 354 · 물류 60) → 고급회로 5 · 6 · 전선 · 회로 · 톱니 옛 사슬도 쉼.
                 "circuit3", "cable4", "eeng", "frame1", "frame2", "acid", "batt", "gear4", "turretasm", "repair", "wallasm",
                 "eng5", "eng6", "adv6", "robot1", "roboport1", "lrobot", "adv5", "gear", "gear2", "gear3", "pipe", "cable", "cable2", "cable3",
-                "circuit", "circuit2"]
+                "circuit", "circuit2",
+                # 04:3x 탄 조립기 먹이 → ammo24 FEED (건설 로봇 요청: 철 → 노랑 · 노랑 (망 > 200) · 강철 · 구리 → 피어싱 둘). 결과는 팔 → 공급 상자
+                "ammo", "pierce", "pierce2"]
 FEEDS = [fd for fd in FEEDS if fd[2] not in DROP_TARGETS]
 # (조립기, 품목, 허브 상한) - 결과칸 → 허브. 로봇 · 로보포트는 허브에서 사람이 들고 가 놓는다 (또는 relay 가 로보포트에)
 # P5: 포탑 조립기가 10분 철판 ~1,500 을 먹었다 (허브 · 저장 상자 채우기) - 허브 20 → 10, 저장 상자 10 → 5
@@ -271,7 +273,7 @@ PIERCE_ZONES = [[-220, 14, -178, 56],        # 유전 (SW 둥지에서 가장 �
 PORT_STOCK = [["construction-robot", 15, "robot"], ["repair-pack", 50, "material"], ["logistic-robot", 5, "robot"]]
 # P7 mall (logi24): 벽 · 포탑 · 수리팩 조립기 결과 → 팔 → 공급 상자 (칸 제한) - 망에 바로 보인다. 허브 → 로보포트 · 저장 상자 중계는 쉰다.
 #   로봇을 포트에 더 넣을 때는 사람이 든다 (P6 chain-kit 처럼). 되돌리려면 아래 셋을 지운다.
-OUTS = [o for o in OUTS if o[0] not in ("turretasm", "repair", "wallasm", "robot1", "roboport1", "lrobot")]   # 03:5x 로봇 · 로보포트 · 물류 로봇 쉼
+OUTS = [o for o in OUTS if o[0] not in ("turretasm", "repair", "wallasm", "robot1", "roboport1", "lrobot", "pierce", "pierce2")]   # 04:3x 피어싱 → 공급 상자 (logi24 ammo)   # 03:5x 로봇 · 로보포트 · 물류 로봇 쉼
 NET_STOCK = []
 PORT_STOCK = []
 LAB_CAP = 20
@@ -280,8 +282,8 @@ TURRET_CAP = 20
 #   동쪽 전초 (P8, 화로 24 · 포탑 16) 10 분 시험 (코디네이터) · 발전 남쪽 호숫가 (ammo24 가 피어싱으로 바꿈 - relay 노랑이 끼면 못 바꾼다)
 # 04:1x 로봇망 안 포탑 (건설 범위) 은 relay S1 · S2 가 쉰다 - ammo24 (탄 < 10 → 20 요청) 가 맡는다. 망 밖 포탑만 relay (손 고리 확인 뒤 뺌)
 TURRET_NET_OFF = True      # 04:13 다시 (바꿈 --switch 없이, 채우기만) · 04:05 되살림 - 망 건설 로봇 354 모두 바빠 (available 0) 바꿈 중 포탑 3 이 탄 0
-SAFE_OFF = [[380, -190, 440, -120]]      # 03:37 동쪽 전초 10 분 시험 (석탄 · 피어싱 손 상자 → 벨트). 03:22 포탑 (2,50) 탄 0 - 되살림. 전: [[-40, 30, 12, 56]]          # + [380, -190, 440, -120] 동쪽 전초 (석탄 상자 채운 뒤)
-CHEST_CAP = 200
+SAFE_OFF = [[-5000, -5000, 5000, 5000]]  # 04:4x S1 · S2 뺌 - 모든 포탑을 relay 가 안 만진다: 망 안 = ammo24 요청 · 망 밖 38 = ammo24 손 고리 (bravo, 탄 < 10) · 동쪽 전초는 피어싱 상자 → 벨트. 전: [[380, -190, 440, -120]]      # 03:37 동쪽 전초 10 분 시험 (석탄 · 피어싱 손 상자 → 벨트). 03:22 포탑 (2,50) 탄 0 - 되살림. 전: [[-40, 30, 12, 56]]          # + [380, -190, 440, -120] 동쪽 전초 (석탄 상자 채운 뒤)
+CHEST_CAP = 0      # 04:4x S3 뺌 (전 200) - 노랑 조립기 결과 → 팔 → 공급 상자 (-53.5,6.5) (logi24 ammo), 허브 탄 상자는 bravo 가 손으로 망 상자에 옮김
 COAL_BOX = [100, -34, 126, -22]
 # (이름, x, y, 레시피, 넣을 품목 ("" = 없음), 상한, 꺼낼 품목, 허브 상한) - p2_24 REFINERY · PLASTIC
 CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
@@ -656,7 +658,7 @@ LUA = """(function()
   end
   local function fuel(list, cap)
     for _, e in pairs(list) do
-      local fi = (not off(e)) and e.get_fuel_inventory()
+      local fi = (e.type == "boiler" or not off(e)) and e.get_fuel_inventory()   -- 04:4x SAFE_OFF 는 포탑 몫 - 보일러 (BOIL, 전력 포화로 되살림) 는 그대로
       if fi then
         local room = cap - fi.get_item_count("coal")
         if room > 0 then

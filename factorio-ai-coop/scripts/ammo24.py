@@ -15,9 +15,9 @@ import runsite  # noqa
 from client import AIBridge, RconError  # noqa
 
 # (x, y, 품목, 이 밑이면, 요청 수, 망에 이만큼은 남김)
-FEED = [(-53.5, 3.5, "iron-plate", 20, 40, 300)]
+FEED = [(-53.5, 3.5, "iron-plate", 40, 100, 300)]      # 04:3x 20/40 → 40/100 (노랑 0.5/s = 철 2/s, 한 분 한 요청)
 for _x, _y in ((-92.5, -6.5), (-68.5, -10.5)):
-    FEED += [(_x, _y, "firearm-magazine", 4, 10, 200), (_x, _y, "steel-plate", 4, 10, 50), (_x, _y, "copper-plate", 10, 25, 300)]
+    FEED += [(_x, _y, "firearm-magazine", 4, 10, 60), (_x, _y, "steel-plate", 4, 10, 50), (_x, _y, "copper-plate", 10, 25, 300)]   # 04:4x 노랑 남김 200 → 60 (노랑이 포탑 채우기에 다 가 피어싱이 섰다)
 # 03:3x 노랑은 포탑 몫 먼저 (망 200 넘을 때만 피어싱 재료로) - 노랑 조립기 결과 팔 (-53.5,5.5) 은 걷음: relay S1 (망 밖 포탑 · P10 북쪽 포탑) 의 노랑 출처가 그 결과칸이다
 # 공급 상자 (logi24 ammo) - 손 고리가 여기서 꺼낸다
 OUT_CHESTS = [(-92.5, -3.5), (-68.5, -13.5)]
@@ -95,6 +95,21 @@ LUA = """(function()
     end
     if far or not net or net.all_construction_robots == 0 then
       out.outside[#out.outside + 1] = {t.position.x, t.position.y, y + p, (p > 0 or y == 0) and 'piercing-rounds-magazine' or 'firearm-magazine'}
+    elseif y + p == 0 and busy(t) then
+      -- 04:3x 빈 포탑에 망에 없는 탄 요청 (다른 담당의 노랑 요청 · 망 노랑 0) 이 걸려 있으면 있는 탄으로 바꿔 건다 (-33,-123 탄 0)
+      local px = s.find_entities_filtered{name = 'item-request-proxy', position = t.position, radius = 0.6}[1]
+      local want
+      for _, pl in pairs(px and px.insert_plan or {}) do want = pl.id.name end
+      if want and net.get_item_count(want) < 5 then
+        local other = (want == 'firearm-magazine') and 'piercing-rounds-magazine' or 'firearm-magazine'
+        if net.get_item_count(other) >= A.fill then
+          px.destroy()
+          proxy(t, {{id = {name = other}, items = {in_inventory = {{inventory = TI, stack = 0, count = A.fill}}}}})
+          spend(net, other, A.fill)
+          nreq = nreq + 1
+          out.req[#out.req + 1] = 'swap-req ' .. other .. ' @' .. t.position.x .. ',' .. t.position.y
+        end
+      end
     elseif nreq < A.max and not busy(t) then
       local np, ny = left(net, 'piercing-rounds-magazine'), left(net, 'firearm-magazine')
       if A.switch and nsw < A.swmax and zone_of(t) < 99 and y > 0 and p == 0 and np >= A.fill + A.pkeep then

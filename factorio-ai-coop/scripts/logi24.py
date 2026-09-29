@@ -396,6 +396,31 @@ def cuin():
     return out
 
 
+def westlabs():
+    """05:0x 코디네이터: rg 빨강 · 초록 넘침 → 서쪽 연구소 (윗줄 6, y -4.5) 벨트. 한 레인씩 (빨강 남 · 초록 북).
+    빨강: 분배기 (22,-3.5) 북향 (서쪽 21.5 = labs5 우선) → x 22.5 북 → y -12.5 서 (지하 19.5→17.5 로 초록 줄 비킴).
+    초록: 분배기 (19,-3.5) 북향 (동쪽 19.5 = labs5 우선) → x 18.5 북 (지하 -6.5→-11.5 로 초록 · 빨강 · 파랑 벨트 밑) → y -13.5 서 → (0.5,-13.5) 남 → 빨강 벨트 북 레인 옆 싣기.
+    합친 벨트 y -12.5 서 → x -32.5 남 (포탑 (-34,-8) 비킴) → y -4.5 서 → 팔 (-35.5,-4.5) → 연구소 (-37.5,-4.5) → 연구소 사이 팔 (서쪽으로 넘김)."""
+    out = [g("splitter", 22.0, -3.5, N), g("splitter", 19.0, -4.5, N)]      # 분배기 둘은 손으로 (유령이 벨트 위 바꿔 놓기를 못 함 - 사라짐)
+    out += line(BELT, 22.5, -4.5, 22.5, -11.5, N)
+    out += line(BELT, 22.5, -12.5, 20.5, -12.5, W)
+    out += [g(UG, 19.5, -12.5, W, ug="input"), g(UG, 17.5, -12.5, W, ug="output")]
+    # y -12.5: 전봇대 (5.5) · (-10.5) 는 지하로, 벽 (x ≤ -28.5, y -12.5) 앞 x -27.5 에서 남 → y -6.5 서 → x -34.5 남 → (-34.5,-4.5) 끝
+    out += line(BELT, 16.5, -12.5, 7.5, -12.5, W) + [g(UG, 6.5, -12.5, W, ug="input"), g(UG, 4.5, -12.5, W, ug="output")]
+    out += line(BELT, 3.5, -12.5, -8.5, -12.5, W) + [g(UG, -9.5, -12.5, W, ug="input"), g(UG, -11.5, -12.5, W, ug="output")]
+    out += line(BELT, -12.5, -12.5, -26.5, -12.5, W)
+    out += [g(BELT, -27.5, -12.5, S)] + line(BELT, -27.5, -11.5, -27.5, -7.5, S) + [g(BELT, -27.5, -6.5, W)]
+    out += line(BELT, -28.5, -6.5, -33.5, -6.5, W) + line(BELT, -34.5, -6.5, -34.5, -2.5, S)
+    # 아랫줄 연구소 넷 (y 8.5): x -34.5 로 더 남 ((-34.5,-0.5) 잔해는 지하) → 끝 (-34.5,5.5) → 팔 (-34.5,6.5) → 연구소 (-35.5,8.5) → 사이 팔 · 긴팔 (서쪽)
+    out += [g(UG, -34.5, -1.5, S, ug="input"), g(UG, -34.5, 0.5, S, ug="output")] + line(BELT, -34.5, 1.5, -34.5, 5.5, S)
+    out += [g(INS, -34.5, 6.5, N), g(INS, -37.5, 8.5, E), g(LINS, -42.5, 8.5, E), g(LINS, -48.5, 8.5, E)]
+    out += [g(BELT, 18.5, -5.5, N), g(UG, 18.5, -6.5, N, ug="input"), g(UG, 18.5, -11.5, N, ug="output"),
+            g(BELT, 18.5, -12.5, N), g(BELT, 18.5, -13.5, W)]
+    out += line(BELT, 17.5, -13.5, 1.5, -13.5, W) + [g(BELT, 0.5, -13.5, S)]
+    out += [g(INS, -35.5, -4.5, E)] + [g(INS, x, -4.5, E) for x in (-39.5, -43.5, -47.5, -51.5, -55.5)]
+    return out
+
+
 ROBO_FILTERS = [(-81.5, -1.5, "electric-engine-unit"), (-88.5, 1.5, "battery"), (-76.5, -3.5, "flying-robot-frame"), (-76.5, -13.5, "iron-gear-wheel")]
 
 
@@ -507,7 +532,7 @@ def bl2():
 
 
 STAGES = {"ironout": (ironout, ironout_clear), "copperout": (copperout, copperout_clear), "rg": (rg, rg_clear), "smelt": (smelt, smelt_clear),
-          "mall": (mall, None), "coal": (coal, coal_clear), "eastwall": (eastwall, None), "boilers": (boilers, None), "bl": (bl, None), "bl2": (bl2, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear), "coal2": (coal2, None), "westnet": (westnet, None), "ammo": (ammo, None), "southnet": (southnet, None), "robo": (robo, None), "chemout": (chemout, None), "cuin": (cuin, None)}
+          "mall": (mall, None), "coal": (coal, coal_clear), "eastwall": (eastwall, None), "boilers": (boilers, None), "bl": (bl, None), "bl2": (bl2, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear), "coal2": (coal2, None), "westnet": (westnet, None), "ammo": (ammo, None), "southnet": (southnet, None), "robo": (robo, None), "chemout": (chemout, None), "cuin": (cuin, None), "westlabs": (westlabs, None)}
 ROTATE = {"copperout": copperout_rotate, "coal2": coal2_rotate}
 
 # ---------------------------------------------------------------------------------------------------------------
