@@ -216,6 +216,7 @@ FEEDS += [["hub", "stone-brick", "wallasm", 25], ["hub", "iron-plate", "gear4", 
           ["gear4", "iron-gear-wheel", "repair", 4], ["circuit3", "electronic-circuit", "repair", 4],
           ["gear4", "iron-gear-wheel", "roboport1", 50]]
 FEEDS += [["frame1", "flying-robot-frame", "lrobot", 2], ["frame2", "flying-robot-frame", "lrobot", 2], ["adv5", "advanced-circuit", "lrobot", 4]]
+# P5 (23:35): 피어싱 허브 400 → 200 - 포탑 50/63 이 바뀌었고 피어싱 10분 200 이 강철 200 을 먹어 엔진 (파랑) 이 강철에 굶는다
 # P5-3 (23:25): 물류 로봇 10분 0 - 틀은 있고 고급회로 5 가 회로 3 (엔진 · 틀 · 로봇 · 수리팩과 나눔) 에 굶는다 → 파랑 블록 고급회로 3 · 6 과 회로 2 도 (상한 그대로)
 FEEDS += [["adv3", "advanced-circuit", "lrobot", 4], ["adv6", "advanced-circuit", "lrobot", 4], ["circuit2", "electronic-circuit", "adv5", 10]]
 # P5: 새 과학 조립기 7 - 같은 상한 규칙
@@ -241,7 +242,7 @@ FEEDS = [fd for fd in FEEDS if fd[:3] not in L1_DROP]
 # (조립기, 품목, 허브 상한) - 결과칸 → 허브. 로봇 · 로보포트는 허브에서 사람이 들고 가 놓는다 (또는 relay 가 로보포트에)
 # P5: 포탑 조립기가 10분 철판 ~1,500 을 먹었다 (허브 · 저장 상자 채우기) - 허브 20 → 10, 저장 상자 10 → 5
 # P5-3: 건설 로봇 허브 100 → 20 (포트 8 × 15 = 120 이 이미 섰다) - 틀이 물류 로봇 조립기로 가게
-OUTS = [["robot1", "construction-robot", 20], ["roboport1", "roboport", 10], ["pierce", "piercing-rounds-magazine", 400], ["pierce2", "piercing-rounds-magazine", 400],
+OUTS = [["robot1", "construction-robot", 20], ["roboport1", "roboport", 10], ["pierce", "piercing-rounds-magazine", 200], ["pierce2", "piercing-rounds-magazine", 200],
         ["turretasm", "gun-turret", 10], ["repair", "repair-pack", 100], ["wallasm", "stone-wall", 200], ["lrobot", "logistic-robot", 40]]
 # 로봇망 (construction-robotics 뒤). 23회차 §3-10: 망 저장이 차면 건설 로봇이 선다 → 모두 «상자마다 · 포트마다» 상한.
 #   (품목, 상자 하나 상한) 허브 → 망 저장 상자 (storage-chest) - 재건 · 수리 재료. 저장 상자는 48 칸, 여기서 쓰는 것은 칸 넷 남짓
