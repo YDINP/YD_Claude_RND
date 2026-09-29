@@ -78,6 +78,25 @@ ASMS = {
     "gear3": [-21.5, 8.5, "iron-gear-wheel"],
     "adv4": [-17.5, 8.5, "advanced-circuit"],
     "blue5": [-13.5, 8.5, "chemical-science-pack"],
+    # P4 (p4_24): 정유 2 (advanced) · 윤활유 · 전기 엔진 (조립기 2) · 황산 · 배터리 · 로봇 줄 - 레시피는 연구가 열리면 자동
+    "ref2": [-87.5, 8.5, "advanced-oil-processing"],
+    "lube": [-85.5, 2.5, "lubricant"],
+    "eeng": [-84.5, -1.5, "electric-engine-unit"],
+    "acid": [-91.5, 5.5, "sulfuric-acid"],
+    "batt": [-91.5, 1.5, "battery"],
+    "pierce": [-92.5, -6.5, "piercing-rounds-magazine"],
+    "circuit3": [-88.5, -6.5, "electronic-circuit"],
+    "cable4": [-84.5, -6.5, "copper-cable"],
+    "frame1": [-80.5, -6.5, "flying-robot-frame"],
+    "frame2": [-76.5, -6.5, "flying-robot-frame"],
+    "robot1": [-72.5, -6.5, "construction-robot"],
+    "roboport1": [-68.5, -6.5, "roboport"],
+    "adv5": [-64.5, -6.5, "advanced-circuit"],
+    # P4 둘째 줄 (p4_24.ROBO2): 로봇망 «재건 세트» 재료
+    "wallasm": [-88.5, -10.5, "stone-wall"],
+    "turretasm": [-84.5, -10.5, "gun-turret"],
+    "repair": [-80.5, -10.5, "repair-pack"],
+    "gear4": [-76.5, -10.5, "iron-gear-wheel"],
 }
 
 # (출처, 품목, 받는 조립기, 상한) - 출처 "hub" 또는 조립기 이름 (그 조립기의 결과칸). 위에서부터 차례로.
@@ -162,14 +181,44 @@ for _b in ("blue1", "blue2", "blue3", "blue4", "blue5"):
     FEEDS += [[_e, "engine-unit", _b, 4] for _e in ("eng1", "eng2", "eng3", "eng4")]
     FEEDS += [[_a, "advanced-circuit", _b, 6] for _a in ("adv1", "adv2", "adv3", "adv4")]
     FEEDS.append(["hub", "sulfur", _b, 4])
+# P4 로봇 사슬 - 받는 쪽마다 품목 상한 (23회차 §3-10)
+FEEDS += [
+    ["hub", "sulfur", "acid", 10], ["hub", "iron-plate", "acid", 5],
+    ["hub", "iron-plate", "batt", 5], ["hub", "copper-plate", "batt", 5],
+    ["hub", "copper-plate", "cable4", 30], ["cable4", "copper-cable", "circuit3", 30], ["hub", "iron-plate", "circuit3", 10],
+    ["circuit3", "electronic-circuit", "eeng", 6],
+]
+# 엔진은 파랑 FEEDS 가 먼저 다 가져가 전기 엔진이 0 이었다 (22:13 실측) → 맨 앞에 (상한 2 라 파랑 몫은 거의 그대로)
+FEEDS = [[_e, "engine-unit", "eeng", 2] for _e in ("eng1", "eng2", "eng3", "eng4")] + FEEDS
+for _f in ("frame1", "frame2"):
+    FEEDS += [["eeng", "electric-engine-unit", _f, 2], ["batt", "battery", _f, 4], ["hub", "steel-plate", _f, 4],
+              ["circuit3", "electronic-circuit", _f, 8]]
+FEEDS += [["frame1", "flying-robot-frame", "robot1", 2], ["frame2", "flying-robot-frame", "robot1", 2],
+          ["circuit3", "electronic-circuit", "robot1", 6],
+          ["hub", "plastic-bar", "adv5", 10], ["cable4", "copper-cable", "adv5", 20], ["circuit3", "electronic-circuit", "adv5", 10],
+          ["hub", "steel-plate", "roboport1", 50], ["gear", "iron-gear-wheel", "roboport1", 50], ["gear3", "iron-gear-wheel", "roboport1", 50],
+          ["adv5", "advanced-circuit", "roboport1", 50],
+          ["ammo", "firearm-magazine", "pierce", 10], ["hub", "steel-plate", "pierce", 5], ["hub", "copper-plate", "pierce", 10]]
+FEEDS += [["hub", "stone-brick", "wallasm", 25], ["hub", "iron-plate", "gear4", 40],
+          ["gear4", "iron-gear-wheel", "turretasm", 10], ["hub", "iron-plate", "turretasm", 20], ["hub", "copper-plate", "turretasm", 10],
+          ["gear4", "iron-gear-wheel", "repair", 4], ["circuit3", "electronic-circuit", "repair", 4],
+          ["gear4", "iron-gear-wheel", "roboport1", 50]]
+# (조립기, 품목, 허브 상한) - 결과칸 → 허브. 로봇 · 로보포트는 허브에서 사람이 들고 가 놓는다 (또는 relay 가 로보포트에)
+OUTS = [["robot1", "construction-robot", 100], ["roboport1", "roboport", 10], ["pierce", "piercing-rounds-magazine", 400],
+        ["turretasm", "gun-turret", 20], ["repair", "repair-pack", 100], ["wallasm", "stone-wall", 200]]
+# 로봇망 (construction-robotics 뒤). 23회차 §3-10: 망 저장이 차면 건설 로봇이 선다 → 모두 «상자마다 · 포트마다» 상한.
+#   (품목, 상자 하나 상한) 허브 → 망 저장 상자 (storage-chest) - 재건 · 수리 재료. 저장 상자는 48 칸, 여기서 쓰는 것은 칸 넷 남짓
+NET_STOCK = [["stone-wall", 100], ["gun-turret", 10], ["repair-pack", 50], ["firearm-magazine", 50]]
+#   허브 → 로보포트 칸 (포트 하나 상한): 건설 로봇 (포트당 25~50 권고 - 처음엔 15) · 수리팩
+PORT_STOCK = [["construction-robot", 15, "robot"], ["repair-pack", 50, "material"]]
 LAB_CAP = 20
 TURRET_CAP = 20
 CHEST_CAP = 200
 COAL_BOX = [100, -34, 126, -22]
 # (이름, x, y, 레시피, 넣을 품목 ("" = 없음), 상한, 꺼낼 품목, 허브 상한) - p2_24 REFINERY · PLASTIC
 CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
-        ["chemical-plant", -106.5, 13.5, "plastic-bar", "coal", 20, "plastic-bar", 500],
-        ["chemical-plant", -102.5, 13.5, "sulfur", "", 0, "sulfur", 300]]           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
+        ["chemical-plant", -106.5, 13.5, "plastic-bar", "coal", 20, "plastic-bar", 1000],      # P4: 500 → 1000 (로보포트 · 고급회로 5)
+        ["chemical-plant", -102.5, 13.5, "sulfur", "", 0, "sulfur", 600]]                   # P4: 300 → 600 (황산)           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
 BOIL, BURN = 20, 5
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍 (P2: 철 버너 줄 자리의 전기 쌍 C (y -54) 까지). 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
 PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500],
@@ -191,7 +240,8 @@ LUA = """(function()
   local function tally(k, n) out.moved[k] = (out.moved[k] or 0) + n end
   local M = {}
   for name, a in pairs(A) do
-    local e = s.find_entities_filtered{name = "assembling-machine-1", force = f, position = {a[1], a[2]}, radius = 0.6}[1]
+    -- P4: 조립기 2 · 화학 공장 · 정유도 같은 표로 (2.0 에선 셋 다 type assembling-machine)
+    local e = s.find_entities_filtered{type = "assembling-machine", force = f, position = {a[1], a[2]}, radius = 0.6}[1]
     if e then
       M[name] = e
       if not e.get_recipe() and f.recipes[a[3]] and f.recipes[a[3]].enabled then e.set_recipe(a[3]) end
@@ -239,6 +289,71 @@ LUA = """(function()
             local put = din.insert{name = item, count = n}
             if put > 0 then sout.remove{name = item, count = put}; tally(item .. ">" .. fd[3], put) end
           end
+        end
+      end
+    end
+  end
+  -- P4: 결과칸 -> 허브 (허브 품목 상한)
+  for _, o in pairs(helpers.json_to_table('%s')) do
+    local m = M[o[1]]
+    if m then
+      local mo = m.get_inventory(defines.inventory.assembling_machine_output)
+      local have = mo.get_item_count(o[2])
+      if have > 0 then
+        local total = 0
+        for _, h in pairs(hubs) do total = total + h.get_inventory(defines.inventory.chest).get_item_count(o[2]) end
+        local n = math.min(have, o[3] - total)
+        if n > 0 then
+          local put = 0
+          for _, h in pairs(hubs) do
+            put = put + h.get_inventory(defines.inventory.chest).insert{name = o[2], count = n - put}
+            if put >= n then break end
+          end
+          if put > 0 then mo.remove{name = o[2], count = put}; tally(o[2] .. ">hub", put) end
+        end
+      end
+    end
+  end
+  -- P4 로봇망: 허브 → 로보포트 (로봇 · 수리팩) · 허브 → 저장 상자 (재건 세트) - 모두 상한
+  local function hub_have(item)
+    local t = 0
+    for _, h in pairs(hubs) do t = t + h.get_inventory(defines.inventory.chest).get_item_count(item) end
+    return t
+  end
+  local function hub_pull(item, want)
+    local got = 0
+    for _, h in pairs(hubs) do
+      local inv = h.get_inventory(defines.inventory.chest)
+      local n = math.min(want - got, inv.get_item_count(item))
+      if n > 0 then got = got + inv.remove{name = item, count = n} end
+      if got >= want then break end
+    end
+    return got
+  end
+  for _, rp in pairs(s.find_entities_filtered{name = "roboport", force = f}) do
+    for _, ps in pairs(helpers.json_to_table('%s')) do
+      local inv = rp.get_inventory(ps[3] == "robot" and defines.inventory.roboport_robot or defines.inventory.roboport_material)
+      local room = ps[2] - inv.get_item_count(ps[1])
+      if room > 0 and hub_have(ps[1]) > 0 then
+        local got = hub_pull(ps[1], room)
+        if got > 0 then
+          local put = inv.insert{name = ps[1], count = got}
+          if put < got then hub_give(ps[1], got - put) end
+          tally(ps[1] .. ">port", put)
+        end
+      end
+    end
+  end
+  for _, sc in pairs(s.find_entities_filtered{name = "storage-chest", force = f}) do
+    local inv = sc.get_inventory(defines.inventory.chest)
+    for _, ns in pairs(helpers.json_to_table('%s')) do
+      local room = ns[2] - inv.get_item_count(ns[1])
+      if room > 0 and hub_have(ns[1]) > 0 then
+        local got = hub_pull(ns[1], room)
+        if got > 0 then
+          local put = inv.insert{name = ns[1], count = got}
+          if put < got then hub_give(ns[1], got - put) end
+          tally(ns[1] .. ">store", put)
         end
       end
     end
@@ -453,7 +568,7 @@ def lua_box(b) -> str:
 
 def once(ai) -> dict:
     return ai.lua(LUA % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
-                         AMMO_CHEST[0], AMMO_CHEST[1], LAB_CAP, TURRET_CAP, CHEST_CAP,
+                         AMMO_CHEST[0], AMMO_CHEST[1], blob(OUTS), blob(PORT_STOCK), blob(NET_STOCK), LAB_CAP, TURRET_CAP, CHEST_CAP,
                          blob(PLATES), blob(CHESTS), blob(SMELT), lua_box(COAL_BOX), blob(CHEM), BOIL, BURN, BURN, BURN))
 
 

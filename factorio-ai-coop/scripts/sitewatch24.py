@@ -68,10 +68,12 @@ LUA = """(function()
     local b = z.box
     local area = {{b[1], b[2]}, {b[3], b[4]}}
     local ents = s.find_entities_filtered{force = f, area = area, type = z.types}
-    local r = {count = #ents, done = 0, working = 0, kw = 0, ammo = 0, low = 0}
+    local r = {count = #ents, done = 0, working = 0, full = 0, kw = 0, ammo = 0, low = 0}
     for _, e in pairs(ents) do
       if e.type == "furnace" or e.type == "assembling-machine" then r.done = r.done + (e.products_finished or 0) end
       if e.type == "mining-drill" and e.status == defines.entity_status.working then r.working = r.working + 1 end
+      -- P4: 펌프잭 waiting_for_space (정유가 받는 것보다 많이 캔다 - 출력 버퍼 가득) 는 고장이 아니다 - «가득» 으로 따로 센다
+      if e.type == "mining-drill" and e.status == defines.entity_status.waiting_for_space_in_destination then r.full = r.full + 1 end
       if e.type == "generator" then r.kw = r.kw + (e.energy_generated_last_tick or 0) * 60 / 1000 end
       if e.type == "lab" and e.status == defines.entity_status.working then r.working = r.working + 1 end
       if e.type == "ammo-turret" then
@@ -115,7 +117,7 @@ def snapshot(ai, zs: dict) -> dict:
     q = {n: {"box": z["box"], "types": TYPES.get(z["kind"], TYPES["smelt"])} for n, z in zs.items()}
     blob = json.dumps(q, ensure_ascii=False).replace("\\", "\\\\").replace("'", "\\'")
     r = ai.lua(LUA % blob)
-    return r.get("zones") or {}
+    return r.get("zones") or {}, int(r.get("tick") or 0)
 
 
 def judge(name: str, z: dict, r: dict, m: dict, dt_ticks: int) -> tuple:
@@ -130,6 +132,11 @@ def judge(name: str, z: dict, r: dict, m: dict, dt_ticks: int) -> tuple:
         done = int(r.get("done", 0))
         prev = m.get("done")
         prod = done - prev if prev is not None and done >= prev else None
+        # P4 (22:06 경보): 재시작 직후 표본이 81 초 뒤라 모든 구역이 «절반 밑». 5 분 (18,000 틱) 당으로 맞춘다
+        if prod is not None and dt_ticks > 0:
+            prod = int(round(prod * 18000 / dt_ticks))
+        elif prod is not None:
+            prod = None                               # 간격을 모르면 비교하지 않는다
         if prev is not None and done < prev:
             alarm.append("카운터 되감김 (설비가 바뀜)")
         last = m.get("prod")
@@ -140,14 +147,15 @@ def judge(name: str, z: dict, r: dict, m: dict, dt_ticks: int) -> tuple:
         m.update(done=done, prod=prod if prod is not None else m.get("prod"))
         shown = "-" if prod is None else str(prod)
     elif kind == "drill" or kind == "lab":
-        prod = int(r.get("working", 0))
+        full = int(r.get("full", 0))
+        prod = int(r.get("working", 0)) + full     # 가득 (출력 대기) 은 멈춤이 아니다 - 받는 쪽이 모자랄 뿐
         last = m.get("prod")
         if last and prod < last / 2:
             alarm.append(f"가동 {last} -> {prod}")
         if count > 0 and prod == 0 and kind == "drill":
             alarm.append("가동 0")
         m["prod"] = prod
-        shown = f"{prod} 가동"
+        shown = f"{prod} 가동" + (f" (가득 {full})" if full else "")
     elif kind == "power":
         prod = int(r.get("kw", 0))
         m["prod"] = prod
@@ -173,13 +181,16 @@ def judge(name: str, z: dict, r: dict, m: dict, dt_ticks: int) -> tuple:
 def once(ai, log) -> None:
     zs = zones()
     mem = memo()
-    snap = snapshot(ai, zs)
+    snap, tick = snapshot(ai, zs)
+    last_tick = int(mem.get("_tick", {}).get("t", 0)) if isinstance(mem.get("_tick"), dict) else 0
+    dt = tick - last_tick if last_tick and tick > last_tick else 0
+    mem["_tick"] = {"t": tick}
     stamp = time.strftime("%H:%M:%S")
     lines = []
     for name, z in zs.items():
         if name not in snap:
             continue
-        line, _ = judge(name, z, snap[name], mem.setdefault(name, {}), 0)
+        line, _ = judge(name, z, snap[name], mem.setdefault(name, {}), dt)
         lines.append(line)
     alive = alive_count(ai)
     lines.append(f"생존 {alive}/8" + (" · 경보 사람이 줄었다" if 0 <= alive < 8 else ""))
