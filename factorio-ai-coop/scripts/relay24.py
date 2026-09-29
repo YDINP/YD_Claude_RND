@@ -273,6 +273,11 @@ BOIL, BURN = 20, 5
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍 (P2: 철 버너 줄 자리의 전기 쌍 C (y -54) 까지). 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
 PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500],
           [[72, -67.5, 96, -64.5], "iron-plate", 2500]]      # P3 철 전기 쌍 E 6 (p3_24.IRONE_XS, 화로 y -66)
+# P7 (2026-09-30 사용자 결정: Lua 중계 금지) - scripts/logi24.py 가 벨트 · 팔로 대신한 줄은 여기서 쉰다. 되돌리려면 목록에서 뺀다.
+#   전환 기록은 docs/run24-site.md «P7 3. 전환 기록».
+DROP_PLATES = ["iron-plate", "copper-plate"]                  # 화로 결과 → 허브: "iron-plate" (ironout 벨트) · "copper-plate" (copperout 벨트)
+PLATES = [p for p in PLATES if p[1] not in DROP_PLATES]
+LAB2_PACKS = None                 # labs5 (LAB_BOX2) 에 relay 가 넣는 팩 - None = 모두, ["chemical-science-pack"] = 빨강 · 초록은 rg 벨트가
 # (구역, 품목, 허브 상한) - 전기 채굴기가 붓는 상자 -> 허브 (짓는 재료)
 CHESTS = [[[97, -8, 111, -5], "stone", 1500]]      # P2: 400 -> 1500 (벽돌 화로 6 이 허브 돌을 먹는다)
 # (구역, 넣을 품목, 화로마다 상한, 꺼낼 품목, 허브 상한) - 벽돌 화로 (p2_24.BRICK_XS, y -9). 벽 (5 벽돌) 재료
@@ -428,7 +433,9 @@ LUA = """(function()
   local labs = s.find_entities_filtered{name = "lab", force = f, area = {{LB[1], LB[2]}, {LB[3], LB[4]}}}
   -- P5: 둘째 연구소 구역 (파랑 블록 동쪽 8) - 먼저 찬 쪽이 아니라 번갈아 (앞 구역만 채우면 뒤 구역이 굶는다)
   local LB2 = %s
-  for _, l in pairs(s.find_entities_filtered{name = "lab", force = f, area = {{LB2[1], LB2[2]}, {LB2[3], LB2[4]}}}) do labs[#labs+1] = l end
+  local L2ONLY = helpers.json_to_table('__L2__')
+  local inL2 = {}
+  for _, l in pairs(s.find_entities_filtered{name = "lab", force = f, area = {{LB2[1], LB2[2]}, {LB2[3], LB2[4]}}}) do labs[#labs+1] = l; inL2[l.unit_number] = true end
   table.sort(labs, function(a, b) return a.get_inventory(defines.inventory.lab_input).get_item_count() < b.get_inventory(defines.inventory.lab_input).get_item_count() end)
   for _, src in pairs({"red1", "red2", "red3", "red4", "red5", "red6", "red7", "green", "green2", "green3", "green4", "green5", "green6", "green7", "blue1", "blue2", "blue3", "blue4", "blue5"}) do
     local m = M[src]
@@ -436,12 +443,16 @@ LUA = """(function()
       local sout = m.get_inventory(defines.inventory.assembling_machine_output)
       local item = m.get_recipe().name
       for _, l in pairs(labs) do
+        if inL2[l.unit_number] and L2ONLY.on and not L2ONLY[item] then goto nextlab end
+        do
         local lin = l.get_inventory(defines.inventory.lab_input)
         local n = math.min(%d - lin.get_item_count(item), sout.get_item_count(item))
         if n > 0 then
           local put = lin.insert{name = item, count = n}
           if put > 0 then sout.remove{name = item, count = put}; tally(item .. ">lab", put) end
         end
+        end
+        ::nextlab::
       end
     end
   end
@@ -664,7 +675,8 @@ def lua_box(b) -> str:
 
 
 def once(ai) -> dict:
-    return ai.lua(LUA.replace("__PZ__", blob(PIERCE_ZONES)) % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
+    l2 = dict({k: True for k in LAB2_PACKS}, on=True) if LAB2_PACKS else {"on": False}
+    return ai.lua(LUA.replace("__PZ__", blob(PIERCE_ZONES)).replace("__L2__", blob(l2)) % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
                          AMMO_CHEST[0], AMMO_CHEST[1], blob(OUTS), blob(PORT_STOCK), blob(NET_STOCK), lua_box(LAB_BOX2), LAB_CAP,
                          TURRET_CAP, TURRET_CAP, TURRET_CAP, TURRET_CAP, TURRET_CAP, CHEST_CAP,
                          blob(PLATES), blob(CHESTS), blob(SMELT), lua_box(COAL_BOX), blob(CHEM), BOIL, BURN, BURN, BURN))
