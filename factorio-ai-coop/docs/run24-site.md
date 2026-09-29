@@ -283,6 +283,19 @@ relay 의 연구소 채움 · 보일러 연료 · 전기 쌍 화로 → 허브 �
 - 로봇 재건은 망 안 포탑 · 벽만 (유전 포탑 9 는 망 밖 - 유전 R_O 는 방어선 뒤 20 칸 자리를 재고 다음에).
 - 다음 연구: physical-projectile-damage-2 · weapon-shooting-speed-1 (logistic-robotics 뒤 대기열).
 
+## P5 (2026-09-29 22:47 ~, tick 750k →)
+
+`scripts/p5_24.py` (짓기 엔진 p1.build_stage) + relay24 확장.
+
+- **진단 (22:48, tick 752k)**: 빨강 5 중 3 · 초록 5 중 3 이 **full_output**, 연구소 10 모두 working → 빨강 · 초록은 굶는 게 아니라 **연구소가 먹는 만큼만** 만든다
+  (30 초 연구 · 연구소 10 = 10분 200 유닛 상한, 파랑 연구 동안은 파랑 76 에 묶임). relay 5분 옮김도 red1 · red2 만 30 (최대), red3~5 · green4~5 는 0.
+  collect_run 은 22:4x 에 이미 뺐다 - 판 문제는 아니다 (허브 철판 여유).
+  파랑 76 은 황 → 석유가스: 원유 10분 14,397 (24/s, 우물 2) · 가스 6,743. 정유 2 (advanced) 는 **중유가 윤활유만큼만 빠져** 10 분에 132 초만 돈다 (중유 in 662) - 경유 탱크 5,349 는 싱크.
+- **P5-2 research_guard (22:56)**: `p4.queue_fill` 의 접두사 규칙을 «이름 그대로 또는 이름-숫자» 로 (military → military-2 는 맞고 military-science-pack 은 아님),
+  `--skip` 에 military-science-pack. `--prefer`: advanced-material-processing → modules → productivity-module → speed-module → logistics-2 → railway (빨강 · 초록만) →
+  processing-unit → low-density-structure → utility-science-pack → advanced-material-processing-2 → production-science-pack → 포탑 위력.
+  22:56 대기열 advanced-material-processing · modules · logistics-2 · processing-unit.
+
 ## 사망 기록
 
 (없음)

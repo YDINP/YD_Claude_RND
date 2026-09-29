@@ -153,8 +153,15 @@ def queue_fill(ai, packs=("automation-science-pack", "logistic-science-pack"), p
         return true
       end
       local pref = {%s}
+      -- 24회차 P5: 접두사는 «이름 그대로» 또는 «이름-숫자» 만 (military → military-2 는 맞고 military-science-pack 은 아니다 -
+      --   22:44 «military» 가 military-science-pack 을 잡아 회색팩 줄도 없는데 빨강 · 초록을 썼다)
+      local function pmatch(n, p)
+        if n == p then return true end
+        if string.sub(n, 1, #p) ~= p then return false end
+        return string.match(string.sub(n, #p + 1), "^%%-%%d+$") ~= nil
+      end
       local function rank(t)
-        for i, p in ipairs(pref) do if string.sub(t.name, 1, #p) == p then return i end end
+        for i, p in ipairs(pref) do if pmatch(t.name, p) then return i end end
         return 999
       end
       local cand, seen = {}, {}
