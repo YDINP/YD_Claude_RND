@@ -183,7 +183,7 @@ for _b in ("blue1", "blue2", "blue3", "blue4", "blue5"):
     FEEDS.append(["hub", "sulfur", _b, 4])
 # P4 로봇 사슬 - 받는 쪽마다 품목 상한 (23회차 §3-10)
 FEEDS += [
-    ["hub", "sulfur", "acid", 10], ["hub", "iron-plate", "acid", 5],
+    ["hub", "sulfur", "acid", 10, 150], ["hub", "iron-plate", "acid", 5],
     ["hub", "iron-plate", "batt", 5], ["hub", "copper-plate", "batt", 5],
     ["hub", "copper-plate", "cable4", 30], ["cable4", "copper-cable", "circuit3", 30], ["hub", "iron-plate", "circuit3", 10],
     ["circuit3", "electronic-circuit", "eeng", 6],
@@ -283,7 +283,15 @@ LUA = """(function()
       local din = dst.get_inventory(defines.inventory.assembling_machine_input)
       local room = cap - din.get_item_count(item)
       if room > 0 then
-        if src == "hub" then
+        -- 5 번째 값 = 허브 하한 (그 밑이면 이 줄은 쉰다) - 황을 파랑이 먼저 쓰게 (22:35 허브 황 2 · 파랑 10분 76)
+        local floor_ok = true
+        if src == "hub" and fd[5] then
+          local t = 0
+          for _, h in pairs(hubs) do t = t + h.get_inventory(defines.inventory.chest).get_item_count(item) end
+          floor_ok = t >= fd[5]
+        end
+        if src == "hub" and not floor_ok then
+        elseif src == "hub" then
           local got = hub_take(item, room)
           if got > 0 then
             local put = din.insert{name = item, count = got}
