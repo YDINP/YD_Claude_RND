@@ -139,8 +139,15 @@ def power5_steps():
     return out
 
 
+# 일곱째 단위 (21:47 실측 10.8 MW 에 7.30 MW = 1.48 배, 문턱 1.5 밑): power5 의 보일러 2 동쪽 물 칸 (-23.5,46.5) 에 관 하나 → 보일러 3 (-21.5,46) 북향 ·
+#   기관 (-21.5, 42.5 / 37.5), 전봇대 (-23.5,40.5) 는 기관 기둥 틈. 같은 펌프 하나 (보일러 셋).
+def power6_steps():
+    return [b("pipe", -23.5, 46.5), b("boiler", -21.5, 46, N), b("steam-engine", -21.5, 42.5, N), b("steam-engine", -21.5, 37.5, N),
+            b(POLE, -23.5, 40.5)]
+
+
 STAGES = {"oilsw": oilsw_steps, "oilsw_wall": oilsw_wall_steps, "refsw": refsw_steps, "refsw_wall": refsw_wall_steps,
-          "power5": power5_steps, "blue2": blue2_steps, "bluepower": bluepower_steps, "steel2": steel2_steps, "irone": irone_steps, "east2": east2_steps}
+          "power5": power5_steps, "blue2": blue2_steps, "bluepower": bluepower_steps, "steel2": steel2_steps, "irone": irone_steps, "east2": east2_steps, "power6": power6_steps}
 FAR = {"oilsw", "oilsw_wall"}
 
 

@@ -201,6 +201,12 @@ stone       중심 (104,1)     거리 104 · (88,-8)~(120,16)      · 383,045
   - 연구 순서 (research_guard `--prefer`): 파랑 뒤 battery → advanced-oil-processing → lubricant → electric-engine → robotics → construction-robotics → logistic-robotics, 포탑 위력은 그 뒤.
   - sitewatch 구역: 발전 (넓힘) · 파랑블록 · 강철2 · 철E · 동쪽면 (넓힘) - 기준 M0 지움.
   - **21:50 10분: 빨강 300 · 초록 250 · 파랑 122 · 강철 301 · 고급회로 200 · 엔진 120 · 플라스틱 414 · 철판 5,033 · 구리판 2,435** · 발전 10.8 MW 에 6.15 MW (1.76 배).
+  - 21:47 발전 10.8 MW 에 7.30 MW (1.48 배 - 문턱 밑) → 일곱째 단위 (`power6`, 같은 펌프에 보일러 셋째 (-21.5,46) · 기관 2) **12.6 MW 에 7.86 MW (1.60 배)**.
+- **보고 (21:52, P3 시작 뒤 ~35 분)**: tick 539k (2.50 h) · 진화 0.080 · 연구 23 (+4: sulfur-processing · advanced-circuit · chemical-science-pack · battery), advanced-oil-processing 84% ·
+  10분 빨강 300 · 초록 250 · **파랑 123** · 철판 5,063 · 구리판 2,439 · 강철 302 · 플라스틱 420 · 포탑 50 · 벽 344 · 발전 12.6 MW (1.60 배) ·
+  공습 0 (흡수 둥지 0, 기지 200 안 적 0, 잃은 것 0) · 사망 0 · 생존 8/8. raidwatch: SW 틈 337 (구름 320) · E 391 · NW 536.
+  P3-4 (로봇) 는 아직: 연구가 advanced-oil-processing → lubricant → electric-engine → robotics → construction-robotics 에 있다. 다음 공사는
+  둘째 정유 (advanced, 물 입력 · 경유 크래킹) · 윤활유 · 황산 → 배터리 화학 · 전기 엔진 (조립기 2 형 + 윤활유 관) → 로봇 틀 → 건설 로봇 · 로보포트.
 
 ## 사망 기록
 
