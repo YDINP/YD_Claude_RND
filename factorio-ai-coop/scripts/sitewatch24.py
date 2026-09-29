@@ -12,6 +12,7 @@
     drill        일하는 채굴기 수 (상자로 쏟는 채굴기는 셀 카운터가 없다)
     power        증기 기관 발전 kW (지금)
     turret       포탑에 든 탄창 합
+    wall         벽 수 (설비 M/M0 이 곧 손실)
 
 구역은 state/{run}_zones.json {"이름": {"kind": ..., "box": [x0, y0, x1, y1]}} - 없으면 아래 기본값으로 만든다.
 새 구역 (전기 채굴 기둥 · 조립 줄) 은 그 파일에 한 줄 더하면 다음 순번부터 찍힌다.
@@ -56,6 +57,7 @@ TYPES = {
     "power": ["boiler", "generator", "offshore-pump", "electric-pole", "pipe", "inserter"],
     "lab": ["lab", "inserter", "electric-pole"],
     "turret": ["ammo-turret"],
+    "wall": ["wall", "gate"],
 }
 
 LUA = """(function()
@@ -152,6 +154,9 @@ def judge(name: str, z: dict, r: dict, m: dict, dt_ticks: int) -> tuple:
         shown = f"{prod} kW"
         if count > 0 and prod == 0:
             alarm.append("발전 0")
+    elif kind == "wall":
+        m["prod"] = count
+        shown = f"벽 {count}"
     else:  # turret
         prod = int(r.get("ammo", 0))
         m["prod"] = prod

@@ -127,6 +127,32 @@ stone       중심 (104,1)     거리 104 · (88,-8)~(120,16)      · 383,045
     둥지는 기지 둘레 560~800 에 있다. 포탑 두 줄이 북 · 북서를 본다.
   - 10분 (tick 269k): 철판 3,992 · 구리판 2,502 · 빨강 161 · 탄창 218. 사망 0.
 
+## P2 (2026-09-29 20:38 ~, tick 289k →)
+
+`scripts/p2_24.py` (짓기 엔진 p1.build_stage) + `scripts/raidwatch24.py` (상주, 5 분) + relay24 확장.
+
+- **P2-1 방어 (20:40~20:58, tick 300k → 360k)**
+  - `raidwatch24` (상주 `raidwatch`, 로그 scratchpad/loops/raidwatch24.log): 방위 8 개마다 «공해 구름 반경 · 둥지 거리 · 틈», 공해가 닿은 둥지 (흡수) 수,
+    기지 200 안 적 유닛 · 다친 포탑·벽 · 잃은 것/잡은 것 (kill 통계) → 들어오면 `state/run24_raids.json` 에 한 건.
+    둥지는 «본 것» (seen 장부) + «조회» (반경 900 방위별 거리만 - walkscout 출정 조건과 같은 안전 조회, 좌표는 적지 않음).
+  - 20:41 판정 (중심 (70,-15)): **동 틈 379 (둥지 613 ×2) > 남서 409 (658 ×4) > 북서 589** · 북 900 안 둥지 없음 · 흡수 0.
+    → 첫 공습은 동쪽. 동쪽에 포탑이 0 이었다.
+  - 포탑 8 → **31**: 동쪽 면 8 (x 130 줄 6 + 받침 2, 석탄 · 돌 밭 앞) · 남서 6 (구리 밭 서 · 남) · 물가 서쪽 4 (x -100) · 유전 5 (아래). 모두 사거리 18 안 이웃 셋.
+  - 벽 **177**: 동 x 134.5 (52) · 구리 남서 L (65) · 북쪽 두 줄 앞 (철 y -70.5 · 물가 y -12.5, 60). 벽돌은 돌 화로 6 (74..84, -9) - relay 가 허브 돌 → 화로 · 벽돌 → 허브 (≤ 1500).
+  - 탄창: relay 포탑 채움이 조립기 결과칸만 봐서 새 포탑 (72,96)·(80,96) 이 20:52 탄 0 (sitewatch 경보). → 좌표 목록이 아니라 «모든 gun-turret, 탄 적은 순»,
+    조립기가 비면 허브 탄창 상자 (≤ 200) 에서도. 20:54 전 포탑 20.
+  - sitewatch 구역: 동쪽면 · 남서면 · 유전 (포탑) · 벽 (wall 종류 새로) · 벽돌 추가, 발전 · 연구소 · 조립줄 상자 넓힘, «석탄» (버너) 은퇴로 뺌 - 바뀐 구역은 기준 M0 을 지우고 다시 잰다.
+- **P2-2 버너 은퇴 · 전력 (20:40~21:00)**
+  - 철 버너 12 → 전기 쌍 C 9 (72.5+3i, -56.5 남향 → 화로 x+0.5, -54) + 전봇대 5 (74.5+6k, -54.5 - 끝 채굴기 96.5 는 92.5 공급 밖이라 98.5 하나 더).
+    석탄 버너 3 은퇴 (상자는 relay 연료 중계용으로 남김). **버너 0**. relay 철판 구역을 y -56 까지 넓힘.
+  - **함정: 은퇴 demolish 가 새 화로를 다시 걷었다.** 옛 화로 자리 (76 · 82 · 88 · 94, -54) = 새 화로 자리라 build_stage 가 «아직 뭔가 있다» 로 demolish 를 남겨
+    순번마다 세우고 걷기를 반복 (10 순번 20/23). → `ironretire` (걷기) · `ironc` (짓기) 로 나눔.
+  - 넷째 발전 단위 (power_plan (-100,15) 확인): 펌프 (-82.5,30.5) · 보일러 (-83,28.5) · 기관 2. **7.2 MW 에 3.4~3.9 MW (여유 1.9 배)**. 보일러 연료 relay (≤ 20).
+- 연구 우선 (research_guard `--prefer`): steel-processing → automation-2 → engine → fluid-handling → oil-gathering → plastics → sulfur-processing → advanced-circuit →
+  chemical-science-pack → 포탑 위력 → battery · advanced-oil-processing · lubricant · electric-engine → robotics → construction-robotics → logistic-robotics.
+  `--packs` 에 파랑 + `--gate chemical-science-pack:20:2`. 20:53 steel · automation-2 · engine · fluid-handling 끝, oil-gathering 중.
+  연구소 4 → 10 (조립 줄 북쪽 y -4.5 여섯) · 초록 조립기 3 → 5 (relay FEEDS · LAB_BOX 넓힘).
+
 ## 사망 기록
 
 (없음)
