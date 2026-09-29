@@ -1,20 +1,52 @@
 {
-  "_comment": "Map generation for the AI coop runs. Three wipes in a row ended with nests inside the base, so the starting area is widened and enemy bases are thinned. See docs/playbook.md.",
+  "_comment": "Map generation for the AI coop runs. run20-22 ended with nests inside the base, so run23 used starting_area 4, enemy-base 0.5, ores 1.5. run23 launched 3 rockets, so run24 is one step harder (user 2026-09-29): starting_area 3, enemy-base 0.75, ores 1.25. See docs/playbook.md and docs/run23-postmortem.md.",
   "terrain_segmentation": 1,
   "water": 1.5,
   "width": 0,
   "height": 0,
-  "starting_area": 4,
+  "starting_area": 3,
   "peaceful_mode": false,
   "autoplace_controls": {
-    "coal": { "frequency": 1.5, "size": 1.5, "richness": 1.5 },
-    "stone": { "frequency": 1.5, "size": 1.5, "richness": 1.5 },
-    "copper-ore": { "frequency": 1.5, "size": 1.5, "richness": 1.5 },
-    "iron-ore": { "frequency": 1.5, "size": 1.5, "richness": 1.5 },
-    "uranium-ore": { "frequency": 1, "size": 1, "richness": 1 },
-    "crude-oil": { "frequency": 1, "size": 1, "richness": 1 },
-    "trees": { "frequency": 1, "size": 1, "richness": 1 },
-    "enemy-base": { "frequency": 0.5, "size": 0.5, "richness": 1 }
+    "coal": {
+      "frequency": 1.25,
+      "size": 1.25,
+      "richness": 1.25
+    },
+    "stone": {
+      "frequency": 1.25,
+      "size": 1.25,
+      "richness": 1.25
+    },
+    "copper-ore": {
+      "frequency": 1.25,
+      "size": 1.25,
+      "richness": 1.25
+    },
+    "iron-ore": {
+      "frequency": 1.25,
+      "size": 1.25,
+      "richness": 1.25
+    },
+    "uranium-ore": {
+      "frequency": 1,
+      "size": 1,
+      "richness": 1
+    },
+    "crude-oil": {
+      "frequency": 1,
+      "size": 1,
+      "richness": 1
+    },
+    "trees": {
+      "frequency": 1,
+      "size": 1,
+      "richness": 1
+    },
+    "enemy-base": {
+      "frequency": 0.75,
+      "size": 0.75,
+      "richness": 1
+    }
   },
   "cliff_settings": {
     "name": "cliff",
