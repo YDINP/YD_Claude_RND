@@ -280,6 +280,9 @@ CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
         ["chemical-plant", -79.5, 4.5, "light-oil-cracking", "", 0, "", 0],
         ["chemical-plant", -75.5, 4.5, "sulfur", "", 0, "sulfur", 600]]      # P4 플라스틱 둘째 (석유 탱크 P)                   # P4: 300 → 600 (황산)           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
 BOIL, BURN = 20, 5
+# P7 안전 (마지막): 석탄 벨트 → 보일러 팔 (logi24 coal) 이 10 분 넘게 돈 뒤 BOIL = 0 (relay 보일러 연료 쉼). 화로는 FURN = 0 (사람 손 연료 고리가 대신).
+FURN = BURN
+BOIL = 0            # 2026-09-30 03:1x 뺌 - 보일러 줄 10 대 (석탄 벨트 y 48.5) 가 발전 전부. 흩어진 보일러 4 대 (-83/-75/-57/-42) 는 연료 떨어지면 쉼 (예비)
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍 (P2: 철 버너 줄 자리의 전기 쌍 C (y -54) 까지). 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
 PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500],
           [[72, -67.5, 96, -64.5], "iron-plate", 2500]]      # P3 철 전기 쌍 E 6 (p3_24.IRONE_XS, 화로 y -66)
@@ -287,7 +290,7 @@ PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-
 #   전환 기록은 docs/run24-site.md «P7 3. 전환 기록».
 DROP_PLATES = ["iron-plate", "copper-plate"]                  # 화로 결과 → 허브: "iron-plate" (ironout 벨트) · "copper-plate" (copperout 벨트)
 PLATES = [p for p in PLATES if p[1] not in DROP_PLATES]
-LAB2_PACKS = ["chemical-science-pack"]                 # labs5 (LAB_BOX2) 에 relay 가 넣는 팩 - None = 모두, ["chemical-science-pack"] = 빨강 · 초록은 rg 벨트가
+LAB2_PACKS = ["__none__"]  # 03:05 파랑도 bl 벨트가 labs5 로 - relay 는 labs5 에 아무것도 안 넣는다. 전:["chemical-science-pack"]                 # labs5 (LAB_BOX2) 에 relay 가 넣는 팩 - None = 모두, ["chemical-science-pack"] = 빨강 · 초록은 rg 벨트가
 # (구역, 품목, 허브 상한) - 전기 채굴기가 붓는 상자 -> 허브 (짓는 재료)
 CHESTS = [[[97, -8, 111, -5], "stone", 1500]]      # P2: 400 -> 1500 (벽돌 화로 6 이 허브 돌을 먹는다)
 # (구역, 넣을 품목, 화로마다 상한, 꺼낼 품목, 허브 상한) - 벽돌 화로 (p2_24.BRICK_XS, y -9). 벽 (5 벽돌) 재료
@@ -694,7 +697,7 @@ def once(ai) -> dict:
     return ai.lua(LUA.replace("__PZ__", blob(PIERCE_ZONES)).replace("__L2__", blob(l2)) % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
                          AMMO_CHEST[0], AMMO_CHEST[1], blob(OUTS), blob(PORT_STOCK), blob(NET_STOCK), lua_box(LAB_BOX2), LAB_CAP,
                          TURRET_CAP, TURRET_CAP, TURRET_CAP, TURRET_CAP, TURRET_CAP, CHEST_CAP,
-                         blob(PLATES), blob(CHESTS), blob(SMELT), lua_box(COAL_BOX), blob(CHEM), BOIL, BURN, BURN, BURN))
+                         blob(PLATES), blob(CHESTS), blob(SMELT), lua_box(COAL_BOX), blob(CHEM), BOIL, BURN, FURN, BURN))
 
 
 def main() -> int:

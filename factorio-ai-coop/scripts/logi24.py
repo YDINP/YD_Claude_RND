@@ -96,7 +96,7 @@ CU_X = 61.5
 
 def copperout():
     out = []
-    out += [g("stone-furnace", c, 77) for c in CU_UP]
+    out += [g("steel-furnace", c, 77) for c in CU_UP]           # 00:5x 로봇 교체로 강철로
     out += [g(INS, c + 0.5, 75.5, S) for c in CU_UP]
     out += line(BELT, 81.5, 74.5, CU_X + 1, 74.5, W)
     out += [g(POLE, x, 75.5) for x in (70.5, 76.5, 82.5)]
@@ -108,7 +108,7 @@ def copperout():
     out += [g(UG, CU_X, 41.5, N, ug="input"), g(UG, CU_X, 39.5, N, ug="output")]
     out += line(BELT, CU_X, 38.5, CU_X, -12.5, N)
     out += line(BELT, CU_X, -13.5, 73.5, -13.5, E)
-    out += [g(INS, x, -14.5, S) for x in (71.5, 72.5, 73.5)]
+    out += [g(FINS, x, -14.5, S) for x in (71.5, 72.5, 73.5)]   # 00:4x 빠른 팔로 교체
     return out
 
 
@@ -307,13 +307,30 @@ def coal():
             g(UG, COAL_X, -14.5, S, ug="input"), g(UG, COAL_X, -12.5, S, ug="output")]
     out += line(BELT, COAL_X, -11.5, COAL_X, 30.5, S)
     out += [g(UG, COAL_X, 31.5, S, ug="input"), g(UG, COAL_X, 36.5, S, ug="output")]
-    out += line(BELT, COAL_X, 37.5, COAL_X, 47.5, S)
-    out += [g(BELT, COAL_X, 48.5, W), g(UG, 62.5, 48.5, W, ug="input"), g(UG, 60.5, 48.5, W, ug="output")]   # 구리 줄기 (61.5) 밑
-    out += line(BELT, 59.5, 48.5, 10.5, 48.5, W)
+    out += line(BELT, COAL_X, 37.5, COAL_X, 56.5, S)
+    out += [g(BELT, COAL_X, 57.5, W), g(UG, 62.5, 57.5, W, ug="input"), g(UG, 60.5, 57.5, W, ug="output")]   # 구리 줄기 (61.5) 밑
+    out += line(BELT, 59.5, 57.5, 11.5, 57.5, W)                     # 02:3x y 48.5 → 57.5 (파랑 모듈 둘째 자리를 비운다)
+    out += line(BELT, 10.5, 57.5, 10.5, 49.5, N)
+    out.append(g(BELT, 10.5, 48.5, W))
     out += [g(UG, 9.5, 48.5, W, ug="input"), g(UG, 7.5, 48.5, W, ug="output")]   # 발전 동쪽 벽 (x 8.5) 밑
     out += line(BELT, 6.5, 48.5, -30.5, 48.5, W)
     out += [g(INS, x, 47.5, S) for x in BOIL_X]
+    out += [g(POLE, x, 47.5) for x in (-27.5, -23.5, -19.5, -15.5, -11.5)]      # 보일러 팔 전기 (02:4x no_power)
+    out += [g(POLE, 114.5, -20.5), g(POLE, 120.5, -20.5)]                        # 새 석탄 채굴기 전기
     return out
+
+
+COAL_OLD = [107.5, 110.5, 113.5, 116.5, 119.5, 122.5]     # relay 석탄 밭 상자 (y -29.5) 로 붓던 남쪽 줄 채굴기 (y -27.5)
+
+
+def coal2():
+    """03:0x BOIL = 0 뒤 보일러 줄 10 이 ~2.6/s 를 먹는데 새 채굴기 5 는 2.5/s → 옛 상자 채굴기 남쪽 줄 6 을 남으로 돌려 (+3/s)
+    벨트 y -25.5 서 → (105.5,-25.5) 남 → 석탄 벨트 (y -24.5) 북 레인에 옆 싣기. 상자 (-29.5) 는 북쪽 줄 (-31.5) 6 이 계속 채운다 (relay 화로 연료 · 화학)."""
+    return line(BELT, 123.5, -25.5, 106.5, -25.5, W) + [g(BELT, 105.5, -25.5, S)]
+
+
+def coal2_rotate():
+    return [("electric-mining-drill", x, -27.5, S) for x in COAL_OLD]
 
 
 def coal_clear():
@@ -328,6 +345,10 @@ def eastwall():
 def boilers():
     out = []
     for bx in (-5.5, -1.5, 2.5, 6.5):
+        if bx == -1.5:   # (0,42) 포탑 자리 - 아래 기관 대신 관 우회 (보일러 → 위 기관 하나)
+            out += [g("pipe", bx - 2, 46.5), g("boiler", bx, 46, N), g("steam-engine", bx, 37.5, N), g(POLE, bx - 2, 40.5)]
+            out += [g("pipe", x, y) for x, y in ((-1.5, 44.5), (-2.5, 44.5), (-2.5, 43.5), (-2.5, 42.5), (-2.5, 41.5), (-2.5, 40.5), (-1.5, 40.5))]
+            continue
         out += [g("pipe", bx - 2, 46.5), g("boiler", bx, 46, N), g("steam-engine", bx, 42.5, N), g("steam-engine", bx, 37.5, N), g(POLE, bx - 2, 40.5)]
     return out
 
@@ -349,18 +370,16 @@ BL_REC = {"B": ("chemical-science-pack", AM2), "P": ("pipe", AM1), "E": ("engine
 BL_Y1, BL_Y2 = 21.5, 28.5
 
 
-def bl():
+def bl_module(dy):
+    """파랑 모듈 하나 (R1 · X · Y · R2 · 상자) - dy 만큼 남쪽으로. 판 벨트 A (y 18.5+dy, 동향) → x 58.5 남 → A2 (y 31.5+dy, 서향)."""
     out = []
-    # 판: rg 벨트1 끝 (27.5,8.5) 에서 잇는다
-    out += [g(BELT, 26.5, 8.5, S)] + line(BELT, 26.5, 9.5, 26.5, 13.5, S)
-    out += [g(UG, 26.5, 14.5, S, ug="input"), g(UG, 26.5, 16.5, S, ug="output"), g(BELT, 26.5, 17.5, S)]
-    out += line(BELT, 26.5, 18.5, 57.5, 18.5, E)
-    out += line(BELT, 58.5, 18.5, 58.5, 30.5, S)
-    out += line(BELT, 58.5, 31.5, 30.5, 31.5, W)
-    out += line(BELT, 57.5, 24.5, 22.5, 24.5, W)          # X
-    out += line(BELT, 57.5, 25.5, 21.5, 25.5, W)          # Y
+    y1, y2 = BL_Y1 + dy, BL_Y2 + dy
+    out += line(BELT, 58.5, 18.5 + dy, 58.5, 30.5 + dy, S)
+    out += line(BELT, 58.5, 31.5 + dy, 30.5, 31.5 + dy, W)
+    out += line(BELT, 57.5, 24.5 + dy, 22.5, 24.5 + dy, W)          # X
+    out += line(BELT, 57.5, 25.5 + dy, 21.5, 25.5 + dy, W)          # Y
     for k, x in enumerate(BL_X):
-        for row, yy, kinds in ((1, BL_Y1, BL_R1), (2, BL_Y2, BL_R2)):
+        for row, yy, kinds in ((1, y1, BL_R1), (2, y2, BL_R2)):
             kind = kinds[k]
             rec, mach = BL_REC[kind]
             out.append(g(mach, x, yy, recipe=rec))
@@ -382,13 +401,22 @@ def bl():
                 else:  # B
                     out += [g(LINS, x - 1, yy - 2, N), g(INS, x + 1, yy - 2, S)]  # X → B · B → Y
                     out += [g(LINS, x, yy + 2, S), g("iron-chest", x, yy + 4)]    # 황 상자
-    # 팔 직결 (틈 x = 25.5 + 4k)
     for gx, d in ((33.5, W), (37.5, E), (41.5, W), (45.5, E), (49.5, W), (53.5, E)):
-        out.append(g(INS, gx, BL_Y1, d))
+        out.append(g(INS, gx, y1, d))
     for gx, d in ((33.5, W), (37.5, W), (41.5, E), (45.5, W), (49.5, E), (53.5, E)):
-        out.append(g(INS, gx, BL_Y2, d))
+        out.append(g(INS, gx, y2, d))
     for gx in [25.5 + 4 * k for k in range(9)]:
-        out += [g(POLE, gx, BL_Y1 - 1), g(POLE, gx, BL_Y1 + 1), g(POLE, gx, BL_Y2 - 1), g(POLE, gx, BL_Y2 + 1)]
+        out += [g(POLE, gx, y1 - 1), g(POLE, gx, y1 + 1), g(POLE, gx, y2 - 1), g(POLE, gx, y2 + 1)]
+    return out
+
+
+def bl():
+    out = []
+    # 판: rg 벨트1 끝 (27.5,8.5) 에서 잇는다
+    out += [g(BELT, 26.5, 8.5, S)] + line(BELT, 26.5, 9.5, 26.5, 13.5, S)
+    out += [g(UG, 26.5, 14.5, S, ug="input"), g(UG, 26.5, 16.5, S, ug="output"), g(BELT, 26.5, 17.5, S)]
+    out += line(BELT, 26.5, 18.5, 57.5, 18.5, E)
+    out += bl_module(0)
     # 파랑 → labs5
     out += [g(BELT, 20.5, 25.5, N)] + line(BELT, 20.5, 24.5, 20.5, 4.5, N)
     out += [g(UG, 20.5, 3.5, N, ug="input"), g(UG, 20.5, 1.5, N, ug="output")]
@@ -399,9 +427,22 @@ def bl():
     return out
 
 
+BL2_DY = 16
+
+
+def bl2():
+    """파랑 모듈 둘째 (y 33..49): 판은 모듈 1 의 A2 끝 (30.5,31.5) 을 이어 x 21.5 남 → y 34.5 동. 파랑 Y' (41.5) 는 x 20.5 북으로 모듈 1 Y 기둥 뒤에 곧게.
+    석탄 벨트는 이 자리 (y 48.5, x 10..59) 를 비우고 y 57.5 로 돈다 (coal)."""
+    out = line(BELT, 29.5, 31.5, 22.5, 31.5, W) + line(BELT, 21.5, 31.5, 21.5, 33.5, S)
+    out += line(BELT, 21.5, 34.5, 57.5, 34.5, E)
+    out += bl_module(BL2_DY)
+    out += line(BELT, 20.5, 41.5, 20.5, 26.5, N)
+    return out
+
+
 STAGES = {"ironout": (ironout, ironout_clear), "copperout": (copperout, copperout_clear), "rg": (rg, rg_clear), "smelt": (smelt, smelt_clear),
-          "mall": (mall, None), "coal": (coal, coal_clear), "eastwall": (eastwall, None), "boilers": (boilers, None), "bl": (bl, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear)}
-ROTATE = {"copperout": copperout_rotate}
+          "mall": (mall, None), "coal": (coal, coal_clear), "eastwall": (eastwall, None), "boilers": (boilers, None), "bl": (bl, None), "bl2": (bl2, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear), "coal2": (coal2, None)}
+ROTATE = {"copperout": copperout_rotate, "coal2": coal2_rotate}
 
 # ---------------------------------------------------------------------------------------------------------------
 LUA_CHECK = """(function()
@@ -440,6 +481,8 @@ LUA_GHOST = """(function()
     if s.count_entities_filtered{name = q.name, force = f, position = p, radius = 0.3} > 0
        or s.count_entities_filtered{ghost_name = q.name, force = f, position = p, radius = 0.3} > 0 then out.have = out.have + 1
     elseif #s.find_logistic_networks_by_construction_area(p, f) == 0 then out.nonet = out.nonet + 1
+    elseif s.count_entities_filtered{type = prototypes.entity[q.name].type, force = f, position = p, radius = 0.3} > 0 then
+      out.have = out.have + 1                     -- 02:5x: 같은 종류 (강철로 위 돌 화로 · 빠른 팔 위 노랑 팔) 가 이미 서 있으면 유령을 놓지 않는다 (manual 은 바꿔 놓기를 허용해 등급이 내려갔다)
     elseif s.can_place_entity{name = q.name, position = p, direction = q.d, force = f, build_check_type = defines.build_check_type.manual} then
       local spec = {name = "entity-ghost", inner_name = q.name, position = p, direction = q.d, force = f}
       if q.ug then spec.type = q.ug end
