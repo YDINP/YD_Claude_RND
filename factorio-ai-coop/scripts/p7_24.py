@@ -219,7 +219,8 @@ CHESTS = {"cS": {"iron-plate": 200}, "cR": {"stone": 150, "steel-plate": 150}, "
 # P8 (01:05): 철판 300 → 600 · 강철 120 → 250 - 허브 철판이 relay 예비 (500) 밑까지 내려가 강철로 (강철2) 가 굶던 때 hauler 가 300~500 띠 (짓는 재료 몫) 를 가져갔다.
 #   철이 모자란 동안 hauler 는 허브에 600 넘게 있을 때만 철판을 가져간다 (P8 전초 공사 · 강철로가 먼저).
 HUB_KEEP = {"coal": 0, "iron-plate": 600, "copper-plate": 300, "steel-plate": 250, "stone": 200, "stone-brick": 200, "sulfur": 150}
-FRAME_ASMS = [(-80.5, -6.5), (-76.5, -6.5)]              # 로봇 줄 틀 조립기 (relay24.ASMS frame1 · frame2) - 결과칸에서 손으로
+FRAME_ASMS = [(-81.5, -3.5)]                             # P8: 틀 조립기 (-80.5,-6.5) 결과 → 팔 → 철 상자 (로봇 유령). take 는 상자만 되어
+#   조립기 결과칸에서 손으로 집던 계획은 한 번도 틀을 못 가져왔다 (cF 늘 20 모자람 → 노랑 10분 3)
 
 
 def footprint(name, x, y):
@@ -631,8 +632,8 @@ def haul(ai, who, minutes) -> None:
           end
           local fr = 0
           for _, p in pairs(helpers.json_to_table('%s')) do
-            local a = s.find_entities_filtered{type = "assembling-machine", force = f, position = p, radius = 0.3}[1]
-            if a then fr = fr + a.get_inventory(defines.inventory.assembling_machine_output).get_item_count("flying-robot-frame") end
+            local a = s.find_entities_filtered{type = "container", force = f, position = p, radius = 0.3}[1]
+            if a then fr = fr + a.get_item_count("flying-robot-frame") end
           end
           out.frames = fr
           return out
@@ -667,7 +668,7 @@ def haul(ai, who, minutes) -> None:
         fr = short.get("cF", {}).get("flying-robot-frame", 0)
         if fr and int(have.get("frames", 0)) > 0:
             for x, y in FRAME_ASMS:
-                plan += [("walk_to", {"x": x, "y": y + 2.5}), ("take", {"name": "flying-robot-frame", "x": x, "y": y, "count": fr})]
+                plan += [("walk_to", {"x": x, "y": y + 2.5}), ("take", {"name": "flying-robot-frame", "x": x, "y": y, "count": min(fr, int(have.get("frames", 0)))})]
         taken = {m: int(c) for m, c in bag.items()}
         for k2, p in plan:
             if k2 == "take":

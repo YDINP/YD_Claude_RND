@@ -43,7 +43,7 @@ from client import AIBridge, RconError   # noqa: E402
 N, E, S, W = 0, 4, 8, 12
 EMD, SF, INS, BELT, FBELT = "electric-mining-drill", "steel-furnace", "inserter", "transport-belt", "fast-transport-belt"
 CHEST, POLE, TUR, WALL = "iron-chest", "small-electric-pole", "gun-turret", "stone-wall"
-SIZE = {EMD: 3, SF: 2, TUR: 2}
+SIZE = {EMD: 3, SF: 2, TUR: 2, "stone-furnace": 2}
 OWNER = "p8"
 SITE = (409.0, -160.0)
 STATE = os.path.join(HERE, "..", "state", "run24_p8.json")
@@ -86,9 +86,12 @@ for _x in (401.5, 411.5):
         add(FBELT, _x, _y + 0.5, S)
 for _y in range(-148, -124):
     add(FBELT, 406.5, _y + 0.5, S)
+# 01:13 허브 강철 0 (강철로가 철 예비 밑에서 굶는다) → 첫 가동은 돌 화로 (저장 상자 (-34.5,14.5) 54 개, 같은 2x2) = 24 × 0.3125 = 7.5/s.
+#   강철이 돌면 FURN = SF 로 바꿔 같은 자리를 강철로로 (15/s). 연료 (90 kW) · 팔 · 벨트 셈은 같다.
+FURN = os.environ.get("P8_FURN", "stone-furnace")
 for _fy in FURN_Y:
-    add(SF, 404.0, _fy)
-    add(SF, 409.0, _fy)
+    add(FURN, 404.0, _fy)
+    add(FURN, 409.0, _fy)
     add(INS, 402.5, _fy - 0.5, W)                                # 입력 W → 화로
     add(INS, 405.5, _fy - 0.5, W)                                # 화로 → P (동쪽 레인)
     add(INS, 407.5, _fy - 0.5, E)                                # 화로 → P (서쪽 레인)
@@ -157,13 +160,13 @@ for _x in range(392, 427):
 # 판으로 따진 한 개 값 (2.0 레시피). 손제작은 중간재를 스스로 만든다.
 COST = {FBELT: {"iron-plate": 3.5}, BELT: {"iron-plate": 1.5}, EMD: {"iron-plate": 23, "copper-plate": 4.5},
         INS: {"iron-plate": 4, "copper-plate": 1.5}, SF: {"steel-plate": 6, "stone-brick": 10}, CHEST: {"iron-plate": 8},
-        POLE: {"copper-plate": 0.5, "wood": 0.5}}
+        POLE: {"copper-plate": 0.5, "wood": 0.5}, "stone-furnace": {"stone": 5}}
 PAIRED = {BELT, POLE}                                             # 빠른 벨트는 1 개씩
 # 완제품을 먼저 가져올 곳 (저장 상자 - 망 재건 몫은 상자마다 남긴다). (59.5,-14.5) · (11.5,-9.5) 는 전환 담당 · P7 몫이라 안 쓴다.
 STORES = [(103.5, -14.5), (67.5, 34.5), (77.5, 70.5), (-34.5, 14.5)]
-STORE_KEEP = {TUR: 4, WALL: 40, EMD: 0, CHEST: 0, "wood": 20}
+STORE_KEEP = {TUR: 4, WALL: 40, EMD: 0, CHEST: 0, "wood": 20, "stone-furnace": 10}
 HUB_BOX = (62, -16.1, 74, -14.9)
-HUB_KEEP = {"iron-plate": 0, "copper-plate": 0, "steel-plate": 100, "stone-brick": 300, "piercing-rounds-magazine": 50,
+HUB_KEEP = {"iron-plate": 0, "copper-plate": 0, "steel-plate": 30, "stone-brick": 300, "piercing-rounds-magazine": 50,
             TUR: 0, WALL: 0}
 
 
@@ -330,7 +333,16 @@ def build(ai, who, group, chunk=40, rounds=40) -> bool:
     from orders import submit
     os.environ[detached.ENV] = OWNER
     steps = steps_of(group)
-    mine = GROUPS[group]
+    wait_idle(ai, who, 600)                           # 앞 프로세스가 남긴 줄이 끝나기를 (queue 64 넘침 - 01:08 foxtrot)
+    _submit = submit
+
+    def submit(ai_, w, plan, strict=False):          # noqa: F811 - 넘치면 줄이 빌 때까지 기다렸다 한 번 더
+        try:
+            return _submit(ai_, w, plan, strict=strict)
+        except RconError as e:
+            print(time.strftime("%X"), w, "submit", str(e)[:60], flush=True)
+            wait_idle(ai_, w, 600)
+            return _submit(ai_, w, plan, strict=strict)
     for rnd in range(rounds):
         detached.mark([who], OWNER, minutes=30)
         up = p1.standing(ai, steps)
@@ -484,7 +496,7 @@ def status(ai) -> dict:
       for k, v in pairs(defines.entity_status) do st[v] = k end
       local out = {}
       local A = {{390, -205}, {430, -95}}
-      for _, n in pairs({"electric-mining-drill", "steel-furnace", "gun-turret", "stone-wall", "inserter", "transport-belt", "fast-transport-belt", "small-electric-pole"}) do
+      for _, n in pairs({"electric-mining-drill", "steel-furnace", "stone-furnace", "gun-turret", "stone-wall", "inserter", "transport-belt", "fast-transport-belt", "small-electric-pole"}) do
         local es = s.find_entities_filtered{name = n, force = f, area = A}
         local c = {}
         for _, e in pairs(es) do local k = e.status and st[e.status] or "-"; c[k] = (c[k] or 0) + 1 end
