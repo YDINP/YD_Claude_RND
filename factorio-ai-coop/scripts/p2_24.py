@@ -163,12 +163,93 @@ def oilprep_steps(ai=None, who=None):
     return out
 
 
+# 원유 관 (유전 → 물가 블록 서쪽 정유). 펌프잭 동향 (4): 출구 바깥 칸 = (X+2, Y-1) - 게임 get_pipe_connections 실측.
+#   (처음엔 prototype 의 (1,-1) 북향을 손으로 돌려 (X+2, Y+1) 로 잡아 원유가 안 나왔다 - 돌린 값은 게임에 묻는다.)
+#   펌프잭 1 (-196.5,27.5) → (-194.5,26.5) · 펌프잭 2 (-195.5,32.5) → (-193.5,31.5). 모으는 관 x -192.5 (y 21.5..33.5).
+#   본관 y 21.5 지하관 짝 (입구 서향 12 · 출구 동향 4, 최대 10 칸) → 정유 (-112.5,18.5) 북향의 입력 바깥 칸 (-113.5 / -111.5, 21.5).
+#   전봇대 줄 (y 26.5~30.5) 을 피해 정유는 그 북쪽.
+PTG = "pipe-to-ground"
+p1.COST.update({"pipe": {"iron-plate": 1}, PTG: {"iron-plate": 7.5}})
+p1.PAIRED.add(PTG)
+REFINERY = (-112.5, 18.5)
+MAIN_Y = 21.5
+
+
+def oilpipe_steps():
+    out = [b("pipe", x, 28.5) for x in (-194.5, -193.5)] + [b("pipe", -194.5, 26.5), b("pipe", -194.5, 27.5), b("pipe", -193.5, 31.5)]
+    out += [b("pipe", -192.5, y + 0.5) for y in range(21, 34)]
+    out.append(b("pipe", -193.5, 33.5))
+    x = -191.5
+    while x < -121.5:
+        out += [b(PTG, x, MAIN_Y, W), b(PTG, x + 9, MAIN_Y, E)]
+        x += 10
+    out += [b(PTG, x, MAIN_Y, W), b(PTG, -114.5, MAIN_Y, E)]
+    out += [b("pipe", xx, MAIN_Y) for xx in (-113.5, -112.5, -111.5)]
+    return out
+
+
+# 정유 · 플라스틱 (oil-processing 트리거 = 펌프잭이 원유를 캐면 열림).
+# 정유 북향 (-112.5,18.5): 입력 바깥 칸 (-113.5 / -111.5, 21.5) = 본관 끝 · 출력 바깥 칸 (-114.5 / -112.5 / -110.5, 15.5) → 석유 줄 y 15.5 (x -114.5..-104.5).
+# 플라스틱 화학 남향 (-106.5,13.5): 입력 바깥 칸 (-107.5 / -105.5, 15.5) 이 석유 줄 위. 석탄 · 플라스틱은 relay (품목 상한).
+# 전봇대 (-109.5,22.5) ← 줄 (-111.5,26.5) · (-108.5,17.5) · (-104.5,13.5).
+PETRO_Y = 15.5
+PLASTIC = (-106.5, 13.5)
+
+
+def refinery_steps():
+    p1.COST.update({"oil-refinery": {"iron-plate": 45, "copper-plate": 15, "steel-plate": 15, "stone-brick": 10},
+                    "chemical-plant": {"iron-plate": 20, "copper-plate": 7.5, "steel-plate": 5}})
+    p1.SIZE.update({"oil-refinery": 5, "chemical-plant": 3})
+    out = [b("oil-refinery", REFINERY[0], REFINERY[1], N)]
+    out += [b("pipe", x + 0.5, PETRO_Y) for x in range(-115, -104)]
+    out += [b("chemical-plant", PLASTIC[0], PLASTIC[1], S)]
+    out += [b(POLE, -109.5, 22.5), b(POLE, -108.5, 17.5), b(POLE, -104.5, 13.5)]
+    return out
+
+
+# 황 화학 (남향 (-102.5,13.5)): 입력 바깥 칸 (-103.5,15.5) = 석유 줄 끝 옆 · (-101.5,15.5) = 물 (사이 -102.5 는 비워 두 관이 안 섞인다).
+# 물: 해안 펌프 (-85.5,35.5) (water_sites) → 출구 칸 (게임에 물어 wpipe 단계에서) → x -100.5 로 북쪽 → (-101.5,15.5).
+SULFUR = (-102.5, 13.5)
+WPUMP = (-85.5, 35.5)
+
+
+def sulfur_steps():
+    p1.COST.update({"chemical-plant": {"iron-plate": 20, "copper-plate": 7.5, "steel-plate": 5}})
+    p1.SIZE.update({"chemical-plant": 3})
+    return [b("chemical-plant", SULFUR[0], SULFUR[1], S), b("pipe", -103.5, PETRO_Y), b("offshore-pump", WPUMP[0], WPUMP[1], E),
+            b(POLE, -102.5, 10.5)]      # (-100.5,11.5) 은 물가 서쪽 포탑 (-100,12) 자리
+
+
+def wpipe_steps(ai=None):
+    """펌프 출구 칸 (게임 get_pipe_connections) 에서 서쪽 y 그 줄로 x -100.5 까지, 북쪽으로 y 15.5, 서쪽 한 칸 (-101.5,15.5)."""
+    out = []
+    if ai is None:
+        return out
+    r = ai.lua("""(function() local e = game.surfaces[1].find_entities_filtered{name = "offshore-pump", force = "player", position = {%f, %f}, radius = 0.6}[1]
+      if not e then return {} end
+      local c = e.fluidbox.get_pipe_connections(1)[1]
+      return {x = c.target_position.x, y = c.target_position.y} end)()""" % WPUMP) or {}
+    if "x" not in r:
+        return out
+    x, y = float(r["x"]), float(r["y"])
+    step = -1 if x > -100.5 else 1
+    while abs(x - -100.5) > 0.1:
+        out.append(b("pipe", x, y))
+        x += step
+    while y > 15.5 + 0.1:
+        out.append(b("pipe", -100.5, y))
+        y -= 1
+    out += [b("pipe", -100.5, 15.5), b("pipe", -101.5, 15.5)]
+    return out
+
+
 def pumpjack_steps():
-    p1.COST["pumpjack"] = {"iron-plate": 29, "copper-plate": 7.5, "steel-plate": 5}
-    return [b("pumpjack", x, y, E) for x, y in OIL_WELLS]
+    p1.COST["pumpjack"] = {"iron-plate": 35, "copper-plate": 7.5, "steel-plate": 5}     # 톱니 10 (20) + 관 10 + 회로 5 (철 5 · 구리 7.5)
+    # 전봇대 (-194.5,30.5): 줄 끝 (-188.5,30.5) 의 공급 (±2.5) 은 펌프잭 (x -198..-194) 에 안 닿는다 (실측 no_power)
+    return [b("pumpjack", x, y, E) for x, y in OIL_WELLS] + [b(POLE, -194.5, 30.5)]
 
 
-STAGES = {"steel": steel_steps, "oilprep": oilprep_steps, "pumpjack": pumpjack_steps, "labs3": labs3_steps, "bricks": bricks_steps, "east": east_steps, "east_wall": east_wall_steps, "sw": sw_steps, "sw_wall": sw_wall_steps,
+STAGES = {"steel": steel_steps, "oilpipe": oilpipe_steps, "refinery": refinery_steps, "sulfur": sulfur_steps, "wpipe": wpipe_steps, "oilprep": oilprep_steps, "pumpjack": pumpjack_steps, "labs3": labs3_steps, "bricks": bricks_steps, "east": east_steps, "east_wall": east_wall_steps, "sw": sw_steps, "sw_wall": sw_wall_steps,
           "lakew": lakew_steps, "north_wall": north_wall_steps, "ironc": ironc_steps, "ironretire": ironretire_steps, "coalretire": coalretire_steps,
           "power4": power4_steps}
 
@@ -192,7 +273,8 @@ def main() -> int:
     os.environ[detached.ENV] = owner
     detached.mark(crew, owner, minutes=90)
     try:
-        steps = oilprep_steps(ai, crew[0]) if a.stage == "oilprep" else STAGES[a.stage]()
+        steps = (oilprep_steps(ai, crew[0]) if a.stage == "oilprep" else wpipe_steps(ai) if a.stage == "wpipe"
+                 else STAGES[a.stage]())
         ok = p1.build_stage(ai, crew, steps, a.stage, rounds=a.rounds)
     finally:
         detached.release(crew)

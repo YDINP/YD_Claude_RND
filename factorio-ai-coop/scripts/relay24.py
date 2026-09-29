@@ -89,7 +89,10 @@ FEEDS = [
 LAB_CAP = 20
 TURRET_CAP = 20
 CHEST_CAP = 200
-COAL_BOX = [100, -34, 126, -22]           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
+COAL_BOX = [100, -34, 126, -22]
+# (이름, x, y, 레시피, 넣을 품목 ("" = 없음), 상한, 꺼낼 품목, 허브 상한) - p2_24 REFINERY · PLASTIC
+CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
+        ["chemical-plant", -106.5, 13.5, "plastic-bar", "coal", 20, "plastic-bar", 500]]           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
 BOIL, BURN = 20, 5
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍 (P2: 철 버너 줄 자리의 전기 쌍 C (y -54) 까지). 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
 PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500]]
@@ -319,6 +322,40 @@ LUA = """(function()
     local p = d.position
     if p.x >= CB[1] and p.x <= CB[3] and p.y >= CB[2] and p.y <= CB[4] then inbox[#inbox+1] = d else others[#others+1] = d end
   end
+  -- 기름 (P2): 정유 · 화학 공장 레시피 (열려 있으면) · 석탄 → 플라스틱 공장 (≤ CHEM_COAL) · 결과 → 허브 (품목 상한)
+  for _, c in pairs(helpers.json_to_table('%s')) do
+    local e = s.find_entities_filtered{name = c[1], force = f, position = {c[2], c[3]}, radius = 0.6}[1]
+    if e then
+      if not e.get_recipe() and f.recipes[c[4]] and f.recipes[c[4]].enabled then e.set_recipe(c[4]) end
+      if e.get_recipe() and c[5] ~= "" then
+        local ein = e.get_inventory(defines.inventory.assembling_machine_input)
+        local room = c[6] - ein.get_item_count(c[5])
+        if room > 0 and c[5] == "coal" then
+          local got = coal_take(room)
+          if got > 0 then
+            local put = ein.insert{name = "coal", count = got}
+            if put < got then coal_back(got - put) end
+            tally("coal>" .. c[4], put)
+          end
+        end
+      end
+      if e.get_recipe() and c[7] ~= "" then
+        local eo = e.get_inventory(defines.inventory.assembling_machine_output)
+        local have = eo.get_item_count(c[7])
+        local total = 0
+        for _, h in pairs(hubs) do total = total + h.get_inventory(defines.inventory.chest).get_item_count(c[7]) end
+        local n = math.min(have, c[8] - total)
+        if n > 0 then
+          local put = 0
+          for _, h in pairs(hubs) do
+            put = put + h.get_inventory(defines.inventory.chest).insert{name = c[7], count = n - put}
+            if put >= n then break end
+          end
+          if put > 0 then eo.remove{name = c[7], count = put}; tally(c[7] .. ">hub", put) end
+        end
+      end
+    end
+  end
   local _ = fuel(s.find_entities_filtered{type = "boiler", force = f}, %d)
     and fuel(inbox, %d)
     and fuel(s.find_entities_filtered{name = "stone-furnace", force = f}, %d)
@@ -338,7 +375,7 @@ def lua_box(b) -> str:
 def once(ai) -> dict:
     return ai.lua(LUA % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
                          AMMO_CHEST[0], AMMO_CHEST[1], LAB_CAP, TURRET_CAP, CHEST_CAP,
-                         blob(PLATES), blob(CHESTS), blob(SMELT), lua_box(COAL_BOX), BOIL, BURN, BURN, BURN))
+                         blob(PLATES), blob(CHESTS), blob(SMELT), lua_box(COAL_BOX), blob(CHEM), BOIL, BURN, BURN, BURN))
 
 
 def main() -> int:
