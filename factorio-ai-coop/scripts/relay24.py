@@ -34,7 +34,7 @@ from client import AIBridge, RconError  # noqa: E402
 
 site = runsite.load()
 HX, HY = site["hub"]
-HUB_BOX = [HX - 4, HY - 0.6, HX + 7, HY + 0.6]
+HUB_BOX = [HX - 4, HY - 0.6, HX + 9.1, HY + 0.6]      # P7: 74.5 · 75.5 상자 (강철 · 벽돌 벨트) 도 허브
 AMMO_CHEST = [HX, HY]                     # 허브 줄 맨 서쪽 나무 상자 (66.5,-15.5)
 LAB_BOX = [-60, -7, -33, 12]            # P2: 조립 줄 북쪽 연구소 6 (y -4.5) 까지
 LAB_BOX2 = [2, -7, 19, 2]               # P5: 파랑 블록 동쪽 연구소 8 (p5_24.LABS5)
@@ -239,6 +239,11 @@ FEEDS += [["hub", "firearm-magazine", "pierce", 10], ["hub", "firearm-magazine",
 L1_DROP = [["gear", "iron-gear-wheel", "red1"], ["gear", "iron-gear-wheel", "inserter"], ["cable2", "copper-cable", "circuit2"],
            ["gear3", "iron-gear-wheel", "red5"], ["pipe", "pipe", "eng2"], ["adv4", "advanced-circuit", "blue5"]]
 FEEDS = [fd for fd in FEEDS if fd[:3] not in L1_DROP]
+# P7 (logi24 rg 가 벨트로 빨강 · 초록을 labs5 에 넣는다): 옛 빨강 7 · 초록 7 · 팔 · 벨트 조립기로 가는 FEEDS 를 쉰다 - 철 ~2.9/s · 구리 ~1.4/s 를 짓는 데로
+#   (코디네이터 01:1x: 둘째 철 광맥 전까지 겹친 수요를 줄인다). 서쪽 연구소 10 은 빨강 · 초록이 끊겨 쉰다 - 되돌리려면 목록을 비운다.
+DROP_TARGETS = ["red1", "red2", "red3", "red4", "red5", "red6", "red7", "green", "green2", "green3", "green4", "green5", "green6", "green7",
+                "inserter", "belt"]
+FEEDS = [fd for fd in FEEDS if fd[2] not in DROP_TARGETS]
 # (조립기, 품목, 허브 상한) - 결과칸 → 허브. 로봇 · 로보포트는 허브에서 사람이 들고 가 놓는다 (또는 relay 가 로보포트에)
 # P5: 포탑 조립기가 10분 철판 ~1,500 을 먹었다 (허브 · 저장 상자 채우기) - 허브 20 → 10, 저장 상자 10 → 5
 # P5-3: 건설 로봇 허브 100 → 20 (포트 8 × 15 = 120 이 이미 섰다) - 틀이 물류 로봇 조립기로 가게
@@ -277,13 +282,18 @@ PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-
 #   전환 기록은 docs/run24-site.md «P7 3. 전환 기록».
 DROP_PLATES = ["iron-plate", "copper-plate"]                  # 화로 결과 → 허브: "iron-plate" (ironout 벨트) · "copper-plate" (copperout 벨트)
 PLATES = [p for p in PLATES if p[1] not in DROP_PLATES]
-LAB2_PACKS = None                 # labs5 (LAB_BOX2) 에 relay 가 넣는 팩 - None = 모두, ["chemical-science-pack"] = 빨강 · 초록은 rg 벨트가
+LAB2_PACKS = ["chemical-science-pack"]                 # labs5 (LAB_BOX2) 에 relay 가 넣는 팩 - None = 모두, ["chemical-science-pack"] = 빨강 · 초록은 rg 벨트가
 # (구역, 품목, 허브 상한) - 전기 채굴기가 붓는 상자 -> 허브 (짓는 재료)
 CHESTS = [[[97, -8, 111, -5], "stone", 1500]]      # P2: 400 -> 1500 (벽돌 화로 6 이 허브 돌을 먹는다)
 # (구역, 넣을 품목, 화로마다 상한, 꺼낼 품목, 허브 상한) - 벽돌 화로 (p2_24.BRICK_XS, y -9). 벽 (5 벽돌) 재료
 SMELT = [[[72.5, -10.5, 85.5, -7.5], "stone", 20, "stone-brick", 1500],
          [[85.5, -10.5, 93.5, -7.5], "iron-plate", 25, "steel-plate", 400],      # 강철 화로 4 (p2_24.STEEL_XS)
          [[72.5, -13.5, 81.5, -10.6], "iron-plate", 25, "steel-plate", 400]]     # P3 강철 화로 4 더 (p3_24.STEEL2_XS, y -12)
+# P7 smelt (logi24): 돌 채굴기가 벨트에 바로 붓고 벽돌 2 · 강철 8 강철로는 필터 팔 · 결과 벨트 → 허브. 되돌리려면 목록을 비운다.
+DROP_CHESTS = ["stone"]                  # "stone"
+DROP_SMELT = ["stone-brick"]  # 01:12 강철 줄 되살림 (결과 벨트 → 허브 상자 공사 중, 사람 없음)                  # "stone-brick" · "steel-plate" (결과 품목)
+CHESTS = [c for c in CHESTS if c[1] not in DROP_CHESTS]
+SMELT = [m for m in SMELT if m[3] not in DROP_SMELT]
 
 LUA = """(function()
   local s, f = game.surfaces[1], game.forces.player

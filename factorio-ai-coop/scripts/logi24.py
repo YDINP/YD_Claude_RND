@@ -195,7 +195,101 @@ def rg_clear():
     return [(BELT, 61.5, 8.5)]
 
 
-STAGES = {"ironout": (ironout, ironout_clear), "copperout": (copperout, copperout_clear), "rg": (rg, rg_clear)}
+# ---------------------------------------------------------------------------------------------------------------
+# smelt: 허브 동남 강철로 줄 (y -9, 10 대 x 73..92) 을 벨트 줄로. relay M2 (돌 상자 → 허브 · 허브 돌/철 → 화로 · 벽돌/강철 → 허브) 를 대신한다.
+#   입력 벨트 y -6.5 (서향): 돌 채굴기 4 (y -4.5 북향) 가 상자 대신 이 벨트에 바로 붓는다 (먼 레인 = 북 레인). 전봇대 (100.5 · 106.5, -6.5) 는 지하로.
+#   철: 줄기 (x 69.5) 의 빠른 분배기 (70,-22.5) 동쪽 → y -21.5 동 → x 96.5 남 → 입력 벨트 밑 지하 → (95.5,-5.5) 에서 남쪽에서 옆 싣기 (남 레인).
+#   화로 입력 팔 (c-0.5,-7.5) 은 필터 (벽돌 2 대 = 돌, 강철 8 대 = 철) · 결과 팔 (c-0.5,-10.5) → 결과 벨트 y -11.5 서향 → (72.5,-12.5) 북 →
+#   구리 허브 벨트 (72.5,-13.5) 에 옆 싣기 → 허브 팔 (71.5..73.5) 이 벽돌 · 강철도 허브로. 윗줄 강철로 4 (y -12) 는 결과 벨트 자리 - 걷는다.
+#   필요: 벽돌 150/5분 = 0.5/s (강철로 한 대 0.625) · 강철 300/5분 = 1/s (강철로 0.125 × 8) · 철 5/s (남 레인 7.5) · 돌 2/s (북 레인).
+SM_X = [74, 76, 78, 80, 82, 84, 86, 88, 90, 92]
+SM_BRICK = {74}                  # 01:05 벽돌 한 대 (0.625/s > 쓰는 양 0.5) - 둘이면 허브 상자가 벽돌로 찬다
+
+
+def smelt():
+    out = []
+    # 입력 벨트 (돌 채굴기 줄 → 서)
+    out += [g(BELT, 109.5, -6.5, W), g(BELT, 108.5, -6.5, W), g(UG, 107.5, -6.5, W, ug="input"), g(UG, 105.5, -6.5, W, ug="output"),
+            g(BELT, 104.5, -6.5, W), g(BELT, 103.5, -6.5, W), g(BELT, 102.5, -6.5, W), g(UG, 101.5, -6.5, W, ug="input"),
+            g(UG, 99.5, -6.5, W, ug="output")]
+    out += line(BELT, 98.5, -6.5, 73.5, -6.5, W)
+    # 철 가지
+    out += [g("fast-splitter", 70.0, -22.5, S)]
+    out += line(BELT, 70.5, -21.5, 95.5, -21.5, E)
+    # 01:15 실측: 돌이 남 레인을 꽉 채워 (벽돌로 한 대만 먹는다) 남쪽 옆 싣기 철이 못 들어갔다 → 북쪽에서 옆 싣기 (북 레인)
+    out += line(BELT, 96.5, -21.5, 96.5, -7.5, S)
+    # 화로 팔
+    for c in SM_X:
+        out.append(g(INS, c - 0.5, -7.5, S, filter="stone" if c in SM_BRICK else "iron-plate"))
+        out.append(g(INS, c - 0.5, -10.5, S))
+    out += [g(POLE, x, -7.5) for x in (72.5, 76.5, 82.5, 84.5, 88.5, 93.5)]
+    out += [g(POLE, x, -10.5) for x in (72.5, 76.5, 82.5, 84.5, 88.5, 93.5)]
+    out.append(g(POLE, 76.5, -14.5))                         # 허브 동쪽 끝 빠른 팔 둘
+    # 결과 벨트 → 허브 동쪽 끝 새 상자 2 (74.5 · 75.5, -15.5) - 01:05 처음엔 구리 허브 벨트에 옆 싣기였는데 구리가 두 레인을 꽉 채워 못 들어갔다 (강철로 full_output)
+    out += line(BELT, 92.5, -11.5, 76.5, -11.5, W)
+    out += [g(BELT, 75.5, -11.5, N), g(BELT, 75.5, -12.5, N), g(BELT, 75.5, -13.5, W), g(BELT, 74.5, -13.5, W)]
+    out += [g(FINS, 75.5, -14.5, S), g(FINS, 74.5, -14.5, S), g("iron-chest", 75.5, -15.5), g("iron-chest", 74.5, -15.5)]
+    return out
+
+
+def smelt_clear():
+    return ([("steel-furnace", x, -12) for x in (74, 76, 78, 80)] + [("iron-chest", x, -6.5) for x in (99.5, 102.5, 105.5, 108.5)]
+            + [(BELT, 75.5, -11.5), (BELT, 74.5, -11.5), (BELT, 73.5, -11.5), (BELT, 72.5, -11.5), (BELT, 72.5, -12.5)]
+            + [(UG, 96.5, -7.5), (UG, 96.5, -5.5), (BELT, 96.5, -4.5), (BELT, 95.5, -4.5), (BELT, 95.5, -5.5)])
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# mall: 로봇 줄 둘째 줄 (y -10.5) 벽 · 포탑 · 수리팩 조립기 결과 → 북쪽 팔 → 공급 상자 (망에 보인다 - 건설 로봇이 유령 재건에 바로 쓴다).
+#   relay M4 의 OUTS (벽 · 포탑 · 수리팩 → 허브) · NET_STOCK (허브 → 저장 상자) · PORT_STOCK (허브 → 로보포트) 를 대신한다.
+#   상자는 칸 제한 (bar) - 넘치면 조립기가 멈춘다 (23회차 §3-10: 망에 넣는 것은 품목 상한).
+MALL = [("wall", -88.5, 2), ("turret", -84.5, 1), ("repair", -80.5, 2)]
+
+
+def mall():
+    out = []
+    for name, x, bar in MALL:
+        out += [g(INS, x, -12.5, S), g("passive-provider-chest", x, -13.5, N, bar=bar)]
+    out += [g(POLE, -86.5, -12.5), g(POLE, -82.5, -12.5)]
+    return out
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# coal: 석탄 → 보일러 벨트 (relay S4 보일러 연료를 대신). 먼저 새 채굴기 줄 (y -22.5 북향, 안 캔 띠 y -24..-19) 이 벨트 y -24.5 에 붓고,
+#   벨트는 서쪽 → x 24.5 남쪽 (rg 팩 벨트 둘은 지하로) → y 48.5 서쪽 → 보일러 줄 (y 46 북향, x -29.5..-9.5 + 새 넷) 남쪽 팔.
+#   옛 상자 줄 (y -29.5) 은 이 벨트가 10 분 넘게 돈 뒤 벨트로 바꿔 옆 싣기 (relay 연료원이라 먼저 걷으면 정전 - 23회차 §3-14).
+#   필요: 보일러 10 × 1.8 MW / 4 MJ = 4.5/s (지금 ~2.7) → 새 채굴기 5 (2.5/s) + 옛 줄 12 (6/s) = 두 레인.
+COAL_NEW = [109.5, 112.5, 115.5, 118.5, 121.5]
+BOIL_X = [-29.5, -25.5, -21.5, -17.5, -13.5, -9.5, -5.5, -1.5, 2.5, 6.5]
+COAL_X = 24.5
+
+
+def coal():
+    out = [g("electric-mining-drill", x, -22.5, N) for x in COAL_NEW]
+    out += line(BELT, 122.5, -24.5, 70.5, -24.5, W)
+    out += [g(UG, 70.5, -24.5, W, ug="input"), g(UG, 68.5, -24.5, W, ug="output")]
+    out = [q for q in out if not (q["name"] == BELT and q["x"] == 70.5)]
+    out += line(BELT, 67.5, -24.5, COAL_X + 1, -24.5, W)
+    out += line(BELT, COAL_X, -24.5, COAL_X, 1.5, S)
+    out += [g(UG, COAL_X, 1.5, S, ug="input"), g(UG, COAL_X, 3.5, S, ug="output")]
+    out = [q for q in out if not (q["name"] == BELT and q["x"] == COAL_X and q["y"] == 1.5)]
+    out += line(BELT, COAL_X, 4.5, COAL_X, 14.5, S)
+    out += [g(UG, COAL_X, 14.5, S, ug="input"), g(UG, COAL_X, 16.5, S, ug="output")]
+    out = [q for q in out if not (q["name"] == BELT and q["x"] == COAL_X and q["y"] == 14.5)]
+    out += line(BELT, COAL_X, 17.5, COAL_X, 47.5, S)
+    out += line(BELT, COAL_X, 48.5, -30.5, 48.5, W)
+    out += [g(INS, x, 47.5, S) for x in BOIL_X]
+    return out
+
+
+def boilers():
+    out = []
+    for bx in (-5.5, -1.5, 2.5, 6.5):
+        out += [g("pipe", bx - 2, 46.5), g("boiler", bx, 46, N), g("steam-engine", bx, 42.5, N), g("steam-engine", bx, 37.5, N), g(POLE, bx - 2, 40.5)]
+    return out
+
+
+STAGES = {"ironout": (ironout, ironout_clear), "copperout": (copperout, copperout_clear), "rg": (rg, rg_clear), "smelt": (smelt, smelt_clear),
+          "mall": (mall, None), "coal": (coal, None), "boilers": (boilers, None)}
 ROTATE = {"copperout": copperout_rotate}
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -342,7 +436,8 @@ PLATES = {BELT: {"iron-plate": 1.5}, FBELT: {"iron-plate": 10}, INS: {"iron-plat
           POLE: {"copper-plate": 0.5, "wood": 0.5}, "iron-chest": {"iron-plate": 8}, "pipe": {"iron-plate": 1},
           "pipe-to-ground": {"iron-plate": 7.5}, "assembling-machine-1": {"iron-plate": 22, "copper-plate": 4.5},
           "assembling-machine-2": {"iron-plate": 20, "copper-plate": 4.5, "steel-plate": 2}, "electric-furnace": {"steel-plate": 10, "stone-brick": 10},
-          "steel-furnace": {"steel-plate": 6, "stone-brick": 10}}
+          "steel-furnace": {"steel-plate": 6, "stone-brick": 10}, "fast-splitter": {"iron-plate": 45, "copper-plate": 15},
+          "passive-provider-chest": {"steel-plate": 8, "iron-plate": 5, "copper-plate": 8, "plastic-bar": 2}}
 CRAFT_UNIT = {BELT: 2, UG: 2, POLE: 2}      # 레시피 한 번에 나오는 수
 
 
