@@ -182,7 +182,8 @@ base.SEGS = SEGS
 base.STATE = STATE
 base.HUB_BOX = (62, -16.1, 76, -14.9)             # 허브 동쪽 강철 · 벽돌 상자 (74.5 · 75.5) 까지
 base.HUB_KEEP["steel-plate"] = 100                # 강철은 blhaul (전환 담당) 몫을 남긴다
-base.COST.update({MPOLE: {"steel-plate": 2, "copper-plate": 2, "iron-plate": 1}, SCHEST: {"steel-plate": 8},
+base.COST.update({FBELT: {"iron-plate": 4.5},           # 03:32 손제작 여유 +2 로는 빠른 벨트 2 개 제작이 «재료 모자람» 으로 돌아 무한 반복
+                  MPOLE: {"steel-plate": 2, "copper-plate": 2, "iron-plate": 1}, SCHEST: {"steel-plate": 8},
                   SF: {"steel-plate": 6, "stone-brick": 10}})
 
 
@@ -239,16 +240,17 @@ def fill(ai, who, what) -> None:
     detached.mark([who], OWNER, minutes=30)
     if what == "coal":
         per, dst = 1000, COAL_CHESTS
-        src = [(n, x, y, c, cn) for n, x, y, c, cn in base.sources_coal(ai)]
+        # 03:50 석탄 밭 상자 (채굴기 6 → 상자, 3/s) 는 여럿이 나눠 100 남김이면 69 뿐 → 20 남김 + 저장 상자 석탄 (50 남김)
+        src = [(n, x, y, c, cn) for n, x, y, c, cn in base.sources_coal(ai)] + base.sources(ai, {"coal"})
     else:
-        per, dst = 50, AMMO_CHESTS
+        per, dst = 100, AMMO_CHESTS                      # 포탑 20 × 20 발 + 벨트 · 팔
         src = base.sources(ai, {"piercing-rounds-magazine", "firearm-magazine"})
     want = per * len(dst)
     plan, got_items = [], {}
     for n, x, y, c, cn in sorted(src, key=lambda r: (r[0] != "piercing-rounds-magazine", -r[3])):
         if want <= 0:
             break
-        keep = 100 if cn == "coalfield" else base.HUB_KEEP.get(n, 0) if cn != "storage-chest" else 20
+        keep = (20 if what == "coal" else 100) if cn == "coalfield" else (50 if what == "coal" else 20) if cn == "storage-chest" else base.HUB_KEEP.get(n, 0)
         got = min(want, c - keep)
         if got > 0:
             plan += [("walk_to", {"x": x, "y": y + 1.5}), ("take", {"name": n, "x": x, "y": y, "count": got})]
