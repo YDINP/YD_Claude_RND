@@ -241,6 +241,19 @@ add("a3", INS, 13.5, 22.5, S)                             # 상자 cA3 (플라�
 add("a3", CHEST, 13.5, 23.5, N, "cA3")
 add("a3", INS, 17.5, 22.5, S)                             # 상자 cC7 (구리) → C7
 add("a3", CHEST, 17.5, 23.5, N, "cC7")
+# 연구소 먹이 (labs5 북서): rg 빨강 · 파랑 벨트 (y -8.5) 가 로보포트 밑 지하로 (10.5 → 5.5) 와서 «지하 출구 칸» 에서 긴팔 하나가 집는다 -
+#   팔은 지하 출구에서 잘 못 집는다 (belt-research §1-2) → 빨강 레인이 x 11..18 까지 꽉 차 서 있는데 labs5 3 대는 빨강 0 (missing).
+#   출구 뒤로 벨트 2 칸 (4.5 · 3.5, 서향) + 긴팔 (3.5,-6.5) 이 보통 벨트 칸 (3.5,-8.5) 에서 집어 연구소 (4.5,-4.5) 로. 긴팔 손 2 = ~2.2/s ≥ 필요 0.27 × 2.
+LABFEED = []
+GROUPS["labfeed"] = LABFEED
+_CUR[0] = LABFEED
+add("labfeed", BELT, 4.5, -8.5, W)
+add("labfeed", BELT, 3.5, -8.5, W)
+add("labfeed", LONG, 3.5, -6.5, N)
+# PU 입력 팔 (03:13 실측): PU 하나 = 녹 20 + 고급 2 = 22 개 / 13.3 s = 1.65/s ≈ 기본 팔 손 2 한계 (~1.7/s) → PU 10분 24 (조립기 상한 45). 팔 둘 더 (버스 → PU).
+_CUR[0] = P9
+add("pu", INS, 0.5, 22.5, S)
+add("pu", INS, 2.5, 22.5, S)
 _CUR[0] = PLAN
 UPGRADE = [(-2.5, 15.5, "low-density-structure"), (7.5, 11.5, "productivity-module")]   # 조립기 1 → 2 (로봇 교체, 레시피 유지)
 
@@ -647,11 +660,15 @@ def chest_pos():
     return {ex: (x, y) for plan in GROUPS.values() for st, n, x, y, d, ex in plan if n == CHEST}
 
 
-def haul(ai, who, minutes) -> None:
-    """공급 상자 채우기 - 허브 판 (허브에 HUB_KEEP 은 남김) · 로봇 줄 틀 조립기 결과칸의 로봇 틀을 사람이 들고 온다."""
+P9_CHESTS = {"cL2", "cC4", "cG2", "cC5", "cA3", "cC7"}
+
+
+def haul(ai, who, minutes, only=None) -> None:
+    """공급 상자 채우기 - 허브 판 (허브에 HUB_KEEP 은 남김) · 로봇 줄 틀 조립기 결과칸의 로봇 틀을 사람이 들고 온다.
+    only: 이 사람이 맡을 상자 (P9: charlie = P7 상자, alpha = P9 상자 - 둘이 같은 상자를 두 번 채우지 않게)."""
     from orders import submit
     end = time.time() + minutes * 60
-    pos = chest_pos()
+    pos = {k: v for k, v in chest_pos().items() if only is None or k in only}
     import walkscout
     os.environ[detached.ENV] = "p7_haul"
     while time.time() < end:
@@ -677,7 +694,7 @@ def haul(ai, who, minutes) -> None:
         end)()""" % (json.dumps({k: list(v) for k, v in pos.items()}), json.dumps(FRAME_ASMS)))
         short, mats = {}, {}
         for k, caps in CHESTS.items():
-            if k not in have:
+            if k not in have or k not in pos:
                 continue
             for m, cap in caps.items():
                 got = int((have.get(k) or {}).get(m, 0))
@@ -773,6 +790,7 @@ def main() -> int:
     ap.add_argument("--upgrade", action="store_true", help="P9: LDS · M 조립기 1 → 2 교체 표시")
     ap.add_argument("--haul", default="")
     ap.add_argument("--minutes", type=float, default=60)
+    ap.add_argument("--chests", default="", help="p7 | p9 | 상자 이름 쉼표 (haul 이 맡을 상자)")
     a = ap.parse_args()
     ai = AIBridge()
     plan = GROUPS[a.group]
@@ -800,7 +818,14 @@ def main() -> int:
         for k, v in (r.items() if isinstance(r, dict) else enumerate(r)):
             print(k, v)
     if a.haul:
-        haul(ai, a.haul, a.minutes)
+        only = None
+        if a.chests == "p9":
+            only = P9_CHESTS
+        elif a.chests == "p7":
+            only = set(CHESTS) - P9_CHESTS
+        elif a.chests:
+            only = set(a.chests.split(","))
+        haul(ai, a.haul, a.minutes, only)
     return 0
 
 
