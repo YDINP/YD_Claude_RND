@@ -42,18 +42,29 @@ def main() -> int:
         try:
             use = list(packs)
             for name, gate in gates.items():
-                # 09-30 03:3x: 재고 (연구소·조립기 결과칸) 가 아니라 «10 분 생산» 으로 잰다. 재고로 재면 공장이 서도
-                # 연구소 잔량으로 켜진 채 남거나 (보라 0 인데 automation-3), 벨트 위 팩을 못 세 영영 안 켜진다 (교착).
-                have = ai.lua("""(function() local st = game.forces.player.get_item_production_statistics(game.surfaces[1])
-                  return {n = math.floor(st.get_flow_count{name = "%s", category = "input",
-                    precision_index = defines.flow_precision_index.ten_minutes, count = true})} end)()""" % name).get("n", 0)
+                # 09-30 03:3x: 10 분 생산 «또는» 재고 (연구소·조립기 결과칸·상자·벨트). 켜기는 둘 중 하나가 켜는수 이상,
+                # 끄기는 둘 다 끄는수 미만. 재고만 보면 공장이 서도 연구소 잔량으로 켜진 채 남고 (보라 0 인데 automation-3),
+                # 생산만 보면 팩이 벨트에 막혀 생산 0 → 연구를 끔 → 계속 막힘 (교착). 둘을 같이 봐야 둘 다 피한다.
+                r = ai.lua("""(function() local s = game.surfaces[1] local n, name = 0, "%s"
+                  local st = game.forces.player.get_item_production_statistics(s)
+                  local prod = math.floor(st.get_flow_count{name = name, category = "input",
+                    precision_index = defines.flow_precision_index.ten_minutes, count = true})
+                  for _, l in pairs(s.find_entities_filtered{type = "lab", force = "player"}) do n = n + l.get_item_count(name) end
+                  for _, m in pairs(s.find_entities_filtered{type = "assembling-machine", force = "player"}) do
+                    n = n + m.get_inventory(defines.inventory.assembling_machine_output).get_item_count(name) end
+                  for _, c in pairs(s.find_entities_filtered{type = {"container", "logistic-container"}, force = "player"}) do
+                    n = n + c.get_inventory(defines.inventory.chest).get_item_count(name) end
+                  for _, b in pairs(s.find_entities_filtered{type = {"transport-belt", "underground-belt", "splitter"}, force = "player"}) do
+                    for i = 1, b.get_max_transport_line_index() do n = n + b.get_transport_line(i).get_item_count(name) end end
+                  return {prod = prod, stock = n} end)()""" % name)
+                have = max(r.get("prod", 0), r.get("stock", 0))
                 if gate[2] is None:
                     gate[2] = have >= gate[1]
                     print(time.strftime("%X"), f"{name} {have} - 시작 상태 {'켬' if gate[2] else '끔'}", flush=True)
                 elif not gate[2] and have >= gate[0]:
                     gate[2] = True
                     print(time.strftime("%X"), f"{name} {have} - 켠다", flush=True)
-                elif gate[2] and have < gate[1]:
+                elif gate[2] and r.get("prod", 0) < gate[1] and r.get("stock", 0) < gate[1]:
                     gate[2] = False
                     print(time.strftime("%X"), f"{name} {have} - 끈다 (그 팩 연구는 대기열에서 뺀다)", flush=True)
                 if not gate[2] and name in use:
