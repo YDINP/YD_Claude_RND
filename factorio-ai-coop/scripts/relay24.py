@@ -245,7 +245,12 @@ DROP_TARGETS = ["red1", "red2", "red3", "red4", "red5", "red6", "red7", "green",
                 "inserter", "belt",
                 # 03:1x 옛 파랑 사슬 쉼 - 파랑은 bl · bl2 (벨트) 가 labs5 로. 옛 파랑 결과는 서쪽 연구소 (빨강 · 초록 끊겨 쉼) 로만 갔다.
                 #   엔진 5 · 6 (전기 엔진) · 고급회로 3 · 6 (물류 로봇) · 회로 2 (고급회로 5) 는 로봇 줄 몫이라 남긴다.
-                "blue1", "blue2", "blue3", "blue4", "blue5", "adv1", "adv2", "adv3", "adv4", "eng1", "eng2", "eng3", "eng4"]   # 03:3x 해체 (adv3 · eng3 · eng4 는 추락선 잔해와 겹침)
+                "blue1", "blue2", "blue3", "blue4", "blue5", "adv1", "adv2", "adv3", "adv4", "eng1", "eng2", "eng3", "eng4",   # 03:3x 해체 (adv3 · eng3 · eng4 는 추락선 잔해와 겹침)
+                # 03:5x 로봇 줄 · mall · 전기 엔진 · 틀 · 황산 · 배터리 → robofeed24 (건설 로봇 요청) + logi24 robo (결과 팔 → 공급/저장 상자).
+                #   로봇 · 로보포트 · 물류 로봇 만들기는 쉼 (망 건설 로봇 354 · 물류 60) → 고급회로 5 · 6 · 전선 · 회로 · 톱니 옛 사슬도 쉼.
+                "circuit3", "cable4", "eeng", "frame1", "frame2", "acid", "batt", "gear4", "turretasm", "repair", "wallasm",
+                "eng5", "eng6", "adv6", "robot1", "roboport1", "lrobot", "adv5", "gear", "gear2", "gear3", "pipe", "cable", "cable2", "cable3",
+                "circuit", "circuit2"]
 FEEDS = [fd for fd in FEEDS if fd[2] not in DROP_TARGETS]
 # (조립기, 품목, 허브 상한) - 결과칸 → 허브. 로봇 · 로보포트는 허브에서 사람이 들고 가 놓는다 (또는 relay 가 로보포트에)
 # P5: 포탑 조립기가 10분 철판 ~1,500 을 먹었다 (허브 · 저장 상자 채우기) - 허브 20 → 10, 저장 상자 10 → 5
@@ -266,21 +271,21 @@ PIERCE_ZONES = [[-220, 14, -178, 56],        # 유전 (SW 둥지에서 가장 �
 PORT_STOCK = [["construction-robot", 15, "robot"], ["repair-pack", 50, "material"], ["logistic-robot", 5, "robot"]]
 # P7 mall (logi24): 벽 · 포탑 · 수리팩 조립기 결과 → 팔 → 공급 상자 (칸 제한) - 망에 바로 보인다. 허브 → 로보포트 · 저장 상자 중계는 쉰다.
 #   로봇을 포트에 더 넣을 때는 사람이 든다 (P6 chain-kit 처럼). 되돌리려면 아래 셋을 지운다.
-OUTS = [o for o in OUTS if o[0] not in ("turretasm", "repair", "wallasm")]
+OUTS = [o for o in OUTS if o[0] not in ("turretasm", "repair", "wallasm", "robot1", "roboport1", "lrobot")]   # 03:5x 로봇 · 로보포트 · 물류 로봇 쉼
 NET_STOCK = []
 PORT_STOCK = []
 LAB_CAP = 20
 TURRET_CAP = 20
 # P7 안전 걷기 (03:2x~): relay 가 포탑 탄 · 화로 연료를 안 넣는 구역 [x0, y0, x1, y1]. 넓혀 가다 모두 덮이면 S1 · S2 · S4 를 뺀다.
 #   동쪽 전초 (P8, 화로 24 · 포탑 16) 10 분 시험 (코디네이터) · 발전 남쪽 호숫가 (ammo24 가 피어싱으로 바꿈 - relay 노랑이 끼면 못 바꾼다)
-SAFE_OFF = []                            # 03:22 포탑 (2,50) 탄 0 - 되살림. 전: [[-40, 30, 12, 56]]          # + [380, -190, 440, -120] 동쪽 전초 (석탄 상자 채운 뒤)
+SAFE_OFF = [[380, -190, 440, -120]]      # 03:37 동쪽 전초 10 분 시험 (석탄 · 피어싱 손 상자 → 벨트). 03:22 포탑 (2,50) 탄 0 - 되살림. 전: [[-40, 30, 12, 56]]          # + [380, -190, 440, -120] 동쪽 전초 (석탄 상자 채운 뒤)
 CHEST_CAP = 200
 COAL_BOX = [100, -34, 126, -22]
 # (이름, x, y, 레시피, 넣을 품목 ("" = 없음), 상한, 꺼낼 품목, 허브 상한) - p2_24 REFINERY · PLASTIC
 CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
-        ["chemical-plant", -106.5, 13.5, "plastic-bar", "coal", 20, "plastic-bar", 700],       # P5: 1000 → 700 - 정유 1 가스를 황 첫째가 먼저 (플라스틱은 둘째 몫)      # P4: 500 → 1000 (로보포트 · 고급회로 5)
+        ["chemical-plant", -106.5, 13.5, "plastic-bar", "", 0, "plastic-bar", 700],   # 03:5x 석탄 (P4) → robofeed24 (망 석탄 = 석탄 밭 공급 상자 (122.5,-29.5))       # P5: 1000 → 700 - 정유 1 가스를 황 첫째가 먼저 (플라스틱은 둘째 몫)      # P4: 500 → 1000 (로보포트 · 고급회로 5)
         ["chemical-plant", -102.5, 13.5, "sulfur", "", 0, "sulfur", 600],
-        ["chemical-plant", -71.5, 11.5, "plastic-bar", "coal", 20, "plastic-bar", 1000],
+        ["chemical-plant", -71.5, 11.5, "plastic-bar", "", 0, "plastic-bar", 1000],   # 03:5x 석탄 → robofeed24
         # P5 기름 블록 (p5_24.crack_steps): 중유 분해 · 경유 분해 · 황 둘째 - 레시피는 관보다 먼저 선 기계에 걸린다
         ["chemical-plant", -82.5, 4.5, "heavy-oil-cracking", "", 0, "", 0],
         ["chemical-plant", -79.5, 4.5, "light-oil-cracking", "", 0, "", 0],
@@ -288,7 +293,7 @@ CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
 BOIL, BURN = 20, 5
 # P7 안전 (마지막): 석탄 벨트 → 보일러 팔 (logi24 coal) 이 10 분 넘게 돈 뒤 BOIL = 0 (relay 보일러 연료 쉼). 화로는 FURN = 0 (사람 손 연료 고리가 대신).
 FURN = BURN
-# BOIL = 0          # 03:17 정전 (보일러 7 석탄 0) 으로 되살림 - 03:01 뺌 - 보일러 줄 10 대 (석탄 벨트 y 48.5) 가 발전 전부. 흩어진 보일러 4 대 (-83/-75/-57/-42) 는 연료 떨어지면 쉼 (예비)
+BOIL = 0            # 03:51 다시 뺌 (새 보일러 팔 전봇대 03:35 - 팔 10 모두 waiting_for_space). 03:17 정전 (보일러 7 석탄 0) 으로 되살림 - 03:01 뺌 - 보일러 줄 10 대 (석탄 벨트 y 48.5) 가 발전 전부. 흩어진 보일러 4 대 (-83/-75/-57/-42) 는 연료 떨어지면 쉼 (예비)
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍 (P2: 철 버너 줄 자리의 전기 쌍 C (y -54) 까지). 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
 PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500],
           [[72, -67.5, 96, -64.5], "iron-plate", 2500]]      # P3 철 전기 쌍 E 6 (p3_24.IRONE_XS, 화로 y -66)

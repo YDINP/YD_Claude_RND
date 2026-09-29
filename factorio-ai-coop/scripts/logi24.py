@@ -352,6 +352,25 @@ def southnet():
     return [g("roboport", 0, 32), g(POLE, 2.5, 34.5)]
 
 
+def robo():
+    """로봇 줄 relay FEEDS 걷기 (03:4x): 결과 팔 → 공급 상자 (칸 제한 1) 로 중간재를 망에 - 먹이는 robofeed24 (건설 로봇 요청).
+    회로 3 · 전기 엔진 · 배터리 · 틀 2 · 톱니 4 · 엔진 (eng6). 틀 1 은 P8 의 팔 → 철 상자 (-81.5,-3.5) 그대로 (P9 hauler).
+    팔 직결: 전선 4 → 회로 3 (-86.5,-6.5) · eng5 (관으로 바꿈) → eng6 (8.5,8.5) · adv6 (톱니로 바꿈) → eng6 (12.5,8.5)."""
+    PP = "passive-provider-chest"
+    ST = "storage-chest"          # 03:5x 플라스틱 0 → 공급 상자 (고급회로) 대신 저장 상자 + 품목 필터 (robo_filters) - 로봇이 다른 것을 버리지 않게
+    return [g(INS, -86.5, -6.5, E),
+            g(INS, -88.5, -4.5, N), g(PP, -88.5, -3.5, N, bar=1),
+            g(INS, -82.5, -1.5, W), g(ST, -81.5, -1.5, N),
+            g(INS, -89.5, 1.5, W), g(ST, -88.5, 1.5, N),
+            g(INS, -76.5, -4.5, N), g(ST, -76.5, -3.5, N),
+            g(INS, -76.5, -12.5, S), g(ST, -76.5, -13.5, N),
+            g(INS, 8.5, 8.5, W), g(INS, 12.5, 8.5, E),
+            g(INS, 10.5, 6.5, S), g(PP, 10.5, 5.5, N, bar=1), g(POLE, 9.5, 5.5)]
+
+
+ROBO_FILTERS = [(-81.5, -1.5, "electric-engine-unit"), (-88.5, 1.5, "battery"), (-76.5, -3.5, "flying-robot-frame"), (-76.5, -13.5, "iron-gear-wheel")]
+
+
 def coal_clear():
     return [("iron-chest", -5.5, 48.5)]                    # P7 이 손으로 채우던 보일러 (-5.5) 석탄 상자 - 벨트가 대신
 
@@ -460,7 +479,7 @@ def bl2():
 
 
 STAGES = {"ironout": (ironout, ironout_clear), "copperout": (copperout, copperout_clear), "rg": (rg, rg_clear), "smelt": (smelt, smelt_clear),
-          "mall": (mall, None), "coal": (coal, coal_clear), "eastwall": (eastwall, None), "boilers": (boilers, None), "bl": (bl, None), "bl2": (bl2, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear), "coal2": (coal2, None), "westnet": (westnet, None), "ammo": (ammo, None), "southnet": (southnet, None)}
+          "mall": (mall, None), "coal": (coal, coal_clear), "eastwall": (eastwall, None), "boilers": (boilers, None), "bl": (bl, None), "bl2": (bl2, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear), "coal2": (coal2, None), "westnet": (westnet, None), "ammo": (ammo, None), "southnet": (southnet, None), "robo": (robo, None)}
 ROTATE = {"copperout": copperout_rotate, "coal2": coal2_rotate}
 
 # ---------------------------------------------------------------------------------------------------------------
