@@ -33,9 +33,10 @@ OWNER = "coldstart"
 os.environ.setdefault("AI_OWNER", OWNER)   # 이 모듈을 쓰는 스크립트는 이 사람들의 주인이다
 # 회차마다 다른 좌표는 state/{AI_RUN}_site.json 에서 읽는다 (22회차 좌표가 코드에 박혀 23회차에 새지 않게).
 # 앵커: 광맥에서 기지에 가장 가까운 칸. 방어/정찰 둘(hotel·delta)은 역할에 넣지 않는다 (방어 관문 D, 고정).
-import json as _json
-_RUN = os.environ.get("AI_RUN", "run23")
-_SITE = _json.load(open(os.path.join(HERE, "..", "state", f"{_RUN}_site.json"), encoding="utf-8"))
+# 회차 이름: `--run run24` > AI_RUN > run23 (runsite.py). 24회차부터 인자로도 받는다.
+import runsite                          # noqa: E402
+_RUN = runsite.RUN
+_SITE = runsite.load()
 EDGE = {k: tuple(v) for k, v in _SITE["edge"].items()}
 ROLES = _SITE["roles"]
 COALMAN = ROLES["coal"][0]
@@ -98,7 +99,7 @@ def gather(ai, count=50) -> None:
             print(f"{who}: {ore} {count}개 손채굴 ({x:.0f},{y:.0f})")
 
 
-RUN = os.environ.get("AI_RUN", "run23")                    # 회차마다 줄 좌표 파일이 따로 (22회차 좌표가 23회차에 박히지 않게)
+RUN = _RUN                                                 # 회차마다 줄 좌표 파일이 따로 (22회차 좌표가 23회차에 박히지 않게)
 LAYOUT = os.path.join(HERE, "..", "state", f"{RUN}_layout.json")
 KEY = {"iron-ore": "iron", "copper-ore": "copper"}
 
@@ -271,8 +272,10 @@ def drills(ai) -> None:
     for _x, _y, fx, fy in copper:
         plan += [("walk_to", {"x": fx + 0.5, "y": fy + 2.0}),
                  ("insert", {"name": "coal", "x": fx, "y": fy, "count": 2})]
-    plan += [("walk_to", {"x": 15.5, "y": -98.5}),
-             ("mine", {"x": 14, "y": -100, "name": "coal", "count": 60, "search_radius": 6})]
+    # 22회차 석탄 좌표 (15.5,-98.5) 가 박혀 있었다 (24회차에 발견) -> 회차 앵커에서 가장 가까운 석탄 칸
+    kx, ky = ore_spots(ai, "coal", EDGE["coal"], 1)[0]
+    plan += [("walk_to", {"x": kx + 1.5, "y": ky + 1.5}),
+             ("mine", {"x": kx, "y": ky, "name": "coal", "count": 60, "search_radius": 6})]
     give(ai, COALMAN, plan)
     # 4) 철 조: 자기 화로 셋에서 판을 꺼낸다 (허브는 bravo 가 세운 뒤)
     seats = [(fx, fy) for _x, _y, fx, fy in iron]
@@ -307,8 +310,8 @@ def drills(ai) -> None:
             ("take", {"name": "iron-plate", "x": HUB[0], "y": HUB[1], "count": PER_DRILL * len(COAL_XS)}),
             ("take", {"name": "stone-furnace", "x": HUB[0], "y": HUB[1], "count": len(COAL_XS)}),
             ("craft", {"recipe": DRILL, "count": len(COAL_XS), "wait": True}),
-            ("walk_to", {"x": 8.5, "y": -97.5}),
-            ("mine", {"x": 8, "y": -101, "name": "coal", "count": 12, "search_radius": 6})]
+            ("walk_to", {"x": EDGE["coal"][0] + 1.5, "y": EDGE["coal"][1] + 1.5}),
+            ("mine", {"x": EDGE["coal"][0], "y": EDGE["coal"][1], "name": "coal", "count": 12, "search_radius": 6})]
     for x in COAL_XS:
         plan += [("walk_to", {"x": x + 0.5, "y": COAL_ROW_Y + 3.5}),
                  ("build", {"name": DRILL, "x": x, "y": COAL_ROW_Y, "direction": 8}),

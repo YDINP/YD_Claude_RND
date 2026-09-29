@@ -39,7 +39,9 @@ HUB_X0, HUB_X1 = -10.5, -3
 # 23회차부터: 회차 설정 파일이 있으면 허브 줄을 거기서 (22회차 허브 좌표가 새 월드에 새지 않게)
 try:
     import json as _json
-    _site = _json.load(open(os.path.join(HERE, "..", "state", os.environ.get("AI_RUN", "run23") + "_site.json"), encoding="utf-8"))
+    sys.path.insert(0, HERE)
+    import runsite                                  # `--run run24` > AI_RUN > run23
+    _site = runsite.load()
     HUB_Y = _site["hub"][1]
     HUB_X0, HUB_X1 = _site["hub"][0] - 4, _site["hub"][0] + 7
 except (OSError, ValueError, KeyError):

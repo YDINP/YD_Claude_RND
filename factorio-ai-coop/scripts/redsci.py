@@ -22,7 +22,12 @@ import p1                                # noqa: E402
 OWNER = "redsci"
 PACK = "automation-science-pack"
 BATCH = 10
-POLE = (-50.5, -58.5)
+POLE = (-50.5, -58.5)            # 23회차 값. 회차 설정에 lab_pole 이 있으면 그것 (runsite)
+try:
+    import runsite                                      # noqa: E402
+    POLE = tuple(runsite.load().get("lab_pole") or POLE)
+except (OSError, ValueError):
+    pass
 
 
 def main() -> int:

@@ -20,6 +20,16 @@ sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
 
 from client import AIBridge  # noqa: E402
 
+KNOWN = ""   # 걸어서 본 청크 (seen.py 장부) "cx,cy;cx,cy" - 헤드리스에 플레이어가 없으면 차트가 0 이라서 (24회차)
+
+
+def _known_lua() -> str:
+    """밝혀진 청크 «또는» seen.py 장부의 청크. force.chart 는 쓰지 않는다."""
+    return """local known = {}
+      for bit in string.gmatch("%s", "[^;]+") do known[bit] = true end
+      local function seen(f, s, cx, cy) return known[cx .. "," .. cy] or f.is_chunk_charted(s, {cx, cy}) end
+""" % KNOWN
+
 CELL = 8
 ORES = ("iron-ore", "copper-ore", "coal", "stone", "crude-oil", "uranium-ore")
 # T2 몫 (coldstart-plan.md): 초당
@@ -35,10 +45,11 @@ def cells(ai, radius) -> list:
     reply = ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local sp = f.get_spawn_position(s)
+      """ + _known_lua() + """
       local acc = {}
       for _, r in pairs(s.find_entities_filtered{type = "resource", position = sp, radius = %d}) do
         local p = r.position
-        if f.is_chunk_charted(s, {math.floor(p.x / 32), math.floor(p.y / 32)}) then
+        if seen(f, s, math.floor(p.x / 32), math.floor(p.y / 32)) then
           local k = r.name .. "|" .. math.floor(p.x / %d) .. "|" .. math.floor(p.y / %d)
           acc[k] = (acc[k] or 0) + r.amount
         end
@@ -91,11 +102,12 @@ def extras(ai, radius) -> dict:
     return ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local sp = f.get_spawn_position(s)
+      """ + _known_lua() + """
       local out = {water = {}, enemies = {}, trees = 0, charted = 0}
       local best = nil
       for _, t in pairs(s.find_tiles_filtered{position = sp, radius = %d, collision_mask = "water_tile", limit = 4000}) do
         local p = t.position
-        if f.is_chunk_charted(s, {math.floor(p.x / 32), math.floor(p.y / 32)}) then
+        if seen(f, s, math.floor(p.x / 32), math.floor(p.y / 32)) then
           local d = (p.x - sp.x) ^ 2 + (p.y - sp.y) ^ 2
           if not best or d < best.d then best = {x = p.x, y = p.y, d = d} end
         end
@@ -104,12 +116,12 @@ def extras(ai, radius) -> dict:
       out.trees = s.count_entities_filtered{type = "tree", position = sp, radius = 120}
       for _, e in pairs(s.find_entities_filtered{force = "enemy", type = {"unit-spawner", "turret"}, position = sp, radius = %d}) do
         local p = e.position
-        if f.is_chunk_charted(s, {math.floor(p.x / 32), math.floor(p.y / 32)}) then
+        if seen(f, s, math.floor(p.x / 32), math.floor(p.y / 32)) then
           out.enemies[#out.enemies+1] = string.format("%%s %%.0f,%%.0f", e.name, p.x, p.y)
         end
       end
       for c in s.get_chunks() do
-        if f.is_chunk_charted(s, {c.x, c.y}) then out.charted = out.charted + 1 end
+        if seen(f, s, c.x, c.y) then out.charted = out.charted + 1 end
       end
       return out
     end)()""" % (radius, radius))
@@ -119,7 +131,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--radius", type=int, default=400)
     ap.add_argument("--md", default="")
+    ap.add_argument("--seen", default="", help="seen.py 장부 (state/runNN_seen.json) - 걸어서 본 청크도 «아는 곳»으로")
     args = ap.parse_args()
+    global KNOWN
+    if args.seen:
+        import json
+        KNOWN = ";".join(json.load(open(args.seen, encoding="utf-8")).get("chunks", []))
     ai = AIBridge()
     spawn, ps = patches(cells(ai, args.radius))
     ex = extras(ai, args.radius)

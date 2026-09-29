@@ -24,6 +24,7 @@ import time
 sys.path[:0] = [os.path.join(os.path.dirname(__file__), "..", "bridge"), os.path.dirname(__file__)]
 from client import AIBridge  # noqa: E402
 from jev import Choice, Jev  # noqa: E402
+import runsite               # noqa: E402  (--run / AI_RUN -> state/{run}_site.json)
 
 TICK = 1.0
 SEE = 45                 # 이 안에 적 유닛·구조물이 있으면 묻는다
@@ -102,7 +103,7 @@ def rules(r) -> dict:
     return {"act": {"retreat": p_ret, "fight": p_fight, "continue": max(0.0, 1 - p_ret - p_fight)}}
 
 
-HOME = (-40.0, -20.0)      # 기지 안쪽 (허브 · 제련 사이)
+HOME = runsite.center((-40.0, -20.0))   # 기지 안쪽 - 회차 설정 파일의 center (없으면 23회차 값)
 
 
 def retreat_goal(r):
