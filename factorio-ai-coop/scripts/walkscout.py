@@ -57,6 +57,18 @@ def route_foes(ai, a, b, pad=PAD) -> dict:
     end)()""" % (a[0], a[1], b[0], b[1], pad))
 
 
+def gen_ahead(ai, goal, chunks=2) -> None:
+    """가는 곳의 땅을 만든다 (지형 생성만 - 지도는 안 연다). 24회차: 플레이어가 없는 헤드리스는 캐릭터 곁 청크를
+    만들지 않아 ~250칸 밖은 «아직 없는 땅» 이고, 길찾기가 거기서 stuck 이 됐다 (북 280 · 서 360).
+    플레이어 몸이 걸으면 저절로 생기는 반경 (청크 둘) 만큼만 요청한다. force.chart 는 여전히 안 쓴다."""
+    ai.lua("""(function()
+      local s = game.surfaces[1]
+      s.request_to_generate_chunks({%f, %f}, %d)
+      s.force_generate_chunk_requests()
+      return {ok = 1}
+    end)()""" % (goal[0], goal[1], chunks))
+
+
 def body(ai, who):
     for r in ai.list():
         if r["name"] == who:
@@ -104,6 +116,7 @@ def main() -> int:
     ap.add_argument("--leg", type=float, default=40)
     ap.add_argument("--home", default="", help="x,y (없으면 회차 설정의 center)")
     ap.add_argument("--end", default="", help="끝나면 갈 곳 x,y (없으면 home)")
+    ap.add_argument("--start", type=float, default=0, help="첫 다리 거리 (이미 걸은 안쪽은 건너뛴다)")
     a = ap.parse_args()
     home = tuple(float(v) for v in a.home.split(",")) if a.home else runsite.center()
     end = tuple(float(v) for v in a.end.split(",")) if a.end else home
@@ -111,7 +124,7 @@ def main() -> int:
     detached.mark([a.who], "walkscout", minutes=60)
     for d in a.dirs.split(","):
         ux, uy = DIRS[d.strip().upper()]
-        dist = a.leg
+        dist = max(a.leg, a.start)
         while dist <= a.reach + 0.1:
             r = body(ai, a.who)
             if not r:
@@ -119,6 +132,7 @@ def main() -> int:
                 return 1
             at = (float(r.get("x") or 0), float(r.get("y") or 0))
             goal = (home[0] + ux * dist, home[1] + uy * dist)
+            gen_ahead(ai, goal)
             f = route_foes(ai, at, goal)          # 출정 조건 - 떠나기 직전에 다시 잰다
             if f.get("units", 0) or f.get("structs", 0):
                 print(f"{a.who} {d} {dist:.0f}: 가는 길 반경 {PAD} 에 적 {f} - 이 방위 접음", flush=True)

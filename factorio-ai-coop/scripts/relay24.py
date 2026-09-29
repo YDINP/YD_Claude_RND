@@ -1,0 +1,292 @@
+"""Lua relay for the run 24 lake assembler row: plates in, products out - every move has a per-item cap.
+
+조립 줄 (p1_24.ASMS) 에는 팔 · 상자 · 벨트가 없다. 이 고리가 «있는 물건만» 옮긴다 (만들지 않는다):
+
+    허브 철판   -> 탄창 · 톱니 · 회로 · 팔 · 벨트 조립기     (조립기 안 철판 ≤ CAP)
+    허브 구리판 -> 빨강 1·2 · 전선 조립기
+    톱니        -> 빨강 1·2 > 팔 > 벨트 (앞 것부터)
+    전선 -> 회로 -> 팔 -> 초록 <- 벨트
+    빨강 · 초록 -> 연구소 (연구소마다 팩 ≤ 20)
+    전기 쌍 화로 판 -> 허브 (허브 철판 ≤ 2500)
+    석탄 밭 상자 -> 보일러 (≤ 20) > 석탄 버너 채굴기 > 돌 화로 > 다른 버너 채굴기 (≤ 5)  - fuel_run (golf) 의 걸음을 대신
+    탄창        -> 포탑 (포탑마다 ≤ 20) -> 남는 것은 허브 탄창 상자 (≤ 200) - 사람 무장용
+
+허브 판은 RESERVE 만큼 남긴다 (짓는 재료). 23회차 복기 §3-10: 망 · 상자에 넣는 중계는 품목 상한 필수.
+23회차 §3-21: 자리가 nil 이면 반경 조회가 지도 전체가 된다 - 자리는 표에서만, 없으면 건너뛴다.
+조립기에 레시피가 없고 그 레시피가 열려 있으면 정해 준다 (GUI 에서 고르는 일).
+
+    python scripts/relay24.py --run run24 --once
+    python scripts/relay24.py --run run24 --every 10
+"""
+import argparse
+import json
+import os
+import sys
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "..", "bridge"))
+sys.path.insert(0, HERE)
+
+import runsite                          # noqa: E402
+from client import AIBridge, RconError  # noqa: E402
+
+site = runsite.load()
+HX, HY = site["hub"]
+HUB_BOX = [HX - 4, HY - 0.6, HX + 7, HY + 0.6]
+AMMO_CHEST = [HX, HY]                     # 허브 줄 맨 서쪽 나무 상자 (66.5,-15.5)
+LAB_BOX = [-50, 4, -34, 12]
+RESERVE = {"iron-plate": 300, "copper-plate": 100}
+
+# p1_24.ASMS 와 같은 표 (그 모듈을 import 하면 p1 이 따라와 무겁다 - 좌표만)
+ASMS = {
+    "ammo": [-53.5, 3.5, "firearm-magazine"],
+    "gear": [-49.5, 3.5, "iron-gear-wheel"],
+    "red1": [-45.5, 3.5, "automation-science-pack"],
+    "red2": [-41.5, 3.5, "automation-science-pack"],
+    "cable": [-37.5, 3.5, "copper-cable"],
+    "circuit": [-53.5, -0.5, "electronic-circuit"],
+    "inserter": [-49.5, -0.5, "inserter"],
+    "belt": [-45.5, -0.5, "transport-belt"],
+    "green": [-41.5, -0.5, "logistic-science-pack"],
+}
+
+# (출처, 품목, 받는 조립기, 상한) - 출처 "hub" 또는 조립기 이름 (그 조립기의 결과칸). 위에서부터 차례로.
+FEEDS = [
+    ["hub", "iron-plate", "ammo", 40],
+    ["hub", "iron-plate", "gear", 40],
+    ["hub", "copper-plate", "red1", 10],
+    ["hub", "copper-plate", "red2", 10],
+    ["gear", "iron-gear-wheel", "red1", 10],
+    ["gear", "iron-gear-wheel", "red2", 10],
+    ["hub", "copper-plate", "cable", 30],
+    ["cable", "copper-cable", "circuit", 30],
+    ["hub", "iron-plate", "circuit", 10],
+    ["circuit", "electronic-circuit", "inserter", 6],
+    ["gear", "iron-gear-wheel", "inserter", 6],
+    ["hub", "iron-plate", "inserter", 6],
+    ["gear", "iron-gear-wheel", "belt", 6],
+    ["hub", "iron-plate", "belt", 6],
+    ["inserter", "inserter", "green", 4],
+    ["belt", "transport-belt", "green", 4],
+]
+LAB_CAP = 20
+TURRET_CAP = 20
+CHEST_CAP = 200
+COAL_BOX = [100, -34, 126, -22]           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
+BOIL, BURN = 20, 5
+# (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍. 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
+PLATES = [[[78, -53, 103, -41], "iron-plate", 2500]]
+
+LUA = """(function()
+  local s, f = game.surfaces[1], game.forces.player
+  local A = helpers.json_to_table('%s')
+  local F = helpers.json_to_table('%s')
+  local R = helpers.json_to_table('%s')
+  local HB, LB, AC = %s, %s, {%f, %f}
+  local out = {moved = {}, miss = {}}
+  local function tally(k, n) out.moved[k] = (out.moved[k] or 0) + n end
+  local M = {}
+  for name, a in pairs(A) do
+    local e = s.find_entities_filtered{name = "assembling-machine-1", force = f, position = {a[1], a[2]}, radius = 0.6}[1]
+    if e then
+      M[name] = e
+      if not e.get_recipe() and f.recipes[a[3]] and f.recipes[a[3]].enabled then e.set_recipe(a[3]) end
+    else out.miss[#out.miss+1] = name end
+  end
+  local hubs = s.find_entities_filtered{type = "container", force = f, area = {{HB[1], HB[2]}, {HB[3], HB[4]}}}
+  local function hub_take(item, want)
+    local got = 0
+    for _, c in pairs(hubs) do
+      local inv = c.get_inventory(defines.inventory.chest)
+      local total = 0
+      for _, h in pairs(hubs) do total = total + h.get_inventory(defines.inventory.chest).get_item_count(item) end
+      local spare = total - (R[item] or 0)
+      if spare <= 0 then break end
+      local n = math.min(want - got, inv.get_item_count(item), spare)
+      if n > 0 then got = got + inv.remove{name = item, count = n} end
+      if got >= want then break end
+    end
+    return got
+  end
+  local function hub_give(item, n)
+    for _, c in pairs(hubs) do
+      local put = c.get_inventory(defines.inventory.chest).insert{name = item, count = n}
+      n = n - put
+      if n <= 0 then return end
+    end
+  end
+  for _, fd in pairs(F) do
+    local src, item, dst, cap = fd[1], fd[2], M[fd[3]], fd[4]
+    if dst and dst.get_recipe() then
+      local din = dst.get_inventory(defines.inventory.assembling_machine_input)
+      local room = cap - din.get_item_count(item)
+      if room > 0 then
+        if src == "hub" then
+          local got = hub_take(item, room)
+          if got > 0 then
+            local put = din.insert{name = item, count = got}
+            if put < got then hub_give(item, got - put) end
+            tally(item .. ">" .. fd[3], put)
+          end
+        elseif M[src] then
+          local sout = M[src].get_inventory(defines.inventory.assembling_machine_output)
+          local n = math.min(room, sout.get_item_count(item))
+          if n > 0 then
+            local put = din.insert{name = item, count = n}
+            if put > 0 then sout.remove{name = item, count = put}; tally(item .. ">" .. fd[3], put) end
+          end
+        end
+      end
+    end
+  end
+  -- 팩 -> 연구소
+  local labs = s.find_entities_filtered{name = "lab", force = f, area = {{LB[1], LB[2]}, {LB[3], LB[4]}}}
+  for _, src in pairs({"red1", "red2", "green"}) do
+    local m = M[src]
+    if m and m.get_recipe() then
+      local sout = m.get_inventory(defines.inventory.assembling_machine_output)
+      local item = m.get_recipe().name
+      for _, l in pairs(labs) do
+        local lin = l.get_inventory(defines.inventory.lab_input)
+        local n = math.min(%d - lin.get_item_count(item), sout.get_item_count(item))
+        if n > 0 then
+          local put = lin.insert{name = item, count = n}
+          if put > 0 then sout.remove{name = item, count = put}; tally(item .. ">lab", put) end
+        end
+      end
+    end
+  end
+  -- 탄창 -> 포탑 -> 탄창 상자
+  local m = M["ammo"]
+  if m then
+    local sout = m.get_inventory(defines.inventory.assembling_machine_output)
+    for _, t in pairs(s.find_entities_filtered{name = "gun-turret", force = f}) do
+      local tin = t.get_inventory(defines.inventory.turret_ammo)
+      local n = math.min(%d - tin.get_item_count("firearm-magazine"), sout.get_item_count("firearm-magazine"))
+      if n > 0 then
+        local put = tin.insert{name = "firearm-magazine", count = n}
+        if put > 0 then sout.remove{name = "firearm-magazine", count = put}; tally("mag>turret", put) end
+      end
+    end
+    local ch = s.find_entities_filtered{type = "container", force = f, position = AC, radius = 0.6}[1]
+    if ch then
+      local cin = ch.get_inventory(defines.inventory.chest)
+      local n = math.min(%d - cin.get_item_count("firearm-magazine"), sout.get_item_count("firearm-magazine"))
+      if n > 0 then
+        local put = cin.insert{name = "firearm-magazine", count = n}
+        if put > 0 then sout.remove{name = "firearm-magazine", count = put}; tally("mag>chest", put) end
+      end
+    end
+  end
+  -- 판: 전기 제련 쌍의 화로 결과칸 -> 허브 (허브 품목 상한까지)
+  for _, pb in pairs(helpers.json_to_table('%s')) do
+    local box, item, cap = pb[1], pb[2], pb[3]
+    for _, fu in pairs(s.find_entities_filtered{type = "furnace", force = f, area = {{box[1], box[2]}, {box[3], box[4]}}}) do
+      local fo = fu.get_inventory(defines.inventory.furnace_result)
+      local have = fo.get_item_count(item)
+      if have > 0 then
+        local total = 0
+        for _, h in pairs(hubs) do total = total + h.get_inventory(defines.inventory.chest).get_item_count(item) end
+        local n = math.min(have, cap - total)
+        if n <= 0 then break end
+        local put = 0
+        for _, h in pairs(hubs) do
+          put = put + h.get_inventory(defines.inventory.chest).insert{name = item, count = n - put}
+          if put >= n then break end
+        end
+        if put > 0 then fo.remove{name = item, count = put}; tally(item .. ">hub", put) end
+      end
+    end
+  end
+  -- 연료: 석탄 밭 상자 -> 보일러 (≤ BOIL) > 석탄 버너 채굴기 > 화로 > 다른 버너 채굴기 (≤ BURN)
+  local CB = %s
+  local coal = s.find_entities_filtered{type = "container", force = f, area = {{CB[1], CB[2]}, {CB[3], CB[4]}}}
+  local function coal_take(want)
+    local got = 0
+    for _, c in pairs(coal) do
+      local inv = c.get_inventory(defines.inventory.chest)
+      local n = math.min(want - got, inv.get_item_count("coal"))
+      if n > 0 then got = got + inv.remove{name = "coal", count = n} end
+      if got >= want then break end
+    end
+    return got
+  end
+  local function coal_back(n)
+    for _, c in pairs(coal) do
+      n = n - c.get_inventory(defines.inventory.chest).insert{name = "coal", count = n}
+      if n <= 0 then return end
+    end
+  end
+  local function fuel(list, cap)
+    for _, e in pairs(list) do
+      local fi = e.get_fuel_inventory()
+      if fi then
+        local room = cap - fi.get_item_count("coal")
+        if room > 0 then
+          local got = coal_take(room)
+          if got == 0 then return false end
+          local put = fi.insert{name = "coal", count = got}
+          if put < got then coal_back(got - put) end
+          tally("coal>" .. e.name, put)
+        end
+      end
+    end
+    return true
+  end
+  local inbox = {}
+  local others = {}
+  for _, d in pairs(s.find_entities_filtered{name = "burner-mining-drill", force = f}) do
+    local p = d.position
+    if p.x >= CB[1] and p.x <= CB[3] and p.y >= CB[2] and p.y <= CB[4] then inbox[#inbox+1] = d else others[#others+1] = d end
+  end
+  local _ = fuel(s.find_entities_filtered{type = "boiler", force = f}, %d)
+    and fuel(inbox, %d)
+    and fuel(s.find_entities_filtered{name = "stone-furnace", force = f}, %d)
+    and fuel(others, %d)
+  return out
+end)()"""
+
+
+def blob(v) -> str:
+    return json.dumps(v).replace("\\", "\\\\").replace("'", "\\'")
+
+
+def lua_box(b) -> str:
+    return "{%f, %f, %f, %f}" % tuple(b)
+
+
+def once(ai) -> dict:
+    return ai.lua(LUA % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
+                         AMMO_CHEST[0], AMMO_CHEST[1], LAB_CAP, TURRET_CAP, CHEST_CAP,
+                         blob(PLATES), lua_box(COAL_BOX), BOIL, BURN, BURN, BURN))
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--every", type=int, default=10)
+    ap.add_argument("--once", action="store_true")
+    a = ap.parse_args()
+    ai, total, last = None, {}, time.time()
+    while True:
+        try:
+            ai = ai or AIBridge()
+            r = once(ai)
+            for k, v in (r.get("moved") or {}).items():
+                total[k] = total.get(k, 0) + int(v)
+            if a.once:
+                print(r)
+                return 0
+            if time.time() - last >= 300:
+                miss = r.get("miss") or {}
+                miss = list(miss.values()) if isinstance(miss, dict) else miss
+                print(f"{time.strftime('%H:%M:%S')} 5분 옮김 {total}" + (f" · 없는 조립기 {miss}" if miss else ""), flush=True)
+                total, last = {}, time.time()
+        except (RconError, OSError) as e:
+            print(f"{time.strftime('%H:%M:%S')} 오류 {e}", flush=True)
+            ai = None
+        time.sleep(a.every)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

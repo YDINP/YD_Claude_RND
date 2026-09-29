@@ -72,9 +72,11 @@ stone       중심 (104,1)     거리 104 · (88,-8)~(120,16)      · 383,045
 | jevloop | 1초 도망 판단 (HOME = 회차 center) |
 | seen | 걸은 시야 장부 |
 | handore_charlie | 구리 손채굴 → 구리 화로 (버너가 다 덮으면 끈다) |
-| fuel_run | golf - 석탄 상자 → 버너 · 화로 · 보일러 |
+| ~~fuel_run~~ | P1 에서 뺌 - relay 연료 중계가 대신 (golf 는 공사로) |
 | collect_run | bravo - 화로 판 → 허브 (66.5..73.5, -15.5) |
-| redsci | echo · foxtrot - 허브 판으로 빨강 손제작 → 연구소 2 |
+| ~~redsci~~ | P1 에서 뺌 - 빨강 조립기 2 가 대신 (echo · foxtrot 는 공사로) |
+| sitewatch | `sitewatch24.py` 5 분마다 구역 (`state/run24_zones.json`) 한 줄 «구역 X: 생산 N · 설비 M/M0», 떨어지면 «경보» - 23회차 §3-19 |
+| relay | `relay24.py` 10 초 Lua 중계 (있는 물건만, 품목 상한): 허브 판 → 물가 조립 줄 · 팩 → 연구소 · 탄창 → 포탑 (≤20) → 허브 탄창 상자 (≤200) · 석탄 밭 상자 → 보일러 (≤20) > 버너 · 화로 (≤5) · 전기 쌍 화로 판 → 허브 (≤2500) |
 | research_guard | `--packs automation-science-pack --prefer gun-turret,military,automation,electric-mining-drill,stone-wall,logistics,...` · 23회차 `--skip` 에서 초반에 쓸 포탑 위력 (physical-projectile-damage · weapon-shooting-speed) 은 뺐다 |
 
 ## P0 (2026-09-29 19:30 ~ 20:05, tick 30k → 160k)
@@ -99,6 +101,17 @@ stone       중심 (104,1)     거리 104 · (88,-8)~(120,16)      · 383,045
 - 헤드리스 무접속 = 차트 0 (위) → seen.py 장부. walkscout 의 «stuck» 은 대개 물·절벽 (그 방위 300칸 부근).
 - coldstart.py 에 22회차 석탄 좌표 (15.5,-98.5)·(8.5,-97.5) 가 남아 있었다 → 회차 앵커로. p1.fetch 의 나무 자리 · PARK 도 회차 설정으로.
 - coldstart drills: 석탄 채굴기 4 중 1 만 섰다 (판 부족) - golf 가 2 더.
+
+## P1 (2026-09-29 20:05 ~, tick 165k →)
+
+`scripts/p1_24.py` (짓기 엔진은 p1.build_stage) + `relay24.py` + `sitewatch24.py`.
+
+- **P1-1 (20:05~20:20, tick 165k → 221k)** 조립 줄 9 (물가 연구소 북쪽, 팔 · 벨트 없이 relay): 탄창 · 톱니 · 빨강 2 · 전선 · 회로 · 팔 · 벨트 · 초록 (초록은 연구 뒤 레시피 자동).
+  전봇대 줄 물가 → 철 (46 개, 망 1). pole_route 자리가 7.6 · 8.5 간격으로 서서 망이 13 조각 → `--stage linefix` 틈마다 1 개.
+  철 전기 쌍 12 (채굴기 → 돌 화로 직결, (81.5+3i, -50.5 / -45.5)) · 석탄 전기 6 → 철 상자 (107.5+3i, -31.5). 둘째 발전 단위 (-57,14.5) 공사 중.
+  무장: 기관단총 + 탄창 20 - hotel delta bravo charlie foxtrot (+golf 진행). 10분 철판 1,087 → 1,990 · 빨강 97 · 탄창 217.
+  정찰: 헤드리스는 캐릭터 곁 청크를 **만들지도** 않아 ~250 칸 밖 길찾기가 stuck (북 280 · 서 360) → walkscout 가 가는 곳 청크 둘만 지형 생성 요청 (차트 아님).
+  북 560 · 북동 ~450 · 서 560 · 북서 560 걸음 - 적 구조물 여전히 0.
 
 ## 사망 기록
 
