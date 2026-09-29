@@ -208,7 +208,14 @@ OUTS = [["robot1", "construction-robot", 100], ["roboport1", "roboport", 10], ["
         ["turretasm", "gun-turret", 20], ["repair", "repair-pack", 100], ["wallasm", "stone-wall", 200]]
 # 로봇망 (construction-robotics 뒤). 23회차 §3-10: 망 저장이 차면 건설 로봇이 선다 → 모두 «상자마다 · 포트마다» 상한.
 #   (품목, 상자 하나 상한) 허브 → 망 저장 상자 (storage-chest) - 재건 · 수리 재료. 저장 상자는 48 칸, 여기서 쓰는 것은 칸 넷 남짓
-NET_STOCK = [["stone-wall", 100], ["gun-turret", 10], ["repair-pack", 50], ["firearm-magazine", 50]]
+NET_STOCK = [["stone-wall", 100], ["gun-turret", 10], ["repair-pack", 50]]      # 탄창은 로봇이 안 넣는다 - 상자에 두지 않는다
+# 피어싱으로 바꾸는 순서 = raidwatch 틈이 작은 방위부터 (22:13: SW 337 · E 370 · NW 402). [x0, y0, x1, y1]
+PIERCE_ZONES = [[-220, 14, -178, 56],        # 유전 (SW 둥지에서 가장 가까운 우리 것)
+                [-130, 0, -84, 50],          # 정유 · 발전 남서 줄
+                [115, -50, 140, 14],         # 동쪽 면
+                [-104, -12, -30, 16],        # 물가 서 · 북쪽 줄 (NW)
+                [70, -70, 100, -58],         # 철 북쪽 줄
+                [48, 70, 90, 102]]           # 구리 남서
 #   허브 → 로보포트 칸 (포트 하나 상한): 건설 로봇 (포트당 25~50 권고 - 처음엔 15) · 수리팩
 PORT_STOCK = [["construction-robot", 15, "robot"], ["repair-pack", 50, "material"]]
 LAB_CAP = 20
@@ -218,7 +225,8 @@ COAL_BOX = [100, -34, 126, -22]
 # (이름, x, y, 레시피, 넣을 품목 ("" = 없음), 상한, 꺼낼 품목, 허브 상한) - p2_24 REFINERY · PLASTIC
 CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
         ["chemical-plant", -106.5, 13.5, "plastic-bar", "coal", 20, "plastic-bar", 1000],      # P4: 500 → 1000 (로보포트 · 고급회로 5)
-        ["chemical-plant", -102.5, 13.5, "sulfur", "", 0, "sulfur", 600]]                   # P4: 300 → 600 (황산)           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
+        ["chemical-plant", -102.5, 13.5, "sulfur", "", 0, "sulfur", 600],
+        ["chemical-plant", -71.5, 11.5, "plastic-bar", "coal", 20, "plastic-bar", 1000]]      # P4 플라스틱 둘째 (석유 탱크 P)                   # P4: 300 → 600 (황산)           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
 BOIL, BURN = 20, 5
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍 (P2: 철 버너 줄 자리의 전기 쌍 C (y -54) 까지). 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
 PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500],
@@ -386,6 +394,33 @@ LUA = """(function()
   local turrets = s.find_entities_filtered{name = "gun-turret", force = f}
   table.sort(turrets, function(a, b)
     return a.get_inventory(defines.inventory.turret_ammo).get_item_count() < b.get_inventory(defines.inventory.turret_ammo).get_item_count() end)
+  -- P4 피어싱 (military-2): 포탑 탄 칸은 하나 - 노랑이 든 포탑은 노랑을 허브로 돌려보내고 피어싱 20 을 넣는다.
+  --   틈이 작은 방위의 구역부터 (PIERCE_ZONES 순서), 허브 피어싱이 20 이상일 때만 바꾼다. 피어싱 포탑은 피어싱으로만 채운다 (떨어지면 아래 노랑 고리가 채움)
+  local ptotal = hub_have("piercing-rounds-magazine")
+  for _, z in pairs(helpers.json_to_table('__PZ__')) do
+    for _, t in pairs(s.find_entities_filtered{name = "gun-turret", force = f, area = {{z[1], z[2]}, {z[3], z[4]}}}) do
+      local tin = t.get_inventory(defines.inventory.turret_ammo)
+      local pc = tin.get_item_count("piercing-rounds-magazine")
+      local yc = tin.get_item_count("firearm-magazine")
+      if yc > 0 and ptotal >= %d then
+        local got = hub_pull("piercing-rounds-magazine", %d)
+        if got > 0 then
+          tin.remove{name = "firearm-magazine", count = yc}
+          hub_give("firearm-magazine", yc)
+          local put = tin.insert{name = "piercing-rounds-magazine", count = got}
+          if put < got then hub_give("piercing-rounds-magazine", got - put) end
+          ptotal = ptotal - put
+          tally("pierce>turret(swap)", put)
+        end
+      elseif pc > 0 and pc < %d and ptotal > 0 then
+        local got = hub_pull("piercing-rounds-magazine", %d - pc)
+        local put = got > 0 and tin.insert{name = "piercing-rounds-magazine", count = got} or 0
+        if put < got then hub_give("piercing-rounds-magazine", got - put) end
+        ptotal = ptotal - put
+        if put > 0 then tally("pierce>turret", put) end
+      end
+    end
+  end
   for _, t in pairs(turrets) do
     local tin = t.get_inventory(defines.inventory.turret_ammo)
     for _, src in pairs(srcs) do
@@ -567,8 +602,9 @@ def lua_box(b) -> str:
 
 
 def once(ai) -> dict:
-    return ai.lua(LUA % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
-                         AMMO_CHEST[0], AMMO_CHEST[1], blob(OUTS), blob(PORT_STOCK), blob(NET_STOCK), LAB_CAP, TURRET_CAP, CHEST_CAP,
+    return ai.lua(LUA.replace("__PZ__", blob(PIERCE_ZONES)) % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
+                         AMMO_CHEST[0], AMMO_CHEST[1], blob(OUTS), blob(PORT_STOCK), blob(NET_STOCK), LAB_CAP,
+                         TURRET_CAP, TURRET_CAP, TURRET_CAP, TURRET_CAP, TURRET_CAP, CHEST_CAP,
                          blob(PLATES), blob(CHESTS), blob(SMELT), lua_box(COAL_BOX), blob(CHEM), BOIL, BURN, BURN, BURN))
 
 

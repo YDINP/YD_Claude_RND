@@ -133,7 +133,25 @@ def ports_steps(ports=PORTS):
     return out
 
 
-STAGES = {"ports": ports_steps, "ports2": lambda: ports_steps(PORTS2), "crude2": crude2_steps, "water2": water2_steps, "ref2": ref2_steps, "acid": acid_steps, "robo": robo_steps, "robo2": robo2_steps}
+# 플라스틱 둘째 (22:36: 로보포트 셋이 플라스틱 80 씩 기다림 - 10분 374 를 파랑의 고급회로가 거의 다 먹는다).
+#   석유 탱크 P 의 동쪽 포트 (-73.5,12.5) → (-72.5,12.5) = 화학 W (-71.5,11.5) 입력 1 칸. 석탄 · 결과는 relay CHEM.
+PLASTIC2 = (-71.5, 11.5)
+
+
+def plastic2_steps():
+    return [b(CHEM, PLASTIC2[0], PLASTIC2[1], W)]
+
+
+# 22:40 실측: 로보포트 R_E · R_M · R_C 가 no_power (에너지 0) - 망 1 전봇대가 7.5~9.6 칸 떨어져 공급 5×5 가 포트 4×4 에 안 닿았다.
+#   벽 유령 시험 (22:39 동쪽 벽 (134.5,-20.5) die → 유령) 이 30 초 넘게 안 지어져 알았다. 포트마다 공급이 겹치는 전봇대 하나 (망 1 전봇대와 7.5 칸 안).
+PORT_POLES = [(103.5, -12.5), (5.5, -12.5), (70.5, 68.5), (-38.5, 11.5)]
+
+
+def portpower_steps():
+    return [b(POLE, x, y) for x, y in PORT_POLES]
+
+
+STAGES = {"portpower": portpower_steps, "plastic2": plastic2_steps, "ports": ports_steps, "ports2": lambda: ports_steps(PORTS2), "crude2": crude2_steps, "water2": water2_steps, "ref2": ref2_steps, "acid": acid_steps, "robo": robo_steps, "robo2": robo2_steps}
 
 
 def main() -> int:
@@ -151,6 +169,10 @@ def main() -> int:
     crew = [n.strip() for n in a.who.split(",") if n.strip()]
     if not (crew and a.stage):
         return 0
+    # 22:30 실측: craft 가 비차단 (P0 함정) 이라 로보포트 (손제작 ~5 분) 를 다 만들기 전에 build 가 돌아 실패하고 순번만 넘어갔다
+    #   (가방에 로보포트를 든 채 놀던 넷). 이 파일의 단계는 craft 를 wait="block" 으로.
+    _fetch = p1.fetch
+    p1.fetch = lambda ai_, who, need: [(k, dict(p, wait="block")) if k == "craft" else (k, p) for k, p in _fetch(ai_, who, need)]
     owner = "p4_24_" + a.stage
     os.environ[detached.ENV] = owner
     detached.mark(crew, owner, minutes=90)
