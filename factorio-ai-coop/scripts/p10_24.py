@@ -239,7 +239,7 @@ def fill(ai, who, what) -> None:
     os.environ[detached.ENV] = OWNER
     detached.mark([who], OWNER, minutes=30)
     if what == "coal":
-        per, dst = 1000, COAL_CHESTS
+        per, dst = 1200, COAL_CHESTS                     # 강철 상자 2,400 칸의 절반씩 (한 사람 가방 ~3,000)
         # 03:50 석탄 밭 상자 (채굴기 6 → 상자, 3/s) 는 여럿이 나눠 100 남김이면 69 뿐 → 20 남김 + 저장 상자 석탄 (50 남김)
         src = [(n, x, y, c, cn) for n, x, y, c, cn in base.sources_coal(ai)] + base.sources(ai, {"coal"})
     else:
@@ -268,6 +268,40 @@ def fill(ai, who, what) -> None:
                 left -= q
     submit(ai, who, plan[:59], strict=False)
     print(time.strftime("%X"), who, "채움", what, dict(items), len(plan), flush=True)
+
+
+def coal_levels(ai) -> list:
+    r = ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local out = {}
+      for _, p in pairs(helpers.json_to_table('%s')) do
+        local c = s.find_entities_filtered{name = "steel-chest", force = f, position = p, radius = 0.3}[1]
+        out[#out+1] = c and c.get_inventory(defines.inventory.chest).get_item_count("coal") or -1
+      end
+      return out
+    end)()""" % json.dumps([list(p) for p in COAL_CHESTS]))
+    return [int(v) for v in ai_rows(r)]
+
+
+def coal_loop(ai, who, every=600, minutes=180, low=1200) -> None:
+    """석탄 상자 (강철로 22 = 0.5/s) 를 사람 손으로: 어느 상자가 low 밑이면, 길 (기지 → 부지 동쪽) 반경 80 적 0 일 때만 채운다.
+    Lua 이동 없음 - fill() 이 take (석탄 밭 상자 · 저장 상자) → walk → insert."""
+    import walkscout
+    t_end = time.time() + minutes * 60
+    while time.time() < t_end:
+        lv = coal_levels(ai)
+        if lv and min(lv) < low:
+            f = [walkscout.route_foes(ai, a, b) for a, b in (((110.0, -29.0), (40.0, -80.0)), ((40.0, -80.0), (33.0, -118.0)))]
+            if any(x.get("units") or x.get("structs") for x in f):
+                print(time.strftime("%X"), "석탄", lv, "- 길에 적", f, "- 미룸", flush=True)
+            else:
+                base.wait_idle(ai, who, 600)
+                fill(ai, who, "coal")
+                base.wait_idle(ai, who, 900)
+                print(time.strftime("%X"), "석탄 채움 뒤", coal_levels(ai), flush=True)
+        else:
+            print(time.strftime("%X"), "석탄", lv, flush=True)
+        time.sleep(every)
 
 
 def status(ai) -> dict:
@@ -319,6 +353,8 @@ def main() -> int:
     ap.add_argument("--to", type=int, default=0)
     ap.add_argument("--fill", default="")
     ap.add_argument("--status", action="store_true")
+    ap.add_argument("--coal-loop", default="")
+    ap.add_argument("--minutes", type=float, default=180)
     a, _ = ap.parse_known_args()
     ai = AIBridge()
     if a.measure:
@@ -345,6 +381,8 @@ def main() -> int:
         fill(ai, a.crew, a.fill)
     if a.status:
         print(json.dumps(status(ai), ensure_ascii=False, indent=1))
+    if a.coal_loop:
+        coal_loop(ai, a.coal_loop, minutes=a.minutes)
     return 0
 
 
