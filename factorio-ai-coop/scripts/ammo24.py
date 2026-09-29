@@ -163,6 +163,21 @@ def hand_round(ai, who, outside):
       end
       return r end)()""")
     src = list(src.values()) if isinstance(src, dict) else (src or [])
+    # 05:3x 빈 포탑 (탄 0) 은 어느 탄이든 된다 - 피어싱이 망에 없으면 노랑으로 (새 남서 전초 포탑 탄 0 · 망 피어싱 0)
+    avail = {}
+    for q in src:
+        avail[q[2]] = avail.get(q[2], 0) + q[3]
+    fixed = []
+    for x, y, have, it in low:
+        if have == 0 and avail.get(it, 0) < FILL:
+            other = "firearm-magazine" if it == "piercing-rounds-magazine" else "piercing-rounds-magazine"
+            if avail.get(other, 0) >= FILL:
+                it = other
+        fixed.append((x, y, have, it))
+    low = fixed
+    need = {}
+    for x, y, have, it in low:
+        need[it] = need.get(it, 0) + FILL - have
     plan, carry = [], {}
     for it, want in need.items():
         for x, y, sit, n in sorted([q for q in src if q[2] == it], key=lambda q: -q[3]):
