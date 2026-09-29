@@ -360,9 +360,11 @@ def build(ai, who, group, chunk=40, rounds=40) -> bool:
         except RconError:
             bag = {}
         have, ready = dict(bag), []
-        for k, p in part:
-            if int(have.get(p["name"], 0)) <= 0:
+        for k, p in todo:                             # 앞에서 막힌 품목 (빠른 벨트 = 철) 이 있어도 가방에 든 다른 것은 짓는다
+            if len(ready) >= chunk:
                 break
+            if int(have.get(p["name"], 0)) <= 0:
+                continue
             have[p["name"]] = int(have[p["name"]]) - 1
             ready.append((k, p))
         if len(ready) >= min(8, len(part)):
