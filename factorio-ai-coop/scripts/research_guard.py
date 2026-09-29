@@ -58,7 +58,7 @@ def main() -> int:
             _stall = stall
             if stall >= 2:
                 for pk, n in (st.get("cnt") or {}).items():
-                    if n < st["labs"] and pk in gates:
+                    if n < max(3, st["labs"] // 3) and pk in gates:  # 06:5x 문턱 완화: 연구소 수 → 연구소 수/3 (생산이 적어도 흐르면 켜 둔다)
                         forced_off[pk] = time.time() + 900
                         print(time.strftime("%X"), f"멈춤: 연구소 {st['miss']}/{st['labs']} 팩 없음 - {pk} 연구소 합 {n} → 15 분 끔", flush=True)
             for pk, until in list(forced_off.items()):
