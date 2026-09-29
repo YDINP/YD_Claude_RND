@@ -156,7 +156,7 @@ def rg():
     for name, x, rec in RG_N:
         out.append(g(AM1, x, YN, recipe=rec))
         if name == "gear":
-            out += [g(INS, x - 1, YN + 2, S), g(LINS, x, YN + 2, N)]
+            out += [g(FINS, x - 1, YN + 2, S), g(LINS, x, YN + 2, N)]      # 00:5x 노랑 팔이 톱니를 0.42/s 로 묶어 빠른 팔로
         elif name[0] in "ib":
             out += [g(INS, x - 1, YN + 2, S), g(LINS, x, YN + 2, S)]
         else:
@@ -177,7 +177,7 @@ def rg():
             out += [g(LINS, x - 1, YS - 2, N), g(INS, x, YS - 2, S)]
         else:
             out += [g(LINS, x - 1, YS - 2, N), g(INS, x, YS - 2, N), g(INS, x, YS + 2, N)]
-    out.append(g(INS, 54.5, YS, E))                          # 전선 → 회로
+    out.append(g(FINS, 54.5, YS, E))                         # 전선 → 회로 (빠른 팔 - 회로 하나에 전선 3)
     for gx in (54.5, 50.5, 46.5, 42.5, 38.5):
         out += [g(POLE, gx, YS - 1), g(POLE, gx, YS + 1)]
     out += line(BELT, 48.5, 15.5, 22.5, 15.5, W)
@@ -198,6 +198,9 @@ def rgfeed():
     out = [g("fast-splitter", 69.0, -27.5, S)]
     out += line(BELT, 68.5, -26.5, 61.5, -26.5, W)
     out += line(BELT, 60.5, -26.5, 60.5, -18.5, S)
+    # 01:55 실측: trunk2 로 줄기가 두 레인이 되자 가지도 두 레인 철 → 벨트1 구리 레인이 철로 막혀 빨강 · 초록 굶음.
+    #   (60.5,-27.5) 받침 벨트로 (60.5,-26.5) 를 곧게 → 가지는 옆 싣기 = 동쪽 한 레인.
+    out.append(g(BELT, 60.5, -27.5, S))
     out += [g(FINS, x, -16.5, N) for x in (72.5, 73.5, 74.5)]      # 허브 철 팔 4 → 7 (P8 둘째 광맥 대비, ~16/s)
     return out
 
@@ -250,13 +253,14 @@ def smelt():
     # 결과 벨트 → 허브 동쪽 끝 새 상자 2 (74.5 · 75.5, -15.5) - 01:05 처음엔 구리 허브 벨트에 옆 싣기였는데 구리가 두 레인을 꽉 채워 못 들어갔다 (강철로 full_output)
     out += line(BELT, 92.5, -11.5, 76.5, -11.5, W)
     out += [g(BELT, 75.5, -11.5, N), g(BELT, 75.5, -12.5, N), g(BELT, 75.5, -13.5, W), g(BELT, 74.5, -13.5, W)]
+    out += [g(BELT, 73.5, -11.5, E), g(BELT, 74.5, -11.5, E)]      # 벽돌로 (74) 결과 - (75.5,-11.5) 에 서쪽에서 옆 싣기 (강철은 동쪽 레인)
     out += [g(FINS, 75.5, -14.5, S), g(FINS, 74.5, -14.5, S), g("iron-chest", 75.5, -15.5), g("iron-chest", 74.5, -15.5)]
     return out
 
 
 def smelt_clear():
     return ([("steel-furnace", x, -12) for x in (74, 76, 78, 80)] + [("iron-chest", x, -6.5) for x in (99.5, 102.5, 105.5, 108.5)]
-            + [(BELT, 75.5, -11.5), (BELT, 74.5, -11.5), (BELT, 73.5, -11.5), (BELT, 72.5, -11.5), (BELT, 72.5, -12.5)]
+            + [(BELT, 72.5, -11.5), (BELT, 72.5, -12.5)]
             + [(UG, 96.5, -7.5), (UG, 96.5, -5.5), (BELT, 96.5, -4.5), (BELT, 95.5, -4.5), (BELT, 95.5, -5.5)])
 
 
@@ -282,25 +286,43 @@ def mall():
 #   필요: 보일러 10 × 1.8 MW / 4 MJ = 4.5/s (지금 ~2.7) → 새 채굴기 5 (2.5/s) + 옛 줄 12 (6/s) = 두 레인.
 COAL_NEW = [109.5, 112.5, 115.5, 118.5, 121.5]
 BOIL_X = [-29.5, -25.5, -21.5, -17.5, -13.5, -9.5, -5.5, -1.5, 2.5, 6.5]
-COAL_X = 24.5
+COAL_X = 63.5
 
 
 def coal():
+    """02:1x 경로 바꿈: x 24.5 는 파랑 블록 (bl) 서쪽 조립기 (23.5) 자리와 겹쳤다 → 구리 줄기 동쪽 x 63.5 로 내려간다.
+    y -24.5 서 → (63.5) 남: 허브 철 벨트 (y -17.5) · 구리 허브 벨트 (y -13.5) · R_S 로보포트 (y 32..35) 밑은 지하 → y 48.5 서 (구리 줄기 · 동쪽 벽 밑 지하) → 보일러."""
     out = [g("electric-mining-drill", x, -22.5, N) for x in COAL_NEW]
-    out += line(BELT, 122.5, -24.5, 70.5, -24.5, W)
-    out += [g(UG, 70.5, -24.5, W, ug="input"), g(UG, 68.5, -24.5, W, ug="output")]
-    out = [q for q in out if not (q["name"] == BELT and q["x"] == 70.5)]
-    out += line(BELT, 67.5, -24.5, COAL_X + 1, -24.5, W)
-    out += line(BELT, COAL_X, -24.5, COAL_X, 1.5, S)
-    out += [g(UG, COAL_X, 1.5, S, ug="input"), g(UG, COAL_X, 3.5, S, ug="output")]
-    out = [q for q in out if not (q["name"] == BELT and q["x"] == COAL_X and q["y"] == 1.5)]
-    out += line(BELT, COAL_X, 4.5, COAL_X, 14.5, S)
-    out += [g(UG, COAL_X, 14.5, S, ug="input"), g(UG, COAL_X, 16.5, S, ug="output")]
-    out = [q for q in out if not (q["name"] == BELT and q["x"] == COAL_X and q["y"] == 14.5)]
-    out += line(BELT, COAL_X, 17.5, COAL_X, 47.5, S)
-    out += line(BELT, COAL_X, 48.5, -30.5, 48.5, W)
+    under = {70.5: 68.5}                                  # 줄기 (69.5) 밑
+    x = 122.5
+    while x >= COAL_X + 1:
+        if x in under:
+            out += [g(UG, x, -24.5, W, ug="input"), g(UG, under[x], -24.5, W, ug="output")]
+            x = under[x] - 1
+            continue
+        out.append(g(BELT, x, -24.5, W))
+        x -= 1
+    out += line(BELT, COAL_X, -24.5, COAL_X, -19.5, S)
+    out += [g(UG, COAL_X, -18.5, S, ug="input"), g(UG, COAL_X, -16.5, S, ug="output"), g(BELT, COAL_X, -15.5, S),
+            g(UG, COAL_X, -14.5, S, ug="input"), g(UG, COAL_X, -12.5, S, ug="output")]
+    out += line(BELT, COAL_X, -11.5, COAL_X, 30.5, S)
+    out += [g(UG, COAL_X, 31.5, S, ug="input"), g(UG, COAL_X, 36.5, S, ug="output")]
+    out += line(BELT, COAL_X, 37.5, COAL_X, 47.5, S)
+    out += [g(BELT, COAL_X, 48.5, W), g(UG, 62.5, 48.5, W, ug="input"), g(UG, 60.5, 48.5, W, ug="output")]   # 구리 줄기 (61.5) 밑
+    out += line(BELT, 59.5, 48.5, 10.5, 48.5, W)
+    out += [g(UG, 9.5, 48.5, W, ug="input"), g(UG, 7.5, 48.5, W, ug="output")]   # 발전 동쪽 벽 (x 8.5) 밑
+    out += line(BELT, 6.5, 48.5, -30.5, 48.5, W)
     out += [g(INS, x, 47.5, S) for x in BOIL_X]
     return out
+
+
+def coal_clear():
+    return [("iron-chest", -5.5, 48.5)]                    # P7 이 손으로 채우던 보일러 (-5.5) 석탄 상자 - 벨트가 대신
+
+
+def eastwall():
+    """코디네이터 01:5x: 발전 남쪽 호숫가 동쪽 벽 (x 8.5) 이 y 44.5 에서 끝나 북쪽이 열렸다 - y 34.5 까지 잇는다 (재료 = mall 벽 상자)."""
+    return [g("stone-wall", 8.5, y + 0.5) for y in range(34, 44)]
 
 
 def boilers():
@@ -378,7 +400,7 @@ def bl():
 
 
 STAGES = {"ironout": (ironout, ironout_clear), "copperout": (copperout, copperout_clear), "rg": (rg, rg_clear), "smelt": (smelt, smelt_clear),
-          "mall": (mall, None), "coal": (coal, None), "boilers": (boilers, None), "bl": (bl, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear)}
+          "mall": (mall, None), "coal": (coal, coal_clear), "eastwall": (eastwall, None), "boilers": (boilers, None), "bl": (bl, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear)}
 ROTATE = {"copperout": copperout_rotate}
 
 # ---------------------------------------------------------------------------------------------------------------

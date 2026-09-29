@@ -296,7 +296,7 @@ SMELT = [[[72.5, -10.5, 85.5, -7.5], "stone", 20, "stone-brick", 1500],
          [[72.5, -13.5, 81.5, -10.6], "iron-plate", 25, "steel-plate", 400]]     # P3 강철 화로 4 더 (p3_24.STEEL2_XS, y -12)
 # P7 smelt (logi24): 돌 채굴기가 벨트에 바로 붓고 벽돌 2 · 강철 8 강철로는 필터 팔 · 결과 벨트 → 허브. 되돌리려면 목록을 비운다.
 DROP_CHESTS = ["stone"]                  # "stone"
-DROP_SMELT = ["stone-brick"]  # 01:12 강철 줄 되살림 (결과 벨트 → 허브 상자 공사 중, 사람 없음)                  # "stone-brick" · "steel-plate" (결과 품목)
+DROP_SMELT = ["stone-brick", "steel-plate"]  # 01:12 되살렸다가 01:50 다시 뺌 (벨트 강철 10분 485 · 허브 759)                  # "stone-brick" · "steel-plate" (결과 품목)
 CHESTS = [c for c in CHESTS if c[1] not in DROP_CHESTS]
 SMELT = [m for m in SMELT if m[3] not in DROP_SMELT]
 
