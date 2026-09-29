@@ -33,7 +33,9 @@ Q_LUA = """(function()
   out.ghost = s.count_entities_filtered{ghost_name = 'storage-chest', force = f, position = {%f, %f}, radius = 0.3}
   local g = c and c.get_filter(1)                    -- 2.0 저장 상자 필터 = set_filter(1, ...) (storage_filter 는 안 먹힘)
   if c and not g then c.set_filter(1, {name = 'coal', quality = 'normal'}); g = c.get_filter(1) end
-  out.filter = g and (type(g.name) == 'table' and g.name.name or g.name) or ''
+  local gn = g and g.name
+  if gn and type(gn) ~= 'string' then gn = gn.name end      -- LuaItemPrototype (userdata) 이면 이름으로
+  out.filter = gn or ''
   for _, e in pairs(s.find_entities_filtered{type = {'container', 'logistic-container'}, force = f, area = %s}) do
     local n = e.get_inventory(defines.inventory.chest).get_item_count('coal')
     if n > 0 then out.src[#out.src + 1] = {e.position.x, e.position.y, n} end
