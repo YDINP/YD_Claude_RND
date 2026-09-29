@@ -71,7 +71,34 @@ stone       중심 (104,1)     거리 104 · (88,-8)~(120,16)      · 383,045
 |---|---|
 | jevloop | 1초 도망 판단 (HOME = 회차 center) |
 | seen | 걸은 시야 장부 |
+| handore_charlie | 구리 손채굴 → 구리 화로 (버너가 다 덮으면 끈다) |
+| fuel_run | golf - 석탄 상자 → 버너 · 화로 · 보일러 |
+| collect_run | bravo - 화로 판 → 허브 (66.5..73.5, -15.5) |
+| redsci | echo · foxtrot - 허브 판으로 빨강 손제작 → 연구소 2 |
 | research_guard | `--packs automation-science-pack --prefer gun-turret,military,automation,electric-mining-drill,stone-wall,logistics,...` · 23회차 `--skip` 에서 초반에 쓸 포탑 위력 (physical-projectile-damage · weapon-shooting-speed) 은 뺐다 |
+
+## P0 (2026-09-29 19:30 ~ 20:05, tick 30k → 160k)
+
+- 손채굴 → 돌 화로 18 (철 12 · 구리 6) → 버너 채굴기 21 (철 12 · 구리 6 · 석탄 3). 해금 셋 (steam-power · electronics · 빨강) 완료.
+- **발전소는 물가에 먼저** (`scripts/power24.py`, 자리는 모드 power_plan): 펌프 (-41.5,15.5) · 보일러 (-42,13.5) · 기관 2 (1.8MW),
+  연구소 2 (-45.5,8.5)·(-39.5,8.5) 를 기관 곁에. 보일러 연료는 fuel_run (golf) + 손.
+- 연구 (research_guard, 방어 관문 D 순서): gun-turret → military → automation → electric-mining-drill → stone-wall → logistics
+  **여섯 다 끝** (tick ~155k). 다음 physical-projectile-damage-1.
+- 관문 D 1차: 포탑 4 (80,-61)·(86,-61)·(92,-61)·(89,-66) 철 버너 줄 북쪽 (공해가 가장 큰 곳), 탄창 10 씩 (손).
+  방어 조 hotel · delta 기관단총 + 탄창 20. **둥지 방향을 아직 모른다** - 2차 정찰 (반경 460, 방위 8) 에서도 적 구조물 0.
+  걸어서 본 거리 (기지 중심에서): 동 253 · 남동 396 · 남 340 · 남서 446 · 서 386 · 북서 428 · 북 312 · 북동 348
+  (동·남동·남쪽은 300 부근에서 물/절벽으로 걸음이 멈춤). 탄약 벨트 · 전원 무장은 아직 - P1 에서.
+- 10분 생산 (tick 160k): 철판 1,087 · 구리판 634. 허브 철판 ~1,900 · 구리 ~250.
+
+### 함정 (24회차)
+
+- **트리거 기술이 안 열렸다: lab 을 세 대 손제작했는데 automation-science-pack 이 false.** 모드의 craft 가 23회차에 «늘 비차단» 으로
+  바뀌면서 결과가 `{ordered=n, waited=false}` 가 되어 `count_crafted_recipe` 가 crafted=0 을 센다 (runner.lua `finish`).
+  steam-power · electronics 는 화로 판이라 열렸다. **트리거용 craft 는 `wait="block"`** (결과 `{crafted=1}` → 바로 열림).
+  redsci.py 의 lab craft 를 block 으로 고쳤다. 모드 수정은 서버 재시작이 필요해 미룸.
+- 헤드리스 무접속 = 차트 0 (위) → seen.py 장부. walkscout 의 «stuck» 은 대개 물·절벽 (그 방위 300칸 부근).
+- coldstart.py 에 22회차 석탄 좌표 (15.5,-98.5)·(8.5,-97.5) 가 남아 있었다 → 회차 앵커로. p1.fetch 의 나무 자리 · PARK 도 회차 설정으로.
+- coldstart drills: 석탄 채굴기 4 중 1 만 섰다 (판 부족) - golf 가 2 더.
 
 ## 사망 기록
 

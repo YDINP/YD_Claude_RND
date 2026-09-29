@@ -65,7 +65,8 @@ def main() -> int:
                             ("take", {"name": "iron-plate", "x": hx, "y": hy, "count": 2 * BATCH + (40 if not have.get("lab") else 0)}),
                             ("take", {"name": "copper-plate", "x": cx, "y": cy, "count": BATCH + (20 if not have.get("lab") else 0)})]
                     if not have.get("lab"):
-                        plan += [("craft", {"recipe": "lab", "count": 1, "wait": True}),
+                        # "block": 비차단 craft 는 모드가 crafted 를 안 세서 트리거 (lab -> automation-science-pack) 가 안 열린다 (24회차 실측)
+                        plan += [("craft", {"recipe": "lab", "count": 1, "wait": "block"}),
                                  ("walk_to", {"x": x, "y": y + 3.0}),
                                  ("build", {"name": "lab", "x": x, "y": y})]
                         if first:

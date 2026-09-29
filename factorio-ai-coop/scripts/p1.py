@@ -52,6 +52,14 @@ SIZE = {"electric-mining-drill": 3, "assembling-machine-1": 3, "assembling-machi
         "oil-refinery": 5, "chemical-plant": 3, "storage-tank": 3, "pump": 2, "offshore-pump": 2,
         "splitter": 2, "iron-chest": 1}                  # 긴 변 (타일) - 짓는 사람이 설 거리
 PARK = (14.5, -30.5)                                   # 공사가 끝나면 비켜 서는 곳 (빈 땅)
+WOOD = (7.0, -76.0, 9, -74)                            # 나무 무리 (서는 칸 x,y · 벨 칸 x,y) - 22회차 값
+try:                                                   # 24회차: 회차 설정 파일의 park · trees (22회차 좌표가 새 판에 새지 않게)
+    PARK = tuple(_site.get("park") or PARK)
+    if _site.get("trees"):
+        _tx, _ty = _site["trees"]
+        WOOD = (_tx - 2.0, _ty, _tx, _ty)
+except NameError:
+    pass
 
 # 판으로 따진 값 (한 개당). 창고가 없으니 허브의 판에서 만든다.
 COST = {
@@ -303,7 +311,7 @@ def fetch(ai, who, need: dict) -> list:
         if lack <= 0:
             continue
         if m == "wood":
-            plan += [("walk_to", {"x": 7.0, "y": -76.0}), ("chop", {"x": 9, "y": -74, "count": max(2, lack // 4 + 1)})]
+            plan += [("walk_to", {"x": WOOD[0], "y": WOOD[1]}), ("chop", {"x": WOOD[2], "y": WOOD[3], "count": max(2, lack // 4 + 1)})]
         elif m in h:
             x, y, c = h[m]
             plan += [("walk_to", {"x": x, "y": y + 1.5}),
