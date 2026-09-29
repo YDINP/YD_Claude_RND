@@ -51,6 +51,7 @@ p1.COST.update({
     "roboport": {"steel-plate": 45, "iron-plate": 180, "copper-plate": 225, "plastic-bar": 90},
     # 저장 상자: 강철 상자 (강철 8) + 회로 3 + 고급회로 1
     "storage-chest": {"steel-plate": 8, "iron-plate": 5, "copper-plate": 10, "plastic-bar": 2},
+    "passive-provider-chest": {"steel-plate": 8, "iron-plate": 5, "copper-plate": 10, "plastic-bar": 2},
 })
 p1.PAIRED.add(PTG)
 p1.SIZE.update({TANK: 3, ASM2: 3, CHEM: 3, "oil-refinery": 5, "roboport": 4, "gun-turret": 2})
@@ -151,16 +152,60 @@ def portpower_steps():
     return [b(POLE, x, y) for x, y in PORT_POLES]
 
 
-STAGES = {"portpower": portpower_steps, "plastic2": plastic2_steps, "ports": ports_steps, "ports2": lambda: ports_steps(PORTS2), "crude2": crude2_steps, "water2": water2_steps, "ref2": ref2_steps, "acid": acid_steps, "robo": robo_steps, "robo2": robo2_steps}
+# L0 (logistic-robotics): 물류 로봇 조립기 (-72.5,-10.5) + 허브 줄 끝 공급 상자 2 (72.5 · 73.5, -15.5) - relay 가 허브로 보고 판을 넣는다
+#   → 허브 재고가 R_H 망에 보인다 (캐릭터 요청 · 건설 로봇 재료). relay 줄은 아직 안 지운다 (P4-3 표).
+def lrobo_steps():
+    return [b(ASM1, -72.5, -10.5), b(POLE, -72.5, -8.5),
+            b("passive-provider-chest", 72.5, -15.5), b("passive-provider-chest", 73.5, -15.5)]
+
+
+# 유전 R_O (-190,28): SW 둥지 (658 ×4) 에서 가장 가까운 우리 것 (유전 포탑 9 · 펌프잭). 남서 벽 모서리 (-216.5,53.5) 에서 ~35 칸 안쪽,
+#   건설 반경 55 가 유전 포탑 · 벽 전부를 덮는다. 따로 도는 망 (기지 망과 안 이어짐) - 저장 상자 · 로봇은 relay 가 포트마다 상한으로.
+#   전봇대 (-188.5,30.5) 의 공급이 포트에 닿는다 (can_place · 거리 확인). 떠나기 직전 출정 조건 (p3_24.oil_ok) 을 다시 잰다.
+PORTS_OIL = {"R_O": (-190, 28)}
+
+
+STAGES = {"portoil": lambda: ports_steps(PORTS_OIL), "lrobo": lrobo_steps, "portpower": portpower_steps, "plastic2": plastic2_steps, "ports": ports_steps, "ports2": lambda: ports_steps(PORTS2), "crude2": crude2_steps, "water2": water2_steps, "ref2": ref2_steps, "acid": acid_steps, "robo": robo_steps, "robo2": robo2_steps}
+
+
+# 로봇이 짓는 것 (23회차 방식: 사람은 전초, 벽 안은 로봇 유령). 유령만 놓는다 (사람이 청사진을 놓는 일) - 재료는 망 저장 상자 (relay NET_STOCK),
+#   탄은 relay 가 모든 포탑에 (로봇은 탄을 안 넣는다). 망 건설 반경 안인지 · 망 재고가 있는지 먼저 묻는다.
+#   swghost: SW 틈 337 (가장 작음) - 정유 · 발전 남서 줄 (P3 refsw 10) 안쪽 둘째 겹 6, R_W 건설 반경 안 (22:45 can_place ghost_revive 확인)
+GHOSTS = {"swghost": [("gun-turret", x, y) for x, y in ((-126, 40), (-118, 44), (-108, 44), (-96, 46), (-126, 32), (-86, 46))]}
+
+
+def place_ghosts(ai, name) -> dict:
+    packed = ";".join(f"{n},{x},{y}" for n, x, y in GHOSTS[name])
+    return ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local out = {placed = 0, skip = 0, nonet = 0}
+      for bit in string.gmatch("%s", "[^;]+") do
+        local n, x, y = string.match(bit, "([^,]+),([^,]+),([^,]+)")
+        local pos = {tonumber(x), tonumber(y)}
+        local nets = s.find_logistic_networks_by_construction_area(pos, f)
+        if #nets == 0 then out.nonet = out.nonet + 1
+        elseif s.count_entities_filtered{name = n, force = f, position = pos, radius = 0.6} > 0
+            or s.count_entities_filtered{ghost_name = n, force = f, position = pos, radius = 0.6} > 0 then out.skip = out.skip + 1
+        elseif s.can_place_entity{name = n, position = pos, force = f, build_check_type = defines.build_check_type.ghost_revive} then
+          s.create_entity{name = "entity-ghost", inner_name = n, position = pos, force = f}
+          out.placed = out.placed + 1
+        end
+      end
+      return out
+    end)()""" % packed)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--stage", default="", choices=("", *STAGES))
+    ap.add_argument("--ghosts", default="", choices=("", *GHOSTS))
     ap.add_argument("--who", default="")
     ap.add_argument("--rounds", type=int, default=10)
     a = ap.parse_args()
     ai = AIBridge()
+    if a.ghosts:
+        print(a.ghosts, place_ghosts(ai, a.ghosts))
+        return 0
     for name, fn in STAGES.items():
         steps = fn()
         bad = p1.blocked(ai, steps)
@@ -173,6 +218,10 @@ def main() -> int:
     #   (가방에 로보포트를 든 채 놀던 넷). 이 파일의 단계는 craft 를 wait="block" 으로.
     _fetch = p1.fetch
     p1.fetch = lambda ai_, who, need: [(k, dict(p, wait="block")) if k == "craft" else (k, p) for k, p in _fetch(ai_, who, need)]
+    if a.stage == "portoil":
+        from p3_24 import oil_ok
+        if not oil_ok(ai):
+            return 2
     owner = "p4_24_" + a.stage
     os.environ[detached.ENV] = owner
     detached.mark(crew, owner, minutes=90)

@@ -58,6 +58,7 @@ TYPES = {
     "lab": ["lab", "inserter", "electric-pole"],
     "turret": ["ammo-turret"],
     "wall": ["wall", "gate"],
+    "port": ["roboport", "logistic-container"],        # P4 로봇망: 포트 · 저장/공급 상자 수 (설비 M/M0 이 곧 손실)
 }
 
 LUA = """(function()
@@ -165,6 +166,9 @@ def judge(name: str, z: dict, r: dict, m: dict, dt_ticks: int) -> tuple:
     elif kind == "wall":
         m["prod"] = count
         shown = f"벽 {count}"
+    elif kind == "port":
+        m["prod"] = count
+        shown = f"포트·상자 {count}"
     else:  # turret
         prod = int(r.get("ammo", 0))
         m["prod"] = prod

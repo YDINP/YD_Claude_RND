@@ -97,6 +97,7 @@ ASMS = {
     "turretasm": [-84.5, -10.5, "gun-turret"],
     "repair": [-80.5, -10.5, "repair-pack"],
     "gear4": [-76.5, -10.5, "iron-gear-wheel"],
+    "lrobot": [-72.5, -10.5, "logistic-robot"],          # L0 (logistic-robotics)
 }
 
 # (출처, 품목, 받는 조립기, 상한) - 출처 "hub" 또는 조립기 이름 (그 조립기의 결과칸). 위에서부터 차례로.
@@ -203,9 +204,10 @@ FEEDS += [["hub", "stone-brick", "wallasm", 25], ["hub", "iron-plate", "gear4", 
           ["gear4", "iron-gear-wheel", "turretasm", 10], ["hub", "iron-plate", "turretasm", 20], ["hub", "copper-plate", "turretasm", 10],
           ["gear4", "iron-gear-wheel", "repair", 4], ["circuit3", "electronic-circuit", "repair", 4],
           ["gear4", "iron-gear-wheel", "roboport1", 50]]
+FEEDS += [["frame1", "flying-robot-frame", "lrobot", 2], ["frame2", "flying-robot-frame", "lrobot", 2], ["adv5", "advanced-circuit", "lrobot", 4]]
 # (조립기, 품목, 허브 상한) - 결과칸 → 허브. 로봇 · 로보포트는 허브에서 사람이 들고 가 놓는다 (또는 relay 가 로보포트에)
 OUTS = [["robot1", "construction-robot", 100], ["roboport1", "roboport", 10], ["pierce", "piercing-rounds-magazine", 400],
-        ["turretasm", "gun-turret", 20], ["repair", "repair-pack", 100], ["wallasm", "stone-wall", 200]]
+        ["turretasm", "gun-turret", 20], ["repair", "repair-pack", 100], ["wallasm", "stone-wall", 200], ["lrobot", "logistic-robot", 40]]
 # 로봇망 (construction-robotics 뒤). 23회차 §3-10: 망 저장이 차면 건설 로봇이 선다 → 모두 «상자마다 · 포트마다» 상한.
 #   (품목, 상자 하나 상한) 허브 → 망 저장 상자 (storage-chest) - 재건 · 수리 재료. 저장 상자는 48 칸, 여기서 쓰는 것은 칸 넷 남짓
 NET_STOCK = [["stone-wall", 100], ["gun-turret", 10], ["repair-pack", 50]]      # 탄창은 로봇이 안 넣는다 - 상자에 두지 않는다
@@ -217,7 +219,7 @@ PIERCE_ZONES = [[-220, 14, -178, 56],        # 유전 (SW 둥지에서 가장 �
                 [70, -70, 100, -58],         # 철 북쪽 줄
                 [48, 70, 90, 102]]           # 구리 남서
 #   허브 → 로보포트 칸 (포트 하나 상한): 건설 로봇 (포트당 25~50 권고 - 처음엔 15) · 수리팩
-PORT_STOCK = [["construction-robot", 15, "robot"], ["repair-pack", 50, "material"]]
+PORT_STOCK = [["construction-robot", 15, "robot"], ["repair-pack", 50, "material"], ["logistic-robot", 5, "robot"]]
 LAB_CAP = 20
 TURRET_CAP = 20
 CHEST_CAP = 200
@@ -255,7 +257,9 @@ LUA = """(function()
       if not e.get_recipe() and f.recipes[a[3]] and f.recipes[a[3]].enabled then e.set_recipe(a[3]) end
     else out.miss[#out.miss+1] = name end
   end
+  -- L0: 허브 줄 끝 공급 상자 (passive-provider) 도 허브 - 거기 든 판이 로봇망에 보인다. 저장 · 요청 상자는 허브가 아니다
   local hubs = s.find_entities_filtered{type = "container", force = f, area = {{HB[1], HB[2]}, {HB[3], HB[4]}}}
+  for _, c in pairs(s.find_entities_filtered{name = "passive-provider-chest", force = f, area = {{HB[1], HB[2]}, {HB[3], HB[4]}}}) do hubs[#hubs+1] = c end
   local function hub_take(item, want)
     local got = 0
     for _, c in pairs(hubs) do
