@@ -37,7 +37,9 @@ HX, HY = site["hub"]
 HUB_BOX = [HX - 4, HY - 0.6, HX + 7, HY + 0.6]
 AMMO_CHEST = [HX, HY]                     # 허브 줄 맨 서쪽 나무 상자 (66.5,-15.5)
 LAB_BOX = [-60, -7, -33, 12]            # P2: 조립 줄 북쪽 연구소 6 (y -4.5) 까지
-RESERVE = {"iron-plate": 300, "copper-plate": 100, "stone": 100}
+LAB_BOX2 = [2, -7, 19, 2]               # P5: 파랑 블록 동쪽 연구소 8 (p5_24.LABS5)
+# P5 (22:58): 허브 철판 354 - relay 가 300 위를 다 가져가 짓는 사람이 기다렸다 → 공사 동안 철판 예비 1000
+RESERVE = {"iron-plate": 1000, "copper-plate": 100, "stone": 100}
 
 # p1_24.ASMS 와 같은 표 (그 모듈을 import 하면 p1 이 따라와 무겁다 - 좌표만)
 ASMS = {
@@ -98,6 +100,15 @@ ASMS = {
     "repair": [-80.5, -10.5, "repair-pack"],
     "gear4": [-76.5, -10.5, "iron-gear-wheel"],
     "lrobot": [-72.5, -10.5, "logistic-robot"],          # L0 (logistic-robotics)
+    # P5 (p5_24.SCI5): 빨강 · 초록 · 엔진 · 고급회로 - 연구소 18 의 먹성에 맞춰
+    "red6": [-9.5, 8.5, "automation-science-pack"],
+    "red7": [-5.5, 8.5, "automation-science-pack"],
+    "green6": [-1.5, 8.5, "logistic-science-pack"],
+    "green7": [2.5, 8.5, "logistic-science-pack"],
+    "eng5": [6.5, 8.5, "engine-unit"],
+    "eng6": [10.5, 8.5, "engine-unit"],
+    "adv6": [14.5, 8.5, "advanced-circuit"],
+    "pierce2": [-68.5, -10.5, "piercing-rounds-magazine"],   # P5 피어싱 둘째 (p5_24.pierce2_steps)
 }
 
 # (출처, 품목, 받는 조립기, 상한) - 출처 "hub" 또는 조립기 이름 (그 조립기의 결과칸). 위에서부터 차례로.
@@ -205,12 +216,29 @@ FEEDS += [["hub", "stone-brick", "wallasm", 25], ["hub", "iron-plate", "gear4", 
           ["gear4", "iron-gear-wheel", "repair", 4], ["circuit3", "electronic-circuit", "repair", 4],
           ["gear4", "iron-gear-wheel", "roboport1", 50]]
 FEEDS += [["frame1", "flying-robot-frame", "lrobot", 2], ["frame2", "flying-robot-frame", "lrobot", 2], ["adv5", "advanced-circuit", "lrobot", 4]]
+# P5: 새 과학 조립기 7 - 같은 상한 규칙
+for _r in ("red6", "red7"):
+    FEEDS += [["hub", "copper-plate", _r, 10], ["gear2", "iron-gear-wheel", _r, 10], ["gear3", "iron-gear-wheel", _r, 10]]
+for _g in ("green6", "green7"):
+    FEEDS += [["inserter", "inserter", _g, 4], ["belt", "transport-belt", _g, 4]]
+for _e in ("eng5", "eng6"):
+    FEEDS += [["hub", "steel-plate", _e, 5], ["gear2", "iron-gear-wheel", _e, 5], ["gear3", "iron-gear-wheel", _e, 5], ["pipe", "pipe", _e, 10],
+              [_e, "engine-unit", "eeng", 2]]
+FEEDS += [["hub", "plastic-bar", "adv6", 10], ["cable3", "copper-cable", "adv6", 20], ["cable2", "copper-cable", "adv6", 20],
+          ["circuit", "electronic-circuit", "adv6", 10], ["circuit2", "electronic-circuit", "adv6", 10]]
+for _b in ("blue1", "blue2", "blue3", "blue4", "blue5"):
+    FEEDS += [[_e, "engine-unit", _b, 4] for _e in ("eng5", "eng6")] + [["adv6", "advanced-circuit", _b, 6]]
+# P5 피어싱 둘째 + 허브 노랑 탄창 (포탑에서 돌려받은 700) 을 피어싱 재료로
+FEEDS += [["hub", "firearm-magazine", "pierce", 10], ["hub", "firearm-magazine", "pierce2", 10], ["ammo", "firearm-magazine", "pierce2", 10],
+          ["hub", "steel-plate", "pierce2", 5], ["hub", "copper-plate", "pierce2", 10]]
 # (조립기, 품목, 허브 상한) - 결과칸 → 허브. 로봇 · 로보포트는 허브에서 사람이 들고 가 놓는다 (또는 relay 가 로보포트에)
-OUTS = [["robot1", "construction-robot", 100], ["roboport1", "roboport", 10], ["pierce", "piercing-rounds-magazine", 400],
-        ["turretasm", "gun-turret", 20], ["repair", "repair-pack", 100], ["wallasm", "stone-wall", 200], ["lrobot", "logistic-robot", 40]]
+# P5: 포탑 조립기가 10분 철판 ~1,500 을 먹었다 (허브 · 저장 상자 채우기) - 허브 20 → 10, 저장 상자 10 → 5
+# P5-3: 건설 로봇 허브 100 → 20 (포트 8 × 15 = 120 이 이미 섰다) - 틀이 물류 로봇 조립기로 가게
+OUTS = [["robot1", "construction-robot", 20], ["roboport1", "roboport", 10], ["pierce", "piercing-rounds-magazine", 400], ["pierce2", "piercing-rounds-magazine", 400],
+        ["turretasm", "gun-turret", 10], ["repair", "repair-pack", 100], ["wallasm", "stone-wall", 200], ["lrobot", "logistic-robot", 40]]
 # 로봇망 (construction-robotics 뒤). 23회차 §3-10: 망 저장이 차면 건설 로봇이 선다 → 모두 «상자마다 · 포트마다» 상한.
 #   (품목, 상자 하나 상한) 허브 → 망 저장 상자 (storage-chest) - 재건 · 수리 재료. 저장 상자는 48 칸, 여기서 쓰는 것은 칸 넷 남짓
-NET_STOCK = [["stone-wall", 100], ["gun-turret", 10], ["repair-pack", 50]]      # 탄창은 로봇이 안 넣는다 - 상자에 두지 않는다
+NET_STOCK = [["stone-wall", 100], ["gun-turret", 5], ["repair-pack", 50]]      # 탄창은 로봇이 안 넣는다 - 상자에 두지 않는다
 # 피어싱으로 바꾸는 순서 = raidwatch 틈이 작은 방위부터 (22:13: SW 337 · E 370 · NW 402). [x0, y0, x1, y1]
 PIERCE_ZONES = [[-220, 14, -178, 56],        # 유전 (SW 둥지에서 가장 가까운 우리 것)
                 [-130, 0, -84, 50],          # 정유 · 발전 남서 줄
@@ -226,9 +254,13 @@ CHEST_CAP = 200
 COAL_BOX = [100, -34, 126, -22]
 # (이름, x, y, 레시피, 넣을 품목 ("" = 없음), 상한, 꺼낼 품목, 허브 상한) - p2_24 REFINERY · PLASTIC
 CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
-        ["chemical-plant", -106.5, 13.5, "plastic-bar", "coal", 20, "plastic-bar", 1000],      # P4: 500 → 1000 (로보포트 · 고급회로 5)
+        ["chemical-plant", -106.5, 13.5, "plastic-bar", "coal", 20, "plastic-bar", 700],       # P5: 1000 → 700 - 정유 1 가스를 황 첫째가 먼저 (플라스틱은 둘째 몫)      # P4: 500 → 1000 (로보포트 · 고급회로 5)
         ["chemical-plant", -102.5, 13.5, "sulfur", "", 0, "sulfur", 600],
-        ["chemical-plant", -71.5, 11.5, "plastic-bar", "coal", 20, "plastic-bar", 1000]]      # P4 플라스틱 둘째 (석유 탱크 P)                   # P4: 300 → 600 (황산)           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
+        ["chemical-plant", -71.5, 11.5, "plastic-bar", "coal", 20, "plastic-bar", 1000],
+        # P5 기름 블록 (p5_24.crack_steps): 중유 분해 · 경유 분해 · 황 둘째 - 레시피는 관보다 먼저 선 기계에 걸린다
+        ["chemical-plant", -82.5, 4.5, "heavy-oil-cracking", "", 0, "", 0],
+        ["chemical-plant", -79.5, 4.5, "light-oil-cracking", "", 0, "", 0],
+        ["chemical-plant", -75.5, 4.5, "sulfur", "", 0, "sulfur", 600]]      # P4 플라스틱 둘째 (석유 탱크 P)                   # P4: 300 → 600 (황산)           # 석탄 밭 상자 (버너 줄 -24.5 · 전기 줄 -29.5)
 BOIL, BURN = 20, 5
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍 (P2: 철 버너 줄 자리의 전기 쌍 C (y -54) 까지). 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
 PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500],
@@ -380,7 +412,11 @@ LUA = """(function()
   end
   -- 팩 -> 연구소
   local labs = s.find_entities_filtered{name = "lab", force = f, area = {{LB[1], LB[2]}, {LB[3], LB[4]}}}
-  for _, src in pairs({"red1", "red2", "red3", "red4", "red5", "green", "green2", "green3", "green4", "green5", "blue1", "blue2", "blue3", "blue4", "blue5"}) do
+  -- P5: 둘째 연구소 구역 (파랑 블록 동쪽 8) - 먼저 찬 쪽이 아니라 번갈아 (앞 구역만 채우면 뒤 구역이 굶는다)
+  local LB2 = %s
+  for _, l in pairs(s.find_entities_filtered{name = "lab", force = f, area = {{LB2[1], LB2[2]}, {LB2[3], LB2[4]}}}) do labs[#labs+1] = l end
+  table.sort(labs, function(a, b) return a.get_inventory(defines.inventory.lab_input).get_item_count() < b.get_inventory(defines.inventory.lab_input).get_item_count() end)
+  for _, src in pairs({"red1", "red2", "red3", "red4", "red5", "red6", "red7", "green", "green2", "green3", "green4", "green5", "green6", "green7", "blue1", "blue2", "blue3", "blue4", "blue5"}) do
     local m = M[src]
     if m and m.get_recipe() then
       local sout = m.get_inventory(defines.inventory.assembling_machine_output)
@@ -615,7 +651,7 @@ def lua_box(b) -> str:
 
 def once(ai) -> dict:
     return ai.lua(LUA.replace("__PZ__", blob(PIERCE_ZONES)) % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
-                         AMMO_CHEST[0], AMMO_CHEST[1], blob(OUTS), blob(PORT_STOCK), blob(NET_STOCK), LAB_CAP,
+                         AMMO_CHEST[0], AMMO_CHEST[1], blob(OUTS), blob(PORT_STOCK), blob(NET_STOCK), lua_box(LAB_BOX2), LAB_CAP,
                          TURRET_CAP, TURRET_CAP, TURRET_CAP, TURRET_CAP, TURRET_CAP, CHEST_CAP,
                          blob(PLATES), blob(CHESTS), blob(SMELT), lua_box(COAL_BOX), blob(CHEM), BOIL, BURN, BURN, BURN))
 
