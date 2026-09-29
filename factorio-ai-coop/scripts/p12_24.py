@@ -100,8 +100,10 @@ for _x in range(25, 59):
     add("gp", BELT, _x + 0.5, -18.5, W)
 add("gp", CHEST, 51.5, -16.5, N, "cP12")             # 플라스틱 상자 (사람 손 - blhaul delta)
 add("gp", INS, 51.5, -17.5, S)                       # 상자 → GP (남쪽에서 넣으니 먼 레인 = 북)
-add("gp", PPC, 52.5, -16.5, N, "green_out")          # 녹색 내보내기 (망)
-add("gp", FAST, 52.5, -17.5, N, "filter:electronic-circuit")
+# 녹색 내보내기 (망): 07:5x 처음엔 (52.5,-17.5) 빠른 필터 팔이었는데 G3 (54.5) 녹색을 다 가져가 A4 (49.5) 가 굶었다 (GP 는 서쪽으로 흐르고
+#   A4 위쪽 G 는 G3 하나) → 거기 상자는 걷고 (팔은 필터째 둠, 상자가 없어 쉰다), A2~A4 를 다 지난 x 31.5 (A2 와 C_A1 사이 틈) 에서 보통 팔 (~1.4/s) 로 넘치는 몫만.
+add("gp", PPC, 31.5, -16.5, N, "green_out")
+add("gp", INS, 31.5, -17.5, N, "filter:electronic-circuit")
 
 # --- A 줄 (조립기 가운데 y -15.5): A C_A A C_A A C_A A ---------------------------------------------------------------
 AX = (25.5, 33.5, 41.5, 49.5)
@@ -143,7 +145,7 @@ UPGRADE_INS = [(12.5, 13.5), (-2.5, 13.5), (1.5, 8.5)]                        # 
 
 # 속도 모듈 (echo 손제작 → STORE) → 건설 로봇 proxy 로 모듈 칸에 (대상마다 ≤ 2 개). 조립기 2 는 칸 2 개 - 속도 1 × 2 = 0.75 → 1.05.
 #   LDS 둘 (노랑 상한 60 → 84) · PU (45 → 63) · Y (64 → 90) · M (30 → 42 = 보라 126). P 는 이미 둘.
-MODULES = [(-2.5, 15.5), (1.5, 10.5), (1.5, 20.5), (1.5, 16.5), (7.5, 11.5)]
+MODULES = [(-2.5, 15.5), (1.5, 10.5), (1.5, 20.5), (1.5, 16.5), (7.5, 11.5), (-4.5, 7.5)]   # + LDS3
 
 
 def modules(ai) -> dict:
@@ -213,7 +215,7 @@ def recipes(ai) -> dict:
 
 def filters(ai) -> dict:
     """녹색 내보내기 팔 필터 · 공급 상자 칸 제한 (필터는 더하기만 - 있는 필터는 지우지 않는다)."""
-    rows = [[x, y, ex.split(":", 1)[1]] for st, n, x, y, d, ex in ZN if n == FAST and ex and ex.startswith("filter:")]
+    rows = [[x, y, ex.split(":", 1)[1]] for st, n, x, y, d, ex in ZN if n in (FAST, INS) and ex and ex.startswith("filter:")]
     return ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local out = {filter = 0, bar = 0}
@@ -221,7 +223,7 @@ def filters(ai) -> dict:
         local e = s.find_entities_filtered{type = 'inserter', force = f, position = {q[1], q[2]}, radius = 0.3}[1]
         if e and not e.get_filter(1) then e.use_filters = true; e.inserter_filter_mode = 'whitelist'; e.set_filter(1, q[3]); out.filter = out.filter + 1 end
       end
-      local g = s.find_entities_filtered{name = 'passive-provider-chest', force = f, position = {52.5, -16.5}, radius = 0.3}[1]
+      local g = s.find_entities_filtered{name = 'passive-provider-chest', force = f, position = {31.5, -16.5}, radius = 0.3}[1]
       if g then g.get_inventory(defines.inventory.chest).set_bar(6); out.bar = out.bar + 1 end     -- 녹색 1,000 까지만 (5 칸)
       return out
     end)()""" % json.dumps(rows))
@@ -261,7 +263,7 @@ def status(ai) -> dict:
       local gh = 0
       for _, g in pairs(s.find_entities_filtered{type = 'entity-ghost', force = f, area = {{22, -32}, {72, -8}}}) do gh = gh + 1 end
       out.ghosts = gh
-      for _, p in pairs({{25.5, -9.5}, {52.5, -16.5}, {51.5, -16.5}}) do
+      for _, p in pairs({{25.5, -9.5}, {31.5, -16.5}, {51.5, -16.5}}) do
         local c = s.find_entities_filtered{type = {'container', 'logistic-container'}, force = f, position = p, radius = 0.3}[1]
         if c then local t = {}; for _, v in pairs(c.get_inventory(defines.inventory.chest).get_contents()) do t[#t + 1] = v.name .. v.count end
           out['chest' .. p[1]] = table.concat(t, ',') end

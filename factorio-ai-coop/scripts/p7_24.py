@@ -47,7 +47,7 @@ INS, LONG, BELT, UG = "inserter", "long-handed-inserter", "transport-belt", "und
 PIPE, PTG, CHEST, POLE = "pipe", "pipe-to-ground", "iron-chest", "small-electric-pole"
 SIZE = {ASM1: 3, ASM2: 3, CHEM: 3, "electric-mining-drill": 3}
 FOOT = {"boiler": (3, 2), "steam-engine": (3, 5)}
-POWERED = {ASM1, ASM2, CHEM, INS, LONG, "electric-mining-drill"}
+POWERED = {ASM1, ASM2, CHEM, INS, LONG, "electric-mining-drill", "fast-inserter"}
 NET_OK = {ASM1, "electric-mining-drill"}
 STORE = (11.5, -9.5)                     # R_M 옆 저장 상자 (p6_24.ASM2_STORE) - 로봇이 유령 재료를 여기서 가져간다
 
@@ -254,6 +254,23 @@ add("labfeed", LONG, 3.5, -6.5, N)
 _CUR[0] = P9
 add("pu", INS, 0.5, 22.5, S)
 add("pu", INS, 2.5, 22.5, S)
+# P12 (07:4x): LDS 셋째 (노랑 세 배 - LDS 0.3/s 는 조립기 2 + 속도 둘 (1.05) 로 4.3 대 몫). K 서쪽 빈 땅 (x -10..3, y 4..9 - free 지도).
+#   상자 cL3 (구리 · 강철 · 플라스틱) → 빠른 팔 → LDS3 (-4.5,7.5) → 팔 → 벨트 x -1.5 북 → y 5.5 동 → x 3.5 남 (K 바로 서쪽 칸) → 끝 (3.5,13.5) → 팔 → 상자 cF → Y.
+#   셈: LDS3 1.05 속도 → 0.07/s (구리 1.4 · 강철 0.14 · 플라스틱 0.35) - 빠른 팔 (상자→조립기 ~4.6) · 벨트 0.07/s. hauler (alpha) 가 구리 · 강철, blhaul (delta) 이 플라스틱.
+P12L = []
+GROUPS["p12lds"] = P12L
+_CUR[0] = P12L
+add("lds3", "assembling-machine-2", -4.5, 7.5, N, "low-density-structure")
+add("lds3", CHEST, -4.5, 4.5, N, "cL3")
+add("lds3", "fast-inserter", -4.5, 5.5, N)               # cL3 → LDS3 (북쪽에서 집는다)
+add("lds3", INS, -2.5, 7.5, W)                           # LDS3 → 벨트 (서쪽에서 집는다)
+add("lds3", BELT, -1.5, 7.5, N)
+add("lds3", BELT, -1.5, 6.5, N)
+for _x in range(-2, 3):
+    add("lds3", BELT, _x + 0.5, 5.5, E)
+for _y in range(5, 14):
+    add("lds3", BELT, 3.5, _y + 0.5, S)
+add("lds3", INS, 2.5, 13.5, E)                           # 벨트 끝 → cF (동쪽에서 집는다)
 _CUR[0] = PLAN
 UPGRADE = [(-2.5, 15.5, "low-density-structure"), (7.5, 11.5, "productivity-module")]   # 조립기 1 → 2 (로봇 교체, 레시피 유지)
 
@@ -265,7 +282,8 @@ CHESTS = {"cS": {"iron-plate": 300}, "cR": {"stone": 300, "steel-plate": 400}, "
           "cL": {"copper-plate": 800, "steel-plate": 150}, "cA": {"sulfur": 100, "iron-plate": 50}, "cF": {"flying-robot-frame": 40},
           "cB": {"coal": 200},
           "cL2": {"copper-plate": 800, "steel-plate": 150, "plastic-bar": 100}, "cC4": {"copper-plate": 400}, "cG2": {"iron-plate": 300},
-          "cC5": {"copper-plate": 400}, "cA3": {"plastic-bar": 100}, "cC7": {"copper-plate": 300}}
+          "cC5": {"copper-plate": 400}, "cA3": {"plastic-bar": 100}, "cC7": {"copper-plate": 300},
+          "cL3": {"copper-plate": 800, "steel-plate": 150}}
 # P12 (07:1x): 보라 · 노랑 세 배 - 레일 R 은 돌 + 강철 3/s, LDS 둘은 구리 3/s 씩 먹는다 → 상자 상한을 올림 (150 이면 100 초 만에 빈다).
 #   cA3 플라스틱은 허브에 없다 (망 (-106.5,10.5)) - hauler 는 못 채움 → blhaul (delta) 이 chemout 상자에서 가져온다.
 # P8 (01:05): 철판 300 → 600 · 강철 120 → 250 - 허브 철판이 relay 예비 (500) 밑까지 내려가 강철로 (강철2) 가 굶던 때 hauler 가 300~500 띠 (짓는 재료 몫) 를 가져갔다.
@@ -664,7 +682,7 @@ def chest_pos():
     return {ex: (x, y) for plan in GROUPS.values() for st, n, x, y, d, ex in plan if n == CHEST}
 
 
-P9_CHESTS = {"cL2", "cC4", "cG2", "cC5", "cA3", "cC7"}
+P9_CHESTS = {"cL2", "cC4", "cG2", "cC5", "cA3", "cC7", "cL3"}
 
 
 def haul(ai, who, minutes, only=None) -> None:
