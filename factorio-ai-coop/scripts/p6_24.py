@@ -111,6 +111,89 @@ WFACE = {"wline": [("gun-turret", x, y) for x, y in ((-176, 4), (-165, 2), (-154
          + [("stone-wall", x + 0.5, -22.5) for x in range(-136, -62)] + [("stone-wall", -136.5, y + 0.5) for y in range(-22, -9)]}
 
 
+# 둘째 유전 (P6-3) - 걸어서 본 청크 (survey --seen, 반경 800) 의 원유: (-347,-218) 우물 8 · 수율 합 ~1040% (원유 ~104/s, 지금 24/s 의 4 배) 는
+#   **무리 A 둥지에서 20 칸** (반경 120 안 적 구조물 10) · (-444,252) 우물 1 · 82% (8/s) 는 적 207 칸 밖이나 유전 (-196,32) 에서 관 ~330 칸.
+#   → 둘째 유전 = 북서 (-347,-218). 무리 A 를 로봇 포탑 크립으로 치운 뒤 펌프잭. 크립은 로보포트 망 안에서만 (offense.md · 23회차 §3-5) →
+#   R_W 망에서 북서로 로보포트 사슬 N1..N5 (물류 반경 25 → 간격 ≤ 50 이면 한 망) + 작은 전봇대 줄 (전선 7.5 → 6 칸 간격).
+#   전봇대는 포트 남서 모서리 (x-2.5, y+2.5) 를 지나 포트에 전기가 닿는다. 유령은 건설 반경 안 것만 놓인다 - 망이 자라면 다시 돌린다.
+#   N2 는 구리 광맥 (-176..-152, -96..-72) 위 - 셋째 구리 전초 자리도 겸한다. N5 는 무리 A 에서 ~64 (건설 반경 55 가 둥지 · 유전을 덮는다).
+CHAIN_POLE0 = (-93.5, -4.5)          # 로봇 줄 서쪽 끝 전봇대 (망 1)
+CHAIN_PORTS = [(-128, -28), (-170, -70), (-212, -112), (-254, -154), (-296, -190)]
+
+
+def chain_ghosts(ai, upto) -> dict:
+    pts, prev = [], CHAIN_POLE0
+    for rx, ry in CHAIN_PORTS[:upto]:
+        c = (rx - 2.5, ry + 2.5)          # 남서 모서리 - 들어오는 줄 (남동) · 나가는 줄 (북서) 이 포트를 비켜 간다
+        n = max(1, math.ceil(math.hypot(c[0] - prev[0], c[1] - prev[1]) / 6))
+        pts += [(round((prev[0] + (c[0] - prev[0]) * i / n) - 0.5) + 0.5, round((prev[1] + (c[1] - prev[1]) * i / n) - 0.5) + 0.5) for i in range(1, n + 1)]
+        prev = c
+    return ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local P = helpers.json_to_table('%s')
+      local R = helpers.json_to_table('%s')
+      local out = {pole = 0, port = 0, have = 0, nonet = 0, blocked = 0, trees = 0}
+      local function net(p) return #s.find_logistic_networks_by_construction_area(p, f) > 0 end
+      local function ghost(n, p, r)
+        for _, t in pairs(s.find_entities_filtered{type = {"tree", "simple-entity"}, area = {{p[1] - r, p[2] - r}, {p[1] + r, p[2] + r}}}) do
+          if not t.to_be_deconstructed() then t.order_deconstruction(f); out.trees = out.trees + 1 end
+        end
+        if s.can_place_entity{name = n, position = p, force = f, build_check_type = defines.build_check_type.blueprint_ghost, forced = true} then
+          s.create_entity{name = "entity-ghost", inner_name = n, position = p, force = f}; return true end
+        return false
+      end
+      local prev = {%f, %f}
+      local OFF = {{0, 0}, {1, 0}, {0, 1}, {-1, 0}, {0, -1}, {1, 1}, {-1, -1}, {1, -1}, {-1, 1}}
+      for _, p in pairs(P) do
+        local done = nil
+        for _, o in pairs(OFF) do
+          local q = {p[1] + o[1], p[2] + o[2]}
+          if math.sqrt((q[1] - prev[1])^2 + (q[2] - prev[2])^2) <= 7.5 then
+            if s.count_entities_filtered{type = "electric-pole", force = f, position = q, radius = 0.6} > 0
+               or s.count_entities_filtered{ghost_name = "small-electric-pole", force = f, position = q, radius = 0.6} > 0 then out.have = out.have + 1; done = q; break end
+            if not net(q) then out.nonet = out.nonet + 1; done = "stop"; break end
+            if ghost("small-electric-pole", q, 0.5) then out.pole = out.pole + 1; done = q; break end
+          end
+        end
+        if done == nil then out.blocked = out.blocked + 1; break end
+        if done == "stop" then break end
+        prev = done
+      end
+      for _, r in pairs(R) do
+        if s.count_entities_filtered{name = "roboport", force = f, position = r, radius = 1} > 0
+           or s.count_entities_filtered{ghost_name = "roboport", force = f, position = r, radius = 1} > 0 then out.have = out.have + 1
+        elseif not net(r) then out.nonet = out.nonet + 1
+        elseif ghost("roboport", r, 2) then out.port = out.port + 1 else out.blocked = out.blocked + 1 end
+      end
+      out.last = string.format("%%.1f,%%.1f", prev[1], prev[2])
+      return out
+    end)()""" % (json.dumps(pts), json.dumps(CHAIN_PORTS[:upto]), CHAIN_POLE0[0], CHAIN_POLE0[1]))
+
+
+def chain_kit(ai, who, poles, ports) -> dict:
+    """전봇대 · 로보포트를 R_W 옆 저장 상자에 (새 relay 줄 없이 - 사람이 든다). 나무는 허브 옆 나무 무리에서 벤다."""
+    import p1
+    from orders import submit
+    h = p1.hub(ai)
+    plan = [("walk_to", {"x": p1.WOOD[0], "y": p1.WOOD[1]}), ("chop", {"x": p1.WOOD[2], "y": p1.WOOD[3], "count": poles // 8 + 2})]
+    x, y, c = h["copper-plate"]
+    plan += [("walk_to", {"x": x, "y": y + 1.5}), ("take", {"name": "copper-plate", "x": x, "y": y, "count": poles + 4})]
+    if ports and "roboport" in h:
+        x, y, c = h["roboport"]
+        plan += [("walk_to", {"x": x, "y": y + 1.5}), ("take", {"name": "roboport", "x": x, "y": y, "count": min(ports, c)})]
+    plan += [("craft", {"recipe": "small-electric-pole", "count": poles // 2, "wait": "block"}),
+             ("walk_to", {"x": CHAIN_STORE[0], "y": CHAIN_STORE[1] + 1.5}),
+             ("insert", {"name": "small-electric-pole", "x": CHAIN_STORE[0], "y": CHAIN_STORE[1], "count": poles})]
+    if ports:
+        plan.append(("insert", {"name": "roboport", "x": CHAIN_STORE[0], "y": CHAIN_STORE[1], "count": ports}))
+    plan.append(("walk_to", {"x": p1.PARK[0], "y": p1.PARK[1]}))
+    submit(ai, who, plan, strict=False)
+    return {"poles": poles, "ports": ports}
+
+
+CHAIN_STORE = (-78.5, 20.5)          # R_W (-82,20) 옆 저장 상자
+
+
 # 파랑 150 (P6-2) - 23:4x 실측: 파랑 조립기 5 모두 working 에 입력이 다 찼다 (엔진 4 · 고급회로 6 · 황 4) → 파랑은 «조립기 수» 에 묶였다
 #   (조립기 1 형 5 대 = 10분 125 상한). 엔진 조립기 6 도 모두 working 에 결과칸 0~3 (나오는 대로 파랑이 가져감) = 10분 180 상한 - 파랑 150 + 전기 엔진 몫에 모자람.
 #   고급회로 3 · 4 · 6 은 결과칸 120~198 (남는다) · 강철 10분 604 (허브 323, 상한 400) - 강철 화로는 병목이 아니다.
@@ -179,6 +262,8 @@ def main() -> int:
     ap.add_argument("--dist", type=float, default=470)
     ap.add_argument("--from", dest="start", default="-118,-9")
     ap.add_argument("--ghosts", default="", choices=("", *WFACE))
+    ap.add_argument("--chain", type=int, default=0, help="로보포트 사슬 N1..N<k> 유령")
+    ap.add_argument("--chain-kit", default="", help="전봇대 수,로보포트 수 - --who 가 만들어 R_W 저장 상자에")
     ap.add_argument("--asm2-craft", type=int, default=0, help="--who 한 사람이 조립기 2 형 N 대를 만들어 저장 상자에")
     ap.add_argument("--who", default="")
     ap.add_argument("--asm2-order", default="", choices=("", *ASM2_UP))
@@ -192,6 +277,13 @@ def main() -> int:
         import p5_24
         p5_24.GHOSTS.update(WFACE)
         print(a.ghosts, p5_24.place_ghosts(ai, a.ghosts))
+        return 0
+    if a.chain:
+        print("chain", chain_ghosts(ai, a.chain))
+        return 0
+    if a.chain_kit:
+        n, k = (int(v) for v in a.chain_kit.split(","))
+        print(chain_kit(ai, a.who, n, k))
         return 0
     if a.asm2_craft:
         print(asm2_craft(ai, a.who, a.asm2_craft))

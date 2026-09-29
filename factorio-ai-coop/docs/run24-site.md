@@ -358,6 +358,13 @@ relay 의 연구소 채움 · 보일러 연료 · 전기 쌍 화로 → 허브 �
     탄은 relay 의 기존 «모든 gun-turret» 줄 (새 줄 아님).
   - **둥지 처리 판단: 지금은 치지 않는다.** 둥지 8 (A 3 · B 5) 파괴 = 진화 +0.016 (0.147 의 11%) 이고, 로봇 크립은 R_O 에서 로보포트 사슬 ~200 칸 (포트 5 · 전봇대) 이 먼저다.
     작은 바이터뿐 (진화 0.15) 이라 공해가 닿아도 피어싱 포탑 줄이 받는다. **치는 조건: raidwatch W/NW «경보 흡수» 또는 틈 < 40** → 그때 R_O 북서로 포트 사슬 → 무리 A 부터 포탑 크립 (offense.md, 사람은 안 들어간다).
+- **P6-2 파랑 150 (23:38~23:50)** - 먼저 잰 것: 파랑 조립기 5 모두 working 에 입력이 다 참 (엔진 4 · 고급회로 6 · 황 4) → **파랑은 조립기 수 (1 형 5 대 = 10분 125 상한) 에 묶였다**.
+    엔진 6 도 모두 working · 결과칸 0~3 (10분 180 상한), 고급회로 3 · 4 · 6 은 결과칸 120~198 (남음), **강철 10분 604 · 허브 323 (상한 400) - 강철 화로는 병목이 아니었다** → 강철 화로는 안 늘림.
+  - 새 조립기 (= 새 relay 줄) 대신 **같은 자리 조립기 2 형 (속도 1.5 배) 로 로봇 교체** (`--asm2-craft 8 --who alpha|bravo` 손제작 → R_M 저장 상자 (11.5,-9.5) · `--asm2-order blue|eng|adv`):
+    파랑 5 · 엔진 6 · 고급회로 5 = **16 대 교체, 로봇이 ~3 분**. relay 는 type = assembling-machine 으로 자리에서 찾아 줄 추가 0 (강철로 사고처럼 «이름으로» 찾는 줄 grep: sitewatch · research_guard 도 type).
+    상한: 파랑 5 × 2 형 = 10분 187 · 엔진 270 · 고급회로 375. 23:50 10분 파랑 104 → 156 (창에 교체 전이 섞임). sitewatch 기준 지움: 파랑블록 · 과학5.
+  - **연구 순서 고침**: processing-unit (23:35 끝) 뒤 research_guard 가 productivity-module-2 · speed-module-2 를 골랐다 (`--prefer` 의 productivity-module · speed-module 이 «이름-숫자» 로 -2 를 잡음).
+    `--prefer` 를 processing-unit → low-density-structure → utility-science-pack → production-science-pack → advanced-material-processing-2 → (모듈 · 포탑 위력은 뒤) 로 → 지금 low-density-structure.
 
 ## 사망 기록
 
