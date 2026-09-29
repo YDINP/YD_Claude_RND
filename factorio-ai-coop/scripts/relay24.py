@@ -646,7 +646,7 @@ LUA = """(function()
   end
   local _ = fuel(s.find_entities_filtered{type = "boiler", force = f}, %d)
     and fuel(inbox, %d)
-    and fuel(s.find_entities_filtered{name = "stone-furnace", force = f}, %d)
+    and fuel(s.find_entities_filtered{name = {"stone-furnace", "steel-furnace"}, force = f}, %d)   -- P5: 강철로도 석탄 (23:23 강철로 25 no_fuel - 철판 6,760 → 4,030)
     and fuel(others, %d)
   return out
 end)()"""
