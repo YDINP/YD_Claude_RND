@@ -46,6 +46,7 @@ ASM1, ASM2, CHEM = "assembling-machine-1", "assembling-machine-2", "chemical-pla
 INS, LONG, BELT, UG = "inserter", "long-handed-inserter", "transport-belt", "underground-belt"
 PIPE, PTG, CHEST, POLE = "pipe", "pipe-to-ground", "iron-chest", "small-electric-pole"
 SIZE = {ASM1: 3, ASM2: 3, CHEM: 3, "electric-mining-drill": 3}
+FOOT = {"boiler": (3, 2), "steam-engine": (3, 5)}
 POWERED = {ASM1, ASM2, CHEM, INS, LONG, "electric-mining-drill"}
 NET_OK = {ASM1, "electric-mining-drill"}
 STORE = (11.5, -9.5)                     # R_M 옆 저장 상자 (p6_24.ASM2_STORE) - 로봇이 유령 재료를 여기서 가져간다
@@ -142,6 +143,7 @@ add("yellow", PIPE, -0.5, 20.5)
 
 # --- 물 (해안 펌프는 --pump 가 물가에서 자리를 찾는다) → y 31.5 → x -6.5 북쪽 → 버스 밑 지하관 → CH 서쪽 입력 --------
 WATER_Y, WATER_X = 31.5, -6.5
+add("water", PIPE, -36.5, 30.5)                          # 펌프 (-37.5,30.5) W 의 출구 (게임에 물음: output (-36.5,30.5))
 for _x in range(-37, -6):
     add("water", PIPE, _x + 0.5, WATER_Y)
 for _y in (30.5, 29.5, 28.5, 27.5, 26.5, 25.5):
@@ -193,21 +195,35 @@ for _fx in (82, 85, 88, 91, 94, 97, 100):
     add("iron", INS, _fx - 0.5, -44.5, N)                # 벨트 (y -45.5) → 화로 (y -44..-43)
 _CUR[0] = PLAN
 
+# --- 발전 열한째 (00:44 12.9 MW / 18.0 MW = 1.40 배 - 문턱 1.5 밑): power9 줄 (x -17.5 · -13.5 · -9.5, 보일러 y 46) 동쪽 다음 칸 x -5.5.
+#   물은 옆 보일러를 거쳐 온다 (관 (-7.5,46.5)). 석탄은 상자 (-5.5,48.5) → 팔 → 보일러, 상자는 사람 손 (haul 의 cB).
+POWER = []
+GROUPS["power"] = POWER
+_CUR[0] = POWER
+add("power", PIPE, -7.5, 46.5)
+add("power", "boiler", -5.5, 46.0, N)
+add("power", "steam-engine", -5.5, 42.5, N)
+add("power", "steam-engine", -5.5, 37.5, N)
+add("power", POLE, -7.5, 40.5)
+add("power", INS, -5.5, 47.5, S)
+add("power", CHEST, -5.5, 48.5, N, "cB")
+_CUR[0] = PLAN
+
 STAGES = ("labs", "collector", "purple", "bus", "circuit", "yellow", "water", "plastic", "poles")
 
 # 공급 상자 (사람 손): 이름 → {품목: 상한}. 허브에 «남길 몫» 이상일 때만 가져간다.
 CHESTS = {"cS": {"iron-plate": 200}, "cR": {"stone": 150, "steel-plate": 150}, "cE": {"steel-plate": 150, "stone-brick": 150},
           "cC1": {"copper-plate": 300}, "cG1": {"iron-plate": 200}, "cC2": {"copper-plate": 300}, "cC3": {"copper-plate": 300},
-          "cL": {"copper-plate": 300, "steel-plate": 60}, "cA": {"sulfur": 60, "iron-plate": 30}, "cF": {"flying-robot-frame": 20}}
-HUB_KEEP = {"iron-plate": 400, "copper-plate": 300, "steel-plate": 120, "stone": 200, "stone-brick": 200, "sulfur": 150}
+          "cL": {"copper-plate": 300, "steel-plate": 60}, "cA": {"sulfur": 60, "iron-plate": 30}, "cF": {"flying-robot-frame": 20},
+          "cB": {"coal": 200}}
+HUB_KEEP = {"coal": 0, "iron-plate": 300, "copper-plate": 300, "steel-plate": 120, "stone": 200, "stone-brick": 200, "sulfur": 150}
 FRAME_ASMS = [(-80.5, -6.5), (-76.5, -6.5)]              # 로봇 줄 틀 조립기 (relay24.ASMS frame1 · frame2) - 결과칸에서 손으로
 
 
 def footprint(name, x, y):
-    k = SIZE.get(name, 1)
-    h = k / 2
-    return [(tx, ty) for tx in range(math.floor(x - h + 0.01), math.ceil(x + h - 0.01))
-            for ty in range(math.floor(y - h + 0.01), math.ceil(y + h - 0.01))]
+    w, hgt = FOOT.get(name, (SIZE.get(name, 1), SIZE.get(name, 1)))
+    return [(tx, ty) for tx in range(math.floor(x - w / 2 + 0.01), math.ceil(x + w / 2 - 0.01))
+            for ty in range(math.floor(y - hgt / 2 + 0.01), math.ceil(y + hgt / 2 - 0.01))]
 
 
 def game_blocked(ai, box) -> set:
@@ -407,7 +423,8 @@ COST = {BELT: {"iron-plate": 1.5}, UG: {"iron-plate": 8.75}, INS: {"iron-plate":
         LONG: {"iron-plate": 7, "copper-plate": 1.5}, PIPE: {"iron-plate": 1}, PTG: {"iron-plate": 7.5}, CHEST: {"iron-plate": 8},
         POLE: {"copper-plate": 0.5, "wood": 0.5}, ASM1: {"iron-plate": 22, "copper-plate": 4.5},
         ASM2: {"iron-plate": 35, "copper-plate": 9, "steel-plate": 2}, CHEM: {"iron-plate": 20, "copper-plate": 7.5, "steel-plate": 5},
-        "offshore-pump": {"iron-plate": 5, "copper-plate": 3}, "electric-mining-drill": {"iron-plate": 23, "copper-plate": 4.5}}
+        "offshore-pump": {"iron-plate": 5, "copper-plate": 3}, "electric-mining-drill": {"iron-plate": 23, "copper-plate": 4.5},
+        "boiler": {"iron-plate": 4, "stone": 5}, "steam-engine": {"iron-plate": 31}}
 PAIRED = {BELT, UG, PTG, POLE}
 
 
@@ -416,7 +433,10 @@ def hub_rows(ai) -> list:
     return p1._rows(ai.lua("""(function()
       local s, f = game.surfaces[1], game.forces.player
       local out = {}
-      for _, c in pairs(s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, area = {{62, -16.1}, {74, -14.9}}}) do
+      local cs = s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, area = {{62, -16.1}, {74, -14.9}}}
+      -- 석탄은 석탄 밭 상자 (채굴기가 붓는 곳, relay24.COAL_BOX) 에서 손으로
+      for _, c in pairs(s.find_entities_filtered{type = "container", force = f, area = {{100, -34}, {126, -22}}}) do cs[#cs+1] = c end
+      for _, c in pairs(cs) do
         for _, v in pairs(c.get_inventory(defines.inventory.chest).get_contents()) do
           out[#out+1] = string.format("%s,%.1f,%.1f,%d", v.name, c.position.x, c.position.y, v.count)
         end
@@ -584,7 +604,7 @@ def status(ai) -> dict:
 
 
 def chest_pos():
-    return {ex: (x, y) for st, n, x, y, d, ex in PLAN if n == CHEST}
+    return {ex: (x, y) for plan in GROUPS.values() for st, n, x, y, d, ex in plan if n == CHEST}
 
 
 def haul(ai, who, minutes) -> None:
@@ -628,12 +648,25 @@ def haul(ai, who, minutes) -> None:
         if not short:
             time.sleep(30)
             continue
+        # 한 번에 상자 4 개까지 (계획 59 걸음에 잘려 뒤 상자가 영영 못 받던 것 - 00:40 cC3 · cL 구리 0), 가장 빈 상자부터. 가방에 든 것은 먼저 쓴다.
+        order = sorted(short, key=lambda k: -sum(short[k].values()) / max(1, sum(CHESTS[k].values())))[:4]
+        short = {k: short[k] for k in order}
+        mats = {}
+        for k in order:
+            for m, q in short[k].items():
+                if m != "flying-robot-frame":
+                    mats[m] = mats.get(m, 0) + q
+        try:
+            bag = ai.agent(who).items()
+        except Exception:
+            bag = {}
+        mats = {m: q - int(bag.get(m, 0)) for m, q in mats.items() if q - int(bag.get(m, 0)) > 0}
         plan = take_plan(ai, mats, HUB_KEEP)
         fr = short.get("cF", {}).get("flying-robot-frame", 0)
         if fr and int(have.get("frames", 0)) > 0:
             for x, y in FRAME_ASMS:
                 plan += [("walk_to", {"x": x, "y": y + 2.5}), ("take", {"name": "flying-robot-frame", "x": x, "y": y, "count": fr})]
-        taken = {}
+        taken = {m: int(c) for m, c in bag.items()}
         for k2, p in plan:
             if k2 == "take":
                 taken[p["name"]] = taken.get(p["name"], 0) + p["count"]
