@@ -191,7 +191,65 @@ def chain_kit(ai, who, poles, ports) -> dict:
     return {"poles": poles, "ports": ports}
 
 
+# 포트마다 포탑 3 (북서 · 북동 · 남서 6 칸) - 23:5x 작은 바이터 무리 둘 (7 마리 group · 5 마리 wander) 이 N2 에서 ~70.
+#   탄은 relay 의 기존 «모든 gun-turret» 줄. 포탑 사거리 18 안에 포트 · 서로.
+for _i, (_x, _y) in enumerate(CHAIN_PORTS, 1):
+    WFACE[f"guard{_i}"] = [("gun-turret", _x + dx, _y + dy) for dx, dy in ((-6, -6), (6, -6), (-6, 6))]
 CHAIN_STORE = (-78.5, 20.5)          # R_W (-82,20) 옆 저장 상자
+
+
+def chain_feed(ai, who, minutes) -> None:
+    """로보포트가 허브에 나오면 (relay 의 기존 OUTS 줄) --who 가 들고 R_W 저장 상자에 넣고, 사슬 유령 · 포트 포탑을 다시 놓는다 (망이 자라면 다음 포트)."""
+    import p1
+    from orders import submit
+    end = time.time() + minutes * 60
+    while time.time() < end:
+        h = p1.hub(ai)
+        r = walkscout.body(ai, who)
+        idle = r and not (r.get("current") or r.get("queued"))
+        if idle and "roboport" in h and h["roboport"][2] > 0:
+            x, y, c = h["roboport"]
+            submit(ai, who, [("walk_to", {"x": x, "y": y + 1.5}), ("take", {"name": "roboport", "x": x, "y": y, "count": c}),
+                             ("walk_to", {"x": CHAIN_STORE[0], "y": CHAIN_STORE[1] + 1.5}),
+                             ("insert", {"name": "roboport", "x": CHAIN_STORE[0], "y": CHAIN_STORE[1], "count": c}),
+                             ("walk_to", {"x": p1.PARK[0], "y": p1.PARK[1]})], strict=False)
+            print(time.strftime("%X"), f"로보포트 {c} -> 저장 상자", flush=True)
+        g = chain_ghosts(ai, len(CHAIN_PORTS))
+        if g.get("pole") or g.get("port"):
+            print(time.strftime("%X"), "사슬", g, flush=True)
+        import p5_24
+        p5_24.GHOSTS.update(WFACE)
+        for i in range(1, len(CHAIN_PORTS) + 1):
+            q = p5_24.place_ghosts(ai, f"guard{i}")
+            if q.get("placed"):
+                print(time.strftime("%X"), f"guard{i}", q, flush=True)
+        q = ammo_requests(ai)
+        if q.get("asked"):
+            print(time.strftime("%X"), "탄 요청", q, flush=True)
+        time.sleep(20)
+
+
+# 탄 (23:58 코디네이터 경보 - 포트 포탑 6 탄 0): relay 노랑 줄은 탄창 조립기 결과칸 · 허브 탄창 상자 (66.5,-15.5) 만 보는데
+#   탄창 조립기는 허브 노랑 ≥ 400 이면 쉬고 (P5 규칙) 그 상자는 비어 있었다 - 노랑 488 은 옆 허브 상자에. 새 relay 줄 대신 **로봇**:
+#   사람이 망 저장 상자에 탄창을 넣고, 탄 적은 포탑마다 item-request-proxy (탄창 20, 대상마다 ≤ 100) → 건설 로봇이 날라 넣는다.
+def ammo_requests(ai, below=5, count=20, item="firearm-magazine") -> dict:
+    return ai.lua("""(function()
+      local s, f = game.surfaces[1], game.forces.player
+      local out = {asked = 0, pending = 0, nonet = 0}
+      for _, t in pairs(s.find_entities_filtered{name = "gun-turret", force = f}) do
+        local inv = t.get_inventory(defines.inventory.turret_ammo)
+        if inv.get_item_count() < %d then
+          if t.item_request_proxy then out.pending = out.pending + 1
+          elseif #s.find_logistic_networks_by_construction_area(t.position, f) == 0 then out.nonet = out.nonet + 1
+          else
+            s.create_entity{name = "item-request-proxy", position = t.position, force = f, target = t,
+              modules = {{id = {name = "%s"}, items = {in_inventory = {{inventory = defines.inventory.turret_ammo, stack = 0, count = %d}}}}}}
+            out.asked = out.asked + 1
+          end
+        end
+      end
+      return out
+    end)()""" % (below, item, min(count, 100)))
 
 
 # 파랑 150 (P6-2) - 23:4x 실측: 파랑 조립기 5 모두 working 에 입력이 다 찼다 (엔진 4 · 고급회로 6 · 황 4) → 파랑은 «조립기 수» 에 묶였다
@@ -201,7 +259,7 @@ CHAIN_STORE = (-78.5, 20.5)          # R_W (-82,20) 옆 저장 상자
 #   relay 는 type = assembling-machine 으로 자리에서 찾으니 줄 추가 0. 교체되며 나온 조립기 1 형은 망 저장으로.
 #   조립기 2 = 강철 2 · 톱니 5 · 회로 3 · 조립기 1 (손제작은 판에서 사슬로) - 판 한 대 철 35 · 구리 9 · 강철 2.
 ASM2_UP = {"blue": ["blue1", "blue2", "blue3", "blue4", "blue5"], "eng": ["eng1", "eng2", "eng3", "eng4", "eng5", "eng6"],
-           "adv": ["adv1", "adv2", "adv3", "adv4", "adv6"]}
+           "adv": ["adv1", "adv2", "adv3", "adv4", "adv6"], "adv5": ["adv5"]}      # adv5 = 로보포트 · 물류 로봇 몫 (P6-3 사슬 포트 9 분에 하나)
 ASM2_STORE = (11.5, -9.5)           # R_M (8,-10) 옆 저장 상자
 
 
@@ -263,6 +321,8 @@ def main() -> int:
     ap.add_argument("--from", dest="start", default="-118,-9")
     ap.add_argument("--ghosts", default="", choices=("", *WFACE))
     ap.add_argument("--chain", type=int, default=0, help="로보포트 사슬 N1..N<k> 유령")
+    ap.add_argument("--ammo", action="store_true", help="탄 < 5 포탑에 item-request-proxy (탄창 20)")
+    ap.add_argument("--chain-feed", type=float, default=0, help="분 - 로보포트를 허브에서 저장 상자로 나르고 사슬을 다시 놓는 고리")
     ap.add_argument("--chain-kit", default="", help="전봇대 수,로보포트 수 - --who 가 만들어 R_W 저장 상자에")
     ap.add_argument("--asm2-craft", type=int, default=0, help="--who 한 사람이 조립기 2 형 N 대를 만들어 저장 상자에")
     ap.add_argument("--who", default="")
@@ -280,6 +340,12 @@ def main() -> int:
         return 0
     if a.chain:
         print("chain", chain_ghosts(ai, a.chain))
+        return 0
+    if a.ammo:
+        print("ammo", ammo_requests(ai))
+        return 0
+    if a.chain_feed:
+        chain_feed(ai, a.who, a.chain_feed)
         return 0
     if a.chain_kit:
         n, k = (int(v) for v in a.chain_kit.split(","))
