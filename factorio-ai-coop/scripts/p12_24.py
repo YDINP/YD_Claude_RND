@@ -57,6 +57,7 @@ BELT, FSPLIT = "transport-belt", "fast-splitter"
 CHEST, PPC = "iron-chest", "passive-provider-chest"
 
 p7_24.SIZE.update({FSPLIT: 1})
+p7_24.FOOT.update({"steel-furnace": (2, 2)})
 p7_24.POWERED.update({FAST})
 p7_24.COST.update({FAST: {"iron-plate": 9, "copper-plate": 4.5}, FSPLIT: {"iron-plate": 45.5, "copper-plate": 22.5},
                    PPC: {"iron-plate": 16, "copper-plate": 7, "plastic-bar": 2, "steel-plate": 8}})
@@ -127,6 +128,32 @@ for _x in range(25, 51):
     add("adv", BELT, _x + 0.5, -11.5, W)
 add("adv", INS, 25.5, -10.5, N)
 add("adv", PPC, 25.5, -9.5, N, "adv_out")
+
+# --- P12-5 강철 줄 (08:3x): 보라가 강철에 묶임 (강철로 9 = 10분 675 가 상한, 씀 1,160 · 망 강철 0 → EF · 레일 멈춤, 보라 10분 18).
+#   철 줄기는 다시 가득 서 있다 (철 10분 11.4k) → FE (철 두 레인, G 셋은 4.5/s 만 먹음) 북쪽에 강철로 12 (delta 가 손제작해 둔 것 R_M 상자):
+#   FE (y -25.5) → 팔 (y -26.5) → 강철로 (가운데 y -28) → 팔 (y -29.5) → 벨트 y -30.5 동 → 팔 → 수동 공급 상자 (55.5,-30.5) = 망 · hauler 출처.
+#   셈: 12 × 0.625 = 철 7.5/s (FE 15 - G 4.5) → 강철 1.5/s = 10분 900 (보라 ~100 몫). 석탄은 로봇 요청 (연료 칸 50, 90 kW = 37 분에 50).
+#   전봇대 (27.5,-27.5) (31.5,-29.5) (34.5,-30.5) (51.5,-29.5) 비킴: 결과 팔은 화로 왼쪽 칸, 34.5 만 오른쪽 (35.5), 벨트는 34 를 지하로.
+STEEL = []
+GROUPS["steel"] = STEEL
+_CUR[0] = STEEL
+SF_X = [29 + 2 * k for k in range(12)]                # 29 .. 51
+for _x in SF_X:
+    add("steel", "steel-furnace", _x, -28.0, N)
+    add("steel", INS, _x - 0.5, -26.5, S)             # FE → 화로 (남쪽에서 집는다)
+    add("steel", INS, (_x + 0.5) if _x == 35 else (_x - 0.5), -29.5, S)   # 화로 → 벨트
+for _x in range(28, 54):
+    if _x == 33:
+        add("steel", "underground-belt", 33.5, -30.5, E, "input")
+    elif _x == 34:
+        continue
+    elif _x == 35:
+        add("steel", "underground-belt", 35.5, -30.5, E, "output")
+    else:
+        add("steel", BELT, _x + 0.5, -30.5, E)
+add("steel", INS, 54.5, -30.5, W)
+add("steel", PPC, 55.5, -30.5, N, "steel_out")
+_CUR[0] = ZN
 
 # 분배기 (줄기 칸을 해체한 뒤에만 놓인다 - --room 먼저)
 SPLITS = [(FSPLIT, 69.0, -29.5, S, (69.5, -29.5)), (FSPLIT, 24.0, -25.5, S, (23.5, -25.5)), (FSPLIT, 24.0, -13.5, S, (23.5, -13.5))]

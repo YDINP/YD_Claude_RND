@@ -57,6 +57,9 @@ FEED += [(-72.5, -6.5, "flying-robot-frame", 1, 2, 0, "robot"), (-72.5, -6.5, CI
 #   진짜 처방은 새 발전 (태양 유령 89 · 새 증기 단위) - 발전 담당 몫. 그게 서면 이 네 줄은 뺀다.
 for _x, _y in ((-83.0, 28.5), (-75.0, 16.5), (-57.0, 14.5), (-42.0, 13.5)):
     FEED.append((_x, _y, "coal", 10, 50, 300, None, "fuel"))
+# P12-5 (08:3x): zone N 강철로 12 (x 29..51, y -28) - 벨트에 석탄 레인이 없다 (FE 는 철 두 레인) → 연료 칸에 석탄 50 (90 kW = 37 분에 50).
+for _x in range(29, 52, 2):
+    FEED.append((float(_x), -28.0, "coal", 10, 50, 300, None, "fuel"))
 MAX_REQ = 30
 
 LUA = """(function()
@@ -83,7 +86,7 @@ LUA = """(function()
     out.gate = {yellow_frames = fr, robots = robots, robot = gate.robot}
   end
   for _, q in pairs(A.feed) do
-    local a = (q[7] == nil or gate[q[7]]) and s.find_entities_filtered{type = {'assembling-machine', 'lab', 'boiler'}, force = f, position = {q[1], q[2]}, radius = 0.6}[1]
+    local a = (q[7] == nil or gate[q[7]]) and s.find_entities_filtered{type = {'assembling-machine', 'lab', 'boiler', 'furnace'}, force = f, position = {q[1], q[2]}, radius = 0.6}[1]
     if q[7] ~= nil and not gate[q[7]] then goto next_feed end
     local net = a and cnet_of(a.position)
     local lab = a and a.type == 'lab'
