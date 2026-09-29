@@ -315,7 +315,7 @@ def coal():
     out += [g(UG, 9.5, 48.5, W, ug="input"), g(UG, 7.5, 48.5, W, ug="output")]   # 발전 동쪽 벽 (x 8.5) 밑
     out += line(BELT, 6.5, 48.5, -30.5, 48.5, W)
     out += [g(INS, x, 47.5, S) for x in BOIL_X]
-    out += [g(POLE, x, 47.5) for x in (-27.5, -23.5, -19.5, -15.5, -11.5)]      # 보일러 팔 전기 (02:4x no_power)
+    out += [g(POLE, x, 47.5) for x in (-27.5, -23.5, -19.5, -15.5, -11.5, -7.5, -3.5, 0.5, 4.5)]   # 보일러 팔 전기 (02:4x no_power · 03:2x 새 셋 팔 no_power → 03:17 정전)
     out += [g(POLE, 114.5, -20.5), g(POLE, 120.5, -20.5)]                        # 새 석탄 채굴기 전기
     return out
 
@@ -331,6 +331,25 @@ def coal2():
 
 def coal2_rotate():
     return [("electric-mining-drill", x, -27.5, S) for x in COAL_OLD]
+
+
+def westnet():
+    """03:1x 탄 줄 전환: 로봇 줄 (y -12..-6, x -94..-63) 이 로봇망 밖 → 로보포트 하나 (-86,-17) 로 (-82,20) 망과 이음 (물류 25).
+    피어싱 조립기 둘 · 탄창 조립기 · 군수 상자가 망 안에 들어와 건설 로봇 요청 (proxy) 으로 먹이고 공급 상자로 뺀다."""
+    return [g("roboport", -86, -17)]
+
+
+def ammo():
+    """탄 조립기 결과 → 팔 → 공급 상자 (망에 보임). 피어싱 1 (-92.5,-6.5) 남 · 피어싱 2 (-68.5,-10.5) 북 · 노랑 탄창 (-53.5,3.5) 남.
+    먹이 (철 · 강철 · 구리 · 노랑 탄창) 와 포탑 채우기는 ammo24.py (건설 로봇 요청). 칸 제한 1 = 피어싱 100 · 노랑 200."""
+    return [g(INS, -92.5, -4.5, N), g("passive-provider-chest", -92.5, -3.5, N, bar=1),
+            g(INS, -68.5, -12.5, S), g("passive-provider-chest", -68.5, -13.5, N, bar=1),
+            g(INS, -53.5, 5.5, N), g("passive-provider-chest", -53.5, 6.5, N, bar=1)]
+
+
+def southnet():
+    """발전 남쪽 호숫가 포탑 10 (y 36..52) 이 로봇망 밖 - 로보포트 (0,32) 로 망을 늘려 탄 요청 (ammo24) · 피어싱 바꿈이 닿게."""
+    return [g("roboport", 0, 32), g(POLE, 2.5, 34.5)]
 
 
 def coal_clear():
@@ -441,7 +460,7 @@ def bl2():
 
 
 STAGES = {"ironout": (ironout, ironout_clear), "copperout": (copperout, copperout_clear), "rg": (rg, rg_clear), "smelt": (smelt, smelt_clear),
-          "mall": (mall, None), "coal": (coal, coal_clear), "eastwall": (eastwall, None), "boilers": (boilers, None), "bl": (bl, None), "bl2": (bl2, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear), "coal2": (coal2, None)}
+          "mall": (mall, None), "coal": (coal, coal_clear), "eastwall": (eastwall, None), "boilers": (boilers, None), "bl": (bl, None), "bl2": (bl2, None), "rgfeed": (rgfeed, None), "trunk2": (trunk2, trunk2_clear), "coal2": (coal2, None), "westnet": (westnet, None), "ammo": (ammo, None), "southnet": (southnet, None)}
 ROTATE = {"copperout": copperout_rotate, "coal2": coal2_rotate}
 
 # ---------------------------------------------------------------------------------------------------------------

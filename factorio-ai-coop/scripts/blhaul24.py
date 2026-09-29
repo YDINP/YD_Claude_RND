@@ -19,7 +19,7 @@ CHESTS = [(35.5, 17.5, "steel-plate", 150), (43.5, 17.5, "steel-plate", 150), (5
           (23.5, 17.5, "sulfur", 60), (27.5, 17.5, "sulfur", 60), (23.5, 32.5, "sulfur", 60), (27.5, 32.5, "sulfur", 60),
           (39.5, 32.5, "plastic-bar", 300), (47.5, 32.5, "plastic-bar", 300)]
 CHESTS += [(x, y + 16, it, goal) for x, y, it, goal in CHESTS]          # 모듈 둘째 (logi24 bl2, dy 16)
-KEEP = {"steel-plate": 150, "sulfur": 100, "plastic-bar": 200}
+KEEP = {"steel-plate": 150, "sulfur": 100, "plastic-bar": 100}   # 03:3x 플라스틱 200 → 100 (bl1 고급회로 플라스틱 0)
 SRC_BOX = [[62.5, -16.1], [76.1, -14.9]]
 
 LUA = """(function()

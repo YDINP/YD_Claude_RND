@@ -242,7 +242,10 @@ FEEDS = [fd for fd in FEEDS if fd[:3] not in L1_DROP]
 # P7 (logi24 rg 가 벨트로 빨강 · 초록을 labs5 에 넣는다): 옛 빨강 7 · 초록 7 · 팔 · 벨트 조립기로 가는 FEEDS 를 쉰다 - 철 ~2.9/s · 구리 ~1.4/s 를 짓는 데로
 #   (코디네이터 01:1x: 둘째 철 광맥 전까지 겹친 수요를 줄인다). 서쪽 연구소 10 은 빨강 · 초록이 끊겨 쉰다 - 되돌리려면 목록을 비운다.
 DROP_TARGETS = ["red1", "red2", "red3", "red4", "red5", "red6", "red7", "green", "green2", "green3", "green4", "green5", "green6", "green7",
-                "inserter", "belt"]
+                "inserter", "belt",
+                # 03:1x 옛 파랑 사슬 쉼 - 파랑은 bl · bl2 (벨트) 가 labs5 로. 옛 파랑 결과는 서쪽 연구소 (빨강 · 초록 끊겨 쉼) 로만 갔다.
+                #   엔진 5 · 6 (전기 엔진) · 고급회로 3 · 6 (물류 로봇) · 회로 2 (고급회로 5) 는 로봇 줄 몫이라 남긴다.
+                "blue1", "blue2", "blue3", "blue4", "blue5", "adv1", "adv2", "adv3", "adv4", "eng1", "eng2", "eng3", "eng4"]   # 03:3x 해체 (adv3 · eng3 · eng4 는 추락선 잔해와 겹침)
 FEEDS = [fd for fd in FEEDS if fd[2] not in DROP_TARGETS]
 # (조립기, 품목, 허브 상한) - 결과칸 → 허브. 로봇 · 로보포트는 허브에서 사람이 들고 가 놓는다 (또는 relay 가 로보포트에)
 # P5: 포탑 조립기가 10분 철판 ~1,500 을 먹었다 (허브 · 저장 상자 채우기) - 허브 20 → 10, 저장 상자 10 → 5
@@ -268,6 +271,9 @@ NET_STOCK = []
 PORT_STOCK = []
 LAB_CAP = 20
 TURRET_CAP = 20
+# P7 안전 걷기 (03:2x~): relay 가 포탑 탄 · 화로 연료를 안 넣는 구역 [x0, y0, x1, y1]. 넓혀 가다 모두 덮이면 S1 · S2 · S4 를 뺀다.
+#   동쪽 전초 (P8, 화로 24 · 포탑 16) 10 분 시험 (코디네이터) · 발전 남쪽 호숫가 (ammo24 가 피어싱으로 바꿈 - relay 노랑이 끼면 못 바꾼다)
+SAFE_OFF = []                            # 03:22 포탑 (2,50) 탄 0 - 되살림. 전: [[-40, 30, 12, 56]]          # + [380, -190, 440, -120] 동쪽 전초 (석탄 상자 채운 뒤)
 CHEST_CAP = 200
 COAL_BOX = [100, -34, 126, -22]
 # (이름, x, y, 레시피, 넣을 품목 ("" = 없음), 상한, 꺼낼 품목, 허브 상한) - p2_24 REFINERY · PLASTIC
@@ -282,7 +288,7 @@ CHEM = [["oil-refinery", -112.5, 18.5, "basic-oil-processing", "", 0, "", 0],
 BOIL, BURN = 20, 5
 # P7 안전 (마지막): 석탄 벨트 → 보일러 팔 (logi24 coal) 이 10 분 넘게 돈 뒤 BOIL = 0 (relay 보일러 연료 쉼). 화로는 FURN = 0 (사람 손 연료 고리가 대신).
 FURN = BURN
-BOIL = 0            # 2026-09-30 03:1x 뺌 - 보일러 줄 10 대 (석탄 벨트 y 48.5) 가 발전 전부. 흩어진 보일러 4 대 (-83/-75/-57/-42) 는 연료 떨어지면 쉼 (예비)
+# BOIL = 0          # 03:17 정전 (보일러 7 석탄 0) 으로 되살림 - 03:01 뺌 - 보일러 줄 10 대 (석탄 벨트 y 48.5) 가 발전 전부. 흩어진 보일러 4 대 (-83/-75/-57/-42) 는 연료 떨어지면 쉼 (예비)
 # (구역, 판, 허브 상한) - 전기 채굴기가 화로에 바로 붓는 쌍 (P2: 철 버너 줄 자리의 전기 쌍 C (y -54) 까지). 결과칸이 차면 채굴기가 선다 (collect_run 걸음으론 모자람)
 PLATES = [[[68, -56, 103, -41], "iron-plate", 2500], [[60, 78, 92, 90], "copper-plate", 1500],
           [[72, -67.5, 96, -64.5], "iron-plate", 2500]]      # P3 철 전기 쌍 E 6 (p3_24.IRONE_XS, 화로 y -66)
@@ -477,12 +483,21 @@ LUA = """(function()
   -- 탄창 -> 포탑 (모든 gun-turret, 좌표 목록 아님) -> 탄창 상자
   -- P2 (20:52 경보: 새 포탑 (72,96)·(80,96) 탄 0): 조립기 결과칸이 비면 허브 탄창 상자 (사람 무장용 ≤ CHEST_CAP) 에서도 포탑으로.
   -- 새 포탑 17 × 20 = 340 이 조립기 한 대 (0.5/s) 보다 빨리 필요했다. 빈 포탑부터 채운다 (탄 적은 순).
+  -- P7 안전 걷기: OFF 구역 (포탑 · 화로 연료) 은 relay 가 손대지 않는다 - 대신하는 것 (ammo24 로봇 요청 · 손 고리 · 벨트) 이 맡는다
+  local OFF = helpers.json_to_table('__OFF__')
+  local function off(e)
+    for _, z in pairs(OFF) do
+      if e.position.x >= z[1] and e.position.y >= z[2] and e.position.x <= z[3] and e.position.y <= z[4] then return true end
+    end
+    return false
+  end
   local m = M["ammo"]
   local ch = s.find_entities_filtered{type = "container", force = f, position = AC, radius = 0.6}[1]
   local srcs = {}
   if m then srcs[#srcs+1] = m.get_inventory(defines.inventory.assembling_machine_output) end
   if ch then srcs[#srcs+1] = ch.get_inventory(defines.inventory.chest) end
-  local turrets = s.find_entities_filtered{name = "gun-turret", force = f}
+  local turrets = {}
+  for _, t in pairs(s.find_entities_filtered{name = "gun-turret", force = f}) do if not off(t) then turrets[#turrets + 1] = t end end
   table.sort(turrets, function(a, b)
     return a.get_inventory(defines.inventory.turret_ammo).get_item_count() < b.get_inventory(defines.inventory.turret_ammo).get_item_count() end)
   -- P4 피어싱 (military-2): 포탑 탄 칸은 하나 - 노랑이 든 포탑은 노랑을 허브로 돌려보내고 피어싱 20 을 넣는다.
@@ -491,9 +506,11 @@ LUA = """(function()
   for _, z in pairs(helpers.json_to_table('__PZ__')) do
     for _, t in pairs(s.find_entities_filtered{name = "gun-turret", force = f, area = {{z[1], z[2]}, {z[3], z[4]}}}) do
       local tin = t.get_inventory(defines.inventory.turret_ammo)
-      local pc = tin.get_item_count("piercing-rounds-magazine")
-      local yc = tin.get_item_count("firearm-magazine")
-      if yc > 0 and ptotal >= %d then
+      if off(t) then tin = nil end
+      local pc = tin and tin.get_item_count("piercing-rounds-magazine") or 0
+      local yc = tin and tin.get_item_count("firearm-magazine") or 0
+      if not tin then
+      elseif yc > 0 and ptotal >= %d then
         local got = hub_pull("piercing-rounds-magazine", %d)
         if got > 0 then
           tin.remove{name = "firearm-magazine", count = yc}
@@ -622,7 +639,7 @@ LUA = """(function()
   end
   local function fuel(list, cap)
     for _, e in pairs(list) do
-      local fi = e.get_fuel_inventory()
+      local fi = (not off(e)) and e.get_fuel_inventory()
       if fi then
         local room = cap - fi.get_item_count("coal")
         if room > 0 then
@@ -694,7 +711,7 @@ def lua_box(b) -> str:
 
 def once(ai) -> dict:
     l2 = dict({k: True for k in LAB2_PACKS}, on=True) if LAB2_PACKS else {"on": False}
-    return ai.lua(LUA.replace("__PZ__", blob(PIERCE_ZONES)).replace("__L2__", blob(l2)) % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
+    return ai.lua(LUA.replace("__PZ__", blob(PIERCE_ZONES)).replace("__OFF__", blob(SAFE_OFF)).replace("__L2__", blob(l2)) % (blob(ASMS), blob(FEEDS), blob(RESERVE), lua_box(HUB_BOX), lua_box(LAB_BOX),
                          AMMO_CHEST[0], AMMO_CHEST[1], blob(OUTS), blob(PORT_STOCK), blob(NET_STOCK), lua_box(LAB_BOX2), LAB_CAP,
                          TURRET_CAP, TURRET_CAP, TURRET_CAP, TURRET_CAP, TURRET_CAP, CHEST_CAP,
                          blob(PLATES), blob(CHESTS), blob(SMELT), lua_box(COAL_BOX), blob(CHEM), BOIL, BURN, FURN, BURN))
