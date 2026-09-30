@@ -48,8 +48,8 @@ FEED = [
     (-106.5, 13.5, "coal", 40, 100, 0), (-71.5, 11.5, "coal", 40, 100, 0),        # 플라스틱 화학 (P4 석탄) - P11 (06:0x): 석유가스 10.6 → 46/s 로
                                                                                   #   석탄 20 개씩 (석탄 밭 상자에서 ~235 칸 비행) 이 플라스틱을 묶음 → 100 개씩
 ]
-for _x in (-80.5, -76.5):                                 # 틀 1 · 2
-    FEED += [(_x, -6.5, "electric-engine-unit", 1, 2, 0), (_x, -6.5, "battery", 2, 4, 0), (_x, -6.5, STEEL, 2, 5, 50), (_x, -6.5, CIRC, 3, 6, 0)]
+for _x in (-80.5, -76.5):                                 # 틀 1 · 2 (18:2x 전기 엔진 남김 0 → 200 = 사일로 몫, 망 틀 514)
+    FEED += [(_x, -6.5, "electric-engine-unit", 1, 2, 200), (_x, -6.5, "battery", 2, 4, 0), (_x, -6.5, STEEL, 2, 5, 50), (_x, -6.5, CIRC, 3, 6, 0)]
 # 04:1x 코디네이터: 건설 로봇 조립기 (robot1) 다시 - 망 건설 로봇 < ROBOT_CAP 이고 노랑 조립기 (1.5,16.5) 입력 틀 ≥ 2 일 때만 (노랑이 틀 먼저)
 #   결과는 팔 (-71.5,-4.5) → 로보포트 (-71,-2) 로 바로 (logi24 robo).
 ROBOT_CAP = 404
@@ -119,7 +119,7 @@ for _x, _y in LABS:
 #   관 조립기 넷에 철 (과학 몫). 엔진 = 관 2 · 톱니 1 · 강철 1 (10 s / 0.75) → 6 대 10분 270.
 for _x in (35.5, 43.5, 51.5):
     for _y in (21.5, 37.5):
-        FEED += [(_x, _y, "iron-gear-wheel", 2, 10, 200), (_x, _y, "pipe", 2, 6, 10)]
+        FEED += [(_x, _y, "iron-gear-wheel", 2, 10, 200), (_x, _y, "pipe", 2, 6, 120)]   # 18:2x 관 남김 10 → 120 (사일로 관 100 몫, rocket24)
 for _x in (31.5, 47.5):
     for _y in (21.5, 37.5):
         FEED.append((_x, _y, IRON, 4, 20, SCI_IRON_KEEP))
@@ -134,14 +134,31 @@ FEED += [(7.5, 19.5, STEEL, 10, 30, 1500), (12.5, 15.5, STEEL, 10, 40, 1500)]
 PIERCE_KEEP = 200
 for _x in (81.5, 89.5):
     FEED += [(_x, -4.5, "piercing-rounds-magazine", 3, 10, PIERCE_KEEP), (_x, -4.5, "stone-wall", 4, 10, 50)]
-FEED += [(85.5, 0.5, "stone-brick", 10, 30, 20)]    # 수류탄 (85.5,-4.5) 은 요청 상자 (85.5,-1.5) 철 50 · 석탄 100 - 망 철이 늘 0 이라 여기 문턱 요청은 안 옴
+FEED += [(85.5, 0.5, "stone-brick", 10, 30, 100)]   # 18:3x 남김 20 → 100: 벽돌이 모자랄 때 전기로 (보라, 남김 0) 먼저    # 수류탄 (85.5,-4.5) 은 요청 상자 (85.5,-1.5) 철 50 · 석탄 100 - 망 철이 늘 0 이라 여기 문턱 요청은 안 옴
 # 15:0x 군사줄 피어싱 조립기 (77.5,-4.5): 망 노랑 (~680, 만듦 > 씀) → 피어싱. 결과는 군사 1 직결 + 공급 상자 (77.5,-1.5) → 망 (포탑).
 #   노랑은 200 남김 (ammo24 포탑 노랑 몫) · 강철 (사일로 몫 1500 남김) · 구리.
 FEED += [(77.5, -4.5, "firearm-magazine", 6, 20, 200), (77.5, -4.5, STEEL, 4, 10, 1500), (77.5, -4.5, CU, 6, 20, 300)]
 for _x in (81.0, 86.0, 89.0, 94.0):
-    FEED += [(_x, 4.0, "stone", 10, 40, 200, None, "src"), (_x, 4.0, "coal", 5, 20, 300, None, "fuel")]
+    FEED += [(_x, 4.0, "stone", 20, 100, 200, None, "src"), (_x, 4.0, "coal", 5, 20, 300, None, "fuel")]   # 18:3x 돌 40 → 100 (40 은 64 s 몫이라 no_ingredients 가 잦음 - 벽돌 → 전기로 → 보라)
 for _x, _y in LABS:
     FEED.append((_x, _y, "military-science-pack", 2, 6, 0))
+# 18:1x 과학 다시 (sci2_24): 빨강 조립기 4 (y 12.5) 톱니 19~23 은 벨트로 오는데 구리 0 (망 구리 14k) → 구리.
+#   전기로 조립기 (7.5,19.5) 벽돌 9/10 (강철 29 · 고급 32 는 넉넉) - 벽돌 먹이가 없었다 → 벽돌 (남김 0 = 보라 먼저).
+#   엔진 옆 톱니 조립기 넷 (39.5 · 55.5, 21.5 · 37.5) 철 벨트 (y 18.5 · 34.5) 비어 굶음 → 철 (과학 몫).
+for _x in (36.5, 40.5, 44.5, 48.5):
+    FEED.append((_x, 12.5, CU, 4, 20, 300))
+FEED.append((7.5, 19.5, "stone-brick", 10, 30, 0))
+FEED.append((7.5, 15.5, "electric-furnace", 1, 2, 0))   # 18:3x 보라 1 은 전기로를 팔 직결로만 받는데 넘침 팔 (8.5,21.5) 과 나눠 가져 굶음 (넘침 상자 9) → 로봇
+FEED.append((74.0, -9.0, "stone", 20, 100, 200, None, "src"))   # 18:3x 허브 강철로 (74,-9) 조리법 벽돌인데 no_ingredients - 돌 (망 7.9k)
+for _x in (39.5, 55.5):
+    for _y in (21.5, 37.5):
+        FEED.append((_x, _y, IRON, 4, 20, SCI_IRON_KEEP))
+# 18:2x 석탄 밭 고갈 (상자 채굴기 9 no_minable, 망 석탄 0 · coalnet src empty) → 돌 화로 4 (벽돌 → 전기로 → 보라) · 철 화로 줄 7 (y -43)
+#   연료칸이 비면 고체 연료 (망 ~1.2k, 12 MJ = 석탄 3 배). 남김 300 (로켓 연료 몫은 따로 만들어야 함). 석탄이 들어 있으면 안 부름 (위 Lua 가드).
+for _x in (81.0, 86.0, 89.0, 94.0):
+    FEED.append((_x, 4.0, "solid-fuel", 1, 5, 300, None, "fuel"))
+for _x in range(82, 101, 3):
+    FEED.append((float(_x), -43.0, "solid-fuel", 1, 5, 300, None, "fuel"))
 MAX_REQ = 60
 # 17:1x 탄 · 과학 철 저울 (ironbal24): 망 피어싱 ≥ BAL_ON 이면 탄 철 먹이가 멈춘다 (탄 블록 팔 = 게임 망 조건, ammo24 = 이력).
 #   그동안 과학 몫 (SCI_IRON_KEEP 철 · 톱니 4 철 · 빨강 · 초록 톱니) 은 망에 남길 몫 0 - 들어오는 철을 과학이 먼저. < BAL_OFF 면 원래 문턱.
@@ -207,6 +224,8 @@ LUA = """(function()
         end
       end
       local have = a.get_inventory(INV).get_item_count(q[3])
+      -- 18:2x 연료칸은 한 칸 - 다른 연료 (석탄 ↔ 고체 연료) 가 들어 있으면 이 연료는 요청하지 않는다 (요청이 못 들어가 busy 로 굳음)
+      if fuel and have == 0 and not a.get_inventory(INV).is_empty() then stack = nil end
       -- 17:1x 연구소 요청이 망에 없는 팩 (보라 0) 에 걸려 있으면 (busy) 다른 팩 (군사 400) 요청을 못 한다 → 망에 없는 팩만 든 요청은 거둔다 (요청 취소 - 물건 이동 없음)
       if lab and stack and have < q[4] then
         for _, p in pairs(s.find_entities_filtered{name = 'item-request-proxy', position = a.position, radius = 0.6}) do
