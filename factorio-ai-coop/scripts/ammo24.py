@@ -15,16 +15,19 @@ import runsite  # noqa
 from client import AIBridge, RconError  # noqa
 
 # (x, y, 품목, 이 밑이면, 요청 수, 망에 이만큼은 남김)
-FEED = [(-53.5, 3.5, "iron-plate", 40, 100, 300)]      # 04:3x 20/40 → 40/100 (노랑 0.5/s = 철 2/s, 한 분 한 요청)
+FEED = [(-53.5, 3.5, "iron-plate", 60, 100, 300)]      # 04:3x 20/40 → 40/100 (노랑 0.5/s = 철 2/s, 한 분 한 요청) · 08:4x D24 조립기 2 (노랑 0.75/s) → 60/100, --every 30
+FEED += [(-96.5, -6.5, "iron-plate", 60, 100, 300)]    # 08:5x D24 노랑 전용 조립기 2 → 팔 → 피어싱 1 (-92.5,-6.5) 에 바로 (d24_defense --yel2)
+FEED += [(-64.5, -10.5, "iron-plate", 60, 100, 300)]   # 08:57 D24 노랑 전용 조립기 1 → 팔 → 피어싱 2 (-68.5,-10.5)
 for _x, _y in ((-92.5, -6.5), (-68.5, -10.5)):
-    FEED += [(_x, _y, "firearm-magazine", 4, 10, 60), (_x, _y, "steel-plate", 4, 10, 50), (_x, _y, "copper-plate", 10, 25, 300)]   # 04:4x 노랑 남김 200 → 60 (노랑이 포탑 채우기에 다 가 피어싱이 섰다)
+    # 08:4x D24: 피어싱 조립기 1 → 2 (한 대 0.25/s = 10분 150, 조리법 노랑 2 · 강철 1 · 구리 2 → 2). 한 요청이 ~2 분 몫이 되게 키움 (전엔 1 분 몫 → 강철 · 노랑 굶음, 10분 100)
+    FEED += [(_x, _y, "firearm-magazine", 12, 30, 60), (_x, _y, "steel-plate", 6, 15, 30), (_x, _y, "copper-plate", 12, 30, 300)]   # 04:4x 노랑 남김 200 → 60 (노랑이 포탑 채우기에 다 가 피어싱이 섰다)
 # 03:3x 노랑은 포탑 몫 먼저 (망 200 넘을 때만 피어싱 재료로) - 노랑 조립기 결과 팔 (-53.5,5.5) 은 걷음: relay S1 (망 밖 포탑 · P10 북쪽 포탑) 의 노랑 출처가 그 결과칸이다
 # 공급 상자 (logi24 ammo) - 손 고리가 여기서 꺼낸다
 OUT_CHESTS = [(-92.5, -3.5), (-68.5, -13.5)]
 LOW, FILL = 10, 20
 # 04:1x 코디네이터: 망 가장자리 포탑은 작은 요청 대신 사람 손 한 번에 (로봇 먼 길) - P10 북쪽 전초 (P10 이 손으로 채움)
 NO_PROXY = [[-10, -150, 50, -85]]
-YELLOW_KEEP = 40          # 노랑은 피어싱 재료 몫을 남긴다
+YELLOW_KEEP = 10          # 노랑은 피어싱 재료 몫을 남긴다 (08:4x D24 40 → 10: 새 포탑 24 채우는 동안 포탑 먼저, 피어싱 먹이는 FEED 남김 60 이 막는다)
 MAX_REQ = 40              # 한 번에 만드는 요청 수 상한
 SW_MAX = 6                # 한 번에 피어싱으로 바꾸는 포탑 수 (빼기 + 넣기 - 망 피어싱을 넘겨 요청하면 빼기만 되어 빈 포탑이 된다)
 PIERCE_KEEP = 60          # 바꿈은 망 피어싱이 이만큼 남을 때만 (빈 포탑 채우기 몫)
@@ -129,6 +132,13 @@ LUA = """(function()
           proxy(t, {{id = {name = it}, items = {in_inventory = {{inventory = TI, stack = 0, count = n}}}}})
           nreq = nreq + 1
           out.req[#out.req + 1] = it .. ' ' .. n .. ' @' .. t.position.x .. ',' .. t.position.y
+        elseif it == 'firearm-magazine' and np >= A.fill and nsw < A.swmax and net.available_construction_robots >= 20 then
+          -- 08:4x D24: 노랑 포탑이 탄 < LOW 인데 망 노랑이 모자라고 피어싱은 있으면 → 남은 노랑 빼기 + 피어싱 넣기 (로봇 여유 20+ 일 때만 - 04:0x 교훈)
+          spend(net, 'piercing-rounds-magazine', A.fill) nsw = nsw + 1
+          proxy(t, {{id = {name = 'piercing-rounds-magazine'}, items = {in_inventory = {{inventory = TI, stack = 0, count = A.fill}}}}},
+                   {{id = {name = 'firearm-magazine'}, items = {in_inventory = {{inventory = TI, stack = 0, count = y}}}}})
+          nreq = nreq + 1 out.sw = out.sw + 1
+          out.req[#out.req + 1] = 'short-swap piercing @' .. t.position.x .. ',' .. t.position.y
         else out.skip[#out.skip + 1] = 'turret ' .. it .. ' short @' .. t.position.x .. ',' .. t.position.y end
       end
     end
