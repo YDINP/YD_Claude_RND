@@ -68,9 +68,20 @@ local function count_craft(force, item, amount)
       if trigger and trigger.type == "craft-item"
           and trigger_item_name(trigger) == item
           and storage.crafted[item] >= (trigger.count or 1) then
-        tech.researched = true
-        pcall(remember_line, "AI", "손으로 " .. item .. "을(를) 만들어 «"
-          .. tech.name .. "» 기술이 열렸습니다.")
+        -- run25 (사용자 2026-10-01): 엄격 모드에서는 기술을 스크립트로 열지 않는다.
+        -- 조건을 채웠다는 것만 남기고 (storage.trigger_met), 엔진이나 사람 플레이어가 열게 둔다.
+        if storage.strict then
+          storage.trigger_met = storage.trigger_met or {}
+          if not storage.trigger_met[tech.name] then
+            storage.trigger_met[tech.name] = game.tick
+            pcall(remember_line, "AI", "손으로 " .. item .. "을(를) 만들어 «"
+              .. tech.name .. "» 트리거 조건을 채웠지만 엄격 모드라 열지 않습니다.")
+          end
+        else
+          tech.researched = true
+          pcall(remember_line, "AI", "손으로 " .. item .. "을(를) 만들어 «"
+            .. tech.name .. "» 기술이 열렸습니다.")
+        end
       end
     end
   end
