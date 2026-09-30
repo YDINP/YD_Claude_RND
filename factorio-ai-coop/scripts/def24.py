@@ -188,7 +188,7 @@ LUA_LASER_SPOTS = """(function()
           local powered = false
           for _, pl in pairs(s.find_entities_filtered{type = 'electric-pole', force = f, position = p, radius = 8}) do
             local r = pl.prototype.get_supply_area_distance()
-            if math.abs(pl.position.x - p[1]) <= r + 1 and math.abs(pl.position.y - p[2]) <= r + 1 then powered = true break end
+            if math.abs(pl.position.x - p[1]) < r + 1 and math.abs(pl.position.y - p[2]) < r + 1 and pl.electric_network_id ~= nil then powered = true break end   -- 17:3x: <= 는 가장자리만 닿는 칸도 셌다 (16 중 7 no_power)
           end
           if powered then
             taken[key] = true
