@@ -96,7 +96,10 @@ def main() -> int:
             if not q and tuple(use) != tuple(packs):
                 # 08:4x: 게이트·멈춤 감지로 먹일 연구가 0 이 되면 연구소가 통째로 선다 - 느리게라도 도는 편이 낫다.
                 # 이때는 게이트를 무시하고 모든 팩으로 대기열을 채운다.
-                q = p4.queue_fill(ai, tuple(packs), prefer=prefer, skip=skip)
+                live = tuple(pk for pk in packs if not (pk in forced_off and time.time() < forced_off[pk]))
+                q = p4.queue_fill(ai, live, prefer=prefer, skip=skip)  # 멈춤 감지로 끈 팩 (연구소에 실제로 없는 팩) 은 빼고
+                if not q:
+                    q = p4.queue_fill(ai, tuple(packs), prefer=prefer, skip=skip)
                 if q:
                     print(time.strftime("%X"), "게이트로 연구 0 - 전체 팩으로 대기열 (느리게라도 돌린다)", flush=True)
             if q != last:
