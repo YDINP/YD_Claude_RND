@@ -99,6 +99,11 @@ def main() -> int:
                 live = tuple(pk for pk in packs if not (pk in forced_off and time.time() < forced_off[pk]))
                 q = p4.queue_fill(ai, live, prefer=prefer, skip=skip)  # 멈춤 감지로 끈 팩 (연구소에 실제로 없는 팩) 은 빼고
                 if not q:
+                    # 19:0x: 석탄 고갈로 군사팩 생산 0 인데 «전체 팩» 이 군사 연구를 맨 앞에 두어 연구소 18/18 이 섰다.
+                    #   게이트가 꺼졌고 (생산·재고 둘 다 낮음) 연구소에도 없는 팩만 빼고 한 번 더.
+                    dead = {pk for pk in packs if pk in gates and gates[pk][2] is False and pk in forced_off}
+                    q = p4.queue_fill(ai, tuple(pk for pk in packs if pk not in dead), prefer=prefer, skip=skip) if dead else []
+                if not q:
                     q = p4.queue_fill(ai, tuple(packs), prefer=prefer, skip=skip)
                 if q:
                     print(time.strftime("%X"), "게이트로 연구 0 - 전체 팩으로 대기열 (느리게라도 돌린다)", flush=True)
