@@ -44,16 +44,17 @@ A2, CP, INS, PP, POLE, PIPE = "assembling-machine-2", "chemical-plant", "inserte
 
 # (이름, x, y, 방향, 조리법)
 MACH = [
-    (A2, -69.5, 2.5, N, "rocket-fuel"), (A2, -67.5, -1.5, S, "rocket-fuel"), (CP, -64.5, -1.5, S, "solid-fuel-from-light-oil"),
+    # 20:5x RF 둘은 3 형으로 올림 (rocketpush24 upgrade) - 유령 · config 이름도 3 형
+    ("assembling-machine-3", -69.5, 2.5, N, "rocket-fuel"), ("assembling-machine-3", -67.5, -1.5, S, "rocket-fuel"), (CP, -64.5, -1.5, S, "solid-fuel-from-light-oil"),
     (CP, -29.5, 29.5, S, "sulfuric-acid"),
     (A2, -30.5, 25.5, E, "processing-unit"), (A2, -30.5, 21.5, E, "processing-unit"), (A2, -26.5, 21.5, W, "processing-unit"),
     (A2, 106.5, -40.5, N, "low-density-structure"), (A2, 113.5, -40.5, N, "low-density-structure"), (A2, 117.5, -47.5, N, "low-density-structure"),
 ]
 # (팔 x, y, 방향, 상자 x, y | None, 칸 제한)
 OUT = [
-    (-67.5, 2.5, W, -66.5, 2.5, 5),      # RF1 → 상자 (RF 20 × 5 = 100)
-    (-67.5, -3.5, S, -67.5, -4.5, 5),    # RF2
-    (-63.5, -3.5, S, -63.5, -4.5, 10),   # SF1 (고체 연료 50 × 10)
+    (-67.5, 2.5, W, -66.5, 2.5, 20),     # RF1 → 상자 (RF 20 × 5 = 100) - 20:5x 5 → 20 칸: 상자 100 이 차 RF1 full_output (RF 가 PU 를 기다리며 쉼)
+    (-67.5, -3.5, S, -67.5, -4.5, 20),   # RF2
+    (-63.5, -3.5, S, -63.5, -4.5, 20),   # SF1 (고체 연료 50 × 10) - 20:5x 10 → 20 칸 (상자 448/500 에 SF1 이 설 뻔)
     (-31.5, 27.5, N, -31.5, 28.5, 2),    # PU1 (PU 100 × 2)
     (-30.5, 19.5, S, -30.5, 18.5, 2),    # PU2
     (-26.5, 19.5, S, -26.5, 18.5, 2),    # PU3
@@ -73,16 +74,28 @@ G += [(PIPE, x, y, N) for x, y in PIPES] + [(POLE, x, y, N) for x, y in POLES]
 
 # 로봇 요청 먹이 (robofeed24 형식: x, y, 품목, 이 밑이면, 요청 수, 망 남김)
 ADV_KEEP_PU, GREEN_KEEP_PU, PLASTIC_KEEP, SF_KEEP = 800, 600, 100, 300   # 19:5x 고급 1500 → 800 (망 고급 976 이라 PU 굶음, 고급 10분 ~380)
-FEED = [(-29.5, 29.5, "sulfur", 10, 30, 100), (-29.5, 29.5, "iron-plate", 3, 6, robofeed24.SCI_IRON_KEEP)]
-for _n, _x, _y, _d, _r in MACH:
-    if _r == "processing-unit":
-        FEED += [(_x, _y, "electronic-circuit", 20, 60, GREEN_KEEP_PU), (_x, _y, "advanced-circuit", 4, 10, ADV_KEEP_PU)]
-    elif _r == "low-density-structure":
-        FEED += [(_x, _y, "copper-plate", 40, 100, 300), (_x, _y, "steel-plate", 6, 16, 1500), (_x, _y, "plastic-bar", 15, 40, PLASTIC_KEEP)]   # 19:5x 한 번에 5 번 몫
-    elif _r == "rocket-fuel":
-        FEED += [(_x, _y, "solid-fuel", 20, 50, SF_KEEP)]   # 19:5x 속도 모듈 2 → 4.2/분 = SF 42/분: 30 씩 30 s 고리로는 모자람
+# 20:5x 로켓 1 호 밀기 (코디네이터 «로켓 > 과학»): 발사 전 (force.rockets_launched == 0) 에는 PU 녹색 남김 600 → 100 · 고급 800 → 200.
+#   새 PU 셋이 녹색 40 · 고급 0 으로 굶었다 (망 녹색 807 · 고급 700 이 남김 밑). 첫 발사 뒤 저절로 옛 값으로 돌아간다.
+PUSH_GREEN_KEEP_PU, PUSH_ADV_KEEP_PU = 100, 200
+
+
+def feed_list(push):
+    g, a = (PUSH_GREEN_KEEP_PU, PUSH_ADV_KEEP_PU) if push else (GREEN_KEEP_PU, ADV_KEEP_PU)
+    out = [(-29.5, 29.5, "sulfur", 10, 30, 100), (-29.5, 29.5, "iron-plate", 3, 6, robofeed24.SCI_IRON_KEEP)]
+    for _n, _x, _y, _d, _r in MACH:
+        if _r == "processing-unit":
+            out += [(_x, _y, "electronic-circuit", 40, 100, g), (_x, _y, "advanced-circuit", 6, 12, a)]   # 20:5x 녹색 20 밑 60 → 40 밑 100 (PU 0.75 = 녹색 1.5/s = 30 s 고리에 45)
+        elif _r == "low-density-structure":
+            out += [(_x, _y, "copper-plate", 40, 100, 300), (_x, _y, "steel-plate", 6, 16, 1500), (_x, _y, "plastic-bar", 15, 40, PLASTIC_KEEP)]   # 19:5x 한 번에 5 번 몫
+        elif _r == "rocket-fuel":
+            out += [(_x, _y, "solid-fuel", 20, 50, SF_KEEP)]   # 19:5x 속도 모듈 2 → 4.2/분 = SF 42/분: 30 씩 30 s 고리로는 모자람
+    return out
+
+
+FEED = feed_list(False)
 SILO = (110.5, -47.5)
-SILO_REQ = {"processing-unit": (30, 60), "low-density-structure": (20, 40), "rocket-fuel": (10, 20)}   # 이 밑이면 · 요청 수
+SILO_REQ = {"processing-unit": (30, 60), "low-density-structure": (20, 40), "rocket-fuel": (30, 60)}   # 이 밑이면 · 요청 수
+# 21:1x RF 10 밑 20 → 30 밑 60: RF 상자 (-66,2) → 사일로 ~185 칸 비행 + 요청은 한 번에 하나 (busy) 라 20 씩이면 ~17/분 상한 (RF 3 형 14/분과 붙음, 부품 1/분)
 MODULE = "productivity-module"
 CRACK, PG_TANK, PG_HI, PG_LO = (-79.5, 4.5), (-74.5, 11.5), 8000, 4000
 SF1, SF_HI, SF_LO = (-64.5, -1.5), 3000, 1500
@@ -143,10 +156,23 @@ LUA_OIL = """(function()
   return o end)()"""
 
 
-def oil(ai):
+# 20:5x 밀기: 경유 10분 생산 10.2k · 씀 5.5k (RF 조립기 둘이 상한) - 처음엔 남는 경유를 분해해 가스 → 플라스틱 (4000 켬 · 2500 끔).
+#   20:55 노랑 LDS 상자 1,150 손 운반으로 LDS 는 한 발 몫이 찼고 RF 가 마지막 벽 (경유 탱크 7.3k → 2.8k) → 발사 전에는 분해를 거의 끔 (12000 켬 · 6000 끔).
+PUSH_LO_HI, PUSH_LO_KEEP = 12000, 6000
+# 20:5x 밀기: 황 둘이 가스를 먹는다 (망 황 826 에서 둘 다 켜짐, 가스 탱크 55) - 발사 전에는 황 400 넘으면 쉼 · 200 밑이면 켬 (PU 황산 몫은 PU 하나에 황 0.5)
+PUSH_S_HI, PUSH_S_LO = 400, 200
+
+
+def push_on(ai):
+    return int(ai.lua("(function() return {n = game.forces.player.rockets_launched} end)()").get("n", 0)) == 0
+
+
+def oil(ai, push=None):
+    push = push_on(ai) if push is None else push
     return ai.lua(LUA_OIL % json.dumps({"pg_tank": list(PG_TANK), "lo_tank": list(LO_TANK), "main": REF_MAIN, "basic": REF_BASIC,
-                                        "surplus": OIL_SURPLUS, "low": OIL_LOW, "crack": list(CRACK), "lo_hi": LO_HI, "lo_keep": LO_KEEP,
-                                        "pg_crit": PG_CRIT, "pg_hi": PG_HI, "sulfur": SULFUR, "s_hi": S_HI, "s_lo": S_LO,
+                                        "surplus": OIL_SURPLUS, "low": OIL_LOW, "crack": list(CRACK),
+                                        "lo_hi": PUSH_LO_HI if push else LO_HI, "lo_keep": PUSH_LO_KEEP if push else LO_KEEP,
+                                        "pg_crit": PG_CRIT, "pg_hi": PG_HI, "sulfur": SULFUR, "s_hi": PUSH_S_HI if push else S_HI, "s_lo": PUSH_S_LO if push else S_LO,
                                         "sf_gas": list(SF_GAS), "sfg_on": SFG_ON, "sfg_off": SFG_OFF}))
 
 LUA_CONFIG = """(function()
@@ -289,8 +315,9 @@ def silo(ai):
                                          "sf1": list(SF1), "sf_hi": SF_HI, "sf_lo": SF_LO}))
 
 
-def feed(ai):
-    arg = json.dumps({"feed": FEED, "max": 30, "robot_cap": 0, "yellow": [0, 0], "sci": [], "paused": False,
+def feed(ai, push=None):
+    push = push_on(ai) if push is None else push
+    arg = json.dumps({"feed": feed_list(push), "max": 30, "robot_cap": 0, "yellow": [0, 0], "sci": [], "paused": False,
                       "bal_on": 10 ** 9, "bal_off": -1})
     return ai.lua(robofeed24.LUA % arg)
 
@@ -324,7 +351,8 @@ def main():
     if a.step == "loop":
         while True:
             try:
-                r = {"silo": silo(ai), "feed": feed(ai), "oil": oil(ai)}
+                push = push_on(ai)
+                r = {"silo": silo(ai), "feed": feed(ai, push), "oil": oil(ai, push)}
                 f = r["feed"]
                 print(time.strftime("%H:%M:%S"), json.dumps({"silo": r["silo"], "req": list((f.get("req") or {}).values()) if isinstance(f.get("req"), dict) else f.get("req"),
                                                              "short": len(f.get("short") or []), "miss": len(f.get("miss") or []), "oil": r["oil"]}, ensure_ascii=False), flush=True)
