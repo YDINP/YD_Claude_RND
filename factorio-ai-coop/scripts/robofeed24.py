@@ -69,12 +69,28 @@ for _x in (36.5, 40.5, 44.5, 48.5):
 for _x in (32.5, 40.5):
     FEED.append((_x, 5.5, "inserter", 2, 5, 10))                      # 초록
 FEED.append((48.5, 5.5, "transport-belt", 2, 5, 10))                  # 초록
+# 12:4x (코디네이터 Task C): 파랑 8 대 모두 고급회로 · 엔진 둘 다 (전엔 위 넷은 고급만 · 아래 넷은 엔진만 - 나머지는 bl 벨트 몫인데 bl 이 굶음).
+#   망 고급 ~930 · 엔진 ~580. 조리법 엔진 2 · 고급 3 · 황 1 → 2 (10 s) - 한 요청 (고급 12 · 엔진 8) ≈ 4 판 = ~40 s 몫.
 for _x in (23.5, 27.5):
-    for _y in (21.5, 28.5):
-        FEED.append((_x, _y, "advanced-circuit", 3, 10, 50))          # 파랑
-    for _y in (37.5, 44.5):
-        FEED.append((_x, _y, "engine-unit", 2, 6, 20))                # 파랑
-MAX_REQ = 30
+    for _y in (21.5, 28.5, 37.5, 44.5):
+        FEED.append((_x, _y, "advanced-circuit", 6, 12, 50))          # 파랑
+        FEED.append((_x, _y, "engine-unit", 4, 8, 20))                # 파랑
+        FEED.append((_x, _y, "sulfur", 2, 6, 100))                    # 파랑 (황 벨트 몫이 모자랄 때)
+# 12:4x 초록 사슬 (rg 벨트 철이 0): 팔 조립기 (36.5 · 52.5, 5.5) · 벨트 조립기 (44.5 · 28.5, 5.5) 에 톱니 (망 4.3k) · 회로 · 철.
+#   철은 과학 몫이라 IRON_KEEP (600) 대신 SCI_IRON_KEEP (100) - 탄 (남김 0) 다음, 다른 철 요청 (600) 앞.
+SCI_IRON_KEEP = 100
+for _x in (36.5, 52.5):
+    FEED += [(_x, 5.5, "iron-gear-wheel", 4, 20, 200), (_x, 5.5, "electronic-circuit", 4, 20, 100), (_x, 5.5, IRON, 4, 20, SCI_IRON_KEEP)]
+for _x in (28.5, 44.5):
+    FEED += [(_x, 5.5, "iron-gear-wheel", 4, 20, 200), (_x, 5.5, IRON, 4, 20, SCI_IRON_KEEP)]
+# 12:4x LDS (-4.5,7.5) 플라스틱 0 (다른 LDS 둘만 먹이가 있었다)
+FEED.append((-4.5, 7.5, "plastic-bar", 10, 30, 100))
+# 12:4x 노랑 사슬: PU (1.5,20.5) fluid_ingredient_shortage ← 황산 화학 (-2.5,20.5) 황 4 (5 필요) · 철 4 → 황 · 철 먹이 (철은 과학 몫 남김)
+FEED += [(-2.5, 20.5, "sulfur", 10, 50, 100), (-2.5, 20.5, IRON, 4, 10, SCI_IRON_KEEP)]
+# 12:4x 철 화로 줄 (y -43, x 82..100, 7 대) 연료 - no_fuel 4 (연료 손 고리 golf 사망 12:01). 망 석탄 ~11k 에서 로봇이 연료 칸에.
+for _x in range(82, 101, 3):
+    FEED.append((float(_x), -43.0, "coal", 10, 50, 300, None, "fuel"))
+MAX_REQ = 40
 
 LUA = """(function()
   local s, f = game.surfaces[1], game.forces.player

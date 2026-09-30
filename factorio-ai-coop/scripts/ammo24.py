@@ -43,6 +43,8 @@ LUA = """(function()
   local A = helpers.json_to_table('%s')
   local out = {req = {}, skip = {}, outside = {}, net = {}, sw = 0}
   local nreq = 0
+  local mn0 = s.find_logistic_network_by_position({66.5, -15.5}, f)
+  A.mainid = mn0 and mn0.network_id or -1
   local function busy(e) return s.count_entities_filtered{name = 'item-request-proxy', position = e.position, radius = 0.6} > 0 end
   local function net_of(p) return s.find_logistic_network_by_position(p, f) end
   -- 포탑 · 조립기 요청은 건설 로봇이 채운다 → 건설 범위 (로보포트 55) 안의 망이면 된다 (로봇이 가장 많은 망)
@@ -126,7 +128,8 @@ LUA = """(function()
         if p > 0 then it = 'piercing-rounds-magazine'
         elseif y > 0 then it = 'firearm-magazine'
         elseif np >= A.fill then it = 'piercing-rounds-magazine' else it = 'firearm-magazine' end
-        local avail = (it == 'piercing-rounds-magazine') and np or (ny - A.ykeep)
+        -- 12:1x 전초 망 (24) 처럼 피어싱 조립기가 없는 망은 노랑을 남길 까닭이 없다 - 남김은 기지 망만 (전초 399,-174 탄 0 · 망 노랑 10 = 남김 10 이라 안 채움)
+        local avail = (it == 'piercing-rounds-magazine') and np or (ny - ((net.network_id == A.mainid) and A.ykeep or 0))
         local n = math.min(A.fill - (y + p), avail)
         if n >= 5 then
           spend(net, it, n)
