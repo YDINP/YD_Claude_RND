@@ -110,9 +110,10 @@ for _x in (9.5, 13.5):
 FEED += [(17.5, 26.5, "rail", 30, 60, 0), (17.5, 26.5, "electric-furnace", 1, 2, 0), (17.5, 26.5, "productivity-module", 1, 2, 0),
          (7.5, 15.5, "productivity-module", 1, 1, 0),
          (7.5, 15.5, "rail", 20, 40, 0)]   # 보라 1 은 속도 모듈로 1.75 (12 s 에 3 판 → 레일 2.5/s) - 긴팔 셋 직결로 모자람
-for _x, _y in ((-57.5, -4.5), (-53.5, -4.5), (-49.5, -4.5), (-45.5, -4.5), (-41.5, -4.5), (-37.5, -4.5),
-               (-51.5, 8.5), (-45.5, 8.5), (-39.5, 8.5), (-35.5, 8.5),
-               (4.5, -4.5), (4.5, -0.5), (8.5, -4.5), (8.5, -0.5), (12.5, -4.5), (12.5, -0.5), (16.5, -4.5), (16.5, -0.5)):
+LABS = ((-57.5, -4.5), (-53.5, -4.5), (-49.5, -4.5), (-45.5, -4.5), (-41.5, -4.5), (-37.5, -4.5),
+        (-51.5, 8.5), (-45.5, 8.5), (-39.5, 8.5), (-35.5, 8.5),
+        (4.5, -4.5), (4.5, -0.5), (8.5, -4.5), (8.5, -0.5), (12.5, -4.5), (12.5, -0.5), (16.5, -4.5), (16.5, -0.5))
+for _x, _y in LABS:
     FEED.append((_x, _y, "production-science-pack", 1, 4, 0))
 # 13:3x 엔진 (purple24 B): 엔진 6 대 옆 관 · 톱니 조립기 1 이 철 벨트 (y 18.5 · 34.5) 가 비어 굶음 → 엔진에 톱니 (망 ~2.9k) · 관 (망 74),
 #   관 조립기 넷에 철 (과학 몫). 엔진 = 관 2 · 톱니 1 · 강철 1 (10 s / 0.75) → 6 대 10분 270.
@@ -127,6 +128,20 @@ FEED += [(-15.5, 33.5, "stone-brick", 20, 50, 200), (-15.5, 33.5, "iron-ore", 4,
 # 13:4x 보라 사슬 강철: 전기로 (7.5,19.5) · 레일 (12.5,15.5) 옆 상자 (7.5,22.5) (12.5,12.5) 강철 0 (허브 손 운반 몫) → 둘 다 섬.
 #   강철은 사일로 1000 몫을 남긴다 (KEEP 1500).
 FEED += [(7.5, 19.5, STEEL, 10, 30, 1500), (12.5, 15.5, STEEL, 10, 40, 1500)]
+# 14:5x 군사팩 줄 (milsci24, 허브 동쪽 x 80..95): 물리 피해 3 · 사격 속도 3 에 군사팩 (전초 함락 - 큰 이빨에 피어싱 3.2).
+#   군사 조립기 둘: 피어싱 (망에 PIERCE_KEEP 남김 - ammo24 포탑 · eastsup 전초가 먼저) · 벽 (50 남김, 나머지는 방어 몫).
+#   벽 조립기: 벽돌. 돌 화로 4: 돌 (원료칸 «src», 레일 몫 200 남김) · 석탄 (연료칸). 연구소 18: 군사팩.
+PIERCE_KEEP = 200
+for _x in (81.5, 89.5):
+    FEED += [(_x, -4.5, "piercing-rounds-magazine", 3, 10, PIERCE_KEEP), (_x, -4.5, "stone-wall", 4, 10, 50)]
+FEED += [(85.5, 0.5, "stone-brick", 10, 30, 20)]    # 수류탄 (85.5,-4.5) 은 요청 상자 (85.5,-1.5) 철 50 · 석탄 100 - 망 철이 늘 0 이라 여기 문턱 요청은 안 옴
+# 15:0x 군사줄 피어싱 조립기 (77.5,-4.5): 망 노랑 (~680, 만듦 > 씀) → 피어싱. 결과는 군사 1 직결 + 공급 상자 (77.5,-1.5) → 망 (포탑).
+#   노랑은 200 남김 (ammo24 포탑 노랑 몫) · 강철 (사일로 몫 1500 남김) · 구리.
+FEED += [(77.5, -4.5, "firearm-magazine", 6, 20, 200), (77.5, -4.5, STEEL, 4, 10, 1500), (77.5, -4.5, CU, 6, 20, 300)]
+for _x in (81.0, 86.0, 89.0, 94.0):
+    FEED += [(_x, 4.0, "stone", 10, 40, 200, None, "src"), (_x, 4.0, "coal", 5, 20, 300, None, "fuel")]
+for _x, _y in LABS:
+    FEED.append((_x, _y, "military-science-pack", 2, 6, 0))
 MAX_REQ = 60
 
 LUA = """(function()
@@ -158,10 +173,11 @@ LUA = """(function()
     local net = a and cnet_of(a.position)
     local lab = a and a.type == 'lab'
     local fuel = a and q[8] == 'fuel'
-    local r = a and ((lab or fuel) and {ingredients = {}} or a.get_recipe())
+    local src = a and q[8] == 'src'      -- 화로 원료칸 (돌 → 벽돌) - 화로는 쉬면 get_recipe 가 nil 이라 품목을 직접
+    local r = a and ((lab or fuel or src) and {ingredients = {}} or a.get_recipe())
     if lab then for i, n in pairs(a.prototype.lab_inputs) do r.ingredients[#r.ingredients + 1] = {type = 'item', name = n} end end
-    if fuel then r.ingredients[1] = {type = 'item', name = q[3]} end
-    local INV = lab and defines.inventory.lab_input or (fuel and defines.inventory.fuel) or defines.inventory.assembling_machine_input
+    if fuel or src then r.ingredients[1] = {type = 'item', name = q[3]} end
+    local INV = lab and defines.inventory.lab_input or (fuel and defines.inventory.fuel) or (src and defines.inventory.furnace_source) or defines.inventory.assembling_machine_input
     if not (a and net and r) then out.miss[#out.miss + 1] = q[3] .. ' @' .. q[1] .. ',' .. q[2]
     elseif nreq < A.max then
       local stack, k = nil, 0
