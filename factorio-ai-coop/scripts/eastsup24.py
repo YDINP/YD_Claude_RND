@@ -39,7 +39,8 @@ AMMO_TRIP = 200                   # 한 바퀴 노랑 (철 800, 손제작 200 s 
 REP_LOW = 100                     # 전초 망 수리팩이 밑이면 챙김 (13:4x 40 → 100)
 REP_TRIP = 200
 # 늘 채워 둘 것 (전초 망 목표 밑이면, 기지 망에서 가장 많이 든 상자 하나에서 · 기지에 keep 남김): (밑이면, 한 바퀴, 기지 남김)
-STOCK = {"piercing-rounds-magazine": (400, 200, 100), "gun-turret": (8, 12, 10), "stone-wall": (150, 200, 40)}
+# 17:1x 기지 망 피어싱 ~1.6k (탄 · 과학 저울 ironbal24 이 800 에서 탄 철을 멈춤) → 전초 목표 400 → 600 · 한 바퀴 200 → 400 · 기지 남김 100 → 500.
+STOCK = {"piercing-rounds-magazine": (600, 400, 500), "gun-turret": (8, 12, 10), "stone-wall": (150, 200, 40)}
 PIERCE_MAIN_KEEP = 250
 # 15:5x 동쪽 몫 피어싱 상자 (ammoplus2_24 둘째 블록 피어싱 B → 망 밖 쇠 상자) - 기지 망 피어싱과 상관없이 여기서 먼저 챙김
 EAST_RESERVE = (34.5, -50.5)
@@ -263,8 +264,12 @@ def trip(ai, who, st):
         have = bag.get(name, 0)
         k = min(max(0, per - have), int(v.get("main", 0)) - keep, int(src[2]) if src else 0)
         if name == "piercing-rounds-magazine" and int(st.get("reserve", 0)) >= RESERVE_MIN:
-            src = [EAST_RESERVE[0], EAST_RESERVE[1], int(st["reserve"])]
-            k = min(max(0, per - have), src[2])
+            # 17:1x 동쪽 몫 상자 먼저, 모자라면 기지 망 상자에서 채움 (전엔 몫 상자 26 만 들고 감)
+            kr = min(max(0, per - have), int(st["reserve"]))
+            plan += [("walk_to", {"x": EAST_RESERVE[0], "y": EAST_RESERVE[1] + 1.5}),
+                     ("take", {"name": name, "x": EAST_RESERVE[0], "y": EAST_RESERVE[1], "count": kr})]
+            have += kr
+            k = min(max(0, per - have), int(v.get("main", 0)) - keep, int(src[2]) if src else 0)
         if k >= 5:
             plan += [("walk_to", {"x": src[0], "y": src[1] + 1.5}), ("take", {"name": name, "x": src[0], "y": src[1], "count": k})]
         else:

@@ -143,6 +143,14 @@ for _x in (81.0, 86.0, 89.0, 94.0):
 for _x, _y in LABS:
     FEED.append((_x, _y, "military-science-pack", 2, 6, 0))
 MAX_REQ = 60
+# 17:1x 탄 · 과학 철 저울 (ironbal24): 망 피어싱 ≥ BAL_ON 이면 탄 철 먹이가 멈춘다 (탄 블록 팔 = 게임 망 조건, ammo24 = 이력).
+#   그동안 과학 몫 (SCI_IRON_KEEP 철 · 톱니 4 철 · 빨강 · 초록 톱니) 은 망에 남길 몫 0 - 들어오는 철을 과학이 먼저. < BAL_OFF 면 원래 문턱.
+BAL_ON, BAL_OFF = 800, 500
+GEAR4 = (-76.5, -10.5)
+SCI_IDX = [i + 1 for i, q in enumerate(FEED)
+           if (q[2] == IRON and q[5] == SCI_IRON_KEEP) or (q[2] == IRON and (q[0], q[1]) == GEAR4)
+           or (q[2] == "iron-gear-wheel" and q[1] in (12.5, 5.5) and q[5] == 200)]
+BAL = {"paused": False}
 
 LUA = """(function()
   local s, f = game.surfaces[1], game.forces.player
@@ -167,7 +175,18 @@ LUA = """(function()
     gate.robot = (fr >= 2) and (robots < A.robot_cap)
     out.gate = {yellow_frames = fr, robots = robots, robot = gate.robot}
   end
-  for _, q in pairs(A.feed) do
+  -- 탄 · 과학 철 저울 - 멈춘 동안 과학 몫 남김 0
+  local paused = A.paused
+  do
+    local n = s.find_logistic_network_by_position({66.5, -15.5}, f)
+    local np = n and n.get_item_count('piercing-rounds-magazine') or 0
+    if np >= A.bal_on then paused = true elseif np < A.bal_off then paused = false end
+    out.bal = {paused = paused, pierce = np, iron = n and n.get_item_count('iron-plate') or 0}
+  end
+  local sci = {}
+  for _, i in pairs(A.sci) do sci[i] = true end
+  for qi, q in ipairs(A.feed) do
+    local keep = (paused and sci[qi]) and 0 or q[6]
     local a = (q[7] == nil or gate[q[7]]) and s.find_entities_filtered{type = {'assembling-machine', 'lab', 'boiler', 'furnace'}, force = f, position = {q[1], q[2]}, radius = 0.6}[1]
     if q[7] ~= nil and not gate[q[7]] then goto next_feed end
     local net = a and cnet_of(a.position)
@@ -188,8 +207,16 @@ LUA = """(function()
         end
       end
       local have = a.get_inventory(INV).get_item_count(q[3])
+      -- 17:1x 연구소 요청이 망에 없는 팩 (보라 0) 에 걸려 있으면 (busy) 다른 팩 (군사 400) 요청을 못 한다 → 망에 없는 팩만 든 요청은 거둔다 (요청 취소 - 물건 이동 없음)
+      if lab and stack and have < q[4] then
+        for _, p in pairs(s.find_entities_filtered{name = 'item-request-proxy', position = a.position, radius = 0.6}) do
+          local dead = true
+          for _, r in pairs(p.item_requests) do if net.get_item_count(r.name) > 0 then dead = false end end
+          if dead and #p.item_requests > 0 then out.cancel = (out.cancel or 0) + 1 p.destroy() end
+        end
+      end
       if stack and have < q[4] and not busy(a) then
-        if net.get_item_count(q[3]) >= q[5] + q[6] then
+        if net.get_item_count(q[3]) >= q[5] + keep then
           s.create_entity{name = 'item-request-proxy', position = a.position, force = f, target = a,
             modules = {{id = {name = q[3]}, items = {in_inventory = {{inventory = INV, stack = stack, count = q[5]}}}}}}
           nreq = nreq + 1
@@ -209,11 +236,13 @@ def main() -> int:
     ap.add_argument("--once", action="store_true")
     a = ap.parse_args()
     ai = None
-    arg = json.dumps({"feed": FEED, "max": MAX_REQ, "robot_cap": ROBOT_CAP, "yellow": YELLOW_ASM})
     while True:
         try:
             ai = ai or AIBridge()
+            arg = json.dumps({"feed": FEED, "max": MAX_REQ, "robot_cap": ROBOT_CAP, "yellow": YELLOW_ASM,
+                              "sci": SCI_IDX, "paused": BAL["paused"], "bal_on": BAL_ON, "bal_off": BAL_OFF})
             r = ai.lua(LUA % arg)
+            BAL["paused"] = bool((r.get("bal") or {}).get("paused"))
             print(time.strftime("%H:%M:%S"), json.dumps({k: (list(v.values()) if isinstance(v, dict) else v) for k, v in r.items()}, ensure_ascii=False), flush=True)
         except (RconError, OSError) as e:
             print(time.strftime("%H:%M:%S"), "오류", e, flush=True)

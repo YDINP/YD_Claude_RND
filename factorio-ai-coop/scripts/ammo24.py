@@ -60,8 +60,15 @@ LUA = """(function()
     if rem then t.removal_plan = rem end
     return s.create_entity(t)
   end
+  -- 0) 탄 · 과학 철 저울 (ironbal24): 망 피어싱 ≥ on 이면 탄 철 먹이 멈춤, < off 면 다시 (이력은 Python 이 들고 옴)
+  local paused = A.paused
+  local bnp = mn0 and mn0.get_item_count('piercing-rounds-magazine') or 0
+  local bny = mn0 and mn0.get_item_count('firearm-magazine') or 0
+  if bnp >= A.bal_on then paused = true elseif bnp < A.bal_off then paused = false end
+  out.bal = {paused = paused, pierce = bnp, yellow = bny}
   -- 1) 조립기 먹이
   for _, q in pairs(A.feed) do
+    if paused and q[3] == 'iron-plate' and not (q[1] == A.tyel[1] and q[2] == A.tyel[2] and bny < A.ymin) then goto next_feed end
     local a = s.find_entities_filtered{type = 'assembling-machine', force = f, position = {q[1], q[2]}, radius = 0.5}[1]
     local net = a and cnet_of(a.position)
     if a and net and nreq < A.max then
@@ -75,6 +82,7 @@ LUA = """(function()
         out.req[#out.req + 1] = q[3] .. ' ' .. q[5] .. ' @' .. q[1] .. ',' .. q[2]
       end
     elseif not net then out.skip[#out.skip + 1] = q[3] .. ' nonet @' .. q[1] .. ',' .. q[2] end
+    ::next_feed::
   end
   -- 2) 포탑
   local TI = defines.inventory.turret_ammo
@@ -153,9 +161,17 @@ LUA = """(function()
 end)()"""
 
 
+# 17:1x 탄 · 과학 철 저울 (ironbal24): 망 피어싱 ≥ BAL_ON 이면 노랑 조립기 철 먹이 (남김 0) 멈춤 → 과학 (robofeed) 이 철을 먼저. < BAL_OFF 면 다시.
+#   포탑 노랑 조립기 (-53.5,3.5) 는 망 노랑 < BAL_YMIN 이면 멈추지 않는다. 탄 블록 팔 넷은 게임 망 조건 (피어싱 < 800) 으로 따로 멈춘다.
+BAL_ON, BAL_OFF, BAL_YMIN = 800, 500, 200
+TURRET_YELLOW = (-53.5, 3.5)
+BAL = {"paused": False}
+
+
 def lua_args(switch):
     return json.dumps({"feed": FEED, "low": LOW, "fill": FILL, "ykeep": YELLOW_KEEP, "max": MAX_REQ, "switch": bool(switch),
-                       "swmax": SW_MAX, "pkeep": PIERCE_KEEP, "zones": SW_ZONES, "noproxy": NO_PROXY})
+                       "swmax": SW_MAX, "pkeep": PIERCE_KEEP, "zones": SW_ZONES, "noproxy": NO_PROXY,
+                       "paused": BAL["paused"], "bal_on": BAL_ON, "bal_off": BAL_OFF, "ymin": BAL_YMIN, "tyel": list(TURRET_YELLOW)})
 
 
 def hand_round(ai, who, outside):
@@ -228,10 +244,12 @@ def main() -> int:
         try:
             ai = ai or AIBridge()
             r = ai.lua(LUA % lua_args(a.switch))
+            bal = r.get("bal") or {}
+            BAL["paused"] = bool(bal.get("paused"))
             outside = r.get("outside") or []
             outside = list(outside.values()) if isinstance(outside, dict) else outside
             low_out = sum(1 for o in outside if o[2] < LOW)
-            line = {"req": len(r.get("req") or []), "sw": r.get("sw"), "skip": r.get("skip") or [], "net": r.get("net"),
+            line = {"req": len(r.get("req") or []), "sw": r.get("sw"), "skip": r.get("skip") or [], "net": r.get("net"), "bal": bal,
                     "outside": len(outside), "outside_low": low_out, "min_out": min([o[2] for o in outside], default=None)}
             if a.who and time.time() - last_hand >= a.hand_every and low_out:
                 body = [b for b in ai.list() if b["name"] == a.who]
