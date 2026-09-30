@@ -60,6 +60,17 @@ for _x, _y in ((-83.0, 28.5), (-75.0, 16.5), (-57.0, 14.5), (-42.0, 13.5)):
 # P12-5 (08:3x): zone N 강철로 12 (x 29..51, y -28) - 벨트에 석탄 레인이 없다 (FE 는 철 두 레인) → 연료 칸에 석탄 50 (90 kW = 37 분에 50).
 for _x in range(29, 52, 2):
     FEED.append((float(_x), -28.0, "coal", 10, 50, 300, None, "fuel"))
+# 09:5x 코디네이터: 과학 조립기 입력 굶음 (rg · bl 벨트의 톱니 · 고급회로 · 엔진 쪽이 철 부족) - 망 재고 (톱니 4.4k · 엔진 440 · 고급회로 640) 를 로봇으로 보충
+for _x in (36.5, 40.5, 44.5, 48.5):
+    FEED.append((_x, 12.5, "iron-gear-wheel", 5, 20, 200))            # 빨강
+for _x in (32.5, 40.5):
+    FEED.append((_x, 5.5, "inserter", 2, 5, 10))                      # 초록
+FEED.append((48.5, 5.5, "transport-belt", 2, 5, 10))                  # 초록
+for _x in (23.5, 27.5):
+    for _y in (21.5, 28.5):
+        FEED.append((_x, _y, "advanced-circuit", 3, 10, 50))          # 파랑
+    for _y in (37.5, 44.5):
+        FEED.append((_x, _y, "engine-unit", 2, 6, 20))                # 파랑
 MAX_REQ = 30
 
 LUA = """(function()
