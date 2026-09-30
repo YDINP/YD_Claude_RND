@@ -16,6 +16,7 @@ from orders import submit  # noqa
 
 COAL_BOX = [[106, -30.1], [124, -28.9]]          # relay COAL_BOX 상자 줄
 LOW, FILL = 20, 50
+NET_BOX, NET_KEEP = [[106, -39.1], [121, -37.9]], 600   # coalnet 공급 상자 5 (107.5..119.5,-38.5) - 망 (보일러 · 화학 · 강철로 요청) 몫 600 씩 남김
 MAX_STOPS = 28
 # 동쪽 전초 석탄 상자 (P8 설계 - 팔이 광석 벨트 석탄 레인에 붓는다) : 목표
 OUTPOST = [(403.5, -149.5, 1500), (413.5, -147.5, 1500)]  # P13 (09:4x) 강철로 24 → 46 - 석탄 0.54 → 1.0/s, 상한 1200 → 1500      # 동쪽 줄은 (413.5,-147.5) (03:4x 새 상자 - 옛 (413.5,-146.5) 는 첫 화로 (409,-147) 팔보다 하류라 그 화로가 relay 연료뿐이었다)
@@ -40,6 +41,11 @@ LUA = """(function()
     local n = c.get_inventory(defines.inventory.chest).get_item_count("coal")
     if n > 0 then out.src[#out.src + 1] = {c.position.x, c.position.y, n} end
   end
+  -- 13:1x (adv24): 상자 줄 석탄 324 뿐인데 망 석탄 ~10.8k 는 coalnet 공급 상자 (y -38.5) 에 - 여기서도 손으로 (상자마다 NET_KEEP 남김)
+  for _, c in pairs(s.find_entities_filtered{name = "passive-provider-chest", force = f, area = A.netbox}) do
+    local n = c.get_inventory(defines.inventory.chest).get_item_count("coal") - A.netkeep
+    if n > 0 then out.src[#out.src + 1] = {c.position.x, c.position.y, n} end
+  end
   for i, q in pairs(A.post) do
     local c = s.find_entities_filtered{name = "iron-chest", force = f, position = {q[1], q[2]}, radius = 0.3}[1]
     out.post[i] = c and c.get_inventory(defines.inventory.chest).get_item_count("coal") or -1
@@ -53,7 +59,7 @@ def listify(v):
 
 
 def once(ai, who) -> dict:
-    r = ai.lua(LUA % json.dumps({"low": LOW, "box": COAL_BOX, "post": OUTPOST, "skip": SKIP}))
+    r = ai.lua(LUA % json.dumps({"low": LOW, "box": COAL_BOX, "post": OUTPOST, "skip": SKIP, "netbox": NET_BOX, "netkeep": NET_KEEP}))
     fur = sorted(listify(r.get("fur")), key=lambda f: f[2])[:MAX_STOPS]
     post = listify(r.get("post"))
     post_need = [(x, y, goal - h) for (x, y, goal), h in zip(OUTPOST, post) if 0 <= h < OUTPOST_LOW]
@@ -70,18 +76,20 @@ def once(ai, who) -> dict:
         carry += k
     if carry < 50:
         return {"fur": len(fur), "coal_src": "empty"}
+    # 12:5x (adv24): 전초 상자를 «먼저». 화로 28 곳 뒤에 붙이면 계획이 64 단계에서 잘려 전초 몫이 12:42 부터 한 번도 안 갔다
+    #   (전초 상자 0 · 전초 철 화로 46 no_fuel · 기지 철 10분 17.8k → 2.3k). 전초 철이 기지 철의 대부분이다.
+    for x, y, n in post_need:
+        k = min(n, carry)
+        if k <= 0:
+            break
+        plan += [("walk_to", {"x": x + 1.5, "y": y}), ("insert", {"name": "coal", "x": x, "y": y, "count": k})]
+        carry -= k
     fur.sort(key=lambda f: (round(f[0] / 16), f[1]))          # 걸음이 짧게 - 열 (x 16 칸) 마다 위→아래
     for x, y, h in fur:
         k = min(FILL - h, carry)
         if k <= 0:
             break
         plan += [("walk_to", {"x": x, "y": y + 1.5}), ("insert", {"name": "coal", "x": x, "y": y, "count": k})]
-        carry -= k
-    for x, y, n in post_need:
-        k = min(n, carry)
-        if k <= 0:
-            break
-        plan += [("walk_to", {"x": x + 1.5, "y": y}), ("insert", {"name": "coal", "x": x, "y": y, "count": k})]
         carry -= k
     plan.append(("walk_to", {"x": 100.5, "y": -26.5}))
     submit(ai, who, plan[:2 * MAX_STOPS + 12], strict=False)

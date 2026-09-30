@@ -90,6 +90,17 @@ FEED += [(-2.5, 20.5, "sulfur", 10, 50, 100), (-2.5, 20.5, IRON, 4, 10, SCI_IRON
 # 12:4x 철 화로 줄 (y -43, x 82..100, 7 대) 연료 - no_fuel 4 (연료 손 고리 golf 사망 12:01). 망 석탄 ~11k 에서 로봇이 연료 칸에.
 for _x in range(82, 101, 3):
     FEED.append((float(_x), -43.0, "coal", 10, 50, 300, None, "fuel"))
+# 12:5x 고급회로 (adv24): 고급 조립기 14 대 중 working 3 - 입력이 벽 (조립기 수는 넉넉, 상한 10분 1,050).
+#   zone N 고급 4 (y -15.5) 는 플라스틱 입력이 아예 없다 → 플라스틱. 고아 고급 (-64.5,-6.5) → 전선 · 플라스틱 · 녹색 (결과 팔 → 공급 상자 (-64.5,-3.5)).
+#   남쪽 녹색 조립기 넷 (옆 고급에 팔 직결) 철 0 → 철 (과학 몫 SCI_IRON_KEEP). 녹색 고아 둘 (결과 팔 → 공급 상자) → 철 · 전선 (망 전선 28k).
+ADV_KEEP = 20
+for _x in (25.5, 33.5, 41.5, 49.5):
+    FEED.append((_x, -15.5, "plastic-bar", 4, 20, ADV_KEEP))
+FEED += [(-64.5, -6.5, "copper-cable", 8, 40, 500), (-64.5, -6.5, "plastic-bar", 4, 20, ADV_KEEP), (-64.5, -6.5, "electronic-circuit", 4, 20, 50)]
+for _x, _y in ((35.5, 28.5), (51.5, 28.5), (35.5, 44.5), (51.5, 44.5)):
+    FEED.append((_x, _y, IRON, 4, 20, SCI_IRON_KEEP))
+for _x, _y in ((-53.5, -0.5), (-17.5, 3.5)):
+    FEED += [(_x, _y, IRON, 5, 20, SCI_IRON_KEEP), (_x, _y, "copper-cable", 15, 60, 500)]
 MAX_REQ = 40
 
 LUA = """(function()
