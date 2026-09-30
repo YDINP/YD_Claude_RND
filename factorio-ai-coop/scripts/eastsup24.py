@@ -34,15 +34,38 @@ HUB_IRON = (74.5, -15.5)          # 망 밖 쇠 상자 (허브 철 벨트 → �
 HUB_KEEP = 300                    # 허브 쇠 상자에 남길 철 (다른 손 고리 몫)
 AMMO_LOW = 150                    # 전초 망 탄 (노랑 + 피어싱) 이 밑이면 한 바퀴
 AMMO_TRIP = 200                   # 한 바퀴 노랑 (철 800, 손제작 200 s - 걷는 ~80 s 동안 대부분)
-REP_LOW = 40                      # 전초 망 수리팩이 밑이면 챙김
-REP_TRIP = 100
+# 13:4x 큰 이빨 (evo 0.54, 물리 저항 8/10%) - 노랑 (5 x 1.44 = 7.2 < 8) 은 거의 안 들어간다 → 전초는 피어싱만.
+#   노랑 손제작은 기지 망 피어싱이 PIERCE_MAIN_KEEP 밑일 때만 (대체).
+REP_LOW = 100                     # 전초 망 수리팩이 밑이면 챙김 (13:4x 40 → 100)
+REP_TRIP = 200
+# 늘 채워 둘 것 (전초 망 목표 밑이면, 기지 망에서 가장 많이 든 상자 하나에서 · 기지에 keep 남김): (밑이면, 한 바퀴, 기지 남김)
+STOCK = {"piercing-rounds-magazine": (400, 400, 250), "gun-turret": (8, 12, 10), "stone-wall": (150, 200, 40)}
+PIERCE_MAIN_KEEP = 250
+# 전초 망 건설 로봇이 이 밑이면 사람이 손제작해 서쪽 문 포트에 넣는다 (틀 (-76.5,-3.5) 1 + 초록 회로 2 → 1, 0.5 s)
+ROBOT_MIN = 20
+ROBOT_TRIP = 20
+FRAMES = (-76.5, -3.5)
+CIRCUITS = (31.5, -16.5)
+# 13:4x 서쪽 문 로보포트 (347,-103): 줄기 전봇대 (344.5,-99.5) 옆 · 남쪽 포트 (394,-120) 와 물류 사각 겹침 (dx 47) = 같은 망.
+#   공습 무리 (x 390..440) 에서 60 넘게 떨어져 전초가 싸우는 중에도 넣을 수 있다 → 넣을 곳 첫째.
+PORT3 = (347.0, -103.0)
+STORE3_TRY = [(344.5, -104.5), (350.5, -106.5), (344.5, -106.5), (352.5, -102.5), (341.5, -103.5)]
 REP_MAIN_KEEP = 300               # 기지 망 수리팩은 이만큼 남김
 # 전초 유령 (공습에 부서진 것) 을 지을 재료 - 전초 망에 없는 만큼 기지 망 상자에서 (기지에 KEEP 남김, 한 바퀴 상한 CAP)
-KIT = {"gun-turret": (20, 10), "stone-wall": (100, 100), "transport-belt": (50, 50), "fast-transport-belt": (50, 50),
+KIT = {"steel-furnace": (20, 0), "gun-turret": (20, 10), "stone-wall": (100, 100), "transport-belt": (50, 50), "fast-transport-belt": (50, 50),
        "inserter": (20, 30), "small-electric-pole": (20, 30), "medium-electric-pole": (5, 10),
        "electric-mining-drill": (15, 0), "iron-chest": (4, 0)}
 # 12:1x 북쪽 끝 공습: 기지 망에 없는 것 (벨트 0 · 작은 전봇대 1 · 쇠 상자 0) 은 사람이 손제작 - (철, 구리, 한 번에 나오는 수)
 CRAFT = {"transport-belt": (3, 0, 2), "small-electric-pole": (0, 1, 2), "iron-chest": (8, 0, 1)}
+# 13:5x 전초 드릴 47 · 강철로 38 · 인서터 84 · 빠른 벨트 74 가 유령인데 기지 망에 0 (조립기 없음) → 사람이 손제작.
+#   재료 (기지 망 가장 많이 든 상자, 철판은 허브 쇠 상자) · 한 바퀴 상한. 중간재 (톱니 · 노랑 벨트) 는 손제작 대기열이 알아서 만든다.
+HAND = {"steel-furnace": ({"steel-plate": 6, "stone-brick": 10}, 20),  # 순서 = 우선 (dict 순)
+        "fast-transport-belt": ({"iron-gear-wheel": 6, "iron-plate": 1}, 40),
+        # 14:0x 기지 망 녹색 회로 0 → 회로도 손제작 (철 1 + 구리 1.5): 드릴 = 톱니 5 + 철 13 + 구리 5 · 인서터 = 톱니 1 + 철 2 + 구리 2
+        "electric-mining-drill": ({"iron-gear-wheel": 5, "iron-plate": 13, "copper-plate": 5}, 24),
+        "inserter": ({"iron-gear-wheel": 1, "iron-plate": 2, "copper-plate": 2}, 30)}
+HAND_HUB_KEEP = 100               # 14:0x 철 굶음 - 전초 드릴이 철을 되살리는 길이라 허브 쇠 상자를 100 까지 쓴다
+SRC_KEEP = {"steel-plate": 1000, "stone-brick": 300, "iron-gear-wheel": 300, "electronic-circuit": 50, "copper-plate": 2000}
 HUB_CU = (71.5, -15.5)            # 허브 구리 쇠 상자 (전봇대 전선용)
 # 북쪽 끝 포탑 둘 더 (12:0x 침 무리가 동벽 x 428, y -185 쪽으로 옴 - 남은 포탑 394 · 399 사거리 (x ≤ 417) 밖)
 NORTH_DEF = [(424.0, -182.0), (424.0, -190.0)]
@@ -57,7 +80,9 @@ NE_TRY = [(418.5, -160.5), (418.5, -158.5), (416.5, -160.5), (420.5, -156.5)]
 LUA = """(function()
   local s, f = game.surfaces[1], game.forces.player
   local out = {}
-  local en = s.find_logistic_network_by_position({%f, %f}, f)
+  -- 13:4x 북쪽 포트 (398,-150) 가 부서짐 → 전초 망은 서쪽 문 · 남쪽 · 북쪽 포트 중 살아 있는 것으로 찾는다
+  local en = s.find_logistic_network_by_position({347, -103}, f) or s.find_logistic_network_by_position({394, -120}, f)
+    or s.find_logistic_network_by_position({%f, %f}, f)
   if en then
     out.east = {id = en.network_id, yellow = en.get_item_count('firearm-magazine'), pierce = en.get_item_count('piercing-rounds-magazine'),
                 repair = en.get_item_count('repair-pack'), robots = en.all_construction_robots}
@@ -103,6 +128,16 @@ LUA = """(function()
   end
   out.port2_ok = (not p2) and s.can_place_entity{name = 'roboport', position = {%f, %f}, force = f, build_check_type = defines.build_check_type.manual}
   out.damaged = dmg
+  local p3 = s.find_entities_filtered{name = 'roboport', position = {%f, %f}, radius = 1, force = f}[1]
+  out.port3 = p3 and true or false
+  out.port3_ok = (not p3) and s.can_place_entity{name = 'roboport', position = {%f, %f}, force = f, build_check_type = defines.build_check_type.manual}
+  local st3 = s.find_entities_filtered{name = 'storage-chest', position = {%f, %f}, radius = 7, force = f}[1]
+  if st3 then out.store3 = {st3.position.x, st3.position.y} else
+    for _, c in pairs(helpers.json_to_table('%s')) do
+      if not out.store3_spot and s.can_place_entity{name = 'storage-chest', position = c, force = f, build_check_type = defines.build_check_type.manual} then out.store3_spot = c end
+    end
+  end
+  out.foe3 = foe_at(%f, %f)
   local hub = s.find_entities_filtered{position = {%f, %f}, radius = 0.3, type = 'container'}[1]
   out.hub_iron = hub and hub.get_item_count('iron-plate') or 0
   local mn = s.find_logistic_network_by_position({66.5, -15.5}, f)
@@ -117,6 +152,40 @@ LUA = """(function()
     end
   end
   out.rep_src = best
+  out.stock = {}
+  for name, v in pairs(helpers.json_to_table('%s')) do
+    local src
+    if mn then
+      for _, c in pairs(mn.providers) do
+        if c.type == 'logistic-container' then
+          local h = c.get_item_count(name)
+          if h > 0 and (not src or h > src[3]) then src = {c.position.x, c.position.y, h} end
+        end
+      end
+      for _, c in pairs(mn.storages) do
+        local h = c.get_item_count(name)
+        if h > 0 and (not src or h > src[3]) then src = {c.position.x, c.position.y, h} end
+      end
+    end
+    out.stock[name] = {east = en and en.get_item_count(name) or 0, main = mn and mn.get_item_count(name) or 0, src = src}
+  end
+  out.srcs = {}
+  for _, name in pairs({'steel-plate', 'stone-brick', 'iron-gear-wheel', 'electronic-circuit', 'copper-plate'}) do
+    local src
+    if mn then
+      for _, c in pairs(mn.providers) do
+        if c.type == 'logistic-container' then
+          local h = c.get_item_count(name)
+          if h > 0 and (not src or h > src[3]) then src = {c.position.x, c.position.y, h} end
+        end
+      end
+      for _, c in pairs(mn.storages) do
+        local h = c.get_item_count(name)
+        if h > 0 and (not src or h > src[3]) then src = {c.position.x, c.position.y, h} end
+      end
+    end
+    if src then src[4] = mn.get_item_count(name) out.srcs[name] = src end
+  end
   -- 전초 유령 재료: 유령 수 - 전초 망 재고, 기지 망에서 가장 많이 든 상자
   local A = helpers.json_to_table('%s')
   local need = {}
@@ -148,7 +217,8 @@ LUA = """(function()
   return out
 end)()""" % (*PORT, *PORT, DANGER_R, *PORT2, *PORT2, *PORT2, DANGER_R, DANGER_R, json.dumps([list(c) for c in STORE2_TRY]),
               DANGER_R, *STORE, json.dumps([list(c) for c in NE_TRY]), *PORT2,
-              *HUB_IRON, json.dumps(KIT))
+              *PORT3, *PORT3, *PORT3, json.dumps([list(c) for c in STORE3_TRY]), PORT3[0] - 4, PORT3[1] + 2,
+              *HUB_IRON, json.dumps(STOCK), json.dumps(KIT))
 
 
 def body(ai, who):
@@ -175,7 +245,31 @@ def trip(ai, who, st):
     except RconError:
         bag = {}
     plan, give = [], {}
-    if ammo < AMMO_LOW:
+    stock = st.get("stock") or {}
+    # 늘 채워 둘 것 (피어싱 · 포탑 · 벽) - 기지 망 가장 많이 든 상자에서
+    for name, (low, per, keep) in STOCK.items():
+        v = stock.get(name) or {}
+        src = v.get("src")
+        src = list(src.values()) if isinstance(src, dict) else src
+        if int(v.get("east", 0)) >= low:
+            continue
+        have = bag.get(name, 0)
+        k = min(max(0, per - have), int(v.get("main", 0)) - keep, int(src[2]) if src else 0)
+        if k >= 5:
+            plan += [("walk_to", {"x": src[0], "y": src[1] + 1.5}), ("take", {"name": name, "x": src[0], "y": src[1], "count": k})]
+        else:
+            k = 0
+        if have + k > 0:
+            give[name] = have + k
+    robots_east = int(east.get("robots", 0)) if east else 0
+    craft_rob = 0
+    if robots_east + bag.get("construction-robot", 0) < ROBOT_MIN:
+        craft_rob = ROBOT_TRIP
+        plan += [("walk_to", {"x": FRAMES[0], "y": FRAMES[1] + 1.5}), ("take", {"name": "flying-robot-frame", "x": FRAMES[0], "y": FRAMES[1], "count": craft_rob}),
+                 ("walk_to", {"x": CIRCUITS[0], "y": CIRCUITS[1] + 1.5}), ("take", {"name": "electronic-circuit", "x": CIRCUITS[0], "y": CIRCUITS[1], "count": 2 * craft_rob}),
+                 ("craft", {"recipe": "construction-robot", "count": craft_rob, "wait": "block"})]
+    pmain = int((stock.get("piercing-rounds-magazine") or {}).get("main", 0))
+    if ammo < AMMO_LOW and pmain < PIERCE_MAIN_KEEP:
         have = bag.get("firearm-magazine", 0)
         n = min(max(0, AMMO_TRIP - have), max(0, int(st.get("hub_iron", 0)) - HUB_KEEP) // 4)
         if n >= 20:
@@ -204,6 +298,11 @@ def trip(ai, who, st):
     for q in kit:
         q = list(q.values()) if isinstance(q, dict) else q
         name, n, x, y = q[0], int(q[1]), q[2], q[3]
+        if name in give:              # STOCK 이 이미 챙김 - 유령 몫만큼 더
+            plan += [("walk_to", {"x": x, "y": y + 1.5}), ("take", {"name": name, "x": x, "y": y, "count": n})]
+            give[name] += n
+            taken[name] = give[name]
+            continue
         have = bag.get(name, 0)
         more = max(0, n - have)
         if more > 0:
@@ -235,6 +334,36 @@ def trip(ai, who, st):
         for name, runs, made in crafts:
             plan.append(("craft", {"recipe": name, "count": runs, "wait": "block"}))
             give[name] = give.get(name, 0) + made
+    # 드릴 · 강철로 · 인서터 · 빠른 벨트 손제작 (재료 상자에서, 기지 망에 SRC_KEEP 남김)
+    srcs = {k: (list(v.values()) if isinstance(v, dict) else v) for k, v in (st.get("srcs") or {}).items()}
+    hub_left = max(0, int(st.get("hub_iron", 0)) - HAND_HUB_KEEP - fe - (give.get("firearm-magazine", 0) - bag.get("firearm-magazine", 0)) * 4)
+    want_ing = {}
+    hand = []
+    for name, (ing, cap) in HAND.items():
+        rest = min(cap, int(short.get(name, 0)) - taken.get(name, 0) - bag.get(name, 0))
+        if rest <= 0:
+            continue
+        for k, per in ing.items():               # 재료가 모자라면 만들 수 있는 만큼만
+            if k == "iron-plate":
+                room = hub_left - want_ing.get(k, 0)
+            else:
+                v = srcs.get(k)
+                room = min(int(v[2]), int(v[3]) - SRC_KEEP.get(k, 0)) - want_ing.get(k, 0) if v else 0
+            rest = min(rest, room // per)
+        if rest <= 0:
+            continue
+        for k, per in ing.items():
+            want_ing[k] = want_ing.get(k, 0) + per * rest
+        hand.append((name, rest))
+    for k, n in want_ing.items():
+        n -= bag.get(k, 0) if k != "iron-plate" else 0
+        if n <= 0:
+            continue
+        x, y = HUB_IRON if k == "iron-plate" else (srcs[k][0], srcs[k][1])
+        plan += [("walk_to", {"x": x, "y": y + 1.5}), ("take", {"name": k, "x": x, "y": y, "count": n})]
+    for name, n in hand:
+        plan.append(("craft", {"recipe": name, "count": n, "wait": "block"}))
+        give[name] = give.get(name, 0) + n
     # 지난 바퀴에 만들어 두고 못 넣은 것 (가방) 도 넣는다
     for name, k in short.items():
         if name not in give and bag.get(name, 0) > 0:
@@ -255,7 +384,27 @@ def trip(ai, who, st):
                 ("walk_to", {"x": 31.5, "y": -15.0}), ("take", {"name": "electronic-circuit", "x": 31.5, "y": -16.5, "count": 3}),
                 ("walk_to", {"x": 25.5, "y": -8.0}), ("take", {"name": "advanced-circuit", "x": 25.5, "y": -9.5, "count": 1}),
                 ("craft", {"recipe": "storage-chest", "count": 1, "wait": "block"})]
-    if s2 and foe2 == 0:
+    s3 = pl(st.get("store3"))
+    foe3 = int(st.get("foe3") or 0)
+    # 적이 서쪽 문 60 안에 있어도 «챙기기» (기지 안, 몇 분) 는 시작한다 - 전초로 걷는 동안 적 문 (x > 250 이면 물림) 이 지킨다.
+    #   이미 가방에 다 챙겼으면 (피어싱 100+) 적이 빠질 때까지 허브에서 기다린다.
+    if (foe3 == 0 or bag.get("piercing-rounds-magazine", 0) < 100) and (s3 or (st.get("store3_spot") and (st.get("port3") or st.get("port3_ok")))):
+        if s3:
+            drop = (s3[0], s3[1])
+            plan.append(("walk_to", {"x": PORT3[0] - 4.0, "y": PORT3[1] + 2.0}))
+        else:
+            sp = pl(st["store3_spot"])
+            pre = []
+            if not st.get("port3") and bag.get("roboport", 0) < 1:
+                pre += [("walk_to", {"x": 59.5, "y": -13.0}), ("take", {"name": "roboport", "x": 59.5, "y": -14.5, "count": 1})]
+            plan = pre + chest_kit() + plan
+            plan.append(("walk_to", {"x": PORT3[0] - 4.0, "y": PORT3[1] + 2.0}))
+            if not st.get("port3"):
+                plan.append(("build", {"name": "roboport", "x": PORT3[0], "y": PORT3[1], "direction": 0}))
+            plan.append(("build", {"name": "storage-chest", "x": sp[0], "y": sp[1], "direction": 0}))
+            drop = (sp[0], sp[1])
+        key = "west"
+    elif s2 and foe2 == 0:
         drop, key = (s2[0], s2[1]), "south"
         plan.append(("walk_to", {"x": drop[0] + 1.5, "y": drop[1] + 1.5}))
     elif foe_s == 0:
@@ -284,6 +433,10 @@ def trip(ai, who, st):
         drop, key = (sp[0], sp[1]), "south"
     if not drop:
         return None
+    # 로봇 먼저 (서쪽 문 포트 로봇 칸에) - 포트가 서야 넣을 수 있다
+    nrob = craft_rob + bag.get("construction-robot", 0)
+    if nrob and key == "west":
+        plan.append(("insert", {"name": "construction-robot", "x": PORT3[0], "y": PORT3[1], "count": nrob}))
     # 포탑 · 수리팩 먼저 (로봇이 유령 · 수리를 바로 시작), 탄창은 끝에
     for name in sorted(give, key=lambda n: n == "firearm-magazine"):
         plan.append(("insert", {"name": name, "x": drop[0], "y": drop[1], "count": give[name]}))
@@ -329,12 +482,12 @@ def main():
         try:
             ai = ai or AIBridge()
             st = ai.lua(LUA)
-            line = {k: st.get(k) for k in ("east", "turrets", "foe", "foe2", "foe_store", "foe_ne", "port2", "store2", "ne", "damaged", "hub_iron", "main_repair", "kit", "short")}
+            line = {k: st.get(k) for k in ("east", "turrets", "foe", "foe2", "foe3", "port3", "store3", "stock", "foe_store", "foe_ne", "port2", "store2", "ne", "damaged", "hub_iron", "main_repair", "kit", "short")}
             b = body(ai, a.who) or {}
             busy = bool(b.get("current") or b.get("queued"))
             ours = busy and detached.owner(a.who) == OWNER
             # 가는 곳의 적: 남쪽으로 가는 바퀴는 foe2 만, 첫 상자로 가는 바퀴는 foe 도 본다
-            dk = {"south": "foe2", "north": "foe_store", "ne": "foe_ne"}.get(state.get("drop", "north"), "foe_store")
+            dk = {"south": "foe2", "north": "foe_store", "ne": "foe_ne", "west": "foe3"}.get(state.get("drop", "north"), "foe_store")
             danger = int(st.get(dk) or 0) > 0
             if ours and danger and float(b.get("x", 0)) > 250:
                 if not a.dry:
