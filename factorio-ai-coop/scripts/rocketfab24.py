@@ -72,20 +72,82 @@ for ix, iy, d, cx, cy, _b in OUT:
 G += [(PIPE, x, y, N) for x, y in PIPES] + [(POLE, x, y, N) for x, y in POLES]
 
 # 로봇 요청 먹이 (robofeed24 형식: x, y, 품목, 이 밑이면, 요청 수, 망 남김)
-ADV_KEEP_PU, GREEN_KEEP_PU, PLASTIC_KEEP, SF_KEEP = 1500, 600, 100, 300
+ADV_KEEP_PU, GREEN_KEEP_PU, PLASTIC_KEEP, SF_KEEP = 800, 600, 100, 300   # 19:5x 고급 1500 → 800 (망 고급 976 이라 PU 굶음, 고급 10분 ~380)
 FEED = [(-29.5, 29.5, "sulfur", 10, 30, 100), (-29.5, 29.5, "iron-plate", 3, 6, robofeed24.SCI_IRON_KEEP)]
 for _n, _x, _y, _d, _r in MACH:
     if _r == "processing-unit":
         FEED += [(_x, _y, "electronic-circuit", 20, 60, GREEN_KEEP_PU), (_x, _y, "advanced-circuit", 4, 10, ADV_KEEP_PU)]
     elif _r == "low-density-structure":
-        FEED += [(_x, _y, "copper-plate", 20, 60, 300), (_x, _y, "steel-plate", 4, 10, 1500), (_x, _y, "plastic-bar", 10, 25, PLASTIC_KEEP)]
+        FEED += [(_x, _y, "copper-plate", 40, 100, 300), (_x, _y, "steel-plate", 6, 16, 1500), (_x, _y, "plastic-bar", 15, 40, PLASTIC_KEEP)]   # 19:5x 한 번에 5 번 몫
     elif _r == "rocket-fuel":
-        FEED += [(_x, _y, "solid-fuel", 10, 30, SF_KEEP)]
+        FEED += [(_x, _y, "solid-fuel", 20, 50, SF_KEEP)]   # 19:5x 속도 모듈 2 → 4.2/분 = SF 42/분: 30 씩 30 s 고리로는 모자람
 SILO = (110.5, -47.5)
 SILO_REQ = {"processing-unit": (30, 60), "low-density-structure": (20, 40), "rocket-fuel": (10, 20)}   # 이 밑이면 · 요청 수
 MODULE = "productivity-module"
 CRACK, PG_TANK, PG_HI, PG_LO = (-79.5, 4.5), (-74.5, 11.5), 8000, 4000
 SF1, SF_HI, SF_LO = (-64.5, -1.5), 3000, 1500
+
+# 기름 몫 (19:3x oil24): 원유 40.6/s = 정유 두 대 몫인데 넷이 나눠 모두 반만 돌았다 (각 6~7 번/분, 최대 12).
+#   기본 정유 R1 · R3 (서쪽 가스 줄 → 플라스틱 1 · 황 1) 을 쉬게 해 고급 R2 · R4 가 원유를 다 받게 한다.
+#   R2 · R4 둘 다 원유가 넘치면 (입력 ≥ OIL_SURPLUS) R3 를 다시 켠다 (< OIL_LOW 면 끔). 사람 손 · 아이템 이동 없음 - active 만.
+# 석유가스 먹는 것: 황 (망 황 > 1500 이면 쉼, < 700 이면 켬) · 고체 연료(가스) (가스 탱크 > 12000 이면 켬, < 6000 이면 쉼).
+# 경유 분해: 경유 탱크 > 10000 (남는 경유) 이거나 가스 탱크 < 500 이면서 경유 탱크 > 4000 일 때만 켬 - 경유는 로켓 연료 몫.
+# 19:4x oil24: R2 에 속도 모듈 3 (원유 32/s 받이) → 원유 40.6 으로는 R2 + R4 (20) 가 다 못 돈다.
+#   R2 가 먼저: R2 원유 입력 (칸 200) < OIL_LOW 이면 켜진 둘째 정유 중 맨 뒤 하나를 끄고, R2 와 켜진 것 모두 ≥ OIL_SURPLUS 면 다음 하나를 켠다 (한 번에 하나).
+REF_MAIN = [(-87.5, 8.5)]                                             # R2 (고급, 속도 3)
+REF_BASIC = [(-90.5, 21.5), (-119.5, 18.5), (-112.5, 18.5)]           # R4 · R3 · R1 (켜는 순서)
+OIL_SURPLUS, OIL_LOW = 190, 140     # 칸 200: 속도 3 인 R2 가 다 받으면 늘 190+ (19:5x 실측 60~170 사이에 머물러 R3 까지 켜진 채 R2 8 번/분)
+LO_TANK, LO_HI, LO_KEEP, PG_CRIT = (-68.5, 9.5), 10000, 2000, 500
+SULFUR = [(-75.5, 4.5), (-102.5, 13.5)]
+S_HI, S_LO = 1000, 500          # 20:2x 1500 → 1000: 가스는 플라스틱 (LDS) 먼저
+SF_GAS, SFG_ON, SFG_OFF = (-89.5, 15.5), 12000, 6000
+
+LUA_OIL = """(function()
+  local s, f = game.surfaces[1], game.forces.player
+  local A = helpers.json_to_table('%s')
+  local o = {}
+  local function one(name, p) return s.find_entities_filtered{name = name, force = f, position = p, radius = 0.5}[1] end
+  local function tank(p) local t = one('storage-tank', p) local x = t and t.fluidbox[1] return x and x.amount or 0 end
+  local function crude(e) local m = 0 for i = 1, #e.fluidbox do local x = e.fluidbox[i] if x and x.name == 'crude-oil' then m = x.amount end end return m end
+  local pg, lo = tank(A.pg_tank), tank(A.lo_tank)
+  o.pg, o.lo = math.floor(pg), math.floor(lo)
+  local minc = 1e9
+  o.main = {}
+  for _, p in pairs(A.main) do local e = one('oil-refinery', p) if e then local c = crude(e) o.main[#o.main + 1] = math.floor(c) if c < minc then minc = c end end end
+  local sec, lastOn, firstOff, allFull = {}, nil, nil, minc >= A.surplus
+  for i, p in pairs(A.basic) do
+    local e = one('oil-refinery', p)
+    if e then
+      sec[i] = e
+      if e.active then lastOn = i if crude(e) < A.surplus then allFull = false end elseif not firstOff then firstOff = i end
+    end
+  end
+  if minc < A.low and lastOn then sec[lastOn].active = false o.ref = 'off ' .. lastOn
+  elseif allFull and firstOff then sec[firstOff].active = true o.ref = 'on ' .. firstOff end
+  o.basic = {}
+  for i = 1, #A.basic do o.basic[i] = sec[i] and sec[i].active or false end
+  local ck = one('chemical-plant', A.crack)
+  if ck then
+    local want = ck.active
+    if lo > A.lo_hi or (pg < A.pg_crit and lo > 2 * A.lo_keep) then want = true
+    elseif lo < A.lo_keep or pg > A.pg_hi then want = false end
+    ck.active = want o.crack = want
+  end
+  local net = s.find_logistic_network_by_position({66.5, -15.5}, f)
+  local su = net and net.get_item_count('sulfur') or 0
+  o.sulfur_net, o.sulfur = su, {}
+  for _, p in pairs(A.sulfur) do local e = one('chemical-plant', p)
+    if e then if su > A.s_hi then e.active = false elseif su < A.s_lo then e.active = true end o.sulfur[#o.sulfur + 1] = e.active end end
+  local g = one('chemical-plant', A.sf_gas)
+  if g then if pg > A.sfg_on then g.active = true elseif pg < A.sfg_off then g.active = false end o.sf_gas = g.active end
+  return o end)()"""
+
+
+def oil(ai):
+    return ai.lua(LUA_OIL % json.dumps({"pg_tank": list(PG_TANK), "lo_tank": list(LO_TANK), "main": REF_MAIN, "basic": REF_BASIC,
+                                        "surplus": OIL_SURPLUS, "low": OIL_LOW, "crack": list(CRACK), "lo_hi": LO_HI, "lo_keep": LO_KEEP,
+                                        "pg_crit": PG_CRIT, "pg_hi": PG_HI, "sulfur": SULFUR, "s_hi": S_HI, "s_lo": S_LO,
+                                        "sf_gas": list(SF_GAS), "sfg_on": SFG_ON, "sfg_off": SFG_OFF}))
 
 LUA_CONFIG = """(function()
   local s, f = game.surfaces[1], game.forces.player
@@ -157,10 +219,7 @@ LUA_SILO = """(function()
   local tank = s.find_entities_filtered{name = 'storage-tank', force = f, position = A.pg_tank, radius = 0.5}[1]
   local pg = tank and tank.fluidbox[1] and tank.fluidbox[1].amount or 0
   local ck = s.find_entities_filtered{name = 'chemical-plant', force = f, position = A.crack, radius = 0.5}[1]
-  if ck then
-    if pg > A.pg_hi and ck.active then ck.active = false o.crack = 'off' elseif pg < A.pg_lo and not ck.active then ck.active = true o.crack = 'on' end
-    o.crack_active = ck.active
-  end
+  if ck then o.crack_active = ck.active end   -- 켜고 끄기는 LUA_OIL (19:3x)
   o.pg = math.floor(pg)
   local sf = s.find_entities_filtered{name = 'chemical-plant', force = f, position = A.sf1, radius = 0.5}[1]
   local nsf = net and net.get_item_count('solid-fuel') or 0
@@ -265,16 +324,16 @@ def main():
     if a.step == "loop":
         while True:
             try:
-                r = {"silo": silo(ai), "feed": feed(ai)}
+                r = {"silo": silo(ai), "feed": feed(ai), "oil": oil(ai)}
                 f = r["feed"]
                 print(time.strftime("%H:%M:%S"), json.dumps({"silo": r["silo"], "req": list((f.get("req") or {}).values()) if isinstance(f.get("req"), dict) else f.get("req"),
-                                                             "short": len(f.get("short") or []), "miss": len(f.get("miss") or [])}, ensure_ascii=False), flush=True)
+                                                             "short": len(f.get("short") or []), "miss": len(f.get("miss") or []), "oil": r["oil"]}, ensure_ascii=False), flush=True)
             except (RconError, OSError) as e:
                 print(time.strftime("%H:%M:%S"), "오류", e, flush=True)
                 ai = AIBridge()
             time.sleep(a.every)
     fn = {"check": lambda ai: place(ai, False), "ghosts": lambda ai: place(ai, True), "need": need, "kit": kit,
-          "config": config, "status": status, "silo": silo, "feed": feed}[a.step]
+          "config": config, "status": status, "silo": silo, "feed": feed, "oil": oil}[a.step]
     print(json.dumps(fn(ai), ensure_ascii=False, default=str))
 
 

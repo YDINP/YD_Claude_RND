@@ -22,6 +22,13 @@ MAX_STOPS = 28
 OUTPOST = [(403.5, -149.5, 1500), (413.5, -147.5, 1500)]  # P13 (09:4x) 강철로 24 → 46 - 석탄 0.54 → 1.0/s, 상한 1200 → 1500      # 동쪽 줄은 (413.5,-147.5) (03:4x 새 상자 - 옛 (413.5,-146.5) 는 첫 화로 (409,-147) 팔보다 하류라 그 화로가 relay 연료뿐이었다)
 OUTPOST_LOW = 700
 SKIP = [[380, -195, 440, -110]]                   # 전초 화로는 벨트 석탄 (상자로)
+# 19:4x oil24: 석탄 위기 뒤 망 석탄 < NET_KEEP 이라 coal_src empty 가 30 분 넘게 → 전초 철 화로 46 no_fuel · 기지 철 10분 17k → 2.2k.
+#   석탄이 없을 때만 고체 연료 (12 MJ = 석탄 3 몫) 를 전초 상자에 (같은 팔이 벨트 석탄 레인에 붓고, 화로 팔은 받을 수 있는 연료만 집는다).
+#   출처는 망 상자 (SF 칸) - 망 고체 연료가 SF_RES 밑이면 안 가져감 (로켓 연료 몫 먼저). 손으로 들고 감, Lua 아이템 이동 0.
+# 19:5x 코디네이터: 망 석탄은 coal24 탭 공급 상자 둘 · P10 강철 상자 둘에 있다 (위 두 영역 밖) → 콕 집어 출처로 (x, y, 남김)
+COAL_SRC = [(100.5, -26.5, 100), (101.5, -26.5, 100), (19.5, -116.5, 0), (29.5, -116.5, 0)]
+SF_SRC = [(59.5, -14.5), (61.5, -15.5)]   # SF1 상자 (-63.5,-4.5) 는 로켓 연료 몫, (-92.5,15.5) 는 RF 줄 서쪽 - 거기서 동쪽으로 가는 길이 RF 줄 관 틈 (y 0 · 1) 에 갇힌다 (19:4x ~ 19:5x 세 번)
+SF_GOAL, SF_LOW, SF_RES = 250, 120, 300
 
 LUA = """(function()
   local s, f = game.surfaces[1], game.forces.player
@@ -46,10 +53,27 @@ LUA = """(function()
     local n = c.get_inventory(defines.inventory.chest).get_item_count("coal") - A.netkeep
     if n > 0 then out.src[#out.src + 1] = {c.position.x, c.position.y, n} end
   end
+  for _, q in pairs(A.coalsrc) do
+    local c = s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, position = {q[1], q[2]}, radius = 0.3}[1]
+    local n = c and (c.get_inventory(defines.inventory.chest).get_item_count("coal") - q[3]) or 0
+    if n > 0 then out.src[#out.src + 1] = {q[1], q[2], n} end
+  end
   for i, q in pairs(A.post) do
     local c = s.find_entities_filtered{name = "iron-chest", force = f, position = {q[1], q[2]}, radius = 0.3}[1]
     out.post[i] = c and c.get_inventory(defines.inventory.chest).get_item_count("coal") or -1
   end
+  out.postsf, out.sfsrc = {}, {}
+  for i, q in pairs(A.post) do
+    local c = s.find_entities_filtered{name = "iron-chest", force = f, position = {q[1], q[2]}, radius = 0.3}[1]
+    out.postsf[i] = c and c.get_inventory(defines.inventory.chest).get_item_count("solid-fuel") or -1
+  end
+  for _, q in pairs(A.sfsrc) do
+    local c = s.find_entities_filtered{type = {"container", "logistic-container"}, force = f, position = q, radius = 0.3}[1]
+    local n = c and c.get_inventory(defines.inventory.chest).get_item_count("solid-fuel") or 0
+    if n > 0 then out.sfsrc[#out.sfsrc + 1] = {q[1], q[2], n} end
+  end
+  local net = s.find_logistic_network_by_position({66.5, -15.5}, f)
+  out.netsf = net and net.get_item_count("solid-fuel") or 0
   return out
 end)()"""
 
@@ -59,7 +83,7 @@ def listify(v):
 
 
 def once(ai, who) -> dict:
-    r = ai.lua(LUA % json.dumps({"low": LOW, "box": COAL_BOX, "post": OUTPOST, "skip": SKIP, "netbox": NET_BOX, "netkeep": NET_KEEP}))
+    r = ai.lua(LUA % json.dumps({"low": LOW, "box": COAL_BOX, "post": OUTPOST, "skip": SKIP, "netbox": NET_BOX, "netkeep": NET_KEEP, "sfsrc": SF_SRC, "coalsrc": COAL_SRC}))
     fur = sorted(listify(r.get("fur")), key=lambda f: f[2])[:MAX_STOPS]
     post = listify(r.get("post"))
     post_need = [(x, y, goal - h) for (x, y, goal), h in zip(OUTPOST, post) if 0 <= h < OUTPOST_LOW]
@@ -75,7 +99,7 @@ def once(ai, who) -> dict:
         plan += [("walk_to", {"x": x, "y": y + 1.5}), ("take", {"name": "coal", "x": x, "y": y, "count": k})]
         carry += k
     if carry < 50:
-        return {"fur": len(fur), "coal_src": "empty"}
+        return sf_run(ai, who, r, post_need) or {"fur": len(fur), "coal_src": "empty"}
     # 12:5x (adv24): 전초 상자를 «먼저». 화로 28 곳 뒤에 붙이면 계획이 64 단계에서 잘려 전초 몫이 12:42 부터 한 번도 안 갔다
     #   (전초 상자 0 · 전초 철 화로 46 no_fuel · 기지 철 10분 17.8k → 2.3k). 전초 철이 기지 철의 대부분이다.
     for x, y, n in post_need:
@@ -94,6 +118,41 @@ def once(ai, who) -> dict:
     plan.append(("walk_to", {"x": 100.5, "y": -26.5}))
     submit(ai, who, plan[:2 * MAX_STOPS + 12], strict=False)
     return {"fur": len(fur), "min": min([f[2] for f in fur], default=None), "post": post, "carry0": need}
+
+
+def sf_run(ai, who, r, post_need):
+    """석탄이 없을 때 전초 상자에 고체 연료."""
+    if not post_need:
+        return None
+    postsf = listify(r.get("postsf"))
+    want = [(x, y, SF_GOAL - h) for (x, y, _g), h in zip(OUTPOST, postsf) if 0 <= h < SF_LOW]
+    held = 0
+    body = [b for b in ai.list() if b["name"] == who and "x" in b]
+    if body:   # 19:4x: 갇혔다 풀린 사람이 들고 있던 몫 먼저
+        held = int(ai.lua("""(function() local c = game.surfaces[1].find_entities_filtered{type = 'character', position = {%f, %f}, radius = 1}[1]
+          return {n = c and c.get_main_inventory().get_item_count('solid-fuel') or 0} end)()""" % (body[0]["x"], body[0]["y"])).get("n") or 0)
+    room = int(r.get("netsf") or 0) - SF_RES
+    need = min(sum(n for _, _, n in want), held + max(0, min(room, sum(c[2] for c in listify(r.get("sfsrc"))))))
+    if need < 50:
+        return {"coal_src": "empty", "sf": "skip", "postsf": postsf, "netsf": r.get("netsf")}
+    plan, carry = [], min(held, need)
+    for x, y, n in sorted(listify(r.get("sfsrc")), key=lambda c: -c[2]):
+        k = min(n, need - carry)
+        if k <= 0:
+            break
+        plan += [("walk_to", {"x": x, "y": y + 1.5}), ("take", {"name": "solid-fuel", "x": x, "y": y, "count": k})]
+        carry += k
+    if carry < 50:
+        return {"coal_src": "empty", "sf": "no_src"}
+    for x, y, n in want:
+        k = min(n, carry)
+        if k <= 0:
+            break
+        plan += [("walk_to", {"x": x + 1.5, "y": y}), ("insert", {"name": "solid-fuel", "x": x, "y": y, "count": k})]
+        carry -= k
+    plan.append(("walk_to", {"x": 100.5, "y": -26.5}))
+    submit(ai, who, plan, strict=False)
+    return {"coal_src": "empty", "sf": "haul", "carry": need, "postsf": postsf}
 
 
 def main() -> int:
