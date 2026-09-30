@@ -123,7 +123,10 @@ def main() -> int:
         try:
             ai = ai or AIBridge()
             body = [b for b in ai.list() if b["name"] == a.who]
-            if body and not body[0].get("queued"):
+            foreign = detached.owner(a.who) not in (None, OWNER)   # 출정 (walkscout · coal24 ...) 중이면 뺏지 않는다 - mark 가 덮어쓰므로
+            if foreign:
+                print(time.strftime("%H:%M:%S"), a.who, "은", detached.owner(a.who), "것 - 쉼", flush=True)
+            elif body and not body[0].get("queued"):
                 if a.ammo_every and time.time() - last_ammo >= a.ammo_every:
                     import p11_24
                     p11_24.fill(ai, a.who, a.ammo_per)          # 남서 유전 탄 상자 넷 (노랑, 모자라면 손제작)
