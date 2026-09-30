@@ -242,7 +242,7 @@ LUA_FEED = """(function()
     for _, n in pairs(s.find_logistic_networks_by_construction_area(a.position, f) or {}) do
       if not net or n.all_construction_robots > net.all_construction_robots then net = n end end
     out.acc = inv.get_item_count('iron-plate') .. 'fe/' .. inv.get_item_count('battery') .. 'bat'
-    if inv.get_item_count('iron-plate') < 4 and inv.get_item_count('battery') >= 5 and not busy and net and net.get_item_count('iron-plate') >= 10 then
+    if inv.get_item_count('iron-plate') < 4 and inv.get_item_count('battery') >= 5 and not busy and net and net.get_item_count('iron-plate') >= 610 then   -- 11:4x 탄 우선: 망 철 600 밑이면 쉼 (ammo24)
       s.create_entity{name = 'item-request-proxy', position = a.position, force = f, target = a,
         modules = {{id = {name = 'iron-plate'}, items = {in_inventory = {{inventory = defines.inventory.assembling_machine_input, stack = 0, count = 10}}}}}}
       out.req[#out.req + 1] = 'acc iron 10'
