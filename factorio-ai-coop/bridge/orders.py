@@ -29,7 +29,17 @@ import detached
 import route
 
 # 이 단계들은 «이미 거기 있는 것»을 건드린다.
-REACHES = {"insert", "take", "demolish", "fuel", "set_recipe", "aim_drill"}
+# run25 캐릭터 조작 (mods/ai-bridge_0.3.0/acts.lua) 중 손으로 하는 것도 여기 든다.
+# (set_requests 에 target="self" 면 x, y 가 없어 검사 밖이다.)
+REACHES = {"insert", "take", "demolish", "fuel", "set_recipe", "aim_drill",
+           "rotate", "set_filter", "set_limit", "set_requests", "set_condition",
+           "launch_rocket", "request_items", "upgrade_mark"}
+
+# run25 에서 새로 생긴 캐릭터 조작 (docs/run25-api-rules.md).
+#   손 (닿아야 함): set_recipe rotate set_filter set_limit set_requests set_condition launch_rocket
+#   지도 (보이는 곳이면): place_ghost deconstruct_mark upgrade_mark request_items research
+ACTS = ("set_recipe", "rotate", "set_filter", "set_limit", "set_requests", "set_condition",
+        "launch_rocket", "place_ghost", "deconstruct_mark", "upgrade_mark", "request_items", "research")
 
 # 짓는 단계. 같은 계획 안에서 먼저 지었으면 그 자리는 찬 것으로 친다.
 MAKES = {"build"}

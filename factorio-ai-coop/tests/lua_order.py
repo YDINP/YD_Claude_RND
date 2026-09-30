@@ -119,6 +119,9 @@ def main() -> int:
                     continue
                 if field_access(line, hit.start()):
                     continue
+                after = line[hit.end():].lstrip()
+                if after.startswith("=") and not after.startswith("=="):
+                    continue               # 표 열쇠 ({ inventory = ... }) 는 이름을 쓰는 것이 아니다
                 trouble.append(f"{name}:{n}: '{word}' 는 {home} 것인데 "
                                f"require 해서 받아두지 않았다")
 

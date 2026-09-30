@@ -402,7 +402,8 @@ local function coal_pair_site(name, x, y, radius, pairs_wanted)
   }
 end
 
-local function aim_drill(name, x, y)
+-- dry: 돌리지 않고 «어느 쪽으로 돌려야 하는가» 만 답한다 (run25 - 돌리는 것은 rotate 주문).
+local function aim_drill(name, x, y, dry)
   local a = agent(name)
   local b = body(a)
   if not b then return { error = "no such agent: " .. tostring(name) } end
@@ -422,6 +423,12 @@ local function aim_drill(name, x, y)
   for _, dir in pairs(DIRECTIONS) do
     if dir ~= drill.direction
         and outlet_ok(b.surface, b.force, drop_tile(drill.position, dir)) then
+      if dry then
+        local tile = drop_tile(drill.position, dir)
+        return { turned = false, want = dir, direction = dir,
+                 x = drill.position.x, y = drill.position.y,
+                 drop_x = tile.x, drop_y = tile.y }
+      end
       drill.direction = dir
       local drop = drill.drop_position
       return { turned = true, direction = dir,
@@ -446,7 +453,9 @@ end
 --
 -- 상자는 걷지 않는다. 안에 든 것이 있고, 벨트가 막힐 때의 완충이기도 하다.
 -- 채굴기가 보는 쪽만 바꾼다.
-local function feed_belts(name, limit)
+-- dry: 돌리지 않고 목록만 (run25 - 돌리는 것은 rotate 주문). 방향을 잠깐 바꿔
+-- drop_position 을 묻는 것은 같은 틱 안에서 되돌리므로 세계에 남지 않는다.
+local function feed_belts(name, limit, dry)
   local a = agent(name)
   local b = body(a)
   if not b then return { error = "no such agent: " .. tostring(name) } end
@@ -470,7 +479,7 @@ local function feed_belts(name, limit)
           position = { p.x, p.y }, radius = 0.4,
           name = "transport-belt", force = force, limit = 1,
         }[1]
-        if not belt then drill.direction = was end
+        if not belt or dry then drill.direction = was end
         if belt then
           seen = seen + 1
           turned[#turned + 1] = { x = drill.position.x, y = drill.position.y,
@@ -480,7 +489,7 @@ local function feed_belts(name, limit)
       end
     end
   end
-  return { turned = turned, total = seen }
+  return { turned = turned, total = seen, dry = dry and true or false }
 end
 
 -- 공장이 실제로 «돌고 있는가». 세운 수가 아니라 도는 수를 센다.

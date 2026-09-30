@@ -103,6 +103,23 @@ local misplaced  = Zones.misplaced
 local next_seat  = Zones.next_seat
 local zones      = Zones.zones
 
+-- run25: 사람이 할 수 있는 조작을 캐릭터 일감으로 (tasks 표에 더한다).
+local Acts = require("acts")
+
+-- run25 엄격 모드: 세계를 «직접» 바꾸던 옛 원격을 막는다. 기본은 꺼짐 (옛 판과 같게).
+-- remote.call("ai", "rules", true) 로 켠다. 게임 저장에 남는다.
+local function legacy(fn, what, instead, dry_arg)
+  return function(...)
+    if storage.strict then
+      local args = { ... }
+      if not (dry_arg and args[dry_arg]) then
+        return { error = "run25 rules: remote '" .. what .. "' is disabled - use " .. instead }
+      end
+    end
+    return fn(...)
+  end
+end
+
 local Runner = require("runner")
 local Reflex = require("reflex")
 local agent_status = Runner.agent_status
@@ -362,6 +379,27 @@ remote.add_interface("ai", {
     return { agents = out, tick = game.tick, count = #out }
   end,
 
+  -- run25: 서 있는 자리에서 지금 한다 (걷지 않는다). 손 조작은 닿아야 하고,
+  -- 지도 조작 (유령 · 표시 · 연구) 은 거리가 없다. name 이 nil 이면 산 사람 아무나.
+  act = function(name, task_type, params)
+    local a = name and agent(name) or nil
+    if not name then
+      for _, n in ipairs(storage.order) do
+        local one = storage.agents[n]
+        if one and body(one) then a = one break end
+      end
+    end
+    local b = body(a)
+    if not b then return { error = "no such agent: " .. tostring(name) } end
+    return Acts.act(a, b, task_type, params)
+  end,
+
+  -- 엄격 모드 (옛 세계 조작 원격 막기). 인자 없이 부르면 지금 값만.
+  rules = function(strict)
+    if strict ~= nil then storage.strict = strict and true or false end
+    return { strict = storage.strict and true or false, acts = Acts.ACTS }
+  end,
+
   status = agent_status,
   observe = observe,
   inventory = inventory,
@@ -445,13 +483,13 @@ remote.add_interface("ai", {
     return { cancelled = total, agents = #storage.order }
   end,
 
-  give = function(name, items)
+  give = legacy(function(name, items)
     local a = agent(name)
     local b = body(a)
     if not b then return { error = "no such agent: " .. tostring(name) } end
     for item, count in pairs(items or {}) do b.insert { name = item, count = count } end
     return inventory(name)
-  end,
+  end, "give", "take/give orders (items come from somewhere)"),
 
   -- Look at what is actually standing on a spot. Automation needs this: a
   -- mining drill decides for itself which tile it drops ore onto, so the chest
@@ -605,7 +643,7 @@ remote.add_interface("ai", {
     return { technology = nil }
   end,
 
-  research = function(name)
+  research = legacy(function(name)
     local force = game.forces["player"]
     local tech = force.technologies[name]
     if not tech then return { error = "no such technology: " .. tostring(name) } end
@@ -613,7 +651,7 @@ remote.add_interface("ai", {
     local ok, err = pcall(function() force.add_research(name) end)
     if not ok then return { error = tostring(err) } end
     return { queued = name, queue_length = #force.research_queue }
-  end,
+  end, "research", "the research order (act/submit)"),
 
   -- Where an offshore pump could go. There is no API for "a spot on the shore",
   -- so this brute-forces it: find water, then try the four directions on the
@@ -719,10 +757,10 @@ remote.add_interface("ai", {
   hungry_rigs = hungry_rigs,
 
   -- 걸어서 못 나오는 곳에 갇힌 사람을 꺼낸다.
-  unstick = unstick,
+  unstick = legacy(unstick, "unstick", "walk_to (teleport is not a player action)"),
 
   -- 조립기: 무엇을 만들지 정하고, 랩 옆 자리를 찾는다.
-  set_recipe = set_recipe,
+  set_recipe = legacy(set_recipe, "set_recipe", "the set_recipe order (reach)"),
   assembler_site = assembler_site,
 
   -- 전봇대가 이 기계에 실제로 «닿는» 자리.
@@ -768,10 +806,10 @@ remote.add_interface("ai", {
 
   -- 채굴기가 들어가고 출구도 비는 자리, 그리고 이미 막힌 것 돌려세우기.
   drill_site = drill_site,
-  aim_drill = aim_drill,
+  aim_drill = legacy(aim_drill, "aim_drill", "aim_drill(name, x, y, true) + the rotate order", 4),
 
   -- 벨트가 옆에 있으면 상자 말고 벨트를 보게 돌린다.
-  feed_belts = feed_belts,
+  feed_belts = legacy(feed_belts, "feed_belts", "feed_belts(name, limit, true) + rotate orders", 3),
 
   -- 석탄 위에서 서로를 먹이는 채굴기 두 대의 자리.
   coal_pair_site = coal_pair_site,

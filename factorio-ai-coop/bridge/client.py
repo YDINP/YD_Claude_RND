@@ -104,10 +104,42 @@ class AIBridge:
             raise RconError(f"no reply from remote.call('ai', '{fn}')")
         return reply
 
+    # -- run25: 사람이 할 수 있는 조작 (docs/run25-api-rules.md) ---------------
+
+    _has_acts: bool | None = None
+
+    def has_acts(self) -> bool:
+        """모드에 run25 캐릭터 조작 (act · rules) 이 있는가. 한 번만 묻는다 (읽기 전용).
+
+        없으면 옛 원격 (set_recipe · aim_drill ...) 으로 돈다 - run24 서버와 같게.
+        """
+        if self._has_acts is None:
+            try:
+                got = self.lua("{ yes = (remote.interfaces.ai and remote.interfaces.ai.act) and true or false }")
+                self._has_acts = bool(got and got.get("yes"))
+            except RconError:
+                self._has_acts = False
+        return self._has_acts
+
+    def act(self, agent: str | None, kind: str, **params: Any) -> dict:
+        """서 있는 자리에서 «지금» 한다 (걷지 않는다).
+
+        손 조작 (set_recipe · rotate · set_filter · set_limit · set_requests ·
+        set_condition · launch_rocket) 은 손이 닿아야 하고, 지도 조작
+        (place_ghost · deconstruct_mark · upgrade_mark · request_items ·
+        research) 은 지도에 보이는 곳이면 된다. 걸어가서 하려면
+        orders.submit 으로 같은 이름의 일감을 보낸다.
+        """
+        return self.call("act", agent, kind, params)
+
+    def rules(self, strict: bool | None = None) -> dict:
+        """엄격 모드 (옛 세계 조작 원격 막기) 를 켜고 끄거나 지금 값을 묻는다."""
+        return self.call("rules", strict)
+
     # -- the roster -------------------------------------------------------
 
     def spawn(self, name: str = "agent", force: str = "player") -> "Agent":
-        reply = self.call("spawn", name, force)
+        reply = self.call("spawn", name, force)  # apilint: ok 몸 만들기 (관리 - 사람의 리스폰과 같다)
         if "error" in reply:
             raise RconError(reply["error"])
         return Agent(self, name)
@@ -117,7 +149,7 @@ class AIBridge:
         return Agent(self, name)
 
     def remove(self, name: str) -> dict:
-        return self.call("remove", name)
+        return self.call("remove", name)  # apilint: ok 관리 (요원 빼기)
 
     def list(self) -> list[dict]:
         return _as_list(self.call("list").get("agents"))
@@ -165,7 +197,14 @@ class AIBridge:
         return self.call("technology", name)
 
     def research(self, name: str) -> dict:
-        return self.call("research", name)
+        """연구 큐에 넣는다. run25 모드면 캐릭터의 연구 GUI 조작 (act research)."""
+        if self.has_acts():
+            got = self.act(None, "research", name=name)
+            if "error" in got:
+                return got
+            queue = _as_list(got.get("queue"))
+            return {"queued": name, "queue_length": len(queue), "current": got.get("current")}
+        return self.call("research", name)  # apilint: ok 옛 서버 (run24) 호환
 
     def available_research(self) -> list[dict]:
         """지금 시작할 수 있는 연구들."""
@@ -232,8 +271,23 @@ class AIBridge:
         return self.call("coal_pair_site", agent, x, y, radius, pairs)
 
     def aim_drill(self, agent: str, x: float, y: float) -> dict:
-        """이미 놓인 채굴기를 출구가 비는 방향으로 돌린다."""
-        return self.call("aim_drill", agent, x, y)
+        """이미 놓인 채굴기를 출구가 비는 방향으로 돌린다.
+
+        run25 모드: 모드는 «어느 쪽» 만 답하고 (dry), 돌리는 것은 그 요원의
+        손 (act rotate - 손이 닿아야 한다) 이다.
+        """
+        if not self.has_acts():
+            return self.call("aim_drill", agent, x, y)  # apilint: ok 옛 서버 (run24) 호환
+        want = self.call("aim_drill", agent, x, y, True)  # apilint: ok dry - 조회만
+        if "error" in want or "want" not in want:
+            return want
+        got = self.act(agent, "rotate", x=want["x"], y=want["y"], direction=want["want"],
+                       search_radius=0.6)
+        if "error" in got:
+            return got
+        return {"turned": True, "direction": got.get("direction"), "x": got.get("x"), "y": got.get("y"),
+                "drop_x": got.get("drop_x", want.get("drop_x")),
+                "drop_y": got.get("drop_y", want.get("drop_y"))}
 
     def broken(self, agent: str, radius: int = 200) -> list[dict]:
         """지금 멈춰 서 있는 기계들, 가까운 순.
@@ -289,8 +343,10 @@ class AIBridge:
         return self.call("fuel_rig", agent, x, y)
 
     def set_recipe(self, agent: str, x: float, y: float, recipe: str) -> dict:
-        """조립기에 무엇을 만들지 정해준다."""
-        return self.call("set_recipe", agent, x, y, recipe)
+        """조립기에 무엇을 만들지 정해준다. run25 모드면 그 요원의 손으로 (닿아야 한다)."""
+        if self.has_acts():
+            return self.act(agent, "set_recipe", x=x, y=y, recipe=recipe)
+        return self.call("set_recipe", agent, x, y, recipe)  # apilint: ok 옛 서버 (run24) 호환
 
     def assembler_site(self, agent: str, x: float, y: float,
                        arm: str = "inserter") -> dict:
@@ -299,10 +355,15 @@ class AIBridge:
 
     def unstick(self, agent: str, x: float | None = None,
                 y: float | None = None) -> dict:
-        """걸어서 못 나오는 곳에 갇힌 사람을 동료 옆으로 옮긴다."""
+        """걸어서 못 나오는 곳에 갇힌 사람을 동료 옆으로 옮긴다.
+
+        run25 모드에서는 순간이동이 없다 - error 를 돌려준다 (부르는 쪽은 사람에게 말한다).
+        """
+        if self.has_acts():
+            return {"error": "run25: 순간이동 금지 - 걸어서 나오거나 사람에게 도움을 청한다"}
         if x is None or y is None:
-            return self.call("unstick", agent)
-        return self.call("unstick", agent, x, y)
+            return self.call("unstick", agent)  # apilint: ok 옛 서버 (run24) 호환
+        return self.call("unstick", agent, x, y)  # apilint: ok 옛 서버 (run24) 호환
 
     def hungry_rigs(self, agent: str, radius: int = 200) -> list[dict]:
         """세워는 놨는데 상자가 빈 급유 장치들, 가까운 순."""
@@ -362,11 +423,26 @@ class AIBridge:
 
     def revive(self, agent: str) -> dict:
         """죽은 요원을 기지에서 다시 세운다. 살아 있으면 아무것도 안 한다."""
-        return self.call("revive", agent)
+        return self.call("revive", agent)  # apilint: ok 관리 (죽은 요원 리스폰)
 
     def feed_belts(self, agent: str, limit: int = 40) -> dict:
-        """벨트가 옆에 있는 채굴기를 벨트 쪽으로 돌린다."""
-        return self.call("feed_belts", agent, limit)
+        """벨트가 옆에 있는 채굴기를 벨트 쪽으로 돌린다.
+
+        run25 모드: 모드는 목록만 (dry), 돌리는 것은 그 요원의 rotate 일감
+        (걸어가서 - 큐에 넣는다). turned 에는 «돌리러 간» 채굴기가 담긴다.
+        """
+        if not self.has_acts():
+            return self.call("feed_belts", agent, limit)  # apilint: ok 옛 서버 (run24) 호환
+        plan = self.call("feed_belts", agent, limit, True)  # apilint: ok dry - 조회만
+        todo = _as_list(plan.get("turned"))[:limit]
+        if not todo:
+            return {"turned": [], "total": 0}
+        steps = [{"type": "rotate", "params": {"x": t["x"], "y": t["y"], "direction": t["dir"],
+                                                "search_radius": 0.6}} for t in todo]
+        reply = self.call("submit_many", agent, steps)
+        if "error" in reply:
+            return reply
+        return {"turned": todo, "total": len(todo), "queued": _as_list(reply.get("ids"))}
 
     def claim_work(self, agent: str, which: str, count: int = 20) -> dict:
         """설계에서 내 몫을 받아온다. 남이 집어간 칸은 안 온다."""
@@ -508,7 +584,10 @@ class Agent:
         return self.inventory().get("items", {})
 
     def give(self, **items: int) -> dict:
-        return self.bridge.call("give", self.name, items)
+        """없는 것을 만들어 준다 (치트). run25 에서는 금지."""
+        if self.bridge.has_acts():
+            return {"error": "run25: 아이템 생성 금지 - take / give (동료에게 건네기) 일감을 쓴다"}
+        return self.bridge.call("give", self.name, items)  # apilint: ok 옛 서버 (run24) 호환
 
     def nearest(self, resource: str, radius: int = 200) -> dict | None:
         found = self.observe(radius=radius).get("resources", {}).get(resource)
@@ -595,6 +674,59 @@ class Agent:
 
     def take(self, name: str, x: float, y: float, count: int = 1, **kw: Any) -> dict:
         return self.run("take", name=name, x=x, y=y, count=count, **kw)
+
+    # -- run25 캐릭터 조작 (걸어가서 한다; 지금 서 있는 곳에서 하려면 bridge.act) --
+
+    def set_recipe(self, x: float, y: float, recipe: str, **kw: Any) -> dict:
+        return self.run("set_recipe", x=x, y=y, recipe=recipe, **kw)
+
+    def rotate(self, x: float, y: float, direction: int | None = None, **kw: Any) -> dict:
+        if direction is not None:
+            kw["direction"] = direction
+        return self.run("rotate", x=x, y=y, **kw)
+
+    def set_filter(self, x: float, y: float, item: str | None = None, **kw: Any) -> dict:
+        if item:
+            kw["item"] = item
+        return self.run("set_filter", x=x, y=y, **kw)
+
+    def set_limit(self, x: float, y: float, slots: int | None = None, **kw: Any) -> dict:
+        if slots is not None:
+            kw["slots"] = slots
+        return self.run("set_limit", x=x, y=y, **kw)
+
+    def set_requests(self, requests: dict, x: float | None = None, y: float | None = None,
+                     **kw: Any) -> dict:
+        if x is None or y is None:
+            return self.run("set_requests", target="self", requests=requests, **kw)
+        return self.run("set_requests", x=x, y=y, requests=requests, **kw)
+
+    def set_condition(self, x: float, y: float, signal: str | None = None, comparator: str = "<",
+                      constant: int | None = None, kind: str = "logistic", **kw: Any) -> dict:
+        params = {"x": x, "y": y, "kind": kind, "comparator": comparator, **kw}
+        if signal:
+            params["signal"] = signal
+        if constant is not None:
+            params["constant"] = constant
+        return self.run("set_condition", **params)
+
+    def launch_rocket(self, x: float, y: float, **kw: Any) -> dict:
+        return self.run("launch_rocket", x=x, y=y, **kw)
+
+    def place_ghost(self, name: str, x: float, y: float, direction: int = 0, **kw: Any) -> dict:
+        return self.run("place_ghost", name=name, x=x, y=y, direction=direction, **kw)
+
+    def deconstruct_mark(self, x: float, y: float, **kw: Any) -> dict:
+        return self.run("deconstruct_mark", x=x, y=y, **kw)
+
+    def upgrade_mark(self, x: float, y: float, target: str, **kw: Any) -> dict:
+        return self.run("upgrade_mark", x=x, y=y, target=target, **kw)
+
+    def request_items(self, x: float, y: float, items: dict, **kw: Any) -> dict:
+        return self.run("request_items", x=x, y=y, items=items, **kw)
+
+    def research(self, name: str, mode: str = "add") -> dict:
+        return self.run("research", name=name, mode=mode)
 
     def tell(self, message: str, speaker: str = "사람") -> dict:
         """사람이 게임 밖에서 내리는 지시를 명령 채널에 넣는다.

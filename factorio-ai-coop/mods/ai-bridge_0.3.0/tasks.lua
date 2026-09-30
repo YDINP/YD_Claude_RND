@@ -233,6 +233,10 @@ local function bag_full(bot)
   return inv ~= nil and inv.count_empty_stacks() == 0
 end
 
+-- acts.lua (run25 캐릭터 조작) 가 같은 걸음·가방 규칙을 쓴다.
+M.approach = function(ctx, target, tolerance) return approach(ctx, target, tolerance) end
+M.bag_full = bag_full
+
 M.walk_to = {
   start = function(ctx)
     ctx.task.state.goal = { x = ctx.task.params.x, y = ctx.task.params.y }
@@ -789,7 +793,19 @@ M.insert = {
     end
 
     local wanted = math.min(p.count or 1, insert_have(bot, p.name))
-    local moved = wanted > 0 and st.target.insert { name = p.name, count = wanted } or 0
+    -- p.inventory: 칸을 골라 넣는다 (사람이 모듈 칸 · 연료 칸에 직접 끌어 넣듯).
+    -- defines.inventory 의 이름 - "assembling_machine_modules", "fuel", "turret_ammo", "chest" ...
+    local into = st.target
+    if p.inventory then
+      local idx = defines.inventory[p.inventory]
+      local inv = idx and st.target.get_inventory(idx)
+      if not inv then
+        ctx.task.error = string.format("%s has no %s inventory", st.target.name, tostring(p.inventory))
+        return "failed"
+      end
+      into = inv
+    end
+    local moved = wanted > 0 and into.insert { name = p.name, count = wanted } or 0
     if moved > 0 then insert_take(bot, p.name, moved) end
     ctx.task.result = { inserted = moved, item = p.name, into = st.target.name }
 
