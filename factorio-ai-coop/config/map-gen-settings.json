@@ -1,31 +1,31 @@
 {
-  "_comment": "Map generation for the AI coop runs. run20-22 ended with nests inside the base, so run23 used starting_area 4, enemy-base 0.5, ores 1.5. run23 launched 3 rockets, so run24 is one step harder (user 2026-09-29): starting_area 3, enemy-base 0.75, ores 1.25. See docs/playbook.md and docs/run23-postmortem.md.",
+  "_comment": "Map generation for the AI coop runs. run20-22 ended with nests inside the base, so run23 used starting_area 4, enemy-base 0.5, ores 1.5. run23 launched 3 rockets, so run24 is one step harder (user 2026-09-29): starting_area 3, enemy-base 0.75, ores 1.25. See docs/playbook.md and docs/run23-postmortem.md. run24 launched 1 rocket (~29 h) so run25 is one step harder again (user 2026-10-01): starting_area 2, enemy-base 1.0, ores 1.0. run25 also bans game-changing Lua API (character actions + read-only queries only) and targets achievement conditions.",
   "terrain_segmentation": 1,
   "water": 1.5,
   "width": 0,
   "height": 0,
-  "starting_area": 3,
+  "starting_area": 2,
   "peaceful_mode": false,
   "autoplace_controls": {
     "coal": {
-      "frequency": 1.25,
-      "size": 1.25,
-      "richness": 1.25
+      "frequency": 1,
+      "size": 1,
+      "richness": 1
     },
     "stone": {
-      "frequency": 1.25,
-      "size": 1.25,
-      "richness": 1.25
+      "frequency": 1,
+      "size": 1,
+      "richness": 1
     },
     "copper-ore": {
-      "frequency": 1.25,
-      "size": 1.25,
-      "richness": 1.25
+      "frequency": 1,
+      "size": 1,
+      "richness": 1
     },
     "iron-ore": {
-      "frequency": 1.25,
-      "size": 1.25,
-      "richness": 1.25
+      "frequency": 1,
+      "size": 1,
+      "richness": 1
     },
     "uranium-ore": {
       "frequency": 1,
@@ -43,8 +43,8 @@
       "richness": 1
     },
     "enemy-base": {
-      "frequency": 0.75,
-      "size": 0.75,
+      "frequency": 1,
+      "size": 1,
       "richness": 1
     }
   },
