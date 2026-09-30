@@ -39,7 +39,7 @@ AMMO_TRIP = 200                   # 한 바퀴 노랑 (철 800, 손제작 200 s 
 REP_LOW = 100                     # 전초 망 수리팩이 밑이면 챙김 (13:4x 40 → 100)
 REP_TRIP = 200
 # 늘 채워 둘 것 (전초 망 목표 밑이면, 기지 망에서 가장 많이 든 상자 하나에서 · 기지에 keep 남김): (밑이면, 한 바퀴, 기지 남김)
-STOCK = {"piercing-rounds-magazine": (400, 400, 250), "gun-turret": (8, 12, 10), "stone-wall": (150, 200, 40)}
+STOCK = {"piercing-rounds-magazine": (400, 200, 100), "gun-turret": (8, 12, 10), "stone-wall": (150, 200, 40)}
 PIERCE_MAIN_KEEP = 250
 # 전초 망 건설 로봇이 이 밑이면 사람이 손제작해 서쪽 문 포트에 넣는다 (틀 (-76.5,-3.5) 1 + 초록 회로 2 → 1, 0.5 s)
 ROBOT_MIN = 20
