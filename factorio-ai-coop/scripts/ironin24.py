@@ -114,7 +114,8 @@ def gate(ai):
 #   허브 쪽이 막힐 때만 받는다. 강철은 망에 6.2k 쌓여 있고 (10분 씀 ~1.8k) rg · 파랑 · 망은 철 0 → 철을 과학 쪽으로.
 #   상주 `ironsplit` (--watch): 망 강철 < STEEL_LOW 이면 우선 끔 (50:50), > STEEL_HIGH 이면 다시 허브 우선.
 SPLIT = (70.0, -22.5)
-STEEL_LOW, STEEL_HIGH = 2500, 4000
+# 15:4x 탄 위기 (피어싱 망 0, 철 광석 10분 9.1k 뿐): 강철 기둥 몫 (철 10분 ~3.6k) 을 허브 · 탄으로. 망 강철 3.2k 는 피어싱 (0.5 강철) 몫에 넉넉
+STEEL_LOW, STEEL_HIGH = 1200, 2000
 
 
 def split(ai, want=None):

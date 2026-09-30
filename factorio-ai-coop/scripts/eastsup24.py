@@ -41,6 +41,9 @@ REP_TRIP = 200
 # 늘 채워 둘 것 (전초 망 목표 밑이면, 기지 망에서 가장 많이 든 상자 하나에서 · 기지에 keep 남김): (밑이면, 한 바퀴, 기지 남김)
 STOCK = {"piercing-rounds-magazine": (400, 200, 100), "gun-turret": (8, 12, 10), "stone-wall": (150, 200, 40)}
 PIERCE_MAIN_KEEP = 250
+# 15:5x 동쪽 몫 피어싱 상자 (ammoplus2_24 둘째 블록 피어싱 B → 망 밖 쇠 상자) - 기지 망 피어싱과 상관없이 여기서 먼저 챙김
+EAST_RESERVE = (34.5, -50.5)
+RESERVE_MIN = 20
 # 전초 망 건설 로봇이 이 밑이면 사람이 손제작해 서쪽 문 포트에 넣는다 (틀 (-76.5,-3.5) 1 + 초록 회로 2 → 1, 0.5 s)
 ROBOT_MIN = 20
 ROBOT_TRIP = 20
@@ -169,6 +172,10 @@ LUA = """(function()
     end
     out.stock[name] = {east = en and en.get_item_count(name) or 0, main = mn and mn.get_item_count(name) or 0, src = src}
   end
+  do  -- 15:5x ammoplus2_24 둘째 블록 피어싱 B 결과 = 동쪽 몫 쇠 상자 (망 밖)
+    local rc = s.find_entities_filtered{name = 'steel-chest', position = {34.5, -50.5}, radius = 0.3}[1]
+    out.reserve = rc and rc.get_item_count('piercing-rounds-magazine') or 0
+  end
   out.srcs = {}
   for _, name in pairs({'steel-plate', 'stone-brick', 'iron-gear-wheel', 'electronic-circuit', 'copper-plate'}) do
     local src
@@ -255,6 +262,9 @@ def trip(ai, who, st):
             continue
         have = bag.get(name, 0)
         k = min(max(0, per - have), int(v.get("main", 0)) - keep, int(src[2]) if src else 0)
+        if name == "piercing-rounds-magazine" and int(st.get("reserve", 0)) >= RESERVE_MIN:
+            src = [EAST_RESERVE[0], EAST_RESERVE[1], int(st["reserve"])]
+            k = min(max(0, per - have), src[2])
         if k >= 5:
             plan += [("walk_to", {"x": src[0], "y": src[1] + 1.5}), ("take", {"name": name, "x": src[0], "y": src[1], "count": k})]
         else:
