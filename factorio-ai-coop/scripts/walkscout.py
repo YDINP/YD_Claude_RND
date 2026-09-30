@@ -117,6 +117,8 @@ def main() -> int:
     ap.add_argument("--home", default="", help="x,y (없으면 회차 설정의 center)")
     ap.add_argument("--end", default="", help="끝나면 갈 곳 x,y (없으면 home)")
     ap.add_argument("--start", type=float, default=0, help="첫 다리 거리 (이미 걸은 안쪽은 건너뛴다)")
+    ap.add_argument("--no-gen", action="store_true",
+                    help="run25: 지형 생성 요청 (request_to_generate_chunks) 을 하지 않는다 - 이미 생긴 땅 안에서만 걷는다")
     a = ap.parse_args()
     home = tuple(float(v) for v in a.home.split(",")) if a.home else runsite.center()
     end = tuple(float(v) for v in a.end.split(",")) if a.end else home
@@ -132,7 +134,8 @@ def main() -> int:
                 return 1
             at = (float(r.get("x") or 0), float(r.get("y") or 0))
             goal = (home[0] + ux * dist, home[1] + uy * dist)
-            gen_ahead(ai, goal)
+            if not a.no_gen:
+                gen_ahead(ai, goal)
             f = route_foes(ai, at, goal)          # 출정 조건 - 떠나기 직전에 다시 잰다
             if f.get("units", 0) or f.get("structs", 0):
                 print(f"{a.who} {d} {dist:.0f}: 가는 길 반경 {PAD} 에 적 {f} - 이 방위 접음", flush=True)

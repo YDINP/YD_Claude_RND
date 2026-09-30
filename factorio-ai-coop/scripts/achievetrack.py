@@ -77,7 +77,7 @@ for n,t in pairs(f.technologies) do
   local p=t.prototype
   local finite = p.max_level ~= 4294967295 and not p.research_unit_count_formula
   if finite then tot=tot+1 if t.researched then done=done+1 end end
-  if t.researched or (t.level and t.level>1 and not finite) then
+  if t.researched or (t.level and t.level>p.level and not finite) then  -- 무한 기술은 시작 레벨 (예: 물리 피해 7) 보다 올라가야 한 번 연구한 것
     for _,i in pairs(p.research_unit_ingredients) do o.packs[i.name]=true end
   end
 end
@@ -310,7 +310,21 @@ def main():
     ap.add_argument('--all', action='store_true')
     ap.add_argument('--json', action='store_true')
     ap.add_argument('--no-save', action='store_true', help='래치 파일을 쓰지 않는다 (다른 런에서 시험할 때)')
+    ap.add_argument('--every', type=float, default=0, help='상주: 이 초마다 다시 잰다 (래치 정확도 - 5 분 권장)')
     a = ap.parse_args()
+    if a.every:
+        import time
+        while True:
+            try:
+                once(a)
+            except Exception as exc:  # noqa: BLE001 - 상주 고리는 한 번 실패로 죽지 않는다
+                print('  게임이 대답하지 않는다:', exc, flush=True)
+            sys.stdout.flush()
+            time.sleep(a.every)
+    once(a)
+
+
+def once(a):
     lua = (LUA.replace('%BUILD%', lua_list(BUILD)).replace('%MADE_TOTAL%', lua_list(MADE_TOTAL))
            .replace('%MADE_HOUR%', lua_list(MADE_HOUR)))
     m = AIBridge().lua(lua)

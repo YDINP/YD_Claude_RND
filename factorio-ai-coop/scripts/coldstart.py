@@ -135,16 +135,23 @@ def _fresh_row(ai, ore, near, n) -> list:
       local function full(x, y)
         return s.count_entities_filtered{name = "%s", area = {{x - 1, y - 1}, {x + 1, y + 1}}} >= 4
       end
-      local out = {}
+      -- 한 줄로 모자라면 4칸 (채굴기 2 + 화로 2) 떨어진 다음 줄에서 더 채운다 (25회차: 광석 1.0 이라 한 줄에 12 가 안 나옴)
+      local out, last = {}, nil
       for dy = 0, 30 do
         local y = %d - dy
-        out = {}
-        for dx = -30, 30, 2 do
-          local x = %d + dx
-          if full(x, y)
-             and s.can_place_entity{name = "burner-mining-drill", position = {x, y}, direction = defines.direction.south, force = f}
-             and s.can_place_entity{name = "stone-furnace", position = {x, y + 2}, force = f} then
-            out[#out+1] = string.format("%%d,%%d", x, y)
+        if not last or last - y >= 4 then
+          local row = {}
+          for dx = -30, 30, 2 do
+            local x = %d + dx
+            if full(x, y)
+               and s.can_place_entity{name = "burner-mining-drill", position = {x, y}, direction = defines.direction.south, force = f}
+               and s.can_place_entity{name = "stone-furnace", position = {x, y + 2}, force = f} then
+              row[#row+1] = string.format("%%d,%%d", x, y)
+            end
+          end
+          if #row >= 4 then
+            for _, v in pairs(row) do out[#out+1] = v end
+            last = y
           end
         end
         if #out >= %d then break end
@@ -152,7 +159,7 @@ def _fresh_row(ai, ore, near, n) -> list:
       return out
     end)()""" % (ore, int(near[1]) + 4, int(near[0]), n))
     rows = [tuple(int(v) for v in str(r).split(",")) for r in _rows(reply)]
-    rows.sort(key=lambda p: abs(p[0] - near[0]))
+    rows.sort(key=lambda p: (-p[1], abs(p[0] - near[0])))
     return [(x, y, x, y + 2) for x, y in rows[:n]]
 
 
