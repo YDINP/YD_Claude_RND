@@ -230,10 +230,10 @@ def drills(ai) -> None:
     drill_crew(ai, IRON[1], iron[half:], "iron-plate")
 
 
-def copper_drills(ai) -> None:
-    """charlie: 구리판을 허브에, 허브의 철판 · 화로로 구리 채굴기 6."""
+def copper_drills(ai, who=None) -> None:
+    """charlie (또는 --who): 구리판을 허브에, 허브의 철판 · 화로로 구리 채굴기 6."""
     _iron, copper = seats(ai)
-    drill_crew(ai, STONE[-1], copper, "copper-plate")
+    drill_crew(ai, who or STONE[-1], copper, "copper-plate")
 
 
 def fuel(ai, who=None) -> None:
@@ -272,15 +272,28 @@ BOILER = (-43.5, -28, 0)
 ENGINES = ((-43.5, -31.5, 0), (-43.5, -36.5, 0))
 TREES_AT_PLANT = ((-45, -32.3), (-45.25, -39.1), (-43.5, -39.25))
 STAND = (-40.5, -31.5)
+POLES = ()
+LABS = ()
+# run25b: 회차 설정 파일의 "power" 가 있으면 그것 (모드 power_plan 이 준 확인된 자리 + can_place{manual} 로 다시 본 전봇대 줄)
+if "power" in SITE:
+    _pw = SITE["power"]
+    PUMP, BOILER = tuple(_pw["pump"]), tuple(_pw["boiler"])
+    ENGINES = tuple(tuple(e) for e in _pw["engines"])
+    TREES_AT_PLANT = tuple(tuple(t) for t in _pw.get("trees", ()))
+    STAND = tuple(_pw["stand"])
+    POLES = tuple(tuple(p) for p in _pw.get("poles", ()))
+    LABS = tuple(tuple(p) for p in _pw.get("labs", ()))
 
 
 def power(ai, who) -> None:
-    plan = [("walk_to", {"x": HUB[0], "y": HUB[1] + 1.5}),
-            ("take", {"name": "iron-plate", "x": HUB[0], "y": HUB[1], "count": 76}),
-            ("take", {"name": "stone-furnace", "x": HUB[0], "y": HUB[1], "count": 1}),
+    need = 9 + 31 * len(ENGINES) - int(cs.bag(ai, who).get("iron-plate", 0))
+    plan = [("walk_to", {"x": HUB[0], "y": HUB[1] + 1.5})]
+    if need > 0:
+        plan.append(("take", {"name": "iron-plate", "x": HUB[0], "y": HUB[1], "count": need}))
+    plan += [("take", {"name": "stone-furnace", "x": HUB[0], "y": HUB[1], "count": 1}),
             ("craft", {"recipe": "offshore-pump", "count": 1, "wait": True}),
             ("craft", {"recipe": "boiler", "count": 1, "wait": True}),
-            ("craft", {"recipe": "steam-engine", "count": 2, "wait": True}),
+            ("craft", {"recipe": "steam-engine", "count": len(ENGINES), "wait": True}),
             ("walk_to", {"x": STAND[0], "y": STAND[1]})]
     for tx, ty in TREES_AT_PLANT:
         plan.append(("chop", {"x": tx, "y": ty, "count": 1}))
@@ -289,7 +302,19 @@ def power(ai, who) -> None:
     for x, y, d in ENGINES:
         plan.append(("build", {"name": "steam-engine", "x": x, "y": y, "direction": d}))
     give(ai, who, plan)
-    print(f"{who}: 펌프 · 보일러 · 기관 2 를 만들어 호수 동쪽 기슭에 {PUMP[:2]}")
+    print(f"{who}: 펌프 · 보일러 · 기관 {len(ENGINES)} 을 만들어 {PUMP[:2]}")
+
+
+def poles(ai, who) -> None:
+    """기관 곁에서 연구소까지 작은 전봇대 줄 (나무 1 + 구리선 2 -> 2 개). 지으면 저절로 이어진다."""
+    n = len(POLES) - int(cs.bag(ai, who).get("small-electric-pole", 0))
+    plan = []
+    if n > 0:
+        plan.append(("craft", {"recipe": "small-electric-pole", "count": (n + 1) // 2, "wait": True}))
+    for x, y in POLES:
+        plan += [("walk_to", {"x": x + 1.5, "y": y + 1.5}), ("build", {"name": "small-electric-pole", "x": x, "y": y})]
+    give(ai, who, plan)
+    print(f"{who}: 전봇대 {len(POLES)} -> {POLES[0]} .. {POLES[-1]}")
 
 
 # ---- 연구소 꾸러미 (사람 몫) ------------------------------------------------------------------
@@ -330,7 +355,7 @@ def status(ai) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("status", "furnaces", "plates", "drills", "copper", "fuel", "hub", "power", "kit"))
+    ap.add_argument("step", choices=("status", "furnaces", "plates", "drills", "copper", "fuel", "hub", "power", "poles", "kit"))
     ap.add_argument("--who", default="")
     a = ap.parse_args()
     ai = AIBridge()
@@ -345,9 +370,11 @@ def main() -> int:
     elif a.step == "drills":
         drills(ai)
     elif a.step == "copper":
-        copper_drills(ai)
+        copper_drills(ai, a.who or None)
     elif a.step == "power":
         power(ai, a.who or STONE[0])
+    elif a.step == "poles":
+        poles(ai, a.who or STONE[1])
     elif a.step == "kit":
         kit(ai, a.who or "bravo")
     elif a.step == "hub":

@@ -88,10 +88,26 @@ def plan_round(ai, who, chests, low) -> list:
     return plan[:60]
 
 
+def _skips(cli: str) -> set:
+    """--skip 과 state/{run}_fuelskip.json {"skip": [...]} (돌면서 매 순번 다시 읽는다 - 고리를 끄지 않고 공해를 조인다).
+
+    run25b: 북쪽 둥지 (65,-300) 까지 공해 구름이 틈 113 으로 다가와 철 · 구리 버너 채굴기 (12/분) 에 석탄을 끊었다.
+    포탑 연구 (사람 손제작 lab -> 빨간 과학) 전까지는 허브 비축으로 버틴다."""
+    out = {k for k in cli.split(",") if k}
+    try:
+        import json
+        import runsite
+        out |= set(json.load(open(runsite.path("fuelskip"), encoding="utf-8")).get("skip", []))
+    except (OSError, ValueError, ImportError):
+        pass
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--who", default="hotel")
     ap.add_argument("--every", type=float, default=60)
+    ap.add_argument("--skip", default="", help="채우지 않을 종류 (coal-drill,mining-drill,furnace,boiler) - 공해를 줄일 때")
     args = ap.parse_args()
     os.environ[detached.ENV] = OWNER
     ai = AIBridge()
@@ -100,6 +116,9 @@ def main() -> int:
         while True:
             try:
                 chests, low = survey(ai)
+                skip = _skips(args.skip)
+                if skip:
+                    low = [r for r in low if r[2] not in skip]
                 live = {w["name"]: w for w in ai.list()}
                 me = live.get(args.who, {})
                 busy = me.get("current") or me.get("queued")

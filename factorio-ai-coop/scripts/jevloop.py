@@ -148,7 +148,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--threshold", type=float, default=0.55, help="retreat 확률이 이 이상이면 후퇴")
+    ap.add_argument("--see", type=int, default=SEE, help="이 반경 안 적을 본다 (run25b: 60 - 사용자 «적 60 칸 안이면 먼저 도망»)")
     a = ap.parse_args()
+    globals()["SEE"] = a.see
     ai, jev = AIBridge(), Jev()
     print(f"jevloop: Jev {'연결' if jev.live else '키 없음 - 규칙으로'} · 주기 {TICK}s · 문턱 {a.threshold}", flush=True)
     held: dict[str, float] = {}
