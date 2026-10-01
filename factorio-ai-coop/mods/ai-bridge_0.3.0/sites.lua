@@ -717,6 +717,8 @@ local function assembler_site(name, x, y, arm)
 end
 
 local function unstick(name, x, y)
+  -- 사용자 (2026-10-01): 텔레포트 전면 금지. 원격 층 (legacy) 이 막지만, 함수 자체도 엄격 모드면 거절한다.
+  if storage.strict then return { error = "teleport banned (strict): walk out or ask a human" } end
   local a = agent(name)
   local b = body(a)
   if not b then return { error = "no such agent: " .. tostring(name) } end
