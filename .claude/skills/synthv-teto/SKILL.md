@@ -13,6 +13,7 @@ description: Synthesizer V Studio 2 Pro 로 카사네 테토 AI 2 를 조교(튜
 - **수정마다 렌더 → `score`/`measure` 수치 확인 → 사용자에게 들려준다.** 숫자가 좋아도 최종 판정은 귀.
 - SynthV 에는 명령줄 렌더·외부 API 가 없다. 스크립트(JS/Lua)는 GUI 안에서만 돈다 → .svp JSON 을 직접 쓴다.
 - 실측으로 맞춘 부분은 건드리지 말 것: grid(템포 일치도·드럼 위상), align/MMS, rhythm·grid_dp(같은 줄 레가토 + 줄 끝 숨 — «끊김»/«툭툭 안 남» 균형), harmony(리드와 다른 음만), RENDER_LAG_FIX, correct 1회(2회는 넘침).
+- **SynthV 2.2.1 은 겹친 노트·길이 0 이하 노트·끝<시작 그룹 참조가 있으면 열자마자 접근 위반으로 죽는다.** .svp 를 손으로 고쳤으면 저장 전에 `tune.guard(d)` 를 거친다(build·correct·mimic 은 자동). 강제 종료 뒤 뜨는 «Auto Recovery» 창은 오른쪽 버튼이 Cancel 이고, `sv_render.ps1` 이 알아서 닫는다.
 - 테토 에디터는 체험판(~2026-10-23 만료) — 상업 업로드 전 활성화 확인.
 
 ## 파이프라인 (곡 폴더 `vocalo-ch/<곡>/synthv*/`, `song.json` 하나)
