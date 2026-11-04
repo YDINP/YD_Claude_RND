@@ -1,0 +1,404 @@
+<!doctype html><html lang='ko'><head><meta charset='utf-8'><title>공모전 제출 완료 목록</title>
+<style>
+@page { size: A4; margin: 13mm 12mm 14mm; }
+* { box-sizing: border-box; }
+body { font-family: 'Malgun Gothic','맑은 고딕',sans-serif; font-size: 9.2pt; color:#1d1d1f; background:#fff; margin:0; line-height:1.45; }
+h1 { font-size: 18pt; margin: 0 0 2mm; }
+.sub { color:#666; font-size:8.5pt; margin-bottom:4mm; }
+.kpis { display:flex; gap:3mm; margin:3mm 0 4mm; }
+.kpi { flex:1; border:1px solid #d9dce3; border-radius:2mm; padding:2.5mm 3mm; }
+.kpi b { display:block; font-size:16pt; color:#1b4f9c; }
+.kpi span { color:#555; font-size:8.3pt; }
+table { border-collapse:collapse; width:100%; }
+.overview th, .overview td, .pending th, .pending td { border-bottom:1px solid #e3e5ea; padding:1.2mm 1.5mm; text-align:left; vertical-align:top; font-size:8.3pt; }
+.overview th, .pending th { background:#f1f3f7; font-weight:700; }
+.overview tr, .pending tr { page-break-inside: avoid; }
+td.n { width:7mm; color:#888; } td.d { width:20mm; white-space:nowrap; } td.r { width:13mm; white-space:nowrap; } td.s { width:18mm; white-space:nowrap; }
+h2 { font-size:12pt; margin:6mm 0 2mm; border-bottom:2px solid #1b4f9c; padding-bottom:1mm; }
+.card { border:1px solid #d9dce3; border-radius:2mm; padding:3mm 3.5mm; margin:0 0 3.5mm; page-break-inside: avoid; break-inside: avoid; }
+.card h3 { font-size:10.5pt; margin:0 0 1.5mm; }
+.card h3 .no { color:#1b4f9c; margin-right:1.5mm; }
+.mark { font-size:9pt; }
+.meta { display:grid; grid-template-columns: 17mm 1fr; gap:0.6mm 2mm; margin-bottom:2mm; }
+.meta dt { color:#666; } .meta dd { margin:0; overflow-wrap:anywhere; }
+.files { width:100%; margin-top:1mm; table-layout:fixed; }
+.files td { border-top:1px solid #eef0f3; padding:0.9mm 1.2mm; font-size:8pt; vertical-align:top; overflow-wrap:anywhere; }
+.files td.ext { width:11mm; font-weight:700; color:#1b4f9c; }
+.files td.det { width:30mm; color:#555; }
+.files td.role { width:52mm; color:#333; }
+.files tr.child td.fn { padding-left:5mm; color:#444; }
+.files tr.child td.fn:before { content:'└ '; color:#aaa; }
+.path { font-family: Consolas, monospace; font-size:7.4pt; color:#333; }
+.thumbs { display:flex; flex-wrap:wrap; gap:2mm; margin-top:2mm; }
+.body { display:flex; gap:3mm; align-items:flex-start; }
+.body .main { flex:1; min-width:0; }
+.body .side { flex:none; max-width:95mm; }
+.side .thumbs { margin-top:0; flex-wrap:nowrap; }
+.side .thumbs img { height:30mm; max-width:44mm; }
+.thumbs figure { margin:0; text-align:center; }
+.thumbs img { height:34mm; max-width:60mm; border:1px solid #ccd; object-fit:contain; background:#fafafa; display:block; }
+.thumbs.many img { height:24mm; }
+.thumbs figcaption { font-size:6.4pt; color:#777; max-width:40mm; overflow-wrap:anywhere; }
+.warn { color:#b0471b; font-weight:700; }
+.none { color:#555; font-style:italic; }
+.note { color:#555; font-size:8pt; margin-top:1mm; }
+</style></head><body>
+<h1>공모전 제출 완료 목록</h1>
+<div class='sub'>생성 2026-11-05 · README.md + _목록/entries.json + 폴더 실파일 기준 · 파일 경로는 reports/공모전/ 기준</div>
+<div class='kpis'>
+<div class='kpi'><b>43</b><span>공모</span></div>
+<div class='kpi'><b>55</b><span>응모작</span></div>
+<div class='kpi'><b>24</b><span>이메일 제출</span></div>
+<div class='kpi'><b>19</b><span>폼 제출</span></div>
+<div class='kpi'><b>6</b><span>제출 기록 없음(확인 필요)</span></div></div>
+<table class='overview'><tr><th>#</th><th>마감</th><th>공모</th><th>응모작</th><th>경로</th><th>제출일</th></tr>
+<tr><td class='n'>1</td><td class='d'>9/30(수)</td><td>✅ 전국민 AI 역량강화 정책 브랜드(슬로건) 공모전</td><td>「AI 가나다」 「나AI」 「AI 두레」 (3작품)</td><td class='r'>폼</td><td class='s'><span class='warn'>미기록</span></td></tr>
+<tr><td class='n'>2</td><td class='d'>10/7(수)</td><td>🏆 정책 톡! 하남 시민 정책 제안</td><td>철도 개통 전까지 출근길을 지킨다 — 하남 &#x27;출근버스 혼잡 신호등&#x27; 30일 대응제</td><td class='r'>이메일</td><td class='s'>9/28(월)</td></tr>
+<tr><td class='n'>3</td><td class='d'>10/11(일)</td><td>✅ 제1회 지역 현안 해결 솔루션 챌린지</td><td>경기 하남 신도시 공사장 비산먼지 AI 조기경보망</td><td class='r'>이메일</td><td class='s'><span class='warn'>미기록</span></td></tr>
+<tr><td class='n'>4</td><td class='d'>10/29(목)</td><td>✅ 한국노동연구원 꿀벌 캐릭터 이름 공모</td><td>꿀잡이</td><td class='r'>폼</td><td class='s'><span class='warn'>미기록</span></td></tr>
+<tr><td class='n'>5</td><td class='d'>10/30(금)</td><td>✅ 「생각을 모아, 종로를 새롭게」 종로구 아이디어 공모전</td><td>종로 골목 접근성 등급제</td><td class='r'>이메일</td><td class='s'><span class='warn'>미기록</span></td></tr>
+<tr><td class='n'>6</td><td class='d'>10/31(토)</td><td>✅ 춘천시 시민 제안 (하반기 심사분)</td><td>원도심 빈 상가 주거전환 원스톱 창구</td><td class='r'>폼</td><td class='s'><span class='warn'>미기록</span></td></tr>
+<tr><td class='n'>7</td><td class='d'>11/1(일)</td><td>✅ 심평원 「우리 동네 병원과 가까워지는 한마디」 슬로건</td><td>가까워서 먼저, 잘 알아서 오래 — 우리 동네 병원</td><td class='r'>폼</td><td class='s'><span class='warn'>미기록</span></td></tr>
+<tr><td class='n'>8</td><td class='d'>11/5(목)</td><td>📨 2026 대국민 공공의료 공모전 — 카드뉴스 부문</td><td>아픈 날, 어디로 가야 할지 막막했던 적 있나요? — 공공의료, 우리 곁의 이야기</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>9</td><td class='d'>11/6(금)</td><td>📨 2026 경북 로컬 관광자원 혁신 콘텐츠 공모전</td><td>아침 9시 전의 영덕 — 동해선 저녁 열차로 와서 대게 경매를 보고 가는 1박 코스</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>10</td><td class='d'>11/6(금)</td><td>📨 2026년 HF 대국민 혁신 아이디어 공모전</td><td>주택연금, 마지막 결정은 식탁에서 납니다</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>11</td><td class='d'>11/6(금)</td><td>✅ 과기정통부 &#x27;모두의 AI&#x27; 정책브랜드 공모</td><td>물어봄 / 어떻게 물을지 몰라도 괜찮아요</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>12</td><td class='d'>11/8(일)</td><td>📨 2026 NIA 탄소중립 혁신 아이디어 공모전</td><td>저탄소 기본값 (전자정부 표준프레임워크)</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>13</td><td class='d'>11/8(일)</td><td>📨 2026 한전KDN 슬로건 공모</td><td>불 켜는 순간마다, 한전KDN은 깨어 있습니다</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>14</td><td class='d'>11/8(일)</td><td>✅ 6G 서비스 시나리오 공모전 (트랙1 일반부문)</td><td>기지국이 먼저 밟아 본 새벽길 — 빙판 지도</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>15</td><td class='d'>11/8(일)</td><td>✅ EBS AI교육 실습 도구 명칭 공모</td><td>「이음표」 「실마리랩」</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>16</td><td class='d'>11/8(일)</td><td>✅ 국토안전관리원 위험현장 사고조사 첨단기술 활용 아이디어</td><td>잔해 출처 장부 (굴착기 집게 블랙박스)</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>17</td><td class='d'>11/8(일)</td><td>✅ 노사발전재단 취약노동자 지원 네트워크 이름짓기</td><td>일곁</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>18</td><td class='d'>11/8(일)</td><td>📨 서울시 「도심 쓰레기 처방전」 공모 (탄탄제로 연계)</td><td>퇴장 동선 수거 거점</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>19</td><td class='d'>11/8(일)</td><td>📨 의정부도시공사 AI 혁신 아이디어 공모전</td><td>번호인식 오답노트</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>20</td><td class='d'>11/9(월)</td><td>📨 「다시, 다리다」 영주 유휴공간 활성화 아이디어 공모전</td><td>맡겨 두고, 찾으러 오는 집</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>21</td><td class='d'>11/10(화)</td><td>📨 2026 KDN Eco-Life 대국민 환경 공모전 (아이디어)</td><td>새벽 3시의 계량기</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>22</td><td class='d'>11/10(화)</td><td>📨 모두의 KISA (국민참여예산 · 슬로건 2부문)</td><td>「진짜 문자 장부」 + 「진짜와 가짜 사이, KISA가 있습니다」</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>23</td><td class='d'>11/11(수)</td><td>📨 경상남도 통합복지 플랫폼 네이밍</td><td>찾아옴</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>24</td><td class='d'>11/11(수)</td><td>📨 보령시 웰니스 정책 제안 공모전</td><td>12주 바다 처방</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>25</td><td class='d'>11/13(금)</td><td>📨 2026 한국공항보안(주) 대국민 AI 디지털 이미지 공모전</td><td>첫 번째 보안검색대는 오늘 밤, 당신의 방입니다</td><td class='r'>이메일</td><td class='s'>11/5(목)</td></tr>
+<tr><td class='n'>26</td><td class='d'>11/13(금)</td><td>📨 강릉 2026 시민 아이디어 공모전</td><td>돌봄 계획서에 &#x27;재난 한 장&#x27;을</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>27</td><td class='d'>11/13(금)</td><td>📨 국가생명윤리정책원 2026 ESG 대국민 아이디어 공모전</td><td>대신 말해줄 가족이 없는 사람부터</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>28</td><td class='d'>11/13(금)</td><td>📨 서울금연지원센터 2026 금연 정책제안 연구공모전</td><td>&#x27;담배연기를 맡았나요?&#x27;의 맹점</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>29</td><td class='d'>11/13(금)</td><td>✅ 제21회 건설사업관리(CM) 표어 공모</td><td>「공정표보다 한 걸음 먼저 보는 눈」 외 2작</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>30</td><td class='d'>11/15(일)</td><td>✅ 2027 KSPO 스포츠가치센터 슬로건</td><td>「이기는 법보다, 함께하는 법」 외 2작</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>31</td><td class='d'>11/15(일)</td><td>✅ KIND 뉴 슬로건</td><td>「짓고 떠나지 않습니다, KIND」 외 2작</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>32</td><td class='d'>11/15(일)</td><td>✅ 국립청주해양과학관 개관 기념 슬로건</td><td>바다에서 가장 먼 곳, 바다의 시작</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>33</td><td class='d'>11/15(일)</td><td>📨 한국도로공사 AI 활용 아이디어 공모전</td><td>쉬지 않은 차 지도</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>34</td><td class='d'>11/16(월)</td><td>✅ 경기신용보증재단 「모두의 소통」 소상공인 정책 아이디어 공모전</td><td>멈춤선 약정</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>35</td><td class='d'>11/16(월)</td><td>📨 세종사이버대 AI창작 공모전 「K-빌런의 21세기 서울 상륙 작전」</td><td>한 편만 더 보면 안 잡아먹지</td><td class='r'>이메일</td><td class='s'>11/5(목)</td></tr>
+<tr><td class='n'>36</td><td class='d'>11/18(수)</td><td>✅ 한국과학창의재단 AI·융합교육 통합 플랫폼 명칭</td><td>「궁리터」 「수업짓기」</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>37</td><td class='d'>11/20(금)</td><td>📨 서울시 행정서식 개선 아이디어 공모</td><td>서울광장 사용신고서 개선</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>38</td><td class='d'>11/20(금)</td><td>📨 제주시 정책 아이디어 공모전 (3차시)</td><td>과태료는 여행이 끝난 뒤 도착한다</td><td class='r'>이메일</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>39</td><td class='d'>11/22(일)</td><td>📨 2026 아름다운 우리말 달력 만들기 공모전</td><td>11월 「떡비」 — 가을비는 떡 먹는 비</td><td class='r'>이메일</td><td class='s'>11/5(목)</td></tr>
+<tr><td class='n'>40</td><td class='d'>11/22(일)</td><td>✅ 국민체육진흥공단 2026 체육관련 규제개선 대국민 아이디어</td><td>체육시설 안전교육을 점검 결과에 맞춘 교육으로</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>41</td><td class='d'>11/27(금)</td><td>✅ 기획예산처 2026 대국민 재정교육 아이디어 공모전</td><td>0원 영수증</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+<tr><td class='n'>42</td><td class='d'>12/6(일)</td><td>📨 한겨레21 제18회 손바닥문학상</td><td>낙하 (단편소설, 원고지 약 61장)</td><td class='r'>이메일</td><td class='s'>11/5(목)</td></tr>
+<tr><td class='n'>43</td><td class='d'>2027-01-15(금)</td><td>✅ 상주시 대표축제 대국민 아이디어 공모전</td><td>곶감 축제는 겨울에 &#x27;판다&#x27;, 상주는 가을에 &#x27;건다&#x27; — 상주 감 거는 축제</td><td class='r'>폼</td><td class='s'>11/4(수)</td></tr>
+</table><h2>공모별 상세</h2>
+<div class='card'><h3><span class='no'>1</span><span class='mark'>✅</span> 전국민 AI 역량강화 정책 브랜드(슬로건) 공모전</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>과학기술정보통신부 · 한국정보통신기술협회 · 대상 200만</dd><dt>마감</dt><dd>9/30(수)</dd><dt>제출</dt><dd><span class='warn'>제출 기록 없음 — 확인 필요</span> · 구글폼 (작품당 1회, 3작품)</dd><dt>응모작</dt><dd><b>「AI 가나다」 「나AI」 「AI 두레」 (3작품)</b></dd><dt>요지</dt><dd>AI를 한글·산수처럼 누구나 익히는 기초 소양으로 — 한글 떼기·나이·두레 비유 세 가지.</dd><dt>결과</dt><dd>10/15 발표</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>AI역량강화_슬로건_제출안.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>2</span><span class='mark'>🏆</span> 정책 톡! 하남 시민 정책 제안</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>하남시 · —</dd><dt>마감</dt><dd>10/7(수)</dd><dt>제출</dt><dd>9/28(월) · 이메일 (하남시 기획조정과 접수, 주소 미기록)</dd><dt>응모작</dt><dd><b>철도 개통 전까지 출근길을 지킨다 — 하남 &#x27;출근버스 혼잡 신호등&#x27; 30일 대응제</b></dd><dt>요지</dt><dd>출근버스 혼잡을 기준치로 신호화해 30일 안에 증차·배차 조정으로 대응하는 교통 제안. 🏆 입상.</dd><dt>결과</dt><dd>10/22 본선 진출 → 10/29 현장 심사 → 입상(10/27 보고). 수상작이라 타 공모 재제출 금지</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/f40edcf51350.png' alt=''><figcaption>정책톡하남_신청서_최종_박용진.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>../정책톡하남_신청서_최종_박용진.hwpx</span></td><td class='det'>63KB</td><td class='role'>신청서+개인정보 동의서 (지정 양식)</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>../정책톡하남_신청서_최종_박용진.pdf</span></td><td class='det'>4쪽 A4 · 301KB</td><td class='role'>같은 내용 PDF</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>3</span><span class='mark'>✅</span> 제1회 지역 현안 해결 솔루션 챌린지</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>과학기술정보통신부 · KISTEP · 대상 1,000만</dd><dt>마감</dt><dd>10/11(일)</dd><dt>제출</dt><dd><span class='warn'>제출 기록 없음 — 확인 필요</span> · 이메일 ideacontest@kistep.re.kr</dd><dt>응모작</dt><dd><b>경기 하남 신도시 공사장 비산먼지 AI 조기경보망</b></dd><dt>요지</dt><dd>공사장 센서·기상 데이터로 비산먼지를 AI가 미리 예측해 자동 대응하고 주민에게 공개.</dd><dt>결과</dt><dd>시·도별 1개 선정(10월) → 12월 발표평가·시상</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/ce762a250386.png' alt=''><figcaption>양식1_지역현안해결아이디어제안서.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>KISTEP_지역현안챌린지/양식1_지역현안해결아이디어제안서.pdf</span></td><td class='det'>4쪽 A4 · 204KB</td><td class='role'>양식1 제안서</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>KISTEP_지역현안챌린지/양식2_개인정보수집이용동의서.pdf</span></td><td class='det'>1쪽 A4 · 72KB</td><td class='role'>양식2 개인정보 동의서</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>KISTEP_지역현안챌린지/양식3_참가자서약서.pdf</span></td><td class='det'>1쪽 A4 · 78KB</td><td class='role'>양식3 참가자 서약서</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>KISTEP_지역현안챌린지/양식4_제안아이디어제3자공개공유동의서.pdf</span></td><td class='det'>1쪽 A4 · 73KB</td><td class='role'>양식4 제3자 공개·공유 동의서</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>4</span><span class='mark'>✅</span> 한국노동연구원 꿀벌 캐릭터 이름 공모</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>한국노동연구원 · —</dd><dt>마감</dt><dd>10/29(목)</dd><dt>제출</dt><dd><span class='warn'>제출 기록 없음 — 확인 필요</span> · 네이버폼 + 이벤트 게시글 &#x27;참여완료&#x27; 댓글</dd><dt>응모작</dt><dd><b>꿀잡이</b></dd><dt>요지</dt><dd>&#x27;꿀 같은 일자리(꿀Job)&#x27;를 찾아 주는 꿀벌 — 좋은 일자리를 연구하는 기관 역할을 이름에.</dd><dt>결과</dt><dd>11/5 발표</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>초간단_네이밍슬로건_응모안.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>5</span><span class='mark'>✅</span> 「생각을 모아, 종로를 새롭게」 종로구 아이디어 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>종로구 · 금상 100만</dd><dt>마감</dt><dd>10/30(금)</dd><dt>제출</dt><dd><span class='warn'>제출 기록 없음 — 확인 필요</span> · 이메일 okmean@mail.jongno.go.kr</dd><dt>응모작</dt><dd><b>종로 골목 접근성 등급제</b></dd><dt>요지</dt><dd>골목마다 &#x27;이동 등급&#x27;을 매겨 돌봄·구급이 미리 알고 찾아가게 하는 안전 제안.</dd><dt>결과</dt><dd>—</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/b2c81a900d8f.png' alt=''><figcaption>박용진-종로 골목 접근성 등급제.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>종로구아이디어공모/박용진-종로 골목 접근성 등급제.hwpx</span></td><td class='det'>35KB</td><td class='role'>지정 양식(제안서+동의서)</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>종로구아이디어공모/박용진-종로 골목 접근성 등급제.pdf</span></td><td class='det'>3쪽 A4 · 133KB</td><td class='role'>서명본 PDF</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>6</span><span class='mark'>✅</span> 춘천시 시민 제안 (하반기 심사분)</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>춘천시 · 금상 300만</dd><dt>마감</dt><dd>10/31(토)</dd><dt>제출</dt><dd><span class='warn'>제출 기록 없음 — 확인 필요</span> · 춘천시 누리집 시민 제안 또는 국민신문고 (로그인 후 입력)</dd><dt>응모작</dt><dd><b>원도심 빈 상가 주거전환 원스톱 창구</b></dd><dt>요지</dt><dd>원도심 장기 빈 상가를 청년·시니어 주거로 바꾸는 절차를 한 창구에서.</dd><dt>결과</dt><dd>—</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>춘천시민제안_빈상가주거전환.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>7</span><span class='mark'>✅</span> 심평원 「우리 동네 병원과 가까워지는 한마디」 슬로건</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>건강보험심사평가원 · 대상 150만</dd><dt>마감</dt><dd>11/1(일)</dd><dt>제출</dt><dd><span class='warn'>제출 기록 없음 — 확인 필요</span> · 네이버폼 + &#x27;좋은 병원 찾기&#x27; 화면 캡처(가산점)</dd><dt>응모작</dt><dd><b>가까워서 먼저, 잘 알아서 오래 — 우리 동네 병원</b></dd><dt>요지</dt><dd>가까워서 먼저 찾고, 나를 잘 알아서 오래 다니는 단골 동네 병원.</dd><dt>결과</dt><dd>11/16 당선작, 11/25 최종</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>초간단_네이밍슬로건_응모안.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>8</span><span class='mark'>📨</span> 2026 대국민 공공의료 공모전 — 카드뉴스 부문</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>보건복지부 · 국립중앙의료원 · 대상 200만</dd><dt>마감</dt><dd>11/5(목)</dd><dt>제출</dt><dd>11/4(수) · nmcpublicedu.or.kr 온라인 접수 (작품접수 → 카드뉴스)</dd><dt>응모작</dt><dd><b>아픈 날, 어디로 가야 할지 막막했던 적 있나요? — 공공의료, 우리 곁의 이야기</b></dd><dt>요지</dt><dd>공공의료를 &#x27;병원 이름이 아니라 약속&#x27;으로 풀고 119·E-GEN 이용법까지 6컷에.</dd><dt>결과</dt><dd>1차 국민투표 30% + 2차 전문가 70%</dd></dl>
+<table class='files'>
+<tr><td class='ext'>ZIP</td><td class='fn'><span class='path'>복지부_공공의료_카드뉴스/공공의료_카드뉴스_박용진.zip</span></td><td class='det'>6개 파일 · 390KB</td><td class='role'>카드뉴스 압축파일 (PNG 6장)</td></tr>
+<tr class="child"><td class='ext'>PNG</td><td class='fn'><span class='path'>공공의료_카드뉴스_01.png</span></td><td class='det'>1080×1080px · 44KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PNG</td><td class='fn'><span class='path'>공공의료_카드뉴스_02.png</span></td><td class='det'>1080×1080px · 60KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PNG</td><td class='fn'><span class='path'>공공의료_카드뉴스_03.png</span></td><td class='det'>1080×1080px · 86KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PNG</td><td class='fn'><span class='path'>공공의료_카드뉴스_04.png</span></td><td class='det'>1080×1080px · 65KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PNG</td><td class='fn'><span class='path'>공공의료_카드뉴스_05.png</span></td><td class='det'>1080×1080px · 65KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PNG</td><td class='fn'><span class='path'>공공의료_카드뉴스_06.png</span></td><td class='det'>1080×1080px · 68KB</td><td class='role'></td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>복지부_공공의료_카드뉴스/서류/생성형AI활용내역및서약서_박용진.pdf</span></td><td class='det'>2쪽 A4 · 146KB</td><td class='role'>생성형 AI 활용내역 및 서약서</td></tr>
+</table>
+<div class='thumbs many'><figure><img src='thumbs/ed3a87a3bee5.png' alt=''><figcaption>공공의료_카드뉴스_01.png</figcaption></figure><figure><img src='thumbs/aa4e0a0e8220.png' alt=''><figcaption>공공의료_카드뉴스_02.png</figcaption></figure><figure><img src='thumbs/57c8ae5eca47.png' alt=''><figcaption>공공의료_카드뉴스_03.png</figcaption></figure><figure><img src='thumbs/647a7089cb82.png' alt=''><figcaption>공공의료_카드뉴스_04.png</figcaption></figure><figure><img src='thumbs/96459224eed3.png' alt=''><figcaption>공공의료_카드뉴스_05.png</figcaption></figure><figure><img src='thumbs/104477b1d5d4.png' alt=''><figcaption>공공의료_카드뉴스_06.png</figcaption></figure></div>
+</div>
+<div class='card'><h3><span class='no'>9</span><span class='mark'>📨</span> 2026 경북 로컬 관광자원 혁신 콘텐츠 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>경상북도문화관광공사 · 총 1,500만</dd><dt>마감</dt><dd>11/6(금)</dd><dt>제출</dt><dd>11/4(수) · 이메일 gbtourbiz@naver.com</dd><dt>응모작</dt><dd><b>아침 9시 전의 영덕 — 동해선 저녁 열차로 와서 대게 경매를 보고 가는 1박 코스</b></dd><dt>요지</dt><dd>관광객이 못 보던 새벽 강구항 대게 경매를 동해선 저녁 열차와 묶은 로컬 1박 코스.</dd><dt>결과</dt><dd>서류심사 11/13 · 결과 11/20 · 통과 시 11/27 현장 PT</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/49e86fcfeee9.png' alt=''><figcaption>박용진_아침9시전의영덕_참가신청서류.pdf</figcaption></figure><figure><img src='thumbs/f4405d1137b4.png' alt=''><figcaption>박용진_아침9시전의영덕_발표자료.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>경북_로컬관광콘텐츠/박용진_아침9시전의영덕_참가신청서류.pdf</span></td><td class='det'>8쪽 A4 · 302KB</td><td class='role'>참가신청서·실행계획서·동의서·서약서 (1개 PDF)</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'>등본(비공개, 미커밋)</td><td class='det'>비공개 · 썸네일 없음</td><td class='role'>git 제외 폴더</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>경북_로컬관광콘텐츠/박용진_아침9시전의영덕_발표자료.pdf</span></td><td class='det'>6쪽 · 132KB</td><td class='role'>발표자료</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>10</span><span class='mark'>📨</span> 2026년 HF 대국민 혁신 아이디어 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>한국주택금융공사 · —</dd><dt>마감</dt><dd>11/6(금)</dd><dt>제출</dt><dd>11/4(수) · 이메일 2026idea@hf.go.kr</dd><dt>응모작</dt><dd><b>주택연금, 마지막 결정은 식탁에서 납니다</b></dd><dt>요지</dt><dd>신청 후 심사 기간에 자녀에게 보내는 「우리 집 숫자」 가족 설명서와 AI 질문창.</dd><dt>결과</dt><dd>—</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/63e7266150e3.png' alt=''><figcaption>박용진_혁신아이디어제안서_주택연금_가족설명서.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>ZIP</td><td class='fn'><span class='path'>HF_대국민혁신아이디어/박용진_HF혁신아이디어공모_응모.zip</span></td><td class='det'>4개 파일 · 268KB</td><td class='role'>응모 압축파일</td></tr>
+<tr class="child"><td class='ext'>HWPX</td><td class='fn'><span class='path'>박용진_혁신아이디어제안서_주택연금_가족설명서.hwpx</span></td><td class='det'>45KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PDF</td><td class='fn'><span class='path'>박용진_혁신아이디어제안서_주택연금_가족설명서.pdf</span></td><td class='det'>3쪽 A4 · 184KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>HWPX</td><td class='fn'><span class='path'>박용진_개인정보수집이용동의서.hwpx</span></td><td class='det'>34KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PDF</td><td class='fn'><span class='path'>박용진_개인정보수집이용동의서.pdf</span></td><td class='det'>1쪽 A4 · 68KB</td><td class='role'></td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>11</span><span class='mark'>✅</span> 과기정통부 &#x27;모두의 AI&#x27; 정책브랜드 공모</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>과학기술정보통신부 · 대상 200만</dd><dt>마감</dt><dd>11/6(금)</dd><dt>제출</dt><dd>11/4(수) · 네이버폼</dd><dt>응모작</dt><dd><b>물어봄 / 어떻게 물을지 몰라도 괜찮아요</b></dd><dt>요지</dt><dd>AI의 벽은 기술이 아니라 &#x27;무엇을 어떻게 물을지 모르는 것&#x27; — 가장 쉬운 말 &#x27;물어봐&#x27;를 이름으로.</dd><dt>결과</dt><dd>11/16 발표</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>슬로건_11월_응모안.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>12</span><span class='mark'>📨</span> 2026 NIA 탄소중립 혁신 아이디어 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>한국지능정보사회진흥원(NIA) · 대상 스마트워치(60만 상당)</dd><dt>마감</dt><dd>11/8(일)</dd><dt>제출</dt><dd>11/4(수) · 이메일 gmltks4240@nia.or.kr</dd><dt>응모작</dt><dd><b>저탄소 기본값 (전자정부 표준프레임워크)</b></dd><dt>요지</dt><dd>공공 누리집 36곳 첫 화면을 실측해 표준프레임워크 기본값을 저탄소로 바꾸자는 제안.</dd><dt>결과</dt><dd>12월 초</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/d11a04056d32.png' alt=''><figcaption>붙임1_작성양식_저탄소기본값_박용진.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>NIA_탄소중립아이디어/붙임1_작성양식_저탄소기본값_박용진.pdf</span></td><td class='det'>2쪽 A4 · 160KB</td><td class='role'>붙임1 작성양식</td></tr>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>NIA_탄소중립아이디어/붙임1_작성양식_저탄소기본값_박용진.hwpx</span></td><td class='det'>38KB</td><td class='role'>붙임1 hwpx</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>NIA_탄소중립아이디어/붙임3_개인정보동의서_박용진.pdf</span></td><td class='det'>1쪽 A4 · 74KB</td><td class='role'>붙임3 개인정보 동의서</td></tr>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>NIA_탄소중립아이디어/붙임3_개인정보동의서_박용진.hwpx</span></td><td class='det'>63KB</td><td class='role'>붙임3 hwpx</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>NIA_탄소중립아이디어/세부설명자료_저탄소기본값_박용진.pdf</span></td><td class='det'>2쪽 A4 · 158KB</td><td class='role'>세부 설명자료</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>13</span><span class='mark'>📨</span> 2026 한전KDN 슬로건 공모</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>한전KDN · 1등 100만</dd><dt>마감</dt><dd>11/8(일)</dd><dt>제출</dt><dd>11/4(수) · 이메일 kdn.slogan26@gmail.com</dd><dt>응모작</dt><dd><b>불 켜는 순간마다, 한전KDN은 깨어 있습니다</b></dd><dt>요지</dt><dd>보이지 않는 전력 ICT를 불을 켜는 일상 장면에 붙인 슬로건.</dd><dt>결과</dt><dd>2차 소셜 투표 50% · 11/25 발표</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/c95b13af0846.png' alt=''><figcaption>박용진_한전KDN슬로건공모전_참가신청서.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>한전KDN_슬로건/박용진_한전KDN슬로건공모전_참가신청서.pdf</span></td><td class='det'>2쪽 A4 · 120KB</td><td class='role'>참가신청서(슬로건 기재)</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>14</span><span class='mark'>✅</span> 6G 서비스 시나리오 공모전 (트랙1 일반부문)</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>과학기술정보통신부 · 대상 500만</dd><dt>마감</dt><dd>11/8(일)</dd><dt>제출</dt><dd>11/4(수) · 123FormBuilder 온라인 폼 (6gvisionfest.org) + PDF 첨부</dd><dt>응모작</dt><dd><b>기지국이 먼저 밟아 본 새벽길 — 빙판 지도</b></dd><dt>요지</dt><dd>6G 기지국 센싱으로 새벽 빙판길을 먼저 감지해 보행자·차량에 지도로 알리는 시나리오.</dd><dt>결과</dt><dd>예선 결과 이메일 통보, 본선 시 소개 영상</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/b284097f9116.png' alt=''><figcaption>빙판지도시나리오.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>과기정통부_6G시나리오/빙판지도시나리오.pdf</span></td><td class='det'>2쪽 A4 · 148KB</td><td class='role'>시나리오 첨부 PDF</td></tr>
+</table>
+<div class='note'>폼 문안: <span class='path'>과기정통부_6G시나리오/폼입력문안.md</span></div>
+</div>
+<div class='card'><h3><span class='no'>15</span><span class='mark'>✅</span> EBS AI교육 실습 도구 명칭 공모</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>EBS · 1등 500만</dd><dt>마감</dt><dd>11/8(일)</dd><dt>제출</dt><dd>11/4(수) · 구글폼 2건</dd><dt>응모작</dt><dd><b>「이음표」 「실마리랩」</b></dd><dt>요지</dt><dd>위젯을 선으로 이어 데이터를 분석하는 노코드 도구 — &#x27;잇는다&#x27;와 &#x27;단서를 찾는다&#x27;.</dd><dt>결과</dt><dd>—</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>슬로건_11월_응모안.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>16</span><span class='mark'>✅</span> 국토안전관리원 위험현장 사고조사 첨단기술 활용 아이디어</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>국토안전관리원 · 우수 5만</dd><dt>마감</dt><dd>11/8(일)</dd><dt>제출</dt><dd>11/4(수) · 네이버폼 (파일 칸 없음)</dd><dt>응모작</dt><dd><b>잔해 출처 장부 (굴착기 집게 블랙박스)</b></dd><dt>요지</dt><dd>붕괴 현장 잔해를 집을 때마다 위치·층을 기록해 사고 원인 조사에 쓰는 굴착기 블랙박스.</dd><dt>결과</dt><dd>11/16 개별 연락</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>국토안전관리원_사고조사아이디어/제출가이드.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>17</span><span class='mark'>✅</span> 노사발전재단 취약노동자 지원 네트워크 이름짓기</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>고용노동부 · 노사발전재단 · —</dd><dt>마감</dt><dd>11/8(일)</dd><dt>제출</dt><dd>11/4(수) · 네이버폼</dd><dt>응모작</dt><dd><b>일곁</b></dd><dt>요지</dt><dd>&#x27;일하는 사람 곁&#x27; — 어느 기관에 먼저 가든 끝까지 이어 주는 네트워크.</dd><dt>결과</dt><dd>—</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>슬로건_11월_응모안.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>18</span><span class='mark'>📨</span> 서울시 「도심 쓰레기 처방전」 공모 (탄탄제로 연계)</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>서울특별시 · 대상 100만</dd><dt>마감</dt><dd>11/8(일)</dd><dt>제출</dt><dd>11/4(수) · 이메일 zeroseoul26@gmail.com (처방1) + 구글폼 한 줄 톡 (처방2)</dd><dt>응모작</dt><dd><b>퇴장 동선 수거 거점</b></dd><dt>요지</dt><dd>번화가 쓰레기는 사람이 떠나는 순간 나온다 — 역 출입구·정류장 등 퇴장 동선에 수거 거점을.</dd><dt>결과</dt><dd>11/30까지 발표</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/949bfc1faa44.png' alt=''><figcaption>아이디어제안서_퇴장동선수거거점_박용진.pdf</figcaption></figure><figure><img src='thumbs/4dabb0b5efaf.png' alt=''><figcaption>서울쓰레기처방전_한줄톡_구글폼_20261104.png</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>서울_도심쓰레기처방전/아이디어제안서_퇴장동선수거거점_박용진.pdf</span></td><td class='det'>2쪽 A4 · 155KB</td><td class='role'>아이디어 제안서</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>서울_도심쓰레기처방전/제출서류_참가신청서·동의서·청렴서약서_박용진.pdf</span></td><td class='det'>3쪽 A4 · 115KB</td><td class='role'>참가신청서·동의서·청렴서약서</td></tr>
+<tr><td class='ext'>PNG</td><td class='fn'><span class='path'>접수확인/서울쓰레기처방전_한줄톡_구글폼_20261104.png</span></td><td class='det'>1249×1277px · 35KB</td><td class='role'>한 줄 톡 구글폼 접수 캡처 (제출물 아님, 확인용)</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>19</span><span class='mark'>📨</span> 의정부도시공사 AI 혁신 아이디어 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>의정부도시공사 · 대상 20만</dd><dt>마감</dt><dd>11/8(일)</dd><dt>제출</dt><dd>11/4(수) · 이메일 uiucpr@uiuc.or.kr</dd><dt>응모작</dt><dd><b>번호인식 오답노트</b></dd><dt>요지</dt><dd>관리원이 고쳐 쓴 번호판을 AI의 교과서로 — 공영주차장 번호인식 오답을 모아 자율개방형 전환 순서를 정한다.</dd><dt>결과</dt><dd>12월 말</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/6b889312e437.png' alt=''><figcaption>박용진_AI혁신아이디어_제안서(번호인식 오답노트).pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>의정부도시공사_AI아이디어/박용진_AI혁신아이디어_제안서(번호인식 오답노트).pdf</span></td><td class='det'>3쪽 A4 · 206KB</td><td class='role'>제안서·신청서·동의서 (서명본)</td></tr>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>의정부도시공사_AI아이디어/박용진_AI혁신아이디어_제안서(번호인식 오답노트).hwpx</span></td><td class='det'>55KB</td><td class='role'>지정 서식 hwpx</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>20</span><span class='mark'>📨</span> 「다시, 다리다」 영주 유휴공간 활성화 아이디어 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>영주시 · 최우수 100만</dd><dt>마감</dt><dd>11/9(월)</dd><dt>제출</dt><dd>11/4(수) · 이메일 daridaidea@gmail.com</dd><dt>응모작</dt><dd><b>맡겨 두고, 찾으러 오는 집</b></dd><dt>요지</dt><dd>옛 한약방의 &#x27;맡기고 다시 찾으러 오는&#x27; 원리로 유휴공간 다리다에 재방문 이유를 만든다.</dd><dt>결과</dt><dd>1차 11/10~13 → 11월 말 발표</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/147b9462a947.png' alt=''><figcaption>다시다리다_박용진_제출서류.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>영주_다리다유휴공간/다시다리다_박용진_제출서류.pdf</span></td><td class='det'>6쪽 A4 · 430KB</td><td class='role'>제출서류 묶음 PDF (제안서+지정서식)</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>21</span><span class='mark'>📨</span> 2026 KDN Eco-Life 대국민 환경 공모전 (아이디어)</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>한전KDN · 최우수 30만(대국민 아이디어)</dd><dt>마감</dt><dd>11/10(화)</dd><dt>제출</dt><dd>11/4(수) · 이메일 eco-life6@kdn.com</dd><dt>응모작</dt><dd><b>새벽 3시의 계량기</b></dd><dt>요지</dt><dd>아무도 안 쓰는 새벽 전기가 진짜 낭비 — AMI 새벽 사용량으로 상시전력을 찾아 끄는 4주 미션.</dd><dt>결과</dt><dd>12/2 발표</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/1c70357d7f07.png' alt=''><figcaption>서식3_에코라이프신규아이디어제안서_박용진.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>한전KDN_EcoLife/서식1_참가신청서_박용진.pdf</span></td><td class='det'>1쪽 A4 · 110KB</td><td class='role'>서식1 참가신청서</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>한전KDN_EcoLife/서식2_개인정보수집이용동의서_박용진.pdf</span></td><td class='det'>1쪽 A4 · 91KB</td><td class='role'>서식2 개인정보 동의서</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>한전KDN_EcoLife/서식3_에코라이프신규아이디어제안서_박용진.pdf</span></td><td class='det'>2쪽 A4 · 178KB</td><td class='role'>서식3 아이디어 제안서</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>22</span><span class='mark'>📨</span> 모두의 KISA (국민참여예산 · 슬로건 2부문)</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>한국인터넷진흥원(KISA) · 국민참여예산 최우수 50만 · 슬로건 30만</dd><dt>마감</dt><dd>11/10(화)</dd><dt>제출</dt><dd>11/4(수) · 이메일 idea@kisa.or.kr (부문별 메일 2통)</dd><dt>응모작</dt><dd><b>「진짜 문자 장부」 + 「진짜와 가짜 사이, KISA가 있습니다」</b></dd><dt>요지</dt><dd>스미싱을 쫓기 전에 공공기관 발송 문자를 &#x27;진짜 장부&#x27;에 먼저 등록하자 + 같은 메시지의 슬로건.</dd><dt>결과</dt><dd>12/1 발표</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/941316cd499d.png' alt=''><figcaption>국민제안서_국민참여예산_진짜문자장부_박용진.pdf</figcaption></figure><figure><img src='thumbs/6dbf2db7e503.png' alt=''><figcaption>국민제안서_슬로건_박용진.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>KISA_모두의KISA/국민제안서_국민참여예산_진짜문자장부_박용진.pdf</span></td><td class='det'>2쪽 A4 · 203KB</td><td class='role'>메일1 국민제안서(국민참여예산) PDF</td></tr>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>KISA_모두의KISA/국민제안서_국민참여예산_진짜문자장부_박용진.hwpx</span></td><td class='det'>103KB</td><td class='role'>메일1 국민제안서 hwpx</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>KISA_모두의KISA/국민제안서_슬로건_박용진.pdf</span></td><td class='det'>1쪽 A4 · 115KB</td><td class='role'>메일2 국민제안서(슬로건) PDF</td></tr>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>KISA_모두의KISA/국민제안서_슬로건_박용진.hwpx</span></td><td class='det'>101KB</td><td class='role'>메일2 국민제안서 hwpx</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>KISA_모두의KISA/개인정보수집이용동의서_박용진.pdf</span></td><td class='det'>1쪽 A4 · 113KB</td><td class='role'>개인정보 동의서 (두 메일 공통)</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>23</span><span class='mark'>📨</span> 경상남도 통합복지 플랫폼 네이밍</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>경상남도 · —</dd><dt>마감</dt><dd>11/11(수)</dd><dt>제출</dt><dd>11/4(수) · 이메일 dodud@korea.kr (본문 기재)</dd><dt>응모작</dt><dd><b>찾아옴</b></dd><dt>요지</dt><dd>찾아가 신청해야 받는 복지를 뒤집어, 복지가 도민에게 먼저 찾아온다.</dd><dt>결과</dt><dd>11/20 발표</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>슬로건_11월_응모안.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>24</span><span class='mark'>📨</span> 보령시 웰니스 정책 제안 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>보령시 · 금상 200~300만</dd><dt>마감</dt><dd>11/11(수)</dd><dt>제출</dt><dd>11/4(수) · 이메일 jsh3744@korea.kr</dd><dt>응모작</dt><dd><b>12주 바다 처방</b></dd><dt>요지</dt><dd>관광객은 한 번 오고 주민은 매주 온다 — 비어 있는 겨울 바다를 외로운 어르신의 12주 처방으로.</dd><dt>결과</dt><dd>12월 발표</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/dbff957a084c.png' alt=''><figcaption>박용진-보령 겨울 바다 처방_제안서.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>보령_웰니스정책제안/박용진-보령 겨울 바다 처방_제안서.pdf</span></td><td class='det'>4쪽 A4 · 213KB</td><td class='role'>제안서(신청서) 서명본</td></tr>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>보령_웰니스정책제안/박용진-보령 겨울 바다 처방_제안서.hwpx</span></td><td class='det'>96KB</td><td class='role'>제안서 hwpx</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>보령_웰니스정책제안/박용진-개인정보 수집·이용 동의서.pdf</span></td><td class='det'>1쪽 A4 · 58KB</td><td class='role'>개인정보 동의서 서명본</td></tr>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>보령_웰니스정책제안/박용진-개인정보 수집·이용 동의서.hwpx</span></td><td class='det'>48KB</td><td class='role'>개인정보 동의서 hwpx</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>25</span><span class='mark'>📨</span> 2026 한국공항보안(주) 대국민 AI 디지털 이미지 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>한국공항보안(주) · 대상 50만</dd><dt>마감</dt><dd>11/13(금)</dd><dt>제출</dt><dd>11/5(목) · 이메일 contest@airsecure.co.kr</dd><dt>응모작</dt><dd><b>첫 번째 보안검색대는 오늘 밤, 당신의 방입니다</b></dd><dt>요지</dt><dd>짐 싸는 전날 밤을 &#x27;첫 번째 보안검색대&#x27;로 — 가방 닫기 전 세 가지 확인을 안내하는 A3 이미지.</dd><dt>결과</dt><dd>—</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/e1cab810bb7b.png' alt=''><figcaption>작품_첫번째보안검색대는오늘밤당신의방_박용진.jpg</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>ZIP</td><td class='fn'><span class='path'>한국공항보안_AI이미지/한국공항보안_AI이미지공모전_박용진.zip</span></td><td class='det'>3개 파일 · 3.8MB</td><td class='role'>응모 압축파일</td></tr>
+<tr class="child"><td class='ext'>JPG</td><td class='fn'><span class='path'>작품_첫번째보안검색대는오늘밤당신의방_박용진.jpg</span></td><td class='det'>4961×3508px · 3.6MB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PDF</td><td class='fn'><span class='path'>참가신청서_개인정보동의서_박용진.pdf</span></td><td class='det'>2쪽 A4 · 126KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>HWPX</td><td class='fn'><span class='path'>참가신청서_개인정보동의서_박용진.hwpx</span></td><td class='det'>55KB</td><td class='role'></td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>26</span><span class='mark'>📨</span> 강릉 2026 시민 아이디어 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>강릉시 · 금 100만</dd><dt>마감</dt><dd>11/13(금)</dd><dt>제출</dt><dd>11/4(수) · 이메일 allstar0m0@korea.kr</dd><dt>응모작</dt><dd><b>돌봄 계획서에 &#x27;재난 한 장&#x27;을</b></dd><dt>요지</dt><dd>바람 센 날 하루 먼저 움직이는 강릉형 통합돌봄 — 돌봄 계획서에 재난 대응 한 장을 붙인다.</dd><dt>결과</dt><dd>12월 개별 통보</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/bb34b542c2f5.png' alt=''><figcaption>박용진_강릉시민아이디어_제안서_재난한장.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>강릉_시민아이디어/박용진_강릉시민아이디어_제안서_재난한장.pdf</span></td><td class='det'>4쪽 A4 · 223KB</td><td class='role'>제안서 서명본</td></tr>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>강릉_시민아이디어/박용진_강릉시민아이디어_제안서_재난한장.hwpx</span></td><td class='det'>63KB</td><td class='role'>제안서 양식 hwpx</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>27</span><span class='mark'>📨</span> 국가생명윤리정책원 2026 ESG 대국민 아이디어 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>국가생명윤리정책원 · —</dd><dt>마감</dt><dd>11/13(금)</dd><dt>제출</dt><dd>11/4(수) · 이메일 opinion@nibp.kr</dd><dt>응모작</dt><dd><b>대신 말해줄 가족이 없는 사람부터</b></dd><dt>요지</dt><dd>사전연명의료의향서 &#x27;우선 대상&#x27;을 대신 말해 줄 가족이 없는 사람 중심으로 다시 정하자는 제안.</dd><dt>결과</dt><dd>12월 초 발표</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/00143493bfa3.png' alt=''><figcaption>2_제안서_대신말해줄가족이없는사람부터_박용진.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>생명윤리정책원_ESG/1_참가신청서_박용진.pdf</span></td><td class='det'>1쪽 A4 · 71KB</td><td class='role'>참가신청서</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>생명윤리정책원_ESG/2_제안서_대신말해줄가족이없는사람부터_박용진.pdf</span></td><td class='det'>2쪽 A4 · 152KB</td><td class='role'>제안서</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>생명윤리정책원_ESG/3_개인정보동의서_박용진.pdf</span></td><td class='det'>1쪽 A4 · 73KB</td><td class='role'>개인정보 동의서</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>28</span><span class='mark'>📨</span> 서울금연지원센터 2026 금연 정책제안 연구공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>서울금연지원센터 · 대상 100만</dd><dt>마감</dt><dd>11/13(금)</dd><dt>제출</dt><dd>11/4(수) · 이메일 seoulnosmoke2026@stcc.kr</dd><dt>응모작</dt><dd><b>&#x27;담배연기를 맡았나요?&#x27;의 맹점</b></dd><dt>요지</dt><dd>전자담배 시대 간접흡연 지표를 재분석하고 목격 기반 측정·관리를 제안한 연구 포스터.</dd><dt>결과</dt><dd>—</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/971bfac7c104.png' alt=''><figcaption>연구포스터_담배연기를맡았나요의맹점_박용진.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>서울금연지원센터_금연정책연구/연구포스터_담배연기를맡았나요의맹점_박용진.pdf</span></td><td class='det'>1쪽 A1 · 411KB</td><td class='role'>연구 포스터 (A1)</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>서울금연지원센터_금연정책연구/신청서·참가동의서_박용진.pdf</span></td><td class='det'>4쪽 A4 · 159KB</td><td class='role'>서식1 신청서·초록 + 서식2 동의서</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>29</span><span class='mark'>✅</span> 제21회 건설사업관리(CM) 표어 공모</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>한국CM협회 · —</dd><dt>마감</dt><dd>11/13(금)</dd><dt>제출</dt><dd>11/4(수) · 협회 온라인 접수 (3작품)</dd><dt>응모작</dt><dd><b>「공정표보다 한 걸음 먼저 보는 눈」 외 2작</b></dd><dt>요지</dt><dd>서류보다 현장, 사후 대응보다 사전 경고를 평가하는 CM 문화.</dd><dt>결과</dt><dd>11/30 발표</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>슬로건_11월_응모안.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>30</span><span class='mark'>✅</span> 2027 KSPO 스포츠가치센터 슬로건</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>국민체육진흥공단 · 대상 30만</dd><dt>마감</dt><dd>11/15(일)</dd><dt>제출</dt><dd>11/4(수) · 구글폼 3회</dd><dt>응모작</dt><dd><b>「이기는 법보다, 함께하는 법」 외 2작</b></dd><dt>요지</dt><dd>승부보다 함께하기·다시 일어서기·몸으로 배우기를 내세운 스포츠 가치 슬로건.</dd><dt>결과</dt><dd>12/7 발표</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>슬로건_11월_응모안.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>31</span><span class='mark'>✅</span> KIND 뉴 슬로건</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>한국해외인프라도시개발지원공사(KIND) · 대상 100만</dd><dt>마감</dt><dd>11/15(일)</dd><dt>제출</dt><dd>11/4(수) · 네이버폼 3건</dd><dt>응모작</dt><dd><b>「짓고 떠나지 않습니다, KIND」 외 2작</b></dd><dt>요지</dt><dd>해외 인프라를 짓고 떠나는 시공이 아니라 끝까지 함께하는 사업으로.</dd><dt>결과</dt><dd>12/7 발표</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>슬로건_11월_응모안.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>32</span><span class='mark'>✅</span> 국립청주해양과학관 개관 기념 슬로건</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>국립청주해양과학관 · 최우수 50만</dd><dt>마감</dt><dd>11/15(일)</dd><dt>제출</dt><dd>11/4(수) · 네이버폼 (1인 1작)</dd><dt>응모작</dt><dd><b>바다에서 가장 먼 곳, 바다의 시작</b></dd><dt>요지</dt><dd>내륙 최초 해양과학관 — 바다에서 가장 먼 청주가 바다 공부의 시작점.</dd><dt>결과</dt><dd>국민투표 예정</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>슬로건_11월_응모안.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>33</span><span class='mark'>📨</span> 한국도로공사 AI 활용 아이디어 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>한국도로공사 · —</dd><dt>마감</dt><dd>11/15(일)</dd><dt>제출</dt><dd>11/4(수) · 이메일 sqrt@ex.co.kr</dd><dt>응모작</dt><dd><b>쉬지 않은 차 지도</b></dd><dt>요지</dt><dd>통행 기록으로 오늘 밤 졸음이 몰릴 구간·시간을 미리 짚는 AI 지도.</dd><dt>결과</dt><dd>국민심사 11/19~25 → 11/30 최종</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/7ca7d1cd9ed3.png' alt=''><figcaption>박용진_AI아이디어기획서_쉬지않은차지도.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>한국도로공사_AI아이디어/박용진_AI아이디어기획서_쉬지않은차지도.pdf</span></td><td class='det'>3쪽 A4 · 225KB</td><td class='role'>아이디어 기획서</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>한국도로공사_AI아이디어/박용진_참가신청서_개인정보동의서.pdf</span></td><td class='det'>2쪽 A4 · 108KB</td><td class='role'>참가신청서·개인정보 동의서</td></tr>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>한국도로공사_AI아이디어/박용진_참가신청서_동의서_기획서.hwpx</span></td><td class='det'>58KB</td><td class='role'>서식 hwpx (신청서+동의서+기획서)</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>34</span><span class='mark'>✅</span> 경기신용보증재단 「모두의 소통」 소상공인 정책 아이디어 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>경기신용보증재단 · 최고 300만</dd><dt>마감</dt><dd>11/16(월)</dd><dt>제출</dt><dd>11/4(수) · gcgfcontest.co.kr 접수 폼 (작품 zip + 동의서 별도 업로드)</dd><dt>응모작</dt><dd><b>멈춤선 약정</b></dd><dt>요지</dt><dd>폐업은 &#x27;결심&#x27;이 아니라 &#x27;사고&#x27;처럼 온다 — 장사될 때 미리 정해 두는 멈춤선 약정.</dd><dt>결과</dt><dd>12월 2차 대면 PT</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/311646812176.png' alt=''><figcaption>아이디어제안상세_멈춤선약정_박용진.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>ZIP</td><td class='fn'><span class='path'>경기신보_소상공인정책아이디어/작품파일_멈춤선약정_박용진.zip</span></td><td class='det'>4개 파일 · 550KB</td><td class='role'>작품 압축파일</td></tr>
+<tr class="child"><td class='ext'>PDF</td><td class='fn'><span class='path'>참가신청서_박용진.pdf</span></td><td class='det'>1쪽 A4 · 90KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PDF</td><td class='fn'><span class='path'>아이디어제안요약서_박용진.pdf</span></td><td class='det'>1쪽 A4 · 96KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PPTX</td><td class='fn'><span class='path'>아이디어제안상세_멈춤선약정_박용진.pptx</span></td><td class='det'>11장 · 148KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PDF</td><td class='fn'><span class='path'>아이디어제안상세_멈춤선약정_박용진.pdf</span></td><td class='det'>11쪽 · 417KB</td><td class='role'></td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>경기신보_소상공인정책아이디어/개인정보수집이용동의서_박용진.pdf</span></td><td class='det'>1쪽 A4 · 81KB</td><td class='role'>개인정보 동의서 (별도 칸)</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>35</span><span class='mark'>📨</span> 세종사이버대 AI창작 공모전 「K-빌런의 21세기 서울 상륙 작전」</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>세종사이버대학교 · 대상 100만</dd><dt>마감</dt><dd>11/16(월)</dd><dt>제출</dt><dd>11/5(목) · 이메일 aiart@sjcu.ac.kr</dd><dt>응모작</dt><dd><b>한 편만 더 보면 안 잡아먹지</b></dd><dt>요지</dt><dd>떡 하나 주면 안 잡아먹던 해님달님 호랑이가 휴대전화 속 &#x27;한 편만 더&#x27;로 돌아온 리소그래프풍 포스터.</dd><dt>결과</dt><dd>12월 발표</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/190eba9bb2c7.png' alt=''><figcaption>AI이미지_한편만더보면안잡아먹지_박용진.png</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PNG</td><td class='fn'><span class='path'>세종사이버대_K빌런/AI이미지_한편만더보면안잡아먹지_박용진.png</span></td><td class='det'>1800×2400px · 7.9MB</td><td class='role'>작품 이미지</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>세종사이버대_K빌런/지원서_AI이미지_한편만더보면안잡아먹지_박용진.pdf</span></td><td class='det'>2쪽 A4 · 127KB</td><td class='role'>지원서</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>36</span><span class='mark'>✅</span> 한국과학창의재단 AI·융합교육 통합 플랫폼 명칭</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>한국과학창의재단 · 대상 300만</dd><dt>마감</dt><dd>11/18(수)</dd><dt>제출</dt><dd>11/4(수) · 네이버폼 2건</dd><dt>응모작</dt><dd><b>「궁리터」 「수업짓기」</b></dd><dt>요지</dt><dd>이치를 끝까지 따지는 탐구의 터 / 교사가 AI와 수업을 &#x27;짓는&#x27; 핵심 기능.</dd><dt>결과</dt><dd>11월 말 발표</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>슬로건_11월_응모안.md</span>)</div>
+</div>
+<div class='card'><h3><span class='no'>37</span><span class='mark'>📨</span> 서울시 행정서식 개선 아이디어 공모</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>서울특별시 · 우수 10명</dd><dt>마감</dt><dd>11/20(금)</dd><dt>제출</dt><dd>11/4(수) · 이메일 regidea@seoul.go.kr</dd><dt>응모작</dt><dd><b>서울광장 사용신고서 개선</b></dd><dt>요지</dt><dd>세 번 적는 인적사항은 한 번으로, 수리 뒤 전화로 다시 묻는 정보는 처음부터 — 서울광장 사용신고서 전·후 비교.</dd><dt>결과</dt><dd>—</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/676ea9164b44.png' alt=''><figcaption>행정서식개선_제안서·동의서·청렴서약서_서울광장사용신고서_박용진.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>서울시_행정서식개선/행정서식개선_제안서·동의서·청렴서약서_서울광장사용신고서_박용진.pdf</span></td><td class='det'>7쪽 A4 · 272KB</td><td class='role'>서식1~4 (제안서·비교표·동의서·청렴서약서)</td></tr>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>서울시_행정서식개선/행정서식개선_제출서식_서울광장사용신고서_박용진.hwpx</span></td><td class='det'>56KB</td><td class='role'>제출서식 hwpx</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>38</span><span class='mark'>📨</span> 제주시 정책 아이디어 공모전 (3차시)</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>제주시 · 최우수 70만</dd><dt>마감</dt><dd>11/20(금)</dd><dt>제출</dt><dd>11/4(수) · 이메일 joos736@korea.kr</dd><dt>응모작</dt><dd><b>과태료는 여행이 끝난 뒤 도착한다</b></dd><dt>요지</dt><dd>버스전용차로를 위반한 렌터카에 다음 날 바로 알림을 보내 여행 중 반복 위반을 막는다.</dd><dt>결과</dt><dd>—</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/cd08d562f689.png' alt=''><figcaption>박용진_제주시 정책 공모전_제안서·동의서.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>제주시_정책아이디어/박용진_제주시 정책 공모전_제안서·동의서.pdf</span></td><td class='det'>5쪽 A4 · 186KB</td><td class='role'>제안서(서식1)·동의서(서식2) PDF</td></tr>
+<tr><td class='ext'>HWPX</td><td class='fn'><span class='path'>제주시_정책아이디어/박용진_제주시 정책 공모전_제안서·동의서.hwpx</span></td><td class='det'>45KB</td><td class='role'>같은 내용 hwpx</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>39</span><span class='mark'>📨</span> 2026 아름다운 우리말 달력 만들기 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>동아대학교 국어문화원 · 달별 1명 10만</dd><dt>마감</dt><dd>11/22(일)</dd><dt>제출</dt><dd>11/5(목) · 이메일 daukor7180@naver.com</dd><dt>응모작</dt><dd><b>11월 「떡비」 — 가을비는 떡 먹는 비</b></dd><dt>요지</dt><dd>가을비를 이르는 우리말 &#x27;떡비&#x27;를 찬비 오는 날 마루에서 팥시루떡을 나누는 수채 삽화로(AI 활용 명시).</dd><dt>결과</dt><dd>11/27 당선작 발표</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/94141eb6967a.png' alt=''><figcaption>11월_떡비_박용진.jpg</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>JPG</td><td class='fn'><span class='path'>동아대_우리말달력/11월_떡비_박용진.jpg</span></td><td class='det'>3000×1875px · 2.4MB</td><td class='role'>달력 그림</td></tr>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>동아대_우리말달력/신청서_개인정보동의서_박용진.pdf</span></td><td class='det'>2쪽 A4 · 127KB</td><td class='role'>신청서·개인정보 동의서</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>40</span><span class='mark'>✅</span> 국민체육진흥공단 2026 체육관련 규제개선 대국민 아이디어</h3>
+<dl class='meta'><dt>주최·상금</dt><dd>국민체육진흥공단 · 50만</dd><dt>마감</dt><dd>11/22(일)</dd><dt>제출</dt><dd>11/4(수) · 구글폼 (파일 칸 없음)</dd><dt>응모작</dt><dd><b>체육시설 안전교육을 점검 결과에 맞춘 교육으로</b></dd><dt>요지</dt><dd>모든 시설에 같은 안전교육 대신, 안전점검에서 지적된 항목에 맞춘 교육으로 바꾸자.</dd><dt>결과</dt><dd>12월 중 시상</dd></dl>
+<div class='none'>파일 없음 (폼 문안: <span class='path'>KSPO_체육규제개선/폼입력안.md</span>)</div>
+<div class='note'>참고: 보관용 제안서 PDF(KSPO_체육규제개선/제안서_체육시설안전교육_점검결과연동.pdf)는 제출하지 않음</div>
+</div>
+<div class='card'><h3><span class='no'>41</span><span class='mark'>✅</span> 기획예산처 2026 대국민 재정교육 아이디어 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>기획예산처 · 대상 100만</dd><dt>마감</dt><dd>11/27(금)</dd><dt>제출</dt><dd>11/4(수) · 구글폼 (파일 1개 업로드)</dd><dt>응모작</dt><dd><b>0원 영수증</b></dd><dt>요지</dt><dd>공짜인 줄 알았던 하루에 나라살림 가격표 붙이기 — 하루 쓴 공공서비스의 &#x27;국민 1인·1일 몫&#x27; 영수증.</dd><dt>결과</dt><dd>12/7 발표</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/6f86019e911d.png' alt=''><figcaption>박용진_대국민재정교육아이디어_참가신청서(0원 영수증).pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>PDF</td><td class='fn'><span class='path'>기획예산처_재정교육아이디어/박용진_대국민재정교육아이디어_참가신청서(0원 영수증).pdf</span></td><td class='det'>3쪽 A4 · 270KB</td><td class='role'>참가신청서(제안서 포함)</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>42</span><span class='mark'>📨</span> 한겨레21 제18회 손바닥문학상</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>한겨레21 · 대상 300만</dd><dt>마감</dt><dd>12/6(일)</dd><dt>제출</dt><dd>11/5(목) · 이메일 palm@hani.co.kr</dd><dt>응모작</dt><dd><b>낙하 (단편소설, 원고지 약 61장)</b></dd><dt>요지</dt><dd>주제 &#x27;화&#x27; — 휴대폰 수리점 장부에 적히는 &#x27;낙하&#x27;를 따라가는 단편.</dd><dt>결과</dt><dd>한겨레21 제1645호(12/28~1/3) 발표</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/7ec52aaede63.png' alt=''><figcaption>낙하_박용진.docx</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>DOCX</td><td class='fn'><span class='path'>한겨레21_손바닥문학상/낙하_박용진.docx</span></td><td class='det'>8쪽 · 45KB</td><td class='role'>원고</td></tr>
+</table>
+</div>
+<div class='card'><h3><span class='no'>43</span><span class='mark'>✅</span> 상주시 대표축제 대국민 아이디어 공모전</h3>
+<div class='body'><div class='main'><dl class='meta'><dt>주최·상금</dt><dd>상주시 · 대상 3,000만 (총 6,000만)</dd><dt>마감</dt><dd>2027-01-15(금)</dd><dt>제출</dt><dd>11/4(수) · sangjufestival.com 온라인 접수 (zip 1개)</dd><dt>응모작</dt><dd><b>곶감 축제는 겨울에 &#x27;판다&#x27;, 상주는 가을에 &#x27;건다&#x27; — 상주 감 거는 축제</b></dd><dt>요지</dt><dd>10월에 관광객이 직접 감을 걸고 1월 설 전에 곶감으로 받아 가는 2막 축제.</dd><dt>결과</dt><dd>1차 서류 2027-01 · 본선 PPT 2월 · 결과 2월 말</dd></dl></div><div class='side'><div class='thumbs'><figure><img src='thumbs/709d2d67cb51.png' alt=''><figcaption>박용진_서식3_축제종합기획제안서_상주감거는축제.pdf</figcaption></figure></div></div></div>
+<table class='files'>
+<tr><td class='ext'>ZIP</td><td class='fn'><span class='path'>상주시_대표축제아이디어/제출/박용진_상주시대표축제공모_제출서류.zip</span></td><td class='det'>12개 파일 · 1.8MB</td><td class='role'>제출서류 압축파일 (서식1~6, PDF+HWPX 12개)</td></tr>
+<tr class="child"><td class='ext'>PDF</td><td class='fn'><span class='path'>박용진_서식1_참가신청서.pdf</span></td><td class='det'>1쪽 A4 · 103KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>HWPX</td><td class='fn'><span class='path'>박용진_서식1_참가신청서.hwpx</span></td><td class='det'>52KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PDF</td><td class='fn'><span class='path'>박용진_서식2_제안서요약본.pdf</span></td><td class='det'>2쪽 A4 · 169KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>HWPX</td><td class='fn'><span class='path'>박용진_서식2_제안서요약본.hwpx</span></td><td class='det'>56KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PDF</td><td class='fn'><span class='path'>박용진_서식3_축제종합기획제안서_상주감거는축제.pdf</span></td><td class='det'>24쪽 A4 · 991KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>HWPX</td><td class='fn'><span class='path'>박용진_서식3_축제종합기획제안서_상주감거는축제.hwpx</span></td><td class='det'>444KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PDF</td><td class='fn'><span class='path'>박용진_서식4_개인정보수집이용동의서.pdf</span></td><td class='det'>1쪽 A4 · 114KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>HWPX</td><td class='fn'><span class='path'>박용진_서식4_개인정보수집이용동의서.hwpx</span></td><td class='det'>61KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PDF</td><td class='fn'><span class='path'>박용진_서식5_저작권및공모작활용동의서.pdf</span></td><td class='det'>2쪽 A4 · 135KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>HWPX</td><td class='fn'><span class='path'>박용진_서식5_저작권및공모작활용동의서.hwpx</span></td><td class='det'>71KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>PDF</td><td class='fn'><span class='path'>박용진_서식6_공모전참가서약서.pdf</span></td><td class='det'>1쪽 A4 · 83KB</td><td class='role'></td></tr>
+<tr class="child"><td class='ext'>HWPX</td><td class='fn'><span class='path'>박용진_서식6_공모전참가서약서.hwpx</span></td><td class='det'>51KB</td><td class='role'></td></tr>
+</table>
+</div>
+<h2>대기 / 보류 (제출 전)</h2><table class='pending'><tr><th>마감</th><th>공모</th><th>상태</th></tr>
+<tr><td class='d'>10/2(금)</td><td>2026 AI 활용 아이디어 공모전 (과기정통부)</td><td>⚠️ 기획서 PDF 완성, 공통서류 양식 미확보 — kfict.or.kr 접속 불가(서버 Not Found) → 양식 받아지면 채움, 또는 kfict1@kfict.or.kr· 문의</td></tr>
+<tr><td class='d'>11/15(일)</td><td>국민콜110 &#x27;일·일·공&#x27; 삼행시 (권익위)</td><td>⏭ 패스 (11/4 사용자 결정 — 인스타 로그인 필요). 문구는 슬로건_11월_응모안.md 6번에 보관</td></tr>
+<tr><td class='d'>11/8(일)</td><td>서울중구시설관리공단 ESG 혁신 아이디어 (1인 1건)</td><td>⏭ 서류 완성 — 서울중구시설관리공단_ESG/ 「매일 오던 회원이 안 보이면 먼저 묻는다」 — 패스 (11/4 사용자 결정 — 사이트 회원 로그인 필요). 서류는 보관</td></tr>
+<tr><td class='d'>11/18(수) 17:00</td><td>국가유산청 국가무형유산 상설공연 아이디어</td><td>⏳ 문안 완성 — 국가유산청_무형유산공연아이디어/ 「웃으며 보내는 밤」 — 폼 11/9 09:00 열림 → 09:07 제출 예약(세션 유지 시)</td></tr>
+<tr><td class='d'>11/20(금) 17:00</td><td>안산 4·16 세월호참사 추모시설 명칭</td><td>⏳ 11/5 10:00 열리면 제출 — 「다시봄」 — 결과 2027-02-26</td></tr>
+<tr><td class='d'>11/18(수) 17:00</td><td>자유기업원 제36회 시장경제칼럼 (대상 30만)</td><td>⏳ 원고 완성 — 자유기업원_시장경제칼럼/ 「같은 값을 강제하자, 가격은 은어가 되었다」(1,997자) — 11/9 09:00 구글폼 오픈 후 제출. 수상 시 주민번호·12/4 ZOOM 시상식</td></tr>
+<tr><td class='d'>11/13(금) 23:59</td><td>햇반 30주년 AI 공모전 (대상 1,000만)</td><td>⏭ 패스 (사용자 결정 11/4). 4컷은 햇반AI공모/final/에 보관</td></tr>
+<tr><td class='d'>10/30(금)</td><td>강원도 「특별한 강원, 우리의 변화」 (도민 부문)</td><td>⏸ 본인 실제 경험 필요(AI 생성물 그대로 제출 시 심사 제외, 표창만) — 체감 변화 몇 줄 주면 작성</td></tr>
+</table>
+</body></html>
