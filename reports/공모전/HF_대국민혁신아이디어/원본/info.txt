@@ -1,0 +1,22 @@
+__typename : Activity
+id : 359967
+title : 2026년도 HF 대국민 혁신 아이디어 공모전
+type : 3
+applyDetail : 2026idea@hf.go.kr
+activityTypeID : 3
+organizationName : 한국주택금융공사
+createdAt : 1793075776000
+managerName : 링커리어
+files [{'__ref': 'ActivityFile:1489904'}, {'__ref': 'ActivityFile:1489905'}]
+reportCount : 0
+recruitType : NORMAL
+recruitCloseAt : 1793977199999
+dateRepresentation : DAY
+recruitScale : 0
+organizationType : 공공기관/공기업
+recruitStartAt : 1792422000000
+tenThousandUnitOfReward : 300
+teamRecruitPostCount : 0
+group : NORMAL
+isAppliedByCurrentUser : False
+status : OPEN
