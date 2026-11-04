@@ -1,0 +1,11 @@
+Use your image generation tool to create exactly ONE image. Landscape, 1536x1024. Do not write any code; just generate the image and reply "done".
+
+Concept: an old Korean word "tteok-bi" means "autumn rain that lets you eat rice cakes" — after the harvest is finished, the late-autumn rain is a gift of rest, not sadness. The picture must make that meaning visible in one glance.
+
+Scene: a small traditional Korean tiled-roof farmhouse at a rainy late-autumn dusk, seen from the yard at a slight distance. Around it, harvested empty rice paddies with round rice-straw stacks, a bare persimmon tree with a few orange persimmons, earthenware jars wet with rain. A fine silvery autumn rain falls over everything in cool blue-grey tones. The house's paper sliding door is open and glowing warm golden from inside; on the wooden floor just inside, a round earthenware steamer releases a big cloud of white steam that drifts out under the eaves into the rain, and a large round red-bean rice cake sits on a small wooden tray. Two small simple figures (a grandmother and a child, seen from behind or in tiny scale, no detailed faces or hands) sit on the floor sharing the rice cake; a dog sleeps under the eaves.
+
+Composition: the UPPER 35% of the image is calm, misty rainy sky with very low detail, clean space for a title to be overlaid later. The warm glowing doorway with the steam is slightly right of centre and is the clear focal point.
+
+Style: gentle Korean picture-book illustration, gouache and soft colored-pencil texture on hand-made paper, slightly flat shapes, warm golden light against muted blue-grey rain, persimmon orange accents. Cozy, calm, quietly happy.
+
+Strictly: no text, no letters, no Hangul, no Chinese characters, no numbers, no signature, no watermark, no logos, no calendar grid.

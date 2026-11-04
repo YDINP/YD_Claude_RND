@@ -1,0 +1,16 @@
+Use your image generation tool to create exactly ONE image. Landscape, 1536x1024. Do not write any code; just generate the image and reply "done".
+
+Concept: the old Korean word "tteok-bi" = "autumn rain that lets you eat rice cakes": once the harvest is finished, the cold late-autumn rain becomes a gift of rest. One glance must show: cold rain outside, warm steaming rice cake inside, people resting.
+
+Scene (medium-close view, the house is LARGER in frame than a landscape): at right-center, the open paper-lattice doors of a traditional tiled Korean farmhouse glow warm gold. Inside on the wooden floor: a low round wooden table with a plate of sirutteok clearly readable — square slices of WHITE steamed rice cake with a thick DARK RED-BROWN red-bean crumb layer on top, stacked in two layers, the white and red stripes clearly visible. Next to it, a tall round earthenware siru steamer on a pot, with a plume of white steam curling up and out under the eaves into the rain. A grandmother and a small child sit at the table seen from behind/three-quarter back, one small slice held near the child (hands hidden by sleeve). Outside, under the eaves: rain falling in thin parallel lines, drips from the roof tiles, two earthenware jars. At the left: a bare persimmon tree with three orange fruits, harvested paddies with stubble rows and one round straw stack, misty hills.
+Composition: the upper-left 40% is quiet grey rainy sky and soft hill silhouettes, plain enough for a title. Asymmetric; the warm doorway is the only bright area.
+Technique: hand-printed Korean woodblock print (mokpanhwa) — limited flat color layers, visible wood-grain texture in flat areas, slight misregistration between color layers, sparse thin carved outlines, printed on off-white hanji paper with fibers visible. Matte.
+
+Style rules (very important — it must look hand-painted by a human illustrator, not AI):
+- Avoid: glossy or wet-plastic shine, oversaturated colors, HDR glow, lens bokeh, cinematic light rays, hyper-fine detail everywhere, perfectly symmetrical composition, repeated copy-paste textures, 3D render look.
+- Keep detail selective: the focal area (glowing doorway, steam, rice cake) a little more defined; the fields, mountains and sky simplified into broad soft shapes.
+- Restrained palette of about 6 colors: muted slate blue-grey, warm ochre/golden lamplight, persimmon orange, red-bean maroon, straw beige, off-white paper. Low saturation overall.
+- Visible paper grain and slightly uneven edges of paint; small imperfections are welcome.
+Accuracy: late November in Korea — rice paddies already harvested (short cut stubble rows, no green rice), round rice-straw stacks, a persimmon tree with no leaves and only 2-4 orange fruits left, earthenware jars. Traditional giwa (tiled) farmhouse with wooden maru floor and hanji paper lattice doors, correct perspective, straight posts.
+People: a grandmother and a small child sit on the floor seen from behind, small in the frame; hands hidden in laps or sleeves (no visible fingers); no faces shown.
+Strictly: no text, no letters, no Hangul, no Chinese characters, no numbers, no signature, no watermark, no logos, no calendar grid, no fake writing on anything.

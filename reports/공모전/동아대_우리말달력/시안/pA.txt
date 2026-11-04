@@ -1,0 +1,13 @@
+Use your image generation tool to create exactly ONE image. Landscape, 1536x1024. Do not write any code; just generate the image and reply "done".
+
+Concept: an old Korean word "tteok-bi" means "autumn rain that lets you eat rice cakes" — after the harvest is finished, the late-autumn rain is not lonely or sad, it is a gift of rest. The picture must make that meaning visible in one glance: cold rain outside, warm steaming rice cakes inside.
+
+Scene: Late November in a rural Korean village. We are sitting inside on the warm wooden floor (maru) of a traditional hanok, looking out through the open wooden doors to the yard. Outside, a fine, steady, cool blue-grey autumn rain falls; the yard is wet, with neatly stacked rice-straw bundles (the harvest is done), a row of brown earthenware sauce jars glistening with raindrops, a bare persimmon tree with a few last orange persimmons, strings of dried persimmons hanging under the eaves, rain dripping from the curved tiled eave.
+Foreground on the floor (lower right half): a round earthenware steamer (siru) with thick white steam curling up, a large round slab of red-bean rice cake (sirutteok) with dark red bean crumbs, a few slices on a small round wooden tray (soban), a small cup of warm tea, and a tabby cat curled up asleep near the warmth. Warm golden lamplight inside, cool rain outside — strong but gentle warm/cool contrast.
+No people at all.
+
+Composition: the LEFT 38% of the image is the soft, misty rainy yard with low detail and calm tones (rain streaks, mist), leaving clean space where a title will be overlaid later. The main objects (steamer, rice cake, cat) sit in the right-centre and lower right.
+
+Style: gentle Korean picture-book illustration, gouache with soft colored-pencil texture, slightly flat shapes, hand-made paper grain, warm earthy palette (persimmon orange, red-bean maroon, rice white, wood brown) against muted blue-grey rain. Cozy, calm, quietly happy.
+
+Strictly: no text, no letters, no Hangul, no Chinese characters, no numbers, no signature, no watermark, no logos, no calendar grid.
