@@ -1,0 +1,405 @@
+"""2026 경북 로컬 관광자원 혁신 콘텐츠 공모전 — 참가신청서류(신청서+실행계획서+동의서+서약서) PDF, 발표자료 PDF."""
+import base64, subprocess, time, tempfile, shutil
+from pathlib import Path
+
+OUT = Path(__file__).parent
+BUILD = OUT / "_build"
+BUILD.mkdir(exist_ok=True)
+SIG = "data:image/png;base64," + base64.b64encode((OUT / "assets" / "sig_1_10.png").read_bytes()).decode()
+CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+
+ME = dict(name="박용진", phone="010-2576-9278", email="parkkb10@gmail.com",
+          addr="경기도 하남시 망월동 839-3 401호", birth="1997.05.29.", job="회사원", y="2026", m="11", d="4")
+NAME = "아침 9시 전의 영덕"
+SUBTITLE = "동해선 저녁 열차로 와서 대게 경매를 보고 가는 1박 코스"
+SUMMARY = ("동해안 일출과 대게 경매는 오전 9시 전에 끝나 당일 방문객은 못 봅니다. "
+           "동해선 저녁 열차로 와 강구항에서 자고 일출·경매를 본 뒤 오전 열차로 돌아가는 대게철 1박 코스.")
+assert len(SUMMARY) <= 100, len(SUMMARY)
+AREA = "경북 영덕군 강구면 일원 — 동해선 영덕역, 강구항 위판장(영덕대게), 삼사해상공원·해파랑공원 해맞이, 영덕 블루로드"
+
+CSS = """
+@page { size:A4; margin:13mm 14mm; }
+* { -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; }
+body { font-family:'Malgun Gothic',sans-serif; font-size:9.6pt; color:#111; line-height:1.55; margin:0; }
+table { width:100%; border-collapse:collapse; }
+.pb { page-break-before:always; }
+.sw { position:relative; display:inline-block; }
+.sig { position:absolute; left:-4px; top:50%; height:42px; transform:translateY(-50%); }
+.tag { display:inline-block; border:1px solid #000; padding:1px 8px; font-size:9.5pt; font-weight:700; }
+h1.t { text-align:center; font-size:15pt; margin:8px 0 12px; }
+.f td, .f th { border:1px solid #000; padding:7px 9px; vertical-align:middle; }
+.f th { background:#eef1f5; font-weight:700; text-align:center; }
+.date { text-align:center; margin:18px 0 10px; font-size:11pt; letter-spacing:1px; }
+.to { text-align:center; font-size:13pt; font-weight:700; margin-top:26px; }
+/* 실행계획서 */
+:root { --n:#173f5f; --nl:#e8eff6; --o:#c8611d; --ol:#fbeee4; }
+.plan > tbody > tr > th { width:15%; background:var(--nl); color:var(--n); border:1px solid #7f8fa0; padding:6px; font-size:9.6pt; }
+.plan > tbody > tr > td { border:1px solid #7f8fa0; padding:8px 10px; vertical-align:top; }
+.hd { font-weight:700; color:var(--n); margin:6px 0 2px; font-size:10pt; }
+.hd:first-child { margin-top:0; }
+p { margin:2px 0; } ul { margin:2px 0 4px 16px; padding:0; } li { margin:1px 0; }
+.in td, .in th { border:1px solid #c3ccd6; padding:4px 6px; font-size:8.9pt; vertical-align:top; }
+.in th { background:#f2f5f8; }
+.key { background:var(--ol); border-left:4px solid var(--o); padding:6px 10px; margin:6px 0; }
+.src { font-size:7.9pt; color:#444; line-height:1.45; }
+.num { text-align:right; white-space:nowrap; }
+.small { font-size:8.6pt; color:#333; }
+"""
+
+
+def sign(label):
+    return f'<span class="sw">{label}<img class="sig" src="{SIG}"></span>'
+
+
+def chk(on):
+    return "■" if on else "□"
+
+
+# ---------- 그림 ----------
+def fig_timeline():
+    """당일 자가용 vs 동해선 1박 — 아침 장면이 누구에게 보이는가."""
+    # x: 06시~24시, 다음날 06~12시 — 단순화: 06:00 기준 분 → px
+    def x(h):  # h: 시각(소수), 0~30 (다음날은 +24)
+        return 70 + (h - 6) * 20.5
+    return f"""<svg viewBox="0 0 700 190" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Malgun Gothic" font-size="11">
+<rect width="700" height="190" fill="#fbfcfd"/>
+<rect x="{x(7.3)}" y="18" width="{x(9.0)-x(7.3)}" height="150" fill="#fbeee4"/>
+<rect x="{x(31.3)}" y="18" width="{x(33.0)-x(31.3)}" height="150" fill="#fbeee4"/>
+<text x="{(x(7.3)+x(9.0))/2}" y="30" text-anchor="middle" fill="#c8611d" font-weight="700">일출·경매</text>
+<text x="{(x(31.3)+x(33.0))/2}" y="30" text-anchor="middle" fill="#c8611d" font-weight="700">일출·경매</text>
+<text x="{(x(7.3)+x(9.0))/2}" y="43" text-anchor="middle" fill="#c8611d" font-size="9.5">07:30~09:00</text>
+<text x="{(x(31.3)+x(33.0))/2}" y="43" text-anchor="middle" fill="#c8611d" font-size="9.5">다음날 07:30~09:00</text>
+<text x="8" y="78" font-weight="700">자가용</text><text x="{x(16.5)+6}" y="81" fill="#555" font-size="10">대구발 당일 (점심 대게·카페)</text><text x="8" y="91" font-size="9.5" fill="#555">당일</text>
+<rect x="{x(10.5)}" y="66" width="{x(16.5)-x(10.5)}" height="22" rx="4" fill="#9aa7b4"/>
+<text x="{(x(10.5)+x(16.5))/2}" y="81" text-anchor="middle" fill="#fff">10:30~16:30</text>
+<text x="8" y="128" font-weight="700" fill="#173f5f">동해선</text><text x="8" y="141" font-size="9.5" fill="#173f5f">1박</text>
+<rect x="{x(18.2)}" y="116" width="{x(35.7)-x(18.2)}" height="22" rx="4" fill="#173f5f"/>
+<text x="{(x(18.2)+x(35.7))/2}" y="131" text-anchor="middle" fill="#fff">18:11 영덕역 → 대게상 → 숙박 → 일출·경매 → 11:43 열차</text>
+<line x1="{x(6)}" y1="160" x2="{x(36)}" y2="160" stroke="#888"/>
+""" + "".join(
+        f'<line x1="{x(h)}" y1="157" x2="{x(h)}" y2="163" stroke="#888"/><text x="{x(h)}" y="176" text-anchor="middle" fill="#666" font-size="9.5">{h % 24:02d}시</text>'
+        for h in [6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36]) + "</svg>"
+
+
+def fig_season():
+    """월별 일출 시각(영덕, 천문 계산) + 대게 조업기."""
+    data = [("11월", 6.9862), ("12월", 7.44), ("1월", 7.5508), ("2월", 7.1895), ("3월", 6.5852), ("4월", 5.8369), ("5월", 5.2731), ("6월", 5.0641), ("7월", 5.2594), ("8월", 5.6618), ("9월", 6.0631), ("10월", 6.4706)]
+    crab = {"11월", "12월", "1월", "2월", "3월", "4월", "5월"}
+    w = 46
+    bars = ""
+    for i, (mname, h) in enumerate(data):
+        xx = 60 + i * w
+        top = 30 + (h - 5.0) * 0  # 기준선
+        hh = (h - 4.5) * 34
+        col = "#c8611d" if mname in crab else "#b8c2cc"
+        bars += f'<rect x="{xx}" y="{150-hh}" width="30" height="{hh}" rx="3" fill="{col}"/>'
+        mins = int(h * 60); hm = f"{mins // 60}:{mins % 60:02d}"
+        bars += f'<text x="{xx+15}" y="{145-hh}" text-anchor="middle" font-size="9.5" fill="#333">{hm}</text>'
+        bars += f'<text x="{xx+15}" y="166" text-anchor="middle" font-size="10" fill="#333">{mname}</text>'
+    return f"""<svg viewBox="0 0 640 192" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Malgun Gothic" font-size="11">
+<rect width="640" height="192" fill="#fbfcfd"/>
+<text x="10" y="18" font-weight="700" fill="#173f5f">영덕 일출 시각(매월 15일)과 대게 조업기</text>
+<rect x="400" y="8" width="12" height="12" fill="#c8611d"/><text x="416" y="18" font-size="10">대게 조업기(11~5월)</text>
+<rect x="528" y="8" width="12" height="12" fill="#b8c2cc"/><text x="544" y="18" font-size="10">금어기(6~10월)</text>
+{bars}
+<text x="10" y="186" font-size="9" fill="#666">막대가 높을수록 해가 늦게 뜸 → 11~3월 일출은 06:35~07:33로, 일출과 08시대 경매가 한 아침에 이어진다 (4~5월은 경매 중심)</text>
+</svg>"""
+
+
+# ---------- 참가신청서 ----------
+def form_apply():
+    m = ME
+    return f"""
+<div class="tag">붙임1</div>
+<h1 class="t">2026 경북 관광자원 혁신 콘텐츠 공모전 참가신청서</h1>
+<table class="f">
+<tr><th style="width:17%">공 모 분 야</th><td colspan="3">{chk(0)} 로컬 식음료 &nbsp;&nbsp;&nbsp;&nbsp; {chk(1)} 로컬기반 관광코스<br>{chk(0)} 로컬기반 ICT &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {chk(0)} 기타 관광산업 아이템<br>{chk(0)} 지역특화 MICE 핵심 콘텐츠</td>
+<th style="width:10%">접수<br>번호</th><td style="width:14%;color:#888;font-size:9pt;text-align:center">센터에서 기재</td></tr>
+<tr><th rowspan="4">제 안 자</th><th style="width:15%">성 명<br>(생년월일)</th><td colspan="4">{m['name']} &nbsp;({m['birth']})</td></tr>
+<tr><th>주 소</th><td colspan="4">{m['addr']}</td></tr>
+<tr><th>휴대전화</th><td colspan="4">{m['phone']}</td></tr>
+<tr><th>이메일</th><td colspan="4">{m['email']}</td></tr>
+<tr><th>콘 텐 츠 명</th><td colspan="5"><b>{NAME}</b> — {SUBTITLE}</td></tr>
+<tr><th style="height:150px">콘 텐 츠<br>개 &nbsp;&nbsp; 요</th><td colspan="5">{SUMMARY}</td></tr>
+</table>
+<p style="text-align:center;font-size:11pt;margin-top:26px;line-height:1.9">위의 내용이 사실임을 확인하며,<br>경북 관광자원 혁신콘텐츠 공모전 참가를 신청합니다.</p>
+<div class="date">{m['y']}년 &nbsp;{m['m']}월 &nbsp;{m['d']}일</div>
+<p style="text-align:right;margin-right:60px;font-size:11pt">신청자 : <b>{m['name']}</b> &nbsp;&nbsp;{sign('(인 또는 서명)')}</p>
+<div class="to">경상북도문화관광공사 사장 귀하</div>
+"""
+
+
+# ---------- 실행계획서 ----------
+def plan():
+    return f"""
+<div class="pb"></div>
+<div class="tag">붙임2</div>
+<h1 class="t" style="margin-bottom:4px">실행계획서</h1>
+<p class="small" style="margin-bottom:6px">※ 도표, 사진, 그래프 및 기타사항 자유롭게 삽입 및 서술 가능</p>
+<table class="plan"><tbody>
+<tr><th>공모분야</th><td>{chk(0)} 로컬 식음료 &nbsp; {chk(1)} <b>로컬기반 관광코스</b> &nbsp; {chk(0)} 로컬기반 ICT &nbsp; {chk(0)} 기타 관광산업 아이템 &nbsp; {chk(0)} 지역특화 MICE 핵심 콘텐츠</td></tr>
+<tr><th>콘텐츠명</th><td><b style="font-size:11pt">{NAME}</b><br>{SUBTITLE}</td></tr>
+<tr><th>활용지역 및<br>관광자원</th><td>{AREA}</td></tr>
+<tr><th>콘텐츠 개요<br>및<br>제안 내용</th><td>
+<div class="hd">○ 목적</div>
+<p>경북 동해안에서 <b>가장 경북다운 장면 두 가지 — 바다 위 일출과 강구항 위판장의 대게 경매 — 는 모두 오전 9시 전에 끝납니다.</b> 이 장면을 상품의 중심에 두고, 동해선 저녁 열차로 온 여행자가 강구항에서 하룻밤을 자야만 볼 수 있게 짜서, 대게철(11~5월) 영덕의 당일 관광을 1박 관광으로 바꾸는 것이 목적입니다.</p>
+<div class="hd">○ 필요성 — 왜 지금까지 ‘아침의 영덕’은 팔리지 않았나</div>
+<table class="in" style="margin:3px 0 5px">
+<tr><th style="width:24%">데이터</th><th>읽어낸 원인</th></tr>
+<tr><td>경북 유입 방문객의 <b>50.4%가 대구</b>에서 옴. 방문객은 5.1% 늘었지만 <b>평균 체류시간은 1.6% 줄어듦</b> (한국관광데이터랩, 경북매일 2026.7.)</td><td>경북 관광의 절반은 1시간 거리 자가용 당일 나들이입니다. 이들은 오전 늦게 도착해 해 지기 전에 돌아가므로, <b>새벽과 아침에 일어나는 일은 구조적으로 보지 못합니다.</b></td></tr>
+<tr><td>경주도 방문객 중 1박 이상 숙박객은 <b>15.5%</b> (2023.1~9월, 경북매일)</td><td>경북 최대 관광도시조차 열 명 중 여덟 명 이상이 자지 않고 갑니다. ‘볼거리 추가’로는 숙박이 늘지 않고, <b>‘자야만 볼 수 있는 것’</b>이 필요합니다.</td></tr>
+<tr><td>영덕대게 조업은 <b>11월~이듬해 5월</b>. 2025년 첫 위판(11.3.) 최고가 1마리 16만 9천 원 (경북매일 2025.11.)</td><td>대게철은 해수욕철과 정반대인 겨울~봄입니다. 그런데 대게 소비는 ‘점심 한 끼’에 머물고, 대게가 바다에서 올라와 값이 매겨지는 <b>위판장 아침</b>은 관광 자원으로 쓰이지 않았습니다.</td></tr>
+<tr><td>대게 성수기(11~3월) 영덕 일출은 <b>06:35~07:33</b> (천문 계산, 매월 15일 기준). 여름(7월)은 05:15</td><td>겨울 일출은 늦어서 <b>일출 → 08시대 경매가 한 아침에 자연스럽게 이어집니다.</b> 여름에는 불가능한 조합이라, 이 코스는 비수기에만 성립하는 상품입니다(일출이 05시대인 4~5월은 해맞이를 선택 일정으로 두고 경매 중심 운영).</td></tr>
+<tr><td>2025.1.1. 동해선 포항~삼척 전 구간 개통, <b>첫 달 이용객 18만 명</b>, 금~일 매진 (경북매일 2025.6.)</td><td>자가용 없이 영덕에 오는 부산·울산·수도권 여행자가 처음 생겼습니다. 이들은 열차 시각에 묶여 있어, <b>저녁에 도착하면 돌아갈 차가 없어 ‘잘 수밖에 없는’ 손님</b>입니다. 지금은 이 손님을 아침까지 붙잡을 상품이 없습니다.</td></tr>
+</table>
+<div class="key"><b>핵심 진단:</b> 영덕의 ‘아침’이 팔리지 않은 이유는 매력이 없어서가 아니라 ① 주 고객(대구발 자가용)이 아침에 그 자리에 없고 ② 위판장은 언제 경매가 열리는지 외부인이 알 수 없는 작업장이며 ③ 대게는 마리 단위 시가로 팔려 1~2인 열차 여행자가 저녁에 먹기 부담스럽기(현장 확인 필요) 때문입니다. 이 콘텐츠는 세 가지를 각각 푸는 장치로 짜여 있습니다.</div>
+<div class="hd">○ 주요내용 — 사업 아이템의 개발 및 구체적 추진계획</div>
+{fig_timeline()}
+<p class="small" style="margin-top:2px">그림 1. 같은 영덕 여행이라도 아침 장면(주황 띠)을 지나는 것은 1박 일정뿐. 열차 시각은 2026.11.7.(토) 운행 기준 공개 시간표(부전 15:33발 ITX → 영덕 18:11 도착, 영덕 11:43발 KTX → 부전 13:36 도착), 실제 판매 전 코레일 시간표로 재확인.</p>
+<ul>
+<li><b>장치 ① 열차 시각에 맞춘 1박 일정:</b> 부산·울산·포항 방면 저녁 열차 도착(18시대) → 승합차로 강구항 숙소 → 다음날 오전 열차(11시대)로 귀가. 열차표는 여행자가 직접 끊고, 상품은 <b>‘역에서 역까지’</b>의 15시간 30분만 책임집니다.</li>
+<li><b>장치 ② 전날 밤 ‘내일 경매 안내’:</b> 위판 시각은 그날 배가 들어오는 시각에 따라 달라지므로, 위판장 운영 수협·중매인과 협약해 <b>전날 21시에 다음날 위판 예정 시각</b>을 참가자에게 알립니다. 출항을 못 한 날은 ‘경매 없음’으로 미리 알리고 대체 일정(아래)과 일부 환급을 적용합니다.</li>
+<li><b>장치 ③ 6인 합석 대게상:</b> 저녁은 6인 한 상으로 대게를 나눠 먹는 합석상으로 차려, 1인·2인 여행자도 박달대게와 수게를 함께 맛보게 합니다. 강구항 대게 식당과 <b>1인 단가 고정 + 대게 시가 변동분은 마릿수로 조정</b>하는 방식으로 계약합니다.</li>
+</ul>
+</td></tr>
+
+<tr><th>콘텐츠의<br>구체성 및<br>구현 가능성</th><td>
+<div class="hd">○ 구체적인 구성 (토요일 출발 예시, 정원 14명)</div>
+<table class="in">
+<tr><th style="width:16%">시각</th><th style="width:30%">일정</th><th>내용·운영 포인트</th></tr>
+<tr><td>1일차 18:11</td><td>영덕역 도착·맞이</td><td>승합차 2대가 역 출구에서 대기. 짐은 차에 싣고 바로 강구항으로 (약 20분, 추정)</td></tr>
+<tr><td>18:40</td><td>강구항 숙소 입실</td><td>항구 도보권 숙박업소 2~3곳과 협약(2인 1실, 1인 참가자는 1인실 추가요금)</td></tr>
+<tr><td>19:00~21:00</td><td>6인 합석 대게상</td><td>대게 식당에서 박달대게·수게를 나눠 먹으며, 은퇴 어민 또는 중매인 해설자가 ‘내일 아침 볼 것’(대게 크기·살 차는 정도로 값이 갈리는 법, 박달대게 구분)을 미리 설명</td></tr>
+<tr><td>21:00</td><td>내일 경매 안내</td><td>참가자 단체 대화방에 다음날 위판 예정 시각·기상 시각·준비물(방한복) 안내</td></tr>
+<tr><td>2일차 06:50~07:40</td><td>해맞이</td><td>숙소에서 걸어서 해파랑공원 또는 차량으로 삼사해상공원 해맞이(12~1월 일출 07:2x~07:3x, 천문 계산)</td></tr>
+<tr><td>07:50~09:00</td><td>위판장 경매 참관</td><td>안전선 밖 지정 구역에서 참관, 반사조끼 착용, 경매사·중매인 작업 방해 금지·촬영 규칙 사전 교육. 해설자가 낙찰 과정을 옆에서 풀어 설명</td></tr>
+<tr><td>09:00~10:00</td><td>항구 아침 식사</td><td>대게 해장국 또는 대게 라면 등 항구 식당 아침. 경매에서 본 대게를 시장에서 직접 사 택배로 보내는 시간 포함</td></tr>
+<tr><td>10:00~11:00</td><td>블루로드 한 구간 걷기</td><td>강구항 인근 해안길 짧은 구간 산책(1시간 이내, 날씨에 따라 생략)</td></tr>
+<tr><td>11:20 → 11:43</td><td>영덕역 출발</td><td>승합차로 역까지 이동, 부산·포항·경주 방면 열차 탑승</td></tr>
+</table>
+<p class="small">· <b>경매가 없는 날 대체 일정:</b> 새벽 부두에서 어선 정박·하역 장면 해설 + 대게 시장 아침장 둘러보기, 1인 1만 원 환급. · <b>흐린 날:</b> 일출 대신 항구 해설 산책. · <b>금요일 출발편</b>도 같은 구조(주 2회 정기 출발).</p>
+
+<div class="hd">○ 구현 방법 (단계별)</div>
+<table class="in">
+<tr><th style="width:18%">시기</th><th>할 일</th></tr>
+<tr><td>2026.12. (첫 달 시범)</td><td>둘째·넷째 토요일 2회, 각 8명 모집. 경북문화관광공사 「2026 동해선 철도 스탬프 투어」(11.30. 종료) B권역(영덕·울진) 참여자에게 카카오톡 채널로 우선 안내해 첫 고객을 모음. 숙소 1곳·식당 1곳·해설자 1명으로 시작</td></tr>
+<tr><td>2027.1.~2.</td><td>시범 결과(만족도, 경매 참관 성공률, 1인당 현지 지출)로 일정·가격 보정. 협약 숙소 3곳·식당 2곳, 해설자 3명으로 확대. 국내여행업 등록 여행사와 판매 위탁 계약</td></tr>
+<tr><td>2027.3.</td><td>영덕대게축제 기간(2026년 기준 3월 말 4일) 매일 특별편 운영, 축제의 ‘경매’ 행사를 보러 온 사람을 ‘진짜 위판장’ 아침으로 연결</td></tr>
+<tr><td>2027.4.~5.</td><td>대게철 마감기 운영, 단체(기업 연수·동호회) 평일 출발 판매</td></tr>
+<tr><td>2027.6.~10.</td><td>금어기: 판매 중단, 다음 시즌 준비(해설자 교육, 울진 후포항 붉은대게 위판 코스 조사)</td></tr>
+<tr><td>2027.11.~</td><td>2년차 시즌 개시, 후포항(울진) 코스 추가</td></tr>
+</table>
+
+<div class="hd">○ 필요 요소</div>
+<table class="in">
+<tr><th style="width:22%">요소</th><th>내용</th><th style="width:22%">확보 방법</th></tr>
+<tr><td>위판장 참관 협조</td><td>참관 구역·시간·인원 상한(회당 14명), 안전 규칙, 전날 위판 예정 시각 공유</td><td>위판장 운영 수협과 협약(참관 1인당 협력금 지급)</td></tr>
+<tr><td>해설자</td><td>은퇴 어민·중매인 등 대게를 아는 주민 3명</td><td>영덕군·수협 추천, 회당 사례비 지급</td></tr>
+<tr><td>숙박·식당</td><td>강구항 도보권 숙박업소, 6인 합석상 가능한 대게 식당</td><td>객실·좌석 블록 계약(출발 7일 전 확정, 미판매분 반환)</td></tr>
+<tr><td>차량</td><td>역~항구 왕복 승합차 2대</td><td>지역 운수업체 전세 계약</td></tr>
+<tr><td>판매·보험</td><td>여행업 등록, 여행자보험</td><td>국내여행업 등록 여행사 판매 위탁(예비창업 단계)</td></tr>
+<tr><td>안내 채널</td><td>예약·전날 안내</td><td>새 앱 없이 카카오톡 채널·단체 대화방 사용</td></tr>
+</table>
+</td></tr>
+
+<tr><th>기업활용 및<br>확산방안</th><td>
+<table class="in">
+<tr><th style="width:20%">활용가능주체</th><td>도내 여행사·관광 스타트업(상품 판매), 강구항 숙박업소·대게 식당(객실·좌석 판매), 위판장 운영 수협(참관 협력금), 지역 운수업체(역 연결), 코레일 여행센터(열차+상품 결합 판매)</td></tr>
+<tr><th>활용방법</th><td>‘전날 경매 안내 → 저녁 합석상 → 해맞이 → 경매 참관 → 오전 열차’의 운영 순서·협약 양식·안전 규칙을 묶어 공개하면, 다른 항구 사업자도 같은 순서로 상품을 만들 수 있습니다.</td></tr>
+<tr><th>활용예시 및<br>확장 가능성</th><td>
+<ul><li><b>울진 후포항</b>(붉은대게·대게 위판, 동해선 후포역): 같은 구조의 ‘아침 9시 전의 후포’</li>
+<li><b>포항 구룡포</b>(겨울 과메기철, 포항역 KTX 연결): 수도권 KTX 이용객 대상</li>
+<li>동해선 정차역이 있는 경북 동해안 항구를 겨울 아침 코스로 잇는 <b>‘동해선 아침 항구’ 시리즈</b>로 확장</li></ul></td></tr>
+<tr><th>기타 홍보전략 등</th><td>
+<ul><li><b>열차 이용자에게 직접:</b> 동해선 직결 도시인 부산(경북 유입 7.5%)·울산(11.2%) 대상, 부전역·태화강역 여행센터와 열차 예매 화면 옆 안내</li>
+<li><b>공사 채널 연계:</b> 동해선 스탬프 투어 카카오 채널(5~11월 운영)과 시기가 겹치지 않으므로, 스탬프 투어가 끝나는 12월에 그 참여자에게 다음 시즌 상품으로 안내</li>
+<li><b>장면이 홍보물:</b> 수협 허락 범위에서 경매 호루라기·낙찰 순간을 짧은 영상으로 남겨 SNS에 올림(“이 장면은 오전 9시 전에만 볼 수 있습니다”)</li>
+<li><b>일출 시즌:</b> 12~1월 해맞이 수요와 결합해 연말연시 특별편 판매</li></ul></td></tr>
+</table>
+</td></tr>
+
+<tr><th>연간참여<br>(예상)인원<br>및 수입액</th><td>
+<table class="in">
+<tr><th style="width:30%">구분 (사업화 후 1년, 대게철 7개월·약 30주)</th><th>산정 근거</th><th class="num" style="width:13%">인원</th></tr>
+<tr><td>정기 출발 (금·토 주 2회)</td><td>30주 × 2회 = 60회, 정원 14명 중 평균 10명(탑승률 약 71%, 추정)</td><td class="num">600명</td></tr>
+<tr><td>단체 출발 (평일)</td><td>기업 연수·동호회 월 4회 × 7개월 = 28회 × 14명</td><td class="num">392명</td></tr>
+<tr><td>축제·연말연시 특별편</td><td>영덕대게축제 4일 × 2회 + 연말연시 4회 = 12회 × 8명</td><td class="num">96명</td></tr>
+<tr><td colspan="2" style="text-align:right"><b>연간 예상 이용인원</b></td><td class="num"><b>1,088명</b></td></tr>
+</table>
+<table class="in" style="margin-top:5px">
+<tr><th style="width:30%">1인 상품가 13만 9천 원 구성(열차 운임 별도, 추정)</th><th>금액</th><th style="width:30%">수입 산정</th><th class="num">금액</th></tr>
+<tr><td>숙박(2인 1실 1인분)</td><td class="num">35,000원</td><td>상품 매출 1,088명 × 139,000원</td><td class="num"><b>1억 5,123만 원</b></td></tr>
+<tr><td>6인 합석 대게상</td><td class="num">55,000원</td><td>그중 지역 업체 지급분(숙박·식당·아침·차량·해설·수협)</td><td class="num">약 1억 3,000만 원</td></tr>
+<tr><td>아침 식사</td><td class="num">10,000원</td><td>보험·판매수수료·운영비 몫(1인 1만 9천 원)</td><td class="num">약 2,067만 원</td></tr>
+<tr><td>역 연결 차량</td><td class="num">8,000원</td><td>상품 밖 현지 추가 소비(대게 구매·택배 등, 1인 3만 원 추정)</td><td class="num">약 3,264만 원</td></tr>
+<tr><td>해설·위판장 참관 협력금</td><td class="num">12,000원</td><td colspan="2" rowspan="2" class="small">· 탑승률·단체 수는 시범 2회 결과로 다시 산정. 대게 시가가 크게 오르는 달은 합석상 마릿수를 조정해 1인가를 유지.<br>· 열차 운임(부전↔영덕 왕복 약 4만 1천 원)은 여행자가 직접 결제하므로 상품 매출에서 제외.</td></tr>
+<tr><td>보험·판매수수료·운영</td><td class="num">19,000원</td></tr>
+</table>
+<p class="small">· 실현 가능성: 동해선은 개통 첫 달 18만 명이 이용했고 금~일 매진이 이어졌습니다(경북매일 2025.6.). 회당 정원 14명은 위판장 참관 인원 상한(14명, 수협 협의로 확정)과 승합차 2대에 맞춘 값으로, 연 1,088명은 하루 동해선 이용객 규모에 비해 작은 목표입니다.</p>
+</td></tr>
+
+<tr><th>기대 효과<br>및<br>지역기여도</th><td>
+<ul>
+<li><b>당일 → 1박 전환:</b> 참가자 전원이 강구항에서 1박하고 저녁·아침 두 끼를 지역에서 먹습니다. 연 1,088명 기준 숙박 약 550실·박(2인 1실 기준, 추정), 지역 업체 지급분 약 1억 3천만 원.</li>
+<li><b>계절 편중 완화:</b> 해수욕철(여름)이 아닌 11~5월, 그중에서도 관광객이 줄어드는 12~2월 평일·주말 저녁에 손님을 만듭니다.</li>
+<li><b>어촌 주민 소득:</b> 은퇴 어민·중매인이 해설자로 참여해 대게 지식이 관광 소득이 되고, 수협은 참관 협력금을 받습니다.</li>
+<li><b>대게 브랜드:</b> ‘먹는 대게’에서 ‘값이 매겨지는 아침을 본 대게’로 — 경매를 본 사람이 시장에서 사고 택배로 보내는 재구매 고객이 됩니다.</li>
+<li><b>지속성:</b> 운영 순서·협약 양식이 공개되면 후포·구룡포 등 동해선 항구로 그대로 옮겨져, 경북 동해안 겨울 관광의 공통 상품 틀이 됩니다.</li>
+</ul>
+<div class="hd" style="margin-top:6px">○ 기존 사업과의 차별점</div>
+<table class="in">
+<tr><th style="width:30%">기존 사업</th><th>이 콘텐츠와 다른 점</th></tr>
+<tr><td>2026 동해선 철도 스탬프 투어 (경북문화관광공사, 5.13.~11.30., 포항·경주·영덕·울진 24곳)</td><td>스탬프 투어는 <b>낮에 역·관광지를 인증</b>하는 방식이고 운영 기간이 5~11월입니다. 이 콘텐츠는 <b>밤과 아침</b>, 그리고 스탬프 투어가 끝난 <b>12~5월</b>을 맡아 두 사업이 한 해를 나눠 씁니다.</td></tr>
+<tr><td>관광전용 열차 상품 「완벽한 기차여행」 (경북도, 2025.7. 이틀 운행 등)</td><td>전세 열차로 하루 날짜에만 운행. 이 콘텐츠는 <b>정기 열차를 그대로 쓰고</b> 대게철 매주 2회 출발합니다.</td></tr>
+<tr><td>영덕대게축제의 경매 행사 (3월 말 4일)</td><td>축제장 무대 행사. 이 콘텐츠는 <b>실제 위판장의 실제 경매</b>를 시즌 내내 보여 줍니다.</td></tr>
+</table>
+</td></tr>
+</tbody></table>
+<p class="src" style="margin-top:6px"><b>근거 자료</b><br>
+· 경북매일, 「붐비긴 했지만 머물진 않았다…TK 관광의 불편한 성적표」, 2026.7.10. (한국관광데이터랩 분석) — https://kbmaeil.com/article/20260709500236<br>
+· 경북매일, 「경주 올해 관광객 3천600만명… 20대 ‘최다’」, 2023.10.25. — https://kbmaeil.com/article/202310240374821<br>
+· 경북매일, 「영덕대게 5개월 금어기 마치고 첫 위판」, 2025.11.5. — https://kbmaeil.com/article/20251104500197<br>
+· 경북매일, 「온전히 연결된 동해선, 남은 문제는 ‘관광 인프라’ 만들기」, 2025.6.23. — https://kbmaeil.com/article/20250618500595<br>
+· 헤럴드경제, 「경북문화관광공사, 동해선철도 스탬프 투어 호응 얻어」, 2026.6.16. — https://www.heraldk.com/article/2026061614275676183<br>
+· 경북매일, 「먹고, 마시고, 관광 즐기고 동해선 ‘관광열차’ 달린다」, 2025.7.7. — https://kbmaeil.com/article/20250706500458<br>
+· 매일신문, 강구항 대게 경매(오전 8시 30분 수협 위판장) 소개 기사, 2007.1. — https://www.imaeil.com/page/view/2007011816211020107 (현행 위판 시각은 당일 입항에 따라 다르며 수협 확인 필요)<br>
+· 열차 시각: 공개 시간표 집계(2026.11.7. 운행 기준) — https://info.koreacharts.com/traintime/10021/10307/contents.html , https://info.koreacharts.com/traintime/10307/10021/contents.html<br>
+· 일출 시각: 영덕(북위 36.35°, 동경 129.39°) 천문 계산값(제안자 계산, 추정). 이동 시간·운임 일부와 1인 비용 구성은 제안자 추정.</p>
+"""
+
+
+def form_privacy():
+    m = ME
+    return f"""
+<div class="pb"></div>
+<div class="tag">붙임3</div>
+<h1 class="t">개인정보 수집·이용 동의서</h1>
+<p style="text-align:center;font-weight:700;font-size:11pt">【개인정보 수집·이용에 관한 동의서】</p>
+<p>&nbsp;2026 경북 관광자원 혁신 콘텐츠 공모전 신청 및 선정 평가와 관련하여, 아래의 내용과 같이 본인의 개인정보를 수집·이용하는 것에 동의합니다.</p>
+<div style="border:1px solid #000;padding:12px 16px;margin:10px 0;line-height:1.8">
+<p><b>1. 개인정보 수집·이용 목적</b><br>&nbsp;&nbsp;&nbsp;2026 경북 관광자원 혁신 콘텐츠 공모전 참가 접수, 심사, 일정·결과 안내, 시상 및 제출작의 권리관계 확인을 위해 수집·이용함.</p>
+<p><b>2. 개인정보 수집 항목</b><br>&nbsp;&nbsp;&nbsp;신청서에 기재된 성명, 생년월일, 전화번호, 전자우편, 주소, 소속, 서명 및 제출작의 저작자·권리자 성명</p>
+<p><b>3. 개인정보 보유·이용 기간</b><br>&nbsp;&nbsp;참가 신청 접수일부터 1년으로 함. 보유기간 경과 또는 처리목적 달성 시 종이 문서는 분쇄하고, 전자파일은 복구 불가능한 방법으로 파기함. 다만, 법령상 보존 의무가 있는 자료는 해당 기간 동안 보관함.</p>
+<p><b>4. 동의 거부 권리 및 불이익</b><br>&nbsp;&nbsp;신청자는 개인정보 수집·이용에 대한 동의를 거부할 권리를 보유함. 다만, 필수 개인정보 수집·이용에 동의하지 않을 경우 참가 접수 및 심사가 제한됨.</p>
+<p>&nbsp;※ 수집이용자 :경상북도문화관광공사 (담당부서 : 경북관광기업지원센터)</p>
+</div>
+<p style="text-align:center;font-size:11pt;margin-top:20px">위와 같이 개인정보 수집·이용에 동의합니다.</p>
+<div class="date">{m['y']}년 &nbsp;{m['m']}월 &nbsp;{m['d']}일</div>
+<div style="margin-left:34%;font-size:11pt;line-height:2.5">
+개인정보 수집·이용 동의자 &nbsp; 소 &nbsp;&nbsp;&nbsp;속 : {m['job']} (개인 참가)<br>
+<span style="margin-left:178px">성 &nbsp;&nbsp;&nbsp;명 : <b>{m['name']}</b> &nbsp;&nbsp;{sign('(서명 또는 날인)')}</span><br>
+<span style="margin-left:178px">생년월일 : {m['birth']}</span></div>
+<div class="to">경상북도문화관광공사 사장 귀하</div>
+<p class="small" style="margin-top:14px">※ 서명(날인) 스캔본 후 첨부</p>
+"""
+
+
+def form_pledge():
+    m = ME
+    items = [
+        "공모전의 원활한 운영에 협조하고 제출기한과 심사 절차를 준수하며, 운영 여건에 따라 일정·장소·프로그램이 변경될 수 있음을 확인한다.",
+        "심사와 행사에 성실히 참여하고 심사 결과를 존중하며, 사전협의 없는 불참 시 공고문에 명시된 불이익이 적용될 수 있음을 확인한다.",
+        "제출내용이 사실임을 확인하며, 허위 기재·표절·도용 등 공고문에 명시된 사유가 확인된 경우 선정 취소 및 상금·상장 환수 조치에 따른다.",
+        "제출자료에 대한 적법한 이용 권한을 확인하고, 본인의 귀책사유로 발생한 제3자 권리 침해에 대한 책임을 부담하며, 공동권리자·제3자 자료의 이용조건 및 공개 제한사항을 사전에 알린다.",
+        "공고문에 명시된 목적·매체·기간 및 이용 범위에 한하여 행사 촬영과 수상작·사진 등의 홈페이지·언론·SNS 홍보 활용에 동의한다.",
+        "응모작의 권리는 응모자에게 귀속되며, 수상작의 저작재산권 및 2차적저작물작성권의 양도 또는 이용허락 여부·범위·대가 등은 수상 후 자유로운 의사에 따른 별도 서면 계약으로 정한다. 저작인격권은 양도 대상에서 제외하며, 본 서약서는 해당 계약을 대신하지 않는다.",
+        "별도 계약으로 공개에 합의한 자료에 한하여 개인정보 등을 제거하고 합의된 범위에서 정리하여 ‘경북 관광기업 지원센터 홈페이지’에 열람·다운로드가 가능하도록 공개하며, 자료 정리에 협조한다. 저작자 표시와 자료의 편집·변경은 별도 합의에 따른다.",
+        "공개 콘텐츠의 기업 등 제3자에 의한 상업적·공익적 이용과 수정·재배포 등은 별도 계약으로 허용한 범위 및 이를 반영한 이용약관에 따른다.",
+        "본 공모전은 수상 아이디어와 콘텐츠를 누구나 활용할 수 있도록 공개하는 것을 목적으로 하며, 공개 대상과 제3자의 이용 범위·조건은 수상 후 별도 서면 계약으로 정한다.",
+    ]
+    lis = "".join(f'<p style="padding-left:16px;text-indent:-16px">{i}. {t}</p>' for i, t in enumerate(items, 1))
+    return f"""
+<div class="pb"></div>
+<div class="tag">붙임4</div>
+<h1 class="t">서약서</h1>
+<p class="small">※ 서명(날인) 스캔 후 첨부</p>
+<p style="text-align:center;font-weight:700;font-size:11pt;margin:10px 0">【2026 경북 관광자원 혁신 콘텐츠 공모전 참가 서약서】</p>
+<p>『2026 경북 관광자원 혁신 콘텐츠 공모전』을 신청함에 있어 다음 각 호의 사항을 준수할 것을 서약합니다.</p>
+<div style="line-height:1.75;margin:8px 0">{lis}</div>
+<p style="text-align:center;font-size:11pt;margin-top:16px;line-height:1.9">참가자는 위의 내용을 충분히 숙지하였으며,<br>2026 경북 관광자원 혁신 콘텐츠 공모전 참가 서약의 내용을 준수하겠습니다.</p>
+<div class="date">{m['y']}년 &nbsp;{m['m']}월 &nbsp;{m['d']}일</div>
+<p style="text-align:right;margin-right:70px;font-size:11pt">참가자 &nbsp;&nbsp;<b>{m['name']}</b> &nbsp;&nbsp;{sign('(서명 또는 날인)')}</p>
+<div class="to">경상북도문화관광공사 사장 귀하</div>
+"""
+
+
+def all_forms():
+    return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>참가신청서류</title><style>{CSS}</style></head><body>
+{form_apply()}{plan()}{form_privacy()}{form_pledge()}
+</body></html>"""
+
+
+# ---------- 발표자료 ----------
+def slides():
+    css = """
+@page { size:297mm 167mm; margin:0; }
+* { -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; }
+body { margin:0; font-family:'Malgun Gothic',sans-serif; color:#111; }
+.s { width:297mm; height:167mm; padding:14mm 18mm; page-break-after:always; position:relative; overflow:hidden; }
+.s:last-child { page-break-after:auto; }
+.k { color:#c8611d; font-weight:700; font-size:12pt; }
+h1 { font-size:25pt; margin:6px 0 10px; color:#173f5f; line-height:1.3; }
+h2 { font-size:19pt; margin:0 0 10px; color:#173f5f; }
+p, li { font-size:13pt; line-height:1.6; }
+ul { margin:6px 0 0 20px; padding:0; }
+.big { font-size:40pt; font-weight:800; color:#c8611d; }
+.row { display:flex; gap:12mm; }
+.card { flex:1; border:1.5px solid #173f5f; border-radius:8px; padding:8px 12px; }
+.card b { color:#173f5f; font-size:14pt; } .card p { font-size:13pt !important; }
+.foot { position:absolute; bottom:8mm; left:18mm; font-size:9pt; color:#777; }
+.cover { background:#173f5f; color:#fff; }
+.cover h1 { color:#fff; font-size:34pt; margin-top:22mm; }
+.cover p { font-size:15pt; opacity:.9; }
+"""
+    foot = '<div class="foot">2026 경북 로컬 관광자원 혁신 콘텐츠 공모전 · 로컬기반 관광코스 · 제안자 박용진</div>'
+    return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>발표자료</title><style>{css}</style></head><body>
+<div class="s cover"><div class="k" style="color:#f2b48a">로컬기반 관광코스</div><h1>{NAME}</h1><p>{SUBTITLE}</p><p style="margin-top:18mm;font-size:12pt">제안자 박용진 · 2026. 11.</p></div>
+
+<div class="s"><div class="k">1. 문제</div><h2>경북 관광객은 늘었는데, 머무는 시간은 줄었다</h2>
+<div class="row" style="margin-top:6mm">
+<div class="card"><div class="big">50.4%</div><p>경북 유입 방문객 중<br>대구에서 온 비율</p></div>
+<div class="card"><div class="big">−1.6%</div><p>방문객 +5.1%인데<br>평균 체류시간은 감소</p></div>
+<div class="card"><div class="big">15.5%</div><p>경주 방문객 중<br>1박 이상 숙박객</p></div></div>
+<p style="margin-top:6mm">→ 경북 관광의 절반은 <b>1시간 거리 자가용 당일 나들이</b>. 오전 늦게 와서 해 지기 전에 돌아갑니다.</p>
+<div class="foot">출처: 한국관광데이터랩(경북매일 2026.7.10.), 경북매일 2023.10.25. · 제안자 박용진</div></div>
+
+<div class="s"><div class="k">2. 통찰</div><h2>영덕에서 가장 영덕다운 장면은 오전 9시 전에 끝난다</h2>
+{fig_timeline()}
+<p>바다 위 일출(07:30 전후)과 강구항 위판장의 대게 경매(08시대) — <b>자고 간 사람만 볼 수 있습니다.</b></p>{foot}</div>
+
+<div class="s"><div class="k">3. 왜 겨울인가, 왜 동해선인가</div><h2>대게철에만 ‘일출 → 경매’가 한 아침에 이어진다</h2>
+<div style="width:72%">{fig_season()}</div>
+<p>· 2025.1. 동해선 전 구간 개통 → 자가용 없이 오는 손님이 처음 생김(첫 달 18만 명)<br>· 저녁 열차로 온 손님은 돌아갈 차가 없어 <b>잘 수밖에 없는 손님</b></p>{foot}</div>
+
+<div class="s"><div class="k">4. 상품</div><h2>역에서 역까지 15시간 30분</h2>
+<div class="row">
+<div class="card"><b>장치 ① 열차 시각 1박</b><p style="font-size:11.5pt">18:11 영덕역 → 강구항 숙소 → 다음날 11:43 열차. 열차표는 여행자가, 그 사이는 상품이.</p></div>
+<div class="card"><b>장치 ② 전날 밤 경매 안내</b><p style="font-size:11.5pt">수협 협약으로 21시에 다음날 위판 예정 시각 안내. 출항 못 한 날은 대체 일정+환급.</p></div>
+<div class="card"><b>장치 ③ 6인 합석 대게상</b><p style="font-size:11.5pt">마리 단위 시가 대게를 6인이 나눠 1~2인 여행자도 진입. 해설자가 ‘내일 볼 것’ 설명.</p></div></div>
+<p style="margin-top:5mm">첫 달 시범: 2026.12. 토요일 2회 × 8명 — 동해선 스탬프 투어(11.30. 종료) 참여자에게 우선 안내</p>{foot}</div>
+
+<div class="s"><div class="k">5. 숫자</div><h2>사업화 1년: 1,088명 · 매출 1억 5,123만 원</h2>
+<ul><li>정기 출발 금·토 60회 × 평균 10명 = 600명</li><li>평일 단체 28회 × 14명 = 392명</li><li>축제·연말연시 특별편 12회 × 8명 = 96명</li>
+<li>1인 13만 9천 원(숙박·저녁·아침·차량·해설, 열차 별도) → 지역 업체 지급분 약 1억 3천만 원</li></ul>
+<p style="margin-top:4mm"><b>확장:</b> 같은 순서를 울진 후포항·포항 구룡포로 — ‘동해선 아침 항구’ 시리즈. 스탬프 투어(5~11월)와 한 해를 나눠 씁니다.</p>
+<div class="foot">인원·금액은 제안자 추정(산정 근거는 실행계획서) · 제안자 박용진</div></div>
+</body></html>"""
+
+
+def pdf(html, name):
+    src = BUILD / (name + ".html")
+    src.write_text(html, encoding="utf-8")
+    out = OUT / (name + ".pdf")
+    prof = Path(tempfile.mkdtemp(prefix="chrome_gb_"))
+    try:
+        subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--no-pdf-header-footer",
+                        f"--user-data-dir={prof}", f"--print-to-pdf={out}", src.as_uri()], capture_output=True, timeout=120)
+        time.sleep(1)
+    finally:
+        shutil.rmtree(prof, ignore_errors=True)
+    print(out, out.exists())
+
+
+if __name__ == "__main__":
+    pdf(all_forms(), "박용진_아침9시전의영덕_참가신청서류")
+    pdf(slides(), "박용진_아침9시전의영덕_발표자료")
