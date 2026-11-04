@@ -1,0 +1,39 @@
+{
+  "width": 1088,
+  "height": 1360,
+  "style": "photorealistic editorial photograph, warm cinematic lighting, shallow depth of field, fine detail, natural skin, 35mm lens, soft rising steam. The rice container is a generic plain white microwaveable instant-rice bowl with a plain matte red film lid, absolutely no text, no logo, no label, no brand marks anywhere. Leave the top-left corner and the bottom third of the frame relatively empty and calm.",
+  "cuts": [
+    {
+      "n": 1,
+      "seed": 3010101,
+      "title": "온기 통화",
+      "sub": "김 한 줄기로 이어지는 안부",
+      "ko": "새벽, 불 꺼진 좁은 서울 원룸. 청년이 갓 데운 즉석밥 용기 뚜껑을 열자 김이 피어오르고, 그 김 속에 시골 부엌의 따뜻한 풍경이 홀로그램처럼 비친다.",
+      "en": "A young Korean man sits at a small table in a dim studio apartment at dawn, opening the lid of a plain white instant rice bowl; the rising steam glows amber and forms a soft holographic window showing a warm countryside kitchen in miniature."
+    },
+    {
+      "n": 2,
+      "seed": 3010202,
+      "title": "온기 통화",
+      "sub": "같은 시각, 시골 부엌",
+      "ko": "시골집 부엌. 어르신이 같은 모양의 용기를 열자 김 속에 도시 원룸의 청년이 작게 보인다. 두 김이 창가에서 하나로 이어진다.",
+      "en": "A warm old Korean farmhouse kitchen in morning light; an elderly woman opens a plain white instant rice bowl, its steam curls and merges with a thin glowing thread of steam traveling out the window toward a distant city skyline."
+    },
+    {
+      "n": 3,
+      "seed": 3010303,
+      "title": "온기 통화",
+      "sub": "지구 밖에서도",
+      "ko": "우주정거장 창가. 우주인이 용기를 열자 김이 무중력 속에서 둥글게 떠올라 창밖 지구와 고향의 불빛을 감싼다.",
+      "en": "Inside a clean near-future space station cupola, an astronaut opens a plain white instant rice bowl; steam floats in zero gravity as a luminous soft cloud, framing planet Earth and city lights through the window."
+    },
+    {
+      "n": 4,
+      "seed": 3010404,
+      "title": "온기 통화",
+      "sub": "30년, 아직 따뜻한 안부",
+      "ko": "마무리 컷. 어두운 하늘 위 도시·시골·바다·우주 곳곳의 창문에서 올라온 따뜻한 김 줄기들이 하나의 큰 곡선으로 이어진다.",
+      "en": "Wide dreamy night scene: many tiny lit windows of a city, a village, a ship and a space station each release a thin ribbon of warm steam that rises and weaves together into one large glowing golden curve across a deep blue sky, no text."
+    }
+  ]
+}
