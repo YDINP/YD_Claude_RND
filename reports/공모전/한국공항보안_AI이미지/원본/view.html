@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+    <meta name="format-detection" content="telephone=no, address=no, email=no, date=no">
+
+    <!-- meta -->
+    <meta name="title" content="한국공항보안(주)">
+    <meta name="publisher" content="한국공항보안(주)">
+    <meta name="author" content="한국공항보안(주)">
+    <meta name="keywords" content="한국공항보안(주)">
+    <meta name="Description" content="안전한 하늘길을 여는 항공보안 전문기업입니다.">
+    <meta name="robots" content="index,follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="한국공항보안(주)">
+    <meta property="og:description" content="안전한 하늘길을 여는 항공보안 전문기업입니다.">
+    <meta property="og:url" content="https://airsecure.co.kr/">
+    <meta property="og:image" content="https://airsecure.co.kr/images/sns_link_20260812.png">
+    <title>한국공항보안(주)</title>
+
+    <!-- ico -->
+    <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico">
+
+    <!-- fonts -->
+<!--    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fonts-archive/Pretendard/Pretendard.css"/>-->
+
+    <!-- css -->
+    <link rel="stylesheet" href="/common/plugins/swiper/swiper-bundle.min.css">
+    <link rel="stylesheet" href="/common/plugins/fullPage/dist/fullpage.css">
+    <link rel="stylesheet" href="/common/css/modle.css">
+    <link rel="stylesheet" href="/common/css/style.css">
+<script nonce="f4ae27d2011bbc35864754c527d861d6">
+function replaceTitleWithGuideText() {
+    let retryCount = 0;
+    const maxRetry = 3;
+
+    function tryReplace() {
+        retryCount++;
+
+        const selectedLi = document.querySelector('.header .gnb > ul > li.on');
+        if (selectedLi) {
+            const firstA = selectedLi.querySelector('a'); 
+            if (firstA) {
+                firstA.setAttribute('title', '현재 페이지');
+            }
+        }
+        const guide = document.querySelector('.guide');
+        const t1 = guide?.querySelector('.t1')?.textContent?.trim() || '';
+        const t2 = guide?.querySelector('.t2')?.textContent?.trim() || '';
+        const modleViewFt = document.querySelector('.modle_view .ft')?.textContent?.trim() || '';
+        const subMenuOn = document.querySelector('.modle_sub_menu a.on');
+        const subMenuText = subMenuOn?.querySelector('p')?.textContent?.trim() || '';
+        const subMenuMinOn = document.querySelector('.modle_sub_menu_min a.on');
+        const subMenuMinText = subMenuMinOn?.textContent?.trim() || '';
+        if (guide && (t1 || t2)) {
+            let newTitle = `한국공항보안(주) - ${t1} - ${t2}`;
+            if (subMenuText) {
+                newTitle += ` - ${subMenuText}`;
+            }
+            if (subMenuMinText) {
+                newTitle += ` - ${subMenuMinText}`;
+            }
+            if (modleViewFt) {
+                newTitle += ` - ${modleViewFt} 상세보기 페이지`;
+            }
+            
+            document.title = newTitle;
+            return;
+        }
+        if (retryCount < maxRetry) {
+            setTimeout(tryReplace, 500);
+        } else {
+            //console.log('');
+        }
+    }
+
+    tryReplace();
+}
+if (document.readyState === 'complete') {
+    replaceTitleWithGuideText();
+} else {
+    window.addEventListener('load', replaceTitleWithGuideText);
+}
+</script>
+<script nonce="f4ae27d2011bbc35864754c527d861d6">
+(function(){
+    // 현재 페이지 title 속성을 설정하는 핵심 함수
+    function setCurrentTitle(){
+        let retryCount = 0; // 재시도 횟수 초기화
+        const maxRetry = 3; // 최대 재시도 횟수
+        
+        // title 설정을 시도하는 내부 함수
+        function trySet(){
+            retryCount++; // 재시도 횟수 증가
+            
+            // title을 설정해야 할 대상 요소 선택자 목록 (기존 + 신규 추가)
+            const selectors = [
+                '.header .gnb > ul > li.on',
+                '.header .gnb > ul > li > ul li.on',
+                '.sub_visual .sub_gnb ul li.on', // 신규 추가: 서브 비주얼 GNB 활성화 li
+                '.modle_sub_menu a.on'          // 신규 추가: 모델 서브 메뉴 활성화 a
+            ];
+            
+            // 활성화(.on)된 요소에 "현재 페이지" title 속성 설정
+            selectors.forEach(selector => {
+                const selectedElement = document.querySelector(selector);
+                if(selectedElement){
+                    // LI 태그는 내부 a 태그를 찾고, 그 외(예: a 태그)는 자기 자신을 대상으로 함
+                    const targetA = selectedElement.tagName === 'LI' 
+                        ? selectedElement.querySelector('a') 
+                        : selectedElement;
+                    
+                    if(targetA) targetA.setAttribute('title', '현재 페이지'); // title 속성 추가/설정
+                }
+            });
+
+            // title 속성을 제거해야 할 모든 대상 요소 (기존 + 신규 추가)
+            const allTargetElements = document.querySelectorAll(
+                '.header .gnb > ul > li, .header .gnb > ul > li > ul li, ' +
+                '.sub_visual .sub_gnb ul li, .modle_sub_menu a'
+            );
+            
+            // 비활성화(.on 없음) 요소의 title 속성 제거 (요소 자체 삭제 아님!)
+            allTargetElements.forEach(element => {
+                if(!element.classList.contains('on')){
+                    const targetA = element.tagName === 'LI' 
+                        ? element.querySelector('a') 
+                        : element;
+                    
+                    if(targetA) targetA.removeAttribute('title'); // title 속성만 제거, 요소 삭제 아님
+                }
+            });
+
+            // title이 설정되지 않았고 최대 재시도 횟수에 도달하지 않은 경우 300ms 후 재시도
+            if(retryCount < maxRetry && !document.querySelector('[title="현재 페이지"]')){
+                setTimeout(trySet, 300);
+            }
+        }
+        
+        trySet(); // 최초 title 설정 시도
+    }
+
+    // 페이지 로드 완료 여부에 따라 함수 실행 (로드 완료되면 즉시, 아니면 load 이벤트 대기)
+    if(document.readyState === 'complete'){
+        setCurrentTitle();
+    }else{
+        window.addEventListener('load', setCurrentTitle);
+    }
+})();
+(function(){
+    function replaceElements() {
+        document.querySelectorAll('div.sub_title').forEach(div => {
+            const h2 = document.createElement('h2');
+            Array.from(div.attributes).forEach(attr => h2.setAttribute(attr.name, attr.value));
+            h2.innerHTML = div.innerHTML;
+            div.parentNode.replaceChild(h2, div);
+        });
+
+        document.querySelectorAll('.sub_visual .tit').forEach(el => {
+            const h1 = document.createElement('h1');
+            Array.from(el.attributes).forEach(attr => h1.setAttribute(attr.name, attr.value));
+            h1.innerHTML = el.innerHTML;
+            el.parentNode.replaceChild(h1, el);
+        });
+
+
+        document.querySelectorAll('.sub_visual .tit2').forEach(el => {
+            const h1 = document.createElement('h1');
+            Array.from(el.attributes).forEach(attr => h1.setAttribute(attr.name, attr.value));
+            h1.innerHTML = el.innerHTML;
+            el.parentNode.replaceChild(h1, el);
+        });
+    }
+
+    if (document.readyState === 'complete') {
+        replaceElements();
+    } else {
+        window.addEventListener('load', replaceElements);
+    }
+})();
+</script>
+    <!-- jquery -->
+    <script src="/common/js/jquery-3.7.1.min.js"></script>
+    <script src="/common/plugins/swiper/swiper-bundle.min.js"></script>
+    <script src="/common/plugins/fullPage/dist/fullpage.min.js"></script>
+    <script src="/common/js/script.js"></script>
+
+    <script nonce="f4ae27d2011bbc35864754c527d861d6">
+    // 기존 링크 DOM을 유지하면서 CSP가 javascript: URL을 평가하지 않도록 기본 동작만 대체합니다.
+    document.addEventListener('click', function (event) {
+        var link = event.target;
+        while (link && link !== document && link.tagName !== 'A') {
+            link = link.parentNode;
+        }
+
+        if (!link || link.tagName !== 'A') {
+            return;
+        }
+
+        var href = link.getAttribute('href') || '';
+        if (/^javascript:\s*void\s*\(\s*0\s*\)\s*;?\s*$/i.test(href)) {
+            event.preventDefault();
+            return;
+        }
+
+        if (/^javascript:\s*history\.go\s*\(\s*-1\s*\)\s*;?\s*$/i.test(href) && !event.defaultPrevented) {
+            event.preventDefault();
+            window.history.go(-1);
+        }
+    }, false);
+    </script>
+</head>
+<body class="modle_scrollbar">
+
+<!-- 2025-12-18 최상단에 a태그 추가 상단으로가기 버튼 클릭시 여기로 포커스가 이동 -->
+<a id="top-focus" tabindex="-1"></a>
+
+<div id="skipNavigation" title="스킵내비게이션">
+	<a href="#contents">본문내용 바로가기</a>
+	<a href="#gnb">주메뉴 바로가기</a>
+</div>
+<div class="modle_popup_main" style="display:none;"><!-- 20251226 -->
+    <div class="inner">
+        <div class="ft">
+            <div class="rolling">
+                <div class="swiper-wrapper">
+                                        <div class="swiper-slide"><a href="" tabindex="-1"><img src="/images/popup01.png" alt="팝업이미지"></a></div>
+                    <div class="swiper-slide"><a href="" tabindex="-1"><img src="/images/popup02.png" alt="팝업이미지"></a></div>
+                    <div class="swiper-slide"><a href="" tabindex="-1"><img src="/images/popup01.png" alt="팝업이미지"></a></div>
+                    <div class="swiper-slide"><a href="" tabindex="-1"><img src="/images/popup02.png" alt="팝업이미지"></a></div>
+                </div>
+            </div>
+                        <div class="modle_popup_main_prev modle_hover" tabindex="-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512"><g data-name="01 align center"><path d="M16.752,23.994,6.879,14.121a3,3,0,0,1,0-4.242L16.746.012,18.16,1.426,8.293,11.293a1,1,0,0,0,0,1.414l9.873,9.873Z"></path></g></svg>
+            </div>
+            <div class="modle_popup_main_next modle_hover" tabindex="-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512"><g data-name="01 align center"><path d="M7.412,24,6,22.588l9.881-9.881a1,1,0,0,0,0-1.414L6.017,1.431,7.431.017l9.862,9.862a3,3,0,0,1,0,4.242Z"></path></g></svg>
+            </div>
+        </div>
+        <div class="fb">
+                        <div class="check modle_toggle_btn" tabindex="-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512"><path d="M22.319,4.431,8.5,18.249a1,1,0,0,1-1.417,0L1.739,12.9a1,1,0,0,0-1.417,0h0a1,1,0,0,0,0,1.417l5.346,5.345a3.008,3.008,0,0,0,4.25,0L23.736,5.847a1,1,0,0,0,0-1.416h0A1,1,0,0,0,22.319,4.431Z"></path></svg>
+                <p>오늘하루 보지않기</p>
+            </div>
+            <div class="modle_popup_main_page"></div>
+                        <div class="close modle_hover" tabindex="-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512"><path d="M23.707.293h0a1,1,0,0,0-1.414,0L12,10.586,1.707.293a1,1,0,0,0-1.414,0h0a1,1,0,0,0,0,1.414L10.586,12,.293,22.293a1,1,0,0,0,0,1.414h0a1,1,0,0,0,1.414,0L12,13.414,22.293,23.707a1,1,0,0,0,1.414,0h0a1,1,0,0,0,0-1.414L13.414,12,23.707,1.707A1,1,0,0,0,23.707.293Z"/></svg>
+                <p>Close</p>
+            </div>
+        </div>
+    </div>
+</div><div class="header" role="banner">
+    <a class="logo modle_hover" href="/index.php" >
+        <img class="white" src="/images/logo_kr_white.svg" alt="한국공항보안 홈으로 이동">
+        <img class="color" src="/images/logo_kr.svg" alt="한국공항보안 홈으로 이동">
+    </a>
+    <div class="gnb" role="navigation" aria-label="주요 메뉴">
+        <ul>
+            <li>
+                <a class="modle_hover" href="/contents/company_management.php" aria-controls="header-submenu-company" role="button" id="gnb">
+                    <p>회사소개</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512">
+                        <title>하위 메뉴 표시</title>
+                        <g data-name="01 align center"><path d="M22.586,5.929l-9.879,9.879a1.021,1.021,0,0,1-1.414,0L1.42,5.934.006,7.348l9.873,9.874a3.075,3.075,0,0,0,4.243,0L24,7.343Z"></path></g>
+                    </svg>
+                </a>
+                <ul id="header-submenu-company" role="group" aria-label="회사소개 하위 메뉴">
+                    <li hidden><a class="modle_hover" href="/contents/company_ceo.php">CEO인사말</a></li>
+                    <li><a class="modle_hover" href="/contents/company_management.php">경영전략</a></li>
+                    <li><a class="modle_hover" href="/contents/company_history.php">연혁</a></li>
+                    <li><a class="modle_hover" href="/contents/company_ci.php">사명/CI/캐릭터</a></li>
+                    <li><a class="modle_hover" href="/contents/company_organization.php">조직도</a></li>
+                </ul>
+            </li>
+            <li>
+                <a class="modle_hover" href="/contents/management_disclosure.php" aria-controls="header-submenu-management" role="button">
+                    <p>열린경영</p>
+                    </a>
+                <ul id="header-submenu-management" role="group" aria-label="열린경영 하위 메뉴">
+                    <li><a class="modle_hover" href="/contents/management_disclosure.php">경영공시</a></li>
+                    <li><a class="modle_hover" href="/contents/management_contract.php">계약정보</a></li>
+                </ul>
+            </li>
+            <li>
+                <a class="modle_hover" href="/contents/sustainability_esg.php" aria-controls="header-submenu-sustain" role="button">
+                    <p>지속가능경영</p>
+                    </a>
+                <ul id="header-submenu-sustain" role="group" aria-label="지속가능경영 하위 메뉴">
+                    <li><a class="modle_hover" href="/contents/sustainability_esg.php">ESG경영</a></li>
+                    <li><a class="modle_hover" href="/contents/sustainability_safety.php">안전보건경영</a></li>
+                    <li><a class="modle_hover" href="/contents/sustainability_human_rights.php">인권경영</a></li>
+                    <li><a class="modle_hover" href="/contents/sustainability_constitution.php">윤리헌장</a></li>
+                    <li><a class="modle_hover" href="/contents/sustainability_coe.php">윤리강령</a></li>
+                </ul>
+            </li>
+            <li>
+                <a class="modle_hover" href="/contents/recruit_guide.php" aria-controls="header-submenu-recruit" role="button">
+                    <p>인재채용</p>
+                    </a>
+                <ul id="header-submenu-recruit" role="group" aria-label="인재채용 하위 메뉴">
+                    <li><a class="modle_hover" href="/contents/recruit_guide.php">채용안내</a></li>
+                    <li><a class="modle_hover" href="/contents/recruit_notice.php">채용공고</a></li>
+                    <li><a class="modle_hover" href="/contents/recruit_curriculum.php">교육과정</a></li>
+                    <li><a class="modle_hover" href="/contents/recruit_welfare.php">복리후생</a></li>
+                </ul>
+            </li>
+            <li>
+                <a class="modle_hover" href="/contents/community_news.php" aria-controls="header-submenu-community" role="button">
+                    <p>홍보센터</p>
+                    </a>
+                <ul id="header-submenu-community" role="group" aria-label="홍보센터 하위 메뉴">
+                    <li><a class="modle_hover" href="/contents/community_news.php">보도자료</a></li>
+                    <li><a class="modle_hover" href="/contents/community_kasc.php">KASC소식</a></li>
+                </ul>
+            </li>
+            <li>
+                <a class="modle_hover" target="_blank" href="https://www.kbei.org/whistle/center/01/s_2.php?code=ASP" title="KASC신문고 새 창 열림">
+                    <p>KASC신문고</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512">
+                        <title>외부 링크 표시</title>
+                        <g data-name="01 align center"><path d="M22.586,5.929l-9.879,9.879a1.021,1.021,0,0,1-1.414,0L1.42,5.934.006,7.348l9.873,9.874a3.075,3.075,0,0,0,4.243,0L24,7.343Z"></path></g>
+                    </svg>
+                </a>
+            </li>
+            <li>
+                <a class="modle_hover" href="/contents/contact_location.php" aria-controls="header-submenu-contact" role="button">
+                    <p>고객지원</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512">
+                        <title>하위 메뉴 표시</title>
+                        <g data-name="01 align center"><path d="M22.586,5.929l-9.879,9.879a1.021,1.021,0,0,1-1.414,0L1.42,5.934.006,7.348l9.873,9.874a3.075,3.075,0,0,0,4.243,0L24,7.343Z"></path></g>
+                    </svg>
+                </a>
+                <ul id="header-submenu-contact" role="group" aria-label="고객지원 하위 메뉴">
+                    <li><a class="modle_hover" href="/contents/contact_location.php">오시는 길</a></li>
+                    <li><a class="modle_hover" target="_blank" href="https://www.avsec365.or.kr" title="반입금지 품목안내 새 창 열림">반입금지 품목안내</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    <div class="fr">
+        <a class="search modle_hover" href="/contents/search.php" title="사이트 검색 페이지로 이동">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512"><title>검색 아이콘</title><g data-name="01 align center"><path d="M24,22.586l-6.262-6.262a10.016,10.016,0,1,0-1.414,1.414L22.586,24ZM10,18a8,8,0,1,1,8-8A8.009,8.009,0,0,1,10,18Z"></path></g></svg>
+        </a>
+    </div>
+</div>
+
+
+<a href="javascript:void(0)" class="full_menu_btn" tabindex="0" 
+   role="button" aria-label="전체 메뉴 열기">
+  <div class="icon modle_hover" aria-controls="full_menu_content">
+    <span></span><span></span><span></span>
+  </div>
+</a>
+
+<div class="full_menu" id="full_menu_content" aria-hidden="true">
+    <div class="inner">
+        <a class="logo modle_hover" href="/index.php"><img src="/images/logo_kr.svg" alt="한국공항보안 홈으로 이동"></a>
+        <div class="gnb modle_scrollbar" role="navigation" aria-label="전체 메뉴">
+            <ul>
+                <li>
+                    <div class="head modle_hover">
+                        <a href="#n" role="button" aria-controls="full-submenu-company">회사소개</a>
+                        </div>
+                    <ul id="full-submenu-company" role="group" aria-label="회사소개 하위 메뉴">
+                        <li hidden><a class="modle_hover" href="/contents/company_ceo.php">CEO 인사말</a></li>
+                        <li><a class="modle_hover" href="/contents/company_management.php">경영전략</a></li>
+                        <li><a class="modle_hover" href="/contents/company_history.php">연혁</a></li>
+                        <li><a class="modle_hover" href="/contents/company_ci.php">사명/CI/캐릭터</a></li>
+                        <li><a class="modle_hover" href="/contents/company_organization.php">조직도</a></li>
+                    </ul>
+                </li>
+				<li>
+					<div class="head modle_hover"><a href="javascript:void(0)" aria-controls="full-submenu-management" role="button">열린경영</a></div>
+					<ul id="full-submenu-management" role="group" aria-label="열린경영 하위 메뉴" style="">
+						<li><a class="modle_hover" href="/contents/management_disclosure.php">경영공시</a></li>
+						<li><a class="modle_hover" href="/contents/management_contract.php">계약정보</a></li>
+					</ul>
+				</li>
+				<li>
+					<div class="head modle_hover"><a href="javascript:void(0)" aria-controls="full-submenu-sustain" role="button">지속가능경영</a></div>
+					<ul id="full-submenu-sustain" role="group" aria-label="지속가능경영 하위 메뉴">
+						<li><a class="modle_hover" href="/contents/sustainability_esg.php">ESG경영</a></li>
+						<li><a class="modle_hover" href="/contents/sustainability_safety.php">안전보건경영</a></li>
+						<li><a class="modle_hover" href="/contents/sustainability_human_rights.php">인권경영</a></li>
+						<li><a class="modle_hover" href="/contents/sustainability_constitution.php">윤리헌장</a></li>
+						<li><a class="modle_hover" href="/contents/sustainability_coe.php">윤리강령</a></li>
+					</ul>
+				</li>
+				<li>
+					<div class="head modle_hover"><a href="javascript:void(0)" aria-controls="full-submenu-recruit" role="button">인재채용</a></div>
+					<ul id="full-submenu-recruit" role="group" aria-label="인재채용 하위 메뉴">
+						<li><a class="modle_hover" href="/contents/recruit_guide.php">채용안내</a></li>
+						<li><a class="modle_hover" href="/contents/recruit_notice.php">채용공고</a></li>
+						<li><a class="modle_hover" href="/contents/recruit_curriculum.php">교육과정</a></li>
+						<li><a class="modle_hover" href="/contents/recruit_welfare.php">복리후생</a></li>
+					</ul>
+				</li>
+				<li>
+					<div class="head modle_hover"><a href="javascript:void(0)" aria-controls="full-submenu-community" role="button">홍보센터</a></div>
+					<ul id="full-submenu-community" role="group" aria-label="홍보센터 하위 메뉴">
+						<li><a class="modle_hover" href="/contents/community_news.php">보도자료</a></li>
+						<li><a class="modle_hover" href="/contents/community_kasc.php">KASC소식</a></li>
+					</ul>
+				</li>
+                <li>
+                    <div class="head modle_hover">
+                        <a class="#n" target="_blank" href="https://www.kbei.org/whistle/center/01/s_2.php?code=ASP" title="KASC신문고 새 창 열림">
+                        KASC신문고</a>
+                        </div>
+                </li>
+                 <li>
+                    <div class="head modle_hover">
+                        <a href="#n" role="button" aria-controls="full-submenu-contact">고객지원</a>
+                        </div>
+                    <ul id="full-submenu-contact" role="group" aria-label="고객지원 하위 메뉴">
+                        <li><a class="modle_hover" href="/contents/contact_location.php">오시는 길</a></li>
+                        <li><a class="modle_hover" target="_blank" href="https://www.avsec365.or.kr" title="반입금지 품목안내 새 창 열림">반입금지 품목안내</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        </div>
+    <div class="close" tabindex="0" role="button" aria-label="전체 메뉴 닫기"></div>
+</div>
+<div id="contents"><div class="sub_visual modle_max">
+    <div class="modle_min">
+        <div class="tit"></div>
+<div class="guide">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-labelledby="svg-home-title" aria-label="홈" role="img" ><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M21 19v-6.733a4 4 0 0 0-1.245-2.9L13.378 3.31a2 2 0 0 0-2.755 0L4.245 9.367A4 4 0 0 0 3 12.267V19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2"/><path d="M9 15a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6H9z"/></g></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><title></title><path fill="currentColor" d="M765.7 486.8L314.9 134.7A7.97 7.97 0 0 0 302 141v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1l-360 281.1c-3.9 3-6.1 7.7-6.1 12.6V883c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1a31.96 31.96 0 0 0 0-50.4"/></svg>
+    <p class="t1"></p>
+    <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><title></title><path fill="currentColor" d="M765.7 486.8L314.9 134.7A7.97 7.97 0 0 0 302 141v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1l-360 281.1c-3.9 3-6.1 7.7-6.1 12.6V883c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1a31.96 31.96 0 0 0 0-50.4"/></svg>
+    <p class="t2"></p>
+</div><div class="sub_gnb">
+    <div class="head">
+        <p></p>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512"><g id="_01_align_center" data-name="01 align center"><path d="M22.586,5.929l-9.879,9.879a1.021,1.021,0,0,1-1.414,0L1.42,5.934.006,7.348l9.873,9.874a3.075,3.075,0,0,0,4.243,0L24,7.343Z"></path></g></svg>
+    </div>
+    <ul>
+        <li><a href="/contents/community_news.php">보도자료</a></li>
+        <li><a href="/contents/community_kasc.php">KASC소식</a></li>
+    </ul>
+</div>    </div>
+</div>
+<div class="modle_max sub">
+    <div class="modle_min">
+
+        <div class="sub_title">KASC소식</div>
+
+        <div class="modle_view">
+            <div class="head">
+                <div class="ft">2026 한국공항보안(주) AI 디지털 이미지 공모전</div>
+                <div class="fb">
+                    <div class="wrap"><p>등록일</p><font>2026.10.16 10:57:31</font></div>
+                    <div class="wrap"><p>조회</p><font>469</font></div>
+					                    <div class="wrap" style="display:none;">
+                        <p>첨부파일</p>
+						                        <a class="file modle_hover" href="/contents/download.php?file=202610%2F1792115851864720_file2.pdf&amp;name=%ED%95%9C%EA%B5%AD%EA%B3%B5%ED%95%AD%EB%B3%B4%EC%95%88+AI+%EB%94%94%EC%A7%80%ED%84%B8+%EC%9D%B4%EB%AF%B8%EC%A7%80+%EA%B3%B5%EB%AA%A8%EC%A0%84+%EA%B3%B5%EA%B3%A0%EB%AC%B8.pdf">
+                            <p>첨부1</p>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><title>File-text-outlined SVG Icon</title><path fill="currentColor" d="M854.6 288.6L639.4 73.4c-6-6-14.1-9.4-22.6-9.4H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V311.3c0-8.5-3.4-16.7-9.4-22.7M790.2 326H602V137.8zm1.8 562H232V136h302v216a42 42 0 0 0 42 42h216zM504 618H320c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8h184c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8M312 490v48c0 4.4 3.6 8 8 8h384c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H320c-4.4 0-8 3.6-8 8"/></svg>
+                        </a>
+						                                                <a class="file modle_hover" href="/contents/download.php?file=202610%2F1792115851864837_file3.hwpx&amp;name=%ED%95%9C%EA%B5%AD%EA%B3%B5%ED%95%AD%EB%B3%B4%EC%95%88+AI+%EA%B3%B5%EB%AA%A8%EC%A0%84+%EC%B0%B8%EA%B0%80%EC%8B%A0%EC%B2%AD%EC%84%9C%28%EA%B0%9C%EC%9D%B8%EC%A0%95%EB%B3%B4+%EC%88%98%EC%A7%91+%EC%9D%B4%EC%9A%A9+%EB%8F%99%EC%9D%98%EC%84%9C+%ED%8F%AC%ED%95%A8%29.hwpx">
+                            <p>첨부2</p>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><title>File-text-outlined SVG Icon</title><path fill="currentColor" d="M854.6 288.6L639.4 73.4c-6-6-14.1-9.4-22.6-9.4H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V311.3c0-8.5-3.4-16.7-9.4-22.7M790.2 326H602V137.8zm1.8 562H232V136h302v216a42 42 0 0 0 42 42h216zM504 618H320c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8h184c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8M312 490v48c0 4.4 3.6 8 8 8h384c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H320c-4.4 0-8 3.6-8 8"/></svg>
+                        </a>
+																		 
+
+                    </div>
+					                </div>
+
+								<div class="new_file">
+					
+
+										<div class="wrap">
+						<div class="tit">첨부파일</div>
+						<a href="/contents/download.php?file=202610%2F1792115851864720_file2.pdf&amp;name=%ED%95%9C%EA%B5%AD%EA%B3%B5%ED%95%AD%EB%B3%B4%EC%95%88+AI+%EB%94%94%EC%A7%80%ED%84%B8+%EC%9D%B4%EB%AF%B8%EC%A7%80+%EA%B3%B5%EB%AA%A8%EC%A0%84+%EA%B3%B5%EA%B3%A0%EB%AC%B8.pdf">
+							<p>한국공항보안 AI 디지털 이미지 공모전 공고문.pdf</p>
+						</a>
+					</div>
+										<div class="wrap">
+						<div class="tit">첨부파일</div>
+						<a href="/contents/download.php?file=202610%2F1792115851864837_file3.hwpx&amp;name=%ED%95%9C%EA%B5%AD%EA%B3%B5%ED%95%AD%EB%B3%B4%EC%95%88+AI+%EA%B3%B5%EB%AA%A8%EC%A0%84+%EC%B0%B8%EA%B0%80%EC%8B%A0%EC%B2%AD%EC%84%9C%28%EA%B0%9C%EC%9D%B8%EC%A0%95%EB%B3%B4+%EC%88%98%EC%A7%91+%EC%9D%B4%EC%9A%A9+%EB%8F%99%EC%9D%98%EC%84%9C+%ED%8F%AC%ED%95%A8%29.hwpx">
+							<p>한국공항보안 AI 공모전 참가신청서(개인정보 수집 이용 동의서 포함).hwpx</p>
+						</a>
+					</div>
+									</div>
+				            </div>
+            <div class="body">
+		<style nonce="f4ae27d2011bbc35864754c527d861d6">
+.pdf-wrap {
+    width: 100%;
+    height: 100vh; /* 화면 전체 높이 */
+	margin-bottom:10px;
+}
+
+.pdf-wrap iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+</style>
+				<!--					<div class="pdf-wrap">
+						<iframe src="/_goods_img/202610/1792115851864720_file2.pdf#pagemode=none"></iframe>
+					</div>
+				
+					
+				
+								-->
+                <p>
+                     <h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">2026년 한국공항보안 대국민 AI 디지털 이미지 공모전</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> </h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">□ 공모 개요</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">○ 주최기관: 한국공항보안(주)</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">○ 공모전명: 함께 지키는 하늘길 항공보안 문화 확산 대국민 AI콘텐츠 공모전</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">○ 공모기간: 2026. 10. 16.(목) ~ 11. 13.(금) (참여율 저조 시 연장될 수 있음)</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">○ 응모자격: 생성형 AI 기반 콘텐츠 제작에 관심 있는 대한민국 국민 누구나 (개인 참가, 1인 1작품 제한)</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""><br></h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">□ 공모 주제 (세부 주제 중 택1)</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">① 나로부터 시작되는 항공보안</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 국민의 항공보안 수칙 준수가 불러일으키는 안전한 여행길</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">② 안전은 더하고 불편은 빼는 스마트 항공보안</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 이용 편의를 높일 수 있는 창의적인 항공보안 절차 개선 아이디어와 미래상</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""><br></h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">□ 출품 조건 및 규격</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">○ 출품 조건</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 생성형 AI 기술이 콘텐츠의 전체 또는 일부에 필수 활용되어야 함</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 식별 가능한 위치에 AI 활용 고지 문구 및 AI 워터마크 필수 표기</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">   ※ (예시) "본 작품은 생성형 AI기술을 활용하여 제작되었음."</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">○ 작품 규격</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 작품 형식: 생성형 AI를 활용한 이미지 파일 (JPG, JPEG, PNG)</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 작품 규격: A3 사이즈 (420mm × 297mm), 해상도 300dpi 권장, 용량 10MB 이하</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">○ 심사 제외 및 제재 사항</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 공모전 접수 정보 기입 누락 작품</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 「항공보안법」 등 관련 규정상 보안 기밀 및 비공개 정보(보안시설 세부 도면, 미공개 출입·검색 절차 등) 포함 작품</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 제3자의 저작권, 초상권, 지적재산권 침해 또는 타인의 저작물 무단 도용 작품 (수상 취소 및 상금 환수)</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""><br></h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">□ 참가 방법</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">○ 참가 양식 작성 및 이메일 제출</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 양식 다운로드: 한국공항보안(주) 홈페이지('KASC 소식')</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">   ※ URL: <a href="https://airsecure.co.kr/contents/community_kasc.php" target="_blank" rel="noopener noreferrer">https://airsecure.co.kr/contents/community_kasc.php</a></h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 제출 서류: 참가신청서 1부, 개인정보 수집·이용 및 저작권 약관 동의서 1부, 작품 파일</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 제출 형태: 제출 서류 및 작품을 하나의 ZIP 파일로 압축하여 이메일 제출</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 접수처(이메일): contest@airsecure.co.kr</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""><br></h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">□ 공모 일정</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">○ 공모 접수: 2026. 10. 16.(목) ~ 2026. 11. 13.(금)</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">○ 작품 심사: 접수 마감 후 내부 심사 진행 (1차 10배수 선별 → 2차 최종 심사)</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">○ 결과 발표 및 시상: 발표 후 30일 이내 계좌 이체 방식으로 상금 지급 (현장 시상식 생략)</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">※ 상기 일정 및 세부 추진 내용은 주최 측 사정에 따라 변경될 수 있습니다.</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""><br></h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">□ 시상 내역 (총 12명 / 총 230만 원)</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 대상 (1명) : 상금 50만원</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 최우수상 (2명) : 상금 각 30만원</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 우수상 (3명) : 상금 각 20만원</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - 장려상 (6명) : 상금 각 10만원</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">※ 심사 결과에 따라 시상 작품 수가 조정되거나 수상작이 없을 수 있습니다.</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">※ 지급되는 상금은 관련 세법에 따라 제세공과금을 공제한 후 지급될 수 있습니다.</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">※ 수상작은 향후 주최 측의 홍보·캠페인·전시 및 인쇄물(달력, 카달로그 등) 제작에 활용될 수 있습니다.</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""><br></h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">□ 문의처</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"="">한국공항보안(주) 공모전 담당자</h1><h1 data-path-to-node="2,0" google="" sans",="" sans-serif="" !important;="" line-height:="" 1.15="" margin-top:="" 0px="" margin-left:="" margin-right:="" !important;"=""> - ✉ contest@airsecure.co.kr</h1>                </p>
+            </div>
+<div class="page">
+
+    <!-- 이전글 -->
+    <div class="wrap">
+        <p>이전글</p>
+        <div class="tit">
+		              <a href="/contents/readCount_k.php?no=87&amp;cp=1&amp;searchSelect=title&amp;sort=no&amp;rowsort=10">
+                 <!--<span>일반</span>-->
+                교섭요구 노동조합 확정 공고            </a>
+		       
+        </div>
+    </div>
+
+    <!-- 다음글 -->
+    <div class="wrap">
+        <p>다음글</p>
+        <div class="tit">
+                    <a href="/contents/readCount_k.php?no=89&amp;cp=1&amp;searchSelect=title&amp;sort=no&amp;rowsort=10" alt="2">
+                <!--<span>일반</span>-->
+                보안직무 교섭대표 노동조합 확정 공고            </a>
+                </div>
+    </div>
+
+</div>
+        </div>
+
+        <div class="modle_btn">
+            <a class="modle_hover" href="javascript:history.go(-1)"><p>리스트</p></a>
+        </div>
+
+    </div>
+</div>
+</div>
+
+<div class="footer">
+    <div class="rolling" aria-label="파트너사 로고 롤링 배너">
+	<div class="footer_visual_btn on">
+		<a id="footer_visual_start" class="modle_hover" role="button" href="javascript:void(0)" aria-label="슬라이드 재생">
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><title>재생 아이콘</title><path fill="currentColor" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.79 5.093A.5.5 0 0 0 6 5.5v5a.5.5 0 0 0 .79.407l3.5-2.5a.5.5 0 0 0 0-.814z"/></svg>
+		</a>
+		<a id="footer_visual_stop" class="modle_hover" role="button" href="javascript:void(0)" aria-label="슬라이드 정지">
+			<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><title>정지 아이콘</title><path fill="currentColor" d="M256 8C119 8 8 119 8 256s111 248 248 248s248-111 248-248S393 8 256 8m-16 328c0 8.8-7.2 16-16 16h-48c-8.8 0-16-7.2-16-16V176c0-8.8 7.2-16 16-16h48c8.8 0 16 7.2 16 16zm112 0c0 8.8-7.2 16-16 16h-48c-8.8 0-16-7.2-16-16V176c0-8.8 7.2-16 16-16h48c8.8 0 16 7.2 16 16z"/></svg>
+		</a>
+	</div>
+        <div class="swiper-wrapper">
+            <div class="swiper-slide"><a target="_blank" href="https://www.molit.go.kr/" title="국토교통부 새 창 열림" tabindex="0"><img src="/images/logo01.png" alt="국토교통부"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="https://www.airport.co.kr/" title="KAC한국공항공사 새 창 열림" tabindex="0"><img src="/images/logo02.png" alt="KAC한국공항공사"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="https://www.kacas.kr/" title="KAC공항서비스 새 창 열림" tabindex="0"><img src="/images/logo03.png" alt="KAC공항서비스"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="https://www.sairports.kr/" title="남부공항서비스 새 창 열림" tabindex="0"><img src="/images/logo04.png" alt="남부공항서비스"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="https://airportsc.kr/" title="인천국제공항 새 창 열림" tabindex="0"><img src="/images/logo05.png" alt="인천국제공항"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="http://kafas.or.kr/" title="한국보안학회 새 창 열림" tabindex="0"><img src="/images/logo06.png" alt="한국보안학회"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="http://www.kasa21.kr/main/" title="한공보안협회 새 창 열림" tabindex="0"><img src="/images/logo07.png" alt="대한민국 한공보안협회"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="https://www.ksan.or.kr/" title="한국경비협회 새 창 열림" tabindex="0"><img src="/images/logo08.png" alt="한국경비협회"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="https://www.molit.go.kr/" title="국토교통부 새 창 열림" tabindex="0"><img src="/images/logo01.png" alt="국토교통부"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="https://www.airport.co.kr/" title="KAC한국공항공사 새 창 열림" tabindex="0"><img src="/images/logo02.png" alt="KAC한국공항공사"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="https://www.kacas.kr/" title="KAC공항서비스 새 창 열림" tabindex="0"><img src="/images/logo03.png" alt="KAC공항서비스"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="https://www.sairports.kr/" title="남부공항서비스 새 창 열림" tabindex="0"><img src="/images/logo04.png" alt="남부공항서비스"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="https://airportsc.kr/" title="인천국제공항보안 새 창 열림" tabindex="0"><img src="/images/logo05.png" alt="인천국제공항"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="http://kafas.or.kr/" title="한국보안학회 새 창 열림" tabindex="0"><img src="/images/logo06.png" alt="한국보안학회"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="http://www.kasa21.kr/main/" title="한공보안협회 새 창 열림" tabindex="0"><img src="/images/logo07.png" alt="대한민국 한공보안협회"></a></div>
+            <div class="swiper-slide"><a target="_blank" href="https://www.ksan.or.kr/" title="한국경비협회 새 창 열림" tabindex="0"><img src="/images/logo08.png" alt="한국경비협회"></a></div>
+        </div>
+    </div>
+    <div class="middle modle_max">
+        <div class="modle_min">
+            <div class="wrap">
+                <a class="logo" href="/index.php" tabindex="0">
+                    <img src="/images/logo_kr.svg" alt="한국공항보안 홈으로 이동">
+                </a>
+            </div>
+            <div class="wrap">
+                <div class="tit max">COMPANY</div>
+                <div class="text">
+                    <div class="row"><p>상호</p><span>한국공항보안(주) </span></div>
+                    <div class="row"><p>대표</p><span>김태욱</span></div>
+                    <div class="row"><p>사업자등록번호</p><span>554-88-01483 <!--<a href="#none" title="사업자정보확인 새 창 열림" target="_blank">사업자정보확인</a>--></span></div>
+                    <div class="row"><p>TEL</p><span>1555-7926</span></div>
+                    <div class="row"><p>안전보안본부(FAX)</p><span>02-3459-3272</span></div>
+                    <div class="row"><p>경영기획본부(FAX)</p><span>02-2661-4272</span></div>
+                    <div class="row"><p>주소</p><span>서울특별시 강서구 하늘길 38, <br>김포국제공항 국제선청사 2층 222, 223-2~4호</span></div>
+                </div>
+            </div>
+            <div class="wrap">
+                <div class="tit">TERMS</div>
+                <div class="btn">
+                    <a href="/contents/terms_privacy.php" tabindex="0"><p>개인정보처리방침</p></a>
+                    <a href="/contents/terms_mail.php" tabindex="0"><p>이메일무단수집거부</p></a>
+                </div>
+            </div>
+            <div class="wrap">
+                <div class="tit">SNS</div>
+                <div class="sns">
+                    <a class="modle_hover" target="_blank" href="https://www.instagram.com/korea_airport_security/" title="한국공항보안 인스타그램 새 창 열림" tabindex="0"><img src="/images/sns_i.png" alt="인스타그램" ></a>
+                    <a class="modle_hover" target="_blank" href="https://www.youtube.com/@k.a.s.c." title="한국공항보안 유튜브 새 창 열림" tabindex="0"><img src="/images/sns_y.png" alt="유튜브"></a>
+                    <a class="modle_hover" target="_blank" href="https://blog.naver.com/kasc_blog" title="한국공항보안 네이버블로그 새 창 열림" tabindex="0"><img src="/images/sns_n.png" alt="네이버블로그"></a>
+                </div>
+            </div>
+            <div class="wrap">
+                <div class="select">
+                    <select title="관련사이트 목록">
+                        <option>관련사이트</option>
+                        <option value="https://www.molit.go.kr/">국토교통부</option>
+                        <option value="https://www.airport.co.kr/">한국공항공사</option>
+                        <option value="https://www.kacas.kr/">KAC공항서비스</option>
+                        <option value="https://www.sairports.kr/">남부공항서비스</option>
+                        <option value="https://airportsc.kr/">인천국제공항보안</option>
+                        <option value="http://kafas.or.kr/">한국항공보안학회</option>
+                        <option value="http://www.kasa21.kr/main/">대한민국항공보안협회</option>
+                        <option value="https://www.ksan.or.kr/">한국경비협회</option>
+                    </select>
+                    <a class="go-link" href="javascript:void(0)" target="_blank" title="새창으로 이동">go</a>
+                    <script nonce="f4ae27d2011bbc35864754c527d861d6">
+                        (function(){
+                            const selectEl = document.querySelector('select[title="관련사이트 목록"]');
+                            const goLink = document.querySelector('.go-link');
+
+                            goLink.addEventListener('click', function(){
+                                const selectedValue = selectEl.value;
+                                const selectedText = selectEl.options[selectEl.selectedIndex].text;
+                                if(selectedText !== '관련사이트' && selectedValue) {
+                                    window.open(selectedValue, '_blank');
+                                } else {
+                                    alert('관련사이트를 선택해주세요.');
+                                }
+                            });
+                        })();
+                    </script>
+                    <script nonce="f4ae27d2011bbc35864754c527d861d6">
+                        function openNewPage(sel) {
+                            if (sel.value) {
+                                window.open(sel.value, "_blank");
+                            }
+                        }
+                    </script>
+                </div>
+            </div>
+            <a class="web" target="_blank" href="#none" title="웹 접근성 마크 인증 정보 새 창 열림"><img src="/images/web.png" alt="웹접근성마크"></a>
+        </div>
+    </div>
+    <div class="bottom modle_max">
+        <div class="modle_min">
+            <p class="copy">Copyright © 2025 한국공항보안(주). All Right Reserved. Designed by samtle company</p>
+        </div>
+    </div>
+	
+	<!-- 2025-12-18 최상단으로 가기 맨 하단으로 스크립트도 추가 -->
+	<div class="quick">
+		<a href="javascript:void(0)" class="scroll_top modle_hover" role="button" aria-label="페이지 맨 위로 이동" tabindex="0">
+			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+				<title>맨 위로 스크롤</title>
+				<path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22V7m-7 7l7-7l7 7M3 2h18"/>
+			</svg>
+		</a>
+	</div>
+	<script nonce="f4ae27d2011bbc35864754c527d861d6">
+		document.querySelector('.scroll_top').addEventListener('click', function () {
+
+			window.scrollTo({
+				top: 0,
+				behavior: 'smooth'
+			});
+
+			const topFocus = document.getElementById('top-focus');
+			if (topFocus) {
+				topFocus.focus();
+			}
+		});
+	</script>
+	<!-- // 2025-12-18 최상단으로 가기 맨 하단으로 -->
+
+</div><script nonce="f4ae27d2011bbc35864754c527d861d6">
+    $(document).ready(function(){
+        $(".gnb > ul > li:nth-child(5)").addClass('on')
+        $(".gnb > ul > li:nth-child(5) ul li:nth-child(2)").addClass('on')
+        $(".sub_gnb > ul > li:nth-child(2)").addClass('on')
+    });
+</script>
+<script src="/common/js/sub_text.js"></script>
+</body>
+</html>
