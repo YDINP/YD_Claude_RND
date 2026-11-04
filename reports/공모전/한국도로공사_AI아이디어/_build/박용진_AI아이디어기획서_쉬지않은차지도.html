@@ -1,0 +1,102 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>AI 아이디어 기획서</title><style>
+@page { size:A4; margin:13mm 14mm; }
+* { -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; }
+body { font-family:'Malgun Gothic',sans-serif; font-size:9.6pt; color:#111; line-height:1.5; margin:0; }
+table { width:100%; border-collapse:collapse; }
+.pb { page-break-before:always; }
+.sw { position:relative; display:inline-block; }
+.sig { position:absolute; left:-4px; top:50%; height:44px; transform:translateY(-50%); }
+
+@page { margin:11mm 13mm; } body { line-height:1.46; }
+:root { --n:#1d4e89; --nl:#e3ecf7; }
+.doc { text-align:center; font-size:15pt; font-weight:700; margin:0 0 6px; letter-spacing:2px; }
+.f td, .f th { border:1px solid #000; padding:5px 8px; vertical-align:middle; font-size:9.8pt; }
+.f th { background:#eceff3; font-weight:700; text-align:center; }
+.sec { background:#d9e1ea; border:1px solid #000; padding:5px 8px; font-weight:700; font-size:11pt; margin-top:8px; }
+.sub { border:1px solid #000; border-top:none; padding:6px 10px 8px; }
+.sub > .lab { font-weight:700; font-size:10.6pt; margin-bottom:3px; }
+.hero { background:var(--n); color:#fff; padding:10px 14px; border-radius:5px; margin:8px 0 2px; }
+.hero b { font-size:13pt; } .hero div { font-size:9.4pt; opacity:.92; margin-top:2px; }
+h4 { font-size:10pt; color:var(--n); margin:7px 0 3px; }
+p { margin:3px 0; } ul { margin:2px 0 2px 16px; padding:0; } li { margin:2px 0; }
+.g td, .g th { border:1px solid #b9c6d6; padding:4px 6px; vertical-align:top; font-size:9.1pt; line-height:1.42; }
+.g th { background:var(--nl); text-align:left; }
+.g { margin:4px 0; } .g tr { page-break-inside:avoid; } h4 { page-break-after:avoid; }
+.box { border:1.5px solid var(--n); background:#f5f8fc; border-radius:5px; padding:6px 10px; margin:6px 0 2px; }
+sup { font-size:7pt; color:#1d4e89; }
+.src { font-size:7.8pt; color:#444; line-height:1.4; }
+</style></head><body>
+<div class="doc">아이디어 기획서</div>
+<div class="sec" style="margin-top:4px">1. 기본 정보</div>
+<table class="f">
+<tr><th style="width:17%">참가형태</th><td colspan="3">□ 팀 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ■ 개인</td></tr>
+<tr><th>팀 명</th><td colspan="3">해당 없음 (개인 참가)</td></tr>
+<tr><th>참가자정보</th><th style="width:22%">이름</th><th style="width:26%">연락처</th><th>이메일</th></tr>
+<tr><th>대표자</th><td style="text-align:center">박용진</td><td style="text-align:center">010-2576-9278</td><td style="text-align:center">parkkb10@gmail.com</td></tr>
+<tr><th>아이디어 제목</th><td colspan="3"><b>「쉬지 않은 차 지도」 — 통행 기록으로 오늘 밤 졸음이 몰릴 구간·시간을 미리 짚는 AI</b></td></tr>
+</table>
+<div class="hero"><b>쉬지 않은 차 지도</b><div>사고가 난 뒤 빨리 아는 AI에서, 사고 나기 전 ‘몇 시간째 쉬지 않은 차가 어디에 몰려 있는지’ 아는 AI로</div></div>
+
+<div class="sec">2. 아이디어 내용</div>
+<div class="sec" style="margin-top:0;border-top:none;background:#eef2f6;font-size:10.4pt">2-1 아이디어 제안 배경 및 목표</div>
+<div class="sub"><div class="lab">1) 해결하고자 하는 문제</div><h4>고속도로 사망의 70% 이상은 ‘졸음·주시태만’ — 그리고 늘고 있다</h4>
+<ul><li>2026년 상반기 고속도로 사고 건수는 줄었지만 사망자는 95명으로 최근 3년 같은 기간 평균(70명)보다 35.7% 늘었고, 그중 졸음·주시태만 사망자가 68명(71.6%)이었습니다.<sup>[1]</sup></li><li>2023~2025년 2월 사망자 45명 중 25명(56%)이 화물차 사고였고, 화물차 사망사고 원인의 76%가 졸음·주시태만이었습니다. 공사는 장거리·야간 운행과 히터 사용으로 인한 환기 부족을 위험 요인으로 봤습니다.<sup>[2]</sup></li></ul>
+<h4>지금의 대책은 세 갈래 — 그러나 ‘오늘 밤 누가 몇 시간째 달리고 있는지’는 아무도 보지 않는다</h4>
+<table class="g"><thead><tr><th style="width:48%">현재 대책</th><th style="width:18%">작동하는 때</th><th style="width:34%">남는 빈칸</th></tr></thead><tr><td>AI CCTV 돌발상황 검지(4,000여 대, 인지~전파 80초 목표)<sup>[3]</sup>, 카카오내비 정지차량 연계<sup>[4]</sup>, 긴급대피콜<sup>[5]</sup></td><td>사고·정차가 <b>일어난 뒤</b></td><td>빨리 알리지만, 졸음 자체를 줄이지는 못함</td></tr><tr><td>휴식포인트(위드라이브 앱, 휴게소·졸음쉼터 <b>도착 시</b> 알림, 15분 휴식 시 적립)<sup>[1]</sup></td><td>운전자가 <b>스스로 들어온 뒤</b></td><td>앱을 쓰지 않거나 쉬지 않고 지나치는 차는 보이지 않음</td></tr><tr><td>노선 알람 순찰·VMS 홍보 — ‘사고 위험이 높은 구간과 시간대’ 중심<sup>[2]</sup></td><td><b>과거 사고 이력</b> 기준</td><td>오늘 밤 실제로 장시간 무휴식 차량이 어디에 몰리는지는 반영 못함</td></tr></table>
+<div class="box"><b>핵심 진단:</b> 졸음의 원인은 ‘장소’보다 <b>‘몇 시간째 쉬지 않았는가’와 ‘지금 몇 시인가’</b>입니다. 그런데 지금의 위험 지도는 과거 사고 지점, 곧 장소 기준입니다. 폐쇄식 고속도로에서는 모든 차의 <b>들어온 영업소와 시각</b>이 통행권·하이패스 기록으로 남고, 나갈 때 기록과 맞추면 <b>도중에 쉬었는지</b>까지 드러납니다. ‘몇 시간째’를 계산할 수 있는 기관은 한국도로공사뿐인데, 공개 자료 기준으로 이 기록이 졸음 대책에 쓰인 사례는 찾지 못했습니다.</div></div>
+<div class="sub"><div class="lab">2) AI 활용 필요성 및 달성목표</div><h4>왜 AI가 필요한가 — 통행 기록에는 ‘들어온 점’과 ‘나간 점’ 두 개뿐</h4>
+<ul><li><b>쉬었는가:</b> 같은 출발·도착 영업소, 같은 시간대의 정상 통행시간 분포와 비교해 휴게소 체류를 찾아야 하는데, 정체로 늦어진 것과 쉬어서 늦어진 것을 규칙으로 가르기 어렵습니다. 구간 속도(VDS·DSRC)로 정체를 보정한 학습 모형이 필요합니다.</li><li><b>지금 어디쯤인가:</b> 들어왔지만 아직 나가지 않은 차는 위치를 모릅니다. 과거 출발·도착(OD) 패턴으로 목적지를 확률 배분하고 구간 속도로 이동시켜, 30분 단위로 구간마다 ‘쉬지 않고 몇 시간째 달리는 차’가 몇 대인지 추정(nowcast)합니다.</li><li><b>얼마나 위험한가:</b> 공사가 공개하는 졸음운전 사고통계(일자·노선·이정·방향)<sup>[6]</sup>를 정답으로 삼아, ‘무휴식 주행시간 × 시각 × 차종 × 기상 × 구간 선형’이 졸음사고와 어떻게 맞물리는지 학습해 졸음위험지수를 만듭니다.</li></ul>
+<h4>달성 목표</h4>
+<ul><li><b>① 매일 오후 ‘오늘 밤 졸음 예보’</b> — 22~06시, 구간(IC~IC) × 30분 단위 졸음위험지수와 ‘3시간 이상 쉬지 않은 차’ 추정 대수</li><li><b>② 실시간 2시간 앞 갱신</b> — 입구 영업소 통과 기록이 들어오는 대로 예보를 고침</li><li><b>③ 순찰·VMS·작업 일정·휴식 안내를 ‘과거 사고 지점’ 기준에서 ‘오늘의 피곤한 차’ 기준으로</b> 바꾸고, 그 효과를 ‘쉬지 않은 장거리 통행 비율’이라는 새 지표로 매일 측정</li></ul></div>
+<div class="sec" style="margin-top:6px;background:#eef2f6;font-size:10.4pt">2-2 AI 활용 아이디어</div>
+<div class="sub"><div class="lab">1) 아이디어 개요</div><p>요금소 통행 기록을 AI가 세 단계로 읽어 <b>‘구간 × 30분’ 단위 졸음위험 예보</b>를 만들고, 공사가 이미 운영하는 순찰·VMS·작업 관리·정지차량 대응·휴식포인트에 그대로 얹습니다. 새 센서나 운전자 앱 설치가 필요 없고, 앱을 쓰지 않는 차량과 화물차까지 모두 계산에 들어갑니다.</p>
+<svg viewBox="0 0 720 196" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Malgun Gothic" font-size="11.5">
+<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#1d4e89"/></marker></defs>
+<rect x="0" y="0" width="720" height="196" rx="6" fill="#f5f8fc"/>
+<g>
+<rect x="10" y="14" width="150" height="72" rx="6" fill="#fff" stroke="#9fb4cc"/>
+<text x="85" y="34" text-anchor="middle" font-weight="700">공사가 가진 기록</text>
+<text x="85" y="52" text-anchor="middle">입구 영업소·시각</text><text x="85" y="67" text-anchor="middle">출구 영업소·시각·차종</text><text x="85" y="82" text-anchor="middle" fill="#555">+ 구간 속도(VDS·DSRC)</text>
+</g>
+<line x1="160" y1="50" x2="186" y2="50" stroke="#1d4e89" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="188" y="14" width="160" height="72" rx="6" fill="#e3ecf7" stroke="#1d4e89"/>
+<text x="268" y="34" text-anchor="middle" font-weight="700" fill="#1d4e89">AI ① 쉬었나?</text>
+<text x="268" y="53" text-anchor="middle">정상 통행시간 대비 초과분을</text><text x="268" y="68" text-anchor="middle">정체 / 휴식으로 판별</text>
+<line x1="348" y1="50" x2="374" y2="50" stroke="#1d4e89" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="376" y="14" width="160" height="72" rx="6" fill="#e3ecf7" stroke="#1d4e89"/>
+<text x="456" y="34" text-anchor="middle" font-weight="700" fill="#1d4e89">AI ② 지금 어디쯤?</text>
+<text x="456" y="53" text-anchor="middle">주행 중 차량을 구간에 배분</text><text x="456" y="68" text-anchor="middle">(30분 단위 nowcast)</text>
+<line x1="536" y1="50" x2="562" y2="50" stroke="#1d4e89" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="564" y="14" width="146" height="72" rx="6" fill="#1d4e89"/>
+<text x="637" y="34" text-anchor="middle" font-weight="700" fill="#fff">AI ③ 졸음위험지수</text>
+<text x="637" y="53" text-anchor="middle" fill="#fff">구간 × 30분</text><text x="637" y="68" text-anchor="middle" fill="#fff">졸음사고 통계로 학습</text>
+<line x1="637" y1="86" x2="637" y2="108" stroke="#1d4e89" stroke-width="2" marker-end="url(#ar)"/>
+<text x="12" y="126" font-weight="700" fill="#333">예보 화면 (예시)</text>
+<g font-size="10.5">
+<text x="12" y="146">○○선 ○○IC→○○JC  02:00~03:30</text>
+<rect x="210" y="136" width="230" height="12" fill="#e8edf3"/><rect x="210" y="136" width="196" height="12" fill="#c0392b"/>
+<text x="448" y="146">위험 높음 · 3시간+ 무휴식 화물차 비중↑</text>
+<text x="12" y="166">○○선 ○○IC→○○IC  03:00~04:30</text>
+<rect x="210" y="156" width="230" height="12" fill="#e8edf3"/><rect x="210" y="156" width="132" height="12" fill="#e67e22"/>
+<text x="448" y="166">주의 · 장거리 승용 귀가 차량</text>
+<text x="12" y="186">○○선 ○○JC→○○IC  01:00~02:30</text>
+<rect x="210" y="176" width="230" height="12" fill="#e8edf3"/><rect x="210" y="176" width="64" height="12" fill="#f1c40f"/>
+<text x="448" y="186">보통</text>
+</g>
+<text x="708" y="190" text-anchor="end" font-size="9.5" fill="#777">※ 구간명·막대는 설명용 가상 예시</text>
+</svg>
+<h4>AI가 만든 예보를 다섯 곳에 씁니다 (모두 공사가 이미 가진 수단)</h4>
+<table class="g"><thead><tr><th style="width:17%">쓰는 곳</th><th style="width:25%">지금</th><th style="width:58%">바뀌는 것</th></tr></thead><tr><td>Ⓐ 노선 알람 순찰</td><td>사고 위험 높은 구간·시간대 중심 순찰</td><td>매일 밤 예보 상위 구간·시간으로 순찰 경로와 시각을 배정</td></tr><tr><td>Ⓑ VMS 문구</td><td>‘졸음운전 조심’ 같은 일반 문구</td><td>예: “이 구간 화물차 3대 중 1대, 3시간 넘게 쉬지 않았습니다 · 다음 졸음쉼터 4km” (추정 수치 기반, 예시)</td></tr><tr><td>Ⓒ 작업장 보호</td><td>작업 일정은 교통량 위주로 결정</td><td>야간 유지보수 작업 승인 때 예보를 확인해 고위험 시간대는 피하고, 못 피하면 보호차·경고 단계 상향</td></tr><tr><td>Ⓓ 2차사고 대응</td><td>AI CCTV·내비로 정지차량 검지</td><td>검지 지점 상류의 졸음위험지수가 높으면 VMS·LCS 표출 범위를 넓히고 순찰 출동을 우선 — 뒤차가 졸고 있을 가능성이 큰 곳부터</td></tr><tr><td>Ⓔ 휴식포인트</td><td>휴게소·졸음쉼터 도착 시 알림</td><td>예보 위험 시간대·구간의 쉼터 적립을 높이고, 도착 후가 아니라 ‘다음 쉼터 전’에 VMS·내비로 안내</td></tr></table>
+<p>확장: 사업용 화물차는 4시간 연속 운전 뒤 30분 이상 쉬어야 합니다.<sup>[7]</sup> 화물차 진입 기록으로 ‘몇 시에 어느 휴게소에 화물차 휴식 수요가 몰릴지’를 미리 계산해 화물차 주차 안내에도 쓸 수 있습니다.</p></div>
+<div class="sub"><div class="lab">2) 필요데이터 및 AI 기술</div><table class="g"><thead><tr><th style="width:50%">필요 데이터</th><th style="width:18%">보유</th><th style="width:32%">쓰임</th></tr></thead><tr><td>TCS 통행 기록 (입·출구 영업소, 통과 시각, 차종, 하이패스/일반 구분)</td><td>공사 보유</td><td>연속 주행시간, 휴식 여부, 현재 주행 중 차량</td></tr><tr><td>VDS·DSRC 구간 속도·통행시간</td><td>공사 보유</td><td>정체 보정, 위치 추정</td></tr><tr><td>졸음운전 사고통계 (일자·노선·이정·방향·사상자)<sup>[6]</sup></td><td>공사(공공데이터 공개)</td><td>위험 모형의 정답</td></tr><tr><td>휴게소·졸음쉼터 위치, 작업 일정, 정지차량 검지 이벤트</td><td>공사 보유</td><td>다음 쉼터 거리, Ⓒ·Ⓓ 연계</td></tr><tr><td>기상(기온·강수·안개), 요일·명절</td><td>기상청 공개</td><td>보조 변수</td></tr></table>
+<table class="g"><thead><tr><th style="width:17%">단계</th><th style="width:33%">AI 기술</th><th style="width:50%">활용 방법</th></tr></thead><tr><td>① 휴식 여부 판별</td><td>혼합분포 모형 + 그래디언트 부스팅</td><td>OD·시간대별 정상 통행시간 대비 초과분을 정체/휴식으로 나눠 ‘무휴식 통행’ 확률 산출</td></tr><tr><td>② 위치·목적지 추정</td><td>OD 확률 모형 + 구간 속도 기반 이동 시뮬레이션</td><td>주행 중 차량을 30분 단위 구간에 배분 (nowcast)</td></tr><tr><td>③ 위험 예측</td><td>시공간 그래프 신경망(GNN) 또는 LightGBM, SHAP 설명</td><td>구간×시간 졸음위험지수와 ‘왜 위험한가’(예: 03시, 3시간 이상 무휴식 화물차 비중↑) 표시</td></tr><tr><td>④ 상황실 지원</td><td>생성형 AI(LLM)</td><td>오늘 밤 예보 요약, VMS 문구 후보 작성 → 담당자가 확정</td></tr></table>
+<p><b>개인정보:</b> 차량 한 대 한 대를 추적하거나 개별 알림을 보내지 않습니다. 통행 기록은 공사 내부에서 일방향 암호화(해시)로 처리하고, 밖으로 나가는 결과는 <b>구간 단위 집계</b>뿐입니다(일정 대수 미만 구간은 표시 안 함). 차량번호 영상은 쓰지 않습니다.</p>
+<p><b>한계와 보완:</b> 개방식 요금소 구간·민자 노선에서는 입구 기록이 끊길 수 있어 DSRC 구간 기록으로 보완하고, 첫 시범은 장거리 화물 통행이 많은 폐쇄식 노선에서 시작합니다.</p></div>
+<div class="sec" style="margin-top:6px;background:#eef2f6;font-size:10.4pt">2-3 활용방안 및 기대효과</div>
+<div class="sub"><h4>첫 달 시범 — 새 장비 없이 보유 데이터만으로</h4>
+<table class="g"><thead><tr><th style="width:11%">시기</th><th style="width:47%">할 일</th><th style="width:42%">확인할 것</th></tr></thead><tr><td>1주</td><td>장거리·야간 화물 통행이 많은 폐쇄식 노선 1곳, 과거 3년 통행 기록 정리 + 휴식 판별 모형</td><td>휴게소 체류 판별이 실제 휴게소 이용 통계와 맞는지</td></tr><tr><td>2주</td><td>졸음운전 사고통계로 백테스트</td><td>사고 난 날·구간의 지수가 평소보다 높았는지, ‘과거 사고 지점 지도’보다 상위 위험구간 안에 더 많이 들어오는지</td></tr><tr><td>3~4주</td><td>지역본부 상황실 1곳에서 매일 오후 ‘오늘 밤 예보’ 섀도 운영 (순찰은 그대로, 예보만 기록)</td><td>예보 상위 구간과 실제 돌발·졸음 사례의 겹침</td></tr><tr><td>2~3개월</td><td>Ⓐ 순찰·Ⓑ VMS 실제 적용 구간 vs 비교 구간</td><td>‘쉬지 않은 장거리 통행 비율’ 변화, 졸음쉼터·휴게소 이용, 졸음사고</td></tr></table>
+<h4>기대효과</h4>
+<ul><li><b>같은 인력으로 더 정확한 곳에:</b> 순찰차·VMS·작업 일정이 ‘작년에 사고 난 곳’이 아니라 ‘오늘 밤 실제로 피곤한 차가 몰린 곳’을 겨냥합니다.</li><li><b>휴식 유도의 효과를 처음으로 잴 수 있음:</b> 통행시간이 늘었는지로 ‘실제로 쉬었는지’를 알 수 있어, 앱 이용자 밖의 모든 차량에 대해 휴식포인트·VMS 문구·순찰이 효과가 있었는지 구간별로 측정합니다. ‘3시간 이상 쉬지 않은 통행 비율’을 노선별 안전 지표로 관리할 수 있습니다.</li><li><b>작업자와 2차사고 피해자 보호:</b> 작업 일정과 정지차량 경보를 ‘뒤에서 다가오는 차가 졸고 있을 가능성’에 맞춰 조정합니다.</li><li><b>빠른 실현성:</b> 데이터(TCS·VDS·DSRC·사고통계)와 전파 수단(VMS·LCS·순찰·내비 연계·위드라이브)이 모두 공사 안에 있어 새 장비 없이 분석 → 섀도 운영 → 적용 순으로 단계적으로 갈 수 있고, 명절 특별교통대책과 국도·민자 노선으로 넓힐 수 있습니다.</li></ul></div>
+<p class="src" style="margin-top:8px"><b>근거 자료</b><br>[1] 파이낸셜뉴스, 도로공사 ‘휴식포인트’ 운영(2026년 상반기 사망 통계 포함), 2026.7.28. (https://www.fnnews.com/news/202607281338101369)<br>[2] 비즈워치, 2월 고속도로 사망사고 분석(2023~2025년 통계, 도로공사 자료), 2026.2.2. (https://news.bizwatch.co.kr/article/real_estate/2026/02/02/0022)<br>[3] 파이낸셜뉴스, 도로공사 CCTV AI 교통관제 도입, 2026.7.1. (https://www.fnnews.com/news/202607011808263248)<br>[4] 파이낸셜뉴스, 도로공사·카카오모빌리티 ‘국민 교통안전이음’ 서비스, 2026.7.20. (https://www.fnnews.com/news/202607201443091259)<br>[5] 비즈워치, 「고속도로 사고 때 차보험 가입정보로 ‘긴급대피콜’」, 2024.6.3. (https://news.bizwatch.co.kr/article/real_estate/2024/06/03/0015)<br>[6] 공공데이터포털, 한국도로공사_졸음운전 사고통계 (https://www.data.go.kr/biz/dcat/metadata/15145210.do)<br>[7] 머니투데이, 「화물차 ‘4시간 운전뒤 30분 휴식’ 의무화」, 2017.1.9. (https://www.mt.co.kr/estate/2017/01/09/2017010909355394104)<br>
+※ 자료 조사와 초안 작성에 생성형 AI(Claude)를 활용했으며, 내용 확인과 최종 판단은 제안자가 했습니다.</p>
+</body></html>
