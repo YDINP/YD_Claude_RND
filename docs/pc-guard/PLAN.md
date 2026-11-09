@@ -103,6 +103,7 @@ pc-guard/            (C:/dev/pc-guard, 비공개 저장소)
 
 **진행 (2026-11-09)**: P0 체크리스트 작성(사용자 조치 대기) · **P1 완료** — `C:/dev/pc-guard`, 비공개 저장소 YDINP/pc-guard, 테스트 21개, 실제 스캔 47만 파일 19초. 첫 결과: 높음 3(Claude 자격증명, `~/.ssh/owrig_ed25519`, ben_suno/.env) · 중간 3 · 긴급 0.
 **P2 완료** — `pcg check` 첫 점수 **53/100** (CFA 꺼짐, 관리자 계정, SAC 꺼짐, 브라우저 저장 비밀번호 Chrome 75·Edge 54, SSH 키 암호 없음). `pcg panic` 체크리스트는 계정→돈→배포→봇→기타 순서. 테스트 31개. 오픈소스 조사는 `OSS-RESEARCH.md` — P3는 SigmaHQ에 브라우저 자격증명 접근 룰이 없어서 4663 기반 자체 구현이 차별점.
+**P3 구현 완료, 설치 대기** — 미끼 4개 심음(AWS 자격증명·Electrum·Exodus·바탕화면 메모 숨김). 구독 배선은 "Windows PowerShell" 로그 400번으로 실측 확인. 남은 것: 사용자가 관리자 PowerShell에서 `%LOCALAPPDATA%\pc-guard\canary-install.ps1` 실행 → 재로그인 → 미끼 읽기 실측(경보 확인). 문서 폴더가 `D:\park`로 지정돼 있어서 메모 미끼는 바탕화면에 둠.
 
 P1·P2만 끝나도 "털리면 뭘 바꿔야 하는지"가 생긴다. 개발 효과는 여기서 가장 크다.
 
