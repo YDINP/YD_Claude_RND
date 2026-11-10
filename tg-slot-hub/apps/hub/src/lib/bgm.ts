@@ -481,11 +481,11 @@ const TROPICAL: BgmStyle = {
   keysLo: 62,
   arpLo: 60,
   bassLo: 36,
-  freeArpShift: 12,
+  freeArpShift: 7,
   freeTempo: 1.05,
   lead: {
-    lo: 72,
-    hi: 88,
+    lo: 65,
+    hi: 81,
     rest: 0.2,
     cells: [
       [s(0, 0.75), s(0.75, 0.75), s(1.5, 0.5), s(2, 1.5)],
