@@ -27,6 +27,7 @@ export {
   FxEffectSchema,
   FxMapSchema,
   FxSymbolSchema,
+  CelebrationSkinSchema,
   ReelBackdropSchema,
   SFX_KEYS,
   SfxSchema,
@@ -36,6 +37,7 @@ export {
   ThemePaletteSchema,
   ThemeTransitionsSchema,
   TransitionClipSchema,
+  type CelebrationSkin,
   type FxEffect,
   type FxMap,
   type FxSymbol,
@@ -136,6 +138,7 @@ export function parseTheme(json: unknown, baseUrl: string, options: ParseThemeOp
     theme.sheets = sheets
   }
   if (file.reelBackdrop !== undefined) theme.reelBackdrop = { ...file.reelBackdrop }
+  if (file.celebration !== undefined) theme.celebration = file.celebration
   if (file.transitions !== undefined) {
     const transitions: ThemeTransitions = {}
     const { freeSpinsEnter, freeSpinsExit } = file.transitions
@@ -151,6 +154,7 @@ export function parseTheme(json: unknown, baseUrl: string, options: ParseThemeOp
     if (Object.keys(transitions).length > 0) theme.transitions = transitions
   }
   if (Object.keys(sfx).length > 0) theme.sfx = sfx
+  if (file.sound !== undefined) theme.sound = { preset: file.sound.preset }
   return theme
 }
 

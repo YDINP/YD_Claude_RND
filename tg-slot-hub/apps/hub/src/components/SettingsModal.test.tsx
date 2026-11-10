@@ -26,7 +26,7 @@ const baseUser: PublicUser = {
 describe('SettingsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useSettingsStore.setState({ locale: 'auto', sound: true, haptics: true, reducedMotion: false, spinSpeed: 'normal' })
+    useSettingsStore.setState({ locale: 'auto', sound: true, sfxVolume: 100, bgm: true, bgmVolume: 40, haptics: true, reducedMotion: false, spinSpeed: 'normal' })
     useSessionStore.setState({
       status: 'ready',
       token: 'test-token',
@@ -115,6 +115,46 @@ describe('SettingsModal', () => {
     expect(useSettingsStore.getState().locale).toBe('ko')
     expect(consoleErrorSpy).toHaveBeenCalled()
     consoleErrorSpy.mockRestore()
+  })
+
+  it('changes the SFX volume through the slider and disables it while muted', async () => {
+    render(<SettingsModal user={baseUser} onClose={() => {}} />)
+
+    const slider = screen.getByRole('slider', { name: /Sound volume/ })
+    await act(async () => {
+      fireEvent.change(slider, { target: { value: '40' } })
+    })
+    expect(useSettingsStore.getState().sfxVolume).toBe(40)
+
+    await act(async () => {
+      useSettingsStore.getState().setSound(false)
+    })
+    expect((slider as HTMLInputElement).disabled).toBe(true)
+  })
+
+  it('toggles music and changes its volume, disabling the slider while music or sound is off', async () => {
+    render(<SettingsModal user={baseUser} onClose={() => {}} />)
+
+    const slider = screen.getByRole('slider', { name: /Music volume/ }) as HTMLInputElement
+    expect(slider.value).toBe('40')
+    await act(async () => {
+      fireEvent.change(slider, { target: { value: '75' } })
+    })
+    expect(useSettingsStore.getState().bgmVolume).toBe(75)
+
+    const musicSwitch = screen.getByRole('switch', { name: 'Music' })
+    await act(async () => {
+      musicSwitch.click()
+    })
+    expect(useSettingsStore.getState().bgm).toBe(false)
+    expect(slider.disabled).toBe(true)
+
+    await act(async () => {
+      musicSwitch.click()
+      useSettingsStore.getState().setSound(false)
+    })
+    expect(useSettingsStore.getState().bgm).toBe(true)
+    expect(slider.disabled).toBe(true)
   })
 
   it('toggles sound/haptics/reducedMotion in the settings store', async () => {

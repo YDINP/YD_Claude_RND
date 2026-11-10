@@ -194,5 +194,25 @@
       "opaqueMs": 0,
       "durationMs": 2999
     }
+  },
+  "celebration": {
+    "palette": { "core": "#ffe14d", "edge": "#ff6b1a", "glow": "#ff9f1c80" },
+    "particles": {
+      "shapes": ["slice", "slice"],
+      "symbols": ["cherry"],
+      "colors": ["#ff4d5e", "#ffc21a", "#7ac943", "#ff8a1f"],
+      "motion": "tumble",
+      "size": 1.6
+    },
+    "rays": { "style": "beams" },
+    "waves": { "style": "ring" },
+    "title": { "font": "rounded", "weight": 900, "stroke": 2, "strokeColor": "#7a1f00b3", "tracking": 0 },
+    "tiers": {
+      "storm": { "core": "#d4ff70", "edge": "#1fae4b", "glow": "#5fd35b80", "density": 1.2 },
+      "cataclysm": { "core": "#fff7b0", "edge": "#ff3d6e", "glow": "#ff3d6e80", "density": 1.4 }
+    }
+  },
+  "sound": {
+    "preset": "fruit"
   }
 }

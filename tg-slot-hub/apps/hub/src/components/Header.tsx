@@ -4,6 +4,7 @@
 import { useState, type ReactNode } from 'react'
 import type { PublicUser, Wallet } from '@tgslot/shared'
 import { Odometer } from './Odometer'
+import { playUiSound } from '../lib/audio'
 import { SettingsModal } from './SettingsModal'
 import { useT } from '../i18n'
 import './Header.css'
@@ -46,7 +47,10 @@ export function Header({ user, wallet }: HeaderProps): ReactNode {
           type="button"
           className="hub-header__settings-btn"
           aria-label={t('settings')}
-          onClick={() => setSettingsOpen(true)}
+          onClick={() => {
+            playUiSound('open')
+            setSettingsOpen(true)
+          }}
         >
           <span aria-hidden="true">⚙️</span>
         </button>

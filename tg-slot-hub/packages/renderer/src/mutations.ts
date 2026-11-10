@@ -39,6 +39,13 @@ export function applyMutationEventsToGrid(
 }
 
 /** 변형 1단계의 기본 길이(ms). */
+/** 스킵한 스핀용으로 단계 하나를 `maxMs` 안에 압축한다. 교체 시점 비율은 그대로 둔다. */
+export function compressMutationStep(step: MutationStep, maxMs: number): MutationStep {
+  if (step.durationMs <= maxMs) return step
+  const scale = maxMs / step.durationMs
+  return { ...step, durationMs: maxMs, commitMs: Math.round(step.commitMs * scale) }
+}
+
 export function mutationDurationMs(kind: MutationKind, reducedMotion = false): number {
   const base = MUTATION_MS_BY_TYPE[kind]
   return reducedMotion ? Math.min(base, REDUCED_MUTATION_MS) : base

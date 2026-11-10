@@ -19,7 +19,7 @@ import { Modal } from '../Modal'
 import { useT } from '../../i18n'
 import { useSettingsStore } from '../../store/settings'
 import type { RoundPopup } from '../../game/roundFlow'
-import { WinCelebration, WinCelebrationFx, useWinRollup } from './WinCelebration'
+import { WinCelebration, WinCelebrationFx, celebrationStyle, useWinRollup } from './WinCelebration'
 import {
   ENTRY_SPARKLES,
   celebrationTiming,
@@ -27,6 +27,7 @@ import {
   type CelebrationTier,
   type WinTierLabels,
 } from './winTiers'
+import type { ResolvedCelebrationSkin } from '@tgslot/renderer'
 import './RoundPopup.css'
 
 const TITLE_ID = 'hub-round-popup-title'
@@ -40,6 +41,8 @@ interface RoundPopupViewProps {
   scatterImageUrl?: string
   /** 게임팩이 `theme.json`으로 덮어쓴 등급 이름. 빠진 등급은 허브 기본값. */
   labels?: WinTierLabels
+  /** 게임 스킨 — 종료 팝업의 샤워·광선·금액 글자가 그 게임의 빅윈과 같은 모양이 된다. */
+  skin?: ResolvedCelebrationSkin
 }
 
 export function RoundPopupView({
@@ -48,6 +51,7 @@ export function RoundPopupView({
   freeSpinsPlayed,
   scatterImageUrl,
   labels,
+  skin,
 }: RoundPopupViewProps): ReactNode {
   const t = useT()
   // 스토어의 reducedMotion은 초기값 자체가 OS의 prefers-reduced-motion을 반영한다(store/settings.ts) —
@@ -122,11 +126,16 @@ export function RoundPopupView({
     <Modal onClose={handleTap} titleId={TITLE_ID}>
       {/* 배경 연출은 카드의 형제여야 한다(z-index/컨테이닝 블록 — WinCelebration.css 참고).
           진입에는 코인 샤워 대신 심볼 주위의 반짝임을 쓴다. */}
-      <WinCelebrationFx tier={tier} reducedMotion={reducedMotion} shower={!entry} />
+      <WinCelebrationFx tier={tier} reducedMotion={reducedMotion} shower={!entry} skin={skin} />
 
       {/* 카드 전체가 하나의 탭 영역이다 — 탭/클릭은 물론 키보드(Enter/Space)로도 같은 뜻이다.
           Modal이 열릴 때 카드 안 첫 포커스 가능 요소로 포커스를 옮기므로 이게 그 대상이 된다. */}
-      <button type="button" className={cardClass} onClick={handleTap}>
+      <button
+        type="button"
+        className={cardClass}
+        style={skin === undefined ? undefined : celebrationStyle(skin, tier)}
+        onClick={handleTap}
+      >
         {/* 트리거 심볼은 이미지가 있을 때만 — 없으면 자리를 비워 두고 제목이 위로 올라온다. */}
         {entry && scatterImageUrl !== undefined && (
           <span className="hub-round-popup__symbol" aria-hidden="true">
@@ -157,6 +166,7 @@ export function RoundPopupView({
           tier={tier}
           value={roll.value}
           labels={labels}
+          skin={skin}
           plainTitle={entry ? t('freeSpinsPopupTitle') : t('winTierPlain')}
           unit={entry ? t('freeSpinsPopupCountUnit') : undefined}
           titleId={TITLE_ID}

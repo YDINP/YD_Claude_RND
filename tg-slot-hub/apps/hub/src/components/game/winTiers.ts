@@ -11,6 +11,12 @@
  * 사용자가 "당첨금액에 비례해서 길게"를 요구한 곳이 후자다.
  */
 import { ROUND_POPUP_AUTO_CLOSE_MS } from '../../game/roundFlow'
+import {
+  celebrationParticleCount,
+  planCelebrationParticles,
+  type CelebrationParticleLook,
+  type ResolvedCelebrationSkin,
+} from '@tgslot/renderer'
 
 /**
  * 축하 등급. 인덱스가 곧 강도이자 결이다 —
@@ -323,3 +329,55 @@ export const ENTRY_SPARKLES: readonly Sparkle[] = Array.from({ length: SPARKLE_C
   delay: (i % 5) * 90,
   size: 5 + (i % 3) * 2,
 }))
+
+// ---- 게임 스킨 파티클 ----
+
+/** 샤워 한 알 — 자리·타이밍은 금화와 같고, 겉모습(모양·색·심볼)은 게임 스킨이 정한다. */
+export interface ShowerParticle extends ShowerCoin {
+  readonly look: CelebrationParticleLook
+}
+
+/** 밀도 배수가 커도 화면을 덮지 않는 상한. 기본 최고 등급(28)의 두 배다. */
+export const MAX_SHOWER_PARTICLES = SHOWER_COUNT_BY_TIER.cataclysm * 2
+
+function showerSlot(i: number): ShowerCoin {
+  return (
+    ALL_SHOWER_COINS[i] ?? {
+      left: Number((((i * GOLDEN_RATIO_CONJUGATE) % 1) * 100).toFixed(1)),
+      delay: (i % 7) * 130 + 60,
+      duration: 1500 + (i % 4) * 260,
+      drift: ((i % 5) - 2) * 11,
+      size: 13 + (i % 3) * 5,
+      spin: (i % 2 === 0 ? 1 : -1) * (240 + (i % 3) * 120),
+    }
+  )
+}
+
+const SHOWER_PARTICLES = new WeakMap<ResolvedCelebrationSkin, Map<CelebrationTier, readonly ShowerParticle[]>>()
+
+/**
+ * 스킨을 입힌 샤워. 개수 = 등급 기본 수 × 스킨 밀도, 자리는 `showerCoins`와 같은 황금비 배치다.
+ * 같은 스킨·같은 등급이면 **같은 배열 참조**를 돌려준다(롤업 프레임마다 새로 만들지 않는다).
+ */
+export function showerParticles(skin: ResolvedCelebrationSkin, tier: CelebrationTier): readonly ShowerParticle[] {
+  let byTier = SHOWER_PARTICLES.get(skin)
+  if (byTier === undefined) {
+    byTier = new Map()
+    SHOWER_PARTICLES.set(skin, byTier)
+  }
+  const cached = byTier.get(tier)
+  if (cached !== undefined) return cached
+  const count = celebrationParticleCount(skin, tier, SHOWER_COUNT_BY_TIER[tier], MAX_SHOWER_PARTICLES)
+  const scale = skin.particles.size
+  const particles = planCelebrationParticles(skin, tier, count).map((look, i) => {
+    const slot = showerSlot(i)
+    return { ...slot, size: Math.round(slot.size * scale), look }
+  })
+  byTier.set(tier, particles)
+  return particles
+}
+
+/** 고리 `count`개의 출발 지연. 스킨이 등급별 고리 수를 바꿀 수 있어 수로 묻는다. */
+export function shockwaveDelaysFor(count: number): readonly number[] {
+  return ALL_SHOCKWAVES.slice(0, Math.max(0, Math.min(ALL_SHOCKWAVES.length, count)))
+}

@@ -192,5 +192,21 @@
       "opaqueMs": 0,
       "durationMs": 3000
     }
+  },
+  "celebration": {
+    "palette": { "core": "#ffd58a", "edge": "#b5652a", "glow": "#e2683a73" },
+    "particles": { "shapes": ["badge", "badge", "casing"], "colors": ["#e8b04a", "#d9d2c0", "#c9884a"], "motion": "tumble", "size": 1.7 },
+    "rays": { "style": "sunburst" },
+    "waves": { "style": "dashed" },
+    "title": { "font": "slab", "weight": 900, "stroke": 2, "strokeColor": "#2a1406d9", "tracking": 0.01 },
+    "tiers": {
+      "surge": { "density": 1.3 },
+      "blast": { "density": 1.3 },
+      "storm": { "core": "#ffcf6b", "edge": "#e2683a", "glow": "#e2683a80" },
+      "cataclysm": { "core": "#fff1d0", "edge": "#c8352b", "glow": "#e2683a9e", "density": 1.3 }
+    }
+  },
+  "sound": {
+    "preset": "western"
   }
 }

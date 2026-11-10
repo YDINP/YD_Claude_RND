@@ -24,6 +24,7 @@ import { useT } from '../../i18n'
 import { useSettingsStore } from '../../store/settings'
 import { WinCelebration, WinCelebrationFx, useWinRollup } from './WinCelebration'
 import { bigWinTimeline, celebrationTier, type WinTierLabels } from './winTiers'
+import type { ResolvedCelebrationSkin } from '@tgslot/renderer'
 import './WinCelebration.css'
 
 const TITLE_ID = 'hub-win-overlay-title'
@@ -43,6 +44,8 @@ interface WinCelebrationOverlayProps {
   hurried?: boolean
   /** 게임팩이 `theme.json`으로 덮어쓴 등급 이름. 빠진 등급은 허브 기본값. */
   labels?: WinTierLabels
+  /** 게임 스킨. 배경 연출과 카드가 같은 값을 입는다. */
+  skin?: ResolvedCelebrationSkin
   /** 붙드는 시간이 지났거나(자동) 사용자가 결과 화면을 탭했을 때. */
   onDismiss: () => void
 }
@@ -52,6 +55,7 @@ export function WinCelebrationOverlay({
   totalBet,
   hurried,
   labels,
+  skin,
   onDismiss,
 }: WinCelebrationOverlayProps): ReactNode {
   const t = useT()
@@ -115,7 +119,7 @@ export function WinCelebrationOverlay({
       data-beat={beat}
       tabIndex={-1}
     >
-      <WinCelebrationFx tier={tier} reducedMotion={reducedMotion} />
+      <WinCelebrationFx tier={tier} reducedMotion={reducedMotion} skin={skin} />
       {/* 화면 전체가 하나의 탭 영역이다 — 탭/클릭은 물론 키보드(Enter/Space)로도 같은 뜻이고,
           다이얼로그가 열릴 때 포커스가 여기로 온다(useDialog가 첫 포커스 가능 요소를 찾는다). */}
       <button type="button" className="hub-win-overlay__tap" onClick={handleTap}>
@@ -123,6 +127,7 @@ export function WinCelebrationOverlay({
           tier={tier}
           value={roll.value}
           labels={labels}
+          skin={skin}
           titleId={TITLE_ID}
           reducedMotion={reducedMotion}
         >

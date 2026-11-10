@@ -71,6 +71,15 @@ describe('ThemeFileSchema', () => {
     expect(parsed.transitions?.freeSpinsEnter?.src).toBe('transitions/fs-enter.webm')
     expect(parsed.sfx?.spin).toBe('sfx/spin.ogg')
   })
+
+  it('sound.preset은 알려진 프리셋만 받고 없어도 된다', () => {
+    const base = { version: '1.0.0', symbols: {}, palette }
+    expect(ThemeFileSchema.parse(base).sound).toBeUndefined()
+    for (const preset of ['bell', 'fruit', 'western', 'shrine', 'clockwork']) {
+      expect(ThemeFileSchema.parse({ ...base, sound: { preset } }).sound?.preset).toBe(preset)
+    }
+    expect(ThemeFileSchema.safeParse({ ...base, sound: { preset: 'disco' } }).success).toBe(false)
+  })
 })
 
 describe('ArtFxFileSchema', () => {
@@ -150,5 +159,39 @@ describe('FX_EFFECT_FIELDS', () => {
     expect(FX_EFFECT_FIELDS).toContain('type')
     expect(FX_EFFECT_FIELDS).toContain('durationMs')
     expect(FX_EFFECT_FIELDS).not.toContain('fromAlpha')
+  })
+})
+
+describe('CelebrationSkinSchema', () => {
+  it('celebration이 없어도 된다 — 허브 기본 연출로 떨어진다', () => {
+    expect(ThemeFileSchema.parse({ symbols: {}, palette }).celebration).toBeUndefined()
+  })
+
+  it('모양·심볼·등급별 값을 받는다', () => {
+    const parsed = ThemeFileSchema.parse({
+      symbols: { charm: 'symbols/charm.webp' },
+      palette,
+      celebration: {
+        palette: { core: '#ffe3ea', glow: '#f6c0cf80' },
+        particles: { shapes: ['petal', 'ema'], symbols: ['charm'], colors: ['#f6c0cf'], motion: 'flutter', size: 1.2 },
+        rays: { style: 'halo' },
+        waves: { style: 'dashed' },
+        title: { font: 'rounded', weight: 900, stroke: 2, strokeColor: '#00000099', gradient: ['#ffffff', '#f6c0cf'] },
+        labels: { storm: 'HANAMI' },
+        tiers: { cataclysm: { core: '#ffffff', density: 1.6, waves: 3, rays: 0.7 } },
+      },
+    })
+    expect(parsed.celebration?.particles?.shapes).toEqual(['petal', 'ema'])
+    expect(parsed.celebration?.tiers?.cataclysm?.density).toBe(1.6)
+  })
+
+  it('모르는 모양·스타일, 깨진 색, 범위를 넘는 밀도는 거부한다', () => {
+    const base = { symbols: {}, palette }
+    expect(ThemeFileSchema.safeParse({ ...base, celebration: { particles: { shapes: ['banana'] } } }).success).toBe(false)
+    expect(ThemeFileSchema.safeParse({ ...base, celebration: { rays: { style: 'laser' } } }).success).toBe(false)
+    expect(ThemeFileSchema.safeParse({ ...base, celebration: { palette: { core: 'gold' } } }).success).toBe(false)
+    expect(ThemeFileSchema.safeParse({ ...base, celebration: { tiers: { storm: { density: 9 } } } }).success).toBe(false)
+    expect(ThemeFileSchema.safeParse({ ...base, celebration: { tiers: { storm: { waves: 4 } } } }).success).toBe(false)
+    expect(ThemeFileSchema.safeParse({ ...base, celebration: { labels: { blast: '   ' } } }).success).toBe(false)
   })
 })

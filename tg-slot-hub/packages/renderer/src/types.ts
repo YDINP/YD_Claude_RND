@@ -1,7 +1,7 @@
 import type { GameMath, MutationEvent, SymbolId, WinLine } from '@tgslot/slot-engine'
 import type { RendererDiagnostics } from './diagnostics.js'
 import type { FrameWindow } from './layout.js'
-import type { FxMap, ReelBackdrop, SheetMap, ThemeTransitions } from './theme.js'
+import type { CelebrationSkin, FxMap, ReelBackdrop, SheetMap, ThemeTransitions } from './theme.js'
 import type { WinTier } from './wins.js'
 import type { FeatureTrigger, RendererMode } from './features.js'
 import type { ModeTarget } from './transition.js'
@@ -9,6 +9,7 @@ import type { SpinSpeed } from './timing.js'
 
 /** 테마가 선택적으로 선언할 수 있는 효과음 키. 파일이 없으면 키를 빼면 된다. */
 export type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
+export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork'
 
 /** 프레임 아트의 배치 정보. 값은 프레임 이미지 크기에 대한 분수다. */
 export interface FrameLayout {
@@ -67,6 +68,10 @@ export interface Theme {
   palette: ThemePalette
   /** 효과음 URL. 렌더러는 재생하지 않고 허브의 AudioBus가 쓴다. */
   sfx?: Partial<Record<SfxKey, string>>
+  /** 빅윈 축하 스킨(원본 그대로). 허브와 렌더러가 `resolveCelebrationSkin`으로 채워 쓴다. */
+  celebration?: CelebrationSkin
+  /** 게임별 합성 효과음 세트. 허브의 오디오가 읽는다. 없으면 기본 `bell`. */
+  sound?: { preset: SoundPreset }
 }
 
 /**
@@ -88,6 +93,12 @@ export type PaylineStyle = 'effect' | 'line'
 export type RendererEvent =
   /** 릴 하나가 정확한 정지 위치에 닿았다. */
   | { type: 'reelStop'; reel: number }
+  /**
+   * 기대감 연출. 스캐터가 트리거 직전 개수까지 떨어져 `reel`이 늘어난 시간 동안 천천히 선다.
+   * `start`는 앞 릴이 멈춘 순간, `end`는 그 릴이 멈추는 순간(스킵하면 그 즉시)에 온다.
+   * 결과는 바뀌지 않는다 — 연출 시간만 늘어난다.
+   */
+  | { type: 'anticipation'; phase: 'start' | 'end'; reel: number }
   /** 모든 릴이 멈췄다. */
   | { type: 'spinEnd' }
   /**
@@ -139,7 +150,7 @@ export type RendererEvent =
    * 배너와 효과음은 허브가 띄운다. 렌더러는 릴 위 연출만 맡는다.
    *
    * `start` 하나에 `end` 하나가 반드시 따른다. 중간에 `skip()`으로 접어도 마찬가지다.
-   * 다만 아직 시작하지 않은 단계는 건너뛰므로 `start`도 `end`도 나오지 않는다.
+   * 스핀을 스킵하면 아직 시작하지 않은 단계도 건너뛰지 않고 짧게 압축해 재생한다(`start`/`end` 모두 나온다).
    *
    * `symbol`은 `mutation.symbol`과 같은 값이다. 배너가 "무엇으로 바뀌었는지"를
    * 한 단계 더 들어가지 않고 읽도록 맨 위에도 올려 둔다. 이벤트에 없으면 정의되지 않는다.

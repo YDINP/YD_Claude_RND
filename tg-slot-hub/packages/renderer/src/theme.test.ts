@@ -59,6 +59,12 @@ describe('parseTheme', () => {
     expect(theme.sfx).toEqual({ spin: '/games/demo/theme/sfx/spin.ogg' })
   })
 
+  it('sound.preset을 그대로 싣고, 없으면 sound 자체를 만들지 않는다', () => {
+    expect(parseTheme(validJson, '/games/demo').sound).toBeUndefined()
+    const theme = parseTheme({ ...validJson, sound: { preset: 'western' } }, '/games/demo')
+    expect(theme.sound).toEqual({ preset: 'western' })
+  })
+
   it('색 형식이 틀리면 ThemeError를 던진다', () => {
     const broken = { ...validJson, palette: { ...validJson.palette, frame: 'gold' } }
     expect(() => parseTheme(broken, '/games/demo')).toThrow(ThemeError)

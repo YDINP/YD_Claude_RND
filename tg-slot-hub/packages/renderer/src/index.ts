@@ -6,6 +6,7 @@ export type {
   RendererFit,
   RendererOptions,
   SfxKey,
+  SoundPreset,
   ShowWinsOptions,
   SlotRenderer,
   SpinHandle,
@@ -24,6 +25,7 @@ export {
   FrameWindowSchema,
   FxEffectSchema,
   FxMapSchema,
+  CelebrationSkinSchema,
   ReelBackdropSchema,
   SheetMapSchema,
   TransitionClipSchema,
@@ -39,6 +41,7 @@ export {
   type LoadThemeOptions,
   type ParseThemeOptions,
   type SymbolSource,
+  type CelebrationSkin,
   type FxEffect,
   type FxMap,
   type FxSymbol,
@@ -92,6 +95,7 @@ export {
   type SpinPlanInput,
   type SpinSpeed,
 } from './timing.js'
+export { anticipatedReels, scatterCountsByReel } from './anticipation.js'
 export { isChromaGreen, keyOutGreen } from './chromaKey.js'
 export {
   atlasUrlFor,
@@ -238,3 +242,25 @@ export {
 export { emptyDiagnostics, type RendererDiagnostics } from './diagnostics.js'
 export { planReelBackdrop, NO_REEL_BACKDROP, type ReelBackdropPlan } from './backdrop.js'
 export * from './constants.js'
+export {
+  CELEBRATION_FONT_FAMILIES,
+  CELEBRATION_LEVELS,
+  DEFAULT_CELEBRATION_LEVELS,
+  DEFAULT_CELEBRATION_SKIN,
+  celebrationLevelForWinTier,
+  celebrationParticleCount,
+  celebrationRayGeometry,
+  celebrationShapeClipPath,
+  celebrationShapePoints,
+  opaqueHex,
+  planCelebrationParticles,
+  resolveCelebrationSkin,
+  shadeColor,
+  type CelebrationLevel,
+  type CelebrationParticleKind,
+  type CelebrationParticleLook,
+  type ResolveCelebrationOptions,
+  type ResolvedCelebrationLevel,
+  type ResolvedCelebrationSkin,
+  type ResolvedCelebrationTitle,
+} from './celebration.js'

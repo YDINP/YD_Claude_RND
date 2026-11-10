@@ -98,8 +98,8 @@
     radial-gradient(circle at 50% 50%, var(--tier-glow) 0%, transparent 56%),
     repeating-conic-gradient(
       from 0deg at 50% 50%,
-      var(--tier-glow) 0deg 4deg,
-      transparent 4deg 16deg
+      var(--tier-glow) 0deg var(--tier-ray-on, 4deg),
+      transparent var(--tier-ray-on, 4deg) var(--tier-ray-period, 16deg)
     );
   -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 10%, #000 32% 68%, transparent 92%);
   mask-image: radial-gradient(circle at 50% 50%, transparent 0 10%, #000 32% 68%, transparent 92%);
@@ -206,6 +206,105 @@
   top: auto;
   bottom: -8vh;
   animation-name: hub-win-coin-rise;
+}
+
+/* ---- 게임 스킨 (theme.json `celebration`) ----
+   모양·색·심볼은 WinCelebration.tsx가 인라인으로 넣는다(clip-path·--bit-color·background-image).
+   윤곽은 렌더러 `celebration.ts`의 점 그대로라 캔버스 버스트와 같은 모양이다. */
+
+.hub-win-fx--rays-halo .hub-win-fx__rays {
+  background: radial-gradient(circle at 50% 50%, var(--tier-glow) 0%, var(--tier-glow) 22%, transparent 66%);
+}
+
+.hub-win-fx--waves-double .hub-win-fx__wave {
+  border: 6px double var(--tier-core);
+}
+
+.hub-win-fx--waves-dashed .hub-win-fx__wave {
+  border: 3px dashed var(--tier-core);
+}
+
+/* 모양 파티클 — 위는 흰빛, 아래는 그늘. clip-path가 그림자를 자르므로 빛은 filter로 바깥에 두지 않는다. */
+.hub-win-fx__bit {
+  width: calc(var(--hub-coin-size) * 1.25);
+  height: calc(var(--hub-coin-size) * 1.25);
+  border-radius: 0;
+  background: linear-gradient(150deg, #ffffff 0 6%, var(--bit-color, var(--tier-core)) 38%, var(--bit-shade, var(--tier-edge)) 100%);
+  box-shadow: none;
+}
+
+/* 과일 단면 — 과육 · 흰 속껍질 · 겉껍질 세 겹. 원의 중심이 윤곽의 평평한 윗변(22%)에 있다. */
+.hub-win-fx__bit--slice {
+  background: radial-gradient(
+    ellipse 50% 62% at 50% 22%,
+    #ffffff 0 6%,
+    var(--bit-color) 18% 68%,
+    #fff8e6 68% 80%,
+    var(--bit-shade) 80% 100%
+  );
+}
+
+/* 심볼 그림 파티클 — 그림이 읽히도록 모양보다 크게 둔다. */
+.hub-win-fx__bit--symbol {
+  width: calc(var(--hub-coin-size) * 2.6);
+  height: calc(var(--hub-coin-size) * 2.6);
+  background-color: transparent;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  filter: drop-shadow(0 0 6px var(--tier-glow));
+}
+
+.hub-win-fx--motion-tumble:not(.hub-win-fx--surge) .hub-win-fx__coin {
+  animation-name: hub-win-bit-tumble;
+}
+
+/* 꽃잎·종잇조각처럼 좌우로 흔들리며 천천히 내려온다. */
+.hub-win-fx--motion-flutter:not(.hub-win-fx--surge) .hub-win-fx__coin {
+  animation-name: hub-win-bit-flutter;
+  animation-duration: calc(var(--hub-coin-duration) * 1.7);
+  animation-timing-function: ease-in-out;
+}
+
+@keyframes hub-win-bit-tumble {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(calc(var(--hub-coin-drift) * var(--tier-drift)), 116vh, 0) rotate(var(--hub-coin-spin));
+    opacity: 0;
+  }
+}
+
+@keyframes hub-win-bit-flutter {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  25% {
+    transform: translate3d(calc(var(--hub-coin-drift) * 2 + 26px), 28vh, 0) rotate(calc(var(--hub-coin-spin) * 0.25));
+  }
+  50% {
+    transform: translate3d(calc(var(--hub-coin-drift) * -1 - 22px), 56vh, 0) rotate(calc(var(--hub-coin-spin) * -0.1));
+  }
+  75% {
+    transform: translate3d(calc(var(--hub-coin-drift) * 2 + 24px), 84vh, 0) rotate(calc(var(--hub-coin-spin) * 0.3));
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(calc(var(--hub-coin-drift) * var(--tier-drift)), 112vh, 0) rotate(calc(var(--hub-coin-spin) * 0.1));
+    opacity: 0;
+  }
 }
 
 @keyframes hub-win-coin-fall {
@@ -327,11 +426,14 @@
 
 .hub-win__title {
   font-size: 20px;
-  font-weight: 800;
+  font-family: var(--win-font, inherit);
+  font-weight: max(800, calc(var(--win-weight, 900) - 100));
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--tier-core);
   text-shadow: 0 0 18px var(--tier-glow);
+  -webkit-text-stroke: calc(var(--win-stroke, 0px) * 0.6) var(--win-stroke-color, transparent);
+  paint-order: stroke fill;
 }
 
 .hub-win__value {
@@ -346,9 +448,12 @@
   /* tabular-nums가 없으면 롤업 도중 글자 폭이 흔들려 숫자가 떨리는 것처럼 보인다. */
   font-variant-numeric: tabular-nums;
   font-size: clamp(42px, 15vw, 64px);
-  font-weight: 900;
+  font-family: var(--win-font, inherit);
+  font-weight: var(--win-weight, 900);
   line-height: 1.05;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--win-tracking, -0.02em);
+  -webkit-text-stroke: var(--win-stroke, 0px) var(--win-stroke-color, transparent);
+  paint-order: stroke fill;
   color: var(--tier-core);
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35), 0 0 26px var(--tier-glow);
   animation: hub-win-number-pop 120ms ease-out;
@@ -357,7 +462,12 @@
 /* 위쪽만 흰빛으로 뜨는 금속 질감. 지원하지 않는 환경에서는 위의 단색이 그대로 남는다. */
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .hub-win__number {
-    background: linear-gradient(180deg, #ffffff 0%, var(--tier-core) 46%, var(--tier-edge) 100%);
+    background: linear-gradient(
+      180deg,
+      var(--win-grad-top, #ffffff) 0%,
+      var(--win-grad-mid, var(--tier-core)) 46%,
+      var(--win-grad-bottom, var(--tier-edge)) 100%
+    );
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;

@@ -218,8 +218,9 @@ describe('변형(뮤테이션) 배선', () => {
     expect(source).toContain('this.overlay = releaseMutationOverlayReel(this.overlay, reel)')
   })
 
-  it('스킵은 남은 변형 단계를 열지 않는다', () => {
-    expect(renderer()).toContain('if (this.skipRequestedToken === token) break')
+  it('스킵은 남은 변형 단계를 건너뛰지 않고 압축해 재생한다', () => {
+    expect(renderer()).not.toContain('if (this.skipRequestedToken === token) break')
+    expect(renderer()).toContain('compressMutationStep(planned, SKIP_MUTATION_MS)')
   })
 
   it('스킵은 재생 중인 단계를 곧장 끝낸다', () => {
@@ -664,9 +665,9 @@ describe('풀링 — 순환 연출이 매번 새로 만들지 않는다', () => 
     const source = stripComments(read('pixi', 'coins.ts'))
     expect(source).not.toContain('new Sprite(')
     expect(source).not.toContain('.destroy()')
-    // 코인·색종이·스캐터 세 연출이 모두 같은 풀에서 꺼낸다.
-    expect(source.match(/pool\.acquire\(/g) ?? []).toHaveLength(3)
-    expect(source.match(/pool\.release\(sprites\)/g) ?? []).toHaveLength(3)
+    // 코인·스킨 샤워·색종이·스캐터 네 연출이 모두 같은 풀에서 꺼낸다.
+    expect(source.match(/pool\.acquire\(/g) ?? []).toHaveLength(4)
+    expect(source.match(/pool\.release\(sprites\)/g) ?? []).toHaveLength(4)
   })
 
   it('파티클 층을 통째로 비우지 않는다', () => {
@@ -858,5 +859,23 @@ describe('시트 스프라이트 상한은 격자에서 나온다', () => {
 
   it('풀은 상한을 주입받는다', () => {
     expect(read('pixi', 'sheetFx.ts')).toContain('constructor(maxRetainedPerKey: number)')
+  })
+})
+
+describe('기대감 배선', () => {
+  const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+
+  it('스킵은 기대감 구간을 즉시 닫는다', () => {
+    const source = renderer()
+    expect(source).toMatch(/this\.skipRequestedToken = token\s+this\.endAnticipation\(\)/)
+  })
+
+  it('기대감 시작은 스킵된 스핀에서는 보내지 않는다', () => {
+    expect(renderer()).toContain('this.anticipatedPlan.has(next) && this.skipRequestedToken !== token')
+  })
+
+  it('기대감 대상은 정지 위치로만 정해진다 - 결과 필드를 읽지 않는다', () => {
+    const source = readFileSync(join(srcDir, 'anticipation.ts'), 'utf8')
+    expect(source).not.toMatch(/totalWin|Math\.random|wins/)
   })
 })

@@ -7,7 +7,8 @@ const mockRenderer = vi.hoisted(() => ({
   onEvent: null as ((e: { type: string; [key: string]: unknown }) => void) | null,
 }))
 
-vi.mock('@tgslot/renderer', () => ({
+vi.mock('@tgslot/renderer', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@tgslot/renderer')>()),
   createSlotRenderer: vi.fn((options: { onEvent?: (e: { type: string }) => void }) => {
     mockRenderer.onEvent = options.onEvent ?? null
     return {

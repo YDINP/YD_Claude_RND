@@ -296,6 +296,11 @@ function checkThemeSymbols(pack: GamePack, add: Add): void {
   for (const id of Object.keys(pack.theme.sheets ?? {})) {
     if (!mathSymbols.has(id)) add('warn', PACK_FILES.theme, `sheets.${id}`, 'math.json에 없는 심볼이다')
   }
+  pack.theme.celebration?.particles?.symbols?.forEach((id, index) => {
+    if (pack.theme.symbols[id] === undefined) {
+      add('error', PACK_FILES.theme, `celebration.particles.symbols.${index}`, `symbols에 없는 심볼이다: ${id}`)
+    }
+  })
 }
 
 /**

@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "apps/hub/src/components/game/WinCelebration.css"
+        ],
+        "createdAt": "2026-11-10T13:58:44.186Z",
+        "reason": "agent: pre-existing metallic big-win numerals (slot-genre convention), skinned per game via theme.json; not introduced by this change"
+      }
+    ]
+  }
+}
