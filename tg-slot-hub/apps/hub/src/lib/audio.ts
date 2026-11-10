@@ -20,7 +20,7 @@ let bgmBus: GainNode | null = null
 let bgmDuck: GainNode | null = null
 let noiseBuffer: AudioBuffer | null = null
 let spinLoop: { src: AudioBufferSourceNode; gain: GainNode } | null = null
-let riser: { osc: OscillatorNode; gain: GainNode; lfo: OscillatorNode } | null = null
+let riser: { osc: OscillatorNode; gain: GainNode; lfo: OscillatorNode; extra: AudioScheduledSourceNode[] } | null = null
 let riserStep = 0
 let lastStopAt = 0
 let lastTickAt = 0
@@ -223,10 +223,28 @@ const popVoice: Voice = (c, f, at, vol) => {
 }
 
 /** 서부 기타: 밝게 시작해 어두워지는 톱니파 + 몸통 삼각파, 끝이 살짝 처진다(트왱). */
-const pluckVoice: Voice = (c, f, at, vol) => {
-  tone(c, { freq: f, slideTo: f * 0.985, at, dur: 0.55, vol: vol * 0.7, type: 'sawtooth', lp: f * 7, lpTo: f * 1.3, attack: 0.002 })
-  tone(c, { freq: f * 0.5, at, dur: 0.4, vol: vol * 0.5, type: 'triangle', attack: 0.002 })
+function pluck(c: AudioContext, f: number, at: number, vol: number, ring: number): void {
+  const t = c.currentTime + at
+  const osc = c.createOscillator()
+  osc.type = 'sawtooth'
+  osc.frequency.setValueAtTime(f, t)
+  const lp = c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.Q.value = 0.8
+  lp.frequency.setValueAtTime(Math.min(9000, f * 10), t)
+  lp.frequency.setTargetAtTime(f * 1.2, t + 0.004, 0.05)
+  const g = c.createGain()
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.exponentialRampToValueAtTime(vol * 0.75, t + 0.002)
+  g.gain.setTargetAtTime(0.0001, t + 0.002, ring)
+  osc.connect(lp).connect(g).connect(master!)
+  osc.start(t)
+  osc.stop(t + ring * 5 + 0.05)
+  tone(c, { freq: f * 2, at, dur: Math.min(0.3, ring * 1.4), vol: vol * 0.18, type: 'sine', attack: 0.002 })
+  noise(c, { at, dur: 0.012, vol: vol * 0.35, filter: 'bandpass', freq: 3200, q: 1.2 })
 }
+
+const pluckVoice: Voice = (c, f, at, vol) => pluck(c, f, at, vol, 0.22)
 
 /** 신사 종: 낮고 길게 울리는 종. 맥놀이 한 겹을 얹어 울림이 흔들린다. */
 const templeVoice: Voice = (c, f, at, vol) => {
@@ -254,8 +272,10 @@ function clack(c: AudioContext, freq: number, at: number, vol: number): void {
 
 /** 총성 같은 딸깍: 짧은 잡음 폭발 + 낮은 쿵. 큰 당첨에서만 쓴다. */
 function gunshot(c: AudioContext, at: number, vol: number): void {
-  noise(c, { at, dur: 0.22, vol, filter: 'lowpass', freq: 5200, sweepTo: 320, q: 0.8 })
-  tone(c, { freq: 110, slideTo: 38, at, dur: 0.2, vol: vol * 1.1, type: 'sine', attack: 0.002 })
+  noise(c, { at, dur: 0.03, vol: vol * 1.2, filter: 'highpass', freq: 1200, q: 0.7 })
+  noise(c, { at, dur: 0.35, vol, filter: 'lowpass', freq: 3000, sweepTo: 200, q: 0.7 })
+  tone(c, { freq: 90, slideTo: 40, at, dur: 0.25, vol: vol * 0.9, type: 'sine', attack: 0.002 })
+  noise(c, { at: at + 0.02, dur: 0.9, vol: vol * 0.15, filter: 'bandpass', freq: 900, q: 0.7 })
 }
 
 /** 톱니바퀴가 한 칸 넘어가는 소리. */
@@ -360,9 +380,10 @@ const BELL_RECIPE: Recipe = {
     tone(c, { freq: 140, dur: 0.12, vol: 0.4, type: 'triangle', slideTo: 70 })
   },
   reelStop(c, lift) {
-    tone(c, { freq: 190 * lift, dur: 0.16, vol: 0.55, type: 'sine', slideTo: 60 })
-    noise(c, { dur: 0.05, vol: 0.3, filter: 'highpass', freq: 2500 })
-    tone(c, { freq: 880 * lift, dur: 0.05, vol: 0.12, type: 'square' })
+    tone(c, { freq: 330 * lift, dur: 0.07, vol: 0.75, type: 'triangle', slideTo: 200 * lift, attack: 0.001, lp: 2600, lpTo: 500 })
+    tone(c, { freq: 120 * lift, dur: 0.06, vol: 0.35, type: 'sine', attack: 0.001 })
+    noise(c, { dur: 0.03, vol: 0.5, filter: 'bandpass', freq: 2200, q: 1.5 })
+    tone(c, { freq: 880 * lift, dur: 0.04, vol: 0.08, type: 'square' })
   },
   winSmall(c, rollup) {
     run(c, (cc, f, at, v) => bell(cc, f, at, v, 0.7), PENTA, [0, 2, 4], 0.08, 0.22)
@@ -411,8 +432,8 @@ const FRUIT_RECIPE: Recipe = {
     tone(c, { freq: 1500 * lift, at: 0.02, dur: 0.05, vol: 0.1, type: 'sine', attack: 0.002 })
   },
   winSmall(c, rollup) {
-    run(c, popVoice, FRUIT_SCALE, [0, 2, 4], 0.08, 0.3)
-    sparkle(c, { dur: Math.min(rollup, 1.2), density: 11, vol: 0.07, lo: 900, hi: 1900, voice: 'bubble' })
+    run(c, popVoice, FRUIT_SCALE, [0, 2, 4], 0.08, 0.5)
+    sparkle(c, { dur: Math.min(rollup, 1.2), density: 11, vol: 0.1, lo: 900, hi: 1900, voice: 'bubble' })
   },
   winBig(c, tier, rollup) {
     const steps = { big: 6, mega: 8, epic: 9, max: 9 }[tier]
@@ -448,8 +469,8 @@ const WESTERN_RECIPE: Recipe = {
     pluckVoice(c, 110, 0.02, 0.4)
   },
   reelStop(c, lift) {
-    pluckVoice(c, 82.41 * lift, 0, 0.55)
-    clack(c, 700 * lift, 0, 0.3)
+    clack(c, 820 * lift, 0, 0.5)
+    tone(c, { freq: 260 * lift, slideTo: 170 * lift, dur: 0.07, vol: 0.4, type: 'triangle', attack: 0.001, lp: 1800, lpTo: 400 })
   },
   winSmall(c, rollup) {
     run(c, pluckVoice, WESTERN_SCALE, [0, 2, 3], 0.09, 0.3)
@@ -483,7 +504,7 @@ const WESTERN_RECIPE: Recipe = {
 
 const SHRINE_RECIPE: Recipe = {
   loop: { hz: 1250, ticks: 10, tonal: 0.45, alt: 0.12, len: 0.03, vol: 0.18 },
-  riser: { wave: 'sine', from: 160, to: 640, pulseHz: 5, lp: 1800, vol: 0.14 },
+  riser: { wave: 'sine', from: 160, to: 640, pulseHz: 5, lp: 1800, vol: 0.11 },
   scale: SHRINE_SCALE,
   spinStart(c) {
     clack(c, 900, 0, 0.35)
@@ -491,8 +512,10 @@ const SHRINE_RECIPE: Recipe = {
     tone(c, { freq: 196, at: 0.02, dur: 0.5, vol: 0.14, type: 'sine', attack: 0.01 })
   },
   reelStop(c, lift) {
-    clack(c, 760 * lift, 0, 0.55)
-    tone(c, { freq: 130 * lift, slideTo: 80, at: 0, dur: 0.14, vol: 0.3, type: 'sine' })
+    tone(c, { freq: 1250 * lift, dur: 0.12, vol: 0.45, type: 'sine', attack: 0.001 })
+    tone(c, { freq: 3400 * lift, dur: 0.05, vol: 0.14, type: 'sine', attack: 0.001 })
+    noise(c, { dur: 0.02, vol: 0.4, filter: 'bandpass', freq: 2500, q: 3 })
+    tone(c, { freq: 420 * lift, slideTo: 330 * lift, at: 0, dur: 0.05, vol: 0.28, type: 'triangle', attack: 0.001 })
   },
   winSmall(c, rollup) {
     templeVoice(c, SHRINE_SCALE[0]! / 2, 0, 0.28)
@@ -726,9 +749,34 @@ export function startAnticipation(): void {
   depth.gain.value = spec.vol * 0.45
   lfo.connect(depth).connect(gain.gain)
   osc.connect(lp).connect(gain).connect(master)
+  const fifth = c.createOscillator()
+  fifth.type = spec.wave
+  fifth.frequency.setValueAtTime(spec.from * lift * 1.5, t)
+  fifth.frequency.exponentialRampToValueAtTime(spec.to * lift * 1.5, t + 1.4)
+  const fifthGain = c.createGain()
+  fifthGain.gain.value = 0.4
+  fifth.connect(fifthGain).connect(lp)
+  const extra: AudioScheduledSourceNode[] = [fifth]
+  if (noiseBuffer) {
+    const wash = c.createBufferSource()
+    wash.buffer = noiseBuffer
+    wash.loop = true
+    const bp = c.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.Q.value = 1.2
+    bp.frequency.setValueAtTime(spec.lp * 0.5, t)
+    bp.frequency.exponentialRampToValueAtTime(spec.lp * 2.5, t + 1.4)
+    const washGain = c.createGain()
+    washGain.gain.setValueAtTime(0.0001, t)
+    washGain.gain.exponentialRampToValueAtTime(1.2, t + 1.4)
+    wash.connect(bp).connect(washGain).connect(gain)
+    wash.start(t)
+    extra.push(wash)
+  }
   osc.start(t)
+  fifth.start(t)
   lfo.start(t)
-  riser = { osc, gain, lfo }
+  riser = { osc, gain, lfo, extra }
   anticipating = true
   refreshDuck()
 }
@@ -739,13 +787,14 @@ export function stopAnticipation(): void {
     refreshDuck()
   }
   if (!riser || !ctx) return
-  const { osc, gain, lfo } = riser
+  const { osc, gain, lfo, extra } = riser
   riser = null
   const t = ctx.currentTime
   gain.gain.cancelScheduledValues(t)
   gain.gain.setTargetAtTime(0.0001, t, 0.03)
   osc.stop(t + 0.15)
   lfo.stop(t + 0.15)
+  for (const n of extra) n.stop(t + 0.15)
 }
 
 // ── 롤업 틱 ───────────────────────────────────────────────
