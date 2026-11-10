@@ -54,8 +54,9 @@ interface Direction {
  * 왼쪽 방향에서 한 번만 센다. **연속이 전 릴이어도 지급 길이가 더 짧으면** 두 방향의
  * 지급 칸이 달라지므로 각각 센다.
  *
- * 지급 칸이 전부 와일드인 해석은 후보마다 중복 성립하므로 챔피언 하나로 접는다
- * (`getWildChampions`). 그러지 않으면 와일드 3개짜리 줄이 후보 수만큼 지급된다.
+ * 지급 칸이 전부 와일드인 **경로**는 후보마다 중복 성립하므로 챔피언 하나로 접는다
+ * (`getWildChampions`). 챔피언이 아닌 후보는 지급 릴별 와일드 칸 수의 곱만큼 경로를 뺀다.
+ * 와일드와 심볼이 섞인 창에서도 순수 와일드 경로는 챔피언에서만 한 번 지급된다.
  */
 export function evaluateWays(grid: SymbolId[][], math: GameMath, betPerWay: number): EvaluateResult {
   const candidates = getLineCandidates(math)
@@ -93,19 +94,17 @@ export function evaluateWays(grid: SymbolId[][], math: GameMath, betPerWay: numb
       const paidCount = candidate.bestCount[run] ?? run
       // 지급 칸이 전 릴을 덮으면 좌우가 같은 사건이다. 오른쪽에서 다시 세면 이중 지급이다.
       if (direction.label === 'rtl' && paidCount === math.reels) continue
-      // 지급 칸이 전부 와일드면 챔피언 후보만 지급한다.
-      let allWild = true
-      for (let i = 0; i < paidCount; i += 1) {
-        const reel = direction.order[i]
-        if (reel === undefined) continue
-        if ((nonWild[reel] ?? 0) > 0) {
-          allWild = false
-          break
+      // 지급 칸이 전부 와일드인 경로는 챔피언 후보만 지급한다.
+      let wildOnlyWays = 0
+      if (wildChampions[run] !== candidate.key) {
+        wildOnlyWays = 1
+        for (let i = 0; i < paidCount; i += 1) {
+          const reel = direction.order[i] ?? 0
+          wildOnlyWays *= (counts[reel] ?? 0) - (nonWild[reel] ?? 0)
         }
       }
-      if (allWild && wildChampions[run] !== candidate.key) continue
       // 경로 수는 **지급되는 길이까지만** 곱한다. 4연속인데 3개까지만 배당이 있으면 3릴 곱이다.
-      const ways = cumulative[paidCount] ?? 0
+      const ways = (cumulative[paidCount] ?? 0) - wildOnlyWays
       if (ways <= 0) continue
       const win = Math.round(ways * multiplier * betPerWay)
       if (win <= 0) continue

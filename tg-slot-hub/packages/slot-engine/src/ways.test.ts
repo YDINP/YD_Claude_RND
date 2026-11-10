@@ -180,6 +180,33 @@ describe('와일드만으로 채워진 줄', () => {
     expect(result.wins.find((win) => win.symbol === 'b')).toMatchObject({ ways: 4, multiplier: 20 })
   })
 
+  it('섞인 창에서는 순수 와일드 경로(릴별 와일드 칸 수의 곱)만 챔피언에게 넘긴다', () => {
+    // a: 릴별 매치 2·2·1 = 4경로, 와일드 칸 1·2·1 = 2경로 -> 챔피언이 아니므로 2경로만 지급.
+    // b: 릴별 매치 1·2·2 = 4경로, 와일드 칸 1·2·1 = 2경로 -> 2경로.
+    // w: 챔피언이라 순수 와일드 2경로를 자기 배수로 지급한다. 같은 경로가 두 번 지급되지 않는다.
+    const grid = makeGrid([
+      ['w', 'w', 'w'],
+      ['a', 'w', 'b'],
+    ])
+    const result = evaluateWays(grid, math, BET_PER_WAY)
+    expect(result.wins.find((win) => win.symbol === 'a')).toMatchObject({ count: 3, ways: 2, multiplier: 100 })
+    expect(result.wins.find((win) => win.symbol === 'b')).toMatchObject({ count: 3, ways: 2, multiplier: 20 })
+    expect(result.wins.find((win) => win.symbol === 'w')).toMatchObject({ count: 3, ways: 2, multiplier: 200 })
+    expect(result.totalWin).toBe(2 * 100 + 2 * 20 + 2 * 200)
+  })
+
+  it('와일드 칸이 여럿인 릴은 그 수만큼 곱해서 뺀다', () => {
+    // a: 매치 2·2·2 = 8, 와일드 1·2·1 = 2 -> 6경로. b: 매치가 전부 와일드라 2 - 2 = 0, 지급 없음.
+    const grid = makeGrid([
+      ['w', 'w', 'w'],
+      ['a', 'w', 'a'],
+    ])
+    const result = evaluateWays(grid, math, BET_PER_WAY)
+    expect(result.wins.map((win) => win.symbol).sort()).toEqual(['a', 'w'])
+    expect(result.wins.find((win) => win.symbol === 'a')).toMatchObject({ ways: 6, multiplier: 100 })
+    expect(result.wins.find((win) => win.symbol === 'w')).toMatchObject({ ways: 2, multiplier: 200 })
+  })
+
   it('챔피언은 배당표만 보고 정해진다 (길이별 최고 배수)', () => {
     // 길이 2에서 배당이 있는 후보는 a뿐이고, 길이 3에서는 w가 가장 크다.
     expect(getWildChampions(math)).toEqual([null, null, 'a', 'w'])

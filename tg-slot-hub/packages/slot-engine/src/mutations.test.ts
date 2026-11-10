@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { evaluate, evaluateScatter } from './evaluate.js'
 import { applyMutations, isProbabilistic } from './mutations.js'
 import { createSeededRng } from './rng/seeded.js'
 import { parseGameMath, safeParseGameMath } from './schema.js'
 import { spin } from './spin.js'
 import { makeGrid, makeMutationMath } from './testFixtures.js'
 import type { Rng } from './types.js'
+import { evaluateWays } from './ways.js'
 
 const BASE = {
   id: 'mut',
@@ -400,6 +402,49 @@ describe('expandWild onlyIfWin', () => {
     applyMutations(onlyIfWin, noWinGrid(), counting)
     applyMutations(onlyIfWin, winGrid(), counting)
     expect(draws).toBe(0)
+  })
+
+  it('탐침 1회 판정이 확장 전후 2회 탐침과 무작위 그리드 전부에서 같은 결과를 낸다', () => {
+    const UNIT = 1_000_000
+    const oldProbe = (math: ReturnType<typeof parseGameMath>, grid: string[][]): number => {
+      const divisor = math.payModel === 'ways' ? (math.ways?.betDivisor ?? 25) : math.paylines.length
+      const lineWin =
+        math.payModel === 'ways' ? evaluateWays(grid, math, UNIT).totalWin : evaluate(grid, math, UNIT).totalWin
+      return lineWin + evaluateScatter(grid, math, UNIT * divisor).win
+    }
+    const ways = {
+      ...JSON.parse(JSON.stringify(BASE)),
+      payModel: 'ways',
+      ways: { base: 27, betDivisor: 3 },
+      paylines: undefined,
+      scatter: { symbol: 's', pays: { 2: 1, 3: 5 } },
+    }
+    const lines = { ...JSON.parse(JSON.stringify(BASE)), scatter: { symbol: 's', pays: { 2: 1, 3: 5 } } }
+    const symbols = ['w', 'q', 's', 'a', 'b']
+    const rng = createSeededRng('onlyIfWin-equivalence')
+    let kept = 0
+    let reverted = 0
+    for (const base of [lines, ways]) {
+      for (const coverScatter of [false, true]) {
+        const expand = { ...mutation, reels: [0, 1, 2], coverScatter }
+        const probe = parseGameMath({ ...base, mutations: [{ ...expand, onlyIfWin: true }] })
+        const plain = parseGameMath({ ...base, mutations: [{ ...expand, onlyIfWin: false }] })
+        for (let i = 0; i < 3000; i += 1) {
+          const grid = makeGrid(
+            Array.from({ length: 3 }, () => Array.from({ length: 3 }, () => symbols[rng.nextInt(symbols.length)] ?? 'a')),
+          )
+          const expanded = applyMutations(plain, grid, createSeededRng('x'))
+          const keep = expanded.events.length > 0 && oldProbe(plain, expanded.grid) > oldProbe(plain, grid)
+          const actual = applyMutations(probe, grid, createSeededRng('x'))
+          expect(actual.grid).toEqual(keep ? expanded.grid : grid)
+          expect(actual.events).toEqual(keep ? expanded.events : [])
+          if (keep) kept += 1
+          else if (expanded.events.length > 0) reverted += 1
+        }
+      }
+    }
+    expect(kept).toBeGreaterThan(100)
+    expect(reverted).toBeGreaterThan(100)
   })
 })
 

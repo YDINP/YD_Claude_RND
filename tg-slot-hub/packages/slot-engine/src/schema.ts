@@ -195,6 +195,9 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
   if (wilds.length > 0 && wilds.some((s) => s.scatter === true)) {
     issue('심볼은 wild와 scatter를 동시에 가질 수 없다', ['symbols'])
   }
+  if (wilds.length > 1) {
+    issue(`와일드는 1종만 선언할 수 있다: ${wilds.map((s) => s.id).join(', ')}`, ['symbols'])
+  }
 
   if (math.strips.length !== math.reels) {
     issue(`strips 개수(${math.strips.length})가 reels(${math.reels})와 다르다`, ['strips'])
