@@ -1,0 +1,193 @@
+{
+  "symbols": {
+    "wild": "symbols/wild.webp",
+    "scatter": "symbols/scatter.webp",
+    "astrolabe": "symbols/astrolabe.webp",
+    "owl": "symbols/owl.webp",
+    "moondial": "symbols/moondial.webp",
+    "gear": "symbols/gear.webp",
+    "key": "symbols/key.webp",
+    "pendulum": "symbols/pendulum.webp",
+    "starjar": "symbols/starjar.webp",
+    "quill": "symbols/quill.webp"
+  },
+  "frame": "frame.webp",
+  "background": "bg.webp",
+  "backgroundFreeSpins": "bg-freespins.webp",
+  "frameLayout": {
+    "window": {
+      "x": 0.0583,
+      "y": 0.1802,
+      "w": 0.8833,
+      "h": 0.742
+    }
+  },
+  "reelBackdrop": {
+    "color": "#0b1022",
+    "alpha": 0.72
+  },
+  "version": "1.0.0",
+  "palette": {
+    "frame": "#c9963f",
+    "reelBg": "#141c3a",
+    "winLine": [
+      "#f2a03d",
+      "#2a5fbf",
+      "#c8354e",
+      "#e8eef7",
+      "#c9963f"
+    ],
+    "text": "#e8eef7"
+  },
+  "fx": {
+    "default": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.12,
+          "durationMs": 600
+        }
+      ]
+    },
+    "wild": {
+      "win": [
+        {
+          "type": "burst",
+          "particles": 18,
+          "durationMs": 900
+        },
+        {
+          "type": "glow",
+          "color": "#f2a03d",
+          "durationMs": 900
+        }
+      ]
+    },
+    "scatter": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#e8eef7",
+          "durationMs": 800
+        },
+        {
+          "type": "spin",
+          "durationMs": 400,
+          "repeat": 1
+        }
+      ]
+    },
+    "astrolabe": {
+      "win": [
+        {
+          "type": "spin",
+          "durationMs": 900,
+          "repeat": 1
+        },
+        {
+          "type": "glow",
+          "color": "#c9963f",
+          "durationMs": 900
+        }
+      ]
+    },
+    "owl": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.08,
+          "durationMs": 700
+        },
+        {
+          "type": "glow",
+          "color": "#f2a03d",
+          "durationMs": 700
+        }
+      ]
+    },
+    "moondial": {
+      "win": [
+        {
+          "type": "shine",
+          "durationMs": 800,
+          "angle": 20
+        },
+        {
+          "type": "pulse",
+          "scale": 1.13,
+          "durationMs": 800
+        }
+      ]
+    },
+    "gear": {
+      "win": [
+        {
+          "type": "spin",
+          "durationMs": 800,
+          "repeat": 1
+        }
+      ]
+    },
+    "key": {
+      "win": [
+        {
+          "type": "shine",
+          "durationMs": 700,
+          "angle": 0
+        }
+      ]
+    },
+    "pendulum": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 14,
+          "durationMs": 900
+        }
+      ]
+    },
+    "starjar": {
+      "win": [
+        {
+          "type": "burst",
+          "particles": 10,
+          "durationMs": 700
+        }
+      ]
+    },
+    "quill": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.06,
+          "durationMs": 650
+        }
+      ]
+    }
+  },
+  "sheets": {
+    "wild": {
+      "win": "sheets/wild-win.json"
+    }
+  },
+  "celebration": {
+    "palette": { "core": "#f6e7c1", "edge": "#c9963f", "glow": "#2a5fbf80" },
+    "particles": {
+      "shapes": ["shard", "shard", "star", "gear"],
+      "colors": ["#2a5fbf", "#c8354e", "#f2a03d", "#e8eef7"],
+      "motion": "tumble",
+      "size": 1.5
+    },
+    "rays": { "style": "beams" },
+    "waves": { "style": "dashed" },
+    "title": { "font": "serif", "weight": 800, "stroke": 1.5, "strokeColor": "#0a0f24cc", "tracking": 0.02 },
+    "tiers": {
+      "surge": { "density": 1.3 },
+      "storm": { "glow": "#c8354e80", "edge": "#c8354e" },
+      "cataclysm": { "core": "#ffffff", "edge": "#f2a03d", "glow": "#e8eef78a", "density": 1.3 }
+    }
+  },
+  "sound": {
+    "preset": "clockwork"
+  }
+}
